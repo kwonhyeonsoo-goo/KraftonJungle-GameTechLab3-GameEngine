@@ -1,0 +1,130 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{274fef04-c9c3-4242-89d2-b115224608df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{0836a0dd-9640-407b-aaa4-6e89a977bf67}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ImGui">
+      <UniqueIdentifier>{60421cd2-dcde-495e-90cf-93c723bc49f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00. MainApp">
+      <UniqueIdentifier>{0cab2ae4-044f-4aaf-9e99-b49c47e185b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="99. Define">
+      <UniqueIdentifier>{49554945-e5d2-4797-948f-594a4354b5db}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03. Math">
+      <UniqueIdentifier>{613a980f-3a12-4bb7-8b9c-2051f5eee9b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03. Math\Vector">
+      <UniqueIdentifier>{4a103c13-7c74-4956-bab8-25e223f4a2bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01. System">
+      <UniqueIdentifier>{400dcfcd-70a3-4271-ae0b-a4f37bf482b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02. Graphic">
+      <UniqueIdentifier>{5f8182e3-4923-4b20-a8cb-d0836506ff83}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02. Graphic\Renderer">
+      <UniqueIdentifier>{e5d59400-df66-4a32-9a61-4bc4bea52a39}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02. Graphic\Shader">
+      <UniqueIdentifier>{bfa52c2c-cb4b-42b1-a4fc-fcee1ec0c5b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shader Files">
+      <UniqueIdentifier>{a7fc94d0-204b-4b15-9abb-9e44bcad12c9}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ImGui\imconfig.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imgui.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imgui_impl_dx11.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imgui_impl_win32.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imgui_internal.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imstb_rectpack.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imstb_textedit.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imstb_truetype.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="UWindow.h">
+      <Filter>00. MainApp</Filter>
+    </ClInclude>
+    <ClInclude Include="UGameApp.h">
+      <Filter>00. MainApp</Filter>
+    </ClInclude>
+    <ClInclude Include="FVector3.h">
+      <Filter>03. Math\Vector</Filter>
+    </ClInclude>
+    <ClInclude Include="URenderer.h">
+      <Filter>02. Graphic\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="UShader.h">
+      <Filter>02. Graphic\Shader</Filter>
+    </ClInclude>
+    <ClInclude Include="UObject.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ImGui\imgui.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_demo.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_draw.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_impl_dx11.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_impl_win32.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_tables.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_widgets.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="UWindow.cpp">
+      <Filter>00. MainApp</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>00. MainApp</Filter>
+    </ClCompile>
+    <ClCompile Include="UGameApp.cpp">
+      <Filter>00. MainApp</Filter>
+    </ClCompile>
+    <ClCompile Include="Utility.h">
+      <Filter>99. Define</Filter>
+    </ClCompile>
+    <ClCompile Include="URenderer.cpp">
+      <Filter>02. Graphic\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="UShader.cpp">
+      <Filter>02. Graphic\Shader</Filter>
+    </ClCompile>
+    <ClCompile Include="UObject.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="ShaderW0.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+  </ItemGroup>
+</Project>
