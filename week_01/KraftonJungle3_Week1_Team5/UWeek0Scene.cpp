@@ -6,7 +6,6 @@
 void UWeek0Scene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
 	// TODO : 여기에 추가할 오브젝트들 하드 코딩으로 추가.
-
 	for (int i = 0; i < 10; ++i)
 	{
 		UGameObject* instance = UBall::Create(device, context);
@@ -34,4 +33,5 @@ void UWeek0Scene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 void UWeek0Scene::Update(float tick)
 {
 	// TODO : 여기에 오브젝트들로 뭘 할지 하드 코딩으로 추가.
+	
 }

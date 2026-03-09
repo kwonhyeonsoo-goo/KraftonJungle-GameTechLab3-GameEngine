@@ -76,6 +76,8 @@ void UGameApp::Initialize()
 void UGameApp::Tick(float dt)
 {
 	// TODO : Update / Render 추가
+	CurrentScene->Update(dt);
+
 	Renderer->Prepare();
 	CurrentScene->Render(Renderer->GetDevice(), Renderer->GetDeviceContext());
 
@@ -87,7 +89,9 @@ void UGameApp::Tick(float dt)
 	// 사이인 이곳에 위치
 	ImGui::Begin("Jungle Property Window");
 	ImGui::Text("Hello Jungle World!");
-
+	ImGui::Text("Delta Time: %.6f", dt);   // 초 단위
+	ImGui::Text("Frame Time: %.3f ms", dt * 1000.0f); // 밀리초
+	ImGui::Text("FPS: %.1f", 1.0f / dt);   // FPS
 	ImGui::End();
 
 	ImGui::Render();
