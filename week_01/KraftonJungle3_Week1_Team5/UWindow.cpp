@@ -92,8 +92,16 @@ void UWindow::OnDestroy()
     PostQuitMessage(0);
 }
 
+extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg,
+    WPARAM wParam, LPARAM lParam);
+
 LRESULT UWindow::OnMessage(const UINT msg, const WPARAM wp, const LPARAM lp)
 {
+    if (ImGui_ImplWin32_WndProcHandler(Hwnd, msg, wp, lp))
+    {
+        return true;
+    }
+
     switch (msg)
     {
     case WM_CREATE: OnCreate(); return 0;

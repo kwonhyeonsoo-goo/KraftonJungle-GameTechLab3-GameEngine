@@ -64,7 +64,7 @@ void URenderer::Prepare()
     DeviceContext->RSSetState(RasterizerState);
 
     DeviceContext->OMSetRenderTargets(1, &FrameBufferRTV, nullptr);
-    DeviceContext->OMSetBlendState(nullptr, nullptr, 0xfffffff);
+    DeviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
 }
 
 void URenderer::SwapBuffer()

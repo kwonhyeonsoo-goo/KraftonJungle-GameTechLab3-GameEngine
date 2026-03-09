@@ -20,6 +20,9 @@ public:
 
     void Render(ID3D11Buffer* buffer, UINT stride, UINT numVertices);
 
+    ID3D11Device* GetDevice() const { return Device; }
+    ID3D11DeviceContext* GetDeviceContext() const { return DeviceContext; }
+
 private:
     void Create(HWND hWnd);
     void Release();

@@ -124,6 +124,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Circle.h" />
+    <ClInclude Include="Enum.h" />
     <ClInclude Include="FVector3.h" />
     <ClInclude Include="ImGui\imconfig.h" />
     <ClInclude Include="ImGui\imgui.h" />
@@ -133,10 +135,20 @@
     <ClInclude Include="ImGui\imstb_rectpack.h" />
     <ClInclude Include="ImGui\imstb_textedit.h" />
     <ClInclude Include="ImGui\imstb_truetype.h" />
+    <ClInclude Include="Sphere.h" />
+    <ClInclude Include="UBall.h" />
+    <ClInclude Include="UCircle2DMesh.h" />
+    <ClInclude Include="UCircleCollider.h" />
+    <ClInclude Include="UCollider.h" />
     <ClInclude Include="UGameApp.h" />
-    <ClInclude Include="UObject.h" />
+    <ClInclude Include="UGameObject.h" />
+    <ClInclude Include="UMesh.h" />
+    <ClInclude Include="UPrimitive.h" />
     <ClInclude Include="URenderer.h" />
+    <ClInclude Include="UScene.h" />
     <ClInclude Include="UShader.h" />
+    <ClInclude Include="USphereMesh.h" />
+    <ClInclude Include="UWeek0Scene.h" />
     <ClInclude Include="UWindow.h" />
   </ItemGroup>
   <ItemGroup>
@@ -148,11 +160,20 @@
     <ClCompile Include="ImGui\imgui_tables.cpp" />
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="UBall.cpp" />
+    <ClCompile Include="UCircle2DMesh.cpp" />
+    <ClCompile Include="UCircleCollider.cpp" />
+    <ClCompile Include="UCollider.cpp" />
     <ClCompile Include="UGameApp.cpp" />
-    <ClCompile Include="UObject.cpp" />
+    <ClCompile Include="UGameObject.cpp" />
+    <ClCompile Include="UMesh.cpp" />
+    <ClCompile Include="UPrimitive.cpp" />
     <ClCompile Include="URenderer.cpp" />
+    <ClCompile Include="UScene.cpp" />
     <ClCompile Include="UShader.cpp" />
+    <ClCompile Include="USphereMesh.cpp" />
     <ClCompile Include="Utility.h" />
+    <ClCompile Include="UWeek0Scene.cpp" />
     <ClCompile Include="UWindow.cpp" />
   </ItemGroup>
   <ItemGroup>

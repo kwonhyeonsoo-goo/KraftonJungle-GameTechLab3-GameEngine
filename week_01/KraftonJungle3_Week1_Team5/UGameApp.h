@@ -1,6 +1,8 @@
 #pragma once
 #include "UWindow.h"
 
+class UScene;
+class UGameObject;
 class URenderer;
 
 class UGameApp : public UWindow
@@ -28,4 +30,5 @@ private:
 
 private:
 	URenderer* Renderer;
+	UScene* CurrentScene;
 };

@@ -3,9 +3,9 @@
 #include <string>
 
 #include "FVector3.h"
-#include "UObject.h"
+#include "UPrimitive.h"
 
-class UShader : public UObject
+class UShader : public UPrimitive
 {
 public:
 	struct FConstants
@@ -15,7 +15,7 @@ public:
 	};
 
 	UShader();
-	~UShader();
+	~UShader() override;
 
 	bool Create(ID3D11Device* device, const std::wstring& shaderFilePath, const D3D11_INPUT_ELEMENT_DESC* inputElements, UINT inputElementCount, const char* vsEntry = "VSMain", const char* psEntry = "PSMain");
 	

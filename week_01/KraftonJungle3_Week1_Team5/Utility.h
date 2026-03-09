@@ -21,6 +21,17 @@ static void SafeDelete(T*& ptr)
     }
 }
 
+template <typename T>
+static void SafeReleaseAndDelete(T*& ptr)
+{
+    if (ptr)
+    {
+        ptr->Release();
+        delete ptr;
+        ptr = nullptr;
+    }
+}
+
 static bool CompileShaderFromFile(const std::wstring& filePath, const char* entryPoint, const char* shaderModel, ID3DBlob** shaderBlob)
 {
     if (shaderBlob == nullptr)
