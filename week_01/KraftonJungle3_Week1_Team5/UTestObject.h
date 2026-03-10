@@ -16,5 +16,12 @@ public:
 private:
 	USphereMesh* SphereMesh;
 	UShader* Shader;
+	float JumpForce;
+	bool bOnGround;
+
+	const float LeftBorder = -1.0f;
+	const float RightBorder = 1.0f;
+	const float TopBorder = 1.0f;
+	const float BottomBorder = -1.0f;
 };
 

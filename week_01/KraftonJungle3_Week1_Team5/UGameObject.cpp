@@ -38,7 +38,7 @@ void UGameObject::ApplyGravity(const float tick)
 {
 	if (UseGravity)
 	{
-		Velocity.y -= 9.81f * tick;
+		Velocity.y -= 1.0f * tick;
 	}
 }
 
