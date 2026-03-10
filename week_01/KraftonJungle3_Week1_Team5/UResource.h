@@ -10,8 +10,6 @@ enum class EResourceType
 	Shader
 };
 
-
-
 class UResource : public UPrimitive
 {
 public:
@@ -19,12 +17,14 @@ public:
 	~UResource() override = default;
 
 	const std::wstring& GetPath() const { return Path; }
+	const std::wstring& GetName() const { return Name; }
 
+	virtual EResourceType GetType() = 0;
+	bool IsLoaded() const { return bLoaded; }
 
 private:
 	std::wstring Name;
 	std::wstring Path;
-	EResourceType Type = EResourceType::None;
 	bool bLoaded = false;
 };
 
