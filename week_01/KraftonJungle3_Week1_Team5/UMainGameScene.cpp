@@ -23,7 +23,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 
 		GameObjects.push_back(object);
 
-		//object->SetPosition(~~)
+		//object->SetPosition(FVector3(0.f, 0.f, 0.f));
 	}
 }
 
