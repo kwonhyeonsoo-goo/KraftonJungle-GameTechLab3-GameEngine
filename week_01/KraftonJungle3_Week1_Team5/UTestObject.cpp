@@ -63,32 +63,56 @@ void UTestObject::ApplyBoundaryCollision()
 {
 	if (Position.x > 1.f - Scale)
 	{
-		Velocity.x *= -1;
+		Velocity.x = 0;
 		Position.x = 1.f - Scale;
 	}
 	if (Position.x < -1.f + Scale)
 	{
-		Velocity.x *= -1;
+		Velocity.x = 0;
 		Position.x = -1.f + Scale;
 	}
 	if (Position.y > 1.f - Scale)
 	{
-		Velocity.y *= -1;
+		Velocity.y = 0;
 		Position.y = 1.f - Scale;
 	}
 	if (Position.y < -1.f + Scale)
 	{
 		bOnGround = true;
-		Velocity.y *= 0;
+		Velocity.y = 0;
 		Position.y = -1.f + Scale;
+
+		if (CurrentState == EPlayerState::Diving)
+		{
+			CurrentState = EPlayerState::Recovering;
+			Velocity.x = 0.0f;
+			RecoveryTimer = 0.5f;
+		}
 	}
 }
 
 void UTestObject::Move(float tick)
 {
-	CurrentState = EPlayerState::Normal;
-	int currentInput = FLAG_NONE;
+	if (CurrentState == EPlayerState::Recovering)
+	{
+		RecoveryTimer -= tick;
+		if (RecoveryTimer <= 0.0f)
+		{
+			CurrentState = EPlayerState::Normal;
+		}
+		else
+		{
+			return;
+		}
+	}
+	else if (CurrentState == EPlayerState::Diving)
+	{
+		return;
+	}
 
+	CurrentState = EPlayerState::Normal;
+
+	int currentInput = FLAG_NONE;
 	if (GetAsyncKeyState(VK_RETURN) & 0x8000) currentInput |= FLAG_SPIKE;
 	if (GetAsyncKeyState(VK_LEFT) & 0x8000) currentInput |= FLAG_LEFT;
 	if (GetAsyncKeyState(VK_RIGHT) & 0x8000) currentInput |= FLAG_RIGHT;
@@ -110,11 +134,17 @@ void UTestObject::Move(float tick)
 		{
 			if (currentInput & FLAG_LEFT)
 			{
-				// 다이빙
+				CurrentState = EPlayerState::Diving;
+				Velocity.x = -0.5f;
+				Velocity.y = JumpForce * 0.5f;
+				bOnGround = false;
 			}
 			else if (currentInput & FLAG_RIGHT)
 			{
-				// 다이빙
+				CurrentState = EPlayerState::Diving;
+				Velocity.x = 0.5f;
+				Velocity.y = JumpForce * 0.5f;
+				bOnGround = false;
 			}
 		}
 	}
