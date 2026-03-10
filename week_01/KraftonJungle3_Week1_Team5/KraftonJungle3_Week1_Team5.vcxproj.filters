@@ -168,12 +168,6 @@
     <ClInclude Include="SceneAutoRegister.h">
       <Filter>00. Engine\01. System\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="SceneManager.h">
-      <Filter>00. Engine\01. System\Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="Mecro.h">
-      <Filter>00. Engine\99. Define</Filter>
-    </ClInclude>
     <ClInclude Include="UMainGameScene.h">
       <Filter>02. Client\01. Scene</Filter>
     </ClInclude>
@@ -182,6 +176,14 @@
     </ClInclude>
     <ClInclude Include="UResource.h">
       <Filter>00. Engine\01. System\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="USceneManager.h" />
+    <ClInclude Include="Cube.h" />
+    <ClInclude Include="UEngine.h" />
+    <ClInclude Include="UResourceManager.h" />
+    <ClInclude Include="UTexture2D.h" />
+    <ClInclude Include="Macro.h">
+      <Filter>00. Engine\99. Define</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -257,9 +259,6 @@
     <ClCompile Include="SceneRegistry.cpp">
       <Filter>00. Engine\01. System\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="SceneManager.cpp">
-      <Filter>00. Engine\01. System\Scene</Filter>
-    </ClCompile>
     <ClCompile Include="UMainGameScene.cpp">
       <Filter>02. Client\01. Scene</Filter>
     </ClCompile>
@@ -269,10 +268,19 @@
     <ClCompile Include="UResource.cpp">
       <Filter>00. Engine\01. System\Resource</Filter>
     </ClCompile>
+    <ClCompile Include="USceneManager.cpp" />
+    <ClCompile Include="UEngine.cpp" />
+    <ClCompile Include="UResourceManager.cpp" />
+    <ClCompile Include="UCubeMesh.cpp" />
+    <ClCompile Include="UCubeMesh.h" />
+    <ClCompile Include="UTexture2D.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ShaderW0.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

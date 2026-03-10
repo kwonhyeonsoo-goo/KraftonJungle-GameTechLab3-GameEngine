@@ -95,7 +95,7 @@ void UTestObject::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 
 void UTestObject::Release()
 {
-	SafeReleaseAndDelete(SphereMesh);
+	SafeReleaseAndDelete(CubeMesh);
 	SafeReleaseAndDelete(Shader);
 }
 
