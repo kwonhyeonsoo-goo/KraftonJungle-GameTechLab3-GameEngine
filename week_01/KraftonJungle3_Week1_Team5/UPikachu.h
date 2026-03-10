@@ -42,11 +42,11 @@ public:
 	void Physics_Update(float tick) override;
 	void Update(float tick) override;
 
+	EPlayerState GetSpikeStateFromInput(int input);
+
 private:
 	void ApplyBoundaryCollision();
 	void Move(float tick);
-
-	EPlayerState GetSpikeStateFromInput(int input);
 
 private:
 	UCubeMesh* CubeMesh;
