@@ -168,6 +168,9 @@
     <ClInclude Include="Mecro.h">
       <Filter>00. Engine\99. Define</Filter>
     </ClInclude>
+    <ClInclude Include="UMainGameScene.h">
+      <Filter>02. Client\01. Scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -244,6 +247,9 @@
     </ClCompile>
     <ClCompile Include="SceneManager.cpp">
       <Filter>00. Engine\01. System\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="UMainGameScene.cpp">
+      <Filter>02. Client\01. Scene</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

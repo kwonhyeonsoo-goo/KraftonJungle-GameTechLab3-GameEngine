@@ -146,6 +146,7 @@
     <ClInclude Include="UCollider.h" />
     <ClInclude Include="UGameApp.h" />
     <ClInclude Include="UGameObject.h" />
+    <ClInclude Include="UMainGameScene.h" />
     <ClInclude Include="UMesh.h" />
     <ClInclude Include="UPrimitive.h" />
     <ClInclude Include="URenderer.h" />
@@ -172,6 +173,7 @@
     <ClCompile Include="UCollider.cpp" />
     <ClCompile Include="UGameApp.cpp" />
     <ClCompile Include="UGameObject.cpp" />
+    <ClCompile Include="UMainGameScene.cpp" />
     <ClCompile Include="UMesh.cpp" />
     <ClCompile Include="UPrimitive.cpp" />
     <ClCompile Include="URenderer.cpp" />
