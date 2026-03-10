@@ -14,7 +14,10 @@ void UTestScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 
 void UTestScene::Update(float tick)
 {
-
+	for (auto& gameObject : GameObjects)
+	{
+		gameObject->Update(tick);
+	}
 }
 
 void UTestScene::Exit()

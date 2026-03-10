@@ -50,6 +50,7 @@ private:
 
 private:
 	UCubeMesh* CubeMesh;
+	USphereMesh* SphereMesh;
 	UShader* Shader;
 
 	EPlayerState CurrentState = EPlayerState::Normal;

@@ -1,8 +1,8 @@
 #include "UPikachu.h"
 
 #include "UCubeMesh.h"
-#include "UShader.h"
 #include "USphereMesh.h"
+#include "UShader.h"
 #include "Utility.h"
 #include "Enum.h"
 #include "UBall.h"
@@ -13,6 +13,8 @@ void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 
 	CubeMesh = new UCubeMesh();
 	CubeMesh->CreateCube(device);
+	SphereMesh = new USphereMesh();
+	SphereMesh->CreateSphere(device);
 
 	D3D11_INPUT_ELEMENT_DESC layout[] = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
@@ -46,10 +48,10 @@ void UPikachu::Update(float tick)
 
 void UPikachu::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 {
-	CubeMesh->Bind(context);
+	SphereMesh->Bind(context);
 	Shader->Bind(context);
 	Shader->UpdateConstant(context, Position, Scale);
-	CubeMesh->Draw(context);
+	SphereMesh->Draw(context);
 }
 
 void UPikachu::HandleCollision(UBall* ball)
@@ -65,7 +67,7 @@ void UPikachu::HandleCollision(UBall* ball)
 
 void UPikachu::Release()
 {
-	SafeReleaseAndDelete(CubeMesh);
+	SafeReleaseAndDelete(SphereMesh);
 	SafeReleaseAndDelete(Shader);
 }
 
@@ -96,7 +98,7 @@ void UPikachu::ApplyBoundaryCollision()
 		{
 			CurrentState = EPlayerState::Recovering;
 			Velocity.x = 0.0f;
-			RecoveryTimer = 0.5f;
+			RecoveryTimer = 0.25f;
 		}
 	}
 }

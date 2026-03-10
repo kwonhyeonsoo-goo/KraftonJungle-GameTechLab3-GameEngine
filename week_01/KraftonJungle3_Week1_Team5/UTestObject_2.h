@@ -1,6 +1,8 @@
 #pragma once
 #include "UGameObject.h"
 #include "TextureRenderer.h"
+#include "Animator.h"
+
 
 class UTestObject_2 : public UGameObject
 {
@@ -15,6 +17,7 @@ public:
 public:
 
 	TextureRenderer* TextureRender;
+	Animator* AnimatorComponent;
 	//UTextureMesh* TextureMesh;
 	//UShader* Shader;
 };
