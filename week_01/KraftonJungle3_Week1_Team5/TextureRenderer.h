@@ -1,5 +1,6 @@
 #pragma once
-#include "WICTextureLoader.h"
+#include <d3d11.h>
+
 #include "FVector3.h"
 
 class UShader;

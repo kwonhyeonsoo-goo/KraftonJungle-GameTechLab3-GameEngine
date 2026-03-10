@@ -82,6 +82,15 @@
     <Filter Include="00. Engine\01. System\Resource\Texture2D">
       <UniqueIdentifier>{11d4163f-8cf8-4da5-88f8-91d83c6873f0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="00. Engine\01. System\Graphic\Mesh\Cube">
+      <UniqueIdentifier>{597b9509-c6c6-4cc4-b972-2b1fa53e790e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00. Engine\01. System\Graphic\Mesh\Texture">
+      <UniqueIdentifier>{0b005236-c78d-46c9-b10d-622c5d88f6b2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00. Engine\01. System\Graphic\Mesh\Rect">
+      <UniqueIdentifier>{98ae2332-6950-43ca-ae4e-702ae2624a1f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGui\imconfig.h">
@@ -177,13 +186,38 @@
     <ClInclude Include="UResource.h">
       <Filter>00. Engine\01. System\Resource</Filter>
     </ClInclude>
-    <ClInclude Include="USceneManager.h" />
-    <ClInclude Include="Cube.h" />
-    <ClInclude Include="UEngine.h" />
-    <ClInclude Include="UResourceManager.h" />
-    <ClInclude Include="UTexture2D.h" />
     <ClInclude Include="Macro.h">
       <Filter>00. Engine\99. Define</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureRenderer.h">
+      <Filter>00. Engine\01. System\Graphic</Filter>
+    </ClInclude>
+    <ClInclude Include="UEngine.h">
+      <Filter>00. Engine\01. System</Filter>
+    </ClInclude>
+    <ClInclude Include="URectCollider.h">
+      <Filter>00. Engine\01. System\Physics\Collider</Filter>
+    </ClInclude>
+    <ClInclude Include="UResourceManager.h">
+      <Filter>00. Engine\01. System\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="USceneManager.h">
+      <Filter>00. Engine\01. System\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="UTexture2D.h">
+      <Filter>00. Engine\01. System\Resource\Texture2D</Filter>
+    </ClInclude>
+    <ClInclude Include="Uscreen.h">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="UTextureMesh.h">
+      <Filter>00. Engine\01. System\Graphic\Mesh\Texture</Filter>
+    </ClInclude>
+    <ClInclude Include="URectMesh.h">
+      <Filter>00. Engine\01. System\Graphic\Mesh\Rect</Filter>
+    </ClInclude>
+    <ClInclude Include="Cube.h">
+      <Filter>00. Engine\01. System\Graphic\Mesh\Cube</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -268,12 +302,39 @@
     <ClCompile Include="UResource.cpp">
       <Filter>00. Engine\01. System\Resource</Filter>
     </ClCompile>
-    <ClCompile Include="USceneManager.cpp" />
-    <ClCompile Include="UEngine.cpp" />
-    <ClCompile Include="UResourceManager.cpp" />
-    <ClCompile Include="UCubeMesh.cpp" />
-    <ClCompile Include="UCubeMesh.h" />
-    <ClCompile Include="UTexture2D.cpp" />
+    <ClCompile Include="TextureRenderer.cpp">
+      <Filter>00. Engine\01. System\Graphic</Filter>
+    </ClCompile>
+    <ClCompile Include="UCubeMesh.h">
+      <Filter>00. Engine\01. System\Graphic\Mesh\Cube</Filter>
+    </ClCompile>
+    <ClCompile Include="UCubeMesh.cpp">
+      <Filter>00. Engine\01. System\Graphic\Mesh\Cube</Filter>
+    </ClCompile>
+    <ClCompile Include="UEngine.cpp">
+      <Filter>00. Engine\01. System</Filter>
+    </ClCompile>
+    <ClCompile Include="URectCollider.cpp">
+      <Filter>00. Engine\01. System\Physics\Collider</Filter>
+    </ClCompile>
+    <ClCompile Include="UResourceManager.cpp">
+      <Filter>00. Engine\01. System\Resource</Filter>
+    </ClCompile>
+    <ClCompile Include="USceneManager.cpp">
+      <Filter>00. Engine\01. System\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="UTexture2D.cpp">
+      <Filter>00. Engine\01. System\Resource\Texture2D</Filter>
+    </ClCompile>
+    <ClCompile Include="Uscreen.cpp">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="UTextureMesh.cpp">
+      <Filter>00. Engine\01. System\Graphic\Mesh\Texture</Filter>
+    </ClCompile>
+    <ClCompile Include="URectMesh.cpp">
+      <Filter>00. Engine\01. System\Graphic\Mesh\Rect</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ShaderW0.hlsl">

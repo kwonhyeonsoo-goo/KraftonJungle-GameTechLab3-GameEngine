@@ -1,7 +1,7 @@
 #pragma once
 #include <DirectXMath.h>
 
-#include "UMesh.h";
+#include "UMesh.h"
 
 class UTextureMesh :public UMesh
 {

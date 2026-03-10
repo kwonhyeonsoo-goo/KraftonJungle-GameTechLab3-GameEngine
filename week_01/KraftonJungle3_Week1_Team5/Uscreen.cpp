@@ -1,5 +1,7 @@
 #include "Uscreen.h"
 
+#include <WICTextureLoader.h>
+
 
 #include "UTextureMesh.h"
 #include "UShader.h"
@@ -55,7 +57,7 @@ void Uscreen::Init(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext)
 
 bool Uscreen::LoadTexture(ID3D11Device* device, ID3D11DeviceContext* context)
 {
-	HRESULT hr = CreateWICTextureFromFile(
+	HRESULT hr = DirectX::CreateWICTextureFromFile(
 		device,
 		context,
 		filename,

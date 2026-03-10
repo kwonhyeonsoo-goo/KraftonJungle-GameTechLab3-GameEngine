@@ -1,6 +1,5 @@
 #pragma once
 #include "UGameObject.h"
-#include "WICTextureLoader.h"
 
 class UShader;
 class UTextureMesh;

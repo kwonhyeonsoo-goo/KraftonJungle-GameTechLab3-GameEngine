@@ -138,12 +138,11 @@
     <ClInclude Include="ImGui\imstb_truetype.h" />
     <ClInclude Include="Macro.h" />
     <ClInclude Include="SceneAutoRegister.h" />
+    <ClInclude Include="TextureRenderer.h" />
     <ClInclude Include="USceneManager.h" />
     <ClInclude Include="SceneRegistry.h" />
     <ClInclude Include="Sphere.h" />
-
     <ClInclude Include="Cube.h" />
-
     <ClInclude Include="UBall.h" />
     <ClInclude Include="UCircle2DMesh.h" />
     <ClInclude Include="UCircleCollider.h" />
@@ -164,12 +163,10 @@
     <ClInclude Include="UShader.h" />
     <ClInclude Include="USphereMesh.h" />
     <ClInclude Include="UTestObject.h" />
-
     <ClInclude Include="UTexture2D.h" />
-
+    <ClInclude Include="UTextureMesh.h" />
     <ClInclude Include="UWeek0Scene.h" />
     <ClInclude Include="UWindow.h" />
-    <ClInclude Include="WICTextureLoader.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp" />
@@ -182,7 +179,6 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="USceneManager.cpp" />
     <ClCompile Include="SceneRegistry.cpp" />
-    <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="TextureRenderer.cpp" />
     <ClCompile Include="UBall.cpp" />
     <ClCompile Include="UCircle2DMesh.cpp" />
@@ -206,12 +202,11 @@
     <ClCompile Include="UCubeMesh.cpp" />
     <ClCompile Include="UCubeMesh.h" />
     <ClCompile Include="UTestObject.cpp" />
-
     <ClCompile Include="UTexture2D.cpp" />
+    <ClCompile Include="UTextureMesh.cpp" />
     <ClCompile Include="Utility.h" />
     <ClCompile Include="UWeek0Scene.cpp" />
     <ClCompile Include="UWindow.cpp" />
-    <ClCompile Include="WICTextureLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ShaderTexture.hlsl">

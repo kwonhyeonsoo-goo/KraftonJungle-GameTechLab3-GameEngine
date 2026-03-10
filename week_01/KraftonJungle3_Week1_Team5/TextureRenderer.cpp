@@ -1,5 +1,7 @@
 #include "TextureRenderer.h"
 
+#include <WICTextureLoader.h>
+
 #include "UTextureMesh.h"
 #include "UShader.h"
 
@@ -35,7 +37,7 @@ void TextureRenderer::Init(ID3D11Device* Device, ID3D11DeviceContext* DeviceCont
 
 bool TextureRenderer::LoadTexture(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const wchar_t* flnm)
 {
-	HRESULT hr = CreateWICTextureFromFile(
+	HRESULT hr = DirectX::CreateWICTextureFromFile(
 		Device,
 		DeviceContext,
 		flnm,
