@@ -76,8 +76,11 @@
     <Filter Include="02. Client\01. Scene">
       <UniqueIdentifier>{e9bdfce3-6250-4318-807d-0e06ea20f7f4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="00. Engine\01. System\Graphic\Texture">
-      <UniqueIdentifier>{be0ed917-dfd4-4eea-b141-37a598c8c666}</UniqueIdentifier>
+    <Filter Include="00. Engine\01. System\Resource">
+      <UniqueIdentifier>{a9395261-7948-4f88-b025-fab8f5c81def}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00. Engine\01. System\Resource\Texture2D">
+      <UniqueIdentifier>{11d4163f-8cf8-4da5-88f8-91d83c6873f0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -165,35 +168,22 @@
     <ClInclude Include="SceneAutoRegister.h">
       <Filter>00. Engine\01. System\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="SceneManager.h">
-      <Filter>00. Engine\01. System\Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="Mecro.h">
-      <Filter>00. Engine\99. Define</Filter>
-    </ClInclude>
     <ClInclude Include="UMainGameScene.h">
       <Filter>02. Client\01. Scene</Filter>
     </ClInclude>
     <ClInclude Include="UTestObject.h">
       <Filter>02. Client\00. GameObject</Filter>
     </ClInclude>
-    <ClInclude Include="Uscreen.h">
-      <Filter>02. Client\00. GameObject</Filter>
+    <ClInclude Include="UResource.h">
+      <Filter>00. Engine\01. System\Resource</Filter>
     </ClInclude>
-    <ClInclude Include="WICTextureLoader.h">
-      <Filter>00. Engine\01. System\Graphic\Texture</Filter>
-    </ClInclude>
-    <ClInclude Include="TextureRenderer.h">
-      <Filter>00. Engine\01. System\Graphic\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="UTextureMesh.h">
-      <Filter>00. Engine\01. System\Graphic\Mesh</Filter>
-    </ClInclude>
-    <ClInclude Include="TextureManager.h">
-      <Filter>00. Engine\01. System\Graphic\Texture</Filter>
-    </ClInclude>
-    <ClInclude Include="UTestObject_2.h">
-      <Filter>02. Client\00. GameObject</Filter>
+    <ClInclude Include="USceneManager.h" />
+    <ClInclude Include="Cube.h" />
+    <ClInclude Include="UEngine.h" />
+    <ClInclude Include="UResourceManager.h" />
+    <ClInclude Include="UTexture2D.h" />
+    <ClInclude Include="Macro.h">
+      <Filter>00. Engine\99. Define</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -269,33 +259,21 @@
     <ClCompile Include="SceneRegistry.cpp">
       <Filter>00. Engine\01. System\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="SceneManager.cpp">
-      <Filter>00. Engine\01. System\Scene</Filter>
-    </ClCompile>
     <ClCompile Include="UMainGameScene.cpp">
       <Filter>02. Client\01. Scene</Filter>
     </ClCompile>
     <ClCompile Include="UTestObject.cpp">
       <Filter>02. Client\00. GameObject</Filter>
     </ClCompile>
-    <ClCompile Include="Uscreen.cpp">
-      <Filter>02. Client\00. GameObject</Filter>
+    <ClCompile Include="UResource.cpp">
+      <Filter>00. Engine\01. System\Resource</Filter>
     </ClCompile>
-    <ClCompile Include="WICTextureLoader.cpp">
-      <Filter>00. Engine\01. System\Graphic\Texture</Filter>
-    </ClCompile>
-    <ClCompile Include="TextureRenderer.cpp">
-      <Filter>00. Engine\01. System\Graphic\Renderer</Filter>
-    </ClCompile>
-    <ClCompile Include="UTextureMesh.cpp">
-      <Filter>00. Engine\01. System\Graphic\Mesh</Filter>
-    </ClCompile>
-    <ClCompile Include="TextureManager.cpp">
-      <Filter>00. Engine\01. System\Graphic\Texture</Filter>
-    </ClCompile>
-    <ClCompile Include="UTestObject_2.cpp">
-      <Filter>02. Client\00. GameObject</Filter>
-    </ClCompile>
+    <ClCompile Include="USceneManager.cpp" />
+    <ClCompile Include="UEngine.cpp" />
+    <ClCompile Include="UResourceManager.cpp" />
+    <ClCompile Include="UCubeMesh.cpp" />
+    <ClCompile Include="UCubeMesh.h" />
+    <ClCompile Include="UTexture2D.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ShaderW0.hlsl">
@@ -304,5 +282,8 @@
     <FxCompile Include="ShaderTexture.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

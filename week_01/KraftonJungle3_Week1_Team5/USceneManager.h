@@ -4,24 +4,23 @@
 #include <string>
 #include <vector>
 
-#include "Mecro.h"
+#include "Macro.h"
 #include "SceneRegistry.h"
 
 class UScene;
 
-class SceneManager
+class USceneManager
 {
-private:
-	SceneManager();
-	~SceneManager();
 public:
-	DECLARE_SINGLETON(SceneManager)
+	USceneManager();
+	~USceneManager();
 
-public:
+    NO_COPY(USceneManager);
+
     bool Initialize(const std::string& startSceneName, ID3D11Device* device, ID3D11DeviceContext* context);
     void Shutdown();
-    void Update(float deltaTime);
-    void Render(ID3D11Device* device, ID3D11DeviceContext* deviceContext);
+    void Update(float deltaTime) const;
+    void Render() const;
     bool ChangeSceneImmediate(const std::string& sceneName);
     bool RequestChangeScene(const std::string& sceneName);
     
@@ -66,6 +65,7 @@ public:
     std::vector<std::string> GetRegisteredSceneNames() const;
 
     bool ProcessPendingSceneChange();
+
 private:
 	bool SetScene(std::unique_ptr<UScene> NewScene, const std::string& SceneName);
 

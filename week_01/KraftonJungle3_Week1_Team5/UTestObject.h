@@ -1,7 +1,8 @@
 #pragma once
 #include "UGameObject.h"
-class UShader;
 class USphereMesh;
+class UShader;
+class UCubeMesh;
 
 class UTestObject : public UGameObject
 {
@@ -13,8 +14,19 @@ public:
 	void Render(ID3D11DeviceContext* context, ID3D11Device* device) override;
 	void Release() override;
 
+	void ApplyBoundaryCollision();
+
+	void Move(float tick);
 private:
 	USphereMesh* SphereMesh;
+	//UCubeMesh* CubeMesh;
 	UShader* Shader;
+	float JumpForce;
+	bool bOnGround;
+
+	const float LeftBorder = -1.0f;
+	const float RightBorder = 1.0f;
+	const float TopBorder = 1.0f;
+	const float BottomBorder = -1.0f;
 };
 

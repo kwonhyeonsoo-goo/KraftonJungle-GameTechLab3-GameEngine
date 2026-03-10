@@ -14,23 +14,41 @@ URenderer::URenderer(HWND hWnd)
     Create(hWnd);
 }
 
+URenderer::URenderer() : Device(nullptr), DeviceContext(nullptr), SwapChain(nullptr), FrameBuffer(nullptr),
+                         FrameBufferRTV(nullptr),
+                         RasterizerState(nullptr)
+{
+
+}
+
 URenderer::~URenderer()
 {
     Release();
 }
 
-void URenderer::Create(HWND hWnd)
+bool URenderer::Create(HWND hWnd)
 {
     // Direct3D 장치 및 스왑 체인 생성
-    CreateDeviceAndSwapChain(hWnd);
+    if (!CreateDeviceAndSwapChain(hWnd))
+    {
+        return false;
+    }
 
     // 프레임 버퍼 생성
-    CreateFrameBuffer();
+    if (!CreateFrameBuffer())
+    {
+        return false;
+    }
 
     // 래스터라이저 상태 생성
-    CreateRasterizerState();
+	if (!CreateRasterizerState())
+	{
+        return false;
+	}
 
     // 깊이 스텐실 버퍼 및 블렌드 상태는 이 코드에서는 다루지 않음
+
+    return true;
 }
 
 void URenderer::Release()
@@ -84,7 +102,7 @@ void URenderer::Render(ID3D11Buffer* buffer, UINT stride, UINT numVertices)
     DeviceContext->Draw(numVertices, 0);
 }
 
-void URenderer::CreateDeviceAndSwapChain(HWND hWnd)
+bool URenderer::CreateDeviceAndSwapChain(HWND hWnd)
 {
     // 지원하는 Direct3D 기능 레벨을 정의
     D3D_FEATURE_LEVEL featurelevels[] = { D3D_FEATURE_LEVEL_11_0 };
@@ -119,14 +137,14 @@ void URenderer::CreateDeviceAndSwapChain(HWND hWnd)
 
     if (FAILED(hr))
     {
-        return;
+        return false;
     }
 
     hr = SwapChain->GetDesc(&swapchaindesc);
 
     if (FAILED(hr))
     {
-        return;
+        return false;
     }
 
     ViewportInfo = {
@@ -137,6 +155,8 @@ void URenderer::CreateDeviceAndSwapChain(HWND hWnd)
 	    .MinDepth = 0.0f,
 	    .MaxDepth = 1.0f
     };
+
+    return true;
 }
 
 void URenderer::ReleaseDeviceAndSwapChain()
@@ -151,7 +171,7 @@ void URenderer::ReleaseDeviceAndSwapChain()
     SafeRelease(Device);
 }
 
-void URenderer::CreateFrameBuffer()
+bool URenderer::CreateFrameBuffer()
 {
     ReleaseFrameBuffer();
 
@@ -159,7 +179,7 @@ void URenderer::CreateFrameBuffer()
     HRESULT hr = SwapChain->GetBuffer(0, IID_PPV_ARGS(&FrameBuffer));
     if (FAILED(hr))
     {
-        return;
+        return false;
     }
 
     // 렌더 타겟 뷰 생성
@@ -170,8 +190,10 @@ void URenderer::CreateFrameBuffer()
     hr = Device->CreateRenderTargetView(FrameBuffer, &framebufferRTVdesc, &FrameBufferRTV);
     if (FAILED(hr))
     {
-        return;
+        return false;
     }
+
+    return true;
 }
 
 void URenderer::ReleaseFrameBuffer()
@@ -180,7 +202,7 @@ void URenderer::ReleaseFrameBuffer()
     SafeRelease(FrameBuffer);
 }
 
-void URenderer::CreateRasterizerState()
+bool URenderer::CreateRasterizerState()
 {
     D3D11_RASTERIZER_DESC rasterizerdesc = {};
     rasterizerdesc.FillMode = D3D11_FILL_SOLID; // 채우기 모드
@@ -189,8 +211,10 @@ void URenderer::CreateRasterizerState()
     HRESULT hr = Device->CreateRasterizerState(&rasterizerdesc, &RasterizerState);
     if (FAILED(hr))
     {
-        return;
+        return false;
     }
+
+    return true;
 }
 
 void URenderer::ReleaseRasterizerState()

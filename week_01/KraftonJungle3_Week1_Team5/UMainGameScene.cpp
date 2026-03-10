@@ -20,7 +20,10 @@ void UMainGameScene::Update(float tick)
 		gameObject->Physics_Update(tick);
 	}
 
-	
+	for (auto& gameObject : GameObjects)
+	{
+		gameObject->Update(tick);
+	}
 }
 
 void UMainGameScene::Exit()

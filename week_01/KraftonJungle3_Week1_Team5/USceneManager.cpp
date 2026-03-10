@@ -1,22 +1,22 @@
-#include "SceneManager.h"
+#include "USceneManager.h"
 
 #include "UScene.h"
 
-SceneManager::SceneManager() = default;
+USceneManager::USceneManager() = default;
 
-SceneManager::~SceneManager()
+USceneManager::~USceneManager()
 {
 	Shutdown();
 }
 
-bool SceneManager::Initialize(const std::string& startSceneName, ID3D11Device* device, ID3D11DeviceContext* context)
+bool USceneManager::Initialize(const std::string& startSceneName, ID3D11Device* device, ID3D11DeviceContext* context)
 {
     Device = device;
     Context = context;
 	return ChangeSceneImmediate(startSceneName);
 }
 
-void SceneManager::Shutdown()
+void USceneManager::Shutdown()
 {
     bChangeRequested = false;
     PendingSceneName.clear();
@@ -30,7 +30,7 @@ void SceneManager::Shutdown()
     }
 }
 
-void SceneManager::Update(float deltaTime)
+void USceneManager::Update(float deltaTime) const
 {
     if (CurrentScene)
     {
@@ -38,15 +38,18 @@ void SceneManager::Update(float deltaTime)
     }
 }
 
-void SceneManager::Render(ID3D11Device* device, ID3D11DeviceContext* deviceContext)
+void USceneManager::Render() const
 {
     if (CurrentScene)
     {
-        CurrentScene->Render(device, deviceContext);
+        if (Device && Context)
+        {
+            CurrentScene->Render(Device, Context);
+        }
     }
 }
 
-bool SceneManager::ChangeSceneImmediate(const std::string& sceneName)
+bool USceneManager::ChangeSceneImmediate(const std::string& sceneName)
 {
     std::unique_ptr<UScene> NewScene = SceneRegistry::Get().CreateSceneByName(sceneName);
     if (NewScene == nullptr)
@@ -57,7 +60,7 @@ bool SceneManager::ChangeSceneImmediate(const std::string& sceneName)
     return SetScene(std::move(NewScene), sceneName);
 }
 
-bool SceneManager::RequestChangeScene(const std::string& sceneName)
+bool USceneManager::RequestChangeScene(const std::string& sceneName)
 {
     const auto* Entry = SceneRegistry::Get().FindByName(sceneName);
     if (Entry == nullptr)
@@ -70,22 +73,22 @@ bool SceneManager::RequestChangeScene(const std::string& sceneName)
     return true;
 }
 
-UScene* SceneManager::GetCurrentScene() const
+UScene* USceneManager::GetCurrentScene() const
 {
     return CurrentScene.get();
 }
 
-const std::string& SceneManager::GetCurrentSceneName() const
+const std::string& USceneManager::GetCurrentSceneName() const
 {
     return CurrentSceneName;
 }
 
-bool SceneManager::IsCurrentScene(const std::string& sceneName) const
+bool USceneManager::IsCurrentScene(const std::string& sceneName) const
 {
     return CurrentSceneName == sceneName;
 }
 
-std::vector<std::string> SceneManager::GetRegisteredSceneNames() const
+std::vector<std::string> USceneManager::GetRegisteredSceneNames() const
 {
     std::vector<std::string> Result;
 
@@ -100,7 +103,7 @@ std::vector<std::string> SceneManager::GetRegisteredSceneNames() const
     return Result;
 }
 
-bool SceneManager::ProcessPendingSceneChange()
+bool USceneManager::ProcessPendingSceneChange()
 {
     if (!bChangeRequested)
     {
@@ -115,7 +118,7 @@ bool SceneManager::ProcessPendingSceneChange()
     return ChangeSceneImmediate(NextSceneName);
 }
 
-bool SceneManager::SetScene(std::unique_ptr<UScene> NewScene, const std::string& SceneName)
+bool USceneManager::SetScene(std::unique_ptr<UScene> NewScene, const std::string& SceneName)
 {
     if (NewScene == nullptr)
     {
@@ -136,6 +139,4 @@ bool SceneManager::SetScene(std::unique_ptr<UScene> NewScene, const std::string&
 
     return true;
 }
-
-IMPLEMENT_SINGLETON(SceneManager)
 
