@@ -15,7 +15,13 @@ public:
 	ID3D11ShaderResourceView* GetSRV() const { return ShaderResourceView; }
 	EResourceType GetType() override { return EResourceType::Texture2D; }
 
+	uint32_t GetWidth() const { return Width; }
+	uint32_t GetHeight() const { return Height; }
+
 private:
 	ID3D11ShaderResourceView* ShaderResourceView = nullptr;
+	uint32_t Width = 0;
+	uint32_t Height = 0;
+	DXGI_FORMAT Format = DXGI_FORMAT_UNKNOWN;
 };
 

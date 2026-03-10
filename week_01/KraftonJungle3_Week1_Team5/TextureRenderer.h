@@ -19,6 +19,8 @@ public:
 	void Init(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const std::wstring& filePath);
 	bool LoadTexture(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const std::wstring& filePath);
 
+	void Release();
+
 private:
 	UTexture2D* Texture = nullptr;
 	UTextureMesh* Mesh;

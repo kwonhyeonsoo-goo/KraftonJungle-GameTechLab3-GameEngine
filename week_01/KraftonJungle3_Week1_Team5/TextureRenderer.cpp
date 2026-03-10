@@ -13,8 +13,7 @@ TextureRenderer::TextureRenderer() : Mesh(nullptr), Shader(nullptr)
 
 TextureRenderer::~TextureRenderer()
 {
-	SafeReleaseAndDelete(Mesh);
-	SafeReleaseAndDelete(Shader);
+	Release();
 }
 
 void TextureRenderer::Create(ID3D11Device* device, ID3D11DeviceContext* context)
@@ -53,4 +52,10 @@ bool TextureRenderer::LoadTexture(ID3D11Device* Device, ID3D11DeviceContext* Dev
 	Texture = UEngine::GetInstance().GetResourceManager().LoadTexture(filePath);
 
 	return true;
+}
+
+void TextureRenderer::Release()
+{
+	SafeReleaseAndDelete(Mesh);
+	SafeReleaseAndDelete(Shader);
 }
