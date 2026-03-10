@@ -154,6 +154,8 @@
     <ClInclude Include="UMainGameScene.h" />
     <ClInclude Include="UMesh.h" />
     <ClInclude Include="UPrimitive.h" />
+    <ClInclude Include="URectCollider.h" />
+    <ClInclude Include="URectMesh.h" />
     <ClInclude Include="URenderer.h" />
     <ClInclude Include="UResource.h" />
     <ClInclude Include="UResourceManager.h" />
@@ -192,6 +194,8 @@
     <ClCompile Include="UMainGameScene.cpp" />
     <ClCompile Include="UMesh.cpp" />
     <ClCompile Include="UPrimitive.cpp" />
+    <ClCompile Include="URectCollider.cpp" />
+    <ClCompile Include="URectMesh.cpp" />
     <ClCompile Include="URenderer.cpp" />
     <ClCompile Include="UResource.cpp" />
     <ClCompile Include="UResourceManager.cpp" />

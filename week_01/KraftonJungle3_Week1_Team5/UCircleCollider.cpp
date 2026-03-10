@@ -5,6 +5,8 @@
 #include "UGameObject.h"
 #include "USphereMesh.h"
 #include "Utility.h"
+#include "URectCollider.h"
+#include <algorithm>
 
 UCircleCollider::UCircleCollider() : UCollider(), SphereMesh(nullptr), Shader(nullptr), Radius(1.f)
 {
@@ -64,4 +66,41 @@ void UCircleCollider::Debug_Render(ID3D11DeviceContext* context, ID3D11Device* d
 
 		SphereMesh->Draw(context);
 	}
+}
+
+bool UCircleCollider::CheckCollisionCC(UCircleCollider* other)
+{
+	if (!Owner || !other->Owner) return false;
+
+	FVector3 Position1 = Owner->GetPosition();
+	FVector3 Position2 = other->Owner->GetPosition();
+
+	float r1 = Radius * Owner->GetScale();
+	float r2 = other->Radius * other->Owner->GetScale();
+
+	float DistanceSquare = (Position1 - Position2).LengthSquare();
+	return DistanceSquare <= (r1 + r2) * (r1 + r2);
+}
+
+bool UCircleCollider::CheckCollisionCR(URectCollider* other)
+{
+	if (!Owner || !other->GetOwner())
+	{
+		return false;
+	}
+
+	UGameObject* OtherOwner = other->GetOwner();
+
+	FVector3 OwnerPos = Owner->GetPosition();
+	FVector3 OtherPos = OtherOwner->GetPosition();
+
+	float halfW = (other->GetWidth() / 2.f) * OtherOwner->GetScale();
+	float halfH = (other->GetHeight() / 2.f) * OtherOwner->GetScale();
+
+	float closestX = std::clamp(OwnerPos.x, OtherPos.x - halfW, OtherPos.x + halfW);
+	float closestY = std::clamp(OwnerPos.y, OtherPos.y - halfH, OtherPos.y + halfH);
+
+	float dist = (OwnerPos - FVector3{ closestX, closestY, 0.f }).LengthSquare();
+	float r = Radius * Owner->GetScale();
+	return dist < r * r;
 }

@@ -21,6 +21,8 @@ public:
 	bool IsTrigger() const { return Trigger; }
 	void SetTrigger(bool isTrigger) { Trigger = isTrigger; }
 
+	UGameObject* GetOwner() const { return Owner; }
+
 protected:
 	// Trigger가 True 일 때 충돌 시 물리 연산을 하지 않고 충돌 체크만 한다.
 	bool Trigger;
