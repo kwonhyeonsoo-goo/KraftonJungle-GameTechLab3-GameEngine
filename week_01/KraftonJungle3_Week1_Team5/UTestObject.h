@@ -1,5 +1,6 @@
 #pragma once
 #include "UGameObject.h"
+class USphereMesh;
 class UShader;
 class UCubeMesh;
 
@@ -14,8 +15,11 @@ public:
 	void Release() override;
 
 	void ApplyBoundaryCollision();
+
+	void Move(float tick);
 private:
-	UCubeMesh* CubeMesh;
+	USphereMesh* SphereMesh;
+	//UCubeMesh* CubeMesh;
 	UShader* Shader;
 	float JumpForce;
 	bool bOnGround;
