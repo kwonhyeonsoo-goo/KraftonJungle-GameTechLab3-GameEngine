@@ -136,6 +136,7 @@
     <ClInclude Include="ImGui\imstb_textedit.h" />
     <ClInclude Include="ImGui\imstb_truetype.h" />
     <ClInclude Include="Mecro.h" />
+    <ClInclude Include="Rect.h" />
     <ClInclude Include="SceneAutoRegister.h" />
     <ClInclude Include="SceneManager.h" />
     <ClInclude Include="SceneRegistry.h" />
@@ -149,6 +150,8 @@
     <ClInclude Include="UMainGameScene.h" />
     <ClInclude Include="UMesh.h" />
     <ClInclude Include="UPrimitive.h" />
+    <ClInclude Include="URectCollider.h" />
+    <ClInclude Include="URectMesh.h" />
     <ClInclude Include="URenderer.h" />
     <ClInclude Include="UScene.h" />
     <ClInclude Include="UShader.h" />
@@ -177,6 +180,8 @@
     <ClCompile Include="UMainGameScene.cpp" />
     <ClCompile Include="UMesh.cpp" />
     <ClCompile Include="UPrimitive.cpp" />
+    <ClCompile Include="URectCollider.cpp" />
+    <ClCompile Include="URectMesh.cpp" />
     <ClCompile Include="URenderer.cpp" />
     <ClCompile Include="UScene.cpp" />
     <ClCompile Include="UShader.cpp" />
