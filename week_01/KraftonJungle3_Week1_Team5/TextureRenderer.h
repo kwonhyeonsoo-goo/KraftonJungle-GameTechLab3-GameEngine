@@ -18,6 +18,7 @@ public:
 	void Draw(ID3D11DeviceContext* context, ID3D11Device* device, FVector3 Position, float Scale);
 	void Init(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const std::wstring& filePath);
 	bool LoadTexture(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const std::wstring& filePath);
+	void SetTexture(UTexture2D* newTexture);
 
 private:
 	UTexture2D* Texture = nullptr;

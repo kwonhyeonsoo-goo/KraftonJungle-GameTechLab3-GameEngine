@@ -54,3 +54,7 @@ bool TextureRenderer::LoadTexture(ID3D11Device* Device, ID3D11DeviceContext* Dev
 
 	return true;
 }
+
+void TextureRenderer::SetTexture(UTexture2D* newTexture) {
+	Texture = newTexture; // 찾을 필요 없이 바로 대입! (초고속)
+}
