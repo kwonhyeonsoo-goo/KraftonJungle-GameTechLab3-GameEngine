@@ -59,7 +59,9 @@ void UGameApp::Initialize()
 {
 	// TODO : DX 초기화 같은 동작 수행
 	Engine = &UEngine::GetInstance();
-	Engine->Initialize(Handle(), "UWeek0Scene");
+	//Engine->Initialize(Handle(), "UWeek0Scene");
+	//TODO eric1306 - 교체해야함.
+	Engine->Initialize(Handle(), "UMainGameScene");
 
 	auto& renderer = Engine->GetRenderer();
 
