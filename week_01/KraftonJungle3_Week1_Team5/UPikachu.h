@@ -3,6 +3,7 @@
 class USphereMesh;
 class UShader;
 class UCubeMesh;
+class UBall;
 
 enum EInputFlag
 {
@@ -35,6 +36,8 @@ public:
 	void Create(ID3D11Device* device, ID3D11DeviceContext* context);
 	void Release() override;
 	void Render(ID3D11DeviceContext* context, ID3D11Device* device) override;
+
+	void HandleCollision(UBall* ball);
 
 	void Physics_Update(float tick) override;
 	void Update(float tick) override;

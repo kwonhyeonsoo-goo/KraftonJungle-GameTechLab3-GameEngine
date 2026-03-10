@@ -4,9 +4,13 @@
 #include "UShader.h"
 #include "USphereMesh.h"
 #include "Utility.h"
+#include "Enum.h"
+#include "UBall.h"
 
 void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 {
+	SetObjectType(ObjectType::Pikachu);
+
 	CubeMesh = new UCubeMesh();
 	CubeMesh->CreateCube(device);
 
@@ -46,6 +50,17 @@ void UPikachu::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 	Shader->Bind(context);
 	Shader->UpdateConstant(context, Position, Scale);
 	CubeMesh->Draw(context);
+}
+
+void UPikachu::HandleCollision(UBall* ball)
+{
+	FVector3 BallPos = ball->GetPosition();
+
+	FVector3 BTOP = (BallPos - Position).Normalize();
+
+	float dot = FVector3::DotProduct(BTOP, ball->GetVelocity());
+	FVector3 nxtVelocity = ball->GetVelocity() - 2 * dot * BTOP;
+	ball->SetVelocity(nxtVelocity);
 }
 
 void UPikachu::Release()
