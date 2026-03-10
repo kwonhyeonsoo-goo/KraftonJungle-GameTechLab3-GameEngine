@@ -2,6 +2,7 @@
 
 #include "USphereMesh.h"
 #include "UShader.h"
+#include "Utility.h"
 
 void UTestObject::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 {
@@ -25,6 +26,7 @@ void UTestObject::Physics_Update(float tick)
 {
 	ApplyGravity(tick);
 	ApplyVelocity(tick);
+	ApplyBoundaryCollision();
 }
 
 void UTestObject::Update(float tick)
@@ -43,4 +45,30 @@ void UTestObject::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 
 void UTestObject::Release()
 {
+	SafeReleaseAndDelete(SphereMesh);
+	SafeReleaseAndDelete(Shader);
+}
+
+void UTestObject::ApplyBoundaryCollision()
+{
+	if (Position.x > 1.f - Scale)
+	{
+		Velocity.x *= -1;
+		Position.x = 1.f - Scale;
+	}
+	if (Position.x < -1.f + Scale)
+	{
+		Velocity.x *= -1;
+		Position.x = -1.f + Scale;
+	}
+	if (Position.y > 1.f - Scale)
+	{
+		Velocity.y *= -1;
+		Position.y = 1.f - Scale;
+	}
+	if (Position.y < -1.f + Scale)
+	{
+		Velocity.y *= -1;
+		Position.y = -1.f + Scale;
+	}
 }

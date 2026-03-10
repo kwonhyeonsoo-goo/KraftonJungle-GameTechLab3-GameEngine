@@ -150,6 +150,7 @@
     <ClInclude Include="UMesh.h" />
     <ClInclude Include="UPrimitive.h" />
     <ClInclude Include="URenderer.h" />
+    <ClInclude Include="UResource.h" />
     <ClInclude Include="UScene.h" />
     <ClInclude Include="UShader.h" />
     <ClInclude Include="USphereMesh.h" />
@@ -178,6 +179,7 @@
     <ClCompile Include="UMesh.cpp" />
     <ClCompile Include="UPrimitive.cpp" />
     <ClCompile Include="URenderer.cpp" />
+    <ClCompile Include="UResource.cpp" />
     <ClCompile Include="UScene.cpp" />
     <ClCompile Include="UShader.cpp" />
     <ClCompile Include="USphereMesh.cpp" />
