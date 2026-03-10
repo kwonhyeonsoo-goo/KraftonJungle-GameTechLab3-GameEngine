@@ -25,9 +25,6 @@
     <Filter Include="00. Engine\01. System\GameObject">
       <UniqueIdentifier>{6e638b56-6534-4fa9-a73e-4106e5b3517f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="00. Engine\01. System\Transform">
-      <UniqueIdentifier>{0ea5eacc-420b-4c12-a2b3-c77a28be0d04}</UniqueIdentifier>
-    </Filter>
     <Filter Include="00. Engine\01. System\Physics">
       <UniqueIdentifier>{08d09b20-85b0-4823-aef1-7aa82fae0d90}</UniqueIdentifier>
     </Filter>
@@ -159,6 +156,18 @@
     <ClInclude Include="UWeek0Scene.h">
       <Filter>02. Client\01. Scene</Filter>
     </ClInclude>
+    <ClInclude Include="SceneRegistry.h">
+      <Filter>00. Engine\01. System\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneAutoRegister.h">
+      <Filter>00. Engine\01. System\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneManager.h">
+      <Filter>00. Engine\01. System\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Mecro.h">
+      <Filter>00. Engine\99. Define</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -229,6 +238,12 @@
     </ClCompile>
     <ClCompile Include="UWeek0Scene.cpp">
       <Filter>02. Client\01. Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SceneRegistry.cpp">
+      <Filter>00. Engine\01. System\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SceneManager.cpp">
+      <Filter>00. Engine\01. System\Scene</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

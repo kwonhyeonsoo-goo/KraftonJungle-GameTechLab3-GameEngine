@@ -1,7 +1,10 @@
 #include "UWeek0Scene.h"
 
+#include "SceneAutoRegister.h"
 #include "UBall.h"
 #include "UGameObject.h"
+
+REGISTER_SCENE(UWeek0Scene)
 
 void UWeek0Scene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
@@ -33,5 +36,18 @@ void UWeek0Scene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 void UWeek0Scene::Update(float tick)
 {
 	// TODO : 여기에 오브젝트들로 뭘 할지 하드 코딩으로 추가.
-	
+	for (auto& gameObject : GameObjects)
+	{
+		gameObject->Physics_Update(tick);
+	}
+
+	for (auto& gameObject : GameObjects)
+	{
+		gameObject->Update(tick);
+	}
+}
+
+void UWeek0Scene::Exit()
+{
+
 }

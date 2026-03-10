@@ -3,6 +3,7 @@
 #include <chrono>
 #include <utility>
 
+#include "SceneManager.h"
 #include "UBall.h"
 #include "URenderer.h"
 #include "Utility.h"
@@ -69,41 +70,30 @@ void UGameApp::Initialize()
 	ImGui_ImplWin32_Init((void*)Handle());
 	ImGui_ImplDX11_Init(Renderer->GetDevice(), Renderer->GetDeviceContext());
 
-	CurrentScene = new UWeek0Scene();
-	CurrentScene->Initialize(Renderer->GetDevice(), Renderer->GetDeviceContext());
+	SceneManager::GetInstance().Initialize("UWeek0Scene", Renderer->GetDevice(), Renderer->GetDeviceContext());
 }
 
-void UGameApp::Tick(float dt)
+void UGameApp::Tick(const float dt)
 {
 	// TODO : Update / Render 추가
-	CurrentScene->Update(dt);
+	SceneManager::GetInstance().Update(dt);
 
 	Renderer->Prepare();
-	CurrentScene->Render(Renderer->GetDevice(), Renderer->GetDeviceContext());
+	
+	SceneManager::GetInstance().Render(Renderer->GetDevice(), Renderer->GetDeviceContext());
 
-	ImGui_ImplDX11_NewFrame();
-	ImGui_ImplWin32_NewFrame();
-	ImGui::NewFrame();
-
-	// 이후 ImGui UI 컨트롤 추가는 ImGui::NewFrame()과 ImGui::Render()
-	// 사이인 이곳에 위치
-	ImGui::Begin("Jungle Property Window");
-	ImGui::Text("Hello Jungle World!");
-	ImGui::Text("Delta Time: %.6f", dt);   // 초 단위
-	ImGui::Text("Frame Time: %.3f ms", dt * 1000.0f); // 밀리초
-	ImGui::Text("FPS: %.1f", 1.0f / dt);   // FPS
-	ImGui::End();
-
-	ImGui::Render();
-
-	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-
+	EditorUpdate(dt);
+	
 	Renderer->SwapBuffer();
+
+	SceneManager::GetInstance().ProcessPendingSceneChange();
 }
 
 void UGameApp::Shutdown()
 {
 	// TODO : 리소스 해제
+	SceneManager::GetInstance().Shutdown();
+
 	SafeReleaseAndDelete(CurrentScene);
 
 	ImGui_ImplDX11_Shutdown();
@@ -126,4 +116,86 @@ LRESULT UGameApp::OnMessage(UINT msg, WPARAM wp, LPARAM lp)
 void UGameApp::CreateRenderer()
 {
 	Renderer = new URenderer(Handle());
+}
+
+void UGameApp::EditorUpdate(float dt)
+{
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+
+	// 이후 ImGui UI 컨트롤 추가는 ImGui::NewFrame()과 ImGui::Render()
+	// 사이인 이곳에 위치
+	ImGui::Begin("Jungle Property Window");
+	ImGui::Text("Hello Jungle World!");
+	ImGui::Text("Delta Time: %.6f", dt);   // 초 단위
+	ImGui::Text("Frame Time: %.3f ms", dt * 1000.0f); // 밀리초
+	ImGui::Text("FPS: %.1f", 1.0f / dt);   // FPS
+	ImGui::End();
+
+	DrawSceneManagerPanel();
+	
+
+	ImGui::Render();
+
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+}
+
+void UGameApp::DrawSceneManagerPanel()
+{
+	if (!ImGui::Begin("Scene Manager"))
+	{
+		ImGui::End();
+		return;
+	}
+
+	SceneManager* SceneManager = &SceneManager::GetInstance();
+
+	const char* CurrentSceneLabel =
+		SceneManager->HasCurrentScene() ? SceneManager->GetCurrentSceneName().c_str() : "<None>";
+
+	ImGui::Text("Current Scene: %s", CurrentSceneLabel);
+
+	ImGui::Separator();
+
+	const auto& Entries = SceneRegistry::Get().GetEntries();
+	const char* PreviewLabel =
+		SceneManager->HasCurrentScene() ? SceneManager->GetCurrentSceneName().c_str() : "<Select Scene>";
+
+	if (ImGui::BeginCombo("Scene", PreviewLabel))
+	{
+		for (const auto& Entry : Entries)
+		{
+			const bool bSelected = SceneManager->IsCurrentScene(Entry.Name);
+
+			if (ImGui::Selectable(Entry.Name.c_str(), bSelected))
+			{
+				if (!bSelected)
+				{
+					SceneManager->RequestChangeScene(Entry.Name);
+				}
+			}
+
+			if (bSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+
+		ImGui::EndCombo();
+	}
+
+	ImGui::Separator();
+
+	if (ImGui::Button("Reload Current Scene"))
+	{
+		if (SceneManager->HasCurrentScene())
+		{
+			SceneManager->RequestChangeScene(SceneManager->GetCurrentSceneName());
+		}
+	}
+
+	ImGui::Text("Registered Scene Count: %d", static_cast<int>(Entries.size()));
+
+	ImGui::End();
 }

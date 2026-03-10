@@ -27,6 +27,9 @@ protected:
 
 private:
 	void CreateRenderer();
+	void EditorUpdate(float dt);
+
+	void DrawSceneManagerPanel();
 
 private:
 	URenderer* Renderer;

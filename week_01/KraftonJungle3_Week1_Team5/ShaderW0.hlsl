@@ -16,6 +16,9 @@ struct PS_INPUT
     float4 color : COLOR; // Color to pass to the pixel shader
 };
 
+// SamplerState << 이미지를 어느 방식으로 샘플링 할지 정해주는 변수
+// SRV -> 즉 우리가 그려줄 이미지
+
 PS_INPUT mainVS(VS_INPUT input)
 {
     PS_INPUT output;

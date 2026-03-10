@@ -135,6 +135,10 @@
     <ClInclude Include="ImGui\imstb_rectpack.h" />
     <ClInclude Include="ImGui\imstb_textedit.h" />
     <ClInclude Include="ImGui\imstb_truetype.h" />
+    <ClInclude Include="Mecro.h" />
+    <ClInclude Include="SceneAutoRegister.h" />
+    <ClInclude Include="SceneManager.h" />
+    <ClInclude Include="SceneRegistry.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="UBall.h" />
     <ClInclude Include="UCircle2DMesh.h" />
@@ -160,6 +164,8 @@
     <ClCompile Include="ImGui\imgui_tables.cpp" />
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="SceneManager.cpp" />
+    <ClCompile Include="SceneRegistry.cpp" />
     <ClCompile Include="UBall.cpp" />
     <ClCompile Include="UCircle2DMesh.cpp" />
     <ClCompile Include="UCircleCollider.cpp" />
