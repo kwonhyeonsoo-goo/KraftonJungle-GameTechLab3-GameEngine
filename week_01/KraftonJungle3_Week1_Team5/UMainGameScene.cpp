@@ -7,7 +7,7 @@ REGISTER_SCENE(UMainGameScene)
 
 void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
-	// ÀÌ ¾À¿¡¼­ »ç¿ëÇÒ ¿ÀºêÁ§Æ®µéÀÌ³ª ±âÅ¸ ÃÊ±âÈ­ ÀÛ¾÷µéÀ» ÇÑ´Ù°í »ý°¢ÇÏ½Ã¸é µÈ´Ù.
+	// ì´ ì”¬ì—ì„œ ì‚¬ìš©í•  ì˜¤ë¸Œì íŠ¸ë“¤ì´ë‚˜ ê¸°íƒ€ ì´ˆê¸°í™” ìž‘ì—…ë“¤ì„ í•œë‹¤ê³  ìƒê°í•˜ì‹œë©´ ëœë‹¤.
 	UTestObject* object = new UTestObject();
 	object->Create(device, context);
 	GameObjects.push_back(object);

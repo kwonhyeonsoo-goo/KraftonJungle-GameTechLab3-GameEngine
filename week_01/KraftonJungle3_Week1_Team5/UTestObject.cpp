@@ -29,7 +29,7 @@ void UTestObject::Physics_Update(float tick)
 
 void UTestObject::Update(float tick)
 {
-	// Ε° ΐΞΗ²Ώ΅ µϋΈ¥ Position Ί―Θ­
+	// ν‚¤ μΈν’‹μ— λ”°λ¥Έ Position λ³€ν™”
 
 }
 

@@ -9,9 +9,9 @@ public:
 	UGameObject();
 	~UGameObject() override = default;
 
-	// Physics Update ³»ºÎ ±¸ÇöÀº Áß·Â ¹İ¿µ -> ¼Óµµ ¹İ¿µ -> Ãæµ¹ ¹İ¿µ ¼ø¼­·Î ÇÏ¸é ÁÁÀ½.
+	// Physics Update ë‚´ë¶€ êµ¬í˜„ì€ ì¤‘ë ¥ ë°˜ì˜ -> ì†ë„ ë°˜ì˜ -> ì¶©ëŒ ë°˜ì˜ ìˆœì„œë¡œ í•˜ë©´ ì¢‹ìŒ.
 	virtual void Physics_Update(float tick) = 0;
-	virtual void Update(float tick) = 0; // tick = delta time ÀÌ¶ó°í º¸¸é µÊ.
+	virtual void Update(float tick) = 0; // tick = delta time ì´ë¼ê³  ë³´ë©´ ë¨.
 	virtual void Render(ID3D11DeviceContext* context, ID3D11Device* device) = 0;
 
 	void SetPosition(const FVector3& position);
@@ -26,8 +26,8 @@ public:
 	virtual void Release() = 0;
 
 protected:
-	// ÀÌ ¾Æ·¡¿¡ ÀÖ´Â ÇÔ¼öµéÀº ³ªÁß¿¡ ¹°¸®¿ë Å¬·¡½º·Î µû·Î »©¾ßÇÔ.
-	// GameObject¶ó°í ÇØ¼­ ´Ù ¹°¸® Ã³¸®¸¦ ÇÏ´Â °ÍÀÌ ¾Æ´Ï±â ¶§¹®.
+	// ì´ ì•„ë˜ì— ìˆëŠ” í•¨ìˆ˜ë“¤ì€ ë‚˜ì¤‘ì— ë¬¼ë¦¬ìš© í´ë˜ìŠ¤ë¡œ ë”°ë¡œ ë¹¼ì•¼í•¨.
+	// GameObjectë¼ê³  í•´ì„œ ë‹¤ ë¬¼ë¦¬ ì²˜ë¦¬ë¥¼ í•˜ëŠ” ê²ƒì´ ì•„ë‹ˆê¸° ë•Œë¬¸.
 	void ApplyGravity(float tick);
 	void ApplyVelocity(float tick);
 

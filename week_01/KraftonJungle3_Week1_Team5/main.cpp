@@ -1,11 +1,11 @@
 #include <windows.h>
 
-// D3D »ç¿ë¿¡ ÇÊ¿äÇÑ ¶óÀÌºê·¯¸®µéÀ» ¸µÅ©ÇÕ´Ï´Ù.
+// D3D ì‚¬ìš©ì— í•„ìš”í•œ ë¼ì´ë¸ŒëŸ¬ë¦¬ë“¤ì„ ë§í¬í•©ë‹ˆë‹¤.
 #pragma comment(lib, "user32")
 #pragma comment(lib, "d3d11")
 #pragma comment(lib, "d3dcompiler")
 
-// D3D »ç¿ë¿¡ ÇÊ¿äÇÑ Çì´õÆÄÀÏµéÀ» Æ÷ÇÔÇÕ´Ï´Ù.
+// D3D ì‚¬ìš©ì— í•„ìš”í•œ í—¤ë”íŒŒì¼ë“¤ì„ í¬í•¨í•©ë‹ˆë‹¤.
 #include <d3d11.h>
 #include <d3dcompiler.h>
 

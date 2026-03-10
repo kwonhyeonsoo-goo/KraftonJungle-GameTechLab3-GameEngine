@@ -24,7 +24,7 @@ bool UShader::Create(ID3D11Device* device, const std::wstring& shaderFilePath,
 	ID3DBlob* vsBlob = nullptr;
 	ID3DBlob* psBlob = nullptr;
 
-	// 1. Vertex Shader ÄÄÆÄÀÏ
+	// 1. Vertex Shader ì»´íŒŒì¼
 	if (!CompileShaderFromFile(shaderFilePath, vsEntry, "vs_5_0", &vsBlob))
 	{
 		SafeRelease(psBlob);
@@ -32,7 +32,7 @@ bool UShader::Create(ID3D11Device* device, const std::wstring& shaderFilePath,
 		return false;
 	}
 
-	// 2. Pixel Shader ÄÄÆÄÀÏ
+	// 2. Pixel Shader ì»´íŒŒì¼
 	if (!CompileShaderFromFile(shaderFilePath, psEntry, "ps_5_0", &psBlob))
 	{
 		SafeRelease(psBlob);
@@ -40,7 +40,7 @@ bool UShader::Create(ID3D11Device* device, const std::wstring& shaderFilePath,
 		return false;
 	}
 
-	// 3. Vertex Shader »ı¼º
+	// 3. Vertex Shader ìƒì„±
 	HRESULT hr = device->CreateVertexShader(
 		vsBlob->GetBufferPointer(),
 		vsBlob->GetBufferSize(),
@@ -55,7 +55,7 @@ bool UShader::Create(ID3D11Device* device, const std::wstring& shaderFilePath,
 		return false;
 	}
 
-	// 4. Pixel Shader »ı¼º
+	// 4. Pixel Shader ìƒì„±
 	hr = device->CreatePixelShader(
 		psBlob->GetBufferPointer(),
 		psBlob->GetBufferSize(),
@@ -70,7 +70,7 @@ bool UShader::Create(ID3D11Device* device, const std::wstring& shaderFilePath,
 		return false;
 	}
 
-	// 5. Input Layout »ı¼º
+	// 5. Input Layout ìƒì„±
 	hr = device->CreateInputLayout(
 		inputElements,
 		inputElementCount,
@@ -86,7 +86,7 @@ bool UShader::Create(ID3D11Device* device, const std::wstring& shaderFilePath,
 		return false;
 	}
 
-	// 6. Constant Buffer »ı¼º
+	// 6. Constant Buffer ìƒì„±
 	if (!CreateConstantBuffers(device))
 	{
 		SafeRelease(psBlob);

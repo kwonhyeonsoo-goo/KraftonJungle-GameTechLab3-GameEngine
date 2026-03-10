@@ -8,18 +8,18 @@ REGISTER_SCENE(UWeek0Scene)
 
 void UWeek0Scene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
-	// TODO : ¿©±â¿¡ Ãß°¡ÇÒ ¿ÀºêÁ§Æ®µé ÇÏµå ÄÚµùÀ¸·Î Ãß°¡.
+	// TODO : ì—¬ê¸°ì— ì¶”ê°€í•  ì˜¤ë¸Œì íŠ¸ë“¤ í•˜ë“œ ì½”ë”©ìœ¼ë¡œ ì¶”ê°€.
 	for (int i = 0; i < 10; ++i)
 	{
 		UGameObject* instance = UBall::Create(device, context);
 
-		FVector3 rendPosition{ // À§Ä¡ÀÇ ¹üÀ§´Â -0.5 ~ 0.5·Î ¼³Á¤
+		FVector3 rendPosition{ // ìœ„ì¹˜ì˜ ë²”ìœ„ëŠ” -0.5 ~ 0.5ë¡œ ì„¤ì •
 			(static_cast<float>(rand()) / (static_cast<float>(RAND_MAX))) * 1.0f - 0.5f,
 			(static_cast<float>(rand()) / (static_cast<float>(RAND_MAX))) * 1.0f - 0.5f,
 			0.f
 		};
 
-		FVector3 rendVelocity{ // ¼Óµµ´Â -0.5 ~ 0.5·Î ¼³Á¤
+		FVector3 rendVelocity{ // ì†ë„ëŠ” -0.5 ~ 0.5ë¡œ ì„¤ì •
 			(static_cast<float>(rand()) / (static_cast<float>(RAND_MAX))) * 1.f - 0.5f, (static_cast<float>(rand()) / (static_cast<float>(RAND_MAX))) * 1.f - 0.5f, 0.f
 		};
 
@@ -35,7 +35,7 @@ void UWeek0Scene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 
 void UWeek0Scene::Update(float tick)
 {
-	// TODO : ¿©±â¿¡ ¿ÀºêÁ§Æ®µé·Î ¹» ÇÒÁö ÇÏµå ÄÚµùÀ¸·Î Ãß°¡.
+	// TODO : ì—¬ê¸°ì— ì˜¤ë¸Œì íŠ¸ë“¤ë¡œ ë­˜ í• ì§€ í•˜ë“œ ì½”ë”©ìœ¼ë¡œ ì¶”ê°€.
 	for (auto& gameObject : GameObjects)
 	{
 		gameObject->Physics_Update(tick);

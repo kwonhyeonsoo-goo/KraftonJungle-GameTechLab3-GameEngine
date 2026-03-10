@@ -42,16 +42,16 @@ bool UCircle2DMesh::CreateCircle(ID3D11Device* device, float radius, UINT segmen
     //std::vector<FVertexColor> vertices;
     //std::vector<UINT> indices;
 
-    //// Áß½É Á¤Á¡ 1°³ + µÑ·¹ Á¤Á¡ (segmentCount + 1)°³
+    //// ì¤‘ì‹¬ ì •ì  1ê°œ + ë‘˜ë ˆ ì •ì  (segmentCount + 1)ê°œ
     //vertices.reserve(segmentCount + 2);
 
-    //// Áß½É Á¤Á¡
+    //// ì¤‘ì‹¬ ì •ì 
     //vertices.push_back({
     //    0.f, 0.f, 0.f,
     //    color.x, color.y, color.z, color.w
     //    });
 
-    //// µÑ·¹ Á¤Á¡
+    //// ë‘˜ë ˆ ì •ì 
     //for (UINT i = 0; i <= segmentCount; ++i)
     //{
     //    const float t = static_cast<float>(i) / static_cast<float>(segmentCount);
@@ -66,7 +66,7 @@ bool UCircle2DMesh::CreateCircle(ID3D11Device* device, float radius, UINT segmen
     //        });
     //}
 
-    //// »ï°¢Çü ÀÎµ¦½º
+    //// ì‚¼ê°í˜• ì¸ë±ìŠ¤
     //// center = 0
     //// ring   = 1 ~ segmentCount+1
     //indices.reserve(segmentCount * 3);

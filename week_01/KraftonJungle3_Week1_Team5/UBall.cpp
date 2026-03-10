@@ -22,7 +22,7 @@ UBall* UBall::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 
 void UBall::Physics_Update(const float tick)
 {
-	// UGameObject¿¡¼­ ¼³¸íÇÑ °Í°ú °°ÀÌ ¼Óµµ º¯È­ ¹İ¿µ(Áß·Â Àû¿ë) -> ¼Óµµ ¹İ¿µ -> Ãæµ¹ ¹İ¿µ
+	// UGameObjectì—ì„œ ì„¤ëª…í•œ ê²ƒê³¼ ê°™ì´ ì†ë„ ë³€í™” ë°˜ì˜(ì¤‘ë ¥ ì ìš©) -> ì†ë„ ë°˜ì˜ -> ì¶©ëŒ ë°˜ì˜
 	ApplyGravity(tick);
 	ApplyVelocity(tick);
 	ApplyBoundaryCollision();

@@ -36,18 +36,18 @@ private:
     void CreateShader();
 
 private:
-    // Direct3D 11 ÀåÄ¡(Device)¿Í ÀåÄ¡ ÄÁÅØ½ºÆ®(Device Context) ¹× ½º¿Ò Ã¼ÀÎ(Swap Chain)À» °ü¸®ÇÏ±â À§ÇÑ Æ÷ÀÎÅÍµé
-    ID3D11Device* Device; // GPU¿Í Åë½ÅÇÏ±â À§ÇÑ Direct3D ÀåÄ¡
-    ID3D11DeviceContext* DeviceContext; // GPU ¸í·É ½ÇÇàÀ» ´ã´çÇÏ´Â ÄÁÅØ½ºÆ®
-    IDXGISwapChain* SwapChain; // ÇÁ·¹ÀÓ ¹öÆÛ¸¦ ±³Ã¼ÇÏ´Â µ¥ »ç¿ëµÇ´Â ½º¿Ò Ã¼ÀÎ
+    // Direct3D 11 ìž¥ì¹˜(Device)ì™€ ìž¥ì¹˜ ì»¨í…ìŠ¤íŠ¸(Device Context) ë° ìŠ¤ì™‘ ì²´ì¸(Swap Chain)ì„ ê´€ë¦¬í•˜ê¸° ìœ„í•œ í¬ì¸í„°ë“¤
+    ID3D11Device* Device; // GPUì™€ í†µì‹ í•˜ê¸° ìœ„í•œ Direct3D ìž¥ì¹˜
+    ID3D11DeviceContext* DeviceContext; // GPU ëª…ë ¹ ì‹¤í–‰ì„ ë‹´ë‹¹í•˜ëŠ” ì»¨í…ìŠ¤íŠ¸
+    IDXGISwapChain* SwapChain; // í”„ë ˆìž„ ë²„í¼ë¥¼ êµì²´í•˜ëŠ” ë° ì‚¬ìš©ë˜ëŠ” ìŠ¤ì™‘ ì²´ì¸
 
-    // ·»´õ¸µ¿¡ ÇÊ¿äÇÑ ¸®¼Ò½º ¹× »óÅÂ¸¦ °ü¸®ÇÏ±â À§ÇÑ º¯¼öµé
-    ID3D11Texture2D* FrameBuffer; // È­¸é Ãâ·Â¿ë ÅØ½ºÃ³
-    ID3D11RenderTargetView* FrameBufferRTV; // ÅØ½ºÃ³¸¦ ·»´õ Å¸°ÙÀ¸·Î »ç¿ëÇÏ´Â ºä
-    ID3D11RasterizerState* RasterizerState; // ·¡½ºÅÍ¶óÀÌÀú »óÅÂ(ÄÃ¸µ, Ã¤¿ì±â ¸ðµå µî Á¤ÀÇ)
-    ID3D11Buffer* ConstantBuffer; // ½¦ÀÌ´õ¿¡ µ¥ÀÌÅÍ¸¦ Àü´ÞÇÏ±â À§ÇÑ »ó¼ö ¹öÆÛ
+    // ë Œë”ë§ì— í•„ìš”í•œ ë¦¬ì†ŒìŠ¤ ë° ìƒíƒœë¥¼ ê´€ë¦¬í•˜ê¸° ìœ„í•œ ë³€ìˆ˜ë“¤
+    ID3D11Texture2D* FrameBuffer; // í™”ë©´ ì¶œë ¥ìš© í…ìŠ¤ì²˜
+    ID3D11RenderTargetView* FrameBufferRTV; // í…ìŠ¤ì²˜ë¥¼ ë Œë” íƒ€ê²Ÿìœ¼ë¡œ ì‚¬ìš©í•˜ëŠ” ë·°
+    ID3D11RasterizerState* RasterizerState; // ëž˜ìŠ¤í„°ë¼ì´ì € ìƒíƒœ(ì»¬ë§, ì±„ìš°ê¸° ëª¨ë“œ ë“± ì •ì˜)
+    ID3D11Buffer* ConstantBuffer; // ì‰ì´ë”ì— ë°ì´í„°ë¥¼ ì „ë‹¬í•˜ê¸° ìœ„í•œ ìƒìˆ˜ ë²„í¼
 
-    FLOAT ClearColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f }; // È­¸éÀ» ÃÊ±âÈ­(clear)ÇÒ ¶§ »ç¿ëÇÒ »ö»ó (RGBA)
-    D3D11_VIEWPORT ViewportInfo = {}; // ·»´õ¸µ ¿µ¿ªÀ» Á¤ÀÇÇÏ´Â ºäÆ÷Æ® Á¤º¸
+    FLOAT ClearColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f }; // í™”ë©´ì„ ì´ˆê¸°í™”(clear)í•  ë•Œ ì‚¬ìš©í•  ìƒ‰ìƒ (RGBA)
+    D3D11_VIEWPORT ViewportInfo = {}; // ë Œë”ë§ ì˜ì—­ì„ ì •ì˜í•˜ëŠ” ë·°í¬íŠ¸ ì •ë³´
 };
 

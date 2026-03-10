@@ -22,7 +22,7 @@ public:
 	void SetTrigger(bool isTrigger) { Trigger = isTrigger; }
 
 protected:
-	// Trigger°¡ True ÀÏ ¶§ Ãæµ¹ ½Ã ¹°¸® ¿¬»êÀ» ÇÏÁö ¾Ê°í Ãæµ¹ Ã¼Å©¸¸ ÇÑ´Ù.
+	// Triggerê°€ True ì¼ ë•Œ ì¶©ëŒ ì‹œ ë¬¼ë¦¬ ì—°ì‚°ì„ í•˜ì§€ ì•Šê³  ì¶©ëŒ ì²´í¬ë§Œ í•œë‹¤.
 	bool Trigger;
 
 	UGameObject* Owner;

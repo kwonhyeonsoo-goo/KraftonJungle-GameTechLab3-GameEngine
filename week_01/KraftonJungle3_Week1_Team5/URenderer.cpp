@@ -21,16 +21,16 @@ URenderer::~URenderer()
 
 void URenderer::Create(HWND hWnd)
 {
-    // Direct3D ÀåÄ¡ ¹× ½º¿Ò Ã¼ÀÎ »ý¼º
+    // Direct3D ìž¥ì¹˜ ë° ìŠ¤ì™‘ ì²´ì¸ ìƒì„±
     CreateDeviceAndSwapChain(hWnd);
 
-    // ÇÁ·¹ÀÓ ¹öÆÛ »ý¼º
+    // í”„ë ˆìž„ ë²„í¼ ìƒì„±
     CreateFrameBuffer();
 
-    // ·¡½ºÅÍ¶óÀÌÀú »óÅÂ »ý¼º
+    // ëž˜ìŠ¤í„°ë¼ì´ì € ìƒíƒœ ìƒì„±
     CreateRasterizerState();
 
-    // ±íÀÌ ½ºÅÙ½Ç ¹öÆÛ ¹× ºí·»µå »óÅÂ´Â ÀÌ ÄÚµå¿¡¼­´Â ´Ù·çÁö ¾ÊÀ½
+    // ê¹Šì´ ìŠ¤í…ì‹¤ ë²„í¼ ë° ë¸”ë Œë“œ ìƒíƒœëŠ” ì´ ì½”ë“œì—ì„œëŠ” ë‹¤ë£¨ì§€ ì•ŠìŒ
 }
 
 void URenderer::Release()
@@ -72,7 +72,7 @@ void URenderer::SwapBuffer()
     if (SwapChain)
     {
         HRESULT hr = SwapChain->Present(1, 0);
-        // ÇÊ¿äÇÏ¸é hr Ã¼Å©
+        // í•„ìš”í•˜ë©´ hr ì²´í¬
     }
 }
 
@@ -86,22 +86,22 @@ void URenderer::Render(ID3D11Buffer* buffer, UINT stride, UINT numVertices)
 
 void URenderer::CreateDeviceAndSwapChain(HWND hWnd)
 {
-    // Áö¿øÇÏ´Â Direct3D ±â´É ·¹º§À» Á¤ÀÇ
+    // ì§€ì›í•˜ëŠ” Direct3D ê¸°ëŠ¥ ë ˆë²¨ì„ ì •ì˜
     D3D_FEATURE_LEVEL featurelevels[] = { D3D_FEATURE_LEVEL_11_0 };
 
-    // ½º¿Ò Ã¼ÀÎ ¼³Á¤ ±¸Á¶Ã¼ ÃÊ±âÈ­
+    // ìŠ¤ì™‘ ì²´ì¸ ì„¤ì • êµ¬ì¡°ì²´ ì´ˆê¸°í™”
     DXGI_SWAP_CHAIN_DESC swapchaindesc = {};
-    swapchaindesc.BufferDesc.Width = 0; // Ã¢ Å©±â¿¡ ¸Â°Ô ÀÚµ¿À¸·Î ¼³Á¤
-    swapchaindesc.BufferDesc.Height = 0; // Ã¢ Å©±â¿¡ ¸Â°Ô ÀÚµ¿À¸·Î ¼³Á¤
-    swapchaindesc.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // »ö»ó Æ÷¸Ë
-    swapchaindesc.SampleDesc.Count = 1; // ¸ÖÆ¼ »ùÇÃ¸µ ºñÈ°¼ºÈ­
-    swapchaindesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; // ·»´õ Å¸°ÙÀ¸·Î »ç¿ë
-    swapchaindesc.BufferCount = 2; // ´õºí ¹öÆÛ¸µ
-    swapchaindesc.OutputWindow = hWnd; // ·»´õ¸µÇÒ Ã¢ ÇÚµé
-    swapchaindesc.Windowed = TRUE; // Ã¢ ¸ðµå
-    swapchaindesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // ½º¿Ò ¹æ½Ä
+    swapchaindesc.BufferDesc.Width = 0; // ì°½ í¬ê¸°ì— ë§žê²Œ ìžë™ìœ¼ë¡œ ì„¤ì •
+    swapchaindesc.BufferDesc.Height = 0; // ì°½ í¬ê¸°ì— ë§žê²Œ ìžë™ìœ¼ë¡œ ì„¤ì •
+    swapchaindesc.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // ìƒ‰ìƒ í¬ë§·
+    swapchaindesc.SampleDesc.Count = 1; // ë©€í‹° ìƒ˜í”Œë§ ë¹„í™œì„±í™”
+    swapchaindesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; // ë Œë” íƒ€ê²Ÿìœ¼ë¡œ ì‚¬ìš©
+    swapchaindesc.BufferCount = 2; // ë”ë¸” ë²„í¼ë§
+    swapchaindesc.OutputWindow = hWnd; // ë Œë”ë§í•  ì°½ í•¸ë“¤
+    swapchaindesc.Windowed = TRUE; // ì°½ ëª¨ë“œ
+    swapchaindesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // ìŠ¤ì™‘ ë°©ì‹
 
-    // Direct3D ÀåÄ¡¿Í ½º¿Ò Ã¼ÀÎÀ» »ý¼º
+    // Direct3D ìž¥ì¹˜ì™€ ìŠ¤ì™‘ ì²´ì¸ì„ ìƒì„±
     HRESULT hr = D3D11CreateDeviceAndSwapChain(
         nullptr,
         D3D_DRIVER_TYPE_HARDWARE,
@@ -143,7 +143,7 @@ void URenderer::ReleaseDeviceAndSwapChain()
 {
     if (DeviceContext)
     {
-        DeviceContext->Flush(); // ³²¾ÆÀÖ´Â GPU ¸í·É ½ÇÇà
+        DeviceContext->Flush(); // ë‚¨ì•„ìžˆëŠ” GPU ëª…ë ¹ ì‹¤í–‰
     }
 
     SafeRelease(SwapChain);
@@ -155,17 +155,17 @@ void URenderer::CreateFrameBuffer()
 {
     ReleaseFrameBuffer();
 
-    // ½º¿Ò Ã¼ÀÎÀ¸·ÎºÎÅÍ ¹é ¹öÆÛ ÅØ½ºÃ³ °¡Á®¿À±â
+    // ìŠ¤ì™‘ ì²´ì¸ìœ¼ë¡œë¶€í„° ë°± ë²„í¼ í…ìŠ¤ì²˜ ê°€ì ¸ì˜¤ê¸°
     HRESULT hr = SwapChain->GetBuffer(0, IID_PPV_ARGS(&FrameBuffer));
     if (FAILED(hr))
     {
         return;
     }
 
-    // ·»´õ Å¸°Ù ºä »ý¼º
+    // ë Œë” íƒ€ê²Ÿ ë·° ìƒì„±
     D3D11_RENDER_TARGET_VIEW_DESC framebufferRTVdesc = {};
-    framebufferRTVdesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB; // »ö»ó Æ÷¸Ë
-    framebufferRTVdesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D; // 2D ÅØ½ºÃ³
+    framebufferRTVdesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB; // ìƒ‰ìƒ í¬ë§·
+    framebufferRTVdesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D; // 2D í…ìŠ¤ì²˜
 
     hr = Device->CreateRenderTargetView(FrameBuffer, &framebufferRTVdesc, &FrameBufferRTV);
     if (FAILED(hr))
@@ -183,8 +183,8 @@ void URenderer::ReleaseFrameBuffer()
 void URenderer::CreateRasterizerState()
 {
     D3D11_RASTERIZER_DESC rasterizerdesc = {};
-    rasterizerdesc.FillMode = D3D11_FILL_SOLID; // Ã¤¿ì±â ¸ðµå
-    rasterizerdesc.CullMode = D3D11_CULL_BACK; // ¹é ÆäÀÌ½º ÄÃ¸µ
+    rasterizerdesc.FillMode = D3D11_FILL_SOLID; // ì±„ìš°ê¸° ëª¨ë“œ
+    rasterizerdesc.CullMode = D3D11_CULL_BACK; // ë°± íŽ˜ì´ìŠ¤ ì»¬ë§
 
     HRESULT hr = Device->CreateRasterizerState(&rasterizerdesc, &RasterizerState);
     if (FAILED(hr))

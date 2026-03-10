@@ -35,12 +35,12 @@ public:
 
         if (NameToIndex.contains(Name))
         {
-            return false; // ÀÌ¸§ Áßº¹
+            return false; // ì´ë¦„ ì¤‘ë³µ
         }
 
         if (TypeToIndex.contains(Type))
         {
-            return false; // Å¸ÀÔ Áßº¹ µî·Ï
+            return false; // íƒ€ì… ì¤‘ë³µ ë“±ë¡
         }
 
         Entry NewEntry{

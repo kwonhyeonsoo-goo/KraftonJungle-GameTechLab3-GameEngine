@@ -16,8 +16,8 @@ struct PS_INPUT
     float4 color : COLOR; // Color to pass to the pixel shader
 };
 
-// SamplerState << ÀÌ¹ÌÁö¸¦ ¾î´À ¹æ½ÄÀ¸·Î »ùÇÃ¸µ ÇÒÁö Á¤ÇØÁÖ´Â º¯¼ö
-// SRV -> Áï ¿ì¸®°¡ ±×·ÁÁÙ ÀÌ¹ÌÁö
+// SamplerState << ì´ë¯¸ì§€ë¥¼ ì–´ëŠ ë°©ì‹ìœ¼ë¡œ ìƒ˜í”Œë§ í• ì§€ ì •í•´ì£¼ëŠ” ë³€ìˆ˜
+// SRV -> ì¦‰ ìš°ë¦¬ê°€ ê·¸ë ¤ì¤„ ì´ë¯¸ì§€
 
 PS_INPUT mainVS(VS_INPUT input)
 {
@@ -26,12 +26,12 @@ PS_INPUT mainVS(VS_INPUT input)
     // Pass the position directly to the pixel shader (no transformation)
     //output.position = input.position;
     
-    // »ó¼ö ¹öÆÛ¸¦ ÅëÇØ ³Ñ°Ü¹ŞÀº Scale°ªÀ» °öÇØ¼­ Á¤Á¡ À§Ä¡ Á¶Àı
+    // ìƒìˆ˜ ë²„í¼ë¥¼ í†µí•´ ë„˜ê²¨ë°›ì€ Scaleê°’ì„ ê³±í•´ì„œ ì •ì  ìœ„ì¹˜ ì¡°ì ˆ
     input.position.x *= Scale;
     input.position.y *= Scale;
     input.position.z *= Scale;
     
-    //»ó¼ö ¹öÆÛ¸¦ ÅëÇØ ³Ñ°Ü¹ŞÀº OffsetÀ» ´õÇØ¼­ ¹öÅØ½º¸¦ ÀÌµ¿½ÃÄÑ ÇÈ¼¿½¦ÀÌ´õ·Î ¿Å±è
+    //ìƒìˆ˜ ë²„í¼ë¥¼ í†µí•´ ë„˜ê²¨ë°›ì€ Offsetì„ ë”í•´ì„œ ë²„í…ìŠ¤ë¥¼ ì´ë™ì‹œì¼œ í”½ì…€ì‰ì´ë”ë¡œ ì˜®ê¹€
     output.position = input.position + float4(Offset, 0.f);
     
     // Pass the color to the pixel shader
