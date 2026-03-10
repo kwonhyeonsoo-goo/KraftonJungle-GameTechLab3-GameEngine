@@ -171,6 +171,9 @@
     <ClInclude Include="UMainGameScene.h">
       <Filter>02. Client\01. Scene</Filter>
     </ClInclude>
+    <ClInclude Include="UTestObject.h">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -250,6 +253,9 @@
     </ClCompile>
     <ClCompile Include="UMainGameScene.cpp">
       <Filter>02. Client\01. Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="UTestObject.cpp">
+      <Filter>02. Client\00. GameObject</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

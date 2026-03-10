@@ -1,0 +1,18 @@
+#pragma once
+#include "UGameObject.h"
+class UShader;
+class USphereMesh;
+
+class UTestObject : public UGameObject
+{
+public:
+	void Physics_Update(float tick) override;
+	void Update(float tick) override;
+	void Render(ID3D11DeviceContext* context, ID3D11Device* device) override;
+	void Release() override;
+
+private:
+	USphereMesh* SphereMesh;
+	UShader* Shader;
+};
+

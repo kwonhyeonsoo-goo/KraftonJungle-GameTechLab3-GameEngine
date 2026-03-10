@@ -153,6 +153,7 @@
     <ClInclude Include="UScene.h" />
     <ClInclude Include="UShader.h" />
     <ClInclude Include="USphereMesh.h" />
+    <ClInclude Include="UTestObject.h" />
     <ClInclude Include="UWeek0Scene.h" />
     <ClInclude Include="UWindow.h" />
   </ItemGroup>
@@ -180,6 +181,7 @@
     <ClCompile Include="UScene.cpp" />
     <ClCompile Include="UShader.cpp" />
     <ClCompile Include="USphereMesh.cpp" />
+    <ClCompile Include="UTestObject.cpp" />
     <ClCompile Include="Utility.h" />
     <ClCompile Include="UWeek0Scene.cpp" />
     <ClCompile Include="UWindow.cpp" />
