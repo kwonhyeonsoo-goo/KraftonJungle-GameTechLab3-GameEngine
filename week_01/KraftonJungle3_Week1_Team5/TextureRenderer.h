@@ -1,25 +1,27 @@
 #pragma once
 #include <d3d11.h>
+#include <string>
 
 #include "FVector3.h"
 
+class UTexture2D;
 class UShader;
 class UTextureMesh;
-
 
 class TextureRenderer
 {
 public:
-	UTextureMesh* Mesh;
-	UShader* Shader;
+	TextureRenderer();
+	~TextureRenderer();
 
 	void Create(ID3D11Device* device, ID3D11DeviceContext* context); //메시와 세이더 생성
 	void Draw(ID3D11DeviceContext* context, ID3D11Device* device, FVector3 Position, float Scale);
-	void Init(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const wchar_t* flnm);
-	bool LoadTexture(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const wchar_t* flnm);
+	void Init(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const std::wstring& filePath);
+	bool LoadTexture(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const std::wstring& filePath);
 
 private:
-	ID3D11ShaderResourceView* gTexture = nullptr;
-
+	UTexture2D* Texture = nullptr;
+	UTextureMesh* Mesh;
+	UShader* Shader;
 };
 

@@ -1,5 +1,11 @@
 #include "UEngine.h"
 
+IMPLEMENT_SINGLETON(UEngine)
+
+UEngine::UEngine() = default;
+
+UEngine::~UEngine() = default;
+
 bool UEngine::Initialize(HWND hWnd, const std::string& startSceneName)
 {
 	if (!Renderer.Create(hWnd))
