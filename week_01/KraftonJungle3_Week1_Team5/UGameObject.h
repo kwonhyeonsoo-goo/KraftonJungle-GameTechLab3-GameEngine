@@ -16,11 +16,12 @@ public:
 	virtual void Physics_Update(float tick) = 0;
 	virtual void Update(float tick) = 0; // tick = delta time 이라고 보면 됨.
 	virtual void Render(ID3D11DeviceContext* context, ID3D11Device* device) = 0;
+	virtual const char* GetEditorTypeName() const { return "UGameObject"; }
 
 	void SetPosition(const FVector3& position);
 	FVector3 GetPosition() const;
 
-	void SetScale(float scale);
+	virtual void SetScale(float scale);
 	float GetScale() const;
 
 	void SetVelocity(const FVector3& velocity);

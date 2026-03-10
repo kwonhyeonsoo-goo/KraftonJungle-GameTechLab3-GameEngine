@@ -1,8 +1,11 @@
 #include "UGameApp.h"
 
 #include <chrono>
+#include <string>
 #include <utility>
 
+#include "UGameObject.h"
+#include "UScene.h"
 #include "USceneManager.h"
 #include "URenderer.h"
 #include "Utility.h"
@@ -59,7 +62,7 @@ void UGameApp::Initialize()
 {
 	// TODO : DX 초기화 같은 동작 수행
 	Engine = &UEngine::GetInstance();
-	Engine->Initialize(Handle(), "UWeek0Scene");
+	Engine->Initialize(Handle(), "UMainTitleScene");
 
 	auto& renderer = Engine->GetRenderer();
 
@@ -121,6 +124,7 @@ void UGameApp::EditorUpdate(float dt)
 	ImGui::End();
 
 	DrawSceneManagerPanel();
+	DrawSceneObjectsPanel();
 
 	ImGui::Render();
 
@@ -182,6 +186,72 @@ void UGameApp::DrawSceneManagerPanel()
 	}
 
 	ImGui::Text("Registered Scene Count: %d", static_cast<int>(Entries.size()));
+
+	ImGui::End();
+}
+
+void UGameApp::DrawSceneObjectsPanel()
+{
+	if (!ImGui::Begin("Scene Objects"))
+	{
+		ImGui::End();
+		return;
+	}
+
+	USceneManager* SceneManager = &Engine->GetSceneManager();
+	UScene* CurrentScene = SceneManager->GetCurrentScene();
+
+	if (CurrentScene == nullptr)
+	{
+		ImGui::TextUnformatted("No active scene.");
+		ImGui::End();
+		return;
+	}
+
+	const auto& GameObjects = CurrentScene->GetGameObjects();
+
+	ImGui::Text("Current Scene: %s", SceneManager->GetCurrentSceneName().c_str());
+	ImGui::Text("Game Object Count: %d", static_cast<int>(GameObjects.size()));
+	ImGui::Separator();
+
+	if (GameObjects.empty())
+	{
+		ImGui::TextUnformatted("Scene has no game objects.");
+		ImGui::End();
+		return;
+	}
+
+	for (int Index = 0; Index < static_cast<int>(GameObjects.size()); ++Index)
+	{
+		UGameObject* GameObject = GameObjects[Index];
+		if (GameObject == nullptr)
+		{
+			continue;
+		}
+
+		ImGui::PushID(Index);
+
+		const std::string ObjectLabel =
+			std::string(GameObject->GetEditorTypeName()) + " [" + std::to_string(Index) + "]";
+
+		if (ImGui::CollapsingHeader(ObjectLabel.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			FVector3 Position = GameObject->GetPosition();
+			float PositionValues[3] = { Position.x, Position.y, Position.z };
+			if (ImGui::DragFloat3("Position", PositionValues, 0.01f))
+			{
+				GameObject->SetPosition(FVector3{ PositionValues[0], PositionValues[1], PositionValues[2] });
+			}
+
+			float Scale = GameObject->GetScale();
+			if (ImGui::DragFloat("Scale", &Scale, 0.01f, 0.001f, 10.0f, "%.3f"))
+			{
+				GameObject->SetScale(Scale);
+			}
+		}
+
+		ImGui::PopID();
+	}
 
 	ImGui::End();
 }

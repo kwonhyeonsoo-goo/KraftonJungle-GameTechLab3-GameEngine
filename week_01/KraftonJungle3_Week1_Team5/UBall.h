@@ -13,6 +13,8 @@ public:
 	void Physics_Update(float tick) override;
 	void Update(float tick) override;
 	void Render(ID3D11DeviceContext* context, ID3D11Device* device) override;
+	const char* GetEditorTypeName() const override { return "UBall"; }
+	void SetScale(float scale) override;
 
 	void ApplyBoundaryCollision();
 

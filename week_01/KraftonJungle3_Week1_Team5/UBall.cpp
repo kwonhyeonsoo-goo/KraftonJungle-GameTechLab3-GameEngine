@@ -38,43 +38,51 @@ void UBall::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 	Collider->Debug_Render(context, device);
 }
 
+void UBall::SetScale(const float scale)
+{
+	UGameObject::SetScale(scale);
+	Radius = scale;
+
+	if (Collider)
+	{
+		Collider->SetRadius(1.f);
+	}
+}
+
 void UBall::ApplyBoundaryCollision()
 {
-	if (Position.x > 1.f - Radius)
+	const float RadiusValue = GetScale();
+
+	if (Position.x > 1.f - RadiusValue)
 	{
 		Velocity.x *= -1;
-		Position.x = 1.f - Radius;
+		Position.x = 1.f - RadiusValue;
 	}
-	if (Position.x < -1.f + Radius)
+	if (Position.x < -1.f + RadiusValue)
 	{
 		Velocity.x *= -1;
-		Position.x = -1.f + Radius;
+		Position.x = -1.f + RadiusValue;
 	}
-	if (Position.y > 1.f - Radius)
+	if (Position.y > 1.f - RadiusValue)
 	{
 		Velocity.y *= -1;
-		Position.y = 1.f - Radius;
+		Position.y = 1.f - RadiusValue;
 	}
-	if (Position.y < -1.f + Radius)
+	if (Position.y < -1.f + RadiusValue)
 	{
 		Velocity.y *= -1;
-		Position.y = -1.f + Radius;
+		Position.y = -1.f + RadiusValue;
 	}
 }
 
 void UBall::SetRadius(const float radius)
 {
-	Radius = radius;
-
-	if (Collider)
-	{
-		Collider->SetRadius(radius);
-	}
+	SetScale(radius);
 }
 
 float UBall::GetRadius() const
 {
-	return Radius;
+	return GetScale();
 }
 
 void UBall::Release()
