@@ -1,9 +1,8 @@
 #pragma once
+#include "UEngine.h"
 #include "UWindow.h"
 
 class UScene;
-class UGameObject;
-class URenderer;
 
 class UGameApp : public UWindow
 {
@@ -26,12 +25,10 @@ protected:
 	LRESULT OnMessage(UINT msg, WPARAM wp, LPARAM lp) override;
 
 private:
-	void CreateRenderer();
 	void EditorUpdate(float dt);
 
 	void DrawSceneManagerPanel();
 
 private:
-	URenderer* Renderer;
-	UScene* CurrentScene;
+	UEngine Engine;
 };

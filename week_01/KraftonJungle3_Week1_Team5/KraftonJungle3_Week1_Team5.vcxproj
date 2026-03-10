@@ -103,6 +103,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -135,16 +136,19 @@
     <ClInclude Include="ImGui\imstb_rectpack.h" />
     <ClInclude Include="ImGui\imstb_textedit.h" />
     <ClInclude Include="ImGui\imstb_truetype.h" />
-    <ClInclude Include="Mecro.h" />
-    <ClInclude Include="Rect.h" />
+    <ClInclude Include="Macro.h" />
     <ClInclude Include="SceneAutoRegister.h" />
-    <ClInclude Include="SceneManager.h" />
+    <ClInclude Include="USceneManager.h" />
     <ClInclude Include="SceneRegistry.h" />
     <ClInclude Include="Sphere.h" />
+
+    <ClInclude Include="Cube.h" />
+
     <ClInclude Include="UBall.h" />
     <ClInclude Include="UCircle2DMesh.h" />
     <ClInclude Include="UCircleCollider.h" />
     <ClInclude Include="UCollider.h" />
+    <ClInclude Include="UEngine.h" />
     <ClInclude Include="UGameApp.h" />
     <ClInclude Include="UGameObject.h" />
     <ClInclude Include="UMainGameScene.h" />
@@ -153,12 +157,19 @@
     <ClInclude Include="URectCollider.h" />
     <ClInclude Include="URectMesh.h" />
     <ClInclude Include="URenderer.h" />
+    <ClInclude Include="UResource.h" />
+    <ClInclude Include="UResourceManager.h" />
     <ClInclude Include="UScene.h" />
+    <ClInclude Include="Uscreen.h" />
     <ClInclude Include="UShader.h" />
     <ClInclude Include="USphereMesh.h" />
     <ClInclude Include="UTestObject.h" />
+
+    <ClInclude Include="UTexture2D.h" />
+
     <ClInclude Include="UWeek0Scene.h" />
     <ClInclude Include="UWindow.h" />
+    <ClInclude Include="WICTextureLoader.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp" />
@@ -169,12 +180,15 @@
     <ClCompile Include="ImGui\imgui_tables.cpp" />
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="SceneManager.cpp" />
+    <ClCompile Include="USceneManager.cpp" />
     <ClCompile Include="SceneRegistry.cpp" />
+    <ClCompile Include="TextureManager.cpp" />
+    <ClCompile Include="TextureRenderer.cpp" />
     <ClCompile Include="UBall.cpp" />
     <ClCompile Include="UCircle2DMesh.cpp" />
     <ClCompile Include="UCircleCollider.cpp" />
     <ClCompile Include="UCollider.cpp" />
+    <ClCompile Include="UEngine.cpp" />
     <ClCompile Include="UGameApp.cpp" />
     <ClCompile Include="UGameObject.cpp" />
     <ClCompile Include="UMainGameScene.cpp" />
@@ -183,15 +197,29 @@
     <ClCompile Include="URectCollider.cpp" />
     <ClCompile Include="URectMesh.cpp" />
     <ClCompile Include="URenderer.cpp" />
+    <ClCompile Include="UResource.cpp" />
+    <ClCompile Include="UResourceManager.cpp" />
     <ClCompile Include="UScene.cpp" />
+    <ClCompile Include="Uscreen.cpp" />
     <ClCompile Include="UShader.cpp" />
     <ClCompile Include="USphereMesh.cpp" />
+    <ClCompile Include="UCubeMesh.cpp" />
+    <ClCompile Include="UCubeMesh.h" />
     <ClCompile Include="UTestObject.cpp" />
+
+    <ClCompile Include="UTexture2D.cpp" />
     <ClCompile Include="Utility.h" />
     <ClCompile Include="UWeek0Scene.cpp" />
     <ClCompile Include="UWindow.cpp" />
+    <ClCompile Include="WICTextureLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="ShaderTexture.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="ShaderW0.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Geometry</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4.0</ShaderModel>
@@ -204,7 +232,17 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </FxCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="packages\directxtk_desktop_win10.2025.10.28.2\build\native\directxtk_desktop_win10.targets" Condition="Exists('packages\directxtk_desktop_win10.2025.10.28.2\build\native\directxtk_desktop_win10.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>이 프로젝트는 이 컴퓨터에 없는 NuGet 패키지를 참조합니다. 해당 패키지를 다운로드하려면 NuGet 패키지 복원을 사용하십시오. 자세한 내용은 http://go.microsoft.com/fwlink/?LinkID=322105를 참조하십시오. 누락된 파일은 {0}입니다.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('packages\directxtk_desktop_win10.2025.10.28.2\build\native\directxtk_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtk_desktop_win10.2025.10.28.2\build\native\directxtk_desktop_win10.targets'))" />
+  </Target>
 </Project>
