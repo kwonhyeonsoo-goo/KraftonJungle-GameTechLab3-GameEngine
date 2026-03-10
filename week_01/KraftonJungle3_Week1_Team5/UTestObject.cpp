@@ -1,13 +1,13 @@
 #include "UTestObject.h"
 
-#include "USphereMesh.h"
+#include "UCubeMesh.h"
 #include "UShader.h"
 #include "Utility.h"
 
 void UTestObject::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 {
-	SphereMesh = new USphereMesh();
-	SphereMesh->CreateSphere(device);
+	CubeMesh = new UCubeMesh();
+	CubeMesh->CreateCube(device);
 
 	D3D11_INPUT_ELEMENT_DESC layout[] = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
@@ -87,10 +87,10 @@ void UTestObject::Update(float tick)
 
 void UTestObject::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 {
-	SphereMesh->Bind(context);
+	CubeMesh->Bind(context);
 	Shader->Bind(context);
 	Shader->UpdateConstant(context, Position, Scale);
-	SphereMesh->Draw(context);
+	CubeMesh->Draw(context);
 }
 
 void UTestObject::Release()

@@ -1,7 +1,7 @@
 #pragma once
 #include "UGameObject.h"
 class UShader;
-class USphereMesh;
+class UCubeMesh;
 
 class UTestObject : public UGameObject
 {
@@ -15,7 +15,7 @@ public:
 
 	void ApplyBoundaryCollision();
 private:
-	USphereMesh* SphereMesh;
+	UCubeMesh* CubeMesh;
 	UShader* Shader;
 	float JumpForce;
 	bool bOnGround;
