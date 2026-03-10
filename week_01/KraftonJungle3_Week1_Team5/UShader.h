@@ -39,4 +39,3 @@ private:
 	ID3D11InputLayout* InputLayout;
 	ID3D11Buffer* ConstantBuffer;
 };
-
