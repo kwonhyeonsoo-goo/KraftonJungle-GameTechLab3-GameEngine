@@ -3,17 +3,14 @@
 #include <chrono>
 #include <utility>
 
-#include "SceneManager.h"
-#include "UBall.h"
+#include "USceneManager.h"
 #include "URenderer.h"
 #include "Utility.h"
-#include "UWeek0Scene.h"
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_dx11.h"
 #include "ImGui/imgui_impl_win32.h"
 
-UGameApp::UGameApp(HINSTANCE hInst, FWindowDesc desc) : UWindow(hInst, std::move(desc)), Renderer(nullptr),
-                                                        CurrentScene(nullptr)
+UGameApp::UGameApp(HINSTANCE hInst, FWindowDesc desc) : UWindow(hInst, std::move(desc))
 {
 }
 
@@ -60,47 +57,41 @@ int UGameApp::Run(int nShowCmd)
 
 void UGameApp::Initialize()
 {
-	// TODO : DX ÃÊ±âÈ­ °°Àº µ¿ÀÛ ¼öÇà
-	CreateRenderer();
+	// TODO : DX ì´ˆê¸°í™” ê°™ì€ ë™ìž‘ ìˆ˜í–‰
+	Engine.Initialize(Handle(), "UWeek0Scene");
 
-	// ImGui ÃÊ±âÈ­
+	auto& renderer = Engine.GetRenderer();
+
+	// ImGui ì´ˆê¸°í™”
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
 	ImGui_ImplWin32_Init((void*)Handle());
-	ImGui_ImplDX11_Init(Renderer->GetDevice(), Renderer->GetDeviceContext());
-
-	SceneManager::GetInstance().Initialize("UWeek0Scene", Renderer->GetDevice(), Renderer->GetDeviceContext());
+	ImGui_ImplDX11_Init(renderer.GetDevice(), renderer.GetDeviceContext());
 }
 
 void UGameApp::Tick(const float dt)
 {
-	// TODO : Update / Render Ãß°¡
-	SceneManager::GetInstance().Update(dt);
+	// TODO : Update / Render ì¶”ê°€
+	auto& SceneManager = Engine.GetSceneManager();
+	auto& Renderer = Engine.GetRenderer();
 
-	Renderer->Prepare();
-	
-	SceneManager::GetInstance().Render(Renderer->GetDevice(), Renderer->GetDeviceContext());
-
+	SceneManager.Update(dt);
+	Renderer.Prepare();
+	SceneManager.Render();
 	EditorUpdate(dt);
-	
-	Renderer->SwapBuffer();
-
-	SceneManager::GetInstance().ProcessPendingSceneChange();
+	Renderer.SwapBuffer();
+	SceneManager.ProcessPendingSceneChange();
 }
 
 void UGameApp::Shutdown()
 {
-	// TODO : ¸®¼Ò½º ÇØÁ¦
-	SceneManager::GetInstance().Shutdown();
-
-	SafeReleaseAndDelete(CurrentScene);
-
+	// TODO : ë¦¬ì†ŒìŠ¤ í•´ì œ
 	ImGui_ImplDX11_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
-	SafeDelete(Renderer);
+	Engine.Release();
 }
 
 void UGameApp::OnDestroy()
@@ -113,28 +104,22 @@ LRESULT UGameApp::OnMessage(UINT msg, WPARAM wp, LPARAM lp)
 	return UWindow::OnMessage(msg, wp, lp);
 }
 
-void UGameApp::CreateRenderer()
-{
-	Renderer = new URenderer(Handle());
-}
-
 void UGameApp::EditorUpdate(float dt)
 {
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
-	// ÀÌÈÄ ImGui UI ÄÁÆ®·Ñ Ãß°¡´Â ImGui::NewFrame()°ú ImGui::Render()
-	// »çÀÌÀÎ ÀÌ°÷¿¡ À§Ä¡
+	// ì´í›„ ImGui UI ì»¨íŠ¸ë¡¤ ì¶”ê°€ëŠ” ImGui::NewFrame()ê³¼ ImGui::Render()
+	// ì‚¬ì´ì¸ ì´ê³³ì— ìœ„ì¹˜
 	ImGui::Begin("Jungle Property Window");
 	ImGui::Text("Hello Jungle World!");
-	ImGui::Text("Delta Time: %.6f", dt);   // ÃÊ ´ÜÀ§
-	ImGui::Text("Frame Time: %.3f ms", dt * 1000.0f); // ¹Ð¸®ÃÊ
+	ImGui::Text("Delta Time: %.6f", dt);   // ì´ˆ ë‹¨ìœ„
+	ImGui::Text("Frame Time: %.3f ms", dt * 1000.0f); // ë°€ë¦¬ì´ˆ
 	ImGui::Text("FPS: %.1f", 1.0f / dt);   // FPS
 	ImGui::End();
 
 	DrawSceneManagerPanel();
-	
 
 	ImGui::Render();
 
@@ -149,7 +134,7 @@ void UGameApp::DrawSceneManagerPanel()
 		return;
 	}
 
-	SceneManager* SceneManager = &SceneManager::GetInstance();
+	USceneManager* SceneManager = &Engine.GetSceneManager();
 
 	const char* CurrentSceneLabel =
 		SceneManager->HasCurrentScene() ? SceneManager->GetCurrentSceneName().c_str() : "<None>";

@@ -13,6 +13,7 @@ public:
 	void Render(ID3D11DeviceContext* context, ID3D11Device* device) override;
 	void Release() override;
 
+	void ApplyBoundaryCollision();
 private:
 	USphereMesh* SphereMesh;
 	UShader* Shader;
