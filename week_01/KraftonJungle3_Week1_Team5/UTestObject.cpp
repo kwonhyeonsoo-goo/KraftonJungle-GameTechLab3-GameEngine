@@ -123,16 +123,4 @@ void UTestObject::Move(float tick)
 			}
 		}
 	}
-
-	if (Position.x < LeftBorder) {
-		Position.x = LeftBorder;
-	}
-	else if (Position.x > RightBorder) {
-		Position.x = RightBorder;
-	}
-
-	if (Position.y < BottomBorder) {
-		Position.y = BottomBorder;
-		bOnGround = true;
-	}
 }
