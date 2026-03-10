@@ -137,6 +137,7 @@
     <ClInclude Include="ImGui\imstb_textedit.h" />
     <ClInclude Include="ImGui\imstb_truetype.h" />
     <ClInclude Include="Macro.h" />
+    <ClInclude Include="Rect.h" />
     <ClInclude Include="SceneAutoRegister.h" />
     <ClInclude Include="TextureRenderer.h" />
     <ClInclude Include="UPikachu.h" />
