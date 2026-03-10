@@ -139,6 +139,7 @@
     <ClInclude Include="Macro.h" />
     <ClInclude Include="SceneAutoRegister.h" />
     <ClInclude Include="TextureRenderer.h" />
+    <ClInclude Include="UPikachu.h" />
     <ClInclude Include="USceneManager.h" />
     <ClInclude Include="SceneRegistry.h" />
     <ClInclude Include="Sphere.h" />
@@ -162,7 +163,6 @@
     <ClInclude Include="Uscreen.h" />
     <ClInclude Include="UShader.h" />
     <ClInclude Include="USphereMesh.h" />
-    <ClInclude Include="UTestObject.h" />
     <ClInclude Include="UTestObject_2.h" />
     <ClInclude Include="UTestScene.h" />
     <ClInclude Include="UTexture2D.h" />
@@ -179,6 +179,7 @@
     <ClCompile Include="ImGui\imgui_tables.cpp" />
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="UPikachu.cpp" />
     <ClCompile Include="USceneManager.cpp" />
     <ClCompile Include="SceneRegistry.cpp" />
     <ClCompile Include="TextureRenderer.cpp" />
@@ -203,7 +204,6 @@
     <ClCompile Include="USphereMesh.cpp" />
     <ClCompile Include="UCubeMesh.cpp" />
     <ClCompile Include="UCubeMesh.h" />
-    <ClCompile Include="UTestObject.cpp" />
     <ClCompile Include="UTestObject_2.cpp" />
     <ClCompile Include="UTestScene.cpp" />
     <ClCompile Include="UTexture2D.cpp" />

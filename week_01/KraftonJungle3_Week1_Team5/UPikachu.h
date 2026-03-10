@@ -27,7 +27,7 @@ enum class EPlayerState
 	DownFrontSpike
 };
 
-class UTestObject : public UGameObject
+class UPikachu : public UGameObject
 {
 public:
 	EPlayerState GetPlayerState() const { return CurrentState; }
