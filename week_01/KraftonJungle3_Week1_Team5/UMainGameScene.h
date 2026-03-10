@@ -1,5 +1,8 @@
 #pragma once
 #include "UScene.h"
+
+class UNet;
+
 class UMainGameScene : public UScene
 {
 public:
@@ -8,5 +11,8 @@ public:
 	void Exit() override;
 
 	void CheckCollision();
+
+private:
+	UNet* Net;
 };
 

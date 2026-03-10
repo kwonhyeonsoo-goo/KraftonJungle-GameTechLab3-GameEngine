@@ -5,6 +5,7 @@
 #include "UCircleCollider.h"
 #include "URectCollider.h"
 #include "UBall.h"
+#include "UNet.h"
 
 REGISTER_SCENE(UMainGameScene)
 
@@ -27,20 +28,27 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 		object->SetPosition(FVector3(0.f, -0.9f, 0.f));
 	}
 
-	UGameObject* instance = UBall::Create(device, context);
+	UBall* instance = UBall::Create(device, context);
 	{
-		FVector3 rendVelocity{ // 속도는 -0.5 ~ 0.5로 설정
-			(static_cast<float>(rand()) / (static_cast<float>(RAND_MAX))) * 1.f - 0.5f, (static_cast<float>(rand()) / (static_cast<float>(RAND_MAX))) * 1.f - 0.5f, 0.f
-		};
+		// 속도는 -0.5 ~ 0.5로 설정
+		FVector3 rendVelocity{ 0.f, -1.f, 0.f};
 
-		float rendRadius{ (static_cast<float>(rand()) / (static_cast<float>(RAND_MAX))) * 0.1f + 0.1f };
+		float rendRadius{0.2f};
 
 		instance->SetVelocity(rendVelocity);
-		instance->SetScale(rendRadius);
-		GameObjects.push_back(instance);
+		instance->SetScale(.1f);
+		instance->SetRadius(0.1f); //radius 지정이 빠짐
 
+		UCircleCollider* circlecollider = new UCircleCollider();
+		circlecollider->Create(device, instance);
+		instance->SetCollider(circlecollider);
 		instance->SetUseGravity(true);
+
+		GameObjects.push_back(instance);
+		
 	}
+	Net = new UNet();
+	Net->Create(device, context);
 }
 
 void UMainGameScene::Update(float tick)
@@ -56,6 +64,14 @@ void UMainGameScene::Update(float tick)
 	}
 
 	CheckCollision();
+
+	for (auto& obj : GameObjects)
+	{
+		if (obj->GetObjectType() == ObjectType::Ball)
+		{
+			Net->HandleBallCollision(static_cast<UBall*>(obj));
+		}
+	}
 }
 
 void UMainGameScene::Exit()

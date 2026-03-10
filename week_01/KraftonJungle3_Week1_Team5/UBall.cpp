@@ -5,7 +5,7 @@
 
 UBall::UBall() : Radius(1.f)
 {
-	SetObjectType(ObjectType::Pikachu);
+	SetObjectType(ObjectType::Ball);
 }
 
 UBall::~UBall()
@@ -16,6 +16,7 @@ UBall* UBall::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 	UBall* instance = new UBall();
 	instance->Collider = new UCircleCollider();
 	instance->Collider->Create(device, instance);
+
 
 	return instance;
 }
