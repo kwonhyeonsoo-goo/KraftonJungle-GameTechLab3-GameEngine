@@ -279,6 +279,9 @@
     <FxCompile Include="ShaderW0.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+    <FxCompile Include="ShaderTexture.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
