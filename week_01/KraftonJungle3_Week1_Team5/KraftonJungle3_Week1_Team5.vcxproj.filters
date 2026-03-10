@@ -219,6 +219,12 @@
     <ClInclude Include="Cube.h">
       <Filter>00. Engine\01. System\Graphic\Mesh\Cube</Filter>
     </ClInclude>
+    <ClInclude Include="UTestObject_2.h">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="UTestScene.h">
+      <Filter>02. Client\01. Scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -334,6 +340,12 @@
     </ClCompile>
     <ClCompile Include="URectMesh.cpp">
       <Filter>00. Engine\01. System\Graphic\Mesh\Rect</Filter>
+    </ClCompile>
+    <ClCompile Include="UTestObject_2.cpp">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="UTestScene.cpp">
+      <Filter>02. Client\01. Scene</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

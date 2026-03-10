@@ -30,5 +30,5 @@ private:
 	void DrawSceneManagerPanel();
 
 private:
-	UEngine Engine;
+	UEngine* Engine;
 };

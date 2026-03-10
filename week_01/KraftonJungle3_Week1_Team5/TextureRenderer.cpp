@@ -2,8 +2,20 @@
 
 #include <WICTextureLoader.h>
 
+#include "UEngine.h"
 #include "UTextureMesh.h"
 #include "UShader.h"
+#include "Utility.h"
+
+TextureRenderer::TextureRenderer() : Mesh(nullptr), Shader(nullptr)
+{
+}
+
+TextureRenderer::~TextureRenderer()
+{
+	SafeReleaseAndDelete(Mesh);
+	SafeReleaseAndDelete(Shader);
+}
 
 void TextureRenderer::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 {
@@ -22,31 +34,23 @@ void TextureRenderer::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 
 void TextureRenderer::Draw(ID3D11DeviceContext* context, ID3D11Device* device, FVector3 Position, float Scale)
 {
+	ID3D11ShaderResourceView* srv = Texture->GetSRV();
+
 	Mesh->Bind(context);
 	Shader->Bind(context);
-	context->PSSetShaderResources(0, 1, &gTexture);
+	context->PSSetShaderResources(0, 1, &srv);
 	Shader->UpdateConstant(context, Position, Scale);
 	Mesh->Draw(context);
 }
 
-void TextureRenderer::Init(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const wchar_t* flnm)
+void TextureRenderer::Init(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const std::wstring& filePath)
 {
-	LoadTexture(Device, DeviceContext, flnm);
-
+	LoadTexture(Device, DeviceContext, filePath);
 }
 
-bool TextureRenderer::LoadTexture(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const wchar_t* flnm)
+bool TextureRenderer::LoadTexture(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const std::wstring& filePath)
 {
-	HRESULT hr = DirectX::CreateWICTextureFromFile(
-		Device,
-		DeviceContext,
-		flnm,
-		nullptr,
-		&gTexture
-	);
-
-	if (FAILED(hr))
-		return false;
+	Texture = UEngine::GetInstance().GetResourceManager().LoadTexture(filePath);
 
 	return true;
 }

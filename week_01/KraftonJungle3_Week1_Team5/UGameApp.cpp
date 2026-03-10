@@ -10,7 +10,7 @@
 #include "ImGui/imgui_impl_dx11.h"
 #include "ImGui/imgui_impl_win32.h"
 
-UGameApp::UGameApp(HINSTANCE hInst, FWindowDesc desc) : UWindow(hInst, std::move(desc))
+UGameApp::UGameApp(HINSTANCE hInst, FWindowDesc desc) : UWindow(hInst, std::move(desc)), Engine(nullptr)
 {
 }
 
@@ -58,9 +58,10 @@ int UGameApp::Run(int nShowCmd)
 void UGameApp::Initialize()
 {
 	// TODO : DX 초기화 같은 동작 수행
-	Engine.Initialize(Handle(), "UWeek0Scene");
+	Engine = &UEngine::GetInstance();
+	Engine->Initialize(Handle(), "UWeek0Scene");
 
-	auto& renderer = Engine.GetRenderer();
+	auto& renderer = Engine->GetRenderer();
 
 	// ImGui 초기화
 	IMGUI_CHECKVERSION();
@@ -73,8 +74,8 @@ void UGameApp::Initialize()
 void UGameApp::Tick(const float dt)
 {
 	// TODO : Update / Render 추가
-	auto& SceneManager = Engine.GetSceneManager();
-	auto& Renderer = Engine.GetRenderer();
+	auto& SceneManager = Engine->GetSceneManager();
+	auto& Renderer = Engine->GetRenderer();
 
 	SceneManager.Update(dt);
 	Renderer.Prepare();
@@ -91,7 +92,7 @@ void UGameApp::Shutdown()
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
-	Engine.Release();
+	Engine->Release();
 }
 
 void UGameApp::OnDestroy()
@@ -134,7 +135,7 @@ void UGameApp::DrawSceneManagerPanel()
 		return;
 	}
 
-	USceneManager* SceneManager = &Engine.GetSceneManager();
+	USceneManager* SceneManager = &Engine->GetSceneManager();
 
 	const char* CurrentSceneLabel =
 		SceneManager->HasCurrentScene() ? SceneManager->GetCurrentSceneName().c_str() : "<None>";

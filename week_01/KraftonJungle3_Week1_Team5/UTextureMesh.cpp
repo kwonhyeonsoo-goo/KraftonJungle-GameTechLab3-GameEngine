@@ -31,6 +31,4 @@ bool UTextureMesh::CreateRect(ID3D11Device* device)
     SetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     return CreateVertexBuffer(device, rect_vertices, sizeof(FVertexTexture), numVerticesRect);
-
-
 }
