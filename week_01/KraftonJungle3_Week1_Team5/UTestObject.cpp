@@ -71,18 +71,6 @@ void UTestObject::Update(float tick)
 			}
 		}
 	}
-
-	if (Position.x < LeftBorder) {
-		Position.x = LeftBorder;
-	}
-	else if (Position.x > RightBorder) {
-		Position.x = RightBorder;
-	}
-
-	if (Position.y < BottomBorder) {
-		Position.y = BottomBorder;
-		bOnGround = true;
-	}
 }
 
 void UTestObject::Render(ID3D11DeviceContext* context, ID3D11Device* device)
@@ -101,24 +89,15 @@ void UTestObject::Release()
 
 void UTestObject::ApplyBoundaryCollision()
 {
-	if (Position.x > 1.f - Scale)
-	{
-		Velocity.x *= -1;
-		Position.x = 1.f - Scale;
+	if (Position.x < LeftBorder) {
+		Position.x = LeftBorder;
 	}
-	if (Position.x < -1.f + Scale)
-	{
-		Velocity.x *= -1;
-		Position.x = -1.f + Scale;
+	else if (Position.x > RightBorder) {
+		Position.x = RightBorder;
 	}
-	if (Position.y > 1.f - Scale)
-	{
-		Velocity.y *= -1;
-		Position.y = 1.f - Scale;
-	}
-	if (Position.y < -1.f + Scale)
-	{
-		Velocity.y *= -1;
-		Position.y = -1.f + Scale;
+
+	if (Position.y < BottomBorder) {
+		Position.y = BottomBorder;
+		bOnGround = true;
 	}
 }
