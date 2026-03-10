@@ -8,6 +8,12 @@
 
 class UEngine : public UPrimitive
 {
+private:
+	UEngine();
+	~UEngine() override;
+public:
+	DECLARE_SINGLETON(UEngine)
+
 public:
 	bool Initialize(HWND hWnd, const std::string& startSceneName);
 	void Release();

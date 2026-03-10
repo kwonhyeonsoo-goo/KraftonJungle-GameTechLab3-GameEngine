@@ -4,8 +4,7 @@
 class UShader;
 class UTextureMesh;
 
-class Uscreen :
-    public UGameObject
+class Uscreen : public UGameObject
 {
 public:
 

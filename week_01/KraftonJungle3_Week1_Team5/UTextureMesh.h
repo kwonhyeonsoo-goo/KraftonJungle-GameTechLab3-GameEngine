@@ -1,9 +1,8 @@
 #pragma once
-#include <DirectXMath.h>
 
 #include "UMesh.h"
 
-class UTextureMesh :public UMesh
+class UTextureMesh : public UMesh
 {
 public:
 	UTextureMesh() = default;
