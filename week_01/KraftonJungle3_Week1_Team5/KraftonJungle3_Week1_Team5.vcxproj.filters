@@ -76,6 +76,9 @@
     <Filter Include="02. Client\01. Scene">
       <UniqueIdentifier>{e9bdfce3-6250-4318-807d-0e06ea20f7f4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="00. Engine\01. System\Graphic\Texture">
+      <UniqueIdentifier>{be0ed917-dfd4-4eea-b141-37a598c8c666}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGui\imconfig.h">
@@ -174,6 +177,24 @@
     <ClInclude Include="UTestObject.h">
       <Filter>02. Client\00. GameObject</Filter>
     </ClInclude>
+    <ClInclude Include="Uscreen.h">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="WICTextureLoader.h">
+      <Filter>00. Engine\01. System\Graphic\Texture</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureRenderer.h">
+      <Filter>00. Engine\01. System\Graphic\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="UTextureMesh.h">
+      <Filter>00. Engine\01. System\Graphic\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureManager.h">
+      <Filter>00. Engine\01. System\Graphic\Texture</Filter>
+    </ClInclude>
+    <ClInclude Include="UTestObject_2.h">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -257,9 +278,30 @@
     <ClCompile Include="UTestObject.cpp">
       <Filter>02. Client\00. GameObject</Filter>
     </ClCompile>
+    <ClCompile Include="Uscreen.cpp">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="WICTextureLoader.cpp">
+      <Filter>00. Engine\01. System\Graphic\Texture</Filter>
+    </ClCompile>
+    <ClCompile Include="TextureRenderer.cpp">
+      <Filter>00. Engine\01. System\Graphic\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="UTextureMesh.cpp">
+      <Filter>00. Engine\01. System\Graphic\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="TextureManager.cpp">
+      <Filter>00. Engine\01. System\Graphic\Texture</Filter>
+    </ClCompile>
+    <ClCompile Include="UTestObject_2.cpp">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ShaderW0.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="ShaderTexture.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
   </ItemGroup>

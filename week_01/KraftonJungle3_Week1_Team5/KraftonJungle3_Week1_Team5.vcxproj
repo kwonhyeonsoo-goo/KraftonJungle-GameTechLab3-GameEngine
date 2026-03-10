@@ -140,6 +140,8 @@
     <ClInclude Include="SceneManager.h" />
     <ClInclude Include="SceneRegistry.h" />
     <ClInclude Include="Sphere.h" />
+    <ClInclude Include="TextureManager.h" />
+    <ClInclude Include="TextureRenderer.h" />
     <ClInclude Include="UBall.h" />
     <ClInclude Include="UCircle2DMesh.h" />
     <ClInclude Include="UCircleCollider.h" />
@@ -151,11 +153,15 @@
     <ClInclude Include="UPrimitive.h" />
     <ClInclude Include="URenderer.h" />
     <ClInclude Include="UScene.h" />
+    <ClInclude Include="Uscreen.h" />
     <ClInclude Include="UShader.h" />
     <ClInclude Include="USphereMesh.h" />
     <ClInclude Include="UTestObject.h" />
+    <ClInclude Include="UTestObject_2.h" />
+    <ClInclude Include="UTextureMesh.h" />
     <ClInclude Include="UWeek0Scene.h" />
     <ClInclude Include="UWindow.h" />
+    <ClInclude Include="WICTextureLoader.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp" />
@@ -168,6 +174,8 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="SceneManager.cpp" />
     <ClCompile Include="SceneRegistry.cpp" />
+    <ClCompile Include="TextureManager.cpp" />
+    <ClCompile Include="TextureRenderer.cpp" />
     <ClCompile Include="UBall.cpp" />
     <ClCompile Include="UCircle2DMesh.cpp" />
     <ClCompile Include="UCircleCollider.cpp" />
@@ -179,14 +187,24 @@
     <ClCompile Include="UPrimitive.cpp" />
     <ClCompile Include="URenderer.cpp" />
     <ClCompile Include="UScene.cpp" />
+    <ClCompile Include="Uscreen.cpp" />
     <ClCompile Include="UShader.cpp" />
     <ClCompile Include="USphereMesh.cpp" />
     <ClCompile Include="UTestObject.cpp" />
+    <ClCompile Include="UTestObject_2.cpp" />
+    <ClCompile Include="UTextureMesh.cpp" />
     <ClCompile Include="Utility.h" />
     <ClCompile Include="UWeek0Scene.cpp" />
     <ClCompile Include="UWindow.cpp" />
+    <ClCompile Include="WICTextureLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="ShaderTexture.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="ShaderW0.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Geometry</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4.0</ShaderModel>
