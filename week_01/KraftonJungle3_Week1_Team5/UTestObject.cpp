@@ -86,41 +86,72 @@ void UTestObject::ApplyBoundaryCollision()
 
 void UTestObject::Move(float tick)
 {
+	CurrentState = EPlayerState::Normal;
+	int currentInput = FLAG_NONE;
+
+	if (GetAsyncKeyState(VK_RETURN) & 0x8000) currentInput |= FLAG_SPIKE;
+	if (GetAsyncKeyState(VK_LEFT) & 0x8000) currentInput |= FLAG_LEFT;
+	if (GetAsyncKeyState(VK_RIGHT) & 0x8000) currentInput |= FLAG_RIGHT;
+	if (GetAsyncKeyState(VK_UP) & 0x8000) currentInput |= FLAG_UP;
+	if (GetAsyncKeyState(VK_DOWN) & 0x8000) currentInput |= FLAG_DOWN;
+
 	// 2. 이동
-	if (GetAsyncKeyState(VK_LEFT) & 0x8000) Position.x -= 1.0f * tick;
-	else if (GetAsyncKeyState(VK_RIGHT) & 0x8000) Position.x += 1.0f * tick;
+	if (currentInput & FLAG_LEFT) Position.x -= 1.0f * tick;
+	if (currentInput & FLAG_RIGHT) Position.x += 1.0f * tick;
 
 	if (bOnGround)
 	{
-		if (GetAsyncKeyState(VK_UP) & 0x8000)
+		if (currentInput & FLAG_UP)
 		{
 			Velocity.y = JumpForce;
 			bOnGround = false;
 		}
-		else if (GetAsyncKeyState(VK_LEFT) || GetAsyncKeyState(VK_RIGHT) && GetAsyncKeyState(VK_RETURN) & 0x8000)
+		else if (currentInput & FLAG_SPIKE)
 		{
-			// 다이빙
+			if (currentInput & FLAG_LEFT)
+			{
+				// 다이빙
+			}
+			else if (currentInput & FLAG_RIGHT)
+			{
+				// 다이빙
+			}
 		}
 	}
 	else
 	{
-		if (GetAsyncKeyState(VK_RETURN) & 0x8000)
+		if (currentInput & FLAG_SPIKE)
 		{
-			// 기본 스파이크 코드 
-
-			if (GetAsyncKeyState(VK_LEFT) || GetAsyncKeyState(VK_RIGHT) & 0x8000)
-			{
-				// 공 충돌 코드
-			}
-
-			if (GetAsyncKeyState(VK_UP) & 0x8000)
-			{
-				// 공 충돌 코드
-			}
-			else if (GetAsyncKeyState(VK_DOWN) & 0x8000)
-			{
-				// 공 충돌 코드
-			}
+			CurrentState = GetSpikeStateFromInput(currentInput);
 		}
 	}
+}
+
+EPlayerState UTestObject::GetSpikeStateFromInput(int input)
+{
+	static EPlayerState SpikeStateLUT[32];
+	static bool bInitialized = false;
+
+	if (!bInitialized)
+	{
+		for (int i = 0; i < 32; ++i)
+		{
+			SpikeStateLUT[i] = EPlayerState::BasicSpike;
+		}
+
+		SpikeStateLUT[FLAG_SPIKE] = EPlayerState::BasicSpike;
+		SpikeStateLUT[FLAG_SPIKE | FLAG_LEFT] = EPlayerState::FrontSpike;
+		SpikeStateLUT[FLAG_SPIKE | FLAG_RIGHT] = EPlayerState::FrontSpike;
+		SpikeStateLUT[FLAG_SPIKE | FLAG_UP] = EPlayerState::UpSpike;
+		SpikeStateLUT[FLAG_SPIKE | FLAG_DOWN] = EPlayerState::DownSpike;
+
+		SpikeStateLUT[FLAG_SPIKE | FLAG_UP | FLAG_LEFT] = EPlayerState::UpFrontSpike;
+		SpikeStateLUT[FLAG_SPIKE | FLAG_UP | FLAG_RIGHT] = EPlayerState::UpFrontSpike;
+		SpikeStateLUT[FLAG_SPIKE | FLAG_DOWN | FLAG_LEFT] = EPlayerState::DownFrontSpike;
+		SpikeStateLUT[FLAG_SPIKE | FLAG_DOWN | FLAG_RIGHT] = EPlayerState::DownFrontSpike;
+
+		bInitialized = true;
+	}
+
+	return SpikeStateLUT[input];
 }
