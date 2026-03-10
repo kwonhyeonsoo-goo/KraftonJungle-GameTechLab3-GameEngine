@@ -3,6 +3,9 @@
 
 #include "FVector3.h"
 #include "UPrimitive.h"
+
+class UCollider;
+
 class UGameObject : public UPrimitive
 {
 public:
@@ -24,6 +27,12 @@ public:
 	FVector3 GetVelocity() const;
 
 	virtual void Release() = 0;
+	
+	bool GetUseGravity() const { return UseGravity; }
+	void SetUseGravity(bool useGravity) { UseGravity = useGravity; }
+
+	UCollider* GetCollider() const { return Collider; }
+	void SetCollider(UCollider* collider) { Collider = collider; }
 
 protected:
 	// 이 아래에 있는 함수들은 나중에 물리용 클래스로 따로 빼야함.
@@ -40,5 +49,8 @@ protected:
 	FVector3	Velocity;
 	float		Mass;
 	bool		UseGravity;
+
+	// Collision
+	UCollider* Collider;
 };
 
