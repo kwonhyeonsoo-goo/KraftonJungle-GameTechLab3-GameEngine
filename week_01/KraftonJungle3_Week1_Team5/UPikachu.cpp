@@ -1,11 +1,11 @@
-#include "UTestObject.h"
+#include "UPikachu.h"
 
 #include "UCubeMesh.h"
 #include "UShader.h"
 #include "USphereMesh.h"
 #include "Utility.h"
 
-void UTestObject::Create(ID3D11Device* device, ID3D11DeviceContext* context)
+void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 {
 	SphereMesh = new USphereMesh();
 	SphereMesh->CreateSphere(device);
@@ -28,7 +28,7 @@ void UTestObject::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 	bOnGround = false;
 }
 
-void UTestObject::Physics_Update(float tick)
+void UPikachu::Physics_Update(float tick)
 {
 	// 속도 (Velocity)을 위치에 반영한 후에 -> 입력을 통한 움직임 같은거 -> 모든 움직임 처리 후에 
 	// 충돌 처리를 해주고 그 충돌에 따른 물리 반영
@@ -38,11 +38,11 @@ void UTestObject::Physics_Update(float tick)
 	ApplyBoundaryCollision();
 }
 
-void UTestObject::Update(float tick)
+void UPikachu::Update(float tick)
 {
 }
 
-void UTestObject::Render(ID3D11DeviceContext* context, ID3D11Device* device)
+void UPikachu::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 {
 	SphereMesh->Bind(context);
 	//CubeMesh->Bind(context);
@@ -52,14 +52,14 @@ void UTestObject::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 	//CubeMesh->Draw(context);
 }
 
-void UTestObject::Release()
+void UPikachu::Release()
 {
 	SafeReleaseAndDelete(SphereMesh);
 	//SafeReleaseAndDelete(CubeMesh);
 	SafeReleaseAndDelete(Shader);
 }
 
-void UTestObject::ApplyBoundaryCollision()
+void UPikachu::ApplyBoundaryCollision()
 {
 	if (Position.x > 1.f - Scale)
 	{
@@ -91,7 +91,7 @@ void UTestObject::ApplyBoundaryCollision()
 	}
 }
 
-void UTestObject::Move(float tick)
+void UPikachu::Move(float tick)
 {
 	if (CurrentState == EPlayerState::Recovering)
 	{
@@ -157,7 +157,7 @@ void UTestObject::Move(float tick)
 	}
 }
 
-EPlayerState UTestObject::GetSpikeStateFromInput(int input)
+EPlayerState UPikachu::GetSpikeStateFromInput(int input)
 {
 	static EPlayerState SpikeStateLUT[32];
 	static bool bInitialized = false;
