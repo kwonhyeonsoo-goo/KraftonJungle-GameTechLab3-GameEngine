@@ -17,6 +17,8 @@ enum EInputFlag
 enum class EPlayerState
 {
 	Normal,				// 기본 (이동, 대기)
+	Diving,
+	Recovering,
 	BasicSpike,			// 기본 스파이크
 	FrontSpike,			// 좌우 방향 스파이크
 	UpSpike,			// 위 스파이크
@@ -51,6 +53,7 @@ private:
 	EPlayerState CurrentState = EPlayerState::Normal;
 	float JumpForce;
 	bool bOnGround;
+	float RecoveryTimer = 1000.0f;
 
 	const float LeftBorder = -1.0f;
 	const float RightBorder = 1.0f;
