@@ -5,7 +5,7 @@
 
 UBall::UBall() : Radius(1.f)
 {
-
+	SetObjectType(ObjectType::Pikachu);
 }
 
 UBall::~UBall()
