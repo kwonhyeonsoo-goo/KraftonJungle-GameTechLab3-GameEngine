@@ -1,41 +1,49 @@
 #include "UUI.h"
-#include "TextureRenderer.h"
-#include "Utility.h"
 
 void UUI::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 {
-	TextureRender = new TextureRenderer();
-	TextureRender->Create(device, context);
-	Scale = 1.f;
+	SetUseGravity(false);
+	SetCollider(nullptr);
+	SetScale(1.0f);
+	OnCreate(device, context);
 }
 
 void UUI::Physics_Update(float tick)
 {
-
+	(void)tick;
 }
 
 void UUI::Update(float tick)
 {
-
+	OnUpdate(tick);
 }
 
 void UUI::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 {
-	if (TextureRender)
+	if (!bVisible)
 	{
-		TextureRender->Draw(context, device, Position, Scale);
+		return;
 	}
+
+	OnRender(context, device);
 }
 
 void UUI::Release()
 {
-	SafeReleaseAndDelete(TextureRender);
+	OnRelease();
 }
 
-void UUI::SetTexture(const std::wstring& filePath) const
+void UUI::OnCreate(ID3D11Device* device, ID3D11DeviceContext* context)
 {
-	if (TextureRender)
-	{
-		TextureRender->LoadTexture(nullptr, nullptr, filePath);
-	}
+	(void)device;
+	(void)context;
+}
+
+void UUI::OnUpdate(float tick)
+{
+	(void)tick;
+}
+
+void UUI::OnRelease()
+{
 }

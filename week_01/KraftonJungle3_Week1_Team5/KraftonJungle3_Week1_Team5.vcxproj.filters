@@ -234,6 +234,9 @@
     <ClInclude Include="UUI.h">
       <Filter>02. Client\00. GameObject</Filter>
     </ClInclude>
+    <ClInclude Include="UUIImage.h">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -360,6 +363,9 @@
       <Filter>02. Client\01. Scene</Filter>
     </ClCompile>
     <ClCompile Include="UUI.cpp">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="UUIImage.cpp">
       <Filter>02. Client\00. GameObject</Filter>
     </ClCompile>
   </ItemGroup>
