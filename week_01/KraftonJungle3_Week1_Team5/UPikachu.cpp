@@ -7,10 +7,8 @@
 
 void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 {
-	SphereMesh = new USphereMesh();
-	SphereMesh->CreateSphere(device);
-	//CubeMesh = new UCubeMesh();
-	//CubeMesh->CreateCube(device);
+	CubeMesh = new UCubeMesh();
+	CubeMesh->CreateCube(device);
 
 	D3D11_INPUT_ELEMENT_DESC layout[] = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
@@ -24,7 +22,7 @@ void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 
 	UseGravity = true;
 
-	JumpForce = 1.0f;
+	JumpForce = 3.0f;
 	bOnGround = false;
 }
 
@@ -44,18 +42,15 @@ void UPikachu::Update(float tick)
 
 void UPikachu::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 {
-	SphereMesh->Bind(context);
-	//CubeMesh->Bind(context);
+	CubeMesh->Bind(context);
 	Shader->Bind(context);
 	Shader->UpdateConstant(context, Position, Scale);
-	SphereMesh->Draw(context);
-	//CubeMesh->Draw(context);
+	CubeMesh->Draw(context);
 }
 
 void UPikachu::Release()
 {
-	SafeReleaseAndDelete(SphereMesh);
-	//SafeReleaseAndDelete(CubeMesh);
+	SafeReleaseAndDelete(CubeMesh);
 	SafeReleaseAndDelete(Shader);
 }
 
@@ -135,15 +130,15 @@ void UPikachu::Move(float tick)
 			if (currentInput & FLAG_LEFT)
 			{
 				CurrentState = EPlayerState::Diving;
-				Velocity.x = -0.5f;
-				Velocity.y = JumpForce * 0.5f;
+				Velocity.x = -1.1f;
+				Velocity.y = JumpForce * 0.3f;
 				bOnGround = false;
 			}
 			else if (currentInput & FLAG_RIGHT)
 			{
 				CurrentState = EPlayerState::Diving;
-				Velocity.x = 0.5f;
-				Velocity.y = JumpForce * 0.5f;
+				Velocity.x = 1.1f;
+				Velocity.y = JumpForce * 0.3f;
 				bOnGround = false;
 			}
 		}

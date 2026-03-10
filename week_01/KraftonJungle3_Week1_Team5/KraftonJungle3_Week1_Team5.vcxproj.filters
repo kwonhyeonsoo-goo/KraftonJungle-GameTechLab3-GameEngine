@@ -225,6 +225,9 @@
     <ClInclude Include="UPikachu.h">
       <Filter>02. Client\00. GameObject</Filter>
     </ClInclude>
+    <ClInclude Include="Rect.h">
+      <Filter>00. Engine\01. System\Graphic\Mesh\Rect</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">

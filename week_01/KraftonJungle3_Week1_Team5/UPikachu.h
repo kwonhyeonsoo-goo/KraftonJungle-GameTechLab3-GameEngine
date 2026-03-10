@@ -46,14 +46,13 @@ private:
 	EPlayerState GetSpikeStateFromInput(int input);
 
 private:
-	USphereMesh* SphereMesh;
-	// UCubeMesh* CubeMesh;
+	UCubeMesh* CubeMesh;
 	UShader* Shader;
 
 	EPlayerState CurrentState = EPlayerState::Normal;
 	float JumpForce;
 	bool bOnGround;
-	float RecoveryTimer = 1000.0f;
+	float RecoveryTimer;
 
 	const float LeftBorder = -1.0f;
 	const float RightBorder = 1.0f;
