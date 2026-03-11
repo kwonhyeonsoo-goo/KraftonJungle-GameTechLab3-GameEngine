@@ -8,6 +8,11 @@ UEngine::~UEngine() = default;
 
 bool UEngine::Initialize(HWND hWnd, const std::string& startSceneName)
 {
+	if (!SoundManager.Initialize())
+	{
+		return false;
+	}
+
 	if (!Renderer.Create(hWnd))
 	{
 		return false;
@@ -28,6 +33,7 @@ bool UEngine::Initialize(HWND hWnd, const std::string& startSceneName)
 
 void UEngine::Release()
 {
+	SoundManager.Release();
 	SceneManager.Shutdown();
 	ResourceManager.Release();
 	Renderer.Release();

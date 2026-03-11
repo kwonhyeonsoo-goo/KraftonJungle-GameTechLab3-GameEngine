@@ -18,7 +18,7 @@ public:
 	int Run(int nShowCmd);
 
 protected:
-	void Initialize();
+	bool Initialize();
 	void Tick(float dt);
 	void Shutdown();
 	void OnDestroy() override;
