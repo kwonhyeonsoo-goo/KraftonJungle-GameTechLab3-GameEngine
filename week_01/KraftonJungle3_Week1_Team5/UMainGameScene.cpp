@@ -9,6 +9,7 @@
 #include "Utility.h"
 #include "UGameManager.h"
 #include "UUIImage.h"
+#include "TextureRenderer.h"
 #include "UUIScore.h"
 
 REGISTER_SCENE(UMainGameScene)
@@ -35,7 +36,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
   // Player2
 	UPikachu* Player2 = new UPikachu();
 	Player2->Create(device, context);
-
+	Player2->TextureRender->SetFlipDraw(true); // Player2는 좌우 반전된 이미지 사용
 	Player2->SetKeyConfig({ VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_RETURN });
 	Player2->SetBoundary(0.02f, 1.0f, 1.0f, -1.0f);
 	// Player2 게임 시작 위치

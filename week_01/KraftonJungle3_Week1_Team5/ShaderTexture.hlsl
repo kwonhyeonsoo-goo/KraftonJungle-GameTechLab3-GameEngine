@@ -31,9 +31,9 @@ PS_INPUT mainVS(VS_INPUT input)
     // output.position = input.position;
     // 위 코드를 아래 코드처럼 수정 하세요.
 
-    input.position.x *= Scale;
-    input.position.y *= Scale;
-    input.position.z *= Scale;
+    input.position.x *= abs(Scale);
+    input.position.y *= abs(Scale);
+    input.position.z *= abs(Scale);
     
     // Pass the position directly to the pixel shader (no transformation)
     // 상수버퍼를 통해 넘겨 받은 Offset을 더해서 버텍스를 이동 시켜 픽셀쉐이더로 넘김
@@ -41,7 +41,8 @@ PS_INPUT mainVS(VS_INPUT input)
 
 
     // Pass the color to the pixel shader
-    output.uv = input.uv;
+    output.uv.x = lerp(input.uv.x, 1.0f - input.uv.x, Scale < 0);
+    output.uv.y = input.uv.y;
 
     return output;
 }

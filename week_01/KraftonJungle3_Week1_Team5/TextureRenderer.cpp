@@ -36,7 +36,7 @@ void TextureRenderer::Draw(ID3D11DeviceContext* context, ID3D11Device* device, F
 	{
 		return;
 	}
-
+	float flipScale = isFlipDraw ? -1.0f*Scale : 1.0f* Scale;
 	UpdateMeshForCurrentViewport(device, context);
 
 	ID3D11ShaderResourceView* srv = Texture->GetSRV();
@@ -44,7 +44,7 @@ void TextureRenderer::Draw(ID3D11DeviceContext* context, ID3D11Device* device, F
 	Mesh->Bind(context);
 	Shader->Bind(context);
 	context->PSSetShaderResources(0, 1, &srv);
-	Shader->UpdateConstant(context, Position, Scale);
+	Shader->UpdateConstant(context, Position, flipScale);
 	Mesh->Draw(context);
 }
 

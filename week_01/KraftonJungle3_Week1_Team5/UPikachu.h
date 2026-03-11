@@ -79,7 +79,8 @@ private:
 	float TopBorder = 1.0f;
 	float BottomBorder = -1.0f;
 
-	TextureRenderer* TextureRender;
+	
+public:
 	Animator* AnimatorComponent;
-
+	TextureRenderer* TextureRender;
 };
