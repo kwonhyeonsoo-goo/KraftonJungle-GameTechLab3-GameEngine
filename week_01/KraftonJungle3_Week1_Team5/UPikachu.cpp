@@ -160,8 +160,6 @@ void UPikachu::Update(float tick)
 				AnimatorComponent->Play("Jump", AnimationMode::Round);
 
 			}
-
-
 		}
 		else if (GetPlayerState() == EPlayerState::Normal) {
 			AnimatorComponent->Play("Normal", AnimationMode::Round);
@@ -226,7 +224,7 @@ void UPikachu::HandleCollision(UBall* ball)
 	{
 	case EPlayerState::BasicSpike:
 		// 앞으로 적당하게
-		newXVel = xSign * 2.0f; // 수정해야함.
+		newXVel = xSign * 2.0f;
 		newYVel = 0.5f;
 		ball->SetSpike(true, Position);
 		break;
