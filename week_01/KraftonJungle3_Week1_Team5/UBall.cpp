@@ -48,7 +48,10 @@ L"Resource/Image/ball/ball_4.png"
 	instance->BallTrail->Create(device, context);	
 	instance->BallTrail->SetTexture(L"Resource/Image/ball/ball_trail.png");
 
-
+	//충돌 이펙트(펀치)
+	instance->BallPunch = new UUIImage();
+	instance->BallPunch->Create(device, context);
+	instance->BallPunch->SetTexture(L"Resource/Image/ball/ball_punch.png");
 	return instance;
 }
 
@@ -63,10 +66,11 @@ void UBall::Physics_Update(const float tick)
 void UBall::Update(float tick)
 {
 	elapsedTime += tick;
+	PunchTimer -= tick;
 
+	//잔상
 	if(elapsedTime > TrailTimer)
 	{
-
 		elapsedTime = 0;
 
 		TrailPosition = HyperPosition;
@@ -74,7 +78,7 @@ void UBall::Update(float tick)
 		PreviousPosition = Position;
 
 	}
-		
+
 	AnimatorComponent->Update(BallTextureRenderer, tick);
 	BallHyper->SetPosition(HyperPosition);
 	BallTrail->SetPosition(TrailPosition);
@@ -88,6 +92,16 @@ void UBall::Update(float tick)
 		BallHyper->SetVisible(false);
 		BallTrail->SetVisible(false);
 	}
+
+	//충돌
+	if (PunchTimer > 0)
+	{
+		BallPunch->SetVisible(true);
+		BallPunch->SetScale(BallPunch->GetScale() - tick * 3.0f);
+	}
+	else
+		BallPunch->SetVisible(false);
+
 }
 
 void UBall::Render(ID3D11DeviceContext* context, ID3D11Device* device)
@@ -98,7 +112,7 @@ void UBall::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 	BallTrail->Render(context, device);
 	BallHyper->Render(context, device);
 	BallTextureRenderer->Draw(context, device, Position, 1.f);
-
+	BallPunch->Render(context, device);
 
 
 }
@@ -112,12 +126,12 @@ void UBall::ApplyBoundaryCollision()
 {
 	if (Position.x > 1.f - Radius)
 	{
-		Velocity.x *= -1;
+		Velocity.x *= -0.9;
 		Position.x = 1.f - Radius;
 	}
 	if (Position.x < -1.f + Radius)
 	{
-		Velocity.x *= -1;
+		Velocity.x *= -0.9;
 		Position.x = -1.f + Radius;
 	}
 	if (Position.y > 1.f - Radius)
@@ -129,6 +143,7 @@ void UBall::ApplyBoundaryCollision()
 	{
 		Velocity.y *= -1;
 		Position.y = -0.8f + Radius;
+		PlayBallPunchEffect({ Position.x, -0.8f,0.0f });
 	}
 }
 
@@ -153,4 +168,27 @@ void UBall::Release()
 	SafeDelete(BallTextureRenderer);
 	SafeReleaseAndDelete(BallTrail);
 	SafeReleaseAndDelete(BallHyper);
+}
+
+void UBall::SetSpike(bool spike)
+{
+	isSpike = spike;
+	if(spike) 
+	PlayBallPunchEffect(Position);
+}
+void UBall::SetSpike(bool spike, FVector3 TargetPosition)
+{
+	isSpike = spike;
+
+	FVector3 direction = (TargetPosition - Position).Normalize()*Radius;
+
+	if(spike) 
+		PlayBallPunchEffect(Position + direction);
+}
+
+void UBall::PlayBallPunchEffect(FVector3 effectPosition)
+{
+	PunchTimer = PunchLifetime;
+	BallPunch->SetPosition(effectPosition);
+	BallPunch->SetScale(1.0f);
 }

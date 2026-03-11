@@ -16,6 +16,9 @@ public:
 
 	void InitializeUI(ID3D11Device* device, ID3D11DeviceContext* context);
 
+	// 임시
+	void OnImGuiRender() override;
+
 	void UpdateCloudImageAnimation(float tick);
 	void UpdateCloudMovement(UUIImage* cloud);
 

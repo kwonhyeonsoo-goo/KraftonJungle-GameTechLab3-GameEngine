@@ -129,6 +129,9 @@ void UGameApp::EditorUpdate(float dt)
 	DrawSceneManagerPanel();
 	DrawSceneObjectsPanel();
 
+	// 임시
+	DrawCurrentScenePanel();
+
 	ImGui::Render();
 
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -258,3 +261,16 @@ void UGameApp::DrawSceneObjectsPanel()
 
 	ImGui::End();
 }
+
+// 임시
+void UGameApp::DrawCurrentScenePanel()
+{
+	USceneManager* SceneManager = &Engine->GetSceneManager();
+	UScene* CurrentScene = SceneManager->GetCurrentScene();
+
+	if (CurrentScene)
+	{
+		CurrentScene->OnImGuiRender();
+	}
+}
+

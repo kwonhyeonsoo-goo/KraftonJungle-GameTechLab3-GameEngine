@@ -15,6 +15,9 @@
 #include "UShadow.h"
 #include "UUIScore.h"
 
+//임시
+#include "ImGui/imgui.h"
+
 REGISTER_SCENE(UMainGameScene)
 
 void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
@@ -84,6 +87,9 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 		ballShadow->SetTarget(ball);
 	}
 
+	Player1->SetTargetBall(ball);
+	Player2->SetTargetBall(ball);
+
 	Net = new UNet();
 	Net->Create(device, context);
 
@@ -102,6 +108,27 @@ void UMainGameScene::Update(float tick)
 	{
 		UEngine::GetInstance().GetSceneManager().RequestChangeScene("UMainTitleScene");
 	}
+
+	// 포인트 획득 상태나 게임 종료시 Update 종료
+	//if (GM.GetGameState() == EGameState::GameOver)
+	//{
+	//	{
+	//		//여기에 승리 실패 시 출력될 애니메이션 코드를 넣습니다.
+	//		Player1->Update(tick);
+	//		Player2->Update(tick);
+	//	}
+
+	//	return;
+	//}
+
+	//if (GM.GetGameState() == EGameState::Serving)
+	//{
+	//	{
+	//		// 여기에 새로운 게임 시작시 출력될
+	//		// 게임 시작! "READY?" 등의 문구를 출력합니다.
+	//	}
+	//	return;
+	//}
 	
 	for (auto& gameObject : GameObjects)
 	{
@@ -114,8 +141,8 @@ void UMainGameScene::Update(float tick)
 			gameObject->Physics_Update(tick);
 	}
 
-	//if (GM.GetGameState() != EGameState::Playing && GM.GetGameState() != EGameState::GameOver)
-	//	return;
+	/*if (GM.GetGameState() != EGameState::Playing && GM.GetGameState() != EGameState::GameOver)
+		return;*/
 
 	for (auto& gameObject : GameObjects)
 	{
@@ -133,6 +160,8 @@ void UMainGameScene::Update(float tick)
 			gameObject->Update(tick);
 		}
 	}
+	/*if (GM.GetGameState() == EGameState::GameOver)
+		return;*/
 
 	CheckCollision();
 
@@ -232,6 +261,7 @@ void UMainGameScene::CheckCollision()
 	}
 }
 
+
 void UMainGameScene::InitializeUI(ID3D11Device* device, ID3D11DeviceContext* context)
 {
 	UUIImage* backGround = new UUIImage();
@@ -311,5 +341,29 @@ void UMainGameScene::UpdateCloudMovement(UUIImage* cloud)
 
 			cloud->SetPosition({-1.2f, yPos, 0.f});
 		}
+	}
+}
+
+// 임시
+void UMainGameScene::OnImGuiRender()
+{
+	if (Player1 == nullptr || Player2 == nullptr) return;
+
+	if (ImGui::Begin("Pikachu AI"))
+	{
+		bool bP1IsAI = Player1->GetIsAI();
+		bool bP2IsAI = Player2->GetIsAI();
+
+		if (ImGui::Checkbox("Enable Player 1 AI", &bP1IsAI))
+		{
+			Player1->SetIsAI(bP1IsAI);
+		}
+
+		if (ImGui::Checkbox("Enable Player 2 AI", &bP2IsAI))
+		{
+			Player2->SetIsAI(bP2IsAI);
+		}
+
+		ImGui::End();
 	}
 }

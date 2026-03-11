@@ -16,6 +16,9 @@ public:
 	virtual void Exit() = 0;
 	void Render(ID3D11Device* device, ID3D11DeviceContext* context);
 
+	// 임시
+	virtual void OnImGuiRender() {}
+
 	void Release();
 	void CheckCollision();
 	const std::vector<UGameObject*>& GetGameObjects() const { return GameObjects; }
