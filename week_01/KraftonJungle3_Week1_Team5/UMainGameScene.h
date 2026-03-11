@@ -3,6 +3,7 @@
 
 class UUIImage;
 class UNet;
+class UPikachu;
 
 class UMainGameScene : public UScene
 {
@@ -22,6 +23,8 @@ private:
 	std::vector<float> CloudAnimationTime;
 	std::vector<UUIImage*> Clouds;
 	UNet* Net;
+	UPikachu* Player1;
+	UPikachu* Player2;
 
 	static constexpr float CloudBaseScale = 0.9f;
 	static constexpr float CloudScaleAmplitude = 0.3f;

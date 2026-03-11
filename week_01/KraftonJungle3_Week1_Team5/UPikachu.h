@@ -59,6 +59,8 @@ public:
 
 	EPlayerState GetSpikeStateFromInput(int input);
 
+	void SetMyFinalSCore(int FinalScore) { MyFinalScore = FinalScore; }
+
 private:
 	void ApplyBoundaryCollision();
 	void Move(float tick);
@@ -82,5 +84,8 @@ private:
 	
 public:
 	Animator* AnimatorComponent;
+
+	int MyFinalScore;
+
 	TextureRenderer* TextureRender;
 };

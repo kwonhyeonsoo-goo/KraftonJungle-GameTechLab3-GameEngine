@@ -124,12 +124,6 @@ void UGameApp::EditorUpdate(float dt)
 	ImGui::Text("Delta Time: %.6f", dt);   // 초 단위
 	ImGui::Text("Frame Time: %.3f ms", dt * 1000.0f); // 밀리초
 	ImGui::Text("FPS: %.1f", 1.0f / dt);   // FPS
-	/*ImGui::Text("Player1: %d", UGameManager::GetInstance().GetP1Point());
-	ImGui::Text("Player2: %d", UGameManager::GetInstance().GetP2Point());
-	if (UGameManager::GetInstance().GetGameState() == EGameState::GameOver)
-	{
-		ImGui::Text("Game Over!");
-	}*/
 	ImGui::End();
 
 	DrawSceneManagerPanel();

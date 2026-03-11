@@ -109,6 +109,8 @@ void UGameManager::ScorePoint(int player)
 	{
 		GameState = EGameState::GameOver;
 		//TODO: 엔터키 입력 전까지 해당 화면을 유지?
+		Player1->SetMyFinalSCore(P1Point);
+		Player2->SetMyFinalSCore(P2Point);
 	}
 
 }
@@ -130,6 +132,11 @@ void UGameManager::ResetRound()
 		PocketBall->SetVelocity(FVector3(0.f, -.5f, 0.f));
 	}
 
+	if (P1Point == 0 && P2Point == 0)
+	{
+		GameState = EGameState::Playing;
+		return;
+	}
 	GameState = EGameState::Serving;
 	StateTimer = 1.5f;
 }
