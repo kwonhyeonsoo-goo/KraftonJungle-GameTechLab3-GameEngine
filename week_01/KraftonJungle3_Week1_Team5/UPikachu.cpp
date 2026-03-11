@@ -32,7 +32,8 @@ void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 	UseGravity = true;
 	JumpForce = 3.0f;
 	bOnGround = false;
-	RecoveryTimer = 0.0f;
+
+	RecoveryTimer = 0.25f;
 
 #pragma region Texture&Animation
 	TextureRender = new TextureRenderer();
@@ -114,7 +115,6 @@ L"Resources/Textures/pikachu/pikachu_6_4.png"
 
 
 #pragma endregion
-
 }
 
 void UPikachu::Physics_Update(float tick)
@@ -204,11 +204,9 @@ void UPikachu::HandleCollision(UBall* ball)
 
 	// 공 y속도 + 플레이어 점프 속도 합산
 	// 절댓값으로 무조건 공이 플레이어보다 올라가게
-	float newYVel = fabsf(ball->GetVelocity().y) + max(0.f, Velocity.y);
+	float newYVel = fabsf(ball->GetVelocity().y) + fabsf(Velocity.y);
 	if (newYVel < 1.5f) newYVel = 1.5f;
 	if (BallPos.y < Position.y) newYVel *= -1;
-	
-
 	
 
 	// 플레이어가 왼쪽, 오른쪽인지에 따라 방향 구분
@@ -219,18 +217,18 @@ void UPikachu::HandleCollision(UBall* ball)
 	case EPlayerState::BasicSpike:
 		// 앞으로 적당하게
 		newXVel = xSign * 2.0f; // 수정해야함.
-		newYVel = 0.5f;
+		newYVel = 0.0f;
 		break;
 
 	case EPlayerState::FrontSpike:
 		// 옆
 		newXVel = xSign * 4.0f;
-		newYVel = 2.0f;
+		newYVel = 0.0f;
 		break;
 
 	case EPlayerState::UpSpike:
 		// 위
-		newXVel *= 0.5f;
+		newXVel *= 1.0f;
 		newYVel = 5.0f;
 		break;
 
@@ -258,8 +256,8 @@ void UPikachu::HandleCollision(UBall* ball)
 	}
 
 	// 속력 제한
-	const float MaxBallSpeed = 4.0f;
-	const float MinBallSpeed = 2.0f;
+	const float MaxBallSpeed = 4.0f; // 스파이크(강공) 속도
+	const float MinBallSpeed = 3.0f; // 일반 공격 속도
 	float speed = sqrtf(newXVel * newXVel + newYVel * newYVel);
 
 	if (speed > 0.f)
@@ -349,13 +347,83 @@ void UPikachu::Move(float tick)
 	}
 
 	CurrentState = EPlayerState::Normal;
-
 	int currentInput = FLAG_NONE;
-	if (GetAsyncKeyState(KeyConfig.SpikeKey) & 0x8000) currentInput |= FLAG_SPIKE;
-	if (GetAsyncKeyState(KeyConfig.LeftKey) & 0x8000) currentInput |= FLAG_LEFT;
-	if (GetAsyncKeyState(KeyConfig.RightKey) & 0x8000) currentInput |= FLAG_RIGHT;
-	if (GetAsyncKeyState(KeyConfig.UpKey) & 0x8000) currentInput |= FLAG_UP;
-	if (GetAsyncKeyState(KeyConfig.DownKey) & 0x8000) currentInput |= FLAG_DOWN;
+
+	if (!bIsAI)
+	{
+		// 사람의 키보드 조작
+		if (GetAsyncKeyState(KeyConfig.SpikeKey) & 0x8000) currentInput |= FLAG_SPIKE;
+		if (GetAsyncKeyState(KeyConfig.LeftKey) & 0x8000) currentInput |= FLAG_LEFT;
+		if (GetAsyncKeyState(KeyConfig.RightKey) & 0x8000) currentInput |= FLAG_RIGHT;
+		if (GetAsyncKeyState(KeyConfig.UpKey) & 0x8000) currentInput |= FLAG_UP;
+		if (GetAsyncKeyState(KeyConfig.DownKey) & 0x8000) currentInput |= FLAG_DOWN;
+	}
+	else
+	{
+		if (TargetBall)
+		{
+			FVector3 ballPos = TargetBall->GetPosition();
+			FVector3 ballVel = TargetBall->GetVelocity();
+
+			float PositionLeftBorder = -1.0f + TargetBall->GetRadius();
+			float PositionRightBorder = 1.0f - TargetBall->GetRadius();
+
+			// 공의 다음 X 위치 예측
+			float targetX = ballPos.x + (ballVel.x * tick * 10.0f);
+			float targetY = ballPos.y + (ballVel.y * tick * 10.0f);
+
+			while (!(PositionLeftBorder < targetX && targetX < PositionRightBorder))
+			{
+				if (targetX < PositionLeftBorder)
+				{
+					targetX = PositionLeftBorder + (PositionLeftBorder - targetX) * 0.9f;
+				}
+
+				if (targetX > PositionRightBorder)
+				{
+					targetX = PositionRightBorder - (targetX - PositionRightBorder) * 0.9f;
+				}
+			}
+
+			float myTargetX = targetX;
+			if (myTargetX < LeftBorder) myTargetX = LeftBorder;
+			if (myTargetX > RightBorder) myTargetX = RightBorder;
+
+			float deadzone = 0.05f;
+
+			// 이동
+			if (Position.x < myTargetX - deadzone)
+			{
+				currentInput |= FLAG_RIGHT;
+			}
+			else if (Position.x > myTargetX + deadzone)
+			{
+				currentInput |= FLAG_LEFT;
+			}
+
+			// 1P 2P 판별
+			bool bIsPlayer1 = (LeftBorder < 0.0f && RightBorder <= 0.0f);
+
+			// 점프
+			if (bOnGround && -0.15f < targetY && targetY < 0.2f && abs(Position.x - targetX) < 0.2f && ballPos.y - Position.y > 0.7f)
+			{
+				currentInput |= FLAG_UP;
+			}
+
+			// 다이빙
+			if (bOnGround && targetY < -0.4f && abs(Position.x - targetX) > 0.3f)
+			{
+				currentInput |= FLAG_SPIKE;
+			}
+
+			// 스파이크
+			if (!bOnGround && ballPos.y > -0.1f && abs(Position.x - ballPos.x) < 0.2f)
+			{
+				currentInput |= FLAG_SPIKE;
+				currentInput |= (rand() % 16) << 1;
+			}
+		}
+	}
 
 	// 2. 이동
 	if (currentInput & FLAG_LEFT) Position.x -= 1.0f * tick;

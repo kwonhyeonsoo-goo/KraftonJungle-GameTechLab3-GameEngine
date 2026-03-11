@@ -8,6 +8,9 @@
 #include "UNet.h"
 #include "UUIImage.h"
 
+//임시
+#include "ImGui/imgui.h"
+
 REGISTER_SCENE(UMainGameScene)
 
 void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
@@ -15,11 +18,11 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	// 이 씬에서 사용할 오브젝트들이나 기타 초기화 작업들을 한다고 생각하시면 된다.
 	InitializeUI(device, context);
 	// Player1
-	UPikachu* Player1 = new UPikachu();
+	Player1 = new UPikachu();
 	Player1->Create(device, context);
 
 	Player1->SetKeyConfig({ 'W', 'S', 'A', 'D', VK_SPACE });
-	Player1->SetBoundary(-1.0f, -0.02f, 1.0f, -1.0f);
+	Player1->SetBoundary(-1.0f, -0.02f, 1.0f, -0.8f);
 	Player1->SetPosition(FVector3(-0.5f, 0.0f, 0.0f));
 
 	UCircleCollider* Collider1 = new UCircleCollider();
@@ -29,11 +32,11 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	GameObjects.push_back(Player1);
   
   // Player2
-	UPikachu* Player2 = new UPikachu();
+	Player2 = new UPikachu();
 	Player2->Create(device, context);
 
 	Player2->SetKeyConfig({ VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_RETURN });
-	Player2->SetBoundary(0.02f, 1.0f, 1.0f, -1.0f);
+	Player2->SetBoundary(0.02f, 1.0f, 1.0f, -0.8f);
 	Player2->SetPosition(FVector3(0.5f, 0.0f, 0.0f));
 
 	UCircleCollider* Collider2 = new UCircleCollider();
@@ -61,6 +64,10 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 		GameObjects.push_back(instance);
 		
 	}
+
+	Player1->SetTargetBall(instance);
+	Player2->SetTargetBall(instance);
+
 	Net = new UNet();
 	Net->Create(device, context);
 }
@@ -170,6 +177,7 @@ void UMainGameScene::CheckCollision()
 	}
 }
 
+
 void UMainGameScene::InitializeUI(ID3D11Device* device, ID3D11DeviceContext* context)
 {
 	UUIImage* backGround = new UUIImage();
@@ -179,4 +187,28 @@ void UMainGameScene::InitializeUI(ID3D11Device* device, ID3D11DeviceContext* con
 		return;
 	}
 	GameObjects.push_back(backGround);
+}
+
+// 임시
+void UMainGameScene::OnImGuiRender()
+{
+	if (Player1 == nullptr || Player2 == nullptr) return;
+
+	if (ImGui::Begin("Pikachu AI"))
+	{
+		bool bP1IsAI = Player1->GetIsAI();
+		bool bP2IsAI = Player2->GetIsAI();
+
+		if (ImGui::Checkbox("Enable Player 1 AI", &bP1IsAI))
+		{
+			Player1->SetIsAI(bP1IsAI);
+		}
+
+		if (ImGui::Checkbox("Enable Player 2 AI", &bP2IsAI))
+		{
+			Player2->SetIsAI(bP2IsAI);
+		}
+
+		ImGui::End();
+	}
 }

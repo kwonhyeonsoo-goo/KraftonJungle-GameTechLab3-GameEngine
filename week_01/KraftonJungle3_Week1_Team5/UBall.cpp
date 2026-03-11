@@ -48,12 +48,12 @@ void UBall::ApplyBoundaryCollision()
 {
 	if (Position.x > 1.f - Radius)
 	{
-		Velocity.x *= -1;
+		Velocity.x *= -0.9;
 		Position.x = 1.f - Radius;
 	}
 	if (Position.x < -1.f + Radius)
 	{
-		Velocity.x *= -1;
+		Velocity.x *= -0.9;
 		Position.x = -1.f + Radius;
 	}
 	if (Position.y > 1.f - Radius)
@@ -61,10 +61,10 @@ void UBall::ApplyBoundaryCollision()
 		Velocity.y *= -1;
 		Position.y = 1.f - Radius;
 	}
-	if (Position.y < -1.f + Radius)
+	if (Position.y < -0.8f + Radius)
 	{
 		Velocity.y *= -1;
-		Position.y = -1.f + Radius;
+		Position.y = -0.8f + Radius;
 	}
 }
 

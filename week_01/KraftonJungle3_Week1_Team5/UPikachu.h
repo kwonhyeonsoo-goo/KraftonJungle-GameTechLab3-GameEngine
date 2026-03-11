@@ -59,6 +59,11 @@ public:
 
 	EPlayerState GetSpikeStateFromInput(int input);
 
+	bool GetIsAI() const { return bIsAI; }
+	void SetIsAI(bool isAI) { bIsAI = isAI; }
+
+	void SetTargetBall(UBall* ball) { TargetBall = ball; }
+
 private:
 	void ApplyBoundaryCollision();
 	void Move(float tick);
@@ -73,6 +78,9 @@ private:
 	float JumpForce;
 	bool bOnGround;
 	float RecoveryTimer;
+
+	bool bIsAI = false;
+	UBall* TargetBall = nullptr;
 
 	float LeftBorder = -1.0f;
 	float RightBorder = 1.0f;
