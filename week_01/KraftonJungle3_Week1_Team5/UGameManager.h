@@ -27,6 +27,9 @@ class UGameManager : public UPrimitive
 	int GetP2Point() const { return P2Point; }
 	int GetMaxPoint() const { return MaxPoint; }
 
+	void SetAIMode(bool active) { bAIMode = active; }
+	bool IsAIMode() const { return bAIMode; }
+
 private:
 	EGameState GameState; //현재 게임 흐름
 	EServerOwner ServerOwner; //서브 주도권 쥐고 있는 플레이어
@@ -44,6 +47,8 @@ private:
 	UBall* PocketBall = nullptr;
 
 	FVector3 Player1Pos, Player2Pos; // 게임 시작시 플레이어 위치
+
+	bool bAIMode = false;
 
 };
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "UScene.h"
 
+class UUIScore;
 class UUIImage;
 class UNet;
 class UPikachu;
@@ -8,6 +9,7 @@ class UPikachu;
 class UMainGameScene : public UScene
 {
 public:
+	void Enter() override;
 	void Initialize(ID3D11Device* device, ID3D11DeviceContext* context) override;
 	void Update(float tick) override;
 	void Exit() override;
@@ -26,9 +28,12 @@ private:
 	std::vector<float> CloudAnimationTime;
 	std::vector<UUIImage*> Clouds;
 
-	UPikachu* Player1;
-	UPikachu* Player2;
-	UNet* Net;
+	UPikachu* Player1 = nullptr;
+	UPikachu* Player2 = nullptr;
+	UNet* Net = nullptr;
+
+	UUIScore* P1_Score = nullptr;
+	UUIScore* P2_Score = nullptr;
 
 	static constexpr float CloudBaseScale = 0.9f;
 	static constexpr float CloudScaleAmplitude = 0.3f;

@@ -6,11 +6,17 @@
 
 #include "SceneAutoRegister.h"
 #include "UEngine.h"
+#include "UGameManager.h"
 #include "UUIButton.h"
 #include "UUIImage.h"
 #include "UTexture2D.h"
 
 REGISTER_SCENE(UMainTitleScene)
+
+void UMainTitleScene::Enter()
+{
+
+}
 
 void UMainTitleScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
@@ -225,12 +231,7 @@ void UMainTitleScene::UpdateMenuVisuals() const
 		}
 
 		MenuButtons[Index]->SetSelected(Index == SelectedMenuIndex);
-	}
-
-	if (SelectionMark != nullptr)
-	{
-		const FVector3 ButtonPosition = MenuButtonPositions[SelectedMenuIndex];
-		SelectionMark->SetPosition(FVector3{ ButtonPosition.x - 0.42f, ButtonPosition.y + 0.01f, ButtonPosition.z });
+		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_Button.wav", SOUND_UI, 0.8f);
 	}
 }
 
@@ -246,12 +247,17 @@ void UMainTitleScene::ExecuteSelectedMenu() const
 {
 	if (SelectedMenuIndex == 0)
 	{
+		UEngine::GetInstance().GetSceneManager().RequestChangeScene("UMainGameScene");
+		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_GameStart.wav", SOUND_UI, 0.8f);
+		UGameManager::GetInstance().SetAIMode(true);
 		return;
 	}
 
 	if (SelectedMenuIndex == 1)
 	{
 		UEngine::GetInstance().GetSceneManager().RequestChangeScene("UMainGameScene");
+		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_GameStart.wav",SOUND_UI, 0.8f);
+		UGameManager::GetInstance().SetAIMode(false);
 		return;
 	}
 }

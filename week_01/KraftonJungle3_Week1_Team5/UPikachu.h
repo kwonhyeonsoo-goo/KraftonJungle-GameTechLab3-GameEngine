@@ -1,4 +1,7 @@
 #pragma once
+#include <string>
+
+#include "fmod_common.h"
 #include "UGameObject.h"
 class USphereMesh;
 class UShader;
@@ -63,7 +66,11 @@ public:
 	void SetIsAI(bool isAI) { bIsAI = isAI; }
 
 	void SetTargetBall(UBall* ball) { TargetBall = ball; }
-	void SetMyFinalSCore(int FinalScore) { MyFinalScore = FinalScore; }
+	void SetMyFinalSCore(int FinalScore);
+#undef PlaySound
+	void PlaySound(const std::wstring& sound) const;
+
+	void SetType(const EPlayerType type) { Type = type; }
 
 private:
 	void ApplyBoundaryCollision();
@@ -71,8 +78,8 @@ private:
 
 private:
 	//UCubeMesh* CubeMesh;
-	USphereMesh* SphereMesh;
-	UShader* Shader;
+	//USphereMesh* SphereMesh;
+	//UShader* Shader;
 
 	EPlayerState CurrentState = EPlayerState::Normal;
 	FPlayerKeyConfig KeyConfig;
@@ -88,6 +95,7 @@ private:
 	float TopBorder = 1.0f;
 	float BottomBorder = -1.0f;
 
+	EPlayerType Type = EPlayerType::None;
 	
 public:
 	Animator* AnimatorComponent;

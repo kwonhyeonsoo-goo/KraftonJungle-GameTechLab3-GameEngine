@@ -6,6 +6,7 @@
 #include "URectCollider.h"
 #include "UBall.h"
 #include "UNet.h"
+#include "UWave.h"
 #include "Utility.h"
 #include "UGameManager.h"
 #include "UUIImage.h"
@@ -19,6 +20,11 @@
 #include "ImGui/imgui.h"
 
 REGISTER_SCENE(UMainGameScene)
+
+void UMainGameScene::Enter()
+{
+	UEngine::GetInstance().GetSoundManager().PlayBGM(L"bgm.mp3", 0.8f);
+}
 
 void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
@@ -47,7 +53,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	Collider1->SetRadius(2.f);
 
 	Player1->SetCollider(Collider1);
-
+	Player1->SetType(EPlayerType::Player1);
 	shadow1->SetTarget(Player1);
 
 	GameObjects.push_back(Player1);
@@ -65,7 +71,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	Collider2->Create(device, Player2);
 	Collider2->SetRadius(2.f);
 	Player2->SetCollider(Collider2);
-
+	Player2->SetType(EPlayerType::Player2);
 	shadow2->SetTarget(Player2);
 
 	GameObjects.push_back(Player2);
@@ -92,10 +98,19 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 
 	Net = new UNet();
 	Net->Create(device, context);
+	
+	UWave* Wave = new UWave();
+	Wave->Create(device, context);
+	GameObjects.push_back(Wave);
 
 	// 게임을 초기화 합니다.
 	UGameManager::GetInstance().Initialize(Player1, Player2, ball,
 		Player1->GetPosition(), Player2->GetPosition());
+
+	if (UGameManager::GetInstance().IsAIMode())
+	{
+		Player1->SetIsAI(true);
+	}
 }
 
 void UMainGameScene::Update(float tick)
@@ -104,6 +119,11 @@ void UMainGameScene::Update(float tick)
 
 	UGameManager& GM = UGameManager::GetInstance();
 	GM.Update(tick);
+
+	P1_Score->SetScore(GM.GetP1Point());
+	P2_Score->SetScore(GM.GetP2Point());
+	P1_Score->Update(tick);
+	P2_Score->Update(tick);
 
 	if ((GM.GetGameState() == EGameState::GameOver) && (GetAsyncKeyState(VK_RETURN) & 0x8000))
 	{
@@ -178,7 +198,7 @@ void UMainGameScene::Update(float tick)
 
 void UMainGameScene::Exit()
 {
-
+	UEngine::GetInstance().GetSoundManager().StopAll();
 }
 // 피카츄 배구 게임에 오브젝트는 3개
 void UMainGameScene::CheckCollision()
@@ -301,15 +321,15 @@ void UMainGameScene::InitializeUI(ID3D11Device* device, ID3D11DeviceContext* con
 		Clouds.push_back(cloud);
 	}
 
-	UUIScore* score_1p = new UUIScore();
-	score_1p->Create(device, context);
-	score_1p->SetPosition({ -0.7f, 0.75f, 0.f });
-	GameObjects.push_back(score_1p);
+	P1_Score = new UUIScore();
+	P1_Score->Create(device, context);
+	P1_Score->SetPosition({ -0.7f, 0.75f, 0.f });
+	GameObjects.push_back(P1_Score);
 
-	UUIScore* score_2p = new UUIScore();
-	score_2p->Create(device, context);
-	score_2p->SetPosition({ 0.7f, 0.75f, 0.f });
-	GameObjects.push_back(score_2p);
+	P2_Score = new UUIScore();
+	P2_Score->Create(device, context);
+	P2_Score->SetPosition({ 0.7f, 0.75f, 0.f });
+	GameObjects.push_back(P2_Score);
 }
 
 void UMainGameScene::UpdateCloudImageAnimation(const float tick)

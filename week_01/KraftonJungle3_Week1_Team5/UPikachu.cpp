@@ -18,8 +18,8 @@ void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 
 	/*CubeMesh = new UCubeMesh();
 	CubeMesh->CreateCube(device);*/
-	SphereMesh = new USphereMesh();
-	SphereMesh->CreateSphere(device);
+	//SphereMesh = new USphereMesh();
+	//SphereMesh->CreateSphere(device);
 
 	D3D11_INPUT_ELEMENT_DESC layout[] = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
@@ -28,8 +28,8 @@ void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 			D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
 
-	Shader = new UShader();
-	Shader->Create(device, L"ShaderW0.hlsl", layout, ARRAYSIZE(layout), "mainVS", "mainPS");
+	//Shader = new UShader();
+	//Shader->Create(device, L"ShaderW0.hlsl", layout, ARRAYSIZE(layout), "mainVS", "mainPS");
 
 	UseGravity = true;
 	JumpForce = 3.0f;
@@ -131,15 +131,15 @@ void UPikachu::Physics_Update(float tick)
 
 void UPikachu::Update(float tick)
 {
-
 	//게임오버시
 	if (UGameManager::GetInstance().GetGameState() == EGameState::GameOver)
 	{
-		if(MyFinalScore == UGameManager::GetInstance().GetMaxPoint())
+		if (MyFinalScore == UGameManager::GetInstance().GetMaxPoint())
+		{
 			AnimatorComponent->Play("Win", AnimationMode::Once);
+		}
 		else
 			AnimatorComponent->Play("Lose", AnimationMode::Once);
-		
 	}
 	else
 	{
@@ -150,15 +150,13 @@ void UPikachu::Update(float tick)
 				)
 			{
 				AnimatorComponent->Play("Spike", AnimationMode::Loop);
-
+				PlaySound(L"Pikachu_Smash.wav");
 			}
 			else if (GetPlayerState() == EPlayerState::Diving) {
 				AnimatorComponent->Play("Diving", AnimationMode::Loop);
-
 			}
 			else {
 				AnimatorComponent->Play("Jump", AnimationMode::Round);
-
 			}
 		}
 		else if (GetPlayerState() == EPlayerState::Normal) {
@@ -177,10 +175,10 @@ void UPikachu::Update(float tick)
 
 void UPikachu::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 {
-	SphereMesh->Bind(context);
-	Shader->Bind(context);
-	Shader->UpdateConstant(context, Position, Scale);
-	SphereMesh->Draw(context);
+	//SphereMesh->Bind(context);
+	//Shader->Bind(context);
+	//Shader->UpdateConstant(context, Position, Scale);
+	//SphereMesh->Draw(context);
 
 	TextureRender->Draw(context, device, Position, 1.f);
 
@@ -314,6 +312,28 @@ void UPikachu::SetBoundary(float left, float right, float top, float bottom)
 	RightBorder = right;
 	TopBorder = top;
 	BottomBorder = bottom;
+}
+
+void UPikachu::SetMyFinalSCore(int FinalScore)
+{
+	MyFinalScore = FinalScore;
+	if (MyFinalScore == UGameManager::GetInstance().GetMaxPoint())
+	{
+		PlaySound(L"Pikachu_Win.wav");
+	}
+}
+
+void UPikachu::PlaySound(const std::wstring& sound) const
+{
+	if (Type == EPlayerType::Player1)
+	{
+		UEngine::GetInstance().GetSoundManager().PlaySound(sound, SOUND_PLAYER_1, 0.8f);
+	}
+
+	if (Type == EPlayerType::Player2)
+	{
+		UEngine::GetInstance().GetSoundManager().PlaySound(sound, SOUND_PLAYER_2, 0.8f);
+	}
 }
 
 void UPikachu::ApplyBoundaryCollision()
@@ -454,6 +474,7 @@ void UPikachu::Move(float tick)
 	{
 		if (currentInput & FLAG_UP)
 		{
+			PlaySound(L"Pikachu_Jump.wav");
 			Velocity.y = JumpForce;
 			bOnGround = false;
 		}
@@ -462,7 +483,7 @@ void UPikachu::Move(float tick)
 			if (currentInput & FLAG_LEFT)
 			{
 				CurrentState = EPlayerState::Diving;
-
+				PlaySound(L"Pikachu_Jump.wav");
 				Velocity.x = -1.1f;
 				Velocity.y = JumpForce * 0.3f;
 				bOnGround = false;
@@ -470,6 +491,7 @@ void UPikachu::Move(float tick)
 			else if (currentInput & FLAG_RIGHT)
 			{
 				CurrentState = EPlayerState::Diving;
+				PlaySound(L"Pikachu_Jump.wav");
 				Velocity.x = 1.1f;
 				Velocity.y = JumpForce * 0.3f;
 				bOnGround = false;

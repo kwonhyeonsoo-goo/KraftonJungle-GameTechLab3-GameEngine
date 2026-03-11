@@ -22,6 +22,5 @@ void UUIScore::OnCreate(ID3D11Device* device, ID3D11DeviceContext* context)
 void UUIScore::OnUpdate(float tick)
 {
 	UUIImage::OnUpdate(tick);
-
 	SetTexture(Numbers[Score]);
 }

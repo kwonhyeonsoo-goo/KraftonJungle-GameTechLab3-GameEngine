@@ -94,6 +94,12 @@
     <Filter Include="00. Engine\01. System\Graphic\Material">
       <UniqueIdentifier>{887aae6e-4cbc-4959-999d-6402369e6b18}</UniqueIdentifier>
     </Filter>
+    <Filter Include="00. Engine\FMod">
+      <UniqueIdentifier>{79ee88cd-52ec-4d91-915b-99ef9327c661}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00. Engine\01. System\Sound">
+      <UniqueIdentifier>{d3f56801-b75b-424e-bd90-fce7d2dfde22}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGui\imconfig.h">
@@ -240,6 +246,35 @@
     <ClInclude Include="UUIButton.h" />
     <ClInclude Include="UUIScore.h" />
     <ClInclude Include="UShadow.h" />
+    <ClInclude Include="UGameManager.h" />
+    <ClInclude Include="FMod\fmod.h">
+      <Filter>00. Engine\FMod</Filter>
+    </ClInclude>
+    <ClInclude Include="FMod\fmod.hpp">
+      <Filter>00. Engine\FMod</Filter>
+    </ClInclude>
+    <ClInclude Include="FMod\fmod_codec.h">
+      <Filter>00. Engine\FMod</Filter>
+    </ClInclude>
+    <ClInclude Include="FMod\fmod_common.h">
+      <Filter>00. Engine\FMod</Filter>
+    </ClInclude>
+    <ClInclude Include="FMod\fmod_dsp.h">
+      <Filter>00. Engine\FMod</Filter>
+    </ClInclude>
+    <ClInclude Include="FMod\fmod_dsp_effects.h">
+      <Filter>00. Engine\FMod</Filter>
+    </ClInclude>
+    <ClInclude Include="FMod\fmod_errors.h">
+      <Filter>00. Engine\FMod</Filter>
+    </ClInclude>
+    <ClInclude Include="FMod\fmod_output.h">
+      <Filter>00. Engine\FMod</Filter>
+    </ClInclude>
+    <ClInclude Include="USoundManager.h">
+      <Filter>00. Engine\01. System\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="UWave.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -374,6 +409,11 @@
     <ClCompile Include="UUIButton.cpp" />
     <ClCompile Include="UUIScore.cpp" />
     <ClCompile Include="UShadow.cpp" />
+    <ClCompile Include="UGameManager.cpp" />
+    <ClCompile Include="USoundManager.cpp">
+      <Filter>00. Engine\01. System\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="UWave.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ShaderW0.hlsl">

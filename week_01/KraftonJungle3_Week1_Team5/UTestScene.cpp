@@ -5,6 +5,10 @@
 
 REGISTER_SCENE(UTestScene)
 
+void UTestScene::Enter()
+{
+}
+
 void UTestScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
 	UPikachu* obj = new UPikachu();

@@ -36,3 +36,23 @@ enum class EServerOwner
 	
 	COUNT
 };
+
+enum CHANNELID
+{
+	SOUND_EFFECT,
+	SOUND_PLAYER_1,
+	SOUND_PLAYER_1_EFFECT,
+	SOUND_PLAYER_2,
+	SOUND_PLAYER_2_EFFECT,
+	SOUND_BGM,
+	SOUND_UI,
+
+	MAXCHANNEL
+};
+
+enum class EPlayerType
+{
+	Player1,
+	Player2,
+	None
+};
