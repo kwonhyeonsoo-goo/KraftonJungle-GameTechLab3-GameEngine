@@ -44,9 +44,9 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	Player1->Create(device, context);
 
 	Player1->SetKeyConfig({ 'W', 'S', 'A', 'D', VK_SPACE });
-	Player1->SetBoundary(-1.0f, -0.02f, 1.0f, -0.75f);
+	Player1->SetBoundary(-1.0f, -0.001f, 1.0f, -0.75f);
 	// Player1 게임 시작 위치
-	Player1->SetPosition(FVector3(-0.5f, -0.75f, 0.0f));
+	Player1->SetPosition(FVector3(-0.8f, -0.75f, 0.0f));
 
 	UCircleCollider* Collider1 = new UCircleCollider();
 	Collider1->Create(device, Player1);
@@ -63,9 +63,9 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	Player2->Create(device, context);
 	Player2->TextureRender->SetFlipDraw(true); // Player2는 좌우 반전된 이미지 사용
 	Player2->SetKeyConfig({ VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_RETURN });
-	Player2->SetBoundary(0.02f, 1.0f, 1.0f, -0.75f);
+	Player2->SetBoundary(0.001f, 1.0f, 1.0f, -0.75f);
 	// Player2 게임 시작 위치
-	Player2->SetPosition(FVector3(0.5f, -0.75f, 0.0f));
+	Player2->SetPosition(FVector3(0.8f, -0.75f, 0.0f));
 
 	UCircleCollider* Collider2 = new UCircleCollider();
 	Collider2->Create(device, Player2);
@@ -110,6 +110,12 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	if (UGameManager::GetInstance().IsAIMode())
 	{
 		Player1->SetIsAI(true);
+	}
+
+	if (UGameManager::GetInstance().IsAIVsAIMode())
+	{
+		Player1->SetIsAI(true);
+		Player2->SetIsAI(true);
 	}
 }
 

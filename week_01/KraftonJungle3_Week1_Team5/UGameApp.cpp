@@ -94,7 +94,9 @@ void UGameApp::Tick(const float dt)
 	SceneManager.Update(dt);
 	Renderer.Prepare();
 	SceneManager.Render();
+#ifdef _DEBUG
 	EditorUpdate(dt);
+#endif
 	Renderer.SwapBuffer();
 	SceneManager.ProcessPendingSceneChange();
 }

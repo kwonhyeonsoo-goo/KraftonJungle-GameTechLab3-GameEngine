@@ -27,8 +27,8 @@ private:
 
 private:
 	std::vector<UUIImage*> BackgroundTiles;
-	std::array<UUIButton*, 2> MenuButtons{ nullptr, nullptr };
-	std::array<FVector3, 2> MenuButtonPositions{};
+	std::array<UUIButton*, 3> MenuButtons{ nullptr, nullptr, nullptr };
+	std::array<FVector3, 3> MenuButtonPositions{};
 	UUIImage* FightImage = nullptr;
 	FVector3 BackgroundTileStep = FVector3{ 0.0f, 0.0f, 0.0f };
 	FVector3 BackgroundScrollOffset = FVector3{ 0.0f, 0.0f, 0.0f };
