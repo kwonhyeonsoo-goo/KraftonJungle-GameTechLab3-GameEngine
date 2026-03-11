@@ -19,7 +19,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nShowCmd)
 		UWindow::FWindowDesc winDesc;
 		winDesc.ClassName = L"JungleWindowClass";
 		winDesc.Title = L"Game Tech Lab";
-		winDesc.Width = 1024;
+		winDesc.Width = 1456;
 		winDesc.Height = 1024;
 		winDesc.Style = WS_OVERLAPPEDWINDOW;
 

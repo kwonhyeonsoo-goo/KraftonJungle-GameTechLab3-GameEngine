@@ -109,7 +109,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 
 	if (UGameManager::GetInstance().IsAIMode())
 	{
-		Player1->SetIsAI(true);
+		Player2->SetIsAI(true);
 	}
 }
 
