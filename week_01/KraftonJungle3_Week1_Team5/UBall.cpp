@@ -56,11 +56,11 @@ void UBall::ApplyBoundaryCollision()
 		Velocity.y *= -1;
 		Position.y = 1.f - Radius;
 	}
-	/*if (Position.y < -1.f + Radius) //바닥 튕김은 GameManager 에서 관리
+	if (Position.y < -1.f + Radius) //바닥 튕김은 GameManager 에서 관리
 	{
 		Velocity.y *= -1;
 		Position.y = -1.f + Radius;
-	}*/
+	}
 }
 
 void UBall::SetRadius(const float radius)
