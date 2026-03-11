@@ -13,8 +13,7 @@ TextureRenderer::TextureRenderer() : Mesh(nullptr), Shader(nullptr)
 
 TextureRenderer::~TextureRenderer()
 {
-	SafeReleaseAndDelete(Mesh);
-	SafeReleaseAndDelete(Shader);
+	Release();
 }
 
 void TextureRenderer::Create(ID3D11Device* device, ID3D11DeviceContext* context)
@@ -29,11 +28,17 @@ void TextureRenderer::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 
 	Shader = new UShader();
 	Shader->Create(device, L"ShaderTexture.hlsl", layout, ARRAYSIZE(layout), "mainVS", "mainPS");
-
 }
 
 void TextureRenderer::Draw(ID3D11DeviceContext* context, ID3D11Device* device, FVector3 Position, float Scale)
 {
+	if (Texture == nullptr || Mesh == nullptr || Shader == nullptr || context == nullptr || device == nullptr)
+	{
+		return;
+	}
+
+	UpdateMeshForCurrentViewport(device, context);
+
 	ID3D11ShaderResourceView* srv = Texture->GetSRV();
 
 	Mesh->Bind(context);
@@ -51,7 +56,60 @@ void TextureRenderer::Init(ID3D11Device* Device, ID3D11DeviceContext* DeviceCont
 bool TextureRenderer::LoadTexture(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const std::wstring& filePath)
 {
 	Texture = UEngine::GetInstance().GetResourceManager().LoadTexture(filePath);
+	bMeshNeedsUpdate = true;
 
+	return Texture != nullptr;
+}
+
+void TextureRenderer::Release()
+{
+	SafeReleaseAndDelete(Mesh);
+	SafeReleaseAndDelete(Shader);
+	CachedViewportWidth = 0.0f;
+	CachedViewportHeight = 0.0f;
+	bMeshNeedsUpdate = true;
+}
+
+bool TextureRenderer::UpdateMeshForCurrentViewport(ID3D11Device* device, ID3D11DeviceContext* context)
+{
+	if (device == nullptr || context == nullptr || Texture == nullptr || Mesh == nullptr)
+	{
+		return false;
+	}
+
+	UINT viewportCount = 0;
+	context->RSGetViewports(&viewportCount, nullptr);
+	if (viewportCount == 0)
+	{
+		return false;
+	}
+
+	D3D11_VIEWPORT viewport = {};
+	viewportCount = 1;
+	context->RSGetViewports(&viewportCount, &viewport);
+	if (viewport.Width <= 0.0f || viewport.Height <= 0.0f)
+	{
+		return false;
+	}
+
+	if (!bMeshNeedsUpdate &&
+		CachedViewportWidth == viewport.Width &&
+		CachedViewportHeight == viewport.Height)
+	{
+		return true;
+	}
+
+	const float halfWidthNdc = static_cast<float>(Texture->GetWidth()) / viewport.Width;
+	const float halfHeightNdc = static_cast<float>(Texture->GetHeight()) / viewport.Height;
+
+	if (!Mesh->CreateRect(device, halfWidthNdc, halfHeightNdc))
+	{
+		return false;
+	}
+
+	CachedViewportWidth = viewport.Width;
+	CachedViewportHeight = viewport.Height;
+	bMeshNeedsUpdate = false;
 	return true;
 }
 

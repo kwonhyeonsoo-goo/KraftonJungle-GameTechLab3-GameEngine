@@ -6,29 +6,31 @@ struct FVertexTexture
     float u, v;
 };
 
-FVertexTexture rect_vertices[] =
-{
-    // triangle 1
-    { -1.0f, -1.0f, 0.0f, 0.0f, 1.0f },
-    { -1.0f,  1.0f, 0.0f, 0.0f, 0.0f },
-    {  1.0f,  1.0f, 0.0f, 1.0f, 0.0f },
-
-    // triangle 2
-    { -1.0f, -1.0f, 0.0f, 0.0f, 1.0f },
-    {  1.0f,  1.0f, 0.0f, 1.0f, 0.0f },
-    {  1.0f, -1.0f, 0.0f, 1.0f, 1.0f }
-};
-
 bool UTextureMesh::CreateRect(ID3D11Device* device)
+{
+    return CreateRect(device, 1.0f, 1.0f);
+}
+
+bool UTextureMesh::CreateRect(ID3D11Device* device, float halfWidthNdc, float halfHeightNdc)
 {
     if (device == nullptr)
     {
         return false;
     }
 
-    UINT numVerticesRect = sizeof(rect_vertices) / sizeof(FVertexTexture);
+    FVertexTexture rectVertices[] =
+    {
+        { -halfWidthNdc, -halfHeightNdc, 0.0f, 0.0f, 1.0f },
+        { -halfWidthNdc,  halfHeightNdc, 0.0f, 0.0f, 0.0f },
+        {  halfWidthNdc,  halfHeightNdc, 0.0f, 1.0f, 0.0f },
+        { -halfWidthNdc, -halfHeightNdc, 0.0f, 0.0f, 1.0f },
+        {  halfWidthNdc,  halfHeightNdc, 0.0f, 1.0f, 0.0f },
+        {  halfWidthNdc, -halfHeightNdc, 0.0f, 1.0f, 1.0f }
+    };
+
+    UINT numVerticesRect = sizeof(rectVertices) / sizeof(FVertexTexture);
 
     SetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    return CreateVertexBuffer(device, rect_vertices, sizeof(FVertexTexture), numVerticesRect);
+    return CreateVertexBuffer(device, rectVertices, sizeof(FVertexTexture), numVerticesRect);
 }

@@ -20,9 +20,17 @@ public:
 	bool LoadTexture(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const std::wstring& filePath);
 	void SetTexture(UTexture2D* newTexture);
 
+	void Release();
+
+private:
+	bool UpdateMeshForCurrentViewport(ID3D11Device* device, ID3D11DeviceContext* context);
+
 private:
 	UTexture2D* Texture = nullptr;
 	UTextureMesh* Mesh;
 	UShader* Shader;
+	float CachedViewportWidth = 0.0f;
+	float CachedViewportHeight = 0.0f;
+	bool bMeshNeedsUpdate = true;
 };
 

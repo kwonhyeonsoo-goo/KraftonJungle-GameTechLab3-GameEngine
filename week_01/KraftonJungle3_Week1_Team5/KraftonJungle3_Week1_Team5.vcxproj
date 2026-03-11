@@ -138,9 +138,9 @@
     <ClInclude Include="ImGui\imstb_textedit.h" />
     <ClInclude Include="ImGui\imstb_truetype.h" />
     <ClInclude Include="Macro.h" />
-    <ClInclude Include="Rect.h" />
     <ClInclude Include="SceneAutoRegister.h" />
     <ClInclude Include="TextureRenderer.h" />
+    <ClInclude Include="UMainTitleScene.h" />
     <ClInclude Include="UNet.h" />
     <ClInclude Include="UPikachu.h" />
     <ClInclude Include="USceneManager.h" />
@@ -170,6 +170,9 @@
     <ClInclude Include="UTestScene.h" />
     <ClInclude Include="UTexture2D.h" />
     <ClInclude Include="UTextureMesh.h" />
+    <ClInclude Include="UUIButton.h" />
+    <ClInclude Include="UUIImage.h" />
+    <ClInclude Include="UUI.h" />
     <ClInclude Include="UWeek0Scene.h" />
     <ClInclude Include="UWindow.h" />
   </ItemGroup>
@@ -183,6 +186,7 @@
     <ClCompile Include="ImGui\imgui_tables.cpp" />
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="UMainTitleScene.cpp" />
     <ClCompile Include="UNet.cpp" />
     <ClCompile Include="UPikachu.cpp" />
     <ClCompile Include="USceneManager.cpp" />
@@ -213,7 +217,10 @@
     <ClCompile Include="UTestScene.cpp" />
     <ClCompile Include="UTexture2D.cpp" />
     <ClCompile Include="UTextureMesh.cpp" />
+    <ClCompile Include="UUIButton.cpp" />
+    <ClCompile Include="UUIImage.cpp" />
     <ClCompile Include="Utility.h" />
+    <ClCompile Include="UUI.cpp" />
     <ClCompile Include="UWeek0Scene.cpp" />
     <ClCompile Include="UWindow.cpp" />
   </ItemGroup>
