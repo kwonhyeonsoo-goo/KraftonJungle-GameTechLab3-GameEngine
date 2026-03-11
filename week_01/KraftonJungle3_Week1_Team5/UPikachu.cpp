@@ -7,6 +7,8 @@
 #include "Enum.h"
 #include "UBall.h"
 #include <algorithm>
+#include "TextureRenderer.h"
+#include "Animator.h"
 
 void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 {
@@ -14,24 +16,106 @@ void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 
 	/*CubeMesh = new UCubeMesh();
 	CubeMesh->CreateCube(device);*/
-	SphereMesh = new USphereMesh();
-	SphereMesh->CreateSphere(device);
+	//SphereMesh = new USphereMesh();
+	//SphereMesh->CreateSphere(device);
 
-	D3D11_INPUT_ELEMENT_DESC layout[] = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
-			D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "Color", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12,
-			D3D11_INPUT_PER_VERTEX_DATA, 0 }
-	};
+	//D3D11_INPUT_ELEMENT_DESC layout[] = {
+	//	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
+	//		D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	//	{ "Color", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12,
+	//		D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	//};
 
-	Shader = new UShader();
-	Shader->Create(device, L"ShaderW0.hlsl", layout, ARRAYSIZE(layout), "mainVS", "mainPS");
+	//Shader = new UShader();
+	//Shader->Create(device, L"ShaderW0.hlsl", layout, ARRAYSIZE(layout), "mainVS", "mainPS");
 
 	UseGravity = true;
 
 	JumpForce = 3.0f;
 	bOnGround = false;
 	RecoveryTimer = 0.0f;
+
+#pragma region Texture&Animation
+	TextureRender = new TextureRenderer();
+	TextureRender->Create(device, context);
+	TextureRender->Init(device, context, L"sprite_sheet.png");
+
+
+	AnimatorComponent = new Animator();
+	AnimatorComponent->SetFrameDuration(0.1f);
+
+	std::vector<std::wstring> idleFrames = {
+	L"Resources/Textures/pikachu/pikachu_0_0.png",
+	L"Resources/Textures/pikachu/pikachu_0_1.png",
+	L"Resources/Textures/pikachu/pikachu_0_2.png",
+	L"Resources/Textures/pikachu/pikachu_0_3.png",
+	L"Resources/Textures/pikachu/pikachu_0_4.png"
+	};
+	AnimatorComponent->AddFrames("Normal", idleFrames);
+
+
+	std::vector<std::wstring> jumpFrames = {
+	L"Resources/Textures/pikachu/pikachu_1_0.png",
+	L"Resources/Textures/pikachu/pikachu_1_1.png",
+	L"Resources/Textures/pikachu/pikachu_1_2.png",
+	L"Resources/Textures/pikachu/pikachu_1_3.png",
+	L"Resources/Textures/pikachu/pikachu_1_4.png"
+	};
+	AnimatorComponent->AddFrames("Jump", jumpFrames);
+
+
+	std::vector<std::wstring> Spike1Frames = {
+	L"Resources/Textures/pikachu/pikachu_2_0.png",
+	L"Resources/Textures/pikachu/pikachu_2_1.png",
+	L"Resources/Textures/pikachu/pikachu_2_2.png",
+	L"Resources/Textures/pikachu/pikachu_2_3.png",
+	L"Resources/Textures/pikachu/pikachu_2_4.png"
+	};
+	AnimatorComponent->AddFrames("Spike", Spike1Frames);
+
+
+	std::vector<std::wstring> Spike2Frames = {
+
+	};
+	AnimatorComponent->AddFrames("Spike2", Spike2Frames);
+
+
+	std::vector<std::wstring> DiveFrames = {
+L"Resources/Textures/pikachu/pikachu_3_0.png",
+L"Resources/Textures/pikachu/pikachu_3_1.png",
+L"Resources/Textures/pikachu/pikachu_3_2.png",
+	};
+	AnimatorComponent->AddFrames("Diving", DiveFrames);
+
+
+	std::vector<std::wstring> RecoverFrames = {
+	L"Resources/Textures/pikachu/pikachu_4_0.png",
+	};
+	AnimatorComponent->AddFrames("Recovering", RecoverFrames);
+
+
+	std::vector<std::wstring> WinFrames = {
+L"Resources/Textures/pikachu/pikachu_5_0.png",
+L"Resources/Textures/pikachu/pikachu_5_1.png",
+L"Resources/Textures/pikachu/pikachu_5_2.png",
+L"Resources/Textures/pikachu/pikachu_5_3.png",
+L"Resources/Textures/pikachu/pikachu_5_4.png"
+	};
+	AnimatorComponent->AddFrames("Win", WinFrames);
+
+
+	std::vector<std::wstring> LoseFrames = {
+L"Resources/Textures/pikachu/pikachu_6_0.png",
+L"Resources/Textures/pikachu/pikachu_6_1.png",
+L"Resources/Textures/pikachu/pikachu_6_2.png",
+L"Resources/Textures/pikachu/pikachu_6_3.png",
+L"Resources/Textures/pikachu/pikachu_6_4.png"
+	};
+	AnimatorComponent->AddFrames("Lose", LoseFrames);
+
+
+#pragma endregion
+
 }
 
 void UPikachu::Physics_Update(float tick)
@@ -46,14 +130,54 @@ void UPikachu::Physics_Update(float tick)
 
 void UPikachu::Update(float tick)
 {
+
+	//게임오버시
+	//AnimatorComponent->Play("Lose", AnimationMode::Once);
+	//AnimatorComponent->Play("Win", AnimationMode::Once);
+
+
+	if (!bOnGround) {
+		if (GetPlayerState() == EPlayerState::BasicSpike || GetPlayerState() == EPlayerState::FrontSpike ||
+			GetPlayerState() == EPlayerState::UpSpike || GetPlayerState() == EPlayerState::DownSpike ||
+			GetPlayerState() == EPlayerState::UpFrontSpike || GetPlayerState() == EPlayerState::DownFrontSpike
+			)
+		{
+			AnimatorComponent->Play("Spike", AnimationMode::Loop);
+
+		}
+		else if (GetPlayerState() == EPlayerState::Diving) {
+			AnimatorComponent->Play("Diving", AnimationMode::Loop);
+
+		}
+		else {
+			AnimatorComponent->Play("Jump", AnimationMode::Round);
+
+		}
+
+
+	}
+	else if (GetPlayerState() == EPlayerState::Normal) {
+		AnimatorComponent->Play("Normal", AnimationMode::Round);
+
+	}
+	else if (GetPlayerState() == EPlayerState::Recovering) {
+		AnimatorComponent->Play("Recovering", AnimationMode::Loop);
+
+	}
+
+	AnimatorComponent->Update(TextureRender, tick);
 }
+
 
 void UPikachu::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 {
-	SphereMesh->Bind(context);
-	Shader->Bind(context);
-	Shader->UpdateConstant(context, Position, Scale);
-	SphereMesh->Draw(context);
+	//SphereMesh->Bind(context);
+	//Shader->Bind(context);
+	//Shader->UpdateConstant(context, Position, Scale);
+	//SphereMesh->Draw(context);
+
+	TextureRender->Draw(context, device, Position, Scale);
+
 }
 
 void UPikachu::HandleCollision(UBall* ball)
@@ -148,8 +272,18 @@ void UPikachu::HandleCollision(UBall* ball)
 
 void UPikachu::Release()
 {
-	SafeReleaseAndDelete(SphereMesh);
-	SafeReleaseAndDelete(Shader);
+	if (TextureRender)
+	{
+		delete TextureRender;
+		TextureRender = nullptr;
+	}
+
+	if (AnimatorComponent)
+	{
+		delete AnimatorComponent;
+		AnimatorComponent = nullptr;
+	}
+
 }
 
 void UPikachu::SetBoundary(float left, float right, float top, float bottom)

@@ -44,6 +44,16 @@ void UTestObject_2::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 	};
 	AnimatorComponent->AddFrames("Idle", idleFrames);
 
+	std::vector<std::wstring> jumpFrames = {
+	L"Resources/Textures/pikachu/pikachu_1_0.png",
+	L"Resources/Textures/pikachu/pikachu_1_1.png",
+	L"Resources/Textures/pikachu/pikachu_1_2.png",
+	L"Resources/Textures/pikachu/pikachu_1_3.png",
+	L"Resources/Textures/pikachu/pikachu_1_4.png"
+	};
+	AnimatorComponent->AddFrames("Jump", jumpFrames);
+
+
 	UseGravity = true;
 }
 
@@ -54,16 +64,27 @@ void UTestObject_2::Physics_Update(float tick)
 
 }
 
+float timer=0;
+
 void UTestObject_2::Update(float tick)
 {
+	timer += tick;
 	//amimation update
-	AnimatorComponent->Play(TextureRender, "Idle", tick);
+	if (timer > 5.0f) // 5초마다 점프 애니메이션으로 전환
+	{
+		AnimatorComponent->PlayLoop(TextureRender, "Jump", tick);
+		if(timer > 10.0f) // 10초마다 다시 Idle 애니메이션으로 전환
+		{
+			timer = 0.0f; // 타이머 초기화
+		}
+	}
+	else
+	AnimatorComponent->PlayLoop(TextureRender, "Idle", tick);
 
 }
 
 void UTestObject_2::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 {
-	TextureRender->SetTexture(AnimatorComponent->GetCurrentFrame());
 
 	TextureRender->Draw(context, device, Position, Scale);
 

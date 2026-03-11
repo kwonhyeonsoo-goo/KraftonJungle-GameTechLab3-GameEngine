@@ -1,13 +1,13 @@
 #include "UTestScene.h"
 
 #include "SceneAutoRegister.h"
-#include "UTestObject_2.h"
+#include "UPikachu.h"
 
 REGISTER_SCENE(UTestScene)
 
 void UTestScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
-	UTestObject_2* obj = new UTestObject_2();
+	UPikachu* obj = new UPikachu();
 	obj->Create(device, context);
 	GameObjects.push_back(obj);
 }
