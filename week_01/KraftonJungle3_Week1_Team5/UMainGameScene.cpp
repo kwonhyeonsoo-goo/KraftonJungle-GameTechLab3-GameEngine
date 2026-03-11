@@ -88,8 +88,8 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 		ballShadow->SetTarget(ball);
 	}
 
-	Player1->SetTargetBall(instance);
-	Player2->SetTargetBall(instance);
+	Player1->SetTargetBall(ball);
+	Player2->SetTargetBall(ball);
 
 	Net = new UNet();
 	Net->Create(device, context);
