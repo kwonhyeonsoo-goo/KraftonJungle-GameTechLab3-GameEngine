@@ -1,4 +1,5 @@
 #include <d3dcompiler.h>
+#include <random>
 #include <string>
 
 template <typename T>
@@ -77,4 +78,11 @@ static bool CompileShaderFromFile(const std::wstring& filePath, const char* entr
 
     SafeRelease(errorBlob);
     return true;
+}
+
+inline double RandomRange(double min, double max)
+{
+    static std::mt19937 gen(std::random_device{}());
+    std::uniform_real_distribution<double> dist(min, max);
+    return dist(gen);
 }

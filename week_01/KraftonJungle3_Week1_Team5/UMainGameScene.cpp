@@ -6,6 +6,7 @@
 #include "URectCollider.h"
 #include "UBall.h"
 #include "UNet.h"
+#include "Utility.h"
 #include "UUIImage.h"
 #include "UUIScore.h"
 
@@ -195,7 +196,18 @@ void UMainGameScene::InitializeUI(ID3D11Device* device, ID3D11DeviceContext* con
 
 	for (int i = 0; i < CloudCount; ++i)
 	{
-			
+		UUIImage* cloud = new UUIImage();
+		cloud->Create(device, context);
+		if (!cloud->SetTexture(L"Resource\\Image\\objects\\cloud.png"))
+		{
+			return;
+		}
+		// 랜덤한 높이
+		float height = static_cast<float>(RandomRange(0.5, 1));
+		cloud->SetPosition({ i / 10.f, height, 0.f });
+		
+		GameObjects.push_back(cloud);
+		Clouds.push_back(cloud);
 	}
 
 }
