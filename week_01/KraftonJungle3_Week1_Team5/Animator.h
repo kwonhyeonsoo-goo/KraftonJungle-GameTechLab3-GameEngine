@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "UEngine.h"
 
 class TextureRenderer;
 class UTexture2D;

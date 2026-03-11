@@ -1,5 +1,8 @@
 #include "Animator.h"
 
+#include "TextureRenderer.h"
+#include "UEngine.h"
+
 Animator::Animator()
 {
 	ElapsedTime = 0.0f;

@@ -1,4 +1,6 @@
 #pragma once
+#include <array>
+#include <list>
 #include <map>
 #include <string>
 
@@ -38,5 +40,8 @@ private:
 	std::map<std::wstring, FMOD_SOUND*> MapSound;
 
 	// FMOD_CHANNEL : 재생하고 있는 사운드를 관리할 객체
-	
+	std::array<FMOD_CHANNEL*, MAXCHANNEL> ChannelArray;
+	std::list<FMOD_CHANNEL*> ChannelList;
+
+	FMOD_SYSTEM* System;
 };
