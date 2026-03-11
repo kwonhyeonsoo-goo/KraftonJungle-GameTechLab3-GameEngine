@@ -11,6 +11,7 @@ public:
 	UScene() = default;
 	~UScene() override;
 
+	virtual void Enter() = 0;
 	virtual void Initialize(ID3D11Device* device, ID3D11DeviceContext* context) = 0;
 	virtual void Update(float tick) = 0;
 	virtual void Exit() = 0;

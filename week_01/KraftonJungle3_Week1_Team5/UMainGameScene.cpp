@@ -20,6 +20,11 @@
 
 REGISTER_SCENE(UMainGameScene)
 
+void UMainGameScene::Enter()
+{
+	UEngine::GetInstance().GetSoundManager().PlayBGM(L"bgm.mp3", 0.8f);
+}
+
 void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
 	// 이 씬에서 사용할 오브젝트들이나 기타 초기화 작업들을 한다고 생각하시면 된다.
@@ -47,7 +52,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	Collider1->SetRadius(2.f);
 
 	Player1->SetCollider(Collider1);
-
+	Player1->SetType(EPlayerType::Player1);
 	shadow1->SetTarget(Player1);
 
 	GameObjects.push_back(Player1);
@@ -65,7 +70,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	Collider2->Create(device, Player2);
 	Collider2->SetRadius(2.f);
 	Player2->SetCollider(Collider2);
-
+	Player2->SetType(EPlayerType::Player2);
 	shadow2->SetTarget(Player2);
 
 	GameObjects.push_back(Player2);
@@ -177,7 +182,7 @@ void UMainGameScene::Update(float tick)
 
 void UMainGameScene::Exit()
 {
-
+	UEngine::GetInstance().GetSoundManager().StopAll();
 }
 // 피카츄 배구 게임에 오브젝트는 3개
 void UMainGameScene::CheckCollision()

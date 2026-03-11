@@ -22,6 +22,7 @@ public:
 	URenderer& GetRenderer() { return Renderer; }
 	UResourceManager& GetResourceManager() { return ResourceManager; }
 	USceneManager& GetSceneManager() { return SceneManager; }
+	USoundManager& GetSoundManager() { return SoundManager; }
 
 private:
 	URenderer Renderer;

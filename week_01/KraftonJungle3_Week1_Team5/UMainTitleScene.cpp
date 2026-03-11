@@ -12,6 +12,11 @@
 
 REGISTER_SCENE(UMainTitleScene)
 
+void UMainTitleScene::Enter()
+{
+
+}
+
 void UMainTitleScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
 	if (!InitializeBackgroundTiles(device, context))
@@ -225,12 +230,7 @@ void UMainTitleScene::UpdateMenuVisuals() const
 		}
 
 		MenuButtons[Index]->SetSelected(Index == SelectedMenuIndex);
-	}
-
-	if (SelectionMark != nullptr)
-	{
-		const FVector3 ButtonPosition = MenuButtonPositions[SelectedMenuIndex];
-		SelectionMark->SetPosition(FVector3{ ButtonPosition.x - 0.42f, ButtonPosition.y + 0.01f, ButtonPosition.z });
+		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_Button.wav", SOUND_UI, 0.8f);
 	}
 }
 
@@ -252,6 +252,7 @@ void UMainTitleScene::ExecuteSelectedMenu() const
 	if (SelectedMenuIndex == 1)
 	{
 		UEngine::GetInstance().GetSceneManager().RequestChangeScene("UMainGameScene");
+		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_GameStart.wav",SOUND_UI, 0.8f);
 		return;
 	}
 }

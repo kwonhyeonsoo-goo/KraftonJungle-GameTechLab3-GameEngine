@@ -131,12 +131,13 @@ void UPikachu::Physics_Update(float tick)
 
 void UPikachu::Update(float tick)
 {
-
 	//게임오버시
 	if (UGameManager::GetInstance().GetGameState() == EGameState::GameOver)
 	{
 		if (MyFinalScore == UGameManager::GetInstance().GetMaxPoint())
+		{
 			AnimatorComponent->Play("Win", AnimationMode::Once);
+		}
 		else
 			AnimatorComponent->Play("Lose", AnimationMode::Once);
 	}
@@ -149,15 +150,13 @@ void UPikachu::Update(float tick)
 				)
 			{
 				AnimatorComponent->Play("Spike", AnimationMode::Loop);
-
+				PlaySound(L"Pikachu_Smash.wav");
 			}
 			else if (GetPlayerState() == EPlayerState::Diving) {
 				AnimatorComponent->Play("Diving", AnimationMode::Loop);
-
 			}
 			else {
 				AnimatorComponent->Play("Jump", AnimationMode::Round);
-
 			}
 		}
 		else if (GetPlayerState() == EPlayerState::Normal) {
@@ -314,6 +313,28 @@ void UPikachu::SetBoundary(float left, float right, float top, float bottom)
 	BottomBorder = bottom;
 }
 
+void UPikachu::SetMyFinalSCore(int FinalScore)
+{
+	MyFinalScore = FinalScore;
+	if (MyFinalScore == UGameManager::GetInstance().GetMaxPoint())
+	{
+		PlaySound(L"Pikachu_Win.wav");
+	}
+}
+
+void UPikachu::PlaySound(const std::wstring& sound) const
+{
+	if (Type == EPlayerType::Player1)
+	{
+		UEngine::GetInstance().GetSoundManager().PlaySound(sound, SOUND_PLAYER_1, 0.8f);
+	}
+
+	if (Type == EPlayerType::Player2)
+	{
+		UEngine::GetInstance().GetSoundManager().PlaySound(sound, SOUND_PLAYER_2, 0.8f);
+	}
+}
+
 void UPikachu::ApplyBoundaryCollision()
 {
 	if (Position.x > RightBorder - Scale)
@@ -452,6 +473,7 @@ void UPikachu::Move(float tick)
 	{
 		if (currentInput & FLAG_UP)
 		{
+			PlaySound(L"Pikachu_Jump.wav");
 			Velocity.y = JumpForce;
 			bOnGround = false;
 		}
@@ -460,7 +482,7 @@ void UPikachu::Move(float tick)
 			if (currentInput & FLAG_LEFT)
 			{
 				CurrentState = EPlayerState::Diving;
-
+				PlaySound(L"Pikachu_Jump.wav");
 				Velocity.x = -1.1f;
 				Velocity.y = JumpForce * 0.3f;
 				bOnGround = false;
@@ -468,6 +490,7 @@ void UPikachu::Move(float tick)
 			else if (currentInput & FLAG_RIGHT)
 			{
 				CurrentState = EPlayerState::Diving;
+				PlaySound(L"Pikachu_Jump.wav");
 				Velocity.x = 1.1f;
 				Velocity.y = JumpForce * 0.3f;
 				bOnGround = false;

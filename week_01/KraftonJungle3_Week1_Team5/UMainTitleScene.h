@@ -11,6 +11,7 @@ class UUIImage;
 class UMainTitleScene : public UScene
 {
 public:
+	void Enter() override;
 	void Initialize(ID3D11Device* device, ID3D11DeviceContext* context) override;
 	void Update(float tick) override;
 	void Exit() override;
@@ -29,7 +30,6 @@ private:
 	std::array<UUIButton*, 2> MenuButtons{ nullptr, nullptr };
 	std::array<FVector3, 2> MenuButtonPositions{};
 	UUIImage* FightImage = nullptr;
-	UUIImage* SelectionMark = nullptr;
 	FVector3 BackgroundTileStep = FVector3{ 0.0f, 0.0f, 0.0f };
 	FVector3 BackgroundScrollOffset = FVector3{ 0.0f, 0.0f, 0.0f };
 	int BackgroundTileColumns = 0;
