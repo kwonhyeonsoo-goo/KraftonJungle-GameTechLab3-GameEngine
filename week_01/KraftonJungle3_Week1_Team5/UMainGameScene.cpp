@@ -6,6 +6,7 @@
 #include "URectCollider.h"
 #include "UBall.h"
 #include "UNet.h"
+#include "UWave.h"
 #include "Utility.h"
 #include "UGameManager.h"
 #include "UUIImage.h"
@@ -97,6 +98,10 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 
 	Net = new UNet();
 	Net->Create(device, context);
+	
+	UWave* Wave = new UWave();
+	Wave->Create(device, context);
+	GameObjects.push_back(Wave);
 
 	// 게임을 초기화 합니다.
 	UGameManager::GetInstance().Initialize(Player1, Player2, ball,
