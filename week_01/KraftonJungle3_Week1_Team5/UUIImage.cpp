@@ -24,6 +24,12 @@ bool UUIImage::SetTexture(UTexture2D* texture)
 	return false;
 }
 
+void UUIImage::OnUpdate(float tick)
+{
+	UUI::OnUpdate(tick);
+	ApplyVelocity(tick);
+}
+
 void UUIImage::OnCreate(ID3D11Device* device, ID3D11DeviceContext* context)
 {
 	TextureRender = new TextureRenderer();

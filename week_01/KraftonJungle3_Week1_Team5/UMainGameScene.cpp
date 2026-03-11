@@ -88,6 +88,8 @@ void UMainGameScene::Update(float tick)
 			Net->HandleBallCollision(static_cast<UBall*>(obj));
 		}
 	}
+
+	UpdateCloudImageAnimation(tick);
 }
 
 void UMainGameScene::Exit()
@@ -193,6 +195,7 @@ void UMainGameScene::InitializeUI(ID3D11Device* device, ID3D11DeviceContext* con
 	GameObjects.push_back(score_2p);
 
 	Clouds.reserve(CloudCount);
+	CloudAnimationTime.reserve(CloudCount);
 
 	for (int i = 0; i < CloudCount; ++i)
 	{
@@ -203,16 +206,53 @@ void UMainGameScene::InitializeUI(ID3D11Device* device, ID3D11DeviceContext* con
 			return;
 		}
 		// 랜덤한 높이
-		float height = static_cast<float>(RandomRange(0.5, 1));
-		cloud->SetPosition({ i / 10.f, height, 0.f });
+		float yPos = static_cast<float>(RandomRange(0, 1));
+		float xPos = static_cast<float>(RandomRange(-1, 1));
+		cloud->SetPosition({  xPos, yPos, 0.f });
 		
+		// 랜덤한 애니메이션 시작 타이밍
+		float randomAnimationTime = static_cast<float>(RandomRange(0, 1));
+		CloudAnimationTime.push_back(randomAnimationTime);
+		
+		// 랜덤한 속도
+		float randomVelocity = static_cast<float>(RandomRange(0.1, 0.15));
+		cloud->SetVelocity({ randomVelocity,0.f,0.f });
+
 		GameObjects.push_back(cloud);
 		Clouds.push_back(cloud);
 	}
 
 }
 
-void UMainGameScene::UpdateCloudImageAnimation(float tick)
+void UMainGameScene::UpdateCloudImageAnimation(const float tick)
 {
-	
+	for (int i = 0; i < CloudCount; ++i)
+	{
+		if (auto& cloud = Clouds[i])
+		{
+			auto& cloudAnimationTime = CloudAnimationTime[i];
+			cloudAnimationTime += tick;
+
+			const float animation = std::sin(cloudAnimationTime * CloudPulseSpeed);
+			const float scaleOffset = (animation * 0.5f + 0.5f) * CloudScaleAmplitude;
+			cloud->SetScale(CloudBaseScale + scaleOffset);
+
+			UpdateCloudMovement(cloud);
+		}
+	}
+}
+
+void UMainGameScene::UpdateCloudMovement(UUIImage* cloud)
+{
+	if (cloud)
+	{
+		float cloud_xPos = cloud->GetPosition().GetX();
+		if (cloud_xPos >= 1.2f)
+		{
+			// 랜덤한 높이
+			float yPos = static_cast<float>(RandomRange(0, 1));
+
+			cloud->SetPosition({-1.2f, yPos, 0.f});
+		}
+	}
 }
