@@ -95,7 +95,7 @@ bool UGameManager::CheckBallFloor()
 {
 	float Radius = PocketBall->GetRadius();
 	float yPos = PocketBall->GetPosition().y;
-	float diff = ( yPos) - (-1.f + Radius);
+	float diff = ( yPos) - (-0.8f + Radius);
 	bool bResult = (diff < 0.00000000001);
 
 	return bResult;
@@ -118,8 +118,8 @@ void UGameManager::ScorePoint(int player)
 void UGameManager::ResetRound()
 {
 	// Player 위치 초기화
-	Player1->SetPosition(Player1Pos);
-	Player2->SetPosition(Player2Pos);
+	Player1->SetPosition(FVector3(Player1Pos.x, Player1Pos.y + 0.1f, Player1Pos.z));
+	Player2->SetPosition(FVector3(Player2Pos.x, Player2Pos.y + 0.1f, Player2Pos.z));
 
 	if (ServerOwner == EServerOwner::Player2)
 	{

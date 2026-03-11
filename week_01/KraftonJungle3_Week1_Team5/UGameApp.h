@@ -30,6 +30,9 @@ private:
 	void DrawSceneManagerPanel();
 	void DrawSceneObjectsPanel();
 
+	// 임시
+	void DrawCurrentScenePanel();
+
 private:
 	UEngine* Engine;
 };
