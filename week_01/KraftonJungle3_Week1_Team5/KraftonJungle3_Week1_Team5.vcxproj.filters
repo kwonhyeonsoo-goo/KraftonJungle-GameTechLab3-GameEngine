@@ -238,9 +238,7 @@
     <ClInclude Include="UNet.h" />
     <ClInclude Include="UPikachu.h" />
     <ClInclude Include="UUIButton.h" />
-    <ClInclude Include="UGameManager.h">
-      <Filter>02. Client\00. GameObject</Filter>
-    </ClInclude>
+    <ClInclude Include="UUIScore.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -373,9 +371,7 @@
     <ClCompile Include="UNet.cpp" />
     <ClCompile Include="UPikachu.cpp" />
     <ClCompile Include="UUIButton.cpp" />
-    <ClCompile Include="UGameManager.cpp">
-      <Filter>02. Client\00. GameObject</Filter>
-    </ClCompile>
+    <ClCompile Include="UUIScore.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ShaderW0.hlsl">

@@ -42,7 +42,7 @@ private:
 
 	static constexpr float BackgroundTileScale = 1.0f;
 	static constexpr float BackgroundScrollSpeed = 0.12f;
-	static constexpr float FightBaseScale = .8f;
-	static constexpr float FightScaleAmplitude = 2.0f;
+	static constexpr float FightBaseScale = .2f;
+	static constexpr float FightScaleAmplitude = 1.0f;
 	static constexpr float FightPulseSpeed = 10.0f;
 };

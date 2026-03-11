@@ -6,9 +6,12 @@
 #include "URectCollider.h"
 #include "UBall.h"
 #include "UNet.h"
+#include "Utility.h"
 #include "UGameManager.h"
 #include "UUIImage.h"
 #include "UEngine.h"
+#include "TextureRenderer.h"
+#include "UUIScore.h"
 
 REGISTER_SCENE(UMainGameScene)
 
@@ -34,7 +37,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
   // Player2
 	Player2 = new UPikachu();
 	Player2->Create(device, context);
-
+	Player2->TextureRender->SetFlipDraw(true); // Player2는 좌우 반전된 이미지 사용
 	Player2->SetKeyConfig({ VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_RETURN });
 	Player2->SetBoundary(0.02f, 1.0f, 1.0f, -1.0f);
 	// Player2 게임 시작 위치
@@ -140,6 +143,8 @@ void UMainGameScene::Update(float tick)
 			Net->HandleBallCollision(static_cast<UBall*>(obj));
 		}
 	}
+
+	UpdateCloudImageAnimation(tick);
 }
 
 void UMainGameScene::Exit()
@@ -233,4 +238,75 @@ void UMainGameScene::InitializeUI(ID3D11Device* device, ID3D11DeviceContext* con
 		return;
 	}
 	GameObjects.push_back(backGround);
+
+	Clouds.reserve(CloudCount);
+	CloudAnimationTime.reserve(CloudCount);
+
+	for (int i = 0; i < CloudCount; ++i)
+	{
+		UUIImage* cloud = new UUIImage();
+		cloud->Create(device, context);
+		if (!cloud->SetTexture(L"Resource\\Image\\objects\\cloud.png"))
+		{
+			return;
+		}
+		// 랜덤한 높이
+		float yPos = static_cast<float>(RandomRange(0, 1));
+		float xPos = static_cast<float>(RandomRange(-1, 1));
+		cloud->SetPosition({  xPos, yPos, 0.f });
+		
+		// 랜덤한 애니메이션 시작 타이밍
+		float randomAnimationTime = static_cast<float>(RandomRange(0, 1));
+		CloudAnimationTime.push_back(randomAnimationTime);
+		
+		// 랜덤한 속도
+		float randomVelocity = static_cast<float>(RandomRange(0.1, 0.15));
+		cloud->SetVelocity({ randomVelocity,0.f,0.f });
+
+		GameObjects.push_back(cloud);
+		Clouds.push_back(cloud);
+	}
+
+	UUIScore* score_1p = new UUIScore();
+	score_1p->Create(device, context);
+	score_1p->SetPosition({ -0.7f, 0.75f, 0.f });
+	GameObjects.push_back(score_1p);
+
+	UUIScore* score_2p = new UUIScore();
+	score_2p->Create(device, context);
+	score_2p->SetPosition({ 0.7f, 0.75f, 0.f });
+	GameObjects.push_back(score_2p);
+}
+
+void UMainGameScene::UpdateCloudImageAnimation(const float tick)
+{
+	for (int i = 0; i < CloudCount; ++i)
+	{
+		if (auto& cloud = Clouds[i])
+		{
+			auto& cloudAnimationTime = CloudAnimationTime[i];
+			cloudAnimationTime += tick;
+
+			const float animation = std::sin(cloudAnimationTime * CloudPulseSpeed);
+			const float scaleOffset = (animation * 0.5f + 0.5f) * CloudScaleAmplitude;
+			cloud->SetScale(CloudBaseScale + scaleOffset);
+
+			UpdateCloudMovement(cloud);
+		}
+	}
+}
+
+void UMainGameScene::UpdateCloudMovement(UUIImage* cloud)
+{
+	if (cloud)
+	{
+		float cloud_xPos = cloud->GetPosition().GetX();
+		if (cloud_xPos >= 1.2f)
+		{
+			// 랜덤한 높이
+			float yPos = static_cast<float>(RandomRange(0, 1));
+
+			cloud->SetPosition({-1.2f, yPos, 0.f});
+		}
+	}
 }
