@@ -77,6 +77,16 @@ void UMainTitleScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* cont
 	GameObjects.push_back(MenuButtons[1]);
 
 	SelectedMenuIndex = 0;
+
+	obj = new UUIImage();
+	obj->Create(device, context);
+	if (!obj->SetTexture(L"Resource\\Image\\DeveloperName.png"))
+	{
+		return;
+	}
+	obj->SetPosition(FVector3{ 0.f, -0.8f, 0.0f });
+	GameObjects.push_back(obj);
+
 	UpdateMenuVisuals();
 }
 
