@@ -20,6 +20,7 @@ public:
 	bool LoadTexture(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const std::wstring& filePath);
 	void SetTexture(UTexture2D* newTexture);
 	void SetFlipDraw(bool bFlip) { isFlipDraw = bFlip; }
+	bool GetFlipDraw() { return isFlipDraw; }
 	void Release();
 
 private:

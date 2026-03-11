@@ -14,7 +14,7 @@ void UWave::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 		Waves[i]->Create(device, context);
 		Waves[i]->SetTexture(L"Resource/Image/objects/wave.png");
 		Waves[i]->SetPosition(FVector3( -1 + offset * i+ offset/2, -1.f, 0.f ));
-		Waves[i]->SetScale(1.f);
+		Waves[i]->SetScale(1.35f);
 	}
 }
 

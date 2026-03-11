@@ -42,6 +42,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	// Player1
 	Player1 = new UPikachu();
 	Player1->Create(device, context);
+	Player1->DefalutFlip = false;
 
 	Player1->SetKeyConfig({ 'W', 'S', 'A', 'D', VK_SPACE });
 	Player1->SetBoundary(-1.0f, -0.001f, 1.0f, -0.75f);
@@ -62,6 +63,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	Player2 = new UPikachu();
 	Player2->Create(device, context);
 	Player2->TextureRender->SetFlipDraw(true); // Player2는 좌우 반전된 이미지 사용
+	Player2->DefalutFlip = true;
 	Player2->SetKeyConfig({ VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_RETURN });
 	Player2->SetBoundary(0.001f, 1.0f, 1.0f, -0.75f);
 	// Player2 게임 시작 위치

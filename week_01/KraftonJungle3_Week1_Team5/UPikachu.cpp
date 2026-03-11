@@ -161,6 +161,7 @@ void UPikachu::Update(float tick)
 			}
 		}
 		else if (GetPlayerState() == EPlayerState::Normal) {
+			TextureRender->SetFlipDraw(DefalutFlip);
 			AnimatorComponent->Play("Normal", AnimationMode::Round);
 
 		}
@@ -377,6 +378,7 @@ void UPikachu::Move(float tick)
 		if (RecoveryTimer <= 0.0f)
 		{
 			CurrentState = EPlayerState::Normal;
+			TextureRender->SetFlipDraw(DefalutFlip);
 		}
 		else
 		{
@@ -496,6 +498,8 @@ void UPikachu::Move(float tick)
 			else if (currentInput & FLAG_RIGHT)
 			{
 				CurrentState = EPlayerState::Diving;
+				TextureRender->SetFlipDraw(!DefalutFlip);
+
 				PlaySound(L"Pikachu_Jump.wav");
 				Velocity.x = 1.2f;
 				Velocity.y = JumpForce * 0.3f;

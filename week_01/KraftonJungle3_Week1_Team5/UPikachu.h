@@ -97,10 +97,11 @@ private:
 
 	EPlayerType Type = EPlayerType::None;
 	
+
 public:
 	Animator* AnimatorComponent;
 
 	int MyFinalScore;
-
+	bool DefalutFlip;
 	TextureRenderer* TextureRender;
 };
