@@ -19,7 +19,7 @@ public:
 	void Init(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const std::wstring& filePath);
 	bool LoadTexture(ID3D11Device* Device, ID3D11DeviceContext* DeviceContext, const std::wstring& filePath);
 	void SetTexture(UTexture2D* newTexture);
-
+	void SetFlipDraw(bool bFlip) { isFlipDraw = bFlip; }
 	void Release();
 
 private:
@@ -32,5 +32,6 @@ private:
 	float CachedViewportWidth = 0.0f;
 	float CachedViewportHeight = 0.0f;
 	bool bMeshNeedsUpdate = true;
+	bool isFlipDraw=false;
 };
 

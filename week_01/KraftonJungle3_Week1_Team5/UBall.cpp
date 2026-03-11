@@ -3,6 +3,10 @@
 #include "UCircleCollider.h"
 #include "Utility.h"
 
+#include "TextureRenderer.h"
+#include "Animator.h"
+#include "UUIImage.h"
+
 UBall::UBall() : Radius(1.f)
 {
 	SetObjectType(ObjectType::Ball);
@@ -17,7 +21,37 @@ UBall* UBall::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 	instance->Collider = new UCircleCollider();
 	instance->Collider->Create(device, instance);
 
+	//스프라이트 애니메이션
+	instance->BallTextureRenderer = new TextureRenderer();
+	instance->BallTextureRenderer->Create(device, context);
+	instance->BallTextureRenderer->Init(device, context, L"sprite_sheet.png");
 
+	instance->AnimatorComponent = new Animator();
+	instance->AnimatorComponent->SetFrameDuration(0.1f);
+
+	std::vector<std::wstring> idleFrames = {
+L"Resource/Image/ball/ball_0.png",
+L"Resource/Image/ball/ball_1.png",
+L"Resource/Image/ball/ball_2.png",
+L"Resource/Image/ball/ball_3.png",
+L"Resource/Image/ball/ball_4.png"
+	};
+	instance->AnimatorComponent->AddFrames("Idle", idleFrames);
+	instance->AnimatorComponent->Play("Idle", AnimationMode::Loop);
+
+	//잔상
+	instance->BallHyper = new UUIImage();
+	instance->BallHyper->Create(device, context);
+	instance->BallHyper->SetTexture(L"Resource/Image/ball/ball_hyper.png");
+
+	instance->BallTrail = new UUIImage();
+	instance->BallTrail->Create(device, context);	
+	instance->BallTrail->SetTexture(L"Resource/Image/ball/ball_trail.png");
+
+	//충돌 이펙트(펀치)
+	instance->BallPunch = new UUIImage();
+	instance->BallPunch->Create(device, context);
+	instance->BallPunch->SetTexture(L"Resource/Image/ball/ball_punch.png");
 	return instance;
 }
 
@@ -31,12 +65,56 @@ void UBall::Physics_Update(const float tick)
 
 void UBall::Update(float tick)
 {
+	elapsedTime += tick;
+	PunchTimer -= tick;
+
+	//잔상
+	if(elapsedTime > TrailTimer)
+	{
+		elapsedTime = 0;
+
+		TrailPosition = HyperPosition;
+		HyperPosition = PreviousPosition;
+		PreviousPosition = Position;
+
+	}
+
+	AnimatorComponent->Update(BallTextureRenderer, tick);
+	BallHyper->SetPosition(HyperPosition);
+	BallTrail->SetPosition(TrailPosition);
+
+	if (isSpike) {
+		BallHyper->SetVisible(true);
+		BallTrail->SetVisible(true);
+
+	}
+	else {
+		BallHyper->SetVisible(false);
+		BallTrail->SetVisible(false);
+	}
+
+	//충돌
+	if (PunchTimer > 0)
+	{
+		BallPunch->SetVisible(true);
+		BallPunch->SetScale(BallPunch->GetScale() - tick * 3.0f);
+	}
+	else
+		BallPunch->SetVisible(false);
 
 }
 
 void UBall::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 {
+
 	Collider->Debug_Render(context, device);
+
+	BallTrail->Render(context, device);
+	BallHyper->Render(context, device);
+	BallTextureRenderer->Draw(context, device, Position, 1.f);
+	BallPunch->Render(context, device);
+
+
 }
 
 void UBall::SetScale(float scale)
@@ -61,10 +139,11 @@ void UBall::ApplyBoundaryCollision()
 		Velocity.y *= -1;
 		Position.y = 1.f - Radius;
 	}
-	if (Position.y < -0.8f + Radius)
+	if (Position.y < -0.8f + Radius) //바닥 튕김은 GameManager 에서 관리
 	{
 		Velocity.y *= -1;
 		Position.y = -0.8f + Radius;
+		PlayBallPunchEffect({ Position.x, -0.8f,0.0f });
 	}
 }
 
@@ -86,4 +165,27 @@ float UBall::GetRadius() const
 void UBall::Release()
 {
 	SafeDelete(Collider);
+}
+
+void UBall::SetSpike(bool spike)
+{
+	isSpike = spike;
+	if(spike) 
+	PlayBallPunchEffect(Position);
+}
+void UBall::SetSpike(bool spike, FVector3 TargetPosition)
+{
+	isSpike = spike;
+
+	FVector3 direction = (TargetPosition - Position).Normalize()*Radius;
+
+	if(spike) 
+		PlayBallPunchEffect(Position + direction);
+}
+
+void UBall::PlayBallPunchEffect(FVector3 effectPosition)
+{
+	PunchTimer = PunchLifetime;
+	BallPunch->SetPosition(effectPosition);
+	BallPunch->SetScale(1.0f);
 }

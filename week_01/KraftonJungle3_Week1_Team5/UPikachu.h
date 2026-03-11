@@ -63,6 +63,7 @@ public:
 	void SetIsAI(bool isAI) { bIsAI = isAI; }
 
 	void SetTargetBall(UBall* ball) { TargetBall = ball; }
+	void SetMyFinalSCore(int FinalScore) { MyFinalScore = FinalScore; }
 
 private:
 	void ApplyBoundaryCollision();
@@ -87,7 +88,11 @@ private:
 	float TopBorder = 1.0f;
 	float BottomBorder = -1.0f;
 
-	TextureRenderer* TextureRender;
+	
+public:
 	Animator* AnimatorComponent;
 
+	int MyFinalScore;
+
+	TextureRenderer* TextureRender;
 };

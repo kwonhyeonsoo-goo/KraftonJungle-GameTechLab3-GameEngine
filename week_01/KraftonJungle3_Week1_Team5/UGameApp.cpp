@@ -12,6 +12,7 @@
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_dx11.h"
 #include "ImGui/imgui_impl_win32.h"
+#include "UGameManager.h"
 
 UGameApp::UGameApp(HINSTANCE hInst, FWindowDesc desc) : UWindow(hInst, std::move(desc)), Engine(nullptr)
 {

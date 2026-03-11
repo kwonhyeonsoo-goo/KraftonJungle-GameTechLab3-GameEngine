@@ -140,6 +140,7 @@
     <ClInclude Include="Macro.h" />
     <ClInclude Include="SceneAutoRegister.h" />
     <ClInclude Include="TextureRenderer.h" />
+    <ClInclude Include="UGameManager.h" />
     <ClInclude Include="UMainTitleScene.h" />
     <ClInclude Include="UNet.h" />
     <ClInclude Include="UPikachu.h" />
@@ -165,6 +166,7 @@
     <ClInclude Include="UScene.h" />
     <ClInclude Include="Uscreen.h" />
     <ClInclude Include="UShader.h" />
+    <ClInclude Include="UShadow.h" />
     <ClInclude Include="USphereMesh.h" />
     <ClInclude Include="UTestObject_2.h" />
     <ClInclude Include="UTestScene.h" />
@@ -173,6 +175,7 @@
     <ClInclude Include="UUIButton.h" />
     <ClInclude Include="UUIImage.h" />
     <ClInclude Include="UUI.h" />
+    <ClInclude Include="UUIScore.h" />
     <ClInclude Include="UWeek0Scene.h" />
     <ClInclude Include="UWindow.h" />
   </ItemGroup>
@@ -186,6 +189,7 @@
     <ClCompile Include="ImGui\imgui_tables.cpp" />
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="UGameManager.cpp" />
     <ClCompile Include="UMainTitleScene.cpp" />
     <ClCompile Include="UNet.cpp" />
     <ClCompile Include="UPikachu.cpp" />
@@ -210,6 +214,7 @@
     <ClCompile Include="UScene.cpp" />
     <ClCompile Include="Uscreen.cpp" />
     <ClCompile Include="UShader.cpp" />
+    <ClCompile Include="UShadow.cpp" />
     <ClCompile Include="USphereMesh.cpp" />
     <ClCompile Include="UCubeMesh.cpp" />
     <ClCompile Include="UCubeMesh.h" />
@@ -221,6 +226,7 @@
     <ClCompile Include="UUIImage.cpp" />
     <ClCompile Include="Utility.h" />
     <ClCompile Include="UUI.cpp" />
+    <ClCompile Include="UUIScore.cpp" />
     <ClCompile Include="UWeek0Scene.cpp" />
     <ClCompile Include="UWindow.cpp" />
   </ItemGroup>

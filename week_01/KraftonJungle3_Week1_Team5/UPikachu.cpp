@@ -9,6 +9,8 @@
 #include <algorithm>
 #include "TextureRenderer.h"
 #include "Animator.h"
+#include "UGameManager.h"
+#include "UEngine.h"
 
 void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 {
@@ -32,8 +34,8 @@ void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 	UseGravity = true;
 	JumpForce = 3.0f;
 	bOnGround = false;
-
 	RecoveryTimer = 0.25f;
+	MyFinalScore = 0;
 
 #pragma region Texture&Animation
 	TextureRender = new TextureRenderer();
@@ -131,37 +133,44 @@ void UPikachu::Update(float tick)
 {
 
 	//게임오버시
-	//AnimatorComponent->Play("Lose", AnimationMode::Once);
-	//AnimatorComponent->Play("Win", AnimationMode::Once);
-
-
-	if (!bOnGround) {
-		if (GetPlayerState() == EPlayerState::BasicSpike || GetPlayerState() == EPlayerState::FrontSpike ||
-			GetPlayerState() == EPlayerState::UpSpike || GetPlayerState() == EPlayerState::DownSpike ||
-			GetPlayerState() == EPlayerState::UpFrontSpike || GetPlayerState() == EPlayerState::DownFrontSpike
-			)
-		{
-			AnimatorComponent->Play("Spike", AnimationMode::Loop);
-
-		}
-		else if (GetPlayerState() == EPlayerState::Diving) {
-			AnimatorComponent->Play("Diving", AnimationMode::Loop);
-
-		}
-		else {
-			AnimatorComponent->Play("Jump", AnimationMode::Round);
-
-		}
-
-
+	if (UGameManager::GetInstance().GetGameState() == EGameState::GameOver)
+	{
+		if(MyFinalScore == UGameManager::GetInstance().GetMaxPoint())
+			AnimatorComponent->Play("Win", AnimationMode::Once);
+		else
+			AnimatorComponent->Play("Lose", AnimationMode::Once);
+		
 	}
-	else if (GetPlayerState() == EPlayerState::Normal) {
-		AnimatorComponent->Play("Normal", AnimationMode::Round);
+	else
+	{
+		if (!bOnGround) {
+			if (GetPlayerState() == EPlayerState::BasicSpike || GetPlayerState() == EPlayerState::FrontSpike ||
+				GetPlayerState() == EPlayerState::UpSpike || GetPlayerState() == EPlayerState::DownSpike ||
+				GetPlayerState() == EPlayerState::UpFrontSpike || GetPlayerState() == EPlayerState::DownFrontSpike
+				)
+			{
+				AnimatorComponent->Play("Spike", AnimationMode::Loop);
 
-	}
-	else if (GetPlayerState() == EPlayerState::Recovering) {
-		AnimatorComponent->Play("Recovering", AnimationMode::Loop);
+			}
+			else if (GetPlayerState() == EPlayerState::Diving) {
+				AnimatorComponent->Play("Diving", AnimationMode::Loop);
 
+			}
+			else {
+				AnimatorComponent->Play("Jump", AnimationMode::Round);
+
+			}
+
+
+		}
+		else if (GetPlayerState() == EPlayerState::Normal) {
+			AnimatorComponent->Play("Normal", AnimationMode::Round);
+
+		}
+		else if (GetPlayerState() == EPlayerState::Recovering) {
+			AnimatorComponent->Play("Recovering", AnimationMode::Loop);
+
+		}
 	}
 
 	AnimatorComponent->Update(TextureRender, tick);
@@ -181,6 +190,7 @@ void UPikachu::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 
 void UPikachu::HandleCollision(UBall* ball)
 {
+
 	FVector3 BallPos = ball->GetPosition();
 	FVector3 BTOP = (BallPos - Position).Normalize();
 
@@ -217,41 +227,53 @@ void UPikachu::HandleCollision(UBall* ball)
 	case EPlayerState::BasicSpike:
 		// 앞으로 적당하게
 		newXVel = xSign * 2.0f; // 수정해야함.
-		newYVel = 0.0f;
+		newYVel = 0.5f;
+		ball->SetSpike(true, Position);
 		break;
 
 	case EPlayerState::FrontSpike:
 		// 옆
 		newXVel = xSign * 4.0f;
-		newYVel = 0.0f;
+		newYVel = 2.0f;
+		ball->SetSpike(true, Position);
+
 		break;
 
 	case EPlayerState::UpSpike:
 		// 위
 		newXVel *= 1.0f;
 		newYVel = 5.0f;
+		ball->SetSpike(true, Position);
+
 		break;
 
 	case EPlayerState::DownSpike:
 		// 아
-		newXVel *= 1.5f;
+		newXVel = xSign * 2.f;
 		newYVel = -4.0f;
+		ball->SetSpike(true, Position);
+
 		break;
 
 	case EPlayerState::UpFrontSpike:
 		// 위 + 앞 대각선
 		newXVel = xSign * 3.0f;
 		newYVel = 4.0f;
+		ball->SetSpike(true, Position);
+
 		break;
 
 	case EPlayerState::DownFrontSpike:
 		// 앞 + 아래 대각선
 		newXVel = xSign * 3.5f;
 		newYVel = -3.0f;
+		ball->SetSpike(true, Position);
 		break;
 
 	default: // Normal
 		newYVel = min(newYVel, 3.0f);
+		ball->SetSpike(false);
+
 		break;
 	}
 

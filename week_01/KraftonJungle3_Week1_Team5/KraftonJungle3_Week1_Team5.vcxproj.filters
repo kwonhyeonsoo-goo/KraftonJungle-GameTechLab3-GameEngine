@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Resource Files">
@@ -183,9 +183,6 @@
     <ClInclude Include="UMainGameScene.h">
       <Filter>02. Client\01. Scene</Filter>
     </ClInclude>
-    <ClInclude Include="UTestObject.h">
-      <Filter>02. Client\00. GameObject</Filter>
-    </ClInclude>
     <ClInclude Include="UResource.h">
       <Filter>00. Engine\01. System\Resource</Filter>
     </ClInclude>
@@ -237,6 +234,12 @@
     <ClInclude Include="UUIImage.h">
       <Filter>02. Client\00. GameObject</Filter>
     </ClInclude>
+    <ClInclude Include="Animator.h" />
+    <ClInclude Include="UNet.h" />
+    <ClInclude Include="UPikachu.h" />
+    <ClInclude Include="UUIButton.h" />
+    <ClInclude Include="UUIScore.h" />
+    <ClInclude Include="UShadow.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -314,9 +317,6 @@
     <ClCompile Include="UMainGameScene.cpp">
       <Filter>02. Client\01. Scene</Filter>
     </ClCompile>
-    <ClCompile Include="UTestObject.cpp">
-      <Filter>02. Client\00. GameObject</Filter>
-    </ClCompile>
     <ClCompile Include="UResource.cpp">
       <Filter>00. Engine\01. System\Resource</Filter>
     </ClCompile>
@@ -368,6 +368,12 @@
     <ClCompile Include="UUIImage.cpp">
       <Filter>02. Client\00. GameObject</Filter>
     </ClCompile>
+    <ClCompile Include="Animator.cpp" />
+    <ClCompile Include="UNet.cpp" />
+    <ClCompile Include="UPikachu.cpp" />
+    <ClCompile Include="UUIButton.cpp" />
+    <ClCompile Include="UUIScore.cpp" />
+    <ClCompile Include="UShadow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ShaderW0.hlsl">

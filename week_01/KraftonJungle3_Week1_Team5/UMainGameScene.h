@@ -1,6 +1,7 @@
 #pragma once
 #include "UScene.h"
 
+class UUIImage;
 class UNet;
 class UPikachu;
 
@@ -18,10 +19,19 @@ public:
 	// 임시
 	void OnImGuiRender() override;
 
-private:
-	UPikachu* Player1 = nullptr;
-	UPikachu* Player2 = nullptr;
+	void UpdateCloudImageAnimation(float tick);
+	void UpdateCloudMovement(UUIImage* cloud);
 
+private:
+	std::vector<float> CloudAnimationTime;
+	std::vector<UUIImage*> Clouds;
 	UNet* Net;
+	UPikachu* Player1;
+	UPikachu* Player2;
+
+	static constexpr float CloudBaseScale = 0.9f;
+	static constexpr float CloudScaleAmplitude = 0.3f;
+	static constexpr float CloudPulseSpeed = 10.f;
+	static constexpr int CloudCount = 20;
 };
 
