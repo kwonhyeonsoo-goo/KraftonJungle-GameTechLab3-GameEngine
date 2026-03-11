@@ -64,7 +64,7 @@ void UGameApp::Initialize()
 	Engine = &UEngine::GetInstance();
 	//Engine->Initialize(Handle(), "UWeek0Scene");
 	//TODO eric1306 - 교체해야함.
-	Engine->Initialize(Handle(), "UMainGameScene");
+	Engine->Initialize(Handle(), "UMainTitleScene");
 
 	auto& renderer = Engine->GetRenderer();
 
