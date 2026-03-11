@@ -35,6 +35,9 @@ public:
 
 private:
 	bool LoadSoundFile();
+	FMOD_SOUND* FindSound(const std::wstring& pSoundKey) const;
+	FMOD_CHANNEL* StartSound(FMOD_SOUND* sound, FMOD_MODE mode, float fVolume);
+	bool StartSound(CHANNELID eID, FMOD_SOUND* sound, FMOD_MODE mode, float fVolume);
 
 	// 사운드 리소스 정보를 가지고 있는 객체
 	std::map<std::wstring, FMOD_SOUND*> MapSound;

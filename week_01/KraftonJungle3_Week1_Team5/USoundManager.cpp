@@ -18,6 +18,8 @@ USoundManager::~USoundManager()
 
 bool USoundManager::Initialize()
 {
+	Release();
+
 	FMOD_RESULT result = FMOD_System_Create(&System, FMOD_VERSION);
 	if (result != FMOD_OK)
 	{
@@ -28,10 +30,18 @@ bool USoundManager::Initialize()
 	result = FMOD_System_Init(System, 512, FMOD_INIT_NORMAL, nullptr);
 	if (result != FMOD_OK)
 	{
+		FMOD_System_Release(System);
+		System = nullptr;
 		return false;
 	}
 
-	return LoadSoundFile();
+	if (!LoadSoundFile())
+	{
+		Release();
+		return false;
+	}
+
+	return true;
 }
 
 void USoundManager::Release()
@@ -55,23 +65,74 @@ void USoundManager::Release()
 
 #undef PlaySound
 
+FMOD_SOUND* USoundManager::FindSound(const std::wstring& pSoundKey) const
+{
+	const auto iter = MapSound.find(pSoundKey);
+	if (iter == MapSound.end())
+	{
+		return nullptr;
+	}
+
+	return iter->second;
+}
+
+FMOD_CHANNEL* USoundManager::StartSound(FMOD_SOUND* sound, FMOD_MODE mode, float fVolume)
+{
+	if (!System || !sound)
+	{
+		return nullptr;
+	}
+
+	FMOD_CHANNEL* channel = nullptr;
+	const FMOD_RESULT playResult = FMOD_System_PlaySound(System, sound, nullptr, TRUE, &channel);
+	if (playResult != FMOD_OK || !channel)
+	{
+		return nullptr;
+	}
+
+	const FMOD_RESULT modeResult = FMOD_Channel_SetMode(channel, mode);
+	const FMOD_RESULT volumeResult = FMOD_Channel_SetVolume(channel, fVolume);
+	const FMOD_RESULT pauseResult = FMOD_Channel_SetPaused(channel, FALSE);
+
+	if (modeResult != FMOD_OK || volumeResult != FMOD_OK || pauseResult != FMOD_OK)
+	{
+		FMOD_Channel_Stop(channel);
+		return nullptr;
+	}
+
+	return channel;
+}
+
+bool USoundManager::StartSound(CHANNELID eID, FMOD_SOUND* sound, FMOD_MODE mode, float fVolume)
+{
+	if (ChannelArray[eID])
+	{
+		FMOD_Channel_Stop(ChannelArray[eID]);
+		ChannelArray[eID] = nullptr;
+	}
+
+	FMOD_CHANNEL* channel = StartSound(sound, mode, fVolume);
+	if (!channel)
+	{
+		return false;
+	}
+
+	ChannelArray[eID] = channel;
+	return true;
+}
+
 void USoundManager::PlaySound(const std::wstring& pSoundKey, CHANNELID eID, float fVolume)
 {
-	auto iter = MapSound.find(pSoundKey);
-	if (iter == MapSound.end())
+	FMOD_SOUND* sound = FindSound(pSoundKey);
+	if (!sound)
 	{
 		return;
 	}
 
-	FMOD_BOOL bPlay = FALSE;
-
-	if (FMOD_Channel_IsPlaying(ChannelArray[eID], &bPlay))
+	if (!StartSound(eID, sound, FMOD_DEFAULT, fVolume))
 	{
-		FMOD_System_PlaySound(System, iter->second, nullptr, FALSE, &ChannelArray[eID]);
+		return;
 	}
-
-	FMOD_Channel_SetMode(ChannelArray[eID], FMOD_DEFAULT);
-	FMOD_Channel_SetVolume(ChannelArray[eID], fVolume);
 
 	FMOD_System_Update(System);
 	UpdateChannelList();
@@ -79,15 +140,18 @@ void USoundManager::PlaySound(const std::wstring& pSoundKey, CHANNELID eID, floa
 
 FMOD_CHANNEL* USoundManager::PlaySound(const std::wstring& pSoundKey, float fVolume)
 {
-	auto iter = MapSound.find(pSoundKey);
-	if (iter == MapSound.end())
+	FMOD_SOUND* sound = FindSound(pSoundKey);
+	if (!sound)
+	{
 		return nullptr;
+	}
 
-	FMOD_CHANNEL* channel;
+	FMOD_CHANNEL* channel = StartSound(sound, FMOD_DEFAULT, fVolume);
+	if (!channel)
+	{
+		return nullptr;
+	}
 
-	FMOD_System_PlaySound(System, iter->second, nullptr, FALSE, &channel);
-	FMOD_Channel_SetMode(channel, FMOD_DEFAULT);
-	FMOD_Channel_SetVolume(channel, fVolume);
 	ChannelList.push_back(channel);
 
 	FMOD_System_Update(System);
@@ -97,36 +161,36 @@ FMOD_CHANNEL* USoundManager::PlaySound(const std::wstring& pSoundKey, float fVol
 
 void USoundManager::PlayLoopSound(const std::wstring& pSoundKey, CHANNELID eID, float fVolume)
 {
-	auto iter = MapSound.find(pSoundKey);
-	if (iter == MapSound.end())
-		return;
-
-	FMOD_BOOL bPlay = FALSE;
-
-	if (FMOD_Channel_IsPlaying(ChannelArray[eID], &bPlay))
+	FMOD_SOUND* sound = FindSound(pSoundKey);
+	if (!sound)
 	{
-		FMOD_System_PlaySound(System, iter->second, nullptr, FALSE, &ChannelArray[eID]);
+		return;
 	}
 
-	FMOD_Channel_SetMode(ChannelArray[eID], FMOD_LOOP_NORMAL);
-	FMOD_Channel_SetVolume(ChannelArray[eID], fVolume);
+	if (!StartSound(eID, sound, FMOD_LOOP_NORMAL, fVolume))
+	{
+		return;
+	}
 	FMOD_System_Update(System);
 	UpdateChannelList();
 }
 
 FMOD_CHANNEL* USoundManager::PlayLoopSound(const std::wstring& pSoundKey, float fVolume)
 {
-	auto iter = MapSound.find(pSoundKey);
-	if (iter == MapSound.end())
+	FMOD_SOUND* sound = FindSound(pSoundKey);
+	if (!sound)
+	{
 		return nullptr;
+	}
 
-	FMOD_CHANNEL* channel;
+	FMOD_CHANNEL* channel = StartSound(sound, FMOD_LOOP_NORMAL, fVolume);
+	if (!channel)
+	{
+		return nullptr;
+	}
 
-	FMOD_System_PlaySound(System, iter->second, nullptr, FALSE, &channel);
-	FMOD_Channel_SetMode(channel, FMOD_LOOP_NORMAL);
-	FMOD_Channel_SetVolume(channel, fVolume);
-	FMOD_System_Update(System);
 	ChannelList.push_back(channel);
+	FMOD_System_Update(System);
 	UpdateChannelList();
 
 	return channel;
@@ -134,25 +198,48 @@ FMOD_CHANNEL* USoundManager::PlayLoopSound(const std::wstring& pSoundKey, float 
 
 void USoundManager::PlayBGM(const std::wstring& pSoundKey, float fVolume)
 {
-	auto iter = MapSound.find(pSoundKey);
-	if (iter == MapSound.end())
+	FMOD_SOUND* sound = FindSound(pSoundKey);
+	if (!sound)
+	{
 		return;
+	}
 
-	FMOD_System_PlaySound(System, iter->second, nullptr, FALSE, &ChannelArray[SOUND_BGM]);
-	FMOD_Channel_SetMode(ChannelArray[SOUND_BGM], FMOD_LOOP_NORMAL);
-	FMOD_Channel_SetVolume(ChannelArray[SOUND_BGM], fVolume);
+	if (!StartSound(SOUND_BGM, sound, FMOD_LOOP_NORMAL, fVolume))
+	{
+		return;
+	}
+
 	FMOD_System_Update(System);
 	UpdateChannelList();
 }
 
 void USoundManager::StopSound(CHANNELID eID)
 {
+	if (!ChannelArray[eID])
+	{
+		return;
+	}
+
 	FMOD_Channel_Stop(ChannelArray[eID]);
+	ChannelArray[eID] = nullptr;
 }
 
 void USoundManager::StopSound(FMOD_CHANNEL* channel)
 {
+	if (!channel)
+	{
+		return;
+	}
+
 	FMOD_Channel_Stop(channel);
+
+	for (auto& fixedChannel : ChannelArray)
+	{
+		if (fixedChannel == channel)
+		{
+			fixedChannel = nullptr;
+		}
+	}
 
 	for (auto it = ChannelList.begin(); it != ChannelList.end();)
 	{
@@ -171,18 +258,38 @@ void USoundManager::StopSound(FMOD_CHANNEL* channel)
 void USoundManager::StopAll()
 {
 	for (int i = 0; i < MAXCHANNEL; ++i)
-		FMOD_Channel_Stop(ChannelArray[i]);
+	{
+		if (ChannelArray[i])
+		{
+			FMOD_Channel_Stop(ChannelArray[i]);
+		}
+
+		ChannelArray[i] = nullptr;
+	}
 
 	for (auto channel : ChannelList)
 	{
-		FMOD_Channel_Stop(channel);
+		if (channel)
+		{
+			FMOD_Channel_Stop(channel);
+		}
 	}
-	FMOD_System_Update(System);
-	UpdateChannelList();
+
+	ChannelList.clear();
+
+	if (System)
+	{
+		FMOD_System_Update(System);
+	}
 }
 
 void USoundManager::SetChannelVolume(CHANNELID eID, float fVolume)
 {
+	if (!System || !ChannelArray[eID])
+	{
+		return;
+	}
+
 	FMOD_Channel_SetVolume(ChannelArray[eID], fVolume);
 
 	FMOD_System_Update(System);
@@ -190,12 +297,15 @@ void USoundManager::SetChannelVolume(CHANNELID eID, float fVolume)
 
 bool USoundManager::IsPlaying(CHANNELID eID)
 {
+	if (!ChannelArray[eID])
+	{
+		return false;
+	}
+
 	FMOD_BOOL bPlay = FALSE;
+	FMOD_RESULT result = FMOD_Channel_IsPlaying(ChannelArray[eID], &bPlay);
 
-	FMOD_Channel_IsPlaying(ChannelArray[eID], &bPlay);
-
-	if (bPlay == 1) return true;
-	return false;
+	return (result == FMOD_OK) && (bPlay == TRUE);
 }
 
 bool USoundManager::IsPlaying(FMOD_CHANNEL* channel)
@@ -215,15 +325,19 @@ void USoundManager::UpdateChannelList()
 {
 	for (auto it = ChannelList.begin(); it != ChannelList.end();)
 	{
-		FMOD_BOOL isPlaying;
+		if (!*it)
+		{
+			it = ChannelList.erase(it);
+			continue;
+		}
 
-		FMOD_Channel_IsPlaying((*it), &isPlaying);
+		FMOD_BOOL isPlaying = FALSE;
+		FMOD_RESULT result = FMOD_Channel_IsPlaying((*it), &isPlaying);
 
-		if (!isPlaying)
+		if (result != FMOD_OK || !isPlaying)
 		{
 			it = ChannelList.erase(it);
 		}
-
 		else
 		{
 			++it;
@@ -233,9 +347,13 @@ void USoundManager::UpdateChannelList()
 
 bool USoundManager::LoadSoundFile()
 {
+	if (!System)
+	{
+		return false;
+	}
 	// _finddata_t : <io.h>에서 제공하며 파일 정보를 저장하는 구조체
 	_finddata_t fd;
-
+	
 	// _findfirst : <io.h>에서 제공하며 사용자가 설정한 경로 내에서 가장 첫 번째 파일을 찾는 함수
 	long long handle = _findfirst("Resource/Sound/*.*", &fd);
 
@@ -264,8 +382,9 @@ bool USoundManager::LoadSoundFile()
 		if (eRes == FMOD_OK)
 		{
 			int len = MultiByteToWideChar(CP_ACP, 0, fd.name, -1, nullptr, 0);
-			std::wstring soundKey(len - 1, L'\0');
+			std::wstring soundKey(len, L'\0');
 			MultiByteToWideChar(CP_ACP, 0, fd.name, -1, soundKey.data(), len);
+			soundKey.resize(len - 1);
 
 			MapSound.emplace(soundKey, pSound);
 		}

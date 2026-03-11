@@ -24,7 +24,10 @@ int UGameApp::Run(int nShowCmd)
 {
 	Show(nShowCmd);
 
-	Initialize();
+	if (!Initialize())
+	{
+		return -1;
+	}
 
 	using clock = std::chrono::steady_clock;
 	auto prev = clock::now();
@@ -59,13 +62,16 @@ int UGameApp::Run(int nShowCmd)
 	return static_cast<int>(msg.wParam);
 }
 
-void UGameApp::Initialize()
+bool UGameApp::Initialize()
 {
 	// TODO : DX 초기화 같은 동작 수행
 	Engine = &UEngine::GetInstance();
 	//Engine->Initialize(Handle(), "UWeek0Scene");
 	//TODO eric1306 - 교체해야함.
-	Engine->Initialize(Handle(), "UMainTitleScene");
+	if (!Engine->Initialize(Handle(), "UMainTitleScene"))
+	{
+		return false;
+	}
 
 	auto& renderer = Engine->GetRenderer();
 
@@ -75,6 +81,8 @@ void UGameApp::Initialize()
 	ImGuiIO& io = ImGui::GetIO();
 	ImGui_ImplWin32_Init((void*)Handle());
 	ImGui_ImplDX11_Init(renderer.GetDevice(), renderer.GetDeviceContext());
+
+	return true;
 }
 
 void UGameApp::Tick(const float dt)
