@@ -18,12 +18,13 @@ enum class ObjectType
 
 enum class EGameState
 {
-	Idle,
-	Serving,
-	Playing,
-	PointScored,
-	SetEnd,
-	GameOver,
+	None,				// 초기 상태
+	Idle,				// Init 단계
+	Serving,			// 서브 시작 단계
+	Playing,			// 게임 플레이 단계
+	PointScored,		// 점수 획득 단계
+	SetEnd,				// 점수 판별 및 세트 종료 단계
+	GameOver,			// 누군가의 Max 점 득점으로 게임 종료
 
 	COUNT
 };
