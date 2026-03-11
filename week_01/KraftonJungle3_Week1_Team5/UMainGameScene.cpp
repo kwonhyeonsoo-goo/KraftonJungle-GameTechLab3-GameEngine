@@ -42,6 +42,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	// Player1
 	Player1 = new UPikachu();
 	Player1->Create(device, context);
+	Player1->TextureRender->SetFlipDraw(false);
 	Player1->DefalutFlip = false;
 
 	Player1->SetKeyConfig({ 'W', 'S', 'A', 'D', VK_SPACE });
