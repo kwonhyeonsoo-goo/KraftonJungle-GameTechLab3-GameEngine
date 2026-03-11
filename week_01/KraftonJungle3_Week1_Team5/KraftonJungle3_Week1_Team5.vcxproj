@@ -140,6 +140,7 @@
     <ClInclude Include="Macro.h" />
     <ClInclude Include="SceneAutoRegister.h" />
     <ClInclude Include="TextureRenderer.h" />
+    <ClInclude Include="UGameManager.h" />
     <ClInclude Include="UMainTitleScene.h" />
     <ClInclude Include="UNet.h" />
     <ClInclude Include="UPikachu.h" />
@@ -186,6 +187,7 @@
     <ClCompile Include="ImGui\imgui_tables.cpp" />
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="UGameManager.cpp" />
     <ClCompile Include="UMainTitleScene.cpp" />
     <ClCompile Include="UNet.cpp" />
     <ClCompile Include="UPikachu.cpp" />
