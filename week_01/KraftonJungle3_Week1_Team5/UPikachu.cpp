@@ -181,6 +181,7 @@ void UPikachu::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 
 void UPikachu::HandleCollision(UBall* ball)
 {
+
 	FVector3 BallPos = ball->GetPosition();
 	FVector3 BTOP = (BallPos - Position).Normalize();
 
