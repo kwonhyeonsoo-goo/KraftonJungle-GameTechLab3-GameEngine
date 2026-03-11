@@ -20,7 +20,8 @@ void UGameManager::Initialize(UPikachu* player1, UPikachu* player2, UBall* ball,
 	{
 		GameState = EGameState::Serving;
 		ServerOwner = EServerOwner::Player1;
-		float StateTimer = 1.5f;
+		MaxStateTimer = 1.f;
+		StateTimer = MaxStateTimer;
 		P1Point = 0;
 		P2Point = 0;
 
@@ -39,27 +40,53 @@ void UGameManager::Initialize(UPikachu* player1, UPikachu* player2, UBall* ball,
 
 void UGameManager::Update(float deltaTime)
 {
-	bool bResult = CheckBallFloor();
-	if (bResult)
+	if (GameState == EGameState::GameOver)
+		return;
+
+	if (GameState == EGameState::PointScored)
 	{
-		GameState = EGameState::PointScored;
-
-		float xPos = PocketBall->GetPosition().x;
-
-		if (xPos >= -1.f && xPos <= -0.02f) // Player1 구역에서 true 라면
+		StateTimer -= deltaTime;
+		if (StateTimer <= 0.f)
 		{
-			ScorePoint(1); // Player 2 점수 증가
-			ServerOwner = EServerOwner::Player2;
+			StateTimer = MaxStateTimer; // 타이머 초기화
+			ResetRound();              // 시간이 다 됐을 때 리셋
 		}
-		else
+		return;
+	}
+
+	if (GameState == EGameState::Serving)
+	{
+		StateTimer -= deltaTime;
+		if (StateTimer <= 0.f)
 		{
-			ScorePoint(0); // Player 1 점수 증가
-			ServerOwner = EServerOwner::Player1;
+			GameState = EGameState::Playing;
 		}
-		if (GameState != EGameState::GameOver)
+		return;
+	}
+
+	if (GameState == EGameState::Playing)
+	{
+		bool bResult = CheckBallFloor();
+		if (bResult)
 		{
-			GameState = EGameState::SetEnd;
-			ResetRound(); //라운드 초기화
+			float xPos = PocketBall->GetPosition().x;
+			if (xPos >= -1.f && xPos <= -0.02f)
+			{
+				ScorePoint(1);
+				ServerOwner = EServerOwner::Player2;
+			}
+			else
+			{
+				ScorePoint(0);
+				ServerOwner = EServerOwner::Player1;
+			}
+
+			// GameOver가 아니면 타이머 시작
+			if (GameState != EGameState::GameOver)
+			{
+				GameState = EGameState::PointScored;
+				StateTimer = MaxStateTimer; // 타이머 시작
+			}
 		}
 	}
 }
@@ -88,8 +115,6 @@ void UGameManager::ScorePoint(int player)
 
 void UGameManager::ResetRound()
 {
-	GameState = EGameState::Serving;
-
 	// Player 위치 초기화
 	Player1->SetPosition(Player1Pos);
 	Player2->SetPosition(Player2Pos);
@@ -105,7 +130,7 @@ void UGameManager::ResetRound()
 		PocketBall->SetVelocity(FVector3(0.f, -.5f, 0.f));
 	}
 
-	GameState = EGameState::Playing;
-
+	GameState = EGameState::Serving;
+	StateTimer = 1.5f;
 }
 
