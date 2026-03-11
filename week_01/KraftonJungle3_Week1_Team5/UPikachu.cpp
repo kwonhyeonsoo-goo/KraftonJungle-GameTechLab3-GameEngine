@@ -181,6 +181,7 @@ void UPikachu::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 
 void UPikachu::HandleCollision(UBall* ball)
 {
+
 	FVector3 BallPos = ball->GetPosition();
 	FVector3 BTOP = (BallPos - Position).Normalize();
 
@@ -236,7 +237,7 @@ void UPikachu::HandleCollision(UBall* ball)
 
 	case EPlayerState::DownSpike:
 		// 아
-		newXVel *= 1.5f;
+		newXVel = xSign * 2.f;
 		newYVel = -4.0f;
 		break;
 
