@@ -490,6 +490,7 @@ void UPikachu::Move(float tick)
 			if (currentInput & FLAG_LEFT)
 			{
 				CurrentState = EPlayerState::Diving;
+				TextureRender->SetFlipDraw(true);
 				PlaySound(L"Pikachu_Jump.wav");
 				Velocity.x = -1.2f;
 				Velocity.y = JumpForce * 0.3f;
@@ -498,7 +499,8 @@ void UPikachu::Move(float tick)
 			else if (currentInput & FLAG_RIGHT)
 			{
 				CurrentState = EPlayerState::Diving;
-				TextureRender->SetFlipDraw(!DefalutFlip);
+
+				TextureRender->SetFlipDraw(false);
 
 				PlaySound(L"Pikachu_Jump.wav");
 				Velocity.x = 1.2f;
