@@ -161,8 +161,6 @@ void UPikachu::Update(float tick)
 				AnimatorComponent->Play("Jump", AnimationMode::Round);
 
 			}
-
-
 		}
 		else if (GetPlayerState() == EPlayerState::Normal) {
 			AnimatorComponent->Play("Normal", AnimationMode::Round);
@@ -215,12 +213,10 @@ void UPikachu::HandleCollision(UBall* ball)
 
 	// 공 y속도 + 플레이어 점프 속도 합산
 	// 절댓값으로 무조건 공이 플레이어보다 올라가게
+
 	float newYVel = fabsf(ball->GetVelocity().y) + max(0.f, Velocity.y);
 	if (newYVel < 1.5f) newYVel = 1.5f;
 	if (BallPos.y < Position.y) newYVel *= -1;
-	
-
-	
 
 	// 플레이어가 왼쪽, 오른쪽인지에 따라 방향 구분
 	float xSign = (Position.x <= -0.02f && Position.x >= -1.0f) ? 1.f : -1.f;
@@ -229,7 +225,7 @@ void UPikachu::HandleCollision(UBall* ball)
 	{
 	case EPlayerState::BasicSpike:
 		// 앞으로 적당하게
-		newXVel = xSign * 2.0f; // 수정해야함.
+		newXVel = xSign * 2.0f;
 		newYVel = 0.5f;
 		ball->SetSpike(true);
 		break;

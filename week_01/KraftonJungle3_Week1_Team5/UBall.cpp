@@ -150,4 +150,7 @@ float UBall::GetRadius() const
 void UBall::Release()
 {
 	SafeDelete(Collider);
+	SafeDelete(BallTextureRenderer);
+	SafeReleaseAndDelete(BallTrail);
+	SafeReleaseAndDelete(BallHyper);
 }

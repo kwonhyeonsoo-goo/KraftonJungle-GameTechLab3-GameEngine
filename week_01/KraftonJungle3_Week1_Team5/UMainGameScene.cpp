@@ -31,7 +31,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	GameObjects.push_back(ballShadow);
 
 	// Player1
-	Player1 = new UPikachu();
+	UPikachu* Player1 = new UPikachu();
 	Player1->Create(device, context);
 
 	Player1->SetKeyConfig({ 'W', 'S', 'A', 'D', VK_SPACE });
@@ -41,6 +41,8 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 
 	UCircleCollider* Collider1 = new UCircleCollider();
 	Collider1->Create(device, Player1);
+	Collider1->SetRadius(2.f);
+
 	Player1->SetCollider(Collider1);
 
 	shadow1->SetTarget(Player1);
@@ -48,7 +50,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	GameObjects.push_back(Player1);
   
     // Player2
-	Player2 = new UPikachu();
+	UPikachu* Player2 = new UPikachu();
 	Player2->Create(device, context);
 	Player2->TextureRender->SetFlipDraw(true); // Player2는 좌우 반전된 이미지 사용
 	Player2->SetKeyConfig({ VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_RETURN });
@@ -58,6 +60,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 
 	UCircleCollider* Collider2 = new UCircleCollider();
 	Collider2->Create(device, Player2);
+	Collider2->SetRadius(2.f);
 	Player2->SetCollider(Collider2);
 
 	shadow2->SetTarget(Player2);
@@ -74,10 +77,6 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 		ball->SetVelocity(rendVelocity);
 		ball->SetScale(.1f);
 		ball->SetRadius(0.1f); //radius 지정이 빠짐
-
-		UCircleCollider* circlecollider = new UCircleCollider();
-		circlecollider->Create(device, ball);
-		ball->SetCollider(circlecollider);
 		ball->SetUseGravity(true);
 
 		GameObjects.push_back(ball);
@@ -103,27 +102,6 @@ void UMainGameScene::Update(float tick)
 	{
 		UEngine::GetInstance().GetSceneManager().RequestChangeScene("UMainTitleScene");
 	}
-
-	// 포인트 획득 상태나 게임 종료시 Update 종료
-	//if (GM.GetGameState() == EGameState::GameOver)
-	//{
-	//	{
-	//		//여기에 승리 실패 시 출력될 애니메이션 코드를 넣습니다.
-	//		Player1->Update(tick);
-	//		Player2->Update(tick);
-	//	}
-
-	//	return;
-	//}
-
-	if (GM.GetGameState() == EGameState::Serving)
-	{
-		{
-			// 여기에 새로운 게임 시작시 출력될
-			// 게임 시작! "READY?" 등의 문구를 출력합니다.
-		}
-		return;
-	}
 	
 	for (auto& gameObject : GameObjects)
 	{
@@ -136,32 +114,35 @@ void UMainGameScene::Update(float tick)
 			gameObject->Physics_Update(tick);
 	}
 
-	if (GM.GetGameState() != EGameState::Playing && GM.GetGameState() != EGameState::GameOver)
-		return;
+	//if (GM.GetGameState() != EGameState::Playing && GM.GetGameState() != EGameState::GameOver)
+	//	return;
 
 	for (auto& gameObject : GameObjects)
 	{
 		if (GM.GetGameState() == EGameState::GameOver)
 		{
-			if (gameObject->GetObjectType() != ObjectType::Pikachu) continue;
-				gameObject->Update(tick);
+			if (gameObject->GetObjectType() != ObjectType::Pikachu)
+			{
+				continue;
+			}
+				
+			gameObject->Update(tick);
 		}
 		else
+		{
 			gameObject->Update(tick);
+		}
 	}
-	if (GM.GetGameState() == EGameState::GameOver)
-		return;
 
 	CheckCollision();
 
-	for (auto& obj : GameObjects)
+	for (auto& gameObject : GameObjects)
 	{
-		if (obj->GetObjectType() == ObjectType::Ball)
+		if (gameObject->GetObjectType() == ObjectType::Ball)
 		{
-			Net->HandleBallCollision(static_cast<UBall*>(obj));
+			Net->HandleBallCollision(static_cast<UBall*>(gameObject));
 		}
 	}
-
 	UpdateCloudImageAnimation(tick);
 }
 
@@ -169,7 +150,7 @@ void UMainGameScene::Exit()
 {
 
 }
-// 피카츄 배구 게임에 오브젝트는 3개 (피카츄, 
+// 피카츄 배구 게임에 오브젝트는 3개
 void UMainGameScene::CheckCollision()
 {
 	for (int i = 0; i < GameObjects.size(); ++i)
@@ -192,13 +173,16 @@ void UMainGameScene::CheckCollision()
 
 						if (bResult)
 						{
-							if (GameObjects[i]->GetObjectType() == ObjectType::Pikachu)
+							ObjectType type1 = GameObjects[i]->GetObjectType();
+							ObjectType type2 = GameObjects[j]->GetObjectType();
+
+							if (type1 == ObjectType::Pikachu && type2 == ObjectType::Ball)
 							{
 								UPikachu* Pikachu = static_cast<UPikachu*>(GameObjects[i]);
 								UBall* Ball = static_cast<UBall*>(GameObjects[j]);
 								Pikachu->HandleCollision(Ball);
 							}
-							else
+							else if(type1 == ObjectType::Ball && type2 == ObjectType::Pikachu)
 							{
 								UPikachu* pikachu = static_cast<UPikachu*>(GameObjects[j]);
 								UBall* Ball = static_cast<UBall*>(GameObjects[i]);
@@ -242,6 +226,7 @@ void UMainGameScene::CheckCollision()
 						}
 					}
 				}
+
 			}
 		}
 	}
