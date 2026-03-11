@@ -1,5 +1,6 @@
 #include "UMainTitleScene.h"
 
+#include <algorithm>
 #include <cmath>
 #include <Windows.h>
 
@@ -7,12 +8,17 @@
 #include "UEngine.h"
 #include "UUIButton.h"
 #include "UUIImage.h"
+#include "UTexture2D.h"
 
 REGISTER_SCENE(UMainTitleScene)
 
 void UMainTitleScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
-	// 피카츄 배구 이미지
+	if (!InitializeBackgroundTiles(device, context))
+	{
+		return;
+	}
+
 	UUIImage* obj = new UUIImage();
 	obj->Create(device, context);
 	if (!obj->SetTexture(L"Resource\\Image\\messages\\ko\\pikachu_volleyball.png"))
@@ -23,7 +29,6 @@ void UMainTitleScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* cont
 	obj->SetScale(2.0f);
 	GameObjects.push_back(obj);
 
-	// 포켓몬 로고 이미지
 	obj = new UUIImage();
 	obj->Create(device, context);
 	if (!obj->SetTexture(L"Resource\\Image\\messages\\ko\\pokemon.png"))
@@ -34,7 +39,6 @@ void UMainTitleScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* cont
 	obj->SetScale(2.0f);
 	GameObjects.push_back(obj);
 
-	// 싸우자 이미지 커졌다 작아졌다 함.
 	FightImage = new UUIImage();
 	FightImage->Create(device, context);
 	if (!FightImage->SetTexture(L"Resource\\Image\\messages\\ko\\fight.png"))
@@ -48,7 +52,6 @@ void UMainTitleScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* cont
 	MenuButtonPositions[0] = FVector3{ 0.0f, -0.20f, 0.0f };
 	MenuButtonPositions[1] = FVector3{ 0.0f, -0.38f, 0.0f };
 
-	// 버튼 이미지들
 	MenuButtons[0] = new UUIButton();
 	MenuButtons[0]->Create(device, context);
 	if (!MenuButtons[0]->SetTexture(L"Resource\\Image\\messages\\ko\\with_computer.png"))
@@ -75,6 +78,7 @@ void UMainTitleScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* cont
 
 void UMainTitleScene::Update(float tick)
 {
+	UpdateBackgroundAnimation(tick);
 	UpdateFightImageAnimation(tick);
 
 	if (IsKeyJustPressed(VK_UP, bWasUpPressed))
@@ -97,6 +101,106 @@ void UMainTitleScene::Update(float tick)
 
 void UMainTitleScene::Exit()
 {
+}
+
+bool UMainTitleScene::InitializeBackgroundTiles(ID3D11Device* device, ID3D11DeviceContext* context)
+{
+	constexpr const wchar_t* BackgroundTexturePath = L"Resource\\Image\\sitting_pikachu.png";
+
+	UTexture2D* BackgroundTexture = UEngine::GetInstance().GetResourceManager().LoadTexture(BackgroundTexturePath);
+	if (BackgroundTexture == nullptr)
+	{
+		return false;
+	}
+
+	const D3D11_VIEWPORT& Viewport = UEngine::GetInstance().GetRenderer().GetViewportInfo();
+	if (Viewport.Width <= 0.0f || Viewport.Height <= 0.0f)
+	{
+		return false;
+	}
+
+	const float TileWidth = (static_cast<float>(BackgroundTexture->GetWidth()) / Viewport.Width) * 2.0f * BackgroundTileScale;
+	const float TileHeight = (static_cast<float>(BackgroundTexture->GetHeight()) / Viewport.Height) * 2.0f * BackgroundTileScale;
+	if (TileWidth <= 0.0f || TileHeight <= 0.0f)
+	{
+		return false;
+	}
+
+	BackgroundTileStep = FVector3{ TileWidth, TileHeight, 0.0f };
+	BackgroundTileColumns = (std::max)(1, static_cast<int>(std::ceil(2.0f / TileWidth)) + 3);
+	BackgroundTileRows = (std::max)(1, static_cast<int>(std::ceil(2.0f / TileHeight)) + 3);
+	BackgroundTiles.reserve(BackgroundTileColumns * BackgroundTileRows);
+
+	for (int Row = 0; Row < BackgroundTileRows; ++Row)
+	{
+		for (int Column = 0; Column < BackgroundTileColumns; ++Column)
+		{
+			UUIImage* Tile = new UUIImage();
+			Tile->Create(device, context);
+			if (!Tile->SetTexture(BackgroundTexturePath))
+			{
+				return false;
+			}
+
+			Tile->SetScale(BackgroundTileScale);
+			GameObjects.push_back(Tile);
+			BackgroundTiles.push_back(Tile);
+		}
+	}
+
+	UpdateBackgroundTilePositions();
+	return true;
+}
+
+void UMainTitleScene::UpdateBackgroundAnimation(float tick)
+{
+	if (BackgroundTiles.empty() || BackgroundTileStep.x <= 0.0f || BackgroundTileStep.y <= 0.0f)
+	{
+		return;
+	}
+
+	BackgroundScrollOffset.x -= BackgroundScrollSpeed * tick;
+	BackgroundScrollOffset.y += BackgroundScrollSpeed * tick;
+
+	while (BackgroundScrollOffset.x <= -BackgroundTileStep.x)
+	{
+		BackgroundScrollOffset.x += BackgroundTileStep.x;
+	}
+
+	while (BackgroundScrollOffset.y >= BackgroundTileStep.y)
+	{
+		BackgroundScrollOffset.y -= BackgroundTileStep.y;
+	}
+
+	UpdateBackgroundTilePositions();
+}
+
+void UMainTitleScene::UpdateBackgroundTilePositions() const
+{
+	if (BackgroundTiles.empty())
+	{
+		return;
+	}
+
+	const float StartX = -1.0f - (BackgroundTileStep.x * 0.5f);
+	const float StartY = -1.0f - (BackgroundTileStep.y * 0.5f);
+
+	for (int Row = 0; Row < BackgroundTileRows; ++Row)
+	{
+		for (int Column = 0; Column < BackgroundTileColumns; ++Column)
+		{
+			const int TileIndex = Row * BackgroundTileColumns + Column;
+			UUIImage* Tile = BackgroundTiles[TileIndex];
+			if (Tile == nullptr)
+			{
+				continue;
+			}
+
+			const float X = StartX + (BackgroundTileStep.x * Column) + BackgroundScrollOffset.x;
+			const float Y = StartY + (BackgroundTileStep.y * Row) + BackgroundScrollOffset.y;
+			Tile->SetPosition(FVector3{ X, Y, 0.0f });
+		}
+	}
 }
 
 void UMainTitleScene::UpdateFightImageAnimation(float tick)
@@ -144,8 +248,6 @@ void UMainTitleScene::ExecuteSelectedMenu() const
 {
 	if (SelectedMenuIndex == 0)
 	{
-		// 1P 플레이 씬으로 전환
-		//UEngine::GetInstance().GetSceneManager().RequestChangeScene("UMainGameScene");
 		return;
 	}
 

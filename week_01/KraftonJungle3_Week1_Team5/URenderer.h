@@ -26,6 +26,7 @@ public:
 
     ID3D11Device* GetDevice() const { return Device; }
     ID3D11DeviceContext* GetDeviceContext() const { return DeviceContext; }
+    const D3D11_VIEWPORT& GetViewportInfo() const { return ViewportInfo; }
 
 private:
     bool CreateDeviceAndSwapChain(HWND hWnd);
