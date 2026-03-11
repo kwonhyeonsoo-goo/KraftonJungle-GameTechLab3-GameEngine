@@ -4,6 +4,8 @@ class USphereMesh;
 class UShader;
 class UCubeMesh;
 class UBall;
+class TextureRenderer;
+class Animator;
 
 enum EInputFlag
 {
@@ -25,7 +27,9 @@ enum class EPlayerState
 	UpSpike,			// 위 스파이크
 	DownSpike,			// 아래 스파이크
 	UpFrontSpike,
-	DownFrontSpike
+	DownFrontSpike,
+	Win,
+	Lose
 };
 
 struct FPlayerKeyConfig
@@ -60,9 +64,9 @@ private:
 	void Move(float tick);
 
 private:
-	UCubeMesh* CubeMesh;
-	USphereMesh* SphereMesh;
-	UShader* Shader;
+	//UCubeMesh* CubeMesh;
+	//USphereMesh* SphereMesh;
+	//UShader* Shader;
 
 	EPlayerState CurrentState = EPlayerState::Normal;
 	FPlayerKeyConfig KeyConfig;
@@ -74,4 +78,8 @@ private:
 	float RightBorder = 1.0f;
 	float TopBorder = 1.0f;
 	float BottomBorder = -1.0f;
+
+	TextureRenderer* TextureRender;
+	Animator* AnimatorComponent;
+
 };
