@@ -6,6 +6,7 @@
 #include "URectCollider.h"
 #include "UBall.h"
 #include "UNet.h"
+#include "UGameManager.h"
 
 REGISTER_SCENE(UMainGameScene)
 
@@ -18,7 +19,8 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 
 	Player1->SetKeyConfig({ 'W', 'S', 'A', 'D', VK_SPACE });
 	Player1->SetBoundary(-1.0f, -0.02f, 1.0f, -1.0f);
-	Player1->SetPosition(FVector3(-0.5f, 0.0f, 0.0f));
+	// Player1 게임 시작 위치
+	Player1->SetPosition(FVector3(-0.5f, -0.9f, 0.0f));
 
 	UCircleCollider* Collider1 = new UCircleCollider();
 	Collider1->Create(device, Player1);
@@ -32,7 +34,8 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 
 	Player2->SetKeyConfig({ VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_RETURN });
 	Player2->SetBoundary(0.02f, 1.0f, 1.0f, -1.0f);
-	Player2->SetPosition(FVector3(0.5f, 0.0f, 0.0f));
+	// Player2 게임 시작 위치
+	Player2->SetPosition(FVector3(0.5f, -0.9f, 0.0f));
 
 	UCircleCollider* Collider2 = new UCircleCollider();
 	Collider2->Create(device, Player2);
@@ -40,34 +43,53 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 
 	GameObjects.push_back(Player2);
 
-	UBall* instance = UBall::Create(device, context);
+	UBall* ball = UBall::Create(device, context);
 	{
 		// 속도는 -0.5 ~ 0.5로 설정
 		FVector3 rendVelocity{ 0.f, -1.f, 0.f};
 
 		float rendRadius{0.2f};
 
-		instance->SetVelocity(rendVelocity);
-		instance->SetScale(.1f);
-		instance->SetRadius(0.1f); //radius 지정이 빠짐
+		ball->SetVelocity(rendVelocity);
+		ball->SetScale(.1f);
+		ball->SetRadius(0.1f); //radius 지정이 빠짐
 
 		UCircleCollider* circlecollider = new UCircleCollider();
-		circlecollider->Create(device, instance);
-		instance->SetCollider(circlecollider);
-		instance->SetUseGravity(true);
+		circlecollider->Create(device, ball);
+		ball->SetCollider(circlecollider);
+		ball->SetUseGravity(true);
 
-		GameObjects.push_back(instance);
+		GameObjects.push_back(ball);
 		
 	}
 	Net = new UNet();
 	Net->Create(device, context);
+
+	UGameManager::GetInstance().Initialize(Player1, Player2, ball,
+		Player1->GetPosition(), Player2->GetPosition());
 }
 
 void UMainGameScene::Update(float tick)
 {
+	UGameManager::GetInstance().Update(tick);
+	UGameManager* GM = &UGameManager::GetInstance();
+
+	// 포인트 획득 상태나 게임 종료시 Update 종료
+	if (GM->GetGameState() == EGameState::PointScored || GM->GetGameState() == EGameState::GameOver) 
+		return;
+
+
 	for (auto& gameObject : GameObjects)
 	{
+		// 서브 대기중인데 
+		if (GM->GetGameState() == EGameState::Serving && gameObject->GetObjectType() == ObjectType::Ball)
+			continue;
 		gameObject->Physics_Update(tick);
+	}
+
+	if (GM->GetGameState() != EGameState::Playing)
+	{
+		return;
 	}
 
 	for (auto& gameObject : GameObjects)
