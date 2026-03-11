@@ -231,40 +231,53 @@ void UPikachu::HandleCollision(UBall* ball)
 		// 앞으로 적당하게
 		newXVel = xSign * 2.0f; // 수정해야함.
 		newYVel = 0.5f;
+		ball->SetSpike(true);
 		break;
 
 	case EPlayerState::FrontSpike:
 		// 옆
 		newXVel = xSign * 4.0f;
 		newYVel = 2.0f;
+		ball->SetSpike(true);
+
 		break;
 
 	case EPlayerState::UpSpike:
 		// 위
 		newXVel *= 0.5f;
 		newYVel = 5.0f;
+		ball->SetSpike(true);
+
 		break;
 
 	case EPlayerState::DownSpike:
 		// 아
 		newXVel = xSign * 2.f;
 		newYVel = -4.0f;
+		ball->SetSpike(true);
+
 		break;
 
 	case EPlayerState::UpFrontSpike:
 		// 위 + 앞 대각선
 		newXVel = xSign * 3.0f;
 		newYVel = 4.0f;
+		ball->SetSpike(true);
+
 		break;
 
 	case EPlayerState::DownFrontSpike:
 		// 앞 + 아래 대각선
 		newXVel = xSign * 3.5f;
 		newYVel = -3.0f;
+		ball->SetSpike(true);
+
 		break;
 
 	default: // Normal
 		newYVel = min(newYVel, 3.0f);
+		ball->SetSpike(false);
+
 		break;
 	}
 
