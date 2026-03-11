@@ -26,7 +26,6 @@ void UMainTitleScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* cont
 		return;
 	}
 	obj->SetPosition(FVector3{ 0.3f, 0.4f, 0.0f });
-	obj->SetScale(2.0f);
 	GameObjects.push_back(obj);
 
 	obj = new UUIImage();
@@ -36,7 +35,6 @@ void UMainTitleScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* cont
 		return;
 	}
 	obj->SetPosition(FVector3{ 0.3f, 0.7f, 0.0f });
-	obj->SetScale(2.0f);
 	GameObjects.push_back(obj);
 
 	FightImage = new UUIImage();
@@ -49,8 +47,8 @@ void UMainTitleScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* cont
 	FightImage->SetScale(FightBaseScale);
 	GameObjects.push_back(FightImage);
 
-	MenuButtonPositions[0] = FVector3{ 0.0f, -0.20f, 0.0f };
-	MenuButtonPositions[1] = FVector3{ 0.0f, -0.38f, 0.0f };
+	MenuButtonPositions[0] = FVector3{ 0.16f, -0.21f, 0.0f };
+	MenuButtonPositions[1] = FVector3{ 0.16f, -0.50f, 0.0f };
 
 	MenuButtons[0] = new UUIButton();
 	MenuButtons[0]->Create(device, context);
