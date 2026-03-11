@@ -229,6 +229,10 @@
       <Filter>00. Engine\01. System\Graphic\Mesh\Rect</Filter>
     </ClInclude>
     <ClInclude Include="Animator.h" />
+    <ClInclude Include="UNet.h" />
+    <ClInclude Include="UGameManager.h">
+      <Filter>02. Client</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -352,6 +356,12 @@
       <Filter>02. Client\00. GameObject</Filter>
     </ClCompile>
     <ClCompile Include="Animator.cpp" />
+    <ClCompile Include="UNet.cpp">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="UGameManager.cpp">
+      <Filter>02. Client</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ShaderW0.hlsl">
