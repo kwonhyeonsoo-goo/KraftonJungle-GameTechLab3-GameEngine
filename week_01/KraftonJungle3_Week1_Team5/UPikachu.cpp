@@ -115,6 +115,7 @@ L"Resources/Textures/pikachu/pikachu_6_4.png"
 	};
 	AnimatorComponent->AddFrames("Lose", LoseFrames);
 
+	AnimatorComponent->Play("Win", AnimationMode::Once);
 
 #pragma endregion
 }
@@ -223,60 +224,60 @@ void UPikachu::HandleCollision(UBall* ball)
 	{
 	case EPlayerState::BasicSpike:
 		// 앞으로 적당하게
-		newXVel = xSign * 2.0f;
-		newYVel = 0.5f;
+		newXVel = xSign * 2.5f;
+		newYVel = 0.0f;
 		ball->SetSpike(true, Position);
 		break;
 
 	case EPlayerState::FrontSpike:
 		// 옆
-		newXVel = xSign * 4.0f;
-		newYVel = 2.0f;
+		newXVel = xSign * 3.0f;
+		newYVel = 0.0f;
 		ball->SetSpike(true, Position);
 
 		break;
 
 	case EPlayerState::UpSpike:
 		// 위
-		newXVel *= 1.0f;
-		newYVel = 5.0f;
+		newXVel = xSign;
+		newYVel = 3.0f;
 		ball->SetSpike(true, Position);
 
 		break;
 
 	case EPlayerState::DownSpike:
 		// 아
-		newXVel = xSign * 2.f;
-		newYVel = -4.0f;
+		newXVel = xSign;
+		newYVel = -3.0f;
 		ball->SetSpike(true, Position);
 
 		break;
 
 	case EPlayerState::UpFrontSpike:
 		// 위 + 앞 대각선
-		newXVel = xSign * 3.0f;
-		newYVel = 4.0f;
+		newXVel = xSign * 2.0f;
+		newYVel = 3.0f;
 		ball->SetSpike(true, Position);
 
 		break;
 
 	case EPlayerState::DownFrontSpike:
 		// 앞 + 아래 대각선
-		newXVel = xSign * 3.5f;
+		newXVel = xSign * 2.0f;
 		newYVel = -3.0f;
 		ball->SetSpike(true, Position);
 		break;
 
 	default: // Normal
-		newYVel = min(newYVel, 3.0f);
+		newYVel = min(newYVel, 2.5f);
 		ball->SetSpike(false);
 
 		break;
 	}
 
 	// 속력 제한
-	const float MaxBallSpeed = 4.0f; // 스파이크(강공) 속도
-	const float MinBallSpeed = 3.0f; // 일반 공격 속도
+	const float MaxBallSpeed = 3.0f; // 스파이크(강공) 속도
+	const float MinBallSpeed = 2.5f; // 일반 공격 속도
 	float speed = sqrtf(newXVel * newXVel + newYVel * newYVel);
 
 	if (speed > 0.f)
@@ -456,7 +457,7 @@ void UPikachu::Move(float tick)
 			}
 
 			// 다이빙
-			if (bOnGround && targetY < -0.4f && abs(Position.x - targetX) > 0.3f)
+			if (bOnGround && targetY < -0.3f && abs(Position.x - myTargetX) > 0.2f)
 			{
 				currentInput |= FLAG_SPIKE;
 			}
@@ -488,7 +489,7 @@ void UPikachu::Move(float tick)
 			{
 				CurrentState = EPlayerState::Diving;
 				PlaySound(L"Pikachu_Jump.wav");
-				Velocity.x = -1.1f;
+				Velocity.x = -1.2f;
 				Velocity.y = JumpForce * 0.3f;
 				bOnGround = false;
 			}
@@ -496,7 +497,7 @@ void UPikachu::Move(float tick)
 			{
 				CurrentState = EPlayerState::Diving;
 				PlaySound(L"Pikachu_Jump.wav");
-				Velocity.x = 1.1f;
+				Velocity.x = 1.2f;
 				Velocity.y = JumpForce * 0.3f;
 				bOnGround = false;
 			}
