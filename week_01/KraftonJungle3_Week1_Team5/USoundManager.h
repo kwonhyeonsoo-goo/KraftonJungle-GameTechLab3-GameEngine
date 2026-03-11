@@ -17,7 +17,7 @@ public:
 	USoundManager();
 	~USoundManager() override;
 
-	void Initialize();
+	bool Initialize();
 	void Release();
 
 	void 			PlaySound(const std::wstring& pSoundKey, CHANNELID eID, float fVolume);
@@ -34,7 +34,7 @@ public:
 	void 			UpdateChannelList();
 
 private:
-	void LoadSoundFile();
+	bool LoadSoundFile();
 
 	// 사운드 리소스 정보를 가지고 있는 객체
 	std::map<std::wstring, FMOD_SOUND*> MapSound;

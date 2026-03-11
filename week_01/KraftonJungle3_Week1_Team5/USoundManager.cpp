@@ -3,8 +3,9 @@
 #include <algorithm>
 #include <corecrt_io.h>
 
-#include "WinBase.h"
-#include "stringapiset.h"
+#define WIN32_LEAN_AND_MEAN
+#include <ranges>
+#include <Windows.h>
 
 USoundManager::USoundManager() : ChannelArray(), System(nullptr)
 {
@@ -15,39 +16,48 @@ USoundManager::~USoundManager()
 	Release();
 }
 
-void USoundManager::Initialize()
+bool USoundManager::Initialize()
 {
-	// 사운드를 담당하는 대표객체를 생성하는 함수
-	FMOD_System_Create(&System, FMOD_VERSION);
+	FMOD_RESULT result = FMOD_System_Create(&System, FMOD_VERSION);
+	if (result != FMOD_OK)
+	{
+		return false;
+	}
 
 	// 1. 시스템 포인터, 2. 사용할 가상채널 수 , 초기화 방식) 
-	FMOD_System_Init(System, 512, FMOD_INIT_NORMAL, nullptr);
+	result = FMOD_System_Init(System, 512, FMOD_INIT_NORMAL, nullptr);
+	if (result != FMOD_OK)
+	{
+		return false;
+	}
 
-	LoadSoundFile();
+	return LoadSoundFile();
 }
 
 void USoundManager::Release()
 {
-	for (auto& pair : MapSound)
+	for (const auto& val : MapSound | std::views::values)
 	{
-		delete[] pair.first;
-		FMOD_Sound_Release(pair.second);
+		FMOD_Sound_Release(val);
 	}
 	MapSound.clear();
 
-	FMOD_System_Release(System);
-	FMOD_System_Close(System);
+	if (System)
+	{
+		FMOD_System_Close(System);
+		FMOD_System_Release(System);
+		System = nullptr;
+	}
+
+	ChannelList.clear();
+	ChannelArray.fill(nullptr);
 }
+
+#undef PlaySound
 
 void USoundManager::PlaySound(const std::wstring& pSoundKey, CHANNELID eID, float fVolume)
 {
-	auto iter = std::find_if(
-		MapSound.begin(), MapSound.end(),
-		[&](auto& it)-> bool
-		{
-			return !lstrcmp(pSoundKey, it.first);
-		});
-
+	auto iter = MapSound.find(pSoundKey);
 	if (iter == MapSound.end())
 	{
 		return;
@@ -69,13 +79,7 @@ void USoundManager::PlaySound(const std::wstring& pSoundKey, CHANNELID eID, floa
 
 FMOD_CHANNEL* USoundManager::PlaySound(const std::wstring& pSoundKey, float fVolume)
 {
-	auto iter = std::find_if(
-		MapSound.begin(), MapSound.end(),
-		[&](auto& it)-> bool
-		{
-			return !lstrcmp(pSoundKey, it.first);
-		});
-
+	auto iter = MapSound.find(pSoundKey);
 	if (iter == MapSound.end())
 		return nullptr;
 
@@ -93,13 +97,7 @@ FMOD_CHANNEL* USoundManager::PlaySound(const std::wstring& pSoundKey, float fVol
 
 void USoundManager::PlayLoopSound(const std::wstring& pSoundKey, CHANNELID eID, float fVolume)
 {
-	// iter = find_if(m_mapSound.begin(), m_mapSound.end(), CTag_Finder(pSoundKey));
-	auto iter = std::find_if(MapSound.begin(), MapSound.end(),
-		[&](auto& it)->bool
-		{
-			return !lstrcmp(pSoundKey, it.first);
-		});
-
+	auto iter = MapSound.find(pSoundKey);
 	if (iter == MapSound.end())
 		return;
 
@@ -118,13 +116,7 @@ void USoundManager::PlayLoopSound(const std::wstring& pSoundKey, CHANNELID eID, 
 
 FMOD_CHANNEL* USoundManager::PlayLoopSound(const std::wstring& pSoundKey, float fVolume)
 {
-	// iter = find_if(m_mapSound.begin(), m_mapSound.end(), CTag_Finder(pSoundKey));
-	auto iter = std::find_if(MapSound.begin(), MapSound.end(),
-		[&](auto& iter)->bool
-		{
-			return !lstrcmp(pSoundKey, iter.first);
-		});
-
+	auto iter = MapSound.find(pSoundKey);
 	if (iter == MapSound.end())
 		return nullptr;
 
@@ -142,12 +134,7 @@ FMOD_CHANNEL* USoundManager::PlayLoopSound(const std::wstring& pSoundKey, float 
 
 void USoundManager::PlayBGM(const std::wstring& pSoundKey, float fVolume)
 {
-	// iter = find_if(m_mapSound.begin(), m_mapSound.end(), CTag_Finder(pSoundKey));
-	auto iter = std::find_if(MapSound.begin(), MapSound.end(), [&](auto& iter)->bool
-		{
-			return !lstrcmp(pSoundKey, iter.first);
-		});
-
+	auto iter = MapSound.find(pSoundKey);
 	if (iter == MapSound.end())
 		return;
 
@@ -213,12 +200,15 @@ bool USoundManager::IsPlaying(CHANNELID eID)
 
 bool USoundManager::IsPlaying(FMOD_CHANNEL* channel)
 {
+	if (!channel)
+	{
+		return false;
+	}
+
 	FMOD_BOOL bPlay = FALSE;
+	FMOD_RESULT result = FMOD_Channel_IsPlaying(channel, &bPlay);
 
-	FMOD_Channel_IsPlaying(channel, &bPlay);
-
-	if (bPlay == 1) return true;
-	return false;
+	return (result == FMOD_OK) && (bPlay == TRUE);
 }
 
 void USoundManager::UpdateChannelList()
@@ -241,20 +231,22 @@ void USoundManager::UpdateChannelList()
 	}
 }
 
-void USoundManager::LoadSoundFile()
+bool USoundManager::LoadSoundFile()
 {
 	// _finddata_t : <io.h>에서 제공하며 파일 정보를 저장하는 구조체
 	_finddata_t fd;
 
 	// _findfirst : <io.h>에서 제공하며 사용자가 설정한 경로 내에서 가장 첫 번째 파일을 찾는 함수
-	long long handle = _findfirst("../Client/Assets/Resource/Sound/*.*", &fd);
+	long long handle = _findfirst("Resource/Sound/*.*", &fd);
 
 	if (handle == -1)
-		return;
-
+	{
+		return false;
+	}
+		
 	int iResult = 0;
 
-	char szCurPath[128] = "../Client/Assets/Resource/Sound/";	 // 상대 경로
+	char szCurPath[128] = "Resource/Sound/";	 // 상대 경로
 	char szFullPath[128] = "";
 
 	while (iResult != -1)
@@ -271,15 +263,11 @@ void USoundManager::LoadSoundFile()
 
 		if (eRes == FMOD_OK)
 		{
-			int iLength = strlen(fd.name) + 1;
+			int len = MultiByteToWideChar(CP_ACP, 0, fd.name, -1, nullptr, 0);
+			std::wstring soundKey(len - 1, L'\0');
+			MultiByteToWideChar(CP_ACP, 0, fd.name, -1, soundKey.data(), len);
 
-			TCHAR* pSoundKey = new TCHAR[iLength];
-			ZeroMemory(pSoundKey, sizeof(TCHAR) * iLength);
-
-			// 아스키 코드 문자열을 유니코드 문자열로 변환시켜주는 함수
-			MultiByteToWideChar(CP_ACP, 0, fd.name, iLength, pSoundKey, iLength);
-
-			MapSound.emplace(pSoundKey, pSound);
+			MapSound.emplace(soundKey, pSound);
 		}
 		//_findnext : <io.h>에서 제공하며 다음 위치의 파일을 찾는 함수, 더이상 없다면 -1을 리턴
 		iResult = _findnext(handle, &fd);
@@ -288,4 +276,6 @@ void USoundManager::LoadSoundFile()
 	FMOD_System_Update(System);
 
 	_findclose(handle);
+
+	return true;
 }

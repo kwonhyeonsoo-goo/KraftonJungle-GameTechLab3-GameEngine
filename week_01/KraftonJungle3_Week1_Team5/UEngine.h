@@ -5,6 +5,7 @@
 #include "URenderer.h"
 #include "UResourceManager.h"
 #include "USceneManager.h"
+#include "USoundManager.h"
 
 class UEngine : public UPrimitive
 {
@@ -26,5 +27,6 @@ private:
 	URenderer Renderer;
 	UResourceManager ResourceManager;
 	USceneManager SceneManager;
+	USoundManager SoundManager;
 };
 
