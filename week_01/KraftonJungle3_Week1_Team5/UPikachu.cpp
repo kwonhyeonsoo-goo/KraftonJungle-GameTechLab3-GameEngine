@@ -198,6 +198,7 @@ void UPikachu::HandleCollision(UBall* ball)
 		float dist = (BallPos - Position).Length();
 		float overlap = (ball->GetRadius() + Scale) - dist;
 		ball->SetPosition(BallPos + BTOP * overlap);
+		BallPos = ball->GetPosition();
 	}
 
 	// 상대 속도 체크: 이미 멀어지는 중이면 스킵

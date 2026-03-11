@@ -101,6 +101,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 void UMainGameScene::Update(float tick)
 {
 	// 테스트를 위한 Game Manager 관련 코드 주석 처리
+
 	UGameManager& GM = UGameManager::GetInstance();
 	GM.Update(tick);
 

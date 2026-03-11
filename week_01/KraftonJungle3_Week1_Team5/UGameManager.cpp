@@ -63,42 +63,31 @@ void UGameManager::Update(float deltaTime)
 		}
 		return;
 	}
-
-	if (GameState == EGameState::Playing)
-	{
-		bool bResult = CheckBallFloor();
-		if (bResult)
-		{
-			float xPos = PocketBall->GetPosition().x;
-			if (xPos >= -1.f && xPos <= -0.02f)
-			{
-				ScorePoint(1);
-				ServerOwner = EServerOwner::Player2;
-			}
-			else
-			{
-				ScorePoint(0);
-				ServerOwner = EServerOwner::Player1;
-			}
-
-			// GameOver가 아니면 타이머 시작
-			if (GameState != EGameState::GameOver)
-			{
-				GameState = EGameState::PointScored;
-				StateTimer = MaxStateTimer; // 타이머 시작
-			}
-		}
-	}
 }
 
-bool UGameManager::CheckBallFloor()
+void UGameManager::CheckScore()
 {
-	float Radius = PocketBall->GetRadius();
-	float yPos = PocketBall->GetPosition().y;
-	float diff = ( yPos) - (-0.8f + Radius);
-	bool bResult = (diff < 0.00000000001);
+	if (GameState == EGameState::Playing)
+	{
+		float xPos = PocketBall->GetPosition().x;
+		if (xPos >= -1.f && xPos <= -0.02f)
+		{
+			ScorePoint(1);
+			ServerOwner = EServerOwner::Player2;
+		}
+		else
+		{
+			ScorePoint(0);
+			ServerOwner = EServerOwner::Player1;
+		}
 
-	return bResult;
+		// GameOver가 아니면 타이머 시작
+		if (GameState != EGameState::GameOver)
+		{
+			GameState = EGameState::PointScored;
+			StateTimer = MaxStateTimer; // 타이머 시작
+		}
+	}
 }
 
 void UGameManager::ScorePoint(int player)
@@ -108,11 +97,9 @@ void UGameManager::ScorePoint(int player)
 	if (P1Point >= MaxPoint || P2Point >= MaxPoint)
 	{
 		GameState = EGameState::GameOver;
-		//TODO: 엔터키 입력 전까지 해당 화면을 유지?
 		Player1->SetMyFinalSCore(P1Point);
 		Player2->SetMyFinalSCore(P2Point);
 	}
-
 }
 
 void UGameManager::ResetRound()
@@ -121,6 +108,7 @@ void UGameManager::ResetRound()
 	Player1->SetPosition(FVector3(Player1Pos.x, Player1Pos.y + 0.1f, Player1Pos.z));
 	Player2->SetPosition(FVector3(Player2Pos.x, Player2Pos.y + 0.1f, Player2Pos.z));
 
+	//서브시 각 서브권마다 공이 시작되는 곳
 	if (ServerOwner == EServerOwner::Player2)
 	{
 		PocketBall->SetPosition(FVector3(Player2Pos.x, .7f, 0.f));
@@ -131,13 +119,16 @@ void UGameManager::ResetRound()
 		PocketBall->SetPosition(FVector3(Player1Pos.x, .7f, 0.f));
 		PocketBall->SetVelocity(FVector3(0.f, -.5f, 0.f));
 	}
+	GameState = EGameState::Playing;
 
-	if (P1Point == 0 && P2Point == 0)
-	{
-		GameState = EGameState::Playing;
-		return;
-	}
-	GameState = EGameState::Serving;
-	StateTimer = 1.5f;
+	//if (P1Point == 0 && P2Point == 0) //첫판이면 바로 시작 
+	//{
+	//	GameState = EGameState::Playing;
+	//	return;
+	//}
+	//점수가 난 이후는 1.5 초 이후 시작
+	//TODO eric1306 : 구현을 위해 잠시 제거
+	//GameState = EGameState::Serving;
+	//StateTimer = 1.5f;
 }
 
