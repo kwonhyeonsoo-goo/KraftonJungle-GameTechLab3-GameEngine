@@ -26,6 +26,8 @@ private:
 	std::vector<float> CloudAnimationTime;
 	std::vector<UUIImage*> Clouds;
 
+	UPikachu* Player1;
+	UPikachu* Player2;
 	UNet* Net;
 
 	static constexpr float CloudBaseScale = 0.9f;
