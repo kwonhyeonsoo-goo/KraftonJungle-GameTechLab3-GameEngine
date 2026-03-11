@@ -26,7 +26,10 @@ public:
 
 	void Release() override;
 
-	void SetSpike(bool spike) { isSpike = spike; }
+	void SetSpike(bool spike);
+	void SetSpike(bool spike, FVector3 TargetPosition);
+
+	void PlayBallPunchEffect(FVector3 effectPosition);
 
 private:
 	//UCircleCollider* Collider; //중복 변수 제거
@@ -37,6 +40,8 @@ private:
 	Animator* AnimatorComponent;
 	UUIImage* BallTrail;
 	UUIImage* BallHyper;
+	UUIImage* BallPunch;
+
 
 	FVector3 PreviousPosition = Position;
 	FVector3 HyperPosition = Position;
@@ -44,6 +49,7 @@ private:
 
 	float TrailTimer = 0.05f;
 	float elapsedTime = 0.f;
-
+	float PunchTimer = 0.0f;
+	float PunchLifetime = 0.3f;
 };
 
