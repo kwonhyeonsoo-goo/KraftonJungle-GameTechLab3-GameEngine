@@ -10,7 +10,7 @@
 #include "fmod.h"
 #include "fmod.hpp"
 #pragma comment(lib, "fmod_vc.lib")
-
+#undef PlaySound
 class USoundManager : public UPrimitive
 {
 public:

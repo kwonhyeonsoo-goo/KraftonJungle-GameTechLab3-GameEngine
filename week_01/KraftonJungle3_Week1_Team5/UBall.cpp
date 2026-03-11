@@ -5,6 +5,7 @@
 
 #include "TextureRenderer.h"
 #include "Animator.h"
+#include "UEngine.h"
 #include "UUIImage.h"
 
 UBall::UBall() : Radius(1.f)
@@ -144,6 +145,7 @@ void UBall::ApplyBoundaryCollision()
 		Velocity.y *= -1;
 		Position.y = -0.8f + Radius;
 		PlayBallPunchEffect({ Position.x, -0.8f,0.0f });
+		UEngine::GetInstance().GetSoundManager().PlaySound(L"Ball_GroundHit.wav", SOUND_EFFECT, 0.8f);
 	}
 }
 
@@ -176,14 +178,18 @@ void UBall::SetSpike(bool spike)
 	if(spike) 
 	PlayBallPunchEffect(Position);
 }
+
 void UBall::SetSpike(bool spike, FVector3 TargetPosition)
 {
 	isSpike = spike;
 
 	FVector3 direction = (TargetPosition - Position).Normalize()*Radius;
 
-	if(spike) 
+	if(spike)
+	{
 		PlayBallPunchEffect(Position + direction);
+		UEngine::GetInstance().GetSoundManager().PlaySound(L"Ball_Smash.wav", SOUND_EFFECT, 0.8f);
+	}
 }
 
 void UBall::PlayBallPunchEffect(FVector3 effectPosition)

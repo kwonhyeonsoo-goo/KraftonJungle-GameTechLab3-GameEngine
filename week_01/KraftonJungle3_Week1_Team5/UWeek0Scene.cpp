@@ -6,6 +6,10 @@
 
 REGISTER_SCENE(UWeek0Scene)
 
+void UWeek0Scene::Enter()
+{
+}
+
 void UWeek0Scene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
 	// TODO : 여기에 추가할 오브젝트들 하드 코딩으로 추가.

@@ -137,6 +137,8 @@ bool USceneManager::SetScene(std::unique_ptr<UScene> NewScene, const std::string
     CurrentScene = std::move(NewScene);
     CurrentSceneName = SceneName;
 
+    CurrentScene->Enter();
+
     return true;
 }
 
