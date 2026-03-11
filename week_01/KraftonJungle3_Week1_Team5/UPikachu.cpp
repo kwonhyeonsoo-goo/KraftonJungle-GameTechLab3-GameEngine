@@ -31,6 +31,7 @@ void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 
 	JumpForce = 3.0f;
 	bOnGround = false;
+	RecoveryTimer = 0.0f;
 }
 
 void UPikachu::Physics_Update(float tick)
@@ -151,28 +152,36 @@ void UPikachu::Release()
 	SafeReleaseAndDelete(Shader);
 }
 
+void UPikachu::SetBoundary(float left, float right, float top, float bottom)
+{
+	LeftBorder = left;
+	RightBorder = right;
+	TopBorder = top;
+	BottomBorder = bottom;
+}
+
 void UPikachu::ApplyBoundaryCollision()
 {
-	if (Position.x > 1.f - Scale)
+	if (Position.x > RightBorder - Scale)
 	{
 		Velocity.x = 0;
-		Position.x = 1.f - Scale;
+		Position.x = RightBorder - Scale;
 	}
-	if (Position.x < -1.f + Scale)
+	if (Position.x < LeftBorder + Scale)
 	{
 		Velocity.x = 0;
-		Position.x = -1.f + Scale;
+		Position.x = LeftBorder + Scale;
 	}
-	if (Position.y > 1.f - Scale)
+	if (Position.y > TopBorder - Scale)
 	{
 		Velocity.y = 0;
-		Position.y = 1.f - Scale;
+		Position.y = TopBorder - Scale;
 	}
-	if (Position.y < -1.f + Scale)
+	if (Position.y < BottomBorder + Scale)
 	{
 		bOnGround = true;
 		Velocity.y = 0;
-		Position.y = -1.f + Scale;
+		Position.y = BottomBorder + Scale;
 
 		if (CurrentState == EPlayerState::Diving)
 		{
@@ -205,11 +214,11 @@ void UPikachu::Move(float tick)
 	CurrentState = EPlayerState::Normal;
 
 	int currentInput = FLAG_NONE;
-	if (GetAsyncKeyState(VK_RETURN) & 0x8000) currentInput |= FLAG_SPIKE;
-	if (GetAsyncKeyState(VK_LEFT) & 0x8000) currentInput |= FLAG_LEFT;
-	if (GetAsyncKeyState(VK_RIGHT) & 0x8000) currentInput |= FLAG_RIGHT;
-	if (GetAsyncKeyState(VK_UP) & 0x8000) currentInput |= FLAG_UP;
-	if (GetAsyncKeyState(VK_DOWN) & 0x8000) currentInput |= FLAG_DOWN;
+	if (GetAsyncKeyState(KeyConfig.SpikeKey) & 0x8000) currentInput |= FLAG_SPIKE;
+	if (GetAsyncKeyState(KeyConfig.LeftKey) & 0x8000) currentInput |= FLAG_LEFT;
+	if (GetAsyncKeyState(KeyConfig.RightKey) & 0x8000) currentInput |= FLAG_RIGHT;
+	if (GetAsyncKeyState(KeyConfig.UpKey) & 0x8000) currentInput |= FLAG_UP;
+	if (GetAsyncKeyState(KeyConfig.DownKey) & 0x8000) currentInput |= FLAG_DOWN;
 
 	// 2. 이동
 	if (currentInput & FLAG_LEFT) Position.x -= 1.0f * tick;
@@ -277,4 +286,9 @@ EPlayerState UPikachu::GetSpikeStateFromInput(int input)
 	}
 
 	return SpikeStateLUT[input];
+}
+
+void UPikachu::SetKeyConfig(const FPlayerKeyConfig& config)
+{
+	KeyConfig = config;
 }

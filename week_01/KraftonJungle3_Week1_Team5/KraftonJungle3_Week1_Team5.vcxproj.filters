@@ -228,6 +228,7 @@
     <ClInclude Include="Rect.h">
       <Filter>00. Engine\01. System\Graphic\Mesh\Rect</Filter>
     </ClInclude>
+    <ClInclude Include="Animator.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -350,6 +351,7 @@
     <ClCompile Include="UPikachu.cpp">
       <Filter>02. Client\00. GameObject</Filter>
     </ClCompile>
+    <ClCompile Include="Animator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ShaderW0.hlsl">

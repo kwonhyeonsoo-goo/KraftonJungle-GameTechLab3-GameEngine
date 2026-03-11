@@ -28,10 +28,21 @@ enum class EPlayerState
 	DownFrontSpike
 };
 
+struct FPlayerKeyConfig
+{
+	int UpKey;
+	int DownKey;
+	int LeftKey;
+	int RightKey;
+	int SpikeKey;
+};
+
 class UPikachu : public UGameObject
 {
 public:
 	EPlayerState GetPlayerState() const { return CurrentState; }
+	void SetKeyConfig(const FPlayerKeyConfig& config);
+	void SetBoundary(float left, float right, float top, float bottom);
 
 	void Create(ID3D11Device* device, ID3D11DeviceContext* context);
 	void Release() override;
@@ -54,12 +65,13 @@ private:
 	UShader* Shader;
 
 	EPlayerState CurrentState = EPlayerState::Normal;
+	FPlayerKeyConfig KeyConfig;
 	float JumpForce;
 	bool bOnGround;
 	float RecoveryTimer;
 
-	const float LeftBorder = -1.0f;
-	const float RightBorder = 1.0f;
-	const float TopBorder = 1.0f;
-	const float BottomBorder = -1.0f;
+	float LeftBorder = -1.0f;
+	float RightBorder = 1.0f;
+	float TopBorder = 1.0f;
+	float BottomBorder = -1.0f;
 };
