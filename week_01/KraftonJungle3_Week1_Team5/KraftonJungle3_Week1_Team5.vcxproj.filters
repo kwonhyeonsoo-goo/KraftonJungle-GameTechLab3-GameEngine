@@ -239,6 +239,7 @@
     <ClInclude Include="UPikachu.h" />
     <ClInclude Include="UUIButton.h" />
     <ClInclude Include="UUIScore.h" />
+    <ClInclude Include="UShadow.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -372,6 +373,7 @@
     <ClCompile Include="UPikachu.cpp" />
     <ClCompile Include="UUIButton.cpp" />
     <ClCompile Include="UUIScore.cpp" />
+    <ClCompile Include="UShadow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ShaderW0.hlsl">

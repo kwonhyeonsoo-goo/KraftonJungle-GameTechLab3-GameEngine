@@ -11,6 +11,8 @@
 #include "UUIImage.h"
 #include "UEngine.h"
 #include "TextureRenderer.h"
+#include "UShader.h"
+#include "UShadow.h"
 #include "UUIScore.h"
 
 REGISTER_SCENE(UMainGameScene)
@@ -19,6 +21,15 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 {
 	// 이 씬에서 사용할 오브젝트들이나 기타 초기화 작업들을 한다고 생각하시면 된다.
 	InitializeUI(device, context);
+
+	UShadow* shadow1 = UShadow::Create(device, context);
+	UShadow* shadow2 = UShadow::Create(device, context);
+	UShadow* ballShadow = UShadow::Create(device, context);
+
+	GameObjects.push_back(shadow1);
+	GameObjects.push_back(shadow2);
+	GameObjects.push_back(ballShadow);
+
 	// Player1
 	Player1 = new UPikachu();
 	Player1->Create(device, context);
@@ -31,6 +42,8 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	UCircleCollider* Collider1 = new UCircleCollider();
 	Collider1->Create(device, Player1);
 	Player1->SetCollider(Collider1);
+
+	shadow1->SetTarget(Player1);
 
 	GameObjects.push_back(Player1);
   
@@ -46,6 +59,8 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	UCircleCollider* Collider2 = new UCircleCollider();
 	Collider2->Create(device, Player2);
 	Player2->SetCollider(Collider2);
+
+	shadow2->SetTarget(Player2);
 
 	GameObjects.push_back(Player2);
 
@@ -66,8 +81,10 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 		ball->SetUseGravity(true);
 
 		GameObjects.push_back(ball);
-		
+
+		ballShadow->SetTarget(ball);
 	}
+
 	Net = new UNet();
 	Net->Create(device, context);
 
