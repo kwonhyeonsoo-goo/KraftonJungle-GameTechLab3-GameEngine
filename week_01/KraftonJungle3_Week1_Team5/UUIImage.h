@@ -3,6 +3,7 @@
 
 #include "UUI.h"
 
+class UTexture2D;
 class TextureRenderer;
 
 class UUIImage : public UUI
@@ -12,6 +13,7 @@ public:
 	~UUIImage() override = default;
 
 	bool SetTexture(const std::wstring& filePath) const;
+	bool SetTexture(UTexture2D* texture);
 	const char* GetEditorTypeName() const override { return "UUIImage"; }
 
 protected:

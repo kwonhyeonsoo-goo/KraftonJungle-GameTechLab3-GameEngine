@@ -7,6 +7,7 @@
 #include "UBall.h"
 #include "UNet.h"
 #include "UUIImage.h"
+#include "UUIScore.h"
 
 REGISTER_SCENE(UMainGameScene)
 
@@ -179,4 +180,14 @@ void UMainGameScene::InitializeUI(ID3D11Device* device, ID3D11DeviceContext* con
 		return;
 	}
 	GameObjects.push_back(backGround);
+
+	UUIScore* score_1p = new UUIScore();
+	score_1p->Create(device, context);
+	score_1p->SetPosition({ -0.7f, 0.75f, 0.f });
+	GameObjects.push_back(score_1p);
+
+	UUIScore* score_2p = new UUIScore();
+	score_2p->Create(device, context);
+	score_2p->SetPosition({ 0.7f, 0.75f, 0.f });
+	GameObjects.push_back(score_2p);
 }

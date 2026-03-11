@@ -13,6 +13,17 @@ bool UUIImage::SetTexture(const std::wstring& filePath) const
 	return TextureRender->LoadTexture(nullptr, nullptr, filePath);
 }
 
+bool UUIImage::SetTexture(UTexture2D* texture)
+{
+	if (TextureRender)
+	{
+		TextureRender->SetTexture(texture);
+		return true;
+	}
+
+	return false;
+}
+
 void UUIImage::OnCreate(ID3D11Device* device, ID3D11DeviceContext* context)
 {
 	TextureRender = new TextureRenderer();
