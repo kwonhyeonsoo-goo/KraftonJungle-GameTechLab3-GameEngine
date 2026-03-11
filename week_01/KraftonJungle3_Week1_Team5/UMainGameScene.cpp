@@ -190,4 +190,17 @@ void UMainGameScene::InitializeUI(ID3D11Device* device, ID3D11DeviceContext* con
 	score_2p->Create(device, context);
 	score_2p->SetPosition({ 0.7f, 0.75f, 0.f });
 	GameObjects.push_back(score_2p);
+
+	Clouds.reserve(CloudCount);
+
+	for (int i = 0; i < CloudCount; ++i)
+	{
+			
+	}
+
+}
+
+void UMainGameScene::UpdateCloudImageAnimation(float tick)
+{
+	
 }
