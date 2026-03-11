@@ -9,6 +9,8 @@
 #include <algorithm>
 #include "TextureRenderer.h"
 #include "Animator.h"
+#include "UGameManager.h"
+#include "UEngine.h"
 
 void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 {
@@ -33,6 +35,7 @@ void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 	JumpForce = 3.0f;
 	bOnGround = false;
 	RecoveryTimer = 0.0f;
+	MyFinalScore = 0;
 
 #pragma region Texture&Animation
 	TextureRender = new TextureRenderer();
@@ -131,37 +134,44 @@ void UPikachu::Update(float tick)
 {
 
 	//게임오버시
-	//AnimatorComponent->Play("Lose", AnimationMode::Once);
-	//AnimatorComponent->Play("Win", AnimationMode::Once);
-
-
-	if (!bOnGround) {
-		if (GetPlayerState() == EPlayerState::BasicSpike || GetPlayerState() == EPlayerState::FrontSpike ||
-			GetPlayerState() == EPlayerState::UpSpike || GetPlayerState() == EPlayerState::DownSpike ||
-			GetPlayerState() == EPlayerState::UpFrontSpike || GetPlayerState() == EPlayerState::DownFrontSpike
-			)
-		{
-			AnimatorComponent->Play("Spike", AnimationMode::Loop);
-
-		}
-		else if (GetPlayerState() == EPlayerState::Diving) {
-			AnimatorComponent->Play("Diving", AnimationMode::Loop);
-
-		}
-		else {
-			AnimatorComponent->Play("Jump", AnimationMode::Round);
-
-		}
-
-
+	if (UGameManager::GetInstance().GetGameState() == EGameState::GameOver)
+	{
+		if(MyFinalScore == UGameManager::GetInstance().GetMaxPoint())
+			AnimatorComponent->Play("Win", AnimationMode::Once);
+		else
+			AnimatorComponent->Play("Lose", AnimationMode::Once);
+		
 	}
-	else if (GetPlayerState() == EPlayerState::Normal) {
-		AnimatorComponent->Play("Normal", AnimationMode::Round);
+	else
+	{
+		if (!bOnGround) {
+			if (GetPlayerState() == EPlayerState::BasicSpike || GetPlayerState() == EPlayerState::FrontSpike ||
+				GetPlayerState() == EPlayerState::UpSpike || GetPlayerState() == EPlayerState::DownSpike ||
+				GetPlayerState() == EPlayerState::UpFrontSpike || GetPlayerState() == EPlayerState::DownFrontSpike
+				)
+			{
+				AnimatorComponent->Play("Spike", AnimationMode::Loop);
 
-	}
-	else if (GetPlayerState() == EPlayerState::Recovering) {
-		AnimatorComponent->Play("Recovering", AnimationMode::Loop);
+			}
+			else if (GetPlayerState() == EPlayerState::Diving) {
+				AnimatorComponent->Play("Diving", AnimationMode::Loop);
 
+			}
+			else {
+				AnimatorComponent->Play("Jump", AnimationMode::Round);
+
+			}
+
+
+		}
+		else if (GetPlayerState() == EPlayerState::Normal) {
+			AnimatorComponent->Play("Normal", AnimationMode::Round);
+
+		}
+		else if (GetPlayerState() == EPlayerState::Recovering) {
+			AnimatorComponent->Play("Recovering", AnimationMode::Loop);
+
+		}
 	}
 
 	AnimatorComponent->Update(TextureRender, tick);

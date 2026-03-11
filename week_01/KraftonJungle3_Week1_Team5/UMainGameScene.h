@@ -2,6 +2,7 @@
 #include "UScene.h"
 
 class UNet;
+class UPikachu;
 
 class UMainGameScene : public UScene
 {
@@ -16,5 +17,7 @@ public:
 
 private:
 	UNet* Net;
+	UPikachu* Player1;
+	UPikachu* Player2;
 };
 
