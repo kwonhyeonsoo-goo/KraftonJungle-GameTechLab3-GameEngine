@@ -17,6 +17,8 @@ public:
 	void Render(ID3D11Device* device, ID3D11DeviceContext* context);
 
 	void Release();
+	void CheckCollision();
+	const std::vector<UGameObject*>& GetGameObjects() const { return GameObjects; }
 
 protected:
 	std::vector<UGameObject*> GameObjects;

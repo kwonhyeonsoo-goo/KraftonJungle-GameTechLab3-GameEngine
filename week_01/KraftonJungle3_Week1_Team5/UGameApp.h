@@ -28,6 +28,7 @@ private:
 	void EditorUpdate(float dt);
 
 	void DrawSceneManagerPanel();
+	void DrawSceneObjectsPanel();
 
 private:
 	UEngine* Engine;

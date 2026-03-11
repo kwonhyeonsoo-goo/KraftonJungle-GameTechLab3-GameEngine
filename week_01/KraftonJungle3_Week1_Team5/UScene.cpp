@@ -25,4 +25,6 @@ void UScene::Release()
 	{
 		SafeReleaseAndDelete(gameObject);
 	}
+
+	GameObjects.clear();
 }

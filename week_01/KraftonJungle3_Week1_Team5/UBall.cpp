@@ -39,6 +39,11 @@ void UBall::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 	Collider->Debug_Render(context, device);
 }
 
+void UBall::SetScale(float scale)
+{
+	UGameObject::SetScale(scale);
+}
+
 void UBall::ApplyBoundaryCollision()
 {
 	if (Position.x > 1.f - Radius)

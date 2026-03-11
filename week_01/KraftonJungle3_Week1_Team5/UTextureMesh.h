@@ -9,6 +9,7 @@ public:
 	~UTextureMesh() override = default;
 
 	bool CreateRect(ID3D11Device* device);
+	bool CreateRect(ID3D11Device* device, float halfWidthNdc, float halfHeightNdc);
 
 };
 

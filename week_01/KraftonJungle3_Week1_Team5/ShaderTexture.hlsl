@@ -49,5 +49,9 @@ PS_INPUT mainVS(VS_INPUT input)
 float4 mainPS(PS_INPUT input) : SV_TARGET
 {
     // Output the color directly
-    return tex0.Sample(samp0, input.uv);
+    float4 texColor = tex0.Sample(samp0, input.uv);
+
+    clip(texColor.a - 0.5);
+
+    return texColor;
 }

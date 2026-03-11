@@ -7,12 +7,14 @@
 #include "UBall.h"
 #include "UNet.h"
 #include "UGameManager.h"
+#include "UUIImage.h"
 
 REGISTER_SCENE(UMainGameScene)
 
 void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
 	// 이 씬에서 사용할 오브젝트들이나 기타 초기화 작업들을 한다고 생각하시면 된다.
+	InitializeUI(device, context);
 	// Player1
 	UPikachu* Player1 = new UPikachu();
 	Player1->Create(device, context);
@@ -133,70 +135,84 @@ void UMainGameScene::CheckCollision()
 	{
 		for (int j = i + 1; j < GameObjects.size(); ++j)
 		{
-			ColliderType type1 = GameObjects[i]->GetCollider()->GetColliderType();
-			ColliderType type2 = GameObjects[j]->GetCollider()->GetColliderType();
-			if (type1 == ColliderType::ColliderType_Circle)
+			if (GameObjects[i]->GetCollider() && GameObjects[j]->GetCollider())
 			{
-				// 당장은 쓸 일 없음
-				if (type1 == type2) //circle circle
+				ColliderType type1 = GameObjects[i]->GetCollider()->GetColliderType();
+				ColliderType type2 = GameObjects[j]->GetCollider()->GetColliderType();
+				if (type1 == ColliderType::ColliderType_Circle)
 				{
-					// 구끼리 충돌 체크
-					UCircleCollider* CircleCollider1 = static_cast<UCircleCollider*>(GameObjects[i]->GetCollider());
-					UCircleCollider* CircleCollider2 = static_cast<UCircleCollider*>(GameObjects[j]->GetCollider());
-					bool bResult = CircleCollider1->CheckCollisionCC(CircleCollider2);
+					// 당장은 쓸 일 없음
+					if (type1 == type2) //circle circle
+					{
+						// 구끼리 충돌 체크
+						UCircleCollider* CircleCollider1 = static_cast<UCircleCollider*>(GameObjects[i]->GetCollider());
+						UCircleCollider* CircleCollider2 = static_cast<UCircleCollider*>(GameObjects[j]->GetCollider());
+						bool bResult = CircleCollider1->CheckCollisionCC(CircleCollider2);
 
-					if (bResult)
-					{
-						if (GameObjects[i]->GetObjectType() == ObjectType::Pikachu)
+						if (bResult)
 						{
-							UPikachu* Pikachu = static_cast<UPikachu*>(GameObjects[i]);
-							UBall* Ball = static_cast<UBall*>(GameObjects[j]);
-							Pikachu->HandleCollision(Ball);
+							if (GameObjects[i]->GetObjectType() == ObjectType::Pikachu)
+							{
+								UPikachu* Pikachu = static_cast<UPikachu*>(GameObjects[i]);
+								UBall* Ball = static_cast<UBall*>(GameObjects[j]);
+								Pikachu->HandleCollision(Ball);
+							}
+							else
+							{
+								UPikachu* pikachu = static_cast<UPikachu*>(GameObjects[j]);
+								UBall* Ball = static_cast<UBall*>(GameObjects[i]);
+								pikachu->HandleCollision(Ball);
+							}
 						}
-						else
+					}
+					else //circle - rect
+					{
+						// 원 - 박스 충돌 체크
+						UCircleCollider* CircleCollider = static_cast<UCircleCollider*>(GameObjects[i]->GetCollider());
+						URectCollider* RectCollider = static_cast<URectCollider*>(GameObjects[j]->GetCollider());
+						bool bResult = CircleCollider->CheckCollisionCR(RectCollider);
+						if (bResult)
 						{
-							UPikachu* pikachu = static_cast<UPikachu*>(GameObjects[j]);
-							UBall* Ball = static_cast<UBall*>(GameObjects[i]);
-							pikachu->HandleCollision(Ball);
+							// Hit: TODO: 반발력 발생
 						}
 					}
 				}
-				else //circle - rect
+				else //ColliderType_Rect
 				{
-					// 원 - 박스 충돌 체크
-					UCircleCollider* CircleCollider = static_cast<UCircleCollider*>(GameObjects[i]->GetCollider());
-					URectCollider* RectCollider = static_cast<URectCollider*>(GameObjects[j]->GetCollider());
-					bool bResult = CircleCollider->CheckCollisionCR(RectCollider);
-					if (bResult)
+					if (type1 == type2)
 					{
-						// Hit: TODO: 반발력 발생
+						URectCollider* RectCollider1 = static_cast<URectCollider*>(GameObjects[i]->GetCollider());
+						URectCollider* RectCollilder2 = static_cast<URectCollider*>(GameObjects[j]->GetCollider());
+						bool bResult = RectCollider1->CheckCollisionRR(RectCollilder2);
+						if (bResult)
+						{
+							// Hit: TODO: 반발력 발생
+						}
 					}
-				}
-			}
-			else //ColliderType_Rect
-			{
-				if (type1 == type2)
-				{
-					URectCollider* RectCollider1 = static_cast<URectCollider*>(GameObjects[i]->GetCollider());
-					URectCollider* RectCollilder2 = static_cast<URectCollider*>(GameObjects[j]->GetCollider());
-					bool bResult = RectCollider1->CheckCollisionRR(RectCollilder2);
-					if (bResult)
+					else //rect circle
 					{
-						// Hit: TODO: 반발력 발생
-					}
-				}
-				else //rect circle
-				{
-					// 원과 박스의 충돌 체크
-					URectCollider* RectCollider = static_cast<URectCollider*>(GameObjects[i]->GetCollider());
-					UCircleCollider* CircleCollider = static_cast<UCircleCollider*>(GameObjects[j]->GetCollider());
-					bool bResult = CircleCollider->CheckCollisionCR(RectCollider);
-					if (bResult)
-					{
-						// Hit: TODO: 반발력 발생
+						// 원과 박스의 충돌 체크
+						URectCollider* RectCollider = static_cast<URectCollider*>(GameObjects[i]->GetCollider());
+						UCircleCollider* CircleCollider = static_cast<UCircleCollider*>(GameObjects[j]->GetCollider());
+						bool bResult = CircleCollider->CheckCollisionCR(RectCollider);
+						if (bResult)
+						{
+							// Hit: TODO: 반발력 발생
+						}
 					}
 				}
 			}
 		}
 	}
+}
+
+void UMainGameScene::InitializeUI(ID3D11Device* device, ID3D11DeviceContext* context)
+{
+	UUIImage* backGround = new UUIImage();
+	backGround->Create(device, context);
+	if (!backGround->SetTexture(L"Resource\\Image\\Pikachu_BG.png"))
+	{
+		return;
+	}
+	GameObjects.push_back(backGround);
 }
