@@ -52,7 +52,7 @@ void UNet::HandleBallCollision(UBall* ball)
 
 	float netLeft = Position.x - HalfWidth; // -0.015f
 	float netRight = Position.x + HalfWidth;//  0.015f
-	float netTop = Position.y + HalfHeight;   // -0.65 + 0.35 = -0.30
+	float netTop = Position.y + HalfHeight + 0.075f;   // -0.65 + 0.35 = -0.30
 	float netBottom = -1.0f;
 
 	// AABB vs Circle
