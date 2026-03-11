@@ -6,6 +6,7 @@
 
 #include "SceneAutoRegister.h"
 #include "UEngine.h"
+#include "UGameManager.h"
 #include "UUIButton.h"
 #include "UUIImage.h"
 #include "UTexture2D.h"
@@ -246,6 +247,9 @@ void UMainTitleScene::ExecuteSelectedMenu() const
 {
 	if (SelectedMenuIndex == 0)
 	{
+		UEngine::GetInstance().GetSceneManager().RequestChangeScene("UMainGameScene");
+		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_GameStart.wav", SOUND_UI, 0.8f);
+		UGameManager::GetInstance().SetAIMode(true);
 		return;
 	}
 
@@ -253,6 +257,7 @@ void UMainTitleScene::ExecuteSelectedMenu() const
 	{
 		UEngine::GetInstance().GetSceneManager().RequestChangeScene("UMainGameScene");
 		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_GameStart.wav",SOUND_UI, 0.8f);
+		UGameManager::GetInstance().SetAIMode(false);
 		return;
 	}
 }

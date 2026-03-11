@@ -18,8 +18,8 @@ void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 
 	/*CubeMesh = new UCubeMesh();
 	CubeMesh->CreateCube(device);*/
-	SphereMesh = new USphereMesh();
-	SphereMesh->CreateSphere(device);
+	//SphereMesh = new USphereMesh();
+	//SphereMesh->CreateSphere(device);
 
 	D3D11_INPUT_ELEMENT_DESC layout[] = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
@@ -28,8 +28,8 @@ void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 			D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
 
-	Shader = new UShader();
-	Shader->Create(device, L"ShaderW0.hlsl", layout, ARRAYSIZE(layout), "mainVS", "mainPS");
+	//Shader = new UShader();
+	//Shader->Create(device, L"ShaderW0.hlsl", layout, ARRAYSIZE(layout), "mainVS", "mainPS");
 
 	UseGravity = true;
 	JumpForce = 3.0f;
@@ -175,10 +175,10 @@ void UPikachu::Update(float tick)
 
 void UPikachu::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 {
-	SphereMesh->Bind(context);
-	Shader->Bind(context);
-	Shader->UpdateConstant(context, Position, Scale);
-	SphereMesh->Draw(context);
+	//SphereMesh->Bind(context);
+	//Shader->Bind(context);
+	//Shader->UpdateConstant(context, Position, Scale);
+	//SphereMesh->Draw(context);
 
 	TextureRender->Draw(context, device, Position, 1.f);
 

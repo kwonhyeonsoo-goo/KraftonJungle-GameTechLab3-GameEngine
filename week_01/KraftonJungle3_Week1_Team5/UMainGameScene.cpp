@@ -106,6 +106,11 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	// 게임을 초기화 합니다.
 	UGameManager::GetInstance().Initialize(Player1, Player2, ball,
 		Player1->GetPosition(), Player2->GetPosition());
+
+	if (UGameManager::GetInstance().IsAIMode())
+	{
+		Player1->SetIsAI(true);
+	}
 }
 
 void UMainGameScene::Update(float tick)
@@ -113,6 +118,11 @@ void UMainGameScene::Update(float tick)
 	// 테스트를 위한 Game Manager 관련 코드 주석 처리
 	UGameManager& GM = UGameManager::GetInstance();
 	GM.Update(tick);
+
+	P1_Score->SetScore(GM.GetP1Point());
+	P2_Score->SetScore(GM.GetP2Point());
+	P1_Score->Update(tick);
+	P2_Score->Update(tick);
 
 	if ((GM.GetGameState() == EGameState::GameOver) && (GetAsyncKeyState(VK_RETURN) & 0x8000))
 	{
@@ -310,15 +320,15 @@ void UMainGameScene::InitializeUI(ID3D11Device* device, ID3D11DeviceContext* con
 		Clouds.push_back(cloud);
 	}
 
-	UUIScore* score_1p = new UUIScore();
-	score_1p->Create(device, context);
-	score_1p->SetPosition({ -0.7f, 0.75f, 0.f });
-	GameObjects.push_back(score_1p);
+	P1_Score = new UUIScore();
+	P1_Score->Create(device, context);
+	P1_Score->SetPosition({ -0.7f, 0.75f, 0.f });
+	GameObjects.push_back(P1_Score);
 
-	UUIScore* score_2p = new UUIScore();
-	score_2p->Create(device, context);
-	score_2p->SetPosition({ 0.7f, 0.75f, 0.f });
-	GameObjects.push_back(score_2p);
+	P2_Score = new UUIScore();
+	P2_Score->Create(device, context);
+	P2_Score->SetPosition({ 0.7f, 0.75f, 0.f });
+	GameObjects.push_back(P2_Score);
 }
 
 void UMainGameScene::UpdateCloudImageAnimation(const float tick)

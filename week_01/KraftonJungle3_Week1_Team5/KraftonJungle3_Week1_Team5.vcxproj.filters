@@ -274,6 +274,7 @@
     <ClInclude Include="USoundManager.h">
       <Filter>00. Engine\01. System\Sound</Filter>
     </ClInclude>
+    <ClInclude Include="UWave.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -412,6 +413,7 @@
     <ClCompile Include="USoundManager.cpp">
       <Filter>00. Engine\01. System\Sound</Filter>
     </ClCompile>
+    <ClCompile Include="UWave.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ShaderW0.hlsl">
