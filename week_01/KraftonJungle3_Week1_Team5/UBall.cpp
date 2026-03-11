@@ -7,6 +7,7 @@
 #include "Animator.h"
 #include "UEngine.h"
 #include "UUIImage.h"
+#include "UGameManager.h"
 
 UBall::UBall() : Radius(1.f)
 {
@@ -127,24 +128,28 @@ void UBall::ApplyBoundaryCollision()
 {
 	if (Position.x > 1.f - Radius)
 	{
-		Velocity.x *= -0.9;
+		//Velocity.x *= -0.9f;
+		Velocity.x *= -1.f;
 		Position.x = 1.f - Radius;
 	}
 	if (Position.x < -1.f + Radius)
 	{
-		Velocity.x *= -0.9;
+		//Velocity.x *= -0.9f;
+		Velocity.x *= -1.f;
 		Position.x = -1.f + Radius;
 	}
 	if (Position.y > 1.f - Radius)
 	{
-		Velocity.y *= -1;
+		Velocity.y *= -1.f;
 		Position.y = 1.f - Radius;
 	}
 	if (Position.y < -0.8f + Radius) //바닥 튕김은 GameManager 에서 관리
 	{
 		Velocity.y *= -1;
 		Position.y = -0.8f + Radius;
-		PlayBallPunchEffect({ Position.x, -0.8f,0.0f });
+		UGameManager::GetInstance().CheckScore();
+		//bIsCollide = false;
+		PlayBallPunchEffect({ Position.x, -0.8f, 0.0f });
 		UEngine::GetInstance().GetSoundManager().PlaySound(L"Ball_GroundHit.wav", SOUND_EFFECT, 0.8f);
 	}
 }

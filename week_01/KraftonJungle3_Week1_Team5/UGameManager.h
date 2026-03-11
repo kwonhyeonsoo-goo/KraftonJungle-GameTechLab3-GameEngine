@@ -18,7 +18,7 @@ class UGameManager : public UPrimitive
 	void Initialize(UPikachu* player1, UPikachu* player2, UBall* ball,
 		FVector3 player1Pos, FVector3 player2Pos);						//게임 매니저 초기화 하는 함수
 	void Update(float deltaTime);
-	bool CheckBallFloor();
+	void CheckScore();
 	void ScorePoint(int player);										// 점수 처리
 	void ResetRound();													// 위치 초기화
 
