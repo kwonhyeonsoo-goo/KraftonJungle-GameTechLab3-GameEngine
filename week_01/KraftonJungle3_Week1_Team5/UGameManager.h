@@ -25,6 +25,7 @@ class UGameManager : public UPrimitive
 	EGameState GetGameState() const { return GameState; }
 	int GetP1Point() const { return P1Point; }
 	int GetP2Point() const { return P2Point; }
+	int GetMaxPoint() const { return MaxPoint; }
 
 private:
 	EGameState GameState; //현재 게임 흐름

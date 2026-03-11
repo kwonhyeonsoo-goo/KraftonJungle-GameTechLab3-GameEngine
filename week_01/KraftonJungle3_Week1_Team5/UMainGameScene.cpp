@@ -9,6 +9,7 @@
 #include "Utility.h"
 #include "UGameManager.h"
 #include "UUIImage.h"
+#include "UEngine.h"
 #include "TextureRenderer.h"
 #include "UShader.h"
 #include "UShadow.h"
@@ -30,7 +31,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	GameObjects.push_back(ballShadow);
 
 	// Player1
-	UPikachu* Player1 = new UPikachu();
+	Player1 = new UPikachu();
 	Player1->Create(device, context);
 
 	Player1->SetKeyConfig({ 'W', 'S', 'A', 'D', VK_SPACE });
@@ -47,7 +48,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	GameObjects.push_back(Player1);
   
   // Player2
-	UPikachu* Player2 = new UPikachu();
+	Player2 = new UPikachu();
 	Player2->Create(device, context);
 	Player2->TextureRender->SetFlipDraw(true); // Player2는 좌우 반전된 이미지 사용
 	Player2->SetKeyConfig({ VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_RETURN });
@@ -88,50 +89,67 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	Net->Create(device, context);
 
 	// 게임을 초기화 합니다.
-	/*UGameManager::GetInstance().Initialize(Player1, Player2, ball,
-		Player1->GetPosition(), Player2->GetPosition());*/
+	UGameManager::GetInstance().Initialize(Player1, Player2, ball,
+		Player1->GetPosition(), Player2->GetPosition());
 }
 
 void UMainGameScene::Update(float tick)
 {
 	// 테스트를 위한 Game Manager 관련 코드 주석 처리
-	/*UGameManager& GM = UGameManager::GetInstance();
-	GM.Update(tick);*/
+	UGameManager& GM = UGameManager::GetInstance();
+	GM.Update(tick);
+
+	if ((GM.GetGameState() == EGameState::GameOver) && (GetAsyncKeyState(VK_RETURN) & 0x8000))
+	{
+		UEngine::GetInstance().GetSceneManager().RequestChangeScene("UMainTitleScene");
+	}
 
 	// 포인트 획득 상태나 게임 종료시 Update 종료
 	//if (GM.GetGameState() == EGameState::GameOver)
 	//{
 	//	{
 	//		//여기에 승리 실패 시 출력될 애니메이션 코드를 넣습니다.
+	//		Player1->Update(tick);
+	//		Player2->Update(tick);
 	//	}
 
 	//	return;
 	//}
 
-	//if (GM.GetGameState() == EGameState::Serving)
-	//{
-	//	{
-	//		// 여기에 새로운 게임 시작시 출력될
-	//		// 게임 시작! "READY?" 등의 문구를 출력합니다.
-	//	}
-	//	return;
-	//}
-
+	if (GM.GetGameState() == EGameState::Serving)
+	{
+		{
+			// 여기에 새로운 게임 시작시 출력될
+			// 게임 시작! "READY?" 등의 문구를 출력합니다.
+		}
+		return;
+	}
+	
 	for (auto& gameObject : GameObjects)
 	{
-		/*if(GM.GetGameState() == EGameState::PointScored)
+		if (GM.GetGameState() == EGameState::GameOver)
+			break;
+		if(GM.GetGameState() == EGameState::PointScored)
 			gameObject->Physics_Update(tick/3.f);
-		else*/
+		else
 			gameObject->Physics_Update(tick);
 	}
 
-	/*if (GM.GetGameState() != EGameState::Playing)
-		return;*/
+	if (GM.GetGameState() != EGameState::Playing && GM.GetGameState() != EGameState::GameOver)
+		return;
 
 	for (auto& gameObject : GameObjects)
 	{
-		gameObject->Update(tick);
+		if (GM.GetGameState() == EGameState::GameOver)
+		{
+			if (gameObject->GetObjectType() != ObjectType::Pikachu) continue;
+				gameObject->Update(tick);
+		}
+		else
+			gameObject->Update(tick);
 	}
+	if (GM.GetGameState() == EGameState::GameOver)
+		return;
 
 	CheckCollision();
 
