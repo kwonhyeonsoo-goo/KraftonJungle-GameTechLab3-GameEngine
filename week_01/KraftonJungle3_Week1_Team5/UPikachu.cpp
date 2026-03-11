@@ -408,9 +408,10 @@ void UPikachu::Move(float tick)
 		{
 			FVector3 ballPos = TargetBall->GetPosition();
 			FVector3 ballVel = TargetBall->GetVelocity();
+			float r = TargetBall->GetRadius();
 
-			float PositionLeftBorder = -1.0f + TargetBall->GetRadius();
-			float PositionRightBorder = 1.0f - TargetBall->GetRadius();
+			float PositionLeftBorder = -1.0f + r;
+			float PositionRightBorder = 1.0f - r;
 
 			// 공의 다음 X 위치 예측
 			float targetX = ballPos.x + (ballVel.x * tick * 10.0f);
@@ -434,8 +435,8 @@ void UPikachu::Move(float tick)
 			}
 
 			float myTargetX = targetX;
-			if (myTargetX < LeftBorder) myTargetX = LeftBorder;
-			if (myTargetX > RightBorder) myTargetX = RightBorder;
+			if (myTargetX + r < LeftBorder) myTargetX = LeftBorder;
+			if (myTargetX - r > RightBorder) myTargetX = RightBorder;
 
 			float deadzone = 0.05f;
 
@@ -459,7 +460,7 @@ void UPikachu::Move(float tick)
 			}
 
 			// 다이빙
-			if (bOnGround && targetY < -0.3f && abs(Position.x - myTargetX) > 0.2f)
+			if (bOnGround && targetY < -0.3f && LeftBorder < myTargetX && myTargetX < RightBorder && abs(Position.x - myTargetX) > 0.2f)
 			{
 				currentInput |= FLAG_SPIKE;
 			}

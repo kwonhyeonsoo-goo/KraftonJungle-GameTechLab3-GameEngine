@@ -117,12 +117,12 @@ void UGameManager::ResetRound()
 	if (ServerOwner == EServerOwner::Player2)
 	{
 		PocketBall->SetPosition(FVector3(Player2Pos.x, .7f, 0.f));
-		PocketBall->SetVelocity(FVector3(0.f, -.5f, 0.f));
+		PocketBall->SetVelocity(FVector3(0.f, 0.0f, 0.f));
 	}
 	else
 	{
 		PocketBall->SetPosition(FVector3(Player1Pos.x, .7f, 0.f));
-		PocketBall->SetVelocity(FVector3(0.f, -.5f, 0.f));
+		PocketBall->SetVelocity(FVector3(0.f, 0.0f, 0.f));
 	}
 	GameState = EGameState::Playing;
 }
