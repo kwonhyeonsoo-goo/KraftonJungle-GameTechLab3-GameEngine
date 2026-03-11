@@ -5,9 +5,11 @@
 
 #include "UTextureMesh.h"
 #include "UShader.h"
+#include "Enum.h"
 
 void Uscreen::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 {
+	SetObjectType(ObjectType::screen);
 	Mesh = new UTextureMesh();
 	Mesh->CreateRect(device);
 

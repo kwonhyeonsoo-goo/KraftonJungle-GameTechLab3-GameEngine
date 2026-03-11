@@ -4,9 +4,16 @@
 #include "USphereMesh.h"
 #include "UShader.h"
 #include "Utility.h"
+#include "Enum.h"
+#include "UBall.h"
+#include <algorithm>
 
 void UPikachu::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 {
+	SetObjectType(ObjectType::Pikachu);
+
+	/*CubeMesh = new UCubeMesh();
+	CubeMesh->CreateCube(device);*/
 	SphereMesh = new USphereMesh();
 	SphereMesh->CreateSphere(device);
 
@@ -47,6 +54,96 @@ void UPikachu::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 	Shader->Bind(context);
 	Shader->UpdateConstant(context, Position, Scale);
 	SphereMesh->Draw(context);
+}
+
+void UPikachu::HandleCollision(UBall* ball)
+{
+	FVector3 BallPos = ball->GetPosition();
+	FVector3 BTOP = (BallPos - Position).Normalize();
+
+	// 위치 보정
+	if (CurrentState == EPlayerState::Normal)
+	{
+		float dist = (BallPos - Position).Length();
+		float overlap = (ball->GetRadius() + Scale) - dist;
+		ball->SetPosition(BallPos + BTOP * overlap);
+	}
+
+	// 상대 속도 체크: 이미 멀어지는 중이면 스킵
+	// 충돌했을때 겹치는 부분이 매우 크다면? -> 
+	FVector3 relativeVelocity = ball->GetVelocity() - Velocity;
+	float closingSpeed = FVector3::DotProduct(BTOP, relativeVelocity);
+	if (closingSpeed > 0) return;
+
+	float xDiff = BallPos.x - Position.x;
+	float maxDist = ball->GetRadius() + Scale;
+	float newXVel = (xDiff / maxDist) * 2.0f;
+
+	// 공 y속도 + 플레이어 점프 속도 합산
+	// 절댓값으로 무조건 공이 플레이어보다 올라가게
+	float newYVel = fabsf(ball->GetVelocity().y) + max(0.f, Velocity.y);
+	if (newYVel < 1.5f) newYVel = 1.5f;
+
+	// xDiff 부호로 공이 어느 방향에 있는지 판단
+	float xSign = (xDiff >= 0.f) ? 1.f : -1.f;
+
+	switch (CurrentState)
+	{
+	case EPlayerState::BasicSpike:
+		// 앞으로 적당하게
+		newXVel = 2.0f; // 수정해야함.
+		newYVel = 0.5f;
+		break;
+
+	case EPlayerState::FrontSpike:
+		// 옆
+		newXVel = xSign * 4.0f;
+		newYVel = 2.0f;
+		break;
+
+	case EPlayerState::UpSpike:
+		// 위
+		newXVel *= 0.5f;
+		newYVel = 5.0f;
+		break;
+
+	case EPlayerState::DownSpike:
+		// 아
+		newXVel *= 1.5f;
+		newYVel = -4.0f;
+		break;
+
+	case EPlayerState::UpFrontSpike:
+		// 위 + 앞 대각선
+		newXVel = xSign * 3.0f;
+		newYVel = 4.0f;
+		break;
+
+	case EPlayerState::DownFrontSpike:
+		// 앞 + 아래 대각선
+		newXVel = xSign * 3.5f;
+		newYVel = -3.0f;
+		break;
+
+	default: // Normal
+		newYVel = min(newYVel, 3.0f);
+		break;
+	}
+
+	// 속력 제한
+	const float MaxBallSpeed = 4.0f;
+	const float MinBallSpeed = 3.0f;
+	float speed = sqrtf(newXVel * newXVel + newYVel * newYVel);
+
+	if (speed > 0.f)
+	{
+		float clampedSpeed = max(MinBallSpeed, min(speed, MaxBallSpeed));
+		float ratio = clampedSpeed / speed;
+		newXVel *= ratio;
+		newYVel *= ratio;
+	}
+
+	ball->SetVelocity({ newXVel, newYVel, 0.f });
 }
 
 void UPikachu::Release()
@@ -139,6 +236,7 @@ void UPikachu::Move(float tick)
 			if (currentInput & FLAG_LEFT)
 			{
 				CurrentState = EPlayerState::Diving;
+
 				Velocity.x = -1.1f;
 				Velocity.y = JumpForce * 0.3f;
 				bOnGround = false;

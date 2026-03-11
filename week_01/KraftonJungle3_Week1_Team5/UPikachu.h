@@ -3,6 +3,7 @@
 class USphereMesh;
 class UShader;
 class UCubeMesh;
+class UBall;
 
 enum EInputFlag
 {
@@ -47,14 +48,16 @@ public:
 	void Release() override;
 	void Render(ID3D11DeviceContext* context, ID3D11Device* device) override;
 
+	void HandleCollision(UBall* ball);
+
 	void Physics_Update(float tick) override;
 	void Update(float tick) override;
+
+	EPlayerState GetSpikeStateFromInput(int input);
 
 private:
 	void ApplyBoundaryCollision();
 	void Move(float tick);
-
-	EPlayerState GetSpikeStateFromInput(int input);
 
 private:
 	UCubeMesh* CubeMesh;

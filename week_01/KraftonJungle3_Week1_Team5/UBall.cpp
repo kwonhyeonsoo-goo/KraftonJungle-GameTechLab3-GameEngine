@@ -3,9 +3,9 @@
 #include "UCircleCollider.h"
 #include "Utility.h"
 
-UBall::UBall() : Collider(nullptr), Radius(1.f)
+UBall::UBall() : Radius(1.f)
 {
-
+	SetObjectType(ObjectType::Ball);
 }
 
 UBall::~UBall()
@@ -16,6 +16,7 @@ UBall* UBall::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 	UBall* instance = new UBall();
 	instance->Collider = new UCircleCollider();
 	instance->Collider->Create(device, instance);
+
 
 	return instance;
 }
@@ -66,9 +67,9 @@ void UBall::SetRadius(const float radius)
 {
 	Radius = radius;
 
-	if (Collider)
+	if (Collider->GetColliderType() == ColliderType::ColliderType_Circle)
 	{
-		Collider->SetRadius(radius);
+		static_cast<UCircleCollider*>(Collider)->SetRadius(radius);
 	}
 }
 
@@ -79,5 +80,5 @@ float UBall::GetRadius() const
 
 void UBall::Release()
 {
-	SafeReleaseAndDelete(Collider);
+	SafeDelete(Collider);
 }

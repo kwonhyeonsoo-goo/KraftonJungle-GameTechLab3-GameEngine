@@ -54,16 +54,16 @@ ColliderType UCircleCollider::GetColliderType() const
 
 void UCircleCollider::Update_Collider()
 {
-
+	
 }
 
 void UCircleCollider::Debug_Render(ID3D11DeviceContext* context, ID3D11Device* device)
 {
 	if (Shader)
 	{
+		SphereMesh->Bind(context);
 		Shader->Bind(context);
 		Shader->UpdateConstant(context, Owner->GetPosition(), Owner->GetScale() * Radius);
-
 		SphereMesh->Draw(context);
 	}
 }
