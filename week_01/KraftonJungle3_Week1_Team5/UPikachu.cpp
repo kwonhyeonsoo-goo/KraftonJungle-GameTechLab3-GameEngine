@@ -83,15 +83,19 @@ void UPikachu::HandleCollision(UBall* ball)
 	// 절댓값으로 무조건 공이 플레이어보다 올라가게
 	float newYVel = fabsf(ball->GetVelocity().y) + max(0.f, Velocity.y);
 	if (newYVel < 1.5f) newYVel = 1.5f;
+	if (BallPos.y < Position.y) newYVel *= -1;
+	
 
-	// xDiff 부호로 공이 어느 방향에 있는지 판단
-	float xSign = (xDiff >= 0.f) ? 1.f : -1.f;
+	
+
+	// 플레이어가 왼쪽, 오른쪽인지에 따라 방향 구분
+	float xSign = (Position.x <= -0.02f && Position.x >= -1.0f) ? 1.f : -1.f;
 
 	switch (CurrentState)
 	{
 	case EPlayerState::BasicSpike:
 		// 앞으로 적당하게
-		newXVel = 2.0f; // 수정해야함.
+		newXVel = xSign * 2.0f; // 수정해야함.
 		newYVel = 0.5f;
 		break;
 
@@ -132,7 +136,7 @@ void UPikachu::HandleCollision(UBall* ball)
 
 	// 속력 제한
 	const float MaxBallSpeed = 4.0f;
-	const float MinBallSpeed = 3.0f;
+	const float MinBallSpeed = 2.0f;
 	float speed = sqrtf(newXVel * newXVel + newYVel * newYVel);
 
 	if (speed > 0.f)
