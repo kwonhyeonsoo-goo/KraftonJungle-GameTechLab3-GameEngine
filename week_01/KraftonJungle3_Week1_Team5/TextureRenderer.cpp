@@ -115,4 +115,5 @@ bool TextureRenderer::UpdateMeshForCurrentViewport(ID3D11Device* device, ID3D11D
 
 void TextureRenderer::SetTexture(UTexture2D* newTexture) {
 	Texture = newTexture; // 찾을 필요 없이 바로 대입! (초고속)
+	bMeshNeedsUpdate = true;  //
 }

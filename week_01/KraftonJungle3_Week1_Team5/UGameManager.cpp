@@ -98,7 +98,12 @@ void UGameManager::ScorePoint(int player)
 	{
 		GameState = EGameState::GameOver;
 		Player1->SetMyFinalSCore(P1Point);
+		FVector3 P1Pos = Player1->GetPosition();
+		Player1->SetPosition(FVector3(P1Pos.x, -0.65f, 0.f));
+
 		Player2->SetMyFinalSCore(P2Point);
+		FVector3 P2Pos = Player2->GetPosition();
+		Player2->SetPosition(FVector3(P2Pos.x, -0.65f, 0.f));
 	}
 }
 
@@ -120,15 +125,5 @@ void UGameManager::ResetRound()
 		PocketBall->SetVelocity(FVector3(0.f, -.5f, 0.f));
 	}
 	GameState = EGameState::Playing;
-
-	//if (P1Point == 0 && P2Point == 0) //첫판이면 바로 시작 
-	//{
-	//	GameState = EGameState::Playing;
-	//	return;
-	//}
-	//점수가 난 이후는 1.5 초 이후 시작
-	//TODO eric1306 : 구현을 위해 잠시 제거
-	//GameState = EGameState::Serving;
-	//StateTimer = 1.5f;
 }
 
