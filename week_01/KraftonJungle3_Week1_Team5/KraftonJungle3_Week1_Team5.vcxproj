@@ -104,10 +104,12 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(SolutionDir)Fmod;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)FMod;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -118,16 +120,26 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)Fmod;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)FMod;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Animator.h" />
     <ClInclude Include="Circle.h" />
     <ClInclude Include="Enum.h" />
+    <ClInclude Include="FMod\fmod.h" />
+    <ClInclude Include="FMod\fmod.hpp" />
+    <ClInclude Include="FMod\fmod_codec.h" />
+    <ClInclude Include="FMod\fmod_common.h" />
+    <ClInclude Include="FMod\fmod_dsp.h" />
+    <ClInclude Include="FMod\fmod_dsp_effects.h" />
+    <ClInclude Include="FMod\fmod_errors.h" />
+    <ClInclude Include="FMod\fmod_output.h" />
     <ClInclude Include="FVector3.h" />
     <ClInclude Include="ImGui\imconfig.h" />
     <ClInclude Include="ImGui\imgui.h" />
@@ -167,6 +179,7 @@
     <ClInclude Include="Uscreen.h" />
     <ClInclude Include="UShader.h" />
     <ClInclude Include="UShadow.h" />
+    <ClInclude Include="USoundManager.h" />
     <ClInclude Include="USphereMesh.h" />
     <ClInclude Include="UTestObject_2.h" />
     <ClInclude Include="UTestScene.h" />
@@ -215,6 +228,7 @@
     <ClCompile Include="Uscreen.cpp" />
     <ClCompile Include="UShader.cpp" />
     <ClCompile Include="UShadow.cpp" />
+    <ClCompile Include="USoundManager.cpp" />
     <ClCompile Include="USphereMesh.cpp" />
     <ClCompile Include="UCubeMesh.cpp" />
     <ClCompile Include="UCubeMesh.h" />

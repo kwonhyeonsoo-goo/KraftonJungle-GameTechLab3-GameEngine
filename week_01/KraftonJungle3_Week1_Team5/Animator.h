@@ -2,10 +2,9 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <d3d11.h>
 #include "UEngine.h"
-#include "TextureRenderer.h"
 
+class TextureRenderer;
 class UTexture2D;
 
 enum class AnimationMode

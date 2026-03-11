@@ -136,11 +136,10 @@ void UPikachu::Update(float tick)
 	//게임오버시
 	if (UGameManager::GetInstance().GetGameState() == EGameState::GameOver)
 	{
-		if(MyFinalScore == UGameManager::GetInstance().GetMaxPoint())
+		if (MyFinalScore == UGameManager::GetInstance().GetMaxPoint())
 			AnimatorComponent->Play("Win", AnimationMode::Once);
 		else
 			AnimatorComponent->Play("Lose", AnimationMode::Once);
-		
 	}
 	else
 	{
