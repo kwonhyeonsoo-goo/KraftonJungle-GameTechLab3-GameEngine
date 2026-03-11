@@ -413,14 +413,18 @@ void UPikachu::Move(float tick)
 			float targetX = ballPos.x + (ballVel.x * tick * 10.0f);
 			float targetY = ballPos.y + (ballVel.y * tick * 10.0f);
 
-			while (!(PositionLeftBorder < targetX && targetX < PositionRightBorder))
+			for (int i = 0; i < 3; ++i)
 			{
+				if (PositionLeftBorder <= targetX && targetX <= PositionRightBorder)
+				{
+					break;
+				}
+
 				if (targetX < PositionLeftBorder)
 				{
 					targetX = PositionLeftBorder + (PositionLeftBorder - targetX) * 0.9f;
 				}
-
-				if (targetX > PositionRightBorder)
+				else if (targetX > PositionRightBorder)
 				{
 					targetX = PositionRightBorder - (targetX - PositionRightBorder) * 0.9f;
 				}
