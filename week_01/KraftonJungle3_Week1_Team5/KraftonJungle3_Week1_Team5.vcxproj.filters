@@ -237,6 +237,14 @@
     <ClInclude Include="UUIImage.h">
       <Filter>02. Client\00. GameObject</Filter>
     </ClInclude>
+<<<<<<< feat/gamemanager
+    <ClInclude Include="Animator.h" />
+    <ClInclude Include="UNet.h" />
+    <ClInclude Include="UGameManager.h">
+      <Filter>02. Client</Filter>
+    </ClInclude>
+=======
+>>>>>>> main
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -368,6 +376,16 @@
     <ClCompile Include="UUIImage.cpp">
       <Filter>02. Client\00. GameObject</Filter>
     </ClCompile>
+<<<<<<< feat/gamemanager
+    <ClCompile Include="Animator.cpp" />
+    <ClCompile Include="UNet.cpp">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="UGameManager.cpp">
+      <Filter>02. Client</Filter>
+    </ClCompile>
+=======
+>>>>>>> main
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ShaderW0.hlsl">

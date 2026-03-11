@@ -237,7 +237,7 @@ void UPikachu::HandleCollision(UBall* ball)
 
 	case EPlayerState::DownSpike:
 		// 아
-		newXVel *= 1.5f;
+		newXVel = xSign * 2.f;
 		newYVel = -4.0f;
 		break;
 
