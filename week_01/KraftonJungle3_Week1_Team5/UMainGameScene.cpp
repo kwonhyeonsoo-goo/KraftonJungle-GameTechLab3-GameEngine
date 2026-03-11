@@ -116,14 +116,14 @@ void UMainGameScene::Update(float tick)
 	//	return;
 	//}
 
-	if (GM.GetGameState() == EGameState::Serving)
-	{
-		{
-			// 여기에 새로운 게임 시작시 출력될
-			// 게임 시작! "READY?" 등의 문구를 출력합니다.
-		}
-		return;
-	}
+	//if (GM.GetGameState() == EGameState::Serving)
+	//{
+	//	{
+	//		// 여기에 새로운 게임 시작시 출력될
+	//		// 게임 시작! "READY?" 등의 문구를 출력합니다.
+	//	}
+	//	return;
+	//}
 	
 	for (auto& gameObject : GameObjects)
 	{
@@ -136,21 +136,25 @@ void UMainGameScene::Update(float tick)
 			gameObject->Physics_Update(tick);
 	}
 
-	if (GM.GetGameState() != EGameState::Playing && GM.GetGameState() != EGameState::GameOver)
-		return;
+	/*if (GM.GetGameState() != EGameState::Playing && GM.GetGameState() != EGameState::GameOver)
+		return;*/
 
 	for (auto& gameObject : GameObjects)
 	{
 		if (GM.GetGameState() == EGameState::GameOver)
 		{
-			if (gameObject->GetObjectType() != ObjectType::Pikachu) continue;
-				gameObject->Update(tick);
+			if (gameObject->GetObjectType() != ObjectType::Pikachu)
+			{
+				continue;
+			}
+				
+			gameObject->Update(tick);
 		}
 		else
 			gameObject->Update(tick);
 	}
-	if (GM.GetGameState() == EGameState::GameOver)
-		return;
+	/*if (GM.GetGameState() == EGameState::GameOver)
+		return;*/
 
 	CheckCollision();
 
