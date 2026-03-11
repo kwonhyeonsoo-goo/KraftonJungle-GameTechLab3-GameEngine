@@ -50,7 +50,7 @@ void UNet::HandleBallCollision(UBall* ball)
 	FVector3 BallPos = ball->GetPosition();
 	float r = ball->GetRadius();
 
-	float netLeft = Position.x - HalfWidth; // -0.015f
+	float netLeft = Position.x - HalfWidth; // -0.001f
 	float netRight = Position.x + HalfWidth;//  0.015f
 	float netTop = Position.y + HalfHeight + 0.075f;   // -0.65 + 0.35 = -0.30
 	float netBottom = -1.0f;
