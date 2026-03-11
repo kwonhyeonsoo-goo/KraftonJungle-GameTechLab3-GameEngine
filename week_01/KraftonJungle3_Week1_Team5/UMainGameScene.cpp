@@ -65,7 +65,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	Net = new UNet();
 	Net->Create(device, context);
 
-	// 테스트를 위한 주석 처리
+	// 게임을 초기화 합니다.
 	/*UGameManager::GetInstance().Initialize(Player1, Player2, ball,
 		Player1->GetPosition(), Player2->GetPosition());*/
 }
@@ -73,26 +73,38 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 void UMainGameScene::Update(float tick)
 {
 	// 테스트를 위한 Game Manager 관련 코드 주석 처리
-	/*UGameManager::GetInstance().Update(tick);
-	UGameManager* GM = &UGameManager::GetInstance();*/
+	/*UGameManager& GM = UGameManager::GetInstance();
+	GM.Update(tick);*/
 
 	// 포인트 획득 상태나 게임 종료시 Update 종료
-	/*if (GM->GetGameState() == EGameState::PointScored || GM->GetGameState() == EGameState::GameOver) 
-		return;*/
+	//if (GM.GetGameState() == EGameState::GameOver)
+	//{
+	//	{
+	//		//여기에 승리 실패 시 출력될 애니메이션 코드를 넣습니다.
+	//	}
 
+	//	return;
+	//}
+
+	//if (GM.GetGameState() == EGameState::Serving)
+	//{
+	//	{
+	//		// 여기에 새로운 게임 시작시 출력될
+	//		// 게임 시작! "READY?" 등의 문구를 출력합니다.
+	//	}
+	//	return;
+	//}
 
 	for (auto& gameObject : GameObjects)
 	{
-		// 서브 대기중인데 
-		/*if (GM->GetGameState() == EGameState::Serving && gameObject->GetObjectType() == ObjectType::Ball)
-			continue;*/
-		gameObject->Physics_Update(tick);
+		/*if(GM.GetGameState() == EGameState::PointScored)
+			gameObject->Physics_Update(tick/3.f);
+		else*/
+			gameObject->Physics_Update(tick);
 	}
 
-	/*if (GM->GetGameState() != EGameState::Playing)
-	{
-		return;
-	}*/
+	/*if (GM.GetGameState() != EGameState::Playing)
+		return;*/
 
 	for (auto& gameObject : GameObjects)
 	{
