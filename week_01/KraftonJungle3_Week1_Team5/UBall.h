@@ -1,6 +1,9 @@
 #pragma once
 #include "UGameObject.h"
 class UCircleCollider;
+class TextureRenderer;
+class Animator;
+class UUIImage;
 
 class UBall : public UGameObject
 {
@@ -23,8 +26,24 @@ public:
 
 	void Release() override;
 
+	void SetSpike(bool spike) { isSpike = spike; }
+
 private:
 	//UCircleCollider* Collider; //중복 변수 제거
 	float Radius;
+	bool isSpike = false;
+
+	TextureRenderer* BallTextureRenderer;
+	Animator* AnimatorComponent;
+	UUIImage* BallTrail;
+	UUIImage* BallHyper;
+
+	FVector3 PreviousPosition = Position;
+	FVector3 HyperPosition = Position;
+	FVector3 TrailPosition = Position;
+
+	float TrailTimer = 0.05f;
+	float elapsedTime = 0.f;
+
 };
 
