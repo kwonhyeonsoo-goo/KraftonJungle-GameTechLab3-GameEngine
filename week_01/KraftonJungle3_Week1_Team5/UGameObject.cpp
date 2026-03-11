@@ -1,6 +1,7 @@
 #include "UGameObject.h"
+#include "Enum.h"
 
-UGameObject::UGameObject() : Scale(.1f), Mass(1), UseGravity(false)
+UGameObject::UGameObject() : Scale(.1f), Mass(1), UseGravity(false), type(ObjectType::None)
 {
 }
 
@@ -38,7 +39,7 @@ void UGameObject::ApplyGravity(const float tick)
 {
 	if (UseGravity)
 	{
-		Velocity.y -= 1.0f * tick;
+		Velocity.y -= 4.5f * tick;
 	}
 }
 

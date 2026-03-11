@@ -3,9 +3,9 @@
 #include "UCircleCollider.h"
 #include "Utility.h"
 
-UBall::UBall() : Collider(nullptr), Radius(1.f)
+UBall::UBall() : Radius(1.f)
 {
-
+	SetObjectType(ObjectType::Ball);
 }
 
 UBall::~UBall()
@@ -16,6 +16,7 @@ UBall* UBall::Create(ID3D11Device* device, ID3D11DeviceContext* context)
 	UBall* instance = new UBall();
 	instance->Collider = new UCircleCollider();
 	instance->Collider->Create(device, instance);
+
 
 	return instance;
 }
@@ -38,54 +39,46 @@ void UBall::Render(ID3D11DeviceContext* context, ID3D11Device* device)
 	Collider->Debug_Render(context, device);
 }
 
-void UBall::SetScale(const float scale)
-{
-	UGameObject::SetScale(scale);
-	Radius = scale;
-
-	if (Collider)
-	{
-		Collider->SetRadius(1.f);
-	}
-}
-
 void UBall::ApplyBoundaryCollision()
 {
-	const float RadiusValue = GetScale();
-
-	if (Position.x > 1.f - RadiusValue)
+	if (Position.x > 1.f - Radius)
 	{
 		Velocity.x *= -1;
-		Position.x = 1.f - RadiusValue;
+		Position.x = 1.f - Radius;
 	}
-	if (Position.x < -1.f + RadiusValue)
+	if (Position.x < -1.f + Radius)
 	{
 		Velocity.x *= -1;
-		Position.x = -1.f + RadiusValue;
+		Position.x = -1.f + Radius;
 	}
-	if (Position.y > 1.f - RadiusValue)
+	if (Position.y > 1.f - Radius)
 	{
 		Velocity.y *= -1;
-		Position.y = 1.f - RadiusValue;
+		Position.y = 1.f - Radius;
 	}
-	if (Position.y < -1.f + RadiusValue)
+	if (Position.y < -1.f + Radius)
 	{
 		Velocity.y *= -1;
-		Position.y = -1.f + RadiusValue;
+		Position.y = -1.f + Radius;
 	}
 }
 
 void UBall::SetRadius(const float radius)
 {
-	SetScale(radius);
+	Radius = radius;
+
+	if (Collider->GetColliderType() == ColliderType::ColliderType_Circle)
+	{
+		static_cast<UCircleCollider*>(Collider)->SetRadius(radius);
+	}
 }
 
 float UBall::GetRadius() const
 {
-	return GetScale();
+	return Radius;
 }
 
 void UBall::Release()
 {
-	SafeReleaseAndDelete(Collider);
+	SafeDelete(Collider);
 }

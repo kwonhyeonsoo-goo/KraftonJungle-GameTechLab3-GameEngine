@@ -24,7 +24,7 @@ public:
 	void Release() override;
 
 private:
-	UCircleCollider* Collider;
+	//UCircleCollider* Collider; //중복 변수 제거
 	float Radius;
 };
 

@@ -3,6 +3,7 @@
 
 #include "FVector3.h"
 #include "UPrimitive.h"
+#include "Enum.h"
 
 class UCollider;
 
@@ -35,6 +36,9 @@ public:
 	UCollider* GetCollider() const { return Collider; }
 	void SetCollider(UCollider* collider) { Collider = collider; }
 
+	ObjectType GetObjectType() const { return type; }
+	void SetObjectType(ObjectType inType) { type = inType; }
+
 protected:
 	// 이 아래에 있는 함수들은 나중에 물리용 클래스로 따로 빼야함.
 	// GameObject라고 해서 다 물리 처리를 하는 것이 아니기 때문.
@@ -53,5 +57,6 @@ protected:
 
 	// Collision
 	UCollider* Collider;
+	ObjectType type;
 };
 
