@@ -53,8 +53,9 @@ void UMainTitleScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* cont
 	FightImage->SetScale(FightBaseScale);
 	GameObjects.push_back(FightImage);
 
-	MenuButtonPositions[0] = FVector3{ 0.16f, -0.21f, 0.0f };
-	MenuButtonPositions[1] = FVector3{ 0.16f, -0.50f, 0.0f };
+	MenuButtonPositions[0] = FVector3{ 0.16f, 0.f, 0.0f };
+	MenuButtonPositions[1] = FVector3{ 0.16f, -0.27f, 0.0f };
+	MenuButtonPositions[2] = FVector3{ 0.08f, -0.53f, 0.f };
 
 	MenuButtons[0] = new UUIButton();
 	MenuButtons[0]->Create(device, context);
@@ -75,6 +76,16 @@ void UMainTitleScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* cont
 	MenuButtons[1]->SetPosition(MenuButtonPositions[1]);
 	MenuButtons[1]->SetScale(2.0f);
 	GameObjects.push_back(MenuButtons[1]);
+
+	MenuButtons[2] = new UUIButton();
+	MenuButtons[2]->Create(device, context);
+	if (!MenuButtons[2]->SetTexture(L"Resource\\Image\\messages\\ko\\computer_computer.png"))
+	{
+		return;
+	}
+	MenuButtons[2]->SetPosition(MenuButtonPositions[2]);
+	MenuButtons[2]->SetScale(1.0f);
+	GameObjects.push_back(MenuButtons[2]);
 
 	SelectedMenuIndex = 0;
 
@@ -260,6 +271,7 @@ void UMainTitleScene::ExecuteSelectedMenu() const
 		UEngine::GetInstance().GetSceneManager().RequestChangeScene("UMainGameScene");
 		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_GameStart.wav", SOUND_UI, 0.8f);
 		UGameManager::GetInstance().SetAIMode(true);
+		UGameManager::GetInstance().SetAIVsAIMode(false);
 		return;
 	}
 
@@ -268,6 +280,16 @@ void UMainTitleScene::ExecuteSelectedMenu() const
 		UEngine::GetInstance().GetSceneManager().RequestChangeScene("UMainGameScene");
 		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_GameStart.wav",SOUND_UI, 0.8f);
 		UGameManager::GetInstance().SetAIMode(false);
+		UGameManager::GetInstance().SetAIVsAIMode(false);
+		return;
+	}
+
+	if (SelectedMenuIndex == 2)
+	{
+		UEngine::GetInstance().GetSceneManager().RequestChangeScene("UMainGameScene");
+		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_GameStart.wav", SOUND_UI, 0.8f);
+		UGameManager::GetInstance().SetAIMode(false);
+		UGameManager::GetInstance().SetAIVsAIMode(true);
 		return;
 	}
 }

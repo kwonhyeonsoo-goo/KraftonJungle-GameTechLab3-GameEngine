@@ -111,6 +111,12 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	{
 		Player1->SetIsAI(true);
 	}
+
+	if (UGameManager::GetInstance().IsAIVsAIMode())
+	{
+		Player1->SetIsAI(true);
+		Player2->SetIsAI(true);
+	}
 }
 
 void UMainGameScene::Update(float tick)
