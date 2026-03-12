@@ -256,7 +256,7 @@ void UPikachu::HandleCollision(UBall* ball)
 
 	case EPlayerState::UpFrontSpike:
 		// 위 + 앞 대각선
-		newXVel = xSign * 2.0f;
+		newXVel = xSign * 3.0f;
 		newYVel = 3.0f;
 		ball->SetSpike(true, Position);
 
@@ -264,7 +264,7 @@ void UPikachu::HandleCollision(UBall* ball)
 
 	case EPlayerState::DownFrontSpike:
 		// 앞 + 아래 대각선
-		newXVel = xSign * 2.0f;
+		newXVel = xSign * 3.0f;
 		newYVel = -3.0f;
 		ball->SetSpike(true, Position);
 		break;
@@ -450,9 +450,6 @@ void UPikachu::Move(float tick)
 				currentInput |= FLAG_LEFT;
 			}
 
-			// 1P 2P 판별
-			bool bIsPlayer1 = (LeftBorder < 0.0f && RightBorder <= 0.0f);
-
 			// 점프
 			if (bOnGround && -0.15f < targetY && targetY < 0.2f && abs(Position.x - targetX) < 0.2f && ballPos.y - Position.y > 0.7f)
 			{
@@ -466,10 +463,71 @@ void UPikachu::Move(float tick)
 			}
 
 			// 스파이크
-			if (!bOnGround && ballPos.y > -0.1f && abs(Position.x - ballPos.x) < 0.2f)
+			if (!bOnGround && ballPos.y > -0.1f + r && abs(Position.x - ballPos.x) < 0.2f)
 			{
+				// 1P 2P 판별
+				bool bIsPlayer1 = (LeftBorder < 0.0f && RightBorder <= 0.0f);
+				float xSign = bIsPlayer1 ? 1.0f : -1.0f;
+				float radius = TargetBall->GetRadius();
+
+				// 1. 6가지 스파이크의 세팅값 (키 입력 플래그, X속도, Y속도)
+				struct SpikeOption {
+					int Flag;
+					float VelX;
+					float VelY;
+				};
+
+				SpikeOption options[6] = {
+					{ FLAG_NONE,                                         xSign * 2.5f,  0.0f }, // 기본
+					{ bIsPlayer1 ? FLAG_RIGHT : FLAG_LEFT,               xSign * 3.0f,  0.0f }, // 앞 (옆)
+					{ FLAG_UP,                                           xSign * 1.0f,  3.0f }, // 위
+					{ FLAG_DOWN,                                         xSign * 1.0f, -3.0f }, // 아래
+					{ (bIsPlayer1 ? FLAG_RIGHT : FLAG_LEFT) | FLAG_UP,   xSign * 3.0f,  3.0f }, // 앞+위
+					{ (bIsPlayer1 ? FLAG_RIGHT : FLAG_LEFT) | FLAG_DOWN, xSign * 3.0f, -3.0f }  // 앞+아래
+				};
+
+				std::vector<int> validSpikes;
+
+				// 2. 각 스파이크별 낙하지점 시뮬레이션
+				for (int i = 0; i < 6; ++i)
+				{
+					// 만들어두신 예측 함수 호출!
+					float landingX = PredictLandingX(Position.x, Position.y, options[i].VelX, options[i].VelY, radius);
+
+					bool bSuccess = false;
+
+					// 네트 영역(-0.1f ~ 0.1f)에 떨어지면 실패로 간주하고 무시
+					//if (landingX > -0.1f && landingX < 0.1f)
+					//{
+					//	continue;
+					//}
+
+					// 1P인 경우 상대 코트(0.1f ~ 1.0f)에 떨어지면 성공!
+					if (bIsPlayer1 && landingX >= 0.01f) bSuccess = true;
+					// 2P인 경우 상대 코트(-1.0f ~ -0.1f)에 떨어지면 성공!
+					if (!bIsPlayer1 && landingX <= -0.01f) bSuccess = true;
+
+					// 성공적인 궤적이라면 후보군에 추가
+					if (bSuccess)
+					{
+						validSpikes.push_back(options[i].Flag);
+					}
+				}
+
 				currentInput |= FLAG_SPIKE;
-				currentInput |= (rand() % 16) << 1;
+
+				if (!validSpikes.empty())
+				{
+					currentInput |= validSpikes[rand() % validSpikes.size()];
+				}
+				//else
+				//{
+				//	// 만약 모든 공격이 네트에 걸리거나 내 코트에 떨어진다면 (예외 상황)
+				//	// 안전하게 무조건 '위로(Up)' 띄워서 위기를 모면함!
+				//	currentInput |= FLAG_UP;
+				//}
+
+				//currentInput |= (rand() % 16) << 1;
 			}
 		}
 	}
@@ -517,6 +575,122 @@ void UPikachu::Move(float tick)
 			CurrentState = GetSpikeStateFromInput(currentInput);
 		}
 	}
+}
+
+// 가상으로 공을 던져보고 바닥(y = -0.8)에 닿을 때의 X 좌표를 반환하는 함수
+float UPikachu::PredictLandingX(float startX, float startY, float velX, float velY, float ballRadius)
+{
+	FVector3 ballPos = TargetBall->GetPosition();
+	FVector3 ballVel = TargetBall->GetVelocity();
+
+	// 1. 전달받은 초기 속도에 속력 제한(Max/Min) 로직 똑같이 적용
+	const float MaxBallSpeed = 3.0f;
+	const float MinBallSpeed = 2.5f;
+	float speed = std::sqrt(velX * velX + velY * velY);
+
+	if (speed > 0.f)
+	{
+		float clampedSpeed = max(MinBallSpeed, min(speed, MaxBallSpeed));
+		float ratio = clampedSpeed / speed;
+		velX *= ratio;
+		velY *= ratio;
+	}
+
+	// 2. 가상 시뮬레이션 환경 세팅
+	float simX = startX;
+	float simY = startY;
+	float simVx = velX;
+	float simVy = velY;
+
+	const float dt = 0.016f; // 1프레임(약 60FPS) 시간
+	const float gravity = 4.5f;
+	const float groundY = -0.8f + ballRadius;
+	const float leftWallX = -1.0f + ballRadius;
+	const float rightWallX = 1.0f - ballRadius;
+
+	float HalfWidth = 0.005f;
+	float HalfHeight = 0.36f;
+	float netLeft = -HalfWidth;	// -0.001f
+	float netRight = HalfWidth;	//  0.015f
+	float netTop = -0.3;   // -0.65 + 0.35 = -0.30
+	float netBottom = -1.0f;
+	bool netCol = true;
+
+	bool xOverlap = (ballPos.x + ballRadius > netLeft) && (ballPos.x - ballRadius < netRight);
+	bool yOverlap = (ballPos.y + ballRadius > netBottom) && (ballPos.y - ballRadius < netTop);
+	if (!xOverlap || !yOverlap)
+	{
+		netCol = false;
+	}
+
+	float distX = fabsf(ballPos.x);
+	float xPen = (HalfWidth - distX);
+	float yPen = (netTop - ballPos.y);
+
+	// 무한 루프를 막기 위한 안전장치 (최대 200프레임 = 약 3초 뒤까지만 계산)
+	const int MAX_STEPS = 200;
+
+	// 3. 바닥에 닿을 때까지 가상으로 물리 엔진을 돌림
+	for (int step = 0; step < MAX_STEPS; ++step)
+	{
+		// 중력 적용 및 위치 이동 (본 게임 물리 로직과 완전 동일)
+		simVy -= gravity * dt;
+		simX += simVx * dt;
+		simY += simVy * dt;
+
+		// [천장 충돌] (혹시 몰라 추가, 본 게임의 천장 처리 방식과 맞추시면 됩니다)
+		if (simY > 1.0f - ballRadius)
+		{
+			simVy *= -1.0f;
+			simY = 1.0f - ballRadius;
+		}
+
+		// [좌우 벽 충돌] 작성해주신 0.9f 감쇠 적용
+		if (simX < leftWallX)
+		{
+			simVx *= -0.9f;
+			simX = leftWallX;
+		}
+		else if (simX > rightWallX)
+		{
+			simVx *= -0.9f;
+			simX = rightWallX;
+		}
+
+		if (netCol)
+		{
+			// 네트 충돌
+			if (xPen < yPen)
+			{
+				// 측면 충돌
+				float sign = (ballPos.x >= 0.0f) ? 1.f : -1.f;
+				if (ballVel.x * sign < 0.f)
+				{
+					simVx *= -1.0f;
+					simX = (HalfWidth + ballRadius) * sign;
+				}
+			}
+			else
+			{
+				// 상단 충돌
+				if (ballVel.y < 0.f)
+				{
+					simVy *= -1.0f;
+					simY = netTop + ballRadius;
+				}
+			}
+		}
+
+
+		// [바닥 충돌] y가 -0.8 부근에 도달했다면 바로 그 순간의 X를 반환!
+		if (simY <= groundY)
+		{
+			return simX;
+		}
+	}
+
+	// 바닥에 닿기 전에 시뮬레이션이 끝났다면 마지막 위치 반환
+	return simX;
 }
 
 EPlayerState UPikachu::GetSpikeStateFromInput(int input)
