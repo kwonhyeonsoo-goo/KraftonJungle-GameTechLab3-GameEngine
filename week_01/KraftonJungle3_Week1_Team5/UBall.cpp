@@ -54,7 +54,16 @@ L"Resource/Image/ball/ball_4.png"
 	instance->BallPunch = new UUIImage();
 	instance->BallPunch->Create(device, context);
 	instance->BallPunch->SetTexture(L"Resource/Image/ball/ball_punch.png");
+
 	return instance;
+}
+
+void UBall::Init()
+{
+	elapsedTime = 0.f;
+	PunchTimer = 0.f;
+	isSpike = false;
+	PreviousPosition = HyperPosition = TrailPosition = Position;
 }
 
 void UBall::Physics_Update(const float tick)
@@ -203,3 +212,4 @@ void UBall::PlayBallPunchEffect(FVector3 effectPosition)
 	BallPunch->SetPosition(effectPosition);
 	BallPunch->SetScale(1.0f);
 }
+

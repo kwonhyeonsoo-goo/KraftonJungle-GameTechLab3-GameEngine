@@ -110,6 +110,7 @@ void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* conte
 	UGameManager::GetInstance().Initialize(Player1, Player2, ball,
 		Player1->GetPosition(), Player2->GetPosition());
 
+	ball->Init();
 	if (UGameManager::GetInstance().IsAIMode())
 	{
 		Player1->SetIsAI(true);

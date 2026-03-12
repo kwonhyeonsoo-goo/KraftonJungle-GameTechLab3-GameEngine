@@ -125,5 +125,6 @@ void UGameManager::ResetRound()
 		PocketBall->SetVelocity(FVector3(0.f, 0.0f, 0.f));
 	}
 	GameState = EGameState::Playing;
+	PocketBall->Init();
 }
 
