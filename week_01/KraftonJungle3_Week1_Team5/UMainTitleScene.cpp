@@ -252,7 +252,7 @@ void UMainTitleScene::UpdateMenuVisuals() const
 		}
 
 		MenuButtons[Index]->SetSelected(Index == SelectedMenuIndex);
-		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_Button.wav", SOUND_UI, 0.8f);
+		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_Button.wav", SOUND_UI, SYSTEM_VOLUME);
 	}
 }
 
@@ -269,7 +269,7 @@ void UMainTitleScene::ExecuteSelectedMenu() const
 	if (SelectedMenuIndex == 0)
 	{
 		UEngine::GetInstance().GetSceneManager().RequestChangeScene("UMainGameScene");
-		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_GameStart.wav", SOUND_UI, 0.8f);
+		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_GameStart.wav", SOUND_UI, SYSTEM_VOLUME);
 		UGameManager::GetInstance().SetAIMode(true);
 		UGameManager::GetInstance().SetAIVsAIMode(false);
 		return;
@@ -278,7 +278,7 @@ void UMainTitleScene::ExecuteSelectedMenu() const
 	if (SelectedMenuIndex == 1)
 	{
 		UEngine::GetInstance().GetSceneManager().RequestChangeScene("UMainGameScene");
-		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_GameStart.wav",SOUND_UI, 0.8f);
+		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_GameStart.wav",SOUND_UI, SYSTEM_VOLUME);
 		UGameManager::GetInstance().SetAIMode(false);
 		UGameManager::GetInstance().SetAIVsAIMode(false);
 		return;
@@ -287,7 +287,7 @@ void UMainTitleScene::ExecuteSelectedMenu() const
 	if (SelectedMenuIndex == 2)
 	{
 		UEngine::GetInstance().GetSceneManager().RequestChangeScene("UMainGameScene");
-		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_GameStart.wav", SOUND_UI, 0.8f);
+		UEngine::GetInstance().GetSoundManager().PlaySound(L"Pikachu_GameStart.wav", SOUND_UI, SYSTEM_VOLUME);
 		UGameManager::GetInstance().SetAIMode(false);
 		UGameManager::GetInstance().SetAIVsAIMode(true);
 		return;

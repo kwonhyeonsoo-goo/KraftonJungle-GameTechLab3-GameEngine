@@ -159,7 +159,7 @@ void UBall::ApplyBoundaryCollision()
 		UGameManager::GetInstance().CheckScore();
 		//bIsCollide = false;
 		PlayBallPunchEffect({ Position.x, -0.8f, 0.0f });
-		UEngine::GetInstance().GetSoundManager().PlaySound(L"Ball_GroundHit.wav", SOUND_EFFECT, 0.8f);
+		UEngine::GetInstance().GetSoundManager().PlaySound(L"Ball_GroundHit.wav", SOUND_EFFECT, SYSTEM_VOLUME);
 	}
 }
 
@@ -202,7 +202,7 @@ void UBall::SetSpike(bool spike, FVector3 TargetPosition)
 	if(spike)
 	{
 		PlayBallPunchEffect(Position + direction);
-		UEngine::GetInstance().GetSoundManager().PlaySound(L"Ball_Smash.wav", SOUND_EFFECT, 0.8f);
+		UEngine::GetInstance().GetSoundManager().PlaySound(L"Ball_Smash.wav", SOUND_EFFECT, SYSTEM_VOLUME);
 	}
 }
 

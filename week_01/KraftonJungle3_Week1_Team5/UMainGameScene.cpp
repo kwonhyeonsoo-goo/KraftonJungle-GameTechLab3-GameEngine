@@ -23,7 +23,7 @@ REGISTER_SCENE(UMainGameScene)
 
 void UMainGameScene::Enter()
 {
-	UEngine::GetInstance().GetSoundManager().PlayBGM(L"bgm.mp3", 0.8f);
+	UEngine::GetInstance().GetSoundManager().PlayBGM(L"bgm.mp3", SYSTEM_VOLUME);
 }
 
 void UMainGameScene::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)

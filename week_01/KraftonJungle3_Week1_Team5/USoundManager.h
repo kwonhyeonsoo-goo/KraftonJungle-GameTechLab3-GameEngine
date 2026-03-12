@@ -29,6 +29,7 @@ public:
 	void			StopSound(FMOD_CHANNEL* channel);
 	void 			StopAll();
 	void 			SetChannelVolume(CHANNELID eID, float fVolume);
+	void			SetSystemVolume(float Volume);
 	bool 			IsPlaying(CHANNELID eID);
 	bool			IsPlaying(FMOD_CHANNEL* channel);
 	void 			UpdateChannelList();
@@ -45,6 +46,8 @@ private:
 	// FMOD_CHANNEL : 재생하고 있는 사운드를 관리할 객체
 	std::array<FMOD_CHANNEL*, MAXCHANNEL> ChannelArray;
 	std::list<FMOD_CHANNEL*> ChannelList;
+
+	float SystemVolume = 0.8f;
 
 	FMOD_SYSTEM* System;
 };

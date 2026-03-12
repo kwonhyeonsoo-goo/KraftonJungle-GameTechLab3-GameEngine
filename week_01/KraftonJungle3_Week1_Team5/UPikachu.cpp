@@ -329,12 +329,12 @@ void UPikachu::PlaySound(const std::wstring& sound) const
 {
 	if (Type == EPlayerType::Player1)
 	{
-		UEngine::GetInstance().GetSoundManager().PlaySound(sound, SOUND_PLAYER_1, 0.8f);
+		UEngine::GetInstance().GetSoundManager().PlaySound(sound, SOUND_PLAYER_1, SYSTEM_VOLUME);
 	}
 
 	if (Type == EPlayerType::Player2)
 	{
-		UEngine::GetInstance().GetSoundManager().PlaySound(sound, SOUND_PLAYER_2, 0.8f);
+		UEngine::GetInstance().GetSoundManager().PlaySound(sound, SOUND_PLAYER_2, SYSTEM_VOLUME);
 	}
 }
 

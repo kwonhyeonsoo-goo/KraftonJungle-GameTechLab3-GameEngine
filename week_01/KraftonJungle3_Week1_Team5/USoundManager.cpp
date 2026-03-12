@@ -295,6 +295,23 @@ void USoundManager::SetChannelVolume(CHANNELID eID, float fVolume)
 	FMOD_System_Update(System);
 }
 
+void USoundManager::SetSystemVolume(float Volume)
+{
+	if (!System)
+	{
+		return;
+	}
+
+	SystemVolume = Volume;
+
+	for (auto& channel : ChannelArray)
+	{
+		FMOD_Channel_SetVolume(channel, Volume);
+	}
+
+	FMOD_System_Update(System);
+}
+
 bool USoundManager::IsPlaying(CHANNELID eID)
 {
 	if (!ChannelArray[eID])
