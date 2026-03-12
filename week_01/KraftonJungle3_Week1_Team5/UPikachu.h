@@ -75,6 +75,7 @@ public:
 private:
 	void ApplyBoundaryCollision();
 	void Move(float tick);
+	float PredictLandingX(float startX, float startY, float velX, float velY, float ballRadius);
 
 private:
 	//UCubeMesh* CubeMesh;
@@ -96,7 +97,7 @@ private:
 	float BottomBorder = -1.0f;
 
 	EPlayerType Type = EPlayerType::None;
-	
+
 
 public:
 	Animator* AnimatorComponent;
