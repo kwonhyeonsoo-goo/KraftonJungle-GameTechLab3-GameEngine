@@ -23,4 +23,4 @@
 
 #pragma endregion Singleton
 
-#define SYSTEM_VOLUME 0.5f
+#define SYSTEM_VOLUME 0.2f

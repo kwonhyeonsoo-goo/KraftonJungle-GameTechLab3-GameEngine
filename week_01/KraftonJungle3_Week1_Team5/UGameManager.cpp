@@ -1,5 +1,6 @@
 #include "UGameManager.h"
 #include "UBall.h"
+#include "UEngine.h"
 #include "UPikachu.h"
 
 IMPLEMENT_SINGLETON(UGameManager)
@@ -93,7 +94,7 @@ void UGameManager::CheckScore()
 void UGameManager::ScorePoint(int player)
 {
 	player == 0 ? P1Point++ : P2Point++;
-
+	UEngine::GetInstance().GetSoundManager().PlaySound(L"Ball_GroundHit.wav", SOUND_EFFECT, SYSTEM_VOLUME);
 	if (P1Point >= MaxPoint || P2Point >= MaxPoint)
 	{
 		GameState = EGameState::GameOver;

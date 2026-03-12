@@ -159,7 +159,8 @@ void UBall::ApplyBoundaryCollision()
 		UGameManager::GetInstance().CheckScore();
 		//bIsCollide = false;
 		PlayBallPunchEffect({ Position.x, -0.8f, 0.0f });
-		UEngine::GetInstance().GetSoundManager().PlaySound(L"Ball_GroundHit.wav", SOUND_EFFECT, SYSTEM_VOLUME);
+		// 공 바닥에 닿을 때 소리 출력이 여러번 되는 문제가 있어서 스코어 올릴 때 처리 해주는 곳으로 옮김.
+		//		UEngine::GetInstance().GetSoundManager().PlaySound(L"Ball_GroundHit.wav", SOUND_EFFECT, SYSTEM_VOLUME);
 	}
 }
 
