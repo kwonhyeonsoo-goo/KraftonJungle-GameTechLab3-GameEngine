@@ -164,14 +164,26 @@ void UMainGameScene::Update(float tick)
 	for (auto& gameObject : GameObjects)
 	{
 		if (GM.GetGameState() == EGameState::GameOver)
+		{
 			break;
+		}
 
 		if(GM.GetGameState() == EGameState::PointScored)
 			gameObject->Physics_Update(tick/3.f);
 		else
 			gameObject->Physics_Update(tick);
 	}
+	if (GM.GetGameState() == EGameState::GameOver)
+	{
+		for (auto& cloud : Clouds)
+		{
+			cloud->Physics_Update(tick);
+		}
 
+		GameSetUI->SetVisible(true);
+		GameSetUI->SetScale(LerpToTarget(GameSetBaseScale, GameSetTargetScale, GameSetUIAnimationDurationTime, GameSetLerpTime));
+		GameSetUIAnimationDurationTime += tick;
+	}
 	/*if (GM.GetGameState() != EGameState::Playing && GM.GetGameState() != EGameState::GameOver)
 		return;*/
 
@@ -203,7 +215,16 @@ void UMainGameScene::Update(float tick)
 			Net->HandleBallCollision(static_cast<UBall*>(gameObject));
 		}
 	}
-	UpdateCloudImageAnimation(tick);
+
+	if (GM.GetGameState() == EGameState::PointScored)
+	{
+		UpdateCloudImageAnimation(tick / 3.f);
+	}
+
+	else
+	{
+		UpdateCloudImageAnimation(tick);
+	}
 }
 
 void UMainGameScene::Exit()
@@ -340,6 +361,13 @@ void UMainGameScene::InitializeUI(ID3D11Device* device, ID3D11DeviceContext* con
 	P2_Score->Create(device, context);
 	P2_Score->SetPosition({ 0.7f, 0.75f, 0.f });
 	GameObjects.push_back(P2_Score);
+
+	GameSetUI = new UUIImage();
+	GameSetUI->Create(device, context);
+	GameSetUI->SetTexture(L"Resource\\Image\\messages\\common\\game_end.png");
+	GameSetUI->SetPosition({ 0.f, 0.3f,0.f });
+	GameSetUI->SetVisible(false);
+	GameObjects.push_back(GameSetUI);
 }
 
 void UMainGameScene::UpdateCloudImageAnimation(const float tick)

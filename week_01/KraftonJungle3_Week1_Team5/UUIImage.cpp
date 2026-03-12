@@ -24,10 +24,15 @@ bool UUIImage::SetTexture(UTexture2D* texture)
 	return false;
 }
 
+void UUIImage::Physics_Update(float tick)
+{
+	UUI::Physics_Update(tick);
+	ApplyVelocity(tick);
+}
+
 void UUIImage::OnUpdate(float tick)
 {
 	UUI::OnUpdate(tick);
-	ApplyVelocity(tick);
 }
 
 void UUIImage::OnCreate(ID3D11Device* device, ID3D11DeviceContext* context)

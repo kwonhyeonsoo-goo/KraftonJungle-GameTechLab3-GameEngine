@@ -15,6 +15,7 @@ public:
 	bool SetTexture(const std::wstring& filePath) const;
 	bool SetTexture(UTexture2D* texture);
 	const char* GetEditorTypeName() const override { return "UUIImage"; }
+	void Physics_Update(float tick) override;
 
 protected:
 	void OnUpdate(float tick) override;

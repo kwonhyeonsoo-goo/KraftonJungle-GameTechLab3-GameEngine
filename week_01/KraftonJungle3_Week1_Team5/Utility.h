@@ -86,3 +86,14 @@ inline double RandomRange(double min, double max)
     std::uniform_real_distribution<double> dist(min, max);
     return dist(gen);
 }
+
+inline float LerpToTarget(float start, float target, float elapsedTime, float duration)
+{
+	if (duration <= 0.0f)
+	{
+        return target;
+	}
+
+    float alpha = std::clamp(elapsedTime / duration, 0.0f, 1.0f);
+    return start + (target - start) * alpha;
+}
