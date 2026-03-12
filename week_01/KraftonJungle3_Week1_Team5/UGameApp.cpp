@@ -67,7 +67,6 @@ bool UGameApp::Initialize()
 	// TODO : DX 초기화 같은 동작 수행
 	Engine = &UEngine::GetInstance();
 	//Engine->Initialize(Handle(), "UWeek0Scene");
-	//TODO eric1306 - 교체해야함.
 	if (!Engine->Initialize(Handle(), "UMainTitleScene"))
 	{
 		return false;

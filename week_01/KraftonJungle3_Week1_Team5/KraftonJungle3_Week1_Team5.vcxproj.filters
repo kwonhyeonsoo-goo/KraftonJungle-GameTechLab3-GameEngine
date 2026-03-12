@@ -91,9 +91,6 @@
     <Filter Include="00. Engine\01. System\Graphic\Mesh\Rect">
       <UniqueIdentifier>{98ae2332-6950-43ca-ae4e-702ae2624a1f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="00. Engine\01. System\Graphic\Material">
-      <UniqueIdentifier>{887aae6e-4cbc-4959-999d-6402369e6b18}</UniqueIdentifier>
-    </Filter>
     <Filter Include="00. Engine\FMod">
       <UniqueIdentifier>{79ee88cd-52ec-4d91-915b-99ef9327c661}</UniqueIdentifier>
     </Filter>
