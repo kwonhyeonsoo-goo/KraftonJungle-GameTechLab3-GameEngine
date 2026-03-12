@@ -75,7 +75,7 @@ public:
 private:
 	void ApplyBoundaryCollision();
 	void Move(float tick);
-	float PredictLandingX(float startX, float startY, float velX, float velY, float ballRadius);
+	float PredictLandingX(UBall* ball);
 
 private:
 	//UCubeMesh* CubeMesh;

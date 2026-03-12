@@ -492,20 +492,20 @@ void UPikachu::Move(float tick)
 				for (int i = 0; i < 6; ++i)
 				{
 					// 만들어두신 예측 함수 호출!
-					float landingX = PredictLandingX(Position.x, Position.y, options[i].VelX, options[i].VelY, radius);
+					float landingX = PredictLandingX(TargetBall);
 
 					bool bSuccess = false;
 
 					// 네트 영역(-0.1f ~ 0.1f)에 떨어지면 실패로 간주하고 무시
-					if (landingX > -0.1f && landingX < 0.1f)
+					if (landingX >= -0.1f && landingX <= 0.1f)
 					{
 						continue;
 					}
 
 					// 1P인 경우 상대 코트(0.1f ~ 1.0f)에 떨어지면 성공!
-					if (bIsPlayer1 && landingX >= 0.1f) bSuccess = true;
+					if (bIsPlayer1 && landingX > 0.1f) bSuccess = true;
 					// 2P인 경우 상대 코트(-1.0f ~ -0.1f)에 떨어지면 성공!
-					if (!bIsPlayer1 && landingX <= -0.1f) bSuccess = true;
+					if (!bIsPlayer1 && landingX < -0.1f) bSuccess = true;
 
 					// 성공적인 궤적이라면 후보군에 추가
 					if (bSuccess)
@@ -524,7 +524,7 @@ void UPikachu::Move(float tick)
 				{
 					// 만약 모든 공격이 네트에 걸리거나 내 코트에 떨어진다면 (예외 상황)
 					// 안전하게 무조건 '위로(Up)' 띄워서 위기를 모면함!
-					currentInput &= !FLAG_SPIKE;
+					//currentInput &= !FLAG_SPIKE;
 				}
 
 				//currentInput |= (rand() % 16) << 1;
@@ -578,23 +578,13 @@ void UPikachu::Move(float tick)
 }
 
 // 가상으로 공을 던져보고 바닥(y = -0.8)에 닿을 때의 X 좌표를 반환하는 함수
-float UPikachu::PredictLandingX(float startX, float startY, float velX, float velY, float ballRadius)
+float UPikachu::PredictLandingX(UBall* ball)
 {
-	FVector3 ballPos = TargetBall->GetPosition();
-	FVector3 ballVel = TargetBall->GetVelocity();
-
-	// 1. 전달받은 초기 속도에 속력 제한(Max/Min) 로직 똑같이 적용
-	const float MaxBallSpeed = 3.0f;
-	const float MinBallSpeed = 2.5f;
-	float speed = std::sqrt(velX * velX + velY * velY);
-
-	if (speed > 0.f)
-	{
-		float clampedSpeed = max(MinBallSpeed, min(speed, MaxBallSpeed));
-		float ratio = clampedSpeed / speed;
-		velX *= ratio;
-		velY *= ratio;
-	}
+	float startX = ball->GetPosition().x;
+	float startY = ball->GetPosition().y;
+	float velX = ball->GetVelocity().x;
+	float velY = ball->GetVelocity().y;
+	float ballRadius = ball->GetRadius();
 
 	// 2. 가상 시뮬레이션 환경 세팅
 	float simX = startX;
@@ -616,17 +606,6 @@ float UPikachu::PredictLandingX(float startX, float startY, float velX, float ve
 	float netBottom = -1.0f;
 	bool netCol = true;
 
-	bool xOverlap = (ballPos.x + ballRadius > netLeft) && (ballPos.x - ballRadius < netRight);
-	bool yOverlap = (ballPos.y + ballRadius > netBottom) && (ballPos.y - ballRadius < netTop);
-	if (!xOverlap || !yOverlap)
-	{
-		netCol = false;
-	}
-
-	float distX = fabsf(ballPos.x);
-	float xPen = (HalfWidth - distX);
-	float yPen = (netTop - ballPos.y);
-
 	// 무한 루프를 막기 위한 안전장치 (최대 200프레임 = 약 3초 뒤까지만 계산)
 	const int MAX_STEPS = 200;
 
@@ -637,6 +616,19 @@ float UPikachu::PredictLandingX(float startX, float startY, float velX, float ve
 		simVy -= gravity * dt;
 		simX += simVx * dt;
 		simY += simVy * dt;
+
+		// 1. 전달받은 초기 속도에 속력 제한(Max/Min) 로직 똑같이 적용
+		const float MaxBallSpeed = 3.0f;
+		const float MinBallSpeed = 2.5f;
+		float speed = std::sqrt(velX * velX + velY * velY);
+
+		if (speed > 0.f)
+		{
+			float clampedSpeed = max(MinBallSpeed, min(speed, MaxBallSpeed));
+			float ratio = clampedSpeed / speed;
+			velX *= ratio;
+			velY *= ratio;
+		}
 
 		// [천장 충돌] (혹시 몰라 추가, 본 게임의 천장 처리 방식과 맞추시면 됩니다)
 		if (simY > 1.0f - ballRadius)
@@ -657,14 +649,25 @@ float UPikachu::PredictLandingX(float startX, float startY, float velX, float ve
 			simX = rightWallX;
 		}
 
+		bool xOverlap = (simX + ballRadius > netLeft) && (simX - ballRadius < netRight);
+		bool yOverlap = (simY + ballRadius > netBottom) && (simY - ballRadius < netTop);
+		if (!xOverlap || !yOverlap)
+		{
+			netCol = false;
+		}
+
+		float distX = fabsf(simX);
+		float xPen = (HalfWidth - distX);
+		float yPen = (netTop - simY);
+
 		if (netCol)
 		{
 			// 네트 충돌
 			if (xPen < yPen)
 			{
 				// 측면 충돌
-				float sign = (ballPos.x >= 0.0f) ? 1.f : -1.f;
-				if (ballVel.x * sign < 0.f)
+				float sign = (simX >= 0.0f) ? 1.f : -1.f;
+				if (simVx * sign < 0.f)
 				{
 					simVx *= -1.0f;
 					simX = (HalfWidth + ballRadius) * sign;
@@ -673,7 +676,7 @@ float UPikachu::PredictLandingX(float startX, float startY, float velX, float ve
 			else
 			{
 				// 상단 충돌
-				if (ballVel.y < 0.f)
+				if (simVy < 0.f)
 				{
 					simVy *= -1.0f;
 					simY = netTop + ballRadius;
