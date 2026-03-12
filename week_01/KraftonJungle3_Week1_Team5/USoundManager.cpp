@@ -368,10 +368,8 @@ bool USoundManager::LoadSoundFile()
 	{
 		return false;
 	}
-	// _finddata_t : <io.h>에서 제공하며 파일 정보를 저장하는 구조체
 	_finddata_t fd;
-	
-	// _findfirst : <io.h>에서 제공하며 사용자가 설정한 경로 내에서 가장 첫 번째 파일을 찾는 함수
+
 	long long handle = _findfirst("Resource/Sound/*.*", &fd);
 
 	if (handle == -1)
@@ -388,9 +386,7 @@ bool USoundManager::LoadSoundFile()
 	{
 		strcpy_s(szFullPath, szCurPath);
 
-		// "./Sound/" + "Success.wav"
 		strcat_s(szFullPath, fd.name);
-		// "./Sound/Success.wav"
 
 		FMOD_SOUND* pSound = nullptr;
 
@@ -405,7 +401,6 @@ bool USoundManager::LoadSoundFile()
 
 			MapSound.emplace(soundKey, pSound);
 		}
-		//_findnext : <io.h>에서 제공하며 다음 위치의 파일을 찾는 함수, 더이상 없다면 -1을 리턴
 		iResult = _findnext(handle, &fd);
 	}
 
