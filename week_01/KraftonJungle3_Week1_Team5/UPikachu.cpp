@@ -497,15 +497,15 @@ void UPikachu::Move(float tick)
 					bool bSuccess = false;
 
 					// 네트 영역(-0.1f ~ 0.1f)에 떨어지면 실패로 간주하고 무시
-					//if (landingX > -0.1f && landingX < 0.1f)
-					//{
-					//	continue;
-					//}
+					if (landingX > -0.1f && landingX < 0.1f)
+					{
+						continue;
+					}
 
 					// 1P인 경우 상대 코트(0.1f ~ 1.0f)에 떨어지면 성공!
-					if (bIsPlayer1 && landingX >= 0.01f) bSuccess = true;
+					if (bIsPlayer1 && landingX >= 0.1f) bSuccess = true;
 					// 2P인 경우 상대 코트(-1.0f ~ -0.1f)에 떨어지면 성공!
-					if (!bIsPlayer1 && landingX <= -0.01f) bSuccess = true;
+					if (!bIsPlayer1 && landingX <= -0.1f) bSuccess = true;
 
 					// 성공적인 궤적이라면 후보군에 추가
 					if (bSuccess)
@@ -520,12 +520,12 @@ void UPikachu::Move(float tick)
 				{
 					currentInput |= validSpikes[rand() % validSpikes.size()];
 				}
-				//else
-				//{
-				//	// 만약 모든 공격이 네트에 걸리거나 내 코트에 떨어진다면 (예외 상황)
-				//	// 안전하게 무조건 '위로(Up)' 띄워서 위기를 모면함!
-				//	currentInput |= FLAG_UP;
-				//}
+				else
+				{
+					// 만약 모든 공격이 네트에 걸리거나 내 코트에 떨어진다면 (예외 상황)
+					// 안전하게 무조건 '위로(Up)' 띄워서 위기를 모면함!
+					currentInput &= !FLAG_SPIKE;
+				}
 
 				//currentInput |= (rand() % 16) << 1;
 			}
@@ -609,7 +609,7 @@ float UPikachu::PredictLandingX(float startX, float startY, float velX, float ve
 	const float rightWallX = 1.0f - ballRadius;
 
 	float HalfWidth = 0.005f;
-	float HalfHeight = 0.36f;
+	float HalfHeight = 0.355f;
 	float netLeft = -HalfWidth;	// -0.001f
 	float netRight = HalfWidth;	//  0.015f
 	float netTop = -0.3;   // -0.65 + 0.35 = -0.30
