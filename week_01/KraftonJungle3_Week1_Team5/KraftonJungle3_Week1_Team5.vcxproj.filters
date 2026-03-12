@@ -100,6 +100,15 @@
     <Filter Include="00. Engine\01. System\Sound">
       <UniqueIdentifier>{d3f56801-b75b-424e-bd90-fce7d2dfde22}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02. Client\02. GameSystem">
+      <UniqueIdentifier>{d6ec47e8-a725-48a3-adae-a5454c0c5201}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00. Engine\01. System\Graphic\Animator">
+      <UniqueIdentifier>{865552cc-c69a-459f-add4-20e92b3a5620}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02. Client\00. GameObject\UI">
+      <UniqueIdentifier>{2a9f601e-3d92-4a40-9c65-4f4c1d1c5060}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGui\imconfig.h">
@@ -234,19 +243,6 @@
     <ClInclude Include="UMainTitleScene.h">
       <Filter>02. Client\01. Scene</Filter>
     </ClInclude>
-    <ClInclude Include="UUI.h">
-      <Filter>02. Client\00. GameObject</Filter>
-    </ClInclude>
-    <ClInclude Include="UUIImage.h">
-      <Filter>02. Client\00. GameObject</Filter>
-    </ClInclude>
-    <ClInclude Include="Animator.h" />
-    <ClInclude Include="UNet.h" />
-    <ClInclude Include="UPikachu.h" />
-    <ClInclude Include="UUIButton.h" />
-    <ClInclude Include="UUIScore.h" />
-    <ClInclude Include="UShadow.h" />
-    <ClInclude Include="UGameManager.h" />
     <ClInclude Include="FMod\fmod.h">
       <Filter>00. Engine\FMod</Filter>
     </ClInclude>
@@ -274,7 +270,36 @@
     <ClInclude Include="USoundManager.h">
       <Filter>00. Engine\01. System\Sound</Filter>
     </ClInclude>
-    <ClInclude Include="UWave.h" />
+    <ClInclude Include="UGameManager.h">
+      <Filter>02. Client\02. GameSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="UNet.h">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="Animator.h">
+      <Filter>00. Engine\01. System\Graphic\Animator</Filter>
+    </ClInclude>
+    <ClInclude Include="UShadow.h">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="UPikachu.h">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="UWave.h">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="UUI.h">
+      <Filter>02. Client\00. GameObject\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UUIButton.h">
+      <Filter>02. Client\00. GameObject\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UUIImage.h">
+      <Filter>02. Client\00. GameObject\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UUIScore.h">
+      <Filter>02. Client\00. GameObject\UI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImGui\imgui.cpp">
@@ -397,23 +422,39 @@
     <ClCompile Include="UMainTitleScene.cpp">
       <Filter>02. Client\01. Scene</Filter>
     </ClCompile>
-    <ClCompile Include="UUI.cpp">
-      <Filter>02. Client\00. GameObject</Filter>
-    </ClCompile>
-    <ClCompile Include="UUIImage.cpp">
-      <Filter>02. Client\00. GameObject</Filter>
-    </ClCompile>
-    <ClCompile Include="Animator.cpp" />
-    <ClCompile Include="UNet.cpp" />
-    <ClCompile Include="UPikachu.cpp" />
-    <ClCompile Include="UUIButton.cpp" />
-    <ClCompile Include="UUIScore.cpp" />
-    <ClCompile Include="UShadow.cpp" />
-    <ClCompile Include="UGameManager.cpp" />
     <ClCompile Include="USoundManager.cpp">
       <Filter>00. Engine\01. System\Sound</Filter>
     </ClCompile>
-    <ClCompile Include="UWave.cpp" />
+    <ClCompile Include="UGameManager.cpp">
+      <Filter>02. Client\02. GameSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="UNet.cpp">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="Animator.cpp">
+      <Filter>00. Engine\01. System\Graphic\Animator</Filter>
+    </ClCompile>
+    <ClCompile Include="UShadow.cpp">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="UPikachu.cpp">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="UWave.cpp">
+      <Filter>02. Client\00. GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="UUI.cpp">
+      <Filter>02. Client\00. GameObject\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UUIButton.cpp">
+      <Filter>02. Client\00. GameObject\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UUIImage.cpp">
+      <Filter>02. Client\00. GameObject\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UUIScore.cpp">
+      <Filter>02. Client\00. GameObject\UI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="ShaderW0.hlsl">
