@@ -82,13 +82,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	UCubeComponent cube;
 	cube.SetRelativeLocation({ 3.0f, 0.0f, 0.0f });
 
-	// ─── Rasterizer State ───
-	D3D11_RASTERIZER_DESC rsDesc = {};
-	rsDesc.FillMode = D3D11_FILL_SOLID;
-	rsDesc.CullMode = D3D11_CULL_BACK;
-	ID3D11RasterizerState* rsState = nullptr;
-	device->CreateRasterizerState(&rsDesc, &rsState);
-
 	// ─── 타이밍 ───
 	LARGE_INTEGER Frequency, LastTime, CurrentTime;
 	QueryPerformanceFrequency(&Frequency);
@@ -135,7 +128,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 			renderer.BeginFrame();
 
 			shader.Bind(context);
-			context->RSSetState(rsState);
 
 			FMatrix VP = camera.GetViewMatrix() * camera.GetProjectionMatrix();
 			renderer.ViewProjectionMatrix = VP;
@@ -143,8 +135,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 			FMeshData* sphereMesh = sphere.GetPrimitive()->GetMeshData();
 			renderer.AddCommand({ sphereMesh, sphere.RelativeTransform.ToMatrix() });
 
-			//FMeshData* cubeMesh = cube.GetPrimitive()->GetMeshData();
-			//renderer.AddCommand({ cubeMesh, cube.RelativeTransform.ToMatrix() });
+			FMeshData* cubeMesh = cube.GetPrimitive()->GetMeshData();
+			renderer.AddCommand({ cubeMesh, cube.RelativeTransform.ToMatrix() });
 
 			renderer.ExecuteCommands();
 
@@ -153,7 +145,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	}
 
 	// ─── 정리 ───
-	if (rsState) rsState->Release();
 	shader.Release();
 	CPrimitiveBase::ClearCache();
 	renderer.Release();
