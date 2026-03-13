@@ -1,11 +1,11 @@
 #pragma once
 #include "CoreMinimal.h"
-#include "Object.h"
 #include "SparseData.h"
 
 
 class ENGINE_API ObjectFactory
 {
+public:
 
 	static UObject* CreateObject(const SparseData& InClassData)
 	{

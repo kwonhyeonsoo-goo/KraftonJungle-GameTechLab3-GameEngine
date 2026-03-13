@@ -1,7 +1,7 @@
 #pragma once
-#include "Object.h"
 #include "CoreMinimal.h"
 #include "SparseData.h"
+#include "ObjectFactory.h";
 
 class ENGINE_API ObjectManager
 {
@@ -19,7 +19,8 @@ public:
 
 private:
 
-	TMap<ObjectType, SparseData* > ClassDefinition;
+	TMap<ObjectType, SparseData* > ClassDefinitions;
+	TArray<UObject*> ObjectArray;
 
 
 
