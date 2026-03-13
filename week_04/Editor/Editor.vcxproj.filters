@@ -103,8 +103,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\VertexShader.hlsl" />
-    <None Include="Shaders\PixelShader.hlsl" />
     <None Include="ThirdParty\imgui\imgui.natstepfilter" />
   </ItemGroup>
   <ItemGroup>

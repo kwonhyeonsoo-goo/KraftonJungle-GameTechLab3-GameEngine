@@ -194,6 +194,10 @@
     <ClInclude Include="Primitive\PrimitivePlane.h" />
     <ClInclude Include="Primitive\PrimitiveSphere.h" />
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Renderer\Shaders\PixelShader.hlsl" />
+    <FxCompile Include="Renderer\Shaders\VertexShader.hlsl" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
