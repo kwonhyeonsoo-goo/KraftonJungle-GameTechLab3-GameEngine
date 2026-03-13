@@ -19,7 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Actor.h" />
+    <ClInclude Include="Component\ActorComponent.h" />
+    <ClInclude Include="Object\Actor\Actor.h" />
+    <ClInclude Include="Object\Class.h" />
     <ClInclude Include="Component\SceneComponent.h" />
     <ClInclude Include="Core\Core.h" />
     <ClInclude Include="CoreMinimal.h" />
@@ -28,7 +30,8 @@
     <ClInclude Include="Component\CubeComponent.h" />
     <ClInclude Include="Component\SphereComponent.h" />
     <ClInclude Include="Object\ObjectManager.h" />
-    <ClInclude Include="Scene\Scene.h" />
+    <ClInclude Include="Object\ObjectTypes.h" />
+    <ClInclude Include="Object\Scene\Scene.h" />
     <ClInclude Include="Types\CoreTypes.h" />
     <ClInclude Include="EngineAPI.h" />
     <ClInclude Include="Types\Array.h" />
@@ -42,13 +45,17 @@
     <ClInclude Include="Types\String.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Actor.cpp" />
+    <ClCompile Include="Component\ActorComponent.cpp" />
+    <ClCompile Include="Core\Core.cpp" />
+    <ClCompile Include="Object\Actor\Actor.cpp" />
+    <ClCompile Include="Object\Class.cpp" />
     <ClCompile Include="Component\CubeComponent.cpp" />
     <ClCompile Include="EngineTest.cpp" />
     <ClCompile Include="Object\Object.cpp" />
     <ClCompile Include="Component\SceneComponent.cpp" />
     <ClCompile Include="Component\SphereComponent.cpp" />
-    <ClCompile Include="Scene\Scene.cpp" />
+    <ClCompile Include="Object\ObjectManager.cpp" />
+    <ClCompile Include="Object\Scene\Scene.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
