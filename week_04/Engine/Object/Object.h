@@ -3,8 +3,8 @@
 
 class ENGINE_API UObject
 {
+public:
 	UObject() = default;
 	virtual ~UObject() = default;
-	
 };
 
