@@ -1,0 +1,84 @@
+\doxysection{CGizmo Class Reference}
+\hypertarget{class_c_gizmo}{}\label{class_c_gizmo}\index{CGizmo@{CGizmo}}
+
+
+{\ttfamily \+\#include $<$Gizmo.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \doxymbox{\hyperlink{class_c_gizmo_abd4797c9d4ca8eecdfb0e8b9b37649d7}{Set\+Mode}} (\doxymbox{\hyperlink{_gizmo_8h_a1cee465b5a90ba35bcc93711d448ff50}{EGizmo\+Mode}} In\+Mode)
+\item 
+\doxymbox{\hyperlink{_gizmo_8h_a1cee465b5a90ba35bcc93711d448ff50}{EGizmo\+Mode}} \doxymbox{\hyperlink{class_c_gizmo_a58f89a05a35ef65f28888d8c64c3e0e7}{Get\+Mode}} () const
+\item 
+void \doxymbox{\hyperlink{class_c_gizmo_a7aed33124a35b361f3df675bf9f91c07}{Cycle\+Mode}} ()
+\item 
+void \doxymbox{\hyperlink{class_c_gizmo_a330cc5e1f13e36c2ae68b6de7d6e6bb4}{Render}} ()
+\item 
+void \doxymbox{\hyperlink{class_c_gizmo_a10bccbc203d0240d38a2ff6589a42bd2}{On\+Drag\+Begin}} (const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&Ray\+Origin, const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&Ray\+Dir)
+\item 
+void \doxymbox{\hyperlink{class_c_gizmo_a972ff5e0f0eadd583b5d46559f0534d0}{On\+Drag\+Update}} (const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&Ray\+Origin, const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&Ray\+Dir)
+\item 
+void \doxymbox{\hyperlink{class_c_gizmo_a7bf6036d4b8f4e04f775b64b0e4d7773}{On\+Drag\+End}} ()
+\item 
+void \doxymbox{\hyperlink{class_c_gizmo_a1d919fc2ed15a058a486bbbf59948464}{Set\+Target\+Transform}} (const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&Position, const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&Rotation, const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&Scale)
+\end{DoxyCompactItemize}
+
+
+\label{doc-func-members}
+\Hypertarget{class_c_gizmo_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_c_gizmo_a7aed33124a35b361f3df675bf9f91c07}\index{CGizmo@{CGizmo}!CycleMode@{CycleMode}}
+\index{CycleMode@{CycleMode}!CGizmo@{CGizmo}}
+\doxysubsubsection{\texorpdfstring{CycleMode()}{CycleMode()}}
+{\footnotesize\ttfamily \label{class_c_gizmo_a7aed33124a35b361f3df675bf9f91c07} 
+void CGizmo::\+\+Cycle\+Mode (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_gizmo_a58f89a05a35ef65f28888d8c64c3e0e7}\index{CGizmo@{CGizmo}!GetMode@{GetMode}}
+\index{GetMode@{GetMode}!CGizmo@{CGizmo}}
+\doxysubsubsection{\texorpdfstring{GetMode()}{GetMode()}}
+{\footnotesize\ttfamily \label{class_c_gizmo_a58f89a05a35ef65f28888d8c64c3e0e7} 
+\doxymbox{\hyperlink{_gizmo_8h_a1cee465b5a90ba35bcc93711d448ff50}{EGizmo\+Mode}} CGizmo::\+\+Get\+Mode (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\Hypertarget{class_c_gizmo_a10bccbc203d0240d38a2ff6589a42bd2}\index{CGizmo@{CGizmo}!OnDragBegin@{OnDragBegin}}
+\index{OnDragBegin@{OnDragBegin}!CGizmo@{CGizmo}}
+\doxysubsubsection{\texorpdfstring{OnDragBegin()}{OnDragBegin()}}
+{\footnotesize\ttfamily \label{class_c_gizmo_a10bccbc203d0240d38a2ff6589a42bd2} 
+void CGizmo::\+\+On\+Drag\+Begin (\begin{DoxyParamCaption}\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{Ray\+Origin}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{Ray\+Dir}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_gizmo_a7bf6036d4b8f4e04f775b64b0e4d7773}\index{CGizmo@{CGizmo}!OnDragEnd@{OnDragEnd}}
+\index{OnDragEnd@{OnDragEnd}!CGizmo@{CGizmo}}
+\doxysubsubsection{\texorpdfstring{OnDragEnd()}{OnDragEnd()}}
+{\footnotesize\ttfamily \label{class_c_gizmo_a7bf6036d4b8f4e04f775b64b0e4d7773} 
+void CGizmo::\+\+On\+Drag\+End (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_gizmo_a972ff5e0f0eadd583b5d46559f0534d0}\index{CGizmo@{CGizmo}!OnDragUpdate@{OnDragUpdate}}
+\index{OnDragUpdate@{OnDragUpdate}!CGizmo@{CGizmo}}
+\doxysubsubsection{\texorpdfstring{OnDragUpdate()}{OnDragUpdate()}}
+{\footnotesize\ttfamily \label{class_c_gizmo_a972ff5e0f0eadd583b5d46559f0534d0} 
+void CGizmo::\+\+On\+Drag\+Update (\begin{DoxyParamCaption}\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{Ray\+Origin}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{Ray\+Dir}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_gizmo_a330cc5e1f13e36c2ae68b6de7d6e6bb4}\index{CGizmo@{CGizmo}!Render@{Render}}
+\index{Render@{Render}!CGizmo@{CGizmo}}
+\doxysubsubsection{\texorpdfstring{Render()}{Render()}}
+{\footnotesize\ttfamily \label{class_c_gizmo_a330cc5e1f13e36c2ae68b6de7d6e6bb4} 
+void CGizmo::\+\+Render (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_gizmo_abd4797c9d4ca8eecdfb0e8b9b37649d7}\index{CGizmo@{CGizmo}!SetMode@{SetMode}}
+\index{SetMode@{SetMode}!CGizmo@{CGizmo}}
+\doxysubsubsection{\texorpdfstring{SetMode()}{SetMode()}}
+{\footnotesize\ttfamily \label{class_c_gizmo_abd4797c9d4ca8eecdfb0e8b9b37649d7} 
+void CGizmo::\+\+Set\+Mode (\begin{DoxyParamCaption}\item[{\doxymbox{\hyperlink{_gizmo_8h_a1cee465b5a90ba35bcc93711d448ff50}{EGizmo\+Mode}}}]{In\+Mode}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_gizmo_a1d919fc2ed15a058a486bbbf59948464}\index{CGizmo@{CGizmo}!SetTargetTransform@{SetTargetTransform}}
+\index{SetTargetTransform@{SetTargetTransform}!CGizmo@{CGizmo}}
+\doxysubsubsection{\texorpdfstring{SetTargetTransform()}{SetTargetTransform()}}
+{\footnotesize\ttfamily \label{class_c_gizmo_a1d919fc2ed15a058a486bbbf59948464} 
+void CGizmo::\+\+Set\+Target\+Transform (\begin{DoxyParamCaption}\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{Position}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{Rotation}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{Scale}{}\end{DoxyParamCaption})}
+
+
+
+The documentation for this class was generated from the following files:\+\begin{DoxyCompactItemize}
+\item 
+Editor/\+\+Gizmo/\+\doxymbox{\hyperlink{_gizmo_8h}{Gizmo.\+h}}\item 
+Editor/\+\+Gizmo/\+\doxymbox{\hyperlink{_gizmo_8cpp}{Gizmo.\+cpp}}\end{DoxyCompactItemize}

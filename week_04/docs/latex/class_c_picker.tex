@@ -1,0 +1,36 @@
+\doxysection{CPicker Class Reference}
+\hypertarget{class_c_picker}{}\label{class_c_picker}\index{CPicker@{CPicker}}
+
+
+{\ttfamily \+\#include $<$Picker.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{struct_f_ray}{FRay}} \doxymbox{\hyperlink{class_c_picker_ab652c61f293198c971211c7a3ab8242c}{Screen\+To\+Ray}} (int ScreenX, int ScreenY, int Screen\+Width, int Screen\+Height, const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&View\+Matrix, const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&Proj\+Matrix) const
+\item 
+bool \doxymbox{\hyperlink{class_c_picker_abcd3486e3b72f5e4446f7459a4a3608f}{Ray\+Triangle\+Intersect}} (const \doxymbox{\hyperlink{struct_f_ray}{FRay}} \&Ray, const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&V0, const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&V1, const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&V2, float \&Out\+Distance) const
+\end{DoxyCompactItemize}
+
+
+\label{doc-func-members}
+\Hypertarget{class_c_picker_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_c_picker_abcd3486e3b72f5e4446f7459a4a3608f}\index{CPicker@{CPicker}!RayTriangleIntersect@{RayTriangleIntersect}}
+\index{RayTriangleIntersect@{RayTriangleIntersect}!CPicker@{CPicker}}
+\doxysubsubsection{\texorpdfstring{RayTriangleIntersect()}{RayTriangleIntersect()}}
+{\footnotesize\ttfamily \label{class_c_picker_abcd3486e3b72f5e4446f7459a4a3608f} 
+bool CPicker::\+\+Ray\+Triangle\+Intersect (\begin{DoxyParamCaption}\item[{const \doxymbox{\hyperlink{struct_f_ray}{FRay}} \&}]{Ray}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{V0}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{V1}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{V2}{, }\item[{float \&}]{Out\+Distance}{}\end{DoxyParamCaption}) const}
+
+\Hypertarget{class_c_picker_ab652c61f293198c971211c7a3ab8242c}\index{CPicker@{CPicker}!ScreenToRay@{ScreenToRay}}
+\index{ScreenToRay@{ScreenToRay}!CPicker@{CPicker}}
+\doxysubsubsection{\texorpdfstring{ScreenToRay()}{ScreenToRay()}}
+{\footnotesize\ttfamily \label{class_c_picker_ab652c61f293198c971211c7a3ab8242c} 
+\doxymbox{\hyperlink{struct_f_ray}{FRay}} CPicker::\+\+Screen\+To\+Ray (\begin{DoxyParamCaption}\item[{int}]{ScreenX}{, }\item[{int}]{ScreenY}{, }\item[{int}]{Screen\+Width}{, }\item[{int}]{Screen\+Height}{, }\item[{const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&}]{View\+Matrix}{, }\item[{const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&}]{Proj\+Matrix}{}\end{DoxyParamCaption}) const}
+
+
+
+The documentation for this class was generated from the following files:\+\begin{DoxyCompactItemize}
+\item 
+Editor/\+\+Picking/\+\doxymbox{\hyperlink{_picker_8h}{Picker.\+h}}\item 
+Editor/\+\+Picking/\+\doxymbox{\hyperlink{_picker_8cpp}{Picker.\+cpp}}\end{DoxyCompactItemize}

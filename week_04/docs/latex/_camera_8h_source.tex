@@ -1,0 +1,42 @@
+\doxysection{Camera.\+h}
+\hypertarget{_camera_8h_source}{}\label{_camera_8h_source}\index{Engine/Camera/Camera.h@{Engine/Camera/Camera.h}}
+\doxymbox{\hyperlink{_camera_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_vector_8h}{Math/Vector.h}}"{}}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_matrix_8h}{Math/Matrix.h}}"{}}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_camera_a514fd8a50554e599fbcf25ca603e7363}{CCamera}}}
+\DoxyCodeLine{00007\ \{}
+\DoxyCodeLine{00008\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00009\ \ \ \ \ \doxymbox{\hyperlink{class_c_camera_a514fd8a50554e599fbcf25ca603e7363}{CCamera}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_camera_a75002682b3ef213202204cd3ee6382d6}{SetPosition}}(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\&\ InPosition);}
+\DoxyCodeLine{00012\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_camera_ae56251541619720b872def5e50198160}{SetLookAt}}(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\&\ InTarget);}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \ \ \ \ \textcolor{comment}{//\ 입력\ 처리}}
+\DoxyCodeLine{00015\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_camera_a2b461783fd9f5213944e4984598d06f6}{MoveForward}}(\textcolor{keywordtype}{float}\ Delta);}
+\DoxyCodeLine{00016\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_camera_a19ea4d933d54ed60819406189f04eada}{MoveRight}}(\textcolor{keywordtype}{float}\ Delta);}
+\DoxyCodeLine{00017\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_camera_a0a89737cd59336138e4c09e8816d5df3}{Rotate}}(\textcolor{keywordtype}{float}\ DeltaYaw,\ \textcolor{keywordtype}{float}\ DeltaPitch);}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \ \ \ \ \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}}\ \doxymbox{\hyperlink{class_c_camera_a1979666bd835b87254be90bca0681837}{GetViewMatrix}}()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00020\ \ \ \ \ \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}}\ \doxymbox{\hyperlink{class_c_camera_aa1df4bc1cc6651c335df42b330d920a8}{GetProjectionMatrix}}()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_camera_ab14db38bc5a84f174b98346dcf967d35}{SetAspectRatio}}(\textcolor{keywordtype}{float}\ InAspectRatio);}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00025\ \ \ \ \ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\ Position\ =\ \{\ 0.0f,\ 5.0f,\ -\/10.0f\ \};}
+\DoxyCodeLine{00026\ \ \ \ \ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\ Target\ =\ \{\ 0.0f,\ 0.0f,\ 0.0f\ \};}
+\DoxyCodeLine{00027\ \ \ \ \ FVector\ Up\ =\ \{\ 0.0f,\ 1.0f,\ 0.0f\ \};}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{keywordtype}{float}\ Yaw\ =\ 0.0f;}
+\DoxyCodeLine{00030\ \ \ \ \ \textcolor{keywordtype}{float}\ Pitch\ =\ 0.0f;}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keywordtype}{float}\ FOV\ =\ 45.0f;}
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{keywordtype}{float}\ AspectRatio\ =\ 16.0f\ /\ 9.0f;}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keywordtype}{float}\ NearPlane\ =\ 0.1f;}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keywordtype}{float}\ FarPlane\ =\ 1000.0f;}
+\DoxyCodeLine{00036\ \};}
+
+\end{DoxyCode}

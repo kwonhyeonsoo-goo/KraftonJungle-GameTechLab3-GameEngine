@@ -1,0 +1,97 @@
+\doxysection{CCamera Class Reference}
+\hypertarget{class_c_camera}{}\label{class_c_camera}\index{CCamera@{CCamera}}
+
+
+{\ttfamily \+\#include $<$Camera.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{class_c_camera_a514fd8a50554e599fbcf25ca603e7363}{CCamera}} ()=default
+\item 
+void \doxymbox{\hyperlink{class_c_camera_a75002682b3ef213202204cd3ee6382d6}{Set\+Position}} (const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&In\+Position)
+\item 
+void \doxymbox{\hyperlink{class_c_camera_ae56251541619720b872def5e50198160}{Set\+Look\+At}} (const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&In\+Target)
+\item 
+void \doxymbox{\hyperlink{class_c_camera_a2b461783fd9f5213944e4984598d06f6}{Move\+Forward}} (float Delta)
+\item 
+void \doxymbox{\hyperlink{class_c_camera_a19ea4d933d54ed60819406189f04eada}{Move\+Right}} (float Delta)
+\item 
+void \doxymbox{\hyperlink{class_c_camera_a0a89737cd59336138e4c09e8816d5df3}{Rotate}} (float Delta\+Yaw, float Delta\+Pitch)
+\item 
+\doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \doxymbox{\hyperlink{class_c_camera_a1979666bd835b87254be90bca0681837}{Get\+View\+Matrix}} () const
+\item 
+\doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \doxymbox{\hyperlink{class_c_camera_aa1df4bc1cc6651c335df42b330d920a8}{Get\+Projection\+Matrix}} () const
+\item 
+void \doxymbox{\hyperlink{class_c_camera_ab14db38bc5a84f174b98346dcf967d35}{Set\+Aspect\+Ratio}} (float In\+Aspect\+Ratio)
+\end{DoxyCompactItemize}
+
+
+\label{doc-constructors}
+\Hypertarget{class_c_camera_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{class_c_camera_a514fd8a50554e599fbcf25ca603e7363}\index{CCamera@{CCamera}!CCamera@{CCamera}}
+\index{CCamera@{CCamera}!CCamera@{CCamera}}
+\doxysubsubsection{\texorpdfstring{CCamera()}{CCamera()}}
+{\footnotesize\ttfamily \label{class_c_camera_a514fd8a50554e599fbcf25ca603e7363} 
+CCamera::\+\+CCamera (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [default]}}
+
+
+
+\label{doc-func-members}
+\Hypertarget{class_c_camera_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_c_camera_aa1df4bc1cc6651c335df42b330d920a8}\index{CCamera@{CCamera}!GetProjectionMatrix@{GetProjectionMatrix}}
+\index{GetProjectionMatrix@{GetProjectionMatrix}!CCamera@{CCamera}}
+\doxysubsubsection{\texorpdfstring{GetProjectionMatrix()}{GetProjectionMatrix()}}
+{\footnotesize\ttfamily \label{class_c_camera_aa1df4bc1cc6651c335df42b330d920a8} 
+\doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} CCamera::\+\+Get\+Projection\+Matrix (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const}
+
+\Hypertarget{class_c_camera_a1979666bd835b87254be90bca0681837}\index{CCamera@{CCamera}!GetViewMatrix@{GetViewMatrix}}
+\index{GetViewMatrix@{GetViewMatrix}!CCamera@{CCamera}}
+\doxysubsubsection{\texorpdfstring{GetViewMatrix()}{GetViewMatrix()}}
+{\footnotesize\ttfamily \label{class_c_camera_a1979666bd835b87254be90bca0681837} 
+\doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} CCamera::\+\+Get\+View\+Matrix (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const}
+
+\Hypertarget{class_c_camera_a2b461783fd9f5213944e4984598d06f6}\index{CCamera@{CCamera}!MoveForward@{MoveForward}}
+\index{MoveForward@{MoveForward}!CCamera@{CCamera}}
+\doxysubsubsection{\texorpdfstring{MoveForward()}{MoveForward()}}
+{\footnotesize\ttfamily \label{class_c_camera_a2b461783fd9f5213944e4984598d06f6} 
+void CCamera::\+\+Move\+Forward (\begin{DoxyParamCaption}\item[{float}]{Delta}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_camera_a19ea4d933d54ed60819406189f04eada}\index{CCamera@{CCamera}!MoveRight@{MoveRight}}
+\index{MoveRight@{MoveRight}!CCamera@{CCamera}}
+\doxysubsubsection{\texorpdfstring{MoveRight()}{MoveRight()}}
+{\footnotesize\ttfamily \label{class_c_camera_a19ea4d933d54ed60819406189f04eada} 
+void CCamera::\+\+Move\+Right (\begin{DoxyParamCaption}\item[{float}]{Delta}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_camera_a0a89737cd59336138e4c09e8816d5df3}\index{CCamera@{CCamera}!Rotate@{Rotate}}
+\index{Rotate@{Rotate}!CCamera@{CCamera}}
+\doxysubsubsection{\texorpdfstring{Rotate()}{Rotate()}}
+{\footnotesize\ttfamily \label{class_c_camera_a0a89737cd59336138e4c09e8816d5df3} 
+void CCamera::\+\+Rotate (\begin{DoxyParamCaption}\item[{float}]{Delta\+Yaw}{, }\item[{float}]{Delta\+Pitch}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_camera_ab14db38bc5a84f174b98346dcf967d35}\index{CCamera@{CCamera}!SetAspectRatio@{SetAspectRatio}}
+\index{SetAspectRatio@{SetAspectRatio}!CCamera@{CCamera}}
+\doxysubsubsection{\texorpdfstring{SetAspectRatio()}{SetAspectRatio()}}
+{\footnotesize\ttfamily \label{class_c_camera_ab14db38bc5a84f174b98346dcf967d35} 
+void CCamera::\+\+Set\+Aspect\+Ratio (\begin{DoxyParamCaption}\item[{float}]{In\+Aspect\+Ratio}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_camera_ae56251541619720b872def5e50198160}\index{CCamera@{CCamera}!SetLookAt@{SetLookAt}}
+\index{SetLookAt@{SetLookAt}!CCamera@{CCamera}}
+\doxysubsubsection{\texorpdfstring{SetLookAt()}{SetLookAt()}}
+{\footnotesize\ttfamily \label{class_c_camera_ae56251541619720b872def5e50198160} 
+void CCamera::\+\+Set\+Look\+At (\begin{DoxyParamCaption}\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{In\+Target}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_camera_a75002682b3ef213202204cd3ee6382d6}\index{CCamera@{CCamera}!SetPosition@{SetPosition}}
+\index{SetPosition@{SetPosition}!CCamera@{CCamera}}
+\doxysubsubsection{\texorpdfstring{SetPosition()}{SetPosition()}}
+{\footnotesize\ttfamily \label{class_c_camera_a75002682b3ef213202204cd3ee6382d6} 
+void CCamera::\+\+Set\+Position (\begin{DoxyParamCaption}\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{In\+Position}{}\end{DoxyParamCaption})}
+
+
+
+The documentation for this class was generated from the following files:\+\begin{DoxyCompactItemize}
+\item 
+Engine/\+\+Camera/\+\doxymbox{\hyperlink{_camera_8h}{Camera.\+h}}\item 
+Engine/\+\+Camera/\+\doxymbox{\hyperlink{_camera_8cpp}{Camera.\+cpp}}\end{DoxyCompactItemize}

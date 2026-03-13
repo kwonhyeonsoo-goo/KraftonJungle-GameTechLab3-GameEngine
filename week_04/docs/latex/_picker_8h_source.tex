@@ -1,0 +1,29 @@
+\doxysection{Picker.\+h}
+\hypertarget{_picker_8h_source}{}\label{_picker_8h_source}\index{Editor/Picking/Picker.h@{Editor/Picking/Picker.h}}
+\doxymbox{\hyperlink{_picker_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_vector_8h}{Math/Vector.h}}"{}}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_matrix_8h}{Math/Matrix.h}}"{}}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{keyword}{struct\ }\doxymbox{\hyperlink{struct_f_ray}{FRay}}}
+\DoxyCodeLine{00007\ \{}
+\DoxyCodeLine{00008\ \ \ \ \ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\ \doxymbox{\hyperlink{struct_f_ray_a0a70223c8fd6aee9bb95e0ed2bfedcd4}{Origin}};}
+\DoxyCodeLine{00009\ \ \ \ \ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\ \doxymbox{\hyperlink{struct_f_ray_a0de68e428ba025607795065a57c96144}{Direction}};}
+\DoxyCodeLine{00010\ \};}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_picker}{CPicker}}}
+\DoxyCodeLine{00013\ \{}
+\DoxyCodeLine{00014\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00015\ \ \ \ \ \textcolor{comment}{//\ 스크린\ 좌표\ →\ 월드\ 레이\ 변환\ (Deprojection)}}
+\DoxyCodeLine{00016\ \ \ \ \ \doxymbox{\hyperlink{struct_f_ray}{FRay}}\ \doxymbox{\hyperlink{class_c_picker_ab652c61f293198c971211c7a3ab8242c}{ScreenToRay}}(\textcolor{keywordtype}{int}\ ScreenX,\ \textcolor{keywordtype}{int}\ ScreenY,\ \textcolor{keywordtype}{int}\ ScreenWidth,\ \textcolor{keywordtype}{int}\ ScreenHeight,}
+\DoxyCodeLine{00017\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}}\&\ ViewMatrix,\ \textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}}\&\ ProjMatrix)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \ \ \ \ \textcolor{comment}{//\ Möller–Trumbore\ 알고리즘:\ 레이-\/삼각형\ 교차\ 검사}}
+\DoxyCodeLine{00020\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_c_picker_abcd3486e3b72f5e4446f7459a4a3608f}{RayTriangleIntersect}}(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_ray}{FRay}}\&\ Ray,}
+\DoxyCodeLine{00021\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\&\ V0,\ \textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\&\ V1,\ \textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\&\ V2,}
+\DoxyCodeLine{00022\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{float}\&\ OutDistance)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00023\ \};}
+
+\end{DoxyCode}
