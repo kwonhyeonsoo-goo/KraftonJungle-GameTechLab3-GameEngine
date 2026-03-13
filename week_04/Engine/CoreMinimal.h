@@ -1,4 +1,5 @@
 #pragma once
+#include "EngineAPI.h"
 #include "Types/CoreTypes.h"
 #include "Types/TArray.h"
 #include "Types/TLinkedList.h"
@@ -10,4 +11,5 @@
 #include "Math/Matrix.h"
 #include "Math/Vector.h"
 #include "Math/Vector4.h"
+#include "Math/Transform.h"
 #include "Object/Object.h"

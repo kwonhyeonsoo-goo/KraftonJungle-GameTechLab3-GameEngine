@@ -1,9 +1,10 @@
 #pragma once
 
+#include "EngineAPI.h"
 #include "Math/Vector.h"
 #include "Math/Vector4.h"
 
-struct FMatrix
+struct ENGINE_API FMatrix
 {
     float M[4][4] = {};
 

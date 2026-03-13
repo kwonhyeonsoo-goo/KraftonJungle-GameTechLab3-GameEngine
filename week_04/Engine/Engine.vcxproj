@@ -162,6 +162,7 @@
   <ItemGroup>
     <ClCompile Include="Math\Vector.cpp" />
     <ClCompile Include="Math\Matrix.cpp" />
+    <ClCompile Include="Math\Transform.cpp" />
     <ClCompile Include="Camera\Camera.cpp" />
     <ClCompile Include="Component\PrimitiveComponent.cpp" />
     <ClCompile Include="Renderer\Renderer.cpp" />
@@ -174,6 +175,7 @@
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="Math\Vector4.h" />
     <ClInclude Include="Math\Matrix.h" />
+    <ClInclude Include="Math\Transform.h" />
     <ClInclude Include="Camera\Camera.h" />
     <ClInclude Include="Renderer\Renderer.h" />
     <ClInclude Include="Renderer\ShaderManager.h" />

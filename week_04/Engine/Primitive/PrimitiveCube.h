@@ -1,9 +1,10 @@
 #pragma once
 
+#include "CoreMinimal.h"
 #include <vector>
 #include "Renderer/PrimitiveVertex.h"
 
-class CPrimitiveCube
+class ENGINE_API CPrimitiveCube
 {
 public:
     void Generate();

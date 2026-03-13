@@ -1,9 +1,10 @@
 #pragma once
 
+#include "CoreMinimal.h"
 #include <vector>
 #include "Renderer/PrimitiveVertex.h"
 
-class CPrimitivePlane
+class ENGINE_API CPrimitivePlane
 {
 public:
     void Generate();
