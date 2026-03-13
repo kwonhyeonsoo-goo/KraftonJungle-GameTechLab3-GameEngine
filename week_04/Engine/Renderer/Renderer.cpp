@@ -135,16 +135,16 @@ bool CRenderer::Initialize(HWND Hwnd, int Width, int Height)
 	Viewport.MaxDepth = 1.f;
 
 
-	//if (!ShaderManager.LoadVertexShader(Device, L"Renderer\\Shaders\\VertexShader.hlsl"))
-	//{
-	//	OutputDebugStringW(L"VS Load Failed - 파일 경로 확인\n");
-	//	return false;
-	//}
-	//if (!ShaderManager.LoadPixelShader(Device, L"Renderer\\Shaders\\PixelShader.hlsl"))
-	//{
-	//	OutputDebugStringW(L"PS Load Failed - 파일 경로 확인\n");
-	//	return false;
-	//}
+	if (!ShaderManager.LoadVertexShader(Device, L"..\\Engine\\Renderer\\Shaders\\VertexShader.hlsl"))
+	{
+		OutputDebugStringW(L"VS Load Failed - 파일 경로 확인\n");
+		return false;
+	}
+	if (!ShaderManager.LoadPixelShader(Device, L"..\\Engine\\Renderer\\Shaders\\PixelShader.hlsl"))
+	{
+		OutputDebugStringW(L"PS Load Failed - 파일 경로 확인\n");
+		return false;
+	}
 
 
 	return true;
