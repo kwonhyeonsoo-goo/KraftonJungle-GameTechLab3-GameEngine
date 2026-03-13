@@ -1,5 +1,5 @@
 #pragma once
-#include "Object/Object.h"
+#include "CoreMinimal.h"
 
 class UScene : public UObject
 {

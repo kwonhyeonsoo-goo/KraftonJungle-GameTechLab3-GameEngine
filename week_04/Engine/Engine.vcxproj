@@ -176,6 +176,7 @@
     <ClCompile Include="Component\PrimitiveComponent.cpp" />
     <ClCompile Include="Renderer\Renderer.cpp" />
     <ClCompile Include="Renderer\ShaderManager.cpp" />
+    <ClCompile Include="Primitive\PrimitiveBase.cpp" />
     <ClCompile Include="Primitive\PrimitiveCube.cpp" />
     <ClCompile Include="Primitive\PrimitivePlane.cpp" />
     <ClCompile Include="Primitive\PrimitiveSphere.cpp" />
@@ -186,9 +187,11 @@
     <ClInclude Include="Math\Matrix.h" />
     <ClInclude Include="Math\Transform.h" />
     <ClInclude Include="Camera\Camera.h" />
+    <ClInclude Include="Renderer\RenderCommand.h" />
     <ClInclude Include="Renderer\Renderer.h" />
     <ClInclude Include="Renderer\ShaderManager.h" />
     <ClInclude Include="Renderer\PrimitiveVertex.h" />
+    <ClInclude Include="Primitive\PrimitiveBase.h" />
     <ClInclude Include="Primitive\PrimitiveCube.h" />
     <ClInclude Include="Primitive\PrimitivePlane.h" />
     <ClInclude Include="Primitive\PrimitiveSphere.h" />

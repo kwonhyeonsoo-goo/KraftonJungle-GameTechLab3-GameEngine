@@ -1,6 +1,5 @@
 #pragma once
 #include "CoreMinimal.h"
-#include "Object/Object.h"
 
 class ENGINE_API USceneComponent : public UObject
 {
