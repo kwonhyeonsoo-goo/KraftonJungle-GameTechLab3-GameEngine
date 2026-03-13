@@ -19,11 +19,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Actor.h" />
     <ClInclude Include="Component\SceneComponent.h" />
+    <ClInclude Include="Core\Core.h" />
     <ClInclude Include="CoreMinimal.h" />
     <ClInclude Include="Component\PrimitiveComponent.h" />
     <ClInclude Include="Component\CubeComponent.h" />
     <ClInclude Include="Component\SphereComponent.h" />
+    <ClInclude Include="Object\ObjectManager.h" />
+    <ClInclude Include="Scene\Scene.h" />
     <ClInclude Include="Types\CoreTypes.h" />
     <ClInclude Include="EngineAPI.h" />
     <ClInclude Include="Types\Array.h" />
@@ -34,12 +38,17 @@
     <ClInclude Include="Types\Set.h" />
     <ClInclude Include="Types\StaticArray.h" />
     <ClInclude Include="Object\Object.h" />
+    <ClInclude Include="Types\String.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Actor.cpp" />
     <ClCompile Include="Component\CubeComponent.cpp" />
+    <ClCompile Include="Core\Core.cpp" />
+    <ClCompile Include="Object\ObjectManager.cpp" />
     <ClCompile Include="Object\Object.cpp" />
     <ClCompile Include="Component\SceneComponent.cpp" />
     <ClCompile Include="Component\SphereComponent.cpp" />
+    <ClCompile Include="Scene\Scene.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
