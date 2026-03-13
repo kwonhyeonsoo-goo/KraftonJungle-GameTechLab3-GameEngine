@@ -18,14 +18,30 @@ public:
         return reinterpret_cast<size_t>(&tag);
     }
 
-
 	template <class T>
-	T* SpawnObject();
+	T* SpawnObject() {
+
+        size_t id = GetTypeID<T>();
+
+        auto* IT = ObjectFactory::CreateObject(id);
+
+        if (IT != nullptr)
+        {
+            ObjectArray.push(IT);
+            RegisterAllocation(sizeof(T));
+
+            return IT;
+
+        }
+
+    }
 
 private:
+    void RegisterAllocation(size_t InSize);
 
-	TArray<UObject*> ObjectArray;
-
+    TArray<UObject*> ObjectArray = {};
+    uint32 TotalAllocationBytes = 0;
+    uint32 TotalAllocationCount = 0;
 };
 
 

@@ -1,17 +1,29 @@
 #pragma once
 #include "../CoreMinimal.h"
 
+using CreateFunc = UObject * (*)();
+
 
 template<class T>
 class ENGINE_API ObjectFactory
 {
 public:
+	static TMap<size_t, CreateFunc> Registry;
 
-	static UObject* CreateObject(size_t id)
+	static T* CreateObject(size_t InId)
 	{
+		if (Registry.find(InId) != Registry.end())
+		{
+			return Registry[InId]();
+		}
 
-		UObject* NewObject = new T(id);
+		return nullptr;
+	}
 
-		return NewObject;
+
+	template<typename T>
+	static void RegisterType(size_t InId)
+	{
+		Registry[InId] = []() -> UObject* { return new T(); };
 	}
 };

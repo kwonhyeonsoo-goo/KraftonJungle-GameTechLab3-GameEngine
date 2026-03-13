@@ -1,16 +1,16 @@
 #include "ObjectManager.h"
 
 
-template<class T>
-T* ObjectManager::SpawnObject() {
 
-    size_t id = GetTypeID<T>();
-    auto* IT =  ObjectFactory::CreateObject(id);
 
-    if (IT != nullptr)
-    {
-        ObjectArray.push(IT);
-    }
 
-    return IT;
+ObjectManager::ObjectManager()
+{
+
+}
+
+void ObjectManager::RegisterAllocation(size_t InSize)
+{
+    TotalAllocationBytes += static_cast<uint32>(InSize);
+    TotalAllocationCount++;
 }
