@@ -28,6 +28,7 @@
     <ClInclude Include="Component\CubeComponent.h" />
     <ClInclude Include="Component\SphereComponent.h" />
     <ClInclude Include="Object\ObjectManager.h" />
+    <ClInclude Include="Renderer\ShaderType.h" />
     <ClInclude Include="Scene\Scene.h" />
     <ClInclude Include="Types\CoreTypes.h" />
     <ClInclude Include="EngineAPI.h" />
