@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="KcraftonJungle_WEEK02/KcraftonJungle_WEEK02.vcxproj" />
+  <Project Path="KcraftonJungle_WEEK02/KcraftonJungle_WEEK02.vcxproj" Id="dff9387b-6ea6-483b-9314-41ee83160d0e" />
 </Solution>

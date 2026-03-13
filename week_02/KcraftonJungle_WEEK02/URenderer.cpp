@@ -150,7 +150,7 @@ void URenderer::ReleaseFrameBuffer()
 void URenderer::CreateRasterizerState()
 {
     D3D11_RASTERIZER_DESC rasterizerdesc = {};
-    rasterizerdesc.FillMode = D3D11_FILL_WIREFRAME;
+    rasterizerdesc.FillMode = D3D11_FILL_SOLID;
     rasterizerdesc.CullMode = D3D11_CULL_BACK;
     rasterizerdesc.FrontCounterClockwise = false;
     Device->CreateRasterizerState(&rasterizerdesc, &RasterizerState);
