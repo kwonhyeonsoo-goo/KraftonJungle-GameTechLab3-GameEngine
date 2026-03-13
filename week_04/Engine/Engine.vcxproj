@@ -127,6 +127,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -143,12 +144,35 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Math\Vector.cpp" />
+    <ClCompile Include="Math\Matrix.cpp" />
+    <ClCompile Include="Camera\Camera.cpp" />
+    <ClCompile Include="Renderer\Renderer.cpp" />
+    <ClCompile Include="Renderer\ShaderManager.cpp" />
+    <ClCompile Include="Primitive\PrimitiveCube.cpp" />
+    <ClCompile Include="Primitive\PrimitivePlane.cpp" />
+    <ClCompile Include="Primitive\PrimitiveSphere.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Math\Vector.h" />
+    <ClInclude Include="Math\Vector4.h" />
+    <ClInclude Include="Math\Matrix.h" />
+    <ClInclude Include="Camera\Camera.h" />
+    <ClInclude Include="Renderer\Renderer.h" />
+    <ClInclude Include="Renderer\ShaderManager.h" />
+    <ClInclude Include="Renderer\PrimitiveVertex.h" />
+    <ClInclude Include="Primitive\PrimitiveCube.h" />
+    <ClInclude Include="Primitive\PrimitivePlane.h" />
+    <ClInclude Include="Primitive\PrimitiveSphere.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

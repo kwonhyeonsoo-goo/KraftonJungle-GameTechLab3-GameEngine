@@ -112,6 +112,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\Engine\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -128,6 +129,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\Engine\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -136,6 +138,24 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Axis\AxisRenderer.cpp" />
+    <ClCompile Include="Gizmo\Gizmo.cpp" />
+    <ClCompile Include="Picking\Picker.cpp" />
+    <ClCompile Include="UI\ConsoleWindow.cpp" />
+    <ClCompile Include="UI\PropertyWindow.cpp" />
+    <ClCompile Include="UI\StatWindow.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Axis\AxisRenderer.h" />
+    <ClInclude Include="Gizmo\Gizmo.h" />
+    <ClInclude Include="Picking\Picker.h" />
+    <ClInclude Include="UI\ConsoleWindow.h" />
+    <ClInclude Include="UI\PropertyWindow.h" />
+    <ClInclude Include="UI\StatWindow.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Shaders\VertexShader.hlsl" />
+    <None Include="Shaders\PixelShader.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
