@@ -1,7 +1,7 @@
 #pragma once
-#include "Component/PrimitiveComponent.h"
-class USphereComponent :
-    public UPrimitiveComponet
+#include "PrimitiveComponent.h"
+
+class USphereComponent : public UPrimitiveComponent
 {
 };
 

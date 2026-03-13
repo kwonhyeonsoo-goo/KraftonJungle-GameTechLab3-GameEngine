@@ -26,13 +26,13 @@
     <ClInclude Include="Component\SphereComponent.h" />
     <ClInclude Include="Types\CoreTypes.h" />
     <ClInclude Include="EngineAPI.h" />
-    <ClInclude Include="Types\TArray.h" />
-    <ClInclude Include="Types\TLinkedList.h" />
-    <ClInclude Include="Types\TMap.h" />
-    <ClInclude Include="Types\TPair.h" />
-    <ClInclude Include="Types\TQueue.h" />
-    <ClInclude Include="Types\TSet.h" />
-    <ClInclude Include="Types\TStaticArray.h" />
+    <ClInclude Include="Types\Array.h" />
+    <ClInclude Include="Types\LinkedList.h" />
+    <ClInclude Include="Types\Map.h" />
+    <ClInclude Include="Types\Pair.h" />
+    <ClInclude Include="Types\Queue.h" />
+    <ClInclude Include="Types\Set.h" />
+    <ClInclude Include="Types\StaticArray.h" />
     <ClInclude Include="Object\Object.h" />
   </ItemGroup>
   <ItemGroup>

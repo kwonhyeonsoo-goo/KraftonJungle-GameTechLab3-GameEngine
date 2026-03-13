@@ -24,25 +24,25 @@
     <ClInclude Include="Types\CoreTypes.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Types\TArray.h">
+    <ClInclude Include="Types\Array.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Types\TLinkedList.h">
+    <ClInclude Include="Types\LinkedList.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Types\TMap.h">
+    <ClInclude Include="Types\Map.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Types\TPair.h">
+    <ClInclude Include="Types\Pair.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Types\TQueue.h">
+    <ClInclude Include="Types\Queue.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Types\TSet.h">
+    <ClInclude Include="Types\Set.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Types\TStaticArray.h">
+    <ClInclude Include="Types\StaticArray.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="Math\Vector.h">
