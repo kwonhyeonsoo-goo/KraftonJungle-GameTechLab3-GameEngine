@@ -37,6 +37,7 @@ private:
 	ID3D11RenderTargetView* RenderTargetView = nullptr;
 	ID3D11DepthStencilView* DepthStencilView = nullptr;
 	ID3D11Buffer* ConstantBuffer = nullptr;
+	ID3D11RasterizerState* RasterizerState = nullptr;
 	D3D11_VIEWPORT Viewport = {};
 
 	std::vector<FRenderCommand> CommandList;

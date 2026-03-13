@@ -142,6 +142,17 @@ bool CRenderer::Initialize(HWND Hwnd, int Width, int Height)
 		return false;
 	}
 
+	// Rasterizer State
+	D3D11_RASTERIZER_DESC rsDesc = {};
+	rsDesc.FillMode = D3D11_FILL_SOLID;
+	rsDesc.CullMode = D3D11_CULL_BACK;
+	hr = Device->CreateRasterizerState(&rsDesc, &RasterizerState);
+	if (FAILED(hr))
+	{
+		MessageBox(0, L"CreateRasterizerState Failed.", 0, 0);
+		return false;
+	}
+
 	return true;
 }
 
@@ -154,6 +165,7 @@ void CRenderer::BeginFrame()
 
 	DeviceContext->OMSetRenderTargets(1, &RenderTargetView, DepthStencilView);
 	DeviceContext->RSSetViewports(1, &Viewport);
+	DeviceContext->RSSetState(RasterizerState);
 
 	CommandList.clear();
 }
@@ -237,6 +249,11 @@ void CRenderer::UpdateConstantBuffer(const FMatrix& WorldMatrix, const FMatrix& 
 
 void CRenderer::Release()
 {
+	if (RasterizerState)
+	{
+		RasterizerState->Release();
+		RasterizerState = nullptr;
+	}
 	if (ConstantBuffer)
 	{
 		ConstantBuffer->Release();
