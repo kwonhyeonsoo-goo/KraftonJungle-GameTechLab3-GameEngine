@@ -1,8 +1,10 @@
 #include "Renderer.h"
+
+
+#include <dxgi1_3.h>
 #include <cassert>
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
-#include <dxgi1_3.h>
 CRenderer::~CRenderer()
 {
 	Release();
@@ -133,6 +135,18 @@ bool CRenderer::Initialize(HWND Hwnd, int Width, int Height)
 	Viewport.MaxDepth = 1.f;
 
 
+	//if (!ShaderManager.LoadVertexShader(Device, L"Renderer\\Shaders\\VertexShader.hlsl"))
+	//{
+	//	OutputDebugStringW(L"VS Load Failed - 파일 경로 확인\n");
+	//	return false;
+	//}
+	//if (!ShaderManager.LoadPixelShader(Device, L"Renderer\\Shaders\\PixelShader.hlsl"))
+	//{
+	//	OutputDebugStringW(L"PS Load Failed - 파일 경로 확인\n");
+	//	return false;
+	//}
+
+
 	return true;
 }
 
@@ -180,4 +194,5 @@ void CRenderer::Release()
 		Device->Release();
 		Device = nullptr;
 	}
+	ShaderManager.Release();
 }

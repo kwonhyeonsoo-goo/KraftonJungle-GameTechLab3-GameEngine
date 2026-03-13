@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ShaderManager.h"
 #include <d3d11.h>
 
 class ENGINE_API CRenderer
@@ -24,4 +25,5 @@ private:
 	ID3D11RenderTargetView* RenderTargetView = nullptr;
 	ID3D11DepthStencilView* DepthStencilView = nullptr;
 	D3D11_VIEWPORT Viewport = {};
+	CShaderManager ShaderManager;
 };

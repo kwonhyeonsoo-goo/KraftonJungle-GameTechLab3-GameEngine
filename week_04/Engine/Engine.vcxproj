@@ -151,6 +151,11 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /y /d "$(ProjectDir)Renderer\Shaders\Engine.pdb" "$(OutDir)"
+xcopy /Y /D "$(ProjectDir)..\Engine\Bin\$(Configuration)\Engine.dll" "$(OutDir)"
+</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -168,6 +173,11 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /y /d "$(ProjectDir)Renderer\Shaders\Engine.pdb" "$(OutDir)"
+xcopy /Y /D "$(ProjectDir)..\Engine\Bin\$(Configuration)\Engine.dll" "$(OutDir)"
+</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Math\Vector.cpp" />
@@ -193,10 +203,6 @@
     <ClInclude Include="Primitive\PrimitiveCube.h" />
     <ClInclude Include="Primitive\PrimitivePlane.h" />
     <ClInclude Include="Primitive\PrimitiveSphere.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="Renderer\Shaders\PixelShader.hlsl" />
-    <FxCompile Include="Renderer\Shaders\VertexShader.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
