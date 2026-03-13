@@ -40,22 +40,71 @@ void AActor::AddOwnedComponent(UActorComponent* InComponent)
 	InComponent->SetOwner(this);
 
 	if (RootComponent == nullptr && InComponent->IsA(USceneComponent::StaticClass()))
+	{
+		RootComponent = static_cast<USceneComponent*>(InComponent);
+	}
 }
 
 void AActor::RemoveOwnedComponent(UActorComponent* InComponent)
 {
+	if (InComponent == nullptr)
+	{
+		return;
+	}
+
+	std::erase(OwnedComponents, InComponent);
+
+	if (RootComponent == InComponent)
+	{
+		RootComponent = nullptr;
+	}
+
+	InComponent->SetOwner(nullptr);
 }
 
 void AActor::PostSpawnInitialize()
 {
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (Component && !Component->IsRegistered())
+		{
+			Component->OnRegister();
+		}
+	}
 }
 
 void AActor::BeginPlay()
 {
+	if (bActorBegunPlay)
+	{
+		return;
+	}
+
+	bActorBegunPlay = true;
+
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (Component && !Component->HasBegunPlay())
+		{
+			Component->BeginPlay();
+		}
+	}
 }
 
 void AActor::Tick(float DeltaTime)
 {
+	if (!CanTick || bPendingDestroy)
+	{
+		return;
+	}
+
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (Component && Component->CanTick())
+		{
+			Component->Tick(DeltaTime);
+		}
+	}
 }
 
 void AActor::EndPlay()
@@ -64,12 +113,31 @@ void AActor::EndPlay()
 
 void AActor::Destroy()
 {
+	if (bPendingDestroy)
+	{
+		return;
+	}
+
+	bPendingDestroy = true;
+	MarkPendingKill();
 }
 
 const FVector& AActor::GetActorLocation() const
 {
+	if (RootComponent == nullptr)
+	{
+		return GZeroVector;
+	}
+
+	return RootComponent->GetRelativeLocation();
 }
 
 void AActor::SetActorLocation(const FVector& InLocation)
 {
+	if (RootComponent == nullptr)
+	{
+		return;
+	}
+
+	RootComponent->SetRelativeLocation(InLocation);
 }
