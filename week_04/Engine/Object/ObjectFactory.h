@@ -1,16 +1,16 @@
 #pragma once
-#include "CoreMinimal.h"
-#include "SparseData.h"
+#include "../CoreMinimal.h"
 
 
+template<class T>
 class ENGINE_API ObjectFactory
 {
 public:
 
-	static UObject* CreateObject(const SparseData& InClassData)
+	static UObject* CreateObject(size_t id)
 	{
 
-		UObject* NewObject = new UObject(InClassData);
+		UObject* NewObject = new T(id);
 
 		return NewObject;
 	}

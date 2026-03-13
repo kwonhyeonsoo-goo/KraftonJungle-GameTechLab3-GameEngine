@@ -29,7 +29,6 @@
     <ClInclude Include="Component\SphereComponent.h" />
     <ClInclude Include="Object\ObjectFactory.h" />
     <ClInclude Include="Object\ObjectManager.h" />
-    <ClInclude Include="Object\SparseData.h" />
     <ClInclude Include="Scene\Scene.h" />
     <ClInclude Include="Types\CoreTypes.h" />
     <ClInclude Include="EngineAPI.h" />

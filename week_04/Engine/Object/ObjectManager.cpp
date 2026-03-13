@@ -1,21 +1,16 @@
 #include "ObjectManager.h"
 
 
-UObject* ObjectManager::SpawnObject(ObjectType className)
-{
+template<class T>
+T* ObjectManager::SpawnObject() {
 
-	auto IT = ClassDefinitions.find(className);
-	
-	if(IT !- classDefinitions.end())
-	{
-		UObject* NewObject = ObjectFactory::CreateObject(IT->second);
+    size_t id = GetTypeID<T>();
+    auto* IT =  ObjectFactory::CreateObject(id);
 
-		ObjectArray.push(NewObject);
+    if (IT != nullptr)
+    {
+        ObjectArray.push(IT);
+    }
 
-		return NewObject;
-
-	}
-
-	return nullptr;
-
-};
+    return IT;
+}
