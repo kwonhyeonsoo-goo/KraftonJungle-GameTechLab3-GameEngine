@@ -16,10 +16,14 @@ public:
 
 	void EndFrame();
 	void Release();
+	bool IsOccluded();
+	void OnResize(int NewWidth, int NewHeight);
+	bool bSwapChainOccluded = false;
 
 	ID3D11Device* GetDevice() const { return Device; }
 	ID3D11DeviceContext* GetDeviceContext() const { return DeviceContext; }
-
+	ID3D11RenderTargetView* GetRenderTargetView() const {return RenderTargetView;}
+	IDXGISwapChain* GetSwapChain() const {return SwapChain;};
 private:
 	ID3D11Device* Device = nullptr;
 	ID3D11DeviceContext* DeviceContext = nullptr;

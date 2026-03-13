@@ -215,7 +215,7 @@ void CRenderer::DrawTestTriangle()
 void CRenderer::EndFrame()
 {
 	SwapChain->Present(1, 0);
-	
+
 }
 
 void CRenderer::Release()
@@ -246,3 +246,52 @@ void CRenderer::Release()
 	}
 	ShaderManager.Release();
 }
+
+bool CRenderer::IsOccluded()
+{
+	if (bSwapChainOccluded &&
+		SwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
+		return true;
+
+	bSwapChainOccluded = false;
+	return false;
+}
+
+void CRenderer::OnResize(int NewWidth, int NewHeight)
+{
+	if (NewWidth == 0 || NewHeight == 0) return;
+
+
+	DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+	RenderTargetView->Release(); RenderTargetView = nullptr;
+	DepthStencilView->Release(); DepthStencilView = nullptr;
+
+	SwapChain->ResizeBuffers(0, NewWidth, NewHeight, DXGI_FORMAT_UNKNOWN, 0);
+
+
+	ID3D11Texture2D* BackBuffer = nullptr;
+	SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&BackBuffer);
+	Device->CreateRenderTargetView(BackBuffer, nullptr, &RenderTargetView);
+	BackBuffer->Release();
+
+	D3D11_TEXTURE2D_DESC DepthDesc = {};
+	DepthDesc.Width = NewWidth;
+	DepthDesc.Height = NewHeight;
+	DepthDesc.MipLevels = 1;
+	DepthDesc.ArraySize = 1;
+	DepthDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	DepthDesc.SampleDesc.Count = 1;
+	DepthDesc.Usage = D3D11_USAGE_DEFAULT;
+	DepthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	ID3D11Texture2D* DepthTex = nullptr;
+	Device->CreateTexture2D(&DepthDesc, nullptr, &DepthTex);
+	Device->CreateDepthStencilView(DepthTex, nullptr, &DepthStencilView);
+	DepthTex->Release();
+
+	// Viewport 갱신
+	Viewport.Width = static_cast<float>(NewWidth);
+	Viewport.Height = static_cast<float>(NewHeight);
+}
+
+
+
