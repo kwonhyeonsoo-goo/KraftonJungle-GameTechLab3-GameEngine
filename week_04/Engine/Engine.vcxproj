@@ -23,6 +23,7 @@
     <ClInclude Include="Component\SceneComponent.h" />
     <ClInclude Include="Core\Core.h" />
     <ClInclude Include="CoreMinimal.h" />
+    <ClInclude Include="EngineTest.h" />
     <ClInclude Include="Component\PrimitiveComponent.h" />
     <ClInclude Include="Component\CubeComponent.h" />
     <ClInclude Include="Component\SphereComponent.h" />
@@ -43,8 +44,7 @@
   <ItemGroup>
     <ClCompile Include="Actor.cpp" />
     <ClCompile Include="Component\CubeComponent.cpp" />
-    <ClCompile Include="Core\Core.cpp" />
-    <ClCompile Include="Object\ObjectManager.cpp" />
+    <ClCompile Include="EngineTest.cpp" />
     <ClCompile Include="Object\Object.cpp" />
     <ClCompile Include="Component\SceneComponent.cpp" />
     <ClCompile Include="Component\SphereComponent.cpp" />
@@ -171,6 +171,7 @@
   <ItemGroup>
     <ClCompile Include="Math\Vector.cpp" />
     <ClCompile Include="Math\Matrix.cpp" />
+    <ClCompile Include="Math\Transform.cpp" />
     <ClCompile Include="Camera\Camera.cpp" />
     <ClCompile Include="Component\PrimitiveComponent.cpp" />
     <ClCompile Include="Renderer\Renderer.cpp" />
@@ -183,6 +184,7 @@
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="Math\Vector4.h" />
     <ClInclude Include="Math\Matrix.h" />
+    <ClInclude Include="Math\Transform.h" />
     <ClInclude Include="Camera\Camera.h" />
     <ClInclude Include="Renderer\Renderer.h" />
     <ClInclude Include="Renderer\ShaderManager.h" />

@@ -1,4 +1,5 @@
 CLAUDE.md
+.claude/
 
 # Created by https://www.toptal.com/developers/gitignore/api/c++,visualstudio
 # Edit at https://www.toptal.com/developers/gitignore?templates=c++,visualstudio
@@ -62,6 +63,12 @@ bld/
 [Ll]og/
 [Ll]ogs/
 Build/
+Bin/
+*.dll
+*.lib
+*.exp
+*.exe
+*.recipe
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/

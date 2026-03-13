@@ -4,4 +4,3 @@
 class USphereComponent : public UPrimitiveComponent
 {
 };
-

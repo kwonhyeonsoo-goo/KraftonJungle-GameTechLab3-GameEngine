@@ -1,8 +1,9 @@
 #pragma once
 
+#include "CoreMinimal.h"
 #include <d3d11.h>
 
-class CRenderer
+class ENGINE_API CRenderer
 {
 public:
     CRenderer() = default;

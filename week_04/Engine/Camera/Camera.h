@@ -1,9 +1,8 @@
 #pragma once
 
-#include "Math/Vector.h"
-#include "Math/Matrix.h"
+#include "CoreMinimal.h"
 
-class CCamera
+class ENGINE_API CCamera
 {
 public:
     CCamera() = default;

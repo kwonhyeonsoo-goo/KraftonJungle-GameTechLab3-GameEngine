@@ -1,9 +1,8 @@
 #pragma once
 
-#include "Math/Vector.h"
-#include "Math/Vector4.h"
+#include "CoreMinimal.h"
 
-struct FPrimitiveVertex
+struct ENGINE_API FPrimitiveVertex
 {
     FVector Position;
     FVector4 Color;
