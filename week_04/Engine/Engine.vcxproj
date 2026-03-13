@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="Component\SceneComponent.h" />
     <ClInclude Include="CoreMinimal.h" />
+    <ClInclude Include="EngineTest.h" />
     <ClInclude Include="Component\PrimitiveComponent.h" />
     <ClInclude Include="Component\CubeComponent.h" />
     <ClInclude Include="Component\SphereComponent.h" />
@@ -37,6 +38,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Component\CubeComponent.cpp" />
+    <ClCompile Include="EngineTest.cpp" />
     <ClCompile Include="Object\Object.cpp" />
     <ClCompile Include="Component\SceneComponent.cpp" />
     <ClCompile Include="Component\SphereComponent.cpp" />
