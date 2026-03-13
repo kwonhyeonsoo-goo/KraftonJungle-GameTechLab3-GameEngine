@@ -50,6 +50,7 @@
     <ClCompile Include="Object\Object.cpp" />
     <ClCompile Include="Component\SceneComponent.cpp" />
     <ClCompile Include="Component\SphereComponent.cpp" />
+    <ClCompile Include="Object\ObjectManager.cpp" />
     <ClCompile Include="Scene\Scene.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
