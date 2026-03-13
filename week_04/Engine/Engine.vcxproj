@@ -19,6 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Component\SceneComponent.h" />
+    <ClInclude Include="CoreMinimal.h" />
     <ClInclude Include="Types\CoreTypes.h" />
     <ClInclude Include="EngineAPI.h" />
     <ClInclude Include="Types\TArray.h" />
@@ -28,10 +30,11 @@
     <ClInclude Include="Types\TQueue.h" />
     <ClInclude Include="Types\TSet.h" />
     <ClInclude Include="Types\TStaticArray.h" />
-    <ClInclude Include="UObject.h" />
+    <ClInclude Include="Object\Object.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="UObject.cpp" />
+    <ClCompile Include="Object\Object.cpp" />
+    <ClCompile Include="Component\SceneComponent.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
