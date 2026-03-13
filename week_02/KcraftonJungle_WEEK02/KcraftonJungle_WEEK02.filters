@@ -1,0 +1,162 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="헤더 파일">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{a1c0611b-e457-46cc-a534-7944f1d591c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine">
+      <UniqueIdentifier>{3c9f82c6-44d8-4187-9af5-2f05715e5701}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Editor">
+      <UniqueIdentifier>{7c48f9e3-4e86-4a69-921c-0d1894a3ece4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Editor\ImGui">
+      <UniqueIdentifier>{4b143d8a-2e89-4849-88e8-3e1c154efb6f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Rendering">
+      <UniqueIdentifier>{fccf23e0-3c08-4a6f-9311-4d941437fa47}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Physics">
+      <UniqueIdentifier>{f9faa023-0086-47b6-b8c6-fe8b6ab082f0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Core">
+      <UniqueIdentifier>{4f5119f7-aab7-4751-997e-baf00d6ca498}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Core\Audio">
+      <UniqueIdentifier>{45c67a17-bdf2-4b15-a262-ab3e0f1972b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Core\Math">
+      <UniqueIdentifier>{8ce84feb-bbc6-4dfb-ba44-bfee0e35fe99}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Core\UObject">
+      <UniqueIdentifier>{c9cfa787-100d-496e-838d-84057088edaa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Core\UObject\USceneComponent">
+      <UniqueIdentifier>{fd0698db-8f12-463b-a34d-5e987b37c354}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Core\UObject\USceneComponent\UPrimitiveComponent">
+      <UniqueIdentifier>{f00d68f0-009c-4003-a377-0cb456fbdeee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Input">
+      <UniqueIdentifier>{8ff6b852-4fa6-46c4-90de-7b630fea6418}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Scene">
+      <UniqueIdentifier>{388829d7-fa49-4615-98c8-4352b91ed47c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Resources">
+      <UniqueIdentifier>{ff863c1f-2450-47cb-8d56-7294b354e2c4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Core\Windows">
+      <UniqueIdentifier>{fe91e712-d16d-49a2-b055-014b1f23f2ba}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="ShaderW0.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ImGui\imconfig.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imgui.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imgui_impl_dx11.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imgui_impl_win32.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imgui_internal.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imstb_rectpack.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imstb_textedit.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imstb_truetype.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Sphere.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="UObject.h">
+      <Filter>Engine\Core\UObject</Filter>
+    </ClInclude>
+    <ClInclude Include="USceneComponent.h">
+      <Filter>Engine\Core\UObject\USceneComponent</Filter>
+    </ClInclude>
+    <ClInclude Include="UPrimitiveComponent.h">
+      <Filter>Engine\Core\UObject\USceneComponent\UPrimitiveComponent</Filter>
+    </ClInclude>
+    <ClInclude Include="UCubeComp.h">
+      <Filter>Engine\Core\UObject\USceneComponent\UPrimitiveComponent</Filter>
+    </ClInclude>
+    <ClInclude Include="USphereComp.h">
+      <Filter>Engine\Core\UObject\USceneComponent\UPrimitiveComponent</Filter>
+    </ClInclude>
+    <ClInclude Include="FMatrix4.h">
+      <Filter>Engine\Core\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="FVector.h">
+      <Filter>Engine\Core\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="FVector4.h">
+      <Filter>Engine\Core\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="URenderer.h">
+      <Filter>Engine\Rendering</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ImGui\imgui.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_demo.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_draw.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_impl_dx11.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_impl_win32.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_tables.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_widgets.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="UObject.cpp">
+      <Filter>Engine\Core\UObject</Filter>
+    </ClCompile>
+    <ClCompile Include="USceneComponent.cpp">
+      <Filter>Engine\Core\UObject\USceneComponent</Filter>
+    </ClCompile>
+    <ClCompile Include="UPrimitiveComponent.cpp">
+      <Filter>Engine\Core\UObject\USceneComponent\UPrimitiveComponent</Filter>
+    </ClCompile>
+    <ClCompile Include="UCubeComp.cpp">
+      <Filter>Engine\Core\UObject\USceneComponent\UPrimitiveComponent</Filter>
+    </ClCompile>
+    <ClCompile Include="USphereComp.cpp">
+      <Filter>Engine\Core\UObject\USceneComponent\UPrimitiveComponent</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Engine\Core\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="URenderer.cpp">
+      <Filter>Engine\Rendering</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

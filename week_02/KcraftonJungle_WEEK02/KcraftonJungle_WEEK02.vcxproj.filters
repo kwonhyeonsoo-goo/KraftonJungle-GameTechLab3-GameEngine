@@ -1,0 +1,156 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="ImGui\imgui.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_demo.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_draw.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_impl_dx11.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_impl_win32.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_tables.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGui\imgui_widgets.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="UCubeComp.cpp">
+      <Filter>Engine\Core\UObject\USceneComponent\UPrimitiveComponent</Filter>
+    </ClCompile>
+    <ClCompile Include="UObject.cpp">
+      <Filter>Engine\Core\UObject</Filter>
+    </ClCompile>
+    <ClCompile Include="USceneComponent.cpp">
+      <Filter>Engine\Core\UObject\USceneComponent</Filter>
+    </ClCompile>
+    <ClCompile Include="UPrimitiveComponent.cpp">
+      <Filter>Engine\Core\UObject\USceneComponent\UPrimitiveComponent</Filter>
+    </ClCompile>
+    <ClCompile Include="USphereComp.cpp">
+      <Filter>Engine\Core\UObject\USceneComponent\UPrimitiveComponent</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Engine\Core\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="URenderer.cpp">
+      <Filter>Engine\Rendering</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Sphere.h" />
+    <ClInclude Include="FMatrix4.h">
+      <Filter>Engine\Core\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="FVector.h">
+      <Filter>Engine\Core\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="FVector4.h">
+      <Filter>Engine\Core\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imconfig.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imgui.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imgui_impl_dx11.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imgui_impl_win32.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imgui_internal.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imstb_rectpack.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imstb_textedit.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\imstb_truetype.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="UCubeComp.h">
+      <Filter>Engine\Core\UObject\USceneComponent\UPrimitiveComponent</Filter>
+    </ClInclude>
+    <ClInclude Include="UObject.h">
+      <Filter>Engine\Core\UObject</Filter>
+    </ClInclude>
+    <ClInclude Include="USceneComponent.h">
+      <Filter>Engine\Core\UObject\USceneComponent</Filter>
+    </ClInclude>
+    <ClInclude Include="UPrimitiveComponent.h">
+      <Filter>Engine\Core\UObject\USceneComponent\UPrimitiveComponent</Filter>
+    </ClInclude>
+    <ClInclude Include="USphereComp.h">
+      <Filter>Engine\Core\UObject\USceneComponent\UPrimitiveComponent</Filter>
+    </ClInclude>
+    <ClInclude Include="URenderer.h">
+      <Filter>Engine\Rendering</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Editor">
+      <UniqueIdentifier>{01cf55ac-a256-4a7a-b654-73bc1bef7772}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Editor\ImGui">
+      <UniqueIdentifier>{9f912369-e210-4462-9a17-d5894d3e4cd7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine">
+      <UniqueIdentifier>{68490dc3-7920-4710-ac33-df3b1a786e75}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Core">
+      <UniqueIdentifier>{088281d5-8dfb-4b0e-8d84-0d7d2108e534}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Core\Audio">
+      <UniqueIdentifier>{8ea79e36-6aea-48df-93ac-7d9403028586}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Core\Math">
+      <UniqueIdentifier>{b8c084a0-5e44-4ae9-8ed1-1488cd79bd45}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Core\UObject">
+      <UniqueIdentifier>{4d12fd48-4a55-4a1b-89c7-070b2aba9fec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Core\UObject\USceneComponent">
+      <UniqueIdentifier>{948954dd-e34f-467a-a30a-f6d83c418f59}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Core\UObject\USceneComponent\UPrimitiveComponent">
+      <UniqueIdentifier>{99268c09-9f2a-404e-8092-dbb100889379}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{3627229a-2852-4b16-92e8-fd33346102fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Core\Windows">
+      <UniqueIdentifier>{24561450-da64-47af-b42b-2d42505a9d98}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Input">
+      <UniqueIdentifier>{bc56b95d-03ec-41ae-86ee-2c16127268e3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Physics">
+      <UniqueIdentifier>{7749478f-ec5a-442c-9aaa-7e598304f394}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Rendering">
+      <UniqueIdentifier>{d56f12ee-4a4d-4b67-8410-1be47c46556f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Resources">
+      <UniqueIdentifier>{30d4e065-3d4e-4aa9-a18d-533c08b0b4cf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Scene">
+      <UniqueIdentifier>{8595a1e2-a0d6-4c5b-8d6a-ed9d07b3af0e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="ShaderW0.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+  </ItemGroup>
+</Project>

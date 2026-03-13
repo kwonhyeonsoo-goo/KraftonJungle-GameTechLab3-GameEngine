@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="KcraftonJungle_WEEK02/KcraftonJungle_WEEK02.vcxproj" />
+</Solution>
