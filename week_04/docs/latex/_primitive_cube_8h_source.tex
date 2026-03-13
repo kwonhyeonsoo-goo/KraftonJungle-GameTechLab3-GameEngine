@@ -1,0 +1,23 @@
+\doxysection{Primitive\+Cube.\+h}
+\hypertarget{_primitive_cube_8h_source}{}\label{_primitive_cube_8h_source}\index{Engine/Primitive/PrimitiveCube.h@{Engine/Primitive/PrimitiveCube.h}}
+\doxymbox{\hyperlink{_primitive_cube_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_primitive_vertex_8h}{Renderer/PrimitiveVertex.h}}"{}}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_primitive_cube}{CPrimitiveCube}}}
+\DoxyCodeLine{00007\ \{}
+\DoxyCodeLine{00008\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00009\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_primitive_cube_a21226d5a2dcf87057d3986a345666639}{Generate}}();}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \ \ \ \ \textcolor{keyword}{const}\ std::vector<FPrimitiveVertex>\&\ \doxymbox{\hyperlink{class_c_primitive_cube_a0ba0512da9a516753510002411fef712}{GetVertices}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Vertices;\ \}}
+\DoxyCodeLine{00012\ \ \ \ \ \textcolor{keyword}{const}\ std::vector<unsigned\ int>\&\ \doxymbox{\hyperlink{class_c_primitive_cube_a7b57692ebb7fdb65b7f75028698f0afa}{GetIndices}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Indices;\ \}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00015\ \ \ \ \ std::vector<FPrimitiveVertex>\ Vertices;}
+\DoxyCodeLine{00016\ \ \ \ \ std::vector<unsigned\ int>\ Indices;}
+\DoxyCodeLine{00017\ \};}
+
+\end{DoxyCode}

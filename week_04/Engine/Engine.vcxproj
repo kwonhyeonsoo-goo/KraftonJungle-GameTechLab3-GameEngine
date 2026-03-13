@@ -18,6 +18,38 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Actor.h" />
+    <ClInclude Include="Component\SceneComponent.h" />
+    <ClInclude Include="Core\Core.h" />
+    <ClInclude Include="CoreMinimal.h" />
+    <ClInclude Include="EngineTest.h" />
+    <ClInclude Include="Component\PrimitiveComponent.h" />
+    <ClInclude Include="Component\CubeComponent.h" />
+    <ClInclude Include="Component\SphereComponent.h" />
+    <ClInclude Include="Object\ObjectManager.h" />
+    <ClInclude Include="Scene\Scene.h" />
+    <ClInclude Include="Types\CoreTypes.h" />
+    <ClInclude Include="EngineAPI.h" />
+    <ClInclude Include="Types\Array.h" />
+    <ClInclude Include="Types\LinkedList.h" />
+    <ClInclude Include="Types\Map.h" />
+    <ClInclude Include="Types\Pair.h" />
+    <ClInclude Include="Types\Queue.h" />
+    <ClInclude Include="Types\Set.h" />
+    <ClInclude Include="Types\StaticArray.h" />
+    <ClInclude Include="Object\Object.h" />
+    <ClInclude Include="Types\String.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Actor.cpp" />
+    <ClCompile Include="Component\CubeComponent.cpp" />
+    <ClCompile Include="EngineTest.cpp" />
+    <ClCompile Include="Object\Object.cpp" />
+    <ClCompile Include="Component\SceneComponent.cpp" />
+    <ClCompile Include="Component\SphereComponent.cpp" />
+    <ClCompile Include="Scene\Scene.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -108,7 +140,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;ENGINECORE_EXPORTS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -125,7 +157,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;ENGINECORE_EXPORTS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -139,7 +171,9 @@
   <ItemGroup>
     <ClCompile Include="Math\Vector.cpp" />
     <ClCompile Include="Math\Matrix.cpp" />
+    <ClCompile Include="Math\Transform.cpp" />
     <ClCompile Include="Camera\Camera.cpp" />
+    <ClCompile Include="Component\PrimitiveComponent.cpp" />
     <ClCompile Include="Renderer\Renderer.cpp" />
     <ClCompile Include="Renderer\ShaderManager.cpp" />
     <ClCompile Include="Primitive\PrimitiveCube.cpp" />
@@ -150,6 +184,7 @@
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="Math\Vector4.h" />
     <ClInclude Include="Math\Matrix.h" />
+    <ClInclude Include="Math\Transform.h" />
     <ClInclude Include="Camera\Camera.h" />
     <ClInclude Include="Renderer\Renderer.h" />
     <ClInclude Include="Renderer\ShaderManager.h" />

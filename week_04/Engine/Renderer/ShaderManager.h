@@ -1,8 +1,9 @@
 #pragma once
 
+#include "CoreMinimal.h"
 #include <d3d11.h>
 
-class CShaderManager
+class ENGINE_API CShaderManager
 {
 public:
     CShaderManager() = default;

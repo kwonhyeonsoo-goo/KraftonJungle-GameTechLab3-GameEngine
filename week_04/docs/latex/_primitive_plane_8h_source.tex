@@ -1,0 +1,23 @@
+\doxysection{Primitive\+Plane.\+h}
+\hypertarget{_primitive_plane_8h_source}{}\label{_primitive_plane_8h_source}\index{Engine/Primitive/PrimitivePlane.h@{Engine/Primitive/PrimitivePlane.h}}
+\doxymbox{\hyperlink{_primitive_plane_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_primitive_vertex_8h}{Renderer/PrimitiveVertex.h}}"{}}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_primitive_plane}{CPrimitivePlane}}}
+\DoxyCodeLine{00007\ \{}
+\DoxyCodeLine{00008\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00009\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_primitive_plane_a43324a1606f34d25060c6f90f74285a3}{Generate}}();}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \ \ \ \ \textcolor{keyword}{const}\ std::vector<FPrimitiveVertex>\&\ \doxymbox{\hyperlink{class_c_primitive_plane_ae6b85feda1c7c61c9a2f91288406deef}{GetVertices}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Vertices;\ \}}
+\DoxyCodeLine{00012\ \ \ \ \ \textcolor{keyword}{const}\ std::vector<unsigned\ int>\&\ \doxymbox{\hyperlink{class_c_primitive_plane_a4a9d4a01a2bc1f0350946798329d8e1b}{GetIndices}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Indices;\ \}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00015\ \ \ \ \ std::vector<FPrimitiveVertex>\ Vertices;}
+\DoxyCodeLine{00016\ \ \ \ \ std::vector<unsigned\ int>\ Indices;}
+\DoxyCodeLine{00017\ \};}
+
+\end{DoxyCode}

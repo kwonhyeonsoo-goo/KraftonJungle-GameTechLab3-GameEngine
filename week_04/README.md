@@ -118,3 +118,9 @@ Engine/Build/Debug/  ← .obj 파일
 - 네이밍: Upper Camel Case (Pascal Case)
 - C++ 표준: C++20
 - 커밋 메시지: 영문, Conventional Commits 기준
+
+---
+
+## 문서화
+
+Doxygen 기반 API 문서: https://dding-ho.github.io/Jungle3_Week2_Team1/

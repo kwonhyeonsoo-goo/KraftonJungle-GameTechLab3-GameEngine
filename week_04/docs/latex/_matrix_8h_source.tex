@@ -1,0 +1,35 @@
+\doxysection{Matrix.\+h}
+\hypertarget{_matrix_8h_source}{}\label{_matrix_8h_source}\index{Engine/Math/Matrix.h@{Engine/Math/Matrix.h}}
+\doxymbox{\hyperlink{_matrix_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_vector_8h}{Math/Vector.h}}"{}}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_vector4_8h}{Math/Vector4.h}}"{}}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{keyword}{struct\ }\doxymbox{\hyperlink{struct_f_matrix_a9fa07d46de6c7da44403290a443fee75}{FMatrix}}}
+\DoxyCodeLine{00007\ \{}
+\DoxyCodeLine{00008\ \ \ \ \ \textcolor{keywordtype}{float}\ \doxymbox{\hyperlink{struct_f_matrix_ade6cbb252cd2225e696c230862402ee3}{M}}[4][4]\ =\ \{\};}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \ \ \ \ \doxymbox{\hyperlink{struct_f_matrix_a9fa07d46de6c7da44403290a443fee75}{FMatrix}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \ \ \ \ \textcolor{keyword}{static}\ \doxymbox{\hyperlink{struct_f_matrix_a9fa07d46de6c7da44403290a443fee75}{FMatrix}}\ \doxymbox{\hyperlink{struct_f_matrix_a619068b0d1f7b0cb2e3f3346ef184a61}{Identity}}();}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \ \ \ \ \doxymbox{\hyperlink{struct_f_matrix_a9fa07d46de6c7da44403290a443fee75}{FMatrix}}\ \doxymbox{\hyperlink{struct_f_matrix_ab6c7e36fdb7d08c84d4cfb0a3c621262}{operator*}}(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_matrix_a9fa07d46de6c7da44403290a443fee75}{FMatrix}}\&\ Other)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00015\ \ \ \ \ \doxymbox{\hyperlink{struct_f_vector4}{FVector4}}\ \doxymbox{\hyperlink{struct_f_matrix_a8171786e1171e89069e289eecf461454}{TransformVector4}}(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_vector4}{FVector4}}\&\ V)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \ \ \ \ \doxymbox{\hyperlink{struct_f_matrix_a9fa07d46de6c7da44403290a443fee75}{FMatrix}}\ \doxymbox{\hyperlink{struct_f_matrix_a9c061bf666887ff60c450c3df5802865}{Transpose}}()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00018\ \ \ \ \ \doxymbox{\hyperlink{struct_f_matrix_a9fa07d46de6c7da44403290a443fee75}{FMatrix}}\ \doxymbox{\hyperlink{struct_f_matrix_a07b1f3111054ad16cb0882243e697ded}{Inverse}}()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \ \ \ \ \textcolor{comment}{//\ MVP\ 변환용\ 팩토리\ 메서드}}
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{keyword}{static}\ \doxymbox{\hyperlink{struct_f_matrix_a9fa07d46de6c7da44403290a443fee75}{FMatrix}}\ \doxymbox{\hyperlink{struct_f_matrix_a634f7363fed6b195f6c63b106a14aedb}{Translation}}(\textcolor{keywordtype}{float}\ X,\ \textcolor{keywordtype}{float}\ Y,\ \textcolor{keywordtype}{float}\ Z);}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keyword}{static}\ \doxymbox{\hyperlink{struct_f_matrix_a9fa07d46de6c7da44403290a443fee75}{FMatrix}}\ \doxymbox{\hyperlink{struct_f_matrix_ae5af1f05a931400f5d385a05610f8d73}{RotationX}}(\textcolor{keywordtype}{float}\ AngleRad);}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keyword}{static}\ \doxymbox{\hyperlink{struct_f_matrix_a9fa07d46de6c7da44403290a443fee75}{FMatrix}}\ \doxymbox{\hyperlink{struct_f_matrix_ae64236b1dba6e42578e446420ff40d6c}{RotationY}}(\textcolor{keywordtype}{float}\ AngleRad);}
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{keyword}{static}\ \doxymbox{\hyperlink{struct_f_matrix_a9fa07d46de6c7da44403290a443fee75}{FMatrix}}\ \doxymbox{\hyperlink{struct_f_matrix_a1e3e51d924e10b587aee35e73f843a40}{RotationZ}}(\textcolor{keywordtype}{float}\ AngleRad);}
+\DoxyCodeLine{00025\ \ \ \ \ \textcolor{keyword}{static}\ \doxymbox{\hyperlink{struct_f_matrix_a9fa07d46de6c7da44403290a443fee75}{FMatrix}}\ \doxymbox{\hyperlink{struct_f_matrix_a22ad51d6e20b33911878e5ffc52c7628}{Scale}}(\textcolor{keywordtype}{float}\ X,\ \textcolor{keywordtype}{float}\ Y,\ \textcolor{keywordtype}{float}\ Z);}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keyword}{static}\ \doxymbox{\hyperlink{struct_f_matrix_a9fa07d46de6c7da44403290a443fee75}{FMatrix}}\ \doxymbox{\hyperlink{struct_f_matrix_a6582f97206bfb5f44d7c8e0ad00ce62b}{LookAt}}(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\&\ Eye,\ \textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\&\ Target,\ \textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\&\ Up);}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keyword}{static}\ \doxymbox{\hyperlink{struct_f_matrix_a9fa07d46de6c7da44403290a443fee75}{FMatrix}}\ \doxymbox{\hyperlink{struct_f_matrix_a503adb50f9dc1feaa04b4b37f97aec86}{Perspective}}(\textcolor{keywordtype}{float}\ FOV,\ \textcolor{keywordtype}{float}\ AspectRatio,\ \textcolor{keywordtype}{float}\ Near,\ \textcolor{keywordtype}{float}\ Far);}
+\DoxyCodeLine{00029\ \};}
+
+\end{DoxyCode}

@@ -1,4 +1,9 @@
+#include "EngineTest.h"
+#include <iostream>
+
 int main()
 {
-    return 0;
+	EngineTestFunction();
+	std::cout << "Run Editor" << std::endl;
+	return 0;
 }

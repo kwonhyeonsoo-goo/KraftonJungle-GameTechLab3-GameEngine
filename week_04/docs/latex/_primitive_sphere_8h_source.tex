@@ -1,0 +1,23 @@
+\doxysection{Primitive\+Sphere.\+h}
+\hypertarget{_primitive_sphere_8h_source}{}\label{_primitive_sphere_8h_source}\index{Engine/Primitive/PrimitiveSphere.h@{Engine/Primitive/PrimitiveSphere.h}}
+\doxymbox{\hyperlink{_primitive_sphere_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_primitive_vertex_8h}{Renderer/PrimitiveVertex.h}}"{}}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_primitive_sphere}{CPrimitiveSphere}}}
+\DoxyCodeLine{00007\ \{}
+\DoxyCodeLine{00008\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00009\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_primitive_sphere_a3685acd045c42e950774113bcf0c419c}{Generate}}(\textcolor{keywordtype}{int}\ Segments\ =\ 16,\ \textcolor{keywordtype}{int}\ Rings\ =\ 16);}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \ \ \ \ \textcolor{keyword}{const}\ std::vector<FPrimitiveVertex>\&\ \doxymbox{\hyperlink{class_c_primitive_sphere_ad4686ac6a746b75bbd648a162898e9b7}{GetVertices}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Vertices;\ \}}
+\DoxyCodeLine{00012\ \ \ \ \ \textcolor{keyword}{const}\ std::vector<unsigned\ int>\&\ \doxymbox{\hyperlink{class_c_primitive_sphere_a60c5f652cbc75d13061b4e5498c760b7}{GetIndices}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Indices;\ \}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00015\ \ \ \ \ std::vector<FPrimitiveVertex>\ Vertices;}
+\DoxyCodeLine{00016\ \ \ \ \ std::vector<unsigned\ int>\ Indices;}
+\DoxyCodeLine{00017\ \};}
+
+\end{DoxyCode}

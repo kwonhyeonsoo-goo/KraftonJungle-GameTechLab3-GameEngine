@@ -1,9 +1,10 @@
 #pragma once
 
+#include "CoreMinimal.h"
 #include <vector>
 #include "Renderer/PrimitiveVertex.h"
 
-class CPrimitiveSphere
+class ENGINE_API CPrimitiveSphere
 {
 public:
     void Generate(int Segments = 16, int Rings = 16);

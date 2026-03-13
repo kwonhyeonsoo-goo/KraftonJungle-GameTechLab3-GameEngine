@@ -1,0 +1,31 @@
+\doxysection{Renderer.\+h}
+\hypertarget{_renderer_8h_source}{}\label{_renderer_8h_source}\index{Engine/Renderer/Renderer.h@{Engine/Renderer/Renderer.h}}
+\doxymbox{\hyperlink{_renderer_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <d3d11.h>}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_renderer_aa90aba692202fafdef765a964cd2a4ca}{CRenderer}}}
+\DoxyCodeLine{00006\ \{}
+\DoxyCodeLine{00007\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00008\ \ \ \ \ \doxymbox{\hyperlink{class_c_renderer_aa90aba692202fafdef765a964cd2a4ca}{CRenderer}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00009\ \ \ \ \ \doxymbox{\hyperlink{class_c_renderer_acb0a66a0d9205fe5f24cec41f0e0b249}{\string~CRenderer}}();}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_c_renderer_af74ac3df749b2fbaa9d1aa688d5a1517}{Initialize}}(HWND\ Hwnd,\ \textcolor{keywordtype}{int}\ Width,\ \textcolor{keywordtype}{int}\ Height);}
+\DoxyCodeLine{00012\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_a4053138d44033afd1cf9f28852d484c2}{BeginFrame}}();}
+\DoxyCodeLine{00013\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_a5eb509d947050b18dc74607be9523c5e}{EndFrame}}();}
+\DoxyCodeLine{00014\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_a99d8500773d26275a45daed89d9a6071}{Release}}();}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \ \ \ \ ID3D11Device*\ \doxymbox{\hyperlink{class_c_renderer_a8e7e81b21c823a9d9bea29e7461f49a7}{GetDevice}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Device;\ \}}
+\DoxyCodeLine{00017\ \ \ \ \ ID3D11DeviceContext*\ \doxymbox{\hyperlink{class_c_renderer_a8ea51190b7b6e47b6c0e5c23acb65c7e}{GetDeviceContext}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ DeviceContext;\ \}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00020\ \ \ \ \ ID3D11Device*\ Device\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00021\ \ \ \ \ ID3D11DeviceContext*\ DeviceContext\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00022\ \ \ \ \ IDXGISwapChain*\ SwapChain\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00023\ \ \ \ \ ID3D11RenderTargetView*\ RenderTargetView\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00024\ \ \ \ \ ID3D11DepthStencilView*\ DepthStencilView\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00025\ \};}
+
+\end{DoxyCode}
