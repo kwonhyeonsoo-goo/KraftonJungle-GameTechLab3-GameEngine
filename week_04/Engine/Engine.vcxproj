@@ -27,6 +27,7 @@
     <ClInclude Include="Component\PrimitiveComponent.h" />
     <ClInclude Include="Component\CubeComponent.h" />
     <ClInclude Include="Component\SphereComponent.h" />
+    <ClInclude Include="Math\MatrixUtils.h" />
     <ClInclude Include="Object\ObjectManager.h" />
     <ClInclude Include="Renderer\ShaderType.h" />
     <ClInclude Include="Scene\Scene.h" />
@@ -152,8 +153,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /y /d "$(ProjectDir)Renderer\Shaders\Engine.pdb" "$(OutDir)"
-xcopy /Y /D "$(ProjectDir)..\Engine\Bin\$(Configuration)\Engine.dll" "$(OutDir)"
+      <Command>xcopy /Y /D "$(ProjectDir)..\Engine\Bin\$(Configuration)\Engine.dll" "$(OutDir)"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -174,8 +174,7 @@ xcopy /Y /D "$(ProjectDir)..\Engine\Bin\$(Configuration)\Engine.dll" "$(OutDir)"
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /y /d "$(ProjectDir)Renderer\Shaders\Engine.pdb" "$(OutDir)"
-xcopy /Y /D "$(ProjectDir)..\Engine\Bin\$(Configuration)\Engine.dll" "$(OutDir)"
+      <Command>xcopy /Y /D "$(ProjectDir)..\Engine\Bin\$(Configuration)\Engine.dll" "$(OutDir)"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>

@@ -1,6 +1,6 @@
 #include "Renderer.h"
-
-
+#include "ShaderType.h"
+#include "Math/MatrixUtils.h"
 #include <dxgi1_3.h>
 #include <cassert>
 #pragma comment(lib, "d3d11.lib")
@@ -161,7 +161,57 @@ void CRenderer::BeginFrame()
 	DeviceContext->RSSetViewports(1, &Viewport);
 
 }
+void CRenderer::DrawTestTriangle()
+{
+	static ID3D11Buffer* s_vb = nullptr;
 
+	if (!s_vb)
+	{
+		struct Vertex { float x, y, z; float r, g, b, a; float nx, ny, nz; };
+		Vertex verts[3] = {
+			{  0.0f,  0.5f, 0.0f,  1,0,0,1,  0,0,-1 },
+			{  0.5f, -0.5f, 0.0f,  0,1,0,1,  0,0,-1 },
+			{ -0.5f, -0.5f, 0.0f,  0,0,1,1,  0,0,-1 },
+		};
+		D3D11_BUFFER_DESC bd = {};
+		bd.ByteWidth = sizeof(verts);
+		bd.Usage = D3D11_USAGE_IMMUTABLE;
+		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		D3D11_SUBRESOURCE_DATA sd = { verts };
+		Device->CreateBuffer(&bd, &sd, &s_vb);
+	}
+
+	// 오브젝트 Transform
+	FTransform obj;
+	obj.Location = { 0.0f, 0.0f, 10.0f };
+	obj.Rotation = { 0.0f, 0.0f, 0.0f };
+	obj.Scale = { 1.0f, 1.0f, 1.0f };
+
+	// 카메라 — Z -5에서 원점을 바라봄
+	FCamera cam;
+	cam.Position = { 0.0f, 0.0f, -5.0f };
+	cam.Target = { 0.0f, 0.0f,  0.0f };
+	cam.Up = { 0.0f, 1.0f,  0.0f };
+	cam.Fov = 45.0f;
+	cam.AspectRatio = Viewport.Width / Viewport.Height;
+	cam.Near = 0.1f;
+	cam.Far = 1000.0f;
+
+	FConstants cb = {};
+	BuildMVP(cb, obj, cam);
+	cb.HighlightColor[0] = 1.0f;
+	cb.HighlightColor[3] = 1.0f;
+	cb.bIsSelected = 0;
+
+	UINT stride = sizeof(float) * 10, offset = 0;
+	DeviceContext->IASetVertexBuffers(0, 1, &s_vb, &stride, &offset);
+	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	ShaderManager.Bind(DeviceContext);
+	ShaderManager.UpdateConstants(DeviceContext, cb);
+
+	DeviceContext->Draw(3, 0);
+}
 void CRenderer::EndFrame()
 {
 	SwapChain->Present(1, 0);

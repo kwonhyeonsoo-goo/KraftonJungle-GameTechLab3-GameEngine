@@ -39,7 +39,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         else
         {
             renderer.BeginFrame();
- 
+            renderer.DrawTestTriangle();
             renderer.EndFrame();
         }
     }

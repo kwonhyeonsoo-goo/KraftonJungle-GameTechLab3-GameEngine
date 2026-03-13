@@ -1,6 +1,6 @@
 cbuffer Constants : register(b0)
 {
-    row_major float4x4 MVP;
+    float4x4 MVP;
     float4 HighlightColor;
     uint bIsSelected;
 };

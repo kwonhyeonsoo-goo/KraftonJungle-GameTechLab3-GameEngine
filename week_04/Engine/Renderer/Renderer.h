@@ -12,6 +12,7 @@ public:
 
 	bool Initialize(HWND Hwnd, int Width, int Height);
 	void BeginFrame();
+	void DrawTestTriangle();
 	void EndFrame();
 	void Release();
 
