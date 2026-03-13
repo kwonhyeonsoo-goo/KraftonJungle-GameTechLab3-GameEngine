@@ -23,4 +23,5 @@ private:
 	IDXGISwapChain* SwapChain = nullptr;
 	ID3D11RenderTargetView* RenderTargetView = nullptr;
 	ID3D11DepthStencilView* DepthStencilView = nullptr;
+	D3D11_VIEWPORT Viewport = {};
 };

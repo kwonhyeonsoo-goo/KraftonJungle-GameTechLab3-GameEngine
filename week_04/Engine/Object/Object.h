@@ -7,4 +7,3 @@ public:
 	UObject() = default;
 	virtual ~UObject() = default;
 };
-
