@@ -1,11 +1,11 @@
 #pragma once
-#include "Object.h"
-
-#include "Math/Vector.h"
+#include "CoreMinimal.h"
 
 class USceneComponent : public UObject
 {
 public:
-	FVector
+	FVector RelativeLocation;
+	FVector RelativeRotation;
+	FVector RelativeScale3D;
 };
 
