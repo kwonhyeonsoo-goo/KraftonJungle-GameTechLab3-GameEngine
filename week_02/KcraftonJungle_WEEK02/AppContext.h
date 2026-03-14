@@ -1,10 +1,16 @@
 #pragma once
 #include "Engine/World/World.h"
 #include "Engine/Rendering/URenderer.h"
+
+#include "Engine/ObjectKernel/UUIDService.h"
+#include "Engine/ObjectKernel/ClassRegistry.h"
+#include "Engine/ObjectKernel/ObjectFactory.h"
 #include "Engine/ObjectKernel/ObjectStore.h"
+
 #include "Engine/Editor/Commands/ICommand.h"
 #include "Engine/Editor/Events/EditorEvents.h"
 #include "Engine/Foundation/Core/CoreTypes.h"
+#include "Engine/Platform/WindowHost.h"
 #include "Engine/ObjectKernel/UUIDService.h"
 #include "Engine/ObjectKernel/ClassRegistry.h"
 #include "Engine/ObjectKernel/ObjectFactory.h"
@@ -33,7 +39,7 @@ struct AppContext {
     URenderer  Renderer;
 
     // Platform
-    //WindowHost     Window;
+    WindowHost Window;
 
     // 式式 蟾晦�� 式式
     bool Initialize(const FString& windowTitle = "MyEngine",
