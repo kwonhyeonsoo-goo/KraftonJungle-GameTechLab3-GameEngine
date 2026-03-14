@@ -15,6 +15,18 @@ UClass* USceneComponent::StaticClass()
     return &ClassInfo;
 }
 
+void USceneComponent::SetRelativeTransform(const FTransform& InTransform)
+{
+	RelativeTransform = InTransform;
+	MarkTransformDirty();
+}
+
+void USceneComponent::SetRelativeLocation(const FVector& InLocation)
+{
+	RelativeTransform.Location = InLocation;
+	MarkTransformDirty();
+}
+
 void USceneComponent::AttachTo(USceneComponent* InParent)
 {
 	if (AttachParent == InParent)
@@ -29,6 +41,8 @@ void USceneComponent::AttachTo(USceneComponent* InParent)
 	{
 		AttachParent->AttachChildren.push_back(this);
 	}
+
+	MarkTransformDirty();
 }
 
 void USceneComponent::DetachFromParent()
@@ -41,16 +55,17 @@ void USceneComponent::DetachFromParent()
 	auto& Siblings = AttachParent->AttachChildren;
 	std::erase(Siblings, this);
 	AttachParent = nullptr;
+
+	MarkTransformDirty();
 }
 
-FMatrix USceneComponent::GetWorldTransform() const
+const FMatrix& USceneComponent::GetWorldTransform() const
 {
-	FMatrix LocalMatrix = RelativeTransform.ToMatrix();
-	if (AttachParent)
+	if (bWorldTransformDirty)
 	{
-		return LocalMatrix * AttachParent->GetWorldTransform();
+		UpdateWorldTransform();
 	}
-	return LocalMatrix;
+	return CachedWorldTransform;
 }
 
 FVector USceneComponent::GetWorldLocation() const
@@ -60,11 +75,33 @@ FVector USceneComponent::GetWorldLocation() const
 		return RelativeTransform.Location;
 	}
 
-	// TODO : XMMatrix 사용해서 제대로 구현해야함.
 	const FVector ParentWorld = AttachParent->GetWorldLocation();
 	return FVector{
 		ParentWorld.X + RelativeTransform.Location.X,
 		ParentWorld.Y + RelativeTransform.Location.Y,
 		ParentWorld.Z + RelativeTransform.Location.Z
 	};
+}
+
+void USceneComponent::MarkTransformDirty()
+{
+	bWorldTransformDirty = true;
+
+	for (USceneComponent* Child : AttachChildren)
+	{
+		if (Child)
+		{
+			Child->MarkTransformDirty();
+		}
+	}
+}
+
+void USceneComponent::UpdateWorldTransform() const
+{
+	CachedWorldTransform = RelativeTransform.ToMatrix();
+	if (AttachParent)
+	{
+		CachedWorldTransform = CachedWorldTransform * AttachParent->GetWorldTransform();
+	}
+	bWorldTransformDirty = false;
 }
