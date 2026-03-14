@@ -47,9 +47,9 @@ private:
 	D3D11_VIEWPORT Viewport = {};
 
 	std::vector<FRenderCommand> CommandList;
-	FMatrix ViewProjectionMatrix;
 
 	// 매 프레임 외부에서 설정
 public:
+	FMatrix ViewProjectionMatrix;
 	CShaderManager ShaderManager;
 };

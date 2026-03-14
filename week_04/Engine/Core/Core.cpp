@@ -119,7 +119,7 @@ void CCore::Render()
 	if (Camera)
 	{
 		FMatrix VP = Camera->GetViewMatrix() * Camera->GetProjectionMatrix();
-		Renderer->ViewProjectionMatrix = VP;
+		Renderer->ViewProjectionMatrix=VP;
 	}
 
 	for (AActor* Actor : Scene->GetActors())
