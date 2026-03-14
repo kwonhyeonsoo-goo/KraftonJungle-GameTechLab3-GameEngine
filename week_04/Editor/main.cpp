@@ -3,22 +3,42 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
 #include "Renderer/Renderer.h"
+#include "Renderer/ShaderManager.h"
+#include "Camera/Camera.h"
+#include "Object/Actor/Actor.h"
+#include "Component/SphereComponent.h"
+#include "Component/CubeComponent.h"
+#include "Component/PrimitiveComponent.h"
+#include "Primitive/PrimitiveBase.h"
 #include <iostream>
+
+// ─── 입력 상태 ───
+static bool bRightMouseDown = false;
+static POINT LastMousePos = {};
 
 static int ResizeWidth = 0, ResizeHeight = 0;
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam)) 
-		return true;
-	if (msg == WM_DESTROY) { 
-		PostQuitMessage(0); 
-		return 0; 
-	}
-	if (msg == WM_SIZE)
+    if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+        return true;
+	switch (msg)
 	{
-		ResizeWidth = LOWORD(lParam);
-		ResizeHeight = HIWORD(lParam);
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		return 0;
+    case WM_SIZE:
+        ResizeWidth = LOWORD(lParam);
+        ResizeHeight = HIWORD(lParam);
+        return 0;
+	case WM_RBUTTONDOWN:
+		bRightMouseDown = true;
+		GetCursorPos(&LastMousePos);
+		SetCapture(hWnd);
+		return 0;
+	case WM_RBUTTONUP:
+		bRightMouseDown = false;
+		ReleaseCapture();
 		return 0;
 	}
 	return DefWindowProc(hWnd, msg, wParam, lParam);
@@ -28,7 +48,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
 	ImGui_ImplWin32_EnableDpiAwareness();
 	float MainScale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY));
-
+	// ─── 윈도우 생성 ───
 	WNDCLASSEX wc = {};
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.lpfnWndProc = WndProc;
@@ -42,7 +62,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		nullptr, nullptr, hInstance, nullptr
 	);
 	ShowWindow(hwnd, SW_SHOW);
-
+	// ─── Renderer 초기화 ───
 	CRenderer* Renderer= new CRenderer();
 	if (!Renderer->Initialize(hwnd, 1280, 720))
 		return -1;
@@ -62,9 +82,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	//io.ConfigDockingTransparentPayload = true;
 
 
-	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
-	//ImGui::StyleColorsLight();
+
 
 	// Setup scaling
 	ImGuiStyle& style = ImGui::GetStyle();
@@ -103,7 +122,27 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	bool show_demo_window = true;
 	bool show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+	// ─── 카메라 ───
+	CCamera camera;
+	camera.SetPosition({ 0.0f, 2.0f, -5.0f });
+	camera.SetRotation(0.0f, -15.0f);
+	camera.SetAspectRatio(1280.0f / 720.0f);
 
+	// ─── Actor 스폰 ───
+	AActor* SphereActor = new AActor(AActor::StaticClass(), "SphereActor");
+	USphereComponent* SphereComp = new USphereComponent();
+	SphereActor->AddOwnedComponent(SphereComp);
+	SphereActor->SetActorLocation({ 0.0f, 0.0f, 0.0f });
+
+	AActor* CubeActor = new AActor(AActor::StaticClass(), "CubeActor");
+	UCubeComponent* CubeComp = new UCubeComponent();
+	CubeActor->AddOwnedComponent(CubeComp);
+	CubeActor->SetActorLocation({ 3.0f, 0.0f, 0.0f });
+
+	// ─── 타이밍 ───
+	LARGE_INTEGER Frequency, LastTime, CurrentTime;
+	QueryPerformanceFrequency(&Frequency);
+	QueryPerformanceCounter(&LastTime);
 	MSG msg = {};
 	bool done = false;
 	while (!done)
@@ -127,11 +166,51 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 			Renderer->OnResize(ResizeWidth, ResizeHeight);
 			ResizeWidth = ResizeHeight = 0;
 		}
+
+		// 델타 타임
+		QueryPerformanceCounter(&CurrentTime);
+		float DeltaTime = static_cast<float>(CurrentTime.QuadPart - LastTime.QuadPart)
+			/ static_cast<float>(Frequency.QuadPart);
+		LastTime = CurrentTime;
+
+		// ─── 키보드 입력 (WASD + QE) ───
+		if (GetAsyncKeyState('W') & 0x8000) camera.MoveForward(DeltaTime);
+		if (GetAsyncKeyState('S') & 0x8000) camera.MoveForward(-DeltaTime);
+		if (GetAsyncKeyState('D') & 0x8000) camera.MoveRight(DeltaTime);
+		if (GetAsyncKeyState('A') & 0x8000) camera.MoveRight(-DeltaTime);
+		if (GetAsyncKeyState('E') & 0x8000) camera.MoveUp(DeltaTime);
+		if (GetAsyncKeyState('Q') & 0x8000) camera.MoveUp(-DeltaTime);
+
+		// ─── 마우스 우클릭 드래그 → 카메라 회전 ───
+		if (bRightMouseDown)
+		{
+			POINT CurrentMousePos;
+			GetCursorPos(&CurrentMousePos);
+			float DeltaX = static_cast<float>(CurrentMousePos.x - LastMousePos.x);
+			float DeltaY = static_cast<float>(CurrentMousePos.y - LastMousePos.y);
+			LastMousePos = CurrentMousePos;
+
+			camera.Rotate(DeltaX * 0.2f, -DeltaY * 0.2f);
+		}
+
 		ImGui_ImplDX11_NewFrame();
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 		Renderer->BeginFrame();
-		Renderer->DrawTestTriangle();
+		shader.Bind(context);
+
+		FMatrix VP = camera.GetViewMatrix() * camera.GetProjectionMatrix();
+		renderer.ViewProjectionMatrix = VP;
+
+		if (SphereComp->GetPrimitive())
+		{
+			renderer.AddCommand({ SphereComp->GetPrimitive()->GetMeshData(), SphereComp->GetWorldTransform() });
+		}
+
+		if (CubeComp->GetPrimitive())
+		{
+			renderer.AddCommand({ CubeComp->GetPrimitive()->GetMeshData(), CubeComp->GetWorldTransform() });
+		}
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
 		{
@@ -178,13 +257,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		// Present
 
 		//HRESULT hr = g_pSwapChain->Present(0, 0); // Present without vsync
-
+		renderer.ExecuteCommands();
 		Renderer->EndFrame();
 
 	}
+	delete SphereActor;
+	delete CubeActor;
 	ImGui_ImplDX11_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
+	CPrimitiveBase::ClearCache();
 	delete Renderer;
 	::DestroyWindow(hwnd);
 	::UnregisterClassW(wc.lpszClassName, wc.hInstance);

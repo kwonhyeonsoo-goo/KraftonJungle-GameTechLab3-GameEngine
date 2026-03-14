@@ -1,8 +1,13 @@
 cbuffer Constants : register(b0)
 {
+<<<<<<<< HEAD:Engine/Renderer/Shaders/VertexShader.hlsl
     float4x4 MVP;
     float4 HighlightColor;
     uint bIsSelected;
+========
+    row_major float4x4 WVP;
+    row_major float4x4 World;
+>>>>>>>> GraphicFramework:Engine/Shaders/VertexShader.hlsl
 };
 
 struct VS_INPUT
@@ -16,12 +21,14 @@ struct VS_OUTPUT
 {
     float4 Position : SV_POSITION;
     float4 Color    : COLOR;
+    float3 Normal   : NORMAL;
 };
 
 VS_OUTPUT main(VS_INPUT Input)
 {
     VS_OUTPUT Output;
-    Output.Position = mul(float4(Input.Position, 1.0f), MVP);
-    Output.Color = bIsSelected ? HighlightColor : Input.Color;
+    Output.Position = mul(float4(Input.Position, 1.0f), WVP);
+    Output.Color = Input.Color;
+    Output.Normal = mul(Input.Normal, (float3x3)World);
     return Output;
 }
