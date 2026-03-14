@@ -12,9 +12,7 @@
     <ClCompile Include="Editor\ImGui\imgui_impl_win32.cpp" />
     <ClCompile Include="Editor\ImGui\imgui_tables.cpp" />
     <ClCompile Include="Editor\ImGui\imgui_widgets.cpp" />
-    <ClCompile Include="Engine\Core\Math\FVector.cpp" />
     <ClCompile Include="Engine\Foundation\Core\log.cpp" />
-    <ClCompile Include="Engine\Foundation\Core\Memory.cpp" />
     <ClCompile Include="Engine\Foundation\Containers\FVector.cpp" />
     <ClCompile Include="Engine\ObjectKernel\ClassRegistry.cpp" />
     <ClCompile Include="Engine\ObjectKernel\ObjectFactory.cpp" />
@@ -25,7 +23,6 @@
     <ClCompile Include="Engine\Rendering\RenderSceneExtractor.cpp" />
     <ClCompile Include="Engine\Rendering\URenderer.cpp" />
     <ClCompile Include="Engine\Services\SerializationService.cpp" />
-    <ClCompile Include="Engine\World\UScene.cpp" />
     <ClCompile Include="Engine\World\Transform.cpp" />
     <ClCompile Include="Engine\World\UCubeComp.cpp" />
     <ClCompile Include="Engine\World\UCubeMesh.cpp" />
@@ -34,9 +31,12 @@
     <ClCompile Include="Engine\World\UPrimitiveComponent.cpp" />
     <ClCompile Include="Engine\World\USceneComponent.cpp" />
     <ClCompile Include="Engine\World\USphereComp.cpp" />
-    <ClCompile Include="Engine\Services\PickingService.cpp" />
+    <ClCompile Include="Engine\World\World.cpp" />
+    <ClCompile Include="Engine\World\Level.cpp" />
     <ClCompile Include="Engine\Services\StatsService.cpp" />
+    <ClCompile Include="Engine\Services\PickingService.cpp" />
     <ClCompile Include="Engine\Services\ConsoleService.cpp" />
+    <ClCompile Include="Engine\Platform\WindowHost.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
@@ -48,19 +48,8 @@
     <ClInclude Include="Editor\ImGui\imstb_rectpack.h" />
     <ClInclude Include="Editor\ImGui\imstb_textedit.h" />
     <ClInclude Include="Editor\ImGui\imstb_truetype.h" />
-    <ClInclude Include="Engine\Core\CoreTypes.h" />
-    <ClInclude Include="Engine\Core\Math\FMatrix.h" />
-    <ClInclude Include="Engine\Core\Math\FMatrix4.h" />
-    <ClInclude Include="Engine\Core\Math\FVector.h" />
-    <ClInclude Include="Engine\Core\Math\FVector4.h" />
-    <ClInclude Include="Engine\Core\Math\TArray.h" />
-    <ClInclude Include="Engine\Core\Math\TMap.h" />
-    <ClInclude Include="Engine\Core\UObject\Circle.h" />
-    <ClInclude Include="Engine\Core\UObject\Cube.h" />
-    <ClInclude Include="Engine\Core\UObject\Rect.h" />
     <ClInclude Include="Engine\Foundation\Core\CoreTypes.h" />
     <ClInclude Include="Engine\Foundation\Core\log.h" />
-    <ClInclude Include="Engine\Foundation\Core\Memory.h" />
     <ClInclude Include="Engine\Foundation\Containers\FMatrix.h" />
     <ClInclude Include="Engine\Foundation\Containers\FMatrix4.h" />
     <ClInclude Include="Engine\Foundation\Containers\FVector.h" />
@@ -81,7 +70,6 @@
     <ClInclude Include="Engine\Rendering\RenderTypes.h" />
     <ClInclude Include="Engine\Rendering\URenderer.h" />
     <ClInclude Include="Engine\Services\SerializationService.h" />
-    <ClInclude Include="Engine\World\UScene.h" />
     <ClInclude Include="Engine\World\Sphere.h" />
     <ClInclude Include="Engine\World\Transform.h" />
     <ClInclude Include="Engine\World\UCubeComp.h" />
@@ -92,9 +80,12 @@
     <ClInclude Include="Engine\World\USceneComponent.h" />
     <ClInclude Include="Engine\World\USphereComp.h" />
     <ClInclude Include="json.hpp" />
-    <ClInclude Include="Engine\Services\PickingService.h" />
+    <ClInclude Include="Engine\World\World.h" />
+    <ClInclude Include="Engine\World\Level.h" />
     <ClInclude Include="Engine\Services\StatsService.h" />
+    <ClInclude Include="Engine\Services\PickingService.h" />
     <ClInclude Include="Engine\Services\ConsoleService.h" />
+    <ClInclude Include="Engine\Platform\WindowHost.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">

@@ -2,6 +2,10 @@
 
 bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 height)
 {
+    if (Window.Initialize(windowTitle, width, height)) {
+        return true;
+    }
+
     return false;
 }
 
