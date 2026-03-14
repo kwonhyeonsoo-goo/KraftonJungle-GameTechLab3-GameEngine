@@ -17,7 +17,7 @@
 #include "Engine/Editor/EditorSession.h"
 #include "Engine/Editor/EditorManager.h"
 
-// main() ½ºÅÃ¿¡¼­ »ý¼º
+// main() 
 struct AppContext {
     // Object Kernel
     UUIDService    UUIDs;
@@ -41,7 +41,7 @@ struct AppContext {
     // Platform
     WindowHost Window;
 
-    // ¦¡¦¡ ÃÊ±âÈ­ ¦¡¦¡
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­ ï¿½ï¿½ï¿½ï¿½
     bool Initialize(const FString& windowTitle = "MyEngine",
         int32 width = 1280,
         int32 height = 720);
@@ -53,8 +53,8 @@ struct AppContext {
     TDelegate<ObjectDestroyedEvent> OnObjectDestroyed;
 
 private:
-    void RegisterBuiltinTypes();   // Cube, Sphere, Plane ClassRegistry µî·Ï
+    void RegisterBuiltinTypes();   // Cube, Sphere, Plane ClassRegistry ï¿½ï¿½ï¿½
     void RegisterPanels();
     void RegisterTools();
-    void SubscribeEvents();        // PlatformEvents ¡æ Editor/Renderer ¿¬°á
+    void SubscribeEvents();        // PlatformEvents ï¿½ï¿½ Editor/Renderer ï¿½ï¿½ï¿½ï¿½
 };

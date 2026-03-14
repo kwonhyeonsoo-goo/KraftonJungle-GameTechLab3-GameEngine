@@ -25,6 +25,7 @@ public:
 private:
     FString Name;
     AppContext* Ctx = nullptr;
+public:
     Level PersistentLevel;
     TArray<Level*> SubLevels;
 };

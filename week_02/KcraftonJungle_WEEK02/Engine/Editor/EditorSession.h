@@ -4,6 +4,8 @@
 #include "./SelectionSet.h"
 #include "./ToolContext.h"
 
+class InputState;
+
 struct CameraState {
     FVector Position;
     float   Yaw = 0.f;

@@ -1,5 +1,8 @@
 #include "ObjectFactory.h"
 #include "../../AppContext.h"
+#include "../World/UCubeComp.h"
+#include "../World/USphereComp.h"
+#include "../World/UPlaneComp.h"
 
 UObject* ObjectFactory::ConstructObject(AppContext& ctx, UClass* uclass)
 {
