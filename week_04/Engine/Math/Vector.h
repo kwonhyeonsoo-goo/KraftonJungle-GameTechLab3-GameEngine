@@ -2,10 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
-
 #include "EngineAPI.h"
-#include <cmath>
-
 #include "Types/CoreTypes.h"
 
 struct ENGINE_API FVector

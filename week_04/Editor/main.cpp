@@ -134,18 +134,45 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	wc.lpszClassName = L"TestWindow";
 	RegisterClassEx(&wc);
 
+	// 원하는 클라이언트 크기
+	int desiredWidth = 1280;
+	int desiredHeight = 720;
+
+	// 기본 창 스타일
+	DWORD dwStyle = WS_OVERLAPPEDWINDOW;
+
+	// 확장 스타일 (필요하다면 변경 가능)
+	DWORD dwExStyle = 0;
+
+	// RECT 구조체에 원하는 클라이언트 크기 설정
+	RECT rect = { 0, 0, desiredWidth, desiredHeight };
+
+	// 창 크기를 계산
+	AdjustWindowRectEx(&rect, dwStyle, TRUE, dwExStyle);
+	int windowWidth = rect.right - rect.left;
+	int windowHeight = rect.bottom - rect.top;
+
 	HWND hwnd = CreateWindowEx(
-		0, L"TestWindow", L"Renderer Test",
-		WS_OVERLAPPEDWINDOW, 100, 100, 1280, 720,
+		dwExStyle,
+		L"TestWindow",
+		L"Renderer Test",
+		dwStyle,
+		CW_USEDEFAULT, CW_USEDEFAULT,
+		windowWidth, windowHeight,
 		nullptr, nullptr, hInstance, nullptr
 	);
 	::ShowWindow(hwnd, SW_SHOWDEFAULT);
 	::UpdateWindow(hwnd);
 
+	RECT clientRect = {};
+	GetClientRect(hwnd, &clientRect);
+	int clientWidth = clientRect.right - clientRect.left;
+	int clientHeight = clientRect.bottom - clientRect.top;
+
 	// Core
 	CCore Core;
 	GCore = &Core;
-	if (!Core.Initialize(hwnd, 1280, 720))
+	if (!Core.Initialize(hwnd, clientWidth, clientHeight))
 		return -1;
 
 	// ImGui
