@@ -82,7 +82,7 @@ void UScene::LoadSceneFromFile(const FString& FilePath)
 	int ActorIndex = 0;
 	for (auto& [Key, Value] : Json["Primitives"].items())
 	{
-		std::string Type = Value.value("Type", "");
+		FString Type = Value.value("Type", "");
 
 		UActorComponent* Comp = nullptr;
 		if (Type == "Sphere")

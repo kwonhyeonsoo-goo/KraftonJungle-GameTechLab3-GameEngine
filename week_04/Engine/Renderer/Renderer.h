@@ -54,8 +54,8 @@ public:
 	FMatrix GetViewProjectionMatrix() { return ViewProjectionMatrix; }
 	ID3D11Device* GetDevice() const { return Device; }
 	ID3D11DeviceContext* GetDeviceContext() const { return DeviceContext; }
-	ID3D11RenderTargetView* GetRenderTargetView() const {return RenderTargetView;}
-	IDXGISwapChain* GetSwapChain() const {return SwapChain;};
+	ID3D11RenderTargetView* GetRenderTargetView() const { return RenderTargetView; }
+	IDXGISwapChain* GetSwapChain() const { return SwapChain; };
 	HWND GetHwnd() const { return Hwnd; }
 private:
 	bool CreateConstantBuffer();
@@ -71,8 +71,8 @@ private:
 	ID3D11RasterizerState* RasterizerState = nullptr;
 	D3D11_VIEWPORT Viewport = {};
 
-	std::vector<FRenderCommand> CommandList;
-	std::vector<FPrimitiveVertex> LineVertices;
+	TArray<FRenderCommand> CommandList;
+	TArray<FPrimitiveVertex> LineVertices;
 	ID3D11Buffer* LineVertexBuffer = nullptr;
 	ID3D11DepthStencilState* LineDepthState = nullptr;
 
