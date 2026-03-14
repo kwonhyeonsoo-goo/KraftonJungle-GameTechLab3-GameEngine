@@ -12,7 +12,6 @@ struct InputState {
 
     bool IsMouseCapturedByImGui()    const;
     bool IsKeyboardCapturedByImGui() const;
-    // ★ 선언만 ? 구현은 .cpp로
 };
 
 class InputRouter {
