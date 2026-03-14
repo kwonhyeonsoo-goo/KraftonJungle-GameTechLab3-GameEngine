@@ -132,6 +132,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AppContext.h" />
     <ClInclude Include="FMatrix4.h" />
     <ClInclude Include="FVector.h" />
     <ClInclude Include="FVector4.h" />
@@ -143,6 +144,9 @@
     <ClInclude Include="ImGui\imstb_rectpack.h" />
     <ClInclude Include="ImGui\imstb_textedit.h" />
     <ClInclude Include="ImGui\imstb_truetype.h" />
+    <ClInclude Include="json.hpp" />
+    <ClInclude Include="Scene.h" />
+    <ClInclude Include="SerializationService.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="UCubeComp.h" />
     <ClInclude Include="UObject.h" />
@@ -152,6 +156,7 @@
     <ClInclude Include="USphereComp.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AppContext.cpp" />
     <ClCompile Include="ImGui\imgui.cpp" />
     <ClCompile Include="ImGui\imgui_demo.cpp" />
     <ClCompile Include="ImGui\imgui_draw.cpp" />
@@ -160,6 +165,8 @@
     <ClCompile Include="ImGui\imgui_tables.cpp" />
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Scene.cpp" />
+    <ClCompile Include="SerializationService.cpp" />
     <ClCompile Include="UCubeComp.cpp" />
     <ClCompile Include="UObject.cpp" />
     <ClCompile Include="UPrimitiveComponent.cpp" />

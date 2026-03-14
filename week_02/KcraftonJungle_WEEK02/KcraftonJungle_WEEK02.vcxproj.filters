@@ -43,6 +43,13 @@
     <ClCompile Include="URenderer.cpp">
       <Filter>Engine\Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="Scene.cpp">
+      <Filter>Engine\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SerializationService.cpp">
+      <Filter>Engine\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="AppContext.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Sphere.h" />
@@ -97,6 +104,16 @@
     <ClInclude Include="URenderer.h">
       <Filter>Engine\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="Scene.h">
+      <Filter>Engine\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="json.hpp">
+      <Filter>Engine\Core\Json</Filter>
+    </ClInclude>
+    <ClInclude Include="SerializationService.h">
+      <Filter>Engine\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="AppContext.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">
@@ -146,6 +163,9 @@
     </Filter>
     <Filter Include="Engine\Scene">
       <UniqueIdentifier>{8595a1e2-a0d6-4c5b-8d6a-ed9d07b3af0e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Core\Json">
+      <UniqueIdentifier>{2edce773-2dd7-4323-8d70-00667c344f84}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

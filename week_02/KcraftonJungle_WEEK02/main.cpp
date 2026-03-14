@@ -101,10 +101,17 @@ FVertexSimple cube_vertices[] =
 };
 
 #include "Sphere.h"
+#include "AppContext.h"
 
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
+
+    //TODO : WindowHost로 옮기기
+#pragma region WindowHost
+    HINSTANCE hInstance = GetModuleHandle(nullptr); // WinMain 파라미터 대신 이걸로 대체 가능
+    //Window.Initialize(hInstance, ...);
+
     WCHAR WindowClass[] = L"JungleWindowClass";
 
     WCHAR Title[] = L"Game Tech Lab";
@@ -115,8 +122,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     HWND hWnd = CreateWindowExW(0, WindowClass, Title, WS_POPUP | WS_VISIBLE | WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, 1024, 1024,
-
         nullptr, nullptr, hInstance, nullptr);
+#pragma endregion
+
+    AppContext ctx;
+
     URenderer renderer;
 
     renderer.Create(hWnd);
