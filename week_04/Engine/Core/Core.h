@@ -28,8 +28,8 @@ private:
 	void RegisterObjects();
 
 private:
-	CRenderer* Renderer;
-	UScene* Scene;
+	CRenderer* Renderer = nullptr;
+	UScene* Scene = nullptr;
 
 	int32 WindowWidth = 0;
 	int32 WindowHeight = 0;
