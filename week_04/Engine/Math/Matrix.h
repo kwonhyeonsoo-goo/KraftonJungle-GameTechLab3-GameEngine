@@ -386,6 +386,9 @@ public:
 		if (std::fabs(DeterminantValue) <= Tolerance)
 		{
 			// 역행렬이 없을 때 원본으로 반환하는 정책으로 변경 가능
+#ifndef NDEBUG
+			assert("FMatrix::GetInverse() failed: matrix is singular or invalid.");
+#endif
 			return Identity;
 		}
 
@@ -396,7 +399,7 @@ public:
 	// 역행렬이 존재하지 않으면 Identity로 설정함
 	// 현재는 역행렬이 없을 때 Identity를 반환/대입하는 정책입니다.
 	// 디버깅 투명성을 높이려면 원본 유지 + false 반환 정책도 고려할 수 있습니다.
-	bool Inverse(float Tolerance = 1.e-8f) noexcept
+	[[nodiscard]] bool Inverse(float Tolerance = 1.e-8f) noexcept
 	{
 		const DirectX::XMMATRIX XM = ToXMMatrix();
 
@@ -627,8 +630,8 @@ public:
 		const FVector UpCandidate =
 			(std::fabs(Y.Z) < 0.999f) ? FVector::UpVector : FVector::ForwardVector;
 
-		const FVector Z = FVector::CrossProduct(Y, UpCandidate).GetSafeNormal();
-		const FVector X = FVector::CrossProduct(Y, Z).GetSafeNormal();
+		const FVector X = FVector::CrossProduct(UpCandidate, Y).GetSafeNormal();
+		const FVector Z = FVector::CrossProduct(X, Y).GetSafeNormal();
 
 		return FMatrix(
 			X.X, X.Y, X.Z, 0.f,
@@ -649,10 +652,10 @@ public:
 		}
 
 		const FVector ForwardCandidate =
-			(std::fabs(Z.Z) < 0.999f) ? FVector::UpVector : FVector::ForwardVector;
+			(std::fabs(Z.X) < 0.999f) ? FVector::ForwardVector : FVector::RightVector;
 
-		const FVector X = FVector::CrossProduct(ForwardCandidate, Z).GetSafeNormal();
-		const FVector Y = FVector::CrossProduct(Z, X).GetSafeNormal();
+		const FVector Y = FVector::CrossProduct(Z, ForwardCandidate).GetSafeNormal();
+		const FVector X = FVector::CrossProduct(Y, Z).GetSafeNormal();
 
 		return FMatrix(
 			X.X, X.Y, X.Z, 0.f,
