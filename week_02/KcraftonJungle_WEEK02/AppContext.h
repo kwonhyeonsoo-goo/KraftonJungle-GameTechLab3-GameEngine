@@ -3,16 +3,19 @@
 #include "Engine/Rendering/URenderer.h"
 #include "Engine/ObjectKernel/ObjectStore.h"
 #include "Engine/Editor/Commands/ICommand.h"
+#include "Engine/Editor/Events/EditorEvents.h"
+#include "Engine/Foundation/Core/CoreTypes.h"
+#include "Engine/ObjectKernel/UUIDService.h"
+#include "Engine/ObjectKernel/ClassRegistry.h"
+#include "Engine/ObjectKernel/ObjectFactory.h"
 
 // main() 스택에서 생성
-class TDelegate;
-
 struct AppContext {
-    //// Object Kernel
-    //UUIDService    UUIDs;
-    //ClassRegistry  Classes;
+    // Object Kernel
+    UUIDService    UUIDs;
+    ClassRegistry  Classes;
     ObjectStore    Objects;
-    //ObjectFactory  Factory;
+    ObjectFactory  Factory;
 
     // World
     World         CurrentScene;
@@ -39,7 +42,7 @@ struct AppContext {
 
     void Dispatch(ICommand* cmd);
 
-    //Delegate<ObjectDestroyedEvent> OnObjectDestroyed;
+    TDelegate<ObjectDestroyedEvent> OnObjectDestroyed;
 
 private:
     void RegisterBuiltinTypes();   // Cube, Sphere, Plane ClassRegistry 등록
