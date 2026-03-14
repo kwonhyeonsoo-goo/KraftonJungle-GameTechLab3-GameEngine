@@ -132,6 +132,8 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Circle.h" />
+    <ClInclude Include="Cube.h" />
     <ClInclude Include="FMatrix4.h" />
     <ClInclude Include="FVector.h" />
     <ClInclude Include="FVector4.h" />
@@ -143,8 +145,14 @@
     <ClInclude Include="ImGui\imstb_rectpack.h" />
     <ClInclude Include="ImGui\imstb_textedit.h" />
     <ClInclude Include="ImGui\imstb_truetype.h" />
+    <ClInclude Include="Rect.h" />
+    <ClInclude Include="RenderQueue.h" />
+    <ClInclude Include="RenderSceneExtractor.h" />
+    <ClInclude Include="RenderTypes.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="UCubeComp.h" />
+    <ClInclude Include="UCubeMesh.h" />
+    <ClInclude Include="UMesh.h" />
     <ClInclude Include="UObject.h" />
     <ClInclude Include="UPrimitiveComponent.h" />
     <ClInclude Include="URenderer.h" />
@@ -160,7 +168,10 @@
     <ClCompile Include="ImGui\imgui_tables.cpp" />
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="RenderSceneExtractor.cpp" />
     <ClCompile Include="UCubeComp.cpp" />
+    <ClCompile Include="UCubeMesh.cpp" />
+    <ClCompile Include="UMesh.cpp" />
     <ClCompile Include="UObject.cpp" />
     <ClCompile Include="UPrimitiveComponent.cpp" />
     <ClCompile Include="URenderer.cpp" />
