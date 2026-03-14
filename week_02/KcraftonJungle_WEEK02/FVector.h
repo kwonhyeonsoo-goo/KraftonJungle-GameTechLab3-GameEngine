@@ -117,8 +117,11 @@ struct FVector
 		}
 	}
 
-	float GetX() { return x; }
-	float GetY() { return y; }
-	float GetZ() { return z; }
+	float GetX() const { return x; }
+	float GetY() const { return y; }
+	float GetZ() const { return z; }
+
+	static const FVector Zero;
+	static const FVector One;
 };
 
