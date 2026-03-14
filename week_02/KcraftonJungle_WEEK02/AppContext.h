@@ -8,6 +8,7 @@
 #include "Engine/ObjectKernel/UUIDService.h"
 #include "Engine/ObjectKernel/ClassRegistry.h"
 #include "Engine/ObjectKernel/ObjectFactory.h"
+#include "Engine/Editor/EditorSession.h"
 
 // main() 스택에서 생성
 struct AppContext {
@@ -24,7 +25,7 @@ struct AppContext {
     //ConsoleService Console;
 
     // Editor
-    //EditorSession  Editor;
+    EditorSession  Editor;
     //EditorManager  Panels;
 
     // Rendering

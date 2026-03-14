@@ -179,6 +179,7 @@
     <ClInclude Include="Engine\Editor\SelectionSet.h" />
     <ClInclude Include="Engine\Editor\ToolContext.h" />
     <ClInclude Include="Engine\Editor\Commands\SetTransformCommand.h" />
+    <ClInclude Include="Engine\Editor\Tools\SelectTool.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AppContext.cpp" />
@@ -217,6 +218,7 @@
     <ClCompile Include="Engine\Editor\SelectionSet.cpp" />
     <ClCompile Include="Engine\Editor\ToolContext.cpp" />
     <ClCompile Include="Engine\Editor\Commands\SetTransformCommand.cpp" />
+    <ClCompile Include="Engine\Editor\Tools\SelectTool.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
