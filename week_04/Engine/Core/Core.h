@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 #include "Windows.h"
 
+class UScene;
 class CRenderer;
 
 class ENGINE_API CCore
@@ -28,6 +29,7 @@ private:
 
 private:
 	CRenderer* Renderer;
+	UScene* Scene;
 
 	int32 WindowWidth = 0;
 	int32 WindowHeight = 0;
