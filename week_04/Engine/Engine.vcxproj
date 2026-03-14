@@ -33,6 +33,7 @@
     <ClInclude Include="Object\ObjectManager.h" />
     <ClInclude Include="Object\ObjectTypes.h" />
     <ClInclude Include="Object\Scene\Scene.h" />
+    <ClInclude Include="ThirdParty\nlohmann\json.hpp" />
     <ClInclude Include="Types\CoreTypes.h" />
     <ClInclude Include="EngineAPI.h" />
     <ClInclude Include="Types\Array.h" />

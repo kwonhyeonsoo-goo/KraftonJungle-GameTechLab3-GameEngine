@@ -1,195 +1,76 @@
-﻿﻿<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="소스 파일">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="헤더 파일">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
-    <Filter Include="리소스 파일">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
+    <ClCompile Include="Component\ActorComponent.cpp" />
+    <ClCompile Include="Core\Core.cpp" />
+    <ClCompile Include="Object\Actor\Actor.cpp" />
+    <ClCompile Include="Object\Class.cpp" />
+    <ClCompile Include="Component\CubeComponent.cpp" />
+    <ClCompile Include="EngineTest.cpp" />
+    <ClCompile Include="Object\Object.cpp" />
+    <ClCompile Include="Component\SceneComponent.cpp" />
+    <ClCompile Include="Component\SphereComponent.cpp" />
+    <ClCompile Include="Object\ObjectManager.cpp" />
+    <ClCompile Include="Object\Scene\Scene.cpp" />
+    <ClCompile Include="Math\Vector.cpp" />
+    <ClCompile Include="Math\Matrix.cpp" />
+    <ClCompile Include="Math\Transform.cpp" />
+    <ClCompile Include="Camera\Camera.cpp" />
+    <ClCompile Include="Component\PrimitiveComponent.cpp" />
+    <ClCompile Include="Renderer\Renderer.cpp" />
+    <ClCompile Include="Renderer\Shader.cpp" />
+    <ClCompile Include="Renderer\ShaderMap.cpp" />
+    <ClCompile Include="Renderer\ShaderManager.cpp" />
+    <ClCompile Include="Renderer\ShaderResource.cpp" />
+    <ClCompile Include="Primitive\PrimitiveBase.cpp" />
+    <ClCompile Include="Primitive\PrimitiveCube.cpp" />
+    <ClCompile Include="Primitive\PrimitivePlane.cpp" />
+    <ClCompile Include="Primitive\PrimitiveSphere.cpp" />
+    <ClCompile Include="Input\InputManager.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Object\Object.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="EngineAPI.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Types\CoreTypes.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Types\Array.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Types\LinkedList.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Types\Map.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Types\Pair.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Types\Queue.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Types\Set.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Types\StaticArray.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Math\Vector.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Math\Vector4.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Math\Matrix.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Camera\Camera.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\Renderer.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\ShaderManager.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer\PrimitiveVertex.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Primitive\PrimitiveCube.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Primitive\PrimitivePlane.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Primitive\PrimitiveSphere.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Component\SceneComponent.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="CoreMinimal.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Component\PrimitiveComponent.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Component\CubeComponent.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Component\SphereComponent.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\Actor\Actor.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Types\String.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\Scene\Scene.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Core.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\ObjectManager.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\Class.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\ObjectTypes.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="EngineTest.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Math\Transform.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Component\ActorComponent.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Input\InputManager.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="Object\Object.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Math\Vector.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Math\Matrix.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Camera\Camera.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\Renderer.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer\ShaderManager.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Primitive\PrimitiveCube.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Primitive\PrimitivePlane.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Primitive\PrimitiveSphere.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Component\SceneComponent.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Component\PrimitiveComponent.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Component\CubeComponent.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Component\SphereComponent.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Object\Actor\Actor.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Object\Scene\Scene.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Object\Class.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="EngineTest.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Math\Transform.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Object\ObjectManager.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Component\ActorComponent.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Core\Core.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Input\InputManager.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
+    <ClInclude Include="Component\ActorComponent.h" />
+    <ClInclude Include="Object\Actor\Actor.h" />
+    <ClInclude Include="Object\Class.h" />
+    <ClInclude Include="Component\SceneComponent.h" />
+    <ClInclude Include="Core\Core.h" />
+    <ClInclude Include="CoreMinimal.h" />
+    <ClInclude Include="EngineTest.h" />
+    <ClInclude Include="Component\PrimitiveComponent.h" />
+    <ClInclude Include="Component\CubeComponent.h" />
+    <ClInclude Include="Component\SphereComponent.h" />
+    <ClInclude Include="Object\ObjectFactory.h" />
+    <ClInclude Include="Object\ObjectManager.h" />
+    <ClInclude Include="Object\ObjectTypes.h" />
+    <ClInclude Include="Object\Scene\Scene.h" />
+    <ClInclude Include="Types\CoreTypes.h" />
+    <ClInclude Include="EngineAPI.h" />
+    <ClInclude Include="Types\Array.h" />
+    <ClInclude Include="Types\LinkedList.h" />
+    <ClInclude Include="Types\Map.h" />
+    <ClInclude Include="Types\Pair.h" />
+    <ClInclude Include="Types\Queue.h" />
+    <ClInclude Include="Types\Set.h" />
+    <ClInclude Include="Types\StaticArray.h" />
+    <ClInclude Include="Object\Object.h" />
+    <ClInclude Include="Types\String.h" />
+    <ClInclude Include="Math\Vector.h" />
+    <ClInclude Include="Math\Vector4.h" />
+    <ClInclude Include="Math\Matrix.h" />
+    <ClInclude Include="Math\Transform.h" />
+    <ClInclude Include="Camera\Camera.h" />
+    <ClInclude Include="Renderer\RenderCommand.h" />
+    <ClInclude Include="Renderer\Renderer.h" />
+    <ClInclude Include="Renderer\Shader.h" />
+    <ClInclude Include="Renderer\ShaderMap.h" />
+    <ClInclude Include="Renderer\ShaderManager.h" />
+    <ClInclude Include="Renderer\ShaderResource.h" />
+    <ClInclude Include="Renderer\PrimitiveVertex.h" />
+    <ClInclude Include="Primitive\PrimitiveBase.h" />
+    <ClInclude Include="Primitive\PrimitiveCube.h" />
+    <ClInclude Include="Primitive\PrimitivePlane.h" />
+    <ClInclude Include="Primitive\PrimitiveSphere.h" />
+    <ClInclude Include="Input\InputManager.h" />
+    <ClInclude Include="ThirdParty\nlohmann\json.hpp" />
   </ItemGroup>
 </Project>
