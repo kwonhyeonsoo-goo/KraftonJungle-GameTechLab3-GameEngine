@@ -15,17 +15,17 @@ static FString GetScenePath(const AppContext& ctx) {
 }
 
 bool SerializationService::Save(const AppContext& ctx) {
-	// ·çÆ® ¿ÀºêÁ§Æ® »ý¼º
+	// ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½
 	JSON root = json::Object();
 	root["SceneName"] = std::string(*ctx.Scene.Name);
 
 	root["Version"] = 1;
 	root["NextUUID"] = (uint32)ctx.UUIDs.GetNextUUID();
 
-	// Primitives ¿ÀºêÁ§Æ®
+	// Primitives ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
 	JSON primitives = json::Object();
 	for (UObject* obj : ctx.Objects.GetAll()) {
-		UPrimitiveComponent* prim = dynamic_cast<UPrimitiveComponent*>(obj);//TODO: IsA·Î RTTI±¸Çö
+		UPrimitiveComponent* prim = dynamic_cast<UPrimitiveComponent*>(obj);//TODO: IsAï¿½ï¿½ RTTIï¿½ï¿½ï¿½ï¿½
 		if (!prim) continue;
 
 		std::string key = std::to_string(prim->GetUUID());
@@ -57,7 +57,7 @@ bool SerializationService::Save(const AppContext& ctx) {
 
 	CreateDirectoryA("saves", nullptr); // Windows API
 
-	// ÆÄÀÏ ¾²±â
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	std::ofstream file(GetScenePath(ctx));
 	if (!file.is_open()) return false;
 	file << root.dump();
@@ -65,7 +65,7 @@ bool SerializationService::Save(const AppContext& ctx) {
 }
 
 bool SerializationService::Load(AppContext& ctx) {
-	// ÆÄÀÏ ÀÐ±â
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½Ð±ï¿½
 	std::ifstream file(GetScenePath(ctx));
 	if (!file.is_open()) return false;
 
@@ -76,22 +76,22 @@ bool SerializationService::Load(AppContext& ctx) {
 	JSON root = JSON::Load(jsonStr);
 	ctx.Editor.Selection.Clear();
 
-	// ¨è ±âÁ¸ UUID º¹»ç ÈÄ OnObjectDestroyed ¹ßÇà
+	// ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ UUID ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ OnObjectDestroyed ï¿½ï¿½ï¿½ï¿½
 	TArray<uint32> oldUUIDs = ctx.UUIDs.GetAll();
 	for (uint32 uuid : oldUUIDs)
 		EventBus::Broadcast(OnObjectDestroyed{ uuid });
 
-	// ¨é ObjectStore ºñ¿ì±â
+	// ï¿½ï¿½ ObjectStore ï¿½ï¿½ï¿½ï¿½
 	ctx.Objects.Clear();
 	ctx.UUIDs.Clear();
 	
 	auto toFloat = [](const JSON& j) -> float {
 		if (j.JSONType() == JSON::Class::Floating)
 			return (float)j.ToFloat();
-		return (float)j.ToInt(); // Á¤¼ö·Î ÀúÀåµÈ °æ¿ì Ã³¸®
+		return (float)j.ToInt(); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½
 		};
 
-	// ¨ê Primitives ¼øÈ¸ ¡æ ¿ÀºêÁ§Æ® »ý¼º
+	// ï¿½ï¿½ Primitives ï¿½ï¿½È¸ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½
 	auto& primitives = root["Primitives"];
 	ctx.Scene.Name = FString(root["SceneName"].ToString());
 
@@ -118,16 +118,16 @@ bool SerializationService::Load(AppContext& ctx) {
 		scl.z = toFloat(kv.second["Location"][2]);
 
 		UPrimitiveComponent* prim = ObjectFactory::Create(typeName, uuid);
-		if (!prim) continue; // ¾Ë ¼ö ¾ø´Â Å¸ÀÔÀÌ¸é ½ºÅµ
+		if (!prim) continue; // ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Å¸ï¿½ï¿½ï¿½Ì¸ï¿½ ï¿½ï¿½Åµ
 
 		prim->SetTransform(Transform(loc, rot, scl));
 
 		ctx.Objects.Add(prim);
 		ctx.UUIDs.Register(uuid);
-		EventBus::Broadcast(OnObjectCreated{ uuid }); // ¡ç Outliner µîÀÌ »õ ¿ÀºêÁ§Æ® ÀÎ½Ä
+		EventBus::Broadcast(OnObjectCreated{ uuid }); // ï¿½ï¿½ Outliner ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½Î½ï¿½
 	}
 
-	// ¨ë NextUUID º¹¿ø
+	// ï¿½ï¿½ NextUUID ï¿½ï¿½ï¿½ï¿½
 	ctx.UUIDs.SyncNextUUID((uint32)root["NextUUID"].ToInt());
 
 	return true;

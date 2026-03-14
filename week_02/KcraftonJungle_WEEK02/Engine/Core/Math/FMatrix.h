@@ -149,7 +149,7 @@ struct FMatrix
         return result;
     }
 
-    // row-vector ±âÁØ: v * M
+    // row-vector ï¿½ï¿½ï¿½ï¿½: v * M
     static FMatrix Translation(const FVector& t)
     {
         FMatrix result = FMatrix::Identity();
