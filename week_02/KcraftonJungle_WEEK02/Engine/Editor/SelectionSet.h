@@ -2,6 +2,7 @@
 #include "../Foundation/Core/CoreTypes.h"
 #include "../World/USceneComponent.h"
 
+
 class SelectionSet
 {
 public:

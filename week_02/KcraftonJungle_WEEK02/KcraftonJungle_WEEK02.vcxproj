@@ -172,10 +172,13 @@
     <ClInclude Include="Engine\World\UPrimitiveComponent.h" />
     <ClInclude Include="Engine\World\USceneComponent.h" />
     <ClInclude Include="Engine\World\USphereComp.h" />
+    <ClInclude Include="Engine\Editor\Commands\ICommand.h" />
+    <ClInclude Include="Engine\Editor\Tools\ITool.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="Engine\World\Level.h" />
     <ClInclude Include="Engine\Editor\SelectionSet.h" />
     <ClInclude Include="Engine\Editor\ToolContext.h" />
+    <ClInclude Include="Engine\Editor\Commands\SetTransformCommand.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AppContext.cpp" />
@@ -213,6 +216,7 @@
     <ClCompile Include="Engine\World\Level.cpp" />
     <ClCompile Include="Engine\Editor\SelectionSet.cpp" />
     <ClCompile Include="Engine\Editor\ToolContext.cpp" />
+    <ClCompile Include="Engine\Editor\Commands\SetTransformCommand.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

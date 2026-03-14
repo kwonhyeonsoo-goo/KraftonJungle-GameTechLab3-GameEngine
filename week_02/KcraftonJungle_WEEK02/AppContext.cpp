@@ -26,3 +26,10 @@ void AppContext::Shutdown()
     //PlatformEvents::OnResize.Unbind(ResizeHandle);
 
 }
+
+// Always receive new Instance -> must delete.
+void AppContext::Dispatch(ICommand* cmd)
+{
+    cmd->Execute();
+    delete cmd;
+}

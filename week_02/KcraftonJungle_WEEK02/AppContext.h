@@ -1,6 +1,7 @@
 #pragma once
 #include "Engine/World/World.h"
 #include "Engine/Rendering/URenderer.h"
+#include "Engine/Editor/Commands/ICommand.h"
 
 // main() 스택에서 생성
 class TDelegate;
@@ -35,7 +36,7 @@ struct AppContext {
 
     void Shutdown();
 
-    //void Dispatch(ICommand* cmd);
+    void Dispatch(ICommand* cmd);
 
     //Delegate<ObjectDestroyedEvent> OnObjectDestroyed;
 

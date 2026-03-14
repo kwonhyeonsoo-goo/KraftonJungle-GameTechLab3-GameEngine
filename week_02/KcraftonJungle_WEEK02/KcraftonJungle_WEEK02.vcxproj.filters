@@ -98,6 +98,9 @@
     <ClCompile Include="Engine\Editor\ToolContext.cpp">
       <Filter>Engine\Editor</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Editor\Commands\SetTransformCommand.cpp">
+      <Filter>Engine\Editor\Commands</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
@@ -237,6 +240,15 @@
     <ClInclude Include="Engine\Mesh\Circle.h">
       <Filter>Engine\Mesh</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Editor\Commands\ICommand.h">
+      <Filter>Engine\Editor\Commands</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Editor\Commands\SetTransformCommand.h">
+      <Filter>Engine\Editor\Commands</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Editor\Tools\ITool.h">
+      <Filter>Engine\Editor\Tools</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">
@@ -277,6 +289,12 @@
     </Filter>
     <Filter Include="Engine\Mesh">
       <UniqueIdentifier>{e3e0725d-3e81-46d2-ae6d-1fc2555d3bf6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Editor\Commands">
+      <UniqueIdentifier>{5c1b3248-0616-4e47-b82a-f7421f687c6b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Editor\Tools">
+      <UniqueIdentifier>{8ca38d0b-b17b-474f-9310-8d901f47ec2f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
