@@ -1,5 +1,5 @@
 #include "ToolContext.h"
-#include "../Foundation/Core/log.h"
+#include "../Foundation/Core/Log.h"
 
 ToolContext::ToolContext()
 {

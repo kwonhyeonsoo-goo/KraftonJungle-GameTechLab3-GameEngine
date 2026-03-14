@@ -141,7 +141,7 @@
     <ClInclude Include="Editor\ImGui\imstb_textedit.h" />
     <ClInclude Include="Editor\ImGui\imstb_truetype.h" />
     <ClInclude Include="Engine\Foundation\Core\CoreTypes.h" />
-    <ClInclude Include="Engine\Foundation\Core\log.h" />
+    <ClInclude Include="Engine\Foundation\Core\Log.h" />
     <ClInclude Include="Engine\Foundation\Core\Memory.h" />
     <ClInclude Include="Engine\Foundation\Math\FMatrix.h" />
     <ClInclude Include="Engine\Foundation\Math\FMatrix4.h" />
@@ -168,6 +168,7 @@
     <ClInclude Include="Engine\Rendering\RenderSceneExtractor.h" />
     <ClInclude Include="Engine\Rendering\RenderTypes.h" />
     <ClInclude Include="Engine\Rendering\URenderer.h" />
+    <ClInclude Include="Engine\Services\ConsoleService.h" />
     <ClInclude Include="Engine\Services\PickingService.h" />
     <ClInclude Include="Engine\Services\SerializationService.h" />
     <ClInclude Include="Engine\Services\StatsService.h" />
@@ -208,7 +209,7 @@
     <ClCompile Include="Editor\ImGui\imgui_impl_win32.cpp" />
     <ClCompile Include="Editor\ImGui\imgui_tables.cpp" />
     <ClCompile Include="Editor\ImGui\imgui_widgets.cpp" />
-    <ClCompile Include="Engine\Foundation\Core\log.cpp" />
+    <ClCompile Include="Engine\Foundation\Core\Log.cpp" />
     <ClCompile Include="Engine\Foundation\Core\Memory.cpp" />
     <ClCompile Include="Engine\Foundation\Math\FVector.cpp" />
     <ClCompile Include="Engine\ObjectKernel\ClassRegistry.cpp" />
@@ -224,6 +225,7 @@
     <ClCompile Include="Engine\Platform\WindowHost.cpp" />
     <ClCompile Include="Engine\Rendering\RenderSceneExtractor.cpp" />
     <ClCompile Include="Engine\Rendering\URenderer.cpp" />
+    <ClCompile Include="Engine\Services\ConsoleService.cpp" />
     <ClCompile Include="Engine\Services\PickingService.cpp" />
     <ClCompile Include="Engine\Services\SerializationService.cpp" />
     <ClCompile Include="Engine\Services\StatsService.cpp" />
