@@ -1,4 +1,5 @@
 #pragma once
+#include "Engine/World/World.h"
 #include "Engine/Rendering/URenderer.h"
 #include "Engine/ObjectKernel/ObjectStore.h"
 #include "Engine/ObjectKernel/UUIDService.h"
@@ -18,7 +19,7 @@ struct AppContext {
     //ObjectFactory  Factory;
 
     // World
-    //UScene         CurrentScene;
+    World         CurrentScene;
 
     // Services
     //ConsoleService Console;
