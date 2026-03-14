@@ -1,9 +1,203 @@
 #include "EngineTest.h"
-#include <iostream>
+#include "Core/Core.h"
+#include "Renderer/Renderer.h"
 
-int main()
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx11.h"
+
+static CCore* GCore = nullptr;
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
+
+LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	EngineTestFunction();
-	std::cout << "Run Editor" << std::endl;
+	if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+		return true;
+
+	switch (msg)
+	{
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		return 0;
+	case WM_SIZE:
+		if (GCore && GCore->GetRenderer() && wParam != SIZE_MINIMIZED)
+		{
+			GCore->GetRenderer()->OnResize(LOWORD(lParam), HIWORD(lParam));
+		}
+		return 0;
+	default:
+		if (GCore)
+		{
+			GCore->ProcessInput(hWnd, msg, wParam, lParam);
+		}
+		break;
+	}
+	return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+static void SetupImGuiCallbacks(CRenderer* Renderer)
+{
+	HWND Hwnd = Renderer->GetHwnd();
+	ID3D11Device* Device = Renderer->GetDevice();
+	ID3D11DeviceContext* DeviceContext = Renderer->GetDeviceContext();
+
+	Renderer->SetGUICallbacks(
+		// Init
+		[Hwnd, Device, DeviceContext]()
+		{
+			IMGUI_CHECKVERSION();
+			ImGui::CreateContext();
+			ImGuiIO& io = ImGui::GetIO();
+			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+			io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+			io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+			ImGui::StyleColorsDark();
+
+			ImGuiStyle& style = ImGui::GetStyle();
+			if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+			{
+				style.WindowRounding = 0.0f;
+				style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+			}
+
+			ImGui_ImplWin32_Init(Hwnd);
+			ImGui_ImplDX11_Init(Device, DeviceContext);
+		},
+		// Shutdown
+		[]()
+		{
+			ImGui_ImplDX11_Shutdown();
+			ImGui_ImplWin32_Shutdown();
+			ImGui::DestroyContext();
+		},
+		// NewFrame
+		[]()
+		{
+			ImGui_ImplDX11_NewFrame();
+			ImGui_ImplWin32_NewFrame();
+			ImGui::NewFrame();
+		},
+		// Render
+		[]()
+		{
+			ImGui::Render();
+			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+		},
+		// PostPresent
+		[]()
+		{
+			ImGuiIO& io = ImGui::GetIO();
+			if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+			{
+				ImGui::UpdatePlatformWindows();
+				ImGui::RenderPlatformWindowsDefault();
+			}
+		}
+	);
+}
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
+{
+	// Window
+	WNDCLASSEX wc = {};
+	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.lpfnWndProc = WndProc;
+	wc.hInstance = hInstance;
+	wc.lpszClassName = L"TestWindow";
+	RegisterClassEx(&wc);
+
+	HWND hwnd = CreateWindowEx(
+		0, L"TestWindow", L"Renderer Test",
+		WS_OVERLAPPEDWINDOW, 100, 100, 1280, 720,
+		nullptr, nullptr, hInstance, nullptr
+	);
+	::ShowWindow(hwnd, SW_SHOWDEFAULT);
+	::UpdateWindow(hwnd);
+
+	// Core
+	CCore Core;
+	GCore = &Core;
+	if (!Core.Initialize(hwnd, 1280, 720))
+		return -1;
+
+	// ImGui
+	SetupImGuiCallbacks(Core.GetRenderer());
+
+	// ImGui test widgets
+	bool show_demo_window = true;
+	bool show_another_window = false;
+	Core.GetRenderer()->SetGUIUpdateCallback([&]()
+	{
+		if (show_demo_window)
+			ImGui::ShowDemoWindow(&show_demo_window);
+
+		{
+			static float f = 0.0f;
+			static int counter = 0;
+
+			ImGui::Begin("Hello, world!");
+			ImGui::Text("This is some useful text.");
+			ImGui::Checkbox("Demo Window", &show_demo_window);
+			ImGui::Checkbox("Another Window", &show_another_window);
+			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+
+			if (ImGui::Button("Button"))
+				counter++;
+			ImGui::SameLine();
+			ImGui::Text("counter = %d", counter);
+
+			ImGuiIO& io = ImGui::GetIO();
+			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+			ImGui::End();
+		}
+
+		if (show_another_window)
+		{
+			ImGui::Begin("Another Window", &show_another_window);
+			ImGui::Text("Hello from another window!");
+			if (ImGui::Button("Close Me"))
+				show_another_window = false;
+			ImGui::End();
+		}
+	});
+
+	// Timing
+	LARGE_INTEGER Frequency, LastTime, CurrentTime;
+	QueryPerformanceFrequency(&Frequency);
+	QueryPerformanceCounter(&LastTime);
+
+	// Main loop
+	MSG msg = {};
+	while (msg.message != WM_QUIT)
+	{
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		else
+		{
+			if (Core.GetRenderer()->IsOccluded())
+				continue;
+
+			QueryPerformanceCounter(&CurrentTime);
+			float DeltaTime = static_cast<float>(CurrentTime.QuadPart - LastTime.QuadPart)
+				/ static_cast<float>(Frequency.QuadPart);
+			LastTime = CurrentTime;
+
+			Core.Tick(DeltaTime);
+		}
+	}
+
+	// Cleanup
+	GCore = nullptr;
+	Core.Release();
+
+	::DestroyWindow(hwnd);
+	::UnregisterClassW(wc.lpszClassName, wc.hInstance);
+
 	return 0;
 }

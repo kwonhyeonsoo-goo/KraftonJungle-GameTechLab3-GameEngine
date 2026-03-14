@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+﻿﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="소스 파일">
@@ -90,13 +90,13 @@
     <ClInclude Include="Component\SphereComponent.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Actor.h">
+    <ClInclude Include="Object\Actor\Actor.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="Types\String.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Scene\Scene.h">
+    <ClInclude Include="Object\Scene\Scene.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="Core\Core.h">
@@ -105,13 +105,22 @@
     <ClInclude Include="Object\ObjectManager.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Object\Class.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\ObjectTypes.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
     <ClInclude Include="EngineTest.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="Math\Transform.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Object\ObjectFactory.h">
+    <ClInclude Include="Component\ActorComponent.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\InputManager.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
@@ -155,10 +164,13 @@
     <ClCompile Include="Component\SphereComponent.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Actor.cpp">
+    <ClCompile Include="Object\Actor\Actor.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Scene\Scene.cpp">
+    <ClCompile Include="Object\Scene\Scene.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\Class.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="EngineTest.cpp">
@@ -168,6 +180,15 @@
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="Object\ObjectManager.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Component\ActorComponent.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Core.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\InputManager.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>

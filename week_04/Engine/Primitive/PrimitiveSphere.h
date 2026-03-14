@@ -1,18 +1,14 @@
 #pragma once
 
-#include "CoreMinimal.h"
-#include <vector>
-#include "Renderer/PrimitiveVertex.h"
+#include "Primitive/PrimitiveBase.h"
 
-class ENGINE_API CPrimitiveSphere
+class ENGINE_API CPrimitiveSphere : public CPrimitiveBase
 {
 public:
-    void Generate(int Segments = 16, int Rings = 16);
+	static const FString Key;
+	static const FString FilePath;
 
-    const std::vector<FPrimitiveVertex>& GetVertices() const { return Vertices; }
-    const std::vector<unsigned int>& GetIndices() const { return Indices; }
+	CPrimitiveSphere(int Segments = 16, int Rings = 16);
 
-private:
-    std::vector<FPrimitiveVertex> Vertices;
-    std::vector<unsigned int> Indices;
+	void Generate(int Segments, int Rings);
 };

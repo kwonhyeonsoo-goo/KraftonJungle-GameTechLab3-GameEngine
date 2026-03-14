@@ -19,7 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Actor.h" />
+    <ClInclude Include="Component\ActorComponent.h" />
+    <ClInclude Include="Object\Actor\Actor.h" />
+    <ClInclude Include="Object\Class.h" />
     <ClInclude Include="Component\SceneComponent.h" />
     <ClInclude Include="Core\Core.h" />
     <ClInclude Include="CoreMinimal.h" />
@@ -29,7 +31,8 @@
     <ClInclude Include="Component\SphereComponent.h" />
     <ClInclude Include="Object\ObjectFactory.h" />
     <ClInclude Include="Object\ObjectManager.h" />
-    <ClInclude Include="Scene\Scene.h" />
+    <ClInclude Include="Object\ObjectTypes.h" />
+    <ClInclude Include="Object\Scene\Scene.h" />
     <ClInclude Include="Types\CoreTypes.h" />
     <ClInclude Include="EngineAPI.h" />
     <ClInclude Include="Types\Array.h" />
@@ -43,14 +46,17 @@
     <ClInclude Include="Types\String.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Actor.cpp" />
+    <ClCompile Include="Component\ActorComponent.cpp" />
+    <ClCompile Include="Core\Core.cpp" />
+    <ClCompile Include="Object\Actor\Actor.cpp" />
+    <ClCompile Include="Object\Class.cpp" />
     <ClCompile Include="Component\CubeComponent.cpp" />
     <ClCompile Include="EngineTest.cpp" />
     <ClCompile Include="Object\Object.cpp" />
     <ClCompile Include="Component\SceneComponent.cpp" />
     <ClCompile Include="Component\SphereComponent.cpp" />
     <ClCompile Include="Object\ObjectManager.cpp" />
-    <ClCompile Include="Scene\Scene.cpp" />
+    <ClCompile Include="Object\Scene\Scene.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -177,10 +183,15 @@
     <ClCompile Include="Camera\Camera.cpp" />
     <ClCompile Include="Component\PrimitiveComponent.cpp" />
     <ClCompile Include="Renderer\Renderer.cpp" />
+    <ClCompile Include="Renderer\Shader.cpp" />
+    <ClCompile Include="Renderer\ShaderMap.cpp" />
     <ClCompile Include="Renderer\ShaderManager.cpp" />
+    <ClCompile Include="Renderer\ShaderResource.cpp" />
+    <ClCompile Include="Primitive\PrimitiveBase.cpp" />
     <ClCompile Include="Primitive\PrimitiveCube.cpp" />
     <ClCompile Include="Primitive\PrimitivePlane.cpp" />
     <ClCompile Include="Primitive\PrimitiveSphere.cpp" />
+    <ClCompile Include="Input\InputManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Math\Vector.h" />
@@ -188,12 +199,18 @@
     <ClInclude Include="Math\Matrix.h" />
     <ClInclude Include="Math\Transform.h" />
     <ClInclude Include="Camera\Camera.h" />
+    <ClInclude Include="Renderer\RenderCommand.h" />
     <ClInclude Include="Renderer\Renderer.h" />
+    <ClInclude Include="Renderer\Shader.h" />
+    <ClInclude Include="Renderer\ShaderMap.h" />
     <ClInclude Include="Renderer\ShaderManager.h" />
+    <ClInclude Include="Renderer\ShaderResource.h" />
     <ClInclude Include="Renderer\PrimitiveVertex.h" />
+    <ClInclude Include="Primitive\PrimitiveBase.h" />
     <ClInclude Include="Primitive\PrimitiveCube.h" />
     <ClInclude Include="Primitive\PrimitivePlane.h" />
     <ClInclude Include="Primitive\PrimitiveSphere.h" />
+    <ClInclude Include="Input\InputManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

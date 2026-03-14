@@ -1,6 +1,70 @@
 #include "PrimitiveSphere.h"
+#include <cmath>
+
+const FString CPrimitiveSphere::Key = "Sphere";
+const FString CPrimitiveSphere::FilePath = "Assets/Meshes/Sphere.mesh";
+
+CPrimitiveSphere::CPrimitiveSphere(int Segments, int Rings)
+{
+	auto Cached = GetCached(Key);
+	if (Cached)
+	{
+		MeshData = Cached;
+	}
+	else
+	{
+		Generate(Segments, Rings);
+	}
+}
 
 void CPrimitiveSphere::Generate(int Segments, int Rings)
 {
-    // TODO: Sphere 정점·인덱스 생성 (UV Sphere 방식)
+	auto Data = std::make_shared<FMeshData>();
+
+	const float PI = 3.14159265358979f;
+
+	for (int Ring = 0; Ring <= Rings; ++Ring)
+	{
+		float Phi = PI * static_cast<float>(Ring) / static_cast<float>(Rings);
+		float Y = cosf(Phi);
+		float SinPhi = sinf(Phi);
+
+		for (int Seg = 0; Seg <= Segments; ++Seg)
+		{
+			float Theta = 2.0f * PI * static_cast<float>(Seg) / static_cast<float>(Segments);
+			float X = SinPhi * cosf(Theta);
+			float Z = SinPhi * sinf(Theta);
+
+			FVector Position = { X * 0.5f, Y * 0.5f, Z * 0.5f };
+			FVector Normal = { X, Y, Z };
+
+			// Normal 기반 색상: 각 축 방향을 RGB로 매핑
+			float R = Normal.X * 0.5f + 0.5f;
+			float G = Normal.Y * 0.5f + 0.5f;
+			float B = Normal.Z * 0.5f + 0.5f;
+			FVector4 Color = { R, G, B, 1.0f };
+
+			Data->Vertices.push_back({ Position, Color, Normal });
+		}
+	}
+
+	for (int Ring = 0; Ring < Rings; ++Ring)
+	{
+		for (int Seg = 0; Seg < Segments; ++Seg)
+		{
+			unsigned int Current = Ring * (Segments + 1) + Seg;
+			unsigned int Next = Current + Segments + 1;
+
+			Data->Indices.push_back(Current);
+			Data->Indices.push_back(Next);
+			Data->Indices.push_back(Current + 1);
+
+			Data->Indices.push_back(Current + 1);
+			Data->Indices.push_back(Next);
+			Data->Indices.push_back(Next + 1);
+		}
+	}
+
+	MeshData = Data;
+	RegisterMeshData(Key, Data);
 }

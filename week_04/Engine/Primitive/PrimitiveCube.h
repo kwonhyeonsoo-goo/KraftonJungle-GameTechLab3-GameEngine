@@ -1,18 +1,15 @@
 #pragma once
 
-#include "CoreMinimal.h"
-#include <vector>
-#include "Renderer/PrimitiveVertex.h"
+#include "Primitive/PrimitiveBase.h"
 
-class ENGINE_API CPrimitiveCube
+class ENGINE_API CPrimitiveCube : public CPrimitiveBase
 {
 public:
-    void Generate();
+	static const FString Key;
+	static const FString FilePath;
 
-    const std::vector<FPrimitiveVertex>& GetVertices() const { return Vertices; }
-    const std::vector<unsigned int>& GetIndices() const { return Indices; }
+	CPrimitiveCube();
 
-private:
-    std::vector<FPrimitiveVertex> Vertices;
-    std::vector<unsigned int> Indices;
+	// 파일 없이 코드로 직접 생성
+	void Generate();
 };

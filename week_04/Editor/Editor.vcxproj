@@ -115,13 +115,13 @@
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\Engine\;$(ProjectDir)ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\Engine\Bin\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>Engine.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y /D "$(ProjectDir)..\Engine\Bin\$(Configuration)\Engine.dll" "$(OutDir)"</Command>
+      <Command>copy /Y "$(ProjectDir)..\Engine\Bin\$(Configuration)\Engine.dll" "$(OutDir)Engine.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -143,7 +143,7 @@
       <AdditionalDependencies>Engine.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y /D "$(ProjectDir)..\Engine\Bin\$(Configuration)\Engine.dll" "$(OutDir)"</Command>
+      <Command>copy /Y "$(ProjectDir)..\Engine\Bin\$(Configuration)\Engine.dll" "$(OutDir)Engine.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -179,8 +179,6 @@
     <ClInclude Include="UI\StatWindow.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\VertexShader.hlsl" />
-    <None Include="Shaders\PixelShader.hlsl" />
     <None Include="ThirdParty\imgui\imgui.natstepfilter" />
   </ItemGroup>
   <ItemGroup>

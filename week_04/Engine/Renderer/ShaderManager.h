@@ -2,6 +2,10 @@
 
 #include "CoreMinimal.h"
 #include <d3d11.h>
+#include <memory>
+
+class FVertexShader;
+class FPixelShader;
 
 class ENGINE_API CShaderManager
 {
@@ -15,7 +19,6 @@ public:
     void Release();
 
 private:
-    ID3D11VertexShader* VertexShader = nullptr;
-    ID3D11PixelShader* PixelShader = nullptr;
-    ID3D11InputLayout* InputLayout = nullptr;
+    std::shared_ptr<FVertexShader> VS;
+    std::shared_ptr<FPixelShader> PS;
 };
