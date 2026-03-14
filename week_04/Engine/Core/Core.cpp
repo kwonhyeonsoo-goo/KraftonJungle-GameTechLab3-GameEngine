@@ -14,6 +14,8 @@ CCore::~CCore()
 	Release();
 }
 
+
+
 bool CCore::Initialize(HWND Hwnd, int Width, int Height)
 {
 	WindowWidth = Width;
@@ -169,4 +171,24 @@ void CCore::Render()
 	Renderer->ExecuteLineCommands();
 
 	Renderer->EndFrame();
+}
+void CCore::OnResize(int Width, int Height)
+{
+	if (Width == 0 || Height == 0) return;
+
+	WindowWidth = Width;
+	WindowHeight = Height;
+
+
+	if (Renderer)
+	{
+		Renderer->OnResize(Width, Height);
+	}
+
+
+	if (Scene && Scene->GetCamera())
+	{
+		float NewAspect = static_cast<float>(Width) / static_cast<float>(Height);
+		Scene->GetCamera()->SetAspectRatio(NewAspect);
+	}
 }
