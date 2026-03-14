@@ -85,7 +85,7 @@ public:
     void CreateShader();
     void ReleaseShader();
 
-    void CreateDeviceAndSwapChain(HWND hWindow);
+    void CreateDeviceAndSwapChain(HWND hWindow, UINT width, UINT height);
     void ReleaseDeviceAndSwapChain();
 
     void CreateFrameBuffer();

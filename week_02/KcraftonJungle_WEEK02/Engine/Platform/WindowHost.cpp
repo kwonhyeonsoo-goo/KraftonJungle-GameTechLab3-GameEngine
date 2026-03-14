@@ -1,12 +1,15 @@
 // WindowHost.cpp
 #include "WindowHost.h"
 #include "../../Editor/ImGui/imgui_impl_win32.h"
+#include "InputRouter.h"
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
         return true;
+
+    InputRouter::Route(hWnd, message, wParam, lParam); // ← 이게 있어야 함
 
     switch (message) {
     case WM_SIZE:

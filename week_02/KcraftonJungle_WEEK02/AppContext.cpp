@@ -1,29 +1,61 @@
 #include "AppContext.h"
+#include "Editor/ImGui/imgui.h"
+#include "Editor/ImGui/imgui_impl_dx11.h"
+#include "Editor/ImGui/imgui_impl_win32.h"
+
+#include "Engine/Platform/PlatformEvents.h"
+#include "Engine/Editor/Tools/SelectTool.h"
 
 bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 height)
 {
-    if (!Window.Initialize(windowTitle, width, height))
+    if (!Window.Initialize(windowTitle, width, height)) {
+        OutputDebugStringA("[ERROR] Window ÃÊ±âÈ­ ½ÇÆÐ\n");
         return false;
+    }
 
-    Renderer.Create(Window.GetHWND());
+    if (!Renderer.Initialize(Window.GetHWND(), width, height)) {
+        OutputDebugStringA("[ERROR] Renderer ÃÊ±âÈ­ ½ÇÆÐ\n");
+        return false;
+    }
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui_ImplWin32_Init((void*)Window.GetHWND());
+    ImGui_ImplDX11_Init(Renderer.Device, Renderer.DeviceContext);
 
     CurrentWorld.SetContext(this);
-
     RegisterBuiltinTypes();
-    RegisterPanels();   // ÆÐ³Î µî·Ï
+    RegisterPanels();
     RegisterTools();
+    SubscribeEvents();
 
-    SubscribeEvents();  //ÀÌº¥Æ® µî·Ï
-
-    return false;
+    return true;
 }
 
 void AppContext::RegisterBuiltinTypes()
 {
+    Classes.Register("Cube", UCubeComp::StaticClass());
+    Classes.Register("Sphere", USphereComp::StaticClass());
+    Classes.Register("Plane", UPlaneComp::StaticClass());
+    /*Classes.Register("Triangle", UtriangleComp::StaticClass());*/
 }
 
 void AppContext::RegisterPanels()
 {
+   // auto* outliner = new OutlinerPanel();
+    //auto* console = new ConsolePanel();
+      
+    auto* property = new PropertyPanel();
+    auto* stat = new StatPanel();
+    auto* toolbar = new ToolbarPanel();
+
+    //OwnedPanels.push_back(outliner);
+    //OwnedPanels.push_back(console);
+
+    OwnedPanels.push_back(property);
+    OwnedPanels.push_back(stat);
+    OwnedPanels.push_back(toolbar);
+
     Panels.Register(new PropertyPanel());
     Panels.Register(new ToolbarPanel());
     Panels.Register(new StatPanel());
@@ -32,28 +64,150 @@ void AppContext::RegisterPanels()
 
 void AppContext::RegisterTools()
 {
+    auto* select = new SelectTool();
+    /*auto* translate = new TranslateTool();
+    auto* rotate = new RotateTool();
+    auto* scale = new ScaleTool();*/
+
+    OwnedTools.push_back(select);
+    /*OwnedTools.push_back(translate);
+    OwnedTools.push_back(rotate);
+    OwnedTools.push_back(scale);*/
+
+    Editor.Tools.RegisterTool(select);
+    /*Editor.Tools.RegisterTool(translate);
+    Editor.Tools.RegisterTool(rotate);
+    Editor.Tools.RegisterTool(scale);*/
+
+    // ±âº» È°¼º Åø
+    Editor.Tools.ActivateTool("Select");
 }
 
 void AppContext::SubscribeEvents()
 {
-    //OutlinerPanel* outliner = (OutlinerPanel*)Panels.Find("OutLiner");
+    MouseDownHandle = PlatformEvents::OnMouseDown.Bind(
+        [this](const MouseDownEvent& e) {
+            const auto& keys = InputRouter::GetState().Keys;
+            MouseEvent mouseEvent{
+                e.X, e.Y,
+                e.Button == 0, e.Button == 1, e.Button == 2,
+                keys[VK_CONTROL], keys[VK_SHIFT], keys[VK_MENU],
+                0, 0 };
+            if (Editor.Tools.GetActiveTool())
+                Editor.Tools.GetActiveTool()->OnMouseDown(mouseEvent, *this);
+        });
+
+    MouseMoveHandle = PlatformEvents::OnMouseMove.Bind(
+        [this](const MouseMoveEvent& e) {
+            const auto& keys = InputRouter::GetState().Keys;
+            MouseEvent mouseEvent{
+                e.X, e.Y,
+                false, e.RightDown, false,
+                keys[VK_CONTROL], keys[VK_SHIFT], keys[VK_MENU],
+                e.DeltaX, e.DeltaY };
+            if (Editor.Tools.GetActiveTool())
+                Editor.Tools.GetActiveTool()->OnMouseMove(mouseEvent, *this);
+        });
+
+    MouseUpHandle = PlatformEvents::OnMouseUp.Bind(
+        [this](const MouseUpEvent& e) {
+            const auto& keys = InputRouter::GetState().Keys;
+            MouseEvent mouseEvent{
+                e.X, e.Y,
+                e.Button == 0, e.Button == 1, e.Button == 2,
+                keys[VK_CONTROL], keys[VK_SHIFT], keys[VK_MENU],
+                0, 0 };
+            if (Editor.Tools.GetActiveTool())
+                Editor.Tools.GetActiveTool()->OnMouseUp(mouseEvent, *this);
+        });
+
+    KeyDownHandle = PlatformEvents::OnKeyDown.Bind(
+        [this](const KeyDownEvent& e) {
+            // Space Bar ¡æ Transform ¸ðµå ¼øÈ¯ (Translate ¡æ Rotate ¡æ Scale)
+            if (e.KeyCode == VK_SPACE) {
+                using M = ETransformMode;
+                auto cur = Editor.Tools.GetMode();
+                Editor.Tools.SetMode(
+                    cur == M::Translate ? M::Rotate :
+                    cur == M::Rotate ? M::Scale : M::Translate);
+            }
+            // Åø¿¡µµ Àü´Þ
+            KeyEvent keyEvent{ e.KeyCode, true };
+            if (Editor.Tools.GetActiveTool())
+                Editor.Tools.GetActiveTool()->OnKeyDown(keyEvent, *this);
+        });
+
+    KeyUpHandle = PlatformEvents::OnKeyUp.Bind(
+        [this](const KeyUpEvent& e) {
+            // ÇöÀç KeyUpÀ» Ã³¸®ÇÏ´Â ITool ÀÎÅÍÆäÀÌ½º´Â ¾øÀ¸¹Ç·Î ºó »óÅÂ À¯Áö
+            // ÇâÈÄ OnKeyUp ½½·Ô Ãß°¡ ½Ã ¿©±â¿¡ ±¸Çö
+        });
+
+    ResizeHandle = PlatformEvents::OnResize.Bind(
+        [this](const ResizeEvent& e) { 
+            Renderer.OnResize(e.Width, e.Height); 
+        });
+
+
+    //OutlinerPanel* outliner = (OutlinerPanel*)Panels.Find("Outliner");
+    PropertyPanel* property = (PropertyPanel*)Panels.Find("Property");
+
+    if (property) {
+        property->ObjectDestroyedHandle = OnObjectDestroyed.Bind(
+            [property](const ObjectDestroyedEvent& e) {
+                property->OnObjectDestroyed(e);
+            });
+        property->SelectionChangedHandle = Editor.Selection.OnSelectionChanged.Bind(
+            [property](const SelectionChangedEvent& e) {
+                property->OnSelectionChanged(e);
+            });
+    }
 }
 
-// ï¿½ï¿½ Shutdown() ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½:
-//   1. ï¿½Ð³ï¿½/ï¿½Ã½ï¿½ï¿½ï¿½ï¿½ï¿½ DelegateHandle Unbind (use-after-free ï¿½ï¿½ï¿½ï¿½)
-//   2. EditorManager (ï¿½Ð³ï¿½ ï¿½Ò¸ï¿½)
-//   3. D3D11Renderer (GPU ï¿½ï¿½ï¿½Ò½ï¿½ ï¿½ï¿½ï¿½ï¿½)
-//   4. ObjectStore::Clear() (UObject ï¿½Þ¸ï¿½ ï¿½ï¿½ï¿½ï¿½)
-//   5. WindowHost::Shutdown()
+
 void AppContext::Shutdown()
 {
     //unbind
-    //PlatformEvents::OnMouseDown.Unbind(MouseDownHandle);
-    //PlatformEvents::OnMouseMove.Unbind(MouseMoveHandle);
-    //PlatformEvents::OnMouseUp.Unbind(MouseUpHandle);
-    //PlatformEvents::OnKeyDown.Unbind(KeyDownHandle);
-    //PlatformEvents::OnResize.Unbind(ResizeHandle);
+    PlatformEvents::OnMouseDown.Unbind(MouseDownHandle);
+    PlatformEvents::OnMouseMove.Unbind(MouseMoveHandle);
+    PlatformEvents::OnMouseUp.Unbind(MouseUpHandle);
+    PlatformEvents::OnKeyDown.Unbind(KeyDownHandle);
+    PlatformEvents::OnKeyUp.Unbind(KeyUpHandle);
+    PlatformEvents::OnResize.Unbind(ResizeHandle);
 
+    PropertyPanel* property = static_cast<PropertyPanel*>(Panels.Find("Property"));
+
+    if (property) {
+        Editor.Selection.OnSelectionChanged.Unbind(property->SelectionChangedHandle);
+        OnObjectDestroyed.Unbind(property->ObjectDestroyedHandle);
+    }
+    /*OutlinerPanel* outliner = static_cast<OutlinerPanel*>(Panels.Find("Outliner"));
+
+    if (outliner) {
+        Editor.Selection.OnSelectionChanged.Unbind(outliner->SelectionChangedHandle);
+        OnObjectDestroyed.Unbind(outliner->ObjectDestroyedHandle);
+    }*/
+
+    for (IEditorPanel* Panel : OwnedPanels) {
+        delete Panel;
+    }
+    OwnedPanels.clear();
+
+    for (ITool* tool : OwnedTools)
+        delete tool;
+    OwnedTools.clear();
+    ImGui_ImplDX11_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
+
+    // 4. Renderer GPU ¸®¼Ò½º ÇØÁ¦
+    Renderer.Shutdown();
+
+    // 5. ObjectStore ÀüÃ¼ ºñ¿ò + UObject ¸Þ¸ð¸® ÇØÁ¦
+    Objects.Clear();
+
+    // 6. Window ÇØÁ¦
+    Window.Shutdown();
 }
 
 // Always receive new Instance -> must delete.

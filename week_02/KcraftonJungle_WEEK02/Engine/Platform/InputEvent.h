@@ -8,8 +8,6 @@ struct KeyDownEvent { int32 KeyCode; };
 struct KeyUpEvent { int32 KeyCode; };
 struct ResizeEvent { int32 Width, Height; };
 
-enum class EInputType { MouseMove, MouseDown, KeyDown /* ... */ };
-
 struct FInputEvent {
     enum class EType {
         MouseMove, MouseDown, MouseUp,

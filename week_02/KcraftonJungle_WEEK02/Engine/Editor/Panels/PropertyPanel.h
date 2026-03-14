@@ -13,9 +13,9 @@ public:
 
     void OnSelectionChanged(const SelectionChangedEvent& e);
 
+    DelegateHandle SelectionChangedHandle = 0;
+    DelegateHandle ObjectDestroyedHandle = 0;
 private:
     const USceneComponent* Current = nullptr;
 
-    DelegateHandle SelectionChangedHandle = 0;
-    DelegateHandle ObjectDestroyedHandle = 0;
 };

@@ -18,7 +18,7 @@ using DelegateHandle = uint64;
 template<typename T>
 class TDelegate {
 public:
-    DelegateHandle Bind(std::function<void(const T&)>& fn);
+    DelegateHandle Bind(std::function<void(const T&)> fn);
     void Unbind(DelegateHandle handle);
     void Clear();
     void Broadcast(const T& value) const;
@@ -30,7 +30,7 @@ private:
 };
 
 template<typename T>
-inline DelegateHandle TDelegate<T>::Bind(std::function<void(const T&)>& fn)
+inline DelegateHandle TDelegate<T>::Bind(std::function<void(const T&)> fn)
 {
     if (!fn) return 0;
     const DelegateHandle Handle = NextHandle++;

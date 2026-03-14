@@ -2,7 +2,7 @@
 #include <cstdint>
 #include "../../Engine/Foundation/Core/CoreTypes.h"
 
-class AppContext;
+struct AppContext;
 class RenderQueue;
 class EditorSession;
 class USceneComponent;
