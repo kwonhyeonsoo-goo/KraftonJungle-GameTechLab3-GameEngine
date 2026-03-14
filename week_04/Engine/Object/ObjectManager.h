@@ -5,7 +5,7 @@
 class ENGINE_API ObjectManager
 {
 public:
-	ObjectManager();
+    ObjectManager() : TotalAllocationBytes(0), TotalAllocationCount(0) {};
 	~ObjectManager() = default;
 
 
@@ -18,8 +18,8 @@ public:
         return reinterpret_cast<size_t>(&tag);
     }
 
-	template <class T>
-	T* SpawnObject() {
+	template <class TObject>
+    TObject* SpawnObject() {
 
         size_t id = GetTypeID<T>();
 
@@ -39,9 +39,9 @@ public:
 private:
     void RegisterAllocation(size_t InSize);
 
-    TArray<UObject*> ObjectArray = {};
-    uint32 TotalAllocationBytes = 0;
-    uint32 TotalAllocationCount = 0;
+    TArray<UObject*> GUObjectArray = {};
+    uint32 TotalAllocationBytes ;
+    uint32 TotalAllocationCount ;
 };
 
 

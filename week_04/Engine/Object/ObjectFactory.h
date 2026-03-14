@@ -1,29 +1,38 @@
 #pragma once
 #include "../CoreMinimal.h"
+#include <functional>
 
 using CreateFunc = UObject * (*)();
 
 
-template<class T>
-class ENGINE_API ObjectFactory
+class ObjectFactory
 {
 public:
-	static TMap<size_t, CreateFunc> Registry;
+    using CreateFunc = std::function<std::shared_ptr<UObject>()>;
 
-	static T* CreateObject(size_t InId)
-	{
-		if (Registry.find(InId) != Registry.end())
-		{
-			return Registry[InId]();
-		}
+    static auto& Registry()
+    {
+        static TMap<size_t, CreateFunc> registry;
+        return registry;
+    }
 
-		return nullptr;
-	}
+    template<typename TObject>
+    static void RegisterType(size_t typeId)
+    {
+        static_assert(std::is_base_of_v<BaseObject, TObject>, "TObject must derive from UObject");
+        Registry()[typeId] = []() -> std::shared_ptr<BaseObject> {
+            return std::make_shared<TObject>();
+            };
+    }
 
-
-	template<typename T>
-	static void RegisterType(size_t InId)
-	{
-		Registry[InId] = []() -> UObject* { return new T(); };
-	}
+    static std::shared_ptr<UObject> CreateObject(size_t typeId)
+    {
+        auto& reg = Registry();
+        auto it = reg.find(typeId);
+        if (it != reg.end())
+        {
+            return it->second();
+        }
+        return nullptr;
+    }
 };
