@@ -52,15 +52,14 @@ void UScene::DestroyActor(AActor* InActor)
 
 void UScene::CleanupDestroyedActors()
 {
-	auto NewEnd = std::remove_if(
-		Actors.begin(),
-		Actors.end(),
-		[](AActor* Actor)
-		{
-			return Actor == nullptr || Actor->IsPendingDestroy();
-		});
+    auto NewEnd = std::ranges::remove_if(Actors
+                                         ,
+                                         [](const AActor* Actor)
+                                         {
+	                                         return Actor == nullptr || Actor->IsPendingDestroy();
+                                         }).begin();
 
-	Actors.erase(NewEnd, Actors.end());
+    Actors.erase(NewEnd, Actors.end());
 }
 
 void UScene::BeginPlay()
