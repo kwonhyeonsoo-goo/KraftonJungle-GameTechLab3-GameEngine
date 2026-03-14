@@ -22,12 +22,12 @@ FVector CCamera::GetForward() const
 	Forward.X = cosf(RadPitch) * sinf(RadYaw);
 	Forward.Y = sinf(RadPitch);
 	Forward.Z = cosf(RadPitch) * cosf(RadYaw);
-	return Forward.Normalize();
+	return Forward.GetSafeNormal();
 }
 
 FVector CCamera::GetRight() const
 {
-	return Up.Cross(GetForward()).Normalize();
+	return FVector::CrossProduct(Up, GetForward()).GetSafeNormal();
 }
 
 void CCamera::MoveForward(float Delta)
@@ -60,12 +60,13 @@ void CCamera::Rotate(float DeltaYaw, float DeltaPitch)
 FMatrix CCamera::GetViewMatrix() const
 {
 	FVector Target = Position + GetForward();
-	return FMatrix::LookAt(Position, Target, Up);
+	return FMatrix::MakeViewLookAtLH(Position, Target, Up);
 }
 
 FMatrix CCamera::GetProjectionMatrix() const
 {
-	return FMatrix::Perspective(FOV, AspectRatio, NearPlane, FarPlane);
+	constexpr float DegreesToRadians = 3.14159265358979f / 180.0f;
+	return FMatrix::MakePerspectiveFovLH(FOV * DegreesToRadians, AspectRatio, NearPlane, FarPlane);
 }
 
 void CCamera::SetAspectRatio(float InAspectRatio)

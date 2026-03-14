@@ -2,8 +2,8 @@
 
 FMatrix FTransform::ToMatrix() const
 {
-	FMatrix S = FMatrix::Scale(Scale.X, Scale.Y, Scale.Z);
-	FMatrix R = FMatrix::RotationZ(Rotation.Z) * FMatrix::RotationY(Rotation.Y) * FMatrix::RotationX(Rotation.X);
-	FMatrix T = FMatrix::Translation(Location.X, Location.Y, Location.Z);
+	FMatrix S = FMatrix::MakeScale(Scale);
+	FMatrix R = FMatrix::MakeRotationZ(Rotation.Z) * FMatrix::MakeRotationY(Rotation.Y) * FMatrix::MakeRotationX(Rotation.X);
+	FMatrix T = FMatrix::MakeTranslation(Location);
 	return S * R * T;
 }
