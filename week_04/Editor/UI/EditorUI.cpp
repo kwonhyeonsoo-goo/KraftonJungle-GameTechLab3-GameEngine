@@ -1,5 +1,6 @@
 #include "EditorUI.h"
 #include "Core/Core.h"
+#include "Camera/Camera.h"
 #include "Renderer/Renderer.h"
 #include "Object/Scene/Scene.h"
 #include "Object/Actor/Actor.h"
@@ -148,6 +149,14 @@ void CEditorUI::SetupWindow(CWindow* InWindow)
 		if (Core && Core->GetRenderer())
 		{
 			Core->GetRenderer()->OnResize(W, H);
+		}
+		if (Core->GetScene() && Core->GetScene()->GetCamera())
+		{
+			// 분모가 0이 되는 것을 방지
+			float NewAspect = (H > 0) ? static_cast<float>(W) / static_cast<float>(H) : 1.0f;
+			Core->GetScene()->GetCamera()->SetAspectRatio(NewAspect);
+
+	
 		}
 	});
 
