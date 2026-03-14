@@ -1,5 +1,6 @@
 #include "EditorSession.h"
 #include <cmath>
+#include "../Platform/InputRouter.h"
 
 FMatrix CameraState::GetViewMatrix() const
 {

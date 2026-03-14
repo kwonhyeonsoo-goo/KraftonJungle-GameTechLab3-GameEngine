@@ -1,7 +1,7 @@
 #pragma once
-#include "../Foundation/Containers/FVector.h"
-#include "../Foundation/Containers/FMatrix.h"
-#include "../Foundation/Math/TArray.h"
+#include "../Foundation/Math/FVector.h"
+#include "../Foundation/Math/FMatrix.h"
+#include "../Foundation/Containers/TArray.h"
 #include "../ObjectKernel/UObject.h"
 #include "../World/UPrimitiveComponent.h"
 
