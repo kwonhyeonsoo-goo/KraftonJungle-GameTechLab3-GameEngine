@@ -1,5 +1,7 @@
 #include "Renderer.h"
 #include "ShaderType.h"
+#include "Shader.h"
+#include "ShaderMap.h"
 #include <dxgi1_3.h>
 #include "Primitive/PrimitiveBase.h"
 #include <cassert>
@@ -305,6 +307,139 @@ void CRenderer::UpdateConstantBuffer(const FMatrix& WorldMatrix, const FMatrix& 
 
 }
 
+bool CRenderer::InitOutlineResources()
+{
+	if (StencilWriteState && StencilTestState && OutlinePS)
+		return true;
+
+	// Pass 1: 통상 렌더 + Stencil에 1 쓰기
+	D3D11_DEPTH_STENCIL_DESC WriteDesc = {};
+	WriteDesc.DepthEnable = TRUE;
+	WriteDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	WriteDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	WriteDesc.StencilEnable = TRUE;
+	WriteDesc.StencilReadMask = 0xFF;
+	WriteDesc.StencilWriteMask = 0xFF;
+	WriteDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	WriteDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	WriteDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+	WriteDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	WriteDesc.BackFace = WriteDesc.FrontFace;
+
+	HRESULT Hr = Device->CreateDepthStencilState(&WriteDesc, &StencilWriteState);
+	if (FAILED(Hr)) return false;
+
+	// Pass 2: Stencil이 1이 아닌 곳에만 그리기 (아웃라인)
+	D3D11_DEPTH_STENCIL_DESC TestDesc = {};
+	TestDesc.DepthEnable = FALSE;
+	TestDesc.StencilEnable = TRUE;
+	TestDesc.StencilReadMask = 0xFF;
+	TestDesc.StencilWriteMask = 0xFF;
+	TestDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	TestDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	TestDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	TestDesc.FrontFace.StencilFunc = D3D11_COMPARISON_NOT_EQUAL;
+	TestDesc.BackFace = TestDesc.FrontFace;
+
+	Hr = Device->CreateDepthStencilState(&TestDesc, &StencilTestState);
+	if (FAILED(Hr)) return false;
+
+	// 아웃라인 픽셀 셰이더 로드
+	OutlinePS = FShaderMap::Get().GetOrCreatePixelShader(Device, L"..\\Engine\\Shaders\\OutlinePixelShader.hlsl");
+	return OutlinePS != nullptr;
+}
+
+void CRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float OutlineScale)
+{
+	if (!Mesh || !InitOutlineResources())
+		return;
+
+	Mesh->CreateBuffers(Device);
+	Mesh->Bind(DeviceContext);
+
+	// Pass 1: 통상 렌더 + Stencil 마킹 (Ref=1)
+	DeviceContext->OMSetDepthStencilState(StencilWriteState, 1);
+	UpdateConstantBuffer(WorldMatrix, ViewProjectionMatrix);
+	DeviceContext->DrawIndexed(Mesh->IndexCount, 0, 0);
+
+	// Pass 2: 확대된 메시를 아웃라인 셰이더로 그리기 (Stencil != 1인 곳만)
+	DeviceContext->OMSetDepthStencilState(StencilTestState, 1);
+
+	// 약간 확대한 WorldMatrix
+	FMatrix ScaleUp = FMatrix::Scale(OutlineScale, OutlineScale, OutlineScale);
+	FMatrix OutlineWorld = ScaleUp * WorldMatrix;
+	UpdateConstantBuffer(OutlineWorld, ViewProjectionMatrix);
+
+	// 아웃라인 셰이더 바인딩
+	OutlinePS->Bind(DeviceContext);
+
+	DeviceContext->DrawIndexed(Mesh->IndexCount, 0, 0);
+
+	// 원래 셰이더 복원
+	ShaderManager.Bind(DeviceContext);
+	// Stencil 상태 복원
+	DeviceContext->OMSetDepthStencilState(nullptr, 0);
+}
+
+void CRenderer::DrawLine(const FVector& Start, const FVector& End, const FVector4& Color)
+{
+	FVector Normal = { 0.0f, 0.0f, 0.0f };
+	LineVertices.push_back({ Start, Color, Normal });
+	LineVertices.push_back({ End, Color, Normal });
+}
+
+void CRenderer::ExecuteLineCommands()
+{
+	if (LineVertices.empty()) return;
+
+	// Depth 테스트 비활성화 (축이 항상 보이도록)
+	if (!LineDepthState)
+	{
+		D3D11_DEPTH_STENCIL_DESC Desc = {};
+		Desc.DepthEnable = FALSE;
+		Desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+		Device->CreateDepthStencilState(&Desc, &LineDepthState);
+	}
+	DeviceContext->OMSetDepthStencilState(LineDepthState, 0);
+
+	// 동적 버퍼 생성/재생성
+	UINT BufferSize = static_cast<UINT>(LineVertices.size() * sizeof(FPrimitiveVertex));
+
+	if (LineVertexBuffer)
+	{
+		LineVertexBuffer->Release();
+		LineVertexBuffer = nullptr;
+	}
+
+	D3D11_BUFFER_DESC Desc = {};
+	Desc.ByteWidth = BufferSize;
+	Desc.Usage = D3D11_USAGE_DEFAULT;
+	Desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+	D3D11_SUBRESOURCE_DATA InitData = {};
+	InitData.pSysMem = LineVertices.data();
+
+	Device->CreateBuffer(&Desc, &InitData, &LineVertexBuffer);
+
+	// 바인딩
+	UINT Stride = sizeof(FPrimitiveVertex);
+	UINT Offset = 0;
+	DeviceContext->IASetVertexBuffers(0, 1, &LineVertexBuffer, &Stride, &Offset);
+	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+
+	// WorldMatrix = Identity로 상수 버퍼 업데이트
+	UpdateConstantBuffer(FMatrix::Identity(), ViewProjectionMatrix);
+
+	DeviceContext->Draw(static_cast<UINT>(LineVertices.size()), 0);
+
+	// 토폴로지 복원
+	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	// Depth 상태 복원
+	DeviceContext->OMSetDepthStencilState(nullptr, 0);
+
+	LineVertices.clear();
+}
+
 void CRenderer::Release()
 {
 	if (GUIShutdown)
@@ -318,6 +453,27 @@ void CRenderer::Release()
 		GUIPostPresent = nullptr;
 	}
 
+	if (StencilWriteState)
+	{
+		StencilWriteState->Release();
+		StencilWriteState = nullptr;
+	}
+	if (StencilTestState)
+	{
+		StencilTestState->Release();
+		StencilTestState = nullptr;
+	}
+	OutlinePS.reset();
+	if (LineVertexBuffer)
+	{
+		LineVertexBuffer->Release();
+		LineVertexBuffer = nullptr;
+	}
+	if (LineDepthState)
+	{
+		LineDepthState->Release();
+		LineDepthState = nullptr;
+	}
 	if (RasterizerState)
 	{
 		RasterizerState->Release();

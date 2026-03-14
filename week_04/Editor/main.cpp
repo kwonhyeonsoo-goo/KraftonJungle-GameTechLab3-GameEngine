@@ -1,12 +1,18 @@
 #include "EngineTest.h"
 #include "Core/Core.h"
 #include "Renderer/Renderer.h"
+#include "Object/Scene/Scene.h"
+#include "Object/Actor/Actor.h"
+#include "Component/SceneComponent.h"
+#include "Picking/Picker.h"
 
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
 
 static CCore* GCore = nullptr;
+static CPicker GPicker;
+static AActor* GSelectedActor = nullptr;
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 
@@ -26,6 +32,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			GCore->GetRenderer()->OnResize(LOWORD(lParam), HIWORD(lParam));
 		}
 		return 0;
+	case WM_LBUTTONDOWN:
+		// ImGui가 마우스를 사용 중이면 피킹하지 않음
+		if (!ImGui::GetIO().WantCaptureMouse && GCore && GCore->GetScene())
+		{
+			int MouseX = LOWORD(lParam);
+			int MouseY = HIWORD(lParam);
+			RECT Rect;
+			GetClientRect(hWnd, &Rect);
+			int Width = Rect.right - Rect.left;
+			int Height = Rect.bottom - Rect.top;
+
+			AActor* Picked = GPicker.PickActor(GCore->GetScene(), MouseX, MouseY, Width, Height);
+			if (Picked)
+			{
+				GSelectedActor = Picked;
+				GCore->SetSelectedActor(GSelectedActor);
+			}
+		}
+		break;
 	default:
 		if (GCore)
 		{
@@ -162,6 +187,44 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 				show_another_window = false;
 			ImGui::End();
 		}
+
+		// 선택된 Actor 정보 표시
+		ImGui::Begin("Property");
+		if (GSelectedActor)
+		{
+			ImGui::Text("Selected: %s", GSelectedActor->GetName().c_str());
+
+			USceneComponent* Root = GSelectedActor->GetRootComponent();
+			if (Root)
+			{
+				FTransform Transform = Root->GetRelativeTransform();
+
+				float Loc[3] = { Transform.Location.X, Transform.Location.Y, Transform.Location.Z };
+				float Rot[3] = { Transform.Rotation.X, Transform.Rotation.Y, Transform.Rotation.Z };
+				float Scl[3] = { Transform.Scale.X, Transform.Scale.Y, Transform.Scale.Z };
+
+				if (ImGui::DragFloat3("Location", Loc, 0.1f))
+				{
+					Transform.Location = { Loc[0], Loc[1], Loc[2] };
+					Root->SetRelativeTransform(Transform);
+				}
+				if (ImGui::DragFloat3("Rotation", Rot, 0.1f))
+				{
+					Transform.Rotation = { Rot[0], Rot[1], Rot[2] };
+					Root->SetRelativeTransform(Transform);
+				}
+				if (ImGui::DragFloat3("Scale", Scl, 0.1f))
+				{
+					Transform.Scale = { Scl[0], Scl[1], Scl[2] };
+					Root->SetRelativeTransform(Transform);
+				}
+			}
+		}
+		else
+		{
+			ImGui::Text("No actor selected");
+		}
+		ImGui::End();
 	});
 
 	// Timing
