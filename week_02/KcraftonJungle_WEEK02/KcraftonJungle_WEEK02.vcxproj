@@ -157,6 +157,10 @@
     <ClInclude Include="Engine\ObjectKernel\UClass.h" />
     <ClInclude Include="Engine\ObjectKernel\UObject.h" />
     <ClInclude Include="Engine\ObjectKernel\UUIDService.h" />
+    <ClInclude Include="Engine\Platform\InputEvent.h" />
+    <ClInclude Include="Engine\Platform\InputRouter.h" />
+    <ClInclude Include="Engine\Platform\PlatformEvents.h" />
+    <ClInclude Include="Engine\Platform\WindowHost.h" />
     <ClInclude Include="Engine\Rendering\RenderQueue.h" />
     <ClInclude Include="Engine\Rendering\RenderSceneExtractor.h" />
     <ClInclude Include="Engine\Rendering\RenderTypes.h" />
@@ -200,6 +204,9 @@
     <ClCompile Include="Engine\ObjectKernel\UClass.cpp" />
     <ClCompile Include="Engine\ObjectKernel\UObject.cpp" />
     <ClCompile Include="Engine\ObjectKernel\UUIDService.cpp" />
+    <ClCompile Include="Engine\Platform\InputRouter.cpp" />
+    <ClCompile Include="Engine\Platform\PlatformEvents.cpp" />
+    <ClCompile Include="Engine\Platform\WindowHost.cpp" />
     <ClCompile Include="Engine\Rendering\RenderSceneExtractor.cpp" />
     <ClCompile Include="Engine\Rendering\URenderer.cpp" />
     <ClCompile Include="Engine\Services\SerializationService.cpp" />

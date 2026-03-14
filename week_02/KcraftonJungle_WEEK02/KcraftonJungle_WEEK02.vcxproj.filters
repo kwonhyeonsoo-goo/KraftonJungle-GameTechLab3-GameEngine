@@ -101,6 +101,9 @@
     <ClCompile Include="Engine\Editor\Commands\SetTransformCommand.cpp">
       <Filter>Engine\Editor\Commands</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Platform\InputRouter.cpp" />
+    <ClCompile Include="Engine\Platform\PlatformEvents.cpp" />
+    <ClCompile Include="Engine\Platform\WindowHost.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
@@ -258,9 +261,10 @@
     <ClInclude Include="Engine\World\USceneComponent.h" />
     <ClInclude Include="Engine\World\USphereComp.h" />
     <ClInclude Include="json.hpp" />
-    <ClInclude Include="Engine\Services\PickingService.h" />
-    <ClInclude Include="Engine\Services\StatsService.h" />
-    <ClInclude Include="Engine\Services\ConsoleService.h" />
+    <ClInclude Include="Engine\Platform\InputEvent.h" />
+    <ClInclude Include="Engine\Platform\InputRouter.h" />
+    <ClInclude Include="Engine\Platform\PlatformEvents.h" />
+    <ClInclude Include="Engine\Platform\WindowHost.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">

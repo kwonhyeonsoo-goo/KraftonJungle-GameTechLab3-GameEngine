@@ -8,6 +8,7 @@
 #include "Engine/ObjectKernel/UUIDService.h"
 #include "Engine/ObjectKernel/ClassRegistry.h"
 #include "Engine/ObjectKernel/ObjectFactory.h"
+#include "Engine/Platform/WindowHost.h"
 
 // main() 스택에서 생성
 struct AppContext {
@@ -31,7 +32,7 @@ struct AppContext {
     URenderer  Renderer;
 
     // Platform
-    //WindowHost     Window;
+    WindowHost Window;
 
     // ── 초기화 ──
     bool Initialize(const FString& windowTitle = "MyEngine",
