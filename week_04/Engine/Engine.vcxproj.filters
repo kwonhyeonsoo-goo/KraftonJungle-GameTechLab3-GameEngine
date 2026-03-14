@@ -114,9 +114,6 @@
     <ClInclude Include="Object\ObjectFactory.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Types\ObjectType.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Object\Object.cpp">

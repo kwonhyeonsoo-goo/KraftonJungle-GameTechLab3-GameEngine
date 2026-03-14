@@ -35,7 +35,6 @@
     <ClInclude Include="Types\Array.h" />
     <ClInclude Include="Types\LinkedList.h" />
     <ClInclude Include="Types\Map.h" />
-    <ClInclude Include="Types\ObjectType.h" />
     <ClInclude Include="Types\Pair.h" />
     <ClInclude Include="Types\Queue.h" />
     <ClInclude Include="Types\Set.h" />
