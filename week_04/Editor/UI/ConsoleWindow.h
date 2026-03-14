@@ -1,8 +1,7 @@
 #pragma once
 
+#include "CoreMinimal.h"
 #include "imgui.h"
-#include <vector>
-#include <string>
 
 class CConsoleWindow
 {

@@ -41,7 +41,7 @@ private:
 	ID3DBlob* ShaderBlob = nullptr;
 
 	// Blob 없이 raw 바이트로 로드한 경우
-	TArray<uint8_t> RawData;
+	std::vector<uint8_t> RawData;
 	bool bFromCso = false;
 
 	static std::unordered_map<std::wstring, std::shared_ptr<FShaderResource>> Cache;

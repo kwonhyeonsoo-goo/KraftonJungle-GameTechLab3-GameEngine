@@ -1,14 +1,10 @@
 #pragma once
 
+#include "CoreMinimal.h"
+#include "imgui.h"
+
 class CStatWindow
 {
 public:
-    void Render();
-
-    void SetObjectCount(unsigned int Count) { ObjectCount = Count; }
-    void SetHeapUsage(unsigned int Bytes) { HeapUsageBytes = Bytes; }
-
-private:
-    unsigned int ObjectCount = 0;
-    unsigned int HeapUsageBytes = 0;
+	void Render();
 };
