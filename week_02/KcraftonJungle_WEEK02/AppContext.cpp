@@ -27,6 +27,7 @@ void AppContext::RegisterPanels()
     Panels.Register(new PropertyPanel());
     Panels.Register(new ToolbarPanel());
     Panels.Register(new StatPanel());
+    Panels.Register(new ConsolePanel());
 }
 
 void AppContext::RegisterTools()

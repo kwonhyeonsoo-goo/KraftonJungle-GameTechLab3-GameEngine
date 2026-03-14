@@ -128,6 +128,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
+    <ClInclude Include="Engine\Editor\Panels\ConsolePanel.h" />
     <ClInclude Include="Engine\Editor\Commands\DeleteObjectCommand.h" />
     <ClInclude Include="Engine\Editor\EditorManager.h" />
     <ClInclude Include="Engine\Editor\EditorSession.h" />
@@ -196,9 +197,11 @@
     <ClInclude Include="Engine\Editor\Panels\ToolbarPanel.h" />
     <ClInclude Include="Engine\Editor\Commands\SpawnObjectCommand.h" />
     <ClInclude Include="Engine\Editor\Panels\StatPanel.h" />
+    <ClInclude Include="Engine\Editor\Tools\TranslateTool.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AppContext.cpp" />
+    <ClCompile Include="Engine\Editor\Panels\ConsolePanel.cpp" />
     <ClCompile Include="Engine\Editor\Commands\DeleteObjectCommand.cpp" />
     <ClCompile Include="Engine\Editor\EditorManager.cpp" />
     <ClCompile Include="Engine\Editor\EditorSession.cpp" />
@@ -248,6 +251,7 @@
     <ClCompile Include="Engine\Editor\Panels\ToolbarPanel.cpp" />
     <ClCompile Include="Engine\Editor\Commands\SpawnObjectCommand.cpp" />
     <ClCompile Include="Engine\Editor\Panels\StatPanel.cpp" />
+    <ClCompile Include="Engine\Editor\Tools\TranslateTool.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
