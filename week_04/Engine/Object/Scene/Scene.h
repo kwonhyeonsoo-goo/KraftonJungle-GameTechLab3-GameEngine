@@ -11,35 +11,35 @@ public:
 	UScene(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
 	~UScene() override = default;
 
-    template <typename T>
-    T* SpawnActor(const FString& InName)
-    {
-        static_assert(std::is_base_of_v<AActor, T>, "T must derive from AActor");
+	template <typename T>
+	T* SpawnActor(const FString& InName)
+	{
+		static_assert(std::is_base_of_v<AActor, T>, "T must derive from AActor");
 
-        UObject* NewObj = T::StaticClass()->CreateInstance(this, InName);
-        if (!NewObj)
-        {
-            return nullptr;
-        }
+		UObject* NewObj = T::StaticClass()->CreateInstance(this, InName);
+		if (!NewObj)
+		{
+			return nullptr;
+		}
 
-        T* NewActor = static_cast<T*>(NewObj);
-        RegisterActor(NewActor);
-        NewActor->PostSpawnInitialize();
+		T* NewActor = static_cast<T*>(NewObj);
+		RegisterActor(NewActor);
+		NewActor->PostSpawnInitialize();
 
-        return NewActor;
-    }
+		return NewActor;
+	}
 
-    void RegisterActor(AActor* InActor);
-    void DestroyActor(AActor* InActor);
-    void CleanupDestroyedActors();
+	void RegisterActor(AActor* InActor);
+	void DestroyActor(AActor* InActor);
+	void CleanupDestroyedActors();
 
-    const std::vector<AActor*>& GetActors() const { return Actors; }
+	const TArray<AActor*>& GetActors() const { return Actors; }
 
-    void BeginPlay();
-    void Tick(float DeltaTime);
+	void BeginPlay();
+	void Tick(float DeltaTime);
 
 private:
 	TArray<AActor*> Actors;
-    bool bBegunPlay = false;
+	bool bBegunPlay = false;
 };
 

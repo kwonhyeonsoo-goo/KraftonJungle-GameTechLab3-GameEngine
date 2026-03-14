@@ -7,6 +7,8 @@ class ENGINE_API USceneComponent : public UActorComponent
 public:
 	static UClass* StaticClass();
 
+	USceneComponent() : UActorComponent(nullptr, "", nullptr) {}
+
 	USceneComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr)
 		: UActorComponent(InClass, InName, InOuter)
 	{

@@ -1,41 +1,74 @@
 #include "Camera.h"
+#include <cmath>
 
 void CCamera::SetPosition(const FVector& InPosition)
 {
-    Position = InPosition;
+	Position = InPosition;
 }
 
-void CCamera::SetLookAt(const FVector& InTarget)
+void CCamera::SetRotation(float InYaw, float InPitch)
 {
-    Target = InTarget;
+	Yaw = InYaw;
+	Pitch = InPitch;
+}
+
+FVector CCamera::GetForward() const
+{
+	const float PI = 3.14159265358979f;
+	float RadYaw = Yaw * PI / 180.0f;
+	float RadPitch = Pitch * PI / 180.0f;
+
+	FVector Forward;
+	Forward.X = cosf(RadPitch) * sinf(RadYaw);
+	Forward.Y = sinf(RadPitch);
+	Forward.Z = cosf(RadPitch) * cosf(RadYaw);
+	return Forward.Normalize();
+}
+
+FVector CCamera::GetRight() const
+{
+	return Up.Cross(GetForward()).Normalize();
 }
 
 void CCamera::MoveForward(float Delta)
 {
-    // TODO: 카메라 전후 이동 (W/S)
+	FVector Forward = GetForward();
+	Position = Position + Forward * (Delta * Speed);
 }
 
 void CCamera::MoveRight(float Delta)
 {
-    // TODO: 카메라 좌우 이동 (A/D)
+	FVector Right = GetRight();
+	Position = Position + Right * (Delta * Speed);
+}
+
+void CCamera::MoveUp(float Delta)
+{
+	Position = Position + Up * (Delta * Speed);
 }
 
 void CCamera::Rotate(float DeltaYaw, float DeltaPitch)
 {
-    // TODO: 마우스 우클릭 드래그 → Yaw/Pitch 회전
+	Yaw += DeltaYaw;
+	Pitch += DeltaPitch;
+
+	// Pitch 제한 (-89 ~ 89도)
+	if (Pitch > 89.0f) Pitch = 89.0f;
+	if (Pitch < -89.0f) Pitch = -89.0f;
 }
 
 FMatrix CCamera::GetViewMatrix() const
 {
-    return FMatrix::LookAt(Position, Target, Up);
+	FVector Target = Position + GetForward();
+	return FMatrix::LookAt(Position, Target, Up);
 }
 
 FMatrix CCamera::GetProjectionMatrix() const
 {
-    return FMatrix::Perspective(FOV, AspectRatio, NearPlane, FarPlane);
+	return FMatrix::Perspective(FOV, AspectRatio, NearPlane, FarPlane);
 }
 
 void CCamera::SetAspectRatio(float InAspectRatio)
 {
-    AspectRatio = InAspectRatio;
+	AspectRatio = InAspectRatio;
 }

@@ -1,6 +1,8 @@
 #pragma once
 #include "PrimitiveComponent.h"
 
-class USphereComponent : public UPrimitiveComponent
+class ENGINE_API USphereComponent : public UPrimitiveComponent
 {
+public:
+	USphereComponent();
 };

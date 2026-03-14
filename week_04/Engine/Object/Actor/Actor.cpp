@@ -93,7 +93,7 @@ void AActor::BeginPlay()
 
 void AActor::Tick(float DeltaTime)
 {
-	if (!CanTick || bPendingDestroy)
+	if (!CanTick() || bPendingDestroy)
 	{
 		return;
 	}
