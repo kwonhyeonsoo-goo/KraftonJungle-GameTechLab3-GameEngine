@@ -48,5 +48,4 @@ void PlatformEvents::Poll()
             break;
         }
     }
-    InputRouter::ResetDelta();
 }

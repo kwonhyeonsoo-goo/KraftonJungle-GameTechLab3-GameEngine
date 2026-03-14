@@ -64,6 +64,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         // ⑤ D3D11 렌더
         ctx.Renderer.BeginFrame();
+        InputRouter::ResetDelta();
 
         RenderQueue queue;
         RenderSceneExtractor::Extract(ctx, queue);
@@ -72,8 +73,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         // ⑥ ImGui 최종 출력
         ImGui::Render();
-        ID3D11RenderTargetView* rtv = ctx.Renderer.FrameBufferRTV;
-        ctx.Renderer.DeviceContext->OMSetRenderTargets(1, &rtv, nullptr);
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
         ctx.Renderer.EndFrame();

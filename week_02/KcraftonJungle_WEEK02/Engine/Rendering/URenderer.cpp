@@ -7,33 +7,7 @@
 #include "../Mesh/Triangle.h"
 #include "../Mesh/Rect.h"
 #include "../Mesh/Line.h"
-
-void URenderer::Create(HWND hWindow)
-
-{
-    //CreateDeviceAndSwapChain(hWindow);
-
-    CreateFrameBuffer();
-
-    CreateDepthBuffer();
-
-    CreateRasterizerState();
-
-     vertexBufferSphere = CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
-     numVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
-
-     vertexBufferCube = CreateVertexBuffer(cube_vertices, sizeof(cube_vertices));
-     numVerticesCube = sizeof(sphere_vertices) / sizeof(FVertexSimple);
-
-     vertexBufferTriangle = CreateVertexBuffer(triangle_vertices, sizeof(triangle_vertices));
-     numVerticesTriangle = sizeof(triangle_vertices) / sizeof(FVertexSimple);
-
-     vertexBufferRect = CreateVertexBuffer(rect_vertices, sizeof(rect_vertices));
-     indexBufferRect = CreateIndexBuffer(rect_indices, sizeof(rect_indices));
-
-     vertexBufferWorldAxis = CreateVertexBuffer(line_vertices, sizeof(line_vertices));
-     numVerticesWorldAxis = sizeof(line_vertices) / sizeof(FVertexSimple);
-}
+#include "../Editor/EditorSession.h"
 
 void URenderer::RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices)
 
@@ -46,12 +20,17 @@ void URenderer::RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices)
 
 void URenderer::RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer)
 {
+    if (!vertexBuffer || !indexBuffer)
+    {
+        return;
+    }
+
 	UINT offset = 0;
     DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &Stride, &offset);
 
     DeviceContext->IASetIndexBuffer(indexBuffer,DXGI_FORMAT_R32_UINT, offset);
 
-	DeviceContext->DrawIndexed(Stride, offset, 0);
+	DeviceContext->DrawIndexed(numIndicesRect, offset, 0);
 }
 
 void URenderer::CreateShader()
@@ -181,11 +160,11 @@ void URenderer::ReleaseFrameBuffer()
     }
 }
 
-void URenderer::CreateDepthBuffer()
+void URenderer::CreateDepthBuffer(uint32 width, uint32 height)
 {
     D3D11_TEXTURE2D_DESC descDepth={};
-    descDepth.Width = 1024;
-    descDepth.Height = 1024;
+    descDepth.Width = width;
+    descDepth.Height = height;
     descDepth.MipLevels = 1;
     descDepth.ArraySize = 1;
     descDepth.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -339,11 +318,8 @@ ID3D11Buffer* URenderer::CreateVertexBuffer(FVertexSimple* vertices, UINT byteWi
 
 void URenderer::ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer)
 {
-    ReleaseVertexBuffer(vertexBufferTriangle);
-    ReleaseVertexBuffer(vertexBufferCube);
-    ReleaseVertexBuffer(vertexBufferSphere);
-
-    vertexBuffer->Release();
+    if(!vertexBuffer)
+        vertexBuffer->Release();
 }
 
 ID3D11Buffer* URenderer::CreateIndexBuffer(void* data, UINT size)
@@ -411,7 +387,7 @@ bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
 
     CreateFrameBuffer();
 
-    CreateDepthBuffer();
+    CreateDepthBuffer(width, height);
 
     CreateRasterizerState();
 
@@ -426,17 +402,34 @@ bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
 
     vertexBufferRect = CreateVertexBuffer(rect_vertices, sizeof(rect_vertices));
     indexBufferRect = CreateIndexBuffer(rect_indices, sizeof(rect_indices));
+    numVerticesRect = sizeof(rect_vertices) / sizeof(FVertexSimple);
+    numIndicesRect = sizeof(rect_indices) / sizeof(uint32_t);
 
     vertexBufferWorldAxis = CreateVertexBuffer(line_vertices, sizeof(line_vertices));
     numVerticesWorldAxis = sizeof(line_vertices) / sizeof(FVertexSimple);
 
     CreateShader();
+    CreateConstantBuffer();
 
     return true;
 }
 
 void URenderer::Shutdown()
 {
+    ReleaseConstantBuffer();
+    ReleaseShader();
+
+    if (vertexBufferSphere) { vertexBufferSphere->Release();    vertexBufferSphere = nullptr; }
+    if (vertexBufferCube) { vertexBufferCube->Release();      vertexBufferCube = nullptr; }
+    if (vertexBufferTriangle) { vertexBufferTriangle->Release();  vertexBufferTriangle = nullptr; }
+    if (vertexBufferRect) { vertexBufferRect->Release();      vertexBufferRect = nullptr; }
+    if (indexBufferRect) { indexBufferRect->Release();       indexBufferRect = nullptr; }
+    if (vertexBufferWorldAxis) { vertexBufferWorldAxis->Release(); vertexBufferWorldAxis = nullptr; }
+
+    ReleaseRasterizerState();
+    ReleaseDepthBuffer();
+    ReleaseFrameBuffer();
+    ReleaseDeviceAndSwapChain();
 }
 
 void URenderer::BeginFrame()
@@ -467,32 +460,14 @@ enum class EPrimitiveShape
 
 void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//, const EditorSession& session)
 {
+    if (queue.IsEmpty()) return;
+    FMatrix MVeiwProj = session.GetViewProjMatrix();
+
 	for (int i = 0; i < queue.GetCommands().size(); ++i)
     {
-        FVector eye = { 0.0f, 0.0f, -50.0f };   // 카메라 위치
-        FVector target = { 0.0f, 0.0f, 0.0f }; // 보는 위치
-        FVector up = { 0.0f, 1.0f, 0.0f };     // 위 방향
-
-        float fov = DirectX::XMConvertToRadians(60.0f);
-        float aspect = 1.0f;   // 창이 정사각형이면 1
-        float nearZ = 0.1f;
-        float farZ = 100.0f;
-
-        FMatrix mView = FMatrix::LookAt(eye, target, up);
-
-
-        FMatrix mProjection =
-            FMatrix::Perspective(
-                fov,
-                aspect,
-                nearZ,
-                farZ
-            );
- 
-
         const RenderCommand& cmd = queue.GetCommands()[i];
         FConstants constants = {};
-        constants.MVP = cmd.WorldTransform * mView * mProjection;
+        constants.MVP = cmd.WorldTransform * MVeiwProj;
 
         UpdateMVP(constants.MVP);
 
@@ -516,6 +491,7 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
                 break;
             case EPrimitiveShape::Plane:
                 RenderIndexedPrimitive(vertexBufferRect, indexBufferRect);
+                break;
             default:
                 break;
             }
