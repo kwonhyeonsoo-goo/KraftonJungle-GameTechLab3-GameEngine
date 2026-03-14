@@ -1,15 +1,21 @@
 #include "StatWindow.h"
-#include "Object/Object.h"
 
 void CStatWindow::Render()
 {
-	ImGui::Begin("Stats");
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+	bool bOpen = ImGui::Begin("Stats");
+	ImGui::PopStyleVar();
 
-	ImGui::Text("Object Count: %d", UObject::TotalAllocationCounts);
-	ImGui::Text("Heap Usage: %d bytes", UObject::TotalAllocationBytes);
+	if (!bOpen)
+	{
+		ImGui::End();
+		return;
+	}
 
 	ImGuiIO& IO = ImGui::GetIO();
-	ImGui::Text("FPS: %.1f (%.3f ms)", IO.Framerate, 1000.0f / IO.Framerate);
+	ImGui::Text("FPS        : %.1f  (%.3f ms)", IO.Framerate, 1000.0f / IO.Framerate);
+	ImGui::Text("Objects    : %u", ObjectCount);
+	ImGui::Text("Heap Usage : %.2f KB", HeapUsageBytes / 1024.0f);
 
 	ImGui::End();
 }

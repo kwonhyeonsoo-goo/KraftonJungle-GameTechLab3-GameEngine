@@ -17,14 +17,15 @@ public:
 	void SetupWindow(CWindow* InWindow);
 	void Render();
 
-	AActor* GetSelectedActor() const { return SelectedActor; }
 	void SetSelectedActor(AActor* InActor);
 
 	CConsoleWindow& GetConsole() { return Console; }
 
 private:
+	void BuildDefaultLayout(unsigned int DockID);
+
 	CCore* Core = nullptr;
-	AActor* SelectedActor = nullptr;
+	AActor* CachedSelectedActor = nullptr;
 
 	CWindow* MainWindow = nullptr;
 	CPicker Picker;
@@ -33,4 +34,6 @@ private:
 	CPropertyWindow Property;
 	CConsoleWindow Console;
 	CStatWindow Stat;
+
+	bool bLayoutInitialized = false;
 };

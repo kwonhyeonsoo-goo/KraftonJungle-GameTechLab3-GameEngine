@@ -18,7 +18,6 @@ public:
 	CCore(CCore&&) = delete;
 	CCore& operator=(const CCore&) = delete;
 	CCore& operator=(CCore&&) = delete;
-
 	bool Initialize(HWND Hwnd, int Width, int Height);
 	void Release();
 
@@ -33,6 +32,7 @@ public:
 	void SetSelectedActor(AActor* InActor) { SelectedActor = InActor; }
 	AActor* GetSelectedActor() const { return SelectedActor; }
 
+	void OnResize(int Width, int Height);
 private:
 	void Physics(float DeltaTime);
 	void GameLogic(float DeltaTime);

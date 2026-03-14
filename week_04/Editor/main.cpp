@@ -13,66 +13,10 @@
 
 static CEditorUI GEditorUI;
 
-static void SetupImGuiCallbacks(CRenderer* Renderer)
-{
-	HWND Hwnd = Renderer->GetHwnd();
-	ID3D11Device* Device = Renderer->GetDevice();
-	ID3D11DeviceContext* DeviceContext = Renderer->GetDeviceContext();
-
-	Renderer->SetGUICallbacks(
-		[Hwnd, Device, DeviceContext]()
-		{
-			IMGUI_CHECKVERSION();
-			ImGui::CreateContext();
-			ImGuiIO& io = ImGui::GetIO();
-			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-			io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-			io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
-			ImGui::StyleColorsDark();
-
-			ImGuiStyle& style = ImGui::GetStyle();
-			if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-			{
-				style.WindowRounding = 0.0f;
-				style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-			}
-
-			ImGui_ImplWin32_Init(Hwnd);
-			ImGui_ImplDX11_Init(Device, DeviceContext);
-		},
-		[]()
-		{
-			ImGui_ImplDX11_Shutdown();
-			ImGui_ImplWin32_Shutdown();
-			ImGui::DestroyContext();
-		},
-		[]()
-		{
-			ImGui_ImplDX11_NewFrame();
-			ImGui_ImplWin32_NewFrame();
-			ImGui::NewFrame();
-		},
-		[]()
-		{
-			ImGui::Render();
-			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-		},
-		[]()
-		{
-			ImGuiIO& io = ImGui::GetIO();
-			if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-			{
-				ImGui::UpdatePlatformWindows();
-				ImGui::RenderPlatformWindowsDefault();
-			}
-		}
-	);
-}
-
 int EngineMain(HINSTANCE hInstance)
 {
+	ImGui_ImplWin32_EnableDpiAwareness();
+
 	// Application & Window
 	CWindowApplication& App = CWindowApplication::Get();
 	if (!App.Create(hInstance))
@@ -87,10 +31,7 @@ int EngineMain(HINSTANCE hInstance)
 	if (!Core.Initialize(MainWindow->GetHwnd(), MainWindow->GetWidth(), MainWindow->GetHeight()))
 		return -1;
 
-	// ImGui
-	SetupImGuiCallbacks(Core.GetRenderer());
-
-	// Editor UI (message filters, picking, resize, panels)
+	// Editor UI (ImGui init, message filters, picking, resize, panels)
 	GEditorUI.Initialize(&Core);
 	GEditorUI.SetupWindow(MainWindow);
 
@@ -100,12 +41,6 @@ int EngineMain(HINSTANCE hInstance)
 		GEditorUI.GetConsole().AddLog("%s", Msg);
 	});
 	UE_LOG("Engine initialized");
-
-	// GUI update
-	Core.GetRenderer()->SetGUIUpdateCallback([&]()
-	{
-		GEditorUI.Render();
-	});
 
 	// Timing
 	LARGE_INTEGER Frequency, LastTime, CurrentTime;

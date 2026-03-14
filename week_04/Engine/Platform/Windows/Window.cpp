@@ -14,10 +14,16 @@ bool CWindow::Create(HINSTANCE Instance, const WCHAR* ClassName,
 	PosX = InX;
 	PosY = InY;
 
+	// AdjustWindowRect to ensure client area matches requested size
+	RECT rc = { 0, 0, Width, Height };
+	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
+	int WindowWidth = rc.right - rc.left;
+	int WindowHeight = rc.bottom - rc.top;
+
 	Hwnd = CreateWindowEx(
 		0, ClassName, Title,
 		WS_OVERLAPPEDWINDOW,
-		PosX, PosY, Width, Height,
+		PosX, PosY, WindowWidth, WindowHeight,
 		nullptr, nullptr, Instance, nullptr
 	);
 

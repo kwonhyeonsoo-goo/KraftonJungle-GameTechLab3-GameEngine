@@ -1,14 +1,15 @@
 #pragma once
-
-#include "CoreMinimal.h"
-#include "imgui.h"
+#include <string>
+#include <vector>
 
 class CCore;
-class AActor;
 
 class CControlPanelWindow
 {
 public:
-	// Render returns true if SelectedActor was changed
-	void Render(CCore* Core, AActor*& SelectedActor);
+	void Render(CCore* Core);
+
+private:
+	std::vector<std::string> SceneFiles;
+	int SelectedSceneIndex = -1;
 };

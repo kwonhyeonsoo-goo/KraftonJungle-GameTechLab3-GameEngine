@@ -1,9 +1,9 @@
 #pragma once
 #include "Object/Object.h"
+#include "Object/Class.h"
 
 class AActor;
 class CCamera;
-
 class ENGINE_API UScene : public UObject
 {
 public:
