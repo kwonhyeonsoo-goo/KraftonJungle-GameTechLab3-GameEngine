@@ -249,6 +249,18 @@
     <ClInclude Include="Engine\Editor\Tools\ITool.h">
       <Filter>Engine\Editor\Tools</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\World\Transform.h" />
+    <ClInclude Include="Engine\World\UCubeComp.h" />
+    <ClInclude Include="Engine\World\UCubeMesh.h" />
+    <ClInclude Include="Engine\World\UMesh.h" />
+    <ClInclude Include="Engine\World\UPlaneComp.h" />
+    <ClInclude Include="Engine\World\UPrimitiveComponent.h" />
+    <ClInclude Include="Engine\World\USceneComponent.h" />
+    <ClInclude Include="Engine\World\USphereComp.h" />
+    <ClInclude Include="json.hpp" />
+    <ClInclude Include="Engine\Services\PickingService.h" />
+    <ClInclude Include="Engine\Services\StatsService.h" />
+    <ClInclude Include="Engine\Services\ConsoleService.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">

@@ -6,6 +6,7 @@
 struct FVector
 {
 	float x, y, z;
+	
 	FVector(float _x = 0.f, float _y = 0.f, float _z = 0.f)
 		: x(_x), y(_y), z(_z) {
 	}
@@ -105,8 +106,8 @@ struct FVector
 	{
 		return sqrtf(LengthSquare());
 	}
-
-	void Normalize()
+	
+	FVector& Normalize()
 	{
 		float Len = Length();
 		if (Len > 0.0f)
@@ -115,6 +116,8 @@ struct FVector
 			y /= Len;
 			z /= Len;
 		}
+
+		return *this;
 	}
 
 	float GetX() const { return x; }

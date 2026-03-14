@@ -1,6 +1,7 @@
 #pragma once
 #include "Engine/World/World.h"
 #include "Engine/Rendering/URenderer.h"
+#include "Engine/ObjectKernel/ObjectStore.h"
 #include "Engine/Editor/Commands/ICommand.h"
 
 // main() 스택에서 생성
@@ -10,7 +11,7 @@ struct AppContext {
     //// Object Kernel
     //UUIDService    UUIDs;
     //ClassRegistry  Classes;
-    //ObjectStore    Objects;
+    ObjectStore    Objects;
     //ObjectFactory  Factory;
 
     // World

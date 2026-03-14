@@ -7,7 +7,7 @@ bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 heigh
 
 void AppContext::SubscribeEvents()
 {
-    OutlinerPanel* outliner = (OutlinerPanel*)Panels.Find("OutLiner");
+    //OutlinerPanel* outliner = (OutlinerPanel*)Panels.Find("OutLiner");
 }
 
 // ★ Shutdown() 해제 순서:
