@@ -128,6 +128,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
+    <ClInclude Include="Engine\Services\ConsoleService.h" />
     <ClInclude Include="Editor\ImGui\imconfig.h" />
     <ClInclude Include="Editor\ImGui\imgui.h" />
     <ClInclude Include="Editor\ImGui\imgui_impl_dx11.h" />
@@ -181,9 +182,11 @@
     <ClInclude Include="Engine\World\USphereComp.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="Engine\Services\PickingService.h" />
+    <ClInclude Include="Engine\Services\StatsService.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AppContext.cpp" />
+    <ClCompile Include="Engine\Services\ConsoleService.cpp" />
     <ClCompile Include="Editor\ImGui\imgui.cpp" />
     <ClCompile Include="Editor\ImGui\imgui_demo.cpp" />
     <ClCompile Include="Editor\ImGui\imgui_draw.cpp" />
@@ -215,6 +218,7 @@
     <ClCompile Include="Engine\World\USphereComp.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Engine\Services\PickingService.cpp" />
+    <ClCompile Include="Engine\Services\StatsService.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

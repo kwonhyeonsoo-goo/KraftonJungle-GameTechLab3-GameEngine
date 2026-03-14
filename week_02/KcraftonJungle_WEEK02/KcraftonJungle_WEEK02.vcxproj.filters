@@ -35,6 +35,8 @@
     <ClCompile Include="Engine\World\USceneComponent.cpp" />
     <ClCompile Include="Engine\World\USphereComp.cpp" />
     <ClCompile Include="Engine\Services\PickingService.cpp" />
+    <ClCompile Include="Engine\Services\StatsService.cpp" />
+    <ClCompile Include="Engine\Services\ConsoleService.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
@@ -91,6 +93,8 @@
     <ClInclude Include="Engine\World\USphereComp.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="Engine\Services\PickingService.h" />
+    <ClInclude Include="Engine\Services\StatsService.h" />
+    <ClInclude Include="Engine\Services\ConsoleService.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">
