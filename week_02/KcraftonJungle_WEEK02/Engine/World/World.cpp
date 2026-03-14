@@ -28,7 +28,7 @@ void World::Add(UPrimitiveComponent* comp)
         return;
     }
 
-    Ctx->Objects.Add(comp);
+    //Ctx->Objects.Add(comp);
 }
 
 void World::Remove(uint32 uuid)
@@ -38,7 +38,7 @@ void World::Remove(uint32 uuid)
         return;
     }
 
-    Ctx->Objects.Remove(uuid);
+    //Ctx->Objects.Remove(uuid);
 }
 
 UPrimitiveComponent* World::Find(uint32 uuid) const

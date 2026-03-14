@@ -48,5 +48,5 @@ inline EPrimitiveShape StringToPrimitiveShape(const FString& str) {
     if (str == "Sphere")   return EPrimitiveShape::Sphere;
     if (str == "Plane")    return EPrimitiveShape::Plane;
     if (str == "Triangle") return EPrimitiveShape::Triangle;
-    return EPrimitiveShape::Cube; // ±âº»°ª
+    return EPrimitiveShape::Cube; 
 }

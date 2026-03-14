@@ -1,7 +1,8 @@
 #pragma once
-#include <cstdint>
-#include "../Foundation/Math/FMatrix4.h"
 
+#include "../Foundation/Math/FMatrix.h"
+#include "../../Engine/Foundation/Core/CoreTypes.h"
+//RenderType
 enum class ERenderType {
 
     Primitive,    // 일반 오브젝트
@@ -18,11 +19,20 @@ enum class ERenderType {
 
 enum class EPrimitiveShape;   // World에서 정의됨
 
+/*
+enum class EPrimitiveShape
+{
+    Cube,
+    Sphere,
+    Plane,
+};
+*/
+//From Object
 // ★ 포인터 금지 — 추출된 값만 보관
 struct RenderCommand {
     ERenderType     Type;
     EPrimitiveShape Shape;          // Primitive/Highlight만 유효
-    FMatrix4        WorldTransform;
+    FMatrix        WorldTransform;
     uint32_t          Color;          // 0xRRGGBBAA
     uint32_t         ObjectId;       // Picking 역참조, 디버그용
 };

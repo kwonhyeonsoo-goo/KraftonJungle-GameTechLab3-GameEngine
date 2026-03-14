@@ -14,6 +14,7 @@ public:
     virtual UClass* GetClass() const;
     static UClass* StaticClass();
 
+
     template<typename T>
     bool IsA() const
     {

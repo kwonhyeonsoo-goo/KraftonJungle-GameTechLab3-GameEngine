@@ -3,8 +3,10 @@
 #include "log.h"
 
 namespace EngineMemory {
-	extern uint32 TotalAllocationBytes;
-	extern uint32 TotalAllocationCount;
+	//extern uint32 TotalAllocationBytes;
+	//extern uint32 TotalAllocationCount;
+	uint32 TotalAllocationBytes;
+	uint32 TotalAllocationCount;
 
 	void* Allocate(uint32 size);
 	void Free(void* ptr);

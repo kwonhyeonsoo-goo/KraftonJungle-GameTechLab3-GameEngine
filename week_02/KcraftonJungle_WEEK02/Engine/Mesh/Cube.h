@@ -1,11 +1,5 @@
 #pragma once
 
-struct FVertexSimple
-{
-	float x, y, z;    // Position
-	float r, g, b, a; // Color
-};
-
 FVertexSimple cube_vertices[] =
 {
     // Front face (Z+)

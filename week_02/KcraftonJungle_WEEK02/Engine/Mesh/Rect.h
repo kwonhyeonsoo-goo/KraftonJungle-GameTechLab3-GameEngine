@@ -1,9 +1,4 @@
 #pragma once
-struct FVertexSimple
-{
-	float x, y, z;    // Position
-	float r, g, b, a; // Color
-};
 
 static FVertexSimple rect_vertices[] = {
     //   x,      y,      z,      r,     g,     b,     a
@@ -14,7 +9,7 @@ static FVertexSimple rect_vertices[] = {
 };
 
 // 시계 방향(CW) 기준
-static unsigned int rect_indices[] = {
+static UINT rect_indices[] = {
     0, 1, 2, // 첫 번째 삼각형 (상단-우측-하단)
     0, 2, 3  // 두 번째 삼각형 (상단-하단-좌측)
 };

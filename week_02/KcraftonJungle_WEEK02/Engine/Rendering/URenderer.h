@@ -4,6 +4,9 @@
 #include <DirectXMath.h>
 
 #include "../Foundation/Math/FVector.h"
+#include "../Foundation/Math/FMatrix.h"
+#include "../Services/SerializationService.h"
+
 
 struct FVertexSimple
 {
@@ -13,10 +16,14 @@ struct FVertexSimple
 
 struct FConstants
 {
-    DirectX::XMMATRIX MVP;
-
+    //DirectX::XMMATRIX MVP;
+    FMatrix MVP;
 };
 
+class RenderQueue;
+class EditorSession;
+struct FMatrix;
+class EditorSession;
 
 class URenderer
 {
@@ -30,6 +37,10 @@ public:
     ID3D11RasterizerState* RasterizerState = nullptr;
     ID3D11Buffer* ConstantBuffer = nullptr;
 
+    ID3D11Texture2D* DepthStencilBuffer = nullptr;
+    ID3D11DepthStencilView* DepthStencilView = nullptr;
+    ID3D11DepthStencilState* DepthStencilState = nullptr;
+
     FLOAT ClearColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f };
     D3D11_VIEWPORT ViewportInfo;
 
@@ -38,10 +49,38 @@ public:
     ID3D11InputLayout* SimpleInputLayout;
     unsigned int Stride;
 
+    ID3D11Buffer* vertexBufferSphere;
+    UINT numVerticesSphere;
+    ID3D11Buffer* vertexBufferCube;
+    UINT numVerticesCube;
+    ID3D11Buffer* vertexBufferTriangle;
+    UINT numVerticesTriangle;
+    ID3D11Buffer* vertexBufferRect;
+    ID3D11Buffer* indexBufferRect;
+    ID3D11Buffer* vertexBufferWorldAxis;
+    UINT numVerticesWorldAxis;
+
+#pragma region D3D11 Renderer 함수들
+	//D3D11 Renderer 함수들
+    bool Initialize(HWND hwnd, UINT width, UINT height);
+    void Shutdown();
+
+    void BeginFrame();
+    void Flush(const RenderQueue& queue, const EditorSession& session);// , const EditorSession& session);
+    void EndFrame();
+
+    // WM_SIZE 이벤트 수신 시 호출
+    void OnResize(UINT width, UINT height);
+
+    // MVP 상수 버퍼 업데이트
+    void UpdateMVP(const FMatrix& mvp);
+
+#pragma endregion
 public:
     void Create(HWND hWindow);
 
     void RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices);
+    void RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer);
 
     void CreateShader();
     void ReleaseShader();
@@ -51,6 +90,9 @@ public:
 
     void CreateFrameBuffer();
     void ReleaseFrameBuffer();
+
+    void CreateDepthBuffer();
+	void ReleaseDepthBuffer();
 
     void CreateRasterizerState();
 
@@ -65,6 +107,12 @@ public:
 
     ID3D11Buffer* CreateVertexBuffer(FVertexSimple* vertices, UINT byteWidth);
     void ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer);
+
+
+    ID3D11Buffer* CreateIndexBuffer(void* data, UINT size);
+    void ReleaseIndexBuffer(ID3D11Buffer* vertexBuffer);
+
+
 public:
 
 
