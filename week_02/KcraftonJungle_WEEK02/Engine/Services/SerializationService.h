@@ -6,9 +6,6 @@
 #include <string>
 #include <vector>
 
-template <typename T>
-using TArray = std::vector<T>;
-
 typedef std::string FString;
 
 typedef int int32;

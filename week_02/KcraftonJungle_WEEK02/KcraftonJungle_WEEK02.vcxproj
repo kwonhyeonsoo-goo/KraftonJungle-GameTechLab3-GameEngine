@@ -180,6 +180,7 @@
     <ClInclude Include="Engine\World\USceneComponent.h" />
     <ClInclude Include="Engine\World\USphereComp.h" />
     <ClInclude Include="json.hpp" />
+    <ClInclude Include="Engine\Services\PickingService.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AppContext.cpp" />
@@ -213,6 +214,7 @@
     <ClCompile Include="Engine\World\USceneComponent.cpp" />
     <ClCompile Include="Engine\World\USphereComp.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Engine\Services\PickingService.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

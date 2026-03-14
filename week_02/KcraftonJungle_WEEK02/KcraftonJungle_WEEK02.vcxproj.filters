@@ -34,20 +34,9 @@
     <ClCompile Include="Engine\World\UPrimitiveComponent.cpp" />
     <ClCompile Include="Engine\World\USceneComponent.cpp" />
     <ClCompile Include="Engine\World\USphereComp.cpp" />
+    <ClCompile Include="Engine\Services\PickingService.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="FVector4.h">
-      <Filter>Engine\Foundation\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="FMatrix4.h">
-      <Filter>Engine\Foundation\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="FVector.h">
-      <Filter>Engine\Foundation\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Sphere.h">
-      <Filter>Engine\Core\UObject\USceneComponent\UPrimitiveComponent\Mesh</Filter>
-    </ClInclude>
     <ClInclude Include="AppContext.h" />
     <ClInclude Include="Editor\ImGui\imconfig.h" />
     <ClInclude Include="Editor\ImGui\imgui.h" />
@@ -101,6 +90,7 @@
     <ClInclude Include="Engine\World\USceneComponent.h" />
     <ClInclude Include="Engine\World\USphereComp.h" />
     <ClInclude Include="json.hpp" />
+    <ClInclude Include="Engine\Services\PickingService.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">
