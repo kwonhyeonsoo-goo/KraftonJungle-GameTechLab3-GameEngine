@@ -8,7 +8,6 @@
 #include "../Services/SerializationService.h"
 
 
-
 struct FVertexSimple
 {
     float x, y, z;    // Position

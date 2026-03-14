@@ -2,8 +2,8 @@
 #include "../../AppContext.h"
 #include "../World/UPrimitiveComponent.h"
 #include "../World/World.h"
-#include "../Foundation/Containers/FVector.h"
-#include "../Foundation/Containers/FVector.h"
+#include "../Foundation/Math/FVector.h"
+#include "../Foundation/Math/FVector.h"
 #include "../ObjectKernel/ObjectFactory.h"
 #include "../../json.hpp"
 
