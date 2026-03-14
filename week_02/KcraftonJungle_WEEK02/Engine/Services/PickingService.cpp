@@ -2,10 +2,10 @@
 
 #include "../Foundation/Core/CoreTypes.h"
 #include "../World/UPrimitiveComponent.h"
-#include "../Foundation/Containers/FVector.h"
-#include "../Foundation/Containers/FVector4.h"
-#include "../Foundation/Containers/FMatrix.h"
-#include "../Foundation/Containers/FMatrix4.h"
+#include "../Foundation/Math/FVector.h"
+#include "../Foundation/Math/FVector4.h"
+#include "../Foundation/Math/FMatrix.h"
+#include "../Foundation/Math/FMatrix4.h"
 
 /// <summary>
 /// 마우스 좌표를 뷰포트 로컬 좌표로 변환해서 전달해줘야함
@@ -48,17 +48,19 @@ UPrimitiveComponent* PickingService::Pick(const Ray& ray, const TArray<UObject*>
 
         // AABB를 World 공간으로 변환
         FMatrix world = Prim->GetWorldMatrix();
+        FVector BoundMin = Prim->GetBoundMin();
+        FVector BoundMax = Prim->GetBoundMax();
 
         // BoundsMin/Max를 World 공간 8개 꼭짓점으로 변환 후 재계산
         FVector corners[8] = {
-            FVector(Prim->BoundsMin.x, Prim->BoundsMin.y, Prim->BoundsMin.z),
-            FVector(Prim->BoundsMax.x, Prim->BoundsMin.y, Prim->BoundsMin.z),
-            FVector(Prim->BoundsMin.x, Prim->BoundsMax.y, Prim->BoundsMin.z),
-            FVector(Prim->BoundsMax.x, Prim->BoundsMax.y, Prim->BoundsMin.z),
-            FVector(Prim->BoundsMin.x, Prim->BoundsMin.y, Prim->BoundsMax.z),
-            FVector(Prim->BoundsMax.x, Prim->BoundsMin.y, Prim->BoundsMax.z),
-            FVector(Prim->BoundsMin.x, Prim->BoundsMax.y, Prim->BoundsMax.z),
-            FVector(Prim->BoundsMax.x, Prim->BoundsMax.y, Prim->BoundsMax.z),
+            FVector(BoundMin.x, BoundMin.y, BoundMin.z),
+            FVector(BoundMax.x, BoundMin.y, BoundMin.z),
+            FVector(BoundMin.x, BoundMax.y, BoundMin.z),
+            FVector(BoundMax.x, BoundMax.y, BoundMin.z),
+            FVector(BoundMin.x, BoundMin.y, BoundMax.z),
+            FVector(BoundMax.x, BoundMin.y, BoundMax.z),
+            FVector(BoundMin.x, BoundMax.y, BoundMax.z),
+            FVector(BoundMax.x, BoundMax.y, BoundMax.z),
         };
 
         FVector WorldMin = FVector(FLT_MAX, FLT_MAX, FLT_MAX);

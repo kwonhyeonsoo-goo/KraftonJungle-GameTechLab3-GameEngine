@@ -2,8 +2,8 @@
 
 namespace
 {
-	constexpr float kPi = 3.14159265358979323846f;
-	constexpr float kDegToRad = kPi / 180.0f;
+    constexpr float kPi = 3.14159265358979323846f;
+    constexpr float kDegToRad = kPi / 180.0f;
 }
 
 Transform::Transform() : Location(FVector::Zero), Rotation(FVector::Zero), Scale(FVector::One)
@@ -12,41 +12,41 @@ Transform::Transform() : Location(FVector::Zero), Rotation(FVector::Zero), Scale
 
 Transform::Transform(const FVector& loc, const FVector& rot, const FVector& scale)
 {
-	Location = loc;
-	Rotation = rot;
-	Scale = scale;
+    Location = loc;
+    Rotation = rot;
+    Scale = scale;
 }
 
 FMatrix Transform::ToMatrix() const
 {
-	const float pitch = Rotation.x * kDegToRad;
-	const float yaw = Rotation.y * kDegToRad;
-	const float roll = Rotation.z * kDegToRad;
+    const float pitch = Rotation.x * kDegToRad;
+    const float yaw = Rotation.y * kDegToRad;
+    const float roll = Rotation.z * kDegToRad;
 
-	return
-		FMatrix::Scale(Scale) *
-		FMatrix::RotationX(pitch) *
-		FMatrix::RotationY(yaw) *
-		FMatrix::RotationZ(roll) *
-		FMatrix::Translation(Location);
+    return
+        FMatrix::Scale(Scale) *
+        FMatrix::RotationY(-pitch) *
+        FMatrix::RotationZ(yaw) * 
+        FMatrix::RotationX(roll) *
+        FMatrix::Translation(Location);
 }
 
 FMatrix Transform::ToInverseMatrix() const
 {
-	return ToMatrix().Inversed();
+    return ToMatrix().Inversed();
 }
 
 FVector Transform::GetLocation() const
 {
-	return Location;
+    return Location;
 }
 
 FVector Transform::GetRotation() const
 {
-	return Rotation;
+    return Rotation;
 }
 
 FVector Transform::GetScale() const
 {
-	return Scale;
+    return Scale;
 }

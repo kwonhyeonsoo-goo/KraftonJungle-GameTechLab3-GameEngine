@@ -2,7 +2,32 @@
 
 bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 height)
 {
+    if (!Window.Initialize(windowTitle, width, height))
+        return false;
+
+    Renderer.Create(Window.GetHWND());
+
+    CurrentWorld.SetContext(this);
+
+    RegisterBuiltinTypes();
+    RegisterPanels();   // 패널 등록
+    RegisterTools();
+
+    SubscribeEvents();  //이벤트 등록
+
     return false;
+}
+
+void AppContext::RegisterBuiltinTypes()
+{
+}
+
+void AppContext::RegisterPanels()
+{
+}
+
+void AppContext::RegisterTools()
+{
 }
 
 void AppContext::SubscribeEvents()
