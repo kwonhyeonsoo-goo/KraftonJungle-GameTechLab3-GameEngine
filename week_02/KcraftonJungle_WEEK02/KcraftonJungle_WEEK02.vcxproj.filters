@@ -32,9 +32,6 @@
     <ClCompile Include="Engine\Foundation\Core\Memory.cpp">
       <Filter>Engine\Foundation\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Foundation\Containers\FVector.cpp">
-      <Filter>Engine\Foundation\Math</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\ObjectKernel\UObject.cpp">
       <Filter>Engine\ObjectKernel</Filter>
     </ClCompile>
@@ -101,6 +98,9 @@
     <ClCompile Include="Engine\Editor\Commands\SetTransformCommand.cpp">
       <Filter>Engine\Editor\Commands</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Foundation\Math\FVector.cpp">
+      <Filter>Engine\Foundation\Math</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
@@ -131,12 +131,6 @@
     <ClInclude Include="Editor\ImGui\imstb_truetype.h">
       <Filter>Editor\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Foundation\Math\TMap.h">
-      <Filter>Engine\Foundation\Containers</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Foundation\Math\TArray.h">
-      <Filter>Engine\Foundation\Containers</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\Foundation\Core\CoreTypes.h">
       <Filter>Engine\Foundation\Core</Filter>
     </ClInclude>
@@ -145,18 +139,6 @@
     </ClInclude>
     <ClInclude Include="Engine\Foundation\Core\Memory.h">
       <Filter>Engine\Foundation\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Foundation\Containers\FMatrix.h">
-      <Filter>Engine\Foundation\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Foundation\Containers\FMatrix4.h">
-      <Filter>Engine\Foundation\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Foundation\Containers\FVector.h">
-      <Filter>Engine\Foundation\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Engine\Foundation\Containers\FVector4.h">
-      <Filter>Engine\Foundation\Math</Filter>
     </ClInclude>
     <ClInclude Include="Engine\ObjectKernel\UObject.h">
       <Filter>Engine\ObjectKernel</Filter>
@@ -258,9 +240,24 @@
     <ClInclude Include="Engine\World\USceneComponent.h" />
     <ClInclude Include="Engine\World\USphereComp.h" />
     <ClInclude Include="json.hpp" />
-    <ClInclude Include="Engine\Services\PickingService.h" />
-    <ClInclude Include="Engine\Services\StatsService.h" />
-    <ClInclude Include="Engine\Services\ConsoleService.h" />
+    <ClInclude Include="Engine\Foundation\Math\FMatrix.h">
+      <Filter>Engine\Foundation\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Foundation\Math\FMatrix4.h">
+      <Filter>Engine\Foundation\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Foundation\Math\FVector.h">
+      <Filter>Engine\Foundation\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Foundation\Math\FVector4.h">
+      <Filter>Engine\Foundation\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Foundation\Containers\TMap.h">
+      <Filter>Engine\Foundation\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Foundation\Containers\TArray.h">
+      <Filter>Engine\Foundation\Containers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">

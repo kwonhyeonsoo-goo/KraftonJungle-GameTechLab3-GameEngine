@@ -10,8 +10,8 @@ using uint64 = std::uint64_t;
 
 using FString = std::string;
 
-#include "../Math/TArray.h"
-#include "../Math/TMap.h"
+#include "../Containers/TArray.h"
+#include "../Containers/TMap.h"
 
 using DelegateHandle = uint64;
 

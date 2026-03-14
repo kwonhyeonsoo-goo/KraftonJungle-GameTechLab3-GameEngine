@@ -142,12 +142,12 @@
     <ClInclude Include="Engine\Foundation\Core\CoreTypes.h" />
     <ClInclude Include="Engine\Foundation\Core\log.h" />
     <ClInclude Include="Engine\Foundation\Core\Memory.h" />
-    <ClInclude Include="Engine\Foundation\Containers\FMatrix.h" />
-    <ClInclude Include="Engine\Foundation\Containers\FMatrix4.h" />
-    <ClInclude Include="Engine\Foundation\Containers\FVector.h" />
-    <ClInclude Include="Engine\Foundation\Containers\FVector4.h" />
-    <ClInclude Include="Engine\Foundation\Math\TArray.h" />
-    <ClInclude Include="Engine\Foundation\Math\TMap.h" />
+    <ClInclude Include="Engine\Foundation\Math\FMatrix.h" />
+    <ClInclude Include="Engine\Foundation\Math\FMatrix4.h" />
+    <ClInclude Include="Engine\Foundation\Math\FVector.h" />
+    <ClInclude Include="Engine\Foundation\Math\FVector4.h" />
+    <ClInclude Include="Engine\Foundation\Containers\TArray.h" />
+    <ClInclude Include="Engine\Foundation\Containers\TMap.h" />
     <ClInclude Include="Engine\Mesh\Circle.h" />
     <ClInclude Include="Engine\Mesh\Cube.h" />
     <ClInclude Include="Engine\Mesh\Rect.h" />
@@ -193,7 +193,7 @@
     <ClCompile Include="Editor\ImGui\imgui_widgets.cpp" />
     <ClCompile Include="Engine\Foundation\Core\log.cpp" />
     <ClCompile Include="Engine\Foundation\Core\Memory.cpp" />
-    <ClCompile Include="Engine\Foundation\Containers\FVector.cpp" />
+    <ClCompile Include="Engine\Foundation\Math\FVector.cpp" />
     <ClCompile Include="Engine\ObjectKernel\ClassRegistry.cpp" />
     <ClCompile Include="Engine\ObjectKernel\ObjectFactory.cpp" />
     <ClCompile Include="Engine\ObjectKernel\ObjectStore.cpp" />
