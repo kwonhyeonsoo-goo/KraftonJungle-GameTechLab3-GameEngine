@@ -6,6 +6,13 @@
 class ENGINE_API UPrimitiveComponent : public USceneComponent
 {
 public:
+	static UClass* StaticClass();
+
+	UPrimitiveComponent() : USceneComponent(StaticClass(), "") {}
+
+	UPrimitiveComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr)
+		: USceneComponent(InClass, InName, InOuter) {}
+
 	CPrimitiveBase* GetPrimitive() const { return Primitive.get(); }
 
 protected:

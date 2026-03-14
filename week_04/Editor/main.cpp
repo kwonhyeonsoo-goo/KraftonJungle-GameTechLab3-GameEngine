@@ -1,41 +1,132 @@
 #include "EngineTest.h"
-#include "Renderer/Renderer.h"
-#include "Renderer/ShaderManager.h"
-#include "Camera/Camera.h"
-#include "Component/SphereComponent.h"
-#include "Component/CubeComponent.h"
-#include "Primitive/PrimitiveBase.h"
-#include <iostream>
-
 #include "Core/Core.h"
+#include "Renderer/Renderer.h"
+#include "Object/Scene/Scene.h"
+#include "Object/Actor/Actor.h"
+#include "Component/SceneComponent.h"
+#include "Picking/Picker.h"
 
-// ─── 입력 상태 ───
-static bool bRightMouseDown = false;
-static POINT LastMousePos = {};
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx11.h"
+
+static CCore* GCore = nullptr;
+static CPicker GPicker;
+static AActor* GSelectedActor = nullptr;
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+		return true;
+
 	switch (msg)
 	{
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		return 0;
-	case WM_RBUTTONDOWN:
-		bRightMouseDown = true;
-		GetCursorPos(&LastMousePos);
-		SetCapture(hWnd);
+	case WM_SIZE:
+		if (GCore && GCore->GetRenderer() && wParam != SIZE_MINIMIZED)
+		{
+			GCore->GetRenderer()->OnResize(LOWORD(lParam), HIWORD(lParam));
+		}
 		return 0;
-	case WM_RBUTTONUP:
-		bRightMouseDown = false;
-		ReleaseCapture();
-		return 0;
+	case WM_LBUTTONDOWN:
+		// ImGui가 마우스를 사용 중이면 피킹하지 않음
+		if (!ImGui::GetIO().WantCaptureMouse && GCore && GCore->GetScene())
+		{
+			int MouseX = LOWORD(lParam);
+			int MouseY = HIWORD(lParam);
+			RECT Rect;
+			GetClientRect(hWnd, &Rect);
+			int Width = Rect.right - Rect.left;
+			int Height = Rect.bottom - Rect.top;
+
+			AActor* Picked = GPicker.PickActor(GCore->GetScene(), MouseX, MouseY, Width, Height);
+			if (Picked)
+			{
+				GSelectedActor = Picked;
+				GCore->SetSelectedActor(GSelectedActor);
+			}
+		}
+		break;
+	default:
+		if (GCore)
+		{
+			GCore->ProcessInput(hWnd, msg, wParam, lParam);
+		}
+		break;
 	}
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
+static void SetupImGuiCallbacks(CRenderer* Renderer)
+{
+	HWND Hwnd = Renderer->GetHwnd();
+	ID3D11Device* Device = Renderer->GetDevice();
+	ID3D11DeviceContext* DeviceContext = Renderer->GetDeviceContext();
+
+	Renderer->SetGUICallbacks(
+		// Init
+		[Hwnd, Device, DeviceContext]()
+		{
+			IMGUI_CHECKVERSION();
+			ImGui::CreateContext();
+			ImGuiIO& io = ImGui::GetIO();
+			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+			io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+			io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+			ImGui::StyleColorsDark();
+
+			ImGuiStyle& style = ImGui::GetStyle();
+			if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+			{
+				style.WindowRounding = 0.0f;
+				style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+			}
+
+			ImGui_ImplWin32_Init(Hwnd);
+			ImGui_ImplDX11_Init(Device, DeviceContext);
+		},
+		// Shutdown
+		[]()
+		{
+			ImGui_ImplDX11_Shutdown();
+			ImGui_ImplWin32_Shutdown();
+			ImGui::DestroyContext();
+		},
+		// NewFrame
+		[]()
+		{
+			ImGui_ImplDX11_NewFrame();
+			ImGui_ImplWin32_NewFrame();
+			ImGui::NewFrame();
+		},
+		// Render
+		[]()
+		{
+			ImGui::Render();
+			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+		},
+		// PostPresent
+		[]()
+		{
+			ImGuiIO& io = ImGui::GetIO();
+			if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+			{
+				ImGui::UpdatePlatformWindows();
+				ImGui::RenderPlatformWindowsDefault();
+			}
+		}
+	);
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
-	// ─── 윈도우 생성 ───
+	// Window
 	WNDCLASSEX wc = {};
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.lpfnWndProc = WndProc;
@@ -48,52 +139,100 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		WS_OVERLAPPEDWINDOW, 100, 100, 1280, 720,
 		nullptr, nullptr, hInstance, nullptr
 	);
-	ShowWindow(hwnd, SW_SHOW);
+	::ShowWindow(hwnd, SW_SHOWDEFAULT);
+	::UpdateWindow(hwnd);
 
-	// ─── Renderer 초기화 ───
-	CRenderer renderer;
-	if (!renderer.Initialize(hwnd, 1280, 720))
-		return -1;
-
-	ID3D11Device* device = renderer.GetDevice();
-	ID3D11DeviceContext* context = renderer.GetDeviceContext();
-
-	// ─── 셰이더 로드 ───
-	CShaderManager shader;
-	if (!shader.LoadVertexShader(device, L"../Engine/Shaders/VertexShader.hlsl"))
-	{
-		MessageBox(0, L"VertexShader load failed", 0, 0);
-		return -1;
-	}
-	if (!shader.LoadPixelShader(device, L"../Engine/Shaders/PixelShader.hlsl"))
-	{
-		MessageBox(0, L"PixelShader load failed", 0, 0);
-		return -1;
-	}
-
-	// ─── Core 초기화 ───
+	// Core
 	CCore Core;
-	Core.Initialize(hwnd);
+	GCore = &Core;
+	if (!Core.Initialize(hwnd, 1280, 720))
+		return -1;
 
-	// ─── 카메라 ───
-	CCamera camera;
-	camera.SetPosition({ 0.0f, 2.0f, -5.0f });
-	camera.SetRotation(0.0f, -15.0f);
-	camera.SetAspectRatio(1280.0f / 720.0f);
+	// ImGui
+	SetupImGuiCallbacks(Core.GetRenderer());
 
-	// ─── 오브젝트 배치 ───
-	USphereComponent sphere;
-	sphere.SetRelativeLocation({ 0.0f, 0.0f, 0.0f });
+	// ImGui test widgets
+	bool show_demo_window = true;
+	bool show_another_window = false;
+	Core.GetRenderer()->SetGUIUpdateCallback([&]()
+	{
+		if (show_demo_window)
+			ImGui::ShowDemoWindow(&show_demo_window);
 
-	UCubeComponent cube;
-	cube.SetRelativeLocation({ 3.0f, 0.0f, 0.0f });
+		{
+			static float f = 0.0f;
+			static int counter = 0;
 
-	// ─── 타이밍 ───
+			ImGui::Begin("Hello, world!");
+			ImGui::Text("This is some useful text.");
+			ImGui::Checkbox("Demo Window", &show_demo_window);
+			ImGui::Checkbox("Another Window", &show_another_window);
+			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+
+			if (ImGui::Button("Button"))
+				counter++;
+			ImGui::SameLine();
+			ImGui::Text("counter = %d", counter);
+
+			ImGuiIO& io = ImGui::GetIO();
+			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+			ImGui::End();
+		}
+
+		if (show_another_window)
+		{
+			ImGui::Begin("Another Window", &show_another_window);
+			ImGui::Text("Hello from another window!");
+			if (ImGui::Button("Close Me"))
+				show_another_window = false;
+			ImGui::End();
+		}
+
+		// 선택된 Actor 정보 표시
+		ImGui::Begin("Property");
+		if (GSelectedActor)
+		{
+			ImGui::Text("Selected: %s", GSelectedActor->GetName().c_str());
+
+			USceneComponent* Root = GSelectedActor->GetRootComponent();
+			if (Root)
+			{
+				FTransform Transform = Root->GetRelativeTransform();
+
+				float Loc[3] = { Transform.Location.X, Transform.Location.Y, Transform.Location.Z };
+				float Rot[3] = { Transform.Rotation.X, Transform.Rotation.Y, Transform.Rotation.Z };
+				float Scl[3] = { Transform.Scale.X, Transform.Scale.Y, Transform.Scale.Z };
+
+				if (ImGui::DragFloat3("Location", Loc, 0.1f))
+				{
+					Transform.Location = { Loc[0], Loc[1], Loc[2] };
+					Root->SetRelativeTransform(Transform);
+				}
+				if (ImGui::DragFloat3("Rotation", Rot, 0.1f))
+				{
+					Transform.Rotation = { Rot[0], Rot[1], Rot[2] };
+					Root->SetRelativeTransform(Transform);
+				}
+				if (ImGui::DragFloat3("Scale", Scl, 0.1f))
+				{
+					Transform.Scale = { Scl[0], Scl[1], Scl[2] };
+					Root->SetRelativeTransform(Transform);
+				}
+			}
+		}
+		else
+		{
+			ImGui::Text("No actor selected");
+		}
+		ImGui::End();
+	});
+
+	// Timing
 	LARGE_INTEGER Frequency, LastTime, CurrentTime;
 	QueryPerformanceFrequency(&Frequency);
 	QueryPerformanceCounter(&LastTime);
 
-	// ─── 메인 루프 ───
+	// Main loop
 	MSG msg = {};
 	while (msg.message != WM_QUIT)
 	{
@@ -104,59 +243,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		}
 		else
 		{
-			// 델타 타임
+			if (Core.GetRenderer()->IsOccluded())
+				continue;
+
 			QueryPerformanceCounter(&CurrentTime);
 			float DeltaTime = static_cast<float>(CurrentTime.QuadPart - LastTime.QuadPart)
 				/ static_cast<float>(Frequency.QuadPart);
 			LastTime = CurrentTime;
 
-			// ─── 키보드 입력 (WASD + QE) ───
-			if (GetAsyncKeyState('W') & 0x8000) camera.MoveForward(DeltaTime);
-			if (GetAsyncKeyState('S') & 0x8000) camera.MoveForward(-DeltaTime);
-			if (GetAsyncKeyState('D') & 0x8000) camera.MoveRight(DeltaTime);
-			if (GetAsyncKeyState('A') & 0x8000) camera.MoveRight(-DeltaTime);
-			if (GetAsyncKeyState('E') & 0x8000) camera.MoveUp(DeltaTime);
-			if (GetAsyncKeyState('Q') & 0x8000) camera.MoveUp(-DeltaTime);
-
-			// ─── 마우스 우클릭 드래그 → 카메라 회전 ───
-			if (bRightMouseDown)
-			{
-				POINT CurrentMousePos;
-				GetCursorPos(&CurrentMousePos);
-				float DeltaX = static_cast<float>(CurrentMousePos.x - LastMousePos.x);
-				float DeltaY = static_cast<float>(CurrentMousePos.y - LastMousePos.y);
-				LastMousePos = CurrentMousePos;
-
-				camera.Rotate(DeltaX * 0.2f, -DeltaY * 0.2f);
-			}
-
 			Core.Tick(DeltaTime);
-
-			// ─── 렌더링 ───
-			renderer.BeginFrame();
-
-			shader.Bind(context);
-
-			FMatrix VP = camera.GetViewMatrix() * camera.GetProjectionMatrix();
-			renderer.ViewProjectionMatrix = VP;
-
-			FMeshData* sphereMesh = sphere.GetPrimitive()->GetMeshData();
-			renderer.AddCommand({ sphereMesh, sphere.GetRelativeTransform().ToMatrix() });
-
-			FMeshData* cubeMesh = cube.GetPrimitive()->GetMeshData();
-			renderer.AddCommand({ cubeMesh, cube.GetRelativeTransform().ToMatrix() });
-
-			renderer.ExecuteCommands();
-
-			renderer.EndFrame();
 		}
 	}
 
-	// ─── 정리 ───
+	// Cleanup
+	GCore = nullptr;
 	Core.Release();
-	shader.Release();
-	CPrimitiveBase::ClearCache();
-	renderer.Release();
+
+	::DestroyWindow(hwnd);
+	::UnregisterClassW(wc.lpszClassName, wc.hInstance);
 
 	return 0;
 }

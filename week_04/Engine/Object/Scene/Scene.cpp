@@ -3,6 +3,12 @@
 #include "Core/Core.h"
 #include "Object/Class.h"
 #include "Object/Actor/Actor.h"
+#include "Camera/Camera.h"
+#include "Component/SphereComponent.h"
+#include "Component/CubeComponent.h"
+#include <algorithm>
+#include <fstream>
+#include "ThirdParty/nlohmann/json.hpp"
 
 namespace
 {
@@ -21,6 +27,100 @@ UClass* UScene::StaticClass()
 UScene::UScene(UClass* InClass, const FString& InName, UObject* InOuter)
 	: UObject(InClass, InName, InOuter)
 {
+}
+
+UScene::~UScene()
+{
+	for (AActor* Actor : Actors)
+	{
+		delete Actor;
+	}
+	Actors.clear();
+
+	delete Camera;
+	Camera = nullptr;
+}
+
+void UScene::InitializeDefaultScene(float AspectRatio)
+{
+	// 카메라
+	Camera = new CCamera();
+	Camera->SetAspectRatio(AspectRatio);
+
+	// JSON 파일에서 씬 로드 (카메라 포함)
+	LoadSceneFromFile("../Assets/Scenes/DefaultScene.json");
+}
+
+void UScene::LoadSceneFromFile(const FString& FilePath)
+{
+	std::ifstream File(FilePath);
+	if (!File.is_open()) return;
+
+	nlohmann::json Json;
+	File >> Json;
+
+	// 카메라 설정 로드
+	if (Camera && Json.contains("Camera"))
+	{
+		auto& Cam = Json["Camera"];
+		if (Cam.contains("Position"))
+		{
+			auto& P = Cam["Position"];
+			Camera->SetPosition({ P[0].get<float>(), P[1].get<float>(), P[2].get<float>() });
+		}
+		if (Cam.contains("Rotation"))
+		{
+			auto& R = Cam["Rotation"];
+			Camera->SetRotation(R[0].get<float>(), R[1].get<float>());
+		}
+	}
+
+	if (!Json.contains("Primitives")) return;
+
+	int ActorIndex = 0;
+	for (auto& [Key, Value] : Json["Primitives"].items())
+	{
+		std::string Type = Value.value("Type", "");
+
+		UActorComponent* Comp = nullptr;
+		if (Type == "Sphere")
+		{
+			Comp = new USphereComponent();
+		}
+		else if (Type == "Cube")
+		{
+			Comp = new UCubeComponent();
+		}
+		else
+		{
+			++ActorIndex;
+			continue;
+		}
+
+		FString ActorName = Type + "_" + std::to_string(ActorIndex);
+		AActor* Actor = SpawnActor<AActor>(ActorName);
+		Actor->AddOwnedComponent(Comp);
+
+		FTransform Transform;
+		if (Value.contains("Location"))
+		{
+			auto& L = Value["Location"];
+			Transform.Location = { L[0].get<float>(), L[1].get<float>(), L[2].get<float>() };
+		}
+		if (Value.contains("Rotation"))
+		{
+			auto& R = Value["Rotation"];
+			Transform.Rotation = { R[0].get<float>(), R[1].get<float>(), R[2].get<float>() };
+		}
+		if (Value.contains("Scale"))
+		{
+			auto& S = Value["Scale"];
+			Transform.Scale = { S[0].get<float>(), S[1].get<float>(), S[2].get<float>() };
+		}
+		Actor->GetRootComponent()->SetRelativeTransform(Transform);
+
+		++ActorIndex;
+	}
 }
 
 void UScene::RegisterActor(AActor* InActor)
@@ -52,14 +152,13 @@ void UScene::DestroyActor(AActor* InActor)
 
 void UScene::CleanupDestroyedActors()
 {
-    auto NewEnd = std::ranges::remove_if(Actors
-                                         ,
-                                         [](const AActor* Actor)
-                                         {
-	                                         return Actor == nullptr || Actor->IsPendingDestroy();
-                                         }).begin();
+	auto NewEnd = std::ranges::remove_if(Actors,
+		[](const AActor* Actor)
+		{
+			return Actor == nullptr || Actor->IsPendingDestroy();
+		}).begin();
 
-    Actors.erase(NewEnd, Actors.end());
+	Actors.erase(NewEnd, Actors.end());
 }
 
 void UScene::BeginPlay()

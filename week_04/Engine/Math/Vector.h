@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "EngineAPI.h"
+#include <cmath>
 
 #include "Types/CoreTypes.h"
 

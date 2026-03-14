@@ -29,9 +29,11 @@
     <ClInclude Include="Component\PrimitiveComponent.h" />
     <ClInclude Include="Component\CubeComponent.h" />
     <ClInclude Include="Component\SphereComponent.h" />
+    <ClInclude Include="Object\ObjectFactory.h" />
     <ClInclude Include="Object\ObjectManager.h" />
     <ClInclude Include="Object\ObjectTypes.h" />
     <ClInclude Include="Object\Scene\Scene.h" />
+    <ClInclude Include="ThirdParty\nlohmann\json.hpp" />
     <ClInclude Include="Types\CoreTypes.h" />
     <ClInclude Include="EngineAPI.h" />
     <ClInclude Include="Types\Array.h" />
@@ -182,11 +184,15 @@
     <ClCompile Include="Camera\Camera.cpp" />
     <ClCompile Include="Component\PrimitiveComponent.cpp" />
     <ClCompile Include="Renderer\Renderer.cpp" />
+    <ClCompile Include="Renderer\Shader.cpp" />
+    <ClCompile Include="Renderer\ShaderMap.cpp" />
     <ClCompile Include="Renderer\ShaderManager.cpp" />
+    <ClCompile Include="Renderer\ShaderResource.cpp" />
     <ClCompile Include="Primitive\PrimitiveBase.cpp" />
     <ClCompile Include="Primitive\PrimitiveCube.cpp" />
     <ClCompile Include="Primitive\PrimitivePlane.cpp" />
     <ClCompile Include="Primitive\PrimitiveSphere.cpp" />
+    <ClCompile Include="Input\InputManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Math\Vector.h" />
@@ -196,12 +202,16 @@
     <ClInclude Include="Camera\Camera.h" />
     <ClInclude Include="Renderer\RenderCommand.h" />
     <ClInclude Include="Renderer\Renderer.h" />
+    <ClInclude Include="Renderer\Shader.h" />
+    <ClInclude Include="Renderer\ShaderMap.h" />
     <ClInclude Include="Renderer\ShaderManager.h" />
+    <ClInclude Include="Renderer\ShaderResource.h" />
     <ClInclude Include="Renderer\PrimitiveVertex.h" />
     <ClInclude Include="Primitive\PrimitiveBase.h" />
     <ClInclude Include="Primitive\PrimitiveCube.h" />
     <ClInclude Include="Primitive\PrimitivePlane.h" />
     <ClInclude Include="Primitive\PrimitiveSphere.h" />
+    <ClInclude Include="Input\InputManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -4,5 +4,7 @@
 class ENGINE_API USphereComponent : public UPrimitiveComponent
 {
 public:
+	static UClass* StaticClass();
+
 	USphereComponent();
 };
