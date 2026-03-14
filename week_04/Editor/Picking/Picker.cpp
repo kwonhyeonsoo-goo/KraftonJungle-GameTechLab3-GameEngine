@@ -16,18 +16,18 @@ FRay CPicker::ScreenToRay(int ScreenX, int ScreenY, int ScreenWidth, int ScreenH
     float NdcY = 1.0f - (2.0f * ScreenY / ScreenHeight);
 
     // NDC → View Space (Projection 역변환)
-    float ViewX = NdcX / ProjMatrix.M[0][0];
-    float ViewY = NdcY / ProjMatrix.M[1][1];
-    float ViewZ = 1.0f;
+    const float ViewForward = 1.0f;
+    const float ViewRight = NdcX / ProjMatrix.M[1][0];
+    const float ViewUp = NdcY / ProjMatrix.M[2][1];
 
     // View → World (View 행렬의 역행렬)
     FMatrix ViewInv = ViewMatrix.GetInverse();
 
     // 레이 방향 (View Space의 방향 벡터를 World로 변환)
     FVector RayDirWorld;
-    RayDirWorld.X = ViewX * ViewInv.M[0][0] + ViewY * ViewInv.M[1][0] + ViewZ * ViewInv.M[2][0];
-    RayDirWorld.Y = ViewX * ViewInv.M[0][1] + ViewY * ViewInv.M[1][1] + ViewZ * ViewInv.M[2][1];
-    RayDirWorld.Z = ViewX * ViewInv.M[0][2] + ViewY * ViewInv.M[1][2] + ViewZ * ViewInv.M[2][2];
+    RayDirWorld.X = ViewForward * ViewInv.M[0][0] + ViewRight * ViewInv.M[1][0] + ViewUp * ViewInv.M[2][0];
+    RayDirWorld.Y = ViewForward * ViewInv.M[0][1] + ViewRight * ViewInv.M[1][1] + ViewUp * ViewInv.M[2][1];
+    RayDirWorld.Z = ViewForward * ViewInv.M[0][2] + ViewRight * ViewInv.M[1][2] + ViewUp * ViewInv.M[2][2];
     RayDirWorld = RayDirWorld.GetSafeNormal();
 
     // 레이 원점 = 카메라 위치 (ViewInverse의 Translation 부분)
