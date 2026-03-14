@@ -445,14 +445,14 @@ void CRenderer::Release()
 	if (GUIShutdown)
 	{
 		GUIShutdown();
-		GUIInit = nullptr;
-		GUIShutdown = nullptr;
-		GUINewFrame = nullptr;
-		GUIUpdate = nullptr;
-		GUIRender = nullptr;
-		GUIPostPresent = nullptr;
-	}
 
+	}
+	GUIInit = nullptr;
+	GUIShutdown = nullptr;
+	GUINewFrame = nullptr;
+	GUIUpdate = nullptr;
+	GUIRender = nullptr;
+	GUIPostPresent = nullptr;
 	if (StencilWriteState)
 	{
 		StencilWriteState->Release();
@@ -475,13 +475,8 @@ void CRenderer::Release()
 		LineDepthState = nullptr;
 	}
 
-	}
-	GUIInit = nullptr;
-	GUIShutdown = nullptr;
-	GUINewFrame = nullptr;
-	GUIUpdate = nullptr;
-	GUIRender = nullptr;
-	GUIPostPresent = nullptr;
+	
+
 	if (RasterizerState)
 	{
 		RasterizerState->Release();

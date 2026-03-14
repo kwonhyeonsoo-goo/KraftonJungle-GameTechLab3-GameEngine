@@ -94,26 +94,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	if (!Core.Initialize(hwnd, 1280, 720))
 		return -1;
 
-	// ImGui
-
 	CEditorGUI EditorGUI;
 	EditorGUI.Initialize(Core.GetRenderer());
-
-
-			ImGuiIO& io = ImGui::GetIO();
-			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-			ImGui::End();
-		}
-
-		if (show_another_window)
-		{
-			ImGui::Begin("Another Window", &show_another_window);
-			ImGui::Text("Hello from another window!");
-			if (ImGui::Button("Close Me"))
-				show_another_window = false;
-			ImGui::End();
-		}
-	});
 
 	// Timing
 	LARGE_INTEGER Frequency, LastTime, CurrentTime;
