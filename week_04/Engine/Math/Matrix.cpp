@@ -46,7 +46,8 @@ FMatrix FMatrix::Transpose() const
 FMatrix FMatrix::Inverse() const
 {
     // TODO: 4x4 역행렬 구현
-    return Identity();
+	FMatrix Result;
+    return Result;
 }
 
 FMatrix FMatrix::Translation(float X, float Y, float Z)
