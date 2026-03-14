@@ -2,8 +2,10 @@
 #include "Renderer/Renderer.h"
 #include "Renderer/ShaderManager.h"
 #include "Camera/Camera.h"
+#include "Object/Actor/Actor.h"
 #include "Component/SphereComponent.h"
 #include "Component/CubeComponent.h"
+#include "Component/PrimitiveComponent.h"
 #include "Primitive/PrimitiveBase.h"
 #include <iostream>
 
@@ -75,12 +77,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	camera.SetRotation(0.0f, -15.0f);
 	camera.SetAspectRatio(1280.0f / 720.0f);
 
-	// ─── 오브젝트 배치 ───
-	USphereComponent sphere;
-	sphere.SetRelativeLocation({ 0.0f, 0.0f, 0.0f });
+	// ─── Actor 스폰 ───
+	AActor* SphereActor = new AActor(AActor::StaticClass(), "SphereActor");
+	USphereComponent* SphereComp = new USphereComponent();
+	SphereActor->AddOwnedComponent(SphereComp);
+	SphereActor->SetActorLocation({ 0.0f, 0.0f, 0.0f });
 
-	UCubeComponent cube;
-	cube.SetRelativeLocation({ 3.0f, 0.0f, 0.0f });
+	AActor* CubeActor = new AActor(AActor::StaticClass(), "CubeActor");
+	UCubeComponent* CubeComp = new UCubeComponent();
+	CubeActor->AddOwnedComponent(CubeComp);
+	CubeActor->SetActorLocation({ 3.0f, 0.0f, 0.0f });
 
 	// ─── 타이밍 ───
 	LARGE_INTEGER Frequency, LastTime, CurrentTime;
@@ -132,11 +138,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 			FMatrix VP = camera.GetViewMatrix() * camera.GetProjectionMatrix();
 			renderer.ViewProjectionMatrix = VP;
 
-			FMeshData* sphereMesh = sphere.GetPrimitive()->GetMeshData();
-			renderer.AddCommand({ sphereMesh, sphere.GetRelativeTransform().ToMatrix() });
+			if (SphereComp->GetPrimitive())
+			{
+				renderer.AddCommand({ SphereComp->GetPrimitive()->GetMeshData(), SphereComp->GetWorldTransform() });
+			}
 
-			FMeshData* cubeMesh = cube.GetPrimitive()->GetMeshData();
-			renderer.AddCommand({ cubeMesh, cube.GetRelativeTransform().ToMatrix() });
+			if (CubeComp->GetPrimitive())
+			{
+				renderer.AddCommand({ CubeComp->GetPrimitive()->GetMeshData(), CubeComp->GetWorldTransform() });
+			}
 
 			renderer.ExecuteCommands();
 
@@ -145,6 +155,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	}
 
 	// ─── 정리 ───
+	delete SphereActor;
+	delete CubeActor;
 	shader.Release();
 	CPrimitiveBase::ClearCache();
 	renderer.Release();

@@ -179,8 +179,6 @@
     <ClInclude Include="UI\StatWindow.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Engine\Shaders\VertexShader.hlsl" />
-    <None Include="..\Engine\Shaders\PixelShader.hlsl" />
     <None Include="ThirdParty\imgui\imgui.natstepfilter" />
   </ItemGroup>
   <ItemGroup>

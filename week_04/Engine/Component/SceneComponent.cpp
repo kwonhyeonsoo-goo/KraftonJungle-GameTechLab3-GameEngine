@@ -43,6 +43,16 @@ void USceneComponent::DetachFromParent()
 	AttachParent = nullptr;
 }
 
+FMatrix USceneComponent::GetWorldTransform() const
+{
+	FMatrix LocalMatrix = RelativeTransform.ToMatrix();
+	if (AttachParent)
+	{
+		return LocalMatrix * AttachParent->GetWorldTransform();
+	}
+	return LocalMatrix;
+}
+
 FVector USceneComponent::GetWorldLocation() const
 {
 	if (AttachParent == nullptr)

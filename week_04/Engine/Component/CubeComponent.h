@@ -4,5 +4,7 @@
 class ENGINE_API UCubeComponent : public UPrimitiveComponent
 {
 public:
+	static UClass* StaticClass();
+
 	UCubeComponent();
 };

@@ -7,7 +7,7 @@ class ENGINE_API USceneComponent : public UActorComponent
 public:
 	static UClass* StaticClass();
 
-	USceneComponent() : UActorComponent(nullptr, "", nullptr) {}
+	USceneComponent() : UActorComponent(StaticClass(), "") {}
 
 	USceneComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr)
 		: UActorComponent(InClass, InName, InOuter)
@@ -26,9 +26,10 @@ public:
 	void AttachTo(USceneComponent* InParent);
 	void DetachFromParent();
 	FVector GetWorldLocation() const;
+	FMatrix GetWorldTransform() const;
 
 private:
-	FTransform RelativeTransform {};
+	FTransform RelativeTransform{};
 	USceneComponent* AttachParent = nullptr;
 	TArray<USceneComponent*> AttachChildren;
 };
