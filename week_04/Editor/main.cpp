@@ -1,15 +1,7 @@
 #include "EngineTest.h"
-#include "Renderer/Renderer.h"
-#include "Renderer/ShaderManager.h"
-#include "Camera/Camera.h"
-#include "Object/Actor/Actor.h"
-#include "Component/SphereComponent.h"
-#include "Component/CubeComponent.h"
-#include "Component/PrimitiveComponent.h"
-#include "Primitive/PrimitiveBase.h"
-#include <iostream>
-
 #include "Core/Core.h"
+#include "Camera/Camera.h"
+#include "Object/Scene/Scene.h"
 
 // ─── 입력 상태 ───
 static bool bRightMouseDown = false;
@@ -52,47 +44,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	);
 	ShowWindow(hwnd, SW_SHOW);
 
-	// ─── Renderer 초기화 ───
-	CRenderer renderer;
-	if (!renderer.Initialize(hwnd, 1280, 720))
-		return -1;
-
-	ID3D11Device* device = renderer.GetDevice();
-	ID3D11DeviceContext* context = renderer.GetDeviceContext();
-
-	// ─── 셰이더 로드 ───
-	CShaderManager shader;
-	if (!shader.LoadVertexShader(device, L"../Engine/Shaders/VertexShader.hlsl"))
-	{
-		MessageBox(0, L"VertexShader load failed", 0, 0);
-		return -1;
-	}
-	if (!shader.LoadPixelShader(device, L"../Engine/Shaders/PixelShader.hlsl"))
-	{
-		MessageBox(0, L"PixelShader load failed", 0, 0);
-		return -1;
-	}
-
 	// ─── Core 초기화 ───
 	CCore Core;
-	Core.Initialize(hwnd);
+	if (!Core.Initialize(hwnd, 1280, 720))
+		return -1;
 
-	// ─── 카메라 ───
-	CCamera camera;
-	camera.SetPosition({ 0.0f, 2.0f, -5.0f });
-	camera.SetRotation(0.0f, -15.0f);
-	camera.SetAspectRatio(1280.0f / 720.0f);
-
-	// ─── Actor 스폰 ───
-	AActor* SphereActor = new AActor(AActor::StaticClass(), "SphereActor");
-	USphereComponent* SphereComp = new USphereComponent();
-	SphereActor->AddOwnedComponent(SphereComp);
-	SphereActor->SetActorLocation({ 0.0f, 0.0f, 0.0f });
-
-	AActor* CubeActor = new AActor(AActor::StaticClass(), "CubeActor");
-	UCubeComponent* CubeComp = new UCubeComponent();
-	CubeActor->AddOwnedComponent(CubeComp);
-	CubeActor->SetActorLocation({ 3.0f, 0.0f, 0.0f });
+	CCamera* Camera = Core.GetScene()->GetCamera();
 
 	// ─── 타이밍 ───
 	LARGE_INTEGER Frequency, LastTime, CurrentTime;
@@ -117,12 +74,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 			LastTime = CurrentTime;
 
 			// ─── 키보드 입력 (WASD + QE) ───
-			if (GetAsyncKeyState('W') & 0x8000) camera.MoveForward(DeltaTime);
-			if (GetAsyncKeyState('S') & 0x8000) camera.MoveForward(-DeltaTime);
-			if (GetAsyncKeyState('D') & 0x8000) camera.MoveRight(DeltaTime);
-			if (GetAsyncKeyState('A') & 0x8000) camera.MoveRight(-DeltaTime);
-			if (GetAsyncKeyState('E') & 0x8000) camera.MoveUp(DeltaTime);
-			if (GetAsyncKeyState('Q') & 0x8000) camera.MoveUp(-DeltaTime);
+			if (GetAsyncKeyState('W') & 0x8000) Camera->MoveForward(DeltaTime);
+			if (GetAsyncKeyState('S') & 0x8000) Camera->MoveForward(-DeltaTime);
+			if (GetAsyncKeyState('D') & 0x8000) Camera->MoveRight(DeltaTime);
+			if (GetAsyncKeyState('A') & 0x8000) Camera->MoveRight(-DeltaTime);
+			if (GetAsyncKeyState('E') & 0x8000) Camera->MoveUp(DeltaTime);
+			if (GetAsyncKeyState('Q') & 0x8000) Camera->MoveUp(-DeltaTime);
 
 			// ─── 마우스 우클릭 드래그 → 카메라 회전 ───
 			if (bRightMouseDown)
@@ -133,42 +90,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 				float DeltaY = static_cast<float>(CurrentMousePos.y - LastMousePos.y);
 				LastMousePos = CurrentMousePos;
 
-				camera.Rotate(DeltaX * 0.2f, -DeltaY * 0.2f);
+				Camera->Rotate(DeltaX * 0.2f, -DeltaY * 0.2f);
 			}
 
 			Core.Tick(DeltaTime);
-
-			// ─── 렌더링 ───
-			renderer.BeginFrame();
-
-			shader.Bind(context);
-
-			FMatrix VP = camera.GetViewMatrix() * camera.GetProjectionMatrix();
-			renderer.ViewProjectionMatrix = VP;
-
-			if (SphereComp->GetPrimitive())
-			{
-				renderer.AddCommand({ SphereComp->GetPrimitive()->GetMeshData(), SphereComp->GetWorldTransform() });
-			}
-
-			if (CubeComp->GetPrimitive())
-			{
-				renderer.AddCommand({ CubeComp->GetPrimitive()->GetMeshData(), CubeComp->GetWorldTransform() });
-			}
-
-			renderer.ExecuteCommands();
-
-			renderer.EndFrame();
 		}
 	}
 
 	// ─── 정리 ───
-	delete SphereActor;
-	delete CubeActor;
 	Core.Release();
-	shader.Release();
-	CPrimitiveBase::ClearCache();
-	renderer.Release();
 
 	return 0;
 }

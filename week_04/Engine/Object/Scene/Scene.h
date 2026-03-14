@@ -2,6 +2,7 @@
 #include "Object/Object.h"
 
 class AActor;
+class CCamera;
 
 class ENGINE_API UScene : public UObject
 {
@@ -9,7 +10,7 @@ public:
 	static UClass* StaticClass();
 
 	UScene(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
-	~UScene() override = default;
+	~UScene() override;
 
 	template <typename T>
 	T* SpawnActor(const FString& InName)
@@ -35,11 +36,14 @@ public:
 
 	const TArray<AActor*>& GetActors() const { return Actors; }
 
+	CCamera* GetCamera() const { return Camera; }
+
+	void InitializeDefaultScene(float AspectRatio);
 	void BeginPlay();
 	void Tick(float DeltaTime);
 
 private:
 	TArray<AActor*> Actors;
+	CCamera* Camera = nullptr;
 	bool bBegunPlay = false;
 };
-
