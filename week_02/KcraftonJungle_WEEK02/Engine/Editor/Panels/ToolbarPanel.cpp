@@ -1,8 +1,5 @@
 #include "ToolbarPanel.h"
 
-#include "ToolbarPanel.h"
-
-
 void ToolbarPanel::OnRender(AppContext& ctx)
 {
     if (!bVisible)

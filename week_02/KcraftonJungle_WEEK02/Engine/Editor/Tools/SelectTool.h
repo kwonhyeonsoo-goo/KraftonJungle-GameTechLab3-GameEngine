@@ -2,6 +2,7 @@
 #include "ITool.h"
 #include "../../Services/PickingService.h"
 #include "../SelectionSet.h"
+#include "../../../AppContext.h"
 
 class SelectTool : public ITool {
 public:

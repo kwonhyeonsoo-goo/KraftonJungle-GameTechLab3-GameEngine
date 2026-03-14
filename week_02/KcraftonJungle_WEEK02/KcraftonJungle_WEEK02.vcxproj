@@ -191,6 +191,7 @@
     <ClInclude Include="Engine\Editor\Tools\SelectTool.h" />
     <ClInclude Include="Engine\Editor\Panels\PropertyPanel.h" />
     <ClInclude Include="Engine\Editor\Panels\ToolbarPanel.h" />
+    <ClInclude Include="Engine\Editor\Commands\SpawnObjectCommand.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AppContext.cpp" />
@@ -238,6 +239,7 @@
     <ClCompile Include="Engine\Editor\Tools\SelectTool.cpp" />
     <ClCompile Include="Engine\Editor\Panels\PropertyPanel.cpp" />
     <ClCompile Include="Engine\Editor\Panels\ToolbarPanel.cpp" />
+    <ClCompile Include="Engine\Editor\Commands\SpawnObjectCommand.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
