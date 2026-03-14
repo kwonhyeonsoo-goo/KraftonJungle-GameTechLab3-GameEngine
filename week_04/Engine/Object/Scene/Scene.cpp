@@ -3,6 +3,7 @@
 #include "Core/Core.h"
 #include "Object/Class.h"
 #include "Object/Actor/Actor.h"
+#include <algorithm>
 
 namespace
 {
