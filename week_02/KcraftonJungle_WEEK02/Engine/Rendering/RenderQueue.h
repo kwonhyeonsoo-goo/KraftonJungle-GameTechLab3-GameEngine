@@ -1,6 +1,6 @@
 #pragma once
 #include "RenderTypes.h"
-#include "../Foundation/Math/TArray.h"
+#include "../Foundation/Containers/TArray.h"
 
 class RenderQueue {
 public:
