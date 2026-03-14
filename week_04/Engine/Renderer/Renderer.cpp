@@ -296,8 +296,8 @@ bool CRenderer::CreateConstantBuffer()
 void CRenderer::UpdateConstantBuffer(const FMatrix& WorldMatrix, const FMatrix& ViewProj)
 {
 	FConstantBufferData CBData;
-	CBData.WVP = (WorldMatrix * ViewProj).Transpose();
-	CBData.World = WorldMatrix.Transpose();
+	CBData.WVP = (WorldMatrix * ViewProj).GetTransposed();
+	CBData.World = WorldMatrix.GetTransposed();
 
 	D3D11_MAPPED_SUBRESOURCE Mapped;
 	DeviceContext->Map(ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped);
@@ -366,7 +366,7 @@ void CRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float
 	DeviceContext->OMSetDepthStencilState(StencilTestState, 1);
 
 	// 약간 확대한 WorldMatrix
-	FMatrix ScaleUp = FMatrix::Scale(OutlineScale, OutlineScale, OutlineScale);
+	FMatrix ScaleUp = FMatrix::MakeScale(OutlineScale);
 	FMatrix OutlineWorld = ScaleUp * WorldMatrix;
 	UpdateConstantBuffer(OutlineWorld, ViewProjectionMatrix);
 
@@ -428,7 +428,7 @@ void CRenderer::ExecuteLineCommands()
 	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
 	// WorldMatrix = Identity로 상수 버퍼 업데이트
-	UpdateConstantBuffer(FMatrix::Identity(), ViewProjectionMatrix);
+	UpdateConstantBuffer(FMatrix::Identity, ViewProjectionMatrix);
 
 	DeviceContext->Draw(static_cast<UINT>(LineVertices.size()), 0);
 
