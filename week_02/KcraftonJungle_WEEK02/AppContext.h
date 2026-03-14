@@ -1,6 +1,7 @@
 #pragma once
 #include "Engine/World/World.h"
 #include "Engine/Rendering/URenderer.h"
+#include "Engine/ObjectKernel/ObjectStore.h"
 
 // main() 스택에서 생성
 class TDelegate;
@@ -9,7 +10,7 @@ struct AppContext {
     //// Object Kernel
     //UUIDService    UUIDs;
     //ClassRegistry  Classes;
-    //ObjectStore    Objects;
+    ObjectStore    Objects;
     //ObjectFactory  Factory;
 
     // World
@@ -37,7 +38,7 @@ struct AppContext {
 
     //void Dispatch(ICommand* cmd);
 
-    T//Delegate<ObjectDestroyedEvent> OnObjectDestroyed;
+    //Delegate<ObjectDestroyedEvent> OnObjectDestroyed;
 
 private:
     void RegisterBuiltinTypes();   // Cube, Sphere, Plane ClassRegistry 등록
