@@ -1,7 +1,7 @@
 #include "Scene.h"
 
 #include "Core/Core.h"
-#include "Object/Class.h"
+
 #include "Object/Actor/Actor.h"
 #include "Camera/Camera.h"
 #include "Component/SphereComponent.h"

@@ -1,7 +1,21 @@
 #include "StatWindow.h"
-// #include <imgui.h>
 
 void CStatWindow::Render()
 {
-    // TODO: ImGui 창 — 오브젝트 수, 힙 메모리 사용량 표시
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+	bool bOpen = ImGui::Begin("Stats");
+	ImGui::PopStyleVar();
+
+	if (!bOpen)
+	{
+		ImGui::End();
+		return;
+	}
+
+	ImGuiIO& IO = ImGui::GetIO();
+	ImGui::Text("FPS        : %.1f  (%.3f ms)", IO.Framerate, 1000.0f / IO.Framerate);
+	ImGui::Text("Objects    : %u", ObjectCount);
+	ImGui::Text("Heap Usage : %.2f KB", HeapUsageBytes / 1024.0f);
+
+	ImGui::End();
 }
