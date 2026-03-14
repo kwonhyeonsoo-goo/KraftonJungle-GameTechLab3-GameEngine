@@ -151,12 +151,14 @@
     <ClInclude Include="Engine\Mesh\Circle.h" />
     <ClInclude Include="Engine\Mesh\Cube.h" />
     <ClInclude Include="Engine\Mesh\Rect.h" />
+    <ClInclude Include="Engine\Mesh\Sphere.h" />
     <ClInclude Include="Engine\ObjectKernel\ClassRegistry.h" />
     <ClInclude Include="Engine\ObjectKernel\ObjectFactory.h" />
     <ClInclude Include="Engine\ObjectKernel\ObjectStore.h" />
     <ClInclude Include="Engine\ObjectKernel\UClass.h" />
     <ClInclude Include="Engine\ObjectKernel\UObject.h" />
     <ClInclude Include="Engine\ObjectKernel\UUIDService.h" />
+    <ClInclude Include="Engine\Rendering\OverlayBuilder.h" />
     <ClInclude Include="Engine\Rendering\RenderQueue.h" />
     <ClInclude Include="Engine\Rendering\RenderSceneExtractor.h" />
     <ClInclude Include="Engine\Rendering\RenderTypes.h" />
@@ -179,6 +181,7 @@
     <ClInclude Include="Engine\Editor\SelectionSet.h" />
     <ClInclude Include="Engine\Editor\ToolContext.h" />
     <ClInclude Include="Engine\Editor\Commands\SetTransformCommand.h" />
+    <ClInclude Include="Engine\Mesh\Line.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AppContext.cpp" />
@@ -200,6 +203,7 @@
     <ClCompile Include="Engine\ObjectKernel\UClass.cpp" />
     <ClCompile Include="Engine\ObjectKernel\UObject.cpp" />
     <ClCompile Include="Engine\ObjectKernel\UUIDService.cpp" />
+    <ClCompile Include="Engine\Rendering\OverlayBuilder.cpp" />
     <ClCompile Include="Engine\Rendering\RenderQueue.cpp" />
     <ClCompile Include="Engine\Rendering\RenderSceneExtractor.cpp" />
     <ClCompile Include="Engine\Rendering\URenderer.cpp" />

@@ -13,7 +13,13 @@ public:
     // ActiveTool::BuildGizmoOverlay()에 위임해 Gizmo 데이터를 수집한다
     static void Build(const EditorSession& session,
         AppContext& ctx,
-        RenderQueue& queue);
+        RenderQueue& queue)
+    {
+        // Default implementation: add world axis command to the render queue.
+        // Implemented inline so the definition is available to all TUs and
+        // to avoid linker unresolved external when the .cpp is not linked.
+        PushWorldAxis(queue);
+    }
 
     // ★ LMS 요구: "축별 색상은 UE와 똑같이 한다"
     //   0xRRGGBBAA 형식 (Alpha=FF)

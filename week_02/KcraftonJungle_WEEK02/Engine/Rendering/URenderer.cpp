@@ -3,6 +3,10 @@
 #include "../Foundation/Math/FMatrix.h"
 #include <DirectXMath.h>
 #include "../Mesh/Sphere.h"
+#include "../Mesh/Cube.h"
+#include "../Mesh/Triangle.h"
+#include "../Mesh/Rect.h"
+#include "../Mesh/Line.h"
 
 void URenderer::Create(HWND hWindow)
 
@@ -17,6 +21,18 @@ void URenderer::Create(HWND hWindow)
 
      vertexBufferSphere = CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
      numVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
+
+     vertexBufferCube = CreateVertexBuffer(cube_vertices, sizeof(cube_vertices));
+     numVerticesCube = sizeof(sphere_vertices) / sizeof(FVertexSimple);
+
+     vertexBufferTriangle = CreateVertexBuffer(triangle_vertices, sizeof(triangle_vertices));
+     numVerticesTriangle = sizeof(triangle_vertices) / sizeof(FVertexSimple);
+
+     vertexBufferRect = CreateVertexBuffer(rect_vertices, sizeof(rect_vertices));
+     indexBufferRect = CreateIndexBuffer(rect_indices, sizeof(rect_indices));
+
+     vertexBufferWorldAxis = CreateVertexBuffer(line_vertices, sizeof(line_vertices));
+     numVerticesWorldAxis = sizeof(line_vertices) / sizeof(FVertexSimple);
 }
 
 void URenderer::RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices)
@@ -323,6 +339,10 @@ ID3D11Buffer* URenderer::CreateVertexBuffer(FVertexSimple* vertices, UINT byteWi
 
 void URenderer::ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer)
 {
+    ReleaseVertexBuffer(vertexBufferTriangle);
+    ReleaseVertexBuffer(vertexBufferCube);
+    ReleaseVertexBuffer(vertexBufferSphere);
+
     vertexBuffer->Release();
 }
 
@@ -428,11 +448,11 @@ enum class EPrimitiveShape
     Triangle
 };
 
-void URenderer::Flush(const RenderQueue& queue)//, const EditorSession& session)
+void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//, const EditorSession& session)
 {
 	for (int i = 0; i < queue.GetCommands().size(); ++i)
     {
-        FVector eye = { 0.0f, 0.0f, -20.0f };   // 카메라 위치
+        FVector eye = { 0.0f, 0.0f, -50.0f };   // 카메라 위치
         FVector target = { 0.0f, 0.0f, 0.0f }; // 보는 위치
         FVector up = { 0.0f, 1.0f, 0.0f };     // 위 방향
 
@@ -462,18 +482,37 @@ void URenderer::Flush(const RenderQueue& queue)//, const EditorSession& session)
         switch (cmd.Type)
         {     
         case ERenderType::Primitive:
+
+            DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
             switch (cmd.Shape)
             {
             case EPrimitiveShape::Sphere:
                 RenderPrimitive(vertexBufferSphere, numVerticesSphere);
+                break;
+            case EPrimitiveShape::Cube:
+                RenderPrimitive(vertexBufferCube, numVerticesCube);
+                break;
+            case EPrimitiveShape::Triangle:
+                RenderPrimitive(vertexBufferTriangle, numVerticesTriangle);
 
                 break;
+            case EPrimitiveShape::Plane:
+                RenderIndexedPrimitive(vertexBufferRect, indexBufferRect);
             default:
                 break;
             }
 
             break;
-       
+        case ERenderType::WorldAxis:
+            DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+            RenderPrimitive(vertexBufferWorldAxis, numVerticesWorldAxis);
+
+            break;
+        case ERenderType::LocalAxis:
+            break;
+        case ERenderType::Gizmo:
+            break;
         default:
             break;
         }

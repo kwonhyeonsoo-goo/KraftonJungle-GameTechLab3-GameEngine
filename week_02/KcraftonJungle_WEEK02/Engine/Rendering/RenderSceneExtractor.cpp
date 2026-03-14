@@ -1,3 +1,4 @@
+#pragma once
 #include "RenderSceneExtractor.h"
 #include "RenderQueue.h"
 #include "../ObjectKernel/UObject.h"

@@ -2,8 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="AppContext.cpp" />
-    <ClCompile Include="Engine\World\UCubeMesh.cpp" />
-    <ClCompile Include="Engine\World\UMesh.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Editor\ImGui\imgui.cpp">
       <Filter>Editor\ImGui</Filter>
@@ -101,11 +99,21 @@
     <ClCompile Include="Engine\Foundation\Math\FVector.cpp">
       <Filter>Engine\Foundation\Math</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Rendering\RenderQueue.cpp">
+      <Filter>Engine\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\World\UMesh.cpp">
+      <Filter>Engine\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\World\UCubeMesh.cpp">
+      <Filter>Engine\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Rendering\OverlayBuilder.cpp">
+      <Filter>Engine\Rendering</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
-    <ClInclude Include="Engine\World\UCubeMesh.h" />
-    <ClInclude Include="Engine\World\UMesh.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="Editor\ImGui\imconfig.h">
       <Filter>Editor\ImGui</Filter>
@@ -209,7 +217,6 @@
     <ClInclude Include="Engine\World\Level.h">
       <Filter>Engine\World</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\World\Sphere.h" />
     <ClInclude Include="Engine\Rendering\RenderQueue.h">
       <Filter>Engine\Rendering</Filter>
     </ClInclude>
@@ -258,6 +265,22 @@
     <ClInclude Include="Engine\Foundation\Containers\TArray.h">
       <Filter>Engine\Foundation\Containers</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\World\Sphere.h">
+      <Filter>Engine\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\World\UMesh.h">
+      <Filter>Engine\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\World\UCubeMesh.h">
+      <Filter>Engine\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Rendering\OverlayBuilder.h">
+      <Filter>Engine\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Mesh\Line.h">
+      <Filter>Engine\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Mesh\Sphere.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">

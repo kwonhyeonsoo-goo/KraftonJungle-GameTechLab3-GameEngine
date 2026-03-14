@@ -15,10 +15,12 @@
 
 #include "Engine/Rendering/URenderer.h"
 #include "Engine/Rendering/RenderSceneExtractor.h"
+#include "Engine/Rendering/OverlayBuilder.h"
 #include "Engine/Rendering/RenderQueue.h"
 
 #include "Engine/World/Sphere.h"
 #include "Engine/World/Transform.h"
+#include "Engine/Editor/EditorSession.h"
 
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -42,10 +44,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-#include "Engine/Mesh/Triangle.h"
-#include "Engine/Mesh/Rect.h"
-#include "Engine/Mesh/Cube.h"
-//#include "Engine/Mesh/Sphere.h"
 
 #include "AppContext.h"
 
@@ -88,40 +86,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     ImGui_ImplWin32_Init((void*)hWnd);
     ImGui_ImplDX11_Init(renderer.Device, renderer.DeviceContext);
 
-    UINT numVerticesTriangle = sizeof(triangle_vertices) / sizeof(FVertexSimple);
-    UINT numVerticesCube = sizeof(cube_vertices) / sizeof(FVertexSimple);
-    UINT numVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
-	UINT numIndicesRect = sizeof(rect_indices) / sizeof(UINT);
+
 
     float scaleMod = 0.1f;
 
-    for (UINT i = 0; i < numVerticesSphere; ++i)
-    {
-        sphere_vertices[i].x *= scaleMod;
-        sphere_vertices[i].y *= scaleMod;
-        sphere_vertices[i].z *= scaleMod;
-    }
-
-    ID3D11Buffer* vertexBufferTriangle = renderer.CreateVertexBuffer(triangle_vertices, sizeof(triangle_vertices));
-    ID3D11Buffer* vertexBufferCube = renderer.CreateVertexBuffer(cube_vertices, sizeof(cube_vertices));
-    ID3D11Buffer* vertexBufferSphere = renderer.CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
-
-	ID3D11Buffer* vertexBufferRect = renderer.CreateVertexBuffer(rect_vertices, sizeof(rect_vertices));
-    ID3D11Buffer* indexBufferRect = renderer.CreateIndexBuffer(rect_indices, sizeof(rect_indices));
-
     bool bIsExit = false;   
 
-    enum ETypePrimitive
-    {
-        EPT_Triangle,
-        EPT_Cube,
-        EPT_Sphere,
-        EPT_Rect,
-        EPT_Max,
-    };
-
-    ETypePrimitive typePrimitive = EPT_Sphere
-        ;
 
     const float leftBorder = -1.0f;
     const float rightBorder = 1.0f;
@@ -266,18 +236,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         rotation.y += 2.0f / targetFrameTime;
         rotation.z += 3.0f / targetFrameTime;
 
-        FVector eye = { 0.0f, 0.0f, -20.0f };   // 카메라 위치
-        FVector target = { 0.0f, 0.0f, 0.0f }; // 보는 위치
-        FVector up = { 0.0f, 1.0f, 0.0f };     // 위 방향
-
-        float fov = DirectX::XMConvertToRadians(60.0f);
-        float aspect = 1.0f;   // 창이 정사각형이면 1
-        float nearZ = 0.1f;
-        float farZ = 100.0f;
 
         AppContext ctx = {};
+        EditorSession ed;
 
-        USphereComp* sphere = new USphereComp();
+        UCubeComp* sphere = new UCubeComp();
 
         Transform trans = Transform();
         trans.Location = offset;
@@ -287,66 +250,38 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         ctx.Objects.Add(sphere);
 
+        USphereComp* cube = new USphereComp();
+
+        trans = Transform();
+        trans.Location = offset + 1;
+        trans.Rotation = rotation;
+        trans.Scale = scale;
+        cube->SetTransform(trans);
+
+        ctx.Objects.Add(cube);
+
+        UPlaneComp* plane = new UPlaneComp();
+
+        trans = Transform();
+        trans.Location = offset - 1;
+        trans.Rotation = rotation;
+        trans.Scale = scale;
+        plane->SetTransform(trans);
+
+        ctx.Objects.Add(plane);
+
+    
         RenderQueue queue = RenderQueue();
         RenderSceneExtractor::Extract(ctx, queue);
+        OverlayBuilder::Build(ed, ctx, queue);
 
-#pragma region MVP 계산
-
-        FMatrix mTranslation = FMatrix::Translation({ offset.x, offset.y, offset.z });
-
-
-        FMatrix quat =
-            FMatrix::RotationX(rotation.x) *
-            FMatrix::RotationY(rotation.y) *
-            FMatrix::RotationZ(rotation.z);
-
-        FMatrix mRotationQuat = quat; // DirectX::XMMatrixRotationQuaternion(quat);
-
-        FMatrix mScale = FMatrix::Scale({ scale.x, scale.y, scale.z });
-
-        FMatrix mWorld = mScale * mRotationQuat * mTranslation;
-
-        FMatrix mView = FMatrix::LookAt(eye, target, up);
-
-
-        FMatrix mProjection =
-            FMatrix::Perspective(
-                fov,
-                aspect,
-                nearZ,
-                farZ
-            );
-#pragma endregion
-
-
-        FConstants constants;
-        //constants.MVP; //= mWorld * mView * mProjection;
-        constants.MVP = mWorld * mView * mProjection;
 
         renderer.Prepare();
         renderer.PrepareShader();
 
-        renderer.UpdateConstant(constants);
-		renderer.UpdateMVP(constants.MVP);
-        switch (typePrimitive)
-        {
-        case EPT_Triangle:
-            renderer.RenderPrimitive(vertexBufferTriangle, numVerticesTriangle);
-            break;
-        case EPT_Cube:
-            renderer.RenderPrimitive(vertexBufferCube, numVerticesCube);
-            break;
-        case EPT_Sphere:
-            renderer.RenderPrimitive(vertexBufferTriangle, numVerticesTriangle);
-            renderer.RenderPrimitive(vertexBufferSphere, numVerticesSphere);
-            break;
-		case EPT_Rect:
-            renderer.RenderIndexedPrimitive(vertexBufferRect, indexBufferRect);
 
-        }
-
-
-        renderer.Flush(queue);
+        
+        renderer.Flush(queue, ed);
 
 #pragma region ImGui
 
@@ -389,9 +324,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
-    renderer.ReleaseVertexBuffer(vertexBufferTriangle);
-    renderer.ReleaseVertexBuffer(vertexBufferCube);
-    renderer.ReleaseVertexBuffer(vertexBufferSphere);
 
     renderer.ReleaseConstantBuffer();
 

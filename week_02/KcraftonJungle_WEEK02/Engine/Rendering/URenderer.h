@@ -23,6 +23,7 @@ struct FConstants
 class RenderQueue;
 class EditorSession;
 struct FMatrix;
+class EditorSession;
 
 class URenderer
 {
@@ -50,9 +51,14 @@ public:
 
     ID3D11Buffer* vertexBufferSphere;
     UINT numVerticesSphere;
-
-
-
+    ID3D11Buffer* vertexBufferCube;
+    UINT numVerticesCube;
+    ID3D11Buffer* vertexBufferTriangle;
+    UINT numVerticesTriangle;
+    ID3D11Buffer* vertexBufferRect;
+    ID3D11Buffer* indexBufferRect;
+    ID3D11Buffer* vertexBufferWorldAxis;
+    UINT numVerticesWorldAxis;
 
 #pragma region D3D11 Renderer 함수들
 	//D3D11 Renderer 함수들
@@ -60,7 +66,7 @@ public:
     void Shutdown();
 
     void BeginFrame();
-    void Flush(const RenderQueue& queue);// , const EditorSession& session);
+    void Flush(const RenderQueue& queue, const EditorSession& session);// , const EditorSession& session);
     void EndFrame();
 
     // WM_SIZE 이벤트 수신 시 호출
