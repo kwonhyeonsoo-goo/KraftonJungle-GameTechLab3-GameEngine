@@ -78,3 +78,24 @@ inline bool TDelegate<T>::IsBound() const
     return !Listeners.empty();
 }
 
+// DirectX나 COM 객체뿐만 아니라 일반적인 포인터 해제에도 쓰일 수 있게 정의
+namespace Engine {
+
+    // DirectX 리소스 해제용 (COM Interface)
+    template <typename T>
+    inline void SafeRelease(T*& InterfacePtr) {
+        if (InterfacePtr != nullptr) {
+            InterfacePtr->Release();
+            InterfacePtr = nullptr;
+        }
+    }
+
+    // 일반 메모리 해제용 (참고용)
+    template <typename T>
+    inline void SafeDelete(T*& Ptr) {
+        if (Ptr != nullptr) {
+            delete Ptr;
+            Ptr = nullptr;
+        }
+    }
+}

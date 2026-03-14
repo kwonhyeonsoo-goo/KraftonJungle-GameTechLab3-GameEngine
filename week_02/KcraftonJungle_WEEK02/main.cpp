@@ -27,6 +27,9 @@ extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    // 윈도우에 저장된 포인터를 다시 URenderer 타입으로 형변환해서 가져옴
+    URenderer* pRenderer = reinterpret_cast<URenderer*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+
     if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
     {
         return true;
@@ -37,6 +40,33 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
+    case WM_SIZE:
+        // pRenderer가 NULL이 아닐 때만 안전하게 호출
+        if (wParam != SIZE_MINIMIZED && pRenderer != nullptr)
+        {
+            UINT width = LOWORD(lParam);
+            UINT height = HIWORD(lParam);
+            pRenderer->OnResize(width, height);
+        }
+        break;
+    //    break;
+    //case WM_PAINT:
+    //    if (pRenderer)
+    //    {
+    //        // 여기서 강제로 한 번 그려줍니다. 
+    //        // 단, Flush에 필요한 queue나 session 데이터를 가져올 방법이 필요합니다.
+    //        // 보통 AppContext나 전역 객체를 통해 현재 상태를 가져와서 그립니다.
+
+    //        //
+    //        //pRenderer->BeginFrame();
+    //        //pRenderer->Flush(queue, ed);
+    //        //pRenderer->EndFrame();
+    //        //
+
+    //        // PAINT 처리를 완료했다고 알림
+    //        //ValidateRect(hWnd, NULL);
+    //    }
+    //    break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
@@ -70,11 +100,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         nullptr, nullptr, hInstance, nullptr);
 #pragma endregion
 
-    AppContext ctx;
-
     URenderer renderer;
 
     renderer.Create(hWnd);
+
+    // hWnd(윈도우)에 renderer 객체의 주소를 '사용자 데이터'로 저장
+    SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)&renderer);
 
     renderer.CreateShader();
 
@@ -93,10 +124,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     bool bIsExit = false;   
 
 
-    const float leftBorder = -1.0f;
-    const float rightBorder = 1.0f;
-    const float topBorder = -1.0f;
-    const float bottomBorder = 1.0f;
+    const float leftBorder = -10.0f;
+    const float rightBorder = 10.0f;
+    const float topBorder = -10.0f;
+    const float bottomBorder = 10.0f;
     const float frontBorder = 10.0f;
     const float backBorder = -10.0f;
 
@@ -112,7 +143,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     FVector	velocity(0.0f);
 
-    const float ballspeed = 0.001f;    
+    const float ballspeed = 0.01f;    
     velocity.x = ((float)(rand() % 100 - 50)) * ballspeed;
     velocity.y = ((float)(rand() % 100 - 50)) * ballspeed;
     velocity.z = ((float)(rand() % 100 - 50)) * ballspeed;
@@ -201,9 +232,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             offset.y += velocity.y;
             offset.z += velocity.z;
 
-            rotation.x += velocity.x;
+
             rotation.y += velocity.y;
-            rotation.z += velocity.z;
+
 
             float renderRadius = sphereRadius * scaleMod;
             if (offset.x < leftBorder + renderRadius)
@@ -232,19 +263,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             }
         }
 
-        rotation.x += 1.0f / targetFrameTime;
-        rotation.y += 2.0f / targetFrameTime;
-        rotation.z += 3.0f / targetFrameTime;
 
 
         AppContext ctx = {};
-        EditorSession ed;
+
 
         UCubeComp* sphere = new UCubeComp();
 
         Transform trans = Transform();
         trans.Location = offset;
-        trans.Rotation = rotation;
+        trans.Rotation = { 0,0,0 };
         trans.Scale = scale;
         sphere->SetTransform(trans);
 
@@ -270,18 +298,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         ctx.Objects.Add(plane);
 
-    
-        RenderQueue queue = RenderQueue();
+        RenderQueue queue = RenderQueue();;
+        EditorSession ed;
         RenderSceneExtractor::Extract(ctx, queue);
         OverlayBuilder::Build(ed, ctx, queue);
 
+        renderer.BeginFrame();
 
-        renderer.Prepare();
-        renderer.PrepareShader();
-
-
-        
         renderer.Flush(queue, ed);
+
+
 
 #pragma region ImGui
 
@@ -304,9 +330,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 #pragma endregion
 
+        renderer.EndFrame();
 
-
-        renderer.SwapBuffer();
 
         do
         {

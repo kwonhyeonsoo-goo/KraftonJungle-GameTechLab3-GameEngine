@@ -111,6 +111,10 @@
     <ClCompile Include="Engine\Rendering\OverlayBuilder.cpp">
       <Filter>Engine\Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Platform\InputRouter.cpp" />
+    <ClCompile Include="Engine\Platform\PlatformEvents.cpp" />
+    <ClCompile Include="Engine\Platform\WindowHost.cpp" />
+    <ClCompile Include="Engine\Services\PickingService.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
@@ -281,6 +285,11 @@
       <Filter>Engine\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Mesh\Sphere.h" />
+    <ClInclude Include="Engine\Platform\InputEvent.h" />
+    <ClInclude Include="Engine\Platform\InputRouter.h" />
+    <ClInclude Include="Engine\Platform\PlatformEvents.h" />
+    <ClInclude Include="Engine\Platform\WindowHost.h" />
+    <ClInclude Include="Engine\Services\PickingService.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">

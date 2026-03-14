@@ -19,6 +19,7 @@ public:
         // Implemented inline so the definition is available to all TUs and
         // to avoid linker unresolved external when the .cpp is not linked.
         PushWorldAxis(queue);
+
     }
 
     // ★ LMS 요구: "축별 색상은 UE와 똑같이 한다"

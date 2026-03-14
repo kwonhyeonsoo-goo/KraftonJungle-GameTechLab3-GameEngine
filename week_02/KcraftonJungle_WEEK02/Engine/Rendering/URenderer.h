@@ -6,6 +6,7 @@
 #include "../Foundation/Math/FVector.h"
 #include "../Foundation/Math/FMatrix.h"
 #include "../Services/SerializationService.h"
+#pragma comment(lib, "dxgi.lib")
 
 
 struct FVertexSimple
@@ -50,7 +51,7 @@ public:
     unsigned int Stride;
 
     ID3D11Buffer* vertexBufferSphere;
-    UINT numVerticesSphere;
+     UINT numVerticesSphere;
     ID3D11Buffer* vertexBufferCube;
     UINT numVerticesCube;
     ID3D11Buffer* vertexBufferTriangle;
@@ -72,6 +73,7 @@ public:
     // WM_SIZE 이벤트 수신 시 호출
     void OnResize(UINT width, UINT height);
 
+
     // MVP 상수 버퍼 업데이트
     void UpdateMVP(const FMatrix& mvp);
 
@@ -79,11 +81,26 @@ public:
 public:
     void Create(HWND hWindow);
 
-    void RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices);
-    void RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer);
-
     void CreateShader();
     void ReleaseShader();
+
+    void CreateConstantBuffer();
+    void ReleaseConstantBuffer();
+
+    void Release();
+
+private:
+    IDXGIOutput* DisplayInfo;
+
+    void Prepare();
+
+    void PrepareShader();
+
+    void SwapBuffer();
+
+
+    void RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices);
+    void RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer, UINT indexCount);
 
     void CreateDeviceAndSwapChain(HWND hWindow);
     void ReleaseDeviceAndSwapChain();
@@ -91,19 +108,15 @@ public:
     void CreateFrameBuffer();
     void ReleaseFrameBuffer();
 
-    void CreateDepthBuffer();
-	void ReleaseDepthBuffer();
+    void CreateDepthBuffer(float width, float height);
+    void ReleaseDepthBuffer();
+
+    void CreatePrimitiveVertexBuffer();
+    void ReleasePrimitivVertexBuffer();
 
     void CreateRasterizerState();
 
     void ReleaseRasterizerState();
-
-    void Release();
-
-    void SwapBuffer();
-    void Prepare();
-
-    void PrepareShader();
 
     ID3D11Buffer* CreateVertexBuffer(FVertexSimple* vertices, UINT byteWidth);
     void ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer);
@@ -112,16 +125,7 @@ public:
     ID3D11Buffer* CreateIndexBuffer(void* data, UINT size);
     void ReleaseIndexBuffer(ID3D11Buffer* vertexBuffer);
 
-
-public:
-
-
-
-    void CreateConstantBuffer();
-
-
     void UpdateConstant(FConstants& param);
 
-    void ReleaseConstantBuffer();
 };
 
