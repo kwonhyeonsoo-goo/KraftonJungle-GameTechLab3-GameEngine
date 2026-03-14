@@ -3,6 +3,9 @@
 #include "Math/Vector.h"
 #include "Math/Matrix.h"
 
+class AActor;
+class UScene;
+
 struct FRay
 {
     FVector Origin;
@@ -20,4 +23,8 @@ public:
     bool RayTriangleIntersect(const FRay& Ray,
                               const FVector& V0, const FVector& V1, const FVector& V2,
                               float& OutDistance) const;
+
+    // 씬의 모든 Actor를 대상으로 피킹 (가장 가까운 Actor 반환)
+    AActor* PickActor(UScene* Scene, int ScreenX, int ScreenY,
+                      int ScreenWidth, int ScreenHeight) const;
 };

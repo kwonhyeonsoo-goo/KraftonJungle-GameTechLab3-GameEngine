@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 #include "Windows.h"
 
+class AActor;
 class UScene;
 class CRenderer;
 class CShaderManager;
@@ -28,6 +29,9 @@ public:
 	CRenderer* GetRenderer() const { return Renderer; }
 	CInputManager* GetInputManager() const { return InputManager; }
 
+	void SetSelectedActor(AActor* InActor) { SelectedActor = InActor; }
+	AActor* GetSelectedActor() const { return SelectedActor; }
+
 	void OnResize(int Width, int Height);
 private:
 	void Physics(float DeltaTime);
@@ -39,6 +43,7 @@ private:
 	CShaderManager* ShaderManager = nullptr;
 	CInputManager* InputManager = nullptr;
 	UScene* Scene = nullptr;
+	AActor* SelectedActor = nullptr;
 
 	int32 WindowWidth = 0;
 	int32 WindowHeight = 0;

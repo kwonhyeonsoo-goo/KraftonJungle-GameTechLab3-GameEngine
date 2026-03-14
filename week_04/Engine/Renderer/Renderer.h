@@ -6,6 +6,8 @@
 #include <vector>
 #include <functional>
 #include "ShaderManager.h"
+#include "PrimitiveVertex.h"
+class FPixelShader;
 struct FMeshData;
 
 using FGUICallback = std::function<void()>;
@@ -40,6 +42,14 @@ public:
 	void ExecuteCommands();
 	void SetViewProjection(const FMatrix& VP) { ViewProjectionMatrix = VP; }
 
+	// 라인 렌더링
+	void DrawLine(const FVector& Start, const FVector& End, const FVector4& Color);
+	void ExecuteLineCommands();
+
+	// 아웃라인 렌더링 (Stencil 기반)
+	bool InitOutlineResources();
+	void RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float OutlineScale = 1.05f);
+
 
 	FMatrix GetViewProjectionMatrix() { return ViewProjectionMatrix; }
 	ID3D11Device* GetDevice() const { return Device; }
@@ -62,6 +72,14 @@ private:
 	D3D11_VIEWPORT Viewport = {};
 
 	std::vector<FRenderCommand> CommandList;
+	std::vector<FPrimitiveVertex> LineVertices;
+	ID3D11Buffer* LineVertexBuffer = nullptr;
+	ID3D11DepthStencilState* LineDepthState = nullptr;
+
+	// 아웃라인 리소스
+	ID3D11DepthStencilState* StencilWriteState = nullptr;
+	ID3D11DepthStencilState* StencilTestState = nullptr;
+	std::shared_ptr<FPixelShader> OutlinePS;
 
 	// GUI callbacks
 	FGUICallback GUIInit;

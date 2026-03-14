@@ -2,11 +2,17 @@
 #include "Core/Core.h"
 #include "Renderer/Renderer.h"
 #include "UI/EditorGUI.h"
+#include "Object/Scene/Scene.h"
+#include "Object/Actor/Actor.h"
+#include "Component/SceneComponent.h"
+#include "Picking/Picker.h"
 
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
 
 static CCore* GCore = nullptr;
+static CPicker GPicker;
+static AActor* GSelectedActor = nullptr;
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 
@@ -26,6 +32,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			GCore->GetRenderer()->OnResize(LOWORD(lParam), HIWORD(lParam));
 		}
 		return 0;
+	case WM_LBUTTONDOWN:
+		// ImGui가 마우스를 사용 중이면 피킹하지 않음
+		if (!ImGui::GetIO().WantCaptureMouse && GCore && GCore->GetScene())
+		{
+			int MouseX = LOWORD(lParam);
+			int MouseY = HIWORD(lParam);
+			RECT Rect;
+			GetClientRect(hWnd, &Rect);
+			int Width = Rect.right - Rect.left;
+			int Height = Rect.bottom - Rect.top;
+
+			AActor* Picked = GPicker.PickActor(GCore->GetScene(), MouseX, MouseY, Width, Height);
+			if (Picked)
+			{
+				GSelectedActor = Picked;
+				GCore->SetSelectedActor(GSelectedActor);
+			}
+		}
+		break;
 	default:
 		if (GCore)
 		{
@@ -75,6 +100,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	EditorGUI.Initialize(Core.GetRenderer());
 
 
+			ImGuiIO& io = ImGui::GetIO();
+			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+			ImGui::End();
+		}
+
+		if (show_another_window)
+		{
+			ImGui::Begin("Another Window", &show_another_window);
+			ImGui::Text("Hello from another window!");
+			if (ImGui::Button("Close Me"))
+				show_another_window = false;
+			ImGui::End();
+		}
+	});
 
 	// Timing
 	LARGE_INTEGER Frequency, LastTime, CurrentTime;
