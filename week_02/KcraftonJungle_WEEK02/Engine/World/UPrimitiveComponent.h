@@ -1,5 +1,6 @@
 #pragma once
 #include "USceneComponent.h"
+#include "../ObjectKernel/UClass.h"
 
 enum class EPrimitiveShape
 {

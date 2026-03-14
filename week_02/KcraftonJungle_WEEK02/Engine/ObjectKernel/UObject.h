@@ -1,5 +1,5 @@
 #pragma once
-#include "./CoreTypes.h"
+#include "../Foundation/Core/CoreTypes.h"
 #include "./UClass.h"
 
 class UObject

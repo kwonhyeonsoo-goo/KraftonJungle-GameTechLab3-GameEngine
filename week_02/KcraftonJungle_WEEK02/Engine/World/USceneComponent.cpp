@@ -1,5 +1,4 @@
 #include "USceneComponent.h"
-#include "UClass.h"
 
 USceneComponent::USceneComponent()
     : RelativeLocation(FVector::Zero)

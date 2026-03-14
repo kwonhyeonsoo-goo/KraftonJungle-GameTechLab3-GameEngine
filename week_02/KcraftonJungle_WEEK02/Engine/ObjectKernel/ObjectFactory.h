@@ -1,10 +1,10 @@
 #pragma once
 #include "./UObject.h"
-#include "./CoreTypes.h"
+#include "../Foundation/Core/CoreTypes.h"
 #include "./UClass.h"
-#include "UCubeComp.h"
-#include "USphereComp.h"
-#include "UPlaneComp.h"
+#include "../World/UCubeComp.h"
+#include "../World/UPlaneComp.h"
+#include "../World/USphereComp.h"
 
 struct AppContext;
 

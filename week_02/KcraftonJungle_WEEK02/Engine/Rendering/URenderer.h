@@ -3,7 +3,7 @@
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 
-#include "FVector.h"
+#include "../Foundation/Containers/FVector.h"
 
 struct FVertexSimple
 {

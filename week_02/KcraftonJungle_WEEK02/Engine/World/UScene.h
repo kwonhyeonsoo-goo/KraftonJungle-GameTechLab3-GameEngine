@@ -1,14 +1,15 @@
 #pragma once
-#include "CoreTypes.h"
+#include "../Foundation/Core/CoreTypes.h"
 #include "UPrimitiveComponent.h"
-#include "AppContext.h"
+#include "../../AppContext.h"
+#include "../ObjectKernel/UObject.h"
 
 struct AppContext;
 
-class Scene
+class UScene
 {
 public:
-    Scene();
+    UScene();
 
     void Add(UPrimitiveComponent* comp);
     void Remove(uint32 uuid);

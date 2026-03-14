@@ -1,6 +1,6 @@
 #pragma once
 #include "./UObject.h"
-#include "./CoreTypes.h"
+#include "../Foundation/Core/CoreTypes.h"
 
 
 class ObjectStore {

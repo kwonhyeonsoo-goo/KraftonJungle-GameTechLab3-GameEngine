@@ -9,9 +9,5 @@ using uint64 = std::uint64_t;
 
 using FString = std::string;
 
-#include "./TArray.h"
-#include "./TMap.h"
-#include "FMatrix4.h"
-#include "FVector.h"
-#include "FVector4.h"
-#include "FMatrix.h"
+#include "../Math/TArray.h"
+#include "../Math/TMap.h"

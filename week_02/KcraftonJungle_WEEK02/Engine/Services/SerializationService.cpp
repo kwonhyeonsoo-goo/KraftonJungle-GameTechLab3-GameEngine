@@ -1,8 +1,8 @@
 #include "SerializationService.h"
-#include "UPrimitiveComponent.h"
-#include "Scene.h"
-#include "FVector.h"
-#include "json.hpp"
+#include "../World/UPrimitiveComponent.h"
+#include "../World/Scene.h"
+#include "../Foundation/Containers/FVector.h"
+#include "../../json.hpp"
 
 #include <fstream>
 #include <sstream>

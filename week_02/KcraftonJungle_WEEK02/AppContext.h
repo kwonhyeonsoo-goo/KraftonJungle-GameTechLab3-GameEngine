@@ -1,6 +1,6 @@
 #pragma once
-#include "Scene.h"
-#include "URenderer.h"
+#include "Engine/World/UScene.h"
+#include "Engine/Rendering/URenderer.h"
 
 // main() 스택에서 생성
 class TDelegate;

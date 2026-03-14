@@ -1,17 +1,16 @@
-#include "Scene.h"
-#include "ObjectStore.h"
+#include "UScene.h"
 
-Scene::Scene()
+UScene::UScene()
     : Ctx(nullptr)
 {
 }
 
-void Scene::SetContext(AppContext* ctx)
+void UScene::SetContext(AppContext* ctx)
 {
     Ctx = ctx;
 }
 
-void Scene::Add(UPrimitiveComponent* comp)
+void UScene::Add(UPrimitiveComponent* comp)
 {
     if (Ctx == nullptr || comp == nullptr)
     {
@@ -21,7 +20,7 @@ void Scene::Add(UPrimitiveComponent* comp)
     Ctx->Objects.Add(comp);
 }
 
-void Scene::Remove(uint32 uuid)
+void UScene::Remove(uint32 uuid)
 {
     if (Ctx == nullptr)
     {
@@ -31,7 +30,7 @@ void Scene::Remove(uint32 uuid)
     Ctx->Objects.Remove(uuid);
 }
 
-UPrimitiveComponent* Scene::Find(uint32 uuid) const
+UPrimitiveComponent* UScene::Find(uint32 uuid) const
 {
     if (Ctx == nullptr)
     {
@@ -41,7 +40,7 @@ UPrimitiveComponent* Scene::Find(uint32 uuid) const
     return static_cast<UPrimitiveComponent*>(Ctx->Objects.Find(uuid));
 }
 
-const TArray<UObject*>& Scene::GetAllObjects() const
+const TArray<UObject*>& UScene::GetAllObjects() const
 {
     return Ctx->Objects.GUObjectArray();
 }

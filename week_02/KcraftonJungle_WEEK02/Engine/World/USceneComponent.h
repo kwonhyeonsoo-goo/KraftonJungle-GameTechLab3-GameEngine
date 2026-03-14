@@ -1,5 +1,5 @@
 #pragma once
-#include "UObject.h"
+#include "../ObjectKernel/UObject.h"
 #include "Transform.h"
 
 class USceneComponent : public UObject

@@ -1,5 +1,4 @@
 #include "UCubeComp.h"
-#include "UClass.h"
 
 UCubeComp::UCubeComp() : UPrimitiveComponent(EPrimitiveShape::Cube)
 {
