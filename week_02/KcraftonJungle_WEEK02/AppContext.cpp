@@ -24,6 +24,8 @@ void AppContext::RegisterBuiltinTypes()
 
 void AppContext::RegisterPanels()
 {
+    Panels.Register(new PropertyPanel());
+    Panels.Register(new ToolbarPanel());
 }
 
 void AppContext::RegisterTools()

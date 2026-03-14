@@ -298,6 +298,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         ImGui::Checkbox("Pinball Movement", &bPinballMovement);
 
         ImGui::End();
+        ctx.Panels.RenderAll(ctx);
 
         ImGui::Render();
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());

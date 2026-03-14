@@ -16,6 +16,8 @@
 #include "Engine/ObjectKernel/ObjectFactory.h"
 #include "Engine/Editor/EditorSession.h"
 #include "Engine/Editor/EditorManager.h"
+#include "Engine/Editor/Panels/PropertyPanel.h"
+#include "Engine/Editor/Panels/ToolbarPanel.h"
 
 // main() 
 struct AppContext {

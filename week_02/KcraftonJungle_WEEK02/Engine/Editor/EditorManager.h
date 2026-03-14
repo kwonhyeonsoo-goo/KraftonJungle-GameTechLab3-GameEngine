@@ -1,5 +1,5 @@
 #pragma once
-#include "Panels/IEditorPanel.h"
+#include "./Panels/IEditorPanel.h"
 
 class EditorManager {
 public:

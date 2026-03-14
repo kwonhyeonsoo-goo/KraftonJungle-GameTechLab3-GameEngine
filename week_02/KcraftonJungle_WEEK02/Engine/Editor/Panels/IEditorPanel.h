@@ -1,6 +1,7 @@
 #pragma once
 #include "../../Foundation/Core/CoreTypes.h"
-#include "../../../AppContext.h"
+
+struct AppContext;
 
 class IEditorPanel {
 public:
