@@ -18,6 +18,18 @@ bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 heigh
     return false;
 }
 
+void AppContext::RegisterBuiltinTypes()
+{
+}
+
+void AppContext::RegisterPanels()
+{
+}
+
+void AppContext::RegisterTools()
+{
+}
+
 void AppContext::SubscribeEvents()
 {
     //OutlinerPanel* outliner = (OutlinerPanel*)Panels.Find("OutLiner");

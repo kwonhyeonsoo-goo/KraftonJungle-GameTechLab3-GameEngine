@@ -15,6 +15,8 @@ struct Ray {
         , Direction(Direction)
     {
     }
+
+    Ray() = default;
 };
 
 class PickingService

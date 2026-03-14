@@ -1,6 +1,13 @@
 #include "PlatformEvents.h"
 #include "../../Editor/ImGui/imgui.h" // ImGui는 cpp에서만 include
 
+TDelegate<MouseMoveEvent> PlatformEvents::OnMouseMove;
+TDelegate<MouseDownEvent> PlatformEvents::OnMouseDown;
+TDelegate<MouseUpEvent>   PlatformEvents::OnMouseUp;
+TDelegate<KeyDownEvent>   PlatformEvents::OnKeyDown;
+TDelegate<KeyUpEvent>     PlatformEvents::OnKeyUp;
+TDelegate<ResizeEvent>    PlatformEvents::OnResize;
+
 //NewFrame() 이후에 호출되어야함
 void PlatformEvents::Poll()
 {
