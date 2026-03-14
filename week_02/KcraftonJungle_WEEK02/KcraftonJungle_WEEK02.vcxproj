@@ -134,6 +134,8 @@
   <ItemGroup>
     <ClInclude Include="Circle.h" />
     <ClInclude Include="Cube.h" />
+    <ClInclude Include="ClassRegistry.h" />
+    <ClInclude Include="CoreTypes.h" />
     <ClInclude Include="FMatrix4.h" />
     <ClInclude Include="FVector.h" />
     <ClInclude Include="FVector4.h" />
@@ -149,17 +151,31 @@
     <ClInclude Include="RenderQueue.h" />
     <ClInclude Include="RenderSceneExtractor.h" />
     <ClInclude Include="RenderTypes.h" />
+    <ClInclude Include="log.h" />
+    <ClInclude Include="Memory.h" />
+    <ClInclude Include="ObjectFactory.h" />
+    <ClInclude Include="ObjectStore.h" />
+    <ClInclude Include="Scene.h" />
     <ClInclude Include="Sphere.h" />
+    <ClInclude Include="TArray.h" />
+    <ClInclude Include="TMap.h" />
+    <ClInclude Include="Transform.h" />
+    <ClInclude Include="UClass.h" />
     <ClInclude Include="UCubeComp.h" />
     <ClInclude Include="UCubeMesh.h" />
     <ClInclude Include="UMesh.h" />
     <ClInclude Include="UObject.h" />
+    <ClInclude Include="UPlaneComp.h" />
     <ClInclude Include="UPrimitiveComponent.h" />
     <ClInclude Include="URenderer.h" />
     <ClInclude Include="USceneComponent.h" />
     <ClInclude Include="USphereComp.h" />
+    <ClInclude Include="UUIDService.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ClassRegistry.cpp" />
+    <ClCompile Include="FMatrix.h" />
+    <ClCompile Include="FVector.cpp" />
     <ClCompile Include="ImGui\imgui.cpp" />
     <ClCompile Include="ImGui\imgui_demo.cpp" />
     <ClCompile Include="ImGui\imgui_draw.cpp" />
@@ -167,16 +183,25 @@
     <ClCompile Include="ImGui\imgui_impl_win32.cpp" />
     <ClCompile Include="ImGui\imgui_tables.cpp" />
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
+    <ClCompile Include="log.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="RenderSceneExtractor.cpp" />
+    <ClCompile Include="Memory.cpp" />
+    <ClCompile Include="ObjectFactory.cpp" />
+    <ClCompile Include="ObjectStore.cpp" />
+    <ClCompile Include="Scene.cpp" />
+    <ClCompile Include="Transform.cpp" />
+    <ClCompile Include="UClass.cpp" />
     <ClCompile Include="UCubeComp.cpp" />
     <ClCompile Include="UCubeMesh.cpp" />
     <ClCompile Include="UMesh.cpp" />
     <ClCompile Include="UObject.cpp" />
+    <ClCompile Include="UPlaneComp.cpp" />
     <ClCompile Include="UPrimitiveComponent.cpp" />
     <ClCompile Include="URenderer.cpp" />
     <ClCompile Include="USceneComponent.cpp" />
     <ClCompile Include="USphereComp.cpp" />
+    <ClCompile Include="UUIDService.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
