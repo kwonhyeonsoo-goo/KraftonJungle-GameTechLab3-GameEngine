@@ -14,6 +14,12 @@
 #include "Editor/imGui/imgui_impl_win32.h"
 
 #include "Engine/Rendering/URenderer.h"
+#include "Engine/Rendering/RenderSceneExtractor.h"
+#include "Engine/Rendering/RenderQueue.h"
+
+#include "Engine/World/Sphere.h"
+#include "Engine/World/Transform.h"
+
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -39,7 +45,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 #include "Engine/Mesh/Triangle.h"
 #include "Engine/Mesh/Rect.h"
 #include "Engine/Mesh/Cube.h"
-#include "Engine/Mesh/Sphere.h"
+//#include "Engine/Mesh/Sphere.h"
 
 #include "AppContext.h"
 
@@ -256,12 +262,38 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             }
         }
 
-
-        FMatrix mTranslation = FMatrix::Translation({ offset.x, offset.y, offset.z });
-
         rotation.x += 1.0f / targetFrameTime;
         rotation.y += 2.0f / targetFrameTime;
         rotation.z += 3.0f / targetFrameTime;
+
+        FVector eye = { 0.0f, 0.0f, -20.0f };   // 카메라 위치
+        FVector target = { 0.0f, 0.0f, 0.0f }; // 보는 위치
+        FVector up = { 0.0f, 1.0f, 0.0f };     // 위 방향
+
+        float fov = DirectX::XMConvertToRadians(60.0f);
+        float aspect = 1.0f;   // 창이 정사각형이면 1
+        float nearZ = 0.1f;
+        float farZ = 100.0f;
+
+        AppContext ctx = {};
+
+        USphereComp* sphere = new USphereComp();
+
+        Transform trans = Transform();
+        trans.Location = offset;
+        trans.Rotation = rotation;
+        trans.Scale = scale;
+        sphere->SetTransform(trans);
+
+        ctx.Objects.Add(sphere);
+
+        RenderQueue queue = RenderQueue();
+        RenderSceneExtractor::Extract(ctx, queue);
+
+#pragma region MVP 계산
+
+        FMatrix mTranslation = FMatrix::Translation({ offset.x, offset.y, offset.z });
+
 
         FMatrix quat =
             FMatrix::RotationX(rotation.x) *
@@ -274,16 +306,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         FMatrix mWorld = mScale * mRotationQuat * mTranslation;
 
-        FVector eye = { 0.0f, 0.0f, -20.0f};   // 카메라 위치
-        FVector target = { 0.0f, 0.0f, 0.0f }; // 보는 위치
-        FVector up = { 0.0f, 1.0f, 0.0f };     // 위 방향
-
         FMatrix mView = FMatrix::LookAt(eye, target, up);
 
-        float fov = DirectX::XMConvertToRadians(60.0f);
-        float aspect = 1.0f;   // 창이 정사각형이면 1
-        float nearZ = 0.1f;
-        float farZ = 100.0f;
 
         FMatrix mProjection =
             FMatrix::Perspective(
@@ -292,6 +316,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                 nearZ,
                 farZ
             );
+#pragma endregion
+
 
         FConstants constants;
         //constants.MVP; //= mWorld * mView * mProjection;
@@ -318,6 +344,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             renderer.RenderIndexedPrimitive(vertexBufferRect, indexBufferRect);
 
         }
+
+
+        renderer.Flush(queue);
 
 #pragma region ImGui
 

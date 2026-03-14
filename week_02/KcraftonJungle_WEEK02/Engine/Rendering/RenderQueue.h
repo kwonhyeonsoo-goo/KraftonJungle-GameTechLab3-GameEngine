@@ -2,9 +2,11 @@
 #include "RenderTypes.h"
 #include "../Foundation/Math/TArray.h"
 
-
 class RenderQueue {
 public:
+    RenderQueue();
+    ~RenderQueue();
+
     void Push(const RenderCommand& cmd);
     void Clear();
 

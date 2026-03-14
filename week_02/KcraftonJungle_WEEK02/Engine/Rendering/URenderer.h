@@ -49,13 +49,19 @@ public:
     ID3D11InputLayout* SimpleInputLayout;
     unsigned int Stride;
 
+    ID3D11Buffer* vertexBufferSphere;
+    UINT numVerticesSphere;
+
+
+
+
 #pragma region D3D11 Renderer 함수들
 	//D3D11 Renderer 함수들
     bool Initialize(HWND hwnd, UINT width, UINT height);
     void Shutdown();
 
     void BeginFrame();
-    void Flush(const RenderQueue& queue, const EditorSession& session);
+    void Flush(const RenderQueue& queue);// , const EditorSession& session);
     void EndFrame();
 
     // WM_SIZE 이벤트 수신 시 호출

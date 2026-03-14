@@ -1,5 +1,15 @@
 #include "RenderQueue.h"
 
+RenderQueue::RenderQueue()
+{
+	Queue = new TArray<RenderCommand>();
+}
+
+RenderQueue::~RenderQueue()
+{
+	delete Queue;
+}
+
 void RenderQueue::Push(const RenderCommand& cmd)
 {
 	Queue->push_back(cmd);

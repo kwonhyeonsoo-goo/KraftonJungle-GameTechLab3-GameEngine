@@ -26,7 +26,6 @@ private:
     FString Name;
     AppContext* Ctx = nullptr;
 public:
-	std::string Name;
     Level PersistentLevel;
     TArray<Level*> SubLevels;
 };

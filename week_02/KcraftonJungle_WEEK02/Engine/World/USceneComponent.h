@@ -23,8 +23,4 @@ public:
 
     static UClass* StaticClass();
     UClass* GetClass() const override;
-
-    virtual EPrimitiveShape GetPrimitiveShape() const override = 0;
-
-
 };

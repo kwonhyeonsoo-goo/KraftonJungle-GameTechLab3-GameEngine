@@ -1,5 +1,8 @@
 #include "URenderer.h"
 #include "RenderQueue.h"
+#include "../Foundation/Containers/FMatrix.h"
+#include <DirectXMath.h>
+#include "../Mesh/Sphere.h"
 
 void URenderer::Create(HWND hWindow)
 
@@ -12,6 +15,8 @@ void URenderer::Create(HWND hWindow)
 
     CreateRasterizerState();
 
+     vertexBufferSphere = CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
+     numVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
 }
 
 void URenderer::RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices)
@@ -415,19 +420,56 @@ enum ETypePrimitive
     EPT_Rect,
     EPT_Max,
 };
+enum class EPrimitiveShape
+{
+    Cube,
+    Sphere,
+    Plane,
+    Triangle
+};
 
-
-void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)
+void URenderer::Flush(const RenderQueue& queue)//, const EditorSession& session)
 {
 	for (int i = 0; i < queue.GetCommands().size(); ++i)
     {
+        FVector eye = { 0.0f, 0.0f, -20.0f };   // 카메라 위치
+        FVector target = { 0.0f, 0.0f, 0.0f }; // 보는 위치
+        FVector up = { 0.0f, 1.0f, 0.0f };     // 위 방향
+
+        float fov = DirectX::XMConvertToRadians(60.0f);
+        float aspect = 1.0f;   // 창이 정사각형이면 1
+        float nearZ = 0.1f;
+        float farZ = 100.0f;
+
+        FMatrix mView = FMatrix::LookAt(eye, target, up);
+
+
+        FMatrix mProjection =
+            FMatrix::Perspective(
+                fov,
+                aspect,
+                nearZ,
+                farZ
+            );
+ 
+
         const RenderCommand& cmd = queue.GetCommands()[i];
+        FConstants constants = {};
+        constants.MVP = cmd.WorldTransform * mView * mProjection;
+
+        UpdateMVP(constants.MVP);
+
         switch (cmd.Type)
-        {
+        {     
         case ERenderType::Primitive:
             switch (cmd.Shape)
             {
-            
+            case EPrimitiveShape::Sphere:
+                RenderPrimitive(vertexBufferSphere, numVerticesSphere);
+
+                break;
+            default:
+                break;
             }
 
             break;

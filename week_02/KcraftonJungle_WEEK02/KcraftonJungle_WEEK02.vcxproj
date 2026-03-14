@@ -200,6 +200,7 @@
     <ClCompile Include="Engine\ObjectKernel\UClass.cpp" />
     <ClCompile Include="Engine\ObjectKernel\UObject.cpp" />
     <ClCompile Include="Engine\ObjectKernel\UUIDService.cpp" />
+    <ClCompile Include="Engine\Rendering\RenderQueue.cpp" />
     <ClCompile Include="Engine\Rendering\RenderSceneExtractor.cpp" />
     <ClCompile Include="Engine\Rendering\URenderer.cpp" />
     <ClCompile Include="Engine\Services\SerializationService.cpp" />

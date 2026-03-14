@@ -28,8 +28,11 @@ void RenderSceneExtractor::Extract(const AppContext& ctx, RenderQueue& queue)
 		if (o->IsA<USceneComponent>()) {
 			RenderCommand objectRenderCommand = {};
 			objectRenderCommand.Type = ERenderType::Primitive;
-			objectRenderCommand.Shape = o->GetPrimitiveShape();
+
 			USceneComponent* sceneComponent = static_cast<USceneComponent*>(o);
+
+			objectRenderCommand.Shape = static_cast<UPrimitiveComponent*>(o)->Shape;
+
 			FVector location = sceneComponent->GetTransform().Location;
 			FVector rotation = sceneComponent->GetTransform().Rotation;
 			FVector scale = sceneComponent->GetTransform().Scale;
