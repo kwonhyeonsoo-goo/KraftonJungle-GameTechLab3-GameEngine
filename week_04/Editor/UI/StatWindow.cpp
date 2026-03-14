@@ -1,12 +1,12 @@
 #include "StatWindow.h"
-#include "imgui.h"
 
 void CStatWindow::Render()
 {
-
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+	bool bOpen = ImGui::Begin("Stats");
 	ImGui::PopStyleVar();
-	if (!ImGui::Begin("Stats"))
+
+	if (!bOpen)
 	{
 		ImGui::End();
 		return;

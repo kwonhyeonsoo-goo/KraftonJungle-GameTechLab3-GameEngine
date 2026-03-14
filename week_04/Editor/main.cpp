@@ -39,6 +39,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
+	ImGui_ImplWin32_EnableDpiAwareness();
 	// Window
 	WNDCLASSEX wc = {};
 	wc.cbSize = sizeof(WNDCLASSEX);
@@ -47,9 +48,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	wc.lpszClassName = L"TestWindow";
 	RegisterClassEx(&wc);
 
+	RECT rc = { 0, 0, 1280, 720 };
+	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
+
+	int windowWidth = rc.right - rc.left;
+	int windowHeight = rc.bottom - rc.top;
+
 	HWND hwnd = CreateWindowEx(
 		0, L"TestWindow", L"Renderer Test",
-		WS_OVERLAPPEDWINDOW, 100, 100, 1280, 720,
+		WS_OVERLAPPEDWINDOW, 100, 100,
+		windowWidth, windowHeight, 
 		nullptr, nullptr, hInstance, nullptr
 	);
 	::ShowWindow(hwnd, SW_SHOWDEFAULT);
