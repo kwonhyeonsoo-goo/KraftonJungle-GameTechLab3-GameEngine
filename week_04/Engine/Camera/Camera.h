@@ -24,6 +24,12 @@ public:
 	void SetAspectRatio(float InAspectRatio);
 	void SetSpeed(float InSpeed) { Speed = InSpeed; }
 
+	FVector GetPosition() const;
+	float GetYaw() const;
+	float GetPitch() const;
+	float GetFOV() const;
+	void SetFOV(float InFOV);
+
 private:
 	FVector Position = { -5.0f, 0.0f, 2.0f };
 	FVector Up = { 0.0f, 0.0f, 1.0f };

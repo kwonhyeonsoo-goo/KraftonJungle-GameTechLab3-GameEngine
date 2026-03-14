@@ -74,3 +74,28 @@ void CCamera::SetAspectRatio(float InAspectRatio)
 {
 	AspectRatio = InAspectRatio;
 }
+
+FVector CCamera::GetPosition() const
+{
+	return Position;
+}
+
+float CCamera::GetYaw() const
+{
+	return Yaw;
+}
+
+float CCamera::GetPitch() const
+{
+	return Pitch;
+}
+
+float CCamera::GetFOV() const
+{
+	return FOV;
+}
+
+void CCamera::SetFOV(float InFOV)
+{
+	FOV = InFOV;
+}

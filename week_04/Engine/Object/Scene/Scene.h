@@ -40,6 +40,8 @@ public:
 
 	void InitializeDefaultScene(float AspectRatio);
 	void LoadSceneFromFile(const FString& FilePath);
+	void SaveSceneToFile(const FString& FilePath);
+	void ClearActors();
 	void BeginPlay();
 	void Tick(float DeltaTime);
 
