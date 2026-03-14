@@ -1,0 +1,47 @@
+#pragma once
+#include "Scene.h"
+#include "URenderer.h"
+
+// main() 스택에서 생성
+class TDelegate;
+
+struct AppContext {
+    //// Object Kernel
+    //UUIDService    UUIDs;
+    //ClassRegistry  Classes;
+    //ObjectStore    Objects;
+    //ObjectFactory  Factory;
+
+    // World
+    UScene         CurrentScene;
+
+    // Services
+    //ConsoleService Console;
+
+    // Editor
+    //EditorSession  Editor;
+    //EditorManager  Panels;
+
+    // Rendering
+    URenderer  Renderer;
+
+    // Platform
+    //WindowHost     Window;
+
+    // ── 초기화 ──
+    bool Initialize(const FString& windowTitle = "MyEngine",
+        int32 width = 1280,
+        int32 height = 720);
+
+    void Shutdown();
+
+    //void Dispatch(ICommand* cmd);
+
+    T//Delegate<ObjectDestroyedEvent> OnObjectDestroyed;
+
+private:
+    void RegisterBuiltinTypes();   // Cube, Sphere, Plane ClassRegistry 등록
+    void RegisterPanels();
+    void RegisterTools();
+    void SubscribeEvents();        // PlatformEvents → Editor/Renderer 연결
+};
