@@ -5,8 +5,7 @@
 #include "../World/UCubeComp.h"
 #include "../World/UPlaneComp.h"
 #include "../World/USphereComp.h"
-
-struct AppContext;
+#include "../../AppContext.h"
 
 class ObjectFactory
 {

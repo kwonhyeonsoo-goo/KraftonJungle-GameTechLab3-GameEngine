@@ -103,7 +103,7 @@ void SelectionSet::OnObjectDestroyed(const ObjectDestroyedEvent& e)
     for (auto it = Items.begin(); it != Items.end(); )
     {
         USceneComponent* comp = *it;
-        if (comp != nullptr && comp->GetUUID() == e.GetUUID())
+        if (comp != nullptr && comp->GetUUID() == e.UUID)
         {
             it = Items.erase(it);
             bChanged = true;

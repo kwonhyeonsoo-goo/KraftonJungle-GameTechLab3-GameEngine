@@ -1,7 +1,7 @@
 #pragma once
 #include "../Foundation/Core/CoreTypes.h"
 #include "../World/USceneComponent.h"
-
+#include "../Editor/Events/EditorEvents.h"
 
 class SelectionSet
 {
