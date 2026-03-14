@@ -17,7 +17,6 @@ public:
 	CCore(CCore&&) = delete;
 	CCore& operator=(const CCore&) = delete;
 	CCore& operator=(CCore&&) = delete;
-
 	bool Initialize(HWND Hwnd, int Width, int Height);
 	void Release();
 
@@ -29,6 +28,7 @@ public:
 	CRenderer* GetRenderer() const { return Renderer; }
 	CInputManager* GetInputManager() const { return InputManager; }
 
+	void OnResize(int Width, int Height);
 private:
 	void Physics(float DeltaTime);
 	void GameLogic(float DeltaTime);
