@@ -8,7 +8,9 @@
 #include "Component/CubeComponent.h"
 #include <algorithm>
 #include <fstream>
+#include <iomanip>
 #include "ThirdParty/nlohmann/json.hpp"
+#include "Component/PrimitiveComponent.h"
 
 namespace
 {
@@ -121,6 +123,69 @@ void UScene::LoadSceneFromFile(const FString& FilePath)
 
 		++ActorIndex;
 	}
+}
+
+void UScene::SaveSceneToFile(const FString& FilePath)
+{
+	nlohmann::json Json;
+
+	// Camera
+	if (Camera)
+	{
+		FVector Pos = Camera->GetPosition();
+		Json["Camera"]["Position"] = { Pos.X, Pos.Y, Pos.Z };
+		Json["Camera"]["Rotation"] = { Camera->GetYaw(), Camera->GetPitch() };
+	}
+
+	// Primitives
+	nlohmann::json Primitives;
+	int Index = 0;
+	for (AActor* Actor : Actors)
+	{
+		if (!Actor || Actor->IsPendingDestroy())
+			continue;
+
+		for (UActorComponent* Comp : Actor->GetComponents())
+		{
+			UPrimitiveComponent* PrimComp = dynamic_cast<UPrimitiveComponent*>(Comp);
+			if (!PrimComp)
+				continue;
+
+			FString Type;
+			if (dynamic_cast<USphereComponent*>(PrimComp))
+				Type = "Sphere";
+			else if (dynamic_cast<UCubeComponent*>(PrimComp))
+				Type = "Cube";
+			else
+				continue;
+
+			FTransform Transform = Actor->GetRootComponent()->GetRelativeTransform();
+			FString Key = std::to_string(Index);
+
+			Primitives[Key]["Type"] = Type;
+			Primitives[Key]["Location"] = { Transform.Location.X, Transform.Location.Y, Transform.Location.Z };
+			Primitives[Key]["Rotation"] = { Transform.Rotation.X, Transform.Rotation.Y, Transform.Rotation.Z };
+			Primitives[Key]["Scale"] = { Transform.Scale.X, Transform.Scale.Y, Transform.Scale.Z };
+
+			++Index;
+		}
+	}
+	Json["Primitives"] = Primitives;
+
+	std::ofstream File(FilePath);
+	if (File.is_open())
+	{
+		File << std::setw(2) << Json << std::endl;
+	}
+}
+
+void UScene::ClearActors()
+{
+	for (AActor* Actor : Actors)
+	{
+		delete Actor;
+	}
+	Actors.clear();
 }
 
 void UScene::RegisterActor(AActor* InActor)

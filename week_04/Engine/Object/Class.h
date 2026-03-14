@@ -1,8 +1,8 @@
 #pragma once
-#include "Types/String.h"
+#include "CoreMinimal.h"
 class UObject;
 
-class UClass
+class ENGINE_API UClass
 {
 public:
 	using CreateFunc = UObject * (*)(UObject* InOuter, const FString& InName);
