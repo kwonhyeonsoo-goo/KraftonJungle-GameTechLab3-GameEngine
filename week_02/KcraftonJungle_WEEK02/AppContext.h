@@ -9,6 +9,7 @@
 #include "Engine/ObjectKernel/ClassRegistry.h"
 #include "Engine/ObjectKernel/ObjectFactory.h"
 #include "Engine/Editor/EditorSession.h"
+#include "Engine/Editor/EditorManager.h"
 
 // main() 스택에서 생성
 struct AppContext {
@@ -26,7 +27,7 @@ struct AppContext {
 
     // Editor
     EditorSession  Editor;
-    //EditorManager  Panels;
+    EditorManager  Panels;
 
     // Rendering
     URenderer  Renderer;
