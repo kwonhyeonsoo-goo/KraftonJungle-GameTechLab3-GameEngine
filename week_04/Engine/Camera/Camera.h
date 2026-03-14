@@ -25,8 +25,8 @@ public:
 	void SetSpeed(float InSpeed) { Speed = InSpeed; }
 
 private:
-	FVector Position = { 0.0f, 2.0f, -5.0f };
-	FVector Up = { 0.0f, 1.0f, 0.0f };
+	FVector Position = { -5.0f, 0.0f, 2.0f };
+	FVector Up = { 0.0f, 0.0f, 1.0f };
 
 	float Yaw = 0.0f;
 	float Pitch = 0.0f;

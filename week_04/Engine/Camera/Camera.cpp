@@ -18,10 +18,11 @@ FVector CCamera::GetForward() const
 	float RadYaw = Yaw * PI / 180.0f;
 	float RadPitch = Pitch * PI / 180.0f;
 
+	// 변경 (Z-up, 언리얼 방식)
 	FVector Forward;
-	Forward.X = cosf(RadPitch) * sinf(RadYaw);
-	Forward.Y = sinf(RadPitch);
-	Forward.Z = cosf(RadPitch) * cosf(RadYaw);
+	Forward.X = cosf(RadPitch) * cosf(RadYaw);   // X가 Forward
+	Forward.Y = cosf(RadPitch) * sinf(RadYaw);   // Y가 Right
+	Forward.Z = sinf(RadPitch);                   // Z가 상하
 	return Forward.Normalize();
 }
 

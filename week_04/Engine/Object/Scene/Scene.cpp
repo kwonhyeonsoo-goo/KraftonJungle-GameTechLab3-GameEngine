@@ -43,7 +43,7 @@ void UScene::InitializeDefaultScene(float AspectRatio)
 {
 	// 카메라
 	Camera = new CCamera();
-	Camera->SetPosition({ 0.0f, 2.0f, -5.0f });
+	Camera->SetPosition({ -5.0f, 0.0f, 2.0f });
 	Camera->SetRotation(0.0f, -15.0f);
 	Camera->SetAspectRatio(AspectRatio);
 
