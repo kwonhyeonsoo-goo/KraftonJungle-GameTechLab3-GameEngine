@@ -128,6 +128,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
+    <ClInclude Include="Engine\Editor\Commands\DeleteObjectCommand.h" />
     <ClInclude Include="Engine\Editor\EditorManager.h" />
     <ClInclude Include="Engine\Editor\EditorSession.h" />
     <ClInclude Include="Engine\Editor\Events\EditorEvents.h" />
@@ -169,6 +170,7 @@
     <ClInclude Include="Engine\Rendering\URenderer.h" />
     <ClInclude Include="Engine\Services\PickingService.h" />
     <ClInclude Include="Engine\Services\SerializationService.h" />
+    <ClInclude Include="Engine\Services\StatsService.h" />
     <ClInclude Include="Engine\World\World.h" />
     <ClInclude Include="Engine\World\Sphere.h" />
     <ClInclude Include="Engine\World\Transform.h" />
@@ -192,9 +194,11 @@
     <ClInclude Include="Engine\Editor\Panels\PropertyPanel.h" />
     <ClInclude Include="Engine\Editor\Panels\ToolbarPanel.h" />
     <ClInclude Include="Engine\Editor\Commands\SpawnObjectCommand.h" />
+    <ClInclude Include="Engine\Editor\Panels\StatPanel.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AppContext.cpp" />
+    <ClCompile Include="Engine\Editor\Commands\DeleteObjectCommand.cpp" />
     <ClCompile Include="Engine\Editor\EditorManager.cpp" />
     <ClCompile Include="Engine\Editor\EditorSession.cpp" />
     <ClCompile Include="Editor\ImGui\imgui.cpp" />
@@ -222,6 +226,7 @@
     <ClCompile Include="Engine\Rendering\URenderer.cpp" />
     <ClCompile Include="Engine\Services\PickingService.cpp" />
     <ClCompile Include="Engine\Services\SerializationService.cpp" />
+    <ClCompile Include="Engine\Services\StatsService.cpp" />
     <ClCompile Include="Engine\World\World.cpp" />
     <ClCompile Include="Engine\World\Transform.cpp" />
     <ClCompile Include="Engine\World\UCubeComp.cpp" />
@@ -240,6 +245,7 @@
     <ClCompile Include="Engine\Editor\Panels\PropertyPanel.cpp" />
     <ClCompile Include="Engine\Editor\Panels\ToolbarPanel.cpp" />
     <ClCompile Include="Engine\Editor\Commands\SpawnObjectCommand.cpp" />
+    <ClCompile Include="Engine\Editor\Panels\StatPanel.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

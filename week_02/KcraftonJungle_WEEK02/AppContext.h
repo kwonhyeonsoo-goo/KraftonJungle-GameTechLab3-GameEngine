@@ -7,17 +7,17 @@
 #include "Engine/ObjectKernel/ObjectFactory.h"
 #include "Engine/ObjectKernel/ObjectStore.h"
 
-#include "Engine/Editor/Commands/ICommand.h"
-#include "Engine/Editor/Events/EditorEvents.h"
-#include "Engine/Foundation/Core/CoreTypes.h"
-#include "Engine/Platform/WindowHost.h"
-#include "Engine/ObjectKernel/UUIDService.h"
-#include "Engine/ObjectKernel/ClassRegistry.h"
-#include "Engine/ObjectKernel/ObjectFactory.h"
 #include "Engine/Editor/EditorSession.h"
 #include "Engine/Editor/EditorManager.h"
+#include "Engine/Editor/Events/EditorEvents.h"
+#include "Engine/Editor/Commands/ICommand.h"
 #include "Engine/Editor/Panels/PropertyPanel.h"
 #include "Engine/Editor/Panels/ToolbarPanel.h"
+#include "Engine/Editor/Panels/StatPanel.h"
+
+#include "Engine/Foundation/Core/CoreTypes.h"
+
+#include "Engine/Platform/WindowHost.h"
 
 // main() 
 struct AppContext {
