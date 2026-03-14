@@ -4,7 +4,8 @@
 class ENGINE_API UObject
 {
 public: 
-	UObject(uint32 InUUID, size_t InObjectType) :UUID(InUUID), ObjectType(InObjectType);
+	UObject(uint32 InUUID, size_t InObjectType) :UUID(InUUID), ObjectType(InObjectType) {
+	};
 	virtual ~UObject() = default;
 	
 
