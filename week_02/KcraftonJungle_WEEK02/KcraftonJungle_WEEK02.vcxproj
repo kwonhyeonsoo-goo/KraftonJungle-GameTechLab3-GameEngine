@@ -190,7 +190,6 @@
     <ClCompile Include="Editor\ImGui\imgui_impl_win32.cpp" />
     <ClCompile Include="Editor\ImGui\imgui_tables.cpp" />
     <ClCompile Include="Editor\ImGui\imgui_widgets.cpp" />
-    <ClCompile Include="Engine\Core\Math\FVector.cpp" />
     <ClCompile Include="Engine\Foundation\Core\log.cpp" />
     <ClCompile Include="Engine\Foundation\Core\Memory.cpp" />
     <ClCompile Include="Engine\Foundation\Containers\FVector.cpp" />

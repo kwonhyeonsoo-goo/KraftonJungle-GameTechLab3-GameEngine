@@ -20,4 +20,7 @@ public:
 
 private:
     AppContext* Ctx = nullptr;
+public:
+	std::string Name;
+
 };

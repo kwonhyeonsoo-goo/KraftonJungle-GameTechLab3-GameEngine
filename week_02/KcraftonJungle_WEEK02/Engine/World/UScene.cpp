@@ -17,7 +17,7 @@ void UScene::Add(UPrimitiveComponent* comp)
         return;
     }
 
-    Ctx->Objects.Add(comp);
+    //Ctx->Objects.Add(comp);
 }
 
 void UScene::Remove(uint32 uuid)
@@ -27,7 +27,7 @@ void UScene::Remove(uint32 uuid)
         return;
     }
 
-    Ctx->Objects.Remove(uuid);
+    //Ctx->Objects.Remove(uuid);
 }
 
 UPrimitiveComponent* UScene::Find(uint32 uuid) const
