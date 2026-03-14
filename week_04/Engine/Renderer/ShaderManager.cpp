@@ -1,4 +1,9 @@
 #include "ShaderManager.h"
+#include "ShaderType.h"
+
+#include "Renderer/PrimitiveVertex.h"
+#include <d3dcompiler.h>
+#pragma comment(lib, "d3dcompiler.lib")
 #include "ShaderMap.h"
 #include "Shader.h"
 
@@ -24,6 +29,8 @@ void CShaderManager::Bind(ID3D11DeviceContext* DeviceContext)
 	if (VS) VS->Bind(DeviceContext);
 	if (PS) PS->Bind(DeviceContext);
 }
+
+
 
 void CShaderManager::Release()
 {

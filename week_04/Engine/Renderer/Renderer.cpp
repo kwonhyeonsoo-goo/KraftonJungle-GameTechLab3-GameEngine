@@ -1,16 +1,13 @@
 #include "Renderer.h"
+#include "ShaderType.h"
+#include <dxgi1_3.h>
 #include "Primitive/PrimitiveBase.h"
 #include <cassert>
 #include <algorithm>
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
-#include <dxgi1_3.h>
 
-struct FConstantBufferData
-{
-	FMatrix WVP;
-	FMatrix World;
-};
+
 
 CRenderer::~CRenderer()
 {
@@ -142,6 +139,18 @@ bool CRenderer::Initialize(HWND Hwnd, int Width, int Height)
 		return false;
 	}
 
+	if (!ShaderManager.LoadVertexShader(Device, L"..\\Engine\\Renderer\\Shaders\\VertexShader.hlsl"))
+	{
+		OutputDebugStringW(L"VS Load Failed - 파일 경로 확인\n");
+		return false;
+	}
+	if (!ShaderManager.LoadPixelShader(Device, L"..\\Engine\\Renderer\\Shaders\\PixelShader.hlsl"))
+	{
+		OutputDebugStringW(L"PS Load Failed - 파일 경로 확인\n");
+		return false;
+	}
+
+
 	// Rasterizer State
 	D3D11_RASTERIZER_DESC rsDesc = {};
 	rsDesc.FillMode = D3D11_FILL_SOLID;
@@ -172,7 +181,9 @@ void CRenderer::BeginFrame()
 
 void CRenderer::EndFrame()
 {
-	SwapChain->Present(1, 0);
+	HRESULT hr = SwapChain->Present(1, 0);
+	if (hr == DXGI_STATUS_OCCLUDED)
+		bSwapChainOccluded = true;
 }
 
 void CRenderer::AddCommand(const FRenderCommand& Command)
@@ -182,7 +193,9 @@ void CRenderer::AddCommand(const FRenderCommand& Command)
 
 void CRenderer::ExecuteCommands()
 {
+	ShaderManager.Bind(DeviceContext);
 	// MeshData 포인터 기준으로 정렬 → 같은 메시끼리 묶어 State Change 최소화
+	DeviceContext->VSSetConstantBuffers(0, 1, &ConstantBuffer);
 	std::sort(CommandList.begin(), CommandList.end(),
 		[](const FRenderCommand& A, const FRenderCommand& B)
 		{
@@ -236,15 +249,15 @@ bool CRenderer::CreateConstantBuffer()
 void CRenderer::UpdateConstantBuffer(const FMatrix& WorldMatrix, const FMatrix& ViewProj)
 {
 	FConstantBufferData CBData;
-	CBData.World = WorldMatrix;
-	CBData.WVP = WorldMatrix * ViewProj;
+	CBData.WVP = (WorldMatrix * ViewProj).Transpose();
+	CBData.World = WorldMatrix.Transpose();
 
 	D3D11_MAPPED_SUBRESOURCE Mapped;
 	DeviceContext->Map(ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped);
 	memcpy(Mapped.pData, &CBData, sizeof(CBData));
 	DeviceContext->Unmap(ConstantBuffer, 0);
 
-	DeviceContext->VSSetConstantBuffers(0, 1, &ConstantBuffer);
+
 }
 
 void CRenderer::Release()
@@ -284,4 +297,51 @@ void CRenderer::Release()
 		Device->Release();
 		Device = nullptr;
 	}
+	ShaderManager.Release();
+}
+
+bool CRenderer::IsOccluded()
+{
+	if (bSwapChainOccluded &&
+		SwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
+		return true;
+
+	bSwapChainOccluded = false;
+	return false;
+}
+
+void CRenderer::OnResize(int NewWidth, int NewHeight)
+{
+	if (NewWidth == 0 || NewHeight == 0) return;
+
+
+	DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+	RenderTargetView->Release(); RenderTargetView = nullptr;
+	DepthStencilView->Release(); DepthStencilView = nullptr;
+
+	SwapChain->ResizeBuffers(0, NewWidth, NewHeight, DXGI_FORMAT_UNKNOWN, 0);
+
+
+	ID3D11Texture2D* BackBuffer = nullptr;
+	SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&BackBuffer);
+	Device->CreateRenderTargetView(BackBuffer, nullptr, &RenderTargetView);
+	BackBuffer->Release();
+
+	D3D11_TEXTURE2D_DESC DepthDesc = {};
+	DepthDesc.Width = NewWidth;
+	DepthDesc.Height = NewHeight;
+	DepthDesc.MipLevels = 1;
+	DepthDesc.ArraySize = 1;
+	DepthDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	DepthDesc.SampleDesc.Count = 1;
+	DepthDesc.Usage = D3D11_USAGE_DEFAULT;
+	DepthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	ID3D11Texture2D* DepthTex = nullptr;
+	Device->CreateTexture2D(&DepthDesc, nullptr, &DepthTex);
+	Device->CreateDepthStencilView(DepthTex, nullptr, &DepthStencilView);
+	DepthTex->Release();
+
+	// Viewport 갱신
+	Viewport.Width = static_cast<float>(NewWidth);
+	Viewport.Height = static_cast<float>(NewHeight);
 }
