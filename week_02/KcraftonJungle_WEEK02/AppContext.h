@@ -37,7 +37,7 @@ struct AppContext {
 
     //void Dispatch(ICommand* cmd);
 
-    T//Delegate<ObjectDestroyedEvent> OnObjectDestroyed;
+    //Delegate<ObjectDestroyedEvent> OnObjectDestroyed;
 
 private:
     void RegisterBuiltinTypes();   // Cube, Sphere, Plane ClassRegistry µî·Ï

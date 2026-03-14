@@ -15,4 +15,8 @@ struct Transform
 
     FMatrix ToMatrix() const;
     FMatrix ToInverseMatrix() const;
+
+    FVector GetLocation() const;
+    FVector GetRotation() const;
+    FVector GetScale() const;
 };

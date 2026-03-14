@@ -35,3 +35,18 @@ FMatrix Transform::ToInverseMatrix() const
 {
 	return ToMatrix().Inversed();
 }
+
+FVector Transform::GetLocation() const
+{
+	return Location;
+}
+
+FVector Transform::GetRotation() const
+{
+	return Rotation;
+}
+
+FVector Transform::GetScale() const
+{
+	return Scale;
+}

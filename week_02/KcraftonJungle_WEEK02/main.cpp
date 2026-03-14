@@ -8,12 +8,12 @@
 
 #include <DirectXMath.h>
 
-#include "ImGui/imgui.h"
-#include "ImGui/imgui_internal.h"
-#include "ImGui/imgui_impl_dx11.h"
-#include "imGui/imgui_impl_win32.h"
+#include "Editor/ImGui/imgui.h"
+#include "Editor/ImGui/imgui_internal.h"
+#include "Editor/ImGui/imgui_impl_dx11.h"
+#include "Editor/imGui/imgui_impl_win32.h"
 
-#include "URenderer.h"
+#include "Engine/Rendering/URenderer.h"
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -100,7 +100,7 @@ FVertexSimple cube_vertices[] =
      {  0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 1.0f }, // TR
 };
 
-#include "Sphere.h"
+#include "Engine/World/Sphere.h"
 #include "AppContext.h"
 
 

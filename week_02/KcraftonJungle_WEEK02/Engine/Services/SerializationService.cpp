@@ -1,6 +1,6 @@
 #include "SerializationService.h"
 #include "../World/UPrimitiveComponent.h"
-#include "../World/Scene.h"
+#include "../World/World.h"
 #include "../Foundation/Containers/FVector.h"
 #include "../../json.hpp"
 
