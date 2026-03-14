@@ -23,10 +23,13 @@ public:
     {
         static_assert(std::is_base_of_v<BaseObject, TObject>, "TObject must derive from BaseObject");
 
-        // 람다 등록 시 typeId를 인자로 받아 생성자에 넘겨줌
+        // 람다 등록 시 UUID, typeId를 인자로 받아 생성자에 넘겨줌
         Registry()[typeId] = [typeId]( uint32 uuid , size_t tid) -> std::shared_ptr<BaseObject> {
             // tid 인자를 직접 써도 되고, 캡처한 typeId를 써도 됩니다.
-            return std::make_shared<TObject>( uuid , typeId);
+            //return std::make_shared<TObject>( uuid , typeId);
+            return std::shared_ptr<TObject>(new Object(uuid, typeId));
+
+
             };
     }
 

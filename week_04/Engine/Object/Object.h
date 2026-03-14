@@ -12,10 +12,15 @@ public:
 
 	static int32 GetTotalBytes();
 	static int32 GetTotalCounts();
+	
+	void* operator new(size_t InSize);
+	void operator delete(void* InAddress, std::size_t size);
 
-private:
 	inline static int32 TotalAllocationBytes = 0;
 	inline static int32 TotalAllocationCounts = 0;
+
+private:
+
 
 	size_t ObjectType;
 	uint32 UUID;
