@@ -6,7 +6,7 @@
 #include "Object/Actor/Actor.h"
 #include "Component/SceneComponent.h"
 #include "Picking/Picker.h"
-
+#include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
 
@@ -96,11 +96,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	// Core
 	CCore Core;
 	GCore = &Core;
+
 	if (!Core.Initialize(hwnd, clientWidth, clientHeight))
 		return -1;
 
 	CEditorGUI EditorGUI;
-	EditorGUI.Initialize(Core.GetRenderer());
+
+	EditorGUI.Initialize(Core.GetRenderer(), &Core);
 
 	// Timing
 	LARGE_INTEGER Frequency, LastTime, CurrentTime;

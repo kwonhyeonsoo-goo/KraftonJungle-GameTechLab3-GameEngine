@@ -4,13 +4,16 @@
 #include "imgui_internal.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
+#include "Object/Actor/Actor.h"
+#include "Component/SceneComponent.h"
+#include "Core/Core.h"
 
-void CEditorGUI::Initialize(CRenderer* Renderer)
+void CEditorGUI::Initialize(CRenderer* Renderer, CCore* Core)
 {
 	HWND                 Hwnd = Renderer->GetHwnd();
 	ID3D11Device* Device = Renderer->GetDevice();
 	ID3D11DeviceContext* DeviceContext = Renderer->GetDeviceContext();
-
+	EngineCore = Core;
 	Renderer->SetGUICallbacks(
 		[Hwnd, Device, DeviceContext]()
 	{
@@ -64,6 +67,24 @@ void CEditorGUI::Initialize(CRenderer* Renderer)
 		}
 	}
 	);
+	Property.OnChanged = [this](const FVector& Loc, const FVector& Rot, const FVector& Scl)
+	{
+		if (EngineCore)
+		{
+			AActor* Selected = EngineCore->GetSelectedActor();
+			if (Selected)
+			{
+				if (USceneComponent* Root = Selected->GetRootComponent())
+				{
+					FTransform T = Root->GetRelativeTransform();
+					T.Location = Loc;
+					T.Rotation = Rot;
+					T.Scale = Scl;
+					Root->SetRelativeTransform(T);
+				}
+			}
+		}
+	};
 
 	Renderer->SetGUIUpdateCallback([this]() { Update(); });
 }
@@ -88,8 +109,12 @@ void CEditorGUI::BuildDefaultLayout(unsigned int DockID)
 	ImGuiID DockRight;
 	ImGui::DockBuilderSplitNode(DockCenter, ImGuiDir_Right, 0.25f, &DockRight, &DockCenter);
 
+	ImGuiID DockRightTop, DockRightBottom;
+	ImGui::DockBuilderSplitNode(DockRight, ImGuiDir_Up, 0.50f, &DockRightTop, &DockRightBottom);
+
 	ImGui::DockBuilderDockWindow("Stats", DockLeft);
-	ImGui::DockBuilderDockWindow("Properties", DockRight);
+	ImGui::DockBuilderDockWindow("Properties", DockRightTop);    // 상단에 프로퍼티
+	ImGui::DockBuilderDockWindow("Control Panel", DockRightBottom); // 하단에 컨트롤 패널
 	ImGui::DockBuilderDockWindow("Console", DockBottom);
 
 	ImGui::DockBuilderFinish(DockID);
@@ -135,8 +160,34 @@ void CEditorGUI::Update()
 	ImGui::PopStyleVar();
 	ImGui::End();
 
+	if (EngineCore)
+	{
+		AActor* Selected = EngineCore->GetSelectedActor();
+
+		// 선택된 액터가 바뀌었을 때 Property Target을 갱신
+		if (Selected != CachedSelectedActor)
+		{
+			if (Selected)
+			{
+				USceneComponent* Root = Selected->GetRootComponent();
+				if (Root)
+				{
+					FTransform T = Root->GetRelativeTransform();
+					Property.SetTarget(T.Location, T.Rotation, T.Scale, Selected->GetName().c_str());
+				}
+			}
+			else
+			{
+				Property.SetTarget({ 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, "None");
+			}
+			CachedSelectedActor = Selected;
+		}
+	}
+
 	// ─── 패널 렌더 ───
 	Stats.Render();
 	Property.Render();
 	Console.Render();
+	ControlPanel.Render(EngineCore);
 }
+

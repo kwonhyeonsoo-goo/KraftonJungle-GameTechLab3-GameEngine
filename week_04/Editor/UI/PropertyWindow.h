@@ -22,6 +22,7 @@ public:
 	// 변경 즉시 콜백 (선택적)
 	void SetOnChanged(FPropertyChangedCallback Callback) { OnChanged = Callback; }
 
+	FPropertyChangedCallback OnChanged;
 private:
 	void DrawTransformSection();
 
@@ -31,5 +32,4 @@ private:
 	char    ActorNameBuf[128] = "None";
 	bool    bModified = false;
 
-	FPropertyChangedCallback OnChanged;
 };

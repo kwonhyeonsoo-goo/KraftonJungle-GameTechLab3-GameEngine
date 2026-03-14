@@ -60,6 +60,9 @@
     <ClCompile Include="UI\EditorGUI.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="UI\ControlPanelWindow.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Axis\AxisRenderer.h">
@@ -105,6 +108,9 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="UI\EditorGUI.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\ControlPanelWindow.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

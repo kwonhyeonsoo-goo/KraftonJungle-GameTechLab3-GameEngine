@@ -159,6 +159,7 @@
     <ClCompile Include="ThirdParty\imgui\imgui_tables.cpp" />
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp" />
     <ClCompile Include="UI\ConsoleWindow.cpp" />
+    <ClCompile Include="UI\ControlPanelWindow.cpp" />
     <ClCompile Include="UI\EditorGUI.cpp" />
     <ClCompile Include="UI\PropertyWindow.cpp" />
     <ClCompile Include="UI\StatWindow.cpp" />
@@ -176,6 +177,7 @@
     <ClInclude Include="ThirdParty\imgui\imstb_textedit.h" />
     <ClInclude Include="ThirdParty\imgui\imstb_truetype.h" />
     <ClInclude Include="UI\ConsoleWindow.h" />
+    <ClInclude Include="UI\ControlPanelWindow.h" />
     <ClInclude Include="UI\EditorGUI.h" />
     <ClInclude Include="UI\PropertyWindow.h" />
     <ClInclude Include="UI\StatWindow.h" />
