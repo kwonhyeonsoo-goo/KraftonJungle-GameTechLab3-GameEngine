@@ -8,10 +8,12 @@ class ENGINE_API UActorComponent : public UObject
 public:
 	static UClass* StaticClass();
 
+	UActorComponent() : UObject(nullptr, "", nullptr) {}
+
 	UActorComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr)
 		: UObject(InClass, InName, InOuter)
 	{
-		
+
 	}
 
 	~UActorComponent() override = default;

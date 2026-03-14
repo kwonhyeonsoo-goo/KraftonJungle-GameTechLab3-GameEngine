@@ -133,10 +133,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 			renderer.ViewProjectionMatrix = VP;
 
 			FMeshData* sphereMesh = sphere.GetPrimitive()->GetMeshData();
-			renderer.AddCommand({ sphereMesh, sphere.RelativeTransform.ToMatrix() });
+			renderer.AddCommand({ sphereMesh, sphere.GetRelativeTransform().ToMatrix() });
 
 			FMeshData* cubeMesh = cube.GetPrimitive()->GetMeshData();
-			renderer.AddCommand({ cubeMesh, cube.RelativeTransform.ToMatrix() });
+			renderer.AddCommand({ cubeMesh, cube.GetRelativeTransform().ToMatrix() });
 
 			renderer.ExecuteCommands();
 
