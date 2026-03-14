@@ -14,8 +14,33 @@ CRenderer::~CRenderer()
 	Release();
 }
 
-bool CRenderer::Initialize(HWND Hwnd, int Width, int Height)
+void CRenderer::SetGUICallbacks(
+	FGUICallback InInit,
+	FGUICallback InShutdown,
+	FGUICallback InNewFrame,
+	FGUICallback InRender,
+	FGUICallback InPostPresent)
 {
+	GUIInit = std::move(InInit);
+	GUIShutdown = std::move(InShutdown);
+	GUINewFrame = std::move(InNewFrame);
+	GUIRender = std::move(InRender);
+	GUIPostPresent = std::move(InPostPresent);
+
+	if (GUIInit)
+	{
+		GUIInit();
+	}
+}
+
+void CRenderer::SetGUIUpdateCallback(FGUICallback InUpdate)
+{
+	GUIUpdate = std::move(InUpdate);
+}
+
+bool CRenderer::Initialize(HWND InHwnd, int Width, int Height)
+{
+	Hwnd = InHwnd;
 	UINT createDeviceFlags = 0;
 #ifdef _DEBUG
 	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
@@ -139,12 +164,12 @@ bool CRenderer::Initialize(HWND Hwnd, int Width, int Height)
 		return false;
 	}
 
-	if (!ShaderManager.LoadVertexShader(Device, L"..\\Engine\\Renderer\\Shaders\\VertexShader.hlsl"))
+	if (!ShaderManager.LoadVertexShader(Device, L"..\\Engine\\Shaders\\VertexShader.hlsl"))
 	{
 		OutputDebugStringW(L"VS Load Failed - 파일 경로 확인\n");
 		return false;
 	}
-	if (!ShaderManager.LoadPixelShader(Device, L"..\\Engine\\Renderer\\Shaders\\PixelShader.hlsl"))
+	if (!ShaderManager.LoadPixelShader(Device, L"..\\Engine\\Shaders\\PixelShader.hlsl"))
 	{
 		OutputDebugStringW(L"PS Load Failed - 파일 경로 확인\n");
 		return false;
@@ -167,6 +192,11 @@ bool CRenderer::Initialize(HWND Hwnd, int Width, int Height)
 
 void CRenderer::BeginFrame()
 {
+	if (GUINewFrame)
+	{
+		GUINewFrame();
+	}
+
 	constexpr float ClearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
 	DeviceContext->ClearRenderTargetView(RenderTargetView, ClearColor);
 	DeviceContext->ClearDepthStencilView(DepthStencilView,
@@ -181,9 +211,24 @@ void CRenderer::BeginFrame()
 
 void CRenderer::EndFrame()
 {
+	if (GUIUpdate)
+	{
+		GUIUpdate();
+	}
+
+	if (GUIRender)
+	{
+		GUIRender();
+	}
+
 	HRESULT hr = SwapChain->Present(1, 0);
 	if (hr == DXGI_STATUS_OCCLUDED)
 		bSwapChainOccluded = true;
+
+	if (GUIPostPresent)
+	{
+		GUIPostPresent();
+	}
 }
 
 void CRenderer::AddCommand(const FRenderCommand& Command)
@@ -262,6 +307,17 @@ void CRenderer::UpdateConstantBuffer(const FMatrix& WorldMatrix, const FMatrix& 
 
 void CRenderer::Release()
 {
+	if (GUIShutdown)
+	{
+		GUIShutdown();
+		GUIInit = nullptr;
+		GUIShutdown = nullptr;
+		GUINewFrame = nullptr;
+		GUIUpdate = nullptr;
+		GUIRender = nullptr;
+		GUIPostPresent = nullptr;
+	}
+
 	if (RasterizerState)
 	{
 		RasterizerState->Release();
