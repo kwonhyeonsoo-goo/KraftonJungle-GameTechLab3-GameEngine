@@ -1,9 +1,10 @@
 #pragma once
+#include "../Foundation/Containers/FVector.h"
+#include "../Foundation/Containers/FMatrix.h"
+#include "../Foundation/Math/TArray.h"
+#include "../ObjectKernel/UObject.h"
+#include "../World/UPrimitiveComponent.h"
 
-class UObject;
-class UPrimitiveComponent;
-struct FVector;
-struct FMatrix;
 
 struct Ray {
     FVector Origin;

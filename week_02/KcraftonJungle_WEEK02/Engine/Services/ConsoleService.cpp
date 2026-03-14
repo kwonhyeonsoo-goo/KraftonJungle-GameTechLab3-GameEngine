@@ -1,5 +1,5 @@
 #include "ConsoleService.h"
-#include "Engine/Foundation/Core/log.h"
+#include "../Foundation/Core/log.h"
 
 ConsoleService::ConsoleService()
 {

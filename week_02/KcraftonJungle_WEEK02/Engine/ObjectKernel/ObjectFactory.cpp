@@ -1,4 +1,5 @@
 #include "ObjectFactory.h"
+#include "../../AppContext.h"
 
 UObject* ObjectFactory::ConstructObject(AppContext& ctx, UClass* uclass)
 {

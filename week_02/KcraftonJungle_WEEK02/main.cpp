@@ -109,7 +109,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     //TODO : WindowHost로 옮기기
 #pragma region WindowHost
-    HINSTANCE hInstance = GetModuleHandle(nullptr); // WinMain 파라미터 대신 이걸로 대체 가능
     //Window.Initialize(hInstance, ...);
 
     WCHAR WindowClass[] = L"JungleWindowClass";

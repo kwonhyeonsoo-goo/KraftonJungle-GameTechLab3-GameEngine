@@ -1,5 +1,5 @@
 #pragma once
-#include "Engine/Foundation/Core/CoreTypes.h"
+#include "../Foundation/Core/CoreTypes.h"
 
 class ConsoleService
 {

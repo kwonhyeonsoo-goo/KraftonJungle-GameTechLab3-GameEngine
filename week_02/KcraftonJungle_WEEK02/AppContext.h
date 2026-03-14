@@ -18,7 +18,7 @@ struct AppContext {
     ObjectFactory  Factory;
 
     // World
-    World         CurrentScene;
+    World         CurrentWorld;
 
     // Services
     //ConsoleService Console;
