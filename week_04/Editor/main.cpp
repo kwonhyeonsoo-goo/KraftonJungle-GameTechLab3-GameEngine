@@ -197,19 +197,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 		Renderer->BeginFrame();
-		shader.Bind(context);
 
 		FMatrix VP = camera.GetViewMatrix() * camera.GetProjectionMatrix();
-		renderer.ViewProjectionMatrix = VP;
+		Renderer->SetViewProjection(VP);
 
 		if (SphereComp->GetPrimitive())
 		{
-			renderer.AddCommand({ SphereComp->GetPrimitive()->GetMeshData(), SphereComp->GetWorldTransform() });
+			Renderer->AddCommand({ SphereComp->GetPrimitive()->GetMeshData(), SphereComp->GetWorldTransform() });
 		}
 
 		if (CubeComp->GetPrimitive())
 		{
-			renderer.AddCommand({ CubeComp->GetPrimitive()->GetMeshData(), CubeComp->GetWorldTransform() });
+			Renderer->AddCommand({ CubeComp->GetPrimitive()->GetMeshData(), CubeComp->GetWorldTransform() });
 		}
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
@@ -257,7 +256,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		// Present
 
 		//HRESULT hr = g_pSwapChain->Present(0, 0); // Present without vsync
-		renderer.ExecuteCommands();
+		Renderer->ExecuteCommands();
 		Renderer->EndFrame();
 
 	}

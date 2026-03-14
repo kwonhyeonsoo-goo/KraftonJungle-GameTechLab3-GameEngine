@@ -32,8 +32,6 @@
     <ClInclude Include="Object\ObjectManager.h" />
     <ClInclude Include="Object\ObjectTypes.h" />
     <ClInclude Include="Object\Scene\Scene.h" />
-    <ClInclude Include="Renderer\ShaderType.h" />
-    <ClInclude Include="Scene\Scene.h" />
     <ClInclude Include="Types\CoreTypes.h" />
     <ClInclude Include="EngineAPI.h" />
     <ClInclude Include="Types\Array.h" />

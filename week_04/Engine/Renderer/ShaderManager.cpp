@@ -60,13 +60,7 @@ bool CShaderManager::LoadVertexShader(ID3D11Device* Device, const wchar_t* FileP
 		&InputLayout
 	);
 
-	D3D11_BUFFER_DESC cbd = {};
-	cbd.ByteWidth = sizeof(FConstants);
-	cbd.Usage = D3D11_USAGE_DYNAMIC;
-	cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-	Device->CreateBuffer(&cbd, nullptr, &ConstantBuffer);
 	ShaderBlob->Release();
 	return SUCCEEDED(Hr);
 }
@@ -110,17 +104,11 @@ void CShaderManager::Bind(ID3D11DeviceContext* DeviceContext)
 	DeviceContext->PSSetShader(PixelShader, nullptr, 0);
 }
 
-void CShaderManager::UpdateConstants(ID3D11DeviceContext* Context, const FConstants& Data)
-{
-	D3D11_MAPPED_SUBRESOURCE mapped = {};
-	Context->Map(ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-	memcpy(mapped.pData, &Data, sizeof(FConstants));
-	Context->Unmap(ConstantBuffer, 0);
-}
+
 
 void CShaderManager::Release()
 {
-	if (ConstantBuffer)	{ConstantBuffer->Release();	ConstantBuffer = nullptr;}
+
 	if (InputLayout) { InputLayout->Release(); InputLayout = nullptr; }
 	if (PixelShader) { PixelShader->Release(); PixelShader = nullptr; }
 	if (VertexShader) { VertexShader->Release(); VertexShader = nullptr; }

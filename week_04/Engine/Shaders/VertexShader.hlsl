@@ -1,13 +1,9 @@
 cbuffer Constants : register(b0)
 {
-<<<<<<<< HEAD:Engine/Renderer/Shaders/VertexShader.hlsl
-    float4x4 MVP;
-    float4 HighlightColor;
-    uint bIsSelected;
-========
-    row_major float4x4 WVP;
-    row_major float4x4 World;
->>>>>>>> GraphicFramework:Engine/Shaders/VertexShader.hlsl
+
+	float4x4 WVP;
+	float4x4 World;
+
 };
 
 struct VS_INPUT

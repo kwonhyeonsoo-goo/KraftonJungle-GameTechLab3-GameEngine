@@ -176,7 +176,7 @@
     <ClCompile Include="Math\Transform.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Math\Transform.cpp">
+    <ClCompile Include="Object\ObjectManager.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="Component\ActorComponent.cpp">

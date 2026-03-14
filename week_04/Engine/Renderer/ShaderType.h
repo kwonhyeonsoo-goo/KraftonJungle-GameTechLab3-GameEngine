@@ -1,9 +1,8 @@
 #pragma once
+#include "Math/Matrix.h"
 
-struct FConstants
+struct FConstantBufferData
 {
-    float MVP[4][4];
-    float HighlightColor[4];
-    unsigned int bIsSelected;
-    float Pad[3];
+	FMatrix WVP;
+	FMatrix World;
 };

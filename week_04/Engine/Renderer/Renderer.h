@@ -4,7 +4,7 @@
 #include "Renderer/RenderCommand.h"
 #include <d3d11.h>
 #include <vector>
-
+#include "ShaderManager.h"
 struct FMeshData;
 
 class ENGINE_API CRenderer
@@ -23,10 +23,12 @@ public:
 
 	// 커맨드 수집
 	void AddCommand(const FRenderCommand& Command);
-
 	// 수집된 커맨드 정렬 후 실행
 	void ExecuteCommands();
+	void SetViewProjection(const FMatrix& VP) { ViewProjectionMatrix = VP; }
 
+
+	FMatrix GetViewProjectionMatrix() { return ViewProjectionMatrix; }
 	ID3D11Device* GetDevice() const { return Device; }
 	ID3D11DeviceContext* GetDeviceContext() const { return DeviceContext; }
 	ID3D11RenderTargetView* GetRenderTargetView() const {return RenderTargetView;}
@@ -45,9 +47,9 @@ private:
 	D3D11_VIEWPORT Viewport = {};
 
 	std::vector<FRenderCommand> CommandList;
+	FMatrix ViewProjectionMatrix;
 
 	// 매 프레임 외부에서 설정
 public:
-	FMatrix ViewProjectionMatrix;
 	CShaderManager ShaderManager;
 };
