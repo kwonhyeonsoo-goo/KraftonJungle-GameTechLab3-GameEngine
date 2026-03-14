@@ -9,6 +9,8 @@
 #include "Primitive/PrimitiveBase.h"
 #include <iostream>
 
+#include "Core/Core.h"
+
 // ─── 입력 상태 ───
 static bool bRightMouseDown = false;
 static POINT LastMousePos = {};
@@ -71,6 +73,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		return -1;
 	}
 
+	// ─── Core 초기화 ───
+	CCore Core;
+	Core.Initialize(hwnd);
+
 	// ─── 카메라 ───
 	CCamera camera;
 	camera.SetPosition({ 0.0f, 2.0f, -5.0f });
@@ -130,6 +136,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 				camera.Rotate(DeltaX * 0.2f, -DeltaY * 0.2f);
 			}
 
+			Core.Tick(DeltaTime);
+
 			// ─── 렌더링 ───
 			renderer.BeginFrame();
 
@@ -157,6 +165,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	// ─── 정리 ───
 	delete SphereActor;
 	delete CubeActor;
+	Core.Release();
 	shader.Release();
 	CPrimitiveBase::ClearCache();
 	renderer.Release();
