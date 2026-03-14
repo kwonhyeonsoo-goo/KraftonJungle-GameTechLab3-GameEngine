@@ -105,7 +105,7 @@ FMatrix FMatrix::Scale(float X, float Y, float Z)
 
 FMatrix FMatrix::LookAt(const FVector& Eye, const FVector& Target, const FVector& Up)
 {
-    FVector Forward = (Target - Eye).Normalize();
+	FVector Forward = (Target - Eye).GetSafeNormal();
     FVector Right = Up.Cross(Forward).Normalize();
     FVector NewUp = Forward.Cross(Right);
 
@@ -113,7 +113,7 @@ FMatrix FMatrix::LookAt(const FVector& Eye, const FVector& Target, const FVector
     Result.M[0][0] = Right.X;    Result.M[0][1] = NewUp.X;    Result.M[0][2] = Forward.X;
     Result.M[1][0] = Right.Y;    Result.M[1][1] = NewUp.Y;    Result.M[1][2] = Forward.Y;
     Result.M[2][0] = Right.Z;    Result.M[2][1] = NewUp.Z;    Result.M[2][2] = Forward.Z;
-    Result.M[3][0] = -Right.Dot(Eye);
+    Result.M[3][0] = -Right.dot(Eye);
     Result.M[3][1] = -NewUp.Dot(Eye);
     Result.M[3][2] = -Forward.Dot(Eye);
     return Result;

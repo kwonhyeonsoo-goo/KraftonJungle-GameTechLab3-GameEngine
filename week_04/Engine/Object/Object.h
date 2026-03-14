@@ -3,6 +3,7 @@
 #include "ObjectTypes.h"
 
 class UClass;
+
 class ENGINE_API UObject
 {
 public:

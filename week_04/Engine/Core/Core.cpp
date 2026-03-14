@@ -43,7 +43,6 @@ void CCore::Tick(const float DeltaTime)
 
 void CCore::Physics(float DeltaTime)
 {
-
 }
 
 void CCore::GameLogic(float DeltaTime)
