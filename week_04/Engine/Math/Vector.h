@@ -9,7 +9,8 @@ struct ENGINE_API FVector
     float Z = 0.0f;
 
     FVector() = default;
-    FVector(float InX, float InY, float InZ) : X(InX), Y(InY), Z(InZ) {}
+    FVector(const float InX, const float InY, const float InZ) : X(InX), Y(InY), Z(InZ) {}
+	FVector(const DirectX::XMFLOADT3 )
 
     FVector operator+(const FVector& Other) const;
     FVector operator-(const FVector& Other) const;
