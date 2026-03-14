@@ -5,6 +5,7 @@
 class UScene;
 class CRenderer;
 class CShaderManager;
+class CInputManager;
 
 class ENGINE_API CCore
 {
@@ -22,8 +23,11 @@ public:
 
 	void Tick(float DeltaTime);
 
+	void ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
+
 	UScene* GetScene() const { return Scene; }
 	CRenderer* GetRenderer() const { return Renderer; }
+	CInputManager* GetInputManager() const { return InputManager; }
 
 private:
 	void Physics(float DeltaTime);
@@ -33,6 +37,7 @@ private:
 private:
 	CRenderer* Renderer = nullptr;
 	CShaderManager* ShaderManager = nullptr;
+	CInputManager* InputManager = nullptr;
 	UScene* Scene = nullptr;
 
 	int32 WindowWidth = 0;

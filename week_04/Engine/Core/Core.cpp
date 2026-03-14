@@ -4,6 +4,7 @@
 #include "Object/Actor/Actor.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/ShaderManager.h"
+#include "Input/InputManager.h"
 #include "Camera/Camera.h"
 #include "Component/PrimitiveComponent.h"
 #include "Primitive/PrimitiveBase.h"
@@ -36,6 +37,9 @@ bool CCore::Initialize(HWND Hwnd, int Width, int Height)
 		return false;
 	}
 
+	// InputManager
+	InputManager = new CInputManager();
+
 	// Scene
 	Scene = new UScene(UScene::StaticClass(), "DefaultScene");
 	Scene->InitializeDefaultScene(static_cast<float>(Width) / static_cast<float>(Height));
@@ -43,10 +47,21 @@ bool CCore::Initialize(HWND Hwnd, int Width, int Height)
 	return true;
 }
 
+void CCore::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+{
+	if (InputManager)
+	{
+		InputManager->ProcessMessage(Hwnd, Msg, WParam, LParam);
+	}
+}
+
 void CCore::Release()
 {
 	delete Scene;
 	Scene = nullptr;
+
+	delete InputManager;
+	InputManager = nullptr;
 
 	if (ShaderManager)
 	{
@@ -67,6 +82,11 @@ void CCore::Release()
 
 void CCore::Tick(const float DeltaTime)
 {
+	if (InputManager && Scene)
+	{
+		InputManager->Tick(DeltaTime, Scene->GetCamera());
+	}
+
 	Physics(DeltaTime);
 	GameLogic(DeltaTime);
 	Render();

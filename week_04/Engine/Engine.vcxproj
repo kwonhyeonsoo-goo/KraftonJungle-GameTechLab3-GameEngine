@@ -190,6 +190,7 @@
     <ClCompile Include="Primitive\PrimitiveCube.cpp" />
     <ClCompile Include="Primitive\PrimitivePlane.cpp" />
     <ClCompile Include="Primitive\PrimitiveSphere.cpp" />
+    <ClCompile Include="Input\InputManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Math\Vector.h" />
@@ -208,6 +209,7 @@
     <ClInclude Include="Primitive\PrimitiveCube.h" />
     <ClInclude Include="Primitive\PrimitivePlane.h" />
     <ClInclude Include="Primitive\PrimitiveSphere.h" />
+    <ClInclude Include="Input\InputManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
