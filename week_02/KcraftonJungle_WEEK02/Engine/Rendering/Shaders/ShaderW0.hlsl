@@ -3,6 +3,7 @@
 // ShaderW0.hlsl �ҽ� ���� ������ �Ʒ� ������� ������ �߰� �ϼ���.
 cbuffer constants : register(b0)
 {
+    //row_major float4x4 MVP;
     row_major float4x4 MVP;
 }
 

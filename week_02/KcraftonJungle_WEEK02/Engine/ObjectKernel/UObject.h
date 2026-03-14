@@ -2,6 +2,14 @@
 #include "../Foundation/Core/CoreTypes.h"
 #include "./UClass.h"
 
+enum class EPrimitiveShape
+{
+    Cube,
+    Sphere,
+    Plane,
+};
+
+
 class UObject
 {
 public:
@@ -13,6 +21,8 @@ public:
 
     virtual UClass* GetClass() const;
     static UClass* StaticClass();
+
+    virtual EPrimitiveShape GetPrimitiveShape() const = 0 ;
 
     template<typename T>
     bool IsA() const

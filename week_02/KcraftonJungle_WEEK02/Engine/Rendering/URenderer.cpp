@@ -1,4 +1,5 @@
 #include "URenderer.h"
+#include "RenderQueue.h"
 
 void URenderer::Create(HWND hWindow)
 
@@ -6,6 +7,8 @@ void URenderer::Create(HWND hWindow)
     CreateDeviceAndSwapChain(hWindow);
 
     CreateFrameBuffer();
+
+    CreateDepthBuffer();
 
     CreateRasterizerState();
 
@@ -18,6 +21,16 @@ void URenderer::RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices)
     DeviceContext->IASetVertexBuffers(0, 1, &pBuffer, &Stride, &offset);
 
     DeviceContext->Draw(numVertices, 0);
+}
+
+void URenderer::RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer)
+{
+	UINT offset = 0;
+    DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &Stride, &offset);
+
+    DeviceContext->IASetIndexBuffer(indexBuffer,DXGI_FORMAT_R32_UINT, offset);
+
+	DeviceContext->DrawIndexed(Stride, offset, 0);
 }
 
 void URenderer::CreateShader()
@@ -147,6 +160,78 @@ void URenderer::ReleaseFrameBuffer()
     }
 }
 
+void URenderer::CreateDepthBuffer()
+{
+    D3D11_TEXTURE2D_DESC descDepth={};
+    descDepth.Width = 1024;
+    descDepth.Height = 1024;
+    descDepth.MipLevels = 1;
+    descDepth.ArraySize = 1;
+    descDepth.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    descDepth.SampleDesc.Count = 1;
+    descDepth.SampleDesc.Quality = 0;
+    descDepth.Usage = D3D11_USAGE_DEFAULT;
+    descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    descDepth.CPUAccessFlags = 0;
+    descDepth.MiscFlags = 0;
+    Device->CreateTexture2D(&descDepth, NULL, &DepthStencilBuffer);
+
+    D3D11_DEPTH_STENCIL_DESC dsDesc = {};
+
+    // Depth test parameters
+    dsDesc.DepthEnable = true;
+    dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
+
+    // Stencil test parameters
+    dsDesc.StencilEnable = true;
+    dsDesc.StencilReadMask = 0xFF;
+    dsDesc.StencilWriteMask = 0xFF;
+
+    // Stencil operations if pixel is front-facing
+    dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+    dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+    dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+    dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+    // Stencil operations if pixel is back-facing
+    dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+    dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+    dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+    dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+    // Create depth stencil state
+    Device->CreateDepthStencilState(&dsDesc, &DepthStencilState);
+
+    D3D11_DEPTH_STENCIL_VIEW_DESC descDSV = {};
+    descDSV.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    descDSV.Texture2D.MipSlice = 0;
+
+    // Create the depth stencil view
+    Device->CreateDepthStencilView(DepthStencilBuffer, // Depth stencil texture
+        &descDSV, // Depth stencil desc
+        &DepthStencilView);  // [out] Depth stencil view
+
+}
+
+void URenderer::ReleaseDepthBuffer()
+{
+    if (DepthStencilBuffer)
+    {
+        DepthStencilBuffer->Release();
+        DepthStencilBuffer = nullptr;
+    };
+    if (DepthStencilView) {
+		DepthStencilView->Release();
+		DepthStencilView = nullptr;
+    }
+    if (DepthStencilState) {
+        DepthStencilState->Release();
+        DepthStencilState = nullptr;
+    }
+}
+
 void URenderer::CreateRasterizerState()
 {
     D3D11_RASTERIZER_DESC rasterizerdesc = {};
@@ -172,6 +257,7 @@ void URenderer::Release()
     DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 
     ReleaseFrameBuffer();
+    ReleaseDepthBuffer();
     ReleaseDeviceAndSwapChain();
 }
 
@@ -183,14 +269,21 @@ void URenderer::SwapBuffer()
 void URenderer::Prepare()
 {
     DeviceContext->ClearRenderTargetView(FrameBufferRTV, ClearColor);
+    DeviceContext->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
     DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     DeviceContext->RSSetViewports(1, &ViewportInfo);
     DeviceContext->RSSetState(RasterizerState);
 
-    DeviceContext->OMSetRenderTargets(1, &FrameBufferRTV, nullptr);
+    // Bind depth stencil state
+    DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
+
+
+    DeviceContext->OMSetRenderTargets(1, &FrameBufferRTV, DepthStencilView);
     DeviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
+
+
 }
 
 void URenderer::PrepareShader()
@@ -228,6 +321,26 @@ void URenderer::ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer)
     vertexBuffer->Release();
 }
 
+ID3D11Buffer* URenderer::CreateIndexBuffer(void* data, UINT size)
+{
+    D3D11_BUFFER_DESC desc = {};
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.ByteWidth = size;
+    desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+
+    D3D11_SUBRESOURCE_DATA init = {};
+    init.pSysMem = data;
+
+    ID3D11Buffer* buffer = nullptr;
+    Device->CreateBuffer(&desc, &init, &buffer);
+
+    return buffer;
+}
+void URenderer::ReleaseIndexBuffer(ID3D11Buffer* vertexBuffer)
+{
+    vertexBuffer->Release();
+}
+
 void URenderer::CreateConstantBuffer()
 {
     D3D11_BUFFER_DESC constantbufferdesc = {};
@@ -261,5 +374,91 @@ void URenderer::ReleaseConstantBuffer()
     {
         ConstantBuffer->Release();
         ConstantBuffer = nullptr;
+    }
+}
+
+
+#pragma region D3D11 Renderer 함수들
+
+bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
+{
+    CreateDeviceAndSwapChain(hwnd);
+
+    CreateFrameBuffer();
+
+    CreateDepthBuffer();
+
+    CreateRasterizerState();
+
+    return false;
+}
+
+void URenderer::Shutdown()
+{
+}
+
+void URenderer::BeginFrame()
+{
+    //렌더타겟 설정
+    //화면 클리어 
+    //기본 렌더 상태 설정
+
+    Prepare();
+    PrepareShader();
+}
+
+enum ETypePrimitive
+{
+    EPT_Triangle,
+    EPT_Cube,
+    EPT_Sphere,
+    EPT_Rect,
+    EPT_Max,
+};
+
+
+void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)
+{
+	for (int i = 0; i < queue.GetCommands().size(); ++i)
+    {
+        const RenderCommand& cmd = queue.GetCommands()[i];
+        switch (cmd.Type)
+        {
+        case ERenderType::Primitive:
+            switch (cmd.Shape)
+            {
+            
+            }
+
+            break;
+       
+        default:
+            break;
+        }
+    }
+}
+
+void URenderer::EndFrame()
+{
+    SwapBuffer();
+}
+
+void URenderer::OnResize(UINT width, UINT height)
+{
+}
+
+void URenderer::UpdateMVP(const FMatrix& mvp)
+{
+    if (ConstantBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
+
+        DeviceContext->Map(ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
+        FConstants* constants = (FConstants*)constantbufferMSR.pData;
+        {
+            //constants->MVP = mvp;
+            constants->MVP = mvp;
+        }
+        DeviceContext->Unmap(ConstantBuffer, 0);
     }
 }

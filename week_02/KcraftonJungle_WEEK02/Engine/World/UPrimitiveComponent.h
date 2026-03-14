@@ -2,13 +2,6 @@
 #include "USceneComponent.h"
 #include "../ObjectKernel/UClass.h"
 
-enum class EPrimitiveShape
-{
-    Cube,
-    Sphere,
-    Plane,
-};
-
 class UPrimitiveComponent : public USceneComponent
 {
 public:
@@ -23,4 +16,7 @@ public:
 
     static UClass* StaticClass();
     UClass* GetClass() const override;
+
+    EPrimitiveShape GetPrimitiveShape() const override { return Shape; }
+
 };

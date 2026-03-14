@@ -36,70 +36,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-FVertexSimple triangle_vertices[] =
-{
-    {  0.0f,  1.0f, 0.0f,  1.0f, 0.0f, 0.0f, 1.0f }, // Top vertex (red)
-    {  1.0f, -1.0f, 0.0f,  0.0f, 1.0f, 0.0f, 1.0f }, // Bottom-right vertex (green)
-    { -1.0f, -1.0f, 0.0f,  0.0f, 0.0f, 1.0f, 1.0f }  // Bottom-left vertex (blue)
-};
 
-FVertexSimple cube_vertices[] =
-{
-    // Front face (Z+)
-     { -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f, 1.0f }, // BL
-     {  0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 1.0f }, // BR
-     { -0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 0.0f, 1.0f }, // TL
-
-     { -0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 0.0f, 1.0f }, // TL
-     {  0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 1.0f }, // BR
-     {  0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f, 1.0f }, // TR
-
-     // Back face (Z-)
-     {  0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 1.0f, 1.0f }, // BR
-     { -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 1.0f, 1.0f }, // BL
-     {  0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f, 1.0f }, // TR
-
-     {  0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f, 1.0f }, // TR
-     { -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 1.0f, 1.0f }, // BL
-     { -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f, 1.0f }, // TL
-
-     // Left face (X-)
-     { -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 1.0f, 1.0f }, // BL
-     { -0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 1.0f }, // BR
-     { -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f, 1.0f }, // TL
-
-     { -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f, 1.0f }, // TL
-     { -0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 1.0f }, // BR
-     { -0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 0.0f, 1.0f }, // TR
-
-     // Right face (X+)
-     {  0.5f, -0.5f,  0.5f,  0.5f, 0.5f, 0.5f, 1.0f }, // BR
-     {  0.5f, -0.5f, -0.5f,  1.0f, 0.5f, 0.0f, 1.0f }, // BL
-     {  0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 0.5f, 1.0f }, // TR
-
-     {  0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 0.5f, 1.0f }, // TR
-     {  0.5f, -0.5f, -0.5f,  1.0f, 0.5f, 0.0f, 1.0f }, // BL
-     {  0.5f,  0.5f, -0.5f,  0.5f, 0.0f, 0.5f, 1.0f }, // TL
-
-     // Top face (Y+)
-     { -0.5f,  0.5f,  0.5f,  0.0f, 0.5f, 1.0f, 1.0f }, // BL
-     {  0.5f,  0.5f,  0.5f,  0.5f, 0.5f, 0.0f, 1.0f }, // BR
-     { -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.5f, 1.0f }, // TL
-
-     { -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.5f, 1.0f }, // TL
-     {  0.5f,  0.5f,  0.5f,  0.5f, 0.5f, 0.0f, 1.0f }, // BR
-     {  0.5f,  0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 1.0f }, // TR
-
-     // Bottom face (Y-)
-     { -0.5f, -0.5f, -0.5f,  0.5f, 0.5f, 0.0f, 1.0f }, // BL
-     {  0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.5f, 1.0f }, // BR
-     { -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f, 1.0f }, // TL
-
-     { -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f, 1.0f }, // TL
-     {  0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.5f, 1.0f }, // BR
-     {  0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 1.0f }, // TR
-};
-
+#include "Engine/Mesh/Triangle.h"
+#include "Engine/Mesh/Rect.h"
+#include "Engine/Mesh/Cube.h"
 #include "Engine/Mesh/Sphere.h"
 #include "AppContext.h"
 
@@ -144,6 +84,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     UINT numVerticesTriangle = sizeof(triangle_vertices) / sizeof(FVertexSimple);
     UINT numVerticesCube = sizeof(cube_vertices) / sizeof(FVertexSimple);
     UINT numVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
+	UINT numIndicesRect = sizeof(rect_indices) / sizeof(UINT);
 
     float scaleMod = 0.1f;
 
@@ -158,6 +99,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     ID3D11Buffer* vertexBufferCube = renderer.CreateVertexBuffer(cube_vertices, sizeof(cube_vertices));
     ID3D11Buffer* vertexBufferSphere = renderer.CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
 
+	ID3D11Buffer* vertexBufferRect = renderer.CreateVertexBuffer(rect_vertices, sizeof(rect_vertices));
+    ID3D11Buffer* indexBufferRect = renderer.CreateIndexBuffer(rect_indices, sizeof(rect_indices));
+
     bool bIsExit = false;   
 
     enum ETypePrimitive
@@ -165,10 +109,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         EPT_Triangle,
         EPT_Cube,
         EPT_Sphere,
+        EPT_Rect,
         EPT_Max,
     };
 
-    ETypePrimitive typePrimitive = EPT_Cube;
+    ETypePrimitive typePrimitive = EPT_Sphere
+        ;
 
     const float leftBorder = -1.0f;
     const float rightBorder = 1.0f;
@@ -310,37 +256,36 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
 
 
-        DirectX::XMMATRIX mTranslation = DirectX::XMMatrixTranslation(offset.x, offset.y, offset.z);
+        FMatrix mTranslation = FMatrix::Translation({ offset.x, offset.y, offset.z });
 
-        rotation.x += 1.0f;
-        rotation.y += 2.0f;
-        rotation.z += 3.0f;
+        rotation.x += 1.0f / targetFrameTime;
+        rotation.y += 2.0f / targetFrameTime;
+        rotation.z += 3.0f / targetFrameTime;
 
-        DirectX::XMVECTOR quat =
-            DirectX::XMQuaternionRotationRollPitchYaw(
-                DirectX::XMConvertToRadians(rotation.x),
-                DirectX::XMConvertToRadians(rotation.y),
-                DirectX::XMConvertToRadians(rotation.z)
-            );        
-        DirectX::XMMATRIX mRotationQuat = DirectX::XMMatrixRotationQuaternion(quat);
+        FMatrix quat =
+            FMatrix::RotationX(rotation.x) *
+            FMatrix::RotationY(rotation.y) *
+            FMatrix::RotationZ(rotation.z);
 
-        DirectX::XMMATRIX mScale = DirectX::XMMatrixScaling(scale.x, scale.y, scale.z);
+        FMatrix mRotationQuat = quat; // DirectX::XMMatrixRotationQuaternion(quat);
 
-		DirectX::XMMATRIX mWorld = mScale * mRotationQuat * mTranslation; 
+        FMatrix mScale = FMatrix::Scale({ scale.x, scale.y, scale.z });
 
-        DirectX::XMVECTOR eye = DirectX::XMVectorSet(0.0f, 0.0f, -20.0f, 0.0f);   // 카메라 위치
-        DirectX::XMVECTOR target = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f); // 보는 위치
-        DirectX::XMVECTOR up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);     // 위 방향
+        FMatrix mWorld = mScale * mRotationQuat * mTranslation;
 
-        DirectX::XMMATRIX mView = DirectX::XMMatrixLookAtLH(eye, target, up);
+        FVector eye = { 0.0f, 0.0f, -20.0f};   // 카메라 위치
+        FVector target = { 0.0f, 0.0f, 0.0f }; // 보는 위치
+        FVector up = { 0.0f, 1.0f, 0.0f };     // 위 방향
+
+        FMatrix mView = FMatrix::LookAt(eye, target, up);
 
         float fov = DirectX::XMConvertToRadians(60.0f);
         float aspect = 1.0f;   // 창이 정사각형이면 1
         float nearZ = 0.1f;
         float farZ = 100.0f;
 
-        DirectX::XMMATRIX mProjection =
-            DirectX::XMMatrixPerspectiveFovLH(
+        FMatrix mProjection =
+            FMatrix::Perspective(
                 fov,
                 aspect,
                 nearZ,
@@ -348,13 +293,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             );
 
         FConstants constants;
-		constants.MVP = mWorld *mView * mProjection;
+        //constants.MVP; //= mWorld * mView * mProjection;
+        constants.MVP = mWorld * mView * mProjection;
 
         renderer.Prepare();
         renderer.PrepareShader();
 
         renderer.UpdateConstant(constants);
-
+		renderer.UpdateMVP(constants.MVP);
         switch (typePrimitive)
         {
         case EPT_Triangle:
@@ -367,6 +313,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             renderer.RenderPrimitive(vertexBufferTriangle, numVerticesTriangle);
             renderer.RenderPrimitive(vertexBufferSphere, numVerticesSphere);
             break;
+		case EPT_Rect:
+            renderer.RenderIndexedPrimitive(vertexBufferRect, indexBufferRect);
+
         }
 
 #pragma region ImGui
