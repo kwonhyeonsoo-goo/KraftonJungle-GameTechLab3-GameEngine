@@ -25,3 +25,22 @@ UClass* UPrimitiveComponent::GetClass() const
 	return UPrimitiveComponent::StaticClass();
 }
 
+FVector UPrimitiveComponent::GetBoundMin() const
+{
+    return BoundsMin;
+}
+
+void UPrimitiveComponent::SetBoundMin(FVector min)
+{
+    BoundsMin = min;
+}
+
+FVector UPrimitiveComponent::GetBoundMax() const
+{
+    return BoundsMax;
+}
+
+void UPrimitiveComponent::SetBoundMax(FVector max)
+{
+    BoundsMax = max;
+}

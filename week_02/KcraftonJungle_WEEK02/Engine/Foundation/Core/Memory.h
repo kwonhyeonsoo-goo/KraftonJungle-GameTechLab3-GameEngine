@@ -12,7 +12,7 @@ namespace EngineMemory {
 	void Free(void* ptr);
 	inline void PrintStats()
 	{
-		UG_LOG("[Memory] Alloc: %u bytes, Count: %u", TotalAllocationBytes, TotalAllocationCount);
+		UE_LOG("[Memory] Alloc: %u bytes, Count: %u", TotalAllocationBytes, TotalAllocationCount);
 	}
 }
 

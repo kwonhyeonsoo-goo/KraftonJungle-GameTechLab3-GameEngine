@@ -2,25 +2,23 @@
 #include "Engine/World/World.h"
 #include "Engine/Rendering/URenderer.h"
 #include "Engine/ObjectKernel/ObjectStore.h"
+#include "Engine/Editor/Commands/ICommand.h"
+#include "Engine/Editor/Events/EditorEvents.h"
+#include "Engine/Foundation/Core/CoreTypes.h"
 #include "Engine/ObjectKernel/UUIDService.h"
+#include "Engine/ObjectKernel/ClassRegistry.h"
+#include "Engine/ObjectKernel/ObjectFactory.h"
 
-
-// main() ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
-class TDelegate;
-class ObjectStore;
-
+// main() ½ºÅÃ¿¡¼­ »ý¼º
 struct AppContext {
-
-    //ìž„ì‹œ!
-
-    //// Object Kernel
+    // Object Kernel
     UUIDService    UUIDs;
-    //ClassRegistry  Classes;
+    ClassRegistry  Classes;
     ObjectStore    Objects;
-    //ObjectFactory  Factory;
+    ObjectFactory  Factory;
 
     // World
-    World         CurrentScene;
+    World         CurrentWorld;
 
     // Services
     //ConsoleService Console;
@@ -35,20 +33,20 @@ struct AppContext {
     // Platform
     //WindowHost     Window;
 
-    // ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­ ï¿½ï¿½ï¿½ï¿½
+    // ¦¡¦¡ ÃÊ±âÈ­ ¦¡¦¡
     bool Initialize(const FString& windowTitle = "MyEngine",
         int32 width = 1280,
         int32 height = 720);
 
     void Shutdown();
 
-    //void Dispatch(ICommand* cmd);
+    void Dispatch(ICommand* cmd);
 
-    //Delegate<ObjectDestroyedEvent> OnObjectDestroyed;
+    TDelegate<ObjectDestroyedEvent> OnObjectDestroyed;
 
 private:
-    void RegisterBuiltinTypes();   // Cube, Sphere, Plane ClassRegistry ï¿½ï¿½ï¿½
+    void RegisterBuiltinTypes();   // Cube, Sphere, Plane ClassRegistry µî·Ï
     void RegisterPanels();
     void RegisterTools();
-    void SubscribeEvents();        // PlatformEvents ï¿½ï¿½ Editor/Renderer ï¿½ï¿½ï¿½ï¿½
+    void SubscribeEvents();        // PlatformEvents ¡æ Editor/Renderer ¿¬°á
 };

@@ -1,88 +1,254 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Engine\Core\Windows</Filter>
-    </ClCompile>
     <ClCompile Include="AppContext.cpp" />
-    <ClCompile Include="Editor\ImGui\imgui.cpp" />
-    <ClCompile Include="Editor\ImGui\imgui_demo.cpp" />
-    <ClCompile Include="Editor\ImGui\imgui_draw.cpp" />
-    <ClCompile Include="Editor\ImGui\imgui_impl_dx11.cpp" />
-    <ClCompile Include="Editor\ImGui\imgui_impl_win32.cpp" />
-    <ClCompile Include="Editor\ImGui\imgui_tables.cpp" />
-    <ClCompile Include="Editor\ImGui\imgui_widgets.cpp" />
-    <ClCompile Include="Engine\Core\Math\FVector.cpp" />
-    <ClCompile Include="Engine\Foundation\Core\log.cpp" />
-    <ClCompile Include="Engine\Foundation\Core\Memory.cpp" />
-    <ClCompile Include="Engine\Foundation\Containers\FVector.cpp" />
-    <ClCompile Include="Engine\ObjectKernel\ClassRegistry.cpp" />
-    <ClCompile Include="Engine\ObjectKernel\ObjectFactory.cpp" />
-    <ClCompile Include="Engine\ObjectKernel\ObjectStore.cpp" />
-    <ClCompile Include="Engine\ObjectKernel\UClass.cpp" />
-    <ClCompile Include="Engine\ObjectKernel\UObject.cpp" />
-    <ClCompile Include="Engine\ObjectKernel\UUIDService.cpp" />
-    <ClCompile Include="Engine\Rendering\RenderSceneExtractor.cpp" />
-    <ClCompile Include="Engine\Rendering\URenderer.cpp" />
-    <ClCompile Include="Engine\Services\SerializationService.cpp" />
-    <ClCompile Include="Engine\World\UScene.cpp" />
-    <ClCompile Include="Engine\World\Transform.cpp" />
-    <ClCompile Include="Engine\World\UCubeComp.cpp" />
     <ClCompile Include="Engine\World\UCubeMesh.cpp" />
     <ClCompile Include="Engine\World\UMesh.cpp" />
-    <ClCompile Include="Engine\World\UPlaneComp.cpp" />
-    <ClCompile Include="Engine\World\UPrimitiveComponent.cpp" />
-    <ClCompile Include="Engine\World\USceneComponent.cpp" />
-    <ClCompile Include="Engine\World\USphereComp.cpp" />
-    <ClCompile Include="Engine\Services\PickingService.cpp" />
-    <ClCompile Include="Engine\Services\StatsService.cpp" />
-    <ClCompile Include="Engine\Services\ConsoleService.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Editor\ImGui\imgui.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Editor\ImGui\imgui_demo.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Editor\ImGui\imgui_draw.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Editor\ImGui\imgui_impl_dx11.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Editor\ImGui\imgui_impl_win32.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Editor\ImGui\imgui_tables.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Editor\ImGui\imgui_widgets.cpp">
+      <Filter>Editor\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Foundation\Core\log.cpp">
+      <Filter>Engine\Foundation\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Foundation\Core\Memory.cpp">
+      <Filter>Engine\Foundation\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Foundation\Containers\FVector.cpp">
+      <Filter>Engine\Foundation\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\ObjectKernel\UObject.cpp">
+      <Filter>Engine\ObjectKernel</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\ObjectKernel\UUIDService.cpp">
+      <Filter>Engine\ObjectKernel</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\ObjectKernel\UClass.cpp">
+      <Filter>Engine\ObjectKernel</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\ObjectKernel\ObjectStore.cpp">
+      <Filter>Engine\ObjectKernel</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\ObjectKernel\ObjectFactory.cpp">
+      <Filter>Engine\ObjectKernel</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\ObjectKernel\ClassRegistry.cpp">
+      <Filter>Engine\ObjectKernel</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\World\Transform.cpp">
+      <Filter>Engine\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\World\UCubeComp.cpp">
+      <Filter>Engine\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\World\UPlaneComp.cpp">
+      <Filter>Engine\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\World\UPrimitiveComponent.cpp">
+      <Filter>Engine\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\World\USceneComponent.cpp">
+      <Filter>Engine\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\World\USphereComp.cpp">
+      <Filter>Engine\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\World\World.cpp">
+      <Filter>Engine\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\World\Level.cpp">
+      <Filter>Engine\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Services\SerializationService.cpp">
+      <Filter>Engine\Services</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Rendering\URenderer.cpp">
+      <Filter>Engine\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Rendering\RenderSceneExtractor.cpp">
+      <Filter>Engine\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Editor\EditorManager.cpp">
+      <Filter>Engine\Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Editor\EditorSession.cpp">
+      <Filter>Engine\Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Editor\SelectionSet.cpp">
+      <Filter>Engine\Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Editor\ToolContext.cpp">
+      <Filter>Engine\Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Editor\Commands\SetTransformCommand.cpp">
+      <Filter>Engine\Editor\Commands</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
-    <ClInclude Include="Editor\ImGui\imconfig.h" />
-    <ClInclude Include="Editor\ImGui\imgui.h" />
-    <ClInclude Include="Editor\ImGui\imgui_impl_dx11.h" />
-    <ClInclude Include="Editor\ImGui\imgui_impl_win32.h" />
-    <ClInclude Include="Editor\ImGui\imgui_internal.h" />
-    <ClInclude Include="Editor\ImGui\imstb_rectpack.h" />
-    <ClInclude Include="Editor\ImGui\imstb_textedit.h" />
-    <ClInclude Include="Editor\ImGui\imstb_truetype.h" />
-    <ClInclude Include="Engine\Core\CoreTypes.h" />
-    <ClInclude Include="Engine\Core\Math\FMatrix.h" />
-    <ClInclude Include="Engine\Core\Math\FMatrix4.h" />
-    <ClInclude Include="Engine\Core\Math\FVector.h" />
-    <ClInclude Include="Engine\Core\Math\FVector4.h" />
-    <ClInclude Include="Engine\Core\Math\TArray.h" />
-    <ClInclude Include="Engine\Core\Math\TMap.h" />
-    <ClInclude Include="Engine\Core\UObject\Circle.h" />
-    <ClInclude Include="Engine\Core\UObject\Cube.h" />
-    <ClInclude Include="Engine\Core\UObject\Rect.h" />
-    <ClInclude Include="Engine\Foundation\Core\CoreTypes.h" />
-    <ClInclude Include="Engine\Foundation\Core\log.h" />
-    <ClInclude Include="Engine\Foundation\Core\Memory.h" />
-    <ClInclude Include="Engine\Foundation\Containers\FMatrix.h" />
-    <ClInclude Include="Engine\Foundation\Containers\FMatrix4.h" />
-    <ClInclude Include="Engine\Foundation\Containers\FVector.h" />
-    <ClInclude Include="Engine\Foundation\Containers\FVector4.h" />
-    <ClInclude Include="Engine\Foundation\Math\TArray.h" />
-    <ClInclude Include="Engine\Foundation\Math\TMap.h" />
-    <ClInclude Include="Engine\Mesh\Circle.h" />
-    <ClInclude Include="Engine\Mesh\Cube.h" />
-    <ClInclude Include="Engine\Mesh\Rect.h" />
-    <ClInclude Include="Engine\ObjectKernel\ClassRegistry.h" />
-    <ClInclude Include="Engine\ObjectKernel\ObjectFactory.h" />
-    <ClInclude Include="Engine\ObjectKernel\ObjectStore.h" />
-    <ClInclude Include="Engine\ObjectKernel\UClass.h" />
-    <ClInclude Include="Engine\ObjectKernel\UObject.h" />
-    <ClInclude Include="Engine\ObjectKernel\UUIDService.h" />
-    <ClInclude Include="Engine\Rendering\RenderQueue.h" />
-    <ClInclude Include="Engine\Rendering\RenderSceneExtractor.h" />
-    <ClInclude Include="Engine\Rendering\RenderTypes.h" />
-    <ClInclude Include="Engine\Rendering\URenderer.h" />
-    <ClInclude Include="Engine\Services\SerializationService.h" />
-    <ClInclude Include="Engine\World\UScene.h" />
+    <ClInclude Include="Engine\World\UCubeMesh.h" />
+    <ClInclude Include="Engine\World\UMesh.h" />
+    <ClInclude Include="json.hpp" />
+    <ClInclude Include="Editor\ImGui\imconfig.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Editor\ImGui\imgui.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Editor\ImGui\imgui_impl_dx11.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Editor\ImGui\imgui_impl_win32.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Editor\ImGui\imgui_internal.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Editor\ImGui\imstb_rectpack.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Editor\ImGui\imstb_textedit.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Editor\ImGui\imstb_truetype.h">
+      <Filter>Editor\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Foundation\Math\TMap.h">
+      <Filter>Engine\Foundation\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Foundation\Math\TArray.h">
+      <Filter>Engine\Foundation\Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Foundation\Core\CoreTypes.h">
+      <Filter>Engine\Foundation\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Foundation\Core\log.h">
+      <Filter>Engine\Foundation\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Foundation\Core\Memory.h">
+      <Filter>Engine\Foundation\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Foundation\Containers\FMatrix.h">
+      <Filter>Engine\Foundation\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Foundation\Containers\FMatrix4.h">
+      <Filter>Engine\Foundation\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Foundation\Containers\FVector.h">
+      <Filter>Engine\Foundation\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Foundation\Containers\FVector4.h">
+      <Filter>Engine\Foundation\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\ObjectKernel\UObject.h">
+      <Filter>Engine\ObjectKernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\ObjectKernel\UUIDService.h">
+      <Filter>Engine\ObjectKernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\ObjectKernel\UClass.h">
+      <Filter>Engine\ObjectKernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\ObjectKernel\ObjectStore.h">
+      <Filter>Engine\ObjectKernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\ObjectKernel\ObjectFactory.h">
+      <Filter>Engine\ObjectKernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\ObjectKernel\ClassRegistry.h">
+      <Filter>Engine\ObjectKernel</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\World\Transform.h">
+      <Filter>Engine\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\World\UCubeComp.h">
+      <Filter>Engine\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\World\UPlaneComp.h">
+      <Filter>Engine\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\World\UPrimitiveComponent.h">
+      <Filter>Engine\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\World\USceneComponent.h">
+      <Filter>Engine\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\World\USphereComp.h">
+      <Filter>Engine\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\World\World.h">
+      <Filter>Engine\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Services\SerializationService.h">
+      <Filter>Engine\Services</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Rendering\URenderer.h">
+      <Filter>Engine\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Rendering\RenderSceneExtractor.h">
+      <Filter>Engine\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Rendering\RenderTypes.h">
+      <Filter>Engine\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Editor\Events\EditorEvents.h">
+      <Filter>Engine\Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Editor\EditorManager.h">
+      <Filter>Engine\Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Editor\EditorSession.h">
+      <Filter>Engine\Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Editor\SelectionSet.h">
+      <Filter>Engine\Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Editor\ToolContext.h">
+      <Filter>Engine\Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\World\Level.h">
+      <Filter>Engine\World</Filter>
+    </ClInclude>
     <ClInclude Include="Engine\World\Sphere.h" />
+    <ClInclude Include="Engine\Rendering\RenderQueue.h">
+      <Filter>Engine\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Mesh\Rect.h">
+      <Filter>Engine\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Mesh\Cube.h">
+      <Filter>Engine\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Mesh\Circle.h">
+      <Filter>Engine\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Editor\Commands\ICommand.h">
+      <Filter>Engine\Editor\Commands</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Editor\Commands\SetTransformCommand.h">
+      <Filter>Engine\Editor\Commands</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Editor\Tools\ITool.h">
+      <Filter>Engine\Editor\Tools</Filter>
+    </ClInclude>
     <ClInclude Include="Engine\World\Transform.h" />
     <ClInclude Include="Engine\World\UCubeComp.h" />
     <ClInclude Include="Engine\World\UCubeMesh.h" />
@@ -98,76 +264,49 @@
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">
-      <UniqueIdentifier>{01cf55ac-a256-4a7a-b654-73bc1bef7772}</UniqueIdentifier>
+      <UniqueIdentifier>{8d144134-2076-42ed-9b19-61370d9a02a3}</UniqueIdentifier>
     </Filter>
     <Filter Include="Editor\ImGui">
-      <UniqueIdentifier>{9f912369-e210-4462-9a17-d5894d3e4cd7}</UniqueIdentifier>
+      <UniqueIdentifier>{e56c02fa-215b-4aa0-8562-dfa454d8c494}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine">
-      <UniqueIdentifier>{68490dc3-7920-4710-ac33-df3b1a786e75}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Core">
-      <UniqueIdentifier>{088281d5-8dfb-4b0e-8d84-0d7d2108e534}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Core\Audio">
-      <UniqueIdentifier>{8ea79e36-6aea-48df-93ac-7d9403028586}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Core\Math">
-      <UniqueIdentifier>{b8c084a0-5e44-4ae9-8ed1-1488cd79bd45}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Core\UObject">
-      <UniqueIdentifier>{4d12fd48-4a55-4a1b-89c7-070b2aba9fec}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Core\UObject\USceneComponent">
-      <UniqueIdentifier>{948954dd-e34f-467a-a30a-f6d83c418f59}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Core\UObject\USceneComponent\UPrimitiveComponent">
-      <UniqueIdentifier>{99268c09-9f2a-404e-8092-dbb100889379}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Shaders">
-      <UniqueIdentifier>{3627229a-2852-4b16-92e8-fd33346102fe}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Core\Windows">
-      <UniqueIdentifier>{24561450-da64-47af-b42b-2d42505a9d98}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Input">
-      <UniqueIdentifier>{bc56b95d-03ec-41ae-86ee-2c16127268e3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Physics">
-      <UniqueIdentifier>{7749478f-ec5a-442c-9aaa-7e598304f394}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Rendering">
-      <UniqueIdentifier>{d56f12ee-4a4d-4b67-8410-1be47c46556f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Resources">
-      <UniqueIdentifier>{30d4e065-3d4e-4aa9-a18d-533c08b0b4cf}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Scene">
-      <UniqueIdentifier>{8595a1e2-a0d6-4c5b-8d6a-ed9d07b3af0e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\ObjectKernel">
-      <UniqueIdentifier>{f0b04fe7-b3c4-4690-9169-eb2f18df1dfc}</UniqueIdentifier>
+      <UniqueIdentifier>{8a336397-eade-4cd8-8aa0-e6acb47c4770}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\Foundation">
-      <UniqueIdentifier>{9cf7d5be-d3d6-4103-a400-30cee9ec6a39}</UniqueIdentifier>
+      <UniqueIdentifier>{537e643e-cf2c-4fe4-a3d6-ef57ff3fb77b}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\Foundation\Math">
-      <UniqueIdentifier>{18e8e3f0-fa20-40a2-8523-414a270ba7ab}</UniqueIdentifier>
+      <UniqueIdentifier>{1e362fa2-e6fc-4460-a463-c57ef586baf4}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\Foundation\Containers">
-      <UniqueIdentifier>{c10206e3-f662-44f5-9ad9-688627d8f714}</UniqueIdentifier>
+      <UniqueIdentifier>{a271ab1a-8a1e-4aee-9ddf-7af2cd27a911}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\Foundation\Core">
-      <UniqueIdentifier>{43215e34-f2f9-4aae-909c-5b0202b79746}</UniqueIdentifier>
+      <UniqueIdentifier>{9b7d07de-6847-40a7-9b20-9f974666d800}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\ObjectKernel">
+      <UniqueIdentifier>{1b7cebf2-9078-4c95-99e0-3d52de5e4467}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\World">
-      <UniqueIdentifier>{0275f248-0680-42ff-af48-58b104fdb1a7}</UniqueIdentifier>
+      <UniqueIdentifier>{a4417356-f4cf-4c33-9d5d-2580636653e0}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Core\UObject\USceneComponent\UPrimitiveComponent\Mesh">
-      <UniqueIdentifier>{5bf16a18-efe8-4617-b775-1f0788e341bf}</UniqueIdentifier>
+    <Filter Include="Engine\Services">
+      <UniqueIdentifier>{ba7f6124-3b9c-475c-9829-ec8cc45f820f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Core\Math\Containers">
-      <UniqueIdentifier>{8b47f3a4-e904-4a59-9883-da14bf6d20f7}</UniqueIdentifier>
+    <Filter Include="Engine\Editor">
+      <UniqueIdentifier>{601ec734-b4d5-4dd1-892d-19768779c333}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Rendering">
+      <UniqueIdentifier>{51a9625c-fbb3-484d-bc81-6a03a07cc212}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Mesh">
+      <UniqueIdentifier>{e3e0725d-3e81-46d2-ae6d-1fc2555d3bf6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Editor\Commands">
+      <UniqueIdentifier>{5c1b3248-0616-4e47-b82a-f7421f687c6b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Editor\Tools">
+      <UniqueIdentifier>{8ca38d0b-b17b-474f-9310-8d901f47ec2f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

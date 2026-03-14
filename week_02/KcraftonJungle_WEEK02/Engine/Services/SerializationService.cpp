@@ -1,84 +1,86 @@
 #include "SerializationService.h"
+#include "../../AppContext.h"
 #include "../World/UPrimitiveComponent.h"
+#include "../World/World.h"
 #include "../Foundation/Containers/FVector.h"
+#include "../Foundation/Containers/FVector.h"
+#include "../ObjectKernel/ObjectFactory.h"
 #include "../../json.hpp"
 
 #include <fstream>
 #include <sstream>
-
 using json::JSON;
 
 static FString GetScenePath(const AppContext& ctx) {
-	//return "saves/" + std::string(*ctx.Scene.Name) + ".scene";
+	return "saves/" + std::string(ctx.CurrentWorld.GetName()) + ".scene";
 }
 
 bool SerializationService::Save(const AppContext& ctx) {
-	//// ��Ʈ ������Ʈ ����
-	//JSON root = json::Object();
-	//root["SceneName"] = std::string(*ctx.Scene.Name);
+	// ��Ʈ ������Ʈ ����
+	JSON root = json::Object();
+	root["SceneName"] = std::string(ctx.CurrentWorld.GetName());
 
-	//root["Version"] = 1;
-	//root["NextUUID"] = (uint32)ctx.UUIDs.GetNextUUID();
+	root["Version"] = 1;
+	root["NextUUID"] = (uint32)ctx.UUIDs.GetNext();//TODO: 이거 UUID로 바꿔야함
 
-	//// Primitives ������Ʈ
-	//JSON primitives = json::Object();
-	//for (UObject* obj : ctx.Objects.GetAll()) {
-	//	UPrimitiveComponent* prim = dynamic_cast<UPrimitiveComponent*>(obj);//TODO: IsA�� RTTI����
-	//	if (!prim) continue;
+	// Primitives ������Ʈ
+	JSON primitives = json::Object();
+	for (UObject* obj : ctx.CurrentWorld.GetAllObjects()) {
+		UPrimitiveComponent* prim = dynamic_cast<UPrimitiveComponent*>(obj);//TODO: IsA�� RTTI����
+		if (!prim) continue;
 
-	//	std::string key = std::to_string(prim->GetUUID());
+		std::string key = std::to_string(prim->GetUUID());
 
-	//	JSON entry = json::Object();
-	//	entry["Type"] = prim->GetTypeName(); // std::string
+		JSON entry = json::Object();
+		entry["Type"] = PrimitiveShapeToString(prim->Shape);
 
 
-	//	Transform trans = prim->GetTransform();
+		Transform trans = prim->GetTransform();
 
-	//	// Location
-	//	FVector loc = trans.GetLocation();
-	//	JSON locArr = json::Array(loc.x, loc.y, loc.z);
-	//	entry["Location"] = locArr;
+		// Location
+		FVector loc = trans.Location;
+		JSON locArr = json::Array(loc.x, loc.y, loc.z);
+		entry["Location"] = locArr;
 
-	//	// Rotation
-	//	FVector rot = trans.GetRotation();
-	//	JSON rotArr = json::Array(rot.x, rot.y, rot.z);
-	//	entry["Rotation"] = rotArr;
+		// Rotation
+		FVector rot = trans.Rotation;
+		JSON rotArr = json::Array(rot.x, rot.y, rot.z);
+		entry["Rotation"] = rotArr;
 
-	//	// Scale
-	//	FVector scl = trans.GetScale();
-	//	JSON sclArr = json::Array(scl.x, scl.y, scl.z);
-	//	entry["Scale"] = sclArr;
+		// Scale
+		FVector scl = trans.Scale;
+		JSON sclArr = json::Array(scl.x, scl.y, scl.z);
+		entry["Scale"] = sclArr;
 
-	//	primitives[key] = entry;
-	//}
-	//root["Primitives"] = primitives;
+		primitives[key] = entry;
+	}
+	root["Primitives"] = primitives;
 
-	//CreateDirectoryA("saves", nullptr); // Windows API
+	CreateDirectoryA("saves", nullptr); // Windows API
 
-	//// ���� ����
-	//std::ofstream file(GetScenePath(ctx));
-	//if (!file.is_open()) return false;
-	//file << root.dump();
-	//return file.good();
-	return true;
+	// ���� ����
+	std::ofstream file(GetScenePath(ctx));
+	if (!file.is_open()) return false;
+	file << root.dump();
+	return file.good();
 }
 
 bool SerializationService::Load(AppContext& ctx) {
-	//// ���� �б�
-	//std::ifstream file(GetScenePath(ctx));
-	//if (!file.is_open()) return false;
+	// ���� �б�
+	std::ifstream file(GetScenePath(ctx));
+	if (!file.is_open()) return false;
 
 	//std::stringstream ss;
 	//ss << file.rdbuf();
 	//FString jsonStr = ss.str();
 
 	//JSON root = JSON::Load(jsonStr);
-	//ctx.Editor.Selection.Clear();
+	////ctx.Editor.Selection.Clear();
 
 	//// �� ���� UUID ���� �� OnObjectDestroyed ����
-	//TArray<uint32> oldUUIDs = ctx.UUIDs.GetAll();
-	//for (uint32 uuid : oldUUIDs)
-	//	EventBus::Broadcast(OnObjectDestroyed{ uuid });
+	//TArray<uint32> olduuids = ctx.UUIDs.GenUUID();
+	//for (uint32 uuid : olduuids)
+	//	eventbus::broadcast(onobjectdestroyed{ uuid });
 
 	//// �� ObjectStore ����
 	//ctx.Objects.Clear();
@@ -92,7 +94,7 @@ bool SerializationService::Load(AppContext& ctx) {
 
 	//// �� Primitives ��ȸ �� ������Ʈ ����
 	//auto& primitives = root["Primitives"];
-	//ctx.Scene.Name = FString(root["SceneName"].ToString());
+	//ctx.CurrentWorld.SetName(root["SceneName"].ToString());
 
 	//for (auto& kv : primitives.ObjectRange()) {
 	//	uint32 uuid = (uint32)std::stoul(kv.first);
@@ -116,13 +118,13 @@ bool SerializationService::Load(AppContext& ctx) {
 	//	scl.y = toFloat(kv.second["Location"][1]);
 	//	scl.z = toFloat(kv.second["Location"][2]);
 
-	//	UPrimitiveComponent* prim = ObjectFactory::Create(typeName, uuid);
+	//	UPrimitiveComponent* prim = ObjectFactory::ConstructObject(typeName, "UPrimitiveComponent");
 	//	if (!prim) continue; // �� �� ���� Ÿ���̸� ��ŵ
 
 	//	prim->SetTransform(Transform(loc, rot, scl));
 
 	//	ctx.Objects.Add(prim);
-	//	ctx.UUIDs.Register(uuid);
+	//	ctx.UUIDs.SyncNextUUID(uuid);
 	//	EventBus::Broadcast(OnObjectCreated{ uuid }); // �� Outliner ���� �� ������Ʈ �ν�
 	//}
 

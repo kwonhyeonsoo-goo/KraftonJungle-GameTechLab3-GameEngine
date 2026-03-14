@@ -19,8 +19,11 @@ public:
     const TArray<UObject*>& GetAllObjects() const;
 
     void SetContext(AppContext* ctx);
+    void SetName(const FString& name) { Name = name; }
+    const FString GetName() const {return Name; }
 
 private:
+    FString Name;
     AppContext* Ctx = nullptr;
 public:
 	std::string Name;

@@ -12,9 +12,9 @@ enum class EPrimitiveShape
 
 class UObject
 {
-public:
     uint32 UUID;
     uint32 InternalIndex;
+public:
 
     UObject();
     virtual ~UObject();

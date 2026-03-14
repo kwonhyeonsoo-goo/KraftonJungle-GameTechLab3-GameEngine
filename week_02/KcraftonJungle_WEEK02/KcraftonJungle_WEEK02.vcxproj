@@ -128,8 +128,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
-    <ClInclude Include="Engine\Rendering\Backend\D3D11Renderer.h" />
-    <ClInclude Include="Engine\Rendering\Backend\D3D11Device.h" />
+    <ClInclude Include="Engine\Editor\EditorManager.h" />
+    <ClInclude Include="Engine\Editor\EditorSession.h" />
+    <ClInclude Include="Engine\Editor\Events\EditorEvents.h" />
     <ClInclude Include="Editor\ImGui\imconfig.h" />
     <ClInclude Include="Editor\ImGui\imgui.h" />
     <ClInclude Include="Editor\ImGui\imgui_impl_dx11.h" />
@@ -150,8 +151,6 @@
     <ClInclude Include="Engine\Mesh\Circle.h" />
     <ClInclude Include="Engine\Mesh\Cube.h" />
     <ClInclude Include="Engine\Mesh\Rect.h" />
-    <ClInclude Include="Engine\Mesh\Sphere.h" />
-    <ClInclude Include="Engine\Mesh\Triangle.h" />
     <ClInclude Include="Engine\ObjectKernel\ClassRegistry.h" />
     <ClInclude Include="Engine\ObjectKernel\ObjectFactory.h" />
     <ClInclude Include="Engine\ObjectKernel\ObjectStore.h" />
@@ -173,14 +172,18 @@
     <ClInclude Include="Engine\World\UPrimitiveComponent.h" />
     <ClInclude Include="Engine\World\USceneComponent.h" />
     <ClInclude Include="Engine\World\USphereComp.h" />
+    <ClInclude Include="Engine\Editor\Commands\ICommand.h" />
+    <ClInclude Include="Engine\Editor\Tools\ITool.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="Engine\World\Level.h" />
-    <ClInclude Include="Engine\Rendering\OverlayBuilder.h" />
+    <ClInclude Include="Engine\Editor\SelectionSet.h" />
+    <ClInclude Include="Engine\Editor\ToolContext.h" />
+    <ClInclude Include="Engine\Editor\Commands\SetTransformCommand.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AppContext.cpp" />
-    <ClCompile Include="Engine\Rendering\Backend\D3D11Renderer.cpp" />
-    <ClCompile Include="Engine\Rendering\Backend\D3D11Device.cpp" />
+    <ClCompile Include="Engine\Editor\EditorManager.cpp" />
+    <ClCompile Include="Engine\Editor\EditorSession.cpp" />
     <ClCompile Include="Editor\ImGui\imgui.cpp" />
     <ClCompile Include="Editor\ImGui\imgui_demo.cpp" />
     <ClCompile Include="Editor\ImGui\imgui_draw.cpp" />
@@ -197,7 +200,6 @@
     <ClCompile Include="Engine\ObjectKernel\UClass.cpp" />
     <ClCompile Include="Engine\ObjectKernel\UObject.cpp" />
     <ClCompile Include="Engine\ObjectKernel\UUIDService.cpp" />
-    <ClCompile Include="Engine\Rendering\RenderQueue.cpp" />
     <ClCompile Include="Engine\Rendering\RenderSceneExtractor.cpp" />
     <ClCompile Include="Engine\Rendering\URenderer.cpp" />
     <ClCompile Include="Engine\Services\SerializationService.cpp" />
@@ -212,7 +214,9 @@
     <ClCompile Include="Engine\World\USphereComp.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Engine\World\Level.cpp" />
-    <ClCompile Include="Engine\Rendering\OverlayBuilder.cpp" />
+    <ClCompile Include="Engine\Editor\SelectionSet.cpp" />
+    <ClCompile Include="Engine\Editor\ToolContext.cpp" />
+    <ClCompile Include="Engine\Editor\Commands\SetTransformCommand.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
