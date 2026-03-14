@@ -1,4 +1,5 @@
 #include "EditorSession.h"
+#include <cmath>
 
 FMatrix CameraState::GetViewMatrix() const
 {
@@ -13,7 +14,7 @@ FVector CameraState::GetForwardVector() const
     const float cy = std::cos(Yaw);
     const float sy = std::sin(Yaw);
 
-	return FVector(cp * cy, cp * sy, sp);
+    return FVector(cp * cy, cp * sy, sp);
 }
 
 FVector CameraState::GetRightVector() const
@@ -35,12 +36,17 @@ EditorSession::EditorSession()
     FarZ = 1000.0f;
 }
 
+void EditorSession::ProcessCameraInput(const InputState& input, float deltaTime)
+{
+}
+
 FMatrix EditorSession::GetProjectionMatrix() const
 {
-    return FMatrix(
-        Camera.Position.GetX() / AspectRatio, 0.0f, 0.0f, 0.0f,
-        0.0f, Camera.Position.GetY(), 0.0f, 0.0f,
-        0.0f, 0.0f, FarZ / FarZ - NearZ, -FarZ * NearZ / (FarZ - NearZ),
-        0.0f, 0.0f, 0.0f, 1.0f
-    );
+    constexpr float DegToRad = 3.14159265358979323846f / 180.0f;
+    return FMatrix::Perspective(FovY * DegToRad, AspectRatio, NearZ, FarZ);
+}
+
+FMatrix EditorSession::GetViewProjMatrix() const
+{
+    return Camera.GetViewMatrix() * GetProjectionMatrix();
 }
