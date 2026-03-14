@@ -181,6 +181,7 @@
     <ClInclude Include="Engine\Editor\ToolContext.h" />
     <ClInclude Include="Engine\Editor\Commands\SetTransformCommand.h" />
     <ClInclude Include="Engine\Editor\Tools\SelectTool.h" />
+    <ClInclude Include="Engine\Editor\Panels\PropertyPanel.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AppContext.cpp" />
@@ -220,6 +221,7 @@
     <ClCompile Include="Engine\Editor\ToolContext.cpp" />
     <ClCompile Include="Engine\Editor\Commands\SetTransformCommand.cpp" />
     <ClCompile Include="Engine\Editor\Tools\SelectTool.cpp" />
+    <ClCompile Include="Engine\Editor\Panels\PropertyPanel.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
