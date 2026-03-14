@@ -169,7 +169,7 @@
     <ClInclude Include="Engine\Rendering\RenderTypes.h" />
     <ClInclude Include="Engine\Rendering\URenderer.h" />
     <ClInclude Include="Engine\Services\SerializationService.h" />
-    <ClInclude Include="Engine\World\UScene.h" />
+    <ClInclude Include="Engine\World\World.h" />
     <ClInclude Include="Engine\World\Sphere.h" />
     <ClInclude Include="Engine\World\Transform.h" />
     <ClInclude Include="Engine\World\UCubeComp.h" />
@@ -180,6 +180,7 @@
     <ClInclude Include="Engine\World\USceneComponent.h" />
     <ClInclude Include="Engine\World\USphereComp.h" />
     <ClInclude Include="json.hpp" />
+    <ClInclude Include="Engine\World\Level.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AppContext.cpp" />
@@ -203,7 +204,7 @@
     <ClCompile Include="Engine\Rendering\RenderSceneExtractor.cpp" />
     <ClCompile Include="Engine\Rendering\URenderer.cpp" />
     <ClCompile Include="Engine\Services\SerializationService.cpp" />
-    <ClCompile Include="Engine\World\UScene.cpp" />
+    <ClCompile Include="Engine\World\World.cpp" />
     <ClCompile Include="Engine\World\Transform.cpp" />
     <ClCompile Include="Engine\World\UCubeComp.cpp" />
     <ClCompile Include="Engine\World\UCubeMesh.cpp" />
@@ -213,6 +214,7 @@
     <ClCompile Include="Engine\World\USceneComponent.cpp" />
     <ClCompile Include="Engine\World\USphereComp.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Engine\World\Level.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,16 +1,26 @@
-#include "UScene.h"
+#include "World.h"
 
-UScene::UScene()
+World::World()
     : Ctx(nullptr)
 {
 }
 
-void UScene::SetContext(AppContext* ctx)
+Level* World::GetPersistentLevel()
+{
+    return &PersistentLevel;
+}
+
+const Level* World::GetPersistentLevel() const
+{
+    return &PersistentLevel;
+}
+
+void World::SetContext(AppContext* ctx)
 {
     Ctx = ctx;
 }
 
-void UScene::Add(UPrimitiveComponent* comp)
+void World::Add(UPrimitiveComponent* comp)
 {
     if (Ctx == nullptr || comp == nullptr)
     {
@@ -20,7 +30,7 @@ void UScene::Add(UPrimitiveComponent* comp)
     Ctx->Objects.Add(comp);
 }
 
-void UScene::Remove(uint32 uuid)
+void World::Remove(uint32 uuid)
 {
     if (Ctx == nullptr)
     {
@@ -30,7 +40,7 @@ void UScene::Remove(uint32 uuid)
     Ctx->Objects.Remove(uuid);
 }
 
-UPrimitiveComponent* UScene::Find(uint32 uuid) const
+UPrimitiveComponent* World::Find(uint32 uuid) const
 {
     if (Ctx == nullptr)
     {
@@ -40,7 +50,7 @@ UPrimitiveComponent* UScene::Find(uint32 uuid) const
     return static_cast<UPrimitiveComponent*>(Ctx->Objects.Find(uuid));
 }
 
-const TArray<UObject*>& UScene::GetAllObjects() const
+const TArray<UObject*>& World::GetAllObjects() const
 {
     return Ctx->Objects.GUObjectArray();
 }

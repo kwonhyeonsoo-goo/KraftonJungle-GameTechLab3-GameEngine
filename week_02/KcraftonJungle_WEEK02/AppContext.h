@@ -1,5 +1,5 @@
 #pragma once
-#include "Engine/World/UScene.h"
+#include "Engine/World/World.h"
 #include "Engine/Rendering/URenderer.h"
 
 // main() 스택에서 생성
@@ -13,7 +13,7 @@ struct AppContext {
     //ObjectFactory  Factory;
 
     // World
-    UScene         CurrentScene;
+    World         CurrentScene;
 
     // Services
     //ConsoleService Console;
