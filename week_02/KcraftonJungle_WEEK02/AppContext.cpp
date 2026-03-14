@@ -7,14 +7,14 @@ bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 heigh
 
 void AppContext::SubscribeEvents()
 {
-    OutlinerPanel* outliner = (OutlinerPanel*)Panels.Find("OutLiner");
+    //OutlinerPanel* outliner = (OutlinerPanel*)Panels.Find("OutLiner");
 }
 
-// ¡Ú Shutdown() ÇØÁ¦ ¼ø¼­:
-//   1. ÆÐ³Î/½Ã½ºÅÛÀÇ DelegateHandle Unbind (use-after-free ¹æÁö)
-//   2. EditorManager (ÆÐ³Î ¼Ò¸ê)
-//   3. D3D11Renderer (GPU ¸®¼Ò½º ÇØÁ¦)
-//   4. ObjectStore::Clear() (UObject ¸Þ¸ð¸® ÇØÁ¦)
+// ï¿½ï¿½ Shutdown() ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½:
+//   1. ï¿½Ð³ï¿½/ï¿½Ã½ï¿½ï¿½ï¿½ï¿½ï¿½ DelegateHandle Unbind (use-after-free ï¿½ï¿½ï¿½ï¿½)
+//   2. EditorManager (ï¿½Ð³ï¿½ ï¿½Ò¸ï¿½)
+//   3. D3D11Renderer (GPU ï¿½ï¿½ï¿½Ò½ï¿½ ï¿½ï¿½ï¿½ï¿½)
+//   4. ObjectStore::Clear() (UObject ï¿½Þ¸ï¿½ ï¿½ï¿½ï¿½ï¿½)
 //   5. WindowHost::Shutdown()
 void AppContext::Shutdown()
 {

@@ -1,19 +1,24 @@
 #pragma once
-#include "Engine/World/UScene.h"
 #include "Engine/Rendering/URenderer.h"
+#include "Engine/ObjectKernel/ObjectStore.h"
+#include "Engine/ObjectKernel/UUIDService.h"
 
-// main() ½ºÅÃ¿¡¼­ »ý¼º
+// main() ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 class TDelegate;
+class ObjectStore;
 
 struct AppContext {
+
+    //ìž„ì‹œ!
+
     //// Object Kernel
-    //UUIDService    UUIDs;
+    UUIDService    UUIDs;
     //ClassRegistry  Classes;
-    //ObjectStore    Objects;
+    ObjectStore    Objects;
     //ObjectFactory  Factory;
 
     // World
-    UScene         CurrentScene;
+    //UScene         CurrentScene;
 
     // Services
     //ConsoleService Console;
@@ -28,7 +33,7 @@ struct AppContext {
     // Platform
     //WindowHost     Window;
 
-    // ¦¡¦¡ ÃÊ±âÈ­ ¦¡¦¡
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­ ï¿½ï¿½ï¿½ï¿½
     bool Initialize(const FString& windowTitle = "MyEngine",
         int32 width = 1280,
         int32 height = 720);
@@ -37,11 +42,11 @@ struct AppContext {
 
     //void Dispatch(ICommand* cmd);
 
-    T//Delegate<ObjectDestroyedEvent> OnObjectDestroyed;
+    //Delegate<ObjectDestroyedEvent> OnObjectDestroyed;
 
 private:
-    void RegisterBuiltinTypes();   // Cube, Sphere, Plane ClassRegistry µî·Ï
+    void RegisterBuiltinTypes();   // Cube, Sphere, Plane ClassRegistry ï¿½ï¿½ï¿½
     void RegisterPanels();
     void RegisterTools();
-    void SubscribeEvents();        // PlatformEvents ¡æ Editor/Renderer ¿¬°á
+    void SubscribeEvents();        // PlatformEvents ï¿½ï¿½ Editor/Renderer ï¿½ï¿½ï¿½ï¿½
 };
