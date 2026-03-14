@@ -1,8 +1,8 @@
 #include "EngineTest.h"
 #include "Core/Core.h"
 #include "Renderer/Renderer.h"
+#include "UI/EditorGUI.h"
 
-#include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
 
@@ -36,68 +36,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-static void SetupImGuiCallbacks(CRenderer* Renderer)
-{
-	HWND Hwnd = Renderer->GetHwnd();
-	ID3D11Device* Device = Renderer->GetDevice();
-	ID3D11DeviceContext* DeviceContext = Renderer->GetDeviceContext();
-
-	Renderer->SetGUICallbacks(
-		// Init
-		[Hwnd, Device, DeviceContext]()
-		{
-			IMGUI_CHECKVERSION();
-			ImGui::CreateContext();
-			ImGuiIO& io = ImGui::GetIO();
-			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-			io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-			io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
-			ImGui::StyleColorsDark();
-
-			ImGuiStyle& style = ImGui::GetStyle();
-			if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-			{
-				style.WindowRounding = 0.0f;
-				style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-			}
-
-			ImGui_ImplWin32_Init(Hwnd);
-			ImGui_ImplDX11_Init(Device, DeviceContext);
-		},
-		// Shutdown
-		[]()
-		{
-			ImGui_ImplDX11_Shutdown();
-			ImGui_ImplWin32_Shutdown();
-			ImGui::DestroyContext();
-		},
-		// NewFrame
-		[]()
-		{
-			ImGui_ImplDX11_NewFrame();
-			ImGui_ImplWin32_NewFrame();
-			ImGui::NewFrame();
-		},
-		// Render
-		[]()
-		{
-			ImGui::Render();
-			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-		},
-		// PostPresent
-		[]()
-		{
-			ImGuiIO& io = ImGui::GetIO();
-			if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-			{
-				ImGui::UpdatePlatformWindows();
-				ImGui::RenderPlatformWindowsDefault();
-			}
-		}
-	);
-}
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
@@ -124,45 +62,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		return -1;
 
 	// ImGui
-	SetupImGuiCallbacks(Core.GetRenderer());
 
-	// ImGui test widgets
-	bool show_demo_window = true;
-	bool show_another_window = false;
-	Core.GetRenderer()->SetGUIUpdateCallback([&]()
-	{
-		if (show_demo_window)
-			ImGui::ShowDemoWindow(&show_demo_window);
+	CEditorGUI EditorGUI;
+	EditorGUI.Initialize(Core.GetRenderer());
 
-		{
-			static float f = 0.0f;
-			static int counter = 0;
 
-			ImGui::Begin("Hello, world!");
-			ImGui::Text("This is some useful text.");
-			ImGui::Checkbox("Demo Window", &show_demo_window);
-			ImGui::Checkbox("Another Window", &show_another_window);
-			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-
-			if (ImGui::Button("Button"))
-				counter++;
-			ImGui::SameLine();
-			ImGui::Text("counter = %d", counter);
-
-			ImGuiIO& io = ImGui::GetIO();
-			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-			ImGui::End();
-		}
-
-		if (show_another_window)
-		{
-			ImGui::Begin("Another Window", &show_another_window);
-			ImGui::Text("Hello from another window!");
-			if (ImGui::Button("Close Me"))
-				show_another_window = false;
-			ImGui::End();
-		}
-	});
 
 	// Timing
 	LARGE_INTEGER Frequency, LastTime, CurrentTime;
