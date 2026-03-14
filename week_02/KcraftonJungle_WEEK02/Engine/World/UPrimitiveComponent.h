@@ -15,12 +15,19 @@ public:
     EPrimitiveShape Shape;
     bool bVisible = true;
 
-    FVector BoundsMin;
-    FVector BoundsMax;
-
     UPrimitiveComponent();
     explicit UPrimitiveComponent(EPrimitiveShape shape);
 
     static UClass* StaticClass();
     UClass* GetClass() const override;
+
+    FVector GetBoundMin() const;
+    void SetBoundMin(FVector min);
+
+    FVector GetBoundMax() const;
+    void SetBoundMax(FVector max);
+
+protected:
+    FVector BoundsMin;
+    FVector BoundsMax;
 };
