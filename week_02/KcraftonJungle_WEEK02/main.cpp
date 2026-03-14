@@ -11,7 +11,7 @@
 #include "Editor/ImGui/imgui.h"
 #include "Editor/ImGui/imgui_internal.h"
 #include "Editor/ImGui/imgui_impl_dx11.h"
-#include "Editor/ImGui/imgui_impl_win32.h"
+#include "Editor/imGui/imgui_impl_win32.h"
 
 #include "Engine/Rendering/URenderer.h"
 
@@ -100,14 +100,32 @@ FVertexSimple cube_vertices[] =
      {  0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 1.0f }, // TR
 };
 
-#include "AppContext.h"
 #include "Engine/World/Sphere.h"
+#include "AppContext.h"
 
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
+
+    //TODO : WindowHost로 옮기기
+#pragma region WindowHost
+    HINSTANCE hInstance = GetModuleHandle(nullptr); // WinMain 파라미터 대신 이걸로 대체 가능
+    //Window.Initialize(hInstance, ...);
+
+    WCHAR WindowClass[] = L"JungleWindowClass";
+
+    WCHAR Title[] = L"Game Tech Lab";
+
+    WNDCLASSW wndclass = { 0, WndProc, 0, 0, 0, 0, 0, 0, 0, WindowClass };
+
+    RegisterClassW(&wndclass);
+
+    HWND hWnd = CreateWindowExW(0, WindowClass, Title, WS_POPUP | WS_VISIBLE | WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 1024, 1024,
+        nullptr, nullptr, hInstance, nullptr);
+#pragma endregion
+
     AppContext ctx;
-    if (!ctx.Initialize("MyEngine", 1280, 720)) return -1;
 
     URenderer renderer;
 

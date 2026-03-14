@@ -3,7 +3,7 @@
 #include "CoreTypes.h"
 #include <functional>
 
-#define UG_LOG(fmt, ...) EngineLog::Print(fmt, ##__VA_ARGS__)
+#define UE_LOG(fmt, ...) EngineLog::Print(fmt, ##__VA_ARGS__)
 
 namespace EngineLog {
 	static std::function<void(const FString&)> GOutputCallback = nullptr;

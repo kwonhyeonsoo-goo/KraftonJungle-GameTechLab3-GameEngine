@@ -7,7 +7,7 @@ UObject* ObjectFactory::ConstructObject(AppContext& ctx, UClass* uclass)
     {
         return nullptr;
     }
-
+     
     return ConstructObject(ctx, uclass->ClassName);
 }
 
@@ -28,7 +28,7 @@ UObject* ObjectFactory::ConstructObject(AppContext& ctx, const FString& typeName
         obj = new UPlaneComp();
     }
     else
-    {
+    { 
         return nullptr;
     }
 

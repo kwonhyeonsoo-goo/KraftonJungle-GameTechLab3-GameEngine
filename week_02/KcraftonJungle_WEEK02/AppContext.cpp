@@ -2,10 +2,6 @@
 
 bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 height)
 {
-    if (Window.Initialize(windowTitle, width, height)) {
-        return true;
-    }
-
     return false;
 }
 
@@ -29,4 +25,11 @@ void AppContext::Shutdown()
     //PlatformEvents::OnKeyDown.Unbind(KeyDownHandle);
     //PlatformEvents::OnResize.Unbind(ResizeHandle);
 
+}
+
+// Always receive new Instance -> must delete.
+void AppContext::Dispatch(ICommand* cmd)
+{
+    cmd->Execute();
+    delete cmd;
 }

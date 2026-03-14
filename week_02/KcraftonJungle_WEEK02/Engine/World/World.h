@@ -1,15 +1,17 @@
 #pragma once
 #include "../Foundation/Core/CoreTypes.h"
 #include "UPrimitiveComponent.h"
-#include "../../AppContext.h"
 #include "../ObjectKernel/UObject.h"
+#include "Level.h"
 
 struct AppContext;
 
-class UScene
+class World
 {
 public:
-    UScene();
+    World();
+    Level* GetPersistentLevel();
+    const Level* GetPersistentLevel() const;
 
     void Add(UPrimitiveComponent* comp);
     void Remove(uint32 uuid);
@@ -23,4 +25,6 @@ public:
 private:
     FString Name;
     AppContext* Ctx = nullptr;
+    Level PersistentLevel;
+    TArray<Level*> SubLevels;
 };
