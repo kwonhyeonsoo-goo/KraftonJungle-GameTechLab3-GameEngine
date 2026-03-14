@@ -26,14 +26,14 @@ void CPrimitiveSphere::Generate(int Segments, int Rings)
 	for (int Ring = 0; Ring <= Rings; ++Ring)
 	{
 		float Phi = PI * static_cast<float>(Ring) / static_cast<float>(Rings);
-		float Y = cosf(Phi);
+		float Z = cosf(Phi);
 		float SinPhi = sinf(Phi);
 
 		for (int Seg = 0; Seg <= Segments; ++Seg)
 		{
 			float Theta = 2.0f * PI * static_cast<float>(Seg) / static_cast<float>(Segments);
 			float X = SinPhi * cosf(Theta);
-			float Z = SinPhi * sinf(Theta);
+			float Y = SinPhi * sinf(Theta);
 
 			FVector Position = { X * 0.5f, Y * 0.5f, Z * 0.5f };
 			FVector Normal = { X, Y, Z };

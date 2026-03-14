@@ -5,11 +5,23 @@
 class UClass;
 class ENGINE_API UObject
 {
-public:
-	UObject(UClass* InClass, FString InName, UObject* InOuter = nullptr);
+public: 
+	UObject(uint32 InUUID, size_t InObjectType) :UUID(InUUID), ObjectType(InObjectType) {
+	};
 	virtual ~UObject() = default;
+	
+	UObject(UClass* InClass, FString InName, UObject* InOuter = nullptr);
 
-    UClass* GetClass() const;
+	static int32 GetTotalBytes();
+	static int32 GetTotalCounts();
+	
+	void* operator new(size_t InSize);
+	void operator delete(void* InAddress, std::size_t size);
+
+	inline static int32 TotalAllocationBytes = 0;
+	inline static int32 TotalAllocationCounts = 0;
+
+   UClass* GetClass() const;
     const std::string& GetName() const;
     UObject* GetOuter() const;
 
@@ -43,11 +55,14 @@ public:
     bool IsPendingKill() const;
 
     static UClass* StaticClass();
-
+  
 private:
 	UClass* Class = nullptr;
 	FString Name;
 	UObject* Outer = nullptr;					// 소속 컨테이너
 	EObjectFlags Flags = EObjectFlags::None;	// 상태
+
+	size_t ObjectType;
+	uint32 UUID;
 };
 

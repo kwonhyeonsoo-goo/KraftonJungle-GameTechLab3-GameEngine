@@ -39,6 +39,7 @@ public:
 	CCamera* GetCamera() const { return Camera; }
 
 	void InitializeDefaultScene(float AspectRatio);
+	void LoadSceneFromFile(const FString& FilePath);
 	void BeginPlay();
 	void Tick(float DeltaTime);
 
