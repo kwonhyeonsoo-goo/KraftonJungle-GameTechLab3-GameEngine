@@ -186,6 +186,7 @@
     <ClInclude Include="Engine\Editor\Commands\ICommand.h" />
     <ClInclude Include="Engine\Editor\Tools\ITool.h" />
     <ClInclude Include="Engine\Editor\Panels\IEditorPanel.h" />
+    <ClInclude Include="Engine\Editor\Tools\GizmoMath.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="Engine\World\Level.h" />
     <ClInclude Include="Engine\Editor\SelectionSet.h" />
@@ -241,6 +242,7 @@
     <ClCompile Include="Engine\World\UPrimitiveComponent.cpp" />
     <ClCompile Include="Engine\World\USceneComponent.cpp" />
     <ClCompile Include="Engine\World\USphereComp.cpp" />
+    <ClCompile Include="Engine\Editor\Tools\GizmoMath.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Engine\World\Level.cpp" />
     <ClCompile Include="Engine\Editor\SelectionSet.cpp" />
