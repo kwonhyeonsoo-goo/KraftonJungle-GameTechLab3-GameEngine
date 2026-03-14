@@ -21,14 +21,14 @@ FRay CPicker::ScreenToRay(int ScreenX, int ScreenY, int ScreenWidth, int ScreenH
     float ViewZ = 1.0f;
 
     // View → World (View 행렬의 역행렬)
-    FMatrix ViewInv = ViewMatrix.Inverse();
+    FMatrix ViewInv = ViewMatrix.GetInverse();
 
     // 레이 방향 (View Space의 방향 벡터를 World로 변환)
     FVector RayDirWorld;
     RayDirWorld.X = ViewX * ViewInv.M[0][0] + ViewY * ViewInv.M[1][0] + ViewZ * ViewInv.M[2][0];
     RayDirWorld.Y = ViewX * ViewInv.M[0][1] + ViewY * ViewInv.M[1][1] + ViewZ * ViewInv.M[2][1];
     RayDirWorld.Z = ViewX * ViewInv.M[0][2] + ViewY * ViewInv.M[1][2] + ViewZ * ViewInv.M[2][2];
-    RayDirWorld = RayDirWorld.Normalize();
+    RayDirWorld = RayDirWorld.GetSafeNormal();
 
     // 레이 원점 = 카메라 위치 (ViewInverse의 Translation 부분)
     FVector RayOrigin;
@@ -48,26 +48,26 @@ bool CPicker::RayTriangleIntersect(const FRay& Ray,
     FVector Edge1 = V1 - V0;
     FVector Edge2 = V2 - V0;
 
-    FVector H = Ray.Direction.Cross(Edge2);
-    float A = Edge1.Dot(H);
+    FVector H = FVector::CrossProduct(Ray.Direction, Edge2);
+    float A = FVector::DotProduct(Edge1, H);
 
     if (A > -EPSILON && A < EPSILON)
         return false; // 레이가 삼각형과 평행
 
     float F = 1.0f / A;
     FVector S = Ray.Origin - V0;
-    float U = F * S.Dot(H);
+    float U = F * FVector::DotProduct(S, H);
 
     if (U < 0.0f || U > 1.0f)
         return false;
 
-    FVector Q = S.Cross(Edge1);
-    float V = F * Ray.Direction.Dot(Q);
+    FVector Q = FVector::CrossProduct(S, Edge1);
+    float V = F * FVector::DotProduct(Ray.Direction, Q);
 
     if (V < 0.0f || U + V > 1.0f)
         return false;
 
-    float T = F * Edge2.Dot(Q);
+    float T = F * FVector::DotProduct(Edge2, Q);
 
     if (T > EPSILON)
     {
