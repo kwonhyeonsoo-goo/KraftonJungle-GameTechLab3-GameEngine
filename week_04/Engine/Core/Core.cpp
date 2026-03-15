@@ -117,7 +117,7 @@ void CCore::GameLogic(float DeltaTime)
 
 void CCore::Render()
 {
-	if (!Renderer || !Scene)
+	if (!Renderer || !Scene || Renderer->IsOccluded())
 	{
 		return;
 	}

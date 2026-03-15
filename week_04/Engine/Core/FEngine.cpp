@@ -53,9 +53,6 @@ void FEngine::Run()
 {
 	while (App->PumpMessages())
 	{
-		if (Core->GetRenderer()->IsOccluded())
-			continue;
-
 		Core->Tick();
 	}
 }
