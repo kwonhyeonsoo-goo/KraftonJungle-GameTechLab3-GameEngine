@@ -38,26 +38,19 @@ void StatPanel::OnRender(AppContext& ctx)
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Text("Camera");
-
-        ImGui::Text("Position            : (%.2f, %.2f, %.2f)",
-            ctx.Editor.Camera.Position.GetX(),
-            ctx.Editor.Camera.Position.GetY(),
-            ctx.Editor.Camera.Position.GetZ());
-
-        ImGui::Text("Yaw / Pitch         : %.2f / %.2f",
-            ctx.Editor.Camera.Yaw,
-            ctx.Editor.Camera.Pitch);
-
-        ImGui::Text("Move Speed          : %.2f", ctx.Editor.Camera.MoveSpeed);
-        ImGui::Text("Rot Speed           : %.2f", ctx.Editor.Camera.RotSpeed);
+        ImGui::DragFloat3("Position", &ctx.Editor.Camera.Position.x, 0.01f);
+        ImGui::DragFloat("Yaw", &ctx.Editor.Camera.Yaw, 0.1f);
+        ImGui::DragFloat("Pitch", &ctx.Editor.Camera.Pitch, 0.1f, -89.f, 89.f);
+        ImGui::DragFloat("Move Speed", &ctx.Editor.Camera.MoveSpeed, 0.01f, 0.1f, 50.f);
+        ImGui::DragFloat("Rot Speed", &ctx.Editor.Camera.RotSpeed, 0.001f, 0.01f, 5.f);
 
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Text("Projection");
 
-        ImGui::Text("FovY                : %.2f", ctx.Editor.FovY);
-        ImGui::Text("Aspect Ratio        : %.3f", ctx.Editor.AspectRatio);
-        ImGui::Text("Near / Far          : %.3f / %.3f", ctx.Editor.NearZ, ctx.Editor.FarZ);
+        ImGui::DragFloat("FovY",    &ctx.Editor.FovY, 0.1f, 10.f, 170.f, "%.2f");
+        ImGui::DragFloat("Near",    &ctx.Editor.NearZ, 0.001f, 0.001f, 10.f, "%.3f");
+        ImGui::DragFloat("Far",     &ctx.Editor.FarZ, 1.f, 10.f, 10000.f, "%.1f");
     }
 
     ImGui::End();

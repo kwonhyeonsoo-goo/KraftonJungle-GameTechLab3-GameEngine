@@ -1,21 +1,5 @@
 #include "TranslateTool.h"
 
-namespace
-{
-    void PushLine(RenderQueue& queue,
-        const FVector& a,
-        const FVector& b,
-        uint32 color,
-        uint32 objectId)
-    {
-        RenderCommand cmd = {};
-        cmd.Type = ERenderType::Gizmo;
-        cmd.Color = color;
-        cmd.ObjectId = objectId;
-        queue.Push(cmd);
-    }
-}
-
 int TranslateTool::AxisToIndex(EAxis axis)
 {
     switch (axis)
