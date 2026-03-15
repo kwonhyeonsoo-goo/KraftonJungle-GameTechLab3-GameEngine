@@ -132,25 +132,6 @@ void CEditorUI::SetupWindow(CWindow* InWindow)
 			}
 			return false;
 		});
-
-	// Input forwarding filter
-	MainWindow->AddMessageFilter([this](HWND h, UINT m, WPARAM w, LPARAM l) -> bool
-		{
-			if (Core)
-			{
-				Core->ProcessInput(h, m, w, l);
-			}
-			return false;
-		});
-
-	// Resize callback
-	MainWindow->SetOnResizeCallback([this](int W, int H)
-		{
-			if (Core)
-			{
-				Core->OnResize(W, H);
-			}
-		});
 }
 
 void CEditorUI::BuildDefaultLayout(unsigned int DockID)

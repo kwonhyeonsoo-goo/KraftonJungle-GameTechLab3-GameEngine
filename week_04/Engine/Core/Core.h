@@ -36,6 +36,7 @@ public:
 
 	void OnResize(int Width, int Height);
 private:
+	void ProcessCameraInput(float DeltaTime);
 	void Physics(float DeltaTime);
 	void GameLogic(float DeltaTime);
 	void Render();

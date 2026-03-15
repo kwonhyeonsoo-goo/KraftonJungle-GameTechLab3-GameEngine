@@ -23,7 +23,9 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int Width, i
 	if (!Core->Initialize(MainWindow->GetHwnd(), MainWindow->GetWidth(), MainWindow->GetHeight()))
 		return false;
 
-	// Input forwarding
+	Startup();
+
+	// Input forwarding (registered after Startup so Editor can add ImGui/Picking filters first)
 	MainWindow->AddMessageFilter([this](HWND h, UINT m, WPARAM w, LPARAM l) -> bool
 		{
 			if (Core)
@@ -41,8 +43,6 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int Width, i
 				Core->OnResize(W, H);
 			}
 		});
-
-	Startup();
 
 	MainWindow->Show();
 

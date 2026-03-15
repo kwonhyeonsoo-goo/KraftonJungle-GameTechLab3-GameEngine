@@ -93,14 +93,40 @@ void CCore::Tick()
 
 void CCore::Tick(const float DeltaTime)
 {
-	if (InputManager && Scene)
+	if (InputManager)
 	{
-		InputManager->Tick(DeltaTime, Scene->GetCamera());
+		InputManager->Tick();
 	}
+
+	ProcessCameraInput(DeltaTime);
 
 	Physics(DeltaTime);
 	GameLogic(DeltaTime);
 	Render();
+}
+
+void CCore::ProcessCameraInput(float DeltaTime)
+{
+	if (!InputManager || !Scene)
+		return;
+
+	CCamera* Camera = Scene->GetCamera();
+	if (!Camera)
+		return;
+
+	if (InputManager->IsKeyDown('W')) Camera->MoveForward(DeltaTime);
+	if (InputManager->IsKeyDown('S')) Camera->MoveForward(-DeltaTime);
+	if (InputManager->IsKeyDown('D')) Camera->MoveRight(DeltaTime);
+	if (InputManager->IsKeyDown('A')) Camera->MoveRight(-DeltaTime);
+	if (InputManager->IsKeyDown('E')) Camera->MoveUp(DeltaTime);
+	if (InputManager->IsKeyDown('Q')) Camera->MoveUp(-DeltaTime);
+
+	if (InputManager->IsMouseButtonDown(CInputManager::MOUSE_RIGHT))
+	{
+		float DeltaX = InputManager->GetMouseDeltaX();
+		float DeltaY = InputManager->GetMouseDeltaY();
+		Camera->Rotate(DeltaX * 0.2f, -DeltaY * 0.2f);
+	}
 }
 
 void CCore::Physics(float DeltaTime)
