@@ -148,6 +148,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="FEditorEngine.cpp" />
     <ClCompile Include="Axis\AxisRenderer.cpp" />
     <ClCompile Include="Gizmo\Gizmo.cpp" />
     <ClCompile Include="Picking\Picker.cpp" />
@@ -166,6 +167,7 @@
     <ClCompile Include="UI\StatWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="FEditorEngine.h" />
     <ClInclude Include="Axis\AxisRenderer.h" />
     <ClInclude Include="Gizmo\Gizmo.h" />
     <ClInclude Include="Picking\Picker.h" />

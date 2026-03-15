@@ -24,6 +24,7 @@
     <ClInclude Include="Object\Class.h" />
     <ClInclude Include="Component\SceneComponent.h" />
     <ClInclude Include="Core\Core.h" />
+    <ClInclude Include="Core\FEngine.h" />
     <ClInclude Include="Core\FTimer.h" />
     <ClInclude Include="CoreMinimal.h" />
     <ClInclude Include="EngineTest.h" />
@@ -50,6 +51,7 @@
   <ItemGroup>
     <ClCompile Include="Component\ActorComponent.cpp" />
     <ClCompile Include="Core\Core.cpp" />
+    <ClCompile Include="Core\FEngine.cpp" />
     <ClCompile Include="Core\FTimer.cpp" />
     <ClCompile Include="Object\Actor\Actor.cpp" />
     <ClCompile Include="Object\Class.cpp" />
