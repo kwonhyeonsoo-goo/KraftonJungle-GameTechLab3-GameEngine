@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+﻿﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Component\ActorComponent.cpp" />
@@ -14,6 +14,8 @@
     <ClCompile Include="Object\Scene\Scene.cpp" />
     <ClCompile Include="Math\Vector.cpp" />
     <ClCompile Include="Math\Matrix.cpp" />
+    <ClCompile Include="Math\Rotator.cpp" />
+    <ClCompile Include="Math\Quat.cpp" />
     <ClCompile Include="Math\Transform.cpp" />
     <ClCompile Include="Camera\Camera.cpp" />
     <ClCompile Include="Component\PrimitiveComponent.cpp" />
@@ -57,6 +59,8 @@
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="Math\Vector4.h" />
     <ClInclude Include="Math\Matrix.h" />
+    <ClInclude Include="Math\Rotator.h" />
+    <ClInclude Include="Math\Quat.h" />
     <ClInclude Include="Math\Transform.h" />
     <ClInclude Include="Camera\Camera.h" />
     <ClInclude Include="Renderer\RenderCommand.h" />

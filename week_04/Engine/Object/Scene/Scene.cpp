@@ -107,17 +107,18 @@ void UScene::LoadSceneFromFile(const FString& FilePath)
 		if (Value.contains("Location"))
 		{
 			auto& L = Value["Location"];
-			Transform.Location = { L[0].get<float>(), L[1].get<float>(), L[2].get<float>() };
+			Transform.SetTranslation({ L[0].get<float>(), L[1].get<float>(), L[2].get<float>() });
 		}
 		if (Value.contains("Rotation"))
 		{
 			auto& R = Value["Rotation"];
-			Transform.Rotation = { R[0].get<float>(), R[1].get<float>(), R[2].get<float>() };
+			const FVector EulerDegrees(R[0].get<float>(), R[1].get<float>(), R[2].get<float>());
+			Transform.SetRotation(FRotator::MakeFromEuler(EulerDegrees));
 		}
 		if (Value.contains("Scale"))
 		{
 			auto& S = Value["Scale"];
-			Transform.Scale = { S[0].get<float>(), S[1].get<float>(), S[2].get<float>() };
+			Transform.SetScale3D({ S[0].get<float>(), S[1].get<float>(), S[2].get<float>() });
 		}
 		Actor->GetRootComponent()->SetRelativeTransform(Transform);
 
@@ -160,12 +161,21 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 				continue;
 
 			FTransform Transform = Actor->GetRootComponent()->GetRelativeTransform();
+			const FVector EulerDegrees = Transform.Rotator().Euler();
 			FString Key = std::to_string(Index);
 
 			Primitives[Key]["Type"] = Type;
-			Primitives[Key]["Location"] = { Transform.Location.X, Transform.Location.Y, Transform.Location.Z };
-			Primitives[Key]["Rotation"] = { Transform.Rotation.X, Transform.Rotation.Y, Transform.Rotation.Z };
-			Primitives[Key]["Scale"] = { Transform.Scale.X, Transform.Scale.Y, Transform.Scale.Z };
+			Primitives[Key]["Location"] = {
+				Transform.GetTranslation().X,
+				Transform.GetTranslation().Y,
+				Transform.GetTranslation().Z
+			};
+			Primitives[Key]["Rotation"] = { EulerDegrees.X, EulerDegrees.Y, EulerDegrees.Z };
+			Primitives[Key]["Scale"] = {
+				Transform.GetScale3D().X,
+				Transform.GetScale3D().Y,
+				Transform.GetScale3D().Z
+			};
 
 			++Index;
 		}

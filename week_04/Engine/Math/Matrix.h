@@ -86,12 +86,11 @@ public:
 	{
 		for (int32 Row = 0; Row < 4; ++Row)
 		{
-			for (int32 Col = 0; Col < 4;  ++Col)
+			const XMVector ThisRow = DirectX::XMVectorSet(M[Row][0], M[Row][1], M[Row][2], M[Row][3]);
+			const XMVector OtherRow = DirectX::XMVectorSet(Other.M[Row][0], Other.M[Row][1], Other.M[Row][2], Other.M[Row][3]);
+			if (!DirectX::XMVector4Equal(ThisRow, OtherRow))
 			{
-				if (M[Row][Col] != Other.M[Row][Col])
-				{
-					return false;
-				}
+				return false;
 			}
 		}
 		return true;
@@ -244,14 +243,14 @@ public:
 	// 두 행렬이 허용 오차(Tolerance) 범위 내에서 같은지 비교함
 	bool Equals(const FMatrix& Other, float Tolerance = 1.e-6f) const noexcept
 	{
+		const XMVector ToleranceVector = DirectX::XMVectorReplicate(Tolerance);
 		for (int32_t Row = 0; Row < 4; ++Row)
 		{
-			for (int32_t Col = 0; Col < 4; ++Col)
+			const XMVector ThisRow = DirectX::XMVectorSet(M[Row][0], M[Row][1], M[Row][2], M[Row][3]);
+			const XMVector OtherRow = DirectX::XMVectorSet(Other.M[Row][0], Other.M[Row][1], Other.M[Row][2], Other.M[Row][3]);
+			if (!DirectX::XMVector4NearEqual(ThisRow, OtherRow, ToleranceVector))
 			{
-				if (std::fabs(M[Row][Col] - Other.M[Row][Col]) > Tolerance)
-				{
-					return false;
-				}
+				return false;
 			}
 		}
 		return true;
@@ -347,10 +346,14 @@ public:
 	// 현재 행렬에 포함된 스케일 값을 반환함
 	FVector GetScaleVector() const noexcept
 	{
+		const XMVector XAxis = DirectX::XMVectorSet(M[0][0], M[0][1], M[0][2], 0.0f);
+		const XMVector YAxis = DirectX::XMVectorSet(M[1][0], M[1][1], M[1][2], 0.0f);
+		const XMVector ZAxis = DirectX::XMVectorSet(M[2][0], M[2][1], M[2][2], 0.0f);
+
 		return FVector(
-			GetScaledAxis(EAxis::X).Size(),
-			GetScaledAxis(EAxis::Y).Size(),
-			GetScaledAxis(EAxis::Z).Size()
+			DirectX::XMVectorGetX(DirectX::XMVector3Length(XAxis)),
+			DirectX::XMVectorGetX(DirectX::XMVector3Length(YAxis)),
+			DirectX::XMVectorGetX(DirectX::XMVector3Length(ZAxis))
 		);
 	}
 
@@ -386,6 +389,9 @@ public:
 		if (std::fabs(DeterminantValue) <= Tolerance)
 		{
 			// 역행렬이 없을 때 원본으로 반환하는 정책으로 변경 가능
+#ifndef NDEBUG
+			assert("FMatrix::GetInverse() failed: matrix is singular or invalid.");
+#endif
 			return Identity;
 		}
 
@@ -396,7 +402,7 @@ public:
 	// 역행렬이 존재하지 않으면 Identity로 설정함
 	// 현재는 역행렬이 없을 때 Identity를 반환/대입하는 정책입니다.
 	// 디버깅 투명성을 높이려면 원본 유지 + false 반환 정책도 고려할 수 있습니다.
-	bool Inverse(float Tolerance = 1.e-8f) noexcept
+	[[nodiscard]] bool Inverse(float Tolerance = 1.e-8f) noexcept
 	{
 		const DirectX::XMMATRIX XM = ToXMMatrix();
 
@@ -627,8 +633,8 @@ public:
 		const FVector UpCandidate =
 			(std::fabs(Y.Z) < 0.999f) ? FVector::UpVector : FVector::ForwardVector;
 
-		const FVector Z = FVector::CrossProduct(Y, UpCandidate).GetSafeNormal();
-		const FVector X = FVector::CrossProduct(Y, Z).GetSafeNormal();
+		const FVector X = FVector::CrossProduct(Y, UpCandidate).GetSafeNormal();
+		const FVector Z = FVector::CrossProduct(X, Y).GetSafeNormal();
 
 		return FMatrix(
 			X.X, X.Y, X.Z, 0.f,
@@ -649,10 +655,10 @@ public:
 		}
 
 		const FVector ForwardCandidate =
-			(std::fabs(Z.Z) < 0.999f) ? FVector::UpVector : FVector::ForwardVector;
+			(std::fabs(Z.X) < 0.999f) ? FVector::ForwardVector : FVector::RightVector;
 
-		const FVector X = FVector::CrossProduct(ForwardCandidate, Z).GetSafeNormal();
-		const FVector Y = FVector::CrossProduct(Z, X).GetSafeNormal();
+		const FVector Y = FVector::CrossProduct(Z, ForwardCandidate).GetSafeNormal();
+		const FVector X = FVector::CrossProduct(Y, Z).GetSafeNormal();
 
 		return FMatrix(
 			X.X, X.Y, X.Z, 0.f,

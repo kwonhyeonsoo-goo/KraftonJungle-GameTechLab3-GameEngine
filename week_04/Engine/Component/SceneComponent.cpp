@@ -23,7 +23,7 @@ void USceneComponent::SetRelativeTransform(const FTransform& InTransform)
 
 void USceneComponent::SetRelativeLocation(const FVector& InLocation)
 {
-	RelativeTransform.Location = InLocation;
+	RelativeTransform.SetTranslation(InLocation);
 	MarkTransformDirty();
 }
 
@@ -70,17 +70,7 @@ const FMatrix& USceneComponent::GetWorldTransform() const
 
 FVector USceneComponent::GetWorldLocation() const
 {
-	if (AttachParent == nullptr)
-	{
-		return RelativeTransform.Location;
-	}
-
-	const FVector ParentWorld = AttachParent->GetWorldLocation();
-	return FVector{
-		ParentWorld.X + RelativeTransform.Location.X,
-		ParentWorld.Y + RelativeTransform.Location.Y,
-		ParentWorld.Z + RelativeTransform.Location.Z
-	};
+	return GetWorldTransform().GetTranslation();
 }
 
 void USceneComponent::MarkTransformDirty()
@@ -98,7 +88,7 @@ void USceneComponent::MarkTransformDirty()
 
 void USceneComponent::UpdateWorldTransform() const
 {
-	CachedWorldTransform = RelativeTransform.ToMatrix();
+	CachedWorldTransform = RelativeTransform.ToMatrixWithScale();
 	if (AttachParent)
 	{
 		CachedWorldTransform = CachedWorldTransform * AttachParent->GetWorldTransform();

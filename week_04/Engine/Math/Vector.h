@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include "EngineAPI.h"
 #include "Types/CoreTypes.h"
@@ -199,9 +200,10 @@ public:
 	// 허용 오차(Tolerance) 범위 내에서 두 벡터가 같은지 비교함
 	bool Equals(const FVector& V, float Tolerance = 1.e-6f) const noexcept
 	{
-		return std::fabs(X - V.X) <= Tolerance
-			&& std::fabs(Y - V.Y) <= Tolerance
-			&& std::fabs(Z - V.Z) <= Tolerance;
+		return DirectX::XMVector3NearEqual(
+			ToXMVector(),
+			V.ToXMVector(),
+			DirectX::XMVectorReplicate(Tolerance));
 	}
 
 	// 모든 성분이 정확히 0인지 확인함
@@ -213,47 +215,46 @@ public:
 	// 모든 성분이 허용 오차(Tolerance) 이하인지 확인함
 	bool IsNearlyZero(float Tolerance = 1.e-6f) const noexcept
 	{
-		return std::fabs(X) <= Tolerance
-			&& std::fabs(Y) <= Tolerance
-			&& std::fabs(Z) <= Tolerance;
+		return DirectX::XMVector3NearEqual(
+			ToXMVector(),
+			DirectX::XMVectorZero(),
+			DirectX::XMVectorReplicate(Tolerance));
 	}
 
 	// 벡터 길이의 제곱 값을 구함
 	// 제곱근 연산이 없어서 Size()보다 빠름
 	float SizeSquared() const noexcept
 	{
-		return X * X + Y * Y + Z * Z;
+		return DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(ToXMVector()));
 	}
 
 	// 벡터의 길이(크기)를 구함
 	float Size() const noexcept
 	{
-		return std::sqrt(SizeSquared());
+		return DirectX::XMVectorGetX(DirectX::XMVector3Length(ToXMVector()));
 	}
 
 	// XY 평면에서의 벡터 길이 제곱 값을 구함
 	float SizeSquared2D() const noexcept
 	{
-		return X * X + Y * Y;
+		return DirectX::XMVectorGetX(DirectX::XMVector2LengthSq(ToXMVector()));
 	}
 
 	// XY 평면에서의 벡터 길이(크기)를 구함
 	float Size2D() const noexcept
 	{
-		return std::sqrt(SizeSquared2D());
+		return DirectX::XMVectorGetX(DirectX::XMVector2Length(ToXMVector()));
 	}
 
 	// 현재 벡터를 정규화함
 	// 길이가 너무 작으면 영벡터로 만들고 false를 반환함
 	bool Normalize(float Tolerance = 1.e-8f) noexcept
 	{
-		const float SquareSum = SizeSquared();
+		const XMVector Vector = ToXMVector();
+		const float SquareSum = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(Vector));
 		if (SquareSum > Tolerance)
 		{
-			const float Scale = 1.0f / std::sqrt(SquareSum);
-			X *= Scale;
-			Y *= Scale;
-			Z *= Scale;
+			*this = FVector(DirectX::XMVector3Normalize(Vector));
 			return true;
 		}
 
@@ -267,11 +268,11 @@ public:
 	// 길이가 너무 작으면 ZeroVector를 반환함
 	FVector GetSafeNormal(float Tolerance = 1.e-8f) const noexcept
 	{
-		const float SquareSum = SizeSquared();
+		const XMVector Vector = ToXMVector();
+		const float SquareSum = DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(Vector));
 		if (SquareSum > Tolerance)
 		{
-			const float Scale = 1.0f / std::sqrt(SquareSum);
-			return FVector(X * Scale, Y * Scale, Z * Scale);
+			return FVector(DirectX::XMVector3Normalize(Vector));
 		}
 
 		return ZeroVector;
@@ -281,11 +282,15 @@ public:
 	// Z는 0으로 설정되며 길이가 너무 작으면 ZeroVector를 반환함
 	FVector GetSafeNormal2D(float Tolerance = 1.e-8f) const noexcept
 	{
-		const float SquareSum = SizeSquared2D();
+		const XMVector Vector = ToXMVector();
+		const float SquareSum = DirectX::XMVectorGetX(DirectX::XMVector2LengthSq(Vector));
 		if (SquareSum > Tolerance)
 		{
-			const float Scale = 1.0f / std::sqrt(SquareSum);
-			return FVector(X * Scale, Y * Scale, 0.f);
+			const XMVector Normalized = DirectX::XMVector2Normalize(Vector);
+			return FVector(
+				DirectX::XMVectorGetX(Normalized),
+				DirectX::XMVectorGetY(Normalized),
+				0.0f);
 		}
 
 		return ZeroVector;
@@ -295,30 +300,28 @@ public:
 	// 두 벡터의 내적(Dot Product)을 구함
 	static float DotProduct(const FVector& A, const FVector& B) noexcept
 	{
-		return A.X * B.X + A.Y * B.Y + A.Z * B.Z;
+		return DirectX::XMVectorGetX(DirectX::XMVector3Dot(A.ToXMVector(), B.ToXMVector()));
 	}
 
 	// 두 벡터의 외적(Cross Product)을 구함
 	static FVector CrossProduct(const FVector& A, const FVector& B) noexcept
 	{
-		return FVector(
-			A.Y * B.Z - A.Z * B.Y,
-			A.Z * B.X - A.X * B.Z,
-			A.X * B.Y - A.Y * B.X
-		);
+		return FVector(DirectX::XMVector3Cross(A.ToXMVector(), B.ToXMVector()));
 	}
 
 	// 두 벡터 사이 거리의 제곱 값을 구함
 	// 거리 비교만 필요할 때 Dist()보다 효율적임
 	static float DistSquared(const FVector& A, const FVector& B) noexcept
 	{
-		return (A - B).SizeSquared();
+		const XMVector Delta = DirectX::XMVectorSubtract(A.ToXMVector(), B.ToXMVector());
+		return DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(Delta));
 	}
 
 	// 두 벡터의 거리를 구함
 	static float Dist(const FVector& A, const FVector& B) noexcept
 	{
-		return (A - B).Size();
+		const XMVector Delta = DirectX::XMVectorSubtract(A.ToXMVector(), B.ToXMVector());
+		return DirectX::XMVectorGetX(DirectX::XMVector3Length(Delta));
 	}
 };
 
