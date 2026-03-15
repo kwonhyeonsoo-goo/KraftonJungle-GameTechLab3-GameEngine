@@ -42,6 +42,9 @@ bool CCore::Initialize(HWND Hwnd, int Width, int Height)
 	// InputManager
 	InputManager = new CInputManager();
 
+	// Timer
+	Timer.Initialize();
+
 	// Scene
 	Scene = new UScene(UScene::StaticClass(), "DefaultScene");
 	Scene->InitializeDefaultScene(static_cast<float>(Width) / static_cast<float>(Height));
@@ -80,6 +83,12 @@ void CCore::Release()
 		delete Renderer;
 		Renderer = nullptr;
 	}
+}
+
+void CCore::Tick()
+{
+	float DeltaTime = Timer.GetDeltaTime();
+	Tick(DeltaTime);
 }
 
 void CCore::Tick(const float DeltaTime)

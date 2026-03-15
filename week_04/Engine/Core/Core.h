@@ -1,6 +1,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "Windows.h"
+#include "Core/FTimer.h"
 
 class AActor;
 class UScene;
@@ -21,6 +22,7 @@ public:
 	bool Initialize(HWND Hwnd, int Width, int Height);
 	void Release();
 
+	void Tick();
 	void Tick(float DeltaTime);
 
 	void ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
@@ -45,6 +47,7 @@ private:
 	UScene* Scene = nullptr;
 	AActor* SelectedActor = nullptr;
 
+	FTimer Timer;
 	int32 WindowWidth = 0;
 	int32 WindowHeight = 0;
 };

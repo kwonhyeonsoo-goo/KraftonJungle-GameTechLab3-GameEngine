@@ -42,23 +42,13 @@ int EngineMain(HINSTANCE hInstance)
 	});
 	UE_LOG("Engine initialized");
 
-	// Timing
-	LARGE_INTEGER Frequency, LastTime, CurrentTime;
-	QueryPerformanceFrequency(&Frequency);
-	QueryPerformanceCounter(&LastTime);
-
 	// Main loop
 	while (App.PumpMessages())
 	{
 		if (Core.GetRenderer()->IsOccluded())
 			continue;
 
-		QueryPerformanceCounter(&CurrentTime);
-		float DeltaTime = static_cast<float>(CurrentTime.QuadPart - LastTime.QuadPart)
-			/ static_cast<float>(Frequency.QuadPart);
-		LastTime = CurrentTime;
-
-		Core.Tick(DeltaTime);
+		Core.Tick();
 	}
 
 	// Cleanup
