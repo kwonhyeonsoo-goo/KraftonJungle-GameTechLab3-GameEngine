@@ -121,9 +121,6 @@ bool SerializationService::Load(AppContext& ctx) {
 		scl.y = toFloat(kv.second["Scale"][1]);
 		scl.z = toFloat(kv.second["Scale"][2]);
 
-
-		std::cout << typeName << Transform(loc, rot, scl) << std::endl;
-
 		ctx.Dispatch(
 			new SpawnObjectCommand(
 				ctx,

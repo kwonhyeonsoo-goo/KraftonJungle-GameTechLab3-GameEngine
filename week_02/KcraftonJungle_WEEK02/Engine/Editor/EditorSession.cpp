@@ -50,7 +50,7 @@ void EditorSession::ProcessCameraInput(const InputState& input, float deltaTime)
     
     if (input.Keys['Q'])
         Camera.Position -= Camera.GetForwardVector().Cross(Camera.GetRightVector()) * Camera.MoveSpeed * deltaTime;
-    if (input.Keys[VK_SPACE])
+    if (input.Keys['E'])
         Camera.Position += Camera.GetForwardVector().Cross(Camera.GetRightVector()) * Camera.MoveSpeed * deltaTime;
 
     if (input.MouseButtons[1]) {
