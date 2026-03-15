@@ -657,13 +657,12 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
         {     
         case ERenderType::Primitive:
             UpdateMVP(constants.MVP);
-
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             PrepareShader();
             switch (cmd.Shape)
             {
             case EPrimitiveShape::Sphere:
-                
+                DeviceContext->RSSetState(RasterizerStateOutline);
                 RenderPrimitive(vertexBufferSphere, numVerticesSphere);
                 break;
             case EPrimitiveShape::Cube:
@@ -713,6 +712,7 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             switch (cmd.Shape)
             {
             case EPrimitiveShape::Sphere:
+                DeviceContext->RSSetState(RasterizerState);
                 RenderPrimitive(vertexBufferSphere, numVerticesSphere);
                 break;
             case EPrimitiveShape::Cube:
