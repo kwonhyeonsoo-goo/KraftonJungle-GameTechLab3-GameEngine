@@ -20,7 +20,7 @@ namespace
     FMatrix BuildRotationMatrixFromDegrees(const FVector& rotationDeg)
     {
         return FMatrix::RotationX(DegToRad(rotationDeg.x))
-            * FMatrix::RotationY(DegToRad(rotationDeg.y))
+            * FMatrix::RotationY(-DegToRad(rotationDeg.y))
             * FMatrix::RotationZ(DegToRad(rotationDeg.z));
     }
 
@@ -35,6 +35,20 @@ namespace
     {
         return a.x * b.x + a.y * b.y;
     }
+}
+
+FMatrix GizmoMath::MakeAxisTransform(const FVector& basePos, const FVector& axisDir, float scale)
+{
+    FVector localZ = axisDir.Normalized();
+    FVector localX = MakeStablePerpendicular(localZ);
+    FVector localY = localZ.Cross(localX).Normalized();
+
+    return {
+        localX.x * scale, localX.y * scale, localX.z * scale, 0.0f,
+        localY.x * scale, localY.y * scale, localY.z * scale, 0.0f,
+        localZ.x * scale, localZ.y * scale, localZ.z * scale, 0.0f,
+        basePos.x,        basePos.y,        basePos.z,        1.0f
+    };
 }
 
 FVector GizmoMath::AxisX()

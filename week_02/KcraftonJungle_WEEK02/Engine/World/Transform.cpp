@@ -25,9 +25,9 @@ FMatrix Transform::ToMatrix() const
 
     return
         FMatrix::Scale(Scale) *
-        FMatrix::RotationY(-pitch) *
-        FMatrix::RotationZ(yaw) * 
-        FMatrix::RotationX(roll) *
+        FMatrix::RotationX(pitch) *
+        FMatrix::RotationY(-yaw) *
+        FMatrix::RotationZ(roll) *
         FMatrix::Translation(Location);
 }
 

@@ -3,31 +3,17 @@
 namespace
 {
     constexpr float MinScaleValue = 0.01f;
-    constexpr float HandleWorldSize = 0.10f;
-
-    void PushLine(RenderQueue& queue,
-        const FVector& a,
-        const FVector& b,
-        uint32 color,
-        uint32 objectId)
-    {
-        RenderCommand cmd = {};
-        cmd.Type = ERenderType::Gizmo;
-        cmd.Color = color;
-        cmd.ObjectId = objectId;
-        queue.Push(cmd);
-    }
-
-    float ClampScaleValue(float value)
-    {
-        return value < MinScaleValue ? MinScaleValue : value;
-    }
 
     bool NearlySameScale(const FVector& a, const FVector& b, float eps = 0.0001f)
     {
         return std::fabs(a.x - b.x) <= eps
             && std::fabs(a.y - b.y) <= eps
             && std::fabs(a.z - b.z) <= eps;
+    }
+
+    float ClampScaleValue(float value)
+    {
+        return value < MinScaleValue ? MinScaleValue : value;
     }
 }
 
@@ -197,21 +183,17 @@ void ScaleTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
     for (int axisIndex = 0; axisIndex < 3; ++axisIndex)
     {
         const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, coordSpace);
-        const FVector tip = origin + axisDir * GizmoMath::GizmoAxisLength;
 
         const uint32 color =
             axisIndex == 0 ? GizmoMath::AxisColorX :
             axisIndex == 1 ? GizmoMath::AxisColorY :
             GizmoMath::AxisColorZ;
 
-        // 축 라인
-        PushLine(queue, origin, tip, color, objectId);
-
-        // 축 끝 핸들: 축에 수직한 두 방향으로 작은 십자 표시
-        const FVector side1 = GizmoMath::MakeStablePerpendicular(axisDir) * HandleWorldSize;
-        const FVector side2 = axisDir.Cross(side1).Normalized() * HandleWorldSize;
-
-        PushLine(queue, tip - side1, tip + side1, color, objectId);
-        PushLine(queue, tip - side2, tip + side2, color, objectId);
+        RenderCommand cmd = {};
+        cmd.Type = ERenderType::Gizmo;
+        cmd.WorldTransform = GizmoMath::MakeAxisTransform(origin, axisDir, GizmoMath::GizmoAxisLength);
+        cmd.Color = color;
+        cmd.ObjectId = objectId;
+        queue.Push(cmd);
     }
 }

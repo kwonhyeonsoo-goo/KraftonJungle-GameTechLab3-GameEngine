@@ -180,7 +180,7 @@ static FMatrix MakeArrowTransformFromLocalZ(
     FVector localX = GizmoMath::MakeStablePerpendicular(localZ);
     FVector localY = localZ.Cross(localX).Normalized();
 
-    // row-vector ±âÁØ:
+    // row-vector ï¿½ï¿½ï¿½ï¿½:
     // row0 = local X axis in world
     // row1 = local Y axis in world
     // row2 = local Z axis in world
@@ -213,7 +213,7 @@ void TranslateTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
 
         RenderCommand cmd = {};
         cmd.Type = ERenderType::Gizmo;
-        cmd.WorldTransform = MakeArrowTransformFromLocalZ(origin, axisDir, 1.0f);
+        cmd.WorldTransform = GizmoMath::MakeAxisTransform(origin, axisDir, GizmoMath::GizmoAxisLength);
         cmd.Color = color;
         cmd.ObjectId = primary->GetUUID();
 
