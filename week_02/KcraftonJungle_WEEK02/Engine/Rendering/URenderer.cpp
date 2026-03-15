@@ -663,16 +663,16 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
                 RenderPrimitive(vertexBufferSphere, numVerticesSphere);
                 break;
             case EPrimitiveShape::Cube:
-
+                DeviceContext->RSSetState(RasterizerState);
                 RenderPrimitive(vertexBufferCube, numVerticesCube);
                 break;
             case EPrimitiveShape::Triangle:
-
+                DeviceContext->RSSetState(RasterizerState);
                 RenderPrimitive(vertexBufferTriangle, numVerticesTriangle);
 
                 break;
             case EPrimitiveShape::Plane:
-
+                DeviceContext->RSSetState(RasterizerState);
                 RenderIndexedPrimitive(vertexBufferRect, indexBufferRect, sizeof(rect_indices)/sizeof(UINT));
 
                 break;
