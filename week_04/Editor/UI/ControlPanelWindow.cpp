@@ -77,6 +77,23 @@ void CControlPanelWindow::Render(CCore* Core)
 			UE_LOG("Spawned %s: %s", SpawnTypes[SpawnTypeIndex], Name.c_str());
 		}
 
+		ImGui::SameLine();
+
+		AActor* Selected = Core->GetSelectedActor();
+		if (!Selected)
+			ImGui::BeginDisabled();
+
+		if (ImGui::Button("Delete"))
+		{
+			FString Name = Selected->GetName();
+			Core->GetScene()->DestroyActor(Selected);
+			Core->SetSelectedActor(nullptr);
+			UE_LOG("Deleted actor: %s", Name.c_str());
+		}
+
+		if (!Selected)
+			ImGui::EndDisabled();
+
 		ImGui::SeparatorText("Scene");
 
 		static char SceneName[128] = "NewScene";
