@@ -128,6 +128,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
+    <ClInclude Include="Engine\Editor\Commands\DeleteObjectCommand.h" />
     <ClInclude Include="Engine\Editor\EditorManager.h" />
     <ClInclude Include="Engine\Editor\EditorSession.h" />
     <ClInclude Include="Engine\Editor\Events\EditorEvents.h" />
@@ -140,7 +141,7 @@
     <ClInclude Include="Editor\ImGui\imstb_textedit.h" />
     <ClInclude Include="Editor\ImGui\imstb_truetype.h" />
     <ClInclude Include="Engine\Foundation\Core\CoreTypes.h" />
-    <ClInclude Include="Engine\Foundation\Core\log.h" />
+    <ClInclude Include="Engine\Foundation\Core\Log.h" />
     <ClInclude Include="Engine\Foundation\Core\Memory.h" />
     <ClInclude Include="Engine\Foundation\Math\FMatrix.h" />
     <ClInclude Include="Engine\Foundation\Math\FMatrix4.h" />
@@ -167,8 +168,10 @@
     <ClInclude Include="Engine\Rendering\RenderSceneExtractor.h" />
     <ClInclude Include="Engine\Rendering\RenderTypes.h" />
     <ClInclude Include="Engine\Rendering\URenderer.h" />
+    <ClInclude Include="Engine\Services\ConsoleService.h" />
     <ClInclude Include="Engine\Services\PickingService.h" />
     <ClInclude Include="Engine\Services\SerializationService.h" />
+    <ClInclude Include="Engine\Services\StatsService.h" />
     <ClInclude Include="Engine\World\World.h" />
     <ClInclude Include="Engine\World\Sphere.h" />
     <ClInclude Include="Engine\World\Transform.h" />
@@ -181,15 +184,22 @@
     <ClInclude Include="Engine\World\USphereComp.h" />
     <ClInclude Include="Engine\Editor\Commands\ICommand.h" />
     <ClInclude Include="Engine\Editor\Tools\ITool.h" />
+    <ClInclude Include="Engine\Editor\Panels\IEditorPanel.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="Engine\World\Level.h" />
     <ClInclude Include="Engine\Editor\SelectionSet.h" />
     <ClInclude Include="Engine\Editor\ToolContext.h" />
     <ClInclude Include="Engine\Editor\Commands\SetTransformCommand.h" />
     <ClInclude Include="Engine\Mesh\Line.h" />
+    <ClInclude Include="Engine\Editor\Tools\SelectTool.h" />
+    <ClInclude Include="Engine\Editor\Panels\PropertyPanel.h" />
+    <ClInclude Include="Engine\Editor\Panels\ToolbarPanel.h" />
+    <ClInclude Include="Engine\Editor\Commands\SpawnObjectCommand.h" />
+    <ClInclude Include="Engine\Editor\Panels\StatPanel.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AppContext.cpp" />
+    <ClCompile Include="Engine\Editor\Commands\DeleteObjectCommand.cpp" />
     <ClCompile Include="Engine\Editor\EditorManager.cpp" />
     <ClCompile Include="Engine\Editor\EditorSession.cpp" />
     <ClCompile Include="Editor\ImGui\imgui.cpp" />
@@ -199,7 +209,7 @@
     <ClCompile Include="Editor\ImGui\imgui_impl_win32.cpp" />
     <ClCompile Include="Editor\ImGui\imgui_tables.cpp" />
     <ClCompile Include="Editor\ImGui\imgui_widgets.cpp" />
-    <ClCompile Include="Engine\Foundation\Core\log.cpp" />
+    <ClCompile Include="Engine\Foundation\Core\Log.cpp" />
     <ClCompile Include="Engine\Foundation\Core\Memory.cpp" />
     <ClCompile Include="Engine\Foundation\Math\FVector.cpp" />
     <ClCompile Include="Engine\ObjectKernel\ClassRegistry.cpp" />
@@ -215,8 +225,10 @@
     <ClCompile Include="Engine\Platform\WindowHost.cpp" />
     <ClCompile Include="Engine\Rendering\RenderSceneExtractor.cpp" />
     <ClCompile Include="Engine\Rendering\URenderer.cpp" />
+    <ClCompile Include="Engine\Services\ConsoleService.cpp" />
     <ClCompile Include="Engine\Services\PickingService.cpp" />
     <ClCompile Include="Engine\Services\SerializationService.cpp" />
+    <ClCompile Include="Engine\Services\StatsService.cpp" />
     <ClCompile Include="Engine\World\World.cpp" />
     <ClCompile Include="Engine\World\Transform.cpp" />
     <ClCompile Include="Engine\World\UCubeComp.cpp" />
@@ -231,6 +243,11 @@
     <ClCompile Include="Engine\Editor\SelectionSet.cpp" />
     <ClCompile Include="Engine\Editor\ToolContext.cpp" />
     <ClCompile Include="Engine\Editor\Commands\SetTransformCommand.cpp" />
+    <ClCompile Include="Engine\Editor\Tools\SelectTool.cpp" />
+    <ClCompile Include="Engine\Editor\Panels\PropertyPanel.cpp" />
+    <ClCompile Include="Engine\Editor\Panels\ToolbarPanel.cpp" />
+    <ClCompile Include="Engine\Editor\Commands\SpawnObjectCommand.cpp" />
+    <ClCompile Include="Engine\Editor\Panels\StatPanel.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

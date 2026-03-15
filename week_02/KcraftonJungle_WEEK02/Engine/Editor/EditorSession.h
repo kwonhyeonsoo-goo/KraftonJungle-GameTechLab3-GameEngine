@@ -4,7 +4,7 @@
 #include "./SelectionSet.h"
 #include "./ToolContext.h"
 
-class InputState;
+struct InputState;
 
 struct CameraState {
     FVector Position;

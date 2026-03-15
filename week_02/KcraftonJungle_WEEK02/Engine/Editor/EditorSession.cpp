@@ -39,6 +39,24 @@ EditorSession::EditorSession()
 
 void EditorSession::ProcessCameraInput(const InputState& input, float deltaTime)
 {
+    if (input.Keys['W'])
+        Camera.Position += Camera.GetForwardVector() * Camera.MoveSpeed * deltaTime;
+    if (input.Keys['S'])
+        Camera.Position -= Camera.GetForwardVector() * Camera.MoveSpeed * deltaTime;
+    if (input.Keys['D'])
+        Camera.Position += Camera.GetRightVector() * Camera.MoveSpeed * deltaTime;
+    if (input.Keys['A'])
+        Camera.Position -= Camera.GetRightVector() * Camera.MoveSpeed * deltaTime;
+    
+    if (input.Keys['Q'])
+        Camera.Position -= Camera.GetForwardVector().Cross(Camera.GetRightVector()) * Camera.MoveSpeed * deltaTime;
+    if (input.Keys[VK_SPACE])
+        Camera.Position += Camera.GetForwardVector().Cross(Camera.GetRightVector()) * Camera.MoveSpeed * deltaTime;
+
+    if (input.MouseButtons[1]) {
+        Camera.Yaw  += input.MouseDeltaX * Camera.RotSpeed * deltaTime;
+        Camera.Pitch -= input.MouseDeltaY * Camera.RotSpeed * deltaTime;
+    }
 }
 
 FMatrix EditorSession::GetProjectionMatrix() const

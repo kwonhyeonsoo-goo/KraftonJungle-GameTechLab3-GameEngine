@@ -115,6 +115,8 @@
     <ClCompile Include="Engine\Platform\PlatformEvents.cpp" />
     <ClCompile Include="Engine\Platform\WindowHost.cpp" />
     <ClCompile Include="Engine\Services\PickingService.cpp" />
+    <ClCompile Include="Engine\Services\ConsoleService.cpp" />
+    <ClCompile Include="Engine\Services\StatsService.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
@@ -290,6 +292,8 @@
     <ClInclude Include="Engine\Platform\PlatformEvents.h" />
     <ClInclude Include="Engine\Platform\WindowHost.h" />
     <ClInclude Include="Engine\Services\PickingService.h" />
+    <ClInclude Include="Engine\Services\ConsoleService.h" />
+    <ClInclude Include="Engine\Services\StatsService.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">

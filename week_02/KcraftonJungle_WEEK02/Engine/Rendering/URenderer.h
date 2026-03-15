@@ -121,6 +121,7 @@ private:
     void RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer, UINT indexCount);
 
     void CreateDeviceAndSwapChain(HWND hWindow);
+
     void ReleaseDeviceAndSwapChain();
 
     void CreateFrameBuffer();

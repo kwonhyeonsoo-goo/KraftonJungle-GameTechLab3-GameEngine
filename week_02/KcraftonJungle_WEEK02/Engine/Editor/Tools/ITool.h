@@ -4,6 +4,12 @@
 
 struct AppContext;
 
+/// <summary>
+/// int32 X, Y;
+/// bool  LeftDown, RightDown, MiddleDown;
+/// bool  Ctrl, Shift, Alt;
+/// int32 DeltaX, DeltaY;
+/// </summary>
 struct MouseEvent {
     int32 X, Y;
     bool  LeftDown, RightDown, MiddleDown;

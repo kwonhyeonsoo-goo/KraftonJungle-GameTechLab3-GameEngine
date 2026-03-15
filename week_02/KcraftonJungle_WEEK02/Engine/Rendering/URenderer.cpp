@@ -13,7 +13,7 @@
 void URenderer::Create(HWND hWindow)
 
 {
-    CreateDeviceAndSwapChain(hWindow);
+    //CreateDeviceAndSwapChain(hWindow);
 
     CreateFrameBuffer();
 
@@ -115,13 +115,13 @@ void URenderer::ReleaseShader()
     }
 }
 
-void URenderer::CreateDeviceAndSwapChain(HWND hWindow)
+void URenderer::CreateDeviceAndSwapChain(HWND hWindow, UINT width, UINT height)
 {
     D3D_FEATURE_LEVEL featurelevels[] = { D3D_FEATURE_LEVEL_11_0 };
 
     DXGI_SWAP_CHAIN_DESC swapchaindesc = {};
-    swapchaindesc.BufferDesc.Width = 0;
-    swapchaindesc.BufferDesc.Height = 0;
+    swapchaindesc.BufferDesc.Width = width;
+    swapchaindesc.BufferDesc.Height = height;
     swapchaindesc.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
     swapchaindesc.SampleDesc.Count = 1;
     swapchaindesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -561,13 +561,30 @@ void URenderer::ReleaseConstantBuffer()
 
 bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
 {
-    CreateDeviceAndSwapChain(hwnd);
+    CreateDeviceAndSwapChain(hwnd, width, height);
 
     CreateFrameBuffer();
 
     CreateRasterizerState();
 
-    return false;
+    vertexBufferSphere = CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
+    numVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
+
+    vertexBufferCube = CreateVertexBuffer(cube_vertices, sizeof(cube_vertices));
+    numVerticesCube = sizeof(sphere_vertices) / sizeof(FVertexSimple);
+
+    vertexBufferTriangle = CreateVertexBuffer(triangle_vertices, sizeof(triangle_vertices));
+    numVerticesTriangle = sizeof(triangle_vertices) / sizeof(FVertexSimple);
+
+    vertexBufferRect = CreateVertexBuffer(rect_vertices, sizeof(rect_vertices));
+    indexBufferRect = CreateIndexBuffer(rect_indices, sizeof(rect_indices));
+
+    vertexBufferWorldAxis = CreateVertexBuffer(line_vertices, sizeof(line_vertices));
+    numVerticesWorldAxis = sizeof(line_vertices) / sizeof(FVertexSimple);
+
+    CreateShader();
+
+    return true;
 }
 
 void URenderer::Shutdown()

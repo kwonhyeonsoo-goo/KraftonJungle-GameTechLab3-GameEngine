@@ -1,11 +1,12 @@
 #include "SetTransformCommand.h"
 
 SetTransformCommand::SetTransformCommand(USceneComponent* target, const Transform& newTransform)
+    : Target(target), OldTransform(), NewTransform(newTransform)
 {
-	if (target == nullptr) return;
-	Target = target;
-	OldTransform = Target->GetTransform();
-	NewTransform = newTransform;
+    if (Target != nullptr)
+    {
+        OldTransform = Target->GetTransform();
+    }
 }
 
 void SetTransformCommand::Execute()

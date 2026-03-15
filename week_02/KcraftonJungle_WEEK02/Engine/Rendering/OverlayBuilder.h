@@ -3,7 +3,7 @@
 #include "../../Engine/Foundation/Core/CoreTypes.h"
 #include "../../Engine/Editor/EditorSession.h"
 #include "../../Engine/Editor/SelectionSet.h"
-class AppContext;
+struct AppContext;
 class RenderQueue;
 class USceneComponent;
 
