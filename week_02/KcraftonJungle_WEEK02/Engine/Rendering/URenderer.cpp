@@ -9,21 +9,6 @@
 #include "../Mesh/Line.h"
 #include "../Editor/EditorSession.h"
 
-
-void URenderer::Create(HWND hWindow)
-
-{
-    //CreateDeviceAndSwapChain(hWindow);
-
-    CreateFrameBuffer();
-
-    CreateRasterizerState();
-
-    CreatePrimitiveVertexBuffer();
-
-
-}
-
 void URenderer::RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices)
 
 {
@@ -35,12 +20,18 @@ void URenderer::RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices)
 
 void URenderer::RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer, UINT indexCount)
 {
+    if (!vertexBuffer || !indexBuffer)
+    {
+        return;
+    }
+
 	UINT offset = 0;
     DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &Stride, &offset);
 
     DeviceContext->IASetIndexBuffer(indexBuffer,DXGI_FORMAT_R32_UINT, offset);
 
 	DeviceContext->DrawIndexed(indexCount, offset, 0);
+
 }
 
 void URenderer::CreateShader()
@@ -201,7 +192,8 @@ void URenderer::ReleaseFrameBuffer()
     }
 }
 
-void URenderer::CreateDepthBuffer(float width, float height)
+void URenderer::CreateDepthBuffer(uint32 width, uint32 height)
+
 {
     D3D11_TEXTURE2D_DESC descDepth={};
     descDepth.Width = width;
@@ -328,10 +320,6 @@ void URenderer::CreatePrimitiveVertexBuffer()
 
 void URenderer::ReleasePrimitivVertexBuffer()
 {
-    ReleaseVertexBuffer(vertexBufferTriangle);
-    ReleaseVertexBuffer(vertexBufferCube);
-    ReleaseVertexBuffer(vertexBufferSphere);
-    ReleaseVertexBuffer(vertexBufferWorldAxis);
 
 }
 
@@ -485,10 +473,11 @@ ID3D11Buffer* URenderer::CreateVertexBuffer(FVertexSimple* vertices, UINT byteWi
 
 void URenderer::ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer)
 {
-    
-    ReleasePrimitivVertexBuffer();
 
-    vertexBuffer->Release();
+
+    if(!vertexBuffer)
+        vertexBuffer->Release();
+
 }
 
 ID3D11Buffer* URenderer::CreateIndexBuffer(void* data, UINT size)
@@ -565,6 +554,9 @@ bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
 
     CreateFrameBuffer();
 
+    CreateDepthBuffer(width, height);
+
+
     CreateRasterizerState();
 
     vertexBufferSphere = CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
@@ -578,17 +570,34 @@ bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
 
     vertexBufferRect = CreateVertexBuffer(rect_vertices, sizeof(rect_vertices));
     indexBufferRect = CreateIndexBuffer(rect_indices, sizeof(rect_indices));
+    numVerticesRect = sizeof(rect_vertices) / sizeof(FVertexSimple);
+    numIndicesRect = sizeof(rect_indices) / sizeof(uint32_t);
 
     vertexBufferWorldAxis = CreateVertexBuffer(line_vertices, sizeof(line_vertices));
     numVerticesWorldAxis = sizeof(line_vertices) / sizeof(FVertexSimple);
 
     CreateShader();
+    CreateConstantBuffer();
 
     return true;
 }
 
 void URenderer::Shutdown()
 {
+    ReleaseConstantBuffer();
+    ReleaseShader();
+
+    if (vertexBufferSphere) { vertexBufferSphere->Release();    vertexBufferSphere = nullptr; }
+    if (vertexBufferCube) { vertexBufferCube->Release();      vertexBufferCube = nullptr; }
+    if (vertexBufferTriangle) { vertexBufferTriangle->Release();  vertexBufferTriangle = nullptr; }
+    if (vertexBufferRect) { vertexBufferRect->Release();      vertexBufferRect = nullptr; }
+    if (indexBufferRect) { indexBufferRect->Release();       indexBufferRect = nullptr; }
+    if (vertexBufferWorldAxis) { vertexBufferWorldAxis->Release(); vertexBufferWorldAxis = nullptr; }
+
+    ReleaseRasterizerState();
+    ReleaseDepthBuffer();
+    ReleaseFrameBuffer();
+    ReleaseDeviceAndSwapChain();
 }
 
 void URenderer::BeginFrame()
@@ -619,37 +628,16 @@ enum class EPrimitiveShape
 
 void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//, const EditorSession& session)
 {
-    FMatrix mCameraView = session.Camera.GetViewMatrix();
 
-    FVector eye = { 0.0f, 0.0f, -50.0f };   // 카메라 위치
-    FVector target = { 0.0f, 0.0f, 0.0f }; // 보는 위치
-    FVector up = { 0.0f, 1.0f, 0.0f };     // 위 방향
-
-    float baseHeight = 1024.0f; // 기준 해상도 높이
-    float currentHeight = ViewportInfo.Height;
-
-    float fov = DirectX::XMConvertToRadians(60.0f) * (currentHeight / baseHeight);
-    float aspect = ViewportInfo.Width / ViewportInfo.Height;   // 창이 정사각형이면 1
-    float nearZ = 0.1f;
-    float farZ = 100.0f;
-
-    FMatrix mView = FMatrix::LookAt(eye, target, up);
-
-
-    FMatrix mProjection =
-        FMatrix::Perspective(
-            fov,
-            aspect,
-            nearZ,
-            farZ
-        );
+    if (queue.IsEmpty()) return;
+    FMatrix MVeiwProj = session.GetViewProjMatrix();
 
 	for (int i = 0; i < queue.GetCommands().size(); ++i)
     {
 
         const RenderCommand& cmd = queue.GetCommands()[i];
         FConstants constants = {};
-        constants.MVP = cmd.WorldTransform * mView * mProjection;
+        constants.MVP = cmd.WorldTransform * MVeiwProj;
 
         
         switch (cmd.Type)
@@ -677,6 +665,9 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             case EPrimitiveShape::Plane:
 
                 RenderIndexedPrimitive(vertexBufferRect, indexBufferRect, sizeof(rect_indices)/sizeof(UINT));
+
+                break;
+
             default:
                 break;
             }

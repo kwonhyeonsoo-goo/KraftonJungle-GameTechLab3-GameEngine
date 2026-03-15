@@ -26,10 +26,13 @@
 #include "Engine/Editor/Panels/PropertyPanel.h"
 #include "Engine/Editor/Panels/ToolbarPanel.h"
 #include "Engine/Editor/Panels/StatPanel.h"
+#include "Engine/Editor/Panels/ConsolePanel.h"
 
 #include "Engine/Foundation/Core/CoreTypes.h"
 
 #include "Engine/Platform/WindowHost.h"
+
+#include "Engine/Services/ConsoleService.h"
 
 // main() 
 

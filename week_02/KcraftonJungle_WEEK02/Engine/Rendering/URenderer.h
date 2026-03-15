@@ -74,6 +74,7 @@ public:
     UINT numVerticesTriangle;
     ID3D11Buffer* vertexBufferRect;
     ID3D11Buffer* indexBufferRect;
+    UINT numVerticesRect;UINT numIndicesRect;
     ID3D11Buffer* vertexBufferWorldAxis;
     UINT numVerticesWorldAxis;
 
@@ -96,7 +97,6 @@ public:
 
 #pragma endregion
 public:
-    void Create(HWND hWindow);
 
     void CreateShader();
     void ReleaseShader();
@@ -127,11 +127,13 @@ private:
     void CreateFrameBuffer();
     void ReleaseFrameBuffer();
 
+
     void CreateDepthBuffer(float width, float height);
     void ReleaseDepthBuffer();
 
     void CreatePrimitiveVertexBuffer();
     void ReleasePrimitivVertexBuffer();
+
 
     void CreateRasterizerState();
 

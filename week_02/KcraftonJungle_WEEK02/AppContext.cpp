@@ -48,6 +48,7 @@ void AppContext::RegisterPanels()
     auto* property = new PropertyPanel();
     auto* stat = new StatPanel();
     auto* toolbar = new ToolbarPanel();
+    auto* console = new ConsolePanel();
 
     //OwnedPanels.push_back(outliner);
     //OwnedPanels.push_back(console);
@@ -55,10 +56,12 @@ void AppContext::RegisterPanels()
     OwnedPanels.push_back(property);
     OwnedPanels.push_back(stat);
     OwnedPanels.push_back(toolbar);
+    OwnedPanels.push_back(console);;
 
     Panels.Register(new PropertyPanel());
     Panels.Register(new ToolbarPanel());
     Panels.Register(new StatPanel());
+    Panels.Register(new ConsolePanel());
 }
 
 void AppContext::RegisterTools()

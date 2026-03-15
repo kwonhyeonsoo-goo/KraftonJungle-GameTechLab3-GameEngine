@@ -119,6 +119,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         // ⑤ D3D11 렌더
         ctx.Renderer.BeginFrame();
+        InputRouter::ResetDelta();
 
         RenderQueue queue;
         RenderSceneExtractor::Extract(ctx, queue);

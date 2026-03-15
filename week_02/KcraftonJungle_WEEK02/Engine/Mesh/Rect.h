@@ -10,6 +10,7 @@ static FVertexSimple rect_vertices[] = {
 
 // 인덱스 데이터는 동일
 static UINT rect_indices[] = {
-    0, 1, 2,
-    0, 2, 3
+    0, 2, 1, // 첫 번째 삼각형 (상단-우측-하단)
+    0, 3, 2  // 두 번째 삼각형 (상단-하단-좌측)
+
 };
