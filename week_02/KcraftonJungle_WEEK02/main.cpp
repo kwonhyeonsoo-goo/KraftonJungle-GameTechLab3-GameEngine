@@ -21,70 +21,22 @@
 #include "Engine/World/Sphere.h"
 #include "Engine/World/Transform.h"
 #include "Engine/Editor/EditorSession.h"
-
-
-
-extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    // 윈도우에 저장된 포인터를 다시 URenderer 타입으로 형변환해서 가져옴
-    URenderer* pRenderer = reinterpret_cast<URenderer*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-
-    if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
-    {
-        return true;
-    }
-
-    switch (message)
-    {
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
-    case WM_SIZE:
-        // pRenderer가 NULL이 아닐 때만 안전하게 호출
-        if (wParam != SIZE_MINIMIZED && pRenderer != nullptr)
-        {
-            UINT width = LOWORD(lParam);
-            UINT height = HIWORD(lParam);
-            pRenderer->OnResize(width, height);
-        }
-        break;
-    //    break;
-    //case WM_PAINT:
-    //    if (pRenderer)
-    //    {
-    //        // 여기서 강제로 한 번 그려줍니다. 
-    //        // 단, Flush에 필요한 queue나 session 데이터를 가져올 방법이 필요합니다.
-    //        // 보통 AppContext나 전역 객체를 통해 현재 상태를 가져와서 그립니다.
-
-    //        //
-    //        //pRenderer->BeginFrame();
-    //        //pRenderer->Flush(queue, ed);
-    //        //pRenderer->EndFrame();
-    //        //
-
-    //        // PAINT 처리를 완료했다고 알림
-    //        //ValidateRect(hWnd, NULL);
-    //    }
-    //    break;
-    default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
-    }
-
-    return 0;
-}
-
 #include "Engine/Platform/PlatformEvents.h"
 
-
-
 #include "AppContext.h"
+#include <iostream>
 
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
+#ifdef _DEBUG
+    // 디버그 모드에서만 콘솔 창을 할당합니다.
+    AllocConsole();
+    FILE* File = nullptr;
+    freopen_s(&File, "CONOUT$", "w", stdout);
 
+    std::cout << "Engine Initialization Started..." << std::endl;
+#endif
 
     AppContext ctx;
     if (!ctx.Initialize("MyEngine", 1280, 720)) return -1;
@@ -134,6 +86,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         ctx.Renderer.EndFrame();
 
     }
+
+#ifdef _DEBUG
+    // 프로그램 종료 전에 콘솔을 해제합니다.
+    FreeConsole();
+#endif
 
     ctx.Shutdown();
     return 0;
