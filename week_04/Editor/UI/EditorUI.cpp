@@ -81,23 +81,23 @@ void CEditorUI::Initialize(CCore* InCore)
 
 	// Property change callback
 	Property.OnChanged = [this](const FVector& Loc, const FVector& Rot, const FVector& Scl)
-	{
-		if (Core)
 		{
-			AActor* Selected = Core->GetSelectedActor();
-			if (Selected)
+			if (Core)
 			{
-				if (USceneComponent* Root = Selected->GetRootComponent())
+				AActor* Selected = Core->GetSelectedActor();
+				if (Selected)
 				{
-					FTransform T = Root->GetRelativeTransform();
-					T.Location = Loc;
-					T.Rotation = Rot;
-					T.Scale = Scl;
-					Root->SetRelativeTransform(T);
+					if (USceneComponent* Root = Selected->GetRootComponent())
+					{
+						FTransform T = Root->GetRelativeTransform();
+						T.Location = Loc;
+						T.Rotation = Rot;
+						T.Scale = Scl;
+						Root->SetRelativeTransform(T);
+					}
 				}
 			}
-		}
-	};
+		};
 
 	Renderer->SetGUIUpdateCallback([this]() { Render(); });
 }
@@ -108,57 +108,54 @@ void CEditorUI::SetupWindow(CWindow* InWindow)
 
 	// ImGui message filter (must be first)
 	MainWindow->AddMessageFilter([](HWND h, UINT m, WPARAM w, LPARAM l) -> bool
-	{
-		return ImGui_ImplWin32_WndProcHandler(h, m, w, l) != 0;
-	});
+		{
+			return ImGui_ImplWin32_WndProcHandler(h, m, w, l) != 0;
+		});
 
 	// Picking filter
 	MainWindow->AddMessageFilter([this](HWND h, UINT m, WPARAM w, LPARAM l) -> bool
-	{
-		if (m == WM_LBUTTONDOWN && !ImGui::GetIO().WantCaptureMouse && Core && Core->GetScene())
 		{
-			int MouseX = LOWORD(l);
-			int MouseY = HIWORD(l);
-			RECT Rect;
-			GetClientRect(h, &Rect);
-			int Width = Rect.right - Rect.left;
-			int Height = Rect.bottom - Rect.top;
-
-			AActor* Picked = Picker.PickActor(Core->GetScene(), MouseX, MouseY, Width, Height);
-			if (Picked)
+			if (m == WM_LBUTTONDOWN && !ImGui::GetIO().WantCaptureMouse && Core && Core->GetScene())
 			{
-				SetSelectedActor(Picked);
+				int MouseX = LOWORD(l);
+				int MouseY = HIWORD(l);
+				RECT Rect;
+				GetClientRect(h, &Rect);
+				int Width = Rect.right - Rect.left;
+				int Height = Rect.bottom - Rect.top;
+
+				AActor* Picked = Picker.PickActor(Core->GetScene(), MouseX, MouseY, Width, Height);
+				if (Picked)
+				{
+					SetSelectedActor(Picked);
+				}
 			}
-		}
-		return false;
-	});
+			return false;
+		});
 
 	// Input forwarding filter
 	MainWindow->AddMessageFilter([this](HWND h, UINT m, WPARAM w, LPARAM l) -> bool
-	{
-		if (Core)
 		{
-			Core->ProcessInput(h, m, w, l);
-		}
-		return false;
-	});
+			if (Core)
+			{
+				Core->ProcessInput(h, m, w, l);
+			}
+			return false;
+		});
 
 	// Resize callback
 	MainWindow->SetOnResizeCallback([this](int W, int H)
-	{
-		if (Core && Core->GetRenderer())
 		{
-			Core->GetRenderer()->OnResize(W, H);
-		}
-		if (Core->GetScene() && Core->GetScene()->GetCamera())
-		{
-			// 분모가 0이 되는 것을 방지
-			float NewAspect = (H > 0) ? static_cast<float>(W) / static_cast<float>(H) : 1.0f;
-			Core->GetScene()->GetCamera()->SetAspectRatio(NewAspect);
-
-	
-		}
-	});
+			if (Core && Core->GetRenderer())
+			{
+				Core->GetRenderer()->OnResize(W, H);
+			}
+			if (Core && Core->GetScene() && Core->GetScene()->GetCamera())
+			{
+				float NewAspect = (H > 0) ? static_cast<float>(W) / static_cast<float>(H) : 1.0f;
+				Core->GetScene()->GetCamera()->SetAspectRatio(NewAspect);
+			}
+		});
 
 	MainWindow->Show();
 }

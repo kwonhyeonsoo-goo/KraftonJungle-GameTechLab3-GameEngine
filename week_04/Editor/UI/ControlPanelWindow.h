@@ -1,4 +1,5 @@
 #pragma once
+#include "CoreMinimal.h"
 #include <string>
 #include <vector>
 
@@ -10,6 +11,6 @@ public:
 	void Render(CCore* Core);
 
 private:
-	std::vector<std::string> SceneFiles;
+	TArray<FString> SceneFiles;
 	int SelectedSceneIndex = -1;
 };
