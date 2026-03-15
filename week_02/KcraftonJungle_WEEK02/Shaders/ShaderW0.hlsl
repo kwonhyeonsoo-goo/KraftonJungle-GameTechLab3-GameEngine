@@ -4,8 +4,8 @@
 cbuffer constants : register(b0)
 {
     row_major float4x4 MVP;
+    float3 Color;
     float thickness;
-    float3 padding;
 }
 
 
@@ -40,5 +40,5 @@ PS_INPUT mainVS(VS_INPUT input)
 float4 mainPS(PS_INPUT input) : SV_TARGET
 {
     // Output the color directly
-    return input.color;
+    return input.color * float4(Color, 1);
 }
