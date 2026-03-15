@@ -148,6 +148,9 @@ void AppContext::SubscribeEvents()
     ResizeHandle = PlatformEvents::OnResize.Bind(
         [this](const ResizeEvent& e) { 
             Renderer.OnResize(e.Width, e.Height); 
+
+            if (e.Height > 0)
+                Editor.AspectRatio = (float)e.Width / (float)e.Height;
         });
 
 

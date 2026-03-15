@@ -24,14 +24,20 @@
 
 #include "Engine/Platform/PlatformEvents.h"
 
-
-
 #include "AppContext.h"
+#include <iostream>
 
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
+#ifdef _DEBUG
+    // 디버그 모드에서만 콘솔 창을 할당합니다.
+    AllocConsole();
+    FILE* File = nullptr;
+    freopen_s(&File, "CONOUT$", "w", stdout);
 
+    std::cout << "Engine Initialization Started..." << std::endl;
+#endif
 
     AppContext ctx;
     if (!ctx.Initialize("MyEngine", 1280, 720)) return -1;
@@ -81,6 +87,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         ctx.Renderer.EndFrame();
 
     }
+
+#ifdef _DEBUG
+    // 프로그램 종료 전에 콘솔을 해제합니다.
+    FreeConsole();
+#endif
 
     ctx.Shutdown();
     return 0;
