@@ -146,14 +146,9 @@ void CEditorUI::SetupWindow(CWindow* InWindow)
 	// Resize callback
 	MainWindow->SetOnResizeCallback([this](int W, int H)
 		{
-			if (Core && Core->GetRenderer())
+			if (Core)
 			{
-				Core->GetRenderer()->OnResize(W, H);
-			}
-			if (Core && Core->GetScene() && Core->GetScene()->GetCamera())
-			{
-				float NewAspect = (H > 0) ? static_cast<float>(W) / static_cast<float>(H) : 1.0f;
-				Core->GetScene()->GetCamera()->SetAspectRatio(NewAspect);
+				Core->OnResize(W, H);
 			}
 		});
 }
