@@ -17,7 +17,7 @@ public:
 	const FTransform& GetRelativeTransform() const { return RelativeTransform; }
 	void SetRelativeTransform(const FTransform& InTransform);
 
-	const FVector& GetRelativeLocation() const { return RelativeTransform.Location; }
+	const FVector& GetRelativeLocation() const { return RelativeTransform.GetTranslation(); }
 	void SetRelativeLocation(const FVector& InLocation);
 
 	USceneComponent* GetAttachParent() const { return AttachParent; }
