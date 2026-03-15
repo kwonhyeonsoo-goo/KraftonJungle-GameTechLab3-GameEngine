@@ -77,9 +77,9 @@ void CEditorGUI::Initialize(CRenderer* Renderer, CCore* Core)
 				if (USceneComponent* Root = Selected->GetRootComponent())
 				{
 					FTransform T = Root->GetRelativeTransform();
-					T.Location = Loc;
-					T.Rotation = Rot;
-					T.Scale = Scl;
+					T.SetLocation(Loc);
+					T.SetRotation(FRotator::MakeFromEuler(Rot));
+					T.SetScale3D(Scl);
 					Root->SetRelativeTransform(T);
 				}
 			}
@@ -173,7 +173,7 @@ void CEditorGUI::Update()
 				if (Root)
 				{
 					FTransform T = Root->GetRelativeTransform();
-					Property.SetTarget(T.Location, T.Rotation, T.Scale, Selected->GetName().c_str());
+					Property.SetTarget(T.GetLocation(), T.Rotator().Euler(), T.GetScale3D(), Selected->GetName().c_str());
 				}
 			}
 			else
