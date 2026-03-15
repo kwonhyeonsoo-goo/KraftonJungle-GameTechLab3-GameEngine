@@ -11,12 +11,16 @@ struct Ray {
     FVector Direction;
 
     Ray(const FVector& Origin, const FVector& Direction)
-        : Origin(Origin) 
+        : Origin(Origin)
         , Direction(Direction)
     {
     }
 
-    Ray() = default;
+    Ray() : Origin(0.0f, 0.0f, 0.0f), Direction(0.0f, 0.0f, 1.0f) {}
+
+    FVector GetPoint(float InT) const {
+        return Origin + (Direction * InT);
+    }
 };
 
 class PickingService
@@ -35,6 +39,14 @@ public:
     static bool IntersectsAABB(const Ray& ray,
         const FVector& min,
         const FVector& max,
+        float& outT);
+
+    static bool IntersectsSphere(const Ray& ray,
+        const FVector& center,
+        float radius,
+        float& outT);
+
+    static bool IntersectsPlane(const Ray& ray, 
         float& outT);
 };
 

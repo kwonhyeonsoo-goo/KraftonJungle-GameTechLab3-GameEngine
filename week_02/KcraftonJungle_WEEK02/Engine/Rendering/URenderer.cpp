@@ -427,9 +427,6 @@ void URenderer::Prepare()
 
     DeviceContext->RSSetViewports(1, &ViewportInfo);
     DeviceContext->RSSetState(RasterizerState);
-
-
-
 }
 
 void URenderer::PrepareShader()
