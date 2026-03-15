@@ -36,6 +36,7 @@ void RenderSceneExtractor::Extract(const AppContext& ctx, RenderQueue& queue)
 
 			objectRenderCommand.WorldTransform = sceneComponent->GetWorldMatrix();
 
+
 			objectRenderCommand.Color = 0;
 
 			objectRenderCommand.ObjectId = o->GetUUID();
