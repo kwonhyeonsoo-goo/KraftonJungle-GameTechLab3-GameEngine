@@ -9,6 +9,7 @@
 #include "../Mesh/Line.h"
 #include "../Editor/EditorSession.h"
 
+
 void URenderer::Create(HWND hWindow)
 
 {
@@ -45,8 +46,8 @@ void URenderer::RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer*
 void URenderer::CreateShader()
 
 {
-    ID3DBlob* vertexshaderCSO;
-    ID3DBlob* pixelshaderCSO;
+    ID3DBlob* vertexshaderCSO = nullptr;
+    ID3DBlob* pixelshaderCSO = nullptr;
 
     D3DCompileFromFile(L"Shaders/ShaderW0.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &vertexshaderCSO, nullptr);
 
@@ -58,8 +59,14 @@ void URenderer::CreateShader()
 
     D3D11_INPUT_ELEMENT_DESC layout[] =
     {
+        // POSITION: x, y, z (3 * 4 = 12 bytes) -> 시작점: 0
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+
+        // COLOR: r, g, b, a (4 * 4 = 16 bytes) -> 시작점: 12
         { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+
+        // NORMAL: nx, ny, nz (3 * 4 = 12 bytes) -> 시작점: 12 + 16 = 28
+        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
 
     Device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexshaderCSO->GetBufferPointer(), vertexshaderCSO->GetBufferSize(), &SimpleInputLayout);
@@ -68,6 +75,22 @@ void URenderer::CreateShader()
 
     vertexshaderCSO->Release();
     pixelshaderCSO->Release();
+
+    ID3DBlob* vertexShaderOutlineCS0 = nullptr;
+    ID3DBlob* pixelShaderOutlineCS0 = nullptr;
+
+    D3DCompileFromFile(L"Shaders/ShaderOutline.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &vertexShaderOutlineCS0, nullptr);
+
+    Device->CreateVertexShader(vertexShaderOutlineCS0->GetBufferPointer(), vertexShaderOutlineCS0->GetBufferSize(), nullptr, &OutlineVertexShader);
+
+    D3DCompileFromFile(L"Shaders/ShaderOutline.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0, &pixelShaderOutlineCS0, nullptr);
+
+    Device->CreatePixelShader(pixelShaderOutlineCS0->GetBufferPointer(), pixelShaderOutlineCS0->GetBufferSize(), nullptr, &OutlinePixelShader);
+
+    Device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaderOutlineCS0->GetBufferPointer(), vertexShaderOutlineCS0->GetBufferSize(), &SimpleInputLayout);
+
+    vertexShaderOutlineCS0->Release();
+    pixelShaderOutlineCS0->Release();
 }
 
 void URenderer::ReleaseShader()
@@ -200,7 +223,6 @@ void URenderer::CreateDepthBuffer(float width, float height)
     dsDesc.DepthEnable = true;
     dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
     dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
-
     // Stencil test parameters
     dsDesc.StencilEnable = true;
     dsDesc.StencilReadMask = 0xFF;
@@ -220,6 +242,36 @@ void URenderer::CreateDepthBuffer(float width, float height)
 
     // Create depth stencil state
     Device->CreateDepthStencilState(&dsDesc, &DepthStencilState);
+
+    D3D11_DEPTH_STENCIL_DESC dsDesc1 = {};
+
+    // Depth test parameters
+    dsDesc1.DepthEnable = true;
+    dsDesc1.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    dsDesc1.DepthFunc = D3D11_COMPARISON_LESS;
+    // Stencil test parameters
+    dsDesc1.StencilEnable = true;
+    dsDesc1.StencilReadMask = 0xFF;
+    dsDesc1.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    // ✅ 핵심: LESS 대신 LESS_EQUAL을 사용합니다.
+    dsDesc1.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+    dsDesc1.StencilWriteMask = 0xFF;
+
+    // Stencil operations if pixel is front-facing
+    dsDesc1.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+    dsDesc1.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+    dsDesc1.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+    dsDesc1.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+    // Stencil operations if pixel is back-facing
+    dsDesc1.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+    dsDesc1.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+    dsDesc1.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+    dsDesc1.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+    // Create depth stencil state
+    Device->CreateDepthStencilState(&dsDesc1, &DepthStencilOutlineState);
+
 
     D3D11_DEPTH_STENCIL_VIEW_DESC descDSV = {};
     descDSV.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -252,6 +304,12 @@ void URenderer::ReleaseDepthBuffer()
 
 void URenderer::CreatePrimitiveVertexBuffer()
 {
+    for (int i = 0; i < 2400; i ++ ) {
+        sphere_vertices[i].nx = sphere_vertices[i].x;
+        sphere_vertices[i].ny = sphere_vertices[i].y;
+        sphere_vertices[i].nz = sphere_vertices[i].z;
+    }
+
     vertexBufferSphere = CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
     numVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
 
@@ -279,11 +337,18 @@ void URenderer::ReleasePrimitivVertexBuffer()
 
 void URenderer::CreateRasterizerState()
 {
+
     D3D11_RASTERIZER_DESC rasterizerdesc = {};
     rasterizerdesc.FillMode = D3D11_FILL_SOLID;
     rasterizerdesc.CullMode = D3D11_CULL_BACK;
     rasterizerdesc.FrontCounterClockwise = false;
     Device->CreateRasterizerState(&rasterizerdesc, &RasterizerState);
+
+    D3D11_RASTERIZER_DESC rasterozeroutlinedesc = {};
+    rasterozeroutlinedesc.FillMode = D3D11_FILL_SOLID;
+    rasterozeroutlinedesc.CullMode = D3D11_CULL_FRONT;
+    Device->CreateRasterizerState(&rasterozeroutlinedesc, &RasterizerStateOutline);
+
 }
 
 void URenderer::ReleaseRasterizerState()
@@ -389,6 +454,19 @@ void URenderer::PrepareShader()
 
 }
 
+void URenderer::PrepareOutlineShader()
+{
+    DeviceContext->VSSetShader(OutlineVertexShader, nullptr, 0);
+    DeviceContext->PSSetShader(OutlinePixelShader, nullptr, 0);
+    DeviceContext->IASetInputLayout(SimpleInputLayout);
+
+    if (OutlineConstantBuffer)
+    {
+        DeviceContext->VSSetConstantBuffers(0, 1, &OutlineConstantBuffer);
+        DeviceContext->PSSetConstantBuffers(0, 1, &OutlineConstantBuffer);
+    }
+
+}
 ID3D11Buffer* URenderer::CreateVertexBuffer(FVertexSimple* vertices, UINT byteWidth)
 {
     D3D11_BUFFER_DESC vertexbufferdesc = {};
@@ -442,6 +520,15 @@ void URenderer::CreateConstantBuffer()
     constantbufferdesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
     Device->CreateBuffer(&constantbufferdesc, nullptr, &ConstantBuffer);
+
+    D3D11_BUFFER_DESC constantbufferdesc1 = {};
+    constantbufferdesc1.ByteWidth = sizeof(FCountantsOutlines) + 0xf & 0xfffffff0;
+    constantbufferdesc1.Usage = D3D11_USAGE_DYNAMIC;
+    constantbufferdesc1.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    constantbufferdesc1.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+    Device->CreateBuffer(&constantbufferdesc1, nullptr, &OutlineConstantBuffer);
+
 }
 
 void URenderer::UpdateConstant(FConstants& param)
@@ -547,27 +634,31 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
         FConstants constants = {};
         constants.MVP = cmd.WorldTransform * mView * mProjection;
 
-        UpdateMVP(constants.MVP);
-
+        
         switch (cmd.Type)
         {     
         case ERenderType::Primitive:
+            UpdateMVP(constants.MVP);
 
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
+            PrepareShader();
             switch (cmd.Shape)
             {
             case EPrimitiveShape::Sphere:
+                
                 RenderPrimitive(vertexBufferSphere, numVerticesSphere);
                 break;
             case EPrimitiveShape::Cube:
+
                 RenderPrimitive(vertexBufferCube, numVerticesCube);
                 break;
             case EPrimitiveShape::Triangle:
+
                 RenderPrimitive(vertexBufferTriangle, numVerticesTriangle);
 
                 break;
             case EPrimitiveShape::Plane:
+
                 RenderIndexedPrimitive(vertexBufferRect, indexBufferRect, sizeof(rect_indices)/sizeof(UINT));
             default:
                 break;
@@ -575,6 +666,9 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
 
             break;
         case ERenderType::WorldAxis:
+            UpdateMVP(constants.MVP);
+
+            PrepareShader();
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
             RenderPrimitive(vertexBufferWorldAxis, numVerticesWorldAxis);
 
@@ -583,6 +677,34 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             break;
         case ERenderType::Gizmo:
             break;
+        case ERenderType::Highlight:
+        {
+            DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+            PrepareOutlineShader();
+            UpdateMVP(constants.MVP, 0.1f);
+            switch (cmd.Shape)
+            {
+            case EPrimitiveShape::Sphere:
+                RenderPrimitive(vertexBufferSphere, numVerticesSphere);
+                break;
+            case EPrimitiveShape::Cube:
+                DeviceContext->OMSetDepthStencilState(DepthStencilOutlineState, 1);
+                DeviceContext->RSSetState(RasterizerStateOutline);
+                RenderPrimitive(vertexBufferCube, numVerticesCube);
+                break;
+            case EPrimitiveShape::Triangle:
+                RenderPrimitive(vertexBufferTriangle, numVerticesTriangle);
+
+                break;
+            case EPrimitiveShape::Plane:
+                RenderIndexedPrimitive(vertexBufferRect, indexBufferRect, sizeof(rect_indices) / sizeof(UINT));
+            default:
+                break;
+            }
+            DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
+            DeviceContext->RSSetState(RasterizerState);
+        }
         default:
             break;
         }
@@ -607,5 +729,21 @@ void URenderer::UpdateMVP(const FMatrix& mvp)
             constants->MVP = mvp;
         }
         DeviceContext->Unmap(ConstantBuffer, 0);
+    }
+}
+
+void URenderer::UpdateMVP(const FMatrix& mvp, const float thickness)
+{
+    if (OutlineConstantBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
+
+        DeviceContext->Map(OutlineConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
+        FCountantsOutlines* constants = (FCountantsOutlines*)constantbufferMSR.pData;
+        {
+            constants->MVP = mvp;
+            constants->thickness = thickness;
+        }
+        DeviceContext->Unmap(OutlineConstantBuffer, 0);
     }
 }

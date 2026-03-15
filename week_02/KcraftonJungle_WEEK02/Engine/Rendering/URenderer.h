@@ -13,13 +13,23 @@ struct FVertexSimple
 {
     float x, y, z;    // Position
     float r, g, b, a; // Color
+    float nx, ny, nz; //normal
 };
 
 struct FConstants
 {
-    //DirectX::XMMATRIX MVP;
     FMatrix MVP;
+    float thickness;
+    float padding[3];
 };
+
+struct FCountantsOutlines
+{
+    FMatrix MVP;
+    float thickness;
+    float padding[3];
+};
+
 
 class RenderQueue;
 class EditorSession;
@@ -36,11 +46,14 @@ public:
     ID3D11Texture2D* FrameBuffer = nullptr;
     ID3D11RenderTargetView* FrameBufferRTV = nullptr;
     ID3D11RasterizerState* RasterizerState = nullptr;
+    ID3D11RasterizerState* RasterizerStateOutline = nullptr;
     ID3D11Buffer* ConstantBuffer = nullptr;
+    ID3D11Buffer* OutlineConstantBuffer = nullptr;
 
     ID3D11Texture2D* DepthStencilBuffer = nullptr;
     ID3D11DepthStencilView* DepthStencilView = nullptr;
     ID3D11DepthStencilState* DepthStencilState = nullptr;
+    ID3D11DepthStencilState* DepthStencilOutlineState = nullptr;
 
     FLOAT ClearColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f };
     D3D11_VIEWPORT ViewportInfo;
@@ -48,6 +61,9 @@ public:
     ID3D11VertexShader* SimpleVertexShader;
     ID3D11PixelShader* SimplePixelShader;
     ID3D11InputLayout* SimpleInputLayout;
+    ID3D11VertexShader* OutlineVertexShader;
+    ID3D11PixelShader* OutlinePixelShader;
+
     unsigned int Stride;
 
     ID3D11Buffer* vertexBufferSphere;
@@ -76,6 +92,7 @@ public:
 
     // MVP 상수 버퍼 업데이트
     void UpdateMVP(const FMatrix& mvp);
+    void UpdateMVP(const FMatrix& mvp, const float thickness);
 
 #pragma endregion
 public:
@@ -95,6 +112,7 @@ private:
     void Prepare();
 
     void PrepareShader();
+    void PrepareOutlineShader();
 
     void SwapBuffer();
 

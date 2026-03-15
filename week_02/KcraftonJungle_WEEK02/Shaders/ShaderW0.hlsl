@@ -4,13 +4,16 @@
 cbuffer constants : register(b0)
 {
     row_major float4x4 MVP;
+    float thickness;
+    float3 padding;
 }
 
 
 struct VS_INPUT
 {
-    float4 position : POSITION; // Input position from vertex buffer
-    float4 color : COLOR; // Input color from vertex buffer
+    float4 position : POSITION;
+    float4 color : COLOR;
+    float3 normal : NORMAL;
 };
 
 struct PS_INPUT

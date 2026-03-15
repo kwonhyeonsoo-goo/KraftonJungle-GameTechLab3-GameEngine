@@ -298,13 +298,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         ctx.Objects.Add(plane);
 
-        RenderQueue queue = RenderQueue();;
         EditorSession ed;
+
+        ed.Selection.Select(sphere);
+
+
+        RenderQueue queue = RenderQueue();;
+        
         RenderSceneExtractor::Extract(ctx, queue);
         OverlayBuilder::Build(ed, ctx, queue);
 
         renderer.BeginFrame();
 
+        
         renderer.Flush(queue, ed);
 
 
