@@ -1,10 +1,10 @@
 #pragma once
 #include <cstdint>
 #include "../../Engine/Foundation/Core/CoreTypes.h"
-
+#include "../../Engine/Editor/EditorSession.h"
+#include "../../Engine/Editor/SelectionSet.h"
 struct AppContext;
 class RenderQueue;
-class EditorSession;
 class USceneComponent;
 
 class OverlayBuilder {
@@ -19,6 +19,8 @@ public:
         // Implemented inline so the definition is available to all TUs and
         // to avoid linker unresolved external when the .cpp is not linked.
         PushWorldAxis(queue);
+        if(!session.Selection.IsEmpty())
+            PushHighlight(session.Selection.GetPrimary(), queue);
     }
 
     // ★ LMS 요구: "축별 색상은 UE와 똑같이 한다"

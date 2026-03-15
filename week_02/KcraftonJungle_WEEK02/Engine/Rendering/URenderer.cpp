@@ -7,6 +7,8 @@
 #include "../Mesh/Triangle.h"
 #include "../Mesh/Rect.h"
 #include "../Mesh/Line.h"
+#include "../Editor/EditorSession.h"
+
 
 void URenderer::Create(HWND hWindow)
 
@@ -15,24 +17,11 @@ void URenderer::Create(HWND hWindow)
 
     CreateFrameBuffer();
 
-    CreateDepthBuffer();
-
     CreateRasterizerState();
 
-     vertexBufferSphere = CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
-     numVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
+    CreatePrimitiveVertexBuffer();
 
-     vertexBufferCube = CreateVertexBuffer(cube_vertices, sizeof(cube_vertices));
-     numVerticesCube = sizeof(sphere_vertices) / sizeof(FVertexSimple);
 
-     vertexBufferTriangle = CreateVertexBuffer(triangle_vertices, sizeof(triangle_vertices));
-     numVerticesTriangle = sizeof(triangle_vertices) / sizeof(FVertexSimple);
-
-     vertexBufferRect = CreateVertexBuffer(rect_vertices, sizeof(rect_vertices));
-     indexBufferRect = CreateIndexBuffer(rect_indices, sizeof(rect_indices));
-
-     vertexBufferWorldAxis = CreateVertexBuffer(line_vertices, sizeof(line_vertices));
-     numVerticesWorldAxis = sizeof(line_vertices) / sizeof(FVertexSimple);
 }
 
 void URenderer::RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices)
@@ -44,21 +33,21 @@ void URenderer::RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices)
     DeviceContext->Draw(numVertices, 0);
 }
 
-void URenderer::RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer)
+void URenderer::RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer, UINT indexCount)
 {
 	UINT offset = 0;
     DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &Stride, &offset);
 
     DeviceContext->IASetIndexBuffer(indexBuffer,DXGI_FORMAT_R32_UINT, offset);
 
-	DeviceContext->DrawIndexed(Stride, offset, 0);
+	DeviceContext->DrawIndexed(indexCount, offset, 0);
 }
 
 void URenderer::CreateShader()
 
 {
-    ID3DBlob* vertexshaderCSO;
-    ID3DBlob* pixelshaderCSO;
+    ID3DBlob* vertexshaderCSO = nullptr;
+    ID3DBlob* pixelshaderCSO = nullptr;
 
     D3DCompileFromFile(L"Shaders/ShaderW0.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &vertexshaderCSO, nullptr);
 
@@ -70,8 +59,14 @@ void URenderer::CreateShader()
 
     D3D11_INPUT_ELEMENT_DESC layout[] =
     {
+        // POSITION: x, y, z (3 * 4 = 12 bytes) -> 시작점: 0
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+
+        // COLOR: r, g, b, a (4 * 4 = 16 bytes) -> 시작점: 12
         { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+
+        // NORMAL: nx, ny, nz (3 * 4 = 12 bytes) -> 시작점: 12 + 16 = 28
+        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
 
     Device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexshaderCSO->GetBufferPointer(), vertexshaderCSO->GetBufferSize(), &SimpleInputLayout);
@@ -80,6 +75,22 @@ void URenderer::CreateShader()
 
     vertexshaderCSO->Release();
     pixelshaderCSO->Release();
+
+    ID3DBlob* vertexShaderOutlineCS0 = nullptr;
+    ID3DBlob* pixelShaderOutlineCS0 = nullptr;
+
+    D3DCompileFromFile(L"Shaders/ShaderOutline.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &vertexShaderOutlineCS0, nullptr);
+
+    Device->CreateVertexShader(vertexShaderOutlineCS0->GetBufferPointer(), vertexShaderOutlineCS0->GetBufferSize(), nullptr, &OutlineVertexShader);
+
+    D3DCompileFromFile(L"Shaders/ShaderOutline.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0, &pixelShaderOutlineCS0, nullptr);
+
+    Device->CreatePixelShader(pixelShaderOutlineCS0->GetBufferPointer(), pixelShaderOutlineCS0->GetBufferSize(), nullptr, &OutlinePixelShader);
+
+    Device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaderOutlineCS0->GetBufferPointer(), vertexShaderOutlineCS0->GetBufferSize(), &SimpleInputLayout);
+
+    vertexShaderOutlineCS0->Release();
+    pixelShaderOutlineCS0->Release();
 }
 
 void URenderer::ReleaseShader()
@@ -164,6 +175,15 @@ void URenderer::CreateFrameBuffer()
     framebufferRTVdesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 
     Device->CreateRenderTargetView(FrameBuffer, &framebufferRTVdesc, &FrameBufferRTV);
+
+    D3D11_TEXTURE2D_DESC desc;
+    FrameBuffer->GetDesc(&desc);
+
+    // 이제 사이즈를 사용할 수 있습니다.
+    UINT width = desc.Width;   // 에러 로그에 찍혔던 1008
+    UINT height = desc.Height; // 에러 로그에 찍혔던 985
+
+    CreateDepthBuffer(desc.Width, desc.Height);
 }
 
 void URenderer::ReleaseFrameBuffer()
@@ -181,11 +201,11 @@ void URenderer::ReleaseFrameBuffer()
     }
 }
 
-void URenderer::CreateDepthBuffer()
+void URenderer::CreateDepthBuffer(float width, float height)
 {
     D3D11_TEXTURE2D_DESC descDepth={};
-    descDepth.Width = 1024;
-    descDepth.Height = 1024;
+    descDepth.Width = width;
+    descDepth.Height = height;
     descDepth.MipLevels = 1;
     descDepth.ArraySize = 1;
     descDepth.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -203,7 +223,6 @@ void URenderer::CreateDepthBuffer()
     dsDesc.DepthEnable = true;
     dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
     dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
-
     // Stencil test parameters
     dsDesc.StencilEnable = true;
     dsDesc.StencilReadMask = 0xFF;
@@ -223,6 +242,36 @@ void URenderer::CreateDepthBuffer()
 
     // Create depth stencil state
     Device->CreateDepthStencilState(&dsDesc, &DepthStencilState);
+
+    D3D11_DEPTH_STENCIL_DESC dsDesc1 = {};
+
+    // Depth test parameters
+    dsDesc1.DepthEnable = true;
+    dsDesc1.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    dsDesc1.DepthFunc = D3D11_COMPARISON_LESS;
+    // Stencil test parameters
+    dsDesc1.StencilEnable = true;
+    dsDesc1.StencilReadMask = 0xFF;
+    dsDesc1.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    // ✅ 핵심: LESS 대신 LESS_EQUAL을 사용합니다.
+    dsDesc1.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+    dsDesc1.StencilWriteMask = 0xFF;
+
+    // Stencil operations if pixel is front-facing
+    dsDesc1.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+    dsDesc1.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+    dsDesc1.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+    dsDesc1.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+    // Stencil operations if pixel is back-facing
+    dsDesc1.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+    dsDesc1.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+    dsDesc1.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+    dsDesc1.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+    // Create depth stencil state
+    Device->CreateDepthStencilState(&dsDesc1, &DepthStencilOutlineState);
+
 
     D3D11_DEPTH_STENCIL_VIEW_DESC descDSV = {};
     descDSV.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -253,13 +302,53 @@ void URenderer::ReleaseDepthBuffer()
     }
 }
 
+void URenderer::CreatePrimitiveVertexBuffer()
+{
+    for (int i = 0; i < 2400; i ++ ) {
+        sphere_vertices[i].nx = sphere_vertices[i].x;
+        sphere_vertices[i].ny = sphere_vertices[i].y;
+        sphere_vertices[i].nz = sphere_vertices[i].z;
+    }
+
+    vertexBufferSphere = CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
+    numVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
+
+    vertexBufferCube = CreateVertexBuffer(cube_vertices, sizeof(cube_vertices));
+    numVerticesCube = sizeof(cube_vertices) / sizeof(FVertexSimple);
+
+    vertexBufferTriangle = CreateVertexBuffer(triangle_vertices, sizeof(triangle_vertices));
+    numVerticesTriangle = sizeof(triangle_vertices) / sizeof(FVertexSimple);
+
+    vertexBufferRect = CreateVertexBuffer(rect_vertices, sizeof(rect_vertices));
+    indexBufferRect = CreateIndexBuffer(rect_indices, sizeof(rect_indices));
+
+    vertexBufferWorldAxis = CreateVertexBuffer(line_vertices, sizeof(line_vertices));
+    numVerticesWorldAxis = sizeof(line_vertices) / sizeof(FVertexSimple);
+}
+
+void URenderer::ReleasePrimitivVertexBuffer()
+{
+    ReleaseVertexBuffer(vertexBufferTriangle);
+    ReleaseVertexBuffer(vertexBufferCube);
+    ReleaseVertexBuffer(vertexBufferSphere);
+    ReleaseVertexBuffer(vertexBufferWorldAxis);
+
+}
+
 void URenderer::CreateRasterizerState()
 {
+
     D3D11_RASTERIZER_DESC rasterizerdesc = {};
     rasterizerdesc.FillMode = D3D11_FILL_SOLID;
     rasterizerdesc.CullMode = D3D11_CULL_BACK;
     rasterizerdesc.FrontCounterClockwise = false;
     Device->CreateRasterizerState(&rasterizerdesc, &RasterizerState);
+
+    D3D11_RASTERIZER_DESC rasterozeroutlinedesc = {};
+    rasterozeroutlinedesc.FillMode = D3D11_FILL_SOLID;
+    rasterozeroutlinedesc.CullMode = D3D11_CULL_FRONT;
+    Device->CreateRasterizerState(&rasterozeroutlinedesc, &RasterizerStateOutline);
+
 }
 
 void URenderer::ReleaseRasterizerState()
@@ -282,6 +371,48 @@ void URenderer::Release()
     ReleaseDeviceAndSwapChain();
 }
 
+void URenderer::OnResize(UINT width, UINT height)
+{
+    DeviceContext->OMSetRenderTargets(0, NULL, NULL);
+
+    Engine::SafeRelease(FrameBuffer);
+    Engine::SafeRelease(FrameBufferRTV);
+    Engine::SafeRelease(DepthStencilBuffer);
+    Engine::SafeRelease(DepthStencilView);
+
+    HRESULT hr = SwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
+
+    if (SUCCEEDED(hr)) {
+
+        // 4. 스왑 체인으로부터 '새로운' 백 버퍼(Texture2D)를 받아와야 합니다. (매우 중요!)
+        hr = SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&FrameBuffer);
+
+        D3D11_RENDER_TARGET_VIEW_DESC framebufferRTVdesc = {};
+        framebufferRTVdesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+        framebufferRTVdesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+
+
+        if (SUCCEEDED(hr)) {
+            // 5. 받아온 텍스처를 바탕으로 RTV 생성
+            // DESC를 NULL로 주면 텍스처의 설정을 그대로 따라갑니다. (특별한 포맷 변환이 없다면 권장)
+            Device->CreateRenderTargetView(FrameBuffer, &framebufferRTVdesc, &FrameBufferRTV);
+        }
+
+        CreateDepthBuffer(width, height);
+        DeviceContext->OMSetRenderTargets(1, &FrameBufferRTV, DepthStencilView);
+
+        // 6. 뷰포트도 갱신해주어야 화면이 안 찌그러집니다.
+        ViewportInfo.Width = (float)width;
+        ViewportInfo.Height = (float)height;
+        ViewportInfo.TopLeftX = 0;
+        ViewportInfo.TopLeftY = 0;
+        ViewportInfo.MinDepth = 0.0f;
+        ViewportInfo.MaxDepth = 1.0f;
+        DeviceContext->RSSetViewports(1, &ViewportInfo);
+    }
+}
+
+
 void URenderer::SwapBuffer()
 {
     SwapChain->Present(1, 0);
@@ -289,6 +420,14 @@ void URenderer::SwapBuffer()
 
 void URenderer::Prepare()
 {
+    // Bind depth stencil state
+    DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
+
+
+    DeviceContext->OMSetRenderTargets(1, &FrameBufferRTV, DepthStencilView);
+    DeviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
+
+
     DeviceContext->ClearRenderTargetView(FrameBufferRTV, ClearColor);
     DeviceContext->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
@@ -297,12 +436,6 @@ void URenderer::Prepare()
     DeviceContext->RSSetViewports(1, &ViewportInfo);
     DeviceContext->RSSetState(RasterizerState);
 
-    // Bind depth stencil state
-    DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
-
-
-    DeviceContext->OMSetRenderTargets(1, &FrameBufferRTV, DepthStencilView);
-    DeviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
 
 
 }
@@ -321,6 +454,19 @@ void URenderer::PrepareShader()
 
 }
 
+void URenderer::PrepareOutlineShader()
+{
+    DeviceContext->VSSetShader(OutlineVertexShader, nullptr, 0);
+    DeviceContext->PSSetShader(OutlinePixelShader, nullptr, 0);
+    DeviceContext->IASetInputLayout(SimpleInputLayout);
+
+    if (OutlineConstantBuffer)
+    {
+        DeviceContext->VSSetConstantBuffers(0, 1, &OutlineConstantBuffer);
+        DeviceContext->PSSetConstantBuffers(0, 1, &OutlineConstantBuffer);
+    }
+
+}
 ID3D11Buffer* URenderer::CreateVertexBuffer(FVertexSimple* vertices, UINT byteWidth)
 {
     D3D11_BUFFER_DESC vertexbufferdesc = {};
@@ -339,9 +485,8 @@ ID3D11Buffer* URenderer::CreateVertexBuffer(FVertexSimple* vertices, UINT byteWi
 
 void URenderer::ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer)
 {
-    ReleaseVertexBuffer(vertexBufferTriangle);
-    ReleaseVertexBuffer(vertexBufferCube);
-    ReleaseVertexBuffer(vertexBufferSphere);
+    
+    ReleasePrimitivVertexBuffer();
 
     vertexBuffer->Release();
 }
@@ -375,6 +520,15 @@ void URenderer::CreateConstantBuffer()
     constantbufferdesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
     Device->CreateBuffer(&constantbufferdesc, nullptr, &ConstantBuffer);
+
+    D3D11_BUFFER_DESC constantbufferdesc1 = {};
+    constantbufferdesc1.ByteWidth = sizeof(FCountantsOutlines) + 0xf & 0xfffffff0;
+    constantbufferdesc1.Usage = D3D11_USAGE_DYNAMIC;
+    constantbufferdesc1.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    constantbufferdesc1.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+    Device->CreateBuffer(&constantbufferdesc1, nullptr, &OutlineConstantBuffer);
+
 }
 
 void URenderer::UpdateConstant(FConstants& param)
@@ -410,8 +564,6 @@ bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
     CreateDeviceAndSwapChain(hwnd, width, height);
 
     CreateFrameBuffer();
-
-    CreateDepthBuffer();
 
     CreateRasterizerState();
 
@@ -467,61 +619,73 @@ enum class EPrimitiveShape
 
 void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//, const EditorSession& session)
 {
+    FMatrix mCameraView = session.Camera.GetViewMatrix();
+
+    FVector eye = { 0.0f, 0.0f, -50.0f };   // 카메라 위치
+    FVector target = { 0.0f, 0.0f, 0.0f }; // 보는 위치
+    FVector up = { 0.0f, 1.0f, 0.0f };     // 위 방향
+
+    float baseHeight = 1024.0f; // 기준 해상도 높이
+    float currentHeight = ViewportInfo.Height;
+
+    float fov = DirectX::XMConvertToRadians(60.0f) * (currentHeight / baseHeight);
+    float aspect = ViewportInfo.Width / ViewportInfo.Height;   // 창이 정사각형이면 1
+    float nearZ = 0.1f;
+    float farZ = 100.0f;
+
+    FMatrix mView = FMatrix::LookAt(eye, target, up);
+
+
+    FMatrix mProjection =
+        FMatrix::Perspective(
+            fov,
+            aspect,
+            nearZ,
+            farZ
+        );
+
 	for (int i = 0; i < queue.GetCommands().size(); ++i)
     {
-        FVector eye = { 0.0f, 0.0f, -50.0f };   // 카메라 위치
-        FVector target = { 0.0f, 0.0f, 0.0f }; // 보는 위치
-        FVector up = { 0.0f, 1.0f, 0.0f };     // 위 방향
-
-        float fov = DirectX::XMConvertToRadians(60.0f);
-        float aspect = 1.0f;   // 창이 정사각형이면 1
-        float nearZ = 0.1f;
-        float farZ = 100.0f;
-
-        FMatrix mView = FMatrix::LookAt(eye, target, up);
-
-
-        FMatrix mProjection =
-            FMatrix::Perspective(
-                fov,
-                aspect,
-                nearZ,
-                farZ
-            );
- 
 
         const RenderCommand& cmd = queue.GetCommands()[i];
         FConstants constants = {};
         constants.MVP = cmd.WorldTransform * mView * mProjection;
 
-        UpdateMVP(constants.MVP);
-
+        
         switch (cmd.Type)
         {     
         case ERenderType::Primitive:
+            UpdateMVP(constants.MVP);
 
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
+            PrepareShader();
             switch (cmd.Shape)
             {
             case EPrimitiveShape::Sphere:
+                
                 RenderPrimitive(vertexBufferSphere, numVerticesSphere);
                 break;
             case EPrimitiveShape::Cube:
+
                 RenderPrimitive(vertexBufferCube, numVerticesCube);
                 break;
             case EPrimitiveShape::Triangle:
+
                 RenderPrimitive(vertexBufferTriangle, numVerticesTriangle);
 
                 break;
             case EPrimitiveShape::Plane:
-                RenderIndexedPrimitive(vertexBufferRect, indexBufferRect);
+
+                RenderIndexedPrimitive(vertexBufferRect, indexBufferRect, sizeof(rect_indices)/sizeof(UINT));
             default:
                 break;
             }
 
             break;
         case ERenderType::WorldAxis:
+            UpdateMVP(constants.MVP);
+
+            PrepareShader();
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
             RenderPrimitive(vertexBufferWorldAxis, numVerticesWorldAxis);
 
@@ -530,6 +694,34 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             break;
         case ERenderType::Gizmo:
             break;
+        case ERenderType::Highlight:
+        {
+            DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+            PrepareOutlineShader();
+            UpdateMVP(constants.MVP, 0.1f);
+            switch (cmd.Shape)
+            {
+            case EPrimitiveShape::Sphere:
+                RenderPrimitive(vertexBufferSphere, numVerticesSphere);
+                break;
+            case EPrimitiveShape::Cube:
+                DeviceContext->OMSetDepthStencilState(DepthStencilOutlineState, 1);
+                DeviceContext->RSSetState(RasterizerStateOutline);
+                RenderPrimitive(vertexBufferCube, numVerticesCube);
+                break;
+            case EPrimitiveShape::Triangle:
+                RenderPrimitive(vertexBufferTriangle, numVerticesTriangle);
+
+                break;
+            case EPrimitiveShape::Plane:
+                RenderIndexedPrimitive(vertexBufferRect, indexBufferRect, sizeof(rect_indices) / sizeof(UINT));
+            default:
+                break;
+            }
+            DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
+            DeviceContext->RSSetState(RasterizerState);
+        }
         default:
             break;
         }
@@ -539,10 +731,6 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
 void URenderer::EndFrame()
 {
     SwapBuffer();
-}
-
-void URenderer::OnResize(UINT width, UINT height)
-{
 }
 
 void URenderer::UpdateMVP(const FMatrix& mvp)
@@ -558,5 +746,21 @@ void URenderer::UpdateMVP(const FMatrix& mvp)
             constants->MVP = mvp;
         }
         DeviceContext->Unmap(ConstantBuffer, 0);
+    }
+}
+
+void URenderer::UpdateMVP(const FMatrix& mvp, const float thickness)
+{
+    if (OutlineConstantBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
+
+        DeviceContext->Map(OutlineConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
+        FCountantsOutlines* constants = (FCountantsOutlines*)constantbufferMSR.pData;
+        {
+            constants->MVP = mvp;
+            constants->thickness = thickness;
+        }
+        DeviceContext->Unmap(OutlineConstantBuffer, 0);
     }
 }
