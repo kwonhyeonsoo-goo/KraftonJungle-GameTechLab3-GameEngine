@@ -2,7 +2,8 @@
 
 FVertexSimple triangle_vertices[] =
 {
-    {  0.0f,  1.0f, 0.0f,  1.0f, 0.0f, 0.0f, 1.0f }, // Top vertex (red)
-    {  1.0f, -1.0f, 0.0f,  0.0f, 1.0f, 0.0f, 1.0f }, // Bottom-right vertex (green)
-    { -1.0f, -1.0f, 0.0f,  0.0f, 0.0f, 1.0f, 1.0f }  // Bottom-left vertex (blue)
+    //   x      y     z     r     g     b     a      nx      ny      nz
+    {  0.0f,  1.0f, 0.0f,  1.0f, 0.0f, 0.0f, 1.0f,  0.0f,   1.0f,   0.0f },   // top
+    {  1.0f, -1.0f, 0.0f,  0.0f, 1.0f, 0.0f, 1.0f,  0.832f, -0.555f, 0.0f },   // right
+    { -1.0f, -1.0f, 0.0f,  0.0f, 0.0f, 1.0f, 1.0f, -0.832f, -0.555f, 0.0f }    // left
 };
