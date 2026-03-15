@@ -1,42 +1,79 @@
 #pragma once
 #include "ITool.h"
+#include "../../Foundation/Math/FVector2D.h"
+#include "../../Foundation/Math/FVector4.h"
+#include "../../Services/PickingService.h"
+#include "../../Editor/ToolContext.h"
+#include "../../World/USceneComponent.h"
+#include "../../World/Transform.h"
+#include "../../../AppContext.h"
 
-enum class ETransformMode { Translate, Rotate, Scale };
-enum class ECoordSpace { World, Local };
+namespace GizmoMath
+{
+    constexpr float  GizmoAxisLength = 1.5f;
+    constexpr float  GizmoRingRadius = 1.2f;
+    constexpr float  GizmoPickThresholdPx = 8.0f;
+    constexpr float  GizmoScaleBoxPx = 10.0f;
 
-class ToolContext {
-public:
-    ToolContext();
+    constexpr uint32 AxisColorX = 0xFF0000FF;
+    constexpr uint32 AxisColorY = 0x00FF00FF;
+    constexpr uint32 AxisColorZ = 0x0000FFFF;
 
-    ITool* GetActiveTool()  const;
-    ETransformMode GetMode()        const;
-    ECoordSpace    GetCoordSpace()  const;
-    float          GetSnapValue()   const;
-    bool           IsSnapEnabled()  const;
+    FVector AxisX();
+    FVector AxisY();
+    FVector AxisZ();
 
-    // ★ SetMode()는 ETransformMode를 갱신하고,
-    //   대응하는 ActiveTool(Translate/Rotate/Scale)을 함께 전환한다.
-    //   Mode와 ActiveTool은 항상 일관된 상태를 유지한다.
-    //   SelectTool이 활성 중일 때 SetMode()를 호출하면 즉시 Transform 툴로 전환된다.
-    void SetMode(ETransformMode mode);    // Space Bar로 전환
-    void SetCoordSpace(ECoordSpace cs);
-    void SetSnapEnabled(bool enabled);
-    void SetSnapValue(float value);
+    FVector2D WorldToScreen(const FVector& worldPos,
+        const FMatrix& viewProj,
+        int32 viewportW, int32 viewportH);
 
-    // 툴 등록 및 활성화
-    // ★ 소유권: ToolContext는 비소유 포인터만 등록한다.
-    //   툴 인스턴스의 실소유자는 AppContext이며,
-    //   AppContext::Shutdown()에서 툴 메모리를 해제한다.
-    void RegisterTool(ITool* tool);
-    void ActivateTool(const FString& name);
+    FVector GetAxisDirection(const USceneComponent* comp,
+        int axisIndex,
+        ECoordSpace coordSpace);
 
-    TDelegate<ETransformMode> OnModeChanged;
+    Ray BuildMouseRay(const MouseEvent& e, AppContext& ctx);
 
-private:
-    TMap<FString, ITool*> Tools;
-    ITool* ActiveTool = nullptr;
-    ETransformMode        Mode = ETransformMode::Translate;
-    ECoordSpace           CoordSpace = ECoordSpace::World;
-    bool                  SnapEnabled = false;
-    float                 SnapValue = 0.25f;
-};
+    bool NearlySameLocation(const FVector& a, const FVector& b, float eps = 0.0001f);
+
+    FVector GetSnapAppliedPosition(const FVector& origin,
+        const FVector& axisDir,
+        float axisDistance,
+        bool snapEnabled,
+        float snapValue);
+
+    float DistancePointToSegment2D(const FVector2D& mouse,
+        const FVector2D& segA,
+        const FVector2D& segB);
+
+    float DistancePointToPolyline2D(const FVector2D& mouse,
+        const TArray<FVector2D>& points);
+
+    TArray<FVector2D> SampleRing2D(const FVector& center,
+        const FVector& normal,
+        float radius,
+        int32 samples,
+        const FMatrix& viewProj,
+        int32 viewportW, int32 viewportH);
+
+    bool PointInRect2D(const FVector2D& mouse,
+        const FVector2D& center,
+        float halfSize);
+
+    bool RayPlaneIntersection(const Ray& ray,
+        const FVector& planeOrigin,
+        const FVector& planeNormal,
+        FVector& outHit);
+
+    // 핵심: 마우스 ray와 gizmo 축 직선의 최단점에서 축 파라미터를 구한다.
+    // outAxisT는 axisOrigin + axisDir * outAxisT 의 t값이다.
+    bool ClosestAxisParameterToRay(const FVector& axisOrigin,
+        const FVector& axisDir,
+        const Ray& ray,
+        float& outAxisT);
+
+    float SignedAngleAroundAxis(const FVector& fromDir,
+        const FVector& toDir,
+        const FVector& axis);
+
+    FVector MakeStablePerpendicular(const FVector& dir);
+}

@@ -2,6 +2,7 @@
 #include "RenderTypes.h"
 #include "../Foundation/Math/FMatrix.h"
 #include "RenderQueue.h"
+#include "../../AppContext.h"
 #include "../../Engine/World/UPrimitiveComponent.h"
 #include "../World/Transform.h"
 /*
@@ -19,6 +20,27 @@ struct RenderCommand {
 */
 
 // Build implementation moved inline into header to ensure linker visibility.
+
+void OverlayBuilder::Build(const EditorSession& session, AppContext& ctx, RenderQueue& queue)
+
+{
+	// Default implementation: add world axis command to the render queue.
+	// Implemented inline so the definition is available to all TUs and
+	// to avoid linker unresolved external when the .cpp is not linked.
+	PushWorldAxis(queue);
+	USceneComponent* primary = session.Selection.GetPrimary();
+	if (primary == nullptr)
+		return;
+
+	PushHighlight(primary, queue);
+
+	ITool* activeTool = ctx.Editor.Tools.GetActiveTool();
+	if (activeTool != nullptr)
+	{
+		activeTool->BuildGizmoOverlay(ctx, queue);
+	}
+}
+
 
 void OverlayBuilder::PushWorldAxis(RenderQueue& queue)
 {

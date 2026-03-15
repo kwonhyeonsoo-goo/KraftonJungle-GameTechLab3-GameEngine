@@ -720,6 +720,43 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             }
             DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
             DeviceContext->RSSetState(RasterizerState);
+            break;
+        }
+        case ERenderType::GizmoLine:
+        {
+            auto ToFloat = [](uint32 c, int shift) -> float
+                {
+                    return ((c >> shift) & 0xFF) / 255.0f;
+                };
+
+            const float r = ToFloat(cmd.Color, 24);
+            const float g = ToFloat(cmd.Color, 16);
+            const float b = ToFloat(cmd.Color, 8);
+            const float a = ToFloat(cmd.Color, 0);
+
+            FVertexSimple lineVertices[2] = {
+                { cmd.LineStart.x, cmd.LineStart.y, cmd.LineStart.z, r, g, b, a, 0.f, 0.f, 0.f },
+                { cmd.LineEnd.x,   cmd.LineEnd.y,   cmd.LineEnd.z,   r, g, b, a, 0.f, 0.f, 0.f }
+            };
+
+            ID3D11Buffer* lineVB = CreateVertexBuffer(lineVertices, sizeof(lineVertices));
+
+            FMatrix identity = {
+                1.f, 0.f, 0.f, 0.f,
+                0.f, 1.f, 0.f, 0.f,
+                0.f, 0.f, 1.f, 0.f,
+                0.f, 0.f, 0.f, 1.f
+            };
+
+            UpdateMVP(identity * MVeiwProj);
+            PrepareShader();
+            DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+            RenderPrimitive(lineVB, 2);
+
+            if (lineVB)
+                lineVB->Release();
+
+            break;
         }
         default:
             break;

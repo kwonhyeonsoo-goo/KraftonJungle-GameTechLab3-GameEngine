@@ -25,6 +25,8 @@ struct KeyEvent {
 class ITool {
 public:
     virtual ~ITool() = default;
+    virtual bool TryBeginManipulation(const MouseEvent& e, AppContext& ctx) { return false; }
+
     virtual void OnMouseMove(const MouseEvent& e, AppContext& ctx) {}
     virtual void OnMouseDown(const MouseEvent& e, AppContext& ctx) {}
     virtual void OnMouseUp(const MouseEvent& e, AppContext& ctx) {}

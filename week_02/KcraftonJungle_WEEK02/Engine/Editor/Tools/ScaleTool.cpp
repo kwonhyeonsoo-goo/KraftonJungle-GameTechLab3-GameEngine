@@ -1,7 +1,10 @@
-#include "TranslateTool.h"
+#include "ScaleTool.h"
 
 namespace
 {
+    constexpr float MinScaleValue = 0.01f;
+    constexpr float HandleWorldSize = 0.10f;
+
     void PushLine(RenderQueue& queue,
         const FVector& a,
         const FVector& b,
@@ -16,9 +19,21 @@ namespace
         cmd.ObjectId = objectId;
         queue.Push(cmd);
     }
+
+    float ClampScaleValue(float value)
+    {
+        return value < MinScaleValue ? MinScaleValue : value;
+    }
+
+    bool NearlySameScale(const FVector& a, const FVector& b, float eps = 0.0001f)
+    {
+        return std::fabs(a.x - b.x) <= eps
+            && std::fabs(a.y - b.y) <= eps
+            && std::fabs(a.z - b.z) <= eps;
+    }
 }
 
-int TranslateTool::AxisToIndex(EAxis axis)
+int ScaleTool::AxisToIndex(EAxis axis)
 {
     switch (axis)
     {
@@ -29,7 +44,7 @@ int TranslateTool::AxisToIndex(EAxis axis)
     }
 }
 
-TranslateTool::EAxis TranslateTool::IndexToAxis(int index)
+ScaleTool::EAxis ScaleTool::IndexToAxis(int index)
 {
     switch (index)
     {
@@ -40,7 +55,7 @@ TranslateTool::EAxis TranslateTool::IndexToAxis(int index)
     }
 }
 
-bool TranslateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
+bool ScaleTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
 {
     if (!e.LeftDown)
         return false;
@@ -61,26 +76,25 @@ bool TranslateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     const int32 viewportH = ctx.Window.GetHeight();
     const FVector2D mouse2D((float)e.X, (float)e.Y);
 
-    const FVector2D screenOrigin =
-        GizmoMath::WorldToScreen(origin, viewProj, viewportW, viewportH);
-
-    float bestDistance = GizmoMath::GizmoPickThresholdPx;
+    float bestDistSq = (std::numeric_limits<float>::max)();
     EAxis bestAxis = EAxis::None;
 
     for (int axisIndex = 0; axisIndex < 3; ++axisIndex)
     {
         const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, coordSpace);
-        const FVector tip = origin + axisDir * GizmoMath::GizmoAxisLength;
+        const FVector handlePos = origin + axisDir * GizmoMath::GizmoAxisLength;
+        const FVector2D handle2D = GizmoMath::WorldToScreen(handlePos, viewProj, viewportW, viewportH);
 
-        const FVector2D screenTip =
-            GizmoMath::WorldToScreen(tip, viewProj, viewportW, viewportH);
+        if (!GizmoMath::PointInRect2D(mouse2D, handle2D, GizmoMath::GizmoScaleBoxPx))
+            continue;
 
-        const float dist =
-            GizmoMath::DistancePointToSegment2D(mouse2D, screenOrigin, screenTip);
+        const float dx = mouse2D.x - handle2D.x;
+        const float dy = mouse2D.y - handle2D.y;
+        const float distSq = dx * dx + dy * dy;
 
-        if (dist < bestDistance)
+        if (distSq < bestDistSq)
         {
-            bestDistance = dist;
+            bestDistSq = distSq;
             bestAxis = IndexToAxis(axisIndex);
         }
     }
@@ -104,7 +118,7 @@ bool TranslateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     return true;
 }
 
-void TranslateTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
+void ScaleTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
 {
     if (!bDragging)
         return;
@@ -123,9 +137,7 @@ void TranslateTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
         return;
 
     const FVector axisOrigin = OriginalTransform.Location;
-    const FVector axisDir =
-        GizmoMath::GetAxisDirection(primary, axisIndex, ctx.Editor.Tools.GetCoordSpace());
-
+    const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, ctx.Editor.Tools.GetCoordSpace());
     const Ray ray = GizmoMath::BuildMouseRay(e, ctx);
 
     float currentAxisT = 0.0f;
@@ -135,17 +147,18 @@ void TranslateTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
     const float delta = currentAxisT - DragStartAxisT;
 
     Transform newTransform = OriginalTransform;
-    newTransform.Location = GizmoMath::GetSnapAppliedPosition(
-        axisOrigin,
-        axisDir,
-        delta,
-        ctx.Editor.Tools.IsSnapEnabled(),
-        ctx.Editor.Tools.GetSnapValue());
+
+    if (axisIndex == 0)
+        newTransform.Scale.x = ClampScaleValue(OriginalTransform.Scale.x + delta);
+    else if (axisIndex == 1)
+        newTransform.Scale.y = ClampScaleValue(OriginalTransform.Scale.y + delta);
+    else if (axisIndex == 2)
+        newTransform.Scale.z = ClampScaleValue(OriginalTransform.Scale.z + delta);
 
     primary->SetTransform(newTransform);
 }
 
-void TranslateTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
+void ScaleTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
 {
     (void)e;
 
@@ -157,7 +170,7 @@ void TranslateTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
     {
         const Transform finalTransform = primary->GetTransform();
 
-        if (!GizmoMath::NearlySameLocation(finalTransform.Location, OriginalTransform.Location))
+        if (!NearlySameScale(finalTransform.Scale, OriginalTransform.Scale))
         {
             primary->SetTransform(OriginalTransform);
             ctx.Dispatch(new SetTransformCommand(primary, finalTransform));
@@ -173,7 +186,7 @@ void TranslateTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
     DragStartAxisT = 0.0f;
 }
 
-void TranslateTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
+void ScaleTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
 {
     USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
     if (primary == nullptr)
@@ -193,6 +206,14 @@ void TranslateTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
             axisIndex == 1 ? GizmoMath::AxisColorY :
             GizmoMath::AxisColorZ;
 
+        // 축 라인
         PushLine(queue, origin, tip, color, objectId);
+
+        // 축 끝 핸들: 축에 수직한 두 방향으로 작은 십자 표시
+        const FVector side1 = GizmoMath::MakeStablePerpendicular(axisDir) * HandleWorldSize;
+        const FVector side2 = axisDir.Cross(side1).Normalized() * HandleWorldSize;
+
+        PushLine(queue, tip - side1, tip + side1, color, objectId);
+        PushLine(queue, tip - side2, tip + side2, color, objectId);
     }
 }

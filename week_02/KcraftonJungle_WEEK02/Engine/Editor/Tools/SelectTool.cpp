@@ -2,14 +2,29 @@
 
 void SelectTool::OnMouseDown(const MouseEvent& e, AppContext& ctx)
 {
-	Ray R = PickingService::ScreenToRay(e.X, e.Y, ctx.Window.GetWidth(), ctx.Window.GetHeight(), ctx.Editor.GetViewProjMatrix().Inversed());
-	UPrimitiveComponent* hit = PickingService::Pick(R, ctx.CurrentWorld.GetAllObjects());
-    if (hit)
+    if (!e.LeftDown)
+        return;
+
+    const FMatrix invViewProj = ctx.Editor.GetViewProjMatrix().Inversed();
+
+    const Ray ray = PickingService::ScreenToRay(
+        e.X, e.Y,
+        ctx.Window.GetWidth(),
+        ctx.Window.GetHeight(),
+        invViewProj);
+
+    UPrimitiveComponent* hit = PickingService::Pick(ray, ctx.CurrentWorld.GetAllObjects());
+
+    if (hit != nullptr)
     {
-        ctx.Editor.Selection.Select(hit, e.Ctrl);
+        const bool additive = e.Ctrl || e.Shift;
+        ctx.Editor.Selection.Select(hit, additive);
     }
     else
     {
-        ctx.Editor.Selection.Clear();
+        if (!(e.Ctrl || e.Shift))
+        {
+            ctx.Editor.Selection.Clear();
+        }
     }
 }

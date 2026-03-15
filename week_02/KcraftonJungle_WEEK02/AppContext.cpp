@@ -5,6 +5,9 @@
 
 #include "Engine/Platform/PlatformEvents.h"
 #include "Engine/Editor/Tools/SelectTool.h"
+#include "Engine/Editor/Tools/TranslateTool.h"
+#include "Engine/Editor/Tools/RotateTool.h"
+#include "Engine/Editor/Tools/ScaleTool.h"
 
 bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 height)
 {
@@ -58,31 +61,34 @@ void AppContext::RegisterPanels()
     OwnedPanels.push_back(toolbar);
     OwnedPanels.push_back(console);;
 
-    Panels.Register(new PropertyPanel());
-    Panels.Register(new ToolbarPanel());
-    Panels.Register(new StatPanel());
-    Panels.Register(new ConsolePanel());
+    Panels.Register(property);
+    Panels.Register(stat);
+    Panels.Register(toolbar);
+    Panels.Register(console);
 }
 
 void AppContext::RegisterTools()
 {
     auto* select = new SelectTool();
-    /*auto* translate = new TranslateTool();
+    auto* translate = new TranslateTool();
     auto* rotate = new RotateTool();
-    auto* scale = new ScaleTool();*/
+    auto* scale = new ScaleTool();
+
+    SelectionTool = select;
+    Translate = translate;
 
     OwnedTools.push_back(select);
-    /*OwnedTools.push_back(translate);
+    OwnedTools.push_back(translate);
     OwnedTools.push_back(rotate);
-    OwnedTools.push_back(scale);*/
+    OwnedTools.push_back(scale);
 
-    Editor.Tools.RegisterTool(select);
-    /*Editor.Tools.RegisterTool(translate);
+    Editor.Tools.RegisterTool(translate);
     Editor.Tools.RegisterTool(rotate);
-    Editor.Tools.RegisterTool(scale);*/
+    Editor.Tools.RegisterTool(scale);
 
     // 기본 활성 툴
-    Editor.Tools.ActivateTool("Select");
+    Editor.Tools.ActivateTool("Translate");
+    CapturedManipulationTool = nullptr;
 }
 
 void AppContext::SubscribeEvents()
@@ -95,8 +101,18 @@ void AppContext::SubscribeEvents()
                 e.Button == 0, e.Button == 1, e.Button == 2,
                 keys[VK_CONTROL], keys[VK_SHIFT], keys[VK_MENU],
                 0, 0 };
-            if (Editor.Tools.GetActiveTool())
-                Editor.Tools.GetActiveTool()->OnMouseDown(mouseEvent, *this);
+            ITool* activeTransformTool = Editor.Tools.GetActiveTool();
+            if (activeTransformTool != nullptr &&
+                activeTransformTool->TryBeginManipulation(mouseEvent, *this))
+            {
+                CapturedManipulationTool = activeTransformTool;
+                return;
+            }
+            CapturedManipulationTool = nullptr;
+            if (SelectionTool != nullptr)
+            {
+                SelectionTool->OnMouseDown(mouseEvent, *this);
+            }
         });
 
     MouseMoveHandle = PlatformEvents::OnMouseMove.Bind(
@@ -119,8 +135,11 @@ void AppContext::SubscribeEvents()
                 e.Button == 0, e.Button == 1, e.Button == 2,
                 keys[VK_CONTROL], keys[VK_SHIFT], keys[VK_MENU],
                 0, 0 };
-            if (Editor.Tools.GetActiveTool())
-                Editor.Tools.GetActiveTool()->OnMouseUp(mouseEvent, *this);
+            if (CapturedManipulationTool != nullptr)
+            {
+                CapturedManipulationTool->OnMouseUp(mouseEvent, *this);
+                CapturedManipulationTool = nullptr;
+            }
         });
 
     KeyDownHandle = PlatformEvents::OnKeyDown.Bind(

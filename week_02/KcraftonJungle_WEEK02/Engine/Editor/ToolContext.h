@@ -21,7 +21,7 @@ public:
     void SetSnapValue(float value);
 
     void RegisterTool(ITool* tool);
-    bool ActivateTool(const FString& name);
+    void ActivateTool(const FString& name);
 
     TDelegate<ETransformMode> OnModeChanged;
 

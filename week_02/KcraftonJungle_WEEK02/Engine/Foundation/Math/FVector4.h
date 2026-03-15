@@ -11,6 +11,10 @@ struct FVector4 {
 		: x(_x), y(_y), z(_z), w(_w) {
 	}
 
+	FVector4(const FVector& _v, float _w = 0.f)
+		: x(_v.x), y(_v.y), z(_v.z), w(_w) {
+	}
+
 	float Dot() const {
 		return (x * x + y * y + z * z + w * w);
 	}

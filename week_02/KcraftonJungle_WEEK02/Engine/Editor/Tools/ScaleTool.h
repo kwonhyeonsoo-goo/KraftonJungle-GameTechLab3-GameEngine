@@ -1,6 +1,7 @@
-﻿#pragma once
+#pragma once
 #include "ITool.h"
 #include <cmath>
+#include <limits>
 #include "../../../AppContext.h"
 #include "../../World/USceneComponent.h"
 #include "../../Editor/Commands/SetTransformCommand.h"
@@ -8,13 +9,13 @@
 #include "../../Rendering/RenderTypes.h"
 #include "GizmoMath.h"
 
-class TranslateTool : public ITool {
+class ScaleTool : public ITool {
 public:
     bool TryBeginManipulation(const MouseEvent& e, AppContext& ctx) override;
     void OnMouseMove(const MouseEvent& e, AppContext& ctx) override;
     void OnMouseUp(const MouseEvent& e, AppContext& ctx) override;
     void BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue) override;
-    FString GetName() const override { return "Translate"; }
+    FString GetName() const override { return "Scale"; }
 
 private:
     enum class EAxis { None, X, Y, Z };

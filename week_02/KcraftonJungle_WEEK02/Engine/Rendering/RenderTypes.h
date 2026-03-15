@@ -15,6 +15,7 @@ enum class ERenderType {
     WorldAxis,    // 월드 좌표계 축
     LocalAxis,    // 선택 오브젝트 로컬 축
     Grid,         // 바닥 그리드
+    GizmoLine,
 };
 
 enum class EPrimitiveShape;   // World에서 정의됨
@@ -35,4 +36,6 @@ struct RenderCommand {
     FMatrix        WorldTransform;
     uint32_t          Color;          // 0xRRGGBBAA
     uint32_t         ObjectId;       // Picking 역참조, 디버그용
+    FVector LineStart;
+    FVector LineEnd;
 };
