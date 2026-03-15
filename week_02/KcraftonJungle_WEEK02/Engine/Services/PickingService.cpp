@@ -42,7 +42,7 @@ UPrimitiveComponent* PickingService::Pick(const Ray& ray, const TArray<UObject*>
 {
     UPrimitiveComponent* CloseObj = nullptr;
     float ObjTime = FLT_MAX;
-
+    
     for (auto* object : objects) {//TODO: 여기도 RTTI로 바꿔야함
         UPrimitiveComponent* Prim = static_cast<UPrimitiveComponent*>(object);
 
@@ -64,7 +64,7 @@ UPrimitiveComponent* PickingService::Pick(const Ray& ray, const TArray<UObject*>
             break;
 
         case EPrimitiveShape::Plane:
-            hit = IntersectsPlane(LocalRay, t);
+            hit = IntersectsAABB(LocalRay, Prim->GetBoundMin(), Prim->GetBoundMax(), t);
             break;
 
         case EPrimitiveShape::Cube:
@@ -98,17 +98,6 @@ UPrimitiveComponent* PickingService::Pick(const Ray& ray, const TArray<UObject*>
         case EPrimitiveShape::Triangle: ShapeName = "Triangle"; break;
         default:                        ShapeName = "Unknown"; break;
         }
-
-        // 2. 상세 정보 출력
-        std::cout << "========================================" << std::endl;
-        std::cout << "[Pick Success]" << std::endl;
-        std::cout << " - Target Shape : " << ShapeName << std::endl;
-        std::cout << " - Distance     : " << ObjTime << " units" << std::endl;
-
-        // 물체의 현재 위치 출력
-        FVector Loc = CloseObj->GetTransform().GetLocation();
-        std::cout << " - Actor Loc    : (" << Loc.x << ", " << Loc.y << ", " << Loc.z << ")" << std::endl;
-        std::cout << "========================================" << std::endl;
     }
     else
     {
@@ -190,6 +179,7 @@ bool PickingService::IntersectsPlane(const Ray& ray, float& outT)
 
     // 교차점이 평면 범위 안인지 확인 [-0.5, 0.5]
     FVector hit = ray.Origin + ray.Direction * t;
+    
     if (hit.x < -0.5f || hit.x > 0.5f) return false;
     if (hit.y < -0.5f || hit.y > 0.5f) return false;
 
