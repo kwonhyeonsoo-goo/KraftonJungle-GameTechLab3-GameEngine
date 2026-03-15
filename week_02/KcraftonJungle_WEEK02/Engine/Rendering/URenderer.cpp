@@ -7,6 +7,7 @@
 #include "../Mesh/Triangle.h"
 #include "../Mesh/Rect.h"
 #include "../Mesh/Line.h"
+#include "../Mesh/Gizmo.h"
 #include "../Editor/EditorSession.h"
 
 void URenderer::RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices)
