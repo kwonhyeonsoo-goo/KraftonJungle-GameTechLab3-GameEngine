@@ -2,18 +2,13 @@
 
 void FTimer::Initialize()
 {
-	QueryPerformanceFrequency(&Frequency);
-	QueryPerformanceCounter(&LastTime);
+	LastTime = Clock::now();
 }
 
-float FTimer::GetDeltaTime()
+void FTimer::Tick()
 {
-	LARGE_INTEGER CurrentTime;
-	QueryPerformanceCounter(&CurrentTime);
-
-	float DeltaTime = static_cast<float>(CurrentTime.QuadPart - LastTime.QuadPart)
-		/ static_cast<float>(Frequency.QuadPart);
+	Clock::time_point CurrentTime = Clock::now();
+	DeltaTime = std::chrono::duration<float>(CurrentTime - LastTime).count();
+	TotalTime += DeltaTime;
 	LastTime = CurrentTime;
-
-	return DeltaTime;
 }

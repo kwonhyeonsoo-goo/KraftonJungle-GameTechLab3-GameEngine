@@ -87,8 +87,8 @@ void CCore::Release()
 
 void CCore::Tick()
 {
-	float DeltaTime = Timer.GetDeltaTime();
-	Tick(DeltaTime);
+	Timer.Tick();
+	Tick(Timer.GetDeltaTime());
 }
 
 void CCore::Tick(const float DeltaTime)

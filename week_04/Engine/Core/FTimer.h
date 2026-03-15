@@ -1,6 +1,6 @@
 #pragma once
 #include "CoreMinimal.h"
-#include "Windows.h"
+#include <chrono>
 
 class ENGINE_API FTimer
 {
@@ -8,9 +8,13 @@ public:
 	FTimer() = default;
 
 	void Initialize();
-	float GetDeltaTime();
+	void Tick();
+	float GetDeltaTime() const { return DeltaTime; }
+	double GetTotalTime() const { return TotalTime; }
 
 private:
-	LARGE_INTEGER Frequency = {};
-	LARGE_INTEGER LastTime = {};
+	using Clock = std::chrono::high_resolution_clock;
+	Clock::time_point LastTime = {};
+	float DeltaTime = 0.0f;
+	double TotalTime = 0.0;
 };
