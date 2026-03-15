@@ -50,7 +50,7 @@ void AppContext::RegisterPanels()
     auto* toolbar = new ToolbarPanel();
     auto* console = new ConsolePanel();
 
-    //OwnedPanels.push_back(outliner);
+    //OwnedPanels.push_back(outlinfer);
     //OwnedPanels.push_back(console);
 
     OwnedPanels.push_back(property);
@@ -58,10 +58,10 @@ void AppContext::RegisterPanels()
     OwnedPanels.push_back(toolbar);
     OwnedPanels.push_back(console);;
 
-    Panels.Register(new PropertyPanel());
-    Panels.Register(new ToolbarPanel());
-    Panels.Register(new StatPanel());
-    Panels.Register(new ConsolePanel());
+    Panels.Register(property);
+    Panels.Register(stat);
+    Panels.Register(toolbar);
+    Panels.Register(console);
 }
 
 void AppContext::RegisterTools()
@@ -220,4 +220,25 @@ void AppContext::Dispatch(ICommand* cmd)
 {
     cmd->Execute();
     delete cmd;
+}
+
+void AppContext::NewScene()
+{
+    // Load() 수명 규약과 동일한 순서
+    // 1. Selection 초기화
+    Editor.Selection.Clear();
+
+    // 2. UUID 목록 복사 후 OnObjectDestroyed 순차 발행
+    TArray<uint32> uuids;
+    for (UObject* obj : CurrentWorld.GetAllObjects())
+        uuids.push_back(obj->GetUUID());
+
+    for (uint32 uuid : uuids)
+        OnObjectDestroyed.Broadcast({ uuid });
+
+    // 3. ObjectStore 전체 비움 + 메모리 해제
+    Objects.Clear();
+
+    // 4. UUID 카운터 초기화
+    UUIDs.SyncNextUUID(1);
 }

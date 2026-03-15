@@ -5,6 +5,7 @@
 #include "../Foundation/Math/FVector.h"
 #include "../Foundation/Math/FVector.h"
 #include "../ObjectKernel/ObjectFactory.h"
+#include "../Editor/Commands/DeleteObjectCommand.h"
 #include "../../json.hpp"
 
 #include <fstream>
@@ -70,66 +71,69 @@ bool SerializationService::Load(AppContext& ctx) {
 	std::ifstream file(GetScenePath(ctx));
 	if (!file.is_open()) return false;
 
-	//std::stringstream ss;
-	//ss << file.rdbuf();
-	//FString jsonStr = ss.str();
+	std::stringstream ss;
+	ss << file.rdbuf();
+	FString jsonStr = ss.str();
 
-	//JSON root = JSON::Load(jsonStr);
-	////ctx.Editor.Selection.Clear();
+	JSON root = JSON::Load(jsonStr);
+	//ctx.Editor.Selection.Clear();
 
-	//// �� ���� UUID ���� �� OnObjectDestroyed ����
-	//TArray<uint32> olduuids = ctx.UUIDs.GenUUID();
-	//for (uint32 uuid : olduuids)
-	//	eventbus::broadcast(onobjectdestroyed{ uuid });
+	// �� ���� UUID ���� �� OnObjectDestroyed ����
+	TArray<UObject*> Objects = ctx.CurrentWorld.GetAllObjects();
+	for (auto* Object : Objects)
+		ctx.Dispatch(new DeleteObjectCommand(
+			ctx,
+			Object->GetUUID()
+		));
 
-	//// �� ObjectStore ����
-	//ctx.Objects.Clear();
-	//ctx.UUIDs.Clear();
-	//
-	//auto toFloat = [](const JSON& j) -> float {
-	//	if (j.JSONType() == JSON::Class::Floating)
-	//		return (float)j.ToFloat();
-	//	return (float)j.ToInt(); // ������ ����� ��� ó��
-	//	};
+	// �� ObjectStore ����
+	ctx.Objects.Clear();
+	
+	auto toFloat = [](const JSON& j) -> float {
+		if (j.JSONType() == JSON::Class::Floating)
+			return (float)j.ToFloat();
+		return (float)j.ToInt();
+		};
 
-	//// �� Primitives ��ȸ �� ������Ʈ ����
-	//auto& primitives = root["Primitives"];
-	//ctx.CurrentWorld.SetName(root["SceneName"].ToString());
+	// �� Primitives ��ȸ �� ������Ʈ ����
+	auto& primitives = root["Primitives"];
+	ctx.CurrentWorld.SetName(root["SceneName"].ToString());
 
-	//for (auto& kv : primitives.ObjectRange()) {
-	//	uint32 uuid = (uint32)std::stoul(kv.first);
-	//	std::string typeName = kv.second["Type"].ToString();
+	for (auto& kv : primitives.ObjectRange()) {
+		uint32 uuid = (uint32)std::stoul(kv.first);
+		std::string typeName = kv.second["Type"].ToString();
 
-	//	// Location
-	//	FVector loc;
-	//	loc.x = toFloat(kv.second["Location"][0]);
-	//	loc.y = toFloat(kv.second["Location"][1]);
-	//	loc.z = toFloat(kv.second["Location"][2]);
+		// Location
+		FVector loc;
+		loc.x = toFloat(kv.second["Location"][0]);
+		loc.y = toFloat(kv.second["Location"][1]);
+		loc.z = toFloat(kv.second["Location"][2]);
 
-	//	// Rotation
-	//	FVector rot;
-	//	rot.x = toFloat(kv.second["Location"][0]);
-	//	rot.y = toFloat(kv.second["Location"][1]);
-	//	rot.z = toFloat(kv.second["Location"][2]);
+		// Rotation
+		FVector rot;
+		rot.x = toFloat(kv.second["Rotation"][0]);
+		rot.y = toFloat(kv.second["Rotation"][1]);
+		rot.z = toFloat(kv.second["Rotation"][2]);
 
-	//	// Scale
-	//	FVector scl;
-	//	scl.x = toFloat(kv.second["Location"][0]);
-	//	scl.y = toFloat(kv.second["Location"][1]);
-	//	scl.z = toFloat(kv.second["Location"][2]);
+		// Scale
+		FVector scl;
+		scl.x = toFloat(kv.second["Scale"][0]);
+		scl.y = toFloat(kv.second["Scale"][1]);
+		scl.z = toFloat(kv.second["Scale"][2]);
 
-	//	UPrimitiveComponent* prim = ObjectFactory::ConstructObject(typeName, "UPrimitiveComponent");
-	//	if (!prim) continue; // �� �� ���� Ÿ���̸� ��ŵ
 
-	//	prim->SetTransform(Transform(loc, rot, scl));
+		std::cout << typeName << Transform(loc, rot, scl) << std::endl;
 
-	//	ctx.Objects.Add(prim);
-	//	ctx.UUIDs.SyncNextUUID(uuid);
-	//	EventBus::Broadcast(OnObjectCreated{ uuid }); // �� Outliner ���� �� ������Ʈ �ν�
-	//}
+		ctx.Dispatch(
+			new SpawnObjectCommand(
+				ctx,
+				StringToPrimitiveShape(typeName),
+				Transform(loc, rot, scl)
+			)
+		);
+	}
 
-	//// �� NextUUID ����
-	//ctx.UUIDs.SyncNextUUID((uint32)root["NextUUID"].ToInt());
+	ctx.UUIDs.SyncNextUUID((uint32)root["NextUUID"].ToInt());
 
 	return true;
 }

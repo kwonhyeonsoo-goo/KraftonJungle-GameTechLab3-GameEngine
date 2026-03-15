@@ -65,6 +65,7 @@ struct AppContext {
         int32 height = 720);
 
     void Shutdown();
+    void NewScene();
 
     void Dispatch(ICommand* cmd);
 
