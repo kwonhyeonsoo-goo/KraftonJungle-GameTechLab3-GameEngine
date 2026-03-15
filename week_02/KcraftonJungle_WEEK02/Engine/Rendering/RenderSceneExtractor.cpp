@@ -23,7 +23,7 @@ struct RenderCommand {
 void RenderSceneExtractor::Extract(const AppContext& ctx, RenderQueue& queue)
 {
 	TArray<UObject*> objects = ctx.Objects.GUObjectArray();
-	
+
 
 	for (UObject* o : objects) {
 		if (o->IsA<USceneComponent>()) {
