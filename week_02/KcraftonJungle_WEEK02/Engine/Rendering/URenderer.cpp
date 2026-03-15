@@ -563,7 +563,7 @@ bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
     numVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
 
     vertexBufferCube = CreateVertexBuffer(cube_vertices, sizeof(cube_vertices));
-    numVerticesCube = sizeof(sphere_vertices) / sizeof(FVertexSimple);
+    numVerticesCube = sizeof(cube_vertices) / sizeof(FVertexSimple);
 
     vertexBufferTriangle = CreateVertexBuffer(triangle_vertices, sizeof(triangle_vertices));
     numVerticesTriangle = sizeof(triangle_vertices) / sizeof(FVertexSimple);

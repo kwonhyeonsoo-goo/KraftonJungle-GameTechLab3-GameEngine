@@ -120,7 +120,7 @@ private:
     void RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices);
     void RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer, UINT indexCount);
 
-    void CreateDeviceAndSwapChain(HWND hWindow);
+    void CreateDeviceAndSwapChain(HWND hWindow, uint32 width, uint32 height);
 
     void ReleaseDeviceAndSwapChain();
 
@@ -128,7 +128,7 @@ private:
     void ReleaseFrameBuffer();
 
 
-    void CreateDepthBuffer(float width, float height);
+    void CreateDepthBuffer(uint32 width, uint32 height);
     void ReleaseDepthBuffer();
 
     void CreatePrimitiveVertexBuffer();
