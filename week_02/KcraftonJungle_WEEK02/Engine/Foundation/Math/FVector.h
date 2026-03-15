@@ -1,6 +1,6 @@
 #pragma once
 #include <cmath>
-
+#include <algorithm>
 
 // Z-up ±‚¡ÿ
 // Right   = +X
@@ -160,6 +160,150 @@ struct FVector
         return std::fabs(a.x - b.x) <= epsilon
             && std::fabs(a.y - b.y) <= epsilon
             && std::fabs(a.z - b.z) <= epsilon;
+    }
+
+#include <algorithm>
+#include <limits>
+
+    static float ClampFloat(float value, float minValue, float maxValue)
+    {
+        return (std::max)(minValue, (std::min)(value, maxValue));
+    }
+
+    FVector Clamped(float minValue, float maxValue) const
+    {
+        return FVector(
+            ClampFloat(x, minValue, maxValue),
+            ClampFloat(y, minValue, maxValue),
+            ClampFloat(z, minValue, maxValue)
+        );
+    }
+
+    FVector& Clamp(float minValue, float maxValue)
+    {
+        x = ClampFloat(x, minValue, maxValue);
+        y = ClampFloat(y, minValue, maxValue);
+        z = ClampFloat(z, minValue, maxValue);
+        return *this;
+    }
+
+    FVector Clamped(const FVector& minValue, const FVector& maxValue) const
+    {
+        return FVector(
+            ClampFloat(x, minValue.x, maxValue.x),
+            ClampFloat(y, minValue.y, maxValue.y),
+            ClampFloat(z, minValue.z, maxValue.z)
+        );
+    }
+
+    FVector& Clamp(const FVector& minValue, const FVector& maxValue)
+    {
+        x = ClampFloat(x, minValue.x, maxValue.x);
+        y = ClampFloat(y, minValue.y, maxValue.y);
+        z = ClampFloat(z, minValue.z, maxValue.z);
+        return *this;
+    }
+
+    FVector Clamped(const FVector& minValue, float maxValue) const
+    {
+        return FVector(
+            ClampFloat(x, minValue.x, maxValue),
+            ClampFloat(y, minValue.y, maxValue),
+            ClampFloat(z, minValue.z, maxValue)
+        );
+    }
+
+    FVector& Clamp(const FVector& minValue, float maxValue)
+    {
+        x = ClampFloat(x, minValue.x, maxValue);
+        y = ClampFloat(y, minValue.y, maxValue);
+        z = ClampFloat(z, minValue.z, maxValue);
+        return *this;
+    }
+
+    FVector Clamped(float minValue, const FVector& maxValue) const
+    {
+        return FVector(
+            ClampFloat(x, minValue, maxValue.x),
+            ClampFloat(y, minValue, maxValue.y),
+            ClampFloat(z, minValue, maxValue.z)
+        );
+    }
+
+    FVector& Clamp(float minValue, const FVector& maxValue)
+    {
+        x = ClampFloat(x, minValue, maxValue.x);
+        y = ClampFloat(y, minValue, maxValue.y);
+        z = ClampFloat(z, minValue, maxValue.z);
+        return *this;
+    }
+
+    FVector ClampedMin(float minValue) const
+    {
+        return FVector(
+            (std::max)(x, minValue),
+            (std::max)(y, minValue),
+            (std::max)(z, minValue)
+        );
+    }
+
+    FVector& ClampMin(float minValue)
+    {
+        x = (std::max)(x, minValue);
+        y = (std::max)(y, minValue);
+        z = (std::max)(z, minValue);
+        return *this;
+    }
+
+    FVector ClampedMin(const FVector& minValue) const
+    {
+        return FVector(
+            (std::max)(x, minValue.x),
+            (std::max)(y, minValue.y),
+            (std::max)(z, minValue.z)
+        );
+    }
+
+    FVector& ClampMin(const FVector& minValue)
+    {
+        x = (std::max)(x, minValue.x);
+        y = (std::max)(y, minValue.y);
+        z = (std::max)(z, minValue.z);
+        return *this;
+    }
+
+    FVector ClampedMax(float maxValue) const
+    {
+        return FVector(
+            (std::min)(x, maxValue),
+            (std::min)(y, maxValue),
+            (std::min)(z, maxValue)
+        );
+    }
+
+    FVector& ClampMax(float maxValue)
+    {
+        x = (std::min)(x, maxValue);
+        y = (std::min)(y, maxValue);
+        z = (std::min)(z, maxValue);
+        return *this;
+    }
+
+    FVector ClampedMax(const FVector& maxValue) const
+    {
+        return FVector(
+            (std::min)(x, maxValue.x),
+            (std::min)(y, maxValue.y),
+            (std::min)(z, maxValue.z)
+        );
+    }
+
+    FVector& ClampMax(const FVector& maxValue)
+    {
+        x = (std::min)(x, maxValue.x);
+        y = (std::min)(y, maxValue.y);
+        z = (std::min)(z, maxValue.z);
+        return *this;
     }
 
     float GetX() const { return x; }

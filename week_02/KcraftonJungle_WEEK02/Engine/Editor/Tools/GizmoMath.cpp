@@ -73,7 +73,7 @@ FVector2D GizmoMath::WorldToScreen(const FVector& worldPos,
     const FVector4 clip = FVector4(worldPos, 1.0f) * viewProj;
 
     constexpr float eps = 1e-6f;
-    if (std::fabs(clip.w) < eps)
+    if (clip.w < eps)
     {
         return FVector2D((std::numeric_limits<float>::max)(),
             (std::numeric_limits<float>::max)());
