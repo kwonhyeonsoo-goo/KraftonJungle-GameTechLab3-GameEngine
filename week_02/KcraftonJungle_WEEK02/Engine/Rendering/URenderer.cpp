@@ -317,6 +317,9 @@ void URenderer::CreatePrimitiveVertexBuffer()
 
     vertexBufferWorldAxis = CreateVertexBuffer(line_vertices, sizeof(line_vertices));
     numVerticesWorldAxis = sizeof(line_vertices) / sizeof(FVertexSimple);
+
+    vertexBufferGizmo = CreateVertexBuffer(gizmoVertices, sizeof(gizmoVertices));
+    numVerticesGizmo = sizeof(gizmoVertices) / sizeof(FVertexSimple);
 }
 
 void URenderer::ReleasePrimitivVertexBuffer()
@@ -583,6 +586,9 @@ bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
     vertexBufferWorldAxis = CreateVertexBuffer(line_vertices, sizeof(line_vertices));
     numVerticesWorldAxis = sizeof(line_vertices) / sizeof(FVertexSimple);
 
+    vertexBufferGizmo = CreateVertexBuffer(gizmoVertices, sizeof(gizmoVertices));
+    numVerticesGizmo = sizeof(gizmoVertices) / sizeof(FVertexSimple);
+
     CreateShader();
     CreateConstantBuffer();
 
@@ -600,7 +606,7 @@ void URenderer::Shutdown()
     if (vertexBufferRect) { vertexBufferRect->Release();      vertexBufferRect = nullptr; }
     if (indexBufferRect) { indexBufferRect->Release();       indexBufferRect = nullptr; }
     if (vertexBufferWorldAxis) { vertexBufferWorldAxis->Release(); vertexBufferWorldAxis = nullptr; }
-
+    if (vertexBufferGizmo) { vertexBufferGizmo->Release(); vertexBufferGizmo = nullptr; }
     ReleaseRasterizerState();
     ReleaseDepthBuffer();
     ReleaseFrameBuffer();
@@ -691,6 +697,10 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
         case ERenderType::LocalAxis:
             break;
         case ERenderType::Gizmo:
+            UpdateMVP(constants.MVP);
+            DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            PrepareShader();
+            RenderPrimitive(vertexBufferGizmo, numVerticesGizmo);
             break;
         case ERenderType::Highlight:
         {
@@ -721,6 +731,8 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             }
             DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
             DeviceContext->RSSetState(RasterizerState);
+
+            break;
         }
         default:
             break;
