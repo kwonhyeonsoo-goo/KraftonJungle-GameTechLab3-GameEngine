@@ -86,13 +86,12 @@ public:
     // WM_SIZE 이벤트 수신 시 호출
     void OnResize(UINT width, UINT height);
 
-
+private:
     // MVP 상수 버퍼 업데이트
     void UpdateMVP(const FMatrix& mvp, FVector color);
     void UpdateMVP(const FMatrix& mvp, const float thickness);
 
 #pragma endregion
-public:
 
     void CreateShader();
     void ReleaseShader();
@@ -102,7 +101,7 @@ public:
 
     void Release();
 
-private:
+
     IDXGIOutput* DisplayInfo;
 
     void Prepare();
@@ -128,8 +127,6 @@ private:
     void ReleaseDepthBuffer();
 
     void CreatePrimitiveVertexBuffer();
-    void ReleasePrimitivVertexBuffer();
-
 
     void CreateRasterizerState();
 

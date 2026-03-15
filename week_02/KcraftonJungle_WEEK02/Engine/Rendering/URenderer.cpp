@@ -322,11 +322,6 @@ void URenderer::CreatePrimitiveVertexBuffer()
     numVerticesGizmo = sizeof(gizmoVertices) / sizeof(FVertexSimple);
 }
 
-void URenderer::ReleasePrimitivVertexBuffer()
-{
-
-}
-
 void URenderer::CreateRasterizerState()
 {
 
@@ -475,10 +470,8 @@ ID3D11Buffer* URenderer::CreateVertexBuffer(FVertexSimple* vertices, UINT byteWi
 void URenderer::ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer)
 {
 
-
     if(!vertexBuffer)
         vertexBuffer->Release();
-
 }
 
 ID3D11Buffer* URenderer::CreateIndexBuffer(void* data, UINT size)
@@ -560,31 +553,7 @@ bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
 
     CreateRasterizerState();
 
-    for (int i = 0; i < 2400; i++) {
-        sphere_vertices[i].nx = sphere_vertices[i].x;
-        sphere_vertices[i].ny = sphere_vertices[i].y;
-        sphere_vertices[i].nz = sphere_vertices[i].z;
-    }
-
-    vertexBufferSphere = CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
-    numVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
-
-    vertexBufferCube = CreateVertexBuffer(cube_vertices, sizeof(cube_vertices));
-    numVerticesCube = sizeof(cube_vertices) / sizeof(FVertexSimple);
-
-    vertexBufferTriangle = CreateVertexBuffer(triangle_vertices, sizeof(triangle_vertices));
-    numVerticesTriangle = sizeof(triangle_vertices) / sizeof(FVertexSimple);
-
-    vertexBufferRect = CreateVertexBuffer(rect_vertices, sizeof(rect_vertices));
-    indexBufferRect = CreateIndexBuffer(rect_indices, sizeof(rect_indices));
-    numVerticesRect = sizeof(rect_vertices) / sizeof(FVertexSimple);
-    numIndicesRect = sizeof(rect_indices) / sizeof(uint32_t);
-
-    vertexBufferWorldAxis = CreateVertexBuffer(line_vertices, sizeof(line_vertices));
-    numVerticesWorldAxis = sizeof(line_vertices) / sizeof(FVertexSimple);
-
-    vertexBufferGizmo = CreateVertexBuffer(gizmoVertices, sizeof(gizmoVertices));
-    numVerticesGizmo = sizeof(gizmoVertices) / sizeof(FVertexSimple);
+    CreatePrimitiveVertexBuffer();
 
     CreateShader();
     CreateConstantBuffer();
