@@ -223,7 +223,7 @@ void CRenderer::EndFrame()
 		GUIRender();
 	}
 
-	HRESULT hr = SwapChain->Present(1, 0);
+	HRESULT hr = SwapChain->Present(0, 0);
 	if (hr == DXGI_STATUS_OCCLUDED)
 		bSwapChainOccluded = true;
 
@@ -475,7 +475,7 @@ void CRenderer::Release()
 		LineDepthState = nullptr;
 	}
 
-	
+
 
 	if (RasterizerState)
 	{
