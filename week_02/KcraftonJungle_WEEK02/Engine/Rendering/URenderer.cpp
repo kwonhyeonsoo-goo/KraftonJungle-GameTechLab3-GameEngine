@@ -693,10 +693,12 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             break;
         case ERenderType::Highlight:
         {
+            FVector direction = session.Camera.Position - FVector(constants.MVP.M[3][0], constants.MVP.M[3][1], constants.MVP.M[3][3]);
+            float distance = sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
             PrepareOutlineShader();
-            UpdateMVP(constants.MVP, 1.1f);
+            UpdateMVP(constants.MVP, 1.0f * distance * 0.01f);
             switch (cmd.Shape)
             {
             case EPrimitiveShape::Sphere:
