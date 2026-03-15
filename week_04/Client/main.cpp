@@ -1,9 +1,13 @@
-#include "EngineTest.h"
-#include <iostream>
+#include "Core/FEngine.h"
 
-int main()
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
-	EngineTestFunction();
-	std::cout << "Run Client" << std::endl;
+	FEngine Engine;
+	if (!Engine.Initialize(hInstance, L"Jungle Client", 1280, 720))
+		return -1;
+
+	Engine.Run();
+	Engine.Shutdown();
+
 	return 0;
 }

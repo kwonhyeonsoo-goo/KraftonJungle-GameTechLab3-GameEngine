@@ -156,8 +156,6 @@ void CEditorUI::SetupWindow(CWindow* InWindow)
 				Core->GetScene()->GetCamera()->SetAspectRatio(NewAspect);
 			}
 		});
-
-	MainWindow->Show();
 }
 
 void CEditorUI::BuildDefaultLayout(unsigned int DockID)

@@ -23,7 +23,28 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int Width, i
 	if (!Core->Initialize(MainWindow->GetHwnd(), MainWindow->GetWidth(), MainWindow->GetHeight()))
 		return false;
 
+	// Input forwarding
+	MainWindow->AddMessageFilter([this](HWND h, UINT m, WPARAM w, LPARAM l) -> bool
+		{
+			if (Core)
+			{
+				Core->ProcessInput(h, m, w, l);
+			}
+			return false;
+		});
+
+	// Resize callback
+	MainWindow->SetOnResizeCallback([this](int W, int H)
+		{
+			if (Core)
+			{
+				Core->OnResize(W, H);
+			}
+		});
+
 	Startup();
+
+	MainWindow->Show();
 
 	return true;
 }
