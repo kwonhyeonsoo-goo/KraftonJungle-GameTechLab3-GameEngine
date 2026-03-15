@@ -1,4 +1,5 @@
 #include "ToolbarPanel.h"
+#include <iostream>
 
 void ToolbarPanel::OnRender(AppContext& ctx)
 {
@@ -116,6 +117,60 @@ void ToolbarPanel::OnRender(AppContext& ctx)
             DefaultSpawnTransform
         ));
     }
+
+#pragma region SceneFeature
+    ImGui::Spacing();
+    ImGui::Text("Scene");
+    ImGui::Separator();
+
+    static char NameBuf[256] = {};
+
+
+    ImGui::Text("Scene Name : %s", ctx.CurrentWorld.GetName().c_str());
+
+    if (!ImGui::IsItemActive())
+    {
+        strncpy_s(NameBuf, ctx.CurrentWorld.GetName().c_str(), sizeof(NameBuf));
+    }
+
+    ImGui::SetNextItemWidth(200.0f);
+    if (ImGui::InputText("##SceneName", NameBuf, sizeof(NameBuf),
+        ImGuiInputTextFlags_EnterReturnsTrue))
+    {
+        if (NameBuf[0] == '\0')
+            strncpy_s(NameBuf, "default", sizeof(NameBuf));
+        ctx.CurrentWorld.SetName(FString(NameBuf));
+    }
+
+    if (ImGui::Button("New Scene"))
+    {
+        ctx.NewScene();
+
+        std::cout << "Clear" << std::endl;
+    }
+
+    if (ImGui::Button("Save Scene"))
+    {
+        std::cout << "Save Start" << std::endl;
+
+        if (SerializationService::Save(ctx)) {
+            std::cout << "Save Sucess" << std::endl;
+        }
+
+        std::cout << "Save End" << std::endl;
+    }
+
+    if (ImGui::Button("Load Scene"))
+    {
+        std::cout << "Load Start" << std::endl;
+
+        if (SerializationService::Load(ctx)) {
+            std::cout << "Load Sucess" << std::endl;
+        }
+
+        std::cout << "Load End" << std::endl;
+    }
+#pragma endregion
 
     ImGui::End();
 }

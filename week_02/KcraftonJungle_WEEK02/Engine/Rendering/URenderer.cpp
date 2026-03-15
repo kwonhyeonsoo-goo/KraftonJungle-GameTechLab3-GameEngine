@@ -7,6 +7,7 @@
 #include "../Mesh/Triangle.h"
 #include "../Mesh/Rect.h"
 #include "../Mesh/Line.h"
+#include "../Mesh/Gizmo.h"
 #include "../Editor/EditorSession.h"
 
 void URenderer::RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices)
@@ -316,6 +317,9 @@ void URenderer::CreatePrimitiveVertexBuffer()
 
     vertexBufferWorldAxis = CreateVertexBuffer(line_vertices, sizeof(line_vertices));
     numVerticesWorldAxis = sizeof(line_vertices) / sizeof(FVertexSimple);
+
+    vertexBufferGizmo = CreateVertexBuffer(gizmoVertices, sizeof(gizmoVertices));
+    numVerticesGizmo = sizeof(gizmoVertices) / sizeof(FVertexSimple);
 }
 
 void URenderer::ReleasePrimitivVertexBuffer()
@@ -582,6 +586,9 @@ bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
     vertexBufferWorldAxis = CreateVertexBuffer(line_vertices, sizeof(line_vertices));
     numVerticesWorldAxis = sizeof(line_vertices) / sizeof(FVertexSimple);
 
+    vertexBufferGizmo = CreateVertexBuffer(gizmoVertices, sizeof(gizmoVertices));
+    numVerticesGizmo = sizeof(gizmoVertices) / sizeof(FVertexSimple);
+
     CreateShader();
     CreateConstantBuffer();
 
@@ -599,7 +606,7 @@ void URenderer::Shutdown()
     if (vertexBufferRect) { vertexBufferRect->Release();      vertexBufferRect = nullptr; }
     if (indexBufferRect) { indexBufferRect->Release();       indexBufferRect = nullptr; }
     if (vertexBufferWorldAxis) { vertexBufferWorldAxis->Release(); vertexBufferWorldAxis = nullptr; }
-
+    if (vertexBufferGizmo) { vertexBufferGizmo->Release(); vertexBufferGizmo = nullptr; }
     ReleaseRasterizerState();
     ReleaseDepthBuffer();
     ReleaseFrameBuffer();
@@ -690,6 +697,10 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
         case ERenderType::LocalAxis:
             break;
         case ERenderType::Gizmo:
+            UpdateMVP(constants.MVP);
+            DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            PrepareShader();
+            RenderPrimitive(vertexBufferGizmo, numVerticesGizmo);
             break;
         case ERenderType::Highlight:
         {
@@ -720,41 +731,6 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             }
             DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
             DeviceContext->RSSetState(RasterizerState);
-            break;
-        }
-        case ERenderType::GizmoLine:
-        {
-            auto ToFloat = [](uint32 c, int shift) -> float
-                {
-                    return ((c >> shift) & 0xFF) / 255.0f;
-                };
-
-            const float r = ToFloat(cmd.Color, 24);
-            const float g = ToFloat(cmd.Color, 16);
-            const float b = ToFloat(cmd.Color, 8);
-            const float a = ToFloat(cmd.Color, 0);
-
-            FVertexSimple lineVertices[2] = {
-                { cmd.LineStart.x, cmd.LineStart.y, cmd.LineStart.z, r, g, b, a, 0.f, 0.f, 0.f },
-                { cmd.LineEnd.x,   cmd.LineEnd.y,   cmd.LineEnd.z,   r, g, b, a, 0.f, 0.f, 0.f }
-            };
-
-            ID3D11Buffer* lineVB = CreateVertexBuffer(lineVertices, sizeof(lineVertices));
-
-            FMatrix identity = {
-                1.f, 0.f, 0.f, 0.f,
-                0.f, 1.f, 0.f, 0.f,
-                0.f, 0.f, 1.f, 0.f,
-                0.f, 0.f, 0.f, 1.f
-            };
-
-            UpdateMVP(identity * MVeiwProj);
-            PrepareShader();
-            DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
-            RenderPrimitive(lineVB, 2);
-
-            if (lineVB)
-                lineVB->Release();
 
             break;
         }

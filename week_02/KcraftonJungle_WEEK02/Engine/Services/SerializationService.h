@@ -19,6 +19,7 @@ struct AppContext;
 
 class SerializationService
 {
+public:
 	static bool Save(const AppContext& ctx);
 	static bool Load(AppContext& ctx);
 };
