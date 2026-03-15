@@ -9,9 +9,7 @@ namespace
         uint32 objectId)
     {
         RenderCommand cmd = {};
-        cmd.Type = ERenderType::GizmoLine;
-        cmd.LineStart = a;
-        cmd.LineEnd = b;
+        cmd.Type = ERenderType::Gizmo;
         cmd.Color = color;
         cmd.ObjectId = objectId;
         queue.Push(cmd);
@@ -173,6 +171,28 @@ void TranslateTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
     DragStartAxisT = 0.0f;
 }
 
+static FMatrix MakeArrowTransformFromLocalZ(
+    const FVector& basePos,
+    const FVector& axisDir,
+    float uniformScale = 1.0f)
+{
+    FVector localZ = axisDir.Normalized();
+    FVector localX = GizmoMath::MakeStablePerpendicular(localZ);
+    FVector localY = localZ.Cross(localX).Normalized();
+
+    // row-vector ±âÁØ:
+    // row0 = local X axis in world
+    // row1 = local Y axis in world
+    // row2 = local Z axis in world
+    // row3 = translation
+    return {
+        localX.x * uniformScale, localX.y * uniformScale, localX.z * uniformScale, 0.0f,
+        localY.x * uniformScale, localY.y * uniformScale, localY.z * uniformScale, 0.0f,
+        localZ.x * uniformScale, localZ.y * uniformScale, localZ.z * uniformScale, 0.0f,
+        basePos.x,               basePos.y,               basePos.z,               1.0f
+    };
+}
+
 void TranslateTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
 {
     USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
@@ -181,18 +201,22 @@ void TranslateTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
 
     const FVector origin = primary->GetTransform().Location;
     const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
-    const uint32 objectId = primary->GetUUID();
 
     for (int axisIndex = 0; axisIndex < 3; ++axisIndex)
     {
         const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, coordSpace);
-        const FVector tip = origin + axisDir * GizmoMath::GizmoAxisLength;
 
         const uint32 color =
             axisIndex == 0 ? GizmoMath::AxisColorX :
             axisIndex == 1 ? GizmoMath::AxisColorY :
             GizmoMath::AxisColorZ;
 
-        PushLine(queue, origin, tip, color, objectId);
+        RenderCommand cmd = {};
+        cmd.Type = ERenderType::Gizmo;
+        cmd.WorldTransform = MakeArrowTransformFromLocalZ(origin, axisDir, 1.0f);
+        cmd.Color = color;
+        cmd.ObjectId = primary->GetUUID();
+
+        queue.Push(cmd);
     }
 }

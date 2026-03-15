@@ -152,6 +152,7 @@
     <ClInclude Include="Engine\Foundation\Containers\TMap.h" />
     <ClInclude Include="Engine\Mesh\Circle.h" />
     <ClInclude Include="Engine\Mesh\Cube.h" />
+    <ClInclude Include="Engine\Mesh\Gizmo.h" />
     <ClInclude Include="Engine\Mesh\Rect.h" />
     <ClInclude Include="Engine\Mesh\Sphere.h" />
     <ClInclude Include="Engine\ObjectKernel\ClassRegistry.h" />

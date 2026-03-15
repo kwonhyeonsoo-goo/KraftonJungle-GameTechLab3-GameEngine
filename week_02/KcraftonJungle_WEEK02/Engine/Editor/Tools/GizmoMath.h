@@ -10,10 +10,10 @@
 
 namespace GizmoMath
 {
-    constexpr float  GizmoAxisLength = 1.5f;
-    constexpr float  GizmoRingRadius = 1.2f;
-    constexpr float  GizmoPickThresholdPx = 8.0f;
-    constexpr float  GizmoScaleBoxPx = 10.0f;
+    constexpr float  GizmoAxisLength = 30.5f;
+    constexpr float  GizmoRingRadius = 30.2f;
+    constexpr float  GizmoPickThresholdPx = 58.0f;
+    constexpr float  GizmoScaleBoxPx = 30.0f;
 
     constexpr uint32 AxisColorX = 0xFF0000FF;
     constexpr uint32 AxisColorY = 0x00FF00FF;

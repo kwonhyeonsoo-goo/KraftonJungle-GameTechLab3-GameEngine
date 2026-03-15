@@ -12,9 +12,7 @@ namespace
         uint32 objectId)
     {
         RenderCommand cmd = {};
-        cmd.Type = ERenderType::GizmoLine;
-        cmd.LineStart = a;
-        cmd.LineEnd = b;
+        cmd.Type = ERenderType::Gizmo;
         cmd.Color = color;
         cmd.ObjectId = objectId;
         queue.Push(cmd);
