@@ -19,8 +19,8 @@ struct FVertexSimple
 struct FConstants
 {
     FMatrix MVP;
+    FVector Color;
     float thickness;
-    float padding[3];
 };
 
 
@@ -88,7 +88,7 @@ public:
 
 
     // MVP 상수 버퍼 업데이트
-    void UpdateMVP(const FMatrix& mvp);
+    void UpdateMVP(const FMatrix& mvp, FVector color);
     void UpdateMVP(const FMatrix& mvp, const float thickness);
 
 #pragma endregion

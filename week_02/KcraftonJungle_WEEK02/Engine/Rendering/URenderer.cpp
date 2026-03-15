@@ -653,14 +653,13 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
         switch (cmd.Type)
         {     
         case ERenderType::Primitive:
-            UpdateMVP(constants.MVP);
-
+            UpdateMVP(constants.MVP, { 1,1,1 });
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             PrepareShader();
             switch (cmd.Shape)
             {
             case EPrimitiveShape::Sphere:
-                
+                DeviceContext->RSSetState(RasterizerStateOutline);
                 RenderPrimitive(vertexBufferSphere, numVerticesSphere);
                 break;
             case EPrimitiveShape::Cube:
@@ -684,7 +683,7 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
 
             break;
         case ERenderType::WorldAxis:
-            UpdateMVP(constants.MVP);
+            UpdateMVP(constants.MVP, {1,1,1 });
 
             PrepareShader();
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
@@ -693,15 +692,20 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             break;
         case ERenderType::LocalAxis:
             break;
-        case ERenderType::Gizmo:
-            UpdateMVP(constants.MVP);
+        case ERenderType::Gizmo: {
+            uint32 Red = (cmd.Color >> 24) & 0xFF;
+            uint32 Green = (cmd.Color >> 16) & 0xFF;
+            uint32 Blue = (cmd.Color >> 8) & 0xFF;
+            UpdateMVP(constants.MVP, { Red / 255.f,Green / 255.f, Blue / 255.f });
+
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             PrepareShader();
             RenderPrimitive(vertexBufferGizmo, numVerticesGizmo);
             break;
+        }
         case ERenderType::Highlight:
         {
-            FVector direction = session.Camera.Position - FVector(constants.MVP.M[3][0], constants.MVP.M[3][1], constants.MVP.M[3][3]);
+            FVector direction = session.Camera.Position - FVector(constants.MVP.M[3][0], constants.MVP.M[3][1], constants.MVP.M[3][2]);
             float distance = sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -710,6 +714,7 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             switch (cmd.Shape)
             {
             case EPrimitiveShape::Sphere:
+                DeviceContext->RSSetState(RasterizerState);
                 RenderPrimitive(vertexBufferSphere, numVerticesSphere);
                 break;
             case EPrimitiveShape::Cube:
@@ -742,7 +747,7 @@ void URenderer::EndFrame()
     SwapBuffer();
 }
 
-void URenderer::UpdateMVP(const FMatrix& mvp)
+void URenderer::UpdateMVP(const FMatrix& mvp, FVector color)
 {
     if (ConstantBuffer)
     {
@@ -753,6 +758,7 @@ void URenderer::UpdateMVP(const FMatrix& mvp)
         {
             //constants->MVP = mvp;
             constants->MVP = mvp;
+            constants->Color = { color.x, color.y, color.z };
         }
         DeviceContext->Unmap(ConstantBuffer, 0);
     }
@@ -769,6 +775,7 @@ void URenderer::UpdateMVP(const FMatrix& mvp, const float thickness)
         {
             constants->MVP = mvp;
             constants->thickness = thickness;
+            constants->Color = { 1,1,1 };
         }
         DeviceContext->Unmap(OutlineConstantBuffer, 0);
     }

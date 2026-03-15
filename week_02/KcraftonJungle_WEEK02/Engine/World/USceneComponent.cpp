@@ -29,7 +29,7 @@ void USceneComponent::SetTransform(const Transform& t)
 {
     RelativeLocation = t.Location;
     RelativeRotation = t.Rotation;
-    RelativeScale3D = t.Scale;
+    RelativeScale3D = t.Scale.ClampedMin(1e-6);
 }
 
 void USceneComponent::AttachTo(USceneComponent* parent)

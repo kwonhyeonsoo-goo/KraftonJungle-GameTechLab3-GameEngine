@@ -25,9 +25,9 @@ FMatrix Transform::ToMatrix() const
 
     return
         FMatrix::Scale(Scale) *
-        FMatrix::RotationY(yaw) *   // Yaw 먼저 (Y축)
-        FMatrix::RotationX(pitch) *   // Pitch    (X축)
-        FMatrix::RotationZ(roll) *   // Roll 마지막 (Z축)
+        FMatrix::RotationX(pitch) *
+        FMatrix::RotationY(-yaw) *
+        FMatrix::RotationZ(roll) *
         FMatrix::Translation(Location);
 }
 

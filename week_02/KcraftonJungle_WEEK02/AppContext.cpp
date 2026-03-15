@@ -45,26 +45,25 @@ void AppContext::RegisterBuiltinTypes()
 
 void AppContext::RegisterPanels()
 {
-   // auto* outliner = new OutlinerPanel();
-    //auto* console = new ConsolePanel();
       
     auto* property = new PropertyPanel();
     auto* stat = new StatPanel();
     auto* toolbar = new ToolbarPanel();
     auto* console = new ConsolePanel();
+    auto* outliner = new OutlinerPanel();
 
-    //OwnedPanels.push_back(outlinfer);
-    //OwnedPanels.push_back(console);
 
     OwnedPanels.push_back(property);
     OwnedPanels.push_back(stat);
     OwnedPanels.push_back(toolbar);
     OwnedPanels.push_back(console);;
+    OwnedPanels.push_back(outliner);
 
     Panels.Register(property);
     Panels.Register(stat);
     Panels.Register(toolbar);
     Panels.Register(console);
+    Panels.Register(outliner);
 }
 
 void AppContext::RegisterTools()
@@ -173,7 +172,7 @@ void AppContext::SubscribeEvents()
         });
 
 
-    //OutlinerPanel* outliner = (OutlinerPanel*)Panels.Find("Outliner");
+    OutlinerPanel* outliner = (OutlinerPanel*)Panels.Find("Outliner");
     PropertyPanel* property = (PropertyPanel*)Panels.Find("Property");
 
     if (property) {
@@ -205,12 +204,12 @@ void AppContext::Shutdown()
         Editor.Selection.OnSelectionChanged.Unbind(property->SelectionChangedHandle);
         OnObjectDestroyed.Unbind(property->ObjectDestroyedHandle);
     }
-    /*OutlinerPanel* outliner = static_cast<OutlinerPanel*>(Panels.Find("Outliner"));
+    OutlinerPanel* outliner = static_cast<OutlinerPanel*>(Panels.Find("Outliner"));
 
     if (outliner) {
         Editor.Selection.OnSelectionChanged.Unbind(outliner->SelectionChangedHandle);
         OnObjectDestroyed.Unbind(outliner->ObjectDestroyedHandle);
-    }*/
+    }
 
     for (IEditorPanel* Panel : OwnedPanels) {
         delete Panel;

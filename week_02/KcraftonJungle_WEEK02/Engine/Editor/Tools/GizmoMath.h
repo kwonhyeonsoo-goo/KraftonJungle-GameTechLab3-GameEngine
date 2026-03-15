@@ -10,9 +10,9 @@
 
 namespace GizmoMath
 {
-    constexpr float  GizmoAxisLength = 30.5f;
-    constexpr float  GizmoRingRadius = 30.2f;
-    constexpr float  GizmoPickThresholdPx = 58.0f;
+    constexpr float  GizmoAxisLength = 1.5f;
+    constexpr float  GizmoRingRadius = 1.2f;
+    constexpr float  GizmoPickThresholdPx = 30.0f;
     constexpr float  GizmoScaleBoxPx = 30.0f;
 
     constexpr uint32 AxisColorX = 0xFF0000FF;
@@ -64,8 +64,8 @@ namespace GizmoMath
         const FVector& planeNormal,
         FVector& outHit);
 
-    // ÇÙ½É: ¸¶¿ì½º ray¿Í gizmo Ãà Á÷¼±ÀÇ ÃÖ´ÜÁ¡¿¡¼­ Ãà ÆÄ¶ó¹ÌÅÍ¸¦ ±¸ÇÑ´Ù.
-    // outAxisT´Â axisOrigin + axisDir * outAxisT ÀÇ t°ªÀÌ´Ù.
+    // ï¿½Ù½ï¿½: ï¿½ï¿½ï¿½ì½º rayï¿½ï¿½ gizmo ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ä¶ï¿½ï¿½ï¿½Í¸ï¿½ ï¿½ï¿½ï¿½Ñ´ï¿½.
+    // outAxisTï¿½ï¿½ axisOrigin + axisDir * outAxisT ï¿½ï¿½ tï¿½ï¿½ï¿½Ì´ï¿½.
     bool ClosestAxisParameterToRay(const FVector& axisOrigin,
         const FVector& axisDir,
         const Ray& ray,
@@ -76,4 +76,6 @@ namespace GizmoMath
         const FVector& axis);
 
     FVector MakeStablePerpendicular(const FVector& dir);
+
+    FMatrix MakeAxisTransform(const FVector& basePos, const FVector& axisDir, float scale);
 }

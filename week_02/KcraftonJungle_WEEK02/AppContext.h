@@ -19,6 +19,7 @@
 #include "Engine/Editor/Panels/ToolbarPanel.h"
 #include "Engine/Editor/Panels/StatPanel.h"
 #include "Engine/Editor/Panels/ConsolePanel.h"
+#include "Engine/Editor/Panels/OutlinerPanel.h"
 #include "Engine/Editor/Tools/ITool.h"
 
 #include "Engine/Platform/WindowHost.h"
@@ -71,8 +72,8 @@ private:
 
     // 변환 모드 툴
     ITool* Translate = nullptr;
-    //RotateTool* Rotate = nullptr;
-    //ScaleTool* Scale = nullptr
+    ITool* Rotate = nullptr;
+    ITool* Scale = nullptr;
 
     // 현재 드래그를 점유한 툴
     ITool* CapturedManipulationTool = nullptr;
