@@ -202,6 +202,7 @@
     <ClInclude Include="Engine\Editor\Tools\TranslateTool.h" />
     <ClInclude Include="Engine\Editor\Tools\ScaleTool.h" />
     <ClInclude Include="Engine\Editor\Tools\RotateTool.h" />
+    <ClInclude Include="Engine\Editor\Panels\OutlinerPanel.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AppContext.cpp" />
@@ -260,6 +261,7 @@
     <ClCompile Include="Engine\Editor\Tools\TranslateTool.cpp" />
     <ClCompile Include="Engine\Editor\Tools\ScaleTool.cpp" />
     <ClCompile Include="Engine\Editor\Tools\RotateTool.cpp" />
+    <ClCompile Include="Engine\Editor\Panels\OutlinerPanel.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -180,7 +180,6 @@ static FMatrix MakeArrowTransformFromLocalZ(
     FVector localX = GizmoMath::MakeStablePerpendicular(localZ);
     FVector localY = localZ.Cross(localX).Normalized();
 
-    // row-vector ����:
     // row0 = local X axis in world
     // row1 = local Y axis in world
     // row2 = local Z axis in world
@@ -193,6 +192,7 @@ static FMatrix MakeArrowTransformFromLocalZ(
     };
 }
 
+// It should be done by renderer... not here.
 void TranslateTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
 {
     USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
