@@ -511,7 +511,7 @@ void URenderer::CreateConstantBuffer()
     Device->CreateBuffer(&constantbufferdesc, nullptr, &ConstantBuffer);
 
     D3D11_BUFFER_DESC constantbufferdesc1 = {};
-    constantbufferdesc1.ByteWidth = sizeof(FCountantsOutlines) + 0xf & 0xfffffff0;
+    constantbufferdesc1.ByteWidth = sizeof(FConstants) + 0xf & 0xfffffff0;
     constantbufferdesc1.Usage = D3D11_USAGE_DYNAMIC;
     constantbufferdesc1.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     constantbufferdesc1.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -558,6 +558,12 @@ bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
 
 
     CreateRasterizerState();
+
+    for (int i = 0; i < 2400; i++) {
+        sphere_vertices[i].nx = sphere_vertices[i].x;
+        sphere_vertices[i].ny = sphere_vertices[i].y;
+        sphere_vertices[i].nz = sphere_vertices[i].z;
+    }
 
     vertexBufferSphere = CreateVertexBuffer(sphere_vertices, sizeof(sphere_vertices));
     numVerticesSphere = sizeof(sphere_vertices) / sizeof(FVertexSimple);
@@ -690,7 +696,7 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
             PrepareOutlineShader();
-            UpdateMVP(constants.MVP, 0.1f);
+            UpdateMVP(constants.MVP, 1.1f);
             switch (cmd.Shape)
             {
             case EPrimitiveShape::Sphere:
@@ -747,7 +753,7 @@ void URenderer::UpdateMVP(const FMatrix& mvp, const float thickness)
         D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
 
         DeviceContext->Map(OutlineConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
-        FCountantsOutlines* constants = (FCountantsOutlines*)constantbufferMSR.pData;
+        FConstants* constants = (FConstants*)constantbufferMSR.pData;
         {
             constants->MVP = mvp;
             constants->thickness = thickness;

@@ -23,12 +23,6 @@ struct FConstants
     float padding[3];
 };
 
-struct FCountantsOutlines
-{
-    FMatrix MVP;
-    float thickness;
-    float padding[3];
-};
 
 
 class RenderQueue;
