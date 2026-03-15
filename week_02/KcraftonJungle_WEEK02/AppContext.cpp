@@ -40,7 +40,7 @@ void AppContext::RegisterBuiltinTypes()
     Classes.Register("Cube", UCubeComp::StaticClass());
     Classes.Register("Sphere", USphereComp::StaticClass());
     Classes.Register("Plane", UPlaneComp::StaticClass());
-    /*Classes.Register("Triangle", UtriangleComp::StaticClass());*/
+    Classes.Register("Triangle", UTriangleComp::StaticClass());
 }
 
 void AppContext::RegisterPanels()

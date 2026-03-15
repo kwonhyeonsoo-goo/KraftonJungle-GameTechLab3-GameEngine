@@ -3,6 +3,7 @@
 #include "../World/UCubeComp.h"
 #include "../World/USphereComp.h"
 #include "../World/UPlaneComp.h"
+#include "../World/UTriangleComp.h"
 
 UObject* ObjectFactory::ConstructObject(AppContext& ctx, UClass* uclass)
 {
@@ -29,6 +30,10 @@ UObject* ObjectFactory::ConstructObject(AppContext& ctx, const FString& typeName
     else if (typeName == "Plane")
     {
         obj = new UPlaneComp();
+    }
+    else if (typeName == "Triangle")
+    {
+        obj = new UTriangleComp();
     }
     else
     { 

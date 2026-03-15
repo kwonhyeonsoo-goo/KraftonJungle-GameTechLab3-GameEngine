@@ -5,6 +5,7 @@
 #include "../World/UCubeComp.h"
 #include "../World/UPlaneComp.h"
 #include "../World/USphereComp.h"
+#include "../World/UTriangleComp.h"
 
 struct AppContext;
 

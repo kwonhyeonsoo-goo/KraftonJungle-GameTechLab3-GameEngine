@@ -669,7 +669,6 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             case EPrimitiveShape::Triangle:
 
                 RenderPrimitive(vertexBufferTriangle, numVerticesTriangle);
-
                 break;
             case EPrimitiveShape::Plane:
 
