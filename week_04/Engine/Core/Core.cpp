@@ -8,6 +8,7 @@
 #include "Camera/Camera.h"
 #include "Component/PrimitiveComponent.h"
 #include "Primitive/PrimitiveBase.h"
+#include "Math/Frustum.h"
 
 CCore::~CCore()
 {
@@ -153,10 +154,12 @@ void CCore::Render()
 	ShaderManager->Bind(Renderer->GetDeviceContext());
 
 	CCamera* Camera = Scene->GetCamera();
+	FFrustum Frustum;
 	if (Camera)
 	{
 		FMatrix VP = Camera->GetViewMatrix() * Camera->GetProjectionMatrix();
 		Renderer->ViewProjectionMatrix = VP;
+		Frustum.ExtractFromVP(VP);
 	}
 
 	for (AActor* Actor : Scene->GetActors())
@@ -171,6 +174,11 @@ void CCore::Render()
 			UPrimitiveComponent* PrimComp = dynamic_cast<UPrimitiveComponent*>(Comp);
 			if (PrimComp && PrimComp->GetPrimitive())
 			{
+				if (!Frustum.IsVisible(PrimComp->GetWorldBounds()))
+				{
+					continue;
+				}
+
 				Renderer->AddCommand({
 					PrimComp->GetPrimitive()->GetMeshData(),
 					PrimComp->GetWorldTransform()

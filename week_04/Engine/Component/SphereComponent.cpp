@@ -20,4 +20,5 @@ USphereComponent::USphereComponent()
 	: UPrimitiveComponent(StaticClass(), "")
 {
 	Primitive = std::make_unique<CPrimitiveSphere>();
+	LocalBoundRadius = 1.0f;
 }

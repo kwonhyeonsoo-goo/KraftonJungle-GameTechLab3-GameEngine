@@ -20,4 +20,5 @@ UCubeComponent::UCubeComponent()
 	: UPrimitiveComponent(StaticClass(), "")
 {
 	Primitive = std::make_unique<CPrimitiveCube>();
+	LocalBoundRadius = 0.866f; // sqrt(3) * 0.5
 }

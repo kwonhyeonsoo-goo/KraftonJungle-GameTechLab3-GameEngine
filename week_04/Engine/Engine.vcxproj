@@ -203,6 +203,7 @@
     <ClCompile Include="Primitive\PrimitivePlane.cpp" />
     <ClCompile Include="Primitive\PrimitiveSphere.cpp" />
     <ClCompile Include="Input\InputManager.cpp" />
+    <ClCompile Include="Math\Frustum.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Math\Vector.h" />
@@ -228,6 +229,7 @@
     <ClInclude Include="Primitive\PrimitivePlane.h" />
     <ClInclude Include="Primitive\PrimitiveSphere.h" />
     <ClInclude Include="Input\InputManager.h" />
+    <ClInclude Include="Math\Frustum.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
