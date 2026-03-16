@@ -34,16 +34,6 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height)
 
 	// ShaderManager
 	ShaderManager = new CShaderManager();
-	std::wstring VSPath = FPaths::ToWide(FPaths::ShaderDir() + "VertexShader.hlsl");
-	std::wstring PSPath = FPaths::ToWide(FPaths::ShaderDir() + "PixelShader.hlsl");
-	if (!ShaderManager->LoadVertexShader(Renderer->GetDevice(), VSPath.c_str()))
-	{
-		return false;
-	}
-	if (!ShaderManager->LoadPixelShader(Renderer->GetDevice(), PSPath.c_str()))
-	{
-		return false;
-	}
 
 	// InputManager
 	InputManager = new CInputManager();
