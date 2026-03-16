@@ -213,6 +213,7 @@ void RotateTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
         RenderCommand cmd = {};
         cmd.Type = ERenderType::Torus;
         cmd.WorldTransform = FMatrix::Scale(FVector(gs, gs, gs)) * axisRotation * FMatrix::Translation(center);
+        cmd.bOrtho = ctx.Editor.bOrthoMode;
         cmd.ObjectId = objectId;
         cmd.Color = color;
         queue.Push(cmd);

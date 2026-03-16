@@ -195,6 +195,7 @@ void ScaleTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
         cmd.Type = ERenderType::Gizmo;
         const float gs = GizmoMath::ComputeGizmoScale(origin, ctx);
         cmd.WorldTransform = GizmoMath::MakeAxisTransform(origin, axisDir, GizmoMath::GizmoAxisLength * gs);
+        cmd.bOrtho = ctx.Editor.bOrthoMode;
         cmd.Color = color;
         cmd.ObjectId = objectId;
         queue.Push(cmd);
