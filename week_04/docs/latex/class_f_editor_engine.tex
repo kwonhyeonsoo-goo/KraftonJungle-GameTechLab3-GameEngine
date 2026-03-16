@@ -1,0 +1,98 @@
+\doxysection{FEditor\+Engine Class Reference}
+\hypertarget{class_f_editor_engine}{}\label{class_f_editor_engine}\index{FEditorEngine@{FEditorEngine}}
+
+
+{\ttfamily \+\#include $<$FEditor\+Engine.\+h$>$}
+
+Inheritance diagram for FEditor\+Engine:\+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{class_f_editor_engine}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{class_f_editor_engine_a898821f2f3b470bdfdf47e98bb45e0a3}{FEditor\+Engine}} ()=default
+\item 
+bool \doxymbox{\hyperlink{class_f_editor_engine_ae17a53971d667370a2882c87621a71f2}{Initialize}} (HINSTANCE h\+Instance)
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \doxymbox{\hyperlink{class_f_engine}{FEngine}}}
+\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{class_f_engine_acadb97058feb748fa8cddc5a9ab734cf}{FEngine}} ()=default
+\item 
+virtual \doxymbox{\hyperlink{class_f_engine_a6eaa0a036e5c61ad63124745a239f142}{\texorpdfstring{$\sim$}{\string~}\+FEngine}} ()
+\item 
+\doxymbox{\hyperlink{class_f_engine_afca34af2a88b041817dc53920b83be33}{FEngine}} (const \doxymbox{\hyperlink{class_f_engine}{FEngine}} \&)=delete
+\item 
+\doxymbox{\hyperlink{class_f_engine}{FEngine}} \& \doxymbox{\hyperlink{class_f_engine_a38c7d0875158a09d1e4e389be7ea8f83}{operator=}} (const \doxymbox{\hyperlink{class_f_engine}{FEngine}} \&)=delete
+\item 
+bool \doxymbox{\hyperlink{class_f_engine_a086ff502be635d86a6868225dcdc95a7}{Initialize}} (HINSTANCE h\+Instance, const wchar\+\_\+t \texorpdfstring{$\ast$}{*}Title, \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}} Width, \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}} Height)
+\item 
+void \doxymbox{\hyperlink{class_f_engine_a96f88477aa7f9f40366a60e8951151aa}{Run}} ()
+\item 
+virtual void \doxymbox{\hyperlink{class_f_engine_a4366f39c93b0d067586cd7f88f60bfb8}{Shutdown}} ()
+\item 
+\doxymbox{\hyperlink{class_c_core}{CCore}} \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{class_f_engine_a9b5296878b319d15116405f03ad760b3}{Get\+Core}} () const
+\item 
+\doxymbox{\hyperlink{class_c_window}{CWindow}} \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{class_f_engine_af9eb8d5a7dc26c5840bc16f6404f1f66}{Get\+Main\+Window}} () const
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \doxymbox{\hyperlink{class_f_editor_engine_a38ae5cde5ea6956722402aa4ad4c03b7}{Startup}} () override
+\end{DoxyCompactItemize}
+\doxysubsection*{Protected Member Functions inherited from \doxymbox{\hyperlink{class_f_engine}{FEngine}}}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \doxymbox{\hyperlink{class_f_engine_a2b7c411423b14ccf9ca9d9295d410de0}{Tick}} (float Delta\+Time)
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Additional Inherited Members}
+\doxysubsection*{Protected Attributes inherited from \doxymbox{\hyperlink{class_f_engine}{FEngine}}}
+\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{class_c_window_application}{CWindow\+Application}} \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{class_f_engine_a36fc82954ad33855c75d74423ad6e4b8}{App}} = nullptr
+\item 
+\doxymbox{\hyperlink{class_c_window}{CWindow}} \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{class_f_engine_a6af841f090f159e0ff3c3db8a33cb2b6}{Main\+Window}} = nullptr
+\item 
+\doxymbox{\hyperlink{class_c_core}{CCore}} \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{class_f_engine_a181f9307db77a43f71eaabbba4991637}{Core}} = nullptr
+\end{DoxyCompactItemize}
+
+
+\label{doc-constructors}
+\Hypertarget{class_f_editor_engine_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{class_f_editor_engine_a898821f2f3b470bdfdf47e98bb45e0a3}\index{FEditorEngine@{FEditorEngine}!FEditorEngine@{FEditorEngine}}
+\index{FEditorEngine@{FEditorEngine}!FEditorEngine@{FEditorEngine}}
+\doxysubsubsection{\texorpdfstring{FEditorEngine()}{FEditorEngine()}}
+{\footnotesize\ttfamily \label{class_f_editor_engine_a898821f2f3b470bdfdf47e98bb45e0a3} 
+FEditor\+Engine::\+\+FEditor\+Engine (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [default]}}
+
+
+
+\label{doc-func-members}
+\Hypertarget{class_f_editor_engine_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_f_editor_engine_ae17a53971d667370a2882c87621a71f2}\index{FEditorEngine@{FEditorEngine}!Initialize@{Initialize}}
+\index{Initialize@{Initialize}!FEditorEngine@{FEditorEngine}}
+\doxysubsubsection{\texorpdfstring{Initialize()}{Initialize()}}
+{\footnotesize\ttfamily \label{class_f_editor_engine_ae17a53971d667370a2882c87621a71f2} 
+bool FEditor\+Engine::\+\+Initialize (\begin{DoxyParamCaption}\item[{HINSTANCE}]{h\+Instance}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_f_editor_engine_a38ae5cde5ea6956722402aa4ad4c03b7}\index{FEditorEngine@{FEditorEngine}!Startup@{Startup}}
+\index{Startup@{Startup}!FEditorEngine@{FEditorEngine}}
+\doxysubsubsection{\texorpdfstring{Startup()}{Startup()}}
+{\footnotesize\ttfamily \label{class_f_editor_engine_a38ae5cde5ea6956722402aa4ad4c03b7} 
+void FEditor\+Engine::\+\+Startup (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [override]}, {\ttfamily [protected]}, {\ttfamily [virtual]}}
+
+
+
+Reimplemented from \doxymbox{\hyperlink{class_f_engine_a56c0530519f8280bed982499d5cf36a7}{FEngine}}.
+
+
+
+The documentation for this class was generated from the following files:\+\begin{DoxyCompactItemize}
+\item 
+Editor/\+\+Source/\+\doxymbox{\hyperlink{_f_editor_engine_8h}{FEditor\+Engine.\+h}}\item 
+Editor/\+\+Source/\+\doxymbox{\hyperlink{_f_editor_engine_8cpp}{FEditor\+Engine.\+cpp}}\end{DoxyCompactItemize}

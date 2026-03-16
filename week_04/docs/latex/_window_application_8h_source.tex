@@ -1,0 +1,47 @@
+\doxysection{Window\+Application.\+h}
+\hypertarget{_window_application_8h_source}{}\label{_window_application_8h_source}\index{Engine/Source/Platform/Windows/WindowApplication.h@{Engine/Source/Platform/Windows/WindowApplication.h}}
+\doxymbox{\hyperlink{_window_application_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_core_minimal_8h}{CoreMinimal.h}}"{}}}
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <Windows.h>}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_window}{CWindow}};}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{_engine_a_p_i_8h_a0697ee40f69dc5dab56d13131f4c4835}{ENGINE\_API}}\ CWindowApplication}
+\DoxyCodeLine{00008\ \{}
+\DoxyCodeLine{00009\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00010\ \ \ \ \ \textcolor{keyword}{static}\ CWindowApplication\&\ \doxymbox{\hyperlink{class_c_window_application_a01873eecba83540c8869f64e15100a50}{Get}}();}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_c_window_application_aa72420df42b692e90d59e50dd61a2bd0}{Create}}(HINSTANCE\ InInstance,\ \textcolor{keyword}{const}\ WCHAR*\ ClassName\ =\ L\textcolor{stringliteral}{"{}JungleEngineWindow"{}});}
+\DoxyCodeLine{00013\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_window_application_a5ea2cdf2837452088e1e35fb4fd8e978}{Destroy}}();}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \ \ \ \ \doxymbox{\hyperlink{class_c_window_application_a850c6c7bf26c00ee0d9c341f809d5d9a}{CWindow}}*\ \doxymbox{\hyperlink{class_c_window_application_a0fe120bce5043b1d509ec5559b7fec81}{MakeWindow}}(\textcolor{keyword}{const}\ WCHAR*\ Title,\ \textcolor{keywordtype}{int}\ Width,\ \textcolor{keywordtype}{int}\ Height,\ \textcolor{keywordtype}{int}\ \doxymbox{\hyperlink{_matrix_8h_a8f7f06af3f81ae67cd5c9a9db06779bca02129bb861061d1a052c592e2dc6b383}{X}}\ =\ 100,\ \textcolor{keywordtype}{int}\ \doxymbox{\hyperlink{_matrix_8h_a8f7f06af3f81ae67cd5c9a9db06779bca57cec4137b614c87cb4e24a3d003a3e0}{Y}}\ =\ 100);}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \ \ \ \ \textcolor{comment}{//\ Returns\ false\ when\ WM\_QUIT\ received}}
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_c_window_application_a1ee470ab2ca68a68b706df7016cec1fb}{PumpMessages}}();}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \ \ \ \ HINSTANCE\ \doxymbox{\hyperlink{class_c_window_application_adda704305c20569c33afa0de6a50de46}{GetInstance}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Instance;\ \}}
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{keyword}{const}\ WCHAR*\ \doxymbox{\hyperlink{class_c_window_application_a92d49e9192313d79266cb4afcc03d25b}{GetClassName}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ WindowClassName;\ \}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00024\ \ \ \ \ \doxymbox{\hyperlink{class_c_window_application}{CWindowApplication}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00025\ \ \ \ \ \doxymbox{\hyperlink{class_c_window_application}{\string~CWindowApplication}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keyword}{static}\ LRESULT\ CALLBACK\ StaticWndProc(HWND\ hWnd,\ UINT\ Msg,\ WPARAM\ wParam,\ LPARAM\ lParam);}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \ \ \ \ HINSTANCE\ Instance\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00030\ \ \ \ \ WNDCLASSEX\ WindowClass\ =\ \{\};}
+\DoxyCodeLine{00031\ \ \ \ \ WCHAR\ WindowClassName[128]\ =\ \{\};}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keywordtype}{bool}\ bClassRegistered\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{comment}{//\ HWND\ -\/>\ CWindow\ mapping}}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keyword}{static}\ \doxymbox{\hyperlink{_map_8h_a2c2e6b88770f2aa07e5e27f6a58b6f90}{TMap<HWND,\ CWindow*>}}\ WindowMap;}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordtype}{void}\ RegisterWindow(HWND\ Hwnd,\ CWindow*\ Window);}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keywordtype}{void}\ UnregisterWindow(HWND\ Hwnd);}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_window_application_a850c6c7bf26c00ee0d9c341f809d5d9a}{CWindow}};}
+\DoxyCodeLine{00041\ \};}
+
+\end{DoxyCode}

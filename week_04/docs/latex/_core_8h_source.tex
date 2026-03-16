@@ -1,0 +1,67 @@
+\doxysection{Core.\+h}
+\hypertarget{_core_8h_source}{}\label{_core_8h_source}\index{Engine/Source/Core/Core.h@{Engine/Source/Core/Core.h}}
+\doxymbox{\hyperlink{_core_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_core_minimal_8h}{CoreMinimal.h}}"{}}}
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ "{}Windows.h"{}}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_f_timer_8h}{Core/FTimer.h}}"{}}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_a_actor}{AActor}};}
+\DoxyCodeLine{00008\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_u_scene}{UScene}};}
+\DoxyCodeLine{00009\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_renderer}{CRenderer}};}
+\DoxyCodeLine{00010\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_shader_manager}{CShaderManager}};}
+\DoxyCodeLine{00011\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_input_manager}{CInputManager}};}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{_engine_a_p_i_8h_a0697ee40f69dc5dab56d13131f4c4835}{ENGINE\_API}}\ \doxymbox{\hyperlink{class_c_core_a4239739c60a7315a6dd5db9675615b27}{CCore}}}
+\DoxyCodeLine{00014\ \{}
+\DoxyCodeLine{00015\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00016\ \ \ \ \ \doxymbox{\hyperlink{class_c_core_a4239739c60a7315a6dd5db9675615b27}{CCore}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00017\ \ \ \ \ \doxymbox{\hyperlink{class_c_core_a4239739c60a7315a6dd5db9675615b27}{\string~CCore}}();}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \ \ \ \ \doxymbox{\hyperlink{class_c_core_ae972c602d9173b64617cae7510780274}{CCore}}(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{class_c_core_a4239739c60a7315a6dd5db9675615b27}{CCore}}\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00020\ \ \ \ \ \doxymbox{\hyperlink{class_c_core_a246843578ba2847551a733b160349939}{CCore}}(\doxymbox{\hyperlink{class_c_core_a4239739c60a7315a6dd5db9675615b27}{CCore}}\&\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00021\ \ \ \ \ \doxymbox{\hyperlink{class_c_core_a4239739c60a7315a6dd5db9675615b27}{CCore}}\&\ \doxymbox{\hyperlink{class_c_core_ac82c5e5f6d66d2cc70dac0ed977a0e3a}{operator=}}(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{class_c_core_a4239739c60a7315a6dd5db9675615b27}{CCore}}\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00022\ \ \ \ \ \doxymbox{\hyperlink{class_c_core_a4239739c60a7315a6dd5db9675615b27}{CCore}}\&\ \doxymbox{\hyperlink{class_c_core_a491b0fcabba228632cbd2632cc0ee11a}{operator=}}(\doxymbox{\hyperlink{class_c_core_a4239739c60a7315a6dd5db9675615b27}{CCore}}\&\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_c_core_a61e7e488c25f0e2da70f67e304d8dcd1}{Initialize}}(HWND\ Hwnd,\ \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}\ Width,\ \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}\ Height);}
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_core_a5e03e45cfbb11e83d5d544d46e2951fa}{Release}}();}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_core_a1f5b67cbedeb32d4b3fb99f26b20741f}{Tick}}();}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_core_a1f5b67cbedeb32d4b3fb99f26b20741f}{Tick}}(\textcolor{keywordtype}{float}\ DeltaTime);}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_core_a3d9d0b06ee592e38197b74fcaa2b62bb}{ProcessInput}}(HWND\ Hwnd,\ UINT\ Msg,\ WPARAM\ WParam,\ LPARAM\ LParam);}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \ \ \ \ \doxymbox{\hyperlink{class_u_scene}{UScene}}*\ \doxymbox{\hyperlink{class_c_core_a16bd79c2fb1fd3253e6d8d6e7310f618}{GetScene}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Scene;\ \}}
+\DoxyCodeLine{00032\ \ \ \ \ \doxymbox{\hyperlink{class_c_renderer}{CRenderer}}*\ \doxymbox{\hyperlink{class_c_core_a05750f17655c1869e0dd94d78af0c0c3}{GetRenderer}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Renderer;\ \}}
+\DoxyCodeLine{00033\ \ \ \ \ \doxymbox{\hyperlink{class_c_input_manager}{CInputManager}}*\ \doxymbox{\hyperlink{class_c_core_a70b292d4d75860f1c5503209af044ee8}{GetInputManager}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ InputManager;\ \}}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_core_ac78f9fb0d56bad2622e5e0e9e30d9181}{SetSelectedActor}}(\doxymbox{\hyperlink{class_a_actor}{AActor}}*\ InActor)\ \{\ SelectedActor\ =\ InActor;\ \}}
+\DoxyCodeLine{00036\ \ \ \ \ \doxymbox{\hyperlink{class_a_actor}{AActor}}*\ \doxymbox{\hyperlink{class_c_core_a45170ab1a52ba335f55841705eb6011f}{GetSelectedActor}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ SelectedActor;\ \}}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keywordtype}{void}\ OnResize(\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}\ Width,\ \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}\ Height);}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keyword}{using\ }\doxymbox{\hyperlink{class_c_core_a394d2cd7a1a7d1323fc826a2b595756d}{FRenderCallback}}\ =\ std::function<void(\doxymbox{\hyperlink{class_c_renderer}{CRenderer}}*)>;}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_core_a226f6d5da34727e02f411b6b9112c1d2}{SetPostRenderCallback}}(\doxymbox{\hyperlink{class_c_core_a394d2cd7a1a7d1323fc826a2b595756d}{FRenderCallback}}\ InCallback)\ \{\ PostRenderCallback\ =\ std::move(InCallback);\ \}}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordtype}{void}\ ProcessCameraInput(\textcolor{keywordtype}{float}\ DeltaTime);}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keywordtype}{void}\ Physics(\textcolor{keywordtype}{float}\ DeltaTime);}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordtype}{void}\ GameLogic(\textcolor{keywordtype}{float}\ DeltaTime);}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keywordtype}{void}\ Render();}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00050\ \ \ \ \ \doxymbox{\hyperlink{class_c_renderer}{CRenderer}}*\ Renderer\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00051\ \ \ \ \ \doxymbox{\hyperlink{class_c_shader_manager}{CShaderManager}}*\ ShaderManager\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00052\ \ \ \ \ \doxymbox{\hyperlink{class_c_input_manager}{CInputManager}}*\ InputManager\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00053\ \ \ \ \ \doxymbox{\hyperlink{class_u_scene}{UScene}}*\ Scene\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00054\ \ \ \ \ \doxymbox{\hyperlink{class_a_actor}{AActor}}*\ SelectedActor\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \ \ \ \ FRenderCallback\ PostRenderCallback;}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \ \ \ \ \doxymbox{\hyperlink{class_f_timer}{FTimer}}\ Timer;}
+\DoxyCodeLine{00059\ \ \ \ \ \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}\ WindowWidth\ =\ 0;}
+\DoxyCodeLine{00060\ \ \ \ \ \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}\ WindowHeight\ =\ 0;}
+\DoxyCodeLine{00061\ \};}
+
+\end{DoxyCode}
