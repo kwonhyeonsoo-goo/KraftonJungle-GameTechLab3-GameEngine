@@ -48,7 +48,8 @@ UPrimitiveComponent* PickingService::Pick(const Ray& ray, const TArray<UObject*>
     UPrimitiveComponent* CloseObj = nullptr;
     float ObjTime = FLT_MAX;
     
-    for (auto* object : objects) {//TODO: 여기도 RTTI로 바꿔야함
+    for (auto* object : objects) {
+        if (!object->IsA<UPrimitiveComponent>()) continue;
         UPrimitiveComponent* Prim = static_cast<UPrimitiveComponent*>(object);
 
         if (!Prim || !Prim->bVisible) continue;

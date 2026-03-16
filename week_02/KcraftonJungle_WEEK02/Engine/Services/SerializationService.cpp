@@ -27,7 +27,8 @@ bool SerializationService::Save(const AppContext& ctx) {
 	// Primitives ������Ʈ
 	JSON primitives = json::Object();
 	for (UObject* obj : ctx.CurrentWorld.GetAllObjects()) {
-		UPrimitiveComponent* prim = dynamic_cast<UPrimitiveComponent*>(obj);//TODO: IsA�� RTTI����
+		if (!obj->IsA<UPrimitiveComponent>()) continue;
+		UPrimitiveComponent* prim = static_cast<UPrimitiveComponent*>(obj);//TODO: IsA�� RTTI����
 		if (!prim) continue;
 
 		std::string key = std::to_string(prim->GetUUID());
