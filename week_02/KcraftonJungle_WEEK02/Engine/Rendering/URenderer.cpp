@@ -623,6 +623,7 @@ void URenderer::Shutdown()
     if (indexBufferRect) { indexBufferRect->Release();       indexBufferRect = nullptr; }
     if (vertexBufferWorldAxis) { vertexBufferWorldAxis->Release(); vertexBufferWorldAxis = nullptr; }
     if (vertexBufferGizmo) { vertexBufferGizmo->Release(); vertexBufferGizmo = nullptr; }
+    if (vertexBufferTorus) { vertexBufferTorus->Release(); vertexBufferTorus = nullptr; }
     ReleaseRasterizerState();
     ReleaseDepthBuffer();
     ReleaseFrameBuffer();
