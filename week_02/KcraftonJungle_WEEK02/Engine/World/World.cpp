@@ -51,7 +51,7 @@ UPrimitiveComponent* World::Find(uint32 uuid) const
     return static_cast<UPrimitiveComponent*>(Ctx->Objects.Find(uuid));
 }
 
-const TArray<UObject*>& World::GetAllObjects() const
+const TArray<std::unique_ptr<UObject>>& World::GetAllObjects() const
 {
     return Ctx->Objects.GUObjectArray();
 }

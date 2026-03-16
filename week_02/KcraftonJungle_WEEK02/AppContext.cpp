@@ -14,12 +14,12 @@
 bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 height)
 {
     if (!Window.Initialize(windowTitle, width, height)) {
-        OutputDebugStringA("[ERROR] Window ÃÊ±âÈ­ ½ÇÆÐ\n");
+        OutputDebugStringA("[ERROR] Window ï¿½Ê±ï¿½È­ ï¿½ï¿½ï¿½ï¿½\n");
         return false;
     }
 
     if (!Renderer.Initialize(Window.GetHWND(), width, height)) {
-        OutputDebugStringA("[ERROR] Renderer ÃÊ±âÈ­ ½ÇÆÐ\n");
+        OutputDebugStringA("[ERROR] Renderer ï¿½Ê±ï¿½È­ ï¿½ï¿½ï¿½ï¿½\n");
         return false;
     }
 
@@ -51,46 +51,44 @@ void AppContext::RegisterBuiltinTypes()
 
 void AppContext::RegisterPanels()
 {
-      
-    auto* property = new PropertyPanel();
-    auto* stat = new StatPanel();
-    auto* toolbar = new ToolbarPanel();
-    auto* console = new ConsolePanel();
-    auto* outliner = new OutlinerPanel();
+    auto property = std::make_unique<PropertyPanel>();
+    auto stat     = std::make_unique<StatPanel>();
+    auto toolbar  = std::make_unique<ToolbarPanel>();
+    auto console  = std::make_unique<ConsolePanel>();
+    auto outliner = std::make_unique<OutlinerPanel>();
 
+    Panels.Register(property.get());
+    Panels.Register(stat.get());
+    Panels.Register(toolbar.get());
+    Panels.Register(console.get());
+    Panels.Register(outliner.get());
 
-    OwnedPanels.push_back(property);
-    OwnedPanels.push_back(stat);
-    OwnedPanels.push_back(toolbar);
-    OwnedPanels.push_back(console);;
-    OwnedPanels.push_back(outliner);
-
-    Panels.Register(property);
-    Panels.Register(stat);
-    Panels.Register(toolbar);
-    Panels.Register(console);
-    Panels.Register(outliner);
+    OwnedPanels.push_back(std::move(property));
+    OwnedPanels.push_back(std::move(stat));
+    OwnedPanels.push_back(std::move(toolbar));
+    OwnedPanels.push_back(std::move(console));
+    OwnedPanels.push_back(std::move(outliner));
 }
 
 void AppContext::RegisterTools()
 {
-    auto* select = new SelectTool();
-    auto* translate = new TranslateTool();
-    auto* rotate = new RotateTool();
-    auto* scale = new ScaleTool();
+    auto select    = std::make_unique<SelectTool>();
+    auto translate = std::make_unique<TranslateTool>();
+    auto rotate    = std::make_unique<RotateTool>();
+    auto scale     = std::make_unique<ScaleTool>();
 
-    SelectionTool = select;
-    Translate = translate;
+    SelectionTool = select.get();
+    Translate     = translate.get();
 
-    OwnedTools.push_back(select);
-    OwnedTools.push_back(translate);
-    OwnedTools.push_back(rotate);
-    OwnedTools.push_back(scale);
+    Editor.Tools.RegisterTool(translate.get());
+    Editor.Tools.RegisterTool(rotate.get());
+    Editor.Tools.RegisterTool(scale.get());
 
-    Editor.Tools.RegisterTool(translate);
-    Editor.Tools.RegisterTool(rotate);
-    Editor.Tools.RegisterTool(scale);
-    // ±âº» È°¼º Åø
+    OwnedTools.push_back(std::move(select));
+    OwnedTools.push_back(std::move(translate));
+    OwnedTools.push_back(std::move(rotate));
+    OwnedTools.push_back(std::move(scale));
+    // ï¿½âº» È°ï¿½ï¿½ ï¿½ï¿½
     Editor.Tools.ActivateTool("Translate");
     CapturedManipulationTool = nullptr;
 }
@@ -148,7 +146,7 @@ void AppContext::SubscribeEvents()
 
     KeyDownHandle = PlatformEvents::OnKeyDown.Bind(
         [this](const KeyDownEvent& e) {
-            // Space Bar ¡æ Transform ¸ðµå ¼øÈ¯ (Translate ¡æ Rotate ¡æ Scale)
+            // Space Bar ï¿½ï¿½ Transform ï¿½ï¿½ï¿½ ï¿½ï¿½È¯ (Translate ï¿½ï¿½ Rotate ï¿½ï¿½ Scale)
             if (e.KeyCode == VK_SPACE) {
                 using M = ETransformMode;
                 auto cur = Editor.Tools.GetMode();
@@ -160,10 +158,10 @@ void AppContext::SubscribeEvents()
 
                 for (USceneComponent* Object : selected) {
                     if (Object)
-                        Dispatch(new DeleteObjectCommand(*this, Object->GetUUID()));
+                        Dispatch(std::make_unique<DeleteObjectCommand>(*this, Object->GetUUID()));
                 }
             }
-            // Åø¿¡µµ Àü´Þ
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             KeyEvent keyEvent{ e.KeyCode, true };
             if (Editor.Tools.GetActiveTool())
                 Editor.Tools.GetActiveTool()->OnKeyDown(keyEvent, *this);
@@ -171,8 +169,8 @@ void AppContext::SubscribeEvents()
 
     KeyUpHandle = PlatformEvents::OnKeyUp.Bind(
         [this](const KeyUpEvent& e) {
-            // ÇöÀç KeyUpÀ» Ã³¸®ÇÏ´Â ITool ÀÎÅÍÆäÀÌ½º´Â ¾øÀ¸¹Ç·Î ºó »óÅÂ À¯Áö
-            // ÇâÈÄ OnKeyUp ½½·Ô Ãß°¡ ½Ã ¿©±â¿¡ ±¸Çö
+            // ï¿½ï¿½ï¿½ï¿½ KeyUpï¿½ï¿½ Ã³ï¿½ï¿½ï¿½Ï´ï¿½ ITool ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+            // ï¿½ï¿½ï¿½ï¿½ OnKeyUp ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½â¿¡ ï¿½ï¿½ï¿½ï¿½
         });
 
     ResizeHandle = PlatformEvents::OnResize.Bind(
@@ -224,52 +222,44 @@ void AppContext::Shutdown()
         OnObjectDestroyed.Unbind(outliner->ObjectDestroyedHandle);
     }
 
-    for (IEditorPanel* Panel : OwnedPanels) {
-        delete Panel;
-    }
     OwnedPanels.clear();
-
-    for (ITool* tool : OwnedTools)
-        delete tool;
     OwnedTools.clear();
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
-    // 4. Renderer GPU ¸®¼Ò½º ÇØÁ¦
+    // 4. Renderer GPU ï¿½ï¿½ï¿½Ò½ï¿½ ï¿½ï¿½ï¿½ï¿½
     Renderer.Shutdown();
 
-    // 5. ObjectStore ÀüÃ¼ ºñ¿ò + UObject ¸Þ¸ð¸® ÇØÁ¦
+    // 5. ObjectStore ï¿½ï¿½Ã¼ ï¿½ï¿½ï¿½ + UObject ï¿½Þ¸ï¿½ ï¿½ï¿½ï¿½ï¿½
     Objects.Clear();
 
-    // 6. Window ÇØÁ¦
+    // 6. Window ï¿½ï¿½ï¿½ï¿½
     Window.Shutdown();
 }
 
-// Always receive new Instance -> must delete.
-void AppContext::Dispatch(ICommand* cmd)
+void AppContext::Dispatch(std::unique_ptr<ICommand> cmd)
 {
     cmd->Execute();
-    delete cmd;
 }
 
 void AppContext::NewScene()
 {
-    // Load() ¼ö¸í ±Ô¾à°ú µ¿ÀÏÇÑ ¼ø¼­
-    // 1. Selection ÃÊ±âÈ­
+    // Load() ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¾ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+    // 1. Selection ï¿½Ê±ï¿½È­
     Editor.Selection.Clear();
 
-    // 2. UUID ¸ñ·Ï º¹»ç ÈÄ OnObjectDestroyed ¼øÂ÷ ¹ßÇà
+    // 2. UUID ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ OnObjectDestroyed ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     TArray<uint32> uuids;
-    for (UObject* obj : CurrentWorld.GetAllObjects())
-        uuids.push_back(obj->GetUUID());
+    for (const auto& obj_uptr : CurrentWorld.GetAllObjects())
+        uuids.push_back(obj_uptr->GetUUID());
 
     for (uint32 uuid : uuids)
         OnObjectDestroyed.Broadcast({ uuid });
 
-    // 3. ObjectStore ÀüÃ¼ ºñ¿ò + ¸Þ¸ð¸® ÇØÁ¦
+    // 3. ObjectStore ï¿½ï¿½Ã¼ ï¿½ï¿½ï¿½ + ï¿½Þ¸ï¿½ ï¿½ï¿½ï¿½ï¿½
     Objects.Clear();
 
-    // 4. UUID Ä«¿îÅÍ ÃÊ±âÈ­
+    // 4. UUID Ä«ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­
     UUIDs.SyncNextUUID(1);
 }

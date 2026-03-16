@@ -26,7 +26,8 @@ bool SerializationService::Save(const AppContext& ctx) {
 
 	// Primitives ������Ʈ
 	JSON primitives = json::Object();
-	for (UObject* obj : ctx.CurrentWorld.GetAllObjects()) {
+	for (const auto& obj_uptr : ctx.CurrentWorld.GetAllObjects()) {
+		UObject* obj = obj_uptr.get();
 		if (!obj->IsA<UPrimitiveComponent>()) continue;
 		UPrimitiveComponent* prim = static_cast<UPrimitiveComponent*>(obj);//TODO: IsA�� RTTI����
 		if (!prim) continue;
@@ -80,12 +81,11 @@ bool SerializationService::Load(AppContext& ctx) {
 	//ctx.Editor.Selection.Clear();
 
 	// �� ���� UUID ���� �� OnObjectDestroyed ����
-	TArray<UObject*> Objects = ctx.CurrentWorld.GetAllObjects();
-	for (auto* Object : Objects)
-		ctx.Dispatch(new DeleteObjectCommand(
-			ctx,
-			Object->GetUUID()
-		));
+	TArray<uint32> uuidsToDelete;
+	for (const auto& obj_uptr : ctx.CurrentWorld.GetAllObjects())
+		uuidsToDelete.push_back(obj_uptr->GetUUID());
+	for (uint32 uuid : uuidsToDelete)
+		ctx.Dispatch(std::make_unique<DeleteObjectCommand>(ctx, uuid));
 
 	// �� ObjectStore ����
 	ctx.Objects.Clear();
@@ -122,13 +122,11 @@ bool SerializationService::Load(AppContext& ctx) {
 		scl.y = toFloat(kv.second["Scale"][1]);
 		scl.z = toFloat(kv.second["Scale"][2]);
 
-		ctx.Dispatch(
-			new SpawnObjectCommand(
-				ctx,
-				StringToPrimitiveShape(typeName),
-				Transform(loc, rot, scl)
-			)
-		);
+		ctx.Dispatch(std::make_unique<SpawnObjectCommand>(
+			ctx,
+			StringToPrimitiveShape(typeName),
+			Transform(loc, rot, scl)
+		));
 	}
 
 	ctx.UUIDs.SyncNextUUID((uint32)root["NextUUID"].ToInt());

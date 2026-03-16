@@ -25,11 +25,11 @@ void OutlinerPanel::OnRender(AppContext& ctx)
 
     if (levelOpen)
     {
-        const TArray<UObject*>& objects = ctx.Objects.GUObjectArray();
+        const auto& objects = ctx.Objects.GUObjectArray();
 
-        for (int i = 0; i < objects.size(); i++)
+        for (int i = 0; i < (int)objects.size(); i++)
         {
-            UObject* obj = objects[i];
+            UObject* obj = objects[i].get();
             if (!obj->IsA<UPrimitiveComponent>()) continue;
             auto* prim = static_cast<UPrimitiveComponent*>(obj);
             if (!prim) continue;

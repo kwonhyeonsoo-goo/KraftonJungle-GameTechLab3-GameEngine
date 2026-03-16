@@ -4,6 +4,7 @@
 #include "../Foundation/Containers/TArray.h"
 #include "../ObjectKernel/UObject.h"
 #include "../World/UPrimitiveComponent.h"
+#include <memory>
 
 
 struct Ray {
@@ -26,16 +27,16 @@ struct Ray {
 class PickingService
 {
 public:
-    // ½ºÅ©¸° ÁÂÇ¥ ¡æ ¿ùµå Ray »ý¼º
+    // ï¿½ï¿½Å©ï¿½ï¿½ ï¿½ï¿½Ç¥ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ray ï¿½ï¿½ï¿½ï¿½
     static Ray ScreenToRay(int32 screenX, int32 screenY,
         int32 viewportW, int32 viewportH,
         const FMatrix& viewProjInverse);
 
-    // Ray ¡æ ±³Â÷ÇÑ ÄÄÆ÷³ÍÆ® ¹ÝÈ¯ (¾øÀ¸¸é nullptr)
+    // Ray ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½È¯ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ nullptr)
     static UPrimitiveComponent* Pick(const Ray& ray,
-        const TArray<UObject*>& objects);
+        const TArray<std::unique_ptr<UObject>>& objects);
 
-    // º¸Á¶: Ray-AABB ±³Â÷ Å×½ºÆ®
+    // ï¿½ï¿½ï¿½ï¿½: Ray-AABB ï¿½ï¿½ï¿½ï¿½ ï¿½×½ï¿½Æ®
     static bool IntersectsAABB(const Ray& ray,
         const FVector& min,
         const FVector& max,

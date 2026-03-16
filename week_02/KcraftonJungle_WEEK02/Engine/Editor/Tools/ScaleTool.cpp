@@ -160,7 +160,7 @@ void ScaleTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
         if (!NearlySameScale(finalTransform.Scale, OriginalTransform.Scale))
         {
             primary->SetTransform(OriginalTransform);
-            ctx.Dispatch(new SetTransformCommand(primary, finalTransform));
+            ctx.Dispatch(std::make_unique<SetTransformCommand>(primary, finalTransform));
         }
         else
         {
