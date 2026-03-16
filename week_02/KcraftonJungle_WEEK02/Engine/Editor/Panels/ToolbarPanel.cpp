@@ -66,6 +66,7 @@ void ToolbarPanel::OnRender(AppContext& ctx)
         }
     }
 
+#pragma region SpawnObject
     ImGui::Spacing();
     ImGui::Text("Spawn Object");
     ImGui::Separator();
@@ -76,47 +77,34 @@ void ToolbarPanel::OnRender(AppContext& ctx)
         FVector(1.0f, 1.0f, 1.0f)
     );
 
-    if (ImGui::Button("Spawn Cube"))
+    const char* ItemNames[] = {
+        "Cube",
+        "Sphere",
+        "Plane",
+        "Triangle"
+    };
+    EPrimitiveShape MyEnum = EPrimitiveShape::Cube;
+    static int32 currentItem = 0;
+    static int32 NumItem = 1;
+
+    ImGui::Combo("My Dropdown Label", &currentItem, ItemNames, IM_ARRAYSIZE(ItemNames));
+
+    if (ImGui::Button("Spawn"))
     {
-        ctx.Dispatch(new SpawnObjectCommand(
-            ctx,
-            EPrimitiveShape::Cube,
-            DefaultSpawnTransform
-        ));
+        for (int i = 0; i < NumItem; ++i)
+        {
+            ctx.Dispatch(new SpawnObjectCommand(
+                ctx,
+                (EPrimitiveShape)currentItem,
+                DefaultSpawnTransform
+            ));
+        }
     }
 
     ImGui::SameLine();
-
-    if (ImGui::Button("Spawn Sphere"))
-    {
-        ctx.Dispatch(new SpawnObjectCommand(
-            ctx,
-            EPrimitiveShape::Sphere,
-            DefaultSpawnTransform
-        ));
-    }
-
-    ImGui::SameLine();
-
-    if (ImGui::Button("Spawn Plane"))
-    {
-        ctx.Dispatch(new SpawnObjectCommand(
-            ctx,
-            EPrimitiveShape::Plane,
-            DefaultSpawnTransform
-        ));
-    }
-
-    ImGui::SameLine();
-
-    if (ImGui::Button("Spawn Triangle"))
-    {
-        ctx.Dispatch(new SpawnObjectCommand(
-            ctx,
-            EPrimitiveShape::Triangle,
-            DefaultSpawnTransform
-        ));
-    }
+    ImGui::DragInt("Num of spawn", &NumItem, 1, 1, 1000);
+    ImGui::Separator();
+#pragma endregion
 
 #pragma region SceneFeature
     ImGui::Spacing();
