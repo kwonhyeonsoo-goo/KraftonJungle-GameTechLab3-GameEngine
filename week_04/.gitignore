@@ -7,6 +7,9 @@ Editor/imgui.ini
 *.vcxproj
 *.vcxproj.filters
 
+# Embedded Python (override *.exe/*.dll ignore below)
+!Scripts/python/**
+
 # Compiled shader objects
 Content/Shaders/*.cso
 
