@@ -161,7 +161,7 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 	Viewport.MinDepth = 0.f;
 	Viewport.MaxDepth = 1.f;
 
-	if (!CreateConstantBuffer())
+	if (!CreateConstantBuffers())
 	{
 		return false;
 	}
@@ -241,8 +241,10 @@ void CRenderer::AddCommand(const FRenderCommand& Command)
 void CRenderer::ExecuteCommands()
 {
 	ShaderManager.Bind(DeviceContext);
-	// MeshData 포인터 기준으로 정렬 → 같은 메시끼리 묶어 State Change 최소화
-	DeviceContext->VSSetConstantBuffers(0, 1, &ConstantBuffer);
+	// 프레임 상수 버퍼 업데이트 및 바인딩 (b0: Frame, b1: Object)
+	UpdateFrameConstantBuffer();
+	ID3D11Buffer* CBs[2] = { FrameConstantBuffer, ObjectConstantBuffer };
+	DeviceContext->VSSetConstantBuffers(0, 2, CBs);
 	std::sort(CommandList.begin(), CommandList.end(),
 		[](const FRenderCommand& A, const FRenderCommand& B)
 		{
@@ -269,42 +271,72 @@ void CRenderer::ExecuteCommands()
 		}
 
 		// 오브젝트별 상수 버퍼 업데이트
-		UpdateConstantBuffer(Cmd.WorldMatrix, ViewProjectionMatrix);
+		UpdateObjectConstantBuffer(Cmd.WorldMatrix);
 
 		// Draw
 		DeviceContext->DrawIndexed(Cmd.MeshData->IndexCount, 0, 0);
 	}
 }
 
-bool CRenderer::CreateConstantBuffer()
+bool CRenderer::CreateConstantBuffers()
 {
 	D3D11_BUFFER_DESC Desc = {};
-	Desc.ByteWidth = sizeof(FConstantBufferData);
 	Desc.Usage = D3D11_USAGE_DYNAMIC;
 	Desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	Desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-	HRESULT Hr = Device->CreateBuffer(&Desc, nullptr, &ConstantBuffer);
+	// b0: Frame (View + Projection)
+	Desc.ByteWidth = sizeof(FFrameConstantBuffer);
+	HRESULT Hr = Device->CreateBuffer(&Desc, nullptr, &FrameConstantBuffer);
 	if (FAILED(Hr))
 	{
-		MessageBox(0, L"CreateConstantBuffer Failed.", 0, 0);
+		MessageBox(0, L"CreateConstantBuffer (Frame) Failed.", 0, 0);
 		return false;
 	}
+
+	// b1: Object (World)
+	Desc.ByteWidth = sizeof(FObjectConstantBuffer);
+	Hr = Device->CreateBuffer(&Desc, nullptr, &ObjectConstantBuffer);
+	if (FAILED(Hr))
+	{
+		MessageBox(0, L"CreateConstantBuffer (Object) Failed.", 0, 0);
+		return false;
+	}
+
 	return true;
 }
 
-void CRenderer::UpdateConstantBuffer(const FMatrix& WorldMatrix, const FMatrix& ViewProj)
+void CRenderer::SetViewMatrix(const FMatrix& InView)
 {
-	FConstantBufferData CBData;
-	CBData.WVP = (WorldMatrix * ViewProj).GetTransposed();
+	ViewMatrix = InView;
+}
+
+void CRenderer::SetProjectionMatrix(const FMatrix& InProjection)
+{
+	ProjectionMatrix = InProjection;
+}
+
+void CRenderer::UpdateFrameConstantBuffer()
+{
+	FFrameConstantBuffer CBData;
+	CBData.View = ViewMatrix.GetTransposed();
+	CBData.Projection = ProjectionMatrix.GetTransposed();
+
+	D3D11_MAPPED_SUBRESOURCE Mapped;
+	DeviceContext->Map(FrameConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped);
+	memcpy(Mapped.pData, &CBData, sizeof(CBData));
+	DeviceContext->Unmap(FrameConstantBuffer, 0);
+}
+
+void CRenderer::UpdateObjectConstantBuffer(const FMatrix& WorldMatrix)
+{
+	FObjectConstantBuffer CBData;
 	CBData.World = WorldMatrix.GetTransposed();
 
 	D3D11_MAPPED_SUBRESOURCE Mapped;
-	DeviceContext->Map(ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped);
+	DeviceContext->Map(ObjectConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped);
 	memcpy(Mapped.pData, &CBData, sizeof(CBData));
-	DeviceContext->Unmap(ConstantBuffer, 0);
-
-
+	DeviceContext->Unmap(ObjectConstantBuffer, 0);
 }
 
 bool CRenderer::InitOutlineResources()
@@ -359,7 +391,7 @@ void CRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float
 
 	// Pass 1: 통상 렌더 + Stencil 마킹 (Ref=1)
 	DeviceContext->OMSetDepthStencilState(StencilWriteState, 1);
-	UpdateConstantBuffer(WorldMatrix, ViewProjectionMatrix);
+	UpdateObjectConstantBuffer(WorldMatrix);
 	DeviceContext->DrawIndexed(Mesh->IndexCount, 0, 0);
 
 	// Pass 2: 확대된 메시를 아웃라인 셰이더로 그리기 (Stencil != 1인 곳만)
@@ -368,7 +400,7 @@ void CRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float
 	// 약간 확대한 WorldMatrix
 	FMatrix ScaleUp = FMatrix::MakeScale(OutlineScale);
 	FMatrix OutlineWorld = ScaleUp * WorldMatrix;
-	UpdateConstantBuffer(OutlineWorld, ViewProjectionMatrix);
+	UpdateObjectConstantBuffer(OutlineWorld);
 
 	// 아웃라인 셰이더 바인딩
 	OutlinePS->Bind(DeviceContext);
@@ -428,7 +460,7 @@ void CRenderer::ExecuteLineCommands()
 	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
 	// WorldMatrix = Identity로 상수 버퍼 업데이트
-	UpdateConstantBuffer(FMatrix::Identity, ViewProjectionMatrix);
+	UpdateObjectConstantBuffer(FMatrix::Identity);
 
 	DeviceContext->Draw(static_cast<UINT>(LineVertices.size()), 0);
 
@@ -482,10 +514,15 @@ void CRenderer::Release()
 		RasterizerState->Release();
 		RasterizerState = nullptr;
 	}
-	if (ConstantBuffer)
+	if (FrameConstantBuffer)
 	{
-		ConstantBuffer->Release();
-		ConstantBuffer = nullptr;
+		FrameConstantBuffer->Release();
+		FrameConstantBuffer = nullptr;
+	}
+	if (ObjectConstantBuffer)
+	{
+		ObjectConstantBuffer->Release();
+		ObjectConstantBuffer = nullptr;
 	}
 	if (DepthStencilView)
 	{

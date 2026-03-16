@@ -157,8 +157,11 @@ void CCore::Render()
 	FFrustum Frustum;
 	if (Camera)
 	{
-		FMatrix VP = Camera->GetViewMatrix() * Camera->GetProjectionMatrix();
-		Renderer->ViewProjectionMatrix = VP;
+		FMatrix V = Camera->GetViewMatrix();
+		FMatrix P = Camera->GetProjectionMatrix();
+		FMatrix VP = V * P;
+		Renderer->SetViewMatrix(V);
+		Renderer->SetProjectionMatrix(P);
 		Frustum.ExtractFromVP(VP);
 	}
 

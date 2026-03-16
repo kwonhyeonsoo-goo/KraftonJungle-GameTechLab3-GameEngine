@@ -1,8 +1,14 @@
-cbuffer Constants : register(b0)
+// b0: 프레임당 1회 (카메라)
+cbuffer FrameData : register(b0)
 {
-	float4x4 WVP;
-	float4x4 World;
+	float4x4 View;
+	float4x4 Projection;
+};
 
+// b1: 오브젝트당
+cbuffer ObjectData : register(b1)
+{
+	float4x4 World;
 };
 
 struct VS_INPUT
@@ -22,7 +28,9 @@ struct VS_OUTPUT
 VS_OUTPUT main(VS_INPUT Input)
 {
 	VS_OUTPUT Output;
-	Output.Position = mul(float4(Input.Position, 1.0f), WVP);
+	float4 WorldPos = mul(float4(Input.Position, 1.0f), World);
+	float4 ViewPos = mul(WorldPos, View);
+	Output.Position = mul(ViewPos, Projection);
 	Output.Color = Input.Color;
 	Output.Normal = mul(Input.Normal, (float3x3) World);
 	return Output;

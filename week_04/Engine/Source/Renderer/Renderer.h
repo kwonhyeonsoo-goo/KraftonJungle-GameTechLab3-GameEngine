@@ -40,7 +40,8 @@ public:
 	void AddCommand(const FRenderCommand& Command);
 	// 수집된 커맨드 정렬 후 실행
 	void ExecuteCommands();
-	void SetViewProjection(const FMatrix& VP) { ViewProjectionMatrix = VP; }
+	void SetViewMatrix(const FMatrix& InView);
+	void SetProjectionMatrix(const FMatrix& InProjection);
 
 	// 라인 렌더링
 	void DrawLine(const FVector& Start, const FVector& End, const FVector4& Color);
@@ -51,15 +52,15 @@ public:
 	void RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float OutlineScale = 1.05f);
 
 
-	FMatrix GetViewProjectionMatrix() { return ViewProjectionMatrix; }
 	ID3D11Device* GetDevice() const { return Device; }
 	ID3D11DeviceContext* GetDeviceContext() const { return DeviceContext; }
 	ID3D11RenderTargetView* GetRenderTargetView() const { return RenderTargetView; }
 	IDXGISwapChain* GetSwapChain() const { return SwapChain; };
 	HWND GetHwnd() const { return Hwnd; }
 private:
-	bool CreateConstantBuffer();
-	void UpdateConstantBuffer(const FMatrix& WorldMatrix, const FMatrix& ViewProj);
+	bool CreateConstantBuffers();
+	void UpdateFrameConstantBuffer();
+	void UpdateObjectConstantBuffer(const FMatrix& WorldMatrix);
 
 	HWND Hwnd = nullptr;
 	ID3D11Device* Device = nullptr;
@@ -67,7 +68,10 @@ private:
 	IDXGISwapChain* SwapChain = nullptr;
 	ID3D11RenderTargetView* RenderTargetView = nullptr;
 	ID3D11DepthStencilView* DepthStencilView = nullptr;
-	ID3D11Buffer* ConstantBuffer = nullptr;
+	ID3D11Buffer* FrameConstantBuffer = nullptr;
+	ID3D11Buffer* ObjectConstantBuffer = nullptr;
+	FMatrix ViewMatrix;
+	FMatrix ProjectionMatrix;
 	ID3D11RasterizerState* RasterizerState = nullptr;
 	D3D11_VIEWPORT Viewport = {};
 
@@ -91,6 +95,5 @@ private:
 
 	// 매 프레임 외부에서 설정
 public:
-	FMatrix ViewProjectionMatrix;
 	CShaderManager ShaderManager;
 };
