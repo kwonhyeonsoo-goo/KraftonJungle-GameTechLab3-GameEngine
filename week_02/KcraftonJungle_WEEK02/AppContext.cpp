@@ -3,6 +3,7 @@
 #include "Editor/ImGui/imgui_impl_dx11.h"
 #include "Editor/ImGui/imgui_impl_win32.h"
 
+#include "Engine/Editor/Commands/DeleteObjectCommand.h"
 #include "Engine/Platform/PlatformEvents.h"
 #include "Engine/Editor/Tools/SelectTool.h"
 #include "Engine/Editor/Tools/TranslateTool.h"
@@ -154,6 +155,13 @@ void AppContext::SubscribeEvents()
                 Editor.Tools.SetMode(
                     cur == M::Translate ? M::Rotate :
                     cur == M::Rotate ? M::Scale : M::Translate);
+            }else if (e.KeyCode == VK_DELETE) {
+                TArray<USceneComponent*> selected = Editor.Selection.GetAll();
+
+                for (USceneComponent* Object : selected) {
+                    if (Object)
+                        Dispatch(new DeleteObjectCommand(*this, Object->GetUUID()));
+                }
             }
             // 툴에도 전달
             KeyEvent keyEvent{ e.KeyCode, true };
