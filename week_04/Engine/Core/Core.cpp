@@ -189,29 +189,10 @@ void CCore::Render()
 
 	Renderer->ExecuteCommands();
 
-	// 선택된 Actor 아웃라인 렌더링
-	if (SelectedActor && !SelectedActor->IsPendingDestroy())
+	if (PostRenderCallback)
 	{
-		for (UActorComponent* Comp : SelectedActor->GetComponents())
-		{
-			UPrimitiveComponent* PrimComp = dynamic_cast<UPrimitiveComponent*>(Comp);
-			if (PrimComp && PrimComp->GetPrimitive())
-			{
-				Renderer->RenderOutline(
-					PrimComp->GetPrimitive()->GetMeshData(),
-					PrimComp->GetWorldTransform()
-				);
-			}
-		}
+		PostRenderCallback(Renderer);
 	}
-
-	// 월드 원점 축 렌더링 (X=빨강, Y=초록, Z=파랑)
-	float AxisLength = 10000.0f;
-	FVector Origin = { 0.0f, 0.0f, 0.0f };
-	Renderer->DrawLine(Origin, { AxisLength, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }); // X: Red
-	Renderer->DrawLine(Origin, { 0.0f, AxisLength, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f }); // Y: Green
-	Renderer->DrawLine(Origin, { 0.0f, 0.0f, AxisLength }, { 0.0f, 0.0f, 1.0f, 1.0f }); // Z: Blue
-	Renderer->ExecuteLineCommands();
 
 	Renderer->EndFrame();
 }
