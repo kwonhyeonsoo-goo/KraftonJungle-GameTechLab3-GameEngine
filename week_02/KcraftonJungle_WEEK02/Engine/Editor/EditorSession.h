@@ -36,7 +36,12 @@ public:
     float AspectRatio;
     float NearZ = 0.1f;
     float FarZ = 1000.f;
+    bool bOrthoMode = false;
+    float OrthoHeight = 10.0f;
 
     FMatrix GetProjectionMatrix() const;
+    FMatrix GetOrthogonalMatrix() const;
     FMatrix GetViewProjMatrix()   const;
+    FMatrix GetViewOrthoMatrix()  const;
+    float ComputeGizmoScale(const FVector& gizmoPos, float viewportHeight) const;
 };

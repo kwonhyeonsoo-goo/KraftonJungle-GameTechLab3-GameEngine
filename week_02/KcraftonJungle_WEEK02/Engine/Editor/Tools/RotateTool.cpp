@@ -3,7 +3,7 @@
 namespace
 {
     constexpr float PI = 3.14159265358979323846f;
-    constexpr int RingSamples = 48;
+    constexpr int RingSamples = 96;
 
     bool NearlySameRotation(const FVector& a, const FVector& b, float eps = 0.0001f)
     {
@@ -63,10 +63,12 @@ bool RotateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     {
         const FVector normal = GizmoMath::GetAxisDirection(primary, axisIndex, coordSpace);
 
+        const float gizmoScale = GizmoMath::ComputeGizmoScale(center, ctx.Editor.Camera.Position);
+
         const TArray<FVector2D> ring2D = GizmoMath::SampleRing2D(
             center,
             normal,
-            GizmoMath::GizmoRingRadius,
+            GizmoMath::GizmoRingRadius * gizmoScale,
             RingSamples,
             viewProj,
             viewportW,
@@ -196,24 +198,21 @@ void RotateTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
             axisIndex == 1 ? GizmoMath::AxisColorY :
             GizmoMath::AxisColorZ;
 
-        FVector prev = center + axis1 * GizmoMath::GizmoRingRadius;
+        // Torus mesh has its ring normal along +Z.
+        // Build a rotation that maps local +Z -> normal, +X -> axis1, +Y -> axis2.
+        // Row-vector convention: row i = where local basis vector i goes in world space.
+        FMatrix axisRotation = FMatrix::Identity();
+        axisRotation.M[0][0] = axis1.x;  axisRotation.M[0][1] = axis1.y;  axisRotation.M[0][2] = axis1.z;
+        axisRotation.M[1][0] = axis2.x;  axisRotation.M[1][1] = axis2.y;  axisRotation.M[1][2] = axis2.z;
+        axisRotation.M[2][0] = normal.x; axisRotation.M[2][1] = normal.y; axisRotation.M[2][2] = normal.z;
 
-        for (int i = 1; i <= RingSamples; ++i)
-        {
-            const float t = (2.0f * PI * (float)i) / (float)RingSamples;
+        const float gs = GizmoMath::ComputeGizmoScale(center, ctx.Editor.Camera.Position);
 
-            const FVector next =
-                center
-                + axis1 * (std::cos(t) * GizmoMath::GizmoRingRadius)
-                + axis2 * (std::sin(t) * GizmoMath::GizmoRingRadius);
-
-            RenderCommand cmd = {};
-            cmd.Type = ERenderType::Gizmo;
-            cmd.WorldTransform = GizmoMath::MakeAxisTransform(prev, next - prev, GizmoMath::GizmoAxisLength);
-            cmd.Color = color;
-            cmd.ObjectId = objectId;
-            queue.Push(cmd);
-            prev = next;
-        }
+        RenderCommand cmd = {};
+        cmd.Type = ERenderType::Torus;
+        cmd.WorldTransform = FMatrix::Scale(FVector(gs, gs, gs)) * axisRotation * FMatrix::Translation(center);
+        cmd.ObjectId = objectId;
+        cmd.Color = color;
+        queue.Push(cmd);
     }
 }

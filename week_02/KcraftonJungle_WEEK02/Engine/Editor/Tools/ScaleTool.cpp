@@ -62,10 +62,12 @@ bool ScaleTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     float bestDistSq = (std::numeric_limits<float>::max)();
     EAxis bestAxis = EAxis::None;
 
+    const float gizmoScale = GizmoMath::ComputeGizmoScale(origin, ctx.Editor.Camera.Position);
+
     for (int axisIndex = 0; axisIndex < 3; ++axisIndex)
     {
         const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, ECoordSpace::Local);
-        const FVector handlePos = origin + axisDir * GizmoMath::GizmoAxisLength;
+        const FVector handlePos = origin + axisDir * GizmoMath::GizmoAxisLength * gizmoScale;
         const FVector2D handle2D = GizmoMath::WorldToScreen(handlePos, viewProj, viewportW, viewportH);
 
         if (!GizmoMath::PointInRect2D(mouse2D, handle2D, GizmoMath::GizmoScaleBoxPx))
@@ -189,7 +191,8 @@ void ScaleTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
 
         RenderCommand cmd = {};
         cmd.Type = ERenderType::Gizmo;
-        cmd.WorldTransform = GizmoMath::MakeAxisTransform(origin, axisDir, GizmoMath::GizmoAxisLength);
+        const float gs = GizmoMath::ComputeGizmoScale(origin, ctx.Editor.Camera.Position);
+        cmd.WorldTransform = GizmoMath::MakeAxisTransform(origin, axisDir, GizmoMath::GizmoAxisLength * gs);
         cmd.Color = color;
         cmd.ObjectId = objectId;
         queue.Push(cmd);

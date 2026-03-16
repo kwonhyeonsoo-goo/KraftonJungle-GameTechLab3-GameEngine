@@ -263,6 +263,9 @@
     <ClCompile Include="Engine\Editor\Tools\RotateTool.cpp" />
     <ClCompile Include="Engine\Editor\Panels\OutlinerPanel.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Engine\Mesh\Torus.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

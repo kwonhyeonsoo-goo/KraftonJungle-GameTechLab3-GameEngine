@@ -65,7 +65,38 @@ FMatrix EditorSession::GetProjectionMatrix() const
     return FMatrix::Perspective(FovY * DegToRad, AspectRatio, NearZ, FarZ);
 }
 
+FMatrix EditorSession::GetOrthogonalMatrix() const
+{
+    constexpr float DegToRad = 3.14159265358979323846f / 180.0f;
+    return FMatrix::Orthographic(OrthoHeight, OrthoHeight * AspectRatio, NearZ, FarZ);
+}
+
 FMatrix EditorSession::GetViewProjMatrix() const
 {
     return Camera.GetViewMatrix() * GetProjectionMatrix();
+}
+
+FMatrix EditorSession::GetViewOrthoMatrix() const
+{
+    return Camera.GetViewMatrix() * GetOrthogonalMatrix();
+}
+
+float EditorSession::ComputeGizmoScale(const FVector& gizmoPos, float viewportHeight) const
+{
+    constexpr float DegToRad = 3.14159265358979323846f / 180.0f;
+    constexpr float DesiredPixels = 96.0f;
+
+    if (bOrthoMode)
+    {
+        return DesiredPixels * (OrthoHeight / viewportHeight);
+    }
+
+    const FVector toGizmo = gizmoPos - Camera.Position;
+    const float depth = (std::max)(0.001f, toGizmo.Dot(Camera.GetForwardVector()));
+
+    const float fovYRad = FovY * DegToRad;
+    const float worldPerPixel =
+        2.0f * depth * std::tan(fovYRad * 0.5f) / viewportHeight;
+
+    return DesiredPixels * worldPerPixel;
 }

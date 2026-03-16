@@ -67,6 +67,11 @@ void ToolbarPanel::OnRender(AppContext& ctx)
     }
 
     ImGui::Spacing();
+    ImGui::Text("View");
+    ImGui::Separator();
+    ImGui::Checkbox("Orthographic", &ctx.Editor.bOrthoMode);
+
+    ImGui::Spacing();
     ImGui::Text("Spawn Object");
     ImGui::Separator();
 

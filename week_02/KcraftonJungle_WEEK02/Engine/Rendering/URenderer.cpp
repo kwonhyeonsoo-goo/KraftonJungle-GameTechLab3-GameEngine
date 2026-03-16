@@ -9,6 +9,7 @@
 #include "../Mesh/Line.h"
 #include "../Mesh/Gizmo.h"
 #include "../Editor/EditorSession.h"
+#include "../Mesh/Torus.h"
 
 void URenderer::RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices)
 
@@ -320,6 +321,11 @@ void URenderer::CreatePrimitiveVertexBuffer()
 
     vertexBufferGizmo = CreateVertexBuffer(gizmoVertices, sizeof(gizmoVertices));
     numVerticesGizmo = sizeof(gizmoVertices) / sizeof(FVertexSimple);
+
+    FVertexSimple Torus[TORUS_VERTEX_COUNT];
+    GetTorusVertices(Torus);
+    vertexBufferTorus = CreateVertexBuffer(Torus, sizeof(Torus));
+    numVerticesTorus = sizeof(Torus) / sizeof(FVertexSimple);
 }
 
 void URenderer::ReleasePrimitivVertexBuffer()
@@ -589,6 +595,11 @@ bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
     vertexBufferGizmo = CreateVertexBuffer(gizmoVertices, sizeof(gizmoVertices));
     numVerticesGizmo = sizeof(gizmoVertices) / sizeof(FVertexSimple);
 
+    FVertexSimple Torus[TORUS_VERTEX_COUNT];
+    GetTorusVertices(Torus);
+    vertexBufferTorus = CreateVertexBuffer(Torus, sizeof(Torus));
+    numVerticesTorus = sizeof(Torus) / sizeof(FVertexSimple);
+
     CreateShader();
     CreateConstantBuffer();
 
@@ -643,14 +654,19 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
 {
 
     if (queue.IsEmpty()) return;
-    FMatrix MVeiwProj = session.GetViewProjMatrix();
 
-	for (int i = 0; i < queue.GetCommands().size(); ++i)
+    const FMatrix MViewPersp = session.GetViewProjMatrix();
+    const FMatrix MViewOrtho = session.GetViewOrthoMatrix();
+
+    for (int i = 0; i < queue.GetCommands().size(); ++i)
     {
-
         const RenderCommand& cmd = queue.GetCommands()[i];
+
+        const FMatrix& viewProj = (cmd.bOrtho || session.bOrthoMode)
+            ? MViewOrtho : MViewPersp;
+
         FConstants constants = {};
-        constants.MVP = cmd.WorldTransform * MVeiwProj;
+        constants.MVP = cmd.WorldTransform * viewProj;
 
         
         switch (cmd.Type)
@@ -704,6 +720,17 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             PrepareShader();
             RenderPrimitive(vertexBufferGizmo, numVerticesGizmo);
+            break;
+        }
+        case ERenderType::Torus: {
+            uint32 Red = (cmd.Color >> 24) & 0xFF;
+            uint32 Green = (cmd.Color >> 16) & 0xFF;
+            uint32 Blue = (cmd.Color >> 8) & 0xFF;
+            UpdateMVP(constants.MVP, { Red / 255.f,Green / 255.f, Blue / 255.f });
+
+            DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            PrepareShader();
+            RenderPrimitive(vertexBufferTorus, numVerticesTorus);
             break;
         }
         case ERenderType::Highlight:

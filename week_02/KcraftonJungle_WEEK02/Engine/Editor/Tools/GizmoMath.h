@@ -10,10 +10,16 @@
 
 namespace GizmoMath
 {
-    constexpr float  GizmoAxisLength = 1.5f;
-    constexpr float  GizmoRingRadius = 1.2f;
+    constexpr float  GizmoAxisLength    = 1.5f;
+    constexpr float  GizmoRingRadius    = 1.0f;  // Torus.h R=1.0 에 맞춤
     constexpr float  GizmoPickThresholdPx = 30.0f;
-    constexpr float  GizmoScaleBoxPx = 60.0f;
+    constexpr float  GizmoScaleBoxPx   = 60.0f;
+    constexpr float  kGizmoScreenScale  = 0.1f;  // dist * kGizmoScreenScale = 월드 스케일
+
+    inline float ComputeGizmoScale(const FVector& gizmoPos, const FVector& cameraPos)
+    {
+        return (gizmoPos - cameraPos).Length() * kGizmoScreenScale;
+    }
 
     constexpr uint32 AxisColorX = 0xFF0000FF;
     constexpr uint32 AxisColorY = 0x00FF00FF;
