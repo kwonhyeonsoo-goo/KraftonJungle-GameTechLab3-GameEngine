@@ -22,7 +22,7 @@ public:
 	CConsoleWindow& GetConsole() { return Console; }
 
 private:
-	void BuildDefaultLayout(unsigned int DockID);
+	void BuildDefaultLayout(uint32 DockID);
 
 	CCore* Core = nullptr;
 	AActor* CachedSelectedActor = nullptr;

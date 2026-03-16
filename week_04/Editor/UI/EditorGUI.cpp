@@ -89,7 +89,7 @@ void CEditorGUI::Initialize(CRenderer* Renderer, CCore* Core)
 	Renderer->SetGUIUpdateCallback([this]() { Update(); });
 }
 
-void CEditorGUI::BuildDefaultLayout(unsigned int DockID)
+void CEditorGUI::BuildDefaultLayout(uint32 DockID)
 {
 	ImGui::DockBuilderRemoveNode(DockID);
 	ImGui::DockBuilderAddNode(DockID, ImGuiDockNodeFlags_DockSpace);

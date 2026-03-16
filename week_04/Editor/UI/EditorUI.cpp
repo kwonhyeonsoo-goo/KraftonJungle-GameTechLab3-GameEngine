@@ -6,6 +6,8 @@
 #include "Object/Actor/Actor.h"
 #include "Object/Object.h"
 #include "Component/SceneComponent.h"
+#include "Component/PrimitiveComponent.h"
+#include "Primitive/PrimitiveBase.h"
 #include "Platform/Windows/Window.h"
 
 #include "imgui.h"
@@ -100,6 +102,37 @@ void CEditorUI::Initialize(CCore* InCore)
 		};
 
 	Renderer->SetGUIUpdateCallback([this]() { Render(); });
+
+	// Editor-only post-render: outline, world axis, gizmo etc.
+	Core->SetPostRenderCallback([this](CRenderer* R)
+		{
+			if (!Core) return;
+
+			// 선택된 Actor 아웃라인 렌더링
+			AActor* Selected = Core->GetSelectedActor();
+			if (Selected && !Selected->IsPendingDestroy())
+			{
+				for (UActorComponent* Comp : Selected->GetComponents())
+				{
+					UPrimitiveComponent* PrimComp = dynamic_cast<UPrimitiveComponent*>(Comp);
+					if (PrimComp && PrimComp->GetPrimitive())
+					{
+						R->RenderOutline(
+							PrimComp->GetPrimitive()->GetMeshData(),
+							PrimComp->GetWorldTransform()
+						);
+					}
+				}
+			}
+
+			// 월드 원점 축 렌더링 (X=빨강, Y=초록, Z=파랑)
+			float AxisLength = 10000.0f;
+			FVector Origin = { 0.0f, 0.0f, 0.0f };
+			R->DrawLine(Origin, { AxisLength, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f });
+			R->DrawLine(Origin, { 0.0f, AxisLength, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f });
+			R->DrawLine(Origin, { 0.0f, 0.0f, AxisLength }, { 0.0f, 0.0f, 1.0f, 1.0f });
+			R->ExecuteLineCommands();
+		});
 }
 
 void CEditorUI::SetupWindow(CWindow* InWindow)
@@ -117,12 +150,12 @@ void CEditorUI::SetupWindow(CWindow* InWindow)
 		{
 			if (m == WM_LBUTTONDOWN && !ImGui::GetIO().WantCaptureMouse && Core && Core->GetScene())
 			{
-				int MouseX = LOWORD(l);
-				int MouseY = HIWORD(l);
+				int32 MouseX = LOWORD(l);
+				int32 MouseY = HIWORD(l);
 				RECT Rect;
 				GetClientRect(h, &Rect);
-				int Width = Rect.right - Rect.left;
-				int Height = Rect.bottom - Rect.top;
+				int32 Width = Rect.right - Rect.left;
+				int32 Height = Rect.bottom - Rect.top;
 
 				AActor* Picked = Picker.PickActor(Core->GetScene(), MouseX, MouseY, Width, Height);
 				if (Picked)
@@ -134,7 +167,7 @@ void CEditorUI::SetupWindow(CWindow* InWindow)
 		});
 }
 
-void CEditorUI::BuildDefaultLayout(unsigned int DockID)
+void CEditorUI::BuildDefaultLayout(uint32 DockID)
 {
 	ImGui::DockBuilderRemoveNode(DockID);
 	ImGui::DockBuilderAddNode(DockID, ImGuiDockNodeFlags_DockSpace);

@@ -20,7 +20,7 @@ public:
 	CStatWindow& GetStats() { return Stats; }
 	CControlPanelWindow ControlPanel;
 private:
-	void BuildDefaultLayout(unsigned int DockID);
+	void BuildDefaultLayout(uint32 DockID);
 
 	CConsoleWindow  Console;
 	CPropertyWindow Property;

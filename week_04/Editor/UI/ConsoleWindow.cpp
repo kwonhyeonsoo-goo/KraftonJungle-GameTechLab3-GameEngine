@@ -4,15 +4,15 @@
 #include <cctype>
 
 // --- Helpers ---
-int CConsoleWindow::Stricmp(const char* S1, const char* S2)
+int32 CConsoleWindow::Stricmp(const char* S1, const char* S2)
 {
-	int d;
+	int32 d;
 	while ((d = toupper(*S2) - toupper(*S1)) == 0 && *S1) { S1++; S2++; }
 	return d;
 }
-int CConsoleWindow::Strnicmp(const char* S1, const char* S2, int N)
+int32 CConsoleWindow::Strnicmp(const char* S1, const char* S2, int32 N)
 {
-	int d = 0;
+	int32 d = 0;
 	while (N > 0 && (d = toupper(*S2) - toupper(*S1)) == 0 && *S1) { S1++; S2++; N--; }
 	return d;
 }
@@ -46,13 +46,13 @@ CConsoleWindow::CConsoleWindow()
 CConsoleWindow::~CConsoleWindow()
 {
 	ClearLog();
-	for (int i = 0; i < History.Size; i++)
+	for (int32 i = 0; i < History.Size; i++)
 		ImGui::MemFree(History[i]);
 }
 
 void CConsoleWindow::ClearLog()
 {
-	for (int i = 0; i < Items.Size; i++)
+	for (int32 i = 0; i < Items.Size; i++)
 		ImGui::MemFree(Items[i]);
 	Items.clear();
 }
@@ -185,7 +185,7 @@ void CConsoleWindow::ExecCommand(const char* CommandLine)
 	AddLog("# %s\n", CommandLine);
 
 	HistoryPos = -1;
-	for (int i = History.Size - 1; i >= 0; i--)
+	for (int32 i = History.Size - 1; i >= 0; i--)
 		if (Stricmp(History[i], CommandLine) == 0)
 		{
 			ImGui::MemFree(History[i]);
@@ -201,13 +201,13 @@ void CConsoleWindow::ExecCommand(const char* CommandLine)
 	else if (Stricmp(CommandLine, "HELP") == 0)
 	{
 		AddLog("Commands:");
-		for (int i = 0; i < Commands.Size; i++)
+		for (int32 i = 0; i < Commands.Size; i++)
 			AddLog("- %s", Commands[i]);
 	}
 	else if (Stricmp(CommandLine, "HISTORY") == 0)
 	{
-		int First = History.Size - 10;
-		for (int i = First > 0 ? First : 0; i < History.Size; i++)
+		int32 First = History.Size - 10;
+		for (int32 i = First > 0 ? First : 0; i < History.Size; i++)
 			AddLog("%3d: %s\n", i, History[i]);
 	}
 	else if (CommandHandler)
@@ -223,12 +223,12 @@ void CConsoleWindow::ExecCommand(const char* CommandLine)
 }
 
 // --- Text callback ---
-int CConsoleWindow::TextEditCallbackStub(ImGuiInputTextCallbackData* Data)
+int32 CConsoleWindow::TextEditCallbackStub(ImGuiInputTextCallbackData* Data)
 {
 	return ((CConsoleWindow*)Data->UserData)->TextEditCallback(Data);
 }
 
-int CConsoleWindow::TextEditCallback(ImGuiInputTextCallbackData* Data)
+int32 CConsoleWindow::TextEditCallback(ImGuiInputTextCallbackData* Data)
 {
 	switch (Data->EventFlag)
 	{
@@ -244,28 +244,28 @@ int CConsoleWindow::TextEditCallback(ImGuiInputTextCallbackData* Data)
 		}
 
 		ImVector<const char*> Candidates;
-		for (int i = 0; i < Commands.Size; i++)
-			if (Strnicmp(Commands[i], WordStart, (int)(WordEnd - WordStart)) == 0)
+		for (int32 i = 0; i < Commands.Size; i++)
+			if (Strnicmp(Commands[i], WordStart, (int32)(WordEnd - WordStart)) == 0)
 				Candidates.push_back(Commands[i]);
 
 		if (Candidates.Size == 0)
 		{
-			AddLog("No match for \"%.*s\"!\n", (int)(WordEnd - WordStart), WordStart);
+			AddLog("No match for \"%.*s\"!\n", (int32)(WordEnd - WordStart), WordStart);
 		}
 		else if (Candidates.Size == 1)
 		{
-			Data->DeleteChars((int)(WordStart - Data->Buf), (int)(WordEnd - WordStart));
+			Data->DeleteChars((int32)(WordStart - Data->Buf), (int32)(WordEnd - WordStart));
 			Data->InsertChars(Data->CursorPos, Candidates[0]);
 			Data->InsertChars(Data->CursorPos, " ");
 		}
 		else
 		{
-			int MatchLen = (int)(WordEnd - WordStart);
+			int32 MatchLen = (int32)(WordEnd - WordStart);
 			for (;;)
 			{
-				int  C = 0;
+				int32  C = 0;
 				bool bAllMatch = true;
-				for (int i = 0; i < Candidates.Size && bAllMatch; i++)
+				for (int32 i = 0; i < Candidates.Size && bAllMatch; i++)
 					if (i == 0) C = toupper(Candidates[i][MatchLen]);
 					else if (C == 0 || C != toupper(Candidates[i][MatchLen])) bAllMatch = false;
 				if (!bAllMatch) break;
@@ -273,18 +273,18 @@ int CConsoleWindow::TextEditCallback(ImGuiInputTextCallbackData* Data)
 			}
 			if (MatchLen > 0)
 			{
-				Data->DeleteChars((int)(WordStart - Data->Buf), (int)(WordEnd - WordStart));
+				Data->DeleteChars((int32)(WordStart - Data->Buf), (int32)(WordEnd - WordStart));
 				Data->InsertChars(Data->CursorPos, Candidates[0], Candidates[0] + MatchLen);
 			}
 			AddLog("Possible matches:\n");
-			for (int i = 0; i < Candidates.Size; i++)
+			for (int32 i = 0; i < Candidates.Size; i++)
 				AddLog("- %s\n", Candidates[i]);
 		}
 		break;
 	}
 	case ImGuiInputTextFlags_CallbackHistory:
 	{
-		const int PrevPos = HistoryPos;
+		const int32 PrevPos = HistoryPos;
 		if (Data->EventKey == ImGuiKey_UpArrow)
 		{
 			if (HistoryPos == -1) HistoryPos = History.Size - 1;

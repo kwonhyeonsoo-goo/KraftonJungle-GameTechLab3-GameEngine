@@ -1,4 +1,5 @@
 #pragma once
+#include "CoreMinimal.h"
 #include "imgui.h"
 #include <functional>
 
@@ -20,11 +21,11 @@ public:
 private:
 	void ExecCommand(const char* CommandLine);
 
-	static int  TextEditCallbackStub(ImGuiInputTextCallbackData* Data);
-	int         TextEditCallback(ImGuiInputTextCallbackData* Data);
+	static int32  TextEditCallbackStub(ImGuiInputTextCallbackData* Data);
+	int32         TextEditCallback(ImGuiInputTextCallbackData* Data);
 
-	static int  Stricmp(const char* S1, const char* S2);
-	static int  Strnicmp(const char* S1, const char* S2, int N);
+	static int32  Stricmp(const char* S1, const char* S2);
+	static int32  Strnicmp(const char* S1, const char* S2, int32 N);
 	static char* Strdup(const char* S);
 	static void  Strtrim(char* S);
 
@@ -32,7 +33,7 @@ private:
 	ImVector<char*>   Items;
 	ImVector<const char*> Commands;
 	ImVector<char*>   History;
-	int               HistoryPos = -1;
+	int32               HistoryPos = -1;
 	ImGuiTextFilter   Filter;
 	bool              AutoScroll = true;
 	bool              ScrollToBottom = false;

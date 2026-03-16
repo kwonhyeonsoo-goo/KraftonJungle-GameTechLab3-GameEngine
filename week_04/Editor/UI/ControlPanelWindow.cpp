@@ -54,14 +54,14 @@ void CControlPanelWindow::Render(CCore* Core)
 
 		ImGui::SeparatorText("Spawn");
 
-		static int SpawnTypeIndex = 0;
+		static int32 SpawnTypeIndex = 0;
 		const char* SpawnTypes[] = { "Cube", "Sphere" };
 		ImGui::Combo("Type", &SpawnTypeIndex, SpawnTypes, IM_ARRAYSIZE(SpawnTypes));
 
 		if (ImGui::Button("Spawn"))
 		{
 			UScene* Scene = Core->GetScene();
-			static int SpawnCount = 0;
+			static int32 SpawnCount = 0;
 			FString Name = FString(SpawnTypes[SpawnTypeIndex]) + "_Spawned_" + std::to_string(SpawnCount++);
 			AActor* NewActor = Scene->SpawnActor<AActor>(Name);
 
@@ -129,7 +129,7 @@ void CControlPanelWindow::Render(CCore* Core)
 		{
 			if (ImGui::BeginListBox("Scenes"))
 			{
-				for (int i = 0; i < static_cast<int>(SceneFiles.size()); ++i)
+				for (int32 i = 0; i < static_cast<int32>(SceneFiles.size()); ++i)
 				{
 					bool bSelected = (SelectedSceneIndex == i);
 					if (ImGui::Selectable(SceneFiles[i].c_str(), bSelected))

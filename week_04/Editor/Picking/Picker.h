@@ -16,7 +16,7 @@ class CPicker
 {
 public:
     // 스크린 좌표 → 월드 레이 변환 (Deprojection)
-    FRay ScreenToRay(int ScreenX, int ScreenY, int ScreenWidth, int ScreenHeight,
+    FRay ScreenToRay(int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight,
                      const FMatrix& ViewMatrix, const FMatrix& ProjMatrix) const;
 
     // Möller–Trumbore 알고리즘: 레이-삼각형 교차 검사
@@ -25,6 +25,6 @@ public:
                               float& OutDistance) const;
 
     // 씬의 모든 Actor를 대상으로 피킹 (가장 가까운 Actor 반환)
-    AActor* PickActor(UScene* Scene, int ScreenX, int ScreenY,
-                      int ScreenWidth, int ScreenHeight) const;
+    AActor* PickActor(UScene* Scene, int32 ScreenX, int32 ScreenY,
+                      int32 ScreenWidth, int32 ScreenHeight) const;
 };

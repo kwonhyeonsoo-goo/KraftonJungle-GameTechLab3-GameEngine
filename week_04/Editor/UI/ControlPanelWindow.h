@@ -12,5 +12,5 @@ public:
 
 private:
 	TArray<FString> SceneFiles;
-	int SelectedSceneIndex = -1;
+	int32 SelectedSceneIndex = -1;
 };

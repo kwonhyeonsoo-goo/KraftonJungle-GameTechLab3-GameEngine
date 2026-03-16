@@ -29,5 +29,5 @@ private:
     FVector TargetPosition;
     FVector TargetRotation;
     FVector TargetScale = { 1.0f, 1.0f, 1.0f };
-    int ActiveAxis = -1; // 0=X, 1=Y, 2=Z, -1=None
+    int32 ActiveAxis = -1; // 0=X, 1=Y, 2=Z, -1=None
 };

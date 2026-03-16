@@ -8,7 +8,7 @@
 #include <cmath>
 #include <limits>
 
-FRay CPicker::ScreenToRay(int ScreenX, int ScreenY, int ScreenWidth, int ScreenHeight,
+FRay CPicker::ScreenToRay(int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight,
                            const FMatrix& ViewMatrix, const FMatrix& ProjMatrix) const
 {
     // Screen → NDC (-1 ~ +1)
@@ -78,8 +78,8 @@ bool CPicker::RayTriangleIntersect(const FRay& Ray,
     return false;
 }
 
-AActor* CPicker::PickActor(UScene* Scene, int ScreenX, int ScreenY,
-                            int ScreenWidth, int ScreenHeight) const
+AActor* CPicker::PickActor(UScene* Scene, int32 ScreenX, int32 ScreenY,
+                            int32 ScreenWidth, int32 ScreenHeight) const
 {
     if (!Scene || !Scene->GetCamera())
         return nullptr;
