@@ -1,0 +1,330 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source">
+      <UniqueIdentifier>{4f6c83fe-a134-3484-3756-8c697b723468}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Camera">
+      <UniqueIdentifier>{5186471f-4dfb-b6f6-7c10-0e7ad54c1e4e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Component">
+      <UniqueIdentifier>{b698e9ab-cffb-22ea-74eb-da6a2ffa9eb4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Core">
+      <UniqueIdentifier>{238c320c-6dd1-5946-035c-35da4bd61493}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Debug">
+      <UniqueIdentifier>{24b403a2-9c98-70c6-7a70-0893e73c6a88}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Input">
+      <UniqueIdentifier>{3932e845-853d-348b-2ac8-4c8557fcaed4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Math">
+      <UniqueIdentifier>{c5a7a384-b882-719b-feb1-81b7a8866df9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Object">
+      <UniqueIdentifier>{57ff594e-c20e-1243-40d9-9d88b6d24db9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Object\Actor">
+      <UniqueIdentifier>{c1eb7930-ca76-bf96-83f2-a26f94ee141b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Object\Scene">
+      <UniqueIdentifier>{9d63c879-daa3-e358-aff0-8d589c79a8c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Platform">
+      <UniqueIdentifier>{7ffeef2f-57c8-23a1-bcad-f74a8fad0318}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Platform\Windows">
+      <UniqueIdentifier>{d690f918-c523-861c-9e5c-6f0118d7b8ce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Primitive">
+      <UniqueIdentifier>{b1c8ef7e-4da0-b414-9db6-0f275d54f96c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Renderer">
+      <UniqueIdentifier>{b4935566-c566-3c8c-ae88-5cc13eba9d31}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Types">
+      <UniqueIdentifier>{1e5cbe70-629e-3dca-3777-f9421b4e6929}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty">
+      <UniqueIdentifier>{889e92e0-4c84-fc5a-a876-5e7c393d8520}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\nlohmann">
+      <UniqueIdentifier>{c70e54eb-75c7-d408-4bdc-b003f49af18a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\EngineTest.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Camera\Camera.cpp">
+      <Filter>Source\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Component\ActorComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Component\CubeComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Component\PrimitiveComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Component\SceneComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Component\SphereComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Core.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\FEngine.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\FTimer.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Debug\EngineLog.cpp">
+      <Filter>Source\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Input\InputManager.cpp">
+      <Filter>Source\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Math\Frustum.cpp">
+      <Filter>Source\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Math\Matrix.cpp">
+      <Filter>Source\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Math\Quat.cpp">
+      <Filter>Source\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Math\Rotator.cpp">
+      <Filter>Source\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Math\Transform.cpp">
+      <Filter>Source\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Math\Vector.cpp">
+      <Filter>Source\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Object\Class.cpp">
+      <Filter>Source\Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Object\Object.cpp">
+      <Filter>Source\Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Object\ObjectManager.cpp">
+      <Filter>Source\Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Object\Actor\Actor.cpp">
+      <Filter>Source\Object\Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Object\Scene\Scene.cpp">
+      <Filter>Source\Object\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp">
+      <Filter>Source\Platform\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Platform\Windows\Window.cpp">
+      <Filter>Source\Platform\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Platform\Windows\WindowApplication.cpp">
+      <Filter>Source\Platform\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Primitive\PrimitiveBase.cpp">
+      <Filter>Source\Primitive</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Primitive\PrimitiveCube.cpp">
+      <Filter>Source\Primitive</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Primitive\PrimitivePlane.cpp">
+      <Filter>Source\Primitive</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Primitive\PrimitiveSphere.cpp">
+      <Filter>Source\Primitive</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Renderer.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Shader.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\ShaderManager.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\ShaderMap.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\ShaderResource.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\CoreMinimal.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\EngineAPI.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\EngineTest.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Camera\Camera.h">
+      <Filter>Source\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\ActorComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\CubeComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\PrimitiveComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\SceneComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\SphereComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Core.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\FEngine.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\FTimer.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Debug\EngineLog.h">
+      <Filter>Source\Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputManager.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Math\Frustum.h">
+      <Filter>Source\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Math\MathUtility.h">
+      <Filter>Source\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Math\Matrix.h">
+      <Filter>Source\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Math\Quat.h">
+      <Filter>Source\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Math\Rotator.h">
+      <Filter>Source\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Math\Transform.h">
+      <Filter>Source\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Math\Vector.h">
+      <Filter>Source\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Math\Vector4.h">
+      <Filter>Source\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Object\Class.h">
+      <Filter>Source\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Object\Object.h">
+      <Filter>Source\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Object\ObjectFactory.h">
+      <Filter>Source\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Object\ObjectManager.h">
+      <Filter>Source\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Object\ObjectTypes.h">
+      <Filter>Source\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Object\Actor\Actor.h">
+      <Filter>Source\Object\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Object\Scene\Scene.h">
+      <Filter>Source\Object\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h">
+      <Filter>Source\Platform\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Platform\Windows\Window.h">
+      <Filter>Source\Platform\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Platform\Windows\WindowApplication.h">
+      <Filter>Source\Platform\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Primitive\PrimitiveBase.h">
+      <Filter>Source\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Primitive\PrimitiveCube.h">
+      <Filter>Source\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Primitive\PrimitivePlane.h">
+      <Filter>Source\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Primitive\PrimitiveSphere.h">
+      <Filter>Source\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\PrimitiveVertex.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderCommand.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Renderer.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Shader.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\ShaderManager.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\ShaderMap.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\ShaderResource.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\ShaderType.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Types\Array.h">
+      <Filter>Source\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Types\CoreTypes.h">
+      <Filter>Source\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Types\LinkedList.h">
+      <Filter>Source\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Types\Map.h">
+      <Filter>Source\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Types\Pair.h">
+      <Filter>Source\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Types\Queue.h">
+      <Filter>Source\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Types\Set.h">
+      <Filter>Source\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Types\StaticArray.h">
+      <Filter>Source\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Types\String.h">
+      <Filter>Source\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\nlohmann\json.hpp">
+      <Filter>ThirdParty\nlohmann</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+</Project>

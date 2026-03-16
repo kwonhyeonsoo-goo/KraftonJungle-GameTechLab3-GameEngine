@@ -2,11 +2,6 @@ CLAUDE.md
 .claude/
 Editor/imgui.ini
 
-# Generated project files
-*.sln
-*.vcxproj
-*.vcxproj.filters
-
 # Embedded Python (override *.exe/*.dll ignore below)
 !Scripts/python/**
 
