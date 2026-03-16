@@ -160,6 +160,7 @@
       <Filter>Source\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="Source\Input\EnhancedInputManager.cpp" />
+    <ClCompile Include="Source\Input\InputMappingContext.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -327,8 +328,14 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp">
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Input\InputMappingContext.h" />
+    <ClInclude Include="Source\Input\InputAction.h" />
+    <ClInclude Include="Source\Input\InputTrigger.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Source\Input\InputModifier.h">
+      <Filter>Source\Input</Filter>
+    </None>
   </ItemGroup>
 </Project>

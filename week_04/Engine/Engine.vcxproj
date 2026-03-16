@@ -33,7 +33,10 @@
     <ClInclude Include="Source\Core\FTimer.h" />
     <ClInclude Include="Source\Debug\EngineLog.h" />
     <ClInclude Include="Source\Input\EnhancedInputManager.h" />
+    <ClInclude Include="Source\Input\InputAction.h" />
     <ClInclude Include="Source\Input\InputManager.h" />
+    <ClInclude Include="Source\Input\InputMappingContext.h" />
+    <ClInclude Include="Source\Input\InputTrigger.h" />
     <ClInclude Include="Source\Math\Frustum.h" />
     <ClInclude Include="Source\Math\MathUtility.h" />
     <ClInclude Include="Source\Math\Matrix.h" />
@@ -89,6 +92,7 @@
     <ClCompile Include="Source\Debug\EngineLog.cpp" />
     <ClCompile Include="Source\Input\EnhancedInputManager.cpp" />
     <ClCompile Include="Source\Input\InputManager.cpp" />
+    <ClCompile Include="Source\Input\InputMappingContext.cpp" />
     <ClCompile Include="Source\Math\Frustum.cpp" />
     <ClCompile Include="Source\Math\Matrix.cpp" />
     <ClCompile Include="Source\Math\Quat.cpp" />
@@ -231,6 +235,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Source\Input\InputModifier.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

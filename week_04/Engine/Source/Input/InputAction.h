@@ -19,8 +19,8 @@ enum class EInputActionValueType : uint32
 
 struct ENGINE_API FInputActionValue
 {
-	EInputActionValueType ValueType = EInputActionValueType::Bool;
-	FVector Value = { 0.0f, 0.0f, 0.0f };
+	EInputActionValueType ValueType = EInputActionValueType::Bool; // Input type
+	FVector Value = { 0.0f, 0.0f, 0.0f }; //Input Value Container float, bool : x, 2D :x,y  3D x,y,z
 	FInputActionValue() = default;
 
 	explicit FInputActionValue(bool bValue)
