@@ -1,6 +1,7 @@
 #include "ControlPanelWindow.h"
 #include "imgui.h"
 #include "Core/Core.h"
+#include "Renderer/Renderer.h"
 #include "Object/Scene/Scene.h"
 #include "Object/Actor/Actor.h"
 #include "Camera/Camera.h"
@@ -37,10 +38,10 @@ void CControlPanelWindow::Render(CCore* Core)
 
 			float CamYaw = Cam->GetYaw();
 			float CamPitch = Cam->GetPitch();
-			bool RotChanged = false;
-			RotChanged |= ImGui::DragFloat("Yaw", &CamYaw, 0.5f);
-			RotChanged |= ImGui::DragFloat("Pitch", &CamPitch, 0.5f, -89.0f, 89.0f);
-			if (RotChanged)
+			bool bRotChanged = false;
+			bRotChanged |= ImGui::DragFloat("Yaw", &CamYaw, 0.5f);
+			bRotChanged |= ImGui::DragFloat("Pitch", &CamPitch, 0.5f, -89.0f, 89.0f);
+			if (bRotChanged)
 			{
 				Cam->SetRotation(CamYaw, CamPitch);
 			}
@@ -112,7 +113,7 @@ void CControlPanelWindow::Render(CCore* Core)
 		{
 			SceneFiles.clear();
 			SelectedSceneIndex = -1;
-			const std::string ScenesDir = "../Assets/Scenes";
+			const FString ScenesDir = "../Assets/Scenes";
 			if (std::filesystem::exists(ScenesDir))
 			{
 				for (auto& Entry : std::filesystem::directory_iterator(ScenesDir))
@@ -146,7 +147,7 @@ void CControlPanelWindow::Render(CCore* Core)
 				Core->GetScene()->ClearActors();
 
 				FString Path = FString("../Assets/Scenes/") + SceneFiles[SelectedSceneIndex] + ".json";
-				Core->GetScene()->LoadSceneFromFile(Path);
+				Core->GetScene()->LoadSceneFromFile(Path, Core->GetRenderer()->GetDevice());
 				UE_LOG("Scene loaded: %s", SceneFiles[SelectedSceneIndex].c_str());
 			}
 		}
