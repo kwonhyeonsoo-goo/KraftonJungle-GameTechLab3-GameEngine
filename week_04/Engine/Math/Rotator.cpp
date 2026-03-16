@@ -1,15 +1,11 @@
 #include "Math/Rotator.h"
 
+#include "Math/MathUtility.h"
 #include "Math/Matrix.h"
 #include "Math/Quat.h"
 
 #include <cassert>
 #include <cmath>
-
-namespace
-{
-	constexpr float DegreesToRadians = 3.14159265358979323846f / 180.0f;
-}
 
 const FRotator FRotator::ZeroRotator(0.0f, 0.0f, 0.0f);
 
@@ -121,8 +117,8 @@ FVector FRotator::Euler() const noexcept
 
 FVector FRotator::Vector() const noexcept
 {
-	const float PitchRadians = Pitch * DegreesToRadians;
-	const float YawRadians = Yaw * DegreesToRadians;
+	const float PitchRadians = FMath::DegreesToRadians(Pitch);
+	const float YawRadians = FMath::DegreesToRadians(Yaw);
 
 	const float CosPitch = std::cos(PitchRadians);
 	return FVector(
@@ -226,9 +222,9 @@ FRotator FRotator::GetInverse() const noexcept
 FQuat FRotator::Quaternion() const noexcept
 {
 	const FMatrix RotationMatrix =
-		FMatrix::MakeRotationZ(Yaw * DegreesToRadians)
-		* FMatrix::MakeRotationY(Pitch * DegreesToRadians)
-		* FMatrix::MakeRotationX(Roll * DegreesToRadians);
+		FMatrix::MakeRotationZ(FMath::DegreesToRadians(Yaw))
+		* FMatrix::MakeRotationY(FMath::DegreesToRadians(Pitch))
+		* FMatrix::MakeRotationX(FMath::DegreesToRadians(Roll));
 
 	return FQuat(DirectX::XMQuaternionRotationMatrix(RotationMatrix.ToXMMatrix())).GetNormalized();
 }

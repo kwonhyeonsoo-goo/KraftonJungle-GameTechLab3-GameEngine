@@ -164,7 +164,6 @@
     <ClCompile Include="UI\ConsoleWindow.cpp" />
     <ClCompile Include="UI\ControlPanelWindow.cpp" />
     <ClCompile Include="UI\EditorUI.cpp" />
-    <ClCompile Include="UI\EditorGUI.cpp" />
     <ClCompile Include="UI\PropertyWindow.cpp" />
     <ClCompile Include="UI\StatWindow.cpp" />
   </ItemGroup>
@@ -184,7 +183,6 @@
     <ClInclude Include="UI\ConsoleWindow.h" />
     <ClInclude Include="UI\ControlPanelWindow.h" />
     <ClInclude Include="UI\EditorUI.h" />
-    <ClInclude Include="UI\EditorGUI.h" />
     <ClInclude Include="UI\PropertyWindow.h" />
     <ClInclude Include="UI\StatWindow.h" />
   </ItemGroup>
