@@ -8,6 +8,14 @@
 class FVertexShader;
 class FPixelShader;
 
+// 파라미터 이름 → 상수 버퍼 내 위치 매핑
+struct FMaterialParameterInfo
+{
+	int32 BufferIndex;  // ConstantBuffers 배열 인덱스
+	uint32 Offset;      // 버퍼 내 바이트 오프셋
+	uint32 Size;        // 바이트 크기
+};
+
 // Material이 소유하는 상수 버퍼 슬롯 하나
 // GPU 버퍼 생성, CPU 데이터 관리, Dirty 플래그 기반 업로드를 모두 담당
 struct ENGINE_API FMaterialConstantBuffer
@@ -91,6 +99,17 @@ public:
 	// 슬롯 인덱스로 상수 버퍼 접근
 	FMaterialConstantBuffer* GetConstantBuffer(int32 Index);
 
+	// 파라미터 이름 등록 (MaterialManager에서 JSON 로드 시 호출)
+	void RegisterParameter(const FString& ParamName, int32 BufferIndex, uint32 Offset, uint32 Size);
+
+	// 이름 기반 파라미터 설정 (타입별 편의 함수)
+	bool SetScalarParameter(const FString& ParamName, float Value);
+	bool SetVectorParameter(const FString& ParamName, const FVector4& Value);
+	bool SetVector3Parameter(const FString& ParamName, const FVector& Value);
+
+	// 범용: 이름으로 raw 데이터 쓰기
+	bool SetParameterData(const FString& ParamName, const void* Data, uint32 DataSize);
+
 	// 셰이더 바인딩 + Dirty 상수 버퍼 업로드 + 바인딩
 	void Bind(ID3D11DeviceContext* DeviceContext);
 
@@ -102,6 +121,7 @@ private:
 	std::shared_ptr<FPixelShader> PixelShader;
 
 	TArray<FMaterialConstantBuffer> ConstantBuffers;
+	TMap<FString, FMaterialParameterInfo> ParameterMap;
 
 	static constexpr UINT MaterialCBStartSlot = 2; // b0=Frame, b1=Object, b2+=Material
 };

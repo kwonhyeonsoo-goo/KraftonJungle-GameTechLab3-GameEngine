@@ -82,7 +82,7 @@ std::shared_ptr<FMaterial> FMaterialManager::GetOrLoad(ID3D11Device* Device, con
 	// 셰이더 로드
 	if (Json.contains("VertexShader"))
 	{
-		FString VSPath = Json["VertexShader"].get<std::string>();
+		FString VSPath = Json["VertexShader"].get<FString>();
 		std::wstring WVSPath(VSPath.begin(), VSPath.end());
 		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, WVSPath.c_str());
 		Mat->SetVertexShader(VS);
@@ -90,7 +90,7 @@ std::shared_ptr<FMaterial> FMaterialManager::GetOrLoad(ID3D11Device* Device, con
 
 	if (Json.contains("PixelShader"))
 	{
-		FString PSPath = Json["PixelShader"].get<std::string>();
+		FString PSPath = Json["PixelShader"].get<FString>();
 		std::wstring WPSPath(PSPath.begin(), PSPath.end());
 		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, WPSPath.c_str());
 		Mat->SetPixelShader(PS);
@@ -111,6 +111,7 @@ std::shared_ptr<FMaterial> FMaterialManager::GetOrLoad(ID3D11Device* Device, con
 			// 1차: 오프셋 계산 + 총 크기 산출
 			struct FParamInfo
 			{
+				FString Name;
 				uint32 Offset;
 				uint32 Size;
 				FString Type;
@@ -131,6 +132,7 @@ std::shared_ptr<FMaterial> FMaterialManager::GetOrLoad(ID3D11Device* Device, con
 				uint32 AlignedOffset = AlignOffset(CurrentOffset, TypeSize);
 
 				FParamInfo Info;
+				Info.Name = P.value("Name", "");
 				Info.Offset = AlignedOffset;
 				Info.Size = TypeSize;
 				Info.Type = Type;
@@ -155,6 +157,15 @@ std::shared_ptr<FMaterial> FMaterialManager::GetOrLoad(ID3D11Device* Device, con
 			}
 
 			FMaterialConstantBuffer* CB = Mat->GetConstantBuffer(SlotIndex);
+
+			// 파라미터 이름 등록
+			for (auto& Info : ParamList)
+			{
+				if (!Info.Name.empty())
+				{
+					Mat->RegisterParameter(Info.Name, SlotIndex, Info.Offset, Info.Size);
+				}
+			}
 
 			// 3차: 초기값 기록
 			for (auto& Info : ParamList)
@@ -214,7 +225,7 @@ std::shared_ptr<FMaterial> FMaterialManager::GetOrLoad(ID3D11Device* Device, con
 
 	if (Json.contains("Name"))
 	{
-		FString Name = Json["Name"].get<std::string>();
+		FString Name = Json["Name"].get<FString>();
 		Mat->SetName(Name);
 		NameCache[Name] = Mat;
 	}

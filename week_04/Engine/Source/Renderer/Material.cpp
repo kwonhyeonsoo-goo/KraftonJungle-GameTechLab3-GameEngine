@@ -100,6 +100,52 @@ FMaterialConstantBuffer* FMaterial::GetConstantBuffer(int32 Index)
 	return &ConstantBuffers[Index];
 }
 
+void FMaterial::RegisterParameter(const FString& ParamName, int32 BufferIndex, uint32 Offset, uint32 Size)
+{
+	ParameterMap[ParamName] = { BufferIndex, Offset, Size };
+}
+
+bool FMaterial::SetScalarParameter(const FString& ParamName, float Value)
+{
+	return SetParameterData(ParamName, &Value, sizeof(float));
+}
+
+bool FMaterial::SetVectorParameter(const FString& ParamName, const FVector4& Value)
+{
+	float Data[4] = { Value.X, Value.Y, Value.Z, Value.W };
+	return SetParameterData(ParamName, Data, sizeof(Data));
+}
+
+bool FMaterial::SetVector3Parameter(const FString& ParamName, const FVector& Value)
+{
+	float Data[3] = { Value.X, Value.Y, Value.Z };
+	return SetParameterData(ParamName, Data, sizeof(Data));
+}
+
+bool FMaterial::SetParameterData(const FString& ParamName, const void* Data, uint32 DataSize)
+{
+	auto It = ParameterMap.find(ParamName);
+	if (It == ParameterMap.end())
+	{
+		return false;
+	}
+
+	const FMaterialParameterInfo& Info = It->second;
+	if (DataSize > Info.Size)
+	{
+		return false;
+	}
+
+	FMaterialConstantBuffer* CB = GetConstantBuffer(Info.BufferIndex);
+	if (!CB)
+	{
+		return false;
+	}
+
+	CB->SetData(Data, DataSize, Info.Offset);
+	return true;
+}
+
 void FMaterial::Bind(ID3D11DeviceContext* DeviceContext)
 {
 	if (VertexShader)
