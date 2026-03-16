@@ -1,6 +1,7 @@
 #pragma once
 #include "Object/Object.h"
 #include "Object/Class.h"
+#include <d3d11.h>
 
 class AActor;
 class CCamera;
@@ -38,8 +39,8 @@ public:
 
 	CCamera* GetCamera() const { return Camera; }
 
-	void InitializeDefaultScene(float AspectRatio);
-	void LoadSceneFromFile(const FString& FilePath);
+	void InitializeDefaultScene(float AspectRatio, ID3D11Device* Device = nullptr);
+	void LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device = nullptr);
 	void SaveSceneToFile(const FString& FilePath);
 	void ClearActors();
 	void BeginPlay();

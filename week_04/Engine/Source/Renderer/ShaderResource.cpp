@@ -153,7 +153,7 @@ std::shared_ptr<FShaderResource> FShaderResource::GetOrCompile(
 	ID3DBlob* ErrorBlob = nullptr;
 
 	HRESULT Hr = D3DCompileFromFile(
-		FilePath, nullptr, nullptr,
+		FilePath, nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE,
 		EntryPoint, Target,
 		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
 		0, &Blob, &ErrorBlob

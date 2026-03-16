@@ -2,6 +2,8 @@
 #include "ShaderType.h"
 #include "Shader.h"
 #include "ShaderMap.h"
+#include "Material.h"
+#include "MaterialManager.h"
 #include <dxgi1_3.h>
 #include "Primitive/PrimitiveBase.h"
 #include <cassert>
@@ -43,72 +45,72 @@ void CRenderer::SetGUIUpdateCallback(FGUICallback InUpdate)
 bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 {
 	Hwnd = InHwnd;
-	UINT createDeviceFlags = 0;
+	UINT CreateDeviceFlags = 0;
 #ifdef _DEBUG
-	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	CreateDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
-	D3D_FEATURE_LEVEL featureLevels = D3D_FEATURE_LEVEL_11_0;
+	D3D_FEATURE_LEVEL FeatureLevels = D3D_FEATURE_LEVEL_11_0;
 
-	HRESULT hr = D3D11CreateDevice(
+	HRESULT Hr = D3D11CreateDevice(
 		0, D3D_DRIVER_TYPE_HARDWARE, 0,
-		createDeviceFlags, 0, 0,
-		D3D11_SDK_VERSION, &Device, &featureLevels,
+		CreateDeviceFlags, 0, 0,
+		D3D11_SDK_VERSION, &Device, &FeatureLevels,
 		&DeviceContext
 	);
 
-	if (FAILED(hr))
+	if (FAILED(Hr))
 	{
 		MessageBox(0, L"D3D11CreateDevice Failed.", 0, 0);
 		return false;
 	}
-	if (featureLevels != D3D_FEATURE_LEVEL_11_0)
+	if (FeatureLevels != D3D_FEATURE_LEVEL_11_0)
 	{
 		MessageBox(0, L"Direct3D Feature Level 11 unsupported", 0, 0);
 		return false;
 	}
-	UINT m4xMsaaQuality;
-	hr = Device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 4, &m4xMsaaQuality);
-	assert(m4xMsaaQuality > 0);
+	UINT M4xMsaaQuality;
+	Hr = Device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 4, &M4xMsaaQuality);
+	assert(M4xMsaaQuality > 0);
 
-	IDXGIDevice* dxgiDevice = nullptr;
-	hr = Device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgiDevice);
-	if (SUCCEEDED(hr))
+	IDXGIDevice* DxgiDevice = nullptr;
+	Hr = Device->QueryInterface(__uuidof(IDXGIDevice), (void**)&DxgiDevice);
+	if (SUCCEEDED(Hr))
 	{
-		IDXGIAdapter* dxgiAdapter = nullptr;
-		hr = dxgiDevice->GetAdapter(&dxgiAdapter);
-		if (SUCCEEDED(hr))
+		IDXGIAdapter* DxgiAdapter = nullptr;
+		Hr = DxgiDevice->GetAdapter(&DxgiAdapter);
+		if (SUCCEEDED(Hr))
 		{
-			IDXGIFactory2* dxgiFactory = nullptr;
-			hr = dxgiAdapter->GetParent(__uuidof(IDXGIFactory2), (void**)&dxgiFactory);
+			IDXGIFactory2* DxgiFactory = nullptr;
+			Hr = DxgiAdapter->GetParent(__uuidof(IDXGIFactory2), (void**)&DxgiFactory);
 
-			if (SUCCEEDED(hr))
+			if (SUCCEEDED(Hr))
 			{
-				DXGI_SWAP_CHAIN_DESC1 sd = {};
-				sd.Width = Width;
-				sd.Height = Height;
-				sd.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-				sd.SampleDesc.Count = 1;
-				sd.SampleDesc.Quality = 0;
-				sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-				sd.BufferCount = 2;
-				sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+				DXGI_SWAP_CHAIN_DESC1 SwapChainDesc = {};
+				SwapChainDesc.Width = Width;
+				SwapChainDesc.Height = Height;
+				SwapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+				SwapChainDesc.SampleDesc.Count = 1;
+				SwapChainDesc.SampleDesc.Quality = 0;
+				SwapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+				SwapChainDesc.BufferCount = 2;
+				SwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
-				IDXGISwapChain1* swapChain1 = nullptr;
-				hr = dxgiFactory->CreateSwapChainForHwnd(
-					Device, Hwnd, &sd, nullptr, nullptr, &swapChain1
+				IDXGISwapChain1* SwapChain1 = nullptr;
+				Hr = DxgiFactory->CreateSwapChainForHwnd(
+					Device, Hwnd, &SwapChainDesc, nullptr, nullptr, &SwapChain1
 				);
 
-				if (SUCCEEDED(hr))
+				if (SUCCEEDED(Hr))
 				{
-					swapChain1->QueryInterface(__uuidof(IDXGISwapChain), (void**)&SwapChain);
-					swapChain1->Release();
+					SwapChain1->QueryInterface(__uuidof(IDXGISwapChain), (void**)&SwapChain);
+					SwapChain1->Release();
 				}
 
-				dxgiFactory->Release();
+				DxgiFactory->Release();
 			}
-			dxgiAdapter->Release();
+			DxgiAdapter->Release();
 		}
-		dxgiDevice->Release();
+		DxgiDevice->Release();
 	}
 	if (!SwapChain)
 	{
@@ -116,15 +118,15 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 	ID3D11Texture2D* BackBuffer = nullptr;
-	hr = SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&BackBuffer);
-	if (FAILED(hr))
+	Hr = SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&BackBuffer);
+	if (FAILED(Hr))
 	{
 		MessageBox(0, L"GetBuffer Failed.", 0, 0); return false;
 	}
 
-	hr = Device->CreateRenderTargetView(BackBuffer, nullptr, &RenderTargetView);
+	Hr = Device->CreateRenderTargetView(BackBuffer, nullptr, &RenderTargetView);
 	BackBuffer->Release();
-	if (FAILED(hr))
+	if (FAILED(Hr))
 	{
 		MessageBox(0, L"CreateRenderTargetView Failed.", 0, 0);
 		return false;
@@ -140,16 +142,16 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 	DepthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 
 	ID3D11Texture2D* DepthTex = nullptr;
-	hr = Device->CreateTexture2D(&DepthDesc, nullptr, &DepthTex);
-	if (FAILED(hr))
+	Hr = Device->CreateTexture2D(&DepthDesc, nullptr, &DepthTex);
+	if (FAILED(Hr))
 	{
 		MessageBox(0, L"CreateTexture2D (Depth) Failed.", 0, 0);
 		return false;
 	}
 
-	hr = Device->CreateDepthStencilView(DepthTex, nullptr, &DepthStencilView);
+	Hr = Device->CreateDepthStencilView(DepthTex, nullptr, &DepthStencilView);
 	DepthTex->Release();
-	if (FAILED(hr))
+	if (FAILED(Hr))
 	{
 		MessageBox(0, L"CreateDepthStencilView Failed.", 0, 0); return false;
 	}
@@ -177,13 +179,23 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 
+	// 기본 Material 생성 (기존 VS/PS 사용) + MaterialManager에 등록
+	{
+		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, L"..\\Engine\\Shaders\\VertexShader.hlsl");
+		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, L"..\\Engine\\Shaders\\PixelShader.hlsl");
+		DefaultMaterial = std::make_shared<FMaterial>();
+		DefaultMaterial->SetName("M_Default");
+		DefaultMaterial->SetVertexShader(VS);
+		DefaultMaterial->SetPixelShader(PS);
+		FMaterialManager::Get().Register("M_Default", DefaultMaterial);
+	}
 
 	// Rasterizer State
-	D3D11_RASTERIZER_DESC rsDesc = {};
-	rsDesc.FillMode = D3D11_FILL_SOLID;
-	rsDesc.CullMode = D3D11_CULL_BACK;
-	hr = Device->CreateRasterizerState(&rsDesc, &RasterizerState);
-	if (FAILED(hr))
+	D3D11_RASTERIZER_DESC RasterizerDesc = {};
+	RasterizerDesc.FillMode = D3D11_FILL_SOLID;
+	RasterizerDesc.CullMode = D3D11_CULL_BACK;
+	Hr = Device->CreateRasterizerState(&RasterizerDesc, &RasterizerState);
+	if (FAILED(Hr))
 	{
 		MessageBox(0, L"CreateRasterizerState Failed.", 0, 0);
 		return false;
@@ -223,8 +235,8 @@ void CRenderer::EndFrame()
 		GUIRender();
 	}
 
-	HRESULT hr = SwapChain->Present(0, 0);
-	if (hr == DXGI_STATUS_OCCLUDED)
+	HRESULT Hr = SwapChain->Present(0, 0);
+	if (Hr == DXGI_STATUS_OCCLUDED)
 		bSwapChainOccluded = true;
 
 	if (GUIPostPresent)
@@ -240,17 +252,30 @@ void CRenderer::AddCommand(const FRenderCommand& Command)
 
 void CRenderer::ExecuteCommands()
 {
-	ShaderManager.Bind(DeviceContext);
 	// 프레임 상수 버퍼 업데이트 및 바인딩 (b0: Frame, b1: Object)
 	UpdateFrameConstantBuffer();
 	ID3D11Buffer* CBs[2] = { FrameConstantBuffer, ObjectConstantBuffer };
 	DeviceContext->VSSetConstantBuffers(0, 2, CBs);
+
+	// Material이 nullptr인 커맨드에 기본 Material 할당
+	FMaterial* DefaultMat = DefaultMaterial.get();
+	for (auto& Cmd : CommandList)
+	{
+		if (!Cmd.Material)
+		{
+			Cmd.Material = DefaultMat;
+		}
+	}
+
+	// 1차: Material, 2차: MeshData 기준 정렬 → State Change 최소화
 	std::sort(CommandList.begin(), CommandList.end(),
 		[](const FRenderCommand& A, const FRenderCommand& B)
 		{
+			if (A.Material != B.Material) return A.Material < B.Material;
 			return A.MeshData < B.MeshData;
 		});
 
+	FMaterial* CurrentMaterial = nullptr;
 	FMeshData* CurrentMesh = nullptr;
 
 	for (const auto& Cmd : CommandList)
@@ -258,6 +283,13 @@ void CRenderer::ExecuteCommands()
 		if (!Cmd.MeshData)
 		{
 			continue;
+		}
+
+		// Material이 바뀔 때만 셰이더 바인딩
+		if (Cmd.Material != CurrentMaterial)
+		{
+			Cmd.Material->Bind(DeviceContext);
+			CurrentMaterial = Cmd.Material;
 		}
 
 		// GPU 버퍼가 없으면 생성
@@ -424,6 +456,11 @@ void CRenderer::ExecuteLineCommands()
 {
 	if (LineVertices.empty()) return;
 
+	// 기본 셰이더 복원 (ExecuteCommands 후 마지막 Material 셰이더가 남아있을 수 있음)
+	ShaderManager.Bind(DeviceContext);
+	ID3D11Buffer* CBs[2] = { FrameConstantBuffer, ObjectConstantBuffer };
+	DeviceContext->VSSetConstantBuffers(0, 2, CBs);
+
 	// Depth 테스트 비활성화 (축이 항상 보이도록)
 	if (!LineDepthState)
 	{
@@ -496,6 +533,7 @@ void CRenderer::Release()
 		StencilTestState = nullptr;
 	}
 	OutlinePS.reset();
+	DefaultMaterial.reset();
 	if (LineVertexBuffer)
 	{
 		LineVertexBuffer->Release();

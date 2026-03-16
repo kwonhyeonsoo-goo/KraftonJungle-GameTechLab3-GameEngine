@@ -48,7 +48,7 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height)
 
 	// Scene
 	Scene = new UScene(UScene::StaticClass(), "DefaultScene");
-	Scene->InitializeDefaultScene(static_cast<float>(Width) / static_cast<float>(Height));
+	Scene->InitializeDefaultScene(static_cast<float>(Width) / static_cast<float>(Height), Renderer->GetDevice());
 
 	return true;
 }
@@ -184,7 +184,8 @@ void CCore::Render()
 
 				Renderer->AddCommand({
 					PrimComp->GetPrimitive()->GetMeshData(),
-					PrimComp->GetWorldTransform()
+					PrimComp->GetWorldTransform(),
+					PrimComp->GetMaterial()
 					});
 			}
 		}

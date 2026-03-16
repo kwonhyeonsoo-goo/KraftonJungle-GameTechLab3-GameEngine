@@ -11,6 +11,8 @@
 #include <iomanip>
 #include "ThirdParty/nlohmann/json.hpp"
 #include "Component/PrimitiveComponent.h"
+#include "Renderer/MaterialManager.h"
+#include "Renderer/Material.h"
 
 namespace
 {
@@ -43,14 +45,14 @@ UScene::~UScene()
 	Camera = nullptr;
 }
 
-void UScene::InitializeDefaultScene(float AspectRatio)
+void UScene::InitializeDefaultScene(float AspectRatio, ID3D11Device* Device)
 {
 	// 카메라
 	Camera = new CCamera();
 	Camera->SetAspectRatio(AspectRatio);
 
 	// JSON 파일에서 씬 로드 (카메라 포함)
-	LoadSceneFromFile("../Assets/Scenes/DefaultScene.json");
+	LoadSceneFromFile("../Assets/Scenes/DefaultScene.json", Device);
 
 	//Test
 	AActor* Actor = SpawnActor<AActor>("TestActor");
@@ -63,7 +65,7 @@ void UScene::InitializeDefaultScene(float AspectRatio)
 	Actor->SetActorLocation({ 0.0f, 0.0f, 12.0f });
 }
 
-void UScene::LoadSceneFromFile(const FString& FilePath)
+void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 {
 	std::ifstream File(FilePath);
 	if (!File.is_open()) return;
@@ -87,6 +89,16 @@ void UScene::LoadSceneFromFile(const FString& FilePath)
 		}
 	}
 
+	// Material 에셋 사전 로드
+	if (Device && Json.contains("Materials"))
+	{
+		for (auto& MatPath : Json["Materials"])
+		{
+			FString Path = MatPath.get<std::string>();
+			FMaterialManager::Get().GetOrLoad(Device, Path);
+		}
+	}
+
 	if (!Json.contains("Primitives")) return;
 
 	int32 ActorIndex = 0;
@@ -107,6 +119,21 @@ void UScene::LoadSceneFromFile(const FString& FilePath)
 		{
 			++ActorIndex;
 			continue;
+		}
+
+		// Material 적용
+		if (Value.contains("Material"))
+		{
+			FString MatName = Value["Material"].get<std::string>();
+			auto Mat = FMaterialManager::Get().FindByName(MatName);
+			if (Mat)
+			{
+				UPrimitiveComponent* PrimComp = dynamic_cast<UPrimitiveComponent*>(Comp);
+				if (PrimComp)
+				{
+					PrimComp->SetMaterial(Mat.get());
+				}
+			}
 		}
 
 		FString ActorName = Type + "_" + std::to_string(ActorIndex);
@@ -175,6 +202,13 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 			FString Key = std::to_string(Index);
 
 			Primitives[Key]["Type"] = Type;
+
+			// Material 이름 저장
+			if (PrimComp->GetMaterial() && !PrimComp->GetMaterial()->GetName().empty())
+			{
+				Primitives[Key]["Material"] = PrimComp->GetMaterial()->GetName();
+			}
+
 			Primitives[Key]["Location"] = {
 				Transform.GetTranslation().X,
 				Transform.GetTranslation().Y,

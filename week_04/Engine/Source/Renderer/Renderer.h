@@ -5,9 +5,11 @@
 #include <d3d11.h>
 #include <vector>
 #include <functional>
+#include <memory>
 #include "ShaderManager.h"
 #include "PrimitiveVertex.h"
 class FPixelShader;
+class FMaterial;
 struct FMeshData;
 
 using FGUICallback = std::function<void()>;
@@ -52,6 +54,8 @@ public:
 	void RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float OutlineScale = 1.05f);
 
 
+	FMaterial* GetDefaultMaterial() const { return DefaultMaterial.get(); }
+
 	ID3D11Device* GetDevice() const { return Device; }
 	ID3D11DeviceContext* GetDeviceContext() const { return DeviceContext; }
 	ID3D11RenderTargetView* GetRenderTargetView() const { return RenderTargetView; }
@@ -92,6 +96,9 @@ private:
 	FGUICallback GUIUpdate;
 	FGUICallback GUIRender;
 	FGUICallback GUIPostPresent;
+
+	// 기본 Material (셰이더 미지정 시 사용)
+	std::shared_ptr<FMaterial> DefaultMaterial;
 
 	// 매 프레임 외부에서 설정
 public:
