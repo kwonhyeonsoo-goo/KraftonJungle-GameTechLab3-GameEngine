@@ -2,6 +2,11 @@ CLAUDE.md
 .claude/
 Editor/imgui.ini
 
+# Generated project files
+*.sln
+*.vcxproj
+*.vcxproj.filters
+
 # Compiled shader objects
 Content/Shaders/*.cso
 
