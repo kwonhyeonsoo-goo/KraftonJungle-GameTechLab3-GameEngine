@@ -17,7 +17,7 @@ UObject::UObject(UClass* InClass, FString InName, UObject* InOuter)
 UObject::~UObject()
 {
 	// 조건 1: 소멸 시 GUObjectArray 슬롯을 nullptr로 마킹
-	if (InternalIndex < static_cast<uint32>(GUObjectArray.Num()))
+	if (InternalIndex < static_cast<uint32>(GUObjectArray.size()))
 	{
 		GUObjectArray[static_cast<int32>(InternalIndex)] = nullptr;
 	}

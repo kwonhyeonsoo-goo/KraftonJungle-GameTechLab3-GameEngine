@@ -25,8 +25,8 @@ UObject* FObjectFactory::ConstructObject(
 	}
 
 	NewObj->UUID = GenerateUUID();
-	NewObj->InternalIndex = static_cast<uint32>(GUObjectArray.Num());
-	GUObjectArray.Add(NewObj);
+	NewObj->InternalIndex = static_cast<uint32>(GUObjectArray.size());
+	GUObjectArray.push_back(NewObj);
 
 	return NewObj;
 }

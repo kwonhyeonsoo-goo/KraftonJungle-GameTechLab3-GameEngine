@@ -11,6 +11,7 @@ public:
 
 
 
+
 	// UClass*를 직접 넘기는 버전
 	UObject* SpawnObject(
 		UClass* InClass,
@@ -23,4 +24,5 @@ public:
 
 	// GUObjectArray의 nullptr 슬롯을 제거하고 InternalIndex 재조정
 	void FlushKilledObjects();
+
 };

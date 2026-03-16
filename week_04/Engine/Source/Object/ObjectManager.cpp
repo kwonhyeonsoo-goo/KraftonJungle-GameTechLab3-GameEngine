@@ -13,7 +13,7 @@ ObjectManager::~ObjectManager()
 	{
 		delete Obj;
 	}
-	GUObjectArray.Empty();
+	GUObjectArray.empty();
 }
 
 UObject* ObjectManager::SpawnObject(
@@ -38,7 +38,7 @@ void ObjectManager::FlushKilledObjects()
 {
 	// nullptr 슬롯을 제거하고 살아있는 오브젝트의 InternalIndex 재조정
 	int32 WriteIdx = 0;
-	for (int32 ReadIdx = 0; ReadIdx < GUObjectArray.Num(); ++ReadIdx)
+	for (int32 ReadIdx = 0; ReadIdx < GUObjectArray.size(); ++ReadIdx)
 	{
 		UObject* Obj = GUObjectArray[ReadIdx];
 		if (Obj != nullptr)
@@ -48,5 +48,6 @@ void ObjectManager::FlushKilledObjects()
 			++WriteIdx;
 		}
 	}
-	GUObjectArray.SetNum(WriteIdx);
+	//GUObjectArray.erase(WriteIdx);
+	GUObjectArray[WriteIdx] = nullptr;
 }
