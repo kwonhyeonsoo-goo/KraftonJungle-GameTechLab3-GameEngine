@@ -293,6 +293,11 @@ void URenderer::ReleaseDepthBuffer()
         DepthStencilState->Release();
         DepthStencilState = nullptr;
     }
+
+    if (DepthStencilOutlineState) {
+        DepthStencilOutlineState->Release();
+        DepthStencilOutlineState = nullptr;
+    }
 }
 
 void URenderer::CreatePrimitiveVertexBuffer()
@@ -344,6 +349,11 @@ void URenderer::ReleaseRasterizerState()
     {
         RasterizerState->Release();
         RasterizerState = nullptr;
+    }
+
+    if (RasterizerStateOutline) {
+        RasterizerStateOutline->Release();
+        RasterizerStateOutline = nullptr;
     }
 }
 
@@ -536,6 +546,11 @@ void URenderer::ReleaseConstantBuffer()
     {
         ConstantBuffer->Release();
         ConstantBuffer = nullptr;
+    }
+
+    if (OutlineConstantBuffer) {
+        OutlineConstantBuffer -> Release();
+        OutlineConstantBuffer = nullptr;
     }
 }
 
