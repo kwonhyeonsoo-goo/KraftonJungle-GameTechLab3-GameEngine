@@ -348,11 +348,13 @@ void URenderer::CreateRasterizerState()
     rasterizerdesc.FillMode = D3D11_FILL_SOLID;
     rasterizerdesc.CullMode = D3D11_CULL_BACK;
     rasterizerdesc.FrontCounterClockwise = false;
+    rasterizerdesc.DepthClipEnable = TRUE;
     Device->CreateRasterizerState(&rasterizerdesc, &RasterizerState);
 
     D3D11_RASTERIZER_DESC rasterozeroutlinedesc = {};
     rasterozeroutlinedesc.FillMode = D3D11_FILL_SOLID;
     rasterozeroutlinedesc.CullMode = D3D11_CULL_FRONT;
+    rasterozeroutlinedesc.DepthClipEnable = TRUE;
     Device->CreateRasterizerState(&rasterozeroutlinedesc, &RasterizerStateOutline);
 
 }
