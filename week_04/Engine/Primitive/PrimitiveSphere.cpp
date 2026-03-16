@@ -4,7 +4,7 @@
 const FString CPrimitiveSphere::Key = "Sphere";
 const FString CPrimitiveSphere::FilePath = "Assets/Meshes/Sphere.mesh";
 
-CPrimitiveSphere::CPrimitiveSphere(int Segments, int Rings)
+CPrimitiveSphere::CPrimitiveSphere(int32 Segments, int32 Rings)
 {
 	auto Cached = GetCached(Key);
 	if (Cached)
@@ -17,19 +17,19 @@ CPrimitiveSphere::CPrimitiveSphere(int Segments, int Rings)
 	}
 }
 
-void CPrimitiveSphere::Generate(int Segments, int Rings)
+void CPrimitiveSphere::Generate(int32 Segments, int32 Rings)
 {
 	auto Data = std::make_shared<FMeshData>();
 
 	const float PI = 3.14159265358979f;
 
-	for (int Ring = 0; Ring <= Rings; ++Ring)
+	for (int32 Ring = 0; Ring <= Rings; ++Ring)
 	{
 		float Phi = PI * static_cast<float>(Ring) / static_cast<float>(Rings);
 		float Z = cosf(Phi);
 		float SinPhi = sinf(Phi);
 
-		for (int Seg = 0; Seg <= Segments; ++Seg)
+		for (int32 Seg = 0; Seg <= Segments; ++Seg)
 		{
 			float Theta = 2.0f * PI * static_cast<float>(Seg) / static_cast<float>(Segments);
 			float X = SinPhi * cosf(Theta);
@@ -48,12 +48,12 @@ void CPrimitiveSphere::Generate(int Segments, int Rings)
 		}
 	}
 
-	for (int Ring = 0; Ring < Rings; ++Ring)
+	for (int32 Ring = 0; Ring < Rings; ++Ring)
 	{
-		for (int Seg = 0; Seg < Segments; ++Seg)
+		for (int32 Seg = 0; Seg < Segments; ++Seg)
 		{
-			unsigned int Current = Ring * (Segments + 1) + Seg;
-			unsigned int Next = Current + Segments + 1;
+			uint32 Current = Ring * (Segments + 1) + Seg;
+			uint32 Next = Current + Segments + 1;
 
 			Data->Indices.push_back(Current);
 			Data->Indices.push_back(Next);

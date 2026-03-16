@@ -69,12 +69,12 @@ public:
 	FMatrix& operator=(FMatrix&&) noexcept = default;
 
 public:
-	float* operator[](int Row) noexcept
+	float* operator[](int32 Row) noexcept
 	{
 		assert(Row >= 0 && Row < 4);
 		return M[Row];
 	}
-	const float* operator[](int Row) const noexcept
+	const float* operator[](int32 Row) const noexcept
 	{
 		assert(Row >= 0 && Row < 4);
 		return M[Row];

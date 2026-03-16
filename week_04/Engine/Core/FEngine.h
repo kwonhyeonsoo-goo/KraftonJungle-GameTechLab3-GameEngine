@@ -15,7 +15,7 @@ public:
 	FEngine(const FEngine&) = delete;
 	FEngine& operator=(const FEngine&) = delete;
 
-	bool Initialize(HINSTANCE hInstance, const wchar_t* Title, int Width, int Height);
+	bool Initialize(HINSTANCE hInstance, const wchar_t* Title, int32 Width, int32 Height);
 	void Run();
 	virtual void Shutdown();
 

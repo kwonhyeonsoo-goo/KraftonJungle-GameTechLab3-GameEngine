@@ -20,7 +20,7 @@ public:
 	CCore(CCore&&) = delete;
 	CCore& operator=(const CCore&) = delete;
 	CCore& operator=(CCore&&) = delete;
-	bool Initialize(HWND Hwnd, int Width, int Height);
+	bool Initialize(HWND Hwnd, int32 Width, int32 Height);
 	void Release();
 
 	void Tick();
@@ -35,7 +35,7 @@ public:
 	void SetSelectedActor(AActor* InActor) { SelectedActor = InActor; }
 	AActor* GetSelectedActor() const { return SelectedActor; }
 
-	void OnResize(int Width, int Height);
+	void OnResize(int32 Width, int32 Height);
 
 	using FRenderCallback = std::function<void(CRenderer*)>;
 	void SetPostRenderCallback(FRenderCallback InCallback) { PostRenderCallback = std::move(InCallback); }

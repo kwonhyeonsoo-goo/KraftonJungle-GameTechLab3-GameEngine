@@ -16,7 +16,7 @@ void FFrustum::ExtractFromVP(const FMatrix& VP)
 	// Far:    col3 - col2
 	Planes[Far]    = { VP[0][3] - VP[0][2], VP[1][3] - VP[1][2], VP[2][3] - VP[2][2], VP[3][3] - VP[3][2] };
 
-	for (int i = 0; i < PlaneCount; ++i)
+	for (int32 i = 0; i < PlaneCount; ++i)
 	{
 		Planes[i].Normalize();
 	}
@@ -24,7 +24,7 @@ void FFrustum::ExtractFromVP(const FMatrix& VP)
 
 bool FFrustum::IsVisible(const FBoundingSphere& Sphere) const
 {
-	for (int i = 0; i < PlaneCount; ++i)
+	for (int32 i = 0; i < PlaneCount; ++i)
 	{
 		if (Planes[i].DistanceTo(Sphere.Center) < -Sphere.Radius)
 		{

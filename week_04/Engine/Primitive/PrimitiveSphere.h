@@ -8,7 +8,7 @@ public:
 	static const FString Key;
 	static const FString FilePath;
 
-	CPrimitiveSphere(int Segments = 16, int Rings = 16);
+	CPrimitiveSphere(int32 Segments = 16, int32 Rings = 16);
 
-	void Generate(int Segments, int Rings);
+	void Generate(int32 Segments, int32 Rings);
 };

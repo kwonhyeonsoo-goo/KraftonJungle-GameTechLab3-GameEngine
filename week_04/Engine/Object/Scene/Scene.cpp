@@ -89,7 +89,7 @@ void UScene::LoadSceneFromFile(const FString& FilePath)
 
 	if (!Json.contains("Primitives")) return;
 
-	int ActorIndex = 0;
+	int32 ActorIndex = 0;
 	for (auto& [Key, Value] : Json["Primitives"].items())
 	{
 		FString Type = Value.value("Type", "");
@@ -150,7 +150,7 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 
 	// Primitives
 	nlohmann::json Primitives;
-	int Index = 0;
+	int32 Index = 0;
 	for (AActor* Actor : Actors)
 	{
 		if (!Actor || Actor->IsPendingDestroy())

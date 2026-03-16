@@ -64,9 +64,9 @@ void CPrimitiveCube::Generate()
 	Data->Vertices.push_back({ { -0.5f, -0.5f,  0.5f }, Magenta, {  0.0f, -1.0f,  0.0f } });
 
 	// 36 indices (6 faces * 2 triangles * 3 vertices)
-	for (unsigned int i = 0; i < 6; ++i)
+	for (uint32 i = 0; i < 6; ++i)
 	{
-		unsigned int Base = i * 4;
+		uint32 Base = i * 4;
 		Data->Indices.push_back(Base + 0);
 		Data->Indices.push_back(Base + 1);
 		Data->Indices.push_back(Base + 2);

@@ -35,7 +35,7 @@ bool FMeshData::CreateBuffers(ID3D11Device* Device)
 	// Index Buffer
 	D3D11_BUFFER_DESC IBDesc = {};
 	IBDesc.Usage = D3D11_USAGE_IMMUTABLE;
-	IBDesc.ByteWidth = static_cast<UINT>(sizeof(unsigned int) * Indices.size());
+	IBDesc.ByteWidth = static_cast<UINT>(sizeof(uint32) * Indices.size());
 	IBDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 
 	D3D11_SUBRESOURCE_DATA IBData = {};

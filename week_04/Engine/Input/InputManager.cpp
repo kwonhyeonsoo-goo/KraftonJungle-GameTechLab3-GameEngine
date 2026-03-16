@@ -7,12 +7,12 @@ void CInputManager::ProcessMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LP
 	{
 	case WM_KEYDOWN:
 		if (WParam < MAX_KEYS)
-			EventQueue.push_back({ EInputEventType::KeyDown, static_cast<int>(WParam) });
+			EventQueue.push_back({ EInputEventType::KeyDown, static_cast<int32>(WParam) });
 		break;
 
 	case WM_KEYUP:
 		if (WParam < MAX_KEYS)
-			EventQueue.push_back({ EInputEventType::KeyUp, static_cast<int>(WParam) });
+			EventQueue.push_back({ EInputEventType::KeyUp, static_cast<int32>(WParam) });
 		break;
 
 	case WM_LBUTTONDOWN:
@@ -91,37 +91,37 @@ void CInputManager::Tick()
 	}
 }
 
-bool CInputManager::IsKeyDown(int Key) const
+bool CInputManager::IsKeyDown(int32 Key) const
 {
 	if (Key < 0 || Key >= MAX_KEYS) return false;
 	return KeyState[Key];
 }
 
-bool CInputManager::IsKeyPressed(int Key) const
+bool CInputManager::IsKeyPressed(int32 Key) const
 {
 	if (Key < 0 || Key >= MAX_KEYS) return false;
 	return KeyState[Key] && !PrevKeyState[Key];
 }
 
-bool CInputManager::IsKeyReleased(int Key) const
+bool CInputManager::IsKeyReleased(int32 Key) const
 {
 	if (Key < 0 || Key >= MAX_KEYS) return false;
 	return !KeyState[Key] && PrevKeyState[Key];
 }
 
-bool CInputManager::IsMouseButtonDown(int Button) const
+bool CInputManager::IsMouseButtonDown(int32 Button) const
 {
 	if (Button < 0 || Button >= MAX_MOUSE_BUTTONS) return false;
 	return MouseButtonState[Button];
 }
 
-bool CInputManager::IsMouseButtonPressed(int Button) const
+bool CInputManager::IsMouseButtonPressed(int32 Button) const
 {
 	if (Button < 0 || Button >= MAX_MOUSE_BUTTONS) return false;
 	return MouseButtonState[Button] && !PrevMouseButtonState[Button];
 }
 
-bool CInputManager::IsMouseButtonReleased(int Button) const
+bool CInputManager::IsMouseButtonReleased(int32 Button) const
 {
 	if (Button < 0 || Button >= MAX_MOUSE_BUTTONS) return false;
 	return !MouseButtonState[Button] && PrevMouseButtonState[Button];

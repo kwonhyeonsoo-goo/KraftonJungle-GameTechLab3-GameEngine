@@ -40,7 +40,7 @@ void CRenderer::SetGUIUpdateCallback(FGUICallback InUpdate)
 	GUIUpdate = std::move(InUpdate);
 }
 
-bool CRenderer::Initialize(HWND InHwnd, int Width, int Height)
+bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 {
 	Hwnd = InHwnd;
 	UINT createDeviceFlags = 0;
@@ -525,7 +525,7 @@ bool CRenderer::IsOccluded()
 	return false;
 }
 
-void CRenderer::OnResize(int NewWidth, int NewHeight)
+void CRenderer::OnResize(int32 NewWidth, int32 NewHeight)
 {
 	if (NewWidth == 0 || NewHeight == 0) return;
 

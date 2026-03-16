@@ -18,12 +18,12 @@ public:
 	CRenderer() = default;
 	~CRenderer();
 
-	bool Initialize(HWND Hwnd, int Width, int Height);
+	bool Initialize(HWND Hwnd, int32 Width, int32 Height);
 	void BeginFrame();
 	void EndFrame();
 	void Release();
 	bool IsOccluded();
-	void OnResize(int NewWidth, int NewHeight);
+	void OnResize(int32 NewWidth, int32 NewHeight);
 	bool bSwapChainOccluded = false;
 
 	// GUI callbacks (ImGui 등 외부 GUI 시스템 연동)

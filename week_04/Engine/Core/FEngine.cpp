@@ -9,7 +9,7 @@ FEngine::~FEngine()
 	Shutdown();
 }
 
-bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int Width, int Height)
+bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int32 Width, int32 Height)
 {
 	App = &CWindowApplication::Get();
 	if (!App->Create(hInstance))
@@ -36,7 +36,7 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int Width, i
 		});
 
 	// Resize callback
-	MainWindow->SetOnResizeCallback([this](int W, int H)
+	MainWindow->SetOnResizeCallback([this](int32 W, int32 H)
 		{
 			if (Core)
 			{

@@ -17,7 +17,7 @@ CCore::~CCore()
 
 
 
-bool CCore::Initialize(HWND Hwnd, int Width, int Height)
+bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height)
 {
 	WindowWidth = Width;
 	WindowHeight = Height;
@@ -196,7 +196,7 @@ void CCore::Render()
 
 	Renderer->EndFrame();
 }
-void CCore::OnResize(int Width, int Height)
+void CCore::OnResize(int32 Width, int32 Height)
 {
 	if (Width == 0 || Height == 0) return;
 
