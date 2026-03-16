@@ -53,9 +53,10 @@ bool ScaleTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
         return false;
 
     const FVector origin = primary->GetTransform().Location;
-    const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
 
-    const FMatrix viewProj = ctx.Editor.GetViewProjMatrix();
+    const FMatrix viewProj = ctx.Editor.bOrthoMode
+        ? ctx.Editor.GetViewOrthoMatrix()
+        : ctx.Editor.GetViewProjMatrix();
     const int32 viewportW = ctx.Window.GetWidth();
     const int32 viewportH = ctx.Window.GetHeight();
     const FVector2D mouse2D((float)e.X, (float)e.Y);
@@ -63,10 +64,12 @@ bool ScaleTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     float bestDistSq = (std::numeric_limits<float>::max)();
     EAxis bestAxis = EAxis::None;
 
+    const float gizmoScale = GizmoMath::ComputeGizmoScale(origin, ctx);
+
     for (int axisIndex = 0; axisIndex < 3; ++axisIndex)
     {
-        const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, coordSpace);
-        const FVector handlePos = origin + axisDir * GizmoMath::GizmoAxisLength;
+        const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, ECoordSpace::Local);
+        const FVector handlePos = origin + axisDir * GizmoMath::GizmoAxisLength * gizmoScale;
         const FVector2D handle2D = GizmoMath::WorldToScreen(handlePos, viewProj, viewportW, viewportH);
 
         if (!GizmoMath::PointInRect2D(mouse2D, handle2D, GizmoMath::GizmoScaleBoxPx))
@@ -87,7 +90,7 @@ bool ScaleTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
         return false;
 
     const int axisIndex = AxisToIndex(bestAxis);
-    const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, coordSpace);
+    const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, ECoordSpace::Local);
     const Ray ray = GizmoMath::BuildMouseRay(e, ctx);
 
     float axisT = 0.0f;
@@ -121,7 +124,7 @@ void ScaleTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
         return;
 
     const FVector axisOrigin = OriginalTransform.Location;
-    const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, ctx.Editor.Tools.GetCoordSpace());
+    const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, ECoordSpace::Local);
     const Ray ray = GizmoMath::BuildMouseRay(e, ctx);
 
     float currentAxisT = 0.0f;
@@ -177,12 +180,11 @@ void ScaleTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
         return;
 
     const FVector origin = primary->GetTransform().Location;
-    const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
     const uint32 objectId = primary->GetUUID();
 
     for (int axisIndex = 0; axisIndex < 3; ++axisIndex)
     {
-        const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, coordSpace);
+        const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, ECoordSpace::Local);
 
         const uint32 color =
             axisIndex == 0 ? GizmoMath::AxisColorX :
@@ -191,7 +193,8 @@ void ScaleTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
 
         RenderCommand cmd = {};
         cmd.Type = ERenderType::Gizmo;
-        cmd.WorldTransform = GizmoMath::MakeAxisTransform(origin, axisDir, GizmoMath::GizmoAxisLength);
+        const float gs = GizmoMath::ComputeGizmoScale(origin, ctx);
+        cmd.WorldTransform = GizmoMath::MakeAxisTransform(origin, axisDir, GizmoMath::GizmoAxisLength * gs);
         cmd.Color = color;
         cmd.ObjectId = objectId;
         queue.Push(cmd);

@@ -20,7 +20,7 @@ namespace
     FMatrix BuildRotationMatrixFromDegrees(const FVector& rotationDeg)
     {
         return FMatrix::RotationX(DegToRad(rotationDeg.x))
-            * FMatrix::RotationY(-DegToRad(rotationDeg.y))
+            * FMatrix::RotationY(DegToRad(rotationDeg.y))
             * FMatrix::RotationZ(DegToRad(rotationDeg.z));
     }
 
@@ -108,7 +108,9 @@ FVector GizmoMath::GetAxisDirection(const USceneComponent* comp,
 
 Ray GizmoMath::BuildMouseRay(const MouseEvent& e, AppContext& ctx)
 {
-    const FMatrix viewProj = ctx.Editor.GetViewProjMatrix();
+    const FMatrix viewProj = ctx.Editor.bOrthoMode
+        ? ctx.Editor.GetViewOrthoMatrix()
+        : ctx.Editor.GetViewProjMatrix();
     const FMatrix invViewProj = viewProj.Inversed();
 
     return PickingService::ScreenToRay(

@@ -293,6 +293,19 @@ struct FMatrix
         return result;
     }
 
+    static FMatrix Orthographic(float height, float width,float nearZ, float farZ)
+    {
+        FMatrix result = {};
+
+        result.M[0][0] = 2.0f / width;
+        result.M[1][1] = 2.0f / height;
+        result.M[2][2] = 1.0f / (farZ - nearZ);
+        result.M[3][2] = -nearZ / (farZ - nearZ);
+        result.M[3][3] = 1.0f;
+
+        return result;
+    }
+
     static FMatrix Perspective(float fovY, float aspect, float nearZ, float farZ)
     {
         const float yScale = 1.0f / std::tan(fovY * 0.5f);
@@ -301,14 +314,6 @@ struct FMatrix
         const float zBias = (-nearZ * farZ) / (farZ - nearZ);
 
         FMatrix result = {};
-
-        for (int r = 0; r < 4; ++r)
-        {
-            for (int c = 0; c < 4; ++c)
-            {
-                result.M[r][c] = 0.f;
-            }
-        }
 
         result.M[0][0] = xScale;
         result.M[1][1] = yScale;

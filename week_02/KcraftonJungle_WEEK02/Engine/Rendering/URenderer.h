@@ -74,6 +74,8 @@ public:
     UINT numVerticesWorldAxis;
     ID3D11Buffer* vertexBufferGizmo;
     UINT numVerticesGizmo;
+    ID3D11Buffer* vertexBufferTorus;
+    UINT numVerticesTorus;
 
 #pragma region D3D11 Renderer 함수들
 	//D3D11 Renderer 함수들

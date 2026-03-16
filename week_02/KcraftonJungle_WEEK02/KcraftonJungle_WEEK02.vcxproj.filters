@@ -372,4 +372,9 @@
       <UniqueIdentifier>{8ca38d0b-b17b-474f-9310-8d901f47ec2f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Engine\Mesh\Torus.h">
+      <Filter>Engine\Mesh</Filter>
+    </None>
+  </ItemGroup>
 </Project>
