@@ -7,6 +7,7 @@
 #include "Object/Actor/CubeActor.h"
 #include "Object/Actor/SphereActor.h"
 #include "Camera/Camera.h"
+#include "Core/Paths.h"
 #include "Debug/EngineLog.h"
 #include <filesystem>
 
@@ -99,7 +100,7 @@ void CControlPanelWindow::Render(CCore* Core)
 
 		if (ImGui::Button("Save"))
 		{
-			FString Path = FString("../Assets/Scenes/") + SceneName + ".json";
+			FString Path = FPaths::SceneDir() + SceneName + ".json";
 			Core->GetScene()->SaveSceneToFile(Path);
 			UE_LOG("Scene saved: %s", SceneName);
 		}
@@ -110,7 +111,7 @@ void CControlPanelWindow::Render(CCore* Core)
 		{
 			SceneFiles.clear();
 			SelectedSceneIndex = -1;
-			const FString ScenesDir = "../Assets/Scenes";
+			const FString ScenesDir = FPaths::SceneDir();
 			if (std::filesystem::exists(ScenesDir))
 			{
 				for (auto& Entry : std::filesystem::directory_iterator(ScenesDir))
@@ -143,7 +144,7 @@ void CControlPanelWindow::Render(CCore* Core)
 				Core->SetSelectedActor(nullptr);
 				Core->GetScene()->ClearActors();
 
-				FString Path = FString("../Assets/Scenes/") + SceneFiles[SelectedSceneIndex] + ".json";
+				FString Path = FPaths::SceneDir() + SceneFiles[SelectedSceneIndex] + ".json";
 				Core->GetScene()->LoadSceneFromFile(Path, Core->GetRenderer()->GetDevice());
 				UE_LOG("Scene loaded: %s", SceneFiles[SelectedSceneIndex].c_str());
 			}

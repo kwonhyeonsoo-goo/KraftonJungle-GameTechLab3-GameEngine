@@ -6,7 +6,7 @@ class ENGINE_API CPrimitivePlane : public CPrimitiveBase
 {
 public:
 	static const FString Key;
-	static const FString FilePath;
+	static FString GetFilePath();
 
 	CPrimitivePlane();
 

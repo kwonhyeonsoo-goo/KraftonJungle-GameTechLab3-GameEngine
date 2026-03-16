@@ -1,4 +1,5 @@
 #include "Core.h"
+#include "Core/Paths.h"
 
 #include "Object/Scene/Scene.h"
 #include "Object/Actor/Actor.h"
@@ -19,6 +20,8 @@ CCore::~CCore()
 
 bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height)
 {
+	FPaths::Initialize();
+
 	WindowWidth = Width;
 	WindowHeight = Height;
 
@@ -31,11 +34,13 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height)
 
 	// ShaderManager
 	ShaderManager = new CShaderManager();
-	if (!ShaderManager->LoadVertexShader(Renderer->GetDevice(), L"../Engine/Shaders/VertexShader.hlsl"))
+	std::wstring VSPath = FPaths::ToWide(FPaths::ShaderDir() + "VertexShader.hlsl");
+	std::wstring PSPath = FPaths::ToWide(FPaths::ShaderDir() + "PixelShader.hlsl");
+	if (!ShaderManager->LoadVertexShader(Renderer->GetDevice(), VSPath.c_str()))
 	{
 		return false;
 	}
-	if (!ShaderManager->LoadPixelShader(Renderer->GetDevice(), L"../Engine/Shaders/PixelShader.hlsl"))
+	if (!ShaderManager->LoadPixelShader(Renderer->GetDevice(), PSPath.c_str()))
 	{
 		return false;
 	}

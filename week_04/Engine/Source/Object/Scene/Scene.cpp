@@ -1,6 +1,7 @@
 #include "Scene.h"
 
 #include "Core/Core.h"
+#include "Core/Paths.h"
 
 #include "Object/Actor/Actor.h"
 #include "Object/Actor/CubeActor.h"
@@ -54,7 +55,7 @@ void UScene::InitializeDefaultScene(float AspectRatio, ID3D11Device* Device)
 	Camera->SetAspectRatio(AspectRatio);
 
 	// JSON 파일에서 씬 로드 (카메라 포함)
-	LoadSceneFromFile("../Assets/Scenes/DefaultScene.json", Device);
+	LoadSceneFromFile(FPaths::SceneDir() + "DefaultScene.json", Device);
 
 	//Test
 	AActor* Actor = SpawnActor<AActor>("TestActor");
@@ -91,13 +92,14 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 		}
 	}
 
-	// Material 에셋 사전 로드
+	// Material 에셋 사전 로드 (프로젝트 루트 기준 상대 경로)
 	if (Device && Json.contains("Materials"))
 	{
 		for (auto& MatPath : Json["Materials"])
 		{
-			FString Path = MatPath.get<FString>();
-			FMaterialManager::Get().GetOrLoad(Device, Path);
+			FString RelPath = MatPath.get<FString>();
+			FString AbsPath = FPaths::Combine(FPaths::ProjectRoot(), RelPath);
+			FMaterialManager::Get().GetOrLoad(Device, AbsPath);
 		}
 	}
 

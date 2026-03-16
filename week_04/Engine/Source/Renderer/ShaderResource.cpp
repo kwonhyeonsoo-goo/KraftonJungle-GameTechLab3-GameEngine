@@ -1,4 +1,5 @@
 #include "ShaderResource.h"
+#include "Core/Paths.h"
 #include <d3dcompiler.h>
 #include <filesystem>
 #include <fstream>
@@ -8,7 +9,7 @@
 namespace fs = std::filesystem;
 
 std::unordered_map<std::wstring, std::shared_ptr<FShaderResource>> FShaderResource::Cache;
-std::wstring FShaderResource::ContentDir = L"../Content/Shaders/";
+std::wstring FShaderResource::ContentDir;
 
 FShaderResource::~FShaderResource()
 {
@@ -127,6 +128,12 @@ std::shared_ptr<FShaderResource> FShaderResource::GetOrCompile(
 	const char* EntryPoint,
 	const char* Target)
 {
+	// ContentDir이 비어 있으면 FPaths에서 초기화
+	if (ContentDir.empty())
+	{
+		SetContentDir(FPaths::ToWide(FPaths::ShaderCacheDir()).c_str());
+	}
+
 	std::wstring Key = std::wstring(FilePath) + L"|" + std::wstring(EntryPoint, EntryPoint + strlen(EntryPoint));
 
 	auto It = Cache.find(Key);

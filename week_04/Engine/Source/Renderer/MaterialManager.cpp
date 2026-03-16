@@ -2,6 +2,7 @@
 #include "Material.h"
 #include "Shader.h"
 #include "ShaderMap.h"
+#include "Core/Paths.h"
 #include "ThirdParty/nlohmann/json.hpp"
 #include <fstream>
 
@@ -79,19 +80,21 @@ std::shared_ptr<FMaterial> FMaterialManager::GetOrLoad(ID3D11Device* Device, con
 	// Material 생성
 	auto Mat = std::make_shared<FMaterial>();
 
-	// 셰이더 로드
+	// 셰이더 로드 (프로젝트 루트 기준 상대 경로)
 	if (Json.contains("VertexShader"))
 	{
-		FString VSPath = Json["VertexShader"].get<FString>();
-		std::wstring WVSPath(VSPath.begin(), VSPath.end());
+		FString VSRelPath = Json["VertexShader"].get<FString>();
+		FString VSAbsPath = FPaths::Combine(FPaths::ProjectRoot(), VSRelPath);
+		std::wstring WVSPath = FPaths::ToWide(VSAbsPath);
 		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, WVSPath.c_str());
 		Mat->SetVertexShader(VS);
 	}
 
 	if (Json.contains("PixelShader"))
 	{
-		FString PSPath = Json["PixelShader"].get<FString>();
-		std::wstring WPSPath(PSPath.begin(), PSPath.end());
+		FString PSRelPath = Json["PixelShader"].get<FString>();
+		FString PSAbsPath = FPaths::Combine(FPaths::ProjectRoot(), PSRelPath);
+		std::wstring WPSPath = FPaths::ToWide(PSAbsPath);
 		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, WPSPath.c_str());
 		Mat->SetPixelShader(PS);
 	}

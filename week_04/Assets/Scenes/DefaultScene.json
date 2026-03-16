@@ -4,10 +4,10 @@
     "Rotation": [32.2, -25.6]
   },
   "Materials": [
-    "../Assets/Materials/M_RedColor.json",
-    "../Assets/Materials/M_GreenColor.json",
-    "../Assets/Materials/M_BlueColor.json",
-    "../Assets/Materials/M_TintYellow.json"
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_TintYellow.json"
   ],
   "Primitives": {
     "0": {

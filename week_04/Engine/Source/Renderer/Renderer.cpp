@@ -4,6 +4,7 @@
 #include "ShaderMap.h"
 #include "Material.h"
 #include "MaterialManager.h"
+#include "Core/Paths.h"
 #include <dxgi1_3.h>
 #include "Primitive/PrimitiveBase.h"
 #include <cassert>
@@ -168,12 +169,16 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 
-	if (!ShaderManager.LoadVertexShader(Device, L"..\\Engine\\Shaders\\VertexShader.hlsl"))
+	std::wstring ShaderDirW = FPaths::ToWide(FPaths::ShaderDir());
+	std::wstring VSPath = ShaderDirW + L"VertexShader.hlsl";
+	std::wstring PSPath = ShaderDirW + L"PixelShader.hlsl";
+
+	if (!ShaderManager.LoadVertexShader(Device, VSPath.c_str()))
 	{
 		OutputDebugStringW(L"VS Load Failed - 파일 경로 확인\n");
 		return false;
 	}
-	if (!ShaderManager.LoadPixelShader(Device, L"..\\Engine\\Shaders\\PixelShader.hlsl"))
+	if (!ShaderManager.LoadPixelShader(Device, PSPath.c_str()))
 	{
 		OutputDebugStringW(L"PS Load Failed - 파일 경로 확인\n");
 		return false;
@@ -181,8 +186,9 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 
 	// 기본 Material 생성 (ColorPixelShader 사용, BaseColor 파라미터 포함)
 	{
-		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, L"..\\Engine\\Shaders\\VertexShader.hlsl");
-		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, L"..\\Engine\\Shaders\\ColorPixelShader.hlsl");
+		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, VSPath.c_str());
+		std::wstring ColorPSPath = ShaderDirW + L"ColorPixelShader.hlsl";
+		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, ColorPSPath.c_str());
 		DefaultMaterial = std::make_shared<FMaterial>();
 		DefaultMaterial->SetName("M_Default");
 		DefaultMaterial->SetVertexShader(VS);
@@ -419,7 +425,8 @@ bool CRenderer::InitOutlineResources()
 	if (FAILED(Hr)) return false;
 
 	// 아웃라인 픽셀 셰이더 로드
-	OutlinePS = FShaderMap::Get().GetOrCreatePixelShader(Device, L"..\\Engine\\Shaders\\OutlinePixelShader.hlsl");
+	std::wstring OutlinePSPath = FPaths::ToWide(FPaths::ShaderDir() + "OutlinePixelShader.hlsl");
+	OutlinePS = FShaderMap::Get().GetOrCreatePixelShader(Device, OutlinePSPath.c_str());
 	return OutlinePS != nullptr;
 }
 

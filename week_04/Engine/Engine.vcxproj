@@ -30,6 +30,7 @@
     <ClInclude Include="Source\Component\RandomColorComponent.h" />
     <ClInclude Include="Source\Component\SphereComponent.h" />
     <ClInclude Include="Source\Core\Core.h" />
+    <ClInclude Include="Source\Core\Paths.h" />
     <ClInclude Include="Source\Core\FEngine.h" />
     <ClInclude Include="Source\Core\FTimer.h" />
     <ClInclude Include="Source\Debug\EngineLog.h" />
@@ -89,6 +90,7 @@
     <ClCompile Include="Source\Component\RandomColorComponent.cpp" />
     <ClCompile Include="Source\Component\SphereComponent.cpp" />
     <ClCompile Include="Source\Core\Core.cpp" />
+    <ClCompile Include="Source\Core\Paths.cpp" />
     <ClCompile Include="Source\Core\FEngine.cpp" />
     <ClCompile Include="Source\Core\FTimer.cpp" />
     <ClCompile Include="Source\Debug\EngineLog.cpp" />
