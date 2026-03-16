@@ -20,7 +20,7 @@ namespace
     FMatrix BuildRotationMatrixFromDegrees(const FVector& rotationDeg)
     {
         return FMatrix::RotationX(DegToRad(rotationDeg.x))
-            * FMatrix::RotationY(-DegToRad(rotationDeg.y))
+            * FMatrix::RotationY(DegToRad(rotationDeg.y))
             * FMatrix::RotationZ(DegToRad(rotationDeg.z));
     }
 

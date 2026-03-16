@@ -5,19 +5,6 @@ namespace
     constexpr float PI = 3.14159265358979323846f;
     constexpr int RingSamples = 48;
 
-    void PushLine(RenderQueue& queue,
-        const FVector& a,
-        const FVector& b,
-        uint32 color,
-        uint32 objectId)
-    {
-        RenderCommand cmd = {};
-        cmd.Type = ERenderType::Gizmo;
-        cmd.Color = color;
-        cmd.ObjectId = objectId;
-        queue.Push(cmd);
-    }
-
     bool NearlySameRotation(const FVector& a, const FVector& b, float eps = 0.0001f)
     {
         return std::fabs(a.x - b.x) <= eps
@@ -149,18 +136,15 @@ void RotateTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
         return;
 
     const float angleRad = GizmoMath::SignedAngleAroundAxis(DragStartDir, currentDir, axis);
-    const float angleDeg = angleRad * (180.0f / PI);
+    
+    const Quatanian Origin(OriginalTransform.ToQuaternion());
+    const Quatanian Delta = MakeAxisAngleQuat(axis, angleRad);
+    FVector4 NewQuatanian = NormalizeQuat(Delta.Mul(Origin));
+    
+    Transform NewRotation = OriginalTransform;
+    NewRotation.Rotation = Transform::ToEularAngle(NewQuatanian);
 
-    Transform newTransform = OriginalTransform;
-
-    if (axisIndex == 0)
-        newTransform.Rotation.x = OriginalTransform.Rotation.x + angleDeg;
-    else if (axisIndex == 1)
-        newTransform.Rotation.y = OriginalTransform.Rotation.y + angleDeg;
-    else if (axisIndex == 2)
-        newTransform.Rotation.z = OriginalTransform.Rotation.z + angleDeg;
-
-    primary->SetTransform(newTransform);
+    primary->SetTransform(NewRotation);
 }
 
 void RotateTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
@@ -223,7 +207,12 @@ void RotateTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
                 + axis1 * (std::cos(t) * GizmoMath::GizmoRingRadius)
                 + axis2 * (std::sin(t) * GizmoMath::GizmoRingRadius);
 
-            PushLine(queue, prev, next, color, objectId);
+            RenderCommand cmd = {};
+            cmd.Type = ERenderType::Gizmo;
+            cmd.WorldTransform = GizmoMath::MakeAxisTransform(prev, next - prev, GizmoMath::GizmoAxisLength);
+            cmd.Color = color;
+            cmd.ObjectId = objectId;
+            queue.Push(cmd);
             prev = next;
         }
     }
