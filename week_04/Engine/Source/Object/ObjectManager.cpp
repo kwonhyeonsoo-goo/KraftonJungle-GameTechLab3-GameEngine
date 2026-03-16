@@ -1,4 +1,6 @@
 #include "ObjectManager.h"
+#include "Object/Object.h"
+#include "Object/Class.h"
 
 ObjectManager::ObjectManager()
 {
@@ -6,27 +8,45 @@ ObjectManager::ObjectManager()
 
 ObjectManager::~ObjectManager()
 {
-    // 필요 시 모든 객체 강제 해제 로직
-    objectArray.clear();
+	// GUObjectArray에 남은 오브젝트 전부 해제
+	for (UObject* Obj : GUObjectArray)
+	{
+		delete Obj;
+	}
+	GUObjectArray.Empty();
 }
 
-void ObjectManager::AddToManager(std::shared_ptr<UObject> obj)
+UObject* ObjectManager::SpawnObject(
+	UClass* InClass,
+	UObject* InOuter,
+	const FString& InName)
 {
-    if (obj)
-    {
-        objectArray.push_back(obj);
-
-    }
+	return FObjectFactory::ConstructObject(InClass, InOuter, InName);
 }
 
-void ObjectManager::ReleaseObject(std::shared_ptr<UObject> obj)
+void ObjectManager::ReleaseObject(UObject* obj)
 {
-    if (!obj) return;
+	if (!obj) return;
 
-    auto it = std::remove(objectArray.begin(), objectArray.end(), obj);
-    if (it != objectArray.end())
-    {
+	// PendingKill 마킹 후 즉시 삭제
+	// ~UObject()에서 GUObjectArray[InternalIndex] = nullptr 처리
+	obj->MarkPendingKill();
+	delete obj;
+}
 
-        objectArray.erase(it, objectArray.end());
-    }
+void ObjectManager::FlushKilledObjects()
+{
+	// nullptr 슬롯을 제거하고 살아있는 오브젝트의 InternalIndex 재조정
+	int32 WriteIdx = 0;
+	for (int32 ReadIdx = 0; ReadIdx < GUObjectArray.Num(); ++ReadIdx)
+	{
+		UObject* Obj = GUObjectArray[ReadIdx];
+		if (Obj != nullptr)
+		{
+			Obj->InternalIndex = static_cast<uint32>(WriteIdx);
+			GUObjectArray[WriteIdx] = Obj;
+			++WriteIdx;
+		}
+	}
+	GUObjectArray.SetNum(WriteIdx);
 }
