@@ -56,6 +56,9 @@ void EditorSession::ProcessCameraInput(const InputState& input, float deltaTime)
     if (input.MouseButtons[1]) {
         Camera.Yaw  += input.MouseDeltaX * Camera.RotSpeed * deltaTime;
         Camera.Pitch -= input.MouseDeltaY * Camera.RotSpeed * deltaTime;
+
+        Camera.Yaw = fmod(Camera.Yaw, 360.f);
+        Camera.Pitch = fmod(Camera.Pitch, 360.f);
     }
 }
 

@@ -130,6 +130,7 @@
     <ClCompile Include="Engine\Editor\Tools\ScaleTool.cpp" />
     <ClCompile Include="Engine\Editor\Tools\RotateTool.cpp" />
     <ClCompile Include="Engine\Editor\Panels\OutlinerPanel.cpp" />
+    <ClCompile Include="Engine\World\UTriangleComp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
@@ -321,6 +322,8 @@
     <ClInclude Include="Engine\Editor\Tools\ScaleTool.h" />
     <ClInclude Include="Engine\Editor\Tools\RotateTool.h" />
     <ClInclude Include="Engine\Editor\Panels\OutlinerPanel.h" />
+    <ClInclude Include="Engine\Mesh\Triangle.h" />
+    <ClInclude Include="Engine\World\UTriangleComp.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">

@@ -6,6 +6,9 @@ struct FVector4 {
 
 	float x, y, z, w;
 
+	FVector4()
+		: x(0.f), y(0.f), z(0.f), w(0.f) {
+	}
 
 	FVector4(float _x = 0.f, float _y = 0.f, float _z = 0.f, float _w = 0.f)
 		: x(_x), y(_y), z(_z), w(_w) {
@@ -13,6 +16,11 @@ struct FVector4 {
 
 	FVector4(const FVector& _v, float _w = 0.f)
 		: x(_v.x), y(_v.y), z(_v.z), w(_w) {
+	}
+
+	FVector4 operator-(const FVector4& rhs) const
+	{
+		return FVector4(x - rhs.x, y - rhs.y, z - rhs.z, w - rhs.w);
 	}
 
 	float Dot() const {
@@ -40,6 +48,18 @@ struct FVector4 {
 
 	FVector ToVector() const {
 		return FVector(x, y, z);
+	}
+
+	FVector4& Normalize()
+	{
+		const float len = Length();
+		if (len > 0.000001f)
+		{
+			x /= len;
+			y /= len;
+			z /= len;
+		}
+		return *this;
 	}
 
 	FVector4 operator*(const float& Other) const {

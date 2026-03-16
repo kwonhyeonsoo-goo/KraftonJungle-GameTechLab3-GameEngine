@@ -81,3 +81,9 @@ bool WindowHost::PollMessages() {
 HWND  WindowHost::GetHWND()   const { return Hwnd; }
 int32 WindowHost::GetWidth()  const { return Width; }
 int32 WindowHost::GetHeight() const { return Height; }
+
+void WindowHost::UpdateSize(int32 width, int32 height)
+{
+    Width = width;
+    Height = height;
+}
