@@ -14,9 +14,8 @@ void CCamera::SetRotation(float InYaw, float InPitch)
 
 FVector CCamera::GetForward() const
 {
-	const float PI = 3.14159265358979f;
-	float RadYaw = Yaw * PI / 180.0f;
-	float RadPitch = Pitch * PI / 180.0f;
+	float RadYaw = FMath::DegreesToRadians(Yaw);
+	float RadPitch = FMath::DegreesToRadians(Pitch);
 
 	// 변경 (Z-up, 언리얼 방식)
 	FVector Forward;
@@ -66,8 +65,7 @@ FMatrix CCamera::GetViewMatrix() const
 
 FMatrix CCamera::GetProjectionMatrix() const
 {
-	constexpr float DegreesToRadians = 3.14159265358979f / 180.0f;
-	return FMatrix::MakePerspectiveFovLH(FOV * DegreesToRadians, AspectRatio, NearPlane, FarPlane);
+	return FMatrix::MakePerspectiveFovLH(FMath::DegreesToRadians(FOV), AspectRatio, NearPlane, FarPlane);
 }
 
 void CCamera::SetAspectRatio(float InAspectRatio)

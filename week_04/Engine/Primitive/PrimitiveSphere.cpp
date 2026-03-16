@@ -21,17 +21,15 @@ void CPrimitiveSphere::Generate(int32 Segments, int32 Rings)
 {
 	auto Data = std::make_shared<FMeshData>();
 
-	const float PI = 3.14159265358979f;
-
 	for (int32 Ring = 0; Ring <= Rings; ++Ring)
 	{
-		float Phi = PI * static_cast<float>(Ring) / static_cast<float>(Rings);
+		float Phi = FMath::PI * static_cast<float>(Ring) / static_cast<float>(Rings);
 		float Z = cosf(Phi);
 		float SinPhi = sinf(Phi);
 
 		for (int32 Seg = 0; Seg <= Segments; ++Seg)
 		{
-			float Theta = 2.0f * PI * static_cast<float>(Seg) / static_cast<float>(Segments);
+			float Theta = FMath::TwoPi * static_cast<float>(Seg) / static_cast<float>(Segments);
 			float X = SinPhi * cosf(Theta);
 			float Y = SinPhi * sinf(Theta);
 

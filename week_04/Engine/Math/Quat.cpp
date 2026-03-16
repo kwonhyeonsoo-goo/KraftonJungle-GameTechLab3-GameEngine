@@ -1,5 +1,6 @@
 #include "Math/Quat.h"
 
+#include "Math/MathUtility.h"
 #include "Math/Rotator.h"
 
 #include <algorithm>
@@ -8,8 +9,7 @@
 
 namespace
 {
-	constexpr float RadiansToDegrees = 180.0f / 3.14159265358979323846f;
-	constexpr float MatrixConversionTolerance = 1.e-8f;
+	constexpr float MatrixConversionTolerance = FMath::SmallNumber;
 
 	bool BuildOrthonormalBasisFromXY(
 		const FVector& InX,
@@ -485,9 +485,9 @@ FRotator FQuat::Rotator() const noexcept
 	}
 
 	FRotator Result(
-		PitchRadians * RadiansToDegrees,
-		YawRadians * RadiansToDegrees,
-		RollRadians * RadiansToDegrees);
+		FMath::RadiansToDegrees(PitchRadians),
+		FMath::RadiansToDegrees(YawRadians),
+		FMath::RadiansToDegrees(RollRadians));
 	Result.Normalize();
 	return Result;
 }
