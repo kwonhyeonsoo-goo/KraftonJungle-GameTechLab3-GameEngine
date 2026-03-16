@@ -7,7 +7,7 @@
 struct InputState;
 
 struct CameraState {
-    FVector Position;
+    FVector Position = FVector(-10.0f, 0.0f, 0.0f);
     float   Yaw = 0.f;
     float   Pitch = 0.f;
     float   MoveSpeed = 5.f;
@@ -36,7 +36,12 @@ public:
     float AspectRatio;
     float NearZ = 0.1f;
     float FarZ = 1000.f;
+    bool bOrthoMode = false;
+    float OrthoHeight = 10.0f;
 
     FMatrix GetProjectionMatrix() const;
+    FMatrix GetOrthogonalMatrix() const;
     FMatrix GetViewProjMatrix()   const;
+    FMatrix GetViewOrthoMatrix()  const;
+    float ComputeGizmoScale(const FVector& gizmoPos, float viewportHeight) const;
 };

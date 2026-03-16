@@ -10,6 +10,7 @@
 #include "../Mesh/Gizmo.h"
 #include "../Mesh/UVRect.h"
 #include "../Editor/EditorSession.h"
+#include "../Mesh/Torus.h"
 
 void URenderer::RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices)
 
@@ -312,6 +313,14 @@ void URenderer::CreateDepthBuffer(uint32 width, uint32 height)
 
     // Create depth stencil state
     Device->CreateDepthStencilState(&dsDesc1, &DepthStencilOutlineState);
+    
+
+    D3D11_DEPTH_STENCIL_DESC dsDescOff = {};
+    dsDescOff.DepthEnable = FALSE; // ← 비활성화
+    dsDescOff.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    dsDescOff.DepthFunc = D3D11_COMPARISON_ALWAYS;
+    dsDesc.StencilEnable = true;
+    Device->CreateDepthStencilState(&dsDescOff, &DepthStencilDisable);
 
 
     D3D11_DEPTH_STENCIL_VIEW_DESC descDSV = {};
@@ -373,6 +382,12 @@ void URenderer::CreatePrimitiveVertexBuffer()
 
     vertexBufferGizmo = CreateVertexBuffer(gizmoVertices, sizeof(gizmoVertices));
     numVerticesGizmo = sizeof(gizmoVertices) / sizeof(FVertexSimple);
+    FVertexSimple Torus[TORUS_VERTEX_COUNT];
+    GetTorusVertices(Torus);
+    vertexBufferTorus = CreateVertexBuffer(Torus, sizeof(Torus));
+    numVerticesTorus = sizeof(Torus) / sizeof(FVertexSimple);
+}
+
 
     vertexBufferGrid = CreateVertexBuffer(UVrect_vertices, sizeof(UVrect_vertices));
     indexBufferGrid = CreateIndexBuffer(UVrect_indices, sizeof(UVrect_indices));
@@ -665,6 +680,11 @@ bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
 
     CreatePrimitiveVertexBuffer();
 
+    FVertexSimple Torus[TORUS_VERTEX_COUNT];
+    GetTorusVertices(Torus);
+    vertexBufferTorus = CreateVertexBuffer(Torus, sizeof(Torus));
+    numVerticesTorus = sizeof(Torus) / sizeof(FVertexSimple);
+
     CreateShader();
     CreateConstantBuffer();
 
@@ -719,14 +739,19 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
 {
 
     if (queue.IsEmpty()) return;
-    FMatrix MVeiwProj = session.GetViewProjMatrix();
 
-	for (int i = 0; i < queue.GetCommands().size(); ++i)
+    const FMatrix MViewPersp = session.GetViewProjMatrix();
+    const FMatrix MViewOrtho = session.GetViewOrthoMatrix();
+
+    for (int i = 0; i < queue.GetCommands().size(); ++i)
     {
-
         const RenderCommand& cmd = queue.GetCommands()[i];
+
+        const FMatrix& viewProj = (cmd.bOrtho || session.bOrthoMode)
+            ? MViewOrtho : MViewPersp;
+
         FConstants constants = {};
-        constants.MVP = cmd.WorldTransform * MVeiwProj;
+        constants.MVP = cmd.WorldTransform * viewProj;
 
         
         switch (cmd.Type)
@@ -749,7 +774,6 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             case EPrimitiveShape::Triangle:
                 DeviceContext->RSSetState(RasterizerState);
                 RenderPrimitive(vertexBufferTriangle, numVerticesTriangle);
-
                 break;
             case EPrimitiveShape::Plane:
                 DeviceContext->RSSetState(RasterizerState);
@@ -774,6 +798,8 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             break;
         case ERenderType::Gizmo: {
             PrepareShader();
+            DeviceContext->OMSetDepthStencilState(DepthStencilDisable, 1);
+
             uint32 Red = (cmd.Color >> 24) & 0xFF;
             uint32 Green = (cmd.Color >> 16) & 0xFF;
             uint32 Blue = (cmd.Color >> 8) & 0xFF;
@@ -782,6 +808,18 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
   
             RenderPrimitive(vertexBufferGizmo, numVerticesGizmo);
+            DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
+            break;
+        }
+        case ERenderType::Torus: {
+            uint32 Red = (cmd.Color >> 24) & 0xFF;
+            uint32 Green = (cmd.Color >> 16) & 0xFF;
+            uint32 Blue = (cmd.Color >> 8) & 0xFF;
+            UpdateMVP(constants.MVP, { Red / 255.f,Green / 255.f, Blue / 255.f });
+
+            DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            PrepareShader();
+            RenderPrimitive(vertexBufferTorus, numVerticesTorus);
             break;
         }
         case ERenderType::Highlight:

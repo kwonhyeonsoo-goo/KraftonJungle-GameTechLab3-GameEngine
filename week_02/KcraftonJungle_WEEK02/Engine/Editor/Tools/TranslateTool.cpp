@@ -38,7 +38,9 @@ bool TranslateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     const FVector origin = primary->GetTransform().Location;
     const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
 
-    const FMatrix viewProj = ctx.Editor.GetViewProjMatrix();
+    const FMatrix viewProj = ctx.Editor.bOrthoMode
+        ? ctx.Editor.GetViewOrthoMatrix()
+        : ctx.Editor.GetViewProjMatrix();
     const int32 viewportW = ctx.Window.GetWidth();
     const int32 viewportH = ctx.Window.GetHeight();
     const FVector2D mouse2D((float)e.X, (float)e.Y);
@@ -49,10 +51,12 @@ bool TranslateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     float bestDistance = GizmoMath::GizmoPickThresholdPx;
     EAxis bestAxis = EAxis::None;
 
+    const float gizmoScale = GizmoMath::ComputeGizmoScale(origin, ctx);
+
     for (int axisIndex = 0; axisIndex < 3; ++axisIndex)
     {
         const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, coordSpace);
-        const FVector tip = origin + axisDir * GizmoMath::GizmoAxisLength;
+        const FVector tip = origin + axisDir * GizmoMath::GizmoAxisLength * gizmoScale;
 
         const FVector2D screenTip =
             GizmoMath::WorldToScreen(tip, viewProj, viewportW, viewportH);
@@ -155,27 +159,6 @@ void TranslateTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
     DragStartAxisT = 0.0f;
 }
 
-static FMatrix MakeArrowTransformFromLocalZ(
-    const FVector& basePos,
-    const FVector& axisDir,
-    float uniformScale = 1.0f)
-{
-    FVector localZ = axisDir.Normalized();
-    FVector localX = GizmoMath::MakeStablePerpendicular(localZ);
-    FVector localY = localZ.Cross(localX).Normalized();
-
-    // row0 = local X axis in world
-    // row1 = local Y axis in world
-    // row2 = local Z axis in world
-    // row3 = translation
-    return {
-        localX.x * uniformScale, localX.y * uniformScale, localX.z * uniformScale, 0.0f,
-        localY.x * uniformScale, localY.y * uniformScale, localY.z * uniformScale, 0.0f,
-        localZ.x * uniformScale, localZ.y * uniformScale, localZ.z * uniformScale, 0.0f,
-        basePos.x,               basePos.y,               basePos.z,               1.0f
-    };
-}
-
 // It should be done by renderer... not here.
 void TranslateTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
 {
@@ -197,7 +180,8 @@ void TranslateTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
 
         RenderCommand cmd = {};
         cmd.Type = ERenderType::Gizmo;
-        cmd.WorldTransform = GizmoMath::MakeAxisTransform(origin, axisDir, GizmoMath::GizmoAxisLength);
+        const float gs = GizmoMath::ComputeGizmoScale(origin, ctx);
+        cmd.WorldTransform = GizmoMath::MakeAxisTransform(origin, axisDir, GizmoMath::GizmoAxisLength * gs);
         cmd.Color = color;
         cmd.ObjectId = primary->GetUUID();
 

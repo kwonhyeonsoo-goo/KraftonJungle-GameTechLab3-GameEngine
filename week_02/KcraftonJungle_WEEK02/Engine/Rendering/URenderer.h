@@ -62,6 +62,7 @@ public:
     ID3D11DepthStencilView* DepthStencilView = nullptr;
     ID3D11DepthStencilState* DepthStencilState = nullptr;
     ID3D11DepthStencilState* DepthStencilOutlineState = nullptr;
+    ID3D11DepthStencilState* DepthStencilDisable = nullptr;
 
     FLOAT ClearColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f };
     D3D11_VIEWPORT ViewportInfo;
@@ -91,9 +92,14 @@ public:
     UINT numVerticesWorldAxis;
     ID3D11Buffer* vertexBufferGizmo;
     UINT numVerticesGizmo;
+
     ID3D11Buffer* vertexBufferGrid;
     ID3D11Buffer* indexBufferGrid;
     UINT numVerticesGrid; UINT numIndicesGrid;
+
+    ID3D11Buffer* vertexBufferTorus;
+    UINT numVerticesTorus;
+
 
 #pragma region D3D11 Renderer 함수들
 	//D3D11 Renderer 함수들

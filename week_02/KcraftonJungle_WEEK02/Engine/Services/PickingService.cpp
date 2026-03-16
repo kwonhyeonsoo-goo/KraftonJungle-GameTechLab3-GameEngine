@@ -22,6 +22,9 @@ Ray PickingService::ScreenToRay(int32 screenX, int32 screenY, int32 viewportW, i
     float ndcX = (2.0f * screenX / viewportW) - 1.0f;
     float ndcY = 1.0f - (2.0f * screenY / viewportH);
 
+    //std::cout << screenX << " " << screenY << " " << viewportW << " " << viewportH << std::endl;
+
+
     FVector4 ndcNear = FVector4(ndcX, ndcY, 0.0f, 1.0f); // Z=0 Near 평면
     FVector4 ndcFar = FVector4(ndcX, ndcY, 1.0f, 1.0f); // Z=1 Far 평면
 
@@ -35,6 +38,8 @@ Ray PickingService::ScreenToRay(int32 screenX, int32 screenY, int32 viewportW, i
     FVector origin = worldNear.ToVector();
     FVector direction = (worldFar.ToVector() - origin).Normalize();
 
+    //std::cout << origin.x << " " << origin.y << " " << origin.z << std::endl;
+
    return Ray(origin, direction);
 }
 
@@ -43,7 +48,8 @@ UPrimitiveComponent* PickingService::Pick(const Ray& ray, const TArray<UObject*>
     UPrimitiveComponent* CloseObj = nullptr;
     float ObjTime = FLT_MAX;
     
-    for (auto* object : objects) {//TODO: 여기도 RTTI로 바꿔야함
+    for (auto* object : objects) {
+        if (!object->IsA<UPrimitiveComponent>()) continue;
         UPrimitiveComponent* Prim = static_cast<UPrimitiveComponent*>(object);
 
         if (!Prim || !Prim->bVisible) continue;
@@ -64,9 +70,6 @@ UPrimitiveComponent* PickingService::Pick(const Ray& ray, const TArray<UObject*>
             break;
 
         case EPrimitiveShape::Plane:
-            hit = IntersectsAABB(LocalRay, Prim->GetBoundMin(), Prim->GetBoundMax(), t);
-            break;
-
         case EPrimitiveShape::Cube:
         case EPrimitiveShape::Triangle:
         default:
@@ -84,25 +87,6 @@ UPrimitiveComponent* PickingService::Pick(const Ray& ray, const TArray<UObject*>
             ObjTime = worldDist;
             CloseObj = Prim;
         }
-    }
-
-    if (CloseObj)
-    {
-        // 1. 도형 타입을 문자열로 변환
-        std::string ShapeName;
-        switch (CloseObj->Shape)
-        {
-        case EPrimitiveShape::Sphere:   ShapeName = "Sphere"; break;
-        case EPrimitiveShape::Plane:    ShapeName = "Plane"; break;
-        case EPrimitiveShape::Cube:     ShapeName = "Cube"; break;
-        case EPrimitiveShape::Triangle: ShapeName = "Triangle"; break;
-        default:                        ShapeName = "Unknown"; break;
-        }
-    }
-    else
-    {
-        // 아무것도 클릭되지 않았을 때
-        // std::cout << "[Pick Failed] No object hit." << std::endl;
     }
     return CloseObj; // 없으면 nullptr
 }

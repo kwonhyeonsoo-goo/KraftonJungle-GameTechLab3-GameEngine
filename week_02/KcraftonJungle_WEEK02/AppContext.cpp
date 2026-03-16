@@ -3,11 +3,13 @@
 #include "Editor/ImGui/imgui_impl_dx11.h"
 #include "Editor/ImGui/imgui_impl_win32.h"
 
+#include "Engine/Editor/Commands/DeleteObjectCommand.h"
 #include "Engine/Platform/PlatformEvents.h"
 #include "Engine/Editor/Tools/SelectTool.h"
 #include "Engine/Editor/Tools/TranslateTool.h"
 #include "Engine/Editor/Tools/RotateTool.h"
 #include "Engine/Editor/Tools/ScaleTool.h"
+#include "Engine/Foundation/Core/log.h"
 
 bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 height)
 {
@@ -32,6 +34,10 @@ bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 heigh
     RegisterTools();
     SubscribeEvents();
 
+    UE_LOG("Hello World = %d", 2024);
+    UE_LOG("Hello World = %d", 2025);
+    UE_LOG("Hello World = %d", 2026);
+
     return true;
 }
 
@@ -40,7 +46,7 @@ void AppContext::RegisterBuiltinTypes()
     Classes.Register("Cube", UCubeComp::StaticClass());
     Classes.Register("Sphere", USphereComp::StaticClass());
     Classes.Register("Plane", UPlaneComp::StaticClass());
-    /*Classes.Register("Triangle", UtriangleComp::StaticClass());*/
+    Classes.Register("Triangle", UTriangleComp::StaticClass());
 }
 
 void AppContext::RegisterPanels()
@@ -84,7 +90,6 @@ void AppContext::RegisterTools()
     Editor.Tools.RegisterTool(translate);
     Editor.Tools.RegisterTool(rotate);
     Editor.Tools.RegisterTool(scale);
-
     // 기본 활성 툴
     Editor.Tools.ActivateTool("Translate");
     CapturedManipulationTool = nullptr;
@@ -150,6 +155,13 @@ void AppContext::SubscribeEvents()
                 Editor.Tools.SetMode(
                     cur == M::Translate ? M::Rotate :
                     cur == M::Rotate ? M::Scale : M::Translate);
+            }else if (e.KeyCode == VK_DELETE) {
+                TArray<USceneComponent*> selected = Editor.Selection.GetAll();
+
+                for (USceneComponent* Object : selected) {
+                    if (Object)
+                        Dispatch(new DeleteObjectCommand(*this, Object->GetUUID()));
+                }
             }
             // 툴에도 전달
             KeyEvent keyEvent{ e.KeyCode, true };
@@ -165,7 +177,8 @@ void AppContext::SubscribeEvents()
 
     ResizeHandle = PlatformEvents::OnResize.Bind(
         [this](const ResizeEvent& e) { 
-            Renderer.OnResize(e.Width, e.Height); 
+            Renderer.OnResize(e.Width, e.Height);
+            Window.UpdateSize(e.Width, e.Height); 
 
             if (e.Height > 0)
                 Editor.AspectRatio = (float)e.Width / (float)e.Height;

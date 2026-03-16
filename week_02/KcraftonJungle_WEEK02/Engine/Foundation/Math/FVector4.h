@@ -31,6 +31,16 @@ struct FVector4 {
 		return (x * Other.x + y * Other.y + z * Other.z + w * Other.w);
 	}
 
+	float LengthSquare() const
+	{
+		return Dot();
+	}
+
+	float LengthSquared() const
+	{
+		return LengthSquare();
+	}
+
 	float Length() const
 	{
 		return sqrtf(Dot());

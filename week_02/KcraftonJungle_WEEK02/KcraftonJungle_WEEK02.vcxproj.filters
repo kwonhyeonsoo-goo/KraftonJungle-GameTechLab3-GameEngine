@@ -117,6 +117,20 @@
     <ClCompile Include="Engine\Services\PickingService.cpp" />
     <ClCompile Include="Engine\Services\ConsoleService.cpp" />
     <ClCompile Include="Engine\Services\StatsService.cpp" />
+    <ClCompile Include="Engine\Editor\Panels\ConsolePanel.cpp" />
+    <ClCompile Include="Engine\Editor\Commands\DeleteObjectCommand.cpp" />
+    <ClCompile Include="Engine\Foundation\Math\FVector2D.h" />
+    <ClCompile Include="Engine\Editor\Tools\GizmoMath.cpp" />
+    <ClCompile Include="Engine\Editor\Tools\SelectTool.cpp" />
+    <ClCompile Include="Engine\Editor\Panels\PropertyPanel.cpp" />
+    <ClCompile Include="Engine\Editor\Panels\ToolbarPanel.cpp" />
+    <ClCompile Include="Engine\Editor\Commands\SpawnObjectCommand.cpp" />
+    <ClCompile Include="Engine\Editor\Panels\StatPanel.cpp" />
+    <ClCompile Include="Engine\Editor\Tools\TranslateTool.cpp" />
+    <ClCompile Include="Engine\Editor\Tools\ScaleTool.cpp" />
+    <ClCompile Include="Engine\Editor\Tools\RotateTool.cpp" />
+    <ClCompile Include="Engine\Editor\Panels\OutlinerPanel.cpp" />
+    <ClCompile Include="Engine\World\UTriangleComp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
@@ -294,6 +308,22 @@
     <ClInclude Include="Engine\Services\PickingService.h" />
     <ClInclude Include="Engine\Services\ConsoleService.h" />
     <ClInclude Include="Engine\Services\StatsService.h" />
+    <ClInclude Include="Engine\Editor\Panels\ConsolePanel.h" />
+    <ClInclude Include="Engine\Editor\Commands\DeleteObjectCommand.h" />
+    <ClInclude Include="Engine\Mesh\Gizmo.h" />
+    <ClInclude Include="Engine\Editor\Panels\IEditorPanel.h" />
+    <ClInclude Include="Engine\Editor\Tools\GizmoMath.h" />
+    <ClInclude Include="Engine\Editor\Tools\SelectTool.h" />
+    <ClInclude Include="Engine\Editor\Panels\PropertyPanel.h" />
+    <ClInclude Include="Engine\Editor\Panels\ToolbarPanel.h" />
+    <ClInclude Include="Engine\Editor\Commands\SpawnObjectCommand.h" />
+    <ClInclude Include="Engine\Editor\Panels\StatPanel.h" />
+    <ClInclude Include="Engine\Editor\Tools\TranslateTool.h" />
+    <ClInclude Include="Engine\Editor\Tools\ScaleTool.h" />
+    <ClInclude Include="Engine\Editor\Tools\RotateTool.h" />
+    <ClInclude Include="Engine\Editor\Panels\OutlinerPanel.h" />
+    <ClInclude Include="Engine\Mesh\Triangle.h" />
+    <ClInclude Include="Engine\World\UTriangleComp.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">
@@ -341,5 +371,10 @@
     <Filter Include="Engine\Editor\Tools">
       <UniqueIdentifier>{8ca38d0b-b17b-474f-9310-8d901f47ec2f}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Engine\Mesh\Torus.h">
+      <Filter>Engine\Mesh</Filter>
+    </None>
   </ItemGroup>
 </Project>
