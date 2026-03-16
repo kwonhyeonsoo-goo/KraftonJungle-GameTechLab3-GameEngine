@@ -66,6 +66,9 @@
     <ClCompile Include="Source\Component\CubeComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Component\GizmoComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Component\PrimitiveComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
@@ -132,10 +135,16 @@
     <ClCompile Include="Source\Platform\Windows\WindowApplication.cpp">
       <Filter>Source\Platform\Windows</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Primitive\GizmoMeshGenerator.cpp">
+      <Filter>Source\Primitive</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Primitive\PrimitiveBase.cpp">
       <Filter>Source\Primitive</Filter>
     </ClCompile>
     <ClCompile Include="Source\Primitive\PrimitiveCube.cpp">
+      <Filter>Source\Primitive</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Primitive\PrimitiveGizmo.cpp">
       <Filter>Source\Primitive</Filter>
     </ClCompile>
     <ClCompile Include="Source\Primitive\PrimitivePlane.cpp">
@@ -177,6 +186,9 @@
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\CubeComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\GizmoComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\PrimitiveComponent.h">
@@ -257,10 +269,16 @@
     <ClInclude Include="Source\Platform\Windows\WindowApplication.h">
       <Filter>Source\Platform\Windows</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Primitive\GizmoMeshGenerator.h">
+      <Filter>Source\Primitive</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Primitive\PrimitiveBase.h">
       <Filter>Source\Primitive</Filter>
     </ClInclude>
     <ClInclude Include="Source\Primitive\PrimitiveCube.h">
+      <Filter>Source\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Primitive\PrimitiveGizmo.h">
       <Filter>Source\Primitive</Filter>
     </ClInclude>
     <ClInclude Include="Source\Primitive\PrimitivePlane.h">

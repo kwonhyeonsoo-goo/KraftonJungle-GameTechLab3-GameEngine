@@ -25,6 +25,7 @@
     <ClInclude Include="Source\Camera\Camera.h" />
     <ClInclude Include="Source\Component\ActorComponent.h" />
     <ClInclude Include="Source\Component\CubeComponent.h" />
+    <ClInclude Include="Source\Component\GizmoComponent.h" />
     <ClInclude Include="Source\Component\PrimitiveComponent.h" />
     <ClInclude Include="Source\Component\SceneComponent.h" />
     <ClInclude Include="Source\Component\SphereComponent.h" />
@@ -51,8 +52,10 @@
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h" />
     <ClInclude Include="Source\Platform\Windows\Window.h" />
     <ClInclude Include="Source\Platform\Windows\WindowApplication.h" />
+    <ClInclude Include="Source\Primitive\GizmoMeshGenerator.h" />
     <ClInclude Include="Source\Primitive\PrimitiveBase.h" />
     <ClInclude Include="Source\Primitive\PrimitiveCube.h" />
+    <ClInclude Include="Source\Primitive\PrimitiveGizmo.h" />
     <ClInclude Include="Source\Primitive\PrimitivePlane.h" />
     <ClInclude Include="Source\Primitive\PrimitiveSphere.h" />
     <ClInclude Include="Source\Renderer\PrimitiveVertex.h" />
@@ -79,6 +82,7 @@
     <ClCompile Include="Source\Camera\Camera.cpp" />
     <ClCompile Include="Source\Component\ActorComponent.cpp" />
     <ClCompile Include="Source\Component\CubeComponent.cpp" />
+    <ClCompile Include="Source\Component\GizmoComponent.cpp" />
     <ClCompile Include="Source\Component\PrimitiveComponent.cpp" />
     <ClCompile Include="Source\Component\SceneComponent.cpp" />
     <ClCompile Include="Source\Component\SphereComponent.cpp" />
@@ -101,8 +105,10 @@
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp" />
     <ClCompile Include="Source\Platform\Windows\Window.cpp" />
     <ClCompile Include="Source\Platform\Windows\WindowApplication.cpp" />
+    <ClCompile Include="Source\Primitive\GizmoMeshGenerator.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveBase.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveCube.cpp" />
+    <ClCompile Include="Source\Primitive\PrimitiveGizmo.cpp" />
     <ClCompile Include="Source\Primitive\PrimitivePlane.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveSphere.cpp" />
     <ClCompile Include="Source\Renderer\Renderer.cpp" />

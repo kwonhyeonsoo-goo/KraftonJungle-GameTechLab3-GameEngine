@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
+
+#include "Component/GizmoComponent.h"
 #include "ThirdParty/nlohmann/json.hpp"
 #include "Component/PrimitiveComponent.h"
 
@@ -61,6 +63,11 @@ void UScene::InitializeDefaultScene(float AspectRatio)
 	Actor->AddOwnedComponent(SpehreComp);
 	Actor->AddOwnedComponent(CubeComp);
 	Actor->SetActorLocation({ 0.0f, 0.0f, 12.0f });
+
+	// Test 2
+	AActor* Actor2 = SpawnActor<AActor>("GizmoTest");
+	UPrimitiveComponent* GizmoComp = new UGizmoComponent();
+	Actor->AddOwnedComponent(GizmoComp);
 }
 
 void UScene::LoadSceneFromFile(const FString& FilePath)
