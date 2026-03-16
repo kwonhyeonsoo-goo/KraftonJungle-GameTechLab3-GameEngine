@@ -179,14 +179,24 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 
-	// 기본 Material 생성 (기존 VS/PS 사용) + MaterialManager에 등록
+	// 기본 Material 생성 (ColorPixelShader 사용, BaseColor 파라미터 포함)
 	{
 		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, L"..\\Engine\\Shaders\\VertexShader.hlsl");
-		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, L"..\\Engine\\Shaders\\PixelShader.hlsl");
+		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, L"..\\Engine\\Shaders\\ColorPixelShader.hlsl");
 		DefaultMaterial = std::make_shared<FMaterial>();
 		DefaultMaterial->SetName("M_Default");
 		DefaultMaterial->SetVertexShader(VS);
 		DefaultMaterial->SetPixelShader(PS);
+
+		// BaseColor 상수 버퍼 (b2) — 기본값 흰색
+		int32 SlotIndex = DefaultMaterial->CreateConstantBuffer(Device, 16);
+		if (SlotIndex >= 0)
+		{
+			DefaultMaterial->RegisterParameter("BaseColor", SlotIndex, 0, 16);
+			float White[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+			DefaultMaterial->GetConstantBuffer(SlotIndex)->SetData(White, sizeof(White));
+		}
+
 		FMaterialManager::Get().Register("M_Default", DefaultMaterial);
 	}
 
