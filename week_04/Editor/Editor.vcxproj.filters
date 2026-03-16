@@ -15,25 +15,25 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="Source\main.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Axis\AxisRenderer.cpp">
+    <ClCompile Include="Source\Axis\AxisRenderer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Gizmo\Gizmo.cpp">
+    <ClCompile Include="Source\Gizmo\Gizmo.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Picking\Picker.cpp">
+    <ClCompile Include="Source\Picking\Picker.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="UI\ConsoleWindow.cpp">
+    <ClCompile Include="Source\UI\ConsoleWindow.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="UI\PropertyWindow.cpp">
+    <ClCompile Include="Source\UI\PropertyWindow.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="UI\StatWindow.cpp">
+    <ClCompile Include="Source\UI\StatWindow.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="ThirdParty\imgui\imgui.cpp">
@@ -57,27 +57,27 @@
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="UI\ControlPanelWindow.cpp">
+    <ClCompile Include="Source\UI\ControlPanelWindow.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Axis\AxisRenderer.h">
+    <ClInclude Include="Source\Axis\AxisRenderer.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Gizmo\Gizmo.h">
+    <ClInclude Include="Source\Gizmo\Gizmo.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Picking\Picker.h">
+    <ClInclude Include="Source\Picking\Picker.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="UI\ConsoleWindow.h">
+    <ClInclude Include="Source\UI\ConsoleWindow.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="UI\PropertyWindow.h">
+    <ClInclude Include="Source\UI\PropertyWindow.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="UI\StatWindow.h">
+    <ClInclude Include="Source\UI\StatWindow.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imconfig.h">
@@ -104,7 +104,7 @@
     <ClInclude Include="ThirdParty\imgui\imstb_truetype.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="UI\ControlPanelWindow.h">
+    <ClInclude Include="Source\UI\ControlPanelWindow.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
