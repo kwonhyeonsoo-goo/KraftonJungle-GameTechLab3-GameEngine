@@ -3,6 +3,8 @@
 #include "Core/Core.h"
 
 #include "Object/Actor/Actor.h"
+#include "Object/Actor/CubeActor.h"
+#include "Object/Actor/SphereActor.h"
 #include "Camera/Camera.h"
 #include "Component/SphereComponent.h"
 #include "Component/CubeComponent.h"
@@ -94,7 +96,7 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 	{
 		for (auto& MatPath : Json["Materials"])
 		{
-			FString Path = MatPath.get<std::string>();
+			FString Path = MatPath.get<FString>();
 			FMaterialManager::Get().GetOrLoad(Device, Path);
 		}
 	}
@@ -105,15 +107,16 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 	for (auto& [Key, Value] : Json["Primitives"].items())
 	{
 		FString Type = Value.value("Type", "");
+		FString ActorName = Type + "_" + std::to_string(ActorIndex);
 
-		UActorComponent* Comp = nullptr;
+		AActor* Actor = nullptr;
 		if (Type == "Sphere")
 		{
-			Comp = new USphereComponent();
+			Actor = SpawnActor<ASphereActor>(ActorName);
 		}
 		else if (Type == "Cube")
 		{
-			Comp = new UCubeComponent();
+			Actor = SpawnActor<ACubeActor>(ActorName);
 		}
 		else
 		{
@@ -124,21 +127,17 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 		// Material 적용
 		if (Value.contains("Material"))
 		{
-			FString MatName = Value["Material"].get<std::string>();
+			FString MatName = Value["Material"].get<FString>();
 			auto Mat = FMaterialManager::Get().FindByName(MatName);
 			if (Mat)
 			{
-				UPrimitiveComponent* PrimComp = dynamic_cast<UPrimitiveComponent*>(Comp);
+				UPrimitiveComponent* PrimComp = Actor->GetComponentByClass<UPrimitiveComponent>();
 				if (PrimComp)
 				{
 					PrimComp->SetMaterial(Mat.get());
 				}
 			}
 		}
-
-		FString ActorName = Type + "_" + std::to_string(ActorIndex);
-		AActor* Actor = SpawnActor<AActor>(ActorName);
-		Actor->AddOwnedComponent(Comp);
 
 		FTransform Transform;
 		if (Value.contains("Location"))
@@ -183,46 +182,40 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 		if (!Actor || Actor->IsPendingDestroy())
 			continue;
 
-		for (UActorComponent* Comp : Actor->GetComponents())
+		FString Type;
+		if (Actor->IsA(ASphereActor::StaticClass()))
+			Type = "Sphere";
+		else if (Actor->IsA(ACubeActor::StaticClass()))
+			Type = "Cube";
+		else
+			continue;
+
+		FTransform Transform = Actor->GetRootComponent()->GetRelativeTransform();
+		const FVector EulerDegrees = Transform.Rotator().Euler();
+		FString Key = std::to_string(Index);
+
+		Primitives[Key]["Type"] = Type;
+
+		// Material 이름 저장
+		UPrimitiveComponent* PrimComp = Actor->GetComponentByClass<UPrimitiveComponent>();
+		if (PrimComp && PrimComp->GetMaterial() && !PrimComp->GetMaterial()->GetName().empty())
 		{
-			UPrimitiveComponent* PrimComp = dynamic_cast<UPrimitiveComponent*>(Comp);
-			if (!PrimComp)
-				continue;
-
-			FString Type;
-			if (dynamic_cast<USphereComponent*>(PrimComp))
-				Type = "Sphere";
-			else if (dynamic_cast<UCubeComponent*>(PrimComp))
-				Type = "Cube";
-			else
-				continue;
-
-			FTransform Transform = Actor->GetRootComponent()->GetRelativeTransform();
-			const FVector EulerDegrees = Transform.Rotator().Euler();
-			FString Key = std::to_string(Index);
-
-			Primitives[Key]["Type"] = Type;
-
-			// Material 이름 저장
-			if (PrimComp->GetMaterial() && !PrimComp->GetMaterial()->GetName().empty())
-			{
-				Primitives[Key]["Material"] = PrimComp->GetMaterial()->GetName();
-			}
-
-			Primitives[Key]["Location"] = {
-				Transform.GetTranslation().X,
-				Transform.GetTranslation().Y,
-				Transform.GetTranslation().Z
-			};
-			Primitives[Key]["Rotation"] = { EulerDegrees.X, EulerDegrees.Y, EulerDegrees.Z };
-			Primitives[Key]["Scale"] = {
-				Transform.GetScale3D().X,
-				Transform.GetScale3D().Y,
-				Transform.GetScale3D().Z
-			};
-
-			++Index;
+			Primitives[Key]["Material"] = PrimComp->GetMaterial()->GetName();
 		}
+
+		Primitives[Key]["Location"] = {
+			Transform.GetTranslation().X,
+			Transform.GetTranslation().Y,
+			Transform.GetTranslation().Z
+		};
+		Primitives[Key]["Rotation"] = { EulerDegrees.X, EulerDegrees.Y, EulerDegrees.Z };
+		Primitives[Key]["Scale"] = {
+			Transform.GetScale3D().X,
+			Transform.GetScale3D().Y,
+			Transform.GetScale3D().Z
+		};
+
+		++Index;
 	}
 	Json["Primitives"] = Primitives;
 

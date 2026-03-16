@@ -4,9 +4,9 @@
 #include "Renderer/Renderer.h"
 #include "Object/Scene/Scene.h"
 #include "Object/Actor/Actor.h"
+#include "Object/Actor/CubeActor.h"
+#include "Object/Actor/SphereActor.h"
 #include "Camera/Camera.h"
-#include "Component/CubeComponent.h"
-#include "Component/SphereComponent.h"
 #include "Debug/EngineLog.h"
 #include <filesystem>
 
@@ -64,15 +64,12 @@ void CControlPanelWindow::Render(CCore* Core)
 			UScene* Scene = Core->GetScene();
 			static int32 SpawnCount = 0;
 			FString Name = FString(SpawnTypes[SpawnTypeIndex]) + "_Spawned_" + std::to_string(SpawnCount++);
-			AActor* NewActor = Scene->SpawnActor<AActor>(Name);
 
-			UActorComponent* Comp = nullptr;
+			AActor* NewActor = nullptr;
 			if (SpawnTypeIndex == 0)
-				Comp = new UCubeComponent();
+				NewActor = Scene->SpawnActor<ACubeActor>(Name);
 			else
-				Comp = new USphereComponent();
-
-			NewActor->AddOwnedComponent(Comp);
+				NewActor = Scene->SpawnActor<ASphereActor>(Name);
 
 			Core->SetSelectedActor(NewActor);
 			UE_LOG("Spawned %s: %s", SpawnTypes[SpawnTypeIndex], Name.c_str());
