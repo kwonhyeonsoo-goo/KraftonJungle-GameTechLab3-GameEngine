@@ -314,7 +314,7 @@ bool CRenderer::InitOutlineResources()
 
 	// Pass 1: 통상 렌더 + Stencil에 1 쓰기
 	D3D11_DEPTH_STENCIL_DESC WriteDesc = {};
-	WriteDesc.DepthEnable = FALSE;
+	WriteDesc.DepthEnable = TRUE;
 	WriteDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
 	WriteDesc.DepthFunc = D3D11_COMPARISON_LESS;
 	WriteDesc.StencilEnable = TRUE;
@@ -358,13 +358,11 @@ void CRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float
 	Mesh->Bind(DeviceContext);
 
 	// Pass 1: 통상 렌더 + Stencil 마킹 (Ref=1)
-	DeviceContext->OMSetRenderTargets(0, nullptr, DepthStencilView);
 	DeviceContext->OMSetDepthStencilState(StencilWriteState, 1);
 	UpdateConstantBuffer(WorldMatrix, ViewProjectionMatrix);
 	DeviceContext->DrawIndexed(Mesh->IndexCount, 0, 0);
 
 	// Pass 2: 확대된 메시를 아웃라인 셰이더로 그리기 (Stencil != 1인 곳만)
-	DeviceContext->OMSetRenderTargets(1, &RenderTargetView, DepthStencilView);
 	DeviceContext->OMSetDepthStencilState(StencilTestState, 1);
 
 	// 약간 확대한 WorldMatrix
