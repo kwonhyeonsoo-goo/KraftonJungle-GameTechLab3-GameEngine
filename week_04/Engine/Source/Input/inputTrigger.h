@@ -22,9 +22,15 @@ class ENGINE_API FInputTrigger
 {
 };
 
-class ENGINE_API FInputRelease
+class ENGINE_API FInputReleased : public FInputTrigger
 {
 };
-class ENGINE_API FInputHolding
+class ENGINE_API FInputHold : public FInputTrigger
+{
+};
+class ENGINE_API FTriggerDown : public FInputTrigger
+{
+};
+class ENGINE_API FTriggerPressed : public FInputTrigger
 {
 };

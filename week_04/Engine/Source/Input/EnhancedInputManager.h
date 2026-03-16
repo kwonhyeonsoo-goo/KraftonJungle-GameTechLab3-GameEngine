@@ -1,8 +1,13 @@
 #pragma once
 #include "CoreMinimal.h"
+#include "InputAction.h"
+#include "InputTrigger.h"
+#include "InputMappingContext.h"
+#include "InputModifier.h"
 #include <functional>
 
 class CInputManager;
+using FInputActionCallback = std::function<void(const FInputActionValue&)>;
 class CEnhancedInputManager
 {
 public:
@@ -17,17 +22,17 @@ public:
 private:
 	struct FMappingContextEntry
 	{
-		int* Context;
+		FInputMappingContext* Context;
 		int32 Priority;
 	};
 
 	struct FBindingEntry
 	{
-		void* Action;
-		int TriggerEvent;
-		void* Callback;
+		FInputAction* Action;
+		ETriggerEvent TriggerEvent;
+		FInputActionCallback* Callback;
 	};
 	TArray<FMappingContextEntry> MappingContexts;
 	TArray<FBindingEntry> Binding;
-	TMap<void*, void> ActionStates;
+	TMap<FInputAction*, ETriggerState> ActionStates;
 };
