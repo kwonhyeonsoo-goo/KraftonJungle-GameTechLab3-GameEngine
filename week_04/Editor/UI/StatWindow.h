@@ -6,8 +6,8 @@ class CStatWindow
 {
 public:
 	void Render();
-	void SetObjectCount(uint32 Count) { ObjectCount = Count; }
-	void SetHeapUsage(uint32 Bytes) { HeapUsageBytes = Bytes; }
+	void SetObjectCount(uint32 InCount) { ObjectCount = InCount; }
+	void SetHeapUsage(uint32 InBytes) { HeapUsageBytes = InBytes; }
 
 private:
 	uint32 ObjectCount = 0;
