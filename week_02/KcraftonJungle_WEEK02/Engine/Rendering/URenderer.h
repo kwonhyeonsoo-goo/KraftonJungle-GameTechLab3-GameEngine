@@ -16,6 +16,13 @@ struct FVertexSimple
     float nx, ny, nz; //normal
 };
 
+struct FVertexUV
+{
+    float x, y, z;    // Position
+    float u, v;         //uv
+    float nx, ny, nz; //normal
+};
+
 struct FConstants
 {
     FMatrix MVP;
@@ -23,6 +30,11 @@ struct FConstants
     float thickness;
 };
 
+struct FcontantsMV
+{
+    FVector _WorldSpaceCameraPos;
+    float padding;
+};
 
 
 class RenderQueue;
@@ -41,8 +53,10 @@ public:
     ID3D11RenderTargetView* FrameBufferRTV = nullptr;
     ID3D11RasterizerState* RasterizerState = nullptr;
     ID3D11RasterizerState* RasterizerStateOutline = nullptr;
+
     ID3D11Buffer* ConstantBuffer = nullptr;
     ID3D11Buffer* OutlineConstantBuffer = nullptr;
+    ID3D11Buffer* GridConstantBuffer = nullptr;
 
     ID3D11Texture2D* DepthStencilBuffer = nullptr;
     ID3D11DepthStencilView* DepthStencilView = nullptr;
@@ -58,8 +72,12 @@ public:
     ID3D11InputLayout* SimpleInputLayout;
     ID3D11VertexShader* OutlineVertexShader;
     ID3D11PixelShader* OutlinePixelShader;
+    ID3D11VertexShader* GridVertexShader;
+    ID3D11PixelShader* GridPixelShader;
+    ID3D11InputLayout* GridInputLayout;
 
     unsigned int Stride;
+    unsigned int StrideUV;
 
     ID3D11Buffer* vertexBufferSphere;
      UINT numVerticesSphere;
@@ -69,13 +87,19 @@ public:
     UINT numVerticesTriangle;
     ID3D11Buffer* vertexBufferRect;
     ID3D11Buffer* indexBufferRect;
-    UINT numVerticesRect;UINT numIndicesRect;
+    UINT numVerticesRect; UINT numIndicesRect;
     ID3D11Buffer* vertexBufferWorldAxis;
     UINT numVerticesWorldAxis;
     ID3D11Buffer* vertexBufferGizmo;
     UINT numVerticesGizmo;
+
+    ID3D11Buffer* vertexBufferGrid;
+    ID3D11Buffer* indexBufferGrid;
+    UINT numVerticesGrid; UINT numIndicesGrid;
+
     ID3D11Buffer* vertexBufferTorus;
     UINT numVerticesTorus;
+
 
 #pragma region D3D11 Renderer 함수들
 	//D3D11 Renderer 함수들
@@ -89,13 +113,14 @@ public:
     // WM_SIZE 이벤트 수신 시 호출
     void OnResize(UINT width, UINT height);
 
-
+private:
     // MVP 상수 버퍼 업데이트
     void UpdateMVP(const FMatrix& mvp, FVector color);
     void UpdateMVP(const FMatrix& mvp, const float thickness);
+    void UpdateConstantBuffer(const FVector& CameraPos);
+
 
 #pragma endregion
-public:
 
     void CreateShader();
     void ReleaseShader();
@@ -105,19 +130,21 @@ public:
 
     void Release();
 
-private:
+
     IDXGIOutput* DisplayInfo;
 
     void Prepare();
 
     void PrepareShader();
     void PrepareOutlineShader();
+    void PrepareShader(ID3D11VertexShader* vertextShader, ID3D11PixelShader* pixelShader, ID3D11InputLayout* layout, ID3D11Buffer* contantBuffer);
 
     void SwapBuffer();
 
 
     void RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices);
     void RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer, UINT indexCount);
+    void RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer, UINT indexCount, UINT stride);
 
     void CreateDeviceAndSwapChain(HWND hWindow, uint32 width, uint32 height);
 
@@ -131,14 +158,13 @@ private:
     void ReleaseDepthBuffer();
 
     void CreatePrimitiveVertexBuffer();
-    void ReleasePrimitivVertexBuffer();
-
 
     void CreateRasterizerState();
 
     void ReleaseRasterizerState();
 
     ID3D11Buffer* CreateVertexBuffer(FVertexSimple* vertices, UINT byteWidth);
+    ID3D11Buffer* CreateVertexBuffer(FVertexUV* vertices, UINT byteWidth);
     void ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer);
 
 
