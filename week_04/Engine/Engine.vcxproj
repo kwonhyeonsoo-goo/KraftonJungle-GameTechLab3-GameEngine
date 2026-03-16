@@ -32,6 +32,7 @@
     <ClInclude Include="Source\Core\FEngine.h" />
     <ClInclude Include="Source\Core\FTimer.h" />
     <ClInclude Include="Source\Debug\EngineLog.h" />
+    <ClInclude Include="Source\Input\EnhancedInputManager.h" />
     <ClInclude Include="Source\Input\InputManager.h" />
     <ClInclude Include="Source\Math\Frustum.h" />
     <ClInclude Include="Source\Math\MathUtility.h" />

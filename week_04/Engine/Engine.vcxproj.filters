@@ -200,6 +200,9 @@
     <ClInclude Include="Source\Debug\EngineLog.h">
       <Filter>Source\Debug</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Input\EnhancedInputManager.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Input\InputManager.h">
       <Filter>Source\Input</Filter>
     </ClInclude>
