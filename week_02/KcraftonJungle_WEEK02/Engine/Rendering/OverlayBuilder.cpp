@@ -27,6 +27,7 @@ void OverlayBuilder::Build(const EditorSession& session, AppContext& ctx, Render
 	// Default implementation: add world axis command to the render queue.
 	// Implemented inline so the definition is available to all TUs and
 	// to avoid linker unresolved external when the .cpp is not linked.
+	PushGrid(queue);
 	PushWorldAxis(queue);
 	USceneComponent* primary = session.Selection.GetPrimary();
 	if (primary == nullptr)
@@ -39,6 +40,8 @@ void OverlayBuilder::Build(const EditorSession& session, AppContext& ctx, Render
 	{
 		activeTool->BuildGizmoOverlay(ctx, queue);
 	}
+
+
 }
 
 
@@ -69,7 +72,6 @@ void OverlayBuilder::PushHighlight(const USceneComponent* comp, RenderQueue& que
 	axisCommand.Type = ERenderType::Highlight;
 	axisCommand.Shape = static_cast<const UPrimitiveComponent*>(comp)->Shape;
 
-
 	axisCommand.WorldTransform = comp->GetWorldMatrix();
 
 	axisCommand.Color = 0;
@@ -81,4 +83,15 @@ void OverlayBuilder::PushHighlight(const USceneComponent* comp, RenderQueue& que
 
 void OverlayBuilder::PushGrid(RenderQueue& queue)
 {
+	RenderCommand axisCommand = {};
+	axisCommand.Type = ERenderType::Grid;
+	axisCommand.Shape;
+
+	axisCommand.WorldTransform = FMatrix::FMatrix();
+
+	axisCommand.Color = 0;
+	axisCommand.ObjectId = 0;
+
+	queue.Push(axisCommand);
+
 }
