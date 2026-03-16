@@ -1,6 +1,5 @@
 #pragma once
 #include "Object/Object.h"
-#include "Object/Class.h"
 #include <d3d11.h>
 
 class AActor;

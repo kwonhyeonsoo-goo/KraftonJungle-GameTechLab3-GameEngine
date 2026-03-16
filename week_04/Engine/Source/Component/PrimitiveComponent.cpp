@@ -1,5 +1,4 @@
 #include "PrimitiveComponent.h"
-#include "Object/Class.h"
 
 namespace
 {

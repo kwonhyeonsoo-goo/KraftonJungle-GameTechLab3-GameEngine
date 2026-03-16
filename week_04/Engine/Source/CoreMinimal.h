@@ -14,4 +14,5 @@
 #include "Math/Vector.h"
 #include "Math/Vector4.h"
 #include "Math/Transform.h"
+#include "Object/Class.h"
 #include "Object/Object.h"
