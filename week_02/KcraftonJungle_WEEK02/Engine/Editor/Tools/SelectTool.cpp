@@ -5,7 +5,9 @@ void SelectTool::OnMouseDown(const MouseEvent& e, AppContext& ctx)
     if (!e.LeftDown)
         return;
 
-    const FMatrix invViewProj = ctx.Editor.GetViewProjMatrix().Inversed();
+    const FMatrix invViewProj = ctx.Editor.bOrthoMode ?
+                                ctx.Editor.GetViewOrthoMatrix().Inversed() :
+                                ctx.Editor.GetViewProjMatrix().Inversed();
 
     const Ray ray = PickingService::ScreenToRay(
         e.X, e.Y,
