@@ -67,6 +67,16 @@ void ToolbarPanel::OnRender(AppContext& ctx)
     }
 
     ImGui::Spacing();
+    ImGui::Text("Coord Space");
+    ImGui::Separator();
+
+    {
+        const bool bLocal = ctx.Editor.Tools.GetCoordSpace() == ECoordSpace::Local;
+        if (ImGui::Button(bLocal ? "Local" : "World"))
+            ctx.Editor.Tools.SetCoordSpace(bLocal ? ECoordSpace::World : ECoordSpace::Local);
+    }
+
+    ImGui::Spacing();
     ImGui::Text("View");
     ImGui::Separator();
     ImGui::Checkbox("Orthographic", &ctx.Editor.bOrthoMode);

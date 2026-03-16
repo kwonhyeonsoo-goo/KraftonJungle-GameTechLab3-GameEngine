@@ -38,7 +38,9 @@ bool TranslateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     const FVector origin = primary->GetTransform().Location;
     const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
 
-    const FMatrix viewProj = ctx.Editor.GetViewProjMatrix();
+    const FMatrix viewProj = ctx.Editor.bOrthoMode
+        ? ctx.Editor.GetViewOrthoMatrix()
+        : ctx.Editor.GetViewProjMatrix();
     const int32 viewportW = ctx.Window.GetWidth();
     const int32 viewportH = ctx.Window.GetHeight();
     const FVector2D mouse2D((float)e.X, (float)e.Y);
@@ -49,7 +51,7 @@ bool TranslateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     float bestDistance = GizmoMath::GizmoPickThresholdPx;
     EAxis bestAxis = EAxis::None;
 
-    const float gizmoScale = GizmoMath::ComputeGizmoScale(origin, ctx.Editor.Camera.Position);
+    const float gizmoScale = GizmoMath::ComputeGizmoScale(origin, ctx);
 
     for (int axisIndex = 0; axisIndex < 3; ++axisIndex)
     {
@@ -178,7 +180,7 @@ void TranslateTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
 
         RenderCommand cmd = {};
         cmd.Type = ERenderType::Gizmo;
-        const float gs = GizmoMath::ComputeGizmoScale(origin, ctx.Editor.Camera.Position);
+        const float gs = GizmoMath::ComputeGizmoScale(origin, ctx);
         cmd.WorldTransform = GizmoMath::MakeAxisTransform(origin, axisDir, GizmoMath::GizmoAxisLength * gs);
         cmd.Color = color;
         cmd.ObjectId = primary->GetUUID();

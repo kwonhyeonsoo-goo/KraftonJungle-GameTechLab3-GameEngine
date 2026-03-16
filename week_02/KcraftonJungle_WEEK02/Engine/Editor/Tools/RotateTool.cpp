@@ -51,7 +51,9 @@ bool RotateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     const FVector center = primary->GetTransform().Location;
     const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
 
-    const FMatrix viewProj = ctx.Editor.GetViewProjMatrix();
+    const FMatrix viewProj = ctx.Editor.bOrthoMode
+        ? ctx.Editor.GetViewOrthoMatrix()
+        : ctx.Editor.GetViewProjMatrix();
     const int32 viewportW = ctx.Window.GetWidth();
     const int32 viewportH = ctx.Window.GetHeight();
     const FVector2D mouse2D((float)e.X, (float)e.Y);
@@ -63,7 +65,7 @@ bool RotateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     {
         const FVector normal = GizmoMath::GetAxisDirection(primary, axisIndex, coordSpace);
 
-        const float gizmoScale = GizmoMath::ComputeGizmoScale(center, ctx.Editor.Camera.Position);
+        const float gizmoScale = GizmoMath::ComputeGizmoScale(center, ctx);
 
         const TArray<FVector2D> ring2D = GizmoMath::SampleRing2D(
             center,
@@ -206,7 +208,7 @@ void RotateTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
         axisRotation.M[1][0] = axis2.x;  axisRotation.M[1][1] = axis2.y;  axisRotation.M[1][2] = axis2.z;
         axisRotation.M[2][0] = normal.x; axisRotation.M[2][1] = normal.y; axisRotation.M[2][2] = normal.z;
 
-        const float gs = GizmoMath::ComputeGizmoScale(center, ctx.Editor.Camera.Position);
+        const float gs = GizmoMath::ComputeGizmoScale(center, ctx);
 
         RenderCommand cmd = {};
         cmd.Type = ERenderType::Torus;
