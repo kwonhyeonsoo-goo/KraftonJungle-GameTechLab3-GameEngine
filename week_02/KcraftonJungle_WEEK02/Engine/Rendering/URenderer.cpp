@@ -386,8 +386,6 @@ void URenderer::CreatePrimitiveVertexBuffer()
     GetTorusVertices(Torus);
     vertexBufferTorus = CreateVertexBuffer(Torus, sizeof(Torus));
     numVerticesTorus = sizeof(Torus) / sizeof(FVertexSimple);
-}
-
 
     vertexBufferGrid = CreateVertexBuffer(UVrect_vertices, sizeof(UVrect_vertices));
     indexBufferGrid = CreateIndexBuffer(UVrect_indices, sizeof(UVrect_indices));
