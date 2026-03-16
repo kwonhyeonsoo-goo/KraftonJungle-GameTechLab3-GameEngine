@@ -53,10 +53,8 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-  </ImportGroup>
-  <ImportGroup Label="Shared">
-  </ImportGroup>
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -114,7 +112,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\Engine\;$(ProjectDir)ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\;$(ProjectDir)..\Engine\Source\;$(ProjectDir)ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -136,10 +134,10 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\Engine\;$(ProjectDir)ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\;$(ProjectDir)..\Engine\Source\;$(ProjectDir)ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\Engine\Bin\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>Engine.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -149,11 +147,16 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="FEditorEngine.cpp" />
-    <ClCompile Include="Axis\AxisRenderer.cpp" />
-    <ClCompile Include="Gizmo\Gizmo.cpp" />
-    <ClCompile Include="Picking\Picker.cpp" />
+    <ClCompile Include="Source\FEditorEngine.cpp" />
+    <ClCompile Include="Source\main.cpp" />
+    <ClCompile Include="Source\Axis\AxisRenderer.cpp" />
+    <ClCompile Include="Source\Gizmo\Gizmo.cpp" />
+    <ClCompile Include="Source\Picking\Picker.cpp" />
+    <ClCompile Include="Source\UI\ConsoleWindow.cpp" />
+    <ClCompile Include="Source\UI\ControlPanelWindow.cpp" />
+    <ClCompile Include="Source\UI\EditorUI.cpp" />
+    <ClCompile Include="Source\UI\PropertyWindow.cpp" />
+    <ClCompile Include="Source\UI\StatWindow.cpp" />
     <ClCompile Include="ThirdParty\imgui\imgui.cpp" />
     <ClCompile Include="ThirdParty\imgui\imgui_demo.cpp" />
     <ClCompile Include="ThirdParty\imgui\imgui_draw.cpp" />
@@ -161,17 +164,17 @@
     <ClCompile Include="ThirdParty\imgui\imgui_impl_win32.cpp" />
     <ClCompile Include="ThirdParty\imgui\imgui_tables.cpp" />
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="UI\ConsoleWindow.cpp" />
-    <ClCompile Include="UI\ControlPanelWindow.cpp" />
-    <ClCompile Include="UI\EditorUI.cpp" />
-    <ClCompile Include="UI\PropertyWindow.cpp" />
-    <ClCompile Include="UI\StatWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="FEditorEngine.h" />
-    <ClInclude Include="Axis\AxisRenderer.h" />
-    <ClInclude Include="Gizmo\Gizmo.h" />
-    <ClInclude Include="Picking\Picker.h" />
+    <ClInclude Include="Source\FEditorEngine.h" />
+    <ClInclude Include="Source\Axis\AxisRenderer.h" />
+    <ClInclude Include="Source\Gizmo\Gizmo.h" />
+    <ClInclude Include="Source\Picking\Picker.h" />
+    <ClInclude Include="Source\UI\ConsoleWindow.h" />
+    <ClInclude Include="Source\UI\ControlPanelWindow.h" />
+    <ClInclude Include="Source\UI\EditorUI.h" />
+    <ClInclude Include="Source\UI\PropertyWindow.h" />
+    <ClInclude Include="Source\UI\StatWindow.h" />
     <ClInclude Include="ThirdParty\imgui\imconfig.h" />
     <ClInclude Include="ThirdParty\imgui\imgui.h" />
     <ClInclude Include="ThirdParty\imgui\imgui_impl_dx11.h" />
@@ -180,11 +183,6 @@
     <ClInclude Include="ThirdParty\imgui\imstb_rectpack.h" />
     <ClInclude Include="ThirdParty\imgui\imstb_textedit.h" />
     <ClInclude Include="ThirdParty\imgui\imstb_truetype.h" />
-    <ClInclude Include="UI\ConsoleWindow.h" />
-    <ClInclude Include="UI\ControlPanelWindow.h" />
-    <ClInclude Include="UI\EditorUI.h" />
-    <ClInclude Include="UI\PropertyWindow.h" />
-    <ClInclude Include="UI\StatWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ThirdParty\imgui\imgui.natstepfilter" />
@@ -193,6 +191,5 @@
     <Natvis Include="ThirdParty\imgui\imgui.natvis" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets" />
 </Project>

@@ -1,117 +1,142 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="소스 파일">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    <Filter Include="Source">
+      <UniqueIdentifier>{eda2fbce-2e37-c3c8-8f8c-35f2a4ff4e59}</UniqueIdentifier>
     </Filter>
-    <Filter Include="헤더 파일">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    <Filter Include="Source\Axis">
+      <UniqueIdentifier>{fd0a8fd4-f8b6-9731-3746-74b723a7b3a0}</UniqueIdentifier>
     </Filter>
-    <Filter Include="리소스 파일">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    <Filter Include="Source\Gizmo">
+      <UniqueIdentifier>{2997c27c-11e9-54ee-4b0c-5a71dc20396c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Picking">
+      <UniqueIdentifier>{f6faa914-edd8-6594-d865-4579e893d626}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\UI">
+      <UniqueIdentifier>{937fbf30-493d-dd10-0906-014ab75451c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty">
+      <UniqueIdentifier>{7f8f3604-0e2c-6720-6445-c319ebeb744c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\imgui">
+      <UniqueIdentifier>{f537fb77-e6d2-da20-075d-83fe43a0b307}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="Source\FEditorEngine.cpp">
+      <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="Axis\AxisRenderer.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="Source\main.cpp">
+      <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="Gizmo\Gizmo.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="Source\Axis\AxisRenderer.cpp">
+      <Filter>Source\Axis</Filter>
     </ClCompile>
-    <ClCompile Include="Picking\Picker.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="Source\Gizmo\Gizmo.cpp">
+      <Filter>Source\Gizmo</Filter>
     </ClCompile>
-    <ClCompile Include="UI\ConsoleWindow.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="Source\Picking\Picker.cpp">
+      <Filter>Source\Picking</Filter>
     </ClCompile>
-    <ClCompile Include="UI\PropertyWindow.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="Source\UI\ConsoleWindow.cpp">
+      <Filter>Source\UI</Filter>
     </ClCompile>
-    <ClCompile Include="UI\StatWindow.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="Source\UI\ControlPanelWindow.cpp">
+      <Filter>Source\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\EditorUI.cpp">
+      <Filter>Source\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\PropertyWindow.cpp">
+      <Filter>Source\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\StatWindow.cpp">
+      <Filter>Source\UI</Filter>
     </ClCompile>
     <ClCompile Include="ThirdParty\imgui\imgui.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>ThirdParty\imgui</Filter>
     </ClCompile>
     <ClCompile Include="ThirdParty\imgui\imgui_demo.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>ThirdParty\imgui</Filter>
     </ClCompile>
     <ClCompile Include="ThirdParty\imgui\imgui_draw.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>ThirdParty\imgui</Filter>
     </ClCompile>
     <ClCompile Include="ThirdParty\imgui\imgui_impl_dx11.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>ThirdParty\imgui</Filter>
     </ClCompile>
     <ClCompile Include="ThirdParty\imgui\imgui_impl_win32.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>ThirdParty\imgui</Filter>
     </ClCompile>
     <ClCompile Include="ThirdParty\imgui\imgui_tables.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>ThirdParty\imgui</Filter>
     </ClCompile>
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="UI\ControlPanelWindow.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>ThirdParty\imgui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Axis\AxisRenderer.h">
-      <Filter>헤더 파일</Filter>
+    <ClInclude Include="Source\FEditorEngine.h">
+      <Filter>Source</Filter>
     </ClInclude>
-    <ClInclude Include="Gizmo\Gizmo.h">
-      <Filter>헤더 파일</Filter>
+    <ClInclude Include="Source\Axis\AxisRenderer.h">
+      <Filter>Source\Axis</Filter>
     </ClInclude>
-    <ClInclude Include="Picking\Picker.h">
-      <Filter>헤더 파일</Filter>
+    <ClInclude Include="Source\Gizmo\Gizmo.h">
+      <Filter>Source\Gizmo</Filter>
     </ClInclude>
-    <ClInclude Include="UI\ConsoleWindow.h">
-      <Filter>헤더 파일</Filter>
+    <ClInclude Include="Source\Picking\Picker.h">
+      <Filter>Source\Picking</Filter>
     </ClInclude>
-    <ClInclude Include="UI\PropertyWindow.h">
-      <Filter>헤더 파일</Filter>
+    <ClInclude Include="Source\UI\ConsoleWindow.h">
+      <Filter>Source\UI</Filter>
     </ClInclude>
-    <ClInclude Include="UI\StatWindow.h">
-      <Filter>헤더 파일</Filter>
+    <ClInclude Include="Source\UI\ControlPanelWindow.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\UI\EditorUI.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\UI\PropertyWindow.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\UI\StatWindow.h">
+      <Filter>Source\UI</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imconfig.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>ThirdParty\imgui</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imgui.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>ThirdParty\imgui</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imgui_impl_dx11.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>ThirdParty\imgui</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imgui_impl_win32.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>ThirdParty\imgui</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imgui_internal.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>ThirdParty\imgui</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imstb_rectpack.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>ThirdParty\imgui</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imstb_textedit.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>ThirdParty\imgui</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imstb_truetype.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="UI\ControlPanelWindow.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>ThirdParty\imgui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="ThirdParty\imgui\imgui.natstepfilter" />
+    <None Include="ThirdParty\imgui\imgui.natstepfilter">
+      <Filter>ThirdParty\imgui</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <Natvis Include="ThirdParty\imgui\imgui.natvis" />
+    <Natvis Include="ThirdParty\imgui\imgui.natvis">
+      <Filter>ThirdParty\imgui</Filter>
+    </Natvis>
   </ItemGroup>
 </Project>

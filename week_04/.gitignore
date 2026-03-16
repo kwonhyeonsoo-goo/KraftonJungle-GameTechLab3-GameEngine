@@ -2,6 +2,9 @@ CLAUDE.md
 .claude/
 Editor/imgui.ini
 
+# Embedded Python (override *.exe/*.dll ignore below)
+!Scripts/python/**
+
 # Compiled shader objects
 Content/Shaders/*.cso
 
