@@ -12,7 +12,8 @@ bool FMaterialConstantBuffer::Create(ID3D11Device* Device, uint32 InSize)
 {
 	Release();
 
-	Size = InSize;
+	// D3D11 상수 버퍼는 ByteWidth가 16의 배수여야 함
+	Size = (InSize + 15) & ~15;
 	CPUData = new uint8[Size];
 	memset(CPUData, 0, Size);
 
