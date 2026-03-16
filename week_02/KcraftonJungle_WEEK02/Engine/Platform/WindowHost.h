@@ -13,6 +13,7 @@ public:
     HWND   GetHWND()   const;
     int32  GetWidth()  const;
     int32  GetHeight() const;
+    void  UpdateSize(int32 width, int32 height); // ¡ç Ãß°¡
 
 private:
     HWND  Hwnd = nullptr;

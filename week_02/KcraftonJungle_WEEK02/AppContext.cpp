@@ -8,6 +8,7 @@
 #include "Engine/Editor/Tools/TranslateTool.h"
 #include "Engine/Editor/Tools/RotateTool.h"
 #include "Engine/Editor/Tools/ScaleTool.h"
+#include "Engine/Foundation/Core/log.h"
 
 bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 height)
 {
@@ -31,6 +32,10 @@ bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 heigh
     RegisterPanels();
     RegisterTools();
     SubscribeEvents();
+
+    UE_LOG("Hello World = %d", 2024);
+    UE_LOG("Hello World = %d", 2025);
+    UE_LOG("Hello World = %d", 2026);
 
     return true;
 }
@@ -84,7 +89,6 @@ void AppContext::RegisterTools()
     Editor.Tools.RegisterTool(translate);
     Editor.Tools.RegisterTool(rotate);
     Editor.Tools.RegisterTool(scale);
-
     // 기본 활성 툴
     Editor.Tools.ActivateTool("Translate");
     CapturedManipulationTool = nullptr;
@@ -165,7 +169,8 @@ void AppContext::SubscribeEvents()
 
     ResizeHandle = PlatformEvents::OnResize.Bind(
         [this](const ResizeEvent& e) { 
-            Renderer.OnResize(e.Width, e.Height); 
+            Renderer.OnResize(e.Width, e.Height);
+            Window.UpdateSize(e.Width, e.Height); 
 
             if (e.Height > 0)
                 Editor.AspectRatio = (float)e.Width / (float)e.Height;
