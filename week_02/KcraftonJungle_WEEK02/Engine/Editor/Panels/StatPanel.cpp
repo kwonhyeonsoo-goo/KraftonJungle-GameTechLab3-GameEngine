@@ -11,6 +11,9 @@ void StatPanel::OnRender(AppContext& ctx)
     {
         ImGui::Text("Engine Statistics");
         ImGui::Separator();
+        ImGui::Text("FPS                 : %.1f", 1.0f / ctx.Window.GetCurrentDeltaTime());
+        ImGui::Spacing();
+        ImGui::Separator();
 
         ImGui::Text("Object Count        : %u", Stats.ObjectCount);
         ImGui::Text("Selected Count      : %u", Stats.SelectedObjectCount);

@@ -14,10 +14,13 @@ public:
     int32  GetWidth()  const;
     int32  GetHeight() const;
     void  UpdateSize(int32 width, int32 height); // ¡ç Ãß°¡
+    float  GetCurrentDeltaTime() const;
+    void   SetCurrentDeltaTime(float FPS);
 
 private:
     HWND  Hwnd = nullptr;
     int32 Width;
     int32 Height;
+    float DeltaTime;;
 };
 

@@ -87,3 +87,13 @@ void WindowHost::UpdateSize(int32 width, int32 height)
     Width = width;
     Height = height;
 }
+
+float WindowHost::GetCurrentDeltaTime() const
+{
+    return DeltaTime;
+}
+
+void WindowHost::SetCurrentDeltaTime(float NewDeltaTime)
+{
+    DeltaTime = NewDeltaTime;
+}
