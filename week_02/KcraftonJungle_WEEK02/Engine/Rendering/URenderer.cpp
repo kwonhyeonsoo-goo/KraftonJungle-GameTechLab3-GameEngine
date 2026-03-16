@@ -8,6 +8,7 @@
 #include "../Mesh/Rect.h"
 #include "../Mesh/Line.h"
 #include "../Mesh/Gizmo.h"
+#include "../Mesh/UVRect.h"
 #include "../Editor/EditorSession.h"
 
 void URenderer::RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices)
@@ -33,6 +34,21 @@ void URenderer::RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer*
 
 	DeviceContext->DrawIndexed(indexCount, offset, 0);
 
+}
+
+void URenderer::RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer, UINT indexCount, UINT stride)
+{
+    if (!vertexBuffer || !indexBuffer)
+    {
+        return;
+    }
+
+    UINT offset = 0;
+    DeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+
+    DeviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, offset);
+
+    DeviceContext->DrawIndexed(indexCount, offset, 0);
 }
 
 void URenderer::CreateShader()
@@ -83,6 +99,38 @@ void URenderer::CreateShader()
 
     vertexShaderOutlineCS0->Release();
     pixelShaderOutlineCS0->Release();
+
+    ID3DBlob* vertexshaderCS2 = nullptr;
+    ID3DBlob* pixelshaderCS2= nullptr;
+
+    StrideUV = sizeof(FVertexUV);
+
+    D3DCompileFromFile(L"Shaders/ShaderWGrid.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &vertexshaderCS2, nullptr);
+
+    Device->CreateVertexShader(vertexshaderCS2->GetBufferPointer(), vertexshaderCS2->GetBufferSize(), nullptr, &GridVertexShader);
+
+    D3DCompileFromFile(L"Shaders/ShaderWGrid.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0, &pixelshaderCS2, nullptr);
+
+    Device->CreatePixelShader(pixelshaderCS2->GetBufferPointer(), pixelshaderCS2->GetBufferSize(), nullptr, &GridPixelShader);
+
+    D3D11_INPUT_ELEMENT_DESC layout2[] =
+    {
+        // POSITION: x, y, z (3 * 4 = 12 bytes) -> 시작점: 0
+        { "POSITION", 0,    DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+
+        // COLOR: r, g, b, a (2 * 4 = 8 bytes) -> 시작점: 12
+        { "TEXCOORD", 0,   DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+
+        // NORMAL: nx, ny, nz (3 * 4 = 12 bytes) -> 시작점: 12 + 8 = 20
+        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+
+    Device->CreateInputLayout(layout2, ARRAYSIZE(layout2), vertexshaderCS2->GetBufferPointer(), vertexshaderCS2->GetBufferSize(), &GridInputLayout);
+
+    StrideUV = sizeof(FVertexUV);
+
+
+
 }
 
 void URenderer::ReleaseShader()
@@ -325,6 +373,10 @@ void URenderer::CreatePrimitiveVertexBuffer()
 
     vertexBufferGizmo = CreateVertexBuffer(gizmoVertices, sizeof(gizmoVertices));
     numVerticesGizmo = sizeof(gizmoVertices) / sizeof(FVertexSimple);
+
+    vertexBufferGrid = CreateVertexBuffer(UVrect_vertices, sizeof(UVrect_vertices));
+    indexBufferGrid = CreateIndexBuffer(UVrect_indices, sizeof(UVrect_indices));
+
 }
 
 void URenderer::CreateRasterizerState()
@@ -333,12 +385,15 @@ void URenderer::CreateRasterizerState()
     D3D11_RASTERIZER_DESC rasterizerdesc = {};
     rasterizerdesc.FillMode = D3D11_FILL_SOLID;
     rasterizerdesc.CullMode = D3D11_CULL_BACK;
+
+
     rasterizerdesc.FrontCounterClockwise = false;
     Device->CreateRasterizerState(&rasterizerdesc, &RasterizerState);
 
     D3D11_RASTERIZER_DESC rasterozeroutlinedesc = {};
     rasterozeroutlinedesc.FillMode = D3D11_FILL_SOLID;
     rasterozeroutlinedesc.CullMode = D3D11_CULL_FRONT;
+
     Device->CreateRasterizerState(&rasterozeroutlinedesc, &RasterizerStateOutline);
 
 }
@@ -422,6 +477,7 @@ void URenderer::Prepare()
 
 
     DeviceContext->OMSetRenderTargets(1, &FrameBufferRTV, DepthStencilView);
+
     DeviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
 
 
@@ -461,6 +517,19 @@ void URenderer::PrepareOutlineShader()
     }
 
 }
+void URenderer::PrepareShader(ID3D11VertexShader* vertextShader, ID3D11PixelShader* pixelShader, ID3D11InputLayout* layout, ID3D11Buffer* contantBuffer)
+{
+    DeviceContext->VSSetShader(vertextShader, nullptr, 0);
+    DeviceContext->PSSetShader(pixelShader, nullptr, 0);
+    DeviceContext->IASetInputLayout(layout);
+
+    if (contantBuffer)
+    {
+        DeviceContext->VSSetConstantBuffers(0, 1, &contantBuffer);
+        DeviceContext->PSSetConstantBuffers(0, 1, &contantBuffer);
+    }
+}
+
 ID3D11Buffer* URenderer::CreateVertexBuffer(FVertexSimple* vertices, UINT byteWidth)
 {
     D3D11_BUFFER_DESC vertexbufferdesc = {};
@@ -477,10 +546,28 @@ ID3D11Buffer* URenderer::CreateVertexBuffer(FVertexSimple* vertices, UINT byteWi
     return vertexBuffer;
 }
 
+ID3D11Buffer* URenderer::CreateVertexBuffer(FVertexUV* vertices, UINT byteWidth)
+{
+    D3D11_BUFFER_DESC vertexbufferdesc = {};
+    vertexbufferdesc.ByteWidth = byteWidth;
+    vertexbufferdesc.Usage = D3D11_USAGE_IMMUTABLE;
+    vertexbufferdesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+    D3D11_SUBRESOURCE_DATA vertexbufferSRD = { vertices };
+
+    ID3D11Buffer* vertexBuffer;
+
+    Device->CreateBuffer(&vertexbufferdesc, &vertexbufferSRD, &vertexBuffer);
+
+    return vertexBuffer;
+}
+
+
+
 void URenderer::ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer)
 {
 
-    if(!vertexBuffer)
+    if(vertexBuffer)
         vertexBuffer->Release();
 }
 
@@ -521,6 +608,14 @@ void URenderer::CreateConstantBuffer()
     constantbufferdesc1.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
     Device->CreateBuffer(&constantbufferdesc1, nullptr, &OutlineConstantBuffer);
+
+    D3D11_BUFFER_DESC constantbufferdesc2 = {};
+    constantbufferdesc2.ByteWidth = sizeof(FcontantsMV) + 0xf & 0xfffffff0;
+    constantbufferdesc2.Usage = D3D11_USAGE_DYNAMIC;
+    constantbufferdesc2.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    constantbufferdesc2.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+    Device->CreateBuffer(&constantbufferdesc2, nullptr, &GridConstantBuffer);
 
 }
 
@@ -637,9 +732,10 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
         switch (cmd.Type)
         {     
         case ERenderType::Primitive:
+            PrepareShader();
             UpdateMVP(constants.MVP, { 1,1,1 });
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            PrepareShader();
+
             switch (cmd.Shape)
             {
             case EPrimitiveShape::Sphere:
@@ -667,9 +763,9 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
 
             break;
         case ERenderType::WorldAxis:
+            PrepareShader();
             UpdateMVP(constants.MVP, {1,1,1 });
 
-            PrepareShader();
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
             RenderPrimitive(vertexBufferWorldAxis, numVerticesWorldAxis);
 
@@ -677,13 +773,14 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
         case ERenderType::LocalAxis:
             break;
         case ERenderType::Gizmo: {
+            PrepareShader();
             uint32 Red = (cmd.Color >> 24) & 0xFF;
             uint32 Green = (cmd.Color >> 16) & 0xFF;
             uint32 Blue = (cmd.Color >> 8) & 0xFF;
             UpdateMVP(constants.MVP, { Red / 255.f,Green / 255.f, Blue / 255.f });
 
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            PrepareShader();
+  
             RenderPrimitive(vertexBufferGizmo, numVerticesGizmo);
             break;
         }
@@ -718,6 +815,20 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
             DeviceContext->RSSetState(RasterizerState);
 
+            break;
+        }
+        case ERenderType::Grid:
+        {
+            DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            
+            PrepareShader(GridVertexShader, GridPixelShader, GridInputLayout, ConstantBuffer);
+            DeviceContext->VSSetConstantBuffers(1, 1, &GridConstantBuffer);
+            DeviceContext->PSSetConstantBuffers(1, 1, &GridConstantBuffer);
+
+            UpdateMVP(constants.MVP, { 1,1,1 });
+
+            UpdateConstantBuffer(session.Camera.Position);
+            RenderIndexedPrimitive(vertexBufferGrid, indexBufferGrid, sizeof(UVrect_indices) / sizeof(UINT), StrideUV);
             break;
         }
         default:
@@ -762,5 +873,20 @@ void URenderer::UpdateMVP(const FMatrix& mvp, const float thickness)
             constants->Color = { 1,1,1 };
         }
         DeviceContext->Unmap(OutlineConstantBuffer, 0);
+    }
+}
+
+void URenderer::UpdateConstantBuffer(const FVector& CameraPos)
+{
+    if (GridConstantBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
+
+        DeviceContext->Map(GridConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
+        FcontantsMV* constants = (FcontantsMV*)constantbufferMSR.pData;
+        {
+            constants->_WorldSpaceCameraPos = CameraPos;
+        }
+        DeviceContext->Unmap(GridConstantBuffer, 0);
     }
 }
