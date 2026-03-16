@@ -53,14 +53,14 @@ void UScene::InitializeDefaultScene(float AspectRatio)
 	LoadSceneFromFile("../Assets/Scenes/DefaultScene.json");
 
 	//Test
-	//AActor* Actor = SpawnActor<AActor>("TestActor");
-	//UPrimitiveComponent* SpehreComp = new USphereComponent();
-	//UPrimitiveComponent* CubeComp = new UCubeComponent();
-	//CubeComp->AttachTo(SpehreComp);
-	//CubeComp->SetRelativeTransform({ FRotator::MakeFromEuler({ 45.0f, 45.0f, 45.0f }), {0.0f, 0.0f, 50.0f}, {0.5f, 0.5f, 0.5f} });
-	//Actor->AddOwnedComponent(SpehreComp);
-	//Actor->AddOwnedComponent(CubeComp);
-	//Actor->SetActorLocation({ 0.0f, 0.0f, 12.0f });
+	AActor* Actor = SpawnActor<AActor>("TestActor");
+	UPrimitiveComponent* SpehreComp = new USphereComponent();
+	UPrimitiveComponent* CubeComp = new UCubeComponent();
+	CubeComp->AttachTo(SpehreComp);
+	CubeComp->SetRelativeTransform({ FRotator::MakeFromEuler({ 45.0f, 45.0f, 45.0f }), {0.0f, 0.0f, 2.0f}, {0.5f, 0.5f, 0.5f} });
+	Actor->AddOwnedComponent(SpehreComp);
+	Actor->AddOwnedComponent(CubeComp);
+	Actor->SetActorLocation({ 0.0f, 0.0f, 12.0f });
 }
 
 void UScene::LoadSceneFromFile(const FString& FilePath)
