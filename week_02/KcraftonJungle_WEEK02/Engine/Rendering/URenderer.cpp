@@ -732,6 +732,7 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             break;
         }
         case ERenderType::Torus: {
+            DeviceContext->OMSetDepthStencilState(DepthStencilDisable, 1);
             uint32 Red = (cmd.Color >> 24) & 0xFF;
             uint32 Green = (cmd.Color >> 16) & 0xFF;
             uint32 Blue = (cmd.Color >> 8) & 0xFF;
