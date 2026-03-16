@@ -48,6 +48,7 @@ public:
     ID3D11DepthStencilView* DepthStencilView = nullptr;
     ID3D11DepthStencilState* DepthStencilState = nullptr;
     ID3D11DepthStencilState* DepthStencilOutlineState = nullptr;
+    ID3D11DepthStencilState* DepthStencilDisable = nullptr;
 
     FLOAT ClearColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f };
     D3D11_VIEWPORT ViewportInfo;

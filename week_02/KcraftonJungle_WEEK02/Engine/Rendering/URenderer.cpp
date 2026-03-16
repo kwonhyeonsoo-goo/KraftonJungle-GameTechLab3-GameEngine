@@ -264,6 +264,14 @@ void URenderer::CreateDepthBuffer(uint32 width, uint32 height)
 
     // Create depth stencil state
     Device->CreateDepthStencilState(&dsDesc1, &DepthStencilOutlineState);
+    
+
+    D3D11_DEPTH_STENCIL_DESC dsDescOff = {};
+    dsDescOff.DepthEnable = FALSE; // ← 비활성화
+    dsDescOff.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    dsDescOff.DepthFunc = D3D11_COMPARISON_ALWAYS;
+    dsDesc.StencilEnable = true;
+    Device->CreateDepthStencilState(&dsDescOff, &DepthStencilDisable);
 
 
     D3D11_DEPTH_STENCIL_VIEW_DESC descDSV = {};
@@ -692,6 +700,7 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
         case ERenderType::LocalAxis:
             break;
         case ERenderType::Gizmo: {
+            DeviceContext->OMSetDepthStencilState(DepthStencilDisable, 1);
             uint32 Red = (cmd.Color >> 24) & 0xFF;
             uint32 Green = (cmd.Color >> 16) & 0xFF;
             uint32 Blue = (cmd.Color >> 8) & 0xFF;
@@ -700,6 +709,7 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             PrepareShader();
             RenderPrimitive(vertexBufferGizmo, numVerticesGizmo);
+            DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
             break;
         }
         case ERenderType::Highlight:
