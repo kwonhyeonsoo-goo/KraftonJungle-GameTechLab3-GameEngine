@@ -2,7 +2,7 @@
 #include "imgui.h"
 #include "Core/Core.h"
 #include "Object/Scene/Scene.h"
-#include "Object/Actor/Actor.h"
+#include "Actor/Actor.h"
 #include "Camera/Camera.h"
 #include "Component/CubeComponent.h"
 #include "Component/SphereComponent.h"

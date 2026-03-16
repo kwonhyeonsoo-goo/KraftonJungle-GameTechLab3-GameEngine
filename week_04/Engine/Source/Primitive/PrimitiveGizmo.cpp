@@ -1,6 +1,6 @@
 #include "PrimitiveGizmo.h"
 
-#include "GizmoMeshGenerator.h"
+#include "UnrealEditorStyledGizmo.h"
 
 const FString CPrimitiveGizmo::Key = "Gizmo";
 const FString CPrimitiveGizmo::FilePath = "Assets/Meshed/Gizmo.mesh";
@@ -14,16 +14,33 @@ CPrimitiveGizmo::CPrimitiveGizmo()
 	}
 	else
 	{
-		Generate();
+		Generate(EGizmoType::Scale);
 	}
 }
 
-void CPrimitiveGizmo::Generate()
+void CPrimitiveGizmo::Generate(EGizmoType Type)
+{
+	if (Type == EGizmoType::Translation)
+	{
+		GenerateTranslationGizmoMesh();
+	}
+
+	if (Type == EGizmoType::Rotation)
+	{
+		GenerateRotationGizmoMesh();
+	}
+
+	if (Type == EGizmoType::Scale)
+	{
+		GenerateScaleGizmoMesh();
+	}
+}
+
+void CPrimitiveGizmo::GenerateTranslationGizmoMesh()
 {
 	auto Data = std::make_shared<FMeshData>();
 
-	TranslationGizmoDesc desc{};
-	desc.includeCenterSphere = true;
+	TranslationDesc desc{};
 
 	auto TranslationGizmo = GenerateTranslationGizmo(desc);
 	Mesh Gizmo = Combine(TranslationGizmo);
@@ -31,7 +48,8 @@ void CPrimitiveGizmo::Generate()
 	Data->Vertices.reserve(Gizmo.vertices.size());
 	for (auto& Vertex : Gizmo.vertices)
 	{
-		Data->Vertices.push_back({ Vertex.position, Vertex.color, Vertex.normal });
+		FVector4 Color = { Vertex.color.r, Vertex.color.g, Vertex.color.b, Vertex.color.a };
+		Data->Vertices.push_back({ Vertex.position, Color, Vertex.normal });
 	}
 
 	Data->Indices.reserve(Gizmo.indices.size());
@@ -43,3 +61,56 @@ void CPrimitiveGizmo::Generate()
 	MeshData = Data;
 	RegisterMeshData(Key, Data);
 }
+
+void CPrimitiveGizmo::GenerateRotationGizmoMesh()
+{
+	auto Data = std::make_shared<FMeshData>();
+
+	RotationDesc desc{};
+
+	auto RotationGizmo = GenerateRotationGizmo(desc);
+	Mesh Gizmo = Combine(RotationGizmo);
+
+	Data->Vertices.reserve(Gizmo.vertices.size());
+	for (auto& Vertex : Gizmo.vertices)
+	{
+		FVector4 Color = { Vertex.color.r, Vertex.color.g, Vertex.color.b, Vertex.color.a };
+		Data->Vertices.push_back({ Vertex.position, Color, Vertex.normal });
+	}
+
+	Data->Indices.reserve(Gizmo.indices.size());
+	for (auto& Index : Gizmo.indices)
+	{
+		Data->Indices.push_back(Index);
+	}
+
+	MeshData = Data;
+	RegisterMeshData(Key, Data);
+}
+
+void CPrimitiveGizmo::GenerateScaleGizmoMesh()
+{
+	auto Data = std::make_shared<FMeshData>();
+
+	ScaleDesc desc{};
+
+	auto ScaleGizmo = GenerateScaleGizmo(desc);
+	Mesh Gizmo = Combine(ScaleGizmo);
+
+	Data->Vertices.reserve(Gizmo.vertices.size());
+	for (auto& Vertex : Gizmo.vertices)
+	{
+		FVector4 Color = { Vertex.color.r, Vertex.color.g, Vertex.color.b, Vertex.color.a };
+		Data->Vertices.push_back({ Vertex.position, Color, Vertex.normal });
+	}
+
+	Data->Indices.reserve(Gizmo.indices.size());
+	for (auto& Index : Gizmo.indices)
+	{
+		Data->Indices.push_back(Index);
+	}
+
+	MeshData = Data;
+	RegisterMeshData(Key, Data);
+}
+

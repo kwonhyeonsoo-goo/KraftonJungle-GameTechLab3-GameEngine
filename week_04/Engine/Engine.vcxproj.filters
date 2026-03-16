@@ -120,7 +120,7 @@
     <ClCompile Include="Source\Object\ObjectManager.cpp">
       <Filter>Source\Object</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Object\Actor\Actor.cpp">
+    <ClCompile Include="Source\Actor\Actor.cpp">
       <Filter>Source\Object\Actor</Filter>
     </ClCompile>
     <ClCompile Include="Source\Object\Scene\Scene.cpp">
@@ -134,9 +134,6 @@
     </ClCompile>
     <ClCompile Include="Source\Platform\Windows\WindowApplication.cpp">
       <Filter>Source\Platform\Windows</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Primitive\GizmoMeshGenerator.cpp">
-      <Filter>Source\Primitive</Filter>
     </ClCompile>
     <ClCompile Include="Source\Primitive\PrimitiveBase.cpp">
       <Filter>Source\Primitive</Filter>
@@ -168,6 +165,8 @@
     <ClCompile Include="Source\Renderer\ShaderResource.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Primitive\UnrealEditorStyledGizmo.cpp" />
+    <ClCompile Include="Source\Actor\Gizmo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -254,7 +253,7 @@
     <ClInclude Include="Source\Object\ObjectTypes.h">
       <Filter>Source\Object</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Object\Actor\Actor.h">
+    <ClInclude Include="Source\Actor\Actor.h">
       <Filter>Source\Object\Actor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Object\Scene\Scene.h">
@@ -268,9 +267,6 @@
     </ClInclude>
     <ClInclude Include="Source\Platform\Windows\WindowApplication.h">
       <Filter>Source\Platform\Windows</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Primitive\GizmoMeshGenerator.h">
-      <Filter>Source\Primitive</Filter>
     </ClInclude>
     <ClInclude Include="Source\Primitive\PrimitiveBase.h">
       <Filter>Source\Primitive</Filter>
@@ -341,6 +337,8 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp">
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Primitive\UnrealEditorStyledGizmo.h" />
+    <ClInclude Include="Source\Actor\Gizmo.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

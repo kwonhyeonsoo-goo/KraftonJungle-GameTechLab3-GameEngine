@@ -3,7 +3,7 @@
 #include "Camera/Camera.h"
 #include "Renderer/Renderer.h"
 #include "Object/Scene/Scene.h"
-#include "Object/Actor/Actor.h"
+#include "Actor/Actor.h"
 #include "Object/Object.h"
 #include "Component/SceneComponent.h"
 #include "Component/PrimitiveComponent.h"

@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Actor\Gizmo.h" />
     <ClInclude Include="Source\CoreMinimal.h" />
     <ClInclude Include="Source\EngineAPI.h" />
     <ClInclude Include="Source\EngineTest.h" />
@@ -47,17 +48,17 @@
     <ClInclude Include="Source\Object\ObjectFactory.h" />
     <ClInclude Include="Source\Object\ObjectManager.h" />
     <ClInclude Include="Source\Object\ObjectTypes.h" />
-    <ClInclude Include="Source\Object\Actor\Actor.h" />
+    <ClInclude Include="Source\Actor\Actor.h" />
     <ClInclude Include="Source\Object\Scene\Scene.h" />
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h" />
     <ClInclude Include="Source\Platform\Windows\Window.h" />
     <ClInclude Include="Source\Platform\Windows\WindowApplication.h" />
-    <ClInclude Include="Source\Primitive\GizmoMeshGenerator.h" />
     <ClInclude Include="Source\Primitive\PrimitiveBase.h" />
     <ClInclude Include="Source\Primitive\PrimitiveCube.h" />
     <ClInclude Include="Source\Primitive\PrimitiveGizmo.h" />
     <ClInclude Include="Source\Primitive\PrimitivePlane.h" />
     <ClInclude Include="Source\Primitive\PrimitiveSphere.h" />
+    <ClInclude Include="Source\Primitive\UnrealEditorStyledGizmo.h" />
     <ClInclude Include="Source\Renderer\PrimitiveVertex.h" />
     <ClInclude Include="Source\Renderer\RenderCommand.h" />
     <ClInclude Include="Source\Renderer\Renderer.h" />
@@ -78,6 +79,7 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Actor\Gizmo.cpp" />
     <ClCompile Include="Source\EngineTest.cpp" />
     <ClCompile Include="Source\Camera\Camera.cpp" />
     <ClCompile Include="Source\Component\ActorComponent.cpp" />
@@ -100,17 +102,17 @@
     <ClCompile Include="Source\Object\Class.cpp" />
     <ClCompile Include="Source\Object\Object.cpp" />
     <ClCompile Include="Source\Object\ObjectManager.cpp" />
-    <ClCompile Include="Source\Object\Actor\Actor.cpp" />
+    <ClCompile Include="Source\Actor\Actor.cpp" />
     <ClCompile Include="Source\Object\Scene\Scene.cpp" />
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp" />
     <ClCompile Include="Source\Platform\Windows\Window.cpp" />
     <ClCompile Include="Source\Platform\Windows\WindowApplication.cpp" />
-    <ClCompile Include="Source\Primitive\GizmoMeshGenerator.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveBase.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveCube.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveGizmo.cpp" />
     <ClCompile Include="Source\Primitive\PrimitivePlane.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveSphere.cpp" />
+    <ClCompile Include="Source\Primitive\UnrealEditorStyledGizmo.cpp" />
     <ClCompile Include="Source\Renderer\Renderer.cpp" />
     <ClCompile Include="Source\Renderer\Shader.cpp" />
     <ClCompile Include="Source\Renderer\ShaderManager.cpp" />

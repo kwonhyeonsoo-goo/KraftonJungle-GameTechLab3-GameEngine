@@ -16,7 +16,11 @@ public:
 
 	CPrimitiveGizmo();
 
-	void Generate();
+	void Generate(EGizmoType Type);
+
+	void GenerateTranslationGizmoMesh();
+	void GenerateRotationGizmoMesh();
+	void GenerateScaleGizmoMesh();
 
 };
 

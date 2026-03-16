@@ -2,7 +2,7 @@
 
 #include "Core/Core.h"
 
-#include "Object/Actor/Actor.h"
+#include "Actor/Actor.h"
 #include "Camera/Camera.h"
 #include "Component/SphereComponent.h"
 #include "Component/CubeComponent.h"
@@ -10,6 +10,7 @@
 #include <fstream>
 #include <iomanip>
 
+#include "Actor/Gizmo.h"
 #include "Component/GizmoComponent.h"
 #include "ThirdParty/nlohmann/json.hpp"
 #include "Component/PrimitiveComponent.h"
@@ -65,9 +66,11 @@ void UScene::InitializeDefaultScene(float AspectRatio)
 	Actor->SetActorLocation({ 0.0f, 0.0f, 12.0f });
 
 	// Test 2
-	AActor* Actor2 = SpawnActor<AActor>("GizmoTest");
-	UPrimitiveComponent* GizmoComp = new UGizmoComponent();
-	Actor->AddOwnedComponent(GizmoComp);
+	//AActor* Actor2 = SpawnActor<AActor>("GizmoTest");
+	//UPrimitiveComponent* GizmoComp = new UGizmoComponent();
+	//Actor2->AddOwnedComponent(GizmoComp);
+
+	AActor* Gizmo = SpawnActor<AGizmo>("GizmoTest");
 }
 
 void UScene::LoadSceneFromFile(const FString& FilePath)

@@ -1,7 +1,7 @@
 #include "Core.h"
 
 #include "Object/Scene/Scene.h"
-#include "Object/Actor/Actor.h"
+#include "Actor/Actor.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/ShaderManager.h"
 #include "Input/InputManager.h"
