@@ -87,6 +87,7 @@
     <ClCompile Include="Source\Core\FEngine.cpp" />
     <ClCompile Include="Source\Core\FTimer.cpp" />
     <ClCompile Include="Source\Debug\EngineLog.cpp" />
+    <ClCompile Include="Source\Input\EnhancedInputManager.cpp" />
     <ClCompile Include="Source\Input\InputManager.cpp" />
     <ClCompile Include="Source\Math\Frustum.cpp" />
     <ClCompile Include="Source\Math\Matrix.cpp" />
