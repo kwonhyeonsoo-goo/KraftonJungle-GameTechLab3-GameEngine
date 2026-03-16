@@ -1,2 +1,2 @@
 @echo off
-python "%~dp0Scripts\GenerateProjectFiles.py" %*
+"%~dp0Scripts\python\python.exe" "%~dp0Scripts\GenerateProjectFiles.py" %*

@@ -129,10 +129,10 @@ def write_xml(root_elem, filepath: Path, bom=False):
     """Write XML tree to file with proper declaration."""
     indent_xml(root_elem)
     tree = ET.ElementTree(root_elem)
-    with open(filepath, "wb") as f:
+    with open(filepath, "w", encoding="utf-8", newline="\r\n") as f:
         if bom:
-            f.write(b"\xef\xbb\xbf")
-        f.write(b'<?xml version="1.0" encoding="utf-8"?>\n')
+            f.write("\ufeff")
+        f.write('<?xml version="1.0" encoding="utf-8"?>\n')
         tree.write(f, encoding="unicode", xml_declaration=False)
 
 
@@ -634,7 +634,7 @@ def generate_sln():
 
     sln_path = ROOT / "KraftonJungleEngine.sln"
     with open(sln_path, "w", encoding="utf-8-sig", newline="\r\n") as f:
-        f.write("\r\n".join(lines))
+        f.write("\n".join(lines))
 
 
 # ──────────────────────────────────────────────
