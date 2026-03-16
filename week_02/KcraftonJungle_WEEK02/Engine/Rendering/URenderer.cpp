@@ -106,6 +106,18 @@ void URenderer::ReleaseShader()
         SimpleVertexShader->Release();
         SimpleVertexShader = nullptr;
     }
+
+    if (OutlineVertexShader)
+    {
+        OutlineVertexShader->Release();
+        OutlineVertexShader = nullptr;
+    }
+
+    if (OutlinePixelShader)
+    {
+        OutlinePixelShader->Release();
+        OutlinePixelShader = nullptr;
+    }
 }
 
 void URenderer::CreateDeviceAndSwapChain(HWND hWindow, UINT width, UINT height)
@@ -302,6 +314,14 @@ void URenderer::ReleaseDepthBuffer()
         DepthStencilState->Release();
         DepthStencilState = nullptr;
     }
+    if (DepthStencilOutlineState) {
+        DepthStencilOutlineState->Release();
+        DepthStencilOutlineState = nullptr;
+    }
+    if (DepthStencilDisable) {
+        DepthStencilDisable->Release();
+        DepthStencilDisable = nullptr;
+    }
 }
 
 void URenderer::CreatePrimitiveVertexBuffer()
@@ -365,6 +385,11 @@ void URenderer::ReleaseRasterizerState()
     {
         RasterizerState->Release();
         RasterizerState = nullptr;
+    }
+    if (RasterizerStateOutline)
+    {
+        RasterizerStateOutline->Release();
+        RasterizerStateOutline = nullptr;
     }
 }
 
@@ -490,11 +515,8 @@ ID3D11Buffer* URenderer::CreateVertexBuffer(FVertexSimple* vertices, UINT byteWi
 
 void URenderer::ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer)
 {
-
-
-    if(!vertexBuffer)
+    if (vertexBuffer)
         vertexBuffer->Release();
-
 }
 
 ID3D11Buffer* URenderer::CreateIndexBuffer(void* data, UINT size)

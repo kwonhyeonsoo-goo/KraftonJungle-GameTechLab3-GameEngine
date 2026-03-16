@@ -4,6 +4,7 @@
 #include "../World/USphereComp.h"
 #include "../World/UPlaneComp.h"
 #include "../World/UTriangleComp.h"
+#include <memory>
 
 UObject* ObjectFactory::ConstructObject(AppContext& ctx, UClass* uclass)
 {
@@ -11,36 +12,37 @@ UObject* ObjectFactory::ConstructObject(AppContext& ctx, UClass* uclass)
     {
         return nullptr;
     }
-     
+
     return ConstructObject(ctx, uclass->ClassName);
 }
 
 UObject* ObjectFactory::ConstructObject(AppContext& ctx, const FString& typeName)
 {
-    UObject* obj = nullptr;
+    std::unique_ptr<UObject> obj;
 
     if (typeName == "Cube")
     {
-        obj = new UCubeComp();
+        obj = std::make_unique<UCubeComp>();
     }
     else if (typeName == "Sphere")
     {
-        obj = new USphereComp();
+        obj = std::make_unique<USphereComp>();
     }
     else if (typeName == "Plane")
     {
-        obj = new UPlaneComp();
+        obj = std::make_unique<UPlaneComp>();
     }
     else if (typeName == "Triangle")
     {
-        obj = new UTriangleComp();
+        obj = std::make_unique<UTriangleComp>();
     }
     else
-    { 
+    {
         return nullptr;
     }
 
     obj->SetUUID(ctx.UUIDs.GenUUID());
-    ctx.Objects.Add(obj);
-    return obj;
+    UObject* rawPtr = obj.get();
+    ctx.Objects.Add(std::move(obj));
+    return rawPtr;
 }

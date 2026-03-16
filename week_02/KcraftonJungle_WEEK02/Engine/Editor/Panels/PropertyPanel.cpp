@@ -36,7 +36,7 @@ void PropertyPanel::OnRender(AppContext& ctx)
         newT.Rotation = FVector(rot[0], rot[1], rot[2]);
         newT.Scale = FVector(scale[0], scale[1], scale[2]);
 
-        ctx.Dispatch(new SetTransformCommand(sceneComp, newT));
+        ctx.Dispatch(std::make_unique<SetTransformCommand>(sceneComp, newT));
     }
 
     ImGui::End();

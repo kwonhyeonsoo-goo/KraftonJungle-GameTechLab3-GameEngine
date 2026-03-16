@@ -1,21 +1,22 @@
 #pragma once
 #include "./UObject.h"
 #include "../Foundation/Core/CoreTypes.h"
+#include <memory>
 
 
 class ObjectStore {
 public:
     ObjectStore();
 
-    void Add(UObject* obj);
+    void Add(std::unique_ptr<UObject> obj);
     void Remove(uint32 uuid);
     void Clear();
     UObject* Find(uint32 uuid) const;
 
-    const TArray<UObject*>& GUObjectArray() const;
+    const TArray<std::unique_ptr<UObject>>& GUObjectArray() const;
 
     uint32 Count() const;
 
 private:
-    TArray<UObject*> Objects;
+    TArray<std::unique_ptr<UObject>> Objects;
 };

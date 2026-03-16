@@ -22,10 +22,10 @@ struct RenderCommand {
 */
 void RenderSceneExtractor::Extract(const AppContext& ctx, RenderQueue& queue)
 {
-	TArray<UObject*> objects = ctx.Objects.GUObjectArray();
+	const auto& objects = ctx.Objects.GUObjectArray();
 
-
-	for (UObject* o : objects) {
+	for (const auto& o_uptr : objects) {
+		UObject* o = o_uptr.get();
 		if (o->IsA<USceneComponent>()) {
 			RenderCommand objectRenderCommand = {};
 			objectRenderCommand.Type = ERenderType::Primitive;

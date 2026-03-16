@@ -146,7 +146,7 @@ void TranslateTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
         if (!GizmoMath::NearlySameLocation(finalTransform.Location, OriginalTransform.Location))
         {
             primary->SetTransform(OriginalTransform);
-            ctx.Dispatch(new SetTransformCommand(primary, finalTransform));
+            ctx.Dispatch(std::make_unique<SetTransformCommand>(primary, finalTransform));
         }
         else
         {

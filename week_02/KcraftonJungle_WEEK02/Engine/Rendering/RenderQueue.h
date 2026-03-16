@@ -4,9 +4,6 @@
 
 class RenderQueue {
 public:
-    RenderQueue();
-    ~RenderQueue();
-
     void Push(const RenderCommand& cmd);
     void Clear();
 
@@ -14,5 +11,5 @@ public:
     bool IsEmpty() const;
 
 private:
-	TArray<RenderCommand>* Queue;
+	TArray<RenderCommand> Queue;
 };

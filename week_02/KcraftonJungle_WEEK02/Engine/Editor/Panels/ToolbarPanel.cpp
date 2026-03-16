@@ -108,7 +108,7 @@ void ToolbarPanel::OnRender(AppContext& ctx)
     {
         for (int i = 0; i < NumItem; ++i)
         {
-            ctx.Dispatch(new SpawnObjectCommand(
+            ctx.Dispatch(std::make_unique<SpawnObjectCommand>(
                 ctx,
                 (EPrimitiveShape)currentItem,
                 DefaultSpawnTransform
