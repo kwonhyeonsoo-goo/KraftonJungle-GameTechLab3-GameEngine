@@ -314,14 +314,14 @@ bool CRenderer::InitOutlineResources()
 
 	// Pass 1: 통상 렌더 + Stencil에 1 쓰기
 	D3D11_DEPTH_STENCIL_DESC WriteDesc = {};
-	WriteDesc.DepthEnable = TRUE;
+	WriteDesc.DepthEnable = FALSE;
 	WriteDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
 	WriteDesc.DepthFunc = D3D11_COMPARISON_LESS;
 	WriteDesc.StencilEnable = TRUE;
 	WriteDesc.StencilReadMask = 0xFF;
 	WriteDesc.StencilWriteMask = 0xFF;
-	WriteDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	WriteDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	WriteDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_REPLACE;
+	WriteDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_REPLACE;
 	WriteDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
 	WriteDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 	WriteDesc.BackFace = WriteDesc.FrontFace;
