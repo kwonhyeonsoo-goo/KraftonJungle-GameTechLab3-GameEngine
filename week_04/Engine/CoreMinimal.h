@@ -9,6 +9,7 @@
 #include "Types/Set.h"
 #include "Types/StaticArray.h"
 #include "Types/String.h"
+#include "Math/MathUtility.h"
 #include "Math/Matrix.h"
 #include "Math/Vector.h"
 #include "Math/Vector4.h"

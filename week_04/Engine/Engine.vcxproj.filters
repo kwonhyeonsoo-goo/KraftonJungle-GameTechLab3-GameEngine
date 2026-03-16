@@ -59,6 +59,7 @@
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="Math\Vector4.h" />
     <ClInclude Include="Math\Matrix.h" />
+    <ClInclude Include="Math\MathUtility.h" />
     <ClInclude Include="Math\Rotator.h" />
     <ClInclude Include="Math\Quat.h" />
     <ClInclude Include="Math\Transform.h" />
