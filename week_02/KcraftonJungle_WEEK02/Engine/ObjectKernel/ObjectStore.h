@@ -19,4 +19,5 @@ public:
 
 private:
     TArray<std::unique_ptr<UObject>> Objects;
+    TMap<uint32, UObject*>           Index;
 };
