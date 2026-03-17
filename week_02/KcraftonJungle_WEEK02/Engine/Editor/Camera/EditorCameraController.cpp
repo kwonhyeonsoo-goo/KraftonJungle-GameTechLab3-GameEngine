@@ -37,23 +37,25 @@ void FEditorCameraController::ProcessFreeCameraInput(FEditorViewport& Viewport,
 
     const float MoveStep = Cam.MoveSpeed * DeltaTime;
 
-    if (Input.Keys['W'])
-        Cam.Position += Forward * MoveStep;
-    if (Input.Keys['S'])
-        Cam.Position -= Forward * MoveStep;
-    if (Input.Keys['D'])
-        Cam.Position += Right * MoveStep;
-    if (Input.Keys['A'])
-        Cam.Position -= Right * MoveStep;
-    if (Input.Keys['Q'])
-        Cam.Position -= Up * MoveStep;
-    if (Input.Keys['E'])
-        Cam.Position += Up * MoveStep;
+    FVector MoveDir = FVector::Zero;
+
+    if (Input.Keys['W']) MoveDir += Forward;
+    if (Input.Keys['S']) MoveDir -= Forward;
+    if (Input.Keys['D']) MoveDir += Right;
+    if (Input.Keys['A']) MoveDir -= Right;
+    if (Input.Keys['E']) MoveDir += Up;
+    if (Input.Keys['Q']) MoveDir -= Up;
+
+    if (!MoveDir.IsNearlyZero())
+    {
+        MoveDir = MoveDir.Normalized();
+        Cam.Position += MoveDir * Cam.MoveSpeed * DeltaTime;
+    }
 
     if (Input.MouseButtons[1])
     {
-        Cam.Yaw += Input.MouseDeltaX * Cam.RotSpeed * DeltaTime;
-        Cam.Pitch -= Input.MouseDeltaY * Cam.RotSpeed * DeltaTime;
+        Cam.Yaw += Input.MouseDeltaX * Cam.RotSpeed / 1000.f;
+        Cam.Pitch -= Input.MouseDeltaY * Cam.RotSpeed / 1000.f;
 
         Cam.Yaw = WrapAngleRad(Cam.Yaw);
         Cam.Pitch = ClampFloat(Cam.Pitch, -PitchLimit, PitchLimit);

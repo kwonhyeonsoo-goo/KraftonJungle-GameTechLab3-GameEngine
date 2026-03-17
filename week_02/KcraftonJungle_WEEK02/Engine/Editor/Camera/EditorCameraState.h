@@ -11,7 +11,7 @@ struct FEditorCameraState
     float Pitch = 0.0f;
 
     float MoveSpeed = 5.0f;
-    float RotSpeed = 0.3f;
+    float RotSpeed = 3.0f;
 
     FMatrix GetViewMatrix() const;
     FVector GetForwardVector() const;
