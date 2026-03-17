@@ -74,5 +74,8 @@ void URandomColorComponent::ApplyRandomColor()
 	}
 
 	FVector4 Color = GenerateRandomColor();
-	DynamicMaterial->SetVectorParameter("BaseColor", Color);
+	if (!DynamicMaterial->SetVectorParameter("BaseColor", Color))
+	{
+		DynamicMaterial->SetVectorParameter("ColorTint", Color);
+	}
 }

@@ -6,6 +6,7 @@
 #include "Object/Actor/Actor.h"
 #include "Object/Actor/CubeActor.h"
 #include "Object/Actor/SphereActor.h"
+#include "Object/Actor/AttachTestActor.h"
 #include "Component/CameraComponent.h"
 #include "Core/Paths.h"
 #include "Debug/EngineLog.h"
@@ -57,7 +58,7 @@ void CControlPanelWindow::Render(CCore* Core, AActor*& SelectedActor)
 		ImGui::SeparatorText("Spawn");
 
 		static int32 SpawnTypeIndex = 0;
-		const char* SpawnTypes[] = { "Cube", "Sphere" };
+		const char* SpawnTypes[] = { "Cube", "Sphere", "AttachTest" };
 		ImGui::Combo("Type", &SpawnTypeIndex, SpawnTypes, IM_ARRAYSIZE(SpawnTypes));
 
 		if (ImGui::Button("Spawn"))
@@ -69,8 +70,10 @@ void CControlPanelWindow::Render(CCore* Core, AActor*& SelectedActor)
 			AActor* NewActor = nullptr;
 			if (SpawnTypeIndex == 0)
 				NewActor = Scene->SpawnActor<ACubeActor>(Name);
-			else
+			else if (SpawnTypeIndex == 1)
 				NewActor = Scene->SpawnActor<ASphereActor>(Name);
+			else if (SpawnTypeIndex == 2)
+				NewActor = Scene->SpawnActor<AAttachTestActor>(Name);
 
 			SelectedActor = NewActor;
 			UE_LOG("Spawned %s: %s", SpawnTypes[SpawnTypeIndex], Name.c_str());

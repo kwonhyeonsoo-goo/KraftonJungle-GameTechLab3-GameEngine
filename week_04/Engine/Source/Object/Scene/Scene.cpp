@@ -6,6 +6,7 @@
 #include "Object/Actor/Actor.h"
 #include "Object/Actor/CubeActor.h"
 #include "Object/Actor/SphereActor.h"
+#include "Object/Actor/AttachTestActor.h"
 
 #include "Component/CameraComponent.h"
 #include "Component/PrimitiveComponent.h"
@@ -61,16 +62,6 @@ void UScene::InitializeDefaultScene(float AspectRatio, ID3D11Device* Device)
 
 	// JSON 파일에서 씬 로드 (카메라 포함)
 	LoadSceneFromFile(FPaths::SceneDir() + "DefaultScene.json", Device);
-
-	//Test
-	AActor* Actor = SpawnActor<AActor>("TestActor");
-	UPrimitiveComponent* SpehreComp = new USphereComponent();
-	UPrimitiveComponent* CubeComp = new UCubeComponent();
-	CubeComp->AttachTo(SpehreComp);
-	CubeComp->SetRelativeTransform({ FRotator::MakeFromEuler({ 45.0f, 45.0f, 45.0f }), {0.0f, 0.0f, 2.0f}, {0.5f, 0.5f, 0.5f} });
-	Actor->AddOwnedComponent(SpehreComp);
-	Actor->AddOwnedComponent(CubeComp);
-	Actor->SetActorLocation({ 0.0f, 0.0f, 12.0f });
 }
 
 void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
@@ -124,6 +115,10 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 		else if (Type == "Cube")
 		{
 			Actor = SpawnActor<ACubeActor>(ActorName);
+		}
+		else if (Type == "AttachTest")
+		{
+			Actor = SpawnActor<AAttachTestActor>(ActorName);
 		}
 		else
 		{
@@ -195,6 +190,8 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 			Type = "Sphere";
 		else if (Actor->IsA(ACubeActor::StaticClass()))
 			Type = "Cube";
+		else if (Actor->IsA(AAttachTestActor::StaticClass()))
+			Type = "AttachTest";
 		else
 			continue;
 
