@@ -7,7 +7,7 @@
 struct InputState;
 
 struct CameraState {
-    FVector Position = FVector(-10.0f, 0.0f, 0.0f);
+    FVector Position = FVector(-10.0f, 0.0f, 5.0f);
     float   Yaw = 0.f;
     float   Pitch = 0.f;
     float   MoveSpeed = 5.f;

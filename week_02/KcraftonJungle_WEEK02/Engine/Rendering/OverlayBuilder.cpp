@@ -30,8 +30,8 @@ void OverlayBuilder::Build(const EditorSession& session, AppContext& ctx, Render
 	// to avoid linker unresolved external when the .cpp is not linked.
 	PushGrid(queue);
 	PushWorldAxis(queue);
-	USceneComponent* primary = session.Selection.GetPrimary();
-	if (primary == nullptr)
+	const TArray<USceneComponent*> primary = session.Selection.GetAll();
+	if (primary.empty())
 		return;
 
 	PushHighlight(primary, queue);
@@ -67,19 +67,18 @@ void OverlayBuilder::PushLocalAxis(const USceneComponent* comp, RenderQueue& que
 {
 }
 
-void OverlayBuilder::PushHighlight(const USceneComponent* comp, RenderQueue& queue)
+void OverlayBuilder::PushHighlight(const TArray<USceneComponent*> objs, RenderQueue& queue)
 {
-	RenderCommand axisCommand = {};
-	axisCommand.Type = ERenderType::Highlight;
-	axisCommand.Shape = static_cast<const UPrimitiveComponent*>(comp)->Shape;
-
-	axisCommand.WorldTransform = comp->GetWorldMatrix();
-
-	axisCommand.Color = 0;
-	axisCommand.ObjectId = comp->GetUUID();
-
-	queue.Push(axisCommand);
-
+	for(auto comp : objs)
+	{
+		RenderCommand highlightCommand = {};
+		highlightCommand.Type = ERenderType::Highlight;
+		highlightCommand.Shape = comp->IsA<UPrimitiveComponent>() ? static_cast<const UPrimitiveComponent*>(comp)->Shape : EPrimitiveShape::Cube;
+		highlightCommand.WorldTransform = comp->GetWorldMatrix();
+		highlightCommand.Color = 0xFFFFFF00; // Yellow with full opacity
+		highlightCommand.ObjectId = comp->GetUUID();
+		queue.Push(highlightCommand);
+	}
 }
 
 void OverlayBuilder::PushGrid(RenderQueue& queue)

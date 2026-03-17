@@ -188,8 +188,6 @@ void RotateTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
 void RotateTool::FillAxisData(const FVector& origin, const FVector& axisDir,
                                float scale, int /*axisIndex*/, GizmoAxisData& out) const
 {
-    // 토러스 메시가 이미 R=GizmoRingRadius 반지름으로 정의되어 있으므로
-    // scale(gs)만 곱하면 world 반지름 = GizmoRingRadius * gs = 감지 반지름과 일치
     out.WorldTransform = GizmoMath::MakeAxisTransform(origin, axisDir, scale);
     out.RenderType = ERenderType::RotationGizmo;
 }

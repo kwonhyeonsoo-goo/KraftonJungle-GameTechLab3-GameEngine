@@ -16,6 +16,5 @@ public:
     DelegateHandle SelectionChangedHandle = 0;
     DelegateHandle ObjectDestroyedHandle = 0;
 private:
-    const USceneComponent* Current = nullptr;
-
+    TArray<const USceneComponent*> CurrentObjs;
 };

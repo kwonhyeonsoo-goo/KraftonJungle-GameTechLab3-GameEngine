@@ -6,7 +6,13 @@ SelectionSet::SelectionSet()
 
 void SelectionSet::Select(USceneComponent* comp, bool additive)
 {
-    if (comp == nullptr) return;
+    if (comp == nullptr)
+    {
+        Items.clear();
+        OnSelectionChanged.Broadcast({ Items });
+        return;
+    }
+
     bool bChanged = false;
     if (!additive)
     {
@@ -43,25 +49,36 @@ void SelectionSet::Select(USceneComponent* comp, bool additive)
 
     if (bChanged)
     {
-        OnSelectionChanged.Broadcast({ GetPrimary() });
+        OnSelectionChanged.Broadcast({ Items });
     }
 }
 
 void SelectionSet::Deselect(USceneComponent* comp)
 {
-	for (auto it = Items.begin(); it < Items.end(); ++it)
-	{
-		if (*it == comp)
-		{
-			Items.erase(it);
-			break;
-		}
-	}
+    bool bChanged = false;
+    for (auto it = Items.begin(); it != Items.end(); ++it)
+    {
+        if (*it == comp)
+        {
+            Items.erase(it);
+            bChanged = true;
+            break;
+        }
+    }
+
+    if (bChanged)
+    {
+        OnSelectionChanged.Broadcast({ Items });
+    }
 }
 
 void SelectionSet::Clear()
 {
-	Items.clear();
+    if (Items.empty())
+        return;
+
+    Items.clear();
+    OnSelectionChanged.Broadcast({ Items });
 }
 
 bool SelectionSet::IsSelected(uint32 uuid) const
@@ -116,6 +133,6 @@ void SelectionSet::OnObjectDestroyed(const ObjectDestroyedEvent& e)
 
     if (bChanged)
     {
-        OnSelectionChanged.Broadcast({ GetPrimary() });
+        OnSelectionChanged.Broadcast({ Items });
     }
 }
