@@ -23,7 +23,7 @@ struct FVertexUV
     float nx, ny, nz; //normal
 };
 
-struct FConstants
+struct alignas(16) FConstants
 {
     FMatrix MVP;
     FVector Color;
@@ -55,7 +55,6 @@ public:
     ID3D11RasterizerState* RasterizerStateOutline = nullptr;
 
     ID3D11Buffer* ConstantBuffer = nullptr;
-    ID3D11Buffer* OutlineConstantBuffer = nullptr;
     ID3D11Buffer* GridConstantBuffer = nullptr;
 
     ID3D11Texture2D* DepthStencilBuffer = nullptr;
@@ -63,6 +62,8 @@ public:
     ID3D11DepthStencilState* DepthStencilState = nullptr;
     ID3D11DepthStencilState* DepthStencilOutlineState = nullptr;
     ID3D11DepthStencilState* DepthStencilDisable = nullptr;
+
+    ID3D11BlendState* BlendState = nullptr;
 
     FLOAT ClearColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f };
     D3D11_VIEWPORT ViewportInfo;
@@ -169,7 +170,7 @@ private:
     ID3D11Buffer* CreateIndexBuffer(void* data, UINT size);
     void ReleaseIndexBuffer(ID3D11Buffer* vertexBuffer);
 
-    void UpdateConstant(FConstants& param);
+    void SetState(ID3D11RasterizerState* rasterizer, ID3D11DepthStencilState* depthstencil, ID3D11BlendState* blendState);
 
 };
 

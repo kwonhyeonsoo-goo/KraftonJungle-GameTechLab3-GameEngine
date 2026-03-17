@@ -600,6 +600,16 @@ void URenderer::ReleaseIndexBuffer(ID3D11Buffer* vertexBuffer)
     vertexBuffer->Release();
 }
 
+void URenderer::SetState(ID3D11RasterizerState* rasterizer, ID3D11DepthStencilState* depthstencil, ID3D11BlendState* blendState)
+{
+    DeviceContext->RSSetState(rasterizer);
+
+    DeviceContext->OMSetDepthStencilState(depthstencil, 1);
+
+    DeviceContext->OMSetBlendState(blendState, nullptr, 0xffffffff);
+
+}
+
 void URenderer::CreateConstantBuffer()
 {
     D3D11_BUFFER_DESC constantbufferdesc = {};
@@ -610,13 +620,6 @@ void URenderer::CreateConstantBuffer()
 
     Device->CreateBuffer(&constantbufferdesc, nullptr, &ConstantBuffer);
 
-    D3D11_BUFFER_DESC constantbufferdesc1 = {};
-    constantbufferdesc1.ByteWidth = sizeof(FConstants) + 0xf & 0xfffffff0;
-    constantbufferdesc1.Usage = D3D11_USAGE_DYNAMIC;
-    constantbufferdesc1.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    constantbufferdesc1.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-
-    Device->CreateBuffer(&constantbufferdesc1, nullptr, &OutlineConstantBuffer);
 
     D3D11_BUFFER_DESC constantbufferdesc2 = {};
     constantbufferdesc2.ByteWidth = sizeof(FcontantsMV) + 0xf & 0xfffffff0;
@@ -628,21 +631,7 @@ void URenderer::CreateConstantBuffer()
 
 }
 
-void URenderer::UpdateConstant(FConstants& param)
-{
 
-    if (ConstantBuffer)
-    {
-        D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
-
-        DeviceContext->Map(ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
-        FConstants* constants = (FConstants*)constantbufferMSR.pData;
-        {
-            constants->MVP = param.MVP;
-        }
-        DeviceContext->Unmap(ConstantBuffer, 0);
-    }
-}
 
 void URenderer::ReleaseConstantBuffer()
 {
@@ -652,10 +641,6 @@ void URenderer::ReleaseConstantBuffer()
         ConstantBuffer = nullptr;
     }
 
-    if (OutlineConstantBuffer) {
-        OutlineConstantBuffer -> Release();
-        OutlineConstantBuffer = nullptr;
-    }
 }
 
 
@@ -762,19 +747,20 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             switch (cmd.Shape)
             {
             case EPrimitiveShape::Sphere:
-                DeviceContext->RSSetState(RasterizerStateOutline);
+                SetState(RasterizerStateOutline, DepthStencilOutlineState, BlendState);
                 RenderPrimitive(vertexBufferSphere, numVerticesSphere);
                 break;
             case EPrimitiveShape::Cube:
-                DeviceContext->RSSetState(RasterizerState);
+                SetState(RasterizerState, DepthStencilState, BlendState);
                 RenderPrimitive(vertexBufferCube, numVerticesCube);
                 break;
             case EPrimitiveShape::Triangle:
-                DeviceContext->RSSetState(RasterizerState);
+                SetState(RasterizerState, DepthStencilState, BlendState);
+
                 RenderPrimitive(vertexBufferTriangle, numVerticesTriangle);
                 break;
             case EPrimitiveShape::Plane:
-                DeviceContext->RSSetState(RasterizerState);
+                SetState(RasterizerState, DepthStencilState, BlendState);
                 RenderIndexedPrimitive(vertexBufferRect, indexBufferRect, sizeof(rect_indices)/sizeof(UINT));
 
                 break;
@@ -792,6 +778,7 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
 
             UpdateMVP(constants.MVP, (uint32)0xFFFFFFFF);
 
+            SetState(RasterizerState, DepthStencilState, BlendState);
             RenderPrimitive(vertexBufferWorldAxis, numVerticesWorldAxis);
 
             break;
@@ -802,24 +789,20 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 
-            DeviceContext->OMSetDepthStencilState(DepthStencilDisable, 1);
-
             UpdateMVP(constants.MVP, cmd.Color);
 
+            SetState(RasterizerState, DepthStencilDisable, BlendState);
             RenderPrimitive(vertexBufferGizmo, numVerticesGizmo);
-            DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
+
             break;
         }
         case ERenderType::Torus: {
             PrepareShader(SimpleVertexShader, SimplePixelShader, SimpleInputLayout);
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-
-
-            DeviceContext->OMSetDepthStencilState(DepthStencilDisable, 1);
+            SetState(RasterizerState, DepthStencilDisable, BlendState);
 
             UpdateMVP(constants.MVP, cmd.Color);
-
             RenderPrimitive(vertexBufferTorus, numVerticesTorus);
             break;
         }
@@ -836,25 +819,29 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             switch (cmd.Shape)
             {
             case EPrimitiveShape::Sphere:
-                DeviceContext->RSSetState(RasterizerState);
+                SetState(RasterizerState, DepthStencilState, BlendState);
+
                 RenderPrimitive(vertexBufferSphere, numVerticesSphere);
                 break;
             case EPrimitiveShape::Cube:
-                DeviceContext->OMSetDepthStencilState(DepthStencilOutlineState, 1);
-                DeviceContext->RSSetState(RasterizerStateOutline);
+
+                SetState(RasterizerStateOutline, DepthStencilOutlineState, BlendState);
+
                 RenderPrimitive(vertexBufferCube, numVerticesCube);
                 break;
             case EPrimitiveShape::Triangle:
+                SetState(RasterizerState, DepthStencilOutlineState, BlendState);
+
                 RenderPrimitive(vertexBufferTriangle, numVerticesTriangle);
 
                 break;
             case EPrimitiveShape::Plane:
+                SetState(RasterizerState, DepthStencilOutlineState, BlendState);
+
                 RenderIndexedPrimitive(vertexBufferRect, indexBufferRect, sizeof(rect_indices) / sizeof(UINT));
             default:
                 break;
             }
-            DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
-            DeviceContext->RSSetState(RasterizerState);
 
             break;
         }
@@ -862,9 +849,8 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
         {
             PrepareShader(GridVertexShader, GridPixelShader, GridInputLayout);
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            
 
-
+            SetState(RasterizerState, DepthStencilState, BlendState);
 
             UpdateMVP(constants.MVP,(uint32)0xFFFFFFFF);
 
