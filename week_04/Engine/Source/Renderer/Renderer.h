@@ -38,12 +38,10 @@ public:
 	);
 	void SetGUIUpdateCallback(FGUICallback InUpdate);
 
-	// 커맨드 수집
-	void AddCommand(const FRenderCommand& Command);
+	// 커맨드 큐 제출 — 큐에서 GPU 버퍼 보장 후 내부 CommandList로 이전
+	void SubmitCommands(FRenderCommandQueue& Queue);
 	// 수집된 커맨드 정렬 후 실행
 	void ExecuteCommands();
-	void SetViewMatrix(const FMatrix& InView);
-	void SetProjectionMatrix(const FMatrix& InProjection);
 
 	// 라인 렌더링
 	void DrawLine(const FVector& Start, const FVector& End, const FVector4& Color);
@@ -56,12 +54,15 @@ public:
 
 	FMaterial* GetDefaultMaterial() const { return DefaultMaterial.get(); }
 
+	size_t GetPrevCommandCount() const { return PrevCommandCount; }
+
 	ID3D11Device* GetDevice() const { return Device; }
 	ID3D11DeviceContext* GetDeviceContext() const { return DeviceContext; }
 	ID3D11RenderTargetView* GetRenderTargetView() const { return RenderTargetView; }
 	IDXGISwapChain* GetSwapChain() const { return SwapChain; };
 	HWND GetHwnd() const { return Hwnd; }
 private:
+	void AddCommand(const FRenderCommand& Command);
 	bool CreateConstantBuffers();
 	void UpdateFrameConstantBuffer();
 	void UpdateObjectConstantBuffer(const FMatrix& WorldMatrix);
@@ -80,6 +81,7 @@ private:
 	D3D11_VIEWPORT Viewport = {};
 
 	TArray<FRenderCommand> CommandList;
+	size_t PrevCommandCount = 0;
 	TArray<FPrimitiveVertex> LineVertices;
 	ID3D11Buffer* LineVertexBuffer = nullptr;
 	ID3D11DepthStencilState* LineDepthState = nullptr;

@@ -2,12 +2,9 @@
 #include "Core/Paths.h"
 
 #include "Object/Scene/Scene.h"
-#include "Object/Actor/Actor.h"
 #include "Renderer/Renderer.h"
-#include "Renderer/ShaderManager.h"
 #include "Input/InputManager.h"
 #include "Camera/Camera.h"
-#include "Component/PrimitiveComponent.h"
 #include "Primitive/PrimitiveBase.h"
 #include "Math/Frustum.h"
 
@@ -31,9 +28,6 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height)
 	{
 		return false;
 	}
-
-	// ShaderManager
-	ShaderManager = new CShaderManager();
 
 	// InputManager
 	InputManager = new CInputManager();
@@ -63,13 +57,6 @@ void CCore::Release()
 
 	delete InputManager;
 	InputManager = nullptr;
-
-	if (ShaderManager)
-	{
-		ShaderManager->Release();
-		delete ShaderManager;
-		ShaderManager = nullptr;
-	}
 
 	CPrimitiveBase::ClearCache();
 
@@ -146,46 +133,24 @@ void CCore::Render()
 
 	Renderer->BeginFrame();
 
-	ShaderManager->Bind(Renderer->GetDeviceContext());
-
+	// 커맨드 큐 준비 (이전 프레임 크기로 reserve)
+	FRenderCommandQueue CommandQueue;
+	CommandQueue.Reserve(Renderer->GetPrevCommandCount());
 	CCamera* Camera = Scene->GetCamera();
 	FFrustum Frustum;
 	if (Camera)
 	{
-		FMatrix V = Camera->GetViewMatrix();
-		FMatrix P = Camera->GetProjectionMatrix();
-		FMatrix VP = V * P;
-		Renderer->SetViewMatrix(V);
-		Renderer->SetProjectionMatrix(P);
+		CommandQueue.ViewMatrix = Camera->GetViewMatrix();
+		CommandQueue.ProjectionMatrix = Camera->GetProjectionMatrix();
+		FMatrix VP = CommandQueue.ViewMatrix * CommandQueue.ProjectionMatrix;
 		Frustum.ExtractFromVP(VP);
 	}
 
-	for (AActor* Actor : Scene->GetActors())
-	{
-		if (!Actor || Actor->IsPendingDestroy())
-		{
-			continue;
-		}
+	// Scene이 큐에 커맨드를 쌓음 (Renderer 참조 없음)
+	Scene->CollectRenderCommands(Frustum, CommandQueue);
 
-		for (UActorComponent* Comp : Actor->GetComponents())
-		{
-			UPrimitiveComponent* PrimComp = dynamic_cast<UPrimitiveComponent*>(Comp);
-			if (PrimComp && PrimComp->GetPrimitive())
-			{
-				if (!Frustum.IsVisible(PrimComp->GetWorldBounds()))
-				{
-					continue;
-				}
-
-				Renderer->AddCommand({
-					PrimComp->GetPrimitive()->GetMeshData(),
-					PrimComp->GetWorldTransform(),
-					PrimComp->GetMaterial()
-					});
-			}
-		}
-	}
-
+	// Renderer가 큐를 소비
+	Renderer->SubmitCommands(CommandQueue);
 	Renderer->ExecuteCommands();
 
 	if (PostRenderCallback)

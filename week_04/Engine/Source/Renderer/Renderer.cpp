@@ -12,6 +12,13 @@
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
 
+uint64 FRenderCommand::MakeSortKey(const FMaterial* InMaterial, const FMeshData* InMeshData)
+{
+	uint32 MatId = InMaterial ? InMaterial->GetSortId() : 0;
+	uint32 MeshId = InMeshData ? InMeshData->GetSortId() : 0;
+	return (static_cast<uint64>(MatId) << 32) | MeshId;
+}
+
 
 
 CRenderer::~CRenderer()
@@ -236,7 +243,9 @@ void CRenderer::BeginFrame()
 	DeviceContext->RSSetViewports(1, &Viewport);
 	DeviceContext->RSSetState(RasterizerState);
 
+	PrevCommandCount = CommandList.size();
 	CommandList.clear();
+	CommandList.reserve(PrevCommandCount);
 }
 
 void CRenderer::EndFrame()
@@ -261,9 +270,34 @@ void CRenderer::EndFrame()
 	}
 }
 
+void CRenderer::SubmitCommands(FRenderCommandQueue& Queue)
+{
+	// 큐의 카메라 데이터를 적용
+	ViewMatrix = Queue.ViewMatrix;
+	ProjectionMatrix = Queue.ProjectionMatrix;
+
+	// GPU 버퍼 보장 + 내부 CommandList로 이전
+	for (auto& Cmd : Queue.Commands)
+	{
+		if (Cmd.MeshData)
+		{
+			Cmd.MeshData->CreateBuffers(Device);
+		}
+		AddCommand(Cmd);
+	}
+}
+
 void CRenderer::AddCommand(const FRenderCommand& Command)
 {
 	CommandList.push_back(Command);
+	FRenderCommand& Added = CommandList.back();
+
+	// Material 미지정 시 DefaultMaterial 할당
+	if (!Added.Material)
+	{
+		Added.Material = DefaultMaterial.get();
+	}
+	Added.SortKey = FRenderCommand::MakeSortKey(Added.Material, Added.MeshData);
 }
 
 void CRenderer::ExecuteCommands()
@@ -273,22 +307,11 @@ void CRenderer::ExecuteCommands()
 	ID3D11Buffer* CBs[2] = { FrameConstantBuffer, ObjectConstantBuffer };
 	DeviceContext->VSSetConstantBuffers(0, 2, CBs);
 
-	// Material이 nullptr인 커맨드에 기본 Material 할당
-	FMaterial* DefaultMat = DefaultMaterial.get();
-	for (auto& Cmd : CommandList)
-	{
-		if (!Cmd.Material)
-		{
-			Cmd.Material = DefaultMat;
-		}
-	}
-
-	// 1차: Material, 2차: MeshData 기준 정렬 → State Change 최소화
+	// SortKey 기준 정렬 → Material, MeshData 순 State Change 최소화
 	std::sort(CommandList.begin(), CommandList.end(),
 		[](const FRenderCommand& A, const FRenderCommand& B)
 		{
-			if (A.Material != B.Material) return A.Material < B.Material;
-			return A.MeshData < B.MeshData;
+			return A.SortKey < B.SortKey;
 		});
 
 	FMaterial* CurrentMaterial = nullptr;
@@ -307,9 +330,6 @@ void CRenderer::ExecuteCommands()
 			Cmd.Material->Bind(DeviceContext);
 			CurrentMaterial = Cmd.Material;
 		}
-
-		// GPU 버퍼가 없으면 생성
-		Cmd.MeshData->CreateBuffers(Device);
 
 		// 메시가 바뀔 때만 바인딩
 		if (Cmd.MeshData != CurrentMesh)
@@ -352,16 +372,6 @@ bool CRenderer::CreateConstantBuffers()
 	}
 
 	return true;
-}
-
-void CRenderer::SetViewMatrix(const FMatrix& InView)
-{
-	ViewMatrix = InView;
-}
-
-void CRenderer::SetProjectionMatrix(const FMatrix& InProjection)
-{
-	ProjectionMatrix = InProjection;
 }
 
 void CRenderer::UpdateFrameConstantBuffer()

@@ -74,13 +74,15 @@ struct ENGINE_API FMaterialConstantBuffer
 class ENGINE_API FMaterial
 {
 public:
-	FMaterial() = default;
+	FMaterial() : SortId(NextSortId++) {}
 	~FMaterial();
 
 	FMaterial(const FMaterial&) = delete;
 	FMaterial& operator=(const FMaterial&) = delete;
 	FMaterial(FMaterial&&) = default;
 	FMaterial& operator=(FMaterial&&) = default;
+
+	uint32 GetSortId() const { return SortId; }
 
 	void SetName(const FString& InName) { Name = InName; }
 	const FString& GetName() const { return Name; }
@@ -116,6 +118,9 @@ public:
 	void Release();
 
 private:
+	uint32 SortId = 0;
+	static inline uint32 NextSortId = 0;
+
 	FString Name;
 	std::shared_ptr<FVertexShader> VertexShader;
 	std::shared_ptr<FPixelShader> PixelShader;

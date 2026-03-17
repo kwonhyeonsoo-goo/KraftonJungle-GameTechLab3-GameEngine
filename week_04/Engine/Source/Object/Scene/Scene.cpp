@@ -7,8 +7,12 @@
 #include "Object/Actor/CubeActor.h"
 #include "Object/Actor/SphereActor.h"
 #include "Camera/Camera.h"
+#include "Component/PrimitiveComponent.h"
 #include "Component/SphereComponent.h"
 #include "Component/CubeComponent.h"
+#include "Renderer/RenderCommand.h"
+#include "Primitive/PrimitiveBase.h"
+#include "Math/Frustum.h"
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
@@ -309,4 +313,52 @@ void UScene::Tick(float DeltaTime)
 	}
 
 	CleanupDestroyedActors();
+}
+
+void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible)
+{
+	for (AActor* Actor : Actors)
+	{
+		if (!Actor || Actor->IsPendingDestroy())
+		{
+			continue;
+		}
+
+		for (UActorComponent* Comp : Actor->GetComponents())
+		{
+			if (!Comp->IsA(UPrimitiveComponent::StaticClass()))
+			{
+				continue;
+			}
+			UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(Comp);
+			if (!PrimComp->GetPrimitive() || !PrimComp->GetPrimitive()->GetMeshData())
+			{
+				continue;
+			}
+
+			if (Frustum.IsVisible(PrimComp->GetWorldBounds()))
+			{
+				OutVisible.push_back(PrimComp);
+			}
+		}
+	}
+}
+
+void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
+{
+	// 1단계: 컬링 — 가시 PrimitiveComponent 수집
+	TArray<UPrimitiveComponent*> VisiblePrimitives;
+	CullVisiblePrimitives(Frustum, VisiblePrimitives);
+
+	// 2단계: 커맨드 수집 — RenderCommand 생성 (GPU 리소스 접근 없음)
+	// SortKey는 Renderer::AddCommand에서 DefaultMaterial 폴백 포함하여 계산
+	for (UPrimitiveComponent* PrimComp : VisiblePrimitives)
+	{
+		FRenderCommand Cmd;
+		Cmd.MeshData = PrimComp->GetPrimitive()->GetMeshData();
+		Cmd.WorldMatrix = PrimComp->GetWorldTransform();
+		Cmd.Material = PrimComp->GetMaterial();
+
+		OutQueue.AddCommand(Cmd);
+	}
 }

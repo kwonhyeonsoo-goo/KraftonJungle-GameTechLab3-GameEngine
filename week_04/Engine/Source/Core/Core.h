@@ -7,7 +7,6 @@
 class AActor;
 class UScene;
 class CRenderer;
-class CShaderManager;
 class CInputManager;
 
 class ENGINE_API CCore
@@ -48,7 +47,6 @@ private:
 
 private:
 	CRenderer* Renderer = nullptr;
-	CShaderManager* ShaderManager = nullptr;
 	CInputManager* InputManager = nullptr;
 	UScene* Scene = nullptr;
 	AActor* SelectedActor = nullptr;

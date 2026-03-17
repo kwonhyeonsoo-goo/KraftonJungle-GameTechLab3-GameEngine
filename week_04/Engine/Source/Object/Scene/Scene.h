@@ -4,6 +4,10 @@
 
 class AActor;
 class CCamera;
+class FFrustum;
+class UPrimitiveComponent;
+struct FRenderCommandQueue;
+
 class ENGINE_API UScene : public UObject
 {
 public:
@@ -44,8 +48,11 @@ public:
 	void ClearActors();
 	void BeginPlay();
 	void Tick(float DeltaTime);
+	void CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue);
 
 private:
+	// 컬링: 가시 PrimitiveComponent 목록 수집 (멀티스레드 분리 가능)
+	void CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible);
 	TArray<AActor*> Actors;
 	CCamera* Camera = nullptr;
 	bool bBegunPlay = false;

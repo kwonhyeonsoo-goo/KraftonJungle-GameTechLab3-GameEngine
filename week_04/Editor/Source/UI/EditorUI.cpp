@@ -114,8 +114,12 @@ void CEditorUI::Initialize(CCore* InCore)
 			{
 				for (UActorComponent* Comp : Selected->GetComponents())
 				{
-					UPrimitiveComponent* PrimComp = dynamic_cast<UPrimitiveComponent*>(Comp);
-					if (PrimComp && PrimComp->GetPrimitive())
+					if (!Comp->IsA(UPrimitiveComponent::StaticClass()))
+					{
+						continue;
+					}
+					UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(Comp);
+					if (PrimComp->GetPrimitive())
 					{
 						R->RenderOutline(
 							PrimComp->GetPrimitive()->GetMeshData(),
