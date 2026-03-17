@@ -90,3 +90,16 @@ void InputRouter::ResetDelta()
     State.MouseDeltaX = 0;
     State.MouseDeltaY = 0;
 }
+
+void InputRouter::SetWindowFocus(bool bIsFocus)
+{
+    for (auto& Key : State.Keys)
+    {
+        Key = false;
+    }
+
+    for (int i = 0; i < 3; ++i)
+    {
+        State.MouseButtons[i] = false;
+	}
+}

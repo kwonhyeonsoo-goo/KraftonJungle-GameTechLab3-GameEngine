@@ -1,6 +1,7 @@
 #pragma once
 #include "USceneComponent.h"
 #include "../ObjectKernel/UClass.h"
+#include "../Mesh/FVertexSimple.h"
 
 enum class EPrimitiveShape
 {
@@ -15,6 +16,9 @@ class UPrimitiveComponent : public USceneComponent
 public:
     EPrimitiveShape Shape;
     bool bVisible = true;
+    const FVertexSimple* Vertices = nullptr; // ← 추가
+    uint32               NumVertices = 0;    // ← 추가
+    const int*           indices = 0;    // ← 추가
 
     UPrimitiveComponent();
     explicit UPrimitiveComponent(EPrimitiveShape shape);

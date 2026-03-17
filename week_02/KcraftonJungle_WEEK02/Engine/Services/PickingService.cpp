@@ -8,6 +8,7 @@
 #include "../Foundation/Math/FMatrix.h"
 #include "../Foundation/Math/FMatrix4.h"
 #include <iostream>
+#include "../Mesh/FVertexSimple.h"
 
 /// <summary>
 /// ���콺 ��ǥ�� ����Ʈ ���� ��ǥ�� ��ȯ�ؼ� �����������
@@ -46,6 +47,7 @@ Ray PickingService::ScreenToRay(int32 screenX, int32 screenY, int32 viewportW, i
 
 UPrimitiveComponent* PickingService::Pick(const Ray& ray, const TArray<std::unique_ptr<UObject>>& objects)
 {
+    static const uint32 PlaneIndices[] = { 0, 2, 1, 0, 3, 2 };
     UPrimitiveComponent* CloseObj = nullptr;
     float ObjTime = FLT_MAX;
 
@@ -65,17 +67,24 @@ UPrimitiveComponent* PickingService::Pick(const Ray& ray, const TArray<std::uniq
 
         float t = FLT_MAX;
         bool hit = false;
+
+        if (!IntersectsAABB(LocalRay, Prim->GetBoundMin(), Prim->GetBoundMax())) continue;
+
         switch (Prim->Shape)
         {
         case EPrimitiveShape::Sphere:
-            hit = IntersectsSphere(LocalRay, FVector(0.0f, 0.0f, 0.0f), 1, t);
+            hit = IntersectsSphere(LocalRay, FVector(0.0f, 0.0f, 0.0f), 1.0f, t);
             break;
 
         case EPrimitiveShape::Plane:
+			hit = IntersectsMeshIndexed(LocalRay, Prim->Vertices, PlaneIndices, 6, t);
+            break;
+
         case EPrimitiveShape::Cube:
         case EPrimitiveShape::Triangle:
         default:
-            hit = IntersectsAABB(LocalRay, Prim->GetBoundMin(), Prim->GetBoundMax(), t);
+			hit = IntersectsMesh(LocalRay, Prim->Vertices, Prim->NumVertices, WorldMat, t);
+            //hit = IntersectsAABB(LocalRay, Prim->GetBoundMin(), Prim->GetBoundMax(), t);
             break;
         }
 
@@ -93,7 +102,7 @@ UPrimitiveComponent* PickingService::Pick(const Ray& ray, const TArray<std::uniq
     return CloseObj; // ������ nullptr
 }
 
-bool PickingService::IntersectsAABB(const Ray& ray, const FVector& min, const FVector& max, float& outT)
+bool PickingService::IntersectsAABB(const Ray& ray, const FVector& min, const FVector& max)
 {
     float tMin = 0.0f;
     float tMax = FLT_MAX;
@@ -123,7 +132,6 @@ bool PickingService::IntersectsAABB(const Ray& ray, const FVector& min, const FV
         }
     }
 
-    outT = tMin;
     return true;
 }
 
@@ -150,24 +158,89 @@ bool PickingService::IntersectsSphere(const Ray& ray,
     return outT > 0.0f;
 }
 
-bool PickingService::IntersectsPlane(const Ray& ray, float& outT)
+bool PickingService::IntersectsMesh(const Ray& ray, const FVertexSimple* vertices, uint32 numVertices, const FMatrix& worldMatrix, float& outT)
 {
-    // ���� ����: ���� = Z��, ��� ��ġ = Z=0
-    float denom = ray.Direction.z;
+    float minT = FLT_MAX;
+	bool hit = false;
 
-    // Ray�� ��鿡 ����
-    if (fabs(denom) < 1e-6f) return false;
+    if (vertices == nullptr || numVertices < 3)
+    {
+        return false;
+    }
 
-    float t = -ray.Origin.z / denom;
+    for (uint32 i = 0; i + 2 < numVertices; i += 3) {
+        FVector v0 = FVector(vertices[i].x, vertices[i].y, vertices[i].z);
+        FVector v1 = FVector(vertices[i + 1].x, vertices[i + 1].y, vertices[i + 1].z);
+        FVector v2 = FVector(vertices[i + 2].x, vertices[i + 2].y, vertices[i + 2].z);
 
-    // ����� ī�޶� �ڿ� ����
-    if (t < 0.0f) return false;
+        float t = 0.f;
+        if (MollerTrumbore(ray, v0, v1, v2, t)) {
+            if (t > 0.f && t < minT) {
+                minT = t;
+                hit = true;
+            }
+        }
+    }
 
-    // �������� ��� ���� ������ Ȯ�� [-0.5, 0.5]
-    FVector hit = ray.Origin + ray.Direction * t;
-    
-    if (hit.x < -0.5f || hit.x > 0.5f) return false;
-    if (hit.y < -0.5f || hit.y > 0.5f) return false;
+	outT = minT;
+    return hit;
+}
+
+bool PickingService::IntersectsMeshIndexed(
+    const Ray& ray,
+    const FVertexSimple* vertices,
+    const uint32* indices,
+    uint32 numIndices,
+    float& outT)
+{
+    float minT = FLT_MAX;
+    bool hit = false;
+
+    if (vertices == nullptr || indices == nullptr || numIndices < 3)
+    {
+        return false;
+    }
+
+    // 3개씩 묶어서 삼각형으로
+    for (uint32 i = 0; i + 2 < numIndices; i += 3) {
+        // 인덱스로 정점 참조
+        uint32 idx0 = indices[i];
+        uint32 idx1 = indices[i + 1];
+        uint32 idx2 = indices[i + 2];
+
+        FVector v0 = FVector(vertices[idx0].x, vertices[idx0].y, vertices[idx0].z);
+        FVector v1 = FVector(vertices[idx1].x, vertices[idx1].y, vertices[idx1].z);
+        FVector v2 = FVector(vertices[idx2].x, vertices[idx2].y, vertices[idx2].z);
+
+        float t = 0.f;
+        if (MollerTrumbore(ray, v0, v1, v2, t)) {
+            if (t > 0.f && t < minT) {
+                minT = t;
+                hit = true;
+            }
+        }
+    }
+
+    outT = minT;
+    return hit;
+}
+
+bool PickingService::MollerTrumbore(const Ray& ray, const FVector& a, const FVector& b, const FVector& c, float& outT)
+{
+    FVector Q = ray.Direction.Cross(b - a); // 한 번만 계산
+    FVector P = (ray.Origin - a).Cross(c - a); // 한 번만 계산
+    float denom = Q.Dot(c - a);
+
+    if (fabs(denom) < 1e-8f) return false;
+
+    float invDenom = 1.0f / denom;
+    float t = P.Dot(b - a) * invDenom;
+    float u = (ray.Origin - a).Dot(Q) * invDenom;
+    float v = ray.Direction.Dot(P) * invDenom;
+
+
+    if (t < 0.f || u < 0.f|| v < 0.f) return false; // 삼각형 밖
+    if (u + v > 1.f)       return false; // 삼각형 밖
 
     outT = t;
     return true;
