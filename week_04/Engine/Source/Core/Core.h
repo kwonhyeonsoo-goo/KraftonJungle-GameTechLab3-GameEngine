@@ -2,7 +2,6 @@
 #include "CoreMinimal.h"
 #include "Windows.h"
 #include "Core/FTimer.h"
-#include <functional>
 
 class AActor;
 class UScene;
@@ -36,9 +35,6 @@ public:
 
 	void OnResize(int32 Width, int32 Height);
 
-	using FRenderCallback = std::function<void(CRenderer*)>;
-	void SetPostRenderCallback(FRenderCallback InCallback) { PostRenderCallback = std::move(InCallback); }
-
 private:
 	void ProcessCameraInput(float DeltaTime);
 	void Physics(float DeltaTime);
@@ -50,8 +46,6 @@ private:
 	CInputManager* InputManager = nullptr;
 	UScene* Scene = nullptr;
 	AActor* SelectedActor = nullptr;
-
-	FRenderCallback PostRenderCallback;
 
 	FTimer Timer;
 	int32 WindowWidth = 0;

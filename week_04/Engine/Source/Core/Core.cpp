@@ -153,11 +153,6 @@ void CCore::Render()
 	Renderer->SubmitCommands(CommandQueue);
 	Renderer->ExecuteCommands();
 
-	if (PostRenderCallback)
-	{
-		PostRenderCallback(Renderer);
-	}
-
 	Renderer->EndFrame();
 }
 void CCore::OnResize(int32 Width, int32 Height)

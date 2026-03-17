@@ -104,7 +104,7 @@ void CEditorUI::Initialize(CCore* InCore)
 	Renderer->SetGUIUpdateCallback([this]() { Render(); });
 
 	// Editor-only post-render: outline, world axis, gizmo etc.
-	Core->SetPostRenderCallback([this](CRenderer* R)
+	Renderer->SetPostRenderCallback([this](CRenderer* R)
 		{
 			if (!Core) return;
 

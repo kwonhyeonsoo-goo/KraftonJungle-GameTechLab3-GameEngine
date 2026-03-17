@@ -344,6 +344,12 @@ void CRenderer::ExecuteCommands()
 		// Draw
 		DeviceContext->DrawIndexed(Cmd.MeshData->IndexCount, 0, 0);
 	}
+
+	// 메시 커맨드 실행 후 PostRender (아웃라인, 라인 등)
+	if (PostRenderCallback)
+	{
+		PostRenderCallback(this);
+	}
 }
 
 bool CRenderer::CreateConstantBuffers()

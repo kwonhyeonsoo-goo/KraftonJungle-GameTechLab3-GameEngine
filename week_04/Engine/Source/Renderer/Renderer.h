@@ -13,6 +13,8 @@ class FMaterial;
 struct FMeshData;
 
 using FGUICallback = std::function<void()>;
+class CRenderer;
+using FPostRenderCallback = std::function<void(CRenderer*)>;
 
 class ENGINE_API CRenderer
 {
@@ -37,6 +39,7 @@ public:
 		FGUICallback InPostPresent = nullptr
 	);
 	void SetGUIUpdateCallback(FGUICallback InUpdate);
+	void SetPostRenderCallback(FPostRenderCallback InCallback) { PostRenderCallback = std::move(InCallback); }
 
 	// 커맨드 큐 제출 — 큐에서 GPU 버퍼 보장 후 내부 CommandList로 이전
 	void SubmitCommands(FRenderCommandQueue& Queue);
@@ -98,6 +101,7 @@ private:
 	FGUICallback GUIUpdate;
 	FGUICallback GUIRender;
 	FGUICallback GUIPostPresent;
+	FPostRenderCallback PostRenderCallback;
 
 	// 기본 Material (셰이더 미지정 시 사용)
 	std::shared_ptr<FMaterial> DefaultMaterial;
