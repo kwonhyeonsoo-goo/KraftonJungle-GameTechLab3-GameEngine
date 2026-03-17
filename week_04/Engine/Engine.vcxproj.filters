@@ -138,6 +138,9 @@
     <ClCompile Include="Source\Object\Actor\SphereActor.cpp">
       <Filter>Source\Object\Actor</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Object\Actor\AttachTestActor.cpp">
+      <Filter>Source\Object\Actor</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Object\Scene\Scene.cpp">
       <Filter>Source\Object\Scene</Filter>
     </ClCompile>
@@ -298,6 +301,9 @@
       <Filter>Source\Object\Actor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Object\Actor\SphereActor.h">
+      <Filter>Source\Object\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Object\Actor\AttachTestActor.h">
       <Filter>Source\Object\Actor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Object\Scene\Scene.h">

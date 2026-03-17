@@ -23,5 +23,5 @@ public:
 private:
 	UPrimitiveComponent* PrimitiveComponent = nullptr;
 	URandomColorComponent* RandomColorComponent = nullptr;
-	bool bUseRandomColor = true;
+	bool bUseRandomColor = false;
 };

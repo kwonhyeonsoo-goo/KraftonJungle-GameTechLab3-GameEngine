@@ -58,6 +58,7 @@
     <ClInclude Include="Source\Object\Actor\Actor.h" />
     <ClInclude Include="Source\Object\Actor\CubeActor.h" />
     <ClInclude Include="Source\Object\Actor\SphereActor.h" />
+    <ClInclude Include="Source\Object\Actor\AttachTestActor.h" />
     <ClInclude Include="Source\Object\Scene\Scene.h" />
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h" />
     <ClInclude Include="Source\Platform\Windows\Window.h" />
@@ -118,6 +119,7 @@
     <ClCompile Include="Source\Object\Actor\Actor.cpp" />
     <ClCompile Include="Source\Object\Actor\CubeActor.cpp" />
     <ClCompile Include="Source\Object\Actor\SphereActor.cpp" />
+    <ClCompile Include="Source\Object\Actor\AttachTestActor.cpp" />
     <ClCompile Include="Source\Object\Scene\Scene.cpp" />
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp" />
     <ClCompile Include="Source\Platform\Windows\Window.cpp" />

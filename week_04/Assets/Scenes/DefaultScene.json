@@ -1,63 +1,184 @@
 {
   "Camera": {
-    "Position": [-15.66, -10.69, 9.27],
-    "Rotation": [32.2, -25.6]
+    "Position": [
+      -12.63737678527832,
+      -14.466354370117188,
+      12.935019493103027
+    ],
+    "Rotation": [
+      44.1999626159668,
+      -36.00000762939453
+    ]
   },
-  "Materials": [
-    "Assets/Materials/M_RedColor.json",
-    "Assets/Materials/M_GreenColor.json",
-    "Assets/Materials/M_BlueColor.json",
-    "Assets/Materials/M_TintYellow.json"
-  ],
   "Primitives": {
     "0": {
-      "Type": "Sphere",
+      "Location": [
+        10.289999961853027,
+        1.2100000381469727,
+        0.0
+      ],
       "Material": "M_RedColor",
-      "Location": [10.29, 1.21, 0.0],
-      "Rotation": [0.0, 0.0, 0.0],
-      "Scale": [1.0, 1.0, 1.0]
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Type": "Sphere"
     },
     "1": {
-      "Type": "Sphere",
+      "Location": [
+        -0.17000000178813934,
+        8.0600004196167,
+        0.0
+      ],
       "Material": "M_GreenColor",
-      "Location": [-0.17, 8.06, 0.0],
-      "Rotation": [0.0, 0.0, 0.0],
-      "Scale": [1.0, 1.0, 1.0]
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Type": "Sphere"
     },
     "2": {
-      "Type": "Sphere",
+      "Location": [
+        0.33000001311302185,
+        -5.289999961853027,
+        0.0
+      ],
       "Material": "M_BlueColor",
-      "Location": [0.33, -5.29, 0.0],
-      "Rotation": [0.0, 0.0, 0.0],
-      "Scale": [1.0, 1.0, 1.0]
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Type": "Sphere"
     },
     "3": {
-      "Type": "Sphere",
+      "Location": [
+        -0.14000000059604645,
+        0.029999999329447746,
+        5.0
+      ],
       "Material": "M_TintYellow",
-      "Location": [-0.14, 0.03, 5.0],
-      "Rotation": [0.0, 0.0, 0.0],
-      "Scale": [1.0, 1.0, 1.0]
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Type": "Sphere"
     },
     "4": {
-      "Type": "Sphere",
+      "Location": [
+        -1.059999942779541,
+        3.619999885559082,
+        6.239999771118164
+      ],
       "Material": "M_RedColor",
-      "Location": [-1.06, 3.62, 6.24],
-      "Rotation": [0.0, 0.0, 0.0],
-      "Scale": [3.0, 3.0, 3.0]
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        3.0,
+        3.0,
+        3.0
+      ],
+      "Type": "Sphere"
     },
     "5": {
-      "Type": "Cube",
-      "Material": "M_TintYellow",
-      "Location": [10.29, 0.42, 0.0],
-      "Rotation": [0.0, 0.76, 50.0],
-      "Scale": [2.0, 2.0, 2.0]
+      "Location": [
+        10.289999961853027,
+        0.41999998688697815,
+        0.0
+      ],
+      "Material": "M_TintYellow_Dynamic",
+      "Rotation": [
+        0.0,
+        0.7600000500679016,
+        50.000003814697266
+      ],
+      "Scale": [
+        2.0,
+        2.0,
+        2.0
+      ],
+      "Type": "Cube"
     },
     "6": {
-      "Type": "Cube",
-      "Material": "M_GreenColor",
-      "Location": [-3.85, 1.07, 2.46],
-      "Rotation": [0.0, -30.91, 0.0],
-      "Scale": [3.0, 3.0, 3.0]
+      "Location": [
+        -3.8499999046325684,
+        1.0700000524520874,
+        2.4600000381469727
+      ],
+      "Material": "M_GreenColor_Dynamic",
+      "Rotation": [
+        -0.0,
+        -30.910003662109375,
+        -0.0
+      ],
+      "Scale": [
+        3.0,
+        3.0,
+        3.0
+      ],
+      "Type": "Cube"
+    },
+    "7": {
+      "Location": [
+        -7.199999809265137,
+        3.5999999046325684,
+        0.0
+      ],
+      "Rotation": [
+        -39.5,
+        17.5,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Type": "AttachTest"
+    },
+    "8": {
+      "Location": [
+        2.0999999046325684,
+        -6.900000095367432,
+        0.0
+      ],
+      "Rotation": [
+        -24.0,
+        -5.5,
+        -2.0
+      ],
+      "Scale": [
+        0.3700000047683716,
+        2.119999885559082,
+        1.0
+      ],
+      "Type": "AttachTest"
     }
   }
 }
