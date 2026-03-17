@@ -75,6 +75,7 @@
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp">
       <Filter>ThirdParty\imgui</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Pawn\EditorCameraPawn.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\FEditorEngine.h">
@@ -128,6 +129,8 @@
     <ClInclude Include="ThirdParty\imgui\imstb_truetype.h">
       <Filter>ThirdParty\imgui</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Pawn\EditorCameraPawn.h" />
+    <ClInclude Include="Source\Controller\EditorViewportController.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ThirdParty\imgui\imgui.natstepfilter">

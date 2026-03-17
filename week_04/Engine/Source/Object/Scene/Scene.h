@@ -3,7 +3,7 @@
 #include "Object/Class.h"
 
 class AActor;
-class CCamera;
+class UCameraComponent;
 class ENGINE_API UScene : public UObject
 {
 public:
@@ -36,8 +36,10 @@ public:
 
 	const TArray<AActor*>& GetActors() const { return Actors; }
 
-	CCamera* GetCamera() const { return Camera; }
+	//CCamera* GetCamera() const { return Camera; }
+	void SetActiveCameraComponent(UCameraComponent* Camera) { ActiveCameraComponent = Camera; }
 
+	UCameraComponent* GetActiveCameraComponent() { return ActiveCameraComponent; }const
 	void InitializeDefaultScene(float AspectRatio);
 	void LoadSceneFromFile(const FString& FilePath);
 	void SaveSceneToFile(const FString& FilePath);
@@ -47,6 +49,7 @@ public:
 
 private:
 	TArray<AActor*> Actors;
-	CCamera* Camera = nullptr;
+	UCameraComponent* ActiveCameraComponent = nullptr;
+	//CCamera* Camera = nullptr; //deprecated
 	bool bBegunPlay = false;
 };

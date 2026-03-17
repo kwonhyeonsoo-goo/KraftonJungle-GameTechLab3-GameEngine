@@ -7,6 +7,7 @@
 #include "Input/InputManager.h"
 #include "Camera/Camera.h"
 #include "Component/PrimitiveComponent.h"
+#include "Component/CameraComponent.h"
 #include "Primitive/PrimitiveBase.h"
 #include "Math/Frustum.h"
 
@@ -153,14 +154,16 @@ void CCore::Render()
 
 	ShaderManager->Bind(Renderer->GetDeviceContext());
 
-	CCamera* Camera = Scene->GetCamera();
+	//CCamera* Camera = Scene->GetCamera();
+	UCameraComponent* ActiveCamera = Scene->GetActiveCameraComponent();
+
 	FFrustum Frustum;
-	if (Camera)
-	{
-		FMatrix VP = Camera->GetViewMatrix() * Camera->GetProjectionMatrix();
-		Renderer->ViewProjectionMatrix = VP;
-		Frustum.ExtractFromVP(VP);
-	}
+	//if (Camera)
+	//{
+	//	FMatrix VP = Camera->GetViewMatrix() * Camera->GetProjectionMatrix();
+	//	Renderer->ViewProjectionMatrix = VP;
+	//	Frustum.ExtractFromVP(VP);
+	//}
 
 	for (AActor* Actor : Scene->GetActors())
 	{
