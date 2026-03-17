@@ -3,8 +3,8 @@
 #include <algorithm>
 
 // Z-up ±‚¡ÿ
-// Right   = +X
-// Forward = +Y
+// Forward = +X
+// Right   = +Y
 // Up      = +Z
 struct FVector
 {
