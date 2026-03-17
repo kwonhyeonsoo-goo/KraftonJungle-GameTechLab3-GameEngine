@@ -5,6 +5,8 @@
 #include <vector>
 #include "Math/Vector.h"
 
+namespace codex::gizmo::unreal_editor
+{
 
 struct Vec2
 {
@@ -37,27 +39,46 @@ struct Mesh
     bool Empty() const;
 };
 
+enum class AxisId : std::uint32_t
+{
+    None = 0,
+    X,
+    Y,
+    Z,
+    XYZ,
+    Screen,
+};
+
 struct TranslationDesc
 {
     float uniformScale = 1.0f;
+    int transformGizmoSize = 0;
     bool includeScreenHandle = true;
+    bool leftUpForward = false;
 };
 
 struct RotationDesc
 {
     float uniformScale = 1.0f;
+    int transformGizmoSize = 0;
     FVector cameraDirection = FVector(-1.0f, -1.0f, -1.0f);
     FVector viewUp = FVector(0.0f, 1.0f, 0.0f);
     FVector viewRight = FVector(1.0f, 0.0f, 0.0f);
+    bool orthographic = false;
     bool fullAxisRings = false;
     bool includeScreenRing = true;
     bool includeArcball = true;
+    bool dragging = false;
+    AxisId activeAxis = AxisId::None;
+    float deltaRotationDegrees = 0.0f;
 };
 
 struct ScaleDesc
 {
     float uniformScale = 1.0f;
+    int transformGizmoSize = 0;
     bool includeCenterCube = true;
+    bool leftUpForward = false;
 };
 
 struct TranslationGizmo
@@ -109,3 +130,5 @@ Color ScreenAxisColor();
 Color ScreenSpaceColor();
 Color ArcballColor();
 Color HighlightColor();
+
+} // namespace codex::gizmo::unreal_editor

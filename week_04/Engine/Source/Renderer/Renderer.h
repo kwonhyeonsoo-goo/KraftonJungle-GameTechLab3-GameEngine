@@ -50,7 +50,6 @@ public:
 	bool InitOutlineResources();
 	void RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float OutlineScale = 1.05f);
 
-
 	FMatrix GetViewProjectionMatrix() { return ViewProjectionMatrix; }
 	ID3D11Device* GetDevice() const { return Device; }
 	ID3D11DeviceContext* GetDeviceContext() const { return DeviceContext; }

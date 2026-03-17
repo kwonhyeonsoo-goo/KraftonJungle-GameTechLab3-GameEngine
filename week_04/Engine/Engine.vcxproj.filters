@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source">
@@ -123,7 +123,7 @@
     <ClCompile Include="Source\Actor\Actor.cpp">
       <Filter>Source\Object\Actor</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Object\Scene\Scene.cpp">
+    <ClCompile Include="Source\Scene\Scene.cpp">
       <Filter>Source\Object\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp">
@@ -256,7 +256,13 @@
     <ClInclude Include="Source\Actor\Actor.h">
       <Filter>Source\Object\Actor</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Object\Scene\Scene.h">
+    <ClInclude Include="Source\Scene\Scene.h">
+      <Filter>Source\Object\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\SceneContext.h">
+      <Filter>Source\Object\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\SceneTypes.h">
       <Filter>Source\Object\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h">

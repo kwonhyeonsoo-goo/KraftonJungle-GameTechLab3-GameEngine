@@ -1,13 +1,35 @@
-#include "ControlPanelWindow.h"
+﻿#include "ControlPanelWindow.h"
 #include "imgui.h"
 #include "Core/Core.h"
-#include "Object/Scene/Scene.h"
+#include "Scene/Scene.h"
 #include "Actor/Actor.h"
 #include "Camera/Camera.h"
 #include "Component/CubeComponent.h"
 #include "Component/SphereComponent.h"
 #include "Debug/EngineLog.h"
 #include <filesystem>
+
+namespace
+{
+	const char* GetSceneTypeLabel(ESceneType SceneType)
+	{
+		switch (SceneType)
+		{
+		case ESceneType::Game:
+			return "Game";
+		case ESceneType::Editor:
+			return "Editor";
+		case ESceneType::PIE:
+			return "PIE";
+		case ESceneType::Preview:
+			return "Preview";
+		case ESceneType::Inactive:
+			return "Inactive";
+		default:
+			return "Unknown";
+		}
+	}
+}
 
 void CControlPanelWindow::Render(CCore* Core)
 {
@@ -23,6 +45,41 @@ void CControlPanelWindow::Render(CCore* Core)
 
 	if (Core && Core->GetScene())
 	{
+		const FSceneContext* ActiveSceneContext = Core->GetActiveSceneContext();
+		const TArray<std::unique_ptr<FEditorSceneContext>>& PreviewSceneContexts = Core->GetPreviewSceneContexts();
+		const bool bPreviewActive = ActiveSceneContext && ActiveSceneContext->SceneType == ESceneType::Preview;
+
+		ImGui::SeparatorText("World");
+
+		if (ActiveSceneContext)
+		{
+			ImGui::Text("Active: %s", ActiveSceneContext->ContextName.c_str());
+			ImGui::Text("Type: %s", GetSceneTypeLabel(ActiveSceneContext->SceneType));
+		}
+
+		if (ImGui::Button("Editor Scene"))
+		{
+			Core->ActivateEditorScene();
+		}
+
+		ImGui::SameLine();
+
+		if (PreviewSceneContexts.empty())
+		{
+			ImGui::BeginDisabled();
+			ImGui::Button("Preview Scene");
+			ImGui::EndDisabled();
+		}
+		else if (ImGui::Button("Preview Scene"))
+		{
+			Core->ActivatePreviewScene(PreviewSceneContexts.front()->ContextName);
+		}
+
+		if (bPreviewActive)
+		{
+			ImGui::TextUnformatted("Preview scene is editor-only. Scene save/load is disabled.");
+		}
+
 		CCamera* Cam = Core->GetScene()->GetCamera();
 		if (Cam)
 		{
@@ -99,6 +156,8 @@ void CControlPanelWindow::Render(CCore* Core)
 		static char SceneName[128] = "NewScene";
 		ImGui::InputText("Scene Name", SceneName, IM_ARRAYSIZE(SceneName));
 
+		ImGui::BeginDisabled(bPreviewActive);
+
 		if (ImGui::Button("Save"))
 		{
 			FString Path = FString("../Assets/Scenes/") + SceneName + ".json";
@@ -150,6 +209,8 @@ void CControlPanelWindow::Render(CCore* Core)
 				UE_LOG("Scene loaded: %s", SceneFiles[SelectedSceneIndex].c_str());
 			}
 		}
+
+		ImGui::EndDisabled();
 	}
 
 	ImGui::End();

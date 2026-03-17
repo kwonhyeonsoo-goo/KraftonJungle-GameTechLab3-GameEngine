@@ -1,6 +1,7 @@
 #pragma once
 #include "Object/Object.h"
 #include "Object/Class.h"
+#include "Scene/SceneTypes.h"
 
 class AActor;
 class CCamera;
@@ -35,9 +36,14 @@ public:
 	void CleanupDestroyedActors();
 
 	const TArray<AActor*>& GetActors() const { return Actors; }
+	void SetSceneType(ESceneType InSceneType) { SceneType = InSceneType; }
+	ESceneType GetSceneType() const { return SceneType; }
+	bool IsEditorScene() const { return SceneType == ESceneType::Editor; }
+	bool IsGameScene() const { return SceneType == ESceneType::Game || SceneType == ESceneType::PIE; }
 
 	CCamera* GetCamera() const { return Camera; }
 
+	void InitializeEmptyScene(float AspectRatio);
 	void InitializeDefaultScene(float AspectRatio);
 	void LoadSceneFromFile(const FString& FilePath);
 	void SaveSceneToFile(const FString& FilePath);
@@ -49,4 +55,5 @@ private:
 	TArray<AActor*> Actors;
 	CCamera* Camera = nullptr;
 	bool bBegunPlay = false;
+	ESceneType SceneType = ESceneType::Game;
 };

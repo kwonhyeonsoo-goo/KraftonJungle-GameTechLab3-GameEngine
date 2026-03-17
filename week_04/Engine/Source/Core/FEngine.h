@@ -1,5 +1,6 @@
 #pragma once
 #include "CoreMinimal.h"
+#include "Scene/SceneTypes.h"
 #include "Windows.h"
 
 class CWindowApplication;
@@ -25,6 +26,7 @@ public:
 protected:
 	virtual void Startup() {}
 	virtual void Tick(float DeltaTime) {}
+	virtual ESceneType GetStartupSceneType() const { return ESceneType::Game; }
 
 	CWindowApplication* App = nullptr;
 	CWindow* MainWindow = nullptr;

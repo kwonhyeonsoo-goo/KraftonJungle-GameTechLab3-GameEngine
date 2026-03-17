@@ -11,7 +11,6 @@
 #include <iomanip>
 
 #include "Actor/Gizmo.h"
-#include "Component/GizmoComponent.h"
 #include "ThirdParty/nlohmann/json.hpp"
 #include "Component/PrimitiveComponent.h"
 
@@ -46,11 +45,20 @@ UScene::~UScene()
 	Camera = nullptr;
 }
 
+void UScene::InitializeEmptyScene(float AspectRatio)
+{
+	if (Camera == nullptr)
+	{
+		Camera = new CCamera();
+	}
+
+	Camera->SetAspectRatio(AspectRatio);
+}
+
 void UScene::InitializeDefaultScene(float AspectRatio)
 {
 	// 카메라
-	Camera = new CCamera();
-	Camera->SetAspectRatio(AspectRatio);
+	InitializeEmptyScene(AspectRatio);
 
 	// JSON 파일에서 씬 로드 (카메라 포함)
 	LoadSceneFromFile("../Assets/Scenes/DefaultScene.json");
@@ -64,13 +72,8 @@ void UScene::InitializeDefaultScene(float AspectRatio)
 	Actor->AddOwnedComponent(SpehreComp);
 	Actor->AddOwnedComponent(CubeComp);
 	Actor->SetActorLocation({ 0.0f, 0.0f, 12.0f });
-
-	// Test 2
-	//AActor* Actor2 = SpawnActor<AActor>("GizmoTest");
-	//UPrimitiveComponent* GizmoComp = new UGizmoComponent();
-	//Actor2->AddOwnedComponent(GizmoComp);
-
-	AActor* Gizmo = SpawnActor<AGizmo>("GizmoTest");
+	
+	SpawnActor<AGizmo>("GizmoTest");
 }
 
 void UScene::LoadSceneFromFile(const FString& FilePath)

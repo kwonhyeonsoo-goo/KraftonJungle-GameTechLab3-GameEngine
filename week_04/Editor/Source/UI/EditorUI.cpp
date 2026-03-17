@@ -2,7 +2,7 @@
 #include "Core/Core.h"
 #include "Camera/Camera.h"
 #include "Renderer/Renderer.h"
-#include "Object/Scene/Scene.h"
+#include "Scene/Scene.h"
 #include "Actor/Actor.h"
 #include "Object/Object.h"
 #include "Component/SceneComponent.h"

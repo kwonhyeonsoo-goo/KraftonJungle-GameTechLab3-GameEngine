@@ -2,6 +2,8 @@
 
 #include "UnrealEditorStyledGizmo.h"
 
+namespace UEStyledGizmo = codex::gizmo::unreal_editor;
+
 const FString CPrimitiveGizmo::Key = "Gizmo";
 const FString CPrimitiveGizmo::FilePath = "Assets/Meshed/Gizmo.mesh";
 
@@ -40,10 +42,10 @@ void CPrimitiveGizmo::GenerateTranslationGizmoMesh()
 {
 	auto Data = std::make_shared<FMeshData>();
 
-	TranslationDesc desc{};
+	UEStyledGizmo::TranslationDesc desc{};
 
-	auto TranslationGizmo = GenerateTranslationGizmo(desc);
-	Mesh Gizmo = Combine(TranslationGizmo);
+	auto TranslationGizmo = UEStyledGizmo::GenerateTranslationGizmo(desc);
+	UEStyledGizmo::Mesh Gizmo = UEStyledGizmo::Combine(TranslationGizmo);
 
 	Data->Vertices.reserve(Gizmo.vertices.size());
 	for (auto& Vertex : Gizmo.vertices)
@@ -66,10 +68,10 @@ void CPrimitiveGizmo::GenerateRotationGizmoMesh()
 {
 	auto Data = std::make_shared<FMeshData>();
 
-	RotationDesc desc{};
+	UEStyledGizmo::RotationDesc desc{};
 
-	auto RotationGizmo = GenerateRotationGizmo(desc);
-	Mesh Gizmo = Combine(RotationGizmo);
+	auto RotationGizmo = UEStyledGizmo::GenerateRotationGizmo(desc);
+	UEStyledGizmo::Mesh Gizmo = UEStyledGizmo::Combine(RotationGizmo);
 
 	Data->Vertices.reserve(Gizmo.vertices.size());
 	for (auto& Vertex : Gizmo.vertices)
@@ -92,10 +94,10 @@ void CPrimitiveGizmo::GenerateScaleGizmoMesh()
 {
 	auto Data = std::make_shared<FMeshData>();
 
-	ScaleDesc desc{};
+	UEStyledGizmo::ScaleDesc desc{};
 
-	auto ScaleGizmo = GenerateScaleGizmo(desc);
-	Mesh Gizmo = Combine(ScaleGizmo);
+	auto ScaleGizmo = UEStyledGizmo::GenerateScaleGizmo(desc);
+	UEStyledGizmo::Mesh Gizmo = UEStyledGizmo::Combine(ScaleGizmo);
 
 	Data->Vertices.reserve(Gizmo.vertices.size());
 	for (auto& Vertex : Gizmo.vertices)

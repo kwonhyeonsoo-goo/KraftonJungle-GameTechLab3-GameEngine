@@ -49,7 +49,9 @@
     <ClInclude Include="Source\Object\ObjectManager.h" />
     <ClInclude Include="Source\Object\ObjectTypes.h" />
     <ClInclude Include="Source\Actor\Actor.h" />
-    <ClInclude Include="Source\Object\Scene\Scene.h" />
+    <ClInclude Include="Source\Scene\SceneContext.h" />
+    <ClInclude Include="Source\Scene\Scene.h" />
+    <ClInclude Include="Source\Scene\SceneTypes.h" />
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h" />
     <ClInclude Include="Source\Platform\Windows\Window.h" />
     <ClInclude Include="Source\Platform\Windows\WindowApplication.h" />
@@ -103,7 +105,7 @@
     <ClCompile Include="Source\Object\Object.cpp" />
     <ClCompile Include="Source\Object\ObjectManager.cpp" />
     <ClCompile Include="Source\Actor\Actor.cpp" />
-    <ClCompile Include="Source\Object\Scene\Scene.cpp" />
+    <ClCompile Include="Source\Scene\Scene.cpp" />
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp" />
     <ClCompile Include="Source\Platform\Windows\Window.cpp" />
     <ClCompile Include="Source\Platform\Windows\WindowApplication.cpp" />

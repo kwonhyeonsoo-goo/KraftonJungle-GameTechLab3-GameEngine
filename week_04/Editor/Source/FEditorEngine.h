@@ -11,6 +11,7 @@ public:
 
 protected:
 	void Startup() override;
+	ESceneType GetStartupSceneType() const override { return ESceneType::Editor; }
 
 private:
 	CEditorUI EditorUI;
