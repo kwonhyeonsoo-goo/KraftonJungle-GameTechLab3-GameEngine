@@ -90,6 +90,9 @@
     <ClCompile Include="Source\Core\FTimer.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Core\ViewportClient.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Debug\EngineLog.cpp">
       <Filter>Source\Debug</Filter>
     </ClCompile>
@@ -228,6 +231,9 @@
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\FTimer.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\ViewportClient.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Debug\EngineLog.h">

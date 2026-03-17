@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 #include "Windows.h"
 #include "Core/FTimer.h"
+#include "Core/ViewportClient.h"
 #include "Scene/SceneContext.h"
 #include "Scene/SceneTypes.h"
 #include "Renderer/Renderer.h"
@@ -38,9 +39,11 @@ public:
 	const TArray<std::unique_ptr<FEditorSceneContext>>& GetPreviewSceneContexts() const { return PreviewSceneContexts; }
 	CRenderer* GetRenderer() const { return Renderer.get(); }
 	CInputManager* GetInputManager() const { return InputManager.get(); }
+	IViewportClient* GetViewportClient() const { return ViewportClient; }
 
 	void SetSelectedActor(AActor* InActor);
 	AActor* GetSelectedActor() const;
+	void SetViewportClient(IViewportClient* InViewportClient);
 	FEditorSceneContext* CreatePreviewSceneContext(const FString& ContextName);
 	bool DestroyPreviewSceneContext(const FString& ContextName);
 	void ActivateEditorScene() { ActiveSceneContext = EditorSceneContext.Scene ? &EditorSceneContext : nullptr; }
@@ -69,6 +72,7 @@ private:
 	FEditorSceneContext EditorSceneContext;
 	TArray<std::unique_ptr<FEditorSceneContext>> PreviewSceneContexts;
 	FSceneContext* ActiveSceneContext = nullptr;
+	IViewportClient* ViewportClient = nullptr;
 
 	FTimer Timer;
 	int32 WindowWidth = 0;

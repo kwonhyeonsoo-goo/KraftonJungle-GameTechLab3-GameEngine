@@ -24,3 +24,13 @@ void CViewport::Render(CCore* Core)
 
 	
 }
+
+void CViewport::ReadySceneView(uint32 Width, uint32 Height)
+{
+	if (Width <= 0 || Height <= 0)
+	{
+		RenderTargetView->Release();
+
+		return;
+	}
+}

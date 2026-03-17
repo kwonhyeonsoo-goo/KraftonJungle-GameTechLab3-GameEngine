@@ -1,4 +1,6 @@
 ﻿#include "FEngine.h"
+
+#include "Core/ViewportClient.h"
 #include "Platform/Windows/WindowApplication.h"
 
 FEngine* GEngine = nullptr;
@@ -26,14 +28,13 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int32 Width,
 	if (!Core->Initialize(MainWindow->GetHwnd(), MainWindow->GetWidth(), MainWindow->GetHeight(), GetStartupSceneType()))
 		return false;
 
+	ViewportClient = CreateViewportClient();
+	Core->SetViewportClient(ViewportClient.get());
+
 	Startup();
 
-	// Input forwarding (registered after Startup so Editor can add ImGui/Picking filters first)
 	App->AddMessageFilter(std::bind(&FEngine::OnInput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-
-	// Resize callback
 	App->SetOnResizeCallback(std::bind(&FEngine::OnResize, this, std::placeholders::_1, std::placeholders::_2));
-
 	App->ShowWindow();
 
 	return true;
@@ -43,7 +44,11 @@ void FEngine::Run()
 {
 	while (App->PumpMessages())
 	{
-		Core->Tick();
+		Tick(0.0f);
+		if (Core)
+		{
+			Core->Tick();
+		}
 	}
 }
 
@@ -64,15 +69,23 @@ void FEngine::OnResize(int32 Width, int32 Height)
 	}
 }
 
+std::unique_ptr<IViewportClient> FEngine::CreateViewportClient()
+{
+	return std::make_unique<CGameViewportClient>();
+}
+
 void FEngine::Shutdown()
 {
 	GEngine = nullptr;
 
 	if (Core)
 	{
+		Core->SetViewportClient(nullptr);
 		Core->Release();
 		Core.reset();
 	}
+
+	ViewportClient.reset();
 
 	if (App)
 	{

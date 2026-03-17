@@ -33,10 +33,10 @@ namespace
 	}
 }
 
-void CControlPanelWindow::Render(CCore* Core, AActor*& SelectedActor)
+void CControlPanelWindow::Render(CCore* Core)
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
-	bool bOpen = ImGui::Begin("Control Panel");
+	const bool bOpen = ImGui::Begin("Control Panel");
 	ImGui::PopStyleVar();
 
 	if (!bOpen)
@@ -82,32 +82,32 @@ void CControlPanelWindow::Render(CCore* Core, AActor*& SelectedActor)
 			ImGui::TextUnformatted("Preview scene is editor-only. Scene save/load is disabled.");
 		}
 
-		CCamera* Cam = Core->GetScene()->GetCamera();
-		if (Cam)
+		CCamera* Camera = Core->GetScene()->GetCamera();
+		if (Camera)
 		{
 			ImGui::SeparatorText("Camera");
 
-			FVector CamPos = Cam->GetPosition();
-			float Pos[3] = { CamPos.X, CamPos.Y, CamPos.Z };
-			if (ImGui::DragFloat3("Position", Pos, 0.1f))
+			const FVector CameraPosition = Camera->GetPosition();
+			float Position[3] = { CameraPosition.X, CameraPosition.Y, CameraPosition.Z };
+			if (ImGui::DragFloat3("Position", Position, 0.1f))
 			{
-				Cam->SetPosition({ Pos[0], Pos[1], Pos[2] });
+				Camera->SetPosition({ Position[0], Position[1], Position[2] });
 			}
 
-			float CamYaw = Cam->GetYaw();
-			float CamPitch = Cam->GetPitch();
-			bool bRotChanged = false;
-			bRotChanged |= ImGui::DragFloat("Yaw", &CamYaw, 0.5f);
-			bRotChanged |= ImGui::DragFloat("Pitch", &CamPitch, 0.5f, -89.0f, 89.0f);
-			if (bRotChanged)
+			float CameraYaw = Camera->GetYaw();
+			float CameraPitch = Camera->GetPitch();
+			bool bRotationChanged = false;
+			bRotationChanged |= ImGui::DragFloat("Yaw", &CameraYaw, 0.5f);
+			bRotationChanged |= ImGui::DragFloat("Pitch", &CameraPitch, 0.5f, -89.0f, 89.0f);
+			if (bRotationChanged)
 			{
-				Cam->SetRotation(CamYaw, CamPitch);
+				Camera->SetRotation(CameraYaw, CameraPitch);
 			}
 
-			float CamFOV = Cam->GetFOV();
-			if (ImGui::SliderFloat("FOV", &CamFOV, 10.0f, 120.0f))
+			float CameraFOV = Camera->GetFOV();
+			if (ImGui::SliderFloat("FOV", &CameraFOV, 10.0f, 120.0f))
 			{
-				Cam->SetFOV(CamFOV);
+				Camera->SetFOV(CameraFOV);
 			}
 		}
 
@@ -121,34 +121,42 @@ void CControlPanelWindow::Render(CCore* Core, AActor*& SelectedActor)
 		{
 			UScene* Scene = Core->GetScene();
 			static int32 SpawnCount = 0;
-			FString Name = FString(SpawnTypes[SpawnTypeIndex]) + "_Spawned_" + std::to_string(SpawnCount++);
+			const FString Name = FString(SpawnTypes[SpawnTypeIndex]) + "_Spawned_" + std::to_string(SpawnCount++);
 
 			AActor* NewActor = nullptr;
 			if (SpawnTypeIndex == 0)
+			{
 				NewActor = Scene->SpawnActor<ACubeActor>(Name);
+			}
 			else
+			{
 				NewActor = Scene->SpawnActor<ASphereActor>(Name);
+			}
 
-			SelectedActor = NewActor;
+			Core->SetSelectedActor(NewActor);
 			UE_LOG("Spawned %s: %s", SpawnTypes[SpawnTypeIndex], Name.c_str());
 		}
 
 		ImGui::SameLine();
 
-		AActor* Selected = SelectedActor;
-		if (!Selected)
+		AActor* SelectedActor = Core->GetSelectedActor();
+		if (!SelectedActor)
+		{
 			ImGui::BeginDisabled();
+		}
 
 		if (ImGui::Button("Delete"))
 		{
-			FString Name = Selected->GetName();
-			Core->GetScene()->DestroyActor(Selected);
-			SelectedActor = nullptr;
+			const FString Name = SelectedActor->GetName();
+			Core->GetScene()->DestroyActor(SelectedActor);
+			Core->SetSelectedActor(nullptr);
 			UE_LOG("Deleted actor: %s", Name.c_str());
 		}
 
-		if (!Selected)
+		if (!SelectedActor)
+		{
 			ImGui::EndDisabled();
+		}
 
 		ImGui::SeparatorText("Scene");
 
@@ -159,7 +167,7 @@ void CControlPanelWindow::Render(CCore* Core, AActor*& SelectedActor)
 
 		if (ImGui::Button("Save"))
 		{
-			FString Path = FPaths::SceneDir() + SceneName + ".json";
+			const FString Path = FPaths::SceneDir() + SceneName + ".json";
 			Core->GetScene()->SaveSceneToFile(Path);
 			UE_LOG("Scene saved: %s", SceneName);
 		}
@@ -187,12 +195,12 @@ void CControlPanelWindow::Render(CCore* Core, AActor*& SelectedActor)
 		{
 			if (ImGui::BeginListBox("Scenes"))
 			{
-				for (int32 i = 0; i < static_cast<int32>(SceneFiles.size()); ++i)
+				for (int32 Index = 0; Index < static_cast<int32>(SceneFiles.size()); ++Index)
 				{
-					bool bSelected = (SelectedSceneIndex == i);
-					if (ImGui::Selectable(SceneFiles[i].c_str(), bSelected))
+					const bool bSelected = (SelectedSceneIndex == Index);
+					if (ImGui::Selectable(SceneFiles[Index].c_str(), bSelected))
 					{
-						SelectedSceneIndex = i;
+						SelectedSceneIndex = Index;
 					}
 				}
 				ImGui::EndListBox();
@@ -200,10 +208,10 @@ void CControlPanelWindow::Render(CCore* Core, AActor*& SelectedActor)
 
 			if (SelectedSceneIndex >= 0 && ImGui::Button("Load"))
 			{
-				SelectedActor = nullptr;
+				Core->SetSelectedActor(nullptr);
 				Core->GetScene()->ClearActors();
 
-				FString Path = FPaths::SceneDir() + SceneFiles[SelectedSceneIndex] + ".json";
+				const FString Path = FPaths::SceneDir() + SceneFiles[SelectedSceneIndex] + ".json";
 				Core->GetScene()->LoadSceneFromFile(Path, Core->GetRenderer()->GetDevice());
 				UE_LOG("Scene loaded: %s", SceneFiles[SelectedSceneIndex].c_str());
 			}

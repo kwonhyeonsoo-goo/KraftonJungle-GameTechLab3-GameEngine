@@ -179,6 +179,26 @@ AActor* CCore::GetSelectedActor() const
 	return EditorSceneContext.SelectedActor;
 }
 
+void CCore::SetViewportClient(IViewportClient* InViewportClient)
+{
+	if (ViewportClient == InViewportClient)
+	{
+		return;
+	}
+
+	if (ViewportClient && Renderer)
+	{
+		ViewportClient->Detach(this, Renderer.get());
+	}
+
+	ViewportClient = InViewportClient;
+
+	if (ViewportClient && Renderer)
+	{
+		ViewportClient->Attach(this, Renderer.get());
+	}
+}
+
 FEditorSceneContext* CCore::CreatePreviewSceneContext(const FString& ContextName)
 {
 	if (ContextName.empty())
@@ -245,10 +265,21 @@ void CCore::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 	{
 		InputManager->ProcessMessage(Hwnd, Msg, WParam, LParam);
 	}
+
+	if (ViewportClient)
+	{
+		ViewportClient->HandleMessage(this, Hwnd, Msg, WParam, LParam);
+	}
 }
 
 void CCore::Release()
 {
+	if (ViewportClient && Renderer)
+	{
+		ViewportClient->Detach(this, Renderer.get());
+	}
+	ViewportClient = nullptr;
+
 	ActiveSceneContext = nullptr;
 	for (std::unique_ptr<FEditorSceneContext>& PreviewContext : PreviewSceneContexts)
 	{
@@ -285,7 +316,14 @@ void CCore::Tick(const float DeltaTime)
 		InputManager->Tick();
 	}
 
-	ProcessCameraInput(DeltaTime);
+	if (ViewportClient)
+	{
+		ViewportClient->Tick(this, DeltaTime);
+	}
+	else
+	{
+		ProcessCameraInput(DeltaTime);
+	}
 
 	Physics(DeltaTime);
 	GameLogic(DeltaTime);
@@ -332,7 +370,7 @@ void CCore::GameLogic(float DeltaTime)
 
 void CCore::Render()
 {
-	UScene* Scene = GetActiveScene();
+	UScene* Scene = ViewportClient ? ViewportClient->ResolveScene(this) : GetActiveScene();
 	if (!Renderer || !Scene || Renderer->IsOccluded())
 	{
 		return;
@@ -353,8 +391,14 @@ void CCore::Render()
 		Frustum.ExtractFromVP(VP);
 	}
 
-	// Scene이 큐에 커맨드를 쌓음 (Renderer 참조 없음)
-	Scene->CollectRenderCommands(Frustum, CommandQueue);
+	if (ViewportClient)
+	{
+		ViewportClient->BuildRenderCommands(this, Scene, Frustum, CommandQueue);
+	}
+	else
+	{
+		Scene->CollectRenderCommands(Frustum, CommandQueue);
+	}
 
 	// Renderer가 큐를 소비
 	Renderer->SubmitCommands(CommandQueue);
