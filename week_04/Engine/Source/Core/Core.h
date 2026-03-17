@@ -2,10 +2,10 @@
 #include "CoreMinimal.h"
 #include "Windows.h"
 #include "Core/FTimer.h"
-
-class UScene;
-class CRenderer;
-class CInputManager;
+#include "Object/Scene/Scene.h"
+#include "Renderer/Renderer.h"
+#include "Input/InputManager.h"
+#include <memory>
 
 class ENGINE_API CCore
 {
@@ -25,9 +25,9 @@ public:
 
 	void ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
 
-	UScene* GetScene() const { return Scene; }
-	CRenderer* GetRenderer() const { return Renderer; }
-	CInputManager* GetInputManager() const { return InputManager; }
+	UScene* GetScene() const { return Scene.get(); }
+	CRenderer* GetRenderer() const { return Renderer.get(); }
+	CInputManager* GetInputManager() const { return InputManager.get(); }
 
 	void OnResize(int32 Width, int32 Height);
 
@@ -38,9 +38,9 @@ private:
 	void Render();
 
 private:
-	CRenderer* Renderer = nullptr;
-	CInputManager* InputManager = nullptr;
-	UScene* Scene = nullptr;
+	std::unique_ptr<CRenderer> Renderer;
+	std::unique_ptr<CInputManager> InputManager;
+	std::unique_ptr<UScene> Scene;
 
 	FTimer Timer;
 };

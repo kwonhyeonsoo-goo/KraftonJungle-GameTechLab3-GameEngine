@@ -1,9 +1,6 @@
 #include "Core.h"
 #include "Core/Paths.h"
 
-#include "Object/Scene/Scene.h"
-#include "Renderer/Renderer.h"
-#include "Input/InputManager.h"
 #include "Camera/Camera.h"
 #include "Primitive/PrimitiveBase.h"
 #include "Math/Frustum.h"
@@ -18,20 +15,20 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height)
 	FPaths::Initialize();
 
 	// Renderer
-	Renderer = new CRenderer();
+	Renderer = std::make_unique<CRenderer>();
 	if (!Renderer->Initialize(Hwnd, Width, Height))
 	{
 		return false;
 	}
 
 	// InputManager
-	InputManager = new CInputManager();
+	InputManager = std::make_unique<CInputManager>();
 
 	// Timer
 	Timer.Initialize();
 
 	// Scene
-	Scene = new UScene(UScene::StaticClass(), "DefaultScene");
+	Scene = std::make_unique<UScene>(UScene::StaticClass(), "DefaultScene");
 	Scene->InitializeDefaultScene(static_cast<float>(Width) / static_cast<float>(Height), Renderer->GetDevice());
 
 	return true;
@@ -47,19 +44,15 @@ void CCore::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 
 void CCore::Release()
 {
-	delete Scene;
-	Scene = nullptr;
-
-	delete InputManager;
-	InputManager = nullptr;
+	Scene.reset();
+	InputManager.reset();
 
 	CPrimitiveBase::ClearCache();
 
 	if (Renderer)
 	{
 		Renderer->Release();
-		delete Renderer;
-		Renderer = nullptr;
+		Renderer.reset();
 	}
 }
 
