@@ -24,6 +24,18 @@ bool SerializationService::Save(const AppContext& ctx) {
 	root["Version"] = 1;
 	root["NextUUID"] = (uint32)ctx.UUIDs.GetNext();//TODO: 이거 UUID로 바꿔야함
 
+	JSON camera = json::Object();
+
+	FEditorCameraState Camera = ctx.Editor.GetActiveCamera();
+	FVector Pos = Camera.Position;
+	camera["Position"] = json::Array(Pos.x, Pos.y, Pos.z);
+
+	camera["Yaw"] = Camera.Yaw;
+	camera["Pitch"] = Camera.Pitch;
+	camera["MoveSpeed"] = Camera.MoveSpeed;
+	camera["RotSpeed"] = Camera.RotSpeed;
+
+	root["Camera"] = camera;
 	// Primitives ������Ʈ
 	JSON primitives = json::Object();
 	for (const auto& obj_uptr : ctx.CurrentWorld.GetAllObjects()) {
@@ -95,6 +107,16 @@ bool SerializationService::Load(AppContext& ctx) {
 			return (float)j.ToFloat();
 		return (float)j.ToInt();
 		};
+	auto& camera = root["Camera"];
+
+	FEditorCameraState & Camera = ctx.Editor.GetActiveCamera();
+	Camera.Position.x = toFloat(camera["Position"][0]);
+	Camera.Position.y = toFloat(camera["Position"][1]);
+	Camera.Position.z = toFloat(camera["Position"][2]);
+	Camera.Yaw = toFloat(camera["Yaw"]);
+	Camera.Pitch = toFloat(camera["Pitch"]);
+	Camera.MoveSpeed = toFloat(camera["MoveSpeed"]);
+	Camera.RotSpeed = toFloat(camera["RotSpeed"]);
 
 	// �� Primitives ��ȸ �� ������Ʈ ����
 	auto& primitives = root["Primitives"];
