@@ -77,6 +77,13 @@ void FEditorEngine::Shutdown()
 		Core->SetViewportClient(nullptr);
 	}
 
+	// EditorPawn은 Scene 소속이 아니므로 직접 정리
+	if (EditorPawn)
+	{
+		EditorPawn->Destroy();
+		EditorPawn = nullptr;
+	}
+
 	PreviewViewportClient.reset();
 	FEngine::Shutdown();
 }
@@ -114,9 +121,8 @@ void FEditorEngine::PostInitialize()
 				FEngineLog::Get().Log("[error] Unknown command: '%s'", CommandLine);
 			}
 		});
-	EditorPawn = new AEditorCameraPawn(
-		AEditorCameraPawn::StaticClass(), "EditorCameraPawn");
-	Core->GetScene()->RegisterActor(EditorPawn);
+	// EditorPawn은 Scene에 등록하지 않음 — FEditorEngine이 직접 소유
+	EditorPawn = FObjectFactory::ConstructObject<AEditorCameraPawn>(nullptr, "EditorCameraPawn");
 	Core->GetScene()->SetActiveCameraComponent(EditorPawn->GetCameraComponent());
 	ViewportController.Initialize(
 		EditorPawn->GetCameraComponent(),
@@ -130,6 +136,17 @@ void FEditorEngine::PostInitialize()
 
 void FEditorEngine::Tick(float DeltaTime)
 {
+	// Editor Scene에서는 EditorPawn 카메라가 항상 활성화되도록 보장
+	// (ClearActors 후 SceneCameraComponent로 폴백된 경우 복원)
+	if (EditorPawn && Core && Core->GetScene() && Core->GetScene()->IsEditorScene())
+	{
+		UCameraComponent* EditorCamera = EditorPawn->GetCameraComponent();
+		if (Core->GetScene()->GetActiveCameraComponent() != EditorCamera)
+		{
+			Core->GetScene()->SetActiveCameraComponent(EditorCamera);
+		}
+	}
+
 	ViewportController.Tick(DeltaTime);
 	SyncViewportClient();
 }
