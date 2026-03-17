@@ -24,6 +24,7 @@
     <ClInclude Include="Source\EngineTest.h" />
     <ClInclude Include="Source\Camera\Camera.h" />
     <ClInclude Include="Source\Component\ActorComponent.h" />
+    <ClInclude Include="Source\Component\CameraComponent.h" />
     <ClInclude Include="Source\Component\CubeComponent.h" />
     <ClInclude Include="Source\Component\PrimitiveComponent.h" />
     <ClInclude Include="Source\Component\SceneComponent.h" />
@@ -36,6 +37,7 @@
     <ClInclude Include="Source\Input\InputAction.h" />
     <ClInclude Include="Source\Input\InputManager.h" />
     <ClInclude Include="Source\Input\InputMappingContext.h" />
+    <ClInclude Include="Source\Input\InputModifier.h" />
     <ClInclude Include="Source\Input\InputTrigger.h" />
     <ClInclude Include="Source\Math\Frustum.h" />
     <ClInclude Include="Source\Math\MathUtility.h" />
@@ -79,6 +81,7 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Component\CameraComponent.cpp" />
     <ClCompile Include="Source\EngineTest.cpp" />
     <ClCompile Include="Source\Camera\Camera.cpp" />
     <ClCompile Include="Source\Component\ActorComponent.cpp" />
@@ -235,7 +238,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="Source\Input\InputModifier.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

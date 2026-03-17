@@ -87,7 +87,13 @@
     <ClCompile Include="Source\Debug\EngineLog.cpp">
       <Filter>Source\Debug</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Input\EnhancedInputManager.cpp">
+      <Filter>Source\Input</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Input\InputManager.cpp">
+      <Filter>Source\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Input\InputMappingContext.cpp">
       <Filter>Source\Input</Filter>
     </ClCompile>
     <ClCompile Include="Source\Math\Frustum.cpp">
@@ -159,8 +165,7 @@
     <ClCompile Include="Source\Renderer\ShaderResource.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Input\EnhancedInputManager.cpp" />
-    <ClCompile Include="Source\Input\InputMappingContext.cpp" />
+    <ClCompile Include="Source\Component\CameraComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -176,6 +181,9 @@
       <Filter>Source\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\ActorComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\CameraComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\CubeComponent.h">
@@ -205,7 +213,19 @@
     <ClInclude Include="Source\Input\EnhancedInputManager.h">
       <Filter>Source\Input</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Input\InputAction.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Input\InputManager.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputMappingContext.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputModifier.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputTrigger.h">
       <Filter>Source\Input</Filter>
     </ClInclude>
     <ClInclude Include="Source\Math\Frustum.h">
@@ -328,14 +348,8 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp">
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Input\InputMappingContext.h" />
-    <ClInclude Include="Source\Input\InputAction.h" />
-    <ClInclude Include="Source\Input\InputTrigger.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="Source\Input\InputModifier.h">
-      <Filter>Source\Input</Filter>
-    </None>
   </ItemGroup>
 </Project>

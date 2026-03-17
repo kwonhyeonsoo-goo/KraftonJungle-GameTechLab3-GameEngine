@@ -1,0 +1,23 @@
+#pragma once
+#include "SceneComponent.h"
+#include "../Camera/Camera.h"
+
+class ENGINE_API UCameraComponent : public USceneComponent
+{
+public:
+	UCameraComponent();
+	virtual ~UCameraComponent() = default;
+
+	virtual void Tick(float DeltaTime) override;
+	//Movement method
+	void MoveForward(float Value);
+	void MoveRight(float Value);
+	void MoveUp(float Value);
+	void Rotate(float DeltaYaw, float DeltaPitch);
+
+	//Setting
+	void SetFov(float inFov);
+	void SetSpeed(float Inspeed);
+private:
+	CCamera* Camera = nullptr;
+};
