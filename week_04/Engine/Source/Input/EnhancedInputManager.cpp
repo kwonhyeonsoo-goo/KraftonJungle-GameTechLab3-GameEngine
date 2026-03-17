@@ -40,8 +40,13 @@ void CEnhancedInputManager::ClearBindings()
 
 FInputActionValue CEnhancedInputManager::GetRawActionValue(CInputManager* Input, int32 Key)
 {
-	return FInputActionValue();
+	if (Key == static_cast<int32>(EInputKey::MouseX))
+		return FInputActionValue(Input->GetMouseDeltaX());
+	if (Key == static_cast<int32>(EInputKey::MouseY))
+		return FInputActionValue(Input->GetMouseDeltaY());
+	return FInputActionValue(Input->IsKeyDown(Key) ? 1.0f : 0.0f);
 }
 void CEnhancedInputManager::ProcessInput(CInputManager* RawInput, float DeltaTime)
 {
+	
 }

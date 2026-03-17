@@ -63,31 +63,37 @@
     <ClCompile Include="Source\Component\ActorComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Component\CameraComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Component\CubeComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Component\PrimitiveComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Component\SceneComponent.cpp">
+    <ClCompile Include="Source\Component\RandomColorComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Component\RandomColorComponent.cpp">
+    <ClCompile Include="Source\Component\SceneComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Component\SphereComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\Core.cpp">
+    <ClCompile Include="Source\Core\ConsoleVariableManager.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\Paths.cpp">
+    <ClCompile Include="Source\Core\Core.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\FEngine.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\FTimer.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Paths.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
     <ClCompile Include="Source\Debug\EngineLog.cpp">
@@ -183,7 +189,6 @@
     <ClCompile Include="Source\Renderer\ShaderResource.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Component\CameraComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -210,25 +215,28 @@
     <ClInclude Include="Source\Component\PrimitiveComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Component\SceneComponent.h">
+    <ClInclude Include="Source\Component\RandomColorComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Component\RandomColorComponent.h">
+    <ClInclude Include="Source\Component\SceneComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\SphereComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\Core.h">
+    <ClInclude Include="Source\Core\ConsoleVariableManager.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\Paths.h">
+    <ClInclude Include="Source\Core\Core.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\FEngine.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\FTimer.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Paths.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Debug\EngineLog.h">
@@ -249,7 +257,7 @@
     <ClInclude Include="Source\Input\InputModifier.h">
       <Filter>Source\Input</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Input\InputTrigger.h">
+    <ClInclude Include="Source\Input\inputTrigger.h">
       <Filter>Source\Input</Filter>
     </ClInclude>
     <ClInclude Include="Source\Math\Frustum.h">
@@ -324,6 +332,12 @@
     <ClInclude Include="Source\Primitive\PrimitiveSphere.h">
       <Filter>Source\Primitive</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Renderer\Material.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\MaterialManager.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Renderer\PrimitiveVertex.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
@@ -343,12 +357,6 @@
       <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\ShaderResource.h">
-      <Filter>Source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Renderer\Material.h">
-      <Filter>Source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Renderer\MaterialManager.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\ShaderType.h">

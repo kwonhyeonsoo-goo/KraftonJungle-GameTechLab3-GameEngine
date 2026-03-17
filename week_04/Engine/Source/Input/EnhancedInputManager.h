@@ -32,7 +32,7 @@ private:
 	{
 		FInputAction* Action;
 		ETriggerEvent TriggerEvent;
-		FInputActionCallback* Callback;
+		FInputActionCallback Callback;
 	};
 	TArray<FMappingContextEntry> MappingContexts;
 	TArray<FBindingEntry> Binding;
