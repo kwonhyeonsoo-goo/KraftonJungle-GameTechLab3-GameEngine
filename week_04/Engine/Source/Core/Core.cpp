@@ -2,7 +2,7 @@
 #include "Core.h"
 #include "Core/Paths.h"
 #include "Core/ConsoleVariableManager.h"
-
+#include "Input/EnhancedInputManager.h"
 #include "Component/CameraComponent.h"
 #include "Primitive/PrimitiveBase.h"
 #include "Math/Frustum.h"
@@ -24,8 +24,8 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height)
 	}
 
 	// InputManager
-	InputManager = std::make_unique<CInputManager>();
-
+	InputManager = new CInputManager();
+	EnhancedInput = new CEnhancedInputManager();
 	// Timer
 	Timer.Initialize();
 
@@ -50,8 +50,10 @@ void CCore::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 void CCore::Release()
 {
 	Scene.reset();
-	InputManager.reset();
-
+	delete EnhancedInput;
+	EnhancedInput = nullptr;
+	delete InputManager;
+	InputManager = nullptr;
 	CPrimitiveBase::ClearCache();
 
 	if (Renderer)
@@ -73,7 +75,8 @@ void CCore::Tick(const float DeltaTime)
 	{
 		InputManager->Tick();
 	}
-
+	if (EnhancedInput && InputManager)
+		EnhancedInput->ProcessInput(InputManager, DeltaTime);
 	//ProcessCameraInput(DeltaTime);
 
 	Physics(DeltaTime);
@@ -81,8 +84,8 @@ void CCore::Tick(const float DeltaTime)
 	Render();
 }
 
-void CCore::ProcessCameraInput(float DeltaTime)
-{
+//void CCore::ProcessCameraInput(float DeltaTime)
+//{
 	//if (!InputManager || !Scene)
 	//	return;
 
@@ -103,7 +106,7 @@ void CCore::ProcessCameraInput(float DeltaTime)
 	//	float DeltaY = InputManager->GetMouseDeltaY();
 	//	Camera->Rotate(DeltaX * 0.2f, -DeltaY * 0.2f);
 	//}
-}
+//}
 
 void CCore::Physics(float DeltaTime)
 {

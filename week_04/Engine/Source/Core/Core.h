@@ -6,6 +6,7 @@
 #include "Renderer/Renderer.h"
 #include "Input/InputManager.h"
 #include <memory>
+class CEnhancedInputManager;
 class ENGINE_API CCore
 {
 public:
@@ -26,13 +27,14 @@ public:
 
 	UScene* GetScene() const { return Scene.get(); }
 	CRenderer* GetRenderer() const { return Renderer.get(); }
-	CInputManager* GetInputManager() const { return InputManager.get(); }
+	CInputManager* GetInputManager() const { return InputManager; }
 	const FTimer& GetTimer() const { return Timer; }
 
 	void OnResize(int32 Width, int32 Height);
-
+	CEnhancedInputManager* GetEnhancedInputManager() const { return EnhancedInput; }
+	float GetDeltaTime() const { return Timer.GetDeltaTime(); }
 private:
-	void ProcessCameraInput(float DeltaTime);
+	//void ProcessCameraInput(float DeltaTime);
 	void Physics(float DeltaTime);
 	void GameLogic(float DeltaTime);
 	void Render();
@@ -40,8 +42,8 @@ private:
 
 private:
 	std::unique_ptr<CRenderer> Renderer;
-	std::unique_ptr<CInputManager> InputManager;
 	std::unique_ptr<UScene> Scene;
-
+	CInputManager* InputManager = nullptr;
+	CEnhancedInputManager* EnhancedInput = nullptr;
 	FTimer Timer;
 };
