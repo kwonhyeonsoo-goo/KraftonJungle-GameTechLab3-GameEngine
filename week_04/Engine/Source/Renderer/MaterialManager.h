@@ -22,6 +22,9 @@ public:
 	// 프로그래밍 방식으로 생성한 Material 등록
 	void Register(const FString& Name, const std::shared_ptr<FMaterial>& InMaterial);
 
+	// 로드된 Material 파일 경로 목록 반환
+	TArray<FString> GetLoadedPaths() const;
+
 	void Clear();
 
 private:

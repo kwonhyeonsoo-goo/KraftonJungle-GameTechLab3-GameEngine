@@ -1,4 +1,6 @@
 #include "EditorCameraPawn.h"
+#include "Object/ObjectFactory.h"
+#include "Component/CameraComponent.h"
 namespace
 {
 	UObject* CreateEditorCameraPawnInstance(UObject* InOuter, const FString& InName)
@@ -15,7 +17,7 @@ UClass* AEditorCameraPawn::StaticClass()
 AEditorCameraPawn::AEditorCameraPawn(UClass* InClass, const FString& InName, UObject* InOuter)
 	: AActor(InClass, InName, InOuter)
 {
-	CameraCompenent = new UCameraComponent();
+	CameraCompenent = FObjectFactory::ConstructObject<UCameraComponent>(this);
 	AddOwnedComponent(CameraCompenent);
 
 }

@@ -1,6 +1,6 @@
 
 #pragma once
-#include "Object/Actor/Actor.h"
+#include "Actor/Actor.h"
 #include "Component/CameraComponent.h"
 
 class AEditorCameraPawn : public AActor

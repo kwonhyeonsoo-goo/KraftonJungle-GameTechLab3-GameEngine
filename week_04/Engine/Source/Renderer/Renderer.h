@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "Renderer/RenderCommand.h"
 #include <d3d11.h>
-#include <vector>
 #include <functional>
 #include <memory>
 #include "ShaderManager.h"
@@ -42,11 +41,12 @@ public:
 		FGUICallback InRender,
 		FGUICallback InPostPresent = nullptr
 	);
+	void ClearViewportCallbacks();
 	void SetGUIUpdateCallback(FGUICallback InUpdate);
 	void SetPostRenderCallback(FPostRenderCallback InCallback) { PostRenderCallback = std::move(InCallback); }
 
 	// 커맨드 큐 제출 — 큐에서 GPU 버퍼 보장 후 내부 CommandList로 이전
-	void SubmitCommands(FRenderCommandQueue& Queue);
+	void SubmitCommands(const FRenderCommandQueue& Queue);
 	// 수집된 커맨드 정렬 후 실행
 	void ExecuteCommands();
 
@@ -57,7 +57,6 @@ public:
 	// 아웃라인 렌더링 (Stencil 기반)
 	bool InitOutlineResources();
 	void RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float OutlineScale = 1.05f);
-
 
 	FMaterial* GetDefaultMaterial() const { return DefaultMaterial.get(); }
 
@@ -70,6 +69,8 @@ public:
 	HWND GetHwnd() const { return Hwnd; }
 private:
 	void AddCommand(const FRenderCommand& Command);
+	bool CreateDeviceAndSwapChain(HWND InHwnd, int32 Width, int32 Height);
+	bool CreateRenderTargetAndDepthStencil(int32 Width, int32 Height);
 	bool CreateConstantBuffers();
 	void UpdateFrameConstantBuffer();
 	void UpdateObjectConstantBuffer(const FMatrix& WorldMatrix);

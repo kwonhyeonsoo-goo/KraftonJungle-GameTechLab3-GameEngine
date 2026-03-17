@@ -1,6 +1,6 @@
-#include "RandomColorComponent.h"
+﻿#include "RandomColorComponent.h"
 #include "PrimitiveComponent.h"
-#include "Object/Actor/Actor.h"
+#include "Actor/Actor.h"
 #include "Renderer/Material.h"
 #include <random>
 
@@ -8,7 +8,7 @@ namespace
 {
 	UObject* CreateURandomColorComponentInstance(UObject* InOuter, const FString& InName)
 	{
-		return new URandomColorComponent();
+		return new URandomColorComponent(URandomColorComponent::StaticClass(), InName, InOuter);
 	}
 
 	FVector4 GenerateRandomColor()
@@ -31,6 +31,14 @@ URandomColorComponent::URandomColorComponent()
 	bCanEverTick = true;
 }
 
+URandomColorComponent::URandomColorComponent(UClass* InClass, const FString& InName, UObject* InOuter)
+	: UActorComponent(InClass, InName, InOuter)
+{
+	bCanEverTick = true;
+}
+
+URandomColorComponent::~URandomColorComponent() = default;
+
 void URandomColorComponent::BeginPlay()
 {
 	UActorComponent::BeginPlay();
@@ -38,6 +46,16 @@ void URandomColorComponent::BeginPlay()
 	if (Owner)
 	{
 		CachedPrimitive = Owner->GetComponentByClass<UPrimitiveComponent>();
+	}
+
+	// 공유 Material을 복제하여 독립적인 DynamicMaterial 생성
+	if (CachedPrimitive && CachedPrimitive->GetMaterial())
+	{
+		DynamicMaterial = CachedPrimitive->GetMaterial()->CreateDynamicMaterial();
+		if (DynamicMaterial)
+		{
+			CachedPrimitive->SetMaterial(DynamicMaterial.get());
+		}
 	}
 
 	// 시작 시 즉시 한 번 적용
@@ -56,17 +74,14 @@ void URandomColorComponent::Tick(float DeltaTime)
 
 void URandomColorComponent::ApplyRandomColor()
 {
-	if (!CachedPrimitive)
-	{
-		return;
-	}
-
-	FMaterial* Mat = CachedPrimitive->GetMaterial();
-	if (!Mat)
+	if (!DynamicMaterial)
 	{
 		return;
 	}
 
 	FVector4 Color = GenerateRandomColor();
-	Mat->SetVectorParameter("BaseColor", Color);
+	if (!DynamicMaterial->SetVectorParameter("BaseColor", Color))
+	{
+		DynamicMaterial->SetVectorParameter("ColorTint", Color);
+	}
 }

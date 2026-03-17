@@ -3,7 +3,6 @@
 #include "InputAction.h"
 #include "InputTrigger.h"
 #include "InputMappingContext.h"
-#include "InputModifier.h"
 #include <functional>
 
 class CInputManager;

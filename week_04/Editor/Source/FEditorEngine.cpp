@@ -1,26 +1,84 @@
 #include "FEditorEngine.h"
+
+#include "UI/EditorViewportClient.h"
+#include "UI/PreviewViewportClient.h"
 #include "Core/Core.h"
 #include "Core/ConsoleVariableManager.h"
-#include "Platform/Windows/WindowApplication.h"
+#include "Scene/Scene.h"
+#include "Actor/Actor.h"
+
+#include "Component/CameraComponent.h"
+
+#include "Component/CubeComponent.h"
+#include "Object/ObjectFactory.h"
 #include "Debug/EngineLog.h"
 
 #include "imgui_impl_win32.h"
 
+namespace
+{
+	constexpr const char* PreviewSceneContextName = "PreviewScene";
+
+	void InitializeDefaultPreviewScene(CCore* Core)
+	{
+		if (Core == nullptr)
+		{
+			return;
+		}
+
+		FEditorSceneContext* PreviewContext = Core->CreatePreviewSceneContext(PreviewSceneContextName);
+		if (PreviewContext == nullptr || PreviewContext->Scene == nullptr)
+		{
+			return;
+		}
+
+		UScene* PreviewScene = PreviewContext->Scene;
+		if (PreviewScene->GetActors().empty())
+		{
+			AActor* PreviewActor = PreviewScene->SpawnActor<AActor>("PreviewCube");
+			if (PreviewActor)
+			{
+				UCubeComponent* PreviewComponent = FObjectFactory::ConstructObject<UCubeComponent>(PreviewActor);
+				PreviewActor->AddOwnedComponent(PreviewComponent);
+				PreviewActor->SetActorLocation({ 0.0f, 0.0f, 0.0f });
+			}
+		}
+
+		if (UCameraComponent* PreviewCamera = PreviewScene->GetActiveCameraComponent())
+		{
+			PreviewCamera->GetCamera()->SetPosition({ -8.0f, -8.0f, 6.0f });
+			PreviewCamera->GetCamera()->SetRotation(45.0f, -20.0f);
+			PreviewCamera->SetFov(50.0f);
+		}
+	}
+}
+
 bool FEditorEngine::Initialize(HINSTANCE hInstance)
 {
-
 	ImGui_ImplWin32_EnableDpiAwareness();
 
 	if (!FEngine::Initialize(hInstance, L"Jungle Editor", 1280, 720))
+	{
 		return false;
+	}
 
+	return true;
 }
 
-void FEditorEngine::Tick(float DeltaTime)
+FEditorEngine::~FEditorEngine()
 {
-	ViewportController.Tick(DeltaTime);
+	//Shutdown();
+}
 
-	FEngine::Tick(DeltaTime);
+void FEditorEngine::Shutdown()
+{
+	if (Core && Core->GetViewportClient() == PreviewViewportClient.get())
+	{
+		Core->SetViewportClient(nullptr);
+	}
+
+	PreviewViewportClient.reset();
+	FEngine::Shutdown();
 }
 
 void FEditorEngine::PreInitialize()
@@ -33,14 +91,13 @@ void FEditorEngine::PreInitialize()
 
 void FEditorEngine::PostInitialize()
 {
-	EditorUI.Initialize(Core.get());
-	EditorUI.SetupWindow(App->GetMainWindow());
+	InitializeDefaultPreviewScene(Core.get());
+	PreviewViewportClient = std::make_unique<CPreviewViewportClient>(EditorUI, MainWindow, PreviewSceneContextName);
 
-	// Console variable commands
 	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
-	TArray<FString> VarNames;
-	CVM.GetAllNames(VarNames);
-	for (const FString& Name : VarNames)
+	TArray<FString> VariableNames;
+	CVM.GetAllNames(VariableNames);
+	for (const FString& Name : VariableNames)
 	{
 		EditorUI.GetConsole().RegisterCommand(Name.c_str());
 	}
@@ -65,5 +122,39 @@ void FEditorEngine::PostInitialize()
 		EditorPawn->GetCameraComponent(),
 		Core->GetInputManager(),
 		Core->GetEnhancedInputManager());
+
+
+	SyncViewportClient();
 	UE_LOG("EditorEngine initialized");
+}
+
+void FEditorEngine::Tick(float DeltaTime)
+{
+	ViewportController.Tick(DeltaTime);
+	SyncViewportClient();
+}
+
+std::unique_ptr<IViewportClient> FEditorEngine::CreateViewportClient()
+{
+	return std::make_unique<CEditorViewportClient>(EditorUI, MainWindow);
+}
+
+void FEditorEngine::SyncViewportClient()
+{
+	if (!Core)
+	{
+		return;
+	}
+
+	IViewportClient* TargetViewportClient = ViewportClient.get();
+	const FSceneContext* ActiveSceneContext = Core->GetActiveSceneContext();
+	if (ActiveSceneContext && ActiveSceneContext->SceneType == ESceneType::Preview && PreviewViewportClient)
+	{
+		TargetViewportClient = PreviewViewportClient.get();
+	}
+
+	if (Core->GetViewportClient() != TargetViewportClient)
+	{
+		Core->SetViewportClient(TargetViewportClient);
+	}
 }

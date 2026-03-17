@@ -229,7 +229,7 @@ std::shared_ptr<FMaterial> FMaterialManager::GetOrLoad(ID3D11Device* Device, con
 	if (Json.contains("Name"))
 	{
 		FString Name = Json["Name"].get<FString>();
-		Mat->SetName(Name);
+		Mat->SetOriginName(Name);
 		NameCache[Name] = Mat;
 	}
 
@@ -252,6 +252,16 @@ void FMaterialManager::Register(const FString& Name, const std::shared_ptr<FMate
 	{
 		NameCache[Name] = InMaterial;
 	}
+}
+
+TArray<FString> FMaterialManager::GetLoadedPaths() const
+{
+	TArray<FString> Result;
+	for (const auto& Pair : PathCache)
+	{
+		Result.push_back(Pair.first);
+	}
+	return Result;
 }
 
 void FMaterialManager::Clear()

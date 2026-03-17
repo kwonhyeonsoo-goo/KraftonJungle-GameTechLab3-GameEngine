@@ -4,7 +4,7 @@ namespace
 {
 	UObject* CreateUPrimitiveComponentInstance(UObject* InOuter, const FString& InName)
 	{
-		return new UPrimitiveComponent();
+		return new UPrimitiveComponent(UPrimitiveComponent::StaticClass(), InName, InOuter);
 	}
 }
 

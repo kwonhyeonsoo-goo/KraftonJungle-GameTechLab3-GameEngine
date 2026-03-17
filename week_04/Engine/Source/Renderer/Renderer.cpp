@@ -1,11 +1,10 @@
-#include "Renderer.h"
+﻿#include "Renderer.h"
 #include "ShaderType.h"
 #include "Shader.h"
 #include "ShaderMap.h"
 #include "Material.h"
 #include "MaterialManager.h"
 #include "Core/Paths.h"
-#include <dxgi1_3.h>
 #include "Primitive/PrimitiveBase.h"
 #include <cassert>
 #include <algorithm>
@@ -50,95 +49,74 @@ void CRenderer::SetGUIUpdateCallback(FGUICallback InUpdate)
 	GUIUpdate = std::move(InUpdate);
 }
 
-bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
+void CRenderer::ClearViewportCallbacks()
 {
-	Hwnd = InHwnd;
+	if (GUIShutdown)
+	{
+		GUIShutdown();
+	}
+
+	GUIInit = nullptr;
+	GUIShutdown = nullptr;
+	GUINewFrame = nullptr;
+	GUIUpdate = nullptr;
+	GUIRender = nullptr;
+	GUIPostPresent = nullptr;
+	PostRenderCallback = nullptr;
+}
+
+bool CRenderer::CreateDeviceAndSwapChain(HWND InHwnd, int32 Width, int32 Height)
+{
+	DXGI_SWAP_CHAIN_DESC SwapChainDesc = {};
+	SwapChainDesc.BufferDesc.Width = Width;
+	SwapChainDesc.BufferDesc.Height = Height;
+	SwapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	SwapChainDesc.SampleDesc.Count = 1;
+	SwapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	SwapChainDesc.BufferCount = 2;
+	SwapChainDesc.OutputWindow = InHwnd;
+	SwapChainDesc.Windowed = TRUE;
+	SwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+
 	UINT CreateDeviceFlags = 0;
 #ifdef _DEBUG
 	CreateDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
-	D3D_FEATURE_LEVEL FeatureLevels = D3D_FEATURE_LEVEL_11_0;
 
-	HRESULT Hr = D3D11CreateDevice(
-		0, D3D_DRIVER_TYPE_HARDWARE, 0,
-		CreateDeviceFlags, 0, 0,
-		D3D11_SDK_VERSION, &Device, &FeatureLevels,
-		&DeviceContext
+	D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_11_0;
+	HRESULT Hr = D3D11CreateDeviceAndSwapChain(
+		nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
+		CreateDeviceFlags, &FeatureLevel, 1,
+		D3D11_SDK_VERSION, &SwapChainDesc,
+		&SwapChain, &Device, nullptr, &DeviceContext
 	);
 
 	if (FAILED(Hr))
 	{
-		MessageBox(0, L"D3D11CreateDevice Failed.", 0, 0);
+		MessageBox(nullptr, L"D3D11CreateDeviceAndSwapChain Failed.", nullptr, 0);
 		return false;
 	}
-	if (FeatureLevels != D3D_FEATURE_LEVEL_11_0)
-	{
-		MessageBox(0, L"Direct3D Feature Level 11 unsupported", 0, 0);
-		return false;
-	}
-	UINT M4xMsaaQuality;
-	Hr = Device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 4, &M4xMsaaQuality);
-	assert(M4xMsaaQuality > 0);
 
-	IDXGIDevice* DxgiDevice = nullptr;
-	Hr = Device->QueryInterface(__uuidof(IDXGIDevice), (void**)&DxgiDevice);
-	if (SUCCEEDED(Hr))
-	{
-		IDXGIAdapter* DxgiAdapter = nullptr;
-		Hr = DxgiDevice->GetAdapter(&DxgiAdapter);
-		if (SUCCEEDED(Hr))
-		{
-			IDXGIFactory2* DxgiFactory = nullptr;
-			Hr = DxgiAdapter->GetParent(__uuidof(IDXGIFactory2), (void**)&DxgiFactory);
+	return true;
+}
 
-			if (SUCCEEDED(Hr))
-			{
-				DXGI_SWAP_CHAIN_DESC1 SwapChainDesc = {};
-				SwapChainDesc.Width = Width;
-				SwapChainDesc.Height = Height;
-				SwapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-				SwapChainDesc.SampleDesc.Count = 1;
-				SwapChainDesc.SampleDesc.Quality = 0;
-				SwapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-				SwapChainDesc.BufferCount = 2;
-				SwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-
-				IDXGISwapChain1* SwapChain1 = nullptr;
-				Hr = DxgiFactory->CreateSwapChainForHwnd(
-					Device, Hwnd, &SwapChainDesc, nullptr, nullptr, &SwapChain1
-				);
-
-				if (SUCCEEDED(Hr))
-				{
-					SwapChain1->QueryInterface(__uuidof(IDXGISwapChain), (void**)&SwapChain);
-					SwapChain1->Release();
-				}
-
-				DxgiFactory->Release();
-			}
-			DxgiAdapter->Release();
-		}
-		DxgiDevice->Release();
-	}
-	if (!SwapChain)
-	{
-		MessageBox(0, L"SwapChain creation Failed.", 0, 0);
-		return false;
-	}
+bool CRenderer::CreateRenderTargetAndDepthStencil(int32 Width, int32 Height)
+{
+	// RenderTargetView
 	ID3D11Texture2D* BackBuffer = nullptr;
-	Hr = SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&BackBuffer);
+	HRESULT Hr = SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&BackBuffer);
 	if (FAILED(Hr))
 	{
-		MessageBox(0, L"GetBuffer Failed.", 0, 0); return false;
+		return false;
 	}
-
 	Hr = Device->CreateRenderTargetView(BackBuffer, nullptr, &RenderTargetView);
 	BackBuffer->Release();
 	if (FAILED(Hr))
 	{
-		MessageBox(0, L"CreateRenderTargetView Failed.", 0, 0);
 		return false;
 	}
+
+	// DepthStencilView
 	D3D11_TEXTURE2D_DESC DepthDesc = {};
 	DepthDesc.Width = Width;
 	DepthDesc.Height = Height;
@@ -153,15 +131,30 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 	Hr = Device->CreateTexture2D(&DepthDesc, nullptr, &DepthTex);
 	if (FAILED(Hr))
 	{
-		MessageBox(0, L"CreateTexture2D (Depth) Failed.", 0, 0);
 		return false;
 	}
-
 	Hr = Device->CreateDepthStencilView(DepthTex, nullptr, &DepthStencilView);
 	DepthTex->Release();
 	if (FAILED(Hr))
 	{
-		MessageBox(0, L"CreateDepthStencilView Failed.", 0, 0); return false;
+		return false;
+	}
+
+	return true;
+}
+
+bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
+{
+	Hwnd = InHwnd;
+
+	if (!CreateDeviceAndSwapChain(Hwnd, Width, Height))
+	{
+		return false;
+	}
+
+	if (!CreateRenderTargetAndDepthStencil(Width, Height))
+	{
+		return false;
 	}
 
 	Viewport.TopLeftX = 0.f;
@@ -182,12 +175,10 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 
 	if (!ShaderManager.LoadVertexShader(Device, VSPath.c_str()))
 	{
-		OutputDebugStringW(L"VS Load Failed - 파일 경로 확인\n");
 		return false;
 	}
 	if (!ShaderManager.LoadPixelShader(Device, PSPath.c_str()))
 	{
-		OutputDebugStringW(L"PS Load Failed - 파일 경로 확인\n");
 		return false;
 	}
 
@@ -197,11 +188,10 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		std::wstring ColorPSPath = ShaderDirW + L"ColorPixelShader.hlsl";
 		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, ColorPSPath.c_str());
 		DefaultMaterial = std::make_shared<FMaterial>();
-		DefaultMaterial->SetName("M_Default");
+		DefaultMaterial->SetOriginName("M_Default");
 		DefaultMaterial->SetVertexShader(VS);
 		DefaultMaterial->SetPixelShader(PS);
 
-		// BaseColor 상수 버퍼 (b2) — 기본값 흰색
 		int32 SlotIndex = DefaultMaterial->CreateConstantBuffer(Device, 16);
 		if (SlotIndex >= 0)
 		{
@@ -217,10 +207,8 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 	D3D11_RASTERIZER_DESC RasterizerDesc = {};
 	RasterizerDesc.FillMode = D3D11_FILL_SOLID;
 	RasterizerDesc.CullMode = D3D11_CULL_BACK;
-	Hr = Device->CreateRasterizerState(&RasterizerDesc, &RasterizerState);
-	if (FAILED(Hr))
+	if (FAILED(Device->CreateRasterizerState(&RasterizerDesc, &RasterizerState)))
 	{
-		MessageBox(0, L"CreateRasterizerState Failed.", 0, 0);
 		return false;
 	}
 
@@ -271,14 +259,14 @@ void CRenderer::EndFrame()
 	}
 }
 
-void CRenderer::SubmitCommands(FRenderCommandQueue& Queue)
+void CRenderer::SubmitCommands(const FRenderCommandQueue& Queue)
 {
 	// 큐의 카메라 데이터를 적용
 	ViewMatrix = Queue.ViewMatrix;
 	ProjectionMatrix = Queue.ProjectionMatrix;
 
 	// GPU 버퍼 보장 + 내부 CommandList로 이전
-	for (auto& Cmd : Queue.Commands)
+	for (const auto& Cmd : Queue.Commands)
 	{
 		if (Cmd.MeshData)
 		{
@@ -545,17 +533,7 @@ void CRenderer::ExecuteLineCommands()
 
 void CRenderer::Release()
 {
-	if (GUIShutdown)
-	{
-		GUIShutdown();
-
-	}
-	GUIInit = nullptr;
-	GUIShutdown = nullptr;
-	GUINewFrame = nullptr;
-	GUIUpdate = nullptr;
-	GUIRender = nullptr;
-	GUIPostPresent = nullptr;
+	ClearViewportCallbacks();
 	if (StencilWriteState)
 	{
 		StencilWriteState->Release();
@@ -638,34 +616,15 @@ void CRenderer::OnResize(int32 NewWidth, int32 NewHeight)
 {
 	if (NewWidth == 0 || NewHeight == 0) return;
 
-
 	DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
-	RenderTargetView->Release(); RenderTargetView = nullptr;
-	DepthStencilView->Release(); DepthStencilView = nullptr;
+
+	if (RenderTargetView) { RenderTargetView->Release(); RenderTargetView = nullptr; }
+	if (DepthStencilView) { DepthStencilView->Release(); DepthStencilView = nullptr; }
 
 	SwapChain->ResizeBuffers(0, NewWidth, NewHeight, DXGI_FORMAT_UNKNOWN, 0);
 
+	CreateRenderTargetAndDepthStencil(NewWidth, NewHeight);
 
-	ID3D11Texture2D* BackBuffer = nullptr;
-	SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&BackBuffer);
-	Device->CreateRenderTargetView(BackBuffer, nullptr, &RenderTargetView);
-	BackBuffer->Release();
-
-	D3D11_TEXTURE2D_DESC DepthDesc = {};
-	DepthDesc.Width = NewWidth;
-	DepthDesc.Height = NewHeight;
-	DepthDesc.MipLevels = 1;
-	DepthDesc.ArraySize = 1;
-	DepthDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	DepthDesc.SampleDesc.Count = 1;
-	DepthDesc.Usage = D3D11_USAGE_DEFAULT;
-	DepthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-	ID3D11Texture2D* DepthTex = nullptr;
-	Device->CreateTexture2D(&DepthDesc, nullptr, &DepthTex);
-	Device->CreateDepthStencilView(DepthTex, nullptr, &DepthStencilView);
-	DepthTex->Release();
-
-	// Viewport 갱신
 	Viewport.Width = static_cast<float>(NewWidth);
 	Viewport.Height = static_cast<float>(NewHeight);
 }

@@ -1,14 +1,13 @@
 #include "EditorUI.h"
+
 #include "Core/Core.h"
-#include "Camera/Camera.h"
-#include "Renderer/Renderer.h"
-#include "Object/Scene/Scene.h"
-#include "Object/Actor/Actor.h"
 #include "Object/Object.h"
-#include "Component/SceneComponent.h"
+#include "Scene/Scene.h"
+#include "Actor/Actor.h"
 #include "Component/PrimitiveComponent.h"
-#include "Primitive/PrimitiveBase.h"
+#include "Component/SceneComponent.h"
 #include "Platform/Windows/Window.h"
+#include "Renderer/Renderer.h"
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -21,33 +20,64 @@ void CEditorUI::Initialize(CCore* InCore)
 {
 	Core = InCore;
 
-	// Setup ImGui callbacks
-	CRenderer* Renderer = Core->GetRenderer();
-	HWND Hwnd = Renderer->GetHwnd();
-	ID3D11Device* Device = Renderer->GetDevice();
-	ID3D11DeviceContext* DeviceContext = Renderer->GetDeviceContext();
+	Property.OnChanged = [this](const FVector& Loc, const FVector& Rot, const FVector& Scl)
+		{
+			if (!Core)
+			{
+				return;
+			}
 
-	Renderer->SetGUICallbacks(
+			AActor* Selected = Core->GetSelectedActor();
+			if (!Selected)
+			{
+				return;
+			}
+
+			if (USceneComponent* Root = Selected->GetRootComponent())
+			{
+				FTransform Transform = Root->GetRelativeTransform();
+				Transform.SetLocation(Loc);
+				Transform.SetRotation(FRotator::MakeFromEuler(Rot));
+				Transform.SetScale3D(Scl);
+				Root->SetRelativeTransform(Transform);
+			}
+		};
+}
+
+void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
+{
+	if (!Core || !InRenderer)
+	{
+		return;
+	}
+
+	bViewportClientActive = true;
+
+	const HWND Hwnd = InRenderer->GetHwnd();
+	ID3D11Device* Device = InRenderer->GetDevice();
+	ID3D11DeviceContext* DeviceContext = InRenderer->GetDeviceContext();
+
+	InRenderer->SetGUICallbacks(
 		[Hwnd, Device, DeviceContext]()
 		{
 			IMGUI_CHECKVERSION();
 			ImGui::CreateContext();
-			ImGuiIO& io = ImGui::GetIO();
-			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-			io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-			io.IniFilename = "imgui_editor.ini";
+			ImGuiIO& IO = ImGui::GetIO();
+			IO.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+			IO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+			IO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+			IO.IniFilename = "imgui_editor.ini";
 
 			ImGui::StyleColorsDark();
 
-			ImGuiStyle& style = ImGui::GetStyle();
-			style.WindowPadding = ImVec2(0, 0);
-			style.DisplayWindowPadding = ImVec2(0, 0);
-			style.DisplaySafeAreaPadding = ImVec2(0, 0);
-			if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+			ImGuiStyle& Style = ImGui::GetStyle();
+			Style.WindowPadding = ImVec2(0, 0);
+			Style.DisplayWindowPadding = ImVec2(0, 0);
+			Style.DisplaySafeAreaPadding = ImVec2(0, 0);
+			if (IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 			{
-				style.WindowRounding = 0.0f;
-				style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+				Style.WindowRounding = 0.0f;
+				Style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 			}
 
 			ImGui_ImplWin32_Init(Hwnd);
@@ -72,8 +102,8 @@ void CEditorUI::Initialize(CCore* InCore)
 		},
 		[]()
 		{
-			ImGuiIO& io = ImGui::GetIO();
-			if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+			ImGuiIO& IO = ImGui::GetIO();
+			if (IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 			{
 				ImGui::UpdatePlatformWindows();
 				ImGui::RenderPlatformWindowsDefault();
@@ -81,93 +111,73 @@ void CEditorUI::Initialize(CCore* InCore)
 		}
 	);
 
-	// Property change callback
-	Property.OnChanged = [this](const FVector& Loc, const FVector& Rot, const FVector& Scl)
+	InRenderer->SetGUIUpdateCallback([this]() { Render(); });
+
+	InRenderer->SetPostRenderCallback([this](CRenderer* Renderer)
 		{
-			if (Core)
+			if (!Core)
 			{
-				AActor* Selected = SelectedActor;
-				if (Selected)
-				{
-					if (USceneComponent* Root = Selected->GetRootComponent())
-					{
-						FTransform T = Root->GetRelativeTransform();
-						T.SetLocation(Loc);
-						T.SetRotation(FRotator::MakeFromEuler(Rot));
-						T.SetScale3D(Scl);
-						Root->SetRelativeTransform(T);
-					}
-				}
+				return;
 			}
-		};
 
-	Renderer->SetGUIUpdateCallback([this]() { Render(); });
-
-	// Editor-only post-render: outline, world axis, gizmo etc.
-	Renderer->SetPostRenderCallback([this](CRenderer* R)
-		{
-			if (!Core) return;
-
-			// 선택된 Actor 아웃라인 렌더링
-			AActor* Selected = SelectedActor;
+			AActor* Selected = Core->GetSelectedActor();
 			if (Selected && !Selected->IsPendingDestroy())
 			{
-				for (UActorComponent* Comp : Selected->GetComponents())
+				for (UActorComponent* Component : Selected->GetComponents())
 				{
-					if (!Comp->IsA(UPrimitiveComponent::StaticClass()))
+					if (!Component->IsA(UPrimitiveComponent::StaticClass()))
 					{
 						continue;
 					}
-					UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(Comp);
-					if (PrimComp->GetPrimitive())
+
+					UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
+					if (PrimitiveComponent->GetPrimitive())
 					{
-						R->RenderOutline(
-							PrimComp->GetPrimitive()->GetMeshData(),
-							PrimComp->GetWorldTransform()
+						Renderer->RenderOutline(
+							PrimitiveComponent->GetPrimitive()->GetMeshData(),
+							PrimitiveComponent->GetWorldTransform()
 						);
 					}
 				}
 			}
 
-			// 월드 원점 축 렌더링 (X=빨강, Y=초록, Z=파랑)
-			float AxisLength = 10000.0f;
-			FVector Origin = { 0.0f, 0.0f, 0.0f };
-			R->DrawLine(Origin, { AxisLength, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f });
-			R->DrawLine(Origin, { 0.0f, AxisLength, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f });
-			R->DrawLine(Origin, { 0.0f, 0.0f, AxisLength }, { 0.0f, 0.0f, 1.0f, 1.0f });
-			R->ExecuteLineCommands();
+			const float AxisLength = 10000.0f;
+			const FVector Origin = { 0.0f, 0.0f, 0.0f };
+			Renderer->DrawLine(Origin, { AxisLength, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f });
+			Renderer->DrawLine(Origin, { 0.0f, AxisLength, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f });
+			Renderer->DrawLine(Origin, { 0.0f, 0.0f, AxisLength }, { 0.0f, 0.0f, 1.0f, 1.0f });
+			Renderer->ExecuteLineCommands();
 		});
+}
+
+void CEditorUI::DetachFromRenderer(CRenderer* InRenderer)
+{
+	bViewportClientActive = false;
+
+	if (InRenderer)
+	{
+		InRenderer->ClearViewportCallbacks();
+	}
 }
 
 void CEditorUI::SetupWindow(CWindow* InWindow)
 {
 	MainWindow = InWindow;
+	if (bWindowSetup || MainWindow == nullptr)
+	{
+		return;
+	}
 
-	// ImGui message filter (must be first)
-	MainWindow->AddMessageFilter([](HWND h, UINT m, WPARAM w, LPARAM l) -> bool
-		{
-			return ImGui_ImplWin32_WndProcHandler(h, m, w, l) != 0;
-		});
+	bWindowSetup = true;
 
-	// Picking filter
-	MainWindow->AddMessageFilter([this](HWND h, UINT m, WPARAM w, LPARAM l) -> bool
+	MainWindow->AddMessageFilter([this](HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam) -> bool
 		{
-			if (m == WM_LBUTTONDOWN && !ImGui::GetIO().WantCaptureMouse && Core && Core->GetScene())
+			if (!bViewportClientActive)
 			{
-				int32 MouseX = LOWORD(l);
-				int32 MouseY = HIWORD(l);
-				RECT Rect;
-				GetClientRect(h, &Rect);
-				int32 Width = Rect.right - Rect.left;
-				int32 Height = Rect.bottom - Rect.top;
-
-				AActor* Picked = Picker.PickActor(Core->GetScene(), MouseX, MouseY, Width, Height);
-				if (Picked)
-				{
-					SetSelectedActor(Picked);
-				}
+				return false;
 			}
-			return false;
+
+			return ImGui_ImplWin32_WndProcHandler(Hwnd, Msg, WParam, LParam) != 0;
 		});
 }
 
@@ -179,16 +189,19 @@ void CEditorUI::BuildDefaultLayout(uint32 DockID)
 	ImGuiViewport* Viewport = ImGui::GetMainViewport();
 	ImGui::DockBuilderSetNodeSize(DockID, Viewport->WorkSize);
 
-	ImGuiID DockBottom, DockUpper;
+	ImGuiID DockBottom = 0;
+	ImGuiID DockUpper = 0;
 	ImGui::DockBuilderSplitNode(DockID, ImGuiDir_Down, 0.25f, &DockBottom, &DockUpper);
 
-	ImGuiID DockLeft, DockCenter;
+	ImGuiID DockLeft = 0;
+	ImGuiID DockCenter = 0;
 	ImGui::DockBuilderSplitNode(DockUpper, ImGuiDir_Left, 0.20f, &DockLeft, &DockCenter);
 
-	ImGuiID DockRight;
+	ImGuiID DockRight = 0;
 	ImGui::DockBuilderSplitNode(DockCenter, ImGuiDir_Right, 0.25f, &DockRight, &DockCenter);
 
-	ImGuiID DockRightTop, DockRightBottom;
+	ImGuiID DockRightTop = 0;
+	ImGuiID DockRightBottom = 0;
 	ImGui::DockBuilderSplitNode(DockRight, ImGuiDir_Up, 0.50f, &DockRightTop, &DockRightBottom);
 
 	ImGui::DockBuilderDockWindow("Stats", DockLeft);
@@ -201,7 +214,11 @@ void CEditorUI::BuildDefaultLayout(uint32 DockID)
 
 void CEditorUI::Render()
 {
-	// DockSpace host
+	if (!bViewportClientActive)
+	{
+		return;
+	}
+
 	ImGuiViewport* Viewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowPos(Viewport->WorkPos);
 	ImGui::SetNextWindowSize(Viewport->WorkSize);
@@ -233,52 +250,48 @@ void CEditorUI::Render()
 			BuildDefaultLayout(DockID);
 		}
 	}
+
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 	ImGui::DockSpace(DockID, ImVec2(0, 0), ImGuiDockNodeFlags_PassthruCentralNode);
 	ImGui::PopStyleVar();
 	ImGui::End();
 
-	// Track selected actor changes for Property
 	if (Core)
 	{
-		AActor* Selected = SelectedActor;
+		AActor* Selected = Core->GetSelectedActor();
 		if (Selected != CachedSelectedActor)
 		{
 			if (Selected)
 			{
-				USceneComponent* Root = Selected->GetRootComponent();
-				if (Root)
+				if (USceneComponent* Root = Selected->GetRootComponent())
 				{
-					FTransform T = Root->GetRelativeTransform();
-					Property.SetTarget(T.GetLocation(), T.Rotator().Euler(), T.GetScale3D(), Selected->GetName().c_str());
+					const FTransform Transform = Root->GetRelativeTransform();
+					Property.SetTarget(
+						Transform.GetLocation(),
+						Transform.Rotator().Euler(),
+						Transform.GetScale3D(),
+						Selected->GetName().c_str()
+					);
 				}
 			}
 			else
 			{
 				Property.SetTarget({ 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, "None");
 			}
+
 			CachedSelectedActor = Selected;
 		}
-	}
 
-	// Update stats
-	if (Core)
-	{
 		const FTimer& Timer = Core->GetTimer();
 		Stat.SetFPS(Timer.GetFPS());
 		Stat.SetFrameTimeMs(Timer.GetFrameTimeMs());
 	}
+
 	Stat.SetObjectCount(UObject::TotalAllocationCounts);
 	Stat.SetHeapUsage(UObject::TotalAllocationBytes);
 
-	// Panels
-	ControlPanel.Render(Core, SelectedActor);
+	ControlPanel.Render(Core);
 	Property.Render();
 	Console.Render();
 	Stat.Render();
-}
-
-void CEditorUI::SetSelectedActor(AActor* InActor)
-{
-	SelectedActor = InActor;
 }
