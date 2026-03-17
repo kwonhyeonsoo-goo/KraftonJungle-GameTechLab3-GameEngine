@@ -32,7 +32,7 @@ bool ScaleTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
 
     const FVector origin = primary->GetTransform().Location;
 
-    const FMatrix viewProj = ctx.Editor.bOrthoMode
+    const FMatrix viewProj = ctx.Editor.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic
         ? ctx.Editor.GetViewOrthoMatrix()
         : ctx.Editor.GetViewProjMatrix();
     const int32 viewportW = ctx.Window.GetWidth();
@@ -92,7 +92,7 @@ void ScaleTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
         if (primary == nullptr) { HoveredAxis = EAxis::None; return; }
 
         const FVector origin = primary->GetTransform().Location;
-        const FMatrix viewProj = ctx.Editor.bOrthoMode
+        const FMatrix viewProj = ctx.Editor.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic
             ? ctx.Editor.GetViewOrthoMatrix()
             : ctx.Editor.GetViewProjMatrix();
         const FVector2D mouse2D((float)e.X, (float)e.Y);

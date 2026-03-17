@@ -180,7 +180,7 @@ void AppContext::SubscribeEvents()
             Window.UpdateSize(e.Width, e.Height); 
 
             if (e.Height > 0)
-                Editor.AspectRatio = (float)e.Width / (float)e.Height;
+                Editor.GetActiveViewport().Projection.AspectRatio = (float)e.Width / (float)e.Height;
         });
 
 

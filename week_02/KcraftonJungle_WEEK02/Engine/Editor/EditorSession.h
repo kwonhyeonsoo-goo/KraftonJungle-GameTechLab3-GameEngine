@@ -1,47 +1,47 @@
 ﻿#pragma once
-#include "../Foundation/Math/FVector.h"
-#include "../Foundation/Math/FMatrix.h"
+
+#include "../Foundation/Containers/TArray.h"
 #include "./SelectionSet.h"
 #include "./ToolContext.h"
+#include "./Viewport/EditorViewport.h"
 
 struct InputState;
+class USceneComponent;
 
-struct CameraState {
-    FVector Position = FVector(-10.0f, 0.0f, 5.0f);
-    float   Yaw = 0.f;
-    float   Pitch = 0.f;
-    float   MoveSpeed = 5.f;
-    float   RotSpeed = 0.3f;
-
-    FMatrix GetViewMatrix() const;
-    FVector GetForwardVector() const;
-    FVector GetRightVector() const;
-};
-
-class EditorSession {
+class EditorSession
+{
 public:
     EditorSession();
 
+public:
     SelectionSet Selection;
-    ToolContext Tools;
-    CameraState Camera;
+    ToolContext  Tools;
 
-    // 카메라 입력 처리 (WASD + 우클릭 마우스)
-    // InputState를 직접 읽는다 — 폴링/이벤트 이중 경로 금지
-    // ImGui가 입력을 선점한 프레임에서는 호출하지 않는다
+private:
+    TArray<FEditorViewport> Viewports;
+    int32 ActiveViewportIndex = 0;
+
+public:
+    // 세션은 "활성 뷰포트/카메라를 관리"만 합니다.
+    FEditorViewport& GetActiveViewport();
+    const FEditorViewport& GetActiveViewport() const;
+
+    FEditorCameraState& GetActiveCamera();
+    const FEditorCameraState& GetActiveCamera() const;
+
+    const TArray<FEditorViewport>& GetViewports() const;
+
+    // 필요 시 나중에 UI에서 active viewport를 전환
+    void SetActiveViewportIndex(int32 Index);
+    int32 GetActiveViewportIndex() const;
+
+    // 세션 API는 유지하되 내부는 controller / viewport 위임
     void ProcessCameraInput(const InputState& input, float deltaTime);
-
-    // Projection 파라미터
-    float FovY = 60.f;
-    float AspectRatio;
-    float NearZ = 0.1f;
-    float FarZ = 1000.f;
-    bool bOrthoMode = false;
-    float OrthoHeight = 10.0f;
 
     FMatrix GetProjectionMatrix() const;
     FMatrix GetOrthogonalMatrix() const;
-    FMatrix GetViewProjMatrix()   const;
-    FMatrix GetViewOrthoMatrix()  const;
+    FMatrix GetViewProjMatrix() const;
+    FMatrix GetViewOrthoMatrix() const;
+
     void FocusObject(const USceneComponent* comp, float distance);
 };
