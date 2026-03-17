@@ -1,7 +1,7 @@
 #pragma once
 #include "InputAction.h"
 #include "CoreMinimal.h"
-#include <memory>
+
 class FInputModifier;
 class FInputTrigger;
 
@@ -9,6 +9,8 @@ struct ENGINE_API FActionKeyMapping
 {
 	FInputAction* Action = nullptr;
 	int32 Key = 0;
+	TArray<FInputTrigger*> Triggers;  
+	TArray<FInputModifier*> Modifiers;
 };
 struct ENGINE_API FInputMappingContext
 {

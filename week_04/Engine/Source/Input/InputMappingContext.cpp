@@ -5,7 +5,9 @@
 
 FActionKeyMapping& FInputMappingContext::AddMapping(FInputAction* Action, int32 Key)
 {
-	FActionKeyMapping temp;
-	return temp;
-    // TODO: insert return statement here
+	Mappings.push_back({});
+	FActionKeyMapping& Mapping = Mappings.back();
+	Mapping.Action = Action;
+	Mapping.Key = Key;
+	return Mapping;
 }

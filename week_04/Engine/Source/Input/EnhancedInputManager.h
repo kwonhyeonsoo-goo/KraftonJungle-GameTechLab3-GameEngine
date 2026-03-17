@@ -12,14 +12,16 @@ class CEnhancedInputManager
 {
 public:
 
-	void AddMappingContext();
-	void RemoveContext();
-	void ClearAllMappingContext();
+	void AddMappingContext(FInputMappingContext* Context, int32 Priority = 0);
+	void RemoveMappingContext(FInputMappingContext* Context);
+	void ClearAllMappingContexts();
 
-	void BindAction();
-	void ClearBinding();
-	void Processinput();
+	void BindAction(FInputAction* Action, ETriggerEvent TriggerEvent, FInputActionCallback Callback);
+	void ClearBindings();
+
+	void ProcessInput(CInputManager* RawInput, float DeltaTime);
 private:
+	FInputActionValue GetRawActionValue(CInputManager* Input, int32 Key);
 	struct FMappingContextEntry
 	{
 		FInputMappingContext* Context;
