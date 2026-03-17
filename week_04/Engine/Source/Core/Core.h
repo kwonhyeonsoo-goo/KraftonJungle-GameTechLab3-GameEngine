@@ -3,7 +3,6 @@
 #include "Windows.h"
 #include "Core/FTimer.h"
 
-class AActor;
 class UScene;
 class CRenderer;
 class CInputManager;
@@ -30,9 +29,6 @@ public:
 	CRenderer* GetRenderer() const { return Renderer; }
 	CInputManager* GetInputManager() const { return InputManager; }
 
-	void SetSelectedActor(AActor* InActor) { SelectedActor = InActor; }
-	AActor* GetSelectedActor() const { return SelectedActor; }
-
 	void OnResize(int32 Width, int32 Height);
 
 private:
@@ -45,9 +41,6 @@ private:
 	CRenderer* Renderer = nullptr;
 	CInputManager* InputManager = nullptr;
 	UScene* Scene = nullptr;
-	AActor* SelectedActor = nullptr;
 
 	FTimer Timer;
-	int32 WindowWidth = 0;
-	int32 WindowHeight = 0;
 };

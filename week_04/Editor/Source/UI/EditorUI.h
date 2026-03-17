@@ -25,6 +25,7 @@ private:
 	void BuildDefaultLayout(uint32 DockID);
 
 	CCore* Core = nullptr;
+	AActor* SelectedActor = nullptr;
 	AActor* CachedSelectedActor = nullptr;
 
 	CWindow* MainWindow = nullptr;

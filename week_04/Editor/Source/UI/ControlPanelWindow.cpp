@@ -11,7 +11,7 @@
 #include "Debug/EngineLog.h"
 #include <filesystem>
 
-void CControlPanelWindow::Render(CCore* Core)
+void CControlPanelWindow::Render(CCore* Core, AActor*& SelectedActor)
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
 	bool bOpen = ImGui::Begin("Control Panel");
@@ -72,13 +72,13 @@ void CControlPanelWindow::Render(CCore* Core)
 			else
 				NewActor = Scene->SpawnActor<ASphereActor>(Name);
 
-			Core->SetSelectedActor(NewActor);
+			SelectedActor = NewActor;
 			UE_LOG("Spawned %s: %s", SpawnTypes[SpawnTypeIndex], Name.c_str());
 		}
 
 		ImGui::SameLine();
 
-		AActor* Selected = Core->GetSelectedActor();
+		AActor* Selected = SelectedActor;
 		if (!Selected)
 			ImGui::BeginDisabled();
 
@@ -86,7 +86,7 @@ void CControlPanelWindow::Render(CCore* Core)
 		{
 			FString Name = Selected->GetName();
 			Core->GetScene()->DestroyActor(Selected);
-			Core->SetSelectedActor(nullptr);
+			SelectedActor = nullptr;
 			UE_LOG("Deleted actor: %s", Name.c_str());
 		}
 
@@ -141,7 +141,7 @@ void CControlPanelWindow::Render(CCore* Core)
 
 			if (SelectedSceneIndex >= 0 && ImGui::Button("Load"))
 			{
-				Core->SetSelectedActor(nullptr);
+				SelectedActor = nullptr;
 				Core->GetScene()->ClearActors();
 
 				FString Path = FPaths::SceneDir() + SceneFiles[SelectedSceneIndex] + ".json";
