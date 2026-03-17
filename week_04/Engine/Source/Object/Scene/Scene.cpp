@@ -3,7 +3,7 @@
 #include "Core/Core.h"
 
 #include "Object/Actor/Actor.h"
-#include "Camera/Camera.h"
+#include "Component/CameraComponent.h"
 #include "Component/SphereComponent.h"
 #include "Component/CubeComponent.h"
 #include <algorithm>
@@ -39,15 +39,15 @@ UScene::~UScene()
 	}
 	Actors.clear();
 
-	delete Camera;
-	Camera = nullptr;
+	delete ActiveCameraComponent;
+	ActiveCameraComponent = nullptr;
 }
 
 void UScene::InitializeDefaultScene(float AspectRatio)
 {
 	// 카메라
-	Camera = new CCamera();
-	Camera->SetAspectRatio(AspectRatio);
+	ActiveCameraComponent = new UCameraComponent();
+	ActiveCameraComponent->GetCamera()->SetAspectRatio(AspectRatio);
 
 	// JSON 파일에서 씬 로드 (카메라 포함)
 	LoadSceneFromFile("../Assets/Scenes/DefaultScene.json");
@@ -70,9 +70,9 @@ void UScene::LoadSceneFromFile(const FString& FilePath)
 
 	nlohmann::json Json;
 	File >> Json;
-
+	CCamera* Camera = ActiveCameraComponent->GetCamera();
 	// 카메라 설정 로드
-	if (Camera && Json.contains("Camera"))
+	if (ActiveCameraComponent && Json.contains("Camera"))
 	{
 		auto& Cam = Json["Camera"];
 		if (Cam.contains("Position"))
@@ -141,8 +141,9 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 	nlohmann::json Json;
 
 	// Camera
-	if (Camera)
+	if (ActiveCameraComponent)
 	{
+		CCamera* Camera = ActiveCameraComponent->GetCamera();
 		FVector Pos = Camera->GetPosition();
 		Json["Camera"]["Position"] = { Pos.X, Pos.Y, Pos.Z };
 		Json["Camera"]["Rotation"] = { Camera->GetYaw(), Camera->GetPitch() };

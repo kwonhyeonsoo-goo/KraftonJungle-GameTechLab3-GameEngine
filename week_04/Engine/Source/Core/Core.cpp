@@ -156,13 +156,16 @@ void CCore::Render()
 
 	//CCamera* Camera = Scene->GetCamera();
 	UCameraComponent* ActiveCamera = Scene->GetActiveCameraComponent();
-
+	if (!ActiveCamera) return;
 	FFrustum Frustum;
+	FMatrix VP = ActiveCamera->GetViewMatrix() * ActiveCamera->GetProjectionMatrix();
+	Renderer->ViewProjectionMatrix = VP;
+	Frustum.ExtractFromVP(VP);
 	//if (Camera)
 	//{
-	//	FMatrix VP = Camera->GetViewMatrix() * Camera->GetProjectionMatrix();
-	//	Renderer->ViewProjectionMatrix = VP;
-	//	Frustum.ExtractFromVP(VP);
+	//FMatrix VP = Camera->GetViewMatrix() * Camera->GetProjectionMatrix();
+	//Renderer->ViewProjectionMatrix = VP;
+	//Frustum.ExtractFromVP(VP);
 	//}
 
 	for (AActor* Actor : Scene->GetActors())

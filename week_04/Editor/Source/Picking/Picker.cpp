@@ -1,7 +1,7 @@
 #include "Picker.h"
 #include "Object/Scene/Scene.h"
 #include "Object/Actor/Actor.h"
-#include "Camera/Camera.h"
+#include "Component/CameraComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Primitive/PrimitiveBase.h"
 #include "Renderer/PrimitiveVertex.h"
@@ -81,10 +81,10 @@ bool CPicker::RayTriangleIntersect(const FRay& Ray,
 AActor* CPicker::PickActor(UScene* Scene, int32 ScreenX, int32 ScreenY,
                             int32 ScreenWidth, int32 ScreenHeight) const
 {
-    if (!Scene || !Scene->GetCamera())
+    if (!Scene || !Scene->GetActiveCameraComponent()->GetCamera())
         return nullptr;
 
-    CCamera* Camera = Scene->GetCamera();
+    CCamera* Camera = Scene->GetActiveCameraComponent()->GetCamera();
     FMatrix ViewMatrix = Camera->GetViewMatrix();
     FMatrix ProjMatrix = Camera->GetProjectionMatrix();
 

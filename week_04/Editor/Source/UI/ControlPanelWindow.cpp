@@ -3,7 +3,7 @@
 #include "Core/Core.h"
 #include "Object/Scene/Scene.h"
 #include "Object/Actor/Actor.h"
-#include "Camera/Camera.h"
+#include "Component/CameraComponent.h"
 #include "Component/CubeComponent.h"
 #include "Component/SphereComponent.h"
 #include "Debug/EngineLog.h"
@@ -23,7 +23,7 @@ void CControlPanelWindow::Render(CCore* Core)
 
 	if (Core && Core->GetScene())
 	{
-		CCamera* Cam = Core->GetScene()->GetCamera();
+		CCamera* Cam = Core->GetScene()->GetActiveCameraComponent()->GetCamera();
 		if (Cam)
 		{
 			ImGui::SeparatorText("Camera");

@@ -22,6 +22,8 @@ public:
 		{
 			return nullptr;
 		}
+		
+
 
 		T* NewActor = static_cast<T*>(NewObj);
 		RegisterActor(NewActor);
@@ -39,7 +41,7 @@ public:
 	//CCamera* GetCamera() const { return Camera; }
 	void SetActiveCameraComponent(UCameraComponent* Camera) { ActiveCameraComponent = Camera; }
 
-	UCameraComponent* GetActiveCameraComponent() { return ActiveCameraComponent; }const
+	UCameraComponent* GetActiveCameraComponent() const { return ActiveCameraComponent; }
 	void InitializeDefaultScene(float AspectRatio);
 	void LoadSceneFromFile(const FString& FilePath);
 	void SaveSceneToFile(const FString& FilePath);
