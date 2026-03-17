@@ -20,13 +20,12 @@ public:
 	virtual void Shutdown();
 
 	CCore* GetCore() const { return Core; }
-	CWindow* GetMainWindow() const { return MainWindow; }
+	CWindowApplication* GetApp() const { return App; }
 
 protected:
 	virtual void Startup() {}
 	virtual void Tick(float DeltaTime) {}
 
 	CWindowApplication* App = nullptr;
-	CWindow* MainWindow = nullptr;
 	CCore* Core = nullptr;
 };

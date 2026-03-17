@@ -20,6 +20,11 @@ public:
 	HINSTANCE GetInstance() const { return Instance; }
 	const WCHAR* GetClassName() const { return WindowClassName; }
 
+	CWindow* GetMainWindow() const { return MainWindow; }
+	void SetMainWindow(CWindow* InWindow) { MainWindow = InWindow; }
+	int32 GetWindowWidth() const;
+	int32 GetWindowHeight() const;
+
 private:
 	CWindowApplication() = default;
 	~CWindowApplication() = default;
@@ -30,6 +35,7 @@ private:
 	WNDCLASSEX WindowClass = {};
 	WCHAR WindowClassName[128] = {};
 	bool bClassRegistered = false;
+	CWindow* MainWindow = nullptr;
 
 	// HWND -> CWindow mapping
 	static TMap<HWND, CWindow*> WindowMap;

@@ -4,6 +4,8 @@
 #include "Platform/Windows/Window.h"
 #include "Renderer/Renderer.h"
 
+FEngine* GEngine = nullptr;
+
 FEngine::~FEngine()
 {
 	Shutdown();
@@ -15,9 +17,12 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int32 Width,
 	if (!App->Create(hInstance))
 		return false;
 
-	MainWindow = App->MakeWindow(Title, Width, Height);
+	CWindow* MainWindow = App->MakeWindow(Title, Width, Height);
 	if (!MainWindow)
 		return false;
+
+	App->SetMainWindow(MainWindow);
+	GEngine = this;
 
 	Core = new CCore();
 	if (!Core->Initialize(MainWindow->GetHwnd(), MainWindow->GetWidth(), MainWindow->GetHeight()))
@@ -59,17 +64,13 @@ void FEngine::Run()
 
 void FEngine::Shutdown()
 {
+	GEngine = nullptr;
+
 	if (Core)
 	{
 		Core->Release();
 		delete Core;
 		Core = nullptr;
-	}
-
-	if (MainWindow)
-	{
-		delete MainWindow;
-		MainWindow = nullptr;
 	}
 
 	if (App)

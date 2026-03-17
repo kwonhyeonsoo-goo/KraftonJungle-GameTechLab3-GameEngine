@@ -34,6 +34,12 @@ bool CWindowApplication::Create(HINSTANCE InInstance, const WCHAR* ClassName)
 
 void CWindowApplication::Destroy()
 {
+	if (MainWindow)
+	{
+		delete MainWindow;
+		MainWindow = nullptr;
+	}
+
 	if (bClassRegistered)
 	{
 		::UnregisterClassW(WindowClassName, Instance);
@@ -85,4 +91,14 @@ void CWindowApplication::RegisterWindow(HWND Hwnd, CWindow* Window)
 void CWindowApplication::UnregisterWindow(HWND Hwnd)
 {
 	WindowMap.erase(Hwnd);
+}
+
+int32 CWindowApplication::GetWindowWidth() const
+{
+	return MainWindow ? MainWindow->GetWidth() : 0;
+}
+
+int32 CWindowApplication::GetWindowHeight() const
+{
+	return MainWindow ? MainWindow->GetHeight() : 0;
 }

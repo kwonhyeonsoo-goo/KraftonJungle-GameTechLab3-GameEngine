@@ -1,5 +1,9 @@
 #pragma once
 #include "EngineAPI.h"
+
+class FEngine;
+ENGINE_API extern FEngine* GEngine;
+
 #include "Types/CoreTypes.h"
 #include "Types/Array.h"
 #include "Types/LinkedList.h"
