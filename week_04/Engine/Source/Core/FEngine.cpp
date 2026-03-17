@@ -42,6 +42,7 @@ void FEngine::Run()
 	while (App->PumpMessages())
 	{
 		Core->Tick();
+		Tick(Core->GetTimer().GetDeltaTime());
 	}
 }
 
