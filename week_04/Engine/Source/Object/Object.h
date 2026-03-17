@@ -81,4 +81,4 @@ private:
 	EObjectFlags Flags = EObjectFlags::None;
 };
 
-
+#include "Types/ObjectPtr.h"

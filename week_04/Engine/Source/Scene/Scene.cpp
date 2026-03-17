@@ -70,7 +70,7 @@ void UScene::SetActiveCameraComponent(UCameraComponent* InCameraComponent)
 
 UCameraComponent* UScene::GetActiveCameraComponent() const
 {
-	return ActiveCameraComponent ? ActiveCameraComponent : SceneCameraComponent;
+	return ActiveCameraComponent ? ActiveCameraComponent.Get() : SceneCameraComponent;
 }
 
 CCamera* UScene::GetCamera() const
@@ -277,7 +277,7 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 		// Material 이름 저장 (에셋 원본 이름 사용)
 		UPrimitiveComponent* PrimComp = Actor->GetComponentByClass<UPrimitiveComponent>();
 		if (PrimComp && PrimComp->GetMaterial() && !PrimComp->GetMaterial()->GetOriginName().empty())
-		//if (UPrimitiveComponent* PrimitiveComponent = Actor->GetComponentByClass<UPrimitiveComponent>())
+			//if (UPrimitiveComponent* PrimitiveComponent = Actor->GetComponentByClass<UPrimitiveComponent>())
 		{
 			Primitives[Key]["Material"] = PrimComp->GetMaterial()->GetOriginName();
 		}

@@ -33,7 +33,7 @@ private:
 	void UpdateWorldTransform() const;
 
 	FTransform RelativeTransform{};
-	USceneComponent* AttachParent = nullptr;
+	TObjectPtr<USceneComponent> AttachParent;
 	TArray<USceneComponent*> AttachChildren;
 
 	mutable FMatrix CachedWorldTransform;
