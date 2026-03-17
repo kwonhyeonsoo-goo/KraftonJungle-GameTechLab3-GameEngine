@@ -97,4 +97,9 @@ void InputRouter::SetWindowFocus(bool bIsFocus)
     {
         Key = false;
     }
+
+    for (int i = 0; i < 3; ++i)
+    {
+        State.MouseButtons[i] = false;
+	}
 }

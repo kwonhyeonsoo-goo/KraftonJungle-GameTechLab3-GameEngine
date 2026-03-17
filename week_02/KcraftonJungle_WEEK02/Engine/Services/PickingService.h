@@ -39,15 +39,23 @@ public:
     // ����: Ray-AABB ���� �׽�Ʈ
     static bool IntersectsAABB(const Ray& ray,
         const FVector& min,
-        const FVector& max,
-        float& outT);
+        const FVector& max);
 
     static bool IntersectsSphere(const Ray& ray,
         const FVector& center,
         float radius,
         float& outT);
 
-    static bool IntersectsPlane(const Ray& ray, 
+    static bool IntersectsMesh(const Ray& ray,
+        const FVertexSimple* vertices,
+        uint32 numVertices,
+        const FMatrix& worldMatrix,
         float& outT);
+
+    static bool IntersectsMeshIndexed(const Ray& ray, const FVertexSimple* vertices, const uint32* indices, uint32 numIndices, float& outT);
+
+    static bool MollerTrumbore(const Ray& ray,
+        const FVector& v0, const FVector& v1, const FVector& v2,
+		float& outT);
 };
 

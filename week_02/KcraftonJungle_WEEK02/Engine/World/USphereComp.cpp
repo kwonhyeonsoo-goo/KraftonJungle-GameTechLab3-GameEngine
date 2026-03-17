@@ -2,6 +2,9 @@
 
 USphereComp::USphereComp() : UPrimitiveComponent(EPrimitiveShape::Sphere)
 {
+    bVisible = true;
+    BoundsMin = FVector(-1.0f, -1.0f, -1.0f);
+    BoundsMax = FVector(1.0f, 1.0f, 1.0f);
 }
 
 UClass* USphereComp::StaticClass()
