@@ -6,9 +6,11 @@ class CInputManager;
 class CEditorCViewportController
 {
 public:
-	CEditorCViewportController();
+	void Initialize(UCameraComponent* InCameraComp, CInputManager* InInput);
 	void Tick(float DeltaTime);
 private:
-	UCameraComponent* CameraComp;
+	UCameraComponent* CameraComponent;
 	CInputManager* InputManager;
+
+	void ProcessCameraInput(float DeltaTime);
 };

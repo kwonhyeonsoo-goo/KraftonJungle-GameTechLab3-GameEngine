@@ -74,7 +74,7 @@ void CCore::Tick(const float DeltaTime)
 		InputManager->Tick();
 	}
 
-	ProcessCameraInput(DeltaTime);
+	//ProcessCameraInput(DeltaTime);
 
 	Physics(DeltaTime);
 	GameLogic(DeltaTime);
@@ -83,26 +83,26 @@ void CCore::Tick(const float DeltaTime)
 
 void CCore::ProcessCameraInput(float DeltaTime)
 {
-	if (!InputManager || !Scene)
-		return;
+	//if (!InputManager || !Scene)
+	//	return;
 
-	UCameraComponent* Camera  = Scene->GetActiveCameraComponent();
-	if (!Camera)
-		return;
+	//UCameraComponent* Camera  = Scene->GetActiveCameraComponent();
+	//if (!Camera)
+	//	return;
 
-	if (InputManager->IsKeyDown('W')) Camera->MoveForward(DeltaTime);
-	if (InputManager->IsKeyDown('S')) Camera->MoveForward(-DeltaTime);
-	if (InputManager->IsKeyDown('D')) Camera->MoveRight(DeltaTime);
-	if (InputManager->IsKeyDown('A')) Camera->MoveRight(-DeltaTime);
-	if (InputManager->IsKeyDown('E')) Camera->MoveUp(DeltaTime);
-	if (InputManager->IsKeyDown('Q')) Camera->MoveUp(-DeltaTime);
+	//if (InputManager->IsKeyDown('W')) Camera->MoveForward(DeltaTime);
+	//if (InputManager->IsKeyDown('S')) Camera->MoveForward(-DeltaTime);
+	//if (InputManager->IsKeyDown('D')) Camera->MoveRight(DeltaTime);
+	//if (InputManager->IsKeyDown('A')) Camera->MoveRight(-DeltaTime);
+	//if (InputManager->IsKeyDown('E')) Camera->MoveUp(DeltaTime);
+	//if (InputManager->IsKeyDown('Q')) Camera->MoveUp(-DeltaTime);
 
-	if (InputManager->IsMouseButtonDown(CInputManager::MOUSE_RIGHT))
-	{
-		float DeltaX = InputManager->GetMouseDeltaX();
-		float DeltaY = InputManager->GetMouseDeltaY();
-		Camera->Rotate(DeltaX * 0.2f, -DeltaY * 0.2f);
-	}
+	//if (InputManager->IsMouseButtonDown(CInputManager::MOUSE_RIGHT))
+	//{
+	//	float DeltaX = InputManager->GetMouseDeltaX();
+	//	float DeltaY = InputManager->GetMouseDeltaY();
+	//	Camera->Rotate(DeltaX * 0.2f, -DeltaY * 0.2f);
+	//}
 }
 
 void CCore::Physics(float DeltaTime)

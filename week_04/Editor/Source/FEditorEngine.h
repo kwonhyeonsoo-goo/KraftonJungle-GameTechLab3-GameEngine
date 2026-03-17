@@ -1,7 +1,8 @@
 #pragma once
 #include "Core/FEngine.h"
 #include "UI/EditorUI.h"
-
+#include "Pawn/EditorCameraPawn.h"
+#include "Controller/EditorViewportController.h"
 class FEditorEngine : public FEngine
 {
 public:

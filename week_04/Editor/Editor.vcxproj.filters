@@ -76,6 +76,7 @@
       <Filter>ThirdParty\imgui</Filter>
     </ClCompile>
     <ClCompile Include="Source\Pawn\EditorCameraPawn.cpp" />
+    <ClCompile Include="Source\Controller\EditorViewportController.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\FEditorEngine.h">
