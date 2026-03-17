@@ -3,6 +3,12 @@
 // 조건 1: 전역 오브젝트 배열 정의
 TArray<UObject*> GUObjectArray;
 
+// TObjectPtr에서 사용: void*를 통해 forward-declared T의 UUID를 안전하게 추출
+uint32_t ExtractUObjectUUID(const void* Ptr)
+{
+	return Ptr ? static_cast<const UObject*>(Ptr)->UUID : 0;
+}
+
 // ─────────────────────────────────────────────────────────────
 //  생성 / 소멸
 // ─────────────────────────────────────────────────────────────
@@ -15,6 +21,12 @@ UObject::UObject(UClass* InClass, FString InName, UObject* InOuter)
 
 UObject::~UObject()
 {
+	// UUID 맵에서 제거
+	if (UUID != 0)
+	{
+		GUUIDToObjectMap.erase(UUID);
+	}
+
 	// 조건 1: 소멸 시 GUObjectArray 슬롯을 nullptr로 마킹
 	if (InternalIndex < static_cast<uint32>(GUObjectArray.size()))
 	{

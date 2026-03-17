@@ -22,7 +22,7 @@ public:
 	void Tick(float DeltaTime) override;
 
 private:
-	UPrimitiveComponent* CachedPrimitive = nullptr;
+	TObjectPtr<UPrimitiveComponent> CachedPrimitive;
 	std::unique_ptr<FDynamicMaterial> DynamicMaterial;
 	float UpdateInterval = 1.0f;
 	float ElapsedTime = 0.0f;
