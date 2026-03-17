@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "../../Foundation/Core/CoreTypes.h"
-#include "../../Rendering/RenderQueue.h"
+#include "../../Rendering/RenderTypes.h"
 
 struct AppContext;
 
@@ -32,7 +32,20 @@ public:
     virtual void OnMouseUp(const MouseEvent& e, AppContext& ctx) {}
     virtual void OnKeyDown(const KeyEvent& e, AppContext& ctx) {}
 
-    virtual void BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue) {}
+    virtual void FillGizmoState(AppContext& ctx, GizmoState& outState) const;
 
     virtual FString GetName() const = 0;
+
+protected:
+    virtual void FillAxisData(const FVector& origin, const FVector& axisDir,
+                              float scale, int axisIndex, GizmoAxisData& out) const {}
+
+    enum class EAxis { None, X, Y, Z };
+
+    static int   AxisToIndex(EAxis axis);
+    static EAxis IndexToAxis(int index);
+
+    EAxis ActiveAxis  = EAxis::None;
+    EAxis HoveredAxis = EAxis::None;
+    bool  bDragging   = false;
 };

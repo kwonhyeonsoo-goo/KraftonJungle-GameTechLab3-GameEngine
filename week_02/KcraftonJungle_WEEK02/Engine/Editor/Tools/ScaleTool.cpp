@@ -17,28 +17,6 @@ namespace
     }
 }
 
-int ScaleTool::AxisToIndex(EAxis axis)
-{
-    switch (axis)
-    {
-    case EAxis::X: return 0;
-    case EAxis::Y: return 1;
-    case EAxis::Z: return 2;
-    default:       return -1;
-    }
-}
-
-ScaleTool::EAxis ScaleTool::IndexToAxis(int index)
-{
-    switch (index)
-    {
-    case 0: return EAxis::X;
-    case 1: return EAxis::Y;
-    case 2: return EAxis::Z;
-    default:return EAxis::None;
-    }
-}
-
 bool ScaleTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
 {
     if (!e.LeftDown)
@@ -108,7 +86,41 @@ bool ScaleTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
 void ScaleTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
 {
     if (!bDragging)
+    {
+        // 호버 감지
+        USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
+        if (primary == nullptr) { HoveredAxis = EAxis::None; return; }
+
+        const FVector origin = primary->GetTransform().Location;
+        const FMatrix viewProj = ctx.Editor.bOrthoMode
+            ? ctx.Editor.GetViewOrthoMatrix()
+            : ctx.Editor.GetViewProjMatrix();
+        const FVector2D mouse2D((float)e.X, (float)e.Y);
+        const float gs = GizmoMath::ComputeGizmoScale(origin, ctx);
+
+        float bestDistSq = GizmoMath::GizmoScaleBoxPx * GizmoMath::GizmoScaleBoxPx;
+        EAxis bestAxis = EAxis::None;
+
+        const ECoordSpace coordSpace = ECoordSpace::Local;
+        for (int i = 0; i < 3; ++i)
+        {
+            const FVector axisDir = GizmoMath::GetAxisDirection(primary, i, coordSpace);
+            const FVector handlePos = origin + axisDir * GizmoMath::GizmoAxisLength * gs;
+            const FVector2D handle2D =
+                GizmoMath::WorldToScreen(handlePos, viewProj, ctx.Window.GetWidth(), ctx.Window.GetHeight());
+
+            if (!GizmoMath::PointInRect2D(mouse2D, handle2D, GizmoMath::GizmoScaleBoxPx))
+                continue;
+
+            const float dx = mouse2D.x - handle2D.x;
+            const float dy = mouse2D.y - handle2D.y;
+            const float distSq = dx * dx + dy * dy;
+            if (distSq < bestDistSq) { bestDistSq = distSq; bestAxis = IndexToAxis(i); }
+        }
+
+        HoveredAxis = bestAxis;
         return;
+    }
 
     USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
     if (primary == nullptr)
@@ -173,31 +185,43 @@ void ScaleTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
     DragStartAxisT = 0.0f;
 }
 
-void ScaleTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
+void ScaleTool::FillGizmoState(AppContext& ctx, GizmoState& out) const
 {
     USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-    if (primary == nullptr)
-        return;
+    if (!primary) return;
 
     const FVector origin = primary->GetTransform().Location;
-    const uint32 objectId = primary->GetUUID();
+    const float   gs     = GizmoMath::ComputeGizmoScale(origin, ctx);
 
-    for (int axisIndex = 0; axisIndex < 3; ++axisIndex)
+    out.bActive          = true;
+    out.HoveredAxisIndex = bDragging ? -1 : AxisToIndex(HoveredAxis);
+    out.ActiveAxisIndex  = bDragging ? AxisToIndex(ActiveAxis) : -1;
+
+    static const uint32 colors[3] = {
+        GizmoMath::AxisColorX, GizmoMath::AxisColorY, GizmoMath::AxisColorZ
+    };
+
+    for (int i = 0; i < 3; ++i)
     {
-        const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, ECoordSpace::Local);
-
-        const uint32 color =
-            axisIndex == 0 ? GizmoMath::AxisColorX :
-            axisIndex == 1 ? GizmoMath::AxisColorY :
-            GizmoMath::AxisColorZ;
-
-        RenderCommand cmd = {};
-        cmd.Type = ERenderType::Gizmo;
-        const float gs = GizmoMath::ComputeGizmoScale(origin, ctx);
-        cmd.WorldTransform = GizmoMath::MakeAxisTransform(origin, axisDir, GizmoMath::GizmoAxisLength * gs);
-        cmd.bOrtho = ctx.Editor.bOrthoMode;
-        cmd.Color = color;
-        cmd.ObjectId = objectId;
-        queue.Push(cmd);
+        const FVector axisDir = GizmoMath::GetAxisDirection(primary, i, ECoordSpace::Local);
+        out.Axes[i].BaseColor = colors[i];
+        FillAxisData(origin, axisDir, gs, i, out.Axes[i]);
     }
+}
+
+void ScaleTool::FillAxisData(const FVector& origin, const FVector& axisDir,
+                              float scale, int /*axisIndex*/, GizmoAxisData& out) const
+{
+    const float s = GizmoMath::GizmoAxisLength * scale;
+    const FVector localY = axisDir.Normalized();
+    const FVector localX = GizmoMath::MakeStablePerpendicular(localY);
+    const FVector localZ = localX.Cross(localY).Normalized();
+
+    out.WorldTransform = {
+        localX.x * s, localX.y * s, localX.z * s, 0.0f,
+        localY.x * s, localY.y * s, localY.z * s, 0.0f,
+        localZ.x * s, localZ.y * s, localZ.z * s, 0.0f,
+        origin.x,     origin.y,     origin.z,     1.0f
+    };
+    out.RenderType = ERenderType::ScaleGizmo;
 }

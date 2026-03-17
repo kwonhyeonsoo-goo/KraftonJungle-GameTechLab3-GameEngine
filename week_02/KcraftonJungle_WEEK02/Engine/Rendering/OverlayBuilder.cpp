@@ -5,6 +5,7 @@
 #include "../../AppContext.h"
 #include "../../Engine/World/UPrimitiveComponent.h"
 #include "../World/Transform.h"
+
 /*
 
 
@@ -36,12 +37,12 @@ void OverlayBuilder::Build(const EditorSession& session, AppContext& ctx, Render
 	PushHighlight(primary, queue);
 
 	ITool* activeTool = ctx.Editor.Tools.GetActiveTool();
-	if (activeTool != nullptr)
-	{
-		activeTool->BuildGizmoOverlay(ctx, queue);
-	}
+	if (!activeTool) return;
 
-
+	GizmoState State;
+	activeTool->FillGizmoState(ctx, State);
+	if (State.bActive)
+		PushGizmoAxes(State, queue);
 }
 
 
@@ -93,4 +94,18 @@ void OverlayBuilder::PushGrid(RenderQueue& queue)
 
 	queue.Push(axisCommand);
 
+}
+
+void OverlayBuilder::PushGizmoAxes(const GizmoState& state, RenderQueue& queue)
+{
+	for (int i = 0; i < 3; ++i)
+	{
+		const bool bHighlight = (i == state.HoveredAxisIndex) || (i == state.ActiveAxisIndex);
+
+		RenderCommand cmd = {};
+		cmd.Type           = state.Axes[i].RenderType;
+		cmd.WorldTransform = state.Axes[i].WorldTransform;
+		cmd.Color          = bHighlight ? AxisColorHighlight : state.Axes[i].BaseColor;
+		queue.Push(cmd);
+	}
 }

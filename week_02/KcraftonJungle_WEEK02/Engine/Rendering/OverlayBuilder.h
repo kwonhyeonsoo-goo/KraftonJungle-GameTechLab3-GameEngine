@@ -17,14 +17,15 @@ public:
 
     // ★ LMS 요구: "축별 색상은 UE와 똑같이 한다"
     //   0xRRGGBBAA 형식 (Alpha=FF)
-    static constexpr uint32 AxisColorX = 0xFF0000FF;   // Red   — X축
-    static constexpr uint32 AxisColorY = 0x00FF00FF;   // Green — Y축
-    static constexpr uint32 AxisColorZ = 0x0000FFFF;   // Blue  — Z축
+    static constexpr uint32 AxisColorX         = 0xFF0000FF;   // Red   — X축
+    static constexpr uint32 AxisColorY         = 0x00FF00FF;   // Green — Y축
+    static constexpr uint32 AxisColorZ         = 0x0000FFFF;   // Blue  — Z축
+    static constexpr uint32 AxisColorHighlight = 0xFFFF00FF;   // Yellow — 호버/드래그
 
 private:
     static void PushWorldAxis(RenderQueue& queue);
     static void PushLocalAxis(const USceneComponent* comp, RenderQueue& queue);
     static void PushHighlight(const TArray< USceneComponent*> primary, RenderQueue& queue);
     static void PushGrid(RenderQueue& queue);
-    // Gizmo는 ActiveTool::BuildGizmoOverlay()가 직접 Push
+    static void PushGizmoAxes(const GizmoState& state, RenderQueue& queue);
 };

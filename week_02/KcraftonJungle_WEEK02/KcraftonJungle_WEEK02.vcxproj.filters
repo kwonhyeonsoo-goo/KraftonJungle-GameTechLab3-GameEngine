@@ -131,6 +131,8 @@
     <ClCompile Include="Engine\Editor\Tools\RotateTool.cpp" />
     <ClCompile Include="Engine\Editor\Panels\OutlinerPanel.cpp" />
     <ClCompile Include="Engine\World\UTriangleComp.cpp" />
+    <ClCompile Include="Engine\Editor\Tools\ITool.cpp" />
+    <ClCompile Include="Engine\Mesh\ScaleGizmo.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
@@ -310,7 +312,7 @@
     <ClInclude Include="Engine\Services\StatsService.h" />
     <ClInclude Include="Engine\Editor\Panels\ConsolePanel.h" />
     <ClInclude Include="Engine\Editor\Commands\DeleteObjectCommand.h" />
-    <ClInclude Include="Engine\Mesh\Gizmo.h" />
+    <ClInclude Include="Engine\Mesh\TranslateGizmo.h" />
     <ClInclude Include="Engine\Editor\Panels\IEditorPanel.h" />
     <ClInclude Include="Engine\Editor\Tools\GizmoMath.h" />
     <ClInclude Include="Engine\Editor\Tools\SelectTool.h" />
@@ -324,6 +326,7 @@
     <ClInclude Include="Engine\Editor\Panels\OutlinerPanel.h" />
     <ClInclude Include="Engine\Mesh\Triangle.h" />
     <ClInclude Include="Engine\World\UTriangleComp.h" />
+    <ClInclude Include="Engine\Mesh\FVertexSimple.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">
@@ -373,7 +376,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Engine\Mesh\Torus.h">
+    <None Include="Engine\Mesh\RotationGizmo.h">
       <Filter>Engine\Mesh</Filter>
     </None>
   </ItemGroup>

@@ -28,7 +28,9 @@ void ObjectStore::Remove(uint32 uuid)
 void ObjectStore::Clear()
 {
 	Index.clear();
+	Index.rehash(0);
 	Objects.clear();
+	Objects.shrink_to_fit();
 }
 
 UObject* ObjectStore::Find(uint32 uuid) const

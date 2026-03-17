@@ -9,7 +9,6 @@ public:
 
     void   SyncNextUUID(uint32 value);
     uint32 GetNext() const;
-    uint32 GetNextUUID() const;
 private:
     uint32 NextUUID = 1;
 };

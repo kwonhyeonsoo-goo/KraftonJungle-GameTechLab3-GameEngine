@@ -50,7 +50,14 @@ void OutlinerPanel::OnRender(AppContext& ctx)
 
             ImGui::TreeNodeEx((void*)(intptr_t)obj->GetUUID(), flags, label);
 
-            if (ImGui::IsItemClicked())
+            if (ImGui::IsItemHovered() &&
+                ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+            {
+                ctx.Editor.FocusObject(prim, 5.0f);
+                bool additive = ImGui::GetIO().KeyCtrl;
+                ctx.Editor.Selection.Select(prim, additive);
+            }
+            else if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
             {
                 bool additive = ImGui::GetIO().KeyCtrl;
                 ctx.Editor.Selection.Select(prim, additive);

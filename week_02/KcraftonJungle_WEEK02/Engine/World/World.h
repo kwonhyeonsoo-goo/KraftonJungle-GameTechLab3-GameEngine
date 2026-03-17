@@ -21,8 +21,8 @@ public:
 
     void SetContext(AppContext* ctx);
     void SetName(const FString& name) { Name = name; }
-    const FString GetName() const {return Name; }
-    FString GetName() {return Name; }
+    const FString GetName() const { return Name; }
+    FString GetName() { return Name; }
 
 private:
     FString Name = "default";
