@@ -43,5 +43,5 @@ public:
     FMatrix GetOrthogonalMatrix() const;
     FMatrix GetViewProjMatrix()   const;
     FMatrix GetViewOrthoMatrix()  const;
-    float ComputeGizmoScale(const FVector& gizmoPos, float viewportHeight) const;
+    void FocusObject(const USceneComponent* comp, float distance);
 };

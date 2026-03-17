@@ -10,8 +10,8 @@
 
 namespace GizmoMath
 {
-    constexpr float  GizmoAxisLength    = 3.0f;
-    constexpr float  GizmoRingRadius    = 3.0f;  // Torus.h R=3.0 에 맞춤
+    constexpr float  GizmoAxisLength    = 1.5f;
+    constexpr float  GizmoRingRadius    = 1.5f;  // Torus.h R=3.0 에 맞춤
     constexpr float  GizmoPickThresholdPx = 30.0f;
     constexpr float  GizmoScaleBoxPx   = 30.0f;
     constexpr float  kGizmoScreenScale  = 0.1f;  // dist * kGizmoScreenScale = 월드 스케일
@@ -25,7 +25,7 @@ namespace GizmoMath
     {
         if (ctx.Editor.bOrthoMode)
             return ctx.Editor.OrthoHeight * kGizmoScreenScale;
-        return (gizmoPos - ctx.Editor.Camera.Position).Length() * kGizmoScreenScale;
+        return (std::max)((gizmoPos - ctx.Editor.Camera.Position).Length() * kGizmoScreenScale, 0.5f);
     }
 
     constexpr uint32 AxisColorX = 0xFF0000FF;
