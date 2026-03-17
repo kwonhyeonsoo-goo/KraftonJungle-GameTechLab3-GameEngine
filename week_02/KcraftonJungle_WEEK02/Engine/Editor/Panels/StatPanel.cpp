@@ -38,14 +38,25 @@ void StatPanel::OnRender(AppContext& ctx)
 
         //ImGui::Text("Snap Value          : %.2f", ctx.Editor.Tools.GetSnapValue());
 
+        FEditorCameraState& Cam = ctx.Editor.GetActiveCamera();
+
+        float YawDeg = Cam.GetYawDeg();
+        float PitchDeg = Cam.GetPitchDeg();
+
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Text("Camera");
-        ImGui::DragFloat3("Position", &ctx.Editor.GetActiveCamera().Position.x, 0.01f);
-        ImGui::DragFloat("Yaw", &ctx.Editor.GetActiveCamera().Yaw, 0.1f);
-        ImGui::DragFloat("Pitch", &ctx.Editor.GetActiveCamera().Pitch, 0.1f, -89.f, 89.f);
-        ImGui::DragFloat("Move Speed", &ctx.Editor.GetActiveCamera().MoveSpeed, 0.01f, 0.1f, 50.f);
-        ImGui::DragFloat("Rot Speed", &ctx.Editor.GetActiveCamera().RotSpeed, 0.001f, 0.01f, 5.f);
+        ImGui::DragFloat3("Position", &Cam.Position.x, 0.01f);
+        if (ImGui::DragFloat("Yaw", &YawDeg, 0.1f, -180.f, 180.f))
+        {
+            Cam.SetYawDeg(YawDeg);
+        }
+        if (ImGui::DragFloat("Pitch", &PitchDeg, 0.1f, -89.f, 89.f))
+        {
+            Cam.SetPitchDeg(PitchDeg);
+        }
+        ImGui::DragFloat("Move Speed", &Cam.MoveSpeed, 0.01f, 0.1f, 50.f);
+        ImGui::DragFloat("Rot Speed", &Cam.RotSpeed, 0.001f, 0.01f, 5.f);
 
         ImGui::Spacing();
         ImGui::Separator();

@@ -94,6 +94,7 @@ void ToolbarPanel::OnRender(AppContext& ctx)
     {
         Mode = EEditorProjectionMode::Perspective;
     }
+    ImGui::SameLine();
 
     if (ImGui::RadioButton("Orthographic", bOrthographic))
     {
@@ -118,7 +119,7 @@ void ToolbarPanel::OnRender(AppContext& ctx)
     static int32 currentItem = 0;
     static int32 NumItem = 1;
 
-    ImGui::Combo("My Dropdown Label", &currentItem, ItemNames, IM_ARRAYSIZE(ItemNames));
+    ImGui::Combo("Object", &currentItem, ItemNames, IM_ARRAYSIZE(ItemNames));
 
     if (ImGui::Button("Spawn"))
     {
@@ -165,6 +166,7 @@ void ToolbarPanel::OnRender(AppContext& ctx)
         ctx.NewScene();
         std::cout << "Clear" << std::endl;
     }
+    ImGui::SameLine();
 
     if (ImGui::Button("Save Scene"))
     {
@@ -176,6 +178,7 @@ void ToolbarPanel::OnRender(AppContext& ctx)
 
         std::cout << "Save End" << std::endl;
     }
+    ImGui::SameLine();
 
     if (ImGui::Button("Load Scene"))
     {

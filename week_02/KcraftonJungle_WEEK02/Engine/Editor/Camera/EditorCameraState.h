@@ -17,4 +17,8 @@ struct FEditorCameraState
     FVector GetForwardVector() const;
     FVector GetRightVector() const;
     FVector GetUpVector() const;
+    float GetYawDeg() const;
+    float GetPitchDeg() const;
+    void SetYawDeg(float Deg);
+    void SetPitchDeg(float Deg);
 };

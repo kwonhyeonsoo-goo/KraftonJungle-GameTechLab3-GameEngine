@@ -150,6 +150,7 @@
     <ClInclude Include="Engine\Foundation\Core\Memory.h" />
     <ClInclude Include="Engine\Foundation\Math\FMatrix.h" />
     <ClInclude Include="Engine\Foundation\Math\FMatrix4.h" />
+    <ClInclude Include="Engine\Foundation\Math\FQuat.h" />
     <ClInclude Include="Engine\Foundation\Math\FVector.h" />
     <ClInclude Include="Engine\Foundation\Math\FVector4.h" />
     <ClInclude Include="Engine\Foundation\Containers\TArray.h" />

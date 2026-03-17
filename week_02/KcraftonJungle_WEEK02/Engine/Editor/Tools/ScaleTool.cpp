@@ -93,7 +93,11 @@ void ScaleTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
     if (!bDragging)
     {
         TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
-        if (primaries.empty()) HoveredAxis = EAxis::None; return;
+        if (primaries.empty())
+        {
+            HoveredAxis = EAxis::None;
+            return;
+        }
 
         // 호버 감지
         USceneComponent* primary = primaries.back();
