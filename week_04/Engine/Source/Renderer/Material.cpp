@@ -149,7 +149,8 @@ std::unique_ptr<FDynamicMaterial> FMaterial::CreateDynamicMaterial() const
 	}
 
 	auto Dynamic = std::make_unique<FDynamicMaterial>();
-	Dynamic->Name = Name + "_Dynamic";
+	Dynamic->OriginName = OriginName;
+	Dynamic->InstanceName = OriginName + "_Dynamic";
 	Dynamic->VertexShader = VertexShader;
 	Dynamic->PixelShader = PixelShader;
 	Dynamic->ParameterMap = ParameterMap;

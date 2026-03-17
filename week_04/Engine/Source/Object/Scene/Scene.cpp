@@ -14,6 +14,7 @@
 #include "Primitive/PrimitiveBase.h"
 #include "Math/Frustum.h"
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include "ThirdParty/nlohmann/json.hpp"
@@ -174,6 +175,21 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 		Json["Camera"]["Rotation"] = { Camera->GetYaw(), Camera->GetPitch() };
 	}
 
+	// Materials (로드된 Material 파일 경로를 프로젝트 루트 기준 상대 경로로 저장)
+	TArray<FString> LoadedPaths = FMaterialManager::Get().GetLoadedPaths();
+	if (!LoadedPaths.empty())
+	{
+		nlohmann::json Materials = nlohmann::json::array();
+		FString Root = FPaths::ProjectRoot();
+		for (const FString& AbsPath : LoadedPaths)
+		{
+			// 절대 경로 → 프로젝트 루트 기준 상대 경로
+			std::filesystem::path Rel = std::filesystem::relative(AbsPath, Root);
+			Materials.push_back(Rel.generic_string());
+		}
+		Json["Materials"] = Materials;
+	}
+
 	// Primitives
 	nlohmann::json Primitives;
 	int32 Index = 0;
@@ -198,11 +214,11 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 
 		Primitives[Key]["Type"] = Type;
 
-		// Material 이름 저장
+		// Material 이름 저장 (에셋 원본 이름 사용)
 		UPrimitiveComponent* PrimComp = Actor->GetComponentByClass<UPrimitiveComponent>();
-		if (PrimComp && PrimComp->GetMaterial() && !PrimComp->GetMaterial()->GetName().empty())
+		if (PrimComp && PrimComp->GetMaterial() && !PrimComp->GetMaterial()->GetOriginName().empty())
 		{
-			Primitives[Key]["Material"] = PrimComp->GetMaterial()->GetName();
+			Primitives[Key]["Material"] = PrimComp->GetMaterial()->GetOriginName();
 		}
 
 		Primitives[Key]["Location"] = {

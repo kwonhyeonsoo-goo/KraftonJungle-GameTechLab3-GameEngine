@@ -84,8 +84,16 @@ public:
 
 	uint32 GetSortId() const { return SortId; }
 
-	void SetName(const FString& InName) { Name = InName; }
-	const FString& GetName() const { return Name; }
+	// 에셋 원본 이름 (JSON에서 로드된 이름, 직렬화 시 사용)
+	void SetOriginName(const FString& InName) { OriginName = InName; }
+	const FString& GetOriginName() const { return OriginName; }
+
+	// 인스턴스 이름 (런타임에서 구분용, DynamicMaterial 등)
+	void SetInstanceName(const FString& InName) { InstanceName = InName; }
+	const FString& GetInstanceName() const { return InstanceName; }
+
+	// 인스턴스 이름이 있으면 인스턴스 이름, 없으면 원본 이름 반환
+	const FString& GetName() const { return InstanceName.empty() ? OriginName : InstanceName; }
 
 	void SetVertexShader(const std::shared_ptr<FVertexShader>& InVS) { VertexShader = InVS; }
 	void SetPixelShader(const std::shared_ptr<FPixelShader>& InPS) { PixelShader = InPS; }
@@ -117,7 +125,8 @@ protected:
 	uint32 SortId = 0;
 	static inline uint32 NextSortId = 0;
 
-	FString Name;
+	FString OriginName;
+	FString InstanceName;
 	std::shared_ptr<FVertexShader> VertexShader;
 	std::shared_ptr<FPixelShader> PixelShader;
 

@@ -10,6 +10,12 @@
       -36.00000762939453
     ]
   },
+  "Materials": [
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_TintYellow.json"
+  ],
   "Primitives": {
     "0": {
       "Location": [
@@ -112,7 +118,7 @@
         0.41999998688697815,
         0.0
       ],
-      "Material": "M_TintYellow_Dynamic",
+      "Material": "M_TintYellow",
       "Rotation": [
         0.0,
         0.7600000500679016,
@@ -131,7 +137,7 @@
         1.0700000524520874,
         2.4600000381469727
       ],
-      "Material": "M_GreenColor_Dynamic",
+      "Material": "M_GreenColor",
       "Rotation": [
         -0.0,
         -30.910003662109375,

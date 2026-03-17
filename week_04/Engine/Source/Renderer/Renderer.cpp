@@ -197,7 +197,7 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		std::wstring ColorPSPath = ShaderDirW + L"ColorPixelShader.hlsl";
 		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, ColorPSPath.c_str());
 		DefaultMaterial = std::make_shared<FMaterial>();
-		DefaultMaterial->SetName("M_Default");
+		DefaultMaterial->SetOriginName("M_Default");
 		DefaultMaterial->SetVertexShader(VS);
 		DefaultMaterial->SetPixelShader(PS);
 
