@@ -210,6 +210,9 @@
     <ClCompile Include="Source\Component\CameraComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Core\Paths.cpp" />
+    <ClCompile Include="Source\Primitive\PrimitiveSky.cpp" />
+    <ClCompile Include="Source\Component\SkyComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -428,8 +431,17 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp">
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Core\Paths.h" />
+    <ClInclude Include="Source\Renderer\Material.h" />
+    <ClInclude Include="Source\Renderer\MaterialManager.h" />
+    <ClInclude Include="Source\Actor\SkySphereActor.h" />
+    <ClInclude Include="Source\Component\SkyComponent.h" />
+    <ClInclude Include="Source\Primitive\PrimitiveSky.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shaders\SkyShader.hlsl" />
   </ItemGroup>
 </Project>
