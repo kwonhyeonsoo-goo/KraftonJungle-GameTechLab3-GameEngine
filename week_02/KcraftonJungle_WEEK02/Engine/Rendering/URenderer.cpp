@@ -406,8 +406,9 @@ void URenderer::ReleasePrimitiveVertexBuffer()
     if (vertexBufferRect) { vertexBufferRect->Release();      vertexBufferRect = nullptr; }
     if (indexBufferRect) { indexBufferRect->Release();       indexBufferRect = nullptr; }
     if (vertexBufferWorldAxis) { vertexBufferWorldAxis->Release(); vertexBufferWorldAxis = nullptr; }
-    if (vertexBufferGizmo) { vertexBufferGizmo->Release(); vertexBufferGizmo = nullptr; }
-    if (vertexBufferTorus) { vertexBufferTorus->Release(); vertexBufferTorus = nullptr; }
+    if (vertexBufferTranslateGizmo) { vertexBufferTranslateGizmo->Release(); vertexBufferTranslateGizmo = nullptr; }
+    if (vertexBufferRotationGizmo) { vertexBufferRotationGizmo->Release(); vertexBufferRotationGizmo = nullptr; }
+    if (vertexBufferScaleGizmo) { vertexBufferScaleGizmo->Release(); vertexBufferScaleGizmo = nullptr; }
 
 }
 
@@ -776,11 +777,7 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
         case ERenderType::WorldAxis:
             PrepareShader(SimpleVertexShader, SimplePixelShader, SimpleInputLayout);
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
-
-
-
             UpdateMVP(constants.MVP, (uint32)0xFFFFFFFF);
-
             SetState(RasterizerState, DepthStencilState, BlendState);
             RenderPrimitive(vertexBufferWorldAxis, numVerticesWorldAxis);
 
@@ -789,39 +786,26 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             break;
 
         case ERenderType::TranslateGizmo: {
-            PrepareShader();
             DeviceContext->OMSetDepthStencilState(DepthStencilDisable, 1);
-
-
-
-
+            UpdateMVP(constants.MVP, cmd.Color);
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-  
+            PrepareShader(SimpleVertexShader, SimplePixelShader, SimpleInputLayout);
             RenderPrimitive(vertexBufferTranslateGizmo, numVerticesTranslateGizmo);
-            DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
             break;
         }
         case ERenderType::RotationGizmo: {
             DeviceContext->OMSetDepthStencilState(DepthStencilDisable, 1);
-            uint32 Red = (cmd.Color >> 24) & 0xFF;
-            uint32 Green = (cmd.Color >> 16) & 0xFF;
-            uint32 Blue = (cmd.Color >> 8) & 0xFF;
-            UpdateMVP(constants.MVP, { Red / 255.f,Green / 255.f, Blue / 255.f });
-
+            UpdateMVP(constants.MVP, cmd.Color);
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            PrepareShader();
+            PrepareShader(SimpleVertexShader, SimplePixelShader, SimpleInputLayout);
             RenderPrimitive(vertexBufferRotationGizmo, numVerticesRotationGizmo);
             break;
         }
         case ERenderType::ScaleGizmo: {
             DeviceContext->OMSetDepthStencilState(DepthStencilDisable, 1);
-            uint32 Red = (cmd.Color >> 24) & 0xFF;
-            uint32 Green = (cmd.Color >> 16) & 0xFF;
-            uint32 Blue = (cmd.Color >> 8) & 0xFF;
-            UpdateMVP(constants.MVP, { Red / 255.f,Green / 255.f, Blue / 255.f });
-
+            UpdateMVP(constants.MVP, cmd.Color);
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            PrepareShader();
+            PrepareShader(SimpleVertexShader, SimplePixelShader, SimpleInputLayout);
             RenderPrimitive(vertexBufferScaleGizmo, numVerticesScaleGizmo);
             break;
         }
