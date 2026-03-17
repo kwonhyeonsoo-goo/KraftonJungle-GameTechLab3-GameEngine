@@ -14,5 +14,15 @@ public:
     DelegateHandle SelectionChangedHandle = 0;
     DelegateHandle ObjectDestroyedHandle = 0;
 private:
-    uint32 HighlightedUUID = 0;
+    TArray<uint32> HighlightedUUIDs;
 };
+
+inline bool IsUUIDHighlighted(const TArray<uint32>& highlightedUUIDs, uint32 uuid)
+{
+    for (uint32 highlighted : highlightedUUIDs)
+    {
+        if (highlighted == uuid)
+            return true;
+    }
+    return false;
+}

@@ -1,18 +1,28 @@
 #include "PropertyPanel.h"
+#include "PropertyPanel.h"
 
 void PropertyPanel::OnRender(AppContext& ctx)
 {
     ImGui::Begin("Property");
 
-    if (Current == nullptr) {
+    if (CurrentObjs.empty()) {
         ImGui::Text("No selection");
         ImGui::End();
         return;
     }
 
+    if (CurrentObjs.size() > 1) {
+        ImGui::Text("Multi-selection (%d)", (int)CurrentObjs.size());
+        ImGui::Text("Property editing is available for single selection only.");
+        ImGui::End();
+        return;
+    }
+
+    const USceneComponent* Current = CurrentObjs.back();
+
     UObject* obj = ctx.Objects.Find(Current->GetUUID());
     if (obj == nullptr || !obj->IsA<USceneComponent>()) {
-        Current = nullptr;
+        CurrentObjs.clear();
         ImGui::Text("Invalid selection");
         ImGui::End();
         return;
@@ -44,11 +54,21 @@ void PropertyPanel::OnRender(AppContext& ctx)
 
 void PropertyPanel::OnObjectDestroyed(const ObjectDestroyedEvent& e)
 {
-	if (Current != nullptr && e.UUID == Current->GetUUID())
-		Current = nullptr;
+    for (auto it = CurrentObjs.begin(); it != CurrentObjs.end(); )
+    {
+        const USceneComponent* comp = *it;
+        if (comp != nullptr && comp->GetUUID() == e.UUID)
+            it = CurrentObjs.erase(it);
+        else
+            ++it;
+    }
 }
 
 void PropertyPanel::OnSelectionChanged(const SelectionChangedEvent& e)
 {
-	Current = e.Primary;
+    CurrentObjs.clear();
+    for (USceneComponent* comp : e.Primitives)
+    {
+        CurrentObjs.push_back(comp);
+    }
 }

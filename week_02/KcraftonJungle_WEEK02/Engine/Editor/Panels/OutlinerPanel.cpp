@@ -34,7 +34,7 @@ void OutlinerPanel::OnRender(AppContext& ctx)
             auto* prim = static_cast<UPrimitiveComponent*>(obj);
             if (!prim) continue;
 
-            bool isSelected = (obj->GetUUID() == HighlightedUUID);
+            bool isSelected = IsUUIDHighlighted(HighlightedUUIDs, prim->GetUUID());
 
             char label[64];
             snprintf(label, sizeof(label), "%s_%u",
@@ -65,11 +65,21 @@ void OutlinerPanel::OnRender(AppContext& ctx)
 
 void OutlinerPanel::OnSelectionChanged(const SelectionChangedEvent& e)
 {
-    HighlightedUUID = e.Primary ? e.Primary->GetUUID() : 0;
+    HighlightedUUIDs.clear();
+
+    for(auto prim : e.Primitives)
+    {
+        HighlightedUUIDs.push_back(prim->GetUUID());
+	}
 }
 
 void OutlinerPanel::OnObjectDestroyed(const ObjectDestroyedEvent& e)
 {
-    if (HighlightedUUID == e.UUID)
-        HighlightedUUID = 0;
+    for(auto it = HighlightedUUIDs.begin(); it != HighlightedUUIDs.end(); )
+    {
+        if (*it == e.UUID)
+            it = HighlightedUUIDs.erase(it);
+        else
+            ++it;
+	}
 }

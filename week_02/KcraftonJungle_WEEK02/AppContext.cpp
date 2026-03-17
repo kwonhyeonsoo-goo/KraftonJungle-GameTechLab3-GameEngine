@@ -10,6 +10,7 @@
 #include "Engine/Editor/Tools/RotateTool.h"
 #include "Engine/Editor/Tools/ScaleTool.h"
 #include "Engine/Foundation/Core/log.h"
+#include <iostream>
 
 bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 height)
 {
@@ -194,6 +195,17 @@ void AppContext::SubscribeEvents()
         property->SelectionChangedHandle = Editor.Selection.OnSelectionChanged.Bind(
             [property](const SelectionChangedEvent& e) {
                 property->OnSelectionChanged(e);
+            });
+    }
+
+    if (outliner) {
+        outliner->ObjectDestroyedHandle = OnObjectDestroyed.Bind(
+            [outliner](const ObjectDestroyedEvent& e) {
+                outliner->OnObjectDestroyed(e);
+            });
+        outliner->SelectionChangedHandle = Editor.Selection.OnSelectionChanged.Bind(
+            [outliner](const SelectionChangedEvent& e) {
+                outliner->OnSelectionChanged(e);
             });
     }
 }

@@ -24,7 +24,7 @@ public:
 private:
     static void PushWorldAxis(RenderQueue& queue);
     static void PushLocalAxis(const USceneComponent* comp, RenderQueue& queue);
-    static void PushHighlight(const USceneComponent* comp, RenderQueue& queue);
+    static void PushHighlight(const TArray< USceneComponent*> primary, RenderQueue& queue);
     static void PushGrid(RenderQueue& queue);
     // Gizmo는 ActiveTool::BuildGizmoOverlay()가 직접 Push
 };
