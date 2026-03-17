@@ -18,13 +18,15 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int32 Width,
 		return false;
 	GEngine = this;
 
+	PreInitialize();
+
 	Core = std::make_unique<CCore>();
 	if (!Core->Initialize(App->GetHwnd(), App->GetWindowWidth(), App->GetWindowHeight()))
 		return false;
 
-	Startup();
+	PostInitialize();
 
-	// Input forwarding (registered after Startup so Editor can add ImGui/Picking filters first)
+	// Input forwarding (registered after PostInitialize so Editor can add ImGui/Picking filters first)
 	App->AddMessageFilter(std::bind(&FEngine::OnInput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
 	// Resize callback

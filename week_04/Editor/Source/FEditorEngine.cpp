@@ -1,5 +1,6 @@
 #include "FEditorEngine.h"
 #include "Core/Core.h"
+#include "Core/ConsoleVariableManager.h"
 #include "Platform/Windows/WindowApplication.h"
 #include "Debug/EngineLog.h"
 
@@ -15,14 +16,40 @@ bool FEditorEngine::Initialize(HINSTANCE hInstance)
 	return true;
 }
 
-void FEditorEngine::Startup()
+void FEditorEngine::PreInitialize()
 {
-	EditorUI.Initialize(Core.get());
-	EditorUI.SetupWindow(App->GetMainWindow());
-
 	FEngineLog::Get().SetCallback([this](const char* Msg)
 		{
 			EditorUI.GetConsole().AddLog("%s", Msg);
 		});
+}
+
+void FEditorEngine::PostInitialize()
+{
+	EditorUI.Initialize(Core.get());
+	EditorUI.SetupWindow(App->GetMainWindow());
+
+	// Console variable commands
+	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
+	TArray<FString> VarNames;
+	CVM.GetAllNames(VarNames);
+	for (const FString& Name : VarNames)
+	{
+		EditorUI.GetConsole().RegisterCommand(Name.c_str());
+	}
+
+	EditorUI.GetConsole().SetCommandHandler([](const char* CommandLine)
+		{
+			FString Result;
+			if (FConsoleVariableManager::Get().Execute(CommandLine, Result))
+			{
+				FEngineLog::Get().Log("%s", Result.c_str());
+			}
+			else
+			{
+				FEngineLog::Get().Log("[error] Unknown command: '%s'", CommandLine);
+			}
+		});
+
 	UE_LOG("EditorEngine initialized");
 }

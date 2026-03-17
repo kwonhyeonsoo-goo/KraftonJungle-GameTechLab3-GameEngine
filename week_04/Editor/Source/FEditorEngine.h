@@ -10,7 +10,8 @@ public:
 	bool Initialize(HINSTANCE hInstance);
 
 protected:
-	void Startup() override;
+	void PreInitialize() override;
+	void PostInitialize() override;
 
 private:
 	CEditorUI EditorUI;
