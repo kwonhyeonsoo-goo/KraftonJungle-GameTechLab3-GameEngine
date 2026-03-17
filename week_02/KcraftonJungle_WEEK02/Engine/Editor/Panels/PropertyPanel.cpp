@@ -11,42 +11,58 @@ void PropertyPanel::OnRender(AppContext& ctx)
         return;
     }
 
-    if (CurrentObjs.size() > 1) {
-        ImGui::Text("Multi-selection (%d)", (int)CurrentObjs.size());
-        ImGui::Text("Property editing is available for single selection only.");
-        ImGui::End();
-        return;
+    TArray<USceneComponent*> targets;
+    for(auto & selected: CurrentObjs) {
+        if (selected == nullptr) continue;
+
+        UObject* obj = ctx.Objects.Find(selected->GetUUID());
+        if (obj == nullptr || !obj->IsA<USceneComponent>()) continue;
+
+        targets.push_back(static_cast<USceneComponent*>(obj));
     }
 
-    const USceneComponent* Current = CurrentObjs.back();
-
-    UObject* obj = ctx.Objects.Find(Current->GetUUID());
-    if (obj == nullptr || !obj->IsA<USceneComponent>()) {
+    if (targets.empty()) {
         CurrentObjs.clear();
         ImGui::Text("Invalid selection");
         ImGui::End();
         return;
     }
 
-    USceneComponent* sceneComp = static_cast<USceneComponent*>(obj);
-    Transform t = sceneComp->GetTransform();
+    USceneComponent* baseComp = targets.back();
+    const Transform baseT = baseComp->GetTransform();
 
-    float loc[3] = { t.Location.GetX(), t.Location.GetY(), t.Location.GetZ()};
-    float rot[3] = { t.Rotation.GetX(), t.Rotation.GetY(), t.Rotation.GetZ()};
-    float scale[3] = { t.Scale.GetX(), t.Scale.GetY(), t.Scale.GetZ()};
+    float loc[3] = { baseT.Location.GetX(), baseT.Location.GetY(), baseT.Location.GetZ() };
+    float rot[3] = { baseT.Rotation.GetX(), baseT.Rotation.GetY(), baseT.Rotation.GetZ() };
+    float scale[3] = { baseT.Scale.GetX(), baseT.Scale.GetY(), baseT.Scale.GetZ() };
 
-    bool changed = false;
-    changed |= ImGui::DragFloat3("Location", loc, 0.1f);
-    changed |= ImGui::DragFloat3("Rotation", rot, 1.0f);
-    changed |= ImGui::DragFloat3("Scale", scale, 0.1f);
+    const bool locChanged = ImGui::DragFloat3("Location", loc, 0.1f);
+    const bool rotChanged = ImGui::DragFloat3("Rotation", rot, 1.0f);
+    const bool sclChanged = ImGui::DragFloat3("Scale", scale, 0.1f);
 
-    if (changed) {
-        Transform newT;
-        newT.Location = FVector(loc[0], loc[1], loc[2]);
-        newT.Rotation = FVector(rot[0], rot[1], rot[2]);
-        newT.Scale = FVector(scale[0], scale[1], scale[2]);
+    if (locChanged || rotChanged || sclChanged)
+    {
+        const FVector oldLoc = baseT.Location;
+        const FVector oldRot = baseT.Rotation;
+        const FVector oldScl = baseT.Scale;
 
-        ctx.Dispatch(std::make_unique<SetTransformCommand>(sceneComp, newT));
+        const FVector newLoc(loc[0], loc[1], loc[2]);
+        const FVector newRot(rot[0], rot[1], rot[2]);   
+        const FVector newScl(scale[0], scale[1], scale[2]);
+
+        const FVector locDelta = newLoc - oldLoc;
+        const FVector rotDelta = newRot - oldRot;
+        const FVector sclDelta = newScl - oldScl;
+
+        for (USceneComponent* target : targets)
+        {
+            Transform t = target->GetTransform();
+
+            if (locChanged) t.Location = t.Location + locDelta;
+            if (rotChanged) t.Rotation = t.Rotation + rotDelta;
+            if (sclChanged) t.Scale = t.Scale + sclDelta;
+
+            ctx.Dispatch(std::make_unique<SetTransformCommand>(target, t));
+        }
     }
 
     ImGui::End();
