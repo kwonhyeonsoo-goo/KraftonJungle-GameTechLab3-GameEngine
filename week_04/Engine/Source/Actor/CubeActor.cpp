@@ -1,6 +1,7 @@
 #include "CubeActor.h"
 #include "Component/CubeComponent.h"
 #include "Component/RandomColorComponent.h"
+#include "Object/ObjectFactory.h"
 
 namespace
 {
@@ -23,12 +24,12 @@ ACubeActor::ACubeActor(UClass* InClass, const FString& InName, UObject* InOuter)
 
 void ACubeActor::PostSpawnInitialize()
 {
-	PrimitiveComponent = new UCubeComponent();
+	PrimitiveComponent = FObjectFactory::ConstructObject<UCubeComponent>(this);
 	AddOwnedComponent(PrimitiveComponent);
 
 	if (bUseRandomColor)
 	{
-		RandomColorComponent = new URandomColorComponent();
+		RandomColorComponent = FObjectFactory::ConstructObject<URandomColorComponent>(this);
 		AddOwnedComponent(RandomColorComponent);
 	}
 

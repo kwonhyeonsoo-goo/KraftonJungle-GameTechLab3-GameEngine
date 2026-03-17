@@ -7,6 +7,7 @@
 #include "Actor/SphereActor.h"
 #include "Camera/Camera.h"
 #include "Component/CameraComponent.h"
+#include "Object/ObjectFactory.h"
 #include "Component/PrimitiveComponent.h"
 #include "Math/Frustum.h"
 #include "Primitive/PrimitiveBase.h"
@@ -43,16 +44,22 @@ UScene::~UScene()
 {
 	for (AActor* Actor : Actors)
 	{
-		delete Actor;
+		if (Actor)
+		{
+			Actor->Destroy();
+		}
 	}
 	Actors.clear();
+
+	if (SceneCameraComponent)
+	{
+		SceneCameraComponent->MarkPendingKill();
+	}
 
 	if (ActiveCameraComponent == SceneCameraComponent)
 	{
 		ActiveCameraComponent = nullptr;
 	}
-
-	delete SceneCameraComponent;
 	SceneCameraComponent = nullptr;
 }
 
@@ -76,7 +83,7 @@ void UScene::InitializeEmptyScene(float AspectRatio)
 {
 	if (SceneCameraComponent == nullptr)
 	{
-		SceneCameraComponent = new UCameraComponent();
+		SceneCameraComponent = FObjectFactory::ConstructObject<UCameraComponent>(this, "SceneCamera");
 	}
 
 	if (ActiveCameraComponent == nullptr)
@@ -308,7 +315,10 @@ void UScene::ClearActors()
 
 	for (AActor* Actor : Actors)
 	{
-		delete Actor;
+		if (Actor)
+		{
+			Actor->Destroy();
+		}
 	}
 	Actors.clear();
 }

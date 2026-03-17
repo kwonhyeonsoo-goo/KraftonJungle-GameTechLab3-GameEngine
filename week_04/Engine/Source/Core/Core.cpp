@@ -5,6 +5,7 @@
 #include "Scene/Scene.h"
 #include "Actor/Actor.h"
 #include "Component/CameraComponent.h"
+#include "Object/ObjectFactory.h"
 #include "Object/ObjectManager.h"
 #include "Component/PrimitiveComponent.h"
 #include "Primitive/PrimitiveBase.h"
@@ -21,7 +22,7 @@ bool CCore::CreateSceneContext(FSceneContext& Context, const FString& ContextNam
 {
 	Context.ContextName = ContextName;
 	Context.SceneType = SceneType;
-	Context.Scene = new UScene(UScene::StaticClass(), ContextName);
+	Context.Scene = FObjectFactory::ConstructObject<UScene>(nullptr, ContextName);
 	if (!Context.Scene)
 	{
 		return false;

@@ -8,6 +8,7 @@
 #include "Actor/Actor.h"
 #include "Camera/Camera.h"
 #include "Component/CubeComponent.h"
+#include "Object/ObjectFactory.h"
 #include "Debug/EngineLog.h"
 
 #include "imgui_impl_win32.h"
@@ -35,7 +36,7 @@ namespace
 			AActor* PreviewActor = PreviewScene->SpawnActor<AActor>("PreviewCube");
 			if (PreviewActor)
 			{
-				UCubeComponent* PreviewComponent = new UCubeComponent();
+				UCubeComponent* PreviewComponent = FObjectFactory::ConstructObject<UCubeComponent>(PreviewActor);
 				PreviewActor->AddOwnedComponent(PreviewComponent);
 				PreviewActor->SetActorLocation({ 0.0f, 0.0f, 0.0f });
 			}

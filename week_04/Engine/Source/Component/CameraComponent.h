@@ -5,8 +5,11 @@
 class ENGINE_API UCameraComponent : public USceneComponent
 {
 public:
+	static UClass* StaticClass();
+
 	UCameraComponent();
-	virtual ~UCameraComponent() = default;
+	UCameraComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
+	virtual ~UCameraComponent();
 
 	virtual void Tick(float DeltaTime) override;
 	//Movement method

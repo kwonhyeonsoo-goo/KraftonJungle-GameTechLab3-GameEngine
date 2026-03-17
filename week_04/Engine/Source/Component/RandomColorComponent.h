@@ -12,6 +12,7 @@ public:
 	static UClass* StaticClass();
 
 	URandomColorComponent();
+	URandomColorComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
 	~URandomColorComponent() override;
 
 	void SetUpdateInterval(float InInterval) { UpdateInterval = InInterval; }

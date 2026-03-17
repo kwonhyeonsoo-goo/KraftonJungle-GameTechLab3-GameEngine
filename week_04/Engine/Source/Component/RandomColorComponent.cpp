@@ -8,7 +8,7 @@ namespace
 {
 	UObject* CreateURandomColorComponentInstance(UObject* InOuter, const FString& InName)
 	{
-		return new URandomColorComponent();
+		return new URandomColorComponent(URandomColorComponent::StaticClass(), InName, InOuter);
 	}
 
 	FVector4 GenerateRandomColor()
@@ -27,6 +27,12 @@ UClass* URandomColorComponent::StaticClass()
 
 URandomColorComponent::URandomColorComponent()
 	: UActorComponent(StaticClass(), "")
+{
+	bCanEverTick = true;
+}
+
+URandomColorComponent::URandomColorComponent(UClass* InClass, const FString& InName, UObject* InOuter)
+	: UActorComponent(InClass, InName, InOuter)
 {
 	bCanEverTick = true;
 }

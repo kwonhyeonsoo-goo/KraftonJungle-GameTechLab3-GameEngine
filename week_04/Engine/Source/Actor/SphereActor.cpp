@@ -1,6 +1,7 @@
 #include "SphereActor.h"
 #include "Component/SphereComponent.h"
 #include "Component/RandomColorComponent.h"
+#include "Object/ObjectFactory.h"
 
 namespace
 {
@@ -23,12 +24,12 @@ ASphereActor::ASphereActor(UClass* InClass, const FString& InName, UObject* InOu
 
 void ASphereActor::PostSpawnInitialize()
 {
-	PrimitiveComponent = new USphereComponent();
+	PrimitiveComponent = FObjectFactory::ConstructObject<USphereComponent>(this);
 	AddOwnedComponent(PrimitiveComponent);
 
 	if (bUseRandomColor)
 	{
-		RandomColorComponent = new URandomColorComponent();
+		RandomColorComponent = FObjectFactory::ConstructObject<URandomColorComponent>(this);
 		AddOwnedComponent(RandomColorComponent);
 	}
 
