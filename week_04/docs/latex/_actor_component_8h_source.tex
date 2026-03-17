@@ -1,0 +1,46 @@
+\doxysection{Actor\+Component.\+h}
+\hypertarget{_actor_component_8h_source}{}\label{_actor_component_8h_source}\index{Engine/Source/Component/ActorComponent.h@{Engine/Source/Component/ActorComponent.h}}
+\doxymbox{\hyperlink{_actor_component_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_object_8h}{Object/Object.h}}"{}}}
+\DoxyCodeLine{00003\ }
+\DoxyCodeLine{00004\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_a_actor}{AActor}};}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{_engine_a_p_i_8h_a0697ee40f69dc5dab56d13131f4c4835}{ENGINE\_API}}\ \doxymbox{\hyperlink{class_u_actor_component_aa26c01d69f8e0369ab9982d01178277a}{UActorComponent}}\ :\ \textcolor{keyword}{public}\ \doxymbox{\hyperlink{class_u_object_a5b2b12e2d9b40cbd11259b3403ebab47}{UObject}}}
+\DoxyCodeLine{00007\ \{}
+\DoxyCodeLine{00008\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00009\ \ \ \ \ \textcolor{keyword}{static}\ \doxymbox{\hyperlink{class_u_class}{UClass}}*\ \doxymbox{\hyperlink{class_u_object_a1cf4d64988214efdf372c32f89d2da2a}{StaticClass}}();}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \ \ \ \ \doxymbox{\hyperlink{class_u_actor_component_aa26c01d69f8e0369ab9982d01178277a}{UActorComponent}}()\ :\ \doxymbox{\hyperlink{class_u_object_a5b2b12e2d9b40cbd11259b3403ebab47}{UObject}}(\doxymbox{\hyperlink{class_u_actor_component_a1c3d51c7d6fa156af0d9fa64d8f31caf}{StaticClass}}(),\ \textcolor{stringliteral}{"{}"{}})\ \{\}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \ \ \ \ \doxymbox{\hyperlink{class_u_actor_component_ac57c963505116c1240bbc73731133658}{UActorComponent}}(\doxymbox{\hyperlink{class_u_class}{UClass}}*\ InClass,\ \textcolor{keyword}{const}\ \doxymbox{\hyperlink{_string_8h_a071f1298c27d6858a9cb71def52f1eb6}{FString}}\&\ InName,\ \doxymbox{\hyperlink{class_u_object_a5b2b12e2d9b40cbd11259b3403ebab47}{UObject}}*\ InOuter\ =\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{00014\ \ \ \ \ \ \ \ \ :\ \doxymbox{\hyperlink{class_u_object_a5b2b12e2d9b40cbd11259b3403ebab47}{UObject}}(InClass,\ InName,\ InOuter)}
+\DoxyCodeLine{00015\ \ \ \ \ \{}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \ \ \ \ \}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \ \ \ \ \doxymbox{\hyperlink{class_u_actor_component_adbce24e0be09ef38e8bcdd59bb34dbd5}{\string~UActorComponent}}()\ \textcolor{keyword}{override}\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \ \ \ \ \doxymbox{\hyperlink{class_a_actor}{AActor}}*\ \doxymbox{\hyperlink{class_u_actor_component_a4d99f75d0cbac7fa868993323cea6d1c}{GetOwner}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \doxymbox{\hyperlink{class_u_actor_component_aeb4cd94abaecef7b180b362b10178026}{Owner}};\ \}}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_u_actor_component_ae577f38520016342c92c79b9dc865b41}{SetOwner}}(\doxymbox{\hyperlink{class_a_actor}{AActor}}*\ InOwner)\ \{\ \doxymbox{\hyperlink{class_u_actor_component_aeb4cd94abaecef7b180b362b10178026}{Owner}}\ =\ InOwner;\ \}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_u_actor_component_a9cca50134837077981e5c1c33ada2e41}{IsRegistered}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \doxymbox{\hyperlink{class_u_actor_component_a53f13b9006971fbe3ca4dcec7f99b751}{bRegistered}};\ \}}
+\DoxyCodeLine{00025\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_u_actor_component_ae08b1b647bb841c318e28c55f0c83747}{OnRegister}}()\ \{\ \doxymbox{\hyperlink{class_u_actor_component_a53f13b9006971fbe3ca4dcec7f99b751}{bRegistered}}\ =\ \textcolor{keyword}{true};\ \}}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_u_actor_component_a5006fc51b7783e68aa0b47f6d3806de2}{OnUnregister}}()\ \{\ \doxymbox{\hyperlink{class_u_actor_component_a53f13b9006971fbe3ca4dcec7f99b751}{bRegistered}}\ =\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_u_actor_component_aeccc0a96cfa9a5b20f81db38a0e5f785}{BeginPlay}}()\ \{\ \doxymbox{\hyperlink{class_u_actor_component_a24027969457d123ed55a8b80c33fede0}{bBegunPlay}}\ =\ \textcolor{keyword}{true};\ \}}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_u_actor_component_a5625885838c86016c5309f7e3f11605e}{Tick}}(\textcolor{keywordtype}{float}\ DeltaTime)\ \{\}}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_u_actor_component_aaafd8a0ce602640eaa0890f60d6a0a17}{HasBegunPlay}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \doxymbox{\hyperlink{class_u_actor_component_a24027969457d123ed55a8b80c33fede0}{bBegunPlay}};\ \}}
+\DoxyCodeLine{00030\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_u_actor_component_a2365f448c768964c70a326a6fdd16cc0}{CanTick}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \doxymbox{\hyperlink{class_u_actor_component_a2de89ee6b4bf85ff67dea3ac1a452a61}{bCanEverTick}}\ \&\&\ \doxymbox{\hyperlink{class_u_actor_component_a1120597c50b7acd05aa48505f414eacd}{bTickEnabled}};\ \}}
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_u_actor_component_a9b213e18dea702ccd555863ceda29f53}{SetComponentTickEnabled}}(\textcolor{keywordtype}{bool}\ bEnabled)\ \{\ \doxymbox{\hyperlink{class_u_actor_component_a1120597c50b7acd05aa48505f414eacd}{bTickEnabled}}\ =\ bEnabled;\ \}}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00034\ \ \ \ \ \doxymbox{\hyperlink{class_a_actor}{AActor}}*\ \doxymbox{\hyperlink{class_u_actor_component_aeb4cd94abaecef7b180b362b10178026}{Owner}}\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_u_actor_component_a53f13b9006971fbe3ca4dcec7f99b751}{bRegistered}}\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_u_actor_component_a24027969457d123ed55a8b80c33fede0}{bBegunPlay}}\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_u_actor_component_a2de89ee6b4bf85ff67dea3ac1a452a61}{bCanEverTick}}\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_u_actor_component_a1120597c50b7acd05aa48505f414eacd}{bTickEnabled}}\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00039\ \};}
+\DoxyCodeLine{00040\ }
+
+\end{DoxyCode}

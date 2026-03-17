@@ -1,8 +1,10 @@
 #include "PrimitiveSphere.h"
+#include "Core/Paths.h"
 #include <cmath>
 
 const FString CPrimitiveSphere::Key = "Sphere";
-const FString CPrimitiveSphere::FilePath = "Assets/Meshes/Sphere.mesh";
+
+FString CPrimitiveSphere::GetFilePath() { return FPaths::MeshDir() + "Sphere.mesh"; }
 
 CPrimitiveSphere::CPrimitiveSphere(int32 Segments, int32 Rings)
 {

@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.16.1"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Jungle_Week1_Team2: Editor/Gizmo/Gizmo.h Source File</title>
+<title>Jungle_Week1_Team2: Editor/Source/Gizmo/Gizmo.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -125,9 +125,10 @@ $(function(){initNavTree('_gizmo_8h_source.html','',''); });
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    <a class="code hl_struct" href="struct_f_vector.html">FVector</a> TargetPosition;</div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    <a class="code hl_struct" href="struct_f_vector.html">FVector</a> TargetRotation;</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <a class="code hl_struct" href="struct_f_vector.html">FVector</a> TargetScale = { 1.0f, 1.0f, 1.0f };</div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    <span class="keywordtype">int</span> ActiveAxis = -1; <span class="comment">// 0=X, 1=Y, 2=Z, -1=None</span></div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    <a class="code hl_typedef" href="_core_types_8h.html#aae6ad039f09c0676db11bd114136a3fa">int32</a> ActiveAxis = -1; <span class="comment">// 0=X, 1=Y, 2=Z, -1=None</span></div>
 <div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>};</div>
 </div>
+<div class="ttc" id="a_core_types_8h_html_aae6ad039f09c0676db11bd114136a3fa"><div class="ttname"><a href="_core_types_8h.html#aae6ad039f09c0676db11bd114136a3fa">int32</a></div><div class="ttdeci">int int32</div><div class="ttdef"><b>Definition</b> CoreTypes.h:8</div></div>
 <div class="ttc" id="a_gizmo_8h_html_a1cee465b5a90ba35bcc93711d448ff50"><div class="ttname"><a href="_gizmo_8h.html#a1cee465b5a90ba35bcc93711d448ff50">EGizmoMode</a></div><div class="ttdeci">EGizmoMode</div><div class="ttdef"><b>Definition</b> Gizmo.h:7</div></div>
 <div class="ttc" id="a_gizmo_8h_html_a1cee465b5a90ba35bcc93711d448ff50a85a7cd587d6142dbfc1a4de05af7b75d"><div class="ttname"><a href="_gizmo_8h.html#a1cee465b5a90ba35bcc93711d448ff50a85a7cd587d6142dbfc1a4de05af7b75d">EGizmoMode::Scale</a></div><div class="ttdeci">@ Scale</div><div class="ttdef"><b>Definition</b> Gizmo.h:10</div></div>
 <div class="ttc" id="a_gizmo_8h_html_a1cee465b5a90ba35bcc93711d448ff50ace5bf551379459c1c61d2a204061c455"><div class="ttname"><a href="_gizmo_8h.html#a1cee465b5a90ba35bcc93711d448ff50ace5bf551379459c1c61d2a204061c455">EGizmoMode::Location</a></div><div class="ttdeci">@ Location</div><div class="ttdef"><b>Definition</b> Gizmo.h:8</div></div>
@@ -143,14 +144,14 @@ $(function(){initNavTree('_gizmo_8h_source.html','',''); });
 <div class="ttc" id="aclass_c_gizmo_html_a7bf6036d4b8f4e04f775b64b0e4d7773"><div class="ttname"><a href="class_c_gizmo.html#a7bf6036d4b8f4e04f775b64b0e4d7773">CGizmo::OnDragEnd</a></div><div class="ttdeci">void OnDragEnd()</div><div class="ttdef"><b>Definition</b> Gizmo.cpp:28</div></div>
 <div class="ttc" id="aclass_c_gizmo_html_a972ff5e0f0eadd583b5d46559f0534d0"><div class="ttname"><a href="class_c_gizmo.html#a972ff5e0f0eadd583b5d46559f0534d0">CGizmo::OnDragUpdate</a></div><div class="ttdeci">void OnDragUpdate(const FVector &amp;RayOrigin, const FVector &amp;RayDir)</div><div class="ttdef"><b>Definition</b> Gizmo.cpp:23</div></div>
 <div class="ttc" id="aclass_c_gizmo_html_abd4797c9d4ca8eecdfb0e8b9b37649d7"><div class="ttname"><a href="class_c_gizmo.html#abd4797c9d4ca8eecdfb0e8b9b37649d7">CGizmo::SetMode</a></div><div class="ttdeci">void SetMode(EGizmoMode InMode)</div><div class="ttdef"><b>Definition</b> Gizmo.cpp:3</div></div>
-<div class="ttc" id="astruct_f_vector_html"><div class="ttname"><a href="struct_f_vector.html">FVector</a></div><div class="ttdef"><b>Definition</b> Vector.h:4</div></div>
+<div class="ttc" id="astruct_f_vector_html"><div class="ttname"><a href="struct_f_vector.html">FVector</a></div><div class="ttdef"><b>Definition</b> Vector.h:10</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 </div><!-- container -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a href="dir_14eca4e58e6d71e3a9859288c1bd2735.html">Editor</a></li><li class="navelem"><a href="dir_96c502612eb663f1692959ba9c9a7ac1.html">Gizmo</a></li><li class="navelem"><a href="_gizmo_8h.html">Gizmo.h</a></li>
+    <li class="navelem"><a href="dir_14eca4e58e6d71e3a9859288c1bd2735.html">Editor</a></li><li class="navelem"><a href="dir_1d889092cf564a659f938a3205d5dd5c.html">Source</a></li><li class="navelem"><a href="dir_28b1d95f820194cf6785190806238987.html">Gizmo</a></li><li class="navelem"><a href="_gizmo_8h.html">Gizmo.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.16.1 </li>
   </ul>
 </div>

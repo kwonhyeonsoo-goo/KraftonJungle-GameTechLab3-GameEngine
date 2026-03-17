@@ -9,7 +9,7 @@
 \item 
 void \doxymbox{\hyperlink{class_c_property_window_a20909f84561fef461e504b13a201288b}{Render}} ()
 \item 
-void \doxymbox{\hyperlink{class_c_property_window_a4a332fdc41790d5edbecdf992378faef}{Set\+Target}} (const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&Location, const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&Rotation, const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&Scale)
+void \doxymbox{\hyperlink{class_c_property_window_a65aae9560b161439f4806252e6a75635}{Set\+Target}} (const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&Location, const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&Rotation, const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&Scale, const char \texorpdfstring{$\ast$}{*}Actor\+Name=nullptr)
 \item 
 bool \doxymbox{\hyperlink{class_c_property_window_a3d2b747ee4eb236acc0171d09d0bafd8}{Is\+Modified}} () const
 \item 
@@ -18,6 +18,13 @@ bool \doxymbox{\hyperlink{class_c_property_window_a3d2b747ee4eb236acc0171d09d0ba
 \doxymbox{\hyperlink{struct_f_vector}{FVector}} \doxymbox{\hyperlink{class_c_property_window_a0105496cc6824942152ba42ec1e1a188}{Get\+Rotation}} () const
 \item 
 \doxymbox{\hyperlink{struct_f_vector}{FVector}} \doxymbox{\hyperlink{class_c_property_window_a21acdb0ef6bfd3d7db51686050837720}{Get\+Scale}} () const
+\item 
+void \doxymbox{\hyperlink{class_c_property_window_a5efd13a367aca62387ff69b18d4e377d}{Set\+On\+Changed}} (\doxymbox{\hyperlink{_property_window_8h_a4c0403ff8980bc00708d42c92a51b70a}{FProperty\+Changed\+Callback}} Callback)
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{_property_window_8h_a4c0403ff8980bc00708d42c92a51b70a}{FProperty\+Changed\+Callback}} \doxymbox{\hyperlink{class_c_property_window_a775d2ef26e91af0500b3cccf7ebac4f0}{On\+Changed}}
 \end{DoxyCompactItemize}
 
 
@@ -54,15 +61,32 @@ bool CProperty\+Window::\+\+Is\+Modified (\begin{DoxyParamCaption}{}{}\end{DoxyP
 {\footnotesize\ttfamily \label{class_c_property_window_a20909f84561fef461e504b13a201288b} 
 void CProperty\+Window::\+\+Render (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
 
-\Hypertarget{class_c_property_window_a4a332fdc41790d5edbecdf992378faef}\index{CPropertyWindow@{CPropertyWindow}!SetTarget@{SetTarget}}
+\Hypertarget{class_c_property_window_a5efd13a367aca62387ff69b18d4e377d}\index{CPropertyWindow@{CPropertyWindow}!SetOnChanged@{SetOnChanged}}
+\index{SetOnChanged@{SetOnChanged}!CPropertyWindow@{CPropertyWindow}}
+\doxysubsubsection{\texorpdfstring{SetOnChanged()}{SetOnChanged()}}
+{\footnotesize\ttfamily \label{class_c_property_window_a5efd13a367aca62387ff69b18d4e377d} 
+void CProperty\+Window::\+\+Set\+On\+Changed (\begin{DoxyParamCaption}\item[{\doxymbox{\hyperlink{_property_window_8h_a4c0403ff8980bc00708d42c92a51b70a}{FProperty\+Changed\+Callback}}}]{Callback}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\Hypertarget{class_c_property_window_a65aae9560b161439f4806252e6a75635}\index{CPropertyWindow@{CPropertyWindow}!SetTarget@{SetTarget}}
 \index{SetTarget@{SetTarget}!CPropertyWindow@{CPropertyWindow}}
 \doxysubsubsection{\texorpdfstring{SetTarget()}{SetTarget()}}
-{\footnotesize\ttfamily \label{class_c_property_window_a4a332fdc41790d5edbecdf992378faef} 
-void CProperty\+Window::\+\+Set\+Target (\begin{DoxyParamCaption}\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{Location}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{Rotation}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{Scale}{}\end{DoxyParamCaption})}
+{\footnotesize\ttfamily \label{class_c_property_window_a65aae9560b161439f4806252e6a75635} 
+void CProperty\+Window::\+\+Set\+Target (\begin{DoxyParamCaption}\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{Location}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{Rotation}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{Scale}{, }\item[{const char \texorpdfstring{$\ast$}{*}}]{Actor\+Name}{ = {\ttfamily nullptr}}\end{DoxyParamCaption})}
+
+
+
+\label{doc-variable-members}
+\Hypertarget{class_c_property_window_doc-variable-members}
+\doxysubsection{Member Data Documentation}
+\Hypertarget{class_c_property_window_a775d2ef26e91af0500b3cccf7ebac4f0}\index{CPropertyWindow@{CPropertyWindow}!OnChanged@{OnChanged}}
+\index{OnChanged@{OnChanged}!CPropertyWindow@{CPropertyWindow}}
+\doxysubsubsection{\texorpdfstring{OnChanged}{OnChanged}}
+{\footnotesize\ttfamily \label{class_c_property_window_a775d2ef26e91af0500b3cccf7ebac4f0} 
+\doxymbox{\hyperlink{_property_window_8h_a4c0403ff8980bc00708d42c92a51b70a}{FProperty\+Changed\+Callback}} CProperty\+Window::\+\+On\+Changed}
 
 
 
 The documentation for this class was generated from the following files:\+\begin{DoxyCompactItemize}
 \item 
-Editor/\+\+UI/\+\doxymbox{\hyperlink{_property_window_8h}{Property\+Window.\+h}}\item 
-Editor/\+\+UI/\+\doxymbox{\hyperlink{_property_window_8cpp}{Property\+Window.\+cpp}}\end{DoxyCompactItemize}
+Editor/\+\+Source/\+\+UI/\+\doxymbox{\hyperlink{_property_window_8h}{Property\+Window.\+h}}\item 
+Editor/\+\+Source/\+\+UI/\+\doxymbox{\hyperlink{_property_window_8cpp}{Property\+Window.\+cpp}}\end{DoxyCompactItemize}

@@ -1,7 +1,9 @@
 #include "PrimitiveCube.h"
+#include "Core/Paths.h"
 
 const FString CPrimitiveCube::Key = "Cube";
-const FString CPrimitiveCube::FilePath = "Assets/Meshes/Cube.mesh";
+
+FString CPrimitiveCube::GetFilePath() { return FPaths::MeshDir() + "Cube.mesh"; }
 
 CPrimitiveCube::CPrimitiveCube()
 {

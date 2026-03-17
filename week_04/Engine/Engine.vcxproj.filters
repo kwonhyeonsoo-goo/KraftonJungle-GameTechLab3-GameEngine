@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source">
@@ -25,10 +25,10 @@
     <Filter Include="Source\Object">
       <UniqueIdentifier>{57ff594e-c20e-1243-40d9-9d88b6d24db9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Object\Actor">
+    <Filter Include="Source\Actor">
       <UniqueIdentifier>{c1eb7930-ca76-bf96-83f2-a26f94ee141b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Object\Scene">
+    <Filter Include="Source\Scene">
       <UniqueIdentifier>{9d63c879-daa3-e358-aff0-8d589c79a8c1}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Platform">
@@ -54,9 +54,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\EngineTest.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Camera\Camera.cpp">
       <Filter>Source\Camera</Filter>
     </ClCompile>
@@ -66,10 +63,16 @@
     <ClCompile Include="Source\Component\CubeComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Component\GizmoComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Component\PrimitiveComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Component\SceneComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Component\RandomColorComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Component\SphereComponent.cpp">
@@ -78,16 +81,31 @@
     <ClCompile Include="Source\Core\Core.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Core\Paths.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Core\FEngine.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\FTimer.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Core\ConsoleVariableManager.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\ViewportClient.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Debug\EngineLog.cpp">
       <Filter>Source\Debug</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Input\EnhancedInputManager.cpp">
+      <Filter>Source\Input</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Input\InputManager.cpp">
+      <Filter>Source\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Input\InputMappingContext.cpp">
       <Filter>Source\Input</Filter>
     </ClCompile>
     <ClCompile Include="Source\Math\Frustum.cpp">
@@ -117,11 +135,23 @@
     <ClCompile Include="Source\Object\ObjectManager.cpp">
       <Filter>Source\Object</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Object\Actor\Actor.cpp">
-      <Filter>Source\Object\Actor</Filter>
+    <ClCompile Include="Source\Actor\Actor.cpp">
+      <Filter>Source\Actor</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Object\Scene\Scene.cpp">
-      <Filter>Source\Object\Scene</Filter>
+    <ClCompile Include="Source\Actor\CubeActor.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Actor\Gizmo.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Actor\SphereActor.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Actor\AttachTestActor.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scene\Scene.cpp">
+      <Filter>Source\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp">
       <Filter>Source\Platform\Windows</Filter>
@@ -138,11 +168,23 @@
     <ClCompile Include="Source\Primitive\PrimitiveCube.cpp">
       <Filter>Source\Primitive</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Primitive\PrimitiveGizmo.cpp">
+      <Filter>Source\Primitive</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Primitive\PrimitivePlane.cpp">
       <Filter>Source\Primitive</Filter>
     </ClCompile>
     <ClCompile Include="Source\Primitive\PrimitiveSphere.cpp">
       <Filter>Source\Primitive</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Primitive\UnrealEditorStyledGizmo.cpp">
+      <Filter>Source\Primitive</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Material.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\MaterialManager.cpp">
+      <Filter>Source\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="Source\Renderer\Renderer.cpp">
       <Filter>Source\Renderer</Filter>
@@ -159,7 +201,12 @@
     <ClCompile Include="Source\Renderer\ShaderResource.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Object\ObjectFactory.cpp" />
+    <ClCompile Include="Source\Object\ObjectFactory.cpp">
+      <Filter>Source\Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Component\CameraComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -168,16 +215,19 @@
     <ClInclude Include="Source\EngineAPI.h">
       <Filter>Source</Filter>
     </ClInclude>
-    <ClInclude Include="Source\EngineTest.h">
-      <Filter>Source</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Camera\Camera.h">
       <Filter>Source\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\ActorComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Component\CameraComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Component\CubeComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\GizmoComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\PrimitiveComponent.h">
@@ -186,10 +236,16 @@
     <ClInclude Include="Source\Component\SceneComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Component\RandomColorComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Component\SphereComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\Core.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Paths.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\FEngine.h">
@@ -198,10 +254,31 @@
     <ClInclude Include="Source\Core\FTimer.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Core\ConsoleVariableManager.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\ViewportClient.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Debug\EngineLog.h">
       <Filter>Source\Debug</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Input\EnhancedInputManager.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputAction.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Input\InputManager.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputMappingContext.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputModifier.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputTrigger.h">
       <Filter>Source\Input</Filter>
     </ClInclude>
     <ClInclude Include="Source\Math\Frustum.h">
@@ -243,11 +320,29 @@
     <ClInclude Include="Source\Object\ObjectTypes.h">
       <Filter>Source\Object</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Object\Actor\Actor.h">
-      <Filter>Source\Object\Actor</Filter>
+    <ClInclude Include="Source\Actor\Actor.h">
+      <Filter>Source\Actor</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Object\Scene\Scene.h">
-      <Filter>Source\Object\Scene</Filter>
+    <ClInclude Include="Source\Actor\CubeActor.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\Gizmo.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\SphereActor.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\AttachTestActor.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\Scene.h">
+      <Filter>Source\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\SceneContext.h">
+      <Filter>Source\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\SceneTypes.h">
+      <Filter>Source\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h">
       <Filter>Source\Platform\Windows</Filter>
@@ -264,10 +359,16 @@
     <ClInclude Include="Source\Primitive\PrimitiveCube.h">
       <Filter>Source\Primitive</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Primitive\PrimitiveGizmo.h">
+      <Filter>Source\Primitive</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Primitive\PrimitivePlane.h">
       <Filter>Source\Primitive</Filter>
     </ClInclude>
     <ClInclude Include="Source\Primitive\PrimitiveSphere.h">
+      <Filter>Source\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Primitive\UnrealEditorStyledGizmo.h">
       <Filter>Source\Primitive</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\PrimitiveVertex.h">
@@ -289,6 +390,12 @@
       <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\ShaderResource.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Material.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\MaterialManager.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\ShaderType.h">

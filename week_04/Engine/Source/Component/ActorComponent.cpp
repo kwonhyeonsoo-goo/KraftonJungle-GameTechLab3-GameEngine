@@ -1,7 +1,5 @@
 #include "ActorComponent.h"
 
-#include "Object/Class.h"
-
 namespace
 {
     UObject* CreateUActorComponentInstance(UObject* InOuter, const FString& InName)

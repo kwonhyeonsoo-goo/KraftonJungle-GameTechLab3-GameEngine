@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.16.1"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Jungle_Week1_Team2: Editor/UI/StatWindow.h Source File</title>
+<title>Jungle_Week1_Team2: Editor/Source/UI/StatWindow.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -92,32 +92,35 @@ $(function(){initNavTree('_stat_window_8h_source.html','',''); });
 </div><!--header-->
 <div class="contents">
 <a href="_stat_window_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#pragma once</span></div>
-<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span> </div>
-<div class="foldopen" id="foldopen00003" data-start="{" data-end="};">
-<div class="line"><a id="l00003" name="l00003"></a><span class="lineno"><a class="line" href="class_c_stat_window.html">    3</a></span><span class="keyword">class </span><a class="code hl_class" href="class_c_stat_window.html">CStatWindow</a></div>
-<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span>{</div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_c_stat_window.html#a37282a941116f7fbc2b79ee07e2848ca">Render</a>();</div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span> </div>
-<div class="line"><a id="l00008" name="l00008"></a><span class="lineno"><a class="line" href="class_c_stat_window.html#a3b030e039a14158cfdf4e97171be66bb">    8</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_c_stat_window.html#a3b030e039a14158cfdf4e97171be66bb">SetObjectCount</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> Count) { ObjectCount = Count; }</div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno"><a class="line" href="class_c_stat_window.html#a6df08ae30e11799035f571256e150a99">    9</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_c_stat_window.html#a6df08ae30e11799035f571256e150a99">SetHeapUsage</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> Bytes) { HeapUsageBytes = Bytes; }</div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>    <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> ObjectCount = 0;</div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>    <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> HeapUsageBytes = 0;</div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>};</div>
+<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="preprocessor">#include &quot;<a class="code" href="_core_minimal_8h.html">CoreMinimal.h</a>&quot;</span></div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="preprocessor">#include &quot;imgui.h&quot;</span></div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span> </div>
+<div class="foldopen" id="foldopen00005" data-start="{" data-end="};">
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno"><a class="line" href="class_c_stat_window.html">    5</a></span><span class="keyword">class </span><a class="code hl_class" href="class_c_stat_window.html">CStatWindow</a></div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span>{</div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_c_stat_window.html#a37282a941116f7fbc2b79ee07e2848ca">Render</a>();</div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno"><a class="line" href="class_c_stat_window.html#af107ab75bd08ac89c12fda61f795c950">    9</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_c_stat_window.html#af107ab75bd08ac89c12fda61f795c950">SetObjectCount</a>(<a class="code hl_typedef" href="_core_types_8h.html#abd01e8e67e3d94cab04ecaaf4f85ac1b">uint32</a> InCount) { ObjectCount = InCount; }</div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno"><a class="line" href="class_c_stat_window.html#a0814286a5ed54538e1367ca7a8122a9a">   10</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="class_c_stat_window.html#a0814286a5ed54538e1367ca7a8122a9a">SetHeapUsage</a>(<a class="code hl_typedef" href="_core_types_8h.html#abd01e8e67e3d94cab04ecaaf4f85ac1b">uint32</a> InBytes) { HeapUsageBytes = InBytes; }</div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>    <a class="code hl_typedef" href="_core_types_8h.html#abd01e8e67e3d94cab04ecaaf4f85ac1b">uint32</a> ObjectCount = 0;</div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>    <a class="code hl_typedef" href="_core_types_8h.html#abd01e8e67e3d94cab04ecaaf4f85ac1b">uint32</a> HeapUsageBytes = 0;</div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>};</div>
 </div>
-<div class="ttc" id="aclass_c_stat_window_html"><div class="ttname"><a href="class_c_stat_window.html">CStatWindow</a></div><div class="ttdef"><b>Definition</b> StatWindow.h:4</div></div>
-<div class="ttc" id="aclass_c_stat_window_html_a37282a941116f7fbc2b79ee07e2848ca"><div class="ttname"><a href="class_c_stat_window.html#a37282a941116f7fbc2b79ee07e2848ca">CStatWindow::Render</a></div><div class="ttdeci">void Render()</div><div class="ttdef"><b>Definition</b> StatWindow.cpp:4</div></div>
-<div class="ttc" id="aclass_c_stat_window_html_a3b030e039a14158cfdf4e97171be66bb"><div class="ttname"><a href="class_c_stat_window.html#a3b030e039a14158cfdf4e97171be66bb">CStatWindow::SetObjectCount</a></div><div class="ttdeci">void SetObjectCount(unsigned int Count)</div><div class="ttdef"><b>Definition</b> StatWindow.h:8</div></div>
-<div class="ttc" id="aclass_c_stat_window_html_a6df08ae30e11799035f571256e150a99"><div class="ttname"><a href="class_c_stat_window.html#a6df08ae30e11799035f571256e150a99">CStatWindow::SetHeapUsage</a></div><div class="ttdeci">void SetHeapUsage(unsigned int Bytes)</div><div class="ttdef"><b>Definition</b> StatWindow.h:9</div></div>
+<div class="ttc" id="a_core_minimal_8h_html"><div class="ttname"><a href="_core_minimal_8h.html">CoreMinimal.h</a></div></div>
+<div class="ttc" id="a_core_types_8h_html_abd01e8e67e3d94cab04ecaaf4f85ac1b"><div class="ttname"><a href="_core_types_8h.html#abd01e8e67e3d94cab04ecaaf4f85ac1b">uint32</a></div><div class="ttdeci">unsigned int uint32</div><div class="ttdef"><b>Definition</b> CoreTypes.h:9</div></div>
+<div class="ttc" id="aclass_c_stat_window_html"><div class="ttname"><a href="class_c_stat_window.html">CStatWindow</a></div><div class="ttdef"><b>Definition</b> StatWindow.h:6</div></div>
+<div class="ttc" id="aclass_c_stat_window_html_a0814286a5ed54538e1367ca7a8122a9a"><div class="ttname"><a href="class_c_stat_window.html#a0814286a5ed54538e1367ca7a8122a9a">CStatWindow::SetHeapUsage</a></div><div class="ttdeci">void SetHeapUsage(uint32 InBytes)</div><div class="ttdef"><b>Definition</b> StatWindow.h:10</div></div>
+<div class="ttc" id="aclass_c_stat_window_html_a37282a941116f7fbc2b79ee07e2848ca"><div class="ttname"><a href="class_c_stat_window.html#a37282a941116f7fbc2b79ee07e2848ca">CStatWindow::Render</a></div><div class="ttdeci">void Render()</div><div class="ttdef"><b>Definition</b> StatWindow.cpp:3</div></div>
+<div class="ttc" id="aclass_c_stat_window_html_af107ab75bd08ac89c12fda61f795c950"><div class="ttname"><a href="class_c_stat_window.html#af107ab75bd08ac89c12fda61f795c950">CStatWindow::SetObjectCount</a></div><div class="ttdeci">void SetObjectCount(uint32 InCount)</div><div class="ttdef"><b>Definition</b> StatWindow.h:9</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 </div><!-- container -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a href="dir_14eca4e58e6d71e3a9859288c1bd2735.html">Editor</a></li><li class="navelem"><a href="dir_f7d6d090f0bcfa8a66d7f61ab6a0ceb7.html">UI</a></li><li class="navelem"><a href="_stat_window_8h.html">StatWindow.h</a></li>
+    <li class="navelem"><a href="dir_14eca4e58e6d71e3a9859288c1bd2735.html">Editor</a></li><li class="navelem"><a href="dir_1d889092cf564a659f938a3205d5dd5c.html">Source</a></li><li class="navelem"><a href="dir_ef0a63b5b5a3aca22b2759ef70d9b464.html">UI</a></li><li class="navelem"><a href="_stat_window_8h.html">StatWindow.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.16.1 </li>
   </ul>
 </div>

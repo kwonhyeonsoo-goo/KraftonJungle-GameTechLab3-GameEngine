@@ -2,6 +2,7 @@
 #include "Object/Object.h"
 #include "Object/Class.h"
 #include "Debug/EngineLog.h"
+#include <algorithm>
 
 constexpr int32 GUObjectArrayReserveSize = 32768;
 

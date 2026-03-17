@@ -1,7 +1,9 @@
 #include "PrimitivePlane.h"
+#include "Core/Paths.h"
 
 const FString CPrimitivePlane::Key = "Plane";
-const FString CPrimitivePlane::FilePath = "Assets/Meshes/Plane.mesh";
+
+FString CPrimitivePlane::GetFilePath() { return FPaths::MeshDir() + "Plane.mesh"; }
 
 CPrimitivePlane::CPrimitivePlane()
 {

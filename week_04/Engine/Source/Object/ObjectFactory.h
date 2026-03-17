@@ -1,5 +1,6 @@
 #pragma once
 #include "CoreMinimal.h"
+#include <functional>
 
 class UClass;
 class UObject;

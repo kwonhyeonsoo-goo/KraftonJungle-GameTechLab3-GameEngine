@@ -1,0 +1,45 @@
+\doxysection{Editor\+UI.\+h}
+\hypertarget{_editor_u_i_8h_source}{}\label{_editor_u_i_8h_source}\index{Editor/Source/UI/EditorUI.h@{Editor/Source/UI/EditorUI.h}}
+\doxymbox{\hyperlink{_editor_u_i_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_control_panel_window_8h}{ControlPanelWindow.h}}"{}}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_property_window_8h}{PropertyWindow.h}}"{}}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_console_window_8h}{ConsoleWindow.h}}"{}}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_stat_window_8h}{StatWindow.h}}"{}}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_picker_8h}{Picking/Picker.h}}"{}}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_core}{CCore}};}
+\DoxyCodeLine{00010\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_window}{CWindow}};}
+\DoxyCodeLine{00011\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_a_actor}{AActor}};}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_editor_u_i}{CEditorUI}}}
+\DoxyCodeLine{00014\ \{}
+\DoxyCodeLine{00015\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00016\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_editor_u_i_af842136fdca7f3f02e39cbd596299fcc}{Initialize}}(\doxymbox{\hyperlink{class_c_core}{CCore}}*\ InCore);}
+\DoxyCodeLine{00017\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_editor_u_i_acd347e21dac19cc9507806521c9adfbb}{SetupWindow}}(\doxymbox{\hyperlink{class_c_window}{CWindow}}*\ InWindow);}
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_editor_u_i_aeaff289996cd22e04aa51e1bbed5289d}{Render}}();}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_editor_u_i_a2d17c9d3798fd57fc81cba182698b693}{SetSelectedActor}}(\doxymbox{\hyperlink{class_a_actor}{AActor}}*\ InActor);}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \ \ \ \ \doxymbox{\hyperlink{class_c_console_window}{CConsoleWindow}}\&\ \doxymbox{\hyperlink{class_c_editor_u_i_a3c7ac27eece5a414a362dba690fcd89e}{GetConsole}}()\ \{\ \textcolor{keywordflow}{return}\ Console;\ \}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00025\ \ \ \ \ \textcolor{keywordtype}{void}\ BuildDefaultLayout(\doxymbox{\hyperlink{_core_types_8h_abd01e8e67e3d94cab04ecaaf4f85ac1b}{uint32}}\ DockID);}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \ \ \ \ \doxymbox{\hyperlink{class_c_core}{CCore}}*\ Core\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00028\ \ \ \ \ \doxymbox{\hyperlink{class_a_actor}{AActor}}*\ CachedSelectedActor\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \ \ \ \ \doxymbox{\hyperlink{class_c_window}{CWindow}}*\ MainWindow\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00031\ \ \ \ \ \doxymbox{\hyperlink{class_c_picker}{CPicker}}\ Picker;}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \ \ \ \ \doxymbox{\hyperlink{class_c_control_panel_window}{CControlPanelWindow}}\ ControlPanel;}
+\DoxyCodeLine{00034\ \ \ \ \ \doxymbox{\hyperlink{class_c_property_window}{CPropertyWindow}}\ Property;}
+\DoxyCodeLine{00035\ \ \ \ \ \doxymbox{\hyperlink{class_c_console_window}{CConsoleWindow}}\ Console;}
+\DoxyCodeLine{00036\ \ \ \ \ \doxymbox{\hyperlink{class_c_stat_window}{CStatWindow}}\ Stat;}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keywordtype}{bool}\ bLayoutInitialized\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00039\ \};}
+
+\end{DoxyCode}

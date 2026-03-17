@@ -1,7 +1,5 @@
 #include "Math/Transform.h"
 
-#include <cmath>
-
 const FTransform FTransform::Identity(FQuat::Identity, FVector::ZeroVector, FVector::OneVector);
 
 FTransform::FTransform(const FMatrix& InMatrix) noexcept

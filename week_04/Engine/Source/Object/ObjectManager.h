@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 #include "ObjectFactory.h"
 #include <algorithm>
+#include <memory>
 
 class ENGINE_API ObjectManager
 {
