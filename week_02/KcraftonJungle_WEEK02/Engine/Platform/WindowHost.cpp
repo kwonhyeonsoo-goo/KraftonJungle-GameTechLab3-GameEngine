@@ -19,6 +19,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
+    case WM_KILLFOCUS:
+        // 윈도우가 포커스를 잃었을 때 입력 비활성화
+        InputRouter::SetWindowFocus(false);
+        break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }

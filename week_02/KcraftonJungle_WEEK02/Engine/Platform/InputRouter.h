@@ -20,6 +20,7 @@ public:
     static const InputState& GetState();
     static TArray<FInputEvent> ConsumePendingEvents();
     static void                ResetDelta();
+    static void SetWindowFocus(bool bIsFocus);
 
 private:
     static InputState          State;

@@ -90,3 +90,11 @@ void InputRouter::ResetDelta()
     State.MouseDeltaX = 0;
     State.MouseDeltaY = 0;
 }
+
+void InputRouter::SetWindowFocus(bool bIsFocus)
+{
+    for (auto& Key : State.Keys)
+    {
+        Key = false;
+    }
+}
