@@ -7,28 +7,9 @@ namespace
 {
     constexpr float PI = 3.14159265358979323846f;
 
-    float DegToRad(float degrees)
-    {
-        return degrees * (PI / 180.0f);
-    }
-
     float ClampFloat(float v, float lo, float hi)
     {
         return v < lo ? lo : (v > hi ? hi : v);
-    }
-
-    FMatrix BuildRotationMatrixFromDegrees(const FVector& rotationDeg)
-    {
-        return FMatrix::RotationX(DegToRad(rotationDeg.x))
-            * FMatrix::RotationY(DegToRad(rotationDeg.y))
-            * FMatrix::RotationZ(DegToRad(rotationDeg.z));
-    }
-
-    FVector TransformDirection(const FVector& dir, const FMatrix& rot)
-    {
-        FVector4 v(dir, 0.0f);
-        FVector4 r = v * rot;
-        return FVector(r.x, r.y, r.z).Normalized();
     }
 
     float Dot2(const FVector2D& a, const FVector2D& b)
@@ -102,8 +83,7 @@ FVector GizmoMath::GetAxisDirection(const USceneComponent* comp,
         return basis;
 
     const Transform t = comp->GetTransform();
-    const FMatrix rot = BuildRotationMatrixFromDegrees(t.Rotation);
-    return TransformDirection(basis, rot);
+    return t.Rotation.RotateVector(basis).Normalized();
 }
 
 Ray GizmoMath::BuildMouseRay(const MouseEvent& e, AppContext& ctx)
@@ -263,6 +243,22 @@ bool GizmoMath::ClosestAxisParameterToRay(const FVector& axisOrigin,
 
     outAxisT = (b * e - c * d) / denom;
     return true;
+}
+
+float GizmoMath::SignedAxisDistance(const FVector& origin,
+    const FVector& axisDir,
+    const FVector& pointOnAxis)
+{
+    return (pointOnAxis - origin).Dot(axisDir.Normalized());
+}
+
+FVector GizmoMath::ProjectPointOntoAxis(const FVector& origin,
+    const FVector& axisDir,
+    const FVector& point)
+{
+    const FVector dir = axisDir.Normalized();
+    const float t = (point - origin).Dot(dir);
+    return origin + dir * t;
 }
 
 float GizmoMath::SignedAngleAroundAxis(const FVector& fromDir,

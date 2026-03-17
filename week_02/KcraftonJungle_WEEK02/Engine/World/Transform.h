@@ -1,25 +1,31 @@
 #pragma once
 #include "../Foundation/Math/FVector.h"
-#include "../Foundation/Math/FVector4.h"
+#include "../Foundation/Math/FQuat.h"
 #include "../Foundation/Math/FMatrix.h"
 
 struct Transform
 {
     FVector Location;
-    FVector Rotation;
+    FQuat Rotation;
     FVector Scale;
 
     Transform();
     Transform(const FVector& loc,
-        const FVector& rot,
+        const FQuat& rot,
+        const FVector& scale);
+
+    static Transform FromEulerDegrees(const FVector& loc,
+        const FVector& rotDeg,
         const FVector& scale);
 
     FMatrix ToMatrix() const;
     FMatrix ToInverseMatrix() const;
 
     FVector GetLocation() const;
-    FVector GetRotation() const;
+    FQuat GetRotation() const;
     FVector GetScale() const;
-    FVector4 ToQuaternion() const;
-    static FVector ToEularAngle(const FVector4& Quaternion);
+
+    FVector GetEulerDegrees() const;
+    FVector GetEulerDegreesNearest(const FVector& referenceDeg) const;
+    void SetEulerDegrees(const FVector& eulerDeg);
 };

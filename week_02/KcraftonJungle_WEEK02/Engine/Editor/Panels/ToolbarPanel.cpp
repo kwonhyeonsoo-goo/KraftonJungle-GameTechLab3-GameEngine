@@ -1,5 +1,10 @@
 #include "ToolbarPanel.h"
 #include <iostream>
+#include "../Commands/SpawnObjectCommand.h"
+#include "../Tools/TranslateTool.h"
+#include "../Tools/RotateTool.h"
+#include "../Tools/ScaleTool.h"
+#include "../../Services/SerializationService.h"
 
 void ToolbarPanel::OnRender(AppContext& ctx)
 {
@@ -19,7 +24,6 @@ void ToolbarPanel::OnRender(AppContext& ctx)
     ImGui::Text("Transform Mode");
     ImGui::Separator();
 
-    // Translate
     if (CurrentMode == ETransformMode::Translate)
     {
         ImGui::BeginDisabled();
@@ -99,7 +103,7 @@ void ToolbarPanel::OnRender(AppContext& ctx)
     ImGui::Text("Spawn Object");
     ImGui::Separator();
 
-    const Transform DefaultSpawnTransform(
+    const Transform DefaultSpawnTransform = Transform::FromEulerDegrees(
         FVector(0.0f, 0.0f, 0.0f),
         FVector(0.0f, 0.0f, 0.0f),
         FVector(1.0f, 1.0f, 1.0f)
@@ -111,7 +115,6 @@ void ToolbarPanel::OnRender(AppContext& ctx)
         "Plane",
         "Triangle"
     };
-    EPrimitiveShape MyEnum = EPrimitiveShape::Cube;
     static int32 currentItem = 0;
     static int32 NumItem = 1;
 
@@ -141,7 +144,6 @@ void ToolbarPanel::OnRender(AppContext& ctx)
 
     static char NameBuf[256] = {};
 
-
     ImGui::Text("Scene Name : %s", ctx.CurrentWorld.GetName().c_str());
 
     if (!ImGui::IsItemActive())
@@ -161,7 +163,6 @@ void ToolbarPanel::OnRender(AppContext& ctx)
     if (ImGui::Button("New Scene"))
     {
         ctx.NewScene();
-
         std::cout << "Clear" << std::endl;
     }
 
