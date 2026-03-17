@@ -16,7 +16,7 @@ struct FVertexUV
     float nx, ny, nz; //normal
 };
 
-struct FConstants
+struct alignas(16) FConstants
 {
     FMatrix MVP;
     FVector Color;
@@ -48,7 +48,6 @@ public:
     ID3D11RasterizerState* RasterizerStateOutline = nullptr;
 
     ID3D11Buffer* ConstantBuffer = nullptr;
-    ID3D11Buffer* OutlineConstantBuffer = nullptr;
     ID3D11Buffer* GridConstantBuffer = nullptr;
 
     ID3D11Texture2D* DepthStencilBuffer = nullptr;
@@ -56,6 +55,8 @@ public:
     ID3D11DepthStencilState* DepthStencilState = nullptr;
     ID3D11DepthStencilState* DepthStencilOutlineState = nullptr;
     ID3D11DepthStencilState* DepthStencilDisable = nullptr;
+
+    ID3D11BlendState* BlendState = nullptr;
 
     FLOAT ClearColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f };
     D3D11_VIEWPORT ViewportInfo;
@@ -110,8 +111,7 @@ public:
 
 private:
     // MVP 상수 버퍼 업데이트
-    void UpdateMVP(const FMatrix& mvp, FVector color);
-    void UpdateMVP(const FMatrix& mvp, const float thickness);
+    void UpdateMVP(const FMatrix& mvp, uint32 color, const float thickness = 1);
     void UpdateConstantBuffer(const FVector& CameraPos);
 
 
@@ -130,32 +130,27 @@ private:
 
     void Prepare();
 
-    void PrepareShader();
-    void PrepareOutlineShader();
-    void PrepareShader(ID3D11VertexShader* vertextShader, ID3D11PixelShader* pixelShader, ID3D11InputLayout* layout, ID3D11Buffer* contantBuffer);
+    void PrepareShader(ID3D11VertexShader* vertextShader, ID3D11PixelShader* pixelShader, ID3D11InputLayout* layout);
 
     void SwapBuffer();
 
 
     void RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices);
-    void RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer, UINT indexCount);
     void RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer, UINT indexCount, UINT stride);
 
     void CreateDeviceAndSwapChain(HWND hWindow, uint32 width, uint32 height);
-
     void ReleaseDeviceAndSwapChain();
 
     void CreateFrameBuffer();
     void ReleaseFrameBuffer();
 
-
     void CreateDepthBuffer(uint32 width, uint32 height);
     void ReleaseDepthBuffer();
 
     void CreatePrimitiveVertexBuffer();
+    void ReleasePrimitiveVertexBuffer();
 
     void CreateRasterizerState();
-
     void ReleaseRasterizerState();
 
     ID3D11Buffer* CreateVertexBuffer(FVertexSimple* vertices, UINT byteWidth);
@@ -166,7 +161,7 @@ private:
     ID3D11Buffer* CreateIndexBuffer(void* data, UINT size);
     void ReleaseIndexBuffer(ID3D11Buffer* vertexBuffer);
 
-    void UpdateConstant(FConstants& param);
+    void SetState(ID3D11RasterizerState* rasterizer, ID3D11DepthStencilState* depthstencil, ID3D11BlendState* blendState);
 
 };
 
