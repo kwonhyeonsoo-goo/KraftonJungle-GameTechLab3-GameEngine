@@ -502,28 +502,30 @@ void URenderer::SwapBuffer()
 void URenderer::Prepare()
 {
     // Bind depth stencil state
-    DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
-
+    
 
     DeviceContext->OMSetRenderTargets(1, &FrameBufferRTV, DepthStencilView);
-
-    DeviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
-
 
     DeviceContext->ClearRenderTargetView(FrameBufferRTV, ClearColor);
     DeviceContext->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-    DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
     DeviceContext->RSSetViewports(1, &ViewportInfo);
+
+    //빼낼 것
     DeviceContext->RSSetState(RasterizerState);
+    DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
+    DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    DeviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
+
+
 }
 
-void URenderer::PrepareShader()
+
+void URenderer::PrepareShader(ID3D11VertexShader* vertextShader, ID3D11PixelShader* pixelShader, ID3D11InputLayout* layout)
 {
-    DeviceContext->VSSetShader(SimpleVertexShader, nullptr, 0);
-    DeviceContext->PSSetShader(SimplePixelShader, nullptr, 0);
-    DeviceContext->IASetInputLayout(SimpleInputLayout);
+    DeviceContext->VSSetShader(vertextShader, nullptr, 0);
+    DeviceContext->PSSetShader(pixelShader, nullptr, 0);
+    DeviceContext->IASetInputLayout(layout);
 
     if (ConstantBuffer)
     {
@@ -531,31 +533,10 @@ void URenderer::PrepareShader()
         DeviceContext->PSSetConstantBuffers(0, 1, &ConstantBuffer);
     }
 
-}
-
-void URenderer::PrepareOutlineShader()
-{
-    DeviceContext->VSSetShader(OutlineVertexShader, nullptr, 0);
-    DeviceContext->PSSetShader(OutlinePixelShader, nullptr, 0);
-    DeviceContext->IASetInputLayout(SimpleInputLayout);
-
-    if (OutlineConstantBuffer)
+    if (GridConstantBuffer)
     {
-        DeviceContext->VSSetConstantBuffers(0, 1, &OutlineConstantBuffer);
-        DeviceContext->PSSetConstantBuffers(0, 1, &OutlineConstantBuffer);
-    }
-
-}
-void URenderer::PrepareShader(ID3D11VertexShader* vertextShader, ID3D11PixelShader* pixelShader, ID3D11InputLayout* layout, ID3D11Buffer* contantBuffer)
-{
-    DeviceContext->VSSetShader(vertextShader, nullptr, 0);
-    DeviceContext->PSSetShader(pixelShader, nullptr, 0);
-    DeviceContext->IASetInputLayout(layout);
-
-    if (contantBuffer)
-    {
-        DeviceContext->VSSetConstantBuffers(0, 1, &contantBuffer);
-        DeviceContext->PSSetConstantBuffers(0, 1, &contantBuffer);
+        DeviceContext->VSSetConstantBuffers(1, 1, &GridConstantBuffer);
+        DeviceContext->PSSetConstantBuffers(1, 1, &GridConstantBuffer);
     }
 }
 
@@ -730,7 +711,7 @@ void URenderer::BeginFrame()
     //기본 렌더 상태 설정
 
     Prepare();
-    PrepareShader();
+
 }
 
 enum ETypePrimitive
@@ -771,10 +752,13 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
         switch (cmd.Type)
         {     
         case ERenderType::Primitive:
-            PrepareShader();
-            UpdateMVP(constants.MVP, { 1,1,1 });
+            PrepareShader(SimpleVertexShader, SimplePixelShader, SimpleInputLayout);
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+
+
+            UpdateMVP(constants.MVP, (uint32)0xFFFFFFFF);
+            
             switch (cmd.Shape)
             {
             case EPrimitiveShape::Sphere:
@@ -801,39 +785,41 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
 
             break;
         case ERenderType::WorldAxis:
-            PrepareShader();
-            UpdateMVP(constants.MVP, {1,1,1 });
-
+            PrepareShader(SimpleVertexShader, SimplePixelShader, SimpleInputLayout);
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+
+
+
+            UpdateMVP(constants.MVP, (uint32)0xFFFFFFFF);
+
             RenderPrimitive(vertexBufferWorldAxis, numVerticesWorldAxis);
 
             break;
         case ERenderType::LocalAxis:
             break;
         case ERenderType::Gizmo: {
-            PrepareShader();
+            PrepareShader(SimpleVertexShader, SimplePixelShader, SimpleInputLayout);
+            DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+
             DeviceContext->OMSetDepthStencilState(DepthStencilDisable, 1);
 
-            uint32 Red = (cmd.Color >> 24) & 0xFF;
-            uint32 Green = (cmd.Color >> 16) & 0xFF;
-            uint32 Blue = (cmd.Color >> 8) & 0xFF;
-            UpdateMVP(constants.MVP, { Red / 255.f,Green / 255.f, Blue / 255.f });
+            UpdateMVP(constants.MVP, cmd.Color);
 
-            DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-  
             RenderPrimitive(vertexBufferGizmo, numVerticesGizmo);
             DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
             break;
         }
         case ERenderType::Torus: {
-            DeviceContext->OMSetDepthStencilState(DepthStencilDisable, 1);
-            uint32 Red = (cmd.Color >> 24) & 0xFF;
-            uint32 Green = (cmd.Color >> 16) & 0xFF;
-            uint32 Blue = (cmd.Color >> 8) & 0xFF;
-            UpdateMVP(constants.MVP, { Red / 255.f,Green / 255.f, Blue / 255.f });
-
+            PrepareShader(SimpleVertexShader, SimplePixelShader, SimpleInputLayout);
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            PrepareShader();
+
+
+
+            DeviceContext->OMSetDepthStencilState(DepthStencilDisable, 1);
+
+            UpdateMVP(constants.MVP, cmd.Color);
+
             RenderPrimitive(vertexBufferTorus, numVerticesTorus);
             break;
         }
@@ -841,9 +827,11 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
         {
             FVector direction = session.Camera.Position - FVector(constants.MVP.M[3][0], constants.MVP.M[3][1], constants.MVP.M[3][2]);
             float distance = sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
+            PrepareShader(OutlineVertexShader, OutlinePixelShader, SimpleInputLayout);
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-            PrepareOutlineShader();
+            
+
             UpdateMVP(constants.MVP, 1.0f * distance * 0.01f);
             switch (cmd.Shape)
             {
@@ -872,13 +860,13 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
         }
         case ERenderType::Grid:
         {
+            PrepareShader(GridVertexShader, GridPixelShader, GridInputLayout);
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             
-            PrepareShader(GridVertexShader, GridPixelShader, GridInputLayout, ConstantBuffer);
-            DeviceContext->VSSetConstantBuffers(1, 1, &GridConstantBuffer);
-            DeviceContext->PSSetConstantBuffers(1, 1, &GridConstantBuffer);
 
-            UpdateMVP(constants.MVP, { 1,1,1 });
+
+
+            UpdateMVP(constants.MVP,(uint32)0xFFFFFFFF);
 
             UpdateConstantBuffer(session.Camera.Position);
             RenderIndexedPrimitive(vertexBufferGrid, indexBufferGrid, sizeof(UVrect_indices) / sizeof(UINT), StrideUV);
@@ -895,7 +883,28 @@ void URenderer::EndFrame()
     SwapBuffer();
 }
 
-void URenderer::UpdateMVP(const FMatrix& mvp, FVector color)
+void URenderer::UpdateMVP(const FMatrix& mvp, uint32 color)
+{
+    if (ConstantBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
+
+        uint32 Red = (color >> 24) & 0xFF;
+        uint32 Green = (color >> 16) & 0xFF;
+        uint32 Blue = (color >> 8) & 0xFF;
+
+        DeviceContext->Map(ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
+        FConstants* constants = (FConstants*)constantbufferMSR.pData;
+        {
+            //constants->MVP = mvp;
+            constants->MVP = mvp;
+            constants->Color = { Red / 255.f,Green / 255.f, Blue / 255.f };
+        }
+        DeviceContext->Unmap(ConstantBuffer, 0);
+    }
+}
+
+void URenderer::UpdateMVP(const FMatrix& mvp, const float thickness)
 {
     if (ConstantBuffer)
     {
@@ -904,28 +913,11 @@ void URenderer::UpdateMVP(const FMatrix& mvp, FVector color)
         DeviceContext->Map(ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
         FConstants* constants = (FConstants*)constantbufferMSR.pData;
         {
-            //constants->MVP = mvp;
-            constants->MVP = mvp;
-            constants->Color = { color.x, color.y, color.z };
-        }
-        DeviceContext->Unmap(ConstantBuffer, 0);
-    }
-}
-
-void URenderer::UpdateMVP(const FMatrix& mvp, const float thickness)
-{
-    if (OutlineConstantBuffer)
-    {
-        D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
-
-        DeviceContext->Map(OutlineConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
-        FConstants* constants = (FConstants*)constantbufferMSR.pData;
-        {
             constants->MVP = mvp;
             constants->thickness = thickness;
             constants->Color = { 1,1,1 };
         }
-        DeviceContext->Unmap(OutlineConstantBuffer, 0);
+        DeviceContext->Unmap(ConstantBuffer, 0);
     }
 }
 

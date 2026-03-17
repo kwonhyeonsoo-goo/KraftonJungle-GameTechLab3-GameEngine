@@ -115,7 +115,7 @@ public:
 
 private:
     // MVP 상수 버퍼 업데이트
-    void UpdateMVP(const FMatrix& mvp, FVector color);
+    void UpdateMVP(const FMatrix& mvp, uint32 color);
     void UpdateMVP(const FMatrix& mvp, const float thickness);
     void UpdateConstantBuffer(const FVector& CameraPos);
 
@@ -135,9 +135,7 @@ private:
 
     void Prepare();
 
-    void PrepareShader();
-    void PrepareOutlineShader();
-    void PrepareShader(ID3D11VertexShader* vertextShader, ID3D11PixelShader* pixelShader, ID3D11InputLayout* layout, ID3D11Buffer* contantBuffer);
+    void PrepareShader(ID3D11VertexShader* vertextShader, ID3D11PixelShader* pixelShader, ID3D11InputLayout* layout);
 
     void SwapBuffer();
 
