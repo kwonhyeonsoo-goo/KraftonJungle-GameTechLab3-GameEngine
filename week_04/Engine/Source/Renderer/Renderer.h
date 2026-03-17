@@ -69,6 +69,8 @@ public:
 	HWND GetHwnd() const { return Hwnd; }
 private:
 	void AddCommand(const FRenderCommand& Command);
+	bool CreateDeviceAndSwapChain(HWND InHwnd, int32 Width, int32 Height);
+	bool CreateRenderTargetAndDepthStencil(int32 Width, int32 Height);
 	bool CreateConstantBuffers();
 	void UpdateFrameConstantBuffer();
 	void UpdateObjectConstantBuffer(const FMatrix& WorldMatrix);
