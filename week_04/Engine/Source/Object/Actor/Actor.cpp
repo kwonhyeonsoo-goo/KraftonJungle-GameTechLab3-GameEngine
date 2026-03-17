@@ -120,6 +120,14 @@ void AActor::Destroy()
 
 	bPendingDestroy = true;
 	MarkPendingKill();
+
+	for (UActorComponent* Comp : OwnedComponents)
+	{
+		if (Comp)
+		{
+			Comp->MarkPendingKill();
+		}
+	}
 }
 
 const FVector& AActor::GetActorLocation() const

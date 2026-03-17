@@ -35,7 +35,10 @@ UScene::~UScene()
 {
 	for (AActor* Actor : Actors)
 	{
-		delete Actor;
+		if (Actor)
+		{
+			Actor->Destroy();
+		}
 	}
 	Actors.clear();
 
@@ -54,8 +57,8 @@ void UScene::InitializeDefaultScene(float AspectRatio)
 
 	//Test
 	AActor* Actor = SpawnActor<AActor>("TestActor");
-	UPrimitiveComponent* SpehreComp = new USphereComponent();
-	UPrimitiveComponent* CubeComp = new UCubeComponent();
+	UPrimitiveComponent* SpehreComp = FObjectFactory::ConstructObject<USphereComponent>(Actor);
+	UPrimitiveComponent* CubeComp = FObjectFactory::ConstructObject<UCubeComponent>(Actor);
 	CubeComp->AttachTo(SpehreComp);
 	CubeComp->SetRelativeTransform({ FRotator::MakeFromEuler({ 45.0f, 45.0f, 45.0f }), {0.0f, 0.0f, 2.0f}, {0.5f, 0.5f, 0.5f} });
 	Actor->AddOwnedComponent(SpehreComp);
@@ -97,11 +100,11 @@ void UScene::LoadSceneFromFile(const FString& FilePath)
 		UActorComponent* Comp = nullptr;
 		if (Type == "Sphere")
 		{
-			Comp = new USphereComponent();
+			Comp = FObjectFactory::ConstructObject<USphereComponent>();
 		}
 		else if (Type == "Cube")
 		{
-			Comp = new UCubeComponent();
+			Comp = FObjectFactory::ConstructObject<UCubeComponent>();
 		}
 		else
 		{
@@ -203,7 +206,10 @@ void UScene::ClearActors()
 {
 	for (AActor* Actor : Actors)
 	{
-		delete Actor;
+		if (Actor)
+		{
+			Actor->Destroy();
+		}
 	}
 	Actors.clear();
 }

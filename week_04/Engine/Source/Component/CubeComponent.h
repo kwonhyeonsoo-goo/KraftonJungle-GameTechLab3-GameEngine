@@ -7,4 +7,5 @@ public:
 	static UClass* StaticClass();
 
 	UCubeComponent();
+	UCubeComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
 };

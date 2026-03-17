@@ -3,6 +3,7 @@
 #include "Core/Core.h"
 #include "Object/Scene/Scene.h"
 #include "Object/Actor/Actor.h"
+#include "Object/ObjectFactory.h"
 #include "Camera/Camera.h"
 #include "Component/CubeComponent.h"
 #include "Component/SphereComponent.h"
@@ -67,9 +68,9 @@ void CControlPanelWindow::Render(CCore* Core)
 
 			UActorComponent* Comp = nullptr;
 			if (SpawnTypeIndex == 0)
-				Comp = new UCubeComponent();
+				Comp = FObjectFactory::ConstructObject<UCubeComponent>(NewActor);
 			else
-				Comp = new USphereComponent();
+				Comp = FObjectFactory::ConstructObject<USphereComponent>(NewActor);
 
 			NewActor->AddOwnedComponent(Comp);
 
@@ -95,6 +96,15 @@ void CControlPanelWindow::Render(CCore* Core)
 			ImGui::EndDisabled();
 
 		ImGui::SeparatorText("Scene");
+
+		if (ImGui::Button("Clear Scene"))
+		{
+			Core->SetSelectedActor(nullptr);
+			Core->GetScene()->ClearActors();
+			UE_LOG("Scene cleared: all actors destroyed");
+		}
+
+		ImGui::Spacing();
 
 		static char SceneName[128] = "NewScene";
 		ImGui::InputText("Scene Name", SceneName, IM_ARRAYSIZE(SceneName));

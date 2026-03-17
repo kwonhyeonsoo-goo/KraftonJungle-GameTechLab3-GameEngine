@@ -1,9 +1,13 @@
 #include "ObjectManager.h"
 #include "Object/Object.h"
 #include "Object/Class.h"
+#include "Debug/EngineLog.h"
+
+constexpr int32 GUObjectArrayReserveSize = 32768;
 
 ObjectManager::ObjectManager()
 {
+	GUObjectArray.reserve(GUObjectArrayReserveSize);
 }
 
 ObjectManager::~ObjectManager()
@@ -11,9 +15,12 @@ ObjectManager::~ObjectManager()
 	// GUObjectArray에 남은 오브젝트 전부 해제
 	for (UObject* Obj : GUObjectArray)
 	{
-		delete Obj;
+		if (Obj)
+		{
+			delete Obj;
+		}
 	}
-	GUObjectArray.empty();
+	GUObjectArray.clear();
 }
 
 UObject* ObjectManager::SpawnObject(
@@ -36,7 +43,21 @@ void ObjectManager::ReleaseObject(UObject* obj)
 
 void ObjectManager::FlushKilledObjects()
 {
-	// nullptr 슬롯을 제거하고 살아있는 오브젝트의 InternalIndex 재조정
+	int32 PrevCount = static_cast<int32>(GUObjectArray.size());
+	int32 KilledCount = 0;
+
+	// Phase 1: PendingKill 오브젝트를 실제 delete (GC)
+	for (int32 Idx = 0; Idx < GUObjectArray.size(); ++Idx)
+	{
+		UObject* Obj = GUObjectArray[Idx];
+		if (Obj && Obj->IsPendingKill())
+		{
+			delete Obj;
+			++KilledCount;
+		}
+	}
+
+	// Phase 2: nullptr 슬롯을 제거하고 살아있는 오브젝트의 InternalIndex 재조정
 	int32 WriteIdx = 0;
 	for (int32 ReadIdx = 0; ReadIdx < GUObjectArray.size(); ++ReadIdx)
 	{
@@ -48,6 +69,9 @@ void ObjectManager::FlushKilledObjects()
 			++WriteIdx;
 		}
 	}
-	//GUObjectArray.erase(WriteIdx);
-	GUObjectArray[WriteIdx] = nullptr;
+	GUObjectArray.resize(WriteIdx);
+	GUObjectArray.reserve(GUObjectArrayReserveSize);
+
+	UE_LOG("[GC] FlushKilledObjects: %d objects collected, %d -> %d alive",
+		KilledCount, PrevCount, WriteIdx);
 }

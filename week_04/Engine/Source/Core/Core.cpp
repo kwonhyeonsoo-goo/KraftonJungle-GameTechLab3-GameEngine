@@ -2,6 +2,8 @@
 
 #include "Object/Scene/Scene.h"
 #include "Object/Actor/Actor.h"
+#include "Object/ObjectFactory.h"
+#include "Object/ObjectManager.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/ShaderManager.h"
 #include "Input/InputManager.h"
@@ -43,11 +45,14 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height)
 	// InputManager
 	InputManager = new CInputManager();
 
+	// ObjectManager
+	ObjManager = new ObjectManager();
+
 	// Timer
 	Timer.Initialize();
 
 	// Scene
-	Scene = new UScene(UScene::StaticClass(), "DefaultScene");
+	Scene = FObjectFactory::ConstructObject<UScene>(nullptr, "DefaultScene");
 	Scene->InitializeDefaultScene(static_cast<float>(Width) / static_cast<float>(Height));
 
 	return true;
@@ -65,6 +70,14 @@ void CCore::Release()
 {
 	delete Scene;
 	Scene = nullptr;
+
+	// Scene 해제 후 PendingKill 오브젝트를 GC로 정리
+	if (ObjManager)
+	{
+		ObjManager->FlushKilledObjects();
+		delete ObjManager;
+		ObjManager = nullptr;
+	}
 
 	delete InputManager;
 	InputManager = nullptr;
@@ -104,6 +117,14 @@ void CCore::Tick(const float DeltaTime)
 	Physics(DeltaTime);
 	GameLogic(DeltaTime);
 	Render();
+
+	// 30초마다 GC 실행
+	double CurrentTime = Timer.GetTotalTime();
+	if (ObjManager && (CurrentTime - LastGCTime) >= GCInterval)
+	{
+		ObjManager->FlushKilledObjects();
+		LastGCTime = CurrentTime;
+	}
 }
 
 void CCore::ProcessCameraInput(float DeltaTime)

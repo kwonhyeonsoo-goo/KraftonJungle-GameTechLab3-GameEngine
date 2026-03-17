@@ -1,6 +1,7 @@
 #pragma once
 #include "Object/Object.h"
 #include "Object/Class.h"
+#include "Object/ObjectFactory.h"
 
 class AActor;
 class CCamera;
@@ -17,13 +18,12 @@ public:
 	{
 		static_assert(std::is_base_of_v<AActor, T>, "T must derive from AActor");
 
-		UObject* NewObj = T::StaticClass()->CreateInstance(this, InName);
-		if (!NewObj)
+		T* NewActor = FObjectFactory::ConstructObject<T>(this, InName);
+		if (!NewActor)
 		{
 			return nullptr;
 		}
 
-		T* NewActor = static_cast<T*>(NewObj);
 		RegisterActor(NewActor);
 		NewActor->PostSpawnInitialize();
 

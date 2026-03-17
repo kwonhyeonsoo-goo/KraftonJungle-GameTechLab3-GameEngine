@@ -9,6 +9,7 @@ class UScene;
 class CRenderer;
 class CShaderManager;
 class CInputManager;
+class ObjectManager;
 
 class ENGINE_API CCore
 {
@@ -50,12 +51,15 @@ private:
 	CRenderer* Renderer = nullptr;
 	CShaderManager* ShaderManager = nullptr;
 	CInputManager* InputManager = nullptr;
+	ObjectManager* ObjManager = nullptr;
 	UScene* Scene = nullptr;
 	AActor* SelectedActor = nullptr;
 
 	FRenderCallback PostRenderCallback;
 
 	FTimer Timer;
+	double LastGCTime = 0.0;
+	static constexpr double GCInterval = 30.0;
 	int32 WindowWidth = 0;
 	int32 WindowHeight = 0;
 };
