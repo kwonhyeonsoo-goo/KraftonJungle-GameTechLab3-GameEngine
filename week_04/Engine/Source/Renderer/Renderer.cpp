@@ -260,7 +260,8 @@ void CRenderer::EndFrame()
 		GUIRender();
 	}
 
-	HRESULT Hr = SwapChain->Present(0, 0);
+	UINT SyncInterval = bVSyncEnabled ? 1 : 0;
+	HRESULT Hr = SwapChain->Present(SyncInterval, 0);
 	if (Hr == DXGI_STATUS_OCCLUDED)
 		bSwapChainOccluded = true;
 

@@ -28,6 +28,10 @@ public:
 	void Release();
 	bool IsOccluded();
 	void OnResize(int32 NewWidth, int32 NewHeight);
+
+	void SetVSync(bool bEnable) { bVSyncEnabled = bEnable; }
+	bool IsVSyncEnabled() const { return bVSyncEnabled; }
+
 	bool bSwapChainOccluded = false;
 
 	// GUI callbacks (ImGui 등 외부 GUI 시스템 연동)
@@ -82,6 +86,7 @@ private:
 	FMatrix ProjectionMatrix;
 	ID3D11RasterizerState* RasterizerState = nullptr;
 	D3D11_VIEWPORT Viewport = {};
+	bool bVSyncEnabled = false;
 
 	TArray<FRenderCommand> CommandList;
 	size_t PrevCommandCount = 0;
