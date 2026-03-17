@@ -13,9 +13,7 @@ bool FEditorEngine::Initialize(HINSTANCE hInstance)
 
 	if (!FEngine::Initialize(hInstance, L"Jungle Editor", 1280, 720))
 		return false;
-	EditorPawn = new AEditorCameraPawn(
-		AEditorCameraPawn::StaticClass(),"EditorCameraPawn");
-	return true;
+
 }
 
 void FEditorEngine::Tick(float DeltaTime)
@@ -59,6 +57,14 @@ void FEditorEngine::PostInitialize()
 				FEngineLog::Get().Log("[error] Unknown command: '%s'", CommandLine);
 			}
 		});
+	EditorPawn = new AEditorCameraPawn(
+		AEditorCameraPawn::StaticClass(), "EditorCameraPawn");
+	Core->GetScene()->RegisterActor(EditorPawn);
+	Core->GetScene()->SetActiveCameraComponent(EditorPawn->GetCameraComponent());
+
+	ViewportController.Initialize(
+		EditorPawn->GetCameraComponent(),
+		Core->GetInputManager());
 
 	UE_LOG("EditorEngine initialized");
 }
