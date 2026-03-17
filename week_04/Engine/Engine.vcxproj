@@ -33,6 +33,7 @@
     <ClInclude Include="Source\Core\Paths.h" />
     <ClInclude Include="Source\Core\FEngine.h" />
     <ClInclude Include="Source\Core\FTimer.h" />
+    <ClInclude Include="Source\Core\ConsoleVariableManager.h" />
     <ClInclude Include="Source\Debug\EngineLog.h" />
     <ClInclude Include="Source\Input\InputManager.h" />
     <ClInclude Include="Source\Math\Frustum.h" />
@@ -93,6 +94,7 @@
     <ClCompile Include="Source\Core\Paths.cpp" />
     <ClCompile Include="Source\Core\FEngine.cpp" />
     <ClCompile Include="Source\Core\FTimer.cpp" />
+    <ClCompile Include="Source\Core\ConsoleVariableManager.cpp" />
     <ClCompile Include="Source\Debug\EngineLog.cpp" />
     <ClCompile Include="Source\Input\InputManager.cpp" />
     <ClCompile Include="Source\Math\Frustum.cpp" />

@@ -1,5 +1,6 @@
 #include "Core.h"
 #include "Core/Paths.h"
+#include "Core/ConsoleVariableManager.h"
 
 #include "Camera/Camera.h"
 #include "Primitive/PrimitiveBase.h"
@@ -26,6 +27,9 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height)
 
 	// Timer
 	Timer.Initialize();
+
+	// Console Variables
+	RegisterConsoleVariables();
 
 	// Scene
 	Scene = std::make_unique<UScene>(UScene::StaticClass(), "DefaultScene");
@@ -158,4 +162,15 @@ void CCore::OnResize(int32 Width, int32 Height)
 		float NewAspect = static_cast<float>(Width) / static_cast<float>(Height);
 		Scene->GetCamera()->SetAspectRatio(NewAspect);
 	}
+}
+
+void CCore::RegisterConsoleVariables()
+{
+	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
+
+	CVM.Register("t.MaxFPS", 0.0f, "Maximum FPS limit (0 = unlimited)")->SetOnChanged(
+		[this](FConsoleVariable* Var) { Timer.SetMaxFPS(Var->GetFloat()); });
+
+	CVM.Register("r.VSync", 0, "Enable VSync (0 = off, 1 = on)")->SetOnChanged(
+		[this](FConsoleVariable* Var) { if (Renderer) Renderer->SetVSync(Var->GetInt() != 0); });
 }
