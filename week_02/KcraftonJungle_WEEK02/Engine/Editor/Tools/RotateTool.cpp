@@ -13,28 +13,6 @@ namespace
     }
 }
 
-int RotateTool::AxisToIndex(EAxis axis)
-{
-    switch (axis)
-    {
-    case EAxis::X: return 0;
-    case EAxis::Y: return 1;
-    case EAxis::Z: return 2;
-    default:       return -1;
-    }
-}
-
-RotateTool::EAxis RotateTool::IndexToAxis(int index)
-{
-    switch (index)
-    {
-    case 0: return EAxis::X;
-    case 1: return EAxis::Y;
-    case 2: return EAxis::Z;
-    default:return EAxis::None;
-    }
-}
-
 bool RotateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
 {
     if (!e.LeftDown)
@@ -110,7 +88,35 @@ bool RotateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
 void RotateTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
 {
     if (!bDragging)
+    {
+        // 호버 감지
+        USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
+        if (primary == nullptr) { HoveredAxis = EAxis::None; return; }
+
+        const FVector center = primary->GetTransform().Location;
+        const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
+        const FMatrix viewProj = ctx.Editor.bOrthoMode
+            ? ctx.Editor.GetViewOrthoMatrix()
+            : ctx.Editor.GetViewProjMatrix();
+        const FVector2D mouse2D((float)e.X, (float)e.Y);
+        const float gs = GizmoMath::ComputeGizmoScale(center, ctx);
+
+        float bestDist = GizmoMath::GizmoPickThresholdPx;
+        EAxis bestAxis = EAxis::None;
+
+        for (int i = 0; i < 3; ++i)
+        {
+            const FVector normal = GizmoMath::GetAxisDirection(primary, i, coordSpace);
+            const TArray<FVector2D> ring2D = GizmoMath::SampleRing2D(
+                center, normal, GizmoMath::GizmoRingRadius * gs,
+                RingSamples, viewProj, ctx.Window.GetWidth(), ctx.Window.GetHeight());
+            const float dist = GizmoMath::DistancePointToPolyline2D(mouse2D, ring2D);
+            if (dist < bestDist) { bestDist = dist; bestAxis = IndexToAxis(i); }
+        }
+
+        HoveredAxis = bestAxis;
         return;
+    }
 
     USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
     if (primary == nullptr)
@@ -179,43 +185,11 @@ void RotateTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
     DragStartDir = FVector::Zero;
 }
 
-void RotateTool::BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue)
+void RotateTool::FillAxisData(const FVector& origin, const FVector& axisDir,
+                               float scale, int /*axisIndex*/, GizmoAxisData& out) const
 {
-    USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-    if (primary == nullptr)
-        return;
-
-    const FVector center = primary->GetTransform().Location;
-    const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
-    const uint32 objectId = primary->GetUUID();
-
-    for (int axisIndex = 0; axisIndex < 3; ++axisIndex)
-    {
-        const FVector normal = GizmoMath::GetAxisDirection(primary, axisIndex, coordSpace);
-        const FVector axis1 = GizmoMath::MakeStablePerpendicular(normal);
-        const FVector axis2 = normal.Cross(axis1).Normalized();
-
-        const uint32 color =
-            axisIndex == 0 ? GizmoMath::AxisColorX :
-            axisIndex == 1 ? GizmoMath::AxisColorY :
-            GizmoMath::AxisColorZ;
-
-        // Torus mesh has its ring normal along +Z.
-        // Build a rotation that maps local +Z -> normal, +X -> axis1, +Y -> axis2.
-        // Row-vector convention: row i = where local basis vector i goes in world space.
-        FMatrix axisRotation = FMatrix::Identity();
-        axisRotation.M[0][0] = axis1.x;  axisRotation.M[0][1] = axis1.y;  axisRotation.M[0][2] = axis1.z;
-        axisRotation.M[1][0] = axis2.x;  axisRotation.M[1][1] = axis2.y;  axisRotation.M[1][2] = axis2.z;
-        axisRotation.M[2][0] = normal.x; axisRotation.M[2][1] = normal.y; axisRotation.M[2][2] = normal.z;
-
-        const float gs = GizmoMath::ComputeGizmoScale(center, ctx);
-
-        RenderCommand cmd = {};
-        cmd.Type = ERenderType::Torus;
-        cmd.WorldTransform = FMatrix::Scale(FVector(gs, gs, gs)) * axisRotation * FMatrix::Translation(center);
-        cmd.bOrtho = ctx.Editor.bOrthoMode;
-        cmd.ObjectId = objectId;
-        cmd.Color = color;
-        queue.Push(cmd);
-    }
+    // 토러스 메시가 이미 R=GizmoRingRadius 반지름으로 정의되어 있으므로
+    // scale(gs)만 곱하면 world 반지름 = GizmoRingRadius * gs = 감지 반지름과 일치
+    out.WorldTransform = GizmoMath::MakeAxisTransform(origin, axisDir, scale);
+    out.RenderType = ERenderType::RotationGizmo;
 }

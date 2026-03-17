@@ -28,9 +28,10 @@ namespace GizmoMath
         return (std::max)((gizmoPos - ctx.Editor.Camera.Position).Length() * kGizmoScreenScale, 0.5f);
     }
 
-    constexpr uint32 AxisColorX = 0xFF0000FF;
-    constexpr uint32 AxisColorY = 0x00FF00FF;
-    constexpr uint32 AxisColorZ = 0x0000FFFF;
+    constexpr uint32 AxisColorX         = 0xFF0000FF;
+    constexpr uint32 AxisColorY         = 0x00FF00FF;
+    constexpr uint32 AxisColorZ         = 0x0000FFFF;
+    constexpr uint32 AxisColorHighlight = 0xFFFF00FF;  // 호버/드래그 강조 (노란색)
 
     FVector AxisX();
     FVector AxisY();

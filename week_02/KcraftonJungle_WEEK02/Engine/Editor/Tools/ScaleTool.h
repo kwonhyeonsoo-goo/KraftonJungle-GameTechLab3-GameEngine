@@ -5,8 +5,6 @@
 #include "../../../AppContext.h"
 #include "../../World/USceneComponent.h"
 #include "../../Editor/Commands/SetTransformCommand.h"
-#include "../../Rendering/RenderQueue.h"
-#include "../../Rendering/RenderTypes.h"
 #include "GizmoMath.h"
 
 class ScaleTool : public ITool {
@@ -14,18 +12,13 @@ public:
     bool TryBeginManipulation(const MouseEvent& e, AppContext& ctx) override;
     void OnMouseMove(const MouseEvent& e, AppContext& ctx) override;
     void OnMouseUp(const MouseEvent& e, AppContext& ctx) override;
-    void BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue) override;
+    void FillGizmoState(AppContext& ctx, GizmoState& out) const override;
     FString GetName() const override { return "Scale"; }
 
+protected:
+    void FillAxisData(const FVector& origin, const FVector& axisDir,
+                      float scale, int axisIndex, GizmoAxisData& out) const override;
 private:
-    enum class EAxis { None, X, Y, Z };
-
-    static int AxisToIndex(EAxis axis);
-    static EAxis IndexToAxis(int index);
-
-private:
-    EAxis     ActiveAxis = EAxis::None;
-    bool      bDragging = false;
     float     DragStartAxisT = 0.0f;
     Transform OriginalTransform;
 };
