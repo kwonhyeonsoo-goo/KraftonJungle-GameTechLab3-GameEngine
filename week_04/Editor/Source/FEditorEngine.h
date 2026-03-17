@@ -1,21 +1,28 @@
 #pragma once
+
 #include "Core/FEngine.h"
 #include "UI/EditorUI.h"
-#include "Pawn/EditorCameraPawn.h"
-#include "Controller/EditorViewportController.h"
+#include "UI/PreviewViewportClient.h"
+
 class FEditorEngine : public FEngine
 {
 public:
 	FEditorEngine() = default;
+	~FEditorEngine() override;
 
 	bool Initialize(HINSTANCE hInstance);
-	void Tick(float DeltaTime) override;
+	void Shutdown() override;
+
 protected:
 	void PreInitialize() override;
 	void PostInitialize() override;
+	void Tick(float DeltaTime) override;
+	ESceneType GetStartupSceneType() const override { return ESceneType::Editor; }
+	std::unique_ptr<IViewportClient> CreateViewportClient() override;
 
 private:
+	void SyncViewportClient();
+
 	CEditorUI EditorUI;
-	AEditorCameraPawn* EditorPawn = nullptr;
-	CEditorViewportController ViewportController;
+	std::unique_ptr<CPreviewViewportClient> PreviewViewportClient;
 };

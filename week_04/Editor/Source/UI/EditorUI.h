@@ -1,13 +1,13 @@
-#pragma once
+﻿#pragma once
 
 #include "ControlPanelWindow.h"
 #include "PropertyWindow.h"
 #include "ConsoleWindow.h"
 #include "StatWindow.h"
-#include "Picking/Picker.h"
 
 class CCore;
 class CWindow;
+class CRenderer;
 class AActor;
 
 class CEditorUI
@@ -15,9 +15,9 @@ class CEditorUI
 public:
 	void Initialize(CCore* InCore);
 	void SetupWindow(CWindow* InWindow);
+	void AttachToRenderer(CRenderer* InRenderer);
+	void DetachFromRenderer(CRenderer* InRenderer);
 	void Render();
-
-	void SetSelectedActor(AActor* InActor);
 
 	CConsoleWindow& GetConsole() { return Console; }
 
@@ -25,16 +25,16 @@ private:
 	void BuildDefaultLayout(uint32 DockID);
 
 	CCore* Core = nullptr;
-	AActor* SelectedActor = nullptr;
 	AActor* CachedSelectedActor = nullptr;
 
 	CWindow* MainWindow = nullptr;
-	CPicker Picker;
 
 	CControlPanelWindow ControlPanel;
 	CPropertyWindow Property;
 	CConsoleWindow Console;
 	CStatWindow Stat;
 
+	bool bWindowSetup = false;
+	bool bViewportClientActive = false;
 	bool bLayoutInitialized = false;
 };

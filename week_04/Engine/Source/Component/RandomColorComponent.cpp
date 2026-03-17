@@ -1,6 +1,6 @@
-#include "RandomColorComponent.h"
+﻿#include "RandomColorComponent.h"
 #include "PrimitiveComponent.h"
-#include "Object/Actor/Actor.h"
+#include "Actor/Actor.h"
 #include "Renderer/Material.h"
 #include <random>
 

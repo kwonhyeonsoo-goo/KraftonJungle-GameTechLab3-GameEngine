@@ -1,10 +1,13 @@
-#pragma once
+﻿#pragma once
 #include "CoreMinimal.h"
+#include "Scene/SceneTypes.h"
 #include "Windows.h"
 #include "Core/Core.h"
 #include <memory>
 
 class CWindowApplication;
+class CWindow;
+class IViewportClient;
 
 class ENGINE_API FEngine
 {
@@ -26,9 +29,13 @@ protected:
 	virtual void PreInitialize() {}
 	virtual void PostInitialize() {}
 	virtual void Tick(float DeltaTime) {}
+	virtual ESceneType GetStartupSceneType() const { return ESceneType::Game; }
+	virtual std::unique_ptr<IViewportClient> CreateViewportClient();
 
 	CWindowApplication* App = nullptr;
+	CWindow* MainWindow = nullptr;
 	std::unique_ptr<CCore> Core;
+	std::unique_ptr<IViewportClient> ViewportClient;
 
 private:
 	bool OnInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);

@@ -1,13 +1,16 @@
 #pragma once
+
 #include "Object/Object.h"
 #include <d3d11.h>
+#include "Scene/SceneTypes.h"
 
 class AActor;
+class CCamera;
 class FFrustum;
+class UCameraComponent;
 class UPrimitiveComponent;
 struct FRenderCommandQueue;
 
-class UCameraComponent;
 class ENGINE_API UScene : public UObject
 {
 public:
@@ -26,8 +29,6 @@ public:
 		{
 			return nullptr;
 		}
-		
-
 
 		T* NewActor = static_cast<T*>(NewObj);
 		RegisterActor(NewActor);
@@ -41,14 +42,18 @@ public:
 	void CleanupDestroyedActors();
 
 	const TArray<AActor*>& GetActors() const { return Actors; }
+	void SetSceneType(ESceneType InSceneType) { SceneType = InSceneType; }
+	ESceneType GetSceneType() const { return SceneType; }
+	bool IsEditorScene() const { return SceneType == ESceneType::Editor; }
+	bool IsGameScene() const { return SceneType == ESceneType::Game || SceneType == ESceneType::PIE; }
 
-	//CCamera* GetCamera() const { return Camera; }
-	void SetActiveCameraComponent(UCameraComponent* Camera) { ActiveCameraComponent = Camera; }
+	void SetActiveCameraComponent(UCameraComponent* InCameraComponent);
+	UCameraComponent* GetActiveCameraComponent() const;
+	CCamera* GetCamera() const;
 
-	UCameraComponent* GetActiveCameraComponent() const { return ActiveCameraComponent; }
+	void InitializeEmptyScene(float AspectRatio);
 	void InitializeDefaultScene(float AspectRatio, ID3D11Device* Device = nullptr);
 	void LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device = nullptr);
-	
 	void SaveSceneToFile(const FString& FilePath);
 	void ClearActors();
 	void BeginPlay();
@@ -56,10 +61,12 @@ public:
 	void CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue);
 
 private:
-	// 컬링: 가시 PrimitiveComponent 목록 수집 (멀티스레드 분리 가능)
 	void CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible);
+
+private:
 	TArray<AActor*> Actors;
+	UCameraComponent* SceneCameraComponent = nullptr;
 	UCameraComponent* ActiveCameraComponent = nullptr;
-	//CCamera* Camera = nullptr; //deprecated
 	bool bBegunPlay = false;
+	ESceneType SceneType = ESceneType::Game;
 };

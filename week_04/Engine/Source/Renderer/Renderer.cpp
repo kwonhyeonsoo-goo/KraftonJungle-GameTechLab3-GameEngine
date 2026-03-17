@@ -1,4 +1,4 @@
-#include "Renderer.h"
+﻿#include "Renderer.h"
 #include "ShaderType.h"
 #include "Shader.h"
 #include "ShaderMap.h"
@@ -48,6 +48,22 @@ void CRenderer::SetGUICallbacks(
 void CRenderer::SetGUIUpdateCallback(FGUICallback InUpdate)
 {
 	GUIUpdate = std::move(InUpdate);
+}
+
+void CRenderer::ClearViewportCallbacks()
+{
+	if (GUIShutdown)
+	{
+		GUIShutdown();
+	}
+
+	GUIInit = nullptr;
+	GUIShutdown = nullptr;
+	GUINewFrame = nullptr;
+	GUIUpdate = nullptr;
+	GUIRender = nullptr;
+	GUIPostPresent = nullptr;
+	PostRenderCallback = nullptr;
 }
 
 bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
@@ -271,14 +287,14 @@ void CRenderer::EndFrame()
 	}
 }
 
-void CRenderer::SubmitCommands(FRenderCommandQueue& Queue)
+void CRenderer::SubmitCommands(const FRenderCommandQueue& Queue)
 {
 	// 큐의 카메라 데이터를 적용
 	ViewMatrix = Queue.ViewMatrix;
 	ProjectionMatrix = Queue.ProjectionMatrix;
 
 	// GPU 버퍼 보장 + 내부 CommandList로 이전
-	for (auto& Cmd : Queue.Commands)
+	for (const auto& Cmd : Queue.Commands)
 	{
 		if (Cmd.MeshData)
 		{
@@ -545,17 +561,7 @@ void CRenderer::ExecuteLineCommands()
 
 void CRenderer::Release()
 {
-	if (GUIShutdown)
-	{
-		GUIShutdown();
-
-	}
-	GUIInit = nullptr;
-	GUIShutdown = nullptr;
-	GUINewFrame = nullptr;
-	GUIUpdate = nullptr;
-	GUIRender = nullptr;
-	GUIPostPresent = nullptr;
+	ClearViewportCallbacks();
 	if (StencilWriteState)
 	{
 		StencilWriteState->Release();
