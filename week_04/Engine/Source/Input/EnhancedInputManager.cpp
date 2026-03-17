@@ -29,12 +29,12 @@ void CEnhancedInputManager::ClearAllMappingContexts()
 
 void CEnhancedInputManager::BindAction(FInputAction* Action, ETriggerEvent TriggerEvent, FInputActionCallback Callback)
 {
-	Binding.push_back({ Action, TriggerEvent, std::move(Callback) });
+	Bindings.push_back({ Action, TriggerEvent, std::move(Callback) });
 }
 
 void CEnhancedInputManager::ClearBindings()
 {
-	Binding.clear();
+	Bindings.clear();
 }
 
 
@@ -133,7 +133,7 @@ void CEnhancedInputManager::ProcessInput(CInputManager* RawInput, float DeltaTim
 		if (Event != ETriggerEvent::None)
 		{
 			FInputActionValue& ActionValue = ActionValues[Action];
-			for (const FBindingEntry& Binding : Binding)
+			for (const FBindingEntry& Binding : Bindings)
 			{
 				if (Binding.Action == Action && (Event & Binding.TriggerEvent))
 				{
@@ -156,7 +156,7 @@ void CEnhancedInputManager::ProcessInput(CInputManager* RawInput, float DeltaTim
 					: ETriggerEvent::Canceled;
 
 				FInputActionValue ZeroValue;
-				for (const FBindingEntry& Binding : Binding)
+				for (const FBindingEntry& Binding : Bindings)
 				{
 					if (Binding.Action == It->first && (Event & Binding.TriggerEvent))
 					{

@@ -8,7 +8,7 @@
 
 class CInputManager;
 using FInputActionCallback = std::function<void(const FInputActionValue&)>;
-class CEnhancedInputManager
+class ENGINE_API  CEnhancedInputManager
 {
 public:
 
@@ -35,6 +35,6 @@ private:
 		FInputActionCallback Callback;
 	};
 	TArray<FMappingContextEntry> MappingContexts;
-	TArray<FBindingEntry> Binding;
+	TArray<FBindingEntry> Bindings;
 	TMap<FInputAction*, ETriggerState> ActionStates;
 };

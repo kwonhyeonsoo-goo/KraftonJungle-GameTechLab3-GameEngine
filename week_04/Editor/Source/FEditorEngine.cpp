@@ -61,10 +61,9 @@ void FEditorEngine::PostInitialize()
 		AEditorCameraPawn::StaticClass(), "EditorCameraPawn");
 	Core->GetScene()->RegisterActor(EditorPawn);
 	Core->GetScene()->SetActiveCameraComponent(EditorPawn->GetCameraComponent());
-
 	ViewportController.Initialize(
 		EditorPawn->GetCameraComponent(),
-		Core->GetInputManager());
-
+		Core->GetInputManager(),
+		Core->GetEnhancedInputManager());
 	UE_LOG("EditorEngine initialized");
 }
