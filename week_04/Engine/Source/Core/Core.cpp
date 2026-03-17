@@ -13,14 +13,9 @@ CCore::~CCore()
 	Release();
 }
 
-
-
 bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height)
 {
 	FPaths::Initialize();
-
-	WindowWidth = Width;
-	WindowHeight = Height;
 
 	// Renderer
 	Renderer = new CRenderer();
@@ -155,19 +150,15 @@ void CCore::Render()
 
 	Renderer->EndFrame();
 }
+
 void CCore::OnResize(int32 Width, int32 Height)
 {
 	if (Width == 0 || Height == 0) return;
-
-	WindowWidth = Width;
-	WindowHeight = Height;
-
 
 	if (Renderer)
 	{
 		Renderer->OnResize(Width, Height);
 	}
-
 
 	if (Scene && Scene->GetCamera())
 	{
