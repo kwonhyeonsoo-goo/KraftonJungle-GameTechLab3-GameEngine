@@ -26,10 +26,11 @@ bool ScaleTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     bDragging = false;
     DragStartAxisT = 0.0f;
 
-    USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-    if (primary == nullptr)
+    TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+    if (primaries.empty())
         return false;
 
+    USceneComponent* primary = primaries.back();
     const FVector origin = primary->GetTransform().Location;
 
     const FMatrix viewProj = ctx.Editor.bOrthoMode
@@ -78,7 +79,11 @@ bool ScaleTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     ActiveAxis = bestAxis;
     bDragging = true;
     DragStartAxisT = axisT;
-    OriginalTransform = primary->GetTransform();
+
+    OriginalTransforms.clear();
+    for (auto& comp : primaries) {
+        OriginalTransforms.push_back(comp->GetTransform());
+    }
 
     return true;
 }
@@ -87,9 +92,11 @@ void ScaleTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
 {
     if (!bDragging)
     {
+        TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+        if (primaries.empty()) HoveredAxis = EAxis::None; return;
+
         // 호버 감지
-        USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-        if (primary == nullptr) { HoveredAxis = EAxis::None; return; }
+        USceneComponent* primary = primaries.back();
 
         const FVector origin = primary->GetTransform().Location;
         const FMatrix viewProj = ctx.Editor.bOrthoMode
@@ -122,20 +129,22 @@ void ScaleTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
         return;
     }
 
-    USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-    if (primary == nullptr)
-    {
+    TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+    if (primaries.empty()) {
         ActiveAxis = EAxis::None;
         bDragging = false;
         DragStartAxisT = 0.0f;
         return;
     }
 
+    // 호버 감지
+    USceneComponent* primary = primaries.back();
+
     const int axisIndex = AxisToIndex(ActiveAxis);
     if (axisIndex < 0)
         return;
 
-    const FVector axisOrigin = OriginalTransform.Location;
+    const FVector axisOrigin = OriginalTransforms.back().Location;
     const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, ECoordSpace::Local);
     const Ray ray = GizmoMath::BuildMouseRay(e, ctx);
 
@@ -145,16 +154,18 @@ void ScaleTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
 
     const float delta = currentAxisT - DragStartAxisT;
 
-    Transform newTransform = OriginalTransform;
+    for (int32 i = 0; i < primaries.size(); i++) {
+        Transform newTransform = OriginalTransforms[i];
 
-    if (axisIndex == 0)
-        newTransform.Scale.x = ClampScaleValue(OriginalTransform.Scale.x + delta);
-    else if (axisIndex == 1)
-        newTransform.Scale.y = ClampScaleValue(OriginalTransform.Scale.y + delta);
-    else if (axisIndex == 2)
-        newTransform.Scale.z = ClampScaleValue(OriginalTransform.Scale.z + delta);
+        if (axisIndex == 0)
+            newTransform.Scale.x = ClampScaleValue(OriginalTransforms[i].Scale.x + delta);
+        else if (axisIndex == 1)
+            newTransform.Scale.y = ClampScaleValue(OriginalTransforms[i].Scale.y + delta);
+        else if (axisIndex == 2)
+            newTransform.Scale.z = ClampScaleValue(OriginalTransforms[i].Scale.z + delta);
 
-    primary->SetTransform(newTransform);
+        primaries[i]->SetTransform(newTransform);
+    }
 }
 
 void ScaleTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
@@ -164,21 +175,27 @@ void ScaleTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
     if (!bDragging)
         return;
 
-    USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-    if (primary != nullptr)
-    {
-        const Transform finalTransform = primary->GetTransform();
+    TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+    if (primaries.empty()) return;
 
-        if (!NearlySameScale(finalTransform.Scale, OriginalTransform.Scale))
+    for (int32 i = 0; i < primaries.size(); i++) {
+        USceneComponent* primary = primaries[i];
+        if (primary != nullptr)
         {
-            primary->SetTransform(OriginalTransform);
-            ctx.Dispatch(std::make_unique<SetTransformCommand>(primary, finalTransform));
-        }
-        else
-        {
-            primary->SetTransform(OriginalTransform);
+            const Transform finalTransform = primary->GetTransform();
+
+            if (!NearlySameScale(finalTransform.Scale, OriginalTransforms[i].Scale))
+            {
+                primary->SetTransform(OriginalTransforms[i]);
+                ctx.Dispatch(std::make_unique<SetTransformCommand>(primary, finalTransform));
+            }
+            else
+            {
+                primary->SetTransform(OriginalTransforms[i]);
+            }
         }
     }
+    OriginalTransforms.clear();
 
     ActiveAxis = EAxis::None;
     bDragging = false;

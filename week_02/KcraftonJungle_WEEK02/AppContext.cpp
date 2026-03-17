@@ -154,6 +154,19 @@ void AppContext::SubscribeEvents()
                 Editor.Tools.SetMode(
                     cur == M::Translate ? M::Rotate :
                     cur == M::Rotate ? M::Scale : M::Translate);
+            }
+            else if (e.KeyCode == '1') {
+                using M = ETransformMode;
+                auto cur = Editor.Tools.GetMode();
+                Editor.Tools.SetMode( M::Translate );
+            }else if (e.KeyCode == '2') {
+                using M = ETransformMode;
+                auto cur = Editor.Tools.GetMode();
+                Editor.Tools.SetMode( M::Rotate);
+            }else if (e.KeyCode == '3') {
+                using M = ETransformMode;
+                auto cur = Editor.Tools.GetMode();
+                Editor.Tools.SetMode( M::Scale);
             }else if (e.KeyCode == VK_DELETE) {
                 TArray<USceneComponent*> selected = Editor.Selection.GetAll();
 

@@ -66,5 +66,5 @@ protected:
 
 private:
     FVector   DragStartDir = FVector::Zero;
-    Transform OriginalTransform;
+    TArray<Transform> OriginalTransforms;
 };

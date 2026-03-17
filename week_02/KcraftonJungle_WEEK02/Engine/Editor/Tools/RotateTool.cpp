@@ -22,9 +22,11 @@ bool RotateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     bDragging = false;
     DragStartDir = FVector::Zero;
 
-    USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-    if (primary == nullptr)
+    TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+    if (primaries.empty())
         return false;
+
+    USceneComponent* primary = primaries.back();
 
     const FVector center = primary->GetTransform().Location;
     const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
@@ -80,7 +82,11 @@ bool RotateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     ActiveAxis = bestAxis;
     bDragging = true;
     DragStartDir = startDir;
-    OriginalTransform = primary->GetTransform();
+
+    OriginalTransforms.clear();
+    for (auto& comp : primaries) {
+        OriginalTransforms.push_back(comp->GetTransform());
+    }
 
     return true;
 }
@@ -89,10 +95,12 @@ void RotateTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
 {
     if (!bDragging)
     {
-        // 호버 감지
-        USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-        if (primary == nullptr) { HoveredAxis = EAxis::None; return; }
+        TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+        if (primaries.empty()) { HoveredAxis = EAxis::None; return; }
 
+        // 호버 감지
+        USceneComponent* primary = primaries.back();
+        
         const FVector center = primary->GetTransform().Location;
         const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
         const FMatrix viewProj = ctx.Editor.bOrthoMode
@@ -118,20 +126,21 @@ void RotateTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
         return;
     }
 
-    USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-    if (primary == nullptr)
-    {
+    TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+    if (primaries.empty()) {
         ActiveAxis = EAxis::None;
         bDragging = false;
         DragStartDir = FVector::Zero;
-        return;
+		return; 
     }
+
+    USceneComponent* primary = primaries.back();
 
     const int axisIndex = AxisToIndex(ActiveAxis);
     if (axisIndex < 0)
         return;
 
-    const FVector center = OriginalTransform.Location;
+    const FVector center = OriginalTransforms.back().Location;
     const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
     const FVector axis = GizmoMath::GetAxisDirection(primary, axisIndex, coordSpace);
 
@@ -146,15 +155,20 @@ void RotateTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
         return;
 
     const float angleRad = GizmoMath::SignedAngleAroundAxis(DragStartDir, currentDir, axis);
-    
-    const Quatanian Origin(OriginalTransform.ToQuaternion());
-    const Quatanian Delta = MakeAxisAngleQuat(axis, angleRad);
-    FVector4 NewQuatanian = NormalizeQuat(Delta.Mul(Origin));
-    
-    Transform NewRotation = OriginalTransform;
-    NewRotation.Rotation = Transform::ToEularAngle(NewQuatanian);
 
-    primary->SetTransform(NewRotation);
+    for (int32 i = 0; i < primaries.size(); i++) {
+        USceneComponent* primary = primaries[i];
+
+        const Quatanian Origin(OriginalTransforms[i].ToQuaternion());
+        const Quatanian Delta = MakeAxisAngleQuat(axis, angleRad);
+        FVector4 NewQuatanian = NormalizeQuat(Delta.Mul(Origin));
+
+        FVector Rotation = Transform::ToEularAngle(NewQuatanian);
+
+        Transform newTransform = OriginalTransforms[i];
+        newTransform.Rotation = Rotation;
+        primaries[i]->SetTransform(newTransform);
+    }
 }
 
 void RotateTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
@@ -164,21 +178,28 @@ void RotateTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
     if (!bDragging)
         return;
 
-    USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-    if (primary != nullptr)
-    {
-        const Transform finalTransform = primary->GetTransform();
+    TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+    if (primaries.empty()) return;
 
-        if (!NearlySameRotation(finalTransform.Rotation, OriginalTransform.Rotation))
+    for (int32 i = 0; i < primaries.size(); i++) {
+        USceneComponent* primary = primaries[i];
+
+        if (primary != nullptr)
         {
-            primary->SetTransform(OriginalTransform);
-            ctx.Dispatch(std::make_unique<SetTransformCommand>(primary, finalTransform));
-        }
-        else
-        {
-            primary->SetTransform(OriginalTransform);
+            const Transform finalTransform = primary->GetTransform();
+
+            if (!NearlySameRotation(finalTransform.Rotation, OriginalTransforms[i].Rotation))
+            {
+                primary->SetTransform(OriginalTransforms[i]);
+                ctx.Dispatch(std::make_unique<SetTransformCommand>(primary, finalTransform));
+            }
+            else
+            {
+                primary->SetTransform(OriginalTransforms[i]);
+            }
         }
     }
+    OriginalTransforms.clear();
 
     ActiveAxis = EAxis::None;
     bDragging = false;
