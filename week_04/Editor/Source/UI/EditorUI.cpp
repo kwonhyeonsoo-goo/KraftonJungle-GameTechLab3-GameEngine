@@ -262,6 +262,12 @@ void CEditorUI::Render()
 	}
 
 	// Update stats
+	if (Core)
+	{
+		const FTimer& Timer = Core->GetTimer();
+		Stat.SetFPS(Timer.GetFPS());
+		Stat.SetFrameTimeMs(Timer.GetFrameTimeMs());
+	}
 	Stat.SetObjectCount(UObject::TotalAllocationCounts);
 	Stat.SetHeapUsage(UObject::TotalAllocationBytes);
 

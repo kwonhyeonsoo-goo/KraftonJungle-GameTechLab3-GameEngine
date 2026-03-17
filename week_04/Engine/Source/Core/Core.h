@@ -28,6 +28,7 @@ public:
 	UScene* GetScene() const { return Scene.get(); }
 	CRenderer* GetRenderer() const { return Renderer.get(); }
 	CInputManager* GetInputManager() const { return InputManager.get(); }
+	const FTimer& GetTimer() const { return Timer; }
 
 	void OnResize(int32 Width, int32 Height);
 
@@ -36,6 +37,7 @@ private:
 	void Physics(float DeltaTime);
 	void GameLogic(float DeltaTime);
 	void Render();
+	void RegisterConsoleVariables();
 
 private:
 	std::unique_ptr<CRenderer> Renderer;
