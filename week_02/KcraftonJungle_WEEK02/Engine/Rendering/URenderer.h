@@ -116,8 +116,7 @@ public:
 
 private:
     // MVP 상수 버퍼 업데이트
-    void UpdateMVP(const FMatrix& mvp, uint32 color);
-    void UpdateMVP(const FMatrix& mvp, const float thickness);
+    void UpdateMVP(const FMatrix& mvp, uint32 color, const float thickness = 1);
     void UpdateConstantBuffer(const FVector& CameraPos);
 
 
@@ -142,24 +141,21 @@ private:
 
 
     void RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices);
-    void RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer, UINT indexCount);
     void RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer, UINT indexCount, UINT stride);
 
     void CreateDeviceAndSwapChain(HWND hWindow, uint32 width, uint32 height);
-
     void ReleaseDeviceAndSwapChain();
 
     void CreateFrameBuffer();
     void ReleaseFrameBuffer();
 
-
     void CreateDepthBuffer(uint32 width, uint32 height);
     void ReleaseDepthBuffer();
 
     void CreatePrimitiveVertexBuffer();
+    void ReleasePrimitiveVertexBuffer();
 
     void CreateRasterizerState();
-
     void ReleaseRasterizerState();
 
     ID3D11Buffer* CreateVertexBuffer(FVertexSimple* vertices, UINT byteWidth);
