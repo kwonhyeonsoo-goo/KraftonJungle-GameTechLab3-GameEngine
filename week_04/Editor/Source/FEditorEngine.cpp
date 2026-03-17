@@ -17,7 +17,7 @@ bool FEditorEngine::Initialize(HINSTANCE hInstance)
 
 void FEditorEngine::Startup()
 {
-	EditorUI.Initialize(Core);
+	EditorUI.Initialize(Core.get());
 	EditorUI.SetupWindow(App->GetMainWindow());
 
 	FEngineLog::Get().SetCallback([this](const char* Msg)

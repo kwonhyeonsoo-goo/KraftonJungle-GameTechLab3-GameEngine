@@ -58,6 +58,12 @@ CWindow* CWindowApplication::MakeWindow(const WCHAR* Title, int Width, int Heigh
 	return Window;
 }
 
+bool CWindowApplication::CreateMainWindow(const WCHAR* Title, int Width, int Height, int X, int Y)
+{
+	MainWindow = MakeWindow(Title, Width, Height, X, Y);
+	return MainWindow != nullptr;
+}
+
 bool CWindowApplication::PumpMessages()
 {
 	MSG Msg = {};
@@ -93,6 +99,11 @@ void CWindowApplication::UnregisterWindow(HWND Hwnd)
 	WindowMap.erase(Hwnd);
 }
 
+HWND CWindowApplication::GetHwnd() const
+{
+	return MainWindow ? MainWindow->GetHwnd() : nullptr;
+}
+
 int32 CWindowApplication::GetWindowWidth() const
 {
 	return MainWindow ? MainWindow->GetWidth() : 0;
@@ -101,4 +112,28 @@ int32 CWindowApplication::GetWindowWidth() const
 int32 CWindowApplication::GetWindowHeight() const
 {
 	return MainWindow ? MainWindow->GetHeight() : 0;
+}
+
+void CWindowApplication::AddMessageFilter(FWndProcFilter Filter)
+{
+	if (MainWindow)
+	{
+		MainWindow->AddMessageFilter(std::move(Filter));
+	}
+}
+
+void CWindowApplication::SetOnResizeCallback(FOnResizeCallback Callback)
+{
+	if (MainWindow)
+	{
+		MainWindow->SetOnResizeCallback(std::move(Callback));
+	}
+}
+
+void CWindowApplication::ShowWindow()
+{
+	if (MainWindow)
+	{
+		MainWindow->Show();
+	}
 }

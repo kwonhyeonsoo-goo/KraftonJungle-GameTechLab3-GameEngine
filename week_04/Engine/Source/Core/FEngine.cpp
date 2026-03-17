@@ -1,8 +1,5 @@
 #include "FEngine.h"
-#include "Core.h"
 #include "Platform/Windows/WindowApplication.h"
-#include "Platform/Windows/Window.h"
-#include "Renderer/Renderer.h"
 
 FEngine* GEngine = nullptr;
 
@@ -17,39 +14,23 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int32 Width,
 	if (!App->Create(hInstance))
 		return false;
 
-	CWindow* MainWindow = App->MakeWindow(Title, Width, Height);
-	if (!MainWindow)
+	if (!App->CreateMainWindow(Title, Width, Height))
 		return false;
-
-	App->SetMainWindow(MainWindow);
 	GEngine = this;
 
-	Core = new CCore();
-	if (!Core->Initialize(MainWindow->GetHwnd(), MainWindow->GetWidth(), MainWindow->GetHeight()))
+	Core = std::make_unique<CCore>();
+	if (!Core->Initialize(App->GetHwnd(), App->GetWindowWidth(), App->GetWindowHeight()))
 		return false;
 
 	Startup();
 
 	// Input forwarding (registered after Startup so Editor can add ImGui/Picking filters first)
-	MainWindow->AddMessageFilter([this](HWND h, UINT m, WPARAM w, LPARAM l) -> bool
-		{
-			if (Core)
-			{
-				Core->ProcessInput(h, m, w, l);
-			}
-			return false;
-		});
+	App->AddMessageFilter(std::bind(&FEngine::OnInput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
 	// Resize callback
-	MainWindow->SetOnResizeCallback([this](int32 W, int32 H)
-		{
-			if (Core)
-			{
-				Core->OnResize(W, H);
-			}
-		});
+	App->SetOnResizeCallback(std::bind(&FEngine::OnResize, this, std::placeholders::_1, std::placeholders::_2));
 
-	MainWindow->Show();
+	App->ShowWindow();
 
 	return true;
 }
@@ -62,6 +43,23 @@ void FEngine::Run()
 	}
 }
 
+bool FEngine::OnInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+{
+	if (Core)
+	{
+		Core->ProcessInput(Hwnd, Msg, WParam, LParam);
+	}
+	return false;
+}
+
+void FEngine::OnResize(int32 Width, int32 Height)
+{
+	if (Core)
+	{
+		Core->OnResize(Width, Height);
+	}
+}
+
 void FEngine::Shutdown()
 {
 	GEngine = nullptr;
@@ -69,8 +67,7 @@ void FEngine::Shutdown()
 	if (Core)
 	{
 		Core->Release();
-		delete Core;
-		Core = nullptr;
+		Core.reset();
 	}
 
 	if (App)
