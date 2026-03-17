@@ -152,7 +152,8 @@
     <ClInclude Include="Engine\Foundation\Containers\TMap.h" />
     <ClInclude Include="Engine\Mesh\Circle.h" />
     <ClInclude Include="Engine\Mesh\Cube.h" />
-    <ClInclude Include="Engine\Mesh\Gizmo.h" />
+    <ClInclude Include="Engine\Mesh\FVertexSimple.h" />
+    <ClInclude Include="Engine\Mesh\TranslateGizmo.h" />
     <ClInclude Include="Engine\Mesh\Rect.h" />
     <ClInclude Include="Engine\Mesh\Sphere.h" />
     <ClInclude Include="Engine\Mesh\Triangle.h" />
@@ -219,10 +220,12 @@
     <ClCompile Include="Editor\ImGui\imgui_impl_win32.cpp" />
     <ClCompile Include="Editor\ImGui\imgui_tables.cpp" />
     <ClCompile Include="Editor\ImGui\imgui_widgets.cpp" />
+    <ClCompile Include="Engine\Editor\Tools\ITool.cpp" />
     <ClCompile Include="Engine\Foundation\Core\Log.cpp" />
     <ClCompile Include="Engine\Foundation\Core\Memory.cpp" />
     <ClCompile Include="Engine\Foundation\Math\FVector.cpp" />
     <ClCompile Include="Engine\Foundation\Math\FVector2D.h" />
+    <ClCompile Include="Engine\Mesh\ScaleGizmo.h" />
     <ClCompile Include="Engine\ObjectKernel\ClassRegistry.cpp" />
     <ClCompile Include="Engine\ObjectKernel\ObjectFactory.cpp" />
     <ClCompile Include="Engine\ObjectKernel\ObjectStore.cpp" />
@@ -267,7 +270,7 @@
     <ClCompile Include="Engine\World\UTriangleComp.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Engine\Mesh\Torus.h" />
+    <None Include="Engine\Mesh\RotationGizmo.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

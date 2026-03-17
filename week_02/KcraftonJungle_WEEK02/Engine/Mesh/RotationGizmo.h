@@ -1,11 +1,12 @@
 ﻿#pragma once
+#include "FVertexSimple.h"
 
 constexpr int TORUS_VERTEX_COUNT = 32 * 16 * 6;
 
-inline void GetTorusVertices(FVertexSimple* V)
+inline void GetRotationGizmoVertices(FVertexSimple* V)
 {
     const float PI2 = 6.28318530717958f;
-    const float R = 3.0f, r = 0.05f;
+    const float R = 1.5f, r = 0.05f;
     const int   M = 32, N = 16;
     int Idx = 0;
 

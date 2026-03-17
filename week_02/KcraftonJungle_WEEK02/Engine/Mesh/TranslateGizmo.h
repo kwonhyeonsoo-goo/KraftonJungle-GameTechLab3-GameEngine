@@ -1,7 +1,7 @@
 #pragma once
 
 // 모든 정점의 Color (r, g, b, a) 값을 1, 1, 1, 1 (흰색)로 통일
-FVertexSimple gizmoVertices[] = {
+FVertexSimple TranslateGizmoVertices[] = {
     // === 1. 원기둥 옆면 (Stem Side - 36 Vertices) ===
     // 면 0
     { 0.020f,  0.000f, 0.0f,  1,1,1,1,  1.0f, 0.0f, 0.0f }, { 0.010f,  0.017f, 0.8f,  1,1,1,1,  0.5f, 0.87f, 0.0f }, { 0.020f,  0.000f, 0.8f,  1,1,1,1,  1.0f, 0.0f, 0.0f },

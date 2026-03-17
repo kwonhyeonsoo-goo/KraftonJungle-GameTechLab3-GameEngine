@@ -22,8 +22,8 @@ void StatPanel::OnRender(AppContext& ctx)
 
         ImGui::Spacing();
         ImGui::Separator();
-        ImGui::Text("Current Tool        : %s",
-            ctx.Editor.Tools.GetActiveTool() ? ctx.Editor.Tools.GetActiveTool()->GetName().c_str() : "None");
+        //ImGui::Text("Current Tool        : %s",
+        //    ctx.Editor.Tools.GetActiveTool() ? ctx.Editor.Tools.GetActiveTool()->GetName().c_str() : "None");
 
         ImGui::Text("Transform Mode      : %s",
             ctx.Editor.Tools.GetMode() == ETransformMode::Translate ? "Translate" :
@@ -33,10 +33,10 @@ void StatPanel::OnRender(AppContext& ctx)
         ImGui::Text("Coord Space         : %s",
             ctx.Editor.Tools.GetCoordSpace() == ECoordSpace::World ? "World" : "Local");
 
-        ImGui::Text("Snap Enabled        : %s",
-            ctx.Editor.Tools.IsSnapEnabled() ? "Yes" : "No");
+        //ImGui::Text("Snap Enabled        : %s",
+        //    ctx.Editor.Tools.IsSnapEnabled() ? "Yes" : "No");
 
-        ImGui::Text("Snap Value          : %.2f", ctx.Editor.Tools.GetSnapValue());
+        //ImGui::Text("Snap Value          : %.2f", ctx.Editor.Tools.GetSnapValue());
 
         ImGui::Spacing();
         ImGui::Separator();

@@ -162,9 +162,6 @@ struct FVector
             && std::fabs(a.z - b.z) <= epsilon;
     }
 
-#include <algorithm>
-#include <limits>
-
     static float ClampFloat(float value, float minValue, float maxValue)
     {
         return (std::max)(minValue, (std::min)(value, maxValue));

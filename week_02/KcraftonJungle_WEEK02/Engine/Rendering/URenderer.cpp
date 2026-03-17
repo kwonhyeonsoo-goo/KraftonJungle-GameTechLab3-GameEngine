@@ -7,10 +7,11 @@
 #include "../Mesh/Triangle.h"
 #include "../Mesh/Rect.h"
 #include "../Mesh/Line.h"
-#include "../Mesh/Gizmo.h"
 #include "../Mesh/UVRect.h"
 #include "../Editor/EditorSession.h"
-#include "../Mesh/Torus.h"
+#include "../Mesh/TranslateGizmo.h"
+#include "../Mesh/RotationGizmo.h"
+#include "../Mesh/ScaleGizmo.h"
 
 void URenderer::RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices)
 
@@ -379,12 +380,18 @@ void URenderer::CreatePrimitiveVertexBuffer()
     vertexBufferWorldAxis = CreateVertexBuffer(line_vertices, sizeof(line_vertices));
     numVerticesWorldAxis = sizeof(line_vertices) / sizeof(FVertexSimple);
 
-    vertexBufferGizmo = CreateVertexBuffer(gizmoVertices, sizeof(gizmoVertices));
-    numVerticesGizmo = sizeof(gizmoVertices) / sizeof(FVertexSimple);
-    FVertexSimple Torus[TORUS_VERTEX_COUNT];
-    GetTorusVertices(Torus);
-    vertexBufferTorus = CreateVertexBuffer(Torus, sizeof(Torus));
-    numVerticesTorus = sizeof(Torus) / sizeof(FVertexSimple);
+    vertexBufferTranslateGizmo = CreateVertexBuffer(TranslateGizmoVertices, sizeof(TranslateGizmoVertices));
+    numVerticesTranslateGizmo = sizeof(TranslateGizmoVertices) / sizeof(FVertexSimple);
+
+    FVertexSimple RotationGizmoVertices[TORUS_VERTEX_COUNT];
+    GetRotationGizmoVertices(RotationGizmoVertices);
+    vertexBufferRotationGizmo = CreateVertexBuffer(RotationGizmoVertices, TORUS_VERTEX_COUNT * sizeof(FVertexSimple));
+    numVerticesRotationGizmo = TORUS_VERTEX_COUNT;
+
+    FVertexSimple ScaleGizmoVertices[SCALE_GIZMO_VERTEX_COUNT];
+    GetScaleGizmoVertices(ScaleGizmoVertices);
+    vertexBufferScaleGizmo = CreateVertexBuffer(ScaleGizmoVertices, SCALE_GIZMO_VERTEX_COUNT * sizeof(FVertexSimple));
+    numVerticesScaleGizmo = SCALE_GIZMO_VERTEX_COUNT;
 
     vertexBufferGrid = CreateVertexBuffer(UVrect_vertices, sizeof(UVrect_vertices));
     indexBufferGrid = CreateIndexBuffer(UVrect_indices, sizeof(UVrect_indices));
@@ -493,7 +500,7 @@ void URenderer::OnResize(UINT width, UINT height)
 
 void URenderer::SwapBuffer()
 {
-    SwapChain->Present(1, 0);
+    SwapChain->Present(0, 0);
 }
 
 void URenderer::Prepare()
@@ -656,10 +663,15 @@ bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
 
     CreatePrimitiveVertexBuffer();
 
-    FVertexSimple Torus[TORUS_VERTEX_COUNT];
-    GetTorusVertices(Torus);
-    vertexBufferTorus = CreateVertexBuffer(Torus, sizeof(Torus));
-    numVerticesTorus = sizeof(Torus) / sizeof(FVertexSimple);
+    FVertexSimple RotationVertices[TORUS_VERTEX_COUNT];
+    GetRotationGizmoVertices(RotationVertices);
+    vertexBufferRotationGizmo = CreateVertexBuffer(RotationVertices, TORUS_VERTEX_COUNT * sizeof(FVertexSimple));
+    numVerticesRotationGizmo = TORUS_VERTEX_COUNT;
+
+    FVertexSimple ScaleVertices[SCALE_GIZMO_VERTEX_COUNT];
+    GetScaleGizmoVertices(ScaleVertices);
+    vertexBufferScaleGizmo = CreateVertexBuffer(ScaleVertices, SCALE_GIZMO_VERTEX_COUNT * sizeof(FVertexSimple));
+    numVerticesScaleGizmo = SCALE_GIZMO_VERTEX_COUNT;
 
     CreateShader();
     CreateConstantBuffer();
@@ -671,7 +683,9 @@ void URenderer::Shutdown()
 {
     ReleaseConstantBuffer();
     ReleaseShader();
+
     ReleasePrimitiveVertexBuffer();
+
     ReleaseRasterizerState();
     ReleaseDepthBuffer();
     ReleaseFrameBuffer();
@@ -773,26 +787,42 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             break;
         case ERenderType::LocalAxis:
             break;
-        case ERenderType::Gizmo: {
-            PrepareShader(SimpleVertexShader, SimplePixelShader, SimpleInputLayout);
+
+        case ERenderType::TranslateGizmo: {
+            PrepareShader();
+            DeviceContext->OMSetDepthStencilState(DepthStencilDisable, 1);
+
+
+
+
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-
-            UpdateMVP(constants.MVP, cmd.Color);
-
-            SetState(RasterizerState, DepthStencilDisable, BlendState);
-            RenderPrimitive(vertexBufferGizmo, numVerticesGizmo);
-
+  
+            RenderPrimitive(vertexBufferTranslateGizmo, numVerticesTranslateGizmo);
+            DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
             break;
         }
-        case ERenderType::Torus: {
-            PrepareShader(SimpleVertexShader, SimplePixelShader, SimpleInputLayout);
+        case ERenderType::RotationGizmo: {
+            DeviceContext->OMSetDepthStencilState(DepthStencilDisable, 1);
+            uint32 Red = (cmd.Color >> 24) & 0xFF;
+            uint32 Green = (cmd.Color >> 16) & 0xFF;
+            uint32 Blue = (cmd.Color >> 8) & 0xFF;
+            UpdateMVP(constants.MVP, { Red / 255.f,Green / 255.f, Blue / 255.f });
+
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            PrepareShader();
+            RenderPrimitive(vertexBufferRotationGizmo, numVerticesRotationGizmo);
+            break;
+        }
+        case ERenderType::ScaleGizmo: {
+            DeviceContext->OMSetDepthStencilState(DepthStencilDisable, 1);
+            uint32 Red = (cmd.Color >> 24) & 0xFF;
+            uint32 Green = (cmd.Color >> 16) & 0xFF;
+            uint32 Blue = (cmd.Color >> 8) & 0xFF;
+            UpdateMVP(constants.MVP, { Red / 255.f,Green / 255.f, Blue / 255.f });
 
-            SetState(RasterizerState, DepthStencilDisable, BlendState);
-
-            UpdateMVP(constants.MVP, cmd.Color);
-            RenderPrimitive(vertexBufferTorus, numVerticesTorus);
+            DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            PrepareShader();
+            RenderPrimitive(vertexBufferScaleGizmo, numVerticesScaleGizmo);
             break;
         }
         case ERenderType::Highlight:

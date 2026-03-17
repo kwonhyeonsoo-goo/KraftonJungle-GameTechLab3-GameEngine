@@ -6,15 +6,8 @@
 #include "../Foundation/Math/FVector.h"
 #include "../Foundation/Math/FMatrix.h"
 #include "../Services/SerializationService.h"
+#include "../Mesh/FVertexSimple.h"
 #pragma comment(lib, "dxgi.lib")
-
-
-struct FVertexSimple
-{
-    float x, y, z;    // Position
-    float r, g, b, a; // Color
-    float nx, ny, nz; //normal
-};
 
 struct FVertexUV
 {
@@ -91,15 +84,17 @@ public:
     UINT numVerticesRect; UINT numIndicesRect;
     ID3D11Buffer* vertexBufferWorldAxis;
     UINT numVerticesWorldAxis;
-    ID3D11Buffer* vertexBufferGizmo;
-    UINT numVerticesGizmo;
 
     ID3D11Buffer* vertexBufferGrid;
     ID3D11Buffer* indexBufferGrid;
     UINT numVerticesGrid; UINT numIndicesGrid;
 
-    ID3D11Buffer* vertexBufferTorus;
-    UINT numVerticesTorus;
+    ID3D11Buffer* vertexBufferTranslateGizmo;
+    UINT numVerticesTranslateGizmo;
+    ID3D11Buffer* vertexBufferRotationGizmo;
+    UINT numVerticesRotationGizmo;
+    ID3D11Buffer* vertexBufferScaleGizmo;
+    UINT numVerticesScaleGizmo;
 
 
 #pragma region D3D11 Renderer 함수들
