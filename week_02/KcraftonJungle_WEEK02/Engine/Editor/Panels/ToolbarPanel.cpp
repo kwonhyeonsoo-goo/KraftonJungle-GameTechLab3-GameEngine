@@ -80,8 +80,21 @@ void ToolbarPanel::OnRender(AppContext& ctx)
     ImGui::Spacing();
     ImGui::Text("View");
     ImGui::Separator();
-    ImGui::Checkbox("Orthographic", &ctx.Editor.bOrthoMode);
+    FEditorViewport& Viewport = ctx.Editor.GetActiveViewport();
+    EEditorProjectionMode& Mode = Viewport.Projection.Mode;
 
+    bool bPerspective = (Mode == EEditorProjectionMode::Perspective);
+    bool bOrthographic = (Mode == EEditorProjectionMode::Orthographic);
+
+    if (ImGui::RadioButton("Perspective", bPerspective))
+    {
+        Mode = EEditorProjectionMode::Perspective;
+    }
+
+    if (ImGui::RadioButton("Orthographic", bOrthographic))
+    {
+        Mode = EEditorProjectionMode::Orthographic;
+    }
     ImGui::Spacing();
     ImGui::Text("Spawn Object");
     ImGui::Separator();

@@ -41,19 +41,19 @@ void StatPanel::OnRender(AppContext& ctx)
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Text("Camera");
-        ImGui::DragFloat3("Position", &ctx.Editor.Camera.Position.x, 0.01f);
-        ImGui::DragFloat("Yaw", &ctx.Editor.Camera.Yaw, 0.1f);
-        ImGui::DragFloat("Pitch", &ctx.Editor.Camera.Pitch, 0.1f, -89.f, 89.f);
-        ImGui::DragFloat("Move Speed", &ctx.Editor.Camera.MoveSpeed, 0.01f, 0.1f, 50.f);
-        ImGui::DragFloat("Rot Speed", &ctx.Editor.Camera.RotSpeed, 0.001f, 0.01f, 5.f);
+        ImGui::DragFloat3("Position", &ctx.Editor.GetActiveCamera().Position.x, 0.01f);
+        ImGui::DragFloat("Yaw", &ctx.Editor.GetActiveCamera().Yaw, 0.1f);
+        ImGui::DragFloat("Pitch", &ctx.Editor.GetActiveCamera().Pitch, 0.1f, -89.f, 89.f);
+        ImGui::DragFloat("Move Speed", &ctx.Editor.GetActiveCamera().MoveSpeed, 0.01f, 0.1f, 50.f);
+        ImGui::DragFloat("Rot Speed", &ctx.Editor.GetActiveCamera().RotSpeed, 0.001f, 0.01f, 5.f);
 
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Text("Projection");
 
-        ImGui::DragFloat("FovY",    &ctx.Editor.FovY, 0.1f, 10.f, 170.f, "%.2f");
-        ImGui::DragFloat("Near",    &ctx.Editor.NearZ, 0.001f, 0.001f, 10.f, "%.3f");
-        ImGui::DragFloat("Far",     &ctx.Editor.FarZ, 1.f, 10.f, 10000.f, "%.1f");
+        ImGui::DragFloat("FovY",    &ctx.Editor.GetActiveViewport().Projection.FovY, 0.1f, 10.f, 170.f, "%.2f");
+        ImGui::DragFloat("Near",    &ctx.Editor.GetActiveViewport().Projection.NearZ, 0.001f, 0.001f, 10.f, "%.3f");
+        ImGui::DragFloat("Far",     &ctx.Editor.GetActiveViewport().Projection.FarZ, 1.f, 10.f, 10000.f, "%.1f");
     }
 
     ImGui::End();

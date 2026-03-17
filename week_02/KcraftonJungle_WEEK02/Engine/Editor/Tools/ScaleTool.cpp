@@ -33,7 +33,7 @@ bool ScaleTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     USceneComponent* primary = primaries.back();
     const FVector origin = primary->GetTransform().Location;
 
-    const FMatrix viewProj = ctx.Editor.bOrthoMode
+    const FMatrix viewProj = ctx.Editor.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic
         ? ctx.Editor.GetViewOrthoMatrix()
         : ctx.Editor.GetViewProjMatrix();
     const int32 viewportW = ctx.Window.GetWidth();
@@ -99,7 +99,7 @@ void ScaleTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
         USceneComponent* primary = primaries.back();
 
         const FVector origin = primary->GetTransform().Location;
-        const FMatrix viewProj = ctx.Editor.bOrthoMode
+        const FMatrix viewProj = ctx.Editor.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic
             ? ctx.Editor.GetViewOrthoMatrix()
             : ctx.Editor.GetViewProjMatrix();
         const FVector2D mouse2D((float)e.X, (float)e.Y);
@@ -205,40 +205,50 @@ void ScaleTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
 void ScaleTool::FillGizmoState(AppContext& ctx, GizmoState& out) const
 {
     USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-    if (!primary) return;
+    if (!primary)
+        return;
 
     const FVector origin = primary->GetTransform().Location;
-    const float   gs     = GizmoMath::ComputeGizmoScale(origin, ctx);
+    const float gs = GizmoMath::ComputeGizmoScale(origin, ctx);
+    const float s = GizmoMath::GizmoAxisLength * gs;
 
-    out.bActive          = true;
+    const FVector basisX = GizmoMath::GetAxisDirection(primary, 0, ECoordSpace::Local);
+    const FVector basisY = GizmoMath::GetAxisDirection(primary, 1, ECoordSpace::Local);
+    const FVector basisZ = GizmoMath::GetAxisDirection(primary, 2, ECoordSpace::Local);
+
+    out.bActive = true;
     out.HoveredAxisIndex = bDragging ? -1 : AxisToIndex(HoveredAxis);
-    out.ActiveAxisIndex  = bDragging ? AxisToIndex(ActiveAxis) : -1;
+    out.ActiveAxisIndex = bDragging ? AxisToIndex(ActiveAxis) : -1;
 
     static const uint32 colors[3] = {
-        GizmoMath::AxisColorX, GizmoMath::AxisColorY, GizmoMath::AxisColorZ
+        GizmoMath::AxisColorX,
+        GizmoMath::AxisColorY,
+        GizmoMath::AxisColorZ
     };
 
-    for (int i = 0; i < 3; ++i)
-    {
-        const FVector axisDir = GizmoMath::GetAxisDirection(primary, i, ECoordSpace::Local);
-        out.Axes[i].BaseColor = colors[i];
-        FillAxisData(origin, axisDir, gs, i, out.Axes[i]);
-    }
-}
+    auto FillScaleAxis = [&](int axisIndex, const FVector& forwardY, const FVector& preferredX)
+        {
+            FVector localY = forwardY.Normalized();
 
-void ScaleTool::FillAxisData(const FVector& origin, const FVector& axisDir,
-                              float scale, int /*axisIndex*/, GizmoAxisData& out) const
-{
-    const float s = GizmoMath::GizmoAxisLength * scale;
-    const FVector localY = axisDir.Normalized();
-    const FVector localX = GizmoMath::MakeStablePerpendicular(localY);
-    const FVector localZ = localX.Cross(localY).Normalized();
+            FVector localX = preferredX - localY * preferredX.Dot(localY);
+            if (localX.IsNearlyZero())
+                localX = GizmoMath::MakeStablePerpendicular(localY);
+            else
+                localX = localX.Normalized();
 
-    out.WorldTransform = {
-        localX.x * s, localX.y * s, localX.z * s, 0.0f,
-        localY.x * s, localY.y * s, localY.z * s, 0.0f,
-        localZ.x * s, localZ.y * s, localZ.z * s, 0.0f,
-        origin.x,     origin.y,     origin.z,     1.0f
-    };
-    out.RenderType = ERenderType::ScaleGizmo;
+            const FVector localZ = localX.Cross(localY).Normalized();
+
+            out.Axes[axisIndex].BaseColor = colors[axisIndex];
+            out.Axes[axisIndex].WorldTransform = {
+                localX.x * s, localX.y * s, localX.z * s, 0.0f,
+                localY.x * s, localY.y * s, localY.z * s, 0.0f,
+                localZ.x * s, localZ.y * s, localZ.z * s, 0.0f,
+                origin.x,     origin.y,     origin.z,     1.0f
+            };
+            out.Axes[axisIndex].RenderType = ERenderType::ScaleGizmo;
+        };
+
+    FillScaleAxis(0, basisX, basisZ);
+    FillScaleAxis(1, basisY, basisX);
+    FillScaleAxis(2, basisZ, basisX);
 }

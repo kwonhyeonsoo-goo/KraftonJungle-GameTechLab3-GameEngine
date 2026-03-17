@@ -108,7 +108,7 @@ FVector GizmoMath::GetAxisDirection(const USceneComponent* comp,
 
 Ray GizmoMath::BuildMouseRay(const MouseEvent& e, AppContext& ctx)
 {
-    const FMatrix viewProj = ctx.Editor.bOrthoMode
+    const FMatrix viewProj = ctx.Editor.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic
         ? ctx.Editor.GetViewOrthoMatrix()
         : ctx.Editor.GetViewProjMatrix();
     const FMatrix invViewProj = viewProj.Inversed();

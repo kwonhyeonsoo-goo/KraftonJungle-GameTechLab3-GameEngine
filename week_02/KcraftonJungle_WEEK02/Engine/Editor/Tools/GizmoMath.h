@@ -23,9 +23,9 @@ namespace GizmoMath
 
     inline float ComputeGizmoScale(const FVector& gizmoPos, const AppContext& ctx)
     {
-        if (ctx.Editor.bOrthoMode)
-            return ctx.Editor.OrthoHeight * kGizmoScreenScale;
-        return (std::max)((gizmoPos - ctx.Editor.Camera.Position).Length() * kGizmoScreenScale, 0.5f);
+        if (ctx.Editor.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic)
+            return ctx.Editor.GetActiveViewport().Projection.OrthoHeight * kGizmoScreenScale;
+        return (std::max)((gizmoPos - ctx.Editor.GetActiveCamera().Position).Length() * kGizmoScreenScale, 0.5f);
     }
 
     constexpr uint32 AxisColorX         = 0xFF0000FF;

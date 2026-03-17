@@ -221,7 +221,24 @@ void URenderer::CreateFrameBuffer()
     UINT width = desc.Width;   // 에러 로그에 찍혔던 1008
     UINT height = desc.Height; // 에러 로그에 찍혔던 985
 
+    //뎁스 버퍼 생성
     CreateDepthBuffer(desc.Width, desc.Height);
+
+    //blend 사용
+    D3D11_BLEND_DESC blendDesc = {};
+    ZeroMemory(&blendDesc, sizeof(D3D11_BLEND_DESC));
+    blendDesc.AlphaToCoverageEnable = FALSE;
+    blendDesc.IndependentBlendEnable = FALSE;
+
+    blendDesc.RenderTarget[0].BlendEnable = TRUE;
+    blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+    blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+    blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+    blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    Device->CreateBlendState(&blendDesc, &AlphaBlendState);
 }
 
 void URenderer::ReleaseFrameBuffer()
@@ -286,7 +303,6 @@ void URenderer::CreateDepthBuffer(uint32 width, uint32 height)
 
     // Depth test parameters
     dsDesc1.DepthEnable = true;
-    dsDesc1.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
     dsDesc1.DepthFunc = D3D11_COMPARISON_LESS;
     // Stencil test parameters
     dsDesc1.StencilEnable = true;
@@ -318,6 +334,14 @@ void URenderer::CreateDepthBuffer(uint32 width, uint32 height)
     dsDescOff.DepthFunc = D3D11_COMPARISON_ALWAYS;
     dsDesc.StencilEnable = true;
     Device->CreateDepthStencilState(&dsDescOff, &DepthStencilDisable);
+
+    D3D11_DEPTH_STENCIL_DESC dsDescWriteOff = {};
+    dsDescOff.DepthEnable = TRUE; // ← 비활성화
+    dsDescOff.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+    dsDescOff.DepthFunc = D3D11_COMPARISON_ALWAYS;
+    dsDesc.StencilEnable = true;
+    dsDescOff.DepthFunc = D3D11_COMPARISON_LESS;
+    Device->CreateDepthStencilState(&dsDescOff, &DepthStencilWriteOff);
 
 
     D3D11_DEPTH_STENCIL_VIEW_DESC descDSV = {};
@@ -510,17 +534,13 @@ void URenderer::Prepare()
     
 
     DeviceContext->OMSetRenderTargets(1, &FrameBufferRTV, DepthStencilView);
-
+    FLOAT ClearColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f };
     DeviceContext->ClearRenderTargetView(FrameBufferRTV, ClearColor);
     DeviceContext->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
     DeviceContext->RSSetViewports(1, &ViewportInfo);
 
-    //빼낼 것
-    DeviceContext->RSSetState(RasterizerState);
-    DeviceContext->OMSetDepthStencilState(DepthStencilState, 1);
-    DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    DeviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
+
 
 
 }
@@ -731,7 +751,7 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
     {
         const RenderCommand& cmd = queue.GetCommands()[i];
 
-        const FMatrix& viewProj = (cmd.bOrtho || session.bOrthoMode)
+        const FMatrix& viewProj = (cmd.bOrtho || session.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic)
             ? MViewOrtho : MViewPersp;
 
         FConstants constants = {};
@@ -751,20 +771,20 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             switch (cmd.Shape)
             {
             case EPrimitiveShape::Sphere:
-                SetState(RasterizerStateOutline, DepthStencilOutlineState, BlendState);
+                SetState(RasterizerStateOutline, DepthStencilOutlineState, nullptr);
                 RenderPrimitive(vertexBufferSphere, numVerticesSphere);
                 break;
             case EPrimitiveShape::Cube:
-                SetState(RasterizerState, DepthStencilState, BlendState);
+                SetState(RasterizerState, DepthStencilState, nullptr);
                 RenderPrimitive(vertexBufferCube, numVerticesCube);
                 break;
             case EPrimitiveShape::Triangle:
-                SetState(RasterizerState, DepthStencilState, BlendState);
+                SetState(RasterizerState, DepthStencilState, nullptr);
 
                 RenderPrimitive(vertexBufferTriangle, numVerticesTriangle);
                 break;
             case EPrimitiveShape::Plane:
-                SetState(RasterizerState, DepthStencilState, BlendState);
+                SetState(RasterizerState, DepthStencilState, nullptr);
                 RenderIndexedPrimitive(vertexBufferRect, indexBufferRect, sizeof(rect_indices)/sizeof(UINT), Stride);
 
                 break;
@@ -778,7 +798,7 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             PrepareShader(SimpleVertexShader, SimplePixelShader, SimpleInputLayout);
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
             UpdateMVP(constants.MVP, (uint32)0xFFFFFFFF);
-            SetState(RasterizerState, DepthStencilState, BlendState);
+            SetState(RasterizerState, DepthStencilState, nullptr);
             RenderPrimitive(vertexBufferWorldAxis, numVerticesWorldAxis);
 
             break;
@@ -812,8 +832,8 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
         case ERenderType::Highlight:
         {
             float distance = 12;
-            if (!session.bOrthoMode) {
-                FVector direction = session.Camera.Position - FVector(constants.MVP.M[3][0], constants.MVP.M[3][1], constants.MVP.M[3][2]);
+            if (session.GetActiveViewport().Projection.Mode != EEditorProjectionMode::Orthographic) {
+                FVector direction = session.GetActiveCamera().Position - FVector(constants.MVP.M[3][0], constants.MVP.M[3][1], constants.MVP.M[3][2]);
                 distance = sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
             }
             PrepareShader(OutlineVertexShader, OutlinePixelShader, SimpleInputLayout);
@@ -823,24 +843,24 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             switch (cmd.Shape)
             {
             case EPrimitiveShape::Sphere:
-                SetState(RasterizerState, DepthStencilState, BlendState);
+                SetState(RasterizerState, DepthStencilOutlineState, nullptr);
 
                 RenderPrimitive(vertexBufferSphere, numVerticesSphere);
                 break;
             case EPrimitiveShape::Cube:
 
-                SetState(RasterizerStateOutline, DepthStencilOutlineState, BlendState);
+                SetState(RasterizerStateOutline, DepthStencilOutlineState, nullptr);
 
                 RenderPrimitive(vertexBufferCube, numVerticesCube);
                 break;
             case EPrimitiveShape::Triangle:
-                SetState(RasterizerState, DepthStencilOutlineState, BlendState);
+                SetState(RasterizerState, DepthStencilOutlineState, nullptr);
 
                 RenderPrimitive(vertexBufferTriangle, numVerticesTriangle);
 
                 break;
             case EPrimitiveShape::Plane:
-                SetState(RasterizerState, DepthStencilOutlineState, BlendState);
+                SetState(RasterizerState, DepthStencilOutlineState, nullptr);
 
                 RenderIndexedPrimitive(vertexBufferRect, indexBufferRect, sizeof(rect_indices) / sizeof(UINT), Stride);
             default:
@@ -854,11 +874,11 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
             PrepareShader(GridVertexShader, GridPixelShader, GridInputLayout);
             DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-            SetState(RasterizerState, DepthStencilState, BlendState);
+            SetState(RasterizerState, DepthStencilWriteOff, AlphaBlendState);
 
             UpdateMVP(constants.MVP,(uint32)0xFFFFFFFF);
 
-            UpdateConstantBuffer(session.Camera.Position);
+            UpdateConstantBuffer(session.GetActiveCamera().Position);
             RenderIndexedPrimitive(vertexBufferGrid, indexBufferGrid, sizeof(UVrect_indices) / sizeof(UINT), StrideUV);
             break;
         }

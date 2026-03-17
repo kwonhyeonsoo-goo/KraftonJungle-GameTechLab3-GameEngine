@@ -38,6 +38,8 @@ class EditorSession;
 class URenderer
 {
 public:
+
+
     ID3D11Device* Device = nullptr;
     ID3D11DeviceContext* DeviceContext = nullptr;
     IDXGISwapChain* SwapChain = nullptr;
@@ -52,13 +54,16 @@ public:
 
     ID3D11Texture2D* DepthStencilBuffer = nullptr;
     ID3D11DepthStencilView* DepthStencilView = nullptr;
-    ID3D11DepthStencilState* DepthStencilState = nullptr;
-    ID3D11DepthStencilState* DepthStencilOutlineState = nullptr;
-    ID3D11DepthStencilState* DepthStencilDisable = nullptr;
+    ID3D11DepthStencilState* DepthStencilState = nullptr;   //primitive 도형 출력
+    ID3D11DepthStencilState* DepthStencilOutlineState = nullptr;    //highlight 도형 출력 less depth
+    ID3D11DepthStencilState* DepthStencilDisable = nullptr;     //gizmo 출력 off depth
+    ID3D11DepthStencilState* DepthStencilWriteOff = nullptr;     //grid 출력용 depth write off
+    ID3D11DepthStencilState* DeptsddshStencilDisabl1e = nullptr;     //gizmo 출력 off depth
 
-    ID3D11BlendState* BlendState = nullptr;
 
-    FLOAT ClearColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f };
+    ID3D11BlendState* AlphaBlendState = nullptr;
+
+
     D3D11_VIEWPORT ViewportInfo;
 
     ID3D11VertexShader* SimpleVertexShader;
@@ -73,28 +78,6 @@ public:
     unsigned int Stride;
     unsigned int StrideUV;
 
-    ID3D11Buffer* vertexBufferSphere;
-     UINT numVerticesSphere;
-    ID3D11Buffer* vertexBufferCube;
-    UINT numVerticesCube;
-    ID3D11Buffer* vertexBufferTriangle;
-    UINT numVerticesTriangle;
-    ID3D11Buffer* vertexBufferRect;
-    ID3D11Buffer* indexBufferRect;
-    UINT numVerticesRect; UINT numIndicesRect;
-    ID3D11Buffer* vertexBufferWorldAxis;
-    UINT numVerticesWorldAxis;
-
-    ID3D11Buffer* vertexBufferGrid;
-    ID3D11Buffer* indexBufferGrid;
-    UINT numVerticesGrid; UINT numIndicesGrid;
-
-    ID3D11Buffer* vertexBufferTranslateGizmo;
-    UINT numVerticesTranslateGizmo;
-    ID3D11Buffer* vertexBufferRotationGizmo;
-    UINT numVerticesRotationGizmo;
-    ID3D11Buffer* vertexBufferScaleGizmo;
-    UINT numVerticesScaleGizmo;
 
 
 #pragma region D3D11 Renderer 함수들
@@ -162,6 +145,30 @@ private:
     void ReleaseIndexBuffer(ID3D11Buffer* vertexBuffer);
 
     void SetState(ID3D11RasterizerState* rasterizer, ID3D11DepthStencilState* depthstencil, ID3D11BlendState* blendState);
+
+    private:
+        ID3D11Buffer* vertexBufferSphere;
+        UINT numVerticesSphere;
+        ID3D11Buffer* vertexBufferCube;
+        UINT numVerticesCube;
+        ID3D11Buffer* vertexBufferTriangle;
+        UINT numVerticesTriangle;
+        ID3D11Buffer* vertexBufferRect;
+        ID3D11Buffer* indexBufferRect;
+        UINT numVerticesRect; UINT numIndicesRect;
+        ID3D11Buffer* vertexBufferWorldAxis;
+        UINT numVerticesWorldAxis;
+
+        ID3D11Buffer* vertexBufferGrid;
+        ID3D11Buffer* indexBufferGrid;
+        UINT numVerticesGrid; UINT numIndicesGrid;
+
+        ID3D11Buffer* vertexBufferTranslateGizmo;
+        UINT numVerticesTranslateGizmo;
+        ID3D11Buffer* vertexBufferRotationGizmo;
+        UINT numVerticesRotationGizmo;
+        ID3D11Buffer* vertexBufferScaleGizmo;
+        UINT numVerticesScaleGizmo;
 
 };
 
