@@ -100,8 +100,10 @@ AActor* CPicker::PickActor(UScene* Scene, int32 ScreenX, int32 ScreenY,
 
         for (UActorComponent* Comp : Actor->GetComponents())
         {
-            UPrimitiveComponent* PrimComp = dynamic_cast<UPrimitiveComponent*>(Comp);
-            if (!PrimComp || !PrimComp->GetPrimitive())
+            if (!Comp->IsA(UPrimitiveComponent::StaticClass()))
+                continue;
+            UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(Comp);
+            if (!PrimComp->GetPrimitive())
                 continue;
 
             FMeshData* Mesh = PrimComp->GetPrimitive()->GetMeshData();

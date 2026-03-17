@@ -6,6 +6,15 @@
 
 struct ENGINE_API FMeshData
 {
+	FMeshData() : SortId(NextSortId++) {}
+	~FMeshData() { Release(); }
+
+	uint32 GetSortId() const { return SortId; }
+
+	bool CreateBuffers(ID3D11Device* Device);
+	void Bind(ID3D11DeviceContext* Context);
+	void Release();
+
 	// CPU 데이터
 	TArray<FPrimitiveVertex> Vertices;
 	TArray<uint32> Indices;
@@ -15,11 +24,9 @@ struct ENGINE_API FMeshData
 	ID3D11Buffer* IndexBuffer = nullptr;
 	uint32 IndexCount = 0;
 
-	~FMeshData() { Release(); }
-
-	bool CreateBuffers(ID3D11Device* Device);
-	void Bind(ID3D11DeviceContext* Context);
-	void Release();
+private:
+	uint32 SortId = 0;
+	static inline uint32 NextSortId = 0;
 };
 
 class ENGINE_API CPrimitiveBase

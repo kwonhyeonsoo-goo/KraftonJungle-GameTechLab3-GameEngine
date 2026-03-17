@@ -28,10 +28,13 @@
     <ClInclude Include="Source\Component\CubeComponent.h" />
     <ClInclude Include="Source\Component\PrimitiveComponent.h" />
     <ClInclude Include="Source\Component\SceneComponent.h" />
+    <ClInclude Include="Source\Component\RandomColorComponent.h" />
     <ClInclude Include="Source\Component\SphereComponent.h" />
     <ClInclude Include="Source\Core\Core.h" />
+    <ClInclude Include="Source\Core\Paths.h" />
     <ClInclude Include="Source\Core\FEngine.h" />
     <ClInclude Include="Source\Core\FTimer.h" />
+    <ClInclude Include="Source\Core\ConsoleVariableManager.h" />
     <ClInclude Include="Source\Debug\EngineLog.h" />
     <ClInclude Include="Source\Input\EnhancedInputManager.h" />
     <ClInclude Include="Source\Input\InputAction.h" />
@@ -53,6 +56,8 @@
     <ClInclude Include="Source\Object\ObjectManager.h" />
     <ClInclude Include="Source\Object\ObjectTypes.h" />
     <ClInclude Include="Source\Object\Actor\Actor.h" />
+    <ClInclude Include="Source\Object\Actor\CubeActor.h" />
+    <ClInclude Include="Source\Object\Actor\SphereActor.h" />
     <ClInclude Include="Source\Object\Scene\Scene.h" />
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h" />
     <ClInclude Include="Source\Platform\Windows\Window.h" />
@@ -68,6 +73,8 @@
     <ClInclude Include="Source\Renderer\ShaderManager.h" />
     <ClInclude Include="Source\Renderer\ShaderMap.h" />
     <ClInclude Include="Source\Renderer\ShaderResource.h" />
+    <ClInclude Include="Source\Renderer\Material.h" />
+    <ClInclude Include="Source\Renderer\MaterialManager.h" />
     <ClInclude Include="Source\Renderer\ShaderType.h" />
     <ClInclude Include="Source\Types\Array.h" />
     <ClInclude Include="Source\Types\CoreTypes.h" />
@@ -88,10 +95,13 @@
     <ClCompile Include="Source\Component\CubeComponent.cpp" />
     <ClCompile Include="Source\Component\PrimitiveComponent.cpp" />
     <ClCompile Include="Source\Component\SceneComponent.cpp" />
+    <ClCompile Include="Source\Component\RandomColorComponent.cpp" />
     <ClCompile Include="Source\Component\SphereComponent.cpp" />
     <ClCompile Include="Source\Core\Core.cpp" />
+    <ClCompile Include="Source\Core\Paths.cpp" />
     <ClCompile Include="Source\Core\FEngine.cpp" />
     <ClCompile Include="Source\Core\FTimer.cpp" />
+    <ClCompile Include="Source\Core\ConsoleVariableManager.cpp" />
     <ClCompile Include="Source\Debug\EngineLog.cpp" />
     <ClCompile Include="Source\Input\EnhancedInputManager.cpp" />
     <ClCompile Include="Source\Input\InputManager.cpp" />
@@ -106,6 +116,8 @@
     <ClCompile Include="Source\Object\Object.cpp" />
     <ClCompile Include="Source\Object\ObjectManager.cpp" />
     <ClCompile Include="Source\Object\Actor\Actor.cpp" />
+    <ClCompile Include="Source\Object\Actor\CubeActor.cpp" />
+    <ClCompile Include="Source\Object\Actor\SphereActor.cpp" />
     <ClCompile Include="Source\Object\Scene\Scene.cpp" />
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp" />
     <ClCompile Include="Source\Platform\Windows\Window.cpp" />
@@ -114,6 +126,8 @@
     <ClCompile Include="Source\Primitive\PrimitiveCube.cpp" />
     <ClCompile Include="Source\Primitive\PrimitivePlane.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveSphere.cpp" />
+    <ClCompile Include="Source\Renderer\Material.cpp" />
+    <ClCompile Include="Source\Renderer\MaterialManager.cpp" />
     <ClCompile Include="Source\Renderer\Renderer.cpp" />
     <ClCompile Include="Source\Renderer\Shader.cpp" />
     <ClCompile Include="Source\Renderer\ShaderManager.cpp" />

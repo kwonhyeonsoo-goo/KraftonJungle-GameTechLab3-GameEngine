@@ -1,8 +1,12 @@
 #pragma once
 #include "Object/Object.h"
-#include "Object/Class.h"
+#include <d3d11.h>
 
 class AActor;
+class FFrustum;
+class UPrimitiveComponent;
+struct FRenderCommandQueue;
+
 class UCameraComponent;
 class ENGINE_API UScene : public UObject
 {
@@ -42,14 +46,18 @@ public:
 	void SetActiveCameraComponent(UCameraComponent* Camera) { ActiveCameraComponent = Camera; }
 
 	UCameraComponent* GetActiveCameraComponent() const { return ActiveCameraComponent; }
-	void InitializeDefaultScene(float AspectRatio);
-	void LoadSceneFromFile(const FString& FilePath);
+	void InitializeDefaultScene(float AspectRatio, ID3D11Device* Device = nullptr);
+	void LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device = nullptr);
+	
 	void SaveSceneToFile(const FString& FilePath);
 	void ClearActors();
 	void BeginPlay();
 	void Tick(float DeltaTime);
+	void CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue);
 
 private:
+	// 컬링: 가시 PrimitiveComponent 목록 수집 (멀티스레드 분리 가능)
+	void CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible);
 	TArray<AActor*> Actors;
 	UCameraComponent* ActiveCameraComponent = nullptr;
 	//CCamera* Camera = nullptr; //deprecated

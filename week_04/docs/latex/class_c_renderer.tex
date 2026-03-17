@@ -11,7 +11,7 @@
 \item 
 \doxymbox{\hyperlink{class_c_renderer_acb0a66a0d9205fe5f24cec41f0e0b249}{\texorpdfstring{$\sim$}{\string~}\+CRenderer}} ()
 \item 
-bool \doxymbox{\hyperlink{class_c_renderer_af74ac3df749b2fbaa9d1aa688d5a1517}{Initialize}} (HWND Hwnd, int Width, int Height)
+bool \doxymbox{\hyperlink{class_c_renderer_a170b4d4c44ad5b957a45f92c44685e89}{Initialize}} (HWND Hwnd, \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}} Width, \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}} Height)
 \item 
 void \doxymbox{\hyperlink{class_c_renderer_a4053138d44033afd1cf9f28852d484c2}{Begin\+Frame}} ()
 \item 
@@ -19,9 +19,48 @@ void \doxymbox{\hyperlink{class_c_renderer_a5eb509d947050b18dc74607be9523c5e}{En
 \item 
 void \doxymbox{\hyperlink{class_c_renderer_a99d8500773d26275a45daed89d9a6071}{Release}} ()
 \item 
+bool \doxymbox{\hyperlink{class_c_renderer_a8ff80451571869da016eb7543a162e41}{Is\+Occluded}} ()
+\item 
+void \doxymbox{\hyperlink{class_c_renderer_ae3c40424539974a762bbabf4e028cb9a}{On\+Resize}} (\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}} New\+Width, \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}} New\+Height)
+\item 
+void \doxymbox{\hyperlink{class_c_renderer_a009c03594c88cd9ba836eacb60b3e53c}{Set\+GUICallbacks}} (\doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}} In\+Init, \doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}} In\+Shutdown, \doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}} In\+New\+Frame, \doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}} In\+Render, \doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}} In\+Post\+Present=nullptr)
+\item 
+void \doxymbox{\hyperlink{class_c_renderer_a04fa8afddd3877984088fdd44ad8aca7}{Set\+GUIUpdate\+Callback}} (\doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}} In\+Update)
+\item 
+void \doxymbox{\hyperlink{class_c_renderer_abf1762b8ed5ffb7fa193d68dbb9084eb}{Add\+Command}} (const \doxymbox{\hyperlink{struct_f_render_command}{FRender\+Command}} \&Command)
+\item 
+void \doxymbox{\hyperlink{class_c_renderer_a5284d9279650f0667487db50bf410210}{Execute\+Commands}} ()
+\item 
+void \doxymbox{\hyperlink{class_c_renderer_a6ad90299ad25f5911aa689004ebf28c2}{Set\+View\+Matrix}} (const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&In\+View)
+\item 
+void \doxymbox{\hyperlink{class_c_renderer_a43a0da4b8eebb73a923b6986a4270069}{Set\+Projection\+Matrix}} (const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&In\+Projection)
+\item 
+void \doxymbox{\hyperlink{class_c_renderer_ac583192433693e032a4b0396f05c5cc0}{Draw\+Line}} (const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&Start, const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&End, const \doxymbox{\hyperlink{struct_f_vector4}{FVector4}} \&Color)
+\item 
+void \doxymbox{\hyperlink{class_c_renderer_ad5d2eb08a723e50472873e3056ed1547}{Execute\+Line\+Commands}} ()
+\item 
+bool \doxymbox{\hyperlink{class_c_renderer_a5ad61ddf360170adfa778ab3855f24d4}{Init\+Outline\+Resources}} ()
+\item 
+void \doxymbox{\hyperlink{class_c_renderer_a0dffc19dcb93a4d2ca8f52fe51089f1b}{Render\+Outline}} (\doxymbox{\hyperlink{struct_f_mesh_data}{FMesh\+Data}} \texorpdfstring{$\ast$}{*}Mesh, const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&World\+Matrix, float Outline\+Scale=1.\+05f)
+\item 
+\doxymbox{\hyperlink{class_f_material}{FMaterial}} \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{class_c_renderer_acb9daa1c6bed28ce68af645a713ce624}{Get\+Default\+Material}} () const
+\item 
 ID3\+D11\+Device \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{class_c_renderer_a8e7e81b21c823a9d9bea29e7461f49a7}{Get\+Device}} () const
 \item 
 ID3\+D11\+Device\+Context \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{class_c_renderer_a8ea51190b7b6e47b6c0e5c23acb65c7e}{Get\+Device\+Context}} () const
+\item 
+ID3\+D11\+Render\+Target\+View \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{class_c_renderer_a9d4032d7430b09a52ae4dbf167994987}{Get\+Render\+Target\+View}} () const
+\item 
+IDXGISwap\+Chain \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{class_c_renderer_a569a78c680b7d2e9407c278c1d37f1b1}{Get\+Swap\+Chain}} () const
+\item 
+HWND \doxymbox{\hyperlink{class_c_renderer_ac7c0c9d66fb6e5fcded879c8d553d617}{Get\+Hwnd}} () const
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+bool \doxymbox{\hyperlink{class_c_renderer_a30fbf79a4ad540af205706485df373fd}{b\+Swap\+Chain\+Occluded}} = false
+\item 
+\doxymbox{\hyperlink{class_c_shader_manager}{CShader\+Manager}} \doxymbox{\hyperlink{class_c_renderer_a62dcea5dbecc9421e09927c6dfc6b9a1}{Shader\+Manager}}
 \end{DoxyCompactItemize}
 
 
@@ -45,17 +84,47 @@ CRenderer::\+\texorpdfstring{$\sim$}{\string~}\+CRenderer (\begin{DoxyParamCapti
 \label{doc-func-members}
 \Hypertarget{class_c_renderer_doc-func-members}
 \doxysubsection{Member Function Documentation}
+\Hypertarget{class_c_renderer_abf1762b8ed5ffb7fa193d68dbb9084eb}\index{CRenderer@{CRenderer}!AddCommand@{AddCommand}}
+\index{AddCommand@{AddCommand}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{AddCommand()}{AddCommand()}}
+{\footnotesize\ttfamily \label{class_c_renderer_abf1762b8ed5ffb7fa193d68dbb9084eb} 
+void CRenderer::\+\+Add\+Command (\begin{DoxyParamCaption}\item[{const \doxymbox{\hyperlink{struct_f_render_command}{FRender\+Command}} \&}]{Command}{}\end{DoxyParamCaption})}
+
 \Hypertarget{class_c_renderer_a4053138d44033afd1cf9f28852d484c2}\index{CRenderer@{CRenderer}!BeginFrame@{BeginFrame}}
 \index{BeginFrame@{BeginFrame}!CRenderer@{CRenderer}}
 \doxysubsubsection{\texorpdfstring{BeginFrame()}{BeginFrame()}}
 {\footnotesize\ttfamily \label{class_c_renderer_a4053138d44033afd1cf9f28852d484c2} 
 void CRenderer::\+\+Begin\+Frame (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
 
+\Hypertarget{class_c_renderer_ac583192433693e032a4b0396f05c5cc0}\index{CRenderer@{CRenderer}!DrawLine@{DrawLine}}
+\index{DrawLine@{DrawLine}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{DrawLine()}{DrawLine()}}
+{\footnotesize\ttfamily \label{class_c_renderer_ac583192433693e032a4b0396f05c5cc0} 
+void CRenderer::\+\+Draw\+Line (\begin{DoxyParamCaption}\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{Start}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{End}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector4}{FVector4}} \&}]{Color}{}\end{DoxyParamCaption})}
+
 \Hypertarget{class_c_renderer_a5eb509d947050b18dc74607be9523c5e}\index{CRenderer@{CRenderer}!EndFrame@{EndFrame}}
 \index{EndFrame@{EndFrame}!CRenderer@{CRenderer}}
 \doxysubsubsection{\texorpdfstring{EndFrame()}{EndFrame()}}
 {\footnotesize\ttfamily \label{class_c_renderer_a5eb509d947050b18dc74607be9523c5e} 
 void CRenderer::\+\+End\+Frame (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_renderer_a5284d9279650f0667487db50bf410210}\index{CRenderer@{CRenderer}!ExecuteCommands@{ExecuteCommands}}
+\index{ExecuteCommands@{ExecuteCommands}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{ExecuteCommands()}{ExecuteCommands()}}
+{\footnotesize\ttfamily \label{class_c_renderer_a5284d9279650f0667487db50bf410210} 
+void CRenderer::\+\+Execute\+Commands (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_renderer_ad5d2eb08a723e50472873e3056ed1547}\index{CRenderer@{CRenderer}!ExecuteLineCommands@{ExecuteLineCommands}}
+\index{ExecuteLineCommands@{ExecuteLineCommands}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{ExecuteLineCommands()}{ExecuteLineCommands()}}
+{\footnotesize\ttfamily \label{class_c_renderer_ad5d2eb08a723e50472873e3056ed1547} 
+void CRenderer::\+\+Execute\+Line\+Commands (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_renderer_acb9daa1c6bed28ce68af645a713ce624}\index{CRenderer@{CRenderer}!GetDefaultMaterial@{GetDefaultMaterial}}
+\index{GetDefaultMaterial@{GetDefaultMaterial}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{GetDefaultMaterial()}{GetDefaultMaterial()}}
+{\footnotesize\ttfamily \label{class_c_renderer_acb9daa1c6bed28ce68af645a713ce624} 
+\doxymbox{\hyperlink{class_f_material}{FMaterial}} \texorpdfstring{$\ast$}{*} CRenderer::\+\+Get\+Default\+Material (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
 
 \Hypertarget{class_c_renderer_a8e7e81b21c823a9d9bea29e7461f49a7}\index{CRenderer@{CRenderer}!GetDevice@{GetDevice}}
 \index{GetDevice@{GetDevice}!CRenderer@{CRenderer}}
@@ -69,11 +138,47 @@ ID3\+D11\+Device \texorpdfstring{$\ast$}{*} CRenderer::\+\+Get\+Device (\begin{D
 {\footnotesize\ttfamily \label{class_c_renderer_a8ea51190b7b6e47b6c0e5c23acb65c7e} 
 ID3\+D11\+Device\+Context \texorpdfstring{$\ast$}{*} CRenderer::\+\+Get\+Device\+Context (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
 
-\Hypertarget{class_c_renderer_af74ac3df749b2fbaa9d1aa688d5a1517}\index{CRenderer@{CRenderer}!Initialize@{Initialize}}
+\Hypertarget{class_c_renderer_ac7c0c9d66fb6e5fcded879c8d553d617}\index{CRenderer@{CRenderer}!GetHwnd@{GetHwnd}}
+\index{GetHwnd@{GetHwnd}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{GetHwnd()}{GetHwnd()}}
+{\footnotesize\ttfamily \label{class_c_renderer_ac7c0c9d66fb6e5fcded879c8d553d617} 
+HWND CRenderer::\+\+Get\+Hwnd (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\Hypertarget{class_c_renderer_a9d4032d7430b09a52ae4dbf167994987}\index{CRenderer@{CRenderer}!GetRenderTargetView@{GetRenderTargetView}}
+\index{GetRenderTargetView@{GetRenderTargetView}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{GetRenderTargetView()}{GetRenderTargetView()}}
+{\footnotesize\ttfamily \label{class_c_renderer_a9d4032d7430b09a52ae4dbf167994987} 
+ID3\+D11\+Render\+Target\+View \texorpdfstring{$\ast$}{*} CRenderer::\+\+Get\+Render\+Target\+View (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\Hypertarget{class_c_renderer_a569a78c680b7d2e9407c278c1d37f1b1}\index{CRenderer@{CRenderer}!GetSwapChain@{GetSwapChain}}
+\index{GetSwapChain@{GetSwapChain}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{GetSwapChain()}{GetSwapChain()}}
+{\footnotesize\ttfamily \label{class_c_renderer_a569a78c680b7d2e9407c278c1d37f1b1} 
+IDXGISwap\+Chain \texorpdfstring{$\ast$}{*} CRenderer::\+\+Get\+Swap\+Chain (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\Hypertarget{class_c_renderer_a170b4d4c44ad5b957a45f92c44685e89}\index{CRenderer@{CRenderer}!Initialize@{Initialize}}
 \index{Initialize@{Initialize}!CRenderer@{CRenderer}}
 \doxysubsubsection{\texorpdfstring{Initialize()}{Initialize()}}
-{\footnotesize\ttfamily \label{class_c_renderer_af74ac3df749b2fbaa9d1aa688d5a1517} 
-bool CRenderer::\+\+Initialize (\begin{DoxyParamCaption}\item[{HWND}]{Hwnd}{, }\item[{int}]{Width}{, }\item[{int}]{Height}{}\end{DoxyParamCaption})}
+{\footnotesize\ttfamily \label{class_c_renderer_a170b4d4c44ad5b957a45f92c44685e89} 
+bool CRenderer::\+\+Initialize (\begin{DoxyParamCaption}\item[{HWND}]{Hwnd}{, }\item[{\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}}]{Width}{, }\item[{\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}}]{Height}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_renderer_a5ad61ddf360170adfa778ab3855f24d4}\index{CRenderer@{CRenderer}!InitOutlineResources@{InitOutlineResources}}
+\index{InitOutlineResources@{InitOutlineResources}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{InitOutlineResources()}{InitOutlineResources()}}
+{\footnotesize\ttfamily \label{class_c_renderer_a5ad61ddf360170adfa778ab3855f24d4} 
+bool CRenderer::\+\+Init\+Outline\+Resources (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_renderer_a8ff80451571869da016eb7543a162e41}\index{CRenderer@{CRenderer}!IsOccluded@{IsOccluded}}
+\index{IsOccluded@{IsOccluded}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{IsOccluded()}{IsOccluded()}}
+{\footnotesize\ttfamily \label{class_c_renderer_a8ff80451571869da016eb7543a162e41} 
+bool CRenderer::\+\+Is\+Occluded (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_renderer_ae3c40424539974a762bbabf4e028cb9a}\index{CRenderer@{CRenderer}!OnResize@{OnResize}}
+\index{OnResize@{OnResize}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{OnResize()}{OnResize()}}
+{\footnotesize\ttfamily \label{class_c_renderer_ae3c40424539974a762bbabf4e028cb9a} 
+void CRenderer::\+\+On\+Resize (\begin{DoxyParamCaption}\item[{\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}}]{New\+Width}{, }\item[{\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}}]{New\+Height}{}\end{DoxyParamCaption})}
 
 \Hypertarget{class_c_renderer_a99d8500773d26275a45daed89d9a6071}\index{CRenderer@{CRenderer}!Release@{Release}}
 \index{Release@{Release}!CRenderer@{CRenderer}}
@@ -81,9 +186,56 @@ bool CRenderer::\+\+Initialize (\begin{DoxyParamCaption}\item[{HWND}]{Hwnd}{, }\
 {\footnotesize\ttfamily \label{class_c_renderer_a99d8500773d26275a45daed89d9a6071} 
 void CRenderer::\+\+Release (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
 
+\Hypertarget{class_c_renderer_a0dffc19dcb93a4d2ca8f52fe51089f1b}\index{CRenderer@{CRenderer}!RenderOutline@{RenderOutline}}
+\index{RenderOutline@{RenderOutline}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{RenderOutline()}{RenderOutline()}}
+{\footnotesize\ttfamily \label{class_c_renderer_a0dffc19dcb93a4d2ca8f52fe51089f1b} 
+void CRenderer::\+\+Render\+Outline (\begin{DoxyParamCaption}\item[{\doxymbox{\hyperlink{struct_f_mesh_data}{FMesh\+Data}} \texorpdfstring{$\ast$}{*}}]{Mesh}{, }\item[{const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&}]{World\+Matrix}{, }\item[{float}]{Outline\+Scale}{ = {\ttfamily 1.05f}}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_renderer_a009c03594c88cd9ba836eacb60b3e53c}\index{CRenderer@{CRenderer}!SetGUICallbacks@{SetGUICallbacks}}
+\index{SetGUICallbacks@{SetGUICallbacks}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{SetGUICallbacks()}{SetGUICallbacks()}}
+{\footnotesize\ttfamily \label{class_c_renderer_a009c03594c88cd9ba836eacb60b3e53c} 
+void CRenderer::\+\+Set\+GUICallbacks (\begin{DoxyParamCaption}\item[{\doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}}]{In\+Init}{, }\item[{\doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}}]{In\+Shutdown}{, }\item[{\doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}}]{In\+New\+Frame}{, }\item[{\doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}}]{In\+Render}{, }\item[{\doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}}]{In\+Post\+Present}{ = {\ttfamily nullptr}}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_renderer_a04fa8afddd3877984088fdd44ad8aca7}\index{CRenderer@{CRenderer}!SetGUIUpdateCallback@{SetGUIUpdateCallback}}
+\index{SetGUIUpdateCallback@{SetGUIUpdateCallback}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{SetGUIUpdateCallback()}{SetGUIUpdateCallback()}}
+{\footnotesize\ttfamily \label{class_c_renderer_a04fa8afddd3877984088fdd44ad8aca7} 
+void CRenderer::\+\+Set\+GUIUpdate\+Callback (\begin{DoxyParamCaption}\item[{\doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}}]{In\+Update}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_renderer_a43a0da4b8eebb73a923b6986a4270069}\index{CRenderer@{CRenderer}!SetProjectionMatrix@{SetProjectionMatrix}}
+\index{SetProjectionMatrix@{SetProjectionMatrix}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{SetProjectionMatrix()}{SetProjectionMatrix()}}
+{\footnotesize\ttfamily \label{class_c_renderer_a43a0da4b8eebb73a923b6986a4270069} 
+void CRenderer::\+\+Set\+Projection\+Matrix (\begin{DoxyParamCaption}\item[{const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&}]{In\+Projection}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_renderer_a6ad90299ad25f5911aa689004ebf28c2}\index{CRenderer@{CRenderer}!SetViewMatrix@{SetViewMatrix}}
+\index{SetViewMatrix@{SetViewMatrix}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{SetViewMatrix()}{SetViewMatrix()}}
+{\footnotesize\ttfamily \label{class_c_renderer_a6ad90299ad25f5911aa689004ebf28c2} 
+void CRenderer::\+\+Set\+View\+Matrix (\begin{DoxyParamCaption}\item[{const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&}]{In\+View}{}\end{DoxyParamCaption})}
+
+
+
+\label{doc-variable-members}
+\Hypertarget{class_c_renderer_doc-variable-members}
+\doxysubsection{Member Data Documentation}
+\Hypertarget{class_c_renderer_a30fbf79a4ad540af205706485df373fd}\index{CRenderer@{CRenderer}!bSwapChainOccluded@{bSwapChainOccluded}}
+\index{bSwapChainOccluded@{bSwapChainOccluded}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{bSwapChainOccluded}{bSwapChainOccluded}}
+{\footnotesize\ttfamily \label{class_c_renderer_a30fbf79a4ad540af205706485df373fd} 
+bool CRenderer::\+b\+Swap\+Chain\+Occluded = false}
+
+\Hypertarget{class_c_renderer_a62dcea5dbecc9421e09927c6dfc6b9a1}\index{CRenderer@{CRenderer}!ShaderManager@{ShaderManager}}
+\index{ShaderManager@{ShaderManager}!CRenderer@{CRenderer}}
+\doxysubsubsection{\texorpdfstring{ShaderManager}{ShaderManager}}
+{\footnotesize\ttfamily \label{class_c_renderer_a62dcea5dbecc9421e09927c6dfc6b9a1} 
+\doxymbox{\hyperlink{class_c_shader_manager}{CShader\+Manager}} CRenderer::\+\+Shader\+Manager}
+
 
 
 The documentation for this class was generated from the following files:\+\begin{DoxyCompactItemize}
 \item 
-Engine/\+\+Renderer/\+\doxymbox{\hyperlink{_renderer_8h}{Renderer.\+h}}\item 
-Engine/\+\+Renderer/\+\doxymbox{\hyperlink{_renderer_8cpp}{Renderer.\+cpp}}\end{DoxyCompactItemize}
+Engine/\+\+Source/\+\+Renderer/\+\doxymbox{\hyperlink{_renderer_8h}{Renderer.\+h}}\item 
+Engine/\+\+Source/\+\+Renderer/\+\doxymbox{\hyperlink{_renderer_8cpp}{Renderer.\+cpp}}\end{DoxyCompactItemize}

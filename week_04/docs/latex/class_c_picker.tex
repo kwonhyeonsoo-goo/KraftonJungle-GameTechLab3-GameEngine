@@ -7,30 +7,38 @@
 \doxysubsubsection*{Public Member Functions}
 \begin{DoxyCompactItemize}
 \item 
-\doxymbox{\hyperlink{struct_f_ray}{FRay}} \doxymbox{\hyperlink{class_c_picker_ab652c61f293198c971211c7a3ab8242c}{Screen\+To\+Ray}} (int ScreenX, int ScreenY, int Screen\+Width, int Screen\+Height, const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&View\+Matrix, const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&Proj\+Matrix) const
+\doxymbox{\hyperlink{struct_f_ray}{FRay}} \doxymbox{\hyperlink{class_c_picker_a1707d38c1ce0696c59b4df94d3b3b39e}{Screen\+To\+Ray}} (\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}} ScreenX, \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}} ScreenY, \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}} Screen\+Width, \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}} Screen\+Height, const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&View\+Matrix, const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&Proj\+Matrix) const
 \item 
 bool \doxymbox{\hyperlink{class_c_picker_abcd3486e3b72f5e4446f7459a4a3608f}{Ray\+Triangle\+Intersect}} (const \doxymbox{\hyperlink{struct_f_ray}{FRay}} \&Ray, const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&V0, const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&V1, const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&V2, float \&Out\+Distance) const
+\item 
+\doxymbox{\hyperlink{class_a_actor}{AActor}} \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{class_c_picker_a658aa6d3497d703f453fff824423805d}{Pick\+Actor}} (\doxymbox{\hyperlink{class_u_scene}{UScene}} \texorpdfstring{$\ast$}{*}Scene, \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}} ScreenX, \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}} ScreenY, \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}} Screen\+Width, \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}} Screen\+Height) const
 \end{DoxyCompactItemize}
 
 
 \label{doc-func-members}
 \Hypertarget{class_c_picker_doc-func-members}
 \doxysubsection{Member Function Documentation}
+\Hypertarget{class_c_picker_a658aa6d3497d703f453fff824423805d}\index{CPicker@{CPicker}!PickActor@{PickActor}}
+\index{PickActor@{PickActor}!CPicker@{CPicker}}
+\doxysubsubsection{\texorpdfstring{PickActor()}{PickActor()}}
+{\footnotesize\ttfamily \label{class_c_picker_a658aa6d3497d703f453fff824423805d} 
+\doxymbox{\hyperlink{class_a_actor}{AActor}} \texorpdfstring{$\ast$}{*} CPicker::\+\+Pick\+Actor (\begin{DoxyParamCaption}\item[{\doxymbox{\hyperlink{class_u_scene}{UScene}} \texorpdfstring{$\ast$}{*}}]{Scene}{, }\item[{\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}}]{ScreenX}{, }\item[{\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}}]{ScreenY}{, }\item[{\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}}]{Screen\+Width}{, }\item[{\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}}]{Screen\+Height}{}\end{DoxyParamCaption}) const}
+
 \Hypertarget{class_c_picker_abcd3486e3b72f5e4446f7459a4a3608f}\index{CPicker@{CPicker}!RayTriangleIntersect@{RayTriangleIntersect}}
 \index{RayTriangleIntersect@{RayTriangleIntersect}!CPicker@{CPicker}}
 \doxysubsubsection{\texorpdfstring{RayTriangleIntersect()}{RayTriangleIntersect()}}
 {\footnotesize\ttfamily \label{class_c_picker_abcd3486e3b72f5e4446f7459a4a3608f} 
 bool CPicker::\+\+Ray\+Triangle\+Intersect (\begin{DoxyParamCaption}\item[{const \doxymbox{\hyperlink{struct_f_ray}{FRay}} \&}]{Ray}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{V0}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{V1}{, }\item[{const \doxymbox{\hyperlink{struct_f_vector}{FVector}} \&}]{V2}{, }\item[{float \&}]{Out\+Distance}{}\end{DoxyParamCaption}) const}
 
-\Hypertarget{class_c_picker_ab652c61f293198c971211c7a3ab8242c}\index{CPicker@{CPicker}!ScreenToRay@{ScreenToRay}}
+\Hypertarget{class_c_picker_a1707d38c1ce0696c59b4df94d3b3b39e}\index{CPicker@{CPicker}!ScreenToRay@{ScreenToRay}}
 \index{ScreenToRay@{ScreenToRay}!CPicker@{CPicker}}
 \doxysubsubsection{\texorpdfstring{ScreenToRay()}{ScreenToRay()}}
-{\footnotesize\ttfamily \label{class_c_picker_ab652c61f293198c971211c7a3ab8242c} 
-\doxymbox{\hyperlink{struct_f_ray}{FRay}} CPicker::\+\+Screen\+To\+Ray (\begin{DoxyParamCaption}\item[{int}]{ScreenX}{, }\item[{int}]{ScreenY}{, }\item[{int}]{Screen\+Width}{, }\item[{int}]{Screen\+Height}{, }\item[{const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&}]{View\+Matrix}{, }\item[{const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&}]{Proj\+Matrix}{}\end{DoxyParamCaption}) const}
+{\footnotesize\ttfamily \label{class_c_picker_a1707d38c1ce0696c59b4df94d3b3b39e} 
+\doxymbox{\hyperlink{struct_f_ray}{FRay}} CPicker::\+\+Screen\+To\+Ray (\begin{DoxyParamCaption}\item[{\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}}]{ScreenX}{, }\item[{\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}}]{ScreenY}{, }\item[{\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}}]{Screen\+Width}{, }\item[{\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}}]{Screen\+Height}{, }\item[{const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&}]{View\+Matrix}{, }\item[{const \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}} \&}]{Proj\+Matrix}{}\end{DoxyParamCaption}) const}
 
 
 
 The documentation for this class was generated from the following files:\+\begin{DoxyCompactItemize}
 \item 
-Editor/\+\+Picking/\+\doxymbox{\hyperlink{_picker_8h}{Picker.\+h}}\item 
-Editor/\+\+Picking/\+\doxymbox{\hyperlink{_picker_8cpp}{Picker.\+cpp}}\end{DoxyCompactItemize}
+Editor/\+\+Source/\+\+Picking/\+\doxymbox{\hyperlink{_picker_8h}{Picker.\+h}}\item 
+Editor/\+\+Source/\+\+Picking/\+\doxymbox{\hyperlink{_picker_8cpp}{Picker.\+cpp}}\end{DoxyCompactItemize}

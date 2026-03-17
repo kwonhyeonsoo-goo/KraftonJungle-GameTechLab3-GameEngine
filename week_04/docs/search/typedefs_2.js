@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['uint32_0',['uint32',['../_core_types_8h.html#abd01e8e67e3d94cab04ecaaf4f85ac1b',1,'CoreTypes.h']]]
+  ['gxmvector_0',['GXMVector',['../_core_types_8h.html#a92e6bc502b69542e9d4af080f2155f81',1,'CoreTypes.h']]]
 ];

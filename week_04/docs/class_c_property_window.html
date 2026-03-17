@@ -97,11 +97,16 @@ $(function(){initNavTree('class_c_property_window.html','','class_c_property_win
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a20909f84561fef461e504b13a201288b" id="r_a20909f84561fef461e504b13a201288b"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a20909f84561fef461e504b13a201288b">Render</a> ()</td></tr>
-<tr class="memitem:a4a332fdc41790d5edbecdf992378faef" id="r_a4a332fdc41790d5edbecdf992378faef"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a4a332fdc41790d5edbecdf992378faef">SetTarget</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Location, const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Rotation, const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Scale)</td></tr>
+<tr class="memitem:a65aae9560b161439f4806252e6a75635" id="r_a65aae9560b161439f4806252e6a75635"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a65aae9560b161439f4806252e6a75635">SetTarget</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Location, const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Rotation, const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Scale, const char *ActorName=nullptr)</td></tr>
 <tr class="memitem:a3d2b747ee4eb236acc0171d09d0bafd8" id="r_a3d2b747ee4eb236acc0171d09d0bafd8"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a3d2b747ee4eb236acc0171d09d0bafd8">IsModified</a> () const</td></tr>
 <tr class="memitem:af0e12f6a98b99f6c643f61a8e6f64afe" id="r_af0e12f6a98b99f6c643f61a8e6f64afe"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#af0e12f6a98b99f6c643f61a8e6f64afe">GetLocation</a> () const</td></tr>
 <tr class="memitem:a0105496cc6824942152ba42ec1e1a188" id="r_a0105496cc6824942152ba42ec1e1a188"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a0105496cc6824942152ba42ec1e1a188">GetRotation</a> () const</td></tr>
 <tr class="memitem:a21acdb0ef6bfd3d7db51686050837720" id="r_a21acdb0ef6bfd3d7db51686050837720"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a21acdb0ef6bfd3d7db51686050837720">GetScale</a> () const</td></tr>
+<tr class="memitem:a5efd13a367aca62387ff69b18d4e377d" id="r_a5efd13a367aca62387ff69b18d4e377d"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a5efd13a367aca62387ff69b18d4e377d">SetOnChanged</a> (<a class="el" href="_property_window_8h.html#a4c0403ff8980bc00708d42c92a51b70a">FPropertyChangedCallback</a> Callback)</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
+Public Attributes</h2></td></tr>
+<tr class="memitem:a775d2ef26e91af0500b3cccf7ebac4f0" id="r_a775d2ef26e91af0500b3cccf7ebac4f0"><td class="memItemLeft"><a class="el" href="_property_window_8h.html#a4c0403ff8980bc00708d42c92a51b70a">FPropertyChangedCallback</a>&#160;</td><td class="memItemRight"><a class="el" href="#a775d2ef26e91af0500b3cccf7ebac4f0">OnChanged</a></td></tr>
 </table>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
 <a id="af0e12f6a98b99f6c643f61a8e6f64afe" name="af0e12f6a98b99f6c643f61a8e6f64afe"></a>
@@ -221,8 +226,33 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a4a332fdc41790d5edbecdf992378faef" name="a4a332fdc41790d5edbecdf992378faef"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4a332fdc41790d5edbecdf992378faef">&#9670;&#160;</a></span>SetTarget()</h2>
+<a id="a5efd13a367aca62387ff69b18d4e377d" name="a5efd13a367aca62387ff69b18d4e377d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5efd13a367aca62387ff69b18d4e377d">&#9670;&#160;</a></span>SetOnChanged()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CPropertyWindow::SetOnChanged </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="_property_window_8h.html#a4c0403ff8980bc00708d42c92a51b70a">FPropertyChangedCallback</a></td>          <td class="paramname"><span class="paramname"><em>Callback</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a65aae9560b161439f4806252e6a75635" name="a65aae9560b161439f4806252e6a75635"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a65aae9560b161439f4806252e6a75635">&#9670;&#160;</a></span>SetTarget()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -240,7 +270,27 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>Scale</em></span>&#160;)</td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>Scale</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>ActorName</em></span><span class="paramdefsep"> = </span><span class="paramdefval">nullptr</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
+<a id="a775d2ef26e91af0500b3cccf7ebac4f0" name="a775d2ef26e91af0500b3cccf7ebac4f0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a775d2ef26e91af0500b3cccf7ebac4f0">&#9670;&#160;</a></span>OnChanged</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="_property_window_8h.html#a4c0403ff8980bc00708d42c92a51b70a">FPropertyChangedCallback</a> CPropertyWindow::OnChanged</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -248,8 +298,8 @@ Public Member Functions</h2></td></tr>
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
-<li>Editor/UI/<a class="el" href="_property_window_8h_source.html">PropertyWindow.h</a></li>
-<li>Editor/UI/<a class="el" href="_property_window_8cpp.html">PropertyWindow.cpp</a></li>
+<li>Editor/Source/UI/<a class="el" href="_property_window_8h_source.html">PropertyWindow.h</a></li>
+<li>Editor/Source/UI/<a class="el" href="_property_window_8cpp.html">PropertyWindow.cpp</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

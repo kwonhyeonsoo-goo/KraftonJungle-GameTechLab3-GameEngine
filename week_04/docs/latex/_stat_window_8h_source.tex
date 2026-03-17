@@ -1,20 +1,21 @@
 \doxysection{Stat\+Window.\+h}
-\hypertarget{_stat_window_8h_source}{}\label{_stat_window_8h_source}\index{Editor/UI/StatWindow.h@{Editor/UI/StatWindow.h}}
+\hypertarget{_stat_window_8h_source}{}\label{_stat_window_8h_source}\index{Editor/Source/UI/StatWindow.h@{Editor/Source/UI/StatWindow.h}}
 \doxymbox{\hyperlink{_stat_window_8h}{Go to the documentation of this file.}}
 \begin{DoxyCode}{0}
 \DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
-\DoxyCodeLine{00002\ }
-\DoxyCodeLine{00003\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_stat_window}{CStatWindow}}}
-\DoxyCodeLine{00004\ \{}
-\DoxyCodeLine{00005\ \textcolor{keyword}{public}:}
-\DoxyCodeLine{00006\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_stat_window_a37282a941116f7fbc2b79ee07e2848ca}{Render}}();}
-\DoxyCodeLine{00007\ }
-\DoxyCodeLine{00008\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_stat_window_a3b030e039a14158cfdf4e97171be66bb}{SetObjectCount}}(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ Count)\ \{\ ObjectCount\ =\ Count;\ \}}
-\DoxyCodeLine{00009\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_stat_window_a6df08ae30e11799035f571256e150a99}{SetHeapUsage}}(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ Bytes)\ \{\ HeapUsageBytes\ =\ Bytes;\ \}}
-\DoxyCodeLine{00010\ }
-\DoxyCodeLine{00011\ \textcolor{keyword}{private}:}
-\DoxyCodeLine{00012\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ ObjectCount\ =\ 0;}
-\DoxyCodeLine{00013\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ HeapUsageBytes\ =\ 0;}
-\DoxyCodeLine{00014\ \};}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_core_minimal_8h}{CoreMinimal.h}}"{}}}
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ "{}imgui.h"{}}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_stat_window}{CStatWindow}}}
+\DoxyCodeLine{00006\ \{}
+\DoxyCodeLine{00007\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00008\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_stat_window_a37282a941116f7fbc2b79ee07e2848ca}{Render}}();}
+\DoxyCodeLine{00009\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_stat_window_af107ab75bd08ac89c12fda61f795c950}{SetObjectCount}}(\doxymbox{\hyperlink{_core_types_8h_abd01e8e67e3d94cab04ecaaf4f85ac1b}{uint32}}\ InCount)\ \{\ ObjectCount\ =\ InCount;\ \}}
+\DoxyCodeLine{00010\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_stat_window_a0814286a5ed54538e1367ca7a8122a9a}{SetHeapUsage}}(\doxymbox{\hyperlink{_core_types_8h_abd01e8e67e3d94cab04ecaaf4f85ac1b}{uint32}}\ InBytes)\ \{\ HeapUsageBytes\ =\ InBytes;\ \}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00013\ \ \ \ \ \doxymbox{\hyperlink{_core_types_8h_abd01e8e67e3d94cab04ecaaf4f85ac1b}{uint32}}\ ObjectCount\ =\ 0;}
+\DoxyCodeLine{00014\ \ \ \ \ \doxymbox{\hyperlink{_core_types_8h_abd01e8e67e3d94cab04ecaaf4f85ac1b}{uint32}}\ HeapUsageBytes\ =\ 0;}
+\DoxyCodeLine{00015\ \};}
 
 \end{DoxyCode}

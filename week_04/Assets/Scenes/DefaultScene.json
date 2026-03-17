@@ -1,141 +1,63 @@
 {
   "Camera": {
-    "Position": [
-      -15.662552833557129,
-      -10.689143180847168,
-      9.274879455566406
-    ],
-    "Rotation": [
-      32.200008392333984,
-      -25.600027084350586
-    ]
+    "Position": [-15.66, -10.69, 9.27],
+    "Rotation": [32.2, -25.6]
   },
+  "Materials": [
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_TintYellow.json"
+  ],
   "Primitives": {
     "0": {
-      "Location": [
-        10.289999961853027,
-        1.2100000381469727,
-        0.0
-      ],
-      "Rotation": [
-        -0.0,
-        0.0,
-        -0.0
-      ],
-      "Scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "Type": "Sphere"
+      "Type": "Sphere",
+      "Material": "M_RedColor",
+      "Location": [10.29, 1.21, 0.0],
+      "Rotation": [0.0, 0.0, 0.0],
+      "Scale": [1.0, 1.0, 1.0]
     },
     "1": {
-      "Location": [
-        -0.17000000178813934,
-        8.0600004196167,
-        0.0
-      ],
-      "Rotation": [
-        -0.0,
-        0.0,
-        -0.0
-      ],
-      "Scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "Type": "Sphere"
+      "Type": "Sphere",
+      "Material": "M_GreenColor",
+      "Location": [-0.17, 8.06, 0.0],
+      "Rotation": [0.0, 0.0, 0.0],
+      "Scale": [1.0, 1.0, 1.0]
     },
     "2": {
-      "Location": [
-        0.33000001311302185,
-        -5.289999961853027,
-        0.0
-      ],
-      "Rotation": [
-        -0.0,
-        0.0,
-        -0.0
-      ],
-      "Scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "Type": "Sphere"
+      "Type": "Sphere",
+      "Material": "M_BlueColor",
+      "Location": [0.33, -5.29, 0.0],
+      "Rotation": [0.0, 0.0, 0.0],
+      "Scale": [1.0, 1.0, 1.0]
     },
     "3": {
-      "Location": [
-        -0.14000000059604645,
-        0.029999999329447746,
-        5.0
-      ],
-      "Rotation": [
-        -0.0,
-        0.0,
-        -0.0
-      ],
-      "Scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "Type": "Sphere"
+      "Type": "Sphere",
+      "Material": "M_TintYellow",
+      "Location": [-0.14, 0.03, 5.0],
+      "Rotation": [0.0, 0.0, 0.0],
+      "Scale": [1.0, 1.0, 1.0]
     },
     "4": {
-      "Location": [
-        -1.059999942779541,
-        3.619999885559082,
-        6.239999771118164
-      ],
-      "Rotation": [
-        -0.0,
-        0.0,
-        -0.0
-      ],
-      "Scale": [
-        3.0,
-        3.0,
-        3.0
-      ],
-      "Type": "Sphere"
+      "Type": "Sphere",
+      "Material": "M_RedColor",
+      "Location": [-1.06, 3.62, 6.24],
+      "Rotation": [0.0, 0.0, 0.0],
+      "Scale": [3.0, 3.0, 3.0]
     },
     "5": {
-      "Location": [
-        10.289999961853027,
-        0.41999998688697815,
-        0.0
-      ],
-      "Rotation": [
-        0.0,
-        0.7600000500679016,
-        50.000003814697266
-      ],
-      "Scale": [
-        2.0,
-        2.0,
-        2.0
-      ],
-      "Type": "Cube"
+      "Type": "Cube",
+      "Material": "M_TintYellow",
+      "Location": [10.29, 0.42, 0.0],
+      "Rotation": [0.0, 0.76, 50.0],
+      "Scale": [2.0, 2.0, 2.0]
     },
     "6": {
-      "Location": [
-        -3.8499999046325684,
-        1.0700000524520874,
-        2.4600000381469727
-      ],
-      "Rotation": [
-        -0.0,
-        -30.910003662109375,
-        -0.0
-      ],
-      "Scale": [
-        3.0,
-        3.0,
-        3.0
-      ],
-      "Type": "Cube"
+      "Type": "Cube",
+      "Material": "M_GreenColor",
+      "Location": [-3.85, 1.07, 2.46],
+      "Rotation": [0.0, -30.91, 0.0],
+      "Scale": [3.0, 3.0, 3.0]
     }
   }
 }

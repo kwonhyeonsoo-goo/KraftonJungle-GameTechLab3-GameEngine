@@ -1,5 +1,4 @@
 #include "SceneComponent.h"
-#include "Object/Class.h"
 
 namespace
 {

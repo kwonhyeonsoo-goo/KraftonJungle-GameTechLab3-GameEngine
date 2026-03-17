@@ -1,8 +1,7 @@
 #include "FEngine.h"
-#include "Core.h"
 #include "Platform/Windows/WindowApplication.h"
-#include "Platform/Windows/Window.h"
-#include "Renderer/Renderer.h"
+
+FEngine* GEngine = nullptr;
 
 FEngine::~FEngine()
 {
@@ -15,36 +14,25 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int32 Width,
 	if (!App->Create(hInstance))
 		return false;
 
-	MainWindow = App->MakeWindow(Title, Width, Height);
-	if (!MainWindow)
+	if (!App->CreateMainWindow(Title, Width, Height))
+		return false;
+	GEngine = this;
+
+	PreInitialize();
+
+	Core = std::make_unique<CCore>();
+	if (!Core->Initialize(App->GetHwnd(), App->GetWindowWidth(), App->GetWindowHeight()))
 		return false;
 
-	Core = new CCore();
-	if (!Core->Initialize(MainWindow->GetHwnd(), MainWindow->GetWidth(), MainWindow->GetHeight()))
-		return false;
+	PostInitialize();
 
-	Startup();
-
-	// Input forwarding (registered after Startup so Editor can add ImGui/Picking filters first)
-	MainWindow->AddMessageFilter([this](HWND h, UINT m, WPARAM w, LPARAM l) -> bool
-		{
-			if (Core)
-			{
-				Core->ProcessInput(h, m, w, l);
-			}
-			return false;
-		});
+	// Input forwarding (registered after PostInitialize so Editor can add ImGui/Picking filters first)
+	App->AddMessageFilter(std::bind(&FEngine::OnInput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
 	// Resize callback
-	MainWindow->SetOnResizeCallback([this](int32 W, int32 H)
-		{
-			if (Core)
-			{
-				Core->OnResize(W, H);
-			}
-		});
+	App->SetOnResizeCallback(std::bind(&FEngine::OnResize, this, std::placeholders::_1, std::placeholders::_2));
 
-	MainWindow->Show();
+	App->ShowWindow();
 
 	return true;
 }
@@ -57,19 +45,31 @@ void FEngine::Run()
 	}
 }
 
-void FEngine::Shutdown()
+bool FEngine::OnInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
 	if (Core)
 	{
-		Core->Release();
-		delete Core;
-		Core = nullptr;
+		Core->ProcessInput(Hwnd, Msg, WParam, LParam);
 	}
+	return false;
+}
 
-	if (MainWindow)
+void FEngine::OnResize(int32 Width, int32 Height)
+{
+	if (Core)
 	{
-		delete MainWindow;
-		MainWindow = nullptr;
+		Core->OnResize(Width, Height);
+	}
+}
+
+void FEngine::Shutdown()
+{
+	GEngine = nullptr;
+
+	if (Core)
+	{
+		Core->Release();
+		Core.reset();
 	}
 
 	if (App)

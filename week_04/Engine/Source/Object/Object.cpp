@@ -1,5 +1,4 @@
 #include "Object/Object.h"
-#include "Object/Class.h"
 
 int32 UObject::GetTotalBytes()
 {

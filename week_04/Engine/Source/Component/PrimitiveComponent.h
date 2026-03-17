@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <cmath>
 
+class FMaterial;
+
 class ENGINE_API UPrimitiveComponent : public USceneComponent
 {
 public:
@@ -17,6 +19,9 @@ public:
 		: USceneComponent(InClass, InName, InOuter) {}
 
 	CPrimitiveBase* GetPrimitive() const { return Primitive.get(); }
+
+	void SetMaterial(FMaterial* InMaterial) { Material = InMaterial; }
+	FMaterial* GetMaterial() const { return Material; }
 
 	FBoundingSphere GetWorldBounds() const
 	{
@@ -30,4 +35,5 @@ public:
 protected:
 	std::unique_ptr<CPrimitiveBase> Primitive;
 	float LocalBoundRadius = 1.0f;
+	FMaterial* Material = nullptr;
 };

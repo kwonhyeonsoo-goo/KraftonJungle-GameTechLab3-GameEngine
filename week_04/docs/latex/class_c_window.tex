@@ -1,0 +1,121 @@
+\doxysection{CWindow Class Reference}
+\hypertarget{class_c_window}{}\label{class_c_window}\index{CWindow@{CWindow}}
+
+
+{\ttfamily \+\#include $<$Window.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\doxymbox{\hyperlink{class_c_window_a6c9caa0943683d97aa79c584358df736}{CWindow}} ()=default
+\item 
+\doxymbox{\hyperlink{class_c_window_a952e8bd3d29abbac67c252c192077c87}{\texorpdfstring{$\sim$}{\string~}\+CWindow}} ()
+\item 
+bool \doxymbox{\hyperlink{class_c_window_a66260709d4dfc6a58519d9e46bcea3e9}{Create}} (HINSTANCE Instance, const WCHAR \texorpdfstring{$\ast$}{*}Class\+Name, const WCHAR \texorpdfstring{$\ast$}{*}Title, int In\+Width, int In\+Height, int InX, int InY)
+\item 
+void \doxymbox{\hyperlink{class_c_window_ae41a212c25bfaaddfa76beb6efdba7bf}{Destroy}} ()
+\item 
+void \doxymbox{\hyperlink{class_c_window_a5b94bfb17508590cdda1462eb436df7e}{Show}} ()
+\item 
+void \doxymbox{\hyperlink{class_c_window_a7e76333fcfb754679393efd2f5bbcca9}{Hide}} ()
+\item 
+HWND \doxymbox{\hyperlink{class_c_window_acad43810576c2e2b20b3206e91992dcf}{Get\+Hwnd}} () const
+\item 
+int \doxymbox{\hyperlink{class_c_window_a2edc7b40871e1e393072751ff11519ef}{Get\+Width}} () const
+\item 
+int \doxymbox{\hyperlink{class_c_window_a6bfdd0cac20261f23716f1e3f92c9d25}{Get\+Height}} () const
+\item 
+void \doxymbox{\hyperlink{class_c_window_ac635238447e5d42b0ee3d1758bcd7aa6}{Add\+Message\+Filter}} (\doxymbox{\hyperlink{_window_8h_ae5eaca48f6972a425d537e52f0389bce}{FWnd\+Proc\+Filter}} Filter)
+\item 
+void \doxymbox{\hyperlink{class_c_window_a9ef93a656de0638952616dd17ac61220}{Set\+On\+Resize\+Callback}} (\doxymbox{\hyperlink{_window_8h_a8359cc47b0b501f85cb5f6341b96ba04}{FOn\+Resize\+Callback}} Callback)
+\item 
+LRESULT \doxymbox{\hyperlink{class_c_window_a48decd44ec49f8492f44eca9cac6aa50}{Handle\+Message}} (UINT Msg, WPARAM w\+Param, LPARAM l\+Param)
+\end{DoxyCompactItemize}
+
+
+\label{doc-constructors}
+\Hypertarget{class_c_window_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{class_c_window_a6c9caa0943683d97aa79c584358df736}\index{CWindow@{CWindow}!CWindow@{CWindow}}
+\index{CWindow@{CWindow}!CWindow@{CWindow}}
+\doxysubsubsection{\texorpdfstring{CWindow()}{CWindow()}}
+{\footnotesize\ttfamily \label{class_c_window_a6c9caa0943683d97aa79c584358df736} 
+CWindow::\+\+CWindow (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [default]}}
+
+\Hypertarget{class_c_window_a952e8bd3d29abbac67c252c192077c87}\index{CWindow@{CWindow}!````~CWindow@{\texorpdfstring{$\sim$}{\string~}CWindow}}
+\index{````~CWindow@{\texorpdfstring{$\sim$}{\string~}CWindow}!CWindow@{CWindow}}
+\doxysubsubsection{\texorpdfstring{\texorpdfstring{$\sim$}{\string~}CWindow()}{\string~CWindow()}}
+{\footnotesize\ttfamily \label{class_c_window_a952e8bd3d29abbac67c252c192077c87} 
+CWindow::\+\texorpdfstring{$\sim$}{\string~}\+CWindow (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+
+
+\label{doc-func-members}
+\Hypertarget{class_c_window_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_c_window_ac635238447e5d42b0ee3d1758bcd7aa6}\index{CWindow@{CWindow}!AddMessageFilter@{AddMessageFilter}}
+\index{AddMessageFilter@{AddMessageFilter}!CWindow@{CWindow}}
+\doxysubsubsection{\texorpdfstring{AddMessageFilter()}{AddMessageFilter()}}
+{\footnotesize\ttfamily \label{class_c_window_ac635238447e5d42b0ee3d1758bcd7aa6} 
+void CWindow::\+\+Add\+Message\+Filter (\begin{DoxyParamCaption}\item[{\doxymbox{\hyperlink{_window_8h_ae5eaca48f6972a425d537e52f0389bce}{FWnd\+Proc\+Filter}}}]{Filter}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_window_a66260709d4dfc6a58519d9e46bcea3e9}\index{CWindow@{CWindow}!Create@{Create}}
+\index{Create@{Create}!CWindow@{CWindow}}
+\doxysubsubsection{\texorpdfstring{Create()}{Create()}}
+{\footnotesize\ttfamily \label{class_c_window_a66260709d4dfc6a58519d9e46bcea3e9} 
+bool CWindow::\+\+Create (\begin{DoxyParamCaption}\item[{HINSTANCE}]{Instance}{, }\item[{const WCHAR \texorpdfstring{$\ast$}{*}}]{Class\+Name}{, }\item[{const WCHAR \texorpdfstring{$\ast$}{*}}]{Title}{, }\item[{int}]{In\+Width}{, }\item[{int}]{In\+Height}{, }\item[{int}]{InX}{, }\item[{int}]{InY}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_window_ae41a212c25bfaaddfa76beb6efdba7bf}\index{CWindow@{CWindow}!Destroy@{Destroy}}
+\index{Destroy@{Destroy}!CWindow@{CWindow}}
+\doxysubsubsection{\texorpdfstring{Destroy()}{Destroy()}}
+{\footnotesize\ttfamily \label{class_c_window_ae41a212c25bfaaddfa76beb6efdba7bf} 
+void CWindow::\+\+Destroy (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_window_a6bfdd0cac20261f23716f1e3f92c9d25}\index{CWindow@{CWindow}!GetHeight@{GetHeight}}
+\index{GetHeight@{GetHeight}!CWindow@{CWindow}}
+\doxysubsubsection{\texorpdfstring{GetHeight()}{GetHeight()}}
+{\footnotesize\ttfamily \label{class_c_window_a6bfdd0cac20261f23716f1e3f92c9d25} 
+int CWindow::\+\+Get\+Height (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\Hypertarget{class_c_window_acad43810576c2e2b20b3206e91992dcf}\index{CWindow@{CWindow}!GetHwnd@{GetHwnd}}
+\index{GetHwnd@{GetHwnd}!CWindow@{CWindow}}
+\doxysubsubsection{\texorpdfstring{GetHwnd()}{GetHwnd()}}
+{\footnotesize\ttfamily \label{class_c_window_acad43810576c2e2b20b3206e91992dcf} 
+HWND CWindow::\+\+Get\+Hwnd (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\Hypertarget{class_c_window_a2edc7b40871e1e393072751ff11519ef}\index{CWindow@{CWindow}!GetWidth@{GetWidth}}
+\index{GetWidth@{GetWidth}!CWindow@{CWindow}}
+\doxysubsubsection{\texorpdfstring{GetWidth()}{GetWidth()}}
+{\footnotesize\ttfamily \label{class_c_window_a2edc7b40871e1e393072751ff11519ef} 
+int CWindow::\+\+Get\+Width (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\Hypertarget{class_c_window_a48decd44ec49f8492f44eca9cac6aa50}\index{CWindow@{CWindow}!HandleMessage@{HandleMessage}}
+\index{HandleMessage@{HandleMessage}!CWindow@{CWindow}}
+\doxysubsubsection{\texorpdfstring{HandleMessage()}{HandleMessage()}}
+{\footnotesize\ttfamily \label{class_c_window_a48decd44ec49f8492f44eca9cac6aa50} 
+LRESULT CWindow::\+\+Handle\+Message (\begin{DoxyParamCaption}\item[{UINT}]{Msg}{, }\item[{WPARAM}]{w\+Param}{, }\item[{LPARAM}]{l\+Param}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_window_a7e76333fcfb754679393efd2f5bbcca9}\index{CWindow@{CWindow}!Hide@{Hide}}
+\index{Hide@{Hide}!CWindow@{CWindow}}
+\doxysubsubsection{\texorpdfstring{Hide()}{Hide()}}
+{\footnotesize\ttfamily \label{class_c_window_a7e76333fcfb754679393efd2f5bbcca9} 
+void CWindow::\+\+Hide (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_window_a9ef93a656de0638952616dd17ac61220}\index{CWindow@{CWindow}!SetOnResizeCallback@{SetOnResizeCallback}}
+\index{SetOnResizeCallback@{SetOnResizeCallback}!CWindow@{CWindow}}
+\doxysubsubsection{\texorpdfstring{SetOnResizeCallback()}{SetOnResizeCallback()}}
+{\footnotesize\ttfamily \label{class_c_window_a9ef93a656de0638952616dd17ac61220} 
+void CWindow::\+\+Set\+On\+Resize\+Callback (\begin{DoxyParamCaption}\item[{\doxymbox{\hyperlink{_window_8h_a8359cc47b0b501f85cb5f6341b96ba04}{FOn\+Resize\+Callback}}}]{Callback}{}\end{DoxyParamCaption})}
+
+\Hypertarget{class_c_window_a5b94bfb17508590cdda1462eb436df7e}\index{CWindow@{CWindow}!Show@{Show}}
+\index{Show@{Show}!CWindow@{CWindow}}
+\doxysubsubsection{\texorpdfstring{Show()}{Show()}}
+{\footnotesize\ttfamily \label{class_c_window_a5b94bfb17508590cdda1462eb436df7e} 
+void CWindow::\+\+Show (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+
+
+The documentation for this class was generated from the following files:\+\begin{DoxyCompactItemize}
+\item 
+Engine/\+\+Source/\+\+Platform/\+\+Windows/\+\doxymbox{\hyperlink{_window_8h}{Window.\+h}}\item 
+Engine/\+\+Source/\+\+Platform/\+\+Windows/\+\doxymbox{\hyperlink{_window_8cpp}{Window.\+cpp}}\end{DoxyCompactItemize}

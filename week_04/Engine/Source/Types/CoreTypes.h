@@ -1,8 +1,14 @@
 #pragma once
 #include <DirectXMath.h>
 
+using int8 = signed char;
+using uint8 = unsigned char;
+using int16 = short;
+using uint16 = unsigned short;
 using int32 = int;
 using uint32 = unsigned int;
+using int64 = long long;
+using uint64 = unsigned long long;
 
 using Float2 = DirectX::XMFLOAT2;
 using Float3 = DirectX::XMFLOAT3;

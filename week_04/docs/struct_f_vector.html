@@ -96,25 +96,80 @@ $(function(){initNavTree('struct_f_vector.html','','struct_f_vector-members'); }
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a527a3a7c6cb80a22138a71499ac2e624" id="r_a527a3a7c6cb80a22138a71499ac2e624"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#a527a3a7c6cb80a22138a71499ac2e624">FVector</a> ()=default</td></tr>
-<tr class="memitem:a77653ea2760929d13e5986fc7a85ac18" id="r_a77653ea2760929d13e5986fc7a85ac18"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#a77653ea2760929d13e5986fc7a85ac18">FVector</a> (float InX, float InY, float InZ)</td></tr>
-<tr class="memitem:aca935f54cfa4739d20b80f87050b02ca" id="r_aca935f54cfa4739d20b80f87050b02ca"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#aca935f54cfa4739d20b80f87050b02ca">operator+</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Other) const</td></tr>
-<tr class="memitem:a8368988bfa4773c816cf65db17156fd8" id="r_a8368988bfa4773c816cf65db17156fd8"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a8368988bfa4773c816cf65db17156fd8">operator-</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Other) const</td></tr>
-<tr class="memitem:a16ee9f840835272857af040542696d93" id="r_a16ee9f840835272857af040542696d93"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a16ee9f840835272857af040542696d93">operator*</a> (float Scalar) const</td></tr>
-<tr class="memitem:afff9561715d1029d7feaeccef6bbfdbc" id="r_afff9561715d1029d7feaeccef6bbfdbc"><td class="memItemLeft">float&#160;</td><td class="memItemRight"><a class="el" href="#afff9561715d1029d7feaeccef6bbfdbc">Dot</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Other) const</td></tr>
-<tr class="memitem:a6a784e2c5e333a10db5eb4f8ba2aec6c" id="r_a6a784e2c5e333a10db5eb4f8ba2aec6c"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a6a784e2c5e333a10db5eb4f8ba2aec6c">Cross</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Other) const</td></tr>
-<tr class="memitem:ac5d9dbdd2d5b55e8ea716440c9aa631d" id="r_ac5d9dbdd2d5b55e8ea716440c9aa631d"><td class="memItemLeft">float&#160;</td><td class="memItemRight"><a class="el" href="#ac5d9dbdd2d5b55e8ea716440c9aa631d">Length</a> () const</td></tr>
-<tr class="memitem:ad9c1b17a736606df5ce1b1b6278d6beb" id="r_ad9c1b17a736606df5ce1b1b6278d6beb"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#ad9c1b17a736606df5ce1b1b6278d6beb">Normalize</a> () const</td></tr>
+<tr class="memitem:ae7dbfb5fe72606197ce4fb94b9655fd2" id="r_ae7dbfb5fe72606197ce4fb94b9655fd2"><td class="memItemLeft">constexpr&#160;</td><td class="memItemRight"><a class="el" href="#ae7dbfb5fe72606197ce4fb94b9655fd2">FVector</a> () noexcept</td></tr>
+<tr class="memitem:a4b578f92700ca4c5d71e5f502955a0cb" id="r_a4b578f92700ca4c5d71e5f502955a0cb"><td class="memItemLeft">constexpr&#160;</td><td class="memItemRight"><a class="el" href="#a4b578f92700ca4c5d71e5f502955a0cb">FVector</a> (const float InX, const float InY, const float InZ) noexcept</td></tr>
+<tr class="memitem:ad6263048876bffb7e391abbc24eabd58" id="r_ad6263048876bffb7e391abbc24eabd58"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#ad6263048876bffb7e391abbc24eabd58">FVector</a> (const <a class="el" href="_core_types_8h.html#aa675d103841c4c5b4208e691647db4aa">Float3</a> &amp;InFloat3) noexcept</td></tr>
+<tr class="memitem:a61d1b99e705f92317907cfe6d1e21367" id="r_a61d1b99e705f92317907cfe6d1e21367"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#a61d1b99e705f92317907cfe6d1e21367">FVector</a> (DirectX::FXMVECTOR InVector) noexcept</td></tr>
+<tr class="memitem:ac72fe081bb328b9ded945eaedd42e3ce" id="r_ac72fe081bb328b9ded945eaedd42e3ce"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#ac72fe081bb328b9ded945eaedd42e3ce">FVector</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;) noexcept=default</td></tr>
+<tr class="memitem:ab63a82c07969c8d385e0a58fb87f0c58" id="r_ab63a82c07969c8d385e0a58fb87f0c58"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#ab63a82c07969c8d385e0a58fb87f0c58">FVector</a> (<a class="el" href="struct_f_vector.html">FVector</a> &amp;&amp;) noexcept=default</td></tr>
+<tr class="memitem:a5a516f98f0ebc59c639fd1193aceb555" id="r_a5a516f98f0ebc59c639fd1193aceb555"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a> &amp;&#160;</td><td class="memItemRight"><a class="el" href="#a5a516f98f0ebc59c639fd1193aceb555">operator=</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;) noexcept=default</td></tr>
+<tr class="memitem:a8296cbea6d42166cea76195af69042f2" id="r_a8296cbea6d42166cea76195af69042f2"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a> &amp;&#160;</td><td class="memItemRight"><a class="el" href="#a8296cbea6d42166cea76195af69042f2">operator=</a> (<a class="el" href="struct_f_vector.html">FVector</a> &amp;&amp;) noexcept=default</td></tr>
+<tr class="memitem:a47115969956c2b8f62af1bb269b703d1" id="r_a47115969956c2b8f62af1bb269b703d1"><td class="memItemLeft">float &amp;&#160;</td><td class="memItemRight"><a class="el" href="#a47115969956c2b8f62af1bb269b703d1">operator[]</a> (int32_t Index) noexcept</td></tr>
+<tr class="memitem:ac6773a5b81ce010860bb63ae7ed0d125" id="r_ac6773a5b81ce010860bb63ae7ed0d125"><td class="memItemLeft">const float &amp;&#160;</td><td class="memItemRight"><a class="el" href="#ac6773a5b81ce010860bb63ae7ed0d125">operator[]</a> (int32_t Index) const noexcept</td></tr>
+<tr class="memitem:a57372a78ed28af45f9100fb0f2ec8a86" id="r_a57372a78ed28af45f9100fb0f2ec8a86"><td class="memItemLeft">constexpr bool&#160;</td><td class="memItemRight"><a class="el" href="#a57372a78ed28af45f9100fb0f2ec8a86">operator==</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Other) const noexcept</td></tr>
+<tr class="memitem:af5a49e11b3d508c714057c7a708a181d" id="r_af5a49e11b3d508c714057c7a708a181d"><td class="memItemLeft">constexpr bool&#160;</td><td class="memItemRight"><a class="el" href="#af5a49e11b3d508c714057c7a708a181d">operator!=</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Other) const noexcept</td></tr>
+<tr class="memitem:a671a49176707513c6371cbe540b1841e" id="r_a671a49176707513c6371cbe540b1841e"><td class="memItemLeft">constexpr <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a671a49176707513c6371cbe540b1841e">operator-</a> () const noexcept</td></tr>
+<tr class="memitem:aa1da00974613ef9c4165ed3969f900fb" id="r_aa1da00974613ef9c4165ed3969f900fb"><td class="memItemLeft">constexpr <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#aa1da00974613ef9c4165ed3969f900fb">operator+</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Other) const noexcept</td></tr>
+<tr class="memitem:a5066a81c1bdd4504fa9a8ad90709599b" id="r_a5066a81c1bdd4504fa9a8ad90709599b"><td class="memItemLeft">constexpr <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a5066a81c1bdd4504fa9a8ad90709599b">operator-</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Other) const noexcept</td></tr>
+<tr class="memitem:a42e617a3e86e2096c77195ca85b0205e" id="r_a42e617a3e86e2096c77195ca85b0205e"><td class="memItemLeft">constexpr <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a42e617a3e86e2096c77195ca85b0205e">operator*</a> (float Scalar) const noexcept</td></tr>
+<tr class="memitem:a2439f239cb468f5a8a0fae11e2ea9846" id="r_a2439f239cb468f5a8a0fae11e2ea9846"><td class="memItemLeft">constexpr <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a2439f239cb468f5a8a0fae11e2ea9846">operator/</a> (float Scalar) const noexcept</td></tr>
+<tr class="memitem:a7ed667881dc0562e2c0d5f73ed664954" id="r_a7ed667881dc0562e2c0d5f73ed664954"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a> &amp;&#160;</td><td class="memItemRight"><a class="el" href="#a7ed667881dc0562e2c0d5f73ed664954">operator+=</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Other) noexcept</td></tr>
+<tr class="memitem:a94d338468b6d960cb78207024077e95e" id="r_a94d338468b6d960cb78207024077e95e"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a> &amp;&#160;</td><td class="memItemRight"><a class="el" href="#a94d338468b6d960cb78207024077e95e">operator-=</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Other) noexcept</td></tr>
+<tr class="memitem:a9ce4d5c5dfa75a96b812022e7f3d538a" id="r_a9ce4d5c5dfa75a96b812022e7f3d538a"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a> &amp;&#160;</td><td class="memItemRight"><a class="el" href="#a9ce4d5c5dfa75a96b812022e7f3d538a">operator*=</a> (float Scalar) noexcept</td></tr>
+<tr class="memitem:af9b5cd593591ea5ad1bc8d23dc7a77d7" id="r_af9b5cd593591ea5ad1bc8d23dc7a77d7"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a> &amp;&#160;</td><td class="memItemRight"><a class="el" href="#af9b5cd593591ea5ad1bc8d23dc7a77d7">operator/=</a> (float Scalar) noexcept</td></tr>
+<tr class="memitem:a53a705027503f6b1ae943359ac556e65" id="r_a53a705027503f6b1ae943359ac556e65"><td class="memItemLeft"><a class="el" href="_core_types_8h.html#aa675d103841c4c5b4208e691647db4aa">Float3</a>&#160;</td><td class="memItemRight"><a class="el" href="#a53a705027503f6b1ae943359ac556e65">ToXMFLOAT3</a> () const noexcept</td></tr>
+<tr class="memitem:a0af64e033781f3b7b5c1b07dbaa2f569" id="r_a0af64e033781f3b7b5c1b07dbaa2f569"><td class="memItemLeft"><a class="el" href="_core_types_8h.html#ad7069eae7b85d4ed27d826f17a716155">XMVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a0af64e033781f3b7b5c1b07dbaa2f569">ToXMVector</a> (float W=0.f) const noexcept</td></tr>
+<tr class="memitem:af568cc9d970e8b05c3bea93773a3e6cc" id="r_af568cc9d970e8b05c3bea93773a3e6cc"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#af568cc9d970e8b05c3bea93773a3e6cc">Equals</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;V, float Tolerance=1.e-6f) const noexcept</td></tr>
+<tr class="memitem:a22105f625a327c8deb64e18e7f208087" id="r_a22105f625a327c8deb64e18e7f208087"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a22105f625a327c8deb64e18e7f208087">IsZero</a> () const noexcept</td></tr>
+<tr class="memitem:aaf3498f1738c72016a0af3cfe058c8f8" id="r_aaf3498f1738c72016a0af3cfe058c8f8"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#aaf3498f1738c72016a0af3cfe058c8f8">IsNearlyZero</a> (float Tolerance=1.e-6f) const noexcept</td></tr>
+<tr class="memitem:aefbfd226172a88a9eb8cdcee7db08d23" id="r_aefbfd226172a88a9eb8cdcee7db08d23"><td class="memItemLeft">float&#160;</td><td class="memItemRight"><a class="el" href="#aefbfd226172a88a9eb8cdcee7db08d23">SizeSquared</a> () const noexcept</td></tr>
+<tr class="memitem:a60e82a073f5cae0a0558e9af50539464" id="r_a60e82a073f5cae0a0558e9af50539464"><td class="memItemLeft">float&#160;</td><td class="memItemRight"><a class="el" href="#a60e82a073f5cae0a0558e9af50539464">Size</a> () const noexcept</td></tr>
+<tr class="memitem:a28d812b3ef4741269b3e0dc66935ef6f" id="r_a28d812b3ef4741269b3e0dc66935ef6f"><td class="memItemLeft">float&#160;</td><td class="memItemRight"><a class="el" href="#a28d812b3ef4741269b3e0dc66935ef6f">SizeSquared2D</a> () const noexcept</td></tr>
+<tr class="memitem:a9fdbfe4bc587b88af4964cdf9f514e74" id="r_a9fdbfe4bc587b88af4964cdf9f514e74"><td class="memItemLeft">float&#160;</td><td class="memItemRight"><a class="el" href="#a9fdbfe4bc587b88af4964cdf9f514e74">Size2D</a> () const noexcept</td></tr>
+<tr class="memitem:a6d71d77f493839c66e1294d744cf8846" id="r_a6d71d77f493839c66e1294d744cf8846"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a6d71d77f493839c66e1294d744cf8846">Normalize</a> (float Tolerance=1.e-8f) noexcept</td></tr>
+<tr class="memitem:a8609d9dafd1faea86bc2209e6a43673e" id="r_a8609d9dafd1faea86bc2209e6a43673e"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a8609d9dafd1faea86bc2209e6a43673e">GetSafeNormal</a> (float Tolerance=1.e-8f) const noexcept</td></tr>
+<tr class="memitem:a4554f19310dd8c4ad6aa9b7854ab201b" id="r_a4554f19310dd8c4ad6aa9b7854ab201b"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a4554f19310dd8c4ad6aa9b7854ab201b">GetSafeNormal2D</a> (float Tolerance=1.e-8f) const noexcept</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-pub-static-methods" class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:abb6697259957bfd67f040496861e90fa" id="r_abb6697259957bfd67f040496861e90fa"><td class="memItemLeft">static <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#abb6697259957bfd67f040496861e90fa">Zero</a> ()</td></tr>
+<tr class="memitem:a0661b2dc7e64db7db2be664f6349e9c3" id="r_a0661b2dc7e64db7db2be664f6349e9c3"><td class="memItemLeft">static <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a0661b2dc7e64db7db2be664f6349e9c3">One</a> ()</td></tr>
+<tr class="memitem:ad367df8e05c6ce063a297e208b54d25e" id="r_ad367df8e05c6ce063a297e208b54d25e"><td class="memItemLeft">static <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#ad367df8e05c6ce063a297e208b54d25e">UnitX</a> ()</td></tr>
+<tr class="memitem:a7d96155a57fb080d6be83f7d50be4373" id="r_a7d96155a57fb080d6be83f7d50be4373"><td class="memItemLeft">static <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a7d96155a57fb080d6be83f7d50be4373">UnitY</a> ()</td></tr>
+<tr class="memitem:ac5164c80ff2f62bbba9aef5514eb60cb" id="r_ac5164c80ff2f62bbba9aef5514eb60cb"><td class="memItemLeft">static <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#ac5164c80ff2f62bbba9aef5514eb60cb">UnitZ</a> ()</td></tr>
+<tr class="memitem:a16c17492999fcbf8bae9b97f3eace0ad" id="r_a16c17492999fcbf8bae9b97f3eace0ad"><td class="memItemLeft">static float&#160;</td><td class="memItemRight"><a class="el" href="#a16c17492999fcbf8bae9b97f3eace0ad">DotProduct</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;A, const <a class="el" href="struct_f_vector.html">FVector</a> &amp;B) noexcept</td></tr>
+<tr class="memitem:a0986e5b79f59415337eb0a8d577cb1b8" id="r_a0986e5b79f59415337eb0a8d577cb1b8"><td class="memItemLeft">static <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a0986e5b79f59415337eb0a8d577cb1b8">CrossProduct</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;A, const <a class="el" href="struct_f_vector.html">FVector</a> &amp;B) noexcept</td></tr>
+<tr class="memitem:a6b4c65cc25f165faad8e1144b2314691" id="r_a6b4c65cc25f165faad8e1144b2314691"><td class="memItemLeft">static float&#160;</td><td class="memItemRight"><a class="el" href="#a6b4c65cc25f165faad8e1144b2314691">DistSquared</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;A, const <a class="el" href="struct_f_vector.html">FVector</a> &amp;B) noexcept</td></tr>
+<tr class="memitem:abea0e06d3c45fde9c5fc0578a08db490" id="r_abea0e06d3c45fde9c5fc0578a08db490"><td class="memItemLeft">static float&#160;</td><td class="memItemRight"><a class="el" href="#abea0e06d3c45fde9c5fc0578a08db490">Dist</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;A, const <a class="el" href="struct_f_vector.html">FVector</a> &amp;B) noexcept</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a398a79b30440560a5e8bc9c1dba0c8e9" id="r_a398a79b30440560a5e8bc9c1dba0c8e9"><td class="memItemLeft">float&#160;</td><td class="memItemRight"><a class="el" href="#a398a79b30440560a5e8bc9c1dba0c8e9">X</a> = 0.0f</td></tr>
-<tr class="memitem:a459449d61a832d42e3f53c0a7a053530" id="r_a459449d61a832d42e3f53c0a7a053530"><td class="memItemLeft">float&#160;</td><td class="memItemRight"><a class="el" href="#a459449d61a832d42e3f53c0a7a053530">Y</a> = 0.0f</td></tr>
-<tr class="memitem:a8bec8086d5d055f23b46f0d41e5893cf" id="r_a8bec8086d5d055f23b46f0d41e5893cf"><td class="memItemLeft">float&#160;</td><td class="memItemRight"><a class="el" href="#a8bec8086d5d055f23b46f0d41e5893cf">Z</a> = 0.0f</td></tr>
+<tr class="memitem:"><td class="memItemLeft anon">union {&#160;</td><td class="memItemRight"></td></tr>
+<tr class="memitem:"><td class="memItemLeft anon">&#160;&#160;&#160;struct {&#160;</td><td class="memItemRight"></td></tr>
+<tr class="memitem:a16ca1a1ce15099b8d424bb48d67bd48a" id="r_a16ca1a1ce15099b8d424bb48d67bd48a"><td class="memItemLeft anon">&#160;&#160;&#160;&#160;&#160;&#160;float&#160;&#160;&#160;<a class="el" href="#a398a79b30440560a5e8bc9c1dba0c8e9">X</a>&#160;</td><td class="memItemRight"></td></tr>
+<tr class="memitem:a535add7372a78ef1e72a725d750d455a" id="r_a535add7372a78ef1e72a725d750d455a"><td class="memItemLeft anon">&#160;&#160;&#160;&#160;&#160;&#160;float&#160;&#160;&#160;<a class="el" href="#a459449d61a832d42e3f53c0a7a053530">Y</a>&#160;</td><td class="memItemRight"></td></tr>
+<tr class="memitem:af7efc06e36eaa850d6e2027471ac1b0a" id="r_af7efc06e36eaa850d6e2027471ac1b0a"><td class="memItemLeft anon">&#160;&#160;&#160;&#160;&#160;&#160;float&#160;&#160;&#160;<a class="el" href="#a8bec8086d5d055f23b46f0d41e5893cf">Z</a>&#160;</td><td class="memItemRight"></td></tr>
+<tr class="memitem:a88483624d703542f3679df3d680b2751" id="r_a88483624d703542f3679df3d680b2751"><td class="memItemLeft anonEnd">&#160;&#160;&#160;}&#160;</td><td class="memItemRight"></td></tr>
+<tr class="memitem:a4acce692b6353435100b6fd397ebce8c" id="r_a4acce692b6353435100b6fd397ebce8c"><td class="memItemLeft anon">&#160;&#160;&#160;float&#160;&#160;&#160;<a class="el" href="#a5e1e864684fa2a648bda1fdf1e574b11">XYZ</a> [3]&#160;</td><td class="memItemRight"></td></tr>
+<tr class="memitem:ae21410b0406e63ae84f4f5060281619a" id="r_ae21410b0406e63ae84f4f5060281619a"><td class="memItemLeft anonEnd">};&#160;</td><td class="memItemRight"></td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-pub-static-attribs" class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
+Static Public Attributes</h2></td></tr>
+<tr class="memitem:a5718e5b26f15f0d7057d05236fcae359" id="r_a5718e5b26f15f0d7057d05236fcae359"><td class="memItemLeft">static const <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a5718e5b26f15f0d7057d05236fcae359">ZeroVector</a></td></tr>
+<tr class="memitem:afbe6a3418478f7060f4b8fb1bf6f1959" id="r_afbe6a3418478f7060f4b8fb1bf6f1959"><td class="memItemLeft">static const <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#afbe6a3418478f7060f4b8fb1bf6f1959">OneVector</a></td></tr>
+<tr class="memitem:a5d712be3687e28c494fb7801926878f8" id="r_a5d712be3687e28c494fb7801926878f8"><td class="memItemLeft">static const <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a5d712be3687e28c494fb7801926878f8">UpVector</a></td></tr>
+<tr class="memitem:a2d2585e46aaed01126d4c63bf48fb11e" id="r_a2d2585e46aaed01126d4c63bf48fb11e"><td class="memItemLeft">static const <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a2d2585e46aaed01126d4c63bf48fb11e">DownVector</a></td></tr>
+<tr class="memitem:a169f3ae880dd478a6bcfdbae88691501" id="r_a169f3ae880dd478a6bcfdbae88691501"><td class="memItemLeft">static const <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a169f3ae880dd478a6bcfdbae88691501">ForwardVector</a></td></tr>
+<tr class="memitem:a3d147395d0980c7ef8444f4878f72c76" id="r_a3d147395d0980c7ef8444f4878f72c76"><td class="memItemLeft">static const <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a3d147395d0980c7ef8444f4878f72c76">BackwardVector</a></td></tr>
+<tr class="memitem:a5ce15aee9c7f6b6ac2dee0b8fa0e899c" id="r_a5ce15aee9c7f6b6ac2dee0b8fa0e899c"><td class="memItemLeft">static const <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a5ce15aee9c7f6b6ac2dee0b8fa0e899c">RightVector</a></td></tr>
+<tr class="memitem:a6816773b2eb79f3a6a8aa22d4e2615c5" id="r_a6816773b2eb79f3a6a8aa22d4e2615c5"><td class="memItemLeft">static const <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a6816773b2eb79f3a6a8aa22d4e2615c5">LeftVector</a></td></tr>
+<tr class="memitem:afb1fe3c231951422a2fd384cccdfef03" id="r_afb1fe3c231951422a2fd384cccdfef03"><td class="memItemLeft">static const <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#afb1fe3c231951422a2fd384cccdfef03">XAxisVector</a></td></tr>
+<tr class="memitem:a7d96d67e3de0eedd451f1b6d402d37bc" id="r_a7d96d67e3de0eedd451f1b6d402d37bc"><td class="memItemLeft">static const <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a7d96d67e3de0eedd451f1b6d402d37bc">YAxisVector</a></td></tr>
+<tr class="memitem:a120a9485ed139aedac5cce7421221454" id="r_a120a9485ed139aedac5cce7421221454"><td class="memItemLeft">static const <a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a120a9485ed139aedac5cce7421221454">ZAxisVector</a></td></tr>
 </table>
 <a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a527a3a7c6cb80a22138a71499ac2e624" name="a527a3a7c6cb80a22138a71499ac2e624"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a527a3a7c6cb80a22138a71499ac2e624">&#9670;&#160;</a></span>FVector() <span class="overload">[1/2]</span></h2>
+<a id="ae7dbfb5fe72606197ce4fb94b9655fd2" name="ae7dbfb5fe72606197ce4fb94b9655fd2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae7dbfb5fe72606197ce4fb94b9655fd2">&#9670;&#160;</a></span>FVector() <span class="overload">[1/6]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -131,15 +186,15 @@ Public Attributes</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel default">default</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="a77653ea2760929d13e5986fc7a85ac18" name="a77653ea2760929d13e5986fc7a85ac18"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a77653ea2760929d13e5986fc7a85ac18">&#9670;&#160;</a></span>FVector() <span class="overload">[2/2]</span></h2>
+<a id="a4b578f92700ca4c5d71e5f502955a0cb" name="a4b578f92700ca4c5d71e5f502955a0cb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4b578f92700ca4c5d71e5f502955a0cb">&#9670;&#160;</a></span>FVector() <span class="overload">[2/6]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -150,22 +205,122 @@ Public Attributes</h2></td></tr>
         <tr>
           <td class="memname">FVector::FVector </td>
           <td>(</td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>InX</em></span>, </td>
+          <td class="paramtype">const float</td>          <td class="paramname"><span class="paramname"><em>InX</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>InY</em></span>, </td>
+          <td class="paramtype">const float</td>          <td class="paramname"><span class="paramname"><em>InY</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>InZ</em></span>&#160;)</td>
+          <td class="paramtype">const float</td>          <td class="paramname"><span class="paramname"><em>InZ</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ad6263048876bffb7e391abbc24eabd58" name="ad6263048876bffb7e391abbc24eabd58"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad6263048876bffb7e391abbc24eabd58">&#9670;&#160;</a></span>FVector() <span class="overload">[3/6]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">FVector::FVector </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="_core_types_8h.html#aa675d103841c4c5b4208e691647db4aa">Float3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>InFloat3</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel explicit">explicit</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a61d1b99e705f92317907cfe6d1e21367" name="a61d1b99e705f92317907cfe6d1e21367"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a61d1b99e705f92317907cfe6d1e21367">&#9670;&#160;</a></span>FVector() <span class="overload">[4/6]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">FVector::FVector </td>
+          <td>(</td>
+          <td class="paramtype">DirectX::FXMVECTOR</td>          <td class="paramname"><span class="paramname"><em>InVector</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel explicit">explicit</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ac72fe081bb328b9ded945eaedd42e3ce" name="ac72fe081bb328b9ded945eaedd42e3ce"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac72fe081bb328b9ded945eaedd42e3ce">&#9670;&#160;</a></span>FVector() <span class="overload">[5/6]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">FVector::FVector </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel default">default</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ab63a82c07969c8d385e0a58fb87f0c58" name="ab63a82c07969c8d385e0a58fb87f0c58"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab63a82c07969c8d385e0a58fb87f0c58">&#9670;&#160;</a></span>FVector() <span class="overload">[6/6]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">FVector::FVector </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="struct_f_vector.html">FVector</a> &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel default">default</span><span class="mlabel noexcept">noexcept</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -173,79 +328,334 @@ Public Attributes</h2></td></tr>
 </div>
 </div>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
-<a id="a6a784e2c5e333a10db5eb4f8ba2aec6c" name="a6a784e2c5e333a10db5eb4f8ba2aec6c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6a784e2c5e333a10db5eb4f8ba2aec6c">&#9670;&#160;</a></span>Cross()</h2>
+<a id="a0986e5b79f59415337eb0a8d577cb1b8" name="a0986e5b79f59415337eb0a8d577cb1b8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0986e5b79f59415337eb0a8d577cb1b8">&#9670;&#160;</a></span>CrossProduct()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> FVector::Cross </td>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> FVector::CrossProduct </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>Other</em></span></td><td>)</td>
-          <td> const</td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>A</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>B</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="afff9561715d1029d7feaeccef6bbfdbc" name="afff9561715d1029d7feaeccef6bbfdbc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afff9561715d1029d7feaeccef6bbfdbc">&#9670;&#160;</a></span>Dot()</h2>
+<a id="abea0e06d3c45fde9c5fc0578a08db490" name="abea0e06d3c45fde9c5fc0578a08db490"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abea0e06d3c45fde9c5fc0578a08db490">&#9670;&#160;</a></span>Dist()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">float FVector::Dot </td>
+          <td class="memname">float FVector::Dist </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>Other</em></span></td><td>)</td>
-          <td> const</td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>A</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>B</em></span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="ac5d9dbdd2d5b55e8ea716440c9aa631d" name="ac5d9dbdd2d5b55e8ea716440c9aa631d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac5d9dbdd2d5b55e8ea716440c9aa631d">&#9670;&#160;</a></span>Length()</h2>
+<a id="a6b4c65cc25f165faad8e1144b2314691" name="a6b4c65cc25f165faad8e1144b2314691"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6b4c65cc25f165faad8e1144b2314691">&#9670;&#160;</a></span>DistSquared()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">float FVector::Length </td>
+          <td class="memname">float FVector::DistSquared </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>A</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>B</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a16c17492999fcbf8bae9b97f3eace0ad" name="a16c17492999fcbf8bae9b97f3eace0ad"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a16c17492999fcbf8bae9b97f3eace0ad">&#9670;&#160;</a></span>DotProduct()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FVector::DotProduct </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>A</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>B</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="af568cc9d970e8b05c3bea93773a3e6cc" name="af568cc9d970e8b05c3bea93773a3e6cc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af568cc9d970e8b05c3bea93773a3e6cc">&#9670;&#160;</a></span>Equals()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool FVector::Equals </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>V</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Tolerance</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1.e-6f</span>&#160;) const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8609d9dafd1faea86bc2209e6a43673e" name="a8609d9dafd1faea86bc2209e6a43673e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8609d9dafd1faea86bc2209e6a43673e">&#9670;&#160;</a></span>GetSafeNormal()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> FVector::GetSafeNormal </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Tolerance</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1.e-8f</span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a4554f19310dd8c4ad6aa9b7854ab201b" name="a4554f19310dd8c4ad6aa9b7854ab201b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4554f19310dd8c4ad6aa9b7854ab201b">&#9670;&#160;</a></span>GetSafeNormal2D()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> FVector::GetSafeNormal2D </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Tolerance</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1.e-8f</span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aaf3498f1738c72016a0af3cfe058c8f8" name="aaf3498f1738c72016a0af3cfe058c8f8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaf3498f1738c72016a0af3cfe058c8f8">&#9670;&#160;</a></span>IsNearlyZero()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool FVector::IsNearlyZero </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Tolerance</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1.e-6f</span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a22105f625a327c8deb64e18e7f208087" name="a22105f625a327c8deb64e18e7f208087"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a22105f625a327c8deb64e18e7f208087">&#9670;&#160;</a></span>IsZero()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool FVector::IsZero </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="ad9c1b17a736606df5ce1b1b6278d6beb" name="ad9c1b17a736606df5ce1b1b6278d6beb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad9c1b17a736606df5ce1b1b6278d6beb">&#9670;&#160;</a></span>Normalize()</h2>
+<a id="a6d71d77f493839c66e1294d744cf8846" name="a6d71d77f493839c66e1294d744cf8846"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6d71d77f493839c66e1294d744cf8846">&#9670;&#160;</a></span>Normalize()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> FVector::Normalize </td>
+          <td class="memname">bool FVector::Normalize </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Tolerance</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1.e-8f</span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a0661b2dc7e64db7db2be664f6349e9c3" name="a0661b2dc7e64db7db2be664f6349e9c3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0661b2dc7e64db7db2be664f6349e9c3">&#9670;&#160;</a></span>One()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> FVector::One </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="af5a49e11b3d508c714057c7a708a181d" name="af5a49e11b3d508c714057c7a708a181d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af5a49e11b3d508c714057c7a708a181d">&#9670;&#160;</a></span>operator!=()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool FVector::operator!= </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>Other</em></span></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="a16ee9f840835272857af040542696d93" name="a16ee9f840835272857af040542696d93"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a16ee9f840835272857af040542696d93">&#9670;&#160;</a></span>operator*()</h2>
+<a id="a42e617a3e86e2096c77195ca85b0205e" name="a42e617a3e86e2096c77195ca85b0205e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a42e617a3e86e2096c77195ca85b0205e">&#9670;&#160;</a></span>operator*()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> FVector::operator* </td>
@@ -254,15 +664,48 @@ Public Attributes</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="aca935f54cfa4739d20b80f87050b02ca" name="aca935f54cfa4739d20b80f87050b02ca"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aca935f54cfa4739d20b80f87050b02ca">&#9670;&#160;</a></span>operator+()</h2>
+<a id="a9ce4d5c5dfa75a96b812022e7f3d538a" name="a9ce4d5c5dfa75a96b812022e7f3d538a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9ce4d5c5dfa75a96b812022e7f3d538a">&#9670;&#160;</a></span>operator*=()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> &amp; FVector::operator*= </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Scalar</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aa1da00974613ef9c4165ed3969f900fb" name="aa1da00974613ef9c4165ed3969f900fb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa1da00974613ef9c4165ed3969f900fb">&#9670;&#160;</a></span>operator+()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> FVector::operator+ </td>
@@ -271,15 +714,73 @@ Public Attributes</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 </div>
 </div>
-<a id="a8368988bfa4773c816cf65db17156fd8" name="a8368988bfa4773c816cf65db17156fd8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8368988bfa4773c816cf65db17156fd8">&#9670;&#160;</a></span>operator-()</h2>
+<a id="a7ed667881dc0562e2c0d5f73ed664954" name="a7ed667881dc0562e2c0d5f73ed664954"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7ed667881dc0562e2c0d5f73ed664954">&#9670;&#160;</a></span>operator+=()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> &amp; FVector::operator+= </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>Other</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a671a49176707513c6371cbe540b1841e" name="a671a49176707513c6371cbe540b1841e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a671a49176707513c6371cbe540b1841e">&#9670;&#160;</a></span>operator-() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> FVector::operator- </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a5066a81c1bdd4504fa9a8ad90709599b" name="a5066a81c1bdd4504fa9a8ad90709599b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5066a81c1bdd4504fa9a8ad90709599b">&#9670;&#160;</a></span>operator-() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> FVector::operator- </td>
@@ -288,11 +789,641 @@ Public Attributes</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a94d338468b6d960cb78207024077e95e" name="a94d338468b6d960cb78207024077e95e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a94d338468b6d960cb78207024077e95e">&#9670;&#160;</a></span>operator-=()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> &amp; FVector::operator-= </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>Other</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a2439f239cb468f5a8a0fae11e2ea9846" name="a2439f239cb468f5a8a0fae11e2ea9846"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2439f239cb468f5a8a0fae11e2ea9846">&#9670;&#160;</a></span>operator/()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> FVector::operator/ </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Scalar</em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="af9b5cd593591ea5ad1bc8d23dc7a77d7" name="af9b5cd593591ea5ad1bc8d23dc7a77d7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af9b5cd593591ea5ad1bc8d23dc7a77d7">&#9670;&#160;</a></span>operator/=()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> &amp; FVector::operator/= </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>Scalar</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a5a516f98f0ebc59c639fd1193aceb555" name="a5a516f98f0ebc59c639fd1193aceb555"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5a516f98f0ebc59c639fd1193aceb555">&#9670;&#160;</a></span>operator=() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> &amp; FVector::operator= </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel default">default</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8296cbea6d42166cea76195af69042f2" name="a8296cbea6d42166cea76195af69042f2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8296cbea6d42166cea76195af69042f2">&#9670;&#160;</a></span>operator=() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> &amp; FVector::operator= </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="struct_f_vector.html">FVector</a> &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel default">default</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a57372a78ed28af45f9100fb0f2ec8a86" name="a57372a78ed28af45f9100fb0f2ec8a86"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a57372a78ed28af45f9100fb0f2ec8a86">&#9670;&#160;</a></span>operator==()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool FVector::operator== </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>Other</em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel constexpr">constexpr</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ac6773a5b81ce010860bb63ae7ed0d125" name="ac6773a5b81ce010860bb63ae7ed0d125"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac6773a5b81ce010860bb63ae7ed0d125">&#9670;&#160;</a></span>operator[]() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const float &amp; FVector::operator[] </td>
+          <td>(</td>
+          <td class="paramtype">int32_t</td>          <td class="paramname"><span class="paramname"><em>Index</em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a47115969956c2b8f62af1bb269b703d1" name="a47115969956c2b8f62af1bb269b703d1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a47115969956c2b8f62af1bb269b703d1">&#9670;&#160;</a></span>operator[]() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float &amp; FVector::operator[] </td>
+          <td>(</td>
+          <td class="paramtype">int32_t</td>          <td class="paramname"><span class="paramname"><em>Index</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a60e82a073f5cae0a0558e9af50539464" name="a60e82a073f5cae0a0558e9af50539464"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a60e82a073f5cae0a0558e9af50539464">&#9670;&#160;</a></span>Size()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FVector::Size </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a9fdbfe4bc587b88af4964cdf9f514e74" name="a9fdbfe4bc587b88af4964cdf9f514e74"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9fdbfe4bc587b88af4964cdf9f514e74">&#9670;&#160;</a></span>Size2D()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FVector::Size2D </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aefbfd226172a88a9eb8cdcee7db08d23" name="aefbfd226172a88a9eb8cdcee7db08d23"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aefbfd226172a88a9eb8cdcee7db08d23">&#9670;&#160;</a></span>SizeSquared()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FVector::SizeSquared </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a28d812b3ef4741269b3e0dc66935ef6f" name="a28d812b3ef4741269b3e0dc66935ef6f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a28d812b3ef4741269b3e0dc66935ef6f">&#9670;&#160;</a></span>SizeSquared2D()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FVector::SizeSquared2D </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a53a705027503f6b1ae943359ac556e65" name="a53a705027503f6b1ae943359ac556e65"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a53a705027503f6b1ae943359ac556e65">&#9670;&#160;</a></span>ToXMFLOAT3()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="_core_types_8h.html#aa675d103841c4c5b4208e691647db4aa">Float3</a> FVector::ToXMFLOAT3 </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a0af64e033781f3b7b5c1b07dbaa2f569" name="a0af64e033781f3b7b5c1b07dbaa2f569"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0af64e033781f3b7b5c1b07dbaa2f569">&#9670;&#160;</a></span>ToXMVector()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="_core_types_8h.html#ad7069eae7b85d4ed27d826f17a716155">XMVector</a> FVector::ToXMVector </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>W</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.f</span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel noexcept">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ad367df8e05c6ce063a297e208b54d25e" name="ad367df8e05c6ce063a297e208b54d25e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad367df8e05c6ce063a297e208b54d25e">&#9670;&#160;</a></span>UnitX()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> FVector::UnitX </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a7d96155a57fb080d6be83f7d50be4373" name="a7d96155a57fb080d6be83f7d50be4373"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7d96155a57fb080d6be83f7d50be4373">&#9670;&#160;</a></span>UnitY()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> FVector::UnitY </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ac5164c80ff2f62bbba9aef5514eb60cb" name="ac5164c80ff2f62bbba9aef5514eb60cb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac5164c80ff2f62bbba9aef5514eb60cb">&#9670;&#160;</a></span>UnitZ()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> FVector::UnitZ </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="abb6697259957bfd67f040496861e90fa" name="abb6697259957bfd67f040496861e90fa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abb6697259957bfd67f040496861e90fa">&#9670;&#160;</a></span>Zero()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> FVector::Zero </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 </div>
 </div>
 <a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
+<a id="ae21410b0406e63ae84f4f5060281619a" name="ae21410b0406e63ae84f4f5060281619a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae21410b0406e63ae84f4f5060281619a">&#9670;&#160;</a></span>[union]</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">union  { ... }  <a class="el" href="struct_f_vector.html">FVector</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a3d147395d0980c7ef8444f4878f72c76" name="a3d147395d0980c7ef8444f4878f72c76"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3d147395d0980c7ef8444f4878f72c76">&#9670;&#160;</a></span>BackwardVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="struct_f_vector.html">FVector</a> FVector::BackwardVector</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Backward vector (-1,0,0) </p>
+
+</div>
+</div>
+<a id="a2d2585e46aaed01126d4c63bf48fb11e" name="a2d2585e46aaed01126d4c63bf48fb11e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2d2585e46aaed01126d4c63bf48fb11e">&#9670;&#160;</a></span>DownVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="struct_f_vector.html">FVector</a> FVector::DownVector</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Down vector (0,0,-1) </p>
+
+</div>
+</div>
+<a id="a169f3ae880dd478a6bcfdbae88691501" name="a169f3ae880dd478a6bcfdbae88691501"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a169f3ae880dd478a6bcfdbae88691501">&#9670;&#160;</a></span>ForwardVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="struct_f_vector.html">FVector</a> FVector::ForwardVector</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Forward vector (1,0,0) </p>
+
+</div>
+</div>
+<a id="a6816773b2eb79f3a6a8aa22d4e2615c5" name="a6816773b2eb79f3a6a8aa22d4e2615c5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6816773b2eb79f3a6a8aa22d4e2615c5">&#9670;&#160;</a></span>LeftVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="struct_f_vector.html">FVector</a> FVector::LeftVector</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Left vector (0,-1,0) </p>
+
+</div>
+</div>
+<a id="afbe6a3418478f7060f4b8fb1bf6f1959" name="afbe6a3418478f7060f4b8fb1bf6f1959"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afbe6a3418478f7060f4b8fb1bf6f1959">&#9670;&#160;</a></span>OneVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="struct_f_vector.html">FVector</a> FVector::OneVector</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>One vector (1,1,1) </p>
+
+</div>
+</div>
+<a id="a5ce15aee9c7f6b6ac2dee0b8fa0e899c" name="a5ce15aee9c7f6b6ac2dee0b8fa0e899c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5ce15aee9c7f6b6ac2dee0b8fa0e899c">&#9670;&#160;</a></span>RightVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="struct_f_vector.html">FVector</a> FVector::RightVector</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Right vector (0,1,0) </p>
+
+</div>
+</div>
+<a id="a5d712be3687e28c494fb7801926878f8" name="a5d712be3687e28c494fb7801926878f8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5d712be3687e28c494fb7801926878f8">&#9670;&#160;</a></span>UpVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="struct_f_vector.html">FVector</a> FVector::UpVector</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Up vector (0,0,1) </p>
+
+</div>
+</div>
 <a id="a398a79b30440560a5e8bc9c1dba0c8e9" name="a398a79b30440560a5e8bc9c1dba0c8e9"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a398a79b30440560a5e8bc9c1dba0c8e9">&#9670;&#160;</a></span>X</h2>
 
@@ -300,7 +1431,44 @@ Public Attributes</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float FVector::X = 0.0f</td>
+          <td class="memname">float FVector::X</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="afb1fe3c231951422a2fd384cccdfef03" name="afb1fe3c231951422a2fd384cccdfef03"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afb1fe3c231951422a2fd384cccdfef03">&#9670;&#160;</a></span>XAxisVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="struct_f_vector.html">FVector</a> FVector::XAxisVector</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Unit X axis vector (1,0,0) </p>
+
+</div>
+</div>
+<a id="a5e1e864684fa2a648bda1fdf1e574b11" name="a5e1e864684fa2a648bda1fdf1e574b11"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e1e864684fa2a648bda1fdf1e574b11">&#9670;&#160;</a></span>XYZ</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float FVector::XYZ[3]</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -314,10 +1482,33 @@ Public Attributes</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float FVector::Y = 0.0f</td>
+          <td class="memname">float FVector::Y</td>
         </tr>
       </table>
 </div><div class="memdoc">
+
+</div>
+</div>
+<a id="a7d96d67e3de0eedd451f1b6d402d37bc" name="a7d96d67e3de0eedd451f1b6d402d37bc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7d96d67e3de0eedd451f1b6d402d37bc">&#9670;&#160;</a></span>YAxisVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="struct_f_vector.html">FVector</a> FVector::YAxisVector</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Unit Y axis vector (0,1,0) </p>
 
 </div>
 </div>
@@ -328,16 +1519,62 @@ Public Attributes</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">float FVector::Z = 0.0f</td>
+          <td class="memname">float FVector::Z</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 </div>
 </div>
+<a id="a120a9485ed139aedac5cce7421221454" name="a120a9485ed139aedac5cce7421221454"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a120a9485ed139aedac5cce7421221454">&#9670;&#160;</a></span>ZAxisVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="struct_f_vector.html">FVector</a> FVector::ZAxisVector</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Unit Z axis vector (0,0,1) </p>
+
+</div>
+</div>
+<a id="a5718e5b26f15f0d7057d05236fcae359" name="a5718e5b26f15f0d7057d05236fcae359"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5718e5b26f15f0d7057d05236fcae359">&#9670;&#160;</a></span>ZeroVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="struct_f_vector.html">FVector</a> FVector::ZeroVector</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>A zero vector (0,0,0) </p>
+
+</div>
+</div>
 <hr/>The documentation for this struct was generated from the following files:<ul>
-<li>Engine/Math/<a class="el" href="_vector_8h_source.html">Vector.h</a></li>
-<li>Engine/Math/<a class="el" href="_vector_8cpp.html">Vector.cpp</a></li>
+<li>Engine/Source/Math/<a class="el" href="_vector_8h_source.html">Vector.h</a></li>
+<li>Engine/Source/Math/<a class="el" href="_vector_8cpp.html">Vector.cpp</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

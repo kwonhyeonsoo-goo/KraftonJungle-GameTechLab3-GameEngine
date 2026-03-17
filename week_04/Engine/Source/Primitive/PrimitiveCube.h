@@ -6,7 +6,7 @@ class ENGINE_API CPrimitiveCube : public CPrimitiveBase
 {
 public:
 	static const FString Key;
-	static const FString FilePath;
+	static FString GetFilePath();
 
 	CPrimitiveCube();
 

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['rotation_0',['Rotation',['../_gizmo_8h.html#a1cee465b5a90ba35bcc93711d448ff50af1a42bd417390fc63b030a519624607a',1,'Gizmo.h']]]
+  ['far_0',['Far',['../class_f_frustum.html#a9d6aecd023734edf3187674d849cf6c3a010f6af91915e57e55a856435d3d9e9b',1,'FFrustum']]]
 ];

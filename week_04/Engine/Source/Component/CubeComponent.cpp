@@ -1,6 +1,5 @@
 #include "CubeComponent.h"
 #include "Primitive/PrimitiveCube.h"
-#include "Object/Class.h"
 
 namespace
 {
