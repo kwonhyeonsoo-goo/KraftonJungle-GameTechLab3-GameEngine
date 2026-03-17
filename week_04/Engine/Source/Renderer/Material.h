@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include <d3d11.h>
 #include <memory>
-#include <cstring>
 
 class FVertexShader;
 class FPixelShader;

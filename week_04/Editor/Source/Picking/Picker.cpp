@@ -3,9 +3,6 @@
 #include "Object/Actor/Actor.h"
 #include "Component/CameraComponent.h"
 #include "Component/PrimitiveComponent.h"
-#include "Primitive/PrimitiveBase.h"
-#include "Renderer/PrimitiveVertex.h"
-#include <cmath>
 #include <limits>
 
 FRay CPicker::ScreenToRay(int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight,

@@ -10,8 +10,6 @@
 
 #include "Component/CameraComponent.h"
 #include "Component/PrimitiveComponent.h"
-#include "Component/SphereComponent.h"
-#include "Component/CubeComponent.h"
 #include "Renderer/RenderCommand.h"
 #include "Primitive/PrimitiveBase.h"
 #include "Math/Frustum.h"
@@ -19,7 +17,6 @@
 #include <fstream>
 #include <iomanip>
 #include "ThirdParty/nlohmann/json.hpp"
-#include "Component/PrimitiveComponent.h"
 #include "Renderer/MaterialManager.h"
 #include "Renderer/Material.h"
 

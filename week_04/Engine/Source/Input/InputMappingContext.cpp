@@ -1,6 +1,4 @@
 #include "InputMappingContext.h"
-#include "InputModifier.h"
-#include "InputTrigger.h"
 
 
 FActionKeyMapping& FInputMappingContext::AddMapping(FInputAction* Action, int32 Key)

@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "Renderer/RenderCommand.h"
 #include <d3d11.h>
-#include <vector>
 #include <functional>
 #include <memory>
 #include "ShaderManager.h"

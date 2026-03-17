@@ -1,6 +1,4 @@
 #include "EnhancedInputManager.h"
-#include "InputManager.h"
-#include <algorithm>
 
 
 
