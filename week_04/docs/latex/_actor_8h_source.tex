@@ -1,0 +1,83 @@
+\doxysection{Actor.\+h}
+\hypertarget{_actor_8h_source}{}\label{_actor_8h_source}\index{Engine/Source/Object/Actor/Actor.h@{Engine/Source/Object/Actor/Actor.h}}
+\doxymbox{\hyperlink{_actor_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_scene_component_8h}{Component/SceneComponent.h}}"{}}}
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_object_8h}{Object/Object.h}}"{}}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_u_actor_component}{UActorComponent}};}
+\DoxyCodeLine{00006\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_u_scene_component}{USceneComponent}};}
+\DoxyCodeLine{00007\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_u_scene}{UScene}};}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{_engine_a_p_i_8h_a0697ee40f69dc5dab56d13131f4c4835}{ENGINE\_API}}\ \doxymbox{\hyperlink{class_a_actor_ad041f1037a92cf9d983c89ae34bdc29d}{AActor}}\ :\ \textcolor{keyword}{public}\ \doxymbox{\hyperlink{class_u_object_a5b2b12e2d9b40cbd11259b3403ebab47}{UObject}}}
+\DoxyCodeLine{00010\ \{}
+\DoxyCodeLine{00011\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00012\ \ \ \ \ \textcolor{keyword}{static}\ \doxymbox{\hyperlink{class_u_class}{UClass}}*\ \doxymbox{\hyperlink{class_u_object_a1cf4d64988214efdf372c32f89d2da2a}{StaticClass}}();}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \ \ \ \ \doxymbox{\hyperlink{class_a_actor_ad041f1037a92cf9d983c89ae34bdc29d}{AActor}}(\doxymbox{\hyperlink{class_u_class}{UClass}}*\ InClass,\ \textcolor{keyword}{const}\ \doxymbox{\hyperlink{_string_8h_a071f1298c27d6858a9cb71def52f1eb6}{FString}}\&\ InName,\ \doxymbox{\hyperlink{class_u_object_a5b2b12e2d9b40cbd11259b3403ebab47}{UObject}}*\ InOuter\ =\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00015\ \ \ \ \ \doxymbox{\hyperlink{class_a_actor_a39af8fb0102b3fb08ec9e066735416f9}{\string~AActor}}()\ \textcolor{keyword}{override}\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \ \ \ \ \doxymbox{\hyperlink{class_u_scene}{UScene}}*\ \doxymbox{\hyperlink{class_a_actor_ae6c57214e749731e735c24df77521389}{GetScene}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \doxymbox{\hyperlink{class_a_actor_af04a80af39a39d1ee31ce359fd5654ba}{Scene}};\ \}}
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_a_actor_a821f13e0205f5532522f6255ed9dcdfb}{SetScene}}(\doxymbox{\hyperlink{class_u_scene}{UScene}}*\ InScene)\ \{\ \doxymbox{\hyperlink{class_a_actor_af04a80af39a39d1ee31ce359fd5654ba}{Scene}}\ =\ InScene;\ \}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \ \ \ \ \textcolor{comment}{//\ ULevel*\ GetLevel()\ const\ \{\ return\ Level;}}
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{comment}{//\ void\ SetLevel(ULevel*\ InLevel)\ \{\ Level\ =\ InLevel;\ \}}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \ \ \ \ \doxymbox{\hyperlink{class_u_scene_component}{USceneComponent}}*\ \doxymbox{\hyperlink{class_a_actor_a255f914e22cb9227096d30fb365d08ff}{GetRootComponent}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \doxymbox{\hyperlink{class_a_actor_acb8863457e43309b371aa59beb8b366b}{RootComponent}};\ \}}
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_a_actor_a2a62eb276eba91c6b3ffbf96af0e6cb4}{SetRootComponent}}(\doxymbox{\hyperlink{class_u_scene_component}{USceneComponent}}*\ InRootComponent)}
+\DoxyCodeLine{00025\ \ \ \ \ \{}
+\DoxyCodeLine{00026\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 의문점}}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 기존에\ RootComponent가\ 있을\ 시에는\ RootComponent의\ OwnerActor를\ 지워주나?}}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 이러면\ 두\ 개의\ RootComponent가\ 하나의\ Owner을\ 가지고\ 있는건데.}}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \doxymbox{\hyperlink{class_a_actor_acb8863457e43309b371aa59beb8b366b}{RootComponent}}\ =\ InRootComponent;}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\doxymbox{\hyperlink{class_a_actor_acb8863457e43309b371aa59beb8b366b}{RootComponent}})}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ \ \ \ \ \doxymbox{\hyperlink{class_a_actor_acb8863457e43309b371aa59beb8b366b}{RootComponent}}-\/>SetOwner(\textcolor{keyword}{this});}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00034\ \ \ \ \ \}}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keyword}{const}\ \doxymbox{\hyperlink{_array_8h_a5a42cebdcc8427a3c8b52ef4276de507}{TArray<UActorComponent*>}}\&\ \doxymbox{\hyperlink{class_a_actor_a1b280198361c9863297f9b4cad0c68dc}{GetComponents}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \doxymbox{\hyperlink{class_a_actor_a8ef1c160d41bb29c7cd736006566a6d4}{OwnedComponents}};\ \}}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keywordtype}{void}\ AddOwnedComponent(\doxymbox{\hyperlink{class_u_actor_component}{UActorComponent}}*\ InComponent);}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordtype}{void}\ RemoveOwnedComponent(\doxymbox{\hyperlink{class_u_actor_component}{UActorComponent}}*\ InComponent);}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00040\ \ \ \ \ T*\ \doxymbox{\hyperlink{class_a_actor_a95b4b629510405b5f336ad191ee500b0}{GetComponentByClass}}()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00041\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\doxymbox{\hyperlink{class_u_actor_component}{UActorComponent}}*\ Component\ :\ \doxymbox{\hyperlink{class_a_actor_a8ef1c160d41bb29c7cd736006566a6d4}{OwnedComponents}})}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (Component\ \&\&\ Component-\/>IsA(T::StaticClass()))}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}T*\textcolor{keyword}{>}(Component);}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00050\ \ \ \ \ \}}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ PostSpawnInitialize();}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ BeginPlay();}
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Tick(\textcolor{keywordtype}{float}\ DeltaTime);}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ EndPlay();}
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Destroy();}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_a_actor_ad59f952081c61de9f99af6ce6ce55f0b}{HasBegunPlay}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \doxymbox{\hyperlink{class_a_actor_ad5e1b0ed20c1b088b302984455470e9a}{bActorBegunPlay}};\ \}}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_a_actor_a40908efd0d6c79a91d15c8888a3a1537}{IsPendingDestroy}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \doxymbox{\hyperlink{class_a_actor_a6a14c7fbedee44f3e2967ca10b5d150b}{bPendingDestroy}};\ \}}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_a_actor_ac5fdb5adaebc21c2edb0aded9d7533ca}{CanTick}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \doxymbox{\hyperlink{class_a_actor_accd71660e9fa34c279af72f64743b1fc}{bCanEverTick}}\ \&\&\ \doxymbox{\hyperlink{class_a_actor_a937188367d99351f6aba2c82c9c740f7}{bTickEnabled}};\ \}}
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_a_actor_a936814c37dbcb506c74f98f5ab708162}{SetActorTickEnabled}}(\textcolor{keywordtype}{bool}\ bEnabled)\ \{\ \doxymbox{\hyperlink{class_a_actor_a937188367d99351f6aba2c82c9c740f7}{bTickEnabled}}\ =\ bEnabled;\ \}}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\&\ GetActorLocation()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keywordtype}{void}\ SetActorLocation(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\&\ InLocation);}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00066\ \ \ \ \ \doxymbox{\hyperlink{class_u_scene}{UScene}}*\ \doxymbox{\hyperlink{class_a_actor_af04a80af39a39d1ee31ce359fd5654ba}{Scene}}\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{comment}{//ULevel*\ Level\ =\ nullptr;}}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \ \ \ \ \doxymbox{\hyperlink{class_u_scene_component}{USceneComponent}}*\ \doxymbox{\hyperlink{class_a_actor_acb8863457e43309b371aa59beb8b366b}{RootComponent}}\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00070\ \ \ \ \ \doxymbox{\hyperlink{_array_8h_a5a42cebdcc8427a3c8b52ef4276de507}{TArray<UActorComponent*>}}\ \doxymbox{\hyperlink{class_a_actor_a8ef1c160d41bb29c7cd736006566a6d4}{OwnedComponents}};}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_a_actor_accd71660e9fa34c279af72f64743b1fc}{bCanEverTick}}\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_a_actor_a937188367d99351f6aba2c82c9c740f7}{bTickEnabled}}\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_a_actor_ad5e1b0ed20c1b088b302984455470e9a}{bActorBegunPlay}}\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_a_actor_a6a14c7fbedee44f3e2967ca10b5d150b}{bPendingDestroy}}\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00076\ \};}
+\DoxyCodeLine{00077\ }
+
+\end{DoxyCode}

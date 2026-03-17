@@ -1,0 +1,46 @@
+\doxysection{Window.\+h}
+\hypertarget{_window_8h_source}{}\label{_window_8h_source}\index{Engine/Source/Platform/Windows/Window.h@{Engine/Source/Platform/Windows/Window.h}}
+\doxymbox{\hyperlink{_window_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_core_minimal_8h}{CoreMinimal.h}}"{}}}
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <Windows.h>}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{keyword}{using\ }\doxymbox{\hyperlink{_window_8h_ae5eaca48f6972a425d537e52f0389bce}{FWndProcFilter}}\ =\ std::function<bool(HWND,\ UINT,\ WPARAM,\ LPARAM)>;}
+\DoxyCodeLine{00007\ \textcolor{keyword}{using\ }\doxymbox{\hyperlink{_window_8h_a8359cc47b0b501f85cb5f6341b96ba04}{FOnResizeCallback}}\ =\ std::function<void(\textcolor{keywordtype}{int}\ Width,\ \textcolor{keywordtype}{int}\ Height)>;}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{_engine_a_p_i_8h_a0697ee40f69dc5dab56d13131f4c4835}{ENGINE\_API}}\ \doxymbox{\hyperlink{class_c_window_a6c9caa0943683d97aa79c584358df736}{CWindow}}}
+\DoxyCodeLine{00010\ \{}
+\DoxyCodeLine{00011\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00012\ \ \ \ \ \doxymbox{\hyperlink{class_c_window_a6c9caa0943683d97aa79c584358df736}{CWindow}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00013\ \ \ \ \ \doxymbox{\hyperlink{class_c_window_a6c9caa0943683d97aa79c584358df736}{\string~CWindow}}();}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_c_window_a66260709d4dfc6a58519d9e46bcea3e9}{Create}}(HINSTANCE\ Instance,\ \textcolor{keyword}{const}\ WCHAR*\ ClassName,}
+\DoxyCodeLine{00016\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ WCHAR*\ Title,\ \textcolor{keywordtype}{int}\ InWidth,\ \textcolor{keywordtype}{int}\ InHeight,\ \textcolor{keywordtype}{int}\ InX,\ \textcolor{keywordtype}{int}\ InY);}
+\DoxyCodeLine{00017\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_window_ae41a212c25bfaaddfa76beb6efdba7bf}{Destroy}}();}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_window_a5b94bfb17508590cdda1462eb436df7e}{Show}}();}
+\DoxyCodeLine{00020\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_window_a7e76333fcfb754679393efd2f5bbcca9}{Hide}}();}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \ \ \ \ HWND\ \doxymbox{\hyperlink{class_c_window_acad43810576c2e2b20b3206e91992dcf}{GetHwnd}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Hwnd;\ \}}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keywordtype}{int}\ \doxymbox{\hyperlink{class_c_window_a2edc7b40871e1e393072751ff11519ef}{GetWidth}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Width;\ \}}
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{keywordtype}{int}\ \doxymbox{\hyperlink{class_c_window_a6bfdd0cac20261f23716f1e3f92c9d25}{GetHeight}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Height;\ \}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keywordtype}{void}\ AddMessageFilter(\doxymbox{\hyperlink{_window_8h_ae5eaca48f6972a425d537e52f0389bce}{FWndProcFilter}}\ Filter);}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keywordtype}{void}\ SetOnResizeCallback(\doxymbox{\hyperlink{_window_8h_a8359cc47b0b501f85cb5f6341b96ba04}{FOnResizeCallback}}\ Callback);}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \ \ \ \ LRESULT\ HandleMessage(UINT\ Msg,\ WPARAM\ wParam,\ LPARAM\ lParam);}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00032\ \ \ \ \ HWND\ Hwnd\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{keywordtype}{int}\ Width\ =\ 0;}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keywordtype}{int}\ Height\ =\ 0;}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keywordtype}{int}\ PosX\ =\ 0;}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keywordtype}{int}\ PosY\ =\ 0;}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ \ \ \doxymbox{\hyperlink{_array_8h_a5a42cebdcc8427a3c8b52ef4276de507}{TArray<FWndProcFilter>}}\ MessageFilters;}
+\DoxyCodeLine{00039\ \ \ \ \ \doxymbox{\hyperlink{_window_8h_a8359cc47b0b501f85cb5f6341b96ba04}{FOnResizeCallback}}\ OnResizeCallback;}
+\DoxyCodeLine{00040\ \};}
+
+\end{DoxyCode}

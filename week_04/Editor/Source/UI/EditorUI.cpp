@@ -86,7 +86,7 @@ void CEditorUI::Initialize(CCore* InCore)
 		{
 			if (Core)
 			{
-				AActor* Selected = Core->GetSelectedActor();
+				AActor* Selected = SelectedActor;
 				if (Selected)
 				{
 					if (USceneComponent* Root = Selected->GetRootComponent())
@@ -104,18 +104,22 @@ void CEditorUI::Initialize(CCore* InCore)
 	Renderer->SetGUIUpdateCallback([this]() { Render(); });
 
 	// Editor-only post-render: outline, world axis, gizmo etc.
-	Core->SetPostRenderCallback([this](CRenderer* R)
+	Renderer->SetPostRenderCallback([this](CRenderer* R)
 		{
 			if (!Core) return;
 
 			// 선택된 Actor 아웃라인 렌더링
-			AActor* Selected = Core->GetSelectedActor();
+			AActor* Selected = SelectedActor;
 			if (Selected && !Selected->IsPendingDestroy())
 			{
 				for (UActorComponent* Comp : Selected->GetComponents())
 				{
-					UPrimitiveComponent* PrimComp = dynamic_cast<UPrimitiveComponent*>(Comp);
-					if (PrimComp && PrimComp->GetPrimitive())
+					if (!Comp->IsA(UPrimitiveComponent::StaticClass()))
+					{
+						continue;
+					}
+					UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(Comp);
+					if (PrimComp->GetPrimitive())
 					{
 						R->RenderOutline(
 							PrimComp->GetPrimitive()->GetMeshData(),
@@ -237,7 +241,7 @@ void CEditorUI::Render()
 	// Track selected actor changes for Property
 	if (Core)
 	{
-		AActor* Selected = Core->GetSelectedActor();
+		AActor* Selected = SelectedActor;
 		if (Selected != CachedSelectedActor)
 		{
 			if (Selected)
@@ -262,7 +266,7 @@ void CEditorUI::Render()
 	Stat.SetHeapUsage(UObject::TotalAllocationBytes);
 
 	// Panels
-	ControlPanel.Render(Core);
+	ControlPanel.Render(Core, SelectedActor);
 	Property.Render();
 	Console.Render();
 	Stat.Render();
@@ -270,8 +274,5 @@ void CEditorUI::Render()
 
 void CEditorUI::SetSelectedActor(AActor* InActor)
 {
-	if (Core)
-	{
-		Core->SetSelectedActor(InActor);
-	}
+	SelectedActor = InActor;
 }

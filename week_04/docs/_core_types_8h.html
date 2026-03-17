@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.16.1"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Jungle_Week1_Team2: Engine/Types/CoreTypes.h File Reference</title>
+<title>Jungle_Week1_Team2: Engine/Source/Types/CoreTypes.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -91,15 +91,188 @@ $(function(){initNavTree('_core_types_8h.html','',''); });
   <div class="headertitle"><div class="title">CoreTypes.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-
+<div class="textblock"><code>#include &lt;DirectXMath.h&gt;</code><br />
+</div>
 <p><a href="_core_types_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-typedef-members" class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
+<tr class="memitem:a07fb256c1077eea7a7726e948cc8ff0e" id="r_a07fb256c1077eea7a7726e948cc8ff0e"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#a07fb256c1077eea7a7726e948cc8ff0e">int8</a> = signed char</td></tr>
+<tr class="memitem:a34ecedcf03a70dc91e4616212d79267d" id="r_a34ecedcf03a70dc91e4616212d79267d"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#a34ecedcf03a70dc91e4616212d79267d">uint8</a> = unsigned char</td></tr>
+<tr class="memitem:a42a3c29969fcebf5c8ab6fe86f8330e5" id="r_a42a3c29969fcebf5c8ab6fe86f8330e5"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#a42a3c29969fcebf5c8ab6fe86f8330e5">int16</a> = short</td></tr>
+<tr class="memitem:af6e23a20bd7abf3ca3c82295c2b323e5" id="r_af6e23a20bd7abf3ca3c82295c2b323e5"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#af6e23a20bd7abf3ca3c82295c2b323e5">uint16</a> = unsigned short</td></tr>
 <tr class="memitem:aae6ad039f09c0676db11bd114136a3fa" id="r_aae6ad039f09c0676db11bd114136a3fa"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#aae6ad039f09c0676db11bd114136a3fa">int32</a> = int</td></tr>
 <tr class="memitem:abd01e8e67e3d94cab04ecaaf4f85ac1b" id="r_abd01e8e67e3d94cab04ecaaf4f85ac1b"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#abd01e8e67e3d94cab04ecaaf4f85ac1b">uint32</a> = unsigned int</td></tr>
+<tr class="memitem:ab0e5976e1a4967e9b13e68b5f271bb44" id="r_ab0e5976e1a4967e9b13e68b5f271bb44"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#ab0e5976e1a4967e9b13e68b5f271bb44">int64</a> = long long</td></tr>
+<tr class="memitem:aba41bf2b6f6da5945ee08fb99931aede" id="r_aba41bf2b6f6da5945ee08fb99931aede"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#aba41bf2b6f6da5945ee08fb99931aede">uint64</a> = unsigned long long</td></tr>
+<tr class="memitem:aa80a2c993af85304eca72a4e11daa1e6" id="r_aa80a2c993af85304eca72a4e11daa1e6"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#aa80a2c993af85304eca72a4e11daa1e6">Float2</a> = DirectX::XMFLOAT2</td></tr>
+<tr class="memitem:aa675d103841c4c5b4208e691647db4aa" id="r_aa675d103841c4c5b4208e691647db4aa"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#aa675d103841c4c5b4208e691647db4aa">Float3</a> = DirectX::XMFLOAT3</td></tr>
+<tr class="memitem:a8f67830dc6446e8c45d77b58760be881" id="r_a8f67830dc6446e8c45d77b58760be881"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#a8f67830dc6446e8c45d77b58760be881">Float4</a> = DirectX::XMFLOAT4</td></tr>
+<tr class="memitem:ad7069eae7b85d4ed27d826f17a716155" id="r_ad7069eae7b85d4ed27d826f17a716155"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#ad7069eae7b85d4ed27d826f17a716155">XMVector</a> = DirectX::XMVECTOR</td></tr>
+<tr class="memitem:abd7c2c39285e92e50224f58070e4266e" id="r_abd7c2c39285e92e50224f58070e4266e"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#abd7c2c39285e92e50224f58070e4266e">FXMVector</a> = DirectX::FXMVECTOR</td></tr>
+<tr class="memitem:a92e6bc502b69542e9d4af080f2155f81" id="r_a92e6bc502b69542e9d4af080f2155f81"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#a92e6bc502b69542e9d4af080f2155f81">GXMVector</a> = DirectX::GXMVECTOR</td></tr>
+<tr class="memitem:a40dce574fcd6ac79aea595b53ff03848" id="r_a40dce574fcd6ac79aea595b53ff03848"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#a40dce574fcd6ac79aea595b53ff03848">HXMVector</a> = DirectX::HXMVECTOR</td></tr>
+<tr class="memitem:aeedd443495678822a99b1eecd48d7fb6" id="r_aeedd443495678822a99b1eecd48d7fb6"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#aeedd443495678822a99b1eecd48d7fb6">CXMVector</a> = DirectX::CXMVECTOR</td></tr>
+<tr class="memitem:a37e3ac851d6d4e93d0864a6b720f14ee" id="r_a37e3ac851d6d4e93d0864a6b720f14ee"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#a37e3ac851d6d4e93d0864a6b720f14ee">Float4X4</a> = DirectX::XMFLOAT4X4</td></tr>
+<tr class="memitem:a4e4c1a26b3ef7ff7bdfa69e3d2a28ca3" id="r_a4e4c1a26b3ef7ff7bdfa69e3d2a28ca3"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#a4e4c1a26b3ef7ff7bdfa69e3d2a28ca3">XMMatrix</a> = DirectX::XMMATRIX</td></tr>
+<tr class="memitem:adcf073213a201e52611e0989a24d0c0d" id="r_adcf073213a201e52611e0989a24d0c0d"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#adcf073213a201e52611e0989a24d0c0d">FXMMatrix</a> = DirectX::FXMMATRIX</td></tr>
+<tr class="memitem:a7e3371c0f101d480dc6b09de802b75ce" id="r_a7e3371c0f101d480dc6b09de802b75ce"><td class="memItemLeft">using&#160;</td><td class="memItemRight"><a class="el" href="#a7e3371c0f101d480dc6b09de802b75ce">CXMMatrix</a> = DirectX::CXMMATRIX</td></tr>
 </table>
 <a name="doc-typedef-members" id="doc-typedef-members"></a><h2 id="header-doc-typedef-members" class="groupheader">Typedef Documentation</h2>
+<a id="a7e3371c0f101d480dc6b09de802b75ce" name="a7e3371c0f101d480dc6b09de802b75ce"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7e3371c0f101d480dc6b09de802b75ce">&#9670;&#160;</a></span>CXMMatrix</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a7e3371c0f101d480dc6b09de802b75ce">CXMMatrix</a> = DirectX::CXMMATRIX</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aeedd443495678822a99b1eecd48d7fb6" name="aeedd443495678822a99b1eecd48d7fb6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aeedd443495678822a99b1eecd48d7fb6">&#9670;&#160;</a></span>CXMVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#aeedd443495678822a99b1eecd48d7fb6">CXMVector</a> = DirectX::CXMVECTOR</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aa80a2c993af85304eca72a4e11daa1e6" name="aa80a2c993af85304eca72a4e11daa1e6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa80a2c993af85304eca72a4e11daa1e6">&#9670;&#160;</a></span>Float2</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#aa80a2c993af85304eca72a4e11daa1e6">Float2</a> = DirectX::XMFLOAT2</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aa675d103841c4c5b4208e691647db4aa" name="aa675d103841c4c5b4208e691647db4aa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa675d103841c4c5b4208e691647db4aa">&#9670;&#160;</a></span>Float3</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#aa675d103841c4c5b4208e691647db4aa">Float3</a> = DirectX::XMFLOAT3</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8f67830dc6446e8c45d77b58760be881" name="a8f67830dc6446e8c45d77b58760be881"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8f67830dc6446e8c45d77b58760be881">&#9670;&#160;</a></span>Float4</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a8f67830dc6446e8c45d77b58760be881">Float4</a> = DirectX::XMFLOAT4</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a37e3ac851d6d4e93d0864a6b720f14ee" name="a37e3ac851d6d4e93d0864a6b720f14ee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a37e3ac851d6d4e93d0864a6b720f14ee">&#9670;&#160;</a></span>Float4X4</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a37e3ac851d6d4e93d0864a6b720f14ee">Float4X4</a> = DirectX::XMFLOAT4X4</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="adcf073213a201e52611e0989a24d0c0d" name="adcf073213a201e52611e0989a24d0c0d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adcf073213a201e52611e0989a24d0c0d">&#9670;&#160;</a></span>FXMMatrix</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#adcf073213a201e52611e0989a24d0c0d">FXMMatrix</a> = DirectX::FXMMATRIX</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="abd7c2c39285e92e50224f58070e4266e" name="abd7c2c39285e92e50224f58070e4266e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abd7c2c39285e92e50224f58070e4266e">&#9670;&#160;</a></span>FXMVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#abd7c2c39285e92e50224f58070e4266e">FXMVector</a> = DirectX::FXMVECTOR</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a92e6bc502b69542e9d4af080f2155f81" name="a92e6bc502b69542e9d4af080f2155f81"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a92e6bc502b69542e9d4af080f2155f81">&#9670;&#160;</a></span>GXMVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a92e6bc502b69542e9d4af080f2155f81">GXMVector</a> = DirectX::GXMVECTOR</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a40dce574fcd6ac79aea595b53ff03848" name="a40dce574fcd6ac79aea595b53ff03848"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a40dce574fcd6ac79aea595b53ff03848">&#9670;&#160;</a></span>HXMVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a40dce574fcd6ac79aea595b53ff03848">HXMVector</a> = DirectX::HXMVECTOR</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a42a3c29969fcebf5c8ab6fe86f8330e5" name="a42a3c29969fcebf5c8ab6fe86f8330e5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a42a3c29969fcebf5c8ab6fe86f8330e5">&#9670;&#160;</a></span>int16</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a42a3c29969fcebf5c8ab6fe86f8330e5">int16</a> = short</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="aae6ad039f09c0676db11bd114136a3fa" name="aae6ad039f09c0676db11bd114136a3fa"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aae6ad039f09c0676db11bd114136a3fa">&#9670;&#160;</a></span>int32</h2>
 
@@ -108,6 +281,48 @@ Typedefs</h2></td></tr>
       <table class="memname">
         <tr>
           <td class="memname">using <a class="el" href="#aae6ad039f09c0676db11bd114136a3fa">int32</a> = int</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ab0e5976e1a4967e9b13e68b5f271bb44" name="ab0e5976e1a4967e9b13e68b5f271bb44"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab0e5976e1a4967e9b13e68b5f271bb44">&#9670;&#160;</a></span>int64</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#ab0e5976e1a4967e9b13e68b5f271bb44">int64</a> = long long</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a07fb256c1077eea7a7726e948cc8ff0e" name="a07fb256c1077eea7a7726e948cc8ff0e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a07fb256c1077eea7a7726e948cc8ff0e">&#9670;&#160;</a></span>int8</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a07fb256c1077eea7a7726e948cc8ff0e">int8</a> = signed char</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="af6e23a20bd7abf3ca3c82295c2b323e5" name="af6e23a20bd7abf3ca3c82295c2b323e5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af6e23a20bd7abf3ca3c82295c2b323e5">&#9670;&#160;</a></span>uint16</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#af6e23a20bd7abf3ca3c82295c2b323e5">uint16</a> = unsigned short</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -128,6 +343,62 @@ Typedefs</h2></td></tr>
 
 </div>
 </div>
+<a id="aba41bf2b6f6da5945ee08fb99931aede" name="aba41bf2b6f6da5945ee08fb99931aede"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aba41bf2b6f6da5945ee08fb99931aede">&#9670;&#160;</a></span>uint64</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#aba41bf2b6f6da5945ee08fb99931aede">uint64</a> = unsigned long long</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a34ecedcf03a70dc91e4616212d79267d" name="a34ecedcf03a70dc91e4616212d79267d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a34ecedcf03a70dc91e4616212d79267d">&#9670;&#160;</a></span>uint8</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a34ecedcf03a70dc91e4616212d79267d">uint8</a> = unsigned char</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a4e4c1a26b3ef7ff7bdfa69e3d2a28ca3" name="a4e4c1a26b3ef7ff7bdfa69e3d2a28ca3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4e4c1a26b3ef7ff7bdfa69e3d2a28ca3">&#9670;&#160;</a></span>XMMatrix</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#a4e4c1a26b3ef7ff7bdfa69e3d2a28ca3">XMMatrix</a> = DirectX::XMMATRIX</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ad7069eae7b85d4ed27d826f17a716155" name="ad7069eae7b85d4ed27d826f17a716155"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad7069eae7b85d4ed27d826f17a716155">&#9670;&#160;</a></span>XMVector</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#ad7069eae7b85d4ed27d826f17a716155">XMVector</a> = DirectX::XMVECTOR</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <div id="page-nav" class="page-nav-panel">
@@ -141,7 +412,7 @@ Typedefs</h2></td></tr>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><a href="dir_0b6ee6e7e9547e675db4add2e5de97da.html">Engine</a></li><li class="navelem"><a href="dir_fa545a2670e9dd72eb6a125c7d6f2997.html">Types</a></li><li class="navelem"><a href="_core_types_8h.html">CoreTypes.h</a></li>
+    <li class="navelem"><a href="dir_0b6ee6e7e9547e675db4add2e5de97da.html">Engine</a></li><li class="navelem"><a href="dir_9579d1ecb2c7bf48cbe1049c41745cb4.html">Source</a></li><li class="navelem"><a href="dir_d8b925d248de9c2a2d9b3c575bde6505.html">Types</a></li><li class="navelem"><a href="_core_types_8h.html">CoreTypes.h</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.16.1 </li>
   </ul>
 </div>

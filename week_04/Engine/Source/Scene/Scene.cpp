@@ -1,11 +1,18 @@
 #include "Scene.h"
 
 #include "Core/Core.h"
+#include "Core/Paths.h"
 
 #include "Actor/Actor.h"
+#include "Object/Actor/CubeActor.h"
+#include "Object/Actor/SphereActor.h"
 #include "Camera/Camera.h"
+#include "Component/PrimitiveComponent.h"
 #include "Component/SphereComponent.h"
 #include "Component/CubeComponent.h"
+#include "Renderer/RenderCommand.h"
+#include "Primitive/PrimitiveBase.h"
+#include "Math/Frustum.h"
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
@@ -13,6 +20,8 @@
 #include "Actor/Gizmo.h"
 #include "ThirdParty/nlohmann/json.hpp"
 #include "Component/PrimitiveComponent.h"
+#include "Renderer/MaterialManager.h"
+#include "Renderer/Material.h"
 
 namespace
 {
@@ -55,13 +64,23 @@ void UScene::InitializeEmptyScene(float AspectRatio)
 	Camera->SetAspectRatio(AspectRatio);
 }
 
-void UScene::InitializeDefaultScene(float AspectRatio)
+void UScene::InitializeEmptyScene(float AspectRatio, ID3D11Device* Device)
+{
+	if (Camera == nullptr)
+	{
+		Camera = new CCamera();
+	}
+
+	Camera->SetAspectRatio(AspectRatio);
+}
+
+void UScene::InitializeDefaultScene(float AspectRatio, ID3D11Device* Device)
 {
 	// 카메라
 	InitializeEmptyScene(AspectRatio);
 
 	// JSON 파일에서 씬 로드 (카메라 포함)
-	LoadSceneFromFile("../Assets/Scenes/DefaultScene.json");
+	LoadSceneFromFile(FPaths::SceneDir() + "DefaultScene.json", Device);
 
 	//Test
 	AActor* Actor = SpawnActor<AActor>("TestActor");
@@ -76,7 +95,7 @@ void UScene::InitializeDefaultScene(float AspectRatio)
 	SpawnActor<AGizmo>("GizmoTest");
 }
 
-void UScene::LoadSceneFromFile(const FString& FilePath)
+void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 {
 	std::ifstream File(FilePath);
 	if (!File.is_open()) return;
@@ -100,21 +119,33 @@ void UScene::LoadSceneFromFile(const FString& FilePath)
 		}
 	}
 
+	// Material 에셋 사전 로드 (프로젝트 루트 기준 상대 경로)
+	if (Device && Json.contains("Materials"))
+	{
+		for (auto& MatPath : Json["Materials"])
+		{
+			FString RelPath = MatPath.get<FString>();
+			FString AbsPath = FPaths::Combine(FPaths::ProjectRoot(), RelPath);
+			FMaterialManager::Get().GetOrLoad(Device, AbsPath);
+		}
+	}
+
 	if (!Json.contains("Primitives")) return;
 
 	int32 ActorIndex = 0;
 	for (auto& [Key, Value] : Json["Primitives"].items())
 	{
 		FString Type = Value.value("Type", "");
+		FString ActorName = Type + "_" + std::to_string(ActorIndex);
 
-		UActorComponent* Comp = nullptr;
+		AActor* Actor = nullptr;
 		if (Type == "Sphere")
 		{
-			Comp = new USphereComponent();
+			Actor = SpawnActor<ASphereActor>(ActorName);
 		}
 		else if (Type == "Cube")
 		{
-			Comp = new UCubeComponent();
+			Actor = SpawnActor<ACubeActor>(ActorName);
 		}
 		else
 		{
@@ -122,9 +153,20 @@ void UScene::LoadSceneFromFile(const FString& FilePath)
 			continue;
 		}
 
-		FString ActorName = Type + "_" + std::to_string(ActorIndex);
-		AActor* Actor = SpawnActor<AActor>(ActorName);
-		Actor->AddOwnedComponent(Comp);
+		// Material 적용
+		if (Value.contains("Material"))
+		{
+			FString MatName = Value["Material"].get<FString>();
+			auto Mat = FMaterialManager::Get().FindByName(MatName);
+			if (Mat)
+			{
+				UPrimitiveComponent* PrimComp = Actor->GetComponentByClass<UPrimitiveComponent>();
+				if (PrimComp)
+				{
+					PrimComp->SetMaterial(Mat.get());
+				}
+			}
+		}
 
 		FTransform Transform;
 		if (Value.contains("Location"))
@@ -169,39 +211,40 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 		if (!Actor || Actor->IsPendingDestroy())
 			continue;
 
-		for (UActorComponent* Comp : Actor->GetComponents())
+		FString Type;
+		if (Actor->IsA(ASphereActor::StaticClass()))
+			Type = "Sphere";
+		else if (Actor->IsA(ACubeActor::StaticClass()))
+			Type = "Cube";
+		else
+			continue;
+
+		FTransform Transform = Actor->GetRootComponent()->GetRelativeTransform();
+		const FVector EulerDegrees = Transform.Rotator().Euler();
+		FString Key = std::to_string(Index);
+
+		Primitives[Key]["Type"] = Type;
+
+		// Material 이름 저장
+		UPrimitiveComponent* PrimComp = Actor->GetComponentByClass<UPrimitiveComponent>();
+		if (PrimComp && PrimComp->GetMaterial() && !PrimComp->GetMaterial()->GetName().empty())
 		{
-			UPrimitiveComponent* PrimComp = dynamic_cast<UPrimitiveComponent*>(Comp);
-			if (!PrimComp)
-				continue;
-
-			FString Type;
-			if (dynamic_cast<USphereComponent*>(PrimComp))
-				Type = "Sphere";
-			else if (dynamic_cast<UCubeComponent*>(PrimComp))
-				Type = "Cube";
-			else
-				continue;
-
-			FTransform Transform = Actor->GetRootComponent()->GetRelativeTransform();
-			const FVector EulerDegrees = Transform.Rotator().Euler();
-			FString Key = std::to_string(Index);
-
-			Primitives[Key]["Type"] = Type;
-			Primitives[Key]["Location"] = {
-				Transform.GetTranslation().X,
-				Transform.GetTranslation().Y,
-				Transform.GetTranslation().Z
-			};
-			Primitives[Key]["Rotation"] = { EulerDegrees.X, EulerDegrees.Y, EulerDegrees.Z };
-			Primitives[Key]["Scale"] = {
-				Transform.GetScale3D().X,
-				Transform.GetScale3D().Y,
-				Transform.GetScale3D().Z
-			};
-
-			++Index;
+			Primitives[Key]["Material"] = PrimComp->GetMaterial()->GetName();
 		}
+
+		Primitives[Key]["Location"] = {
+			Transform.GetTranslation().X,
+			Transform.GetTranslation().Y,
+			Transform.GetTranslation().Z
+		};
+		Primitives[Key]["Rotation"] = { EulerDegrees.X, EulerDegrees.Y, EulerDegrees.Z };
+		Primitives[Key]["Scale"] = {
+			Transform.GetScale3D().X,
+			Transform.GetScale3D().Y,
+			Transform.GetScale3D().Z
+		};
+
+		++Index;
 	}
 	Json["Primitives"] = Primitives;
 
@@ -293,4 +336,52 @@ void UScene::Tick(float DeltaTime)
 	}
 
 	CleanupDestroyedActors();
+}
+
+void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible)
+{
+	for (AActor* Actor : Actors)
+	{
+		if (!Actor || Actor->IsPendingDestroy())
+		{
+			continue;
+		}
+
+		for (UActorComponent* Comp : Actor->GetComponents())
+		{
+			if (!Comp->IsA(UPrimitiveComponent::StaticClass()))
+			{
+				continue;
+			}
+			UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(Comp);
+			if (!PrimComp->GetPrimitive() || !PrimComp->GetPrimitive()->GetMeshData())
+			{
+				continue;
+			}
+
+			if (Frustum.IsVisible(PrimComp->GetWorldBounds()))
+			{
+				OutVisible.push_back(PrimComp);
+			}
+		}
+	}
+}
+
+void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
+{
+	// 1단계: 컬링 — 가시 PrimitiveComponent 수집
+	TArray<UPrimitiveComponent*> VisiblePrimitives;
+	CullVisiblePrimitives(Frustum, VisiblePrimitives);
+
+	// 2단계: 커맨드 수집 — RenderCommand 생성 (GPU 리소스 접근 없음)
+	// SortKey는 Renderer::AddCommand에서 DefaultMaterial 폴백 포함하여 계산
+	for (UPrimitiveComponent* PrimComp : VisiblePrimitives)
+	{
+		FRenderCommand Cmd;
+		Cmd.MeshData = PrimComp->GetPrimitive()->GetMeshData();
+		Cmd.WorldMatrix = PrimComp->GetWorldTransform();
+		Cmd.Material = PrimComp->GetMaterial();
+
+		OutQueue.AddCommand(Cmd);
+	}
 }

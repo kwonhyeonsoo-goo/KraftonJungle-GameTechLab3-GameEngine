@@ -28,10 +28,14 @@ var NAVTREE =
     [ "Classes", "annotated.html", [
       [ "Class List", "annotated.html", "annotated_dup" ],
       [ "Class Index", "classes.html", null ],
+      [ "Class Hierarchy", "hierarchy.html", "hierarchy" ],
       [ "Class Members", "functions.html", [
-        [ "All", "functions.html", null ],
-        [ "Functions", "functions_func.html", null ],
-        [ "Variables", "functions_vars.html", null ]
+        [ "All", "functions.html", "functions_dup" ],
+        [ "Functions", "functions_func.html", "functions_func" ],
+        [ "Variables", "functions_vars.html", null ],
+        [ "Typedefs", "functions_type.html", null ],
+        [ "Enumerator", "functions_eval.html", null ],
+        [ "Related Symbols", "functions_rela.html", null ]
       ] ]
     ] ],
     [ "Files", "files.html", [
@@ -39,6 +43,7 @@ var NAVTREE =
       [ "File Members", "globals.html", [
         [ "All", "globals.html", null ],
         [ "Functions", "globals_func.html", null ],
+        [ "Variables", "globals_vars.html", null ],
         [ "Typedefs", "globals_type.html", null ],
         [ "Enumerations", "globals_enum.html", null ],
         [ "Macros", "globals_defs.html", null ]
@@ -49,7 +54,11 @@ var NAVTREE =
 
 var NAVTREEINDEX =
 [
-"_axis_renderer_8cpp.html"
+"_actor_8cpp.html",
+"_vector_8h.html",
+"class_f_material.html#a00563e4d256210e3b57b98cd2c5822f9",
+"struct_f_material_constant_buffer.html#a4a58d5bc12f4c7305c09280b51159292",
+"struct_f_vector.html#a9ce4d5c5dfa75a96b812022e7f3d538a"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

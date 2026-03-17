@@ -1,12 +1,9 @@
 var searchData=
 [
-  ['raytriangleintersect_0',['RayTriangleIntersect',['../class_c_picker.html#abcd3486e3b72f5e4446f7459a4a3608f',1,'CPicker']]],
-  ['release_1',['Release',['../class_c_renderer.html#a99d8500773d26275a45daed89d9a6071',1,'CRenderer::Release()'],['../class_c_shader_manager.html#a5f5a58d9a6c52df5f8147e6a1297bf12',1,'CShaderManager::Release()']]],
-  ['render_2',['Render',['../class_c_gizmo.html#a330cc5e1f13e36c2ae68b6de7d6e6bb4',1,'CGizmo::Render()'],['../class_c_console_window.html#acc01e27adaf6c6a71af3e43a36b9b7a6',1,'CConsoleWindow::Render()'],['../class_c_property_window.html#a20909f84561fef461e504b13a201288b',1,'CPropertyWindow::Render()'],['../class_c_stat_window.html#a37282a941116f7fbc2b79ee07e2848ca',1,'CStatWindow::Render()']]],
-  ['renderlocalaxis_3',['RenderLocalAxis',['../class_c_axis_renderer.html#a395d35e071f91d103492e9ad23a31f68',1,'CAxisRenderer']]],
-  ['renderworldaxis_4',['RenderWorldAxis',['../class_c_axis_renderer.html#aec784de10631ebcc824c3b3ff1dc1945',1,'CAxisRenderer']]],
-  ['rotate_5',['Rotate',['../class_c_camera.html#a0a89737cd59336138e4c09e8816d5df3',1,'CCamera']]],
-  ['rotationx_6',['RotationX',['../struct_f_matrix.html#ae5af1f05a931400f5d385a05610f8d73',1,'FMatrix']]],
-  ['rotationy_7',['RotationY',['../struct_f_matrix.html#ae64236b1dba6e42578e446420ff40d6c',1,'FMatrix']]],
-  ['rotationz_8',['RotationZ',['../struct_f_matrix.html#a1e3e51d924e10b587aee35e73f843a40',1,'FMatrix']]]
+  ['pickactor_0',['PickActor',['../class_c_picker.html#a658aa6d3497d703f453fff824423805d',1,'CPicker']]],
+  ['postspawninitialize_1',['PostSpawnInitialize',['../class_a_actor.html#ab070735695b6368e0795ccc62057e0ca',1,'AActor::PostSpawnInitialize()'],['../class_a_cube_actor.html#aea6d17d68f181ad35cb39817e6d8c9da',1,'ACubeActor::PostSpawnInitialize()'],['../class_a_sphere_actor.html#a1b6ecbc35632adacd101d21c0e094f4c',1,'ASphereActor::PostSpawnInitialize()']]],
+  ['processinput_2',['ProcessInput',['../class_c_core.html#a3d9d0b06ee592e38197b74fcaa2b62bb',1,'CCore']]],
+  ['processmessage_3',['ProcessMessage',['../class_c_input_manager.html#a9f5e640735099147bd163fb3c69ef122',1,'CInputManager']]],
+  ['projectroot_4',['ProjectRoot',['../class_f_paths.html#a77ca548189fe576289cb6141cccfc276',1,'FPaths']]],
+  ['pumpmessages_5',['PumpMessages',['../class_c_window_application.html#a1ee470ab2ca68a68b706df7016cec1fb',1,'CWindowApplication']]]
 ];

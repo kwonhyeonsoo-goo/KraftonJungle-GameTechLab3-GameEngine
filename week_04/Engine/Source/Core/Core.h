@@ -4,6 +4,9 @@
 #include "Core/FTimer.h"
 #include "Scene/SceneContext.h"
 #include "Scene/SceneTypes.h"
+#include "Renderer/Renderer.h"
+#include "Input/InputManager.h"
+#include <memory>
 #include <functional>
 
 class AActor;
@@ -50,9 +53,6 @@ public:
 
 	void OnResize(int32 Width, int32 Height);
 
-	using FRenderCallback = std::function<void(CRenderer*)>;
-	void SetPostRenderCallback(FRenderCallback InCallback) { PostRenderCallback = std::move(InCallback); }
-
 private:
 	bool CreateSceneContext(FSceneContext& Context, const FString& ContextName, ESceneType SceneType, float AspectRatio, bool bInitializeDefaultScene = true);
 	void DestroySceneContext(FSceneContext& Context);
@@ -67,17 +67,14 @@ private:
 	void Render();
 
 private:
-	CRenderer* Renderer = nullptr;
+	std::unique_ptr<CRenderer> Renderer;
 	CShaderManager* ShaderManager = nullptr;
-	CInputManager* InputManager = nullptr;
+	std::unique_ptr<CInputManager> InputManager;
 	FSceneContext GameSceneContext;
 	FEditorSceneContext EditorSceneContext;
 	TArray<std::unique_ptr<FEditorSceneContext>> PreviewSceneContexts;
 	FSceneContext* ActiveSceneContext = nullptr;
-
 	FRenderCallback PostRenderCallback;
 
 	FTimer Timer;
-	int32 WindowWidth = 0;
-	int32 WindowHeight = 0;
 };

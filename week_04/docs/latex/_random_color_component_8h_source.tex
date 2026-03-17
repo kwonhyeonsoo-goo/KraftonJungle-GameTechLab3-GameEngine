@@ -1,0 +1,32 @@
+\doxysection{Random\+Color\+Component.\+h}
+\hypertarget{_random_color_component_8h_source}{}\label{_random_color_component_8h_source}\index{Engine/Source/Component/RandomColorComponent.h@{Engine/Source/Component/RandomColorComponent.h}}
+\doxymbox{\hyperlink{_random_color_component_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_actor_component_8h}{ActorComponent.h}}"{}}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_u_primitive_component}{UPrimitiveComponent}};}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{_engine_a_p_i_8h_a0697ee40f69dc5dab56d13131f4c4835}{ENGINE\_API}}\ \doxymbox{\hyperlink{class_u_random_color_component_a9c15cea6ad6429a462730f9faab7f230}{URandomColorComponent}}\ :\ \textcolor{keyword}{public}\ \doxymbox{\hyperlink{class_u_actor_component_aa26c01d69f8e0369ab9982d01178277a}{UActorComponent}}}
+\DoxyCodeLine{00008\ \{}
+\DoxyCodeLine{00009\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00010\ \ \ \ \ \textcolor{keyword}{static}\ \doxymbox{\hyperlink{class_u_class}{UClass}}*\ \doxymbox{\hyperlink{class_u_actor_component_a1c3d51c7d6fa156af0d9fa64d8f31caf}{StaticClass}}();}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \ \ \ \ \doxymbox{\hyperlink{class_u_random_color_component_a9c15cea6ad6429a462730f9faab7f230}{URandomColorComponent}}();}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_u_random_color_component_a95fdfb94c61cf3eb9d9c21144dae779c}{SetUpdateInterval}}(\textcolor{keywordtype}{float}\ InInterval)\ \{\ UpdateInterval\ =\ InInterval;\ \}}
+\DoxyCodeLine{00015\ \ \ \ \ \textcolor{keywordtype}{float}\ \doxymbox{\hyperlink{class_u_random_color_component_a1d26f12950e7fa81de30680a71f03999}{GetUpdateInterval}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ UpdateInterval;\ \}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_u_actor_component_aeccc0a96cfa9a5b20f81db38a0e5f785}{BeginPlay}}()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_u_actor_component_a5625885838c86016c5309f7e3f11605e}{Tick}}(\textcolor{keywordtype}{float}\ DeltaTime)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00021\ \ \ \ \ \doxymbox{\hyperlink{class_u_primitive_component}{UPrimitiveComponent}}*\ CachedPrimitive\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keywordtype}{float}\ UpdateInterval\ =\ 1.0f;}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keywordtype}{float}\ ElapsedTime\ =\ 0.0f;}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \ \ \ \ \textcolor{keywordtype}{void}\ ApplyRandomColor();}
+\DoxyCodeLine{00026\ \};}
+
+\end{DoxyCode}

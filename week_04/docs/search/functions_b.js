@@ -1,9 +1,6 @@
 var searchData=
 [
-  ['ondragbegin_0',['OnDragBegin',['../class_c_gizmo.html#a10bccbc203d0240d38a2ff6589a42bd2',1,'CGizmo']]],
-  ['ondragend_1',['OnDragEnd',['../class_c_gizmo.html#a7bf6036d4b8f4e04f775b64b0e4d7773',1,'CGizmo']]],
-  ['ondragupdate_2',['OnDragUpdate',['../class_c_gizmo.html#a972ff5e0f0eadd583b5d46559f0534d0',1,'CGizmo']]],
-  ['operator_2a_3',['operator*',['../struct_f_matrix.html#ab6c7e36fdb7d08c84d4cfb0a3c621262',1,'FMatrix::operator*()'],['../struct_f_vector.html#a16ee9f840835272857af040542696d93',1,'FVector::operator*(float Scalar) const']]],
-  ['operator_2b_4',['operator+',['../struct_f_vector.html#aca935f54cfa4739d20b80f87050b02ca',1,'FVector']]],
-  ['operator_2d_5',['operator-',['../struct_f_vector.html#a8368988bfa4773c816cf65db17156fd8',1,'FVector']]]
+  ['normalize_0',['Normalize',['../struct_f_plane4.html#aa289c3ef6ef75ec9affcecf1e9501e3d',1,'FPlane4::Normalize()'],['../struct_f_quat.html#a20b1175ee99c038924047a6cdc322144',1,'FQuat::Normalize()'],['../struct_f_rotator.html#a696e8c8d1d0cef7168ad7ba3bdcda0e5',1,'FRotator::Normalize()'],['../struct_f_vector.html#a6d71d77f493839c66e1294d744cf8846',1,'FVector::Normalize()']]],
+  ['normalizeaxis_1',['NormalizeAxis',['../struct_f_rotator.html#add462c186e8dc2c76947732bc479440d',1,'FRotator']]],
+  ['normalizerotation_2',['NormalizeRotation',['../struct_f_transform.html#a2d6cf80bac27ef403f4fde948b5359c7',1,'FTransform']]]
 ];

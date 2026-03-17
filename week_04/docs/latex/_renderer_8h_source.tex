@@ -1,31 +1,112 @@
 \doxysection{Renderer.\+h}
-\hypertarget{_renderer_8h_source}{}\label{_renderer_8h_source}\index{Engine/Renderer/Renderer.h@{Engine/Renderer/Renderer.h}}
+\hypertarget{_renderer_8h_source}{}\label{_renderer_8h_source}\index{Engine/Source/Renderer/Renderer.h@{Engine/Source/Renderer/Renderer.h}}
 \doxymbox{\hyperlink{_renderer_8h}{Go to the documentation of this file.}}
 \begin{DoxyCode}{0}
 \DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
 \DoxyCodeLine{00002\ }
-\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <d3d11.h>}}
-\DoxyCodeLine{00004\ }
-\DoxyCodeLine{00005\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_c_renderer_aa90aba692202fafdef765a964cd2a4ca}{CRenderer}}}
-\DoxyCodeLine{00006\ \{}
-\DoxyCodeLine{00007\ \textcolor{keyword}{public}:}
-\DoxyCodeLine{00008\ \ \ \ \ \doxymbox{\hyperlink{class_c_renderer_aa90aba692202fafdef765a964cd2a4ca}{CRenderer}}()\ =\ \textcolor{keywordflow}{default};}
-\DoxyCodeLine{00009\ \ \ \ \ \doxymbox{\hyperlink{class_c_renderer_acb0a66a0d9205fe5f24cec41f0e0b249}{\string~CRenderer}}();}
-\DoxyCodeLine{00010\ }
-\DoxyCodeLine{00011\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_c_renderer_af74ac3df749b2fbaa9d1aa688d5a1517}{Initialize}}(HWND\ Hwnd,\ \textcolor{keywordtype}{int}\ Width,\ \textcolor{keywordtype}{int}\ Height);}
-\DoxyCodeLine{00012\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_a4053138d44033afd1cf9f28852d484c2}{BeginFrame}}();}
-\DoxyCodeLine{00013\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_a5eb509d947050b18dc74607be9523c5e}{EndFrame}}();}
-\DoxyCodeLine{00014\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_a99d8500773d26275a45daed89d9a6071}{Release}}();}
-\DoxyCodeLine{00015\ }
-\DoxyCodeLine{00016\ \ \ \ \ ID3D11Device*\ \doxymbox{\hyperlink{class_c_renderer_a8e7e81b21c823a9d9bea29e7461f49a7}{GetDevice}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Device;\ \}}
-\DoxyCodeLine{00017\ \ \ \ \ ID3D11DeviceContext*\ \doxymbox{\hyperlink{class_c_renderer_a8ea51190b7b6e47b6c0e5c23acb65c7e}{GetDeviceContext}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ DeviceContext;\ \}}
-\DoxyCodeLine{00018\ }
-\DoxyCodeLine{00019\ \textcolor{keyword}{private}:}
-\DoxyCodeLine{00020\ \ \ \ \ ID3D11Device*\ Device\ =\ \textcolor{keyword}{nullptr};}
-\DoxyCodeLine{00021\ \ \ \ \ ID3D11DeviceContext*\ DeviceContext\ =\ \textcolor{keyword}{nullptr};}
-\DoxyCodeLine{00022\ \ \ \ \ IDXGISwapChain*\ SwapChain\ =\ \textcolor{keyword}{nullptr};}
-\DoxyCodeLine{00023\ \ \ \ \ ID3D11RenderTargetView*\ RenderTargetView\ =\ \textcolor{keyword}{nullptr};}
-\DoxyCodeLine{00024\ \ \ \ \ ID3D11DepthStencilView*\ DepthStencilView\ =\ \textcolor{keyword}{nullptr};}
-\DoxyCodeLine{00025\ \};}
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_core_minimal_8h}{CoreMinimal.h}}"{}}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_render_command_8h}{Renderer/RenderCommand.h}}"{}}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ <d3d11.h>}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_shader_manager_8h}{ShaderManager.h}}"{}}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}\doxymbox{\hyperlink{_primitive_vertex_8h}{PrimitiveVertex.h}}"{}}}
+\DoxyCodeLine{00011\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_f_pixel_shader}{FPixelShader}};}
+\DoxyCodeLine{00012\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{class_f_material}{FMaterial}};}
+\DoxyCodeLine{00013\ \textcolor{keyword}{struct\ }\doxymbox{\hyperlink{struct_f_mesh_data}{FMeshData}};}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{keyword}{using\ }\doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}\ =\ std::function<void()>;}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{keyword}{class\ }\doxymbox{\hyperlink{_engine_a_p_i_8h_a0697ee40f69dc5dab56d13131f4c4835}{ENGINE\_API}}\ \doxymbox{\hyperlink{class_c_renderer_aa90aba692202fafdef765a964cd2a4ca}{CRenderer}}}
+\DoxyCodeLine{00018\ \{}
+\DoxyCodeLine{00019\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00020\ \ \ \ \ \doxymbox{\hyperlink{class_c_renderer_aa90aba692202fafdef765a964cd2a4ca}{CRenderer}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00021\ \ \ \ \ \doxymbox{\hyperlink{class_c_renderer_aa90aba692202fafdef765a964cd2a4ca}{\string~CRenderer}}();}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_c_renderer_a170b4d4c44ad5b957a45f92c44685e89}{Initialize}}(HWND\ Hwnd,\ \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}\ Width,\ \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}\ Height);}
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_a4053138d44033afd1cf9f28852d484c2}{BeginFrame}}();}
+\DoxyCodeLine{00025\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_a5eb509d947050b18dc74607be9523c5e}{EndFrame}}();}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_a99d8500773d26275a45daed89d9a6071}{Release}}();}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_c_renderer_a8ff80451571869da016eb7543a162e41}{IsOccluded}}();}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_ae3c40424539974a762bbabf4e028cb9a}{OnResize}}(\doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}\ NewWidth,\ \doxymbox{\hyperlink{_core_types_8h_aae6ad039f09c0676db11bd114136a3fa}{int32}}\ NewHeight);}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_c_renderer_a30fbf79a4ad540af205706485df373fd}{bSwapChainOccluded}}\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{comment}{//\ GUI\ callbacks\ (ImGui\ 등\ 외부\ GUI\ 시스템\ 연동)}}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_a009c03594c88cd9ba836eacb60b3e53c}{SetGUICallbacks}}(}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ \doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}\ InInit,}
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}\ InShutdown,}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ \doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}\ InNewFrame,}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ \doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}\ InRender,}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ \doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}\ InPostPresent\ =\ \textcolor{keyword}{nullptr}}
+\DoxyCodeLine{00038\ \ \ \ \ );}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_a04fa8afddd3877984088fdd44ad8aca7}{SetGUIUpdateCallback}}(\doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}\ InUpdate);}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{comment}{//\ 커맨드\ 수집}}
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_abf1762b8ed5ffb7fa193d68dbb9084eb}{AddCommand}}(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_render_command}{FRenderCommand}}\&\ Command);}
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{comment}{//\ 수집된\ 커맨드\ 정렬\ 후\ 실행}}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_a5284d9279650f0667487db50bf410210}{ExecuteCommands}}();}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_a6ad90299ad25f5911aa689004ebf28c2}{SetViewMatrix}}(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}}\&\ InView);}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_a43a0da4b8eebb73a923b6986a4270069}{SetProjectionMatrix}}(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}}\&\ InProjection);}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{comment}{//\ 라인\ 렌더링}}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_ac583192433693e032a4b0396f05c5cc0}{DrawLine}}(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\&\ Start,\ \textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_vector}{FVector}}\&\ End,\ \textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_vector4}{FVector4}}\&\ Color);}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_ad5d2eb08a723e50472873e3056ed1547}{ExecuteLineCommands}}();}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{comment}{//\ 아웃라인\ 렌더링\ (Stencil\ 기반)}}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keywordtype}{bool}\ \doxymbox{\hyperlink{class_c_renderer_a5ad61ddf360170adfa778ab3855f24d4}{InitOutlineResources}}();}
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keywordtype}{void}\ \doxymbox{\hyperlink{class_c_renderer_a0dffc19dcb93a4d2ca8f52fe51089f1b}{RenderOutline}}(\doxymbox{\hyperlink{struct_f_mesh_data}{FMeshData}}*\ Mesh,\ \textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}}\&\ WorldMatrix,\ \textcolor{keywordtype}{float}\ OutlineScale\ =\ 1.05f);}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ \ \ \ \ \doxymbox{\hyperlink{class_f_material}{FMaterial}}*\ \doxymbox{\hyperlink{class_c_renderer_acb9daa1c6bed28ce68af645a713ce624}{GetDefaultMaterial}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ DefaultMaterial.get();\ \}}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \ \ ID3D11Device*\ \doxymbox{\hyperlink{class_c_renderer_a8e7e81b21c823a9d9bea29e7461f49a7}{GetDevice}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Device;\ \}}
+\DoxyCodeLine{00060\ \ \ \ \ ID3D11DeviceContext*\ \doxymbox{\hyperlink{class_c_renderer_a8ea51190b7b6e47b6c0e5c23acb65c7e}{GetDeviceContext}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ DeviceContext;\ \}}
+\DoxyCodeLine{00061\ \ \ \ \ ID3D11RenderTargetView*\ \doxymbox{\hyperlink{class_c_renderer_a9d4032d7430b09a52ae4dbf167994987}{GetRenderTargetView}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ RenderTargetView;\ \}}
+\DoxyCodeLine{00062\ \ \ \ \ IDXGISwapChain*\ \doxymbox{\hyperlink{class_c_renderer_a569a78c680b7d2e9407c278c1d37f1b1}{GetSwapChain}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ SwapChain;\ \};}
+\DoxyCodeLine{00063\ \ \ \ \ HWND\ \doxymbox{\hyperlink{class_c_renderer_ac7c0c9d66fb6e5fcded879c8d553d617}{GetHwnd}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Hwnd;\ \}}
+\DoxyCodeLine{00064\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keywordtype}{bool}\ CreateConstantBuffers();}
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{keywordtype}{void}\ UpdateFrameConstantBuffer();}
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keywordtype}{void}\ UpdateObjectConstantBuffer(\textcolor{keyword}{const}\ \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}}\&\ WorldMatrix);}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \ \ \ \ HWND\ Hwnd\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00070\ \ \ \ \ ID3D11Device*\ Device\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00071\ \ \ \ \ ID3D11DeviceContext*\ DeviceContext\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00072\ \ \ \ \ IDXGISwapChain*\ SwapChain\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00073\ \ \ \ \ ID3D11RenderTargetView*\ RenderTargetView\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00074\ \ \ \ \ ID3D11DepthStencilView*\ DepthStencilView\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00075\ \ \ \ \ ID3D11Buffer*\ FrameConstantBuffer\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00076\ \ \ \ \ ID3D11Buffer*\ ObjectConstantBuffer\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00077\ \ \ \ \ \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}}\ ViewMatrix;}
+\DoxyCodeLine{00078\ \ \ \ \ \doxymbox{\hyperlink{struct_f_matrix}{FMatrix}}\ ProjectionMatrix;}
+\DoxyCodeLine{00079\ \ \ \ \ ID3D11RasterizerState*\ RasterizerState\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00080\ \ \ \ \ D3D11\_VIEWPORT\ Viewport\ =\ \{\};}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \ \ \ \ \doxymbox{\hyperlink{_array_8h_a5a42cebdcc8427a3c8b52ef4276de507}{TArray<FRenderCommand>}}\ CommandList;}
+\DoxyCodeLine{00083\ \ \ \ \ \doxymbox{\hyperlink{_array_8h_a5a42cebdcc8427a3c8b52ef4276de507}{TArray<FPrimitiveVertex>}}\ LineVertices;}
+\DoxyCodeLine{00084\ \ \ \ \ ID3D11Buffer*\ LineVertexBuffer\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00085\ \ \ \ \ ID3D11DepthStencilState*\ LineDepthState\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{comment}{//\ 아웃라인\ 리소스}}
+\DoxyCodeLine{00088\ \ \ \ \ ID3D11DepthStencilState*\ StencilWriteState\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00089\ \ \ \ \ ID3D11DepthStencilState*\ StencilTestState\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00090\ \ \ \ \ std::shared\_ptr<FPixelShader>\ OutlinePS;}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{comment}{//\ GUI\ callbacks}}
+\DoxyCodeLine{00093\ \ \ \ \ \doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}\ GUIInit;}
+\DoxyCodeLine{00094\ \ \ \ \ \doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}\ GUIShutdown;}
+\DoxyCodeLine{00095\ \ \ \ \ \doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}\ GUINewFrame;}
+\DoxyCodeLine{00096\ \ \ \ \ \doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}\ GUIUpdate;}
+\DoxyCodeLine{00097\ \ \ \ \ \doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}\ GUIRender;}
+\DoxyCodeLine{00098\ \ \ \ \ \doxymbox{\hyperlink{_renderer_8h_a56d2a4c2b644d6edf52ffe9754e5cae3}{FGUICallback}}\ GUIPostPresent;}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \ \ \textcolor{comment}{//\ 기본\ Material\ (셰이더\ 미지정\ 시\ 사용)}}
+\DoxyCodeLine{00101\ \ \ \ \ std::shared\_ptr<FMaterial>\ DefaultMaterial;}
+\DoxyCodeLine{00102\ }
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{comment}{//\ 매\ 프레임\ 외부에서\ 설정}}
+\DoxyCodeLine{00104\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00105\ \ \ \ \ \doxymbox{\hyperlink{class_c_shader_manager}{CShaderManager}}\ \doxymbox{\hyperlink{class_c_renderer_a62dcea5dbecc9421e09927c6dfc6b9a1}{ShaderManager}};}
+\DoxyCodeLine{00106\ \};}
 
 \end{DoxyCode}

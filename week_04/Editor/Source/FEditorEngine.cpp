@@ -4,6 +4,7 @@
 #include "Actor/Actor.h"
 #include "Camera/Camera.h"
 #include "Component/CubeComponent.h"
+#include "Platform/Windows/WindowApplication.h"
 #include "Debug/EngineLog.h"
 
 #include "imgui_impl_win32.h"
@@ -56,13 +57,13 @@ bool FEditorEngine::Initialize(HINSTANCE hInstance)
 
 void FEditorEngine::Startup()
 {
-	EditorUI.Initialize(Core);
-	EditorUI.SetupWindow(MainWindow);
+	EditorUI.Initialize(Core.get());
+	EditorUI.SetupWindow(App->GetMainWindow());
 	InitializeDefaultPreviewScene(Core);
 
 	FEngineLog::Get().SetCallback([this](const char* Msg)
 		{
 			EditorUI.GetConsole().AddLog("%s", Msg);
 		});
-	UE_LOG("Engine initialized");
+	UE_LOG("EditorEngine initialized");
 }

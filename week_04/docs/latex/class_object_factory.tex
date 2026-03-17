@@ -1,0 +1,68 @@
+\doxysection{Object\+Factory Class Reference}
+\hypertarget{class_object_factory}{}\label{class_object_factory}\index{ObjectFactory@{ObjectFactory}}
+
+
+{\ttfamily \+\#include $<$Object\+Factory.\+h$>$}
+
+\doxysubsubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+using \doxymbox{\hyperlink{class_object_factory_ae900ca9bbb0e63c6b016ad08ba40b6f6}{Create\+Func}} = std::\+function$<$std::\+shared\+\_\+ptr$<$\doxymbox{\hyperlink{class_u_object}{UObject}}$>$(\doxymbox{\hyperlink{_core_types_8h_abd01e8e67e3d94cab04ecaaf4f85ac1b}{uint32}}, size\+\_\+t)$>$
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static auto \& \doxymbox{\hyperlink{class_object_factory_a9fa0b70ff6c04f9636b6fdcb4f85b95a}{Registry}} ()
+\item 
+{\footnotesize template$<$typename TObject$>$ }\\static void \doxymbox{\hyperlink{class_object_factory_ac3328f514387f8c2f6607e29215cc750}{Register\+Type}} (size\+\_\+t type\+Id)
+\item 
+static std::\+shared\+\_\+ptr$<$ \doxymbox{\hyperlink{class_u_object}{UObject}} $>$ \doxymbox{\hyperlink{class_object_factory_aad021ef4339c7ba3edcfa2d091b4e759}{Create\+Object}} (\doxymbox{\hyperlink{_core_types_8h_abd01e8e67e3d94cab04ecaaf4f85ac1b}{uint32}} uuid, size\+\_\+t type\+Id)
+\item 
+static \doxymbox{\hyperlink{_core_types_8h_abd01e8e67e3d94cab04ecaaf4f85ac1b}{uint32}} \doxymbox{\hyperlink{class_object_factory_a6177ada55c040ea0890dc81e9f293267}{Generate\+UUID}} ()
+\end{DoxyCompactItemize}
+
+
+\label{doc-typedef-members}
+\Hypertarget{class_object_factory_doc-typedef-members}
+\doxysubsection{Member Typedef Documentation}
+\Hypertarget{class_object_factory_ae900ca9bbb0e63c6b016ad08ba40b6f6}\index{ObjectFactory@{ObjectFactory}!CreateFunc@{CreateFunc}}
+\index{CreateFunc@{CreateFunc}!ObjectFactory@{ObjectFactory}}
+\doxysubsubsection{\texorpdfstring{CreateFunc}{CreateFunc}}
+{\footnotesize\ttfamily \label{class_object_factory_ae900ca9bbb0e63c6b016ad08ba40b6f6} 
+using \doxymbox{\hyperlink{class_object_factory_ae900ca9bbb0e63c6b016ad08ba40b6f6}{Object\+Factory::\+\+Create\+Func}} = std::\+function$<$std::\+shared\+\_\+ptr$<$\doxymbox{\hyperlink{class_u_object}{UObject}}$>$(\doxymbox{\hyperlink{_core_types_8h_abd01e8e67e3d94cab04ecaaf4f85ac1b}{uint32}}, size\+\_\+t)$>$}
+
+
+
+\label{doc-func-members}
+\Hypertarget{class_object_factory_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_object_factory_aad021ef4339c7ba3edcfa2d091b4e759}\index{ObjectFactory@{ObjectFactory}!CreateObject@{CreateObject}}
+\index{CreateObject@{CreateObject}!ObjectFactory@{ObjectFactory}}
+\doxysubsubsection{\texorpdfstring{CreateObject()}{CreateObject()}}
+{\footnotesize\ttfamily \label{class_object_factory_aad021ef4339c7ba3edcfa2d091b4e759} 
+std::\+shared\+\_\+ptr$<$ \doxymbox{\hyperlink{class_u_object}{UObject}} $>$ Object\+Factory::\+\+Create\+Object (\begin{DoxyParamCaption}\item[{\doxymbox{\hyperlink{_core_types_8h_abd01e8e67e3d94cab04ecaaf4f85ac1b}{uint32}}}]{uuid}{, }\item[{size\+\_\+t}]{type\+Id}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+\Hypertarget{class_object_factory_a6177ada55c040ea0890dc81e9f293267}\index{ObjectFactory@{ObjectFactory}!GenerateUUID@{GenerateUUID}}
+\index{GenerateUUID@{GenerateUUID}!ObjectFactory@{ObjectFactory}}
+\doxysubsubsection{\texorpdfstring{GenerateUUID()}{GenerateUUID()}}
+{\footnotesize\ttfamily \label{class_object_factory_a6177ada55c040ea0890dc81e9f293267} 
+\doxymbox{\hyperlink{_core_types_8h_abd01e8e67e3d94cab04ecaaf4f85ac1b}{uint32}} Object\+Factory::\+\+Generate\+UUID (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+\Hypertarget{class_object_factory_ac3328f514387f8c2f6607e29215cc750}\index{ObjectFactory@{ObjectFactory}!RegisterType@{RegisterType}}
+\index{RegisterType@{RegisterType}!ObjectFactory@{ObjectFactory}}
+\doxysubsubsection{\texorpdfstring{RegisterType()}{RegisterType()}}
+{\footnotesize\ttfamily \label{class_object_factory_ac3328f514387f8c2f6607e29215cc750} 
+template$<$typename TObject$>$ \\
+void Object\+Factory::\+\+Register\+Type (\begin{DoxyParamCaption}\item[{size\+\_\+t}]{type\+Id}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+\Hypertarget{class_object_factory_a9fa0b70ff6c04f9636b6fdcb4f85b95a}\index{ObjectFactory@{ObjectFactory}!Registry@{Registry}}
+\index{Registry@{Registry}!ObjectFactory@{ObjectFactory}}
+\doxysubsubsection{\texorpdfstring{Registry()}{Registry()}}
+{\footnotesize\ttfamily \label{class_object_factory_a9fa0b70ff6c04f9636b6fdcb4f85b95a} 
+auto \& Object\+Factory::\+\+Registry (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+The documentation for this class was generated from the following file:\+\begin{DoxyCompactItemize}
+\item 
+Engine/\+\+Source/\+\+Object/\+\doxymbox{\hyperlink{_object_factory_8h}{Object\+Factory.\+h}}\end{DoxyCompactItemize}

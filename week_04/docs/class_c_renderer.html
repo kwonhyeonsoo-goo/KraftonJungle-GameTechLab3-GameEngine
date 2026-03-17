@@ -98,12 +98,33 @@ $(function(){initNavTree('class_c_renderer.html','','class_c_renderer-members');
 Public Member Functions</h2></td></tr>
 <tr class="memitem:aa90aba692202fafdef765a964cd2a4ca" id="r_aa90aba692202fafdef765a964cd2a4ca"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#aa90aba692202fafdef765a964cd2a4ca">CRenderer</a> ()=default</td></tr>
 <tr class="memitem:acb0a66a0d9205fe5f24cec41f0e0b249" id="r_acb0a66a0d9205fe5f24cec41f0e0b249"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#acb0a66a0d9205fe5f24cec41f0e0b249">~CRenderer</a> ()</td></tr>
-<tr class="memitem:af74ac3df749b2fbaa9d1aa688d5a1517" id="r_af74ac3df749b2fbaa9d1aa688d5a1517"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#af74ac3df749b2fbaa9d1aa688d5a1517">Initialize</a> (HWND Hwnd, int Width, int Height)</td></tr>
+<tr class="memitem:a170b4d4c44ad5b957a45f92c44685e89" id="r_a170b4d4c44ad5b957a45f92c44685e89"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a170b4d4c44ad5b957a45f92c44685e89">Initialize</a> (HWND Hwnd, <a class="el" href="_core_types_8h.html#aae6ad039f09c0676db11bd114136a3fa">int32</a> Width, <a class="el" href="_core_types_8h.html#aae6ad039f09c0676db11bd114136a3fa">int32</a> Height)</td></tr>
 <tr class="memitem:a4053138d44033afd1cf9f28852d484c2" id="r_a4053138d44033afd1cf9f28852d484c2"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a4053138d44033afd1cf9f28852d484c2">BeginFrame</a> ()</td></tr>
 <tr class="memitem:a5eb509d947050b18dc74607be9523c5e" id="r_a5eb509d947050b18dc74607be9523c5e"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a5eb509d947050b18dc74607be9523c5e">EndFrame</a> ()</td></tr>
 <tr class="memitem:a99d8500773d26275a45daed89d9a6071" id="r_a99d8500773d26275a45daed89d9a6071"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a99d8500773d26275a45daed89d9a6071">Release</a> ()</td></tr>
+<tr class="memitem:a8ff80451571869da016eb7543a162e41" id="r_a8ff80451571869da016eb7543a162e41"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a8ff80451571869da016eb7543a162e41">IsOccluded</a> ()</td></tr>
+<tr class="memitem:ae3c40424539974a762bbabf4e028cb9a" id="r_ae3c40424539974a762bbabf4e028cb9a"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#ae3c40424539974a762bbabf4e028cb9a">OnResize</a> (<a class="el" href="_core_types_8h.html#aae6ad039f09c0676db11bd114136a3fa">int32</a> NewWidth, <a class="el" href="_core_types_8h.html#aae6ad039f09c0676db11bd114136a3fa">int32</a> NewHeight)</td></tr>
+<tr class="memitem:a009c03594c88cd9ba836eacb60b3e53c" id="r_a009c03594c88cd9ba836eacb60b3e53c"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a009c03594c88cd9ba836eacb60b3e53c">SetGUICallbacks</a> (<a class="el" href="_renderer_8h.html#a56d2a4c2b644d6edf52ffe9754e5cae3">FGUICallback</a> InInit, <a class="el" href="_renderer_8h.html#a56d2a4c2b644d6edf52ffe9754e5cae3">FGUICallback</a> InShutdown, <a class="el" href="_renderer_8h.html#a56d2a4c2b644d6edf52ffe9754e5cae3">FGUICallback</a> InNewFrame, <a class="el" href="_renderer_8h.html#a56d2a4c2b644d6edf52ffe9754e5cae3">FGUICallback</a> InRender, <a class="el" href="_renderer_8h.html#a56d2a4c2b644d6edf52ffe9754e5cae3">FGUICallback</a> InPostPresent=nullptr)</td></tr>
+<tr class="memitem:a04fa8afddd3877984088fdd44ad8aca7" id="r_a04fa8afddd3877984088fdd44ad8aca7"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a04fa8afddd3877984088fdd44ad8aca7">SetGUIUpdateCallback</a> (<a class="el" href="_renderer_8h.html#a56d2a4c2b644d6edf52ffe9754e5cae3">FGUICallback</a> InUpdate)</td></tr>
+<tr class="memitem:abf1762b8ed5ffb7fa193d68dbb9084eb" id="r_abf1762b8ed5ffb7fa193d68dbb9084eb"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#abf1762b8ed5ffb7fa193d68dbb9084eb">AddCommand</a> (const <a class="el" href="struct_f_render_command.html">FRenderCommand</a> &amp;Command)</td></tr>
+<tr class="memitem:a5284d9279650f0667487db50bf410210" id="r_a5284d9279650f0667487db50bf410210"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a5284d9279650f0667487db50bf410210">ExecuteCommands</a> ()</td></tr>
+<tr class="memitem:a6ad90299ad25f5911aa689004ebf28c2" id="r_a6ad90299ad25f5911aa689004ebf28c2"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a6ad90299ad25f5911aa689004ebf28c2">SetViewMatrix</a> (const <a class="el" href="struct_f_matrix.html">FMatrix</a> &amp;InView)</td></tr>
+<tr class="memitem:a43a0da4b8eebb73a923b6986a4270069" id="r_a43a0da4b8eebb73a923b6986a4270069"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a43a0da4b8eebb73a923b6986a4270069">SetProjectionMatrix</a> (const <a class="el" href="struct_f_matrix.html">FMatrix</a> &amp;InProjection)</td></tr>
+<tr class="memitem:ac583192433693e032a4b0396f05c5cc0" id="r_ac583192433693e032a4b0396f05c5cc0"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#ac583192433693e032a4b0396f05c5cc0">DrawLine</a> (const <a class="el" href="struct_f_vector.html">FVector</a> &amp;Start, const <a class="el" href="struct_f_vector.html">FVector</a> &amp;End, const <a class="el" href="struct_f_vector4.html">FVector4</a> &amp;Color)</td></tr>
+<tr class="memitem:ad5d2eb08a723e50472873e3056ed1547" id="r_ad5d2eb08a723e50472873e3056ed1547"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#ad5d2eb08a723e50472873e3056ed1547">ExecuteLineCommands</a> ()</td></tr>
+<tr class="memitem:a5ad61ddf360170adfa778ab3855f24d4" id="r_a5ad61ddf360170adfa778ab3855f24d4"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a5ad61ddf360170adfa778ab3855f24d4">InitOutlineResources</a> ()</td></tr>
+<tr class="memitem:a0dffc19dcb93a4d2ca8f52fe51089f1b" id="r_a0dffc19dcb93a4d2ca8f52fe51089f1b"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a0dffc19dcb93a4d2ca8f52fe51089f1b">RenderOutline</a> (<a class="el" href="struct_f_mesh_data.html">FMeshData</a> *Mesh, const <a class="el" href="struct_f_matrix.html">FMatrix</a> &amp;WorldMatrix, float OutlineScale=1.05f)</td></tr>
+<tr class="memitem:acb9daa1c6bed28ce68af645a713ce624" id="r_acb9daa1c6bed28ce68af645a713ce624"><td class="memItemLeft"><a class="el" href="class_f_material.html">FMaterial</a> *&#160;</td><td class="memItemRight"><a class="el" href="#acb9daa1c6bed28ce68af645a713ce624">GetDefaultMaterial</a> () const</td></tr>
 <tr class="memitem:a8e7e81b21c823a9d9bea29e7461f49a7" id="r_a8e7e81b21c823a9d9bea29e7461f49a7"><td class="memItemLeft">ID3D11Device *&#160;</td><td class="memItemRight"><a class="el" href="#a8e7e81b21c823a9d9bea29e7461f49a7">GetDevice</a> () const</td></tr>
 <tr class="memitem:a8ea51190b7b6e47b6c0e5c23acb65c7e" id="r_a8ea51190b7b6e47b6c0e5c23acb65c7e"><td class="memItemLeft">ID3D11DeviceContext *&#160;</td><td class="memItemRight"><a class="el" href="#a8ea51190b7b6e47b6c0e5c23acb65c7e">GetDeviceContext</a> () const</td></tr>
+<tr class="memitem:a9d4032d7430b09a52ae4dbf167994987" id="r_a9d4032d7430b09a52ae4dbf167994987"><td class="memItemLeft">ID3D11RenderTargetView *&#160;</td><td class="memItemRight"><a class="el" href="#a9d4032d7430b09a52ae4dbf167994987">GetRenderTargetView</a> () const</td></tr>
+<tr class="memitem:a569a78c680b7d2e9407c278c1d37f1b1" id="r_a569a78c680b7d2e9407c278c1d37f1b1"><td class="memItemLeft">IDXGISwapChain *&#160;</td><td class="memItemRight"><a class="el" href="#a569a78c680b7d2e9407c278c1d37f1b1">GetSwapChain</a> () const</td></tr>
+<tr class="memitem:ac7c0c9d66fb6e5fcded879c8d553d617" id="r_ac7c0c9d66fb6e5fcded879c8d553d617"><td class="memItemLeft">HWND&#160;</td><td class="memItemRight"><a class="el" href="#ac7c0c9d66fb6e5fcded879c8d553d617">GetHwnd</a> () const</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
+Public Attributes</h2></td></tr>
+<tr class="memitem:a30fbf79a4ad540af205706485df373fd" id="r_a30fbf79a4ad540af205706485df373fd"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a30fbf79a4ad540af205706485df373fd">bSwapChainOccluded</a> = false</td></tr>
+<tr class="memitem:a62dcea5dbecc9421e09927c6dfc6b9a1" id="r_a62dcea5dbecc9421e09927c6dfc6b9a1"><td class="memItemLeft"><a class="el" href="class_c_shader_manager.html">CShaderManager</a>&#160;</td><td class="memItemRight"><a class="el" href="#a62dcea5dbecc9421e09927c6dfc6b9a1">ShaderManager</a></td></tr>
 </table>
 <a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="aa90aba692202fafdef765a964cd2a4ca" name="aa90aba692202fafdef765a964cd2a4ca"></a>
@@ -149,6 +170,23 @@ Public Member Functions</h2></td></tr>
 </div>
 </div>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
+<a id="abf1762b8ed5ffb7fa193d68dbb9084eb" name="abf1762b8ed5ffb7fa193d68dbb9084eb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abf1762b8ed5ffb7fa193d68dbb9084eb">&#9670;&#160;</a></span>AddCommand()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CRenderer::AddCommand </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_f_render_command.html">FRenderCommand</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>Command</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a4053138d44033afd1cf9f28852d484c2" name="a4053138d44033afd1cf9f28852d484c2"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a4053138d44033afd1cf9f28852d484c2">&#9670;&#160;</a></span>BeginFrame()</h2>
 
@@ -160,6 +198,32 @@ Public Member Functions</h2></td></tr>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ac583192433693e032a4b0396f05c5cc0" name="ac583192433693e032a4b0396f05c5cc0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac583192433693e032a4b0396f05c5cc0">&#9670;&#160;</a></span>DrawLine()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CRenderer::DrawLine </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>Start</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector.html">FVector</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>End</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="struct_f_vector4.html">FVector4</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>Color</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -179,6 +243,65 @@ Public Member Functions</h2></td></tr>
           <td></td>
         </tr>
       </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a5284d9279650f0667487db50bf410210" name="a5284d9279650f0667487db50bf410210"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5284d9279650f0667487db50bf410210">&#9670;&#160;</a></span>ExecuteCommands()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CRenderer::ExecuteCommands </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ad5d2eb08a723e50472873e3056ed1547" name="ad5d2eb08a723e50472873e3056ed1547"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad5d2eb08a723e50472873e3056ed1547">&#9670;&#160;</a></span>ExecuteLineCommands()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CRenderer::ExecuteLineCommands </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="acb9daa1c6bed28ce68af645a713ce624" name="acb9daa1c6bed28ce68af645a713ce624"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acb9daa1c6bed28ce68af645a713ce624">&#9670;&#160;</a></span>GetDefaultMaterial()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="class_f_material.html">FMaterial</a> * CRenderer::GetDefaultMaterial </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 </div>
@@ -233,8 +356,83 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="af74ac3df749b2fbaa9d1aa688d5a1517" name="af74ac3df749b2fbaa9d1aa688d5a1517"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af74ac3df749b2fbaa9d1aa688d5a1517">&#9670;&#160;</a></span>Initialize()</h2>
+<a id="ac7c0c9d66fb6e5fcded879c8d553d617" name="ac7c0c9d66fb6e5fcded879c8d553d617"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac7c0c9d66fb6e5fcded879c8d553d617">&#9670;&#160;</a></span>GetHwnd()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">HWND CRenderer::GetHwnd </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a9d4032d7430b09a52ae4dbf167994987" name="a9d4032d7430b09a52ae4dbf167994987"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9d4032d7430b09a52ae4dbf167994987">&#9670;&#160;</a></span>GetRenderTargetView()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">ID3D11RenderTargetView * CRenderer::GetRenderTargetView </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a569a78c680b7d2e9407c278c1d37f1b1" name="a569a78c680b7d2e9407c278c1d37f1b1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a569a78c680b7d2e9407c278c1d37f1b1">&#9670;&#160;</a></span>GetSwapChain()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">IDXGISwapChain * CRenderer::GetSwapChain </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a170b4d4c44ad5b957a45f92c44685e89" name="a170b4d4c44ad5b957a45f92c44685e89"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a170b4d4c44ad5b957a45f92c44685e89">&#9670;&#160;</a></span>Initialize()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -247,12 +445,67 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>Width</em></span>, </td>
+          <td class="paramtype"><a class="el" href="_core_types_8h.html#aae6ad039f09c0676db11bd114136a3fa">int32</a></td>          <td class="paramname"><span class="paramname"><em>Width</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>Height</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="_core_types_8h.html#aae6ad039f09c0676db11bd114136a3fa">int32</a></td>          <td class="paramname"><span class="paramname"><em>Height</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a5ad61ddf360170adfa778ab3855f24d4" name="a5ad61ddf360170adfa778ab3855f24d4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5ad61ddf360170adfa778ab3855f24d4">&#9670;&#160;</a></span>InitOutlineResources()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool CRenderer::InitOutlineResources </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8ff80451571869da016eb7543a162e41" name="a8ff80451571869da016eb7543a162e41"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8ff80451571869da016eb7543a162e41">&#9670;&#160;</a></span>IsOccluded()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool CRenderer::IsOccluded </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ae3c40424539974a762bbabf4e028cb9a" name="ae3c40424539974a762bbabf4e028cb9a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae3c40424539974a762bbabf4e028cb9a">&#9670;&#160;</a></span>OnResize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CRenderer::OnResize </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="_core_types_8h.html#aae6ad039f09c0676db11bd114136a3fa">int32</a></td>          <td class="paramname"><span class="paramname"><em>NewWidth</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="_core_types_8h.html#aae6ad039f09c0676db11bd114136a3fa">int32</a></td>          <td class="paramname"><span class="paramname"><em>NewHeight</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -276,9 +529,151 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a0dffc19dcb93a4d2ca8f52fe51089f1b" name="a0dffc19dcb93a4d2ca8f52fe51089f1b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0dffc19dcb93a4d2ca8f52fe51089f1b">&#9670;&#160;</a></span>RenderOutline()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CRenderer::RenderOutline </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="struct_f_mesh_data.html">FMeshData</a> *</td>          <td class="paramname"><span class="paramname"><em>Mesh</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="struct_f_matrix.html">FMatrix</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>WorldMatrix</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>OutlineScale</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1.05f</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a009c03594c88cd9ba836eacb60b3e53c" name="a009c03594c88cd9ba836eacb60b3e53c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a009c03594c88cd9ba836eacb60b3e53c">&#9670;&#160;</a></span>SetGUICallbacks()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CRenderer::SetGUICallbacks </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="_renderer_8h.html#a56d2a4c2b644d6edf52ffe9754e5cae3">FGUICallback</a></td>          <td class="paramname"><span class="paramname"><em>InInit</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="_renderer_8h.html#a56d2a4c2b644d6edf52ffe9754e5cae3">FGUICallback</a></td>          <td class="paramname"><span class="paramname"><em>InShutdown</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="_renderer_8h.html#a56d2a4c2b644d6edf52ffe9754e5cae3">FGUICallback</a></td>          <td class="paramname"><span class="paramname"><em>InNewFrame</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="_renderer_8h.html#a56d2a4c2b644d6edf52ffe9754e5cae3">FGUICallback</a></td>          <td class="paramname"><span class="paramname"><em>InRender</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="_renderer_8h.html#a56d2a4c2b644d6edf52ffe9754e5cae3">FGUICallback</a></td>          <td class="paramname"><span class="paramname"><em>InPostPresent</em></span><span class="paramdefsep"> = </span><span class="paramdefval">nullptr</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a04fa8afddd3877984088fdd44ad8aca7" name="a04fa8afddd3877984088fdd44ad8aca7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a04fa8afddd3877984088fdd44ad8aca7">&#9670;&#160;</a></span>SetGUIUpdateCallback()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CRenderer::SetGUIUpdateCallback </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="_renderer_8h.html#a56d2a4c2b644d6edf52ffe9754e5cae3">FGUICallback</a></td>          <td class="paramname"><span class="paramname"><em>InUpdate</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a43a0da4b8eebb73a923b6986a4270069" name="a43a0da4b8eebb73a923b6986a4270069"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a43a0da4b8eebb73a923b6986a4270069">&#9670;&#160;</a></span>SetProjectionMatrix()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CRenderer::SetProjectionMatrix </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_f_matrix.html">FMatrix</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>InProjection</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a6ad90299ad25f5911aa689004ebf28c2" name="a6ad90299ad25f5911aa689004ebf28c2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6ad90299ad25f5911aa689004ebf28c2">&#9670;&#160;</a></span>SetViewMatrix()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CRenderer::SetViewMatrix </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_f_matrix.html">FMatrix</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>InView</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
+<a id="a30fbf79a4ad540af205706485df373fd" name="a30fbf79a4ad540af205706485df373fd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a30fbf79a4ad540af205706485df373fd">&#9670;&#160;</a></span>bSwapChainOccluded</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool CRenderer::bSwapChainOccluded = false</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a62dcea5dbecc9421e09927c6dfc6b9a1" name="a62dcea5dbecc9421e09927c6dfc6b9a1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a62dcea5dbecc9421e09927c6dfc6b9a1">&#9670;&#160;</a></span>ShaderManager</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="class_c_shader_manager.html">CShaderManager</a> CRenderer::ShaderManager</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <hr/>The documentation for this class was generated from the following files:<ul>
-<li>Engine/Renderer/<a class="el" href="_renderer_8h_source.html">Renderer.h</a></li>
-<li>Engine/Renderer/<a class="el" href="_renderer_8cpp.html">Renderer.cpp</a></li>
+<li>Engine/Source/Renderer/<a class="el" href="_renderer_8h_source.html">Renderer.h</a></li>
+<li>Engine/Source/Renderer/<a class="el" href="_renderer_8cpp.html">Renderer.cpp</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->
