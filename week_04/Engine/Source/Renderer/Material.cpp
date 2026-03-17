@@ -106,23 +106,6 @@ void FMaterial::RegisterParameter(const FString& ParamName, int32 BufferIndex, u
 	ParameterMap[ParamName] = { BufferIndex, Offset, Size };
 }
 
-bool FMaterial::SetScalarParameter(const FString& ParamName, float Value)
-{
-	return SetParameterData(ParamName, &Value, sizeof(float));
-}
-
-bool FMaterial::SetVectorParameter(const FString& ParamName, const FVector4& Value)
-{
-	float Data[4] = { Value.X, Value.Y, Value.Z, Value.W };
-	return SetParameterData(ParamName, Data, sizeof(Data));
-}
-
-bool FMaterial::SetVector3Parameter(const FString& ParamName, const FVector& Value)
-{
-	float Data[3] = { Value.X, Value.Y, Value.Z };
-	return SetParameterData(ParamName, Data, sizeof(Data));
-}
-
 bool FMaterial::SetParameterData(const FString& ParamName, const void* Data, uint32 DataSize)
 {
 	auto It = ParameterMap.find(ParamName);
@@ -145,6 +128,66 @@ bool FMaterial::SetParameterData(const FString& ParamName, const void* Data, uin
 
 	CB->SetData(Data, DataSize, Info.Offset);
 	return true;
+}
+
+std::unique_ptr<FDynamicMaterial> FMaterial::CreateDynamicMaterial() const
+{
+	// 기존 GPU 버퍼에서 Device 획득
+	ID3D11Device* Device = nullptr;
+	for (const auto& CB : ConstantBuffers)
+	{
+		if (CB.GPUBuffer)
+		{
+			CB.GPUBuffer->GetDevice(&Device);
+			break;
+		}
+	}
+	if (!Device)
+	{
+		return nullptr;
+	}
+
+	auto Dynamic = std::make_unique<FDynamicMaterial>();
+	Dynamic->Name = Name + "_Dynamic";
+	Dynamic->VertexShader = VertexShader;
+	Dynamic->PixelShader = PixelShader;
+	Dynamic->ParameterMap = ParameterMap;
+
+	for (const auto& CB : ConstantBuffers)
+	{
+		FMaterialConstantBuffer NewCB;
+		if (NewCB.Create(Device, CB.Size))
+		{
+			if (CB.CPUData && NewCB.CPUData)
+			{
+				memcpy(NewCB.CPUData, CB.CPUData, CB.Size);
+				NewCB.bDirty = true;
+			}
+		}
+		Dynamic->ConstantBuffers.push_back(std::move(NewCB));
+	}
+
+	Device->Release();
+	return Dynamic;
+}
+
+// ─── FDynamicMaterial ───
+
+bool FDynamicMaterial::SetScalarParameter(const FString& ParamName, float Value)
+{
+	return SetParameterData(ParamName, &Value, sizeof(float));
+}
+
+bool FDynamicMaterial::SetVectorParameter(const FString& ParamName, const FVector4& Value)
+{
+	float Data[4] = { Value.X, Value.Y, Value.Z, Value.W };
+	return SetParameterData(ParamName, Data, sizeof(Data));
+}
+
+bool FDynamicMaterial::SetVector3Parameter(const FString& ParamName, const FVector& Value)
+{
+	float Data[3] = { Value.X, Value.Y, Value.Z };
+	return SetParameterData(ParamName, Data, sizeof(Data));
 }
 
 void FMaterial::Bind(ID3D11DeviceContext* DeviceContext)

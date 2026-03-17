@@ -71,11 +71,12 @@ struct ENGINE_API FMaterialConstantBuffer
 };
 
 // Material: VS/PS 셰이더 조합 + 추가 상수 버퍼 (b2+)
+// 생성 후 파라미터 값 변경 불가 (읽기 전용). 런타임 변경이 필요하면 FDynamicMaterial 사용.
 class ENGINE_API FMaterial
 {
 public:
 	FMaterial() : SortId(NextSortId++) {}
-	~FMaterial();
+	virtual ~FMaterial();
 
 	FMaterial(const FMaterial&) = delete;
 	FMaterial& operator=(const FMaterial&) = delete;
@@ -94,8 +95,6 @@ public:
 	FPixelShader* GetPixelShader() const { return PixelShader.get(); }
 
 	// 상수 버퍼 슬롯 추가 (b2, b3, ... 순서대로)
-	// InSize: 상수 버퍼 크기 (16바이트 정렬 필수)
-	// 반환: 슬롯 인덱스 (0 = b2, 1 = b3, ...)
 	int32 CreateConstantBuffer(ID3D11Device* Device, uint32 InSize);
 
 	// 슬롯 인덱스로 상수 버퍼 접근
@@ -104,20 +103,18 @@ public:
 	// 파라미터 이름 등록 (MaterialManager에서 JSON 로드 시 호출)
 	void RegisterParameter(const FString& ParamName, int32 BufferIndex, uint32 Offset, uint32 Size);
 
-	// 이름 기반 파라미터 설정 (타입별 편의 함수)
-	bool SetScalarParameter(const FString& ParamName, float Value);
-	bool SetVectorParameter(const FString& ParamName, const FVector4& Value);
-	bool SetVector3Parameter(const FString& ParamName, const FVector& Value);
-
-	// 범용: 이름으로 raw 데이터 쓰기
-	bool SetParameterData(const FString& ParamName, const void* Data, uint32 DataSize);
+	// 독립적인 상수 버퍼를 가진 DynamicMaterial 복제본 생성
+	std::unique_ptr<class FDynamicMaterial> CreateDynamicMaterial() const;
 
 	// 셰이더 바인딩 + Dirty 상수 버퍼 업로드 + 바인딩
 	void Bind(ID3D11DeviceContext* DeviceContext);
 
 	void Release();
 
-private:
+protected:
+	// FDynamicMaterial에서 파라미터 설정 시 사용
+	bool SetParameterData(const FString& ParamName, const void* Data, uint32 DataSize);
+
 	uint32 SortId = 0;
 	static inline uint32 NextSortId = 0;
 
@@ -129,4 +126,17 @@ private:
 	TMap<FString, FMaterialParameterInfo> ParameterMap;
 
 	static constexpr UINT MaterialCBStartSlot = 2; // b0=Frame, b1=Object, b2+=Material
+};
+
+// DynamicMaterial: 런타임에 파라미터 값을 변경할 수 있는 Material 인스턴스
+// FMaterial::CreateDynamicMaterial()로 생성
+class ENGINE_API FDynamicMaterial : public FMaterial
+{
+public:
+	FDynamicMaterial() = default;
+
+	// 이름 기반 파라미터 설정 (타입별 편의 함수)
+	bool SetScalarParameter(const FString& ParamName, float Value);
+	bool SetVectorParameter(const FString& ParamName, const FVector4& Value);
+	bool SetVector3Parameter(const FString& ParamName, const FVector& Value);
 };
