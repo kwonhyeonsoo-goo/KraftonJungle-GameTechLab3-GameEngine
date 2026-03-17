@@ -25,7 +25,7 @@ namespace GizmoMath
     {
         if (ctx.Editor.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic)
             return ctx.Editor.GetActiveViewport().Projection.OrthoHeight * kGizmoScreenScale;
-        return (std::max)((gizmoPos - ctx.Editor.GetActiveCamera().Position).Length() * kGizmoScreenScale, 0.5f);
+        return ((gizmoPos - ctx.Editor.GetActiveCamera().Position).Length() + 3.0f) * kGizmoScreenScale;
     }
 
     constexpr uint32 AxisColorX         = 0xFF0000FF;
