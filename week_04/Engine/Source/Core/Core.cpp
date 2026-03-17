@@ -112,7 +112,7 @@ void CCore::ProcessCameraInput(float DeltaTime)
 	if (!InputManager || !Scene)
 		return;
 
-	CCamera* Camera = Scene->GetCamera();
+	UCameraComponent* Camera  = Scene->GetActiveCameraComponent();
 	if (!Camera)
 		return;
 
@@ -211,11 +211,11 @@ void CCore::OnResize(int32 Width, int32 Height)
 	{
 		Renderer->OnResize(Width, Height);
 	}
+	UCameraComponent* Camera = Scene->GetActiveCameraComponent();
 
-
-	if (Scene && Scene->GetCamera())
+	if (Scene && Camera)
 	{
 		float NewAspect = static_cast<float>(Width) / static_cast<float>(Height);
-		Scene->GetCamera()->SetAspectRatio(NewAspect);
+		Camera->GetCamera()->SetAspectRatio(NewAspect);
 	}
 }
