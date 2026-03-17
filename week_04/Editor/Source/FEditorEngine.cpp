@@ -58,8 +58,8 @@ bool FEditorEngine::Initialize(HINSTANCE hInstance)
 void FEditorEngine::Startup()
 {
 	EditorUI.Initialize(Core.get());
-	EditorUI.SetupWindow(App->GetMainWindow());
-	InitializeDefaultPreviewScene(Core);
+	EditorUI.SetupWindow(MainWindow);
+	InitializeDefaultPreviewScene(Core.get());
 
 	FEngineLog::Get().SetCallback([this](const char* Msg)
 		{

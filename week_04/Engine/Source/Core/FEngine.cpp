@@ -1,4 +1,4 @@
-#include "FEngine.h"
+﻿#include "FEngine.h"
 #include "Platform/Windows/WindowApplication.h"
 
 FEngine* GEngine = nullptr;
@@ -17,6 +17,10 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int32 Width,
 	if (!App->CreateMainWindow(Title, Width, Height))
 		return false;
 	GEngine = this;
+
+	MainWindow = App->GetMainWindow();
+	if (!MainWindow)
+		return false;
 
 	Core = std::make_unique<CCore>();
 	if (!Core->Initialize(MainWindow->GetHwnd(), MainWindow->GetWidth(), MainWindow->GetHeight(), GetStartupSceneType()))
@@ -75,4 +79,6 @@ void FEngine::Shutdown()
 		App->Destroy();
 		App = nullptr;
 	}
+
+	MainWindow = nullptr;
 }

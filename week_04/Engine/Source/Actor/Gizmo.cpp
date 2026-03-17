@@ -13,8 +13,6 @@ namespace
 
 AGizmo::AGizmo() : AActor(StaticClass(), "")
 {
-	UPrimitiveComponent* GizmoComp = new UGizmoComponent();
-	this->AddOwnedComponent(GizmoComp);
 }
 
 UClass* AGizmo::StaticClass()
@@ -25,7 +23,8 @@ UClass* AGizmo::StaticClass()
 
 void AGizmo::PostSpawnInitialize()
 {
-	AActor::PostSpawnInitialize();
+	UPrimitiveComponent* GizmoComp = new UGizmoComponent();
+	this->AddOwnedComponent(GizmoComp);
 }
 
 void AGizmo::BeginPlay()

@@ -1,11 +1,11 @@
-#include "Scene.h"
+﻿#include "Scene.h"
 
 #include "Core/Core.h"
 #include "Core/Paths.h"
 
 #include "Actor/Actor.h"
-#include "Object/Actor/CubeActor.h"
-#include "Object/Actor/SphereActor.h"
+#include "Actor/CubeActor.h"
+#include "Actor/SphereActor.h"
 #include "Camera/Camera.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SphereComponent.h"
@@ -55,16 +55,6 @@ UScene::~UScene()
 }
 
 void UScene::InitializeEmptyScene(float AspectRatio)
-{
-	if (Camera == nullptr)
-	{
-		Camera = new CCamera();
-	}
-
-	Camera->SetAspectRatio(AspectRatio);
-}
-
-void UScene::InitializeEmptyScene(float AspectRatio, ID3D11Device* Device)
 {
 	if (Camera == nullptr)
 	{

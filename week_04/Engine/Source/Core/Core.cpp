@@ -1,8 +1,13 @@
-#include "Core.h"
+﻿#include "Core.h"
 #include "Core/Paths.h"
 
+#include "Scene/Scene.h"
+#include "Actor/Actor.h"
 #include "Camera/Camera.h"
+#include "Component/PrimitiveComponent.h"
 #include "Primitive/PrimitiveBase.h"
+#include "Renderer/Renderer.h"
+#include "Renderer/RenderCommand.h"
 #include "Math/Frustum.h"
 
 CCore::~CCore()
@@ -23,7 +28,7 @@ bool CCore::CreateSceneContext(FSceneContext& Context, const FString& ContextNam
 	Context.Scene->SetSceneType(SceneType);
 	if (bInitializeDefaultScene)
 	{
-		Context.Scene->InitializeDefaultScene(AspectRatio);
+		Context.Scene->InitializeDefaultScene(AspectRatio, Renderer ? Renderer->GetDevice() : nullptr);
 	}
 	else
 	{
@@ -109,6 +114,8 @@ const FEditorSceneContext* CCore::FindPreviewSceneContext(const FString& Context
 bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupSceneType)
 {
 	FPaths::Initialize();
+	WindowWidth = Width;
+	WindowHeight = Height;
 
 	// Renderer
 	Renderer = std::make_unique<CRenderer>();
@@ -254,15 +261,7 @@ void CCore::Release()
 	DestroySceneContext(EditorSceneContext);
 	DestroySceneContext(GameSceneContext);
 
-	delete InputManager;
-	InputManager = nullptr;
-
-	if (ShaderManager)
-	{
-		ShaderManager->Release();
-		delete ShaderManager;
-		ShaderManager = nullptr;
-	}
+	InputManager.reset();
 
 	CPrimitiveBase::ClearCache();
 
@@ -367,6 +366,8 @@ void CCore::Render()
 void CCore::OnResize(int32 Width, int32 Height)
 {
 	if (Width == 0 || Height == 0) return;
+	WindowWidth = Width;
+	WindowHeight = Height;
 
 	if (Renderer)
 	{

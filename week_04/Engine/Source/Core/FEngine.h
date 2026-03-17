@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "CoreMinimal.h"
 #include "Scene/SceneTypes.h"
 #include "Windows.h"
@@ -6,6 +6,7 @@
 #include <memory>
 
 class CWindowApplication;
+class CWindow;
 
 class ENGINE_API FEngine
 {
@@ -29,6 +30,7 @@ protected:
 	virtual ESceneType GetStartupSceneType() const { return ESceneType::Game; }
 
 	CWindowApplication* App = nullptr;
+	CWindow* MainWindow = nullptr;
 	std::unique_ptr<CCore> Core;
 
 private:

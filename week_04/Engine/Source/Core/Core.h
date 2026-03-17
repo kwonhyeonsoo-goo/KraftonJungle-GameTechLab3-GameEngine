@@ -7,13 +7,9 @@
 #include "Renderer/Renderer.h"
 #include "Input/InputManager.h"
 #include <memory>
-#include <functional>
 
 class AActor;
 class UScene;
-class CRenderer;
-class CShaderManager;
-class CInputManager;
 
 class ENGINE_API CCore
 {
@@ -40,8 +36,8 @@ public:
 	UScene* GetPreviewScene(const FString& ContextName) const;
 	const FSceneContext* GetActiveSceneContext() const { return ActiveSceneContext; }
 	const TArray<std::unique_ptr<FEditorSceneContext>>& GetPreviewSceneContexts() const { return PreviewSceneContexts; }
-	CRenderer* GetRenderer() const { return Renderer; }
-	CInputManager* GetInputManager() const { return InputManager; }
+	CRenderer* GetRenderer() const { return Renderer.get(); }
+	CInputManager* GetInputManager() const { return InputManager.get(); }
 
 	void SetSelectedActor(AActor* InActor);
 	AActor* GetSelectedActor() const;
@@ -68,13 +64,13 @@ private:
 
 private:
 	std::unique_ptr<CRenderer> Renderer;
-	CShaderManager* ShaderManager = nullptr;
 	std::unique_ptr<CInputManager> InputManager;
 	FSceneContext GameSceneContext;
 	FEditorSceneContext EditorSceneContext;
 	TArray<std::unique_ptr<FEditorSceneContext>> PreviewSceneContexts;
 	FSceneContext* ActiveSceneContext = nullptr;
-	FRenderCallback PostRenderCallback;
 
 	FTimer Timer;
+	int32 WindowWidth = 0;
+	int32 WindowHeight = 0;
 };
