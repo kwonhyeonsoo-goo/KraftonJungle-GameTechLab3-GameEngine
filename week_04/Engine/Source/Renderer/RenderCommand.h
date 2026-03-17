@@ -11,6 +11,10 @@ struct ENGINE_API FRenderCommand
 	FMatrix WorldMatrix;
 	FMaterial* Material = nullptr;
 	uint64 SortKey = 0;
+	bool bOverlay = false;
+	bool bDisableDepthTest = false;
+	bool bDisableDepthWrite = false;
+	bool bDisableCulling = false;
 
 	static uint64 MakeSortKey(const FMaterial* InMaterial, const FMeshData* InMeshData);
 };

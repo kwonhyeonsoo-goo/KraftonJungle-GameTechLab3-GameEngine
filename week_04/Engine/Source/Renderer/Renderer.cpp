@@ -1,4 +1,4 @@
-﻿#include "Renderer.h"
+#include "Renderer.h"
 #include "ShaderType.h"
 #include "Shader.h"
 #include "ShaderMap.h"
@@ -24,6 +24,22 @@ uint64 FRenderCommand::MakeSortKey(const FMaterial* InMaterial, const FMeshData*
 CRenderer::~CRenderer()
 {
 	Release();
+}
+
+void CRenderer::SetSceneRenderTarget(ID3D11RenderTargetView* InRenderTargetView, ID3D11DepthStencilView* InDepthStencilView, const D3D11_VIEWPORT& InViewport)
+{
+	SceneRenderTargetView = InRenderTargetView;
+	SceneDepthStencilView = InDepthStencilView;
+	SceneViewport = InViewport;
+	bUseSceneRenderTargetOverride = (SceneRenderTargetView != nullptr && SceneDepthStencilView != nullptr);
+}
+
+void CRenderer::ClearSceneRenderTarget()
+{
+	SceneRenderTargetView = nullptr;
+	SceneDepthStencilView = nullptr;
+	SceneViewport = {};
+	bUseSceneRenderTargetOverride = false;
 }
 
 void CRenderer::SetGUICallbacks(
@@ -240,6 +256,26 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 
+	D3D11_RASTERIZER_DESC NoCullDesc = RasterizerDesc;
+	NoCullDesc.CullMode = D3D11_CULL_NONE;
+	Hr = Device->CreateRasterizerState(&NoCullDesc, &NoCullRasterizerState);
+	if (FAILED(Hr))
+	{
+		MessageBox(0, L"CreateRasterizerState (NoCull) Failed.", 0, 0);
+		return false;
+	}
+
+	D3D11_DEPTH_STENCIL_DESC OverlayDepthDesc = {};
+	OverlayDepthDesc.DepthEnable = FALSE;
+	OverlayDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	OverlayDepthDesc.DepthFunc = D3D11_COMPARISON_ALWAYS;
+	Hr = Device->CreateDepthStencilState(&OverlayDepthDesc, &OverlayDepthState);
+	if (FAILED(Hr))
+	{
+		MessageBox(0, L"CreateDepthStencilState (Overlay) Failed.", 0, 0);
+		return false;
+	}
+
 	return true;
 }
 
@@ -250,13 +286,45 @@ void CRenderer::BeginFrame()
 		GUINewFrame();
 	}
 
-	constexpr float ClearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
-	DeviceContext->ClearRenderTargetView(RenderTargetView, ClearColor);
-	DeviceContext->ClearDepthStencilView(DepthStencilView,
-		D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	if (GUIUpdate)
+	{
+		GUIUpdate();
+	}
 
-	DeviceContext->OMSetRenderTargets(1, &RenderTargetView, DepthStencilView);
-	DeviceContext->RSSetViewports(1, &Viewport);
+	constexpr float ClearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
+	if (RenderTargetView)
+	{
+		DeviceContext->ClearRenderTargetView(RenderTargetView, ClearColor);
+	}
+	if (DepthStencilView)
+	{
+		DeviceContext->ClearDepthStencilView(DepthStencilView,
+			D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	}
+
+	ID3D11RenderTargetView* ActiveRenderTargetView = RenderTargetView;
+	ID3D11DepthStencilView* ActiveDepthStencilView = DepthStencilView;
+	D3D11_VIEWPORT ActiveViewport = Viewport;
+
+	if (bUseSceneRenderTargetOverride)
+	{
+		ActiveRenderTargetView = SceneRenderTargetView;
+		ActiveDepthStencilView = SceneDepthStencilView;
+		ActiveViewport = SceneViewport;
+
+		if (ActiveRenderTargetView && ActiveRenderTargetView != RenderTargetView)
+		{
+			DeviceContext->ClearRenderTargetView(ActiveRenderTargetView, ClearColor);
+		}
+		if (ActiveDepthStencilView && ActiveDepthStencilView != DepthStencilView)
+		{
+			DeviceContext->ClearDepthStencilView(ActiveDepthStencilView,
+				D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+		}
+	}
+
+	DeviceContext->OMSetRenderTargets(1, &ActiveRenderTargetView, ActiveDepthStencilView);
+	DeviceContext->RSSetViewports(1, &ActiveViewport);
 	DeviceContext->RSSetState(RasterizerState);
 
 	PrevCommandCount = CommandList.size();
@@ -266,9 +334,11 @@ void CRenderer::BeginFrame()
 
 void CRenderer::EndFrame()
 {
-	if (GUIUpdate)
+	if (RenderTargetView)
 	{
-		GUIUpdate();
+		DeviceContext->OMSetRenderTargets(1, &RenderTargetView, DepthStencilView);
+		DeviceContext->RSSetViewports(1, &Viewport);
+		DeviceContext->RSSetState(RasterizerState);
 	}
 
 	if (GUIRender)
@@ -323,6 +393,73 @@ void CRenderer::ExecuteCommands()
 	UpdateFrameConstantBuffer();
 	ID3D11Buffer* CBs[2] = { FrameConstantBuffer, ObjectConstantBuffer };
 	DeviceContext->VSSetConstantBuffers(0, 2, CBs);
+
+	std::sort(CommandList.begin(), CommandList.end(),
+		[](const FRenderCommand& A, const FRenderCommand& B)
+		{
+			return A.SortKey < B.SortKey;
+		});
+
+	auto ExecutePass = [this, &CBs](bool bOverlayPass)
+	{
+		FMaterial* CurrentMaterial = nullptr;
+		FMeshData* CurrentMesh = nullptr;
+		ID3D11RasterizerState* CurrentRasterizerState = nullptr;
+		ID3D11DepthStencilState* CurrentDepthStencilState = nullptr;
+
+		for (const auto& Cmd : CommandList)
+		{
+			if (Cmd.bOverlay != bOverlayPass || !Cmd.MeshData)
+			{
+				continue;
+			}
+
+			ID3D11RasterizerState* DesiredRasterizerState = Cmd.bDisableCulling ? NoCullRasterizerState : RasterizerState;
+			if (DesiredRasterizerState != CurrentRasterizerState)
+			{
+				DeviceContext->RSSetState(DesiredRasterizerState);
+				CurrentRasterizerState = DesiredRasterizerState;
+			}
+
+			ID3D11DepthStencilState* DesiredDepthStencilState = (Cmd.bDisableDepthTest || Cmd.bDisableDepthWrite) ? OverlayDepthState : nullptr;
+			if (DesiredDepthStencilState != CurrentDepthStencilState)
+			{
+				DeviceContext->OMSetDepthStencilState(DesiredDepthStencilState, 0);
+				CurrentDepthStencilState = DesiredDepthStencilState;
+			}
+
+			if (Cmd.Material != CurrentMaterial)
+			{
+				Cmd.Material->Bind(DeviceContext);
+				CurrentMaterial = Cmd.Material;
+				DeviceContext->VSSetConstantBuffers(0, 2, CBs);
+			}
+
+			if (Cmd.MeshData != CurrentMesh)
+			{
+				Cmd.MeshData->Bind(DeviceContext);
+				CurrentMesh = Cmd.MeshData;
+			}
+
+			UpdateObjectConstantBuffer(Cmd.WorldMatrix);
+			DeviceContext->DrawIndexed(Cmd.MeshData->IndexCount, 0, 0);
+		}
+	};
+
+	ExecutePass(false);
+	ExecutePass(true);
+
+	DeviceContext->OMSetDepthStencilState(nullptr, 0);
+	DeviceContext->RSSetState(RasterizerState);
+	ShaderManager.Bind(DeviceContext);
+	DeviceContext->VSSetConstantBuffers(0, 2, CBs);
+
+	if (PostRenderCallback)
+	{
+		PostRenderCallback(this);
+	}
+
+	return;
 
 	// SortKey 기준 정렬 → Material, MeshData 순 State Change 최소화
 	std::sort(CommandList.begin(), CommandList.end(),
@@ -562,6 +699,7 @@ void CRenderer::ExecuteLineCommands()
 void CRenderer::Release()
 {
 	ClearViewportCallbacks();
+	ClearSceneRenderTarget();
 	if (StencilWriteState)
 	{
 		StencilWriteState->Release();
@@ -584,6 +722,11 @@ void CRenderer::Release()
 		LineDepthState->Release();
 		LineDepthState = nullptr;
 	}
+	if (OverlayDepthState)
+	{
+		OverlayDepthState->Release();
+		OverlayDepthState = nullptr;
+	}
 
 
 
@@ -591,6 +734,11 @@ void CRenderer::Release()
 	{
 		RasterizerState->Release();
 		RasterizerState = nullptr;
+	}
+	if (NoCullRasterizerState)
+	{
+		NoCullRasterizerState->Release();
+		NoCullRasterizerState = nullptr;
 	}
 	if (FrameConstantBuffer)
 	{
@@ -644,6 +792,7 @@ void CRenderer::OnResize(int32 NewWidth, int32 NewHeight)
 {
 	if (NewWidth == 0 || NewHeight == 0) return;
 
+	ClearSceneRenderTarget();
 
 	DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 	RenderTargetView->Release(); RenderTargetView = nullptr;

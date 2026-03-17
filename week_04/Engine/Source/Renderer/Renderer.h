@@ -27,6 +27,8 @@ public:
 	void Release();
 	bool IsOccluded();
 	void OnResize(int32 NewWidth, int32 NewHeight);
+	void SetSceneRenderTarget(ID3D11RenderTargetView* InRenderTargetView, ID3D11DepthStencilView* InDepthStencilView, const D3D11_VIEWPORT& InViewport);
+	void ClearSceneRenderTarget();
 
 	void SetVSync(bool bEnable) { bVSyncEnabled = bEnable; }
 	bool IsVSyncEnabled() const { return bVSyncEnabled; }
@@ -84,7 +86,12 @@ private:
 	FMatrix ViewMatrix;
 	FMatrix ProjectionMatrix;
 	ID3D11RasterizerState* RasterizerState = nullptr;
+	ID3D11RasterizerState* NoCullRasterizerState = nullptr;
 	D3D11_VIEWPORT Viewport = {};
+	ID3D11RenderTargetView* SceneRenderTargetView = nullptr;
+	ID3D11DepthStencilView* SceneDepthStencilView = nullptr;
+	D3D11_VIEWPORT SceneViewport = {};
+	bool bUseSceneRenderTargetOverride = false;
 	bool bVSyncEnabled = false;
 
 	TArray<FRenderCommand> CommandList;
@@ -92,6 +99,7 @@ private:
 	TArray<FPrimitiveVertex> LineVertices;
 	ID3D11Buffer* LineVertexBuffer = nullptr;
 	ID3D11DepthStencilState* LineDepthState = nullptr;
+	ID3D11DepthStencilState* OverlayDepthState = nullptr;
 
 	// 아웃라인 리소스
 	ID3D11DepthStencilState* StencilWriteState = nullptr;

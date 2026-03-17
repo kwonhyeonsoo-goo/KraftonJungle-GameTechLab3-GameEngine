@@ -1,5 +1,6 @@
 #include "FEditorEngine.h"
 
+#include "imgui_impl_dx11.h"
 #include "UI/EditorViewportClient.h"
 #include "UI/PreviewViewportClient.h"
 #include "Core/Core.h"
@@ -75,6 +76,7 @@ void FEditorEngine::Shutdown()
 	}
 
 	PreviewViewportClient.reset();
+
 	FEngine::Shutdown();
 }
 
