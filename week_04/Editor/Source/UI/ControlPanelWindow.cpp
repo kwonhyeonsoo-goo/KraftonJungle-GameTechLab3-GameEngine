@@ -12,7 +12,7 @@
 #include "Camera/Camera.h"
 #include "Core/Paths.h"
 #include "Debug/EngineLog.h"
-
+#include "Component/CameraComponent.h"
 #include <filesystem>
 
 namespace
@@ -170,8 +170,14 @@ void CControlPanelWindow::Render(CCore* Core)
 		if (ImGui::Button("New Scene"))
 		{
 			Core->SetSelectedActor(nullptr);
-			Core->GetScene()->ClearActors();
+		
 			strncpy_s(SceneName, "NewScene", IM_ARRAYSIZE(SceneName));
+			if (UCameraComponent* Cam = Core->GetScene()->GetActiveCameraComponent())
+			{
+				Cam->GetCamera()->SetPosition({ -5.0f, 0.0f, 2.0f });
+				Cam->GetCamera()->SetRotation(0.f,0.f);
+			}
+			Core->GetScene()->ClearActors();
 			UE_LOG("New scene created");
 		}
 
