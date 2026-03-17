@@ -166,7 +166,16 @@ void CControlPanelWindow::Render(CCore* Core)
 		}
 
 		ImGui::SeparatorText("Scene");
+		static char SceneName[128] = "NewScene";
+		if (ImGui::Button("New Scene"))
+		{
+			Core->SetSelectedActor(nullptr);
+			Core->GetScene()->ClearActors();
+			strncpy_s(SceneName, "NewScene", IM_ARRAYSIZE(SceneName));
+			UE_LOG("New scene created");
+		}
 
+		ImGui::SameLine();
 		if (ImGui::Button("Clear Scene"))
 		{
 			Core->SetSelectedActor(nullptr);
@@ -176,7 +185,6 @@ void CControlPanelWindow::Render(CCore* Core)
 
 		ImGui::Spacing();
 
-		static char SceneName[128] = "NewScene";
 		ImGui::InputText("Scene Name", SceneName, IM_ARRAYSIZE(SceneName));
 
 		ImGui::BeginDisabled(bPreviewActive);
