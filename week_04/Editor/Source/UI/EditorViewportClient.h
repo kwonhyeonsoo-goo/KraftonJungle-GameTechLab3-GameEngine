@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Core/ViewportClient.h"
 #include "Picking/Picker.h"

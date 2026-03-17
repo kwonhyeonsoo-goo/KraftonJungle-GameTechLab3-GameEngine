@@ -68,7 +68,6 @@ private:
 	const FEditorSceneContext* GetActiveEditorSceneContext() const;
 	FEditorSceneContext* FindPreviewSceneContext(const FString& ContextName);
 	const FEditorSceneContext* FindPreviewSceneContext(const FString& ContextName) const;
-	void ProcessCameraInput(float DeltaTime);
 	void Physics(float DeltaTime);
 	void GameLogic(float DeltaTime);
 	void Render();
@@ -76,7 +75,6 @@ private:
 
 private:
 	std::unique_ptr<CRenderer> Renderer;
-	std::unique_ptr<UScene> Scene;
 	CInputManager* InputManager = nullptr;
 	CEnhancedInputManager* EnhancedInput = nullptr;
 

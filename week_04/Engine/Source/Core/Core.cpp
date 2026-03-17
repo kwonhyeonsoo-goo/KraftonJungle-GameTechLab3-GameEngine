@@ -309,7 +309,7 @@ void CCore::Release()
 
 
 
-	Scene.reset();
+
 	delete EnhancedInput;
 	EnhancedInput = nullptr;
 	delete InputManager;

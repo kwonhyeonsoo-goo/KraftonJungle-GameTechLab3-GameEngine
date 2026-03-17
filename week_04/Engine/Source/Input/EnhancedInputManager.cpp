@@ -1,6 +1,8 @@
 #include "EnhancedInputManager.h"
+#include "InputModifier.h"
+#include "InputManager.h"
 
-
+#include <algorithm>
 
 void CEnhancedInputManager::AddMappingContext(FInputMappingContext* Context, int32 Priority)
 {

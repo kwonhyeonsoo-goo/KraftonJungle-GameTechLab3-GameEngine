@@ -1,4 +1,4 @@
-﻿#include "EditorViewportClient.h"
+#include "EditorViewportClient.h"
 
 #include "EditorUI.h"
 #include "Core/Core.h"
@@ -47,7 +47,7 @@ void CEditorViewportClient::Tick(CCore* Core, float DeltaTime)
 		}
 	}
 
-	IViewportClient::Tick(Core, DeltaTime);
+	//IViewportClient::Tick(Core, DeltaTime);
 }
 
 void CEditorViewportClient::HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
