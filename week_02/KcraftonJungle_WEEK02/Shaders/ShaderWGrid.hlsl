@@ -68,9 +68,9 @@ float PristineGrid(float2 uv, float2 lineWidth)
     float2 gridUV = abs(frac(uv) * 2.0 - 1.0);
     gridUV = invertLine ? gridUV : 1.0 - gridUV;
     float2 grid2 = smoothstep(drawWidth + lineAA, drawWidth - lineAA, gridUV);
-    //grid2 *= saturate(targetWidth / drawWidth);
-    //grid2 = lerp(grid2, targetWidth, saturate(uvDeriv * 2.0 - 1.0));
-    //grid2 = invertLine ? 1.0 - grid2 : grid2;
+    grid2 *= saturate(targetWidth / drawWidth);
+    grid2 = lerp(grid2, targetWidth, saturate(uvDeriv * 2.0 - 1.0));
+    grid2 = invertLine ? 1.0 - grid2 : grid2;
     return lerp(grid2.x, 1.0, grid2.y);
 }
 
@@ -80,14 +80,10 @@ float4 mainPS(PS_INPUT input) : SV_TARGET
     float _LineWidthY = 0.01;
     
     float4 _LineColor = float4(1, 1, 1, 1);
-    float4 _BaseColor = float4(0, 0, 0, 1);
+    float4 _BaseColor = float4(0, 0, 0, 0);
     
     float grid = PristineGrid(input.uv, float2(_LineWidthX, _LineWidthY));
 
-    
-    if (grid < 0.5)
-        discard;
-    
     return lerp(_BaseColor, _LineColor, grid * _LineColor.a);
 
 
