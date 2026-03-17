@@ -35,6 +35,21 @@ void UCameraComponent::Rotate(float DeltaYaw, float DeltaPitch)
 	Camera->Rotate(DeltaYaw, DeltaPitch);
 }
 
+CCamera* UCameraComponent::GetCamera() const
+{
+	return Camera;
+}
+
+FMatrix UCameraComponent::GetViewMatrix() const
+{
+	return Camera->GetViewMatrix();
+}
+
+FMatrix UCameraComponent::GetProjectionMatrix() const
+{
+	return Camera->GetProjectionMatrix();
+}
+
 void UCameraComponent::SetFov(float inFov)
 {
 	Camera->SetFOV(inFov);

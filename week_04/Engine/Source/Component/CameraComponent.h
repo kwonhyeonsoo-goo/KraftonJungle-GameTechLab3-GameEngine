@@ -15,6 +15,11 @@ public:
 	void MoveUp(float Value);
 	void Rotate(float DeltaYaw, float DeltaPitch);
 
+	//Camera property getter
+	CCamera* GetCamera() const;
+	FMatrix GetViewMatrix() const;
+	FMatrix GetProjectionMatrix() const;
+
 	//Setting
 	void SetFov(float inFov);
 	void SetSpeed(float Inspeed);
