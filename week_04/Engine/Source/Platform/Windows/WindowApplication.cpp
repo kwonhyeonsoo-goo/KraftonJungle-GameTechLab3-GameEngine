@@ -1,5 +1,4 @@
 #include "WindowApplication.h"
-#include "Window.h"
 #include "PlatformGlobals.h"
 
 TMap<HWND, CWindow*> CWindowApplication::WindowMap;

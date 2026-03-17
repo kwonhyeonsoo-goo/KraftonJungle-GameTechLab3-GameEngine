@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Core/FEngine.h"
 #include "UI/EditorUI.h"
@@ -14,7 +14,8 @@ public:
 	void Shutdown() override;
 
 protected:
-	void Startup() override;
+	void PreInitialize() override;
+	void PostInitialize() override;
 	void Tick(float DeltaTime) override;
 	ESceneType GetStartupSceneType() const override { return ESceneType::Editor; }
 	std::unique_ptr<IViewportClient> CreateViewportClient() override;

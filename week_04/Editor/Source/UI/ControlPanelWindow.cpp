@@ -1,14 +1,17 @@
-﻿#include "ControlPanelWindow.h"
+#include "ControlPanelWindow.h"
+
 #include "imgui.h"
 #include "Core/Core.h"
 #include "Renderer/Renderer.h"
 #include "Scene/Scene.h"
 #include "Actor/Actor.h"
+#include "Actor/AttachTestActor.h"
 #include "Actor/CubeActor.h"
 #include "Actor/SphereActor.h"
 #include "Camera/Camera.h"
 #include "Core/Paths.h"
 #include "Debug/EngineLog.h"
+
 #include <filesystem>
 
 namespace
@@ -82,8 +85,7 @@ void CControlPanelWindow::Render(CCore* Core)
 			ImGui::TextUnformatted("Preview scene is editor-only. Scene save/load is disabled.");
 		}
 
-		CCamera* Camera = Core->GetScene()->GetCamera();
-		if (Camera)
+		if (CCamera* Camera = Core->GetScene()->GetCamera())
 		{
 			ImGui::SeparatorText("Camera");
 
@@ -114,7 +116,7 @@ void CControlPanelWindow::Render(CCore* Core)
 		ImGui::SeparatorText("Spawn");
 
 		static int32 SpawnTypeIndex = 0;
-		const char* SpawnTypes[] = { "Cube", "Sphere" };
+		const char* SpawnTypes[] = { "Cube", "Sphere", "AttachTest" };
 		ImGui::Combo("Type", &SpawnTypeIndex, SpawnTypes, IM_ARRAYSIZE(SpawnTypes));
 
 		if (ImGui::Button("Spawn"))
@@ -128,9 +130,13 @@ void CControlPanelWindow::Render(CCore* Core)
 			{
 				NewActor = Scene->SpawnActor<ACubeActor>(Name);
 			}
-			else
+			else if (SpawnTypeIndex == 1)
 			{
 				NewActor = Scene->SpawnActor<ASphereActor>(Name);
+			}
+			else if (SpawnTypeIndex == 2)
+			{
+				NewActor = Scene->SpawnActor<AAttachTestActor>(Name);
 			}
 
 			Core->SetSelectedActor(NewActor);

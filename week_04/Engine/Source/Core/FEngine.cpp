@@ -1,4 +1,4 @@
-﻿#include "FEngine.h"
+#include "FEngine.h"
 
 #include "Core/ViewportClient.h"
 #include "Platform/Windows/WindowApplication.h"
@@ -14,24 +14,35 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int32 Width,
 {
 	App = &CWindowApplication::Get();
 	if (!App->Create(hInstance))
+	{
 		return false;
+	}
 
 	if (!App->CreateMainWindow(Title, Width, Height))
+	{
 		return false;
+	}
+
 	GEngine = this;
 
 	MainWindow = App->GetMainWindow();
 	if (!MainWindow)
+	{
 		return false;
+	}
+
+	PreInitialize();
 
 	Core = std::make_unique<CCore>();
 	if (!Core->Initialize(MainWindow->GetHwnd(), MainWindow->GetWidth(), MainWindow->GetHeight(), GetStartupSceneType()))
+	{
 		return false;
+	}
 
 	ViewportClient = CreateViewportClient();
 	Core->SetViewportClient(ViewportClient.get());
 
-	Startup();
+	PostInitialize();
 
 	App->AddMessageFilter(std::bind(&FEngine::OnInput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 	App->SetOnResizeCallback(std::bind(&FEngine::OnResize, this, std::placeholders::_1, std::placeholders::_2));
@@ -44,9 +55,9 @@ void FEngine::Run()
 {
 	while (App->PumpMessages())
 	{
-		Tick(0.0f);
 		if (Core)
 		{
+			Tick(Core->GetTimer().GetDeltaTime());
 			Core->Tick();
 		}
 	}

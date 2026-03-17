@@ -1,14 +1,13 @@
-﻿#include "EditorUI.h"
+#include "EditorUI.h"
+
 #include "Core/Core.h"
-#include "Camera/Camera.h"
-#include "Renderer/Renderer.h"
+#include "Object/Object.h"
 #include "Scene/Scene.h"
 #include "Actor/Actor.h"
-#include "Object/Object.h"
-#include "Component/SceneComponent.h"
 #include "Component/PrimitiveComponent.h"
-#include "Primitive/PrimitiveBase.h"
+#include "Component/SceneComponent.h"
 #include "Platform/Windows/Window.h"
+#include "Renderer/Renderer.h"
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -36,11 +35,11 @@ void CEditorUI::Initialize(CCore* InCore)
 
 			if (USceneComponent* Root = Selected->GetRootComponent())
 			{
-				FTransform T = Root->GetRelativeTransform();
-				T.SetLocation(Loc);
-				T.SetRotation(FRotator::MakeFromEuler(Rot));
-				T.SetScale3D(Scl);
-				Root->SetRelativeTransform(T);
+				FTransform Transform = Root->GetRelativeTransform();
+				Transform.SetLocation(Loc);
+				Transform.SetRotation(FRotator::MakeFromEuler(Rot));
+				Transform.SetScale3D(Scl);
+				Root->SetRelativeTransform(Transform);
 			}
 		};
 }
@@ -54,7 +53,7 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 
 	bViewportClientActive = true;
 
-	HWND Hwnd = InRenderer->GetHwnd();
+	const HWND Hwnd = InRenderer->GetHwnd();
 	ID3D11Device* Device = InRenderer->GetDevice();
 	ID3D11DeviceContext* DeviceContext = InRenderer->GetDeviceContext();
 
@@ -124,14 +123,14 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 			AActor* Selected = Core->GetSelectedActor();
 			if (Selected && !Selected->IsPendingDestroy())
 			{
-				for (UActorComponent* Comp : Selected->GetComponents())
+				for (UActorComponent* Component : Selected->GetComponents())
 				{
-					if (!Comp->IsA(UPrimitiveComponent::StaticClass()))
+					if (!Component->IsA(UPrimitiveComponent::StaticClass()))
 					{
 						continue;
 					}
 
-					UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Comp);
+					UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
 					if (PrimitiveComponent->GetPrimitive())
 					{
 						Renderer->RenderOutline(
@@ -282,6 +281,10 @@ void CEditorUI::Render()
 
 			CachedSelectedActor = Selected;
 		}
+
+		const FTimer& Timer = Core->GetTimer();
+		Stat.SetFPS(Timer.GetFPS());
+		Stat.SetFrameTimeMs(Timer.GetFrameTimeMs());
 	}
 
 	Stat.SetObjectCount(UObject::TotalAllocationCounts);

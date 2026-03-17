@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Object/Object.h"
 #include <d3d11.h>
 #include "Scene/SceneTypes.h"
@@ -6,6 +7,7 @@
 class AActor;
 class CCamera;
 class FFrustum;
+class UCameraComponent;
 class UPrimitiveComponent;
 struct FRenderCommandQueue;
 
@@ -45,7 +47,9 @@ public:
 	bool IsEditorScene() const { return SceneType == ESceneType::Editor; }
 	bool IsGameScene() const { return SceneType == ESceneType::Game || SceneType == ESceneType::PIE; }
 
-	CCamera* GetCamera() const { return Camera; }
+	void SetActiveCameraComponent(UCameraComponent* InCameraComponent);
+	UCameraComponent* GetActiveCameraComponent() const;
+	CCamera* GetCamera() const;
 
 	void InitializeEmptyScene(float AspectRatio);
 	void InitializeDefaultScene(float AspectRatio, ID3D11Device* Device = nullptr);
@@ -57,10 +61,12 @@ public:
 	void CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue);
 
 private:
-	// 컬링: 가시 PrimitiveComponent 목록 수집 (멀티스레드 분리 가능)
 	void CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible);
+
+private:
 	TArray<AActor*> Actors;
-	CCamera* Camera = nullptr;
+	UCameraComponent* SceneCameraComponent = nullptr;
+	UCameraComponent* ActiveCameraComponent = nullptr;
 	bool bBegunPlay = false;
 	ESceneType SceneType = ESceneType::Game;
 };

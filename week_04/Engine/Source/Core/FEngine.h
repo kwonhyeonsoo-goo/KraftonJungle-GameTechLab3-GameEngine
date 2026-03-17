@@ -26,7 +26,8 @@ public:
 	CWindowApplication* GetApp() const { return App; }
 
 protected:
-	virtual void Startup() {}
+	virtual void PreInitialize() {}
+	virtual void PostInitialize() {}
 	virtual void Tick(float DeltaTime) {}
 	virtual ESceneType GetStartupSceneType() const { return ESceneType::Game; }
 	virtual std::unique_ptr<IViewportClient> CreateViewportClient();

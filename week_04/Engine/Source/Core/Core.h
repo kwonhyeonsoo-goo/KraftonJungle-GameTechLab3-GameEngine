@@ -1,4 +1,5 @@
-﻿#pragma once
+#pragma once
+
 #include "CoreMinimal.h"
 #include "Windows.h"
 #include "Core/FTimer.h"
@@ -22,6 +23,7 @@ public:
 	CCore(CCore&&) = delete;
 	CCore& operator=(const CCore&) = delete;
 	CCore& operator=(CCore&&) = delete;
+
 	bool Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupSceneType = ESceneType::Game);
 	void Release();
 
@@ -35,11 +37,13 @@ public:
 	UScene* GetEditorScene() const { return EditorSceneContext.Scene; }
 	UScene* GetGameScene() const { return GameSceneContext.Scene; }
 	UScene* GetPreviewScene(const FString& ContextName) const;
+
 	const FSceneContext* GetActiveSceneContext() const { return ActiveSceneContext; }
 	const TArray<std::unique_ptr<FEditorSceneContext>>& GetPreviewSceneContexts() const { return PreviewSceneContexts; }
 	CRenderer* GetRenderer() const { return Renderer.get(); }
 	CInputManager* GetInputManager() const { return InputManager.get(); }
 	IViewportClient* GetViewportClient() const { return ViewportClient; }
+	const FTimer& GetTimer() const { return Timer; }
 
 	void SetSelectedActor(AActor* InActor);
 	AActor* GetSelectedActor() const;
@@ -64,6 +68,7 @@ private:
 	void Physics(float DeltaTime);
 	void GameLogic(float DeltaTime);
 	void Render();
+	void RegisterConsoleVariables();
 
 private:
 	std::unique_ptr<CRenderer> Renderer;

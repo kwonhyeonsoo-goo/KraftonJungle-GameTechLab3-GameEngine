@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -23,6 +23,7 @@
     <ClInclude Include="Source\EngineAPI.h" />
     <ClInclude Include="Source\Camera\Camera.h" />
     <ClInclude Include="Source\Component\ActorComponent.h" />
+    <ClInclude Include="Source\Component\CameraComponent.h" />
     <ClInclude Include="Source\Component\CubeComponent.h" />
     <ClInclude Include="Source\Component\GizmoComponent.h" />
     <ClInclude Include="Source\Component\PrimitiveComponent.h" />
@@ -32,10 +33,16 @@
     <ClInclude Include="Source\Core\Core.h" />
     <ClInclude Include="Source\Core\Paths.h" />
     <ClInclude Include="Source\Core\FEngine.h" />
+    <ClInclude Include="Source\Core\ConsoleVariableManager.h" />
     <ClInclude Include="Source\Core\FTimer.h" />
     <ClInclude Include="Source\Core\ViewportClient.h" />
     <ClInclude Include="Source\Debug\EngineLog.h" />
+    <ClInclude Include="Source\Input\EnhancedInputManager.h" />
+    <ClInclude Include="Source\Input\InputAction.h" />
     <ClInclude Include="Source\Input\InputManager.h" />
+    <ClInclude Include="Source\Input\InputMappingContext.h" />
+    <ClInclude Include="Source\Input\InputModifier.h" />
+    <ClInclude Include="Source\Input\InputTrigger.h" />
     <ClInclude Include="Source\Math\Frustum.h" />
     <ClInclude Include="Source\Math\MathUtility.h" />
     <ClInclude Include="Source\Math\Matrix.h" />
@@ -50,6 +57,7 @@
     <ClInclude Include="Source\Object\ObjectManager.h" />
     <ClInclude Include="Source\Object\ObjectTypes.h" />
     <ClInclude Include="Source\Actor\Actor.h" />
+    <ClInclude Include="Source\Actor\AttachTestActor.h" />
     <ClInclude Include="Source\Actor\CubeActor.h" />
     <ClInclude Include="Source\Actor\Gizmo.h" />
     <ClInclude Include="Source\Actor\SphereActor.h" />
@@ -87,6 +95,7 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Component\CameraComponent.cpp" />
     <ClCompile Include="Source\Camera\Camera.cpp" />
     <ClCompile Include="Source\Component\ActorComponent.cpp" />
     <ClCompile Include="Source\Component\CubeComponent.cpp" />
@@ -97,11 +106,14 @@
     <ClCompile Include="Source\Component\SphereComponent.cpp" />
     <ClCompile Include="Source\Core\Core.cpp" />
     <ClCompile Include="Source\Core\Paths.cpp" />
+    <ClCompile Include="Source\Core\ConsoleVariableManager.cpp" />
     <ClCompile Include="Source\Core\FEngine.cpp" />
     <ClCompile Include="Source\Core\FTimer.cpp" />
     <ClCompile Include="Source\Core\ViewportClient.cpp" />
     <ClCompile Include="Source\Debug\EngineLog.cpp" />
+    <ClCompile Include="Source\Input\EnhancedInputManager.cpp" />
     <ClCompile Include="Source\Input\InputManager.cpp" />
+    <ClCompile Include="Source\Input\InputMappingContext.cpp" />
     <ClCompile Include="Source\Math\Frustum.cpp" />
     <ClCompile Include="Source\Math\Matrix.cpp" />
     <ClCompile Include="Source\Math\Quat.cpp" />
@@ -112,6 +124,7 @@
     <ClCompile Include="Source\Object\Object.cpp" />
     <ClCompile Include="Source\Object\ObjectManager.cpp" />
     <ClCompile Include="Source\Actor\Actor.cpp" />
+    <ClCompile Include="Source\Actor\AttachTestActor.cpp" />
     <ClCompile Include="Source\Actor\CubeActor.cpp" />
     <ClCompile Include="Source\Actor\Gizmo.cpp" />
     <ClCompile Include="Source\Actor\SphereActor.cpp" />

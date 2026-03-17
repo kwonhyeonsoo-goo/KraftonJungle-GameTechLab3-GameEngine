@@ -1,13 +1,13 @@
-﻿#include "FEditorEngine.h"
+#include "FEditorEngine.h"
 
 #include "UI/EditorViewportClient.h"
 #include "UI/PreviewViewportClient.h"
 #include "Core/Core.h"
+#include "Core/ConsoleVariableManager.h"
 #include "Scene/Scene.h"
 #include "Actor/Actor.h"
 #include "Camera/Camera.h"
 #include "Component/CubeComponent.h"
-#include "Platform/Windows/WindowApplication.h"
 #include "Debug/EngineLog.h"
 
 #include "imgui_impl_win32.h"
@@ -35,7 +35,7 @@ namespace
 			AActor* PreviewActor = PreviewScene->SpawnActor<AActor>("PreviewCube");
 			if (PreviewActor)
 			{
-				UPrimitiveComponent* PreviewComponent = new UCubeComponent();
+				UCubeComponent* PreviewComponent = new UCubeComponent();
 				PreviewActor->AddOwnedComponent(PreviewComponent);
 				PreviewActor->SetActorLocation({ 0.0f, 0.0f, 0.0f });
 			}
@@ -78,16 +78,41 @@ void FEditorEngine::Shutdown()
 	FEngine::Shutdown();
 }
 
-void FEditorEngine::Startup()
+void FEditorEngine::PreInitialize()
 {
-	InitializeDefaultPreviewScene(Core.get());
-	PreviewViewportClient = std::make_unique<CPreviewViewportClient>(EditorUI, MainWindow, PreviewSceneContextName);
-	SyncViewportClient();
-
 	FEngineLog::Get().SetCallback([this](const char* Msg)
 		{
 			EditorUI.GetConsole().AddLog("%s", Msg);
 		});
+}
+
+void FEditorEngine::PostInitialize()
+{
+	InitializeDefaultPreviewScene(Core.get());
+	PreviewViewportClient = std::make_unique<CPreviewViewportClient>(EditorUI, MainWindow, PreviewSceneContextName);
+
+	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
+	TArray<FString> VariableNames;
+	CVM.GetAllNames(VariableNames);
+	for (const FString& Name : VariableNames)
+	{
+		EditorUI.GetConsole().RegisterCommand(Name.c_str());
+	}
+
+	EditorUI.GetConsole().SetCommandHandler([](const char* CommandLine)
+		{
+			FString Result;
+			if (FConsoleVariableManager::Get().Execute(CommandLine, Result))
+			{
+				FEngineLog::Get().Log("%s", Result.c_str());
+			}
+			else
+			{
+				FEngineLog::Get().Log("[error] Unknown command: '%s'", CommandLine);
+			}
+		});
+
+	SyncViewportClient();
 	UE_LOG("EditorEngine initialized");
 }
 

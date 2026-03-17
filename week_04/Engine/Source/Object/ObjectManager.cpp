@@ -1,4 +1,5 @@
 #include "ObjectManager.h"
+#include <algorithm>
 
 ObjectManager::ObjectManager()
 {

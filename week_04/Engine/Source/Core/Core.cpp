@@ -1,9 +1,10 @@
-﻿#include "Core.h"
-#include "Core/Paths.h"
+#include "Core.h"
 
+#include "Core/Paths.h"
+#include "Core/ConsoleVariableManager.h"
 #include "Scene/Scene.h"
 #include "Actor/Actor.h"
-#include "Camera/Camera.h"
+#include "Component/CameraComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Primitive/PrimitiveBase.h"
 #include "Renderer/Renderer.h"
@@ -34,6 +35,7 @@ bool CCore::CreateSceneContext(FSceneContext& Context, const FString& ContextNam
 	{
 		Context.Scene->InitializeEmptyScene(AspectRatio);
 	}
+
 	return true;
 }
 
@@ -117,18 +119,16 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupS
 	WindowWidth = Width;
 	WindowHeight = Height;
 
-	// Renderer
 	Renderer = std::make_unique<CRenderer>();
 	if (!Renderer->Initialize(Hwnd, Width, Height))
 	{
 		return false;
 	}
 
-	// InputManager
 	InputManager = std::make_unique<CInputManager>();
 
-	// Timer
 	Timer.Initialize();
+	RegisterConsoleVariables();
 
 	const float AspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
 	FSceneContext* StartupContext = &GameSceneContext;
@@ -146,7 +146,6 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupS
 	}
 
 	ActiveSceneContext = StartupContext;
-
 	return true;
 }
 
@@ -334,24 +333,28 @@ void CCore::ProcessCameraInput(float DeltaTime)
 {
 	UScene* Scene = GetActiveScene();
 	if (!InputManager || !Scene)
+	{
 		return;
+	}
 
-	CCamera* Camera = Scene->GetCamera();
-	if (!Camera)
+	UCameraComponent* CameraComponent = Scene->GetActiveCameraComponent();
+	if (!CameraComponent)
+	{
 		return;
+	}
 
-	if (InputManager->IsKeyDown('W')) Camera->MoveForward(DeltaTime);
-	if (InputManager->IsKeyDown('S')) Camera->MoveForward(-DeltaTime);
-	if (InputManager->IsKeyDown('D')) Camera->MoveRight(DeltaTime);
-	if (InputManager->IsKeyDown('A')) Camera->MoveRight(-DeltaTime);
-	if (InputManager->IsKeyDown('E')) Camera->MoveUp(DeltaTime);
-	if (InputManager->IsKeyDown('Q')) Camera->MoveUp(-DeltaTime);
+	if (InputManager->IsKeyDown('W')) CameraComponent->MoveForward(DeltaTime);
+	if (InputManager->IsKeyDown('S')) CameraComponent->MoveForward(-DeltaTime);
+	if (InputManager->IsKeyDown('D')) CameraComponent->MoveRight(DeltaTime);
+	if (InputManager->IsKeyDown('A')) CameraComponent->MoveRight(-DeltaTime);
+	if (InputManager->IsKeyDown('E')) CameraComponent->MoveUp(DeltaTime);
+	if (InputManager->IsKeyDown('Q')) CameraComponent->MoveUp(-DeltaTime);
 
 	if (InputManager->IsMouseButtonDown(CInputManager::MOUSE_RIGHT))
 	{
-		float DeltaX = InputManager->GetMouseDeltaX();
-		float DeltaY = InputManager->GetMouseDeltaY();
-		Camera->Rotate(DeltaX * 0.2f, -DeltaY * 0.2f);
+		const float DeltaX = InputManager->GetMouseDeltaX();
+		const float DeltaY = InputManager->GetMouseDeltaY();
+		CameraComponent->Rotate(DeltaX * 0.2f, -DeltaY * 0.2f);
 	}
 }
 
@@ -378,18 +381,22 @@ void CCore::Render()
 
 	Renderer->BeginFrame();
 
-	// 커맨드 큐 준비 (이전 프레임 크기로 reserve)
+	UCameraComponent* ActiveCamera = Scene->GetActiveCameraComponent();
+	if (!ActiveCamera)
+	{
+		Renderer->EndFrame();
+		return;
+	}
+
 	FRenderCommandQueue CommandQueue;
 	CommandQueue.Reserve(Renderer->GetPrevCommandCount());
-	CCamera* Camera = Scene->GetCamera();
+
+	CommandQueue.ViewMatrix = ActiveCamera->GetViewMatrix();
+	CommandQueue.ProjectionMatrix = ActiveCamera->GetProjectionMatrix();
+
 	FFrustum Frustum;
-	if (Camera)
-	{
-		CommandQueue.ViewMatrix = Camera->GetViewMatrix();
-		CommandQueue.ProjectionMatrix = Camera->GetProjectionMatrix();
-		FMatrix VP = CommandQueue.ViewMatrix * CommandQueue.ProjectionMatrix;
-		Frustum.ExtractFromVP(VP);
-	}
+	const FMatrix ViewProjection = CommandQueue.ViewMatrix * CommandQueue.ProjectionMatrix;
+	Frustum.ExtractFromVP(ViewProjection);
 
 	if (ViewportClient)
 	{
@@ -400,16 +407,18 @@ void CCore::Render()
 		Scene->CollectRenderCommands(Frustum, CommandQueue);
 	}
 
-	// Renderer가 큐를 소비
 	Renderer->SubmitCommands(CommandQueue);
 	Renderer->ExecuteCommands();
-
 	Renderer->EndFrame();
 }
 
 void CCore::OnResize(int32 Width, int32 Height)
 {
-	if (Width == 0 || Height == 0) return;
+	if (Width == 0 || Height == 0)
+	{
+		return;
+	}
+
 	WindowWidth = Width;
 	WindowHeight = Height;
 
@@ -418,10 +427,55 @@ void CCore::OnResize(int32 Width, int32 Height)
 		Renderer->OnResize(Width, Height);
 	}
 
-	UScene* Scene = GetActiveScene();
-	if (Scene && Scene->GetCamera())
+	const float NewAspect = static_cast<float>(Width) / static_cast<float>(Height);
+	auto UpdateSceneAspectRatio = [NewAspect](UScene* Scene)
+		{
+			if (Scene && Scene->GetCamera())
+			{
+				Scene->GetCamera()->SetAspectRatio(NewAspect);
+			}
+		};
+
+	UpdateSceneAspectRatio(GameSceneContext.Scene);
+	UpdateSceneAspectRatio(EditorSceneContext.Scene);
+	for (const std::unique_ptr<FEditorSceneContext>& PreviewContext : PreviewSceneContexts)
 	{
-		float NewAspect = static_cast<float>(Width) / static_cast<float>(Height);
-		Scene->GetCamera()->SetAspectRatio(NewAspect);
+		if (PreviewContext)
+		{
+			UpdateSceneAspectRatio(PreviewContext->Scene);
+		}
+	}
+}
+
+void CCore::RegisterConsoleVariables()
+{
+	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
+
+	FConsoleVariable* MaxFPSVar = CVM.Find("t.MaxFPS");
+	if (!MaxFPSVar)
+	{
+		MaxFPSVar = CVM.Register("t.MaxFPS", 0.0f, "Maximum FPS limit (0 = unlimited)");
+	}
+	MaxFPSVar->SetOnChanged([this](FConsoleVariable* Var)
+		{
+			Timer.SetMaxFPS(Var->GetFloat());
+		});
+	Timer.SetMaxFPS(MaxFPSVar->GetFloat());
+
+	FConsoleVariable* VSyncVar = CVM.Find("r.VSync");
+	if (!VSyncVar)
+	{
+		VSyncVar = CVM.Register("r.VSync", 0, "Enable VSync (0 = off, 1 = on)");
+	}
+	VSyncVar->SetOnChanged([this](FConsoleVariable* Var)
+		{
+			if (Renderer)
+			{
+				Renderer->SetVSync(Var->GetInt() != 0);
+			}
+		});
+	if (Renderer)
+	{
+		Renderer->SetVSync(VSyncVar->GetInt() != 0);
 	}
 }

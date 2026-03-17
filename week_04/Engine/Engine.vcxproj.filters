@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source">
@@ -90,13 +90,22 @@
     <ClCompile Include="Source\Core\FTimer.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Core\ConsoleVariableManager.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Core\ViewportClient.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
     <ClCompile Include="Source\Debug\EngineLog.cpp">
       <Filter>Source\Debug</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Input\EnhancedInputManager.cpp">
+      <Filter>Source\Input</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Input\InputManager.cpp">
+      <Filter>Source\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Input\InputMappingContext.cpp">
       <Filter>Source\Input</Filter>
     </ClCompile>
     <ClCompile Include="Source\Math\Frustum.cpp">
@@ -136,6 +145,9 @@
       <Filter>Source\Actor</Filter>
     </ClCompile>
     <ClCompile Include="Source\Actor\SphereActor.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Actor\AttachTestActor.cpp">
       <Filter>Source\Actor</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scene\Scene.cpp">
@@ -189,6 +201,9 @@
     <ClCompile Include="Source\Renderer\ShaderResource.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Component\CameraComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -201,6 +216,9 @@
       <Filter>Source\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\ActorComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\CameraComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\CubeComponent.h">
@@ -233,13 +251,31 @@
     <ClInclude Include="Source\Core\FTimer.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Core\ConsoleVariableManager.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Core\ViewportClient.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Debug\EngineLog.h">
       <Filter>Source\Debug</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Input\EnhancedInputManager.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputAction.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Input\InputManager.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputMappingContext.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputModifier.h">
+      <Filter>Source\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputTrigger.h">
       <Filter>Source\Input</Filter>
     </ClInclude>
     <ClInclude Include="Source\Math\Frustum.h">
@@ -291,6 +327,9 @@
       <Filter>Source\Actor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Actor\SphereActor.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\AttachTestActor.h">
       <Filter>Source\Actor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scene\Scene.h">
