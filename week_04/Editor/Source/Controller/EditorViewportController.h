@@ -3,7 +3,7 @@
 class UCameraComponent;
 class CInputManager;
 
-class CEditorCViewportController
+class CEditorViewportController
 {
 public:
 	void Initialize(UCameraComponent* InCameraComp, CInputManager* InInput);

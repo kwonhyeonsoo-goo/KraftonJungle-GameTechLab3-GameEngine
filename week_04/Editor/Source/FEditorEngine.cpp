@@ -8,12 +8,21 @@
 
 bool FEditorEngine::Initialize(HINSTANCE hInstance)
 {
+
 	ImGui_ImplWin32_EnableDpiAwareness();
 
 	if (!FEngine::Initialize(hInstance, L"Jungle Editor", 1280, 720))
 		return false;
-
+	EditorPawn = new AEditorCameraPawn(
+		AEditorCameraPawn::StaticClass(),"EditorCameraPawn");
 	return true;
+}
+
+void FEditorEngine::Tick(float DeltaTime)
+{
+	ViewportController.Tick(DeltaTime);
+
+	FEngine::Tick(DeltaTime);
 }
 
 void FEditorEngine::PreInitialize()

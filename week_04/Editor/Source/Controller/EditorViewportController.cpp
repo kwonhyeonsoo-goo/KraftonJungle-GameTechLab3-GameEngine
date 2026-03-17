@@ -3,18 +3,18 @@
 #include "Input/InputManager.h"
 
 
-void CEditorCViewportController::Initialize(UCameraComponent* InCameraComp, CInputManager* InInput)
+void CEditorViewportController::Initialize(UCameraComponent* InCameraComp, CInputManager* InInput)
 {
 	CameraComponent = InCameraComp;
 	InputManager = InInput;
 }
 
-void CEditorCViewportController::Tick(float DeltaTime)
+void CEditorViewportController::Tick(float DeltaTime)
 {
 	ProcessCameraInput(DeltaTime);
 }
 
-void CEditorCViewportController::ProcessCameraInput(float DeltaTime)
+void CEditorViewportController::ProcessCameraInput(float DeltaTime)
 {
 	if (InputManager->IsKeyDown('W')) CameraComponent->MoveForward(DeltaTime);
 	if (InputManager->IsKeyDown('S')) CameraComponent->MoveForward(-DeltaTime);
