@@ -9,17 +9,35 @@
 
 #include <limits>
 
-FRay CPicker::ScreenToRay(int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight,
-						  const FMatrix& ViewMatrix, const FMatrix& ProjMatrix) const
+FRay CPicker::ScreenToRay(const CCamera* Camera, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const
 {
-	float NdcX = (2.0f * ScreenX / ScreenWidth) - 1.0f;
-	float NdcY = 1.0f - (2.0f * ScreenY / ScreenHeight);
+	if (!Camera || ScreenWidth <= 0 || ScreenHeight <= 0)
+	{
+		return { FVector::ZeroVector, FVector::ForwardVector };
+	}
+
+	const FMatrix ViewMatrix = Camera->GetViewMatrix();
+	const FMatrix ProjMatrix = Camera->GetProjectionMatrix();
+	const FMatrix ViewInverse = ViewMatrix.GetInverse();
+	const float NdcX = (2.0f * ScreenX / ScreenWidth) - 1.0f;
+	const float NdcY = 1.0f - (2.0f * ScreenY / ScreenHeight);
+
+	if (Camera->IsOrthographic())
+	{
+		const float ViewRight = NdcX * (Camera->GetOrthoWidth() * 0.5f);
+		const float ViewUp = NdcY * (Camera->GetOrthoHeight() * 0.5f);
+
+		FVector RayOrigin;
+		RayOrigin.X = ViewRight * ViewInverse.M[1][0] + ViewUp * ViewInverse.M[2][0] + ViewInverse.M[3][0];
+		RayOrigin.Y = ViewRight * ViewInverse.M[1][1] + ViewUp * ViewInverse.M[2][1] + ViewInverse.M[3][1];
+		RayOrigin.Z = ViewRight * ViewInverse.M[1][2] + ViewUp * ViewInverse.M[2][2] + ViewInverse.M[3][2];
+
+		return { RayOrigin, Camera->GetForward() };
+	}
 
 	const float ViewForward = 1.0f;
 	const float ViewRight = NdcX / ProjMatrix.M[1][0];
 	const float ViewUp = NdcY / ProjMatrix.M[2][1];
-
-	const FMatrix ViewInverse = ViewMatrix.GetInverse();
 
 	FVector RayDirectionWorld;
 	RayDirectionWorld.X = ViewForward * ViewInverse.M[0][0] + ViewRight * ViewInverse.M[1][0] + ViewUp * ViewInverse.M[2][0];
@@ -87,10 +105,7 @@ AActor* CPicker::PickActor(UScene* Scene, int32 ScreenX, int32 ScreenY,
 	}
 
 	CCamera* Camera = Scene->GetCamera();
-	const FMatrix ViewMatrix = Camera->GetViewMatrix();
-	const FMatrix ProjMatrix = Camera->GetProjectionMatrix();
-
-	const FRay Ray = ScreenToRay(ScreenX, ScreenY, ScreenWidth, ScreenHeight, ViewMatrix, ProjMatrix);
+	const FRay Ray = ScreenToRay(Camera, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 
 	AActor* ClosestActor = nullptr;
 	float ClosestDistance = (std::numeric_limits<float>::max)();

@@ -107,10 +107,31 @@ void CControlPanelWindow::Render(CCore* Core)
 				Camera->SetRotation(CameraYaw, CameraPitch);
 			}
 
-			float CameraFOV = Camera->GetFOV();
-			if (ImGui::SliderFloat("FOV", &CameraFOV, 10.0f, 120.0f))
+			int ProjectionModeIndex = (Camera->GetProjectionMode() == ECameraProjectionMode::Orthographic) ? 1 : 0;
+			const char* ProjectionModes[] = { "Perspective", "Orthographic" };
+			if (ImGui::Combo("Projection", &ProjectionModeIndex, ProjectionModes, IM_ARRAYSIZE(ProjectionModes)))
 			{
-				Camera->SetFOV(CameraFOV);
+				Camera->SetProjectionMode(
+					ProjectionModeIndex == 0
+					? ECameraProjectionMode::Perspective
+					: ECameraProjectionMode::Orthographic);
+			}
+
+			if (Camera->IsOrthographic())
+			{
+				float OrthoWidth = Camera->GetOrthoWidth();
+				if (ImGui::DragFloat("Ortho Width", &OrthoWidth, 0.5f, 1.0f, 1000.0f))
+				{
+					Camera->SetOrthoWidth(OrthoWidth);
+				}
+			}
+			else
+			{
+				float CameraFOV = Camera->GetFOV();
+				if (ImGui::SliderFloat("FOV", &CameraFOV, 10.0f, 120.0f))
+				{
+					Camera->SetFOV(CameraFOV);
+				}
 			}
 		}
 

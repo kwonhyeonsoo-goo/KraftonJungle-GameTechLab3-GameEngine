@@ -359,9 +359,7 @@ bool CGizmo::UpdateDrag(AActor* SelectedActor, UScene* Scene, const CPicker& Pic
 		return false;
 	}
 
-	const FMatrix ViewMatrix = Scene->GetCamera()->GetViewMatrix();
-	const FMatrix ProjectionMatrix = Scene->GetCamera()->GetProjectionMatrix();
-	const FRay Ray = Picker.ScreenToRay(ScreenX, ScreenY, ScreenWidth, ScreenHeight, ViewMatrix, ProjectionMatrix);
+	const FRay Ray = Picker.ScreenToRay(Scene->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 
 	FVector Intersection = FVector::ZeroVector;
 	if (!IntersectPlane(Ray, DragStartGizmoLocation, DragPlaneNormal, Intersection))
@@ -695,9 +693,7 @@ EGizmoAxis CGizmo::HitTestAxis(AActor* SelectedActor, UScene* Scene, const CPick
 		return EGizmoAxis::None;
 	}
 
-	const FMatrix ViewMatrix = Scene->GetCamera()->GetViewMatrix();
-	const FMatrix ProjectionMatrix = Scene->GetCamera()->GetProjectionMatrix();
-	const FRay Ray = Picker.ScreenToRay(ScreenX, ScreenY, ScreenWidth, ScreenHeight, ViewMatrix, ProjectionMatrix);
+	const FRay Ray = Picker.ScreenToRay(Scene->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 	const float GizmoScale = GetRenderGizmoScale(ComputeGizmoScale(WorldLocation, Scene->GetCamera()));
 	const FQuat GizmoRotation = GetGizmoRotation(SelectedActor);
 	const FMatrix AxisGizmoWorld = FTransform(GizmoRotation, WorldLocation, FVector(GizmoScale, GizmoScale, GizmoScale)).ToMatrixWithScale();
@@ -794,9 +790,7 @@ bool CGizmo::BeginTranslationDrag(EGizmoAxis AxisId, AActor* SelectedActor, USce
 		return false;
 	}
 
-	const FMatrix ViewMatrix = Scene->GetCamera()->GetViewMatrix();
-	const FMatrix ProjectionMatrix = Scene->GetCamera()->GetProjectionMatrix();
-	const FRay Ray = Picker.ScreenToRay(ScreenX, ScreenY, ScreenWidth, ScreenHeight, ViewMatrix, ProjectionMatrix);
+	const FRay Ray = Picker.ScreenToRay(Scene->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 
 	const FVector GizmoLocation = GetActorWorldLocation(SelectedActor);
 	const FVector Axis = GetGizmoAxisVector(AxisId, SelectedActor);
@@ -855,9 +849,7 @@ bool CGizmo::BeginRotationDrag(EGizmoAxis AxisId, AActor* SelectedActor, UScene*
 		return false;
 	}
 
-	const FMatrix ViewMatrix = Scene->GetCamera()->GetViewMatrix();
-	const FMatrix ProjectionMatrix = Scene->GetCamera()->GetProjectionMatrix();
-	const FRay Ray = Picker.ScreenToRay(ScreenX, ScreenY, ScreenWidth, ScreenHeight, ViewMatrix, ProjectionMatrix);
+	const FRay Ray = Picker.ScreenToRay(Scene->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 
 	const FVector GizmoLocation = GetActorWorldLocation(SelectedActor);
 	const FVector Axis = (AxisId == EGizmoAxis::Screen) ? Scene->GetCamera()->GetForward() : GetGizmoAxisVector(AxisId, SelectedActor);
@@ -890,9 +882,7 @@ bool CGizmo::BeginScaleDrag(EGizmoAxis AxisId, AActor* SelectedActor, UScene* Sc
 		return false;
 	}
 
-	const FMatrix ViewMatrix = Scene->GetCamera()->GetViewMatrix();
-	const FMatrix ProjectionMatrix = Scene->GetCamera()->GetProjectionMatrix();
-	const FRay Ray = Picker.ScreenToRay(ScreenX, ScreenY, ScreenWidth, ScreenHeight, ViewMatrix, ProjectionMatrix);
+	const FRay Ray = Picker.ScreenToRay(Scene->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 
 	const FVector GizmoLocation = GetActorWorldLocation(SelectedActor);
 	const CCamera* Camera = Scene->GetCamera();
@@ -1242,9 +1232,18 @@ float CGizmo::ComputeGizmoScale(const FVector& WorldPosition, const CCamera* Cam
 		return MinGizmoScale;
 	}
 
-	const float Distance = (WorldPosition - Camera->GetPosition()).Size();
-	const float HalfFovRadians = FMath::DegreesToRadians(Camera->GetFOV() * 0.5f);
-	const float VisibleHeight = 2.0f * (std::max)(Distance, 1.0f) * std::tan(HalfFovRadians);
+	float VisibleHeight = 0.0f;
+	if (Camera->IsOrthographic())
+	{
+		VisibleHeight = Camera->GetOrthoHeight();
+	}
+	else
+	{
+		const float Distance = (WorldPosition - Camera->GetPosition()).Size();
+		const float HalfFovRadians = FMath::DegreesToRadians(Camera->GetFOV() * 0.5f);
+		VisibleHeight = 2.0f * (std::max)(Distance, 1.0f) * std::tan(HalfFovRadians);
+	}
+
 	const float DesiredAxisLength = VisibleHeight * GizmoViewportHeightRatio;
 	const float ReferenceAxisLength = (Mode == EGizmoMode::Scale) ? ScaleAxisLengthUnits : TranslationAxisLengthUnits;
 	return std::clamp(DesiredAxisLength / ReferenceAxisLength, MinGizmoScale, MaxGizmoScale);

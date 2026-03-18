@@ -5,6 +5,7 @@
 
 class AActor;
 class UScene;
+class CCamera;
 
 struct FRay
 {
@@ -16,8 +17,7 @@ class CPicker
 {
 public:
     // 스크린 좌표 → 월드 레이 변환 (Deprojection)
-    FRay ScreenToRay(int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight,
-                     const FMatrix& ViewMatrix, const FMatrix& ProjMatrix) const;
+    FRay ScreenToRay(const CCamera* Camera, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const;
 
     // Möller–Trumbore 알고리즘: 레이-삼각형 교차 검사
     bool RayTriangleIntersect(const FRay& Ray,

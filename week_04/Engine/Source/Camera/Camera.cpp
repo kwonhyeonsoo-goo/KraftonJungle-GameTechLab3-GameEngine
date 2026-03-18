@@ -1,4 +1,5 @@
 #include "Camera.h"
+#include <algorithm>
 #include <cmath>
 
 void CCamera::SetPosition(const FVector& InPosition)
@@ -65,12 +66,19 @@ FMatrix CCamera::GetViewMatrix() const
 
 FMatrix CCamera::GetProjectionMatrix() const
 {
+	if (ProjectionMode == ECameraProjectionMode::Orthographic)
+	{
+		const float SafeViewWidth = (std::max)(OrthoWidth, 0.01f);
+		const float SafeAspectRatio = (std::max)(AspectRatio, 0.01f);
+		return FMatrix::MakeOrthographicLH(SafeViewWidth, SafeViewWidth / SafeAspectRatio, NearPlane, FarPlane);
+	}
+
 	return FMatrix::MakePerspectiveFovLH(FMath::DegreesToRadians(FOV), AspectRatio, NearPlane, FarPlane);
 }
 
 void CCamera::SetAspectRatio(float InAspectRatio)
 {
-	AspectRatio = InAspectRatio;
+	AspectRatio = (std::max)(InAspectRatio, 0.01f);
 }
 
 FVector CCamera::GetPosition() const
@@ -95,5 +103,35 @@ float CCamera::GetFOV() const
 
 void CCamera::SetFOV(float InFOV)
 {
-	FOV = InFOV;
+	FOV = std::clamp(InFOV, 1.0f, 179.0f);
+}
+
+ECameraProjectionMode CCamera::GetProjectionMode() const
+{
+	return ProjectionMode;
+}
+
+bool CCamera::IsOrthographic() const
+{
+	return ProjectionMode == ECameraProjectionMode::Orthographic;
+}
+
+void CCamera::SetProjectionMode(ECameraProjectionMode InProjectionMode)
+{
+	ProjectionMode = InProjectionMode;
+}
+
+float CCamera::GetOrthoWidth() const
+{
+	return OrthoWidth;
+}
+
+float CCamera::GetOrthoHeight() const
+{
+	return OrthoWidth / (std::max)(AspectRatio, 0.01f);
+}
+
+void CCamera::SetOrthoWidth(float InOrthoWidth)
+{
+	OrthoWidth = (std::max)(InOrthoWidth, 0.01f);
 }
