@@ -6,5 +6,6 @@ public:
 	static UClass* StaticClass();
 
 	UGizmoComponent();
+	UGizmoComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
 };
 

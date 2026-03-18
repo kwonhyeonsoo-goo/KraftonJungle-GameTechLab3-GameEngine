@@ -4,6 +4,7 @@ class ENGINE_API AGizmo : public AActor
 {
 public:
 	AGizmo();
+	AGizmo(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
 
 	static UClass* StaticClass();
 

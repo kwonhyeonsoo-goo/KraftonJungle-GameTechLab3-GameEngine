@@ -3,7 +3,8 @@
 #include "Core/FEngine.h"
 #include "UI/EditorUI.h"
 #include "UI/PreviewViewportClient.h"
-
+#include "Controller/EditorViewportController.h"
+#include "Pawn/EditorCameraPawn.h"
 class FEditorEngine : public FEngine
 {
 public:
@@ -25,4 +26,6 @@ private:
 
 	CEditorUI EditorUI;
 	std::unique_ptr<CPreviewViewportClient> PreviewViewportClient;
+	AEditorCameraPawn* EditorPawn = nullptr;
+	CEditorViewportController ViewportController;
 };

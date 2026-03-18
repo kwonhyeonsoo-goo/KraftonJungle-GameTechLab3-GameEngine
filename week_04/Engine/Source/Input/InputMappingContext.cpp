@@ -3,7 +3,8 @@
 
 FActionKeyMapping& FInputMappingContext::AddMapping(FInputAction* Action, int32 Key)
 {
-	FActionKeyMapping& Mapping = Mappings.emplace_back();
+	Mappings.push_back({});
+	FActionKeyMapping& Mapping = Mappings.back();
 	Mapping.Action = Action;
 	Mapping.Key = Key;
 	return Mapping;

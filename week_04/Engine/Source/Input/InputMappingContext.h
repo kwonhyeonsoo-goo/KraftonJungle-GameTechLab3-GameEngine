@@ -8,6 +8,8 @@ struct ENGINE_API FActionKeyMapping
 {
 	FInputAction* Action = nullptr;
 	int32 Key = 0;
+	TArray<FInputTrigger*> Triggers;  
+	TArray<FInputModifier*> Modifiers;
 };
 struct ENGINE_API FInputMappingContext
 {

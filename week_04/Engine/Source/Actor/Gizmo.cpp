@@ -2,16 +2,22 @@
 
 #include "Component/GizmoComponent.h"
 #include "Object/Class.h"
+#include "Object/ObjectFactory.h"
 
 namespace 
 {
 	UObject* CreateAGizmoInstance(UObject* InOuter, const FString& InName)
 	{
-		return new AGizmo();
+		return new AGizmo(AGizmo::StaticClass(), InName, InOuter);
 	}
 }
 
 AGizmo::AGizmo() : AActor(StaticClass(), "")
+{
+}
+
+AGizmo::AGizmo(UClass* InClass, const FString& InName, UObject* InOuter)
+	: AActor(InClass, InName, InOuter)
 {
 }
 
@@ -23,7 +29,7 @@ UClass* AGizmo::StaticClass()
 
 void AGizmo::PostSpawnInitialize()
 {
-	UPrimitiveComponent* GizmoComp = new UGizmoComponent();
+	UPrimitiveComponent* GizmoComp = FObjectFactory::ConstructObject<UGizmoComponent>(this);
 	this->AddOwnedComponent(GizmoComp);
 }
 

@@ -7,8 +7,14 @@
     <Filter Include="Source\Axis">
       <UniqueIdentifier>{fd0a8fd4-f8b6-9731-3746-74b723a7b3a0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Controller">
+      <UniqueIdentifier>{87711c71-c47c-3353-a198-3ec340231beb}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Gizmo">
       <UniqueIdentifier>{2997c27c-11e9-54ee-4b0c-5a71dc20396c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Pawn">
+      <UniqueIdentifier>{a777ac28-eaa3-c912-4c4f-9b625f58984b}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Picking">
       <UniqueIdentifier>{f6faa914-edd8-6594-d865-4579e893d626}</UniqueIdentifier>
@@ -39,8 +45,14 @@
     <ClCompile Include="Source\Axis\AxisRenderer.cpp">
       <Filter>Source\Axis</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Controller\EditorViewportController.cpp">
+      <Filter>Source\Controller</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Gizmo\Gizmo.cpp">
       <Filter>Source\Gizmo</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Pawn\EditorCameraPawn.cpp">
+      <Filter>Source\Pawn</Filter>
     </ClCompile>
     <ClCompile Include="Source\Picking\Picker.cpp">
       <Filter>Source\Picking</Filter>

@@ -7,7 +7,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		return -1;
 
 	Engine.Run();
-	Engine.Shutdown();
+	//Engine.Shutdown(); // ~FEingine() called shutdown
 
 	return 0;
 }

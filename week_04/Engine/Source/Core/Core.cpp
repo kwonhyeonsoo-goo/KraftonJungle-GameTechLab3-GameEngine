@@ -4,7 +4,10 @@
 #include "Core/ConsoleVariableManager.h"
 #include "Scene/Scene.h"
 #include "Actor/Actor.h"
+#include "Input/EnhancedInputManager.h"
 #include "Component/CameraComponent.h"
+#include "Object/ObjectFactory.h"
+#include "Object/ObjectManager.h"
 #include "Component/PrimitiveComponent.h"
 #include "Primitive/PrimitiveBase.h"
 #include "Renderer/Renderer.h"
@@ -20,7 +23,7 @@ bool CCore::CreateSceneContext(FSceneContext& Context, const FString& ContextNam
 {
 	Context.ContextName = ContextName;
 	Context.SceneType = SceneType;
-	Context.Scene = new UScene(UScene::StaticClass(), ContextName);
+	Context.Scene = FObjectFactory::ConstructObject<UScene>(nullptr, ContextName);
 	if (!Context.Scene)
 	{
 		return false;
@@ -125,8 +128,12 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupS
 		return false;
 	}
 
-	InputManager = std::make_unique<CInputManager>();
+	ObjManager = new ObjectManager();
 
+	// InputManager
+	InputManager = new CInputManager();
+	EnhancedInput = new CEnhancedInputManager();
+	// Timer
 	Timer.Initialize();
 	RegisterConsoleVariables();
 
@@ -291,8 +298,18 @@ void CCore::Release()
 	DestroySceneContext(EditorSceneContext);
 	DestroySceneContext(GameSceneContext);
 
-	InputManager.reset();
+	// Scene 해제 후 PendingKill 오브젝트를 GC로 정리
+	if (ObjManager)
+	{
+		ObjManager->FlushKilledObjects();
+		delete ObjManager;
+		ObjManager = nullptr;
+	}
 
+	delete EnhancedInput;
+	EnhancedInput = nullptr;
+	delete InputManager;
+	InputManager = nullptr;
 	CPrimitiveBase::ClearCache();
 
 	if (Renderer)
@@ -310,51 +327,28 @@ void CCore::Tick()
 
 void CCore::Tick(const float DeltaTime)
 {
+	Input(DeltaTime);
+	Physics(DeltaTime);
+	GameLogic(DeltaTime);
+	Render();
+	LateUpdate(DeltaTime);
+}
+
+void CCore::Input(float DeltaTime)
+{
 	if (InputManager)
 	{
 		InputManager->Tick();
 	}
 
+	if (EnhancedInput && InputManager)
+	{
+		EnhancedInput->ProcessInput(InputManager, DeltaTime);
+	}
+
 	if (ViewportClient)
 	{
 		ViewportClient->Tick(this, DeltaTime);
-	}
-	else
-	{
-		ProcessCameraInput(DeltaTime);
-	}
-
-	Physics(DeltaTime);
-	GameLogic(DeltaTime);
-	Render();
-}
-
-void CCore::ProcessCameraInput(float DeltaTime)
-{
-	UScene* Scene = GetActiveScene();
-	if (!InputManager || !Scene)
-	{
-		return;
-	}
-
-	UCameraComponent* CameraComponent = Scene->GetActiveCameraComponent();
-	if (!CameraComponent)
-	{
-		return;
-	}
-
-	if (InputManager->IsKeyDown('W')) CameraComponent->MoveForward(DeltaTime);
-	if (InputManager->IsKeyDown('S')) CameraComponent->MoveForward(-DeltaTime);
-	if (InputManager->IsKeyDown('D')) CameraComponent->MoveRight(DeltaTime);
-	if (InputManager->IsKeyDown('A')) CameraComponent->MoveRight(-DeltaTime);
-	if (InputManager->IsKeyDown('E')) CameraComponent->MoveUp(DeltaTime);
-	if (InputManager->IsKeyDown('Q')) CameraComponent->MoveUp(-DeltaTime);
-
-	if (InputManager->IsMouseButtonDown(CInputManager::MOUSE_RIGHT))
-	{
-		const float DeltaX = InputManager->GetMouseDeltaX();
-		const float DeltaY = InputManager->GetMouseDeltaY();
-		CameraComponent->Rotate(DeltaX * 0.2f, -DeltaY * 0.2f);
 	}
 }
 
@@ -368,6 +362,16 @@ void CCore::GameLogic(float DeltaTime)
 	if (Scene)
 	{
 		Scene->Tick(DeltaTime);
+	}
+}
+
+void CCore::LateUpdate(float DeltaTime)
+{
+	double CurrentTime = Timer.GetTotalTime();
+	if (ObjManager && (CurrentTime - LastGCTime) >= GCInterval)
+	{
+		ObjManager->FlushKilledObjects();
+		LastGCTime = CurrentTime;
 	}
 }
 

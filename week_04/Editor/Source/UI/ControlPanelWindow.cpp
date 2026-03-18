@@ -8,10 +8,11 @@
 #include "Actor/AttachTestActor.h"
 #include "Actor/CubeActor.h"
 #include "Actor/SphereActor.h"
+#include "Object/ObjectFactory.h"
 #include "Camera/Camera.h"
 #include "Core/Paths.h"
 #include "Debug/EngineLog.h"
-
+#include "Component/CameraComponent.h"
 #include <filesystem>
 
 namespace
@@ -165,8 +166,31 @@ void CControlPanelWindow::Render(CCore* Core)
 		}
 
 		ImGui::SeparatorText("Scene");
-
 		static char SceneName[128] = "NewScene";
+		if (ImGui::Button("New Scene"))
+		{
+			Core->SetSelectedActor(nullptr);
+		
+			strncpy_s(SceneName, "NewScene", IM_ARRAYSIZE(SceneName));
+			if (UCameraComponent* Cam = Core->GetScene()->GetActiveCameraComponent())
+			{
+				Cam->GetCamera()->SetPosition({ -5.0f, 0.0f, 2.0f });
+				Cam->GetCamera()->SetRotation(0.f,0.f);
+			}
+			Core->GetScene()->ClearActors();
+			UE_LOG("New scene created");
+		}
+
+		ImGui::SameLine();
+		if (ImGui::Button("Clear Scene"))
+		{
+			Core->SetSelectedActor(nullptr);
+			Core->GetScene()->ClearActors();
+			UE_LOG("Scene cleared: all actors destroyed");
+		}
+
+		ImGui::Spacing();
+
 		ImGui::InputText("Scene Name", SceneName, IM_ARRAYSIZE(SceneName));
 
 		ImGui::BeginDisabled(bPreviewActive);

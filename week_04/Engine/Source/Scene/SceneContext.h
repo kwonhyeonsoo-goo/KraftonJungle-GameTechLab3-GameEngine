@@ -23,7 +23,7 @@ struct ENGINE_API FSceneContext
 
 struct ENGINE_API FEditorSceneContext : public FSceneContext
 {
-	AActor* SelectedActor = nullptr;
+	TObjectPtr<AActor> SelectedActor;
 
 	void Reset()
 	{

@@ -7,6 +7,7 @@
 #include "Actor/SphereActor.h"
 #include "Camera/Camera.h"
 #include "Component/CameraComponent.h"
+#include "Object/ObjectFactory.h"
 #include "Component/PrimitiveComponent.h"
 #include "Math/Frustum.h"
 #include "Primitive/PrimitiveBase.h"
@@ -43,16 +44,22 @@ UScene::~UScene()
 {
 	for (AActor* Actor : Actors)
 	{
-		delete Actor;
+		if (Actor)
+		{
+			Actor->Destroy();
+		}
 	}
 	Actors.clear();
+
+	if (SceneCameraComponent)
+	{
+		SceneCameraComponent->MarkPendingKill();
+	}
 
 	if (ActiveCameraComponent == SceneCameraComponent)
 	{
 		ActiveCameraComponent = nullptr;
 	}
-
-	delete SceneCameraComponent;
 	SceneCameraComponent = nullptr;
 }
 
@@ -63,7 +70,7 @@ void UScene::SetActiveCameraComponent(UCameraComponent* InCameraComponent)
 
 UCameraComponent* UScene::GetActiveCameraComponent() const
 {
-	return ActiveCameraComponent ? ActiveCameraComponent : SceneCameraComponent;
+	return ActiveCameraComponent ? ActiveCameraComponent.Get() : SceneCameraComponent;
 }
 
 CCamera* UScene::GetCamera() const
@@ -76,7 +83,7 @@ void UScene::InitializeEmptyScene(float AspectRatio)
 {
 	if (SceneCameraComponent == nullptr)
 	{
-		SceneCameraComponent = new UCameraComponent();
+		SceneCameraComponent = FObjectFactory::ConstructObject<UCameraComponent>(this, "SceneCamera");
 	}
 
 	if (ActiveCameraComponent == nullptr)
@@ -270,7 +277,7 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 		// Material 이름 저장 (에셋 원본 이름 사용)
 		UPrimitiveComponent* PrimComp = Actor->GetComponentByClass<UPrimitiveComponent>();
 		if (PrimComp && PrimComp->GetMaterial() && !PrimComp->GetMaterial()->GetOriginName().empty())
-		//if (UPrimitiveComponent* PrimitiveComponent = Actor->GetComponentByClass<UPrimitiveComponent>())
+			//if (UPrimitiveComponent* PrimitiveComponent = Actor->GetComponentByClass<UPrimitiveComponent>())
 		{
 			Primitives[Key]["Material"] = PrimComp->GetMaterial()->GetOriginName();
 		}
@@ -308,7 +315,10 @@ void UScene::ClearActors()
 
 	for (AActor* Actor : Actors)
 	{
-		delete Actor;
+		if (Actor)
+		{
+			Actor->Destroy();
+		}
 	}
 	Actors.clear();
 }

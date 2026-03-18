@@ -63,7 +63,7 @@ public:
 	void SetActorLocation(const FVector& InLocation);
 
 protected:
-	UScene* Scene = nullptr;
+	TObjectPtr<UScene> Scene;
 	//ULevel* Level = nullptr;
 
 	USceneComponent* RootComponent = nullptr;

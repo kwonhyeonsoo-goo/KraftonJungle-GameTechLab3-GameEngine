@@ -20,3 +20,4 @@ ENGINE_API extern FEngine* GEngine;
 #include "Math/Transform.h"
 #include "Object/Class.h"
 #include "Object/Object.h"
+#include "Debug/EngineLog.h"

@@ -1,4 +1,27 @@
 #include "StatWindow.h"
+#include "Object/Object.h"
+#include "Object/Class.h"
+
+void CStatWindow::RefreshObjectList()
+{
+	ObjectEntries.clear();
+
+	for (UObject* Obj : GUObjectArray)
+	{
+		if (Obj == nullptr)
+		{
+			continue;
+		}
+
+		FObjectEntry Entry;
+		Entry.Name = Obj->GetName();
+		Entry.ClassName = Obj->GetClass() ? Obj->GetClass()->GetName() : "Unknown";
+		Entry.Size = Obj->ObjectSize;
+		ObjectEntries.push_back(Entry);
+	}
+
+	bShowObjectList = true;
+}
 
 void CStatWindow::Render()
 {
@@ -15,6 +38,42 @@ void CStatWindow::Render()
 	ImGui::Text("FPS        : %.1f  (%.3f ms)", FPS, FrameTimeMs);
 	ImGui::Text("Objects    : %u", ObjectCount);
 	ImGui::Text("Heap Usage : %.2f KB", HeapUsageBytes / 1024.0f);
+
+	ImGui::Separator();
+
+	if (ImGui::Button("Refresh Object List"))
+	{
+		RefreshObjectList();
+	}
+
+	if (bShowObjectList && !ObjectEntries.empty())
+	{
+		ImGui::Text("Total: %d objects", static_cast<int>(ObjectEntries.size()));
+
+		if (ImGui::BeginTable("ObjectTable", 3,
+			ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY,
+			ImVec2(0, 300)))
+		{
+			ImGui::TableSetupScrollFreeze(0, 1);
+			ImGui::TableSetupColumn("Name");
+			ImGui::TableSetupColumn("Class");
+			ImGui::TableSetupColumn("Size (bytes)");
+			ImGui::TableHeadersRow();
+
+			for (const FObjectEntry& Entry : ObjectEntries)
+			{
+				ImGui::TableNextRow();
+				ImGui::TableNextColumn();
+				ImGui::TextUnformatted(Entry.Name.c_str());
+				ImGui::TableNextColumn();
+				ImGui::TextUnformatted(Entry.ClassName.c_str());
+				ImGui::TableNextColumn();
+				ImGui::Text("%u", Entry.Size);
+			}
+
+			ImGui::EndTable();
+		}
+	}
 
 	ImGui::End();
 }

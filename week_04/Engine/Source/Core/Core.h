@@ -9,9 +9,11 @@
 #include "Renderer/Renderer.h"
 #include "Input/InputManager.h"
 #include <memory>
+class CEnhancedInputManager;
 
 class AActor;
 class UScene;
+class ObjectManager;
 
 class ENGINE_API CCore
 {
@@ -41,8 +43,9 @@ public:
 	const FSceneContext* GetActiveSceneContext() const { return ActiveSceneContext; }
 	const TArray<std::unique_ptr<FEditorSceneContext>>& GetPreviewSceneContexts() const { return PreviewSceneContexts; }
 	CRenderer* GetRenderer() const { return Renderer.get(); }
-	CInputManager* GetInputManager() const { return InputManager.get(); }
+
 	IViewportClient* GetViewportClient() const { return ViewportClient; }
+	CInputManager* GetInputManager() const { return InputManager; }
 	const FTimer& GetTimer() const { return Timer; }
 
 	void SetSelectedActor(AActor* InActor);
@@ -55,7 +58,8 @@ public:
 	bool ActivatePreviewScene(const FString& ContextName);
 
 	void OnResize(int32 Width, int32 Height);
-
+	CEnhancedInputManager* GetEnhancedInputManager() const { return EnhancedInput; }
+	float GetDeltaTime() const { return Timer.GetDeltaTime(); }
 private:
 	bool CreateSceneContext(FSceneContext& Context, const FString& ContextName, ESceneType SceneType, float AspectRatio, bool bInitializeDefaultScene = true);
 	void DestroySceneContext(FSceneContext& Context);
@@ -64,15 +68,19 @@ private:
 	const FEditorSceneContext* GetActiveEditorSceneContext() const;
 	FEditorSceneContext* FindPreviewSceneContext(const FString& ContextName);
 	const FEditorSceneContext* FindPreviewSceneContext(const FString& ContextName) const;
-	void ProcessCameraInput(float DeltaTime);
+	void Input(float DeltaTime);
 	void Physics(float DeltaTime);
 	void GameLogic(float DeltaTime);
 	void Render();
+	void LateUpdate(float DeltaTime);
 	void RegisterConsoleVariables();
 
 private:
 	std::unique_ptr<CRenderer> Renderer;
-	std::unique_ptr<CInputManager> InputManager;
+	CInputManager* InputManager = nullptr;
+	CEnhancedInputManager* EnhancedInput = nullptr;
+
+	ObjectManager* ObjManager = nullptr;
 	FSceneContext GameSceneContext;
 	FEditorSceneContext EditorSceneContext;
 	TArray<std::unique_ptr<FEditorSceneContext>> PreviewSceneContexts;
@@ -80,6 +88,8 @@ private:
 	IViewportClient* ViewportClient = nullptr;
 
 	FTimer Timer;
+	double LastGCTime = 0.0;
+	static constexpr double GCInterval = 30.0;
 	int32 WindowWidth = 0;
 	int32 WindowHeight = 0;
 };

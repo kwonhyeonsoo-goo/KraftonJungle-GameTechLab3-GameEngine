@@ -31,7 +31,7 @@ public:
 	void SetComponentTickEnabled(bool bEnabled) { bTickEnabled = bEnabled; }
 
 protected:
-	AActor* Owner = nullptr;
+	TObjectPtr<AActor> Owner;
 	bool bRegistered = false;
 	bool bBegunPlay = false;
 	bool bCanEverTick = false;
