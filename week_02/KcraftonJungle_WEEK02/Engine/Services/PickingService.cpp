@@ -9,6 +9,8 @@
 #include "../Foundation/Math/FMatrix4.h"
 #include <iostream>
 #include "../Mesh/FVertexSimple.h"
+#include "../World/USphereComp.h"
+#include "../World/UPlaneComp.h"
 
 /// <summary>
 /// ���콺 ��ǥ�� ����Ʈ ���� ��ǥ�� ��ȯ�ؼ� �����������
@@ -64,28 +66,18 @@ UPrimitiveComponent* PickingService::Pick(const Ray& ray, const TArray<std::uniq
         Ray LocalRay;
         LocalRay.Origin = InvWorld.TransformPosition(ray.Origin);
         LocalRay.Direction = InvWorld.TransformVector(ray.Direction);
+        LocalRay.Direction = LocalRay.Direction.Normalize(); // ← 추가
 
         float t = FLT_MAX;
         bool hit = false;
 
         if (!IntersectsAABB(LocalRay, Prim->GetBoundMin(), Prim->GetBoundMax())) continue;
 
-        switch (Prim->Shape)
-        {
-        case EPrimitiveShape::Sphere:
-            hit = IntersectsSphere(LocalRay, FVector(0.0f, 0.0f, 0.0f), 1.0f, t);
-            break;
-
-        case EPrimitiveShape::Plane:
-			hit = IntersectsMeshIndexed(LocalRay, Prim->Vertices, PlaneIndices, 6, t);
-            break;
-
-        case EPrimitiveShape::Cube:
-        case EPrimitiveShape::Triangle:
-        default:
-			hit = IntersectsMesh(LocalRay, Prim->Vertices, Prim->NumVertices, WorldMat, t);
-            //hit = IntersectsAABB(LocalRay, Prim->GetBoundMin(), Prim->GetBoundMax(), t);
-            break;
+        if (Prim->IsA<UPlaneComp>()) {
+            hit = IntersectsMeshIndexed(LocalRay, Prim->Vertices, PlaneIndices, 6, t);
+        }
+        else {
+            hit = IntersectsMesh(LocalRay, Prim->Vertices, Prim->NumVertices, WorldMat, t);
         }
 
         if (!hit || t <= 0.0f) continue;
@@ -172,6 +164,8 @@ bool PickingService::IntersectsMesh(const Ray& ray, const FVertexSimple* vertice
         FVector v0 = FVector(vertices[i].x, vertices[i].y, vertices[i].z);
         FVector v1 = FVector(vertices[i + 1].x, vertices[i + 1].y, vertices[i + 1].z);
         FVector v2 = FVector(vertices[i + 2].x, vertices[i + 2].y, vertices[i + 2].z);
+
+        
 
         float t = 0.f;
         if (MollerTrumbore(ray, v0, v1, v2, t)) {
