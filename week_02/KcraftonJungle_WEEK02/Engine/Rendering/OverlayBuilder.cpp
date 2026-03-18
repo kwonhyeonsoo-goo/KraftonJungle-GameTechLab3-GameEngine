@@ -98,9 +98,12 @@ void OverlayBuilder::PushGrid(RenderQueue& queue , FVector cameraPos)
 
 void OverlayBuilder::PushGizmoAxes(const GizmoState& state, RenderQueue& queue)
 {
+	const bool IsUniformScale = state.bUniformScale;
+	const bool IsActive = (state.HoveredAxisIndex >= 0 || state.ActiveAxisIndex >= 0);
+
 	for (int i = 0; i < 3; ++i)
 	{
-		const bool bHighlight = (i == state.HoveredAxisIndex) || (i == state.ActiveAxisIndex);
+		const bool bHighlight = (i == state.HoveredAxisIndex) || (i == state.ActiveAxisIndex) || (IsUniformScale && IsActive);
 
 		RenderCommand cmd = {};
 		cmd.Type           = state.Axes[i].RenderType;

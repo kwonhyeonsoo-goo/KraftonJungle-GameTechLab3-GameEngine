@@ -52,4 +52,5 @@ struct GizmoState {
     GizmoAxisData Axes[3];
     int           HoveredAxisIndex = -1;
     int           ActiveAxisIndex = -1;
+    bool          bUniformScale = false;
 };

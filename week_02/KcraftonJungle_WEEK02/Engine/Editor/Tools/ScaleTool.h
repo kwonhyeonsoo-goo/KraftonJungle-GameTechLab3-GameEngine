@@ -16,6 +16,14 @@ public:
     FString GetName() const override { return "Scale"; }
 
 private:
+    bool TryPickAxisHandle(const MouseEvent& e, AppContext& ctx, EAxis& outAxis) const;
+    void ApplyScaleDelta(const TArray<USceneComponent*>& primaries, float delta) const;
+    void ResetManipulationState();
+
+private:
+    bool bActiveUniformScale = false;
+    FVector DragAxisOrigin{};
+    FVector DragAxisDirection{};
     float     DragStartAxisT = 0.0f;
     TArray<Transform> OriginalTransforms;
 };

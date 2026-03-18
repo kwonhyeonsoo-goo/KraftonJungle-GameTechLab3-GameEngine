@@ -16,8 +16,6 @@ void PropertyPanel::OnRender(AppContext& ctx)
     float consoleHeight = h * 0.2f;
     float propertyHeight = (h - consoleHeight) * 0.5f;
 
-	static bool UniformScale = true;
-
     // ¿ì»ó´Ü
     ImGui::SetNextWindowPos(ImVec2(w - rightWidth, 0), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(rightWidth, propertyHeight), ImGuiCond_Always);
@@ -73,7 +71,14 @@ void PropertyPanel::OnRender(AppContext& ctx)
     const bool rotChanged = ImGui::DragFloat3("Rotation (deg)", rot, 1.0f);
     const bool sclChanged = ImGui::DragFloat3("Scale", scale, 0.1f);
 
+	bool UniformScale = ctx.Editor.Tools.GetUniformScale();
+    ImGui::BeginDisabled(ctx.Editor.Tools.GetMode() != ETransformMode::Scale);
 	ImGui::Checkbox("Uniform Sacle", &UniformScale);
+    ImGui::EndDisabled();
+
+	if (UniformScale != ctx.Editor.Tools.GetUniformScale()) {
+		ctx.Editor.Tools.SetUniformScale(UniformScale);
+	}
 
     if (locChanged || rotChanged || sclChanged)
     {

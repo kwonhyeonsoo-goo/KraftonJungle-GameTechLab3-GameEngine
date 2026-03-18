@@ -31,7 +31,8 @@ namespace GizmoMath
     constexpr uint32 AxisColorX = 0xFF0000FF;
     constexpr uint32 AxisColorY = 0x00FF00FF;
     constexpr uint32 AxisColorZ = 0x0000FFFF;
-    constexpr uint32 AxisColorHighlight = 0xFFFF00FF;
+    constexpr uint32 AxisColorALL = 0xE040E6FF;
+    constexpr uint32 AxisColorHighlight = 0xFFB300FF;
 
     FVector AxisX();
     FVector AxisY();

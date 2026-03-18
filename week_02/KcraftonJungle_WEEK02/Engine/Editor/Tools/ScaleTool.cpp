@@ -15,35 +15,66 @@ namespace
     {
         return value < MinScaleValue ? MinScaleValue : value;
     }
+
+    bool TryComputeAxisParameterFromMouse(
+        const MouseEvent& e,
+        AppContext& ctx,
+        const FVector& axisOrigin,
+        const FVector& axisDir,
+        float& outAxisT)
+    {
+        const Ray ray = GizmoMath::BuildMouseRay(e, ctx);
+        return GizmoMath::ClosestAxisParameterToRay(axisOrigin, axisDir, ray, outAxisT);
+    }
+
+    Transform BuildScaledTransform(
+        const Transform& original,
+        int activeAxisIndex,
+        bool bUniformScale,
+        float delta)
+    {
+        Transform result = original;
+
+        auto ApplyAxis = [&](int axisIndex, float& value)
+            {
+                if (bUniformScale || axisIndex == activeAxisIndex)
+                {
+                    value = ClampScaleValue(value + delta);
+                }
+            };
+
+        ApplyAxis(0, result.Scale.x);
+        ApplyAxis(1, result.Scale.y);
+        ApplyAxis(2, result.Scale.z);
+
+        return result;
+    }
 }
 
-bool ScaleTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
+bool ScaleTool::TryPickAxisHandle(const MouseEvent& e, AppContext& ctx, EAxis& outAxis) const
 {
-    if (!e.LeftDown)
-        return false;
-
-    ActiveAxis = EAxis::None;
-    bDragging = false;
-    DragStartAxisT = 0.0f;
+    outAxis = EAxis::None;
 
     TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
     if (primaries.empty())
         return false;
 
     USceneComponent* primary = primaries.back();
-    const FVector origin = primary->GetTransform().Location;
+    if (primary == nullptr)
+        return false;
 
+    const FVector origin = primary->GetTransform().Location;
     const FMatrix viewProj = ctx.Editor.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic
         ? ctx.Editor.GetViewOrthoMatrix()
         : ctx.Editor.GetViewProjMatrix();
+
     const int32 viewportW = ctx.Window.GetWidth();
     const int32 viewportH = ctx.Window.GetHeight();
     const FVector2D mouse2D((float)e.X, (float)e.Y);
+    const float gizmoScale = GizmoMath::ComputeGizmoScale(origin, ctx);
 
     float bestDistSq = (std::numeric_limits<float>::max)();
     EAxis bestAxis = EAxis::None;
-
-    const float gizmoScale = GizmoMath::ComputeGizmoScale(origin, ctx);
 
     for (int axisIndex = 0; axisIndex < 3; ++axisIndex)
     {
@@ -68,22 +99,88 @@ bool ScaleTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     if (bestAxis == EAxis::None)
         return false;
 
-    const int axisIndex = AxisToIndex(bestAxis);
-    const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, ECoordSpace::Local);
-    const Ray ray = GizmoMath::BuildMouseRay(e, ctx);
+    outAxis = bestAxis;
+    return true;
+}
 
-    float axisT = 0.0f;
-    if (!GizmoMath::ClosestAxisParameterToRay(origin, axisDir, ray, axisT))
+void ScaleTool::ApplyScaleDelta(const TArray<USceneComponent*>& primaries, float delta) const
+{
+    const int activeAxisIndex = AxisToIndex(ActiveAxis);
+    if (activeAxisIndex < 0)
+        return;
+
+    const int32 count = static_cast<int32>(primaries.size());
+    for (int32 i = 0; i < count; ++i)
+    {
+        USceneComponent* component = primaries[i];
+        if (component == nullptr)
+            continue;
+
+        const Transform newTransform = BuildScaledTransform(
+            OriginalTransforms[i],
+            activeAxisIndex,
+            bActiveUniformScale,
+            delta);
+
+        component->SetTransform(newTransform);
+    }
+}
+
+void ScaleTool::ResetManipulationState()
+{
+    ActiveAxis = EAxis::None;
+    bDragging = false;
+    DragStartAxisT = 0.0f;
+    bActiveUniformScale = false;
+    DragAxisOrigin = FVector{};
+    DragAxisDirection = FVector{};
+}
+
+bool ScaleTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
+{
+    if (!e.LeftDown)
         return false;
 
-    ActiveAxis = bestAxis;
-    bDragging = true;
-    DragStartAxisT = axisT;
-
+    ResetManipulationState();
     OriginalTransforms.clear();
-    for (auto& comp : primaries) {
+
+    TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+    if (primaries.empty())
+        return false;
+
+    USceneComponent* primary = primaries.back();
+    if (primary == nullptr)
+        return false;
+
+    EAxis pickedAxis = EAxis::None;
+    if (!TryPickAxisHandle(e, ctx, pickedAxis))
+        return false;
+
+    const int axisIndex = AxisToIndex(pickedAxis);
+    if (axisIndex < 0)
+        return false;
+
+    DragAxisOrigin = primary->GetTransform().Location;
+    DragAxisDirection = GizmoMath::GetAxisDirection(primary, axisIndex, ECoordSpace::Local);
+
+    float axisT = 0.0f;
+    if (!TryComputeAxisParameterFromMouse(e, ctx, DragAxisOrigin, DragAxisDirection, axisT))
+    {
+        ResetManipulationState();
+        return false;
+    }
+
+    OriginalTransforms.reserve(primaries.size());
+    for (USceneComponent* comp : primaries)
+    {
         OriginalTransforms.push_back(comp->GetTransform());
     }
+
+    ActiveAxis = pickedAxis;
+    HoveredAxis = pickedAxis;
+    bDragging = true;
+    DragStartAxisT = axisT;
+    bActiveUniformScale = ctx.Editor.Tools.GetUniformScale();
 
     return true;
 }
@@ -92,84 +189,26 @@ void ScaleTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
 {
     if (!bDragging)
     {
-        TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
-        if (primaries.empty())
-        {
-            HoveredAxis = EAxis::None;
-            return;
-        }
-
-        // 호버 감지
-        USceneComponent* primary = primaries.back();
-
-        const FVector origin = primary->GetTransform().Location;
-        const FMatrix viewProj = ctx.Editor.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic
-            ? ctx.Editor.GetViewOrthoMatrix()
-            : ctx.Editor.GetViewProjMatrix();
-        const FVector2D mouse2D((float)e.X, (float)e.Y);
-        const float gs = GizmoMath::ComputeGizmoScale(origin, ctx);
-
-        float bestDistSq = GizmoMath::GizmoScaleBoxPx * GizmoMath::GizmoScaleBoxPx;
-        EAxis bestAxis = EAxis::None;
-
-        const ECoordSpace coordSpace = ECoordSpace::Local;
-        for (int i = 0; i < 3; ++i)
-        {
-            const FVector axisDir = GizmoMath::GetAxisDirection(primary, i, coordSpace);
-            const FVector handlePos = origin + axisDir * GizmoMath::GizmoAxisLength * gs;
-            const FVector2D handle2D =
-                GizmoMath::WorldToScreen(handlePos, viewProj, ctx.Window.GetWidth(), ctx.Window.GetHeight());
-
-            if (!GizmoMath::PointInRect2D(mouse2D, handle2D, GizmoMath::GizmoScaleBoxPx))
-                continue;
-
-            const float dx = mouse2D.x - handle2D.x;
-            const float dy = mouse2D.y - handle2D.y;
-            const float distSq = dx * dx + dy * dy;
-            if (distSq < bestDistSq) { bestDistSq = distSq; bestAxis = IndexToAxis(i); }
-        }
-
-        HoveredAxis = bestAxis;
+        EAxis hoveredAxis = EAxis::None;
+        HoveredAxis = TryPickAxisHandle(e, ctx, hoveredAxis) ? hoveredAxis : EAxis::None;
         return;
     }
 
     TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
-    if (primaries.empty()) {
-        ActiveAxis = EAxis::None;
-        bDragging = false;
-        DragStartAxisT = 0.0f;
+    if (primaries.empty() || primaries.size() != OriginalTransforms.size())
+    {
+        HoveredAxis = EAxis::None;
+        OriginalTransforms.clear();
+        ResetManipulationState();
         return;
     }
 
-    // 호버 감지
-    USceneComponent* primary = primaries.back();
-
-    const int axisIndex = AxisToIndex(ActiveAxis);
-    if (axisIndex < 0)
-        return;
-
-    const FVector axisOrigin = OriginalTransforms.back().Location;
-    const FVector axisDir = GizmoMath::GetAxisDirection(primary, axisIndex, ECoordSpace::Local);
-    const Ray ray = GizmoMath::BuildMouseRay(e, ctx);
-
     float currentAxisT = 0.0f;
-    if (!GizmoMath::ClosestAxisParameterToRay(axisOrigin, axisDir, ray, currentAxisT))
+    if (!TryComputeAxisParameterFromMouse(e, ctx, DragAxisOrigin, DragAxisDirection, currentAxisT))
         return;
 
     const float delta = currentAxisT - DragStartAxisT;
-
-    for (int32 i = 0; i < primaries.size(); i++) {
-        Transform newTransform = OriginalTransforms[i];
-
-        if (axisIndex == 0)
-            newTransform.Scale.x = ClampScaleValue(OriginalTransforms[i].Scale.x + delta);
-        else if (axisIndex == 1)
-            newTransform.Scale.y = ClampScaleValue(OriginalTransforms[i].Scale.y + delta);
-        else if (axisIndex == 2)
-            newTransform.Scale.z = ClampScaleValue(OriginalTransforms[i].Scale.z + delta);
-
-        primaries[i]->SetTransform(newTransform);
-    }
+    ApplyScaleDelta(primaries, delta);
 }
 
 void ScaleTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
@@ -180,30 +219,33 @@ void ScaleTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
         return;
 
     TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
-    if (primaries.empty()) return;
+    if (primaries.empty() || primaries.size() != OriginalTransforms.size())
+    {
+        OriginalTransforms.clear();
+        ResetManipulationState();
+        return;
+    }
 
-    for (int32 i = 0; i < primaries.size(); i++) {
+    const int32 count = static_cast<int32>(primaries.size());
+    for (int32 i = 0; i < count; ++i)
+    {
         USceneComponent* primary = primaries[i];
-        if (primary != nullptr)
-        {
-            const Transform finalTransform = primary->GetTransform();
+        if (primary == nullptr)
+            continue;
 
-            if (!NearlySameScale(finalTransform.Scale, OriginalTransforms[i].Scale))
-            {
-                primary->SetTransform(OriginalTransforms[i]);
-                ctx.Dispatch(std::make_unique<SetTransformCommand>(primary, finalTransform));
-            }
-            else
-            {
-                primary->SetTransform(OriginalTransforms[i]);
-            }
+        const Transform originalTransform = OriginalTransforms[i];
+        const Transform finalTransform = primary->GetTransform();
+
+        primary->SetTransform(originalTransform);
+
+        if (!NearlySameScale(finalTransform.Scale, originalTransform.Scale))
+        {
+            ctx.Dispatch(std::make_unique<SetTransformCommand>(primary, finalTransform));
         }
     }
-    OriginalTransforms.clear();
 
-    ActiveAxis = EAxis::None;
-    bDragging = false;
-    DragStartAxisT = 0.0f;
+    OriginalTransforms.clear();
+    ResetManipulationState();
 }
 
 void ScaleTool::FillGizmoState(AppContext& ctx, GizmoState& out) const
@@ -224,6 +266,9 @@ void ScaleTool::FillGizmoState(AppContext& ctx, GizmoState& out) const
     out.HoveredAxisIndex = bDragging ? -1 : AxisToIndex(HoveredAxis);
     out.ActiveAxisIndex = bDragging ? AxisToIndex(ActiveAxis) : -1;
 
+    const bool bUniformVisual = bDragging ? bActiveUniformScale : ctx.Editor.Tools.GetUniformScale();
+    out.bUniformScale = bUniformVisual;
+
     static const uint32 colors[3] = {
         GizmoMath::AxisColorX,
         GizmoMath::AxisColorY,
@@ -242,7 +287,7 @@ void ScaleTool::FillGizmoState(AppContext& ctx, GizmoState& out) const
 
             const FVector localZ = localX.Cross(localY).Normalized();
 
-            out.Axes[axisIndex].BaseColor = colors[axisIndex];
+            out.Axes[axisIndex].BaseColor = bUniformVisual ? GizmoMath::AxisColorALL : colors[axisIndex];
             out.Axes[axisIndex].WorldTransform = {
                 localX.x * s, localX.y * s, localX.z * s, 0.0f,
                 localY.x * s, localY.y * s, localY.z * s, 0.0f,
