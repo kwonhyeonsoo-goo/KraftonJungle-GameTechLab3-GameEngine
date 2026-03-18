@@ -5,6 +5,15 @@
 
 void ConsolePanel::OnRender(AppContext& ctx)
 {
+
+    float w = (float)ctx.Window.GetWidth();
+    float h = (float)ctx.Window.GetHeight();
+    float consoleHeight = h * 0.2f;
+
+    // го╢э width 100%
+    ImGui::SetNextWindowPos(ImVec2(0, h - consoleHeight), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(w, consoleHeight), ImGuiCond_Always);
+
     const TArray<FString>& logs = ctx.Console.GetLogs();
 
     for (int i = LastCount; i < logs.size(); i++)

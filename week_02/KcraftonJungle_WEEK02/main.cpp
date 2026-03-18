@@ -40,7 +40,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 #endif
 
     AppContext ctx;
-    if (!ctx.Initialize("MyEngine", 1280, 720)) return -1;
+    if (!ctx.Initialize("MyEngine", 1600, 900)) return -1;
 
     const int TargetFPS = 1000000;
     const double TargetFrameTime = 1000.0 / TargetFPS;

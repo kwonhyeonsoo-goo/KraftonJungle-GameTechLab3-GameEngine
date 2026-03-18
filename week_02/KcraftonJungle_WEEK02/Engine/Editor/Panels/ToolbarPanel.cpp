@@ -10,6 +10,16 @@ void ToolbarPanel::OnRender(AppContext& ctx)
 {
     if (!bVisible)
         return;
+    float w = (float)ctx.Window.GetWidth();
+    float h = (float)ctx.Window.GetHeight();
+    float rightWidth = w * 0.2f;
+    float consoleHeight = h * 0.2f;
+    float propertyHeight = (h - consoleHeight) * 0.5f;
+    float toolbarHeight = h - consoleHeight - propertyHeight;
+
+    // property ¾Æ·¡
+    ImGui::SetNextWindowPos(ImVec2(w - rightWidth, propertyHeight), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(rightWidth, toolbarHeight), ImGuiCond_Always);
 
     if (!ImGui::Begin("Toolbar", &bVisible,
         ImGuiWindowFlags_NoCollapse |
@@ -134,7 +144,8 @@ void ToolbarPanel::OnRender(AppContext& ctx)
     }
 
     ImGui::SameLine();
-    ImGui::DragInt("Num of spawn", &NumItem, 1, 1, 1000);
+    ImGui::SetNextItemWidth(80.0f);
+    ImGui::DragInt("##NumOfSpawn", &NumItem, 1, 1, 1000); // ## ·Î ¶óº§ ¼û±è
     ImGui::Separator();
 #pragma endregion
 
