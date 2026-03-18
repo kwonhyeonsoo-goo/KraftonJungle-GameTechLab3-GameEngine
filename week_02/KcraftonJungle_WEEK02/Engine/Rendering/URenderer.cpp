@@ -494,6 +494,8 @@ void URenderer::Release()
 
 void URenderer::OnResize(UINT width, UINT height)
 {
+    if (!width || !height) return;
+
     DeviceContext->OMSetRenderTargets(0, NULL, NULL);
 
     Engine::SafeRelease(FrameBuffer);
@@ -695,7 +697,7 @@ bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
 
     CreatePrimitiveVertexBuffer();
 
-    FVertexSimple RotationVertices[TORUS_VERTEX_COUNT];
+    /*FVertexSimple RotationVertices[TORUS_VERTEX_COUNT];
     GetRotationGizmoVertices(RotationVertices);
     vertexBufferRotationGizmo = CreateVertexBuffer(RotationVertices, TORUS_VERTEX_COUNT * sizeof(FVertexSimple));
     numVerticesRotationGizmo = TORUS_VERTEX_COUNT;
@@ -703,7 +705,7 @@ bool URenderer::Initialize(HWND hwnd, UINT width, UINT height)
     FVertexSimple ScaleVertices[SCALE_GIZMO_VERTEX_COUNT];
     GetScaleGizmoVertices(ScaleVertices);
     vertexBufferScaleGizmo = CreateVertexBuffer(ScaleVertices, SCALE_GIZMO_VERTEX_COUNT * sizeof(FVertexSimple));
-    numVerticesScaleGizmo = SCALE_GIZMO_VERTEX_COUNT;
+    numVerticesScaleGizmo = SCALE_GIZMO_VERTEX_COUNT;*/
 
     CreateShader();
     CreateConstantBuffer();
