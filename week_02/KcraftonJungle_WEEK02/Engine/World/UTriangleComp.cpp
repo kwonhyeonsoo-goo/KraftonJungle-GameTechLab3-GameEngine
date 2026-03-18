@@ -11,7 +11,7 @@ UTriangleComp::UTriangleComp() : UPrimitiveComponent(EPrimitiveShape::Triangle)
 
 UClass* UTriangleComp::StaticClass()
 {
-    static UClass ClassInfo("Triangle", UPrimitiveComponent::StaticClass());
+    static UClass ClassInfo("Triangle", UPrimitiveComponent::StaticClass(), []() -> std::unique_ptr<UObject> { return std::make_unique<UTriangleComp>(); });
     return &ClassInfo;
 }
 

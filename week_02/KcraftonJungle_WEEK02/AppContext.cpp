@@ -11,6 +11,10 @@
 #include "Engine/Editor/Tools/ScaleTool.h"
 #include "Engine/Foundation/Core/log.h"
 #include <iostream>
+#include "Engine/World/UCubeComp.h"
+#include "Engine/World/USphereComp.h"
+#include "Engine/World/UPlaneComp.h"
+#include "Engine/World/UTriangleComp.h"
 
 bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 height)
 {

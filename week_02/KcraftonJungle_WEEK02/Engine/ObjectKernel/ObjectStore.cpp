@@ -28,9 +28,7 @@ void ObjectStore::Remove(uint32 uuid)
 void ObjectStore::Clear()
 {
 	Index.clear();
-	Index.rehash(0);
 	Objects.clear();
-	Objects.shrink_to_fit();
 }
 
 void ObjectStore::ReleaseMemory()

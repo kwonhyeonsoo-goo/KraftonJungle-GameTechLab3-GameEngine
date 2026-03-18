@@ -9,7 +9,7 @@ USphereComp::USphereComp() : UPrimitiveComponent(EPrimitiveShape::Sphere)
 
 UClass* USphereComp::StaticClass()
 {
-    static UClass ClassInfo("Sphere", UPrimitiveComponent::StaticClass());
+    static UClass ClassInfo("Sphere", UPrimitiveComponent::StaticClass(), []() -> std::unique_ptr<UObject> { return std::make_unique<USphereComp>(); });
     return &ClassInfo;
 }
 
