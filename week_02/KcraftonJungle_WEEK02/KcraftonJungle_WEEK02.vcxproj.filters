@@ -133,6 +133,10 @@
     <ClCompile Include="Engine\World\UTriangleComp.cpp" />
     <ClCompile Include="Engine\Editor\Tools\ITool.cpp" />
     <ClCompile Include="Engine\Mesh\ScaleGizmo.h" />
+    <ClCompile Include="Engine\Editor\Camera\EditorCameraController.cpp" />
+    <ClCompile Include="Engine\Editor\Camera\EditorCameraState.cpp" />
+    <ClCompile Include="Engine\Editor\Camera\EditorProjectionSetting.cpp" />
+    <ClCompile Include="Engine\Editor\Viewport\EditorViewport.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppContext.h" />
@@ -327,6 +331,11 @@
     <ClInclude Include="Engine\Mesh\Triangle.h" />
     <ClInclude Include="Engine\World\UTriangleComp.h" />
     <ClInclude Include="Engine\Mesh\FVertexSimple.h" />
+    <ClInclude Include="Engine\Editor\Camera\EditorCameraController.h" />
+    <ClInclude Include="Engine\Editor\Camera\EditorCameraState.h" />
+    <ClInclude Include="Engine\Editor\Camera\EditorProjectionSettings.h" />
+    <ClInclude Include="Engine\Editor\Viewport\EditorViewport.h" />
+    <ClInclude Include="Engine\Foundation\Math\FQuat.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Editor">

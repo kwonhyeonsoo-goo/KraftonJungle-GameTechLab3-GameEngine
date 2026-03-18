@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "IEditorPanel.h"
 #include "../Commands/SetTransformCommand.h"
 #include "../../../AppContext.h"
@@ -10,12 +10,15 @@ public:
     FString GetName() const override { return "Property"; }
 
     void OnObjectDestroyed(const ObjectDestroyedEvent& e);
-
     void OnSelectionChanged(const SelectionChangedEvent& e);
 
     DelegateHandle SelectionChangedHandle = 0;
     DelegateHandle ObjectDestroyedHandle = 0;
 private:
-    const USceneComponent* Current = nullptr;
+    void InvalidateRotationDisplayCache();
 
+    TArray<const USceneComponent*> CurrentObjs;
+    bool bRotationDisplayValid = false;
+    uint32 RotationDisplayTargetUUID = 0;
+    FVector RotationDisplayEulerDeg = FVector::Zero;
 };

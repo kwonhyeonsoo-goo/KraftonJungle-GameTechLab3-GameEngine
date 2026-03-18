@@ -9,14 +9,16 @@ bool TranslateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     bDragging = false;
     DragStartAxisT = 0.0f;
 
-    USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-    if (primary == nullptr)
-        return false;
+    TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+    if(primaries.empty())
+		return false;
+
+	USceneComponent* primary = primaries.back();
 
     const FVector origin = primary->GetTransform().Location;
     const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
 
-    const FMatrix viewProj = ctx.Editor.bOrthoMode
+    const FMatrix viewProj = ctx.Editor.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic
         ? ctx.Editor.GetViewOrthoMatrix()
         : ctx.Editor.GetViewProjMatrix();
     const int32 viewportW = ctx.Window.GetWidth();
@@ -63,7 +65,11 @@ bool TranslateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     ActiveAxis = bestAxis;
     bDragging = true;
     DragStartAxisT = axisT;
-    OriginalTransform = primary->GetTransform();
+
+    OriginalTransforms.clear();
+    for(auto & comp: primaries) {
+        OriginalTransforms.push_back(comp->GetTransform());
+	}
 
     return true;
 }
@@ -72,20 +78,21 @@ void TranslateTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
 {
     if (bDragging)
     {
-        USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-        if (primary == nullptr)
-        {
+        TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+        if (primaries.empty()) {
             ActiveAxis = EAxis::None;
             bDragging = false;
             DragStartAxisT = 0.0f;
             return;
         }
 
+        USceneComponent* primary = primaries.back();
+
         const int axisIndex = AxisToIndex(ActiveAxis);
         if (axisIndex < 0)
             return;
 
-        const FVector axisOrigin = OriginalTransform.Location;
+        const FVector axisOrigin = OriginalTransforms.back().Location;
         const FVector axisDir =
             GizmoMath::GetAxisDirection(primary, axisIndex, ctx.Editor.Tools.GetCoordSpace());
 
@@ -97,13 +104,18 @@ void TranslateTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
 
         const float delta = currentAxisT - DragStartAxisT;
 
-        Transform newTransform = OriginalTransform;
-        newTransform.Location = GizmoMath::GetSnapAppliedPosition(
+        FVector NewLocation = GizmoMath::GetSnapAppliedPosition(
             axisOrigin, axisDir, delta,
             ctx.Editor.Tools.IsSnapEnabled(),
             ctx.Editor.Tools.GetSnapValue());
 
-        primary->SetTransform(newTransform);
+        FVector DeltaLocation = NewLocation - axisOrigin;
+
+        for (int32 i = 0; i < primaries.size(); i++) {
+            Transform newTransform = OriginalTransforms[i];
+			newTransform.Location += DeltaLocation;
+            primaries[i]->SetTransform(newTransform);
+        }
         return;
     }
 
@@ -113,7 +125,7 @@ void TranslateTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
 
     const FVector origin = primary->GetTransform().Location;
     const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
-    const FMatrix viewProj = ctx.Editor.bOrthoMode
+    const FMatrix viewProj = ctx.Editor.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic
         ? ctx.Editor.GetViewOrthoMatrix()
         : ctx.Editor.GetViewProjMatrix();
     const FVector2D mouse2D((float)e.X, (float)e.Y);
@@ -144,21 +156,25 @@ void TranslateTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
     if (!bDragging)
         return;
 
-    USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-    if (primary != nullptr)
-    {
+    TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+    if (primaries.empty()) return;
+
+    for (int32 i = 0; i < primaries.size(); i++) {
+		USceneComponent* primary = primaries[i];
+
         const Transform finalTransform = primary->GetTransform();
 
-        if (!GizmoMath::NearlySameLocation(finalTransform.Location, OriginalTransform.Location))
+        if (!GizmoMath::NearlySameLocation(finalTransform.Location, OriginalTransforms[i].Location))
         {
-            primary->SetTransform(OriginalTransform);
+            primary->SetTransform(OriginalTransforms[i]);
             ctx.Dispatch(std::make_unique<SetTransformCommand>(primary, finalTransform));
         }
         else
         {
-            primary->SetTransform(OriginalTransform);
+            primary->SetTransform(OriginalTransforms[i]);
         }
     }
+    OriginalTransforms.clear();
 
     ActiveAxis = EAxis::None;
     bDragging = false;

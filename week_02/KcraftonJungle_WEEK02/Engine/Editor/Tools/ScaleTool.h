@@ -15,10 +15,7 @@ public:
     void FillGizmoState(AppContext& ctx, GizmoState& out) const override;
     FString GetName() const override { return "Scale"; }
 
-protected:
-    void FillAxisData(const FVector& origin, const FVector& axisDir,
-                      float scale, int axisIndex, GizmoAxisData& out) const override;
 private:
     float     DragStartAxisT = 0.0f;
-    Transform OriginalTransform;
+    TArray<Transform> OriginalTransforms;
 };

@@ -5,7 +5,7 @@ void SelectTool::OnMouseDown(const MouseEvent& e, AppContext& ctx)
     if (!e.LeftDown)
         return;
 
-    const FMatrix invViewProj = ctx.Editor.bOrthoMode ?
+    const FMatrix invViewProj = ctx.Editor.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic ?
                                 ctx.Editor.GetViewOrthoMatrix().Inversed() :
                                 ctx.Editor.GetViewProjMatrix().Inversed();
 

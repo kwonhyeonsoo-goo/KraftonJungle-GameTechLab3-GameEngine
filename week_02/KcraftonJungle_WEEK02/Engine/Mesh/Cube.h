@@ -1,6 +1,6 @@
 #pragma once
 
-FVertexSimple cube_vertices[] =
+static FVertexSimple cube_vertices[] =
 {
     // Front face (Z+)
     // 법선을 각 꼭짓점의 위치(x, y, z)와 일치시켜 대각선 방향을 보게 만듭니다.

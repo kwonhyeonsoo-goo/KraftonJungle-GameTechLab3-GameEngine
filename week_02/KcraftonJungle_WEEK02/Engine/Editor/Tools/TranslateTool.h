@@ -19,5 +19,5 @@ protected:
 
 private:
     float     DragStartAxisT = 0.0f;
-    Transform OriginalTransform;
+    TArray<Transform> OriginalTransforms;
 };

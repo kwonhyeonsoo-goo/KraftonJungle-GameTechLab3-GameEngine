@@ -762,7 +762,7 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
     {
         const RenderCommand& cmd = queue.GetCommands()[i];
 
-        const FMatrix& viewProj = (cmd.bOrtho || session.bOrthoMode)
+        const FMatrix& viewProj = (cmd.bOrtho || session.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic)
             ? MViewOrtho : MViewPersp;
 
         FConstants constants = {};
@@ -843,8 +843,8 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
         case ERenderType::Highlight:
         {
             float distance = 12;
-            if (!session.bOrthoMode) {
-                FVector direction = session.Camera.Position - FVector(constants.MVP.M[3][0], constants.MVP.M[3][1], constants.MVP.M[3][2]);
+            if (session.GetActiveViewport().Projection.Mode != EEditorProjectionMode::Orthographic) {
+                FVector direction = session.GetActiveCamera().Position - FVector(constants.MVP.M[3][0], constants.MVP.M[3][1], constants.MVP.M[3][2]);
                 distance = sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
             }
             PrepareShader(OutlineVertexShader, OutlinePixelShader, SimpleInputLayout);
@@ -889,7 +889,7 @@ void URenderer::Flush(const RenderQueue& queue, const EditorSession& session)//,
 
             UpdateMVP(constants.MVP,(uint32)0xFFFFFFFF);
 
-            UpdateConstantBuffer(session.Camera.Position);
+            UpdateConstantBuffer(session.GetActiveCamera().Position);
             RenderIndexedPrimitive(vertexBufferGrid, indexBufferGrid, sizeof(UVrect_indices) / sizeof(UINT), StrideUV);
             break;
         }

@@ -10,11 +10,11 @@
 
 namespace GizmoMath
 {
-    constexpr float  GizmoAxisLength    = 1.5f;
-    constexpr float  GizmoRingRadius    = 1.5f;  // Torus.h R=3.0 에 맞춤
-    constexpr float  GizmoPickThresholdPx = 30.0f;
-    constexpr float  GizmoScaleBoxPx   = 30.0f;
-    constexpr float  kGizmoScreenScale  = 0.1f;  // dist * kGizmoScreenScale = 월드 스케일
+    constexpr float GizmoAxisLength = 1.5f;
+    constexpr float GizmoRingRadius = 1.5f;
+    constexpr float GizmoPickThresholdPx = 30.0f;
+    constexpr float GizmoScaleBoxPx = 30.0f;
+    constexpr float kGizmoScreenScale = 0.1f;
 
     inline float ComputeGizmoScale(const FVector& gizmoPos, const FVector& cameraPos)
     {
@@ -23,15 +23,15 @@ namespace GizmoMath
 
     inline float ComputeGizmoScale(const FVector& gizmoPos, const AppContext& ctx)
     {
-        if (ctx.Editor.bOrthoMode)
-            return ctx.Editor.OrthoHeight * kGizmoScreenScale;
-        return (std::max)((gizmoPos - ctx.Editor.Camera.Position).Length() * kGizmoScreenScale, 0.5f);
+        if (ctx.Editor.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic)
+            return ctx.Editor.GetActiveViewport().Projection.OrthoHeight * kGizmoScreenScale;
+        return ((gizmoPos - ctx.Editor.GetActiveCamera().Position).Length() + 3.0f) * kGizmoScreenScale;
     }
 
-    constexpr uint32 AxisColorX         = 0xFF0000FF;
-    constexpr uint32 AxisColorY         = 0x00FF00FF;
-    constexpr uint32 AxisColorZ         = 0x0000FFFF;
-    constexpr uint32 AxisColorHighlight = 0xFFFF00FF;  // 호버/드래그 강조 (노란색)
+    constexpr uint32 AxisColorX = 0xFF0000FF;
+    constexpr uint32 AxisColorY = 0x00FF00FF;
+    constexpr uint32 AxisColorZ = 0x0000FFFF;
+    constexpr uint32 AxisColorHighlight = 0xFFFF00FF;
 
     FVector AxisX();
     FVector AxisY();
@@ -78,12 +78,18 @@ namespace GizmoMath
         const FVector& planeNormal,
         FVector& outHit);
 
-    // �ٽ�: ���콺 ray�� gizmo �� ������ �ִ������� �� �Ķ���͸� ���Ѵ�.
-    // outAxisT�� axisOrigin + axisDir * outAxisT �� t���̴�.
     bool ClosestAxisParameterToRay(const FVector& axisOrigin,
         const FVector& axisDir,
         const Ray& ray,
         float& outAxisT);
+
+    float SignedAxisDistance(const FVector& origin,
+        const FVector& axisDir,
+        const FVector& pointOnAxis);
+
+    FVector ProjectPointOntoAxis(const FVector& origin,
+        const FVector& axisDir,
+        const FVector& point);
 
     float SignedAngleAroundAxis(const FVector& fromDir,
         const FVector& toDir,

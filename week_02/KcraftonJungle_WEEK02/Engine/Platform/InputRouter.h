@@ -20,6 +20,10 @@ public:
     static const InputState& GetState();
     static TArray<FInputEvent> ConsumePendingEvents();
     static void                ResetDelta();
+    static void SetWindowFocus(bool bIsFocus);
+
+    static bool bMouseDeltaValid;
+    static bool bTrackingMouseLeave;
 
 private:
     static InputState          State;

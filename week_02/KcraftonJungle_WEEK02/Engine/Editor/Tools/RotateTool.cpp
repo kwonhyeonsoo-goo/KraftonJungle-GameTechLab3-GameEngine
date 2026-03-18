@@ -1,15 +1,34 @@
 #include "RotateTool.h"
+#include <cmath>
 
 namespace
 {
-    constexpr float PI = 3.14159265358979323846f;
     constexpr int RingSamples = 96;
 
-    bool NearlySameRotation(const FVector& a, const FVector& b, float eps = 0.0001f)
+    bool NearlySameRotation(const FQuat& a, const FQuat& b, float eps = 0.0001f)
     {
-        return std::fabs(a.x - b.x) <= eps
-            && std::fabs(a.y - b.y) <= eps
-            && std::fabs(a.z - b.z) <= eps;
+        const FQuat na = a.Normalized();
+        const FQuat nb = b.Normalized();
+        const float dotAbs = std::fabs(na.Dot(nb));
+        return (1.0f - dotAbs) <= eps;
+    }
+
+    FVector GetBasisAxisByIndex(int axisIndex)
+    {
+        return axisIndex == 0 ? GizmoMath::AxisX() :
+            axisIndex == 1 ? GizmoMath::AxisY() :
+            GizmoMath::AxisZ();
+    }
+
+    FVector GetRotationAxisForManipulation(const Transform& reference,
+        int axisIndex,
+        ECoordSpace coordSpace)
+    {
+        const FVector basis = GetBasisAxisByIndex(axisIndex);
+        if (coordSpace == ECoordSpace::World)
+            return basis;
+
+        return reference.Rotation.RotateVector(basis).Normalized();
     }
 }
 
@@ -22,14 +41,16 @@ bool RotateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     bDragging = false;
     DragStartDir = FVector::Zero;
 
-    USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-    if (primary == nullptr)
+    TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+    if (primaries.empty())
         return false;
+
+    USceneComponent* primary = primaries.back();
 
     const FVector center = primary->GetTransform().Location;
     const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
 
-    const FMatrix viewProj = ctx.Editor.bOrthoMode
+    const FMatrix viewProj = ctx.Editor.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic
         ? ctx.Editor.GetViewOrthoMatrix()
         : ctx.Editor.GetViewProjMatrix();
     const int32 viewportW = ctx.Window.GetWidth();
@@ -42,7 +63,6 @@ bool RotateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     for (int axisIndex = 0; axisIndex < 3; ++axisIndex)
     {
         const FVector normal = GizmoMath::GetAxisDirection(primary, axisIndex, coordSpace);
-
         const float gizmoScale = GizmoMath::ComputeGizmoScale(center, ctx);
 
         const TArray<FVector2D> ring2D = GizmoMath::SampleRing2D(
@@ -80,7 +100,12 @@ bool RotateTool::TryBeginManipulation(const MouseEvent& e, AppContext& ctx)
     ActiveAxis = bestAxis;
     bDragging = true;
     DragStartDir = startDir;
-    OriginalTransform = primary->GetTransform();
+
+    OriginalTransforms.clear();
+    for (USceneComponent* comp : primaries)
+    {
+        OriginalTransforms.push_back(comp->GetTransform());
+    }
 
     return true;
 }
@@ -89,13 +114,13 @@ void RotateTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
 {
     if (!bDragging)
     {
-        // 호버 감지
-        USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-        if (primary == nullptr) { HoveredAxis = EAxis::None; return; }
+        TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+        if (primaries.empty()) { HoveredAxis = EAxis::None; return; }
 
+        USceneComponent* primary = primaries.back();
         const FVector center = primary->GetTransform().Location;
         const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
-        const FMatrix viewProj = ctx.Editor.bOrthoMode
+        const FMatrix viewProj = ctx.Editor.GetActiveViewport().Projection.Mode == EEditorProjectionMode::Orthographic
             ? ctx.Editor.GetViewOrthoMatrix()
             : ctx.Editor.GetViewProjMatrix();
         const FVector2D mouse2D((float)e.X, (float)e.Y);
@@ -118,8 +143,8 @@ void RotateTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
         return;
     }
 
-    USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-    if (primary == nullptr)
+    TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+    if (primaries.empty())
     {
         ActiveAxis = EAxis::None;
         bDragging = false;
@@ -131,9 +156,10 @@ void RotateTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
     if (axisIndex < 0)
         return;
 
-    const FVector center = OriginalTransform.Location;
+    const Transform& primaryOriginal = OriginalTransforms.back();
+    const FVector center = primaryOriginal.Location;
     const ECoordSpace coordSpace = ctx.Editor.Tools.GetCoordSpace();
-    const FVector axis = GizmoMath::GetAxisDirection(primary, axisIndex, coordSpace);
+    const FVector axis = GetRotationAxisForManipulation(primaryOriginal, axisIndex, coordSpace);
 
     const Ray ray = GizmoMath::BuildMouseRay(e, ctx);
 
@@ -146,15 +172,14 @@ void RotateTool::OnMouseMove(const MouseEvent& e, AppContext& ctx)
         return;
 
     const float angleRad = GizmoMath::SignedAngleAroundAxis(DragStartDir, currentDir, axis);
-    
-    const Quatanian Origin(OriginalTransform.ToQuaternion());
-    const Quatanian Delta = MakeAxisAngleQuat(axis, angleRad);
-    FVector4 NewQuatanian = NormalizeQuat(Delta.Mul(Origin));
-    
-    Transform NewRotation = OriginalTransform;
-    NewRotation.Rotation = Transform::ToEularAngle(NewQuatanian);
+    const FQuat deltaQuat = FQuat::FromAxisAngleRad(axis, angleRad);
 
-    primary->SetTransform(NewRotation);
+    for (int32 i = 0; i < primaries.size(); i++)
+    {
+        Transform newTransform = OriginalTransforms[i];
+        newTransform.Rotation = (deltaQuat * OriginalTransforms[i].Rotation).Normalized();
+        primaries[i]->SetTransform(newTransform);
+    }
 }
 
 void RotateTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
@@ -164,21 +189,29 @@ void RotateTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
     if (!bDragging)
         return;
 
-    USceneComponent* primary = ctx.Editor.Selection.GetPrimary();
-    if (primary != nullptr)
-    {
-        const Transform finalTransform = primary->GetTransform();
+    TArray<USceneComponent*> primaries = ctx.Editor.Selection.GetAll();
+    if (primaries.empty()) return;
 
-        if (!NearlySameRotation(finalTransform.Rotation, OriginalTransform.Rotation))
+    for (int32 i = 0; i < primaries.size(); i++)
+    {
+        USceneComponent* primary = primaries[i];
+
+        if (primary != nullptr)
         {
-            primary->SetTransform(OriginalTransform);
-            ctx.Dispatch(std::make_unique<SetTransformCommand>(primary, finalTransform));
-        }
-        else
-        {
-            primary->SetTransform(OriginalTransform);
+            const Transform finalTransform = primary->GetTransform();
+
+            if (!NearlySameRotation(finalTransform.Rotation, OriginalTransforms[i].Rotation))
+            {
+                primary->SetTransform(OriginalTransforms[i]);
+                ctx.Dispatch(std::make_unique<SetTransformCommand>(primary, finalTransform));
+            }
+            else
+            {
+                primary->SetTransform(OriginalTransforms[i]);
+            }
         }
     }
+    OriginalTransforms.clear();
 
     ActiveAxis = EAxis::None;
     bDragging = false;
@@ -186,7 +219,7 @@ void RotateTool::OnMouseUp(const MouseEvent& e, AppContext& ctx)
 }
 
 void RotateTool::FillAxisData(const FVector& origin, const FVector& axisDir,
-                               float scale, int /*axisIndex*/, GizmoAxisData& out) const
+    float scale, int /*axisIndex*/, GizmoAxisData& out) const
 {
     out.WorldTransform = GizmoMath::MakeAxisTransform(origin, axisDir, scale);
     out.RenderType = ERenderType::RotationGizmo;

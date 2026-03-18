@@ -1,4 +1,5 @@
 #include "UPrimitiveComponent.h"
+#include "../Mesh/FVertexSimple.h"
 
 UPrimitiveComponent::UPrimitiveComponent() : Shape(EPrimitiveShape::Cube)
 {

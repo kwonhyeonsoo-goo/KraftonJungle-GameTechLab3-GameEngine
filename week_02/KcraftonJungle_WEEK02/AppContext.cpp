@@ -10,6 +10,7 @@
 #include "Engine/Editor/Tools/RotateTool.h"
 #include "Engine/Editor/Tools/ScaleTool.h"
 #include "Engine/Foundation/Core/log.h"
+#include <iostream>
 
 bool AppContext::Initialize(const FString& windowTitle, int32 width, int32 height)
 {
@@ -153,6 +154,19 @@ void AppContext::SubscribeEvents()
                 Editor.Tools.SetMode(
                     cur == M::Translate ? M::Rotate :
                     cur == M::Rotate ? M::Scale : M::Translate);
+            }
+            else if (e.KeyCode == '1') {
+                using M = ETransformMode;
+                auto cur = Editor.Tools.GetMode();
+                Editor.Tools.SetMode( M::Translate );
+            }else if (e.KeyCode == '2') {
+                using M = ETransformMode;
+                auto cur = Editor.Tools.GetMode();
+                Editor.Tools.SetMode( M::Rotate);
+            }else if (e.KeyCode == '3') {
+                using M = ETransformMode;
+                auto cur = Editor.Tools.GetMode();
+                Editor.Tools.SetMode( M::Scale);
             }else if (e.KeyCode == VK_DELETE) {
                 TArray<USceneComponent*> selected = Editor.Selection.GetAll();
 
@@ -179,7 +193,7 @@ void AppContext::SubscribeEvents()
             Window.UpdateSize(e.Width, e.Height); 
 
             if (e.Height > 0)
-                Editor.AspectRatio = (float)e.Width / (float)e.Height;
+                Editor.GetActiveViewport().Projection.AspectRatio = (float)e.Width / (float)e.Height;
         });
 
 
@@ -194,6 +208,17 @@ void AppContext::SubscribeEvents()
         property->SelectionChangedHandle = Editor.Selection.OnSelectionChanged.Bind(
             [property](const SelectionChangedEvent& e) {
                 property->OnSelectionChanged(e);
+            });
+    }
+
+    if (outliner) {
+        outliner->ObjectDestroyedHandle = OnObjectDestroyed.Bind(
+            [outliner](const ObjectDestroyedEvent& e) {
+                outliner->OnObjectDestroyed(e);
+            });
+        outliner->SelectionChangedHandle = Editor.Selection.OnSelectionChanged.Bind(
+            [outliner](const SelectionChangedEvent& e) {
+                outliner->OnSelectionChanged(e);
             });
     }
 }
@@ -258,7 +283,7 @@ void AppContext::NewScene()
         OnObjectDestroyed.Broadcast({ uuid });
 
     // 3. ObjectStore ��ü ��� + �޸� ����
-    Objects.Clear();
+    Objects.ClearAndReleaseMemory();
 
     // 4. UUID ī���� �ʱ�ȭ
     UUIDs.SyncNextUUID(1);

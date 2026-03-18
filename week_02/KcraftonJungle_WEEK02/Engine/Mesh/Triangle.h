@@ -1,7 +1,6 @@
 #pragma once
 
-FVertexSimple triangle_vertices[] =
-
+static FVertexSimple triangle_vertices[] =
 {
     //   x      y     z     r     g     b     a      nx      ny      nz
     {  0.0f,  1.0f, 0.0f,  1.0f, 0.0f, 0.0f, 1.0f,  0.0f,   1.0f,   -0.1f },   // top

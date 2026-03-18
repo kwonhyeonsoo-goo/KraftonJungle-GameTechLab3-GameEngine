@@ -1,5 +1,10 @@
 #include "ToolbarPanel.h"
 #include <iostream>
+#include "../Commands/SpawnObjectCommand.h"
+#include "../Tools/TranslateTool.h"
+#include "../Tools/RotateTool.h"
+#include "../Tools/ScaleTool.h"
+#include "../../Services/SerializationService.h"
 
 void ToolbarPanel::OnRender(AppContext& ctx)
 {
@@ -19,7 +24,6 @@ void ToolbarPanel::OnRender(AppContext& ctx)
     ImGui::Text("Transform Mode");
     ImGui::Separator();
 
-    // Translate
     if (CurrentMode == ETransformMode::Translate)
     {
         ImGui::BeginDisabled();
@@ -80,13 +84,27 @@ void ToolbarPanel::OnRender(AppContext& ctx)
     ImGui::Spacing();
     ImGui::Text("View");
     ImGui::Separator();
-    ImGui::Checkbox("Orthographic", &ctx.Editor.bOrthoMode);
+    FEditorViewport& Viewport = ctx.Editor.GetActiveViewport();
+    EEditorProjectionMode& Mode = Viewport.Projection.Mode;
 
+    bool bPerspective = (Mode == EEditorProjectionMode::Perspective);
+    bool bOrthographic = (Mode == EEditorProjectionMode::Orthographic);
+
+    if (ImGui::RadioButton("Perspective", bPerspective))
+    {
+        Mode = EEditorProjectionMode::Perspective;
+    }
+    ImGui::SameLine();
+
+    if (ImGui::RadioButton("Orthographic", bOrthographic))
+    {
+        Mode = EEditorProjectionMode::Orthographic;
+    }
     ImGui::Spacing();
     ImGui::Text("Spawn Object");
     ImGui::Separator();
 
-    const Transform DefaultSpawnTransform(
+    const Transform DefaultSpawnTransform = Transform::FromEulerDegrees(
         FVector(0.0f, 0.0f, 0.0f),
         FVector(0.0f, 0.0f, 0.0f),
         FVector(1.0f, 1.0f, 1.0f)
@@ -98,11 +116,10 @@ void ToolbarPanel::OnRender(AppContext& ctx)
         "Plane",
         "Triangle"
     };
-    EPrimitiveShape MyEnum = EPrimitiveShape::Cube;
     static int32 currentItem = 0;
     static int32 NumItem = 1;
 
-    ImGui::Combo("My Dropdown Label", &currentItem, ItemNames, IM_ARRAYSIZE(ItemNames));
+    ImGui::Combo("Object", &currentItem, ItemNames, IM_ARRAYSIZE(ItemNames));
 
     if (ImGui::Button("Spawn"))
     {
@@ -128,7 +145,6 @@ void ToolbarPanel::OnRender(AppContext& ctx)
 
     static char NameBuf[256] = {};
 
-
     ImGui::Text("Scene Name : %s", ctx.CurrentWorld.GetName().c_str());
 
     if (!ImGui::IsItemActive())
@@ -148,9 +164,9 @@ void ToolbarPanel::OnRender(AppContext& ctx)
     if (ImGui::Button("New Scene"))
     {
         ctx.NewScene();
-
         std::cout << "Clear" << std::endl;
     }
+    ImGui::SameLine();
 
     if (ImGui::Button("Save Scene"))
     {
@@ -162,6 +178,7 @@ void ToolbarPanel::OnRender(AppContext& ctx)
 
         std::cout << "Save End" << std::endl;
     }
+    ImGui::SameLine();
 
     if (ImGui::Button("Load Scene"))
     {
