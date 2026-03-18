@@ -7,9 +7,16 @@
 
 CEditorViewportController::~CEditorViewportController()
 {
+	Cleanup();
+}
+
+void CEditorViewportController::Cleanup()
+{
 	if (EnhancedInput && CameraContext)
 		EnhancedInput->RemoveMappingContext(CameraContext);
 	delete CameraContext;
+	CameraContext = nullptr;
+	EnhancedInput = nullptr;
 }
 
 void CEditorViewportController::Initialize(UCameraComponent* InCameraComp, CInputManager* InInput, CEnhancedInputManager* InEnhancedInput)

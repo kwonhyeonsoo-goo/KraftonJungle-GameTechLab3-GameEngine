@@ -87,6 +87,9 @@ void FEditorEngine::Shutdown()
 
 	PreviewViewportClient.reset();
 
+	// ViewportController가 EnhancedInput을 참조하므로, Engine이 해제하기 전에 정리
+	ViewportController.Cleanup();
+
 	FEngine::Shutdown();
 }
 

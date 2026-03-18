@@ -15,6 +15,7 @@ public:
 
 	// ← EnhancedInput 포인터 추가
 	void Initialize(UCameraComponent* InCameraComp, CInputManager* InInput, CEnhancedInputManager* InEnhancedInput);
+	void Cleanup();
 
 	void Tick(float DeltaTime);
 
