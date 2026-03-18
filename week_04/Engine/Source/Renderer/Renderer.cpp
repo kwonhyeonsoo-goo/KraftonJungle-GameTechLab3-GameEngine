@@ -230,7 +230,7 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 
 	D3D11_RASTERIZER_DESC NoCullDesc = RasterizerDesc;
 	NoCullDesc.CullMode = D3D11_CULL_NONE;
-	Hr = Device->CreateRasterizerState(&NoCullDesc, &NoCullRasterizerState);
+	HRESULT Hr = Device->CreateRasterizerState(&NoCullDesc, &NoCullRasterizerState);
 	if (FAILED(Hr))
 	{
 		MessageBox(0, L"CreateRasterizerState (NoCull) Failed.", 0, 0);
