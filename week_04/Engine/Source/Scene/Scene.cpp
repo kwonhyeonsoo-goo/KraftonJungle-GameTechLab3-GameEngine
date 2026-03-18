@@ -31,7 +31,7 @@ namespace
 
 UClass* UScene::StaticClass()
 {
-	static UClass ClassInfo("UWorld", UObject::StaticClass(), &CreateUWorldInstance);
+	static UClass ClassInfo("UScene", UObject::StaticClass(), &CreateUWorldInstance);
 	return &ClassInfo;
 }
 

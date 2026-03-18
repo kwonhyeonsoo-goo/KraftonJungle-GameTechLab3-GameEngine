@@ -251,6 +251,10 @@ void CEditorUI::Render()
 	ImGui::PopStyleVar(3);
 	ImGuiID DockID = ImGui::GetID("MainDockSpace");
 
+	#ifdef _DEBUG
+	ImGui::ShowDemoWindow();
+	#endif
+
 	if (!bLayoutInitialized)
 	{
 		bLayoutInitialized = true;
