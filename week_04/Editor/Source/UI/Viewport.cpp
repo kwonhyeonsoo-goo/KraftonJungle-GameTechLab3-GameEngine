@@ -1,5 +1,6 @@
 #include "Viewport.h"
 
+#include "EditorViewportClient.h"
 #include "Core/Core.h"
 #include "Renderer/Renderer.h"
 #include "Scene/Scene.h"
@@ -17,6 +18,33 @@ namespace
 			Resource = nullptr;
 		}
 	}
+
+	bool RenderGizmoModeButton(const char* Label, EGizmoMode Mode, CEditorViewportClient* ViewportClient)
+	{
+		if (ViewportClient == nullptr)
+		{
+			return false;
+		}
+
+		const bool bSelected = (ViewportClient->GetGizmoMode() == Mode);
+		const float ButtonHeight = ImGui::GetFrameHeight();
+		const ImVec2 ButtonSize(ButtonHeight, ButtonHeight);
+		if (bSelected)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.45f, 0.85f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.55f, 0.95f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.20f, 0.40f, 0.80f, 1.0f));
+		}
+
+		const bool bClicked = ImGui::Button(Label, ButtonSize);
+
+		if (bSelected)
+		{
+			ImGui::PopStyleColor(3);
+		}
+
+		return bClicked;
+	}
 }
 
 CViewport::~CViewport()
@@ -27,7 +55,7 @@ CViewport::~CViewport()
 void CViewport::Render(CCore* Core, CRenderer* Renderer, HWND Hwnd)
 {
 	//ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	const bool bOpen = ImGui::Begin("Viewport");
+	const bool bOpen = ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_MenuBar);
 	//ImGui::PopStyleVar();
 
 	if (!bOpen)
@@ -41,6 +69,35 @@ void CViewport::Render(CCore* Core, CRenderer* Renderer, HWND Hwnd)
 		}
 		ImGui::End();
 		return;
+	}
+
+	if (ImGui::BeginMenuBar())
+	{
+		//ImGui::TextUnformatted("Viewport");
+
+		CEditorViewportClient* EditorViewportClient = Core ? dynamic_cast<CEditorViewportClient*>(Core->GetViewportClient()) : nullptr;
+		if (EditorViewportClient)
+		{
+			ImGui::Separator();
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, ImGui::GetStyle().ItemSpacing.y));
+			if (RenderGizmoModeButton("T", EGizmoMode::Location, EditorViewportClient))
+			{
+				EditorViewportClient->SetGizmoMode(EGizmoMode::Location);
+			}
+
+			if (RenderGizmoModeButton("R", EGizmoMode::Rotation, EditorViewportClient))
+			{
+				EditorViewportClient->SetGizmoMode(EGizmoMode::Rotation);
+			}
+
+			if (RenderGizmoModeButton("S", EGizmoMode::Scale, EditorViewportClient))
+			{
+				EditorViewportClient->SetGizmoMode(EGizmoMode::Scale);
+			}
+			ImGui::PopStyleVar();
+		}
+
+		ImGui::EndMenuBar();
 	}
 
 	bFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
