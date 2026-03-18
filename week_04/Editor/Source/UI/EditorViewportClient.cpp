@@ -3,6 +3,7 @@
 #include "EditorUI.h"
 #include "Actor/Actor.h"
 #include "Core/Core.h"
+#include "Input/InputManager.h"
 #include "Debug/EngineLog.h"
 #include "Platform/Windows/Window.h"
 #include "Renderer/RenderCommand.h"
@@ -90,9 +91,17 @@ void CEditorViewportClient::HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPAR
 		Width,
 		Height);
 
+	const bool bRightMouseDown = Core->GetInputManager() &&
+		Core->GetInputManager()->IsMouseButtonDown(CInputManager::MOUSE_RIGHT);
+
 	switch (Msg)
 	{
 	case WM_KEYDOWN:
+		if (bRightMouseDown)
+		{
+			return;
+		}
+
 		switch (WParam)
 		{
 		case 'W':

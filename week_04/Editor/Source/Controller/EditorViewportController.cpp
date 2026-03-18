@@ -60,17 +60,20 @@ void CEditorViewportController::SetupInputBindings()
 
 	EnhancedInput->BindAction(&MoveForwardAction, ETriggerEvent::Triggered,
 		[this](const FInputActionValue& Value) {
-		CameraComponent->MoveForward(Value.Get() * CurrentDeltaTime);
+		if (InputManager && InputManager->IsMouseButtonDown(CInputManager::MOUSE_RIGHT))
+			CameraComponent->MoveForward(Value.Get() * CurrentDeltaTime);
 	});
 
 	EnhancedInput->BindAction(&MoveRightAction, ETriggerEvent::Triggered,
 		[this](const FInputActionValue& Value) {
-		CameraComponent->MoveRight(Value.Get() * CurrentDeltaTime);
+		if (InputManager && InputManager->IsMouseButtonDown(CInputManager::MOUSE_RIGHT))
+			CameraComponent->MoveRight(Value.Get() * CurrentDeltaTime);
 	});
 
 	EnhancedInput->BindAction(&MoveUpAction, ETriggerEvent::Triggered,
 		[this](const FInputActionValue& Value) {
-		CameraComponent->MoveUp(Value.Get() * CurrentDeltaTime);
+		if (InputManager && InputManager->IsMouseButtonDown(CInputManager::MOUSE_RIGHT))
+			CameraComponent->MoveUp(Value.Get() * CurrentDeltaTime);
 	});
 
 	EnhancedInput->BindAction(&LookXAction, ETriggerEvent::Triggered,
