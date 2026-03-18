@@ -86,3 +86,13 @@ void ToolContext::ActivateTool(const FString& name)
         ActiveTool = it->second;
     }
 }
+
+void ToolContext::SetUniformScale(bool uniform)
+{
+	bUniformScale = uniform;
+}
+
+bool ToolContext::GetUniformScale() const
+{
+	return bUniformScale;
+}

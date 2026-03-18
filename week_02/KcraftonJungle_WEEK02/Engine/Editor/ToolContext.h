@@ -19,6 +19,8 @@ public:
     void SetCoordSpace(ECoordSpace cs);
     void SetSnapEnabled(bool enabled);
     void SetSnapValue(float value);
+    void SetUniformScale(bool uniform);
+    bool GetUniformScale() const;
 
     void RegisterTool(ITool* tool);
     void ActivateTool(const FString& name);
@@ -32,4 +34,5 @@ private:
     ECoordSpace CoordSpace = ECoordSpace::World;
     bool SnapEnabled = false;
     float SnapValue = 0.25f;
+    bool bUniformScale = false;
 };
