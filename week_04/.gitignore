@@ -1,6 +1,7 @@
 CLAUDE.md
 .claude/
 Editor/imgui.ini
+ReleaseBuild/
 
 # Embedded Python (override *.exe/*.dll ignore below)
 !Scripts/python/**
