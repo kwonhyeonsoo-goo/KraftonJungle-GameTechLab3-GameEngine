@@ -23,7 +23,7 @@ void ConsolePanel::OnRender(AppContext& ctx)
     }
     LastCount = logs.size();
 
-    if (ImGui::Begin("Console")) {
+    if (ImGui::Begin("Console", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize)) {
         if (ImGui::Button("Clear All")) {
             ctx.Console.Clear();
             Log.Clear();

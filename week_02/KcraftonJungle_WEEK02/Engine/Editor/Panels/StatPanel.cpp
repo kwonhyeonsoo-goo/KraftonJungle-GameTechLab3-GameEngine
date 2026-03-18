@@ -18,7 +18,7 @@ void StatPanel::OnRender(AppContext& ctx)
 
     const EngineStats Stats = StatsService::Collect(ctx);
 
-    if (ImGui::Begin("Stats", &bVisible))
+    if (ImGui::Begin("Stats", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize))
     {
         ImGui::Text("Engine Statistics");
         ImGui::Separator();

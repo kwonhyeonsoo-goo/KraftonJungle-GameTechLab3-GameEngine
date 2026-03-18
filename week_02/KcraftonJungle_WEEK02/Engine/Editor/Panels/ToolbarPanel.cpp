@@ -21,9 +21,7 @@ void ToolbarPanel::OnRender(AppContext& ctx)
     ImGui::SetNextWindowPos(ImVec2(w - rightWidth, propertyHeight), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(rightWidth, toolbarHeight), ImGuiCond_Always);
 
-    if (!ImGui::Begin("Toolbar", &bVisible,
-        ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoScrollbar))
+    if (!ImGui::Begin("Toolbar", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar))
     {
         ImGui::End();
         return;

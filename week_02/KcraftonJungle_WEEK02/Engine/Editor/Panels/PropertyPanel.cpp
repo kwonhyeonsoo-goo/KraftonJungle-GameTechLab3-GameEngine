@@ -19,7 +19,7 @@ void PropertyPanel::OnRender(AppContext& ctx)
     // ¿ì»ó´Ü
     ImGui::SetNextWindowPos(ImVec2(w - rightWidth, 0), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(rightWidth, propertyHeight), ImGuiCond_Always);
-    ImGui::Begin("Property");
+    ImGui::Begin("Property", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
 
     if (CurrentObjs.empty()) {
         InvalidateRotationDisplayCache();

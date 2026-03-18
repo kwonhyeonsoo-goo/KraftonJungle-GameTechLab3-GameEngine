@@ -26,7 +26,7 @@ void OutlinerPanel::OnRender(AppContext& ctx)
 
     ImGui::SetNextWindowPos(ImVec2(0, statHeight), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(leftWidth, outlinerHeight), ImGuiCond_Always);
-    ImGui::Begin("Outliner");
+    ImGui::Begin("Outliner", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
 
     bool levelOpen = ImGui::TreeNodeEx(
         ctx.CurrentWorld.GetName().c_str(),
