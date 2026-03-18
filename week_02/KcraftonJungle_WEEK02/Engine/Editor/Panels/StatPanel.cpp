@@ -5,6 +5,17 @@ void StatPanel::OnRender(AppContext& ctx)
     if (!bVisible)
         return;
 
+    float w = (float)ctx.Window.GetWidth();
+    float h = (float)ctx.Window.GetHeight();
+    float leftWidth = w * 0.2f;
+    float rightWidth = w * 0.2f;
+    float statHeight = h * 0.45f;
+    float consoleHeight = h * 0.2f;
+
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(leftWidth, statHeight), ImGuiCond_Always);
+
     const EngineStats Stats = StatsService::Collect(ctx);
 
     if (ImGui::Begin("Stats", &bVisible))

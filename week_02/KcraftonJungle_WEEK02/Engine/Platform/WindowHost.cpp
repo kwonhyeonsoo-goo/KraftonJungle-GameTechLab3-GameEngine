@@ -15,7 +15,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
     case WM_SIZE:
         // InputRouter를 통해 Resize 이벤트 적재
         // InputRouter::Route(hWnd, message, wParam, lParam);
-        return 0;
+
+        break;
     case WM_DESTROY:
         PostQuitMessage(0);
         break;

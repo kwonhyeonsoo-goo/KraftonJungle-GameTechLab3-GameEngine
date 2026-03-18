@@ -9,7 +9,7 @@ UCubeComp::UCubeComp() : UPrimitiveComponent(EPrimitiveShape::Cube)
 
 UClass* UCubeComp::StaticClass()
 {
-    static UClass ClassInfo("Cube", UPrimitiveComponent::StaticClass());
+    static UClass ClassInfo("Cube", UPrimitiveComponent::StaticClass(), []() -> std::unique_ptr<UObject> { return std::make_unique<UCubeComp>(); });
     return &ClassInfo;
 }
 

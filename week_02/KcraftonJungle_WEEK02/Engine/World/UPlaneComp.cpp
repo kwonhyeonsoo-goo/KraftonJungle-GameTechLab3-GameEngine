@@ -11,7 +11,7 @@ UPlaneComp::UPlaneComp() : UPrimitiveComponent(EPrimitiveShape::Plane)
 
 UClass* UPlaneComp::StaticClass()
 {
-    static UClass ClassInfo("Plane", UPrimitiveComponent::StaticClass());
+    static UClass ClassInfo("Plane", UPrimitiveComponent::StaticClass(), []() -> std::unique_ptr<UObject> { return std::make_unique<UPlaneComp>(); });
     return &ClassInfo;
 }
 

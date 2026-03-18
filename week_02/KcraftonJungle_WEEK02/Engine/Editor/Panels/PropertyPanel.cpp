@@ -1,4 +1,5 @@
 #include "PropertyPanel.h"
+#include <algorithm>
 
 void PropertyPanel::InvalidateRotationDisplayCache()
 {
@@ -9,6 +10,17 @@ void PropertyPanel::InvalidateRotationDisplayCache()
 
 void PropertyPanel::OnRender(AppContext& ctx)
 {
+    float w = (float)ctx.Window.GetWidth();
+    float h = (float)ctx.Window.GetHeight();
+    float rightWidth = w * 0.2f;
+    float consoleHeight = h * 0.2f;
+    float propertyHeight = (h - consoleHeight) * 0.5f;
+
+	static bool UniformScale = true;
+
+    // ¿ì»ó´Ü
+    ImGui::SetNextWindowPos(ImVec2(w - rightWidth, 0), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(rightWidth, propertyHeight), ImGuiCond_Always);
     ImGui::Begin("Property");
 
     if (CurrentObjs.empty()) {
@@ -61,6 +73,8 @@ void PropertyPanel::OnRender(AppContext& ctx)
     const bool rotChanged = ImGui::DragFloat3("Rotation (deg)", rot, 1.0f);
     const bool sclChanged = ImGui::DragFloat3("Scale", scale, 0.1f);
 
+	ImGui::Checkbox("Uniform Sacle", &UniformScale);
+
     if (locChanged || rotChanged || sclChanged)
     {
         const FVector oldLoc = baseT.Location;
@@ -71,7 +85,23 @@ void PropertyPanel::OnRender(AppContext& ctx)
         const FVector newScl(scale[0], scale[1], scale[2]);
 
         const FVector locDelta = newLoc - oldLoc;
-        const FVector sclDelta = newScl - oldScl;
+        FVector sclDelta = newScl - oldScl;
+
+        if (UniformScale) {
+            float ax = std::fabs(sclDelta.x);
+            float ay = std::fabs(sclDelta.y);
+            float az = std::fabs(sclDelta.z);
+
+            float maxDelta = (std::max)(ax, (std::max)(ay, az));
+
+            if (maxDelta > 0.0001f) {
+                const float sign = (sclDelta.x >= 0.f && sclDelta.y >= 0.f && sclDelta.z >= 0.f) ? 1.f : -1.f;
+                const FVector uniformDelta = FVector(maxDelta * sign, maxDelta * sign, maxDelta * sign);
+                sclDelta.x = uniformDelta.x;
+                sclDelta.y = uniformDelta.y;
+                sclDelta.z = uniformDelta.z;
+			}
+        }
 
         FQuat deltaQuat = FQuat::Identity();
         if (rotChanged)

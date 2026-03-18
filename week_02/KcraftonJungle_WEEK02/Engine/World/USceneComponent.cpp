@@ -80,7 +80,7 @@ void USceneComponent::Detach()
 
 UClass* USceneComponent::StaticClass()
 {
-    static UClass ClassInfo("SceneComponent", UObject::StaticClass());
+    static UClass ClassInfo("SceneComponent", UObject::StaticClass(), []() -> std::unique_ptr<UObject> { return std::make_unique<USceneComponent>(); });
     return &ClassInfo;
 }
 

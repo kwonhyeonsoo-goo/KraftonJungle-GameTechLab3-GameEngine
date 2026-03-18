@@ -94,16 +94,19 @@ bool SerializationService::Load(AppContext& ctx) {
             return (float)j.ToFloat();
         return (float)j.ToInt();
         };
-    auto& camera = root["Camera"];
 
-    FEditorCameraState& Camera = ctx.Editor.GetActiveCamera();
-    Camera.Position.x = toFloat(camera["Position"][0]);
-    Camera.Position.y = toFloat(camera["Position"][1]);
-    Camera.Position.z = toFloat(camera["Position"][2]);
-    Camera.Yaw = toFloat(camera["Yaw"]);
-    Camera.Pitch = toFloat(camera["Pitch"]);
-    Camera.MoveSpeed = toFloat(camera["MoveSpeed"]);
-    Camera.RotSpeed = toFloat(camera["RotSpeed"]);
+    ctx.UUIDs.SyncNextUUID((uint32)root["NextUUID"].ToInt());
+
+    //auto& camera = root["Camera"];
+
+    //FEditorCameraState& Camera = ctx.Editor.GetActiveCamera();
+    //Camera.Position.x = toFloat(camera["Position"][0]);
+    //Camera.Position.y = toFloat(camera["Position"][1]);
+    //Camera.Position.z = toFloat(camera["Position"][2]);
+    //Camera.Yaw = toFloat(camera["Yaw"]);
+    //Camera.Pitch = toFloat(camera["Pitch"]);
+    //Camera.MoveSpeed = toFloat(camera["MoveSpeed"]);
+    //Camera.RotSpeed = toFloat(camera["RotSpeed"]);
 
     auto& primitives = root["Primitives"];
     ctx.CurrentWorld.SetName(root["SceneName"].ToString());
@@ -134,8 +137,6 @@ bool SerializationService::Load(AppContext& ctx) {
             Transform(loc, rot, scl)
         ));
     }
-
-    ctx.UUIDs.SyncNextUUID((uint32)root["NextUUID"].ToInt());
 
     return true;
 }
