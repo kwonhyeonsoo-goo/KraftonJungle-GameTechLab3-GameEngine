@@ -1,11 +1,14 @@
 #include "InputRouter.h"
 #include "../../Editor/ImGui/imgui.h" // ImGui´Â cpp¿¡¼­¸¸ include
+#include <windowsx.h>
 
 // static ¸â¹ö Á¤ÀÇ
 InputState          InputRouter::State;
 int32               InputRouter::LastMouseX = 0;
 int32               InputRouter::LastMouseY = 0;
 TArray<FInputEvent> InputRouter::Events;
+bool InputRouter::bMouseDeltaValid = false;
+bool InputRouter::bTrackingMouseLeave = false;
 
 bool InputState::IsMouseCapturedByImGui() const {
     return ImGui::GetIO().WantCaptureMouse;
@@ -19,11 +22,30 @@ LRESULT InputRouter::Route(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     switch (msg) {
     case WM_MOUSEMOVE:{
-        int32 xPos = LOWORD(lp); // X ÁÂÇ¥ ²¨³»±â
-        int32 yPos = HIWORD(lp); // Y ÁÂÇ¥ ²¨³»±â
+        if (!bTrackingMouseLeave)
+        {
+            TRACKMOUSEEVENT tme = {};
+            tme.cbSize = sizeof(TRACKMOUSEEVENT);
+            tme.dwFlags = TME_LEAVE;
+            tme.hwndTrack = hwnd;
+            TrackMouseEvent(&tme);
+            bTrackingMouseLeave = true;
+        }
 
-        State.MouseDeltaX = xPos - LastMouseX;
-        State.MouseDeltaY = yPos - LastMouseY;
+        int32 xPos = GET_X_LPARAM(lp); // X ÁÂÇ¥ ²¨³»±â
+        int32 yPos = GET_Y_LPARAM(lp); // Y ÁÂÇ¥ ²¨³»±â
+
+        if (!bMouseDeltaValid)
+        {
+            State.MouseDeltaX = 0;
+            State.MouseDeltaY = 0;
+            bMouseDeltaValid = true;
+        }
+        else
+        {
+            State.MouseDeltaX = xPos - LastMouseX;
+            State.MouseDeltaY = yPos - LastMouseY;
+        }
         State.MouseX = xPos;
         State.MouseY = yPos;
         LastMouseX = xPos;
@@ -35,9 +57,27 @@ LRESULT InputRouter::Route(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             State.MouseButtons[1] }));
         break;
     }
+    case WM_MOUSELEAVE:
+        bTrackingMouseLeave = false;
+        bMouseDeltaValid = false;
+        State.MouseDeltaX = 0;
+        State.MouseDeltaY = 0;
+        break;
+
     case WM_LBUTTONDOWN:
         State.MouseButtons[0] = true;
         Events.push_back(FInputEvent::Make(MouseDownEvent{ LOWORD(lp), HIWORD(lp), 0 }));
+        break;
+
+    case WM_NCMOUSEMOVE:
+    case WM_NCLBUTTONDOWN:
+    case WM_NCLBUTTONUP:
+    case WM_NCRBUTTONDOWN:
+    case WM_NCRBUTTONUP:
+    case WM_CAPTURECHANGED:
+        bMouseDeltaValid = false;
+        State.MouseDeltaX = 0;
+        State.MouseDeltaY = 0;
         break;
 
     case WM_RBUTTONDOWN:
@@ -93,13 +133,21 @@ void InputRouter::ResetDelta()
 
 void InputRouter::SetWindowFocus(bool bIsFocus)
 {
-    for (auto& Key : State.Keys)
+    if (!bIsFocus)
     {
-        Key = false;
-    }
+        for (auto& Key : State.Keys)
+        {
+            Key = false;
+        }
 
-    for (int i = 0; i < 3; ++i)
-    {
-        State.MouseButtons[i] = false;
-	}
+        for (int i = 0; i < 3; ++i)
+        {
+            State.MouseButtons[i] = false;
+        }
+
+        State.MouseDeltaX = 0;
+        State.MouseDeltaY = 0;
+        bMouseDeltaValid = false;
+        bTrackingMouseLeave = false;
+    }
 }
