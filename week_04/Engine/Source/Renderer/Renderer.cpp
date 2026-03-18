@@ -430,52 +430,6 @@ void CRenderer::ExecuteCommands()
 	{
 		PostRenderCallback(this);
 	}
-
-	return;
-
-	// SortKey 기준 정렬 → Material, MeshData 순 State Change 최소화
-	std::sort(CommandList.begin(), CommandList.end(),
-		[](const FRenderCommand& A, const FRenderCommand& B)
-		{
-			return A.SortKey < B.SortKey;
-		});
-
-	FMaterial* CurrentMaterial = nullptr;
-	FMeshData* CurrentMesh = nullptr;
-
-	for (const auto& Cmd : CommandList)
-	{
-		if (!Cmd.MeshData)
-		{
-			continue;
-		}
-
-		// Material이 바뀔 때만 셰이더 바인딩
-		if (Cmd.Material != CurrentMaterial)
-		{
-			Cmd.Material->Bind(DeviceContext);
-			CurrentMaterial = Cmd.Material;
-		}
-
-		// 메시가 바뀔 때만 바인딩
-		if (Cmd.MeshData != CurrentMesh)
-		{
-			Cmd.MeshData->Bind(DeviceContext);
-			CurrentMesh = Cmd.MeshData;
-		}
-
-		// 오브젝트별 상수 버퍼 업데이트
-		UpdateObjectConstantBuffer(Cmd.WorldMatrix);
-
-		// Draw
-		DeviceContext->DrawIndexed(Cmd.MeshData->IndexCount, 0, 0);
-	}
-
-	// 메시 커맨드 실행 후 PostRender (아웃라인, 라인 등)
-	if (PostRenderCallback)
-	{
-		PostRenderCallback(this);
-	}
 }
 
 bool CRenderer::CreateConstantBuffers()
@@ -630,24 +584,34 @@ void CRenderer::ExecuteLineCommands()
 	}
 	DeviceContext->OMSetDepthStencilState(LineDepthState, 0);
 
-	// 동적 버퍼 생성/재생성
+	// 동적 버퍼 생성/재사용
 	UINT BufferSize = static_cast<UINT>(LineVertices.size() * sizeof(FPrimitiveVertex));
 
-	if (LineVertexBuffer)
+	if (LineVertexBuffer && LineVertexBufferSize < BufferSize)
 	{
 		LineVertexBuffer->Release();
 		LineVertexBuffer = nullptr;
+		LineVertexBufferSize = 0;
 	}
 
-	D3D11_BUFFER_DESC Desc = {};
-	Desc.ByteWidth = BufferSize;
-	Desc.Usage = D3D11_USAGE_DEFAULT;
-	Desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	if (!LineVertexBuffer)
+	{
+		D3D11_BUFFER_DESC Desc = {};
+		Desc.ByteWidth = BufferSize;
+		Desc.Usage = D3D11_USAGE_DYNAMIC;
+		Desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		Desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-	D3D11_SUBRESOURCE_DATA InitData = {};
-	InitData.pSysMem = LineVertices.data();
+		Device->CreateBuffer(&Desc, nullptr, &LineVertexBuffer);
+		LineVertexBufferSize = BufferSize;
+	}
 
-	Device->CreateBuffer(&Desc, &InitData, &LineVertexBuffer);
+	D3D11_MAPPED_SUBRESOURCE Mapped;
+	if (SUCCEEDED(DeviceContext->Map(LineVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
+	{
+		memcpy(Mapped.pData, LineVertices.data(), BufferSize);
+		DeviceContext->Unmap(LineVertexBuffer, 0);
+	}
 
 	// 바인딩
 	UINT Stride = sizeof(FPrimitiveVertex);

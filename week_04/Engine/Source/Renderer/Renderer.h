@@ -100,6 +100,7 @@ private:
 	size_t PrevCommandCount = 0;
 	TArray<FPrimitiveVertex> LineVertices;
 	ID3D11Buffer* LineVertexBuffer = nullptr;
+	UINT LineVertexBufferSize = 0;
 	ID3D11DepthStencilState* LineDepthState = nullptr;
 	ID3D11DepthStencilState* OverlayDepthState = nullptr;
 
