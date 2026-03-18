@@ -72,9 +72,7 @@ void PropertyPanel::OnRender(AppContext& ctx)
     const bool sclChanged = ImGui::DragFloat3("Scale", scale, 0.1f);
 
 	bool UniformScale = ctx.Editor.Tools.GetUniformScale();
-    ImGui::BeginDisabled(ctx.Editor.Tools.GetMode() != ETransformMode::Scale);
 	ImGui::Checkbox("Uniform Sacle", &UniformScale);
-    ImGui::EndDisabled();
 
 	if (UniformScale != ctx.Editor.Tools.GetUniformScale()) {
 		ctx.Editor.Tools.SetUniformScale(UniformScale);
