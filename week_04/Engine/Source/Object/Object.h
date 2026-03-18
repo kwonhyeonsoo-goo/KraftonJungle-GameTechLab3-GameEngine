@@ -25,10 +25,12 @@ public:
 
 	inline static uint32 TotalAllocationBytes = 0;
 	inline static uint32 TotalAllocationCounts = 0;
+	inline static uint32 LastNewSize = 0; // operator new에서 생성자로 크기 전달용
 
 	// 조건 1: 모든 UObject가 갖는 고유 식별자 (FObjectFactory가 주입)
 	uint32 UUID = 0; // 엔진 전체 고유 ID (1-based, 단조 증가)
 	uint32 InternalIndex = 0; // GUObjectArray 내 인덱스
+	uint32 ObjectSize = 0; // 이 오브젝트의 할당 크기 (bytes)
 
 	// 조건 4: RTTI
 	UClass* GetClass() const;

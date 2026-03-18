@@ -17,6 +17,7 @@ UObject::UObject(UClass* InClass, FString InName, UObject* InOuter)
 	: Class(InClass), Name(std::move(InName)), Outer(InOuter)
 {
 	// UUID, InternalIndex는 FObjectFactory::ConstructObject에서 주입
+	ObjectSize = LastNewSize;
 }
 
 UObject::~UObject()
@@ -52,6 +53,7 @@ void* UObject::operator new(size_t InSize)
 {
 	UObject::TotalAllocationCounts += 1;
 	UObject::TotalAllocationBytes += static_cast<uint32>(InSize);
+	UObject::LastNewSize = static_cast<uint32>(InSize);
 	return ::operator new(InSize);
 }
 

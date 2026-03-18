@@ -128,7 +128,6 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupS
 		return false;
 	}
 
-
 	ObjManager = new ObjectManager();
 
 	// InputManager
@@ -307,9 +306,6 @@ void CCore::Release()
 		ObjManager = nullptr;
 	}
 
-
-
-
 	delete EnhancedInput;
 	EnhancedInput = nullptr;
 	delete InputManager;
@@ -331,36 +327,30 @@ void CCore::Tick()
 
 void CCore::Tick(const float DeltaTime)
 {
+	Input(DeltaTime);
+	Physics(DeltaTime);
+	GameLogic(DeltaTime);
+	Render();
+	LateUpdate(DeltaTime);
+}
+
+void CCore::Input(float DeltaTime)
+{
 	if (InputManager)
 	{
 		InputManager->Tick();
 	}
+
 	if (EnhancedInput && InputManager)
+	{
 		EnhancedInput->ProcessInput(InputManager, DeltaTime);
+	}
+
 	if (ViewportClient)
 	{
 		ViewportClient->Tick(this, DeltaTime);
 	}
-
-
-	//ProcessCameraInput(DeltaTime);
-
-	Physics(DeltaTime);
-	GameLogic(DeltaTime);
-	Render();
-
-	// 30초마다 GC 실행
-	double CurrentTime = Timer.GetTotalTime();
-	if (ObjManager && (CurrentTime - LastGCTime) >= GCInterval)
-	{
-		ObjManager->FlushKilledObjects();
-		LastGCTime = CurrentTime;
-	}
 }
-
-
-
-
 
 void CCore::Physics(float DeltaTime)
 {
@@ -372,6 +362,16 @@ void CCore::GameLogic(float DeltaTime)
 	if (Scene)
 	{
 		Scene->Tick(DeltaTime);
+	}
+}
+
+void CCore::LateUpdate(float DeltaTime)
+{
+	double CurrentTime = Timer.GetTotalTime();
+	if (ObjManager && (CurrentTime - LastGCTime) >= GCInterval)
+	{
+		ObjManager->FlushKilledObjects();
+		LastGCTime = CurrentTime;
 	}
 }
 

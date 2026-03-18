@@ -68,9 +68,11 @@ private:
 	const FEditorSceneContext* GetActiveEditorSceneContext() const;
 	FEditorSceneContext* FindPreviewSceneContext(const FString& ContextName);
 	const FEditorSceneContext* FindPreviewSceneContext(const FString& ContextName) const;
+	void Input(float DeltaTime);
 	void Physics(float DeltaTime);
 	void GameLogic(float DeltaTime);
 	void Render();
+	void LateUpdate(float DeltaTime);
 	void RegisterConsoleVariables();
 
 private:
