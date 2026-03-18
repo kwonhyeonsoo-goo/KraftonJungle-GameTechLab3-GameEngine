@@ -282,7 +282,7 @@ void CEditorUI::Render()
 		}
 
 		const FTimer& Timer = Core->GetTimer();
-		Stat.SetFPS(Timer.GetFPS());
+		Stat.SetFPS(Timer.GetDisplayFPS());
 		Stat.SetFrameTimeMs(Timer.GetFrameTimeMs());
 	}
 
