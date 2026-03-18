@@ -672,6 +672,11 @@ void CRenderer::Release()
 {
 	ClearViewportCallbacks();
 	ClearSceneRenderTarget();
+
+	ShaderManager.Release();
+	FShaderMap::Get().Clear();
+	FMaterialManager::Get().Clear();
+	
 	if (StencilWriteState)
 	{
 		StencilWriteState->Release();
@@ -747,7 +752,6 @@ void CRenderer::Release()
 		Device->Release();
 		Device = nullptr;
 	}
-	ShaderManager.Release();
 }
 
 bool CRenderer::IsOccluded()
