@@ -5,8 +5,6 @@
 #include <vector>
 #include "Math/Vector.h"
 
-namespace codex::gizmo::unreal_editor
-{
 
 struct Vec2
 {
@@ -66,6 +64,7 @@ struct RotationDesc
     FVector viewRight = FVector(1.0f, 0.0f, 0.0f);
     bool orthographic = false;
     bool fullAxisRings = false;
+    bool includeInnerDisk = false;
     bool includeScreenRing = true;
     bool includeArcball = true;
     bool dragging = false;
@@ -130,5 +129,3 @@ Color ScreenAxisColor();
 Color ScreenSpaceColor();
 Color ArcballColor();
 Color HighlightColor();
-
-} // namespace codex::gizmo::unreal_editor

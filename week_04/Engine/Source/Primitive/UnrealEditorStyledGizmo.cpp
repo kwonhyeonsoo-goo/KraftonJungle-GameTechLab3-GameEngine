@@ -3,8 +3,6 @@
 #include <algorithm>
 #include <cmath>
 
-namespace codex::gizmo::unreal_editor
-{
 
 namespace
 {
@@ -14,20 +12,20 @@ constexpr float kHalfPi = 0.5f * kPi;
 constexpr float kTwoPi = 2.0f * kPi;
 
 constexpr float kAxisLength = 35.0f;
-constexpr float kAxisLengthScaleOffset = 5.0f;
-constexpr float kCylinderRadius = 1.2f;
+constexpr float kAxisLengthScaleOffset = 1.0f;
+constexpr float kCylinderRadius = .6f;
 constexpr float kConeHeadOffset = 12.0f;
-constexpr float kCubeHeadOffset = 3.0f;
+constexpr float kCubeHeadOffset = 0.0f;
 constexpr float kConeScale = -13.0f;
 constexpr int kAxisCircleSides = 24;
-constexpr float kInnerAxisCircleRadius = 48.0f;
-constexpr float kOuterAxisCircleRadius = 56.0f;
+constexpr float kInnerAxisCircleRadius = 44.0f;
+constexpr float kOuterAxisCircleRadius = 52.0f;
 constexpr float kTranslateCornerStart = 7.0f;
 constexpr float kTranslateCornerLength = 12.0f;
 constexpr float kTranslateCornerThickness = 1.2f;
 constexpr float kTranslateScreenSphereRadius = 4.0f;
 constexpr float kScaleLineHalfThickness = 0.35f;
-constexpr float kScaleCenterCubeHalf = 4.0f;
+constexpr float kScaleCenterCubeHalf = 2.5f;
 constexpr float kLargeInnerAlpha = 63.0f / 255.0f;
 constexpr float kSmallInnerAlpha = 15.0f / 255.0f;
 constexpr float kLargeOuterAlpha = 127.0f / 255.0f;
@@ -566,20 +564,33 @@ RotationGizmo GenerateRotationGizmo(const RotationDesc& desc)
             }
 
             const float deltaAngle = DegreesToRadians(std::fabs(desc.deltaRotationDegrees));
-            const float startAngle = (desc.deltaRotationDegrees < 0.0f) ? -deltaAngle : 0.0f;
-            if (deltaAngle > 1.0e-6f)
+            if (deltaAngle <= 1.0e-6f)
             {
-                AppendArcBand(mesh, axis0, axis1, innerRadius, outerRadius, startAngle, startAngle + deltaAngle, ApplyAlpha(baseColor, kLargeOuterAlpha), circleSides);
+                AppendArcBand(mesh, axis0, axis1, innerRadius, outerRadius, 0.0f, kTwoPi, ApplyAlpha(baseColor, kLargeOuterAlpha), circleSides);
+                if (desc.includeInnerDisk)
+                {
+                    AppendArcBand(mesh, axis0, axis1, 0.0f, innerRadius, 0.0f, kTwoPi, ApplyAlpha(baseColor, kSmallInnerAlpha), circleSides);
+                }
+                return;
             }
+
+            const float startAngle = (desc.deltaRotationDegrees < 0.0f) ? -deltaAngle : 0.0f;
+            AppendArcBand(mesh, axis0, axis1, innerRadius, outerRadius, startAngle, startAngle + deltaAngle, ApplyAlpha(baseColor, kLargeOuterAlpha), circleSides);
             AppendArcBand(mesh, axis0, axis1, innerRadius, outerRadius, startAngle + deltaAngle, startAngle + kTwoPi, ApplyAlpha(baseColor, kSmallOuterAlpha), circleSides);
-            AppendArcBand(mesh, axis0, axis1, 0.0f, innerRadius, startAngle, startAngle + kTwoPi, ApplyAlpha(baseColor, kSmallInnerAlpha), circleSides);
+            if (desc.includeInnerDisk)
+            {
+                AppendArcBand(mesh, axis0, axis1, 0.0f, innerRadius, startAngle, startAngle + kTwoPi, ApplyAlpha(baseColor, kSmallInnerAlpha), circleSides);
+            }
             return;
         }
 
         if (desc.fullAxisRings)
         {
             AppendArcBand(mesh, axis0, axis1, innerRadius, outerRadius, 0.0f, kTwoPi, ApplyAlpha(baseColor, kLargeOuterAlpha), circleSides);
-            AppendArcBand(mesh, axis0, axis1, 0.0f, innerRadius, 0.0f, kTwoPi, ApplyAlpha(baseColor, kSmallInnerAlpha), circleSides);
+            if (desc.includeInnerDisk)
+            {
+                AppendArcBand(mesh, axis0, axis1, 0.0f, innerRadius, 0.0f, kTwoPi, ApplyAlpha(baseColor, kSmallInnerAlpha), circleSides);
+            }
             return;
         }
 
@@ -588,7 +599,10 @@ RotationGizmo GenerateRotationGizmo(const RotationDesc& desc)
         const FVector render0 = mirror0 ? axis0 : axis0 * -1.0f;
         const FVector render1 = mirror1 ? axis1 : axis1 * -1.0f;
         AppendArcBand(mesh, render0, render1, innerRadius, outerRadius, 0.0f, kHalfPi, ApplyAlpha(baseColor, kLargeOuterAlpha), circleSides);
-        AppendArcBand(mesh, render0, render1, 0.0f, innerRadius, 0.0f, kHalfPi, ApplyAlpha(baseColor, kSmallInnerAlpha), circleSides);
+        if (desc.includeInnerDisk)
+        {
+            AppendArcBand(mesh, render0, render1, 0.0f, innerRadius, 0.0f, kHalfPi, ApplyAlpha(baseColor, kSmallInnerAlpha), circleSides);
+        }
     };
 
     appendAxisArc(gizmo.ringX, AxisId::X, FVector(0.0f, 0.0f, 1.0f), FVector(0.0f, 1.0f, 0.0f), AxisColorX());
@@ -664,5 +678,3 @@ Mesh Combine(const ScaleGizmo& gizmo)
 {
     return MergeMeshes({&gizmo.axisX, &gizmo.axisY, &gizmo.axisZ, &gizmo.planeXY, &gizmo.planeXZ, &gizmo.planeYZ, &gizmo.centerCube});
 }
-
-} // namespace codex::gizmo::unreal_editor

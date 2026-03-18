@@ -1,4 +1,4 @@
-﻿#include "PreviewViewportClient.h"
+#include "PreviewViewportClient.h"
 
 #include "EditorUI.h"
 #include "Core/Core.h"
@@ -41,10 +41,15 @@ void CPreviewViewportClient::Tick(CCore* Core, float DeltaTime)
 	if (ImGui::GetCurrentContext())
 	{
 		const ImGuiIO& IO = ImGui::GetIO();
-		if (IO.WantCaptureKeyboard || IO.WantCaptureMouse)
+		if ((IO.WantCaptureKeyboard || IO.WantCaptureMouse) && !EditorUI.IsViewportInteractive())
 		{
 			return;
 		}
+	}
+
+	if (!EditorUI.IsViewportInteractive())
+	{
+		return;
 	}
 
 	IViewportClient::Tick(Core, DeltaTime);

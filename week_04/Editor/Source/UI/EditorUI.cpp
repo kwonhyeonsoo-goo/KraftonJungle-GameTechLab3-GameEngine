@@ -52,6 +52,7 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 	}
 
 	bViewportClientActive = true;
+	CurrentRenderer = InRenderer;
 
 	const HWND Hwnd = InRenderer->GetHwnd();
 	ID3D11Device* Device = InRenderer->GetDevice();
@@ -153,9 +154,12 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 void CEditorUI::DetachFromRenderer(CRenderer* InRenderer)
 {
 	bViewportClientActive = false;
+	CurrentRenderer = nullptr;
+	Viewport.ReleaseSceneView();
 
 	if (InRenderer)
 	{
+		InRenderer->ClearSceneRenderTarget();
 		InRenderer->ClearViewportCallbacks();
 	}
 }
@@ -177,7 +181,13 @@ void CEditorUI::SetupWindow(CWindow* InWindow)
 				return false;
 			}
 
-			return ImGui_ImplWin32_WndProcHandler(Hwnd, Msg, WParam, LParam) != 0;
+			const bool bHandledByImGui = ImGui_ImplWin32_WndProcHandler(Hwnd, Msg, WParam, LParam) != 0;
+			if (IsViewportInteractive())
+			{
+				return false;
+			}
+
+			return bHandledByImGui;
 		});
 }
 
@@ -204,6 +214,7 @@ void CEditorUI::BuildDefaultLayout(uint32 DockID)
 	ImGuiID DockRightBottom = 0;
 	ImGui::DockBuilderSplitNode(DockRight, ImGuiDir_Up, 0.50f, &DockRightTop, &DockRightBottom);
 
+	ImGui::DockBuilderDockWindow("Viewport", DockCenter);
 	ImGui::DockBuilderDockWindow("Stats", DockLeft);
 	ImGui::DockBuilderDockWindow("Properties", DockRightTop);
 	ImGui::DockBuilderDockWindow("Control Panel", DockRightBottom);
@@ -219,10 +230,10 @@ void CEditorUI::Render()
 		return;
 	}
 
-	ImGuiViewport* Viewport = ImGui::GetMainViewport();
-	ImGui::SetNextWindowPos(Viewport->WorkPos);
-	ImGui::SetNextWindowSize(Viewport->WorkSize);
-	ImGui::SetNextWindowViewport(Viewport->ID);
+	ImGuiViewport* MainViewport = ImGui::GetMainViewport();
+	ImGui::SetNextWindowPos(MainViewport->WorkPos);
+	ImGui::SetNextWindowSize(MainViewport->WorkSize);
+	ImGui::SetNextWindowViewport(MainViewport->ID);
 
 	ImGuiWindowFlags HostFlags =
 		ImGuiWindowFlags_NoTitleBar |
@@ -256,30 +267,14 @@ void CEditorUI::Render()
 	ImGui::PopStyleVar();
 	ImGui::End();
 
+	Viewport.Render(Core, CurrentRenderer, MainWindow ? MainWindow->GetHwnd() : nullptr);
+
 	if (Core)
 	{
 		AActor* Selected = Core->GetSelectedActor();
 		if (Selected != CachedSelectedActor)
 		{
-			if (Selected)
-			{
-				if (USceneComponent* Root = Selected->GetRootComponent())
-				{
-					const FTransform Transform = Root->GetRelativeTransform();
-					Property.SetTarget(
-						Transform.GetLocation(),
-						Transform.Rotator().Euler(),
-						Transform.GetScale3D(),
-						Selected->GetName().c_str()
-					);
-				}
-			}
-			else
-			{
-				Property.SetTarget({ 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, "None");
-			}
-
-			CachedSelectedActor = Selected;
+			SyncSelectedActorProperty();
 		}
 
 		const FTimer& Timer = Core->GetTimer();
@@ -294,4 +289,43 @@ void CEditorUI::Render()
 	Property.Render();
 	Console.Render();
 	Stat.Render();
+}
+
+bool CEditorUI::GetViewportMousePosition(int32 WindowMouseX, int32 WindowMouseY, int32& OutViewportX, int32& OutViewportY, int32& OutWidth, int32& OutHeight) const
+{
+	return Viewport.GetMousePositionInViewport(WindowMouseX, WindowMouseY, OutViewportX, OutViewportY, OutWidth, OutHeight);
+}
+
+void CEditorUI::SyncSelectedActorProperty()
+{
+	if (!Core)
+	{
+		return;
+	}
+
+	AActor* Selected = Core->GetSelectedActor();
+	if (Selected)
+	{
+		if (USceneComponent* Root = Selected->GetRootComponent())
+		{
+			const FTransform Transform = Root->GetRelativeTransform();
+			Property.SetTarget(
+				Transform.GetLocation(),
+				Transform.Rotator().Euler(),
+				Transform.GetScale3D(),
+				Selected->GetName().c_str()
+			);
+		}
+	}
+	else
+	{
+		Property.SetTarget({ 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, "None");
+	}
+
+	CachedSelectedActor = Selected;
+}
+
+bool CEditorUI::IsViewportInteractive() const
+{
+	return Viewport.IsVisible() && (Viewport.IsHovered() || Viewport.IsFocused());
 }

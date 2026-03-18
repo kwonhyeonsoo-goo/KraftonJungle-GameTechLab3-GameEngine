@@ -47,7 +47,8 @@ bool CPicker::RayTriangleIntersect(const FRay& Ray,
 	const FVector H = FVector::CrossProduct(Ray.Direction, Edge2);
 	const float A = FVector::DotProduct(Edge1, H);
 
-	if (A > -Epsilon && A < Epsilon)
+	// Render path와 동일하게 back-face는 picking 대상에서 제외한다.
+	if (A <= Epsilon)
 	{
 		return false;
 	}
