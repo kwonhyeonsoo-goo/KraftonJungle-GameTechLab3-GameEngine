@@ -28,7 +28,7 @@ void OverlayBuilder::Build(const EditorSession& session, AppContext& ctx, Render
 	// Default implementation: add world axis command to the render queue.
 	// Implemented inline so the definition is available to all TUs and
 	// to avoid linker unresolved external when the .cpp is not linked.
-	PushGrid(queue, session.Camera.Position);
+	PushGrid(queue, session.GetActiveCamera().Position);
 	PushWorldAxis(queue);
 	const TArray<USceneComponent*> primary = session.Selection.GetAll();
 	if (primary.empty())
