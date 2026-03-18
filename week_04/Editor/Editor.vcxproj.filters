@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source">
@@ -18,12 +18,6 @@
     </Filter>
     <Filter Include="Source\Picking">
       <UniqueIdentifier>{f6faa914-edd8-6594-d865-4579e893d626}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Controller">
-      <UniqueIdentifier>{7d83c849-5a9a-4ff4-b13b-8f7fe9bba101}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Pawn">
-      <UniqueIdentifier>{4fca8b36-7d53-451b-a8f5-666dc0d33f60}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\UI">
       <UniqueIdentifier>{937fbf30-493d-dd10-0906-014ab75451c6}</UniqueIdentifier>
@@ -78,6 +72,9 @@
     <ClCompile Include="Source\UI\StatWindow.cpp">
       <Filter>Source\UI</Filter>
     </ClCompile>
+    <ClCompile Include="Source\UI\Viewport.cpp">
+      <Filter>Source\UI</Filter>
+    </ClCompile>
     <ClCompile Include="ThirdParty\imgui\imgui.cpp">
       <Filter>ThirdParty\imgui</Filter>
     </ClCompile>
@@ -99,15 +96,6 @@
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp">
       <Filter>ThirdParty\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Pawn\EditorCameraPawn.cpp">
-      <Filter>Source\Pawn</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Controller\EditorViewportController.cpp">
-      <Filter>Source\Controller</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\UI\Viewport.cpp">
-      <Filter>Source\UI</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\FEditorEngine.h">
@@ -116,8 +104,14 @@
     <ClInclude Include="Source\Axis\AxisRenderer.h">
       <Filter>Source\Axis</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Controller\EditorViewportController.h">
+      <Filter>Source\Controller</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Gizmo\Gizmo.h">
       <Filter>Source\Gizmo</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Pawn\EditorCameraPawn.h">
+      <Filter>Source\Pawn</Filter>
     </ClInclude>
     <ClInclude Include="Source\Picking\Picker.h">
       <Filter>Source\Picking</Filter>
@@ -143,6 +137,9 @@
     <ClInclude Include="Source\UI\StatWindow.h">
       <Filter>Source\UI</Filter>
     </ClInclude>
+    <ClInclude Include="Source\UI\Viewport.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imconfig.h">
       <Filter>ThirdParty\imgui</Filter>
     </ClInclude>
@@ -166,15 +163,6 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imstb_truetype.h">
       <Filter>ThirdParty\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Pawn\EditorCameraPawn.h">
-      <Filter>Source\Pawn</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Controller\EditorViewportController.h">
-      <Filter>Source\Controller</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\UI\Viewport.h">
-      <Filter>Source\UI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

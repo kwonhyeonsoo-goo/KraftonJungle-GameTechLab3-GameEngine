@@ -373,50 +373,50 @@ void CRenderer::ExecuteCommands()
 		});
 
 	auto ExecutePass = [this, &CBs](bool bOverlayPass)
-	{
-		FMaterial* CurrentMaterial = nullptr;
-		FMeshData* CurrentMesh = nullptr;
-		ID3D11RasterizerState* CurrentRasterizerState = nullptr;
-		ID3D11DepthStencilState* CurrentDepthStencilState = nullptr;
-
-		for (const auto& Cmd : CommandList)
 		{
-			if (Cmd.bOverlay != bOverlayPass || !Cmd.MeshData)
-			{
-				continue;
-			}
+			FMaterial* CurrentMaterial = nullptr;
+			FMeshData* CurrentMesh = nullptr;
+			ID3D11RasterizerState* CurrentRasterizerState = nullptr;
+			ID3D11DepthStencilState* CurrentDepthStencilState = nullptr;
 
-			ID3D11RasterizerState* DesiredRasterizerState = Cmd.bDisableCulling ? NoCullRasterizerState : RasterizerState;
-			if (DesiredRasterizerState != CurrentRasterizerState)
+			for (const auto& Cmd : CommandList)
 			{
-				DeviceContext->RSSetState(DesiredRasterizerState);
-				CurrentRasterizerState = DesiredRasterizerState;
-			}
+				if (Cmd.bOverlay != bOverlayPass || !Cmd.MeshData)
+				{
+					continue;
+				}
 
-			ID3D11DepthStencilState* DesiredDepthStencilState = (Cmd.bDisableDepthTest || Cmd.bDisableDepthWrite) ? OverlayDepthState : nullptr;
-			if (DesiredDepthStencilState != CurrentDepthStencilState)
-			{
-				DeviceContext->OMSetDepthStencilState(DesiredDepthStencilState, 0);
-				CurrentDepthStencilState = DesiredDepthStencilState;
-			}
+				ID3D11RasterizerState* DesiredRasterizerState = Cmd.bDisableCulling ? NoCullRasterizerState : RasterizerState;
+				if (DesiredRasterizerState != CurrentRasterizerState)
+				{
+					DeviceContext->RSSetState(DesiredRasterizerState);
+					CurrentRasterizerState = DesiredRasterizerState;
+				}
 
-			if (Cmd.Material != CurrentMaterial)
-			{
-				Cmd.Material->Bind(DeviceContext);
-				CurrentMaterial = Cmd.Material;
-				DeviceContext->VSSetConstantBuffers(0, 2, CBs);
-			}
+				ID3D11DepthStencilState* DesiredDepthStencilState = (Cmd.bDisableDepthTest || Cmd.bDisableDepthWrite) ? OverlayDepthState : nullptr;
+				if (DesiredDepthStencilState != CurrentDepthStencilState)
+				{
+					DeviceContext->OMSetDepthStencilState(DesiredDepthStencilState, 0);
+					CurrentDepthStencilState = DesiredDepthStencilState;
+				}
 
-			if (Cmd.MeshData != CurrentMesh)
-			{
-				Cmd.MeshData->Bind(DeviceContext);
-				CurrentMesh = Cmd.MeshData;
-			}
+				if (Cmd.Material != CurrentMaterial)
+				{
+					Cmd.Material->Bind(DeviceContext);
+					CurrentMaterial = Cmd.Material;
+					DeviceContext->VSSetConstantBuffers(0, 2, CBs);
+				}
 
-			UpdateObjectConstantBuffer(Cmd.WorldMatrix);
-			DeviceContext->DrawIndexed(Cmd.MeshData->IndexCount, 0, 0);
-		}
-	};
+				if (Cmd.MeshData != CurrentMesh)
+				{
+					Cmd.MeshData->Bind(DeviceContext);
+					CurrentMesh = Cmd.MeshData;
+				}
+
+				UpdateObjectConstantBuffer(Cmd.WorldMatrix);
+				DeviceContext->DrawIndexed(Cmd.MeshData->IndexCount, 0, 0);
+			}
+		};
 
 	ExecutePass(false);
 	ExecutePass(true);
@@ -704,8 +704,6 @@ void CRenderer::Release()
 		OverlayDepthState->Release();
 		OverlayDepthState = nullptr;
 	}
-
-
 
 	if (RasterizerState)
 	{

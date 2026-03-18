@@ -1,8 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source">
       <UniqueIdentifier>{4f6c83fe-a134-3484-3756-8c697b723468}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Actor">
+      <UniqueIdentifier>{fdf9760a-55b6-437a-ee71-e2ab34f8bb89}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Camera">
       <UniqueIdentifier>{5186471f-4dfb-b6f6-7c10-0e7ad54c1e4e}</UniqueIdentifier>
@@ -25,12 +28,6 @@
     <Filter Include="Source\Object">
       <UniqueIdentifier>{57ff594e-c20e-1243-40d9-9d88b6d24db9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Actor">
-      <UniqueIdentifier>{c1eb7930-ca76-bf96-83f2-a26f94ee141b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Scene">
-      <UniqueIdentifier>{9d63c879-daa3-e358-aff0-8d589c79a8c1}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Platform">
       <UniqueIdentifier>{7ffeef2f-57c8-23a1-bcad-f74a8fad0318}</UniqueIdentifier>
     </Filter>
@@ -43,6 +40,9 @@
     <Filter Include="Source\Renderer">
       <UniqueIdentifier>{b4935566-c566-3c8c-ae88-5cc13eba9d31}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Scene">
+      <UniqueIdentifier>{f9c008c1-5b68-14f2-ea56-7006fc09bfab}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Types">
       <UniqueIdentifier>{1e5cbe70-629e-3dca-3777-f9421b4e6929}</UniqueIdentifier>
     </Filter>
@@ -54,6 +54,21 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Actor\Actor.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Actor\AttachTestActor.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Actor\CubeActor.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Actor\Gizmo.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Actor\SphereActor.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Camera\Camera.cpp">
       <Filter>Source\Camera</Filter>
     </ClCompile>
@@ -78,6 +93,9 @@
     <ClCompile Include="Source\Component\SceneComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Component\SkyComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Component\SphereComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
@@ -93,7 +111,7 @@
     <ClCompile Include="Source\Core\FTimer.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\ConsoleVariableManager.cpp">
+    <ClCompile Include="Source\Core\Paths.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\ViewportClient.cpp">
@@ -135,26 +153,11 @@
     <ClCompile Include="Source\Object\Object.cpp">
       <Filter>Source\Object</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Object\ObjectManager.cpp">
+    <ClCompile Include="Source\Object\ObjectFactory.cpp">
       <Filter>Source\Object</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Actor\Actor.cpp">
-      <Filter>Source\Actor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Actor\CubeActor.cpp">
-      <Filter>Source\Actor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Actor\Gizmo.cpp">
-      <Filter>Source\Actor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Actor\SphereActor.cpp">
-      <Filter>Source\Actor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Actor\AttachTestActor.cpp">
-      <Filter>Source\Actor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Scene\Scene.cpp">
-      <Filter>Source\Scene</Filter>
+    <ClCompile Include="Source\Object\ObjectManager.cpp">
+      <Filter>Source\Object</Filter>
     </ClCompile>
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp">
       <Filter>Source\Platform\Windows</Filter>
@@ -175,6 +178,9 @@
       <Filter>Source\Primitive</Filter>
     </ClCompile>
     <ClCompile Include="Source\Primitive\PrimitivePlane.cpp">
+      <Filter>Source\Primitive</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Primitive\PrimitiveSky.cpp">
       <Filter>Source\Primitive</Filter>
     </ClCompile>
     <ClCompile Include="Source\Primitive\PrimitiveSphere.cpp">
@@ -204,15 +210,9 @@
     <ClCompile Include="Source\Renderer\ShaderResource.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Object\ObjectFactory.cpp">
-      <Filter>Source\Object</Filter>
+    <ClCompile Include="Source\Scene\Scene.cpp">
+      <Filter>Source\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Component\CameraComponent.cpp">
-      <Filter>Source\Component</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Core\Paths.cpp" />
-    <ClCompile Include="Source\Primitive\PrimitiveSky.cpp" />
-    <ClCompile Include="Source\Component\SkyComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -220,6 +220,24 @@
     </ClInclude>
     <ClInclude Include="Source\EngineAPI.h">
       <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\Actor.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\AttachTestActor.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\CubeActor.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\Gizmo.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\SkySphereActor.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\SphereActor.h">
+      <Filter>Source\Actor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Camera\Camera.h">
       <Filter>Source\Camera</Filter>
@@ -245,6 +263,9 @@
     <ClInclude Include="Source\Component\SceneComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Component\SkyComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Component\SphereComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
@@ -260,7 +281,7 @@
     <ClInclude Include="Source\Core\FTimer.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\ConsoleVariableManager.h">
+    <ClInclude Include="Source\Core\Paths.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\ViewportClient.h">
@@ -326,30 +347,6 @@
     <ClInclude Include="Source\Object\ObjectTypes.h">
       <Filter>Source\Object</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Actor\Actor.h">
-      <Filter>Source\Actor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Actor\CubeActor.h">
-      <Filter>Source\Actor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Actor\Gizmo.h">
-      <Filter>Source\Actor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Actor\SphereActor.h">
-      <Filter>Source\Actor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Actor\AttachTestActor.h">
-      <Filter>Source\Actor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Scene\Scene.h">
-      <Filter>Source\Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Scene\SceneContext.h">
-      <Filter>Source\Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Scene\SceneTypes.h">
-      <Filter>Source\Scene</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h">
       <Filter>Source\Platform\Windows</Filter>
     </ClInclude>
@@ -371,11 +368,20 @@
     <ClInclude Include="Source\Primitive\PrimitivePlane.h">
       <Filter>Source\Primitive</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Primitive\PrimitiveSky.h">
+      <Filter>Source\Primitive</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Primitive\PrimitiveSphere.h">
       <Filter>Source\Primitive</Filter>
     </ClInclude>
     <ClInclude Include="Source\Primitive\UnrealEditorStyledGizmo.h">
       <Filter>Source\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Material.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\MaterialManager.h">
+      <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\PrimitiveVertex.h">
       <Filter>Source\Renderer</Filter>
@@ -401,6 +407,15 @@
     <ClInclude Include="Source\Renderer\ShaderType.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Scene\Scene.h">
+      <Filter>Source\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\SceneContext.h">
+      <Filter>Source\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\SceneTypes.h">
+      <Filter>Source\Scene</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Types\Array.h">
       <Filter>Source\Types</Filter>
     </ClInclude>
@@ -411,6 +426,9 @@
       <Filter>Source\Types</Filter>
     </ClInclude>
     <ClInclude Include="Source\Types\Map.h">
+      <Filter>Source\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Types\ObjectPtr.h">
       <Filter>Source\Types</Filter>
     </ClInclude>
     <ClInclude Include="Source\Types\Pair.h">
@@ -431,12 +449,6 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp">
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\Paths.h" />
-    <ClInclude Include="Source\Renderer\Material.h" />
-    <ClInclude Include="Source\Renderer\MaterialManager.h" />
-    <ClInclude Include="Source\Actor\SkySphereActor.h" />
-    <ClInclude Include="Source\Component\SkyComponent.h" />
-    <ClInclude Include="Source\Primitive\PrimitiveSky.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -16,9 +16,6 @@ class UObject;
 class ENGINE_API FObjectFactory
 {
 public:
-
-
-
 	// UClass*를 직접 지정하는 버전
 	static UObject* ConstructObject(
 		UClass* InClass,

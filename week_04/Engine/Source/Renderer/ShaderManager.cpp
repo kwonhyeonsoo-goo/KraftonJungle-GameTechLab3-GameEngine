@@ -25,8 +25,6 @@ void CShaderManager::Bind(ID3D11DeviceContext* DeviceContext)
 	if (PS) PS->Bind(DeviceContext);
 }
 
-
-
 void CShaderManager::Release()
 {
 	VS.reset();
