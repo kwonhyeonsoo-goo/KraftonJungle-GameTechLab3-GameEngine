@@ -91,8 +91,19 @@ void URenderer::CreateShader()
 
     StrideUV = sizeof(FVertexUV);
 
-    D3DCompileFromFile(L"Shaders/ShaderWGrid.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &vertexshaderCS2, nullptr);
+    ID3DBlob* errorBlob = nullptr;
 
+    HRESULT hr = D3DCompileFromFile(L"Shaders/ShaderWGrid.hlsl", nullptr, nullptr, "mainVS", "vs_5_0", 0, 0, &vertexshaderCS2, &errorBlob);
+    if (FAILED(hr))
+    {
+        if (errorBlob)
+        {
+            // 에러 메시지 출력
+            MessageBoxA(nullptr, (char*)errorBlob->GetBufferPointer(), "Shader Error", MB_OK);
+            OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+            errorBlob->Release();
+        }
+    }
     Device->CreateVertexShader(vertexshaderCS2->GetBufferPointer(), vertexshaderCS2->GetBufferSize(), nullptr, &GridVertexShader);
 
     D3DCompileFromFile(L"Shaders/ShaderWGrid.hlsl", nullptr, nullptr, "mainPS", "ps_5_0", 0, 0, &pixelshaderCS2, nullptr);
@@ -925,6 +936,7 @@ void URenderer::UpdateConstantBuffer(const FVector& CameraPos)
         FcontantsMV* constants = (FcontantsMV*)constantbufferMSR.pData;
         {
             constants->_WorldSpaceCameraPos = CameraPos;
+            constants->_ObjectToWorld = FMatrix::Translation(CameraPos);
         }
         DeviceContext->Unmap(GridConstantBuffer, 0);
     }

@@ -28,7 +28,7 @@ void OverlayBuilder::Build(const EditorSession& session, AppContext& ctx, Render
 	// Default implementation: add world axis command to the render queue.
 	// Implemented inline so the definition is available to all TUs and
 	// to avoid linker unresolved external when the .cpp is not linked.
-	PushGrid(queue);
+	PushGrid(queue, session.Camera.Position);
 	PushWorldAxis(queue);
 	USceneComponent* primary = session.Selection.GetPrimary();
 	if (primary == nullptr)
@@ -82,13 +82,13 @@ void OverlayBuilder::PushHighlight(const USceneComponent* comp, RenderQueue& que
 
 }
 
-void OverlayBuilder::PushGrid(RenderQueue& queue)
+void OverlayBuilder::PushGrid(RenderQueue& queue , FVector cameraPos)
 {
 	RenderCommand axisCommand = {};
 	axisCommand.Type = ERenderType::Grid;
 	axisCommand.Shape;
-
-	axisCommand.WorldTransform = FMatrix::FMatrix();
+	FVector cameraPosXY = { cameraPos.x, cameraPos.y, 0 };
+	axisCommand.WorldTransform = FMatrix::Translation(cameraPosXY);
 
 	axisCommand.Color = 0;
 	axisCommand.ObjectId = 0;

@@ -7,6 +7,7 @@ cbuffer constants : register(b0)
 
 cbuffer contantsMV : register(b1)
 {
+    row_major float4x4 _ObjectToWorld;
     float3 _WorldSpaceCameraPos;
     float padding;
 
@@ -46,10 +47,11 @@ PS_INPUT mainVS(VS_INPUT input)
     
     output.position = mul(input.position, MVP);
     
+    float3 worldPos = mul(float4(input.position.xyz, 1), _ObjectToWorld);
     float3 cameraCenteringOffset = floor(_WorldSpaceCameraPos * _GridScale);
-    float3 cameraSnappedWorldPos = input.position.xyz * _GridScale - cameraCenteringOffset;
+    float3 cameraSnappedWorldPos = worldPos.xyz * _GridScale - cameraCenteringOffset;
 
-    output.uv = cameraSnappedWorldPos.xy;  
+    output.uv = cameraSnappedWorldPos.xy;
 
     return output;
 
@@ -88,3 +90,4 @@ float4 mainPS(PS_INPUT input) : SV_TARGET
 
 
 }
+

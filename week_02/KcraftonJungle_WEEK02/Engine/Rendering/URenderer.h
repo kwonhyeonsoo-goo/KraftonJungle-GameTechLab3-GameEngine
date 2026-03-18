@@ -25,6 +25,7 @@ struct alignas(16) FConstants
 
 struct FcontantsMV
 {
+    FMatrix _ObjectToWorld;
     FVector _WorldSpaceCameraPos;
     float padding;
 };
