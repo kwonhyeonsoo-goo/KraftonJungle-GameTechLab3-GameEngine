@@ -58,8 +58,18 @@ public:
 	bool Execute(const char* CommandLine, FString& OutResult);
 	void GetAllNames(TArray<FString>& OutNames) const;
 
+	using FConsoleCommand = std::function<void(FString&)>;
+	void RegisterCommand(const FString& Name, FConsoleCommand InCommand, const FString& Help = "");
+
 private:
 	FConsoleVariableManager() = default;
 	static FString ToLower(const FString& Str);
 	TMap<FString, FConsoleVariable*> Variables;
+
+	struct FCommandEntry
+	{
+		FConsoleCommand Command;
+		FString Help;
+	};
+	TMap<FString, FCommandEntry> Commands;
 };

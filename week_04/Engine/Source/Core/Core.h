@@ -89,7 +89,7 @@ private:
 
 	FTimer Timer;
 	double LastGCTime = 0.0;
-	static constexpr double GCInterval = 30.0;
+	double GCInterval = 30.0;
 	int32 WindowWidth = 0;
 	int32 WindowHeight = 0;
 };

@@ -107,6 +107,15 @@ bool FConsoleVariableManager::Execute(const char* CommandLine, FString& OutResul
 	size_t SpacePos = Line.find(' ');
 	FString Name = (SpacePos != FString::npos) ? Line.substr(0, SpacePos) : Line;
 
+	// Check commands first
+	FString LowerName = ToLower(Name);
+	auto CmdIt = Commands.find(LowerName);
+	if (CmdIt != Commands.end())
+	{
+		CmdIt->second.Command(OutResult);
+		return true;
+	}
+
 	FConsoleVariable* Var = Find(Name);
 	if (!Var)
 		return false;
@@ -137,9 +146,21 @@ bool FConsoleVariableManager::Execute(const char* CommandLine, FString& OutResul
 	return true;
 }
 
+void FConsoleVariableManager::RegisterCommand(const FString& Name, FConsoleCommand InCommand, const FString& Help)
+{
+	FCommandEntry Entry;
+	Entry.Command = std::move(InCommand);
+	Entry.Help = Help;
+	Commands[ToLower(Name)] = std::move(Entry);
+}
+
 void FConsoleVariableManager::GetAllNames(TArray<FString>& OutNames) const
 {
 	for (auto& Pair : Variables)
+	{
+		OutNames.push_back(Pair.first);
+	}
+	for (auto& Pair : Commands)
 	{
 		OutNames.push_back(Pair.first);
 	}

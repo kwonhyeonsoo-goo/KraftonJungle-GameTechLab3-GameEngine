@@ -367,6 +367,11 @@ void CCore::GameLogic(float DeltaTime)
 
 void CCore::LateUpdate(float DeltaTime)
 {
+	if (GCInterval <= 0.0)
+	{
+		return;
+	}
+
 	double CurrentTime = Timer.GetTotalTime();
 	if (ObjManager && (CurrentTime - LastGCTime) >= GCInterval)
 	{
@@ -482,4 +487,29 @@ void CCore::RegisterConsoleVariables()
 	{
 		Renderer->SetVSync(VSyncVar->GetInt() != 0);
 	}
+
+	FConsoleVariable* GCIntervalVar = CVM.Find("gc.Interval");
+	if (!GCIntervalVar)
+	{
+		GCIntervalVar = CVM.Register("gc.Interval", 30.0f, "GC interval in seconds (0 = disabled)");
+	}
+	GCIntervalVar->SetOnChanged([this](FConsoleVariable* Var)
+		{
+			GCInterval = static_cast<double>(Var->GetFloat());
+		});
+	GCInterval = static_cast<double>(GCIntervalVar->GetFloat());
+
+	CVM.RegisterCommand("ForceGC", [this](FString& OutResult)
+		{
+			if (ObjManager)
+			{
+				ObjManager->FlushKilledObjects();
+				LastGCTime = Timer.GetTotalTime();
+				OutResult = "ForceGC: Garbage collection completed.";
+			}
+			else
+			{
+				OutResult = "ForceGC: ObjectManager is not available.";
+			}
+		}, "Force immediate garbage collection");
 }
