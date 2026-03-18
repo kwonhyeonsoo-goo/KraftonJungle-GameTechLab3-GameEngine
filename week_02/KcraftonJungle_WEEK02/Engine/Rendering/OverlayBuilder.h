@@ -25,7 +25,9 @@ public:
 private:
     static void PushWorldAxis(RenderQueue& queue);
     static void PushLocalAxis(const USceneComponent* comp, RenderQueue& queue);
-    static void PushHighlight(const TArray< USceneComponent*> primary, RenderQueue& queue);
-    static void PushGrid(RenderQueue& queue);
+
+    static void PushHighlight(const USceneComponent* comp, RenderQueue& queue);
+    static void PushGrid(RenderQueue& queue, FVector cameraPos);
+
     static void PushGizmoAxes(const GizmoState& state, RenderQueue& queue);
 };
