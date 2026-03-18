@@ -283,7 +283,7 @@ void AppContext::NewScene()
         OnObjectDestroyed.Broadcast({ uuid });
 
     // 3. ObjectStore ��ü ��� + �޸� ����
-    Objects.Clear();
+    Objects.ClearAndReleaseMemory();
 
     // 4. UUID ī���� �ʱ�ȭ
     UUIDs.SyncNextUUID(1);

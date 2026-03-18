@@ -9,7 +9,7 @@ namespace
     constexpr float Pi = 3.14159265358979323846f;
     constexpr float TwoPi = 6.28318530717958647692f;
     constexpr float HalfPi = 1.57079632679489661923f;
-    constexpr float PitchLimit = HalfPi - 0.001f;
+    constexpr float PitchLimit = HalfPi - 0.01f;
 
     float WrapAngleRad(float A)
     {

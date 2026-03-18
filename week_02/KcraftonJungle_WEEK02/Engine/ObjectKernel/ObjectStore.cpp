@@ -33,6 +33,24 @@ void ObjectStore::Clear()
 	Objects.shrink_to_fit();
 }
 
+void ObjectStore::ReleaseMemory()
+{
+	decltype(Index) emptyIndex;
+	Index.swap(emptyIndex);
+
+	decltype(Objects) emptyObjects;
+	Objects.swap(emptyObjects);
+}
+
+void ObjectStore::ClearAndReleaseMemory()
+{
+	decltype(Index) emptyIndex;
+	Index.swap(emptyIndex);
+
+	decltype(Objects) emptyObjects;
+	Objects.swap(emptyObjects);
+}
+
 UObject* ObjectStore::Find(uint32 uuid) const
 {
 	auto it = Index.find(uuid);

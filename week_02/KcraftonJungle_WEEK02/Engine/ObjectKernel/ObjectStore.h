@@ -11,6 +11,8 @@ public:
     void Add(std::unique_ptr<UObject> obj);
     void Remove(uint32 uuid);
     void Clear();
+    void ReleaseMemory();
+    void ClearAndReleaseMemory();
     UObject* Find(uint32 uuid) const;
 
     const TArray<std::unique_ptr<UObject>>& GUObjectArray() const;
