@@ -1,11 +1,11 @@
-#pragma once
+ï»¿#pragma once
 
 #pragma region __DEVELOPMENT_MACRO__
 
-//  Debug ¿ëÀÔ´Ï´Ù. -> ³ªÁß¿¡ DEBUG ºÎºĞ »èÁ¦ °¡´É (¿¡·¯ ¸Ş½ÃÁö Ãâ·ÂÇÔ)
-#define DEBUG £°
+//  Debug ìš©ì…ë‹ˆë‹¤. -> ë‚˜ì¤‘ì— DEBUG ë¶€ë¶„ ì‚­ì œ ê°€ëŠ¥ (ì—ëŸ¬ ë©”ì‹œì§€ ì¶œë ¥í•¨)
+#define DEBUG ï¼
 
-//  Å×½ºÆ® ¿ëÀÔ´Ï´Ù. -> ³ªÁß¿¡ »èÁ¦ °¡´É
-#define TEST £°
+//  í…ŒìŠ¤íŠ¸ ìš©ì…ë‹ˆë‹¤. -> ë‚˜ì¤‘ì— ì‚­ì œ ê°€ëŠ¥
+#define TEST ï¼
 
 #pragma endregion

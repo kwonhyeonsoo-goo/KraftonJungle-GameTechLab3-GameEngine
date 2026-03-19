@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Render/Common/RenderTypes.h"
 
@@ -12,7 +12,7 @@
 class UWorld;
 class UCamera;
 class UGizmoComponent;
-
+ 
 using namespace common::structs;
 
 class FEditorViewportClient

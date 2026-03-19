@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "Object/ObjectFactory.h"
 #include "SceneComponent.h"
@@ -46,7 +46,7 @@ public:
 		return true;
 	}
 
-	//	°¢ Primitive Component´Â ÀÚ½ÅÀÌ ¾î¶² Primitive TypeÀÎÁö Renderer¿¡°Ô ¾Ë·ÁÁÙ ¼ö ÀÖ¾î¾ß ÇÕ´Ï´Ù. (Dynamic Binding)
+	//	ê° Primitive ComponentëŠ” ìì‹ ì´ ì–´ë–¤ Primitive Typeì¸ì§€ Rendererì—ê²Œ ì•Œë ¤ì¤„ ìˆ˜ ìˆì–´ì•¼ í•©ë‹ˆë‹¤. (Dynamic Binding)
 	virtual EPrimitiveType GetPrimitiveType() const = 0;
 };
 
