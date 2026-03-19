@@ -1,4 +1,5 @@
 #include "PickingService.h"
+#include <memory>
 
 #include "../Foundation/Core/CoreTypes.h"
 #include "../World/UPrimitiveComponent.h"
@@ -6,9 +7,13 @@
 #include "../Foundation/Math/FVector4.h"
 #include "../Foundation/Math/FMatrix.h"
 #include "../Foundation/Math/FMatrix4.h"
+#include <iostream>
+#include "../Mesh/FVertexSimple.h"
+#include "../World/USphereComp.h"
+#include "../World/UPlaneComp.h"
 
 /// <summary>
-/// ¸¶¿ì½º ÁÂÇ¥¸¦ ºäÆ÷Æ® ·ÎÄÃ ÁÂÇ¥·Î º¯È¯ÇØ¼­ Àü´ŞÇØÁà¾ßÇÔ
+/// ï¿½ï¿½ï¿½ì½º ï¿½ï¿½Ç¥ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ç¥ï¿½ï¿½ ï¿½ï¿½È¯ï¿½Ø¼ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 /// </summary>
 /// <param name="screenX"></param>
 /// <param name="screenY"></param>
@@ -21,74 +26,75 @@ Ray PickingService::ScreenToRay(int32 screenX, int32 screenY, int32 viewportW, i
     float ndcX = (2.0f * screenX / viewportW) - 1.0f;
     float ndcY = 1.0f - (2.0f * screenY / viewportH);
 
-    FVector4 ndcNear = FVector4(ndcX, ndcY, 0.0f, 1.0f); // Z=0 Near Æò¸é
-    FVector4 ndcFar = FVector4(ndcX, ndcY, 1.0f, 1.0f); // Z=1 Far Æò¸é
+    //std::cout << screenX << " " << screenY << " " << viewportW << " " << viewportH << std::endl;
+
+
+    FVector4 ndcNear = FVector4(ndcX, ndcY, 0.0f, 1.0f); // Z=0 Near ï¿½ï¿½ï¿½
+    FVector4 ndcFar = FVector4(ndcX, ndcY, 1.0f, 1.0f); // Z=1 Far ï¿½ï¿½ï¿½
 
     FVector4 worldNear = ndcNear * viewProjInverse;
-    FVector4 worldFar = ndcFar * viewProjInverse;;
+    FVector4 worldFar = ndcFar * viewProjInverse;
 
     if(worldNear.w != 0.0f) worldNear = worldNear * (1.0f / worldNear.w);
     if (worldFar.w != 0.0f) worldFar = worldFar * (1.0f / worldFar.w);
 
+
     FVector origin = worldNear.ToVector();
     FVector direction = (worldFar.ToVector() - origin).Normalize();
 
-	return Ray(origin, direction);
+    //std::cout << origin.x << " " << origin.y << " " << origin.z << std::endl;
+
+   return Ray(origin, direction);
 }
 
-UPrimitiveComponent* PickingService::Pick(const Ray& ray, const TArray<UObject*>& objects)
+UPrimitiveComponent* PickingService::Pick(const Ray& ray, const TArray<std::unique_ptr<UObject>>& objects)
 {
+    static const uint32 PlaneIndices[] = { 0, 2, 1, 0, 3, 2 };
     UPrimitiveComponent* CloseObj = nullptr;
     float ObjTime = FLT_MAX;
 
-    for (auto* object : objects) {//TODO: ¿©±âµµ RTTI·Î ¹Ù²ã¾ßÇÔ
-        UPrimitiveComponent* Prim = dynamic_cast<UPrimitiveComponent*>(object);
+    for (const auto& obj_uptr : objects) {
+        UObject* object = obj_uptr.get();
+        if (!object->IsA<UPrimitiveComponent>()) continue;
+        UPrimitiveComponent* Prim = static_cast<UPrimitiveComponent*>(object);
 
         if (!Prim || !Prim->bVisible) continue;
 
-        // AABB¸¦ World °ø°£À¸·Î º¯È¯
-        FMatrix world = Prim->GetWorldMatrix();
-        FVector BoundMin = Prim->GetBoundMin();
-        FVector BoundMax = Prim->GetBoundMax();
+        FMatrix WorldMat = Prim->GetWorldMatrix();
+        FMatrix InvWorld = WorldMat.Inversed();
 
-        // BoundsMin/Max¸¦ World °ø°£ 8°³ ²ÀÁşÁ¡À¸·Î º¯È¯ ÈÄ Àç°è»ê
-        FVector corners[8] = {
-            FVector(BoundMin.x, BoundMin.y, BoundMin.z),
-            FVector(BoundMax.x, BoundMin.y, BoundMin.z),
-            FVector(BoundMin.x, BoundMax.y, BoundMin.z),
-            FVector(BoundMax.x, BoundMax.y, BoundMin.z),
-            FVector(BoundMin.x, BoundMin.y, BoundMax.z),
-            FVector(BoundMax.x, BoundMin.y, BoundMax.z),
-            FVector(BoundMin.x, BoundMax.y, BoundMax.z),
-            FVector(BoundMax.x, BoundMax.y, BoundMax.z),
-        };
-
-        FVector WorldMin = FVector(FLT_MAX, FLT_MAX, FLT_MAX);
-        FVector WorldMax = FVector(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-
-        for (FVector& c : corners) {
-            FVector4 wc = FVector4(c.x, c.y, c.z, 1.0f) * world;
-            WorldMin.x = std::min(WorldMin.x, wc.x);
-            WorldMin.y = std::min(WorldMin.y, wc.y);
-            WorldMin.z = std::min(WorldMin.z, wc.z);
-            WorldMax.x = std::max(WorldMax.x, wc.x);
-            WorldMax.y = std::max(WorldMax.y, wc.y);
-            WorldMax.z = std::max(WorldMax.z, wc.z);
-        }
+        Ray LocalRay;
+        LocalRay.Origin = InvWorld.TransformPosition(ray.Origin);
+        LocalRay.Direction = InvWorld.TransformVector(ray.Direction);
+        LocalRay.Direction = LocalRay.Direction.Normalize(); // â† ì¶”ê°€
 
         float t = FLT_MAX;
-        if (IntersectsAABB(ray, WorldMin, WorldMax, t)) {
-            if (t < ObjTime && t > 0) {
-                ObjTime = t;
-                CloseObj = Prim;
-            }
+        bool hit = false;
+
+        if (!IntersectsAABB(LocalRay, Prim->GetBoundMin(), Prim->GetBoundMax())) continue;
+
+        if (Prim->IsA<UPlaneComp>()) {
+            hit = IntersectsMeshIndexed(LocalRay, Prim->Vertices, PlaneIndices, 6, t);
+        }
+        else {
+            hit = IntersectsMesh(LocalRay, Prim->Vertices, Prim->NumVertices, WorldMat, t);
+        }
+
+        if (!hit || t <= 0.0f) continue;
+
+        FVector localHit = LocalRay.Origin + LocalRay.Direction * t;
+        FVector worldHit = WorldMat.TransformPosition(localHit);
+        float   worldDist = (worldHit - ray.Origin).Length();
+
+        if (worldDist < ObjTime) {
+            ObjTime = worldDist;
+            CloseObj = Prim;
         }
     }
-
-    return CloseObj; // ¾øÀ¸¸é nullptr
+    return CloseObj; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ nullptr
 }
 
-bool PickingService::IntersectsAABB(const Ray& ray, const FVector& min, const FVector& max, float& outT)
+bool PickingService::IntersectsAABB(const Ray& ray, const FVector& min, const FVector& max)
 {
     float tMin = 0.0f;
     float tMax = FLT_MAX;
@@ -100,7 +106,7 @@ bool PickingService::IntersectsAABB(const Ray& ray, const FVector& min, const FV
         float bMax = (&max.x)[i];
 
         if (fabs(dir) < 1e-6f) {
-            // Ray°¡ ÇØ´ç Ãà¿¡ ÆòÇà ¡æ ½½·¦ ¹ÛÀÌ¸é ±³Â÷ ¾øÀ½
+            // Rayï¿½ï¿½ ï¿½Ø´ï¿½ ï¿½à¿¡ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             if (origin < bMin || origin > bMax)
                 return false;
         }
@@ -118,6 +124,118 @@ bool PickingService::IntersectsAABB(const Ray& ray, const FVector& min, const FV
         }
     }
 
-    outT = tMin;
+    return true;
+}
+
+bool PickingService::IntersectsSphere(const Ray& ray,
+    const FVector& center,
+    float radius,
+    float& outT)
+{
+    FVector L = center - ray.Origin;
+
+    float tc = L.Dot(ray.Direction);
+    if (tc < 0.0f) return false;
+
+    float d2 = L.Dot(L) - tc * tc;
+    float radius2 = radius * radius;
+
+    if (d2 > radius2) return false;
+
+    float t1c = sqrtf(radius2 - d2);
+    float t1 = tc - t1c;
+    float t2 = tc + t1c;
+
+    outT = (t1 > 0.0f) ? t1 : t2;
+    return outT > 0.0f;
+}
+
+bool PickingService::IntersectsMesh(const Ray& ray, const FVertexSimple* vertices, uint32 numVertices, const FMatrix& worldMatrix, float& outT)
+{
+    float minT = FLT_MAX;
+	bool hit = false;
+
+    if (vertices == nullptr || numVertices < 3)
+    {
+        return false;
+    }
+
+    for (uint32 i = 0; i + 2 < numVertices; i += 3) {
+        FVector v0 = FVector(vertices[i].x, vertices[i].y, vertices[i].z);
+        FVector v1 = FVector(vertices[i + 1].x, vertices[i + 1].y, vertices[i + 1].z);
+        FVector v2 = FVector(vertices[i + 2].x, vertices[i + 2].y, vertices[i + 2].z);
+
+        
+
+        float t = 0.f;
+        if (MollerTrumbore(ray, v0, v1, v2, t)) {
+            if (t > 0.f && t < minT) {
+                minT = t;
+                hit = true;
+            }
+        }
+    }
+
+	outT = minT;
+    return hit;
+}
+
+bool PickingService::IntersectsMeshIndexed(
+    const Ray& ray,
+    const FVertexSimple* vertices,
+    const uint32* indices,
+    uint32 numIndices,
+    float& outT)
+{
+    float minT = FLT_MAX;
+    bool hit = false;
+
+    if (vertices == nullptr || indices == nullptr || numIndices < 3)
+    {
+        return false;
+    }
+
+    // 3ê°œì”© ë¬¶ì–´ì„œ ì‚¼ê°í˜•ìœ¼ë¡œ
+    for (uint32 i = 0; i + 2 < numIndices; i += 3) {
+        // ì¸ë±ìŠ¤ë¡œ ì •ì  ì°¸ì¡°
+        uint32 idx0 = indices[i];
+        uint32 idx1 = indices[i + 1];
+        uint32 idx2 = indices[i + 2];
+
+        FVector v0 = FVector(vertices[idx0].x, vertices[idx0].y, vertices[idx0].z);
+        FVector v1 = FVector(vertices[idx1].x, vertices[idx1].y, vertices[idx1].z);
+        FVector v2 = FVector(vertices[idx2].x, vertices[idx2].y, vertices[idx2].z);
+
+        float t = 0.f;
+        if (MollerTrumbore(ray, v0, v1, v2, t)) {
+            if (t > 0.f && t < minT) {
+                minT = t;
+                hit = true;
+            }
+        }
+    }
+
+    outT = minT;
+    return hit;
+}
+
+bool PickingService::MollerTrumbore(const Ray& ray, const FVector& a, const FVector& b, const FVector& c, float& outT)
+{
+    FVector Q = ray.Direction.Cross(b - a); // í•œ ë²ˆë§Œ ê³„ì‚°
+    FVector P = (ray.Origin - a).Cross(c - a); // í•œ ë²ˆë§Œ ê³„ì‚°
+    float denom = Q.Dot(c - a);
+
+    if (fabs(denom) < 1e-8f) return false;
+
+    float invDenom = 1.0f / denom;
+    float t = P.Dot(b - a) * invDenom;
+    float u = (ray.Origin - a).Dot(Q) * invDenom;
+    float v = ray.Direction.Dot(P) * invDenom;
+
+
+    if (t < 0.f || u < 0.f|| v < 0.f) return false; // ì‚¼ê°í˜• ë°–
+    if (u + v > 1.f)       return false; // ì‚¼ê°í˜• ë°–
+
+    outT = t;
     return true;
 }

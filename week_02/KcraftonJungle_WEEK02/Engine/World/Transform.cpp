@@ -1,33 +1,31 @@
 #include "Transform.h"
 
-namespace
-{
-    constexpr float kPi = 3.14159265358979323846f;
-    constexpr float kDegToRad = kPi / 180.0f;
-}
-
-Transform::Transform() : Location(FVector::Zero), Rotation(FVector::Zero), Scale(FVector::One)
+Transform::Transform()
+    : Location(FVector::Zero)
+    , Rotation(FQuat::Identity())
+    , Scale(FVector::One)
 {
 }
 
-Transform::Transform(const FVector& loc, const FVector& rot, const FVector& scale)
+Transform::Transform(const FVector& loc, const FQuat& rot, const FVector& scale)
+    : Location(loc)
+    , Rotation(rot.Normalized())
+    , Scale(scale)
 {
-    Location = loc;
-    Rotation = rot;
-    Scale = scale;
+}
+
+Transform Transform::FromEulerDegrees(const FVector& loc,
+    const FVector& rotDeg,
+    const FVector& scale)
+{
+    return Transform(loc, FQuat::FromEulerDegXYZ(rotDeg), scale);
 }
 
 FMatrix Transform::ToMatrix() const
 {
-    const float pitch = Rotation.x * kDegToRad;
-    const float yaw = Rotation.y * kDegToRad;
-    const float roll = Rotation.z * kDegToRad;
-
     return
         FMatrix::Scale(Scale) *
-        FMatrix::RotationY(-pitch) *
-        FMatrix::RotationZ(yaw) * 
-        FMatrix::RotationX(roll) *
+        Rotation.ToRotationMatrix() *
         FMatrix::Translation(Location);
 }
 
@@ -41,7 +39,7 @@ FVector Transform::GetLocation() const
     return Location;
 }
 
-FVector Transform::GetRotation() const
+FQuat Transform::GetRotation() const
 {
     return Rotation;
 }
@@ -49,4 +47,19 @@ FVector Transform::GetRotation() const
 FVector Transform::GetScale() const
 {
     return Scale;
+}
+
+FVector Transform::GetEulerDegrees() const
+{
+    return Rotation.ToEulerDegXYZ();
+}
+
+FVector Transform::GetEulerDegreesNearest(const FVector& referenceDeg) const
+{
+    return Rotation.ToEulerDegXYZNearest(referenceDeg);
+}
+
+void Transform::SetEulerDegrees(const FVector& eulerDeg)
+{
+    Rotation = FQuat::FromEulerDegXYZ(eulerDeg);
 }

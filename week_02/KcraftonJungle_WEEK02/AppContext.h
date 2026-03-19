@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include "Engine/Foundation/Core/CoreTypes.h"
 
 #include "Engine/ObjectKernel/UUIDService.h"
@@ -7,7 +8,6 @@
 #include "Engine/ObjectKernel/ObjectStore.h"
 
 #include "Engine/World/World.h"
-#include "Engine/Services/ConsoleService.h"
 
 #include "Engine/Editor/EditorSession.h"
 #include "Engine/Editor/EditorManager.h"
@@ -15,20 +15,13 @@
 
 #include "Engine/Rendering/URenderer.h"
 
-#include "Engine/Platform/WindowHost.h"
-#include "Engine/ObjectKernel/UUIDService.h"
-#include "Engine/ObjectKernel/ClassRegistry.h"
-#include "Engine/ObjectKernel/ObjectFactory.h"
-#include "Engine/Editor/EditorSession.h"
-#include "Engine/Editor/EditorManager.h"
 #include "Engine/Editor/Events/EditorEvents.h"
-#include "Engine/Editor/Commands/ICommand.h"
 #include "Engine/Editor/Panels/PropertyPanel.h"
 #include "Engine/Editor/Panels/ToolbarPanel.h"
 #include "Engine/Editor/Panels/StatPanel.h"
 #include "Engine/Editor/Panels/ConsolePanel.h"
-
-#include "Engine/Foundation/Core/CoreTypes.h"
+#include "Engine/Editor/Panels/OutlinerPanel.h"
+#include "Engine/Editor/Tools/ITool.h"
 
 #include "Engine/Platform/WindowHost.h"
 
@@ -65,14 +58,26 @@ struct AppContext {
         int32 height = 720);
 
     void Shutdown();
+    void NewScene();
 
-    void Dispatch(ICommand* cmd);
+    void Dispatch(std::unique_ptr<ICommand> cmd);
 
     TDelegate<ObjectDestroyedEvent> OnObjectDestroyed;
 
 private:
-    TArray<IEditorPanel*> OwnedPanels;
-    TArray<ITool*> OwnedTools;
+    TArray<std::unique_ptr<IEditorPanel>> OwnedPanels;
+    TArray<std::unique_ptr<ITool>> OwnedTools;
+
+    // 선택은 항상 가능한 기본 동작
+    ITool* SelectionTool = nullptr;
+
+    // 변환 모드 툴
+    ITool* Translate = nullptr;
+    ITool* Rotate = nullptr;
+    ITool* Scale = nullptr;
+
+    // 현재 드래그를 점유한 툴
+    ITool* CapturedManipulationTool = nullptr;
 
     void RegisterBuiltinTypes();   // Cube, Sphere, Plane ClassRegistry ���
     void RegisterPanels();

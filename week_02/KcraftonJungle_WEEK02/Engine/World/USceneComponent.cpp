@@ -2,7 +2,7 @@
 
 USceneComponent::USceneComponent()
     : RelativeLocation(FVector::Zero)
-    , RelativeRotation(FVector::Zero)
+    , RelativeRotation(FQuat::Identity())
     , RelativeScale3D(FVector::One)
     , Parent(nullptr)
 {
@@ -28,8 +28,8 @@ FMatrix USceneComponent::GetWorldMatrix() const
 void USceneComponent::SetTransform(const Transform& t)
 {
     RelativeLocation = t.Location;
-    RelativeRotation = t.Rotation;
-    RelativeScale3D = t.Scale;
+    RelativeRotation = t.Rotation.Normalized();
+    RelativeScale3D = t.Scale.ClampedMin(1e-6f);
 }
 
 void USceneComponent::AttachTo(USceneComponent* parent)
@@ -80,7 +80,7 @@ void USceneComponent::Detach()
 
 UClass* USceneComponent::StaticClass()
 {
-    static UClass ClassInfo("SceneComponent", UObject::StaticClass());
+    static UClass ClassInfo("SceneComponent", UObject::StaticClass(), []() -> std::unique_ptr<UObject> { return std::make_unique<USceneComponent>(); });
     return &ClassInfo;
 }
 

@@ -4,20 +4,21 @@ ObjectStore::ObjectStore()
 {
 }
 
-void ObjectStore::Add(UObject* obj)
+void ObjectStore::Add(std::unique_ptr<UObject> obj)
 {
-	if (obj == nullptr) return;
-	Objects.push_back(obj);
+	if (!obj) return;
+	Index[obj->GetUUID()] = obj.get();
+	Objects.push_back(std::move(obj));
 }
 
 void ObjectStore::Remove(uint32 uuid)
 {
+	Index.erase(uuid);
+
 	for (auto it = Objects.begin(); it != Objects.end(); ++it)
 	{
-		UObject* obj = *it;
-		if (obj != nullptr && obj->GetUUID() == uuid)
+		if ((*it) != nullptr && (*it)->GetUUID() == uuid)
 		{
-			delete obj;
 			Objects.erase(it);
 			return;
 		}
@@ -26,21 +27,36 @@ void ObjectStore::Remove(uint32 uuid)
 
 void ObjectStore::Clear()
 {
-	for (auto obj : Objects)
-	{
-		delete obj;
-	}
+	Index.clear();
 	Objects.clear();
+}
+
+void ObjectStore::ReleaseMemory()
+{
+	decltype(Index) emptyIndex;
+	Index.swap(emptyIndex);
+
+	decltype(Objects) emptyObjects;
+	Objects.swap(emptyObjects);
+}
+
+void ObjectStore::ClearAndReleaseMemory()
+{
+	decltype(Index) emptyIndex;
+	Index.swap(emptyIndex);
+
+	decltype(Objects) emptyObjects;
+	Objects.swap(emptyObjects);
 }
 
 UObject* ObjectStore::Find(uint32 uuid) const
 {
-	for (auto obj : Objects)
-		if (obj->GetUUID() == uuid) return obj;
+	auto it = Index.find(uuid);
+	if (it != Index.end()) return it->second;
 	return nullptr;
 }
 
-const TArray<UObject*>& ObjectStore::GUObjectArray() const
+const TArray<std::unique_ptr<UObject>>& ObjectStore::GUObjectArray() const
 {
 	return Objects;
 }

@@ -1,54 +1,144 @@
 #include "Memory.h"
+#include <cstdint>
+#include <limits>
 
 namespace EngineMemory
 {
-    uint32 TotalAllocationBytes = 0;
-    uint32 TotalAllocationCount = 0;
-
-    void* Allocate(uint32 size)
+    struct Header
     {
-        const uint32 TotalSize = size + sizeof(uint32);
+        std::size_t RequestedSize; // 사용자가 요청한 크기
+        void* RawBlock;            // std::malloc이 반환한 원래 주소
+        std::uint32_t Magic;       // 유효성 체크용
+    };
 
-        void* raw = std::malloc(TotalSize);
-        if (!raw)
-            throw std::bad_alloc();
+    static const std::uint32_t kMagic = 0xC0FFEE11u;
 
-        std::memcpy(raw, &size, sizeof(uint32));
+    std::atomic<std::size_t> EngineMemory::TotalAllocationBytes{ 0 };
+    std::atomic<std::size_t> EngineMemory::TotalAllocationCount{ 0 };
 
-        TotalAllocationBytes += size;
-        TotalAllocationCount += 1;
+    inline std::uintptr_t AlignUp(std::uintptr_t value, std::size_t alignment) noexcept
+    {
+        const std::uintptr_t remainder = value % alignment;
+        if (remainder == 0)
+            return value;
 
-        return static_cast<char*>(raw) + sizeof(uint32);
+        return value + (alignment - remainder);
     }
 
-    void Free(void* ptr)
+    inline static void* AllocateRawWithNewHandler(std::size_t totalSize)
+    {
+        for (;;)
+        {
+            if (void* p = std::malloc(totalSize))
+                return p;
+
+            std::new_handler handler = std::get_new_handler();
+            if (!handler)
+                throw std::bad_alloc();
+
+            handler();
+        }
+    }
+
+    void* Allocate(std::size_t size)
+    {
+        const std::size_t actualUserSize = (size == 0) ? 1 : size;
+
+        const std::size_t alignment = alignof(std::max_align_t);
+        const std::size_t extra = sizeof(Header) + (alignment - 1);
+
+        if (actualUserSize > (std::numeric_limits<std::size_t>::max)() - extra)
+            throw std::bad_alloc();
+
+        const std::size_t totalSize = actualUserSize + extra;
+
+        void* raw = AllocateRawWithNewHandler(totalSize);
+
+        const std::uintptr_t rawAddr = reinterpret_cast<std::uintptr_t>(raw);
+        const std::uintptr_t userAddr = AlignUp(rawAddr + sizeof(Header), alignment);
+
+        Header* header = reinterpret_cast<Header*>(userAddr - sizeof(Header));
+        header->RequestedSize = size;
+        header->RawBlock = raw;
+        header->Magic = kMagic;
+
+        TotalAllocationBytes.fetch_add(size, std::memory_order_relaxed);
+        TotalAllocationCount.fetch_add(1, std::memory_order_relaxed);
+        return reinterpret_cast<void*>(userAddr);
+    }
+
+    void Free(void* ptr) noexcept
     {
         if (ptr == nullptr)
             return;
 
-        void* raw = static_cast<char*>(ptr) - sizeof(uint32);
+        Header* header = reinterpret_cast<Header*>(
+            reinterpret_cast<std::uintptr_t>(ptr) - sizeof(Header));
 
-        uint32 size = 0;
-        std::memcpy(&size, raw, sizeof(uint32));
+        if (header->Magic != kMagic)
+        {
+            std::abort();
+        }
 
-        if (TotalAllocationBytes >= size)
-            TotalAllocationBytes -= size;
-        else
-            TotalAllocationBytes = 0;
+        header->Magic = 0;
 
-        if (TotalAllocationCount > 0)
-            TotalAllocationCount -= 1;
+        TotalAllocationBytes.fetch_sub(header->RequestedSize, std::memory_order_relaxed);
+        TotalAllocationCount.fetch_sub(1, std::memory_order_relaxed);
 
-        std::free(raw);
+        std::free(header->RawBlock);
     }
 }
 
 void* operator new(std::size_t size)
 {
-    return EngineMemory::Allocate(static_cast<uint32>(size));
+    return EngineMemory::Allocate(size);
 }
 
 void operator delete(void* ptr) noexcept
+{
+    EngineMemory::Free(ptr);
+}
+
+void* operator new[](std::size_t size)
+{
+    return EngineMemory::Allocate(size);
+}
+
+void operator delete[](void* ptr) noexcept
+{
+    EngineMemory::Free(ptr);
+}
+
+void* operator new(std::size_t size, const std::nothrow_t&) noexcept
+{
+    try
+    {
+        return EngineMemory::Allocate(size);
+    }
+    catch (...)
+    {
+        return nullptr;
+    }
+}
+
+void operator delete(void* ptr, const std::nothrow_t&) noexcept
+{
+    EngineMemory::Free(ptr);
+}
+
+void* operator new[](std::size_t size, const std::nothrow_t&) noexcept
+{
+    try
+    {
+        return EngineMemory::Allocate(size);
+    }
+    catch (...)
+    {
+        return nullptr;
+    }
+}
+
+void operator delete[](void* ptr, const std::nothrow_t&) noexcept
 {
     EngineMemory::Free(ptr);
 }
@@ -58,17 +148,7 @@ void operator delete(void* ptr, std::size_t) noexcept
     EngineMemory::Free(ptr);
 }
 
-void* operator new[](std::size_t size)
-{
-    return EngineMemory::Allocate(static_cast<uint32>(size));
-}
-
-void operator delete[](void* ptr) noexcept
-{
-    EngineMemory::Free(ptr);
-}
-
-void operator delete[](void* ptr, std::size_t /*size*/) noexcept
+void operator delete[](void* ptr, std::size_t) noexcept
 {
     EngineMemory::Free(ptr);
 }

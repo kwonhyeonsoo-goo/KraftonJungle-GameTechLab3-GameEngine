@@ -15,9 +15,14 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
     case WM_SIZE:
         // InputRouter를 통해 Resize 이벤트 적재
         // InputRouter::Route(hWnd, message, wParam, lParam);
-        return 0;
+
+        break;
     case WM_DESTROY:
         PostQuitMessage(0);
+        break;
+    case WM_KILLFOCUS:
+        // 윈도우가 포커스를 잃었을 때 입력 비활성화
+        InputRouter::SetWindowFocus(false);
         break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
@@ -30,20 +35,25 @@ bool WindowHost::Initialize(const FString& title, int32 width, int32 height) {
     Height = height;
 
     // 윈도우 클래스 등록
-    WNDCLASSEXA wc = {};
-    wc.cbSize = sizeof(WNDCLASSEXA);
+    WNDCLASSEXW wc = {};
+    wc.cbSize = sizeof(WNDCLASSEXW);
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WndProc;
     wc.hInstance = GetModuleHandle(nullptr);
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-    wc.lpszClassName = "MyEngineClass";
-    RegisterClassExA(&wc);
+    wc.lpszClassName = L"MyEngineClass";
+    RegisterClassExW(&wc);
 
-    // 윈도우 생성
-    Hwnd = CreateWindowExA(
+    // ANSI(string)를 Wide(wstring)로 변환
+    int nwLen = MultiByteToWideChar(CP_ACP, 0, title.c_str(), -1, NULL, 0);
+    std::wstring wTitle(nwLen, L'\0');
+    MultiByteToWideChar(CP_ACP, 0, title.c_str(), -1, &wTitle[0], nwLen);
+
+    // 변환된 wTitle.c_str() 사용
+    Hwnd = CreateWindowExW(
         0,
-        "MyEngineClass",
-        title.c_str(),
+        L"MyEngineClass",
+        wTitle.c_str(),
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT,
         width, height,
@@ -64,7 +74,7 @@ void WindowHost::Shutdown() {
         DestroyWindow(Hwnd);
         Hwnd = nullptr;
     }
-    UnregisterClassA("MyEngineClass", GetModuleHandle(nullptr));
+    UnregisterClassW(L"MyEngineClass", GetModuleHandle(nullptr));
 }
 
 bool WindowHost::PollMessages() {
@@ -81,3 +91,19 @@ bool WindowHost::PollMessages() {
 HWND  WindowHost::GetHWND()   const { return Hwnd; }
 int32 WindowHost::GetWidth()  const { return Width; }
 int32 WindowHost::GetHeight() const { return Height; }
+
+void WindowHost::UpdateSize(int32 width, int32 height)
+{
+    Width = width;
+    Height = height;
+}
+
+float WindowHost::GetCurrentDeltaTime() const
+{
+    return DeltaTime;
+}
+
+void WindowHost::SetCurrentDeltaTime(float NewDeltaTime)
+{
+    DeltaTime = NewDeltaTime;
+}

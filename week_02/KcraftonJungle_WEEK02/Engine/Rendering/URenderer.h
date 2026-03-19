@@ -6,19 +6,30 @@
 #include "../Foundation/Math/FVector.h"
 #include "../Foundation/Math/FMatrix.h"
 #include "../Services/SerializationService.h"
+#include "../Mesh/FVertexSimple.h"
+#pragma comment(lib, "dxgi.lib")
 
-
-struct FVertexSimple
+struct FVertexUV
 {
     float x, y, z;    // Position
-    float r, g, b, a; // Color
+    float u, v;         //uv
+    float nx, ny, nz; //normal
 };
 
-struct FConstants
+struct alignas(16) FConstants
 {
-    //DirectX::XMMATRIX MVP;
     FMatrix MVP;
+    FVector Color;
+    float thickness;
 };
+
+struct FcontantsMV
+{
+    FMatrix _ObjectToWorld;
+    FVector _WorldSpaceCameraPos;
+    float padding;
+};
+
 
 class RenderQueue;
 class EditorSession;
@@ -28,6 +39,8 @@ class EditorSession;
 class URenderer
 {
 public:
+
+
     ID3D11Device* Device = nullptr;
     ID3D11DeviceContext* DeviceContext = nullptr;
     IDXGISwapChain* SwapChain = nullptr;
@@ -35,31 +48,38 @@ public:
     ID3D11Texture2D* FrameBuffer = nullptr;
     ID3D11RenderTargetView* FrameBufferRTV = nullptr;
     ID3D11RasterizerState* RasterizerState = nullptr;
+    ID3D11RasterizerState* RasterizerStateOutline = nullptr;
+
     ID3D11Buffer* ConstantBuffer = nullptr;
+    ID3D11Buffer* GridConstantBuffer = nullptr;
 
     ID3D11Texture2D* DepthStencilBuffer = nullptr;
     ID3D11DepthStencilView* DepthStencilView = nullptr;
-    ID3D11DepthStencilState* DepthStencilState = nullptr;
+    ID3D11DepthStencilState* DepthStencilState = nullptr;   //primitive 도형 출력
+    ID3D11DepthStencilState* DepthStencilOutlineState = nullptr;    //highlight 도형 출력 less depth
+    ID3D11DepthStencilState* DepthStencilDisable = nullptr;     //gizmo 출력 off depth
+    ID3D11DepthStencilState* DepthStencilWriteOff = nullptr;     //grid 출력용 depth write off
+    ID3D11DepthStencilState* DeptsddshStencilDisabl1e = nullptr;     //gizmo 출력 off depth
 
-    FLOAT ClearColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f };
+
+    ID3D11BlendState* AlphaBlendState = nullptr;
+
+
     D3D11_VIEWPORT ViewportInfo;
 
     ID3D11VertexShader* SimpleVertexShader;
     ID3D11PixelShader* SimplePixelShader;
     ID3D11InputLayout* SimpleInputLayout;
-    unsigned int Stride;
+    ID3D11VertexShader* OutlineVertexShader;
+    ID3D11PixelShader* OutlinePixelShader;
+    ID3D11VertexShader* GridVertexShader;
+    ID3D11PixelShader* GridPixelShader;
+    ID3D11InputLayout* GridInputLayout;
 
-    ID3D11Buffer* vertexBufferSphere;
-    UINT numVerticesSphere;
-    ID3D11Buffer* vertexBufferCube;
-    UINT numVerticesCube;
-    ID3D11Buffer* vertexBufferTriangle;
-    UINT numVerticesTriangle;
-    ID3D11Buffer* vertexBufferRect;
-    ID3D11Buffer* indexBufferRect;
-    UINT numVerticesRect;UINT numIndicesRect;
-    ID3D11Buffer* vertexBufferWorldAxis;
-    UINT numVerticesWorldAxis;
+    unsigned int Stride;
+    unsigned int StrideUV;
+
+
 
 #pragma region D3D11 Renderer 함수들
 	//D3D11 Renderer 함수들
@@ -73,56 +93,83 @@ public:
     // WM_SIZE 이벤트 수신 시 호출
     void OnResize(UINT width, UINT height);
 
+private:
     // MVP 상수 버퍼 업데이트
-    void UpdateMVP(const FMatrix& mvp);
+    void UpdateMVP(const FMatrix& mvp, uint32 color, const float thickness = 1);
+    void UpdateConstantBuffer(const FVector& CameraPos);
+
 
 #pragma endregion
-public:
-
-    void RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices);
-    void RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer);
 
     void CreateShader();
     void ReleaseShader();
 
-    void CreateDeviceAndSwapChain(HWND hWindow, UINT width, UINT height);
+    void CreateConstantBuffer();
+    void ReleaseConstantBuffer();
+
+    void Release();
+
+
+    IDXGIOutput* DisplayInfo;
+
+    void Prepare();
+
+    void PrepareShader(ID3D11VertexShader* vertextShader, ID3D11PixelShader* pixelShader, ID3D11InputLayout* layout);
+
+    void SwapBuffer();
+
+
+    void RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices);
+    void RenderIndexedPrimitive(ID3D11Buffer* vertexBuffer, ID3D11Buffer* indexBuffer, UINT indexCount, UINT stride);
+
+    void CreateDeviceAndSwapChain(HWND hWindow, uint32 width, uint32 height);
     void ReleaseDeviceAndSwapChain();
 
     void CreateFrameBuffer();
     void ReleaseFrameBuffer();
 
     void CreateDepthBuffer(uint32 width, uint32 height);
+    void ReleaseDepthBuffer();
 
-	void ReleaseDepthBuffer();
+    void CreatePrimitiveVertexBuffer();
+    void ReleasePrimitiveVertexBuffer();
 
     void CreateRasterizerState();
-
     void ReleaseRasterizerState();
 
-    void Release();
-
-    void SwapBuffer();
-    void Prepare();
-
-    void PrepareShader();
-
     ID3D11Buffer* CreateVertexBuffer(FVertexSimple* vertices, UINT byteWidth);
+    ID3D11Buffer* CreateVertexBuffer(FVertexUV* vertices, UINT byteWidth);
     void ReleaseVertexBuffer(ID3D11Buffer* vertexBuffer);
 
 
     ID3D11Buffer* CreateIndexBuffer(void* data, UINT size);
     void ReleaseIndexBuffer(ID3D11Buffer* vertexBuffer);
 
+    void SetState(ID3D11RasterizerState* rasterizer, ID3D11DepthStencilState* depthstencil, ID3D11BlendState* blendState);
 
-public:
+    private:
+        ID3D11Buffer* vertexBufferSphere;
+        UINT numVerticesSphere;
+        ID3D11Buffer* vertexBufferCube;
+        UINT numVerticesCube;
+        ID3D11Buffer* vertexBufferTriangle;
+        UINT numVerticesTriangle;
+        ID3D11Buffer* vertexBufferRect;
+        ID3D11Buffer* indexBufferRect;
+        UINT numVerticesRect; UINT numIndicesRect;
+        ID3D11Buffer* vertexBufferWorldAxis;
+        UINT numVerticesWorldAxis;
 
+        ID3D11Buffer* vertexBufferGrid;
+        ID3D11Buffer* indexBufferGrid;
+        UINT numVerticesGrid; UINT numIndicesGrid;
 
+        ID3D11Buffer* vertexBufferTranslateGizmo;
+        UINT numVerticesTranslateGizmo;
+        ID3D11Buffer* vertexBufferRotationGizmo;
+        UINT numVerticesRotationGizmo;
+        ID3D11Buffer* vertexBufferScaleGizmo;
+        UINT numVerticesScaleGizmo;
 
-    void CreateConstantBuffer();
-
-
-    void UpdateConstant(FConstants& param);
-
-    void ReleaseConstantBuffer();
 };
 

@@ -3,6 +3,7 @@
 #include "UPrimitiveComponent.h"
 #include "../ObjectKernel/UObject.h"
 #include "Level.h"
+#include <memory>
 
 struct AppContext;
 
@@ -16,14 +17,15 @@ public:
     void Add(UPrimitiveComponent* comp);
     void Remove(uint32 uuid);
     UPrimitiveComponent* Find(uint32 uuid) const;
-    const TArray<UObject*>& GetAllObjects() const;
+    const TArray<std::unique_ptr<UObject>>& GetAllObjects() const;
 
     void SetContext(AppContext* ctx);
     void SetName(const FString& name) { Name = name; }
-    const FString GetName() const {return Name; }
+    const FString GetName() const { return Name; }
+    FString GetName() { return Name; }
 
 private:
-    FString Name;
+    FString Name = "default";
     AppContext* Ctx = nullptr;
 public:
     Level PersistentLevel;

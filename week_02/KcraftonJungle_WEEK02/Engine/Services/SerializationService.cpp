@@ -3,8 +3,8 @@
 #include "../World/UPrimitiveComponent.h"
 #include "../World/World.h"
 #include "../Foundation/Math/FVector.h"
-#include "../Foundation/Math/FVector.h"
 #include "../ObjectKernel/ObjectFactory.h"
+#include "../Editor/Commands/DeleteObjectCommand.h"
 #include "../../json.hpp"
 
 #include <fstream>
@@ -12,124 +12,131 @@
 using json::JSON;
 
 static FString GetScenePath(const AppContext& ctx) {
-	return "saves/" + std::string(ctx.CurrentWorld.GetName()) + ".scene";
+    return "saves/" + std::string(ctx.CurrentWorld.GetName()) + ".scene";
 }
 
 bool SerializationService::Save(const AppContext& ctx) {
-	// ��Ʈ ������Ʈ ����
-	JSON root = json::Object();
-	root["SceneName"] = std::string(ctx.CurrentWorld.GetName());
+    JSON root = json::Object();
+    root["SceneName"] = std::string(ctx.CurrentWorld.GetName());
 
-	root["Version"] = 1;
-	root["NextUUID"] = (uint32)ctx.UUIDs.GetNext();//TODO: 이거 UUID로 바꿔야함
+    root["Version"] = 1;
+	root["NextUUID"] = (uint32)ctx.UUIDs.GetNext();//TODO: �̰� UUID�� �ٲ����
 
-	// Primitives ������Ʈ
-	JSON primitives = json::Object();
-	for (UObject* obj : ctx.CurrentWorld.GetAllObjects()) {
-		UPrimitiveComponent* prim = dynamic_cast<UPrimitiveComponent*>(obj);//TODO: IsA�� RTTI����
-		if (!prim) continue;
+    JSON camera = json::Object();
 
-		std::string key = std::to_string(prim->GetUUID());
+    FEditorCameraState Camera = ctx.Editor.GetActiveCamera();
+    FVector Pos = Camera.Position;
+    camera["Position"] = json::Array(Pos.x, Pos.y, Pos.z);
 
-		JSON entry = json::Object();
-		entry["Type"] = PrimitiveShapeToString(prim->Shape);
+    camera["Yaw"] = Camera.Yaw;
+    camera["Pitch"] = Camera.Pitch;
+    camera["MoveSpeed"] = Camera.MoveSpeed;
+    camera["RotSpeed"] = Camera.RotSpeed;
 
+    root["Camera"] = camera;
 
-		Transform trans = prim->GetTransform();
+    JSON primitives = json::Object();
+    for (const auto& obj_uptr : ctx.CurrentWorld.GetAllObjects()) {
+        UObject* obj = obj_uptr.get();
+        if (!obj->IsA<UPrimitiveComponent>()) continue;
+        UPrimitiveComponent* prim = static_cast<UPrimitiveComponent*>(obj);
+        if (!prim) continue;
 
-		// Location
-		FVector loc = trans.Location;
-		JSON locArr = json::Array(loc.x, loc.y, loc.z);
-		entry["Location"] = locArr;
+        std::string key = std::to_string(prim->GetUUID());
 
-		// Rotation
-		FVector rot = trans.Rotation;
-		JSON rotArr = json::Array(rot.x, rot.y, rot.z);
-		entry["Rotation"] = rotArr;
+        JSON entry = json::Object();
+        entry["Type"] = PrimitiveShapeToString(prim->Shape);
 
-		// Scale
-		FVector scl = trans.Scale;
-		JSON sclArr = json::Array(scl.x, scl.y, scl.z);
-		entry["Scale"] = sclArr;
+        Transform trans = prim->GetTransform();
 
-		primitives[key] = entry;
-	}
-	root["Primitives"] = primitives;
+        FVector loc = trans.Location;
+        entry["Location"] = json::Array(loc.x, loc.y, loc.z);
+
+        const FQuat rot = trans.Rotation;
+        entry["RotationQuat"] = json::Array(rot.x, rot.y, rot.z, rot.w);
+
+        FVector scl = trans.Scale;
+        entry["Scale"] = json::Array(scl.x, scl.y, scl.z);
+
+        primitives[key] = entry;
+    }
+    root["Primitives"] = primitives;
 
 	CreateDirectoryA("saves", nullptr); // Windows API
 
-	// ���� ����
-	std::ofstream file(GetScenePath(ctx));
-	if (!file.is_open()) return false;
-	file << root.dump();
-	return file.good();
+    std::ofstream file(GetScenePath(ctx));
+    if (!file.is_open()) return false;
+    file << root.dump();
+    return file.good();
 }
 
 bool SerializationService::Load(AppContext& ctx) {
-	// ���� �б�
-	std::ifstream file(GetScenePath(ctx));
-	if (!file.is_open()) return false;
+    std::ifstream file(GetScenePath(ctx));
+    if (!file.is_open()) return false;
 
-	//std::stringstream ss;
-	//ss << file.rdbuf();
-	//FString jsonStr = ss.str();
+    std::stringstream ss;
+    ss << file.rdbuf();
+    FString jsonStr = ss.str();
 
-	//JSON root = JSON::Load(jsonStr);
-	////ctx.Editor.Selection.Clear();
+    JSON root = JSON::Load(jsonStr);
+	//ctx.Editor.Selection.Clear();
 
-	//// �� ���� UUID ���� �� OnObjectDestroyed ����
-	//TArray<uint32> olduuids = ctx.UUIDs.GenUUID();
-	//for (uint32 uuid : olduuids)
-	//	eventbus::broadcast(onobjectdestroyed{ uuid });
+    TArray<uint32> uuidsToDelete;
+    for (const auto& obj_uptr : ctx.CurrentWorld.GetAllObjects())
+        uuidsToDelete.push_back(obj_uptr->GetUUID());
+    for (uint32 uuid : uuidsToDelete)
+        ctx.Dispatch(std::make_unique<DeleteObjectCommand>(ctx, uuid));
 
-	//// �� ObjectStore ����
-	//ctx.Objects.Clear();
-	//ctx.UUIDs.Clear();
-	//
-	//auto toFloat = [](const JSON& j) -> float {
-	//	if (j.JSONType() == JSON::Class::Floating)
-	//		return (float)j.ToFloat();
-	//	return (float)j.ToInt(); // ������ ����� ��� ó��
-	//	};
+    ctx.Objects.Clear();
 
-	//// �� Primitives ��ȸ �� ������Ʈ ����
-	//auto& primitives = root["Primitives"];
-	//ctx.CurrentWorld.SetName(root["SceneName"].ToString());
+    auto toFloat = [](const JSON& j) -> float {
+        if (j.JSONType() == JSON::Class::Floating)
+            return (float)j.ToFloat();
+        return (float)j.ToInt();
+        };
 
-	//for (auto& kv : primitives.ObjectRange()) {
-	//	uint32 uuid = (uint32)std::stoul(kv.first);
-	//	std::string typeName = kv.second["Type"].ToString();
+    ctx.UUIDs.SyncNextUUID((uint32)root["NextUUID"].ToInt());
 
-	//	// Location
-	//	FVector loc;
-	//	loc.x = toFloat(kv.second["Location"][0]);
-	//	loc.y = toFloat(kv.second["Location"][1]);
-	//	loc.z = toFloat(kv.second["Location"][2]);
+    //auto& camera = root["Camera"];
 
-	//	// Rotation
-	//	FVector rot;
-	//	rot.x = toFloat(kv.second["Location"][0]);
-	//	rot.y = toFloat(kv.second["Location"][1]);
-	//	rot.z = toFloat(kv.second["Location"][2]);
+    //FEditorCameraState& Camera = ctx.Editor.GetActiveCamera();
+    //Camera.Position.x = toFloat(camera["Position"][0]);
+    //Camera.Position.y = toFloat(camera["Position"][1]);
+    //Camera.Position.z = toFloat(camera["Position"][2]);
+    //Camera.Yaw = toFloat(camera["Yaw"]);
+    //Camera.Pitch = toFloat(camera["Pitch"]);
+    //Camera.MoveSpeed = toFloat(camera["MoveSpeed"]);
+    //Camera.RotSpeed = toFloat(camera["RotSpeed"]);
 
-	//	// Scale
-	//	FVector scl;
-	//	scl.x = toFloat(kv.second["Location"][0]);
-	//	scl.y = toFloat(kv.second["Location"][1]);
-	//	scl.z = toFloat(kv.second["Location"][2]);
+    auto& primitives = root["Primitives"];
+    ctx.CurrentWorld.SetName(root["SceneName"].ToString());
 
-	//	UPrimitiveComponent* prim = ObjectFactory::ConstructObject(typeName, "UPrimitiveComponent");
-	//	if (!prim) continue; // �� �� ���� Ÿ���̸� ��ŵ
+    for (auto& kv : primitives.ObjectRange()) {
+		uint32 uuid = (uint32)std::stoul(kv.first);
+        std::string typeName = kv.second["Type"].ToString();
 
-	//	prim->SetTransform(Transform(loc, rot, scl));
+        FVector loc;
+        loc.x = toFloat(kv.second["Location"][0]);
+        loc.y = toFloat(kv.second["Location"][1]);
+        loc.z = toFloat(kv.second["Location"][2]);
 
-	//	ctx.Objects.Add(prim);
-	//	ctx.UUIDs.SyncNextUUID(uuid);
-	//	EventBus::Broadcast(OnObjectCreated{ uuid }); // �� Outliner ���� �� ������Ʈ �ν�
-	//}
+        FQuat rot;
+        rot.x = toFloat(kv.second["RotationQuat"][0]);
+        rot.y = toFloat(kv.second["RotationQuat"][1]);
+        rot.z = toFloat(kv.second["RotationQuat"][2]);
+        rot.w = toFloat(kv.second["RotationQuat"][3]);
 
-	//// �� NextUUID ����
-	//ctx.UUIDs.SyncNextUUID((uint32)root["NextUUID"].ToInt());
+        FVector scl;
+        scl.x = toFloat(kv.second["Scale"][0]);
+        scl.y = toFloat(kv.second["Scale"][1]);
+        scl.z = toFloat(kv.second["Scale"][2]);
 
-	return true;
+        ctx.Dispatch(std::make_unique<SpawnObjectCommand>(
+            ctx,
+            StringToPrimitiveShape(typeName),
+            Transform(loc, rot, scl)
+        ));
+    }
+
+    return true;
 }

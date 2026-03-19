@@ -1,4 +1,5 @@
 #include "UPrimitiveComponent.h"
+#include "../Mesh/FVertexSimple.h"
 
 UPrimitiveComponent::UPrimitiveComponent() : Shape(EPrimitiveShape::Cube)
 {
@@ -16,7 +17,7 @@ UPrimitiveComponent::UPrimitiveComponent(EPrimitiveShape shape) : Shape(shape)
 
 UClass* UPrimitiveComponent::StaticClass()
 {
-	static UClass ClassInfo("PrimitiveComponent", USceneComponent::StaticClass());
+	static UClass ClassInfo("PrimitiveComponent", USceneComponent::StaticClass(), []() -> std::unique_ptr<UObject> { return std::make_unique<UPrimitiveComponent>(); });
 	return &ClassInfo;
 }
 

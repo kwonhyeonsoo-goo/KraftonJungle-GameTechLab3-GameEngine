@@ -8,7 +8,5 @@ public:
 
 	static UClass* StaticClass();
 	UClass* GetClass() const override;
-
-
 };
 

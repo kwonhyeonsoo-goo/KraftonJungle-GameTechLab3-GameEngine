@@ -4,13 +4,16 @@
 cbuffer constants : register(b0)
 {
     row_major float4x4 MVP;
+    float3 Color;
+    float thickness;
 }
 
 
 struct VS_INPUT
 {
-    float4 position : POSITION; // Input position from vertex buffer
-    float4 color : COLOR; // Input color from vertex buffer
+    float4 position : POSITION;
+    float4 color : COLOR;
+    float3 normal : NORMAL;
 };
 
 struct PS_INPUT
@@ -37,5 +40,5 @@ PS_INPUT mainVS(VS_INPUT input)
 float4 mainPS(PS_INPUT input) : SV_TARGET
 {
     // Output the color directly
-    return input.color;
+    return input.color * float4(Color, 1);
 }

@@ -1,28 +1,23 @@
 ﻿#pragma once
 #include "ITool.h"
-#include "../../World/Transform.h"
+#include <cmath>
+#include "../../../AppContext.h"
+#include "../../World/USceneComponent.h"
+#include "../../Editor/Commands/SetTransformCommand.h"
+#include "GizmoMath.h"
 
 class TranslateTool : public ITool {
 public:
+    bool TryBeginManipulation(const MouseEvent& e, AppContext& ctx) override;
     void OnMouseMove(const MouseEvent& e, AppContext& ctx) override;
-    void OnMouseDown(const MouseEvent& e, AppContext& ctx) override;
     void OnMouseUp(const MouseEvent& e, AppContext& ctx) override;
-    void BuildGizmoOverlay(AppContext& ctx, RenderQueue& queue) override;
     FString GetName() const override { return "Translate"; }
 
+protected:
+    void FillAxisData(const FVector& origin, const FVector& axisDir,
+                      float scale, int axisIndex, GizmoAxisData& out) const override;
+
 private:
-    enum class EAxis { None, X, Y, Z };
-    EAxis     ActiveAxis = EAxis::None;
-    bool      bDragging = false;
-    FVector   DragStartPos;
-    Transform OriginalTransform;
-
-    // GizmoMath 헬퍼를 사용해 축 hit 판정
-    // 1. GizmoMath::RaySegmentDistance()로 각 축 핸들과의 거리 계산
-    // 2. threshold 이내면 해당 축 ActiveAxis로 기록
-    // 3. 못 잡으면 PickingService::Pick()으로 오브젝트 선택 시도
+    float     DragStartAxisT = 0.0f;
+    TArray<Transform> OriginalTransforms;
 };
-
-// RotateTool — GizmoMath::RayRingHit()으로 링 판정
-// ScaleTool  — GizmoMath::RaySegmentDistance() 공유 (Translate와 동일)
-// 둘 다 동일한 private 상태 구조 (ActiveAxis, bDragging, DragStartPos, OriginalTransform)

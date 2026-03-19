@@ -41,6 +41,37 @@ struct FMatrix
         }
     }
 
+    FVector TransformPosition(const FVector& V) const {
+        FVector Result;
+        // Result = [V.x, V.y, V.z, 1.0] * M
+        Result.x = V.x * M[0][0] + V.y * M[1][0] + V.z * M[2][0] + 1.0f * M[3][0];
+        Result.y = V.x * M[0][1] + V.y * M[1][1] + V.z * M[2][1] + 1.0f * M[3][1];
+        Result.z = V.x * M[0][2] + V.y * M[1][2] + V.z * M[2][2] + 1.0f * M[3][2];
+
+        // 투영 변환까지 고려한다면 W로 나눠야 하지만, 
+        // 일반적인 모델/월드 변환에서는 W가 1이므로 생략 가능합니다.
+        float W = V.x * M[0][3] + V.y * M[1][3] + V.z * M[2][3] + 1.0f * M[3][3];
+        if (std::abs(W - 1.0f) > 1e-6f && std::abs(W) > 1e-6f)
+        {
+            Result.x /= W; Result.y /= W; Result.z /= W;
+        }
+
+        return Result;
+    }
+
+    // 벡터(방향) 변환: w = 0.0 적용 (이동 성분 제외)
+    FVector TransformVector(const FVector& V) const
+    {
+        FVector Result;
+        // Result = [V.x, V.y, V.z, 0.0] * M
+        // M[3][0], M[3][1], M[3][2] (이동 성분)는 0과 곱해져서 사라집니다.
+        Result.x = V.x * M[0][0] + V.y * M[1][0] + V.z * M[2][0];
+        Result.y = V.x * M[0][1] + V.y * M[1][1] + V.z * M[2][1];
+        Result.z = V.x * M[0][2] + V.y * M[1][2] + V.z * M[2][2];
+
+        return Result;
+    }
+
     static FMatrix Identity()
     {
         return FMatrix();
@@ -262,6 +293,19 @@ struct FMatrix
         return result;
     }
 
+    static FMatrix Orthographic(float height, float width,float nearZ, float farZ)
+    {
+        FMatrix result = {};
+
+        result.M[0][0] = 2.0f / width;
+        result.M[1][1] = 2.0f / height;
+        result.M[2][2] = 1.0f / (farZ - nearZ);
+        result.M[3][2] = -nearZ / (farZ - nearZ);
+        result.M[3][3] = 1.0f;
+
+        return result;
+    }
+
     static FMatrix Perspective(float fovY, float aspect, float nearZ, float farZ)
     {
         const float yScale = 1.0f / std::tan(fovY * 0.5f);
@@ -270,14 +314,6 @@ struct FMatrix
         const float zBias = (-nearZ * farZ) / (farZ - nearZ);
 
         FMatrix result = {};
-
-        for (int r = 0; r < 4; ++r)
-        {
-            for (int c = 0; c < 4; ++c)
-            {
-                result.M[r][c] = 0.f;
-            }
-        }
 
         result.M[0][0] = xScale;
         result.M[1][1] = yScale;

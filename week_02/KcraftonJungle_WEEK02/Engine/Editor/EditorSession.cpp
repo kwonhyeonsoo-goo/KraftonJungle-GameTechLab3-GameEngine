@@ -1,71 +1,92 @@
 #include "EditorSession.h"
-#include <cmath>
+
 #include "../Platform/InputRouter.h"
-
-FMatrix CameraState::GetViewMatrix() const
-{
-    const FVector Forward = GetForwardVector();
-    return FMatrix::LookAt(Position, Position + Forward, FVector(0.0f, 0.0f, 1.0f));
-}
-
-FVector CameraState::GetForwardVector() const
-{
-    const float cp = std::cos(Pitch);
-    const float sp = std::sin(Pitch);
-    const float cy = std::cos(Yaw);
-    const float sy = std::sin(Yaw);
-
-    return FVector(cp * cy, cp * sy, sp);
-}
-
-FVector CameraState::GetRightVector() const
-{
-    const float cy = std::cos(Yaw);
-    const float sy = std::sin(Yaw);
-    return FVector(-sy, cy, 0.0f);
-}
+#include "../World/USceneComponent.h"
+#include "./Camera/EditorCameraController.h"
 
 EditorSession::EditorSession()
 {
     Selection = SelectionSet();
     Tools = ToolContext();
-    Camera = CameraState();
 
-    FovY = 60.0f;
-    AspectRatio = 16.0f / 9.0f;
-    NearZ = 0.1f;
-    FarZ = 1000.0f;
+    FEditorViewport DefaultViewport;
+    DefaultViewport.Name = "Perspective";
+    DefaultViewport.Type = EEditorViewportType::Perspective;
+
+    DefaultViewport.Camera = FEditorCameraState();
+    DefaultViewport.Projection = FEditorProjectionSettings();
+
+    Viewports.push_back(DefaultViewport);
+    ActiveViewportIndex = 0;
 }
 
-void EditorSession::ProcessCameraInput(const InputState& input, float deltaTime)
+FEditorViewport& EditorSession::GetActiveViewport()
 {
-    if (input.Keys['W'])
-        Camera.Position += Camera.GetForwardVector() * Camera.MoveSpeed * deltaTime;
-    if (input.Keys['S'])
-        Camera.Position -= Camera.GetForwardVector() * Camera.MoveSpeed * deltaTime;
-    if (input.Keys['D'])
-        Camera.Position += Camera.GetRightVector() * Camera.MoveSpeed * deltaTime;
-    if (input.Keys['A'])
-        Camera.Position -= Camera.GetRightVector() * Camera.MoveSpeed * deltaTime;
-    
-    if (input.Keys['Q'])
-        Camera.Position -= Camera.GetForwardVector().Cross(Camera.GetRightVector()) * Camera.MoveSpeed * deltaTime;
-    if (input.Keys[VK_SPACE])
-        Camera.Position += Camera.GetForwardVector().Cross(Camera.GetRightVector()) * Camera.MoveSpeed * deltaTime;
+    return Viewports[ActiveViewportIndex];
+}
 
-    if (input.MouseButtons[1]) {
-        Camera.Yaw  += input.MouseDeltaX * Camera.RotSpeed * deltaTime;
-        Camera.Pitch -= input.MouseDeltaY * Camera.RotSpeed * deltaTime;
-    }
+const FEditorViewport& EditorSession::GetActiveViewport() const
+{
+    return Viewports[ActiveViewportIndex];
+}
+
+FEditorCameraState& EditorSession::GetActiveCamera()
+{
+    return GetActiveViewport().Camera;
+}
+
+const FEditorCameraState& EditorSession::GetActiveCamera() const
+{
+    return GetActiveViewport().Camera;
+}
+
+const TArray<FEditorViewport>& EditorSession::GetViewports() const
+{
+    return Viewports;
+}
+
+void EditorSession::SetActiveViewportIndex(int32 Index)
+{
+    ActiveViewportIndex = Index;
+}
+
+int32 EditorSession::GetActiveViewportIndex() const
+{
+    return ActiveViewportIndex;
+}
+
+void EditorSession::ProcessCameraInput(const InputState& Input, float DeltaTime)
+{
+    FEditorCameraController::ProcessFreeCameraInput(GetActiveViewport(), Input, DeltaTime);
 }
 
 FMatrix EditorSession::GetProjectionMatrix() const
 {
-    constexpr float DegToRad = 3.14159265358979323846f / 180.0f;
-    return FMatrix::Perspective(FovY * DegToRad, AspectRatio, NearZ, FarZ);
+    return GetActiveViewport().GetProjectionMatrix();
+}
+
+FMatrix EditorSession::GetOrthogonalMatrix() const
+{
+    return GetActiveViewport().GetOrthographicMatrix();
 }
 
 FMatrix EditorSession::GetViewProjMatrix() const
 {
-    return Camera.GetViewMatrix() * GetProjectionMatrix();
+    return GetActiveViewport().GetViewProjMatrix();
+}
+
+FMatrix EditorSession::GetViewOrthoMatrix() const
+{
+    return GetActiveViewport().GetViewOrthoMatrix();
+}
+
+void EditorSession::FocusObject(const USceneComponent* Comp, float Distance)
+{
+    if (Comp == nullptr)
+        return;
+
+    FEditorCameraController::FocusPoint(
+        GetActiveViewport(),
+        Comp->GetTransform().Location,
+        Distance);
 }

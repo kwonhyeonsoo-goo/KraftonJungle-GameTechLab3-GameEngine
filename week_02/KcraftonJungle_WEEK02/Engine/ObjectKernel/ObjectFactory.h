@@ -2,9 +2,6 @@
 #include "./UObject.h"
 #include "../Foundation/Core/CoreTypes.h"
 #include "./UClass.h"
-#include "../World/UCubeComp.h"
-#include "../World/UPlaneComp.h"
-#include "../World/USphereComp.h"
 
 struct AppContext;
 

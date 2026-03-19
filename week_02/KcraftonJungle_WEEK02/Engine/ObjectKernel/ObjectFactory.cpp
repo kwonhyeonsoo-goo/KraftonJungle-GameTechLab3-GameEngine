@@ -1,41 +1,21 @@
 #include "ObjectFactory.h"
 #include "../../AppContext.h"
-#include "../World/UCubeComp.h"
-#include "../World/USphereComp.h"
-#include "../World/UPlaneComp.h"
-
-UObject* ObjectFactory::ConstructObject(AppContext& ctx, UClass* uclass)
-{
-    if (uclass == nullptr)
-    {
-        return nullptr;
-    }
-     
-    return ConstructObject(ctx, uclass->ClassName);
-}
+#include <memory>
 
 UObject* ObjectFactory::ConstructObject(AppContext& ctx, const FString& typeName)
 {
-    UObject* obj = nullptr;
+    UClass* uclass = ctx.Classes.Find(typeName);
+    return ConstructObject(ctx, uclass);
+}
 
-    if (typeName == "Cube")
-    {
-        obj = new UCubeComp();
-    }
-    else if (typeName == "Sphere")
-    {
-        obj = new USphereComp();
-    }
-    else if (typeName == "Plane")
-    {
-        obj = new UPlaneComp();
-    }
-    else
-    { 
+UObject* ObjectFactory::ConstructObject(AppContext& ctx, UClass* uclass)
+{
+    if (uclass == nullptr || !uclass->CanInstantiate())
         return nullptr;
-    }
 
+    auto obj = uclass->Constructor();
     obj->SetUUID(ctx.UUIDs.GenUUID());
-    ctx.Objects.Add(obj);
-    return obj;
+    UObject* raw = obj.get();
+    ctx.Objects.Add(std::move(obj));
+    return raw;
 }

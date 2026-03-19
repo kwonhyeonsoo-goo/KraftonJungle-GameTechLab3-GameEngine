@@ -1,13 +1,27 @@
 #include "ToolbarPanel.h"
+#include <iostream>
+#include "../Commands/SpawnObjectCommand.h"
+#include "../Tools/TranslateTool.h"
+#include "../Tools/RotateTool.h"
+#include "../Tools/ScaleTool.h"
+#include "../../Services/SerializationService.h"
 
 void ToolbarPanel::OnRender(AppContext& ctx)
 {
     if (!bVisible)
         return;
+    float w = (float)ctx.Window.GetWidth();
+    float h = (float)ctx.Window.GetHeight();
+    float rightWidth = w * 0.2f;
+    float consoleHeight = h * 0.2f;
+    float propertyHeight = (h - consoleHeight) * 0.5f;
+    float toolbarHeight = h - consoleHeight - propertyHeight;
 
-    if (!ImGui::Begin("Toolbar", &bVisible,
-        ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoScrollbar))
+    // property ¾Æ·¡
+    ImGui::SetNextWindowPos(ImVec2(w - rightWidth, propertyHeight), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(rightWidth, toolbarHeight), ImGuiCond_Always);
+
+    if (!ImGui::Begin("Toolbar", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar))
     {
         ImGui::End();
         return;
@@ -18,7 +32,6 @@ void ToolbarPanel::OnRender(AppContext& ctx)
     ImGui::Text("Transform Mode");
     ImGui::Separator();
 
-    // Translate
     if (CurrentMode == ETransformMode::Translate)
     {
         ImGui::BeginDisabled();
@@ -65,57 +78,128 @@ void ToolbarPanel::OnRender(AppContext& ctx)
         }
     }
 
+#pragma region SpawnObject
+    ImGui::Spacing();
+    ImGui::Text("Coord Space");
+    ImGui::Separator();
+
+    {
+        const bool bLocal = ctx.Editor.Tools.GetCoordSpace() == ECoordSpace::Local;
+        if (ImGui::Button(bLocal ? "Local" : "World"))
+            ctx.Editor.Tools.SetCoordSpace(bLocal ? ECoordSpace::World : ECoordSpace::Local);
+    }
+
+    ImGui::Spacing();
+    ImGui::Text("View");
+    ImGui::Separator();
+    FEditorViewport& Viewport = ctx.Editor.GetActiveViewport();
+    EEditorProjectionMode& Mode = Viewport.Projection.Mode;
+
+    bool bPerspective = (Mode == EEditorProjectionMode::Perspective);
+    bool bOrthographic = (Mode == EEditorProjectionMode::Orthographic);
+
+    if (ImGui::RadioButton("Perspective", bPerspective))
+    {
+        Mode = EEditorProjectionMode::Perspective;
+    }
+    ImGui::SameLine();
+
+    if (ImGui::RadioButton("Orthographic", bOrthographic))
+    {
+        Mode = EEditorProjectionMode::Orthographic;
+    }
     ImGui::Spacing();
     ImGui::Text("Spawn Object");
     ImGui::Separator();
 
-    const Transform DefaultSpawnTransform(
+    const Transform DefaultSpawnTransform = Transform::FromEulerDegrees(
         FVector(0.0f, 0.0f, 0.0f),
         FVector(0.0f, 0.0f, 0.0f),
         FVector(1.0f, 1.0f, 1.0f)
     );
 
-    if (ImGui::Button("Spawn Cube"))
+    const char* ItemNames[] = {
+        "Cube",
+        "Sphere",
+        "Plane",
+        "Triangle"
+    };
+    static int32 currentItem = 0;
+    static int32 NumItem = 1;
+
+    ImGui::Combo("Object", &currentItem, ItemNames, IM_ARRAYSIZE(ItemNames));
+
+    if (ImGui::Button("Spawn"))
     {
-        ctx.Dispatch(new SpawnObjectCommand(
-            ctx,
-            EPrimitiveShape::Cube,
-            DefaultSpawnTransform
-        ));
+        for (int i = 0; i < NumItem; ++i)
+        {
+            ctx.Dispatch(std::make_unique<SpawnObjectCommand>(
+                ctx,
+                (EPrimitiveShape)currentItem,
+                DefaultSpawnTransform
+            ));
+        }
     }
 
     ImGui::SameLine();
+    ImGui::SetNextItemWidth(80.0f);
+    ImGui::DragInt("##NumOfSpawn", &NumItem, 1, 1, 1000); // ## ·Î ¶óº§ ¼û±è
+    ImGui::Separator();
+#pragma endregion
 
-    if (ImGui::Button("Spawn Sphere"))
+#pragma region SceneFeature
+    ImGui::Spacing();
+    ImGui::Text("Scene");
+    ImGui::Separator();
+
+    static char NameBuf[256] = {};
+
+    ImGui::Text("Scene Name : %s", ctx.CurrentWorld.GetName().c_str());
+
+    if (!ImGui::IsItemActive())
     {
-        ctx.Dispatch(new SpawnObjectCommand(
-            ctx,
-            EPrimitiveShape::Sphere,
-            DefaultSpawnTransform
-        ));
+        strncpy_s(NameBuf, ctx.CurrentWorld.GetName().c_str(), sizeof(NameBuf));
     }
 
+    ImGui::SetNextItemWidth(200.0f);
+    if (ImGui::InputText("##SceneName", NameBuf, sizeof(NameBuf),
+        ImGuiInputTextFlags_EnterReturnsTrue))
+    {
+        if (NameBuf[0] == '\0')
+            strncpy_s(NameBuf, "default", sizeof(NameBuf));
+        ctx.CurrentWorld.SetName(FString(NameBuf));
+    }
+
+    if (ImGui::Button("New Scene"))
+    {
+        ctx.NewScene();
+        std::cout << "Clear" << std::endl;
+    }
     ImGui::SameLine();
 
-    if (ImGui::Button("Spawn Plane"))
+    if (ImGui::Button("Save Scene"))
     {
-        ctx.Dispatch(new SpawnObjectCommand(
-            ctx,
-            EPrimitiveShape::Plane,
-            DefaultSpawnTransform
-        ));
-    }
+        std::cout << "Save Start" << std::endl;
 
+        if (SerializationService::Save(ctx)) {
+            std::cout << "Save Sucess" << std::endl;
+        }
+
+        std::cout << "Save End" << std::endl;
+    }
     ImGui::SameLine();
 
-    if (ImGui::Button("Spawn Triangle"))
+    if (ImGui::Button("Load Scene"))
     {
-        ctx.Dispatch(new SpawnObjectCommand(
-            ctx,
-            EPrimitiveShape::Triangle,
-            DefaultSpawnTransform
-        ));
+        std::cout << "Load Start" << std::endl;
+
+        if (SerializationService::Load(ctx)) {
+            std::cout << "Load Sucess" << std::endl;
+        }
+
+        std::cout << "Load End" << std::endl;
     }
+#pragma endregion
 
     ImGui::End();
 }
