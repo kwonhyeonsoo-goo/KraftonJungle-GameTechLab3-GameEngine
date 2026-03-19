@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="ShaderW0.hlsl" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="Editor\Core\EditorConsole.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>

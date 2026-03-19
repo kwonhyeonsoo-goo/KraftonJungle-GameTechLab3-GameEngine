@@ -2,7 +2,7 @@
 
 #include "Render/Common/RenderTypes.h"
 
-#include "Viewport/CursorOverlayState.h"
+#include "CursorOverlayState.h"
 #include <windows.h>
 #include <string>
 #include "Core/RayTypes.h"
