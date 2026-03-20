@@ -213,8 +213,12 @@
     <ClCompile Include="Source\Scene\Scene.cpp">
       <Filter>Source\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\FontAtlas.cpp" />
-    <ClCompile Include="Source\Renderer\TextRenderer.cpp" />
+    <ClCompile Include="Source\Renderer\FontAtlas.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\TextRenderer.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -455,8 +459,12 @@
       <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Shaders\FontVertexShader.hlsl" />
-    <ClInclude Include="Source\Renderer\FontAtlas.h" />
-    <ClInclude Include="Source\Renderer\TextRenderer.h" />
+    <ClInclude Include="Source\Renderer\FontAtlas.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\TextRenderer.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
