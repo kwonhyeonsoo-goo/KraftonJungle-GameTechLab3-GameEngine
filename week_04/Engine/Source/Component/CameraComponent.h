@@ -7,7 +7,7 @@ class ENGINE_API UCameraComponent : public USceneComponent
 public:
 	static UClass* StaticClass();
 
-	UCameraComponent();
+	UCameraComponent() ;
 	UCameraComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
 	virtual ~UCameraComponent();
 

@@ -213,6 +213,10 @@
     <ClCompile Include="Source\Scene\Scene.cpp">
       <Filter>Source\Scene</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Types\Name.cpp">
+      <Filter>Source\Types</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scene\SceneManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -449,6 +453,10 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp">
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Types\Name.h">
+      <Filter>Source\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\SceneManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
