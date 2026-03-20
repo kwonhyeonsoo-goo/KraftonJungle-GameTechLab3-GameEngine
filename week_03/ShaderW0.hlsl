@@ -28,13 +28,13 @@ cbuffer OverlayBuffer : register(b2)
     float4 OverlayColor;
 };
 
-//  Axis : 0, Grid : 1 (CamearPosition°ú °öÇÏ¸é Axis´Â CameraPosition¿¡ ¿µÇâÀ» ¹ÞÁö ¾ÊÀ½)
-cbuffer EditorBuffer : register(b3)
-{
-    float4 CameraPosition;
-    uint EditorFlag;
-    float3 Padding3;
-};
+//  Axis : 0, Grid : 1 (Pixel ì…°ì´ë”ë¥¼ í†µí•œ ë¬´í•œ ê·¸ë¦¬ë“œì™€ ì¶•)
+//cbuffer EditorBuffer : register(b3)
+//{
+//    float4 CameraPosition;
+//    uint EditorFlag;
+//    float3 Padding3;
+//};
 
 cbuffer OutlineConstants : register(b4)
 {
@@ -179,92 +179,93 @@ struct EditorPSInput
     float3 worldPos : TEXCOORD0;
 };
 
-EditorPSInput EditorVS(EditorVSInput input)
-{
-    EditorPSInput output;
-    
-    if (!(bool)EditorFlag)
-    {
-        float3 axisDir = input.position.xyz;
-        float InfinityLength = 100000.0f;
 
-        float3 worldPos = float3(0.0f, 0.0f, 0.0f);
-
-        if (abs(axisDir.x) > 0.0f)
-            worldPos.x = CameraPosition.x + (axisDir.x * InfinityLength);
-        if (abs(axisDir.y) > 0.0f)
-            worldPos.y = CameraPosition.y + (axisDir.y * InfinityLength);
-        if (abs(axisDir.z) > 0.0f)
-            worldPos.z = CameraPosition.z + (axisDir.z * InfinityLength);
-
-        output.worldPos = worldPos;
-
-        float4 viewPos = mul(float4(worldPos, 1.0f), View);
-        output.position = mul(viewPos, Projection);
-    
-        output.color = input.color;
-        return output;
-    }
-	else
-	{
-        float3 scaledPos = input.position.xyz * 100000.0f;
-        float3 worldPos = float3(CameraPosition.x + scaledPos.x, CameraPosition.y + scaledPos.y, 0.0f);
-		
-        output.worldPos = worldPos;
-		
-        float4 viewPos = mul(float4(worldPos, 1.0f), View);
-        output.position = mul(viewPos, Projection);
-		
-        output.color = input.color;
-		
-        return output;
-    }
-}
-
-float4 EditorPS(EditorPSInput input) : SV_TARGET
-{
-    if (EditorFlag == 0)
-    {
-        return input.color;
-    }
-    else
-    {
-        float MinorThickness = 0.8f;
-        float MajorThickness = 1.2f;
-        
-        float2 coord1 = input.worldPos.xy / 10.0f;
-        float2 deriv1 = fwidth(coord1);
-        float2 grid1 = abs(frac(coord1 - 0.5f) - 0.5f);
-        
-        float2 lineAlpha1 = smoothstep(deriv1 * MinorThickness, deriv1 * (MinorThickness * 0.2f), grid1);
-        float minorAlpha = max(lineAlpha1.x, lineAlpha1.y);
-        
-        float2 coord2 = input.worldPos.xy / 100.0f;
-        float2 deriv2 = fwidth(coord2);
-        float2 grid2 = abs(frac(coord2 - 0.5f) - 0.5f);
-        
-        float2 lineAlpha2 = smoothstep(deriv2 * MajorThickness, deriv2 * (MajorThickness * 0.2f), grid2);
-        float majorAlpha = max(lineAlpha2.x, lineAlpha2.y);
-        
-        float dist = distance(CameraPosition.xyz, input.worldPos);
-        float fade = 1.0f - saturate(dist / 2000.0f);
-
-        float2 originDist = abs(input.worldPos.xy);
-        float2 originDeriv = fwidth(input.worldPos.xy);
-
-        float AxisThickness = MajorThickness * 1.5f;
-
-        float2 axisAlpha = 1.0f - smoothstep(originDeriv * (AxisThickness * 0.2f), originDeriv * AxisThickness, originDist);
-
-        float3 gridColor = float3(0.6f, 0.6f, 0.6f);
-        float finalAlpha = max(minorAlpha * 0.3f, majorAlpha * 1.0f);
-
-        if (axisAlpha.y > 0.0f) finalAlpha = 0.0f;
-        if (axisAlpha.x > 0.0f) finalAlpha = 0.0f;
-        
-        return float4(gridColor, finalAlpha * fade);
-    }
-}
+// í”½ì…€ ì…°ì´ë”ë¥¼ í†µí•œ Grid & Axis => batchLine Drawë¥¼ ìœ„í•´ ë¹„í™œì„±í™”
+//EditorPSInput EditorVS(EditorVSInput input)
+//{
+//    EditorPSInput output;
+//    
+//    if (!(bool)EditorFlag)
+//    {
+//        float3 axisDir = input.position.xyz;
+//        float InfinityLength = 100000.0f;
+//
+//        float3 worldPos = float3(0.0f, 0.0f, 0.0f);
+//
+//        if (abs(axisDir.x) > 0.0f)
+//            worldPos.x = CameraPosition.x + (axisDir.x * InfinityLength);
+//        if (abs(axisDir.y) > 0.0f)
+//            worldPos.y = CameraPosition.y + (axisDir.y * InfinityLength);
+//        if (abs(axisDir.z) > 0.0f)
+//            worldPos.z = CameraPosition.z + (axisDir.z * InfinityLength);
+//
+//        output.worldPos = worldPos;
+//
+//        float4 viewPos = mul(float4(worldPos, 1.0f), View);
+//        output.position = mul(viewPos, Projection);
+//    
+//        output.color = input.color;
+//        return output;
+//    }
+//	else
+//	{
+//        float3 scaledPos = input.position.xyz * 100000.0f;
+//        float3 worldPos = float3(CameraPosition.x + scaledPos.x, CameraPosition.y + scaledPos.y, 0.0f);
+//		
+//        output.worldPos = worldPos;
+//		
+//        float4 viewPos = mul(float4(worldPos, 1.0f), View);
+//        output.position = mul(viewPos, Projection);
+//		
+//        output.color = input.color;
+//		
+//        return output;
+//    }
+//}
+//float4 EditorPS(EditorPSInput input) : SV_TARGET
+//{
+//    if (EditorFlag == 0)
+//    {
+//        return input.color;
+//    }
+//    else
+//    {
+//        float MinorThickness = 0.8f;
+//        float MajorThickness = 1.2f;
+//        
+//        float2 coord1 = input.worldPos.xy / 10.0f;
+//        float2 deriv1 = fwidth(coord1);
+//        float2 grid1 = abs(frac(coord1 - 0.5f) - 0.5f);
+//        
+//        float2 lineAlpha1 = smoothstep(deriv1 * MinorThickness, deriv1 * (MinorThickness * 0.2f), grid1);
+//        float minorAlpha = max(lineAlpha1.x, lineAlpha1.y);
+//        
+//        float2 coord2 = input.worldPos.xy / 100.0f;
+//        float2 deriv2 = fwidth(coord2);
+//        float2 grid2 = abs(frac(coord2 - 0.5f) - 0.5f);
+//        
+//        float2 lineAlpha2 = smoothstep(deriv2 * MajorThickness, deriv2 * (MajorThickness * 0.2f), grid2);
+//        float majorAlpha = max(lineAlpha2.x, lineAlpha2.y);
+//        
+//        float dist = distance(CameraPosition.xyz, input.worldPos);
+//        float fade = 1.0f - saturate(dist / 2000.0f);
+//
+//        float2 originDist = abs(input.worldPos.xy);
+//        float2 originDeriv = fwidth(input.worldPos.xy);
+//
+//        float AxisThickness = MajorThickness * 1.5f;
+//
+//        float2 axisAlpha = 1.0f - smoothstep(originDeriv * (AxisThickness * 0.2f), originDeriv * AxisThickness, originDist);
+//
+//        float3 gridColor = float3(0.6f, 0.6f, 0.6f);
+//        float finalAlpha = max(minorAlpha * 0.3f, majorAlpha * 1.0f);
+//
+//        if (axisAlpha.y > 0.0f) finalAlpha = 0.0f;
+//        if (axisAlpha.x > 0.0f) finalAlpha = 0.0f;
+//        
+//        return float4(gridColor, finalAlpha * fade);
+//    }
+//}
 
 /* Outline */
 PrimitivePSInput OutlineVS(PrimitiveVSInput input)

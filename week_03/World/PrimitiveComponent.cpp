@@ -5,9 +5,11 @@
 
 DEFINE_CLASS(UPrimitiveComponent, USceneComponent)
 DEFINE_CLASS(UCubeComponent, UPrimitiveComponent)
+DEFINE_CLASS(UBoxComponent, UPrimitiveComponent)
 DEFINE_CLASS(USphereComponent, UPrimitiveComponent)
 DEFINE_CLASS(UPlaneComponent, UPrimitiveComponent)
 REGISTER_FACTORY(UCubeComponent)
+REGISTER_FACTORY(UBoxComponent)
 REGISTER_FACTORY(USphereComponent)
 REGISTER_FACTORY(UPlaneComponent)
 
@@ -273,6 +275,22 @@ bool UPlaneComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix&
 
 	return UPrimitiveComponent::GetRenderCommand(viewMatrix, projMatrix, OutCommand);
 }
+
+UBoxComponent::UBoxComponent()
+{
+
+}
+
+bool UBoxComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand)
+{
+	if (!MeshData || !bIsVisible) 
+	{
+		return false;
+	}
+
+	return UPrimitiveComponent::GetRenderCommand(viewMatrix, projMatrix, OutCommand);
+}
+
 
 //bool UPlaneComponent::Raycast(const FRay& Ray, float& OutDistance)
 //{

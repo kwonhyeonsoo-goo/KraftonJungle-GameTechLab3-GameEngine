@@ -25,6 +25,7 @@ private:
 	UWorld* EditorWorld = nullptr;
 	UCamera* EditorCamera = nullptr;
 	UGizmoComponent* EditorGizmo = nullptr;
+
 	HWND HWindow = nullptr;
 
 	float WindowWidth = 1920.f;
@@ -36,8 +37,6 @@ private:
 
 	uint32 CurrentWorld = 0;
 	TArray<UWorld*> Scene;
-
-	FRenderHandler RenderHandler;
 
 	FRenderer Renderer;
 	FRenderBus RenderBus;
@@ -75,7 +74,7 @@ uint32 GetCurrentWorld() const { return CurrentWorld; }
 void SetCurrentWorld(uint32 NewWorldIndex) { CurrentWorld = NewWorldIndex; }
 UCamera* GetCamera() const { return EditorCamera; }
 UGizmoComponent* GetGizmo() const { return EditorGizmo; }
-FRenderHandler& GetRenderHandler() { return RenderHandler; }
+
 FCameraState& GetCameraState() { return EditorCamera->GetCameraState(); }
 const FCameraState& GetCameraState() const { return EditorCamera->GetCameraState(); }
 void ResetCamera(UCamera* Camera);

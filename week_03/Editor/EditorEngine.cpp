@@ -11,6 +11,7 @@ void FEditorEngine::Create(HWND InHWindow)
 
 	Renderer.Create(HWindow);
 	FRenderCollector::Initialize(Renderer.GetFD3DDevice().GetDevice());
+	RenderBus.Create(Renderer.GetFD3DDevice().GetDevice());
 
 	MainPanel.Create(HWindow, Renderer, this);
 
@@ -42,6 +43,10 @@ void FEditorEngine::Create(HWND InHWindow)
 	EditorCamera = UObjectManager::Get().CreateObject<UCamera>();
 	ViewportClient.SetCamera(EditorCamera);
 	ViewportClient.SetViewportSize(WindowWidth, WindowHeight);
+
+	AActor* DebugActor = Scene[CurrentWorld]->SpawnActor<AActor>();
+	DebugActor->AddComponent<UBoxComponent>();
+	DebugActor->SetActorLocation(FVector(-3.f, 0.f, 0.f));
 
 	ResetCamera(EditorCamera);
 	EditorCamera->ApplyCameraState();
@@ -119,6 +124,7 @@ void FEditorEngine::Release()
 {
 	CloseScene();
 	MainPanel.Release();
+	RenderBus.Release();
 	Renderer.Release();
 }
 
@@ -194,7 +200,6 @@ void FEditorEngine::BuildRenderCommands()
 	Context.World = Scene[CurrentWorld];
 	Context.Camera = EditorCamera;
 	Context.Gizmo = EditorGizmo;
-	Context.bGridVisible = RenderHandler.bGridVisible;
 	Context.CursorOverlayState = &ViewportClient.GetCursorOverlayState();
 	Context.ViewportHeight = WindowHeight;
 	Context.ViewportWidth = WindowWidth;

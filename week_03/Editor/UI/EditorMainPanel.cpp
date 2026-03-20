@@ -203,11 +203,6 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 
 	SEPARATOR();
 
-	if (ImGui::Button(EditorEngine->GetRenderHandler().bGridVisible ? "Grid : OFF" : "Grid : ON"))
-	{
-		EditorEngine->GetRenderHandler().bGridVisible = !EditorEngine->GetRenderHandler().bGridVisible;
-	}
-
 
 	ImGui::End();
 

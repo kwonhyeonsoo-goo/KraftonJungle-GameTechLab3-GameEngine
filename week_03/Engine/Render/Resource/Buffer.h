@@ -11,29 +11,22 @@
 #include "Core/CoreTypes.h"
 #include "Render/Resource/VertexTypes.h"
 
-
 class FVertexBuffer
 {
 private:
-	ID3D11Buffer* Buffer;
+	ID3D11Buffer* Buffer = nullptr;
 	uint32 VertexCount = 0;
 	uint32 Stride = 0;
 
 public:
-
-
-private:
-
-
-public:
-	void Create(ID3D11Device* InDevice, const TArray<FVertex>&, uint32 InByteWidth, uint32 InStride);
+	void Create(ID3D11Device* InDevice, const TArray<FVertex>& InData, uint32 InStride);
+	void CreateDynamic(ID3D11Device* InDevice, uint32 InMaxVertices, uint32 InStride);
 	void Release();
-	
-	void Update(ID3D11DeviceContext* InDeviceContext, const TArray<uint32>& InData, uint32 InByteWidth);
+
+	void Update(ID3D11DeviceContext* InDeviceContext, const TArray<FVertex>& InData);
 
 	uint32 GetVertexCount() const { return VertexCount; }
 	uint32 GetStride() const { return Stride; }
-
 	ID3D11Buffer* GetBuffer() const;
 };
 
@@ -67,7 +60,7 @@ public:
 private:
 
 public:
-	void Create(ID3D11Device* InDevice, const TArray<uint32>& InData, uint32 InByteWidth);
+	void Create(ID3D11Device* InDevice, const TArray<uint32>& InData);
 	void Release();
 
 	void Update(ID3D11DeviceContext* InDeviceContext, const TArray<uint32>& InData, uint32 InByteWidth);
@@ -82,13 +75,14 @@ class FMeshBuffer
 {
 private:
 	FVertexBuffer VertexBuffer;
-	FIndexBuffer IndexBuffer;
+	FIndexBuffer  IndexBuffer;
 public:
 
 private:
 
 public:
 	void Create(ID3D11Device* InDevice, const FMeshData& InMeshData);
+	void CreateDynamic(ID3D11Device* InDevice, uint32 InMaxVertices);
 	void Release();
 
 	FVertexBuffer& GetFVertexBuffer() { return VertexBuffer; }

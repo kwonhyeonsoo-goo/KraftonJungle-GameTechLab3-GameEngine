@@ -6,14 +6,15 @@
 #include <sstream>
 
 FMeshData FMeshManager::CubeMeshData;
+FMeshData FMeshManager::BoxMeshData;
 FMeshData FMeshManager::PlaneMeshData;
 FMeshData FMeshManager::SphereMeshData;
 FMeshData FMeshManager::TranslationGizmoMeshData;
 FMeshData FMeshManager::RotationGizmoMeshData;
 FMeshData FMeshManager::ScaleGizmoMeshData;
-FMeshData FMeshManager::AxisMeshData;
 FMeshData FMeshManager::MouseOverlayMeshData;
-FMeshData FMeshManager::GridMeshData;
+//FMeshData FMeshManager::AxisMeshData;
+//FMeshData FMeshManager::GridMeshData;
 
 bool FMeshManager::bIsInitialized = false;
 
@@ -50,16 +51,19 @@ void FMeshManager::Initialize()
     {
         CreateRotationGizmo();
     }
-
-    if (AxisMeshData.Vertices.empty())
+    if (BoxMeshData.Vertices.empty())
     {
-        CreateAxis();
+        CreateBox();
     }
-
-    if (GridMeshData.Vertices.empty())
-    {
-        CreateGrid();
-    }
+    //if (AxisMeshData.Vertices.empty())
+    //{
+    //    CreateAxis();
+    //}
+    //
+    //if (GridMeshData.Vertices.empty())
+    //{
+    //    CreateGrid();
+    //}
 
     if (MouseOverlayMeshData.Vertices.empty())
     {
@@ -143,6 +147,40 @@ void FMeshManager::CreateCube()
         12,14,13, 12,15,14,
         16,18,17, 16,19,18,
         20,22,21, 20,23,22
+    };
+}
+
+void FMeshManager::CreateBox()
+{
+    TArray<FVertex>& vertices = BoxMeshData.Vertices;
+    TArray<uint32>& indices = BoxMeshData.Indices;
+
+    vertices.clear();
+    indices.clear();
+
+    auto V = [&](float x, float y, float z)
+        {
+            return FVertex{ FVector(x, y, z), {0.f, 1.f, 0.f, 1.f} };
+        };
+
+    vertices = {
+        V(-0.5f,-0.5f,-0.5f), // 0
+        V(0.5f,-0.5f,-0.5f),  // 1
+        V(0.5f, 0.5f,-0.5f),  // 2
+        V(-0.5f, 0.5f,-0.5f), // 3
+        V(-0.5f,-0.5f, 0.5f), // 4
+        V(0.5f,-0.5f, 0.5f),  // 5
+        V(0.5f, 0.5f, 0.5f),  // 6
+        V(-0.5f, 0.5f, 0.5f), // 7
+    };
+
+    indices = {
+        // bottom
+        0,1,  1,2,  2,3,  3,0,
+        // top
+        4,5,  5,6,  6,7,  7,4,
+        // side
+        0,4,  1,5,  2,6,  3,7,
     };
 }
 
@@ -327,6 +365,7 @@ void FMeshManager::CreateScaleGizmo()
     }
 }
 
+
 void FMeshManager::CreateTranslationGizmo()
 {
     TArray<FVertex>& vertices = TranslationGizmoMeshData.Vertices;
@@ -457,61 +496,61 @@ void FMeshManager::CreatePlane()
 	};
 }
 
-void FMeshManager::CreateAxis()
-{
-    TArray<FVertex>& vertices = AxisMeshData.Vertices;
-    TArray<uint32>& indices = AxisMeshData.Indices;
-
-    vertices.clear();
-    indices.clear();
-
-    FVector4 Red(1.0f, 0.0f, 0.0f, 1.0f);
-    FVector4 Green(0.0f, 1.0f, 0.0f, 1.0f);
-    FVector4 Blue(0.0f, 0.0f, 1.0f, 1.0f);
-
-    vertices.push_back({ FVector(-1.0f, 0.0f, 0.0f), Red });
-    vertices.push_back({ FVector(1.0f, 0.0f, 0.0f), Red });
-
-    vertices.push_back({ FVector(0.0f, -1.0f, 0.0f), Green });
-    vertices.push_back({ FVector(0.0f,  1.0f, 0.0f), Green });
-
-    vertices.push_back({ FVector(0.0f, 0.0f, -1.0f), Blue });
-    vertices.push_back({ FVector(0.0f, 0.0f,  1.0f), Blue });
-
-    for (int i = 0; i < 6; i++) indices.push_back(i);
-}
-
-void FMeshManager::CreateGrid()
-{
-    TArray<FVertex>& vertices = GridMeshData.Vertices;
-    TArray<uint32>& indices = GridMeshData.Indices;
-
-    vertices.clear();
-    indices.clear();
-
-    FVector4 Color(1.0f, 1.0f, 1.0f, 1.0f);
-
-    vertices.push_back({ FVector(-1.0f, -1.0f, 0.0f), Color });
-    vertices.push_back({ FVector(-1.0f, 1.0f,  0.0f), Color });
-    vertices.push_back({ FVector(1.0f, 1.0f,  0.0f), Color });
-    vertices.push_back({ FVector(1.0f, -1.0f, 0.0f), Color });
-
-    indices.push_back(0);
-    indices.push_back(1);
-    indices.push_back(2);
-
-    indices.push_back(0);
-    indices.push_back(2);
-    indices.push_back(3);
-
-    indices.push_back(0);
-    indices.push_back(2);
-    indices.push_back(1);
-
-    indices.push_back(0);
-    indices.push_back(3);
-    indices.push_back(2);
-}
+//void FMeshManager::CreateAxis()
+//{
+//    TArray<FVertex>& vertices = AxisMeshData.Vertices;
+//    TArray<uint32>& indices = AxisMeshData.Indices;
+//
+//    vertices.clear();
+//    indices.clear();
+//
+//    FVector4 Red(1.0f, 0.0f, 0.0f, 1.0f);
+//    FVector4 Green(0.0f, 1.0f, 0.0f, 1.0f);
+//    FVector4 Blue(0.0f, 0.0f, 1.0f, 1.0f);
+//
+//    vertices.push_back({ FVector(-1.0f, 0.0f, 0.0f), Red });
+//    vertices.push_back({ FVector(1.0f, 0.0f, 0.0f), Red });
+//
+//    vertices.push_back({ FVector(0.0f, -1.0f, 0.0f), Green });
+//    vertices.push_back({ FVector(0.0f,  1.0f, 0.0f), Green });
+//
+//    vertices.push_back({ FVector(0.0f, 0.0f, -1.0f), Blue });
+//    vertices.push_back({ FVector(0.0f, 0.0f,  1.0f), Blue });
+//
+//    for (int i = 0; i < 6; i++) indices.push_back(i);
+//}
+//
+//void FMeshManager::CreateGrid()
+//{
+//    TArray<FVertex>& vertices = GridMeshData.Vertices;
+//    TArray<uint32>& indices = GridMeshData.Indices;
+//
+//    vertices.clear();
+//    indices.clear();
+//
+//    FVector4 Color(1.0f, 1.0f, 1.0f, 1.0f);
+//
+//    vertices.push_back({ FVector(-1.0f, -1.0f, 0.0f), Color });
+//    vertices.push_back({ FVector(-1.0f, 1.0f,  0.0f), Color });
+//    vertices.push_back({ FVector(1.0f, 1.0f,  0.0f), Color });
+//    vertices.push_back({ FVector(1.0f, -1.0f, 0.0f), Color });
+//
+//    indices.push_back(0);
+//    indices.push_back(1);
+//    indices.push_back(2);
+//
+//    indices.push_back(0);
+//    indices.push_back(2);
+//    indices.push_back(3);
+//
+//    indices.push_back(0);
+//    indices.push_back(2);
+//    indices.push_back(1);
+//
+//    indices.push_back(0);
+//    indices.push_back(3);
+//    indices.push_back(2);
+//}
 
 void FMeshManager::CreateMouseOverlay()
 {
