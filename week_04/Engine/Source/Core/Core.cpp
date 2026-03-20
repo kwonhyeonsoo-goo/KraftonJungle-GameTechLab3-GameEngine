@@ -13,6 +13,7 @@
 #include "Renderer/Renderer.h"
 #include "Renderer/RenderCommand.h"
 #include "Math/Frustum.h"
+#include "Physics/PhysicsManager.h"
 
 CCore::~CCore()
 {
@@ -133,6 +134,9 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupS
 	// InputManager
 	InputManager = new CInputManager();
 	EnhancedInput = new CEnhancedInputManager();
+
+	PhysicsManager = std::make_unique<CPhysicsManager>();
+
 	// Timer
 	Timer.Initialize();
 	RegisterConsoleVariables();
@@ -355,90 +359,38 @@ void CCore::Input(float DeltaTime)
 void CCore::Physics(float DeltaTime)
 {
 	UScene* Scene = ViewportClient ? ViewportClient->ResolveScene(this) : GetActiveScene();
-
-	const TArray<AActor*>& Actors = Scene->GetActors();
-
-	FVector LineStart(0, 0, 0), LineEnd(1, 1, 0);
-	FVector LineDirection = LineEnd - LineStart;
-	LineDirection.Normalize();
-
-	// Normalize 실패 상황 고려
-	if (!LineDirection.IsZero())
+	
+	if (Scene)
 	{
-		// Culling 고려
-		for (AActor* Actor : Actors)
+		FVector LineStart(0, 0, 0), LineEnd(1, 1, 0);
+		FHitResult HitResult;
+
+		bool bHit = PhysicsManager->Linetrace(Scene, LineStart, LineEnd, HitResult);
+
+		if (bHit)
 		{
-			if (!Actor || Actor->IsPendingDestroy())
+			for (UActorComponent* ActorComp : HitResult.HitActor->GetComponents())
 			{
-				continue;
-			}
-
-			for (UActorComponent* Component : Actor->GetComponents())
-			{
-				if (!Component->IsA(UPrimitiveComponent::StaticClass()))
+				if (!ActorComp->IsA(UPrimitiveComponent::StaticClass()))
 				{
 					continue;
 				}
 
-				UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
-				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
+				UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(ActorComp);
+
+				if (PrimComp)
 				{
-					continue;
-				}
-
-				FBoxSphereBounds Bound = PrimitiveComponent->GetWorldBoundsForAABB();
-
-				if (Renderer)
-				{
-					Renderer->DrawLine(LineStart, LineEnd, FVector4(0, 1, 1, 1));
-
+					FBoxSphereBounds Bound;
+					Bound = PrimComp->GetWorldBoundsForAABB();
 					Renderer->DrawCube(Bound.Center, Bound.BoxExtent, FVector4(1, 0, 0, 1));
 				}
-
-				FVector VecToOrigin = Bound.Center - LineStart;
-				float ShortestT = FVector::DotProduct(VecToOrigin, LineDirection);
-				FVector ShortestPos = LineStart + LineDirection * ShortestT;
-				float ShortestDistSquared = (ShortestPos - Bound.Center).SizeSquared();
-				
-				// 빠른 검사를 위해 일차적으로 Sphere 로 test
-				if (ShortestDistSquared <= Bound.RadiusSquared)
-				{
-					// 정밀한 검사를 위해 Box test
-					FVector SlabMin = Bound.Center - Bound.BoxExtent;
-					FVector SlabMax = Bound.Center + Bound.BoxExtent;
-
-					FVector DirectionInv(1 / LineDirection.X, 1 / LineDirection.Y, 1 / LineDirection.Z);
-
-					FVector T1 = FVector::Multiply((SlabMin - LineStart), DirectionInv);
-					FVector T2 = FVector::Multiply((SlabMax - LineStart), DirectionInv);
-
-					FVector TMinVec = FVector::Min(T1, T2);
-					FVector TMaxVec = FVector::Max(T1, T2);
-
-					float tNear = FMath::Max(FMath::Max(TMinVec.X, TMinVec.Y), TMinVec.Z);
-					float tFar = FMath::Min(FMath::Min(TMaxVec.X, TMaxVec.Y), TMaxVec.Z);
-
-					bool bIntersected =
-						(tNear <= tFar) &&
-						(tFar >= 0.0f) &&
-						(tNear * tNear <= (LineEnd - LineStart).SizeSquared());
-
-					if (bIntersected)
-					{
-						UE_LOG("Line Collided");
-					}
-				}
-				else
-				{
-					// rejct
-				}
-				
 			}
 		}
 
-
-		// AABB 도 그려야하는데
-
+		if (Renderer)
+		{
+			Renderer->DrawLine(LineStart, LineEnd, FVector4(0, 1, 1, 1));
+		}
 	}
 }
 
