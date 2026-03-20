@@ -203,13 +203,6 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 
 	SEPARATOR();
 
-	if (ImGui::Button(EditorEngine->GetRenderHandler().bGridVisible ? "Grid : OFF" : "Grid : ON"))
-	{
-		EditorEngine->GetRenderHandler().bGridVisible = !EditorEngine->GetRenderHandler().bGridVisible;
-	}
-
-	SEPARATOR();
-
 	if (ImGui::Button(Renderer->renderMode == RenderMode::SolidMode? "WireFrame : OFF" : "WireFrame : ON"))
 	{
 		Renderer->renderMode = (Renderer->renderMode == RenderMode::SolidMode ? RenderMode::WireFrameMode : RenderMode::SolidMode);
