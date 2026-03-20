@@ -24,7 +24,7 @@ public:
 	bool ActivatePreviewScene(const FString& ContextName);
 
 	// Preview Scene 관리
-	FEditorSceneContext* CreatePreviewScene(const FString& ContextName, int32 WindowWidth, int32 WindowHeight);
+	FEditorSceneContext* CreatePreviewSceneContext(const FString& ContextName, int32 WindowWidth, int32 WindowHeight);
 	bool DestroyPreviewScene(const FString& ContextName);
 
 	// 접근자

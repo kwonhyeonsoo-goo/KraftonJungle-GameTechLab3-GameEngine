@@ -169,7 +169,7 @@ void FEditorEngine::SyncViewportClient()
 	}
 
 	IViewportClient* TargetViewportClient = ViewportClient.get();
-	const FSceneContext* ActiveSceneContext = Core->GetActiveSceneContext();
+	const FSceneContext* ActiveSceneContext = Core->GetSceneManager()->GetActiveSceneContext();
 	if (ActiveSceneContext && ActiveSceneContext->SceneType == ESceneType::Preview && PreviewViewportClient)
 	{
 		TargetViewportClient = PreviewViewportClient.get();

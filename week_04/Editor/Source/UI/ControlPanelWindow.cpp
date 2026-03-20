@@ -51,6 +51,7 @@ void CControlPanelWindow::Render(CCore* Core)
 
 	if (Core && Core->GetScene())
 	{
+	
 		const FSceneContext* ActiveSceneContext = Core->GetActiveSceneContext();
 		const TArray<std::unique_ptr<FEditorSceneContext>>& PreviewSceneContexts = Core->GetPreviewSceneContexts();
 		const bool bPreviewActive = ActiveSceneContext && ActiveSceneContext->SceneType == ESceneType::Preview;

@@ -212,7 +212,7 @@ void FSceneManager::OnResize(int32 Width, int32 Height)
 		}
 	}
 }
-FEditorSceneContext* FSceneManager::CreatePreviewScene(const FString& ContextName, int32 WindowWidth, int32 WindowHeight)
+FEditorSceneContext* FSceneManager::CreatePreviewSceneContext(const FString& ContextName, int32 WindowWidth, int32 WindowHeight)
 {
 	if (ContextName.empty())
 	{
@@ -235,6 +235,7 @@ FEditorSceneContext* FSceneManager::CreatePreviewScene(const FString& ContextNam
 	PreviewSceneContexts.push_back(std::move(PreviewContext));
 	return CreatedContext;
 }
+
 
 bool FSceneManager::DestroyPreviewScene(const FString& ContextName)
 {

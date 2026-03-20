@@ -57,6 +57,14 @@ public:
 	AActor* GetSelectedActor() const { return SceneManager->GetSelectedActor(); }
 	void ActivateEditorScene() { SceneManager->ActivateEditorScene(); }
 	void ActivateGameScene() { SceneManager->ActivateGameScene(); }
+
+	//rapper
+	FEditorSceneContext* CreatePreviewSceneContext(const FString& ContextName)	{return SceneManager->CreatePreviewSceneContext(ContextName, WindowWidth, WindowHeight);}
+	bool DestroyPreviewSceneContext(const FString& ContextName)	{return SceneManager->DestroyPreviewScene(ContextName);}
+	bool ActivatePreviewScene(const FString& ContextName){return SceneManager->ActivatePreviewScene(ContextName);}
+	const FSceneContext* GetActiveSceneContext() const{	return SceneManager->GetActiveSceneContext();}
+	const TArray<std::unique_ptr<FEditorSceneContext>>& GetPreviewSceneContexts() const{return SceneManager->GetPreviewSceneContexts();}
+
 private:
 	void Input(float DeltaTime);
 	void Physics(float DeltaTime);

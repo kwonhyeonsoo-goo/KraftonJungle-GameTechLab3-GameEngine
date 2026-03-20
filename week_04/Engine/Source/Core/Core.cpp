@@ -34,6 +34,7 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupS
 		return false;
 	}
 
+
 	ObjManager = new ObjectManager();
 
 	// InputManager
@@ -42,38 +43,17 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupS
 	// Timer
 	Timer.Initialize();
 	RegisterConsoleVariables();
-
+	SceneManager = std::make_unique<FSceneManager>();
 	const float AspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
-	FSceneContext* StartupContext = &GameSceneContext;
-	FString ContextName = "GameScene";
-
-	if (StartupSceneType == ESceneType::Editor)
-	{
-		StartupContext = &EditorSceneContext;
-		ContextName = "EditorScene";
-	}
-
-	if (!CreateSceneContext(*StartupContext, ContextName, StartupSceneType, AspectRatio))
+	if (!SceneManager->Initialize(AspectRatio, StartupSceneType, Renderer.get()))
 	{
 		return false;
 	}
 
-	ActiveSceneContext = StartupContext;
 	return true;
 }
 
 
-void CCore::SetSelectedActor(AActor* InActor)
-{
-	FEditorSceneContext* ActiveEditorContext = GetActiveEditorSceneContext();
-	if (ActiveEditorContext)
-	{
-		ActiveEditorContext->SelectedActor = InActor;
-		return;
-	}
-
-	EditorSceneContext.SelectedActor = InActor;
-}
 
 void CCore::SetViewportClient(IViewportClient* InViewportClient)
 {
@@ -118,18 +98,11 @@ void CCore::Release()
 		ViewportClient->Detach(this, Renderer.get());
 	}
 	ViewportClient = nullptr;
-
-	ActiveSceneContext = nullptr;
-	for (std::unique_ptr<FEditorSceneContext>& PreviewContext : PreviewSceneContexts)
+	if (SceneManager)
 	{
-		if (PreviewContext)
-		{
-			DestroySceneContext(*PreviewContext);
-		}
+		SceneManager->Release();
+		SceneManager.reset();
 	}
-	PreviewSceneContexts.clear();
-	DestroySceneContext(EditorSceneContext);
-	DestroySceneContext(GameSceneContext);
 
 	// Scene 해제 후 PendingKill 오브젝트를 GC로 정리
 	if (ObjManager)
@@ -256,37 +229,11 @@ void CCore::Render()
 
 void CCore::OnResize(int32 Width, int32 Height)
 {
-	if (Width == 0 || Height == 0)
-	{
-		return;
-	}
-
+	if (Width == 0 || Height == 0) return;
 	WindowWidth = Width;
 	WindowHeight = Height;
-
-	if (Renderer)
-	{
-		Renderer->OnResize(Width, Height);
-	}
-
-	const float NewAspect = static_cast<float>(Width) / static_cast<float>(Height);
-	auto UpdateSceneAspectRatio = [NewAspect](UScene* Scene)
-		{
-			if (Scene && Scene->GetCamera())
-			{
-				Scene->GetCamera()->SetAspectRatio(NewAspect);
-			}
-		};
-
-	UpdateSceneAspectRatio(GameSceneContext.Scene);
-	UpdateSceneAspectRatio(EditorSceneContext.Scene);
-	for (const std::unique_ptr<FEditorSceneContext>& PreviewContext : PreviewSceneContexts)
-	{
-		if (PreviewContext)
-		{
-			UpdateSceneAspectRatio(PreviewContext->Scene);
-		}
-	}
+	if (Renderer) Renderer->OnResize(Width, Height);
+	if (SceneManager) SceneManager->OnResize(Width, Height);
 }
 
 void CCore::RegisterConsoleVariables()
