@@ -354,6 +354,92 @@ void CCore::Input(float DeltaTime)
 
 void CCore::Physics(float DeltaTime)
 {
+	UScene* Scene = ViewportClient ? ViewportClient->ResolveScene(this) : GetActiveScene();
+
+	const TArray<AActor*>& Actors = Scene->GetActors();
+
+	FVector LineStart(0, 0, 0), LineEnd(1, 1, 0);
+	FVector LineDirection = LineEnd - LineStart;
+	LineDirection.Normalize();
+
+	// Normalize 실패 상황 고려
+	if (!LineDirection.IsZero())
+	{
+		// Culling 고려
+		for (AActor* Actor : Actors)
+		{
+			if (!Actor || Actor->IsPendingDestroy())
+			{
+				continue;
+			}
+
+			for (UActorComponent* Component : Actor->GetComponents())
+			{
+				if (!Component->IsA(UPrimitiveComponent::StaticClass()))
+				{
+					continue;
+				}
+
+				UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
+				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
+				{
+					continue;
+				}
+
+				FBoxSphereBounds Bound = PrimitiveComponent->GetWorldBoundsForAABB();
+
+				if (Renderer)
+				{
+					Renderer->DrawLine(LineStart, LineEnd, FVector4(0, 1, 1, 1));
+
+					Renderer->DrawCube(Bound.Center, Bound.BoxExtent, FVector4(1, 0, 0, 1));
+				}
+
+				FVector VecToOrigin = Bound.Center - LineStart;
+				float ShortestT = FVector::DotProduct(VecToOrigin, LineDirection);
+				FVector ShortestPos = LineStart + LineDirection * ShortestT;
+				float ShortestDistSquared = (ShortestPos - Bound.Center).SizeSquared();
+				
+				// 빠른 검사를 위해 일차적으로 Sphere 로 test
+				if (ShortestDistSquared <= Bound.RadiusSquared)
+				{
+					// 정밀한 검사를 위해 Box test
+					FVector SlabMin = Bound.Center - Bound.BoxExtent;
+					FVector SlabMax = Bound.Center + Bound.BoxExtent;
+
+					FVector DirectionInv(1 / LineDirection.X, 1 / LineDirection.Y, 1 / LineDirection.Z);
+
+					FVector T1 = FVector::Multiply((SlabMin - LineStart), DirectionInv);
+					FVector T2 = FVector::Multiply((SlabMax - LineStart), DirectionInv);
+
+					FVector TMinVec = FVector::Min(T1, T2);
+					FVector TMaxVec = FVector::Max(T1, T2);
+
+					float tNear = FMath::Max(FMath::Max(TMinVec.X, TMinVec.Y), TMinVec.Z);
+					float tFar = FMath::Min(FMath::Min(TMaxVec.X, TMaxVec.Y), TMaxVec.Z);
+
+					bool bIntersected =
+						(tNear <= tFar) &&
+						(tFar >= 0.0f) &&
+						(tNear * tNear <= (LineEnd - LineStart).SizeSquared());
+
+					if (bIntersected)
+					{
+						UE_LOG("Line Collided");
+					}
+				}
+				else
+				{
+					// rejct
+				}
+				
+			}
+		}
+
+
+		// AABB 도 그려야하는데
+
+	}
 }
 
 void CCore::GameLogic(float DeltaTime)

@@ -21,4 +21,14 @@ struct ENGINE_API FMath
 	{
 		return Radians * (180.0f / PI);
 	}
+
+	static float Max(float A, float B)
+	{
+		return A < B ? B : A;
+	}
+
+	static float Min(float A, float B)
+	{
+		return A < B ? A : B;
+	}
 };
