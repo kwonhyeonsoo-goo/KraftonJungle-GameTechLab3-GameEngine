@@ -74,33 +74,90 @@ bool FFontAtlas::Initialize(
 	return true;
 }
 
+// 매핑
+//void FFontAtlas::BuildGridAtlas128x128()
+//{
+//	const float CellU = 1.0f / static_cast<float>(CellsPerRow);
+//	const float CellV = 1.0f / static_cast<float>(Rows);
+//
+//	for (int32 Index = 0; Index < GlyphCount; ++Index)
+//	{
+//		const int32 Row = Index / CellsPerRow;
+//		const int32 Col = Index % CellsPerRow;
+//
+//		FFontGlyph& Glyph = Glyphs[Index];
+//		Glyph.U0 = static_cast<float>(Col) * CellU;
+//		Glyph.V0 = static_cast<float>(Row) * CellV;
+//		Glyph.U1 = static_cast<float>(Col + 1) * CellU;
+//		Glyph.V1 = static_cast<float>(Row + 1) * CellV;
+//
+//		Glyph.Width = 1.0f;
+//		Glyph.Height = 1.0f;
+//		Glyph.Advance = 1.0f;
+//	}
+//
+//	// 공백 U+0020
+//	if (32 < GlyphCount)
+//	{
+//		Glyphs[32].Width = 0.0f;
+//		Glyphs[32].Height = 0.0f;
+//		Glyphs[32].Advance = 0.35f;
+//	}
+//}
 void FFontAtlas::BuildGridAtlas128x128()
 {
 	const float CellU = 1.0f / static_cast<float>(CellsPerRow);
 	const float CellV = 1.0f / static_cast<float>(Rows);
 
-	for (int32 Index = 0; Index < GlyphCount; ++Index)
+	for (uint32 Index = 0; Index < GlyphCount; ++Index)
 	{
-		const int32 Row = Index / CellsPerRow;
-		const int32 Col = Index % CellsPerRow;
-
 		FFontGlyph& Glyph = Glyphs[Index];
-		Glyph.U0 = static_cast<float>(Col) * CellU;
-		Glyph.V0 = static_cast<float>(Row) * CellV;
-		Glyph.U1 = static_cast<float>(Col + 1) * CellU;
-		Glyph.V1 = static_cast<float>(Row + 1) * CellV;
-
-		Glyph.Width = 1.0f;
-		Glyph.Height = 1.0f;
+		Glyph.U0 = 0.0f;
+		Glyph.V0 = 0.0f;
+		Glyph.U1 = 0.0f;
+		Glyph.V1 = 0.0f;
+		Glyph.Width = 0.0f;
+		Glyph.Height = 0.0f;
 		Glyph.Advance = 1.0f;
 	}
 
-	// 공백 U+0020
+	auto SetGlyphAt = [&](uint32 Codepoint, uint32 Row, uint32 Col, float Advance = 1.0f)
+		{
+			if (Codepoint >= GlyphCount || Row >= Rows || Col >= CellsPerRow)
+			{
+				return;
+			}
+
+			FFontGlyph& Glyph = Glyphs[Codepoint];
+			Glyph.U0 = static_cast<float>(Col) * CellU;
+			Glyph.V0 = static_cast<float>(Row) * CellV;
+			Glyph.U1 = static_cast<float>(Col + 1) * CellU;
+			Glyph.V1 = static_cast<float>(Row + 1) * CellV;
+			Glyph.Width = 1.0f;
+			Glyph.Height = 1.0f;
+			Glyph.Advance = Advance;
+		};
+
 	if (32 < GlyphCount)
 	{
 		Glyphs[32].Width = 0.0f;
 		Glyphs[32].Height = 0.0f;
 		Glyphs[32].Advance = 0.35f;
+	}
+
+	// 대문자 A-Z 매핑
+	// A가 1행 33열  코드에서는 0-based로 Row=0, Col=32
+	const uint32 UpperStartRow = 0;
+	const uint32 UpperStartCol = 32;
+
+	for (uint32 Cp = 'A'; Cp <= 'Z'; ++Cp)
+	{
+		const uint32 Offset = Cp - 'A';
+		const uint32 LinearCol = UpperStartCol + Offset;
+		const uint32 Row = UpperStartRow + (LinearCol / CellsPerRow);
+		const uint32 Col = LinearCol % CellsPerRow;
+
+		SetGlyphAt(Cp, Row, Col, 1.0f);
 	}
 }
 
