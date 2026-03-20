@@ -1,29 +1,9 @@
 #include "CameraComponent.h"
 #include "Object/Class.h"
 
-namespace
-{
-	UObject* CreateUCameraComponentInstance(UObject* InOuter, const FString& InName)
-	{
-		return new UCameraComponent(UCameraComponent::StaticClass(), InName, InOuter);
-	}
-}
+IMPLEMENT_RTTI(UCameraComponent, USceneComponent)
 
-UClass* UCameraComponent::StaticClass()
-{
-	static UClass ClassInfo("UCameraComponent", USceneComponent::StaticClass(), &CreateUCameraComponentInstance);
-	return &ClassInfo;
-}
-
-UCameraComponent::UCameraComponent()
-	: USceneComponent(StaticClass(), "")
-{
-	bCanEverTick = true;
-	Camera = new CCamera();
-}
-
-UCameraComponent::UCameraComponent(UClass* InClass, const FString& InName, UObject* InOuter)
-	: USceneComponent(InClass, InName, InOuter)
+void UCameraComponent::Initialize()
 {
 	bCanEverTick = true;
 	Camera = new CCamera();

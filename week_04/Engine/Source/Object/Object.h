@@ -2,6 +2,50 @@
 #include "CoreMinimal.h"
 #include "ObjectTypes.h"
 
+template <typename T>
+concept HasInitialize = requires(T t) {
+	{ t.Initialize() } -> std::same_as<void>;
+};
+
+template <typename T>
+inline void InitializeIfAble(T* obj) {
+	if constexpr (HasInitialize<T>) {
+		obj->Initialize();
+	}
+}
+
+#define DECLARE_RTTI(ClassName, ParentClassName) \
+    public: \
+        static UClass* StaticClass(); \
+        \
+        virtual UClass* GetClass() const override \
+        { \
+            return ClassName::StaticClass(); \
+        } \
+		ClassName() : ParentClassName("") { \
+			InitializeIfAble(this); \
+		} \
+		ClassName(const FString& InName, UObject* InOuter = nullptr) \
+			: ParentClassName(InName, InOuter) \
+		{ \
+			InitializeIfAble(this); \
+		}
+
+#define IMPLEMENT_RTTI(ClassName, ParentClassName) \
+	namespace { \
+		UObject* Create##ClassName##Instance(UObject* InOuter, const FString& InName) { \
+			 return new ClassName(InName, InOuter); \
+		} \
+	} \
+    UClass* ClassName::StaticClass() { \
+        static UClass ClassInfo = { \
+            #ClassName, \
+            ParentClassName::StaticClass(),  \
+            Create##ClassName##Instance \
+        }; \
+        return &ClassInfo; \
+    }
+
 class UClass;
 class UObject;
 // 조건 1: 엔진에서 생성되는 모든 UObject를 관리하는 전역 배열
@@ -13,7 +57,8 @@ extern ENGINE_API 	TArray<UObject*> GUObjectArray;
 class ENGINE_API UObject
 {
 public:
-	UObject(UClass* InClass, FString InName, UObject* InOuter = nullptr);
+	UObject(const UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
+	UObject(const FString& InName, UObject* InOuter = nullptr);
 	virtual ~UObject();  // GUObjectArray 슬롯 nullptr 마킹
 
 	// 조건 2: new/delete 오버로딩으로 메모리 통계 추적
@@ -33,7 +78,8 @@ public:
 	uint32 ObjectSize = 0; // 이 오브젝트의 할당 크기 (bytes)
 
 	// 조건 4: RTTI
-	UClass* GetClass() const;
+	static UClass* StaticClass();
+	virtual UClass* GetClass() const;
 	const FString& GetName() const;
 	UObject* GetOuter() const;
 
@@ -73,11 +119,7 @@ public:
 	void MarkPendingKill();
 	bool IsPendingKill() const;
 
-	static UClass* StaticClass();
-
-
 private:
-	UClass* Class = nullptr;
 	FString      Name;
 	UObject* Outer = nullptr;
 	EObjectFlags Flags = EObjectFlags::None;

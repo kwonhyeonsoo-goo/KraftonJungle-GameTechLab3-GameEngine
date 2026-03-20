@@ -3,9 +3,7 @@
 
 class ENGINE_API USphereComponent : public UPrimitiveComponent
 {
-public:
-	static UClass* StaticClass();
+	DECLARE_RTTI(USphereComponent, UPrimitiveComponent)
 
-	USphereComponent();
-	USphereComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
+	void Initialize();
 };

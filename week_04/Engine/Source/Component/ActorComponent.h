@@ -6,15 +6,7 @@ class AActor;
 class ENGINE_API UActorComponent : public UObject
 {
 public:
-	static UClass* StaticClass();
-
-	UActorComponent() : UObject(StaticClass(), "") {}
-
-	UActorComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr)
-		: UObject(InClass, InName, InOuter)
-	{
-
-	}
+	DECLARE_RTTI(UActorComponent, UObject)
 
 	~UActorComponent() override = default;
 

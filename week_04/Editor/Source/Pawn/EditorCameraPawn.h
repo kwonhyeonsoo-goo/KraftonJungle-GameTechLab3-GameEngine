@@ -6,12 +6,11 @@
 class AEditorCameraPawn : public AActor
 {
 public:
-	static UClass* StaticClass();
+	DECLARE_RTTI(AEditorCameraPawn, AActor)
+	void Initialize();
 
-	AEditorCameraPawn(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
 	UCameraComponent* GetCameraComponent() const { return CameraCompenent; }
 
 private:
 	UCameraComponent* CameraCompenent = nullptr;
-
 };

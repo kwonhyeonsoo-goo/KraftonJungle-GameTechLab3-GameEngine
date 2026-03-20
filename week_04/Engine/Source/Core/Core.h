@@ -8,7 +8,7 @@
 #include "Scene/SceneTypes.h"
 #include "Renderer/Renderer.h"
 #include "Input/InputManager.h"
-#include "Scene/SceneManager.h"
+#include "Physics/PhysicsManager.h"
 #include <memory>
 class CEnhancedInputManager;
 
@@ -48,7 +48,7 @@ public:
 
 	FSceneManager* GetSceneManager() const { return SceneManager.get(); }
 
-	// 기존 호환 래퍼
+	// ���� ȣȯ ����
 	UScene* GetScene() const { return SceneManager->GetActiveScene(); }
 	UScene* GetActiveScene() const { return SceneManager->GetActiveScene(); }
 	UScene* GetEditorScene() const { return SceneManager->GetEditorScene(); }
@@ -81,6 +81,8 @@ private:
 	ObjectManager* ObjManager = nullptr;
 	IViewportClient* ViewportClient = nullptr;
 	std::unique_ptr<FSceneManager> SceneManager;
+
+	std::unique_ptr<CPhysicsManager> PhysicsManager;
 
 	FTimer Timer;
 	double LastGCTime = 0.0;

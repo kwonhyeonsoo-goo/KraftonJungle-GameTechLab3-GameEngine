@@ -3,24 +3,7 @@
 #include "Component/CubeComponent.h"
 #include "Object/ObjectFactory.h"
 
-namespace
-{
-	UObject* CreateAAttachTestActorInstance(UObject* InOuter, const FString& InName)
-	{
-		return new AAttachTestActor(AAttachTestActor::StaticClass(), InName, InOuter);
-	}
-}
-
-UClass* AAttachTestActor::StaticClass()
-{
-	static UClass ClassInfo("AAttachTestActor", AActor::StaticClass(), &CreateAAttachTestActorInstance);
-	return &ClassInfo;
-}
-
-AAttachTestActor::AAttachTestActor(UClass* InClass, const FString& InName, UObject* InOuter)
-	: AActor(InClass, InName, InOuter)
-{
-}
+IMPLEMENT_RTTI(AAttachTestActor, AActor)
 
 void AAttachTestActor::PostSpawnInitialize()
 {

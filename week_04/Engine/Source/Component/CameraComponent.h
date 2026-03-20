@@ -5,12 +5,10 @@
 class ENGINE_API UCameraComponent : public USceneComponent
 {
 public:
-	static UClass* StaticClass();
-
-	UCameraComponent() ;
-	UCameraComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
+	DECLARE_RTTI(UCameraComponent, USceneComponent)
 	virtual ~UCameraComponent();
 
+	void Initialize();
 	virtual void Tick(float DeltaTime) override;
 	//Movement method
 	void MoveForward(float Value);

@@ -5,14 +5,7 @@
 class ENGINE_API USceneComponent : public UActorComponent
 {
 public:
-	static UClass* StaticClass();
-
-	USceneComponent() : UActorComponent(StaticClass(), "") {}
-
-	USceneComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr)
-		: UActorComponent(InClass, InName, InOuter)
-	{
-	}
+	DECLARE_RTTI(USceneComponent, UActorComponent)
 
 	const FTransform& GetRelativeTransform() const { return RelativeTransform; }
 	void SetRelativeTransform(const FTransform& InTransform);

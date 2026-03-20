@@ -13,6 +13,7 @@
 #include "Renderer/Renderer.h"
 #include "Renderer/RenderCommand.h"
 #include "Math/Frustum.h"
+#include "Physics/PhysicsManager.h"
 
 CCore::~CCore()
 {
@@ -40,6 +41,9 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupS
 	// InputManager
 	InputManager = new CInputManager();
 	EnhancedInput = new CEnhancedInputManager();
+
+	PhysicsManager = std::make_unique<CPhysicsManager>();
+
 	// Timer
 	Timer.Initialize();
 	RegisterConsoleVariables();
@@ -160,6 +164,40 @@ void CCore::Input(float DeltaTime)
 
 void CCore::Physics(float DeltaTime)
 {
+	UScene* Scene = ViewportClient ? ViewportClient->ResolveScene(this) : GetActiveScene();
+	
+	if (Scene)
+	{
+		FVector LineStart(0, 0, 0), LineEnd(1, 1, 0);
+		FHitResult HitResult;
+
+		bool bHit = PhysicsManager->Linetrace(Scene, LineStart, LineEnd, HitResult);
+
+		if (bHit)
+		{
+			for (UActorComponent* ActorComp : HitResult.HitActor->GetComponents())
+			{
+				if (!ActorComp->IsA(UPrimitiveComponent::StaticClass()))
+				{
+					continue;
+				}
+
+				UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(ActorComp);
+
+				if (PrimComp)
+				{
+					FBoxSphereBounds Bound;
+					Bound = PrimComp->GetWorldBoundsForAABB();
+					Renderer->DrawCube(Bound.Center, Bound.BoxExtent, FVector4(1, 0, 0, 1));
+				}
+			}
+		}
+
+		if (Renderer)
+		{
+			Renderer->DrawLine(LineStart, LineEnd, FVector4(0, 1, 1, 1));
+		}
+	}
 }
 
 void CCore::GameLogic(float DeltaTime)
