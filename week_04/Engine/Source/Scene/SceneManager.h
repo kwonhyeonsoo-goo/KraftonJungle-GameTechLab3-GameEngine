@@ -13,7 +13,10 @@ class ENGINE_API FSceneManager
 public:
 	FSceneManager() = default;
 	~FSceneManager();
-
+	FSceneManager(const FSceneManager&) = delete;
+	FSceneManager& operator=(const FSceneManager&) = delete;
+	FSceneManager(FSceneManager&&) = delete;
+	FSceneManager& operator=(FSceneManager&&) = delete;
 	// 초기화
 	bool Initialize(float AspectRatio, ESceneType StartupSceneType, CRenderer* InRenderer);
 	void Release();
