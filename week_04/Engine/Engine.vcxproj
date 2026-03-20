@@ -88,6 +88,7 @@
     <ClInclude Include="Source\Renderer\ShaderMap.h" />
     <ClInclude Include="Source\Renderer\ShaderResource.h" />
     <ClInclude Include="Source\Renderer\ShaderType.h" />
+    <ClInclude Include="Source\Renderer\TextRenderer.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="Source\Scene\SceneContext.h" />
     <ClInclude Include="Source\Scene\SceneTypes.h" />
@@ -157,6 +158,7 @@
     <ClCompile Include="Source\Renderer\ShaderManager.cpp" />
     <ClCompile Include="Source\Renderer\ShaderMap.cpp" />
     <ClCompile Include="Source\Renderer\ShaderResource.cpp" />
+    <ClCompile Include="Source\Renderer\TextRenderer.cpp" />
     <ClCompile Include="Source\Scene\Scene.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

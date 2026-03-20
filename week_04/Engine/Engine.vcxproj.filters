@@ -214,6 +214,7 @@
       <Filter>Source\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Renderer\FontAtlas.cpp" />
+    <ClCompile Include="Source\Renderer\TextRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -455,6 +456,7 @@
     </ClInclude>
     <ClInclude Include="Shaders\FontVertexShader.hlsl" />
     <ClInclude Include="Source\Renderer\FontAtlas.h" />
+    <ClInclude Include="Source\Renderer\TextRenderer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

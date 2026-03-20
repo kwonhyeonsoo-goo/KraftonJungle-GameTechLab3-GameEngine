@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Renderer/RenderCommand.h"
+#include "Renderer/TextRenderer.h"
 #include <d3d11.h>
 #include <functional>
 #include <memory>
@@ -120,6 +121,10 @@ private:
 
 	// 기본 Material (셰이더 미지정 시 사용)
 	std::shared_ptr<FMaterial> DefaultMaterial;
+
+	// 텍스처 렌더링 테스트용 (임시)
+	CTextRenderer TextRenderer;
+	bool bEnableTextRenderTest = true;
 
 	// 매 프레임 외부에서 설정
 public:
