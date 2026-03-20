@@ -6,11 +6,10 @@ void FMeshBufferManager::Create(ID3D11Device* InDevice)
 	MeshBufferMap[EPrimitiveType::EPT_Sphere].Create(InDevice, FMeshManager::GetSphere());
 	MeshBufferMap[EPrimitiveType::EPT_Plane].Create(InDevice, FMeshManager::GetPlane());
 	MeshBufferMap[EPrimitiveType::EPT_TransGizmo].Create(InDevice, FMeshManager::GetTranslationGizmo());
-	MeshBufferMap[EPrimitiveType::EPT_RotGizmo].Create(InDevice, FMeshManager::GetRotationGizmo()); 
+	MeshBufferMap[EPrimitiveType::EPT_RotGizmo].Create(InDevice, FMeshManager::GetRotationGizmo());
 	MeshBufferMap[EPrimitiveType::EPT_ScaleGizmo].Create(InDevice, FMeshManager::GetScaleGizmo());
-	MeshBufferMap[EPrimitiveType::EPT_Axis].Create(InDevice, FMeshManager::GetAxis());
-	MeshBufferMap[EPrimitiveType::EPT_Grid].Create(InDevice, FMeshManager::GetGrid());
 	MeshBufferMap[EPrimitiveType::EPT_MouseOverlay].Create(InDevice, FMeshManager::GetMouseOverlay());
+	MeshBufferMap[EPrimitiveType::EPT_Box].Create(InDevice, FMeshManager::GetBox());
 }
 
 //	TODO : 내일 하기

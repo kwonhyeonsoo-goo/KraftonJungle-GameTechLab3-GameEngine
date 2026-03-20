@@ -13,7 +13,7 @@ struct FRenderResources
     FConstantBuffer PerObjectConstantBuffer;        // b0
     FConstantBuffer GizmoPerObjectConstantBuffer;   // b1
     FConstantBuffer OverlayConstantBuffer;          // b2
-    FConstantBuffer EditorConstantBuffer;           // b3
+    //FConstantBuffer EditorConstantBuffer;           // b3
 	FConstantBuffer OutlineConstantBuffer;          // b4
 
     FShader PrimitiveShader;

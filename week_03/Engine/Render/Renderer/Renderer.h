@@ -18,6 +18,8 @@ private:
 	FD3DDevice Device;
 	FRenderResources Resources;
 
+	TArray<FVertex> Grids;
+
 	//	File Path
 	const wchar_t * ShaderFilePath  = L"ShaderW0.hlsl";
 
@@ -37,10 +39,15 @@ private:
 public:
 
 private:
+	void BuildGrid();
 	void RenderComponentPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
 	void RenderDepthLessPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
-	void RenderEditorPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
-	void RenderGridEditorPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
+
+	//void RenderEditorPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
+	//void RenderGridEditorPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
+
+	void RenderLineBatchPass(ID3D11DeviceContext* InDeviceContext, FRenderBus& InRenderBus);
+
 	void RenderOverlayPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
 	void RenderOutlinePass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
 
@@ -51,7 +58,7 @@ public:
 	void Release();
 
 	void BeginFrame();
-	void Render(const FRenderBus& InRenderBus);
+	void Render(FRenderBus& InRenderBus);
 	void RenderOverlay(const FRenderBus& InRenderBus);	//	반드시 따로 호출해야 함
 	void EndFrame();
 

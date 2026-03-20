@@ -1,4 +1,5 @@
 ﻿#include "RenderBus.h"
+#include "World/Mesh/MeshManager.h"
 
 #if DEBUG
 
@@ -6,14 +7,26 @@
 
 #endif
 
+void FRenderBus::Create(ID3D11Device* InDevice)
+{
+	LineBatch.Create(InDevice);
+}
+
+void FRenderBus::Release()
+{
+	LineBatch.Release();
+}
+
+
 void FRenderBus::Clear()
 {
 	ComponentCommands.clear();
 	DepthLessCommands.clear();
-	EditorCommands.clear();
-	EditorGridCommands.clear();
+	//EditorCommands.clear();
+	//EditorGridCommands.clear();
 	OverlayCommands.clear();
 	OutlineCommands.clear();
+	LineBatch.Clear();
 }
 
 void FRenderBus::AddComponentCommand(const FRenderCommand& InCommand)
@@ -22,6 +35,7 @@ void FRenderBus::AddComponentCommand(const FRenderCommand& InCommand)
 	{
 		return;
 	}
+
 	ComponentCommands.push_back(InCommand);
 }
 
@@ -34,23 +48,43 @@ void FRenderBus::AddDepthLessCommand(const FRenderCommand& InCommand)
 	DepthLessCommands.push_back(InCommand);
 }
 
-void FRenderBus::AddEditorCommand(const FRenderCommand& InCommand)
+void FRenderBus::AddLineBatchCommand(const FRenderCommand& InCommand)
 {
-	if(InCommand.MeshBuffer == nullptr)
+	const FMeshData& MeshData = FMeshManager::GetBox();
+	if (MeshData.Vertices.empty() || MeshData.Indices.size() < 2) return;
+
+	CachedView = InCommand.TransformConstants.View;
+	CachedProjection = InCommand.TransformConstants.Projection;
+
+	const FMatrix& Model = InCommand.TransformConstants.Model;
+	const TArray<FVertex>& Vertices = MeshData.Vertices;
+	const TArray<uint32>& Indices = MeshData.Indices;
+
+	for (int32 i = 0; i + 1 < static_cast<int32>(Indices.size()); i += 2)
 	{
-		return;
+		FVector Start = Model.TransformPositionWithW(Vertices[Indices[i ]].Position);
+		FVector End   = Model.TransformPositionWithW(Vertices[Indices[i + 1]].Position);
+		LineBatch.AddLine(Start, End, Vertices[Indices[i]].Color);
 	}
-	EditorCommands.push_back(InCommand);
 }
 
-void FRenderBus::AddGridEditorCommand(const FRenderCommand& InCommand)
-{
-	if (InCommand.MeshBuffer == nullptr)
-	{
-		return;
-	}
-	EditorGridCommands.push_back(InCommand);
-}
+//void FRenderBus::AddEditorCommand(const FRenderCommand& InCommand)
+//{
+//	if(InCommand.MeshBuffer == nullptr)
+//	{
+//		return;
+//	}
+//	EditorCommands.push_back(InCommand);
+//}
+//
+//void FRenderBus::AddGridEditorCommand(const FRenderCommand& InCommand)
+//{
+//	if (InCommand.MeshBuffer == nullptr)
+//	{
+//		return;
+//	}
+//	EditorGridCommands.push_back(InCommand);
+//}
 
 void FRenderBus::AddOutlineCommand(const FRenderCommand& InCommand)
 {
