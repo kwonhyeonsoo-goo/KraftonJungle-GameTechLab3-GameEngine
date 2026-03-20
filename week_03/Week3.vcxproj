@@ -134,6 +134,7 @@
     <ClCompile Include="Editor\Viewport\EditorViewportClient.cpp" />
     <ClCompile Include="Engine\Classes\AActor.cpp" />
     <ClCompile Include="Engine\Core\InputSystem.cpp" />
+    <ClCompile Include="Engine\Core\Name.cpp" />
     <ClCompile Include="Engine\Math\Matrix.cpp" />
     <ClCompile Include="Engine\Math\Utils.cpp" />
     <ClCompile Include="Engine\Math\Vector.cpp" />
@@ -182,6 +183,7 @@
     <ClInclude Include="Engine\Core\CoreTypes.h" />
     <ClInclude Include="Engine\Core\Debug.h" />
     <ClInclude Include="Engine\Core\InputSystem.h" />
+    <ClInclude Include="Engine\Core\Name.h" />
     <ClInclude Include="Engine\Core\RayTypes.h" />
     <ClInclude Include="Engine\Math\Matrix.h" />
     <ClInclude Include="Engine\Math\Utils.h" />
