@@ -213,7 +213,7 @@ void CEditorUI::BuildDefaultLayout(uint32 DockID)
 	ImGuiID DockRightTop = 0;
 	ImGuiID DockRightBottom = 0;
 	ImGui::DockBuilderSplitNode(DockRight, ImGuiDir_Up, 0.50f, &DockRightTop, &DockRightBottom);
-
+	ImGui::DockBuilderDockWindow("Viewport", DockCenter);
 	ImGui::DockBuilderDockWindow("Viewport", DockCenter);
 	ImGui::DockBuilderDockWindow("Stats", DockLeft);
 	ImGui::DockBuilderDockWindow("Properties", DockRightTop);
@@ -293,6 +293,7 @@ void CEditorUI::Render()
 	Property.Render();
 	Console.Render();
 	Stat.Render();
+	Outliner.Render(Core);
 }
 
 bool CEditorUI::GetViewportMousePosition(int32 WindowMouseX, int32 WindowMouseY, int32& OutViewportX, int32& OutViewportY, int32& OutWidth, int32& OutHeight) const

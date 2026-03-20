@@ -1,5 +1,5 @@
 #pragma once
-
+#include "OutlinerWindow.h" 
 #include "ControlPanelWindow.h"
 #include "PropertyWindow.h"
 #include "ConsoleWindow.h"
@@ -38,6 +38,7 @@ private:
 	CConsoleWindow Console;
 	CStatWindow Stat;
 	CViewport Viewport;
+	COutlinerWindow Outliner;
 
 	bool bWindowSetup = false;
 	bool bViewportClientActive = false;
