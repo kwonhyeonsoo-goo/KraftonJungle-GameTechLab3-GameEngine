@@ -28,6 +28,7 @@ private:
 	float SceneSaveNotificationTimer = 0;
 	float SceneLoadNotificationTimer = 0;
 	FEditorEngine* EditorEngine = nullptr;
+	FRenderer* Renderer;
 
 	int SelectedPrimitiveType = 0;
 	int NumberOfSpawnedActors = 1;

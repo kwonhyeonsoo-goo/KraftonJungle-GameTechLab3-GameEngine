@@ -76,6 +76,7 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 {
 	ID3D11DeviceContext* context = Device.GetDeviceContext();
 
+	
 	//ID3D11Buffer* VSConstantBuffers[3] =
 	//{
 	//	Resources.PerObjectConstantBuffer.GetBuffer(),
@@ -93,6 +94,8 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 
 	//	Primitive
 	Device.SetDepthStencilState(EDepthStencilState::StencilWrite);
+	if(renderMode == RenderMode::WireFrameMode) Device.SetRasterizerState(ERasterizerState::WireFrame);
+	else  Device.SetRasterizerState(ERasterizerState::SolidBackCull);
 	Device.SetBlendState(EBlendState::Opaque);
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
