@@ -565,6 +565,37 @@ void CRenderer::DrawLine(const FVector& Start, const FVector& End, const FVector
 	LineVertices.push_back({ End, Color, Normal });
 }
 
+void CRenderer::DrawCube(const FVector& Center, const FVector& BoxExtent, const FVector4& Color)
+{
+	// 8개 꼭짓점 생성
+	FVector v000 = Center + FVector(-BoxExtent.X, -BoxExtent.Y, -BoxExtent.Z);
+	FVector v001 = Center + FVector(-BoxExtent.X, -BoxExtent.Y, BoxExtent.Z);
+	FVector v010 = Center + FVector(-BoxExtent.X, BoxExtent.Y, -BoxExtent.Z);
+	FVector v011 = Center + FVector(-BoxExtent.X, BoxExtent.Y, BoxExtent.Z);
+	FVector v100 = Center + FVector(BoxExtent.X, -BoxExtent.Y, -BoxExtent.Z);
+	FVector v101 = Center + FVector(BoxExtent.X, -BoxExtent.Y, BoxExtent.Z);
+	FVector v110 = Center + FVector(BoxExtent.X, BoxExtent.Y, -BoxExtent.Z);
+	FVector v111 = Center + FVector(BoxExtent.X, BoxExtent.Y, BoxExtent.Z);
+
+	// --- 아래 사각형 (Z-)
+	DrawLine(v000, v100, Color);
+	DrawLine(v100, v110, Color);
+	DrawLine(v110, v010, Color);
+	DrawLine(v010, v000, Color);
+
+	// --- 위 사각형 (Z+)
+	DrawLine(v001, v101, Color);
+	DrawLine(v101, v111, Color);
+	DrawLine(v111, v011, Color);
+	DrawLine(v011, v001, Color);
+
+	// --- 수직 연결
+	DrawLine(v000, v001, Color);
+	DrawLine(v100, v101, Color);
+	DrawLine(v110, v111, Color);
+	DrawLine(v010, v011, Color);
+}
+
 void CRenderer::ExecuteLineCommands()
 {
 	if (LineVertices.empty()) return;

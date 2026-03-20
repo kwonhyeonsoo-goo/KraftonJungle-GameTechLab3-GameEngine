@@ -8,6 +8,7 @@
 #include "Scene/SceneTypes.h"
 #include "Renderer/Renderer.h"
 #include "Input/InputManager.h"
+#include "Physics/PhysicsManager.h"
 #include <memory>
 class CEnhancedInputManager;
 
@@ -86,6 +87,8 @@ private:
 	TArray<std::unique_ptr<FEditorSceneContext>> PreviewSceneContexts;
 	FSceneContext* ActiveSceneContext = nullptr;
 	IViewportClient* ViewportClient = nullptr;
+
+	std::unique_ptr<CPhysicsManager> PhysicsManager;
 
 	FTimer Timer;
 	double LastGCTime = 0.0;

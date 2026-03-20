@@ -322,5 +322,23 @@ public:
 		const XMVector Delta = DirectX::XMVectorSubtract(A.ToXMVector(), B.ToXMVector());
 		return DirectX::XMVectorGetX(DirectX::XMVector3Length(Delta));
 	}
+
+	// 두 벡터의 element-wise 곱
+	static FVector Multiply(const FVector& A, const FVector& B)
+	{
+		return FVector(A.X * B.X, A.Y * B.Y, A.Z * B.Z);
+	}
+
+	// A, B 의 각 원소 중 작은 값만으로 새로운 벡터 구성
+	static FVector Min(const FVector& A, const FVector& B)
+	{
+		return FVector(A.X < B.X ? A.X : B.X, A.Y < B.Y ? A.Y : B.Y, A.Z < B.Z ? A.Z : B.Z);
+	}
+
+	// A, B 의 각 원소 중 큰 값만으로 새로운 벡터 구성
+	static FVector Max(const FVector& A, const FVector& B)
+	{
+		return FVector(A.X > B.X ? A.X : B.X, A.Y > B.Y ? A.Y : B.Y, A.Z > B.Z ? A.Z : B.Z);
+	}
 };
 

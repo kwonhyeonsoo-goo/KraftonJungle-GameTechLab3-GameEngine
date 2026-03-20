@@ -213,6 +213,7 @@
     <ClCompile Include="Source\Scene\Scene.cpp">
       <Filter>Source\Scene</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Physics\PhysicsManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -449,6 +450,7 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp">
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Physics\PhysicsManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

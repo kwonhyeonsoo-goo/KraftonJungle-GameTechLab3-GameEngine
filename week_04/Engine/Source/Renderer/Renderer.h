@@ -54,6 +54,10 @@ public:
 
 	// 라인 렌더링
 	void DrawLine(const FVector& Start, const FVector& End, const FVector4& Color);
+
+	// 큐브 렌더링
+	void DrawCube(const FVector& Center, const FVector& BoxExtent, const FVector4& Color);
+	
 	void ExecuteLineCommands();
 
 	// 아웃라인 렌더링 (Stencil 기반)
