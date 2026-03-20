@@ -18,7 +18,7 @@ void FEditorMainPanel::Create(HWND InHWindow, FRenderer& InRenderer, FEditorEngi
 {
 	EditorEngine = InEditorEngine;
 	SelectedPrimitiveType = static_cast<int>(EPrimitiveType::EPT_Cube);
-
+	Renderer = &InRenderer;
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -208,6 +208,12 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 		EditorEngine->GetRenderHandler().bGridVisible = !EditorEngine->GetRenderHandler().bGridVisible;
 	}
 
+	SEPARATOR();
+
+	if (ImGui::Button(Renderer->renderMode == RenderMode::SolidMode? "WireFrame : OFF" : "WireFrame : ON"))
+	{
+		Renderer->renderMode = (Renderer->renderMode == RenderMode::SolidMode ? RenderMode::WireFrameMode : RenderMode::SolidMode);
+	}
 
 	ImGui::End();
 

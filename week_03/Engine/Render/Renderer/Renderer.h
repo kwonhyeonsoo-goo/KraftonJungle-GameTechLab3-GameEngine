@@ -12,6 +12,10 @@
 
 #include <cstddef>
 
+enum RenderMode {
+	SolidMode, WireFrameMode
+};
+
 class FRenderer
 {
 private:
@@ -57,5 +61,9 @@ public:
 
 	FD3DDevice& GetFD3DDevice() { return Device; }
 	FRenderResources& GetResources() { return Resources; }
+
+public: 
+	RenderMode renderMode = RenderMode::SolidMode;
+
 };
 
