@@ -1,18 +1,6 @@
 #include "SceneComponent.h"
 
-namespace
-{
-    UObject* CreateUSceneComponentInstance(UObject* InOuter, const FString& InName)
-    {
-        return new USceneComponent(USceneComponent::StaticClass(), InName, InOuter);
-    }
-}
-
-UClass* USceneComponent::StaticClass()
-{
-    static UClass ClassInfo("USceneComponent", UActorComponent::StaticClass(), &CreateUSceneComponentInstance);
-    return &ClassInfo;
-}
+IMPLEMENT_RTTI(USceneComponent, UActorComponent)
 
 void USceneComponent::SetRelativeTransform(const FTransform& InTransform)
 {

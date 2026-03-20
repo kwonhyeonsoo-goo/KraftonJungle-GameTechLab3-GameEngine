@@ -1,38 +1,11 @@
-﻿#include "RandomColorComponent.h"
+#include "RandomColorComponent.h"
 #include "PrimitiveComponent.h"
 #include "Actor/Actor.h"
-#include "Renderer/Material.h"
 #include <random>
 
-namespace
-{
-	UObject* CreateURandomColorComponentInstance(UObject* InOuter, const FString& InName)
-	{
-		return new URandomColorComponent(URandomColorComponent::StaticClass(), InName, InOuter);
-	}
+IMPLEMENT_RTTI(URandomColorComponent, UActorComponent)
 
-	FVector4 GenerateRandomColor()
-	{
-		static std::mt19937 Rng(std::random_device{}());
-		static std::uniform_real_distribution<float> Dist(0.0f, 1.0f);
-		return { Dist(Rng), Dist(Rng), Dist(Rng), 1.0f };
-	}
-}
-
-UClass* URandomColorComponent::StaticClass()
-{
-	static UClass ClassInfo("URandomColorComponent", UActorComponent::StaticClass(), &CreateURandomColorComponentInstance);
-	return &ClassInfo;
-}
-
-URandomColorComponent::URandomColorComponent()
-	: UActorComponent(StaticClass(), "")
-{
-	bCanEverTick = true;
-}
-
-URandomColorComponent::URandomColorComponent(UClass* InClass, const FString& InName, UObject* InOuter)
-	: UActorComponent(InClass, InName, InOuter)
+void URandomColorComponent::Initialize()
 {
 	bCanEverTick = true;
 }
@@ -69,6 +42,15 @@ void URandomColorComponent::Tick(float DeltaTime)
 	{
 		ElapsedTime -= UpdateInterval;
 		ApplyRandomColor();
+	}
+}
+
+namespace {
+	FVector4 GenerateRandomColor()
+	{
+		static std::mt19937 Rng(std::random_device{}());
+		static std::uniform_real_distribution<float> Dist(0.0f, 1.0f);
+		return { Dist(Rng), Dist(Rng), Dist(Rng), 1.0f };
 	}
 }
 

@@ -8,9 +8,7 @@ class URandomColorComponent;
 class ENGINE_API ACubeActor : public AActor
 {
 public:
-	static UClass* StaticClass();
-
-	ACubeActor(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
+	DECLARE_RTTI(ACubeActor, AActor)
 
 	void PostSpawnInitialize() override;
 

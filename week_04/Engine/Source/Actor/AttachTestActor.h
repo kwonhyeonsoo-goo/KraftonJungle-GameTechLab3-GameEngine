@@ -7,9 +7,7 @@ class UPrimitiveComponent;
 class ENGINE_API AAttachTestActor : public AActor
 {
 public:
-	static UClass* StaticClass();
-
-	AAttachTestActor(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
+	DECLARE_RTTI(AAttachTestActor, AActor)
 
 	void PostSpawnInitialize() override;
 

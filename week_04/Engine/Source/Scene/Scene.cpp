@@ -21,24 +21,7 @@
 #include <fstream>
 #include <iomanip>
 
-namespace
-{
-	UObject* CreateUWorldInstance(UObject* InOuter, const FString& InName)
-	{
-		return new UScene(UScene::StaticClass(), InName, InOuter);
-	}
-}
-
-UClass* UScene::StaticClass()
-{
-	static UClass ClassInfo("UScene", UObject::StaticClass(), &CreateUWorldInstance);
-	return &ClassInfo;
-}
-
-UScene::UScene(UClass* InClass, const FString& InName, UObject* InOuter)
-	: UObject(InClass, InName, InOuter)
-{
-}
+IMPLEMENT_RTTI(UScene, UObject)
 
 UScene::~UScene()
 {

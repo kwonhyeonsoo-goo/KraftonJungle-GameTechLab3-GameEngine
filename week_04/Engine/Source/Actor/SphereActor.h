@@ -8,10 +8,7 @@ class URandomColorComponent;
 class ENGINE_API ASphereActor : public AActor
 {
 public:
-	static UClass* StaticClass();
-
-	ASphereActor(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
-
+	DECLARE_RTTI(ASphereActor, AActor)
 	void PostSpawnInitialize() override;
 
 	UPrimitiveComponent* GetPrimitiveComponent() const { return PrimitiveComponent; }

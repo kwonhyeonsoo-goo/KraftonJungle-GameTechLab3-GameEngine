@@ -13,8 +13,14 @@ uint32_t ExtractUObjectUUID(const void* Ptr)
 //  생성 / 소멸
 // ─────────────────────────────────────────────────────────────
 
-UObject::UObject(UClass* InClass, FString InName, UObject* InOuter)
-	: Class(InClass), Name(std::move(InName)), Outer(InOuter)
+// 기존 코드베이스와 호환되기 위한 더미 생성자
+UObject::UObject(const UClass* InClass, const FString& InName, UObject* InOuter)
+	: UObject(InName, InOuter)
+{
+}
+
+UObject::UObject(const FString& InName, UObject* InOuter)
+	: Name(std::move(InName)), Outer(InOuter)
 {
 	// UUID, InternalIndex는 FObjectFactory::ConstructObject에서 주입
 	ObjectSize = LastNewSize;
@@ -84,12 +90,12 @@ UClass* UObject::StaticClass()
 
 UClass* UObject::GetClass() const
 {
-	return Class;
+	return UObject::StaticClass();
 }
 
 bool UObject::IsA(const UClass* InClass) const
 {
-	return Class && InClass && Class->IsChildOf(InClass);
+	return InClass && GetClass()->IsChildOf(InClass);
 }
 
 // ─────────────────────────────────────────────────────────────

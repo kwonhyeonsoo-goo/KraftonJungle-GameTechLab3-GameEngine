@@ -9,9 +9,7 @@ class UScene;
 class ENGINE_API AActor : public UObject
 {
 public:
-	static UClass* StaticClass();
-
-	AActor(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
+	DECLARE_RTTI(AActor, UObject)
 	~AActor() override = default;
 
 	UScene* GetScene() const { return Scene; }
