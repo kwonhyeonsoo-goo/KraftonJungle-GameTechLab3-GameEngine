@@ -1,3 +1,4 @@
+
 Texture2D FontTexture : register(t0);
 SamplerState FontSampler : register(s0);
 
@@ -9,13 +10,15 @@ cbuffer TextData : register(b2)
 struct PSInput
 {
 	float4 Position : SV_POSITION;
-	float2 UV : TEXTCOORD0;
+	float2 UV : TEXCOORD0;
 };
 
 float4 main(PSInput Input) : SV_TARGET
 {
 	float4 SampledColor = FontTexture.Sample(FontSampler, Input.UV);
-	float Alpha = SampledColor.a;
-	clip(Alpha - 0.01f); // 알파가 거의 0인 픽셀은 버림)
-	return float4(TextColor.rgb, TextColor.a * Alpha);
+	//float Alpha = SampledColor.a;
+	//clip(Alpha - 0.01f);
+	//return float4(TextColor.rgb, TextColor.a * Alpha);
+	//return float4(Input.UV.x, Input.UV.y, 0.0f, 1.0f);
+	return SampledColor;
 }

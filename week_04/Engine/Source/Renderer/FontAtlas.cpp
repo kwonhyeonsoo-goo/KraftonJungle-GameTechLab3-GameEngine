@@ -75,35 +75,6 @@ bool FFontAtlas::Initialize(
 }
 
 // 매핑
-//void FFontAtlas::BuildGridAtlas128x128()
-//{
-//	const float CellU = 1.0f / static_cast<float>(CellsPerRow);
-//	const float CellV = 1.0f / static_cast<float>(Rows);
-//
-//	for (int32 Index = 0; Index < GlyphCount; ++Index)
-//	{
-//		const int32 Row = Index / CellsPerRow;
-//		const int32 Col = Index % CellsPerRow;
-//
-//		FFontGlyph& Glyph = Glyphs[Index];
-//		Glyph.U0 = static_cast<float>(Col) * CellU;
-//		Glyph.V0 = static_cast<float>(Row) * CellV;
-//		Glyph.U1 = static_cast<float>(Col + 1) * CellU;
-//		Glyph.V1 = static_cast<float>(Row + 1) * CellV;
-//
-//		Glyph.Width = 1.0f;
-//		Glyph.Height = 1.0f;
-//		Glyph.Advance = 1.0f;
-//	}
-//
-//	// 공백 U+0020
-//	if (32 < GlyphCount)
-//	{
-//		Glyphs[32].Width = 0.0f;
-//		Glyphs[32].Height = 0.0f;
-//		Glyphs[32].Advance = 0.35f;
-//	}
-//}
 void FFontAtlas::BuildGridAtlas128x128()
 {
 	const float CellU = 1.0f / static_cast<float>(CellsPerRow);
@@ -146,9 +117,11 @@ void FFontAtlas::BuildGridAtlas128x128()
 	}
 
 	// 대문자 A-Z 매핑
-	// A가 1행 33열  코드에서는 0-based로 Row=0, Col=32
-	const uint32 UpperStartRow = 0;
-	const uint32 UpperStartCol = 32;
+	// A가 1행 34열  코드에서는 0-based로 Row=0, Col=33
+
+	// A가 5행 2열인 16x16으로 테스트중
+	const uint32 UpperStartRow = 4;
+	const uint32 UpperStartCol = 1;
 
 	for (uint32 Cp = 'A'; Cp <= 'Z'; ++Cp)
 	{

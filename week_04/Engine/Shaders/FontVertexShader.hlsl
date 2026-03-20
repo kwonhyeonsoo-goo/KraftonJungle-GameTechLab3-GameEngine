@@ -1,3 +1,4 @@
+
 cbuffer FrameData : register(b0)
 {
 	float4x4 View;
@@ -18,7 +19,7 @@ struct VSInput
 struct VSOutput
 {
 	float4 Position : SV_POSITION;
-	float2 UV : TEXTCOORD0;
+	float2 UV : TEXCOORD0;
 };
 
 VSOutput main(VSInput Input)

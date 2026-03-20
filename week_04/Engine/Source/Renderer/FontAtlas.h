@@ -34,8 +34,8 @@ public:
 	ID3D11ShaderResourceView* GetTextureSRV() const { return TextureSRV; }
 	ID3D11SamplerState* GetSamplerState() const { return SamplerState; }
 
-	static constexpr uint32 CellsPerRow = 128;
-	static constexpr uint32 Rows = 128;
+	static constexpr uint32 CellsPerRow = 16;
+	static constexpr uint32 Rows = 16;
 	static constexpr uint32 GlyphCount = CellsPerRow * Rows;
 
 private:

@@ -46,8 +46,8 @@ bool CTextRenderer::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDe
 		return false;
 	}
 
-	const std::wstring FontPath = FPaths::ToWide(FPaths::ContentDir() + "Fonts/NotoSansKR_Atlas.png");
-	//const std::wstring FontPath = (L"C:\\Users\\Seyoung\\source\\repos\\Week3_Team5_DinoEngine\\Content\\Fonts\\NotoSansKR_Atlas.png");
+	//const std::wstring FontPath = FPaths::ToWide(FPaths::ContentDir() + "Fonts/NotoSansKR_Atlas.png");
+	const std::wstring FontPath = FPaths::ToWide(FPaths::ContentDir() + "Fonts/DejaVuSansMono.png");
 	if (!Atlas.Initialize(Device, DeviceContext, FontPath))
 	{
 		MessageBox(0, L"TextRenderer: Atlas.Initialize failed", 0, 0);
@@ -343,6 +343,9 @@ void CTextRenderer::DrawTextBillboard(
 	}
 
 	float TotalWidth = 0.0f;
+	const FFontGlyph& A = Atlas.GetGlyph('A');
+	printf("A: U0=%.4f, V0=%.4f, U1=%.4f, V1=%.4f\n", A.U0, A.V0, A.U1, A.V1);
+	
 	for (uint32 Cp : Codepoints)
 	{
 		const FFontGlyph& Glyph = Atlas.GetGlyph(Cp);
@@ -372,10 +375,10 @@ void CTextRenderer::DrawTextBillboard(
 
 			// 로컬 공간에서 YZ 평면에 글자 quad를 만들고
 			// billboard 월드행렬로 카메라를 바라보게 함
-			Vertices.push_back(FFontVertex(FVector(0.0f, X0, Y1), FVector2(Glyph.U0, Glyph.V0)));
-			Vertices.push_back(FFontVertex(FVector(0.0f, X1, Y1), FVector2(Glyph.U1, Glyph.V0)));
-			Vertices.push_back(FFontVertex(FVector(0.0f, X1, Y0), FVector2(Glyph.U1, Glyph.V1)));
-			Vertices.push_back(FFontVertex(FVector(0.0f, X0, Y0), FVector2(Glyph.U0, Glyph.V1)));
+			Vertices.push_back(FFontVertex(FVector(0.0f, X1, Y1), FVector2(Glyph.U0, Glyph.V0)));
+			Vertices.push_back(FFontVertex(FVector(0.0f, X0, Y1), FVector2(Glyph.U1, Glyph.V0)));
+			Vertices.push_back(FFontVertex(FVector(0.0f, X0, Y0), FVector2(Glyph.U1, Glyph.V1)));
+			Vertices.push_back(FFontVertex(FVector(0.0f, X1, Y0), FVector2(Glyph.U0, Glyph.V1)));
 
 			Indices.push_back(BaseIndex + 0);
 			Indices.push_back(BaseIndex + 1);
