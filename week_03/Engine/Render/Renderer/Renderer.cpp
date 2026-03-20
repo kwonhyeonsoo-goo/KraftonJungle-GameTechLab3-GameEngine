@@ -26,19 +26,26 @@ void FRenderer::Create(HWND hWindow)
 		"GizmoVS", "GizmoPS", PrimitiveInputLayout, ARRAYSIZE(PrimitiveInputLayout));
 	Resources.OverlayShader.Create(Device.GetDevice(), ShaderFilePath,
 		"OverlayVS", "OverlayPS", OverlayInputLayout, ARRAYSIZE(OverlayInputLayout));
-	Resources.EditorShader.Create(Device.GetDevice(), ShaderFilePath,
-		"EditorVS", "EditorPS", PrimitiveInputLayout, ARRAYSIZE(PrimitiveInputLayout));
+	// 픽셀 셰이더를 통한 그리드 그리기 비활성화
+	//Resources.EditorShader.Create(Device.GetDevice(), ShaderFilePath,
+	//	"EditorVS", "EditorPS", PrimitiveInputLayout, ARRAYSIZE(PrimitiveInputLayout));
+
 	Resources.OutlineShader.Create(Device.GetDevice(), ShaderFilePath,
 		"OutlineVS", "OutlinePS", PrimitiveInputLayout, ARRAYSIZE(PrimitiveInputLayout));
 
 	Resources.PerObjectConstantBuffer.Create(Device.GetDevice(), sizeof(FTransformConstants));
 	Resources.GizmoPerObjectConstantBuffer.Create(Device.GetDevice(), sizeof(FGizmoConstants));
 	Resources.OverlayConstantBuffer.Create(Device.GetDevice(), sizeof(FOverlayConstants));
-	Resources.EditorConstantBuffer.Create(Device.GetDevice(), sizeof(FEditorConstants));
+
+	// 픽셀 셰이더를 통한 그리드 비활성화 -> Line은 PerObjectConstantBuffer로 그릴 수 있음
+	//Resources.EditorConstantBuffer.Create(Device.GetDevice(), sizeof(FEditorConstants));
+
 	Resources.OutlineConstantBuffer.Create(Device.GetDevice(), sizeof(FOutlineConstants));
 
 	//	MeshManager init
 	FMeshManager::Initialize();
+
+	BuildGrid();
 }
 
 void FRenderer::Release()
@@ -52,7 +59,7 @@ void FRenderer::Release()
 	Resources.PerObjectConstantBuffer.Release();
 	Resources.GizmoPerObjectConstantBuffer.Release();
 	Resources.OverlayConstantBuffer.Release();
-	Resources.EditorConstantBuffer.Release();
+	//Resources.EditorConstantBuffer.Release();
 	Resources.OutlineConstantBuffer.Release();
 
 	Device.Release();
@@ -65,7 +72,7 @@ void FRenderer::BeginFrame()
 }
 
 //	Render Update Main function. RenderBus에 담긴 모든 RenderCommand에 대해서 Draw Call 수행
-void FRenderer::Render(const FRenderBus& InRenderBus)
+void FRenderer::Render(FRenderBus& InRenderBus)
 {
 	ID3D11DeviceContext* context = Device.GetDeviceContext();
 
@@ -95,21 +102,27 @@ void FRenderer::Render(const FRenderBus& InRenderBus)
 	Resources.PrimitiveShader.Bind(context);
 	RenderComponentPass(context, InRenderBus);
 
+	//  TODO : Editor에서 조작된 그리드로 교체 
+	FLineBatch& Batch = InRenderBus.GetLineBatch();
+	Batch.InsertLineDatas(Grids);
 
 	//	Axis (LINELIST)
-	Device.SetDepthStencilState(EDepthStencilState::Default);
-	Device.SetRasterizerState(ERasterizerState::SolidBackCull);
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
-	Resources.EditorShader.Bind(context);
-	RenderEditorPass(context, InRenderBus);
+	//Device.SetDepthStencilState(EDepthStencilState::Default);
+	//Device.SetRasterizerState(ERasterizerState::SolidBackCull);
+	//context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+	//Resources.EditorShader.Bind(context);
+	//RenderEditorPass(context, InRenderBus);
+	//
+	////	Grid (AlphaBlend)
+	////	Grid should not overwrite depth, otherwise gizmo behind z=0 gets culled.
+	//Device.SetDepthStencilState(EDepthStencilState::DepthReadOnly);
+	//Device.SetBlendState(EBlendState::AlphaBlend);
+	//context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//Resources.EditorShader.Bind(context);
+	//RenderGridEditorPass(context, InRenderBus);
 
-	//	Grid (AlphaBlend)
-	//	Grid should not overwrite depth, otherwise gizmo behind z=0 gets culled.
-	Device.SetDepthStencilState(EDepthStencilState::DepthReadOnly);
-	Device.SetBlendState(EBlendState::AlphaBlend);
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	Resources.EditorShader.Bind(context);
-	RenderGridEditorPass(context, InRenderBus);
+	//	Grid And Box
+	RenderLineBatchPass(context, InRenderBus);
 
 	//	Selection Outline (Stencil)
 	Device.SetDepthStencilState(EDepthStencilState::StencilOutline);
@@ -121,6 +134,7 @@ void FRenderer::Render(const FRenderBus& InRenderBus)
 	// Gizmo (Depth-less Variable)
 	Device.SetBlendState(EBlendState::Opaque);
 	RenderDepthLessPass(context, InRenderBus);
+
 
 	//	Reset to default
 	Device.SetRasterizerState(ERasterizerState::SolidBackCull);
@@ -139,6 +153,23 @@ void FRenderer::RenderOverlay(const FRenderBus& InRenderBus)
 	Resources.OverlayShader.Bind(context);
 
 	RenderOverlayPass(context, InRenderBus);
+}
+
+void FRenderer::BuildGrid()
+{
+	int32 GridMin = -1000;
+	int32 GridMax = 1000;
+	FVector4 GridColor = { 0.38f, 0.38f ,0.38f, 1.f };
+
+
+	for (float i = GridMin; i <= GridMax; i += 5)
+    {
+        Grids.push_back({FVector(GridMin, i, 0.0f), GridColor});
+		Grids.push_back({FVector(GridMax, i, 0.0f), GridColor});
+
+		Grids.push_back({FVector(i, GridMin, 0.0f), GridColor});
+		Grids.push_back({FVector(i, GridMax, 0.0f), GridColor});
+    }
 }
 
 void FRenderer::RenderComponentPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus)
@@ -180,21 +211,46 @@ void FRenderer::RenderDepthLessPass(ID3D11DeviceContext* InDeviceContext, const 
 	//}
 }
 
-void FRenderer::RenderEditorPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus)
+//픽셀 셰이더를 통한 그리드와 축 RenderPass 비활성화
+//void FRenderer::RenderEditorPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus)
+//{
+//	for (const FRenderCommand& command : InRenderBus.GetEditorCommand())
+//	{
+//		DrawCommand(InDeviceContext, command);
+//	}
+//}
+//
+//void FRenderer::RenderGridEditorPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus)
+//{
+//	for (const FRenderCommand& command : InRenderBus.GetGridEditorCommand())
+//	{
+//		DrawCommand(InDeviceContext, command);
+//	}
+//}
+
+void FRenderer::RenderLineBatchPass(ID3D11DeviceContext* InDeviceContext, FRenderBus& InRenderBus)
 {
-	for (const FRenderCommand& command : InRenderBus.GetEditorCommand())
-	{
-		DrawCommand(InDeviceContext, command);
-	}
+	FLineBatch& Batch = InRenderBus.GetLineBatch();
+	if (!Batch.HasLines()) return;
+
+	Device.SetDepthStencilState(EDepthStencilState::Default);
+	Device.SetBlendState(EBlendState::Opaque);
+	InDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+	Resources.PrimitiveShader.Bind(InDeviceContext);
+
+	FTransformConstants LineBatchConstants = {};
+	LineBatchConstants.Model = FMatrix::Identity;
+	LineBatchConstants.View = InRenderBus.GetCachedView();
+	LineBatchConstants.Projection = InRenderBus.GetCachedProjection();
+
+	Resources.PerObjectConstantBuffer.Update(InDeviceContext, &LineBatchConstants, sizeof(FTransformConstants));
+	ID3D11Buffer*  ConstantBuffer = Resources.PerObjectConstantBuffer.GetBuffer();
+	InDeviceContext->VSSetConstantBuffers(0, 1, &ConstantBuffer);
+
+	//한번의 드로우 콜로 해결
+	Batch.DrawLineBatch(InDeviceContext);
 }
 
-void FRenderer::RenderGridEditorPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus)
-{
-	for (const FRenderCommand& command : InRenderBus.GetGridEditorCommand())
-	{
-		DrawCommand(InDeviceContext, command);
-	}
-}
 
 void FRenderer::RenderOverlayPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus)
 {
@@ -248,7 +304,7 @@ void FRenderer::DrawCommand(ID3D11DeviceContext * InDeviceContext, const FRender
 		InDeviceContext->VSSetConstantBuffers(2, 1, &cb);
 		InDeviceContext->PSSetConstantBuffers(2, 1, &cb);
 	}
-	else if (InCommand.Type == ERenderCommandType::Axis || InCommand.Type == ERenderCommandType::Grid)
+	/*else if (InCommand.Type == ERenderCommandType::Axis || InCommand.Type == ERenderCommandType::Grid)
 	{
 		Resources.EditorConstantBuffer.Update(InDeviceContext, &InCommand.EditorConstants, sizeof(FEditorConstants));
 
@@ -259,7 +315,7 @@ void FRenderer::DrawCommand(ID3D11DeviceContext * InDeviceContext, const FRender
 		cb = Resources.PerObjectConstantBuffer.GetBuffer();
 		InDeviceContext->VSSetConstantBuffers(0, 1, &cb);
 		InDeviceContext->PSSetConstantBuffers(0, 1, &cb);
-	}
+	}*/
 	else if(InCommand.Type == ERenderCommandType::SelectionOutline)
 	{
 		Resources.OutlineConstantBuffer.Update(InDeviceContext, &InCommand.OutlineConstants, sizeof(FOutlineConstants));

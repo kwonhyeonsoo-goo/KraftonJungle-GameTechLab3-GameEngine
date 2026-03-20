@@ -89,6 +89,20 @@ public:
 	EPrimitiveType GetPrimitiveType() const override { return PrimitiveType; }
 };
 
+
+class UBoxComponent : public UPrimitiveComponent
+{
+private:
+
+public:
+	DECLARE_CLASS(UBoxComponent, UPrimitiveComponent)
+	UBoxComponent();
+	bool GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand) override;
+	static constexpr EPrimitiveType PrimitiveType = EPrimitiveType::EPT_Box;
+
+	EPrimitiveType GetPrimitiveType() const override { return PrimitiveType; }
+};
+
 #if TEST
 
 //class UStandfordBunnyComponent : public UPrimitiveComponent

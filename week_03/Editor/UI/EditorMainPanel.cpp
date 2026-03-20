@@ -215,6 +215,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 		Renderer->renderMode = (Renderer->renderMode == RenderMode::SolidMode ? RenderMode::WireFrameMode : RenderMode::SolidMode);
 	}
 
+
 	ImGui::End();
 
 	RenderObjectWindow(ViewOutput.Object);

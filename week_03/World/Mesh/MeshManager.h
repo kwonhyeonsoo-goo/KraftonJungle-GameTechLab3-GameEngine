@@ -6,19 +6,6 @@
 #include "Math/Vector.h"
 #include "Render/Resource/VertexTypes.h"
 
-//	Render/Resource/VertexTypes.h로 이동했습니다.
-//struct FVertex
-//{
-//	FVector Postion;
-//	FVector4 Color;
-//};
-
-//struct FMeshData
-//{
-//	TArray<FVertex> Vertices;
-//	TArray<uint32> Indices;
-//};
-
 
 class FMeshManager
 {
@@ -26,24 +13,27 @@ private:
 	FMeshManager() = default;
 
 	static FMeshData CubeMeshData;
+	static FMeshData BoxMeshData;
 	static FMeshData PlaneMeshData;
 	static FMeshData SphereMeshData;
 	static FMeshData TranslationGizmoMeshData;
 	static FMeshData RotationGizmoMeshData;
 	static FMeshData ScaleGizmoMeshData;
-	static FMeshData AxisMeshData;
-	static FMeshData GridMeshData;
+	//static FMeshData AxisMeshData;
+	//static FMeshData GridMeshData;
 	
 	static FMeshData MouseOverlayMeshData;
 
 	static void CreateCube();
+	static void CreateBox();
 	static void CreatePlane();
 	static void CreateSphere(int slices = 20, int stacks = 20);
 	static void CreateTranslationGizmo();
 	static void CreateRotationGizmo();
 	static void CreateScaleGizmo();
-	static void CreateAxis();
-	static void CreateGrid();
+
+	//static void CreateAxis();
+	//static void CreateGrid();
 
 	static void CreateMouseOverlay();
 
@@ -74,8 +64,9 @@ public:
 	static const FMeshData& GetTranslationGizmo() { return Get().TranslationGizmoMeshData; }
 	static const FMeshData& GetRotationGizmo() { return Get().RotationGizmoMeshData; }
 	static const FMeshData& GetScaleGizmo() { return Get().ScaleGizmoMeshData; }
-	static const FMeshData& GetAxis() { return Get().AxisMeshData; }
-	static const FMeshData& GetGrid() { return Get().GridMeshData; }
+	static const FMeshData& GetBox() { return Get().BoxMeshData; };
+	//static const FMeshData& GetAxis() { return Get().AxisMeshData; }
+	//static const FMeshData& GetGrid() { return Get().GridMeshData; }
 
 	static const FMeshData& GetMouseOverlay() { return Get().MouseOverlayMeshData; }
 };

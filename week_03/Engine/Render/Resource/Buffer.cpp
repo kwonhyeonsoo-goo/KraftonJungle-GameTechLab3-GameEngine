@@ -4,18 +4,21 @@
 
 void FMeshBuffer::Create(ID3D11Device* InDevice, const FMeshData& InMeshData)
 {
-	if (InMeshData.Vertices.empty())
-	{
-		VertexBuffer.Release();
-		IndexBuffer.Release();
-		return;
-	}
+	Release();
 
-	VertexBuffer.Create(InDevice, InMeshData.Vertices, sizeof(FVertex) * InMeshData.Vertices.size(), sizeof(FVertex));
+	if (InMeshData.Vertices.empty()) return;
+
+	VertexBuffer.Create(InDevice, InMeshData.Vertices, sizeof(FVertex));
 	if (!InMeshData.Indices.empty())
 	{
-		IndexBuffer.Create(InDevice, InMeshData.Indices, sizeof(uint32) * InMeshData.Indices.size());
+		IndexBuffer.Create(InDevice, InMeshData.Indices);
 	}
+}
+
+void FMeshBuffer::CreateDynamic(ID3D11Device* InDevice, uint32 InMaxVertices)
+{
+	Release();
+	VertexBuffer.CreateDynamic(InDevice, InMaxVertices, sizeof(FVertex));
 }
 
 void FMeshBuffer::Release()
@@ -28,33 +31,39 @@ void FMeshBuffer::Release()
 
 #pragma region __FVERTEXBUFFER__
 
-void FVertexBuffer::Create(ID3D11Device* InDevice, const TArray<FVertex> & InData, uint32 InByteWidth, uint32 InStride)
+void FVertexBuffer::Create(ID3D11Device* InDevice, const TArray<FVertex>& InData, uint32 InStride)
 {
-	if (InData.empty() || InByteWidth == 0)
-	{
-		Release();
-		VertexCount = 0;
-		Stride = InStride;
-		return;
-	}
+	Release();
 
-	D3D11_BUFFER_DESC vertexBufferDesc = {};
-	vertexBufferDesc.ByteWidth = InByteWidth;
-	vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	if (InData.empty()) return;
 
-	D3D11_SUBRESOURCE_DATA vertexBufferSRD = { InData.data() };
-	
-	HRESULT hr = InDevice->CreateBuffer(&vertexBufferDesc, &vertexBufferSRD, &Buffer);
-	if (FAILED(hr))
-	{
-		Release();
-		VertexCount = 0;
-		Stride = InStride;
-		return;
-	}
+	D3D11_BUFFER_DESC desc = {};
+	desc.ByteWidth  = static_cast<uint32>(InData.size()) * InStride;
+	desc.Usage      = D3D11_USAGE_IMMUTABLE;
+	desc.BindFlags  = D3D11_BIND_VERTEX_BUFFER;
+
+	D3D11_SUBRESOURCE_DATA srd = { InData.data() };
+	HRESULT hr = InDevice->CreateBuffer(&desc, &srd, &Buffer);
+	if (FAILED(hr)) { Release(); return; }
 
 	VertexCount = static_cast<uint32>(InData.size());
+	Stride = InStride;
+}
+
+void FVertexBuffer::CreateDynamic(ID3D11Device* InDevice, uint32 InMaxVertices, uint32 InStride)
+{
+	Release();
+
+	D3D11_BUFFER_DESC desc = {};
+	desc.ByteWidth      = InMaxVertices * InStride;
+	desc.Usage          = D3D11_USAGE_DYNAMIC;
+	desc.BindFlags      = D3D11_BIND_VERTEX_BUFFER;
+	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+	HRESULT hr = InDevice->CreateBuffer(&desc, nullptr, &Buffer);
+	if (FAILED(hr)) { Release(); return; }
+
+	VertexCount = 0;
 	Stride = InStride;
 }
 
@@ -67,10 +76,16 @@ void FVertexBuffer::Release()
 	}
 }
 
-//	 Vertex buffer는 Immutable로 생성했으므로 업데이트가 불가. 업데이트가 필요하다면 Dynamic으로 생성
-void FVertexBuffer::Update(ID3D11DeviceContext* InDeviceContext, const TArray<uint32>& InData, uint32 InByteWidth)
+void FVertexBuffer::Update(ID3D11DeviceContext* InDeviceContext, const TArray<FVertex>& InData)
 {
-	//	 Do nothing
+	if (!Buffer || InData.empty()) return;
+
+	D3D11_MAPPED_SUBRESOURCE MSR = {};
+	InDeviceContext->Map(Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MSR);
+	memcpy(MSR.pData, InData.data(), sizeof(FVertex) * InData.size());
+	InDeviceContext->Unmap(Buffer, 0);
+
+	VertexCount = static_cast<uint32>(InData.size());
 }
 
 ID3D11Buffer* FVertexBuffer::GetBuffer() const
@@ -133,41 +148,24 @@ ID3D11Buffer* FConstantBuffer::GetBuffer()
 
 #pragma region __FINDEXBUFFER__
 
-void FIndexBuffer::Create(ID3D11Device* InDevice, const TArray<uint32>& InData, uint32 InByteWidth)
+void FIndexBuffer::Create(ID3D11Device* InDevice, const TArray<uint32>& InData)
 {
-	if (InData.empty() || InByteWidth == 0)
-	{
-		Release();
-		IndexCount = 0;
-		return;
-	}
+	Release();
 
-	D3D11_BUFFER_DESC indexBufferDesc = {};
+	if (InData.empty()) return;
 
-	indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-	indexBufferDesc.ByteWidth = InByteWidth;	//	NOTE : Total byte width of the buffer, not the count of indices
-	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	D3D11_BUFFER_DESC desc = {};
+	desc.Usage     = D3D11_USAGE_IMMUTABLE;
+	desc.ByteWidth = static_cast<uint32>(InData.size()) * sizeof(uint32);
+	desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 
-	D3D11_SUBRESOURCE_DATA indexBufferSRD = { InData.data() };
-
-	HRESULT hr = InDevice->CreateBuffer(&indexBufferDesc, &indexBufferSRD, &Buffer);
-	if (FAILED(hr))
-	{
-		Release();
-		IndexCount = 0;
-		return;
-	}
+	D3D11_SUBRESOURCE_DATA srd = { InData.data() };
+	HRESULT hr = InDevice->CreateBuffer(&desc, &srd, &Buffer);
+	if (FAILED(hr)) { Release(); return; }
 
 	IndexCount = static_cast<uint32>(InData.size());
-
-#if DEBUG
-	if (FAILED(hr))
-	{
-		MessageBox(nullptr, L"Failed to create index buffer", L"Error", MB_OK);
-	}
-#endif
-
 }
+
 
 void FIndexBuffer::Release()
 {

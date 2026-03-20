@@ -144,6 +144,7 @@
     <ClCompile Include="Engine\Render\Resource\Buffer.cpp" />
     <ClCompile Include="Engine\Render\Resource\MeshBufferManager.cpp" />
     <ClCompile Include="Engine\Render\Resource\Shader.cpp" />
+    <ClCompile Include="Engine\Render\Scene\LineBatch.cpp" />
     <ClCompile Include="Engine\Render\Scene\RenderBus.cpp" />
     <ClCompile Include="Engine\Render\Scene\RenderCollector.cpp" />
     <ClCompile Include="Engine\Runtime\EngineLoop.cpp" />
@@ -197,6 +198,7 @@
     <ClInclude Include="Engine\Render\Resource\RenderResources.h" />
     <ClInclude Include="Engine\Render\Resource\Shader.h" />
     <ClInclude Include="Engine\Render\Resource\VertexTypes.h" />
+    <ClInclude Include="Engine\Render\Scene\LineBatch.h" />
     <ClInclude Include="Engine\Render\Scene\RenderBus.h" />
     <ClInclude Include="Engine\Render\Scene\RenderCollector.h" />
     <ClInclude Include="Engine\Render\Scene\RenderCollectorContext.h" />
