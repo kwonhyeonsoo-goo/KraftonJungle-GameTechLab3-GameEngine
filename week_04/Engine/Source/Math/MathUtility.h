@@ -31,4 +31,12 @@ struct ENGINE_API FMath
 	{
 		return A < B ? A : B;
 	}
+
+	template <typename T>
+	static T Clamp(const T& Value, const T& Min, const T& Max)
+	{
+		if (Value < Min) return Min;
+		if (Value > Max) return Max;
+		return Value;
+	}
 };
