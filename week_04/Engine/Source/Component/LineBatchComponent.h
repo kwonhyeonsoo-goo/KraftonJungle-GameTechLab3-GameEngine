@@ -13,4 +13,6 @@ public:
 	void Initialize();
 	void DrawLine(FVector InStart, FVector InEnd, FVector4 color);
 	void DrawCube(FVector InCenter, FQuat InRotation, FVector InScale, FVector4 InColor);
+	// 테스트
+	void Tick(float deltaTime) override;
 };

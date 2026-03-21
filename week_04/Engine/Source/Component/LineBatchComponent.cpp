@@ -5,6 +5,7 @@ IMPLEMENT_RTTI(ULineBatchComponent, UPrimitiveComponent)
 
 void ULineBatchComponent::Initialize()
 {
+	bCanEverTick = true; // 테스트
 	Primitive = std::make_shared<CPrimitiveLineBatch>();
 	LocalBoundRadius = 1.0f;
 }
@@ -39,4 +40,17 @@ void ULineBatchComponent::DrawCube(FVector InCenter, FQuat InRotation, FVector I
 		FVector End = InRotation * FVector::Multiply(BaseCube[i][1], InScale) + InCenter;
 		LineBatch->AddLine(Start, End, InColor);
 	}
+}
+
+void ULineBatchComponent::Tick(float deltaTime)
+{
+	static FVector point = { 1, 0, 1 };
+	static float time = 0.0f;
+	float angle = (time) * 3.141592f * 180;
+	const float radius = 3.0f;
+	FVector newPoint = { radius * cos(angle), radius * sin(angle), 1 };
+	DrawLine(point, newPoint, { 1,1,1,1 });
+	point = newPoint;
+	time += deltaTime;
+	UE_LOG("newPoint x: %f, y : %f\n", newPoint.X, newPoint.Y);
 }
