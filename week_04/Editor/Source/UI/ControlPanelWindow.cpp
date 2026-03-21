@@ -212,6 +212,7 @@ void CControlPanelWindow::Render(CCore* Core)
 				Cam->GetCamera()->SetRotation(0.f,0.f);
 			}
 			Core->GetScene()->ClearActors();
+
 			UE_LOG("New scene created");
 		}
 
@@ -274,9 +275,10 @@ void CControlPanelWindow::Render(CCore* Core)
 			{
 				Core->SetSelectedActor(nullptr);
 				Core->GetScene()->ClearActors();
-
+				
 				const FString Path = FPaths::SceneDir() + SceneFiles[SelectedSceneIndex] + ".json";
 				Core->GetScene()->LoadSceneFromFile(Path, Core->GetRenderer()->GetDevice());
+	
 				UE_LOG("Scene loaded: %s", SceneFiles[SelectedSceneIndex].c_str());
 			}
 		}

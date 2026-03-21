@@ -153,6 +153,10 @@ void UObject::ClearFlags(EObjectFlags InFlags)
 
 void UObject::MarkPendingKill()
 {
+	if (UUID != 0)
+	{
+		GUUIDToObjectMap.erase(UUID);
+	}
 	AddFlags(EObjectFlags::PendingKill);
 }
 

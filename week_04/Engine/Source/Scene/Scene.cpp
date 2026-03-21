@@ -215,6 +215,18 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 			}
 		}
 
+		//AddOwnedComponent → SetOwner(this) → TObjectPtr이 Actor의 UUID를 캐싱
+		//	그 다음 LoadSceneFromFile에서 Actor->UUID = SavedUUID로 UUID 변경
+		//	TObjectPtr은 여전히 이전 UUID를 기억
+		//	GetOwner() → TObjectPtr이 캐싱된 UUID로 맵 조회 → 맵에 없음 → nullptr 반환
+		// 해결안 UUID 변경 후에 Owner를 다시 설정
+		for (UActorComponent* Comp : Actor->GetComponents())
+		{
+			if (Comp)
+			{
+				Comp->SetOwner(Actor);
+			}
+		}
 		++ActorIndex;
 
 	}
@@ -226,6 +238,7 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 			FObjectFactory::SetLastUUID(Saved);
 		}
 	}
+
 }
 
 void UScene::SaveSceneToFile(const FString& FilePath)

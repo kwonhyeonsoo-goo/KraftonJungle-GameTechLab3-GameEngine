@@ -36,6 +36,8 @@ UObject* FObjectFactory::ConstructObject(
 	return NewObj;
 }
 
+
+
 uint32 FObjectFactory::GetLastUUID()
 {
 	return LastUUID;
