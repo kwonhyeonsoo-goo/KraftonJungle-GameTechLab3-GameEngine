@@ -114,6 +114,7 @@ void CGizmo::BuildRenderCommands(AActor* SelectedActor, const CCamera* Camera, F
 	Command.bDisableDepthTest = true;
 	Command.bDisableDepthWrite = true;
 	Command.bDisableCulling = true;
+	
 
 	switch (Mode)
 	{

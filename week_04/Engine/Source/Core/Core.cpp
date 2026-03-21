@@ -193,10 +193,10 @@ void CCore::Physics(float DeltaTime)
 			}
 		}
 
-		if (Renderer)
-		{
-			Renderer->DrawLine(LineStart, LineEnd, FVector4(0, 1, 1, 1));
-		}
+		//if (Renderer)
+		//{
+		//	Renderer->DrawLine(LineStart, LineEnd, FVector4(0, 1, 1, 1));
+		//}
 	}
 }
 

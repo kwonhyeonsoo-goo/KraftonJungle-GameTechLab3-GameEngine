@@ -400,7 +400,10 @@ void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveCom
 		{
 			continue;
 		}
-
+		if (!Actor->IsVisible())
+		{
+			continue;
+		}
 		for (UActorComponent* Component : Actor->GetComponents())
 		{
 			if (!Component->IsA(UPrimitiveComponent::StaticClass()))
@@ -434,9 +437,7 @@ void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue&
 	
 	for (UPrimitiveComponent* PrimitiveComponent : VisiblePrimitives)
 	{
-		AActor* Owner = PrimitiveComponent->GetOwner();
-		if (Owner && !Owner->IsVisible())
-			continue;
+	
 		FRenderCommand Command;
 		Command.MeshData = PrimitiveComponent->GetPrimitive()->GetMeshData();
 		Command.WorldMatrix = PrimitiveComponent->GetWorldTransform();
