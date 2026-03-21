@@ -1,5 +1,6 @@
 #pragma once
-#include "../CoreMinimal.h"
+#include "CoreMinimal.h"
+#include "EngineAPI.h"
 enum class EEngineShowFlags : uint64
 {
 	SF_Primitives = 1 << 0,
@@ -8,7 +9,7 @@ enum class EEngineShowFlags : uint64
 	 // SF_Grid        = 1 << 3,
 	 // SF_Fog         = 1 << 4,
 };
-class FShowFlags
+class ENGINE_API FShowFlags
 {
 public:
 	FShowFlags()
