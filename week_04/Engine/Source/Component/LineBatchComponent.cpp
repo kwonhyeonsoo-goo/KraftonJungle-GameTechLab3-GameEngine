@@ -1,6 +1,7 @@
 #include "LineBatchComponent.h"
 #include "PrimitiveLineBatch.h"
 #include "Math/MathUtility.h"
+#include "Object/Class.h"
 
 IMPLEMENT_RTTI(ULineBatchComponent, UPrimitiveComponent)
 
