@@ -33,7 +33,9 @@ public:
 		static_assert(std::is_base_of_v<UObject, T>, "T must derive from UObject");
 		return static_cast<T*>(ConstructObject(T::StaticClass(), InOuter, InName));
 	}
-
+	static uint32 GetLastUUID();
+	static void SetLastUUID(uint32 InUUID);
 private:
+	static uint32 LastUUID;
 	static uint32 GenerateUUID();
 };

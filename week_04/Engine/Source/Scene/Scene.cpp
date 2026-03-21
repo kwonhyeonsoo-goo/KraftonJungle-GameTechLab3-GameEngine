@@ -134,6 +134,10 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 		return;
 	}
 
+	if (Json.contains("NextUUID"))
+	{
+		FObjectFactory::SetLastUUID(Json["NextUUID"].get<uint32>());
+	}
 	int32 ActorIndex = 0;
 	for (auto& [Key, Value] : Json["Primitives"].items())
 	{
@@ -158,7 +162,13 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 			++ActorIndex;
 			continue;
 		}
-
+		if (Value.contains("UUID"))
+		{
+			uint32 SavedUUID = Value["UUID"].get<uint32>();
+			GUUIDToObjectMap.erase(Actor->UUID);
+			Actor->UUID = SavedUUID;
+			GUUIDToObjectMap[SavedUUID] = Actor;
+		}
 		if (Value.contains("Material"))
 		{
 			const FString MaterialName = Value["Material"].get<FString>();
@@ -258,7 +268,7 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 		const FString Key = std::to_string(Index);
 
 		Primitives[Key]["Type"] = Type;
-
+		Primitives[Key]["UUID"] = Actor->UUID;
 		// Material 이름 저장 (에셋 원본 이름 사용)
 		UPrimitiveComponent* PrimComp = Actor->GetComponentByClass<UPrimitiveComponent>();
 		if (PrimComp && PrimComp->GetMaterial() && !PrimComp->GetMaterial()->GetOriginName().empty())
@@ -283,7 +293,7 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 	}
 
 	Json["Primitives"] = Primitives;
-
+	Json["NextUUID"] = FObjectFactory::GetLastUUID();
 	std::ofstream File(FilePath);
 	if (File.is_open())
 	{

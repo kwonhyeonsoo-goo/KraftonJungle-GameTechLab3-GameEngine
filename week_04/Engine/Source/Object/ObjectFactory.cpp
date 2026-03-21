@@ -4,7 +4,7 @@
 
 // UUID -> UObject* 역방향 조회 맵 정의
 TMap<uint32, UObject*> GUUIDToObjectMap;
-
+uint32 FObjectFactory::LastUUID = 0;
 // 조건 3: ConstructObject 구현
 // 처리 순서:
 //   1. UClass::CreateInstance  → 파생 클래스 new 호출 (operator new에서 메모리 통계 갱신)
@@ -36,8 +36,17 @@ UObject* FObjectFactory::ConstructObject(
 	return NewObj;
 }
 
+uint32 FObjectFactory::GetLastUUID()
+{
+	return LastUUID;
+}
+
+void FObjectFactory::SetLastUUID(uint32 InUUID)
+{
+	LastUUID = InUUID;
+}
+
 uint32 FObjectFactory::GenerateUUID()
 {
-	static uint32 LastUUID = 0;
 	return ++LastUUID;
 }
