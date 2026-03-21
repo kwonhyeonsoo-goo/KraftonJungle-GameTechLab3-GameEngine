@@ -1,5 +1,7 @@
 #include "UUIDBillboardComponent.h"
 #include "Actor/Actor.h"
+#include "Object/Class.h"
+
 
 IMPLEMENT_RTTI(UUUIDBillboardComponent, UPrimitiveComponent)
 
