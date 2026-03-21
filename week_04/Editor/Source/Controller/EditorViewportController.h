@@ -18,6 +18,11 @@ public:
 	void Cleanup();
 
 	void Tick(float DeltaTime);
+	float GetSensitivity();
+	void SetSensitivity(float InSensitivity);
+
+	float GetMoveSpeed();
+	void SetMoveSpeed(float InSpeed);
 
 private:
 	void SetupInputBindings(); // 기존 ProcessCameraInput 대체
@@ -36,4 +41,6 @@ private:
 	FInputAction LookYAction{ "LookY",       EInputActionValueType::Float };
 
 	float CurrentDeltaTime = 0.0f; // 콜백에서 DeltaTime 쓰기 위해 보관
+	float MouseSensitivity = 0.2f;
+	float MoveSpeed = 1.0f;
 };

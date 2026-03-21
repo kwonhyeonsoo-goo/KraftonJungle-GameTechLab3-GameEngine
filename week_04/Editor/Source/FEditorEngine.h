@@ -23,6 +23,7 @@ protected:
 	ESceneType GetStartupSceneType() const override { return ESceneType::Editor; }
 	std::unique_ptr<IViewportClient> CreateViewportClient() override;
 
+	CEditorViewportController* GetViewportController();
 private:
 	void SyncViewportClient();
 

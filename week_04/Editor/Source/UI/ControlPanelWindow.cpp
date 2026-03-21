@@ -13,6 +13,7 @@
 #include "Core/Paths.h"
 #include "Debug/EngineLog.h"
 #include "Component/CameraComponent.h"
+#include "Controller/EditorViewportController.h"
 #include <filesystem>
 
 namespace
@@ -86,10 +87,12 @@ void CControlPanelWindow::Render(CCore* Core)
 		{
 			ImGui::TextUnformatted("Preview scene is editor-only. Scene save/load is disabled.");
 		}
+		ImGui::SeparatorText("Camera");
+		
 
 		if (CCamera* Camera = Core->GetScene()->GetCamera())
 		{
-			ImGui::SeparatorText("Camera");
+		
 
 			const FVector CameraPosition = Camera->GetPosition();
 			float Position[3] = { CameraPosition.X, CameraPosition.Y, CameraPosition.Z };

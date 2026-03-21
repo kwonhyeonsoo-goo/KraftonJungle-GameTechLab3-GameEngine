@@ -33,6 +33,26 @@ void CEditorViewportController::Tick(float DeltaTime)
 	CurrentDeltaTime = DeltaTime;
 }
 
+float CEditorViewportController::GetSensitivity()
+{
+	return MouseSensitivity;
+}
+
+void CEditorViewportController::SetSensitivity(float InSensitivity)
+{
+	MouseSensitivity = InSensitivity;
+}
+
+float CEditorViewportController::GetMoveSpeed()
+{
+	return MoveSpeed;
+}
+
+void CEditorViewportController::SetMoveSpeed(float InSpeed)
+{
+	MoveSpeed = InSpeed;
+}
+
 void CEditorViewportController::SetupInputBindings()
 {
 	CameraContext = new FInputMappingContext();
@@ -69,31 +89,31 @@ void CEditorViewportController::SetupInputBindings()
 	EnhancedInput->BindAction(&MoveForwardAction, ETriggerEvent::Triggered,
 		[this](const FInputActionValue& Value) {
 		if (InputManager && InputManager->IsMouseButtonDown(CInputManager::MOUSE_RIGHT))
-			CameraComponent->MoveForward(Value.Get() * CurrentDeltaTime);
+			CameraComponent->MoveForward(Value.Get() * CurrentDeltaTime* MoveSpeed);
 	});
 
 	EnhancedInput->BindAction(&MoveRightAction, ETriggerEvent::Triggered,
 		[this](const FInputActionValue& Value) {
 		if (InputManager && InputManager->IsMouseButtonDown(CInputManager::MOUSE_RIGHT))
-			CameraComponent->MoveRight(Value.Get() * CurrentDeltaTime);
+			CameraComponent->MoveRight(Value.Get() * CurrentDeltaTime* MoveSpeed);
 	});
 
 	EnhancedInput->BindAction(&MoveUpAction, ETriggerEvent::Triggered,
 		[this](const FInputActionValue& Value) {
 		if (InputManager && InputManager->IsMouseButtonDown(CInputManager::MOUSE_RIGHT))
-			CameraComponent->MoveUp(Value.Get() * CurrentDeltaTime);
+			CameraComponent->MoveUp(Value.Get() * CurrentDeltaTime* MoveSpeed);
 	});
 
 	EnhancedInput->BindAction(&LookXAction, ETriggerEvent::Triggered,
 		[this](const FInputActionValue& Value) {
 		if (InputManager && InputManager->IsMouseButtonDown(CInputManager::MOUSE_RIGHT))
-			CameraComponent->Rotate(Value.Get() * 0.2f, 0.0f);
+			CameraComponent->Rotate(Value.Get() * MouseSensitivity, 0.0f);
 	});
 
 	EnhancedInput->BindAction(&LookYAction, ETriggerEvent::Triggered,
 		[this](const FInputActionValue& Value) {
 		if (InputManager && InputManager->IsMouseButtonDown(CInputManager::MOUSE_RIGHT))
-			CameraComponent->Rotate(0.0f, -Value.Get() * 0.2f);
+			CameraComponent->Rotate(0.0f, -Value.Get() * MouseSensitivity);
 	});
 
 }

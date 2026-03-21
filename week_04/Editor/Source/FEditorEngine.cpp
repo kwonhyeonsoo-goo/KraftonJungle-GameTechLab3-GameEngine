@@ -163,6 +163,11 @@ std::unique_ptr<IViewportClient> FEditorEngine::CreateViewportClient()
 	return std::make_unique<CEditorViewportClient>(EditorUI, MainWindow);
 }
 
+CEditorViewportController* FEditorEngine::GetViewportController()
+{
+	return &ViewportController;
+}
+
 void FEditorEngine::SyncViewportClient()
 {
 	if (!Core)
