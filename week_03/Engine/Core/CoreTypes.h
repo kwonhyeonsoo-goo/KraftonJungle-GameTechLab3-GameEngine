@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <stdint.h>
 #include <vector>
 #include <list>
@@ -12,8 +12,19 @@
 #include "Core/Debug.h"
 
 
+typedef int int8;
+typedef unsigned int uint8;
+
+typedef int int16;
+typedef unsigned int uint16;
+
 typedef int int32;
 typedef unsigned int uint32;
+
+typedef long long int64;
+typedef unsigned long long uint64;
+
+typedef wchar_t TCHAR;
 
 using FString = std::string;
 

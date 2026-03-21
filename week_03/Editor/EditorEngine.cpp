@@ -155,6 +155,7 @@ void FEditorEngine::BeginFrame(float DeltaTime)
 
 void FEditorEngine::Update(float DeltaTime)
 {
+	
 }
 
 void FEditorEngine::Render(float DeltaTime)

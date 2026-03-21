@@ -11,12 +11,14 @@ void FD3DDevice::Create(HWND InHWindow)
 	CreateRasterizerState();
 	CreateDepthStencilBuffer();
 	CreateBlendState();
+	CreateSampler();
 }
 
 void FD3DDevice::Release()
 {
 	DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 
+	ReleaseSampler();
 	ReleaseBlendState();
 	ReleaseDepthStencilBuffer();
 	ReleaseRasterizerState();
@@ -333,4 +335,24 @@ void FD3DDevice::ReleaseDepthStencilBuffer()
 void FD3DDevice::ReleaseBlendState()
 {
 	SAFE_RELEASE(BlendStateAlpha);
+}
+
+void FD3DDevice::CreateSampler()
+{
+	D3D11_SAMPLER_DESC sampDesc = {};
+	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+	Device->CreateSamplerState(&sampDesc, &FontSampler);
+}
+
+void FD3DDevice::ReleaseSampler()
+{
+	if (FontSampler) {
+		FontSampler->Release();
+		FontSampler = nullptr;
+	}
 }

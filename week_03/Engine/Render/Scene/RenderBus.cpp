@@ -12,6 +12,8 @@ void FRenderBus::Create(ID3D11Device* InDevice)
 	BatchedLine.Create(InDevice);
 	BatchLineCommand.MeshBuffer = BatchedLine.GetBatchedLineBuffer();
 
+	FontCache.SetFontData();
+	FontCache.Initialize();
 }
 
 void FRenderBus::Release()
@@ -27,6 +29,7 @@ void FRenderBus::Clear()
 	OverlayCommands.clear();
 	OutlineCommands.clear();
 	BatchedLine.Clear();
+	FontCommands.clear();
 }
 
 void FRenderBus::AddComponentCommand(const FRenderCommand& InCommand)
@@ -47,6 +50,13 @@ void FRenderBus::AddDepthLessCommand(const FRenderCommand& InCommand)
 	}
 	DepthLessCommands.push_back(InCommand);
 }
+
+void FRenderBus::AddFontCommand(const FRenderCommand& InCommand)
+{
+	FontCommands.push_back(InCommand);
+}
+
+
 
 void FRenderBus::AddOutlineCommand(const FRenderCommand& InCommand)
 {

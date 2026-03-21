@@ -17,7 +17,15 @@ FName::FName(FString str)
 
 int32 FName::Compare(const FName& Other) const
 {
-    return GetFString().compare(Other.GetFString());
+    FString str1 = this->GetFString();
+    std::transform(str1.begin(), str1.end(), str1.begin(),
+        [](unsigned char c) { return std::tolower(c); });   //소문자 전환
+
+    FString str2 = Other.GetFString();
+    std::transform(str2.begin(), str2.end(), str2.begin(),
+        [](unsigned char c) { return std::tolower(c); });   //소문자 전환
+
+    return str1.compare(str2);
 }
 
 FString FName::GetFString() const

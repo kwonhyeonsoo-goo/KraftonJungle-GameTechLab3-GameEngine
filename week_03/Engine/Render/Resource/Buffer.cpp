@@ -89,6 +89,18 @@ void FVertexBuffer::Update(ID3D11DeviceContext* InDeviceContext, const TArray<FV
 	VertexCount = static_cast<uint32>(InData.size());
 }
 
+void FVertexBuffer::FontUpdate(ID3D11DeviceContext* InDeviceContext, const TArray<FFontVertex>& InData)
+{
+	if (!Buffer || InData.empty()) return;
+
+	D3D11_MAPPED_SUBRESOURCE MSR = {};
+	InDeviceContext->Map(Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MSR);
+	memcpy(MSR.pData, InData.data(), sizeof(FFontVertex) * InData.size());
+	InDeviceContext->Unmap(Buffer, 0);
+
+	VertexCount = static_cast<uint32>(InData.size());
+}
+
 ID3D11Buffer* FVertexBuffer::GetBuffer() const
 {
 	return Buffer;

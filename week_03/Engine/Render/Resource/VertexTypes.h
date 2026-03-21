@@ -53,3 +53,10 @@ struct FMeshData
 	TArray<FVertex> Vertices;
 	TArray<uint32> Indices;
 };
+
+struct FFontVertex
+{
+	FVector Position;
+	float U, V;     // UV
+};
+

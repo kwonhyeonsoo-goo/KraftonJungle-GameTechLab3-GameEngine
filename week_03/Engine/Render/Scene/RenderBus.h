@@ -10,6 +10,7 @@
 #include "Core/CoreTypes.h"
 #include "Render/Scene/RenderCommand.h"
 #include "Render/Scene/BatchedLine.h"
+#include "Engine/Fonts/FontCache.h"
 
 class FRenderBus
 {
@@ -21,6 +22,12 @@ private:
 	TArray<FRenderCommand> OutlineCommands;
 	TArray<FRenderCommand> OverlayCommands;
 
+	TArray<FRenderCommand> FontCommands;
+
+	FLineBatch LineBatch;
+	FFontCache FontCache;
+	FMatrix CachedView;
+	FMatrix CachedProjection;
 	//	일괄적으로 처리하기 때문에 하나의 커맨드를 두었습니다.
 	FRenderCommand			BatchLineCommand;
 	FBatchedLine			BatchedLine;
@@ -33,6 +40,7 @@ public:
 	//	Draw Call 요청을 RenderBus에 추가하는 함수
 	void AddComponentCommand(const FRenderCommand& InCommand);
 	void AddDepthLessCommand(const FRenderCommand& InCommand);
+	void AddFontCommand(const FRenderCommand& InCommand);
 	void AddOutlineCommand(const FRenderCommand& InCommand);
 	void AddOverlayCommand(const FRenderCommand& InCommand);
 	void UpdateLineBatchLineCommand(const FMatrix& InViewMatrix, const FMatrix& InPorjectionMatrix);
@@ -43,6 +51,10 @@ public:
 	const TArray<FRenderCommand>& GetOverlayCommands() const { return OverlayCommands; }
 	const FRenderCommand& GetBatchLineCommand() const { return BatchLineCommand;  }
 	FBatchedLine*		  GetBatehdLine()  { return &BatchedLine; }
+	const TArray<FRenderCommand>& GetFontCommands() const { return FontCommands; }
 
+	FFontCache&	    GetFontCache() { return FontCache; }
+	const FMatrix&	GetCachedView()	const { return CachedView; }
+	const FMatrix&	GetCachedProjection() const	{ return CachedProjection; }
 };
 
