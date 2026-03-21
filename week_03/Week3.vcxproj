@@ -238,14 +238,46 @@
     <None Include="imgui.ini" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="Assets\Shader\FontShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Assets\Shader\ShaderW0.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="FontShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Engine\Fonts\font.dds" />
-    <Image Include="Engine\Fonts\font.png" />
+    <Image Include="Assets\Fonts\DDS\AFont.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_1.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_10.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_11.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_12.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_2.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_3.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_4.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_5.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_6.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_7.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_8.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_9.dds" />
+    <Image Include="Assets\Fonts\PNG\AFont.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_1.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_10.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_11.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_12.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_2.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_3.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_4.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_5.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_6.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_7.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_8.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_9.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

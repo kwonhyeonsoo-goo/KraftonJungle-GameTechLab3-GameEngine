@@ -38,9 +38,9 @@ private:
 	TArray<FVertex> Grids;
 
 	//	File Path
-	const WCHAR* ShaderFilePath  = L"ShaderW0.hlsl";
-	const WCHAR* FontShaderFilePath = L"FontShader.hlsl";
-	const WCHAR* FontTextureFIlePath = L"Engine/Fonts/font.dds";
+	const WCHAR* ShaderFilePath  = L"Assets/Shader/ShaderW0.hlsl";
+	const WCHAR* FontShaderFilePath = L"Assets/Shader/FontShader.hlsl";
+	const WCHAR* FontTextureFIlePath = L"Assets/Fonts/DDS/AFont.dds";
 
 	//	Primitive and Gizmo Input Layout
 	D3D11_INPUT_ELEMENT_DESC PrimitiveInputLayout[2] =
