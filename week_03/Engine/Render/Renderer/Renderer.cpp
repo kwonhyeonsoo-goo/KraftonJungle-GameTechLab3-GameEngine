@@ -93,14 +93,16 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 	//	State Caching으로 인해 중복 설정은 자동으로 스킵됨.
 
 	//	Primitive
-	Device.SetDepthStencilState(EDepthStencilState::StencilWrite);
-	if(renderMode == RenderMode::WireFrameMode) Device.SetRasterizerState(ERasterizerState::WireFrame);
-	else  Device.SetRasterizerState(ERasterizerState::SolidBackCull);
-	Device.SetBlendState(EBlendState::Opaque);
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	if (showFlag == EEngineShowFlags::SF_Primitives) {
+		Device.SetDepthStencilState(EDepthStencilState::StencilWrite);
+		if (viewMode == EViewModeIndex::VMI_Wireframe) Device.SetRasterizerState(ERasterizerState::WireFrame);
+		else  Device.SetRasterizerState(ERasterizerState::SolidBackCull);
+		Device.SetBlendState(EBlendState::Opaque);
+		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	Resources.PrimitiveShader.Bind(context);
-	RenderComponentPass(context, InRenderBus);
+		Resources.PrimitiveShader.Bind(context);
+		RenderComponentPass(context, InRenderBus);
+	}
 
 	//  TODO : Editor에서 조작된 그리드로 교체 
 	FLineBatch& Batch = InRenderBus.GetLineBatch();
