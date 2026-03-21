@@ -22,6 +22,8 @@
     <ClInclude Include="Shaders\FontVertexShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="Source\Actor\PlaneActor.h" />
+    <ClInclude Include="Source\Component\PlaneComponent.h" />
     <ClInclude Include="Source\Component\UUIDBillboardComponent.h" />
     <ClInclude Include="Source\Renderer\FontAtlas.h" />
     <ClInclude Include="Source\Renderer\FontVertex.h" />
@@ -118,12 +120,14 @@
     <ClCompile Include="Source\Actor\AttachTestActor.cpp" />
     <ClCompile Include="Source\Actor\CubeActor.cpp" />
     <ClCompile Include="Source\Actor\Gizmo.cpp" />
+    <ClCompile Include="Source\Actor\PlaneActor.cpp" />
     <ClCompile Include="Source\Actor\SphereActor.cpp" />
     <ClCompile Include="Source\Camera\Camera.cpp" />
     <ClCompile Include="Source\Component\ActorComponent.cpp" />
     <ClCompile Include="Source\Component\CameraComponent.cpp" />
     <ClCompile Include="Source\Component\CubeComponent.cpp" />
     <ClCompile Include="Source\Component\GizmoComponent.cpp" />
+    <ClCompile Include="Source\Component\PlaneComponent.cpp" />
     <ClCompile Include="Source\Component\PrimitiveComponent.cpp" />
     <ClCompile Include="Source\Component\RandomColorComponent.cpp" />
     <ClCompile Include="Source\Component\SceneComponent.cpp" />
