@@ -474,7 +474,7 @@ void CRenderer::ExecuteCommands()
 			);
 		}
 	}
-
+	ShaderManager.Bind(DeviceContext);
 	if (PostRenderCallback)
 	{
 		PostRenderCallback(this);
@@ -603,6 +603,7 @@ void CRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float
 
 	// 원래 셰이더 복원
 	ShaderManager.Bind(DeviceContext);
+
 	// Stencil 상태 복원
 	DeviceContext->OMSetDepthStencilState(nullptr, 0);
 }

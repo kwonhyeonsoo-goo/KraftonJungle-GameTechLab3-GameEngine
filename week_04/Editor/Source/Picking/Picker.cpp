@@ -116,8 +116,9 @@ AActor* CPicker::PickActor(UScene* Scene, int32 ScreenX, int32 ScreenY,
 		{
 			continue;
 		}
-		if (!Actor->IsVisible())
+		if (!Actor->IsVisible() )
 			continue;
+
 		
 		for (UActorComponent* Component : Actor->GetComponents())
 		{

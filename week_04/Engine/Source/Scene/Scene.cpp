@@ -406,6 +406,7 @@ void UScene::Tick(float DeltaTime)
 
 void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible)
 {
+	
 	for (AActor* Actor : Actors)
 	{
 		if (!Actor || Actor->IsPendingDestroy())
@@ -418,6 +419,7 @@ void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveCom
 		}
 		for (UActorComponent* Component : Actor->GetComponents())
 		{
+		
 			if (!Component->IsA(UPrimitiveComponent::StaticClass()))
 			{
 				continue;
@@ -425,8 +427,19 @@ void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveCom
 
 			UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
 			// if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
-			if (!PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
+			if (PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
 			{
+				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_BillboardText))
+				{
+					continue;
+				}
+			}
+			else
+			{
+				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives))
+				{
+					continue;
+				}
 				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
 				{
 					continue;
@@ -444,10 +457,7 @@ void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveCom
 void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
 
-	if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives))
-	{
-		return;
-	}
+
 	TArray<UPrimitiveComponent*> VisiblePrimitives;
 	CullVisiblePrimitives(Frustum, VisiblePrimitives);
 	
@@ -459,6 +469,7 @@ void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue&
 		}
 		if (PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
 		{
+		
 			UUUIDBillboardComponent* UUIDComponent =
 				static_cast<UUUIDBillboardComponent*>(PrimitiveComponent);
 

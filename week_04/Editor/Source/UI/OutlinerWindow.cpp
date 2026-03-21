@@ -35,7 +35,11 @@ void COutlinerWindow::Render(CCore* Core)
 	{
 		ShowFlags.SetFlag(EEngineShowFlags::SF_Primitives, bPrimitives);
 	}
-
+	bool bBillboardText = ShowFlags.HasFlag(EEngineShowFlags::SF_BillboardText);
+	if (ImGui::Checkbox("Billborads", &bBillboardText))
+	{
+		ShowFlags.SetFlag(EEngineShowFlags::SF_BillboardText, bBillboardText);
+	}
 	ImGui::SeparatorText("Actors");
 
 	const TArray<AActor*>& Actors = Scene->GetActors();

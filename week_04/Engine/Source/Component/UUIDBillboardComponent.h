@@ -23,11 +23,13 @@ public:
 
 	FBoundingSphere GetWorldBounds() const override;
 	FBoxSphereBounds GetWorldBoundsForAABB() const override;
-
+	bool GetVisible() const { return bVisible; }
+	void SetVisible(bool InVisible) { bVisible = InVisible; }
 private:
 	FVector WorldOffset = FVector(0.0f, 0.0f, 0.3f);
 
 	float BillboardScale = 0.3f;
 
 	FVector4 TextColor = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
+	bool bVisible = false;
 };
