@@ -1,6 +1,8 @@
 #pragma once
 #include "CoreMinimal.h"
-#include "Window.h"
+#include "WindowTypes.h"
+
+class CWindow;
 
 class ENGINE_API CWindowApplication
 {

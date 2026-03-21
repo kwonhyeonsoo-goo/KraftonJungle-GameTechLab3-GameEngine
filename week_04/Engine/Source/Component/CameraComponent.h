@@ -1,6 +1,7 @@
 #pragma once
 #include "SceneComponent.h"
-#include "../Camera/Camera.h"
+
+class CCamera;
 
 class ENGINE_API UCameraComponent : public USceneComponent
 {

@@ -1,6 +1,6 @@
 #pragma once
-#include "Component/SceneComponent.h"
 #include "Object/Object.h"
+#include "Component/ActorComponent.h"
 
 class UActorComponent;
 class USceneComponent;
@@ -12,25 +12,16 @@ public:
 	DECLARE_RTTI(AActor, UObject)
 	~AActor() override = default;
 
-	UScene* GetScene() const { return Scene; }
-	void SetScene(UScene* InScene) { Scene = InScene; }
+	UScene* GetScene() const;
+	void SetScene(UScene* InScene);
 
 	// ULevel* GetLevel() const { return Level;
 	// void SetLevel(ULevel* InLevel) { Level = InLevel; }
 
-	USceneComponent* GetRootComponent() const { return RootComponent; }
-	void SetRootComponent(USceneComponent* InRootComponent)
-	{
-		// 의문점
-		// 기존에 RootComponent가 있을 시에는 RootComponent의 OwnerActor를 지워주나?
-		// 이러면 두 개의 RootComponent가 하나의 Owner을 가지고 있는건데.
-		RootComponent = InRootComponent;
-		if (RootComponent)
-		{
-			RootComponent->SetOwner(this);
-		}
-	}
-	const TArray<UActorComponent*>& GetComponents() const { return OwnedComponents; }
+	USceneComponent* GetRootComponent() const;
+	void SetRootComponent(USceneComponent* InRootComponent);
+
+	const TArray<UActorComponent*>& GetComponents() const;
 	void AddOwnedComponent(UActorComponent* InComponent);
 	void RemoveOwnedComponent(UActorComponent* InComponent);
 
@@ -46,6 +37,8 @@ public:
 		}
 		return nullptr;
 	}
+
+	void Test() { int a = 5; }
 
 	virtual void PostSpawnInitialize();
 	virtual void BeginPlay();

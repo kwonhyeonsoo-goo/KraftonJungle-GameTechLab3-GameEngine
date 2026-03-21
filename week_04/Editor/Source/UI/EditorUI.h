@@ -5,6 +5,7 @@
 #include "ConsoleWindow.h"
 #include "StatWindow.h"
 #include "Viewport.h"
+#include "Types/ObjectPtr.h"
 
 class CCore;
 class CWindow;

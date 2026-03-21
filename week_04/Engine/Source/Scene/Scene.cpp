@@ -15,6 +15,7 @@
 #include "Renderer/MaterialManager.h"
 #include "Renderer/RenderCommand.h"
 #include "ThirdParty/nlohmann/json.hpp"
+#include "Object/Class.h"
 
 #include <algorithm>
 #include <filesystem>

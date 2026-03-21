@@ -9,6 +9,7 @@
 #include "Primitive/UnrealEditorStyledGizmo.h"
 #include "Renderer/RenderCommand.h"
 #include "Scene/Scene.h"
+#include "Math/MathUtility.h"
 
 #include <algorithm>
 #include <cmath>

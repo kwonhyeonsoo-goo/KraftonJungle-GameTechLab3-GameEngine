@@ -1,6 +1,7 @@
 #include "PhysicsManager.h"
 #include "Scene/Scene.h"
 #include "Math/Vector.h"
+#include "Math/MathUtility.h"
 #include "Actor/Actor.h"
 #include "Component/PrimitiveComponent.h"
 
@@ -53,7 +54,6 @@ bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const
 
 				if (bIsLineInside)
 				{
-					UE_LOG("Actor %s line collided (Inside)", Actor->GetName().c_str());
 					OutHit.HitActor = Actor;
 					return true;
 				}
@@ -93,7 +93,6 @@ bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const
 
 						if (bIntersected)
 						{
-							UE_LOG("Actor %s line collided", Actor->GetName().c_str());
 							OutHit.HitActor = Actor;
 							return true;
 						}

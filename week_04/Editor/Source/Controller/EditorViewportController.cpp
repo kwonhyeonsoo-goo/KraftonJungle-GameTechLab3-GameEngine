@@ -4,6 +4,7 @@
 #include "Input/EnhancedInputManager.h"
 #include "Input/InputTrigger.h"
 #include "Input/InputModifier.h"
+#include "Input/InputMappingContext.h"
 
 CEditorViewportController::~CEditorViewportController()
 {

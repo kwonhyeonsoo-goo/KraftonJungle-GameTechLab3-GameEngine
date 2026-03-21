@@ -67,6 +67,7 @@
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h" />
     <ClInclude Include="Source\Platform\Windows\Window.h" />
     <ClInclude Include="Source\Platform\Windows\WindowApplication.h" />
+    <ClInclude Include="Source\Platform\Windows\WindowTypes.h" />
     <ClInclude Include="Source\Primitive\PrimitiveBase.h" />
     <ClInclude Include="Source\Primitive\PrimitiveCube.h" />
     <ClInclude Include="Source\Primitive\PrimitiveGizmo.h" />

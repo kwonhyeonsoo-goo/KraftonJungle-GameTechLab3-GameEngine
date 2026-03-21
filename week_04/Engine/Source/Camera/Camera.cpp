@@ -1,6 +1,7 @@
 #include "Camera.h"
 #include <algorithm>
 #include <cmath>
+#include "Math/MathUtility.h"
 
 void CCamera::SetPosition(const FVector& InPosition)
 {

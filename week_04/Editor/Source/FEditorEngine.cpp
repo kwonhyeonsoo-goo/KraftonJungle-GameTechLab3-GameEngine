@@ -15,6 +15,8 @@
 #include "Debug/EngineLog.h"
 
 #include "imgui_impl_win32.h"
+#include "Pawn/EditorCameraPawn.h"
+#include "Camera/Camera.h"
 
 namespace
 {

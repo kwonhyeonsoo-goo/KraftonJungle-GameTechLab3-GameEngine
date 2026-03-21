@@ -2,6 +2,7 @@
 #include "Component/CubeComponent.h"
 #include "Component/RandomColorComponent.h"
 #include "Object/ObjectFactory.h"
+#include "Object/Class.h"
 
 IMPLEMENT_RTTI(ACubeActor, AActor)
 

@@ -2,6 +2,7 @@
 #include "Component/SphereComponent.h"
 #include "Component/CubeComponent.h"
 #include "Object/ObjectFactory.h"
+#include "Object/Class.h"
 
 IMPLEMENT_RTTI(AAttachTestActor, AActor)
 
