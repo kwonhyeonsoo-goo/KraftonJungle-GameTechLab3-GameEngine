@@ -50,7 +50,6 @@ bool FMeshData::CreateBuffers(ID3D11Device* Device)
 		return false;
 	}
 
-	IndexCount = static_cast<uint32_t>(Indices.size());
 	return true;
 }
 
@@ -74,7 +73,6 @@ void FMeshData::Release()
 		VertexBuffer->Release();
 		VertexBuffer = nullptr;
 	}
-	IndexCount = 0;
 }
 
 // ─── CPrimitiveBase ───

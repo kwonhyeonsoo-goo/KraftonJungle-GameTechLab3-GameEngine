@@ -382,7 +382,7 @@ void CRenderer::ExecuteCommands()
 
 			for (const auto& Cmd : CommandList)
 			{
-				if (Cmd.bOverlay != bOverlayPass || !Cmd.MeshData)
+				if (Cmd.bOverlay != bOverlayPass || !Cmd.MeshData || Cmd.MeshData->Indices.empty())
 				{
 					continue;
 				}
@@ -421,7 +421,7 @@ void CRenderer::ExecuteCommands()
 				}
 
 				UpdateObjectConstantBuffer(Cmd.WorldMatrix);
-				DeviceContext->DrawIndexed(Cmd.MeshData->IndexCount, 0, 0);
+				DeviceContext->DrawIndexed(Cmd.MeshData->Indices.size(), 0, 0);
 			}
 		};
 
@@ -544,7 +544,7 @@ void CRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float
 	// Pass 1: 통상 렌더 + Stencil 마킹 (Ref=1)
 	DeviceContext->OMSetDepthStencilState(StencilWriteState, 1);
 	UpdateObjectConstantBuffer(WorldMatrix);
-	DeviceContext->DrawIndexed(Mesh->IndexCount, 0, 0);
+	DeviceContext->DrawIndexed(Mesh->Indices.size(), 0, 0);
 
 	// Pass 2: 확대된 메시를 아웃라인 셰이더로 그리기 (Stencil != 1인 곳만)
 	DeviceContext->OMSetDepthStencilState(StencilTestState, 1);
@@ -557,7 +557,7 @@ void CRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float
 	// 아웃라인 셰이더 바인딩
 	OutlinePS->Bind(DeviceContext);
 
-	DeviceContext->DrawIndexed(Mesh->IndexCount, 0, 0);
+	DeviceContext->DrawIndexed(Mesh->Indices.size(), 0, 0);
 
 	// 원래 셰이더 복원
 	ShaderManager.Bind(DeviceContext);

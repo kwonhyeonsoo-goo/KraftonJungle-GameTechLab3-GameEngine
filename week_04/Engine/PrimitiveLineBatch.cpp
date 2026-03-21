@@ -9,8 +9,9 @@ CPrimitiveLineBatch::CPrimitiveLineBatch()
 uint32 CPrimitiveLineBatch::AddLine(FVector InStart, FVector InEnd, FVector4 InColor, uint32 InBatchID)
 {
 	uint32 meshDataSize = MeshData->Vertices.size();
-	MeshData->Vertices.push_back({ InStart, InColor, FVector::ZeroVector });
-	MeshData->Vertices.push_back({ InEnd, InColor, FVector::ZeroVector });
+	const FVector normal = FVector::ZeroVector;
+	MeshData->Vertices.push_back({ InStart, InColor,  normal });
+	MeshData->Vertices.push_back({ InEnd, InColor, normal });
 	MeshData->Indices.push_back(meshDataSize);
 	MeshData->Indices.push_back(meshDataSize + 1);
 

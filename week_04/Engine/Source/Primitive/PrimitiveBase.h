@@ -35,7 +35,6 @@ struct ENGINE_API FMeshData
 	// GPU 버퍼
 	ID3D11Buffer* VertexBuffer = nullptr;
 	ID3D11Buffer* IndexBuffer = nullptr;
-	uint32 IndexCount = 0;
 
 private:
 	uint32 SortId = 0;

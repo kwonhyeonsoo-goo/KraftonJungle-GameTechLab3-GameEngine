@@ -12,8 +12,5 @@ class ULineBatchComponent : public UPrimitiveComponent
 public:
 	void Initialize();
 	void DrawLine(FVector InStart, FVector InEnd, FVector4 color);
-
-	// 미구현
-	void DrawCube(FVector InCenter, FQuat InRotation, FVector InScale, FVector4 color) = delete;
-
+	void DrawCube(FVector InCenter, FQuat InRotation, FVector InScale, FVector4 InColor);
 };
