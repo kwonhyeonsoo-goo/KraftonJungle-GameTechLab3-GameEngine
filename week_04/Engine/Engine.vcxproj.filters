@@ -214,6 +214,8 @@
       <Filter>Source\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Physics\PhysicsManager.cpp" />
+    <ClCompile Include="Source\Scene\SceneManager.cpp" />
+    <ClCompile Include="Source\Types\Name.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -451,6 +453,9 @@
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
     <ClInclude Include="Source\Physics\PhysicsManager.h" />
+    <ClInclude Include="Source\Scene\SceneManager.h" />
+    <ClInclude Include="Source\Types\Name.h" />
+    <ClInclude Include="Source\Platform\Windows\WindowTypes.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

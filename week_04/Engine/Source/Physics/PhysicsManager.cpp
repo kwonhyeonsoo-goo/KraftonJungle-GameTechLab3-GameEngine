@@ -1,6 +1,7 @@
 #include "PhysicsManager.h"
 #include "Scene/Scene.h"
 #include "Math/Vector.h"
+#include "Math/MathUtility.h"
 #include "Actor/Actor.h"
 #include "Component/PrimitiveComponent.h"
 

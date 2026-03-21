@@ -1,6 +1,7 @@
 #include "RandomColorComponent.h"
 #include "PrimitiveComponent.h"
 #include "Actor/Actor.h"
+#include "Object/Class.h"
 #include <random>
 
 IMPLEMENT_RTTI(URandomColorComponent, UActorComponent)

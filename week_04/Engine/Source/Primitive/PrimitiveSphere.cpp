@@ -1,5 +1,6 @@
 #include "PrimitiveSphere.h"
 #include "Core/Paths.h"
+#include "Math/MathUtility.h"
 #include <cmath>
 
 const FString CPrimitiveSphere::Key = "Sphere";

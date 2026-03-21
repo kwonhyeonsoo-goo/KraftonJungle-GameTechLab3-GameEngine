@@ -1,10 +1,30 @@
 #include "Actor.h"
+#include "Object/Class.h"
+#include "Component/SceneComponent.h"
 
 IMPLEMENT_RTTI(AActor, UObject)
 
 namespace {
 	FVector GZeroVector{};
 }
+
+UScene* AActor::GetScene() const { return Scene; }
+void AActor::SetScene(UScene* InScene) { Scene = InScene; }
+USceneComponent* AActor::GetRootComponent() const { return RootComponent; }
+
+void AActor::SetRootComponent(USceneComponent* InRootComponent)
+{
+	// 의문점
+	// 기존에 RootComponent가 있을 시에는 RootComponent의 OwnerActor를 지워주나?
+	// 이러면 두 개의 RootComponent가 하나의 Owner을 가지고 있는건데.
+	RootComponent = InRootComponent;
+	if (RootComponent)
+	{
+		RootComponent->SetOwner(this);
+	}
+}
+
+const TArray<UActorComponent*>& AActor::GetComponents() const { return OwnedComponents; }
 
 void AActor::AddOwnedComponent(UActorComponent* InComponent)
 {

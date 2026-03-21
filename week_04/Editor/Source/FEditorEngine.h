@@ -4,7 +4,9 @@
 #include "UI/EditorUI.h"
 #include "UI/PreviewViewportClient.h"
 #include "Controller/EditorViewportController.h"
-#include "Pawn/EditorCameraPawn.h"
+
+class AEditorCameraPawn;
+
 class FEditorEngine : public FEngine
 {
 public:

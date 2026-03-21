@@ -2,6 +2,7 @@
 #include "Component/SphereComponent.h"
 #include "Component/RandomColorComponent.h"
 #include "Object/ObjectFactory.h"
+#include "Object/Class.h"
 
 IMPLEMENT_RTTI(ASphereActor, AActor)
 

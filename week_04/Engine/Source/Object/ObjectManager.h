@@ -1,17 +1,16 @@
 #pragma once
 #include "CoreMinimal.h"
-#include "ObjectFactory.h"
 #include <algorithm>
 #include <memory>
+
+class UObject;
+class UClass;
 
 class ENGINE_API ObjectManager
 {
 public:
 	ObjectManager();
 	~ObjectManager();
-
-
-
 
 	// UClass*를 직접 넘기는 버전
 	UObject* SpawnObject(

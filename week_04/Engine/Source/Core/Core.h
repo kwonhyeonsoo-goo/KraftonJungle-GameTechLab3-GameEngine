@@ -3,19 +3,20 @@
 #include "CoreMinimal.h"
 #include "Windows.h"
 #include "Core/FTimer.h"
-#include "Core/ViewportClient.h"
 #include "Scene/SceneContext.h"
 #include "Scene/SceneTypes.h"
 #include "Renderer/Renderer.h"
-#include "Input/InputManager.h"
 #include "Physics/PhysicsManager.h"
 #include "Scene/SceneManager.h"
 #include <memory>
+
 class CEnhancedInputManager;
+class CInputManager;
 
 class AActor;
 class UScene;
 class ObjectManager;
+class IViewportClient;
 
 class ENGINE_API CCore
 {

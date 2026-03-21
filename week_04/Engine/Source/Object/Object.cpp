@@ -1,4 +1,5 @@
 #include "Object/Object.h"
+#include "Object/Class.h"
 
 // 조건 1: 전역 오브젝트 배열 정의
 TArray<UObject*> GUObjectArray;

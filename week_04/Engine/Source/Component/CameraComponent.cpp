@@ -1,5 +1,6 @@
 #include "CameraComponent.h"
 #include "Object/Class.h"
+#include "Camera/Camera.h"
 
 IMPLEMENT_RTTI(UCameraComponent, USceneComponent)
 

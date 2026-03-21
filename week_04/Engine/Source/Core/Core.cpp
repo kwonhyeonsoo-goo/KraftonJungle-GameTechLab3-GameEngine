@@ -13,15 +13,13 @@
 #include "Renderer/Renderer.h"
 #include "Renderer/RenderCommand.h"
 #include "Math/Frustum.h"
-#include "Physics/PhysicsManager.h"
+#include "Input/InputManager.h"
+#include "ViewportClient.h"
 
 CCore::~CCore()
 {
 	Release();
 }
-
-
-
 
 bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupSceneType)
 {

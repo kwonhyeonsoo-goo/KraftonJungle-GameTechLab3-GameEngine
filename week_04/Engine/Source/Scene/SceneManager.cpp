@@ -2,6 +2,8 @@
 #include "Scene/Scene.h"
 #include "Renderer/Renderer.h"
 #include "Component/CameraComponent.h"
+#include "Camera/Camera.h"
+
 FSceneManager::~FSceneManager()
 {
 	Release();
