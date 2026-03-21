@@ -62,6 +62,7 @@ void COutlinerWindow::Render(CCore* Core)
 		{
 			Core->SetSelectedActor(Actor);
 		}
+		ImGui::PopID();
 	}
 
 	ImGui::End();
