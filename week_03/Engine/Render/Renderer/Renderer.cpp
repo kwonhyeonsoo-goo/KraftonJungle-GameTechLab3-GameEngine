@@ -1,4 +1,4 @@
-#pragma comment( lib, "dxguid.lib")
+﻿#pragma comment( lib, "dxguid.lib")
 
 #include "Renderer.h"
 
@@ -54,6 +54,7 @@ void FRenderer::Create(HWND hWindow)
 	Resources.OutlineConstantBuffer.Create(Device.GetDevice(), sizeof(FOutlineConstants));
 
 	CreateWICTextureFromFile(Device.GetDevice(), Device.GetDeviceContext(), FontTextureFIlePath, nullptr, &Resources.FontAtlasSRV);
+
 	//	MeshManager init
 	FMeshManager::Initialize();
 
@@ -293,11 +294,10 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 	const float CellW = (float)FontCache.GetFontData().CellWidth * FontScale;
 	const float CellH = (float)FontCache.GetFontData().CellHeight * FontScale;
 
-	auto FontCommands = InRenderBus.GetFontCommands();
-	for (const auto& Cmd : FontCommands) {
+	for (const auto& Cmd : InRenderBus.GetFontCommands()) {
 		vertices.clear();
 
-		FString Text = "UUID: " + std::to_string(Cmd.UUID);
+		std::wstring Text = L"뷁웱꿱켘흫쀆\n유유아이디\nUUID:" + std::to_wstring(Cmd.UUID);
 
 		float TotalWidth = CellW * Text.size();
 		float PenX = -TotalWidth * 0.5f;  // 중앙 정렬
@@ -306,7 +306,7 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 		for (TCHAR c : Text)
 		{
 			if (c == TEXT(' ')) { PenX += CellW; continue; }
-			if (c == TEXT('\n')) { PenX = 0; PenY += CellH; continue; }
+			if (c == TEXT('\n')) { PenX = -TotalWidth * 0.5f; PenY -= CellH; continue; }
 
 			uint32 base = (uint32)vertices.size();
 
@@ -377,7 +377,6 @@ void FRenderer::RenderFont(ID3D11DeviceContext* InDeviceContext)
 
 	InDeviceContext->Draw(Resources.FontVertexBuffer.GetVertexCount(), 0);
 }
-
 
 void FRenderer::RenderOverlayPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus)
 {

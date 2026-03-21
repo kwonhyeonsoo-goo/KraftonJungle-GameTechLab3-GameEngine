@@ -7,7 +7,6 @@ struct FCharacterInfo
 {
 	float StartU, StartV;
 	float USize, VSize;
-	uint8 AtlasIndex; // Atlas Index : 한국어용 (Atlas가 여러 장)
 };
 
 struct FAtlasData
@@ -23,7 +22,6 @@ struct FAtlasData
 	float OffsetX;
 	float OffsetY;
 };
-
 
 class FFontCache
 {

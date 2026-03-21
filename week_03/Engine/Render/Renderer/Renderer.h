@@ -40,7 +40,7 @@ private:
 	//	File Path
 	const WCHAR* ShaderFilePath  = L"Assets/Shader/ShaderW0.hlsl";
 	const WCHAR* FontShaderFilePath = L"Assets/Shader/FontShader.hlsl";
-	const WCHAR* FontTextureFIlePath = L"Assets/Fonts/DDS/AFont.dds";
+	const WCHAR* FontTextureFIlePath = L"Assets/Fonts/Font.dds";
 
 	//	Primitive and Gizmo Input Layout
 	D3D11_INPUT_ELEMENT_DESC PrimitiveInputLayout[2] =
