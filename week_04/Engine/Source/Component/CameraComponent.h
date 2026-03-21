@@ -25,6 +25,7 @@ public:
 	//Setting
 	void SetFov(float inFov);
 	void SetSpeed(float Inspeed);
+	void SetSensitivity(float InSetSensitivity);
 private:
 	CCamera* Camera = nullptr;
 };

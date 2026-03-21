@@ -69,3 +69,8 @@ void UCameraComponent::SetSpeed(float Inspeed)
 {
 	Camera->SetSpeed(Inspeed);
 }
+
+void UCameraComponent::SetSensitivity(float InSetSensitivity)
+{
+	Camera->SetMouseSensitivity(InSetSensitivity);
+}

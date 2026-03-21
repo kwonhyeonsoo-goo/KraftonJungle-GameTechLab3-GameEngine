@@ -93,7 +93,17 @@ void CControlPanelWindow::Render(CCore* Core)
 		if (CCamera* Camera = Core->GetScene()->GetCamera())
 		{
 		
+			float Sensitivity = Camera->GetMouseSensitivity();
+			if (ImGui::SliderFloat("Mouse Sensitivity", &Sensitivity, 0.01f, 1.0f))
+			{
+				Camera->SetMouseSensitivity(Sensitivity);
+			}
 
+			float Speed = Camera->GetSpeed();
+			if (ImGui::SliderFloat("Move Speed", &Speed, 0.1f, 20.0f))
+			{
+				Camera->SetSpeed(Speed);
+			}
 			const FVector CameraPosition = Camera->GetPosition();
 			float Position[3] = { CameraPosition.X, CameraPosition.Y, CameraPosition.Z };
 			if (ImGui::DragFloat3("Position", Position, 0.1f))

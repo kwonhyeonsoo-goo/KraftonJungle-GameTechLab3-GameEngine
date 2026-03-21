@@ -29,7 +29,9 @@ public:
 
 	void SetAspectRatio(float InAspectRatio);
 	void SetSpeed(float InSpeed) { Speed = InSpeed; }
-
+	float GetSpeed() const { return Speed; }
+	float GetMouseSensitivity() const { return Sensitivity; }
+	void SetMouseSensitivity(float InSensitivity) { Sensitivity = InSensitivity; }
 	FVector GetPosition() const;
 	float GetYaw() const;
 	float GetPitch() const;
@@ -49,7 +51,7 @@ private:
 	float Yaw = 0.0f;
 	float Pitch = 0.0f;
 	float Speed = 5.0f;
-
+	float Sensitivity = 0.2f;
 	float FOV = 45.0f;
 	float AspectRatio = 16.0f / 9.0f;
 	ECameraProjectionMode ProjectionMode = ECameraProjectionMode::Perspective;
