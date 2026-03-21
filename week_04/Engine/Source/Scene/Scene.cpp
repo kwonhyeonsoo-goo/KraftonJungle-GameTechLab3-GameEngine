@@ -392,7 +392,7 @@ void UScene::Tick(float DeltaTime)
 	CleanupDestroyedActors();
 }
 
-void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible)
+void UScene::FrustrumCull(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible)
 {
 	for (AActor* Actor : Actors)
 	{
@@ -425,7 +425,7 @@ void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveCom
 void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
 	TArray<UPrimitiveComponent*> VisiblePrimitives;
-	CullVisiblePrimitives(Frustum, VisiblePrimitives);
+	FrustrumCull(Frustum, VisiblePrimitives);
 
 	for (UPrimitiveComponent* PrimitiveComponent : VisiblePrimitives)
 	{

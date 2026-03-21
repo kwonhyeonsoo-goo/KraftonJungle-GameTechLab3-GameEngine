@@ -4,6 +4,16 @@
 #include "Renderer/PrimitiveVertex.h"
 #include <d3d11.h>
 
+enum class EMeshTopology
+{
+	EMT_Undefined = 0, // = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED
+	EMT_Point = 1,	// =  D3D11_PRIMITIVE_TOPOLOGY_POINTLIST
+	EMT_LineList = 2, // = D3D11_PRIMITIVE_TOPOLOGY_LINELIST
+	EMT_LineStrip = 3,	// = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP
+	EMT_TriangleList = 4, // = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+	EMT_TriangleStrip = 5, // = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP
+};
+
 struct ENGINE_API FMeshData
 {
 	FMeshData() : SortId(NextSortId++) {}
@@ -14,6 +24,9 @@ struct ENGINE_API FMeshData
 	bool CreateBuffers(ID3D11Device* Device);
 	void Bind(ID3D11DeviceContext* Context);
 	void Release();
+
+	// 토폴로지 옵션
+	EMeshTopology Topology = EMeshTopology::EMT_Undefined;
 
 	// CPU 데이터
 	TArray<FPrimitiveVertex> Vertices;

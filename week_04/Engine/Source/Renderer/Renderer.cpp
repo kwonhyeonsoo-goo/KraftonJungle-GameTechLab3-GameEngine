@@ -376,6 +376,7 @@ void CRenderer::ExecuteCommands()
 		{
 			FMaterial* CurrentMaterial = nullptr;
 			FMeshData* CurrentMesh = nullptr;
+			D3D11_PRIMITIVE_TOPOLOGY CurrentMeshTopology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
 			ID3D11RasterizerState* CurrentRasterizerState = nullptr;
 			ID3D11DepthStencilState* CurrentDepthStencilState = nullptr;
 
@@ -384,6 +385,25 @@ void CRenderer::ExecuteCommands()
 				if (Cmd.bOverlay != bOverlayPass || !Cmd.MeshData)
 				{
 					continue;
+				}
+
+				if (Cmd.Material != CurrentMaterial)
+				{
+					Cmd.Material->Bind(DeviceContext);
+					CurrentMaterial = Cmd.Material;
+					DeviceContext->VSSetConstantBuffers(0, 2, CBs);
+				}
+
+				if (Cmd.MeshData != CurrentMesh)
+				{
+					Cmd.MeshData->Bind(DeviceContext);
+					CurrentMesh = Cmd.MeshData;
+				}
+
+				D3D11_PRIMITIVE_TOPOLOGY DesiredMeshTopology = (D3D11_PRIMITIVE_TOPOLOGY)CurrentMesh->Topology;
+				if (DesiredMeshTopology != CurrentMeshTopology)
+				{
+					DeviceContext->IASetPrimitiveTopology(DesiredMeshTopology);
 				}
 
 				ID3D11RasterizerState* DesiredRasterizerState = Cmd.bDisableCulling ? NoCullRasterizerState : RasterizerState;
@@ -398,19 +418,6 @@ void CRenderer::ExecuteCommands()
 				{
 					DeviceContext->OMSetDepthStencilState(DesiredDepthStencilState, 0);
 					CurrentDepthStencilState = DesiredDepthStencilState;
-				}
-
-				if (Cmd.Material != CurrentMaterial)
-				{
-					Cmd.Material->Bind(DeviceContext);
-					CurrentMaterial = Cmd.Material;
-					DeviceContext->VSSetConstantBuffers(0, 2, CBs);
-				}
-
-				if (Cmd.MeshData != CurrentMesh)
-				{
-					Cmd.MeshData->Bind(DeviceContext);
-					CurrentMesh = Cmd.MeshData;
 				}
 
 				UpdateObjectConstantBuffer(Cmd.WorldMatrix);
@@ -615,7 +622,7 @@ void CRenderer::ExecuteLineCommands()
 	}
 	DeviceContext->OMSetDepthStencilState(LineDepthState, 0);
 
-	// 동적 버퍼 생성/재사용
+	// 동적 버퍼 재사용, 불가능하면 새로 생성.
 	UINT BufferSize = static_cast<UINT>(LineVertices.size() * sizeof(FPrimitiveVertex));
 
 	if (LineVertexBuffer && LineVertexBufferSize < BufferSize)
@@ -637,6 +644,7 @@ void CRenderer::ExecuteLineCommands()
 		LineVertexBufferSize = BufferSize;
 	}
 
+	// 버퍼에 메모리 카피
 	D3D11_MAPPED_SUBRESOURCE Mapped;
 	if (SUCCEEDED(DeviceContext->Map(LineVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
 	{
@@ -651,12 +659,11 @@ void CRenderer::ExecuteLineCommands()
 	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
 	// WorldMatrix = Identity로 상수 버퍼 업데이트
+	// => 월드 좌표 (0,0,0) 기준으로 그리기
 	UpdateObjectConstantBuffer(FMatrix::Identity);
 
 	DeviceContext->Draw(static_cast<UINT>(LineVertices.size()), 0);
 
-	// 토폴로지 복원
-	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	// Depth 상태 복원
 	DeviceContext->OMSetDepthStencilState(nullptr, 0);
 

@@ -58,7 +58,7 @@ public:
 	void CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue);
 
 private:
-	void CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible);
+	void FrustrumCull(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible);
 
 private:
 	TArray<AActor*> Actors;

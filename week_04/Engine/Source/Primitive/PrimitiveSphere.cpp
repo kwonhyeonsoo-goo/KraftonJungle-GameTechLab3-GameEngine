@@ -65,6 +65,8 @@ void CPrimitiveSphere::Generate(int32 Segments, int32 Rings)
 		}
 	}
 
+	Data->Topology = EMeshTopology::EMT_TriangleList;
+
 	MeshData = Data;
 	RegisterMeshData(Key, Data);
 }
