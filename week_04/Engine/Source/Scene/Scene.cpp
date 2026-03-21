@@ -85,19 +85,10 @@ void UScene::InitializeEmptyScene(float AspectRatio)
 	}
 }
 
-#include "Component/LineBatchComponent.h"
-
 void UScene::InitializeDefaultScene(float AspectRatio, ID3D11Device* Device)
 {
 	InitializeEmptyScene(AspectRatio);
 	LoadSceneFromFile(FPaths::SceneDir() + "DefaultScene.json", Device);
-	// 테스트 코드
-	AActor *Actor = SpawnActor<AActor>("test");
-	ULineBatchComponent* lineDrawer = (ULineBatchComponent*)FObjectFactory::ConstructObject(ULineBatchComponent::StaticClass());
-	Actor->AddOwnedComponent(lineDrawer);
-	static FVector rotEuler = { 45, 0, 0 };
-	lineDrawer->DrawWireCube({ 1, 0, 0 }, FQuat::MakeFromEuler(rotEuler), { 2, 1, 1, }, {1,1,1,1});
-	// 테스트 코드
 }
 
 void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
@@ -445,4 +436,3 @@ void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue&
 		OutQueue.AddCommand(Command);
 	}
 }
-	

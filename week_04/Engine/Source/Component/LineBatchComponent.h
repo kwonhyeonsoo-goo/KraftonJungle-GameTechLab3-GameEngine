@@ -15,6 +15,4 @@ public:
 	void DrawWireCube(FVector InCenter, FQuat InRotation, FVector InScale, FVector4 InColor);
 	void DrawWireSphere(FVector InCenter, float InRadius, FVector4 InColor);
 	void Clear();
-	// 테스트
-	void Tick(float deltaTime) override;
 };

@@ -6,7 +6,6 @@ IMPLEMENT_RTTI(ULineBatchComponent, UPrimitiveComponent)
 
 void ULineBatchComponent::Initialize()
 {
-	bCanEverTick = true; // 테스트
 	Primitive = std::make_shared<CPrimitiveLineBatch>();
 	LocalBoundRadius = 1.0f;
 }
@@ -89,22 +88,4 @@ void ULineBatchComponent::Clear()
 {
 	auto primitive = static_pointer_cast<CPrimitiveLineBatch>(Primitive);
 	primitive->ClearVertices();
-}
-
-void ULineBatchComponent::Tick(float deltaTime)
-{
-	static FVector point = { 1, 0, 1 };
-	static float time = 0.0f;
-	static float count = 0;
-	float angle = (count * 15) * FMath::PI / 180;
-	const float radius = 3.0f;
-	FVector newPoint = { radius * cos(angle), radius * sin(angle), 1 };
-	point = newPoint;
-	time += deltaTime;
-	if (time > 2.0f)
-	{
-		DrawWireSphere(point, 0.3f, { 1,1,1,1 });
-		count++;
-		time = 0;
-	}
 }
