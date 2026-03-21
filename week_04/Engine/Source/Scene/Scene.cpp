@@ -434,6 +434,9 @@ void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue&
 	
 	for (UPrimitiveComponent* PrimitiveComponent : VisiblePrimitives)
 	{
+		AActor* Owner = PrimitiveComponent->GetOwner();
+		if (Owner && !Owner->IsVisible())
+			continue;
 		FRenderCommand Command;
 		Command.MeshData = PrimitiveComponent->GetPrimitive()->GetMeshData();
 		Command.WorldMatrix = PrimitiveComponent->GetWorldTransform();

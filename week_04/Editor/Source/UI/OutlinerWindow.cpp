@@ -43,12 +43,20 @@ void COutlinerWindow::Render(CCore* Core)
 
 	for (AActor* Actor : Actors)
 	{
+;
 		if (!Actor || Actor->IsPendingDestroy())
 		{
 			continue;
 		}
 
 		const bool bSelected = (Actor == SelectedActor);
+		ImGui::PushID(Actor);
+		bool bVisible = Actor->IsVisible();
+		if (ImGui::Checkbox("##visible", &bVisible))
+		{
+			Actor->SetVisible(bVisible);
+		}
+		ImGui::SameLine();
 
 		if (ImGui::Selectable(Actor->GetName().c_str(), bSelected))
 		{
