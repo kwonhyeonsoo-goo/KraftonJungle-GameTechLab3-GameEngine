@@ -375,10 +375,10 @@ void CTextRenderer::DrawTextBillboard(
 
 			// 로컬 공간에서 YZ 평면에 글자 quad를 만들고
 			// billboard 월드행렬로 카메라를 바라보게 함
-			Vertices.push_back(FFontVertex(FVector(0.0f, X1, Y1), FVector2(Glyph.U0, Glyph.V0)));
-			Vertices.push_back(FFontVertex(FVector(0.0f, X0, Y1), FVector2(Glyph.U1, Glyph.V0)));
-			Vertices.push_back(FFontVertex(FVector(0.0f, X0, Y0), FVector2(Glyph.U1, Glyph.V1)));
-			Vertices.push_back(FFontVertex(FVector(0.0f, X1, Y0), FVector2(Glyph.U0, Glyph.V1)));
+			Vertices.push_back(FFontVertex(FVector(0.0f, X0, Y1), FVector2(Glyph.U0, Glyph.V0))); // 좌상
+			Vertices.push_back(FFontVertex(FVector(0.0f, X1, Y1), FVector2(Glyph.U1, Glyph.V0))); // 우상
+			Vertices.push_back(FFontVertex(FVector(0.0f, X1, Y0), FVector2(Glyph.U1, Glyph.V1))); // 우하
+			Vertices.push_back(FFontVertex(FVector(0.0f, X0, Y0), FVector2(Glyph.U0, Glyph.V1))); // 좌하
 
 			Indices.push_back(BaseIndex + 0);
 			Indices.push_back(BaseIndex + 1);

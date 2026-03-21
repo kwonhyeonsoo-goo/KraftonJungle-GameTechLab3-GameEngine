@@ -16,9 +16,10 @@ struct PSInput
 float4 main(PSInput Input) : SV_TARGET
 {
 	float4 SampledColor = FontTexture.Sample(FontSampler, Input.UV);
-	//float Alpha = SampledColor.a;
-	//clip(Alpha - 0.01f);
-	//return float4(TextColor.rgb, TextColor.a * Alpha);
-	//return float4(Input.UV.x, Input.UV.y, 0.0f, 1.0f);
-	return SampledColor;
+
+	float Alpha = SampledColor.r; // 또는 g, b
+	clip(Alpha - 0.01f);
+
+	return float4(TextColor.rgb, TextColor.a * Alpha);
+	//return SampledColor;
 }
