@@ -396,10 +396,7 @@ void UScene::Tick(float DeltaTime)
 
 void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible)
 {
-	if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives))
-	{
-		return;
-	}
+	
 	for (AActor* Actor : Actors)
 	{
 		if (!Actor || Actor->IsPendingDestroy())
@@ -422,15 +419,17 @@ void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveCom
 			// if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
 			if (PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
 			{
-		
-				if (ShowFlags.HasFlag(EEngineShowFlags::SF_BillboardText))
+				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_BillboardText))
 				{
 					continue;
 				}
 			}
 			else
 			{
-
+				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives))
+				{
+					continue;
+				}
 				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
 				{
 					continue;
