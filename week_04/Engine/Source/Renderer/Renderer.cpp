@@ -475,6 +475,7 @@ void CRenderer::ExecuteCommands()
 		}
 	}
 	ShaderManager.Bind(DeviceContext);
+	DeviceContext->VSSetConstantBuffers(0, 2, CBs);
 	if (PostRenderCallback)
 	{
 		PostRenderCallback(this);
