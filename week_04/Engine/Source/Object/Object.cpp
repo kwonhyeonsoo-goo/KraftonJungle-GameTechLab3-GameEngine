@@ -27,12 +27,16 @@ UObject::UObject(const FString& InName, UObject* InOuter)
 	ObjectSize = LastNewSize;
 }
 
-UObject::~UObject()
+UObject::~UObject() 
 {
 	// UUID 맵에서 제거
 	if (UUID != 0)
 	{
-		GUUIDToObjectMap.erase(UUID);
+		auto It = GUUIDToObjectMap.find(UUID);
+		if (It != GUUIDToObjectMap.end() && It->second == this)
+		{
+			GUUIDToObjectMap.erase(It);
+		}
 	}
 
 	// 조건 1: 소멸 시 GUObjectArray 슬롯을 nullptr로 마킹

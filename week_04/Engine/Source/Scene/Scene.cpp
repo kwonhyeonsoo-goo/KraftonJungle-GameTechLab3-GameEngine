@@ -134,10 +134,7 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 		return;
 	}
 
-	if (Json.contains("NextUUID"))
-	{
-		FObjectFactory::SetLastUUID(Json["NextUUID"].get<uint32>());
-	}
+
 	int32 ActorIndex = 0;
 	for (auto& [Key, Value] : Json["Primitives"].items())
 	{
@@ -169,6 +166,7 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 			Actor->UUID = SavedUUID;
 			GUUIDToObjectMap[SavedUUID] = Actor;
 		}
+
 		if (Value.contains("Material"))
 		{
 			const FString MaterialName = Value["Material"].get<FString>();
@@ -204,8 +202,29 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 		{
 			Root->SetRelativeTransform(Transform);
 		}
+		if (Value.contains("ComponentUUIDs"))
+		{
+			auto& CompUUIDs = Value["ComponentUUIDs"];
+			const auto& Components = Actor->GetComponents();
+			for (size_t i = 0; i < CompUUIDs.size() && i < Components.size(); ++i)
+			{
+				uint32 SavedCompUUID = CompUUIDs[i].get<uint32>();
+				GUUIDToObjectMap.erase(Components[i]->UUID);
+				Components[i]->UUID = SavedCompUUID;
+				GUUIDToObjectMap[SavedCompUUID] = Components[i];
+			}
+		}
 
 		++ActorIndex;
+
+	}
+	if (Json.contains("NextUUID"))
+	{
+		uint32 Saved = Json["NextUUID"].get<uint32>();
+		if (Saved > FObjectFactory::GetLastUUID())
+		{
+			FObjectFactory::SetLastUUID(Saved);
+		}
 	}
 }
 
@@ -269,6 +288,15 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 
 		Primitives[Key]["Type"] = Type;
 		Primitives[Key]["UUID"] = Actor->UUID;
+		nlohmann::json CompUUIDs = nlohmann::json::array();
+		for (UActorComponent* Comp : Actor->GetComponents())
+		{
+			if (Comp)
+			{
+				CompUUIDs.push_back(Comp->UUID);
+			}
+		}
+		Primitives[Key]["ComponentUUIDs"] = CompUUIDs;
 		// Material 이름 저장 (에셋 원본 이름 사용)
 		UPrimitiveComponent* PrimComp = Actor->GetComponentByClass<UPrimitiveComponent>();
 		if (PrimComp && PrimComp->GetMaterial() && !PrimComp->GetMaterial()->GetOriginName().empty())
@@ -316,6 +344,8 @@ void UScene::ClearActors()
 		}
 	}
 	Actors.clear();
+
+	bBegunPlay = false;
 }
 
 void UScene::RegisterActor(AActor* InActor)
