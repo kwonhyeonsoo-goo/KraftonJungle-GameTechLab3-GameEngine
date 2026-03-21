@@ -2,6 +2,7 @@
 #include <WICTextureLoader.h>
 #include <fstream>
 #include <filesystem>
+#include <Windows.h>
 
 FFontAtlas::~FFontAtlas()
 {
@@ -21,7 +22,7 @@ bool FFontAtlas::Initialize(
 		return false;
 	}
 
-	MessageBox(0, TexturePath.c_str(), L"FontAtlas TexturePath", 0);
+	MessageBox(0, TexturePath.c_str(), L"FontAtlas TexturePath", 0); // 버그: 이 메시지 박스 코드를 지우면 실행이 안됨... 곧 버그 수정	예정
 
 	std::ifstream TestFile(std::filesystem::path(TexturePath), std::ios::binary);
 	if (!TestFile.is_open())
@@ -30,6 +31,11 @@ bool FFontAtlas::Initialize(
 		return false;
 	}
 	TestFile.close();
+
+	if (!std::filesystem::exists(TexturePath)) {
+		MessageBox(0, TexturePath.c_str(), L"FontAtlas: File does not exist", 0);
+		return false;
+	}
 
 	HRESULT Hr = DirectX::CreateWICTextureFromFile(
 		Device,
@@ -116,11 +122,10 @@ void FFontAtlas::BuildGridAtlas128x128()
 		Glyphs[32].Advance = 0.35f;
 	}
 
+	// 숫자부터 대문자 매핑
 	// 대문자 A-Z 매핑
 	// A가 1행 34열  코드에서는 0-based로 Row=0, Col=33
-
-	// A가 5행 2열인 16x16으로 테스트중
-	const uint32 UpperStartRow = 4;
+	/*const uint32 UpperStartRow = 4;
 	const uint32 UpperStartCol = 1;
 
 	for (uint32 Cp = 'A'; Cp <= 'Z'; ++Cp)
@@ -131,6 +136,21 @@ void FFontAtlas::BuildGridAtlas128x128()
 		const uint32 Col = LinearCol % CellsPerRow;
 
 		SetGlyphAt(Cp, Row, Col, 1.0f);
+	}*/
+
+	// 숫자부터 대문자 매핑
+	// A가 4행 2열인 16x16으로 테스트중
+	const uint32 UpperStartRow = 3;
+	const uint32 UpperStartCol = 0;
+
+	for (uint32 Cp = '0'; Cp <= 'Z'; ++Cp)
+	{
+		const uint32 Offset = Cp - '0';
+		const uint32 LinearCol = UpperStartCol + Offset;
+		const uint32 Row = UpperStartRow + (LinearCol / CellsPerRow);
+		const uint32 Col = LinearCol % CellsPerRow;
+
+		SetGlyphAt(Cp, Row, Col, 0.5f);
 	}
 }
 

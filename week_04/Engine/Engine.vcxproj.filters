@@ -210,7 +210,7 @@
     <ClCompile Include="Source\Renderer\ShaderResource.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
-	  <ClCompile Include="Source\Renderer\FontAtlas.cpp">
+    <ClCompile Include="Source\Renderer\FontAtlas.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="Source\Renderer\TextRenderer.cpp">
@@ -218,8 +218,11 @@
     </ClCompile>
     <ClCompile Include="Source\Scene\Scene.cpp">
       <Filter>Source\Scene</Filter>
-    </ClCompile>    
+    </ClCompile>
     <ClCompile Include="Source\Physics\PhysicsManager.cpp" />
+    <ClCompile Include="Source\Scene\SceneManager.cpp" />
+    <ClCompile Include="Source\Types\Name.cpp" />
+    <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -467,6 +470,9 @@
       <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Source\Physics\PhysicsManager.h" />
+    <ClInclude Include="Source\Scene\SceneManager.h" />
+    <ClInclude Include="Source\Types\Name.h" />
+    <ClInclude Include="Source\Component\UUIDBillboardComponent.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

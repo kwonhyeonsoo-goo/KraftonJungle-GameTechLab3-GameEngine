@@ -48,6 +48,7 @@ bool CTextRenderer::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDe
 
 	//const std::wstring FontPath = FPaths::ToWide(FPaths::ContentDir() + "Fonts/NotoSansKR_Atlas.png");
 	const std::wstring FontPath = FPaths::ToWide(FPaths::ContentDir() + "Fonts/DejaVuSansMono.png");
+	//const std::wstring TestFontPath = L"C:\\Users\\jungle\\source\\repos\\Jungle3_Week3_Team5\\Content\\Fonts\\TestFont.png";
 	if (!Atlas.Initialize(Device, DeviceContext, FontPath))
 	{
 		MessageBox(0, L"TextRenderer: Atlas.Initialize failed", 0, 0);
@@ -343,8 +344,7 @@ void CTextRenderer::DrawTextBillboard(
 	}
 
 	float TotalWidth = 0.0f;
-	const FFontGlyph& A = Atlas.GetGlyph('A');
-	printf("A: U0=%.4f, V0=%.4f, U1=%.4f, V1=%.4f\n", A.U0, A.V0, A.U1, A.V1);
+
 	
 	for (uint32 Cp : Codepoints)
 	{

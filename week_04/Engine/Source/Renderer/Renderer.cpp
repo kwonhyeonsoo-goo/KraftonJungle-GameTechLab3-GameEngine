@@ -313,6 +313,9 @@ void CRenderer::BeginFrame()
 	PrevCommandCount = CommandList.size();
 	CommandList.clear();
 	CommandList.reserve(PrevCommandCount);
+
+	TextCommandList.clear();
+	TextCommandList.reserve(PrevCommandCount);
 }
 
 void CRenderer::EndFrame()
@@ -355,6 +358,11 @@ void CRenderer::SubmitCommands(const FRenderCommandQueue& Queue)
 		}
 		AddCommand(Cmd);
 	}
+	for (const auto& TextCmd : Queue.TextCommands)
+	{
+		TextCommandList.push_back(TextCmd);
+	}
+
 }
 
 void CRenderer::AddCommand(const FRenderCommand& Command)
@@ -439,16 +447,32 @@ void CRenderer::ExecuteCommands()
 
 	const FVector CameraPosition = GetCameraWorldPositionFromViewMatrix(ViewMatrix);
 
-	if (bEnableTextRenderTest)
+	if (!TextCommandList.empty() || bEnableTextRenderTest)
 	{
 		TextRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
 
-		TextRenderer.DrawTextBillboard(
-			FString("TEST"),
-			FVector(0.0f, 0.0f, 0.0f),
-			0.3f,
-			FVector4(1.0f, 1.0f, 1.0f, 1.0f)
-		);
+		for (const FTextRenderCommand& TextCmd : TextCommandList)
+		{
+			TextRenderer.DrawTextBillboard(
+				TextCmd.Text,
+				TextCmd.WorldPosition,
+				TextCmd.WorldScale,
+				TextCmd.Color
+			);
+		}
+
+		// 테스트용 코드
+		if (bEnableTextRenderTest)
+		{
+			TextRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
+
+			TextRenderer.DrawTextBillboard(
+				FString("012TEST"),
+				FVector(0.0f, 0.0f, 0.0f),
+				0.3f,
+				FVector4(1.0f, 1.0f, 1.0f, 1.0f)
+			);
+		}
 	}
 
 	if (PostRenderCallback)

@@ -1,4 +1,6 @@
 #include "Actor.h"
+#include "Object/ObjectFactory.h"
+#include "Component/UUIDBillboardComponent.h"
 
 IMPLEMENT_RTTI(AActor, UObject)
 
@@ -47,6 +49,21 @@ void AActor::RemoveOwnedComponent(UActorComponent* InComponent)
 
 void AActor::PostSpawnInitialize()
 {
+	if (GetComponentByClass<UUUIDBillboardComponent>() == nullptr)
+	{
+		UUUIDBillboardComponent* UUIDComponent =
+			FObjectFactory::ConstructObject<UUUIDBillboardComponent>(this, "UUIDBillboard");
+
+		if (UUIDComponent)
+		{
+			AddOwnedComponent(UUIDComponent);
+
+			UUIDComponent->SetWorldOffset(FVector(0.0f, 0.0f, 0.3f));
+			UUIDComponent->SetWorldScale(0.3f);
+			UUIDComponent->SetTextColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+		}
+	}
+
 	for (UActorComponent* Component : OwnedComponents)
 	{
 		if (Component && !Component->IsRegistered())
