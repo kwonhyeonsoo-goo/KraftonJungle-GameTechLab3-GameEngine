@@ -166,7 +166,7 @@ void CCore::Physics(float DeltaTime)
 	
 	if (Scene)
 	{
-		FVector LineStart(0, 0, 0), LineEnd(1, 1, 0);
+		FVector LineStart(2, 2, 0), LineEnd(5, 5, 0);
 		FHitResult HitResult;
 
 		bool bHit = PhysicsManager->Linetrace(Scene, LineStart, LineEnd, HitResult);
@@ -189,6 +189,8 @@ void CCore::Physics(float DeltaTime)
 					Renderer->DrawCube(Bound.Center, Bound.BoxExtent, FVector4(1, 0, 0, 1));
 				}
 			}
+
+			Renderer->DrawCube(HitResult.HitLocation, FVector(0.1, 0.1, 0.1), FVector4(0, 1, 0, 1));
 		}
 
 		if (Renderer)
