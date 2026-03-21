@@ -98,6 +98,8 @@ void FRenderCollector::CollectFromEditor(const FRenderCollectorContext& Context,
 	//	Gizmo
 	UGizmoComponent* Gizmo = Context.Gizmo;
 
+	RenderBus.SetCachedView(ViewMat);
+	RenderBus.SetCachedProjection(ProjMat);
 	RenderBus.UpdateLineBatchLineCommand(ViewMat, ProjMat);
 
 	FBatchedLine* BatchLine = RenderBus.GetBatehdLine();
