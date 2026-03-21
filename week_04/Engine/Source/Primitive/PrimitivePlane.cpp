@@ -37,6 +37,8 @@ void CPrimitivePlane::Generate()
 	Data->Indices.push_back(2);
 	Data->Indices.push_back(3);
 
+	Data->Topology = EMeshTopology::EMT_TriangleList;
+
 	MeshData = Data;
 	RegisterMeshData(Key, Data);
 }

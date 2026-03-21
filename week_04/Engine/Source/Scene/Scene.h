@@ -59,7 +59,7 @@ public:
 	FShowFlags& GetShowFlags() { return ShowFlags; }
 	const FShowFlags& GetShowFlags() const { return ShowFlags; }
 private:
-	void CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible);
+	void FrustrumCull(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible);
 
 private:
 	TArray<AActor*> Actors;

@@ -6,9 +6,18 @@
 
 bool FMeshData::CreateBuffers(ID3D11Device* Device)
 {
-	if (VertexBuffer && IndexBuffer)
-	{
+	if (!bIsDirty)
 		return true;
+
+	if (VertexBuffer)
+	{
+		VertexBuffer->Release();
+		VertexBuffer = nullptr;
+	}
+	if (IndexBuffer)
+	{
+		IndexBuffer->Release();
+		IndexBuffer = nullptr;
 	}
 
 	if (Vertices.empty() || Indices.empty())
@@ -50,7 +59,6 @@ bool FMeshData::CreateBuffers(ID3D11Device* Device)
 		return false;
 	}
 
-	IndexCount = static_cast<uint32_t>(Indices.size());
 	return true;
 }
 
@@ -60,7 +68,6 @@ void FMeshData::Bind(ID3D11DeviceContext* Context)
 	UINT Offset = 0;
 	Context->IASetVertexBuffers(0, 1, &VertexBuffer, &Stride, &Offset);
 	Context->IASetIndexBuffer(IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
-	Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
 void FMeshData::Release()
@@ -75,7 +82,6 @@ void FMeshData::Release()
 		VertexBuffer->Release();
 		VertexBuffer = nullptr;
 	}
-	IndexCount = 0;
 }
 
 // ─── CPrimitiveBase ───
@@ -143,6 +149,9 @@ std::shared_ptr<FMeshData> CPrimitiveBase::LoadFromFile(const FString& FilePath)
 	File.read(reinterpret_cast<char*>(&IndexCount), sizeof(uint32_t));
 	Data->Indices.resize(IndexCount);
 	File.read(reinterpret_cast<char*>(Data->Indices.data()), IndexCount * sizeof(uint32_t));
+
+	// 메시 읽어올 때 기본 옵션 Triangle list
+	Data->Topology = EMeshTopology::EMT_TriangleList;
 
 	if (File.fail())
 	{

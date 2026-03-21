@@ -34,8 +34,10 @@ public:
 		return LocalBoxExtent;
 	}
 
+	void UpdateLocalBoundRadius(FVector InNewPointLocalPos);
+
 protected:
-	std::unique_ptr<CPrimitiveBase> Primitive;
+	std::shared_ptr<CPrimitiveBase> Primitive;
 	float LocalBoundRadius = 1.0f;
 	FMaterial* Material = nullptr;
 

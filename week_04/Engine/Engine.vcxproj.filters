@@ -231,6 +231,10 @@
     <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Component\LineBatchComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="PrimitiveLineBatch.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -496,6 +500,12 @@
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Platform\Windows\WindowTypes.h" />
+    <ClInclude Include="Source\Component\LineBatchComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="PrimitiveLineBatch.h">
+      <Filter>Source\Primitive</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
