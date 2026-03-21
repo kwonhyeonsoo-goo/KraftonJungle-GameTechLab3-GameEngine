@@ -14,6 +14,7 @@
 
 #define SEPARATOR(); ImGui::Spacing(); ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing(); ImGui::Spacing();
 
+
 void FEditorMainPanel::Create(HWND InHWindow, FRenderer& InRenderer, FEditorEngine* InEditorEngine)
 {
 	EditorEngine = InEditorEngine;
@@ -64,7 +65,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 
 	ImGui::Text("Times Allocated : %d", EngineStatics::GetTotalAllocationCount());
 
-	SEPARATOR();
+	ImGui::SeparatorText("Spawn");
 
 	ImGui::Combo("Primitive", &SelectedPrimitiveType, PrimitiveTypes, IM_ARRAYSIZE(PrimitiveTypes));
 
@@ -90,7 +91,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 
 	ImGui::InputInt("Number of Spawn", &NumberOfSpawnedActors, 1, 10);
 
-	SEPARATOR();
+	ImGui::SeparatorText("Scene");
 
 	if (ImGui::Button("New Scene")) {
 		EditorEngine->GetGizmo()->SetVisibility(false);
@@ -138,7 +139,8 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 	ImGui::SameLine();
 	ImGui::InputText("Load Path", LoadPath, IM_ARRAYSIZE(LoadPath));
 
-	SEPARATOR();
+	ImGui::SeparatorText("Camera");
+
 	FCameraState& CameraState = EditorEngine->GetCameraState();
 	ImGui::Checkbox("Orthographic", &(CameraState.bIsOrthogonal));
 
@@ -173,7 +175,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 		Camera->SetRelativeRotation(FVector(Clamp(CameraRotation[0], CamRot.X, CamRot.X), CameraRotation[1], CameraRotation[2]));
 	}
 
-	SEPARATOR();
+	ImGui::SeparatorText("Gizmo");
 
 	// Space Select Button(World or Local)
 	static int SelectedSpace = 0;
@@ -192,7 +194,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 	}
 
 
-	SEPARATOR();
+	ImGui::SeparatorText("Tools");
 
 	if (ImGui::Button("Translate")) EditorEngine->GetEditorGizmo()->SetTranslateMode();
 	ImGui::SameLine();
@@ -200,45 +202,30 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 	ImGui::SameLine();
 	if (ImGui::Button("Scale")) EditorEngine->GetEditorGizmo()->SetScaleMode();
 
+	
+	ImGui::SeparatorText("View Mode");
 
-	SEPARATOR();
-	ImGuiStyle& style = ImGui::GetStyle();
-	ImVec2 originalButtonTextAlign = style.ButtonTextAlign;
-
-	// Push the new style: (0.0f, 0.5f) is left-aligned horizontally, centered vertically
-	ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.0f));
-
-	switch (Renderer->viewMode)
-	{
-	case EViewModeIndex::VMI_Lit:
-	{
-		if (ImGui::Button("View Mode : Lit", ImVec2(160.0f, 0.0f)))
-			Renderer->viewMode =  EViewModeIndex::VMI_Unlit;
-
-		break;
+	static int ViewMode = 0;
+	if (ImGui::RadioButton("Lit", &ViewMode, 0)) {
+		Renderer->viewMode = EViewModeIndex::VMI_Unlit;
 	}
-	case EViewModeIndex::VMI_Unlit:
-	{
-		if (ImGui::Button("View Mode : Unlit", ImVec2(160.0f, 0.0f)))
-			Renderer->viewMode = EViewModeIndex::VMI_Wireframe;
 
-		break;
+	if (ImGui::RadioButton("Unlit", &ViewMode, 1)) {
+		Renderer->viewMode = EViewModeIndex::VMI_Unlit;
 	}
-	case EViewModeIndex::VMI_Wireframe:
-	{
-		if (ImGui::Button("View Mode : Wireframe", ImVec2(160.0f, 0.0f)))
-			Renderer->viewMode = EViewModeIndex::VMI_Lit;
 
-		break;
+	if (ImGui::RadioButton("Wireframe", &ViewMode, 2)) {
+		Renderer->viewMode = EViewModeIndex::VMI_Wireframe;
 	}
-	default:
-		break;
-	}
-	ImGui::SameLine();
-	if (ImGui::Button(Renderer->showFlag == EEngineShowFlags::SF_Primitives ? "Show Flag : Primitive" : "Show Flag : BillboardText", ImVec2(200.0f, 0.0f))) {
-		Renderer->showFlag = Renderer->showFlag == EEngineShowFlags::SF_Primitives ? EEngineShowFlags::SF_BillboardText : EEngineShowFlags::SF_Primitives;
-	}
-	ImGui::PopStyleVar();
+
+	ImGui::SeparatorText("Common Show Flag");
+
+
+	ImGui::CheckboxFlags("Primitives", (int*)&Renderer->showFlag, (uint64)EEngineShowFlags::SF_Primitives);
+	ImGui::CheckboxFlags("BillboardText", (int*)&Renderer->showFlag, (uint64)EEngineShowFlags::SF_BillboardText);
+
+
+
 	ImGui::End();
 
 	RenderObjectWindow(ViewOutput.Object);

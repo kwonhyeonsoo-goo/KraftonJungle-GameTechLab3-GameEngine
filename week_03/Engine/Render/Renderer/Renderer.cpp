@@ -93,7 +93,7 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 	//	State Caching으로 인해 중복 설정은 자동으로 스킵됨.
 
 	//	Primitive
-	if (showFlag == EEngineShowFlags::SF_Primitives) {
+	if (showFlag & (uint64)EEngineShowFlags::SF_Primitives) {
 		Device.SetDepthStencilState(EDepthStencilState::StencilWrite);
 		if (viewMode == EViewModeIndex::VMI_Wireframe) Device.SetRasterizerState(ERasterizerState::WireFrame);
 		else  Device.SetRasterizerState(ERasterizerState::SolidBackCull);

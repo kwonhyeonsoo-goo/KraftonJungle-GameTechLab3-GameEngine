@@ -21,8 +21,11 @@ enum class EViewModeIndex : uint32
 
 enum class EEngineShowFlags : uint64
 {
-	SF_Primitives,
-	SF_BillboardText,
+	SF_None = 0,
+	SF_Primitives = 1 <<0 ,	//1
+	SF_BillboardText = 1 << 1, //2
+	Flag_OptionB = 1 << 2, //4
+	Flag_OptionC = 1 << 3, //8
 };
 
 class FRenderer
@@ -80,7 +83,7 @@ public:
 
 public: 
 	EViewModeIndex viewMode = EViewModeIndex::VMI_Unlit;
-	EEngineShowFlags showFlag = EEngineShowFlags::SF_Primitives;
+	uint64 showFlag = (uint64)EEngineShowFlags::SF_Primitives;
 
 };
 
