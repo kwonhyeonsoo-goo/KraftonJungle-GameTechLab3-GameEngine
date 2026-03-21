@@ -96,7 +96,7 @@ void UScene::InitializeDefaultScene(float AspectRatio, ID3D11Device* Device)
 	ULineBatchComponent* lineDrawer = (ULineBatchComponent*)FObjectFactory::ConstructObject(ULineBatchComponent::StaticClass());
 	Actor->AddOwnedComponent(lineDrawer);
 	static FVector rotEuler = { 45, 0, 0 };
-	lineDrawer->DrawCube({ 1, 0, 0 }, FQuat::MakeFromEuler(rotEuler), { 2, 1, 1, }, {1,1,1,1});
+	lineDrawer->DrawWireCube({ 1, 0, 0 }, FQuat::MakeFromEuler(rotEuler), { 2, 1, 1, }, {1,1,1,1});
 	// 테스트 코드
 }
 
