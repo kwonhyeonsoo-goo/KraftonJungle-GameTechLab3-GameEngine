@@ -423,7 +423,7 @@ void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveCom
 			if (PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
 			{
 		
-				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_BillboardText))
+				if (ShowFlags.HasFlag(EEngineShowFlags::SF_BillboardText))
 				{
 					continue;
 				}
