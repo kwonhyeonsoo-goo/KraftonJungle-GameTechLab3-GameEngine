@@ -5,6 +5,8 @@
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_dx11.h"
 #include "ImGui/imgui_impl_win32.h"
+// Merge icons into default tool font
+#include "ImGui/IconsFontAwesome4.h"
 
 #include "Render/Renderer/Renderer.h"
 #include "World/PrimitiveComponent.h"
@@ -25,6 +27,16 @@ void FEditorMainPanel::Create(HWND InHWindow, FRenderer& InRenderer, FEditorEngi
 	ImGui::CreateContext();
 	ImGui_ImplWin32_Init((void*)InHWindow);
 	ImGui_ImplDX11_Init(InRenderer.GetFD3DDevice().GetDevice(), InRenderer.GetFD3DDevice().GetDeviceContext());
+
+	//폰트 아이콘
+	ImGuiIO& io = ImGui::GetIO();
+	io.Fonts->AddFontDefault();
+	ImFontConfig config;
+	config.MergeMode = true;
+	config.GlyphOffset = ImVec2(0.0f, 2.0f);  // ← 이거 추가 (양수 = 아래로)
+	config.GlyphMinAdvanceX = 13.0f; // Use if you want to make the icon monospaced
+	static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+	io.Fonts->AddFontFromFileTTF("ImGui/fontawesome-webfont.ttf", 13.0f, &config, icon_ranges);
 }
 
 void FEditorMainPanel::Release()
@@ -93,7 +105,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 
 	ImGui::SeparatorText("Scene");
 
-	if (ImGui::Button("New Scene")) {
+	if (ImGui::Button(ICON_FA_FILE_TEXT_O" New Scene")) {
 		EditorEngine->GetGizmo()->SetVisibility(false);
 		ViewOutput.Object = nullptr;
 		EditorEngine->NewScene();
@@ -105,7 +117,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 		ImGui::Text("New scene created");
 	}
 
-	if (ImGui::Button("Save Scene")) {
+	if (ImGui::Button(ICON_FA_FLOPPY_O" Save Scene")) {
 		FSceneSaveManager::SaveSceneAsJSON(SceneName, EditorEngine->GetScene());
 		SceneSaveNotificationTimer = NotificationTimer;
 	}
@@ -116,7 +128,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 	ImGui::SameLine();
 	ImGui::InputText("Scene Name", SceneName, IM_ARRAYSIZE(SceneName));
 
-	if (ImGui::Button("Load Scene")) {
+	if (ImGui::Button(ICON_FA_FOLDER_OPEN" Load Scene")) {
 		if (std::ifstream(LoadPath).is_open()) {
 			EditorEngine->GetGizmo()->SetVisibility(false);
 			EditorEngine->ClearScene();
@@ -145,20 +157,24 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 	ImGui::Checkbox("Orthographic", &(CameraState.bIsOrthogonal));
 
 	float CameraFOV_Deg = CameraState.FOV * (RAD_TO_DEG);
-
-	if (ImGui::DragFloat("Camera FOV",
-		&CameraFOV_Deg,
-		0.5f,          // speed in degrees
-		1.0f,          // min deg
-		90.0f))        // max deg
-	{
-		CameraState.FOV = CameraFOV_Deg * (DEG_TO_RAD);
-	}
-
 	float OrthoWidth = CameraState.OrthoWidth;
-	if (ImGui::DragFloat("Ortho Width", &OrthoWidth, 0.1f, 0.1f, 1000.0f))
-	{
-		CameraState.OrthoWidth = Clamp(OrthoWidth, 0.1f, 1000.0f);
+
+	if (!CameraState.bIsOrthogonal) {
+		if (ImGui::DragFloat("Camera FOV",
+			&CameraFOV_Deg,
+			0.5f,          // speed in degrees
+			1.0f,          // min deg
+			90.0f))        // max deg
+		{
+			CameraState.FOV = CameraFOV_Deg * (DEG_TO_RAD);
+		}
+	}
+	else {
+
+		if (ImGui::DragFloat("Ortho Width", &OrthoWidth, 0.1f, 0.1f, 1000.0f))
+		{
+			CameraState.OrthoWidth = Clamp(OrthoWidth, 0.1f, 1000.0f);
+		}
 	}
 	UCamera* Camera = EditorEngine->GetCamera();
 	FVector CamPos = Camera->GetWorldLocation();
@@ -206,23 +222,23 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 	ImGui::SeparatorText("View Mode");
 
 	static int ViewMode = 0;
-	if (ImGui::RadioButton("Lit", &ViewMode, 0)) {
+	if (ImGui::RadioButton(ICON_FA_ADJUST" Lit", &ViewMode, 0)) {
 		Renderer->viewMode = EViewModeIndex::VMI_Unlit;
 	}
 
-	if (ImGui::RadioButton("Unlit", &ViewMode, 1)) {
+	if (ImGui::RadioButton(ICON_FA_CIRCLE" Unlit", &ViewMode, 1)) {
 		Renderer->viewMode = EViewModeIndex::VMI_Unlit;
 	}
 
-	if (ImGui::RadioButton("Wireframe", &ViewMode, 2)) {
+	if (ImGui::RadioButton(ICON_FA_CODEPEN" Wireframe", &ViewMode, 2)) {
 		Renderer->viewMode = EViewModeIndex::VMI_Wireframe;
 	}
 
 	ImGui::SeparatorText("Common Show Flag");
 
 
-	ImGui::CheckboxFlags("Primitives", (int*)&Renderer->showFlag, (uint64)EEngineShowFlags::SF_Primitives);
-	ImGui::CheckboxFlags("BillboardText", (int*)&Renderer->showFlag, (uint64)EEngineShowFlags::SF_BillboardText);
+	ImGui::CheckboxFlags(ICON_FA_CUBES" Primitives", (int*)&Renderer->showFlag, (uint64)EEngineShowFlags::SF_Primitives);
+	ImGui::CheckboxFlags(ICON_FA_FONT " BillboardText", (int*)&Renderer->showFlag, (uint64)EEngineShowFlags::SF_BillboardText);
 
 
 
