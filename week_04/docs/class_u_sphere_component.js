@@ -1,4 +1,4 @@
 var class_u_sphere_component =
 [
-    [ "USphereComponent", "class_u_sphere_component.html#af14a1346d778d5c23b3800ba121cba0d", null ]
+    [ "Initialize", "class_u_sphere_component.html#a92a4d861f7158ca4baf48683b1a680b2", null ]
 ];

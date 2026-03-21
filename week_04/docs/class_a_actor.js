@@ -1,6 +1,5 @@
 var class_a_actor =
 [
-    [ "AActor", "class_a_actor.html#ad041f1037a92cf9d983c89ae34bdc29d", null ],
     [ "~AActor", "class_a_actor.html#a39af8fb0102b3fb08ec9e066735416f9", null ],
     [ "AddOwnedComponent", "class_a_actor.html#a53a6234894ae6398bc0f18c0c72b8826", null ],
     [ "BeginPlay", "class_a_actor.html#aa18a335c99d43d74ac46328df5c4918b", null ],
@@ -20,6 +19,7 @@ var class_a_actor =
     [ "SetActorTickEnabled", "class_a_actor.html#a936814c37dbcb506c74f98f5ab708162", null ],
     [ "SetRootComponent", "class_a_actor.html#a2a62eb276eba91c6b3ffbf96af0e6cb4", null ],
     [ "SetScene", "class_a_actor.html#a821f13e0205f5532522f6255ed9dcdfb", null ],
+    [ "Test", "class_a_actor.html#aa3fe879fd2fdecdb714af623477b6fd4", null ],
     [ "Tick", "class_a_actor.html#a797bdc4ef46d44e7b8abd2f728cdc50a", null ],
     [ "bActorBegunPlay", "class_a_actor.html#ad5e1b0ed20c1b088b302984455470e9a", null ],
     [ "bCanEverTick", "class_a_actor.html#accd71660e9fa34c279af72f64743b1fc", null ],
@@ -27,5 +27,5 @@ var class_a_actor =
     [ "bTickEnabled", "class_a_actor.html#a937188367d99351f6aba2c82c9c740f7", null ],
     [ "OwnedComponents", "class_a_actor.html#a8ef1c160d41bb29c7cd736006566a6d4", null ],
     [ "RootComponent", "class_a_actor.html#acb8863457e43309b371aa59beb8b366b", null ],
-    [ "Scene", "class_a_actor.html#af04a80af39a39d1ee31ce359fd5654ba", null ]
+    [ "Scene", "class_a_actor.html#a335d69b0ffd4c79da99bda5390796c5b", null ]
 ];

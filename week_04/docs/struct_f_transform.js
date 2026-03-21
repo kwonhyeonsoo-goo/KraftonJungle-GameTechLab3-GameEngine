@@ -7,9 +7,12 @@ var struct_f_transform =
     [ "FTransform", "struct_f_transform.html#a8eb279a0b745ba5b2440711cc42e67b1", null ],
     [ "FTransform", "struct_f_transform.html#a7039fdf9a605d50cacf7b8bc3acdeb95", null ],
     [ "AddToTranslation", "struct_f_transform.html#a09a9406b2afb4ec5e3590f8be4211e15", null ],
+    [ "ComponentDivideSafe", "struct_f_transform.html#a8cc7b856689256582b30d0037b6065fb", null ],
+    [ "ComponentMultiply", "struct_f_transform.html#afd310ac77bb3f5c81f84520dc981690c", null ],
     [ "Equals", "struct_f_transform.html#a4ed98d45b85aa5e738b8e4d2a050a823", null ],
     [ "GetLocation", "struct_f_transform.html#afd6018501c5d76eb9da91e44580ea911", null ],
     [ "GetRotation", "struct_f_transform.html#acd1616d9c7fdf7599ca99781de81a38d", null ],
+    [ "GetSafeScaleReciprocal", "struct_f_transform.html#ace4aaa62dbeac228c7e1c34b07404f5c", null ],
     [ "GetScale3D", "struct_f_transform.html#ab0ea0fe880fd7d0392e5c8f092d830db", null ],
     [ "GetScaledAxis", "struct_f_transform.html#abb3522e5d726ff8226051624ce50a5ce", null ],
     [ "GetTranslation", "struct_f_transform.html#adfb62649b99f635c19b7254b74076237", null ],
@@ -37,5 +40,9 @@ var struct_f_transform =
     [ "TransformPosition", "struct_f_transform.html#af970552c4fb30c622e7be63d3af44842", null ],
     [ "TransformPositionNoScale", "struct_f_transform.html#acf11d80b6c5df9b43cee94fb2f0d738a", null ],
     [ "TransformVector", "struct_f_transform.html#a5d90c5717303cc79c7337cf87c183d07", null ],
-    [ "TransformVectorNoScale", "struct_f_transform.html#a682db807d83f6be63eec6a7e6bec38e4", null ]
+    [ "TransformVectorNoScale", "struct_f_transform.html#a682db807d83f6be63eec6a7e6bec38e4", null ],
+    [ "Identity", "struct_f_transform.html#a594dc5a642fcdef4a64192ca57ca4138", null ],
+    [ "Rotation", "struct_f_transform.html#ad96f056e0b57583eb4cac57789573ad0", null ],
+    [ "Scale3D", "struct_f_transform.html#adde5946e28218ba334457fe8f0a554a7", null ],
+    [ "Translation", "struct_f_transform.html#afbb97b64538b8fff13e7448d8128c849", null ]
 ];
