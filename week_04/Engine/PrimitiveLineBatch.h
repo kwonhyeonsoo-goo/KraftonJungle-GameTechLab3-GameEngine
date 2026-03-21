@@ -38,4 +38,5 @@ public:
 
 	/// <returns>생성한 라인의 id, 수동으로 삭제할 때 사용</returns>
 	uint32 AddLine(FVector InStart, FVector InEnd, FVector4 InColor, uint32 InBatchID = 0);
+	void ClearVertices();
 };

@@ -19,3 +19,10 @@ uint32 CPrimitiveLineBatch::AddLine(FVector InStart, FVector InEnd, FVector4 InC
 	// TODO: batchID 구현 (추가한 batchLine 수동으로 삭제하는 용도)
 	return InBatchID;
 }
+
+void CPrimitiveLineBatch::ClearVertices()
+{
+	MeshData->Vertices.clear();
+	MeshData->Indices.clear();
+	MeshData->bIsDirty = true;
+}

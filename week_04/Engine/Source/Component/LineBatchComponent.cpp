@@ -43,6 +43,12 @@ void ULineBatchComponent::DrawCube(FVector InCenter, FQuat InRotation, FVector I
 	}
 }
 
+void ULineBatchComponent::Clear()
+{
+	auto primitive = static_pointer_cast<CPrimitiveLineBatch>(Primitive);
+	primitive->ClearVertices();
+}
+
 void ULineBatchComponent::Tick(float deltaTime)
 {
 	static FVector point = { 1, 0, 1 };
@@ -53,5 +59,10 @@ void ULineBatchComponent::Tick(float deltaTime)
 	DrawLine(point, newPoint, { 1,1,1,1 });
 	point = newPoint;
 	time += deltaTime;
+	if (time > 10.0f)
+	{
+		Clear();
+		time = 0;
+	}
 	UE_LOG("newPoint x: %f, y : %f\n", newPoint.X, newPoint.Y);
 }
