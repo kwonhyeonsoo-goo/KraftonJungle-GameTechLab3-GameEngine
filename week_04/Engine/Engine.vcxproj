@@ -88,6 +88,7 @@
     <ClInclude Include="Source\Scene\SceneContext.h" />
     <ClInclude Include="Source\Scene\SceneManager.h" />
     <ClInclude Include="Source\Scene\SceneTypes.h" />
+    <ClInclude Include="Source\Scene\ShowFlags.h" />
     <ClInclude Include="Source\Types\Array.h" />
     <ClInclude Include="Source\Types\CoreTypes.h" />
     <ClInclude Include="Source\Types\LinkedList.h" />
@@ -157,6 +158,7 @@
     <ClCompile Include="Source\Renderer\ShaderResource.cpp" />
     <ClCompile Include="Source\Scene\Scene.cpp" />
     <ClCompile Include="Source\Scene\SceneManager.cpp" />
+    <ClCompile Include="Source\Scene\ShowFlags.cpp" />
     <ClCompile Include="Source\Types\Name.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

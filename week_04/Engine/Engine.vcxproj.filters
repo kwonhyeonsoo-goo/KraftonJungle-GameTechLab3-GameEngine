@@ -28,6 +28,9 @@
     <Filter Include="Source\Object">
       <UniqueIdentifier>{57ff594e-c20e-1243-40d9-9d88b6d24db9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Physics">
+      <UniqueIdentifier>{41700508-bfbe-3cac-2d38-1c7d31414d7c}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Platform">
       <UniqueIdentifier>{7ffeef2f-57c8-23a1-bcad-f74a8fad0318}</UniqueIdentifier>
     </Filter>
@@ -159,6 +162,9 @@
     <ClCompile Include="Source\Object\ObjectManager.cpp">
       <Filter>Source\Object</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Physics\PhysicsManager.cpp">
+      <Filter>Source\Physics</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp">
       <Filter>Source\Platform\Windows</Filter>
     </ClCompile>
@@ -213,7 +219,15 @@
     <ClCompile Include="Source\Scene\Scene.cpp">
       <Filter>Source\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Physics\PhysicsManager.cpp" />
+    <ClCompile Include="Source\Scene\SceneManager.cpp">
+      <Filter>Source\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scene\ShowFlags.cpp">
+      <Filter>Source\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Types\Name.cpp">
+      <Filter>Source\Types</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -348,6 +362,9 @@
     <ClInclude Include="Source\Object\ObjectTypes.h">
       <Filter>Source\Object</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Physics\PhysicsManager.h">
+      <Filter>Source\Physics</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h">
       <Filter>Source\Platform\Windows</Filter>
     </ClInclude>
@@ -414,7 +431,13 @@
     <ClInclude Include="Source\Scene\SceneContext.h">
       <Filter>Source\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Scene\SceneManager.h">
+      <Filter>Source\Scene</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Scene\SceneTypes.h">
+      <Filter>Source\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\ShowFlags.h">
       <Filter>Source\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Source\Types\Array.h">
@@ -427,6 +450,9 @@
       <Filter>Source\Types</Filter>
     </ClInclude>
     <ClInclude Include="Source\Types\Map.h">
+      <Filter>Source\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Types\Name.h">
       <Filter>Source\Types</Filter>
     </ClInclude>
     <ClInclude Include="Source\Types\ObjectPtr.h">
@@ -450,7 +476,6 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp">
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Physics\PhysicsManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

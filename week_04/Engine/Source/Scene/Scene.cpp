@@ -424,9 +424,14 @@ void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveCom
 
 void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
+
+	if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives))
+	{
+		return;
+	}
 	TArray<UPrimitiveComponent*> VisiblePrimitives;
 	CullVisiblePrimitives(Frustum, VisiblePrimitives);
-
+	
 	for (UPrimitiveComponent* PrimitiveComponent : VisiblePrimitives)
 	{
 		FRenderCommand Command;
