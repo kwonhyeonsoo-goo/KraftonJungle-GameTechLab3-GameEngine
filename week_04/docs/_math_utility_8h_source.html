@@ -119,14 +119,41 @@ $(function(){initNavTree('_math_utility_8h_source.html','',''); });
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>        <span class="keywordflow">return</span> Radians * (180.0f / <a class="code hl_variable" href="struct_f_math.html#a0e31f8455cdcf4748cdd4cea66ff9917">PI</a>);</div>
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>    }</div>
 </div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>};</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
+<div class="foldopen" id="foldopen00025" data-start="{" data-end="}">
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno"><a class="line" href="struct_f_math.html#a4292eb31f08e0f1c4042fcc9229adb7b">   25</a></span>    <span class="keyword">static</span> <span class="keywordtype">float</span> <a class="code hl_function" href="struct_f_math.html#a4292eb31f08e0f1c4042fcc9229adb7b">Max</a>(<span class="keywordtype">float</span> A, <span class="keywordtype">float</span> B)</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    {</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>        <span class="keywordflow">return</span> A &lt; B ? B : A;</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    }</div>
+</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span> </div>
+<div class="foldopen" id="foldopen00030" data-start="{" data-end="}">
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno"><a class="line" href="struct_f_math.html#a3f3d129ff98443cdb70bc1eb8b3d1748">   30</a></span>    <span class="keyword">static</span> <span class="keywordtype">float</span> <a class="code hl_function" href="struct_f_math.html#a3f3d129ff98443cdb70bc1eb8b3d1748">Min</a>(<span class="keywordtype">float</span> A, <span class="keywordtype">float</span> B)</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    {</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>        <span class="keywordflow">return</span> A &lt; B ? A : B;</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    }</div>
+</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    <span class="keyword">template</span> &lt;<span class="keyword">typename</span> T&gt;</div>
+<div class="foldopen" id="foldopen00036" data-start="{" data-end="}">
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno"><a class="line" href="struct_f_math.html#a0d1ea8174043daca09b77874618df223">   36</a></span>    <span class="keyword">static</span> T <a class="code hl_function" href="struct_f_math.html#a0d1ea8174043daca09b77874618df223">Clamp</a>(<span class="keyword">const</span> T&amp; Value, <span class="keyword">const</span> T&amp; <a class="code hl_function" href="struct_f_math.html#a3f3d129ff98443cdb70bc1eb8b3d1748">Min</a>, <span class="keyword">const</span> T&amp; <a class="code hl_function" href="struct_f_math.html#a4292eb31f08e0f1c4042fcc9229adb7b">Max</a>)</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    {</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>        <span class="keywordflow">if</span> (Value &lt; <a class="code hl_function" href="struct_f_math.html#a3f3d129ff98443cdb70bc1eb8b3d1748">Min</a>) <span class="keywordflow">return</span> <a class="code hl_function" href="struct_f_math.html#a3f3d129ff98443cdb70bc1eb8b3d1748">Min</a>;</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        <span class="keywordflow">if</span> (Value &gt; <a class="code hl_function" href="struct_f_math.html#a4292eb31f08e0f1c4042fcc9229adb7b">Max</a>) <span class="keywordflow">return</span> <a class="code hl_function" href="struct_f_math.html#a4292eb31f08e0f1c4042fcc9229adb7b">Max</a>;</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>        <span class="keywordflow">return</span> Value;</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    }</div>
+</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>};</div>
 </div>
 <div class="ttc" id="a_engine_a_p_i_8h_html"><div class="ttname"><a href="_engine_a_p_i_8h.html">EngineAPI.h</a></div></div>
 <div class="ttc" id="a_engine_a_p_i_8h_html_a0697ee40f69dc5dab56d13131f4c4835"><div class="ttname"><a href="_engine_a_p_i_8h.html#a0697ee40f69dc5dab56d13131f4c4835">ENGINE_API</a></div><div class="ttdeci">#define ENGINE_API</div><div class="ttdef"><b>Definition</b> EngineAPI.h:8</div></div>
 <div class="ttc" id="astruct_f_math_html"><div class="ttname"><a href="struct_f_math.html">FMath</a></div><div class="ttdef"><b>Definition</b> MathUtility.h:6</div></div>
+<div class="ttc" id="astruct_f_math_html_a0d1ea8174043daca09b77874618df223"><div class="ttname"><a href="struct_f_math.html#a0d1ea8174043daca09b77874618df223">FMath::Clamp</a></div><div class="ttdeci">static T Clamp(const T &amp;Value, const T &amp;Min, const T &amp;Max)</div><div class="ttdef"><b>Definition</b> MathUtility.h:36</div></div>
 <div class="ttc" id="astruct_f_math_html_a0e31f8455cdcf4748cdd4cea66ff9917"><div class="ttname"><a href="struct_f_math.html#a0e31f8455cdcf4748cdd4cea66ff9917">FMath::PI</a></div><div class="ttdeci">static constexpr float PI</div><div class="ttdef"><b>Definition</b> MathUtility.h:7</div></div>
 <div class="ttc" id="astruct_f_math_html_a1cc4ccc68adb0dfca7b16b013edda0b3"><div class="ttname"><a href="struct_f_math.html#a1cc4ccc68adb0dfca7b16b013edda0b3">FMath::RadiansToDegrees</a></div><div class="ttdeci">static constexpr float RadiansToDegrees(float Radians)</div><div class="ttdef"><b>Definition</b> MathUtility.h:20</div></div>
+<div class="ttc" id="astruct_f_math_html_a3f3d129ff98443cdb70bc1eb8b3d1748"><div class="ttname"><a href="struct_f_math.html#a3f3d129ff98443cdb70bc1eb8b3d1748">FMath::Min</a></div><div class="ttdeci">static float Min(float A, float B)</div><div class="ttdef"><b>Definition</b> MathUtility.h:30</div></div>
 <div class="ttc" id="astruct_f_math_html_a4031a15930971d3d38e731bfb1ccf552"><div class="ttname"><a href="struct_f_math.html#a4031a15930971d3d38e731bfb1ccf552">FMath::DegreesToRadians</a></div><div class="ttdeci">static constexpr float DegreesToRadians(float Degrees)</div><div class="ttdef"><b>Definition</b> MathUtility.h:15</div></div>
+<div class="ttc" id="astruct_f_math_html_a4292eb31f08e0f1c4042fcc9229adb7b"><div class="ttname"><a href="struct_f_math.html#a4292eb31f08e0f1c4042fcc9229adb7b">FMath::Max</a></div><div class="ttdeci">static float Max(float A, float B)</div><div class="ttdef"><b>Definition</b> MathUtility.h:25</div></div>
 <div class="ttc" id="astruct_f_math_html_a6365a1c81ddf8914f7a3a2146541a22f"><div class="ttname"><a href="struct_f_math.html#a6365a1c81ddf8914f7a3a2146541a22f">FMath::InvPI</a></div><div class="ttdeci">static constexpr float InvPI</div><div class="ttdef"><b>Definition</b> MathUtility.h:8</div></div>
 <div class="ttc" id="astruct_f_math_html_a94f434202aed7479fa30773ed2fec6d9"><div class="ttname"><a href="struct_f_math.html#a94f434202aed7479fa30773ed2fec6d9">FMath::SmallNumber</a></div><div class="ttdeci">static constexpr float SmallNumber</div><div class="ttdef"><b>Definition</b> MathUtility.h:12</div></div>
 <div class="ttc" id="astruct_f_math_html_ab17d986563a0fb0ffc59f0477dc780f2"><div class="ttname"><a href="struct_f_math.html#ab17d986563a0fb0ffc59f0477dc780f2">FMath::HalfPI</a></div><div class="ttdeci">static constexpr float HalfPI</div><div class="ttdef"><b>Definition</b> MathUtility.h:9</div></div>

@@ -22,8 +22,6 @@ bool FFontAtlas::Initialize(
 		return false;
 	}
 
-	MessageBox(0, TexturePath.c_str(), L"FontAtlas TexturePath", 0); // 버그: 이 메시지 박스 코드를 지우면 실행이 안됨... 곧 버그 수정	예정
-
 	std::ifstream TestFile(std::filesystem::path(TexturePath), std::ios::binary);
 	if (!TestFile.is_open())
 	{

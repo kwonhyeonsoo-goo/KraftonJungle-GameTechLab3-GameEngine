@@ -1,4 +1,4 @@
 var _object_factory_8h =
 [
-    [ "ObjectFactory", "class_object_factory.html", "class_object_factory" ]
+    [ "FObjectFactory", "class_f_object_factory.html", "class_f_object_factory" ]
 ];

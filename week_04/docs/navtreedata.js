@@ -25,6 +25,7 @@
 var NAVTREE =
 [
   [ "Jungle_Week1_Team2", "index.html", [
+    [ "Concepts", "concepts.html", "concepts" ],
     [ "Classes", "annotated.html", [
       [ "Class List", "annotated.html", "annotated_dup" ],
       [ "Class Index", "classes.html", null ],
@@ -32,8 +33,9 @@ var NAVTREE =
       [ "Class Members", "functions.html", [
         [ "All", "functions.html", "functions_dup" ],
         [ "Functions", "functions_func.html", "functions_func" ],
-        [ "Variables", "functions_vars.html", null ],
+        [ "Variables", "functions_vars.html", "functions_vars" ],
         [ "Typedefs", "functions_type.html", null ],
+        [ "Enumerations", "functions_enum.html", null ],
         [ "Enumerator", "functions_eval.html", null ],
         [ "Related Symbols", "functions_rela.html", null ]
       ] ]
@@ -55,10 +57,14 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "_actor_8cpp.html",
-"_vector_8h.html",
-"class_f_material.html#a00563e4d256210e3b57b98cd2c5822f9",
-"struct_f_material_constant_buffer.html#a4a58d5bc12f4c7305c09280b51159292",
-"struct_f_vector.html#a9ce4d5c5dfa75a96b812022e7f3d538a"
+"_primitive_base_8cpp.html",
+"class_c_camera.html#a42d41d046236816065fa9387073459ad",
+"class_c_input_manager.html#a3bea1bba6f2efe1cc55f110a4d5341b8",
+"class_c_window.html#a48decd44ec49f8492f44eca9cac6aa50",
+"class_f_paths.html#ad534fcf71651d5c5b930a523c7dba576",
+"class_u_scene.html#a6ae59eca200daf53ecb7905f4f61a6dd",
+"struct_f_material_parameter_info.html#a8e4236a22f16f375ec2925ef51b6d523",
+"struct_f_transform.html#a2d6cf80bac27ef403f4fde948b5359c7"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

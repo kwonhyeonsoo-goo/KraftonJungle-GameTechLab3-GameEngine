@@ -15,5 +15,19 @@ var class_c_input_manager =
     [ "operator=", "class_c_input_manager.html#a42d8aca707c1713b00af78109ecaadeb", null ],
     [ "operator=", "class_c_input_manager.html#aff8abf4fd79a252a7326aee68187653e", null ],
     [ "ProcessMessage", "class_c_input_manager.html#a9f5e640735099147bd163fb3c69ef122", null ],
-    [ "Tick", "class_c_input_manager.html#aecebf908a1cdb654427963ca44aa1fb8", null ]
+    [ "Tick", "class_c_input_manager.html#aecebf908a1cdb654427963ca44aa1fb8", null ],
+    [ "bTrackingMouse", "class_c_input_manager.html#a93fdcf590e218c61ae55926fedb1409b", null ],
+    [ "EventQueue", "class_c_input_manager.html#aed4be2c95c32a2dc20ddc0b13df640ad", null ],
+    [ "KeyState", "class_c_input_manager.html#a4b031ed7b8cd30cf19f1540aa3e5ea14", null ],
+    [ "LastMousePos", "class_c_input_manager.html#a5a9a0fe669681f9be9985ead40f9f586", null ],
+    [ "MAX_KEYS", "class_c_input_manager.html#a5b53796d7f0ea765f8c73f4198f61f58", null ],
+    [ "MAX_MOUSE_BUTTONS", "class_c_input_manager.html#a9b27379284e061d839d44adda61955b0", null ],
+    [ "MOUSE_LEFT", "class_c_input_manager.html#aeab53e594d0cde345f005fdfbdfdcdb9", null ],
+    [ "MOUSE_MIDDLE", "class_c_input_manager.html#a963db7ce946338ac01bf6c382096ee9a", null ],
+    [ "MOUSE_RIGHT", "class_c_input_manager.html#abb8d1846bcbe0787752cb01029dfc9fe", null ],
+    [ "MouseButtonState", "class_c_input_manager.html#a5a23f4f1e89a3901929c8ccda506d50b", null ],
+    [ "MouseDeltaX", "class_c_input_manager.html#ac82cd549ec004d1dbef75488c6a8d2dd", null ],
+    [ "MouseDeltaY", "class_c_input_manager.html#a524280c733faf5daaf261653dfe46c1e", null ],
+    [ "PrevKeyState", "class_c_input_manager.html#a26af3dc95348ffd8c8900afaa6bfa2a3", null ],
+    [ "PrevMouseButtonState", "class_c_input_manager.html#ac8c08901cb9af6c05f22bed815ebde19", null ]
 ];

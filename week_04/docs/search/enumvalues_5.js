@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['near_0',['Near',['../class_f_frustum.html#a9d6aecd023734edf3187674d849cf6c3a736bbfba12341b9991963852ce3c169b',1,'FFrustum']]],
-  ['none_1',['None',['../_object_types_8h.html#a1508ac1247bcd79c4921cf8497e72c79a6adf97f83acf6453d4a6a4b1070f3754',1,'ObjectTypes.h']]]
+  ['game_0',['Game',['../_scene_types_8h.html#a4fa75d8646a7d0cecf8aa5958b9077c5a63d72051e901c069f8aa1b32aa0c43bb',1,'SceneTypes.h']]]
 ];
