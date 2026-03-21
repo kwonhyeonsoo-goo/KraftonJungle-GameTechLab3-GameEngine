@@ -231,6 +231,8 @@
     <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Scene\ShowFlags.cpp" />
+    <ClCompile Include="Source\Renderer\SubUVRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -496,11 +498,14 @@
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Platform\Windows\WindowTypes.h" />
+    <ClInclude Include="Source\Renderer\SubUVRenderer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\FontPixelShader.hlsl" />
+    <FxCompile Include="Shaders\SubUVPixelShader.hlsl" />
+    <FxCompile Include="Shaders\SubUVVertexShader.hlsl" />
   </ItemGroup>
 </Project>

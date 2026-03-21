@@ -28,6 +28,13 @@ struct ENGINE_API FTextRenderCommand
 	FVector4 Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
 };
 
+struct ENGINE_API FSubUVRendererCommand
+{
+	FVector WorldPosition;
+	float WorldScale = 1.0f;
+
+};
+
 // Scene → Renderer 간 전달되는 프레임 단위 커맨드 큐
 // Scene은 Renderer를 몰라도 이 큐에 데이터를 쌓을 수 있음
 struct ENGINE_API FRenderCommandQueue
