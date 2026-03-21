@@ -5,6 +5,7 @@ var struct_f_rotator =
     [ "FRotator", "struct_f_rotator.html#abc74784e638be89c01f79ae1d1fcfff8", null ],
     [ "Add", "struct_f_rotator.html#aed0827acaeff72e6ffd33e0844383eb4", null ],
     [ "Clamp", "struct_f_rotator.html#a07734b6fbcca2f8adf01d1851fc8494b", null ],
+    [ "ClampAxis", "struct_f_rotator.html#ab24830195473ee8799c97558deff5b0a", null ],
     [ "ContainsNaN", "struct_f_rotator.html#a331661f492903319c675e0a1a0a6870f", null ],
     [ "Equals", "struct_f_rotator.html#af6c4fc8e42fb0127aff1a78a6ee4633f", null ],
     [ "Euler", "struct_f_rotator.html#a64d1e3cdfdfacd359888b9d6474d6fb8", null ],
@@ -14,7 +15,9 @@ var struct_f_rotator =
     [ "GetNormalized", "struct_f_rotator.html#add09e0ea1a3b72e1b37546b7009773a0", null ],
     [ "IsNearlyZero", "struct_f_rotator.html#ad2450db1f708bb62a566ff8035fbe60e", null ],
     [ "IsZero", "struct_f_rotator.html#a8f3878e58d056b2522ec3dd7f6aeb96e", null ],
+    [ "MakeFromEuler", "struct_f_rotator.html#abefa00857033100d3bfa33aa8b760280", null ],
     [ "Normalize", "struct_f_rotator.html#a696e8c8d1d0cef7168ad7ba3bdcda0e5", null ],
+    [ "NormalizeAxis", "struct_f_rotator.html#add462c186e8dc2c76947732bc479440d", null ],
     [ "operator!=", "struct_f_rotator.html#afc3152d593441de3ecd0d9668df8e2cb", null ],
     [ "operator*", "struct_f_rotator.html#a3eed056ea85619fa7d05694f29bec3fd", null ],
     [ "operator*=", "struct_f_rotator.html#ae5d58595b7d8577ee62f9095298fb438", null ],
@@ -33,5 +36,6 @@ var struct_f_rotator =
     [ "Vector", "struct_f_rotator.html#a7f18a2097fa0376319ad8c72e5d57d2d", null ],
     [ "Pitch", "struct_f_rotator.html#a1f03e2f7482b096ef225610df9ba37aa", null ],
     [ "Roll", "struct_f_rotator.html#aae501271aa428d5c586b889a27fb46e3", null ],
-    [ "Yaw", "struct_f_rotator.html#a202f324cba2b7733ed8a020e259c8864", null ]
+    [ "Yaw", "struct_f_rotator.html#a202f324cba2b7733ed8a020e259c8864", null ],
+    [ "ZeroRotator", "struct_f_rotator.html#a01f41d398ea3053dd0b7b7beb1d8f1bc", null ]
 ];

@@ -1,7 +1,5 @@
 var class_u_actor_component =
 [
-    [ "UActorComponent", "class_u_actor_component.html#aa26c01d69f8e0369ab9982d01178277a", null ],
-    [ "UActorComponent", "class_u_actor_component.html#ac57c963505116c1240bbc73731133658", null ],
     [ "~UActorComponent", "class_u_actor_component.html#adbce24e0be09ef38e8bcdd59bb34dbd5", null ],
     [ "BeginPlay", "class_u_actor_component.html#aeccc0a96cfa9a5b20f81db38a0e5f785", null ],
     [ "CanTick", "class_u_actor_component.html#a2365f448c768964c70a326a6fdd16cc0", null ],
@@ -17,5 +15,5 @@ var class_u_actor_component =
     [ "bCanEverTick", "class_u_actor_component.html#a2de89ee6b4bf85ff67dea3ac1a452a61", null ],
     [ "bRegistered", "class_u_actor_component.html#a53f13b9006971fbe3ca4dcec7f99b751", null ],
     [ "bTickEnabled", "class_u_actor_component.html#a1120597c50b7acd05aa48505f414eacd", null ],
-    [ "Owner", "class_u_actor_component.html#aeb4cd94abaecef7b180b362b10178026", null ]
+    [ "Owner", "class_u_actor_component.html#a809450661c8ba40ed964b73a7d60e3cf", null ]
 ];

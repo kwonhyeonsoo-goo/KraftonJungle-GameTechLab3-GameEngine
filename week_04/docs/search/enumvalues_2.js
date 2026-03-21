@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['keydown_0',['KeyDown',['../_input_manager_8h.html#a321a7f9d01d5b064474f51f03016e0a5acfd07bf1effd88bca04a12a087777354',1,'InputManager.h']]],
-  ['keyup_1',['KeyUp',['../_input_manager_8h.html#a321a7f9d01d5b064474f51f03016e0a5a0f8baa14654b1f6ef00fed708c7f198a',1,'InputManager.h']]]
+  ['canceled_0',['Canceled',['../input_trigger_8h.html#a942d0291b297b97655aad0c8bb91797ca0e22fe7d45f8e5632a4abf369b24e29c',1,'inputTrigger.h']]],
+  ['completed_1',['Completed',['../input_trigger_8h.html#a942d0291b297b97655aad0c8bb91797ca07ca5050e697392c9ed47e6453f1453f',1,'inputTrigger.h']]]
 ];

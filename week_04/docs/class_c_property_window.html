@@ -93,6 +93,17 @@ $(function(){initNavTree('class_c_property_window.html','','class_c_property_win
 <div class="contents">
 
 <p><code>#include &lt;<a class="el" href="_property_window_8h_source.html">PropertyWindow.h</a>&gt;</code></p>
+<div class="dynheader">
+Collaboration diagram for CPropertyWindow:</div>
+<div class="dyncontent">
+<div class="center"><img src="class_c_property_window__coll__graph.png" border="0" usemap="#a_c_property_window_coll__map" loading="lazy" alt="Collaboration graph"/></div>
+<map name="a_c_property_window_coll__map" id="a_c_property_window_coll__map">
+<area shape="rect" title=" " alt="" coords="107,765,273,1027"/>
+<area shape="rect" href="struct_f_vector.html" title=" " alt="" coords="5,5,375,651"/>
+<area shape="poly" title=" " alt="" coords="191,648,193,749,188,748,189,653"/>
+<area shape="poly" title=" " alt="" coords="375,271,395,295,402,328,399,352,389,371,385,369,394,350,397,328,390,297,375,276"/>
+</map>
+</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -107,8 +118,55 @@ Public Member Functions</h2></td></tr>
 <tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a775d2ef26e91af0500b3cccf7ebac4f0" id="r_a775d2ef26e91af0500b3cccf7ebac4f0"><td class="memItemLeft"><a class="el" href="_property_window_8h.html#a4c0403ff8980bc00708d42c92a51b70a">FPropertyChangedCallback</a>&#160;</td><td class="memItemRight"><a class="el" href="#a775d2ef26e91af0500b3cccf7ebac4f0">OnChanged</a></td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-pri-methods" class="groupheader"><a id="pri-methods" name="pri-methods"></a>
+Private Member Functions</h2></td></tr>
+<tr class="memitem:a002362695662c4593843a56b871e09ae" id="r_a002362695662c4593843a56b871e09ae"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a002362695662c4593843a56b871e09ae">DrawTransformSection</a> ()</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-pri-attribs" class="groupheader"><a id="pri-attribs" name="pri-attribs"></a>
+Private Attributes</h2></td></tr>
+<tr class="memitem:aae7a44d318da12388f272c638bd9eb79" id="r_aae7a44d318da12388f272c638bd9eb79"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#aae7a44d318da12388f272c638bd9eb79">EditLocation</a> = { 0.0f, 0.0f, 0.0f }</td></tr>
+<tr class="memitem:a1d0ecdc4be76910fcebcff62cc02d436" id="r_a1d0ecdc4be76910fcebcff62cc02d436"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a1d0ecdc4be76910fcebcff62cc02d436">EditRotation</a> = { 0.0f, 0.0f, 0.0f }</td></tr>
+<tr class="memitem:a04c4c7abe53ce12d4f1f046b8e31883b" id="r_a04c4c7abe53ce12d4f1f046b8e31883b"><td class="memItemLeft"><a class="el" href="struct_f_vector.html">FVector</a>&#160;</td><td class="memItemRight"><a class="el" href="#a04c4c7abe53ce12d4f1f046b8e31883b">EditScale</a> = { 1.0f, 1.0f, 1.0f }</td></tr>
+<tr class="memitem:ae65b650fb1c7917a8ca54da7b169e443" id="r_ae65b650fb1c7917a8ca54da7b169e443"><td class="memItemLeft">char&#160;</td><td class="memItemRight"><a class="el" href="#ae65b650fb1c7917a8ca54da7b169e443">ActorNameBuf</a> [128] = &quot;None&quot;</td></tr>
+<tr class="memitem:a38623a8fc939c96880de6794d5e92c11" id="r_a38623a8fc939c96880de6794d5e92c11"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a38623a8fc939c96880de6794d5e92c11">bModified</a> = false</td></tr>
 </table>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
+<a id="a002362695662c4593843a56b871e09ae" name="a002362695662c4593843a56b871e09ae"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a002362695662c4593843a56b871e09ae">&#9670;&#160;</a></span>DrawTransformSection()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CPropertyWindow::DrawTransformSection </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<div class="dynheader">
+Here is the caller graph for this function:</div>
+<div class="dyncontent">
+<div class="center"><img src="class_c_property_window_a002362695662c4593843a56b871e09ae_icgraph.png" border="0" usemap="#aclass_c_property_window_a002362695662c4593843a56b871e09ae_icgraph" loading="lazy" alt=""/></div>
+<map name="aclass_c_property_window_a002362695662c4593843a56b871e09ae_icgraph" id="aclass_c_property_window_a002362695662c4593843a56b871e09ae_icgraph">
+<area shape="rect" title=" " alt="" coords="231,5,456,48"/>
+<area shape="rect" href="class_c_property_window.html#a20909f84561fef461e504b13a201288b" title=" " alt="" coords="5,13,183,40"/>
+<area shape="poly" title=" " alt="" coords="212,27,183,29,183,24,218,26"/>
+</map>
+</div>
+
+</div>
+</div>
 <a id="af0e12f6a98b99f6c643f61a8e6f64afe" name="af0e12f6a98b99f6c643f61a8e6f64afe"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af0e12f6a98b99f6c643f61a8e6f64afe">&#9670;&#160;</a></span>GetLocation()</h2>
 
@@ -223,6 +281,16 @@ Public Attributes</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
+<div class="dynheader">
+Here is the call graph for this function:</div>
+<div class="dyncontent">
+<div class="center"><img src="class_c_property_window_a20909f84561fef461e504b13a201288b_cgraph.png" border="0" usemap="#aclass_c_property_window_a20909f84561fef461e504b13a201288b_cgraph" loading="lazy" alt=""/></div>
+<map name="aclass_c_property_window_a20909f84561fef461e504b13a201288b_cgraph" id="aclass_c_property_window_a20909f84561fef461e504b13a201288b_cgraph">
+<area shape="rect" title=" " alt="" coords="5,13,183,40"/>
+<area shape="rect" href="class_c_property_window.html#a002362695662c4593843a56b871e09ae" title=" " alt="" coords="231,5,456,48"/>
+<area shape="poly" title=" " alt="" coords="183,24,217,26,212,27,183,29"/>
+</map>
+</div>
 
 </div>
 </div>
@@ -283,6 +351,116 @@ Public Attributes</h2></td></tr>
 </div>
 </div>
 <a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
+<a id="ae65b650fb1c7917a8ca54da7b169e443" name="ae65b650fb1c7917a8ca54da7b169e443"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae65b650fb1c7917a8ca54da7b169e443">&#9670;&#160;</a></span>ActorNameBuf</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">char CPropertyWindow::ActorNameBuf[128] = &quot;None&quot;</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a38623a8fc939c96880de6794d5e92c11" name="a38623a8fc939c96880de6794d5e92c11"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a38623a8fc939c96880de6794d5e92c11">&#9670;&#160;</a></span>bModified</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool CPropertyWindow::bModified = false</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aae7a44d318da12388f272c638bd9eb79" name="aae7a44d318da12388f272c638bd9eb79"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aae7a44d318da12388f272c638bd9eb79">&#9670;&#160;</a></span>EditLocation</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> CPropertyWindow::EditLocation = { 0.0f, 0.0f, 0.0f }</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a1d0ecdc4be76910fcebcff62cc02d436" name="a1d0ecdc4be76910fcebcff62cc02d436"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1d0ecdc4be76910fcebcff62cc02d436">&#9670;&#160;</a></span>EditRotation</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> CPropertyWindow::EditRotation = { 0.0f, 0.0f, 0.0f }</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a04c4c7abe53ce12d4f1f046b8e31883b" name="a04c4c7abe53ce12d4f1f046b8e31883b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a04c4c7abe53ce12d4f1f046b8e31883b">&#9670;&#160;</a></span>EditScale</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_f_vector.html">FVector</a> CPropertyWindow::EditScale = { 1.0f, 1.0f, 1.0f }</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a775d2ef26e91af0500b3cccf7ebac4f0" name="a775d2ef26e91af0500b3cccf7ebac4f0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a775d2ef26e91af0500b3cccf7ebac4f0">&#9670;&#160;</a></span>OnChanged</h2>
 

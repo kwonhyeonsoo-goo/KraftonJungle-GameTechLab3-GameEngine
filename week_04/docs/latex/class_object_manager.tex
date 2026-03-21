@@ -4,6 +4,16 @@
 
 {\ttfamily \+\#include $<$Object\+Manager.\+h$>$}
 
+
+
+Collaboration diagram for Object\+Manager:\+
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=186pt]{class_object_manager__coll__graph}
+\end{center}
+\end{figure}
 \doxysubsubsection*{Public Member Functions}
 \begin{DoxyCompactItemize}
 \item 
@@ -11,14 +21,11 @@
 \item 
 \doxymbox{\hyperlink{class_object_manager_a25b057e6d1e60c9cbeb29d41923d8c2c}{\texorpdfstring{$\sim$}{\string~}\+Object\+Manager}} ()
 \item 
-{\footnotesize template$<$typename TObject$>$ }\\std::\+shared\+\_\+ptr$<$ TObject $>$ \doxymbox{\hyperlink{class_object_manager_a866c745f7b7da9f3259b76d4fe075d09}{Spawn\+Object}} ()
+\doxymbox{\hyperlink{class_u_object}{UObject}} \texorpdfstring{$\ast$}{*} \doxymbox{\hyperlink{class_object_manager_aff3888017d74f319cdbea3618869cb83}{Spawn\+Object}} (\doxymbox{\hyperlink{class_u_class}{UClass}} \texorpdfstring{$\ast$}{*}In\+Class, \doxymbox{\hyperlink{class_u_object}{UObject}} \texorpdfstring{$\ast$}{*}In\+Outer=nullptr, const \doxymbox{\hyperlink{_string_8h_a071f1298c27d6858a9cb71def52f1eb6}{FString}} \&In\+Name="{}None"{})
 \item 
-void \doxymbox{\hyperlink{class_object_manager_a1c04d083df19d8ed066e4bd234633f9e}{Release\+Object}} (std::\+shared\+\_\+ptr$<$ \doxymbox{\hyperlink{class_u_object}{UObject}} $>$ obj)
-\end{DoxyCompactItemize}
-\doxysubsubsection*{Static Public Member Functions}
-\begin{DoxyCompactItemize}
+void \doxymbox{\hyperlink{class_object_manager_ace616f661c42bbf182b35f2f8d4cf0d5}{Release\+Object}} (\doxymbox{\hyperlink{class_u_object}{UObject}} \texorpdfstring{$\ast$}{*}obj)
 \item 
-{\footnotesize template$<$typename T$>$ }\\static size\+\_\+t \doxymbox{\hyperlink{class_object_manager_a339efb7714f868c513e618c9442b8318}{Get\+Type\+ID}} ()
+void \doxymbox{\hyperlink{class_object_manager_a0d350c3bc182b680bae2d76ff1a49291}{Flush\+Killed\+Objects}} ()
 \end{DoxyCompactItemize}
 
 
@@ -42,26 +49,48 @@ Object\+Manager::\+\texorpdfstring{$\sim$}{\string~}\+Object\+Manager (\begin{Do
 \label{doc-func-members}
 \Hypertarget{class_object_manager_doc-func-members}
 \doxysubsection{Member Function Documentation}
-\Hypertarget{class_object_manager_a339efb7714f868c513e618c9442b8318}\index{ObjectManager@{ObjectManager}!GetTypeID@{GetTypeID}}
-\index{GetTypeID@{GetTypeID}!ObjectManager@{ObjectManager}}
-\doxysubsubsection{\texorpdfstring{GetTypeID()}{GetTypeID()}}
-{\footnotesize\ttfamily \label{class_object_manager_a339efb7714f868c513e618c9442b8318} 
-template$<$typename T$>$ \\
-size\+\_\+t Object\+Manager::\+\+Get\+Type\+ID (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+\Hypertarget{class_object_manager_a0d350c3bc182b680bae2d76ff1a49291}\index{ObjectManager@{ObjectManager}!FlushKilledObjects@{FlushKilledObjects}}
+\index{FlushKilledObjects@{FlushKilledObjects}!ObjectManager@{ObjectManager}}
+\doxysubsubsection{\texorpdfstring{FlushKilledObjects()}{FlushKilledObjects()}}
+{\footnotesize\ttfamily \label{class_object_manager_a0d350c3bc182b680bae2d76ff1a49291} 
+void Object\+Manager::\+\+Flush\+Killed\+Objects (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
 
-\Hypertarget{class_object_manager_a1c04d083df19d8ed066e4bd234633f9e}\index{ObjectManager@{ObjectManager}!ReleaseObject@{ReleaseObject}}
+Here is the call graph for this function:\+
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{class_object_manager_a0d350c3bc182b680bae2d76ff1a49291_cgraph}
+\end{center}
+\end{figure}
+\Hypertarget{class_object_manager_ace616f661c42bbf182b35f2f8d4cf0d5}\index{ObjectManager@{ObjectManager}!ReleaseObject@{ReleaseObject}}
 \index{ReleaseObject@{ReleaseObject}!ObjectManager@{ObjectManager}}
 \doxysubsubsection{\texorpdfstring{ReleaseObject()}{ReleaseObject()}}
-{\footnotesize\ttfamily \label{class_object_manager_a1c04d083df19d8ed066e4bd234633f9e} 
-void Object\+Manager::\+\+Release\+Object (\begin{DoxyParamCaption}\item[{std::\+shared\+\_\+ptr$<$ \doxymbox{\hyperlink{class_u_object}{UObject}} $>$}]{obj}{}\end{DoxyParamCaption})}
+{\footnotesize\ttfamily \label{class_object_manager_ace616f661c42bbf182b35f2f8d4cf0d5} 
+void Object\+Manager::\+\+Release\+Object (\begin{DoxyParamCaption}\item[{\doxymbox{\hyperlink{class_u_object}{UObject}} \texorpdfstring{$\ast$}{*}}]{obj}{}\end{DoxyParamCaption})}
 
-\Hypertarget{class_object_manager_a866c745f7b7da9f3259b76d4fe075d09}\index{ObjectManager@{ObjectManager}!SpawnObject@{SpawnObject}}
+Here is the call graph for this function:\+
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{class_object_manager_ace616f661c42bbf182b35f2f8d4cf0d5_cgraph}
+\end{center}
+\end{figure}
+\Hypertarget{class_object_manager_aff3888017d74f319cdbea3618869cb83}\index{ObjectManager@{ObjectManager}!SpawnObject@{SpawnObject}}
 \index{SpawnObject@{SpawnObject}!ObjectManager@{ObjectManager}}
 \doxysubsubsection{\texorpdfstring{SpawnObject()}{SpawnObject()}}
-{\footnotesize\ttfamily \label{class_object_manager_a866c745f7b7da9f3259b76d4fe075d09} 
-template$<$typename TObject$>$ \\
-std::\+shared\+\_\+ptr$<$ TObject $>$ Object\+Manager::\+\+Spawn\+Object (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+{\footnotesize\ttfamily \label{class_object_manager_aff3888017d74f319cdbea3618869cb83} 
+\doxymbox{\hyperlink{class_u_object}{UObject}} \texorpdfstring{$\ast$}{*} Object\+Manager::\+\+Spawn\+Object (\begin{DoxyParamCaption}\item[{\doxymbox{\hyperlink{class_u_class}{UClass}} \texorpdfstring{$\ast$}{*}}]{In\+Class}{, }\item[{\doxymbox{\hyperlink{class_u_object}{UObject}} \texorpdfstring{$\ast$}{*}}]{In\+Outer}{ = {\ttfamily nullptr}, }\item[{const \doxymbox{\hyperlink{_string_8h_a071f1298c27d6858a9cb71def52f1eb6}{FString}} \&}]{In\+Name}{ = {\ttfamily "{}None"{}}}\end{DoxyParamCaption})}
 
+Here is the call graph for this function:\+
+\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{class_object_manager_aff3888017d74f319cdbea3618869cb83_cgraph}
+\end{center}
+\end{figure}
 
 
 The documentation for this class was generated from the following files:\+\begin{DoxyCompactItemize}
