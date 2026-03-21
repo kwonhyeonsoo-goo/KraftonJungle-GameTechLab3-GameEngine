@@ -44,8 +44,8 @@ private:
 	FEditorViewportClient ViewportClient;
 	float MainLoopFPS = 0.0f;
 	FRuntimeSettings RuntimeSettings;
+	uint32			 GridSize = 5.f;
 
-	
 private:
 void UpdateWorld(float DeltaTime);
 void SyncCameraFromRenderHandler();
@@ -74,6 +74,8 @@ uint32 GetCurrentWorld() const { return CurrentWorld; }
 void SetCurrentWorld(uint32 NewWorldIndex) { CurrentWorld = NewWorldIndex; }
 UCamera* GetCamera() const { return EditorCamera; }
 UGizmoComponent* GetGizmo() const { return EditorGizmo; }
+const uint32	 GetGridSize() const { return GridSize;  }
+void			 SetGridSize(uint32 InGridSize) { GridSize = InGridSize;}
 
 FCameraState& GetCameraState() { return EditorCamera->GetCameraState(); }
 const FCameraState& GetCameraState() const { return EditorCamera->GetCameraState(); }

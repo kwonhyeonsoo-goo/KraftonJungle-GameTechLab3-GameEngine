@@ -12,7 +12,7 @@
 #include "Render/Resource/VertexTypes.h"
 
 class FVertexBuffer
-{
+{ 
 private:
 	ID3D11Buffer* Buffer = nullptr;
 	uint32 VertexCount = 0;
@@ -53,6 +53,7 @@ class FIndexBuffer
 {
 private:
 	ID3D11Buffer* Buffer = nullptr;
+	uint32 MaxIndexCount = 0;
 	uint32 IndexCount = 0;
 
 public:
@@ -61,11 +62,14 @@ private:
 
 public:
 	void Create(ID3D11Device* InDevice, const TArray<uint32>& InData);
+	void CreateDynamic(ID3D11Device* InDevice, uint32 InMaxIndices);
 	void Release();
 
-	void Update(ID3D11DeviceContext* InDeviceContext, const TArray<uint32>& InData, uint32 InByteWidth);
+	void Update(ID3D11DeviceContext* InDeviceContext, const TArray<uint32>& InData);
 
 	uint32 GetIndexCount() const { return IndexCount; }
+	uint32 GetMaxIndexCount() const { return MaxIndexCount; };
+
 	ID3D11Buffer* GetBuffer() const;
 };
 

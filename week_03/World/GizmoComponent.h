@@ -56,6 +56,8 @@ public:
 	inline void SetPressedOnHandle(bool bPressed) { bPressedOnHandle = bPressed; }
 	inline bool IsPressedOnHandle() const { return bPressedOnHandle; }
 
+	virtual void UpdateWorldAABB() override;
+
 	void UpdateHoveredAxis(int Index);
 	void UpdateDrag(const FRay& Ray);
 	void DragEnd();

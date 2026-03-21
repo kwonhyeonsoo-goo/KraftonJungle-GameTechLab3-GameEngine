@@ -44,10 +44,6 @@ void FEditorEngine::Create(HWND InHWindow)
 	ViewportClient.SetCamera(EditorCamera);
 	ViewportClient.SetViewportSize(WindowWidth, WindowHeight);
 
-	AActor* DebugActor = Scene[CurrentWorld]->SpawnActor<AActor>();
-	DebugActor->AddComponent<UBoxComponent>();
-	DebugActor->SetActorLocation(FVector(-3.f, 0.f, 0.f));
-
 	ResetCamera(EditorCamera);
 	EditorCamera->ApplyCameraState();
 	SyncCameraFromRenderHandler();
@@ -204,6 +200,7 @@ void FEditorEngine::BuildRenderCommands()
 	Context.ViewportHeight = WindowHeight;
 	Context.ViewportWidth = WindowWidth;
 	Context.SelectedComponent = ViewportClient.GetGizmo()->HasTarget() ? (UPrimitiveComponent *)ViewportClient.GetGizmo()->GetTarget() : nullptr;
+	Context.GridSize = GridSize;
 
 	FRenderCollector::Collect(Context, RenderBus);
 }

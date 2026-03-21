@@ -9,7 +9,7 @@
 //	TODO : CoreType.h 경로 변경 요구
 #include "Core/CoreTypes.h"
 #include "Render/Scene/RenderCommand.h"
-#include "Render/Scene/LineBatch.h"
+#include "Render/Scene/BatchedLine.h"
 
 class FRenderBus
 {
@@ -17,16 +17,14 @@ private:
 	TArray<FRenderCommand> ComponentCommands;
 	TArray<FRenderCommand> DepthLessCommands;
 
-	//TArray<FRenderCommand> EditorCommands;
-	//TArray<FRenderCommand> EditorGridCommands;
-
 	//	Array로 하지 않아도 되지만, 추후를 위한 확장성을 고려하여 추가하였습니다.
 	TArray<FRenderCommand> OutlineCommands;
 	TArray<FRenderCommand> OverlayCommands;
 
-	FLineBatch LineBatch;
-	FMatrix CachedView;
-	FMatrix CachedProjection;
+	//	일괄적으로 처리하기 때문에 하나의 커맨드를 두었습니다.
+	FRenderCommand			BatchLineCommand;
+	FBatchedLine			BatchedLine;
+
 
 public:
 	void Create(ID3D11Device* InDevice);
@@ -35,23 +33,16 @@ public:
 	//	Draw Call 요청을 RenderBus에 추가하는 함수
 	void AddComponentCommand(const FRenderCommand& InCommand);
 	void AddDepthLessCommand(const FRenderCommand& InCommand);
-	void AddLineBatchCommand(const FRenderCommand& InCommand);
-	//void AddEditorCommand(const FRenderCommand& InCommand);
-	//void AddGridEditorCommand(const FRenderCommand& InCommand);
 	void AddOutlineCommand(const FRenderCommand& InCommand);
 	void AddOverlayCommand(const FRenderCommand& InCommand);
-
+	void UpdateLineBatchLineCommand(const FMatrix& InViewMatrix, const FMatrix& InPorjectionMatrix);
 
 	const TArray<FRenderCommand>& GetComponentCommands() const { return ComponentCommands; }
 	const TArray<FRenderCommand>& GetDepthLessCommands() const { return DepthLessCommands; }
-
-	//const TArray<FRenderCommand>& GetEditorCommand() const { return EditorCommands; }
-	//const TArray<FRenderCommand>& GetGridEditorCommand() const { return EditorGridCommands; }
 	const TArray<FRenderCommand>& GetSelectionOutlineCommands() const { return OutlineCommands; }
 	const TArray<FRenderCommand>& GetOverlayCommands() const { return OverlayCommands; }
+	const FRenderCommand& GetBatchLineCommand() const { return BatchLineCommand;  }
+	FBatchedLine*		  GetBatehdLine()  { return &BatchedLine; }
 
-	FLineBatch&		GetLineBatch() { return LineBatch; }
-	const FMatrix&	GetCachedView()	const { return CachedView; }
-	const FMatrix&	GetCachedProjection() const	{ return CachedProjection; }
 };
 

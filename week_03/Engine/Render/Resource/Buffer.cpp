@@ -19,6 +19,7 @@ void FMeshBuffer::CreateDynamic(ID3D11Device* InDevice, uint32 InMaxVertices)
 {
 	Release();
 	VertexBuffer.CreateDynamic(InDevice, InMaxVertices, sizeof(FVertex));
+	IndexBuffer.CreateDynamic(InDevice, InMaxVertices);
 }
 
 void FMeshBuffer::Release()
@@ -38,9 +39,9 @@ void FVertexBuffer::Create(ID3D11Device* InDevice, const TArray<FVertex>& InData
 	if (InData.empty()) return;
 
 	D3D11_BUFFER_DESC desc = {};
-	desc.ByteWidth  = static_cast<uint32>(InData.size()) * InStride;
-	desc.Usage      = D3D11_USAGE_IMMUTABLE;
-	desc.BindFlags  = D3D11_BIND_VERTEX_BUFFER;
+	desc.ByteWidth = static_cast<uint32>(InData.size()) * InStride;
+	desc.Usage = D3D11_USAGE_IMMUTABLE;
+	desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
 	D3D11_SUBRESOURCE_DATA srd = { InData.data() };
 	HRESULT hr = InDevice->CreateBuffer(&desc, &srd, &Buffer);
@@ -55,9 +56,9 @@ void FVertexBuffer::CreateDynamic(ID3D11Device* InDevice, uint32 InMaxVertices, 
 	Release();
 
 	D3D11_BUFFER_DESC desc = {};
-	desc.ByteWidth      = InMaxVertices * InStride;
-	desc.Usage          = D3D11_USAGE_DYNAMIC;
-	desc.BindFlags      = D3D11_BIND_VERTEX_BUFFER;
+	desc.ByteWidth = InMaxVertices * InStride;
+	desc.Usage = D3D11_USAGE_DYNAMIC;
+	desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
 	HRESULT hr = InDevice->CreateBuffer(&desc, nullptr, &Buffer);
@@ -102,9 +103,9 @@ void FConstantBuffer::Create(ID3D11Device* InDevice, uint32 InByteWidth)
 {
 	D3D11_BUFFER_DESC constantBufferDesc = {};
 
-	constantBufferDesc.ByteWidth = InByteWidth + 0xf &0xfffffff0;
+	constantBufferDesc.ByteWidth = InByteWidth + 0xf & 0xfffffff0;
 	constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;	
+	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
 	InDevice->CreateBuffer(&constantBufferDesc, nullptr, &Buffer);
@@ -112,7 +113,7 @@ void FConstantBuffer::Create(ID3D11Device* InDevice, uint32 InByteWidth)
 
 void FConstantBuffer::Release()
 {
-	if(Buffer)
+	if (Buffer)
 	{
 		Buffer->Release();
 		Buffer = nullptr;
@@ -122,24 +123,18 @@ void FConstantBuffer::Release()
 //	Constant buffer는 Dynamic으로 생성했으므로 업데이트가 가능. 업데이트가 필요하다면 Map/Unmap을 이용하여 업데이트
 //	InData는 Constant buffer에 업데이트할 데이터의 포인터입니다. InByteWidth는 업데이트할 데이터의 총 byte 크기입니다.
 //	즉, InData는 FPerObjectConstants 구조체의 포인터입니다.
-void FConstantBuffer::Update(ID3D11DeviceContext* InDeviceContext, const void * InData, uint32 InByteWidth)
+void FConstantBuffer::Update(ID3D11DeviceContext* InDeviceContext, const void* InData, uint32 InByteWidth)
 {
-	if (Buffer)
-	{
-		D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
-		InDeviceContext->Map(Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR);
+	if (!Buffer || !InData) return;
 
-		//std::memcpy(constantbufferMSR.pData, InData, InByteWidth);
-		FConstantBuffer* constants = (FConstantBuffer*)constantbufferMSR.pData;
-		{
-			std::memcpy(constants, InData, InByteWidth);
-		}
+	D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
+	InDeviceContext->Map(Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR);
+	memcpy(constantbufferMSR.pData, InData, InByteWidth);
+	InDeviceContext->Unmap(Buffer, 0);
 
-		InDeviceContext->Unmap(Buffer, 0);
-	}
 }
 
-ID3D11Buffer* FConstantBuffer::GetBuffer() 
+ID3D11Buffer* FConstantBuffer::GetBuffer()
 {
 	return Buffer;
 }
@@ -155,7 +150,7 @@ void FIndexBuffer::Create(ID3D11Device* InDevice, const TArray<uint32>& InData)
 	if (InData.empty()) return;
 
 	D3D11_BUFFER_DESC desc = {};
-	desc.Usage     = D3D11_USAGE_IMMUTABLE;
+	desc.Usage = D3D11_USAGE_IMMUTABLE;
 	desc.ByteWidth = static_cast<uint32>(InData.size()) * sizeof(uint32);
 	desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 
@@ -164,6 +159,23 @@ void FIndexBuffer::Create(ID3D11Device* InDevice, const TArray<uint32>& InData)
 	if (FAILED(hr)) { Release(); return; }
 
 	IndexCount = static_cast<uint32>(InData.size());
+}
+
+void FIndexBuffer::CreateDynamic(ID3D11Device* InDevice, uint32 InMaxIndices)
+{
+	Release();
+
+	D3D11_BUFFER_DESC desc = {};
+	desc.ByteWidth = sizeof(uint32) * InMaxIndices;
+	desc.Usage = D3D11_USAGE_DYNAMIC;
+	desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+	HRESULT hr = InDevice->CreateBuffer(&desc, nullptr, &Buffer);
+	if (FAILED(hr)) { Release(); return; }
+
+	MaxIndexCount = InMaxIndices;
+	IndexCount = 0;
 }
 
 
@@ -176,12 +188,20 @@ void FIndexBuffer::Release()
 	}
 }
 
-void FIndexBuffer::Update(ID3D11DeviceContext* InDeviceContext, const TArray<uint32>& InData, uint32 InByteWidth)
+void FIndexBuffer::Update(ID3D11DeviceContext* InDeviceContext, const TArray<uint32>& InData)
 {
-	//	 Do nothing
+	if (!Buffer || InData.empty()) return;
+	if (InData.size() > MaxIndexCount) return;
+
+	D3D11_MAPPED_SUBRESOURCE MSR = {};
+	InDeviceContext->Map(Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MSR);
+	memcpy(MSR.pData, InData.data(), sizeof(uint32) * InData.size());
+	InDeviceContext->Unmap(Buffer, 0);
+
+	IndexCount = InData.size();
 }
 
-ID3D11Buffer * FIndexBuffer::GetBuffer() const
+ID3D11Buffer* FIndexBuffer::GetBuffer() const
 {
 	return Buffer;
 }

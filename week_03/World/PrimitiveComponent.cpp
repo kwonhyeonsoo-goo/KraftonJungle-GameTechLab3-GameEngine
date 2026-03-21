@@ -5,28 +5,11 @@
 
 DEFINE_CLASS(UPrimitiveComponent, USceneComponent)
 DEFINE_CLASS(UCubeComponent, UPrimitiveComponent)
-DEFINE_CLASS(UBoxComponent, UPrimitiveComponent)
 DEFINE_CLASS(USphereComponent, UPrimitiveComponent)
 DEFINE_CLASS(UPlaneComponent, UPrimitiveComponent)
 REGISTER_FACTORY(UCubeComponent)
-REGISTER_FACTORY(UBoxComponent)
 REGISTER_FACTORY(USphereComponent)
 REGISTER_FACTORY(UPlaneComponent)
-
-void UPrimitiveComponent::UpdateWorldAABB()
-{
-	FVector LExt = LocalExtents;
-
-	FMatrix worldMatrix = GetWorldMatrix();
-
-	float NewEx = std::abs(worldMatrix.M[0][0]) * LExt.X + std::abs(worldMatrix.M[1][0]) * LExt.Y + std::abs(worldMatrix.M[2][0]) * LExt.Z;
-	float NewEy = std::abs(worldMatrix.M[0][1]) * LExt.X + std::abs(worldMatrix.M[1][1]) * LExt.Y + std::abs(worldMatrix.M[2][1]) * LExt.Z;
-	float NewEz = std::abs(worldMatrix.M[0][2]) * LExt.X + std::abs(worldMatrix.M[1][2]) * LExt.Y + std::abs(worldMatrix.M[2][2]) * LExt.Z;
-
-	FVector WorldCenter = GetWorldLocation();
-	WorldAABBMinLocation = WorldCenter - FVector(NewEx, NewEy, NewEz);
-	WorldAABBMaxLocation = WorldCenter + FVector(NewEx, NewEy, NewEz);
-}
 
 bool UPrimitiveComponent::CheckAABB(const FRay& Ray)
 {
@@ -37,8 +20,8 @@ bool UPrimitiveComponent::CheckAABB(const FRay& Ray)
 	{
 		float invDir = 1.0f / (i == 0 ? Ray.Direction.X : (i == 1 ? Ray.Direction.Y : Ray.Direction.Z));
 		float origin = (i == 0 ? Ray.Origin.X : (i == 1 ? Ray.Origin.Y : Ray.Origin.Z));
-		float minBound = (i == 0 ? WorldAABBMinLocation.X : (i == 1 ? WorldAABBMinLocation.Y : WorldAABBMinLocation.Z));
-		float maxBound = (i == 0 ? WorldAABBMaxLocation.X : (i == 1 ? WorldAABBMaxLocation.Y : WorldAABBMaxLocation.Z));
+		float minBound = (i == 0 ? BoundingBox.WorldAABBMinLocation.X : (i == 1 ? BoundingBox.WorldAABBMinLocation.Y : BoundingBox.WorldAABBMinLocation.Z));
+		float maxBound = (i == 0 ? BoundingBox.WorldAABBMaxLocation.X : (i == 1 ? BoundingBox.WorldAABBMaxLocation.Y : BoundingBox.WorldAABBMaxLocation.Z));
 
 		float t1 = (minBound - origin) * invDir;
 		float t2 = (maxBound - origin) * invDir;
@@ -53,6 +36,7 @@ bool UPrimitiveComponent::CheckAABB(const FRay& Ray)
 
 	return tMax >= 0;
 }
+
 
 bool UPrimitiveComponent::Raycast(const FRay& Ray, FHitResult& OutHitResult)
 {
@@ -151,6 +135,28 @@ UCubeComponent::UCubeComponent()
 	MeshData = &FMeshManager::GetCube();
 }
 
+void UCubeComponent::UpdateWorldAABB()
+{
+	FVector forward = GetForwardVector();
+	FVector right = GetRightVector();
+	FVector up = GetUpVector();
+	FVector Scale = GetScaleVector();
+
+	float halfX = LocalExtents.X * Scale.X;
+	float halfY = LocalExtents.Y * Scale.Y;
+	float halfZ = LocalExtents.Z * Scale.Z;
+
+	FVector extent = {
+		std::abs(forward.X) * halfX + std::abs(right.X) * halfY + std::abs(up.X) * halfZ,
+		std::abs(forward.Y) * halfX + std::abs(right.Y) * halfY + std::abs(up.Y) * halfZ,
+		std::abs(forward.Z) * halfX + std::abs(right.Z) * halfY + std::abs(up.Z) * halfZ
+	};
+
+	FVector WorldCenter = GetWorldLocation();
+	BoundingBox.WorldAABBMinLocation = WorldCenter - extent;
+	BoundingBox.WorldAABBMaxLocation = WorldCenter + extent;
+}
+
 bool UCubeComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand) {
 	if (!MeshData || !bIsVisible) {
 		return false;
@@ -213,6 +219,40 @@ USphereComponent::USphereComponent()
 {
 	MeshData = &FMeshManager::GetSphere();
 }
+void USphereComponent::UpdateWorldAABB()
+{
+	// 타원체의 AABB
+	FVector LExt = LocalExtents;
+	FVector Scale = GetScaleVector();
+
+	FVector Forward = GetForwardVector(); Forward.Normalize();
+	FVector Right = GetRightVector();  Right.Normalize();
+	FVector Up = GetUpVector(); Up.Normalize();
+
+	float XComponent = LExt.X * Scale.X;
+	float YComponent = LExt.Y * Scale.Y;
+	float ZComponent = LExt.Z * Scale.Z;
+
+	FVector NewExtent;
+	NewExtent.X = sqrtf(
+		Forward.X * Forward.X * XComponent * XComponent + 
+		Right.X * Right.X * YComponent * YComponent +
+		Up.X * Up.X * ZComponent * ZComponent);
+
+	NewExtent.Y = sqrtf(
+		Forward.Y * Forward.Y* XComponent * XComponent +
+		Right.Y * Right.Y * YComponent * YComponent +
+		Up.Y * Up.Y * ZComponent * ZComponent);
+
+	NewExtent.Z = sqrtf(
+		Forward.Z * Forward.Z * XComponent * XComponent +
+		Right.Z * Right.Z * YComponent * YComponent +
+		Up.Z * Up.Z * ZComponent * ZComponent);
+
+	FVector WorldCenter = GetWorldLocation();
+	BoundingBox.WorldAABBMinLocation = WorldCenter - NewExtent;
+	BoundingBox.WorldAABBMaxLocation = WorldCenter + NewExtent;
+}
 bool USphereComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand) {
 	if (!MeshData || !bIsVisible) {
 		return false;
@@ -261,7 +301,32 @@ bool USphereComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix
 
 UPlaneComponent::UPlaneComponent()
 {
+	LocalExtents = { 0.5f, 0.5f, 0.01f };
+
 	MeshData = &FMeshManager::GetPlane();
+}
+void UPlaneComponent::UpdateWorldAABB()
+{
+	FVector forward = GetForwardVector();
+	FVector right = GetRightVector();
+	FVector up = GetUpVector();
+	FVector Scale = GetScaleVector();
+
+	float halfX = LocalExtents.X * Scale.X;
+	float halfY = LocalExtents.Y * Scale.Y;
+	float halfZ = LocalExtents.Z * Scale.Z;
+
+	FVector extent = {
+		abs(forward.X) * halfX + abs(right.X) * halfY + abs(up.X) * halfZ,
+		abs(forward.Y) * halfX + abs(right.Y) * halfY + abs(up.Y) * halfZ,
+		abs(forward.Z) * halfX + abs(right.Z) * halfY + abs(up.Z) * halfZ
+	};
+
+	extent.Z += LocalExtents.Z * 0.5f;
+	
+	FVector WorldCenter = GetWorldLocation();
+	BoundingBox.WorldAABBMinLocation = WorldCenter - extent;
+	BoundingBox.WorldAABBMaxLocation = WorldCenter + extent;
 }
 bool UPlaneComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand) {
 	if (!MeshData || !bIsVisible) {
@@ -272,21 +337,6 @@ bool UPlaneComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix&
 	/*OutCommand.VertexBuffer = ...;
 	OutCommand.VertexCount = ...;
 	OutCommand.Stride = sizeof(vbuffer);*/
-
-	return UPrimitiveComponent::GetRenderCommand(viewMatrix, projMatrix, OutCommand);
-}
-
-UBoxComponent::UBoxComponent()
-{
-
-}
-
-bool UBoxComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand)
-{
-	if (!MeshData || !bIsVisible) 
-	{
-		return false;
-	}
 
 	return UPrimitiveComponent::GetRenderCommand(viewMatrix, projMatrix, OutCommand);
 }

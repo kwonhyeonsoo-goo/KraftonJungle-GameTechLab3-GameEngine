@@ -39,7 +39,6 @@ private:
 public:
 
 private:
-	void BuildGrid();
 	void RenderComponentPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
 	void RenderDepthLessPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
 

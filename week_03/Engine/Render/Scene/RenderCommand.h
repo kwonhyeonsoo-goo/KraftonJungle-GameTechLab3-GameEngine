@@ -19,9 +19,6 @@ enum class ERenderCommandType
 	Primitive,
 	Gizmo,
 	Overlay,
-	DebugLineBatch,
-	//Axis,
-	//Grid,
 	SelectionOutline
 };
 
@@ -53,13 +50,6 @@ struct FOverlayConstants
 	FVector4 Color;
 };
 
-//struct FEditorConstants
-//{
-//	FVector4 CameraPosition; // xyz 사용, w padding
-//	uint32 Flag;
-//	float Padding0[3];
-//};
-
 struct FOutlineConstants
 {
 	FVector4 OutlineColor = FVector4(1.0f, 0.5f, 0.0f, 1.0f); // RGBA
@@ -76,7 +66,6 @@ struct FRenderCommand
 
 	FTransformConstants TransformConstants = {};
 	FGizmoConstants GizmoConstants = {};
-	//FEditorConstants EditorConstants = {};
 	FOverlayConstants OverlayConstants = {};
 	FOutlineConstants OutlineConstants = {};
 	

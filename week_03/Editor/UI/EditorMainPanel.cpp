@@ -164,13 +164,18 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 	if (ImGui::DragFloat3("Camera Location", CameraLocation, 0.1f))
 	{
 		Camera->SetWorldLocation(FVector(CameraLocation[0], CameraLocation[1], CameraLocation[2]));
-		
 	}
 	FVector CamRot = Camera->GetRelativeRotation();
 	float CameraRotation[3] = { CamRot.X, CamRot.Y, CamRot.Z };
 	if (ImGui::DragFloat3("Camera Rotation", CameraRotation, 0.1f))
 	{
 		Camera->SetRelativeRotation(FVector(Clamp(CameraRotation[0], CamRot.X, CamRot.X), CameraRotation[1], CameraRotation[2]));
+	}
+
+	int GridSize = static_cast<int>(EditorEngine->GetGridSize());
+	if (ImGui::DragInt("Grid Size", &GridSize, 1, 1, 100))
+	{
+		EditorEngine->SetGridSize(static_cast<uint32>(GridSize));
 	}
 
 	SEPARATOR();

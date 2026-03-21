@@ -216,6 +216,7 @@ FVector USceneComponent::GetRightVector()
 	return right;
 }
 
+
 FVector USceneComponent::GetUpVector()
 {
 	const FMatrix& matrix = GetWorldMatrix();
@@ -223,6 +224,18 @@ FVector USceneComponent::GetUpVector()
 	up.Normalize();
 	return up;
 }
+
+FVector USceneComponent::GetScaleVector()
+{
+	const FMatrix& matrix = GetWorldMatrix();
+	FVector Scale = {};
+	Scale.X = FVector(matrix.M[0][0], matrix.M[0][1], matrix.M[0][2]).Length();
+	Scale.Y = FVector(matrix.M[1][0], matrix.M[1][1], matrix.M[1][2]).Length();
+	Scale.Z = FVector(matrix.M[2][0], matrix.M[2][1], matrix.M[2][2]).Length();
+
+	return Scale;
+}
+
 
 void USceneComponent::Move(const FVector& delta) {
 	SetRelativeLocation(RelativeLocation + delta);

@@ -14,7 +14,6 @@ void FRenderCollector::Collect(const FRenderCollectorContext& Context, FRenderBu
 	}
 
 	//	Must be the active camera
-
 	FMatrix View = Context.Camera->GetViewMatrix();
 	FMatrix Projection = Context.Camera->GetProjectionMatrix();
 
@@ -59,13 +58,6 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* primitiveCompon
 	Cmd.MeshBuffer = &MeshBufferManager.GetMeshBuffer(primitiveComponent->GetPrimitiveType());
 	Cmd.TransformConstants = FTransformConstants{ primitiveComponent->GetWorldMatrix(), Context.Camera->GetViewMatrix(), Context.Camera->GetProjectionMatrix() };
 
-
-	if (primitiveComponent->IsA<UBoxComponent>())
-	{
-		RenderBus.AddLineBatchCommand(Cmd);
-		return;
-	}
-
 	if (primitiveComponent->GetRenderCommand(Context.Camera->GetViewMatrix(), Context.Camera->GetProjectionMatrix(), Cmd))
 	{
 		RenderBus.AddComponentCommand(Cmd);
@@ -98,10 +90,17 @@ void FRenderCollector::CollectFromEditor(const FRenderCollectorContext& Context,
 {
 	//	Gizmo
 	UGizmoComponent* Gizmo = Context.Gizmo;
-	
-	//그리드가 변경되었을 시 반영
 
+	RenderBus.UpdateLineBatchLineCommand(ViewMat, ProjMat);
 
+	FBatchedLine* BatchLine = RenderBus.GetBatehdLine();
+	BatchLine->AddGrid(Context.GridSize);
+
+	if (Context.SelectedComponent)
+	{
+		FBoundingBox AABB = Context.SelectedComponent->GetBoundingBox();
+		RenderBus.GetBatehdLine()->AddAABB(AABB.WorldAABBMinLocation, AABB.WorldAABBMaxLocation);
+	}
 
 	if (Gizmo && Gizmo->IsVisible())
 	{
@@ -133,33 +132,6 @@ void FRenderCollector::CollectFromEditor(const FRenderCollectorContext& Context,
 			RenderBus.AddDepthLessCommand(Cmd2);
 		}
 	}
-
-	//if (Context.bGridVisible)
-	//{
-	//	// 픽셀 셰이더를 통한 라인과 그리드
-	//	//	Axis 추가
-	//	//FRenderCommand AxisCmd = {};
-	//	//AxisCmd.Type = ERenderCommandType::Axis;
-	//	//AxisCmd.MeshBuffer = &MeshBufferManager.GetMeshBuffer(EPrimitiveType::EPT_Axis);
-	//	//AxisCmd.TransformConstants = FTransformConstants{ FMatrix::Identity, ViewMat, ProjMat };	//	Model은 고정
-	//	//
-	//	//FVector camPos = Context.Camera->GetWorldLocation();
-	//	//AxisCmd.EditorConstants.CameraPosition = FVector4{ camPos.X,camPos.Y,camPos.Z,0.0f };
-	//	//AxisCmd.EditorConstants.Flag = 0; // Axis : 0
-	//	//
-	//	//RenderBus.AddEditorCommand(AxisCmd);
-	//	//
-	//	//FRenderCommand GridCmd = {};
-	//	//GridCmd.Type = ERenderCommandType::Grid;
-	//	//GridCmd.MeshBuffer = &MeshBufferManager.GetMeshBuffer(EPrimitiveType::EPT_Grid);
-	//	//GridCmd.TransformConstants = FTransformConstants{ FMatrix::Identity, ViewMat, ProjMat };
-	//	//
-	//	//GridCmd.EditorConstants.CameraPosition = FVector4{ camPos.X,camPos.Y,camPos.Z,0.0f };
-	//	//GridCmd.EditorConstants.Flag = 1; // Grid : 1
-	//	//
-	//	//RenderBus.AddGridEditorCommand(GridCmd);
-	//}
-    
 
 	//	Cursor Overlay (null checking +)
 	if (Context.CursorOverlayState && Context.CursorOverlayState->bVisible)

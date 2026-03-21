@@ -12,3 +12,9 @@ struct FHitResult
 
     bool bHit = false;
 };
+
+struct FBoundingBox
+{
+    FVector WorldAABBMinLocation;
+    FVector WorldAABBMaxLocation;
+};

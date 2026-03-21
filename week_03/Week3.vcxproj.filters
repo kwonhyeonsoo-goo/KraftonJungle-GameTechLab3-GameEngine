@@ -129,7 +129,7 @@
     <ClCompile Include="main.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Render\Scene\LineBatch.cpp">
+    <ClCompile Include="Engine\Render\Scene\BatchedLine.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
@@ -296,7 +296,7 @@
     <ClInclude Include="World\Transform.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Render\Scene\LineBatch.h">
+    <ClInclude Include="Engine\Render\Scene\BatchedLine.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

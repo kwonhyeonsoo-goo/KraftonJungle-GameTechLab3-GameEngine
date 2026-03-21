@@ -9,26 +9,25 @@
 
 struct FMeshData;
 
-
 class UPrimitiveComponent : public USceneComponent
 {
-private:
-	FVector WorldAABBMinLocation;
-	FVector WorldAABBMaxLocation;
-
 protected:
 	const FMeshData* MeshData = nullptr;
+	FBoundingBox BoundingBox;
+
 	FVector LocalExtents = { 0.5f, 0.5f, 0.5f };
 	bool bIsVisible = true;
 
 public:
 	DECLARE_CLASS(UPrimitiveComponent, USceneComponent)
 	inline const FMeshData* GetMeshData() const { return MeshData; };
-
 	inline void SetVisibility(bool bVisible) { bIsVisible = bVisible; }
 
+	const FBoundingBox& GetBoundingBox() const { return BoundingBox; }
+
 	//Collision
-	void UpdateWorldAABB();
+	virtual void UpdateWorldAABB() = 0;
+
 	bool CheckAABB(const FRay& Ray);
 	bool Raycast(const FRay& Ray, FHitResult& OutHitResult);
 	bool IntersectTriangle(const FVector& RayOrigin, const FVector& RayDir, const FVector& V0, const FVector& V1, const FVector& V2, float& OutT);
@@ -57,6 +56,7 @@ private:
 public:
 	DECLARE_CLASS(UCubeComponent, UPrimitiveComponent)
 	UCubeComponent();
+	virtual void UpdateWorldAABB() override;
 	bool GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand) override;
 	static constexpr EPrimitiveType PrimitiveType = EPrimitiveType::EPT_Cube;
 
@@ -70,6 +70,7 @@ private:
 public:
 	DECLARE_CLASS(USphereComponent, UPrimitiveComponent)
 	USphereComponent();
+	virtual void UpdateWorldAABB() override;
 	bool GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand) override;
 	static constexpr EPrimitiveType PrimitiveType = EPrimitiveType::EPT_Sphere;
 
@@ -83,22 +84,10 @@ private:
 public:
 	DECLARE_CLASS(UPlaneComponent, UPrimitiveComponent)
 	UPlaneComponent();
+
+	virtual void UpdateWorldAABB() override;
 	bool GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand) override;
 	static constexpr EPrimitiveType PrimitiveType = EPrimitiveType::EPT_Plane;
-
-	EPrimitiveType GetPrimitiveType() const override { return PrimitiveType; }
-};
-
-
-class UBoxComponent : public UPrimitiveComponent
-{
-private:
-
-public:
-	DECLARE_CLASS(UBoxComponent, UPrimitiveComponent)
-	UBoxComponent();
-	bool GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand) override;
-	static constexpr EPrimitiveType PrimitiveType = EPrimitiveType::EPT_Box;
 
 	EPrimitiveType GetPrimitiveType() const override { return PrimitiveType; }
 };

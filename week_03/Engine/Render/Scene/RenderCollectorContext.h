@@ -20,5 +20,6 @@ struct FRenderCollectorContext
 	float ViewportWidth = 0.f;
 	float ViewportHeight = 0.f;
 
-	bool bGridVisible = true;
+	bool  bGridVisible = true;
+	int32 GridSize = 5;
 };

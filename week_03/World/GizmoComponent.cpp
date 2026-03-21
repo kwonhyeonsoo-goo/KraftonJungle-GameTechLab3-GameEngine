@@ -261,6 +261,21 @@ void UGizmoComponent::UpdateAngularDrag(const FRay& Ray)
 	LastIntersectionLocation = CurrentIntersectionLocation;
 }
 
+void UGizmoComponent::UpdateWorldAABB()
+{
+	FVector LExt = LocalExtents;
+
+	FMatrix worldMatrix = GetWorldMatrix();
+
+	float NewEx = std::abs(worldMatrix.M[0][0]) * LExt.X + std::abs(worldMatrix.M[1][0]) * LExt.Y + std::abs(worldMatrix.M[2][0]) * LExt.Z;
+	float NewEy = std::abs(worldMatrix.M[0][1]) * LExt.X + std::abs(worldMatrix.M[1][1]) * LExt.Y + std::abs(worldMatrix.M[2][1]) * LExt.Z;
+	float NewEz = std::abs(worldMatrix.M[0][2]) * LExt.X + std::abs(worldMatrix.M[1][2]) * LExt.Y + std::abs(worldMatrix.M[2][2]) * LExt.Z;
+
+	FVector WorldCenter = GetWorldLocation();
+	BoundingBox.WorldAABBMinLocation = WorldCenter - FVector(NewEx, NewEy, NewEz);
+	BoundingBox.WorldAABBMaxLocation = WorldCenter + FVector(NewEx, NewEy, NewEz);
+}
+
 void UGizmoComponent::UpdateHoveredAxis(int Index)
 {
 	if (Index < 0)
