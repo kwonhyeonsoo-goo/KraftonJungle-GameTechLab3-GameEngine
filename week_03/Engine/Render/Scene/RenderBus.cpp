@@ -9,6 +9,8 @@
 
 void FRenderBus::Create(ID3D11Device* InDevice)
 {
+	FontCache.SetFontData();
+	FontCache.Initialize();
 	LineBatch.Create(InDevice);
 }
 
@@ -27,6 +29,7 @@ void FRenderBus::Clear()
 	OverlayCommands.clear();
 	OutlineCommands.clear();
 	LineBatch.Clear();
+	FontCommands.clear();
 }
 
 void FRenderBus::AddComponentCommand(const FRenderCommand& InCommand)
@@ -66,6 +69,11 @@ void FRenderBus::AddLineBatchCommand(const FRenderCommand& InCommand)
 		FVector End   = Model.TransformPositionWithW(Vertices[Indices[i + 1]].Position);
 		LineBatch.AddLine(Start, End, Vertices[Indices[i]].Color);
 	}
+}
+
+void FRenderBus::AddFontCommand(const FRenderCommand& InCommand)
+{
+	FontCommands.push_back(InCommand);
 }
 
 //void FRenderBus::AddEditorCommand(const FRenderCommand& InCommand)

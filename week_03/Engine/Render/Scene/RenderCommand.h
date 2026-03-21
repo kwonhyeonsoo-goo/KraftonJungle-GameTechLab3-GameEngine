@@ -22,7 +22,8 @@ enum class ERenderCommandType
 	DebugLineBatch,
 	//Axis,
 	//Grid,
-	SelectionOutline
+	SelectionOutline,
+	Font
 };
 
 //	Object를 위한 Constant Buffer입니다.
@@ -69,16 +70,35 @@ struct FOutlineConstants
 	float Padding0[3];
 };
 
+ 
+struct FFontTransform
+{
+	FMatrix MVP;
+};
+
+struct FFontColor
+{
+	FVector4 Color;
+};
+
 struct FRenderCommand
 {
 	//	VB, IB 모두 담고 있는 MB
 	FMeshBuffer* MeshBuffer = nullptr;
+
+	// VB만 담고 있는 버퍼
+	FVertexBuffer* VertexBuffer = nullptr;
 
 	FTransformConstants TransformConstants = {};
 	FGizmoConstants GizmoConstants = {};
 	//FEditorConstants EditorConstants = {};
 	FOverlayConstants OverlayConstants = {};
 	FOutlineConstants OutlineConstants = {};
+
+	FVector FontPosition = {};
+	FFontColor FontColor = {};
 	
+	uint32 UUID = 0;
 	ERenderCommandType Type = ERenderCommandType::Primitive;
+
 };

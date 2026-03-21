@@ -24,6 +24,7 @@ public:
 	void Release();
 
 	void Update(ID3D11DeviceContext* InDeviceContext, const TArray<FVertex>& InData);
+	void FontUpdate(ID3D11DeviceContext* InDeviceContext, const TArray<FFontVertex>& InData);
 
 	uint32 GetVertexCount() const { return VertexCount; }
 	uint32 GetStride() const { return Stride; }

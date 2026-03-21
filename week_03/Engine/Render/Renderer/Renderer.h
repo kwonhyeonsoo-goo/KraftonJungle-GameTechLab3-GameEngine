@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 /*
 	실제 렌더링을 담당하는 Class 입니다. (Rendering 최상위 클래스)
@@ -9,6 +9,7 @@
 #include "Render/Scene/RenderBus.h"
 #include "Render/Device/D3DDevice.h"
 #include "Render/Resource/RenderResources.h"
+#include "Engine/Fonts/FontCache.h"
 
 #include <cstddef>
 
@@ -34,7 +35,9 @@ private:
 	TArray<FVertex> Grids;
 
 	//	File Path
-	const wchar_t * ShaderFilePath  = L"ShaderW0.hlsl";
+	const WCHAR* ShaderFilePath  = L"ShaderW0.hlsl";
+	const WCHAR* FontShaderFilePath = L"FontShader.hlsl";
+	const WCHAR* FontTextureFIlePath = L"Engine/Fonts/font.dds";
 
 	//	Primitive and Gizmo Input Layout
 	D3D11_INPUT_ELEMENT_DESC PrimitiveInputLayout[2] =
@@ -49,6 +52,13 @@ private:
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 
+	// Font Input Layout
+	D3D11_INPUT_ELEMENT_DESC FontInputLayout[2] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	};
+
 public:
 
 private:
@@ -60,6 +70,9 @@ private:
 	//void RenderGridEditorPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
 
 	void RenderLineBatchPass(ID3D11DeviceContext* InDeviceContext, FRenderBus& InRenderBus);
+
+	void DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InRenderBus);
+	void RenderFont(ID3D11DeviceContext* InDeviceContext);
 
 	void RenderOverlayPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
 	void RenderOutlinePass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);

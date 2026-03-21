@@ -76,6 +76,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -105,6 +106,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories> $(SolutionDir)Engine;$(SolutionDir)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -128,6 +130,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="DirectXTK\WICTextureLoader.cpp" />
     <ClCompile Include="Editor\Core\EditorConsole.cpp" />
     <ClCompile Include="Editor\EditorEngine.cpp" />
     <ClCompile Include="Editor\UI\EditorMainPanel.cpp" />
@@ -135,6 +138,7 @@
     <ClCompile Include="Engine\Classes\AActor.cpp" />
     <ClCompile Include="Engine\Core\InputSystem.cpp" />
     <ClCompile Include="Engine\Core\Name.cpp" />
+    <ClCompile Include="Engine\Fonts\FontCache.cpp" />
     <ClCompile Include="Engine\Math\Matrix.cpp" />
     <ClCompile Include="Engine\Math\Utils.cpp" />
     <ClCompile Include="Engine\Math\Vector.cpp" />
@@ -170,6 +174,7 @@
     <ClCompile Include="World\Transform.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DirectXTK\WICTextureLoader.h" />
     <ClInclude Include="Editor\Core\EditorConsole.h" />
     <ClInclude Include="Editor\EditorEngine.h" />
     <ClInclude Include="Editor\UI\EditorMainPanel.h" />
@@ -185,6 +190,8 @@
     <ClInclude Include="Engine\Core\InputSystem.h" />
     <ClInclude Include="Engine\Core\Name.h" />
     <ClInclude Include="Engine\Core\RayTypes.h" />
+    <ClInclude Include="Engine\Fonts\DDSTextureLoader.h" />
+    <ClInclude Include="Engine\Fonts\FontCache.h" />
     <ClInclude Include="Engine\Math\Matrix.h" />
     <ClInclude Include="Engine\Math\Utils.h" />
     <ClInclude Include="Engine\Math\Vector.h" />
@@ -229,6 +236,16 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="FontShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Engine\Fonts\font.dds" />
+    <Image Include="Engine\Fonts\font.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

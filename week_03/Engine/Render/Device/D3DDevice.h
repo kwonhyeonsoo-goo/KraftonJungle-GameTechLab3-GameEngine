@@ -52,6 +52,9 @@ private:
 	ID3D11DepthStencilState* DepthStencilStateStencilWrite = nullptr;
 	ID3D11DepthStencilState* DepthStencilStateStencilOutline = nullptr;
 
+	// Texture
+	ID3D11SamplerState* FontSampler = nullptr;
+
 	ID3D11BlendState* BlendStateAlpha = nullptr;
 
 	D3D11_VIEWPORT ViewportInfo = {};
@@ -80,6 +83,9 @@ private:
 
 	void CreateBlendState();
 	void ReleaseBlendState();
+
+	void CreateSampler();
+	void ReleaseSampler();
 
 public:
 	FD3DDevice() = default;

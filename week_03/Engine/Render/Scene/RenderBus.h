@@ -10,6 +10,7 @@
 #include "Core/CoreTypes.h"
 #include "Render/Scene/RenderCommand.h"
 #include "Render/Scene/LineBatch.h"
+#include "Engine/Fonts/FontCache.h"
 
 class FRenderBus
 {
@@ -24,7 +25,10 @@ private:
 	TArray<FRenderCommand> OutlineCommands;
 	TArray<FRenderCommand> OverlayCommands;
 
+	TArray<FRenderCommand> FontCommands;
+
 	FLineBatch LineBatch;
+	FFontCache FontCache;
 	FMatrix CachedView;
 	FMatrix CachedProjection;
 
@@ -36,6 +40,7 @@ public:
 	void AddComponentCommand(const FRenderCommand& InCommand);
 	void AddDepthLessCommand(const FRenderCommand& InCommand);
 	void AddLineBatchCommand(const FRenderCommand& InCommand);
+	void AddFontCommand(const FRenderCommand& InCommand);
 	//void AddEditorCommand(const FRenderCommand& InCommand);
 	//void AddGridEditorCommand(const FRenderCommand& InCommand);
 	void AddOutlineCommand(const FRenderCommand& InCommand);
@@ -49,8 +54,10 @@ public:
 	//const TArray<FRenderCommand>& GetGridEditorCommand() const { return EditorGridCommands; }
 	const TArray<FRenderCommand>& GetSelectionOutlineCommands() const { return OutlineCommands; }
 	const TArray<FRenderCommand>& GetOverlayCommands() const { return OverlayCommands; }
+	const TArray<FRenderCommand>& GetFontCommands() const { return FontCommands; }
 
 	FLineBatch&		GetLineBatch() { return LineBatch; }
+	FFontCache&	    GetFontCache() { return FontCache; }
 	const FMatrix&	GetCachedView()	const { return CachedView; }
 	const FMatrix&	GetCachedProjection() const	{ return CachedProjection; }
 };

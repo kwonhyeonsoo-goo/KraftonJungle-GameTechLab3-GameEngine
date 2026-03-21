@@ -18,6 +18,9 @@ private:
 	ID3D11InputLayout* InputLayout = nullptr;
 
 public:
+	ID3D11VertexShader* const& GetVertexShader() const { return VertexShader; }
+	ID3D11PixelShader* const& GetPixelShader() const { return PixelShader; }
+	ID3D11InputLayout* const& GetInputLayout() const { return InputLayout; }
 
 private:
 
