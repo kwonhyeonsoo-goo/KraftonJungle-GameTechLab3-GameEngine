@@ -1,8 +1,9 @@
 #pragma once
-#include "InputAction.h"
 #include "CoreMinimal.h"
+
 class FInputModifier;
 class FInputTrigger;
+struct FInputAction;
 
 struct ENGINE_API FActionKeyMapping
 {

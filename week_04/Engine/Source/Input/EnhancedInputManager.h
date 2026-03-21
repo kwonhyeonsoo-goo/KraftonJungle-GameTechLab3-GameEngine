@@ -1,11 +1,13 @@
 #pragma once
 #include "CoreMinimal.h"
-#include "InputAction.h"
 #include "InputTrigger.h"
-#include "InputMappingContext.h"
 #include <functional>
 
 class CInputManager;
+
+struct FInputMappingContext;
+struct FInputAction;
+
 using FInputActionCallback = std::function<void(const FInputActionValue&)>;
 class ENGINE_API  CEnhancedInputManager
 {

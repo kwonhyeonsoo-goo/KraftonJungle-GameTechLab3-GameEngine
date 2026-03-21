@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Input/InputAction.h"
-#include "Input/InputMappingContext.h"
 
 class UCameraComponent;
 class CInputManager;
 class CEnhancedInputManager;
+struct FInputMappingContext;
 
 
 class CEditorViewportController

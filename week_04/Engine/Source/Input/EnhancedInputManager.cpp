@@ -1,6 +1,8 @@
 #include "EnhancedInputManager.h"
 #include "InputModifier.h"
 #include "InputManager.h"
+#include "InputAction.h"
+#include "InputMappingContext.h"
 
 #include <algorithm>
 

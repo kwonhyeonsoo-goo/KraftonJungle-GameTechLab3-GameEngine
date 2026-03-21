@@ -2,9 +2,7 @@
 #include "CoreMinimal.h"
 #include <Windows.h>
 #include <functional>
-
-using FWndProcFilter = std::function<bool(HWND, UINT, WPARAM, LPARAM)>;
-using FOnResizeCallback = std::function<void(int Width, int Height)>;
+#include "WindowTypes.h"
 
 class ENGINE_API CWindow
 {

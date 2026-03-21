@@ -1,5 +1,6 @@
 #include "GizmoComponent.h"
 #include "Primitive/PrimitiveGizmo.h"
+#include "Object/Class.h"
 
 IMPLEMENT_RTTI(UGizmoComponent, UPrimitiveComponent)
 

@@ -1,4 +1,5 @@
 #include "SceneComponent.h"
+#include "Object/Class.h"
 
 IMPLEMENT_RTTI(USceneComponent, UActorComponent)
 

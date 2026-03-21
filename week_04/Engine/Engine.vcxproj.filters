@@ -477,6 +477,7 @@
     <ClInclude Include="Source\Component\UUIDBillboardComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Platform\Windows\WindowTypes.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

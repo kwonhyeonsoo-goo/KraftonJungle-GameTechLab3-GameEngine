@@ -16,6 +16,7 @@
 #include "Renderer/RenderCommand.h"
 #include "ThirdParty/nlohmann/json.hpp"
 #include "Component/UUIDBillboardComponent.h"
+#include "Object/Class.h"
 
 #include <algorithm>
 #include <filesystem>

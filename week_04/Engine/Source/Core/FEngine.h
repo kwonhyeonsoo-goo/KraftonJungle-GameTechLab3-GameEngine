@@ -1,13 +1,13 @@
-﻿#pragma once
+#pragma once
 #include "CoreMinimal.h"
 #include "Scene/SceneTypes.h"
 #include "Windows.h"
 #include "Core/Core.h"
+#include "ViewportClient.h"
 #include <memory>
 
 class CWindowApplication;
 class CWindow;
-class IViewportClient;
 
 class ENGINE_API FEngine
 {

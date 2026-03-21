@@ -1,5 +1,6 @@
 #include "CubeComponent.h"
 #include "Primitive/PrimitiveCube.h"
+#include "Object/Class.h"
 
 IMPLEMENT_RTTI(UCubeComponent, UPrimitiveComponent)
 
