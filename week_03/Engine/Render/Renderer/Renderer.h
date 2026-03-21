@@ -12,8 +12,17 @@
 
 #include <cstddef>
 
-enum RenderMode {
-	SolidMode, WireFrameMode
+enum class EViewModeIndex : uint32
+{
+	VMI_Lit,
+	VMI_Unlit,
+	VMI_Wireframe,
+};
+
+enum class EEngineShowFlags : uint64
+{
+	SF_Primitives,
+	SF_BillboardText,
 };
 
 class FRenderer
@@ -70,7 +79,8 @@ public:
 	FRenderResources& GetResources() { return Resources; }
 
 public: 
-	RenderMode renderMode = RenderMode::SolidMode;
+	EViewModeIndex viewMode = EViewModeIndex::VMI_Unlit;
+	EEngineShowFlags showFlag = EEngineShowFlags::SF_Primitives;
 
 };
 

@@ -202,13 +202,43 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 
 
 	SEPARATOR();
+	ImGuiStyle& style = ImGui::GetStyle();
+	ImVec2 originalButtonTextAlign = style.ButtonTextAlign;
 
-	if (ImGui::Button(Renderer->renderMode == RenderMode::SolidMode? "WireFrame : OFF" : "WireFrame : ON"))
+	// Push the new style: (0.0f, 0.5f) is left-aligned horizontally, centered vertically
+	ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.0f));
+
+	switch (Renderer->viewMode)
 	{
-		Renderer->renderMode = (Renderer->renderMode == RenderMode::SolidMode ? RenderMode::WireFrameMode : RenderMode::SolidMode);
+	case EViewModeIndex::VMI_Lit:
+	{
+		if (ImGui::Button("View Mode : Lit", ImVec2(160.0f, 0.0f)))
+			Renderer->viewMode =  EViewModeIndex::VMI_Unlit;
+
+		break;
 	}
+	case EViewModeIndex::VMI_Unlit:
+	{
+		if (ImGui::Button("View Mode : Unlit", ImVec2(160.0f, 0.0f)))
+			Renderer->viewMode = EViewModeIndex::VMI_Wireframe;
 
+		break;
+	}
+	case EViewModeIndex::VMI_Wireframe:
+	{
+		if (ImGui::Button("View Mode : Wireframe", ImVec2(160.0f, 0.0f)))
+			Renderer->viewMode = EViewModeIndex::VMI_Lit;
 
+		break;
+	}
+	default:
+		break;
+	}
+	ImGui::SameLine();
+	if (ImGui::Button(Renderer->showFlag == EEngineShowFlags::SF_Primitives ? "Show Flag : Primitive" : "Show Flag : BillboardText", ImVec2(200.0f, 0.0f))) {
+		Renderer->showFlag = Renderer->showFlag == EEngineShowFlags::SF_Primitives ? EEngineShowFlags::SF_BillboardText : EEngineShowFlags::SF_Primitives;
+	}
+	ImGui::PopStyleVar();
 	ImGui::End();
 
 	RenderObjectWindow(ViewOutput.Object);
