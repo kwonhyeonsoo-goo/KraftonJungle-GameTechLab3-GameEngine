@@ -1,24 +1,9 @@
 #include "Actor.h"
 
-namespace
-{
-	UObject* CreateAActorInstance(UObject* InOuter, const FString& InName)
-	{
-		return new AActor(AActor::StaticClass(), InName, InOuter);
-	}
+IMPLEMENT_RTTI(AActor, UObject)
 
+namespace {
 	FVector GZeroVector{};
-}
-
-UClass* AActor::StaticClass()
-{
-	static UClass ClassInfo("AActor", UObject::StaticClass(), &CreateAActorInstance);
-	return &ClassInfo;
-}
-
-AActor::AActor(UClass* InClass, const FString& InName, UObject* InOuter)
-	: UObject(InClass, InName, InOuter)
-{
 }
 
 void AActor::AddOwnedComponent(UActorComponent* InComponent)

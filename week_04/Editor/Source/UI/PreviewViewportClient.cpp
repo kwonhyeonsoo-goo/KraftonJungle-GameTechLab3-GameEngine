@@ -62,7 +62,7 @@ UScene* CPreviewViewportClient::ResolveScene(CCore* Core) const
 		return nullptr;
 	}
 
-	if (UScene* PreviewScene = Core->GetPreviewScene(PreviewContextName))
+	if (UScene* PreviewScene = Core->GetSceneManager()->GetPreviewScene(PreviewContextName))
 	{
 		return PreviewScene;
 	}

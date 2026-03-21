@@ -68,6 +68,7 @@
     <ClInclude Include="Source\Object\ObjectFactory.h" />
     <ClInclude Include="Source\Object\ObjectManager.h" />
     <ClInclude Include="Source\Object\ObjectTypes.h" />
+    <ClInclude Include="Source\Physics\PhysicsManager.h" />
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h" />
     <ClInclude Include="Source\Platform\Windows\Window.h" />
     <ClInclude Include="Source\Platform\Windows\WindowApplication.h" />
@@ -91,11 +92,13 @@
     <ClInclude Include="Source\Renderer\TextRenderer.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="Source\Scene\SceneContext.h" />
+    <ClInclude Include="Source\Scene\SceneManager.h" />
     <ClInclude Include="Source\Scene\SceneTypes.h" />
     <ClInclude Include="Source\Types\Array.h" />
     <ClInclude Include="Source\Types\CoreTypes.h" />
     <ClInclude Include="Source\Types\LinkedList.h" />
     <ClInclude Include="Source\Types\Map.h" />
+    <ClInclude Include="Source\Types\Name.h" />
     <ClInclude Include="Source\Types\ObjectPtr.h" />
     <ClInclude Include="Source\Types\Pair.h" />
     <ClInclude Include="Source\Types\Queue.h" />
@@ -140,6 +143,7 @@
     <ClCompile Include="Source\Object\Object.cpp" />
     <ClCompile Include="Source\Object\ObjectFactory.cpp" />
     <ClCompile Include="Source\Object\ObjectManager.cpp" />
+    <ClCompile Include="Source\Physics\PhysicsManager.cpp" />
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp" />
     <ClCompile Include="Source\Platform\Windows\Window.cpp" />
     <ClCompile Include="Source\Platform\Windows\WindowApplication.cpp" />
@@ -160,6 +164,8 @@
     <ClCompile Include="Source\Renderer\ShaderResource.cpp" />
     <ClCompile Include="Source\Renderer\TextRenderer.cpp" />
     <ClCompile Include="Source\Scene\Scene.cpp" />
+    <ClCompile Include="Source\Scene\SceneManager.cpp" />
+    <ClCompile Include="Source\Types\Name.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

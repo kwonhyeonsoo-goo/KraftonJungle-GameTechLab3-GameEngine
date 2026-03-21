@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ActorComponent.h"
+#include "Renderer/Material.h"
 #include <memory>
 
 class FDynamicMaterial;
@@ -9,10 +10,8 @@ class UPrimitiveComponent;
 class ENGINE_API URandomColorComponent : public UActorComponent
 {
 public:
-	static UClass* StaticClass();
-
-	URandomColorComponent();
-	URandomColorComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
+	DECLARE_RTTI(URandomColorComponent, UActorComponent)
+	void Initialize();
 	~URandomColorComponent() override;
 
 	void SetUpdateInterval(float InInterval) { UpdateInterval = InInterval; }

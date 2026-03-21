@@ -3,9 +3,7 @@
 
 class ENGINE_API USkyComponent : public UPrimitiveComponent
 {
-public:
-	static UClass* StaticClass();
+	DECLARE_RTTI(USkyComponent, UPrimitiveComponent)
 
-	USkyComponent();
-	USkyComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
+	void Initialize();
 };

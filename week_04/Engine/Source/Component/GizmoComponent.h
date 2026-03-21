@@ -1,11 +1,11 @@
 #pragma once
 #include "PrimitiveComponent.h"
+
 class ENGINE_API UGizmoComponent : public UPrimitiveComponent
 {
 public:
-	static UClass* StaticClass();
+	DECLARE_RTTI(UGizmoComponent, UPrimitiveComponent)
 
-	UGizmoComponent();
-	UGizmoComponent(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
+	void Initialize();
 };
 

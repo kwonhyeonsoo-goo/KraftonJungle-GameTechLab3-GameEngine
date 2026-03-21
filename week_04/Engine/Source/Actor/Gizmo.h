@@ -3,10 +3,7 @@
 class ENGINE_API AGizmo : public AActor
 {
 public:
-	AGizmo();
-	AGizmo(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
-
-	static UClass* StaticClass();
+	DECLARE_RTTI(AGizmo, AActor)
 
 	void PostSpawnInitialize() override;
 	void BeginPlay() override;

@@ -809,6 +809,21 @@ public:
 	{
 		return MakeWorld(Translation, RotationMatrix, Scale);
 	}
+
+	static FMatrix Abs(const FMatrix& InMatrix) noexcept
+	{
+		FMatrix Result = InMatrix;
+
+		for (int i = 0; i < 4; i++)
+		{
+			for (int j = 0; j < 4; j++)
+			{
+				Result[i][j] = abs(Result[i][j]);
+			}
+		}
+
+		return Result;
+	}
 };
 
 inline FMatrix operator*(float Scalar, const FMatrix& Matrix) noexcept

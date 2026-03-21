@@ -11,6 +11,7 @@ struct ENGINE_API FRenderCommand
 	FMatrix WorldMatrix;
 	FMaterial* Material = nullptr;
 	uint64 SortKey = 0;
+
 	bool bOverlay = false;
 	bool bDisableDepthTest = false;
 	bool bDisableDepthWrite = false;

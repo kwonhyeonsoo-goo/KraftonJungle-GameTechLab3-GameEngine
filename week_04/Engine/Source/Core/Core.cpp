@@ -13,108 +13,15 @@
 #include "Renderer/Renderer.h"
 #include "Renderer/RenderCommand.h"
 #include "Math/Frustum.h"
+#include "Physics/PhysicsManager.h"
 
 CCore::~CCore()
 {
 	Release();
 }
 
-bool CCore::CreateSceneContext(FSceneContext& Context, const FString& ContextName, ESceneType SceneType, float AspectRatio, bool bInitializeDefaultScene)
-{
-	Context.ContextName = ContextName;
-	Context.SceneType = SceneType;
-	Context.Scene = FObjectFactory::ConstructObject<UScene>(nullptr, ContextName);
-	if (!Context.Scene)
-	{
-		return false;
-	}
 
-	Context.Scene->SetSceneType(SceneType);
-	if (bInitializeDefaultScene)
-	{
-		Context.Scene->InitializeDefaultScene(AspectRatio, Renderer ? Renderer->GetDevice() : nullptr);
-	}
-	else
-	{
-		Context.Scene->InitializeEmptyScene(AspectRatio);
-	}
 
-	return true;
-}
-
-void CCore::DestroySceneContext(FSceneContext& Context)
-{
-	delete Context.Scene;
-	Context.Reset();
-}
-
-void CCore::DestroySceneContext(FEditorSceneContext& Context)
-{
-	delete Context.Scene;
-	Context.Reset();
-}
-
-FEditorSceneContext* CCore::GetActiveEditorSceneContext()
-{
-	if (ActiveSceneContext == &EditorSceneContext)
-	{
-		return &EditorSceneContext;
-	}
-
-	for (const std::unique_ptr<FEditorSceneContext>& Context : PreviewSceneContexts)
-	{
-		if (Context && Context.get() == ActiveSceneContext)
-		{
-			return Context.get();
-		}
-	}
-
-	return nullptr;
-}
-
-const FEditorSceneContext* CCore::GetActiveEditorSceneContext() const
-{
-	if (ActiveSceneContext == &EditorSceneContext)
-	{
-		return &EditorSceneContext;
-	}
-
-	for (const std::unique_ptr<FEditorSceneContext>& Context : PreviewSceneContexts)
-	{
-		if (Context && Context.get() == ActiveSceneContext)
-		{
-			return Context.get();
-		}
-	}
-
-	return nullptr;
-}
-
-FEditorSceneContext* CCore::FindPreviewSceneContext(const FString& ContextName)
-{
-	for (const std::unique_ptr<FEditorSceneContext>& Context : PreviewSceneContexts)
-	{
-		if (Context && Context->ContextName == ContextName)
-		{
-			return Context.get();
-		}
-	}
-
-	return nullptr;
-}
-
-const FEditorSceneContext* CCore::FindPreviewSceneContext(const FString& ContextName) const
-{
-	for (const std::unique_ptr<FEditorSceneContext>& Context : PreviewSceneContexts)
-	{
-		if (Context && Context->ContextName == ContextName)
-		{
-			return Context.get();
-		}
-	}
-
-	return nullptr;
-}
 
 bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupSceneType)
 {
@@ -128,62 +35,29 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupS
 		return false;
 	}
 
+
 	ObjManager = new ObjectManager();
 
 	// InputManager
 	InputManager = new CInputManager();
 	EnhancedInput = new CEnhancedInputManager();
+
+	PhysicsManager = std::make_unique<CPhysicsManager>();
+
 	// Timer
 	Timer.Initialize();
 	RegisterConsoleVariables();
-
+	SceneManager = std::make_unique<FSceneManager>();
 	const float AspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
-	FSceneContext* StartupContext = &GameSceneContext;
-	FString ContextName = "GameScene";
-
-	if (StartupSceneType == ESceneType::Editor)
-	{
-		StartupContext = &EditorSceneContext;
-		ContextName = "EditorScene";
-	}
-
-	if (!CreateSceneContext(*StartupContext, ContextName, StartupSceneType, AspectRatio))
+	if (!SceneManager->Initialize(AspectRatio, StartupSceneType, Renderer.get()))
 	{
 		return false;
 	}
 
-	ActiveSceneContext = StartupContext;
 	return true;
 }
 
-UScene* CCore::GetPreviewScene(const FString& ContextName) const
-{
-	const FEditorSceneContext* Context = FindPreviewSceneContext(ContextName);
-	return Context ? Context->Scene : nullptr;
-}
 
-void CCore::SetSelectedActor(AActor* InActor)
-{
-	FEditorSceneContext* ActiveEditorContext = GetActiveEditorSceneContext();
-	if (ActiveEditorContext)
-	{
-		ActiveEditorContext->SelectedActor = InActor;
-		return;
-	}
-
-	EditorSceneContext.SelectedActor = InActor;
-}
-
-AActor* CCore::GetSelectedActor() const
-{
-	const FEditorSceneContext* ActiveEditorContext = GetActiveEditorSceneContext();
-	if (ActiveEditorContext)
-	{
-		return ActiveEditorContext->SelectedActor;
-	}
-
-	return EditorSceneContext.SelectedActor;
-}
 
 void CCore::SetViewportClient(IViewportClient* InViewportClient)
 {
@@ -205,65 +79,8 @@ void CCore::SetViewportClient(IViewportClient* InViewportClient)
 	}
 }
 
-FEditorSceneContext* CCore::CreatePreviewSceneContext(const FString& ContextName)
-{
-	if (ContextName.empty())
-	{
-		return nullptr;
-	}
 
-	if (FEditorSceneContext* ExistingContext = FindPreviewSceneContext(ContextName))
-	{
-		return ExistingContext;
-	}
 
-	std::unique_ptr<FEditorSceneContext> PreviewContext = std::make_unique<FEditorSceneContext>();
-	const float AspectRatio = (WindowHeight > 0) ? (static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight)) : 1.0f;
-	if (!CreateSceneContext(*PreviewContext, ContextName, ESceneType::Preview, AspectRatio, false))
-	{
-		return nullptr;
-	}
-
-	FEditorSceneContext* CreatedContext = PreviewContext.get();
-	PreviewSceneContexts.push_back(std::move(PreviewContext));
-	return CreatedContext;
-}
-
-bool CCore::DestroyPreviewSceneContext(const FString& ContextName)
-{
-	for (auto It = PreviewSceneContexts.begin(); It != PreviewSceneContexts.end(); ++It)
-	{
-		if (*It && (*It)->ContextName == ContextName)
-		{
-			if (ActiveSceneContext == It->get())
-			{
-				ActivateEditorScene();
-				if (ActiveSceneContext == nullptr)
-				{
-					ActivateGameScene();
-				}
-			}
-
-			DestroySceneContext(*(*It));
-			PreviewSceneContexts.erase(It);
-			return true;
-		}
-	}
-
-	return false;
-}
-
-bool CCore::ActivatePreviewScene(const FString& ContextName)
-{
-	FEditorSceneContext* PreviewContext = FindPreviewSceneContext(ContextName);
-	if (PreviewContext == nullptr)
-	{
-		return false;
-	}
-
-	ActiveSceneContext = PreviewContext;
-	return true;
-}
 
 void CCore::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
@@ -285,18 +102,11 @@ void CCore::Release()
 		ViewportClient->Detach(this, Renderer.get());
 	}
 	ViewportClient = nullptr;
-
-	ActiveSceneContext = nullptr;
-	for (std::unique_ptr<FEditorSceneContext>& PreviewContext : PreviewSceneContexts)
+	if (SceneManager)
 	{
-		if (PreviewContext)
-		{
-			DestroySceneContext(*PreviewContext);
-		}
+		SceneManager->Release();
+		SceneManager.reset();
 	}
-	PreviewSceneContexts.clear();
-	DestroySceneContext(EditorSceneContext);
-	DestroySceneContext(GameSceneContext);
 
 	// Scene 해제 후 PendingKill 오브젝트를 GC로 정리
 	if (ObjManager)
@@ -354,6 +164,40 @@ void CCore::Input(float DeltaTime)
 
 void CCore::Physics(float DeltaTime)
 {
+	UScene* Scene = ViewportClient ? ViewportClient->ResolveScene(this) : GetActiveScene();
+	
+	if (Scene)
+	{
+		FVector LineStart(0, 0, 0), LineEnd(1, 1, 0);
+		FHitResult HitResult;
+
+		bool bHit = PhysicsManager->Linetrace(Scene, LineStart, LineEnd, HitResult);
+
+		if (bHit)
+		{
+			for (UActorComponent* ActorComp : HitResult.HitActor->GetComponents())
+			{
+				if (!ActorComp->IsA(UPrimitiveComponent::StaticClass()))
+				{
+					continue;
+				}
+
+				UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(ActorComp);
+
+				if (PrimComp)
+				{
+					FBoxSphereBounds Bound;
+					Bound = PrimComp->GetWorldBoundsForAABB();
+					Renderer->DrawCube(Bound.Center, Bound.BoxExtent, FVector4(1, 0, 0, 1));
+				}
+			}
+		}
+
+		if (Renderer)
+		{
+			Renderer->DrawLine(LineStart, LineEnd, FVector4(0, 1, 1, 1));
+		}
+	}
 }
 
 void CCore::GameLogic(float DeltaTime)
@@ -423,37 +267,11 @@ void CCore::Render()
 
 void CCore::OnResize(int32 Width, int32 Height)
 {
-	if (Width == 0 || Height == 0)
-	{
-		return;
-	}
-
+	if (Width == 0 || Height == 0) return;
 	WindowWidth = Width;
 	WindowHeight = Height;
-
-	if (Renderer)
-	{
-		Renderer->OnResize(Width, Height);
-	}
-
-	const float NewAspect = static_cast<float>(Width) / static_cast<float>(Height);
-	auto UpdateSceneAspectRatio = [NewAspect](UScene* Scene)
-		{
-			if (Scene && Scene->GetCamera())
-			{
-				Scene->GetCamera()->SetAspectRatio(NewAspect);
-			}
-		};
-
-	UpdateSceneAspectRatio(GameSceneContext.Scene);
-	UpdateSceneAspectRatio(EditorSceneContext.Scene);
-	for (const std::unique_ptr<FEditorSceneContext>& PreviewContext : PreviewSceneContexts)
-	{
-		if (PreviewContext)
-		{
-			UpdateSceneAspectRatio(PreviewContext->Scene);
-		}
-	}
+	if (Renderer) Renderer->OnResize(Width, Height);
+	if (SceneManager) SceneManager->OnResize(Width, Height);
 }
 
 void CCore::RegisterConsoleVariables()
