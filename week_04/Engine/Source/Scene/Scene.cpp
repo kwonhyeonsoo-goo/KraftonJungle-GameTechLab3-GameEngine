@@ -15,6 +15,7 @@
 #include "Renderer/MaterialManager.h"
 #include "Renderer/RenderCommand.h"
 #include "ThirdParty/nlohmann/json.hpp"
+#include "Component/UUIDBillboardComponent.h"
 #include "Object/Class.h"
 
 #include <algorithm>
@@ -413,9 +414,13 @@ void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveCom
 			}
 
 			UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
-			if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
+			// if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
+			if (!PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
 			{
-				continue;
+				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
+				{
+					continue;
+				}
 			}
 
 			if (Frustum.IsVisible(PrimitiveComponent->GetWorldBounds()))
@@ -438,7 +443,30 @@ void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue&
 	
 	for (UPrimitiveComponent* PrimitiveComponent : VisiblePrimitives)
 	{
-	
+		if (!PrimitiveComponent)
+		{
+			continue;
+		}
+		if (PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
+		{
+			UUUIDBillboardComponent* UUIDComponent =
+				static_cast<UUUIDBillboardComponent*>(PrimitiveComponent);
+
+			FTextRenderCommand TextCmd;
+			TextCmd.Text = UUIDComponent->GetDisplayText();
+			TextCmd.WorldPosition = UUIDComponent->GetTextWorldPosition();
+			TextCmd.WorldScale = UUIDComponent->GetWorldScale();
+			TextCmd.Color = UUIDComponent->GetTextColor();
+
+			OutQueue.AddTextCommand(TextCmd);
+			continue;
+		}
+
+		if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
+		{
+			continue;
+		}
+
 		FRenderCommand Command;
 		Command.MeshData = PrimitiveComponent->GetPrimitive()->GetMeshData();
 		Command.WorldMatrix = PrimitiveComponent->GetWorldTransform();

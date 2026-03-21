@@ -769,10 +769,9 @@ public:
 		}
 
 		const FVector NewUp = FVector::CrossProduct(Forward, Right).GetSafeNormal();
-
 		return FMatrix(
 			Forward.X, Forward.Y, Forward.Z, 0.f,
-			Right.X, Right.Y, Right.Z, 0.f,
+			-Right.X, -Right.Y, -Right.Z, 0.f,
 			NewUp.X, NewUp.Y, NewUp.Z, 0.f,
 			Position.X, Position.Y, Position.Z, 1.f
 		);

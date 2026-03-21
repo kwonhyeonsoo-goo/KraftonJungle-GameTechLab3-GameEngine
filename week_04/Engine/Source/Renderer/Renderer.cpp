@@ -8,6 +8,11 @@
 #include "Primitive/PrimitiveBase.h"
 #include <cassert>
 #include <algorithm>
+static FVector GetCameraWorldPositionFromViewMatrix(const FMatrix& ViewMatrix)
+{
+	const FMatrix InvView = ViewMatrix.GetInverse();
+	return FVector(InvView.M[3][0], InvView.M[3][1], InvView.M[3][2]);
+}
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
 
@@ -248,6 +253,12 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 
+	if (!TextRenderer.Initialize(Device, DeviceContext))
+	{
+		MessageBox(0, L"TextRenderer Initialize Failed.", 0, 0);
+		return false;
+	}
+
 	return true;
 }
 
@@ -302,6 +313,9 @@ void CRenderer::BeginFrame()
 	PrevCommandCount = CommandList.size();
 	CommandList.clear();
 	CommandList.reserve(PrevCommandCount);
+
+	TextCommandList.clear();
+	TextCommandList.reserve(PrevCommandCount);
 }
 
 void CRenderer::EndFrame()
@@ -344,6 +358,11 @@ void CRenderer::SubmitCommands(const FRenderCommandQueue& Queue)
 		}
 		AddCommand(Cmd);
 	}
+	for (const auto& TextCmd : Queue.TextCommands)
+	{
+		TextCommandList.push_back(TextCmd);
+	}
+
 }
 
 void CRenderer::AddCommand(const FRenderCommand& Command)
@@ -425,6 +444,36 @@ void CRenderer::ExecuteCommands()
 	DeviceContext->RSSetState(RasterizerState);
 	ShaderManager.Bind(DeviceContext);
 	DeviceContext->VSSetConstantBuffers(0, 2, CBs);
+
+	const FVector CameraPosition = GetCameraWorldPositionFromViewMatrix(ViewMatrix);
+
+	if (!TextCommandList.empty() || bEnableTextRenderTest)
+	{
+		TextRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
+
+		for (const FTextRenderCommand& TextCmd : TextCommandList)
+		{
+			TextRenderer.DrawTextBillboard(
+				TextCmd.Text,
+				TextCmd.WorldPosition,
+				TextCmd.WorldScale,
+				TextCmd.Color
+			);
+		}
+
+		// 테스트용 코드
+		if (bEnableTextRenderTest)
+		{
+			TextRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
+
+			TextRenderer.DrawTextBillboard(
+				FString("012TEST"),
+				FVector(0.0f, 0.0f, 0.0f),
+				0.3f,
+				FVector4(1.0f, 1.0f, 1.0f, 1.0f)
+			);
+		}
+	}
 
 	if (PostRenderCallback)
 	{
@@ -667,6 +716,8 @@ void CRenderer::Release()
 {
 	ClearViewportCallbacks();
 	ClearSceneRenderTarget();
+
+	TextRenderer.Release();
 
 	ShaderManager.Release();
 	FShaderMap::Get().Clear();

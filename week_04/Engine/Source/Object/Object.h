@@ -110,6 +110,10 @@ public:
 	}
 
 	FString GetPathName() const;
+	FString GetUUIDString() const
+	{
+		return std::to_string(UUID);
+	}
 
 	bool HasAnyFlags(EObjectFlags InFlags) const;
 	bool HasAllFlags(EObjectFlags InFlags) const;

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source">
@@ -216,12 +216,21 @@
     <ClCompile Include="Source\Renderer\ShaderResource.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Renderer\FontAtlas.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\TextRenderer.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Scene\Scene.cpp">
       <Filter>Source\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Physics\PhysicsManager.cpp" />
     <ClCompile Include="Source\Scene\SceneManager.cpp" />
     <ClCompile Include="Source\Types\Name.cpp" />
+    <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -470,12 +479,28 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp">
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Renderer\FontVertex.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Shaders\FontVertexShader.hlsl" />
+    <ClInclude Include="Source\Renderer\FontAtlas.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\TextRenderer.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Physics\PhysicsManager.h" />
     <ClInclude Include="Source\Scene\SceneManager.h" />
     <ClInclude Include="Source\Types\Name.h" />
+    <ClInclude Include="Source\Component\UUIDBillboardComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Platform\Windows\WindowTypes.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shaders\FontPixelShader.hlsl" />
   </ItemGroup>
 </Project>

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Renderer/RenderCommand.h"
+#include "Renderer/TextRenderer.h"
 #include <d3d11.h>
 #include <functional>
 #include <memory>
@@ -10,6 +11,7 @@
 class FPixelShader;
 class FMaterial;
 struct FMeshData;
+class UScene;
 
 using FGUICallback = std::function<void()>;
 class CRenderer;
@@ -73,6 +75,9 @@ public:
 	ID3D11RenderTargetView* GetRenderTargetView() const { return RenderTargetView; }
 	IDXGISwapChain* GetSwapChain() const { return SwapChain; };
 	HWND GetHwnd() const { return Hwnd; }
+
+	void RenderActorUUIDs(UScene* Scene);
+
 private:
 	void AddCommand(const FRenderCommand& Command);
 	bool CreateDeviceAndSwapChain(HWND InHwnd, int32 Width, int32 Height);
@@ -101,6 +106,8 @@ private:
 	bool bVSyncEnabled = false;
 
 	TArray<FRenderCommand> CommandList;
+	TArray<FTextRenderCommand> TextCommandList;
+
 	size_t PrevCommandCount = 0;
 	TArray<FPrimitiveVertex> LineVertices;
 	ID3D11Buffer* LineVertexBuffer = nullptr;
@@ -124,6 +131,10 @@ private:
 
 	// 기본 Material (셰이더 미지정 시 사용)
 	std::shared_ptr<FMaterial> DefaultMaterial;
+
+	// 텍스처 렌더링 테스트용 (임시)
+	CTextRenderer TextRenderer;
+	bool bEnableTextRenderTest = false;
 
 	// 매 프레임 외부에서 설정
 public:

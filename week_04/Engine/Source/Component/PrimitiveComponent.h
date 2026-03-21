@@ -25,7 +25,7 @@ public:
 	void SetMaterial(FMaterial* InMaterial) { Material = InMaterial; }
 	FMaterial* GetMaterial() const { return Material; }
 
-	FBoundingSphere GetWorldBounds() const
+	virtual FBoundingSphere GetWorldBounds() const
 	{
 		FVector Center = GetWorldLocation();
 		FTransform T = GetRelativeTransform();

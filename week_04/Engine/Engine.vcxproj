@@ -19,6 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Shaders\FontVertexShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="Source\Component\UUIDBillboardComponent.h" />
+    <ClInclude Include="Source\Renderer\FontAtlas.h" />
+    <ClInclude Include="Source\Renderer\FontVertex.h" />
     <ClInclude Include="Source\CoreMinimal.h" />
     <ClInclude Include="Source\EngineAPI.h" />
     <ClInclude Include="Source\Actor\Actor.h" />
@@ -85,6 +91,7 @@
     <ClInclude Include="Source\Renderer\ShaderMap.h" />
     <ClInclude Include="Source\Renderer\ShaderResource.h" />
     <ClInclude Include="Source\Renderer\ShaderType.h" />
+    <ClInclude Include="Source\Renderer\TextRenderer.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="Source\Scene\SceneContext.h" />
     <ClInclude Include="Source\Scene\SceneManager.h" />
@@ -119,6 +126,7 @@
     <ClCompile Include="Source\Component\SceneComponent.cpp" />
     <ClCompile Include="Source\Component\SkyComponent.cpp" />
     <ClCompile Include="Source\Component\SphereComponent.cpp" />
+    <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp" />
     <ClCompile Include="Source\Core\ConsoleVariableManager.cpp" />
     <ClCompile Include="Source\Core\Core.cpp" />
     <ClCompile Include="Source\Core\FEngine.cpp" />
@@ -150,6 +158,7 @@
     <ClCompile Include="Source\Primitive\PrimitiveSky.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveSphere.cpp" />
     <ClCompile Include="Source\Primitive\UnrealEditorStyledGizmo.cpp" />
+    <ClCompile Include="Source\Renderer\FontAtlas.cpp" />
     <ClCompile Include="Source\Renderer\Material.cpp" />
     <ClCompile Include="Source\Renderer\MaterialManager.cpp" />
     <ClCompile Include="Source\Renderer\Renderer.cpp" />
@@ -157,6 +166,7 @@
     <ClCompile Include="Source\Renderer\ShaderManager.cpp" />
     <ClCompile Include="Source\Renderer\ShaderMap.cpp" />
     <ClCompile Include="Source\Renderer\ShaderResource.cpp" />
+    <ClCompile Include="Source\Renderer\TextRenderer.cpp" />
     <ClCompile Include="Source\Scene\Scene.cpp" />
     <ClCompile Include="Source\Scene\SceneManager.cpp" />
     <ClCompile Include="Source\Scene\ShowFlags.cpp" />
@@ -280,6 +290,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shaders\FontPixelShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

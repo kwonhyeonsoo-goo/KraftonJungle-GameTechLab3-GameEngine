@@ -16,6 +16,13 @@ public:
 		const std::shared_ptr<FShaderResource>& Resource
 	);
 
+	static std::shared_ptr<FVertexShader> CreateWithLayout(
+		ID3D11Device* Device,
+		const std::shared_ptr<FShaderResource>& Resource,
+		const D3D11_INPUT_ELEMENT_DESC* Layout,
+		UINT LayoutCount
+	);
+
 	void Bind(ID3D11DeviceContext* DeviceContext) const;
 	void Release();
 
