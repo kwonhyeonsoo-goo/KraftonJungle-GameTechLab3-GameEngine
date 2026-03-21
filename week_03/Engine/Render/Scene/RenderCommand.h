@@ -21,7 +21,6 @@ enum class ERenderCommandType
 	Overlay,
 	SelectionOutline,
 	Font
-	SelectionOutline
 };
 
 //	Object를 위한 Constant Buffer입니다.

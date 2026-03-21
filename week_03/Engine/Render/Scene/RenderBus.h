@@ -24,7 +24,6 @@ private:
 
 	TArray<FRenderCommand> FontCommands;
 
-	FLineBatch LineBatch;
 	FFontCache FontCache;
 	FMatrix CachedView;
 	FMatrix CachedProjection;
