@@ -163,10 +163,11 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 	ID3D11PixelShader* psCheck = Resources.FontShader.GetPixelShader();
 
 	// Font Text
-	Device.SetDepthStencilState(EDepthStencilState::None);
-	Device.SetBlendState(EBlendState::AlphaBlend);
-	DrawString(context, InRenderBus);
-
+	if (showFlag & (uint64)EEngineShowFlags::SF_BillboardText) {
+		Device.SetDepthStencilState(EDepthStencilState::None);
+		Device.SetBlendState(EBlendState::AlphaBlend);
+		DrawString(context, InRenderBus);
+	}
 	//	Reset to default
 	Device.SetRasterizerState(ERasterizerState::SolidBackCull);
 
