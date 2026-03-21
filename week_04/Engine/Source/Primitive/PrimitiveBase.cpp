@@ -6,10 +6,8 @@
 
 bool FMeshData::CreateBuffers(ID3D11Device* Device)
 {
-	if (VertexBuffer && IndexBuffer)
-	{
+	if (!bIsDirty)
 		return true;
-	}
 
 	if (Vertices.empty() || Indices.empty())
 	{

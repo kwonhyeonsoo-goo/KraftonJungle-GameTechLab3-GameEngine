@@ -12,7 +12,8 @@ void ULineBatchComponent::Initialize()
 
 void ULineBatchComponent::DrawLine(FVector InStart, FVector InEnd, FVector4 InColor)
 {
-	static_pointer_cast<CPrimitiveLineBatch>(Primitive)->AddLine(InStart, InEnd, InColor);
+	auto primitive = static_pointer_cast<CPrimitiveLineBatch>(Primitive);
+	primitive->AddLine(InStart, InEnd, InColor);
 	UpdateLocalBoundRadius(InStart);
 	UpdateLocalBoundRadius(InEnd);
 }
