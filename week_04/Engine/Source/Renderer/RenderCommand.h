@@ -28,10 +28,24 @@ struct ENGINE_API FTextRenderCommand
 	FVector4 Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
 };
 
-struct ENGINE_API FSubUVRendererCommand
+struct ENGINE_API FSubUVRenderCommand
 {
 	FVector WorldPosition;
-	float WorldScale = 1.0f;
+	FVector2 Size = FVector2(0.3f, 0.3f);
+	FVector4 Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
+
+	int32 Columns = 9;
+	int32 Rows = 4;
+	int32 TotalFrames = 36;
+
+	uint32 FirstFrame = 14;
+	uint32 LastFrame = 17;
+	
+	float FPS = 8.0f;
+	float ElapsedTime = 0.0f;
+
+	bool bLoop = true;
+	bool bBillboard = true;
 
 };
 
@@ -43,6 +57,8 @@ struct ENGINE_API FRenderCommandQueue
 
 	TArray<FTextRenderCommand> TextCommands;
 
+	TArray<FSubUVRenderCommand> SubUVCommands;
+
 	FMatrix ViewMatrix;
 	FMatrix ProjectionMatrix;
 
@@ -51,6 +67,8 @@ struct ENGINE_API FRenderCommandQueue
 		Commands.reserve(Count);
 
 		TextCommands.reserve(Count);
+
+		SubUVCommands.reserve(Count);
 	}
 
 	void AddCommand(const FRenderCommand& Cmd)
@@ -61,6 +79,11 @@ struct ENGINE_API FRenderCommandQueue
 	void AddTextCommand(const FTextRenderCommand& Cmd)
 	{
 		TextCommands.push_back(Cmd);
+	}
+
+	void AddSubUVCommand(const FSubUVRenderCommand& Cmd)
+	{
+		SubUVCommands.push_back(Cmd);
 	}
 
 	void Clear()

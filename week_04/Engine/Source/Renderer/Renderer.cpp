@@ -259,6 +259,12 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 
+	const std::wstring SubUVTexturePath = FPaths::ToWide(FPaths::ContentDir() + "Textures/SubUVPenguin.png");
+	if (!SubUVRenderer.Initialize(Device, DeviceContext, SubUVTexturePath))
+	{
+		MessageBox(0, L"SubUVRenderer Initialize Failed.", 0, 0);
+	}
+
 	return true;
 }
 
@@ -316,6 +322,9 @@ void CRenderer::BeginFrame()
 
 	TextCommandList.clear();
 	TextCommandList.reserve(PrevCommandCount);
+
+	SubUVCommandList.clear();
+	SubUVCommandList.reserve(PrevCommandCount);
 }
 
 void CRenderer::EndFrame()
@@ -361,6 +370,10 @@ void CRenderer::SubmitCommands(const FRenderCommandQueue& Queue)
 	for (const auto& TextCmd : Queue.TextCommands)
 	{
 		TextCommandList.push_back(TextCmd);
+	}
+	for (const auto& SubUVCmd : Queue.SubUVCommands)
+	{
+		SubUVCommandList.push_back(SubUVCmd);
 	}
 
 }
@@ -471,6 +484,29 @@ void CRenderer::ExecuteCommands()
 				FVector(0.0f, 0.0f, 0.0f),
 				0.3f,
 				FVector4(1.0f, 1.0f, 1.0f, 1.0f)
+			);
+		}
+	}
+
+	if (!SubUVCommandList.empty())
+	{
+		SubUVRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
+
+		for (const FSubUVRenderCommand& Cmd : SubUVCommandList)
+		{
+			SubUVRenderer.DrawSubUV(
+				Cmd.WorldPosition,
+				Cmd.Size,
+				Cmd.Color,
+				Cmd.Columns,
+				Cmd.Rows,
+				Cmd.TotalFrames,
+				Cmd.FirstFrame,
+				Cmd.LastFrame,
+				Cmd.FPS,
+				Cmd.ElapsedTime,
+				Cmd.bLoop,
+				Cmd.bBillboard
 			);
 		}
 	}

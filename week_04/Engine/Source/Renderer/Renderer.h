@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Renderer/RenderCommand.h"
 #include "Renderer/TextRenderer.h"
+#include "Renderer/SubUVRenderer.h"
 #include <d3d11.h>
 #include <functional>
 #include <memory>
@@ -76,8 +77,6 @@ public:
 	IDXGISwapChain* GetSwapChain() const { return SwapChain; };
 	HWND GetHwnd() const { return Hwnd; }
 
-	void RenderActorUUIDs(UScene* Scene);
-
 private:
 	void AddCommand(const FRenderCommand& Command);
 	bool CreateDeviceAndSwapChain(HWND InHwnd, int32 Width, int32 Height);
@@ -107,6 +106,7 @@ private:
 
 	TArray<FRenderCommand> CommandList;
 	TArray<FTextRenderCommand> TextCommandList;
+	TArray<FSubUVRenderCommand> SubUVCommandList;
 
 	size_t PrevCommandCount = 0;
 	TArray<FPrimitiveVertex> LineVertices;
@@ -135,6 +135,9 @@ private:
 	// 텍스처 렌더링 테스트용 (임시)
 	CTextRenderer TextRenderer;
 	bool bEnableTextRenderTest = false;
+
+	// SubUV 렌더링
+	CSubUVRenderer SubUVRenderer;
 
 	// 매 프레임 외부에서 설정
 public:

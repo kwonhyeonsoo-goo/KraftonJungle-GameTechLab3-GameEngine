@@ -232,7 +232,9 @@
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scene\ShowFlags.cpp" />
-    <ClCompile Include="Source\Renderer\SubUVRenderer.cpp" />
+    <ClCompile Include="Source\Renderer\SubUVRenderer.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -498,7 +500,13 @@
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Platform\Windows\WindowTypes.h" />
-    <ClInclude Include="Source\Renderer\SubUVRenderer.h" />
+    <ClInclude Include="Source\Renderer\SubUVRenderer.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\SubUVVertex.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Math\Vector2.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

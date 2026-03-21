@@ -17,6 +17,7 @@
 #include "ThirdParty/nlohmann/json.hpp"
 #include "Component/UUIDBillboardComponent.h"
 #include "Object/Class.h"
+#include "Core/FEngine.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -472,5 +473,22 @@ void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue&
 		Command.WorldMatrix = PrimitiveComponent->GetWorldTransform();
 		Command.Material = PrimitiveComponent->GetMaterial();
 		OutQueue.AddCommand(Command);
+
+		// SubUV 테스트용 더미 커맨드
+		FSubUVRenderCommand SubUVCmd;
+		SubUVCmd.WorldPosition = FVector(0.0f, 0.0f, 0.0f);
+		SubUVCmd.Size = FVector2(0.3f, 0.3f);
+		SubUVCmd.Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
+
+		SubUVCmd.Columns = 9;
+		SubUVCmd.Rows = 4;
+		SubUVCmd.TotalFrames = 36;
+
+		SubUVCmd.FPS = 8.0f;
+		SubUVCmd.ElapsedTime = static_cast<float>(GEngine->GetCore()->GetTimer().GetTotalTime());
+		SubUVCmd.bLoop = true;
+		SubUVCmd.bBillboard = true;
+
+		OutQueue.AddSubUVCommand(SubUVCmd);
 	}
 }

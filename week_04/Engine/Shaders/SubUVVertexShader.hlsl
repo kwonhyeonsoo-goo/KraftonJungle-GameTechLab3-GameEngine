@@ -1,35 +1,34 @@
-
-cbuffer FrameData : register(b0)
+cbuffer FrameConstantBuffer : register(b0)
 {
-	float4x4 View;
-	float4x4 Projection;
+	matrix View;
+	matrix Projection;
 };
 
-cbuffer ObjectData : register(b1)
+cbuffer ObjectConstantBuffer : register(b1)
 {
-	float4x4 World;
+	matrix World;
 };
 
 struct VSInput
 {
 	float3 Position : POSITION;
-	float2 TexCoord : TEXCOORD0;
+	float2 UV : TEXCOORD0;
 };
 
-struct VSOutput
+struct PSInput
 {
 	float4 Position : SV_POSITION;
 	float2 UV : TEXCOORD0;
 };
 
-VSOutput main(VSInput Input)
+PSInput main(VSInput Input)
 {
-	VSOutput Output;
-	
+	PSInput Output;
+
 	float4 WorldPos = mul(float4(Input.Position, 1.0f), World);
 	float4 ViewPos = mul(WorldPos, View);
 	Output.Position = mul(ViewPos, Projection);
-	Output.UV = Input.TexCoord;
-	
+
+	Output.UV = Input.UV;
 	return Output;
 }
