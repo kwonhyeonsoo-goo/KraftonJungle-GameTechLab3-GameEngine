@@ -396,6 +396,10 @@ void UScene::Tick(float DeltaTime)
 
 void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible)
 {
+	if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives))
+	{
+		return;
+	}
 	for (AActor* Actor : Actors)
 	{
 		if (!Actor || Actor->IsPendingDestroy())
@@ -408,6 +412,10 @@ void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveCom
 		}
 		for (UActorComponent* Component : Actor->GetComponents())
 		{
+			if (!ShowFlags.HasFlag(EEngineShowFlags::SF_BillboardText))
+			{
+				continue;
+			}
 			if (!Component->IsA(UPrimitiveComponent::StaticClass()))
 			{
 				continue;
@@ -434,10 +442,7 @@ void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveCom
 void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
 
-	if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives))
-	{
-		return;
-	}
+
 	TArray<UPrimitiveComponent*> VisiblePrimitives;
 	CullVisiblePrimitives(Frustum, VisiblePrimitives);
 	

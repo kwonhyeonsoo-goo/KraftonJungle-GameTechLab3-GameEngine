@@ -180,7 +180,6 @@ void CControlPanelWindow::Render(CCore* Core)
 		}
 
 		ImGui::SameLine();
-
 		AActor* SelectedActor = Core->GetSelectedActor();
 		if (!SelectedActor)
 		{
