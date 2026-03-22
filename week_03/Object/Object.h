@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "EngineStatics.h"
+#include <memory>
 
 #define DECLARE_CLASS(ClassName, ParentClass)                          \
     static const FTypeInfo s_TypeInfo;                                 \
@@ -41,11 +42,15 @@ struct FTypeInfo {
 	}
 };
 
-class UObject
+using std::make_shared;
+using std::shared_ptr;
+using std::weak_ptr;
+class UObject : public std::enable_shared_from_this<UObject>
 {
 public:
 	uint32 UUID;
 	uint32 InternalIndex;
+	uint32 AllocationSize;
 	bool bPendingKill;
 
 	UObject();
@@ -70,8 +75,6 @@ public:
 ;		}
 	}
 
-	//virtual std::string GetClass() { return "UObject"; }
-
 	// RTTI stuffs
 	virtual const FTypeInfo* GetTypeInfo() const { return &s_TypeInfo; }
 
@@ -87,7 +90,7 @@ public:
 	static const FTypeInfo s_TypeInfo;
 };
 
-extern TArray<UObject*> GUObjectArray;
+extern TArray<shared_ptr<UObject>> GUObjectArray;
 
 
 class UObjectManager {
@@ -100,49 +103,79 @@ public:
 	}
 
 	template<typename T>
-	T* CreateObject() {
-		T* Obj = new T();
-		//GUObjectArray.push_back(Obj);
+	weak_ptr<T> CreateObject() {
+		auto Obj = make_shared<T>();
+		Obj->InternalIndex = static_cast<uint32>(GUObjectArray.size());
+		Obj->AllocationSize = static_cast<uint32>(sizeof(T));
+		EngineStatics::OnAllocated(static_cast<uint32>(sizeof(T)));
+		GUObjectArray.push_back(Obj);
 		return Obj;
 	}
 
-	// Does not detroy the target object right away. Only marks for death
-	void DestroyObject(UObject* Obj) {
-		if (!Obj) {
-			return;
+	// Does not destroy the target object right away. Only marks for death
+	void DestroyObject(weak_ptr<UObject> Obj) {
+		if (auto ptr = Obj.lock()) {
+			ptr->bPendingKill = true;
+			bGCDirty = true;
 		}
-		Obj->bPendingKill = true;
+	}
+
+	void DestroyObject(UObject* Obj) {
+		if (Obj) {
+			Obj->bPendingKill = true;
+			bGCDirty = true;
+		}
+	}
+
+	void Tick(float DeltaTime) {
+		if (!bGCDirty) return;
+
+		GCTimer += DeltaTime;
+		if (GCTimer >= GCInterval) {
+			CollectGarbage();
+		}
 	}
 
 	void CollectGarbage() {
-		for (int i = 0; i < GUObjectArray.size(); i++) {
-			if (GUObjectArray[i] && GUObjectArray[i]->bPendingKill) {
-				delete GUObjectArray[i];
-				GUObjectArray[i] = nullptr;
-			}
-		}
+		GUObjectArray.erase(
+			std::remove_if(GUObjectArray.begin(), GUObjectArray.end(),
+				[](const shared_ptr<UObject>& Obj) {
+					return !Obj || Obj->bPendingKill;
+				}),
+			GUObjectArray.end()
+		);
+		GCTimer = 0.0f;
+		bGCDirty = false;
 	}
 
-	UObject* FindByUUID(uint32 UUID)
-	{
-		for (auto* Obj : GUObjectArray)
-			if (Obj && Obj->UUID == UUID)
-				return Obj;
-		return nullptr;
+	void ForceFlush() {
+		GUObjectArray.clear();  // shutdown only
+		bGCDirty = false;
+		GCTimer = 0.0f;
 	}
 
-	UObject* FindByIndex(uint32 Index)
-	{
-		if (Index >= GUObjectArray.size()) return nullptr;
-		return GUObjectArray[Index];   // may be null if destroyed
-	}
+	//UObject* FindByUUID(uint32 UUID)
+	//{
+	//	for (auto* Obj : GUObjectArray)
+	//		if (Obj && Obj->UUID == UUID)
+	//			return Obj;
+	//	return nullptr;
+	//}
 
-	// Used to kill the current rendering scene (i.e for loading a new savefile)
-	void PurgeScene();
+	//UObject* FindByIndex(uint32 Index)
+	//{
+	//	if (Index >= GUObjectArray.size()) return nullptr;
+	//	return GUObjectArray[Index];   // may be null if destroyed
+	//}
+
+	//// Used to kill the current rendering scene (i.e for loading a new savefile)
+	//void PurgeScene();
 
 private:
 	UObjectManager() = default;
 	~UObjectManager() { CollectGarbage(); }
 
-	//TArray<UObject*> GUObjectArray;
+	float GCInterval = 15.0f;
+	float GCTimer = 0.0f;
+	bool bGCDirty = false;
 };

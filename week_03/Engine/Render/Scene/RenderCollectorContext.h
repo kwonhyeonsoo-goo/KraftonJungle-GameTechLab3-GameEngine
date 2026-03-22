@@ -3,14 +3,14 @@
 
 #include "Editor/Viewport/CursorOverlayState.h"
 
-class UWorld;
+class UScene;
 class UCamera;
 class UGizmoComponent;
 class UPrimitiveComponent;
 
 struct FRenderCollectorContext
 {
-	UWorld* World = nullptr;
+	UScene* Scene = nullptr;
 	UCamera* Camera = nullptr;
 	UGizmoComponent* Gizmo = nullptr;
 	const FCursorOverlayState* CursorOverlayState = nullptr;

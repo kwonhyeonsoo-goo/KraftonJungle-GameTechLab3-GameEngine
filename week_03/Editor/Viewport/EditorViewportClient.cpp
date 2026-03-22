@@ -14,6 +14,14 @@
 void FEditorViewportClient::Initialize(HWND InHWindow)
 {
 	HWindow = InHWindow;
+	Gizmo = UObjectManager::Get().CreateObject<UGizmoComponent>();
+	Gizmo.lock()->SetWorldLocation(FVector(0.0f, 0.0f, 0.0f));
+	Gizmo.lock()->Deactivate();
+
+	Camera = UObjectManager::Get().CreateObject<UCamera>();
+	ResetCamera(Camera);
+	Camera.lock()->ApplyCameraState();
+
 
 	UE_LOG("Hello ZZup Engine! %d", 2026);
 }
@@ -30,9 +38,9 @@ void FEditorViewportClient::SetViewportSize(float InWidth, float InHeight)
 		WindowHeight = InHeight;
 	}
 
-	if (Camera)
+	if (Camera.lock())
 	{
-		Camera->OnResize(static_cast<int>(WindowWidth), static_cast<int>(WindowHeight));
+		Camera.lock()->OnResize(static_cast<int>(WindowWidth), static_cast<int>(WindowHeight));
 	}
 }
 
@@ -49,7 +57,8 @@ void FEditorViewportClient::FlushViewOutput() {
 
 void FEditorViewportClient::TickInput(float DeltaTime)
 {
-	if (!Camera)
+	auto Camerptr = Camera.lock();
+	if (!Camerptr)
 	{
 		return;
 	}
@@ -59,7 +68,7 @@ void FEditorViewportClient::TickInput(float DeltaTime)
 		return;
 	}
 
-	FCameraState& CameraState = Camera->GetCameraState();
+	FCameraState& CameraState = Camerptr->GetCameraState();
 
 	FVector move = FVector(0, 0, 0);
 
@@ -77,7 +86,7 @@ void FEditorViewportClient::TickInput(float DeltaTime)
 		move.Z += CameraVelocity;
 
 	move *= DeltaTime;
-	Camera->MoveLocal(move);
+	Camerptr->MoveLocal(move);
 
 	FVector rotation = FVector(0, 0, 0);
 	FVector mouseRotation = FVector(0, 0, 0);
@@ -108,10 +117,10 @@ void FEditorViewportClient::TickInput(float DeltaTime)
 	}
 
 	if (InputSystem::GetKeyUp(VK_SPACE))
-		Gizmo->SetNextMode();
+		Gizmo.lock()->SetNextMode();
 
 	rotation *= DeltaTime;
-	Camera->Rotate(rotation.Y + mouseRotation.Y, rotation.Z + mouseRotation.Z);
+	Camerptr->Rotate(rotation.Y + mouseRotation.Y, rotation.Z + mouseRotation.Z);
 
 	if (InputSystem::GetKeyDown('O')) {
 		CameraState.bIsOrthogonal = !CameraState.bIsOrthogonal;
@@ -121,13 +130,15 @@ void FEditorViewportClient::TickInput(float DeltaTime)
 void FEditorViewportClient::TickInteraction(float DeltaTime)
 {
 	(void)DeltaTime;
-
-	if (!Camera || !Gizmo || !World)
+	auto Cameraptr = Camera.lock();
+	auto Gizmoptr = Gizmo.lock();
+	auto Sceneptr = Scene.lock();
+	if (!Cameraptr || !Gizmoptr || !Sceneptr)
 	{
 		return;
 	}
 
-	Gizmo->ApplyScreenSpaceScaling(Camera->GetWorldLocation());
+	Gizmoptr->ApplyScreenSpaceScaling(Cameraptr->GetWorldLocation());
 
 	if (InputSystem::GuiInputState.bUsingMouse)
 	{
@@ -135,7 +146,7 @@ void FEditorViewportClient::TickInteraction(float DeltaTime)
 	}
 
 
-	FCameraState& CameraState = Camera->GetCameraState();
+	FCameraState& CameraState = Cameraptr->GetCameraState();
 	uint32 zoomspeed = 300;
 
 	float scrollNotches = InputSystem::GetScrollNotches();
@@ -212,11 +223,11 @@ void FEditorViewportClient::TickInteraction(float DeltaTime)
 		}
 	}
 	
-	FRay ray = Camera->DeprojectScreenToWorld(mousepoint.x, mousepoint.y, WindowWidth, WindowHeight);
+	FRay ray = Cameraptr->DeprojectScreenToWorld(mousepoint.x, mousepoint.y, WindowWidth, WindowHeight);
 	FHitResult hitResult;
 
 	//Gizmo Hover
-	Gizmo->Raycast(ray, hitResult);
+	Gizmoptr->Raycast(ray, hitResult);
 
 	if (InputSystem::GetKeyDown(VK_LBUTTON))
 	{
@@ -225,19 +236,19 @@ void FEditorViewportClient::TickInteraction(float DeltaTime)
 	else if (InputSystem::GetLeftDragging())
 	{
 		//	눌려있고, Holding되지 않았다면 다음 Loop부터 드래그 업데이트 시작
-		if (Gizmo->IsPressedOnHandle() && !Gizmo->IsHolding())
+		if (Gizmoptr->IsPressedOnHandle() && !Gizmoptr->IsHolding())
 		{
-			Gizmo->SetHolding(true);
+			Gizmoptr->SetHolding(true);
 		}
 
-		if (Gizmo->IsHolding())
+		if (Gizmoptr->IsHolding())
 		{
-			Gizmo->UpdateDrag(ray);
+			Gizmoptr->UpdateDrag(ray);
 		}
 	}
 	else if (InputSystem::GetLeftDragEnd())
 	{
-		Gizmo->DragEnd();
+		Gizmoptr->DragEnd();
 	}
 	//else if (InputSystem::GetKeyUp(VK_LBUTTON) && !Gizmo->HasTarget())
 	//{
@@ -251,14 +262,42 @@ void FEditorViewportClient::TickInteraction(float DeltaTime)
 	//}
 }
 
+void FEditorViewportClient::ResetCamera(weak_ptr<UCamera> Camera) {
+	if (auto Cameraptr = Camera.lock()) {
+		Cameraptr->SetWorldLocation(InitViewPos);
+		Cameraptr->LookAt(InitLookAt);
+	}
+}
 
+void FEditorViewportClient::SyncCameraFromRenderHandler()
+{
+	if (auto Cameraptr = Camera.lock())
+	{
+		Cameraptr->ApplyCameraState();
+	}
+}
+
+void FEditorViewportClient::ResetViewport() {
+	Gizmo.lock()->Deactivate();
+	Gizmo.lock()->SetWorldLocation(FVector(0.0f, 0.0f, 0.0f));
+	Camera.lock()->bPendingKill = true;
+	UObjectManager::Get().CollectGarbage();
+
+	Camera = UObjectManager::Get().CreateObject<UCamera>();
+	SetViewportSize(WindowWidth, WindowHeight);
+	Camera.lock()->ApplyCameraState();
+	ResetCamera(Camera.lock());
+	SyncCameraFromRenderHandler();
+}
 
 void FEditorViewportClient::HandleDragStart(const FRay& Ray)
 {
 	FHitResult hitResult{};
-	if (Gizmo->Raycast(Ray, hitResult))
+	auto Gizmoptr = Gizmo.lock();
+	if (!Gizmoptr) { return; }
+	if (Gizmoptr->Raycast(Ray, hitResult))
 	{
-		Gizmo->SetPressedOnHandle(true);
+		Gizmoptr->SetPressedOnHandle(true);
 		//Gizmo->SetHolding(true);
 		FString PickLog = "Gizmo is Holding: " + ViewOutput.ObjectPicked;
 		UE_LOG(PickLog.c_str(), true);
@@ -269,7 +308,9 @@ void FEditorViewportClient::HandleDragStart(const FRay& Ray)
 		UPrimitiveComponent* bestTarget = nullptr;
 		float closetDistance = FLT_MAX;
 
-		for (auto* it : World->GetActors())
+		auto Sceneptr = Scene.lock();
+		if (!Sceneptr) { return; }
+		for (auto* it : Sceneptr->GetActors())
 		{
 			if (!it || it->bPendingKill || (it->GetRootComponent() && it->GetRootComponent()->bPendingKill)) {
 				continue;
@@ -294,11 +335,11 @@ void FEditorViewportClient::HandleDragStart(const FRay& Ray)
 
 		if (bestTarget == nullptr)
 		{
-			Gizmo->Deactivate();
+			Gizmoptr->Deactivate();
 		}
 		else
 		{
-			Gizmo->SetTarget(bestTarget);
+			Gizmoptr->SetTarget(bestTarget);
 		}
 	}
 }
@@ -313,4 +354,8 @@ void FEditorViewportClient::TickCursorOverlay(float DeltaTime)
 		CursorOverlayState.CurrentRadius = 0.0f;
 		CursorOverlayState.bVisible = false;
 	}
+}
+
+void FEditorViewportClient::CloseViewport() {
+	Gizmo.lock()->bPendingKill = true;
 }

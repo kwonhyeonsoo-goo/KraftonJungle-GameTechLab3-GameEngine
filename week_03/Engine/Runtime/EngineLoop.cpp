@@ -91,9 +91,8 @@ bool FEngineLoop::PreInit(HINSTANCE hInstance, int nShowCmd)
 		return false;
 	}
 
-	// 에디터 초기화 및 테스트용 샘플 액터 생성
+	// 에디터 초기화
 	Editor.Create(HWindow);
-	Editor.SpawnNewPrimitiveActor<UCubeComponent>(FVector(-3.f, 0, 0));
 	Editor.BeginPlay();
 
 	// 콘솔 헬퍼는 초기화 효과만 필요해서 지역 정적으로 유지
@@ -130,7 +129,7 @@ void FEngineLoop::TickFrame()
 		return;
 	}
 
-	UObjectManager::Get().CollectGarbage();
+	UObjectManager::Get().Tick(DeltaTime);
 	Editor.BeginFrame(DeltaTime);
 	Editor.Update(DeltaTime);
 
@@ -173,6 +172,7 @@ void FEngineLoop::Shutdown()
 	Editor.Release();
 	UObjectManager::Get().CollectGarbage();
 	//std::cout << "Checking Memory Leaks...\n";
+	//int Nullcount = 0;
 	//for (int i = 0; i < GUObjectArray.size(); i++) {
 	//	if (GUObjectArray[i]) {
 	//		std::cout << "Slot " << i
@@ -180,11 +180,12 @@ void FEngineLoop::Shutdown()
 	//			<< " PendingKill: " << GUObjectArray[i]->bPendingKill
 	//			<< " UUID: " << GUObjectArray[i]->UUID
 	//			<< "\n";
+	//		Nullcount++;
 	//	}
 	//}
 
-	//// -1 = gizmo
-	////std::cout << "Memory Leaks: " << Nullcount - 1 << std::endl;
+	////// -1 = gizmo
+	//std::cout << "Memory Leaks: " << Nullcount << std::endl;
 	//for (uint32 i = 5; i > 0; i--) {
 	//	std::cout << "Program closing in " << i << " seconds\n";
 	//	Sleep(1000);

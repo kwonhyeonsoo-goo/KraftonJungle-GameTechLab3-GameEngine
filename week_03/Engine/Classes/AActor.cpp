@@ -1,4 +1,5 @@
 ﻿#include "Classes/AActor.h"
+#include "Scene/Scene.h"
 
 DEFINE_CLASS(AActor, UObject)
 REGISTER_FACTORY(AActor)
@@ -28,6 +29,13 @@ void AActor::SetActorLocation(const FVector& NewLocation) {
 		RootComponent->SetWorldLocation(NewLocation);
 	}
 }
+
+//UScene* AActor::GetOwner() {
+//	if (OwningSceneUUID <= 0) return nullptr;
+//	UObject* Obj = UObjectManager::Get().FindByUUID(OwningSceneUUID);
+//	if (!Obj || !Obj->IsA<UScene>()) return nullptr;
+//	return Obj->Cast<UScene>();
+//}
 
 void AActor::RegisterComponentRecursive(USceneComponent* Comp) {
 	if (!Comp) return;

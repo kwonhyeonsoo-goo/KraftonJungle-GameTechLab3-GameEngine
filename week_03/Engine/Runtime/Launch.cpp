@@ -21,6 +21,6 @@ namespace
 
 int Launch(HINSTANCE hInstance, int nShowCmd)
 {
-	//ConsoleHelper console;
+	ConsoleHelper console;
 	return GuardedMain(hInstance, nShowCmd);
 }

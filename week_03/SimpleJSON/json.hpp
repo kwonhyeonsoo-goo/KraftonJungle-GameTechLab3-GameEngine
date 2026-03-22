@@ -1,6 +1,9 @@
 ﻿
 #pragma once
 
+#pragma warning(push)
+#pragma warning(disable: 26439 26479)
+
 #include <cstdint>
 #include <cmath>
 #include <cctype>
@@ -647,3 +650,5 @@ JSON JSON::Load( const string &str ) {
 }
 
 } // End Namespace json
+
+#pragma warning(pop)

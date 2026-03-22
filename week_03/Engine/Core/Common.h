@@ -5,7 +5,6 @@
 namespace common {
 	namespace structs {
 		struct FViewOutput {
-			int InternalIndex = 0;
 			std::string ObjectPicked = "";
 			UObject* Object;
 		};

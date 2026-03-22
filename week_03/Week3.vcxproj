@@ -155,6 +155,8 @@
     <ClCompile Include="Engine\Runtime\Launch.cpp" />
     <ClCompile Include="Engine\SceneSaveManager.cpp" />
     <ClCompile Include="Engine\Scene\Camera.cpp" />
+    <ClCompile Include="Engine\Scene\Scene.cpp" />
+    <ClCompile Include="Engine\Scene\SceneManager.cpp" />
     <ClCompile Include="Engine\World.cpp" />
     <ClCompile Include="ImGui\imgui.cpp" />
     <ClCompile Include="ImGui\imgui_demo.cpp" />
@@ -212,6 +214,8 @@
     <ClInclude Include="Engine\Render\Scene\RenderCommand.h" />
     <ClInclude Include="Engine\Runtime\EngineLoop.h" />
     <ClInclude Include="Engine\Runtime\Launch.h" />
+    <ClInclude Include="Engine\Scene\Scene.h" />
+    <ClInclude Include="Engine\Scene\SceneManager.h" />
     <ClInclude Include="Engine\SceneSaveManager.h" />
     <ClInclude Include="Engine\Scene\Camera.h" />
     <ClInclude Include="Engine\World.h" />

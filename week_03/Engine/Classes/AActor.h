@@ -3,7 +3,7 @@
 #include "Object/ObjectFactory.h"
 #include "World/SceneComponent.h"
 
-class UWorld;
+class UScene;
 
 class AActor : public UObject{
 public:
@@ -17,9 +17,9 @@ public:
 
 	template<typename T>
 	T* AddComponent() {
-		T* component = UObjectManager::Get().CreateObject<T>();
+		auto WeakComp = UObjectManager::Get().CreateObject<T>();
+		T* component = WeakComp.lock().get();
 
-		// Remeber to add this later
 		component->SetOwningActor(this);
 
 		// First component added becomes the root
@@ -87,15 +87,16 @@ public:
 		return FVector(0, 0, 1);
 	}
 
-	void SetWorld(UWorld* World) { OwningWorld = World; }
-	UWorld* GetWorld() const { return OwningWorld; }
+	void SetOwnerUUID(uint32 SceneUUID) { OwningSceneUUID = SceneUUID; }
+	uint32 GetOwnerUUID() const { return OwningSceneUUID; }
+	//UScene* GetOwner();
 
 	bool IsVisible() const { return bVisible; }
 	void SetVisible(bool Visible) { bVisible = Visible; }
 
 protected:
 	USceneComponent* RootComponent = nullptr;
-	UWorld* OwningWorld = nullptr;
+	uint32 OwningSceneUUID = -1;
 
 	FVector PendingActorLocation = FVector(0, 0, 0);
 	bool bVisible = true;
