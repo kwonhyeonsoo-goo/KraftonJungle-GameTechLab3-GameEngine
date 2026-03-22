@@ -27,4 +27,5 @@ void CPrimitiveLineBatch::ClearVertices()
 	MeshData->Vertices.clear();
 	MeshData->Indices.clear();
 	MeshData->bIsDirty = true;
+	MeshData->UpdateLocalBound();
 }
