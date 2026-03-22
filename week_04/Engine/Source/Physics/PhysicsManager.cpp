@@ -35,7 +35,7 @@ bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const
 					continue;
 				}
 
-				FBoxSphereBounds Bound = PrimitiveComponent->GetWorldBoundsForAABB();
+				FBoxSphereBounds Bound = PrimitiveComponent->GetWorldBounds();
 
 				FVector MaxBound = Bound.Center + Bound.BoxExtent;
 				FVector MinBound = Bound.Center - Bound.BoxExtent;
@@ -52,24 +52,27 @@ bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const
 
 				bool bIsLineInside = bStartInside || bEndInside;
 
-				if (bIsLineInside)
+				FVector VecToOrigin = Bound.Center - Start;
+				float Length = (End - Start).Size();
+				float ShortestT = FVector::DotProduct(VecToOrigin, LineDirection);
+				// start 
+				ShortestT = FMath::Clamp(ShortestT, 0.0f, Length);
+
+				FVector ShortestPos = Start + LineDirection * ShortestT;
+
+				if (bStartInside && bEndInside)
 				{
+					// Line 이 전부 다 AABB 안에 포함되는 경우 Shortest Pos 반환
 					OutHit.HitActor = Actor;
+					OutHit.HitLocation = ShortestPos;					
 					return true;
 				}
 				else
 				{
-					FVector VecToOrigin = Bound.Center - Start;
-					float Length = (End - Start).Size();
-					float ShortestT = FVector::DotProduct(VecToOrigin, LineDirection);
-					// start 
-					ShortestT = FMath::Clamp(ShortestT, 0.0f, Length);
-
-					FVector ShortestPos = Start + LineDirection * ShortestT;
-					float ShortestDistSquared = (ShortestPos - Bound.Center).SizeSquared();
+					float ShortestDistSquared = (ShortestPos - Bound.Center).Size();
 
 					// 빠른 검사를 위해 일차적으로 Sphere 로 test
-					if (ShortestDistSquared <= Bound.RadiusSquared)
+					if (ShortestDistSquared <= Bound.Radius)
 					{
 						// 정밀한 검사를 위해 Box test
 						FVector SlabMin = Bound.Center - Bound.BoxExtent;
@@ -94,6 +97,13 @@ bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const
 						if (bIntersected)
 						{
 							OutHit.HitActor = Actor;
+
+							// 시작점이 포함되는 경우 (tNear >= 0.f), 끝점 쪽의 HitLocation 반환
+							if (tNear >= 0.f)
+								OutHit.HitLocation = Start + LineDirection * tNear;
+							else	
+								OutHit.HitLocation = Start + LineDirection * tFar;
+
 							return true;
 						}
 					}

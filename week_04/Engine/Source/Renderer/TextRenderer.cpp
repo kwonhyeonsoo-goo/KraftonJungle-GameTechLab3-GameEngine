@@ -46,9 +46,7 @@ bool CTextRenderer::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDe
 		return false;
 	}
 
-	//const std::wstring FontPath = FPaths::ToWide(FPaths::ContentDir() + "Fonts/NotoSansKR_Atlas.png");
 	const std::wstring FontPath = FPaths::ToWide(FPaths::ContentDir() + "Fonts/DejaVuSansMono.png");
-	//const std::wstring TestFontPath = L"C:\\Users\\jungle\\source\\repos\\Jungle3_Week3_Team5\\Content\\Fonts\\TestFont.png";
 	if (!Atlas.Initialize(Device, DeviceContext, FontPath))
 	{
 		MessageBox(0, L"TextRenderer: Atlas.Initialize failed", 0, 0);

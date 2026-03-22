@@ -235,6 +235,13 @@
     <ClCompile Include="Source\Renderer\SubUVRenderer.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Component\LineBatchComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="PrimitiveLineBatch.cpp" />
+    <ClCompile Include="Source\Scene\ShowFlags.cpp" />
+    <ClCompile Include="Source\Actor\PlaneActor.cpp" />
+    <ClCompile Include="Source\Component\PlaneComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -507,6 +514,14 @@
       <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Source\Math\Vector2.h" />
+    <ClInclude Include="Source\Component\LineBatchComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="PrimitiveLineBatch.h">
+      <Filter>Source\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\PlaneActor.h" />
+    <ClInclude Include="Source\Component\PlaneComponent.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

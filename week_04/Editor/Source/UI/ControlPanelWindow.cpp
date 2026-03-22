@@ -8,6 +8,7 @@
 #include "Actor/AttachTestActor.h"
 #include "Actor/CubeActor.h"
 #include "Actor/SphereActor.h"
+#include "Actor/PlaneActor.h"
 #include "Object/ObjectFactory.h"
 #include "Camera/Camera.h"
 #include "Core/Paths.h"
@@ -152,7 +153,7 @@ void CControlPanelWindow::Render(CCore* Core)
 		ImGui::SeparatorText("Spawn");
 
 		static int32 SpawnTypeIndex = 0;
-		const char* SpawnTypes[] = { "Cube", "Sphere", "AttachTest" };
+		const char* SpawnTypes[] = { "Cube", "Sphere", "Plane", "AttachTest" };
 		ImGui::Combo("Type", &SpawnTypeIndex, SpawnTypes, IM_ARRAYSIZE(SpawnTypes));
 
 		if (ImGui::Button("Spawn"))
@@ -171,6 +172,10 @@ void CControlPanelWindow::Render(CCore* Core)
 				NewActor = Scene->SpawnActor<ASphereActor>(Name);
 			}
 			else if (SpawnTypeIndex == 2)
+			{
+				NewActor = Scene->SpawnActor<APlaneActor>(Name);
+			}
+			else if (SpawnTypeIndex == 3)
 			{
 				NewActor = Scene->SpawnActor<AAttachTestActor>(Name);
 			}

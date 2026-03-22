@@ -39,7 +39,7 @@ public:
 	static constexpr uint32 GlyphCount = CellsPerRow * Rows;
 
 private:
-	void BuildGridAtlas128x128();
+	void BuildGridAtlas();
 
 private:
 	ID3D11ShaderResourceView* TextureSRV = nullptr;

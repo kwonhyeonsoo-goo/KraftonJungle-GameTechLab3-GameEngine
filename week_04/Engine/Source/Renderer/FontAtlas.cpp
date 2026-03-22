@@ -74,12 +74,12 @@ bool FFontAtlas::Initialize(
 		return false;
 	}
 
-	BuildGridAtlas128x128();
+	BuildGridAtlas();
 	return true;
 }
 
 // 매핑
-void FFontAtlas::BuildGridAtlas128x128()
+void FFontAtlas::BuildGridAtlas()
 {
 	const float CellU = 1.0f / static_cast<float>(CellsPerRow);
 	const float CellV = 1.0f / static_cast<float>(Rows);
@@ -121,23 +121,7 @@ void FFontAtlas::BuildGridAtlas128x128()
 	}
 
 	// 숫자부터 대문자 매핑
-	// 대문자 A-Z 매핑
-	// A가 1행 34열  코드에서는 0-based로 Row=0, Col=33
-	/*const uint32 UpperStartRow = 4;
-	const uint32 UpperStartCol = 1;
-
-	for (uint32 Cp = 'A'; Cp <= 'Z'; ++Cp)
-	{
-		const uint32 Offset = Cp - 'A';
-		const uint32 LinearCol = UpperStartCol + Offset;
-		const uint32 Row = UpperStartRow + (LinearCol / CellsPerRow);
-		const uint32 Col = LinearCol % CellsPerRow;
-
-		SetGlyphAt(Cp, Row, Col, 1.0f);
-	}*/
-
-	// 숫자부터 대문자 매핑
-	// A가 4행 2열인 16x16으로 테스트중
+	// '0'이 3행 0열인 16x16
 	const uint32 UpperStartRow = 3;
 	const uint32 UpperStartCol = 0;
 

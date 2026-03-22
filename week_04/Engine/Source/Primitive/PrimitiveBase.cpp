@@ -6,9 +6,18 @@
 
 bool FMeshData::CreateBuffers(ID3D11Device* Device)
 {
-	if (VertexBuffer && IndexBuffer)
-	{
+	if (!bIsDirty)
 		return true;
+
+	if (VertexBuffer)
+	{
+		VertexBuffer->Release();
+		VertexBuffer = nullptr;
+	}
+	if (IndexBuffer)
+	{
+		IndexBuffer->Release();
+		IndexBuffer = nullptr;
 	}
 
 	if (Vertices.empty() || Indices.empty())
@@ -50,7 +59,6 @@ bool FMeshData::CreateBuffers(ID3D11Device* Device)
 		return false;
 	}
 
-	IndexCount = static_cast<uint32_t>(Indices.size());
 	return true;
 }
 
@@ -60,7 +68,6 @@ void FMeshData::Bind(ID3D11DeviceContext* Context)
 	UINT Offset = 0;
 	Context->IASetVertexBuffers(0, 1, &VertexBuffer, &Stride, &Offset);
 	Context->IASetIndexBuffer(IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
-	Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
 void FMeshData::Release()
@@ -75,7 +82,31 @@ void FMeshData::Release()
 		VertexBuffer->Release();
 		VertexBuffer = nullptr;
 	}
-	IndexCount = 0;
+}
+
+void FMeshData::UpdateLocalBound()
+{
+	if (Vertices.empty())
+	{
+		MinCoord = FVector(FLT_MAX, FLT_MAX, FLT_MAX);
+		MaxCoord = FVector(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+		LocalBoundRadius = 0.f;
+	}
+	else
+	{
+		// TODO: Ritter's Algorithm으로 개선
+		for (const FPrimitiveVertex& Vertex : Vertices)
+		{
+			if (Vertex.Position.X < MinCoord.X) MinCoord.X = Vertex.Position.X;
+			if (Vertex.Position.X > MaxCoord.X) MaxCoord.X = Vertex.Position.X;
+			if (Vertex.Position.Y < MinCoord.Y) MinCoord.Y = Vertex.Position.Y;
+			if (Vertex.Position.Y > MaxCoord.Y) MaxCoord.Y = Vertex.Position.Y;
+			if (Vertex.Position.Z < MinCoord.Z) MinCoord.Z = Vertex.Position.Z;
+			if (Vertex.Position.Z > MaxCoord.Z) MaxCoord.Z = Vertex.Position.Z;
+
+			LocalBoundRadius = ((MaxCoord - MinCoord) * 0.5).Size();
+		}
+	}
 }
 
 // ─── CPrimitiveBase ───
@@ -94,6 +125,7 @@ std::shared_ptr<FMeshData> CPrimitiveBase::GetOrLoad(const FString& Key, const F
 	if (Data)
 	{
 		MeshCache[Key] = Data;
+		RegisterMeshData(Key, Data);
 	}
 	return Data;
 }
@@ -110,6 +142,7 @@ std::shared_ptr<FMeshData> CPrimitiveBase::GetCached(const FString& Key)
 
 void CPrimitiveBase::RegisterMeshData(const FString& Key, std::shared_ptr<FMeshData> Data)
 {
+	Data->UpdateLocalBound();
 	MeshCache[Key] = Data;
 }
 
@@ -144,6 +177,9 @@ std::shared_ptr<FMeshData> CPrimitiveBase::LoadFromFile(const FString& FilePath)
 	Data->Indices.resize(IndexCount);
 	File.read(reinterpret_cast<char*>(Data->Indices.data()), IndexCount * sizeof(uint32_t));
 
+	// 메시 읽어올 때 기본 옵션 Triangle list
+	Data->Topology = EMeshTopology::EMT_TriangleList;
+
 	if (File.fail())
 	{
 		printf("[PrimitiveBase] Failed to read mesh file: %s\n", FilePath.c_str());
@@ -152,5 +188,6 @@ std::shared_ptr<FMeshData> CPrimitiveBase::LoadFromFile(const FString& FilePath)
 
 	printf("[PrimitiveBase] Loaded mesh: %s (Vertices: %u, Indices: %u)\n",
 		FilePath.c_str(), VertexCount, IndexCount);
+
 	return Data;
 }

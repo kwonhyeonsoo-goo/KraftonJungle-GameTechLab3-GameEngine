@@ -37,6 +37,8 @@ namespace
 			Data->Indices.push_back(Index);
 		}
 
+		Data->Topology = EMeshTopology::EMT_TriangleList;
+
 		return Data;
 	}
 

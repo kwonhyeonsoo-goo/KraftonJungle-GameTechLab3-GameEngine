@@ -7,8 +7,7 @@ IMPLEMENT_RTTI(UUUIDBillboardComponent, UPrimitiveComponent)
 
 void UUUIDBillboardComponent::Initialize()
 {
-	LocalBoundRadius = 1.0f;
-	LocalBoxExtent = FVector(1.0f, 1.0f, 1.0f);
+
 }
 
 FString UUUIDBillboardComponent::GetDisplayText() const
@@ -56,7 +55,7 @@ FVector UUUIDBillboardComponent::GetTextWorldPosition() const
 			continue;
 		}
 
-		const FBoxSphereBounds Bounds = PrimitiveComp->GetWorldBoundsForAABB();
+		const FBoxSphereBounds Bounds = PrimitiveComp->GetWorldBounds();
 		const float TopZ = Bounds.Center.Z + Bounds.BoxExtent.Z;
 
 		if (!bFoundPrimitiveBounds || TopZ > MaxTopZ)
@@ -78,17 +77,11 @@ FVector UUUIDBillboardComponent::GetTextWorldPosition() const
 	return RootLocation + WorldOffset;
 }
 
-FBoundingSphere UUUIDBillboardComponent::GetWorldBounds() const
+FBoxSphereBounds UUUIDBillboardComponent::GetWorldBounds() const
 {
 	const FVector Center = GetTextWorldPosition();
+	// radius 를 정사각형 extent 에 맞게 줄이기
+	const FVector Extent(BillboardScale * 3.0f * 0.707f, BillboardScale * 3.0f * 0.707f, BillboardScale * 3.0f * 0.707f);
 
-	return { Center, BillboardScale * 3.0f };
-}
-
-FBoxSphereBounds UUUIDBillboardComponent::GetWorldBoundsForAABB() const
-{
-	const FVector Center = GetTextWorldPosition();
-	const FVector Extent(BillboardScale * 3.0f, BillboardScale * 3.0f, BillboardScale * 3.0f);
-
-	return { Center, Extent.SizeSquared(), Extent };
+	return { Center, Extent.Size(), Extent };
 }
