@@ -11,7 +11,7 @@ class FMaterial;
 struct FBoxSphereBounds
 {
 	FVector Center;
-	float RadiusSquared;
+	float Radius;
 	FVector BoxExtent;
 };
 
@@ -25,22 +25,11 @@ public:
 	void SetMaterial(FMaterial* InMaterial) { Material = InMaterial; }
 	FMaterial* GetMaterial() const { return Material; }
 
-	virtual FBoundingSphere GetWorldBounds() const;
+	virtual FBoxSphereBounds GetWorldBounds() const;
 
-	virtual FBoxSphereBounds GetWorldBoundsForAABB() const;
-
-	FVector GetLocalBoxExtent() const
-	{
-		return LocalBoxExtent;
-	}
-
-	void UpdateLocalBoundRadius(FVector InNewPointLocalPos);
+	void UpdateLocalBound();
 
 protected:
 	std::shared_ptr<CPrimitiveBase> Primitive;
-	float LocalBoundRadius = 1.0f;
 	FMaterial* Material = nullptr;
-
-	
-	FVector LocalBoxExtent = FVector(0.75, 0.75, 0.75);
 };
