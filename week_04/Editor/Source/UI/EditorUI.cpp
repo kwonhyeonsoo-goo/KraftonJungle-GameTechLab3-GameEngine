@@ -20,7 +20,13 @@
 #include <windows.h>
 #include <commdlg.h>
 
-std::string SaveFileDialog()
+enum class EFileDialogType
+{
+	Open,
+	Save
+};
+
+std::string GetFilePathUsingDialog(EFileDialogType Type)
 {
 	char FileName[MAX_PATH] = "";
 
@@ -29,13 +35,22 @@ std::string SaveFileDialog()
 	Ofn.lpstrFilter = "Scene Files (*.json)\0*.json\0All Files (*.*)\0*.*\0";
 	Ofn.lpstrFile = FileName;
 	Ofn.nMaxFile = MAX_PATH;
-	Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
 	Ofn.lpstrDefExt = "json";
 	Ofn.lpstrInitialDir = FPaths::ContentDir().c_str();
 
-	if (GetSaveFileNameA(&Ofn))
+	if (Type == EFileDialogType::Save)
 	{
-		return std::string(FileName);
+		Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
+
+		if (GetSaveFileNameA(&Ofn))
+			return std::string(FileName);
+	}
+	else // Open
+	{
+		Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+		if (GetOpenFileNameA(&Ofn))
+			return std::string(FileName);
 	}
 
 	return "";
@@ -332,7 +347,7 @@ void CEditorUI::Render()
 			{
 				if (Core && Core->GetActiveScene())
 				{
-					FString Path = SaveFileDialog();
+					FString Path = GetFilePathUsingDialog(EFileDialogType::Save);
 
 					if (!Path.empty())
 					{
@@ -341,12 +356,18 @@ void CEditorUI::Render()
 				}
 			}
 
-			/*
 			if (ImGui::MenuItem("Open Scene"))
 			{
-				//OnOpenScene();
+				if (Core && Core->GetActiveScene())
+				{
+					FString Path = GetFilePathUsingDialog(EFileDialogType::Open);
+
+					if (!Path.empty())
+					{
+						Core->GetActiveScene()->LoadSceneFromFile(Path);
+					}
+				}
 			}
-			*/
 
 			ImGui::EndMenu();
 		}
@@ -359,7 +380,7 @@ void CEditorUI::Render()
 	Console.Render();
 	Stat.Render();
 	Outliner.Render(Core);
-	ContentBrowser.Render();
+	// ContentBrowser.Render();
 }
 
 bool CEditorUI::GetViewportMousePosition(int32 WindowMouseX, int32 WindowMouseY, int32& OutViewportX, int32& OutViewportY, int32& OutWidth, int32& OutHeight) const
