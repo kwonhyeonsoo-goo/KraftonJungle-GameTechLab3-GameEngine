@@ -261,8 +261,11 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 
-	CreateTextureFromSTB(Device, "C:\\jungle-techlab-week3-team5\\Assets\\Textures\\FolderIcon.png", &FolderIconSRV);
-	CreateTextureFromSTB(Device, "C:\\jungle-techlab-week3-team5\\Assets\\Textures\\FileIcon.png", &FileIconSRV);
+	FString FolderIconPath = FPaths::AssetDir() + FString("\\Textures\\FolderIcon.png");
+	FString FileIconPath = FPaths::AssetDir() + FString("\\Textures\\FileIcon.png");
+
+	CreateTextureFromSTB(Device, FolderIconPath.c_str(), &FolderIconSRV);
+	CreateTextureFromSTB(Device, FileIconPath.c_str(), &FileIconSRV);
 
 	return true;
 }
