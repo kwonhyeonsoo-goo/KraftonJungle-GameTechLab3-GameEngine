@@ -1,4 +1,5 @@
 #include "Frustum.h"
+#include "Component/PrimitiveComponent.h"
 
 void FFrustum::ExtractFromVP(const FMatrix& VP)
 {
@@ -22,7 +23,7 @@ void FFrustum::ExtractFromVP(const FMatrix& VP)
 	}
 }
 
-bool FFrustum::IsVisible(const FBoundingSphere& Sphere) const
+bool FFrustum::IsVisible(const FBoxSphereBounds& Sphere) const
 {
 	for (int32 i = 0; i < PlaneCount; ++i)
 	{

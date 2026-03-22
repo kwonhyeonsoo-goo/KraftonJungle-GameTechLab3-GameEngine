@@ -185,7 +185,7 @@ void CCore::Physics(float DeltaTime)
 				if (PrimComp)
 				{
 					FBoxSphereBounds Bound;
-					Bound = PrimComp->GetWorldBoundsForAABB();
+					Bound = PrimComp->GetWorldBounds();
 					Renderer->DrawCube(Bound.Center, Bound.BoxExtent, FVector4(1, 0, 0, 1));
 				}
 			}

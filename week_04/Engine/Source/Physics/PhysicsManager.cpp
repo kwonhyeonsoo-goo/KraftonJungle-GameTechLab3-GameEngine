@@ -35,7 +35,7 @@ bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const
 					continue;
 				}
 
-				FBoxSphereBounds Bound = PrimitiveComponent->GetWorldBoundsForAABB();
+				FBoxSphereBounds Bound = PrimitiveComponent->GetWorldBounds();
 
 				FVector MaxBound = Bound.Center + Bound.BoxExtent;
 				FVector MinBound = Bound.Center - Bound.BoxExtent;
@@ -69,10 +69,10 @@ bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const
 				}
 				else
 				{
-					float ShortestDistSquared = (ShortestPos - Bound.Center).SizeSquared();
+					float ShortestDistSquared = (ShortestPos - Bound.Center).Size();
 
 					// 빠른 검사를 위해 일차적으로 Sphere 로 test
-					if (ShortestDistSquared <= Bound.RadiusSquared)
+					if (ShortestDistSquared <= Bound.Radius)
 					{
 						// 정밀한 검사를 위해 Box test
 						FVector SlabMin = Bound.Center - Bound.BoxExtent;
