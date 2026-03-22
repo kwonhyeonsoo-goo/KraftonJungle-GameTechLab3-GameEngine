@@ -2,12 +2,13 @@
 #include <filesystem>
 #include <d3d11.h>
 #include "Debug/EngineLog.h"
+#include "Core/Paths.h"
 
 CContentBrowserWindow::CContentBrowserWindow():
 	RootPath(std::filesystem::current_path()),
 	CurrentPath(std::filesystem::current_path())
 {
-	while (!std::filesystem::exists(RootPath / "Assets"))
+	while (!std::filesystem::exists(RootPath / "Engine"))
 	{
 		RootPath = RootPath.parent_path();
 	}
@@ -27,8 +28,10 @@ void CContentBrowserWindow::Render()
 	// 상단 경로 + 뒤로가기
 	if (ImGui::Button("<-"))
 	{
-		if (CurrentPath.has_parent_path())
+		if (CurrentPath != RootPath)
+		{
 			CurrentPath = CurrentPath.parent_path();
+		}
 	}
 
 	ImGui::SameLine();
