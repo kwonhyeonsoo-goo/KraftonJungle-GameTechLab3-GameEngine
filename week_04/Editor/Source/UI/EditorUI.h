@@ -6,6 +6,7 @@
 #include "StatWindow.h"
 #include "Viewport.h"
 #include "Types/ObjectPtr.h"
+#include "ContentBrowserWindow.h"
 
 class CCore;
 class CWindow;
@@ -25,6 +26,7 @@ public:
 	bool IsViewportInteractive() const;
 
 	CConsoleWindow& GetConsole() { return Console; }
+	CCore* GetCore() { return Core; }
 
 private:
 	void BuildDefaultLayout(uint32 DockID);
@@ -40,6 +42,7 @@ private:
 	CStatWindow Stat;
 	CViewport Viewport;
 	COutlinerWindow Outliner;
+	CContentBrowserWindow ContentBrowser;
 
 	bool bWindowSetup = false;
 	bool bViewportClientActive = false;

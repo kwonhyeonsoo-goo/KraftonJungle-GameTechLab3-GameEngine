@@ -8,6 +8,10 @@
 #include "Primitive/PrimitiveBase.h"
 #include <cassert>
 #include <algorithm>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "ThirdParty/stb_image.h"
+
 static FVector GetCameraWorldPositionFromViewMatrix(const FMatrix& ViewMatrix)
 {
 	const FMatrix InvView = ViewMatrix.GetInverse();
@@ -22,8 +26,6 @@ uint64 FRenderCommand::MakeSortKey(const FMaterial* InMaterial, const FMeshData*
 	uint32 MeshId = InMeshData ? InMeshData->GetSortId() : 0;
 	return (static_cast<uint64>(MatId) << 32) | MeshId;
 }
-
-
 
 CRenderer::~CRenderer()
 {
@@ -258,6 +260,9 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		MessageBox(0, L"TextRenderer Initialize Failed.", 0, 0);
 		return false;
 	}
+
+	CreateTextureFromSTB(Device, "C:\\jungle-techlab-week3-team5\\Assets\\Textures\\FolderIcon.png", &FolderIconSRV);
+	CreateTextureFromSTB(Device, "C:\\jungle-techlab-week3-team5\\Assets\\Textures\\FileIcon.png", &FileIconSRV);
 
 	return true;
 }
@@ -537,6 +542,53 @@ void CRenderer::UpdateObjectConstantBuffer(const FMatrix& WorldMatrix)
 	DeviceContext->Map(ObjectConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped);
 	memcpy(Mapped.pData, &CBData, sizeof(CBData));
 	DeviceContext->Unmap(ObjectConstantBuffer, 0);
+}
+
+bool CRenderer::CreateTextureFromSTB(
+	ID3D11Device* Device,
+	const char* FilePath,
+	ID3D11ShaderResourceView** OutSRV)
+{
+	int Width, Height, Channels;
+	unsigned char* Data = stbi_load(FilePath, &Width, &Height, &Channels, 4); // RGBA
+
+	if (!Data)
+		return false;
+
+	// Texture 생성
+	D3D11_TEXTURE2D_DESC Desc = {};
+	Desc.Width = Width;
+	Desc.Height = Height;
+	Desc.MipLevels = 1;
+	Desc.ArraySize = 1;
+	Desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	Desc.SampleDesc.Count = 1;
+	Desc.Usage = D3D11_USAGE_DEFAULT;
+	Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+	D3D11_SUBRESOURCE_DATA InitData = {};
+	InitData.pSysMem = Data;
+	InitData.SysMemPitch = Width * 4;
+
+	ID3D11Texture2D* Texture = nullptr;
+	HRESULT hr = Device->CreateTexture2D(&Desc, &InitData, &Texture);
+
+	stbi_image_free(Data);
+
+	if (FAILED(hr))
+		return false;
+
+	// SRV 생성
+	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+	SRVDesc.Format = Desc.Format;
+	SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	SRVDesc.Texture2D.MipLevels = 1;
+
+	hr = Device->CreateShaderResourceView(Texture, &SRVDesc, OutSRV);
+
+	Texture->Release();
+
+	return SUCCEEDED(hr);
 }
 
 bool CRenderer::InitOutlineResources()

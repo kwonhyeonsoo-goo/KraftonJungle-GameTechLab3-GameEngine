@@ -155,6 +155,7 @@
     <ClCompile Include="Source\Pawn\EditorCameraPawn.cpp" />
     <ClCompile Include="Source\Picking\Picker.cpp" />
     <ClCompile Include="Source\UI\ConsoleWindow.cpp" />
+    <ClCompile Include="Source\UI\ContentBrowserWindow.cpp" />
     <ClCompile Include="Source\UI\ControlPanelWindow.cpp" />
     <ClCompile Include="Source\UI\EditorUI.cpp" />
     <ClCompile Include="Source\UI\EditorViewportClient.cpp" />
@@ -179,6 +180,7 @@
     <ClInclude Include="Source\Pawn\EditorCameraPawn.h" />
     <ClInclude Include="Source\Picking\Picker.h" />
     <ClInclude Include="Source\UI\ConsoleWindow.h" />
+    <ClInclude Include="Source\UI\ContentBrowserWindow.h" />
     <ClInclude Include="Source\UI\ControlPanelWindow.h" />
     <ClInclude Include="Source\UI\EditorUI.h" />
     <ClInclude Include="Source\UI\EditorViewportClient.h" />

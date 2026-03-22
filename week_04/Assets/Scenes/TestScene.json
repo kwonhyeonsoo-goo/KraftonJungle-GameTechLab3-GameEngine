@@ -1,0 +1,39 @@
+{
+  "Camera": {
+    "Position": [
+      -5.0,
+      0.0,
+      2.0
+    ],
+    "Rotation": [
+      -0.7999999523162842,
+      -10.399995803833008
+    ]
+  },
+  "Materials": [
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_TintYellow.json"
+  ],
+  "Primitives": {
+    "0": {
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Type": "Sphere"
+    }
+  }
+}

@@ -21,6 +21,8 @@ public:
 	void BuildRenderCommands(CCore* Core, UScene* Scene, const FFrustum& Frustum, FRenderCommandQueue& OutQueue) const override;
 	EGizmoMode GetGizmoMode() const { return Gizmo.GetMode(); }
 	void SetGizmoMode(EGizmoMode InMode) { Gizmo.SetMode(InMode); }
+	
+	void HandleFileDoubleClick(const FString& FilePath) override;
 
 private:
 	CEditorUI& EditorUI;

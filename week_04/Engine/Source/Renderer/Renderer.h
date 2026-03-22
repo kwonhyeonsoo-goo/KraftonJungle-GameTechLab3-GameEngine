@@ -78,6 +78,9 @@ public:
 
 	void RenderActorUUIDs(UScene* Scene);
 
+	ID3D11ShaderResourceView* GetFolderIconSRV() const { return FolderIconSRV; }
+	ID3D11ShaderResourceView* GetFileIconSRV() const { return FileIconSRV; }
+
 private:
 	void AddCommand(const FRenderCommand& Command);
 	bool CreateDeviceAndSwapChain(HWND InHwnd, int32 Width, int32 Height);
@@ -85,6 +88,12 @@ private:
 	bool CreateConstantBuffers();
 	void UpdateFrameConstantBuffer();
 	void UpdateObjectConstantBuffer(const FMatrix& WorldMatrix);
+
+	/** 파일, 폴더 아이콘 등 생성 */
+	bool CreateTextureFromSTB(
+		ID3D11Device* Device,
+		const char* FilePath,
+		ID3D11ShaderResourceView** OutSRV);
 
 	HWND Hwnd = nullptr;
 	ID3D11Device* Device = nullptr;
@@ -135,6 +144,10 @@ private:
 	// 텍스처 렌더링 테스트용 (임시)
 	CTextRenderer TextRenderer;
 	bool bEnableTextRenderTest = false;
+
+	// Folder, File Icon 테스트용
+	ID3D11ShaderResourceView* FolderIconSRV;
+	ID3D11ShaderResourceView* FileIconSRV;
 
 	// 매 프레임 외부에서 설정
 public:
