@@ -15,6 +15,31 @@
 #include "imgui_impl_dx11.h"
 
 #include "Core/ViewportClient.h"
+#include "Core/Paths.h"
+
+#include <windows.h>
+#include <commdlg.h>
+
+std::string SaveFileDialog()
+{
+	char FileName[MAX_PATH] = "";
+
+	OPENFILENAMEA Ofn = {};
+	Ofn.lStructSize = sizeof(OPENFILENAMEA);
+	Ofn.lpstrFilter = "Scene Files (*.json)\0*.json\0All Files (*.*)\0*.*\0";
+	Ofn.lpstrFile = FileName;
+	Ofn.nMaxFile = MAX_PATH;
+	Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
+	Ofn.lpstrDefExt = "json";
+	Ofn.lpstrInitialDir = FPaths::ContentDir().c_str();
+
+	if (GetSaveFileNameA(&Ofn))
+	{
+		return std::string(FileName);
+	}
+
+	return "";
+}
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 
@@ -298,6 +323,36 @@ void CEditorUI::Render()
 
 	Stat.SetObjectCount(UObject::TotalAllocationCounts);
 	Stat.SetHeapUsage(UObject::TotalAllocationBytes);
+
+	if (ImGui::BeginMainMenuBar())
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("Save Scene As..."))
+			{
+				if (Core && Core->GetActiveScene())
+				{
+					FString Path = SaveFileDialog();
+
+					if (!Path.empty())
+					{
+						Core->GetActiveScene()->SaveSceneToFile(Path);
+					}
+				}
+			}
+
+			/*
+			if (ImGui::MenuItem("Open Scene"))
+			{
+				//OnOpenScene();
+			}
+			*/
+
+			ImGui::EndMenu();
+		}
+
+		ImGui::EndMainMenuBar();
+	}
 
 	ControlPanel.Render(Core);
 	Property.Render();
