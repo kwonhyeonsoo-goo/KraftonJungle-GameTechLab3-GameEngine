@@ -1,5 +1,20 @@
 #include "ContentBrowserWindow.h"
 #include <filesystem>
+#include <d3d11.h>
+#include "Debug/EngineLog.h"
+
+CContentBrowserWindow::CContentBrowserWindow():
+	RootPath(std::filesystem::current_path()),
+	CurrentPath(std::filesystem::current_path())
+{
+	while (!std::filesystem::exists(RootPath / "Assets"))
+	{
+		RootPath = RootPath.parent_path();
+	}
+
+	RootPath = RootPath / "Assets";
+	CurrentPath = RootPath;
+}
 
 void CContentBrowserWindow::Render()
 {
@@ -34,6 +49,16 @@ void CContentBrowserWindow::Render()
 	ImGui::EndChild();
 
 	ImGui::End();
+}
+
+void CContentBrowserWindow::SetFolderIcon(ID3D11ShaderResourceView* FolderSRV)
+{
+	FolderIcon = (ImTextureID)(FolderSRV);
+}
+
+void CContentBrowserWindow::SetFileIcon(ID3D11ShaderResourceView* FileSRV)
+{
+	FileIcon = (ImTextureID)(FileSRV);
 }
 
 void CContentBrowserWindow::DrawFolderTree(const std::filesystem::path& Path)
@@ -83,10 +108,10 @@ void CContentBrowserWindow::DrawFileGrid()
 
 		ImGui::PushID(Name.c_str());
 
-		// ImTextureID Icon = Entry.is_directory() ? FolderIcon : FileIcon;
+		ImTextureID Icon = Entry.is_directory() ? FolderIcon : FileIcon;
 
 		// 아이콘 버튼
-		// ImGui::ImageButton(Name.c_str(), Icon, ImVec2(IconSize, IconSize));
+		ImGui::ImageButton(Name.c_str(), Icon, ImVec2(IconSize, IconSize));
 
 		// 선택
 		if (ImGui::IsItemClicked())
@@ -104,7 +129,8 @@ void CContentBrowserWindow::DrawFileGrid()
 			else
 			{
 				// TODO: 파일 열기
-				SelectedPath = Path;
+				// SelectedPath = Path;
+				OnFileDoubleClickCallback(Path.string());
 			}
 		}
 

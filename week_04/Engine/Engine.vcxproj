@@ -113,6 +113,7 @@
     <ClInclude Include="Source\Types\StaticArray.h" />
     <ClInclude Include="Source\Types\String.h" />
     <ClInclude Include="ThirdParty\nlohmann\json.hpp" />
+    <ClInclude Include="ThirdParty\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PrimitiveLineBatch.cpp" />

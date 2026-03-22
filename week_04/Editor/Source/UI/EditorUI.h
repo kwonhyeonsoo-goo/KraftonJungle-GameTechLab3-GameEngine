@@ -26,6 +26,7 @@ public:
 	bool IsViewportInteractive() const;
 
 	CConsoleWindow& GetConsole() { return Console; }
+	CCore* GetCore() { return Core; }
 
 private:
 	void BuildDefaultLayout(uint32 DockID);

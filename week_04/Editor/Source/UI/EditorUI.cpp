@@ -14,6 +14,8 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
 
+#include "Core/ViewportClient.h"
+
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 
 void CEditorUI::Initialize(CCore* InCore)
@@ -42,6 +44,15 @@ void CEditorUI::Initialize(CCore* InCore)
 				Root->SetRelativeTransform(Transform);
 			}
 		};
+
+	ContentBrowser.OnFileDoubleClickCallback = [this](const FString& FilePath)
+		{
+			if (Core)
+			{
+				Core->GetViewportClient()->HandleFileDoubleClick(FilePath);
+			}
+		};
+
 }
 
 void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
@@ -57,6 +68,9 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 	const HWND Hwnd = InRenderer->GetHwnd();
 	ID3D11Device* Device = InRenderer->GetDevice();
 	ID3D11DeviceContext* DeviceContext = InRenderer->GetDeviceContext();
+
+	ContentBrowser.SetFolderIcon(CurrentRenderer->GetFolderIconSRV());
+	ContentBrowser.SetFileIcon(CurrentRenderer->GetFileIconSRV());
 
 	InRenderer->SetGUICallbacks(
 		[Hwnd, Device, DeviceContext]()

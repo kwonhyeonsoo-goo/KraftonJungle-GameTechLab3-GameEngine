@@ -2,6 +2,7 @@
 
 #include "EngineAPI.h"
 #include "Windows.h"
+#include "Types/String.h"
 
 class CCore;
 class CRenderer;
@@ -20,6 +21,9 @@ public:
 	virtual void HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
 	virtual UScene* ResolveScene(CCore* Core) const;
 	virtual void BuildRenderCommands(CCore* Core, UScene* Scene, const FFrustum& Frustum, FRenderCommandQueue& OutQueue) const;
+	
+	/** 입력 처리는 원래 Viewport 에서 처리하는게 맞는데 구조상 여기다 넣음 */
+	virtual void HandleFileDoubleClick(const FString& FilePath);
 };
 
 class ENGINE_API CGameViewportClient : public IViewportClient
