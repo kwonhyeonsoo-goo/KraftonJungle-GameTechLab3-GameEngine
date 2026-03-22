@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Renderer/PrimitiveVertex.h"
 #include <d3d11.h>
+#include <limits>
 
 enum class EMeshTopology
 {
@@ -37,9 +38,21 @@ struct ENGINE_API FMeshData
 	ID3D11Buffer* VertexBuffer = nullptr;
 	ID3D11Buffer* IndexBuffer = nullptr;
 
+	/** AABB Box Extent 및 Local Bound Radius 갱신 */
+	void UpdateLocalBound();
+	float GetLocalBoundRadius() const { return LocalBoundRadius; }
+
+	FVector GetMinCoord() const { return MinCoord; }
+	FVector GetMaxCoord() const { return MaxCoord; }
+	FVector GetCenterCoord() const { return (MaxCoord - MinCoord) * 0.5 + MinCoord; }
+
 private:
 	uint32 SortId = 0;
 	static inline uint32 NextSortId = 0;
+
+	FVector MinCoord = FVector(FLT_MAX, FLT_MAX, FLT_MAX);
+	FVector MaxCoord = FVector(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+	float LocalBoundRadius = 0.f;
 };
 
 class ENGINE_API CPrimitiveBase

@@ -84,6 +84,22 @@ void FMeshData::Release()
 	}
 }
 
+void FMeshData::UpdateLocalBound()
+{
+	// TODO: Ritter's Algorithm으로 개선
+	for (const FPrimitiveVertex& Vertex : Vertices)
+	{
+		if (Vertex.Position.X < MinCoord.X) MinCoord.X = Vertex.Position.X;
+		if (Vertex.Position.X > MaxCoord.X) MaxCoord.X = Vertex.Position.X;
+		if (Vertex.Position.Y < MinCoord.Y) MinCoord.Y = Vertex.Position.Y;
+		if (Vertex.Position.Y > MaxCoord.Y) MaxCoord.Y = Vertex.Position.Y;
+		if (Vertex.Position.Z < MinCoord.Z) MinCoord.Z = Vertex.Position.Z;
+		if (Vertex.Position.Z > MaxCoord.Z) MaxCoord.Z = Vertex.Position.Z;
+
+		LocalBoundRadius = ((MaxCoord - MinCoord) * 0.5).Size();
+	}
+}
+
 // ─── CPrimitiveBase ───
 
 std::unordered_map<FString, std::shared_ptr<FMeshData>> CPrimitiveBase::MeshCache;
@@ -100,6 +116,7 @@ std::shared_ptr<FMeshData> CPrimitiveBase::GetOrLoad(const FString& Key, const F
 	if (Data)
 	{
 		MeshCache[Key] = Data;
+		RegisterMeshData(Key, Data);
 	}
 	return Data;
 }
@@ -116,6 +133,7 @@ std::shared_ptr<FMeshData> CPrimitiveBase::GetCached(const FString& Key)
 
 void CPrimitiveBase::RegisterMeshData(const FString& Key, std::shared_ptr<FMeshData> Data)
 {
+	Data->UpdateLocalBound();
 	MeshCache[Key] = Data;
 }
 
@@ -161,5 +179,6 @@ std::shared_ptr<FMeshData> CPrimitiveBase::LoadFromFile(const FString& FilePath)
 
 	printf("[PrimitiveBase] Loaded mesh: %s (Vertices: %u, Indices: %u)\n",
 		FilePath.c_str(), VertexCount, IndexCount);
+
 	return Data;
 }

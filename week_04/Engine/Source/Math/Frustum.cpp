@@ -6,7 +6,7 @@ void FFrustum::ExtractFromVP(const FMatrix& VP)
 	// Left:   col3 + col0
 	Planes[Left]   = { VP[0][3] + VP[0][0], VP[1][3] + VP[1][0], VP[2][3] + VP[2][0], VP[3][3] + VP[3][0] };
 	// Right:  col3 - col0
-	Planes[Right]  = { VP[0][3] - VP[0][0], VP[1][3] - VP[1][0], VP[2][3] - VP[2][0], VP[3][3] - VP[3][0] };
+	Planes[Right]  = { VP[0][3] - VP[0][0], VP[1][3] - VP[1][0], VP[2][3] - VP[2][0], VP[3][3] - VP[3][0] };		
 	// Bottom: col3 + col1
 	Planes[Bottom] = { VP[0][3] + VP[0][1], VP[1][3] + VP[1][1], VP[2][3] + VP[2][1], VP[3][3] + VP[3][1] };
 	// Top:    col3 - col1

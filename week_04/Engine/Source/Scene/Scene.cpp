@@ -23,6 +23,9 @@
 #include <fstream>
 #include <iomanip>
 
+
+#include "Component/LineBatchComponent.h"
+
 IMPLEMENT_RTTI(UScene, UObject)
 
 UScene::~UScene()

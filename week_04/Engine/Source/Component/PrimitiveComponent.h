@@ -29,18 +29,9 @@ public:
 
 	virtual FBoxSphereBounds GetWorldBoundsForAABB() const;
 
-	FVector GetLocalBoxExtent() const
-	{
-		return LocalBoxExtent;
-	}
-
-	void UpdateLocalBoundRadius(FVector InNewPointLocalPos);
+	void UpdateLocalBound();
 
 protected:
 	std::shared_ptr<CPrimitiveBase> Primitive;
-	float LocalBoundRadius = 1.0f;
 	FMaterial* Material = nullptr;
-
-	
-	FVector LocalBoxExtent = FVector(0.75, 0.75, 0.75);
 };

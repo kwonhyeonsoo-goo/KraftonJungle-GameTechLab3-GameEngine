@@ -7,5 +7,4 @@ IMPLEMENT_RTTI(UCubeComponent, UPrimitiveComponent)
 void UCubeComponent::Initialize()
 {
 	Primitive = std::make_unique<CPrimitiveCube>();
-	LocalBoundRadius = 0.866f; // sqrt(3) * 0.5
 }

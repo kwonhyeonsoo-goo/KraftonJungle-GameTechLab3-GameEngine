@@ -16,6 +16,8 @@ uint32 CPrimitiveLineBatch::AddLine(FVector InStart, FVector InEnd, FVector4 InC
 	MeshData->Indices.push_back(meshDataSize + 1);
 
 	MeshData->bIsDirty = true;
+	MeshData->UpdateLocalBound();
+
 	// TODO: batchID 구현 (추가한 batchLine 수동으로 삭제하는 용도)
 	return InBatchID;
 }

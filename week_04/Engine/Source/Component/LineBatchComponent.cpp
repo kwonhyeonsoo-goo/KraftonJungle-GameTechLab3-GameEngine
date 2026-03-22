@@ -8,15 +8,12 @@ IMPLEMENT_RTTI(ULineBatchComponent, UPrimitiveComponent)
 void ULineBatchComponent::Initialize()
 {
 	Primitive = std::make_shared<CPrimitiveLineBatch>();
-	LocalBoundRadius = 1.0f;
 }
 
 void ULineBatchComponent::DrawLine(FVector InStart, FVector InEnd, FVector4 InColor)
 {
 	auto primitive = static_pointer_cast<CPrimitiveLineBatch>(Primitive);
 	primitive->AddLine(InStart, InEnd, InColor);
-	UpdateLocalBoundRadius(InStart);
-	UpdateLocalBoundRadius(InEnd);
 }
 
 void ULineBatchComponent::DrawWireCube(FVector InCenter, FQuat InRotation, FVector InScale, FVector4 InColor)

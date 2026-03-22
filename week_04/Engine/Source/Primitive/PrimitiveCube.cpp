@@ -80,4 +80,5 @@ void CPrimitiveCube::Generate()
 	Data->Topology = EMeshTopology::EMT_TriangleList;
 	MeshData = Data;
 	RegisterMeshData(Key, Data);
+
 }
