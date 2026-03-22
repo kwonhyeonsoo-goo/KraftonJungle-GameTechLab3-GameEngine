@@ -9,7 +9,7 @@
 #include "ImGui/IconsFontAwesome4.h"
 
 #include "Render/Renderer/Renderer.h"
-#include "World/PrimitiveComponent.h"
+#include "World/Primitives/Primitives.h"
 #include "SceneSaveManager.h"
 #include "Core/Common.h"
 #include "Engine/Core/InputSystem.h"

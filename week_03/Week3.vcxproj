@@ -136,6 +136,7 @@
     <ClCompile Include="Editor\UI\EditorMainPanel.cpp" />
     <ClCompile Include="Editor\Viewport\EditorViewportClient.cpp" />
     <ClCompile Include="Engine\Classes\AActor.cpp" />
+    <ClCompile Include="Engine\Classes\ASpotlight.cpp" />
     <ClCompile Include="Engine\Core\InputSystem.cpp" />
     <ClCompile Include="Engine\Core\Name.cpp" />
     <ClCompile Include="Engine\Fonts\FontCache.cpp" />
@@ -172,6 +173,9 @@
     <ClCompile Include="World\GizmoComponent.cpp" />
     <ClCompile Include="World\Mesh\MeshManager.cpp" />
     <ClCompile Include="World\PrimitiveComponent.cpp" />
+    <ClCompile Include="World\Primitives\CubeComponent.cpp" />
+    <ClCompile Include="World\Primitives\PlaneComponent.cpp" />
+    <ClCompile Include="World\Primitives\SphereComponent.cpp" />
     <ClCompile Include="World\SceneComponent.cpp" />
     <ClCompile Include="World\Transform.cpp" />
   </ItemGroup>
@@ -183,6 +187,7 @@
     <ClInclude Include="Editor\Viewport\CursorOverlayState.h" />
     <ClInclude Include="Editor\Viewport\EditorViewportClient.h" />
     <ClInclude Include="Engine\Classes\AActor.h" />
+    <ClInclude Include="Engine\Classes\ASpotlight.h" />
     <ClInclude Include="Engine\Core\CollisionTypes.h" />
     <ClInclude Include="Engine\Core\Common.h" />
     <ClInclude Include="Engine\Core\Console.h" />
@@ -235,6 +240,9 @@
     <ClInclude Include="World\GizmoComponent.h" />
     <ClInclude Include="World\Mesh\MeshManager.h" />
     <ClInclude Include="World\PrimitiveComponent.h" />
+    <ClInclude Include="World\Primitives\CubeComponent.h" />
+    <ClInclude Include="World\Primitives\PlaneComponent.h" />
+    <ClInclude Include="World\Primitives\SphereComponent.h" />
     <ClInclude Include="World\SceneComponent.h" />
     <ClInclude Include="World\Transform.h" />
   </ItemGroup>

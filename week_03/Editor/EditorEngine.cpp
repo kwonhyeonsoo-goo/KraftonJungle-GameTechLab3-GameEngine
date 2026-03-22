@@ -1,9 +1,8 @@
 ﻿#include "Editor/EditorEngine.h"
-
 #include "Engine/Core/InputSystem.h"
-
 #include "Render/Scene/RenderCollector.h"
 #include "Render/Scene/RenderCollectorContext.h"
+#include "World/Primitives/Primitives.h"
 
 void FEditorEngine::Create(HWND InHWindow)
 {
