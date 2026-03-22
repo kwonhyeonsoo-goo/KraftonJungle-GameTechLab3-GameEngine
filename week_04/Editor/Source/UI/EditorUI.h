@@ -6,6 +6,7 @@
 #include "StatWindow.h"
 #include "Viewport.h"
 #include "Types/ObjectPtr.h"
+#include "ContentBrowserWindow.h"
 
 class CCore;
 class CWindow;
@@ -40,6 +41,7 @@ private:
 	CStatWindow Stat;
 	CViewport Viewport;
 	COutlinerWindow Outliner;
+	CContentBrowserWindow ContentBrowser;
 
 	bool bWindowSetup = false;
 	bool bViewportClientActive = false;

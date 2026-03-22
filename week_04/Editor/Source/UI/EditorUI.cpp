@@ -290,6 +290,7 @@ void CEditorUI::Render()
 	Console.Render();
 	Stat.Render();
 	Outliner.Render(Core);
+	ContentBrowser.Render();
 }
 
 bool CEditorUI::GetViewportMousePosition(int32 WindowMouseX, int32 WindowMouseY, int32& OutViewportX, int32& OutViewportY, int32& OutWidth, int32& OutHeight) const
