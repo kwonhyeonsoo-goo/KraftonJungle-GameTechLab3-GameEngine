@@ -147,9 +147,9 @@ void UCubeComponent::UpdateWorldAABB()
 	float halfZ = LocalExtents.Z * Scale.Z;
 
 	FVector extent = {
-		std::abs(forward.X) * halfX + std::abs(right.X) * halfY + std::abs(up.X) * halfZ,
-		std::abs(forward.Y) * halfX + std::abs(right.Y) * halfY + std::abs(up.Y) * halfZ,
-		std::abs(forward.Z) * halfX + std::abs(right.Z) * halfY + std::abs(up.Z) * halfZ
+		abs(forward.X) * halfX + abs(right.X) * halfY + abs(up.X) * halfZ,
+		abs(forward.Y) * halfX + abs(right.Y) * halfY + abs(up.Y) * halfZ,
+		abs(forward.Z) * halfX + abs(right.Z) * halfY + abs(up.Z) * halfZ
 	};
 
 	FVector WorldCenter = GetWorldLocation();

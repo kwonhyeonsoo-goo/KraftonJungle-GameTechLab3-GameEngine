@@ -116,16 +116,19 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 	}
 
 	//	Grid And Box
+	Resources.PrimitiveShader.Bind(context);
 	Device.SetDepthStencilState(EDepthStencilState::Default);
 	RenderLineBatchPass(context, InRenderBus);
 
 
-	//	Selection Outline (Stencil)
-	Device.SetDepthStencilState(EDepthStencilState::StencilOutline);
-	Device.SetRasterizerState(ERasterizerState::SolidFrontCull);
-	Device.SetBlendState(EBlendState::Opaque);
-	Resources.OutlineShader.Bind(context);
-	RenderOutlinePass(context, InRenderBus);
+	if (showFlag & (uint64)EEngineShowFlags::SF_Primitives) {
+		//	Selection Outline (Stencil)
+		Device.SetDepthStencilState(EDepthStencilState::StencilOutline);
+		Device.SetRasterizerState(ERasterizerState::SolidFrontCull);
+		Device.SetBlendState(EBlendState::Opaque);
+		Resources.OutlineShader.Bind(context);
+		RenderOutlinePass(context, InRenderBus);
+	}
 
 	// Gizmo (Depth-less Variable)
 	Device.SetBlendState(EBlendState::Opaque);

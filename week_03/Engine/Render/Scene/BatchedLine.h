@@ -18,7 +18,7 @@ public:
 	void Create(ID3D11Device* InDevice, uint32 MaxIndexCount = (1 << 16));
 	void Release();
 
-	void AddGrid(int32 GridSize, int32 GrdMin = -100, int32 GrdMax = 100);
+	void AddGrid(int32 GridSize);
 	void AddLine(const FVector& StartPoint, const FVector& EndPoint, const FVector4& Color);
 	void AddAABB(const FVector& WorldMin, const FVector& WorldMax, const FVector4& Color = { 1.f, 1.f ,1.f ,1.f});
 

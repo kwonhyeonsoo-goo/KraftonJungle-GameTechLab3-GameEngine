@@ -106,7 +106,7 @@ void FRenderCollector::CollectFromEditor(const FRenderCollectorContext& Context,
 	if (Context.SelectedComponent)
 	{
 		FBoundingBox AABB = Context.SelectedComponent->GetBoundingBox();
-		RenderBus.GetBatehdLine()->AddAABB(AABB.WorldAABBMinLocation, AABB.WorldAABBMaxLocation);
+		BatchLine->AddAABB(AABB.WorldAABBMinLocation, AABB.WorldAABBMaxLocation);
 	}
 
 	if (Gizmo && Gizmo->IsVisible())
