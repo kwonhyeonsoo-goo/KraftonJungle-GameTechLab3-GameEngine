@@ -253,6 +253,8 @@
       <Filter>Source\Types</Filter>
     </ClCompile>
     <ClCompile Include="PrimitiveLineBatch.cpp" />
+    <ClCompile Include="Source\Scene\SceneRenderCollector.cpp" />
+    <ClCompile Include="Source\Serializer\Archive.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -532,6 +534,8 @@
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
     <ClInclude Include="PrimitiveLineBatch.h" />
+    <ClInclude Include="Source\Scene\SceneRenderCollector.h" />
+    <ClInclude Include="Source\Serializer\Archive.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

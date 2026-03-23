@@ -51,12 +51,13 @@ public:
 
 	void InitializeEmptyScene(float AspectRatio);
 	void InitializeDefaultScene(float AspectRatio, ID3D11Device* Device = nullptr);
-	//void LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device = nullptr);
-//	void SaveSceneToFile(const FString& FilePath);
+
 	void ClearActors();
 	void BeginPlay();
 	void Tick(float DeltaTime);
 	void CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue);
+	
+
 	FShowFlags& GetShowFlags() { return ShowFlags; }
 	const FShowFlags& GetShowFlags() const { return ShowFlags; }
 private:

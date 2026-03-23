@@ -2,8 +2,9 @@
 #include "Object/ObjectFactory.h"
 #include "Component/UUIDBillboardComponent.h"
 #include "Object/Class.h"
+#include "Renderer/Material.h"
 #include "Component/SceneComponent.h"
-
+#include "Serializer/Archive.h"
 IMPLEMENT_RTTI(AActor, UObject)
 
 namespace {
@@ -150,6 +151,108 @@ void AActor::Destroy()
 	}
 }
 
+void AActor::Serialize(FArchive& Ar)
+{
+	if (Ar.IsSaving())// Save Actor property
+	{
+		FString ClassName = GetClass()->GetName();
+		Ar.Serialize("Class", ClassName);
+		Ar.Serialize("UUID", UUID);
+
+		TArray<uint32> CompUUIDs;
+		for (UActorComponent* Comp : GetComponents())
+			if (Comp) CompUUIDs.push_back(Comp->UUID);
+		Ar.SerializeUIntArray("ComponentUUIDs", CompUUIDs);
+
+		if (USceneComponent* Root = GetRootComponent())
+		{
+			const FTransform Transform = Root->GetRelativeTransform();
+
+			FVector Location = Transform.GetTranslation();
+			FVector Rotation = Transform.Rotator().Euler();
+			FVector Scale = Transform.GetScale3D();
+			Ar.Serialize("Location", Location);
+			Ar.Serialize("Rotation", Rotation);
+			Ar.Serialize("Scale", Scale);
+
+		}
+		if (UPrimitiveComponent* PrimComp = GetComponentByClass<UPrimitiveComponent>())
+		{
+			if (PrimComp->GetMaterial() && !PrimComp->GetMaterial()->GetOriginName().empty())
+			{
+				FString MatName = PrimComp->GetMaterial()->GetOriginName();
+				Ar.Serialize("Material", MatName);
+			}
+		}
+	}
+	else//Load 
+	{
+		if (Ar.Contains("UUID"))
+		{
+			uint32 SavedUUID = 0;
+			Ar.Serialize("UUID", SavedUUID);
+			// 기존 UUID 제거
+			GUUIDToObjectMap.erase(UUID);
+			// 충돌하는 UUID가 이미 있으면 기존 것 제거
+			if (auto It = GUUIDToObjectMap.find(SavedUUID); It != GUUIDToObjectMap.end() && It->second != this)
+			{
+				It->second->UUID = 0;
+				GUUIDToObjectMap.erase(It);
+			}
+			UUID = SavedUUID;
+			GUUIDToObjectMap[SavedUUID] = this;
+
+		}
+
+		//restore Transform
+		FTransform Transform;
+		if (Ar.Contains("Location"))
+		{
+			FVector Location;
+			Ar.Serialize("Location", Location);
+			Transform.SetTranslation(Location);
+		}
+		if (Ar.Contains("Rotation"))
+		{
+			FVector Rotation;
+			Ar.Serialize("Rotation", Rotation);
+			Transform.SetRotation(FRotator::MakeFromEuler(Rotation));
+		}
+		if (Ar.Contains("Scale"))
+		{
+			FVector Scale;
+			Ar.Serialize("Scale", Scale);
+			Transform.SetScale3D(Scale);
+		}
+		if (USceneComponent* Root = GetRootComponent())
+			Root->SetRelativeTransform(Transform);
+
+		// Components UUID Restore
+		if (Ar.Contains("ComponentUUIDs"))
+		{
+			TArray<uint32> CompUUIDs;
+			Ar.SerializeUIntArray("ComponentUUIDs", CompUUIDs);
+			const TArray<UActorComponent*>& Components = GetComponents();
+			for (size_t i = 0; i < CompUUIDs.size(); i++)
+			{
+				GUUIDToObjectMap.erase(Components[i]->UUID);
+				if (auto It = GUUIDToObjectMap.find(CompUUIDs[i]);
+					It != GUUIDToObjectMap.end() &&
+					It->second != Components[i])
+				{
+					It->second->UUID = 0;
+					GUUIDToObjectMap.erase(It);
+				}
+				Components[i]->UUID = CompUUIDs[i];
+				GUUIDToObjectMap[CompUUIDs[i]] = Components[i];
+			}
+		}
+		//Setting Owner
+		for (UActorComponent* Comp : GetComponents())
+			if (Comp)
+				Comp->SetOwner(this);
+	}
+}
 const FVector& AActor::GetActorLocation() const
 {
 	if (RootComponent == nullptr)

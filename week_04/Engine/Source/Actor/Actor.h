@@ -5,7 +5,7 @@
 class UActorComponent;
 class USceneComponent;
 class UScene;
-
+class FArchive;
 class ENGINE_API AActor : public UObject
 {
 public:
@@ -39,12 +39,14 @@ public:
 	}
 
 	void Test() { int a = 5; }
-
+	
 	virtual void PostSpawnInitialize();
 	virtual void BeginPlay();
 	virtual void Tick(float DeltaTime);
 	virtual void EndPlay();
 	virtual void Destroy();
+	//Add direct Serializer
+	virtual void Serialize(FArchive& Ar);
 
 	bool HasBegunPlay() const { return bActorBegunPlay; }
 	bool IsPendingDestroy() const { return bPendingDestroy; }
