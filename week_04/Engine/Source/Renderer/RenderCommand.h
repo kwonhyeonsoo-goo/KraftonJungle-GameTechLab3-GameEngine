@@ -31,21 +31,20 @@ struct ENGINE_API FTextRenderCommand
 struct ENGINE_API FSubUVRenderCommand
 {
 	FVector WorldPosition;
-	FVector2 Size = FVector2(0.3f, 0.3f);
-	FVector4 Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
+	FVector2 Size;
+	FVector4 Color;
+	int32 Columns;
+	int32 Rows;
+	int32 TotalFrames;
 
-	int32 Columns = 9;
-	int32 Rows = 4;
-	int32 TotalFrames = 36;
-
-	uint32 FirstFrame = 14;
-	uint32 LastFrame = 17;
+	uint32 FirstFrame;
+	uint32 LastFrame;
 	
-	float FPS = 8.0f;
-	float ElapsedTime = 0.0f;
+	float FPS;
+	float ElapsedTime;
 
-	bool bLoop = true;
-	bool bBillboard = true;
+	bool bLoop;
+	bool bBillboard;
 
 };
 
