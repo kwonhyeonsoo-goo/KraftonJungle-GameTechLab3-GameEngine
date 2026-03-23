@@ -107,17 +107,15 @@ void FEditorEngine::PostInitialize()
 	PreviewViewportClient = std::make_unique<CPreviewViewportClient>(EditorUI, MainWindow, PreviewSceneContextName);
 
 	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
-	TArray<FString> VariableNames;
 
-	// Global delete Error
-	//CVM.GetAllNames(VariableNames);
+	// TArray<FString> VariableNames; 삭제
+	// CVM.GetAllNames(VariableNames); 삭제
 
-
-
-	//for (const FString& Name : VariableNames)
-	//{
-	//	EditorUI.GetConsole().RegisterCommand(Name.c_str());
-	//}
+	// 이렇게 람다로 바로 받아서 등록하도록 변경합니다.
+	CVM.GetAllNames([this](const FString& Name)
+	{
+		EditorUI.GetConsole().RegisterCommand(Name.c_str());
+	});
 
 	EditorUI.GetConsole().SetCommandHandler([](const char* CommandLine)
 		{

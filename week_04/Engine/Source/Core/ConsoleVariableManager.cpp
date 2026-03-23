@@ -154,14 +154,14 @@ void FConsoleVariableManager::RegisterCommand(const FString& Name, FConsoleComma
 	Commands[ToLower(Name)] = std::move(Entry);
 }
 
-void FConsoleVariableManager::GetAllNames(TArray<FString>& OutNames) const
+void FConsoleVariableManager::GetAllNames(std::function<void(const FString&)> Callback) const
 {
 	for (auto& Pair : Variables)
 	{
-		OutNames.push_back(Pair.first);
+		Callback(Pair.first);
 	}
 	for (auto& Pair : Commands)
 	{
-		OutNames.push_back(Pair.first);
+		Callback(Pair.first);
 	}
 }

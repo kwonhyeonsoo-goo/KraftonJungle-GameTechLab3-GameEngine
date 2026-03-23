@@ -56,7 +56,7 @@ public:
 
 	FConsoleVariable* Find(const FString& Name);
 	bool Execute(const char* CommandLine, FString& OutResult);
-	void GetAllNames(TArray<FString>& OutNames) const;
+	void GetAllNames(std::function<void(const FString&)> Callback) const;
 
 	using FConsoleCommand = std::function<void(FString&)>;
 	void RegisterCommand(const FString& Name, FConsoleCommand InCommand, const FString& Help = "");

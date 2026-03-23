@@ -37,7 +37,10 @@ void FMalloc::Free(void* Original)
 		return;
 
 	FAllocHeader* Header = (FAllocHeader*)((uint8*)Original - HEADER_STRIDE);
-
+	if (Header->MagicNumber == 0)
+	{
+		return;
+	}
 	// Magic 검사 — GMalloc 이전 일반 할당이거나 double free, 오염된 포인터
 	if (Header->MagicNumber != MALLOC_MAGIC)
 	{
