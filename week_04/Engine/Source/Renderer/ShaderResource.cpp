@@ -131,7 +131,8 @@ std::shared_ptr<FShaderResource> FShaderResource::GetOrCompile(
 	// ContentDir이 비어 있으면 FPaths에서 초기화
 	if (ContentDir.empty())
 	{
-		SetContentDir(FPaths::ToWide(FPaths::ShaderCacheDir()).c_str());
+		std::wstring Temp = FPaths::ShaderCacheDir().wstring();
+		SetContentDir(Temp.c_str());
 	}
 
 	std::wstring Key = std::wstring(FilePath) + L"|" + std::wstring(EntryPoint, EntryPoint + strlen(EntryPoint));

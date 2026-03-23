@@ -20,6 +20,10 @@
 #include <windows.h>
 #include <commdlg.h>
 
+#include "Debug/EngineLog.h"
+#include "Component/CameraComponent.h"
+#include "Camera/Camera.h"
+
 enum class EFileDialogType
 {
 	Open,
@@ -29,6 +33,7 @@ enum class EFileDialogType
 std::string GetFilePathUsingDialog(EFileDialogType Type)
 {
 	char FileName[MAX_PATH] = "";
+	FString ContentDir = FPaths::ContentDir().string();
 
 	OPENFILENAMEA Ofn = {};
 	Ofn.lStructSize = sizeof(OPENFILENAMEA);
@@ -36,7 +41,7 @@ std::string GetFilePathUsingDialog(EFileDialogType Type)
 	Ofn.lpstrFile = FileName;
 	Ofn.nMaxFile = MAX_PATH;
 	Ofn.lpstrDefExt = "json";
-	Ofn.lpstrInitialDir = FPaths::ContentDir().c_str();
+	Ofn.lpstrInitialDir = ContentDir.c_str();
 
 	if (Type == EFileDialogType::Save)
 	{
@@ -343,19 +348,21 @@ void CEditorUI::Render()
 	{
 		if (ImGui::BeginMenu("File"))
 		{
-			if (ImGui::MenuItem("Save Scene As..."))
+			if (ImGui::MenuItem("New Scene"))
 			{
-				if (Core && Core->GetActiveScene())
+				if (Core)
 				{
-					FString Path = GetFilePathUsingDialog(EFileDialogType::Save);
+					Core->SetSelectedActor(nullptr);
 
-					if (!Path.empty())
+					if (UCameraComponent* Cam = Core->GetScene()->GetActiveCameraComponent())
 					{
-						Core->GetActiveScene()->SaveSceneToFile(Path);
+						Cam->GetCamera()->SetPosition({ -5.0f, 0.0f, 2.0f });
+						Cam->GetCamera()->SetRotation(0.f, 0.f);
 					}
+					Core->GetScene()->ClearActors();
+					UE_LOG("New scene created");
 				}
 			}
-
 			if (ImGui::MenuItem("Open Scene"))
 			{
 				if (Core && Core->GetActiveScene())
@@ -365,6 +372,19 @@ void CEditorUI::Render()
 					if (!Path.empty())
 					{
 						Core->GetActiveScene()->LoadSceneFromFile(Path);
+					}
+				}
+			}
+
+			if (ImGui::MenuItem("Save Scene As..."))
+			{
+				if (Core && Core->GetActiveScene())
+				{
+					FString Path = GetFilePathUsingDialog(EFileDialogType::Save);
+
+					if (!Path.empty())
+					{
+						Core->GetActiveScene()->SaveSceneToFile(Path);
 					}
 				}
 			}

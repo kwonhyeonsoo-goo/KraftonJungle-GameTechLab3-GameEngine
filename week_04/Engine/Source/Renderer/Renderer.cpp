@@ -192,7 +192,7 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 
-	std::wstring ShaderDirW = FPaths::ToWide(FPaths::ShaderDir());
+	std::wstring ShaderDirW = FPaths::ShaderDir();
 	std::wstring VSPath = ShaderDirW + L"VertexShader.hlsl";
 	std::wstring PSPath = ShaderDirW + L"PixelShader.hlsl";
 
@@ -261,11 +261,14 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 
-	FString FolderIconPath = FPaths::AssetDir() + FString("\\Textures\\FolderIcon.png");
-	FString FileIconPath = FPaths::AssetDir() + FString("\\Textures\\FileIcon.png");
+	std::filesystem::path FolderIconPath = FPaths::AssetDir() / FString("\\Textures\\FolderIcon.png");
+	std::filesystem::path FileIconPath = FPaths::AssetDir() / FString("\\Textures\\FileIcon.png");
 
-	CreateTextureFromSTB(Device, FolderIconPath.c_str(), &FolderIconSRV);
-	CreateTextureFromSTB(Device, FileIconPath.c_str(), &FileIconSRV);
+	FString FolderIconPathString = FolderIconPath.string();
+	FString FileIconPathString = FileIconPath.string();
+
+	CreateTextureFromSTB(Device, FolderIconPathString.c_str(), &FolderIconSRV);
+	CreateTextureFromSTB(Device, FileIconPathString.c_str(), &FileIconSRV);
 
 	return true;
 }
@@ -632,7 +635,9 @@ bool CRenderer::InitOutlineResources()
 	if (FAILED(Hr)) return false;
 
 	// 아웃라인 픽셀 셰이더 로드
-	std::wstring OutlinePSPath = FPaths::ToWide(FPaths::ShaderDir() + "OutlinePixelShader.hlsl");
+	FString OutlinePSPathString = (FPaths::ShaderDir() / "OutlinePixelShader.hlsl").string();
+	std::wstring OutlinePSPath = std::wstring(OutlinePSPathString.begin(), OutlinePSPathString.end());	
+
 	OutlinePS = FShaderMap::Get().GetOrCreatePixelShader(Device, OutlinePSPath.c_str());
 	return OutlinePS != nullptr;
 }
