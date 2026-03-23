@@ -12,10 +12,10 @@ FBoxSphereBounds USubUVComponent::GetWorldBounds() const
 {
 	const FVector Center = GetWorldLocation();
 
-	const float HalfW = Size.X * 0.5f;
-	const float HalfH = Size.Y * 0.5f;
+	const float HalfW = Size.X * 0.3f;
+	const float HalfH = Size.Y * 0.3f;
 	const float MaxHalf = (HalfW > HalfH) ? HalfW : HalfH;
-	const float PickingPadding = 1.0f;
+	const float PickingPadding = 0.0f;
 
 	const FVector BoxExtent(HalfW+PickingPadding, HalfH+PickingPadding, MaxHalf+PickingPadding);
 

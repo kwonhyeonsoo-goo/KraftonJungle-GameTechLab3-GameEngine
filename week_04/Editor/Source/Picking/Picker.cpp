@@ -6,6 +6,7 @@
 #include "Component/PrimitiveComponent.h"
 #include "Primitive/PrimitiveBase.h"
 #include "Renderer/PrimitiveVertex.h"
+#include "Component/SubUVComponent.h"
 
 #include <limits>
 
@@ -127,6 +128,36 @@ AActor* CPicker::PickActor(UScene* Scene, int32 ScreenX, int32 ScreenY,
 			}
 
 			UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
+			if (!PrimitiveComponent)
+			{
+				continue;
+			}
+
+			const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
+			if (bIsSubUV)
+			{
+				const FBoxSphereBounds Bounds = PrimitiveComponent->GetWorldBounds();
+
+				FVector ToCenter = Bounds.Center - Ray.Origin;
+				float T = FVector::DotProduct(ToCenter, Ray.Direction);
+				if (T < 0.0f)
+				{
+					continue;
+				}
+
+				const FVector ClosestPoint = Ray.Origin + Ray.Direction * T;
+				const float DistSq = (ClosestPoint - Bounds.Center).SizeSquared();
+				const float RadiusSq = Bounds.Radius * Bounds.Radius;
+
+				if (DistSq <= RadiusSq && T < ClosestDistance)
+				{
+					ClosestDistance = T;
+					ClosestActor = Actor;
+				}
+
+				continue;
+			}
+
 			if (!PrimitiveComponent->GetPrimitive())
 			{
 				continue;
