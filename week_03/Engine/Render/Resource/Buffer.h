@@ -24,9 +24,28 @@ public:
 	void Release();
 
 	void Update(ID3D11DeviceContext* InDeviceContext, const TArray<FVertex>& InData);
-	void FontUpdate(ID3D11DeviceContext* InDeviceContext, const TArray<FFontVertex>& InData);
 
 	uint32 GetVertexCount() const { return VertexCount; }
+	uint32 GetStride() const { return Stride; }
+	ID3D11Buffer* GetBuffer() const;
+};
+
+class FInstanceBuffer
+{
+private:
+	ID3D11Buffer* Buffer = nullptr;
+	uint32 MaxInstanceCount = 0;
+	uint32 InstanceCount = 0;
+	uint32 Stride = 0;
+
+public:
+	void CreateDynamic(ID3D11Device* InDevice, uint32 InMaxVertices, uint32 InStride);
+	void Release();
+
+	void Update(ID3D11DeviceContext* InDeviceContext, const TArray<FVertex>& InData);
+	void FontUpdate(ID3D11DeviceContext* InDeviceContext, const TArray<FFontInstance>& InData);
+
+	uint32 GetInstanceCount() const { return InstanceCount; }
 	uint32 GetStride() const { return Stride; }
 	ID3D11Buffer* GetBuffer() const;
 };

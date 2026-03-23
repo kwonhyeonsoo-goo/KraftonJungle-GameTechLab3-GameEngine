@@ -61,9 +61,11 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* primitiveCompon
 	Cmd.TransformConstants = FTransformConstants{ primitiveComponent->GetWorldMatrix(), Context.Camera->GetViewMatrix(), Context.Camera->GetProjectionMatrix() };
 
 	FRenderCommand FontCmd = {};
+	FontCmd.Type = ERenderCommandType::Font;
+	FontCmd.MeshBuffer = &MeshBufferManager.GetMeshBuffer(EPrimitiveType::EPT_Quad);
 	FontCmd.FontPosition = primitiveComponent->GetWorldLocation();
 	FontCmd.FontPosition.Z += 1.0f;
-	FontCmd.FontColor = FFontColor{ FVector4(1, 1, 1, 1) };
+	FontCmd.FontColor = FVector4(1, 1, 1, 1);
 	FontCmd.UUID = primitiveComponent->UUID;
 	RenderBus.AddFontCommand(FontCmd);
 

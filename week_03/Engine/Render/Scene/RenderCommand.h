@@ -60,24 +60,10 @@ struct FOutlineConstants
 	float Padding0[3];
 };
 
- 
-struct FFontTransform
-{
-	FMatrix MVP;
-};
-
-struct FFontColor
-{
-	FVector4 Color;
-};
-
 struct FRenderCommand
 {
 	//	VB, IB 모두 담고 있는 MB
 	FMeshBuffer* MeshBuffer = nullptr;
-
-	// VB만 담고 있는 버퍼
-	FVertexBuffer* VertexBuffer = nullptr;
 
 	FTransformConstants TransformConstants = {};
 	FGizmoConstants GizmoConstants = {};
@@ -85,9 +71,8 @@ struct FRenderCommand
 	FOutlineConstants OutlineConstants = {};
 
 	FVector FontPosition = {};
-	FFontColor FontColor = {};
+	FVector4 FontColor = {};
 	
 	uint32 UUID = 0;
 	ERenderCommandType Type = ERenderCommandType::Primitive;
-
 };
