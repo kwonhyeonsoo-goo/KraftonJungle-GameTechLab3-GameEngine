@@ -68,9 +68,6 @@ public:
 	static int32 GetTotalBytes();
 	static int32 GetTotalCounts();
 
-	void* operator new(size_t InSize);
-	void operator delete(void* InAddress, std::size_t size);
-
 	inline static uint32 TotalAllocationBytes = 0;
 	inline static uint32 TotalAllocationCounts = 0;
 	inline static uint32 LastNewSize = 0; // operator new에서 생성자로 크기 전달용

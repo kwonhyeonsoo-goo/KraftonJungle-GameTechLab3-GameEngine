@@ -71,4 +71,5 @@ private:
 	ESceneType SceneType = ESceneType::Game;
 	FShowFlags ShowFlags;
 
+	TArray<UPrimitiveComponent*> VisiblePrimitives;
 };

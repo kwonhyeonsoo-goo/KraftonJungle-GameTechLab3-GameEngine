@@ -18,6 +18,8 @@
 #include "Controller/EditorViewportController.h"
 #include "Serializer/SceneSerializer.h"
 #include <filesystem>
+#include <random>
+#include <chrono>
 
 namespace
 {
@@ -55,7 +57,6 @@ void CControlPanelWindow::Render(CCore* Core)
 
 	if (Core && Core->GetScene())
 	{
-	
 		const FSceneContext* ActiveSceneContext = Core->GetActiveSceneContext();
 		const TArray<std::unique_ptr<FEditorSceneContext>>& PreviewSceneContexts = Core->GetPreviewSceneContexts();
 		const bool bPreviewActive = ActiveSceneContext && ActiveSceneContext->SceneType == ESceneType::Preview;
@@ -91,8 +92,27 @@ void CControlPanelWindow::Render(CCore* Core)
 			ImGui::TextUnformatted("Preview scene is editor-only. Scene save/load is disabled.");
 		}
 		ImGui::SeparatorText("Camera");
-		
 
+		if (ImGui::Button("Spawn Test"))
+		{
+			UScene* Scene = Core->GetScene();
+			AActor* NewActor = nullptr;
+
+			for (int i = 0; i < 1000; i++)
+			{
+				// 시드: 현재 시간 기반
+				static std::mt19937 rng(static_cast<unsigned int>(
+					std::chrono::steady_clock::now().time_since_epoch().count()
+					));
+
+				std::uniform_real_distribution<float> dist(-10, 10);
+
+				FVector V{ 0, 0, 0 };
+				NewActor = Scene->SpawnActor<ACubeActor>("Test");
+				NewActor->SetActorLocation(V);
+			}
+		}
+		
 		if (CCamera* Camera = Core->GetScene()->GetCamera())
 		{
 		

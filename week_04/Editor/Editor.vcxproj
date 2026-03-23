@@ -147,6 +147,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="EditorGlobals.cpp" />
     <ClCompile Include="Source\FEditorEngine.cpp" />
     <ClCompile Include="Source\main.cpp" />
     <ClCompile Include="Source\Axis\AxisRenderer.cpp" />
@@ -173,6 +174,7 @@
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="EditorGlobals.h" />
     <ClInclude Include="Source\FEditorEngine.h" />
     <ClInclude Include="Source\Axis\AxisRenderer.h" />
     <ClInclude Include="Source\Controller\EditorViewportController.h" />

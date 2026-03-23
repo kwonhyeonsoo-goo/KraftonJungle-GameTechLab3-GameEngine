@@ -2,6 +2,7 @@
 #include "Platform/Windows/Window.h"
 #include "Core/ViewportClient.h"
 #include "Platform/Windows/WindowApplication.h"
+#include "Object/ObjectGlobals.h"
 
 FEngine* GEngine = nullptr;
 

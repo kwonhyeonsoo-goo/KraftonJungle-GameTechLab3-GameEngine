@@ -268,6 +268,21 @@
       <Filter>Source\Types</Filter>
     </ClCompile>
     <ClCompile Include="PrimitiveLineBatch.cpp" />
+    <ClCompile Include="Source\Scene\ShowFlags.cpp" />
+    <ClCompile Include="Source\Component\SubUVComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Actor\SubUVActor.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Actor\PlaneActor.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Component\PlaneComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Memory\MemoryBase.cpp" />
+    <ClCompile Include="Source\Object\ObjectGlobals.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -564,7 +579,52 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp">
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
+<<<<<<< HEAD
     <ClInclude Include="PrimitiveLineBatch.h" />
+=======
+    <ClInclude Include="Shaders\FontVertexShader.hlsl" />
+    <ClInclude Include="Source\Renderer\FontAtlas.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\TextRenderer.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Physics\PhysicsManager.h" />
+    <ClInclude Include="Source\Scene\SceneManager.h" />
+    <ClInclude Include="Source\Types\Name.h" />
+    <ClInclude Include="Source\Component\UUIDBillboardComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Platform\Windows\WindowTypes.h" />
+    <ClInclude Include="Source\Renderer\SubUVRenderer.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Math\Vector2.h" />
+    <ClInclude Include="Source\Component\LineBatchComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="PrimitiveLineBatch.h">
+      <Filter>Source\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\stb_image.h" />
+    <ClInclude Include="Source\Component\SubUVComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\SubUVActor.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\PlaneActor.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\PlaneComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\TextureVertex.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Memory\MemoryBase.h" />
+    <ClInclude Include="Source\Object\ObjectGlobals.h" />
+>>>>>>> refactor/global_new_delete
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
