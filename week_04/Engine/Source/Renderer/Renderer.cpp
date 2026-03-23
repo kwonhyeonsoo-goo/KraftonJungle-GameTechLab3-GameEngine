@@ -20,13 +20,6 @@ static FVector GetCameraWorldPositionFromViewMatrix(const FMatrix& ViewMatrix)
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
 
-uint64 FRenderCommand::MakeSortKey(const FMaterial* InMaterial, const FMeshData* InMeshData)
-{
-	uint32 MatId = InMaterial ? InMaterial->GetSortId() : 0;
-	uint32 MeshId = InMeshData ? InMeshData->GetSortId() : 0;
-	return (static_cast<uint64>(MatId) << 32) | MeshId;
-}
-
 CRenderer::~CRenderer()
 {
 	Release();

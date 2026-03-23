@@ -238,6 +238,7 @@
     <ClCompile Include="Source\Scene\ShowFlags.cpp" />
     <ClCompile Include="Source\Actor\PlaneActor.cpp" />
     <ClCompile Include="Source\Component\PlaneComponent.cpp" />
+    <ClCompile Include="Source\Renderer\RenderCommand.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
