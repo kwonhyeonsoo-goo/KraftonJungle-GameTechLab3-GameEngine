@@ -85,6 +85,7 @@ public:
 	ID3D11ShaderResourceView* GetFileIconSRV() const { return FileIconSRV; }
 
 private:
+	void SetConstantBuffers();
 	void AddCommand(const FRenderCommand& Command);
 	void ClearCommandList();
 	bool CreateDeviceAndSwapChain(HWND InHwnd, int32 Width, int32 Height);

@@ -184,6 +184,7 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 	{
 		return false;
 	}
+	SetConstantBuffers();
 
 	std::wstring ShaderDirW = FPaths::ToWide(FPaths::ShaderDir());
 	std::wstring VSPath = ShaderDirW + L"VertexShader.hlsl";
@@ -261,6 +262,12 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 	CreateTextureFromSTB(Device, FileIconPath.c_str(), &FileIconSRV);
 
 	return true;
+}
+
+void CRenderer::SetConstantBuffers()
+{
+	ID3D11Buffer* ConstantBuffers[2] = { FrameConstantBuffer, ObjectConstantBuffer };
+	DeviceContext->VSSetConstantBuffers(0, 2, ConstantBuffers);
 }
 
 void CRenderer::BeginFrame()
@@ -387,11 +394,6 @@ void CRenderer::AddCommand(const FRenderCommand& Command)
 
 void CRenderer::ExecuteCommands()
 {
-	// 프레임 상수 버퍼 업데이트 및 바인딩 (b0: Frame, b1: Object)
-	UpdateFrameConstantBuffer();
-	ID3D11Buffer* ConstantBuffers[2] = { FrameConstantBuffer, ObjectConstantBuffer };
-	DeviceContext->VSSetConstantBuffers(0, 2, ConstantBuffers);
-
 	std::sort(CommandList.begin(), CommandList.end(),
 		[](const FRenderCommand& A, const FRenderCommand& B)
 		{
@@ -400,9 +402,13 @@ void CRenderer::ExecuteCommands()
 			return A.SortKey < B.SortKey;
 		});
 
+	// 프레임 상수 버퍼 업데이트 및 바인딩 (b0: Frame, b1: Object)
+	// ImGui에서 VSSetConstantBuffers를 호출하기 때문에 매 프레임마다 다시 Set해줘야 함
+	SetConstantBuffers();
+	UpdateFrameConstantBuffer();
+
 	ExecuteRenderPass(ERenderLayer::Default);
 	ExecuteRenderPass(ERenderLayer::Overlay);
-
 	ExecuteTextRenderPass();
 }
 
@@ -436,8 +442,6 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 		{
 			Cmd.Material->Bind(DeviceContext);
 			CurrentMaterial = Cmd.Material;
-			ID3D11Buffer* ConstantBuffers[2] = { FrameConstantBuffer, ObjectConstantBuffer };
-			DeviceContext->VSSetConstantBuffers(0, 2, ConstantBuffers);
 		}
 
 		if (Cmd.MeshData != CurrentMesh)
@@ -730,8 +734,6 @@ void CRenderer::ExecuteLineCommands()
 
 	// 기본 셰이더 복원 (ExecuteCommands 후 마지막 Material 셰이더가 남아있을 수 있음)
 	ShaderManager.Bind(DeviceContext);
-	ID3D11Buffer* CBs[2] = { FrameConstantBuffer, ObjectConstantBuffer };
-	DeviceContext->VSSetConstantBuffers(0, 2, CBs);
 
 	// Depth 테스트 비활성화 (축이 항상 보이도록)
 	if (!LineDepthState)
