@@ -9,6 +9,7 @@
 #include "Renderer/RenderCommand.h"
 #include "Renderer/Renderer.h"
 #include "Scene/Scene.h"
+#include "Serializer/SceneSerializer.h"
 
 #include "imgui.h"
 
@@ -203,7 +204,8 @@ void CEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
 	{
 		Core->SetSelectedActor(nullptr);
 		Core->GetScene()->ClearActors();
-		Core->GetScene()->LoadSceneFromFile(FilePath, Core->GetRenderer()->GetDevice());
+		FSceneSerializer::Load(Core->GetScene(), FilePath, Core->GetRenderer()->GetDevice());
+
 		UE_LOG("Scene loaded: %s", FilePath.c_str());
 	}
 }

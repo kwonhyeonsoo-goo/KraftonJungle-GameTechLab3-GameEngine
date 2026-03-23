@@ -1,7 +1,7 @@
 #pragma once
 #include "../Types/String.h"
-
-class UScene;
+#include "Scene/Scene.h"
+#include <d3d11.h>
 class FSceneSerializer
 {
 public:

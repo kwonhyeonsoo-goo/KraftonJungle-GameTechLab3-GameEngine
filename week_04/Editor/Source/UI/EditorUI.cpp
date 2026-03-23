@@ -23,7 +23,7 @@
 #include "Debug/EngineLog.h"
 #include "Component/CameraComponent.h"
 #include "Camera/Camera.h"
-
+#include "Serializer/SceneSerializer.h"
 enum class EFileDialogType
 {
 	Open,
@@ -375,7 +375,9 @@ void CEditorUI::Render()
 
 					if (!Path.empty())
 					{
-						Core->GetActiveScene()->LoadSceneFromFile(Path);
+				
+						FSceneSerializer::Load(Core->GetScene(), Path, Device);
+
 					}
 				}
 			}
@@ -388,7 +390,7 @@ void CEditorUI::Render()
 
 					if (!Path.empty())
 					{
-						Core->GetActiveScene()->SaveSceneToFile(Path);
+						FSceneSerializer::Save(Core->GetScene(),Path);
 					}
 				}
 			}

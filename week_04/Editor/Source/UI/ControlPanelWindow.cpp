@@ -15,6 +15,7 @@
 #include "Debug/EngineLog.h"
 #include "Component/CameraComponent.h"
 #include "Controller/EditorViewportController.h"
+#include "Serializer/SceneSerializer.h"
 #include <filesystem>
 
 namespace
@@ -240,7 +241,9 @@ void CControlPanelWindow::Render(CCore* Core)
 			FString SceneNameString = SceneName;
 			SceneNameString += ".json";
 			const FString Path = (FPaths::SceneDir() / SceneNameString).string();
-			Core->GetScene()->SaveSceneToFile(Path);
+	
+			
+			FSceneSerializer::Save(Core->GetScene(),Path);
 			UE_LOG("Scene saved: %s", SceneName);
 		}
 
@@ -287,8 +290,10 @@ void CControlPanelWindow::Render(CCore* Core)
 				FString SceneFileName = SceneFiles[SelectedSceneIndex];
 				SceneFileName += ".json";
 				const FString Path = (FPaths::SceneDir() / SceneFileName).string();
-				Core->GetScene()->LoadSceneFromFile(Path, Core->GetRenderer()->GetDevice());
-	
+
+		
+				FSceneSerializer::Load(Core->GetScene(), Path, Core->GetRenderer()->GetDevice());
+
 				UE_LOG("Scene loaded: %s", SceneFiles[SelectedSceneIndex].c_str());
 			}
 		}

@@ -5,6 +5,7 @@
 #include <d3d11.h>
 #include "SceneTypes.h"
 #include "ShowFlags.h"
+#include "Serializer/SceneSerializer.h"
 class AActor;
 class CCamera;
 class FFrustum;
@@ -50,8 +51,8 @@ public:
 
 	void InitializeEmptyScene(float AspectRatio);
 	void InitializeDefaultScene(float AspectRatio, ID3D11Device* Device = nullptr);
-	void LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device = nullptr);
-	void SaveSceneToFile(const FString& FilePath);
+	//void LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device = nullptr);
+//	void SaveSceneToFile(const FString& FilePath);
 	void ClearActors();
 	void BeginPlay();
 	void Tick(float DeltaTime);
@@ -68,4 +69,5 @@ private:
 	bool bBegunPlay = false;
 	ESceneType SceneType = ESceneType::Game;
 	FShowFlags ShowFlags;
+
 };

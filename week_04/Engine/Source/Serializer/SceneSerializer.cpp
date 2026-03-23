@@ -10,7 +10,7 @@
 #include "Actor/CubeActor.h"
 #include "Actor/SphereActor.h"
 #include "Component/PrimitiveComponent.h"
-#include "Scene/Scene.h"
+
 #include "Object/ObjectFactory.h" 
 #include <iomanip>
 #include <filesystem>
@@ -18,7 +18,7 @@
 void FSceneSerializer::Save(UScene* Scene, const FString& FilePath)
 {
 	nlohmann::json Json;
-	CCamera* Camera = Scene->GetActiveCameraComponent()->GetCamera();
+	CCamera* Camera = Scene->GetCamera();
 	if (Camera)
 	{
 		const FVector Position = Camera->GetPosition();
@@ -68,8 +68,17 @@ void FSceneSerializer::Save(UScene* Scene, const FString& FilePath)
 		{
 			continue;
 		}
-
-		const FTransform Transform = Actor->GetRootComponent()->GetRelativeTransform();
+		USceneComponent* Root = Actor->GetRootComponent();
+		if (!Root)
+		{
+			continue;
+		}
+		USceneComponent* Root = Actor->GetRootComponent();
+		if (!Root)
+		{
+			continue;
+		}
+		const FTransform Transform = Root->GetRelativeTransform();
 		const FVector EulerDegrees = Transform.Rotator().Euler();
 		const FString Key = std::to_string(Index);
 
@@ -87,7 +96,6 @@ void FSceneSerializer::Save(UScene* Scene, const FString& FilePath)
 		// Material 이름 저장 (에셋 원본 이름 사용)
 		UPrimitiveComponent* PrimComp = Actor->GetComponentByClass<UPrimitiveComponent>();
 		if (PrimComp && PrimComp->GetMaterial() && !PrimComp->GetMaterial()->GetOriginName().empty())
-			//if (UPrimitiveComponent* PrimitiveComponent = Actor->GetComponentByClass<UPrimitiveComponent>())
 		{
 			Primitives[Key]["Material"] = PrimComp->GetMaterial()->GetOriginName();
 		}
@@ -126,7 +134,7 @@ void FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 
 	nlohmann::json Json;
 	File >> Json;
-	CCamera* Camera = Scene->GetActiveCameraComponent()->GetCamera();
+	CCamera* Camera = Scene->GetCamera();
 	if (Camera && Json.contains("Camera"))
 	{
 		auto& Cam = Json["Camera"];
@@ -185,7 +193,14 @@ void FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 		if (Value.contains("UUID"))
 		{
 			uint32 SavedUUID = Value["UUID"].get<uint32>();
+			// 기존 UUID 제거
 			GUUIDToObjectMap.erase(Actor->UUID);
+			// 충돌하는 UUID가 이미 있으면 기존 것 제거
+			if (auto It = GUUIDToObjectMap.find(SavedUUID); It != GUUIDToObjectMap.end() && It->second != Actor)
+			{
+				It->second->UUID = 0;
+				GUUIDToObjectMap.erase(It);
+			}
 			Actor->UUID = SavedUUID;
 			GUUIDToObjectMap[SavedUUID] = Actor;
 		}
@@ -233,6 +248,11 @@ void FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 			{
 				uint32 SavedCompUUID = CompUUIDs[i].get<uint32>();
 				GUUIDToObjectMap.erase(Components[i]->UUID);
+				if (auto It = GUUIDToObjectMap.find(SavedCompUUID); It != GUUIDToObjectMap.end() && It->second != Components[i])
+				{
+					It->second->UUID = 0;
+					GUUIDToObjectMap.erase(It);
+				}
 				Components[i]->UUID = SavedCompUUID;
 				GUUIDToObjectMap[SavedCompUUID] = Components[i];
 			}
