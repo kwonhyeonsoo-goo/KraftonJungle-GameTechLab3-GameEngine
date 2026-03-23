@@ -5,6 +5,7 @@
 #include "Actor/AttachTestActor.h"
 #include "Actor/CubeActor.h"
 #include "Actor/SphereActor.h"
+#include "Actor/SubUVActor.h"
 #include "Camera/Camera.h"
 #include "Component/CameraComponent.h"
 #include "Object/ObjectFactory.h"
@@ -18,12 +19,12 @@
 #include "Component/UUIDBillboardComponent.h"
 #include "Object/Class.h"
 #include "Core/FEngine.h"
+#include "Component/SubUVComponent.h"
 
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
-
 
 #include "Component/LineBatchComponent.h"
 
@@ -95,6 +96,31 @@ void UScene::InitializeDefaultScene(float AspectRatio, ID3D11Device* Device)
 {
 	InitializeEmptyScene(AspectRatio);
 	LoadSceneFromFile((FPaths::SceneDir() / "DefaultScene.json").string(), Device);
+
+	// SubUV 테스트용 Actor 추가
+	ASubUVActor* SubUVActor = SpawnActor<ASubUVActor>("SubUV_Test");
+	if (SubUVActor)
+	{
+		SubUVActor->SetActorLocation(FVector(0.0f, 0.0f, 0.0f));
+
+		USubUVComponent* SubUVComponent = SubUVActor->GetSubUVComponent();
+		if (SubUVComponent)
+		{
+			SubUVComponent->SetSize(FVector2(1.0f, 1.0f));
+			SubUVComponent->SetColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+
+			SubUVComponent->SetColumns(9);
+			SubUVComponent->SetRows(4);
+			SubUVComponent->SetTotalFrames(36);
+
+			SubUVComponent->SetFirstFrame(14);
+			SubUVComponent->SetLastFrame(17);
+
+			SubUVComponent->SetFPS(8.0f);
+			SubUVComponent->SetLoop(true);
+			SubUVComponent->SetBillboard(true);
+		}
+	}
 }
 
 void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
@@ -418,8 +444,11 @@ void UScene::FrustrumCull(const FFrustum& Frustum, TArray<UPrimitiveComponent*>&
 			}
 
 			UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
-			// if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
-			if (!PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
+
+			const bool bIsUUID = PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass());
+			const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
+
+			if (!bIsUUID && !bIsSubUV)
 			{
 				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
 				{
@@ -465,6 +494,26 @@ void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue&
 			OutQueue.AddTextCommand(TextCmd);
 			continue;
 		}
+		if (PrimitiveComponent->IsA(USubUVComponent::StaticClass()))
+		{
+			USubUVComponent* SubUVComponent = static_cast<USubUVComponent*>(PrimitiveComponent);
+			FSubUVRenderCommand SubUVCmd;
+			SubUVCmd.WorldPosition = SubUVComponent->GetWorldLocation();
+			SubUVCmd.Size = SubUVComponent->GetSize();
+			SubUVCmd.Color = SubUVComponent->GetColor();
+			SubUVCmd.Columns = SubUVComponent->GetColumns();
+			SubUVCmd.Rows = SubUVComponent->GetRows();
+			SubUVCmd.TotalFrames = SubUVComponent->GetTotalFrames();
+			SubUVCmd.FPS = SubUVComponent->GetFPS();
+			SubUVCmd.ElapsedTime = static_cast<float>(GEngine->GetCore()->GetTimer().GetTotalTime());
+			SubUVCmd.bLoop = SubUVComponent->IsLoop();
+			SubUVCmd.bBillboard = SubUVComponent->IsBillboard();
+			SubUVCmd.FirstFrame = SubUVComponent->GetFirstFrame();
+			SubUVCmd.LastFrame = SubUVComponent->GetLastFrame();
+
+			OutQueue.AddSubUVCommand(SubUVCmd);
+			continue;
+		}
 
 		if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
 		{
@@ -476,22 +525,5 @@ void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue&
 		Command.WorldMatrix = PrimitiveComponent->GetWorldTransform();
 		Command.Material = PrimitiveComponent->GetMaterial();
 		OutQueue.AddCommand(Command);
-
-		// SubUV 테스트용 더미 커맨드
-		FSubUVRenderCommand SubUVCmd;
-		SubUVCmd.WorldPosition = FVector(0.0f, 0.0f, 0.0f);
-		SubUVCmd.Size = FVector2(0.3f, 0.3f);
-		SubUVCmd.Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
-
-		SubUVCmd.Columns = 9;
-		SubUVCmd.Rows = 4;
-		SubUVCmd.TotalFrames = 36;
-
-		SubUVCmd.FPS = 8.0f;
-		SubUVCmd.ElapsedTime = static_cast<float>(GEngine->GetCore()->GetTimer().GetTotalTime());
-		SubUVCmd.bLoop = true;
-		SubUVCmd.bBillboard = true;
-
-		OutQueue.AddSubUVCommand(SubUVCmd);
 	}
 }

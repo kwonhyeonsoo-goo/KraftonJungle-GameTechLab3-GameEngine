@@ -240,8 +240,18 @@
     </ClCompile>
     <ClCompile Include="PrimitiveLineBatch.cpp" />
     <ClCompile Include="Source\Scene\ShowFlags.cpp" />
-    <ClCompile Include="Source\Actor\PlaneActor.cpp" />
-    <ClCompile Include="Source\Component\PlaneComponent.cpp" />
+    <ClCompile Include="Source\Component\SubUVComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Actor\SubUVActor.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Actor\PlaneActor.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Component\PlaneComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -490,9 +500,6 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp">
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\FontVertex.h">
-      <Filter>Source\Renderer</Filter>
-    </ClInclude>
     <ClInclude Include="Shaders\FontVertexShader.hlsl" />
     <ClInclude Include="Source\Renderer\FontAtlas.h">
       <Filter>Source\Renderer</Filter>
@@ -510,9 +517,6 @@
     <ClInclude Include="Source\Renderer\SubUVRenderer.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\SubUVVertex.h">
-      <Filter>Source\Renderer</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Math\Vector2.h" />
     <ClInclude Include="Source\Component\LineBatchComponent.h">
       <Filter>Source\Component</Filter>
@@ -520,9 +524,22 @@
     <ClInclude Include="PrimitiveLineBatch.h">
       <Filter>Source\Primitive</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Actor\PlaneActor.h" />
-    <ClInclude Include="Source\Component\PlaneComponent.h" />
     <ClInclude Include="ThirdParty\stb_image.h" />
+    <ClInclude Include="Source\Component\SubUVComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\SubUVActor.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\PlaneActor.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\PlaneComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\TextureVertex.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

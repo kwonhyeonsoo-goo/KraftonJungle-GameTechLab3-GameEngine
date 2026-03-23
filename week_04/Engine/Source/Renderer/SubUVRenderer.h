@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Renderer/SubUVVertex.h"
+#include "Renderer/TextureVertex.h"
 #include <d3d11.h>
 #include <memory>
 
@@ -36,8 +36,8 @@ public:
 		int32 Columns,
 		int32 Rows,
 		int32 TotalFrames,
-		int32 StartFrame,
-		int32 EndFrame,
+		int32 FirstFrame,
+		int32 LastFrame,
 		float FPS,
 		float ElapsedTime,
 		bool bLoop,

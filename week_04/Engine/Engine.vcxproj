@@ -23,11 +23,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="Source\Actor\PlaneActor.h" />
+    <ClInclude Include="Source\Actor\SubUVActor.h" />
     <ClInclude Include="Source\Component\PlaneComponent.h" />
+    <ClInclude Include="Source\Component\SubUVComponent.h" />
     <ClInclude Include="Source\Component\UUIDBillboardComponent.h" />
     <ClInclude Include="Source\Math\Vector2.h" />
     <ClInclude Include="Source\Renderer\FontAtlas.h" />
-    <ClInclude Include="Source\Renderer\FontVertex.h" />
     <ClInclude Include="PrimitiveLineBatch.h" />
     <ClInclude Include="Source\Component\LineBatchComponent.h" />
     <ClInclude Include="Source\CoreMinimal.h" />
@@ -97,8 +98,8 @@
     <ClInclude Include="Source\Renderer\ShaderResource.h" />
     <ClInclude Include="Source\Renderer\ShaderType.h" />
     <ClInclude Include="Source\Renderer\SubUVRenderer.h" />
-    <ClInclude Include="Source\Renderer\SubUVVertex.h" />
     <ClInclude Include="Source\Renderer\TextRenderer.h" />
+    <ClInclude Include="Source\Renderer\TextureVertex.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="Source\Scene\SceneContext.h" />
     <ClInclude Include="Source\Scene\SceneManager.h" />
@@ -126,6 +127,7 @@
     <ClCompile Include="Source\Actor\Gizmo.cpp" />
     <ClCompile Include="Source\Actor\PlaneActor.cpp" />
     <ClCompile Include="Source\Actor\SphereActor.cpp" />
+    <ClCompile Include="Source\Actor\SubUVActor.cpp" />
     <ClCompile Include="Source\Camera\Camera.cpp" />
     <ClCompile Include="Source\Component\ActorComponent.cpp" />
     <ClCompile Include="Source\Component\CameraComponent.cpp" />
@@ -137,6 +139,7 @@
     <ClCompile Include="Source\Component\SceneComponent.cpp" />
     <ClCompile Include="Source\Component\SkyComponent.cpp" />
     <ClCompile Include="Source\Component\SphereComponent.cpp" />
+    <ClCompile Include="Source\Component\SubUVComponent.cpp" />
     <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp" />
     <ClCompile Include="Source\Component\LineBatchComponent.cpp" />
     <ClCompile Include="Source\Core\ConsoleVariableManager.cpp" />

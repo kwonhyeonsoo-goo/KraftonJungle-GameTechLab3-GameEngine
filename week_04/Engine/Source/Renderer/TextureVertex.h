@@ -2,17 +2,17 @@
 
 #include "CoreMinimal.h"
 
-struct ENGINE_API FFontVertex
+struct ENGINE_API FTextureVertex
 {
 	FVector Position;
 	FVector2 UV;
 
-	FFontVertex()
+	FTextureVertex()
 		: Position(), UV()
 	{
 	}
 
-	FFontVertex(const FVector& InPosition, const FVector2& InUV)
+	FTextureVertex(const FVector& InPosition, const FVector2& InUV)
 		: Position(InPosition), UV(InUV)
 	{
 	}

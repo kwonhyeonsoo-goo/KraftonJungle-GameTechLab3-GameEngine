@@ -241,7 +241,7 @@ void CTextRenderer::EnsureDynamicBuffers(uint32 VertexCount, uint32 IndexCount)
 		Desc.Usage = D3D11_USAGE_DYNAMIC;
 		Desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		Desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		Desc.ByteWidth = sizeof(FFontVertex) * VertexCount;
+		Desc.ByteWidth = sizeof(FTextureVertex) * VertexCount;
 
 		if (SUCCEEDED(Device->CreateBuffer(&Desc, nullptr, &DynamicVertexBuffer)))
 		{
@@ -354,7 +354,7 @@ void CTextRenderer::DrawTextBillboard(
 
 	float PenX = -TotalWidth * 0.5f;
 
-	TArray<FFontVertex> Vertices;
+	TArray<FTextureVertex> Vertices;
 	TArray<uint32> Indices;
 
 	Vertices.reserve(Codepoints.size() * 4);
@@ -375,10 +375,10 @@ void CTextRenderer::DrawTextBillboard(
 
 			// 로컬 공간에서 YZ 평면에 글자 quad를 만들고
 			// billboard 월드행렬로 카메라를 바라보게 함
-			Vertices.push_back(FFontVertex(FVector(0.0f, X0, Y1), FVector2(Glyph.U0, Glyph.V0))); // 좌상
-			Vertices.push_back(FFontVertex(FVector(0.0f, X1, Y1), FVector2(Glyph.U1, Glyph.V0))); // 우상
-			Vertices.push_back(FFontVertex(FVector(0.0f, X1, Y0), FVector2(Glyph.U1, Glyph.V1))); // 우하
-			Vertices.push_back(FFontVertex(FVector(0.0f, X0, Y0), FVector2(Glyph.U0, Glyph.V1))); // 좌하
+			Vertices.push_back(FTextureVertex(FVector(0.0f, X0, Y1), FVector2(Glyph.U0, Glyph.V0))); // 좌상
+			Vertices.push_back(FTextureVertex(FVector(0.0f, X1, Y1), FVector2(Glyph.U1, Glyph.V0))); // 우상
+			Vertices.push_back(FTextureVertex(FVector(0.0f, X1, Y0), FVector2(Glyph.U1, Glyph.V1))); // 우하
+			Vertices.push_back(FTextureVertex(FVector(0.0f, X0, Y0), FVector2(Glyph.U0, Glyph.V1))); // 좌하
 
 			Indices.push_back(BaseIndex + 0);
 			Indices.push_back(BaseIndex + 1);
@@ -410,7 +410,7 @@ void CTextRenderer::DrawTextBillboard(
 
 	if (SUCCEEDED(DeviceContext->Map(DynamicVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
 	{
-		std::memcpy(Mapped.pData, Vertices.data(), sizeof(FFontVertex) * Vertices.size());
+		std::memcpy(Mapped.pData, Vertices.data(), sizeof(FTextureVertex) * Vertices.size());
 		DeviceContext->Unmap(DynamicVertexBuffer, 0);
 	}
 
@@ -445,7 +445,7 @@ void CTextRenderer::DrawTextBillboard(
 	DeviceContext->OMSetBlendState(AlphaBlendState, BlendFactor, 0xffffffff);
 	DeviceContext->RSSetState(NoCullRasterizerState);
 
-	UINT Stride = sizeof(FFontVertex);
+	UINT Stride = sizeof(FTextureVertex);
 	UINT Offset = 0;
 	DeviceContext->IASetVertexBuffers(0, 1, &DynamicVertexBuffer, &Stride, &Offset);
 	DeviceContext->IASetIndexBuffer(DynamicIndexBuffer, DXGI_FORMAT_R32_UINT, 0);

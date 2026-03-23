@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Renderer/FontAtlas.h"
-#include "Renderer/FontVertex.h"
+#include "Renderer/TextureVertex.h"
 #include <d3d11.h>
 #include <memory>
 

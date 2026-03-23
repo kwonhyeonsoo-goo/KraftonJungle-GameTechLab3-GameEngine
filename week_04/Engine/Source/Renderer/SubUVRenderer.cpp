@@ -285,7 +285,7 @@ void CSubUVRenderer::EnsureDynamicBuffers(uint32 VertexCount, uint32 IndexCount)
 		Desc.Usage = D3D11_USAGE_DYNAMIC;
 		Desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		Desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		Desc.ByteWidth = sizeof(FSubUVVertex) * VertexCount;
+		Desc.ByteWidth = sizeof(FTextureVertex) * VertexCount;
 
 		if (SUCCEEDED(Device->CreateBuffer(&Desc, nullptr, &DynamicVertexBuffer)))
 		{
@@ -366,8 +366,8 @@ void CSubUVRenderer::DrawSubUV(
 	int32 Columns,
 	int32 Rows,
 	int32 TotalFrames,
-	int32 StartFrame,
-	int32 EndFrame,
+	int32 FirstFrame,
+	int32 LastFrame,
 	float FPS,
 	float ElapsedTime,
 	bool bLoop,
@@ -386,27 +386,27 @@ void CSubUVRenderer::DrawSubUV(
 	float FrameFloat = ElapsedTime * FPS;
 	int32 AnimationFrame = static_cast<int32>(FrameFloat);
 
-	StartFrame = std::max<int32>(0, std::min<int32>(StartFrame, TotalFrames - 1));
-	EndFrame = std::max<int32>(0, std::min<int32>(EndFrame, TotalFrames - 1));
+	FirstFrame = std::max<int32>(0, std::min<int32>(FirstFrame, TotalFrames - 1));
+	LastFrame = std::max<int32>(0, std::min<int32>(LastFrame, TotalFrames - 1));
 
-	if (StartFrame > EndFrame)
+	if (FirstFrame > LastFrame)
 	{
-		std::swap(StartFrame, EndFrame);
+		std::swap(FirstFrame, LastFrame);
 	}
 
-	const int32 PlayableFrameCount = EndFrame - StartFrame + 1;
+	const int32 PlayableFrameCount = LastFrame - FirstFrame + 1;
 
-	int32 FrameIndex = StartFrame;
+	int32 FrameIndex = FirstFrame;
 
 	if (PlayableFrameCount > 0)
 	{
 		if (bLoop)
 		{
-			FrameIndex = StartFrame + (AnimationFrame % PlayableFrameCount);
+			FrameIndex = FirstFrame + (AnimationFrame % PlayableFrameCount);
 		}
 		else
 		{
-			FrameIndex = StartFrame + std::min<int32>(AnimationFrame, PlayableFrameCount - 1);
+			FrameIndex = FirstFrame + std::min<int32>(AnimationFrame, PlayableFrameCount - 1);
 		}
 	}
 
@@ -424,7 +424,7 @@ void CSubUVRenderer::DrawSubUV(
 		static_cast<float>(Row) * CellHeight
 	);
 
-	TArray<FSubUVVertex> Vertices;
+	TArray<FTextureVertex> Vertices;
 	TArray<uint32> Indices;
 
 	Vertices.reserve(4);
@@ -433,10 +433,10 @@ void CSubUVRenderer::DrawSubUV(
 	const float HalfW = Size.X * 0.5f;
 	const float HalfH = Size.Y * 0.5f;
 
-	Vertices.push_back(FSubUVVertex(FVector(0.0f, -HalfW, HalfH), FVector2(0.0f, 0.0f)));
-	Vertices.push_back(FSubUVVertex(FVector(0.0f, HalfW, HalfH), FVector2(1.0f, 0.0f)));
-	Vertices.push_back(FSubUVVertex(FVector(0.0f, HalfW, -HalfH), FVector2(1.0f, 1.0f)));
-	Vertices.push_back(FSubUVVertex(FVector(0.0f, -HalfW, -HalfH), FVector2(0.0f, 1.0f)));
+	Vertices.push_back(FTextureVertex(FVector(0.0f, -HalfW, HalfH), FVector2(0.0f, 0.0f)));
+	Vertices.push_back(FTextureVertex(FVector(0.0f, HalfW, HalfH), FVector2(1.0f, 0.0f)));
+	Vertices.push_back(FTextureVertex(FVector(0.0f, HalfW, -HalfH), FVector2(1.0f, 1.0f)));
+	Vertices.push_back(FTextureVertex(FVector(0.0f, -HalfW, -HalfH), FVector2(0.0f, 1.0f)));
 
 	Indices.push_back(0);
 	Indices.push_back(1);
@@ -456,7 +456,7 @@ void CSubUVRenderer::DrawSubUV(
 
 	if (SUCCEEDED(DeviceContext->Map(DynamicVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
 	{
-		std::memcpy(Mapped.pData, Vertices.data(), sizeof(FSubUVVertex) * Vertices.size());
+		std::memcpy(Mapped.pData, Vertices.data(), sizeof(FTextureVertex) * Vertices.size());
 		DeviceContext->Unmap(DynamicVertexBuffer, 0);
 	}
 
@@ -494,7 +494,7 @@ void CSubUVRenderer::DrawSubUV(
 	DeviceContext->OMSetBlendState(AlphaBlendState, BlendFactor, 0xffffffff);
 	DeviceContext->RSSetState(NoCullRasterizerState);
 
-	UINT Stride = sizeof(FSubUVVertex);
+	UINT Stride = sizeof(FTextureVertex);
 	UINT Offset = 0;
 
 	DeviceContext->IASetVertexBuffers(0, 1, &DynamicVertexBuffer, &Stride, &Offset);
