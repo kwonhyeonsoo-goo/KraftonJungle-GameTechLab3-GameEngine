@@ -5,6 +5,7 @@
 #include "Renderer/Material.h"
 #include "Component/SceneComponent.h"
 #include "Serializer/Archive.h"
+#include "Scene/Scene.h"
 IMPLEMENT_RTTI(AActor, UObject)
 
 namespace {
@@ -13,6 +14,14 @@ namespace {
 
 UScene* AActor::GetScene() const { return Scene; }
 void AActor::SetScene(UScene* InScene) { Scene = InScene; }
+UWorld* AActor::GetWorld() const
+{
+	if (Scene)
+	{
+		return Scene->GetTypedOuter<UWorld>();
+	}
+	return nullptr;
+}
 USceneComponent* AActor::GetRootComponent() const { return RootComponent; }
 
 void AActor::SetRootComponent(USceneComponent* InRootComponent)

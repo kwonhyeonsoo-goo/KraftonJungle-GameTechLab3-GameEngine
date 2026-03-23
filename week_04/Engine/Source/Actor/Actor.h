@@ -5,6 +5,7 @@
 class UActorComponent;
 class USceneComponent;
 class UScene;
+class UWorld;
 class FArchive;
 class ENGINE_API AActor : public UObject
 {
@@ -14,7 +15,7 @@ public:
 
 	UScene* GetScene() const;
 	void SetScene(UScene* InScene);
-
+	UWorld* GetWorld() const;
 	// ULevel* GetLevel() const { return Level;
 	// void SetLevel(ULevel* InLevel) { Level = InLevel; }
 

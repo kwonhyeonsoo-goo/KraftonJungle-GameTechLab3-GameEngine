@@ -9,7 +9,7 @@ class CRenderer;
 class UScene;
 class FFrustum;
 struct FRenderCommandQueue;
-
+class UWorld;
 class ENGINE_API IViewportClient
 {
 public:
@@ -20,6 +20,7 @@ public:
 	virtual void Tick(CCore* Core, float DeltaTime);
 	virtual void HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
 	virtual UScene* ResolveScene(CCore* Core) const;
+	virtual UWorld* ResolveWorld(CCore* Core) const;
 	virtual void BuildRenderCommands(CCore* Core, UScene* Scene, const FFrustum& Frustum, FRenderCommandQueue& OutQueue) const;
 	
 	/** 입력 처리는 원래 Viewport 에서 처리하는게 맞는데 구조상 여기다 넣음 */

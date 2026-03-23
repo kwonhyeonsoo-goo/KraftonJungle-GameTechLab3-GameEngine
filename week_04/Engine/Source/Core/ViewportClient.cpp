@@ -60,6 +60,10 @@ UScene* IViewportClient::ResolveScene(CCore* Core) const
 	return Core ? Core->GetActiveScene() : nullptr;
 }
 
+UWorld* IViewportClient::ResolveWorld(CCore* Core) const
+{
+	return Core ? Core->GetActiveWorld() : nullptr;
+}
 void IViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene, const FFrustum& Frustum, FRenderCommandQueue& OutQueue) const
 {
 	if (Scene)

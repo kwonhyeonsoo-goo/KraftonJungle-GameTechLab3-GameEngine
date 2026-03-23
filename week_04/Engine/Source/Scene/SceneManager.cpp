@@ -1,5 +1,7 @@
 #include "SceneManager.h"
 #include "Scene/Scene.h"
+#include "World/World.h"
+#include "Object/ObjectFactory.h"
 #include "Renderer/Renderer.h"
 #include "Component/CameraComponent.h"
 #include "Camera/Camera.h"
@@ -7,255 +9,269 @@
 FSceneManager::~FSceneManager()
 {
 	Release();
-
 }
 
 bool FSceneManager::Initialize(float AspectRatio, ESceneType StartupSceneType, CRenderer* InRenderer)
 {
 	Renderer = InRenderer;
 
-	FSceneContext* StartupContext = &GameSceneContext;
+	FWorldContext* StartupContext = &GameWorldContext;
 	FString ContextName = "GameScene";
 
 	if (StartupSceneType == ESceneType::Editor)
 	{
-		StartupContext = &EditorSceneContext;
+		StartupContext = &EditorWorldContext;
 		ContextName = "EditorScene";
 	}
 
-	if (!CreateSceneContext(*StartupContext, ContextName, StartupSceneType, AspectRatio))
+	if (!CreateWorldContext(*StartupContext, ContextName, StartupSceneType, AspectRatio))
 	{
 		return false;
 	}
 
-	ActiveSceneContext = StartupContext;
+	ActiveWorldContext = StartupContext;
 	return true;
 }
 
 void FSceneManager::Release()
 {
-	ActiveSceneContext = nullptr;
-	for (std::unique_ptr<FEditorSceneContext>& PreviewContext : PreviewSceneContexts)
+	ActiveWorldContext = nullptr;
+
+	for (std::unique_ptr<FEditorWorldContext>& PreviewContext : PreviewWorldContexts)
 	{
 		if (PreviewContext)
 		{
-			DestroySceneContext(*PreviewContext);
+			DestroyWorldContext(*PreviewContext);
 		}
 	}
-	PreviewSceneContexts.clear();
-	DestroySceneContext(EditorSceneContext);
-	DestroySceneContext(GameSceneContext);
+	PreviewWorldContexts.clear();
+
+	DestroyWorldContext(EditorWorldContext);
+	DestroyWorldContext(GameWorldContext);
 	Renderer = nullptr;
 }
 
-bool FSceneManager::CreateSceneContext(FSceneContext& OutContext, const FString& ContextName, ESceneType SceneType, float AspectRatio, bool bDefaultScene)
+// ===== World Context 생성/파괴 =====
+
+bool FSceneManager::CreateWorldContext(FWorldContext& OutContext, const FString& ContextName,
+	ESceneType WorldType, float AspectRatio, bool bDefaultScene)
 {
 	OutContext.ContextName = ContextName;
-	OutContext.SceneType = SceneType;
-	OutContext.Scene = FObjectFactory::ConstructObject<UScene>(nullptr, ContextName);
-	if (!OutContext.Scene)
+	OutContext.WorldType = WorldType;
+
+	OutContext.World = FObjectFactory::ConstructObject<UWorld>(nullptr, ContextName);
+	if (!OutContext.World)
 	{
 		return false;
 	}
 
-	OutContext.Scene->SetSceneType(SceneType);
+	OutContext.World->SetWorldType(WorldType);
+
 	if (bDefaultScene)
 	{
-		OutContext.Scene->InitializeDefaultScene(AspectRatio, Renderer ? Renderer->GetDevice() : nullptr);
+		OutContext.World->InitializeWorld(AspectRatio, Renderer ? Renderer->GetDevice() : nullptr);
 	}
 	else
 	{
-		OutContext.Scene->InitializeEmptyScene(AspectRatio);
+		OutContext.World->InitializeWorld(AspectRatio);
 	}
 
 	return true;
 }
 
-void FSceneManager::DestroySceneContext(FSceneContext& Context)
+void FSceneManager::DestroyWorldContext(FWorldContext& Context)
 {
-	delete Context.Scene;
+	if (Context.World)
+	{
+		Context.World->CleanupWorld();
+		delete Context.World;
+	}
 	Context.Reset();
 }
 
-void FSceneManager::DestroySceneContext(FEditorSceneContext& Context)
+void FSceneManager::DestroyWorldContext(FEditorWorldContext& Context)
 {
-	delete Context.Scene;
+	if (Context.World)
+	{
+		Context.World->CleanupWorld();
+		delete Context.World;
+	}
 	Context.Reset();
 }
 
-FEditorSceneContext* FSceneManager::GetActiveEditorContext()
+// ===== 하위 호환 Scene 접근자 =====
+
+UScene* FSceneManager::GetActiveScene() const
 {
-	if (ActiveSceneContext == &EditorSceneContext)
-	{
-		return &EditorSceneContext;
-	}
+	UWorld* World = GetActiveWorld();
+	return World ? World->GetScene() : nullptr;
+}
 
-	for (const std::unique_ptr<FEditorSceneContext>& Context : PreviewSceneContexts)
-	{
-		if (Context && Context.get() == ActiveSceneContext)
-		{
-			return Context.get();
-		}
-	}
+UScene* FSceneManager::GetEditorScene() const
+{
+	return EditorWorldContext.World ? EditorWorldContext.World->GetScene() : nullptr;
+}
 
+UScene* FSceneManager::GetGameScene() const
+{
+	return GameWorldContext.World ? GameWorldContext.World->GetScene() : nullptr;
+}
+
+UScene* FSceneManager::GetPreviewScene(const FString& ContextName) const
+{
+	const FEditorWorldContext* Context = FindPreviewWorld(ContextName);
+	if (Context && Context->World)
+	{
+		return Context->World->GetScene();
+	}
 	return nullptr;
 }
 
-const FEditorSceneContext* FSceneManager::GetActiveEditorContext() const
-{
-	if (ActiveSceneContext == &EditorSceneContext)
-	{
-		return &EditorSceneContext;
-	}
-
-	for (const std::unique_ptr<FEditorSceneContext>& Context : PreviewSceneContexts)
-	{
-		if (Context && Context.get() == ActiveSceneContext)
-		{
-			return Context.get();
-		}
-	}
-
-	return nullptr;
-}
-
-FEditorSceneContext* FSceneManager::FindPreviewScene(const FString& ContextName)
-{
-	for (const std::unique_ptr<FEditorSceneContext>& Context : PreviewSceneContexts)
-	{
-		if (Context && Context->ContextName == ContextName)
-		{
-			return Context.get();
-		}
-	}
-
-	return nullptr;
-}
-
-const FEditorSceneContext* FSceneManager::FindPreviewScene(const FString& ContextName) const
-{
-	for (const std::unique_ptr<FEditorSceneContext>& Context : PreviewSceneContexts)
-	{
-		if (Context && Context->ContextName == ContextName)
-		{
-			return Context.get();
-		}
-	}
-
-	return nullptr;
-}
-
+// ===== Activate =====
 
 bool FSceneManager::ActivatePreviewScene(const FString& ContextName)
 {
-	FEditorSceneContext* PreviewContext = FindPreviewScene(ContextName);
+	FEditorWorldContext* PreviewContext = FindPreviewWorld(ContextName);
 	if (PreviewContext == nullptr)
 	{
 		return false;
 	}
 
-	ActiveSceneContext = PreviewContext;
+	ActiveWorldContext = PreviewContext;
 	return true;
 }
 
+// ===== Selected Actor =====
 
-
-UScene* FSceneManager::GetPreviewScene(const FString& ContextName) const
+FEditorWorldContext* FSceneManager::GetActiveEditorContext()
 {
-	const FEditorSceneContext* Context = FindPreviewScene(ContextName);
-	return Context ? Context->Scene : nullptr;
+	if (ActiveWorldContext == &EditorWorldContext)
+	{
+		return &EditorWorldContext;
+	}
+
+	for (const std::unique_ptr<FEditorWorldContext>& Context : PreviewWorldContexts)
+	{
+		if (Context && Context.get() == ActiveWorldContext)
+		{
+			return Context.get();
+		}
+	}
+
+	return nullptr;
+}
+
+const FEditorWorldContext* FSceneManager::GetActiveEditorContext() const
+{
+	if (ActiveWorldContext == &EditorWorldContext)
+	{
+		return &EditorWorldContext;
+	}
+
+	for (const std::unique_ptr<FEditorWorldContext>& Context : PreviewWorldContexts)
+	{
+		if (Context && Context.get() == ActiveWorldContext)
+		{
+			return Context.get();
+		}
+	}
+
+	return nullptr;
 }
 
 void FSceneManager::SetSelectedActor(AActor* InActor)
 {
-	FEditorSceneContext* ActiveEditorContext = GetActiveEditorContext();
+	FEditorWorldContext* ActiveEditorContext = GetActiveEditorContext();
 	if (ActiveEditorContext)
 	{
 		ActiveEditorContext->SelectedActor = InActor;
 		return;
 	}
 
-	EditorSceneContext.SelectedActor = InActor;
+	EditorWorldContext.SelectedActor = InActor;
 }
+
 AActor* FSceneManager::GetSelectedActor() const
 {
-	const FEditorSceneContext* ActiveEditorContext = GetActiveEditorContext();
+	const FEditorWorldContext* ActiveEditorContext = GetActiveEditorContext();
 	if (ActiveEditorContext)
 	{
 		return ActiveEditorContext->SelectedActor;
 	}
 
-	return EditorSceneContext.SelectedActor;
+	return EditorWorldContext.SelectedActor;
 }
-void FSceneManager::OnResize(int32 Width, int32 Height)
+
+// ===== Preview =====
+
+FEditorWorldContext* FSceneManager::FindPreviewWorld(const FString& ContextName)
 {
-	if (Width == 0 || Height == 0)
+	for (const std::unique_ptr<FEditorWorldContext>& Context : PreviewWorldContexts)
 	{
-		return;
-	}
-	const float NewAspect = static_cast<float>(Width) / static_cast<float>(Height);
-	auto UpdateAspect = [NewAspect](UScene* Scene)
-	{
-		if (Scene && Scene->GetCamera())
+		if (Context && Context->ContextName == ContextName)
 		{
-			Scene->GetCamera()->SetAspectRatio(NewAspect);
-		}
-	};
-
-
-
-	UpdateAspect(GameSceneContext.Scene);
-	UpdateAspect(EditorSceneContext.Scene);
-	for (const std::unique_ptr<FEditorSceneContext>& PreviewContext : PreviewSceneContexts)
-	{
-		if (PreviewContext)
-		{
-			UpdateAspect(PreviewContext->Scene);
+			return Context.get();
 		}
 	}
+	return nullptr;
 }
-FEditorSceneContext* FSceneManager::CreatePreviewSceneContext(const FString& ContextName, int32 WindowWidth, int32 WindowHeight)
+
+const FEditorWorldContext* FSceneManager::FindPreviewWorld(const FString& ContextName) const
+{
+	for (const std::unique_ptr<FEditorWorldContext>& Context : PreviewWorldContexts)
+	{
+		if (Context && Context->ContextName == ContextName)
+		{
+			return Context.get();
+		}
+	}
+	return nullptr;
+}
+
+FEditorWorldContext* FSceneManager::CreatePreviewWorldContext(const FString& ContextName, int32 WindowWidth, int32 WindowHeight)
 {
 	if (ContextName.empty())
 	{
 		return nullptr;
 	}
 
-	if (FEditorSceneContext* ExistingContext = FindPreviewScene(ContextName))
+	if (FEditorWorldContext* ExistingContext = FindPreviewWorld(ContextName))
 	{
 		return ExistingContext;
 	}
 
-	std::unique_ptr<FEditorSceneContext> PreviewContext = std::make_unique<FEditorSceneContext>();
-	const float AspectRatio = (WindowHeight > 0) ? (static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight)) : 1.0f;
-	if (!CreateSceneContext(*PreviewContext, ContextName, ESceneType::Preview, AspectRatio, false))
+	std::unique_ptr<FEditorWorldContext> PreviewContext = std::make_unique<FEditorWorldContext>();
+	const float AspectRatio = (WindowHeight > 0)
+		? (static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight))
+		: 1.0f;
+
+	if (!CreateWorldContext(*PreviewContext, ContextName, ESceneType::Preview, AspectRatio, false))
 	{
 		return nullptr;
 	}
 
-	FEditorSceneContext* CreatedContext = PreviewContext.get();
-	PreviewSceneContexts.push_back(std::move(PreviewContext));
+	FEditorWorldContext* CreatedContext = PreviewContext.get();
+	PreviewWorldContexts.push_back(std::move(PreviewContext));
 	return CreatedContext;
 }
 
-
-bool FSceneManager::DestroyPreviewScene(const FString& ContextName)
+bool FSceneManager::DestroyPreviewWorld(const FString& ContextName)
 {
-	for (auto It = PreviewSceneContexts.begin(); It != PreviewSceneContexts.end(); ++It)
+	for (auto It = PreviewWorldContexts.begin(); It != PreviewWorldContexts.end(); ++It)
 	{
 		if (*It && (*It)->ContextName == ContextName)
 		{
-			if (ActiveSceneContext == It->get())
+			if (ActiveWorldContext == It->get())
 			{
 				ActivateEditorScene();
-				if (ActiveSceneContext == nullptr)
+				if (ActiveWorldContext == nullptr)
 				{
 					ActivateGameScene();
 				}
 			}
 
-			DestroySceneContext(*(*It));
-			PreviewSceneContexts.erase(It);
+			DestroyWorldContext(*(*It));
+			PreviewWorldContexts.erase(It);
 			return true;
 		}
 	}
@@ -263,3 +279,33 @@ bool FSceneManager::DestroyPreviewScene(const FString& ContextName)
 	return false;
 }
 
+// ===== Resize =====
+
+void FSceneManager::OnResize(int32 Width, int32 Height)
+{
+	if (Width == 0 || Height == 0)
+	{
+		return;
+	}
+
+	const float NewAspect = static_cast<float>(Width) / static_cast<float>(Height);
+
+	auto UpdateAspect = [NewAspect](UWorld* World)
+	{
+		if (World && World->GetCamera())
+		{
+			World->GetCamera()->SetAspectRatio(NewAspect);
+		}
+	};
+
+	UpdateAspect(GameWorldContext.World);
+	UpdateAspect(EditorWorldContext.World);
+
+	for (const std::unique_ptr<FEditorWorldContext>& PreviewContext : PreviewWorldContexts)
+	{
+		if (PreviewContext)
+		{
+			UpdateAspect(PreviewContext->World);
+		}
+	}
+}

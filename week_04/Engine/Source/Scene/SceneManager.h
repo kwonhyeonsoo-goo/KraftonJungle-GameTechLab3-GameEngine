@@ -1,10 +1,11 @@
 #pragma once
 #include "CoreMinimal.h"
-#include "Scene/SceneContext.h"
+#include "World/WorldContext.h"
 #include "Scene/SceneTypes.h"
 #include <memory>
 
 class UScene;
+class UWorld;
 class AActor;
 class CRenderer;
 
@@ -17,50 +18,56 @@ public:
 	FSceneManager& operator=(const FSceneManager&) = delete;
 	FSceneManager(FSceneManager&&) = delete;
 	FSceneManager& operator=(FSceneManager&&) = delete;
+
 	// 초기화
 	bool Initialize(float AspectRatio, ESceneType StartupSceneType, CRenderer* InRenderer);
 	void Release();
 
-	// Scene 전환
-	void ActivateEditorScene() { ActiveSceneContext = EditorSceneContext.Scene ? &EditorSceneContext : nullptr; }
-	void ActivateGameScene() { ActiveSceneContext = GameSceneContext.Scene ? &GameSceneContext : nullptr; }
+	// World 전환
+	void ActivateEditorScene() { ActiveWorldContext = EditorWorldContext.World ? &EditorWorldContext : nullptr; }
+	void ActivateGameScene() { ActiveWorldContext = GameWorldContext.World ? &GameWorldContext : nullptr; }
 	bool ActivatePreviewScene(const FString& ContextName);
 
-	// Preview Scene 관리
-	FEditorSceneContext* CreatePreviewSceneContext(const FString& ContextName, int32 WindowWidth, int32 WindowHeight);
-	bool DestroyPreviewScene(const FString& ContextName);
+	// Preview 관리
+	FEditorWorldContext* CreatePreviewWorldContext(const FString& ContextName, int32 WindowWidth, int32 WindowHeight);
+	bool DestroyPreviewWorld(const FString& ContextName);
 
-	// 접근자
-	UScene* GetActiveScene() const { return ActiveSceneContext ? ActiveSceneContext->Scene : nullptr; }
-	UScene* GetEditorScene() const { return EditorSceneContext.Scene; }
-	UScene* GetGameScene() const { return GameSceneContext.Scene; }
+	// World 접근자
+	UWorld* GetActiveWorld() const { return ActiveWorldContext ? ActiveWorldContext->World : nullptr; }
+	UWorld* GetEditorWorld() const { return EditorWorldContext.World; }
+	UWorld* GetGameWorld() const { return GameWorldContext.World; }
+
+	const FWorldContext* GetActiveWorldContext() const { return ActiveWorldContext; }
+	const TArray<std::unique_ptr<FEditorWorldContext>>& GetPreviewWorldContexts() const { return PreviewWorldContexts; }
+
+	// 하위 호환 — World 경유로 Scene 반환
+	UScene* GetActiveScene() const;
+	UScene* GetEditorScene() const;
+	UScene* GetGameScene() const;
 	UScene* GetPreviewScene(const FString& ContextName) const;
-
-	const FSceneContext* GetActiveSceneContext() const { return ActiveSceneContext; }
-	const TArray<std::unique_ptr<FEditorSceneContext>>& GetPreviewSceneContexts() const { return PreviewSceneContexts; }
 
 	// 선택 Actor
 	void SetSelectedActor(AActor* InActor);
 	AActor* GetSelectedActor() const;
 
-	// Resize 시 AspectRatio 갱신
+	// Resize
 	void OnResize(int32 Width, int32 Height);
 
 private:
-	bool CreateSceneContext(FSceneContext& OutContext, const FString& ContextName,
-		ESceneType SceneType, float AspectRatio, bool bDefaultScene = true);
-	void DestroySceneContext(FSceneContext& Context);
-	void DestroySceneContext(FEditorSceneContext& Context);
+	bool CreateWorldContext(FWorldContext& OutContext, const FString& ContextName,
+		ESceneType WorldType, float AspectRatio, bool bDefaultScene = true);
+	void DestroyWorldContext(FWorldContext& Context);
+	void DestroyWorldContext(FEditorWorldContext& Context);
 
-	FEditorSceneContext* GetActiveEditorContext();
-	const FEditorSceneContext* GetActiveEditorContext() const;
-	FEditorSceneContext* FindPreviewScene(const FString& ContextName);
-	const FEditorSceneContext* FindPreviewScene(const FString& ContextName) const;
+	FEditorWorldContext* GetActiveEditorContext();
+	const FEditorWorldContext* GetActiveEditorContext() const;
+	FEditorWorldContext* FindPreviewWorld(const FString& ContextName);
+	const FEditorWorldContext* FindPreviewWorld(const FString& ContextName) const;
 
 private:
-	FSceneContext GameSceneContext;
-	FEditorSceneContext EditorSceneContext;
-	TArray<std::unique_ptr<FEditorSceneContext>> PreviewSceneContexts;
-	FSceneContext* ActiveSceneContext = nullptr;
-	CRenderer* Renderer = nullptr;  // 비소유 포인터 (Scene 생성 시 Device 필요)
+	FWorldContext GameWorldContext;
+	FEditorWorldContext EditorWorldContext;
+	TArray<std::unique_ptr<FEditorWorldContext>> PreviewWorldContexts;
+	FWorldContext* ActiveWorldContext = nullptr;
+	CRenderer* Renderer = nullptr;
 };

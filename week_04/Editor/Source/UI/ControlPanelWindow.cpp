@@ -1,5 +1,5 @@
 #include "ControlPanelWindow.h"
-
+#include "World/WorldContext.h"
 #include "imgui.h"
 #include "Core/Core.h"
 #include "Renderer/Renderer.h"
@@ -56,16 +56,15 @@ void CControlPanelWindow::Render(CCore* Core)
 	if (Core && Core->GetScene())
 	{
 	
-		const FSceneContext* ActiveSceneContext = Core->GetActiveSceneContext();
-		const TArray<std::unique_ptr<FEditorSceneContext>>& PreviewSceneContexts = Core->GetPreviewSceneContexts();
-		const bool bPreviewActive = ActiveSceneContext && ActiveSceneContext->SceneType == ESceneType::Preview;
-
+		const FWorldContext* ActiveSceneContext = Core->GetActiveWorldContext();
+		const TArray<std::unique_ptr<FEditorWorldContext>>& PreviewSceneContexts = Core->GetSceneManager()->GetPreviewWorldContexts();
+		const bool bPreviewActive = ActiveSceneContext && ActiveSceneContext->WorldType == ESceneType::Preview;
 		ImGui::SeparatorText("World");
 
 		if (ActiveSceneContext)
 		{
 			ImGui::Text("Active: %s", ActiveSceneContext->ContextName.c_str());
-			ImGui::Text("Type: %s", GetSceneTypeLabel(ActiveSceneContext->SceneType));
+			ImGui::Text("Type: %s", GetSceneTypeLabel(ActiveSceneContext->WorldType));
 		}
 
 		if (ImGui::Button("Editor Scene"))

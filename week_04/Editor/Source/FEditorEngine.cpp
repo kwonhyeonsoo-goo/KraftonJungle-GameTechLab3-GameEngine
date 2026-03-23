@@ -13,7 +13,7 @@
 #include "Component/CubeComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Debug/EngineLog.h"
-
+#include "World/World.h"
 #include "imgui_impl_win32.h"
 #include "Pawn/EditorCameraPawn.h"
 #include "Camera/Camera.h"
@@ -28,14 +28,12 @@ namespace
 		{
 			return;
 		}
-
-		FEditorSceneContext* PreviewContext = Core->CreatePreviewSceneContext(PreviewSceneContextName);
-		if (PreviewContext == nullptr || PreviewContext->Scene == nullptr)
+		FEditorWorldContext* PreviewContext = Core->GetSceneManager()->CreatePreviewWorldContext(PreviewSceneContextName, 1280, 720);
+		if (PreviewContext == nullptr || PreviewContext->World == nullptr)
 		{
 			return;
 		}
-
-		UScene* PreviewScene = PreviewContext->Scene;
+		UScene* PreviewScene = PreviewContext->World->GetScene();
 		if (PreviewScene->GetActors().empty())
 		{
 			AActor* PreviewActor = PreviewScene->SpawnActor<AActor>("PreviewCube");
@@ -176,8 +174,8 @@ void FEditorEngine::SyncViewportClient()
 	}
 
 	IViewportClient* TargetViewportClient = ViewportClient.get();
-	const FSceneContext* ActiveSceneContext = Core->GetActiveSceneContext();
-	if (ActiveSceneContext && ActiveSceneContext->SceneType == ESceneType::Preview && PreviewViewportClient)
+	const FWorldContext* ActiveSceneContext = Core->GetActiveWorldContext();
+	if (ActiveSceneContext && ActiveSceneContext->WorldType == ESceneType::Preview && PreviewViewportClient);
 	{
 		TargetViewportClient = PreviewViewportClient.get();
 	}

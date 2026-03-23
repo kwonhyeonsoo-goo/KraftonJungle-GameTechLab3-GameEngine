@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "Windows.h"
 #include "Core/FTimer.h"
-#include "Scene/SceneContext.h"
 #include "Scene/SceneTypes.h"
 #include "Renderer/Renderer.h"
 #include "Physics/PhysicsManager.h"
@@ -50,22 +49,23 @@ public:
 
 	FSceneManager* GetSceneManager() const { return SceneManager.get(); }
 
-	// ���� ȣȯ ����
+	// Getter
 	UScene* GetScene() const { return SceneManager->GetActiveScene(); }
 	UScene* GetActiveScene() const { return SceneManager->GetActiveScene(); }
 	UScene* GetEditorScene() const { return SceneManager->GetEditorScene(); }
 	UScene* GetGameScene() const { return SceneManager->GetGameScene(); }
+
 	void SetSelectedActor(AActor* A) { SceneManager->SetSelectedActor(A); }
 	AActor* GetSelectedActor() const { return SceneManager->GetSelectedActor(); }
 	void ActivateEditorScene() { SceneManager->ActivateEditorScene(); }
 	void ActivateGameScene() { SceneManager->ActivateGameScene(); }
+	bool ActivatePreviewScene(const FString& ContextName) { return SceneManager->ActivatePreviewScene(ContextName); }
 
-	//rapper
-	FEditorSceneContext* CreatePreviewSceneContext(const FString& ContextName)	{return SceneManager->CreatePreviewSceneContext(ContextName, WindowWidth, WindowHeight);}
-	bool DestroyPreviewSceneContext(const FString& ContextName)	{return SceneManager->DestroyPreviewScene(ContextName);}
-	bool ActivatePreviewScene(const FString& ContextName){return SceneManager->ActivatePreviewScene(ContextName);}
-	const FSceneContext* GetActiveSceneContext() const{	return SceneManager->GetActiveSceneContext();}
-	const TArray<std::unique_ptr<FEditorSceneContext>>& GetPreviewSceneContexts() const{return SceneManager->GetPreviewSceneContexts();}
+	// ===== World 접근자 =====
+	UWorld* GetActiveWorld() const { return SceneManager->GetActiveWorld(); }
+	UWorld* GetEditorWorld() const { return SceneManager->GetEditorWorld(); }
+	UWorld* GetGameWorld() const { return SceneManager->GetGameWorld(); }
+	const FWorldContext* GetActiveWorldContext() const { return SceneManager->GetActiveWorldContext(); }
 
 private:
 	void Input(float DeltaTime);
