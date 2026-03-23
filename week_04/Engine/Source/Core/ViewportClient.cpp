@@ -9,6 +9,8 @@
 #include "Scene/Scene.h"
 #include "Debug/EngineLog.h"
 #include "Component/UUIDBillboardComponent.h"
+#include "Component/SubUVComponent.h"
+#include "Core/FEngine.h"
 
 
 void IViewportClient::Attach(CCore* Core, CRenderer* Renderer)
@@ -97,6 +99,25 @@ void IViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene, const FFru
 			TextCmd.Color = UUIDComponent->GetTextColor();
 
 			OutQueue.AddTextCommand(TextCmd);
+			continue;
+		}
+		if (PrimitiveComponent->IsA(USubUVComponent::StaticClass()))
+		{
+			USubUVComponent* SubUVComponent = static_cast<USubUVComponent*>(PrimitiveComponent);
+			FSubUVRenderCommand SubUVCmd;
+			SubUVCmd.WorldMatrix = SubUVComponent->GetWorldTransform();
+			SubUVCmd.Size = SubUVComponent->GetSize();
+			SubUVCmd.Columns = SubUVComponent->GetColumns();
+			SubUVCmd.Rows = SubUVComponent->GetRows();
+			SubUVCmd.TotalFrames = SubUVComponent->GetTotalFrames();
+			SubUVCmd.FPS = SubUVComponent->GetFPS();
+			SubUVCmd.ElapsedTime = static_cast<float>(GEngine->GetCore()->GetTimer().GetTotalTime());
+			SubUVCmd.bLoop = SubUVComponent->IsLoop();
+			SubUVCmd.bBillboard = SubUVComponent->IsBillboard();
+			SubUVCmd.FirstFrame = SubUVComponent->GetFirstFrame();
+			SubUVCmd.LastFrame = SubUVComponent->GetLastFrame();
+
+			OutQueue.AddSubUVCommand(SubUVCmd);
 			continue;
 		}
 
