@@ -125,9 +125,10 @@ void CSubUVRenderer::Release()
 
 bool CSubUVRenderer::CreateShaders()
 {
-	const std::wstring ShaderDir = FPaths::ToWide(FPaths::ShaderDir());
-	const std::wstring VSPath = ShaderDir + L"SubUVVertexShader.hlsl";
-	const std::wstring PSPath = ShaderDir + L"SubUVPixelShader.hlsl";
+	const std::filesystem::path ShaderDir = FPaths::ShaderDir();
+	const std::wstring VSPath = (ShaderDir / "SubUVVertexShader.hlsl").wstring();
+	const std::wstring PSPath = (ShaderDir / "SubUVPixelShader.hlsl").wstring();
+
 
 	auto VSResource = FShaderResource::GetOrCompile(VSPath.c_str(), "main", "vs_5_0");
 	if (!VSResource)

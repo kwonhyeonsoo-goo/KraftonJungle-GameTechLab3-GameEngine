@@ -143,9 +143,8 @@ private:
 	// 기본 Material (셰이더 미지정 시 사용)
 	std::shared_ptr<FMaterial> DefaultMaterial;
 
-	// 텍스처 렌더링 테스트용 (임시)
+	// 텍스처 렌더링
 	CTextRenderer TextRenderer;
-	bool bEnableTextRenderTest = false;
 
 	// SubUV 렌더링
 	CSubUVRenderer SubUVRenderer;

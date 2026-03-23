@@ -479,7 +479,7 @@ void CRenderer::ExecuteCommands()
 
 	const FVector CameraPosition = GetCameraWorldPositionFromViewMatrix(ViewMatrix);
 
-	if (!TextCommandList.empty() || bEnableTextRenderTest)
+	if (!TextCommandList.empty())
 	{
 		TextRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
 
@@ -490,19 +490,6 @@ void CRenderer::ExecuteCommands()
 				TextCmd.WorldPosition,
 				TextCmd.WorldScale,
 				TextCmd.Color
-			);
-		}
-
-		// 테스트용 코드
-		if (bEnableTextRenderTest)
-		{
-			TextRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
-
-			TextRenderer.DrawTextBillboard(
-				FString("012TEST"),
-				FVector(0.0f, 0.0f, 0.0f),
-				0.3f,
-				FVector4(1.0f, 1.0f, 1.0f, 1.0f)
 			);
 		}
 	}
