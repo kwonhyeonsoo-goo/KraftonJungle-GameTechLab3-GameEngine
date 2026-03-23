@@ -15,6 +15,7 @@
 #include "Math/Frustum.h"
 #include "Input/InputManager.h"
 #include "ViewportClient.h"
+#include "Object/ObjectGlobals.h"
 
 CCore::~CCore()
 {

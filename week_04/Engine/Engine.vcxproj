@@ -28,6 +28,8 @@
     <ClInclude Include="Source\Component\SubUVComponent.h" />
     <ClInclude Include="Source\Component\UUIDBillboardComponent.h" />
     <ClInclude Include="Source\Math\Vector2.h" />
+    <ClInclude Include="Source\Memory\MemoryBase.h" />
+    <ClInclude Include="Source\Object\ObjectGlobals.h" />
     <ClInclude Include="Source\Renderer\FontAtlas.h" />
     <ClInclude Include="PrimitiveLineBatch.h" />
     <ClInclude Include="Source\Component\LineBatchComponent.h" />
@@ -158,9 +160,11 @@
     <ClCompile Include="Source\Math\Rotator.cpp" />
     <ClCompile Include="Source\Math\Transform.cpp" />
     <ClCompile Include="Source\Math\Vector.cpp" />
+    <ClCompile Include="Source\Memory\MemoryBase.cpp" />
     <ClCompile Include="Source\Object\Class.cpp" />
     <ClCompile Include="Source\Object\Object.cpp" />
     <ClCompile Include="Source\Object\ObjectFactory.cpp" />
+    <ClCompile Include="Source\Object\ObjectGlobals.cpp" />
     <ClCompile Include="Source\Object\ObjectManager.cpp" />
     <ClCompile Include="Source\Physics\PhysicsManager.cpp" />
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp" />

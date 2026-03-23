@@ -252,6 +252,8 @@
     <ClCompile Include="Source\Component\PlaneComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Memory\MemoryBase.cpp" />
+    <ClCompile Include="Source\Object\ObjectGlobals.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -540,6 +542,8 @@
     <ClInclude Include="Source\Renderer\TextureVertex.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Memory\MemoryBase.h" />
+    <ClInclude Include="Source\Object\ObjectGlobals.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
