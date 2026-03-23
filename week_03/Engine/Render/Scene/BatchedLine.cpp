@@ -17,6 +17,8 @@ void FBatchedLine::AddGrid(int32 GridSize)
 	int32 GridMin = -GridMax;
 	
 	FVector4 GridColor = { 0.38f, 0.38f, 0.38f, 1.f };
+	FVector4 GridColorThick = { 0.64f, 0.64f, 0.64f, 1.f };
+
 	float FloatGridMin = static_cast<float>(GridMin);
 	float FloatGridMax = static_cast<float>(GridMax);
 
@@ -33,10 +35,13 @@ void FBatchedLine::AddGrid(int32 GridSize)
 	for (int32 GridIndex = GridSize; GridIndex <= GridMax; GridIndex += GridSize)
 	{
 		float CurrentGrid = static_cast<float>(GridIndex);
-		AddLine({ FloatGridMin,  CurrentGrid, 0.f }, { FloatGridMax,  CurrentGrid, 0.f }, GridColor);
-		AddLine({ FloatGridMin, -CurrentGrid, 0.f }, { FloatGridMax, -CurrentGrid, 0.f }, GridColor);
-		AddLine({  CurrentGrid, FloatGridMin, 0.f }, {  CurrentGrid, FloatGridMax, 0.f }, GridColor);
-		AddLine({ -CurrentGrid, FloatGridMin, 0.f }, { -CurrentGrid, FloatGridMax, 0.f }, GridColor);
+		bool bIsFifth = (GridIndex % (GridSize * 5) == 0);  
+		FVector4 Color = bIsFifth ? GridColorThick : GridColor;
+
+		AddLine({ FloatGridMin,  CurrentGrid, 0.f }, { FloatGridMax,  CurrentGrid, 0.f }, Color);
+		AddLine({ FloatGridMin, -CurrentGrid, 0.f }, { FloatGridMax, -CurrentGrid, 0.f }, Color);
+		AddLine({  CurrentGrid, FloatGridMin, 0.f }, {  CurrentGrid, FloatGridMax, 0.f }, Color);
+		AddLine({ -CurrentGrid, FloatGridMin, 0.f }, { -CurrentGrid, FloatGridMax, 0.f }, Color);
 	}
 }
 
@@ -45,20 +50,10 @@ void FBatchedLine::AddLine(const FVector& StartPoint, const FVector& EndPoint, c
 	FVertex StartVertex = { StartPoint, Color };
 	FVertex EndVertex   = { EndPoint,	Color };
 
-	if (IndexMap.end() == IndexMap.find(StartVertex))
-	{
-		IndexMap[StartVertex] = Vertices.size();
-		Vertices.push_back({ StartPoint, Color });
-	}
-
-	if (IndexMap.end() == IndexMap.find(EndVertex))
-	{
-		IndexMap[EndVertex] = Vertices.size();
-		Vertices.push_back({ EndPoint, Color });
-	}
-
-	Indices.push_back(IndexMap[StartVertex]);
-	Indices.push_back(IndexMap[EndVertex]);
+	Vertices.push_back(StartVertex);
+	Indices.push_back(Vertices.size() - 1);
+	Vertices.push_back(EndVertex);
+	Indices.push_back(Vertices.size() - 1);
 }
 
 void FBatchedLine::AddAABB(const FVector& WorldMin, const FVector& WorldMax, const FVector4& Color)
@@ -96,5 +91,4 @@ void FBatchedLine::Clear()
 {
 	Vertices.clear();
 	Indices.clear();
-	IndexMap.clear();
 }

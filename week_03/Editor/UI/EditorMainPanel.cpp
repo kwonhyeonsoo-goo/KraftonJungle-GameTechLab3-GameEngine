@@ -5,6 +5,7 @@
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_dx11.h"
 #include "ImGui/imgui_impl_win32.h"
+#include "ImGui/imgui_internal.h"
 // Merge icons into default tool font
 #include "ImGui/IconsFontAwesome4.h"
 

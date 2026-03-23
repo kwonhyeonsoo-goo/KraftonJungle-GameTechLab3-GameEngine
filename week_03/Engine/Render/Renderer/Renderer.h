@@ -38,8 +38,9 @@ private:
 	TArray<FVertex> Grids;
 
 	//	File Path
-	const WCHAR* ShaderFilePath  = L"Assets/Shader/ShaderW0.hlsl";
-	const WCHAR* FontShaderFilePath = L"Assets/Shader/FontShader.hlsl";
+	const WCHAR* ShaderFilePath          = L"Assets/Shader/ShaderW0.hlsl";
+	const WCHAR* BatchedLineShaderFilePath = L"Assets/Shader/BatchedLineShader.hlsl";
+	const WCHAR* FontShaderFilePath      = L"Assets/Shader/FontShader.hlsl";
 	const WCHAR* FontTextureFIlePath = L"Assets/Fonts/Font.dds";
 
 	//	Primitive and Gizmo Input Layout

@@ -16,14 +16,18 @@ struct FRenderResources
     //FConstantBuffer EditorConstantBuffer;           // b3
 	FConstantBuffer OutlineConstantBuffer;          // b4
 
+    // BatchedLine
+    FConstantBuffer BatchedLineBuffer;              // b0
+
+    // Font
     FConstantBuffer FontConstantBuffer;             // b0
     FConstantBuffer FontColorConstantBuffer;        // b1
-
     FVertexBuffer FontVertexBuffer;
 
     FShader PrimitiveShader;
     FShader GizmoShader;
     FShader OverlayShader;
+    FShader BatchedLineShader;
     FShader EditorShader;
 	FShader OutlineShader;
     FShader FontShader;

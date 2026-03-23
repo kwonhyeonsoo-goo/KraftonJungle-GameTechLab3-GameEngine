@@ -36,6 +36,9 @@ void FRenderer::Create(HWND hWindow)
 	Resources.OutlineShader.Create(Device.GetDevice(), ShaderFilePath,
 		"OutlineVS", "OutlinePS", PrimitiveInputLayout, ARRAYSIZE(PrimitiveInputLayout));
 
+	Resources.BatchedLineShader.Create(Device.GetDevice(), BatchedLineShaderFilePath,
+		"VS_BatchLine", "PS_BatchLine", PrimitiveInputLayout, ARRAYSIZE(PrimitiveInputLayout));
+
 	Resources.FontShader.Create(Device.GetDevice(), FontShaderFilePath,
 		"VS_Font", "PS_Font", FontInputLayout, ARRAYSIZE(FontInputLayout));
 
@@ -52,6 +55,7 @@ void FRenderer::Create(HWND hWindow)
 	//Resources.EditorConstantBuffer.Create(Device.GetDevice(), sizeof(FEditorConstants));
 
 	Resources.OutlineConstantBuffer.Create(Device.GetDevice(), sizeof(FOutlineConstants));
+	Resources.BatchedLineBuffer.Create(Device.GetDevice(), sizeof(FBatchedLineConstants));
 
 	CreateWICTextureFromFile(Device.GetDevice(), Device.GetDeviceContext(), FontTextureFIlePath, nullptr, &Resources.FontAtlasSRV);
 
@@ -66,6 +70,7 @@ void FRenderer::Release()
 	Resources.OverlayShader.Release();
 	Resources.EditorShader.Release();
 	Resources.OutlineShader.Release();
+	Resources.BatchedLineShader.Release();
 	Resources.FontShader.Release();
 
 	Resources.PerObjectConstantBuffer.Release();
@@ -73,6 +78,7 @@ void FRenderer::Release()
 	Resources.OverlayConstantBuffer.Release();
 	//Resources.EditorConstantBuffer.Release();
 	Resources.OutlineConstantBuffer.Release();
+	Resources.BatchedLineBuffer.Release();
 
 	Resources.FontColorConstantBuffer.Release();
 	Resources.FontConstantBuffer.Release();
@@ -194,18 +200,23 @@ void FRenderer::RenderDepthLessPass(ID3D11DeviceContext* InDeviceContext, const 
 
 }
 
+// Draw once
 void FRenderer::RenderLineBatchPass(ID3D11DeviceContext* InDeviceContext, FRenderBus& InRenderBus)
 {
-	FBatchedLine* BatchedLine = InRenderBus.GetBatehdLine();
+	FBatchedLine* BatchedLine = InRenderBus.GetBatchedLine();
 	if (!BatchedLine->HasLines())
 	{
 		return;
 	}
+	Device.SetDepthStencilState(EDepthStencilState::Default);
+	Device.SetBlendState(EBlendState::AlphaBlend);
+	Resources.BatchedLineShader.Bind(InDeviceContext);
 
 	BatchedLine->Update(InDeviceContext);
 	InDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 	DrawCommand(InDeviceContext, InRenderBus.GetBatchLineCommand());
 	InDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	Device.SetBlendState(EBlendState::Opaque);
 }
 
 void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InRenderBus)
@@ -326,7 +337,7 @@ void FRenderer::DrawCommand(ID3D11DeviceContext *InDeviceContext, const FRenderC
 		return;
 	}
 
-	if (InCommand.Type != ERenderCommandType::Overlay)
+	if (InCommand.Type != ERenderCommandType::Overlay && InCommand.Type != ERenderCommandType::BatchedLine)
 	{
 		Resources.PerObjectConstantBuffer.Update(InDeviceContext, &InCommand.TransformConstants, sizeof(FTransformConstants));
 		
@@ -365,6 +376,13 @@ void FRenderer::DrawCommand(ID3D11DeviceContext *InDeviceContext, const FRenderC
 		cb = Resources.PerObjectConstantBuffer.GetBuffer();
 		InDeviceContext->VSSetConstantBuffers(0, 1, &cb);
 		//InDeviceContext->PSSetConstantBuffers(0, 1, &cb);
+	}
+	else if (InCommand.Type == ERenderCommandType::BatchedLine)
+	{
+		Resources.BatchedLineBuffer.Update(InDeviceContext, &InCommand.BatchedLineConstants, sizeof(FBatchedLineConstants));
+		ID3D11Buffer* cb = Resources.BatchedLineBuffer.GetBuffer();
+		InDeviceContext->VSSetConstantBuffers(0, 1, &cb);
+		InDeviceContext->PSSetConstantBuffers(0, 1, &cb);
 	}
 	uint32 offset = 0;
 	ID3D11Buffer* vertexBuffer = InCommand.MeshBuffer->GetFVertexBuffer().GetBuffer();

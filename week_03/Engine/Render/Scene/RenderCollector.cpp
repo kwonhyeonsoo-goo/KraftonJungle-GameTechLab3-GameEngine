@@ -49,7 +49,7 @@ void FRenderCollector::CollectFromActor(AActor* Actor, const FRenderCollectorCon
 	}
 
 	if (Actor->IsA<ASpotlight>()) {
-		ASpotlight::Cast(Actor)->AddConeLinesToBatch(RenderBus.GetBatehdLine());
+		ASpotlight::Cast(Actor)->AddConeLinesToBatch(RenderBus.GetBatchedLine());
 	}
 }
 
@@ -102,10 +102,22 @@ void FRenderCollector::CollectFromEditor(const FRenderCollectorContext& Context,
 
 	RenderBus.SetCachedView(ViewMat);
 	RenderBus.SetCachedProjection(ProjMat);
-	RenderBus.UpdateLineBatchLineCommand(ViewMat, ProjMat);
 
-	FBatchedLine* BatchLine = RenderBus.GetBatehdLine();
+	FBatchedLine* BatchLine = RenderBus.GetBatchedLine();
 	BatchLine->AddGrid(Context.GridSize);
+
+	FRenderCommand BatchedLineCommand = {};
+
+	FVector CamWorldPos = Context.Camera->GetWorldLocation();
+	BatchedLineCommand.Type = ERenderCommandType::BatchedLine;
+	BatchedLineCommand.MeshBuffer = BatchLine->GetBatchedLineBuffer();
+
+	BatchedLineCommand.BatchedLineConstants = FBatchedLineConstants{
+		FMatrix::Identity, ViewMat, ProjMat,
+		FVector4(CamWorldPos.X, CamWorldPos.Y, CamWorldPos.Z, 1.f)
+	};
+
+	RenderBus.AddBatcedLineCommand(BatchedLineCommand);
 
 	if (Context.SelectedComponent)
 	{

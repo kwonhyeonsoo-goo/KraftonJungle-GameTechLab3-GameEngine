@@ -28,7 +28,7 @@ private:
 	FMatrix CachedView;
 	FMatrix CachedProjection;
 	//	일괄적으로 처리하기 때문에 하나의 커맨드를 두었습니다.
-	FRenderCommand			BatchLineCommand;
+	FRenderCommand			BatchedLineCommand;
 	FBatchedLine			BatchedLine;
 
 
@@ -42,14 +42,15 @@ public:
 	void AddFontCommand(const FRenderCommand& InCommand);
 	void AddOutlineCommand(const FRenderCommand& InCommand);
 	void AddOverlayCommand(const FRenderCommand& InCommand);
-	void UpdateLineBatchLineCommand(const FMatrix& InViewMatrix, const FMatrix& InPorjectionMatrix);
+	void AddBatcedLineCommand(const FRenderCommand& InCommand);
 
 	const TArray<FRenderCommand>& GetComponentCommands() const { return ComponentCommands; }
 	const TArray<FRenderCommand>& GetDepthLessCommands() const { return DepthLessCommands; }
 	const TArray<FRenderCommand>& GetSelectionOutlineCommands() const { return OutlineCommands; }
 	const TArray<FRenderCommand>& GetOverlayCommands() const { return OverlayCommands; }
-	const FRenderCommand& GetBatchLineCommand() const { return BatchLineCommand;  }
-	FBatchedLine*		  GetBatehdLine()  { return &BatchedLine; }
+	const FRenderCommand& GetBatchLineCommand() const { return BatchedLineCommand;  }
+	FBatchedLine*		  GetBatchedLine()  { return &BatchedLine; }
+
 	const TArray<FRenderCommand>& GetFontCommands() const { return FontCommands; }
 
 	FFontCache&	    GetFontCache() { return FontCache; }

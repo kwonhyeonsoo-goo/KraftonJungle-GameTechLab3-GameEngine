@@ -10,7 +10,7 @@
 void FRenderBus::Create(ID3D11Device* InDevice)
 {
 	BatchedLine.Create(InDevice);
-	BatchLineCommand.MeshBuffer = BatchedLine.GetBatchedLineBuffer();
+	BatchedLineCommand.MeshBuffer = BatchedLine.GetBatchedLineBuffer();
 
 	FontCache.SetFontData();
 	FontCache.Initialize();
@@ -76,9 +76,13 @@ void FRenderBus::AddOverlayCommand(const FRenderCommand& InCommand)
 	OverlayCommands.push_back(InCommand);
 }
 
-
-void FRenderBus::UpdateLineBatchLineCommand(const FMatrix& InViewMatrix, const FMatrix& InPorjectionMatrix)
+void FRenderBus::AddBatcedLineCommand(const FRenderCommand& InCommand)
 {
-	BatchLineCommand.TransformConstants = { FMatrix::Identity,InViewMatrix, InPorjectionMatrix };
+	if (InCommand.MeshBuffer == nullptr)
+	{
+		return;
+	}
+	BatchedLineCommand = InCommand;
 }
+
 

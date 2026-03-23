@@ -16,6 +16,7 @@ enum class EPrimitiveType;
 
 using namespace common::structs;
 
+
 class FEditorMainPanel
 {
 private:

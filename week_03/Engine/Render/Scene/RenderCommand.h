@@ -20,7 +20,7 @@ enum class ERenderCommandType
 	Gizmo,
 	Overlay,
 	SelectionOutline,
-	Font
+	BatchedLine
 };
 
 //	Object를 위한 Constant Buffer입니다.
@@ -60,7 +60,14 @@ struct FOutlineConstants
 	float Padding0[3];
 };
 
- 
+struct FBatchedLineConstants
+{
+	FMatrix  Model;
+	FMatrix  View;
+	FMatrix	 Projection;
+	FVector4 CameraPosition;
+};
+
 struct FFontTransform
 {
 	FMatrix MVP;
@@ -83,6 +90,8 @@ struct FRenderCommand
 	FGizmoConstants GizmoConstants = {};
 	FOverlayConstants OverlayConstants = {};
 	FOutlineConstants OutlineConstants = {};
+
+	FBatchedLineConstants BatchedLineConstants = {};
 
 	FVector FontPosition = {};
 	FFontColor FontColor = {};

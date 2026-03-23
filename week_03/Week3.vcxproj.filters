@@ -4,6 +4,7 @@
     <FxCompile Include="FontShader.hlsl" />
     <FxCompile Include="Assets\Shader\FontShader.hlsl" />
     <FxCompile Include="Assets\Shader\ShaderW0.hlsl" />
+    <FxCompile Include="Assets\Shader\BatchedLineShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DirectXTK\WICTextureLoader.cpp" />
@@ -55,6 +56,8 @@
     <ClCompile Include="World\Primitives\CubeComponent.cpp" />
     <ClCompile Include="World\Primitives\PlaneComponent.cpp" />
     <ClCompile Include="World\Primitives\SphereComponent.cpp" />
+    <ClCompile Include="World\Light\LightComponent.cpp" />
+    <ClCompile Include="World\Light\SpotLightComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DirectXTK\WICTextureLoader.h" />
@@ -125,6 +128,8 @@
     <ClInclude Include="World\Primitives\PlaneComponent.h" />
     <ClInclude Include="World\Primitives\SphereComponent.h" />
     <ClInclude Include="Editor\UI\Inspector\Inspector.h" />
+    <ClInclude Include="World\Light\LightComponent.h" />
+    <ClInclude Include="World\Light\SpotLightComponent.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Fonts\DDS\AFont.dds" />

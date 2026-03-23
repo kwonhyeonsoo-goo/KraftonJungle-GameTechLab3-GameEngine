@@ -12,7 +12,6 @@ private:
 
 	TArray<FVertex>			Vertices;
 	TArray<uint32>			Indices;
-	TMap<FVertex, uint32>	IndexMap;
 
 public:
 	void Create(ID3D11Device* InDevice, uint32 MaxIndexCount = (1 << 16));
