@@ -54,6 +54,9 @@
     <ClCompile Include="Source\UI\ConsoleWindow.cpp">
       <Filter>Source\UI</Filter>
     </ClCompile>
+    <ClCompile Include="Source\UI\ContentBrowserWindow.cpp">
+      <Filter>Source\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\UI\ControlPanelWindow.cpp">
       <Filter>Source\UI</Filter>
     </ClCompile>
@@ -99,9 +102,6 @@
     <ClCompile Include="ThirdParty\imgui\imgui_widgets.cpp">
       <Filter>ThirdParty\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="Source\UI\ContentBrowserWindow.cpp">
-      <Filter>Source\UI</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\FEditorEngine.h">
@@ -123,6 +123,9 @@
       <Filter>Source\Picking</Filter>
     </ClInclude>
     <ClInclude Include="Source\UI\ConsoleWindow.h">
+      <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\UI\ContentBrowserWindow.h">
       <Filter>Source\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\UI\ControlPanelWindow.h">
@@ -172,9 +175,6 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imstb_truetype.h">
       <Filter>ThirdParty\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\UI\ContentBrowserWindow.h">
-      <Filter>Source\UI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

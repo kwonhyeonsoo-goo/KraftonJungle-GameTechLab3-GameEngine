@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source">
@@ -46,6 +46,9 @@
     <Filter Include="Source\Scene">
       <UniqueIdentifier>{f9c008c1-5b68-14f2-ea56-7006fc09bfab}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Serializer">
+      <UniqueIdentifier>{31714189-31bf-1cc6-f130-c789ef837eee}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Types">
       <UniqueIdentifier>{1e5cbe70-629e-3dca-3777-f9421b4e6929}</UniqueIdentifier>
     </Filter>
@@ -69,6 +72,9 @@
     <ClCompile Include="Source\Actor\Gizmo.cpp">
       <Filter>Source\Actor</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Actor\PlaneActor.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Actor\SphereActor.cpp">
       <Filter>Source\Actor</Filter>
     </ClCompile>
@@ -87,6 +93,12 @@
     <ClCompile Include="Source\Component\GizmoComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Component\LineBatchComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Component\PlaneComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Component\PrimitiveComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
@@ -100,6 +112,9 @@
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Component\SphereComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\ConsoleVariableManager.cpp">
@@ -195,6 +210,9 @@
     <ClCompile Include="Source\Primitive\UnrealEditorStyledGizmo.cpp">
       <Filter>Source\Primitive</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Renderer\FontAtlas.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Renderer\Material.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
@@ -216,28 +234,24 @@
     <ClCompile Include="Source\Renderer\ShaderResource.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\FontAtlas.cpp">
-      <Filter>Source\Renderer</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Renderer\TextRenderer.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scene\Scene.cpp">
       <Filter>Source\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Physics\PhysicsManager.cpp" />
-    <ClCompile Include="Source\Scene\SceneManager.cpp" />
-    <ClCompile Include="Source\Types\Name.cpp" />
-    <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp">
-      <Filter>Source\Component</Filter>
+    <ClCompile Include="Source\Scene\SceneManager.cpp">
+      <Filter>Source\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Component\LineBatchComponent.cpp">
-      <Filter>Source\Component</Filter>
+    <ClCompile Include="Source\Scene\ShowFlags.cpp">
+      <Filter>Source\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="PrimitiveLineBatch.cpp" />
-    <ClCompile Include="Source\Scene\ShowFlags.cpp" />
-    <ClCompile Include="Source\Actor\PlaneActor.cpp" />
-    <ClCompile Include="Source\Component\PlaneComponent.cpp" />
+    <ClCompile Include="Source\Serializer\SceneSerializer.cpp">
+      <Filter>Source\Serializer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Types\Name.cpp">
+      <Filter>Source\Types</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -256,6 +270,9 @@
       <Filter>Source\Actor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Actor\Gizmo.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\PlaneActor.h">
       <Filter>Source\Actor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Actor\SkySphereActor.h">
@@ -279,6 +296,12 @@
     <ClInclude Include="Source\Component\GizmoComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Component\LineBatchComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\PlaneComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Component\PrimitiveComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
@@ -292,6 +315,9 @@
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\SphereComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\UUIDBillboardComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\ConsoleVariableManager.h">
@@ -384,6 +410,9 @@
     <ClInclude Include="Source\Platform\Windows\WindowApplication.h">
       <Filter>Source\Platform\Windows</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Platform\Windows\WindowTypes.h">
+      <Filter>Source\Platform\Windows</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Primitive\PrimitiveBase.h">
       <Filter>Source\Primitive</Filter>
     </ClInclude>
@@ -404,6 +433,12 @@
     </ClInclude>
     <ClInclude Include="Source\Primitive\UnrealEditorStyledGizmo.h">
       <Filter>Source\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\FontAtlas.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\FontVertex.h">
+      <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\Material.h">
       <Filter>Source\Renderer</Filter>
@@ -435,6 +470,9 @@
     <ClInclude Include="Source\Renderer\ShaderType.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Renderer\TextRenderer.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Scene\Scene.h">
       <Filter>Source\Scene</Filter>
     </ClInclude>
@@ -449,6 +487,9 @@
     </ClInclude>
     <ClInclude Include="Source\Scene\ShowFlags.h">
       <Filter>Source\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Serializer\SceneSerializer.h">
+      <Filter>Source\Serializer</Filter>
     </ClInclude>
     <ClInclude Include="Source\Types\Array.h">
       <Filter>Source\Types</Filter>
@@ -483,40 +524,14 @@
     <ClInclude Include="Source\Types\String.h">
       <Filter>Source\Types</Filter>
     </ClInclude>
+    <ClInclude Include="ThirdParty\stb_image.h">
+      <Filter>ThirdParty</Filter>
+    </ClInclude>
     <ClInclude Include="ThirdParty\nlohmann\json.hpp">
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\FontVertex.h">
-      <Filter>Source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Shaders\FontVertexShader.hlsl" />
-    <ClInclude Include="Source\Renderer\FontAtlas.h">
-      <Filter>Source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Renderer\TextRenderer.h">
-      <Filter>Source\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Physics\PhysicsManager.h" />
-    <ClInclude Include="Source\Scene\SceneManager.h" />
-    <ClInclude Include="Source\Types\Name.h" />
-    <ClInclude Include="Source\Component\UUIDBillboardComponent.h">
-      <Filter>Source\Component</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Platform\Windows\WindowTypes.h" />
-    <ClInclude Include="Source\Component\LineBatchComponent.h">
-      <Filter>Source\Component</Filter>
-    </ClInclude>
-    <ClInclude Include="PrimitiveLineBatch.h">
-      <Filter>Source\Primitive</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Actor\PlaneActor.h" />
-    <ClInclude Include="Source\Component\PlaneComponent.h" />
-    <ClInclude Include="ThirdParty\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="Shaders\FontPixelShader.hlsl" />
   </ItemGroup>
 </Project>

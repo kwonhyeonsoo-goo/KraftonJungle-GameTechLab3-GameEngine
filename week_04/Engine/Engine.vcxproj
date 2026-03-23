@@ -19,22 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Shaders\FontVertexShader.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-    </ClInclude>
-    <ClInclude Include="Source\Actor\PlaneActor.h" />
-    <ClInclude Include="Source\Component\PlaneComponent.h" />
-    <ClInclude Include="Source\Component\UUIDBillboardComponent.h" />
-    <ClInclude Include="Source\Renderer\FontAtlas.h" />
-    <ClInclude Include="Source\Renderer\FontVertex.h" />
-    <ClInclude Include="PrimitiveLineBatch.h" />
-    <ClInclude Include="Source\Component\LineBatchComponent.h" />
     <ClInclude Include="Source\CoreMinimal.h" />
     <ClInclude Include="Source\EngineAPI.h" />
     <ClInclude Include="Source\Actor\Actor.h" />
     <ClInclude Include="Source\Actor\AttachTestActor.h" />
     <ClInclude Include="Source\Actor\CubeActor.h" />
     <ClInclude Include="Source\Actor\Gizmo.h" />
+    <ClInclude Include="Source\Actor\PlaneActor.h" />
     <ClInclude Include="Source\Actor\SkySphereActor.h" />
     <ClInclude Include="Source\Actor\SphereActor.h" />
     <ClInclude Include="Source\Camera\Camera.h" />
@@ -42,11 +33,14 @@
     <ClInclude Include="Source\Component\CameraComponent.h" />
     <ClInclude Include="Source\Component\CubeComponent.h" />
     <ClInclude Include="Source\Component\GizmoComponent.h" />
+    <ClInclude Include="Source\Component\LineBatchComponent.h" />
+    <ClInclude Include="Source\Component\PlaneComponent.h" />
     <ClInclude Include="Source\Component\PrimitiveComponent.h" />
     <ClInclude Include="Source\Component\RandomColorComponent.h" />
     <ClInclude Include="Source\Component\SceneComponent.h" />
     <ClInclude Include="Source\Component\SkyComponent.h" />
     <ClInclude Include="Source\Component\SphereComponent.h" />
+    <ClInclude Include="Source\Component\UUIDBillboardComponent.h" />
     <ClInclude Include="Source\Core\ConsoleVariableManager.h" />
     <ClInclude Include="Source\Core\Core.h" />
     <ClInclude Include="Source\Core\FEngine.h" />
@@ -85,6 +79,8 @@
     <ClInclude Include="Source\Primitive\PrimitiveSky.h" />
     <ClInclude Include="Source\Primitive\PrimitiveSphere.h" />
     <ClInclude Include="Source\Primitive\UnrealEditorStyledGizmo.h" />
+    <ClInclude Include="Source\Renderer\FontAtlas.h" />
+    <ClInclude Include="Source\Renderer\FontVertex.h" />
     <ClInclude Include="Source\Renderer\Material.h" />
     <ClInclude Include="Source\Renderer\MaterialManager.h" />
     <ClInclude Include="Source\Renderer\PrimitiveVertex.h" />
@@ -101,6 +97,7 @@
     <ClInclude Include="Source\Scene\SceneManager.h" />
     <ClInclude Include="Source\Scene\SceneTypes.h" />
     <ClInclude Include="Source\Scene\ShowFlags.h" />
+    <ClInclude Include="Source\Serializer\SceneSerializer.h" />
     <ClInclude Include="Source\Types\Array.h" />
     <ClInclude Include="Source\Types\CoreTypes.h" />
     <ClInclude Include="Source\Types\LinkedList.h" />
@@ -112,11 +109,10 @@
     <ClInclude Include="Source\Types\Set.h" />
     <ClInclude Include="Source\Types\StaticArray.h" />
     <ClInclude Include="Source\Types\String.h" />
-    <ClInclude Include="ThirdParty\nlohmann\json.hpp" />
     <ClInclude Include="ThirdParty\stb_image.h" />
+    <ClInclude Include="ThirdParty\nlohmann\json.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="PrimitiveLineBatch.cpp" />
     <ClCompile Include="Source\Actor\Actor.cpp" />
     <ClCompile Include="Source\Actor\AttachTestActor.cpp" />
     <ClCompile Include="Source\Actor\CubeActor.cpp" />
@@ -128,6 +124,7 @@
     <ClCompile Include="Source\Component\CameraComponent.cpp" />
     <ClCompile Include="Source\Component\CubeComponent.cpp" />
     <ClCompile Include="Source\Component\GizmoComponent.cpp" />
+    <ClCompile Include="Source\Component\LineBatchComponent.cpp" />
     <ClCompile Include="Source\Component\PlaneComponent.cpp" />
     <ClCompile Include="Source\Component\PrimitiveComponent.cpp" />
     <ClCompile Include="Source\Component\RandomColorComponent.cpp" />
@@ -135,7 +132,6 @@
     <ClCompile Include="Source\Component\SkyComponent.cpp" />
     <ClCompile Include="Source\Component\SphereComponent.cpp" />
     <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp" />
-    <ClCompile Include="Source\Component\LineBatchComponent.cpp" />
     <ClCompile Include="Source\Core\ConsoleVariableManager.cpp" />
     <ClCompile Include="Source\Core\Core.cpp" />
     <ClCompile Include="Source\Core\FEngine.cpp" />
@@ -179,6 +175,7 @@
     <ClCompile Include="Source\Scene\Scene.cpp" />
     <ClCompile Include="Source\Scene\SceneManager.cpp" />
     <ClCompile Include="Source\Scene\ShowFlags.cpp" />
+    <ClCompile Include="Source\Serializer\SceneSerializer.cpp" />
     <ClCompile Include="Source\Types\Name.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -299,11 +296,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="Shaders\FontPixelShader.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-    </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
