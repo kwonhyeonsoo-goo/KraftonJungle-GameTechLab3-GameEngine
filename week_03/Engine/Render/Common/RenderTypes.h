@@ -19,12 +19,14 @@ enum class EPrimitiveType
 	EPT_Cube,
 	EPT_Sphere,
 	EPT_Plane,
+	EPT_SubUV,
 	EPT_TransGizmo,
 	EPT_RotGizmo,
 	EPT_ScaleGizmo,
 	EPT_Line,
 	EPT_Box,
 	EPT_MouseOverlay,
+	EPT_Quad,
 };
 
 enum class EUtilType

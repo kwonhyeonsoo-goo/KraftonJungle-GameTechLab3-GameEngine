@@ -56,6 +56,15 @@ void FBatchedLine::AddLine(const FVector& StartPoint, const FVector& EndPoint, c
 	Indices.push_back(Vertices.size() - 1);
 }
 
+void FBatchedLine::AddLineRaw(const FVector& StartPoint, const FVector& EndPoint, const FVector4& Color)
+{
+	uint32 StartIdx = static_cast<uint32>(Vertices.size());
+	Vertices.push_back({ StartPoint, Color });
+	Vertices.push_back({ EndPoint,   Color });
+	Indices.push_back(StartIdx);
+	Indices.push_back(StartIdx + 1);
+}
+
 void FBatchedLine::AddAABB(const FVector& WorldMin, const FVector& WorldMax, const FVector4& Color)
 {
 	auto GetCornerPoint = [&](int32 Bit) -> FVector

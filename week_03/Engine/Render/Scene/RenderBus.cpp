@@ -30,6 +30,7 @@ void FRenderBus::Clear()
 	OutlineCommands.clear();
 	BatchedLine.Clear();
 	FontCommands.clear();
+	SubUVCommands.clear();
 }
 
 void FRenderBus::AddComponentCommand(const FRenderCommand& InCommand)
@@ -40,6 +41,16 @@ void FRenderBus::AddComponentCommand(const FRenderCommand& InCommand)
 	}
 
 	ComponentCommands.push_back(InCommand);
+}
+
+void FRenderBus::AddSubUVCompoenetCommand(const FRenderCommand& InCommand)
+{
+	if (InCommand.MeshBuffer == nullptr)
+	{
+		return;
+	}
+
+	SubUVCommands.push_back(InCommand);
 }
 
 void FRenderBus::AddDepthLessCommand(const FRenderCommand& InCommand)

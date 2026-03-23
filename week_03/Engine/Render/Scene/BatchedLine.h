@@ -19,6 +19,7 @@ public:
 
 	void AddGrid(int32 GridSize);
 	void AddLine(const FVector& StartPoint, const FVector& EndPoint, const FVector4& Color);
+	void AddLineRaw(const FVector& StartPoint, const FVector& EndPoint, const FVector4& Color);
 	void AddAABB(const FVector& WorldMin, const FVector& WorldMax, const FVector4& Color = { 1.f, 1.f ,1.f ,1.f});
 
 	void Update(ID3D11DeviceContext* InDeviceContext);

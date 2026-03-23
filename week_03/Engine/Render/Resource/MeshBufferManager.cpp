@@ -10,6 +10,9 @@ void FMeshBufferManager::Create(ID3D11Device* InDevice)
 	MeshBufferMap[EPrimitiveType::EPT_ScaleGizmo].Create(InDevice, FMeshManager::GetScaleGizmo());
 	MeshBufferMap[EPrimitiveType::EPT_MouseOverlay].Create(InDevice, FMeshManager::GetMouseOverlay());
 	MeshBufferMap[EPrimitiveType::EPT_Box].Create(InDevice, FMeshManager::GetBox());
+	UVMeshBufferMap[EPrimitiveType::EPT_SubUV].Create(InDevice, FMeshManager::GetUVRect());
+	MeshBufferMap[EPrimitiveType::EPT_Quad].Create(InDevice, FMeshManager::GetQuad());
+
 }
 
 //	TODO : 내일 하기
@@ -33,4 +36,17 @@ FMeshBuffer& FMeshBufferManager::GetMeshBuffer(EPrimitiveType InPrimitiveType)
 	
 	//	존재하지 않는 PrimitiveType이 요청된 경우, 기본적으로 CubeMeshBuffer를 반환하도록 합니다.
 	return MeshBufferMap.at(EPrimitiveType::EPT_Cube);
+}
+
+FUVMeshBuffer& FMeshBufferManager::GetUVMeshBuffer(EPrimitiveType InPrimitiveType)
+{
+	// TODO: 여기에 return 문을 삽입합니다.
+	auto it = UVMeshBufferMap.find(InPrimitiveType);
+	if (it != UVMeshBufferMap.end())
+	{
+		return it->second;
+	}
+
+	//	존재하지 않는 PrimitiveType이 요청된 경우, 기본적으로 CubeMeshBuffer를 반환하도록 합니다.
+	return UVMeshBufferMap.at(EPrimitiveType::EPT_SubUV);
 }

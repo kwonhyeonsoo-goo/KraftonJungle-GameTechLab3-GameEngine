@@ -56,6 +56,7 @@ void FEditorViewportClient::TickInput(float DeltaTime)
 	FCameraState& CameraState = Cameraptr->GetCameraState();
 
 	FVector move = FVector(0, 0, 0);
+	float CameraVelocity = FUISettingInitializer::GetViewCamMoveSpeed();
 	if (InputSystem::GetKey('W') && !CameraState.bIsOrthogonal) move.X += CameraVelocity;
 	if (InputSystem::GetKey('A'))                               move.Y -= CameraVelocity;
 	if (InputSystem::GetKey('S') && !CameraState.bIsOrthogonal) move.X -= CameraVelocity;
@@ -75,13 +76,13 @@ void FEditorViewportClient::TickInput(float DeltaTime)
 	if (InputSystem::GetKey(VK_DOWN))  rotation.Z += AngleVelocity;
 	if (InputSystem::GetKey(VK_RIGHT)) rotation.Y += AngleVelocity;
 
-	float MouseRotationSpeed = 0.15f;
+	float CameraAngleVelocity = FUISettingInitializer::GetViewCamRotSpeed();
 	if (InputSystem::GetKey(VK_RBUTTON))
 	{
 		float deltaX = static_cast<float>(InputSystem::MouseDeltaX());
 		float deltaY = static_cast<float>(InputSystem::MouseDeltaY());
-		mouseRotation.Y = Clamp(deltaX * MouseRotationSpeed, -89.0f, 89.0f);
-		mouseRotation.Z = Clamp(deltaY * MouseRotationSpeed, -89.0f, 89.0f);
+		mouseRotation.Y = Clamp(deltaX * CameraAngleVelocity, -89.0f, 89.0f);
+		mouseRotation.Z = Clamp(deltaY * CameraAngleVelocity, -89.0f, 89.0f);
 	}
 
 	if (InputSystem::GetKeyUp(VK_SPACE))

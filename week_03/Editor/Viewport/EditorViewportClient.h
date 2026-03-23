@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Render/Common/RenderTypes.h"
-
+#include "FileManager/UISettingInit.h"
 #include "CursorOverlayState.h"
 #include <windows.h>
 #include <string>
@@ -50,8 +50,6 @@ private:
 	weak_ptr<UCamera>  Camera;
 	FGizmoManager      GizmoManager;
 
-	float CameraVelocity = 10.f;
-	float CameraAngleVelocity = 60.f;
 	FVector InitViewPos = FVector(10, 0, 5);
 	FVector InitLookAt  = FVector(0, 0, 0);
 	float WindowWidth  = 1920.f;

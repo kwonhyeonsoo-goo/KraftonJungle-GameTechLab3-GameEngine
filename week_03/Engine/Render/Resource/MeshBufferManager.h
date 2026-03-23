@@ -15,6 +15,7 @@ class FMeshBufferManager
 {
 private:
 	TMap<EPrimitiveType, FMeshBuffer> MeshBufferMap;
+	TMap<EPrimitiveType, FUVMeshBuffer> UVMeshBufferMap;
 
 public:
 
@@ -25,5 +26,6 @@ public:
 	void Release();
 
 	FMeshBuffer& GetMeshBuffer(EPrimitiveType InPrimitiveType);
+	FUVMeshBuffer& GetUVMeshBuffer(EPrimitiveType InPrimitiveType);
 
 };

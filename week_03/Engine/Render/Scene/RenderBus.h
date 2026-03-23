@@ -17,7 +17,7 @@ class FRenderBus
 private:
 	TArray<FRenderCommand> ComponentCommands;
 	TArray<FRenderCommand> DepthLessCommands;
-
+	TArray<FRenderCommand> SubUVCommands;
 	//	Array로 하지 않아도 되지만, 추후를 위한 확장성을 고려하여 추가하였습니다.
 	TArray<FRenderCommand> OutlineCommands;
 	TArray<FRenderCommand> OverlayCommands;
@@ -38,6 +38,7 @@ public:
 	void Clear();
 	//	Draw Call 요청을 RenderBus에 추가하는 함수
 	void AddComponentCommand(const FRenderCommand& InCommand);
+	void AddSubUVCompoenetCommand(const FRenderCommand& InCommand);
 	void AddDepthLessCommand(const FRenderCommand& InCommand);
 	void AddFontCommand(const FRenderCommand& InCommand);
 	void AddOutlineCommand(const FRenderCommand& InCommand);
@@ -52,7 +53,7 @@ public:
 	FBatchedLine*		  GetBatchedLine()  { return &BatchedLine; }
 
 	const TArray<FRenderCommand>& GetFontCommands() const { return FontCommands; }
-
+	const TArray<FRenderCommand>& GetSubUVCommands() const { return SubUVCommands; }
 	FFontCache&	    GetFontCache() { return FontCache; }
 
 	void  SetCachedView(const FMatrix& View){ CachedView = View; }

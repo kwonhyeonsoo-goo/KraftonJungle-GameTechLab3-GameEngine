@@ -13,6 +13,11 @@ FMeshData FMeshManager::TranslationGizmoMeshData;
 FMeshData FMeshManager::RotationGizmoMeshData;
 FMeshData FMeshManager::ScaleGizmoMeshData;
 FMeshData FMeshManager::MouseOverlayMeshData;
+
+FUVMeshData FMeshManager::UVRectMeshData;
+
+FMeshData FMeshManager::QuadVertexData;
+
 //FMeshData FMeshManager::AxisMeshData;
 //FMeshData FMeshManager::GridMeshData;
 
@@ -55,6 +60,10 @@ void FMeshManager::Initialize()
     {
         CreateBox();
     }
+    if (QuadVertexData.Vertices.empty())
+    {
+        CreateQuad();
+    }
     //if (AxisMeshData.Vertices.empty())
     //{
     //    CreateAxis();
@@ -68,6 +77,11 @@ void FMeshManager::Initialize()
     if (MouseOverlayMeshData.Vertices.empty())
     {
         CreateMouseOverlay();
+    }
+
+    if (UVRectMeshData.Vertices.empty())
+    {
+        CreateUVRect();
     }
 
     bIsInitialized = true;
@@ -184,6 +198,25 @@ void FMeshManager::CreateBox()
     };
 }
 
+void FMeshManager::CreateQuad()
+{
+    TArray<FVertex>& vertices = QuadVertexData.Vertices;
+
+    auto V = [&](float x, float y, float z, float u, float v)
+        {
+            return FVertex{ FVector(x, y, z), {0.f, 1.f, 0.f, 1.f}, u, v };
+        };
+
+    vertices = {
+        V(0.0f, 0, 0.0f, 0.0f, 1.0f),  // 좌하
+        V(1.0f, 0, 1.0f, 1.0f, 0.0f),  // 우상
+        V(0.0f, 0, 1.0f, 0.0f, 0.0f),  // 좌상
+        V(0.0f, 0, 0.0f, 0.0f, 1.0f),  // 좌하
+        V(1.0f, 0, 0.0f, 1.0f, 1.0f),  // 우하
+        V(1.0f, 0, 1.0f, 1.0f, 0.0f),  // 우상
+    };
+}
+
 void FMeshManager::CreateSphere(int slices, int stacks)
 {
     TArray<FVertex>& vertices = SphereMeshData.Vertices;
@@ -287,7 +320,7 @@ void FMeshManager::CreateRotationGizmo()
                 else if (axis == 1) pos = FVector(x, z, y); // Y축 회전 (XZ 평면)
                 else                pos = FVector(x, y, z); // Z축 회전 (XY 평면)
 
-                vertices.push_back({ pos, Colors[axis], axis });
+                vertices.push_back({ pos, Colors[axis], 0, 0, axis });
             }
         }
 
@@ -342,7 +375,7 @@ void FMeshManager::CreateScaleGizmo()
 
         for (int j = 0; j < 8; ++j)
         {
-            vertices.push_back({ p[j], Color, SubID });
+            vertices.push_back({ p[j], Color, 0, 0, SubID });
         }
 
         uint32 BoxIndices[] = {
@@ -363,6 +396,31 @@ void FMeshManager::CreateScaleGizmo()
         float boxSizeHalf = BoxSize;
         AddBox(dirs[i] * LineLength, FVector(boxSizeHalf, boxSizeHalf, boxSizeHalf), colors[i], i);
     }
+}
+
+void FMeshManager::CreateUVRect()
+{
+    TArray<FUVVertex>& vertices = UVRectMeshData.Vertices;
+    TArray<uint32>& indices = UVRectMeshData.Indices;
+
+    vertices.clear();
+    indices.clear();
+
+    // Front face (Z = 0.01f)
+    vertices = {
+        { {0.f, -0.5f, -0.5f}, 1.f, 1.f }, // 0
+        { {0.f, -0.5f,  0.5f}, 1.f, 0.f }, // 1
+        { {0.f,  0.5f,  0.5f}, 0.f, 0.f }, // 2
+        { {0.f,  0.5f, -0.5f}, 0.f, 1.f }  // 3
+
+    };
+
+    // Front face triangles
+    indices = {
+        0, 2, 1,  // Front tri 1
+        0, 3, 2  // Front tri 2
+    };
+
 }
 
 
@@ -404,9 +462,9 @@ void FMeshManager::CreateTranslationGizmo()
             float c = cos(angle);
             float s = sin(angle);
 
-            vertices.push_back({ GetRotatedPos(c * radius, s * radius, 0.0f), colors[axis], axis });
-            vertices.push_back({ GetRotatedPos(c * radius, s * radius, stemLength), colors[axis], axis });
-            vertices.push_back({ GetRotatedPos(c * headRadius, s * headRadius, stemLength), colors[axis], axis });
+            vertices.push_back({ GetRotatedPos(c * radius, s * radius, 0.0f), colors[axis], 0, 0, axis });
+            vertices.push_back({ GetRotatedPos(c * radius, s * radius, stemLength), colors[axis], 0, 0, axis });
+            vertices.push_back({ GetRotatedPos(c * headRadius, s * headRadius, stemLength), colors[axis], 0, 0, axis });
         }
 
         // 화살표 끝
@@ -414,7 +472,7 @@ void FMeshManager::CreateTranslationGizmo()
             (axis == 1) ? FVector(0, totalLength, 0) :
             FVector(0, 0, totalLength);
 
-        vertices.push_back({ TipPos, colors[axis], axis });
+        vertices.push_back({ TipPos, colors[axis], 0, 0, axis });
         int32 tipIndex = (int32)vertices.size() - 1;
 
         // === 추가 1: cone 밑면 중심점 ===
@@ -422,7 +480,7 @@ void FMeshManager::CreateTranslationGizmo()
             (axis == 1) ? FVector(0, stemLength, 0) :
             FVector(0, 0, stemLength);
 
-        vertices.push_back({ baseCenterPos, colors[axis], axis });
+        vertices.push_back({ baseCenterPos, colors[axis], 0, 0, axis });
         int32 baseCenterIndex = (int32)vertices.size() - 1;
 
         for (int32 i = 0; i < segments; ++i)

@@ -23,6 +23,9 @@ struct FRenderResources
     FConstantBuffer FontConstantBuffer;             // b0
     FConstantBuffer FontColorConstantBuffer;        // b1
     FVertexBuffer FontVertexBuffer;
+    FInstanceBuffer FontInstanceBuffer;
+
+    FConstantBuffer SubUVConstantBuffer;
 
     FShader PrimitiveShader;
     FShader GizmoShader;
@@ -31,6 +34,7 @@ struct FRenderResources
     FShader EditorShader;
 	FShader OutlineShader;
     FShader FontShader;
+    FShader SubUVShader;
 
     ID3D11ShaderResourceView* FontAtlasSRV = nullptr;
 };

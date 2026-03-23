@@ -12,7 +12,7 @@
 #include "Render/Renderer/Renderer.h"
 #include "World/Gizmo/GizmoManager.h"
 #include "World/Primitives/Primitives.h"
-#include "SceneSaveManager.h"
+#include "FileManager/SceneSaveManager.h"
 #include "Core/Common.h"
 #include "Engine/Core/InputSystem.h"
 #include "Classes/ASpotlight.h"
@@ -97,6 +97,10 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 				break;
 			case EPrimitiveType::EPT_Plane:
 				EditorEngine->SpawnNewPrimitiveActor<UPlaneComponent>(CurSpawnPoint);
+				break;
+			case EPrimitiveType::EPT_SubUV:
+				EditorEngine->SpawnNewPrimitiveActor<USubUVComponent>(CurSpawnPoint);
+
 				break;
 			}
 		}
@@ -203,10 +207,20 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 		Camera->SetRelativeRotation(FVector(Clamp(CameraRotation[0], CamRot.X, CamRot.X), CameraRotation[1], CameraRotation[2]));
 	}
 
-	int GridSize = static_cast<int>(EditorEngine->GetGridSize());
+	int GridSize = static_cast<int>(FUISettingInitializer::GetGridSize());
 	if (ImGui::DragInt("Grid Size", &GridSize, 1, 1, 100))
 	{
-		EditorEngine->SetGridSize(static_cast<uint32>(GridSize));
+		FUISettingInitializer::SetGridSize(static_cast<uint32>(GridSize));
+	}
+
+	float CamMoveSpeed = FUISettingInitializer::GetViewCamMoveSpeed();
+	if (ImGui::SliderFloat("Camera Movement Sensitivity", &CamMoveSpeed, 5.f, 30.f)) {
+		FUISettingInitializer::SetViewCamMoveSpeed(CamMoveSpeed);
+	}
+
+	float CamRotSpeed = FUISettingInitializer::GetViewCamRotSpeed();
+	if (ImGui::SliderFloat("Camera Rotation Sensitivity", &CamRotSpeed, 0.05f, 0.6f)) {
+		FUISettingInitializer::SetViewCamRotSpeed(CamRotSpeed);
 	}
 
 	SEPARATOR();
@@ -216,7 +230,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 	static int SelectedSpace = 0;
 	if (ImGui::RadioButton("World", &SelectedSpace, 0))
 	{
-		Viewport->GetGizmoManager().SetVisibility(true);
+		Viewport->GetGizmoManager().SetWorldSpace(true);
 		std::cout << "Switched to World Space\n";
 	}
 
@@ -314,18 +328,32 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 			AActor* Actor = PrimitiveActors[i];
 			FString Label = "Actor_" + std::to_string(Actor->UUID);
 
-			bool bSelected = (SelectedActorIndex == Actor->UUID);
-			if (ImGui::Selectable(Label.c_str(), bSelected)) {
-				SelectedActorIndex = Actor->UUID;
-				auto* TargetComponent = Actor->GetRootComponent();
+			//bool bSelected = (SelectedActorIndex == Actor->UUID);
+			//if (ImGui::Selectable(Label.c_str(), bSelected)) {
+			//	SelectedActorIndex = Actor->UUID;
+			//	auto* TargetComponent = Actor->GetRootComponent();
 
-				// Move gizmo to target component
-				Viewport->GetGizmoManager().SetTarget(Actor->GetRootComponent());
+			//	// Move gizmo to target component
+			//	Viewport->GetGizmoManager().SetTarget(Actor->GetRootComponent());
 
-				// Let the viewoutput know about selected object
-				ViewOutput.Object = TargetComponent;
-				ViewOutput.ObjectPicked = TargetComponent->GetTypeInfo()->name;
+			//	// Let the viewoutput know about selected object
+			//	ViewOutput.Object = TargetComponent;
+			//	ViewOutput.ObjectPicked = TargetComponent->GetTypeInfo()->name;
+			//}
+			ImGui::Indent();
+			if (ImGui::CollapsingHeader(Label.c_str())) {
+				for (auto* Comps : Actor->GetComponents()) {
+					bool bSelected = (SelectedComponentIndex == Comps->UUID);
+					FString CompLabel = Comps->GetTypeInfo()->name + std::to_string(Comps->UUID);
+					if (ImGui::Selectable(CompLabel.c_str(), bSelected)) {
+						SelectedComponentIndex = Comps->UUID;
+						Viewport->GetGizmoManager().SetTarget(Comps);
+						ViewOutput.Object = Comps;
+						ViewOutput.ObjectPicked = Comps->GetTypeInfo()->name;
+					}
+				}
 			}
+			ImGui::Unindent();
 		}
 	}
 
@@ -355,6 +383,7 @@ void FEditorMainPanel::RenderPickedObjectWindow(UObject*& ObjectPicked) {
 	if (ObjectPicked) {
 		ImGui::Text("Class: %s", ObjectPicked->GetTypeInfo()->name);
 		ImGui::Text("Object Size: %d", sizeof(*ObjectPicked));
+		//ImGui::Text("Object Name: %s", ObjectPicked->Name.GetFString().c_str());
 	}
 	if (ObjectPicked->IsA<USceneComponent>()) {
 		ImGui::Text("Transform");

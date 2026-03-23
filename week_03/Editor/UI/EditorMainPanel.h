@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include <windows.h>
-
+#include "FileManager/UISettingInit.h"
 #include "Math/Vector.h"
 #include "Editor/Core/EditorConsole.h"
 #include "Core/Common.h"
@@ -20,16 +20,18 @@ using namespace common::structs;
 class FEditorMainPanel
 {
 private:
-	const char* PrimitiveTypes[3] =
+	const char* PrimitiveTypes[4] =
 	{
 		"Cube",
 		"Sphere",
-		"Plane"
+		"Plane",
+		"SubUV"
 	};
 	const char* UtilTypes[1] =
 	{
 		"Spotlight"
 	};
+
 	FEditorEngine* EditorEngine = nullptr;
 	FRenderer* Renderer;
 	FEditorViewportClient* Viewport;
@@ -48,6 +50,7 @@ private:
 
 	// Scene Manager stuffs
 	uint32 SelectedActorIndex = 0;
+	uint32 SelectedComponentIndex = 0;
 
 	FEditorConsole ConsoleInstance;
 

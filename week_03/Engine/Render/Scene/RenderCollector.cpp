@@ -57,19 +57,28 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* primitiveCompon
 {
 	FRenderCommand Cmd = {};
 	Cmd.Type = ERenderCommandType::Primitive;
-	Cmd.MeshBuffer = &MeshBufferManager.GetMeshBuffer(primitiveComponent->GetPrimitiveType());
+	Cmd.MeshBuffer = &MeshBufferManager.GetMeshBuffer(primitiveComponent->GetPrimitiveType());	// ?
 	Cmd.TransformConstants = FTransformConstants{ primitiveComponent->GetWorldMatrix(), Context.Camera->GetViewMatrix(), Context.Camera->GetProjectionMatrix() };
 
 	FRenderCommand FontCmd = {};
+	FontCmd.Type = ERenderCommandType::Font;
+	FontCmd.MeshBuffer = &MeshBufferManager.GetMeshBuffer(EPrimitiveType::EPT_Quad);
 	FontCmd.FontPosition = primitiveComponent->GetWorldLocation();
 	FontCmd.FontPosition.Z += 1.0f;
-	FontCmd.FontColor = FFontColor{ FVector4(1, 1, 1, 1) };
+	FontCmd.FontColor = FVector4(1, 1, 1, 1);
 	FontCmd.UUID = primitiveComponent->UUID;
 	RenderBus.AddFontCommand(FontCmd);
 
 	if (primitiveComponent->GetRenderCommand(Context.Camera->GetViewMatrix(), Context.Camera->GetProjectionMatrix(), Cmd))
 	{
-		RenderBus.AddComponentCommand(Cmd);
+		if (Cmd.Type != ERenderCommandType::Primitive)//여기 SubUV{
+		{
+			Cmd.UVMeshBuffer = &MeshBufferManager.GetUVMeshBuffer(primitiveComponent->GetPrimitiveType());
+			RenderBus.AddSubUVCompoenetCommand(Cmd);
+		}
+		else {
+			RenderBus.AddComponentCommand(Cmd);
+		}
 
 		if (Context.SelectedComponent == primitiveComponent)
 		{

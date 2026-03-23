@@ -3,14 +3,14 @@
 #include "World.h"
 #include "Engine/Scene/Camera.h"
 #include "World/Gizmo/GizmoManager.h"
-
+#include "FileManager/UISettingInit.h"
 #include "Render/Renderer/Renderer.h"
 #include "Render/Scene/RenderBus.h"
 
 #include "Editor/Viewport/EditorViewportClient.h"
 #include "Editor/UI/EditorMainPanel.h"
 
-#include "Engine/SceneSaveManager.h"
+#include "Engine/FileManager/SceneSaveManager.h"
 
 class FEditorEngine
 {
@@ -37,7 +37,6 @@ private:
 	FEditorViewportClient ViewportClient;
 	float MainLoopFPS = 0.0f;
 	FRuntimeSettings RuntimeSettings;
-	uint32			 GridSize = 5.f;
 
 private:
 	void UpdateWorld(float DeltaTime);
@@ -54,8 +53,6 @@ public:
 	void Render(float DeltaTime);
 	void EndFrame();
 
-	const uint32	 GetGridSize() const { return GridSize; }
-	void			 SetGridSize(uint32 InGridSize) { GridSize = InGridSize; }
 	weak_ptr<UWorld> GetWorld() const { return EditorWorld; }
 	void NewScene();
 	void ResetViewportScene();
