@@ -102,6 +102,9 @@
     <ClCompile Include="Source\UI\ContentBrowserWindow.cpp">
       <Filter>Source\UI</Filter>
     </ClCompile>
+    <ClCompile Include="EditorGlobals.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\FEditorEngine.h">
@@ -175,6 +178,9 @@
     </ClInclude>
     <ClInclude Include="Source\UI\ContentBrowserWindow.h">
       <Filter>Source\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="EditorGlobals.h">
+      <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

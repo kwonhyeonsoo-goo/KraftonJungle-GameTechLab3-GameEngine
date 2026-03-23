@@ -34,7 +34,6 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupS
 		return false;
 	}
 
-
 	ObjManager = new ObjectManager();
 
 	// InputManager
