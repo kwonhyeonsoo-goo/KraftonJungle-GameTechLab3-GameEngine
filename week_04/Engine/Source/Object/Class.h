@@ -12,13 +12,16 @@ public:
 	const FString& GetName() const;
 	UClass* GetSuperClass() const;
 
+
 	bool IsChildOf(const UClass* Other) const;
 
 	UObject* CreateInstance(UObject* InOuter, const FString& InName) const;
-
+	static UClass* FindClass(const FString& InString);
+	static void RegisterClass(UClass* InClass);
 private:
 	FString Name;
 	UClass* SuperClass = nullptr;
 	CreateFunc Factory = nullptr;
+	static TMap<FString, UClass*>& GetClassRegistry();
 };
 

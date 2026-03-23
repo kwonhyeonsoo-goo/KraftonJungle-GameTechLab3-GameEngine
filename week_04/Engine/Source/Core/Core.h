@@ -75,6 +75,7 @@ private:
 	void LateUpdate(float DeltaTime);
 	void RegisterConsoleVariables();
 
+
 private:
 	std::unique_ptr<CRenderer> Renderer;
 	CInputManager* InputManager = nullptr;

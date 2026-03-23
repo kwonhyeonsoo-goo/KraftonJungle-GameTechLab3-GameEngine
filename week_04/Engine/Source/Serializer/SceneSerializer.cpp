@@ -12,6 +12,8 @@
 #include "Component/PrimitiveComponent.h"
 #include "Scene/Scene.h"
 #include "Object/ObjectFactory.h" 
+#include "Serializer/Archive.h"
+#include "Object/Class.h"
 #include <iomanip>
 #include <filesystem>
 #include <fstream>
@@ -47,67 +49,15 @@ void FSceneSerializer::Save(UScene* Scene, const FString& FilePath)
 	for (AActor* Actor : Scene->GetActors())
 	{
 		if (!Actor || Actor->IsPendingDestroy())
-		{
 			continue;
-		}
-
-		FString Type;
-		if (Actor->IsA(ASphereActor::StaticClass()))
-		{
-			Type = "Sphere";
-		}
-		else if (Actor->IsA(ACubeActor::StaticClass()))
-		{
-			Type = "Cube";
-		}
-		else if (Actor->IsA(AAttachTestActor::StaticClass()))
-		{
-			Type = "AttachTest";
-		}
-		else
-		{
+		if (!Actor->GetRootComponent())
 			continue;
-		}
-		USceneComponent* RootComp = Actor->GetRootComponent();
-		if (!RootComp)
-		{
-			continue;
-		}
-		const FTransform Transform = RootComp->GetRelativeTransform();
-		const FVector EulerDegrees = Transform.Rotator().Euler();
-		const FString Key = std::to_string(Index);
-
-		Primitives[Key]["Type"] = Type;
-		Primitives[Key]["UUID"] = Actor->UUID;
-		nlohmann::json CompUUIDs = nlohmann::json::array();
-		for (UActorComponent* Comp : Actor->GetComponents())
-		{
-			if (Comp)
-			{
-				CompUUIDs.push_back(Comp->UUID);
-			}
-		}
-		Primitives[Key]["ComponentUUIDs"] = CompUUIDs;
-		// Material 이름 저장 (에셋 원본 이름 사용)
-		UPrimitiveComponent* PrimComp = Actor->GetComponentByClass<UPrimitiveComponent>();
-		if (PrimComp && PrimComp->GetMaterial() && !PrimComp->GetMaterial()->GetOriginName().empty())
-		{
-			Primitives[Key]["Material"] = PrimComp->GetMaterial()->GetOriginName();
-		}
-
-		Primitives[Key]["Location"] = {
-			Transform.GetTranslation().X,
-			Transform.GetTranslation().Y,
-			Transform.GetTranslation().Z
-		};
-		Primitives[Key]["Rotation"] = { EulerDegrees.X, EulerDegrees.Y, EulerDegrees.Z };
-		Primitives[Key]["Scale"] = {
-			Transform.GetScale3D().X,
-			Transform.GetScale3D().Y,
-			Transform.GetScale3D().Z
-		};
-
-		++Index;
+		FArchive Ar(true);
+		Actor->Serialize(Ar);
+		nlohmann::json& ActorJson 
+			= *static_cast<nlohmann::json*>(Ar.GetRawJson());
+		Primitives[std::to_string(Index)] = ActorJson;
+		Index++;
 	}
 
 	Json["Primitives"] = Primitives;
@@ -156,49 +106,33 @@ void FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 	}
 
 	if (!Json.contains("Primitives"))
-	{
 		return;
-	}
 
 
 	int32 ActorIndex = 0;
 	for (auto& [Key, Value] : Json["Primitives"].items())
 	{
-		const FString Type = Value.value("Type", "");
-		const FString ActorName = Type + "_" + std::to_string(ActorIndex);
-
-		AActor* Actor = nullptr;
-		if (Type == "Sphere")
+		FString ClassName = Value.value("Class","");
+		UClass* ActorClass = UClass::FindClass(ClassName);
+		if (!ActorClass)
 		{
-			Actor = Scene->SpawnActor<ASphereActor>(ActorName);
-		}
-		else if (Type == "Cube")
-		{
-			Actor = Scene->SpawnActor<ACubeActor>(ActorName);
-		}
-		else if (Type == "AttachTest")
-		{
-			Actor = Scene->SpawnActor<AAttachTestActor>(ActorName);
-		}
-		else
-		{
-			++ActorIndex;
+			ActorIndex++;
 			continue;
 		}
-		if (Value.contains("UUID"))
+		const FString ActorName = ClassName + "_" + std::to_string(ActorIndex);
+		AActor* Actor = static_cast<AActor*>(FObjectFactory::ConstructObject(ActorClass, Scene, ActorName));
+		if (!Actor)
 		{
-			uint32 SavedUUID = Value["UUID"].get<uint32>();
-			// 기존 UUID 제거
-			GUUIDToObjectMap.erase(Actor->UUID);
-			// 충돌하는 UUID가 이미 있으면 기존 것 제거
-			if (auto It = GUUIDToObjectMap.find(SavedUUID); It != GUUIDToObjectMap.end() && It->second != Actor)
-			{
-				It->second->UUID = 0;
-				GUUIDToObjectMap.erase(It);
-			}
-			Actor->UUID = SavedUUID;
-			GUUIDToObjectMap[SavedUUID] = Actor;
+			ActorIndex++;
+			continue;
 		}
+		Scene->RegisterActor(Actor);
+		Actor->PostSpawnInitialize();
+		FArchive Ar(false);// loading
+		*static_cast<nlohmann::json*>(Ar.GetRawJson()) = Value;
+		Actor->Serialize(Ar);
+
+
 
 		if (Value.contains("Material"))
 		{
@@ -213,58 +147,7 @@ void FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 			}
 		}
 
-		FTransform Transform;
-		if (Value.contains("Location"))
-		{
-			auto& L = Value["Location"];
-			Transform.SetTranslation({ L[0].get<float>(), L[1].get<float>(), L[2].get<float>() });
-		}
-		if (Value.contains("Rotation"))
-		{
-			auto& R = Value["Rotation"];
-			const FVector EulerDegrees(R[0].get<float>(), R[1].get<float>(), R[2].get<float>());
-			Transform.SetRotation(FRotator::MakeFromEuler(EulerDegrees));
-		}
-		if (Value.contains("Scale"))
-		{
-			auto& S = Value["Scale"];
-			Transform.SetScale3D({ S[0].get<float>(), S[1].get<float>(), S[2].get<float>() });
-		}
 
-		if (USceneComponent* Root = Actor->GetRootComponent())
-		{
-			Root->SetRelativeTransform(Transform);
-		}
-		if (Value.contains("ComponentUUIDs"))
-		{
-			auto& CompUUIDs = Value["ComponentUUIDs"];
-			const auto& Components = Actor->GetComponents();
-			for (size_t i = 0; i < CompUUIDs.size() && i < Components.size(); ++i)
-			{
-				uint32 SavedCompUUID = CompUUIDs[i].get<uint32>();
-				GUUIDToObjectMap.erase(Components[i]->UUID);
-				if (auto It = GUUIDToObjectMap.find(SavedCompUUID); It != GUUIDToObjectMap.end() && It->second != Components[i])
-				{
-					It->second->UUID = 0;
-					GUUIDToObjectMap.erase(It);
-				}
-				Components[i]->UUID = SavedCompUUID;
-				GUUIDToObjectMap[SavedCompUUID] = Components[i];
-			}
-		}
-
-		//AddOwnedComponent → SetOwner(this) → TObjectPtr이 Actor의 UUID를 캐싱
-		//	그 다음 LoadSceneFromFile에서 Actor->UUID = SavedUUID로 UUID 변경
-		//	TObjectPtr은 여전히 이전 UUID를 기억
-		//	GetOwner() → TObjectPtr이 캐싱된 UUID로 맵 조회 → 맵에 없음 → nullptr 반환
-		// 해결안 UUID 변경 후에 Owner를 다시 설정
-		for (UActorComponent* Comp : Actor->GetComponents())
-		{
-			if (Comp)
-			{
-				Comp->SetOwner(Actor);
-			}
-		}
 		++ActorIndex;
 
 	}

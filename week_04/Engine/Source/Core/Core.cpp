@@ -331,3 +331,4 @@ void CCore::RegisterConsoleVariables()
 			}
 		}, "Force immediate garbage collection");
 }
+

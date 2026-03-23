@@ -32,15 +32,18 @@ inline void InitializeIfAble(T* obj) {
 		}
 
 #define IMPLEMENT_RTTI(ClassName, ParentClassName) \
-	namespace { \
-		UObject* Create##ClassName##Instance(UObject* InOuter, const FString& InName) { \
-			 return new ClassName(InName, InOuter); \
-		} \
-	} \
+    namespace { \
+        UObject* Create##ClassName##Instance(UObject* InOuter, const FString& InName) { \
+             return new ClassName(InName, InOuter); \
+        } \
+        struct FAutoRegister_##ClassName { \
+            FAutoRegister_##ClassName() { ClassName::StaticClass(); } \
+        } GAutoRegister_##ClassName; \
+    } \
     UClass* ClassName::StaticClass() { \
         static UClass ClassInfo = { \
             #ClassName, \
-            ParentClassName::StaticClass(),  \
+            ParentClassName::StaticClass(), \
             Create##ClassName##Instance \
         }; \
         return &ClassInfo; \
