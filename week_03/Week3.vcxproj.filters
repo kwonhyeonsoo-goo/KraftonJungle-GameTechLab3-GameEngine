@@ -55,6 +55,10 @@
     <ClCompile Include="World\Primitives\CubeComponent.cpp" />
     <ClCompile Include="World\Primitives\PlaneComponent.cpp" />
     <ClCompile Include="World\Primitives\SphereComponent.cpp" />
+    <ClCompile Include="World\Light\LightComponent.cpp" />
+    <ClCompile Include="World\Light\SpotLightComponent.cpp" />
+    <ClCompile Include="World\Primitives\SubUV\SubUV.cpp" />
+    <ClCompile Include="Engine\Render\Resource\RenderResourceManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DirectXTK\WICTextureLoader.h" />
@@ -125,6 +129,10 @@
     <ClInclude Include="World\Primitives\PlaneComponent.h" />
     <ClInclude Include="World\Primitives\SphereComponent.h" />
     <ClInclude Include="Editor\UI\Inspector\Inspector.h" />
+    <ClInclude Include="World\Light\LightComponent.h" />
+    <ClInclude Include="World\Light\SpotLightComponent.h" />
+    <ClInclude Include="World\Primitives\SubUV\SubUV.h" />
+    <ClInclude Include="Engine\Render\Resource\RenderResourceManager.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Fonts\DDS\AFont.dds" />

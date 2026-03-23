@@ -26,10 +26,6 @@ public:
 
 	void Update(ID3D11DeviceContext* InDeviceContext, const TArray<FVertex>& InData);
 
-	void FontUpdate(ID3D11DeviceContext* InDeviceContext, const TArray<FFontVertex>& InData);
-	void UpdateUV(ID3D11DeviceContext* InDeviceContext, const float u, const float v);
-
-
 	uint32 GetVertexCount() const { return VertexCount; }
 	uint32 GetStride() const { return Stride; }
 	ID3D11Buffer* GetBuffer() const;

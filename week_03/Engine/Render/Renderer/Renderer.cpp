@@ -52,10 +52,6 @@ void FRenderer::Create(HWND hWindow)
 	Resources.OverlayConstantBuffer.Create(Device.GetDevice(), sizeof(FOverlayConstants));
 
 	Resources.SubUVConstantBuffer.Create(Device.GetDevice(), sizeof(FSubUVConstants));
-	Resources.FontConstantBuffer.Create(Device.GetDevice(), sizeof(FFontTransform));
-	Resources.FontColorConstantBuffer.Create(Device.GetDevice(), sizeof(FFontColor));
-
-
 	Resources.FontInstanceBuffer.CreateDynamic(Device.GetDevice(), 1024 * 4, sizeof(FFontInstance));
 
 

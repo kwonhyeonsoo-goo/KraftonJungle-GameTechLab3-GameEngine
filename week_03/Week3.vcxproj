@@ -148,6 +148,7 @@
     <ClCompile Include="Engine\Render\Renderer\Renderer.cpp" />
     <ClCompile Include="Engine\Render\Resource\Buffer.cpp" />
     <ClCompile Include="Engine\Render\Resource\MeshBufferManager.cpp" />
+    <ClCompile Include="Engine\Render\Resource\RenderResourceManager.cpp" />
     <ClCompile Include="Engine\Render\Resource\Shader.cpp" />
     <ClCompile Include="Engine\Render\Scene\BatchedLine.cpp" />
     <ClCompile Include="Engine\Render\Scene\RenderBus.cpp" />
@@ -179,6 +180,7 @@
     <ClCompile Include="World\Primitives\CubeComponent.cpp" />
     <ClCompile Include="World\Primitives\PlaneComponent.cpp" />
     <ClCompile Include="World\Primitives\SphereComponent.cpp" />
+    <ClCompile Include="World\Primitives\SubUV\SubUV.cpp" />
     <ClCompile Include="World\SceneComponent.cpp" />
     <ClCompile Include="World\Transform.cpp" />
   </ItemGroup>
@@ -214,6 +216,7 @@
     <ClInclude Include="Engine\Render\Renderer\RenderPipeline.h" />
     <ClInclude Include="Engine\Render\Resource\Buffer.h" />
     <ClInclude Include="Engine\Render\Resource\MeshBufferManager.h" />
+    <ClInclude Include="Engine\Render\Resource\RenderResourceManager.h" />
     <ClInclude Include="Engine\Render\Resource\RenderResources.h" />
     <ClInclude Include="Engine\Render\Resource\Shader.h" />
     <ClInclude Include="Engine\Render\Resource\VertexTypes.h" />
@@ -251,6 +254,7 @@
     <ClInclude Include="World\Primitives\CubeComponent.h" />
     <ClInclude Include="World\Primitives\PlaneComponent.h" />
     <ClInclude Include="World\Primitives\SphereComponent.h" />
+    <ClInclude Include="World\Primitives\SubUV\SubUV.h" />
     <ClInclude Include="World\SceneComponent.h" />
     <ClInclude Include="World\Transform.h" />
   </ItemGroup>

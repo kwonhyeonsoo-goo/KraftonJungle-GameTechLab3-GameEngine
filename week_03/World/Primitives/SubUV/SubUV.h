@@ -30,7 +30,7 @@ private:
     void ReloadTextureResource(std::wstring filename = L"Assets/Effects/Explosion.PNG");
 
 public:
-    virtual void UpdateWorldAABB() override;
+    void UpdateWorldAABB() override;
     float ElaspedTime;
     float Timer;
     static constexpr EPrimitiveType PrimitiveType = EPrimitiveType::EPT_SubUV;
