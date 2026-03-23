@@ -471,6 +471,7 @@ void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue&
 		}
 
 		FRenderCommand Command;
+		Command.RenderLayer = ERenderLayer::Default;
 		Command.MeshData = PrimitiveComponent->GetPrimitive()->GetMeshData();
 		Command.WorldMatrix = PrimitiveComponent->GetWorldTransform();
 		Command.Material = PrimitiveComponent->GetMaterial();

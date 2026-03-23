@@ -53,6 +53,9 @@ public:
 	void SubmitCommands(const FRenderCommandQueue& Queue);
 	// 수집된 커맨드 정렬 후 실행
 	void ExecuteCommands();
+	void ExecuteRenderPass(ERenderLayer RenderLayer);
+	// TODO: 텍스트 렌더도 일반적인 Render Pass에 통합하고 이 함수는 삭제
+	void ExecuteTextRenderPass();	
 
 	// 라인 렌더링
 	void DrawLine(const FVector& Start, const FVector& End, const FVector4& Color);
@@ -83,6 +86,7 @@ public:
 
 private:
 	void AddCommand(const FRenderCommand& Command);
+	void ClearCommandList();
 	bool CreateDeviceAndSwapChain(HWND InHwnd, int32 Width, int32 Height);
 	bool CreateRenderTargetAndDepthStencil(int32 Width, int32 Height);
 	bool CreateConstantBuffers();
@@ -115,7 +119,7 @@ private:
 	bool bVSyncEnabled = false;
 
 	TArray<FRenderCommand> CommandList;
-	TArray<FTextRenderCommand> TextCommandList;
+	TArray<FTextRenderCommand> TextCommandList;	// TODO: CommandList에 통합되면 이 행 삭제
 
 	size_t PrevCommandCount = 0;
 	TArray<FPrimitiveVertex> LineVertices;

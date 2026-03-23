@@ -74,7 +74,7 @@ struct ENGINE_API FMaterialConstantBuffer
 class ENGINE_API FMaterial
 {
 public:
-	FMaterial() : SortId(NextSortId++) {}
+	FMaterial() : ShaderId(NextShaderId++) {}
 	virtual ~FMaterial();
 
 	FMaterial(const FMaterial&) = delete;
@@ -82,7 +82,7 @@ public:
 	FMaterial(FMaterial&&) = default;
 	FMaterial& operator=(FMaterial&&) = default;
 
-	uint32 GetSortId() const { return SortId; }
+	uint64 GetSortId() const;
 
 	// 에셋 원본 이름 (JSON에서 로드된 이름, 직렬화 시 사용)
 	void SetOriginName(const FString& InName) { OriginName = InName; }
@@ -122,8 +122,10 @@ protected:
 	// FDynamicMaterial에서 파라미터 설정 시 사용
 	bool SetParameterData(const FString& ParamName, const void* Data, uint32 DataSize);
 
-	uint32 SortId = 0;
-	static inline uint32 NextSortId = 0;
+	// TODO: ShaderId가 실제 사용하는 쉐이더를 반영하도록 변경
+	// NOTE: GetSortId에서 사용하는 비트 연산으로 인해 실질적으로 [0, 262,143] 범위
+	uint32 ShaderId = 0;
+	static inline uint32 NextShaderId = 0;
 
 	FString OriginName;
 	FString InstanceName;

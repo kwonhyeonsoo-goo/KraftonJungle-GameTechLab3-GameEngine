@@ -318,9 +318,15 @@ void CRenderer::BeginFrame()
 	DeviceContext->RSSetViewports(1, &ActiveViewport);
 	DeviceContext->RSSetState(RasterizerState);
 
+	ClearCommandList();
+}
+
+void CRenderer::ClearCommandList()
+{
+	// 기존과 같은 크기의 CommandList가 들어올 확률이 높다고 가정
 	PrevCommandCount = CommandList.size();
 	CommandList.clear();
-	CommandList.reserve(PrevCommandCount);
+	CommandList.reserve(PrevCommandCount);	
 
 	TextCommandList.clear();
 	TextCommandList.reserve(PrevCommandCount);
@@ -362,7 +368,7 @@ void CRenderer::SubmitCommands(const FRenderCommandQueue& Queue)
 	{
 		if (Cmd.MeshData)
 		{
-			Cmd.MeshData->CreateBuffers(Device);
+			Cmd.MeshData->UpdateVertexAndIndexBuffer(Device);
 		}
 		AddCommand(Cmd);
 	}
@@ -390,75 +396,93 @@ void CRenderer::ExecuteCommands()
 {
 	// 프레임 상수 버퍼 업데이트 및 바인딩 (b0: Frame, b1: Object)
 	UpdateFrameConstantBuffer();
-	ID3D11Buffer* CBs[2] = { FrameConstantBuffer, ObjectConstantBuffer };
-	DeviceContext->VSSetConstantBuffers(0, 2, CBs);
+	ID3D11Buffer* ConstantBuffers[2] = { FrameConstantBuffer, ObjectConstantBuffer };
+	DeviceContext->VSSetConstantBuffers(0, 2, ConstantBuffers);
 
 	std::sort(CommandList.begin(), CommandList.end(),
 		[](const FRenderCommand& A, const FRenderCommand& B)
 		{
+			if (A.RenderLayer != B.RenderLayer)
+				return A.RenderLayer < B.RenderLayer;
 			return A.SortKey < B.SortKey;
 		});
 
-	auto ExecutePass = [this, &CBs](bool bOverlayPass)
+	ExecuteRenderPass(ERenderLayer::Default);
+	ExecuteRenderPass(ERenderLayer::Overlay);
+
+	ExecuteTextRenderPass();
+}
+
+void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
+{
+	FMaterial* CurrentMaterial = nullptr;
+	FMeshData* CurrentMesh = nullptr;
+	D3D11_PRIMITIVE_TOPOLOGY CurrentMeshTopology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
+	ID3D11RasterizerState* CurrentRasterizerState = nullptr;
+	ID3D11DepthStencilState* CurrentDepthStencilState = nullptr;
+
+	FRenderCommand toFind;
+	toFind.RenderLayer = InRenderLayer;
+	auto it = std::lower_bound(CommandList.begin(), CommandList.end(), toFind,
+		[](const FRenderCommand& A, const FRenderCommand& B)
+		{ return A.RenderLayer < B.RenderLayer; }
+	);
+
+	for (; it != CommandList.end(); it++)
+	{
+		auto Cmd = *it;
+		if (Cmd.RenderLayer != InRenderLayer)
+			return;
+
+		if (!Cmd.MeshData || Cmd.MeshData->Indices.empty())
 		{
-			FMaterial* CurrentMaterial = nullptr;
-			FMeshData* CurrentMesh = nullptr;
-			D3D11_PRIMITIVE_TOPOLOGY CurrentMeshTopology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
-			ID3D11RasterizerState* CurrentRasterizerState = nullptr;
-			ID3D11DepthStencilState* CurrentDepthStencilState = nullptr;
+			continue;
+		}
 
-			for (const auto& Cmd : CommandList)
-			{
-				if (Cmd.bOverlay != bOverlayPass || !Cmd.MeshData || Cmd.MeshData->Indices.empty())
-				{
-					continue;
-				}
+		if (Cmd.Material != CurrentMaterial)
+		{
+			Cmd.Material->Bind(DeviceContext);
+			CurrentMaterial = Cmd.Material;
+			ID3D11Buffer* ConstantBuffers[2] = { FrameConstantBuffer, ObjectConstantBuffer };
+			DeviceContext->VSSetConstantBuffers(0, 2, ConstantBuffers);
+		}
 
-				if (Cmd.Material != CurrentMaterial)
-				{
-					Cmd.Material->Bind(DeviceContext);
-					CurrentMaterial = Cmd.Material;
-					DeviceContext->VSSetConstantBuffers(0, 2, CBs);
-				}
+		if (Cmd.MeshData != CurrentMesh)
+		{
+			Cmd.MeshData->Bind(DeviceContext);
+			CurrentMesh = Cmd.MeshData;
+		}
 
-				if (Cmd.MeshData != CurrentMesh)
-				{
-					Cmd.MeshData->Bind(DeviceContext);
-					CurrentMesh = Cmd.MeshData;
-				}
+		D3D11_PRIMITIVE_TOPOLOGY DesiredMeshTopology = (D3D11_PRIMITIVE_TOPOLOGY)CurrentMesh->Topology;
+		if (DesiredMeshTopology != CurrentMeshTopology)
+		{
+			DeviceContext->IASetPrimitiveTopology(DesiredMeshTopology);
+		}
 
-				D3D11_PRIMITIVE_TOPOLOGY DesiredMeshTopology = (D3D11_PRIMITIVE_TOPOLOGY)CurrentMesh->Topology;
-				if (DesiredMeshTopology != CurrentMeshTopology)
-				{
-					DeviceContext->IASetPrimitiveTopology(DesiredMeshTopology);
-				}
+		ID3D11RasterizerState* DesiredRasterizerState = Cmd.bDisableCulling ? NoCullRasterizerState : RasterizerState;
+		if (DesiredRasterizerState != CurrentRasterizerState)
+		{
+			DeviceContext->RSSetState(DesiredRasterizerState);
+			CurrentRasterizerState = DesiredRasterizerState;
+		}
 
-				ID3D11RasterizerState* DesiredRasterizerState = Cmd.bDisableCulling ? NoCullRasterizerState : RasterizerState;
-				if (DesiredRasterizerState != CurrentRasterizerState)
-				{
-					DeviceContext->RSSetState(DesiredRasterizerState);
-					CurrentRasterizerState = DesiredRasterizerState;
-				}
+		ID3D11DepthStencilState* DesiredDepthStencilState = (Cmd.bDisableDepthTest || Cmd.bDisableDepthWrite) ? OverlayDepthState : nullptr;
+		if (DesiredDepthStencilState != CurrentDepthStencilState)
+		{
+			DeviceContext->OMSetDepthStencilState(DesiredDepthStencilState, 0);
+			CurrentDepthStencilState = DesiredDepthStencilState;
+		}
 
-				ID3D11DepthStencilState* DesiredDepthStencilState = (Cmd.bDisableDepthTest || Cmd.bDisableDepthWrite) ? OverlayDepthState : nullptr;
-				if (DesiredDepthStencilState != CurrentDepthStencilState)
-				{
-					DeviceContext->OMSetDepthStencilState(DesiredDepthStencilState, 0);
-					CurrentDepthStencilState = DesiredDepthStencilState;
-				}
+		UpdateObjectConstantBuffer(Cmd.WorldMatrix);
+		DeviceContext->DrawIndexed(Cmd.MeshData->Indices.size(), 0, 0);
+	}
+}
 
-				UpdateObjectConstantBuffer(Cmd.WorldMatrix);
-				DeviceContext->DrawIndexed(Cmd.MeshData->Indices.size(), 0, 0);
-			}
-		};
-
-	ExecutePass(false);
-	ExecutePass(true);
-
+void CRenderer::ExecuteTextRenderPass()
+{
 	DeviceContext->OMSetDepthStencilState(nullptr, 0);
 	DeviceContext->RSSetState(RasterizerState);
 	ShaderManager.Bind(DeviceContext);
-	DeviceContext->VSSetConstantBuffers(0, 2, CBs);
 
 	const FVector CameraPosition = GetCameraWorldPositionFromViewMatrix(ViewMatrix);
 
@@ -642,7 +666,7 @@ void CRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float
 	if (!Mesh || !InitOutlineResources())
 		return;
 
-	Mesh->CreateBuffers(Device);
+	Mesh->UpdateVertexAndIndexBuffer(Device);
 	Mesh->Bind(DeviceContext);
 
 	// Pass 1: 통상 렌더 + Stencil 마킹 (Ref=1)
