@@ -5,7 +5,11 @@
 #include "Camera/Camera.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/RenderCommand.h"
+#include "Renderer/Material.h"
 #include "Scene/Scene.h"
+#include "Debug/EngineLog.h"
+#include "Component/UUIDBillboardComponent.h"
+
 
 void IViewportClient::Attach(CCore* Core, CRenderer* Renderer)
 {
@@ -62,10 +66,58 @@ UScene* IViewportClient::ResolveScene(CCore* Core) const
 
 void IViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene, const FFrustum& Frustum, FRenderCommandQueue& OutQueue) const
 {
-	if (Scene)
+	if (!Scene)
 	{
-		Scene->CollectRenderCommands(Frustum, OutQueue);
+		UE_LOG("[IViewportClient] Cannot find Scene\n");
+		return;
 	}
+
+	if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives))
+	{
+		return;
+	}
+	TArray<UPrimitiveComponent*> VisiblePrimitives;
+	Scene->FrustrumCull(Frustum, VisiblePrimitives);
+
+	for (UPrimitiveComponent* PrimitiveComponent : VisiblePrimitives)
+	{
+		if (!PrimitiveComponent)
+		{
+			continue;
+		}
+		if (PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
+		{
+			UUUIDBillboardComponent* UUIDComponent =
+				static_cast<UUUIDBillboardComponent*>(PrimitiveComponent);
+
+			FTextRenderCommand TextCmd;
+			TextCmd.Text = UUIDComponent->GetDisplayText();
+			TextCmd.WorldPosition = UUIDComponent->GetTextWorldPosition();
+			TextCmd.WorldScale = UUIDComponent->GetWorldScale();
+			TextCmd.Color = UUIDComponent->GetTextColor();
+
+			OutQueue.AddTextCommand(TextCmd);
+			continue;
+		}
+
+		if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
+		{
+			continue;
+		}
+
+		FRenderCommand Command = BuildRenderCommand(PrimitiveComponent);
+		OutQueue.AddCommand(Command);
+	}
+}
+
+FRenderCommand IViewportClient::BuildRenderCommand(UPrimitiveComponent* PrimitiveComponent) const
+{
+	FRenderCommand Command;
+	Command.RenderLayer = ERenderLayer::Default;
+	Command.MeshData = PrimitiveComponent->GetPrimitive()->GetMeshData();
+	Command.WorldMatrix = PrimitiveComponent->GetWorldTransform();
+	Command.Material = PrimitiveComponent->GetMaterial();
+	return Command;
 }
 
 void IViewportClient::HandleFileDoubleClick(const FString& FilePath)

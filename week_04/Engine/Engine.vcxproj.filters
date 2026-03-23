@@ -283,6 +283,20 @@
     </ClCompile>
     <ClCompile Include="Source\Memory\MemoryBase.cpp" />
     <ClCompile Include="Source\Object\ObjectGlobals.cpp" />
+    <ClCompile Include="Source\Actor\PlaneActor.cpp" />
+    <ClCompile Include="Source\Component\PlaneComponent.cpp" />
+    <ClCompile Include="Source\Renderer\RenderCommand.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderState.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderStateManager.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\ShowFlags.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -579,9 +593,7 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp">
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
-<<<<<<< HEAD
     <ClInclude Include="PrimitiveLineBatch.h" />
-=======
     <ClInclude Include="Shaders\FontVertexShader.hlsl" />
     <ClInclude Include="Source\Renderer\FontAtlas.h">
       <Filter>Source\Renderer</Filter>
@@ -624,7 +636,15 @@
     </ClInclude>
     <ClInclude Include="Source\Memory\MemoryBase.h" />
     <ClInclude Include="Source\Object\ObjectGlobals.h" />
->>>>>>> refactor/global_new_delete
+    <ClInclude Include="Source\Renderer\RenderStateManager.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderState.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\ShowFlags.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

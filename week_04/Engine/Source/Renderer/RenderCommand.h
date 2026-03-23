@@ -5,6 +5,12 @@
 struct FMeshData;
 class FMaterial;
 
+enum class ERenderLayer {
+	Default,
+	Overlay,
+	UI,
+};
+
 struct ENGINE_API FRenderCommand
 {
 	FMeshData* MeshData = nullptr;
@@ -12,7 +18,7 @@ struct ENGINE_API FRenderCommand
 	FMaterial* Material = nullptr;
 	uint64 SortKey = 0;
 
-	bool bOverlay = false;
+	ERenderLayer RenderLayer = ERenderLayer::Default;
 	bool bDisableDepthTest = false;
 	bool bDisableDepthWrite = false;
 	bool bDisableCulling = false;

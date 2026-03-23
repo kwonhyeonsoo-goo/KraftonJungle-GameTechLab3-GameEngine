@@ -111,7 +111,7 @@ void CGizmo::BuildRenderCommands(AActor* SelectedActor, const CCamera* Camera, F
 	const FMatrix ScreenGizmoWorld = FTransform(FQuat::Identity, WorldLocation, FVector(RenderGizmoScale, RenderGizmoScale, RenderGizmoScale)).ToMatrixWithScale();
 	FRenderCommand Command;
 	Command.WorldMatrix = AxisGizmoWorld;
-	Command.bOverlay = true;
+	Command.RenderLayer = ERenderLayer::Overlay;
 	Command.bDisableDepthTest = true;
 	Command.bDisableDepthWrite = true;
 	Command.bDisableCulling = true;

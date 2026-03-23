@@ -253,7 +253,7 @@ void CCore::Render()
 	}
 	else
 	{
-		Scene->CollectRenderCommands(Frustum, CommandQueue);
+		// Scene->CollectRenderCommands(Frustum, CommandQueue);
 	}
 
 	Renderer->SubmitCommands(CommandQueue);
