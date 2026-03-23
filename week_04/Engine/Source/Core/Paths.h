@@ -11,20 +11,22 @@ public:
 	static void Initialize();
 
 	// 프로젝트 루트 (슬래시 끝)
-	static const FString& ProjectRoot();
+	static const std::filesystem::path& ProjectRoot();
 
 	// 주요 디렉토리 (모두 절대 경로, 슬래시 끝)
-	static FString EngineDir();
-	static FString ShaderDir();
-	static FString AssetDir();
-	static FString SceneDir();
-	static FString MaterialDir();
-	static FString MeshDir();
-	static FString ContentDir();
-	static FString ShaderCacheDir();
+	static std::filesystem::path EngineDir();
+	static std::filesystem::path ShaderDir();
+	static std::filesystem::path AssetDir();
+	static std::filesystem::path SceneDir();
+	static std::filesystem::path MaterialDir();
+	static std::filesystem::path MeshDir();
+	static std::filesystem::path ContentDir();
+	static std::filesystem::path ShaderCacheDir();
 
+	/*
 	// 경로 결합
 	static FString Combine(const FString& Base, const FString& Relative);
+	*/
 
 	// FString → std::wstring 변환 (셰이더 로드 등 Win32 API용)
 	static std::wstring ToWide(const FString& Path);
@@ -32,6 +34,7 @@ public:
 private:
 	static void SetRoot(const std::filesystem::path& InPath);
 
-	static FString Root;
+	// static FString Root;
+	static std::filesystem::path Root;
 	static bool bInitialized;
 };

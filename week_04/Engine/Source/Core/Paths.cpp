@@ -4,7 +4,8 @@
 
 namespace fs = std::filesystem;
 
-FString FPaths::Root;
+// FString FPaths::Root;
+std::filesystem::path FPaths::Root;
 bool FPaths::bInitialized = false;
 
 void FPaths::Initialize()
@@ -47,68 +48,63 @@ void FPaths::Initialize()
 	SetRoot(ExeDir);
 }
 
+std::wstring FPaths::ToWide(const FString& Path)
+{
+	return std::wstring(Path.begin(), Path.end());
+}
+
 void FPaths::SetRoot(const std::filesystem::path& InPath)
 {
-	Root = InPath.string();
-	for (auto& Ch : Root)
-	{
-		if (Ch == '\\')
-		{
-			Ch = '/';
-		}
-	}
-	if (!Root.empty() && Root.back() != '/')
-	{
-		Root += '/';
-	}
+	Root = InPath;
 	bInitialized = true;
 }
 
-const FString& FPaths::ProjectRoot()
+const std::filesystem::path& FPaths::ProjectRoot()
 {
 	return Root;
 }
 
-FString FPaths::EngineDir()
+std::filesystem::path FPaths::EngineDir()
 {
-	return Root + "Engine/";
+	return Root / "Engine/";
 }
 
-FString FPaths::ShaderDir()
+std::filesystem::path FPaths::ShaderDir()
 {
-	return Root + "Engine/Shaders/";
+	return Root / "Engine/Shaders/";
 }
 
-FString FPaths::AssetDir()
+std::filesystem::path FPaths::AssetDir()
 {
-	return Root + "Assets/";
+	return Root / "Assets/";
 }
 
-FString FPaths::SceneDir()
+std::filesystem::path FPaths::SceneDir()
 {
-	return Root + "Assets/Scenes/";
+	return Root / "Assets/Scenes/";
 }
 
-FString FPaths::MaterialDir()
+std::filesystem::path FPaths::MaterialDir()
 {
-	return Root + "Assets/Materials/";
+	return Root / "Assets/Materials/";
 }
 
-FString FPaths::MeshDir()
+std::filesystem::path FPaths::MeshDir()
 {
-	return Root + "Assets/Meshes/";
+	return Root / "Assets/Meshes/";
 }
 
-FString FPaths::ContentDir()
+std::filesystem::path FPaths::ContentDir()
 {
-	return Root + "Content/";
+	return Root / "Content/";
 }
 
-FString FPaths::ShaderCacheDir()
+std::filesystem::path FPaths::ShaderCacheDir()
 {
-	return Root + "Content/Shaders/";
+	return Root / "Content/Shaders/";
 }
 
+/*
 FString FPaths::Combine(const FString& Base, const FString& Relative)
 {
 	if (Base.empty())
@@ -126,3 +122,4 @@ std::wstring FPaths::ToWide(const FString& Path)
 {
 	return std::wstring(Path.begin(), Path.end());
 }
+*/

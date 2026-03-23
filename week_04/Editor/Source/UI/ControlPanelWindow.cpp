@@ -237,7 +237,9 @@ void CControlPanelWindow::Render(CCore* Core)
 
 		if (ImGui::Button("Save"))
 		{
-			const FString Path = FPaths::SceneDir() + SceneName + ".json";
+			FString SceneNameString = SceneName;
+			SceneNameString += ".json";
+			const FString Path = (FPaths::SceneDir() / SceneNameString).string();
 			Core->GetScene()->SaveSceneToFile(Path);
 			UE_LOG("Scene saved: %s", SceneName);
 		}
@@ -248,7 +250,8 @@ void CControlPanelWindow::Render(CCore* Core)
 		{
 			SceneFiles.clear();
 			SelectedSceneIndex = -1;
-			const FString ScenesDir = FPaths::SceneDir();
+
+			const FString ScenesDir = FPaths::SceneDir().string();
 			if (std::filesystem::exists(ScenesDir))
 			{
 				for (auto& Entry : std::filesystem::directory_iterator(ScenesDir))
@@ -281,7 +284,9 @@ void CControlPanelWindow::Render(CCore* Core)
 				Core->SetSelectedActor(nullptr);
 				Core->GetScene()->ClearActors();
 
-				const FString Path = FPaths::SceneDir() + SceneFiles[SelectedSceneIndex] + ".json";
+				FString SceneFileName = SceneFiles[SelectedSceneIndex];
+				SceneFileName += ".json";
+				const FString Path = (FPaths::SceneDir() / SceneFileName).string();
 				Core->GetScene()->LoadSceneFromFile(Path, Core->GetRenderer()->GetDevice());
 				UE_LOG("Scene loaded: %s", SceneFiles[SelectedSceneIndex].c_str());
 			}

@@ -46,7 +46,9 @@ bool CTextRenderer::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDe
 		return false;
 	}
 
-	const std::wstring FontPath = FPaths::ToWide(FPaths::ContentDir() + "Fonts/DejaVuSansMono.png");
+	// "Fonts/NotoSansKR_Atlas.png"
+	std::wstring FontPath = (FPaths::ContentDir() / "Fonts/DejaVuSansMono.png").wstring();
+	
 	if (!Atlas.Initialize(Device, DeviceContext, FontPath))
 	{
 		MessageBox(0, L"TextRenderer: Atlas.Initialize failed", 0, 0);
@@ -114,7 +116,7 @@ void CTextRenderer::Release()
 
 bool CTextRenderer::CreateShaders()
 {
-	const std::wstring ShaderDir = FPaths::ToWide(FPaths::ShaderDir());
+	const std::wstring ShaderDir = FPaths::ShaderDir();
 	const std::wstring VSPath = ShaderDir + L"FontVertexShader.hlsl";
 	const std::wstring PSPath = ShaderDir + L"FontPixelShader.hlsl";
 
