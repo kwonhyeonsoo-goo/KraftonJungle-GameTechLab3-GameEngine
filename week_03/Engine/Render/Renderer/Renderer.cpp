@@ -81,6 +81,7 @@ void FRenderer::Release()
 	Resources.OutlineShader.Release();
 	Resources.BatchedLineShader.Release();
 	Resources.FontShader.Release();
+	Resources.SubUVShader.Release();
 
 	Resources.PerObjectConstantBuffer.Release();
 	Resources.GizmoPerObjectConstantBuffer.Release();
