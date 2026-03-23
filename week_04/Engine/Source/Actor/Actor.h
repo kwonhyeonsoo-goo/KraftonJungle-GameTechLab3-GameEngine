@@ -1,11 +1,12 @@
 #pragma once
 #include "Object/Object.h"
+#include "World/World.h"
 #include "Component/ActorComponent.h"
 
 class UActorComponent;
 class USceneComponent;
 class UScene;
-class UWorld;
+
 class FArchive;
 class ENGINE_API AActor : public UObject
 {

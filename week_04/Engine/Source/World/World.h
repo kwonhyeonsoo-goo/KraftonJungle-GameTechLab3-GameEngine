@@ -3,13 +3,13 @@
 #include "Object/Object.h"
 #include "Scene/SceneTypes.h"
 #include "Scene/ShowFlags.h"
-
+#include "Math/Frustum.h"
 // Forward declarations — include 최소화
 class UScene;
 class AActor;
 class UCameraComponent;
 class CCamera;
-struct FFrustum;
+class FFrustum;
 struct FRenderCommandQueue;
 struct ID3D11Device;
 
@@ -19,14 +19,8 @@ public:
 	DECLARE_RTTI(UWorld, UObject)
 	~UWorld();
 
-	// Actor 접근 — Scene에 위임
 	template <typename T>
-	T* SpawnActor(const FString& InName)
-	{
-		static_assert(std::is_base_of_v<AActor, T>, "T must derive from AActor");
-		if (!Scene) return nullptr;
-		return Scene->SpawnActor<T>(InName);
-	}
+	T* SpawnActor(const FString& InName);
 
 	void DestroyActor(AActor* InActor);
 	const TArray<AActor*>& GetActors() const;
@@ -62,3 +56,12 @@ private:
 	float DeltaSeconds = 0.f;
 	ESceneType WorldType = ESceneType::Game;
 };
+#include "Scene/Scene.h"
+
+template <typename T>
+T* UWorld::SpawnActor(const FString& InName)
+{
+	static_assert(std::is_base_of_v<AActor, T>, "T must derive from AActor");
+	if (!Scene) return nullptr;
+	return Scene->SpawnActor<T>(InName);
+}

@@ -7,6 +7,7 @@
 #include "Renderer/Renderer.h"
 #include "Physics/PhysicsManager.h"
 #include "Scene/SceneManager.h"
+#include "World/WorldContext.h"
 #include <memory>
 
 class CEnhancedInputManager;
