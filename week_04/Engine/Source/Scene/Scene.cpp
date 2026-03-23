@@ -5,6 +5,7 @@
 #include "Actor/AttachTestActor.h"
 #include "Actor/CubeActor.h"
 #include "Actor/SphereActor.h"
+#include "Actor/SubUVActor.h"
 #include "Camera/Camera.h"
 #include "Component/CameraComponent.h"
 #include "Object/ObjectFactory.h"
@@ -17,12 +18,13 @@
 #include "ThirdParty/nlohmann/json.hpp"
 #include "Component/UUIDBillboardComponent.h"
 #include "Object/Class.h"
+#include "Core/FEngine.h"
+#include "Component/SubUVComponent.h"
 
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
-
 
 #include "Component/LineBatchComponent.h"
 
@@ -157,6 +159,10 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 		{
 			Actor = SpawnActor<AAttachTestActor>(ActorName);
 		}
+		else if (Type == "SubUV")
+		{
+			Actor = SpawnActor<ASubUVActor>(ActorName);
+		}
 		else
 		{
 			++ActorIndex;
@@ -204,6 +210,61 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 		if (USceneComponent* Root = Actor->GetRootComponent())
 		{
 			Root->SetRelativeTransform(Transform);
+		}
+
+		if (Type == "SubUV" && Value.contains("SubUV"))
+		{
+			ASubUVActor* SubUVActor = static_cast<ASubUVActor*>(Actor);
+			if (SubUVActor)
+			{
+				USubUVComponent* SubUVComponent = SubUVActor->GetSubUVComponent();
+				if (SubUVComponent)
+				{
+					auto& SubUVJson = Value["SubUV"];
+
+					if (SubUVJson.contains("Size"))
+					{
+						auto& Size = SubUVJson["Size"];
+						SubUVComponent->SetSize(FVector2(
+							Size[0].get<float>(),
+							Size[1].get<float>()
+						));
+					}
+										
+					if (SubUVJson.contains("Columns"))
+					{
+						SubUVComponent->SetColumns(SubUVJson["Columns"].get<int32>());
+					}
+					if (SubUVJson.contains("Rows"))
+					{
+						SubUVComponent->SetRows(SubUVJson["Rows"].get<int32>());
+					}
+					if (SubUVJson.contains("TotalFrames"))
+					{
+						SubUVComponent->SetTotalFrames(SubUVJson["TotalFrames"].get<int32>());
+					}
+					if (SubUVJson.contains("FirstFrame"))
+					{
+						SubUVComponent->SetFirstFrame(SubUVJson["FirstFrame"].get<int32>());
+					}
+					if (SubUVJson.contains("LastFrame"))
+					{
+						SubUVComponent->SetLastFrame(SubUVJson["LastFrame"].get<int32>());
+					}
+					if (SubUVJson.contains("FPS"))
+					{
+						SubUVComponent->SetFPS(SubUVJson["FPS"].get<float>());
+					}
+					if (SubUVJson.contains("Loop"))
+					{
+						SubUVComponent->SetLoop(SubUVJson["Loop"].get<bool>());
+					}
+					if (SubUVJson.contains("Billboard"))
+					{
+						SubUVComponent->SetBillboard(SubUVJson["Billboard"].get<bool>());
+					}
+				}
+			}
 		}
 		if (Value.contains("ComponentUUIDs"))
 		{
@@ -293,6 +354,10 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 		{
 			Type = "AttachTest";
 		}
+		else if (Actor->IsA(ASubUVActor::StaticClass()))
+		{
+			Type = "SubUV";
+		}
 		else
 		{
 			continue;
@@ -332,6 +397,31 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 			Transform.GetScale3D().Y,
 			Transform.GetScale3D().Z
 		};
+
+		if (Actor->IsA(ASubUVActor::StaticClass()))
+		{
+			ASubUVActor* SubUVActor = static_cast<ASubUVActor*>(Actor);
+			if (SubUVActor)
+			{
+				USubUVComponent* SubUVComponent = SubUVActor->GetSubUVComponent();
+				if (SubUVComponent)
+				{
+					Primitives[Key]["SubUV"]["Size"] = {
+						SubUVComponent->GetSize().X,
+						SubUVComponent->GetSize().Y
+					};
+
+					Primitives[Key]["SubUV"]["Columns"] = SubUVComponent->GetColumns();
+					Primitives[Key]["SubUV"]["Rows"] = SubUVComponent->GetRows();
+					Primitives[Key]["SubUV"]["TotalFrames"] = SubUVComponent->GetTotalFrames();
+					Primitives[Key]["SubUV"]["FirstFrame"] = SubUVComponent->GetFirstFrame();
+					Primitives[Key]["SubUV"]["LastFrame"] = SubUVComponent->GetLastFrame();
+					Primitives[Key]["SubUV"]["FPS"] = SubUVComponent->GetFPS();
+					Primitives[Key]["SubUV"]["Loop"] = SubUVComponent->IsLoop();
+					Primitives[Key]["SubUV"]["Billboard"] = SubUVComponent->IsBillboard();
+				}
+			}
+		}
 
 		++Index;
 	}
@@ -472,6 +562,12 @@ void UScene::FrustrumCull(const FFrustum& Frustum, TArray<UPrimitiveComponent*>&
 			}
 
 			UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
+
+			const bool bIsUUID = PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass());
+			const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
+
+			if (!bIsUUID && !bIsSubUV)
+			{
 			// if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
 			if (PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
 			{
@@ -526,6 +622,25 @@ void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue&
 			TextCmd.Color = UUIDComponent->GetTextColor();
 
 			OutQueue.AddTextCommand(TextCmd);
+			continue;
+		}
+		if (PrimitiveComponent->IsA(USubUVComponent::StaticClass()))
+		{
+			USubUVComponent* SubUVComponent = static_cast<USubUVComponent*>(PrimitiveComponent);
+			FSubUVRenderCommand SubUVCmd;
+			SubUVCmd.WorldMatrix = SubUVComponent->GetWorldTransform();
+			SubUVCmd.Size = SubUVComponent->GetSize();
+			SubUVCmd.Columns = SubUVComponent->GetColumns();
+			SubUVCmd.Rows = SubUVComponent->GetRows();
+			SubUVCmd.TotalFrames = SubUVComponent->GetTotalFrames();
+			SubUVCmd.FPS = SubUVComponent->GetFPS();
+			SubUVCmd.ElapsedTime = static_cast<float>(GEngine->GetCore()->GetTimer().GetTotalTime());
+			SubUVCmd.bLoop = SubUVComponent->IsLoop();
+			SubUVCmd.bBillboard = SubUVComponent->IsBillboard();
+			SubUVCmd.FirstFrame = SubUVComponent->GetFirstFrame();
+			SubUVCmd.LastFrame = SubUVComponent->GetLastFrame();
+
+			OutQueue.AddSubUVCommand(SubUVCmd);
 			continue;
 		}
 

@@ -21,4 +21,5 @@ ENGINE_API extern FEngine* GEngine;
 #include "Math/Vector.h"
 #include "Math/Vector4.h"
 #include "Math/Transform.h"
+#include "Math/Vector2.h"
 
