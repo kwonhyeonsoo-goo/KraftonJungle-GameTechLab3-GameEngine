@@ -78,6 +78,9 @@
     <ClCompile Include="Source\Actor\SphereActor.cpp">
       <Filter>Source\Actor</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Actor\SubUVActor.cpp">
+      <Filter>Source\Actor</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Camera\Camera.cpp">
       <Filter>Source\Camera</Filter>
     </ClCompile>
@@ -112,6 +115,9 @@
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Component\SphereComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Component\SubUVComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp">
@@ -234,6 +240,9 @@
     <ClCompile Include="Source\Renderer\ShaderResource.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Renderer\SubUVRenderer.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Renderer\TextRenderer.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
@@ -243,8 +252,14 @@
     <ClCompile Include="Source\Scene\SceneManager.cpp">
       <Filter>Source\Scene</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Scene\SceneRenderCollector.cpp">
+      <Filter>Source\Scene</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Scene\ShowFlags.cpp">
       <Filter>Source\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Serializer\Archive.cpp">
+      <Filter>Source\Serializer</Filter>
     </ClCompile>
     <ClCompile Include="Source\Serializer\SceneSerializer.cpp">
       <Filter>Source\Serializer</Filter>
@@ -253,8 +268,6 @@
       <Filter>Source\Types</Filter>
     </ClCompile>
     <ClCompile Include="PrimitiveLineBatch.cpp" />
-    <ClCompile Include="Source\Scene\SceneRenderCollector.cpp" />
-    <ClCompile Include="Source\Serializer\Archive.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -282,6 +295,9 @@
       <Filter>Source\Actor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Actor\SphereActor.h">
+      <Filter>Source\Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\SubUVActor.h">
       <Filter>Source\Actor</Filter>
     </ClInclude>
     <ClInclude Include="Source\Camera\Camera.h">
@@ -318,6 +334,9 @@
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\SphereComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\SubUVComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\UUIDBillboardComponent.h">
@@ -383,6 +402,9 @@
     <ClInclude Include="Source\Math\Vector.h">
       <Filter>Source\Math</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Math\Vector2.h">
+      <Filter>Source\Math</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Math\Vector4.h">
       <Filter>Source\Math</Filter>
     </ClInclude>
@@ -440,9 +462,6 @@
     <ClInclude Include="Source\Renderer\FontAtlas.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\FontVertex.h">
-      <Filter>Source\Renderer</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Renderer\Material.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
@@ -473,7 +492,13 @@
     <ClInclude Include="Source\Renderer\ShaderType.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Renderer\SubUVRenderer.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Renderer\TextRenderer.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\TextureVertex.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scene\Scene.h">
@@ -493,6 +518,9 @@
     </ClInclude>
     <ClInclude Include="Source\Scene\ShowFlags.h">
       <Filter>Source\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Serializer\Archive.h">
+      <Filter>Source\Serializer</Filter>
     </ClInclude>
     <ClInclude Include="Source\Serializer\SceneSerializer.h">
       <Filter>Source\Serializer</Filter>
@@ -537,8 +565,6 @@
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
     <ClInclude Include="PrimitiveLineBatch.h" />
-    <ClInclude Include="Source\Scene\SceneRenderCollector.h" />
-    <ClInclude Include="Source\Serializer\Archive.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

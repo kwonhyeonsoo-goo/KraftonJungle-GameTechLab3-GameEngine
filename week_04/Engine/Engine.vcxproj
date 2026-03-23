@@ -29,6 +29,7 @@
     <ClInclude Include="Source\Actor\PlaneActor.h" />
     <ClInclude Include="Source\Actor\SkySphereActor.h" />
     <ClInclude Include="Source\Actor\SphereActor.h" />
+    <ClInclude Include="Source\Actor\SubUVActor.h" />
     <ClInclude Include="Source\Camera\Camera.h" />
     <ClInclude Include="Source\Component\ActorComponent.h" />
     <ClInclude Include="Source\Component\CameraComponent.h" />
@@ -41,6 +42,7 @@
     <ClInclude Include="Source\Component\SceneComponent.h" />
     <ClInclude Include="Source\Component\SkyComponent.h" />
     <ClInclude Include="Source\Component\SphereComponent.h" />
+    <ClInclude Include="Source\Component\SubUVComponent.h" />
     <ClInclude Include="Source\Component\UUIDBillboardComponent.h" />
     <ClInclude Include="Source\Core\ConsoleVariableManager.h" />
     <ClInclude Include="Source\Core\Core.h" />
@@ -62,6 +64,7 @@
     <ClInclude Include="Source\Math\Rotator.h" />
     <ClInclude Include="Source\Math\Transform.h" />
     <ClInclude Include="Source\Math\Vector.h" />
+    <ClInclude Include="Source\Math\Vector2.h" />
     <ClInclude Include="Source\Math\Vector4.h" />
     <ClInclude Include="Source\Object\Class.h" />
     <ClInclude Include="Source\Object\Object.h" />
@@ -81,7 +84,6 @@
     <ClInclude Include="Source\Primitive\PrimitiveSphere.h" />
     <ClInclude Include="Source\Primitive\UnrealEditorStyledGizmo.h" />
     <ClInclude Include="Source\Renderer\FontAtlas.h" />
-    <ClInclude Include="Source\Renderer\FontVertex.h" />
     <ClInclude Include="Source\Renderer\Material.h" />
     <ClInclude Include="Source\Renderer\MaterialManager.h" />
     <ClInclude Include="Source\Renderer\PrimitiveVertex.h" />
