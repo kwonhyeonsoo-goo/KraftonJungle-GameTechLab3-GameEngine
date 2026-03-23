@@ -172,6 +172,8 @@
     <ClCompile Include="Object\Object.cpp" />
     <ClCompile Include="World\Gizmo\GizmoComponent.cpp" />
     <ClCompile Include="World\Gizmo\GizmoManager.cpp" />
+    <ClCompile Include="World\Light\LightComponent.cpp" />
+    <ClCompile Include="World\Light\SpotLightComponent.cpp" />
     <ClCompile Include="World\Mesh\MeshManager.cpp" />
     <ClCompile Include="World\PrimitiveComponent.cpp" />
     <ClCompile Include="World\Primitives\CubeComponent.cpp" />
@@ -242,6 +244,8 @@
     <ClInclude Include="SimpleJSON\json.hpp" />
     <ClInclude Include="World\Gizmo\GizmoComponent.h" />
     <ClInclude Include="World\Gizmo\GizmoManager.h" />
+    <ClInclude Include="World\Light\LightComponent.h" />
+    <ClInclude Include="World\Light\SpotLightComponent.h" />
     <ClInclude Include="World\Mesh\MeshManager.h" />
     <ClInclude Include="World\PrimitiveComponent.h" />
     <ClInclude Include="World\Primitives\CubeComponent.h" />

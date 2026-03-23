@@ -412,20 +412,23 @@ void FEditorMainPanel::RenderPickedActorWindow(AActor* Actor) {
 		ASpotlight* Spotlight = ASpotlight::Cast(Actor);
 		float SpotlightRot[2] = { Spotlight->GetYaw(), Spotlight->GetPitch()};
 		if (ImGui::DragFloat2("Spotlight Rotation", SpotlightRot, 0.1f)) {
-			Clamp(SpotlightRot[0], -80.0f, 80.0f); Clamp(SpotlightRot[1], -80.0f, 80.0f);
+			SpotlightRot[0] = Clamp(SpotlightRot[0], -80.0f, 80.0f); SpotlightRot[1] = Clamp(SpotlightRot[1], -80.0f, 80.0f);
 			Spotlight->SetYaw(SpotlightRot[0]); Spotlight->SetPitch(SpotlightRot[1]);
 		}
 
 		int NumVertices = Spotlight->GetNumVertices();
 		if (ImGui::DragInt("No. Vertices", &NumVertices, 1)) { 
-			Clamp(NumVertices, 0, 200);
+			NumVertices = Clamp(NumVertices, 0, 500);
 			if (NumVertices >= 0) {
 				Spotlight->SetNumVertex(NumVertices);
 			}
 		}
 
 		float SpotlightHeight = Spotlight->GetConeHeight();
-		if (ImGui::DragFloat("Spotlight Height", &SpotlightHeight, 0.1f)) { Clamp(SpotlightHeight, 0.1f, 500.0f); Spotlight->SetConeHeight(SpotlightHeight); }
+		if (ImGui::DragFloat("Spotlight Height", &SpotlightHeight, 0.1f)) {SpotlightHeight =  Clamp(SpotlightHeight, 0.1f, 500.0f); Spotlight->SetConeHeight(SpotlightHeight); }
+
+		float SpotlightRadius = Spotlight->GetRadius();
+		if (ImGui::DragFloat("Spotlight Radius", &SpotlightRadius, 0.1f)) { SpotlightRadius = Clamp(SpotlightRadius, 0.1f, 100.0f); Spotlight->SetConeRadius(SpotlightRadius); }
 
 		// Color
 	}

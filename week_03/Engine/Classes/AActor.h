@@ -56,6 +56,7 @@ public:
 	FVector GetActorLocation();
 	FVector GetActorRotation();
 	FVector GetActorScale();
+	virtual void Transformed() {}
 
 	FVector GetActorForward() const
 	{

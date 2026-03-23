@@ -1,4 +1,5 @@
 #include "GizmoManager.h"
+#include "Classes/AActor.h"
 #include <cmath>
 
 void FGizmoManager::Initialize(weak_ptr<UGizmoComponent> InComponent)
@@ -186,6 +187,7 @@ void FGizmoManager::TranslateTarget(float DragAmount)
 	FVector delta = GetVectorForAxis(Comp->GetSelectedAxis()) * DragAmount;
 	Comp->AddWorldOffset(delta);
 	TargetComponent->AddWorldOffset(delta);
+	TargetComponent->GetOwningActor()->Transformed();
 }
 
 void FGizmoManager::RotateTarget(float DragAmount)
@@ -196,6 +198,7 @@ void FGizmoManager::RotateTarget(float DragAmount)
 	FVector rotAxis     = GetVectorForAxis(Comp->GetSelectedAxis());
 	FMatrix deltaMatrix = FMatrix::MakeRotationAxis(rotAxis, DragAmount);
 	TargetComponent->SetRelativeRotation((curMatrix * deltaMatrix).GetEuler());
+	TargetComponent->GetOwningActor()->Transformed();
 }
 
 void FGizmoManager::ScaleTarget(float DragAmount)
@@ -211,6 +214,7 @@ void FGizmoManager::ScaleTarget(float DragAmount)
 	case 2: NewScale.Z += scaleDelta; break;
 	}
 	TargetComponent->SetRelativeScale(NewScale);
+	TargetComponent->GetOwningActor()->Transformed();
 }
 
 void FGizmoManager::UpdateLinearDrag(const FRay& Ray)

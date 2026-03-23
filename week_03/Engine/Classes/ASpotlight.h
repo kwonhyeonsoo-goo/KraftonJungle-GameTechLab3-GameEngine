@@ -45,11 +45,18 @@ public:
 	void SetConeColor(FVector4 NewConeColor)	{ ConeColor = NewConeColor; }
 	void SetYaw(float NewYaw) { Yaw = NewYaw; bIsConeDirty = true; }
 	void SetPitch(float NewPitch) { Pitch = NewPitch; bIsConeDirty = true; }
+	void SetRadius(float NewRadius) { if (NewRadius >= 0) Radius = NewRadius; bIsConeDirty = true; }
 
-	float GetYaw() { return Yaw; }
-	float GetPitch() { return Pitch; }
-	float GetConeHeight() { return ConeHeight; }
-	int GetNumVertices() { return NumCircleVertex; }
+	float GetYaw() const { return Yaw; }
+	float GetPitch() const { return Pitch; }
+	float GetConeHeight() const { return ConeHeight; }
+	float GetRadius() const { return Radius; }
+	int GetNumVertices() const { return NumCircleVertex; }
+
+	//void SetActorLocation(const FVector& Location, USceneComponent* WhichComp) override;
+	//void SetActorRotation(const FVector& Rotation, USceneComponent* WhichComp) override;
+	//void SetActorScale(const FVector& Scale, USceneComponent* WhichComp) override;
+	void Transformed() override { bIsConeDirty = true; }
 
 	// Rendering
 	void AddConeLinesToBatch(FBatchedLine* BatchLine);

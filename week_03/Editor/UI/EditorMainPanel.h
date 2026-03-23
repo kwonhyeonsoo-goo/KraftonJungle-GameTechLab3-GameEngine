@@ -25,7 +25,7 @@ private:
 		"Sphere",
 		"Plane"
 	};
-	const char* UtilTypes[3] =
+	const char* UtilTypes[1] =
 	{
 		"Spotlight"
 	};
