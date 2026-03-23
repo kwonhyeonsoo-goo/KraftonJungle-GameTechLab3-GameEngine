@@ -96,31 +96,6 @@ void UScene::InitializeDefaultScene(float AspectRatio, ID3D11Device* Device)
 {
 	InitializeEmptyScene(AspectRatio);
 	LoadSceneFromFile((FPaths::SceneDir() / "DefaultScene.json").string(), Device);
-
-	// SubUV 테스트용 Actor 추가
-	ASubUVActor* SubUVActor = SpawnActor<ASubUVActor>("SubUV_Test");
-	if (SubUVActor)
-	{
-		SubUVActor->SetActorLocation(FVector(0.0f, 0.0f, 0.0f));
-
-		USubUVComponent* SubUVComponent = SubUVActor->GetSubUVComponent();
-		if (SubUVComponent)
-		{
-			SubUVComponent->SetSize(FVector2(1.0f, 1.0f));
-			SubUVComponent->SetColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
-
-			SubUVComponent->SetColumns(9);
-			SubUVComponent->SetRows(4);
-			SubUVComponent->SetTotalFrames(36);
-
-			SubUVComponent->SetFirstFrame(14);
-			SubUVComponent->SetLastFrame(17);
-
-			SubUVComponent->SetFPS(8.0f);
-			SubUVComponent->SetLoop(true);
-			SubUVComponent->SetBillboard(true);
-		}
-	}
 }
 
 void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
