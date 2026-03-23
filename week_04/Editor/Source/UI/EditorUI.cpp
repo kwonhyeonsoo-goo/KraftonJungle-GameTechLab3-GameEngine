@@ -367,6 +367,9 @@ void CEditorUI::Render()
 			{
 				if (Core && Core->GetActiveScene())
 				{
+					Core->SetSelectedActor(nullptr);
+					Core->GetScene()->ClearActors();
+
 					FString Path = GetFilePathUsingDialog(EFileDialogType::Open);
 
 					if (!Path.empty())
