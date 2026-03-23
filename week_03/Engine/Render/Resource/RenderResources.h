@@ -16,10 +16,7 @@ struct FRenderResources
     //FConstantBuffer EditorConstantBuffer;           // b3
 	FConstantBuffer OutlineConstantBuffer;          // b4
 
-    FConstantBuffer FontConstantBuffer;             // b0
-    FConstantBuffer FontColorConstantBuffer;        // b1
-
-    FVertexBuffer FontVertexBuffer;
+    FInstanceBuffer FontInstanceBuffer;
 
     FShader PrimitiveShader;
     FShader GizmoShader;

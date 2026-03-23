@@ -10,6 +10,7 @@ void FMeshBufferManager::Create(ID3D11Device* InDevice)
 	MeshBufferMap[EPrimitiveType::EPT_ScaleGizmo].Create(InDevice, FMeshManager::GetScaleGizmo());
 	MeshBufferMap[EPrimitiveType::EPT_MouseOverlay].Create(InDevice, FMeshManager::GetMouseOverlay());
 	MeshBufferMap[EPrimitiveType::EPT_Box].Create(InDevice, FMeshManager::GetBox());
+	MeshBufferMap[EPrimitiveType::EPT_Quad].Create(InDevice, FMeshManager::GetQuad());
 }
 
 //	TODO : 내일 하기
