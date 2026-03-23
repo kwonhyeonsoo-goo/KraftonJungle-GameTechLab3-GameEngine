@@ -13,6 +13,7 @@ FMeshData FMeshManager::TranslationGizmoMeshData;
 FMeshData FMeshManager::RotationGizmoMeshData;
 FMeshData FMeshManager::ScaleGizmoMeshData;
 FMeshData FMeshManager::MouseOverlayMeshData;
+FUVMeshData FMeshManager::UVRectMeshData;
 //FMeshData FMeshManager::AxisMeshData;
 //FMeshData FMeshManager::GridMeshData;
 
@@ -68,6 +69,11 @@ void FMeshManager::Initialize()
     if (MouseOverlayMeshData.Vertices.empty())
     {
         CreateMouseOverlay();
+    }
+
+    if (UVRectMeshData.Vertices.empty())
+    {
+        CreateUVRect();
     }
 
     bIsInitialized = true;
@@ -363,6 +369,31 @@ void FMeshManager::CreateScaleGizmo()
         float boxSizeHalf = BoxSize;
         AddBox(dirs[i] * LineLength, FVector(boxSizeHalf, boxSizeHalf, boxSizeHalf), colors[i], i);
     }
+}
+
+void FMeshManager::CreateUVRect()
+{
+    TArray<FUVVertex>& vertices = UVRectMeshData.Vertices;
+    TArray<uint32>& indices = UVRectMeshData.Indices;
+
+    vertices.clear();
+    indices.clear();
+
+    // Front face (Z = 0.01f)
+    vertices = {
+        { {0.f, -0.5f, -0.5f}, 1.f, 1.f }, // 0
+        { {0.f, -0.5f,  0.5f}, 1.f, 0.f }, // 1
+        { {0.f,  0.5f,  0.5f}, 0.f, 0.f }, // 2
+        { {0.f,  0.5f, -0.5f}, 0.f, 1.f }  // 3
+
+    };
+
+    // Front face triangles
+    indices = {
+        0, 2, 1,  // Front tri 1
+        0, 3, 2  // Front tri 2
+    };
+
 }
 
 

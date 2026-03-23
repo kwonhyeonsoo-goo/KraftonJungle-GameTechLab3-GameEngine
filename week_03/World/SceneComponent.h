@@ -38,6 +38,8 @@ public:
 	bool ContainsChild(const USceneComponent* Child) const;
 	const TArray<USceneComponent*>& GetChildren() const { return ChildComponents; }
 
+	virtual void Update(float deltaTime) {}
+
 	virtual void UpdateWorldMatrix();
 	void AddWorldOffset(const FVector& WorldDelta);
 	virtual void SetRelativeLocation(const FVector NewLocation);

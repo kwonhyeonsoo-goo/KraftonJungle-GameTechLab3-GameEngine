@@ -20,7 +20,8 @@ enum class ERenderCommandType
 	Gizmo,
 	Overlay,
 	SelectionOutline,
-	Font
+	Font,
+	SubUV
 };
 
 //	Object를 위한 Constant Buffer입니다.
@@ -60,7 +61,12 @@ struct FOutlineConstants
 	float Padding0[3];
 };
 
- 
+struct FSubUVConstants
+{
+	float startX, startY;
+	float cellSizeWidth, cellSizeheight;
+};
+
 struct FFontTransform
 {
 	FMatrix MVP;
@@ -75,7 +81,7 @@ struct FRenderCommand
 {
 	//	VB, IB 모두 담고 있는 MB
 	FMeshBuffer* MeshBuffer = nullptr;
-
+	FUVMeshBuffer* UVMeshBuffer = nullptr;
 	// VB만 담고 있는 버퍼
 	FVertexBuffer* VertexBuffer = nullptr;
 
@@ -83,11 +89,13 @@ struct FRenderCommand
 	FGizmoConstants GizmoConstants = {};
 	FOverlayConstants OverlayConstants = {};
 	FOutlineConstants OutlineConstants = {};
-
+	FSubUVConstants SubUVConstants = {};
 	FVector FontPosition = {};
 	FFontColor FontColor = {};
 	
 	uint32 UUID = 0;
 	ERenderCommandType Type = ERenderCommandType::Primitive;
+
+	uint32 TextureID;
 
 };

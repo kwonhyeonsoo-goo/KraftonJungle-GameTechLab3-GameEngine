@@ -96,6 +96,10 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 			case EPrimitiveType::EPT_Plane:
 				EditorEngine->SpawnNewPrimitiveActor<UPlaneComponent>(CurSpawnPoint);
 				break;
+			case EPrimitiveType::EPT_SubUV:
+				EditorEngine->SpawnNewPrimitiveActor<USubUVComponent>(CurSpawnPoint);
+
+				break;
 			}
 		}
 

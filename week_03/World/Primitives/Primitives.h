@@ -3,3 +3,4 @@
 #include "CubeComponent.h"
 #include "SphereComponent.h"
 #include "PlaneComponent.h"
+#include "SubUV/SubUV.h"

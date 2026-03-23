@@ -10,7 +10,7 @@ void FShader::Create(ID3D11Device* InDevice, const wchar_t* InFilePath, const ch
 	ID3DBlob* pixelShaderCSO = nullptr;
 	ID3DBlob* errorBlob = nullptr;	//	For Debugging
 	HRESULT hr = D3DCompileFromFile(InFilePath, nullptr, nullptr, InVSEntryPoint, "vs_5_0", 0, 0, &vertexShaderCSO, &errorBlob);
-#if DEBUG
+#if _DEBUG
 	//	Vertex Shader Compile Error
 	if (FAILED(hr))
 	{
@@ -26,7 +26,7 @@ void FShader::Create(ID3D11Device* InDevice, const wchar_t* InFilePath, const ch
 #endif
 	hr = D3DCompileFromFile(InFilePath, nullptr, nullptr, InPSEntryPoint, "ps_5_0", 0, 0, &pixelShaderCSO, nullptr);
 
-#if DEBUG
+#if _DEBUG
 	//	Vertex Shader Compile Error
 	if (FAILED(hr))
 	{
@@ -42,7 +42,7 @@ void FShader::Create(ID3D11Device* InDevice, const wchar_t* InFilePath, const ch
 #endif
 	hr = InDevice->CreateVertexShader(vertexShaderCSO->GetBufferPointer(), vertexShaderCSO->GetBufferSize(), nullptr, &VertexShader);
 
-#if DEBUG
+#if _DEBUG
 	//	Vertex Shader Compile Error
 	if (FAILED(hr))
 	{
@@ -59,7 +59,7 @@ void FShader::Create(ID3D11Device* InDevice, const wchar_t* InFilePath, const ch
 
 	hr = InDevice->CreatePixelShader(pixelShaderCSO->GetBufferPointer(), pixelShaderCSO->GetBufferSize(), nullptr, &PixelShader);
 
-#if DEBUG
+#if _DEBUG
 	//	Vertex Shader Compile Error
 	if (FAILED(hr))
 	{

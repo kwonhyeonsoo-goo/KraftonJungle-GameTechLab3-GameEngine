@@ -54,8 +54,13 @@ private:
 
 	// Texture
 	ID3D11SamplerState* FontSampler = nullptr;
+public:
+	ID3D11SamplerState* SubUVSampler = nullptr;
 
+private:
 	ID3D11BlendState* BlendStateAlpha = nullptr;
+
+
 
 	D3D11_VIEWPORT ViewportInfo = {};
 

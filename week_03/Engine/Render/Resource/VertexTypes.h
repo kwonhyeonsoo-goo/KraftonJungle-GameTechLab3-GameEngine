@@ -27,6 +27,23 @@ struct FVertex
     }
 };
 
+struct FUVVertex
+{
+    FVector Position;
+    float u, v;
+
+    // TMap을 위한 연산자 오버로딩
+    bool operator==(const FUVVertex& Other) const
+    {
+        return Position.X == Other.Position.X
+            && Position.Y == Other.Position.Y
+            && Position.Z == Other.Position.Z
+            && u == Other.u
+            && v == Other.v;
+    }
+};
+
+
 namespace std
 {
     template<>
@@ -54,9 +71,14 @@ struct FMeshData
 	TArray<uint32> Indices;
 };
 
+struct FUVMeshData
+{
+    TArray<FUVVertex> Vertices;
+    TArray<uint32> Indices;
+};
+
 struct FFontVertex
 {
 	FVector Position;
 	float U, V;     // UV
 };
-
