@@ -3,6 +3,8 @@
 #include "Engine/Render/Resource/RenderResourceManager.h"
 #include "World/Mesh/MeshManager.h"
 
+DEFINE_CLASS(USubUVComponent, UPrimitiveComponent)
+REGISTER_FACTORY(USubUVComponent, UPrimitiveComponent)
 
 void USubUVComponent::UpdateFrame(float deltaTime)
 {
@@ -35,11 +37,11 @@ USubUVComponent::USubUVComponent(std::wstring filename)
 	CellSizeY = (1.f - OffsetUpY - OffsetBottomY) / CellCountY;
 
 	currentU = OffsetLeftX; currentV = OffsetUpY;
-	MeshData = &FMeshManager::GetUVRect();
+	UVMeshData = &FMeshManager::GetUVRect();
 }
 
 bool USubUVComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand) {
-	if (!MeshData || !bIsVisible ) {
+	if (!UVMeshData || !bIsVisible ) {
 		return false;
 	}
 
@@ -58,7 +60,7 @@ bool USubUVComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix&
 	
 	return UPrimitiveComponent::GetRenderCommand(viewMatrix, projMatrix, OutCommand);
 }
-//
+
 void USubUVComponent::Update(float deltatime)
 {
 	UpdateFrame(deltatime);
@@ -68,6 +70,46 @@ void USubUVComponent::ReloadTextureResource(std::wstring filename)
 {
 	Texture2DId = FEngineServices::GetResourceManager()->CreateTexture(this->filename);
 
+}
+
+bool USubUVComponent::RaycastMesh(const FRay& Ray, FHitResult& OutHitResult)
+{
+	if (!UVMeshData || UVMeshData->Indices.empty())
+		return false;
+
+	FMatrix invWorld = CachedWorldMatrix.GetInverse();
+	FVector localOrigin = invWorld.TransformPositionWithW(Ray.Origin);
+	FVector localDirection = invWorld.TransformVector(Ray.Direction);
+	localDirection.Normalize();
+
+	bool bHit = false;
+	float closestT = FLT_MAX;
+
+	for (size_t i = 0; i < UVMeshData->Indices.size(); i += 3)
+	{
+		FVector v0 = UVMeshData->Vertices[UVMeshData->Indices[i]].Position;
+		FVector v1 = UVMeshData->Vertices[UVMeshData->Indices[i + 1]].Position;
+		FVector v2 = UVMeshData->Vertices[UVMeshData->Indices[i + 2]].Position;
+
+		float t = 0.0f;
+		if (IntersectTriangle(localOrigin, localDirection, v0, v1, v2, t) && t > 0.0f && t < closestT)
+		{
+			closestT = t;
+			bHit = true;
+			OutHitResult.FaceIndex = i;
+		}
+	}
+
+	OutHitResult.bHit = bHit;
+	if (bHit)
+	{
+		FVector localHit = localOrigin + localDirection * closestT;
+		FVector worldHit = CachedWorldMatrix.TransformPositionWithW(localHit);
+		OutHitResult.Distance = FVector::Distance(Ray.Origin, worldHit);
+		OutHitResult.HitComponent = this;
+		return true;
+	}
+	return false;
 }
 
 void USubUVComponent::UpdateWorldAABB()
