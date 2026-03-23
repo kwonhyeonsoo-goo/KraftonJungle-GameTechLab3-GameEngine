@@ -219,8 +219,8 @@ FRenderCommand CEditorViewportClient::BuildRenderCommand(UPrimitiveComponent* Pr
 	case ERenderMode::NoLighting:
 		Command.Material = PrimitiveComponent->GetMaterial();
 		break;
-	// WireFrame 렌더모드에서는 기존 Primitive가 가지고 있던 Material 무시 
-	case ERenderMode::WireFrame:
+	// Wireframe 렌더모드에서는 기존 Primitive가 가지고 있던 Material 무시 
+	case ERenderMode::Wireframe:
 		Command.Material = WireFrameMaterial.get();
 	}
 	return Command;

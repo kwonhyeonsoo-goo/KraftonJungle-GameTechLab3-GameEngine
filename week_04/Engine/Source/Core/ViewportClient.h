@@ -14,13 +14,6 @@ class FFrustum;
 class UPrimitiveComponent;
 struct FRenderCommandQueue;
 
-enum class ERenderMode
-{
-	Lighting,
-	NoLighting,
-	WireFrame,
-};
-
 class ENGINE_API IViewportClient
 {
 public:

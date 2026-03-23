@@ -9,6 +9,13 @@ class CWindow;
 class FFrustum;
 struct FRenderCommandQueue;
 
+enum class ERenderMode
+{
+	Lighting,
+	NoLighting,
+	Wireframe,
+};
+
 class CEditorViewportClient : public IViewportClient
 {
 public:
@@ -21,6 +28,7 @@ public:
 	void BuildRenderCommands(CCore* Core, UScene* Scene, const FFrustum& Frustum, FRenderCommandQueue& OutQueue) const override;
 	EGizmoMode GetGizmoMode() const { return Gizmo.GetMode(); }
 	void SetGizmoMode(EGizmoMode InMode) { Gizmo.SetMode(InMode); }
+	ERenderMode GetRenderMode() { return RenderMode; }
 	void SetRenderMode(ERenderMode InRenderMode) { RenderMode = InRenderMode; }
 
 	void HandleFileDoubleClick(const FString& FilePath) override;
@@ -34,7 +42,7 @@ private:
 	CPicker Picker;
 	mutable CGizmo Gizmo;
 
-	ERenderMode RenderMode = ERenderMode::WireFrame;	// Test
+	ERenderMode RenderMode = ERenderMode::Lighting;
 	const FString WireframeMaterialPath = "Assets/Materials/M_Wireframe.json";
 	std::shared_ptr<FMaterial> WireFrameMaterial = nullptr;
 };
