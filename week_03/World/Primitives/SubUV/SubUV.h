@@ -6,7 +6,7 @@ class USubUVComponent :
     public UPrimitiveComponent
 {
 private:
-    const FUVMeshData* MeshData = nullptr;
+    const FUVMeshData* UVMeshData = nullptr;
     int Texture2DId = -1;
     float OffsetLeftX, OffsetUpY, OffsetRightX, OffsetBottomY;
     int FrameCount;
@@ -19,6 +19,7 @@ private:
     bool bIsBillBoard = true;
     float currentU, currentV;
 public:
+    DECLARE_CLASS(USubUVComponent, UPrimitiveComponent)
     void UpdateFrame(float deltaTime);
     USubUVComponent(std::wstring filename = L"Assets/Effects/Explosion.PNG");
     bool GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand) override;
@@ -31,6 +32,7 @@ private:
 
 public:
     void UpdateWorldAABB() override;
+    bool RaycastMesh(const FRay& Ray, FHitResult& OutHitResult) override;
     float ElaspedTime;
     float Timer;
     static constexpr EPrimitiveType PrimitiveType = EPrimitiveType::EPT_SubUV;
