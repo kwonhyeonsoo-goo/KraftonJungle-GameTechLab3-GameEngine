@@ -68,4 +68,6 @@ private:
 	bool bBegunPlay = false;
 	ESceneType SceneType = ESceneType::Game;
 	FShowFlags ShowFlags;
+
+	TArray<UPrimitiveComponent*> VisiblePrimitives;
 };

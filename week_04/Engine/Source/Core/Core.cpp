@@ -77,9 +77,6 @@ void CCore::SetViewportClient(IViewportClient* InViewportClient)
 	}
 }
 
-
-
-
 void CCore::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
 	if (InputManager)
@@ -241,9 +238,8 @@ void CCore::Render()
 		return;
 	}
 
-	FRenderCommandQueue CommandQueue;
+	CommandQueue.Clear();
 	CommandQueue.Reserve(Renderer->GetPrevCommandCount());
-
 	CommandQueue.ViewMatrix = ActiveCamera->GetViewMatrix();
 	CommandQueue.ProjectionMatrix = ActiveCamera->GetProjectionMatrix();
 

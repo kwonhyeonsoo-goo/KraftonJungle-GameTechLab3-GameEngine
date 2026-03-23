@@ -529,12 +529,12 @@ void UScene::FrustrumCull(const FFrustum& Frustum, TArray<UPrimitiveComponent*>&
 
 void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
-
 	if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives))
 	{
 		return;
 	}
-	TArray<UPrimitiveComponent*> VisiblePrimitives;
+
+	VisiblePrimitives.clear();
 	FrustrumCull(Frustum, VisiblePrimitives);
 
 	for (UPrimitiveComponent* PrimitiveComponent : VisiblePrimitives)

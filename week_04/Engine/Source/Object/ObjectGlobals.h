@@ -1,6 +1,6 @@
 #pragma once
 #include "CoreMinimal.h"
 
-struct FMalloc;
+class FMalloc;
 
 ENGINE_API FMalloc* GetGMalloc();

@@ -56,7 +56,6 @@ void CControlPanelWindow::Render(CCore* Core)
 
 	if (Core && Core->GetScene())
 	{
-	
 		const FSceneContext* ActiveSceneContext = Core->GetActiveSceneContext();
 		const TArray<std::unique_ptr<FEditorSceneContext>>& PreviewSceneContexts = Core->GetPreviewSceneContexts();
 		const bool bPreviewActive = ActiveSceneContext && ActiveSceneContext->SceneType == ESceneType::Preview;
@@ -107,7 +106,7 @@ void CControlPanelWindow::Render(CCore* Core)
 
 				std::uniform_real_distribution<float> dist(-10, 10);
 
-				FVector V{ dist(rng), dist(rng), dist(rng) };
+				FVector V{ 0, 0, 0 };
 				NewActor = Scene->SpawnActor<ACubeActor>("Test");
 				NewActor->SetActorLocation(V);
 			}

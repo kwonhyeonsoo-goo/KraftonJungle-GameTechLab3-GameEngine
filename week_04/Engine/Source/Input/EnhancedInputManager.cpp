@@ -48,6 +48,7 @@ FInputActionValue CEnhancedInputManager::GetRawActionValue(CInputManager* Input,
 		return FInputActionValue(Input->GetMouseDeltaY());
 	return FInputActionValue(Input->IsKeyDown(Key) ? 1.0f : 0.0f);
 }
+
 void CEnhancedInputManager::ProcessInput(CInputManager* RawInput, float DeltaTime)
 {
 	TMap<FInputAction*, FInputActionValue> ActionValues;
@@ -66,6 +67,7 @@ void CEnhancedInputManager::ProcessInput(CInputManager* RawInput, float DeltaTim
 				Value = Modifier->ModifyRaw(Value);
 			}
 			ETriggerState MappingTriggerState = ETriggerState::None;
+
 			if (Mapping.Triggers.empty())
 			{
 				MappingTriggerState = Value.IsNonZero()
@@ -90,8 +92,10 @@ void CEnhancedInputManager::ProcessInput(CInputManager* RawInput, float DeltaTim
 				else if (bAnyOngoing)
 					MappingTriggerState = ETriggerState::Ongoing;
 			}
+
 			if (ActionValues.find(Mapping.Action) == ActionValues.end())
 				ActionValues[Mapping.Action] = FInputActionValue();
+
 			ActionValues[Mapping.Action] = ActionValues[Mapping.Action] + Value;
 
 			ETriggerState& CurrentBest = NewTriggerStates[Mapping.Action];
