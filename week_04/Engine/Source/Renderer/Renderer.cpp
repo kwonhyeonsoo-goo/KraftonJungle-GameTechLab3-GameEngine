@@ -808,6 +808,7 @@ void CRenderer::Release()
 	ClearSceneRenderTarget();
 
 	TextRenderer.Release();
+	SubUVRenderer.Release();
 
 	ShaderManager.Release();
 	FShaderMap::Get().Clear();
