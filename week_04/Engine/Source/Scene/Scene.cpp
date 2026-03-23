@@ -5,6 +5,7 @@
 #include "Actor/AttachTestActor.h"
 #include "Actor/CubeActor.h"
 #include "Actor/SphereActor.h"
+#include "Actor/SubUVActor.h"
 #include "Camera/Camera.h"
 #include "Component/CameraComponent.h"
 #include "Object/ObjectFactory.h"
@@ -17,6 +18,9 @@
 
 #include "Component/UUIDBillboardComponent.h"
 #include "Object/Class.h"
+#include "Core/FEngine.h"
+#include "Component/SubUVComponent.h"
+
 #include "Serializer/SceneSerializer.h"
 #include <algorithm>
 
@@ -222,13 +226,20 @@ void UScene::FrustrumCull(const FFrustum& Frustum, TArray<UPrimitiveComponent*>&
 			}
 
 			UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
-			// if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
+
+			const bool bIsUUID = PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass());
+			const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
+
 			if (PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
 			{
 				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_BillboardText))
 				{
 					continue;
 				}
+			}
+			else if (PrimitiveComponent->IsA(USubUVComponent::StaticClass()))
+			{
+				// SubUV??mesh data 체크 불필??
 			}
 			else
 			{
@@ -246,9 +257,9 @@ void UScene::FrustrumCull(const FFrustum& Frustum, TArray<UPrimitiveComponent*>&
 			{
 				OutVisible.push_back(PrimitiveComponent);
 			}
-		}
-	}
-}
+		}  // for Component
+	}  // for Actor
+}  // FrustrumCull ??
 
 void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
@@ -276,6 +287,25 @@ void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue&
 			TextCmd.Color = UUIDComponent->GetTextColor();
 
 			OutQueue.AddTextCommand(TextCmd);
+			continue;
+		}
+		if (PrimitiveComponent->IsA(USubUVComponent::StaticClass()))
+		{
+			USubUVComponent* SubUVComponent = static_cast<USubUVComponent*>(PrimitiveComponent);
+			FSubUVRenderCommand SubUVCmd;
+			SubUVCmd.WorldMatrix = SubUVComponent->GetWorldTransform();
+			SubUVCmd.Size = SubUVComponent->GetSize();
+			SubUVCmd.Columns = SubUVComponent->GetColumns();
+			SubUVCmd.Rows = SubUVComponent->GetRows();
+			SubUVCmd.TotalFrames = SubUVComponent->GetTotalFrames();
+			SubUVCmd.FPS = SubUVComponent->GetFPS();
+			SubUVCmd.ElapsedTime = static_cast<float>(GEngine->GetCore()->GetTimer().GetTotalTime());
+			SubUVCmd.bLoop = SubUVComponent->IsLoop();
+			SubUVCmd.bBillboard = SubUVComponent->IsBillboard();
+			SubUVCmd.FirstFrame = SubUVComponent->GetFirstFrame();
+			SubUVCmd.LastFrame = SubUVComponent->GetLastFrame();
+
+			OutQueue.AddSubUVCommand(SubUVCmd);
 			continue;
 		}
 

@@ -261,6 +261,13 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 
+	std::filesystem::path SubUVTexturePath = FPaths::ContentDir() / FString("Textures/SubUVPenguin.png");
+	FString SubUVTexturePathString = SubUVTexturePath.string();
+	if (!SubUVRenderer.Initialize(Device, DeviceContext, FPaths::ToWide(SubUVTexturePathString)))
+	{
+		MessageBox(0, L"SubUVRenderer Initialize Failed.", 0, 0);
+	}
+
 	std::filesystem::path FolderIconPath = FPaths::AssetDir() / FString("\\Textures\\FolderIcon.png");
 	std::filesystem::path FileIconPath = FPaths::AssetDir() / FString("\\Textures\\FileIcon.png");
 
@@ -327,6 +334,9 @@ void CRenderer::BeginFrame()
 
 	TextCommandList.clear();
 	TextCommandList.reserve(PrevCommandCount);
+
+	SubUVCommandList.clear();
+	SubUVCommandList.reserve(PrevCommandCount);
 }
 
 void CRenderer::EndFrame()
@@ -372,6 +382,10 @@ void CRenderer::SubmitCommands(const FRenderCommandQueue& Queue)
 	for (const auto& TextCmd : Queue.TextCommands)
 	{
 		TextCommandList.push_back(TextCmd);
+	}
+	for (const auto& SubUVCmd : Queue.SubUVCommands)
+	{
+		SubUVCommandList.push_back(SubUVCmd);
 	}
 
 }
@@ -465,7 +479,7 @@ void CRenderer::ExecuteCommands()
 
 	const FVector CameraPosition = GetCameraWorldPositionFromViewMatrix(ViewMatrix);
 
-	if (!TextCommandList.empty() || bEnableTextRenderTest)
+	if (!TextCommandList.empty())
 	{
 		TextRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
 
@@ -478,17 +492,26 @@ void CRenderer::ExecuteCommands()
 				TextCmd.Color
 			);
 		}
+	}
 
-		// 테스트용 코드
-		if (bEnableTextRenderTest)
+	if (!SubUVCommandList.empty())
+	{
+		SubUVRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
+
+		for (const FSubUVRenderCommand& Cmd : SubUVCommandList)
 		{
-			TextRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
-
-			TextRenderer.DrawTextBillboard(
-				FString("012TEST"),
-				FVector(0.0f, 0.0f, 0.0f),
-				0.3f,
-				FVector4(1.0f, 1.0f, 1.0f, 1.0f)
+			SubUVRenderer.DrawSubUV(
+				Cmd.WorldMatrix,
+				Cmd.Size,
+				Cmd.Columns,
+				Cmd.Rows,
+				Cmd.TotalFrames,
+				Cmd.FirstFrame,
+				Cmd.LastFrame,
+				Cmd.FPS,
+				Cmd.ElapsedTime,
+				Cmd.bLoop,
+				Cmd.bBillboard
 			);
 		}
 	}
@@ -787,6 +810,7 @@ void CRenderer::Release()
 	ClearSceneRenderTarget();
 
 	TextRenderer.Release();
+	SubUVRenderer.Release();
 
 	ShaderManager.Release();
 	FShaderMap::Get().Clear();

@@ -4,6 +4,8 @@
 #include "Math/MathUtility.h"
 #include "Actor/Actor.h"
 #include "Component/PrimitiveComponent.h"
+#include "Component/SubUVComponent.h"
+#include "Component/UUIDBillboardComponent.h"
 
 bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const FVector& End, FHitResult& OutHit)
 {
@@ -30,9 +32,16 @@ bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const
 				}
 
 				UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
-				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
+				
+				const bool bIsUUID = PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass());
+				const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
+
+				if (!bIsUUID && !bIsSubUV)
 				{
-					continue;
+					if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
+					{
+						continue;
+					}
 				}
 
 				FBoxSphereBounds Bound = PrimitiveComponent->GetWorldBounds();

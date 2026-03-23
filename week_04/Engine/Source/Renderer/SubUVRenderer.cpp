@@ -1,21 +1,27 @@
-#include "Renderer/TextRenderer.h"
+#include "Renderer/SubUVRenderer.h"
 #include "Renderer/Shader.h"
 #include "Renderer/ShaderResource.h"
-#include "Renderer/ShaderType.h"
 #include "Core/Paths.h"
+#include <WICTextureLoader.h>
 #include <cstring>
+#include <algorithm>
+#include "Renderer/ShaderType.h"
 
-struct FTextConstantBuffer
+struct FSubUVConstantBuffer
 {
-	FVector4 TextColor;
+	FVector2 CellSize;
+	FVector2 Offset;
 };
 
-CTextRenderer::~CTextRenderer()
+CSubUVRenderer::~CSubUVRenderer()
 {
 	Release();
 }
 
-bool CTextRenderer::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext)
+bool CSubUVRenderer::Initialize(
+	ID3D11Device* InDevice,
+	ID3D11DeviceContext* InDeviceContext,
+	const std::wstring& TexturePath)
 {
 	Release();
 
@@ -24,46 +30,48 @@ bool CTextRenderer::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDe
 
 	if (!Device || !DeviceContext)
 	{
-		MessageBox(0, L"TextRenderer: Device or DeviceContext is null", 0, 0);
 		return false;
 	}
 
 	if (!CreateShaders())
 	{
-		MessageBox(0, L"TextRenderer: CreateShaders failed", 0, 0);
 		return false;
 	}
 
 	if (!CreateConstantBuffers())
 	{
-		MessageBox(0, L"TextRenderer: CreateConstantBuffers failed", 0, 0);
 		return false;
 	}
 
 	if (!CreateRenderStates())
 	{
-		MessageBox(0, L"TextRenderer: CreateRenderStates failed", 0, 0);
 		return false;
 	}
 
-	// "Fonts/NotoSansKR_Atlas.png"
-	std::wstring FontPath = (FPaths::ContentDir() / "Fonts/DejaVuSansMono.png").wstring();
-	
-	if (!Atlas.Initialize(Device, DeviceContext, FontPath))
+	if (!CreateTextureAndSampler(TexturePath))
 	{
-		MessageBox(0, L"TextRenderer: Atlas.Initialize failed", 0, 0);
 		return false;
 	}
 
 	return true;
 }
 
-void CTextRenderer::Release()
+void CSubUVRenderer::Release()
 {
-	Atlas.Release();
+	SubUVVS.reset();
+	SubUVPS.reset();
 
-	FontVS.reset();
-	FontPS.reset();
+	if (TextureSRV)
+	{
+		TextureSRV->Release();
+		TextureSRV = nullptr;
+	}
+
+	if (SamplerState)
+	{
+		SamplerState->Release();
+		SamplerState = nullptr;
+	}
 
 	if (FrameConstantBuffer)
 	{
@@ -77,10 +85,10 @@ void CTextRenderer::Release()
 		ObjectConstantBuffer = nullptr;
 	}
 
-	if (TextConstantBuffer)
+	if (SubUVConstantBuffer)
 	{
-		TextConstantBuffer->Release();
-		TextConstantBuffer = nullptr;
+		SubUVConstantBuffer->Release();
+		SubUVConstantBuffer = nullptr;
 	}
 
 	if (DynamicVertexBuffer)
@@ -114,11 +122,12 @@ void CTextRenderer::Release()
 	DeviceContext = nullptr;
 }
 
-bool CTextRenderer::CreateShaders()
+bool CSubUVRenderer::CreateShaders()
 {
-	const std::wstring ShaderDir = FPaths::ShaderDir();
-	const std::wstring VSPath = ShaderDir + L"FontVertexShader.hlsl";
-	const std::wstring PSPath = ShaderDir + L"FontPixelShader.hlsl";
+	const std::filesystem::path ShaderDir = FPaths::ShaderDir();
+	const std::wstring VSPath = (ShaderDir / "SubUVVertexShader.hlsl").wstring();
+	const std::wstring PSPath = (ShaderDir / "SubUVPixelShader.hlsl").wstring();
+
 
 	auto VSResource = FShaderResource::GetOrCompile(VSPath.c_str(), "main", "vs_5_0");
 	if (!VSResource)
@@ -132,26 +141,26 @@ bool CTextRenderer::CreateShaders()
 		return false;
 	}
 
-	D3D11_INPUT_ELEMENT_DESC FontLayout[] =
+	D3D11_INPUT_ELEMENT_DESC Layout[] =
 	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	  { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	  { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 
-	FontVS = FVertexShader::CreateWithLayout(
+	SubUVVS = FVertexShader::CreateWithLayout(
 		Device,
 		VSResource,
-		FontLayout,
-		ARRAYSIZE(FontLayout)
+		Layout,
+		ARRAYSIZE(Layout)
 	);
 
-	if (!FontVS)
+	if (!SubUVVS)
 	{
 		return false;
 	}
 
-	FontPS = FPixelShader::Create(Device, PSResource);
-	if (!FontPS)
+	SubUVPS = FPixelShader::Create(Device, PSResource);
+	if (!SubUVPS)
 	{
 		return false;
 	}
@@ -159,7 +168,7 @@ bool CTextRenderer::CreateShaders()
 	return true;
 }
 
-bool CTextRenderer::CreateConstantBuffers()
+bool CSubUVRenderer::CreateConstantBuffers()
 {
 	D3D11_BUFFER_DESC Desc = {};
 	Desc.Usage = D3D11_USAGE_DYNAMIC;
@@ -178,8 +187,8 @@ bool CTextRenderer::CreateConstantBuffers()
 		return false;
 	}
 
-	Desc.ByteWidth = sizeof(FTextConstantBuffer);
-	if (FAILED(Device->CreateBuffer(&Desc, nullptr, &TextConstantBuffer)))
+	Desc.ByteWidth = sizeof(FSubUVConstantBuffer);
+	if (FAILED(Device->CreateBuffer(&Desc, nullptr, &SubUVConstantBuffer)))
 	{
 		return false;
 	}
@@ -187,7 +196,7 @@ bool CTextRenderer::CreateConstantBuffers()
 	return true;
 }
 
-bool CTextRenderer::CreateRenderStates()
+bool CSubUVRenderer::CreateRenderStates()
 {
 	D3D11_BLEND_DESC BlendDesc = {};
 	BlendDesc.RenderTarget[0].BlendEnable = TRUE;
@@ -207,7 +216,6 @@ bool CTextRenderer::CreateRenderStates()
 	D3D11_RASTERIZER_DESC RasterDesc = {};
 	RasterDesc.FillMode = D3D11_FILL_SOLID;
 	RasterDesc.CullMode = D3D11_CULL_NONE;
-	RasterDesc.FrontCounterClockwise = FALSE;
 	RasterDesc.DepthClipEnable = TRUE;
 
 	if (FAILED(Device->CreateRasterizerState(&RasterDesc, &NoCullRasterizerState)))
@@ -218,7 +226,42 @@ bool CTextRenderer::CreateRenderStates()
 	return true;
 }
 
-void CTextRenderer::Begin(const FMatrix& InView, const FMatrix& InProjection, const FVector& InCameraPosition)
+bool CSubUVRenderer::CreateTextureAndSampler(const std::wstring& TexturePath)
+{
+	HRESULT Hr = DirectX::CreateWICTextureFromFile(
+		Device,
+		DeviceContext,
+		TexturePath.c_str(),
+		nullptr,
+		&TextureSRV
+	);
+
+	if (FAILED(Hr))
+	{
+		return false;
+	}
+
+	D3D11_SAMPLER_DESC SamplerDesc = {};
+	SamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	SamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	SamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	SamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	SamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	SamplerDesc.MinLOD = 0;
+	SamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	if (FAILED(Device->CreateSamplerState(&SamplerDesc, &SamplerState)))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+void CSubUVRenderer::Begin(
+	const FMatrix& InView,
+	const FMatrix& InProjection,
+	const FVector& InCameraPosition)
 {
 	ViewMatrix = InView;
 	ProjectionMatrix = InProjection;
@@ -227,7 +270,7 @@ void CTextRenderer::Begin(const FMatrix& InView, const FMatrix& InProjection, co
 	UpdateFrameCB();
 }
 
-void CTextRenderer::EnsureDynamicBuffers(uint32 VertexCount, uint32 IndexCount)
+void CSubUVRenderer::EnsureDynamicBuffers(uint32 VertexCount, uint32 IndexCount)
 {
 	if (VertexCount > DynamicVertexCapacity)
 	{
@@ -270,7 +313,7 @@ void CTextRenderer::EnsureDynamicBuffers(uint32 VertexCount, uint32 IndexCount)
 	}
 }
 
-void CTextRenderer::UpdateFrameCB()
+void CSubUVRenderer::UpdateFrameCB()
 {
 	FFrameConstantBuffer CBData;
 	CBData.View = ViewMatrix.GetTransposed();
@@ -284,7 +327,7 @@ void CTextRenderer::UpdateFrameCB()
 	}
 }
 
-void CTextRenderer::UpdateObjectCB(const FMatrix& WorldMatrix)
+void CSubUVRenderer::UpdateObjectCB(const FMatrix& WorldMatrix)
 {
 	FObjectConstantBuffer CBData;
 	CBData.World = WorldMatrix.GetTransposed();
@@ -297,109 +340,108 @@ void CTextRenderer::UpdateObjectCB(const FMatrix& WorldMatrix)
 	}
 }
 
-void CTextRenderer::UpdateTextCB(const FVector4& Color)
+void CSubUVRenderer::UpdateSubUVCB(
+	const FVector2& CellSize,
+	const FVector2& Offset)
 {
-	FTextConstantBuffer CBData;
-	CBData.TextColor = Color;
+	FSubUVConstantBuffer CBData;
+	CBData.CellSize = CellSize;
+	CBData.Offset = Offset;
 
 	D3D11_MAPPED_SUBRESOURCE Mapped = {};
-	if (SUCCEEDED(DeviceContext->Map(TextConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
+	if (SUCCEEDED(DeviceContext->Map(SubUVConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
 	{
 		std::memcpy(Mapped.pData, &CBData, sizeof(CBData));
-		DeviceContext->Unmap(TextConstantBuffer, 0);
+		DeviceContext->Unmap(SubUVConstantBuffer, 0);
 	}
 }
 
-TArray<uint32> CTextRenderer::DecodeToCodepoints(const FString& Text) const
+void CSubUVRenderer::DrawSubUV(
+	const FMatrix& WorldMatrix,
+	const FVector2& Size,
+	int32 Columns,
+	int32 Rows,
+	int32 TotalFrames,
+	int32 FirstFrame,
+	int32 LastFrame,
+	float FPS,
+	float ElapsedTime,
+	bool bLoop,
+	bool bBillboard)
 {
-	TArray<uint32> Result;
-	Result.reserve(Text.size());
-
-	// 현재 단계:
-	// std::string(FString) 내부의 각 바이트를 그대로 codepoint로 사용
-	// 한글 UTF-8 완전 지원은 이후 여기만 교체
-	for (unsigned char Byte : Text)
-	{
-		Result.push_back(static_cast<uint32>(Byte));
-	}
-
-	return Result;
-}
-
-void CTextRenderer::DrawTextBillboard(
-	const FString& Text,
-	const FVector& WorldPosition,
-	float WorldScale,
-	const FVector4& Color)
-{
-	if (!Device || !DeviceContext || !FontVS || !FontPS || Text.empty())
+	if (!Device || !DeviceContext || !SubUVVS || !SubUVPS || !TextureSRV)
 	{
 		return;
 	}
 
-	const TArray<uint32> Codepoints = DecodeToCodepoints(Text);
-	if (Codepoints.empty())
+	if (Columns <= 0 || Rows <= 0 || TotalFrames <= 0 || FPS <= 0.0f)
 	{
 		return;
 	}
 
-	float TotalWidth = 0.0f;
+	float FrameFloat = ElapsedTime * FPS;
+	int32 AnimationFrame = static_cast<int32>(FrameFloat);
 
-	
-	for (uint32 Cp : Codepoints)
+	FirstFrame = std::max<int32>(0, std::min<int32>(FirstFrame, TotalFrames - 1));
+	LastFrame = std::max<int32>(0, std::min<int32>(LastFrame, TotalFrames - 1));
+
+	if (FirstFrame > LastFrame)
 	{
-		const FFontGlyph& Glyph = Atlas.GetGlyph(Cp);
-		TotalWidth += Glyph.Advance;
+		std::swap(FirstFrame, LastFrame);
 	}
 
-	float PenX = -TotalWidth * 0.5f;
+	const int32 PlayableFrameCount = LastFrame - FirstFrame + 1;
+
+	int32 FrameIndex = FirstFrame;
+
+	if (PlayableFrameCount > 0)
+	{
+		if (bLoop)
+		{
+			FrameIndex = FirstFrame + (AnimationFrame % PlayableFrameCount);
+		}
+		else
+		{
+			FrameIndex = FirstFrame + std::min<int32>(AnimationFrame, PlayableFrameCount - 1);
+		}
+	}
+
+	const int32 Col = FrameIndex % Columns;
+	const int32 Row = FrameIndex / Columns;
+
+	const float CellWidth = 1.0f / static_cast<float>(Columns);
+	const float CellHeight = 1.0f / static_cast<float>(Rows);
+
+	FVector2 CellSize(CellWidth, CellHeight);
+
+	// 텍스처가 위->아래 순으로 정렬된 atlas 기준
+	FVector2 UVOffset(
+		static_cast<float>(Col) * CellWidth,
+		static_cast<float>(Row) * CellHeight
+	);
 
 	TArray<FTextureVertex> Vertices;
 	TArray<uint32> Indices;
 
-	Vertices.reserve(Codepoints.size() * 4);
-	Indices.reserve(Codepoints.size() * 6);
+	Vertices.reserve(4);
+	Indices.reserve(6);
 
-	for (uint32 Cp : Codepoints)
-	{
-		const FFontGlyph& Glyph = Atlas.GetGlyph(Cp);
+	const float HalfW = Size.X * 0.5f;
+	const float HalfH = Size.Y * 0.5f;
 
-		if (Glyph.Width > 0.0f && Glyph.Height > 0.0f)
-		{
-			const float X0 = PenX;
-			const float X1 = PenX + Glyph.Width;
-			const float Y0 = 0.0f;
-			const float Y1 = Glyph.Height;
+	Vertices.push_back(FTextureVertex(FVector(0.0f, -HalfW, HalfH), FVector2(0.0f, 0.0f)));
+	Vertices.push_back(FTextureVertex(FVector(0.0f, HalfW, HalfH), FVector2(1.0f, 0.0f)));
+	Vertices.push_back(FTextureVertex(FVector(0.0f, HalfW, -HalfH), FVector2(1.0f, 1.0f)));
+	Vertices.push_back(FTextureVertex(FVector(0.0f, -HalfW, -HalfH), FVector2(0.0f, 1.0f)));
 
-			const uint32 BaseIndex = static_cast<uint32>(Vertices.size());
+	Indices.push_back(0);
+	Indices.push_back(1);
+	Indices.push_back(2);
+	Indices.push_back(0);
+	Indices.push_back(2);
+	Indices.push_back(3);
 
-			// 로컬 공간에서 YZ 평면에 글자 quad를 만들고
-			// billboard 월드행렬로 카메라를 바라보게 함
-			Vertices.push_back(FTextureVertex(FVector(0.0f, X0, Y1), FVector2(Glyph.U0, Glyph.V0))); // 좌상
-			Vertices.push_back(FTextureVertex(FVector(0.0f, X1, Y1), FVector2(Glyph.U1, Glyph.V0))); // 우상
-			Vertices.push_back(FTextureVertex(FVector(0.0f, X1, Y0), FVector2(Glyph.U1, Glyph.V1))); // 우하
-			Vertices.push_back(FTextureVertex(FVector(0.0f, X0, Y0), FVector2(Glyph.U0, Glyph.V1))); // 좌하
-
-			Indices.push_back(BaseIndex + 0);
-			Indices.push_back(BaseIndex + 1);
-			Indices.push_back(BaseIndex + 2);
-			Indices.push_back(BaseIndex + 0);
-			Indices.push_back(BaseIndex + 2);
-			Indices.push_back(BaseIndex + 3);
-		}
-
-		PenX += Glyph.Advance;
-	}
-
-	if (Vertices.empty() || Indices.empty())
-	{
-		return;
-	}
-
-	EnsureDynamicBuffers(
-		static_cast<uint32>(Vertices.size()),
-		static_cast<uint32>(Indices.size())
-	);
+	EnsureDynamicBuffers(4, 6);
 
 	if (!DynamicVertexBuffer || !DynamicIndexBuffer)
 	{
@@ -420,26 +462,32 @@ void CTextRenderer::DrawTextBillboard(
 		DeviceContext->Unmap(DynamicIndexBuffer, 0);
 	}
 
-	const FMatrix Billboard = FMatrix::MakeBillboard(WorldPosition, CameraPosition);
-	const FMatrix Scale = FMatrix::MakeScale(WorldScale);
-	const FMatrix World = Scale * Billboard;
+	FMatrix World = WorldMatrix;
+
+	if (bBillboard)
+	{
+		const FVector WorldPosition = WorldMatrix.GetTranslation();
+		const FVector WorldScale = WorldMatrix.GetScaleVector();
+
+		World = FMatrix::MakeScale(WorldScale) * FMatrix::MakeBillboard(WorldPosition, CameraPosition);
+	}
+	else
+	{
+		World = WorldMatrix;
+	}
 
 	UpdateObjectCB(World);
-	UpdateTextCB(Color);
+	UpdateSubUVCB(CellSize, UVOffset);
 
-	FontVS->Bind(DeviceContext);
-	FontPS->Bind(DeviceContext);
+	SubUVVS->Bind(DeviceContext);
+	SubUVPS->Bind(DeviceContext);
 
 	ID3D11Buffer* VSConstantBuffers[2] = { FrameConstantBuffer, ObjectConstantBuffer };
 	DeviceContext->VSSetConstantBuffers(0, 2, VSConstantBuffers);
+	DeviceContext->PSSetConstantBuffers(2, 1, &SubUVConstantBuffer);
 
-	ID3D11Buffer* PSConstantBuffers[1] = { TextConstantBuffer };
-	DeviceContext->PSSetConstantBuffers(2, 1, PSConstantBuffers);
-
-	ID3D11ShaderResourceView* SRV = Atlas.GetTextureSRV();
-	ID3D11SamplerState* Sampler = Atlas.GetSamplerState();
-	DeviceContext->PSSetShaderResources(0, 1, &SRV);
-	DeviceContext->PSSetSamplers(0, 1, &Sampler);
+	DeviceContext->PSSetShaderResources(0, 1, &TextureSRV);
+	DeviceContext->PSSetSamplers(0, 1, &SamplerState);
 
 	const float BlendFactor[4] = { 0, 0, 0, 0 };
 	DeviceContext->OMSetBlendState(AlphaBlendState, BlendFactor, 0xffffffff);
@@ -447,11 +495,12 @@ void CTextRenderer::DrawTextBillboard(
 
 	UINT Stride = sizeof(FTextureVertex);
 	UINT Offset = 0;
+
 	DeviceContext->IASetVertexBuffers(0, 1, &DynamicVertexBuffer, &Stride, &Offset);
 	DeviceContext->IASetIndexBuffer(DynamicIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	DeviceContext->DrawIndexed(static_cast<UINT>(Indices.size()), 0, 0);
+	DeviceContext->DrawIndexed(6, 0, 0);
 
 	ID3D11ShaderResourceView* NullSRV[1] = { nullptr };
 	DeviceContext->PSSetShaderResources(0, 1, NullSRV);
