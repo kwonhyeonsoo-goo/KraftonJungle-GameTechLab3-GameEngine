@@ -88,5 +88,7 @@ struct ENGINE_API FRenderCommandQueue
 	void Clear()
 	{
 		Commands.clear();
+		TextCommands.clear();
+		SubUVCommands.clear();
 	}
 };
