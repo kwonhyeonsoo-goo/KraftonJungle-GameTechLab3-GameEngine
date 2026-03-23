@@ -25,6 +25,11 @@ void CContentBrowserWindow::Render()
 		return;
 	}
 
+	bIsMouseOnDirectory = false;
+	bIsMouseOnFile = false;
+	DirectoryPathUnderMouse = "";
+	FilePathUnderMouse = "";
+
 	// 상단 경로 + 뒤로가기
 	if (ImGui::Button("<-"))
 	{
@@ -51,7 +56,35 @@ void CContentBrowserWindow::Render()
 	DrawFileGrid();
 	ImGui::EndChild();
 
+	bIsHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
+
 	ImGui::End();
+
+
+	if (bFileOnDrag)
+	{
+		if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+		{
+			ImVec2 MousePos = ImGui::GetMousePos();
+
+			ImGui::SetNextWindowPos(MousePos, ImGuiCond_Always);
+			ImGui::SetNextWindowBgAlpha(0.0f);
+
+			ImGui::Begin("DragPreview", nullptr,
+				ImGuiWindowFlags_NoDecoration |
+				ImGuiWindowFlags_NoInputs |
+				ImGuiWindowFlags_AlwaysAutoResize);
+
+			ImGui::Image(FileIcon, ImVec2(48, 48));
+
+			ImGui::End();
+		}
+		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+		{
+			bFileOnDrag = false;
+			OnFileDragEnd(SelectedFilePath.string(), DirectoryPathUnderMouse.string());
+		}
+	}
 }
 
 void CContentBrowserWindow::SetFolderIcon(ID3D11ShaderResourceView* FolderSRV)
@@ -90,6 +123,22 @@ void CContentBrowserWindow::DrawFolderTree(const std::filesystem::path& Path)
 			DrawFolderTree(DirPath);
 			ImGui::TreePop();
 		}
+
+		if (ImGui::IsItemHovered())
+		{
+			if (Entry.is_directory())
+			{
+				bIsMouseOnDirectory = true;
+				DirectoryPathUnderMouse = DirPath;
+				
+			}
+			else if (Entry.is_regular_file())
+			{
+				bIsMouseOnFile = true;
+				FilePathUnderMouse = DirPath;
+			}
+
+		}
 	}
 }
 
@@ -109,12 +158,34 @@ void CContentBrowserWindow::DrawFileGrid()
 		const auto& Path = Entry.path();
 		std::string Name = Path.filename().string();
 
+		std::string Ext = Path.extension().string();
+		std::ranges::transform(Ext, Ext.begin(), [](unsigned char c) {
+			return std::tolower(c);
+			});
+
+		if (!(Ext == ".json" || Ext == ".obj"))
+		{
+			continue;
+		}
+
 		ImGui::PushID(Name.c_str());
 
 		ImTextureID Icon = Entry.is_directory() ? FolderIcon : FileIcon;
 
 		// 아이콘 버튼
 		ImGui::ImageButton(Name.c_str(), Icon, ImVec2(IconSize, IconSize));
+
+		if (!Entry.is_directory())
+		{
+			if (ImGui::BeginPopupContextItem())
+			{
+				if (ImGui::MenuItem("Delete"))
+				{
+					std::filesystem::remove(Path);
+				}
+				ImGui::EndPopup();
+			}
+		}
 
 		// 선택
 		if (ImGui::IsItemClicked())
@@ -123,17 +194,34 @@ void CContentBrowserWindow::DrawFileGrid()
 		}
 
 		// 더블클릭 처리 🔥
-		if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
+		if (ImGui::IsItemHovered())
 		{
 			if (Entry.is_directory())
 			{
-				CurrentPath /= Path.filename(); // 폴더 진입
+				bIsMouseOnDirectory = true;
+				DirectoryPathUnderMouse = Path;
 			}
-			else
+			else if (Entry.is_regular_file())
 			{
-				// TODO: 파일 열기
-				// SelectedPath = Path;
-				OnFileDoubleClickCallback(Path.string());
+				bIsMouseOnFile = true;
+				FilePathUnderMouse = Path;
+			}
+
+			if (ImGui::IsMouseDoubleClicked(0))
+			{
+				if (Entry.is_directory())
+				{
+					CurrentPath /= Path.filename(); // 폴더 진입
+				}
+				else
+				{
+					OnFileDoubleClickCallback(Path.string());
+				}
+			}
+			else if (!bFileOnDrag && ImGui::IsMouseDown(ImGuiMouseButton_Left) && !Entry.is_directory())
+			{
+				bFileOnDrag = true;
+				SelectedFilePath = Path;
 			}
 		}
 
