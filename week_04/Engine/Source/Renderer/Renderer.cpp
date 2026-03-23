@@ -242,12 +242,6 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 	OverlayDepthDesc.DepthEnable = FALSE;
 	OverlayDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
 	OverlayDepthDesc.DepthFunc = D3D11_COMPARISON_ALWAYS;
-	Hr = Device->CreateDepthStencilState(&OverlayDepthDesc, &OverlayDepthState);
-	if (FAILED(Hr))
-	{
-		MessageBox(0, L"CreateDepthStencilState (Overlay) Failed.", 0, 0);
-		return false;
-	}
 
 	if (!TextRenderer.Initialize(Device, DeviceContext))
 	{
@@ -408,6 +402,7 @@ void CRenderer::ExecuteCommands()
 	UpdateFrameConstantBuffer();
 
 	ExecuteRenderPass(ERenderLayer::Default);
+	ClearDepthBuffer();
 	ExecuteRenderPass(ERenderLayer::Overlay);
 	ExecuteTextRenderPass();
 }
@@ -463,13 +458,6 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 			CurrentRasterizerState = DesiredRasterizerState;
 		}
 
-		ID3D11DepthStencilState* DesiredDepthStencilState = (Cmd.bDisableDepthTest || Cmd.bDisableDepthWrite) ? OverlayDepthState : nullptr;
-		if (DesiredDepthStencilState != CurrentDepthStencilState)
-		{
-			DeviceContext->OMSetDepthStencilState(DesiredDepthStencilState, 0);
-			CurrentDepthStencilState = DesiredDepthStencilState;
-		}
-
 		UpdateObjectConstantBuffer(Cmd.WorldMatrix);
 		DeviceContext->DrawIndexed(Cmd.MeshData->Indices.size(), 0, 0);
 	}
@@ -515,6 +503,11 @@ void CRenderer::ExecuteTextRenderPass()
 	{
 		PostRenderCallback(this);
 	}
+}
+
+void CRenderer::ClearDepthBuffer()
+{
+	DeviceContext->ClearDepthStencilView(SceneDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
 
 bool CRenderer::CreateConstantBuffers()
@@ -735,16 +728,6 @@ void CRenderer::ExecuteLineCommands()
 	// 기본 셰이더 복원 (ExecuteCommands 후 마지막 Material 셰이더가 남아있을 수 있음)
 	ShaderManager.Bind(DeviceContext);
 
-	// Depth 테스트 비활성화 (축이 항상 보이도록)
-	if (!LineDepthState)
-	{
-		D3D11_DEPTH_STENCIL_DESC Desc = {};
-		Desc.DepthEnable = FALSE;
-		Desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-		Device->CreateDepthStencilState(&Desc, &LineDepthState);
-	}
-	DeviceContext->OMSetDepthStencilState(LineDepthState, 0);
-
 	// 동적 버퍼 재사용, 불가능하면 새로 생성.
 	UINT BufferSize = static_cast<UINT>(LineVertices.size() * sizeof(FPrimitiveVertex));
 
@@ -820,16 +803,6 @@ void CRenderer::Release()
 	{
 		LineVertexBuffer->Release();
 		LineVertexBuffer = nullptr;
-	}
-	if (LineDepthState)
-	{
-		LineDepthState->Release();
-		LineDepthState = nullptr;
-	}
-	if (OverlayDepthState)
-	{
-		OverlayDepthState->Release();
-		OverlayDepthState = nullptr;
 	}
 
 	if (RasterizerState)

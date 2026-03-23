@@ -93,6 +93,7 @@ private:
 	bool CreateConstantBuffers();
 	void UpdateFrameConstantBuffer();
 	void UpdateObjectConstantBuffer(const FMatrix& WorldMatrix);
+	void ClearDepthBuffer();
 
 	/** 파일, 폴더 아이콘 등 생성 */
 	bool CreateTextureFromSTB(
@@ -126,8 +127,6 @@ private:
 	TArray<FPrimitiveVertex> LineVertices;
 	ID3D11Buffer* LineVertexBuffer = nullptr;
 	UINT LineVertexBufferSize = 0;
-	ID3D11DepthStencilState* LineDepthState = nullptr;
-	ID3D11DepthStencilState* OverlayDepthState = nullptr;
 
 	// 아웃라인 리소스
 	ID3D11DepthStencilState* StencilWriteState = nullptr;
