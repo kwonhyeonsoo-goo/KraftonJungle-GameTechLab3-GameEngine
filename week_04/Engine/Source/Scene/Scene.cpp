@@ -222,18 +222,7 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 							Size[1].get<float>()
 						));
 					}
-
-					if (SubUVJson.contains("Color"))
-					{
-						auto& Color = SubUVJson["Color"];
-						SubUVComponent->SetColor(FVector4(
-							Color[0].get<float>(),
-							Color[1].get<float>(),
-							Color[2].get<float>(),
-							Color[3].get<float>()
-						));
-					}
-
+										
 					if (SubUVJson.contains("Columns"))
 					{
 						SubUVComponent->SetColumns(SubUVJson["Columns"].get<int32>());
@@ -369,13 +358,6 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 					Primitives[Key]["SubUV"]["Size"] = {
 						SubUVComponent->GetSize().X,
 						SubUVComponent->GetSize().Y
-					};
-
-					Primitives[Key]["SubUV"]["Color"] = {
-						SubUVComponent->GetColor().X,
-						SubUVComponent->GetColor().Y,
-						SubUVComponent->GetColor().Z,
-						SubUVComponent->GetColor().W
 					};
 
 					Primitives[Key]["SubUV"]["Columns"] = SubUVComponent->GetColumns();
@@ -581,7 +563,6 @@ void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue&
 			FSubUVRenderCommand SubUVCmd;
 			SubUVCmd.WorldPosition = SubUVComponent->GetWorldLocation();
 			SubUVCmd.Size = SubUVComponent->GetSize();
-			SubUVCmd.Color = SubUVComponent->GetColor();
 			SubUVCmd.Columns = SubUVComponent->GetColumns();
 			SubUVCmd.Rows = SubUVComponent->GetRows();
 			SubUVCmd.TotalFrames = SubUVComponent->GetTotalFrames();

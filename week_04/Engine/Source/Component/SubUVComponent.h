@@ -13,9 +13,6 @@ public:
 	void SetSize(const FVector2& InSize) { Size = InSize; }
 	const FVector2& GetSize() const { return Size; }
 
-	void SetColor(const FVector4& InColor) { Color = InColor; }
-	const FVector4& GetColor() const { return Color; }
-
 	void SetColumns(int32 InColumns) { Columns = InColumns; }
 	int32 GetColumns() const { return Columns; }
 
