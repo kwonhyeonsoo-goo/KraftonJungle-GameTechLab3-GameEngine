@@ -35,11 +35,17 @@ void COutlinerWindow::Render(CCore* Core)
 	{
 		ShowFlags.SetFlag(EEngineShowFlags::SF_Primitives, bPrimitives);
 	}
-	bool bBillboardText = ShowFlags.HasFlag(EEngineShowFlags::SF_BillboardText);
-	if (ImGui::Checkbox("Billborads", &bBillboardText))
+	bool bUUID = ShowFlags.HasFlag(EEngineShowFlags::SF_UUID);
+	if (ImGui::Checkbox("UUID", &bUUID))
 	{
-		ShowFlags.SetFlag(EEngineShowFlags::SF_BillboardText, bBillboardText);
+		ShowFlags.SetFlag(EEngineShowFlags::SF_UUID, bUUID);
 	}
+
+	/*bool bBillboard = ShowFlags.HasFlag(EEngineShowFlags::SF_Billboard);
+	if (ImGui::Checkbox("Billboards", &bBillboard))
+	{
+		ShowFlags.SetFlag(EEngineShowFlags::SF_Billboard, bBillboard);
+	}*/
 	ImGui::SeparatorText("Actors");
 
 	const TArray<AActor*>& Actors = Scene->GetActors();
