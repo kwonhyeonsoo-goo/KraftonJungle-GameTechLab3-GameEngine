@@ -1,6 +1,5 @@
 #include "SubUVComponent.h"
 #include "Object/Class.h"
-#include <algorithm>
 
 IMPLEMENT_RTTI(USubUVComponent, UPrimitiveComponent)
 
