@@ -10,7 +10,7 @@
 #include "Actor/CubeActor.h"
 #include "Actor/SphereActor.h"
 #include "Component/PrimitiveComponent.h"
-
+#include "Scene/Scene.h"
 #include "Object/ObjectFactory.h" 
 #include <iomanip>
 #include <filesystem>
@@ -68,17 +68,12 @@ void FSceneSerializer::Save(UScene* Scene, const FString& FilePath)
 		{
 			continue;
 		}
-		USceneComponent* Root = Actor->GetRootComponent();
-		if (!Root)
+		USceneComponent* RootComp = Actor->GetRootComponent();
+		if (!RootComp)
 		{
 			continue;
 		}
-		USceneComponent* Root = Actor->GetRootComponent();
-		if (!Root)
-		{
-			continue;
-		}
-		const FTransform Transform = Root->GetRelativeTransform();
+		const FTransform Transform = RootComp->GetRelativeTransform();
 		const FVector EulerDegrees = Transform.Rotator().Euler();
 		const FString Key = std::to_string(Index);
 

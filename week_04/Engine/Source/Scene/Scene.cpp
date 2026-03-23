@@ -17,7 +17,7 @@
 #include "ThirdParty/nlohmann/json.hpp"
 #include "Component/UUIDBillboardComponent.h"
 #include "Object/Class.h"
-
+#include "Serializer/SceneSerializer.h"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>

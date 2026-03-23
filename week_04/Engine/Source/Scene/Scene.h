@@ -5,7 +5,7 @@
 #include <d3d11.h>
 #include "SceneTypes.h"
 #include "ShowFlags.h"
-#include "Serializer/SceneSerializer.h"
+
 class AActor;
 class CCamera;
 class FFrustum;

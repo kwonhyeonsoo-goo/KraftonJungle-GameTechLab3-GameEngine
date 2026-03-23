@@ -376,7 +376,7 @@ void CEditorUI::Render()
 					if (!Path.empty())
 					{
 				
-						FSceneSerializer::Load(Core->GetScene(), Path, Device);
+						FSceneSerializer::Load(Core->GetScene(), Path, Core->GetRenderer()->GetDevice());
 
 					}
 				}

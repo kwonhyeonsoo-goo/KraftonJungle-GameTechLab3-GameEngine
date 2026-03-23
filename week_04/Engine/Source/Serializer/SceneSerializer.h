@@ -1,8 +1,9 @@
 #pragma once
 #include "../Types/String.h"
-#include "Scene/Scene.h"
+#include "EngineAPI.h"
 #include <d3d11.h>
-class FSceneSerializer
+class UScene;
+class ENGINE_API FSceneSerializer
 {
 public:
 
