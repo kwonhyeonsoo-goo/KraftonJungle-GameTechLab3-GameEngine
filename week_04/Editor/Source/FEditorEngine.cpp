@@ -108,11 +108,16 @@ void FEditorEngine::PostInitialize()
 
 	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
 	TArray<FString> VariableNames;
-	CVM.GetAllNames(VariableNames);
-	for (const FString& Name : VariableNames)
-	{
-		EditorUI.GetConsole().RegisterCommand(Name.c_str());
-	}
+
+	// Global delete Error
+	//CVM.GetAllNames(VariableNames);
+
+
+
+	//for (const FString& Name : VariableNames)
+	//{
+	//	EditorUI.GetConsole().RegisterCommand(Name.c_str());
+	//}
 
 	EditorUI.GetConsole().SetCommandHandler([](const char* CommandLine)
 		{
