@@ -220,7 +220,7 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		FMaterialManager::Get().Register("M_Default", DefaultMaterial);
 	}
 
-	RenderStateManager = std::make_unique<CRenderStatemanager>(Device, DeviceContext);
+	RenderStateManager = std::make_unique<CRenderStateManager>(Device, DeviceContext);
 	RenderStateManager->PrepareCommonStates();
 
 	D3D11_DEPTH_STENCIL_DESC OverlayDepthDesc = {};
@@ -405,6 +405,8 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 		{ return A.RenderLayer < B.RenderLayer; }
 	);
 
+	// ImGui로 인해 RS 값 바뀐 것 되돌리기
+	RenderStateManager->RebindState();
 	for (; it != CommandList.end(); it++)
 	{
 		auto Cmd = *it;

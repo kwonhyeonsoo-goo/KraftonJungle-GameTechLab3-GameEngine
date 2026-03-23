@@ -21,12 +21,20 @@ public:
 	void BuildRenderCommands(CCore* Core, UScene* Scene, const FFrustum& Frustum, FRenderCommandQueue& OutQueue) const override;
 	EGizmoMode GetGizmoMode() const { return Gizmo.GetMode(); }
 	void SetGizmoMode(EGizmoMode InMode) { Gizmo.SetMode(InMode); }
-	
+	void SetRenderMode(ERenderMode InRenderMode) { RenderMode = InRenderMode; }
+
 	void HandleFileDoubleClick(const FString& FilePath) override;
+
+protected:
+	virtual FRenderCommand BuildRenderCommand(UPrimitiveComponent* PrimitiveComponent) const override;
 
 private:
 	CEditorUI& EditorUI;
 	CWindow* MainWindow = nullptr;
 	CPicker Picker;
 	mutable CGizmo Gizmo;
+
+	ERenderMode RenderMode = ERenderMode::WireFrame;	// Test
+	const FString WireframeMaterialPath = "Assets/Materials/M_Wireframe.json";
+	std::shared_ptr<FMaterial> WireFrameMaterial = nullptr;
 };

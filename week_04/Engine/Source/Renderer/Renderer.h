@@ -74,6 +74,7 @@ public:
 
 	size_t GetPrevCommandCount() const { return PrevCommandCount; }
 
+	std::unique_ptr<CRenderStateManager>& GetRenderStateManager() { return RenderStateManager; }
 	ID3D11Device* GetDevice() const { return Device; }
 	ID3D11DeviceContext* GetDeviceContext() const { return DeviceContext; }
 	ID3D11RenderTargetView* GetRenderTargetView() const { return RenderTargetView; }
@@ -102,7 +103,7 @@ private:
 		const char* FilePath,
 		ID3D11ShaderResourceView** OutSRV);
 
-	std::unique_ptr<CRenderStatemanager> RenderStateManager = nullptr;
+	std::unique_ptr<CRenderStateManager> RenderStateManager = nullptr;
 
 	HWND Hwnd = nullptr;
 	ID3D11Device* Device = nullptr;

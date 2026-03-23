@@ -235,7 +235,6 @@
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="PrimitiveLineBatch.cpp" />
-    <ClCompile Include="Source\Scene\ShowFlags.cpp" />
     <ClCompile Include="Source\Actor\PlaneActor.cpp" />
     <ClCompile Include="Source\Component\PlaneComponent.cpp" />
     <ClCompile Include="Source\Renderer\RenderCommand.cpp">
@@ -246,6 +245,9 @@
     </ClCompile>
     <ClCompile Include="Source\Renderer\RenderStateManager.cpp">
       <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\ShowFlags.cpp">
+      <Filter>Source\Core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -456,9 +458,6 @@
     <ClInclude Include="Source\Scene\SceneTypes.h">
       <Filter>Source\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Scene\ShowFlags.h">
-      <Filter>Source\Scene</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Types\Array.h">
       <Filter>Source\Types</Filter>
     </ClInclude>
@@ -526,6 +525,9 @@
     </ClInclude>
     <ClInclude Include="Source\Renderer\RenderState.h">
       <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\ShowFlags.h">
+      <Filter>Source\Core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

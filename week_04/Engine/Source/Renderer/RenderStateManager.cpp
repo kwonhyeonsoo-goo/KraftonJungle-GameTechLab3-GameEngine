@@ -1,6 +1,7 @@
 #include "RenderStateManager.h"
+#include "RenderState.h"
 
-inline void CRenderStatemanager::PrepareCommonStates()
+void CRenderStateManager::PrepareCommonStates()
 {
 	// 예: Solid/Wireframe x Cull None/Back/Front
 	D3D11_FILL_MODE fills[] = { D3D11_FILL_SOLID, D3D11_FILL_WIREFRAME };
@@ -11,12 +12,12 @@ inline void CRenderStatemanager::PrepareCommonStates()
 			FRasterizerStateOption opt;
 			opt.FillMode = f;
 			opt.CullMode = c;
-			GetOrCreateRenderState(opt); // 내부적으로 생성 및 저장
+			GetOrCreateRenderState(opt);
 		}
 	}
 }
 
-std::shared_ptr<FRasterizerState> CRenderStatemanager::GetOrCreateRenderState(const FRasterizerStateOption& opt)
+std::shared_ptr<FRasterizerState> CRenderStateManager::GetOrCreateRenderState(const FRasterizerStateOption& opt)
 {
 	uint32_t key = opt.ToKey();
 
@@ -31,10 +32,17 @@ std::shared_ptr<FRasterizerState> CRenderStatemanager::GetOrCreateRenderState(co
 	return StateMap[key];
 }
 
-void CRenderStatemanager::BindState(std::shared_ptr<FRasterizerState> InOption)
+void CRenderStateManager::BindState(std::shared_ptr<FRasterizerState> InRS)
 {
-	if (CurrentRenderState != InOption) {
-		InOption->Bind(DeviceContext);
-		CurrentRenderState = InOption;
+	if (CurrentRenderState != InRS)
+	{
+		InRS->Bind(DeviceContext);
+		CurrentRenderState = InRS;
 	}
+}
+
+void CRenderStateManager::RebindState()
+{
+	if(CurrentRenderState)
+		CurrentRenderState->Bind(DeviceContext);
 }

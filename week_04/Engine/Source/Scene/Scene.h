@@ -4,7 +4,7 @@
 #include "Object/ObjectFactory.h"
 #include <d3d11.h>
 #include "SceneTypes.h"
-#include "ShowFlags.h"
+
 class AActor;
 class CCamera;
 class FFrustum;
@@ -55,10 +55,6 @@ public:
 	void ClearActors();
 	void BeginPlay();
 	void Tick(float DeltaTime);
-	void CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue);
-	FShowFlags& GetShowFlags() { return ShowFlags; }
-	const FShowFlags& GetShowFlags() const { return ShowFlags; }
-private:
 	void FrustrumCull(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible);
 
 private:
@@ -67,5 +63,4 @@ private:
 	TObjectPtr<UCameraComponent> ActiveCameraComponent;
 	bool bBegunPlay = false;
 	ESceneType SceneType = ESceneType::Game;
-	FShowFlags ShowFlags;
 };

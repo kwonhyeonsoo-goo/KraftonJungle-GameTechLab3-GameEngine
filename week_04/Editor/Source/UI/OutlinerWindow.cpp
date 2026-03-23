@@ -2,8 +2,9 @@
 
 #include "imgui.h"
 #include "Core/Core.h"
+#include "Core/ShowFlags.h"
+#include "Core/ViewportClient.h"
 #include "Scene/Scene.h"
-#include "Scene/ShowFlags.h"
 #include "Actor/Actor.h"
 
 void COutlinerWindow::Render(CCore* Core)
@@ -22,10 +23,10 @@ void COutlinerWindow::Render(CCore* Core)
 		return;
 	}
 
-	UScene* Scene = Core->GetScene();
-	if (!Scene) { ImGui::End(); return; }
+	IViewportClient* ViewportCli = Core->GetViewportClient();
+	if (!ViewportCli) { ImGui::End(); return; }
 
-	FShowFlags& ShowFlags = Scene->GetShowFlags();
+	FShowFlags& ShowFlags = ViewportCli->GetShowFlags();
 
 	// ===== Show Flags 섹션 =====
 	ImGui::SeparatorText("Show Flags");
@@ -38,6 +39,7 @@ void COutlinerWindow::Render(CCore* Core)
 
 	ImGui::SeparatorText("Actors");
 
+	UScene* Scene = Core->GetScene();
 	const TArray<AActor*>& Actors = Scene->GetActors();
 	AActor* SelectedActor = Core->GetSelectedActor();
 
