@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Renderer/RenderCommand.h"
+#include "Renderer/RenderStateManager.h"
 #include "Renderer/TextRenderer.h"
 #include "Renderer/SubUVRenderer.h"
 #include <d3d11.h>
@@ -54,6 +55,9 @@ public:
 	void SubmitCommands(const FRenderCommandQueue& Queue);
 	// 수집된 커맨드 정렬 후 실행
 	void ExecuteCommands();
+	void ExecuteRenderPass(ERenderLayer RenderLayer);
+	// TODO: 텍스트 렌더도 일반적인 Render Pass에 통합하고 이 함수는 삭제
+	void ExecuteTextRenderPass();	
 
 	// 라인 렌더링
 	void DrawLine(const FVector& Start, const FVector& End, const FVector4& Color);
@@ -71,6 +75,7 @@ public:
 
 	size_t GetPrevCommandCount() const { return PrevCommandCount; }
 
+	std::unique_ptr<CRenderStateManager>& GetRenderStateManager() { return RenderStateManager; }
 	ID3D11Device* GetDevice() const { return Device; }
 	ID3D11DeviceContext* GetDeviceContext() const { return DeviceContext; }
 	ID3D11RenderTargetView* GetRenderTargetView() const { return RenderTargetView; }
@@ -83,18 +88,23 @@ public:
 	ID3D11ShaderResourceView* GetFileIconSRV() const { return FileIconSRV; }
 
 private:
+	void SetConstantBuffers();
 	void AddCommand(const FRenderCommand& Command);
+	void ClearCommandList();
 	bool CreateDeviceAndSwapChain(HWND InHwnd, int32 Width, int32 Height);
 	bool CreateRenderTargetAndDepthStencil(int32 Width, int32 Height);
 	bool CreateConstantBuffers();
 	void UpdateFrameConstantBuffer();
 	void UpdateObjectConstantBuffer(const FMatrix& WorldMatrix);
+	void ClearDepthBuffer();
 
 	/** 파일, 폴더 아이콘 등 생성 */
 	bool CreateTextureFromSTB(
 		ID3D11Device* Device,
 		const char* FilePath,
 		ID3D11ShaderResourceView** OutSRV);
+
+	std::unique_ptr<CRenderStateManager> RenderStateManager = nullptr;
 
 	HWND Hwnd = nullptr;
 	ID3D11Device* Device = nullptr;
@@ -106,8 +116,6 @@ private:
 	ID3D11Buffer* ObjectConstantBuffer = nullptr;
 	FMatrix ViewMatrix;
 	FMatrix ProjectionMatrix;
-	ID3D11RasterizerState* RasterizerState = nullptr;
-	ID3D11RasterizerState* NoCullRasterizerState = nullptr;
 	D3D11_VIEWPORT Viewport = {};
 	ID3D11RenderTargetView* SceneRenderTargetView = nullptr;
 	ID3D11DepthStencilView* SceneDepthStencilView = nullptr;
@@ -116,15 +124,13 @@ private:
 	bool bVSyncEnabled = false;
 
 	TArray<FRenderCommand> CommandList;
-	TArray<FTextRenderCommand> TextCommandList;
+	TArray<FTextRenderCommand> TextCommandList;	// TODO: CommandList에 통합되면 이 행 삭제
 	TArray<FSubUVRenderCommand> SubUVCommandList;
 
 	size_t PrevCommandCount = 0;
 	TArray<FPrimitiveVertex> LineVertices;
 	ID3D11Buffer* LineVertexBuffer = nullptr;
 	UINT LineVertexBufferSize = 0;
-	ID3D11DepthStencilState* LineDepthState = nullptr;
-	ID3D11DepthStencilState* OverlayDepthState = nullptr;
 
 	// 아웃라인 리소스
 	ID3D11DepthStencilState* StencilWriteState = nullptr;

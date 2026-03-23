@@ -8,9 +8,13 @@
 #include "Platform/Windows/Window.h"
 #include "Renderer/RenderCommand.h"
 #include "Renderer/Renderer.h"
+#include "Renderer/RenderStateManager.h"
+#include "Renderer/Materialmanager.h"
+#include "Renderer/Material.h"
 #include "Scene/Scene.h"
 #include "Serializer/SceneSerializer.h"
-
+#include "Component/PrimitiveComponent.h"
+#include "Core/Paths.h"
 #include "imgui.h"
 
 CEditorViewportClient::CEditorViewportClient(CEditorUI& InEditorUI, CWindow* InMainWindow)
@@ -29,6 +33,14 @@ void CEditorViewportClient::Attach(CCore* Core, CRenderer* Renderer)
 	EditorUI.Initialize(Core);
 	EditorUI.SetupWindow(MainWindow);
 	EditorUI.AttachToRenderer(Renderer);
+
+	// Wireframe 모드를 위한 머티리얼 생성
+	const auto AbsolutePath = FPaths::ProjectRoot() / WireframeMaterialPath;
+	WireFrameMaterial = FMaterialManager::Get().GetOrLoad(Renderer->GetDevice(), AbsolutePath.string());
+	FRasterizerStateOption rasterizerOption;
+	rasterizerOption.FillMode = D3D11_FILL_WIREFRAME;
+	auto RasterizerState = Renderer->GetRenderStateManager()->GetOrCreateRenderState(rasterizerOption);
+	WireFrameMaterial->SetRasterizerState(RasterizerState);
 }
 
 void CEditorViewportClient::Detach(CCore* Core, CRenderer* Renderer)
@@ -195,6 +207,26 @@ void CEditorViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene, cons
 
 	Gizmo.BuildRenderCommands(Core->GetSelectedActor(), Scene->GetCamera(), OutQueue);
 }
+
+FRenderCommand CEditorViewportClient::BuildRenderCommand(UPrimitiveComponent* PrimitiveComponent) const
+{
+	FRenderCommand Command;
+	Command.RenderLayer = ERenderLayer::Default;
+	Command.MeshData = PrimitiveComponent->GetPrimitive()->GetMeshData();
+	Command.WorldMatrix = PrimitiveComponent->GetWorldTransform();
+	switch (RenderMode)
+	{
+	case ERenderMode::Lighting:
+	case ERenderMode::NoLighting:
+		Command.Material = PrimitiveComponent->GetMaterial();
+		break;
+	// Wireframe 렌더모드에서는 기존 Primitive가 가지고 있던 Material 무시 
+	case ERenderMode::Wireframe:
+		Command.Material = WireFrameMaterial.get();
+	}
+	return Command;
+}
+
 
 void CEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
 {

@@ -73,8 +73,7 @@ void CViewport::Render(CCore* Core, CRenderer* Renderer, HWND Hwnd)
 
 	if (ImGui::BeginMenuBar())
 	{
-		//ImGui::TextUnformatted("Viewport");
-
+		// 도구 선택 버튼
 		CEditorViewportClient* EditorViewportClient = Core ? dynamic_cast<CEditorViewportClient*>(Core->GetViewportClient()) : nullptr;
 		if (EditorViewportClient)
 		{
@@ -96,7 +95,17 @@ void CViewport::Render(CCore* Core, CRenderer* Renderer, HWND Hwnd)
 			}
 			ImGui::PopStyleVar();
 		}
-
+		
+		// RenderMode 선택
+		float RenderModeComboWidth = 120.0f;
+		// 오른쪽 정렬
+		ImGui::SetCursorPosX(ImGui::GetWindowWidth() - RenderModeComboWidth);
+		ImGui::SetNextItemWidth(RenderModeComboWidth);
+		{
+			ERenderMode RenderMode = EditorViewportClient->GetRenderMode();
+			ImGui::Combo("", (int*) &RenderMode, "Lighting\0No Lighting\0Wireframe", 3);
+			EditorViewportClient->SetRenderMode(RenderMode);
+		}
 		ImGui::EndMenuBar();
 	}
 
