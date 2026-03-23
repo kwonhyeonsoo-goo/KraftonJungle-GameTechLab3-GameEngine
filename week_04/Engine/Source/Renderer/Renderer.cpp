@@ -8,6 +8,10 @@
 #include "Primitive/PrimitiveBase.h"
 #include <cassert>
 #include <algorithm>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "ThirdParty/stb_image.h"
+
 static FVector GetCameraWorldPositionFromViewMatrix(const FMatrix& ViewMatrix)
 {
 	const FMatrix InvView = ViewMatrix.GetInverse();
@@ -22,8 +26,6 @@ uint64 FRenderCommand::MakeSortKey(const FMaterial* InMaterial, const FMeshData*
 	uint32 MeshId = InMeshData ? InMeshData->GetSortId() : 0;
 	return (static_cast<uint64>(MatId) << 32) | MeshId;
 }
-
-
 
 CRenderer::~CRenderer()
 {
@@ -190,7 +192,7 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 
-	std::wstring ShaderDirW = FPaths::ToWide(FPaths::ShaderDir());
+	std::wstring ShaderDirW = FPaths::ShaderDir();
 	std::wstring VSPath = ShaderDirW + L"VertexShader.hlsl";
 	std::wstring PSPath = ShaderDirW + L"PixelShader.hlsl";
 
@@ -259,11 +261,21 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 
-	const std::wstring SubUVTexturePath = FPaths::ToWide(FPaths::ContentDir() + "Textures/SubUVPenguin.png");
-	if (!SubUVRenderer.Initialize(Device, DeviceContext, SubUVTexturePath))
+	std::filesystem::path SubUVTexturePath = FPaths::ContentDir() / FString("Textures/SubUVPenguin.png");
+	FString SubUVTexturePathString = SubUVTexturePath.string();
+	if (!SubUVRenderer.Initialize(Device, DeviceContext, FPaths::ToWide(SubUVTexturePathString)))
 	{
 		MessageBox(0, L"SubUVRenderer Initialize Failed.", 0, 0);
 	}
+
+	std::filesystem::path FolderIconPath = FPaths::AssetDir() / FString("\\Textures\\FolderIcon.png");
+	std::filesystem::path FileIconPath = FPaths::AssetDir() / FString("\\Textures\\FileIcon.png");
+
+	FString FolderIconPathString = FolderIconPath.string();
+	FString FileIconPathString = FileIconPath.string();
+
+	CreateTextureFromSTB(Device, FolderIconPathString.c_str(), &FolderIconSRV);
+	CreateTextureFromSTB(Device, FileIconPathString.c_str(), &FileIconSRV);
 
 	return true;
 }
@@ -575,6 +587,53 @@ void CRenderer::UpdateObjectConstantBuffer(const FMatrix& WorldMatrix)
 	DeviceContext->Unmap(ObjectConstantBuffer, 0);
 }
 
+bool CRenderer::CreateTextureFromSTB(
+	ID3D11Device* Device,
+	const char* FilePath,
+	ID3D11ShaderResourceView** OutSRV)
+{
+	int Width, Height, Channels;
+	unsigned char* Data = stbi_load(FilePath, &Width, &Height, &Channels, 4); // RGBA
+
+	if (!Data)
+		return false;
+
+	// Texture 생성
+	D3D11_TEXTURE2D_DESC Desc = {};
+	Desc.Width = Width;
+	Desc.Height = Height;
+	Desc.MipLevels = 1;
+	Desc.ArraySize = 1;
+	Desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	Desc.SampleDesc.Count = 1;
+	Desc.Usage = D3D11_USAGE_DEFAULT;
+	Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+	D3D11_SUBRESOURCE_DATA InitData = {};
+	InitData.pSysMem = Data;
+	InitData.SysMemPitch = Width * 4;
+
+	ID3D11Texture2D* Texture = nullptr;
+	HRESULT hr = Device->CreateTexture2D(&Desc, &InitData, &Texture);
+
+	stbi_image_free(Data);
+
+	if (FAILED(hr))
+		return false;
+
+	// SRV 생성
+	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+	SRVDesc.Format = Desc.Format;
+	SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	SRVDesc.Texture2D.MipLevels = 1;
+
+	hr = Device->CreateShaderResourceView(Texture, &SRVDesc, OutSRV);
+
+	Texture->Release();
+
+	return SUCCEEDED(hr);
+}
+
 bool CRenderer::InitOutlineResources()
 {
 	if (StencilWriteState && StencilTestState && OutlinePS)
@@ -613,7 +672,9 @@ bool CRenderer::InitOutlineResources()
 	if (FAILED(Hr)) return false;
 
 	// 아웃라인 픽셀 셰이더 로드
-	std::wstring OutlinePSPath = FPaths::ToWide(FPaths::ShaderDir() + "OutlinePixelShader.hlsl");
+	FString OutlinePSPathString = (FPaths::ShaderDir() / "OutlinePixelShader.hlsl").string();
+	std::wstring OutlinePSPath = std::wstring(OutlinePSPathString.begin(), OutlinePSPathString.end());	
+
 	OutlinePS = FShaderMap::Get().GetOrCreatePixelShader(Device, OutlinePSPath.c_str());
 	return OutlinePS != nullptr;
 }

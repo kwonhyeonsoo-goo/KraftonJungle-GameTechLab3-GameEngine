@@ -3,7 +3,7 @@
 
 const FString CPrimitivePlane::Key = "Plane";
 
-FString CPrimitivePlane::GetFilePath() { return FPaths::MeshDir() + "Plane.mesh"; }
+// FString CPrimitivePlane::GetFilePath() { return FPaths::MeshDir() + "Plane.mesh"; }
 
 CPrimitivePlane::CPrimitivePlane()
 {

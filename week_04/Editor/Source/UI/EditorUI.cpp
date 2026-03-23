@@ -14,6 +14,53 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
 
+#include "Core/ViewportClient.h"
+#include "Core/Paths.h"
+
+#include <windows.h>
+#include <commdlg.h>
+
+#include "Debug/EngineLog.h"
+#include "Component/CameraComponent.h"
+#include "Camera/Camera.h"
+
+enum class EFileDialogType
+{
+	Open,
+	Save
+};
+
+std::string GetFilePathUsingDialog(EFileDialogType Type)
+{
+	char FileName[MAX_PATH] = "";
+	FString ContentDir = FPaths::ContentDir().string();
+
+	OPENFILENAMEA Ofn = {};
+	Ofn.lStructSize = sizeof(OPENFILENAMEA);
+	Ofn.lpstrFilter = "Scene Files (*.json)\0*.json\0All Files (*.*)\0*.*\0";
+	Ofn.lpstrFile = FileName;
+	Ofn.nMaxFile = MAX_PATH;
+	Ofn.lpstrDefExt = "json";
+	Ofn.lpstrInitialDir = ContentDir.c_str();
+
+	if (Type == EFileDialogType::Save)
+	{
+		Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
+
+		if (GetSaveFileNameA(&Ofn))
+			return std::string(FileName);
+	}
+	else // Open
+	{
+		Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+		if (GetOpenFileNameA(&Ofn))
+			return std::string(FileName);
+	}
+
+	return "";
+}
+
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 
 void CEditorUI::Initialize(CCore* InCore)
@@ -42,6 +89,15 @@ void CEditorUI::Initialize(CCore* InCore)
 				Root->SetRelativeTransform(Transform);
 			}
 		};
+
+	ContentBrowser.OnFileDoubleClickCallback = [this](const FString& FilePath)
+		{
+			if (Core)
+			{
+				Core->GetViewportClient()->HandleFileDoubleClick(FilePath);
+			}
+		};
+
 }
 
 void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
@@ -57,6 +113,9 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 	const HWND Hwnd = InRenderer->GetHwnd();
 	ID3D11Device* Device = InRenderer->GetDevice();
 	ID3D11DeviceContext* DeviceContext = InRenderer->GetDeviceContext();
+
+	ContentBrowser.SetFolderIcon(CurrentRenderer->GetFolderIconSRV());
+	ContentBrowser.SetFileIcon(CurrentRenderer->GetFileIconSRV());
 
 	InRenderer->SetGUICallbacks(
 		[Hwnd, Device, DeviceContext]()
@@ -285,11 +344,66 @@ void CEditorUI::Render()
 	Stat.SetObjectCount(UObject::TotalAllocationCounts);
 	Stat.SetHeapUsage(UObject::TotalAllocationBytes);
 
+	if (ImGui::BeginMainMenuBar())
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("New Scene"))
+			{
+				if (Core)
+				{
+					Core->SetSelectedActor(nullptr);
+
+					if (UCameraComponent* Cam = Core->GetScene()->GetActiveCameraComponent())
+					{
+						Cam->GetCamera()->SetPosition({ -5.0f, 0.0f, 2.0f });
+						Cam->GetCamera()->SetRotation(0.f, 0.f);
+					}
+					Core->GetScene()->ClearActors();
+					UE_LOG("New scene created");
+				}
+			}
+			if (ImGui::MenuItem("Open Scene"))
+			{
+				if (Core && Core->GetActiveScene())
+				{
+					Core->SetSelectedActor(nullptr);
+					Core->GetScene()->ClearActors();
+
+					FString Path = GetFilePathUsingDialog(EFileDialogType::Open);
+
+					if (!Path.empty())
+					{
+						Core->GetActiveScene()->LoadSceneFromFile(Path);
+					}
+				}
+			}
+
+			if (ImGui::MenuItem("Save Scene As..."))
+			{
+				if (Core && Core->GetActiveScene())
+				{
+					FString Path = GetFilePathUsingDialog(EFileDialogType::Save);
+
+					if (!Path.empty())
+					{
+						Core->GetActiveScene()->SaveSceneToFile(Path);
+					}
+				}
+			}
+
+			ImGui::EndMenu();
+		}
+
+		ImGui::EndMainMenuBar();
+	}
+
 	ControlPanel.Render(Core);
 	Property.Render();
 	Console.Render();
 	Stat.Render();
 	Outliner.Render(Core);
+	// ContentBrowser.Render();
 }
 
 bool CEditorUI::GetViewportMousePosition(int32 WindowMouseX, int32 WindowMouseY, int32& OutViewportX, int32& OutViewportY, int32& OutWidth, int32& OutHeight) const

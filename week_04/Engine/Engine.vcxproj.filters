@@ -522,6 +522,7 @@
     </ClInclude>
     <ClInclude Include="Source\Actor\PlaneActor.h" />
     <ClInclude Include="Source\Component\PlaneComponent.h" />
+    <ClInclude Include="ThirdParty\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

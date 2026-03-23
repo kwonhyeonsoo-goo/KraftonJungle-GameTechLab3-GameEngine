@@ -68,6 +68,11 @@ void IViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene, const FFru
 	}
 }
 
+void IViewportClient::HandleFileDoubleClick(const FString& FilePath)
+{
+
+}
+
 void CGameViewportClient::Attach(CCore* Core, CRenderer* Renderer)
 {
 	if (Renderer)

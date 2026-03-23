@@ -5,7 +5,7 @@
 
 const FString CPrimitiveSphere::Key = "Sphere";
 
-FString CPrimitiveSphere::GetFilePath() { return FPaths::MeshDir() + "Sphere.mesh"; }
+// FString CPrimitiveSphere::GetFilePath() { return FPaths::MeshDir() + "Sphere.mesh"; }
 
 CPrimitiveSphere::CPrimitiveSphere(int32 Segments, int32 Rings)
 {

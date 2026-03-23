@@ -3,7 +3,7 @@
 
 const FString CPrimitiveCube::Key = "Cube";
 
-FString CPrimitiveCube::GetFilePath() { return FPaths::MeshDir() + "Cube.mesh"; }
+// FString CPrimitiveCube::GetFilePath() { return FPaths::MeshDir() + "Cube.mesh"; }
 
 CPrimitiveCube::CPrimitiveCube()
 {
