@@ -503,7 +503,6 @@ void CRenderer::ExecuteCommands()
 			SubUVRenderer.DrawSubUV(
 				Cmd.WorldPosition,
 				Cmd.Size,
-				Cmd.Color,
 				Cmd.Columns,
 				Cmd.Rows,
 				Cmd.TotalFrames,
@@ -809,6 +808,7 @@ void CRenderer::Release()
 	ClearSceneRenderTarget();
 
 	TextRenderer.Release();
+	SubUVRenderer.Release();
 
 	ShaderManager.Release();
 	FShaderMap::Get().Clear();

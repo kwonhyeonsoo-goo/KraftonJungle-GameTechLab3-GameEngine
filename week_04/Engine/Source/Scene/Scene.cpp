@@ -96,31 +96,6 @@ void UScene::InitializeDefaultScene(float AspectRatio, ID3D11Device* Device)
 {
 	InitializeEmptyScene(AspectRatio);
 	LoadSceneFromFile((FPaths::SceneDir() / "DefaultScene.json").string(), Device);
-
-	// SubUV 테스트용 Actor 추가
-	ASubUVActor* SubUVActor = SpawnActor<ASubUVActor>("SubUV_Test");
-	if (SubUVActor)
-	{
-		SubUVActor->SetActorLocation(FVector(0.0f, 0.0f, 0.0f));
-
-		USubUVComponent* SubUVComponent = SubUVActor->GetSubUVComponent();
-		if (SubUVComponent)
-		{
-			SubUVComponent->SetSize(FVector2(1.0f, 1.0f));
-			SubUVComponent->SetColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
-
-			SubUVComponent->SetColumns(9);
-			SubUVComponent->SetRows(4);
-			SubUVComponent->SetTotalFrames(36);
-
-			SubUVComponent->SetFirstFrame(14);
-			SubUVComponent->SetLastFrame(17);
-
-			SubUVComponent->SetFPS(8.0f);
-			SubUVComponent->SetLoop(true);
-			SubUVComponent->SetBillboard(true);
-		}
-	}
 }
 
 void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
@@ -183,6 +158,10 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 		{
 			Actor = SpawnActor<AAttachTestActor>(ActorName);
 		}
+		else if (Type == "SubUV")
+		{
+			Actor = SpawnActor<ASubUVActor>(ActorName);
+		}
 		else
 		{
 			++ActorIndex;
@@ -223,6 +202,61 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 		if (USceneComponent* Root = Actor->GetRootComponent())
 		{
 			Root->SetRelativeTransform(Transform);
+		}
+
+		if (Type == "SubUV" && Value.contains("SubUV"))
+		{
+			ASubUVActor* SubUVActor = static_cast<ASubUVActor*>(Actor);
+			if (SubUVActor)
+			{
+				USubUVComponent* SubUVComponent = SubUVActor->GetSubUVComponent();
+				if (SubUVComponent)
+				{
+					auto& SubUVJson = Value["SubUV"];
+
+					if (SubUVJson.contains("Size"))
+					{
+						auto& Size = SubUVJson["Size"];
+						SubUVComponent->SetSize(FVector2(
+							Size[0].get<float>(),
+							Size[1].get<float>()
+						));
+					}
+										
+					if (SubUVJson.contains("Columns"))
+					{
+						SubUVComponent->SetColumns(SubUVJson["Columns"].get<int32>());
+					}
+					if (SubUVJson.contains("Rows"))
+					{
+						SubUVComponent->SetRows(SubUVJson["Rows"].get<int32>());
+					}
+					if (SubUVJson.contains("TotalFrames"))
+					{
+						SubUVComponent->SetTotalFrames(SubUVJson["TotalFrames"].get<int32>());
+					}
+					if (SubUVJson.contains("FirstFrame"))
+					{
+						SubUVComponent->SetFirstFrame(SubUVJson["FirstFrame"].get<int32>());
+					}
+					if (SubUVJson.contains("LastFrame"))
+					{
+						SubUVComponent->SetLastFrame(SubUVJson["LastFrame"].get<int32>());
+					}
+					if (SubUVJson.contains("FPS"))
+					{
+						SubUVComponent->SetFPS(SubUVJson["FPS"].get<float>());
+					}
+					if (SubUVJson.contains("Loop"))
+					{
+						SubUVComponent->SetLoop(SubUVJson["Loop"].get<bool>());
+					}
+					if (SubUVJson.contains("Billboard"))
+					{
+						SubUVComponent->SetBillboard(SubUVJson["Billboard"].get<bool>());
+					}
+				}
+			}
 		}
 
 		++ActorIndex;
@@ -278,6 +312,10 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 		{
 			Type = "AttachTest";
 		}
+		else if (Actor->IsA(ASubUVActor::StaticClass()))
+		{
+			Type = "SubUV";
+		}
 		else
 		{
 			continue;
@@ -308,6 +346,31 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 			Transform.GetScale3D().Y,
 			Transform.GetScale3D().Z
 		};
+
+		if (Actor->IsA(ASubUVActor::StaticClass()))
+		{
+			ASubUVActor* SubUVActor = static_cast<ASubUVActor*>(Actor);
+			if (SubUVActor)
+			{
+				USubUVComponent* SubUVComponent = SubUVActor->GetSubUVComponent();
+				if (SubUVComponent)
+				{
+					Primitives[Key]["SubUV"]["Size"] = {
+						SubUVComponent->GetSize().X,
+						SubUVComponent->GetSize().Y
+					};
+
+					Primitives[Key]["SubUV"]["Columns"] = SubUVComponent->GetColumns();
+					Primitives[Key]["SubUV"]["Rows"] = SubUVComponent->GetRows();
+					Primitives[Key]["SubUV"]["TotalFrames"] = SubUVComponent->GetTotalFrames();
+					Primitives[Key]["SubUV"]["FirstFrame"] = SubUVComponent->GetFirstFrame();
+					Primitives[Key]["SubUV"]["LastFrame"] = SubUVComponent->GetLastFrame();
+					Primitives[Key]["SubUV"]["FPS"] = SubUVComponent->GetFPS();
+					Primitives[Key]["SubUV"]["Loop"] = SubUVComponent->IsLoop();
+					Primitives[Key]["SubUV"]["Billboard"] = SubUVComponent->IsBillboard();
+				}
+			}
+		}
 
 		++Index;
 	}
@@ -500,7 +563,6 @@ void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue&
 			FSubUVRenderCommand SubUVCmd;
 			SubUVCmd.WorldPosition = SubUVComponent->GetWorldLocation();
 			SubUVCmd.Size = SubUVComponent->GetSize();
-			SubUVCmd.Color = SubUVComponent->GetColor();
 			SubUVCmd.Columns = SubUVComponent->GetColumns();
 			SubUVCmd.Rows = SubUVComponent->GetRows();
 			SubUVCmd.TotalFrames = SubUVComponent->GetTotalFrames();

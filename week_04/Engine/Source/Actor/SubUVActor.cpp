@@ -10,5 +10,14 @@ void ASubUVActor::PostSpawnInitialize()
 	SubUVComponent = FObjectFactory::ConstructObject<USubUVComponent>(this, "SubUVComponent");
 	AddOwnedComponent(SubUVComponent);
 
+	SetActorLocation(FVector(0.0f, 0.0f, 0.0f));
+
+	if (SubUVComponent)
+	{
+		SubUVComponent->SetSize(FVector2(1.0f, 1.0f));
+		SubUVComponent->SetFirstFrame(14);
+		SubUVComponent->SetLastFrame(17);
+	}
+
 	AActor::PostSpawnInitialize();
 }

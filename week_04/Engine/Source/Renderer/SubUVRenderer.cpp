@@ -9,7 +9,6 @@
 
 struct FSubUVConstantBuffer
 {
-	FVector4 Color;
 	FVector2 CellSize;
 	FVector2 Offset;
 };
@@ -342,12 +341,10 @@ void CSubUVRenderer::UpdateObjectCB(const FMatrix& WorldMatrix)
 }
 
 void CSubUVRenderer::UpdateSubUVCB(
-	const FVector4& Color,
 	const FVector2& CellSize,
 	const FVector2& Offset)
 {
 	FSubUVConstantBuffer CBData;
-	CBData.Color = Color;
 	CBData.CellSize = CellSize;
 	CBData.Offset = Offset;
 
@@ -362,7 +359,6 @@ void CSubUVRenderer::UpdateSubUVCB(
 void CSubUVRenderer::DrawSubUV(
 	const FVector& WorldPosition,
 	const FVector2& Size,
-	const FVector4& Color,
 	int32 Columns,
 	int32 Rows,
 	int32 TotalFrames,
@@ -478,7 +474,7 @@ void CSubUVRenderer::DrawSubUV(
 	}
 
 	UpdateObjectCB(World);
-	UpdateSubUVCB(Color, CellSize, UVOffset);
+	UpdateSubUVCB(CellSize, UVOffset);
 
 	SubUVVS->Bind(DeviceContext);
 	SubUVPS->Bind(DeviceContext);

@@ -32,7 +32,6 @@ public:
 	void DrawSubUV(
 		const FVector& WorldPosition,
 		const FVector2& Size,
-		const FVector4& Color,
 		int32 Columns,
 		int32 Rows,
 		int32 TotalFrames,
@@ -55,7 +54,6 @@ private:
 	void UpdateFrameCB();
 	void UpdateObjectCB(const FMatrix& WorldMatrix);
 	void UpdateSubUVCB(
-		const FVector4& Color,
 		const FVector2& CellSize,
 		const FVector2& Offset
 	);
