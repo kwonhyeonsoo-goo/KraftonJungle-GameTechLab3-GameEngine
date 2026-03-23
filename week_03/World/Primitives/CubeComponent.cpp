@@ -2,7 +2,7 @@
 #include "World/Mesh/MeshManager.h"
 
 DEFINE_CLASS(UCubeComponent, UPrimitiveComponent)
-REGISTER_FACTORY(UCubeComponent, UPrimitiveComponent)
+REGISTER_FACTORY(UCubeComponent)
 
 UCubeComponent::UCubeComponent()
 {

@@ -2,7 +2,7 @@
 
 #include "World.h"
 #include "Engine/Scene/Camera.h"
-#include "World/GizmoComponent.h"
+#include "World/Gizmo/GizmoManager.h"
 
 #include "Render/Renderer/Renderer.h"
 #include "Render/Scene/RenderBus.h"
@@ -72,6 +72,15 @@ public:
 		auto World = EditorWorld.lock();
 		if (!World) { return {}; }
 		AActor* Actor = World->SpawnPrimitiveActor<T>(Location);
+		if (!Actor) { return {}; }
+		return std::dynamic_pointer_cast<AActor>(Actor->shared_from_this());
+	}
+
+	template <typename T>
+	weak_ptr<AActor> SpawnNewUtilActor(const FVector& Location) {
+		auto World = EditorWorld.lock();
+		if (!World) { return {}; }
+		AActor* Actor = World->SpawnUtilActor<T>(Location);
 		if (!Actor) { return {}; }
 		return std::dynamic_pointer_cast<AActor>(Actor->shared_from_this());
 	}

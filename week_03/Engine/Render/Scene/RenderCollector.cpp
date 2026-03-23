@@ -1,8 +1,8 @@
 ﻿#include "RenderCollector.h"
-
-#include "World.h"
 #include "Engine/Scene/Camera.h"
-#include "World/GizmoComponent.h"
+#include "World.h"
+#include "World/Gizmo/GizmoComponent.h"
+#include "Classes/ASpotlight.h"
 
 FMeshBufferManager FRenderCollector::MeshBufferManager;
 
@@ -46,7 +46,10 @@ void FRenderCollector::CollectFromActor(AActor* Actor, const FRenderCollectorCon
 
 		UPrimitiveComponent* Primitive = static_cast<UPrimitiveComponent*>(Comp);
 		CollectFromComponent(Primitive, Context, RenderBus);
+	}
 
+	if (Actor->IsA<ASpotlight>()) {
+		ASpotlight::Cast(Actor)->AddConeLinesToBatch(RenderBus.GetBatehdLine());
 	}
 }
 

@@ -26,3 +26,8 @@ enum class EPrimitiveType
 	EPT_Box,
 	EPT_MouseOverlay,
 };
+
+enum class EUtilType
+{
+	EUT_Spotlight,
+};

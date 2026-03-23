@@ -31,6 +31,16 @@ public:
 		return Actor;
 	}
 
+	template <typename T>
+	AActor* SpawnUtilActor(const FVector& Location) {
+		auto WeakActor = UObjectManager::Get().CreateObject<T>();
+		AActor* Actor = WeakActor.lock().get();
+		Actor->SetOwnerUUID(UUID);
+		Actor->SetActorLocation(Location);
+		Actors.push_back(Actor);
+		return Actor;
+	}
+
 private:
 	TArray<AActor*> Actors;
 	UCamera* ActiveCamera = nullptr;	// Unused for now

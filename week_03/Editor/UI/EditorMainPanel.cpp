@@ -9,10 +9,12 @@
 #include "ImGui/IconsFontAwesome4.h"
 
 #include "Render/Renderer/Renderer.h"
+#include "World/Gizmo/GizmoManager.h"
 #include "World/Primitives/Primitives.h"
 #include "SceneSaveManager.h"
 #include "Core/Common.h"
 #include "Engine/Core/InputSystem.h"
+#include "Classes/ASpotlight.h"
 
 #define SEPARATOR(); ImGui::Spacing(); ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing(); ImGui::Spacing();
 
@@ -48,7 +50,6 @@ void FEditorMainPanel::Release()
 
 void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 {
-	using namespace common::constants::ImGui;
 	auto& SceneManager = EditorEngine->GetWorld().lock()->GetSceneManager();
 	(void)DeltaTime;
 	if (!EditorEngine)
@@ -82,7 +83,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 
 	ImGui::Combo("Primitive", &SelectedPrimitiveType, PrimitiveTypes, IM_ARRAYSIZE(PrimitiveTypes));
 
-	if (ImGui::Button("Spawn"))
+	if (ImGui::Button("Spawn Primitive Actor"))
 	{
 		for (int i = 0; i < NumberOfSpawnedActors; i++) {
 			switch ((EPrimitiveType)SelectedPrimitiveType)
@@ -102,15 +103,30 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 		NumberOfSpawnedActors = 1;
 	}
 
+	ImGui::Combo("Utility", &SelectedUtilityActorType, UtilTypes, IM_ARRAYSIZE(UtilTypes));
+	if (ImGui::Button("Spawn Utility Actor"))
+	{
+		for (int i = 0; i < NumberOfSpawnedActors; i++) {
+			switch ((EUtilType)SelectedUtilityActorType)
+			{
+			case EUtilType::EUT_Spotlight:
+				EditorEngine->SpawnNewUtilActor<ASpotlight>(CurSpawnPoint);
+				break;
+			}
+		}
+
+		NumberOfSpawnedActors = 1;
+	}
+
 	ImGui::InputInt("Number of Spawn", &NumberOfSpawnedActors, 1, 10);
 
 	ImGui::SeparatorText("Scene");
 
 	if (ImGui::Button("New Scene")) {
-		Viewport->GetGizmo().lock()->SetVisibility(false);
+		Viewport->GetGizmoManager().SetVisibility(false);
 		ViewOutput.Object = nullptr;
 		EditorEngine->NewScene();
-		NewSceneNotificationTimer = NotificationTimer;
+		NewSceneNotificationTimer = common::constants::imgui::NotificationTimer;
 	}
 	if (NewSceneNotificationTimer > 0.0f) {
 		NewSceneNotificationTimer -= DeltaTime;
@@ -120,7 +136,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 
 	if (ImGui::Button("Save Scene")) {
 		FSceneSaveManager::SaveSceneAsJSON(EditorEngine->GetWorld().lock()->GetActiveScene().lock().get());
-		SceneSaveNotificationTimer = NotificationTimer;
+		SceneSaveNotificationTimer = common::constants::imgui::NotificationTimer;
 	}
 	if (SceneSaveNotificationTimer > 0.0f) {
 		SceneSaveNotificationTimer -= DeltaTime;
@@ -130,7 +146,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 	if (ImGui::Button("Load Scene")) {
 		UScene* Scene = FSceneSaveManager::LoadSceneFromJSON(EditorEngine->GetWorld().lock().get());
 		if (Scene) {
-			Viewport->GetGizmo().lock()->SetVisibility(false);
+			Viewport->GetGizmoManager().SetVisibility(false);
 			ViewOutput.Object = nullptr;
 			//EditorEngine->GetWorld()->GetSceneManager().RemoveActiveScene();
 			SceneManager.AddScene(Scene);
@@ -138,7 +154,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 			Viewport->ResetViewport();
 			EditorEngine->ResetViewportScene();
 			Sleep(50);	// Safeguard
-			SceneLoadNotificationTimer = NotificationTimer;
+			SceneLoadNotificationTimer = common::constants::imgui::NotificationTimer;
 		}
 	}
 
@@ -199,7 +215,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 	static int SelectedSpace = 0;
 	if (ImGui::RadioButton("World", &SelectedSpace, 0))
 	{
-		Viewport->GetGizmo().lock()->SetVisibility(true);
+		Viewport->GetGizmoManager().SetVisibility(true);
 		std::cout << "Switched to World Space\n";
 	}
 
@@ -207,18 +223,18 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 
 	if (ImGui::RadioButton("Local", &SelectedSpace, 1))
 	{
-		Viewport->GetGizmo().lock()->SetWorldSpace(false);
+		Viewport->GetGizmoManager().SetWorldSpace(false);
 		std::cout << "Switched to Local Space\n";
 	}
 
 
 	ImGui::SeparatorText("Tools");
 
-	if (ImGui::Button("Translate")) Viewport->GetGizmo().lock()->SetTranslateMode();
+	if (ImGui::Button("Translate")) Viewport->GetGizmoManager().SetTranslateMode();
 	ImGui::SameLine();
-	if (ImGui::Button("Rotate")) Viewport->GetGizmo().lock()->SetRotateMode();
+	if (ImGui::Button("Rotate")) Viewport->GetGizmoManager().SetRotateMode();
 	ImGui::SameLine();
-	if (ImGui::Button("Scale")) Viewport->GetGizmo().lock()->SetScaleMode();
+	if (ImGui::Button("Scale")) Viewport->GetGizmoManager().SetScaleMode();
 
 	ImGui::SeparatorText("View Mode");
 
@@ -245,7 +261,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 
 	ImGui::End();
 
-	RenderObjectWindow(ViewOutput.Object);
+	RenderPickedObjectWindow(ViewOutput.Object);
 	RenderObjectManager(ViewOutput);
 
 	ImGui::Render();
@@ -303,7 +319,7 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 				auto* TargetComponent = Actor->GetRootComponent();
 
 				// Move gizmo to target component
-				Viewport->GetGizmo().lock()->SetTarget(Actor->GetRootComponent());
+				Viewport->GetGizmoManager().SetTarget(Actor->GetRootComponent());
 
 				// Let the viewoutput know about selected object
 				ViewOutput.Object = TargetComponent;
@@ -321,7 +337,7 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 			bool bSelected = (SelectedActorIndex == Actor->UUID);
 			if (ImGui::Selectable(Label.c_str(), bSelected)) {
 				SelectedActorIndex = Actor->UUID;
-				Viewport->GetGizmo().lock()->Deactivate();
+				Viewport->GetGizmoManager().Deactivate();
 			}
 		}
 	}
@@ -329,7 +345,7 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 	ImGui::End();
 }
 
-void FEditorMainPanel::RenderObjectWindow(UObject*& ObjectPicked) {
+void FEditorMainPanel::RenderPickedObjectWindow(UObject*& ObjectPicked) {
 	ImGui::Begin("Picked Object");
 	if(!ObjectPicked) {
 		ImGui::End();
@@ -354,18 +370,18 @@ void FEditorMainPanel::RenderObjectWindow(UObject*& ObjectPicked) {
 		float ScaleArray[3] = { Scale.X, Scale.Y, Scale.Z };
 
 
-		UGizmoComponent* Gizmo = Viewport->GetGizmo().lock().get();
+		FGizmoManager& Gizmo = Viewport->GetGizmoManager();
 		if (ImGui::DragFloat3("Location", PosArray, 0.1f))
 		{
-			Gizmo->SetTargetLocation(FVector(PosArray[0], PosArray[1], PosArray[2]));
+			Gizmo.SetTargetLocation(FVector(PosArray[0], PosArray[1], PosArray[2]));
 		}
 		if (ImGui::DragFloat3("Rotation", RotArray, 0.1f))
 		{
-			Gizmo->SetTargetRotation(FVector(RotArray[0], RotArray[1], RotArray[2]));
+			Gizmo.SetTargetRotation(FVector(RotArray[0], RotArray[1], RotArray[2]));
 		}
 		if (ImGui::DragFloat3("Scale", ScaleArray, 0.1f))
 		{
-			Gizmo->SetTargetScale(FVector(ScaleArray[0], ScaleArray[1], ScaleArray[2]));
+			Gizmo.SetTargetScale(FVector(ScaleArray[0], ScaleArray[1], ScaleArray[2]));
 		}
 
 		SEPARATOR();
@@ -379,13 +395,40 @@ void FEditorMainPanel::RenderObjectWindow(UObject*& ObjectPicked) {
 					UObjectManager::Get().DestroyObject(SceneComp->GetOwningActor());
 				}
 			}
-			Viewport->GetGizmo().lock()->SetVisibility(false);
-			Viewport->GetGizmo().lock()->Deactivate();
+			Viewport->GetGizmoManager().SetVisibility(false);
+			Viewport->GetGizmoManager().Deactivate();
 			ObjectPicked = nullptr;
 		}
+
+		if (SceneComp->GetOwningActor()) { RenderPickedActorWindow(SceneComp->GetOwningActor()); }
 	}
 
 	ImGui::End();
+}
+
+void FEditorMainPanel::RenderPickedActorWindow(AActor* Actor) {
+	if (Actor->IsA<ASpotlight>()) {
+		SEPARATOR();
+		ASpotlight* Spotlight = ASpotlight::Cast(Actor);
+		float SpotlightRot[2] = { Spotlight->GetYaw(), Spotlight->GetPitch()};
+		if (ImGui::DragFloat2("Spotlight Rotation", SpotlightRot, 0.1f)) {
+			Clamp(SpotlightRot[0], -80.0f, 80.0f); Clamp(SpotlightRot[1], -80.0f, 80.0f);
+			Spotlight->SetYaw(SpotlightRot[0]); Spotlight->SetPitch(SpotlightRot[1]);
+		}
+
+		int NumVertices = Spotlight->GetNumVertices();
+		if (ImGui::DragInt("No. Vertices", &NumVertices, 1)) { 
+			Clamp(NumVertices, 0, 200);
+			if (NumVertices >= 0) {
+				Spotlight->SetNumVertex(NumVertices);
+			}
+		}
+
+		float SpotlightHeight = Spotlight->GetConeHeight();
+		if (ImGui::DragFloat("Spotlight Height", &SpotlightHeight, 0.1f)) { Clamp(SpotlightHeight, 0.1f, 500.0f); Spotlight->SetConeHeight(SpotlightHeight); }
+
+		// Color
+	}
 }
 
 void FEditorMainPanel::Update()

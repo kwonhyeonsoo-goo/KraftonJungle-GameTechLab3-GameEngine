@@ -170,7 +170,8 @@
     <ClCompile Include="Object\ActorComponent.cpp" />
     <ClCompile Include="Object\EngineStatics.cpp" />
     <ClCompile Include="Object\Object.cpp" />
-    <ClCompile Include="World\GizmoComponent.cpp" />
+    <ClCompile Include="World\Gizmo\GizmoComponent.cpp" />
+    <ClCompile Include="World\Gizmo\GizmoManager.cpp" />
     <ClCompile Include="World\Mesh\MeshManager.cpp" />
     <ClCompile Include="World\PrimitiveComponent.cpp" />
     <ClCompile Include="World\Primitives\CubeComponent.cpp" />
@@ -184,9 +185,11 @@
     <ClInclude Include="Editor\Core\EditorConsole.h" />
     <ClInclude Include="Editor\EditorEngine.h" />
     <ClInclude Include="Editor\UI\EditorMainPanel.h" />
+    <ClInclude Include="Editor\UI\Inspector\Inspector.h" />
     <ClInclude Include="Editor\Viewport\CursorOverlayState.h" />
     <ClInclude Include="Editor\Viewport\EditorViewportClient.h" />
     <ClInclude Include="Engine\Classes\AActor.h" />
+    <ClInclude Include="Engine\Classes\Actors.h" />
     <ClInclude Include="Engine\Classes\ASpotlight.h" />
     <ClInclude Include="Engine\Core\CollisionTypes.h" />
     <ClInclude Include="Engine\Core\Common.h" />
@@ -237,7 +240,8 @@
     <ClInclude Include="Object\Object.h" />
     <ClInclude Include="Object\ObjectFactory.h" />
     <ClInclude Include="SimpleJSON\json.hpp" />
-    <ClInclude Include="World\GizmoComponent.h" />
+    <ClInclude Include="World\Gizmo\GizmoComponent.h" />
+    <ClInclude Include="World\Gizmo\GizmoManager.h" />
     <ClInclude Include="World\Mesh\MeshManager.h" />
     <ClInclude Include="World\PrimitiveComponent.h" />
     <ClInclude Include="World\Primitives\CubeComponent.h" />
