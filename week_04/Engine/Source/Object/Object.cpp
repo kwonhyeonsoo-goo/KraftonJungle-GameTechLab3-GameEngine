@@ -60,21 +60,6 @@ int32 UObject::GetTotalCounts()
 	return static_cast<int32>(UObject::TotalAllocationCounts);
 }
 
-void* UObject::operator new(size_t InSize)
-{
-	UObject::TotalAllocationCounts += 1;
-	UObject::TotalAllocationBytes += static_cast<uint32>(InSize);
-	UObject::LastNewSize = static_cast<uint32>(InSize);
-	return ::operator new(InSize);
-}
-
-void UObject::operator delete(void* InAddress, std::size_t size)
-{
-	UObject::TotalAllocationCounts -= 1;
-	UObject::TotalAllocationBytes -= static_cast<uint32>(size);
-	::operator delete(InAddress);
-}
-
 // ─────────────────────────────────────────────────────────────
 //  조건 4: RTTI
 // ─────────────────────────────────────────────────────────────

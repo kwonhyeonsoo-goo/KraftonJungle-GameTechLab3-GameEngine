@@ -2,9 +2,11 @@
 
 #include "imgui.h"
 #include "Core/Core.h"
+#include "Core/ShowFlags.h"
+#include "Core/ViewportClient.h"
 #include "Scene/Scene.h"
-#include "Scene/ShowFlags.h"
 #include "Actor/Actor.h"
+#include "Component/SubUVComponent.h"
 
 void COutlinerWindow::Render(CCore* Core)
 {
@@ -22,10 +24,12 @@ void COutlinerWindow::Render(CCore* Core)
 		return;
 	}
 
-	UScene* Scene = Core->GetScene();
-	if (!Scene) { ImGui::End(); return; }
+	IViewportClient* ViewportCli = Core->GetViewportClient();
+	if (!ViewportCli) { ImGui::End(); return; }
 
-	FShowFlags& ShowFlags = Scene->GetShowFlags();
+	FShowFlags & ShowFlags = ViewportCli->GetShowFlags();
+	AActor* SelectedActor = Core->GetSelectedActor();
+
 
 	// ===== Show Flags 섹션 =====
 	ImGui::SeparatorText("Show Flags");
@@ -35,15 +39,39 @@ void COutlinerWindow::Render(CCore* Core)
 	{
 		ShowFlags.SetFlag(EEngineShowFlags::SF_Primitives, bPrimitives);
 	}
-	bool bBillboardText = ShowFlags.HasFlag(EEngineShowFlags::SF_BillboardText);
-	if (ImGui::Checkbox("Billborads", &bBillboardText))
+	bool bUUID = ShowFlags.HasFlag(EEngineShowFlags::SF_UUID);
+	if (ImGui::Checkbox("UUID", &bUUID))
 	{
-		ShowFlags.SetFlag(EEngineShowFlags::SF_BillboardText, bBillboardText);
+		ShowFlags.SetFlag(EEngineShowFlags::SF_UUID, bUUID);
 	}
+
+
+	if (SelectedActor)
+	{
+		for (UActorComponent* Component : SelectedActor->GetComponents())
+		{
+			if (!Component || !Component->IsA(USubUVComponent::StaticClass()))
+			{
+				continue;
+			}
+
+			USubUVComponent* SubUVComponent = static_cast<USubUVComponent*>(Component);
+			bool bBillboard = SubUVComponent->IsBillboard();
+
+			if (ImGui::Checkbox("SubUV Billboard", &bBillboard))
+			{
+				SubUVComponent->SetBillboard(bBillboard);
+			}
+
+			break;
+		}
+	}
+
 	ImGui::SeparatorText("Actors");
 
+	UScene* Scene = Core->GetScene();
 	const TArray<AActor*>& Actors = Scene->GetActors();
-	AActor* SelectedActor = Core->GetSelectedActor();
+	
 
 	for (AActor* Actor : Actors)
 	{

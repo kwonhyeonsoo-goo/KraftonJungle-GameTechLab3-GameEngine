@@ -93,4 +93,6 @@ private:
 	double GCInterval = 30.0;
 	int32 WindowWidth = 0;
 	int32 WindowHeight = 0;
+
+	FRenderCommandQueue CommandQueue;
 };

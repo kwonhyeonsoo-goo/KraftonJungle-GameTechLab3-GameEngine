@@ -4,7 +4,7 @@
 #include "Object/ObjectFactory.h"
 #include <d3d11.h>
 #include "SceneTypes.h"
-#include "ShowFlags.h"
+#include "Core/ShowFlags.h"
 
 class AActor;
 class CCamera;
@@ -60,7 +60,6 @@ public:
 
 	FShowFlags& GetShowFlags() { return ShowFlags; }
 	const FShowFlags& GetShowFlags() const { return ShowFlags; }
-private:
 	void FrustrumCull(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible);
 
 private:
@@ -71,4 +70,5 @@ private:
 	ESceneType SceneType = ESceneType::Game;
 	FShowFlags ShowFlags;
 
+	TArray<UPrimitiveComponent*> VisiblePrimitives;
 };

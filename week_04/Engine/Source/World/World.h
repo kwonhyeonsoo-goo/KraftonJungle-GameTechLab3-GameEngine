@@ -2,7 +2,7 @@
 #include "CoreMinimal.h"
 #include "Object/Object.h"
 #include "Scene/SceneTypes.h"
-#include "Scene/ShowFlags.h"
+#include "Core/ShowFlags.h"
 #include "Math/Frustum.h"
 // Forward declarations — include 최소화
 class UScene;

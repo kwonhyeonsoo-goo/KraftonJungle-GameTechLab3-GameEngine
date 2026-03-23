@@ -49,6 +49,7 @@
     <ClInclude Include="Source\Core\FEngine.h" />
     <ClInclude Include="Source\Core\FTimer.h" />
     <ClInclude Include="Source\Core\Paths.h" />
+    <ClInclude Include="Source\Core\ShowFlags.h" />
     <ClInclude Include="Source\Core\ViewportClient.h" />
     <ClInclude Include="Source\Debug\EngineLog.h" />
     <ClInclude Include="Source\Input\EnhancedInputManager.h" />
@@ -66,9 +67,11 @@
     <ClInclude Include="Source\Math\Vector.h" />
     <ClInclude Include="Source\Math\Vector2.h" />
     <ClInclude Include="Source\Math\Vector4.h" />
+    <ClInclude Include="Source\Memory\MemoryBase.h" />
     <ClInclude Include="Source\Object\Class.h" />
     <ClInclude Include="Source\Object\Object.h" />
     <ClInclude Include="Source\Object\ObjectFactory.h" />
+    <ClInclude Include="Source\Object\ObjectGlobals.h" />
     <ClInclude Include="Source\Object\ObjectManager.h" />
     <ClInclude Include="Source\Object\ObjectTypes.h" />
     <ClInclude Include="Source\Physics\PhysicsManager.h" />
@@ -88,6 +91,8 @@
     <ClInclude Include="Source\Renderer\MaterialManager.h" />
     <ClInclude Include="Source\Renderer\PrimitiveVertex.h" />
     <ClInclude Include="Source\Renderer\RenderCommand.h" />
+    <ClInclude Include="Source\Renderer\RenderState.h" />
+    <ClInclude Include="Source\Renderer\RenderStateManager.h" />
     <ClInclude Include="Source\Renderer\Renderer.h" />
     <ClInclude Include="Source\Renderer\Shader.h" />
     <ClInclude Include="Source\Renderer\ShaderManager.h" />
@@ -102,7 +107,6 @@
     <ClInclude Include="Source\Scene\SceneManager.h" />
     <ClInclude Include="Source\Scene\SceneRenderCollector.h" />
     <ClInclude Include="Source\Scene\SceneTypes.h" />
-    <ClInclude Include="Source\Scene\ShowFlags.h" />
     <ClInclude Include="Source\Serializer\Archive.h" />
     <ClInclude Include="Source\Serializer\SceneSerializer.h" />
     <ClInclude Include="Source\Types\Array.h" />
@@ -149,6 +153,7 @@
     <ClCompile Include="Source\Core\FEngine.cpp" />
     <ClCompile Include="Source\Core\FTimer.cpp" />
     <ClCompile Include="Source\Core\Paths.cpp" />
+    <ClCompile Include="Source\Core\ShowFlags.cpp" />
     <ClCompile Include="Source\Core\ViewportClient.cpp" />
     <ClCompile Include="Source\Debug\EngineLog.cpp" />
     <ClCompile Include="Source\Input\EnhancedInputManager.cpp" />
@@ -160,9 +165,11 @@
     <ClCompile Include="Source\Math\Rotator.cpp" />
     <ClCompile Include="Source\Math\Transform.cpp" />
     <ClCompile Include="Source\Math\Vector.cpp" />
+    <ClCompile Include="Source\Memory\MemoryBase.cpp" />
     <ClCompile Include="Source\Object\Class.cpp" />
     <ClCompile Include="Source\Object\Object.cpp" />
     <ClCompile Include="Source\Object\ObjectFactory.cpp" />
+    <ClCompile Include="Source\Object\ObjectGlobals.cpp" />
     <ClCompile Include="Source\Object\ObjectManager.cpp" />
     <ClCompile Include="Source\Physics\PhysicsManager.cpp" />
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp" />
@@ -178,6 +185,9 @@
     <ClCompile Include="Source\Renderer\FontAtlas.cpp" />
     <ClCompile Include="Source\Renderer\Material.cpp" />
     <ClCompile Include="Source\Renderer\MaterialManager.cpp" />
+    <ClCompile Include="Source\Renderer\RenderCommand.cpp" />
+    <ClCompile Include="Source\Renderer\RenderState.cpp" />
+    <ClCompile Include="Source\Renderer\RenderStateManager.cpp" />
     <ClCompile Include="Source\Renderer\Renderer.cpp" />
     <ClCompile Include="Source\Renderer\Shader.cpp" />
     <ClCompile Include="Source\Renderer\ShaderManager.cpp" />
@@ -188,7 +198,6 @@
     <ClCompile Include="Source\Scene\Scene.cpp" />
     <ClCompile Include="Source\Scene\SceneManager.cpp" />
     <ClCompile Include="Source\Scene\SceneRenderCollector.cpp" />
-    <ClCompile Include="Source\Scene\ShowFlags.cpp" />
     <ClCompile Include="Source\Serializer\Archive.cpp" />
     <ClCompile Include="Source\Serializer\SceneSerializer.cpp" />
     <ClCompile Include="Source\Types\Name.cpp" />

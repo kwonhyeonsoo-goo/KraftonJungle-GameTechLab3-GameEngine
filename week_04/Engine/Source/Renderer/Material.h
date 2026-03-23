@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RenderState.h"
 #include <d3d11.h>
 #include <memory>
 
@@ -74,7 +75,7 @@ struct ENGINE_API FMaterialConstantBuffer
 class ENGINE_API FMaterial
 {
 public:
-	FMaterial() : SortId(NextSortId++) {}
+	FMaterial() : ShaderId(NextShaderId++) {}
 	virtual ~FMaterial();
 
 	FMaterial(const FMaterial&) = delete;
@@ -82,7 +83,7 @@ public:
 	FMaterial(FMaterial&&) = default;
 	FMaterial& operator=(FMaterial&&) = default;
 
-	uint32 GetSortId() const { return SortId; }
+	uint64 GetSortId() const;
 
 	// 에셋 원본 이름 (JSON에서 로드된 이름, 직렬화 시 사용)
 	void SetOriginName(const FString& InName) { OriginName = InName; }
@@ -97,9 +98,13 @@ public:
 
 	void SetVertexShader(const std::shared_ptr<FVertexShader>& InVS) { VertexShader = InVS; }
 	void SetPixelShader(const std::shared_ptr<FPixelShader>& InPS) { PixelShader = InPS; }
+	void SetRasterizerOption(const FRasterizerStateOption InOption) { RasterizerOption = InOption; }
+	void SetRasterizerState(const std::shared_ptr<FRasterizerState> InState) { RasterizerState = InState; }
 
 	FVertexShader* GetVertexShader() const { return VertexShader.get(); }
 	FPixelShader* GetPixelShader() const { return PixelShader.get(); }
+	const FRasterizerStateOption& GetRasterizerOption() const { return RasterizerOption; }
+	std::shared_ptr<FRasterizerState> GetRasterizerState() const { return RasterizerState; }
 
 	// 상수 버퍼 슬롯 추가 (b2, b3, ... 순서대로)
 	int32 CreateConstantBuffer(ID3D11Device* Device, uint32 InSize);
@@ -122,13 +127,19 @@ protected:
 	// FDynamicMaterial에서 파라미터 설정 시 사용
 	bool SetParameterData(const FString& ParamName, const void* Data, uint32 DataSize);
 
-	uint32 SortId = 0;
-	static inline uint32 NextSortId = 0;
+	// TODO: ShaderId가 실제 사용하는 쉐이더를 반영하도록 변경
+	// NOTE: GetSortId에서 비트 연산 쓰는 경우 ShaderId가 32bit를 전부 쓰면 안 됨
+	uint32 ShaderId = 0;
+	static inline uint32 NextShaderId = 0;
 
 	FString OriginName;
 	FString InstanceName;
 	std::shared_ptr<FVertexShader> VertexShader;
 	std::shared_ptr<FPixelShader> PixelShader;
+	// RasterizerState를 생성하기 위한 옵션, Serialize.
+	FRasterizerStateOption RasterizerOption;
+	// 머티리얼 로드시에 생성되는 RasterizerState 포인터. No-Serialize.
+	std::shared_ptr<FRasterizerState> RasterizerState = nullptr;
 
 	TArray<FMaterialConstantBuffer> ConstantBuffers;
 	TMap<FString, FMaterialParameterInfo> ParameterMap;

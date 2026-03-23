@@ -232,7 +232,7 @@ void UScene::FrustrumCull(const FFrustum& Frustum, TArray<UPrimitiveComponent*>&
 
 			if (PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
 			{
-				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_BillboardText))
+				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_UUID))
 				{
 					continue;
 				}

@@ -34,7 +34,6 @@ void CEditorViewportController::Tick(float DeltaTime)
 }
 
 
-
 void CEditorViewportController::SetupInputBindings()
 {
 	CameraContext = new FInputMappingContext();

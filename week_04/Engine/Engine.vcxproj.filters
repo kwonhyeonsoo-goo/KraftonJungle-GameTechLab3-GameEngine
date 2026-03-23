@@ -25,6 +25,9 @@
     <Filter Include="Source\Math">
       <UniqueIdentifier>{c5a7a384-b882-719b-feb1-81b7a8866df9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Memory">
+      <UniqueIdentifier>{248bf638-afdc-db0a-16e9-0fe63995e938}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Object">
       <UniqueIdentifier>{57ff594e-c20e-1243-40d9-9d88b6d24db9}</UniqueIdentifier>
     </Filter>
@@ -51,6 +54,9 @@
     </Filter>
     <Filter Include="Source\Types">
       <UniqueIdentifier>{1e5cbe70-629e-3dca-3777-f9421b4e6929}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\World">
+      <UniqueIdentifier>{0ac2ec06-dba6-7a8b-78bc-e17cca5c8860}</UniqueIdentifier>
     </Filter>
     <Filter Include="ThirdParty">
       <UniqueIdentifier>{889e92e0-4c84-fc5a-a876-5e7c393d8520}</UniqueIdentifier>
@@ -138,6 +144,9 @@
     <ClCompile Include="Source\Core\Paths.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Core\ShowFlags.cpp">
+      <Filter>Source\Core</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Core\ViewportClient.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
@@ -171,6 +180,9 @@
     <ClCompile Include="Source\Math\Vector.cpp">
       <Filter>Source\Math</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Memory\MemoryBase.cpp">
+      <Filter>Source\Memory</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Object\Class.cpp">
       <Filter>Source\Object</Filter>
     </ClCompile>
@@ -178,6 +190,9 @@
       <Filter>Source\Object</Filter>
     </ClCompile>
     <ClCompile Include="Source\Object\ObjectFactory.cpp">
+      <Filter>Source\Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Object\ObjectGlobals.cpp">
       <Filter>Source\Object</Filter>
     </ClCompile>
     <ClCompile Include="Source\Object\ObjectManager.cpp">
@@ -225,6 +240,15 @@
     <ClCompile Include="Source\Renderer\MaterialManager.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderCommand.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderState.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderStateManager.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Renderer\Renderer.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
@@ -255,9 +279,6 @@
     <ClCompile Include="Source\Scene\SceneRenderCollector.cpp">
       <Filter>Source\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Scene\ShowFlags.cpp">
-      <Filter>Source\Scene</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Serializer\Archive.cpp">
       <Filter>Source\Serializer</Filter>
     </ClCompile>
@@ -267,8 +288,10 @@
     <ClCompile Include="Source\Types\Name.cpp">
       <Filter>Source\Types</Filter>
     </ClCompile>
+    <ClCompile Include="Source\World\World.cpp">
+      <Filter>Source\World</Filter>
+    </ClCompile>
     <ClCompile Include="PrimitiveLineBatch.cpp" />
-    <ClCompile Include="Source\World\World.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -358,6 +381,9 @@
     <ClInclude Include="Source\Core\Paths.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Core\ShowFlags.h">
+      <Filter>Source\Core</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Core\ViewportClient.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
@@ -409,6 +435,9 @@
     <ClInclude Include="Source\Math\Vector4.h">
       <Filter>Source\Math</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Memory\MemoryBase.h">
+      <Filter>Source\Memory</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Object\Class.h">
       <Filter>Source\Object</Filter>
     </ClInclude>
@@ -416,6 +445,9 @@
       <Filter>Source\Object</Filter>
     </ClInclude>
     <ClInclude Include="Source\Object\ObjectFactory.h">
+      <Filter>Source\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Object\ObjectGlobals.h">
       <Filter>Source\Object</Filter>
     </ClInclude>
     <ClInclude Include="Source\Object\ObjectManager.h">
@@ -475,6 +507,12 @@
     <ClInclude Include="Source\Renderer\RenderCommand.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderState.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderStateManager.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Renderer\Renderer.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
@@ -517,9 +555,6 @@
     <ClInclude Include="Source\Scene\SceneTypes.h">
       <Filter>Source\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Scene\ShowFlags.h">
-      <Filter>Source\Scene</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Serializer\Archive.h">
       <Filter>Source\Serializer</Filter>
     </ClInclude>
@@ -559,6 +594,12 @@
     <ClInclude Include="Source\Types\String.h">
       <Filter>Source\Types</Filter>
     </ClInclude>
+    <ClInclude Include="Source\World\World.h">
+      <Filter>Source\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\World\WorldContext.h">
+      <Filter>Source\World</Filter>
+    </ClInclude>
     <ClInclude Include="ThirdParty\stb_image.h">
       <Filter>ThirdParty</Filter>
     </ClInclude>
@@ -566,8 +607,6 @@
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
     <ClInclude Include="PrimitiveLineBatch.h" />
-    <ClInclude Include="Source\World\World.h" />
-    <ClInclude Include="Source\World\WorldContext.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

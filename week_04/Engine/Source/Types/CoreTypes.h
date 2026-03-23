@@ -25,3 +25,5 @@ using Float4X4 = DirectX::XMFLOAT4X4;
 using XMMatrix = DirectX::XMMATRIX;
 using FXMMatrix = DirectX::FXMMATRIX;
 using CXMMatrix = DirectX::CXMMATRIX;
+
+using SIZE_T = size_t;

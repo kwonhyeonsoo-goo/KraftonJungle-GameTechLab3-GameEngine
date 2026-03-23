@@ -23,7 +23,8 @@ struct ENGINE_API FMeshData
 	uint32 GetSortId() const { return SortId; }
 	bool bIsDirty = true;	// 최초 1회 초기화 보장
 
-	bool CreateBuffers(ID3D11Device* Device);
+	bool UpdateVertexAndIndexBuffer(ID3D11Device* Device);
+	bool CreateVertexAndIndexBuffer(ID3D11Device* Device);
 	void Bind(ID3D11DeviceContext* Context);
 	void Release();
 

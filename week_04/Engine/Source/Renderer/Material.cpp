@@ -82,6 +82,29 @@ FMaterial::~FMaterial()
 	Release();
 }
 
+// TODO: GetSortId 고도화
+/*
+uint64 FMaterial::GetSortId() const
+{
+	uint64 SortId = 0;
+	// [0 - 3]: Render Pass
+	SortId |= RenderPass << (63 - 3);
+	// [4 - 15]: Render Queue
+	SortId |= RenderQueue << (63 - 15);
+	// [16 - 27]: Depth Stencil State & Rasterizer State ID(Culling / Wireframe)
+	SortId |= RenderState << (63 - 27);
+	// [28 - 43]: Shader (최대 65536개)
+	SortId |= ShaderId << (63 - 43);
+	// [44 - 63]: reserved for distance sorting
+	return SortId;
+}
+*/
+
+uint64 FMaterial::GetSortId() const
+{
+	return ShaderId;
+}
+
 int32 FMaterial::CreateConstantBuffer(ID3D11Device* Device, uint32 InSize)
 {
 	FMaterialConstantBuffer CB;
@@ -192,6 +215,7 @@ bool FDynamicMaterial::SetVector3Parameter(const FString& ParamName, const FVect
 	return SetParameterData(ParamName, Data, sizeof(Data));
 }
 
+// TODO: BindShader와 BindConstantBuffers로 분리
 void FMaterial::Bind(ID3D11DeviceContext* DeviceContext)
 {
 	if (VertexShader)

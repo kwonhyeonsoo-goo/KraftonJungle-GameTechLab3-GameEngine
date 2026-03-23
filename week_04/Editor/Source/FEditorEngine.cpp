@@ -128,6 +128,7 @@ void FEditorEngine::PostInitialize()
 		});
 	// EditorPawn은 Scene에 등록하지 않음 — FEditorEngine이 직접 소유
 	EditorPawn = FObjectFactory::ConstructObject<AEditorCameraPawn>(nullptr, "EditorCameraPawn");
+	EditorPawn->Initialize();
 	Core->GetScene()->SetActiveCameraComponent(EditorPawn->GetCameraComponent());
 	ViewportController.Initialize(
 		EditorPawn->GetCameraComponent(),

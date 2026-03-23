@@ -1,6 +1,8 @@
 #include "StatWindow.h"
 #include "Object/Object.h"
 #include "Object/Class.h"
+#include "Object/ObjectGlobals.h"
+#include "Memory/MemoryBase.h"
 
 void CStatWindow::RefreshObjectList()
 {
@@ -37,7 +39,12 @@ void CStatWindow::Render()
 
 	ImGui::Text("FPS        : %.1f  (%.3f ms)", FPS, FrameTimeMs);
 	ImGui::Text("Objects    : %u", ObjectCount);
-	ImGui::Text("Heap Usage : %.2f KB", HeapUsageBytes / 1024.0f);
+
+	ImGui::Text("Current Heap Usage : %.2f KB", GetGMalloc()->MallocStats.CurrentAllocationBytes / 1024.0f);
+	ImGui::Text("Total Heap Usage : %.2f KB", GetGMalloc()->MallocStats.TotalAllocationBytes / 1024.0f);
+
+	ImGui::Text("Current Heap Count : %d", GetGMalloc()->MallocStats.CurrentAllocationCount);
+	ImGui::Text("Total Heap Count : %d", GetGMalloc()->MallocStats.TotalAllocationCount);
 
 	ImGui::Separator();
 

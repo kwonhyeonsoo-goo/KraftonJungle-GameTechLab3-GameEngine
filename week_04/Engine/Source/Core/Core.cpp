@@ -15,6 +15,7 @@
 #include "Math/Frustum.h"
 #include "Input/InputManager.h"
 #include "ViewportClient.h"
+#include "Object/ObjectGlobals.h"
 
 CCore::~CCore()
 {
@@ -32,7 +33,6 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupS
 	{
 		return false;
 	}
-
 
 	ObjManager = new ObjectManager();
 
@@ -76,9 +76,6 @@ void CCore::SetViewportClient(IViewportClient* InViewportClient)
 		ViewportClient->Attach(this, Renderer.get());
 	}
 }
-
-
-
 
 void CCore::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
@@ -241,9 +238,8 @@ void CCore::Render()
 		return;
 	}
 
-	FRenderCommandQueue CommandQueue;
+	CommandQueue.Clear();
 	CommandQueue.Reserve(Renderer->GetPrevCommandCount());
-
 	CommandQueue.ViewMatrix = ActiveCamera->GetViewMatrix();
 	CommandQueue.ProjectionMatrix = ActiveCamera->GetProjectionMatrix();
 
@@ -257,7 +253,7 @@ void CCore::Render()
 	}
 	else
 	{
-		Scene->CollectRenderCommands(Frustum, CommandQueue);
+		// Scene->CollectRenderCommands(Frustum, CommandQueue);
 	}
 
 	Renderer->SubmitCommands(CommandQueue);

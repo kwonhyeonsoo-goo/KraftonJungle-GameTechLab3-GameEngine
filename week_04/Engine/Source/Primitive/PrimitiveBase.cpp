@@ -4,11 +4,16 @@
 
 // ─── FMeshData ───
 
-bool FMeshData::CreateBuffers(ID3D11Device* Device)
+bool FMeshData::UpdateVertexAndIndexBuffer(ID3D11Device* Device)
 {
 	if (!bIsDirty)
 		return true;
 
+	return CreateVertexAndIndexBuffer(Device);
+}
+
+bool FMeshData::CreateVertexAndIndexBuffer(ID3D11Device* Device)
+{
 	if (VertexBuffer)
 	{
 		VertexBuffer->Release();
