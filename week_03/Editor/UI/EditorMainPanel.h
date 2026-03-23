@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include <windows.h>
-
+#include "FileManager/UISettingInit.h"
 #include "Math/Vector.h"
 #include "Editor/Core/EditorConsole.h"
 #include "Core/Common.h"
@@ -30,6 +30,7 @@ private:
 	{
 		"Spotlight"
 	};
+
 	FEditorEngine* EditorEngine = nullptr;
 	FRenderer* Renderer;
 	FEditorViewportClient* Viewport;
@@ -48,6 +49,7 @@ private:
 
 	// Scene Manager stuffs
 	uint32 SelectedActorIndex = 0;
+	uint32 SelectedComponentIndex = 0;
 
 	FEditorConsole ConsoleInstance;
 

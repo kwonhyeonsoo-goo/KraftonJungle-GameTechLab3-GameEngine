@@ -134,6 +134,7 @@
     <ClCompile Include="Editor\Core\EditorConsole.cpp" />
     <ClCompile Include="Editor\EditorEngine.cpp" />
     <ClCompile Include="Editor\UI\EditorMainPanel.cpp" />
+    <ClCompile Include="Engine\FileManager\UISettingInit.cpp" />
     <ClCompile Include="Editor\Viewport\EditorViewportClient.cpp" />
     <ClCompile Include="Engine\Classes\AActor.cpp" />
     <ClCompile Include="Engine\Classes\ASpotlight.cpp" />
@@ -155,7 +156,7 @@
     <ClCompile Include="Engine\Render\Scene\RenderCollector.cpp" />
     <ClCompile Include="Engine\Runtime\EngineLoop.cpp" />
     <ClCompile Include="Engine\Runtime\Launch.cpp" />
-    <ClCompile Include="Engine\SceneSaveManager.cpp" />
+    <ClCompile Include="Engine\FileManager\SceneSaveManager.cpp" />
     <ClCompile Include="Engine\Scene\Camera.cpp" />
     <ClCompile Include="Engine\Scene\Scene.cpp" />
     <ClCompile Include="Engine\Scene\SceneManager.cpp" />
@@ -190,6 +191,8 @@
     <ClInclude Include="Editor\EditorEngine.h" />
     <ClInclude Include="Editor\UI\EditorMainPanel.h" />
     <ClInclude Include="Editor\UI\Inspector\Inspector.h" />
+    <ClInclude Include="Engine\FileManager\Format_ini.h" />
+    <ClInclude Include="Engine\FileManager\UISettingInit.h" />
     <ClInclude Include="Editor\Viewport\CursorOverlayState.h" />
     <ClInclude Include="Editor\Viewport\EditorViewportClient.h" />
     <ClInclude Include="Engine\Classes\AActor.h" />
@@ -229,7 +232,7 @@
     <ClInclude Include="Engine\Runtime\Launch.h" />
     <ClInclude Include="Engine\Scene\Scene.h" />
     <ClInclude Include="Engine\Scene\SceneManager.h" />
-    <ClInclude Include="Engine\SceneSaveManager.h" />
+    <ClInclude Include="Engine\FileManager\SceneSaveManager.h" />
     <ClInclude Include="Engine\Scene\Camera.h" />
     <ClInclude Include="Engine\World.h" />
     <ClInclude Include="ImGui\imconfig.h" />
@@ -259,6 +262,7 @@
     <ClInclude Include="World\Transform.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="editor.ini" />
     <None Include="imgui.ini" />
   </ItemGroup>
   <ItemGroup>

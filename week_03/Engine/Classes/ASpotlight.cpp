@@ -11,6 +11,7 @@ ASpotlight::ASpotlight() {
 
 void ASpotlight::UpdateCone() {
 	CircleVertices.clear();
+	CircleVertices.reserve(NumCircleVertex);
 
 	// Base vectors
 	FVector BaseNormal = RootComponent->GetUpVector().Normalized();
@@ -47,10 +48,10 @@ void ASpotlight::AddConeLinesToBatch(FBatchedLine* BatchLine) {
 	FVector ConeApex = RootComponent->GetWorldLocation();
 	for (size_t i = 0; i < NumCircleVertex; i++) {
 		// Point to Apex
-		BatchLine->AddLine(CircleVertices[i], ConeApex, ConeColor);
-		
+		BatchLine->AddLineRaw(CircleVertices[i], ConeApex, ConeColor);
+
 		// Point to next Point
-		BatchLine->AddLine(CircleVertices[i], CircleVertices[(i + 1) % NumCircleVertex], ConeColor);
+		BatchLine->AddLineRaw(CircleVertices[i], CircleVertices[(i + 1) % NumCircleVertex], ConeColor);
 	}
 }
 
