@@ -2,6 +2,7 @@
 
 #include "PrimitiveComponent.h"
 
+
 class ENGINE_API UUUIDBillboardComponent : public UPrimitiveComponent
 {
 public:
@@ -21,8 +22,8 @@ public:
 	void SetWorldScale(float InScale) { BillboardScale = InScale; }
 	void SetTextColor(const FVector4& InColor) { TextColor = InColor; }
 
-	FBoundingSphere GetWorldBounds() const override;
-	FBoxSphereBounds GetWorldBoundsForAABB() const override;
+	FBoxSphereBounds GetWorldBounds() const override;
+
 	bool GetVisible() const { return bVisible; }
 	void SetVisible(bool InVisible) { bVisible = InVisible; }
 private:
