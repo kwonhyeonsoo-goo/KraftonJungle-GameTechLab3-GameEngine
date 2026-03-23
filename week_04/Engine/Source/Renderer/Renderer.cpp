@@ -220,23 +220,8 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		FMaterialManager::Get().Register("M_Default", DefaultMaterial);
 	}
 
-	// Rasterizer State
-	D3D11_RASTERIZER_DESC RasterizerDesc = {};
-	RasterizerDesc.FillMode = D3D11_FILL_SOLID;
-	RasterizerDesc.CullMode = D3D11_CULL_BACK;
-	if (FAILED(Device->CreateRasterizerState(&RasterizerDesc, &RasterizerState)))
-	{
-		return false;
-	}
-
-	D3D11_RASTERIZER_DESC NoCullDesc = RasterizerDesc;
-	NoCullDesc.CullMode = D3D11_CULL_NONE;
-	HRESULT Hr = Device->CreateRasterizerState(&NoCullDesc, &NoCullRasterizerState);
-	if (FAILED(Hr))
-	{
-		MessageBox(0, L"CreateRasterizerState (NoCull) Failed.", 0, 0);
-		return false;
-	}
+	RenderStateManager = std::make_unique<CRenderStatemanager>(Device, DeviceContext);
+	RenderStateManager->PrepareCommonStates();
 
 	D3D11_DEPTH_STENCIL_DESC OverlayDepthDesc = {};
 	OverlayDepthDesc.DepthEnable = FALSE;
@@ -310,7 +295,6 @@ void CRenderer::BeginFrame()
 
 	DeviceContext->OMSetRenderTargets(1, &ActiveRenderTargetView, ActiveDepthStencilView);
 	DeviceContext->RSSetViewports(1, &ActiveViewport);
-	DeviceContext->RSSetState(RasterizerState);
 
 	ClearCommandList();
 }
@@ -332,7 +316,6 @@ void CRenderer::EndFrame()
 	{
 		DeviceContext->OMSetRenderTargets(1, &RenderTargetView, DepthStencilView);
 		DeviceContext->RSSetViewports(1, &Viewport);
-		DeviceContext->RSSetState(RasterizerState);
 	}
 
 	if (GUIRender)
@@ -436,6 +419,18 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 		if (Cmd.Material != CurrentMaterial)
 		{
 			Cmd.Material->Bind(DeviceContext);
+
+			// TODO : 아래 코드 머티리얼 로드 시점으로 옮기기
+			// 우선 머티리얼 로드하는 코드를 Scene 말고 다른 곳으로 옮긴 후에 작업 가능
+			// 여기서부터
+			auto RasterizerState = Cmd.Material->GetRasterizerState();
+			if (RasterizerState == nullptr)
+			{
+				auto RasterizerState = RenderStateManager->GetOrCreateRenderState(Cmd.Material->GetRasterizerOption());
+				Cmd.Material->SetRasterizerState(RasterizerState);
+			}
+			// 여기까지
+			RenderStateManager->BindState(Cmd.Material->GetRasterizerState());
 			CurrentMaterial = Cmd.Material;
 		}
 
@@ -451,13 +446,6 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 			DeviceContext->IASetPrimitiveTopology(DesiredMeshTopology);
 		}
 
-		ID3D11RasterizerState* DesiredRasterizerState = Cmd.bDisableCulling ? NoCullRasterizerState : RasterizerState;
-		if (DesiredRasterizerState != CurrentRasterizerState)
-		{
-			DeviceContext->RSSetState(DesiredRasterizerState);
-			CurrentRasterizerState = DesiredRasterizerState;
-		}
-
 		UpdateObjectConstantBuffer(Cmd.WorldMatrix);
 		DeviceContext->DrawIndexed(Cmd.MeshData->Indices.size(), 0, 0);
 	}
@@ -466,7 +454,6 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 void CRenderer::ExecuteTextRenderPass()
 {
 	DeviceContext->OMSetDepthStencilState(nullptr, 0);
-	DeviceContext->RSSetState(RasterizerState);
 	ShaderManager.Bind(DeviceContext);
 
 	const FVector CameraPosition = GetCameraWorldPositionFromViewMatrix(ViewMatrix);
@@ -803,17 +790,6 @@ void CRenderer::Release()
 	{
 		LineVertexBuffer->Release();
 		LineVertexBuffer = nullptr;
-	}
-
-	if (RasterizerState)
-	{
-		RasterizerState->Release();
-		RasterizerState = nullptr;
-	}
-	if (NoCullRasterizerState)
-	{
-		NoCullRasterizerState->Release();
-		NoCullRasterizerState = nullptr;
 	}
 	if (FrameConstantBuffer)
 	{

@@ -122,6 +122,7 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 		}
 	}
 
+	// TODO: Material 데이터 로드 시점을 Scene 로드 시점과 분리하기
 	if (Device && Json.contains("Materials"))
 	{
 		for (auto& MatPath : Json["Materials"])

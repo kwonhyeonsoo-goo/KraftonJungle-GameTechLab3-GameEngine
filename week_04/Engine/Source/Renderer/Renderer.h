@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Renderer/RenderCommand.h"
+#include "Renderer/RenderStateManager.h"
 #include "Renderer/TextRenderer.h"
 #include <d3d11.h>
 #include <functional>
@@ -101,6 +102,8 @@ private:
 		const char* FilePath,
 		ID3D11ShaderResourceView** OutSRV);
 
+	std::unique_ptr<CRenderStatemanager> RenderStateManager = nullptr;
+
 	HWND Hwnd = nullptr;
 	ID3D11Device* Device = nullptr;
 	ID3D11DeviceContext* DeviceContext = nullptr;
@@ -111,8 +114,6 @@ private:
 	ID3D11Buffer* ObjectConstantBuffer = nullptr;
 	FMatrix ViewMatrix;
 	FMatrix ProjectionMatrix;
-	ID3D11RasterizerState* RasterizerState = nullptr;
-	ID3D11RasterizerState* NoCullRasterizerState = nullptr;
 	D3D11_VIEWPORT Viewport = {};
 	ID3D11RenderTargetView* SceneRenderTargetView = nullptr;
 	ID3D11DepthStencilView* SceneDepthStencilView = nullptr;

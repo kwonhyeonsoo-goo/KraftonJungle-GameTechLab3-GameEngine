@@ -90,6 +90,8 @@
     <ClInclude Include="Source\Renderer\PrimitiveVertex.h" />
     <ClInclude Include="Source\Renderer\RenderCommand.h" />
     <ClInclude Include="Source\Renderer\Renderer.h" />
+    <ClInclude Include="Source\Renderer\RenderState.h" />
+    <ClInclude Include="Source\Renderer\RenderStateManager.h" />
     <ClInclude Include="Source\Renderer\Shader.h" />
     <ClInclude Include="Source\Renderer\ShaderManager.h" />
     <ClInclude Include="Source\Renderer\ShaderMap.h" />
@@ -172,6 +174,8 @@
     <ClCompile Include="Source\Renderer\MaterialManager.cpp" />
     <ClCompile Include="Source\Renderer\RenderCommand.cpp" />
     <ClCompile Include="Source\Renderer\Renderer.cpp" />
+    <ClCompile Include="Source\Renderer\RenderState.cpp" />
+    <ClCompile Include="Source\Renderer\RenderStateManager.cpp" />
     <ClCompile Include="Source\Renderer\Shader.cpp" />
     <ClCompile Include="Source\Renderer\ShaderManager.cpp" />
     <ClCompile Include="Source\Renderer\ShaderMap.cpp" />

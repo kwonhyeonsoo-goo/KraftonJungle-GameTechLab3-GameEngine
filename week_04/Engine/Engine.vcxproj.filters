@@ -238,7 +238,15 @@
     <ClCompile Include="Source\Scene\ShowFlags.cpp" />
     <ClCompile Include="Source\Actor\PlaneActor.cpp" />
     <ClCompile Include="Source\Component\PlaneComponent.cpp" />
-    <ClCompile Include="Source\Renderer\RenderCommand.cpp" />
+    <ClCompile Include="Source\Renderer\RenderCommand.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderState.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderStateManager.cpp">
+      <Filter>Source\Renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -513,6 +521,12 @@
     <ClInclude Include="Source\Actor\PlaneActor.h" />
     <ClInclude Include="Source\Component\PlaneComponent.h" />
     <ClInclude Include="ThirdParty\stb_image.h" />
+    <ClInclude Include="Source\Renderer\RenderStateManager.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderState.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
