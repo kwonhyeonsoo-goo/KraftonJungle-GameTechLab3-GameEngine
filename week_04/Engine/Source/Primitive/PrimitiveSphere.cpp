@@ -5,7 +5,7 @@
 
 const FString CPrimitiveSphere::Key = "Sphere";
 
-FString CPrimitiveSphere::GetFilePath() { return FPaths::MeshDir() + "Sphere.mesh"; }
+// FString CPrimitiveSphere::GetFilePath() { return FPaths::MeshDir() + "Sphere.mesh"; }
 
 CPrimitiveSphere::CPrimitiveSphere(int32 Segments, int32 Rings)
 {
@@ -65,6 +65,8 @@ void CPrimitiveSphere::Generate(int32 Segments, int32 Rings)
 			Data->Indices.push_back(Next + 1);
 		}
 	}
+
+	Data->Topology = EMeshTopology::EMT_TriangleList;
 
 	MeshData = Data;
 	RegisterMeshData(Key, Data);

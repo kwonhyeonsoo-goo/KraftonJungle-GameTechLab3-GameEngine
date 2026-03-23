@@ -3,6 +3,17 @@
 #include "CoreMinimal.h"
 #include "Renderer/PrimitiveVertex.h"
 #include <d3d11.h>
+#include <limits>
+
+enum class EMeshTopology
+{
+	EMT_Undefined = 0, // = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED
+	EMT_Point = 1,	// =  D3D11_PRIMITIVE_TOPOLOGY_POINTLIST
+	EMT_LineList = 2, // = D3D11_PRIMITIVE_TOPOLOGY_LINELIST
+	EMT_LineStrip = 3,	// = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP
+	EMT_TriangleList = 4, // = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+	EMT_TriangleStrip = 5, // = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP
+};
 
 struct ENGINE_API FMeshData
 {
@@ -10,10 +21,14 @@ struct ENGINE_API FMeshData
 	~FMeshData() { Release(); }
 
 	uint32 GetSortId() const { return SortId; }
+	bool bIsDirty = true;	// 최초 1회 초기화 보장
 
 	bool CreateBuffers(ID3D11Device* Device);
 	void Bind(ID3D11DeviceContext* Context);
 	void Release();
+
+	// 토폴로지 옵션
+	EMeshTopology Topology = EMeshTopology::EMT_Undefined;
 
 	// CPU 데이터
 	TArray<FPrimitiveVertex> Vertices;
@@ -22,11 +37,22 @@ struct ENGINE_API FMeshData
 	// GPU 버퍼
 	ID3D11Buffer* VertexBuffer = nullptr;
 	ID3D11Buffer* IndexBuffer = nullptr;
-	uint32 IndexCount = 0;
+
+	/** AABB Box Extent 및 Local Bound Radius 갱신 */
+	void UpdateLocalBound();
+	float GetLocalBoundRadius() const { return LocalBoundRadius; }
+
+	FVector GetMinCoord() const { return MinCoord; }
+	FVector GetMaxCoord() const { return MaxCoord; }
+	FVector GetCenterCoord() const { return (MaxCoord - MinCoord) * 0.5 + MinCoord; }
 
 private:
 	uint32 SortId = 0;
 	static inline uint32 NextSortId = 0;
+
+	FVector MinCoord = FVector(FLT_MAX, FLT_MAX, FLT_MAX);
+	FVector MaxCoord = FVector(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+	float LocalBoundRadius = 0.f;
 };
 
 class ENGINE_API CPrimitiveBase

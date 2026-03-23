@@ -23,6 +23,9 @@
 #include <fstream>
 #include <iomanip>
 
+
+#include "Component/LineBatchComponent.h"
+
 IMPLEMENT_RTTI(UScene, UObject)
 
 UScene::~UScene()
@@ -90,7 +93,7 @@ void UScene::InitializeEmptyScene(float AspectRatio)
 void UScene::InitializeDefaultScene(float AspectRatio, ID3D11Device* Device)
 {
 	InitializeEmptyScene(AspectRatio);
-	LoadSceneFromFile(FPaths::SceneDir() + "DefaultScene.json", Device);
+	LoadSceneFromFile((FPaths::SceneDir() / "DefaultScene.json").string(), Device);
 }
 
 void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
@@ -124,7 +127,7 @@ void UScene::LoadSceneFromFile(const FString& FilePath, ID3D11Device* Device)
 		for (auto& MatPath : Json["Materials"])
 		{
 			const FString RelativePath = MatPath.get<FString>();
-			const FString AbsolutePath = FPaths::Combine(FPaths::ProjectRoot(), RelativePath);
+			const FString AbsolutePath = (FPaths::ProjectRoot() / RelativePath).string();
 			FMaterialManager::Get().GetOrLoad(Device, AbsolutePath);
 		}
 	}
@@ -257,7 +260,7 @@ void UScene::SaveSceneToFile(const FString& FilePath)
 	if (!LoadedPaths.empty())
 	{
 		nlohmann::json Materials = nlohmann::json::array();
-		FString Root = FPaths::ProjectRoot();
+		FString Root = FPaths::ProjectRoot().string();
 		for (const FString& AbsPath : LoadedPaths)
 		{
 			// 절대 경로 → 프로젝트 루트 기준 상대 경로
@@ -447,7 +450,7 @@ void UScene::Tick(float DeltaTime)
 	CleanupDestroyedActors();
 }
 
-void UScene::CullVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible)
+void UScene::FrustrumCull(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible)
 {
 	
 	for (AActor* Actor : Actors)
@@ -502,8 +505,8 @@ void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue&
 
 
 	TArray<UPrimitiveComponent*> VisiblePrimitives;
-	CullVisiblePrimitives(Frustum, VisiblePrimitives);
-	
+	FrustrumCull(Frustum, VisiblePrimitives);
+
 	for (UPrimitiveComponent* PrimitiveComponent : VisiblePrimitives)
 	{
 		if (!PrimitiveComponent)

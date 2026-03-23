@@ -3,7 +3,7 @@
 
 const FString CPrimitiveCube::Key = "Cube";
 
-FString CPrimitiveCube::GetFilePath() { return FPaths::MeshDir() + "Cube.mesh"; }
+// FString CPrimitiveCube::GetFilePath() { return FPaths::MeshDir() + "Cube.mesh"; }
 
 CPrimitiveCube::CPrimitiveCube()
 {
@@ -77,6 +77,8 @@ void CPrimitiveCube::Generate()
 		Data->Indices.push_back(Base + 3);
 	}
 
+	Data->Topology = EMeshTopology::EMT_TriangleList;
 	MeshData = Data;
 	RegisterMeshData(Key, Data);
+
 }

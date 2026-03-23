@@ -8,6 +8,7 @@
 #include "Actor/AttachTestActor.h"
 #include "Actor/CubeActor.h"
 #include "Actor/SphereActor.h"
+#include "Actor/PlaneActor.h"
 #include "Object/ObjectFactory.h"
 #include "Camera/Camera.h"
 #include "Core/Paths.h"
@@ -152,7 +153,7 @@ void CControlPanelWindow::Render(CCore* Core)
 		ImGui::SeparatorText("Spawn");
 
 		static int32 SpawnTypeIndex = 0;
-		const char* SpawnTypes[] = { "Cube", "Sphere", "AttachTest" };
+		const char* SpawnTypes[] = { "Cube", "Sphere", "Plane", "AttachTest" };
 		ImGui::Combo("Type", &SpawnTypeIndex, SpawnTypes, IM_ARRAYSIZE(SpawnTypes));
 
 		if (ImGui::Button("Spawn"))
@@ -171,6 +172,10 @@ void CControlPanelWindow::Render(CCore* Core)
 				NewActor = Scene->SpawnActor<ASphereActor>(Name);
 			}
 			else if (SpawnTypeIndex == 2)
+			{
+				NewActor = Scene->SpawnActor<APlaneActor>(Name);
+			}
+			else if (SpawnTypeIndex == 3)
 			{
 				NewActor = Scene->SpawnActor<AAttachTestActor>(Name);
 			}
@@ -232,7 +237,9 @@ void CControlPanelWindow::Render(CCore* Core)
 
 		if (ImGui::Button("Save"))
 		{
-			const FString Path = FPaths::SceneDir() + SceneName + ".json";
+			FString SceneNameString = SceneName;
+			SceneNameString += ".json";
+			const FString Path = (FPaths::SceneDir() / SceneNameString).string();
 			Core->GetScene()->SaveSceneToFile(Path);
 			UE_LOG("Scene saved: %s", SceneName);
 		}
@@ -243,7 +250,8 @@ void CControlPanelWindow::Render(CCore* Core)
 		{
 			SceneFiles.clear();
 			SelectedSceneIndex = -1;
-			const FString ScenesDir = FPaths::SceneDir();
+
+			const FString ScenesDir = FPaths::SceneDir().string();
 			if (std::filesystem::exists(ScenesDir))
 			{
 				for (auto& Entry : std::filesystem::directory_iterator(ScenesDir))
@@ -275,8 +283,10 @@ void CControlPanelWindow::Render(CCore* Core)
 			{
 				Core->SetSelectedActor(nullptr);
 				Core->GetScene()->ClearActors();
-				
-				const FString Path = FPaths::SceneDir() + SceneFiles[SelectedSceneIndex] + ".json";
+
+				FString SceneFileName = SceneFiles[SelectedSceneIndex];
+				SceneFileName += ".json";
+				const FString Path = (FPaths::SceneDir() / SceneFileName).string();
 				Core->GetScene()->LoadSceneFromFile(Path, Core->GetRenderer()->GetDevice());
 	
 				UE_LOG("Scene loaded: %s", SceneFiles[SelectedSceneIndex].c_str());

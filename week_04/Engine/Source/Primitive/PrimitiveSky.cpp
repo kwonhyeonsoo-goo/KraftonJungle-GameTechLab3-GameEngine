@@ -2,7 +2,7 @@
 #include "Core/Paths.h"
 #include <cmath>
 const FString CPrimitiveSky::Key = "SkySphere";
-FString CPrimitiveSky::GetFilePath() { return FPaths::MeshDir() + "SkySphere.mesh"; }
+// FString CPrimitiveSky::GetFilePath() { return FPaths::MeshDir() + "SkySphere.mesh"; }
 
 
 CPrimitiveSky::CPrimitiveSky(int32 Segments, int32 Rings)

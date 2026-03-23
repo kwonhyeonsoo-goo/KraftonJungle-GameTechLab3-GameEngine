@@ -2,6 +2,8 @@
 #include "CoreMinimal.h"
 #include <cmath>
 
+struct FBoxSphereBounds;
+
 struct FPlane4
 {
 	float A, B, C, D;
@@ -36,7 +38,7 @@ public:
 	enum { Left = 0, Right, Bottom, Top, Near, Far, PlaneCount };
 
 	void ExtractFromVP(const FMatrix& VP);
-	bool IsVisible(const FBoundingSphere& Sphere) const;
+	bool IsVisible(const FBoxSphereBounds& Sphere) const;
 
 private:
 	FPlane4 Planes[PlaneCount];

@@ -11,7 +11,7 @@ class FMaterial;
 struct FBoxSphereBounds
 {
 	FVector Center;
-	float RadiusSquared;
+	float Radius;
 	FVector BoxExtent;
 };
 
@@ -25,54 +25,11 @@ public:
 	void SetMaterial(FMaterial* InMaterial) { Material = InMaterial; }
 	FMaterial* GetMaterial() const { return Material; }
 
-	virtual FBoundingSphere GetWorldBounds() const
-	{
-		FVector Center = GetWorldLocation();
-		FTransform T = GetRelativeTransform();
-		FVector S = T.GetScale3D();
-		float MaxScale = (std::max)({ std::abs(S.X), std::abs(S.Y), std::abs(S.Z) });
-		return { Center, LocalBoundRadius * MaxScale };
-	}
+	virtual FBoxSphereBounds GetWorldBounds() const;
 
-	virtual FBoxSphereBounds GetWorldBoundsForAABB() const
-	{
-		FVector Center = GetWorldLocation();
-		FTransform T = GetRelativeTransform();
-		FVector S = T.GetScale3D();
-
-		FVector ScaledExtent = FVector::Multiply(LocalBoxExtent, S);
-
-		FMatrix AbsR = FMatrix::Abs(T.GetRotation().ToMatrix());
-
-		FVector WorldBoxExtent;
-		WorldBoxExtent.X =
-			AbsR.M[0][0] * ScaledExtent.X +
-			AbsR.M[0][1] * ScaledExtent.Y +
-			AbsR.M[0][2] * ScaledExtent.Z;
-
-		WorldBoxExtent.Y =
-			AbsR.M[1][0] * ScaledExtent.X +
-			AbsR.M[1][1] * ScaledExtent.Y +
-			AbsR.M[1][2] * ScaledExtent.Z;
-
-		WorldBoxExtent.Z =
-			AbsR.M[2][0] * ScaledExtent.X +
-			AbsR.M[2][1] * ScaledExtent.Y +
-			AbsR.M[2][2] * ScaledExtent.Z;
-
-		return { Center, WorldBoxExtent.SizeSquared(), WorldBoxExtent};
-	}
-
-	FVector GetLocalBoxExtent() const
-	{
-		return LocalBoxExtent;
-	}
+	void UpdateLocalBound();
 
 protected:
-	std::unique_ptr<CPrimitiveBase> Primitive;
-	float LocalBoundRadius = 1.0f;
+	std::shared_ptr<CPrimitiveBase> Primitive;
 	FMaterial* Material = nullptr;
-
-	
-	FVector LocalBoxExtent = FVector(0.75, 0.75, 0.75);
 };

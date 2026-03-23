@@ -8,6 +8,10 @@
 #include "Primitive/PrimitiveBase.h"
 #include <cassert>
 #include <algorithm>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "ThirdParty/stb_image.h"
+
 static FVector GetCameraWorldPositionFromViewMatrix(const FMatrix& ViewMatrix)
 {
 	const FMatrix InvView = ViewMatrix.GetInverse();
@@ -22,8 +26,6 @@ uint64 FRenderCommand::MakeSortKey(const FMaterial* InMaterial, const FMeshData*
 	uint32 MeshId = InMeshData ? InMeshData->GetSortId() : 0;
 	return (static_cast<uint64>(MatId) << 32) | MeshId;
 }
-
-
 
 CRenderer::~CRenderer()
 {
@@ -190,7 +192,7 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 
-	std::wstring ShaderDirW = FPaths::ToWide(FPaths::ShaderDir());
+	std::wstring ShaderDirW = FPaths::ShaderDir();
 	std::wstring VSPath = ShaderDirW + L"VertexShader.hlsl";
 	std::wstring PSPath = ShaderDirW + L"PixelShader.hlsl";
 
@@ -258,6 +260,15 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		MessageBox(0, L"TextRenderer Initialize Failed.", 0, 0);
 		return false;
 	}
+
+	std::filesystem::path FolderIconPath = FPaths::AssetDir() / FString("\\Textures\\FolderIcon.png");
+	std::filesystem::path FileIconPath = FPaths::AssetDir() / FString("\\Textures\\FileIcon.png");
+
+	FString FolderIconPathString = FolderIconPath.string();
+	FString FileIconPathString = FileIconPath.string();
+
+	CreateTextureFromSTB(Device, FolderIconPathString.c_str(), &FolderIconSRV);
+	CreateTextureFromSTB(Device, FileIconPathString.c_str(), &FileIconSRV);
 
 	return true;
 }
@@ -395,14 +406,34 @@ void CRenderer::ExecuteCommands()
 		{
 			FMaterial* CurrentMaterial = nullptr;
 			FMeshData* CurrentMesh = nullptr;
+			D3D11_PRIMITIVE_TOPOLOGY CurrentMeshTopology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
 			ID3D11RasterizerState* CurrentRasterizerState = nullptr;
 			ID3D11DepthStencilState* CurrentDepthStencilState = nullptr;
 
 			for (const auto& Cmd : CommandList)
 			{
-				if (Cmd.bOverlay != bOverlayPass || !Cmd.MeshData)
+				if (Cmd.bOverlay != bOverlayPass || !Cmd.MeshData || Cmd.MeshData->Indices.empty())
 				{
 					continue;
+				}
+
+				if (Cmd.Material != CurrentMaterial)
+				{
+					Cmd.Material->Bind(DeviceContext);
+					CurrentMaterial = Cmd.Material;
+					DeviceContext->VSSetConstantBuffers(0, 2, CBs);
+				}
+
+				if (Cmd.MeshData != CurrentMesh)
+				{
+					Cmd.MeshData->Bind(DeviceContext);
+					CurrentMesh = Cmd.MeshData;
+				}
+
+				D3D11_PRIMITIVE_TOPOLOGY DesiredMeshTopology = (D3D11_PRIMITIVE_TOPOLOGY)CurrentMesh->Topology;
+				if (DesiredMeshTopology != CurrentMeshTopology)
+				{
+					DeviceContext->IASetPrimitiveTopology(DesiredMeshTopology);
 				}
 
 				ID3D11RasterizerState* DesiredRasterizerState = Cmd.bDisableCulling ? NoCullRasterizerState : RasterizerState;
@@ -419,21 +450,8 @@ void CRenderer::ExecuteCommands()
 					CurrentDepthStencilState = DesiredDepthStencilState;
 				}
 
-				if (Cmd.Material != CurrentMaterial)
-				{
-					Cmd.Material->Bind(DeviceContext);
-					CurrentMaterial = Cmd.Material;
-					DeviceContext->VSSetConstantBuffers(0, 2, CBs);
-				}
-
-				if (Cmd.MeshData != CurrentMesh)
-				{
-					Cmd.MeshData->Bind(DeviceContext);
-					CurrentMesh = Cmd.MeshData;
-				}
-
 				UpdateObjectConstantBuffer(Cmd.WorldMatrix);
-				DeviceContext->DrawIndexed(Cmd.MeshData->IndexCount, 0, 0);
+				DeviceContext->DrawIndexed(Cmd.MeshData->Indices.size(), 0, 0);
 			}
 		};
 
@@ -533,6 +551,53 @@ void CRenderer::UpdateObjectConstantBuffer(const FMatrix& WorldMatrix)
 	DeviceContext->Unmap(ObjectConstantBuffer, 0);
 }
 
+bool CRenderer::CreateTextureFromSTB(
+	ID3D11Device* Device,
+	const char* FilePath,
+	ID3D11ShaderResourceView** OutSRV)
+{
+	int Width, Height, Channels;
+	unsigned char* Data = stbi_load(FilePath, &Width, &Height, &Channels, 4); // RGBA
+
+	if (!Data)
+		return false;
+
+	// Texture 생성
+	D3D11_TEXTURE2D_DESC Desc = {};
+	Desc.Width = Width;
+	Desc.Height = Height;
+	Desc.MipLevels = 1;
+	Desc.ArraySize = 1;
+	Desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	Desc.SampleDesc.Count = 1;
+	Desc.Usage = D3D11_USAGE_DEFAULT;
+	Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+	D3D11_SUBRESOURCE_DATA InitData = {};
+	InitData.pSysMem = Data;
+	InitData.SysMemPitch = Width * 4;
+
+	ID3D11Texture2D* Texture = nullptr;
+	HRESULT hr = Device->CreateTexture2D(&Desc, &InitData, &Texture);
+
+	stbi_image_free(Data);
+
+	if (FAILED(hr))
+		return false;
+
+	// SRV 생성
+	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+	SRVDesc.Format = Desc.Format;
+	SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	SRVDesc.Texture2D.MipLevels = 1;
+
+	hr = Device->CreateShaderResourceView(Texture, &SRVDesc, OutSRV);
+
+	Texture->Release();
+
+	return SUCCEEDED(hr);
+}
+
 bool CRenderer::InitOutlineResources()
 {
 	if (StencilWriteState && StencilTestState && OutlinePS)
@@ -571,7 +636,9 @@ bool CRenderer::InitOutlineResources()
 	if (FAILED(Hr)) return false;
 
 	// 아웃라인 픽셀 셰이더 로드
-	std::wstring OutlinePSPath = FPaths::ToWide(FPaths::ShaderDir() + "OutlinePixelShader.hlsl");
+	FString OutlinePSPathString = (FPaths::ShaderDir() / "OutlinePixelShader.hlsl").string();
+	std::wstring OutlinePSPath = std::wstring(OutlinePSPathString.begin(), OutlinePSPathString.end());	
+
 	OutlinePS = FShaderMap::Get().GetOrCreatePixelShader(Device, OutlinePSPath.c_str());
 	return OutlinePS != nullptr;
 }
@@ -587,7 +654,7 @@ void CRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float
 	// Pass 1: 통상 렌더 + Stencil 마킹 (Ref=1)
 	DeviceContext->OMSetDepthStencilState(StencilWriteState, 1);
 	UpdateObjectConstantBuffer(WorldMatrix);
-	DeviceContext->DrawIndexed(Mesh->IndexCount, 0, 0);
+	DeviceContext->DrawIndexed(Mesh->Indices.size(), 0, 0);
 
 	// Pass 2: 확대된 메시를 아웃라인 셰이더로 그리기 (Stencil != 1인 곳만)
 	DeviceContext->OMSetDepthStencilState(StencilTestState, 1);
@@ -600,7 +667,7 @@ void CRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float
 	// 아웃라인 셰이더 바인딩
 	OutlinePS->Bind(DeviceContext);
 
-	DeviceContext->DrawIndexed(Mesh->IndexCount, 0, 0);
+	DeviceContext->DrawIndexed(Mesh->Indices.size(), 0, 0);
 
 	// 원래 셰이더 복원
 	ShaderManager.Bind(DeviceContext);
@@ -666,7 +733,7 @@ void CRenderer::ExecuteLineCommands()
 	}
 	DeviceContext->OMSetDepthStencilState(LineDepthState, 0);
 
-	// 동적 버퍼 생성/재사용
+	// 동적 버퍼 재사용, 불가능하면 새로 생성.
 	UINT BufferSize = static_cast<UINT>(LineVertices.size() * sizeof(FPrimitiveVertex));
 
 	if (LineVertexBuffer && LineVertexBufferSize < BufferSize)
@@ -688,6 +755,7 @@ void CRenderer::ExecuteLineCommands()
 		LineVertexBufferSize = BufferSize;
 	}
 
+	// 버퍼에 메모리 카피
 	D3D11_MAPPED_SUBRESOURCE Mapped;
 	if (SUCCEEDED(DeviceContext->Map(LineVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
 	{
@@ -702,12 +770,11 @@ void CRenderer::ExecuteLineCommands()
 	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
 	// WorldMatrix = Identity로 상수 버퍼 업데이트
+	// => 월드 좌표 (0,0,0) 기준으로 그리기
 	UpdateObjectConstantBuffer(FMatrix::Identity);
 
 	DeviceContext->Draw(static_cast<UINT>(LineVertices.size()), 0);
 
-	// 토폴로지 복원
-	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	// Depth 상태 복원
 	DeviceContext->OMSetDepthStencilState(nullptr, 0);
 

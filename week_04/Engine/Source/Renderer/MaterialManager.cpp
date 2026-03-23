@@ -84,8 +84,7 @@ std::shared_ptr<FMaterial> FMaterialManager::GetOrLoad(ID3D11Device* Device, con
 	if (Json.contains("VertexShader"))
 	{
 		FString VSRelPath = Json["VertexShader"].get<FString>();
-		FString VSAbsPath = FPaths::Combine(FPaths::ProjectRoot(), VSRelPath);
-		std::wstring WVSPath = FPaths::ToWide(VSAbsPath);
+		std::wstring WVSPath = (FPaths::ProjectRoot() / VSRelPath).wstring();
 		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, WVSPath.c_str());
 		Mat->SetVertexShader(VS);
 	}
@@ -93,8 +92,7 @@ std::shared_ptr<FMaterial> FMaterialManager::GetOrLoad(ID3D11Device* Device, con
 	if (Json.contains("PixelShader"))
 	{
 		FString PSRelPath = Json["PixelShader"].get<FString>();
-		FString PSAbsPath = FPaths::Combine(FPaths::ProjectRoot(), PSRelPath);
-		std::wstring WPSPath = FPaths::ToWide(PSAbsPath);
+		std::wstring WPSPath = (FPaths::ProjectRoot() / PSRelPath).wstring();
 		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, WPSPath.c_str());
 		Mat->SetPixelShader(PS);
 	}

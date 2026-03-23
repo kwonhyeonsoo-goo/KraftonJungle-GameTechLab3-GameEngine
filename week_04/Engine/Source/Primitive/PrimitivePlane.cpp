@@ -3,7 +3,7 @@
 
 const FString CPrimitivePlane::Key = "Plane";
 
-FString CPrimitivePlane::GetFilePath() { return FPaths::MeshDir() + "Plane.mesh"; }
+// FString CPrimitivePlane::GetFilePath() { return FPaths::MeshDir() + "Plane.mesh"; }
 
 CPrimitivePlane::CPrimitivePlane()
 {
@@ -36,6 +36,8 @@ void CPrimitivePlane::Generate()
 	Data->Indices.push_back(0);
 	Data->Indices.push_back(2);
 	Data->Indices.push_back(3);
+
+	Data->Topology = EMeshTopology::EMT_TriangleList;
 
 	MeshData = Data;
 	RegisterMeshData(Key, Data);

@@ -231,6 +231,13 @@
     <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Component\LineBatchComponent.cpp">
+      <Filter>Source\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="PrimitiveLineBatch.cpp" />
+    <ClCompile Include="Source\Scene\ShowFlags.cpp" />
+    <ClCompile Include="Source\Actor\PlaneActor.cpp" />
+    <ClCompile Include="Source\Component\PlaneComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -496,6 +503,15 @@
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Platform\Windows\WindowTypes.h" />
+    <ClInclude Include="Source\Component\LineBatchComponent.h">
+      <Filter>Source\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="PrimitiveLineBatch.h">
+      <Filter>Source\Primitive</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Actor\PlaneActor.h" />
+    <ClInclude Include="Source\Component\PlaneComponent.h" />
+    <ClInclude Include="ThirdParty\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -194,3 +194,16 @@ void CEditorViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene, cons
 
 	Gizmo.BuildRenderCommands(Core->GetSelectedActor(), Scene->GetCamera(), OutQueue);
 }
+
+void CEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
+{
+	CCore* Core = EditorUI.GetCore();
+
+	if (Core)
+	{
+		Core->SetSelectedActor(nullptr);
+		Core->GetScene()->ClearActors();
+		Core->GetScene()->LoadSceneFromFile(FilePath, Core->GetRenderer()->GetDevice());
+		UE_LOG("Scene loaded: %s", FilePath.c_str());
+	}
+}
