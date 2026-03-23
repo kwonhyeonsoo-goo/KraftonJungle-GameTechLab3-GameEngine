@@ -566,15 +566,16 @@ void UScene::FrustrumCull(const FFrustum& Frustum, TArray<UPrimitiveComponent*>&
 			const bool bIsUUID = PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass());
 			const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
 
-			if (!bIsUUID && !bIsSubUV)
-			{
-			// if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
 			if (PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
 			{
 				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_BillboardText))
 				{
 					continue;
 				}
+			}
+			else if (PrimitiveComponent->IsA(USubUVComponent::StaticClass()))
+			{
+				// SubUV는 mesh data 체크 불필요
 			}
 			else
 			{
@@ -592,9 +593,9 @@ void UScene::FrustrumCull(const FFrustum& Frustum, TArray<UPrimitiveComponent*>&
 			{
 				OutVisible.push_back(PrimitiveComponent);
 			}
-		}
-	}
-}
+		}  // for Component
+	}  // for Actor
+}  // FrustrumCull 끝
 
 void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
