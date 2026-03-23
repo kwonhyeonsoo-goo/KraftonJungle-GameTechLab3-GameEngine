@@ -4,16 +4,16 @@
 #include <functional>
 #include "Object/Object.h"
 
-#define REGISTER_FACTORY(TypeName)															\
-namespace {																					\
-	 struct TypeName##_RegisterFactory {													\
-		TypeName##_RegisterFactory() {														\
-				FObjectFactory::Get().Register(												\
-					#TypeName,																\
-					[]()->UObject* {return UObjectManager::Get().CreateObject<TypeName>();} \
-				);																			\
-		}																					\
-	};																						\
+#define REGISTER_FACTORY(TypeName)																		\
+namespace {																								\
+	 struct TypeName##_RegisterFactory {																\
+		TypeName##_RegisterFactory() {																	\
+				FObjectFactory::Get().Register(															\
+					#TypeName,																			\
+					[]()->weak_ptr<UObject> {return UObjectManager::Get().CreateObject<TypeName>();}	\
+				);																						\
+		}																								\
+	};																									\
 TypeName##_RegisterFactory G##TypeName##_RegisterFactory;} 																												
 
 // Different from UFactory class
@@ -24,15 +24,15 @@ public:
 		return FactorySingleton;
 	}
 
-	void Register(const char* TypeName, std::function<UObject*()> Spawner) {
+	void Register(const char* TypeName, std::function<weak_ptr<UObject>()> Spawner) {
 		Registry[TypeName] = Spawner;
 	}
 
-	UObject* Create(const std::string& TypeName) {
+	weak_ptr<UObject> Create(const std::string& TypeName) {
 		auto Spawner = Registry.find(TypeName);	// Do NOT use array accessor [] here. it will insert a new key if not found.
-		return (Spawner != Registry.end()) ? Spawner->second() : nullptr;
+		return (Spawner != Registry.end()) ? Spawner->second() : weak_ptr<UObject>();
 	}
 
 private:
-	TMap<std::string, std::function<UObject*()>> Registry;
+	TMap<std::string, std::function<weak_ptr<UObject>()>> Registry;
 };

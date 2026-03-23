@@ -8,7 +8,7 @@ FMeshBufferManager FRenderCollector::MeshBufferManager;
 
 void FRenderCollector::Collect(const FRenderCollectorContext& Context, FRenderBus& RenderBus)
 {
-	if (!Context.Camera || !Context.World)
+	if (!Context.Camera || !Context.Scene)
 	{
 		return;
 	}
@@ -21,15 +21,14 @@ void FRenderCollector::Collect(const FRenderCollectorContext& Context, FRenderBu
 	CollectFromEditor(Context, View, Projection, RenderBus);
 
 	//	Draw from World
-	//	Iterate through GUObjects
-	for (auto* Object : GUObjectArray)
+	//	Iterate through GUObjects, not context.scene. This is for extra encapsulation
+	for (const auto& ObjPtr : GUObjectArray)
 	{
-		if (!Object) continue;
-
-		if (Object->IsA<AActor>() && !Object->bPendingKill)
+		auto* Object = ObjPtr.get();
+		if (Object && Object->IsA<AActor>() && !Object->bPendingKill)
 		{
 			auto* Actor = Object->Cast<AActor>();
-			if (Actor->GetWorld() == Context.World)
+			if (Actor->GetOwnerUUID() == Context.Scene->UUID)
 			{
 				CollectFromActor(Actor, Context, RenderBus);
 			}
@@ -45,7 +44,7 @@ void FRenderCollector::CollectFromActor(AActor* Actor, const FRenderCollectorCon
 		if (!Comp || Comp->bPendingKill) continue;
 		if (!Comp->IsA<UPrimitiveComponent>()) continue;
 
-		UPrimitiveComponent* Primitive = dynamic_cast<UPrimitiveComponent*>(Comp);
+		UPrimitiveComponent* Primitive = static_cast<UPrimitiveComponent*>(Comp);
 		CollectFromComponent(Primitive, Context, RenderBus);
 
 	}
@@ -98,6 +97,8 @@ void FRenderCollector::CollectFromEditor(const FRenderCollectorContext& Context,
 	//	Gizmo
 	UGizmoComponent* Gizmo = Context.Gizmo;
 
+	RenderBus.SetCachedView(ViewMat);
+	RenderBus.SetCachedProjection(ProjMat);
 	RenderBus.UpdateLineBatchLineCommand(ViewMat, ProjMat);
 
 	FBatchedLine* BatchLine = RenderBus.GetBatehdLine();

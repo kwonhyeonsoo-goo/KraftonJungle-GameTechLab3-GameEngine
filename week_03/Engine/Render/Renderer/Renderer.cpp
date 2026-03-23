@@ -97,9 +97,6 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 {
 	ID3D11DeviceContext* context = Device.GetDeviceContext();
 
-	
-	
-
 	//	순서 지켜야 함. (Component -> Axis -> Grid -> Outline -> Gizmo -> Overlay)
 	//	State Caching으로 인해 중복 설정은 자동으로 스킵됨.
 

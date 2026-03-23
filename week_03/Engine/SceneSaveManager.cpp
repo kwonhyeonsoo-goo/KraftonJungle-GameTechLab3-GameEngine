@@ -1,48 +1,30 @@
 ﻿#include "SceneSaveManager.h"
 #include "SimpleJSON/json.hpp"
 
-void FSceneSaveManager::SaveSceneAsJSON(const string& filepath, TArray<UWorld*>& Scene) {
+void FSceneSaveManager::SaveSceneAsJSON(UScene* Scene) {
     using namespace json;
 
-    string FileDestination;
-    string SceneName;
-    if (!filepath.length()) {
-        SceneName = "Save_" + GetCurrentTimeStamp();
-        FileDestination = "Saves/" + SceneName + ".Scene";
-    }
-    else {
-        SceneName = filepath;
-        FileDestination = "Saves/" + filepath + ".Scene";
-    }
-
-    //std::filesystem::create_directories("Saves");
+    std::string FileDestination = GetFileDialoguePath(FILE_SAVE);
 
     JSON Root;
-
     // Metadata
     Root["Scene"]["Version"] = 1;
-    Root["Scene"]["Name"] = SceneName;
+    Root["Scene"]["Name"] = "Scene" + Scene->UUID;
+    Root["Scene"]["UUID"] = Scene->UUID;
 
     JSON Objects = json::Array();
+    Objects.append(SerializeObject(Scene));
+    for (AActor* Actor : Scene->GetActors()) {
+        if (!Actor || Actor->bPendingKill) continue;
 
-    for (UWorld* World : Scene) {
-        if (!World || World->bPendingKill) continue;
+        // Serialize actor
+        Objects.append(SerializeObject(Actor));
 
-        // Serialize world itself
-        Objects.append(SerializeObject(World));
+        for (USceneComponent* Component : Actor->GetComponents()) {
+            if (!Component || Component->bPendingKill) continue;
 
-        for (AActor* Actor : World->GetActors()) {
-            if (!Actor || Actor->bPendingKill) continue;
-
-            // Serialize actor
-            Objects.append(SerializeObject(Actor));
-
-            for (USceneComponent* Component : Actor->GetComponents()) {
-                if (!Component || Component->bPendingKill) continue;
-
-                // Serialize component
-                Objects.append(SerializeObject(Component));
-            }
+            // Serialize component
+            Objects.append(SerializeObject(Component));
         }
     }
 
@@ -94,11 +76,10 @@ json::JSON FSceneSaveManager::SerializeObject(UObject* Object) {
         j["RootComponentUUID"] = Actor->GetRootComponent()
             ? (int)Actor->GetRootComponent()->UUID
             : 0;
+    }
 
-        // Guard against null world
-        j["OwningWorldUUID"] = Actor->GetWorld()
-            ? (int)Actor->GetWorld()->UUID
-            : 0;
+    if (Object->IsA<UScene>()) {
+        // Placeholder
     }
 
     return j;
@@ -112,34 +93,34 @@ json::JSON FSceneSaveManager::SerializeVector(float X, float Y, float Z) {
     return v;
 }
 
-void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, TArray<UWorld*>& Scene) {
-    // Purge current scene
-    for (UWorld* World : Scene) {
-        World->EndPlay();
-    }
-    UObjectManager::Get().CollectGarbage();
-    Scene.clear();
-    using json::JSON;
-    std::ifstream File(filepath);
+UScene* FSceneSaveManager::LoadSceneFromJSON(UWorld* World) {
+    // Find file location using file explorer
+    FString FilePath = GetFileDialoguePath(FILE_LOAD);
+    if (!FilePath.size()) { return nullptr; }
+    std::ifstream File(FilePath);
     if (!File.is_open()) {
         // Failed to open file at target destination
         std::cerr << "Failed to open file at target destination" << std::endl;
-        return;
+        return nullptr;
     }
 
+    using json::JSON;
+    
     string FileContent((std::istreambuf_iterator<char>(File)),
         std::istreambuf_iterator<char>());
 
     JSON root = JSON::Load(FileContent);
     TMap<uint32, UObject*> uuidObjectMap;
+    UScene* Scene = nullptr;
     uint32 MaxUUID = 0;
-    TArray<uint32> Worlds;
 
     // Retrieve UObject info
     for (auto& JSONObject : root["Scene"]["Objects"].ArrayRange()) {
         string ClassName = JSONObject["ClassName"].ToString();
-        UObject* Obj = FObjectFactory::Get().Create(ClassName);
-        if (!Obj || !Obj->IsA<UObject>()) {
+        auto WeakObj = FObjectFactory::Get().Create(ClassName);
+        if (WeakObj.expired()) { continue; }
+        UObject* Obj = WeakObj.lock().get();
+        if (!Obj->IsA<UObject>()) {
             // Either ClassName is not a valid UObject type, or factory has not been linked yet
             continue;
         }
@@ -160,29 +141,31 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, TArray<UWorld*
             // Handle camera objects
             if (Obj->IsA<UCamera>()) { DecodeCamera(Obj->Cast<UCamera>(), JSONObject); }
         }
-
-        if (Obj->IsA<UWorld>()) {
-            Worlds.push_back(Obj->UUID);
+        else if (Obj->IsA<UScene>()) {
+            Scene = Obj->Cast<UScene>();
         }
+    }
+    
+    // Give a fresh UUID to the scene regardless of the conflict
+    if (Scene) {
+        Scene->UUID = ++MaxUUID;
+        // Reset UUID counting logic
+        EngineStatics::ResetUUIDGeneration(MaxUUID + 1);
+    }
+    else {
+        // No scene found => corrupted savefile
+        return nullptr;
     }
 
     // Resolve parent-owning relationship
-    LinkReferences(uuidObjectMap, root["Scene"]["Objects"]);
-
-    // Reload Scene with cooked worlds
-    for (auto i : Worlds) {
-        auto it = uuidObjectMap.find(i);
-        if (it != uuidObjectMap.end()) {
-            Scene.push_back(static_cast<UWorld*>(it->second));
-        }
-    }
-
-    // Reset UUID counting logic
-    EngineStatics::ResetUUIDGeneration(MaxUUID + 1);
+    LinkReferences(uuidObjectMap, root["Scene"]["Objects"], Scene);
+    
+    return Scene;
 }
 
-void FSceneSaveManager::LinkReferences(const TMap<uint32, UObject*>& uuidMap, json::JSON Savedata) {
+UScene* FSceneSaveManager::LinkReferences(const TMap<uint32, UObject*>& uuidMap, json::JSON Savedata, UScene* Scene) {
     using namespace json;
+
     // Pass 1: restore all parent-child relationships
     for (auto& JSONObject : Savedata.ArrayRange()) {
         uint32 cachedUUID = JSONObject["UUID"].ToInt();
@@ -213,15 +196,7 @@ void FSceneSaveManager::LinkReferences(const TMap<uint32, UObject*>& uuidMap, js
         if (Obj->IsA<AActor>()) {
             AActor* Actor = Obj->Cast<AActor>();
 
-            uint32 WorldUUID = JSONObject["OwningWorldUUID"].ToInt();
-            if (WorldUUID) {
-                auto WorldIt = uuidMap.find(WorldUUID);
-                if (WorldIt != uuidMap.end()) {
-                    UWorld* World = static_cast<UWorld*>(WorldIt->second);
-                    Actor->SetWorld(World);
-                    World->AddActor(Actor);
-                }
-            }
+            Actor->SetOwnerUUID(Scene->UUID);
 
             uint32 RootCompUUID = JSONObject["RootComponentUUID"].ToInt();
             if (RootCompUUID) {
@@ -234,8 +209,11 @@ void FSceneSaveManager::LinkReferences(const TMap<uint32, UObject*>& uuidMap, js
             }
 
             Actor->SetVisible(JSONObject["bVisible"].ToBool());
+            Scene->AddActor(Actor);
         }
     }
+
+    return Scene;
 }
 
 void FSceneSaveManager::DeserializeSpaceVectors(USceneComponent* SceneComp, json::JSON& Savedata) {
@@ -255,12 +233,69 @@ void FSceneSaveManager::DecodePrimitiveComponents(UPrimitiveComponent* Prim, jso
     // Placeholder. No features to add yet
 }
 
-void FSceneSaveManager::OverwriteSave(const string& filepath, UWorld* World) {
-    // Check if file exists at target destination
 
-    // If yes, delete
+FString FSceneSaveManager::GetFileDialoguePath(EDialogueMode Mode) {
+    string FileDestination;
+    switch (Mode) {
+    case (FILE_SAVE) : {
+        string SceneName = "Save_" + GetCurrentTimeStamp();
 
-    // Create json save
+        // Save dialogue
+        char szFile[MAX_PATH] = {};
+        // Pre-fill the filename box with the scene name
+        strncpy_s(szFile, SceneName.c_str(), MAX_PATH - 1);
+
+        OPENFILENAMEA ofn = {};
+        ofn.lStructSize = sizeof(ofn);
+        ofn.hwndOwner = nullptr;
+        ofn.lpstrFilter = "Scene Files (*.Scene)\0*.Scene\0All Files (*.*)\0*.*\0";
+        ofn.lpstrFile = szFile;
+        ofn.nMaxFile = MAX_PATH;
+        ofn.lpstrDefExt = "Scene";
+        ofn.lpstrTitle = "Save Scene";
+        ofn.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
+
+        if (!GetSaveFileNameA(&ofn)) {
+            return "";
+        }
+
+        FileDestination = szFile;
+        break;
+    }
+
+    case (FILE_LOAD):
+        char szFile[MAX_PATH] = {};
+
+        OPENFILENAMEA ofn = {};
+        ofn.lStructSize = sizeof(ofn);
+        ofn.hwndOwner = nullptr;
+        ofn.lpstrFilter = "Scene Files (*.Scene)\0*.Scene\0All Files (*.*)\0*.*\0";
+        ofn.lpstrFile = szFile;
+        ofn.nMaxFile = MAX_PATH;
+        ofn.lpstrDefExt = "Scene";
+        ofn.lpstrTitle = "Load Scene";
+        ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+
+        if (!GetOpenFileNameA(&ofn)) {
+            break;
+        }
+
+        FileDestination = szFile;
+
+        const size_t DotPos = FileDestination.rfind('.');
+        if (DotPos == std::string::npos) {
+            std::cerr << "Invalid file: no extension found" << std::endl;
+            return "";
+        }
+        const std::string Extension = FileDestination.substr(DotPos);
+        if (Extension != ".Scene") {
+            std::cerr << "Invalid file type: expected .Scene, got " << Extension << std::endl;
+            return "";
+        }
+        break;
+    }
+
+    return FileDestination;
 }
 
 string FSceneSaveManager::GetCurrentTimeStamp() {

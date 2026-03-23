@@ -9,7 +9,7 @@
 #include "Core/CollisionTypes.h"
 #include "Core/Common.h"
 
-class UWorld;
+class UScene;
 class UCamera;
 class UGizmoComponent;
  
@@ -19,13 +19,19 @@ class FEditorViewportClient
 {
 public:
 	void Initialize(HWND InHWindow);
-	void SetWorld(UWorld* InWorld) { World = InWorld; }
-	void SetCamera(UCamera* InCamera) { Camera = InCamera; }
-	void SetGizmo(UGizmoComponent* InGizmo) { Gizmo = InGizmo; }
-	UGizmoComponent* GetGizmo() { return Gizmo; }
+	weak_ptr<UCamera> GetCamera() { return Camera; }
+	void SetScene(weak_ptr<UScene> InScene) { Scene = InScene; }
+	void SetCamera(weak_ptr<UCamera> InCamera) { Camera = InCamera; }
+	void SetGizmo(weak_ptr<UGizmoComponent> InGizmo) { Gizmo = InGizmo; }
+	weak_ptr<UGizmoComponent> GetGizmo() { return Gizmo; }
 	void SetViewportSize(float InWidth, float InHeight);
 
 	void Tick(float DeltaTime);
+
+	void ResetCamera(weak_ptr<UCamera> Camera);
+	void SyncCameraFromRenderHandler();
+	void ResetViewport();
+	void CloseViewport();
 
 	const FCursorOverlayState& GetCursorOverlayState() const { return CursorOverlayState; }
 	FViewOutput& GetViewOutput() { return ViewOutput;  }
@@ -40,12 +46,14 @@ private:
 
 private:
 	HWND HWindow = nullptr;
-	UWorld* World = nullptr;
-	UCamera* Camera = nullptr;
-	UGizmoComponent* Gizmo = nullptr;
+	weak_ptr<UScene> Scene;
+	weak_ptr<UCamera> Camera;
+	weak_ptr<UGizmoComponent> Gizmo;
 
 	float CameraVelocity = 10.f;
 	float CameraAngleVelocity = 60.f;
+	FVector InitViewPos = FVector(10, 0, 5);
+	FVector InitLookAt = FVector(0, 0, 0);
 	float WindowWidth = 1920.f;
 	float WindowHeight = 1080.f;
 

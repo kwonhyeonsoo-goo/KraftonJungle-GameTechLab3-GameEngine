@@ -53,6 +53,9 @@ public:
 	const TArray<FRenderCommand>& GetFontCommands() const { return FontCommands; }
 
 	FFontCache&	    GetFontCache() { return FontCache; }
+
+	void  SetCachedView(const FMatrix& View){ CachedView = View; }
+	void  SetCachedProjection(const FMatrix& Projection) { CachedProjection = Projection; }
 	const FMatrix&	GetCachedView()	const { return CachedView; }
 	const FMatrix&	GetCachedProjection() const	{ return CachedProjection; }
 };

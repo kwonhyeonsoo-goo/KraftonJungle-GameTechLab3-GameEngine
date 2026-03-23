@@ -9,6 +9,7 @@
 
 class FRenderer;
 class FEditorEngine;
+class FEditorViewportClient;
 
 enum class EPrimitiveType;
 
@@ -23,27 +24,31 @@ private:
 		"Sphere",
 		"Plane"
 	};
-
-	float NewSceneNotificationTimer = 0;
-	float SceneSaveNotificationTimer = 0;
-	float SceneLoadNotificationTimer = 0;
 	FEditorEngine* EditorEngine = nullptr;
 	FRenderer* Renderer;
+	FEditorViewportClient* Viewport;
 
 	int SelectedPrimitiveType = 0;
 	int NumberOfSpawnedActors = 1;
 	FVector CurSpawnPoint = { 0.f,0.f,0.f };
 	bool bShowConsole = true;
 
-	char SceneName[128] = "Default";
-	char LoadPath[128] = "Saves/";
+	// Scene stuffs
+	float NewSceneNotificationTimer = 0;
+	float SceneSaveNotificationTimer = 0;
+	float SceneLoadNotificationTimer = 0;
+	uint32 SelectedSceneIndex = -1;
+
+	// Scene Manager stuffs
+	uint32 SelectedActorIndex = 0;
 
 	FEditorConsole ConsoleInstance;
 	
 public:
-	void Create(HWND InHWindow, FRenderer& InRenderer, FEditorEngine* InEditorEngine);
+	void Create(HWND InHWindow, FRenderer& InRenderer, FEditorEngine* InEditorEngine, FEditorViewportClient* InEditorViewport);
 	void Release();
 	void Render(float DeltaTime, FViewOutput& ViewOutput);
+	void RenderObjectManager(FViewOutput& ViewOutput);
 	void RenderObjectWindow(UObject*& Object);
 	void Update();
 };

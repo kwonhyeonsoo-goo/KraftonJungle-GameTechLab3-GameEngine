@@ -1,0 +1,35 @@
+{
+  "Scene" : {
+    "Name" : "Default",
+    "Objects" : [{
+        "ClassName" : "AActor",
+        "InternalIndex" : 2,
+        "OwningSceneUUID" : 2,
+        "RootComponentUUID" : 4,
+        "UUID" : 3,
+        "bVisible" : true
+      }, {
+        "ClassName" : "UCubeComponent",
+        "InternalIndex" : 3,
+        "Location" : {
+          "X" : -3.000000,
+          "Y" : 0.000000,
+          "Z" : 0.000000
+        },
+        "ParentUUID" : 0,
+        "Rotation" : {
+          "X" : 55.736248,
+          "Y" : 35.817310,
+          "Z" : 68.263107
+        },
+        "Scale" : {
+          "X" : 4.000000,
+          "Y" : 4.100000,
+          "Z" : 4.082000
+        },
+        "UUID" : 4
+      }],
+    "UUID" : 2,
+    "Version" : 1
+  }
+}

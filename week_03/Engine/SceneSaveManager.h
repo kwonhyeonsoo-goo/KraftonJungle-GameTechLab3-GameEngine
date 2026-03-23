@@ -4,10 +4,10 @@
 #include <fstream>
 #include <filesystem>
 #include <chrono>
-#include "World.h"
 #include "Engine/Scene/Camera.h"
 #include "World/PrimitiveComponent.h"
 #include "Object/Object.h"
+#include "World.h"
 #include "Object/ObjectFactory.h"
 
 // Forward decl.
@@ -15,19 +15,22 @@ namespace json {
 	class JSON;
 }
 
+enum EDialogueMode {
+	FILE_SAVE,
+	FILE_LOAD
+};
+
 using std::string;
 
+// The Rule of Thumb: 1 scene, 1 save file
 class FSceneSaveManager {
 public:
-	// Creates a .json save file at the given destination
-	static void SaveSceneAsJSON(const string& filepath, TArray<UWorld*>& Scene);
-	static void LoadSceneFromJSON(const string& filepath, TArray<UWorld*>& Scene);
+	// Creates a .json save file at the given destination. 
+	static void SaveSceneAsJSON(UScene* Scene);
+	static UScene* LoadSceneFromJSON(UWorld* World);
 
-	// If file exists at given path, delete, then save. Otherwise, simply create a new save
-	static void OverwriteSave(const string& filepath, UWorld* World);
-
+	static FString GetFileDialoguePath(EDialogueMode Mode);
 private:
-
 	//-----------------------------------------------------------------------------------
 	// Serialization
 	// ----------------------------------------------------------------------------------
@@ -40,7 +43,7 @@ private:
 	// Desrialization
 	// ----------------------------------------------------------------------------------
 	// Resolves parent-child and owning references between components, actors, and world
-	static void LinkReferences(const TMap<uint32, UObject*>& uuidMap, json::JSON Savedata);
+	static UScene* LinkReferences(const TMap<uint32, UObject*>& uuidMap, json::JSON Savedata, UScene* Scene);
 	
 	// Generate spatial vectors for USceneCompoents from a json save
 	static void DeserializeSpaceVectors(USceneComponent* SceneComp, json::JSON& Savedata);

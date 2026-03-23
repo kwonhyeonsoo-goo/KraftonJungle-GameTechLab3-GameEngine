@@ -21,11 +21,7 @@ private:
 		int UpdateRate = 60;
 	};
 
-
-	UWorld* EditorWorld = nullptr;
-	UCamera* EditorCamera = nullptr;
-	UGizmoComponent* EditorGizmo = nullptr;
-
+	weak_ptr<UWorld> EditorWorld;
 	HWND HWindow = nullptr;
 
 	float WindowWidth = 1920.f;
@@ -34,9 +30,6 @@ private:
 	// Initial Camera Dimensions
 	FVector InitViewPos = FVector(10, 0, 5);
 	FVector InitLookAt = FVector(0, 0, 0);
-
-	uint32 CurrentWorld = 0;
-	TArray<UWorld*> Scene;
 
 	FRenderer Renderer;
 	FRenderBus RenderBus;
@@ -47,43 +40,25 @@ private:
 	uint32			 GridSize = 5.f;
 
 private:
-void UpdateWorld(float DeltaTime);
-void SyncCameraFromRenderHandler();
-void BuildRenderCommands();
-
-
-
+	void UpdateWorld(float DeltaTime);
+	void BuildRenderCommands();
 
 
 public:
-void Create(HWND InHWindow);
-void Release();
-void OnWindowResized(uint32 Width, uint32 Height);
-void BeginPlay();
-void BeginFrame(float DeltaTime);
-void Update(float DeltaTime);
-void Render(float DeltaTime);
-void EndFrame();
+	void Create(HWND InHWindow);
+	void Release();
+	void OnWindowResized(uint32 Width, uint32 Height);
+	void BeginPlay();
+	void BeginFrame(float DeltaTime);
+	void Update(float DeltaTime);
+	void Render(float DeltaTime);
+	void EndFrame();
 
-UWorld* GetWorld() const { 
-	//return EditorWorld;
-	return Scene[CurrentWorld];
-}
-TArray<UWorld*>& GetScene() { return Scene; }
-uint32 GetCurrentWorld() const { return CurrentWorld; }
-void SetCurrentWorld(uint32 NewWorldIndex) { CurrentWorld = NewWorldIndex; }
-UCamera* GetCamera() const { return EditorCamera; }
-UGizmoComponent* GetGizmo() const { return EditorGizmo; }
-const uint32	 GetGridSize() const { return GridSize;  }
-void			 SetGridSize(uint32 InGridSize) { GridSize = InGridSize;}
-
-FCameraState& GetCameraState() { return EditorCamera->GetCameraState(); }
-const FCameraState& GetCameraState() const { return EditorCamera->GetCameraState(); }
-void ResetCamera(UCamera* Camera);
-void ClearScene();
-void ResetViewport();
-void CloseScene();
-void NewScene();
+	const uint32	 GetGridSize() const { return GridSize; }
+	void			 SetGridSize(uint32 InGridSize) { GridSize = InGridSize; }
+	weak_ptr<UWorld> GetWorld() const { return EditorWorld; }
+	void NewScene();
+	void ResetViewportScene();
 	void SetMainLoopFPS(float InFPS) { MainLoopFPS = InFPS; }
 	float GetMainLoopFPS() const { return MainLoopFPS; }
 
@@ -92,19 +67,12 @@ void NewScene();
 	int GetUpdateRate() const { return RuntimeSettings.UpdateRate; }
 	void SetUpdateRate(int NewRate) { RuntimeSettings.UpdateRate = (NewRate < 1) ? 1 : NewRate; }
 
-// Legacy names for compatibility during migration
-UWorld* GetEditorWorld() const { return GetWorld(); }
-UCamera* GetEditorCamera() const { return GetCamera(); }
-UGizmoComponent* GetEditorGizmo() const { return GetGizmo(); }
-FCameraState& GetEditorCameraState() { return GetCameraState(); }
-const FCameraState& GetEditorCameraState() const { return GetCameraState(); }
-
-template <typename T>
-AActor* SpawnNewPrimitiveActor(FVector InitLocation)
-{
-	AActor* NewActor = Scene[CurrentWorld]->SpawnActor<AActor>();
-	NewActor->SetActorLocation(InitLocation);
-	NewActor->AddComponent<T>();
-	return NewActor;
-}
+	template <typename T>
+	weak_ptr<AActor> SpawnNewPrimitiveActor(const FVector& Location) {
+		auto World = EditorWorld.lock();
+		if (!World) { return {}; }
+		AActor* Actor = World->SpawnPrimitiveActor<T>(Location);
+		if (!Actor) { return {}; }
+		return std::dynamic_pointer_cast<AActor>(Actor->shared_from_this());
+	}
 };

@@ -1,9 +1,8 @@
 ﻿#include "Editor/EditorEngine.h"
-
 #include "Engine/Core/InputSystem.h"
-
 #include "Render/Scene/RenderCollector.h"
 #include "Render/Scene/RenderCollectorContext.h"
+#include "World/Primitives/Primitives.h"
 
 void FEditorEngine::Create(HWND InHWindow)
 {
@@ -12,24 +11,10 @@ void FEditorEngine::Create(HWND InHWindow)
 	Renderer.Create(HWindow);
 	FRenderCollector::Initialize(Renderer.GetFD3DDevice().GetDevice());
 	RenderBus.Create(Renderer.GetFD3DDevice().GetDevice());
-
-	MainPanel.Create(HWindow, Renderer, this);
-
-	if (!Scene.empty()) {
-		EditorWorld = Scene[0];
-	}
-	else {
-		EditorWorld = UObjectManager::Get().CreateObject<UWorld>();
-		Scene.push_back(EditorWorld);
-	}
-	CurrentWorld = 0;
-	Scene[CurrentWorld]->InitWorld();
-
-	EditorGizmo = UObjectManager::Get().CreateObject<UGizmoComponent>();
-	EditorGizmo->SetWorldLocation(FVector(0.0f, 0.0f, 0.0f));
-	ViewportClient.SetGizmo(EditorGizmo);
-
-	EditorGizmo->Deactivate();	//	Initially hide the gizmo until an object is selected
+	EditorWorld = UObjectManager::Get().CreateObject<UWorld>();
+	auto WorldPtr = EditorWorld.lock();
+	WorldPtr->Init();
+	WorldPtr->SpawnPrimitiveActor<UCubeComponent>(FVector(-3.f, 0, 0));	// Test sample
 
 	RECT rect;
 	GetClientRect(HWindow, &rect);
@@ -38,21 +23,10 @@ void FEditorEngine::Create(HWND InHWindow)
 
 	ViewportClient.Initialize(HWindow);
 	ViewportClient.SetViewportSize(WindowWidth, WindowHeight);
-	ViewportClient.SetWorld(Scene[CurrentWorld]);
+	ViewportClient.SetScene(WorldPtr->GetActiveScene());
 
-	EditorCamera = UObjectManager::Get().CreateObject<UCamera>();
-	ViewportClient.SetCamera(EditorCamera);
 	ViewportClient.SetViewportSize(WindowWidth, WindowHeight);
-
-	ResetCamera(EditorCamera);
-	EditorCamera->ApplyCameraState();
-	SyncCameraFromRenderHandler();
-
-	Scene[CurrentWorld]->SetActiveCamera(EditorCamera);
-	
-	//EditorGizmo = UObjectManager::Get().CreateObject<UGizmoComponent>();
-	//EditorGizmo->SetWorldLocation(FVector(0.0f, 0.0f, 0.0f));
-	//ViewportClient.SetGizmo(EditorGizmo);
+    MainPanel.Create(HWindow, Renderer, this, &ViewportClient);
 }
 
 void FEditorEngine::OnWindowResized(uint32 Width, uint32 Height)
@@ -69,79 +43,32 @@ void FEditorEngine::OnWindowResized(uint32 Width, uint32 Height)
 	Renderer.GetFD3DDevice().OnResizeViewport(Width, Height);
 }
 
-void FEditorEngine::ResetCamera(UCamera* Camera) {
-	if (!Camera) return;
-	Camera->SetWorldLocation(InitViewPos);
-	Camera->LookAt(InitLookAt);
-}
-
-void FEditorEngine::ResetViewport() {
-	EditorCamera->bPendingKill = true;
-	UObjectManager::Get().CollectGarbage();
-
-	EditorCamera = UObjectManager::Get().CreateObject<UCamera>();
-	ViewportClient.SetWorld(Scene[CurrentWorld]);
-	ViewportClient.SetCamera(EditorCamera);
-	ViewportClient.SetViewportSize(WindowWidth, WindowHeight);
-	EditorCamera->ApplyCameraState();
-	ResetCamera(EditorCamera);
-	SyncCameraFromRenderHandler();
-	Scene[CurrentWorld]->SetActiveCamera(EditorCamera);
-}
-
-void FEditorEngine::CloseScene() {
-	EditorGizmo->bPendingKill = true;
-
-	if (!Scene.empty()) {
-		for (UWorld* World : Scene) {
-			World->EndPlay();
-		}
-	}
-
-	UObjectManager::Get().CollectGarbage();
-	FRenderCollector::Release();
-
-	//if (EditorGizmo)
-	//{
-	//	delete EditorGizmo;
-	//	EditorGizmo = nullptr;
-	//}
-}
-
 void FEditorEngine::NewScene() {
-	ClearScene();
-	UWorld* World = UObjectManager::Get().CreateObject<UWorld>();
-	Scene.push_back(World);
-	CurrentWorld = 0;
-	ResetViewport();
+	auto Worldptr = EditorWorld.lock();
+	Worldptr->GetSceneManager().AddNewScene();
+	ViewportClient.ResetViewport();
+	ResetViewportScene();
+}
+
+void FEditorEngine::ResetViewportScene() {
+	ViewportClient.SetScene(EditorWorld.lock()->GetActiveScene());
 }
 
 void FEditorEngine::Release()
 {
-	CloseScene();
+	if (auto Worldptr = EditorWorld.lock()) {
+		Worldptr->EndPlay();
+	}
+	FRenderCollector::Release();
 	MainPanel.Release();
 	RenderBus.Release();
 	Renderer.Release();
 }
 
-void FEditorEngine::ClearScene() {
-	if (!Scene.empty()) {
-		for (UWorld* World : Scene) {
-			World->EndPlay();
-		}
-		UObjectManager::Get().CollectGarbage();
-		for (auto* W : Scene) {
-			W = nullptr;
-		}
-		Scene.clear();
-	}
-}
-
 void FEditorEngine::BeginPlay()
 {
-	if (!Scene.empty() && Scene[CurrentWorld])
-	{
-		Scene[CurrentWorld]->BeginPlay();
+	if (auto Worldptr = EditorWorld.lock()) {
+		Worldptr->BeginPlay();
 	}
 }
 
@@ -150,7 +77,7 @@ void FEditorEngine::BeginFrame(float DeltaTime)
 	InputSystem::Update();
 	ViewportClient.Tick(DeltaTime);
 	MainPanel.Update();
-	SyncCameraFromRenderHandler();
+	ViewportClient.SyncCameraFromRenderHandler();
 }
 
 void FEditorEngine::Update(float DeltaTime)
@@ -172,35 +99,28 @@ void FEditorEngine::Render(float DeltaTime)
 
 void FEditorEngine::EndFrame()
 {
-	UObjectManager::Get().CollectGarbage();
-}
-
-void FEditorEngine::SyncCameraFromRenderHandler()
-{
-	if (EditorCamera)
-	{
-		EditorCamera->ApplyCameraState();
-	}
+	//UObjectManager::Get().CollectGarbage();
 }
 
 void FEditorEngine::UpdateWorld(float DeltaTime)
 {
-	if (!Scene.empty() && Scene[CurrentWorld])
+	if (auto Worldptr = EditorWorld.lock())
 	{
-		Scene[CurrentWorld]->Tick(DeltaTime);
+		Worldptr->Tick(DeltaTime);
 	}
 }
 
 void FEditorEngine::BuildRenderCommands()
 {
 	FRenderCollectorContext Context;
-	Context.World = Scene[CurrentWorld];
-	Context.Camera = EditorCamera;
-	Context.Gizmo = EditorGizmo;
+	Context.Scene = EditorWorld.lock()->GetActiveScene().lock().get();
+	Context.Camera = ViewportClient.GetCamera().lock().get();
+	Context.Gizmo = ViewportClient.GetGizmo().lock().get();
 	Context.CursorOverlayState = &ViewportClient.GetCursorOverlayState();
 	Context.ViewportHeight = WindowHeight;
 	Context.ViewportWidth = WindowWidth;
-	Context.SelectedComponent = ViewportClient.GetGizmo()->HasTarget() ? (UPrimitiveComponent *)ViewportClient.GetGizmo()->GetTarget() : nullptr;
+	auto GizmoPtr = ViewportClient.GetGizmo().lock();
+	Context.SelectedComponent = GizmoPtr && GizmoPtr->HasTarget() ? (UPrimitiveComponent*)GizmoPtr->GetTarget() : nullptr;
 	Context.GridSize = GridSize;
 
 	FRenderCollector::Collect(Context, RenderBus);

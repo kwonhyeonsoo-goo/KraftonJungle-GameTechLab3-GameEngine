@@ -1,5 +1,5 @@
 ﻿#include "Editor/UI/EditorMainPanel.h"
-
+//#include "Editor/Viewport/EditorViewportClient.h"
 #include "Editor/EditorEngine.h"
 
 #include "ImGui/imgui.h"
@@ -9,16 +9,16 @@
 #include "ImGui/IconsFontAwesome4.h"
 
 #include "Render/Renderer/Renderer.h"
-#include "World/PrimitiveComponent.h"
+#include "World/Primitives/Primitives.h"
 #include "SceneSaveManager.h"
 #include "Core/Common.h"
 #include "Engine/Core/InputSystem.h"
 
 #define SEPARATOR(); ImGui::Spacing(); ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing(); ImGui::Spacing();
 
-
-void FEditorMainPanel::Create(HWND InHWindow, FRenderer& InRenderer, FEditorEngine* InEditorEngine)
+void FEditorMainPanel::Create(HWND InHWindow, FRenderer& InRenderer, FEditorEngine* InEditorEngine, FEditorViewportClient* InViewport)
 {
+	Viewport = InViewport;
 	EditorEngine = InEditorEngine;
 	SelectedPrimitiveType = static_cast<int>(EPrimitiveType::EPT_Cube);
 	Renderer = &InRenderer;
@@ -49,6 +49,7 @@ void FEditorMainPanel::Release()
 void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 {
 	using namespace common::constants::ImGui;
+	auto& SceneManager = EditorEngine->GetWorld().lock()->GetSceneManager();
 	(void)DeltaTime;
 	if (!EditorEngine)
 	{
@@ -105,8 +106,8 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 
 	ImGui::SeparatorText("Scene");
 
-	if (ImGui::Button(ICON_FA_FILE_TEXT_O" New Scene")) {
-		EditorEngine->GetGizmo()->SetVisibility(false);
+	if (ImGui::Button("New Scene")) {
+		Viewport->GetGizmo().lock()->SetVisibility(false);
 		ViewOutput.Object = nullptr;
 		EditorEngine->NewScene();
 		NewSceneNotificationTimer = NotificationTimer;
@@ -117,43 +118,38 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 		ImGui::Text("New scene created");
 	}
 
-	if (ImGui::Button(ICON_FA_FLOPPY_O" Save Scene")) {
-		FSceneSaveManager::SaveSceneAsJSON(SceneName, EditorEngine->GetScene());
+	if (ImGui::Button("Save Scene")) {
+		FSceneSaveManager::SaveSceneAsJSON(EditorEngine->GetWorld().lock()->GetActiveScene().lock().get());
 		SceneSaveNotificationTimer = NotificationTimer;
 	}
 	if (SceneSaveNotificationTimer > 0.0f) {
 		SceneSaveNotificationTimer -= DeltaTime;
 		ImGui::Text("Scene saved");
 	}
-	ImGui::SameLine();
-	ImGui::InputText("Scene Name", SceneName, IM_ARRAYSIZE(SceneName));
 
-	if (ImGui::Button(ICON_FA_FOLDER_OPEN" Load Scene")) {
-		if (std::ifstream(LoadPath).is_open()) {
-			EditorEngine->GetGizmo()->SetVisibility(false);
-			EditorEngine->ClearScene();
+	if (ImGui::Button("Load Scene")) {
+		UScene* Scene = FSceneSaveManager::LoadSceneFromJSON(EditorEngine->GetWorld().lock().get());
+		if (Scene) {
+			Viewport->GetGizmo().lock()->SetVisibility(false);
 			ViewOutput.Object = nullptr;
-			FSceneSaveManager::LoadSceneFromJSON(LoadPath, EditorEngine->GetScene());
-			EditorEngine->ResetViewport();
-			Sleep(50);
+			//EditorEngine->GetWorld()->GetSceneManager().RemoveActiveScene();
+			SceneManager.AddScene(Scene);
+			SceneManager.SetActiveScene(Scene);
+			Viewport->ResetViewport();
+			EditorEngine->ResetViewportScene();
+			Sleep(50);	// Safeguard
 			SceneLoadNotificationTimer = NotificationTimer;
 		}
 	}
+
 	if (SceneLoadNotificationTimer > 0.0f) {
 		SceneLoadNotificationTimer -= DeltaTime;
 		ImGui::Text("Scene loaded");
 	}
-	if (SceneLoadNotificationTimer > 0.0f) {
-		SceneLoadNotificationTimer -= DeltaTime;
-		ImGui::Text("Scene loaded");
-	}
 
-	ImGui::SameLine();
-	ImGui::InputText("Load Path", LoadPath, IM_ARRAYSIZE(LoadPath));
+	SEPARATOR();
 
-	ImGui::SeparatorText("Camera");
-
-	FCameraState& CameraState = EditorEngine->GetCameraState();
+	FCameraState& CameraState = Viewport->GetCamera().lock()->GetCameraState();
 	ImGui::Checkbox("Orthographic", &(CameraState.bIsOrthogonal));
 
 	float CameraFOV_Deg = CameraState.FOV * (RAD_TO_DEG);
@@ -170,13 +166,13 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 		}
 	}
 	else {
-
+		float OrthoWidth = CameraState.OrthoWidth;
 		if (ImGui::DragFloat("Ortho Width", &OrthoWidth, 0.1f, 0.1f, 1000.0f))
 		{
 			CameraState.OrthoWidth = Clamp(OrthoWidth, 0.1f, 1000.0f);
 		}
 	}
-	UCamera* Camera = EditorEngine->GetCamera();
+	UCamera* Camera = Viewport->GetCamera().lock().get();
 	FVector CamPos = Camera->GetWorldLocation();
 	float CameraLocation[3] = { CamPos.X, CamPos.Y, CamPos.Z };
 	if (ImGui::DragFloat3("Camera Location", CameraLocation, 0.1f))
@@ -203,7 +199,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 	static int SelectedSpace = 0;
 	if (ImGui::RadioButton("World", &SelectedSpace, 0))
 	{
-		EditorEngine->GetEditorGizmo()->SetWorldSpace(true);
+		Viewport->GetGizmo().lock()->SetVisibility(true);
 		std::cout << "Switched to World Space\n";
 	}
 
@@ -211,20 +207,19 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 
 	if (ImGui::RadioButton("Local", &SelectedSpace, 1))
 	{
-		EditorEngine->GetEditorGizmo()->SetWorldSpace(false);
+		Viewport->GetGizmo().lock()->SetWorldSpace(false);
 		std::cout << "Switched to Local Space\n";
 	}
 
 
 	ImGui::SeparatorText("Tools");
 
-	if (ImGui::Button("Translate")) EditorEngine->GetEditorGizmo()->SetTranslateMode();
+	if (ImGui::Button("Translate")) Viewport->GetGizmo().lock()->SetTranslateMode();
 	ImGui::SameLine();
-	if (ImGui::Button("Rotate")) EditorEngine->GetEditorGizmo()->SetRotateMode();
+	if (ImGui::Button("Rotate")) Viewport->GetGizmo().lock()->SetRotateMode();
 	ImGui::SameLine();
-	if (ImGui::Button("Scale")) EditorEngine->GetEditorGizmo()->SetScaleMode();
+	if (ImGui::Button("Scale")) Viewport->GetGizmo().lock()->SetScaleMode();
 
-	
 	ImGui::SeparatorText("View Mode");
 
 	static int ViewMode = 0;
@@ -251,9 +246,87 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 	ImGui::End();
 
 	RenderObjectWindow(ViewOutput.Object);
+	RenderObjectManager(ViewOutput);
 
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+}
+
+void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
+	ImGui::Begin("Scene Manager");
+	auto& SceneManager = EditorEngine->GetWorld().lock()->GetSceneManager();
+
+	// Loaded scenes dropdown
+	if (ImGui::CollapsingHeader("Scenes")) {
+		const TArray<UScene*>& Scenes = SceneManager.GetScenes();
+		for (int i = 0; i < Scenes.size(); i++) {
+			UScene* Scene = Scenes[i];
+			if (!Scene) continue;
+
+			std::string Label = "Scene_" + std::to_string(Scene->UUID);
+
+			bool bSelected = (SelectedSceneIndex == i);
+			if (ImGui::Selectable(Label.c_str(), bSelected)) {
+				SelectedSceneIndex = i;
+				SceneManager.SetActiveScene(Scene);
+				Viewport->ResetViewport();
+				EditorEngine->ResetViewportScene();
+			}
+		}
+	}
+
+	// Load actors present in the current scene
+	TArray<AActor*> PrimitiveActors;
+	TArray<AActor*> NonPrimitiveActors;
+	const TArray<AActor*>& Actors = SceneManager.GetActiveScene().lock()->GetActors();
+	for (AActor* Actor : Actors) {
+		if (!Actor || Actor->bPendingKill) continue;
+
+		// We define Primitive actor = has a UPrimitiveComponent as its root
+		if (Actor->GetRootComponent() && Actor->GetRootComponent()->IsA<UPrimitiveComponent>()) {
+			PrimitiveActors.push_back(Actor);
+		}
+		else {
+			NonPrimitiveActors.push_back(Actor);
+		}
+	}
+
+	// Primitive Actors dropdown
+	if (ImGui::CollapsingHeader("Primitive Actors")) {
+		for (int i = 0; i < PrimitiveActors.size(); i++) {
+			AActor* Actor = PrimitiveActors[i];
+			FString Label = "Actor_" + std::to_string(Actor->UUID);
+
+			bool bSelected = (SelectedActorIndex == Actor->UUID);
+			if (ImGui::Selectable(Label.c_str(), bSelected)) {
+				SelectedActorIndex = Actor->UUID;
+				auto* TargetComponent = Actor->GetRootComponent();
+
+				// Move gizmo to target component
+				Viewport->GetGizmo().lock()->SetTarget(Actor->GetRootComponent());
+
+				// Let the viewoutput know about selected object
+				ViewOutput.Object = TargetComponent;
+				ViewOutput.ObjectPicked = TargetComponent->GetTypeInfo()->name;
+			}
+		}
+	}
+
+	// Non-Primitive Actors Dropdown
+	if (ImGui::CollapsingHeader("Non-Primitive Actors")) {
+		for (int i = 0; i < NonPrimitiveActors.size(); i++) {
+			AActor* Actor = NonPrimitiveActors[i];
+			std::string Label = "Actor_" + std::to_string(Actor->UUID);
+
+			bool bSelected = (SelectedActorIndex == Actor->UUID);
+			if (ImGui::Selectable(Label.c_str(), bSelected)) {
+				SelectedActorIndex = Actor->UUID;
+				Viewport->GetGizmo().lock()->Deactivate();
+			}
+		}
+	}
+
+	ImGui::End();
 }
 
 void FEditorMainPanel::RenderObjectWindow(UObject*& ObjectPicked) {
@@ -281,7 +354,7 @@ void FEditorMainPanel::RenderObjectWindow(UObject*& ObjectPicked) {
 		float ScaleArray[3] = { Scale.X, Scale.Y, Scale.Z };
 
 
-		UGizmoComponent* Gizmo = EditorEngine->GetGizmo();
+		UGizmoComponent* Gizmo = Viewport->GetGizmo().lock().get();
 		if (ImGui::DragFloat3("Location", PosArray, 0.1f))
 		{
 			Gizmo->SetTargetLocation(FVector(PosArray[0], PosArray[1], PosArray[2]));
@@ -306,8 +379,8 @@ void FEditorMainPanel::RenderObjectWindow(UObject*& ObjectPicked) {
 					UObjectManager::Get().DestroyObject(SceneComp->GetOwningActor());
 				}
 			}
-			EditorEngine->GetGizmo()->SetVisibility(false);
-			EditorEngine->GetGizmo()->Deactivate();
+			Viewport->GetGizmo().lock()->SetVisibility(false);
+			Viewport->GetGizmo().lock()->Deactivate();
 			ObjectPicked = nullptr;
 		}
 	}
