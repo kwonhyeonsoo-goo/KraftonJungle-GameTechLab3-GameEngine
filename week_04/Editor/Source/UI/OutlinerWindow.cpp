@@ -5,6 +5,7 @@
 #include "Scene/Scene.h"
 #include "Scene/ShowFlags.h"
 #include "Actor/Actor.h"
+#include "Component/SubUVComponent.h"
 
 void COutlinerWindow::Render(CCore* Core)
 {
@@ -26,6 +27,7 @@ void COutlinerWindow::Render(CCore* Core)
 	if (!Scene) { ImGui::End(); return; }
 
 	FShowFlags& ShowFlags = Scene->GetShowFlags();
+	AActor* SelectedActor = Core->GetSelectedActor();
 
 	// ===== Show Flags 섹션 =====
 	ImGui::SeparatorText("Show Flags");
@@ -41,15 +43,32 @@ void COutlinerWindow::Render(CCore* Core)
 		ShowFlags.SetFlag(EEngineShowFlags::SF_UUID, bUUID);
 	}
 
-	/*bool bBillboard = ShowFlags.HasFlag(EEngineShowFlags::SF_Billboard);
-	if (ImGui::Checkbox("Billboards", &bBillboard))
+
+	if (SelectedActor)
 	{
-		ShowFlags.SetFlag(EEngineShowFlags::SF_Billboard, bBillboard);
-	}*/
+		for (UActorComponent* Component : SelectedActor->GetComponents())
+		{
+			if (!Component || !Component->IsA(USubUVComponent::StaticClass()))
+			{
+				continue;
+			}
+
+			USubUVComponent* SubUVComponent = static_cast<USubUVComponent*>(Component);
+			bool bBillboard = SubUVComponent->IsBillboard();
+
+			if (ImGui::Checkbox("SubUV Billboard", &bBillboard))
+			{
+				SubUVComponent->SetBillboard(bBillboard);
+			}
+
+			break;
+		}
+	}
+
 	ImGui::SeparatorText("Actors");
 
 	const TArray<AActor*>& Actors = Scene->GetActors();
-	AActor* SelectedActor = Core->GetSelectedActor();
+	
 
 	for (AActor* Actor : Actors)
 	{
