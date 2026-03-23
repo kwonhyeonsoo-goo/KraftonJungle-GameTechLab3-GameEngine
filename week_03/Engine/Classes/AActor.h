@@ -14,7 +14,12 @@ public:
 	~AActor() override;
 
 	virtual void BeginPlay() {}
-	virtual void Tick(float DeltaTime) {}
+	virtual void Tick(float DeltaTime) 
+	{
+		for (USceneComponent* comp : GetComponents()) {
+			comp->Update(DeltaTime);
+		}
+	}
 	virtual void EndPlay() {}
 
 	// Component management

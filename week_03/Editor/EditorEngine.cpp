@@ -82,6 +82,9 @@ void FEditorEngine::BeginFrame(float DeltaTime)
 
 void FEditorEngine::Update(float DeltaTime)
 {
+
+	//USubUVComponent::UpdateFrame(DeltaTime);
+
 	UpdateWorld(DeltaTime);
 }
 

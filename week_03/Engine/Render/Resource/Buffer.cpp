@@ -15,12 +15,19 @@ void FMeshBuffer::Create(ID3D11Device* InDevice, const FMeshData& InMeshData)
 	}
 }
 
-void FMeshBuffer::CreateDynamic(ID3D11Device* InDevice, uint32 InMaxVertices)
+void FMeshBuffer::CreateDynamic(ID3D11Device* InDevice, uint32 InMaxVertices, uint64 sizeofVertex)
 {
 	Release();
-	VertexBuffer.CreateDynamic(InDevice, InMaxVertices, sizeof(FVertex));
+	VertexBuffer.CreateDynamic(InDevice, InMaxVertices, sizeofVertex);
 	IndexBuffer.CreateDynamic(InDevice, InMaxVertices);
 }
+
+//void FMeshBuffer::CreateDynamic(ID3D11Device* InDevice, uint32 InMaxVertices)
+//{
+//	Release();
+//	VertexBuffer.CreateDynamic(InDevice, InMaxVertices, sizeof(FVertex));
+//	IndexBuffer.CreateDynamic(InDevice, InMaxVertices);
+//}
 
 void FMeshBuffer::Release()
 {
@@ -33,6 +40,25 @@ void FMeshBuffer::Release()
 #pragma region __FVERTEXBUFFER__
 
 void FVertexBuffer::Create(ID3D11Device* InDevice, const TArray<FVertex>& InData, uint32 InStride)
+{
+	Release();
+
+	if (InData.empty()) return;
+
+	D3D11_BUFFER_DESC desc = {};
+	desc.ByteWidth = static_cast<uint32>(InData.size()) * InStride;
+	desc.Usage = D3D11_USAGE_IMMUTABLE;
+	desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+	D3D11_SUBRESOURCE_DATA srd = { InData.data() };
+	HRESULT hr = InDevice->CreateBuffer(&desc, &srd, &Buffer);
+	if (FAILED(hr)) { Release(); return; }
+
+	VertexCount = static_cast<uint32>(InData.size());
+	Stride = InStride;
+}
+
+void FVertexBuffer::Create(ID3D11Device* InDevice, const TArray<FUVVertex>& InData, uint32 InStride)
 {
 	Release();
 
@@ -64,7 +90,7 @@ void FVertexBuffer::CreateDynamic(ID3D11Device* InDevice, uint32 InMaxVertices, 
 	HRESULT hr = InDevice->CreateBuffer(&desc, nullptr, &Buffer);
 	if (FAILED(hr)) { Release(); return; }
 
-	VertexCount = 0;
+	VertexCount = InMaxVertices;
 	Stride = InStride;
 }
 
@@ -136,6 +162,7 @@ void FInstanceBuffer::Update(ID3D11DeviceContext* InDeviceContext, const TArray<
 
 	InstanceCount = static_cast<uint32>(InData.size());
 }
+
 
 void FInstanceBuffer::FontUpdate(ID3D11DeviceContext* InDeviceContext, const TArray<FFontInstance>& InData)
 {
@@ -228,19 +255,20 @@ void FIndexBuffer::Create(ID3D11Device* InDevice, const TArray<uint32>& InData)
 
 void FIndexBuffer::CreateDynamic(ID3D11Device* InDevice, uint32 InMaxIndices)
 {
-	Release();
+	 Release();
 
-	D3D11_BUFFER_DESC desc = {};
-	desc.ByteWidth = sizeof(uint32) * InMaxIndices;
-	desc.Usage = D3D11_USAGE_DYNAMIC;
-	desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-	HRESULT hr = InDevice->CreateBuffer(&desc, nullptr, &Buffer);
-	if (FAILED(hr)) { Release(); return; }
+    D3D11_BUFFER_DESC desc = {};
+    desc.ByteWidth      = sizeof(uint32) * InMaxIndices;
+    desc.Usage          = D3D11_USAGE_DYNAMIC;
+    desc.BindFlags      = D3D11_BIND_INDEX_BUFFER;
+    desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-	MaxIndexCount = InMaxIndices;
-	IndexCount = 0;
+    HRESULT hr = InDevice->CreateBuffer(&desc, nullptr, &Buffer);
+    if (FAILED(hr)) { Release(); return; }
+
+    MaxIndexCount = InMaxIndices;
+    IndexCount    = 6;
 }
 
 
@@ -272,3 +300,29 @@ ID3D11Buffer* FIndexBuffer::GetBuffer() const
 }
 
 #pragma endregion
+
+void FUVMeshBuffer::Create(ID3D11Device* InDevice, const FUVMeshData& InMeshData)
+{
+	Release();
+
+	if (InMeshData.Vertices.empty()) return;
+
+	VertexBuffer.Create(InDevice, InMeshData.Vertices, sizeof(FUVVertex));
+	if (!InMeshData.Indices.empty())
+	{
+		IndexBuffer.Create(InDevice, InMeshData.Indices);
+	}
+}
+
+void FUVMeshBuffer::CreateDynamic(ID3D11Device* InDevice, uint32 InMaxVertices, uint64 sizeofVertex)
+{
+	Release();
+	VertexBuffer.CreateDynamic(InDevice, InMaxVertices, sizeofVertex);
+	IndexBuffer.CreateDynamic(InDevice, InMaxVertices);
+}
+
+void FUVMeshBuffer::Release()
+{
+	VertexBuffer.Release();
+	IndexBuffer.Release();
+}

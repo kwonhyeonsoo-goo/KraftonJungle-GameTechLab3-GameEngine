@@ -71,7 +71,14 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* primitiveCompon
 
 	if (primitiveComponent->GetRenderCommand(Context.Camera->GetViewMatrix(), Context.Camera->GetProjectionMatrix(), Cmd))
 	{
-		RenderBus.AddComponentCommand(Cmd);
+		if (Cmd.Type != ERenderCommandType::Primitive)//여기 SubUV{
+		{
+			Cmd.UVMeshBuffer = &MeshBufferManager.GetUVMeshBuffer(primitiveComponent->GetPrimitiveType());
+			RenderBus.AddSubUVCompoenetCommand(Cmd);
+		}
+		else {
+			RenderBus.AddComponentCommand(Cmd);
+		}
 
 		if (Context.SelectedComponent == primitiveComponent)
 		{

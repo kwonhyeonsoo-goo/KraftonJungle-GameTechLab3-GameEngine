@@ -19,8 +19,10 @@ private:
 	static FMeshData TranslationGizmoMeshData;
 	static FMeshData RotationGizmoMeshData;
 	static FMeshData ScaleGizmoMeshData;
+	static FUVMeshData UVRectMeshData;
 	static FMeshData QuadVertexData;
 	//static FMeshData AxisMeshData;
+	// 
 	//static FMeshData GridMeshData;
 	
 	static FMeshData MouseOverlayMeshData;
@@ -32,6 +34,7 @@ private:
 	static void CreateTranslationGizmo();
 	static void CreateRotationGizmo();
 	static void CreateScaleGizmo();
+	static void CreateUVRect();
 	static void CreateQuad();
 
 	//static void CreateAxis();
@@ -70,6 +73,8 @@ public:
 	static const FMeshData& GetQuad() { return Get().QuadVertexData; };
 	//static const FMeshData& GetAxis() { return Get().AxisMeshData; }
 	//static const FMeshData& GetGrid() { return Get().GridMeshData; }
+	static const FUVMeshData& GetUVRect() { return Get().UVRectMeshData; };
+	//static FUVMeshData& UpdateUVRectMesh();
 
 	static const FMeshData& GetMouseOverlay() { return Get().MouseOverlayMeshData; }
 };

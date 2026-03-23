@@ -37,7 +37,7 @@ public:
 	void UpdateWorldMatrix() override;
 
 	virtual bool GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand) {
-		OutCommand.Type = ERenderCommandType::Primitive;
+		//OutCommand.Type = ERenderCommandType::Primitive;
 		OutCommand.TransformConstants.Model = GetWorldMatrix();
 		OutCommand.TransformConstants.View = viewMatrix;
 		OutCommand.TransformConstants.Projection = projMatrix;

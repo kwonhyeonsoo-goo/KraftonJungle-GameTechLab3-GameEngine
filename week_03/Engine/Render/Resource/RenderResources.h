@@ -15,7 +15,7 @@ struct FRenderResources
     FConstantBuffer OverlayConstantBuffer;          // b2
     //FConstantBuffer EditorConstantBuffer;           // b3
 	FConstantBuffer OutlineConstantBuffer;          // b4
-
+  
     FInstanceBuffer FontInstanceBuffer;
 
     FShader PrimitiveShader;
@@ -24,6 +24,7 @@ struct FRenderResources
     FShader EditorShader;
 	FShader OutlineShader;
     FShader FontShader;
+    FShader SubUVShader;
 
     ID3D11ShaderResourceView* FontAtlasSRV = nullptr;
 };

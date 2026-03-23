@@ -9,6 +9,8 @@
 #include "Render/Scene/RenderBus.h"
 #include "Render/Device/D3DDevice.h"
 #include "Render/Resource/RenderResources.h"
+#include "Render/Resource/RenderResourceManager.h"
+
 #include "Engine/Fonts/FontCache.h"
 
 #include <cstddef>
@@ -34,6 +36,7 @@ class FRenderer
 private:
 	FD3DDevice Device;
 	FRenderResources Resources;
+	FRenderResourceManager RenderResourceManager;
 
 	TArray<FVertex> Grids;
 
@@ -41,6 +44,7 @@ private:
 	const WCHAR* ShaderFilePath  = L"Assets/Shader/ShaderW0.hlsl";
 	const WCHAR* FontShaderFilePath = L"Assets/Shader/FontShader.hlsl";
 	const WCHAR* FontTextureFIlePath = L"Assets/Fonts/Font.dds";
+	const WCHAR* SubUVShaderFilePath = L"Assets/Shader/ShaderWSubUV.hlsl";
 
 	//	Primitive and Gizmo Input Layout
 	D3D11_INPUT_ELEMENT_DESC PrimitiveInputLayout[2] =
@@ -74,10 +78,19 @@ private:
 		{ "COLOR",     0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 96, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 	};
 
+	// Font Input Layout
+	D3D11_INPUT_ELEMENT_DESC SubUVInputLayout[2] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	};
+
+
 public:
 
 private:
 	void RenderComponentPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
+	void RenderSubUVCompPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
 	void RenderDepthLessPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
 
 	//void RenderEditorPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
@@ -92,6 +105,7 @@ private:
 	void RenderOutlinePass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
 
 	void DrawCommand(ID3D11DeviceContext* InDeviceContext, const FRenderCommand& InCommand);
+	void DrawUVCommand(ID3D11DeviceContext* InDeviceContext, const FRenderCommand& InCommand);
 
 public:
 	void Create(HWND hWindow);

@@ -4,6 +4,7 @@
 
 #include "Render/Common/RenderTypes.h"
 #include "DirectXTK/WICTextureLoader.h"
+#include "Engine/EngineServices/EngineServices.h"
 
 #if DEBUG
 
@@ -23,6 +24,10 @@ void FRenderer::Create(HWND hWindow)
 		std::cout << "Failed to create D3D Device." << std::endl;
 	}
 
+
+	RenderResourceManager.Create(&Device);
+	FEngineServices::RegisterResourceManager(&RenderResourceManager);
+
 	Resources.PrimitiveShader.Create(Device.GetDevice(), ShaderFilePath,
 		"PrimitiveVS", "PrimitivePS",PrimitiveInputLayout, ARRAYSIZE(PrimitiveInputLayout));
 	Resources.GizmoShader.Create(Device.GetDevice(), ShaderFilePath,
@@ -39,11 +44,20 @@ void FRenderer::Create(HWND hWindow)
 	Resources.FontShader.Create(Device.GetDevice(), FontShaderFilePath,
 		"VS_Font", "PS_Font", FontInputLayout, ARRAYSIZE(FontInputLayout));
 
+	Resources.SubUVShader.Create(Device.GetDevice(), SubUVShaderFilePath,
+		"VS_Sprite", "PS_Sprite", SubUVInputLayout, ARRAYSIZE(SubUVInputLayout));
+
 	Resources.PerObjectConstantBuffer.Create(Device.GetDevice(), sizeof(FTransformConstants));
 	Resources.GizmoPerObjectConstantBuffer.Create(Device.GetDevice(), sizeof(FGizmoConstants));
 	Resources.OverlayConstantBuffer.Create(Device.GetDevice(), sizeof(FOverlayConstants));
 
+	Resources.SubUVConstantBuffer.Create(Device.GetDevice(), sizeof(FSubUVConstants));
+	Resources.FontConstantBuffer.Create(Device.GetDevice(), sizeof(FFontTransform));
+	Resources.FontColorConstantBuffer.Create(Device.GetDevice(), sizeof(FFontColor));
+
+
 	Resources.FontInstanceBuffer.CreateDynamic(Device.GetDevice(), 1024 * 4, sizeof(FFontInstance));
+
 
 	// 픽셀 셰이더를 통한 그리드 비활성화 -> Line은 PerObjectConstantBuffer로 그릴 수 있음
 	//Resources.EditorConstantBuffer.Create(Device.GetDevice(), sizeof(FEditorConstants));
@@ -51,6 +65,8 @@ void FRenderer::Create(HWND hWindow)
 	Resources.OutlineConstantBuffer.Create(Device.GetDevice(), sizeof(FOutlineConstants));
 
 	CreateWICTextureFromFile(Device.GetDevice(), Device.GetDeviceContext(), FontTextureFIlePath, nullptr, &Resources.FontAtlasSRV);
+
+	//여기에 SUb UV용 쉐이더 생성
 
 	//	MeshManager init
 	FMeshManager::Initialize();
@@ -71,7 +87,12 @@ void FRenderer::Release()
 	//Resources.EditorConstantBuffer.Release();
 	Resources.OutlineConstantBuffer.Release();
 
+	Resources.SubUVConstantBuffer.Release();
+
+
+
 	Resources.FontInstanceBuffer.Release();
+
 
 	if (Resources.FontAtlasSRV) {
 		Resources.FontAtlasSRV->Release();
@@ -103,8 +124,13 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 		Device.SetBlendState(EBlendState::Opaque);
 		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+
 		Resources.PrimitiveShader.Bind(context);
 		RenderComponentPass(context, InRenderBus);
+
+		//여기서부터 SubUV 출력
+		Resources.SubUVShader.Bind(context);
+		RenderSubUVCompPass(context, InRenderBus);
 	}
 
 	//	Grid And Box
@@ -161,6 +187,28 @@ void FRenderer::RenderComponentPass(ID3D11DeviceContext* InDeviceContext, const 
 	{
 		DrawCommand(InDeviceContext, command);
 	}
+}
+
+void FRenderer::RenderSubUVCompPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus)
+{
+
+	Device.SetDepthStencilState(EDepthStencilState::Default);
+	Device.SetBlendState(EBlendState::AlphaBlend);
+
+	//쉐이더 설정
+	TArray<FRenderCommand> cmdarrya = InRenderBus.GetSubUVCommands();
+	for (const FRenderCommand& command : cmdarrya)
+	{
+
+		//shaderTesourceView 설정
+		ID3D11ShaderResourceView* srv = RenderResourceManager.GetTexture(command.TextureID).ShaderResourceView;
+		
+		InDeviceContext->PSSetShaderResources(0, 1, &srv);
+		InDeviceContext->PSSetSamplers(0, 1, &(Device.SubUVSampler));
+		//대충 drawcommand 날리기
+		DrawUVCommand(InDeviceContext, command);
+	}
+
 }
 
 void FRenderer::RenderDepthLessPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus)
@@ -304,6 +352,7 @@ void FRenderer::RenderOutlinePass(ID3D11DeviceContext* InDeviceContext, const FR
 
 	for(const FRenderCommand& command : InRenderBus.GetSelectionOutlineCommands())
 	{
+
 		DrawCommand(InDeviceContext, command);
 	}
 }
@@ -382,6 +431,66 @@ void FRenderer::DrawCommand(ID3D11DeviceContext *InDeviceContext, const FRenderC
 	{
 		InDeviceContext->Draw(vertexCount, 0);
 	}
+}
+
+void FRenderer::DrawUVCommand(ID3D11DeviceContext* InDeviceContext, const FRenderCommand& InCommand)
+{
+
+	InDeviceContext->IASetInputLayout(Resources.SubUVShader.GetInputLayout());
+
+	if (InCommand.UVMeshBuffer ==  nullptr  || !InCommand.UVMeshBuffer->IsValid())
+	{
+		return;
+	}
+	//MVP 업데이트
+	Resources.PerObjectConstantBuffer.Update(
+		InDeviceContext,
+		&InCommand.TransformConstants,
+		sizeof(FTransformConstants)
+	);
+	ID3D11Buffer* cb = Resources.PerObjectConstantBuffer.GetBuffer();
+	InDeviceContext->VSSetConstantBuffers(0, 1, &cb);
+
+	//UV constant 업데이트 하기
+	Resources.SubUVConstantBuffer.Update(
+		InDeviceContext,
+		&InCommand.SubUVConstants,
+		sizeof(FSubUVConstants)
+	);
+	ID3D11Buffer* cbuv = Resources.SubUVConstantBuffer.GetBuffer();
+	InDeviceContext->VSSetConstantBuffers(1, 1, &cbuv);
+
+
+	uint32 offset = 0;
+
+	//버텍스 버퍼 불러오기
+	ID3D11Buffer* vertexBuffer = InCommand.UVMeshBuffer->GetFVertexBuffer().GetBuffer();
+	if (vertexBuffer == nullptr)
+	{
+		return;
+	}
+
+	uint32 vertexCount = InCommand.UVMeshBuffer->GetFVertexBuffer().GetVertexCount();
+	uint32 stride = InCommand.UVMeshBuffer->GetFVertexBuffer().GetStride();
+	if (vertexCount == 0 || stride == 0)
+	{
+		return;
+	}
+	InDeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+
+	//인덱스 버퍼 불러오기
+	ID3D11Buffer* indexBuffer = InCommand.UVMeshBuffer->GetFIndexBuffer().GetBuffer();
+	if (indexBuffer != nullptr)
+	{
+		uint32 indexCount = InCommand.UVMeshBuffer->GetFIndexBuffer().GetIndexCount();
+		InDeviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+		InDeviceContext->DrawIndexed(indexCount, 0, 0);
+	}
+	else
+	{
+		InDeviceContext->Draw(vertexCount, 0);
+	}
+
 }
 
 //	Present the rendered frame to the screen. 반드시 Render 이후에 호출되어야 함.

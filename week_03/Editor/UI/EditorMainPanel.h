@@ -19,11 +19,12 @@ using namespace common::structs;
 class FEditorMainPanel
 {
 private:
-	const char* PrimitiveTypes[3] =
+	const char* PrimitiveTypes[4] =
 	{
 		"Cube",
 		"Sphere",
-		"Plane"
+		"Plane",
+		"SubUV"
 	};
 	const char* UtilTypes[1] =
 	{

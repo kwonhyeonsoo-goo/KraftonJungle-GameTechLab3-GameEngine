@@ -347,6 +347,15 @@ void FD3DDevice::CreateSampler()
 	sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
 	Device->CreateSamplerState(&sampDesc, &FontSampler);
+
+	D3D11_SAMPLER_DESC sampDesc1 = {};
+	sampDesc1.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	sampDesc1.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	sampDesc1.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	sampDesc1.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	sampDesc1.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	sampDesc1.MaxLOD = D3D11_FLOAT32_MAX;
+	Device->CreateSamplerState(&sampDesc1, &SubUVSampler);
 }
 
 void FD3DDevice::ReleaseSampler()
