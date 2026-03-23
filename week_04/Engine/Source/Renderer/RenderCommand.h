@@ -30,9 +30,9 @@ struct ENGINE_API FTextRenderCommand
 
 struct ENGINE_API FSubUVRenderCommand
 {
-	FVector WorldPosition;
+	FMatrix WorldMatrix = FMatrix::Identity;
 	FVector2 Size;
-	FVector4 Color;
+
 	int32 Columns;
 	int32 Rows;
 	int32 TotalFrames;

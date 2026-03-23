@@ -30,7 +30,7 @@ public:
 	);
 
 	void DrawSubUV(
-		const FVector& WorldPosition,
+		const FMatrix& WorldMatrix,
 		const FVector2& Size,
 		int32 Columns,
 		int32 Rows,

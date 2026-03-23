@@ -51,5 +51,5 @@ private:
 	float FPS = 8.0f;
 
 	bool bLoop = true;
-	bool bBillboard = true;
+	bool bBillboard = false;
 };

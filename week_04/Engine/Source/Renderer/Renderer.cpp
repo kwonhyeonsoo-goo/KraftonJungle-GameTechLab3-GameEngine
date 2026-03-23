@@ -501,7 +501,7 @@ void CRenderer::ExecuteCommands()
 		for (const FSubUVRenderCommand& Cmd : SubUVCommandList)
 		{
 			SubUVRenderer.DrawSubUV(
-				Cmd.WorldPosition,
+				Cmd.WorldMatrix,
 				Cmd.Size,
 				Cmd.Columns,
 				Cmd.Rows,

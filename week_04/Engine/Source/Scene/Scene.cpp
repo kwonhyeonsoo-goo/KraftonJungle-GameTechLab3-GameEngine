@@ -561,7 +561,7 @@ void UScene::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue&
 		{
 			USubUVComponent* SubUVComponent = static_cast<USubUVComponent*>(PrimitiveComponent);
 			FSubUVRenderCommand SubUVCmd;
-			SubUVCmd.WorldPosition = SubUVComponent->GetWorldLocation();
+			SubUVCmd.WorldMatrix = SubUVComponent->GetWorldTransform();
 			SubUVCmd.Size = SubUVComponent->GetSize();
 			SubUVCmd.Columns = SubUVComponent->GetColumns();
 			SubUVCmd.Rows = SubUVComponent->GetRows();

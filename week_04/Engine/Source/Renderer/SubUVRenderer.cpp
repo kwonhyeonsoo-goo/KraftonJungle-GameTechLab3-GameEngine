@@ -357,7 +357,7 @@ void CSubUVRenderer::UpdateSubUVCB(
 }
 
 void CSubUVRenderer::DrawSubUV(
-	const FVector& WorldPosition,
+	const FMatrix& WorldMatrix,
 	const FVector2& Size,
 	int32 Columns,
 	int32 Rows,
@@ -462,15 +462,18 @@ void CSubUVRenderer::DrawSubUV(
 		DeviceContext->Unmap(DynamicIndexBuffer, 0);
 	}
 
-	FMatrix World = FMatrix::Identity;
+	FMatrix World = WorldMatrix;
 
 	if (bBillboard)
 	{
-		World = FMatrix::MakeBillboard(WorldPosition, CameraPosition);
+		const FVector WorldPosition = WorldMatrix.GetTranslation();
+		const FVector WorldScale = WorldMatrix.GetScaleVector();
+
+		World = FMatrix::MakeScale(WorldScale) * FMatrix::MakeBillboard(WorldPosition, CameraPosition);
 	}
 	else
 	{
-		World = FMatrix::MakeTranslation(WorldPosition);
+		World = WorldMatrix;
 	}
 
 	UpdateObjectCB(World);
