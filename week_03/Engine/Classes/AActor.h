@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Object/Object.h"
 #include "Object/ObjectFactory.h"
 #include "World/SceneComponent.h"
@@ -8,6 +8,8 @@ class UScene;
 class AActor : public UObject{
 public:
 	DECLARE_CLASS(AActor, UObject)
+
+	// Lifecycle
 	AActor() = default;
 	~AActor() override;
 
@@ -20,6 +22,7 @@ public:
 	}
 	virtual void EndPlay() {}
 
+	// Component management
 	template<typename T>
 	T* AddComponent() {
 		auto WeakComp = UObjectManager::Get().CreateObject<T>();
@@ -43,48 +46,23 @@ public:
 		return component;
 	}
 
-	USceneComponent* AddComponent(USceneComponent* ExistingComp) {
-		if (!ExistingComp) return nullptr;
+	USceneComponent* AddComponent(USceneComponent* ExistingComp);
+	void             RemoveComponent(USceneComponent* Component);
+	void             SetRootComponent(USceneComponent* Comp);
 
-		if (!RootComponent) {
-			RootComponent = ExistingComp;
-			RootComponent->SetWorldLocation(PendingActorLocation);
-		}
-		else {
-			ExistingComp->SetParent(RootComponent);
-		}
+	USceneComponent*                 GetRootComponent() const { return RootComponent; }
+	const TArray<USceneComponent*>&  GetComponents()    const { return Components; }
 
-		RegisterComponentRecursive(ExistingComp);
-		return ExistingComp;
-	}
-
-	void RemoveComponent(USceneComponent* Component){
-		if (!Component) return;
-
-		auto it = std::find(Components.begin(),
-			Components.end(), Component);
-		if (it != Components.end())
-			Components.erase(it);
-
-		if (RootComponent == Component)
-			RootComponent = Components.empty()
-			? nullptr
-			: Components[0];
-
-		UObjectManager::Get().DestroyObject(Component);
-	}
-
-	void SetRootComponent(USceneComponent* Comp) {
-		if (!Comp) return;
-		RootComponent = Comp;
-		Components.clear(); // rebuild from scratch
-		RegisterComponentRecursive(Comp);
-	}
-
-	USceneComponent* GetRootComponent() const { return RootComponent; }
-	const TArray<USceneComponent*>& GetComponents() const { return Components; }
+	// Transform
 	FVector GetActorLocation() const;
-	void SetActorLocation(const FVector& Location);
+	virtual void SetActorLocation(const FVector& Location);
+	virtual void SetActorRotation(const FVector& Rotation);
+	virtual void SetActorScale(const FVector& Scale);
+	FVector GetActorLocation();
+	FVector GetActorRotation();
+	FVector GetActorScale();
+	virtual void Transformed() {}
+
 	FVector GetActorForward() const
 	{
 		if (RootComponent)
@@ -92,12 +70,13 @@ public:
 		return FVector(0, 0, 1);
 	}
 
-	void SetOwnerUUID(uint32 SceneUUID) { OwningSceneUUID = SceneUUID; }
-	uint32 GetOwnerUUID() const { return OwningSceneUUID; }
-	//UScene* GetOwner();
+	// Owner
+	void   SetOwnerUUID(uint32 SceneUUID) { OwningSceneUUID = SceneUUID; }
+	uint32 GetOwnerUUID()           const { return OwningSceneUUID; }
 
-	bool IsVisible() const { return bVisible; }
-	void SetVisible(bool Visible) { bVisible = Visible; }
+	// Visibility
+	bool IsVisible()              const { return bVisible; }
+	void SetVisible(bool Visible)       { bVisible = Visible; }
 
 protected:
 	USceneComponent* RootComponent = nullptr;
@@ -107,7 +86,7 @@ protected:
 	bool bVisible = true;
 
 	TArray<USceneComponent*> Components;
-	
+
 private:
 	void RegisterComponentRecursive(USceneComponent* Comp);
 };

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Render/Common/RenderTypes.h"
 
@@ -8,11 +8,11 @@
 #include "Core/RayTypes.h"
 #include "Core/CollisionTypes.h"
 #include "Core/Common.h"
+#include "World/Gizmo/GizmoManager.h"
 
 class UScene;
 class UCamera;
-class UGizmoComponent;
- 
+
 using namespace common::structs;
 
 class FEditorViewportClient
@@ -22,9 +22,9 @@ public:
 	weak_ptr<UCamera> GetCamera() { return Camera; }
 	void SetScene(weak_ptr<UScene> InScene) { Scene = InScene; }
 	void SetCamera(weak_ptr<UCamera> InCamera) { Camera = InCamera; }
-	void SetGizmo(weak_ptr<UGizmoComponent> InGizmo) { Gizmo = InGizmo; }
-	weak_ptr<UGizmoComponent> GetGizmo() { return Gizmo; }
 	void SetViewportSize(float InWidth, float InHeight);
+
+	FGizmoManager& GetGizmoManager() { return GizmoManager; }
 
 	void Tick(float DeltaTime);
 
@@ -46,19 +46,19 @@ private:
 
 private:
 	HWND HWindow = nullptr;
-	weak_ptr<UScene> Scene;
-	weak_ptr<UCamera> Camera;
-	weak_ptr<UGizmoComponent> Gizmo;
+	weak_ptr<UScene>   Scene;
+	weak_ptr<UCamera>  Camera;
+	FGizmoManager      GizmoManager;
 
 	float CameraVelocity = 10.f;
 	float CameraAngleVelocity = 60.f;
 	FVector InitViewPos = FVector(10, 0, 5);
-	FVector InitLookAt = FVector(0, 0, 0);
-	float WindowWidth = 1920.f;
+	FVector InitLookAt  = FVector(0, 0, 0);
+	float WindowWidth  = 1920.f;
 	float WindowHeight = 1080.f;
 
 	bool bIsCursorVisible = true;
 
 	FCursorOverlayState CursorOverlayState;
-	FViewOutput ViewOutput;
+	FViewOutput         ViewOutput;
 };

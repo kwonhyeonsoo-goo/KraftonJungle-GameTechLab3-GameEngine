@@ -1,5 +1,6 @@
 #pragma once
 #include "Scene.h"
+#include "Classes/Actors.h"
 
 class FSceneManager {
 public:
@@ -21,6 +22,12 @@ public:
 	AActor* SpawnPrimitiveActor(const FVector& Location) {
 		if (!ActiveScene) { return nullptr; }
 		return ActiveScene->SpawnPrimitiveActor<T>(Location);
+	}
+
+	template <typename T>
+	AActor* SpawnUtilActor(const FVector& Location) {
+		if (!ActiveScene) { return nullptr; }
+		return ActiveScene->SpawnUtilActor<T>(Location);
 	}
 
 private:

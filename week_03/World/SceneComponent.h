@@ -54,9 +54,7 @@ public:
 	FVector GetForwardVector();
 	FVector GetUpVector();
 	FVector GetRightVector();
-
 	FVector GetScaleVector();
-
 	FMatrix GetRelativeMatrixTemp() const;
 
 	// Make sure we are not facing gimbal lock

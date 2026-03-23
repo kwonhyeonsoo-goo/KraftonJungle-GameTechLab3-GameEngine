@@ -11,11 +11,14 @@ void FBatchedLine::Release()
 }
 
 
-void FBatchedLine::AddGrid(int32 GridSize, int32 InGridMin, int32 InGridMax)
+void FBatchedLine::AddGrid(int32 GridSize)
 {
+	int32 GridMax = GridSize * 100;
+	int32 GridMin = -GridMax;
+	
 	FVector4 GridColor = { 0.38f, 0.38f, 0.38f, 1.f };
-	float FloatGridMin = static_cast<float>(InGridMin);
-	float FloatGridMax = static_cast<float>(InGridMax);
+	float FloatGridMin = static_cast<float>(GridMin);
+	float FloatGridMax = static_cast<float>(GridMax);
 
 	FVector4 AxisColor[3] = {
 		{1.f, 0.f, 0.f, 1.f},	
@@ -27,7 +30,7 @@ void FBatchedLine::AddGrid(int32 GridSize, int32 InGridMin, int32 InGridMax)
 	AddLine({ 0.f, FloatGridMin, 0.f }, { 0.f, FloatGridMax, 0.f }, AxisColor[1]); // Y
 	AddLine({ 0.f, 0.f, FloatGridMin }, { 0.f, 0.f, FloatGridMax }, AxisColor[2]); // Z
 
-	for (int32 GridIndex = GridSize; GridIndex <= InGridMax; GridIndex += GridSize)
+	for (int32 GridIndex = GridSize; GridIndex <= GridMax; GridIndex += GridSize)
 	{
 		float CurrentGrid = static_cast<float>(GridIndex);
 		AddLine({ FloatGridMin,  CurrentGrid, 0.f }, { FloatGridMax,  CurrentGrid, 0.f }, GridColor);

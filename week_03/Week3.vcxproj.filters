@@ -2,6 +2,8 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <FxCompile Include="FontShader.hlsl" />
+    <FxCompile Include="Assets\Shader\FontShader.hlsl" />
+    <FxCompile Include="Assets\Shader\ShaderW0.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DirectXTK\WICTextureLoader.cpp" />
@@ -12,7 +14,6 @@
     <ClCompile Include="Engine\Classes\AActor.cpp" />
     <ClCompile Include="Engine\Core\InputSystem.cpp" />
     <ClCompile Include="Engine\Core\Name.cpp" />
-    <ClCompile Include="Engine\Fonts\FontAtlas.cpp" />
     <ClCompile Include="Engine\Fonts\FontCache.cpp" />
     <ClCompile Include="Engine\Math\Matrix.cpp" />
     <ClCompile Include="Engine\Math\Utils.cpp" />
@@ -23,7 +24,6 @@
     <ClCompile Include="Engine\Render\Resource\Buffer.cpp" />
     <ClCompile Include="Engine\Render\Resource\MeshBufferManager.cpp" />
     <ClCompile Include="Engine\Render\Resource\Shader.cpp" />
-    <ClCompile Include="Engine\Render\Scene\LineBatch.cpp" />
     <ClCompile Include="Engine\Render\Scene\RenderBus.cpp" />
     <ClCompile Include="Engine\Render\Scene\RenderCollector.cpp" />
     <ClCompile Include="Engine\Runtime\EngineLoop.cpp" />
@@ -42,11 +42,19 @@
     <ClCompile Include="Object\ActorComponent.cpp" />
     <ClCompile Include="Object\EngineStatics.cpp" />
     <ClCompile Include="Object\Object.cpp" />
-    <ClCompile Include="World\GizmoComponent.cpp" />
     <ClCompile Include="World\Mesh\MeshManager.cpp" />
     <ClCompile Include="World\PrimitiveComponent.cpp" />
     <ClCompile Include="World\SceneComponent.cpp" />
     <ClCompile Include="World\Transform.cpp" />
+    <ClCompile Include="Engine\Classes\ASpotlight.cpp" />
+    <ClCompile Include="Engine\Render\Scene\BatchedLine.cpp" />
+    <ClCompile Include="Engine\Scene\Scene.cpp" />
+    <ClCompile Include="Engine\Scene\SceneManager.cpp" />
+    <ClCompile Include="World\Gizmo\GizmoComponent.cpp" />
+    <ClCompile Include="World\Gizmo\GizmoManager.cpp" />
+    <ClCompile Include="World\Primitives\CubeComponent.cpp" />
+    <ClCompile Include="World\Primitives\PlaneComponent.cpp" />
+    <ClCompile Include="World\Primitives\SphereComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DirectXTK\WICTextureLoader.h" />
@@ -66,7 +74,6 @@
     <ClInclude Include="Engine\Core\Name.h" />
     <ClInclude Include="Engine\Core\RayTypes.h" />
     <ClInclude Include="Engine\Fonts\DDSTextureLoader.h" />
-    <ClInclude Include="Engine\Fonts\FontAtlas.h" />
     <ClInclude Include="Engine\Fonts\FontCache.h" />
     <ClInclude Include="Engine\Math\Matrix.h" />
     <ClInclude Include="Engine\Math\Utils.h" />
@@ -81,7 +88,6 @@
     <ClInclude Include="Engine\Render\Resource\RenderResources.h" />
     <ClInclude Include="Engine\Render\Resource\Shader.h" />
     <ClInclude Include="Engine\Render\Resource\VertexTypes.h" />
-    <ClInclude Include="Engine\Render\Scene\LineBatch.h" />
     <ClInclude Include="Engine\Render\Scene\RenderBus.h" />
     <ClInclude Include="Engine\Render\Scene\RenderCollector.h" />
     <ClInclude Include="Engine\Render\Scene\RenderCollectorContext.h" />
@@ -104,21 +110,51 @@
     <ClInclude Include="Object\Object.h" />
     <ClInclude Include="Object\ObjectFactory.h" />
     <ClInclude Include="SimpleJSON\json.hpp" />
-    <ClInclude Include="World\GizmoComponent.h" />
     <ClInclude Include="World\Mesh\MeshManager.h" />
     <ClInclude Include="World\PrimitiveComponent.h" />
     <ClInclude Include="World\SceneComponent.h" />
     <ClInclude Include="World\Transform.h" />
+    <ClInclude Include="Engine\Classes\Actors.h" />
+    <ClInclude Include="Engine\Classes\ASpotlight.h" />
+    <ClInclude Include="Engine\Render\Scene\BatchedLine.h" />
+    <ClInclude Include="Engine\Scene\Scene.h" />
+    <ClInclude Include="Engine\Scene\SceneManager.h" />
+    <ClInclude Include="World\Gizmo\GizmoComponent.h" />
+    <ClInclude Include="World\Gizmo\GizmoManager.h" />
+    <ClInclude Include="World\Primitives\CubeComponent.h" />
+    <ClInclude Include="World\Primitives\PlaneComponent.h" />
+    <ClInclude Include="World\Primitives\SphereComponent.h" />
+    <ClInclude Include="Editor\UI\Inspector\Inspector.h" />
   </ItemGroup>
   <ItemGroup>
-     <ClCompile Include="Engine\Scene\SceneManager.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-     <ClInclude Include="Engine\Scene\SceneManager.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <Image Include="Engine\Fonts\font.dds" />
-    <Image Include="Engine\Fonts\font.png" />
+    <Image Include="Assets\Fonts\DDS\AFont.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_1.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_10.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_11.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_12.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_2.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_3.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_4.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_5.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_6.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_7.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_8.dds" />
+    <Image Include="Assets\Fonts\DDS\KFont_9.dds" />
+    <Image Include="Assets\Fonts\Font.dds" />
+    <Image Include="Assets\Fonts\Font.png" />
+    <Image Include="Assets\Fonts\PNG\AFont.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_1.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_10.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_11.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_12.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_2.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_3.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_4.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_5.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_6.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_7.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_8.png" />
+    <Image Include="Assets\Fonts\PNG\KFont_9.png" />
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />

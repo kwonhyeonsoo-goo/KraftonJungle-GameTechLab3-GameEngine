@@ -20,6 +20,7 @@ private:
 	static FMeshData RotationGizmoMeshData;
 	static FMeshData ScaleGizmoMeshData;
 	static FUVMeshData UVRectMeshData;
+	static FMeshData QuadVertexData;
 	//static FMeshData AxisMeshData;
 	// 
 	//static FMeshData GridMeshData;
@@ -34,6 +35,8 @@ private:
 	static void CreateRotationGizmo();
 	static void CreateScaleGizmo();
 	static void CreateUVRect();
+	static void CreateQuad();
+
 	//static void CreateAxis();
 	//static void CreateGrid();
 
@@ -67,6 +70,7 @@ public:
 	static const FMeshData& GetRotationGizmo() { return Get().RotationGizmoMeshData; }
 	static const FMeshData& GetScaleGizmo() { return Get().ScaleGizmoMeshData; }
 	static const FMeshData& GetBox() { return Get().BoxMeshData; };
+	static const FMeshData& GetQuad() { return Get().QuadVertexData; };
 	//static const FMeshData& GetAxis() { return Get().AxisMeshData; }
 	//static const FMeshData& GetGrid() { return Get().GridMeshData; }
 	static const FUVMeshData& GetUVRect() { return Get().UVRectMeshData; };

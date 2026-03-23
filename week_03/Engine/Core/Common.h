@@ -15,10 +15,10 @@ namespace common {
 			namespace ASpotlight {
 				const float DefaultConeHeight = 12.0f;
 				const float DefaultRadius = 4.5f;
-				const size_t DefaultSphereVertex = 10;
+				const size_t DefaultCircleVertex = 100;
 			}
 		}
-		namespace ImGui {
+		namespace imgui {
 			const float NotificationTimer = 1.5f;
 		}
 	}

@@ -10,6 +10,7 @@
 class FRenderer;
 class FEditorEngine;
 class FEditorViewportClient;
+class AActor;
 
 enum class EPrimitiveType;
 
@@ -25,10 +26,15 @@ private:
 		"Plane",
 		"SubUV"
 	};
+	const char* UtilTypes[1] =
+	{
+		"Spotlight"
+	};
 	FEditorEngine* EditorEngine = nullptr;
 	FRenderer* Renderer;
 	FEditorViewportClient* Viewport;
 
+	int SelectedUtilityActorType = 0;
 	int SelectedPrimitiveType = 0;
 	int NumberOfSpawnedActors = 1;
 	FVector CurSpawnPoint = { 0.f,0.f,0.f };
@@ -44,12 +50,15 @@ private:
 	uint32 SelectedActorIndex = 0;
 
 	FEditorConsole ConsoleInstance;
+
+private:
+	void RenderObjectManager(FViewOutput& ViewOutput);
+	void RenderPickedObjectWindow(UObject*& Object);
+	void RenderPickedActorWindow(AActor* Actor);
 	
 public:
 	void Create(HWND InHWindow, FRenderer& InRenderer, FEditorEngine* InEditorEngine, FEditorViewportClient* InEditorViewport);
 	void Release();
 	void Render(float DeltaTime, FViewOutput& ViewOutput);
-	void RenderObjectManager(FViewOutput& ViewOutput);
-	void RenderObjectWindow(UObject*& Object);
 	void Update();
 };

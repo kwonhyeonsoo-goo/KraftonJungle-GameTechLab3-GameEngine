@@ -2,7 +2,7 @@
 #include "World/Mesh/MeshManager.h"
 
 DEFINE_CLASS(USphereComponent, UPrimitiveComponent)
-REGISTER_FACTORY(USphereComponent, UPrimitiveComponent)
+REGISTER_FACTORY(USphereComponent)
 
 USphereComponent::USphereComponent()
 {

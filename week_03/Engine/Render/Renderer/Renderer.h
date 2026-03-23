@@ -60,10 +60,22 @@ private:
 	};
 
 	// Font Input Layout
-	D3D11_INPUT_ELEMENT_DESC FontInputLayout[2] =
+	D3D11_INPUT_ELEMENT_DESC FontInputLayout[11] =
 	{
+		// slot 0 : Vertex Buffer
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+
+		// slot 1 : Instance Buffer
+		{ "MVP", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1,  0, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MVP", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MVP", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MVP", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 48, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "PEN_POS",   0, DXGI_FORMAT_R32G32_FLOAT,       1, 64, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "CELL_SIZE", 0, DXGI_FORMAT_R32G32_FLOAT,       1, 72, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "START_UV",  0, DXGI_FORMAT_R32G32_FLOAT,       1, 80, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "UV_SIZE",   0, DXGI_FORMAT_R32G32_FLOAT,       1, 88, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "COLOR",     0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 96, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 	};
 
 	// Font Input Layout
@@ -87,7 +99,7 @@ private:
 	void RenderLineBatchPass(ID3D11DeviceContext* InDeviceContext, FRenderBus& InRenderBus);
 
 	void DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InRenderBus);
-	void RenderFont(ID3D11DeviceContext* InDeviceContext);
+	void RenderFont(ID3D11DeviceContext* InDeviceContext, FRenderBus& InRenderBus);
 
 	void RenderOverlayPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);
 	void RenderOutlinePass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus);

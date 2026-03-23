@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Math/Vector.h"
+#include "Math/Matrix.h"
 
 /*
 	Vertex 구조체들을 정의하는 Header입니다.
@@ -11,6 +12,7 @@ struct FVertex
 { 
 	FVector Position;
 	FVector4 Color;
+    float U, V;
 	int SubID;
 
     // TMap을 위한 연산자 오버로딩
@@ -71,14 +73,21 @@ struct FMeshData
 	TArray<uint32> Indices;
 };
 
+
 struct FUVMeshData
 {
     TArray<FUVVertex> Vertices;
     TArray<uint32> Indices;
 };
 
-struct FFontVertex
+
+struct FFontInstance
+
 {
-	FVector Position;
-	float U, V;     // UV
+    FMatrix MVP;
+    float PenX, PenY;
+    float CellW, CellH; 
+    float StartU, StartV;
+    float USize, VSize;
+    FVector4 Color;
 };

@@ -15,13 +15,8 @@ struct FRenderResources
     FConstantBuffer OverlayConstantBuffer;          // b2
     //FConstantBuffer EditorConstantBuffer;           // b3
 	FConstantBuffer OutlineConstantBuffer;          // b4
-
-    FConstantBuffer FontConstantBuffer;             // b0
-    FConstantBuffer FontColorConstantBuffer;        // b1
-    FConstantBuffer SubUVConstantBuffer;        // b1
-
-
-    FVertexBuffer FontVertexBuffer;
+  
+    FInstanceBuffer FontInstanceBuffer;
 
     FShader PrimitiveShader;
     FShader GizmoShader;

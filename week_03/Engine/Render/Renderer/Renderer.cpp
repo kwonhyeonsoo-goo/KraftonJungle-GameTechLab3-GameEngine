@@ -50,11 +50,14 @@ void FRenderer::Create(HWND hWindow)
 	Resources.PerObjectConstantBuffer.Create(Device.GetDevice(), sizeof(FTransformConstants));
 	Resources.GizmoPerObjectConstantBuffer.Create(Device.GetDevice(), sizeof(FGizmoConstants));
 	Resources.OverlayConstantBuffer.Create(Device.GetDevice(), sizeof(FOverlayConstants));
+
 	Resources.SubUVConstantBuffer.Create(Device.GetDevice(), sizeof(FSubUVConstants));
 	Resources.FontConstantBuffer.Create(Device.GetDevice(), sizeof(FFontTransform));
 	Resources.FontColorConstantBuffer.Create(Device.GetDevice(), sizeof(FFontColor));
 
-	Resources.FontVertexBuffer.CreateDynamic(Device.GetDevice(), sizeof(FFontVertex), 1024 * 4);
+
+	Resources.FontInstanceBuffer.CreateDynamic(Device.GetDevice(), 1024 * 4, sizeof(FFontInstance));
+
 
 	// 픽셀 셰이더를 통한 그리드 비활성화 -> Line은 PerObjectConstantBuffer로 그릴 수 있음
 	//Resources.EditorConstantBuffer.Create(Device.GetDevice(), sizeof(FEditorConstants));
@@ -83,10 +86,13 @@ void FRenderer::Release()
 	Resources.OverlayConstantBuffer.Release();
 	//Resources.EditorConstantBuffer.Release();
 	Resources.OutlineConstantBuffer.Release();
+
 	Resources.SubUVConstantBuffer.Release();
-	Resources.FontColorConstantBuffer.Release();
-	Resources.FontConstantBuffer.Release();
-	Resources.FontVertexBuffer.Release();
+
+
+
+	Resources.FontInstanceBuffer.Release();
+
 
 	if (Resources.FontAtlasSRV) {
 		Resources.FontAtlasSRV->Release();
@@ -132,12 +138,15 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 	Device.SetDepthStencilState(EDepthStencilState::Default);
 	RenderLineBatchPass(context, InRenderBus);
 
-	//	Selection Outline (Stencil)
-	Device.SetDepthStencilState(EDepthStencilState::StencilOutline);
-	Device.SetRasterizerState(ERasterizerState::SolidFrontCull);
-	Device.SetBlendState(EBlendState::Opaque);
-	Resources.OutlineShader.Bind(context);
-	RenderOutlinePass(context, InRenderBus);
+
+	if (showFlag & (uint64)EEngineShowFlags::SF_Primitives) {
+		//	Selection Outline (Stencil)
+		Device.SetDepthStencilState(EDepthStencilState::StencilOutline);
+		Device.SetRasterizerState(ERasterizerState::SolidFrontCull);
+		Device.SetBlendState(EBlendState::Opaque);
+		Resources.OutlineShader.Bind(context);
+		RenderOutlinePass(context, InRenderBus);
+	}
 
 	// Gizmo (Depth-less Variable)
 	Device.SetBlendState(EBlendState::Opaque);
@@ -246,49 +255,16 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 {
 	FFontCache& FontCache = InRenderBus.GetFontCache();
 
-	TArray<FFontVertex> vertices;
+	TArray<FFontInstance> Instances;
 
 	float FontScale = 0.1f;
 	const float CellW = (float)FontCache.GetFontData().CellWidth * FontScale;
 	const float CellH = (float)FontCache.GetFontData().CellHeight * FontScale;
 
 	for (const auto& Cmd : InRenderBus.GetFontCommands()) {
-		vertices.clear();
+		FVector4 colorData = Cmd.FontColor;
 
-		std::wstring Text = L"뷁웱꿱켘흫쀆\n유유아이디\nUUID:" + std::to_wstring(Cmd.UUID);
-
-		float TotalWidth = CellW * Text.size();
-		float PenX = -TotalWidth * 0.5f;  // 중앙 정렬
-		float PenY = -CellH * 0.5f;
-
-		for (TCHAR c : Text)
-		{
-			if (c == TEXT(' ')) { PenX += CellW; continue; }
-			if (c == TEXT('\n')) { PenX = -TotalWidth * 0.5f; PenY -= CellH; continue; }
-
-			uint32 base = (uint32)vertices.size();
-
-			FCharacterInfo CI = FontCache.GetCharacterAtlasData(c);
-
-			// CCW, Z up
-			vertices.push_back({ {PenX,         0, PenY        }, CI.StartU,            CI.StartV + CI.VSize }); // 0 좌상
-			vertices.push_back({ {PenX + CellW, 0, PenY + CellH}, CI.StartU + CI.USize, CI.StartV }); // 2 우하
-			vertices.push_back({ {PenX,         0, PenY + CellH}, CI.StartU,            CI.StartV }); // 1 좌하
-
-			vertices.push_back({ {PenX,         0, PenY        }, CI.StartU,            CI.StartV + CI.VSize }); // 3 좌상
-			vertices.push_back({ {PenX + CellW, 0, PenY        }, CI.StartU + CI.USize, CI.StartV + CI.VSize }); // 5 우상
-			vertices.push_back({ {PenX + CellW, 0, PenY + CellH}, CI.StartU + CI.USize, CI.StartV }); // 4 우하
-
-			PenX += CellW;
-		}
-
-		if (vertices.empty()) return;
-
-		Resources.FontVertexBuffer.FontUpdate(InDeviceContext, vertices);
-
-		FFontColor colorData = Cmd.FontColor;
-		Resources.FontColorConstantBuffer.Update(InDeviceContext, &colorData, sizeof(colorData));
-
+		// 각 String의 MVP
 		// View^(-1) (Z up) -> 전치
 		FMatrix View = InRenderBus.GetCachedView();
 
@@ -304,36 +280,63 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 		FMatrix Translation = FMatrix::MakeTranslationMatrix(Cmd.FontPosition);
 
 		FMatrix Model = ScaleMatrix * BillboardRotation * Translation;
+		FMatrix MVP = Model * View * InRenderBus.GetCachedProjection();
 
-		FFontTransform FontConstants;
-		FontConstants.MVP = Model * View * InRenderBus.GetCachedProjection();
+		// String, UV값
+		std::wstring Text = L"윢윩앏있띻\nUUID:" + std::to_wstring(Cmd.UUID);
 
-		Resources.FontConstantBuffer.Update(InDeviceContext, &FontConstants, sizeof(FontConstants));
+		float TotalWidth = CellW * Text.size();
+		float PenX = -TotalWidth * 0.5f;  // 중앙 정렬
+		float PenY = -CellH * 0.5f;
 
-		RenderFont(InDeviceContext);
+		for (TCHAR c : Text)
+		{
+			if (c == TEXT(' ')) { PenX += CellW; continue; }
+			if (c == TEXT('\n')) { PenX = -TotalWidth * 0.5f; PenY -= CellH; continue; }
+
+			uint32 base = (uint32)Instances.size();
+
+			FCharacterInfo CI = FontCache.GetCharacterAtlasData(c);
+
+			// 인스턴스 저장 -> GPU에서 사용
+			Instances.push_back({
+				MVP, 
+				PenX, PenY,
+				CellW, CellH,
+				CI.StartU, CI.StartV, 
+				CI.USize, CI.VSize, 
+				Cmd.FontColor });
+
+			PenX += CellW;
+		}
 	}
+	if (Instances.empty()) return;
+
+	// Instance Buffer 업데이트
+	Resources.FontInstanceBuffer.FontUpdate(InDeviceContext, Instances);
+
+	RenderFont(InDeviceContext, InRenderBus);
 }
 
-void FRenderer::RenderFont(ID3D11DeviceContext* InDeviceContext)
+void FRenderer::RenderFont(ID3D11DeviceContext* InDeviceContext, FRenderBus& InRenderBus)
 {
 	InDeviceContext->IASetInputLayout(Resources.FontShader.GetInputLayout());
 	InDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	UINT stride = sizeof(FFontVertex), offset = 0;
-	ID3D11Buffer* VertexBuffer = Resources.FontVertexBuffer.GetBuffer();
-	InDeviceContext->IASetVertexBuffers(0, 1, &VertexBuffer, &stride, &offset);
+	UINT strides[2] = { sizeof(FVertex), sizeof(FFontInstance) };
+	UINT offsets[2] = { 0, 0 };
+	ID3D11Buffer* Buffers[2] = {
+		InRenderBus.GetFontCommands()[0].MeshBuffer->GetFVertexBuffer().GetBuffer(),
+		Resources.FontInstanceBuffer.GetBuffer(),
+	};
+	InDeviceContext->IASetVertexBuffers(0, 2, Buffers, strides, offsets);
 
 	InDeviceContext->VSSetShader(Resources.FontShader.GetVertexShader(), nullptr, 0);
 	InDeviceContext->PSSetShader(Resources.FontShader.GetPixelShader(), nullptr, 0);
 
 	InDeviceContext->PSSetShaderResources(0, 1, &Resources.FontAtlasSRV);
 
-	ID3D11Buffer* ConstantBuffer = Resources.FontConstantBuffer.GetBuffer();
-	InDeviceContext->VSSetConstantBuffers(0, 1, &ConstantBuffer);
-	ID3D11Buffer* ColorConstantBuffer = Resources.FontColorConstantBuffer.GetBuffer();
-	InDeviceContext->PSSetConstantBuffers(1, 1, &ColorConstantBuffer);
-
-	InDeviceContext->Draw(Resources.FontVertexBuffer.GetVertexCount(), 0);
+	InDeviceContext->DrawInstanced(6, Resources.FontInstanceBuffer.GetInstanceCount(), 0, 0);
 }
 
 void FRenderer::RenderOverlayPass(ID3D11DeviceContext* InDeviceContext, const FRenderBus& InRenderBus)

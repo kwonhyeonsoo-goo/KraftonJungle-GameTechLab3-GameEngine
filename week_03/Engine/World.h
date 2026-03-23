@@ -27,6 +27,13 @@ public:
         return Actor;
     }
 
+    template <typename T>
+    AActor* SpawnUtilActor(const FVector& Location) {
+        AActor* Actor = SceneManager.SpawnUtilActor<T>(Location);
+        Actor->BeginPlay();
+        return Actor;
+    }
+
 private:
     FSceneManager SceneManager;     // Has no independent lifetime = value member
     UScene* CurrentScene = nullptr;

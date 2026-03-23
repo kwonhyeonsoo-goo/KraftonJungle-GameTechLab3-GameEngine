@@ -82,7 +82,9 @@ void FEditorEngine::BeginFrame(float DeltaTime)
 
 void FEditorEngine::Update(float DeltaTime)
 {
+
 	//USubUVComponent::UpdateFrame(DeltaTime);
+
 	UpdateWorld(DeltaTime);
 }
 
@@ -116,12 +118,12 @@ void FEditorEngine::BuildRenderCommands()
 	FRenderCollectorContext Context;
 	Context.Scene = EditorWorld.lock()->GetActiveScene().lock().get();
 	Context.Camera = ViewportClient.GetCamera().lock().get();
-	Context.Gizmo = ViewportClient.GetGizmo().lock().get();
+	FGizmoManager& GizmoManager = ViewportClient.GetGizmoManager();
+	Context.Gizmo = GizmoManager.GetComponent().lock().get();
 	Context.CursorOverlayState = &ViewportClient.GetCursorOverlayState();
 	Context.ViewportHeight = WindowHeight;
 	Context.ViewportWidth = WindowWidth;
-	auto GizmoPtr = ViewportClient.GetGizmo().lock();
-	Context.SelectedComponent = GizmoPtr && GizmoPtr->HasTarget() ? (UPrimitiveComponent*)GizmoPtr->GetTarget() : nullptr;
+	Context.SelectedComponent = GizmoManager.HasTarget() ? (UPrimitiveComponent*)GizmoManager.GetTarget() : nullptr;
 	Context.GridSize = GridSize;
 
 	FRenderCollector::Collect(Context, RenderBus);

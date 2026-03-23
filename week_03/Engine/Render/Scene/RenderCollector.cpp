@@ -1,8 +1,8 @@
 ﻿#include "RenderCollector.h"
-
-#include "World.h"
 #include "Engine/Scene/Camera.h"
-#include "World/GizmoComponent.h"
+#include "World.h"
+#include "World/Gizmo/GizmoComponent.h"
+#include "Classes/ASpotlight.h"
 
 FMeshBufferManager FRenderCollector::MeshBufferManager;
 
@@ -46,7 +46,10 @@ void FRenderCollector::CollectFromActor(AActor* Actor, const FRenderCollectorCon
 
 		UPrimitiveComponent* Primitive = static_cast<UPrimitiveComponent*>(Comp);
 		CollectFromComponent(Primitive, Context, RenderBus);
+	}
 
+	if (Actor->IsA<ASpotlight>()) {
+		ASpotlight::Cast(Actor)->AddConeLinesToBatch(RenderBus.GetBatehdLine());
 	}
 }
 
@@ -58,9 +61,11 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* primitiveCompon
 	Cmd.TransformConstants = FTransformConstants{ primitiveComponent->GetWorldMatrix(), Context.Camera->GetViewMatrix(), Context.Camera->GetProjectionMatrix() };
 
 	FRenderCommand FontCmd = {};
+	FontCmd.Type = ERenderCommandType::Font;
+	FontCmd.MeshBuffer = &MeshBufferManager.GetMeshBuffer(EPrimitiveType::EPT_Quad);
 	FontCmd.FontPosition = primitiveComponent->GetWorldLocation();
 	FontCmd.FontPosition.Z += 1.0f;
-	FontCmd.FontColor = FFontColor{ FVector4(1, 1, 1, 1) };
+	FontCmd.FontColor = FVector4(1, 1, 1, 1);
 	FontCmd.UUID = primitiveComponent->UUID;
 	RenderBus.AddFontCommand(FontCmd);
 
@@ -114,7 +119,7 @@ void FRenderCollector::CollectFromEditor(const FRenderCollectorContext& Context,
 	if (Context.SelectedComponent)
 	{
 		FBoundingBox AABB = Context.SelectedComponent->GetBoundingBox();
-		RenderBus.GetBatehdLine()->AddAABB(AABB.WorldAABBMinLocation, AABB.WorldAABBMaxLocation);
+		BatchLine->AddAABB(AABB.WorldAABBMinLocation, AABB.WorldAABBMaxLocation);
 	}
 
 	if (Gizmo && Gizmo->IsVisible())

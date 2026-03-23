@@ -1,4 +1,4 @@
-﻿#include "Classes/AActor.h"
+#include "Classes/AActor.h"
 #include "Scene/Scene.h"
 
 DEFINE_CLASS(AActor, UObject)
@@ -13,6 +13,44 @@ AActor::~AActor() {
 
 	Components.clear();
 	RootComponent = nullptr;
+}
+
+USceneComponent* AActor::AddComponent(USceneComponent* ExistingComp) {
+	if (!ExistingComp) return nullptr;
+
+	if (!RootComponent) {
+		RootComponent = ExistingComp;
+		RootComponent->SetWorldLocation(PendingActorLocation);
+	}
+	else {
+		ExistingComp->SetParent(RootComponent);
+	}
+
+	RegisterComponentRecursive(ExistingComp);
+	return ExistingComp;
+}
+
+void AActor::RemoveComponent(USceneComponent* Component) {
+	if (!Component) return;
+
+	auto it = std::find(Components.begin(),
+		Components.end(), Component);
+	if (it != Components.end())
+		Components.erase(it);
+
+	if (RootComponent == Component)
+		RootComponent = Components.empty()
+		? nullptr
+		: Components[0];
+
+	UObjectManager::Get().DestroyObject(Component);
+}
+
+void AActor::SetRootComponent(USceneComponent* Comp) {
+	if (!Comp) return;
+	RootComponent = Comp;
+	Components.clear(); // rebuild from scratch
+	RegisterComponentRecursive(Comp);
 }
 
 FVector AActor::GetActorLocation() const {
@@ -30,12 +68,41 @@ void AActor::SetActorLocation(const FVector& NewLocation) {
 	}
 }
 
-//UScene* AActor::GetOwner() {
-//	if (OwningSceneUUID <= 0) return nullptr;
-//	UObject* Obj = UObjectManager::Get().FindByUUID(OwningSceneUUID);
-//	if (!Obj || !Obj->IsA<UScene>()) return nullptr;
-//	return Obj->Cast<UScene>();
-//}
+void AActor::SetActorRotation(const FVector& Rotation) {
+	if (RootComponent) {
+		RootComponent->SetRelativeRotation(Rotation);
+	}
+}
+
+void AActor::SetActorScale(const FVector& Scale) {
+	if (RootComponent) {
+		RootComponent->SetRelativeScale(Scale);
+	}
+}
+
+FVector AActor::GetActorLocation() {
+	FVector Vec(0, 0, 0);
+	if (RootComponent) {
+		Vec = RootComponent->GetWorldLocation();
+	}
+	return Vec;
+}
+
+FVector AActor::GetActorRotation() {
+	FVector Vec(0, 0, 0);
+	if (RootComponent) {
+		Vec = RootComponent->GetRelativeRotation();
+	}
+	return Vec;
+}
+
+FVector AActor::GetActorScale() {
+	FVector Vec(0, 0, 0);
+	if (RootComponent) {
+		Vec = RootComponent->GetRelativeScale();
+	}
+	return Vec;
+}
 
 void AActor::RegisterComponentRecursive(USceneComponent* Comp) {
 	if (!Comp) return;

@@ -115,22 +115,73 @@ void FVertexBuffer::Update(ID3D11DeviceContext* InDeviceContext, const TArray<FV
 	VertexCount = static_cast<uint32>(InData.size());
 }
 
-void FVertexBuffer::FontUpdate(ID3D11DeviceContext* InDeviceContext, const TArray<FFontVertex>& InData)
+ID3D11Buffer* FVertexBuffer::GetBuffer() const
+{
+	return Buffer;
+}
+
+#pragma endregion
+
+#pragma region __FINSTANCEBUFFER__
+
+void FInstanceBuffer::CreateDynamic(ID3D11Device* InDevice, uint32 InMaxVertices, uint32 InStride)
+{
+	Release();
+	MaxInstanceCount = InMaxVertices;
+
+	D3D11_BUFFER_DESC desc = {};
+	desc.ByteWidth = InMaxVertices * InStride;
+	desc.Usage = D3D11_USAGE_DYNAMIC;
+	desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+	HRESULT hr = InDevice->CreateBuffer(&desc, nullptr, &Buffer);
+	if (FAILED(hr)) { Release(); return; }
+
+	InstanceCount = 0;
+	Stride = InStride;
+}
+
+void FInstanceBuffer::Release()
+{
+	if (Buffer)
+	{
+		Buffer->Release();
+		Buffer = nullptr;
+	}
+}
+
+void FInstanceBuffer::Update(ID3D11DeviceContext* InDeviceContext, const TArray<FVertex>& InData)
 {
 	if (!Buffer || InData.empty()) return;
 
 	D3D11_MAPPED_SUBRESOURCE MSR = {};
 	InDeviceContext->Map(Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MSR);
-	memcpy(MSR.pData, InData.data(), sizeof(FFontVertex) * InData.size());
+	memcpy(MSR.pData, InData.data(), sizeof(FVertex) * InData.size());
 	InDeviceContext->Unmap(Buffer, 0);
 
-	VertexCount = static_cast<uint32>(InData.size());
+	InstanceCount = static_cast<uint32>(InData.size());
 }
 
 
+void FInstanceBuffer::FontUpdate(ID3D11DeviceContext* InDeviceContext, const TArray<FFontInstance>& InData)
+{
+	if (!Buffer || InData.empty()) return;
 
+	uint32 WriteCount = static_cast<uint32>(InData.size());
+	if (InData.size() > MaxInstanceCount) {
+		WriteCount = MaxInstanceCount;
+	}
 
-ID3D11Buffer* FVertexBuffer::GetBuffer() const
+	D3D11_MAPPED_SUBRESOURCE MSR = {};
+	InDeviceContext->Map(Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MSR);
+	memcpy(MSR.pData, InData.data(), sizeof(FFontInstance) * WriteCount);
+	InDeviceContext->Unmap(Buffer, 0);
+
+	InstanceCount = WriteCount;
+}
+
+ID3D11Buffer* FInstanceBuffer::GetBuffer() const
 {
 	return Buffer;
 }

@@ -2,7 +2,7 @@
 #include "World/Mesh/MeshManager.h"
 
 DEFINE_CLASS(UPlaneComponent, UPrimitiveComponent)
-REGISTER_FACTORY(UPlaneComponent, UPrimitiveComponent)
+REGISTER_FACTORY(UPlaneComponent)
 
 UPlaneComponent::UPlaneComponent()
 {
