@@ -703,12 +703,22 @@ void CRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float
 	Mesh->UpdateVertexAndIndexBuffer(Device);
 	Mesh->Bind(DeviceContext);
 
+	ID3D11RenderTargetView* ActiveRenderTargetView = RenderTargetView;
+	ID3D11DepthStencilView* ActiveDepthStencilView = DepthStencilView;
+	if (bUseSceneRenderTargetOverride)
+	{
+		ActiveRenderTargetView = SceneRenderTargetView;
+		ActiveDepthStencilView = SceneDepthStencilView;
+	}
+
 	// Pass 1: 통상 렌더 + Stencil 마킹 (Ref=1)
+	DeviceContext->OMSetRenderTargets(0, nullptr, ActiveDepthStencilView);
 	DeviceContext->OMSetDepthStencilState(StencilWriteState, 1);
 	UpdateObjectConstantBuffer(WorldMatrix);
 	DeviceContext->DrawIndexed(Mesh->Indices.size(), 0, 0);
 
 	// Pass 2: 확대된 메시를 아웃라인 셰이더로 그리기 (Stencil != 1인 곳만)
+	DeviceContext->OMSetRenderTargets(1, &ActiveRenderTargetView, ActiveDepthStencilView);
 	DeviceContext->OMSetDepthStencilState(StencilTestState, 1);
 
 	// 약간 확대한 WorldMatrix
