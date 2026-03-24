@@ -4,6 +4,7 @@
 #include "Actor/Actor.h"
 #include "Component/SubUVComponent.h"
 #include "Core/FEngine.h"
+#include "Component/TextComponent.h"
 
 
 void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors, const FFrustum& Frustum,
@@ -20,22 +21,39 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 		}
 		if (PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
 		{
-
 			UUUIDBillboardComponent* UUIDComponent =
 				static_cast<UUUIDBillboardComponent*>(PrimitiveComponent);
 
 			FTextRenderCommand TextCmd;
 			TextCmd.Text = UUIDComponent->GetDisplayText();
-			TextCmd.WorldPosition = UUIDComponent->GetTextWorldPosition();
+			TextCmd.WorldMatrix = FMatrix::MakeTranslation(UUIDComponent->GetTextWorldPosition());
 			TextCmd.WorldScale = UUIDComponent->GetWorldScale();
+			TextCmd.bBillboard = true;
 			TextCmd.Color = UUIDComponent->GetTextColor();
 
 			OutQueue.AddTextCommand(TextCmd);
 			continue;
 		}
+
+		if (PrimitiveComponent->IsA(UTextComponent::StaticClass()))
+		{
+			UTextComponent* TextComponent = static_cast<UTextComponent*>(PrimitiveComponent);
+
+			FTextRenderCommand TextCmd;
+			TextCmd.Text = TextComponent->GetText();
+			TextCmd.WorldMatrix = TextComponent->GetWorldTransform();
+			TextCmd.WorldScale = TextComponent->GetBillboardScale();
+			TextCmd.bBillboard = TextComponent->IsBillboard();
+			TextCmd.Color = TextComponent->GetTextColor();
+
+			OutQueue.AddTextCommand(TextCmd);
+			continue;
+		}
+
 		if (PrimitiveComponent->IsA(USubUVComponent::StaticClass()))
 		{
 			USubUVComponent* SubUVComponent = static_cast<USubUVComponent*>(PrimitiveComponent);
+
 			FSubUVRenderCommand SubUVCmd;
 			SubUVCmd.WorldMatrix = SubUVComponent->GetWorldTransform();
 			SubUVCmd.Size = SubUVComponent->GetSize();
@@ -81,7 +99,6 @@ void FSceneRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 		}
 		for (UActorComponent* Component : Actor->GetComponents())
 		{
-
 			if (!Component->IsA(UPrimitiveComponent::StaticClass()))
 			{
 				continue;
@@ -91,6 +108,7 @@ void FSceneRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 
 			const bool bIsUUID = PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass());
 			const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
+			const bool bIsText = PrimitiveComponent->IsA(UTextComponent::StaticClass());
 
 			if (bIsUUID)
 			{
@@ -101,15 +119,17 @@ void FSceneRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 			}
 			else if (bIsSubUV)
 			{
-			}	
-
-		
+			}
+			else if (bIsText)
+			{
+			}
 			else
 			{
 				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives))
 				{
 					continue;
 				}
+
 				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
 				{
 					continue;
@@ -123,4 +143,3 @@ void FSceneRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 		}  // for Component
 	}  // for Actor
 }  // FrustrumCull ??
-
