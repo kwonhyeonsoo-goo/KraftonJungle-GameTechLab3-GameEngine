@@ -73,7 +73,7 @@ public:
 	}
 
 	// 캐시에서 가져오거나 파일에서 로드
-	static std::shared_ptr<FMeshData> GetOrLoad(const FString& Key, const FString& FilePath);
+	static std::shared_ptr<FMeshData> LoadFromFile(const FString& Key, const FString& FilePath);
 	// 캐시에서만 조회
 	static std::shared_ptr<FMeshData> GetCached(const FString& Key);
 	// 코드로 생성한 데이터를 캐시에 등록

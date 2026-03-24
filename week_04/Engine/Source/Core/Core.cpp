@@ -12,6 +12,7 @@
 #include "Primitive/PrimitiveBase.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/RenderCommand.h"
+#include "Renderer/MaterialManager.h"
 #include "Math/Frustum.h"
 #include "Input/InputManager.h"
 #include "ViewportClient.h"
@@ -35,6 +36,9 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupS
 	}
 
 	ObjManager = new ObjectManager();
+
+	// Material
+	FMaterialManager::Get().LoadAllMaterials(Renderer->GetDevice(), Renderer->GetRenderStateManager().get());
 
 	// InputManager
 	InputManager = new CInputManager();
