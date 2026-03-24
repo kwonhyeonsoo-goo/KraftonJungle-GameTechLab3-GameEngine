@@ -5,7 +5,7 @@
 #include "Types/String.h"
 #include "ShowFlags.h"
 #include "Renderer/RenderCommand.h"
-
+#include "Scene/SceneRenderCollector.h"
 
 class CCore;
 class CRenderer;
@@ -28,13 +28,14 @@ public:
 	virtual void BuildRenderCommands(CCore* Core, UScene* Scene, const FFrustum& Frustum, FRenderCommandQueue& OutQueue) const;
 	FShowFlags& GetShowFlags() { return ShowFlags; }
 	const FShowFlags& GetShowFlags() const { return ShowFlags; }
-	
+	virtual void BuildRenderCommands(CCore* Core, UScene* Scene,
+		const FFrustum& Frustum, FRenderCommandQueue& OutQueue);
 	/** 입력 처리는 원래 Viewport 에서 처리하는게 맞는데 구조상 여기다 넣음 */
 	virtual void HandleFileDoubleClick(const FString& FilePath);
+	virtual FRenderCommand BuildRenderCommand(UPrimitiveComponent* PrimitiveComponent) const;
 protected:
 	FShowFlags ShowFlags;
-
-	virtual FRenderCommand BuildRenderCommand(UPrimitiveComponent* PrimitiveComponent) const;
+	FSceneRenderCollector RenderCollector;
 };
 
 class ENGINE_API CGameViewportClient : public IViewportClient

@@ -102,18 +102,18 @@ CCamera* UWorld::GetCamera() const
 
 FShowFlags& UWorld::GetShowFlags()
 {
-	return Scene->GetShowFlags();
+	return Scene->GetRenderCollector().GetShowFlags();
 }
 
 const FShowFlags& UWorld::GetShowFlags() const
 {
-	return Scene->GetShowFlags();
+	return Scene->GetRenderCollector().GetShowFlags();
 }
 
 void UWorld::CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
 	if (Scene)
 	{
-		Scene->CollectRenderCommands(Frustum, OutQueue);
+		Scene->GetRenderCollector().CollectRenderCommands(Scene->GetActors(), Frustum, OutQueue);
 	}
 }

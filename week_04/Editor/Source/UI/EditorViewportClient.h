@@ -32,7 +32,8 @@ public:
 	void SetRenderMode(ERenderMode InRenderMode) { RenderMode = InRenderMode; }
 
 	void HandleFileDoubleClick(const FString& FilePath) override;
-
+	void BuildRenderCommands(CCore* Core, UScene* Scene,
+		const FFrustum& Frustum, FRenderCommandQueue& OutQueue) override;
 protected:
 	virtual FRenderCommand BuildRenderCommand(UPrimitiveComponent* PrimitiveComponent) const override;
 

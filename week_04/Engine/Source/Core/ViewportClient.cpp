@@ -83,7 +83,7 @@ void IViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene, const FFru
 		return;
 	}
 	TArray<UPrimitiveComponent*> VisiblePrimitives;
-	Scene->FrustrumCull(Frustum, VisiblePrimitives);
+	Scene->GetRenderCollector().FrustrumCull(Scene->GetActors(),Frustum, VisiblePrimitives);
 
 	for (UPrimitiveComponent* PrimitiveComponent : VisiblePrimitives)
 	{
@@ -143,6 +143,11 @@ FRenderCommand IViewportClient::BuildRenderCommand(UPrimitiveComponent* Primitiv
 	Command.WorldMatrix = PrimitiveComponent->GetWorldTransform();
 	Command.Material = PrimitiveComponent->GetMaterial();
 	return Command;
+}
+
+void IViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene, const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
+{
+	RenderCollector.CollectRenderCommands(Scene->GetActors(), Frustum, ShowFlags, OutQueue);
 }
 
 void IViewportClient::HandleFileDoubleClick(const FString& FilePath)
