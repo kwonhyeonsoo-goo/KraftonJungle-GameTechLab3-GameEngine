@@ -70,16 +70,28 @@ void FSceneSerializer::Save(UScene* Scene, const FString& FilePath)
 	}
 }
 
-void FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device* Device)
+bool FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device* Device)
 {
 	std::ifstream File(FilePath);
 	if (!File.is_open())
 	{
-		return;
+		return false;
 	}
 
 	nlohmann::json Json;
-	File >> Json;
+
+	try
+	{
+		File >> Json;
+	}
+	catch (const std::exception& e)
+	{
+		return false;
+	}
+
+	if (!Json.contains("Primitives"))
+		return false;
+
 	CCamera* Camera = Scene->GetCamera();
 	if (Camera && Json.contains("Camera"))
 	{
@@ -95,10 +107,6 @@ void FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 			Camera->SetRotation(R[0].get<float>(), R[1].get<float>());
 		}
 	}
-
-	if (!Json.contains("Primitives"))
-		return;
-
 
 	int32 ActorIndex = 0;
 	for (auto& [Key, Value] : Json["Primitives"].items())

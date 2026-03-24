@@ -233,9 +233,22 @@ void CEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
 		{
 			Core->SetSelectedActor(nullptr);
 			Core->GetScene()->ClearActors();
-			FSceneSerializer::Load(Core->GetScene(), FilePath, Core->GetRenderer()->GetDevice());
+			bool bLoaded = FSceneSerializer::Load(Core->GetScene(), FilePath, Core->GetRenderer()->GetDevice());
 
-			UE_LOG("Scene loaded: %s", FilePath.c_str());
+			if (bLoaded)
+			{
+				UE_LOG("Scene loaded: %s", FilePath.c_str());
+			}			
+			else
+			{
+				MessageBoxA(
+
+					nullptr,
+					"Scene 정보가 잘못되었습니다.",
+					"Error",
+					MB_OK | MB_ICONWARNING
+				);
+			}
 		}
 	}
 }

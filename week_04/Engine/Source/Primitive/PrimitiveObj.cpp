@@ -23,7 +23,6 @@ void CPrimitiveObj::LoadObj(const FString& FilePath)
 		return;
 	}
 
-
 	std::ifstream File(FilePath);
 	if (!File.is_open())
 	{

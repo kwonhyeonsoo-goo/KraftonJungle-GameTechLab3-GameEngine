@@ -309,17 +309,28 @@ void CControlPanelWindow::Render(CCore* Core)
 
 			if (SelectedSceneIndex >= 0 && ImGui::Button("Load"))
 			{
-				Core->SetSelectedActor(nullptr);
-				Core->GetScene()->ClearActors();
-
 				FString SceneFileName = SceneFiles[SelectedSceneIndex];
 				SceneFileName += ".json";
 				const FString Path = (FPaths::SceneDir() / SceneFileName).string();
 
-		
-				FSceneSerializer::Load(Core->GetScene(), Path, Core->GetRenderer()->GetDevice());
+				Core->SetSelectedActor(nullptr);
+				Core->GetScene()->ClearActors();
 
-				UE_LOG("Scene loaded: %s", SceneFiles[SelectedSceneIndex].c_str());
+				bool bLoaded = FSceneSerializer::Load(Core->GetScene(), Path, Core->GetRenderer()->GetDevice());
+				if (bLoaded)
+				{
+					UE_LOG("Scene loaded: %s", SceneFiles[SelectedSceneIndex].c_str());
+				}
+				else
+				{
+					MessageBoxA(
+						nullptr,
+						"Scene 정보가 잘못되었습니다.",
+						"Error",
+						MB_OK | MB_ICONWARNING
+					);
+				}
+
 			}
 		}
 

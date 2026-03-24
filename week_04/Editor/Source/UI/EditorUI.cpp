@@ -97,6 +97,7 @@ void CEditorUI::Initialize(CCore* InCore)
 		{
 			if (Core)
 			{
+
 				Core->GetViewportClient()->HandleFileDoubleClick(FilePath);
 			}
 		};
@@ -436,15 +437,27 @@ void CEditorUI::Render()
 			{
 				if (Core && Core->GetActiveScene())
 				{
-					Core->SetSelectedActor(nullptr);
-					Core->GetScene()->ClearActors();
-
 					FString Path = GetFilePathUsingDialog(EFileDialogType::Open);
 
 					if (!Path.empty())
 					{
-						FSceneSerializer::Load(Core->GetScene(), Path, Core->GetRenderer()->GetDevice());
+						Core->SetSelectedActor(nullptr);
+						Core->GetScene()->ClearActors();
 
+						bool bLoaded = FSceneSerializer::Load(Core->GetScene(), Path, Core->GetRenderer()->GetDevice());
+						if (bLoaded)
+						{
+							UE_LOG("Scene loaded: %s", Path.c_str());
+						}
+						else
+						{
+							MessageBoxA(
+								nullptr,
+								"Scene 정보가 잘못되었습니다.",
+								"Error",
+								MB_OK | MB_ICONWARNING
+							);
+						}
 					}
 				}
 			}

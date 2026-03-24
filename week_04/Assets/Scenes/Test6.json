@@ -1,0 +1,48 @@
+{
+  "Camera": {
+    "Position": [
+      -6.501518249511719,
+      2.6461098194122314,
+      6.565153121948242
+    ],
+    "Rotation": [
+      -25.599990844726563,
+      -37.60006332397461
+    ]
+  },
+  "Materials": [
+    "Assets/Materials/M_TintYellow.json",
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_Wireframe.json"
+  ],
+  "NextUUID": 4075,
+  "Primitives": {
+    "0": {
+      "Class": "AObjActor",
+      "ComponentUUIDs": [
+        4073,
+        4074,
+        4075
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "PrimitiveFileName": "C:\\jungle-techlab-week3-team5\\Assets\\Meshes\\Cat.obj",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 4072
+    }
+  }
+}
