@@ -220,6 +220,7 @@ void CAxisRenderer::Draw(float GridSize, float LineThickness)
 	DeviceContext->OMSetBlendState(nullptr, BlendFactor, 0xffffffff);
 	DeviceContext->RSSetState(nullptr);
 	ID3D11Buffer* NullCB[1] = { nullptr };
+	//b0, b2 슬롯에 Axis 전용 CB를 바인딩해놓고 정리하지 않고 끝남-> 다음 패스(TextRenderPass/SubUV)가 시작될 때 잔여 CB 상태를 물려받음.
 	DeviceContext->VSSetConstantBuffers(0, 1, NullCB);  
 	DeviceContext->VSSetConstantBuffers(2, 1, NullCB);  
 	DeviceContext->PSSetConstantBuffers(2, 1, NullCB);
