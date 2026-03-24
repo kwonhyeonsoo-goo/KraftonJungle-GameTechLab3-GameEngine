@@ -80,6 +80,9 @@ public:
 	static void RegisterMeshData(const FString& Key, std::shared_ptr<FMeshData> Data);
 	static void ClearCache();
 
+	void SetPrimitiveFileName(const FString& InFileName) { PrimitiveFileName = InFileName; }
+	FString GetPrimitiveFileName() const { return PrimitiveFileName; }
+
 protected:
 	std::shared_ptr<FMeshData> MeshData;
 
@@ -87,4 +90,6 @@ private:
 	static TMap<FString, std::shared_ptr<FMeshData>> MeshCache;
 
 	static std::shared_ptr<FMeshData> LoadFromFile(const FString& FilePath);
+
+	FString PrimitiveFileName = "";
 };

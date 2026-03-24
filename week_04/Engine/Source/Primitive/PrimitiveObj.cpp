@@ -15,12 +15,14 @@ CPrimitiveObj::CPrimitiveObj(const FString& FilePath)
 
 void CPrimitiveObj::LoadObj(const FString& FilePath)
 {
+	SetPrimitiveFileName(FilePath);
 	auto Cached = GetCached(FilePath);
 	if (Cached)
 	{
 		MeshData = Cached;
 		return;
 	}
+
 
 	std::ifstream File(FilePath);
 	if (!File.is_open())

@@ -124,8 +124,6 @@ void FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 		*static_cast<nlohmann::json*>(Ar.GetRawJson()) = Value;
 		Actor->Serialize(Ar);
 
-
-
 		if (Value.contains("Material"))
 		{
 			const FString MaterialName = Value["Material"].get<FString>();
@@ -139,6 +137,19 @@ void FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 			}
 		}
 
+		if (Value.contains("PrimitiveFileName"))
+		{
+			if (Actor->IsA(AObjActor::StaticClass()))
+			{
+				const FString PrimitiveFileName = Value["PrimitiveFileName"].get<FString>();
+				if (PrimitiveFileName != "")
+				{
+					AObjActor* ObjActor = static_cast<AObjActor*>(Actor);
+					if (ObjActor)
+						ObjActor->LoadObj(PrimitiveFileName);
+				}
+			}
+		}
 
 		++ActorIndex;
 
