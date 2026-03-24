@@ -30,7 +30,7 @@ struct ENGINE_API FTextRenderCommand
 {
 	FString Text;
 	FMatrix WorldMatrix = FMatrix::Identity;
-	float WorldScale = 0.3f;
+	FVector WorldScale = FVector(1.0f, 1.0f, 1.0f);
 	bool bBillboard = true;
 	FVector4 Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
 };

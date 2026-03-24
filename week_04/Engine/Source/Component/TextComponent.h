@@ -19,12 +19,8 @@ public:
 	void SetBillboard(bool bInBillboard) { bBillboard = bInBillboard; }
 	bool IsBillboard() const { return bBillboard; }
 
-	void SetBillboardScale(float InScale) { BillboardScale = InScale; }
-	float GetBillboardScale() const { return BillboardScale; }
-
 private:
 	FString Text = "Text";
 	FVector4 TextColor = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
 	bool bBillboard = false;
-	float BillboardScale = 0.3f;
 };

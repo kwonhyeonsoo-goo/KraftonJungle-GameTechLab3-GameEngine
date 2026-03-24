@@ -27,7 +27,8 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 			FTextRenderCommand TextCmd;
 			TextCmd.Text = UUIDComponent->GetDisplayText();
 			TextCmd.WorldMatrix = FMatrix::MakeTranslation(UUIDComponent->GetTextWorldPosition());
-			TextCmd.WorldScale = UUIDComponent->GetWorldScale();
+			const float Scale = UUIDComponent->GetWorldScale();
+			TextCmd.WorldScale = FVector(Scale, Scale, Scale);
 			TextCmd.bBillboard = true;
 			TextCmd.Color = UUIDComponent->GetTextColor();
 
@@ -42,7 +43,7 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 			FTextRenderCommand TextCmd;
 			TextCmd.Text = TextComponent->GetText();
 			TextCmd.WorldMatrix = TextComponent->GetWorldTransform();
-			TextCmd.WorldScale = TextComponent->GetBillboardScale();
+			TextCmd.WorldScale = TextComponent->GetWorldTransform().GetScaleVector();			
 			TextCmd.bBillboard = TextComponent->IsBillboard();
 			TextCmd.Color = TextComponent->GetTextColor();
 
