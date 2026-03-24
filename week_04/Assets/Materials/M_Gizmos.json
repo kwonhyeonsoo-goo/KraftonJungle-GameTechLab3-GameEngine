@@ -16,5 +16,5 @@
       { "Name": "BaseColor", "Type": "float4", "Value": [1.0, 1.0, 1.0, 1.0] }
     ]
   }
-
-]
+  ]
+}

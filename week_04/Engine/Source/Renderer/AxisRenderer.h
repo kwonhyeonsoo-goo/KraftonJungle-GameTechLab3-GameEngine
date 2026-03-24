@@ -18,7 +18,7 @@ public:
 	bool Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext);
 	void Release();
 
-	void Begin(const FMatrix& InView, const FMatrix& InProjection, const FVector& InCameraPosition);
+	void Begin(const FVector& InCameraPosition);
 
 	void Draw(float GridSize, float LineThickness);
 

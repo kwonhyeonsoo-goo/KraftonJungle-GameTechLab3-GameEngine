@@ -494,7 +494,7 @@ void CRenderer::ExecuteAxisRenderPass()
 
 	const FVector CameraPosition = GetCameraWorldPositionFromViewMatrix(ViewMatrix);
 
-	AxisRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
+	AxisRenderer.Begin(CameraPosition);
 	AxisRenderer.Draw(10.0f, 1.0f);
 }
 

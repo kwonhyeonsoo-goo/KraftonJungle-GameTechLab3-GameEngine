@@ -8,14 +8,6 @@ cbuffer FrameData : register(b0)
 // b1: 오브젝트당
 
 
-cbuffer CameraBuffer : register(b2)
-{
-	float3 CameraPos;
-	float GridSize;
-	float LineThickness;
-	float3 padding;
-};
-
 struct VS_OUTPUT
 {
 	float4 Pos : SV_POSITION; // 클립 공간 좌표
@@ -65,7 +57,9 @@ VS_OUTPUT main(uint id : SV_VertexID)
 	float3 lPos = positions[id];
 	output.PlaneNo = planeno[id / 6];
 	if (output.PlaneNo == 0)
-		worldPosition = float3(CameraPos.x + lPos.x * range, CameraPos.y + lPos.y * range, 0.0f);
+		// TODO: 카메라 위치에 따라 Grid 그리는 영역 조절
+		// worldPosition = float3(CameraPos.x + lPos.x * range, CameraPos.y + lPos.y * range, 0.0f);
+		worldPosition = float3(lPos.x * range, lPos.y * range, 0.0f);
 	else
 		worldPosition = float3(lPos.x * range, lPos.y * range, lPos.z * range);
 	output.WorldPos = worldPosition;
