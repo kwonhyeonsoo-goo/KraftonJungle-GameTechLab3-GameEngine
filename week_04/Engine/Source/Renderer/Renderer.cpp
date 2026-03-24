@@ -404,7 +404,7 @@ void CRenderer::ExecuteCommands()
 	ExecuteRenderPass(ERenderLayer::Default);
 	ClearDepthBuffer();
 	ExecuteRenderPass(ERenderLayer::Overlay);
-	//ExecuteTextRenderPass();
+	ExecuteTextRenderPass();
 }
 
 void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
@@ -467,6 +467,11 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 
 		UpdateObjectConstantBuffer(Cmd.WorldMatrix);
 		DeviceContext->DrawIndexed(Cmd.MeshData->Indices.size(), 0, 0);
+	}
+
+	if (PostRenderCallback)
+	{
+		PostRenderCallback(this);
 	}
 }
 
