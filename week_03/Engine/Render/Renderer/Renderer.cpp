@@ -1,4 +1,4 @@
-﻿#pragma comment( lib, "dxguid.lib")
+#pragma comment( lib, "dxguid.lib")
 
 #include "Renderer.h"
 
@@ -120,7 +120,6 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 		Device.SetBlendState(EBlendState::Opaque);
 		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-
 		Resources.PrimitiveShader.Bind(context);
 		RenderComponentPass(context, InRenderBus);
 
@@ -134,12 +133,11 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 	Device.SetDepthStencilState(EDepthStencilState::Default);
 	RenderLineBatchPass(context, InRenderBus);
 
-	// Font Text
-	if (showFlag & (uint64)EEngineShowFlags::SF_BillboardText) {
-		Device.SetDepthStencilState(EDepthStencilState::None);
-		Device.SetBlendState(EBlendState::AlphaBlend);
-		DrawString(context, InRenderBus);
-	}
+	// Text
+	Device.SetRasterizerState(ERasterizerState::None);
+	Device.SetDepthStencilState(EDepthStencilState::None);
+	Device.SetBlendState(EBlendState::AlphaBlend);
+	DrawString(context, InRenderBus);
 
 	if (showFlag & (uint64)EEngineShowFlags::SF_Primitives) {
 		//	Selection Outline (Stencil)
@@ -253,42 +251,70 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 
 	TArray<FFontInstance> Instances;
 
-	float FontScale = 0.1f;
-	const float CellW = (float)FontCache.GetFontData().CellWidth * FontScale;
-	const float CellH = (float)FontCache.GetFontData().CellHeight * FontScale;
+	for (const auto& Cmd : InRenderBus.GetTextCommands()) {
 
-	for (const auto& Cmd : InRenderBus.GetFontCommands()) {
-		FVector4 colorData = Cmd.FontColor;
+		if (Cmd.Type == ERenderCommandType::Font)
+		{
+			if (~showFlag & (uint64)EEngineShowFlags::SF_BillboardText)
+				continue;
+		}
+		else if (Cmd.Type == ERenderCommandType::TextPrimitive)
+		{
+			if (~showFlag & (uint64)EEngineShowFlags::SF_Primitives)
+				continue;
+		}
 
+		// String 정보
+		std::wstring Text = Cmd.TextConstants.Text;
+
+		// 줄바꿈이 있을 때 가장 긴 줄을 기준으로 삼음
+		int MaxLineLen = 0, CurLen = 0, LineCount = 1;
+		for (TCHAR c : Text)
+		{
+			if (c == TEXT('\n')) { MaxLineLen = (MaxLineLen > CurLen) ? MaxLineLen : CurLen; CurLen = 0; LineCount++; }
+			else CurLen++;
+		}
+		MaxLineLen = (MaxLineLen > CurLen) ? MaxLineLen : CurLen;
+
+		FVector FontScale = Cmd.TextConstants.TextScale;
+		const float CellW = FontScale.Y / MaxLineLen;
+		const float CellH = FontScale.Z;
+
+		float TotalWidth = CellW * MaxLineLen;
+		float PenX = TotalWidth * 0.5f - CellW * 0.5f;  // 중앙 정렬
+		float PenY = 0;
+
+		FVector4 colorData = Cmd.TextConstants.TextColor;
 		// 각 String의 MVP
 		// View^(-1) (Z up) -> 전치
 		FMatrix View = InRenderBus.GetCachedView();
+		FMatrix RotationMatrix = FMatrix::Identity;
 
-		FMatrix BillboardRotation =
-			FMatrix(
-				1, 0, 0, 0,
-				-View.Data[0], -View.Data[4], 0, 0,
-				0, 0, 1, 0,
-				0, 0, 0, 1);
+		if (Cmd.TextConstants.OrientationType == EOrientationType::Billboard)
+		{
+			FMatrix BillboardRotation =
+				FMatrix(
+					1, 0, 0, 0,
+					-View.Data[0], -View.Data[4], 0, 0,
+					0, 0, 1, 0,
+					0, 0, 0, 1);
+			RotationMatrix = BillboardRotation;
+		}
+		else {
+			RotationMatrix = FMatrix::MakeRotationEuler(Cmd.TextConstants.TextRotation);
+		}
 
 		// Scale, Translation 행렬
-		FMatrix ScaleMatrix = FMatrix::MakeScaleMatrix(FVector(FontScale, FontScale, FontScale));
-		FMatrix Translation = FMatrix::MakeTranslationMatrix(Cmd.FontPosition);
+		FMatrix ScaleMatrix = FMatrix::MakeScaleMatrix(FontScale);
+		FMatrix TranslationMatrix = FMatrix::MakeTranslationMatrix(Cmd.TextConstants.TextPosition);
 
-		FMatrix Model = ScaleMatrix * BillboardRotation * Translation;
+		FMatrix Model =  RotationMatrix * TranslationMatrix;
 		FMatrix MVP = Model * View * InRenderBus.GetCachedProjection();
-
-		// String, UV값
-		std::wstring Text = L"윢윩앏있띻\nUUID:" + std::to_wstring(Cmd.UUID);
-
-		float TotalWidth = CellW * Text.size();
-		float PenX = TotalWidth * 0.5f;  // 중앙 정렬
-		float PenY = -CellH * 0.5f;
 
 		for (TCHAR c : Text)
 		{
-			if (c == TEXT(' ')) { PenX += CellW; continue; }
-			if (c == TEXT('\n')) { PenX = TotalWidth * 0.5f; PenY -= CellH; continue; }
+			if (c == TEXT(' ')) { PenX -= CellW; continue; }
+			if (c == TEXT('\n')) { PenX = TotalWidth * 0.5f - CellW * 0.5f; PenY -= CellH; continue; }
 
 			uint32 base = (uint32)Instances.size();
 
@@ -301,7 +327,7 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 				CellW, CellH,
 				CI.StartU, CI.StartV, 
 				CI.USize, CI.VSize, 
-				Cmd.FontColor });
+				Cmd.TextConstants.TextColor });
 
 			PenX -= CellW;
 		}
@@ -322,7 +348,7 @@ void FRenderer::RenderFont(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 	UINT strides[2] = { sizeof(FVertex), sizeof(FFontInstance) };
 	UINT offsets[2] = { 0, 0 };
 	ID3D11Buffer* Buffers[2] = {
-		InRenderBus.GetFontCommands()[0].MeshBuffer->GetFVertexBuffer().GetBuffer(),
+		InRenderBus.GetTextCommands()[0].MeshBuffer->GetFVertexBuffer().GetBuffer(),
 		Resources.FontInstanceBuffer.GetBuffer(),
 	};
 	InDeviceContext->IASetVertexBuffers(0, 2, Buffers, strides, offsets);
@@ -359,6 +385,12 @@ void FRenderer::DrawCommand(ID3D11DeviceContext *InDeviceContext, const FRenderC
 	{
 		return;
 	}
+
+	if (InCommand.Type == ERenderCommandType::TextPrimitive) 
+	{
+		Device.SetBlendState(EBlendState::AlphaBlend);
+	}
+
 
 	if (InCommand.Type != ERenderCommandType::Overlay)
 	{

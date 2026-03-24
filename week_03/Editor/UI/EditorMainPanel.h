@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <windows.h>
 #include "FileManager/UISettingInit.h"
@@ -13,6 +13,7 @@ class FEditorEngine;
 class FEditorViewportClient;
 class AActor;
 class USubUVComponent;
+class UTextComponent;
 
 enum class EPrimitiveType;
 
@@ -21,12 +22,13 @@ using namespace common::structs;
 class FEditorMainPanel
 {
 private:
-	const char* PrimitiveTypes[4] =
+	const char* PrimitiveTypes[5] =
 	{
 		"Cube",
 		"Sphere",
 		"Plane",
-		"SubUV"
+		"SubUV",
+		"Text",
 	};
 	const char* UtilTypes[1] =
 	{
@@ -60,6 +62,7 @@ private:
 	void RenderPickedObjectWindow(UObject*& Object);
 	void RenderPickedActorWindow(AActor* Actor);
 	void RenderPicekdSubUVWindow(USubUVComponent* SubUVComp);
+	void DrawTextComponentUI(UTextComponent* TextComp);
 public:
 	void Create(HWND InHWindow, FRenderer& InRenderer, FEditorEngine* InEditorEngine, FEditorViewportClient* InEditorViewport);
 	void Release();

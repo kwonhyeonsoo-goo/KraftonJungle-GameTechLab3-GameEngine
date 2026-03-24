@@ -8,8 +8,6 @@ class AActor;
 
 class USceneComponent : public UActorComponent
 {
-private:
-	AActor* Owner;
 protected:
 	USceneComponent* ParentComponent = nullptr;
 	TArray<USceneComponent*> ChildComponents;
@@ -61,7 +59,5 @@ public:
 	void Move(const FVector& delta);
 	void MoveLocal(const FVector& delta);
 	void Rotate(float dx, float dy);
-
-	void SetOwner(AActor* Actor) { Owner = Actor; }
 };
 

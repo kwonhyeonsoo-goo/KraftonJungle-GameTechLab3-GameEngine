@@ -49,7 +49,7 @@ void FRenderCollector::CollectFromActor(AActor* Actor, const FRenderCollectorCon
 	}
 
 	if (Actor->IsA<ASpotlight>()) {
-		ASpotlight::Cast(Actor)->AddConeLinesToBatch(RenderBus.GetBatehdLine());
+		ASpotlight::Cast(Actor)->RenderLines(RenderBus.GetBatehdLine());
 	}
 }
 
@@ -62,16 +62,22 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* primitiveCompon
 
 	FRenderCommand FontCmd = {};
 	FontCmd.Type = ERenderCommandType::Font;
+	FontCmd.TextConstants.OrientationType = EOrientationType::Billboard;
 	FontCmd.MeshBuffer = &MeshBufferManager.GetMeshBuffer(EPrimitiveType::EPT_Quad);
-	FontCmd.FontPosition = primitiveComponent->GetWorldLocation();
-	FontCmd.FontPosition.Z += 1.0f;
-	FontCmd.FontColor = FVector4(1, 1, 1, 1);
-	FontCmd.UUID = primitiveComponent->UUID;
-	RenderBus.AddFontCommand(FontCmd);
+	FontCmd.TextConstants.Text = L"윢윩앏있띻\nUUID:" + std::to_wstring(primitiveComponent->UUID);
+
+	float TopZ = primitiveComponent->GetBoundingBox().WorldAABBMaxLocation.Z;
+	FontCmd.TextConstants.TextPosition = primitiveComponent->GetBoundingBox().WorldAABBMaxLocation * 0.5f	// AABB 평균: 오브젝트 중앙
+		+ primitiveComponent->GetBoundingBox().WorldAABBMinLocation * 0.5f;
+	FontCmd.TextConstants.TextPosition.Z = TopZ + 1.5f;
+
+	FontCmd.TextConstants.TextScale = { 1.0f, 5.0f, 0.7f };
+	FontCmd.TextConstants.TextColor = FVector4(1, 1, 1, 1);
+	RenderBus.AddTextCommand(FontCmd);
 
 	if (primitiveComponent->GetRenderCommand(Context.Camera->GetViewMatrix(), Context.Camera->GetProjectionMatrix(), Cmd))
 	{
-		if (Cmd.Type != ERenderCommandType::Primitive)//여기 SubUV{
+		if (Cmd.Type != ERenderCommandType::Primitive && Cmd.Type != ERenderCommandType::TextPrimitive)//여기 SubUV{
 		{
 			Cmd.UVMeshBuffer = &MeshBufferManager.GetUVMeshBuffer(primitiveComponent->GetPrimitiveType());
 			RenderBus.AddSubUVCompoenetCommand(Cmd);
@@ -100,6 +106,19 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* primitiveCompon
 			}
 
 			RenderBus.AddOutlineCommand(OutlineCmd);
+		}
+
+		if (primitiveComponent->GetPrimitiveType() == EPrimitiveType::EPT_Text)
+		{
+			FRenderCommand TextCmd = Cmd;
+			TextCmd.Type = ERenderCommandType::TextPrimitive;
+			TextCmd.TextConstants.OrientationType = EOrientationType::Fixed;
+			TextCmd.TextConstants.Text = static_cast<UTextComponent*>(primitiveComponent)->GetText();
+			TextCmd.TextConstants.TextPosition = primitiveComponent->GetWorldLocation();
+			TextCmd.TextConstants.TextRotation = primitiveComponent->GetRelativeRotation();
+			TextCmd.TextConstants.TextScale = primitiveComponent->GetScaleVector();
+			TextCmd.TextConstants.TextColor = static_cast<UTextComponent*>(primitiveComponent)->GetColor();
+			RenderBus.AddTextCommand(TextCmd);
 		}
 	}
 }

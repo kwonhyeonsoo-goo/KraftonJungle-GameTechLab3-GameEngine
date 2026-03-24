@@ -1,4 +1,4 @@
-﻿#include "Editor/UI/EditorMainPanel.h"
+#include "Editor/UI/EditorMainPanel.h"
 //#include "Editor/Viewport/EditorViewportClient.h"
 #include "Editor/EditorEngine.h"
 
@@ -41,6 +41,7 @@ void FEditorMainPanel::Create(HWND InHWindow, FRenderer& InRenderer, FEditorEngi
 	config.GlyphMinAdvanceX = 13.0f; // Use if you want to make the icon monospaced
 	static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
 	io.Fonts->AddFontFromFileTTF("ImGui/fontawesome-webfont.ttf", 13.0f, &config, icon_ranges);
+	io.Fonts->AddFontFromFileTTF("ImGui/NanumGothic.otf", 13.0f, &config, io.Fonts->GetGlyphRangesKorean());
 }
 
 void FEditorMainPanel::Release()
@@ -101,7 +102,9 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 				break;
 			case EPrimitiveType::EPT_SubUV:
 				EditorEngine->SpawnNewPrimitiveActor<USubUVComponent>(CurSpawnPoint);
-
+				break;
+			case EPrimitiveType::EPT_Text:
+				EditorEngine->SpawnNewPrimitiveActor<UTextComponent>(CurSpawnPoint);
 				break;
 			}
 		}
@@ -324,7 +327,7 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 	}
 
 	// Primitive Actors dropdown
-	if (ImGui::CollapsingHeader("Primitive Actors")) {
+	if (ImGui::CollapsingHeader("Scene Actors")) {
 		for (int i = 0; i < PrimitiveActors.size(); i++) {
 			AActor* Actor = PrimitiveActors[i];
 			FString Label = "Actor_" + std::to_string(Actor->UUID);
@@ -352,6 +355,15 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 						ViewOutput.Object = Comps;
 						ViewOutput.ObjectPicked = Comps->GetTypeInfo()->name;
 					}
+
+					if (bSelected)
+					{
+						// Text 컴포넌트면 입력창 표시
+						if (Comps->IsA<UTextComponent>()) {
+							UTextComponent* TextComp = static_cast<UTextComponent*>(Comps);
+							DrawTextComponentUI(TextComp);
+						}
+					}
 				}
 			}
 			ImGui::Unindent();
@@ -359,7 +371,7 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 	}
 
 	// Non-Primitive Actors Dropdown
-	if (ImGui::CollapsingHeader("Non-Primitive Actors")) {
+	if (ImGui::CollapsingHeader("Non-Scene Actors")) {
 		for (int i = 0; i < NonPrimitiveActors.size(); i++) {
 			AActor* Actor = NonPrimitiveActors[i];
 			std::string Label = "Actor_" + std::to_string(Actor->UUID);
@@ -440,7 +452,8 @@ void FEditorMainPanel::RenderPickedObjectWindow(UObject*& ObjectPicked) {
 void FEditorMainPanel::RenderPickedActorWindow(AActor* Actor) {
 	if (Actor->IsA<ASpotlight>()) {
 		SEPARATOR();
-		ASpotlight* Spotlight = ASpotlight::Cast(Actor);
+		ASpotlight* SpotlightActor = ASpotlight::Cast(Actor);
+		USpotlightComponent* Spotlight = SpotlightActor->GetSpotlightComp();
 		float SpotlightRot[2] = { Spotlight->GetYaw(), Spotlight->GetPitch()};
 		if (ImGui::DragFloat2("Spotlight Rotation", SpotlightRot, 0.1f)) {
 			SpotlightRot[0] = Clamp(SpotlightRot[0], -80.0f, 80.0f); SpotlightRot[1] = Clamp(SpotlightRot[1], -80.0f, 80.0f);
@@ -462,6 +475,12 @@ void FEditorMainPanel::RenderPickedActorWindow(AActor* Actor) {
 		if (ImGui::DragFloat("Spotlight Radius", &SpotlightRadius, 0.1f)) { SpotlightRadius = Clamp(SpotlightRadius, 0.1f, 100.0f); Spotlight->SetConeRadius(SpotlightRadius); }
 
 		// Color
+		FVector4 RayColor = Spotlight->GetColor();
+		float Color[4] = { RayColor.X, RayColor.Y, RayColor.Z, RayColor.W };
+		if (ImGui::ColorEdit4("Ray Color", Color)) {
+			FVector4 NewColor(Color[0], Color[1], Color[2], Color[3]);
+			Spotlight->SetColor(NewColor);
+		}
 	}
 
 	for (USceneComponent* comp : Actor->GetComponents()) {
@@ -530,6 +549,37 @@ void FEditorMainPanel::RenderPicekdSubUVWindow(USubUVComponent* SubUVComp)
 	if (ImGui::DragInt("Columns", &columns, 1, 1, 10))
 		SubUVComp->CellColumns = columns;
 
+}
+
+void FEditorMainPanel::DrawTextComponentUI(UTextComponent* TextComp)
+{
+	// UUID별로 버퍼 관리
+	static std::unordered_map<uint32, std::array<char, 256>> TextBuffers;
+	auto& Buffer = TextBuffers[TextComp->UUID];
+
+	// 현재 텍스트로 초기화
+	std::wstring Current = TextComp->GetText();
+	WideCharToMultiByte(CP_UTF8, 0, Current.c_str(), -1, Buffer.data(), 256, nullptr, nullptr);
+
+	FString InputLabel = "##TextInput" + std::to_string(TextComp->UUID);
+	ImGui::Indent();
+	if (ImGui::InputText(InputLabel.c_str(), Buffer.data(), Buffer.size())) {
+		wchar_t Wide[256];
+		MultiByteToWideChar(CP_UTF8, 0, Buffer.data(), -1, Wide, 256);
+		std::wstring WideStr(Wide);
+		TextComp->SetText(WideStr);
+	}
+
+	// Color 조정
+	FVector4 Color = TextComp->GetColor();
+	float ColorArr[4] = { Color.X, Color.Y, Color.Z, Color.W };
+	FString ColorLabel = "Color##" + std::to_string(TextComp->UUID);
+	if (ImGui::ColorEdit4(ColorLabel.c_str(), ColorArr)) {
+		FVector4 NewColor(ColorArr[0], ColorArr[1], ColorArr[2], ColorArr[3]);
+		TextComp->SetTextColor(NewColor);
+	}
+
+	ImGui::Unindent();
 }
 
 void FEditorMainPanel::Update()
