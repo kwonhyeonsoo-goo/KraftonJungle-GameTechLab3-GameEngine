@@ -2,22 +2,26 @@
 #include <fstream>
 #include <sstream>
 
+CPrimitiveObj::CPrimitiveObj()
+{
+	MeshData = std::make_shared<FMeshData>();
+}
+
 CPrimitiveObj::CPrimitiveObj(const FString& FilePath)
+{
+	MeshData = std::make_shared<FMeshData>();
+	LoadObj(FilePath);
+}
+
+void CPrimitiveObj::LoadObj(const FString& FilePath)
 {
 	auto Cached = GetCached(FilePath);
 	if (Cached)
 	{
 		MeshData = Cached;
+		return;
 	}
-	else
-	{
-		MeshData = std::make_shared<FMeshData>();
-		LoadObj(FilePath);
-	}
-}
 
-void CPrimitiveObj::LoadObj(const FString& FilePath)
-{
 	std::ifstream File(FilePath);
 	if (!File.is_open())
 	{
