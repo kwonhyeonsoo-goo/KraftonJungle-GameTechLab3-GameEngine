@@ -23,7 +23,7 @@ public:
 	inline const FMeshData* GetMeshData() const { return MeshData; };
 	inline void SetVisibility(bool bVisible) { bIsVisible = bVisible; }
 
-	const FBoundingBox& GetBoundingBox() const { return BoundingBox; }
+	virtual const FBoundingBox& GetBoundingBox() const { return BoundingBox; }
 
 	//Collision
 	virtual void UpdateWorldAABB() = 0;

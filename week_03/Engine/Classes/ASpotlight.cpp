@@ -4,84 +4,39 @@ DEFINE_CLASS(ASpotlight, AActor)
 REGISTER_FACTORY(ASpotlight)
 
 ASpotlight::ASpotlight() {
-	// Create PlaneComponent as a fixed root
-	AddComponent<UPlaneComponent>();
-	UpdateCone();
+	// Creates an icon component as a clickable primitive root
+	auto WeakIcon = UObjectManager::Get().CreateObject<UBillBoardComponent>();
+	UBillBoardComponent* Icon = WeakIcon.lock().get();
+	Icon->LoadTexture(L"Assets/Icons/light_icon.png");
+	AddComponent(Icon);
+
+	// Spotlight component
+	AddComponent<USpotlightComponent>();
+	UpdateShine();
 }
 
-void ASpotlight::UpdateCone() {
-	CircleVertices.clear();
-	CircleVertices.reserve(NumCircleVertex);
-
-	// Base vectors
-	FVector BaseNormal = RootComponent->GetUpVector().Normalized();
-	FVector BaseRight = RootComponent->GetRightVector().Normalized();
-	FVector BaseForward = RootComponent->GetForwardVector().Normalized();
-
-	// Apply pitch around the local right axis, then yaw around the local up axis
-	FMatrix PitchMat = FMatrix::MakeRotationAxis(BaseRight, Pitch);
-	FMatrix YawMat = FMatrix::MakeRotationAxis(BaseForward, Yaw);
-	FMatrix RotMat = PitchMat * YawMat;
-
-	UnitNormal = (RotMat.TransformVector(BaseNormal)).Normalized();
-	CircleCenter = RootComponent->GetWorldLocation() + UnitNormal * ConeHeight;
-
-	// Recompute U and V perpendicular to the rotated axis
-	FVector U = (RotMat.TransformVector(BaseForward)).Normalized();
-	FVector V = UnitNormal.Cross(U).Normalized();
-
-	// Find the unit orthogonal. We can choose between U or V. Not used for now
-	UnitOrthogonal = U;
-
-	float Angle = 2.0f * M_PI / NumCircleVertex;
-	for (size_t i = 0; i < NumCircleVertex; i++) {
-		FVector Point = CircleCenter + (U * cosf(Angle * i) + V * sinf(Angle * i)) * Radius;
-		CircleVertices.push_back(Point);
-	}
+USpotlightComponent* ASpotlight::GetSpotlightComp() const {
+	// Light actor is closed to modular modifications
+	auto* Obj = Components[1];
+	return USpotlightComponent::Cast(Obj);
 }
 
-void ASpotlight::AddConeLinesToBatch(FBatchedLine* BatchLine) {
-	if (!BatchLine || CircleVertices.empty()) {
-		return;
-	}
-
-	FVector ConeApex = RootComponent->GetWorldLocation();
-	for (size_t i = 0; i < NumCircleVertex; i++) {
-		// Point to Apex
-		BatchLine->AddLineRaw(CircleVertices[i], ConeApex, ConeColor);
-
-		// Point to next Point
-		BatchLine->AddLineRaw(CircleVertices[i], CircleVertices[(i + 1) % NumCircleVertex], ConeColor);
-	}
+void ASpotlight::UpdateShine() {
+	// Light actor is closed to modular modifications
+	auto* Obj = Components[1];
+	USpotlightComponent* Spotlight = USpotlightComponent::Cast(Obj);
+	Spotlight->UpdateLight();
 }
 
-void ASpotlight::Tick(float DeltaTIme) {
-	if (bIsConeDirty) {
-		UpdateCone();
-		bIsConeDirty = false;
-	}
+void ASpotlight::RenderLines(FBatchedLine* BatchLine) {
+	// Light actor is closed to modular modifications
+	auto* Obj = Components[1];
+	USpotlightComponent* Spotlight = USpotlightComponent::Cast(Obj);
+	Spotlight->RenderLines(BatchLine);
 }
 
-//void ASpotlight::SetActorLocation(const FVector& Location, USceneComponent* WhichComp) {
-//	if (WhichComp) {
-//		WhichComp->SetRelativeLocation(Location);
-//
-//		if (WhichComp == RootComponent) {
-//			bIsConeDirty = true;
-//		}
-//	}
-//}
-//void ASpotlight::SetActorRotation(const FVector& Rotation, USceneComponent* WhichComp) {
-//	if (WhichComp) {
-//		WhichComp->SetRelativeLocation(Rotation);
-//
-//		if (WhichComp == RootComponent) {
-//			bIsConeDirty = true;
-//		}
-//	}
-//}
-//void ASpotlight::SetActorScale(const FVector& Scale, USceneComponent* WhichComp) {
-//	if (WhichComp) {
-//		WhichComp->SetRelativeScale(Scale);
-//	}
-//}
+void ASpotlight::Tick(float DeltaTime) {
+	for (UActorComponent* Comp : Components) {
+		Comp->ExcuteTick(DeltaTime);
+	}
+}

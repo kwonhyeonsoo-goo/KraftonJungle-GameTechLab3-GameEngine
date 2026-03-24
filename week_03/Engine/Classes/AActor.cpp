@@ -110,7 +110,7 @@ void AActor::RegisterComponentRecursive(USceneComponent* Comp) {
 	// Avoid duplicates
 	auto it = std::find(Components.begin(), Components.end(), Comp);
 	if (it == Components.end()) {
-		Comp->SetOwner(this);
+		Comp->SetOwningActor(this);
 		Components.push_back(Comp);
 	}
 

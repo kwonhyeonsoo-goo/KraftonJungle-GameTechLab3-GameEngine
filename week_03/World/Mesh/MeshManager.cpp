@@ -13,6 +13,7 @@ FMeshData FMeshManager::TranslationGizmoMeshData;
 FMeshData FMeshManager::RotationGizmoMeshData;
 FMeshData FMeshManager::ScaleGizmoMeshData;
 FMeshData FMeshManager::MouseOverlayMeshData;
+FMeshData FMeshManager::NullMeshData;
 
 FUVMeshData FMeshManager::UVRectMeshData;
 
@@ -64,15 +65,7 @@ void FMeshManager::Initialize()
     {
         CreateQuad();
     }
-    //if (AxisMeshData.Vertices.empty())
-    //{
-    //    CreateAxis();
-    //}
-    //
-    //if (GridMeshData.Vertices.empty())
-    //{
-    //    CreateGrid();
-    //}
+
 
     if (MouseOverlayMeshData.Vertices.empty())
     {
@@ -82,6 +75,11 @@ void FMeshManager::Initialize()
     if (UVRectMeshData.Vertices.empty())
     {
         CreateUVRect();
+    }
+
+    if (NullMeshData.Vertices.empty())
+    {
+        CreateNull();
     }
 
     bIsInitialized = true;
@@ -208,12 +206,12 @@ void FMeshManager::CreateQuad()
         };
 
     vertices = {
-        V(0.0f, 0, 0.0f, 0.0f, 1.0f),  // 좌하
-        V(1.0f, 0, 1.0f, 1.0f, 0.0f),  // 우상
-        V(0.0f, 0, 1.0f, 0.0f, 0.0f),  // 좌상
-        V(0.0f, 0, 0.0f, 0.0f, 1.0f),  // 좌하
-        V(1.0f, 0, 0.0f, 1.0f, 1.0f),  // 우하
-        V(1.0f, 0, 1.0f, 1.0f, 0.0f),  // 우상
+        V(0.0f, -0.5f, -0.5f, 1.0f, 1.0f),  // 좌하
+        V(0.0f, 0.5f, 0.5f, 0.0f, 0.0f),  // 우상
+        V(0.0f, -0.5f, 0.5f, 1.0f, 0.0f),  // 좌상
+        V(0.0f, -0.5f, -0.5f, 1.0f, 1.0f),  // 좌하
+        V(0.0f, 0.5f, -0.5f, 0.0f, 1.0f),  // 우하
+        V(0.0f, 0.5f, 0.5f, 0.0f, 0.0f),  // 우상
     };
 }
 
@@ -421,6 +419,18 @@ void FMeshManager::CreateUVRect()
         0, 3, 2  // Front tri 2
     };
 
+}
+
+void FMeshManager::CreateNull()
+{
+    // Degenerate triangle — all vertices at origin, produces zero-area geometry.
+    // Used to silently suppress the outline pass for texture-based components.
+    NullMeshData.Vertices = {
+        { {0.f, 0.f, 0.f}, {} },
+        { {0.f, 0.f, 0.f}, {} },
+        { {0.f, 0.f, 0.f}, {} },
+    };
+    NullMeshData.Indices = { 0, 1, 2 };
 }
 
 

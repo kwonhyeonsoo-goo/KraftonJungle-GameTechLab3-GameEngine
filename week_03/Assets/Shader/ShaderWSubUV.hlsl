@@ -51,6 +51,8 @@ float4 PS_Sprite(PS_INPUT input) : SV_TARGET
     float4 color = SpriteAtlas.Sample(SpriteSampler, input.TexCoord);
     float minColor = min(min(color.r, color.b), color.g);
     float maxColor = max(max(color.r, color.b), color.g);
+    if (maxColor < 0.1f)
+        discard;
     return float4(color.rgb, maxColor);
 
 }

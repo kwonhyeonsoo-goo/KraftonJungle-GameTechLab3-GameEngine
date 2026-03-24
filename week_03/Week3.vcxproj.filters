@@ -5,6 +5,7 @@
     <FxCompile Include="Assets\Shader\FontShader.hlsl" />
     <FxCompile Include="Assets\Shader\ShaderW0.hlsl" />
     <FxCompile Include="Assets\Shader\BatchedLineShader.hlsl" />
+    <FxCompile Include="Assets\Shader\ShaderWSubUV.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DirectXTK\WICTextureLoader.cpp" />

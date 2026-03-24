@@ -100,7 +100,6 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 				break;
 			case EPrimitiveType::EPT_SubUV:
 				EditorEngine->SpawnNewPrimitiveActor<USubUVComponent>(CurSpawnPoint);
-
 				break;
 			}
 		}
@@ -323,7 +322,7 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 	}
 
 	// Primitive Actors dropdown
-	if (ImGui::CollapsingHeader("Primitive Actors")) {
+	if (ImGui::CollapsingHeader("Scene Actors")) {
 		for (int i = 0; i < PrimitiveActors.size(); i++) {
 			AActor* Actor = PrimitiveActors[i];
 			FString Label = "Actor_" + std::to_string(Actor->UUID);
@@ -358,7 +357,7 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 	}
 
 	// Non-Primitive Actors Dropdown
-	if (ImGui::CollapsingHeader("Non-Primitive Actors")) {
+	if (ImGui::CollapsingHeader("Non-Scene Actors")) {
 		for (int i = 0; i < NonPrimitiveActors.size(); i++) {
 			AActor* Actor = NonPrimitiveActors[i];
 			std::string Label = "Actor_" + std::to_string(Actor->UUID);
@@ -439,7 +438,8 @@ void FEditorMainPanel::RenderPickedObjectWindow(UObject*& ObjectPicked) {
 void FEditorMainPanel::RenderPickedActorWindow(AActor* Actor) {
 	if (Actor->IsA<ASpotlight>()) {
 		SEPARATOR();
-		ASpotlight* Spotlight = ASpotlight::Cast(Actor);
+		ASpotlight* SpotlightActor = ASpotlight::Cast(Actor);
+		USpotlightComponent* Spotlight = SpotlightActor->GetSpotlightComp();
 		float SpotlightRot[2] = { Spotlight->GetYaw(), Spotlight->GetPitch()};
 		if (ImGui::DragFloat2("Spotlight Rotation", SpotlightRot, 0.1f)) {
 			SpotlightRot[0] = Clamp(SpotlightRot[0], -80.0f, 80.0f); SpotlightRot[1] = Clamp(SpotlightRot[1], -80.0f, 80.0f);
@@ -461,6 +461,12 @@ void FEditorMainPanel::RenderPickedActorWindow(AActor* Actor) {
 		if (ImGui::DragFloat("Spotlight Radius", &SpotlightRadius, 0.1f)) { SpotlightRadius = Clamp(SpotlightRadius, 0.1f, 100.0f); Spotlight->SetConeRadius(SpotlightRadius); }
 
 		// Color
+		FVector4 RayColor = Spotlight->GetColor();
+		float Color[4] = { RayColor.X, RayColor.Y, RayColor.Z, RayColor.W };
+		if (ImGui::ColorEdit4("Ray Color", Color)) {
+			FVector4 NewColor(Color[0], Color[1], Color[2], Color[3]);
+			Spotlight->SetColor(NewColor);
+		}
 	}
 }
 

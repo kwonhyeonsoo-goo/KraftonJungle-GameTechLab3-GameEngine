@@ -49,7 +49,7 @@ void FRenderCollector::CollectFromActor(AActor* Actor, const FRenderCollectorCon
 	}
 
 	if (Actor->IsA<ASpotlight>()) {
-		ASpotlight::Cast(Actor)->AddConeLinesToBatch(RenderBus.GetBatchedLine());
+		ASpotlight::Cast(Actor)->RenderLines(RenderBus.GetBatehdLine());
 	}
 }
 

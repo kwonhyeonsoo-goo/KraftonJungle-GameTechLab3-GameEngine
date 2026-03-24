@@ -16,15 +16,11 @@ private:
 	FVector UnitNormal;
 	FVector UnitOrthogonal;
 	FVector CircleCenter;
-	FVector4 ConeColor = FVector4(1.0f, 1.0f, 0.0f, 1.0f);	// Yellow by default
-
-	// Checks if spotlight cone has been transformed
-	bool bIsConeDirty = false;
 
 	TArray<FVector> CircleVertices;
 
 public:
-	DECLARE_CLASS(USpotlightComponent, USceneComponent)
+	DECLARE_CLASS(USpotlightComponent, ULightComponent)
 
 	USpotlightComponent();
 	~USpotlightComponent() = default;
@@ -33,14 +29,15 @@ public:
 	void TickComponent(float DeltaTime) override;
 	void EndPlay() override {}
 
-	void UpdateCone();
-	void SetConeHeight(float NewConeHeight) { ConeHeight = NewConeHeight; bIsConeDirty = true; }
-	void SetConeRadius(float NewRadius) { Radius = NewRadius; bIsConeDirty = true; }
-	void SetNumVertex(size_t Num) { NumCircleVertex = Num; bIsConeDirty = true; }
-	void SetConeColor(FVector4 NewConeColor) { ConeColor = NewConeColor; }
-	void SetYaw(float NewYaw) { Yaw = NewYaw; bIsConeDirty = true; }
-	void SetPitch(float NewPitch) { Pitch = NewPitch; bIsConeDirty = true; }
-	void SetRadius(float NewRadius) { if (NewRadius >= 0) Radius = NewRadius; bIsConeDirty = true; }
+	void UpdateWorldMatrix() override;
+
+	void UpdateLight() override;
+	void SetConeHeight(float NewConeHeight) { ConeHeight = NewConeHeight; bIsLightDirty = true; }
+	void SetConeRadius(float NewRadius) { Radius = NewRadius; bIsLightDirty = true; }
+	void SetNumVertex(size_t Num) { NumCircleVertex = Num; bIsLightDirty = true; }
+	void SetYaw(float NewYaw) { Yaw = NewYaw; bIsLightDirty = true; }
+	void SetPitch(float NewPitch) { Pitch = NewPitch; bIsLightDirty = true; }
+	void SetRadius(float NewRadius) { if (NewRadius >= 0) Radius = NewRadius; bIsLightDirty = true; }
 
 	float GetYaw() const { return Yaw; }
 	float GetPitch() const { return Pitch; }
@@ -48,8 +45,7 @@ public:
 	float GetRadius() const { return Radius; }
 	int GetNumVertices() const { return NumCircleVertex; }
 
-	//void Transformed() override { bIsConeDirty = true; }
-
 	// Rendering
-	void AddConeLinesToBatch(FBatchedLine* BatchLine);
+	void Render() override { /* To be Implemented */ }
+	void RenderLines(FBatchedLine* BatchLine) override;
 };

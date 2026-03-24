@@ -17,7 +17,6 @@ void USubUVComponent::UpdateFrame(float deltaTime)
 	currentU = OffsetLeftX +(CurrentFrameIndex % CellCountX) * CellSizeX;
 	currentV = OffsetUpY +(CurrentFrameIndex / CellCountX) * CellSizeY;
 
-	//if Billboard면 
 }
 
 USubUVComponent::USubUVComponent(std::wstring filename)
@@ -41,15 +40,29 @@ USubUVComponent::USubUVComponent(std::wstring filename)
 }
 
 bool USubUVComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand) {
+
 	if (!UVMeshData || !bIsVisible ) {
+
 		return false;
 	}
 
 	if (Texture2DId == -1) {
 		return false;
 	}
+	FVector CameraRight = { -viewMatrix.M[0][0], -viewMatrix.M[0][1],0 };
+	CameraRight.Normalize();
+	FMatrix invesView = {
+						1,					0 ,	0 , 0,
+			CameraRight.X,		CameraRight.Y,	0,  0,
+						0,					0 ,	1 , 0,
+						0,					0,	0 ,	1 };
+
+	FMatrix model = FMatrix::MakeScaleMatrix(GetScaleVector()) * invesView
+					* FMatrix::MakeTranslationMatrix(GetWorldLocation());
+
 	OutCommand.Type = ERenderCommandType::SubUV;
-	OutCommand.TransformConstants.Model = GetWorldMatrix();
+	if (bIsBillBoard) OutCommand.TransformConstants.Model = model;
+	else OutCommand.TransformConstants.Model = GetWorldMatrix();
 	OutCommand.TransformConstants.View = viewMatrix;
 	OutCommand.TransformConstants.Projection = projMatrix;
 	OutCommand.TextureID = Texture2DId;
@@ -58,7 +71,7 @@ bool USubUVComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix&
 	OutCommand.SubUVConstants.startX = currentU;
 	OutCommand.SubUVConstants.startY = currentV;
 	
-	return UPrimitiveComponent::GetRenderCommand(viewMatrix, projMatrix, OutCommand);
+	return true;// UPrimitiveComponent::GetRenderCommand(viewMatrix, projMatrix, OutCommand);
 }
 
 void USubUVComponent::Update(float deltatime)
