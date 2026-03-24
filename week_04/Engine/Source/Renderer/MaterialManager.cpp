@@ -181,6 +181,7 @@ std::shared_ptr<FMaterial> FMaterialManager::LoadFromFile(
 		{
 			depthStencilOption.StencilWriteMask = RenderStatesJson["StencilWriteMask"].get<uint8>();
 		}
+		//DepthTest: true, DepthFunc: Less -> 기본 메시가 이미 같은 깊이를 기록해놓음 -> 하이라이트가 "더 가까운가?" 비교 -> 같은 깊이니까 통과 못함 -> 안 그려짐
 		if (RenderStatesJson.contains("DepthFunc"))
 		{
 			FString Func = RenderStatesJson["DepthFunc"].get<std::string>();
@@ -191,7 +192,6 @@ std::shared_ptr<FMaterial> FMaterialManager::LoadFromFile(
 			else if (Func == "Always")
 				depthStencilOption.DepthFunc = D3D11_COMPARISON_ALWAYS;
 		}
-
 		auto DepthStencilState = InStateManager->GetOrCreateDepthStencilState(depthStencilOption);
 		Mat->SetDepthStencilOption(depthStencilOption);
 		Mat->SetDepthStencilState(DepthStencilState);
