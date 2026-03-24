@@ -178,7 +178,7 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 	ContentBrowser.SetFolderIcon(CurrentRenderer->GetFolderIconSRV());
 	ContentBrowser.SetFileIcon(CurrentRenderer->GetFileIconSRV());
 
-	std::filesystem::path FontPath = FPaths::ProjectRoot() / "Content" / "Fonts" / "NotoSansKR.ttf";
+	std::filesystem::path FontPath = FPaths::ProjectRoot() / "Content" / "Fonts" / "NotoSansKR-Bold.ttf";
 	std::string FontPathString = FontPath.string();
 	InRenderer->SetGUICallbacks(
 		[Hwnd, Device, DeviceContext, FontPathString]()
