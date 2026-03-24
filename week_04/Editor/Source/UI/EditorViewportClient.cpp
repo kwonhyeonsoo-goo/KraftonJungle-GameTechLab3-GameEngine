@@ -188,27 +188,6 @@ void CEditorViewportClient::HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPAR
 	}
 }
 
-
-FRenderCommand CEditorViewportClient::BuildRenderCommand(UPrimitiveComponent* PrimitiveComponent) const
-{
-	FRenderCommand Command;
-	Command.RenderLayer = ERenderLayer::Default;
-	Command.MeshData = PrimitiveComponent->GetPrimitive()->GetMeshData();
-	Command.WorldMatrix = PrimitiveComponent->GetWorldTransform();
-	switch (RenderMode)
-	{
-	case ERenderMode::Lighting:
-	case ERenderMode::NoLighting:
-		Command.Material = PrimitiveComponent->GetMaterial();
-		break;
-	// Wireframe 렌더모드에서는 기존 Primitive가 가지고 있던 Material 무시 
-	case ERenderMode::Wireframe:
-		Command.Material = WireFrameMaterial.get();
-	}
-	return Command;
-}
-
-
 void CEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
 {
 	CCore* Core = EditorUI.GetCore();
@@ -263,6 +242,15 @@ void CEditorViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene,
 	const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
 	IViewportClient::BuildRenderCommands(Core, Scene, Frustum, OutQueue);  // non-const 부모 호출
+
+	// RenderMode 처리
+	if (RenderMode == ERenderMode::Wireframe)
+	{
+		for (auto it = OutQueue.Commands.begin(); it != OutQueue.Commands.end(); it++)
+		{
+			it->Material = WireFrameMaterial.get();
+		}
+	}
 
 	if (!Core || !Scene || !Scene->GetCamera())
 	{

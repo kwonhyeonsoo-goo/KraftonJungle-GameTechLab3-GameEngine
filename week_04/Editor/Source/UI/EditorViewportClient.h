@@ -35,8 +35,6 @@ public:
 	void HandleFileDropOnViewport(const FString& FilePath) override;
 	void BuildRenderCommands(CCore* Core, UScene* Scene,
 		const FFrustum& Frustum, FRenderCommandQueue& OutQueue) override;
-protected:
-	virtual FRenderCommand BuildRenderCommand(UPrimitiveComponent* PrimitiveComponent) const override;
 
 private:
 	CEditorUI& EditorUI;

@@ -72,16 +72,6 @@ UWorld* IViewportClient::ResolveWorld(CCore* Core) const
 	return Core ? Core->GetActiveWorld() : nullptr;
 }
 
-FRenderCommand IViewportClient::BuildRenderCommand(UPrimitiveComponent* PrimitiveComponent) const
-{
-	FRenderCommand Command;
-	Command.RenderLayer = ERenderLayer::Default;
-	Command.MeshData = PrimitiveComponent->GetPrimitive()->GetMeshData();
-	Command.WorldMatrix = PrimitiveComponent->GetWorldTransform();
-	Command.Material = PrimitiveComponent->GetMaterial();
-	return Command;
-}
-
 void IViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene, const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
 	UWorld* World = ResolveWorld(Core);
