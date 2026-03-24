@@ -34,13 +34,8 @@ void CEditorViewportClient::Attach(CCore* Core, CRenderer* Renderer)
 	EditorUI.SetupWindow(MainWindow);
 	EditorUI.AttachToRenderer(Renderer);
 
-	// Wireframe 모드를 위한 머티리얼 생성
-	const auto AbsolutePath = FPaths::ProjectRoot() / WireframeMaterialPath;
-	WireFrameMaterial = FMaterialManager::Get().GetOrLoad(Renderer->GetDevice(), AbsolutePath.string());
-	FRasterizerStateOption rasterizerOption;
-	rasterizerOption.FillMode = D3D11_FILL_WIREFRAME;
-	auto RasterizerState = Renderer->GetRenderStateManager()->GetOrCreateRenderState(rasterizerOption);
-	WireFrameMaterial->SetRasterizerState(RasterizerState);
+	// Wireframe 모드를 위한 머티리얼 가져와서 보관
+	WireFrameMaterial = FMaterialManager::Get().FindByName(WireframeMaterialName);
 }
 
 void CEditorViewportClient::Detach(CCore* Core, CRenderer* Renderer)
