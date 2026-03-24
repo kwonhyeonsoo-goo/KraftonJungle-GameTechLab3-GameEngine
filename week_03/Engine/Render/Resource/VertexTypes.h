@@ -15,6 +15,7 @@ struct FVertex
     float U, V;
 	int SubID;
 };
+
 struct FUVVertex
 {
     FVector Position;

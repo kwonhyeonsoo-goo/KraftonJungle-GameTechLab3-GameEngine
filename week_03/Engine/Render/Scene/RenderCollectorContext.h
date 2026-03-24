@@ -6,7 +6,7 @@
 class UScene;
 class UCamera;
 class UGizmoComponent;
-class UPrimitiveComponent;
+class USceneComponent;
 
 struct FRenderCollectorContext
 {
@@ -15,7 +15,7 @@ struct FRenderCollectorContext
 	UGizmoComponent* Gizmo = nullptr;
 	const FCursorOverlayState* CursorOverlayState = nullptr;
 
-	UPrimitiveComponent* SelectedComponent = nullptr;
+	const std::vector<USceneComponent*>* SelectedComponent;
 
 	float ViewportWidth = 0.f;
 	float ViewportHeight = 0.f;

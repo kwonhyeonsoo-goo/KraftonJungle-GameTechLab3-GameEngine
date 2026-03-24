@@ -41,10 +41,6 @@ void FEditorViewportClient::Tick(float DeltaTime)
 	TickCursorOverlay(DeltaTime);
 }
 
-void FEditorViewportClient::FlushViewOutput()
-{
-	ViewOutput = {};
-}
 
 void FEditorViewportClient::TickInput(float DeltaTime)
 {
@@ -232,38 +228,55 @@ void FEditorViewportClient::HandleDragStart(const FRay& Ray)
 		GizmoManager.SetPressedOnHandle(true);
 		FString PickLog = "Gizmo is Holding: " + ViewOutput.ObjectPicked;
 		UE_LOG(PickLog.c_str(), true);
+		return;
+	}
+
+	// Find closest hit object in scene
+	UPrimitiveComponent* bestTarget  = nullptr;
+	float closestDistance = FLT_MAX;
+
+	auto Sceneptr = Scene.lock();
+	if (!Sceneptr) return;
+
+	for (auto* it : Sceneptr->GetActors())
+	{
+		if (!it || it->bPendingKill || (it->GetRootComponent() && it->GetRootComponent()->bPendingKill))
+			continue;
+
+		UPrimitiveComponent* primitiveComp = dynamic_cast<UPrimitiveComponent*>(it->GetRootComponent());
+		if (!primitiveComp) continue;
+
+		hitResult = {};
+		if (primitiveComp->Raycast(Ray, hitResult) && hitResult.Distance < closestDistance)
+		{
+			closestDistance = hitResult.Distance;
+			bestTarget      = primitiveComp;
+		}
+	}
+
+	bool bCtrlHeld = InputSystem::GetKey(VK_CONTROL);
+
+	if (bCtrlHeld)
+	{
+		if (bestTarget != nullptr)
+		{
+			GizmoManager.AddTarget(bestTarget);
+			ViewOutput.ObjectPicked = bestTarget->GetTypeInfo()->name;
+			ViewOutput.Object       = bestTarget;
+		}
 	}
 	else
 	{
-		FlushViewOutput();
-		UPrimitiveComponent* bestTarget  = nullptr;
-		float closestDistance = FLT_MAX;
-
-		auto Sceneptr = Scene.lock();
-		if (!Sceneptr) return;
-
-		for (auto* it : Sceneptr->GetActors())
-		{
-			if (!it || it->bPendingKill || (it->GetRootComponent() && it->GetRootComponent()->bPendingKill))
-				continue;
-
-			UPrimitiveComponent* primitiveComp = dynamic_cast<UPrimitiveComponent*>(it->GetRootComponent());
-			if (!primitiveComp) continue;
-
-			hitResult = {};
-			if (primitiveComp->Raycast(Ray, hitResult) && hitResult.Distance < closestDistance)
-			{
-				closestDistance         = hitResult.Distance;
-				bestTarget              = primitiveComp;
-				ViewOutput.ObjectPicked = primitiveComp->GetTypeInfo()->name;
-				ViewOutput.Object       = primitiveComp;
-			}
-		}
-
 		if (bestTarget == nullptr)
+		{
 			GizmoManager.Deactivate();
+		}
 		else
+		{
 			GizmoManager.SetTarget(bestTarget);
+			ViewOutput.ObjectPicked = bestTarget->GetTypeInfo()->name;
+			ViewOutput.Object       = bestTarget;
+		}
 	}
 }
 

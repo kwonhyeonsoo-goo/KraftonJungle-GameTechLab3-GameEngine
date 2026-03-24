@@ -80,26 +80,34 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* primitiveCompon
 			RenderBus.AddComponentCommand(Cmd);
 		}
 
-		if (Context.SelectedComponent == primitiveComponent)
+		FBatchedLine* BatchLine = RenderBus.GetBatchedLine();
+
+		for (uint64 i = 0; i < (Context.SelectedComponent)->size(); ++i)
 		{
-			FRenderCommand OutlineCmd = Cmd;
-			OutlineCmd.Type = ERenderCommandType::SelectionOutline;
-			OutlineCmd.OutlineConstants.OutlineColor = FVector4(1.0f, 0.5f, 0.0f, 1.0f); // RGBA
-			OutlineCmd.OutlineConstants.OutlineInvScale = FVector(1.0f / primitiveComponent->GetRelativeScale().X,
-				1.0f / primitiveComponent->GetRelativeScale().Y, 1.0f / primitiveComponent->GetRelativeScale().Z);
-			OutlineCmd.OutlineConstants.OutlineOffset = 0.03;
-
-			if (primitiveComponent->GetPrimitiveType() == EPrimitiveType::EPT_Plane)
+			if (primitiveComponent == (*Context.SelectedComponent)[i])
 			{
-				OutlineCmd.OutlineConstants.PrimitiveType = 0u;
-			}
-			else
-			{
-				//	Plane은 Outline이 제대로 안나오는 이슈가 있어서, 일단 Cube로 대체하여 그립니다.
-				OutlineCmd.OutlineConstants.PrimitiveType = 1u;
-			}
+				FBoundingBox AABB = primitiveComponent->GetBoundingBox();
+				BatchLine->AddAABB(AABB.WorldAABBMinLocation, AABB.WorldAABBMaxLocation);
 
-			RenderBus.AddOutlineCommand(OutlineCmd);
+				FRenderCommand OutlineCmd = Cmd;
+				OutlineCmd.Type = ERenderCommandType::SelectionOutline;
+				OutlineCmd.OutlineConstants.OutlineColor = FVector4(1.0f, 0.5f, 0.0f, 1.0f); // RGBA
+				OutlineCmd.OutlineConstants.OutlineInvScale = FVector(1.0f / primitiveComponent->GetRelativeScale().X,
+					1.0f / primitiveComponent->GetRelativeScale().Y, 1.0f / primitiveComponent->GetRelativeScale().Z);
+				OutlineCmd.OutlineConstants.OutlineOffset = 0.03;
+
+				if (primitiveComponent->GetPrimitiveType() == EPrimitiveType::EPT_Plane)
+				{
+					OutlineCmd.OutlineConstants.PrimitiveType = 0u;
+				}
+				else
+				{
+					//	Plane은 Outline이 제대로 안나오는 이슈가 있어서, 일단 Cube로 대체하여 그립니다.
+					OutlineCmd.OutlineConstants.PrimitiveType = 1u;
+				}
+
+				RenderBus.AddOutlineCommand(OutlineCmd);
+			}
 		}
 	}
 }
@@ -128,11 +136,6 @@ void FRenderCollector::CollectFromEditor(const FRenderCollectorContext& Context,
 
 	RenderBus.AddBatcedLineCommand(BatchedLineCommand);
 
-	if (Context.SelectedComponent)
-	{
-		FBoundingBox AABB = Context.SelectedComponent->GetBoundingBox();
-		BatchLine->AddAABB(AABB.WorldAABBMinLocation, AABB.WorldAABBMaxLocation);
-	}
 
 	if (Gizmo && Gizmo->IsVisible())
 	{

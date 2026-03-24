@@ -123,7 +123,8 @@ void FEditorEngine::BuildRenderCommands()
 	Context.CursorOverlayState = &ViewportClient.GetCursorOverlayState();
 	Context.ViewportHeight = WindowHeight;
 	Context.ViewportWidth = WindowWidth;
-	Context.SelectedComponent = GizmoManager.HasTarget() ? (UPrimitiveComponent*)GizmoManager.GetTarget() : nullptr;
+
+	Context.SelectedComponent = &GizmoManager.GetSelectedTargets();
 	Context.GridSize = FUISettingInitializer::GetGridSize();
 
 	FRenderCollector::Collect(Context, RenderBus);

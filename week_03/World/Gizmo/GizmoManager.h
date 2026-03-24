@@ -3,6 +3,7 @@
 #include "GizmoComponent.h"
 #include "Core/RayTypes.h"
 #include "Core/CollisionTypes.h"
+#include <vector>
 
 class FGizmoManager
 {
@@ -13,9 +14,14 @@ public:
 
 	// Target
 	void SetTarget(USceneComponent* NewTarget);
+	void AddTarget(USceneComponent* NewTarget);
+
 	void Deactivate();
 	bool HasTarget()             const { return TargetComponent != nullptr; }
+	bool IsSelected(USceneComponent* Comp) const;
 	USceneComponent* GetTarget() const { return TargetComponent; }
+
+	const std::vector<USceneComponent*>& GetSelectedTargets() const { return SelectedComponents; }
 
 	// Mode
 	void SetNextMode();
@@ -50,7 +56,9 @@ public:
 private:
 	weak_ptr<UGizmoComponent> Component;
 
-	USceneComponent* TargetComponent      = nullptr;
+	USceneComponent*              TargetComponent    = nullptr;
+	std::vector<USceneComponent*> SelectedComponents;
+
 	EGizmoMode       CurMode              = Translate;
 	FVector          LastIntersectionLocation;
 

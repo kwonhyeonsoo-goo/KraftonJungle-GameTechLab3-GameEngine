@@ -1,6 +1,7 @@
 #include "GizmoManager.h"
 #include "Classes/AActor.h"
 #include <cmath>
+#include <algorithm>
 
 void FGizmoManager::Initialize(weak_ptr<UGizmoComponent> InComponent)
 {
@@ -26,17 +27,57 @@ void FGizmoManager::SetTarget(USceneComponent* NewTarget)
 	auto Comp = Component.lock();
 	if (!Comp) return;
 
+	SelectedComponents.clear();
+	SelectedComponents.push_back(NewTarget);
 	TargetComponent = NewTarget;
 	Comp->SetWorldLocation(TargetComponent->GetWorldLocation());
 	UpdateGizmoTransform();
 	Comp->SetVisibility(true);
 }
 
+void FGizmoManager::AddTarget(USceneComponent* NewTarget)
+{
+	if (!NewTarget) return;
+
+	auto it = std::find(SelectedComponents.begin(), SelectedComponents.end(), NewTarget);
+	if (it != SelectedComponents.end())
+	{
+		// 이미 선택된 경우는 비활성화
+		SelectedComponents.erase(it);
+		if (SelectedComponents.empty())
+		{
+			Deactivate();
+			return;
+		}
+		TargetComponent = SelectedComponents.back();
+		UpdateGizmoTransform();
+		return;
+	}
+
+	SelectedComponents.push_back(NewTarget);
+	TargetComponent = NewTarget;
+
+	auto Comp = Component.lock();
+	if (!Comp) return;
+	Comp->SetWorldLocation(TargetComponent->GetWorldLocation());
+	UpdateGizmoTransform();
+	Comp->SetVisibility(true);
+}
+
+
+bool FGizmoManager::IsSelected(USceneComponent* Comp) const
+{
+	return std::find(SelectedComponents.begin(), SelectedComponents.end(), Comp) != SelectedComponents.end();
+}
+
 void FGizmoManager::Deactivate()
 {
+	SelectedComponents.clear();
 	TargetComponent = nullptr;
 	if (auto Comp = Component.lock())
+	{
 		Comp->Deactivate();
+	}
 }
 
 void FGizmoManager::SetNextMode()
@@ -183,38 +224,55 @@ void FGizmoManager::HandleDrag(float DragAmount)
 void FGizmoManager::TranslateTarget(float DragAmount)
 {
 	auto Comp = Component.lock();
-	if (!Comp || !TargetComponent) return;
+	if (!Comp || SelectedComponents.empty()) return;
 	FVector delta = GetVectorForAxis(Comp->GetSelectedAxis()) * DragAmount;
 	Comp->AddWorldOffset(delta);
-	TargetComponent->AddWorldOffset(delta);
-	TargetComponent->GetOwningActor()->Transformed();
+	for (auto* target : SelectedComponents)
+	{
+		if (target)
+		{
+			target->AddWorldOffset(delta);
+			target->GetOwningActor()->Transformed();
+		}
+	}
 }
 
 void FGizmoManager::RotateTarget(float DragAmount)
 {
 	auto Comp = Component.lock();
-	if (!Comp || !TargetComponent) return;
-	FMatrix curMatrix   = FMatrix::MakeRotationEuler(TargetComponent->RelativeRotation);
+	if (!Comp || SelectedComponents.empty()) return;
 	FVector rotAxis     = GetVectorForAxis(Comp->GetSelectedAxis());
 	FMatrix deltaMatrix = FMatrix::MakeRotationAxis(rotAxis, DragAmount);
-	TargetComponent->SetRelativeRotation((curMatrix * deltaMatrix).GetEuler());
-	TargetComponent->GetOwningActor()->Transformed();
+	for (auto* target : SelectedComponents)
+	{
+		if (target)
+		{
+			FMatrix curMatrix = FMatrix::MakeRotationEuler(target->RelativeRotation);
+			target->SetRelativeRotation((curMatrix * deltaMatrix).GetEuler());
+			target->GetOwningActor()->Transformed();
+		}
+	}
 }
 
 void FGizmoManager::ScaleTarget(float DragAmount)
 {
 	auto Comp = Component.lock();
-	if (!Comp || !TargetComponent) return;
+	if (!Comp || SelectedComponents.empty()) return;
 	float scaleDelta = DragAmount * ScaleSensitivity;
-	FVector NewScale = TargetComponent->RelativeScale3D;
-	switch (Comp->GetSelectedAxis())
+	int axis = Comp->GetSelectedAxis();
+	for (auto* target : SelectedComponents)
 	{
-	case 0: NewScale.X += scaleDelta; break;
-	case 1: NewScale.Y += scaleDelta; break;
-	case 2: NewScale.Z += scaleDelta; break;
+		if (!target) continue;
+		FVector NewScale = target->RelativeScale3D;
+		switch (axis)
+		{
+		case 0: NewScale.X += scaleDelta; break;
+		case 1: NewScale.Y += scaleDelta; break;
+		case 2: NewScale.Z += scaleDelta; break;
+		}
+		target->SetRelativeScale(NewScale);
+		target->GetOwningActor()->Transformed();
 	}
-	TargetComponent->SetRelativeScale(NewScale);
-	TargetComponent->GetOwningActor()->Transformed();
 }
 
 void FGizmoManager::UpdateLinearDrag(const FRay& Ray)
@@ -266,7 +324,7 @@ void FGizmoManager::UpdateDrag(const FRay& Ray)
 {
 	auto Comp = Component.lock();
 	if (!bIsHolding || !Comp || !Comp->IsActive()) return;
-	if (Comp->GetSelectedAxis() == -1 || !TargetComponent) return;
+	if (Comp->GetSelectedAxis() == -1 || SelectedComponents.empty()) return;
 
 	if (CurMode == Rotate)
 		UpdateAngularDrag(Ray);
