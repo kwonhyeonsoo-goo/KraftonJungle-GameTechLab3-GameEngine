@@ -75,9 +75,6 @@
     <ClCompile Include="Source\Actor\CubeActor.cpp">
       <Filter>Source\Actor</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Actor\Gizmo.cpp">
-      <Filter>Source\Actor</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Actor\ObjActor.cpp">
       <Filter>Source\Actor</Filter>
     </ClCompile>
@@ -100,9 +97,6 @@
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Component\CubeComponent.cpp">
-      <Filter>Source\Component</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Component\GizmoComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Component\LineBatchComponent.cpp">
@@ -327,9 +321,6 @@
     <ClInclude Include="Source\Actor\CubeActor.h">
       <Filter>Source\Actor</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Actor\Gizmo.h">
-      <Filter>Source\Actor</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Actor\ObjActor.h">
       <Filter>Source\Actor</Filter>
     </ClInclude>
@@ -355,9 +346,6 @@
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\CubeComponent.h">
-      <Filter>Source\Component</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Component\GizmoComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\LineBatchComponent.h">
