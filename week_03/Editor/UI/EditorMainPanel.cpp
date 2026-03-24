@@ -7,7 +7,8 @@
 #include "ImGui/imgui_impl_win32.h"
 // Merge icons into default tool font
 #include "ImGui/IconsFontAwesome4.h"
-
+#include "Engine/EngineServices/EngineServices.h"
+#include "Engine/Render/Resource/RenderResourceManager.h"
 #include "Render/Renderer/Renderer.h"
 #include "World/Gizmo/GizmoManager.h"
 #include "World/Primitives/Primitives.h"
@@ -15,6 +16,7 @@
 #include "Core/Common.h"
 #include "Engine/Core/InputSystem.h"
 #include "Classes/ASpotlight.h"
+#include "World/Primitives/SubUV/SubUV.h"
 
 #define SEPARATOR(); ImGui::Spacing(); ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing(); ImGui::Spacing();
 
@@ -480,6 +482,73 @@ void FEditorMainPanel::RenderPickedActorWindow(AActor* Actor) {
 			Spotlight->SetColor(NewColor);
 		}
 	}
+
+	for (USceneComponent* comp : Actor->GetComponents()) {
+		if (comp->IsA< USubUVComponent>()) {
+			ImGui::SeparatorText("Sub UV");
+
+			RenderPicekdSubUVWindow(static_cast<USubUVComponent*>(comp));
+
+		}
+	}
+}
+
+void FEditorMainPanel::RenderPicekdSubUVWindow(USubUVComponent* SubUVComp)
+{
+	std::wstring wFileName = SubUVComp->GetFileName();
+	std::string textureFileName(wFileName.begin(), wFileName.end());
+
+	ImGui::Text( ("Texture File: " + textureFileName).c_str());
+
+	if (ImGui::Button("Load New Texture")) {
+		FString newFilePath = FEngineServices::GetResourceManager()->LoadResourceFilePath();
+
+		std::replace(newFilePath.begin(), newFilePath.end(), '/', '\\');
+		std::wstring FileDestinationW(newFilePath.begin(), newFilePath.end());
+		SubUVComp->ReloadTextureResource(FileDestinationW);
+	}
+
+	float offsetLeft, offsetRight, offsetUP, offsetBottom;
+	offsetLeft = SubUVComp->OffsetLeftX; offsetRight = SubUVComp->OffsetRightX; offsetUP = SubUVComp->OffsetUpY; offsetBottom = SubUVComp->OffsetBottomY;
+
+	int playRate = SubUVComp->PlayRate;
+	
+	ImGui::Checkbox("is Loop", &(SubUVComp->bLoop));
+
+	if (ImGui::DragInt("Play Rate", &playRate, 1, 60)) {
+		SubUVComp->PlayRate = playRate;
+	}
+
+	if (ImGui::DragFloat("Offset Left", &offsetLeft,
+		0.01f,          // speed in degrees
+		0.0f,          // min deg
+		1.0f))        // max deg
+	{
+		SubUVComp->OffsetLeftX = offsetLeft;
+	}
+;
+
+	if (ImGui::DragFloat("Offset Right", &offsetRight,0.01f,0.0f,1.0f))
+		SubUVComp->OffsetRightX = offsetRight;
+
+
+	if (ImGui::DragFloat("Offset Up", &offsetUP, 0.01f, 0.0f, 1.0f))
+		SubUVComp->OffsetUpY = offsetUP;
+
+
+	if (ImGui::DragFloat("Offset Bottom", &offsetBottom, 0.01f, 0.0f, 1.0f))
+		SubUVComp->OffsetBottomY = offsetBottom;
+
+	int rows, columns;
+	rows = SubUVComp->CellRows; columns = SubUVComp->CellColumns;
+
+	if (ImGui::DragInt("Rows", &rows, 1, 1, 10))
+		SubUVComp->CellRows = rows;
+
+
+	if (ImGui::DragInt("Columns", &columns, 1, 1, 10))
+		SubUVComp->CellColumns = columns;
+
 }
 
 void FEditorMainPanel::DrawTextComponentUI(UTextComponent* TextComp)

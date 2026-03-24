@@ -10,24 +10,28 @@ public:
     bool GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand) override;
     void Update(float deltatime) override;
     EPrimitiveType GetPrimitiveType() const override { return PrimitiveType; }
+    std::wstring GetFileName() { return filename; }
+    void ReloadTextureResource(std::wstring filename = L"Assets/Effects/Explosion.PNG");
 
 public:
     void UpdateWorldAABB() override;
     bool bIsBillBoard = true;
     float Timer;
     static constexpr EPrimitiveType PrimitiveType = EPrimitiveType::EPT_SubUV;
+    int CellRows, CellColumns;
+    float OffsetLeftX, OffsetUpY, OffsetRightX, OffsetBottomY;
+    int PlayRate = 24;
+    bool bLoop = true;
 
 private:
     const FUVMeshData* UVMeshData = nullptr;
     int Texture2DId = -1;
-    float OffsetLeftX, OffsetUpY, OffsetRightX, OffsetBottomY;
+
     int FrameCount;
     float CellSizeX, CellSizeY;
-    int CellCountX, CellCountY;
+
     int CurrentFrameIndex;
     std::wstring filename;
-    bool bLoop = true;
-    float PlayRate = 24.f;
 
 public:
     DECLARE_CLASS(USubUVComponent, UPrimitiveComponent)
@@ -35,7 +39,6 @@ public:
     float currentU, currentV;
 
 private:
-    void ReloadTextureResource(std::wstring filename = L"Assets/Effects/Explosion.PNG");
     bool RaycastMesh(const FRay& Ray, FHitResult& OutHitResult) override;
     float ElaspedTime;
 

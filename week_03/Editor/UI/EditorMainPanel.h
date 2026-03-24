@@ -7,10 +7,12 @@
 #include "Core/Common.h"
 #include "Object/Object.h"
 
+
 class FRenderer;
 class FEditorEngine;
 class FEditorViewportClient;
 class AActor;
+class USubUVComponent;
 class UTextComponent;
 
 enum class EPrimitiveType;
@@ -59,8 +61,8 @@ private:
 	void RenderObjectManager(FViewOutput& ViewOutput);
 	void RenderPickedObjectWindow(UObject*& Object);
 	void RenderPickedActorWindow(AActor* Actor);
+	void RenderPicekdSubUVWindow(USubUVComponent* SubUVComp);
 	void DrawTextComponentUI(UTextComponent* TextComp);
-	
 public:
 	void Create(HWND InHWindow, FRenderer& InRenderer, FEditorEngine* InEditorEngine, FEditorViewportClient* InEditorViewport);
 	void Release();
