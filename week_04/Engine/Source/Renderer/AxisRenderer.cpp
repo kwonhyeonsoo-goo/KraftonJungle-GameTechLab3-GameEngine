@@ -143,10 +143,8 @@ bool CAxisRenderer::CreateRenderStates()
 	return true;
 }
 
-void CAxisRenderer::Begin(const FMatrix& InView, const FMatrix& InProjection, const FVector& InCameraPosition)
+void CAxisRenderer::Begin(const FVector& InCameraPosition)
 {
-	ViewMatrix = InView;
-	ProjectionMatrix = InProjection;
 	CameraPosition = InCameraPosition;
 
 	UpdateFrameCB();
@@ -187,25 +185,13 @@ void CAxisRenderer::Draw(float GridSize, float LineThickness)
 	if (!Device || !DeviceContext || !AxisVS || !AxisPS)
 		return;
 
-	/** VB 명시적 제거 (AxisRenderer 에선 VB 안 쓰므로) */
-	ID3D11Buffer* NullVB = nullptr;
-	UINT Stride = 0;
-	UINT Offset = 0;
-
-	DeviceContext->IASetVertexBuffers(0, 1, &NullVB, &Stride, &Offset);
-
 	UpdateCameraCB(GridSize, LineThickness);
 
 	AxisVS->Bind(DeviceContext);
 	AxisPS->Bind(DeviceContext);
 
-	// Constant Buffers
-	ID3D11Buffer* VS_CB[1] = { FrameConstantBuffer };
-	DeviceContext->VSSetConstantBuffers(0, 1, VS_CB);
-
-
 	ID3D11Buffer* PS_CB[1] = { CameraConstantBuffer };
-	/*DeviceContext->VSSetConstantBuffers(2, 1, PS_CB); */
+	DeviceContext->VSSetConstantBuffers(2, 1, PS_CB); 
 	DeviceContext->PSSetConstantBuffers(2, 1, PS_CB);
 
 	// States

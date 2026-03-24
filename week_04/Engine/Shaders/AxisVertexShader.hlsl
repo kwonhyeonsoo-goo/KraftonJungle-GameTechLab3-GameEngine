@@ -11,14 +11,6 @@ cbuffer ObjectData : register(b1)
 	float4x4 World;
 };
 
-cbuffer CameraBuffer : register(b2)
-{
-	float3 CameraPos;
-	float GridSize;
-	float LineThickness;
-	float3 padding;
-};
-
 struct VS_OUTPUT
 {
 	float4 Pos : SV_POSITION; // 클립 공간 좌표
