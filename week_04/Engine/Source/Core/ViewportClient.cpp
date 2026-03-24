@@ -97,6 +97,11 @@ void IViewportClient::HandleFileDoubleClick(const FString& FilePath)
 
 }
 
+void IViewportClient::HandleFileDropOnViewport(const FString& FilePath)
+{
+
+}
+
 void CGameViewportClient::Attach(CCore* Core, CRenderer* Renderer)
 {
 	if (Renderer)

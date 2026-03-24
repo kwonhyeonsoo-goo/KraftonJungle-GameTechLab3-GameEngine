@@ -170,4 +170,6 @@ bool FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 			FObjectFactory::SetLastUUID(Saved);
 		}
 	}
+
+	return true;
 }

@@ -152,17 +152,10 @@ void CEditorUI::Initialize(CCore* InCore)
 			}
 			else if (Viewport.IsHovered())
 			{
-				UE_LOG("Drop On Viewport");
-
+				UE_LOG("Drop On Viewport");			
 				if (Core)
 				{
-					if (DraggingFilePath.ends_with(".obj"))
-					{
-						AObjActor* NewActor = Core->GetScene()->SpawnActor<AObjActor>("ObjActor");
-						NewActor->LoadObj(DraggingFilePath);
-						FVector V{ 0, 0, 0 };
-						NewActor->SetActorLocation(V);
-					}
+					Core->GetViewportClient()->HandleFileDropOnViewport(DraggingFilePath);
 				}
 			}
 		};

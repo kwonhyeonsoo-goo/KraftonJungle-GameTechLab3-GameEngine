@@ -32,6 +32,7 @@ public:
 	virtual FRenderCommand BuildRenderCommand(UPrimitiveComponent* PrimitiveComponent) const;
 	/** 입력 처리는 원래 Viewport 에서 처리하는게 맞는데 구조상 여기다 넣음 */
 	virtual void HandleFileDoubleClick(const FString& FilePath);
+	virtual void HandleFileDropOnViewport(const FString& FilePath);
 protected:
 	FShowFlags ShowFlags;
 	FSceneRenderCollector RenderCollector;
