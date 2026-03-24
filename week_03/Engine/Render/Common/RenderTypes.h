@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 //	Windows API Include
 #define NOMINMAX
@@ -20,13 +20,14 @@ enum class EPrimitiveType
 	EPT_Sphere,
 	EPT_Plane,
 	EPT_SubUV,
+	EPT_Text,
+	EPT_Quad,
 	EPT_TransGizmo,
 	EPT_RotGizmo,
 	EPT_ScaleGizmo,
 	EPT_Line,
 	EPT_Box,
 	EPT_MouseOverlay,
-	EPT_Quad,
 };
 
 enum class EUtilType

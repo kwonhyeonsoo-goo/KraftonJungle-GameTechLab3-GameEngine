@@ -202,16 +202,17 @@ void FMeshManager::CreateQuad()
 
     auto V = [&](float x, float y, float z, float u, float v)
         {
-            return FVertex{ FVector(x, y, z), {0.f, 1.f, 0.f, 1.f}, u, v };
+            return FVertex{ FVector(x, y, z), {0.f, 0.f, 0.f, 0.0f}, u, v };
         };
 
     vertices = {
-        V(0.0f, -0.5f, -0.5f, 1.0f, 1.0f),  // 좌하
-        V(0.0f, 0.5f, 0.5f, 0.0f, 0.0f),  // 우상
-        V(0.0f, -0.5f, 0.5f, 1.0f, 0.0f),  // 좌상
-        V(0.0f, -0.5f, -0.5f, 1.0f, 1.0f),  // 좌하
-        V(0.0f, 0.5f, -0.5f, 0.0f, 1.0f),  // 우하
-        V(0.0f, 0.5f, 0.5f, 0.0f, 0.0f),  // 우상
+        V(0.01f, -0.5f, -0.5f, 1.0f, 1.0f),  // 좌하
+        V(0.01f, 0.5f, 0.5f, 0.0f, 0.0f),  // 우상
+        V(0.01f, -0.5f, 0.5f, 1.0f, 0.0f),  // 좌상
+
+        V(0.01f, -0.5f, -0.5f, 1.0f, 1.0f),  // 좌하
+        V(0.01f, 0.5f, -0.5f, 0.0f, 1.0f),  // 우하
+        V(0.01f, 0.5f, 0.5f, 0.0f, 0.0f),  // 우상
     };
 }
 

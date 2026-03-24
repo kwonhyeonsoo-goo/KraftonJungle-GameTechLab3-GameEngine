@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #pragma once
 
@@ -17,11 +17,18 @@
 enum class ERenderCommandType
 {
 	Primitive,
+	TextPrimitive,
 	Gizmo,
 	Overlay,
 	SelectionOutline,
 	Font,
 	SubUV
+};
+
+enum class EOrientationType
+{
+	Fixed,
+	Billboard,
 };
 
 //	Object를 위한 Constant Buffer입니다.
@@ -68,6 +75,16 @@ struct FSubUVConstants
 	float cellSizeWidth, cellSizeheight;
 };
 
+struct FTextConstants
+{
+	EOrientationType OrientationType = EOrientationType::Fixed;
+	std::wstring Text = L"";
+	FVector TextPosition = {};
+	FVector TextRotation = {};
+	FVector TextScale = {};
+	FVector4 TextColor = {};
+};	
+
 struct FRenderCommand
 {
 	//	VB, IB 모두 담고 있는 MB
@@ -79,10 +96,8 @@ struct FRenderCommand
 	FOverlayConstants OverlayConstants = {};
 	FOutlineConstants OutlineConstants = {};
 	FSubUVConstants SubUVConstants = {};
-	FVector FontPosition = {};
-	FVector4 FontColor = {};
+	FTextConstants TextConstants = {};
 	
-	uint32 UUID = 0;
 	ERenderCommandType Type = ERenderCommandType::Primitive;
 
 	uint32 TextureID;

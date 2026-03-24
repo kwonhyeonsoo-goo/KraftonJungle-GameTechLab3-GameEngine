@@ -78,6 +78,8 @@ PrimitivePSInput PrimitiveVS(PrimitiveVSInput input)
 
 float4 PrimitivePS(PrimitivePSInput input) : SV_TARGET
 {
+    if (input.color.a < 0.1f)
+        discard;
     return input.color;
 }
 
