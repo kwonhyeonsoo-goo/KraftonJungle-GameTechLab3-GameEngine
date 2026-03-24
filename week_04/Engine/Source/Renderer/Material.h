@@ -100,11 +100,15 @@ public:
 	void SetPixelShader(const std::shared_ptr<FPixelShader>& InPS) { PixelShader = InPS; }
 	void SetRasterizerOption(const FRasterizerStateOption InOption) { RasterizerOption = InOption; }
 	void SetRasterizerState(const std::shared_ptr<FRasterizerState> InState) { RasterizerState = InState; }
+	void SetDepthStencilOption(const FDepthStencilStateOption InOption) { DepthStencilOption = InOption; }
+	void SetDepthStencilState(const std::shared_ptr<FDepthStencilState> InState) { DepthStencilState = InState; }
 
 	FVertexShader* GetVertexShader() const { return VertexShader.get(); }
 	FPixelShader* GetPixelShader() const { return PixelShader.get(); }
 	const FRasterizerStateOption& GetRasterizerOption() const { return RasterizerOption; }
+	const FDepthStencilStateOption& GetDepthStencilOption() const { return DepthStencilOption; }
 	std::shared_ptr<FRasterizerState> GetRasterizerState() const { return RasterizerState; }
+	std::shared_ptr<FDepthStencilState> GetDepthStencilState() const { return DepthStencilState; }
 
 	// 상수 버퍼 슬롯 추가 (b2, b3, ... 순서대로)
 	int32 CreateConstantBuffer(ID3D11Device* Device, uint32 InSize);
@@ -138,8 +142,10 @@ protected:
 	std::shared_ptr<FPixelShader> PixelShader;
 	// RasterizerState를 생성하기 위한 옵션, Serialize.
 	FRasterizerStateOption RasterizerOption;
+	FDepthStencilStateOption DepthStencilOption;
 	// 머티리얼 로드시에 생성되는 RasterizerState 포인터. No-Serialize.
 	std::shared_ptr<FRasterizerState> RasterizerState = nullptr;
+	std::shared_ptr<FDepthStencilState> DepthStencilState = nullptr;
 
 	TArray<FMaterialConstantBuffer> ConstantBuffers;
 	TMap<FString, FMaterialParameterInfo> ParameterMap;

@@ -8,6 +8,8 @@
 #include "Primitive/PrimitiveGizmo.h"
 #include "Primitive/UnrealEditorStyledGizmo.h"
 #include "Renderer/RenderCommand.h"
+#include "Renderer/Material.h"
+#include "Renderer/MaterialManager.h"
 #include "Scene/Scene.h"
 #include "Math/MathUtility.h"
 
@@ -47,6 +49,13 @@ namespace
 			ClampScaleComponent(InScale.Y),
 			ClampScaleComponent(InScale.Z));
 	}
+}
+
+CGizmo::CGizmo()
+{
+	// TODO: 매직 넘버 제거
+	const FString GizmoMaterialName = "M_Gizmos";
+	Material = FMaterialManager::Get().FindByName(GizmoMaterialName);
 }
 
 void CGizmo::SetMode(EGizmoMode InMode)
@@ -112,6 +121,7 @@ void CGizmo::BuildRenderCommands(AActor* SelectedActor, const CCamera* Camera, F
 	FRenderCommand Command;
 	Command.WorldMatrix = AxisGizmoWorld;
 	Command.RenderLayer = ERenderLayer::Overlay;
+	Command.Material = Material.get();
 	Command.bDisableDepthTest = true;
 	Command.bDisableDepthWrite = true;
 	Command.bDisableCulling = true;

@@ -1,0 +1,12 @@
+{
+  "Name": "M_Gizmos",
+  "VertexShader": "Engine/Shaders/ColorVertexShader.hlsl",
+  "PixelShader": "Engine/Shaders/ColorPixelShader.hlsl",
+  "RenderState": {
+    "FillMode": 3,
+    "CullMode": 1,
+    "DepthTest": false
+  },
+  "ConstantBuffers": [
+  ]
+}

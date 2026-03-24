@@ -132,8 +132,8 @@ std::shared_ptr<FMaterial> FMaterialManager::LoadFromFile(
 	if (Json.contains("RenderState"))
 	{
 		auto RenderStatesJson = Json["RenderState"];
-		FRasterizerStateOption rasterizerOption;
 
+		FRasterizerStateOption rasterizerOption;
 		if (RenderStatesJson.contains("FillMode"))
 		{
 			rasterizerOption.FillMode = RenderStatesJson["FillMode"].get<D3D11_FILL_MODE>();
@@ -142,10 +142,36 @@ std::shared_ptr<FMaterial> FMaterialManager::LoadFromFile(
 		{
 			rasterizerOption.CullMode = RenderStatesJson["CullMode"].get<D3D11_CULL_MODE>();
 		}
-		// DepthBias 등의 추가 옵션을 지원하려면 여기에 추가
-
 		auto RasterizerState = InStateManager->GetOrCreateRenderState(rasterizerOption);
+		Mat->SetRasterizerOption(rasterizerOption);	// 디버깅용 정보 삽입
 		Mat->SetRasterizerState(RasterizerState);
+
+		FDepthStencilStateOption depthStencilOption;
+		if (RenderStatesJson.contains("DepthTest"))
+		{
+			depthStencilOption.DepthEnable = RenderStatesJson["DepthTest"].get<bool>();
+		}
+		if (RenderStatesJson.contains("DepthWrite"))
+		{
+			depthStencilOption.DepthWriteMask = RenderStatesJson["DepthWrite"].get<D3D11_DEPTH_WRITE_MASK>();
+		}
+		if (RenderStatesJson.contains("StencilEnable"))
+		{
+			depthStencilOption.StencilEnable = RenderStatesJson["StencilEnable"].get<bool>();
+		}
+		if (RenderStatesJson.contains("StencilReadMask"))
+		{
+			depthStencilOption.DepthEnable = RenderStatesJson["StencilReadMask"].get<bool>();
+		}
+		if (RenderStatesJson.contains("DepthTest"))
+		{
+			depthStencilOption.DepthEnable = RenderStatesJson["DepthTest"].get<bool>();
+		}
+		auto DepthStencilState = InStateManager->GetOrCreateDepthStencilState(depthStencilOption);
+		Mat->SetDepthStencilOption(depthStencilOption);
+		Mat->SetDepthStencilState(DepthStencilState);
+
+		// DepthBias 등의 추가 옵션을 지원하려면 여기에 추가
 	}
 
 	// 상수 버퍼 로드

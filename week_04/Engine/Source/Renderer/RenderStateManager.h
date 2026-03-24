@@ -15,8 +15,11 @@ class ENGINE_API CRenderStateManager
 private:
 	ID3D11Device* Device;
 	ID3D11DeviceContext* DeviceContext;
-	TMap<uint32_t, std::shared_ptr<FRasterizerState>> StateMap;
-	std::shared_ptr<FRasterizerState> CurrentRenderState = nullptr;
+	TMap<uint32, std::shared_ptr<FRasterizerState>> RasterizerStateMap;
+	TMap<uint32, std::shared_ptr<FDepthStencilState>> DepthStencilStateMap;
+
+	std::shared_ptr<FRasterizerState> CurrentRasterizerState = nullptr;
+	std::shared_ptr<FDepthStencilState> CurrentDepthStencilState = nullptr;
 
 public:
 	CRenderStateManager(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext) 
@@ -29,8 +32,10 @@ public:
 
 	// 옵션에 따른 FRasterizerState 반환 (없으면 생성)
 	std::shared_ptr<FRasterizerState> GetOrCreateRenderState(const FRasterizerStateOption& opt);
+	std::shared_ptr<FDepthStencilState> GetOrCreateDepthStencilState(const FDepthStencilStateOption& opt);
 
 	// 실제 FRasterizerState 적용
 	void BindState(std::shared_ptr<FRasterizerState> InRS);
+	void BindState(std::shared_ptr<FDepthStencilState> InDSS);
 	void RebindState();
 };

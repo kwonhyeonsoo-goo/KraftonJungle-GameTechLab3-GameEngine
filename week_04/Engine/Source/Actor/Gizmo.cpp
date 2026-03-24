@@ -9,6 +9,7 @@ IMPLEMENT_RTTI(AGizmo, AActor)
 void AGizmo::PostSpawnInitialize()
 {
 	UPrimitiveComponent* GizmoComp = FObjectFactory::ConstructObject<UGizmoComponent>(this);
+	static_cast<UGizmoComponent*>(GizmoComp)->Initialize();
 	this->AddOwnedComponent(GizmoComp);
 }
 

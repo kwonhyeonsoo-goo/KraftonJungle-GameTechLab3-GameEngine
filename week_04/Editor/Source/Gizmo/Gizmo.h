@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Primitive/PrimitiveGizmo.h"
-
+#include "EngineAPI.h"
 #include <memory>
 
 class AActor;
@@ -12,6 +12,8 @@ class UScene;
 class USceneComponent;
 struct RotationDesc;
 struct FMeshData;
+class FMaterial;
+class FMaterialManager;
 struct FRenderCommandQueue;
 struct FRay;
 
@@ -44,6 +46,7 @@ enum class EGizmoAxis : uint8
 class CGizmo
 {
 public:
+	CGizmo();
 	void SetMode(EGizmoMode InMode);
 	EGizmoMode GetMode() const { return Mode; }
 	void CycleMode();
@@ -106,6 +109,8 @@ private:
 	FQuat DragStartActorRotation = FQuat::Identity;
 	int32 DragStartScreenX = 0;
 	int32 DragStartScreenY = 0;
+
+	std::shared_ptr<FMaterial> Material;
 
 	mutable std::unique_ptr<CPrimitiveGizmo> TranslationGizmo;
 	mutable std::unique_ptr<CPrimitiveGizmo> ScaleGizmo;
