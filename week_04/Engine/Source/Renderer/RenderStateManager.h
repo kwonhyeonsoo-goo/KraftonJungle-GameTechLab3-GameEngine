@@ -31,7 +31,7 @@ public:
 	void PrepareCommonStates();
 
 	// 옵션에 따른 FRasterizerState 반환 (없으면 생성)
-	std::shared_ptr<FRasterizerState> GetOrCreateRenderState(const FRasterizerStateOption& opt);
+	std::shared_ptr<FRasterizerState> GetOrCreateRasterizerState(const FRasterizerStateOption& opt);
 	std::shared_ptr<FDepthStencilState> GetOrCreateDepthStencilState(const FDepthStencilStateOption& opt);
 
 	// 실제 FRasterizerState 적용

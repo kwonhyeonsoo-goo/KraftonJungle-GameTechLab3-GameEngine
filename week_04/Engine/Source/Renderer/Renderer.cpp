@@ -180,6 +180,9 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 	Viewport.MinDepth = 0.f;
 	Viewport.MaxDepth = 1.f;
 
+	RenderStateManager = std::make_unique<CRenderStateManager>(Device, DeviceContext);
+	RenderStateManager->PrepareCommonStates();
+
 	if (!CreateConstantBuffers())
 	{
 		return false;
@@ -209,6 +212,23 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		DefaultMaterial->SetVertexShader(VS);
 		DefaultMaterial->SetPixelShader(PS);
 
+		// Renderer State 채워넣기
+		FRasterizerStateOption rasterizerOption;
+		rasterizerOption.FillMode = D3D11_FILL_SOLID;
+		rasterizerOption.CullMode = D3D11_CULL_BACK;
+		rasterizerOption.DepthClipEnable = false;
+		rasterizerOption.DepthBias = 0;
+		auto rasterizerState = RenderStateManager.get()->GetOrCreateRasterizerState(rasterizerOption);
+		DefaultMaterial->SetRasterizerOption(rasterizerOption); // 디버그용 정보 삽입
+		DefaultMaterial->SetRasterizerState(rasterizerState);
+		FDepthStencilStateOption depthStencilOption;
+		depthStencilOption.DepthEnable = true;
+		depthStencilOption.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+		depthStencilOption.StencilEnable = false;
+		auto depthStencilState = RenderStateManager.get()->GetOrCreateDepthStencilState(depthStencilOption);
+		DefaultMaterial->SetDepthStencilOption(depthStencilOption); // 디버그용 정보 삽입
+		DefaultMaterial->SetDepthStencilState(depthStencilState);
+
 		int32 SlotIndex = DefaultMaterial->CreateConstantBuffer(Device, 16);
 		if (SlotIndex >= 0)
 		{
@@ -219,9 +239,6 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 
 		FMaterialManager::Get().Register("M_Default", DefaultMaterial);
 	}
-
-	RenderStateManager = std::make_unique<CRenderStateManager>(Device, DeviceContext);
-	RenderStateManager->PrepareCommonStates();
 
 	D3D11_DEPTH_STENCIL_DESC OverlayDepthDesc = {};
 	OverlayDepthDesc.DepthEnable = FALSE;

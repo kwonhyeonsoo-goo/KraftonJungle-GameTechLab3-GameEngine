@@ -12,12 +12,12 @@ void CRenderStateManager::PrepareCommonStates()
 			FRasterizerStateOption opt;
 			opt.FillMode = f;
 			opt.CullMode = c;
-			GetOrCreateRenderState(opt);
+			GetOrCreateRasterizerState(opt);
 		}
 	}
 }
 
-std::shared_ptr<FRasterizerState> CRenderStateManager::GetOrCreateRenderState(const FRasterizerStateOption& opt)
+std::shared_ptr<FRasterizerState> CRenderStateManager::GetOrCreateRasterizerState(const FRasterizerStateOption& opt)
 {
 	uint32_t key = opt.ToKey();
 

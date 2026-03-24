@@ -142,7 +142,7 @@ std::shared_ptr<FMaterial> FMaterialManager::LoadFromFile(
 		{
 			rasterizerOption.CullMode = RenderStatesJson["CullMode"].get<D3D11_CULL_MODE>();
 		}
-		auto RasterizerState = InStateManager->GetOrCreateRenderState(rasterizerOption);
+		auto RasterizerState = InStateManager->GetOrCreateRasterizerState(rasterizerOption);
 		Mat->SetRasterizerOption(rasterizerOption);	// 디버깅용 정보 삽입
 		Mat->SetRasterizerState(RasterizerState);
 
@@ -151,13 +151,25 @@ std::shared_ptr<FMaterial> FMaterialManager::LoadFromFile(
 		{
 			depthStencilOption.DepthEnable = RenderStatesJson["DepthTest"].get<bool>();
 		}
+		else
+		{
+			depthStencilOption.DepthEnable = true;	// 기본값
+		}
 		if (RenderStatesJson.contains("DepthWrite"))
 		{
 			depthStencilOption.DepthWriteMask = RenderStatesJson["DepthWrite"].get<D3D11_DEPTH_WRITE_MASK>();
 		}
+		else
+		{
+			depthStencilOption.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL; // 기본값
+		}
 		if (RenderStatesJson.contains("StencilEnable"))
 		{
 			depthStencilOption.StencilEnable = RenderStatesJson["StencilEnable"].get<bool>();
+		}
+		else
+		{
+			depthStencilOption.StencilEnable = false; // 기본값
 		}
 		if (RenderStatesJson.contains("StencilReadMask"))
 		{
