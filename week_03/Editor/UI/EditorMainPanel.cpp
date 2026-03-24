@@ -359,29 +359,9 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 						// Text 컴포넌트면 입력창 표시
 						if (Comps->IsA<UTextComponent>()) {
 							UTextComponent* TextComp = static_cast<UTextComponent*>(Comps);
-
-							// UUID별로 버퍼 관리
-							static std::unordered_map<uint32, std::array<char, 256>> TextBuffers;
-							auto& Buffer = TextBuffers[Comps->UUID];
-
-							// 최초 1회 현재 텍스트로 초기화
-							if (bSelected) {
-								std::wstring Current = TextComp->GetText();
-								WideCharToMultiByte(CP_UTF8, 0, Current.c_str(), -1, Buffer.data(), 256, nullptr, nullptr);
-							}
-
-							FString InputLabel = "##TextInput" + std::to_string(Comps->UUID);
-							ImGui::Indent();
-							if (ImGui::InputText(InputLabel.c_str(), Buffer.data(), Buffer.size())) {
-								wchar_t Wide[256];
-								MultiByteToWideChar(CP_UTF8, 0, Buffer.data(), -1, Wide, 256);
-								std::wstring WideStr(Wide);
-								TextComp->SetText(WideStr);
-							}
-							ImGui::Unindent();
+							DrawTextComponentUI(TextComp);
 						}
 					}
-
 				}
 			}
 			ImGui::Unindent();
@@ -500,6 +480,37 @@ void FEditorMainPanel::RenderPickedActorWindow(AActor* Actor) {
 			Spotlight->SetColor(NewColor);
 		}
 	}
+}
+
+void FEditorMainPanel::DrawTextComponentUI(UTextComponent* TextComp)
+{
+	// UUID별로 버퍼 관리
+	static std::unordered_map<uint32, std::array<char, 256>> TextBuffers;
+	auto& Buffer = TextBuffers[TextComp->UUID];
+
+	// 현재 텍스트로 초기화
+	std::wstring Current = TextComp->GetText();
+	WideCharToMultiByte(CP_UTF8, 0, Current.c_str(), -1, Buffer.data(), 256, nullptr, nullptr);
+
+	FString InputLabel = "##TextInput" + std::to_string(TextComp->UUID);
+	ImGui::Indent();
+	if (ImGui::InputText(InputLabel.c_str(), Buffer.data(), Buffer.size())) {
+		wchar_t Wide[256];
+		MultiByteToWideChar(CP_UTF8, 0, Buffer.data(), -1, Wide, 256);
+		std::wstring WideStr(Wide);
+		TextComp->SetText(WideStr);
+	}
+
+	// Color 조정
+	FVector4 Color = TextComp->GetColor();
+	float ColorArr[4] = { Color.X, Color.Y, Color.Z, Color.W };
+	FString ColorLabel = "Color##" + std::to_string(TextComp->UUID);
+	if (ImGui::ColorEdit4(ColorLabel.c_str(), ColorArr)) {
+		FVector4 NewColor(ColorArr[0], ColorArr[1], ColorArr[2], ColorArr[3]);
+		TextComp->SetTextColor(NewColor);
+	}
+
+	ImGui::Unindent();
 }
 
 void FEditorMainPanel::Update()

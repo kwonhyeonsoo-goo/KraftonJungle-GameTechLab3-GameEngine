@@ -21,5 +21,5 @@ public:
 	FVector4 const& GetColor() const { return Color; }
 
 	void SetText(std::wstring& newText) { Text = newText; }
-	void SetTextColor(FVector& newColor) { Color = newColor; }
+	void SetTextColor(FVector4& newColor) { Color = newColor; }
 };

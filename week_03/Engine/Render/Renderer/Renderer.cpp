@@ -264,9 +264,12 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 				continue;
 		}
 
+		// String 정보
+		std::wstring Text = Cmd.TextConstants.Text;
 		FVector FontScale = Cmd.TextConstants.TextScale;
-		const float CellW = (float)FontCache.GetFontData().CellWidth * FontScale.Y;
-		const float CellH = (float)FontCache.GetFontData().CellHeight * FontScale.Z;
+		int TextLen = (int)Text.size();
+		const float CellW = FontScale.Y / TextLen;
+		const float CellH = FontScale.Z;
 
 		FVector4 colorData = Cmd.TextConstants.TextColor;
 
@@ -293,16 +296,13 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 		FMatrix ScaleMatrix = FMatrix::MakeScaleMatrix(FontScale);
 		FMatrix TranslationMatrix = FMatrix::MakeTranslationMatrix(Cmd.TextConstants.TextPosition);
 
-		FMatrix Model = ScaleMatrix * RotationMatrix * TranslationMatrix;
+		FMatrix Model =  RotationMatrix * TranslationMatrix;
 		FMatrix MVP = Model * View * InRenderBus.GetCachedProjection();
 
 		// String, UV값
-		//std::wstring Text = L"윢윩앏있띻\nUUID:" + std::to_wstring(Cmd.UUID);
-		std::wstring Text = Cmd.TextConstants.Text;
-
 		float TotalWidth = CellW * Text.size();
 		float PenX = TotalWidth * 0.5f - CellW * 0.5f;  // 중앙 정렬
-		float PenY = -CellH * 0.5f;
+		float PenY = 0;
 
 		for (TCHAR c : Text)
 		{

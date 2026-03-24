@@ -11,6 +11,7 @@ class FRenderer;
 class FEditorEngine;
 class FEditorViewportClient;
 class AActor;
+class UTextComponent;
 
 enum class EPrimitiveType;
 
@@ -58,6 +59,7 @@ private:
 	void RenderObjectManager(FViewOutput& ViewOutput);
 	void RenderPickedObjectWindow(UObject*& Object);
 	void RenderPickedActorWindow(AActor* Actor);
+	void DrawTextComponentUI(UTextComponent* TextComp);
 	
 public:
 	void Create(HWND InHWindow, FRenderer& InRenderer, FEditorEngine* InEditorEngine, FEditorViewportClient* InEditorViewport);

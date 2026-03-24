@@ -8,7 +8,7 @@ UTextComponent::UTextComponent()
 {
 	LocalExtents = { 0.01f, 0.5f, 0.5f };
 
-	MeshData = &FMeshManager::GetPlane();
+	MeshData = &FMeshManager::GetQuad();
 }
 
 void UTextComponent::UpdateWorldAABB()

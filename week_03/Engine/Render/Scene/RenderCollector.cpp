@@ -67,7 +67,7 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* primitiveCompon
 	FontCmd.TextConstants.Text = L"윢윩앏있띻\nUUID:" + std::to_wstring(primitiveComponent->UUID);
 	FontCmd.TextConstants.TextPosition = primitiveComponent->GetWorldLocation();
 	FontCmd.TextConstants.TextPosition.Z += 1.0f;
-	FontCmd.TextConstants.TextScale = { 0.1f, 0.1f, 0.1f };
+	FontCmd.TextConstants.TextScale = { 1.0f, 10.0f, 1.0f };
 	FontCmd.TextConstants.TextColor = FVector4(1, 1, 1, 1);
 	RenderBus.AddTextCommand(FontCmd);
 
@@ -112,7 +112,7 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* primitiveCompon
 			TextCmd.TextConstants.Text = static_cast<UTextComponent*>(primitiveComponent)->GetText();
 			TextCmd.TextConstants.TextPosition = primitiveComponent->GetWorldLocation();
 			TextCmd.TextConstants.TextRotation = primitiveComponent->GetRelativeRotation();
-			TextCmd.TextConstants.TextScale = primitiveComponent->GetScaleVector() * 0.1f;
+			TextCmd.TextConstants.TextScale = primitiveComponent->GetScaleVector();
 			TextCmd.TextConstants.TextColor = static_cast<UTextComponent*>(primitiveComponent)->GetColor();
 			RenderBus.AddTextCommand(TextCmd);
 		}
