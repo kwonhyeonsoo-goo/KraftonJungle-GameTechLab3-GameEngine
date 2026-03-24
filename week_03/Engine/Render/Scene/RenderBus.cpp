@@ -1,4 +1,4 @@
-﻿#include "RenderBus.h"
+#include "RenderBus.h"
 #include "World/Mesh/MeshManager.h"
 
 #if DEBUG
@@ -29,8 +29,8 @@ void FRenderBus::Clear()
 	OverlayCommands.clear();
 	OutlineCommands.clear();
 	BatchedLine.Clear();
-	FontCommands.clear();
 	SubUVCommands.clear();
+	TextCommands.clear();
 }
 
 void FRenderBus::AddComponentCommand(const FRenderCommand& InCommand)
@@ -62,12 +62,10 @@ void FRenderBus::AddDepthLessCommand(const FRenderCommand& InCommand)
 	DepthLessCommands.push_back(InCommand);
 }
 
-void FRenderBus::AddFontCommand(const FRenderCommand& InCommand)
+void FRenderBus::AddTextCommand(const FRenderCommand& InCommand)
 {
-	FontCommands.push_back(InCommand);
+	TextCommands.push_back(InCommand);
 }
-
-
 
 void FRenderBus::AddOutlineCommand(const FRenderCommand& InCommand)
 {

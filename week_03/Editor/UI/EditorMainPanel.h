@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <windows.h>
 #include "FileManager/UISettingInit.h"
@@ -19,12 +19,13 @@ using namespace common::structs;
 class FEditorMainPanel
 {
 private:
-	const char* PrimitiveTypes[4] =
+	const char* PrimitiveTypes[5] =
 	{
 		"Cube",
 		"Sphere",
 		"Plane",
-		"SubUV"
+		"SubUV",
+		"Text",
 	};
 	const char* UtilTypes[1] =
 	{

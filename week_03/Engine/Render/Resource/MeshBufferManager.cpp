@@ -1,4 +1,4 @@
-﻿#include "MeshBufferManager.h"
+#include "MeshBufferManager.h"
 
 void FMeshBufferManager::Create(ID3D11Device* InDevice)
 {
@@ -13,6 +13,7 @@ void FMeshBufferManager::Create(ID3D11Device* InDevice)
 	UVMeshBufferMap[EPrimitiveType::EPT_SubUV].Create(InDevice, FMeshManager::GetUVRect());
 	MeshBufferMap[EPrimitiveType::EPT_Quad].Create(InDevice, FMeshManager::GetQuad());
 	MeshBufferMap[EPrimitiveType::EPT_SubUV].Create(InDevice, FMeshManager::GetNull());
+	MeshBufferMap[EPrimitiveType::EPT_Text].Create(InDevice, FMeshManager::GetQuad());
 }
 
 //	TODO : 내일 하기

@@ -24,6 +24,7 @@ enum class EBlendState
 
 enum class ERasterizerState
 {
+	None,
 	SolidBackCull,
 	SolidFrontCull,
 	WireFrame
@@ -39,6 +40,7 @@ private:
 	ID3D11Texture2D* FrameBuffer = nullptr;
 	ID3D11RenderTargetView* FrameBufferRTV = nullptr;
 
+	ID3D11RasterizerState* RasterizerStateNone = nullptr;
 	ID3D11RasterizerState* RasterizerStateBackCull = nullptr;
 	ID3D11RasterizerState* RasterizerStateFrontCull = nullptr;
 	ID3D11RasterizerState* RasterizerStateWireFrame = nullptr;
