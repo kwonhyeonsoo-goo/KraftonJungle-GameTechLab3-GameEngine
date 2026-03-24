@@ -1,4 +1,4 @@
-﻿#include "Editor/UI/EditorMainPanel.h"
+#include "Editor/UI/EditorMainPanel.h"
 //#include "Editor/Viewport/EditorViewportClient.h"
 #include "Editor/EditorEngine.h"
 
@@ -40,6 +40,7 @@ void FEditorMainPanel::Create(HWND InHWindow, FRenderer& InRenderer, FEditorEngi
 	config.GlyphMinAdvanceX = 13.0f; // Use if you want to make the icon monospaced
 	static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
 	io.Fonts->AddFontFromFileTTF("ImGui/fontawesome-webfont.ttf", 13.0f, &config, icon_ranges);
+	io.Fonts->AddFontFromFileTTF("ImGui/NanumGothic.otf", 13.0f, &config, io.Fonts->GetGlyphRangesKorean());
 }
 
 void FEditorMainPanel::Release()
@@ -100,6 +101,9 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 				break;
 			case EPrimitiveType::EPT_SubUV:
 				EditorEngine->SpawnNewPrimitiveActor<USubUVComponent>(CurSpawnPoint);
+				break;
+			case EPrimitiveType::EPT_Text:
+				EditorEngine->SpawnNewPrimitiveActor<UTextComponent>(CurSpawnPoint);
 				break;
 			}
 		}
@@ -350,6 +354,35 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 						ViewOutput.Object = Comps;
 						ViewOutput.ObjectPicked = Comps->GetTypeInfo()->name;
 					}
+
+					if (bSelected)
+					{
+						// Text 컴포넌트면 입력창 표시
+						if (Comps->IsA<UTextComponent>()) {
+							UTextComponent* TextComp = static_cast<UTextComponent*>(Comps);
+
+							// UUID별로 버퍼 관리
+							static std::unordered_map<uint32, std::array<char, 256>> TextBuffers;
+							auto& Buffer = TextBuffers[Comps->UUID];
+
+							// 최초 1회 현재 텍스트로 초기화
+							if (bSelected) {
+								std::wstring Current = TextComp->GetText();
+								WideCharToMultiByte(CP_UTF8, 0, Current.c_str(), -1, Buffer.data(), 256, nullptr, nullptr);
+							}
+
+							FString InputLabel = "##TextInput" + std::to_string(Comps->UUID);
+							ImGui::Indent();
+							if (ImGui::InputText(InputLabel.c_str(), Buffer.data(), Buffer.size())) {
+								wchar_t Wide[256];
+								MultiByteToWideChar(CP_UTF8, 0, Buffer.data(), -1, Wide, 256);
+								std::wstring WideStr(Wide);
+								TextComp->SetText(WideStr);
+							}
+							ImGui::Unindent();
+						}
+					}
+
 				}
 			}
 			ImGui::Unindent();

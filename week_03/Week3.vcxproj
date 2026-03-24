@@ -183,6 +183,7 @@
     <ClCompile Include="World\Primitives\PlaneComponent.cpp" />
     <ClCompile Include="World\Primitives\SphereComponent.cpp" />
     <ClCompile Include="World\Primitives\SubUV\SubUV.cpp" />
+    <ClCompile Include="World\Primitives\TextComponent.cpp" />
     <ClCompile Include="World\SceneComponent.cpp" />
     <ClCompile Include="World\Transform.cpp" />
   </ItemGroup>
@@ -236,6 +237,7 @@
     <ClInclude Include="Engine\FileManager\SceneSaveManager.h" />
     <ClInclude Include="Engine\Scene\Camera.h" />
     <ClInclude Include="Engine\World.h" />
+    <ClInclude Include="ImGui\IconsFontAwesome4.h" />
     <ClInclude Include="ImGui\imconfig.h" />
     <ClInclude Include="ImGui\imgui.h" />
     <ClInclude Include="ImGui\imgui_impl_dx11.h" />
@@ -260,6 +262,7 @@
     <ClInclude Include="World\Primitives\PlaneComponent.h" />
     <ClInclude Include="World\Primitives\SphereComponent.h" />
     <ClInclude Include="World\Primitives\SubUV\SubUV.h" />
+    <ClInclude Include="World\Primitives\TextComponent.h" />
     <ClInclude Include="World\SceneComponent.h" />
     <ClInclude Include="World\Transform.h" />
   </ItemGroup>
@@ -318,6 +321,10 @@
     <Image Include="Assets\Fonts\PNG\KFont_7.png" />
     <Image Include="Assets\Fonts\PNG\KFont_8.png" />
     <Image Include="Assets\Fonts\PNG\KFont_9.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="ImGui\fontawesome-webfont.ttf" />
+    <Font Include="ImGui\NanumGothic.otf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

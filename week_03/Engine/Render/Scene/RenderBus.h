@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 /*
 	
@@ -22,7 +22,7 @@ private:
 	TArray<FRenderCommand> OutlineCommands;
 	TArray<FRenderCommand> OverlayCommands;
 
-	TArray<FRenderCommand> FontCommands;
+	TArray<FRenderCommand> TextCommands;
 
 	FFontCache FontCache;
 	FMatrix CachedView;
@@ -40,7 +40,7 @@ public:
 	void AddComponentCommand(const FRenderCommand& InCommand);
 	void AddSubUVCompoenetCommand(const FRenderCommand& InCommand);
 	void AddDepthLessCommand(const FRenderCommand& InCommand);
-	void AddFontCommand(const FRenderCommand& InCommand);
+	void AddTextCommand(const FRenderCommand& InCommand);
 	void AddOutlineCommand(const FRenderCommand& InCommand);
 	void AddOverlayCommand(const FRenderCommand& InCommand);
 	void AddBatcedLineCommand(const FRenderCommand& InCommand);
@@ -54,6 +54,7 @@ public:
 
 	const TArray<FRenderCommand>& GetFontCommands() const { return FontCommands; }
 	const TArray<FRenderCommand>& GetSubUVCommands() const { return SubUVCommands; }
+	const TArray<FRenderCommand>& GetTextCommands() const { return TextCommands; }
 	FFontCache&	    GetFontCache() { return FontCache; }
 
 	void  SetCachedView(const FMatrix& View){ CachedView = View; }
