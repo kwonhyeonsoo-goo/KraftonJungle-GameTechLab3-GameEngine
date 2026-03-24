@@ -362,7 +362,7 @@ TArray<uint32> CTextRenderer::DecodeToCodepoints(const FString& Text) const
 void CTextRenderer::DrawText(
 	const FString& Text,
 	const FMatrix& InWorldMatrix,
-	float WorldScale,
+	const FVector& WorldScale,
 	bool bBillboard,
 	const FVector4& Color)
 {
@@ -456,9 +456,7 @@ void CTextRenderer::DrawText(
 	if (bBillboard)
 	{
 		const FVector WorldPosition = InWorldMatrix.GetTranslation();
-		const FMatrix Billboard = FMatrix::MakeBillboard(WorldPosition, CameraPosition);
-		const FMatrix Scale = FMatrix::MakeScale(WorldScale);
-		World = Scale * Billboard;
+		World = FMatrix::MakeScale(WorldScale) * FMatrix::MakeBillboard(WorldPosition, CameraPosition);
 	}
 
 	UpdateObjectCB(World);

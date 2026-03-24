@@ -16,8 +16,11 @@ void ATextActor::PostSpawnInitialize()
 	{
 		TextComponent->SetText("Text");
 		TextComponent->SetBillboard(false);
-		TextComponent->SetBillboardScale(0.3f);
 		TextComponent->SetTextColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+
+		FTransform RelativeTransform = TextComponent->GetRelativeTransform();
+		RelativeTransform.SetScale3D(FVector(0.3f, 0.3f, 0.3f));
+		TextComponent->SetRelativeTransform(RelativeTransform);
 	}
 
 	AActor::PostSpawnInitialize();

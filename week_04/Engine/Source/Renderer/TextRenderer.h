@@ -24,7 +24,7 @@ public:
 	void DrawText(
 		const FString& Text,
 		const FMatrix& WorldMatrix,
-		float WorldScale,
+		const FVector& WorldScale,
 		bool bBillboard,
 		const FVector4& Color
 	);
