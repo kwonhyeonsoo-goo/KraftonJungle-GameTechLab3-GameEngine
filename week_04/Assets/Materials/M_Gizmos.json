@@ -10,6 +10,11 @@
     "StencilReadMask": 0,
     "StencilWriteMask": 255
   },
-  "ConstantBuffers": [
-  ]
-}
+	"ConstantBuffers": [
+  {
+    "Parameters": [
+      { "Name": "BaseColor", "Type": "float4", "Value": [1.0, 1.0, 1.0, 1.0] }
+    ]
+  }
+
+]

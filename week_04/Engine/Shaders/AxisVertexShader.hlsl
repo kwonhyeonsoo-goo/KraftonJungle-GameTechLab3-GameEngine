@@ -6,10 +6,7 @@ cbuffer FrameData : register(b0)
 };
 
 // b1: 오브젝트당
-cbuffer ObjectData : register(b1)
-{
-	float4x4 World;
-};
+
 
 cbuffer CameraBuffer : register(b2)
 {

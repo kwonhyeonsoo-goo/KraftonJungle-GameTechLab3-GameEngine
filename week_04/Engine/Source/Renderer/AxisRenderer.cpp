@@ -219,4 +219,8 @@ void CAxisRenderer::Draw(float GridSize, float LineThickness)
 
 	DeviceContext->OMSetBlendState(nullptr, BlendFactor, 0xffffffff);
 	DeviceContext->RSSetState(nullptr);
+	ID3D11Buffer* NullCB[1] = { nullptr };
+	DeviceContext->VSSetConstantBuffers(0, 1, NullCB);  
+	DeviceContext->VSSetConstantBuffers(2, 1, NullCB);  
+	DeviceContext->PSSetConstantBuffers(2, 1, NullCB);
 }
