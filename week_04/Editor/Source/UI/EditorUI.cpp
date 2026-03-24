@@ -246,10 +246,10 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 			{
 				return;
 			}
-
+	
 			AActor* Selected = Core->GetSelectedActor();
 			if (Selected && !Selected->IsPendingDestroy() && Selected->IsVisible()
-				&& Core->GetScene()->GetRenderCollector().GetShowFlags().HasFlag(EEngineShowFlags::SF_Primitives))
+				&& Core->GetViewportClient()->GetShowFlags().HasFlag(EEngineShowFlags::SF_Primitives))
 			{
 				for (UActorComponent* Component : Selected->GetComponents())
 				{

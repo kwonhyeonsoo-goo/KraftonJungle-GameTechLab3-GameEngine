@@ -2,8 +2,7 @@
 #include "CoreMinimal.h"
 #include "Object/Object.h"
 #include "Scene/SceneTypes.h"
-#include "Core/ShowFlags.h"
-#include "Math/Frustum.h"
+
 // Forward declarations — include 최소화
 class UScene;
 class AActor;
@@ -36,12 +35,6 @@ public:
 	void Tick(float InDeltaTime);
 	void CleanupWorld();
 
-	// ShowFlags
-	FShowFlags& GetShowFlags();
-	const FShowFlags& GetShowFlags() const;
-
-	// 렌더 수집
-	void CollectRenderCommands(const FFrustum& Frustum, FRenderCommandQueue& OutQueue);
 
 	// 접근자
 	UScene* GetScene() const { return Scene; }

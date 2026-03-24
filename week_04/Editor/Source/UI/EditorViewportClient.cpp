@@ -196,17 +196,6 @@ void CEditorViewportClient::HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPAR
 	}
 }
 
-void CEditorViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene, const FFrustum& Frustum, FRenderCommandQueue& OutQueue) const
-{
-	IViewportClient::BuildRenderCommands(Core, Scene, Frustum, OutQueue);
-
-	if (!Core || !Scene || !Scene->GetCamera())
-	{
-		return;
-	}
-
-	Gizmo.BuildRenderCommands(Core->GetSelectedActor(), Scene->GetCamera(), OutQueue);
-}
 
 FRenderCommand CEditorViewportClient::BuildRenderCommand(UPrimitiveComponent* PrimitiveComponent) const
 {
@@ -243,4 +232,16 @@ void CEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
 			UE_LOG("Scene loaded: %s", FilePath.c_str());
 		}
 	}
+}
+
+void CEditorViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene,
+	const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
+{
+	IViewportClient::BuildRenderCommands(Core, Scene, Frustum, OutQueue);  // non-const 부모 호출
+
+	if (!Core || !Scene || !Scene->GetCamera())
+	{
+		return;
+	}
+	Gizmo.BuildRenderCommands(Core->GetSelectedActor(), Scene->GetCamera(), OutQueue);
 }

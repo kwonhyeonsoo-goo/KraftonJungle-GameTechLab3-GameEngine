@@ -5,7 +5,7 @@
 #include <d3d11.h>
 #include "SceneTypes.h"
 #include "Core/ShowFlags.h"
-#include "SceneRenderCollector.h"
+#include "RenderCollector.h"
 class AActor;
 class CCamera;
 class FFrustum;
@@ -57,8 +57,7 @@ public:
 	void Tick(float DeltaTime);
 
 
-	FSceneRenderCollector& GetRenderCollector() { return RenderCollector; }
-	const FSceneRenderCollector& GetRenderCollector() const { return RenderCollector; }
+	
 
 private:
 	TArray<AActor*> Actors;
@@ -67,6 +66,5 @@ private:
 	bool bBegunPlay = false;
 	ESceneType SceneType = ESceneType::Game;
 
-	FSceneRenderCollector RenderCollector;
 
 };

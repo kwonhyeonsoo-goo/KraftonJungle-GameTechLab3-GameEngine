@@ -1,4 +1,4 @@
-#include "SceneRenderCollector.h"
+#include "RenderCollector.h"
 #include "Component/UUIDBillboardComponent.h"
 #include "Renderer/RenderCommand.h"
 #include "Actor/Actor.h"
@@ -6,10 +6,11 @@
 #include "Core/FEngine.h"
 
 
-void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors, const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
+void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors, const FFrustum& Frustum,
+	const FShowFlags& ShowFlags, FRenderCommandQueue& OutQueue)
 {
 	TArray<UPrimitiveComponent*> VisiblePrimitives;
-	FrustrumCull(Actors, Frustum, VisiblePrimitives);
+	FrustrumCull(Actors, Frustum, ShowFlags, VisiblePrimitives);
 
 	for (UPrimitiveComponent* PrimitiveComponent : VisiblePrimitives)
 	{
@@ -65,7 +66,8 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 	}
 }
 
-void FSceneRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutVisible)
+void FSceneRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FFrustum& Frustum,
+	const FShowFlags& ShowFlags, TArray<UPrimitiveComponent*>& OutVisible)
 {
 	for (AActor* Actor : Actors)
 	{
