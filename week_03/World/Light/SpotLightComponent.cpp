@@ -1,15 +1,34 @@
 #include "SpotLightComponent.h"
 
-DEFINE_CLASS(USpotlightComponent, USceneComponent)
+DEFINE_CLASS(USpotlightComponent, ULightComponent)
 REGISTER_FACTORY(USpotlightComponent)
 
 USpotlightComponent::USpotlightComponent() {
-	// Create PlaneComponent as a fixed root
-	//AddComponent<UPlaneComponent>();
-	UpdateCone();
+	UpdateLight();
 }
 
-void USpotlightComponent::UpdateCone() {
+void USpotlightComponent::UpdateWorldMatrix() {
+	if (bUpdateFlag == false)
+	{
+		return;
+	}
+
+	FMatrix relativeMatrix = GetRelativeMatrixTemp();
+
+	if (ParentComponent != nullptr)
+	{
+		CachedWorldMatrix = relativeMatrix * ParentComponent->GetWorldMatrix();
+	}
+	else
+	{
+		CachedWorldMatrix = relativeMatrix;
+	}
+
+	bUpdateFlag = false;
+	bIsLightDirty = true;
+}
+
+void USpotlightComponent::UpdateLight() {
 	CircleVertices.clear();
 	CircleVertices.reserve(NumCircleVertex);
 
@@ -39,7 +58,7 @@ void USpotlightComponent::UpdateCone() {
 	}
 }
 
-void USpotlightComponent::AddConeLinesToBatch(FBatchedLine* BatchLine) {
+void USpotlightComponent::RenderLines(FBatchedLine* BatchLine) {
 	if (!BatchLine || CircleVertices.empty()) {
 		return;
 	}
@@ -47,16 +66,16 @@ void USpotlightComponent::AddConeLinesToBatch(FBatchedLine* BatchLine) {
 	FVector ConeApex = GetWorldLocation();
 	for (size_t i = 0; i < NumCircleVertex; i++) {
 		// Point to Apex 
-		BatchLine->AddLineRaw(CircleVertices[i], ConeApex, ConeColor);
+		BatchLine->AddLineRaw(CircleVertices[i], ConeApex, Color);
 
 		// Point to next Point
-		BatchLine->AddLineRaw(CircleVertices[i], CircleVertices[(i + 1) % NumCircleVertex], ConeColor);
+		BatchLine->AddLineRaw(CircleVertices[i], CircleVertices[(i + 1) % NumCircleVertex], Color);
 	}
 }
 
 void USpotlightComponent::TickComponent(float DeltaTIme) {
-	if (bIsConeDirty) {
-		UpdateCone();
-		bIsConeDirty = false;
+	if (bIsLightDirty) {
+		UpdateLight();
+		bIsLightDirty = false;
 	}
 }

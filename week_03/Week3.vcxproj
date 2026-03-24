@@ -178,6 +178,7 @@
     <ClCompile Include="World\Light\SpotLightComponent.cpp" />
     <ClCompile Include="World\Mesh\MeshManager.cpp" />
     <ClCompile Include="World\PrimitiveComponent.cpp" />
+    <ClCompile Include="World\Primitives\BillBoardComponent.cpp" />
     <ClCompile Include="World\Primitives\CubeComponent.cpp" />
     <ClCompile Include="World\Primitives\PlaneComponent.cpp" />
     <ClCompile Include="World\Primitives\SphereComponent.cpp" />
@@ -254,6 +255,7 @@
     <ClInclude Include="World\Light\SpotLightComponent.h" />
     <ClInclude Include="World\Mesh\MeshManager.h" />
     <ClInclude Include="World\PrimitiveComponent.h" />
+    <ClInclude Include="World\Primitives\BillBoardComponent.h" />
     <ClInclude Include="World\Primitives\CubeComponent.h" />
     <ClInclude Include="World\Primitives\PlaneComponent.h" />
     <ClInclude Include="World\Primitives\SphereComponent.h" />
@@ -283,6 +285,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <Image Include="..\..\..\..\..\Downloads\light_icon.png" />
     <Image Include="Assets\Fonts\DDS\AFont.dds" />
     <Image Include="Assets\Fonts\DDS\KFont_1.dds" />
     <Image Include="Assets\Fonts\DDS\KFont_10.dds" />

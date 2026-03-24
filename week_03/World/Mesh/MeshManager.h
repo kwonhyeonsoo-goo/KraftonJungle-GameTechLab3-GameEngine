@@ -26,6 +26,7 @@ private:
 	//static FMeshData GridMeshData;
 	
 	static FMeshData MouseOverlayMeshData;
+	static FMeshData NullMeshData;
 
 	static void CreateCube();
 	static void CreateBox();
@@ -41,6 +42,7 @@ private:
 	//static void CreateGrid();
 
 	static void CreateMouseOverlay();
+	static void CreateNull();
 
 
 #if TEST
@@ -71,11 +73,10 @@ public:
 	static const FMeshData& GetScaleGizmo() { return Get().ScaleGizmoMeshData; }
 	static const FMeshData& GetBox() { return Get().BoxMeshData; };
 	static const FMeshData& GetQuad() { return Get().QuadVertexData; };
-	//static const FMeshData& GetAxis() { return Get().AxisMeshData; }
-	//static const FMeshData& GetGrid() { return Get().GridMeshData; }
 	static const FUVMeshData& GetUVRect() { return Get().UVRectMeshData; };
 	//static FUVMeshData& UpdateUVRectMesh();
 
 	static const FMeshData& GetMouseOverlay() { return Get().MouseOverlayMeshData; }
+	static const FMeshData& GetNull() { return Get().NullMeshData; }
 };
 
