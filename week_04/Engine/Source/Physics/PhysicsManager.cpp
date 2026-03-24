@@ -26,22 +26,24 @@ bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const
 
 			for (UActorComponent* Component : Actor->GetComponents())
 			{
+
 				if (!Component->IsA(UPrimitiveComponent::StaticClass()))
 				{
 					continue;
 				}
 
 				UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
-				
+
 				const bool bIsUUID = PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass());
 				const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
-
-				if (!bIsUUID && !bIsSubUV)
+				if (bIsUUID || bIsSubUV)
 				{
-					if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
-					{
-						continue;
-					}
+					continue;
+				}
+
+				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
+				{
+					continue;
 				}
 
 				FBoxSphereBounds Bound = PrimitiveComponent->GetWorldBounds();
@@ -73,7 +75,7 @@ bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const
 				{
 					// Line 이 전부 다 AABB 안에 포함되는 경우 Shortest Pos 반환
 					OutHit.HitActor = Actor;
-					OutHit.HitLocation = ShortestPos;					
+					OutHit.HitLocation = ShortestPos;
 					return true;
 				}
 				else
@@ -110,7 +112,7 @@ bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const
 							// 시작점이 포함되는 경우 (tNear >= 0.f), 끝점 쪽의 HitLocation 반환
 							if (tNear >= 0.f)
 								OutHit.HitLocation = Start + LineDirection * tNear;
-							else	
+							else
 								OutHit.HitLocation = Start + LineDirection * tFar;
 
 							return true;
@@ -124,6 +126,6 @@ bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const
 			}
 		}
 	}
-	
+
 	return false;
 }

@@ -45,7 +45,17 @@ void COutlinerWindow::Render(CCore* Core)
 		ShowFlags.SetFlag(EEngineShowFlags::SF_UUID, bUUID);
 	}
 
+	bool bDebugDraw = ShowFlags.HasFlag(EEngineShowFlags::SF_DebugDraw);
+	if (ImGui::Checkbox("Debug Draw", &bDebugDraw))
+		ShowFlags.SetFlag(EEngineShowFlags::SF_DebugDraw, bDebugDraw);
 
+	bool bWorldAxis = ShowFlags.HasFlag(EEngineShowFlags::SF_WorldAxis);
+	if (ImGui::Checkbox("World Axis", &bWorldAxis))
+		ShowFlags.SetFlag(EEngineShowFlags::SF_WorldAxis, bWorldAxis);
+
+	bool bCollision = ShowFlags.HasFlag(EEngineShowFlags::SF_Collision);
+	if (ImGui::Checkbox("Collision", &bCollision))
+		ShowFlags.SetFlag(EEngineShowFlags::SF_Collision, bCollision);
 	if (SelectedActor)
 	{
 		for (UActorComponent* Component : SelectedActor->GetComponents())

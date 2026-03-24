@@ -272,10 +272,6 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 
 			const float AxisLength = 10000.0f;
 			const FVector Origin = { 0.0f, 0.0f, 0.0f };
-			Renderer->DrawLine(Origin, { AxisLength, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f });
-			Renderer->DrawLine(Origin, { 0.0f, AxisLength, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f });
-			Renderer->DrawLine(Origin, { 0.0f, 0.0f, AxisLength }, { 0.0f, 0.0f, 1.0f, 1.0f });
-			Renderer->ExecuteLineCommands();
 		});
 }
 

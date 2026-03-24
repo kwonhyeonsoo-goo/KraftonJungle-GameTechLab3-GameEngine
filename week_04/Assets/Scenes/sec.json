@@ -1,0 +1,73 @@
+{
+  "Camera": {
+    "Position": [
+      -9.238662719726563,
+      5.698000907897949,
+      2.560075283050537
+    ],
+    "Rotation": [
+      -1.4513731002807617e-05,
+      2.799999713897705
+    ]
+  },
+  "Materials": [
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_TintYellow.json",
+    "Assets/Materials/M_Wireframe.json"
+  ],
+  "NextUUID": 20,
+  "Primitives": {
+    "0": {
+      "Class": "AObjActor",
+      "ComponentUUIDs": [
+        14,
+        15,
+        16
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        1.0957109928131104
+      ],
+      "PrimitiveFileName": "C:\\Users\\jungle\\source\\repos\\Week3_Team5_DinoEngine\\Assets\\Meshes\\Cat.obj",
+      "Rotation": [
+        90.14356994628906,
+        0.21137945353984833,
+        55.814605712890625
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 13
+    },
+    "1": {
+      "Class": "AObjActor",
+      "ComponentUUIDs": [
+        18,
+        19,
+        20
+      ],
+      "Location": [
+        0.0,
+        4.14493465423584,
+        0.0
+      ],
+      "PrimitiveFileName": "C:\\Users\\jungle\\source\\repos\\Week3_Team5_DinoEngine\\Assets\\Meshes\\Cat.obj",
+      "Rotation": [
+        -97.98126220703125,
+        -5.959808349609375,
+        132.01974487304688
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 17
+    }
+  }
+}

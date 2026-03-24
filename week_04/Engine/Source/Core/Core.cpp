@@ -17,7 +17,8 @@
 #include "Input/InputManager.h"
 #include "ViewportClient.h"
 #include "Object/ObjectGlobals.h"
-
+#include "Component/UUIDBillboardComponent.h"
+#include "Component/SubUVComponent.h"
 CCore::~CCore()
 {
 	Release();
@@ -180,23 +181,23 @@ void CCore::Physics(float DeltaTime)
 				{
 					continue;
 				}
-
+				//discard Billboard subUv
 				UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(ActorComp);
+				if (PrimComp->IsA(UUUIDBillboardComponent::StaticClass()) ||
+					PrimComp->IsA(USubUVComponent::StaticClass()))
+					continue;
 
-				if (PrimComp)
-				{
-					FBoxSphereBounds Bound;
-					Bound = PrimComp->GetWorldBounds();
-					Renderer->DrawCube(Bound.Center, Bound.BoxExtent, FVector4(1, 0, 0, 1));
-				}
+				FBoxSphereBounds Bound = PrimComp->GetWorldBounds();
+				DebugDrawManager.DrawCube(Bound.Center, Bound.BoxExtent, FVector4(1, 0, 0, 1));
 			}
+			
 
 			Renderer->DrawCube(HitResult.HitLocation, FVector(0.1, 0.1, 0.1), FVector4(0, 1, 0, 1));
 		}
 
 		if (Renderer)
 		{
-			Renderer->DrawLine(LineStart, LineEnd, FVector4(0, 1, 1, 1));
+			DebugDrawManager.DrawLine(LineStart, LineEnd, FVector4(0, 1, 1, 1));
 		}
 	}
 }
@@ -268,6 +269,8 @@ void CCore::Render()
 
 	Renderer->SubmitCommands(CommandQueue);
 	Renderer->ExecuteCommands();
+	const FShowFlags& ShowFlags = ViewportClient ? ViewportClient->GetShowFlags() : FShowFlags();
+	DebugDrawManager.Flush(Renderer.get(), ShowFlags, ActiveWorld);
 	Renderer->EndFrame();
 }
 

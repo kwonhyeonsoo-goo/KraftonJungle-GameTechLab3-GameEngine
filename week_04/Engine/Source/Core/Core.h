@@ -9,7 +9,7 @@
 #include "Scene/SceneManager.h"
 #include "World/WorldContext.h"
 #include <memory>
-
+#include "Debug/DebugDrawManager.h"
 class CEnhancedInputManager;
 class CInputManager;
 
@@ -75,9 +75,10 @@ private:
 	void Render();
 	void LateUpdate(float DeltaTime);
 	void RegisterConsoleVariables();
-
+	FDebugDrawManager& GetDebugDrawManager() { return DebugDrawManager; }
 
 private:
+	FDebugDrawManager DebugDrawManager;
 	std::unique_ptr<CRenderer> Renderer;
 	CInputManager* InputManager = nullptr;
 	CEnhancedInputManager* EnhancedInput = nullptr;

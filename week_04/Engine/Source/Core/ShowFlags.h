@@ -5,8 +5,10 @@ enum class EEngineShowFlags : uint64
 {
 	SF_Primitives = 1 << 0,
 	SF_UUID = 1 << 1,
-	/*SF_Billboard = 1 << 1,*/
-	// SF_Collision   = 1 << 2,
+	SF_DebugDraw = 1 <<2,
+	SF_WorldAxis = 1 <<3,
+	SF_Collision =1<<4 
+
 	 // SF_Grid        = 1 << 3,
 	 // SF_Fog         = 1 << 4,
 };
