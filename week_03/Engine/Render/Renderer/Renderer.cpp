@@ -266,13 +266,25 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 
 		// String 정보
 		std::wstring Text = Cmd.TextConstants.Text;
+
+		// 줄바꿈이 있을 때 가장 긴 줄을 기준으로 삼음
+		int MaxLineLen = 0, CurLen = 0, LineCount = 1;
+		for (TCHAR c : Text)
+		{
+			if (c == TEXT('\n')) { MaxLineLen = (MaxLineLen > CurLen) ? MaxLineLen : CurLen; CurLen = 0; LineCount++; }
+			else CurLen++;
+		}
+		MaxLineLen = (MaxLineLen > CurLen) ? MaxLineLen : CurLen;
+
 		FVector FontScale = Cmd.TextConstants.TextScale;
-		int TextLen = (int)Text.size();
-		const float CellW = FontScale.Y / TextLen;
+		const float CellW = FontScale.Y / MaxLineLen;
 		const float CellH = FontScale.Z;
 
-		FVector4 colorData = Cmd.TextConstants.TextColor;
+		float TotalWidth = CellW * MaxLineLen;
+		float PenX = TotalWidth * 0.5f - CellW * 0.5f;  // 중앙 정렬
+		float PenY = 0;
 
+		FVector4 colorData = Cmd.TextConstants.TextColor;
 		// 각 String의 MVP
 		// View^(-1) (Z up) -> 전치
 		FMatrix View = InRenderBus.GetCachedView();
@@ -299,15 +311,10 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 		FMatrix Model =  RotationMatrix * TranslationMatrix;
 		FMatrix MVP = Model * View * InRenderBus.GetCachedProjection();
 
-		// String, UV값
-		float TotalWidth = CellW * Text.size();
-		float PenX = TotalWidth * 0.5f - CellW * 0.5f;  // 중앙 정렬
-		float PenY = 0;
-
 		for (TCHAR c : Text)
 		{
 			if (c == TEXT(' ')) { PenX -= CellW; continue; }
-			if (c == TEXT('\n')) { PenX = TotalWidth * 0.5f; PenY -= CellH; continue; }
+			if (c == TEXT('\n')) { PenX = TotalWidth * 0.5f - CellW * 0.5f; PenY -= CellH; continue; }
 
 			uint32 base = (uint32)Instances.size();
 
