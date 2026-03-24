@@ -27,6 +27,8 @@ void FEditorEngine::Create(HWND InHWindow)
 
 	ViewportClient.SetViewportSize(WindowWidth, WindowHeight);
     MainPanel.Create(HWindow, Renderer, this, &ViewportClient);
+
+	FUISettingInitializer::LoadEditorViewSettings();
 }
 
 void FEditorEngine::OnWindowResized(uint32 Width, uint32 Height)
@@ -61,6 +63,7 @@ void FEditorEngine::Release()
 	}
 	FRenderCollector::Release();
 	MainPanel.Release();
+	FUISettingInitializer::SaveEditorViewSettings();
 	RenderBus.Release();
 	Renderer.Release();
 }
@@ -82,9 +85,6 @@ void FEditorEngine::BeginFrame(float DeltaTime)
 
 void FEditorEngine::Update(float DeltaTime)
 {
-
-	//USubUVComponent::UpdateFrame(DeltaTime);
-
 	UpdateWorld(DeltaTime);
 }
 
@@ -124,7 +124,7 @@ void FEditorEngine::BuildRenderCommands()
 	Context.ViewportHeight = WindowHeight;
 	Context.ViewportWidth = WindowWidth;
 	Context.SelectedComponent = GizmoManager.HasTarget() ? (UPrimitiveComponent*)GizmoManager.GetTarget() : nullptr;
-	Context.GridSize = GridSize;
+	Context.GridSize = FUISettingInitializer::GetGridSize();
 
 	FRenderCollector::Collect(Context, RenderBus);
 }

@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "EngineStatics.h"
+#include "Core/Name.h"
 #include <memory>
 
 #define DECLARE_CLASS(ClassName, ParentClass)                          \

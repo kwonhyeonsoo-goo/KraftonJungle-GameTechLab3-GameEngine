@@ -13,13 +13,12 @@ public:
 
 public:
     void UpdateWorldAABB() override;
-
     bool bIsBillBoard = true;
     float Timer;
     static constexpr EPrimitiveType PrimitiveType = EPrimitiveType::EPT_SubUV;
 
 private:
-    const FUVMeshData* MeshData = nullptr;
+    const FUVMeshData* UVMeshData = nullptr;
     int Texture2DId = -1;
     float OffsetLeftX, OffsetUpY, OffsetRightX, OffsetBottomY;
     int FrameCount;
@@ -30,11 +29,15 @@ private:
     bool bLoop = true;
     float PlayRate = 24.f;
 
+public:
+    DECLARE_CLASS(USubUVComponent, UPrimitiveComponent)
+    void UpdateFrame(float deltaTime);
     float currentU, currentV;
     float ElaspedTime;
 
 private:
     void ReloadTextureResource(std::wstring filename = L"Assets/Effects/Explosion.PNG");
-    void UpdateFrame(float deltaTime);
+    bool RaycastMesh(const FRay& Ray, FHitResult& OutHitResult) override;
+    float ElaspedTime;
 
 };

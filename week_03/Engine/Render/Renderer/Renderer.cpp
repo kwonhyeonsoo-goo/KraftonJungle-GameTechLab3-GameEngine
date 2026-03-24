@@ -134,6 +134,12 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 	Device.SetDepthStencilState(EDepthStencilState::Default);
 	RenderLineBatchPass(context, InRenderBus);
 
+	// Font Text
+	if (showFlag & (uint64)EEngineShowFlags::SF_BillboardText) {
+		Device.SetDepthStencilState(EDepthStencilState::None);
+		Device.SetBlendState(EBlendState::AlphaBlend);
+		DrawString(context, InRenderBus);
+	}
 
 	if (showFlag & (uint64)EEngineShowFlags::SF_Primitives) {
 		//	Selection Outline (Stencil)
@@ -151,12 +157,6 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 	ID3D11VertexShader* vsCheck = Resources.FontShader.GetVertexShader();
 	ID3D11PixelShader* psCheck = Resources.FontShader.GetPixelShader();
 
-	// Font Text
-	if (showFlag & (uint64)EEngineShowFlags::SF_BillboardText) {
-		Device.SetDepthStencilState(EDepthStencilState::None);
-		Device.SetBlendState(EBlendState::AlphaBlend);
-		DrawString(context, InRenderBus);
-	}
 	//	Reset to default
 	Device.SetRasterizerState(ERasterizerState::SolidBackCull);
 
@@ -266,8 +266,8 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 
 		FMatrix BillboardRotation =
 			FMatrix(
-				View.Data[0], View.Data[4], View.Data[8], 0,
-				View.Data[1], View.Data[5], View.Data[9], 0,
+				1, 0, 0, 0,
+				-View.Data[0], -View.Data[4], 0, 0,
 				0, 0, 1, 0,
 				0, 0, 0, 1);
 
@@ -282,13 +282,13 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 		std::wstring Text = L"윢윩앏있띻\nUUID:" + std::to_wstring(Cmd.UUID);
 
 		float TotalWidth = CellW * Text.size();
-		float PenX = -TotalWidth * 0.5f;  // 중앙 정렬
+		float PenX = TotalWidth * 0.5f;  // 중앙 정렬
 		float PenY = -CellH * 0.5f;
 
 		for (TCHAR c : Text)
 		{
 			if (c == TEXT(' ')) { PenX += CellW; continue; }
-			if (c == TEXT('\n')) { PenX = -TotalWidth * 0.5f; PenY -= CellH; continue; }
+			if (c == TEXT('\n')) { PenX = TotalWidth * 0.5f; PenY -= CellH; continue; }
 
 			uint32 base = (uint32)Instances.size();
 
@@ -303,7 +303,7 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 				CI.USize, CI.VSize, 
 				Cmd.FontColor });
 
-			PenX += CellW;
+			PenX -= CellW;
 		}
 	}
 	if (Instances.empty()) return;

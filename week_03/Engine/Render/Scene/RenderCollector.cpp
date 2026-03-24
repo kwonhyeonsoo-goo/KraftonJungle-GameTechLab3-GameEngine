@@ -57,7 +57,7 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* primitiveCompon
 {
 	FRenderCommand Cmd = {};
 	Cmd.Type = ERenderCommandType::Primitive;
-	Cmd.MeshBuffer = &MeshBufferManager.GetMeshBuffer(primitiveComponent->GetPrimitiveType());
+	Cmd.MeshBuffer = &MeshBufferManager.GetMeshBuffer(primitiveComponent->GetPrimitiveType());	// ?
 	Cmd.TransformConstants = FTransformConstants{ primitiveComponent->GetWorldMatrix(), Context.Camera->GetViewMatrix(), Context.Camera->GetProjectionMatrix() };
 
 	FRenderCommand FontCmd = {};

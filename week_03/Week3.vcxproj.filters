@@ -29,7 +29,7 @@
     <ClCompile Include="Engine\Render\Scene\RenderCollector.cpp" />
     <ClCompile Include="Engine\Runtime\EngineLoop.cpp" />
     <ClCompile Include="Engine\Runtime\Launch.cpp" />
-    <ClCompile Include="Engine\SceneSaveManager.cpp" />
+    <ClCompile Include="Engine\FileManager\SceneSaveManager.cpp" />
     <ClCompile Include="Engine\Scene\Camera.cpp" />
     <ClCompile Include="Engine\World.cpp" />
     <ClCompile Include="ImGui\imgui.cpp" />
@@ -60,6 +60,7 @@
     <ClCompile Include="World\Light\SpotLightComponent.cpp" />
     <ClCompile Include="World\Primitives\SubUV\SubUV.cpp" />
     <ClCompile Include="Engine\Render\Resource\RenderResourceManager.cpp" />
+    <ClCompile Include="Engine\FileManager\UISettingInit.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DirectXTK\WICTextureLoader.h" />
@@ -99,7 +100,7 @@
     <ClInclude Include="Engine\Render\Scene\RenderCommand.h" />
     <ClInclude Include="Engine\Runtime\EngineLoop.h" />
     <ClInclude Include="Engine\Runtime\Launch.h" />
-    <ClInclude Include="Engine\SceneSaveManager.h" />
+    <ClInclude Include="Engine\FileManager\SceneSaveManager.h" />
     <ClInclude Include="Engine\Scene\Camera.h" />
     <ClInclude Include="Engine\World.h" />
     <ClInclude Include="ImGui\imconfig.h" />
@@ -134,6 +135,8 @@
     <ClInclude Include="World\Light\SpotLightComponent.h" />
     <ClInclude Include="World\Primitives\SubUV\SubUV.h" />
     <ClInclude Include="Engine\Render\Resource\RenderResourceManager.h" />
+    <ClInclude Include="Engine\FileManager\UISettingInit.h" />
+    <ClInclude Include="Engine\FileManager\Format_ini.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Fonts\DDS\AFont.dds" />
@@ -167,5 +170,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />
+    <None Include="editor.ini" />
   </ItemGroup>
 </Project>
