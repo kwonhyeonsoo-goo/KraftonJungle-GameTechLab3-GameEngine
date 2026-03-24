@@ -203,8 +203,9 @@ void CAxisRenderer::Draw(float GridSize, float LineThickness)
 	ID3D11Buffer* VS_CB[1] = { FrameConstantBuffer };
 	DeviceContext->VSSetConstantBuffers(0, 1, VS_CB);
 
+
 	ID3D11Buffer* PS_CB[1] = { CameraConstantBuffer };
-	DeviceContext->VSSetConstantBuffers(2, 1, PS_CB);
+	/*DeviceContext->VSSetConstantBuffers(2, 1, PS_CB); */
 	DeviceContext->PSSetConstantBuffers(2, 1, PS_CB);
 
 	// States
