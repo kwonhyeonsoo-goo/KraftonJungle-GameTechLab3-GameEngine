@@ -16,6 +16,7 @@
 #include "Component/PrimitiveComponent.h"
 #include "Core/Paths.h"
 #include "imgui.h"
+#include "Actor/ObjActor.h"
 
 CEditorViewportClient::CEditorViewportClient(CEditorUI& InEditorUI, CWindow* InMainWindow)
 	: EditorUI(InEditorUI)
@@ -87,17 +88,13 @@ void CEditorViewportClient::HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPAR
 		return;
 	}
 
-	int32 MouseX = 0;
-	int32 MouseY = 0;
-	int32 Width = 0;
-	int32 Height = 0;
 	const bool bHasViewportMouse = EditorUI.GetViewportMousePosition(
 		static_cast<int32>(static_cast<short>(LOWORD(LParam))),
 		static_cast<int32>(static_cast<short>(HIWORD(LParam))),
-		MouseX,
-		MouseY,
-		Width,
-		Height);
+		ScreenMouseX,
+		ScreenMouseY,
+		ScreenWidth,
+		ScreenHeight);
 
 	const bool bRightMouseDown = Core->GetInputManager() &&
 		Core->GetInputManager()->IsMouseButtonDown(CInputManager::MOUSE_RIGHT);
@@ -139,12 +136,12 @@ void CEditorViewportClient::HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPAR
 			return;
 		}
 
-		if (SelectedActor && Gizmo.BeginDrag(SelectedActor, Scene, Picker, MouseX, MouseY, Width, Height))
+		if (SelectedActor && Gizmo.BeginDrag(SelectedActor, Scene, Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight))
 		{
 			return;
 		}
 
-		if (AActor* PickedActor = Picker.PickActor(Scene, MouseX, MouseY, Width, Height))
+		if (AActor* PickedActor = Picker.PickActor(Scene, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight))
 		{
 			Core->SetSelectedActor(PickedActor);
 			EditorUI.SyncSelectedActorProperty();
@@ -160,11 +157,11 @@ void CEditorViewportClient::HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPAR
 
 		if (!Gizmo.IsDragging())
 		{
-			Gizmo.UpdateHover(SelectedActor, Scene, Picker, MouseX, MouseY, Width, Height);
+			Gizmo.UpdateHover(SelectedActor, Scene, Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
 			return;
 		}
 
-		if (Gizmo.UpdateDrag(SelectedActor, Scene, Picker, MouseX, MouseY, Width, Height))
+		if (Gizmo.UpdateDrag(SelectedActor, Scene, Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight))
 		{
 			EditorUI.SyncSelectedActorProperty();
 		}
@@ -176,7 +173,7 @@ void CEditorViewportClient::HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPAR
 			Gizmo.EndDrag();
 			if (bHasViewportMouse)
 			{
-				Gizmo.UpdateHover(SelectedActor, Scene, Picker, MouseX, MouseY, Width, Height);
+				Gizmo.UpdateHover(SelectedActor, Scene, Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
 			}
 			else
 			{
@@ -238,6 +235,26 @@ void CEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
 					MB_OK | MB_ICONWARNING
 				);
 			}
+		}
+	}
+}
+
+void CEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
+{
+	CCore* Core = EditorUI.GetCore();
+
+	if (Core)
+	{
+		if (FilePath.ends_with(".obj"))
+		{
+			const FRay Ray = Picker.ScreenToRay(Core->GetScene()->GetCamera(), ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
+
+			AObjActor* NewActor = Core->GetScene()->SpawnActor<AObjActor>("ObjActor");
+			NewActor->LoadObj(FilePath);
+			FVector V = Ray.Origin + Ray.Direction * 5;
+			NewActor->SetActorLocation(V);
+
+
 		}
 	}
 }

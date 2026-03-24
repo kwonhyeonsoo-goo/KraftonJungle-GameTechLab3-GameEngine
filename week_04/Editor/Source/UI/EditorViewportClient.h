@@ -3,6 +3,7 @@
 #include "Core/ViewportClient.h"
 #include "Gizmo/Gizmo.h"
 #include "Picking/Picker.h"
+#include "Types/CoreTypes.h"
 
 class CEditorUI;
 class CWindow;
@@ -31,6 +32,7 @@ public:
 	void SetRenderMode(ERenderMode InRenderMode) { RenderMode = InRenderMode; }
 
 	void HandleFileDoubleClick(const FString& FilePath) override;
+	void HandleFileDropOnViewport(const FString& FilePath) override;
 	void BuildRenderCommands(CCore* Core, UScene* Scene,
 		const FFrustum& Frustum, FRenderCommandQueue& OutQueue) override;
 protected:
@@ -45,4 +47,9 @@ private:
 	ERenderMode RenderMode = ERenderMode::Lighting;
 	const FString WireframeMaterialName = "M_Wireframe";
 	std::shared_ptr<FMaterial> WireFrameMaterial = nullptr;
+
+	int32 ScreenWidth = 0;
+	int32 ScreenHeight = 0;
+	int32 ScreenMouseX = 0;
+	int32 ScreenMouseY = 0;
 };
