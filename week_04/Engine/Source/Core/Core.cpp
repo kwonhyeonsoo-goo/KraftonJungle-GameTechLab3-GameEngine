@@ -199,10 +199,10 @@ void CCore::Physics(float DeltaTime)
 
 void CCore::GameLogic(float DeltaTime)
 {
-	UScene* Scene = GetActiveScene();
-	if (Scene)
+	UWorld* World = GetActiveWorld();
+	if (World)
 	{
-		Scene->Tick(DeltaTime);
+		World->Tick(DeltaTime);
 	}
 }
 

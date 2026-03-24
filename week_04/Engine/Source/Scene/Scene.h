@@ -45,7 +45,7 @@ public:
 	bool IsEditorScene() const { return SceneType == ESceneType::Editor; }
 	bool IsGameScene() const { return SceneType == ESceneType::Game || SceneType == ESceneType::PIE; }
 
-
+  
 	CCamera* GetCamera() const;
 
 
