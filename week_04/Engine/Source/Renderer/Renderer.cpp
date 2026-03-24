@@ -404,6 +404,9 @@ void CRenderer::ExecuteCommands()
 	ExecuteRenderPass(ERenderLayer::Default);
 	ClearDepthBuffer();
 	ExecuteRenderPass(ERenderLayer::Overlay);
+	if (PostRenderCallback) {
+		PostRenderCallback(this);
+	}
 	ExecuteTextRenderPass();
 }
 
@@ -468,11 +471,6 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 		UpdateObjectConstantBuffer(Cmd.WorldMatrix);
 		DeviceContext->DrawIndexed(Cmd.MeshData->Indices.size(), 0, 0);
 	}
-
-	if (PostRenderCallback)
-	{
-		PostRenderCallback(this);
-	}
 }
 
 void CRenderer::ExecuteTextRenderPass()
@@ -522,8 +520,24 @@ void CRenderer::ExecuteTextRenderPass()
 		}
 	}
 
+	// Text/SubUV 패스 후 잔여 상태 정리
+	ID3D11ShaderResourceView* NullSRV[1] = { nullptr };
+	ID3D11SamplerState* NullSampler[1] = { nullptr };
+	ID3D11Buffer* NullPSCB[1] = { nullptr };
+
+	DeviceContext->PSSetShaderResources(0, 1, NullSRV);
+	DeviceContext->PSSetSamplers(0, 1, NullSampler);
+	DeviceContext->PSSetConstantBuffers(2, 1, NullPSCB);
+
+	const float BlendFactor[4] = { 0, 0, 0, 0 };
+	DeviceContext->OMSetBlendState(nullptr, BlendFactor, 0xffffffff);
+	DeviceContext->OMSetDepthStencilState(nullptr, 0);
+	DeviceContext->RSSetState(nullptr);
+
+	// 기본 렌더 상태 다시 바인딩
 	ShaderManager.Bind(DeviceContext);
 	SetConstantBuffers();
+	RenderStateManager->RebindState();
 }
 
 void CRenderer::ClearDepthBuffer()

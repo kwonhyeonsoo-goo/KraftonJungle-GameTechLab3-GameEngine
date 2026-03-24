@@ -491,7 +491,22 @@ void CTextRenderer::DrawText(
 	DeviceContext->DrawIndexed(static_cast<UINT>(Indices.size()), 0, 0);
 
 	ID3D11ShaderResourceView* NullSRV[1] = { nullptr };
+	ID3D11SamplerState* NullSampler[1] = { nullptr };
+	ID3D11Buffer* NullPSCB[1] = { nullptr };
+	ID3D11Buffer* NullVB[1] = { nullptr };
+	UINT NullStride[1] = { 0 };
+	UINT NullOffset[1] = { 0 };
+
 	DeviceContext->PSSetShaderResources(0, 1, NullSRV);
+	DeviceContext->PSSetSamplers(0, 1, NullSampler);
+	DeviceContext->PSSetConstantBuffers(2, 1, NullPSCB);
+
+	DeviceContext->IASetVertexBuffers(0, 1, NullVB, NullStride, NullOffset);
+	DeviceContext->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
+	DeviceContext->IASetInputLayout(nullptr);
+
+	DeviceContext->VSSetShader(nullptr, nullptr, 0);
+	DeviceContext->PSSetShader(nullptr, nullptr, 0);
 
 	DeviceContext->OMSetBlendState(nullptr, BlendFactor, 0xffffffff);
 	DeviceContext->RSSetState(nullptr);

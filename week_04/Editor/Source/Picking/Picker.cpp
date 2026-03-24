@@ -7,6 +7,7 @@
 #include "Primitive/PrimitiveBase.h"
 #include "Renderer/PrimitiveVertex.h"
 #include "Component/SubUVComponent.h"
+#include "Component/TextComponent.h"
 
 #include <limits>
 
@@ -135,7 +136,8 @@ AActor* CPicker::PickActor(UScene* Scene, int32 ScreenX, int32 ScreenY,
 			}
 
 			const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
-			if (bIsSubUV)
+			const bool bIsText = PrimitiveComponent->IsA(UTextComponent::StaticClass());
+			if (bIsSubUV || bIsText)
 			{
 				const FBoxSphereBounds Bounds = PrimitiveComponent->GetWorldBounds();
 
