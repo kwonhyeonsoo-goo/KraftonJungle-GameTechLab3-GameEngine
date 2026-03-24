@@ -41,7 +41,7 @@ USubUVComponent::USubUVComponent(std::wstring filename)
 
 bool USubUVComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand) {
 
-	if (!MeshData || !bIsVisible ) {
+	if (!UVMeshData || !bIsVisible ) {
 
 		return false;
 	}

@@ -33,7 +33,6 @@ public:
     DECLARE_CLASS(USubUVComponent, UPrimitiveComponent)
     void UpdateFrame(float deltaTime);
     float currentU, currentV;
-    float ElaspedTime;
 
 private:
     void ReloadTextureResource(std::wstring filename = L"Assets/Effects/Explosion.PNG");
