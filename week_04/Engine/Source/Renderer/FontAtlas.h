@@ -15,6 +15,13 @@ struct ENGINE_API FFontGlyph
 	float Advance = 1.0f;
 };
 
+struct ENGINE_API FAtlasRange
+{
+	uint32 StartCodepoint = 0;
+	uint32 Count = 0;
+	uint32 StartIndex = 0;
+};
+
 class ENGINE_API FFontAtlas
 {
 public:
@@ -34,9 +41,10 @@ public:
 	ID3D11ShaderResourceView* GetTextureSRV() const { return TextureSRV; }
 	ID3D11SamplerState* GetSamplerState() const { return SamplerState; }
 
-	static constexpr uint32 CellsPerRow = 16;
-	static constexpr uint32 Rows = 16;
+	static constexpr uint32 CellsPerRow = 128;
+	static constexpr uint32 Rows = 128;
 	static constexpr uint32 GlyphCount = CellsPerRow * Rows;
+	static constexpr uint32 BaseCodepoint = 0x0020;
 
 private:
 	void BuildGridAtlas();
@@ -46,4 +54,7 @@ private:
 	ID3D11SamplerState* SamplerState = nullptr;
 
 	FFontGlyph Glyphs[GlyphCount] = {};
+
+	FAtlasRange AskiiRange;
+	FAtlasRange KRRange;
 };

@@ -477,6 +477,15 @@ void CRenderer::ExecuteTextRenderPass()
 
 	const FVector CameraPosition = GetCameraWorldPositionFromViewMatrix(ViewMatrix);
 
+	TextRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
+
+	TextRenderer.DrawTextBillboard(
+		"ABC xyz 123 한글 테스트 ?! () ; [] {} 궬 뤡 궭",
+		FVector(0.0f, 2.0f, 0.0f),
+		0.3f,
+		FVector4(1.0f, 1.0f, 0.0f, 1.0f)
+	);
+
 	if (!TextCommandList.empty())
 	{
 		TextRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);

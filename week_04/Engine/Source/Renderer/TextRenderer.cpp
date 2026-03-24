@@ -46,8 +46,8 @@ bool CTextRenderer::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDe
 		return false;
 	}
 
-	// "Fonts/NotoSansKR_Atlas.png"
-	std::wstring FontPath = (FPaths::ContentDir() / "Fonts/DejaVuSansMono.png").wstring();
+	// "Fonts/DejaVuSansMono.png"
+	std::wstring FontPath = (FPaths::ContentDir() / "Fonts/NotoSansKR_Atlas.png").wstring();
 	
 	if (!Atlas.Initialize(Device, DeviceContext, FontPath))
 	{
@@ -313,14 +313,47 @@ void CTextRenderer::UpdateTextCB(const FVector4& Color)
 TArray<uint32> CTextRenderer::DecodeToCodepoints(const FString& Text) const
 {
 	TArray<uint32> Result;
-	Result.reserve(Text.size());
 
-	// 현재 단계:
-	// std::string(FString) 내부의 각 바이트를 그대로 codepoint로 사용
-	// 한글 UTF-8 완전 지원은 이후 여기만 교체
-	for (unsigned char Byte : Text)
+	if (Text.empty())
 	{
-		Result.push_back(static_cast<uint32>(Byte));
+		return Result;
+	}
+
+	const int WideLength = MultiByteToWideChar(CP_UTF8, 0, Text.c_str(), -1, nullptr, 0);
+
+	if (WideLength <= 0)
+	{
+		return Result;
+	}
+
+	std::wstring WideText;
+	WideText.resize(static_cast<size_t>(WideLength - 1));
+
+	MultiByteToWideChar(CP_UTF8, 0, Text.c_str(), -1, WideText.data(), WideLength);
+
+	Result.reserve(WideText.size());
+
+	for (size_t i = 0; i < WideText.size(); ++i)
+	{
+		const uint32 W1 = static_cast<uint32>(WideText[i]);
+
+		if (W1 >= 0xD800 && W1 <= 0xDBFF)
+		{
+			if (i + 1 < WideText.size())
+			{
+				const uint32 W2 = static_cast<uint32>(WideText[i + 1]);
+				if (W2 >= 0xDC00 && W2 <= 0xDFFF)
+				{
+					const uint32 Codepoint =
+						0x10000 + (((W1 - 0xD800) << 10) | (W2 - 0xDC00));
+					Result.push_back(Codepoint);
+					++i;
+					continue;
+				}
+			}
+		}
+
+		Result.push_back(W1);
 	}
 
 	return Result;

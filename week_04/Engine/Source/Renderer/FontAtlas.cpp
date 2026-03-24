@@ -86,66 +86,84 @@ void FFontAtlas::BuildGridAtlas()
 
 	for (uint32 Index = 0; Index < GlyphCount; ++Index)
 	{
+		const uint32 Row = Index / CellsPerRow;
+		const uint32 Col = Index % CellsPerRow;
+
 		FFontGlyph& Glyph = Glyphs[Index];
-		Glyph.U0 = 0.0f;
-		Glyph.V0 = 0.0f;
-		Glyph.U1 = 0.0f;
-		Glyph.V1 = 0.0f;
-		Glyph.Width = 0.0f;
-		Glyph.Height = 0.0f;
+		Glyph.U0 = static_cast<float>(Col) * CellU;
+		Glyph.V0 = static_cast<float>(Row) * CellV;
+		Glyph.U1 = static_cast<float>(Col + 1) * CellU;
+		Glyph.V1 = static_cast<float>(Row + 1) * CellV;
+
+		Glyph.Width = 1.0f;
+		Glyph.Height = 1.0f;
 		Glyph.Advance = 1.0f;
 	}
 
-	auto SetGlyphAt = [&](uint32 Codepoint, uint32 Row, uint32 Col, float Advance = 1.0f)
-		{
-			if (Codepoint >= GlyphCount || Row >= Rows || Col >= CellsPerRow)
-			{
-				return;
-			}
+	// ASCII: 공백 부터 ~ 까지
+	AskiiRange.StartCodepoint = 0x0020;
+	AskiiRange.Count = (0x007E - 0x0020 + 1);
+	AskiiRange.StartIndex = 0;
 
-			FFontGlyph& Glyph = Glyphs[Codepoint];
-			Glyph.U0 = static_cast<float>(Col) * CellU;
-			Glyph.V0 = static_cast<float>(Row) * CellV;
-			Glyph.U1 = static_cast<float>(Col + 1) * CellU;
-			Glyph.V1 = static_cast<float>(Row + 1) * CellV;
-			Glyph.Width = 1.0f;
-			Glyph.Height = 1.0f;
-			Glyph.Advance = Advance;
-		};
+	// 완성형 한글: 가 ~ 힣
+	// 가 = 0인덱스 기준 1행 19열 = 147번 인덱스
+	KRRange.StartCodepoint = 0xAC00;   // 가
+	KRRange.Count = (0xD7A3 - 0xAC00 + 1); // 11172
+	KRRange.StartIndex = 147;
 
-	if (32 < GlyphCount)
+	// 공백 폭
+	const uint32 SpaceIndex = AskiiRange.StartIndex + (' ' - AskiiRange.StartCodepoint);
+	if (SpaceIndex < GlyphCount)
 	{
-		Glyphs[32].Width = 0.0f;
-		Glyphs[32].Height = 0.0f;
-		Glyphs[32].Advance = 0.35f;
-	}
-
-	// 숫자부터 대문자 매핑
-	// '0'이 3행 0열인 16x16
-	const uint32 UpperStartRow = 3;
-	const uint32 UpperStartCol = 0;
-
-	for (uint32 Cp = '0'; Cp <= 'Z'; ++Cp)
-	{
-		const uint32 Offset = Cp - '0';
-		const uint32 LinearCol = UpperStartCol + Offset;
-		const uint32 Row = UpperStartRow + (LinearCol / CellsPerRow);
-		const uint32 Col = LinearCol % CellsPerRow;
-
-		SetGlyphAt(Cp, Row, Col, 0.5f);
+		Glyphs[SpaceIndex].Width = 0.0f;
+		Glyphs[SpaceIndex].Height = 0.0f;
+		Glyphs[SpaceIndex].Advance = 0.35f;
 	}
 }
 
+// 없는 문자면 ?로 반환
 const FFontGlyph& FFontAtlas::GetGlyph(uint32 Codepoint) const
 {
-	static FFontGlyph Fallback;
+	static FFontGlyph EmptyFallback = { 0, 0, 0, 0, 0, 0, 1.0f };
 
-	if (Codepoint >= GlyphCount)
+	const auto GetGlyphFromIndex = [&](uint32 Index) -> const FFontGlyph&
+		{
+			if (Index >= GlyphCount)
+			{
+				return EmptyFallback;
+			}
+			return Glyphs[Index];
+		};
+
+	const auto GetQuestionGlyph = [&]() -> const FFontGlyph&
+		{
+			const uint32 QuestionCodepoint = static_cast<uint32>('?');
+
+			if (QuestionCodepoint >= AskiiRange.StartCodepoint &&
+				QuestionCodepoint < AskiiRange.StartCodepoint + AskiiRange.Count)
+			{
+				const uint32 LocalIndex = QuestionCodepoint - AskiiRange.StartCodepoint;
+				return GetGlyphFromIndex(AskiiRange.StartIndex + LocalIndex);
+			}
+
+			return EmptyFallback;
+		};
+
+	if (Codepoint >= AskiiRange.StartCodepoint &&
+		Codepoint < AskiiRange.StartCodepoint + AskiiRange.Count)
 	{
-		return Fallback;
+		const uint32 LocalIndex = Codepoint - AskiiRange.StartCodepoint;
+		return GetGlyphFromIndex(AskiiRange.StartIndex + LocalIndex);
 	}
 
-	return Glyphs[Codepoint];
+	if (Codepoint >= KRRange.StartCodepoint &&
+		Codepoint < KRRange.StartCodepoint + KRRange.Count)
+	{
+		const uint32 LocalIndex = Codepoint - KRRange.StartCodepoint;
+		return GetGlyphFromIndex(KRRange.StartIndex + LocalIndex);
+	}
+
+	return GetQuestionGlyph();
 }
 
 void FFontAtlas::Release()
