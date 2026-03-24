@@ -6,7 +6,7 @@ REGISTER_FACTORY(UTextComponent)
 
 UTextComponent::UTextComponent()
 {
-	LocalExtents = { 0.01f, 0.5f, 0.5f };
+	LocalExtents = { 0.0f, 0.5f, 0.5f };
 
 	MeshData = &FMeshManager::GetQuad();
 }
