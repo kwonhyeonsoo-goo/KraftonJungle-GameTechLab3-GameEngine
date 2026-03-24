@@ -431,6 +431,7 @@ void CEditorUI::Render()
 					UE_LOG("New scene created");
 				}
 			}
+
 			if (ImGui::MenuItem("Open Scene"))
 			{
 				if (Core && Core->GetActiveScene())
@@ -442,7 +443,6 @@ void CEditorUI::Render()
 
 					if (!Path.empty())
 					{
-				
 						FSceneSerializer::Load(Core->GetScene(), Path, Core->GetRenderer()->GetDevice());
 
 					}
