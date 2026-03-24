@@ -328,7 +328,31 @@ void CEditorUI::SetupWindow(CWindow* InWindow)
 				return false;
 			}
 
+			const bool bIsImeMessage =
+				Msg == WM_IME_STARTCOMPOSITION ||
+				Msg == WM_IME_COMPOSITION ||
+				Msg == WM_IME_ENDCOMPOSITION ||
+				Msg == WM_IME_NOTIFY ||
+				Msg == WM_IME_SETCONTEXT ||
+				Msg == WM_IME_CHAR;
+
+			const bool bIsCharMessage =
+				Msg == WM_CHAR ||
+				Msg == WM_SYSCHAR ||
+				Msg == WM_UNICHAR;
+
+			if (bIsImeMessage || bIsCharMessage)
+			{
+				const bool bAllowTextInput = ControlPanel.IsSpawnTextInputActive();
+
+				if (!bAllowTextInput)
+				{
+					return true;
+				}
+			}
+
 			const bool bHandledByImGui = ImGui_ImplWin32_WndProcHandler(Hwnd, Msg, WParam, LParam) != 0;
+
 			if (IsViewportInteractive())
 			{
 				return false;

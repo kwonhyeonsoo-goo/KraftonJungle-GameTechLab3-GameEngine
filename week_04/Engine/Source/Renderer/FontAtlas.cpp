@@ -105,9 +105,14 @@ void FFontAtlas::BuildGridAtlas()
 	AskiiRange.Count = (0x007E - 0x0020 + 1);
 	AskiiRange.StartIndex = 0;
 
+	// 호환 자모: ㄱ ~ ㅣ
+	// atlas index 96 ~ 146
+	JamoRange.StartCodepoint = 0x3131;
+	JamoRange.Count = (0x3163 - 0x3131 + 1); // 51
+	JamoRange.StartIndex = 96;
+
 	// 완성형 한글: 가 ~ 힣
-	// 가 = 0인덱스 기준 1행 19열 = 147번 인덱스
-	KRRange.StartCodepoint = 0xAC00;   // 가
+	KRRange.StartCodepoint = 0xAC00;
 	KRRange.Count = (0xD7A3 - 0xAC00 + 1); // 11172
 	KRRange.StartIndex = 147;
 
@@ -154,6 +159,13 @@ const FFontGlyph& FFontAtlas::GetGlyph(uint32 Codepoint) const
 	{
 		const uint32 LocalIndex = Codepoint - AskiiRange.StartCodepoint;
 		return GetGlyphFromIndex(AskiiRange.StartIndex + LocalIndex);
+	}
+
+	if (Codepoint >= JamoRange.StartCodepoint &&
+		Codepoint < JamoRange.StartCodepoint + JamoRange.Count)
+	{
+		const uint32 LocalIndex = Codepoint - JamoRange.StartCodepoint;
+		return GetGlyphFromIndex(JamoRange.StartIndex + LocalIndex);
 	}
 
 	if (Codepoint >= KRRange.StartCodepoint &&

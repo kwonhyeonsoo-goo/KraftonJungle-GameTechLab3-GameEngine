@@ -56,5 +56,6 @@ private:
 	FFontGlyph Glyphs[GlyphCount] = {};
 
 	FAtlasRange AskiiRange;
+	FAtlasRange JamoRange;
 	FAtlasRange KRRange;
 };
