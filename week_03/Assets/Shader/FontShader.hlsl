@@ -25,8 +25,8 @@ struct PS_INPUT
 PS_INPUT VS_Font(VS_INPUT input)
 {
     float3 pos;
-    pos.x = input.PenPos.x + input.Position.x * input.CellSize.x;
-    pos.y = 0;
+    pos.x = 0;
+    pos.y = input.PenPos.x + input.Position.y * input.CellSize.x;
     pos.z = input.PenPos.y + input.Position.z * input.CellSize.y;
 
     PS_INPUT output;
