@@ -80,6 +80,7 @@
     <ClCompile Include="Source\Serializer\SceneSerializer.cpp" />
     <ClCompile Include="Source\Types\Name.cpp" />
     <ClCompile Include="Source\World\World.cpp" />
+    <ClCompile Include="Source\Renderer\AxisRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PrimitiveLineBatch.h" />
@@ -190,6 +191,7 @@
     <ClInclude Include="Source\World\WorldContext.h" />
     <ClInclude Include="ThirdParty\stb_image.h" />
     <ClInclude Include="ThirdParty\nlohmann\json.hpp" />
+    <ClInclude Include="Source\Renderer\AxisRenderer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

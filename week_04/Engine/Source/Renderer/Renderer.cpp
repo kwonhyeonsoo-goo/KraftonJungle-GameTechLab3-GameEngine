@@ -234,6 +234,12 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 
+	if (!AxisRenderer.Initialize(Device, DeviceContext))
+	{
+		MessageBox(0, L"AxisRenderer Initialize Failed.", 0, 0);
+		return false;
+	}
+
 	std::filesystem::path SubUVTexturePath = FPaths::ContentDir() / FString("Textures/SubUVPenguin.png");
 	FString SubUVTexturePathString = SubUVTexturePath.string();
 	if (!SubUVRenderer.Initialize(Device, DeviceContext, FPaths::ToWide(SubUVTexturePathString)))
@@ -404,6 +410,7 @@ void CRenderer::ExecuteCommands()
 	ExecuteRenderPass(ERenderLayer::Default);
 	ClearDepthBuffer();
 	ExecuteRenderPass(ERenderLayer::Overlay);
+	ExecuteAxisRenderPass();
 	ExecuteTextRenderPass();
 }
 
@@ -468,6 +475,17 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 		UpdateObjectConstantBuffer(Cmd.WorldMatrix);
 		DeviceContext->DrawIndexed(Cmd.MeshData->Indices.size(), 0, 0);
 	}
+}
+
+void CRenderer::ExecuteAxisRenderPass()
+{
+	DeviceContext->OMSetDepthStencilState(nullptr, 0);
+	ShaderManager.Bind(DeviceContext);
+
+	const FVector CameraPosition = GetCameraWorldPositionFromViewMatrix(ViewMatrix);
+
+	AxisRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
+	AxisRenderer.Draw(10.0f, 1.0f);
 }
 
 void CRenderer::ExecuteTextRenderPass()
@@ -802,6 +820,7 @@ void CRenderer::Release()
 
 	TextRenderer.Release();
 	SubUVRenderer.Release();
+	AxisRenderer.Release();
 
 	ShaderManager.Release();
 	FShaderMap::Get().Clear();

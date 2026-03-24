@@ -89,6 +89,7 @@
     <ClInclude Include="Source\Primitive\PrimitiveSky.h" />
     <ClInclude Include="Source\Primitive\PrimitiveSphere.h" />
     <ClInclude Include="Source\Primitive\UnrealEditorStyledGizmo.h" />
+    <ClInclude Include="Source\Renderer\AxisRenderer.h" />
     <ClInclude Include="Source\Renderer\FontAtlas.h" />
     <ClInclude Include="Source\Renderer\Material.h" />
     <ClInclude Include="Source\Renderer\MaterialManager.h" />
@@ -188,6 +189,7 @@
     <ClCompile Include="Source\Primitive\PrimitiveSky.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveSphere.cpp" />
     <ClCompile Include="Source\Primitive\UnrealEditorStyledGizmo.cpp" />
+    <ClCompile Include="Source\Renderer\AxisRenderer.cpp" />
     <ClCompile Include="Source\Renderer\FontAtlas.cpp" />
     <ClCompile Include="Source\Renderer\Material.cpp" />
     <ClCompile Include="Source\Renderer\MaterialManager.cpp" />
