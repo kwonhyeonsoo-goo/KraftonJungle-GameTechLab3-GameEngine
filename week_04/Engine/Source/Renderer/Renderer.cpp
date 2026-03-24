@@ -241,8 +241,8 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		MessageBox(0, L"SubUVRenderer Initialize Failed.", 0, 0);
 	}
 
-	std::filesystem::path FolderIconPath = FPaths::AssetDir() / FString("\\Textures\\FolderIcon.png");
-	std::filesystem::path FileIconPath = FPaths::AssetDir() / FString("\\Textures\\FileIcon.png");
+	std::filesystem::path FolderIconPath = FPaths::AssetDir() / FString("Textures/FolderIcon.png");
+	std::filesystem::path FileIconPath = FPaths::AssetDir() / FString("Textures/FileIcon.png");
 
 	FString FolderIconPathString = FolderIconPath.string();
 	FString FileIconPathString = FileIconPath.string();

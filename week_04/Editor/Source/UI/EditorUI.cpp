@@ -24,6 +24,9 @@
 #include "Component/CameraComponent.h"
 #include "Camera/Camera.h"
 #include "Serializer/SceneSerializer.h"
+
+#include "Actor/ObjActor.h"
+
 enum class EFileDialogType
 {
 	Open,
@@ -98,6 +101,70 @@ void CEditorUI::Initialize(CCore* InCore)
 			}
 		};
 
+	ContentBrowser.OnFileDragEnd = [this](const FString& DraggingFilePath, const FString& ReleaseDirectory)
+		{
+			if (ContentBrowser.IsHovered())
+			{
+				if (ContentBrowser.IsMouseOnDirectory())
+				{
+					std::filesystem::path Src = DraggingFilePath;
+					std::filesystem::path DstDir = ReleaseDirectory;
+
+					std::filesystem::path Dst = DstDir / Src.filename();
+
+					std::error_code ec;
+
+					if (std::filesystem::exists(Dst))
+					{
+						int Result = MessageBoxA(
+							nullptr,
+							"이미 같은 이름의 파일이 존재합니다.\n덮어쓰시겠습니까?",
+							"Overwrite",
+							MB_YESNO | MB_ICONWARNING
+						);
+
+						if (Result != IDYES)
+						{
+							return; // 취소
+						}
+
+						// 덮어쓰기 위해 기존 파일 삭제
+						std::filesystem::remove(Dst, ec);
+						if (ec)
+						{
+							MessageBoxA(nullptr, ec.message().c_str(), "Delete Failed", MB_OK | MB_ICONERROR);
+							return;
+						}
+					}
+
+					std::filesystem::rename(Src, Dst, ec);
+
+					if (ec)
+					{
+						UE_LOG("Move Failed: %s", ec.message().c_str());
+					}
+					else
+					{
+						UE_LOG("Moved: %s -> %s", Src.string().c_str(), Dst.string().c_str());
+					}
+				}
+			}
+			else if (Viewport.IsHovered())
+			{
+				UE_LOG("Drop On Viewport");
+
+				if (Core)
+				{
+					if (DraggingFilePath.ends_with(".obj"))
+					{
+						AObjActor* NewActor = Core->GetScene()->SpawnActor<AObjActor>("ObjActor");
+						NewActor->LoadObj(DraggingFilePath);
+						FVector V{ 0, 0, 0 };
+						NewActor->SetActorLocation(V);
+					}
+				}
+			}
+		};
 }
 
 void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
@@ -406,7 +473,7 @@ void CEditorUI::Render()
 	Console.Render();
 	Stat.Render();
 	Outliner.Render(Core);
-	// ContentBrowser.Render();
+	ContentBrowser.Render();
 }
 
 bool CEditorUI::GetViewportMousePosition(int32 WindowMouseX, int32 WindowMouseY, int32& OutViewportX, int32& OutViewportY, int32& OutWidth, int32& OutHeight) const

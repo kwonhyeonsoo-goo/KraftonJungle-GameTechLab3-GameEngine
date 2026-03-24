@@ -9,6 +9,7 @@
 #include "Actor/AttachTestActor.h"
 #include "Actor/CubeActor.h"
 #include "Actor/SphereActor.h"
+#include "Actor/ObjActor.h"
 #include "Component/PrimitiveComponent.h"
 #include "Scene/Scene.h"
 #include "Object/ObjectFactory.h" 
@@ -126,6 +127,7 @@ void FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 			ActorIndex++;
 			continue;
 		}
+
 		Scene->RegisterActor(Actor);
 		Actor->PostSpawnInitialize();
 		FArchive Ar(false);// loading

@@ -6,8 +6,14 @@ IMPLEMENT_RTTI(UPrimitiveComponent, USceneComponent)
 
 FBoxSphereBounds UPrimitiveComponent::GetWorldBounds() const
 {
-	FMeshData* MeshData = Primitive->GetMeshData();
 	FVector Center = GetWorldLocation();
+
+	if (!Primitive)
+	{
+		return { Center, 1, FVector(1, 1, 1) };
+	}
+
+	FMeshData* MeshData = Primitive->GetMeshData();
 
 	if (MeshData)
 	{
@@ -35,7 +41,6 @@ FBoxSphereBounds UPrimitiveComponent::GetWorldBounds() const
 	}
 
 	/** MeshData 가 없을 때 어떻게 처리할 지는 생각이 필요할듯 */
-	UE_LOG("UPrimitiveComponent::GetWorldBounds: MeshData is not found");
 	return { Center, 1, FVector(1, 1, 1) };
 }
 

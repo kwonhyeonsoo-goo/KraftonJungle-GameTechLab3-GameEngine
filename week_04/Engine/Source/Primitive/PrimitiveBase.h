@@ -62,7 +62,15 @@ public:
 	CPrimitiveBase() = default;
 	virtual ~CPrimitiveBase() = default;
 
-	FMeshData* GetMeshData() const { return MeshData.get(); }
+	FMeshData* GetMeshData() const 
+	{ 
+		if (MeshData)
+		{
+			return MeshData.get();
+		}
+
+		return nullptr;
+	}
 
 	// 캐시에서 가져오거나 파일에서 로드
 	static std::shared_ptr<FMeshData> GetOrLoad(const FString& Key, const FString& FilePath);

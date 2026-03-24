@@ -234,10 +234,13 @@ void CEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
 
 	if (Core)
 	{
-		Core->SetSelectedActor(nullptr);
-		Core->GetScene()->ClearActors();
-		FSceneSerializer::Load(Core->GetScene(), FilePath, Core->GetRenderer()->GetDevice());
+		if (FilePath.ends_with(".json"))
+		{
+			Core->SetSelectedActor(nullptr);
+			Core->GetScene()->ClearActors();
+			FSceneSerializer::Load(Core->GetScene(), FilePath, Core->GetRenderer()->GetDevice());
 
-		UE_LOG("Scene loaded: %s", FilePath.c_str());
+			UE_LOG("Scene loaded: %s", FilePath.c_str());
+		}
 	}
 }
