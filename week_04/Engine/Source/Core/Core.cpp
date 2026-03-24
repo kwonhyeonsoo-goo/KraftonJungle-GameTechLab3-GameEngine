@@ -188,11 +188,16 @@ void CCore::Physics(float DeltaTime)
 					continue;
 
 				FBoxSphereBounds Bound = PrimComp->GetWorldBounds();
+				//DebugDrawManager를 통해 그림 → Flush()에서 일괄 렌더
+
 				DebugDrawManager.DrawCube(Bound.Center, Bound.BoxExtent, FVector4(1, 0, 0, 1));
+
 			}
 			
 
-			Renderer->DrawCube(HitResult.HitLocation, FVector(0.1, 0.1, 0.1), FVector4(0, 1, 0, 1));
+			//Renderer->DrawCube(HitResult.HitLocation, FVector(0.1, 0.1, 0.1), FVector4(0, 1, 0, 1));
+			//Renderer를 직접 호출 → DebugDrawManager를 거치지 않음
+			DebugDrawManager.DrawCube(HitResult.HitLocation, FVector(0.1, 0.1, 0.1), FVector4(0, 1, 0, 1));
 		}
 
 		if (Renderer)

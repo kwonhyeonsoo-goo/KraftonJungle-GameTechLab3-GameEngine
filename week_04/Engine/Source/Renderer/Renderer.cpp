@@ -801,7 +801,7 @@ void CRenderer::ExecuteLineCommands()
 
 	// 기본 셰이더 복원 (ExecuteCommands 후 마지막 Material 셰이더가 남아있을 수 있음)
 	ShaderManager.Bind(DeviceContext);
-
+	DefaultMaterial->Bind(DeviceContext);
 	// 동적 버퍼 재사용, 불가능하면 새로 생성.
 	UINT BufferSize = static_cast<UINT>(LineVertices.size() * sizeof(FPrimitiveVertex));
 

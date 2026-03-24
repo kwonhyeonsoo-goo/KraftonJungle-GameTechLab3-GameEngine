@@ -43,12 +43,17 @@ bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const
 				{
 					continue;
 				}
+			/*	SubUV, Text만 검사(일반 메시 스킵)
+					if (!bIsSubUV && !bIsText)
+					{
+						continue;
+					}*/
 
-				if (!bIsSubUV && !bIsText)
+				//SubUV, Text는 스킵 (일반 메시만 검사)
+				if (bIsSubUV || bIsText)
 				{
 					continue;
 				}
-
 				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
 				{
 					continue;
