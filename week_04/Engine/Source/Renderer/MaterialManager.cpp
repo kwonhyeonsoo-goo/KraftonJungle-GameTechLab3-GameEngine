@@ -146,6 +146,8 @@ std::shared_ptr<FMaterial> FMaterialManager::LoadFromFile(
 		Mat->SetRasterizerOption(rasterizerOption);	// 디버깅용 정보 삽입
 		Mat->SetRasterizerState(RasterizerState);
 
+
+
 		FDepthStencilStateOption depthStencilOption;
 		if (RenderStatesJson.contains("DepthTest"))
 		{
@@ -179,6 +181,17 @@ std::shared_ptr<FMaterial> FMaterialManager::LoadFromFile(
 		{
 			depthStencilOption.StencilWriteMask = RenderStatesJson["StencilWriteMask"].get<uint8>();
 		}
+		if (RenderStatesJson.contains("DepthFunc"))
+		{
+			FString Func = RenderStatesJson["DepthFunc"].get<std::string>();
+			if (Func == "LessEqual")
+				depthStencilOption.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+			else if (Func == "Less")
+				depthStencilOption.DepthFunc = D3D11_COMPARISON_LESS;
+			else if (Func == "Always")
+				depthStencilOption.DepthFunc = D3D11_COMPARISON_ALWAYS;
+		}
+
 		auto DepthStencilState = InStateManager->GetOrCreateDepthStencilState(depthStencilOption);
 		Mat->SetDepthStencilOption(depthStencilOption);
 		Mat->SetDepthStencilState(DepthStencilState);

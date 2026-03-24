@@ -63,7 +63,7 @@ std::shared_ptr<FDepthStencilState> FDepthStencilState::Create(
 	desc.StencilWriteMask = InOption.StencilWriteMask;	
 	// 나머지 기본값 설정
 	// --- 깊이 테스트 (Depth Test) 기본값 ---
-	desc.DepthFunc = D3D11_COMPARISON_LESS;             // 기본: 현재보다 가까운 것만 통과
+	desc.DepthFunc = InOption.DepthFunc;            // 기본: 현재보다 가까운 것만 통과
 
 	// --- 앞면(FrontFace) 스텐실 연산 설정 ---
 	desc.FrontFace.StencilFailOp = InOption.StencilWriteMask ? D3D11_STENCIL_OP_REPLACE : D3D11_STENCIL_OP_KEEP;      // 기본: 실패 시 유지

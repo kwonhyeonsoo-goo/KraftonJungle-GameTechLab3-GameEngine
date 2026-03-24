@@ -6,6 +6,7 @@
     "FillMode": 3,
     "CullMode": 1,
     "DepthTest": true,
+	"DepthFunc": "LessEqual",
     "StencilEnable": true,
     "StencilReadMask": 0,
     "StencilWriteMask": 255
