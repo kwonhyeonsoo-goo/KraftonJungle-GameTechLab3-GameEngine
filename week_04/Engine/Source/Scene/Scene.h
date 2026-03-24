@@ -58,8 +58,6 @@ public:
 
 private:
 	TArray<AActor*> Actors;
-	UCameraComponent* SceneCameraComponent = nullptr;
-	TObjectPtr<UCameraComponent> ActiveCameraComponent;
 	bool bBegunPlay = false;
 	ESceneType SceneType = ESceneType::Game;
 

@@ -84,12 +84,12 @@ FRenderCommand IViewportClient::BuildRenderCommand(UPrimitiveComponent* Primitiv
 
 void IViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene, const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
-	if (!Scene)
-	{
-		UE_LOG("[IViewportClient] Cannot find Scene\n");
-		return;
-	}
-	RenderCollector.CollectRenderCommands(Scene->GetActors(), Frustum, ShowFlags, OutQueue);
+	UWorld* World = ResolveWorld(Core);
+	if (!World) return;
+
+	// Persistent + Streaming 전체 액터를 렌더
+	TArray<AActor*> AllActors = World->GetAllActors();
+	RenderCollector.CollectRenderCommands(AllActors, Frustum, ShowFlags, OutQueue);
 }
 
 void IViewportClient::HandleFileDoubleClick(const FString& FilePath)

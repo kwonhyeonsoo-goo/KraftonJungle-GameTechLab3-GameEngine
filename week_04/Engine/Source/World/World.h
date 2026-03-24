@@ -20,10 +20,21 @@ public:
 
 	template <typename T>
 	T* SpawnActor(const FString& InName);
-
 	void DestroyActor(AActor* InActor);
-	const TArray<AActor*>& GetActors() const;
 
+	// ── Persistent Level ──
+	UScene* GetPersistentLevel() const { return PersistentLevel; }
+	// ── Streaming Levels ──
+	UScene* LoadStreamingLevel(const FString& LevelName, ID3D11Device* Device = nullptr);
+	void UnloadStreamingLevel(const FString& LevelName);
+	UScene* FindStreamingLevel(const FString& LevelName) const;
+	const TArray<UScene*>& GetStreamingLevels() const { return StreamingLevels; }
+
+	// ── 전체 액터 조회 (Persistent + Streaming 합산) ──
+	TArray<AActor*> GetAllActors() const;
+	const TArray<AActor*>& GetActors() const;  // PersistentLevel만
+
+	UScene* GetScene() const { return PersistentLevel; }
 	// 카메라
 	void SetActiveCameraComponent(UCameraComponent* InCamera);
 	UCameraComponent* GetActiveCameraComponent() const;
@@ -37,15 +48,17 @@ public:
 	void CleanupWorld();
 	
 
-	// 접근자
-	UScene* GetScene() const { return Scene; }
+
 	ESceneType GetWorldType() const { return WorldType; }
 	void SetWorldType(ESceneType InType) { WorldType = InType; }
 	float GetWorldTime() const { return WorldTime; }
 	float GetDeltaTime() const { return DeltaSeconds; }
 
 private:
-	UScene* Scene = nullptr;
+	UScene* PersistentLevel = nullptr;      
+	TArray<UScene*> StreamingLevels;
+
+	bool bBegunPlay = false;
 	float WorldTime = 0.f;
 	float DeltaSeconds = 0.f;
 	ESceneType WorldType = ESceneType::Game;
@@ -58,6 +71,6 @@ template <typename T>
 T* UWorld::SpawnActor(const FString& InName)
 {
 	static_assert(std::is_base_of_v<AActor, T>, "T must derive from AActor");
-	if (!Scene) return nullptr;
-	return Scene->SpawnActor<T>(InName);
+	if (!PersistentLevel) return nullptr;
+	return PersistentLevel->SpawnActor<T>(InName);
 }

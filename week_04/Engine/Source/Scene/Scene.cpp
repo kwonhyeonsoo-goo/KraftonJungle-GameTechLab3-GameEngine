@@ -46,10 +46,7 @@ CCamera* UScene::GetCamera() const
 
 void UScene::ClearActors()
 {
-	if (ActiveCameraComponent != SceneCameraComponent)
-	{
-		ActiveCameraComponent = SceneCameraComponent;
-	}
+
 
 	for (AActor* Actor : Actors)
 	{
@@ -87,17 +84,6 @@ void UScene::DestroyActor(AActor* InActor)
 		return;
 	}
 
-	if (ActiveCameraComponent && ActiveCameraComponent != SceneCameraComponent)
-	{
-		for (UActorComponent* Component : InActor->GetComponents())
-		{
-			if (Component == ActiveCameraComponent)
-			{
-				ActiveCameraComponent = SceneCameraComponent;
-				break;
-			}
-		}
-	}
 
 	InActor->Destroy();
 }
