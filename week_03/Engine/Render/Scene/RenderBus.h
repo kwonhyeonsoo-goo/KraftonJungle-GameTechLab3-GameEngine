@@ -23,7 +23,7 @@ private:
 	TArray<FRenderCommand> OverlayCommands;
 
 	TArray<FRenderCommand> TextCommands;
-
+	TArray<FRenderCommand> FontCommands;
 	FFontCache FontCache;
 	FMatrix CachedView;
 	FMatrix CachedProjection;
