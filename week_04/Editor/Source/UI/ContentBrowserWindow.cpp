@@ -155,7 +155,8 @@ void CContentBrowserWindow::DrawFileGrid()
 
 	for (auto& Entry : std::filesystem::directory_iterator(CurrentPath))
 	{
-		const auto& Path = Entry.path();
+		const auto& 
+			Path = Entry.path();
 		std::string Name = Path.filename().string();
 
 		std::string Ext = Path.extension().string();
@@ -163,10 +164,15 @@ void CContentBrowserWindow::DrawFileGrid()
 			return std::tolower(c);
 			});
 
-		if (!(Ext == ".json" || Ext == ".obj"))
+		if (Entry.is_regular_file())
 		{
-			continue;
+			if (!(Ext == ".json" || Ext == ".obj"))
+			{
+				continue;
+			}
 		}
+
+		/** PushID 전에 종료처리 할것 */
 
 		ImGui::PushID(Name.c_str());
 
@@ -175,7 +181,10 @@ void CContentBrowserWindow::DrawFileGrid()
 		// 아이콘 버튼
 		ImGui::ImageButton(Name.c_str(), Icon, ImVec2(IconSize, IconSize));
 
-		if (!Entry.is_directory())
+		if (Entry.is_directory())
+		{
+		}
+		else
 		{
 			if (ImGui::BeginPopupContextItem())
 			{
@@ -184,7 +193,7 @@ void CContentBrowserWindow::DrawFileGrid()
 					std::filesystem::remove(Path);
 				}
 				ImGui::EndPopup();
-			}
+			}			
 		}
 
 		// 선택
