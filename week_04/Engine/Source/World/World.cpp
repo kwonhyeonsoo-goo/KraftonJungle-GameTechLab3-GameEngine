@@ -4,7 +4,9 @@
 #include "Object/ObjectFactory.h"
 #include "Component/CameraComponent.h"
 #include "Camera/Camera.h"
-
+#include "Serializer/SceneSerializer.h"
+#include "Core/Paths.h"
+#include "Actor/Actor.h"
 IMPLEMENT_RTTI(UWorld, UObject)
 
 UWorld::~UWorld()
@@ -22,13 +24,22 @@ void UWorld::InitializeWorld(float AspectRatio, ID3D11Device* Device)
 
 	Scene->SetSceneType(WorldType);
 
+	if (!SceneCameraComponent)
+	{
+		SceneCameraComponent = FObjectFactory::ConstructObject<UCameraComponent>(this, "SceneCamera");
+	}
+	if (!ActiveCameraComponent)
+	{
+		ActiveCameraComponent = SceneCameraComponent;
+	}
+	if (SceneCameraComponent->GetCamera())
+	{
+		SceneCameraComponent->GetCamera()->SetAspectRatio(AspectRatio);
+	}
+
 	if (Device)
 	{
-		Scene->InitializeDefaultScene(AspectRatio, Device);
-	}
-	else
-	{
-		Scene->InitializeEmptyScene(AspectRatio);
+		FSceneSerializer::Load(Scene, (FPaths::SceneDir() / "DefaultScene.json").string(), Device);
 	}
 }
 
@@ -59,17 +70,37 @@ void UWorld::CleanupWorld()
 		Scene->MarkPendingKill();
 		Scene = nullptr;
 	}
-
+	if (SceneCameraComponent)
+	{
+		SceneCameraComponent->MarkPendingKill();
+	}
+	if (ActiveCameraComponent == SceneCameraComponent)
+	{
+		ActiveCameraComponent = nullptr;
+	}
+	SceneCameraComponent = nullptr;
 	WorldTime = 0.f;
 	DeltaSeconds = 0.f;
 }
 
 void UWorld::DestroyActor(AActor* InActor)
 {
-	if (Scene)
+	if (!InActor || !Scene) return;
+
+
+	if (ActiveCameraComponent && ActiveCameraComponent != SceneCameraComponent)
 	{
-		Scene->DestroyActor(InActor);
+		for (UActorComponent* Component : InActor->GetComponents())
+		{
+			if (Component == ActiveCameraComponent)
+			{
+				ActiveCameraComponent = SceneCameraComponent;
+				break;
+			}
+		}
 	}
+
+	Scene->DestroyActor(InActor);
 }
 
 const TArray<AActor*>& UWorld::GetActors() const
@@ -84,19 +115,17 @@ const TArray<AActor*>& UWorld::GetActors() const
 
 void UWorld::SetActiveCameraComponent(UCameraComponent* InCamera)
 {
-	if (Scene)
-	{
-		Scene->SetActiveCameraComponent(InCamera);
-	}
+	ActiveCameraComponent = InCamera ? InCamera : SceneCameraComponent;
 }
 
 UCameraComponent* UWorld::GetActiveCameraComponent() const
 {
-	return Scene ? Scene->GetActiveCameraComponent() : nullptr;
+	return ActiveCameraComponent ? ActiveCameraComponent.Get() : SceneCameraComponent;
 }
 
 CCamera* UWorld::GetCamera() const
 {
-	return Scene ? Scene->GetCamera() : nullptr;
+	UCameraComponent* Cam = GetActiveCameraComponent();
+	return Cam ? Cam->GetCamera() : nullptr;
 }
 

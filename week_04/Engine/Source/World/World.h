@@ -29,12 +29,13 @@ public:
 	UCameraComponent* GetActiveCameraComponent() const;
 	CCamera* GetCamera() const;
 
+
 	// 라이프사이클
 	void InitializeWorld(float AspectRatio, ID3D11Device* Device = nullptr);
 	void BeginPlay();
 	void Tick(float InDeltaTime);
 	void CleanupWorld();
-
+	
 
 	// 접근자
 	UScene* GetScene() const { return Scene; }
@@ -48,6 +49,8 @@ private:
 	float WorldTime = 0.f;
 	float DeltaSeconds = 0.f;
 	ESceneType WorldType = ESceneType::Game;
+	UCameraComponent* SceneCameraComponent = nullptr;    
+	TObjectPtr<UCameraComponent> ActiveCameraComponent;
 };
 #include "Scene/Scene.h"
 

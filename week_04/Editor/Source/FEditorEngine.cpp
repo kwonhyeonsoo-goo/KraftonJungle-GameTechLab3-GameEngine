@@ -33,10 +33,10 @@ namespace
 		{
 			return;
 		}
-		UScene* PreviewScene = PreviewContext->World->GetScene();
-		if (PreviewScene->GetActors().empty())
+		UWorld* PreviewWorld = PreviewContext->World;
+		if (PreviewWorld->GetActors().empty())
 		{
-			AActor* PreviewActor = PreviewScene->SpawnActor<AActor>("PreviewCube");
+			AActor* PreviewActor = PreviewWorld->SpawnActor<AActor>("PreviewCube");
 			if (PreviewActor)
 			{
 				UCubeComponent* PreviewComponent = FObjectFactory::ConstructObject<UCubeComponent>(PreviewActor);
@@ -45,7 +45,7 @@ namespace
 			}
 		}
 
-		if (UCameraComponent* PreviewCamera = PreviewScene->GetActiveCameraComponent())
+		if (UCameraComponent* PreviewCamera = PreviewWorld->GetActiveCameraComponent())
 		{
 			PreviewCamera->GetCamera()->SetPosition({ -8.0f, -8.0f, 6.0f });
 			PreviewCamera->GetCamera()->SetRotation(45.0f, -20.0f);
@@ -132,7 +132,7 @@ void FEditorEngine::PostInitialize()
 	// EditorPawn은 Scene에 등록하지 않음 — FEditorEngine이 직접 소유
 	EditorPawn = FObjectFactory::ConstructObject<AEditorCameraPawn>(nullptr, "EditorCameraPawn");
 	EditorPawn->Initialize();
-	Core->GetScene()->SetActiveCameraComponent(EditorPawn->GetCameraComponent());
+	Core->GetActiveWorld()->SetActiveCameraComponent(EditorPawn->GetCameraComponent());
 	ViewportController.Initialize(
 		EditorPawn->GetCameraComponent(),
 		Core->GetInputManager(),
@@ -150,9 +150,9 @@ void FEditorEngine::Tick(float DeltaTime)
 	if (EditorPawn && Core && Core->GetScene() && Core->GetScene()->IsEditorScene())
 	{
 		UCameraComponent* EditorCamera = EditorPawn->GetCameraComponent();
-		if (Core->GetScene()->GetActiveCameraComponent() != EditorCamera)
+		if (Core->GetActiveWorld()->GetActiveCameraComponent() != EditorCamera)
 		{
-			Core->GetScene()->SetActiveCameraComponent(EditorCamera);
+			Core->GetActiveWorld()->SetActiveCameraComponent(EditorCamera);
 		}
 	}
 

@@ -45,18 +45,15 @@ public:
 	bool IsEditorScene() const { return SceneType == ESceneType::Editor; }
 	bool IsGameScene() const { return SceneType == ESceneType::Game || SceneType == ESceneType::PIE; }
 
-	void SetActiveCameraComponent(UCameraComponent* InCameraComponent);
-	UCameraComponent* GetActiveCameraComponent() const;
+
 	CCamera* GetCamera() const;
 
-	void InitializeEmptyScene(float AspectRatio);
-	void InitializeDefaultScene(float AspectRatio, ID3D11Device* Device = nullptr);
 
 	void ClearActors();
 	void BeginPlay();
 	void Tick(float DeltaTime);
 
-
+	
 	
 
 private:

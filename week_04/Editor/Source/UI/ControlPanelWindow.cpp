@@ -237,7 +237,7 @@ void CControlPanelWindow::Render(CCore* Core)
 			Core->SetSelectedActor(nullptr);
 		
 			strncpy_s(SceneName, "NewScene", IM_ARRAYSIZE(SceneName));
-			if (UCameraComponent* Cam = Core->GetScene()->GetActiveCameraComponent())
+			if (UCameraComponent* Cam = Core->GetActiveWorld()->GetActiveCameraComponent())
 			{
 				Cam->GetCamera()->SetPosition({ -5.0f, 0.0f, 2.0f });
 				Cam->GetCamera()->SetRotation(0.f,0.f);

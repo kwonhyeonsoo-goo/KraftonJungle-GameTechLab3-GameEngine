@@ -231,7 +231,7 @@ void CCore::Render()
 
 	Renderer->BeginFrame();
 
-	UCameraComponent* ActiveCamera = Scene->GetActiveCameraComponent();
+	UCameraComponent* ActiveCamera = GetActiveWorld()->GetActiveCameraComponent();
 	if (!ActiveCamera)
 	{
 		Renderer->EndFrame();

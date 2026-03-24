@@ -10,16 +10,7 @@
 #include "Component/CameraComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Component/PrimitiveComponent.h"
-#include "Math/Frustum.h"
-#include "Primitive/PrimitiveBase.h"
-#include "Renderer/Material.h"
-#include "Renderer/MaterialManager.h"
-#include "Renderer/RenderCommand.h"
-
-#include "Component/UUIDBillboardComponent.h"
 #include "Object/Class.h"
-#include "Core/FEngine.h"
-#include "Component/SubUVComponent.h"
 
 #include "Serializer/SceneSerializer.h"
 #include <algorithm>
@@ -41,63 +32,17 @@ UScene::~UScene()
 	}
 	Actors.clear();
 
-	if (SceneCameraComponent)
-	{
-		SceneCameraComponent->MarkPendingKill();
-	}
 
-	if (ActiveCameraComponent == SceneCameraComponent)
-	{
-		ActiveCameraComponent = nullptr;
-	}
-	SceneCameraComponent = nullptr;
 }
 
-void UScene::SetActiveCameraComponent(UCameraComponent* InCameraComponent)
-{
-	ActiveCameraComponent = InCameraComponent ? InCameraComponent : SceneCameraComponent;
-}
-
-UCameraComponent* UScene::GetActiveCameraComponent() const
-{
-	return ActiveCameraComponent ? ActiveCameraComponent.Get() : SceneCameraComponent;
-}
 
 CCamera* UScene::GetCamera() const
 {
-	UCameraComponent* CameraComponent = GetActiveCameraComponent();
-	return CameraComponent ? CameraComponent->GetCamera() : nullptr;
+	UWorld* World = GetTypedOuter<UWorld>();
+	return World ? World->GetCamera() : nullptr;
 }
 
-void UScene::InitializeEmptyScene(float AspectRatio)
-{
-	if (SceneCameraComponent == nullptr)
-	{
-		SceneCameraComponent = FObjectFactory::ConstructObject<UCameraComponent>(this, "SceneCamera");
-	}
 
-	if (ActiveCameraComponent == nullptr)
-	{
-		ActiveCameraComponent = SceneCameraComponent;
-	}
-
-	if (SceneCameraComponent->GetCamera())
-	{
-		SceneCameraComponent->GetCamera()->SetAspectRatio(AspectRatio);
-	}
-
-	if (ActiveCameraComponent != SceneCameraComponent && GetCamera())
-	{
-		GetCamera()->SetAspectRatio(AspectRatio);
-	}
-}
-
-void UScene::InitializeDefaultScene(float AspectRatio, ID3D11Device* Device)
-{
-	InitializeEmptyScene(AspectRatio);
-	//LoadSceneFromFile((FPaths::SceneDir() / "DefaultScene.json").string(), Device);
-	FSceneSerializer::Load(this, (FPaths::SceneDir() / "DefaultScene.json").string(), Device);
-}
 
 void UScene::ClearActors()
 {
