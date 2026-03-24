@@ -70,16 +70,28 @@ void FSceneSerializer::Save(UScene* Scene, const FString& FilePath)
 	}
 }
 
-void FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device* Device)
+bool FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device* Device)
 {
 	std::ifstream File(FilePath);
 	if (!File.is_open())
 	{
-		return;
+		return false;
 	}
 
 	nlohmann::json Json;
-	File >> Json;
+
+	try
+	{
+		File >> Json;
+	}
+	catch (const std::exception& e)
+	{
+		return false;
+	}
+
+	if (!Json.contains("Primitives"))
+		return false;
+
 	CCamera* Camera = Scene->GetCamera();
 	if (Camera && Json.contains("Camera"))
 	{
@@ -95,20 +107,6 @@ void FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 			Camera->SetRotation(R[0].get<float>(), R[1].get<float>());
 		}
 	}
-
-	if (Device && Json.contains("Materials"))
-	{
-		for (auto& MatPath : Json["Materials"])
-		{
-			const FString RelativePath = MatPath.get<FString>();
-			const FString AbsolutePath = (FPaths::ProjectRoot() / RelativePath).string();
-			FMaterialManager::Get().GetOrLoad(Device, AbsolutePath);
-		}
-	}
-
-	if (!Json.contains("Primitives"))
-		return;
-
 
 	int32 ActorIndex = 0;
 	for (auto& [Key, Value] : Json["Primitives"].items())
@@ -134,8 +132,6 @@ void FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 		*static_cast<nlohmann::json*>(Ar.GetRawJson()) = Value;
 		Actor->Serialize(Ar);
 
-
-
 		if (Value.contains("Material"))
 		{
 			const FString MaterialName = Value["Material"].get<FString>();
@@ -149,6 +145,19 @@ void FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 			}
 		}
 
+		if (Value.contains("PrimitiveFileName"))
+		{
+			if (Actor->IsA(AObjActor::StaticClass()))
+			{
+				const FString PrimitiveFileName = Value["PrimitiveFileName"].get<FString>();
+				if (PrimitiveFileName != "")
+				{
+					AObjActor* ObjActor = static_cast<AObjActor*>(Actor);
+					if (ObjActor)
+						ObjActor->LoadObj(PrimitiveFileName);
+				}
+			}
+		}
 
 		++ActorIndex;
 

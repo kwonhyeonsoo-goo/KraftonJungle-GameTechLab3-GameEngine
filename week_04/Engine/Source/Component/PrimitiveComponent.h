@@ -29,6 +29,12 @@ public:
 
 	void UpdateLocalBound();
 
+	FString GetPrimitiveFileName() const 
+	{ 
+		if (Primitive) return Primitive->GetPrimitiveFileName();
+		else return ""; 
+	}
+
 protected:
 	std::shared_ptr<CPrimitiveBase> Primitive;
 	FMaterial* Material = nullptr;

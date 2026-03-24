@@ -43,6 +43,6 @@ private:
 	mutable CGizmo Gizmo;
 
 	ERenderMode RenderMode = ERenderMode::Lighting;
-	const FString WireframeMaterialPath = "Assets/Materials/M_Wireframe.json";
+	const FString WireframeMaterialName = "M_Wireframe";
 	std::shared_ptr<FMaterial> WireFrameMaterial = nullptr;
 };

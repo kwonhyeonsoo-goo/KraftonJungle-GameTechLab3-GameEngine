@@ -183,7 +183,6 @@ void AActor::Serialize(FArchive& Ar)
 			Ar.Serialize("Location", Location);
 			Ar.Serialize("Rotation", Rotation);
 			Ar.Serialize("Scale", Scale);
-
 		}
 		if (UPrimitiveComponent* PrimComp = GetComponentByClass<UPrimitiveComponent>())
 		{
@@ -191,6 +190,12 @@ void AActor::Serialize(FArchive& Ar)
 			{
 				FString MatName = PrimComp->GetMaterial()->GetOriginName();
 				Ar.Serialize("Material", MatName);
+			}
+
+			if (PrimComp->GetPrimitive())
+			{
+				FString PrimFileName = PrimComp->GetPrimitiveFileName();
+				Ar.Serialize("PrimitiveFileName", PrimFileName);
 			}
 		}
 	}

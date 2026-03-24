@@ -8,5 +8,5 @@ class ENGINE_API FSceneSerializer
 public:
 
 	static void Save(UScene* Scene, const FString& FilePath);
-	static void Load(UScene* Scene, const FString& FilePath, ID3D11Device* Device);
+	static bool Load(UScene* Scene, const FString& FilePath, ID3D11Device* Device);
 };

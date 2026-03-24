@@ -1,0 +1,222 @@
+{
+  "Camera": {
+    "Position": [
+      -11.471606254577637,
+      -7.135919094085693,
+      13.267571449279785
+    ],
+    "Rotation": [
+      33.800086975097656,
+      -32.20004653930664
+    ]
+  },
+  "Materials": [
+    "Assets/Materials/M_TintYellow.json",
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_Wireframe.json"
+  ],
+  "NextUUID": 8136,
+  "Primitives": {
+    "0": {
+      "Class": "AObjActor",
+      "ComponentUUIDs": [
+        14,
+        15,
+        16
+      ],
+      "Location": [
+        0.0,
+        -3.3284213542938232,
+        0.0
+      ],
+      "PrimitiveFileName": "C:\\jungle-techlab-week3-team5\\Assets\\Meshes\\Cat.obj",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 13
+    },
+    "1": {
+      "Class": "AObjActor",
+      "ComponentUUIDs": [
+        18,
+        19,
+        20
+      ],
+      "Location": [
+        9.933476448059082,
+        8.05762004852295,
+        -1.2937078475952148
+      ],
+      "PrimitiveFileName": "C:\\jungle-techlab-week3-team5\\Assets\\Meshes\\Cat.obj",
+      "Rotation": [
+        -53.951812744140625,
+        -21.05767822265625,
+        91.88796997070313
+      ],
+      "Scale": [
+        2.843252420425415,
+        2.507053852081299,
+        3.0969088077545166
+      ],
+      "UUID": 17
+    },
+    "2": {
+      "Class": "ACubeActor",
+      "ComponentUUIDs": [
+        22,
+        23,
+        24
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "PrimitiveFileName": "",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 21
+    },
+    "3": {
+      "Class": "ASphereActor",
+      "ComponentUUIDs": [
+        26,
+        27
+      ],
+      "Location": [
+        0.0,
+        -1.246948480606079,
+        0.0
+      ],
+      "PrimitiveFileName": "",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 25
+    },
+    "4": {
+      "Class": "AObjActor",
+      "ComponentUUIDs": [
+        4049,
+        4050,
+        4051
+      ],
+      "Location": [
+        0.0,
+        -4.446793556213379,
+        -1.393412470817566
+      ],
+      "PrimitiveFileName": "C:\\jungle-techlab-week3-team5\\Assets\\Meshes\\Cat.obj",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 4048
+    },
+    "5": {
+      "Class": "AObjActor",
+      "ComponentUUIDs": [
+        4053,
+        4054,
+        4055
+      ],
+      "Location": [
+        0.0,
+        -9.368741989135742,
+        0.0
+      ],
+      "PrimitiveFileName": "C:\\jungle-techlab-week3-team5\\Assets\\Meshes\\Cat.obj",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 4052
+    },
+    "6": {
+      "Class": "AObjActor",
+      "ComponentUUIDs": [
+        8130,
+        8131,
+        8132
+      ],
+      "Location": [
+        0.0,
+        7.689027786254883,
+        0.0
+      ],
+      "PrimitiveFileName": "C:\\jungle-techlab-week3-team5\\Assets\\Meshes\\Cat.obj",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 8129
+    },
+    "7": {
+      "Class": "AObjActor",
+      "ComponentUUIDs": [
+        8134,
+        8135,
+        8136
+      ],
+      "Location": [
+        14.349420547485352,
+        0.0,
+        0.0
+      ],
+      "PrimitiveFileName": "C:\\jungle-techlab-week3-team5\\Assets\\Meshes\\Cat.obj",
+      "Rotation": [
+        169.65481567382813,
+        0.0,
+        68.40926361083984
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 8133
+    }
+  }
+}
