@@ -29,8 +29,9 @@ struct ENGINE_API FRenderCommand
 struct ENGINE_API FTextRenderCommand
 {
 	FString Text;
-	FVector WorldPosition;
+	FMatrix WorldMatrix = FMatrix::Identity;
 	float WorldScale = 0.3f;
+	bool bBillboard = true;
 	FVector4 Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
 };
 

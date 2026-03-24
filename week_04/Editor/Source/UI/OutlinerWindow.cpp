@@ -7,6 +7,7 @@
 #include "Scene/Scene.h"
 #include "Actor/Actor.h"
 #include "Component/SubUVComponent.h"
+#include "Component/TextComponent.h"
 
 void COutlinerWindow::Render(CCore* Core)
 {
@@ -60,20 +61,31 @@ void COutlinerWindow::Render(CCore* Core)
 	{
 		for (UActorComponent* Component : SelectedActor->GetComponents())
 		{
-			if (!Component || !Component->IsA(USubUVComponent::StaticClass()))
+			if (!Component)
 			{
 				continue;
 			}
 
-			USubUVComponent* SubUVComponent = static_cast<USubUVComponent*>(Component);
-			bool bBillboard = SubUVComponent->IsBillboard();
-
-			if (ImGui::Checkbox("SubUV Billboard", &bBillboard))
+			if (Component->IsA(USubUVComponent::StaticClass()))
 			{
-				SubUVComponent->SetBillboard(bBillboard);
-			}
+				USubUVComponent* SubUVComponent = static_cast<USubUVComponent*>(Component);
+				bool bBillboard = SubUVComponent->IsBillboard();
 
-			break;
+				if (ImGui::Checkbox("SubUV Billboard", &bBillboard))
+				{
+					SubUVComponent->SetBillboard(bBillboard);
+				}
+			}
+			else if (Component->IsA(UTextComponent::StaticClass()))
+			{
+				UTextComponent* TextComponent = static_cast<UTextComponent*>(Component);
+				bool bBillboard = TextComponent->IsBillboard();
+
+				if (ImGui::Checkbox("Text Billboard", &bBillboard))
+				{
+					TextComponent->SetBillboard(bBillboard);
+				}
+			}
 		}
 	}
 

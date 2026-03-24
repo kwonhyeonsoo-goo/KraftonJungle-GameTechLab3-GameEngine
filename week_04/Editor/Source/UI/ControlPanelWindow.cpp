@@ -10,6 +10,8 @@
 #include "Actor/SphereActor.h"
 #include "Actor/PlaneActor.h"
 #include "Actor/SubUVActor.h"
+#include "Actor/TextActor.h"
+#include "Component/TextComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Camera/Camera.h"
 #include "Core/Paths.h"
@@ -175,8 +177,14 @@ void CControlPanelWindow::Render(CCore* Core)
 		ImGui::SeparatorText("Spawn");
 
 		static int32 SpawnTypeIndex = 0;
-		const char* SpawnTypes[] = { "Cube", "Sphere", "Plane", "AttachTest", "SubUV"};
+		const char* SpawnTypes[] = { "Cube", "Sphere", "Plane", "AttachTest", "SubUV", "Text"};
 		ImGui::Combo("Type", &SpawnTypeIndex, SpawnTypes, IM_ARRAYSIZE(SpawnTypes));
+
+		static char SpawnTextBuffer[256] = "Text";
+		if (SpawnTypeIndex == 5)
+		{
+			ImGui::InputText("Text", SpawnTextBuffer, IM_ARRAYSIZE(SpawnTextBuffer));
+		}
 
 		if (ImGui::Button("Spawn"))
 		{
@@ -204,6 +212,26 @@ void CControlPanelWindow::Render(CCore* Core)
 			else if (SpawnTypeIndex == 4)
 			{
 				NewActor = Scene->SpawnActor<ASubUVActor>(Name);
+			}
+			else if (SpawnTypeIndex == 5)
+			{
+				NewActor = Scene->SpawnActor<ATextActor>(Name);
+
+				if (NewActor)
+				{
+					ATextActor* TextActor = static_cast<ATextActor*>(NewActor);
+					if (UTextComponent* TextComponent = TextActor->GetTextComponent())
+					{
+						if (SpawnTextBuffer[0] != '\0')
+						{
+							TextComponent->SetText(SpawnTextBuffer);
+						}
+						else
+						{
+							TextComponent->SetText("Text");
+						}
+					}
+				}
 			}
 
 			Core->SetSelectedActor(NewActor);

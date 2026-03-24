@@ -6,6 +6,7 @@
 #include "Component/PrimitiveComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/UUIDBillboardComponent.h"
+#include "Component/TextComponent.h"
 
 bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const FVector& End, FHitResult& OutHit)
 {
@@ -36,7 +37,14 @@ bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const
 
 				const bool bIsUUID = PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass());
 				const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
-				if (bIsUUID || bIsSubUV)
+				const bool bIsText = PrimitiveComponent->IsA(UTextComponent::StaticClass());
+
+				if (bIsUUID)
+				{
+					continue;
+				}
+
+				if (!bIsSubUV && !bIsText)
 				{
 					continue;
 				}

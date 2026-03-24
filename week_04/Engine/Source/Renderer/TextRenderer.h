@@ -19,12 +19,13 @@ public:
 	bool Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext);
 	void Release();
 
-	void Begin(const FMatrix& InView, const FMatrix& InProjection, const FVector& InCameraPosition);
+	void Begin(const FMatrix& View, const FMatrix& Projection, const FVector& InCameraPosition);
 
-	void DrawTextBillboard(
+	void DrawText(
 		const FString& Text,
-		const FVector& WorldPosition,
+		const FMatrix& WorldMatrix,
 		float WorldScale,
+		bool bBillboard,
 		const FVector4& Color
 	);
 

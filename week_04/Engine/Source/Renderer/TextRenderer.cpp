@@ -359,10 +359,11 @@ TArray<uint32> CTextRenderer::DecodeToCodepoints(const FString& Text) const
 	return Result;
 }
 
-void CTextRenderer::DrawTextBillboard(
+void CTextRenderer::DrawText(
 	const FString& Text,
-	const FVector& WorldPosition,
+	const FMatrix& InWorldMatrix,
 	float WorldScale,
+	bool bBillboard,
 	const FVector4& Color)
 {
 	if (!Device || !DeviceContext || !FontVS || !FontPS || Text.empty())
@@ -378,7 +379,6 @@ void CTextRenderer::DrawTextBillboard(
 
 	float TotalWidth = 0.0f;
 
-	
 	for (uint32 Cp : Codepoints)
 	{
 		const FFontGlyph& Glyph = Atlas.GetGlyph(Cp);
@@ -406,12 +406,10 @@ void CTextRenderer::DrawTextBillboard(
 
 			const uint32 BaseIndex = static_cast<uint32>(Vertices.size());
 
-			// 로컬 공간에서 YZ 평면에 글자 quad를 만들고
-			// billboard 월드행렬로 카메라를 바라보게 함
-			Vertices.push_back(FTextureVertex(FVector(0.0f, X0, Y1), FVector2(Glyph.U0, Glyph.V0))); // 좌상
-			Vertices.push_back(FTextureVertex(FVector(0.0f, X1, Y1), FVector2(Glyph.U1, Glyph.V0))); // 우상
-			Vertices.push_back(FTextureVertex(FVector(0.0f, X1, Y0), FVector2(Glyph.U1, Glyph.V1))); // 우하
-			Vertices.push_back(FTextureVertex(FVector(0.0f, X0, Y0), FVector2(Glyph.U0, Glyph.V1))); // 좌하
+			Vertices.push_back(FTextureVertex(FVector(0.0f, X0, Y1), FVector2(Glyph.U0, Glyph.V0)));
+			Vertices.push_back(FTextureVertex(FVector(0.0f, X1, Y1), FVector2(Glyph.U1, Glyph.V0)));
+			Vertices.push_back(FTextureVertex(FVector(0.0f, X1, Y0), FVector2(Glyph.U1, Glyph.V1)));
+			Vertices.push_back(FTextureVertex(FVector(0.0f, X0, Y0), FVector2(Glyph.U0, Glyph.V1)));
 
 			Indices.push_back(BaseIndex + 0);
 			Indices.push_back(BaseIndex + 1);
@@ -453,9 +451,15 @@ void CTextRenderer::DrawTextBillboard(
 		DeviceContext->Unmap(DynamicIndexBuffer, 0);
 	}
 
-	const FMatrix Billboard = FMatrix::MakeBillboard(WorldPosition, CameraPosition);
-	const FMatrix Scale = FMatrix::MakeScale(WorldScale);
-	const FMatrix World = Scale * Billboard;
+	FMatrix World = InWorldMatrix;
+
+	if (bBillboard)
+	{
+		const FVector WorldPosition = InWorldMatrix.GetTranslation();
+		const FMatrix Billboard = FMatrix::MakeBillboard(WorldPosition, CameraPosition);
+		const FMatrix Scale = FMatrix::MakeScale(WorldScale);
+		World = Scale * Billboard;
+	}
 
 	UpdateObjectCB(World);
 	UpdateTextCB(Color);

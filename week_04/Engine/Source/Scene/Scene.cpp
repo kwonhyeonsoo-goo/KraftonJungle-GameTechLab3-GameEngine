@@ -134,4 +134,3 @@ void UScene::Tick(float DeltaTime)
 
 	CleanupDestroyedActors();
 }
-

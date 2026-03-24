@@ -404,7 +404,7 @@ void CRenderer::ExecuteCommands()
 	ExecuteRenderPass(ERenderLayer::Default);
 	ClearDepthBuffer();
 	ExecuteRenderPass(ERenderLayer::Overlay);
-	ExecuteTextRenderPass();
+	//ExecuteTextRenderPass();
 }
 
 void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
@@ -479,23 +479,17 @@ void CRenderer::ExecuteTextRenderPass()
 
 	TextRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
 
-	TextRenderer.DrawTextBillboard(
-		"ABC xyz 123 한글 테스트 ?! () ; [] {} 궬 뤡 궭",
-		FVector(0.0f, 2.0f, 0.0f),
-		0.3f,
-		FVector4(1.0f, 1.0f, 0.0f, 1.0f)
-	);
-
 	if (!TextCommandList.empty())
 	{
 		TextRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
 
 		for (const FTextRenderCommand& TextCmd : TextCommandList)
 		{
-			TextRenderer.DrawTextBillboard(
+			TextRenderer.DrawText(
 				TextCmd.Text,
-				TextCmd.WorldPosition,
+				TextCmd.WorldMatrix,
 				TextCmd.WorldScale,
+				TextCmd.bBillboard,
 				TextCmd.Color
 			);
 		}
@@ -522,12 +516,9 @@ void CRenderer::ExecuteTextRenderPass()
 			);
 		}
 	}
+
 	ShaderManager.Bind(DeviceContext);
 	SetConstantBuffers();
-	if (PostRenderCallback)
-	{
-		PostRenderCallback(this);
-	}
 }
 
 void CRenderer::ClearDepthBuffer()

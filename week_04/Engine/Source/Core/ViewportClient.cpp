@@ -11,6 +11,7 @@
 #include "Component/UUIDBillboardComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Core/FEngine.h"
+#include "Component/TextComponent.h"
 
 
 void IViewportClient::Attach(CCore* Core, CRenderer* Renderer)
@@ -70,7 +71,6 @@ UWorld* IViewportClient::ResolveWorld(CCore* Core) const
 {
 	return Core ? Core->GetActiveWorld() : nullptr;
 }
-
 
 FRenderCommand IViewportClient::BuildRenderCommand(UPrimitiveComponent* PrimitiveComponent) const
 {
