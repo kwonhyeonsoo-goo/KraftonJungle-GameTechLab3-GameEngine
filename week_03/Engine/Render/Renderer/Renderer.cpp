@@ -76,16 +76,16 @@ void FRenderer::Release()
 	Resources.EditorShader.Release();
 	Resources.OutlineShader.Release();
 	Resources.FontShader.Release();
+	Resources.SubUVShader.Release();
 
 	Resources.PerObjectConstantBuffer.Release();
 	Resources.GizmoPerObjectConstantBuffer.Release();
 	Resources.OverlayConstantBuffer.Release();
 	//Resources.EditorConstantBuffer.Release();
 	Resources.OutlineConstantBuffer.Release();
-
 	Resources.SubUVConstantBuffer.Release();
 
-
+	FEngineServices::GetResourceManager()->Release();
 
 	Resources.FontInstanceBuffer.Release();
 
