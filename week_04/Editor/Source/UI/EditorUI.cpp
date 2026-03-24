@@ -178,8 +178,10 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 	ContentBrowser.SetFolderIcon(CurrentRenderer->GetFolderIconSRV());
 	ContentBrowser.SetFileIcon(CurrentRenderer->GetFileIconSRV());
 
+	std::filesystem::path FontPath = FPaths::ProjectRoot() / "Content" / "Fonts" / "NotoSansKR.ttf";
+	std::string FontPathString = FontPath.string();
 	InRenderer->SetGUICallbacks(
-		[Hwnd, Device, DeviceContext]()
+		[Hwnd, Device, DeviceContext, FontPathString]()
 		{
 			IMGUI_CHECKVERSION();
 			ImGui::CreateContext();
@@ -189,12 +191,40 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 			IO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 			IO.IniFilename = "imgui_editor.ini";
 
+			ImFontConfig FontConfig;
+			FontConfig.OversampleH = 1;
+			FontConfig.OversampleV = 1;
+			FontConfig.PixelSnapH = true;
+
+			ImFont* Font = nullptr;
+
+			if (std::filesystem::exists(FontPathString))
+			{
+				Font = IO.Fonts->AddFontFromFileTTF(
+					FontPathString.c_str(),
+					16.0f,
+					&FontConfig,
+					IO.Fonts->GetGlyphRangesKorean()
+				);
+			}
+
+			if (!Font)
+			{
+				MessageBoxA(nullptr, FontPathString.c_str(), "Failed to load font", MB_OK);
+				IO.Fonts->AddFontDefault();
+			}
+
 			ImGui::StyleColorsDark();
 
 			ImGuiStyle& Style = ImGui::GetStyle();
 			Style.WindowPadding = ImVec2(0, 0);
 			Style.DisplayWindowPadding = ImVec2(0, 0);
 			Style.DisplaySafeAreaPadding = ImVec2(0, 0);
+
+			Style.Colors[ImGuiCol_Text] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+			Style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.60f, 0.60f, 0.60f, 1.0f);
+
+
 			if (IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 			{
 				Style.WindowRounding = 0.0f;
