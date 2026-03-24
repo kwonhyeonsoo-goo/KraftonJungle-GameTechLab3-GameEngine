@@ -711,7 +711,8 @@ void CRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float
 		ActiveDepthStencilView = SceneDepthStencilView;
 	}
 
-	// Pass 1: 통상 렌더 + Stencil 마킹 (Ref=1)
+	// Pass 1: 통상 렌더 X + Stencil 마킹 (Ref=1)
+	// NOTE: Gizmo도 stencil 마킹 사용함. Gizmo가 이미 그려진 픽셀에 아웃라인은 렌더링되지 않음
 	DeviceContext->OMSetRenderTargets(0, nullptr, ActiveDepthStencilView);
 	DeviceContext->OMSetDepthStencilState(StencilWriteState, 1);
 	UpdateObjectConstantBuffer(WorldMatrix);

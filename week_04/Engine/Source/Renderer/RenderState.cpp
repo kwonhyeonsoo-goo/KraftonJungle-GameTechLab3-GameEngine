@@ -60,16 +60,18 @@ std::shared_ptr<FDepthStencilState> FDepthStencilState::Create(
 	desc.DepthWriteMask = InOption.DepthWriteMask;
 	desc.StencilEnable = InOption.StencilEnable;
 	desc.StencilReadMask = InOption.StencilReadMask;
-	desc.StencilWriteMask = InOption.StencilWriteMask;
+	desc.StencilWriteMask = InOption.StencilWriteMask;	
 	// 나머지 기본값 설정
 	// --- 깊이 테스트 (Depth Test) 기본값 ---
 	desc.DepthFunc = D3D11_COMPARISON_LESS;             // 기본: 현재보다 가까운 것만 통과
 
 	// --- 앞면(FrontFace) 스텐실 연산 설정 ---
-	desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;      // 기본: 실패 시 유지
-	desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP; // 기본: 깊이 실패 시 유지
-	desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;      // 기본: 통과 시 유지
-	desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;      // 기본: 항상 통과
+	desc.FrontFace.StencilFailOp = InOption.StencilWriteMask ? D3D11_STENCIL_OP_REPLACE : D3D11_STENCIL_OP_KEEP;      // 기본: 실패 시 유지
+	desc.FrontFace.StencilDepthFailOp = InOption.StencilWriteMask ? D3D11_STENCIL_OP_REPLACE : D3D11_STENCIL_OP_KEEP; // 기본: 깊이 실패 시 유지
+	desc.FrontFace.StencilPassOp = InOption.StencilWriteMask ? D3D11_STENCIL_OP_REPLACE : D3D11_STENCIL_OP_KEEP;      // 기본: 통과 시 유지
+	desc.FrontFace.StencilFunc = 
+		(InOption.StencilEnable && InOption.StencilReadMask) ? 
+		D3D11_COMPARISON_NOT_EQUAL : D3D11_COMPARISON_ALWAYS;    // 기본: 항상 통과
 	// --- 뒷면(BackFace) 스텐실 연산 설정 (앞면과 동일) ---
 	desc.BackFace = desc.FrontFace;
 

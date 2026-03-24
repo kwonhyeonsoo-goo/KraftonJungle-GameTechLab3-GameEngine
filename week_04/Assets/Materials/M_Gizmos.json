@@ -5,7 +5,10 @@
   "RenderState": {
     "FillMode": 3,
     "CullMode": 1,
-    "DepthTest": false
+    "DepthTest": true,
+    "StencilEnable": true,
+    "StencilReadMask": 0,
+    "StencilWriteMask": 255
   },
   "ConstantBuffers": [
   ]

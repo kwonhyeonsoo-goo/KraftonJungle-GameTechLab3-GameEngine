@@ -173,11 +173,11 @@ std::shared_ptr<FMaterial> FMaterialManager::LoadFromFile(
 		}
 		if (RenderStatesJson.contains("StencilReadMask"))
 		{
-			depthStencilOption.DepthEnable = RenderStatesJson["StencilReadMask"].get<bool>();
+			depthStencilOption.StencilReadMask = RenderStatesJson["StencilReadMask"].get<uint8>();
 		}
-		if (RenderStatesJson.contains("DepthTest"))
+		if (RenderStatesJson.contains("StencilWriteMask"))
 		{
-			depthStencilOption.DepthEnable = RenderStatesJson["DepthTest"].get<bool>();
+			depthStencilOption.StencilWriteMask = RenderStatesJson["StencilWriteMask"].get<uint8>();
 		}
 		auto DepthStencilState = InStateManager->GetOrCreateDepthStencilState(depthStencilOption);
 		Mat->SetDepthStencilOption(depthStencilOption);
