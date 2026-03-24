@@ -5,6 +5,7 @@
 #include <memory>
 
 class FMaterial;
+class CRenderStateManager;
 
 // Material 에셋 로더 + 캐시 (싱글톤)
 // JSON 파일에서 Material을 로드하고 이름 기반으로 캐싱
@@ -13,8 +14,11 @@ class ENGINE_API FMaterialManager
 public:
 	static FMaterialManager& Get();
 
+	// 지정된 디렉토리 내의 모든 머티리얼을 미리 로드
+	void LoadAllMaterials(ID3D11Device* Device, CRenderStateManager* InStateManager);
+
 	// JSON 파일에서 Material 로드 (캐시 히트 시 기존 반환)
-	std::shared_ptr<FMaterial> GetOrLoad(ID3D11Device* Device, const FString& FilePath);
+	std::shared_ptr<FMaterial> LoadFromFile(ID3D11Device* InDevice, CRenderStateManager* InStateManager, const FString& InFilePath);
 
 	// 이름으로 이미 로드된 Material 조회
 	std::shared_ptr<FMaterial> FindByName(const FString& Name) const;

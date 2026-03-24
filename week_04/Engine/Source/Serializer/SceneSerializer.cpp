@@ -96,16 +96,6 @@ void FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 		}
 	}
 
-	if (Device && Json.contains("Materials"))
-	{
-		for (auto& MatPath : Json["Materials"])
-		{
-			const FString RelativePath = MatPath.get<FString>();
-			const FString AbsolutePath = (FPaths::ProjectRoot() / RelativePath).string();
-			FMaterialManager::Get().GetOrLoad(Device, AbsolutePath);
-		}
-	}
-
 	if (!Json.contains("Primitives"))
 		return;
 

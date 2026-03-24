@@ -1,8 +1,10 @@
 #include "MaterialManager.h"
+#include "Renderer/RenderStateManager.h"
 #include "Material.h"
 #include "Shader.h"
 #include "ShaderMap.h"
 #include "Core/Paths.h"
+#include "Debug/EngineLog.h"
 #include "ThirdParty/nlohmann/json.hpp"
 #include <fstream>
 
@@ -51,17 +53,46 @@ FMaterialManager& FMaterialManager::Get()
 	return Instance;
 }
 
-std::shared_ptr<FMaterial> FMaterialManager::GetOrLoad(ID3D11Device* Device, const FString& FilePath)
+void FMaterialManager::LoadAllMaterials(ID3D11Device* InDevice, CRenderStateManager* InStateManager)
+{
+	// 경로 내의 모든 머티리얼 JSON 파일 가져오기
+	namespace fs = std::filesystem;
+	auto MaterialDir = FPaths::MaterialDir();
+	try {
+		if (!fs::exists(MaterialDir) /* && fs::is_directory(FPaths::MaterialDir()) */)
+		{
+			UE_LOG("[MaterialManager] Material dir not exists\n");
+			return;
+		}
+
+		// 전부 캐시에 등록
+		for (const auto& entry : fs::directory_iterator(MaterialDir)) {
+			if (entry.is_regular_file() && entry.path().extension() == ".json") {
+				FString FilePath = entry.path().string();
+				LoadFromFile(InDevice, InStateManager, FilePath);
+			}
+		}
+	}
+	catch (const fs::filesystem_error& ex) {
+		UE_LOG("[MaterialManager] Filesystem Error while preload materials: %s\n", ex.what());
+	}
+}
+
+std::shared_ptr<FMaterial> FMaterialManager::LoadFromFile(
+	ID3D11Device* InDevice, 
+	CRenderStateManager* InStateManager, 
+	const FString& InFilePath
+)
 {
 	// 경로 캐시 확인
-	auto It = PathCache.find(FilePath);
+	auto It = PathCache.find(InFilePath);
 	if (It != PathCache.end())
 	{
 		return It->second;
 	}
 
 	// JSON 파일 로드
-	std::ifstream File(FilePath);
+	std::ifstream File(InFilePath);
 	if (!File.is_open())
 	{
 		return nullptr;
@@ -85,7 +116,7 @@ std::shared_ptr<FMaterial> FMaterialManager::GetOrLoad(ID3D11Device* Device, con
 	{
 		FString VSRelPath = Json["VertexShader"].get<FString>();
 		std::wstring WVSPath = (FPaths::ProjectRoot() / VSRelPath).wstring();
-		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, WVSPath.c_str());
+		auto VS = FShaderMap::Get().GetOrCreateVertexShader(InDevice, WVSPath.c_str());
 		Mat->SetVertexShader(VS);
 	}
 
@@ -93,8 +124,28 @@ std::shared_ptr<FMaterial> FMaterialManager::GetOrLoad(ID3D11Device* Device, con
 	{
 		FString PSRelPath = Json["PixelShader"].get<FString>();
 		std::wstring WPSPath = (FPaths::ProjectRoot() / PSRelPath).wstring();
-		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, WPSPath.c_str());
+		auto PS = FShaderMap::Get().GetOrCreatePixelShader(InDevice, WPSPath.c_str());
 		Mat->SetPixelShader(PS);
+	}
+
+	// Render State 로드
+	if (Json.contains("RenderState"))
+	{
+		auto RenderStatesJson = Json["RenderState"];
+		FRasterizerStateOption rasterizerOption;
+
+		if (RenderStatesJson.contains("FillMode"))
+		{
+			rasterizerOption.FillMode = RenderStatesJson["FillMode"].get<D3D11_FILL_MODE>();
+		}
+		if (RenderStatesJson.contains("CullMode"))
+		{
+			rasterizerOption.CullMode = RenderStatesJson["CullMode"].get<D3D11_CULL_MODE>();
+		}
+		// DepthBias 등의 추가 옵션을 지원하려면 여기에 추가
+
+		auto RasterizerState = InStateManager->GetOrCreateRenderState(rasterizerOption);
+		Mat->SetRasterizerState(RasterizerState);
 	}
 
 	// 상수 버퍼 로드
@@ -151,7 +202,7 @@ std::shared_ptr<FMaterial> FMaterialManager::GetOrLoad(ID3D11Device* Device, con
 			uint32 BufferSize = AlignBufferSize(CurrentOffset);
 
 			// 2차: 상수 버퍼 생성
-			int32 SlotIndex = Mat->CreateConstantBuffer(Device, BufferSize);
+			int32 SlotIndex = Mat->CreateConstantBuffer(InDevice, BufferSize);
 			if (SlotIndex < 0)
 			{
 				continue;
@@ -230,7 +281,7 @@ std::shared_ptr<FMaterial> FMaterialManager::GetOrLoad(ID3D11Device* Device, con
 	}
 
 	// 캐시 등록
-	PathCache[FilePath] = Mat;
+	PathCache[InFilePath] = Mat;
 
 	if (Json.contains("Name"))
 	{

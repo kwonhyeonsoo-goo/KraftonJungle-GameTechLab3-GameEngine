@@ -118,7 +118,7 @@ void FMeshData::UpdateLocalBound()
 
 std::unordered_map<FString, std::shared_ptr<FMeshData>> CPrimitiveBase::MeshCache;
 
-std::shared_ptr<FMeshData> CPrimitiveBase::GetOrLoad(const FString& Key, const FString& FilePath)
+std::shared_ptr<FMeshData> CPrimitiveBase::LoadFromFile(const FString& Key, const FString& FilePath)
 {
 	auto It = MeshCache.find(Key);
 	if (It != MeshCache.end())
