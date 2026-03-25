@@ -343,7 +343,7 @@ void CEditorUI::SetupWindow(CWindow* InWindow)
 
 			if (bIsImeMessage || bIsCharMessage)
 			{
-				const bool bAllowTextInput = ControlPanel.IsSpawnTextInputActive();
+				const bool bAllowTextInput = ImGui::GetIO().WantTextInput;
 
 				if (!bAllowTextInput)
 				{

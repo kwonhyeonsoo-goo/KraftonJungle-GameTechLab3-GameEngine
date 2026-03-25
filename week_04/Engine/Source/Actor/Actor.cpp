@@ -3,6 +3,7 @@
 #include "Component/UUIDBillboardComponent.h"
 #include "Object/Class.h"
 #include "Renderer/Material.h"
+#include "Component/TextComponent.h"
 #include "Component/SceneComponent.h"
 #include "Serializer/Archive.h"
 #include "Scene/Scene.h"
@@ -198,6 +199,16 @@ void AActor::Serialize(FArchive& Ar)
 				Ar.Serialize("PrimitiveFileName", PrimFileName);
 			}
 		}
+		if (UTextComponent* TC = GetComponentByClass<UTextComponent>())
+		{
+			FString Text = TC->GetText();
+			FVector4 Color4 = TC->GetTextColor();
+			bool bBillboard = TC->IsBillboard();
+			Ar.Serialize("Text", Text);
+			Ar.Serialize("TextColor", Color4);
+			Ar.Serialize("Billboard", bBillboard);
+		
+		}
 	}
 	else//Load 
 	{
@@ -265,6 +276,20 @@ void AActor::Serialize(FArchive& Ar)
 		for (UActorComponent* Comp : GetComponents())
 			if (Comp)
 				Comp->SetOwner(this);
+		if (UTextComponent* TC = GetComponentByClass<UTextComponent>())
+		{
+			FString Text = TC->GetText();
+			FVector4 TextColor = TC->GetTextColor();
+			bool bBillboard = TC->IsBillboard();
+
+			Ar.Serialize("Text", Text);
+			Ar.Serialize("TextColor", TextColor);
+			Ar.Serialize("Billboard", bBillboard);
+
+			TC->SetText(Text);
+			TC->SetTextColor(TextColor);
+			TC->SetBillboard(bBillboard);
+		}
 	}
 }
 const FVector& AActor::GetActorLocation() const
