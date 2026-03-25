@@ -345,24 +345,27 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 			AActor* Actor = PrimitiveActors[i];
 			FString Label = Actor->Name.GetFString();
 
-			ImGui::Indent();
-			if (ImGui::CollapsingHeader(Label.c_str())) {
-				for (auto* Comps : Actor->GetComponents()) {
-					bool bSelected = (SelectedComponentIndex == Comps->UUID);
-					FString CompLabel = Comps->Name.GetFString();
-					if (ImGui::Selectable(CompLabel.c_str(), bSelected)) {
-						SelectedComponentIndex = Comps->UUID;
-						Viewport->GetGizmoManager().SetTarget(Comps);
-						ViewOutput.Object = Comps;
-						ViewOutput.ObjectPicked = Comps->GetTypeInfo()->name;
-					}
+			if (Label.length() > 0)
+			{
+				ImGui::Indent();
+				if (ImGui::CollapsingHeader(Label.c_str())) {
+					for (auto* Comps : Actor->GetComponents()) {
+						bool bSelected = (SelectedComponentIndex == Comps->UUID);
+						FString CompLabel = Comps->Name.GetFString();
+						if (ImGui::Selectable(CompLabel.c_str(), bSelected)) {
+							SelectedComponentIndex = Comps->UUID;
+							Viewport->GetGizmoManager().SetTarget(Comps);
+							ViewOutput.Object = Comps;
+							ViewOutput.ObjectPicked = Comps->GetTypeInfo()->name;
+						}
 
-					if (bSelected)
-					{
-						// Text 컴포넌트면 입력창 표시
-						if (Comps->IsA<UTextComponent>()) {
-							UTextComponent* TextComp = static_cast<UTextComponent*>(Comps);
-							DrawTextComponentUI(TextComp);
+						if (bSelected)
+						{
+							// Text 컴포넌트면 입력창 표시
+							if (Comps->IsA<UTextComponent>()) {
+								UTextComponent* TextComp = static_cast<UTextComponent*>(Comps);
+								DrawTextComponentUI(TextComp);
+							}
 						}
 					}
 				}

@@ -139,7 +139,10 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 		RenderComponentPass(context, InRenderBus);
 
 		//여기서부터 SubUV 출력
-		Resources.SubUVShader.Bind(context);
+		if (viewMode != EViewModeIndex::VMI_Wireframe)
+		{
+			Resources.SubUVShader.Bind(context);
+		}
 		RenderSubUVCompPass(context, InRenderBus);
 	}
 
@@ -340,11 +343,12 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 		{
 			FVector Forward = FVector(View.M[0][2], View.M[1][2], View.M[2][2]); Forward.Normalize();
 			FVector Right = FVector(View.M[0][0], View.M[1][0], View.M[2][0]); Right.Normalize();
+			FVector Up = FVector(View.M[0][1], View.M[1][1], View.M[2][1]); Right.Normalize();
 
 			FMatrix BillboardRotation(
 				Forward.X, Forward.Y, Forward.Z, 0,
 				-Right.X, -Right.Y, -Right.Z, 0,
-				0, 0, 1, 0,
+				Up.X, Up.Y, Up.Z, 0,
 				0, 0, 0, 1
 			);
 			RotationMatrix = BillboardRotation;
