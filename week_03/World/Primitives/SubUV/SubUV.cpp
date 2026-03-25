@@ -61,15 +61,34 @@ bool USubUVComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix&
 	if (Texture2DId == -1) {
 		return false;
 	}
-	FVector CameraRight = { -viewMatrix.M[0][0], -viewMatrix.M[0][1],0 };
-	CameraRight.Normalize();
-	FMatrix invesView = {
-						1,					0 ,	0 , 0,
-			CameraRight.X,		CameraRight.Y,	0,  0,
-						0,					0 ,	1 , 0,
-						0,					0,	0 ,	1 };
 
-	FMatrix model = FMatrix::MakeScaleMatrix(GetScaleVector()) * invesView
+	FVector Scale = GetScaleVector();
+	FMatrix Translation = FMatrix::MakeTranslationMatrix(GetWorldLocation());
+
+	float Tx = viewMatrix.M[3][0];
+	float Ty = viewMatrix.M[3][1];
+	float Tz = viewMatrix.M[3][2];
+
+	FVector CameraPosition = FVector(
+		-(Tx * viewMatrix.M[0][0] + Ty * viewMatrix.M[0][1] + Tz * viewMatrix.M[0][2]),
+		-(Tx * viewMatrix.M[1][0] + Ty * viewMatrix.M[1][1] + Tz * viewMatrix.M[1][2]),
+		-(Tx * viewMatrix.M[2][0] + Ty * viewMatrix.M[2][1] + Tz * viewMatrix.M[2][2])
+	);
+
+	FVector BillBoardForward = CameraPosition - GetWorldLocation(); BillBoardForward.Normalize();
+	FVector BillBoardUp = FVector(0.f, 0.f, 1.f);
+	FVector BillBoardRight = BillBoardUp.Cross(BillBoardForward); BillBoardRight.Normalize();
+
+
+	FMatrix BillBoarding{
+		BillBoardForward.X, BillBoardForward.Y, BillBoardForward.Z , 0.f ,
+		BillBoardRight.X, BillBoardRight.Y, BillBoardRight.Z , 0.f ,
+		BillBoardUp.X, BillBoardUp.Y, BillBoardUp.Z , 0.f ,
+		0, 0, 0, 1
+
+	};
+
+	FMatrix model = FMatrix::MakeScaleMatrix(GetScaleVector()) * BillBoarding
 					* FMatrix::MakeTranslationMatrix(GetWorldLocation());
 
 	OutCommand.Type = ERenderCommandType::SubUV;

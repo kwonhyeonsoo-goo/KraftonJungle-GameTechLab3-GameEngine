@@ -302,13 +302,31 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 
 		if (Cmd.TextConstants.OrientationType == EOrientationType::Billboard)
 		{
-			FMatrix BillboardRotation =
-				FMatrix(
-					1, 0, 0, 0,
-					-View.Data[0], -View.Data[4], 0, 0,
-					0, 0, 1, 0,
-					0, 0, 0, 1);
-			RotationMatrix = BillboardRotation;
+			FMatrix ScaleMatrix = FMatrix::MakeScaleMatrix(FontScale);
+			FMatrix TranslationMatrix = FMatrix::MakeTranslationMatrix(Cmd.TextConstants.TextPosition);
+
+			float Tx = View.M[3][0];
+			float Ty = View.M[3][1];
+			float Tz = View.M[3][2];
+
+			FVector CameraPosition = FVector(
+				-(Tx * View.M[0][0] + Ty * View.M[0][1] + Tz * View.M[0][2]),
+				-(Tx * View.M[1][0] + Ty * View.M[1][1] + Tz * View.M[1][2]),
+				-(Tx * View.M[2][0] + Ty * View.M[2][1] + Tz * View.M[2][2])
+			);
+
+			FVector BillBoardForward = CameraPosition - Cmd.TextConstants.TextPosition; BillBoardForward.Normalize();
+			FVector BillBoardUp = FVector(0.f, 0.f, 1.f);
+			FVector BillBoardRight = BillBoardUp.Cross(BillBoardForward); BillBoardRight.Normalize();
+
+			FMatrix BillBoarding{
+				BillBoardForward.X, BillBoardForward.Y, BillBoardForward.Z , 0.f ,
+				BillBoardRight.X, BillBoardRight.Y, BillBoardRight.Z , 0.f ,
+				BillBoardUp.X, BillBoardUp.Y, BillBoardUp.Z , 0.f ,
+				0, 0, 0, 1.f
+
+			};
+			RotationMatrix = BillBoarding;
 		}
 		else {
 			RotationMatrix = FMatrix::MakeRotationEuler(Cmd.TextConstants.TextRotation);

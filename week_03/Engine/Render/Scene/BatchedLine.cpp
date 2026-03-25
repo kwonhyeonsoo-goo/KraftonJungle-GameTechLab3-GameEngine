@@ -2,7 +2,7 @@
 
 void FBatchedLine::Create(ID3D11Device* InDevice, uint32 MaxIndexCount)
 {
-	DynamicBuffer.CreateDynamic(InDevice, 1 << 16);
+	DynamicBuffer.CreateDynamic(InDevice, MaxIndexCount);
 }
 
 void FBatchedLine::Release()
