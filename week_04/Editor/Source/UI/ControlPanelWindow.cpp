@@ -15,7 +15,7 @@
 #include "Object/ObjectFactory.h"
 #include "Camera/Camera.h"
 #include "Core/Paths.h"
-#include "Debug/EngineLog.h"6
+#include "Debug/EngineLog.h"
 #include "Component/CameraComponent.h"
 #include "Actor/SkySphereActor.h"
 #include "Controller/EditorViewportController.h"
