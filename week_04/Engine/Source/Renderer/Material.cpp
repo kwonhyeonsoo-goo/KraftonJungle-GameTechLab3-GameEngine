@@ -82,24 +82,6 @@ FMaterial::~FMaterial()
 	Release();
 }
 
-// TODO: GetSortId 고도화
-/*
-uint64 FMaterial::GetSortId() const
-{
-	uint64 SortId = 0;
-	// [0 - 3]: Render Pass
-	SortId |= RenderPass << (63 - 3);
-	// [4 - 15]: Render Queue
-	SortId |= RenderQueue << (63 - 15);
-	// [16 - 27]: Depth Stencil State & Rasterizer State ID(Culling / Wireframe)
-	SortId |= RenderState << (63 - 27);
-	// [28 - 43]: Shader (최대 65536개)
-	SortId |= ShaderId << (63 - 43);
-	// [44 - 63]: reserved for distance sorting
-	return SortId;
-}
-*/
-
 uint64 FMaterial::GetSortId() const
 {
 	return ShaderId;
@@ -156,7 +138,6 @@ bool FMaterial::SetParameterData(const FString& ParamName, const void* Data, uin
 
 std::unique_ptr<FDynamicMaterial> FMaterial::CreateDynamicMaterial() const
 {
-	// 기존 GPU 버퍼에서 Device 획득
 	ID3D11Device* Device = nullptr;
 	for (const auto& CB : ConstantBuffers)
 	{
@@ -177,6 +158,12 @@ std::unique_ptr<FDynamicMaterial> FMaterial::CreateDynamicMaterial() const
 	Dynamic->VertexShader = VertexShader;
 	Dynamic->PixelShader = PixelShader;
 	Dynamic->ParameterMap = ParameterMap;
+	Dynamic->RasterizerOption = RasterizerOption;
+	Dynamic->DepthStencilOption = DepthStencilOption;
+	Dynamic->BlendOption = BlendOption;
+	Dynamic->RasterizerState = RasterizerState;
+	Dynamic->DepthStencilState = DepthStencilState;
+	Dynamic->BlendState = BlendState;
 
 	for (const auto& CB : ConstantBuffers)
 	{
@@ -215,23 +202,14 @@ bool FDynamicMaterial::SetVector3Parameter(const FString& ParamName, const FVect
 	return SetParameterData(ParamName, Data, sizeof(Data));
 }
 
-// TODO: BindShader와 BindConstantBuffers로 분리
 void FMaterial::Bind(ID3D11DeviceContext* DeviceContext)
 {
-	if (VertexShader)
-	{
-		VertexShader->Bind(DeviceContext);
-	}
-	if (PixelShader)
-	{
-		PixelShader->Bind(DeviceContext);
-	}
+	if (VertexShader) VertexShader->Bind(DeviceContext);
+	if (PixelShader) PixelShader->Bind(DeviceContext);
 
-	// Dirty 상수 버퍼 업로드 + 바인딩
 	for (int32 i = 0; i < static_cast<int32>(ConstantBuffers.size()); ++i)
 	{
 		ConstantBuffers[i].Upload(DeviceContext);
-
 		UINT Slot = MaterialCBStartSlot + static_cast<UINT>(i);
 		ID3D11Buffer* Buf = ConstantBuffers[i].GPUBuffer;
 		DeviceContext->VSSetConstantBuffers(Slot, 1, &Buf);
@@ -243,6 +221,9 @@ void FMaterial::Release()
 {
 	VertexShader.reset();
 	PixelShader.reset();
+	RasterizerState.reset();
+	DepthStencilState.reset();
+	BlendState.reset();
 	for (auto& CB : ConstantBuffers)
 	{
 		CB.Release();

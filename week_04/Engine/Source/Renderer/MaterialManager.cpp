@@ -323,14 +323,6 @@ std::shared_ptr<FMaterial> FMaterialManager::LoadFromFile(
 		}
 	}
 
-	// Raterize 옵션 로드
-	if (Json.contains("RasterizerOptions"))
-	{
-		// TODO: Json에서 RasterizerOptions 세이브/로드하도록 구현
-		FRasterizerStateOption Option;	// 기본 옵션 사용
-		Mat->SetRasterizerOption(Option);
-	}
-
 	// 캐시 등록
 	PathCache[InFilePath] = Mat;
 

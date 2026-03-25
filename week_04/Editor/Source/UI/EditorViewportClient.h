@@ -50,4 +50,9 @@ private:
 	int32 ScreenHeight = 0;
 	int32 ScreenMouseX = 0;
 	int32 ScreenMouseY = 0;
+
+	// 그리드 렌더링용
+	std::unique_ptr<FMeshData> GridMesh;
+	std::shared_ptr<FMaterial> GridMaterial;
+	void CreateGridResource(CRenderer* Renderer);
 };

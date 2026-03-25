@@ -26,55 +26,21 @@ struct ENGINE_API FRenderCommand
 	static uint64 MakeSortKey(const FMaterial* InMaterial, const FMeshData* InMeshData);
 };
 
-struct ENGINE_API FTextRenderCommand
-{
-	FString Text;
-	FMatrix WorldMatrix = FMatrix::Identity;
-	FVector WorldScale = FVector(1.0f, 1.0f, 1.0f);
-	bool bBillboard = true;
-	FVector4 Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
-};
-
-struct ENGINE_API FSubUVRenderCommand
-{
-	FMatrix WorldMatrix = FMatrix::Identity;
-	FVector2 Size;
-
-	int32 Columns;
-	int32 Rows;
-	int32 TotalFrames;
-
-	uint32 FirstFrame;
-	uint32 LastFrame;
-	
-	float FPS;
-	float ElapsedTime;
-
-	bool bLoop;
-	bool bBillboard;
-
-};
-
-// Scene → Renderer 간 전달되는 프레임 단위 커맨드 큐
-// Scene은 Renderer를 몰라도 이 큐에 데이터를 쌓을 수 있음
+/**
+ * 한 프레임 동안 수집된 모든 렌더링 명령을 담는 큐
+ */
 struct ENGINE_API FRenderCommandQueue
 {
+	/** 일반 메시 렌더링 명령 목록 (텍스트, SubUV 포함 통합) */
 	TArray<FRenderCommand> Commands;
 
-	TArray<FTextRenderCommand> TextCommands;
-
-	TArray<FSubUVRenderCommand> SubUVCommands;
-
+	/** 프레임의 카메라 행렬 */
 	FMatrix ViewMatrix;
 	FMatrix ProjectionMatrix;
 
 	void Reserve(size_t Count)
 	{
 		Commands.reserve(Count);
-
-		TextCommands.reserve(Count);
-
-		SubUVCommands.reserve(Count);
 	}
 
 	void AddCommand(const FRenderCommand& Cmd)
@@ -82,20 +48,9 @@ struct ENGINE_API FRenderCommandQueue
 		Commands.push_back(Cmd);
 	}
 
-	void AddTextCommand(const FTextRenderCommand& Cmd)
-	{
-		TextCommands.push_back(Cmd);
-	}
-
-	void AddSubUVCommand(const FSubUVRenderCommand& Cmd)
-	{
-		SubUVCommands.push_back(Cmd);
-	}
-
+	/** 큐 초기화 */
 	void Clear()
 	{
 		Commands.clear();
-		TextCommands.clear();
-		SubUVCommands.clear();
 	}
 };

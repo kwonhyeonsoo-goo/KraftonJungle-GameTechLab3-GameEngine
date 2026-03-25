@@ -90,7 +90,6 @@
     <ClInclude Include="Source\Primitive\PrimitiveSky.h" />
     <ClInclude Include="Source\Primitive\PrimitiveSphere.h" />
     <ClInclude Include="Source\Primitive\UnrealEditorStyledGizmo.h" />
-    <ClInclude Include="Source\Renderer\AxisRenderer.h" />
     <ClInclude Include="Source\Renderer\FontAtlas.h" />
     <ClInclude Include="Source\Renderer\Material.h" />
     <ClInclude Include="Source\Renderer\MaterialManager.h" />
@@ -105,7 +104,7 @@
     <ClInclude Include="Source\Renderer\ShaderResource.h" />
     <ClInclude Include="Source\Renderer\ShaderType.h" />
     <ClInclude Include="Source\Renderer\SubUVRenderer.h" />
-    <ClInclude Include="Source\Renderer\TextRenderer.h" />
+    <ClInclude Include="Source\Renderer\TextMeshBuilder.h" />
     <ClInclude Include="Source\Renderer\TextureVertex.h" />
     <ClInclude Include="Source\Scene\RenderCollector.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
@@ -192,7 +191,6 @@
     <ClCompile Include="Source\Primitive\PrimitiveSky.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveSphere.cpp" />
     <ClCompile Include="Source\Primitive\UnrealEditorStyledGizmo.cpp" />
-    <ClCompile Include="Source\Renderer\AxisRenderer.cpp" />
     <ClCompile Include="Source\Renderer\FontAtlas.cpp" />
     <ClCompile Include="Source\Renderer\Material.cpp" />
     <ClCompile Include="Source\Renderer\MaterialManager.cpp" />
@@ -205,7 +203,7 @@
     <ClCompile Include="Source\Renderer\ShaderMap.cpp" />
     <ClCompile Include="Source\Renderer\ShaderResource.cpp" />
     <ClCompile Include="Source\Renderer\SubUVRenderer.cpp" />
-    <ClCompile Include="Source\Renderer\TextRenderer.cpp" />
+    <ClCompile Include="Source\Renderer\TextMeshBuilder.cpp" />
     <ClCompile Include="Source\Scene\RenderCollector.cpp" />
     <ClCompile Include="Source\Scene\Scene.cpp" />
     <ClCompile Include="Source\Scene\SceneManager.cpp" />

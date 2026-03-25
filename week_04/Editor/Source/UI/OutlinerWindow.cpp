@@ -8,6 +8,7 @@
 #include "Actor/Actor.h"
 #include "Component/SubUVComponent.h"
 #include "Component/TextComponent.h"
+#include "Component/UUIDBillboardComponent.h"
 
 void COutlinerWindow::Render(CCore* Core)
 {

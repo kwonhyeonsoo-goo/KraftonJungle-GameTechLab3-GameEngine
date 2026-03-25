@@ -53,9 +53,8 @@ struct FDepthStencilStateOption {
 	uint32 ToKey() const {
 		uint32 key = 0;
 		key |= (DepthEnable ? 1 : 0);									// 1 bit
-		key |= (DepthEnable ? 1 : 0) << 1;								// 1 bit
 		key |= (static_cast<uint32>(DepthWriteMask) & 0x1) << 2;		// 1 bit
-		key |= (StencilEnable ? 1 : 0) << 3;							// 3 bit
+		key |= (StencilEnable ? 1 : 0) << 3;							// 1 bit
 		key |= (static_cast<uint32>(StencilReadMask) & 0xFF) << 6;		// 8 bit
 		key |= (static_cast<uint32>(StencilWriteMask) & 0xFF) << 14;	// 8 bit
 		return key;
@@ -75,4 +74,40 @@ struct FDepthStencilState {
 	private:
 		FDepthStencilState() = default;
 		ComPtr<ID3D11DepthStencilState> State = nullptr;
+};
+
+struct FBlendStateOption {
+	bool isDirty = true;
+	bool BlendEnable = false;
+	D3D11_BLEND SrcBlend = D3D11_BLEND_ONE;
+	D3D11_BLEND DestBlend = D3D11_BLEND_ZERO;
+	D3D11_BLEND_OP BlendOp = D3D11_BLEND_OP_ADD;
+	D3D11_BLEND SrcBlendAlpha = D3D11_BLEND_ONE;
+	D3D11_BLEND DestBlendAlpha = D3D11_BLEND_ZERO;
+	D3D11_BLEND_OP BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	uint8 RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+	uint32 ToKey() const {
+		uint32 key = 0;
+		key |= (BlendEnable ? 1 : 0);
+		key |= (static_cast<uint32>(SrcBlend) & 0x1F) << 1;
+		key |= (static_cast<uint32>(DestBlend) & 0x1F) << 6;
+		key |= (static_cast<uint32>(BlendOp) & 0x7) << 11;
+		return key;
+	}
+};
+
+struct FBlendState {
+public:
+	~FBlendState() = default;
+
+	static std::shared_ptr<FBlendState> Create(
+		ID3D11Device* InDevice, const FBlendStateOption& InOption);
+
+	void Bind(ID3D11DeviceContext* InDeviceContext) const;
+	void Release();
+
+private:
+	FBlendState() = default;
+	ComPtr<ID3D11BlendState> State = nullptr;
 };
