@@ -2,6 +2,32 @@
 #include "Shader.h"
 #include <cstring>
 
+
+FMaterialTexture::~FMaterialTexture()
+{
+	Release();
+}
+
+void FMaterialTexture::Release()
+{
+	if (TextureSRV)
+	{
+		TextureSRV->Release();
+		TextureSRV = nullptr;
+	}
+
+	if (SamplerState)
+	{
+		SamplerState->Release();
+		SamplerState = nullptr;
+	}
+}
+
+void FMaterialTexture::Bind(ID3D11DeviceContext* DeviceContext)
+{
+	DeviceContext->PSSetShaderResources(0, 1, &TextureSRV);
+}
+
 // ─── FMaterialConstantBuffer ───
 
 FMaterialConstantBuffer::~FMaterialConstantBuffer()
@@ -206,6 +232,7 @@ void FMaterial::Bind(ID3D11DeviceContext* DeviceContext)
 {
 	if (VertexShader) VertexShader->Bind(DeviceContext);
 	if (PixelShader) PixelShader->Bind(DeviceContext);
+	if (MaterialTexture) MaterialTexture->Bind(DeviceContext);
 
 	for (int32 i = 0; i < static_cast<int32>(ConstantBuffers.size()); ++i)
 	{

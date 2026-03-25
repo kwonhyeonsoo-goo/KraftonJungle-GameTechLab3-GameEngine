@@ -213,6 +213,40 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		FMaterialManager::Get().Register("M_Default", DefaultMaterial);
 	}
 
+	/** Texture 용 Material 생성 */
+	{
+		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, VSPath.c_str());
+		std::wstring TexturePSPath = ShaderDirW + L"TexturePixelShader.hlsl";
+		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, TexturePSPath.c_str());
+		DefaultTextureMaterial = std::make_shared<FMaterial>();
+		DefaultTextureMaterial->SetOriginName("M_Default");
+		DefaultTextureMaterial->SetVertexShader(VS);
+		DefaultTextureMaterial->SetPixelShader(PS);
+
+		FRasterizerStateOption rasterizerOption;
+		rasterizerOption.FillMode = D3D11_FILL_SOLID;
+		rasterizerOption.CullMode = D3D11_CULL_BACK;
+		auto RS = RenderStateManager->GetOrCreateRasterizerState(rasterizerOption);
+		DefaultTextureMaterial->SetRasterizerOption(rasterizerOption);
+		DefaultTextureMaterial->SetRasterizerState(RS);
+
+		FDepthStencilStateOption depthStencilOption;
+		depthStencilOption.DepthEnable = true;
+		depthStencilOption.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+		auto DSS = RenderStateManager->GetOrCreateDepthStencilState(depthStencilOption);
+		DefaultTextureMaterial->SetDepthStencilOption(depthStencilOption);
+		DefaultTextureMaterial->SetDepthStencilState(DSS);
+
+		int32 SlotIndex = DefaultTextureMaterial->CreateConstantBuffer(Device, 16);
+		if (SlotIndex >= 0)
+		{
+			DefaultTextureMaterial->RegisterParameter("BaseColor", SlotIndex, 0, 16);
+			float White[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+			DefaultTextureMaterial->GetConstantBuffer(SlotIndex)->SetData(White, sizeof(White));
+		}
+		FMaterialManager::Get().Register("M_Default_Texture", DefaultTextureMaterial);
+	}
+
 	if (!TextRenderer.Initialize(this)) return false;
 
 	std::filesystem::path SubUVTexturePath = FPaths::ContentDir() / FString("Textures/SubUVDino.png");
@@ -369,6 +403,11 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 			{
 				DeviceContext->PSSetShaderResources(0, 1, &SubUVSRV);
 				DeviceContext->PSSetSamplers(0, 1, &SubUVSampler);
+			}
+			else
+			{
+				// SRV 는 일반 Material 안에서 bind
+				DeviceContext->PSSetSamplers(0, 1, &NormalSampler);
 			}
 		}
 
@@ -565,6 +604,7 @@ void CRenderer::Release()
 	ClearViewportCallbacks(); ClearSceneRenderTarget();
 	TextRenderer.Release(); SubUVRenderer.Release();
 	ShaderManager.Release(); FShaderMap::Get().Clear(); FMaterialManager::Get().Clear();
+	if (NormalSampler) NormalSampler->Release();
 	if (StencilWriteState) StencilWriteState->Release();
 	if (StencilTestState) StencilTestState->Release();
 	OutlinePS.reset(); DefaultMaterial.reset();

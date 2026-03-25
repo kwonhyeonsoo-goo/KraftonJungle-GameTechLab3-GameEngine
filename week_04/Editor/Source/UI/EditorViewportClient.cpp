@@ -285,14 +285,15 @@ void CEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 {
 	CCore* Core = EditorUI.GetCore();
 
-	if (Core)
+	if (Core && Core->GetRenderer())
 	{
 		if (FilePath.ends_with(".obj"))
 		{
 			const FRay Ray = Picker.ScreenToRay(Core->GetScene()->GetCamera(), ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
 
 			AObjActor* NewActor = Core->GetScene()->SpawnActor<AObjActor>("ObjActor");
-			NewActor->LoadObj(FilePath);
+			
+			NewActor->LoadObj(Core->GetRenderer()->GetDevice(), FilePath);
 			FVector V = Ray.Origin + Ray.Direction * 5;
 			NewActor->SetActorLocation(V);
 
