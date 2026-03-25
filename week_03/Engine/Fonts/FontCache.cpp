@@ -60,14 +60,14 @@ void FFontCache::SetFontData()
 
 	// ASCII + Korean
 	FAtlasData data;
-	data.BitmapWidth = 4096.f;
-	data.BitmapHeight = 4096.f;
+	data.BitmapWidth = 2048.f;
+	data.BitmapHeight = 2048.f;
 	data.CellsPerRow = 128.f;
 	data.CellsperColumn = 128.f;
-	data.CellWidth = 32.f;
-	data.CellHeight = 32.f;
+	data.CellWidth = 16.f;
+	data.CellHeight = 16.f;
 
-	data.FontSize = 15.f;
+	data.FontSize = 10.f;
 	data.OffsetX = 0.f;
 	data.OffsetY = 0.f;
 

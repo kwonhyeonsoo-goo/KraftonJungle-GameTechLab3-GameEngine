@@ -44,7 +44,7 @@ private:
 	const WCHAR* ShaderFilePath          = L"Assets/Shader/ShaderW0.hlsl";
 	const WCHAR* BatchedLineShaderFilePath = L"Assets/Shader/BatchedLineShader.hlsl";
 	const WCHAR* FontShaderFilePath      = L"Assets/Shader/FontShader.hlsl";
-	const WCHAR* FontTextureFIlePath = L"Assets/Fonts/Font.dds";
+	const WCHAR* FontTextureFIlePath = L"Assets/Fonts/NanumGothic.dds";
 	const WCHAR* SubUVShaderFilePath = L"Assets/Shader/ShaderWSubUV.hlsl";
 
 	//	Primitive and Gizmo Input Layout
