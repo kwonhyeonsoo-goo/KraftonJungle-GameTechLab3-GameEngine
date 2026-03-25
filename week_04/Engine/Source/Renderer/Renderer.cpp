@@ -568,6 +568,8 @@ void CRenderer::Release()
 	if (StencilWriteState) StencilWriteState->Release();
 	if (StencilTestState) StencilTestState->Release();
 	OutlinePS.reset(); DefaultMaterial.reset();
+	if (FolderIconSRV)FolderIconSRV->Release();
+	if (FileIconSRV)FileIconSRV->Release();
 	if (LineVertexBuffer) LineVertexBuffer->Release();
 	if (FrameConstantBuffer) FrameConstantBuffer->Release();
 	if (ObjectConstantBuffer) ObjectConstantBuffer->Release();
