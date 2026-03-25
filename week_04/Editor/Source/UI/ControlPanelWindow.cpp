@@ -63,6 +63,11 @@ void CControlPanelWindow::Render(CCore* Core)
 		const FWorldContext* ActiveSceneContext = Core->GetActiveWorldContext();
 		const TArray<std::unique_ptr<FEditorWorldContext>>& PreviewSceneContexts = Core->GetSceneManager()->GetPreviewWorldContexts();
 		const bool bPreviewActive = ActiveSceneContext && ActiveSceneContext->WorldType == ESceneType::Preview;
+
+		/*
+			PreviewScene 등 아마 확장의 여지를 둔 것으로 보이나 아무 기능도 없어 주석 처리함		
+		*/
+		/*
 		ImGui::SeparatorText("World");
 
 		if (ActiveSceneContext)
@@ -70,12 +75,16 @@ void CControlPanelWindow::Render(CCore* Core)
 			ImGui::Text("Active: %s", ActiveSceneContext->ContextName.c_str());
 			ImGui::Text("Type: %s", GetSceneTypeLabel(ActiveSceneContext->WorldType));
 		}
+		*/
 
+		/*
 		if (ImGui::Button("Editor Scene"))
 		{
 			Core->ActivateEditorScene();
 		}
+		*/
 
+		/*
 		ImGui::SameLine();
 
 		if (PreviewSceneContexts.empty())
@@ -93,8 +102,12 @@ void CControlPanelWindow::Render(CCore* Core)
 		{
 			ImGui::TextUnformatted("Preview scene is editor-only. Scene save/load is disabled.");
 		}
-		ImGui::SeparatorText("Camera");
+		*/
 
+		ImGui::SeparatorText("Camera");
+		
+
+		/*
 		if (ImGui::Button("Spawn Test"))
 		{
 			UScene* Scene = Core->GetScene();
@@ -114,6 +127,7 @@ void CControlPanelWindow::Render(CCore* Core)
 				NewActor->SetActorLocation(V);
 			}
 		}
+		*/
 		
 		if (CCamera* Camera = Core->GetScene()->GetCamera())
 		{
@@ -259,112 +273,6 @@ void CControlPanelWindow::Render(CCore* Core)
 		{
 			ImGui::EndDisabled();
 		}
-
-		ImGui::SeparatorText("Scene");
-		static char SceneName[128] = "NewScene";
-		if (ImGui::Button("New Scene"))
-		{
-			Core->SetSelectedActor(nullptr);
-		
-			strncpy_s(SceneName, "NewScene", IM_ARRAYSIZE(SceneName));
-			if (UCameraComponent* Cam = Core->GetActiveWorld()->GetActiveCameraComponent())
-			{
-				Cam->GetCamera()->SetPosition({ -5.0f, 0.0f, 2.0f });
-				Cam->GetCamera()->SetRotation(0.f,0.f);
-			}
-			Core->GetScene()->ClearActors();
-
-			UE_LOG("New scene created");
-		}
-
-		ImGui::SameLine();
-		if (ImGui::Button("Clear Scene"))
-		{
-			Core->SetSelectedActor(nullptr);
-			Core->GetScene()->ClearActors();
-			UE_LOG("Scene cleared: all actors destroyed");
-		}
-
-		ImGui::Spacing();
-
-		ImGui::InputText("Scene Name", SceneName, IM_ARRAYSIZE(SceneName));
-
-		ImGui::BeginDisabled(bPreviewActive);
-
-		if (ImGui::Button("Save"))
-		{
-			FString SceneNameString = SceneName;
-			SceneNameString += ".json";
-			const FString Path = (FPaths::SceneDir() / SceneNameString).string();
-	
-			
-			FSceneSerializer::Save(Core->GetScene(),Path);
-			UE_LOG("Scene saved: %s", SceneName);
-		}
-
-		ImGui::Spacing();
-
-		if (ImGui::Button("Refresh List"))
-		{
-			SceneFiles.clear();
-			SelectedSceneIndex = -1;
-
-			const FString ScenesDir = FPaths::SceneDir().string();
-			if (std::filesystem::exists(ScenesDir))
-			{
-				for (auto& Entry : std::filesystem::directory_iterator(ScenesDir))
-				{
-					if (Entry.path().extension() == ".json")
-					{
-						SceneFiles.push_back(Entry.path().stem().string());
-					}
-				}
-			}
-		}
-
-		if (!SceneFiles.empty())
-		{
-			if (ImGui::BeginListBox("Scenes"))
-			{
-				for (int32 Index = 0; Index < static_cast<int32>(SceneFiles.size()); ++Index)
-				{
-					const bool bSelected = (SelectedSceneIndex == Index);
-					if (ImGui::Selectable(SceneFiles[Index].c_str(), bSelected))
-					{
-						SelectedSceneIndex = Index;
-					}
-				}
-				ImGui::EndListBox();
-			}
-
-			if (SelectedSceneIndex >= 0 && ImGui::Button("Load"))
-			{
-				FString SceneFileName = SceneFiles[SelectedSceneIndex];
-				SceneFileName += ".json";
-				const FString Path = (FPaths::SceneDir() / SceneFileName).string();
-
-				Core->SetSelectedActor(nullptr);
-				Core->GetScene()->ClearActors();
-
-				bool bLoaded = FSceneSerializer::Load(Core->GetScene(), Path, Core->GetRenderer()->GetDevice());
-				if (bLoaded)
-				{
-					UE_LOG("Scene loaded: %s", SceneFiles[SelectedSceneIndex].c_str());
-				}
-				else
-				{
-					MessageBoxA(
-						nullptr,
-						"Scene 정보가 잘못되었습니다.",
-						"Error",
-						MB_OK | MB_ICONWARNING
-					);
-				}
-
-			}
-		}
-
-		ImGui::EndDisabled();
 	}
 
 	ImGui::End();
