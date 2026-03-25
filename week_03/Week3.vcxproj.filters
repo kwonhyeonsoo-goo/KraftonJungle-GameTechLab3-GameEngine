@@ -5,7 +5,6 @@
     <FxCompile Include="Assets\Shader\ShaderW0.hlsl" />
     <FxCompile Include="Assets\Shader\BatchedLineShader.hlsl" />
     <FxCompile Include="Assets\Shader\ShaderWSubUV.hlsl" />
-    <FxCompile Include="FontShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DirectXTK\WICTextureLoader.cpp" />
@@ -63,6 +62,7 @@
     <ClCompile Include="Engine\Render\Resource\RenderResourceManager.cpp" />
     <ClCompile Include="Engine\FileManager\UISettingInit.cpp" />
     <ClCompile Include="World\Primitives\TextComponent.cpp" />
+    <ClCompile Include="World\Primitives\BillBoardComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DirectXTK\WICTextureLoader.h" />
@@ -139,6 +139,9 @@
     <ClInclude Include="Engine\Render\Resource\RenderResourceManager.h" />
     <ClInclude Include="Engine\FileManager\UISettingInit.h" />
     <ClInclude Include="Engine\FileManager\Format_ini.h" />
+    <ClInclude Include="ImGui\IconsFontAwesome4.h" />
+    <ClInclude Include="World\Primitives\BillBoardComponent.h" />
+    <ClInclude Include="World\Primitives\TextComponent.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Fonts\DDS\AFont.dds" />
@@ -169,9 +172,14 @@
     <Image Include="Assets\Fonts\PNG\KFont_7.png" />
     <Image Include="Assets\Fonts\PNG\KFont_8.png" />
     <Image Include="Assets\Fonts\PNG\KFont_9.png" />
+    <Image Include="..\..\..\..\..\Downloads\light_icon.png" />
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />
     <None Include="editor.ini" />
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="ImGui\fontawesome-webfont.ttf" />
+    <Font Include="ImGui\NanumGothic.otf" />
   </ItemGroup>
 </Project>

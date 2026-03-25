@@ -442,6 +442,20 @@ void FEditorMainPanel::RenderPickedObjectWindow(UObject*& ObjectPicked) {
 			Gizmo.SetTargetScale(FVector(ScaleArray[0], ScaleArray[1], ScaleArray[2]));
 		}
 
+		if (SceneComp->GetOwningActor()) { RenderPickedActorWindow(SceneComp->GetOwningActor()); }
+
+		// Sub UV
+		if (ObjectPicked->IsA< USubUVComponent>()) {
+			ImGui::SeparatorText("Sub UV");
+			RenderPicekdSubUVWindow(static_cast<USubUVComponent*>(ObjectPicked));
+		}
+
+		// Text 컴포넌트면 입력창 표시
+		if (ObjectPicked->IsA<UTextComponent>()) {
+			SEPARATOR();
+			DrawTextComponentUI(static_cast<UTextComponent*>(ObjectPicked));
+		}
+
 		SEPARATOR();
 
 		if (ImGui::Button("Remove Object") && ObjectPicked) {
@@ -457,8 +471,6 @@ void FEditorMainPanel::RenderPickedObjectWindow(UObject*& ObjectPicked) {
 			Viewport->GetGizmoManager().Deactivate();
 			ObjectPicked = nullptr;
 		}
-
-		if (SceneComp->GetOwningActor()) { RenderPickedActorWindow(SceneComp->GetOwningActor()); }
 	}
 
 	ImGui::End();
@@ -511,15 +523,6 @@ void FEditorMainPanel::RenderPickedActorWindow(AActor* Actor) {
 		if (ImGui::ColorEdit4("Ray Color", Color)) {
 			FVector4 NewColor(Color[0], Color[1], Color[2], Color[3]);
 			Spotlight->SetColor(NewColor);
-		}
-	}
-
-	for (USceneComponent* comp : Actor->GetComponents()) {
-		if (comp->IsA< USubUVComponent>()) {
-			ImGui::SeparatorText("Sub UV");
-
-			RenderPicekdSubUVWindow(static_cast<USubUVComponent*>(comp));
-
 		}
 	}
 }
@@ -599,16 +602,39 @@ void FEditorMainPanel::DrawTextComponentUI(UTextComponent* TextComp)
 	std::wstring Current = TextComp->GetText();
 	WideCharToMultiByte(CP_UTF8, 0, Current.c_str(), -1, Buffer.data(), 256, nullptr, nullptr);
 
-	FString InputLabel = "##TextInput" + std::to_string(TextComp->UUID);
-	ImGui::Indent();
-	if (ImGui::InputText(InputLabel.c_str(), Buffer.data(), Buffer.size())) {
+	FString InputLabel = "Text##TextInput" + std::to_string(TextComp->UUID);
+	if (ImGui::InputTextMultiline(InputLabel.c_str(), Buffer.data(), Buffer.size(), ImVec2(-1, 50))) {
 		wchar_t Wide[256];
 		MultiByteToWideChar(CP_UTF8, 0, Buffer.data(), -1, Wide, 256);
 		std::wstring WideStr(Wide);
 		TextComp->SetText(WideStr);
 	}
 
-	// Color 조정
+	// 정렬
+	ImGui::Combo("H Align", &SelectedAlignment, TextAlignmentTypes, IM_ARRAYSIZE(TextAlignmentTypes));
+	ETextAlignment Alignment = ETextAlignment::Center;
+	switch (SelectedAlignment)
+	{
+	case 0:
+		// left
+		Alignment = ETextAlignment::Left;
+		TextComp->SetTextAlignment(Alignment);
+		break;
+	case 1:
+		// Center
+		Alignment = ETextAlignment::Center;
+		TextComp->SetTextAlignment(Alignment);
+		break;
+	case 2:
+		// Center
+		Alignment = ETextAlignment::Right;
+		TextComp->SetTextAlignment(Alignment);
+		break;
+	default:
+		break;
+	}
+
+	// Color
 	FVector4 Color = TextComp->GetColor();
 	float ColorArr[4] = { Color.X, Color.Y, Color.Z, Color.W };
 	FString ColorLabel = "Color##" + std::to_string(TextComp->UUID);
@@ -617,7 +643,22 @@ void FEditorMainPanel::DrawTextComponentUI(UTextComponent* TextComp)
 		TextComp->SetTextColor(NewColor);
 	}
 
-	ImGui::Unindent();
+	// Text Scale
+	FVector CurrScale = TextComp->GetTextScale();
+	float Width, Height;
+	Width = CurrScale.Y;
+	Height = CurrScale.Z;
+	if (ImGui::DragFloat("Width", &Width, 0.01f, 0.1f, 5.0f))
+	{
+		CurrScale.Y = Width;
+		TextComp->SetTextScale(CurrScale);
+	}
+
+	if (ImGui::DragFloat("Height", &Height, 0.01f, 0.1f, 5.0f))
+	{
+		CurrScale.Z = Height;
+		TextComp->SetTextScale(CurrScale);
+	}	
 }
 
 void FEditorMainPanel::Update()

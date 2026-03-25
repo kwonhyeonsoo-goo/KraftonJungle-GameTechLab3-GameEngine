@@ -5,7 +5,9 @@ class UTextComponent : public UPrimitiveComponent
 {
 private:
 	std::wstring Text = L"쿼드";
+	FVector Scale = { 0.0f, 1.0f, 1.0f };
 	FVector4 Color = { 1, 1, 1, 1 };
+	ETextAlignment Alignment = ETextAlignment::Center;
 
 public:
 	DECLARE_CLASS(UTextComponent, UPrimitiveComponent)
@@ -21,8 +23,12 @@ public:
 
 public:
 	std::wstring const& GetText() const { return Text; }
+	FVector const& GetTextScale() const { return Scale; }
 	FVector4 const& GetColor() const { return Color; }
+	ETextAlignment const& GetAlignment() const { return Alignment; }
 
 	void SetText(std::wstring& newText) { Text = newText; }
+	void SetTextScale(FVector& newScale) { Scale = newScale; }
 	void SetTextColor(FVector4& newColor) { Color = newColor; }
+	void SetTextAlignment(ETextAlignment& newAlignment) { Alignment = newAlignment; }
 };

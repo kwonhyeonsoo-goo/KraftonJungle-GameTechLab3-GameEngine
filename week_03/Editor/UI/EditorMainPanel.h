@@ -35,6 +35,12 @@ private:
 	{
 		"Spotlight"
 	};
+	const char* TextAlignmentTypes[3] =
+	{
+		"Left",
+		"Center",
+		"Right",
+	};
 
 	FEditorEngine* EditorEngine = nullptr;
 	FRenderer* Renderer;
@@ -57,6 +63,9 @@ private:
 	uint32 SelectedComponentIndex = 0;
 
 	FEditorConsole ConsoleInstance;
+
+	// Text
+	int SelectedAlignment = 0;
 
 private:
 	void RenderObjectManager(FViewOutput& ViewOutput);

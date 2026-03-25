@@ -69,9 +69,9 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* primitiveCompon
 	float TopZ = primitiveComponent->GetBoundingBox().WorldAABBMaxLocation.Z;
 	FontCmd.TextConstants.TextPosition = primitiveComponent->GetBoundingBox().WorldAABBMaxLocation * 0.5f	// AABB 평균: 오브젝트 중앙
 		+ primitiveComponent->GetBoundingBox().WorldAABBMinLocation * 0.5f;
-	FontCmd.TextConstants.TextPosition.Z = TopZ + 1.5f;
+	FontCmd.TextConstants.TextPosition.Z = TopZ + 1.0f;
 
-	FontCmd.TextConstants.TextScale = { 1.0f, 5.0f, 0.7f };
+	FontCmd.TextConstants.TextScale = { 1.0f, 5.0f, 1.5f };
 	FontCmd.TextConstants.TextColor = FVector4(1, 1, 1, 1);
 	RenderBus.AddTextCommand(FontCmd);
 
@@ -118,14 +118,16 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* primitiveCompon
 
 		if (primitiveComponent->GetPrimitiveType() == EPrimitiveType::EPT_Text)
 		{
+			UTextComponent* TextComponent = static_cast<UTextComponent*>(primitiveComponent);
 			FRenderCommand TextCmd = Cmd;
 			TextCmd.Type = ERenderCommandType::TextPrimitive;
 			TextCmd.TextConstants.OrientationType = EOrientationType::Fixed;
-			TextCmd.TextConstants.Text = static_cast<UTextComponent*>(primitiveComponent)->GetText();
+			TextCmd.TextConstants.Alignment = TextComponent->GetAlignment();
+			TextCmd.TextConstants.Text = TextComponent->GetText();
 			TextCmd.TextConstants.TextPosition = primitiveComponent->GetWorldLocation();
 			TextCmd.TextConstants.TextRotation = primitiveComponent->GetRelativeRotation();
-			TextCmd.TextConstants.TextScale = primitiveComponent->GetScaleVector();
-			TextCmd.TextConstants.TextColor = static_cast<UTextComponent*>(primitiveComponent)->GetColor();
+			TextCmd.TextConstants.TextScale = primitiveComponent->GetScaleVector() * TextComponent->GetTextScale();
+			TextCmd.TextConstants.TextColor = TextComponent->GetColor();
 			RenderBus.AddTextCommand(TextCmd);
 		}
 	}
