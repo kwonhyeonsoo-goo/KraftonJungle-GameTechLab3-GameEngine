@@ -58,13 +58,38 @@ void COutlinerWindow::Render(CCore* Core)
 	bool bCollision = ShowFlags.HasFlag(EEngineShowFlags::SF_Collision);
 	if (ImGui::Checkbox("Collision", &bCollision))
 		ShowFlags.SetFlag(EEngineShowFlags::SF_Collision, bCollision);
-	bool bBillboard = ShowFlags.HasFlag(EEngineShowFlags::SF_Billboard);
-	if (ImGui::Checkbox("SubUV Billboard", &bBillboard))
-		ShowFlags.SetFlag(EEngineShowFlags::SF_Billboard, bBillboard);
 
-	bool bText = ShowFlags.HasFlag(EEngineShowFlags::SF_Text);
-	if (ImGui::Checkbox("Text Billboard", &bText))
-		ShowFlags.SetFlag(EEngineShowFlags::SF_Text, bText);
+	if (SelectedActor)
+	{
+		for (UActorComponent* Component : SelectedActor->GetComponents())
+		{
+			if (!Component)
+			{
+				continue;
+			}
+
+			if (Component->IsA(USubUVComponent::StaticClass()))
+			{
+				USubUVComponent* SubUVComponent = static_cast<USubUVComponent*>(Component);
+				bool bBillboard = SubUVComponent->IsBillboard();
+
+				if (ImGui::Checkbox("SubUV Billboard", &bBillboard))
+				{
+					SubUVComponent->SetBillboard(bBillboard);
+				}
+			}
+			else if (Component->IsA(UTextComponent::StaticClass()) && !Component->IsA(UUUIDBillboardComponent::StaticClass()))
+			{
+				UTextComponent* TextComponent = static_cast<UTextComponent*>(Component);
+				bool bBillboard = TextComponent->IsBillboard();
+
+				if (ImGui::Checkbox("Text Billboard", &bBillboard))
+				{
+					TextComponent->SetBillboard(bBillboard);
+				}
+			}
+		}
+	}
 
 	ImGui::SeparatorText("Actors");
 
