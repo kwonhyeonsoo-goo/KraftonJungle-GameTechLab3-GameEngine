@@ -26,6 +26,7 @@ void USubUVComponent::UpdateFrame(float deltaTime)
 	}
 	currentU = OffsetLeftX +(CurrentFrameIndex % CellColumns) * CellSizeX;
 	currentV = OffsetUpY +(CurrentFrameIndex / CellColumns) * CellSizeY;
+	FVector tmp = LocalExtents;
 
 }
 
@@ -62,18 +63,24 @@ bool USubUVComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix&
 	if (Texture2DId == -1) {
 		return false;
 	}
-	FVector CameraRight = { -viewMatrix.M[0][0], -viewMatrix.M[0][1],0 };
-	CameraRight.Normalize();
-	FMatrix invesView = {
-						1,					0 ,	0 , 0,
-			CameraRight.X,		CameraRight.Y,	0,  0,
-						0,					0 ,	1 , 0,
-						0,					0,	0 ,	1 };
+	FVector Scale = GetScaleVector();
+	FMatrix Translation = FMatrix::MakeTranslationMatrix(GetWorldLocation());
 
+	FVector Forward = FVector(viewMatrix.M[0][2], viewMatrix.M[1][2], viewMatrix.M[2][2]); Forward.Normalize();
+	FVector Right = FVector(viewMatrix.M[0][0], viewMatrix.M[1][0], viewMatrix.M[2][0]); Right.Normalize();
+
+	FMatrix BillboardRotation(
+		Forward.X, Forward.Y, Forward.Z, 0,
+		-Right.X, -Right.Y, -Right.Z, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	);
+	
 	FVector localScale = GetRelativeScale();
 	localScale.Y *= (CellSizeX * Texture2Dinfo.TextureWidth) / (CellSizeY * Texture2Dinfo.TextureHeight);
-	FMatrix model = FMatrix::MakeScaleMatrix(localScale) * invesView
-					* FMatrix::MakeTranslationMatrix(GetWorldLocation());
+	FMatrix model = FMatrix::MakeScaleMatrix(localScale) * BillboardRotation
+		* FMatrix::MakeTranslationMatrix(GetWorldLocation());
+
 
 	OutCommand.Type = ERenderCommandType::SubUV;
 	if (bIsBillBoard) OutCommand.TransformConstants.Model = model;
@@ -191,8 +198,6 @@ void USubUVComponent::UpdateWorldAABB()
 		abs(forward.Y) * halfX + abs(right.Y) * halfY + abs(up.Y) * halfZ,
 		abs(forward.Z) * halfX + abs(right.Z) * halfY + abs(up.Z) * halfZ
 	};
-
-	extent.Z += LocalExtents.Z * 0.5f;
 
 	FVector WorldCenter = GetWorldLocation();
 	BoundingBox.WorldAABBMinLocation = WorldCenter - extent;
