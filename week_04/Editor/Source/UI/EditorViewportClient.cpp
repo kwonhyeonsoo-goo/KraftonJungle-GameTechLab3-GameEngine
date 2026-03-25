@@ -141,8 +141,8 @@ void CEditorViewportClient::HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPAR
 			return;
 		}
 
-		if (AActor* PickedActor = Picker.PickActor(Scene, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight))
 		{
+			AActor* PickedActor = Picker.PickActor(Scene, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
 			Core->SetSelectedActor(PickedActor);
 			EditorUI.SyncSelectedActorProperty();
 		}

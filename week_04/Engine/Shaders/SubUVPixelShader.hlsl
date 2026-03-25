@@ -18,7 +18,7 @@ float4 main(PSInput Input) : SV_TARGET
 	float2 FinalUV = Input.UV * CellSize + Offset;
 	float4 Sampled = MainTexture.Sample(MainSampler, FinalUV);
 
-	clip(Sampled.r - 0.01f);
+	clip(Sampled.a - 0.01f);
 
-	return float4(Sampled.rgb, Sampled.r);
+	return float4(Sampled.rgb, Sampled.a);
 }
