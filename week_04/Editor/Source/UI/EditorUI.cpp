@@ -182,10 +182,9 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 	ContentBrowser.SetFileIcon(CurrentRenderer->GetFileIconSRV());
 
 	std::filesystem::path FontPath = FPaths::ProjectRoot() / "Content" / "Fonts" / "NotoSansKR-Bold.ttf";
-	std::string FontPathString = FontPath.string();
 	std::wstring FontPathWString = FontPath.wstring();
 	InRenderer->SetGUICallbacks(
-		[Hwnd, Device, DeviceContext, FontPathString, FontPathWString]()
+		[Hwnd, Device, DeviceContext, FontPathWString, FontPath]()
 		{
 			IMGUI_CHECKVERSION();
 			ImGui::CreateContext();
@@ -201,15 +200,25 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 			FontConfig.PixelSnapH = true;
 
 			ImFont* Font = nullptr;
+			FILE* f;
+			_wfopen_s(&f, FontPath.c_str(), L"rb");
+			if (f) {
+				// 1. 파일 크기 확인
+				fseek(f, 0, SEEK_END);
+				size_t size = ftell(f);
+				fseek(f, 0, SEEK_SET);
 
-			if (std::filesystem::exists(FontPathString))
-			{
-				Font = IO.Fonts->AddFontFromFileTTF(
-					FontPathString.c_str(),
-					16.0f,
-					&FontConfig,
-					IO.Fonts->GetGlyphRangesKorean()
-				);
+				// 2. ImGui 전용 메모리 할당 (ImGui가 나중에 직접 free함)
+				void* fontData = IM_ALLOC(size);
+				fread(fontData, 1, size, f);
+				fclose(f);
+
+				// 3. 메모리로부터 폰트 로드
+				// 마지막 인자로 한글 범위를 지정해야 화면에 한글이 출력됩니다.
+				Font = IO.Fonts->AddFontFromMemoryTTF(fontData, (int)size, 16.0f, &FontConfig, IO.Fonts->GetGlyphRangesKorean());
+			}
+			else {
+				fclose(f);
 			}
 
 			if (!Font)
