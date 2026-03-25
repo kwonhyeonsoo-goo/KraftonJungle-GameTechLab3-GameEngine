@@ -20,12 +20,15 @@
 #include <windows.h>
 #include <commdlg.h>
 
+#include "UI/EditorViewportClient.h"
 #include "Debug/EngineLog.h"
 #include "Component/CameraComponent.h"
 #include "Camera/Camera.h"
 #include "Serializer/SceneSerializer.h"
 #include "Actor/SkySphereActor.h" 
 #include "Actor/ObjActor.h"
+#include "Core/ShowFlags.h"
+#include "EditorViewportClient.h"
 
 enum class EFileDialogType
 {
@@ -298,6 +301,7 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 			const float AxisLength = 10000.0f;
 			const FVector Origin = { 0.0f, 0.0f, 0.0f };
 		});
+	LoadEditorSettings();
 }
 
 void CEditorUI::DetachFromRenderer(CRenderer* InRenderer)
@@ -401,6 +405,76 @@ void CEditorUI::BuildDefaultLayout(uint32 DockID)
 
 	ImGui::DockBuilderFinish(DockID);
 }
+
+void CEditorUI::LoadEditorSettings()
+{
+	std::wstring Path = GetEditorIniPathW();
+	wchar_t Buf[64];
+
+	GetPrivateProfileStringW(L"Grid", L"GridSize", L"10.0", Buf, 64, Path.c_str());
+	float GridSize = static_cast<float>(_wtof(Buf));
+
+	GetPrivateProfileStringW(L"Grid", L"LineThickness", L"1.0", Buf, 64, Path.c_str());
+	float Thickness = static_cast<float>(_wtof(Buf));
+
+	GetPrivateProfileStringW(L"Grid", L"ShowGrid", L"1", Buf, 64, Path.c_str());
+	bool bShowGrid = (_wtoi(Buf) != 0);
+
+	if (Core && Core->GetViewportClient())
+	{
+		auto* VPC = static_cast<CEditorViewportClient*>(Core->GetViewportClient());
+		VPC->SetGridSize(GridSize);
+		VPC->SetLineThickness(Thickness);
+		VPC->SetGridVisible(bShowGrid);
+		FShowFlags& ShowFlags = VPC->GetShowFlags();
+
+		GetPrivateProfileStringW(L"ShowFlags", L"Primitives", L"1", Buf, 64, Path.c_str());
+		ShowFlags.SetFlag(EEngineShowFlags::SF_Primitives, _wtoi(Buf) != 0);
+
+		GetPrivateProfileStringW(L"ShowFlags", L"UUID", L"1", Buf, 64, Path.c_str());
+		ShowFlags.SetFlag(EEngineShowFlags::SF_UUID, _wtoi(Buf) != 0);
+
+		GetPrivateProfileStringW(L"ShowFlags", L"DebugDraw", L"0", Buf, 64, Path.c_str());
+		ShowFlags.SetFlag(EEngineShowFlags::SF_DebugDraw, _wtoi(Buf) != 0);
+
+		GetPrivateProfileStringW(L"ShowFlags", L"WorldAxis", L"0", Buf, 64, Path.c_str());
+		ShowFlags.SetFlag(EEngineShowFlags::SF_WorldAxis, _wtoi(Buf) != 0);
+
+		GetPrivateProfileStringW(L"ShowFlags", L"Collision", L"0", Buf, 64, Path.c_str());
+		ShowFlags.SetFlag(EEngineShowFlags::SF_Collision, _wtoi(Buf) != 0);
+
+	}
+
+}
+
+void CEditorUI::SaveEditorSettings()
+{
+	std::wstring Path = GetEditorIniPathW();
+	if (!Core || !Core->GetViewportClient()) return;
+	auto* VPC = static_cast<CEditorViewportClient*>(Core->GetViewportClient());
+
+	wchar_t Buf[64];
+	swprintf(Buf, 64, L"%.2f", VPC->GetGridSize());
+	WritePrivateProfileStringW(L"Grid", L"GridSize", Buf, Path.c_str());
+
+	swprintf(Buf, 64, L"%.2f", VPC->GetLineThickness());
+	WritePrivateProfileStringW(L"Grid", L"LineThickness", Buf, Path.c_str());
+
+	WritePrivateProfileStringW(L"Grid", L"ShowGrid", VPC->IsGridVisible() ? L"1" : L"0", Path.c_str());
+	FShowFlags& ShowFlags = VPC->GetShowFlags();
+	WritePrivateProfileStringW(L"ShowFlags", L"Primitives", ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives) ? L"1" : L"0", Path.c_str());
+	WritePrivateProfileStringW(L"ShowFlags", L"UUID", ShowFlags.HasFlag(EEngineShowFlags::SF_UUID) ? L"1" : L"0", Path.c_str());
+	WritePrivateProfileStringW(L"ShowFlags", L"DebugDraw", ShowFlags.HasFlag(EEngineShowFlags::SF_DebugDraw) ? L"1" : L"0", Path.c_str());
+	WritePrivateProfileStringW(L"ShowFlags", L"WorldAxis", ShowFlags.HasFlag(EEngineShowFlags::SF_WorldAxis) ? L"1" : L"0", Path.c_str());
+	WritePrivateProfileStringW(L"ShowFlags", L"Collision", ShowFlags.HasFlag(EEngineShowFlags::SF_Collision) ? L"1" : L"0", Path.c_str());
+
+}
+
+std::wstring CEditorUI::GetEditorIniPathW() const
+{
+	return (FPaths::ProjectRoot() / "editor.ini").wstring();
+}
+
 
 void CEditorUI::Render()
 {
@@ -528,7 +602,60 @@ void CEditorUI::Render()
 
 			ImGui::EndMenu();
 		}
+		if (ImGui::BeginMenu("View"))
+		{
+			if (Core && Core->GetViewportClient())
+			{
+				auto* VPC = static_cast<CEditorViewportClient*>(Core->GetViewportClient());
+			
 
+				IViewportClient* ViewportCli = Core->GetViewportClient();
+				if (!ViewportCli) { ImGui::End(); return; }
+
+				FShowFlags& ShowFlags = ViewportCli->GetShowFlags();
+				// ===== Show Flags 섹션 =====
+				ImGui::SeparatorText("Show Flags");
+				// 각 플래그마다 Checkbox 하나씩
+				auto ShowFlagCheckbox = [&](const char* Label, EEngineShowFlags Flag)
+				{
+					bool bValue = ShowFlags.HasFlag(Flag);
+					if (ImGui::Checkbox(Label, &bValue))
+					{
+						ShowFlags.SetFlag(Flag, bValue);
+						SaveEditorSettings();
+					}
+				};
+
+				ShowFlagCheckbox("Primitives", EEngineShowFlags::SF_Primitives);
+				ShowFlagCheckbox("UUID", EEngineShowFlags::SF_UUID);
+				ShowFlagCheckbox("Debug Draw", EEngineShowFlags::SF_DebugDraw);
+				//ShowFlagCheckbox("World Axis", EEngineShowFlags::SF_WorldAxis);
+				ShowFlagCheckbox("Collision", EEngineShowFlags::SF_Collision);
+
+				// ─── Grid ───
+				ImGui::SeparatorText("Grid");
+				bool bShowGrid = VPC->IsGridVisible();
+				if (ImGui::Checkbox("Show Grid", &bShowGrid))
+				{
+					VPC->SetGridVisible(bShowGrid);
+					SaveEditorSettings();
+				}
+				float GridSize = VPC->GetGridSize();
+				if (ImGui::SliderFloat("Grid Size", &GridSize, 1.0f, 100.0f, "%.1f"))
+				{
+					VPC->SetGridSize(GridSize);
+					SaveEditorSettings();
+				}
+
+				float Thickness = VPC->GetLineThickness();
+				if (ImGui::SliderFloat("Line Thickness", &Thickness, 0.1f, 5.0f, "%.2f"))
+				{
+					VPC->SetLineThickness(Thickness);
+					SaveEditorSettings();
+				}
+			}
+			ImGui::EndMenu();
+		}
 		ImGui::EndMainMenuBar();
 	}
 

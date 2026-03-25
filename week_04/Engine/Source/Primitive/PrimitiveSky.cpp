@@ -61,7 +61,7 @@ void CPrimitiveSky::Generate(int32 Segments, int32 Rings)
 			Data->Indices.push_back(Next);
 		}
 	}
-
+	Data->Topology = EMeshTopology::EMT_TriangleList;
 	MeshData = Data;
 	RegisterMeshData(Key, Data);
 }

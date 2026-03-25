@@ -27,7 +27,7 @@ bool CTextMeshBuilder::Initialize(CRenderer* InRenderer)
 
 	Device = InRenderer->GetDevice();
 	DeviceContext = InRenderer->GetDeviceContext();
-
+	RenderStateManager = InRenderer->GetRenderStateManager().get();
 	if (!Device || !DeviceContext)
 	{
 		return false;
@@ -101,6 +101,7 @@ void CTextMeshBuilder::Release()
 	FontMaterial.reset();
 	Device = nullptr;
 	DeviceContext = nullptr;
+	RenderStateManager = nullptr;
 }
 
 bool CTextMeshBuilder::BuildTextMesh(const FString& Text, FMeshData& OutMesh) const
@@ -168,6 +169,17 @@ bool CTextMeshBuilder::BuildTextMesh(const FString& Text, FMeshData& OutMesh) co
 	}
 
 	return !OutMesh.Vertices.empty();
+}
+
+void CTextMeshBuilder::SetFillMode(D3D11_FILL_MODE InFillMode)
+{
+	if (!FontMaterial) return;
+	FRasterizerStateOption Option = FontMaterial->GetRasterizerOption();
+	if (Option.FillMode == InFillMode) return;
+	Option.FillMode = InFillMode;
+	auto RS = RenderStateManager->GetOrCreateRasterizerState(Option);
+	FontMaterial->SetRasterizerOption(Option);
+	FontMaterial->SetRasterizerState(RS);
 }
 
 TArray<uint32> CTextMeshBuilder::DecodeToCodepoints(const FString& Text) const

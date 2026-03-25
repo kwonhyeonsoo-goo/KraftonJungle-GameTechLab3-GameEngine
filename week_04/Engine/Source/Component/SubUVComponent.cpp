@@ -7,6 +7,7 @@ IMPLEMENT_RTTI(USubUVComponent, UPrimitiveComponent)
 void USubUVComponent::Initialize()
 {
 	// SubUV 렌더링용 메시 객체 생성
+	bDrawDebugBounds = true;
 	SubUVMesh = std::make_shared<FMeshData>();
 }
 

@@ -8,6 +8,7 @@ IMPLEMENT_RTTI(UTextComponent, UPrimitiveComponent)
 void UTextComponent::Initialize()
 {
 	// 폰트 렌더링용 메시 데이터 객체 생성
+	bDrawDebugBounds = true;
 	TextMesh = std::make_shared<FMeshData>();
 }
 

@@ -35,7 +35,12 @@ public:
 	void HandleFileDropOnViewport(const FString& FilePath) override;
 	void BuildRenderCommands(CCore* Core, UScene* Scene,
 		const FFrustum& Frustum, FRenderCommandQueue& OutQueue) override;
-
+	float GetGridSize() const { return GridSize; }
+	void SetGridSize(float InSize);
+	float GetLineThickness() const { return LineThickness; }
+	void SetLineThickness(float InThickness);
+	bool IsGridVisible() const { return bShowGrid; }
+	void SetGridVisible(bool bVisible) { bShowGrid = bVisible; }
 private:
 	CEditorUI& EditorUI;
 	CWindow* MainWindow = nullptr;
@@ -55,4 +60,7 @@ private:
 	std::unique_ptr<FMeshData> GridMesh;
 	std::shared_ptr<FMaterial> GridMaterial;
 	void CreateGridResource(CRenderer* Renderer);
+	float GridSize = 10.0f;
+	float LineThickness = 1.0f;
+	bool bShowGrid = true;
 };

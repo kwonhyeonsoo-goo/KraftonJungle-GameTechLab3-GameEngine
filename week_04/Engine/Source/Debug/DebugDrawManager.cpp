@@ -6,6 +6,7 @@
 #include "Component/PrimitiveComponent.h"
 #include "Component/UUIDBillboardComponent.h"
 #include "Component/SubUVComponent.h"
+#include "Component/SkyComponent.h"
 #include "Object/Class.h"
 void FDebugDrawManager::DrawLine(const FVector& Start, const FVector& End, const FVector4& Color)
 {
@@ -85,9 +86,7 @@ void FDebugDrawManager::DrawAllCollisionBounds(CRenderer* Renderer, UWorld* Worl
 			UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(Comp);
 
 			// 빌보드, SubUV 제외
-			if (PrimComp->IsA(UUUIDBillboardComponent::StaticClass()) ||
-				PrimComp->IsA(USubUVComponent::StaticClass()))
-				continue;
+			if (!PrimComp->ShouldDrawDebugBounds()) continue;
 
 			if (!PrimComp->GetPrimitive() || !PrimComp->GetPrimitive()->GetMeshData())
 				continue;
