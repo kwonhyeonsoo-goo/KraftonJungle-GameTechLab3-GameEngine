@@ -2,6 +2,7 @@
 #include "Engine/EngineServices/EngineServices.h"
 #include "Engine/Render/Resource/RenderResourceManager.h"
 #include "World/Mesh/MeshManager.h"
+#include "SimpleJSON/json.hpp"
 
 DEFINE_CLASS(USubUVComponent, UPrimitiveComponent)
 REGISTER_FACTORY(USubUVComponent, UPrimitiveComponent)
@@ -139,6 +140,36 @@ bool USubUVComponent::RaycastMesh(const FRay& Ray, FHitResult& OutHitResult)
 		return true;
 	}
 	return false;
+}
+
+void USubUVComponent::Serialize(json::JSON& j) const {
+	UPrimitiveComponent::Serialize(j);
+	j["filename"]    = std::string(filename.begin(), filename.end());
+	j["PlayRate"]    = PlayRate;
+	j["bLoop"]       = bLoop;
+	j["CellRows"]	 = CellRows;
+	j["CellColumns"] = CellColumns;
+}
+
+void USubUVComponent::Deserialize(const json::JSON& j) {
+	UPrimitiveComponent::Deserialize(j);
+	auto& jj = const_cast<json::JSON&>(j);
+
+	std::string path = jj["filename"].ToString();
+	if (!path.empty())
+		filename = std::wstring(path.begin(), path.end());
+	PlayRate	 = jj["PlayRate"].ToInt();
+	bLoop		 = jj["bLoop"].ToBool();
+	CellRows	 = jj["CellRows"].ToInt();
+	CellColumns	 = jj["CellColumns"].ToInt();
+
+	// Recalculate derived values
+	FrameCount = CellRows * CellColumns;
+	Timer      = 1.f / PlayRate;
+	CellSizeX  = (1.f - OffsetLeftX - OffsetRightX) / CellRows;
+	CellSizeY  = (1.f - OffsetUpY   - OffsetBottomY) / CellColumns;
+	if (!filename.empty())
+		ReloadTextureResource(filename);
 }
 
 void USubUVComponent::UpdateWorldAABB()

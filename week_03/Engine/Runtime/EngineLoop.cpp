@@ -129,7 +129,7 @@ void FEngineLoop::TickFrame()
 		return;
 	}
 
-	UObjectManager::Get().Tick(DeltaTime);
+	//UObjectManager::Get().Tick(DeltaTime);
 	Editor.BeginFrame(DeltaTime);
 	Editor.Update(DeltaTime);
 

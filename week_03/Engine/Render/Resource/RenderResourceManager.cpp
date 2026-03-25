@@ -33,6 +33,8 @@ int FRenderResourceManager::CreateTexture(std::wstring filepath)
 
     ID3D11Resource* RawTexture = nullptr;
 
+    device->GetDeviceContext()->Flush();
+
     HRESULT Hr = CreateWICTextureFromFile(
         device->GetDevice(),
         device->GetDeviceContext(),

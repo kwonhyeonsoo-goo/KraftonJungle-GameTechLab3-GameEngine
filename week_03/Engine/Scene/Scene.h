@@ -41,6 +41,9 @@ public:
 		return Actor;
 	}
 
+	void Serialize(json::JSON& j) const override;
+	void Deserialize(const json::JSON& j) override;
+
 private:
 	TArray<AActor*> Actors;
 	UCamera* ActiveCamera = nullptr;	// Unused for now

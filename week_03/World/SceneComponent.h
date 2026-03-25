@@ -13,7 +13,7 @@ protected:
 	TArray<USceneComponent*> ChildComponents;
 
 	FMatrix CachedWorldMatrix{};
-	
+	json::JSON SerializeVector(float X, float Y, float Z) const;
 
 public:
 	DECLARE_CLASS(USceneComponent, UActorComponent)
@@ -59,5 +59,8 @@ public:
 	void Move(const FVector& delta);
 	void MoveLocal(const FVector& delta);
 	void Rotate(float dx, float dy);
+
+	void Serialize(json::JSON& j) const override;
+	void Deserialize(const json::JSON& j) override;
 };
 

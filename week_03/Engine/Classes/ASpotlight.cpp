@@ -1,4 +1,5 @@
 #include "ASpotlight.h"
+#include "SimpleJSON/json.hpp"
 
 DEFINE_CLASS(ASpotlight, AActor)
 REGISTER_FACTORY(ASpotlight)
@@ -39,4 +40,12 @@ void ASpotlight::Tick(float DeltaTime) {
 	for (UActorComponent* Comp : Components) {
 		Comp->ExcuteTick(DeltaTime);
 	}
+}
+
+void ASpotlight::Serialize(json::JSON& j) const {
+	AActor::Serialize(j);
+}
+
+void ASpotlight::Deserialize(const json::JSON& j) {
+	AActor::Deserialize(j);
 }

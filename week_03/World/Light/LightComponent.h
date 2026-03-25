@@ -32,4 +32,7 @@ public:
 	void SetColor(const FVector4& NewColor) { bIsLightDirty = true; Color = NewColor; }
 	void SetEnabled(bool IsEnabled) { bIsEnabled = IsEnabled; }
 	void SetEditorModeEnabled(bool B) { bIsEditorModeEnabled = B; }
+
+	void Serialize(json::JSON& j) const override;
+	void Deserialize(const json::JSON& j) override;
 };

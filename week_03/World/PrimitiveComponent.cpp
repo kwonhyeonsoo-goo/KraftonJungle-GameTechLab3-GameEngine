@@ -2,8 +2,19 @@
 #include "Core/RayTypes.h"
 #include "Mesh/MeshManager.h"
 #include "Core/CollisionTypes.h"
+#include "SimpleJSON/json.hpp"
 
 DEFINE_CLASS(UPrimitiveComponent, USceneComponent)
+
+void UPrimitiveComponent::Serialize(json::JSON& j) const {
+	USceneComponent::Serialize(j);
+	j["bIsVisible"] = bIsVisible;
+}
+
+void UPrimitiveComponent::Deserialize(const json::JSON& j) {
+	USceneComponent::Deserialize(j);
+	bIsVisible = const_cast<json::JSON&>(j)["bIsVisible"].ToBool();
+}
 
 bool UPrimitiveComponent::CheckAABB(const FRay& Ray)
 {

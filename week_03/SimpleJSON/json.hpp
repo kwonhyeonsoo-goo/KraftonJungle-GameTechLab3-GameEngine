@@ -380,7 +380,7 @@ class JSON
             return "";
         }
 
-        friend std::ostream& operator<<( std::ostream&, const JSON & );
+        inline friend std::ostream& operator<<( std::ostream&, const JSON & );
 
     private:
         void SetType( Class type ) {
@@ -421,7 +421,7 @@ class JSON
         Class Type = Class::Null;
 };
 
-JSON Array() {
+inline JSON Array() {
     return std::move( JSON::Make( JSON::Class::Array ) );
 }
 
@@ -432,7 +432,7 @@ JSON Array( T... args ) {
     return std::move( arr );
 }
 
-JSON Object() {
+inline JSON Object() {
     return std::move( JSON::Make( JSON::Class::Object ) );
 }
 
@@ -644,7 +644,7 @@ namespace {
     }
 }
 
-JSON JSON::Load( const string &str ) {
+inline JSON JSON::Load( const string &str ) {
     size_t offset = 0;
     return std::move( parse_next( str, offset ) );
 }

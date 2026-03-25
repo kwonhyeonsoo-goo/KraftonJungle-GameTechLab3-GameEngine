@@ -22,6 +22,9 @@ public:
 
 	virtual void Activate();
 	virtual void Deactivate();
+
+	void Serialize(json::JSON& j) const override;
+	void Deserialize(const json::JSON& j) override;
 	
 	void ExcuteTick(float DeltaTime);
 	void SetActive(bool bNewActive);

@@ -43,6 +43,8 @@ struct FTypeInfo {
 	}
 };
 
+namespace json { class JSON; }
+
 using std::make_shared;
 using std::shared_ptr;
 using std::weak_ptr;
@@ -75,6 +77,11 @@ public:
 			std::free(Ptr);
 ;		}
 	}
+
+	void SerializeHeader(json::JSON& j) const;
+	void DeserializeHeader(const json::JSON& j);
+	virtual void Serialize(json::JSON& j) const {}
+	virtual void Deserialize(const json::JSON& j) {}
 
 	// RTTI stuffs
 	virtual const FTypeInfo* GetTypeInfo() const { return &s_TypeInfo; }
@@ -117,25 +124,29 @@ public:
 	void DestroyObject(weak_ptr<UObject> Obj) {
 		if (auto ptr = Obj.lock()) {
 			ptr->bPendingKill = true;
-			bGCDirty = true;
+			if (NumPendingToKill++ > GC_Threshold) {
+				CollectGarbage();
+			}
 		}
 	}
 
 	void DestroyObject(UObject* Obj) {
 		if (Obj) {
 			Obj->bPendingKill = true;
-			bGCDirty = true;
+			if (NumPendingToKill++ > GC_Threshold) {
+				CollectGarbage();
+			}
 		}
 	}
 
-	void Tick(float DeltaTime) {
-		if (!bGCDirty) return;
+	//void Tick(float DeltaTime) {
+	//	if (!bGCDirty) return;
 
-		GCTimer += DeltaTime;
-		if (GCTimer >= GCInterval) {
-			CollectGarbage();
-		}
-	}
+	//	GCTimer += DeltaTime;
+	//	if (GCTimer >= GCInterval) {
+	//		CollectGarbage();
+	//	}
+	//}
 
 	void CollectGarbage() {
 		GUObjectArray.erase(
@@ -145,14 +156,12 @@ public:
 				}),
 			GUObjectArray.end()
 		);
-		GCTimer = 0.0f;
-		bGCDirty = false;
+		NumPendingToKill = 0;
 	}
 
 	void ForceFlush() {
 		GUObjectArray.clear();  // shutdown only
-		bGCDirty = false;
-		GCTimer = 0.0f;
+		NumPendingToKill = 0;
 	}
 
 	//UObject* FindByUUID(uint32 UUID)
@@ -176,7 +185,6 @@ private:
 	UObjectManager() = default;
 	~UObjectManager() { CollectGarbage(); }
 
-	float GCInterval = 15.0f;
-	float GCTimer = 0.0f;
-	bool bGCDirty = false;
+	uint32 NumPendingToKill = 0;
+	const uint32 GC_Threshold = 512;
 };

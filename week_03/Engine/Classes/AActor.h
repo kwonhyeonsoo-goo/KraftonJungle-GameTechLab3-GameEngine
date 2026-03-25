@@ -78,6 +78,9 @@ public:
 	bool IsVisible()              const { return bVisible; }
 	void SetVisible(bool Visible)       { bVisible = Visible; }
 
+	void Serialize(json::JSON& j) const override;
+	void Deserialize(const json::JSON& j) override;
+
 protected:
 	USceneComponent* RootComponent = nullptr;
 	uint32 OwningSceneUUID = -1;

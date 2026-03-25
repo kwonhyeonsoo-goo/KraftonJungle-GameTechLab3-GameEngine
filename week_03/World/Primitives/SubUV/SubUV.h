@@ -37,6 +37,8 @@ public:
     DECLARE_CLASS(USubUVComponent, UPrimitiveComponent)
     void UpdateFrame(float deltaTime);
     float currentU, currentV;
+    void Serialize(json::JSON& j) const override;
+    void Deserialize(const json::JSON& j) override;
 
 private:
     bool RaycastMesh(const FRay& Ray, FHitResult& OutHitResult) override;
