@@ -71,7 +71,7 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* primitiveCompon
 		+ primitiveComponent->GetBoundingBox().WorldAABBMinLocation * 0.5f;
 	FontCmd.TextConstants.TextPosition.Z = TopZ + 1.0f;
 
-	FontCmd.TextConstants.TextScale = { 1.0f, 1.0f, 0.7f };
+	FontCmd.TextConstants.TextScale = { 1.0f, 0.8f, 0.7f };
 	FontCmd.TextConstants.TextColor = FVector4(1, 1, 1, 1);
 	RenderBus.AddTextCommand(FontCmd);
 
