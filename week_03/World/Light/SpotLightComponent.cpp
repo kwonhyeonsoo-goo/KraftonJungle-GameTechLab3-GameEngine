@@ -1,4 +1,5 @@
 #include "SpotLightComponent.h"
+#include "SimpleJSON/json.hpp"
 
 DEFINE_CLASS(USpotlightComponent, ULightComponent)
 REGISTER_FACTORY(USpotlightComponent)
@@ -78,4 +79,23 @@ void USpotlightComponent::TickComponent(float DeltaTIme) {
 		UpdateLight();
 		bIsLightDirty = false;
 	}
+}
+
+void USpotlightComponent::Serialize(json::JSON& j) const {
+	ULightComponent::Serialize(j);
+	j["ConeHeight"]      = ConeHeight;
+	j["Radius"]          = Radius;
+	j["Yaw"]             = Yaw;
+	j["Pitch"]           = Pitch;
+	j["NumCircleVertex"] = NumCircleVertex;
+}
+
+void USpotlightComponent::Deserialize(const json::JSON& j) {
+	ULightComponent::Deserialize(j);
+	auto& jj = const_cast<json::JSON&>(j);
+	SetConeHeight(jj["ConeHeight"].ToFloat());
+	SetConeRadius(jj["Radius"].ToFloat());
+	SetYaw(jj["Yaw"].ToFloat());
+	SetPitch(jj["Pitch"].ToFloat());
+	SetNumVertex(jj["NumCircleVertex"].ToInt());
 }

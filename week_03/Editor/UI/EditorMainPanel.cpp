@@ -158,13 +158,25 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 		if (Scene) {
 			Viewport->GetGizmoManager().SetVisibility(false);
 			ViewOutput.Object = nullptr;
-			//EditorEngine->GetWorld()->GetSceneManager().RemoveActiveScene();
 			SceneManager.AddScene(Scene);
 			SceneManager.SetActiveScene(Scene);
 			Viewport->ResetViewport();
 			EditorEngine->ResetViewportScene();
 			Sleep(50);	// Safeguard
 			SceneLoadNotificationTimer = common::constants::imgui::NotificationTimer;
+		}
+	}
+
+	if (ImGui::Button("Delete Current Scene")) {
+		if (SceneManager.GetScenes().size() > 1) {
+			auto Scenes = SceneManager.GetScenes();
+				Viewport->GetGizmoManager().SetVisibility(false);
+				ViewOutput.Object = nullptr;
+				uint32 RemovedIndex = SceneManager.RemoveActiveScene();
+				UScene* NewActiveScene = Scenes[RemovedIndex - 1];
+				SceneManager.SetActiveScene(NewActiveScene);
+				Viewport->ResetViewport();
+				EditorEngine->ResetViewportScene();
 		}
 	}
 
@@ -331,25 +343,13 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 	if (ImGui::CollapsingHeader("Scene Actors")) {
 		for (int i = 0; i < PrimitiveActors.size(); i++) {
 			AActor* Actor = PrimitiveActors[i];
-			FString Label = "Actor_" + std::to_string(Actor->UUID);
+			FString Label = Actor->Name.GetFString();
 
-			//bool bSelected = (SelectedActorIndex == Actor->UUID);
-			//if (ImGui::Selectable(Label.c_str(), bSelected)) {
-			//	SelectedActorIndex = Actor->UUID;
-			//	auto* TargetComponent = Actor->GetRootComponent();
-
-			//	// Move gizmo to target component
-			//	Viewport->GetGizmoManager().SetTarget(Actor->GetRootComponent());
-
-			//	// Let the viewoutput know about selected object
-			//	ViewOutput.Object = TargetComponent;
-			//	ViewOutput.ObjectPicked = TargetComponent->GetTypeInfo()->name;
-			//}
 			ImGui::Indent();
 			if (ImGui::CollapsingHeader(Label.c_str())) {
 				for (auto* Comps : Actor->GetComponents()) {
 					bool bSelected = (SelectedComponentIndex == Comps->UUID);
-					FString CompLabel = Comps->GetTypeInfo()->name + std::to_string(Comps->UUID);
+					FString CompLabel = Comps->Name.GetFString();
 					if (ImGui::Selectable(CompLabel.c_str(), bSelected)) {
 						SelectedComponentIndex = Comps->UUID;
 						Viewport->GetGizmoManager().SetTarget(Comps);
@@ -397,7 +397,21 @@ void FEditorMainPanel::RenderPickedObjectWindow(UObject*& ObjectPicked) {
 	if (ObjectPicked) {
 		ImGui::Text("Class: %s", ObjectPicked->GetTypeInfo()->name);
 		ImGui::Text("Object Size: %d", sizeof(*ObjectPicked));
-		//ImGui::Text("Object Name: %s", ObjectPicked->Name.GetFString().c_str());
+
+		auto ObjectName = ObjectPicked->Name.GetFString();
+		auto ObjectUUID = ObjectPicked->UUID;
+		static std::unordered_map<uint32, std::array<char, 256>> FNameBuffers;
+		auto& Buffer = FNameBuffers[ObjectUUID];
+		// Seed buffer if empty
+		if (Buffer[0] == '\0')
+		{
+			strncpy_s(Buffer.data(), Buffer.size(), ObjectName.c_str(), _TRUNCATE);
+		}
+		FString Current = ObjectPicked->Name.GetFString();
+		FString InputLabel = "##NameInput" + std::to_string(ObjectUUID);
+		if (ImGui::InputText(InputLabel.c_str(), Buffer.data(), Buffer.size())) {
+			ObjectPicked->SetNewName(FString(Buffer.data()));
+		}
 	}
 	if (ObjectPicked->IsA<USceneComponent>()) {
 		ImGui::Text("Transform");
@@ -428,6 +442,20 @@ void FEditorMainPanel::RenderPickedObjectWindow(UObject*& ObjectPicked) {
 			Gizmo.SetTargetScale(FVector(ScaleArray[0], ScaleArray[1], ScaleArray[2]));
 		}
 
+		if (SceneComp->GetOwningActor()) { RenderPickedActorWindow(SceneComp->GetOwningActor()); }
+
+		// Sub UV
+		if (ObjectPicked->IsA< USubUVComponent>()) {
+			ImGui::SeparatorText("Sub UV");
+			RenderPicekdSubUVWindow(static_cast<USubUVComponent*>(ObjectPicked));
+		}
+
+		// Text 컴포넌트면 입력창 표시
+		if (ObjectPicked->IsA<UTextComponent>()) {
+			SEPARATOR();
+			DrawTextComponentUI(static_cast<UTextComponent*>(ObjectPicked));
+		}
+
 		SEPARATOR();
 
 		if (ImGui::Button("Remove Object") && ObjectPicked) {
@@ -443,16 +471,30 @@ void FEditorMainPanel::RenderPickedObjectWindow(UObject*& ObjectPicked) {
 			Viewport->GetGizmoManager().Deactivate();
 			ObjectPicked = nullptr;
 		}
-
-		if (SceneComp->GetOwningActor()) { RenderPickedActorWindow(SceneComp->GetOwningActor()); }
 	}
 
 	ImGui::End();
 }
 
 void FEditorMainPanel::RenderPickedActorWindow(AActor* Actor) {
+	ImGui::SeparatorText("Owning Actor");
+	auto ActorName = Actor->Name.GetFString();
+	auto ActorUUID = Actor->UUID;
+	static std::unordered_map<uint32, std::array<char, 256>> FNameBuffers;
+	auto& Buffer = FNameBuffers[ActorUUID];
+	// Seed buffer if empty
+	if (Buffer[0] == '\0')
+	{
+		strncpy_s(Buffer.data(), Buffer.size(), ActorName.c_str(), _TRUNCATE);
+	}
+	FString Current = Actor->Name.GetFString();
+	FString InputLabel = "##NameInput" + std::to_string(ActorUUID);
+	if (ImGui::InputText(InputLabel.c_str(), Buffer.data(), Buffer.size())) {
+		Actor->SetNewName(FString(Buffer.data()));
+	}
+
 	if (Actor->IsA<ASpotlight>()) {
-		SEPARATOR();
+		ImGui::SeparatorText("Spotlight");
 		ASpotlight* SpotlightActor = ASpotlight::Cast(Actor);
 		USpotlightComponent* Spotlight = SpotlightActor->GetSpotlightComp();
 		float SpotlightRot[2] = { Spotlight->GetYaw(), Spotlight->GetPitch()};
@@ -483,26 +525,24 @@ void FEditorMainPanel::RenderPickedActorWindow(AActor* Actor) {
 			Spotlight->SetColor(NewColor);
 		}
 	}
-
-	for (USceneComponent* comp : Actor->GetComponents()) {
-		if (comp->IsA< USubUVComponent>()) {
-			ImGui::SeparatorText("Sub UV");
-
-			RenderPicekdSubUVWindow(static_cast<USubUVComponent*>(comp));
-
-		}
-	}
 }
 
 void FEditorMainPanel::RenderPicekdSubUVWindow(USubUVComponent* SubUVComp)
 {
-	std::wstring wFileName = SubUVComp->GetFileName();
-	std::string textureFileName(wFileName.begin(), wFileName.end());
+	std::wstring wFileName = L"Texture File: " + SubUVComp->GetFileName();
 
-	ImGui::Text( ("Texture File: " + textureFileName).c_str());
+	//wchar_t Wide[256];
+	//MultiByteToWideChar(CP_UTF8, 0, Buffer.data(), -1, Wide, 256);
+	//std::wstring WideStr(Wide);
+
+
+	char strMultibyte[256] = { 0, };
+	WideCharToMultiByte(CP_UTF8, 0, wFileName.c_str(), -1, strMultibyte, wFileName.size()*sizeof(WCHAR), NULL, NULL);
+
+	ImGui::Text(strMultibyte);
 
 	if (ImGui::Button("Load New Texture")) {
-		FString newFilePath = FEngineServices::GetResourceManager()->LoadResourceFilePath();
+		std::wstring newFilePath = FEngineServices::GetResourceManager()->LoadResourceFilePath();
 
 		std::replace(newFilePath.begin(), newFilePath.end(), '/', '\\');
 		std::wstring FileDestinationW(newFilePath.begin(), newFilePath.end());
@@ -562,16 +602,40 @@ void FEditorMainPanel::DrawTextComponentUI(UTextComponent* TextComp)
 	std::wstring Current = TextComp->GetText();
 	WideCharToMultiByte(CP_UTF8, 0, Current.c_str(), -1, Buffer.data(), 256, nullptr, nullptr);
 
+	ImGui::Text("Text");
 	FString InputLabel = "##TextInput" + std::to_string(TextComp->UUID);
-	ImGui::Indent();
-	if (ImGui::InputText(InputLabel.c_str(), Buffer.data(), Buffer.size())) {
+	if (ImGui::InputTextMultiline(InputLabel.c_str(), Buffer.data(), Buffer.size(), ImVec2(-1, 50))) {
 		wchar_t Wide[256];
 		MultiByteToWideChar(CP_UTF8, 0, Buffer.data(), -1, Wide, 256);
 		std::wstring WideStr(Wide);
 		TextComp->SetText(WideStr);
 	}
 
-	// Color 조정
+	// 정렬
+	ImGui::Combo("H Align", &SelectedAlignment, TextAlignmentTypes, IM_ARRAYSIZE(TextAlignmentTypes));
+	ETextAlignment Alignment = ETextAlignment::Center;
+	switch (SelectedAlignment)
+	{
+	case 0:
+		// left
+		Alignment = ETextAlignment::Left;
+		TextComp->SetTextAlignment(Alignment);
+		break;
+	case 1:
+		// Center
+		Alignment = ETextAlignment::Center;
+		TextComp->SetTextAlignment(Alignment);
+		break;
+	case 2:
+		// Center
+		Alignment = ETextAlignment::Right;
+		TextComp->SetTextAlignment(Alignment);
+		break;
+	default:
+		break;
+	}
+
+	// Color
 	FVector4 Color = TextComp->GetColor();
 	float ColorArr[4] = { Color.X, Color.Y, Color.Z, Color.W };
 	FString ColorLabel = "Color##" + std::to_string(TextComp->UUID);
@@ -580,7 +644,22 @@ void FEditorMainPanel::DrawTextComponentUI(UTextComponent* TextComp)
 		TextComp->SetTextColor(NewColor);
 	}
 
-	ImGui::Unindent();
+	// Text Scale
+	FVector CurrScale = TextComp->GetTextScale();
+	float Width, Height;
+	Width = CurrScale.Y;
+	Height = CurrScale.Z;
+	if (ImGui::DragFloat("Width", &Width, 0.01f, 0.1f, 5.0f))
+	{
+		CurrScale.Y = Width;
+		TextComp->SetTextScale(CurrScale);
+	}
+
+	if (ImGui::DragFloat("Height", &Height, 0.01f, 0.1f, 5.0f))
+	{
+		CurrScale.Z = Height;
+		TextComp->SetTextScale(CurrScale);
+	}	
 }
 
 void FEditorMainPanel::Update()

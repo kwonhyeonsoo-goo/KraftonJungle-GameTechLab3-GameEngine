@@ -34,6 +34,9 @@ public:
         return Actor;
     }
 
+    void Serialize(json::JSON& j) const override;
+    void Deserialize(const json::JSON& j) override;
+
 private:
     FSceneManager SceneManager;     // Has no independent lifetime = value member
     UScene* CurrentScene = nullptr;

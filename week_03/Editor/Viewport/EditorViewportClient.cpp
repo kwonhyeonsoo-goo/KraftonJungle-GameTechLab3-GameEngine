@@ -270,6 +270,8 @@ void FEditorViewportClient::HandleDragStart(const FRay& Ray)
 		if (bestTarget == nullptr)
 		{
 			GizmoManager.Deactivate();
+			ViewOutput.ObjectPicked = "";
+			ViewOutput.Object = nullptr;
 		}
 		else
 		{

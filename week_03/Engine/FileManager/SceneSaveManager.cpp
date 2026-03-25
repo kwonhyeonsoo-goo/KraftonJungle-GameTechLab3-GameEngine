@@ -2,29 +2,28 @@
 #include "SimpleJSON/json.hpp"
 
 void FSceneSaveManager::SaveSceneAsJSON(UScene* Scene) {
-    using namespace json;
+    if (!Scene) return;
 
     std::string FileDestination = GetFileDialoguePath(FILE_SAVE);
+    if (FileDestination.empty()) return;
 
-    JSON Root;
-    // Metadata
+    json::JSON Root;
     Root["Scene"]["Version"] = 1;
-    Root["Scene"]["Name"] = "Scene" + Scene->UUID;
-    Root["Scene"]["UUID"] = Scene->UUID;
+    Root["Scene"]["Name"] = std::string("Scene_") + std::to_string(Scene->UUID);
 
-    JSON Objects = json::Array();
+    json::JSON Objects = json::Array();
+
+    // Scene object first (LoadSceneFromJSON uses it to identify the scene)
     Objects.append(SerializeObject(Scene));
+
     for (AActor* Actor : Scene->GetActors()) {
         if (!Actor || Actor->bPendingKill) continue;
 
-        // Serialize actor
         Objects.append(SerializeObject(Actor));
 
-        for (USceneComponent* Component : Actor->GetComponents()) {
-            if (!Component || Component->bPendingKill) continue;
-
-            // Serialize component
-            Objects.append(SerializeObject(Component));
+        for (USceneComponent* Comp : Actor->GetComponents()) {
+            if (!Comp || Comp->bPendingKill) continue;
+            Objects.append(SerializeObject(Comp));
         }
     }
 
@@ -39,127 +38,61 @@ void FSceneSaveManager::SaveSceneAsJSON(UScene* Scene) {
 }
 
 json::JSON FSceneSaveManager::SerializeObject(UObject* Object) {
-    using namespace json;
-    JSON j = json::Object();
-
+    json::JSON j = json::Object();
     if (!Object) return j;
-
-    // Base UObject fields
-    j["ClassName"] = Object->GetTypeInfo()->name;
-    j["UUID"] = Object->UUID;
-    j["InternalIndex"] = Object->InternalIndex;
-
-    if (Object->IsA<USceneComponent>()) {
-        USceneComponent* Comp = Object->Cast<USceneComponent>();
-        j["Location"] = SerializeVector(
-            Comp->RelativeLocation.X,
-            Comp->RelativeLocation.Y,
-            Comp->RelativeLocation.Z);
-        j["Rotation"] = SerializeVector(
-            Comp->RelativeRotation.X,
-            Comp->RelativeRotation.Y,
-            Comp->RelativeRotation.Z);
-        j["Scale"] = SerializeVector(
-            Comp->RelativeScale3D.X,
-            Comp->RelativeScale3D.Y,
-            Comp->RelativeScale3D.Z);
-
-        // Parent in the component hierarchy
-        j["ParentUUID"] = Comp->GetParent()
-            ? (int)Comp->GetParent()->UUID
-            : 0;
-    }
-
-    if (Object->IsA<AActor>()) {
-        AActor* Actor = Object->Cast<AActor>();
-        j["bVisible"] = Actor->IsVisible();
-        j["RootComponentUUID"] = Actor->GetRootComponent()
-            ? (int)Actor->GetRootComponent()->UUID
-            : 0;
-    }
-
-    if (Object->IsA<UScene>()) {
-        // Placeholder
-    }
-
+    Object->SerializeHeader(j);   // ClassName, UUID, InternalIndex
+    Object->Serialize(j);         // virtual — type-specific fields
     return j;
 }
 
-json::JSON FSceneSaveManager::SerializeVector(float X, float Y, float Z) {
-    json::JSON v = json::Object();
-    v["X"] = X;
-    v["Y"] = Y;
-    v["Z"] = Z;
-    return v;
-}
-
 UScene* FSceneSaveManager::LoadSceneFromJSON(UWorld* World) {
-    // Find file location using file explorer
     FString FilePath = GetFileDialoguePath(FILE_LOAD);
-    if (!FilePath.size()) { return nullptr; }
+    if (FilePath.empty()) return nullptr;
+
     std::ifstream File(FilePath);
     if (!File.is_open()) {
-        // Failed to open file at target destination
-        std::cerr << "Failed to open file at target destination" << std::endl;
+        std::cerr << "Failed to open file: " << FilePath << std::endl;
         return nullptr;
     }
 
-    using json::JSON;
-    
-    string FileContent((std::istreambuf_iterator<char>(File)),
-        std::istreambuf_iterator<char>());
+    json::JSON Root = json::JSON::Load(string(
+        std::istreambuf_iterator<char>(File),
+        std::istreambuf_iterator<char>()));
 
-    JSON root = JSON::Load(FileContent);
-    TMap<uint32, UObject*> uuidObjectMap;
+    TMap<uint32, UObject*> UUIDMap;
     UScene* Scene = nullptr;
     uint32 MaxUUID = 0;
 
-    // Retrieve UObject info
-    for (auto& JSONObject : root["Scene"]["Objects"].ArrayRange()) {
+    // Pass 1: create all objects and restore their data
+    for (auto& JSONObject : Root["Scene"]["Objects"].ArrayRange()) {
         string ClassName = JSONObject["ClassName"].ToString();
         auto WeakObj = FObjectFactory::Get().Create(ClassName);
-        if (WeakObj.expired()) { continue; }
+        if (WeakObj.expired()) continue;
+
         UObject* Obj = WeakObj.lock().get();
-        if (!Obj->IsA<UObject>()) {
-            // Either ClassName is not a valid UObject type, or factory has not been linked yet
-            continue;
-        }
 
-        // Give essenmtial information
-        Obj->InternalIndex = JSONObject["InternalIndex"].ToInt();
-        uint32 UUID = JSONObject["UUID"].ToInt(); MaxUUID = MaxUUID > UUID ? MaxUUID : UUID;
-        Obj->UUID = UUID;
+        uint32 UUID = static_cast<uint32>(JSONObject["UUID"].ToInt());
+        Obj->UUID          = UUID;
+        Obj->InternalIndex = static_cast<uint32>(JSONObject["InternalIndex"].ToInt());
+        Obj->Name = FName(JSONObject["FName"].ToString());
+        MaxUUID = (UUID > MaxUUID) ? UUID : MaxUUID;
 
-        // Register Object to UUID Map
-        uuidObjectMap[UUID] = Obj;
+        UUIDMap[UUID] = Obj;
+        Obj->Deserialize(JSONObject);
 
-        // Perform necessary transformations for USceneComponents
-        if (Obj->IsA<USceneComponent>()) {
-            // GIve Space vectors
-            DeserializeSpaceVectors(Obj->Cast<USceneComponent>(), JSONObject);
-
-            // Handle camera objects
-            if (Obj->IsA<UCamera>()) { DecodeCamera(Obj->Cast<UCamera>(), JSONObject); }
-        }
-        else if (Obj->IsA<UScene>()) {
+        if (Obj->IsA<UScene>())
             Scene = Obj->Cast<UScene>();
-        }
-    }
-    
-    // Give a fresh UUID to the scene regardless of the conflict
-    if (Scene) {
-        Scene->UUID = ++MaxUUID;
-        // Reset UUID counting logic
-        EngineStatics::ResetUUIDGeneration(MaxUUID + 1);
-    }
-    else {
-        // No scene found => corrupted savefile
-        return nullptr;
     }
 
-    // Resolve parent-owning relationship
-    LinkReferences(uuidObjectMap, root["Scene"]["Objects"], Scene);
-    
+    if (!Scene) return nullptr;  // corrupted save
+
+    // Assign a fresh UUID to avoid conflicts with existing objects
+    Scene->UUID = ++MaxUUID;
+    EngineStatics::ResetUUIDGeneration(MaxUUID + 1);
+
+    // Pass 2: resolve UUID references (parents, root components, scene membership)
+    LinkReferences(UUIDMap, Root["Scene"]["Objects"], Scene);
+
     return Scene;
 }
 
@@ -208,29 +141,11 @@ UScene* FSceneSaveManager::LinkReferences(const TMap<uint32, UObject*>& uuidMap,
                 }
             }
 
-            Actor->SetVisible(JSONObject["bVisible"].ToBool());
             Scene->AddActor(Actor);
         }
     }
 
     return Scene;
-}
-
-void FSceneSaveManager::DeserializeSpaceVectors(USceneComponent* SceneComp, json::JSON& Savedata) {
-    auto& Pos = Savedata["Location"];
-    auto& Rot = Savedata["Rotation"];
-    auto& Scale = Savedata["Scale"];
-    SceneComp->SetRelativeLocation(FVector(Pos["X"].ToFloat(), Pos["Y"].ToFloat(), Pos["Z"].ToFloat()));
-    SceneComp->SetRelativeRotation(FVector(Rot["X"].ToFloat(), Rot["Y"].ToFloat(), Rot["Z"].ToFloat()));
-    SceneComp->SetRelativeScale(FVector(Scale["X"].ToFloat(), Scale["Y"].ToFloat(), Scale["Z"].ToFloat()));
-}
-
-void FSceneSaveManager::DecodeCamera(UCamera* Camera, json::JSON& Savedata) {
-    // TODO
-}
-
-void FSceneSaveManager::DecodePrimitiveComponents(UPrimitiveComponent* Prim, json::JSON& Savedata) {
-    // Placeholder. No features to add yet
 }
 
 
@@ -253,7 +168,7 @@ FString FSceneSaveManager::GetFileDialoguePath(EDialogueMode Mode) {
         ofn.nMaxFile = MAX_PATH;
         ofn.lpstrDefExt = "Scene";
         ofn.lpstrTitle = "Save Scene";
-        ofn.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
+        ofn.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
 
         if (!GetSaveFileNameA(&ofn)) {
             return "";
@@ -274,7 +189,7 @@ FString FSceneSaveManager::GetFileDialoguePath(EDialogueMode Mode) {
         ofn.nMaxFile = MAX_PATH;
         ofn.lpstrDefExt = "Scene";
         ofn.lpstrTitle = "Load Scene";
-        ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+        ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
 
         if (!GetOpenFileNameA(&ofn)) {
             break;

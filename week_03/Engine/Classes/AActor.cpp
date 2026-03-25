@@ -1,5 +1,6 @@
 #include "Classes/AActor.h"
 #include "Scene/Scene.h"
+#include "SimpleJSON/json.hpp"
 
 DEFINE_CLASS(AActor, UObject)
 REGISTER_FACTORY(AActor)
@@ -117,4 +118,14 @@ void AActor::RegisterComponentRecursive(USceneComponent* Comp) {
 	for (USceneComponent* Child : Comp->GetChildren()) {
 		RegisterComponentRecursive(Child);
 	}
+}
+
+void AActor::Serialize(json::JSON& j) const {
+	j["bVisible"] = bVisible;
+	j["RootComponentUUID"] = RootComponent ? (int)RootComponent->UUID : 0;
+}
+
+void AActor::Deserialize(const json::JSON& j) {
+	bVisible = const_cast<json::JSON&>(j)["bVisible"].ToBool();
+	// RootComponentUUID resolved by LinkReferences
 }

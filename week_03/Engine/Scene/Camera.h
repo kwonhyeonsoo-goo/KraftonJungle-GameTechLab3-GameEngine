@@ -47,6 +47,9 @@ public:
 	
 
 	FRay DeprojectScreenToWorld(float MouseX, float MouseY, float ScreenWidth, float ScreenHeight);
+
+	void Serialize(json::JSON& j) const override;
+	void Deserialize(const json::JSON& j) override;
 private:
 	float NearZ = 0.01f;
 	float FarZ = 1000.0f;

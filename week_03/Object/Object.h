@@ -43,7 +43,11 @@ struct FTypeInfo {
 	}
 };
 
+namespace json { class JSON; }
+
+using std::make_unique;
 using std::make_shared;
+using std::unique_ptr;
 using std::shared_ptr;
 using std::weak_ptr;
 class UObject : public std::enable_shared_from_this<UObject>
@@ -52,6 +56,7 @@ public:
 	uint32 UUID;
 	uint32 InternalIndex;
 	uint32 AllocationSize;
+	FName Name;
 	bool bPendingKill;
 
 	UObject();
@@ -75,6 +80,13 @@ public:
 			std::free(Ptr);
 ;		}
 	}
+
+	void SetNewName(FString NewName) { Name = FName(NewName); };
+	void SetNewName(const char* NewName) { Name = FName(NewName); };
+	void SerializeHeader(json::JSON& j) const;
+	void DeserializeHeader(const json::JSON& j);
+	virtual void Serialize(json::JSON& j) const {}
+	virtual void Deserialize(const json::JSON& j) {}
 
 	// RTTI stuffs
 	virtual const FTypeInfo* GetTypeInfo() const { return &s_TypeInfo; }
@@ -106,6 +118,7 @@ public:
 	template<typename T>
 	weak_ptr<T> CreateObject() {
 		auto Obj = make_shared<T>();
+		Obj->Name = FName(FString(Obj->GetTypeInfo()->name) + "_" + std::to_string(Obj->UUID));
 		Obj->InternalIndex = static_cast<uint32>(GUObjectArray.size());
 		Obj->AllocationSize = static_cast<uint32>(sizeof(T));
 		EngineStatics::OnAllocated(static_cast<uint32>(sizeof(T)));
@@ -117,23 +130,18 @@ public:
 	void DestroyObject(weak_ptr<UObject> Obj) {
 		if (auto ptr = Obj.lock()) {
 			ptr->bPendingKill = true;
-			bGCDirty = true;
+			if (NumPendingToKill++ > GC_Threshold) {
+				//CollectGarbage();
+			}
 		}
 	}
 
 	void DestroyObject(UObject* Obj) {
 		if (Obj) {
 			Obj->bPendingKill = true;
-			bGCDirty = true;
-		}
-	}
-
-	void Tick(float DeltaTime) {
-		if (!bGCDirty) return;
-
-		GCTimer += DeltaTime;
-		if (GCTimer >= GCInterval) {
-			CollectGarbage();
+			if (NumPendingToKill++ > GC_Threshold) {
+				//CollectGarbage();
+			}
 		}
 	}
 
@@ -145,14 +153,12 @@ public:
 				}),
 			GUObjectArray.end()
 		);
-		GCTimer = 0.0f;
-		bGCDirty = false;
+		NumPendingToKill = 0;
 	}
 
 	void ForceFlush() {
 		GUObjectArray.clear();  // shutdown only
-		bGCDirty = false;
-		GCTimer = 0.0f;
+		NumPendingToKill = 0;
 	}
 
 	//UObject* FindByUUID(uint32 UUID)
@@ -169,14 +175,11 @@ public:
 	//	return GUObjectArray[Index];   // may be null if destroyed
 	//}
 
-	//// Used to kill the current rendering scene (i.e for loading a new savefile)
-	//void PurgeScene();
 
 private:
 	UObjectManager() = default;
 	~UObjectManager() { CollectGarbage(); }
 
-	float GCInterval = 15.0f;
-	float GCTimer = 0.0f;
-	bool bGCDirty = false;
+	uint32 NumPendingToKill = 0;
+	const uint32 GC_Threshold = 512;
 };

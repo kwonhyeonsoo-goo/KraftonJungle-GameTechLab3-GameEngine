@@ -47,22 +47,8 @@ public:
 
 	//	각 Primitive Component는 자신이 어떤 Primitive Type인지 Renderer에게 알려줄 수 있어야 합니다. (Dynamic Binding)
 	virtual EPrimitiveType GetPrimitiveType() const = 0;
+
+	void Serialize(json::JSON& j) const override;
+	void Deserialize(const json::JSON& j) override;
 };
 
-#if TEST
-
-//class UStandfordBunnyComponent : public UPrimitiveComponent
-//{
-//private:
-//
-//public:
-//	DECLARE_CLASS(UStandfordBunnyComponent, UPrimitiveComponent)
-//	UStandfordBunnyComponent();
-//	bool Raycast(const FRay& Ray, float& OutDistance) override;
-//	bool GetRenderCommand(const FMatrix& viewMatrix, const FMatrix& projMatrix, FRenderCommand& OutCommand) override;
-//	static constexpr EPrimitiveType PrimitiveType = EPrimitiveType::EPT_StandfordBunny;
-//
-//	EPrimitiveType GetPrimitiveType() const override { return PrimitiveType; }
-//};
-
-#endif

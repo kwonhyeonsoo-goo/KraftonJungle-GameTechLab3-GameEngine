@@ -129,7 +129,7 @@ void FEngineLoop::TickFrame()
 		return;
 	}
 
-	UObjectManager::Get().Tick(DeltaTime);
+	//UObjectManager::Get().Tick(DeltaTime);
 	Editor.BeginFrame(DeltaTime);
 	Editor.Update(DeltaTime);
 
@@ -170,7 +170,9 @@ int FEngineLoop::Run()
 void FEngineLoop::Shutdown()
 {
 	Editor.Release();
-	UObjectManager::Get().CollectGarbage();
+	GUObjectArray.clear();
+	//UObjectManager::Get().CollectGarbage();
+
 	//std::cout << "Checking Memory Leaks...\n";
 	//int Nullcount = 0;
 	//for (int i = 0; i < GUObjectArray.size(); i++) {

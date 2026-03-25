@@ -6,6 +6,7 @@ private:
 	const FUVMeshData* UVMeshData = nullptr;
 	int32 TextureID = -1;
 	float Size = 1.0f;
+	std::wstring TexturePath;
 public:
 	DECLARE_CLASS(UBillBoardComponent, UPrimitiveComponent)
 	UBillBoardComponent();
@@ -16,4 +17,7 @@ public:
 	bool RaycastMesh(const FRay& Ray, FHitResult& OutHitResult) override;
 
 	void LoadTexture(const std::wstring& InTexturePath);
+
+	void Serialize(json::JSON& j) const override;
+	void Deserialize(const json::JSON& j) override;
 };

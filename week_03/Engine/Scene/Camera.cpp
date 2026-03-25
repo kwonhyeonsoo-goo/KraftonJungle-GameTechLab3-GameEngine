@@ -1,4 +1,5 @@
 ﻿#include "Engine/Scene/Camera.h"
+#include "SimpleJSON/json.hpp"
 #include <cmath>
 
 DEFINE_CLASS(UCamera, USceneComponent)
@@ -190,4 +191,25 @@ FRay UCamera::DeprojectScreenToWorld(float MouseX, float MouseY, float ScreenWid
 	ray.Direction = (length > 1e-4f) ? dir / length : FVector(1, 0, 0);
 
 	return ray;
+}
+
+void UCamera::Serialize(json::JSON& j) const {
+	USceneComponent::Serialize(j);
+	j["FOV"]          = CameraState.FOV;
+	j["NearZ"]        = CameraState.NearZ;
+	j["FarZ"]         = CameraState.FarZ;
+	j["OrthoWidth"]   = CameraState.OrthoWidth;
+	j["bIsOrthogonal"] = CameraState.bIsOrthogonal;
+}
+
+void UCamera::Deserialize(const json::JSON& j) {
+	USceneComponent::Deserialize(j);
+	auto& jj = const_cast<json::JSON&>(j);
+	FCameraState State = CameraState;
+	State.FOV          = jj["FOV"].ToFloat();
+	State.NearZ        = jj["NearZ"].ToFloat();
+	State.FarZ         = jj["FarZ"].ToFloat();
+	State.OrthoWidth   = jj["OrthoWidth"].ToFloat();
+	State.bIsOrthogonal = jj["bIsOrthogonal"].ToBool();
+	SetCameraState(State);
 }

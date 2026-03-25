@@ -1,5 +1,6 @@
 ﻿#include "Object.h"
 #include "EngineStatics.h"
+#include "SimpleJSON/json.hpp"
 
 TArray<shared_ptr<UObject>> GUObjectArray;
 
@@ -7,7 +8,6 @@ UObject::UObject()
 {
 	UUID = EngineStatics::GenUUID();
 	bPendingKill = false;
-	//Name = FName("");	 // Set by UObjectManager::CreateObject
 	InternalIndex = 0;   // Set by UObjectManager::CreateObject
 	AllocationSize = 0;  // Set by UObjectManager::CreateObject
 }
@@ -29,6 +29,17 @@ UObject::~UObject()
 	//GUObjectArray.pop_back();
 
 	//EngineStatics::OnDeallocated(sizeof(UObject));
+}
+
+void UObject::SerializeHeader(json::JSON& j) const {
+	j["ClassName"] = GetTypeInfo()->name;
+	j["FName"] = Name.GetFString();
+	j["UUID"] = UUID;
+	j["InternalIndex"] = InternalIndex;
+}
+
+void UObject::DeserializeHeader(const json::JSON& j) {
+
 }
 
 const FTypeInfo UObject::s_TypeInfo = { "UObject", nullptr, sizeof(UObject) };

@@ -88,6 +88,15 @@ FVector FVector::operator*(float Scalar) const {
 	return ret;
 }
 
+FVector FVector::operator*(const FVector& Other) const
+{
+	FVector ret;
+	ret.X = X * Other.X;
+	ret.Y = Y * Other.Y;
+	ret.Z = Z * Other.Z;
+	return ret;
+}
+
 FVector FVector::operator/(float Scalar) const {
 	FVector ret;
 	ret.X = X / Scalar;

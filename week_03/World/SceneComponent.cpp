@@ -1,4 +1,5 @@
 ﻿#include "SceneComponent.h"
+#include "SimpleJSON/json.hpp"
 
 
 DEFINE_CLASS(USceneComponent, UActorComponent)
@@ -266,4 +267,29 @@ void USceneComponent::Rotate(float dx, float dy) {
 FMatrix USceneComponent::GetRelativeMatrixTemp() const
 {
 	return FTransform(RelativeLocation, RelativeRotation, RelativeScale3D).ToMatrix();
+}
+
+void USceneComponent::Serialize(json::JSON& j) const {
+	j["Location"] = SerializeVector(RelativeLocation.X, RelativeLocation.Y, RelativeLocation.Z);
+	j["Rotation"] = SerializeVector(RelativeRotation.X, RelativeRotation.Y, RelativeRotation.Z);
+	j["Scale"]    = SerializeVector(RelativeScale3D.X,  RelativeScale3D.Y,  RelativeScale3D.Z);
+	j["ParentUUID"] = ParentComponent ? (int)ParentComponent->UUID : 0;
+}
+
+void USceneComponent::Deserialize(const json::JSON& j) {
+	auto& Pos = const_cast<json::JSON&>(j)["Location"];
+	auto& Rot = const_cast<json::JSON&>(j)["Rotation"];
+	auto& Scl = const_cast<json::JSON&>(j)["Scale"];
+	SetRelativeLocation({ (float)Pos["X"].ToFloat(), (float)Pos["Y"].ToFloat(), (float)Pos["Z"].ToFloat() });
+	SetRelativeRotation({ (float)Rot["X"].ToFloat(), (float)Rot["Y"].ToFloat(), (float)Rot["Z"].ToFloat() });
+	SetRelativeScale(   { (float)Scl["X"].ToFloat(), (float)Scl["Y"].ToFloat(), (float)Scl["Z"].ToFloat() });
+	// ParentUUID resolved by LinkReferences after all objects are created
+}
+
+json::JSON USceneComponent::SerializeVector(float X, float Y, float Z) const {
+	json::JSON v = json::Object();
+	v["X"] = X;
+	v["Y"] = Y;
+	v["Z"] = Z;
+	return v;
 }

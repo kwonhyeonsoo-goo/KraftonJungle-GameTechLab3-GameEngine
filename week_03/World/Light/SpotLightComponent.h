@@ -48,4 +48,7 @@ public:
 	// Rendering
 	void Render() override { /* To be Implemented */ }
 	void RenderLines(FBatchedLine* BatchLine) override;
+
+	void Serialize(json::JSON& j) const override;
+	void Deserialize(const json::JSON& j) override;
 };

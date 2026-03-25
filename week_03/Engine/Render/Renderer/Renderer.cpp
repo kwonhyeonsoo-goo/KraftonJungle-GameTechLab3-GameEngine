@@ -83,6 +83,7 @@ void FRenderer::Release()
 	Resources.FontShader.Release();
 	Resources.SubUVShader.Release();
 
+	Resources.BatchedLineBuffer.Release();
 	Resources.PerObjectConstantBuffer.Release();
 	Resources.GizmoPerObjectConstantBuffer.Release();
 	Resources.OverlayConstantBuffer.Release();
@@ -184,7 +185,7 @@ void FRenderer::RenderOverlay(const FRenderBus& InRenderBus)
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	Device.SetDepthStencilState(EDepthStencilState::None);
-	Device.SetBlendState(EBlendState::Opaque);
+	Device.SetBlendState(EBlendState::AlphaBlend);
 	Resources.OverlayShader.Bind(context);
 
 	RenderOverlayPass(context, InRenderBus);
@@ -288,22 +289,46 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 		// String 정보
 		std::wstring Text = Cmd.TextConstants.Text;
 
+		// 줄별 길이 미리 계산
+		TArray<int> LineLengths;
+
 		// 줄바꿈이 있을 때 가장 긴 줄을 기준으로 삼음
-		int MaxLineLen = 0, CurLen = 0, LineCount = 1;
+		int MaxLineLen = 0, CurLen = 0;
 		for (TCHAR c : Text)
 		{
-			if (c == TEXT('\n')) { MaxLineLen = (MaxLineLen > CurLen) ? MaxLineLen : CurLen; CurLen = 0; LineCount++; }
+			if (c == TEXT('\n')) 
+			{
+				LineLengths.push_back(CurLen); 
+				MaxLineLen = (MaxLineLen > CurLen) ? MaxLineLen : CurLen; 
+				CurLen = 0; 
+			}
 			else CurLen++;
 		}
+		LineLengths.push_back(CurLen);
 		MaxLineLen = (MaxLineLen > CurLen) ? MaxLineLen : CurLen;
 
 		FVector FontScale = Cmd.TextConstants.TextScale;
-		const float CellW = FontScale.Y / MaxLineLen;
+		const float CellW = FontScale.Y;
 		const float CellH = FontScale.Z;
-
 		float TotalWidth = CellW * MaxLineLen;
-		float PenX = TotalWidth * 0.5f - CellW * 0.5f;  // 중앙 정렬
-		float PenY = 0;
+		float TotalHeight = CellH * LineLengths.size();
+
+		// 정렬
+		ETextAlignment Alignment = Cmd.TextConstants.Alignment;
+		auto GetLineStartPenX = [&](int LineLen) -> float {
+			float LineWidth = CellW * LineLen;
+			if (Alignment == ETextAlignment::Left)
+				return 0.0f;
+			else if (Alignment == ETextAlignment::Right)
+				return -(TotalWidth - LineWidth);  // 오른쪽 끝 기준, 왼쪽으로 진행
+			else  // Center
+				return -(TotalWidth - LineWidth) * 0.5f;
+			};
+		int LineIndex = 0;
+		float StartPenX = TotalWidth * 0.5f - CellW * 0.5f; // 처음 그리기 시작할 위치
+		float StartPenY = TotalHeight * 0.5f - CellH * 0.5f;
+		float PenX = StartPenX + GetLineStartPenX(LineLengths[0]);
+		float PenY = StartPenY;
 
 		FVector4 colorData = Cmd.TextConstants.TextColor;
 		// 각 String의 MVP
@@ -330,7 +355,8 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 
 		// Scale, Translation 행렬
 		FMatrix ScaleMatrix = FMatrix::MakeScaleMatrix(FontScale);
-		FMatrix TranslationMatrix = FMatrix::MakeTranslationMatrix(Cmd.TextConstants.TextPosition);
+		FVector TextPosition = Cmd.TextConstants.TextPosition;
+		FMatrix TranslationMatrix = FMatrix::MakeTranslationMatrix(TextPosition);
 
 		FMatrix Model =  RotationMatrix * TranslationMatrix;
 		FMatrix MVP = Model * View * InRenderBus.GetCachedProjection();
@@ -338,7 +364,13 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 		for (TCHAR c : Text)
 		{
 			if (c == TEXT(' ')) { PenX -= CellW; continue; }
-			if (c == TEXT('\n')) { PenX = TotalWidth * 0.5f - CellW * 0.5f; PenY -= CellH; continue; }
+			if (c == TEXT('\n')) 
+			{
+				LineIndex++;
+				PenX = StartPenX + GetLineStartPenX(LineLengths[LineIndex]);
+				PenY -= CellH; 
+				continue; 
+			}
 
 			uint32 base = (uint32)Instances.size();
 

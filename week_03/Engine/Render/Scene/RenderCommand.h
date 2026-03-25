@@ -32,6 +32,13 @@ enum class EOrientationType
 	Billboard,
 };
 
+enum class ETextAlignment
+{
+	Left,
+	Center,
+	Right
+};
+
 //	Object를 위한 Constant Buffer입니다.
 struct FTransformConstants
 {
@@ -91,6 +98,7 @@ struct FSubUVConstants
 struct FTextConstants
 {
 	EOrientationType OrientationType = EOrientationType::Fixed;
+	ETextAlignment Alignment = ETextAlignment::Center;
 	std::wstring Text = L"";
 	FVector TextPosition = {};
 	FVector TextRotation = {};

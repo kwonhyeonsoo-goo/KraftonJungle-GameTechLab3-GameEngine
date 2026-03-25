@@ -2,6 +2,7 @@
 #include "World/Mesh/MeshManager.h"
 #include "Engine/EngineServices/EngineServices.h"
 #include "Engine/Render/Resource/RenderResourceManager.h"
+#include "SimpleJSON/json.hpp"
 
 DEFINE_CLASS(UBillBoardComponent, UPrimitiveComponent)
 REGISTER_FACTORY(UBillBoardComponent)
@@ -12,6 +13,7 @@ UBillBoardComponent::UBillBoardComponent() {
 }
 
 void UBillBoardComponent::LoadTexture(const std::wstring& InTexturePath) { 
+	TexturePath = InTexturePath;
 	TextureID = FEngineServices::GetResourceManager()->CreateTexture(InTexturePath);
 }
 
@@ -95,6 +97,24 @@ bool UBillBoardComponent::RaycastMesh(const FRay& Ray, FHitResult& OutHitResult)
 	}
 
 	return false;
+}
+
+void UBillBoardComponent::Serialize(json::JSON& j) const {
+	UPrimitiveComponent::Serialize(j);
+	j["Size"] = Size;
+	j["TexturePath"] = std::string(TexturePath.begin(), TexturePath.end());
+}
+
+void UBillBoardComponent::Deserialize(const json::JSON& j) {
+	UPrimitiveComponent::Deserialize(j);
+	auto& jj = const_cast<json::JSON&>(j);
+	Size = jj["Size"].ToFloat();
+	std::string path = jj["TexturePath"].ToString();
+	if (!path.empty())
+	{
+		auto wFilePath = std::wstring(path.begin(), path.end());
+		LoadTexture(wFilePath);
+	}
 }
 
 // Because, icons do not have a real volume

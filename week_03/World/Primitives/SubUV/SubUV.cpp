@@ -1,10 +1,11 @@
 #include "SubUV.h"
 #include "Engine/EngineServices/EngineServices.h"
-#include "Engine/Render/Resource/RenderResourceManager.h"
 #include "World/Mesh/MeshManager.h"
+#include "SimpleJSON/json.hpp"
 
 DEFINE_CLASS(USubUVComponent, UPrimitiveComponent)
 REGISTER_FACTORY(USubUVComponent, UPrimitiveComponent)
+
 
 void USubUVComponent::UpdateFrame(float deltaTime)
 {
@@ -25,6 +26,7 @@ void USubUVComponent::UpdateFrame(float deltaTime)
 	}
 	currentU = OffsetLeftX +(CurrentFrameIndex % CellColumns) * CellSizeX;
 	currentV = OffsetUpY +(CurrentFrameIndex / CellColumns) * CellSizeY;
+	FVector tmp = LocalExtents;
 
 }
 
@@ -38,10 +40,10 @@ USubUVComponent::USubUVComponent(std::wstring filename)
 	CellRows = CellColumns = 6;
 	FrameCount = CellRows * CellColumns;
 	CurrentFrameIndex = 0;
-	if (FEngineServices::GetResourceManager()->GetTextureSize() > 0) 
-		Texture2DId = FEngineServices::GetResourceManager()->GetDefaultTexture();
-	else
-		Texture2DId = FEngineServices::GetResourceManager()->CreateTexture(this->filename);
+
+	Texture2DId = FEngineServices::GetResourceManager()->CreateTexture(this->filename);
+	Texture2Dinfo = FEngineServices::GetResourceManager()->GetTextureInfo(Texture2DId);
+
 	Timer = 1.f / PlayRate;
 
 	CellSizeX = (1.f - OffsetLeftX - OffsetRightX) / CellColumns;
@@ -61,7 +63,6 @@ bool USubUVComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix&
 	if (Texture2DId == -1) {
 		return false;
 	}
-
 	FVector Scale = GetScaleVector();
 	FMatrix Translation = FMatrix::MakeTranslationMatrix(GetWorldLocation());
 
@@ -74,8 +75,12 @@ bool USubUVComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix&
 		0, 0, 1, 0,
 		0, 0, 0, 1
 	);
-	FMatrix model = FMatrix::MakeScaleMatrix(GetScaleVector()) * BillboardRotation
-					* FMatrix::MakeTranslationMatrix(GetWorldLocation());
+	
+	FVector localScale = GetRelativeScale();
+	localScale.Y *= (CellSizeX * Texture2Dinfo.TextureWidth) / (CellSizeY * Texture2Dinfo.TextureHeight);
+	FMatrix model = FMatrix::MakeScaleMatrix(localScale) * BillboardRotation
+		* FMatrix::MakeTranslationMatrix(GetWorldLocation());
+
 
 	OutCommand.Type = ERenderCommandType::SubUV;
 	if (bIsBillBoard) OutCommand.TransformConstants.Model = model;
@@ -103,6 +108,7 @@ void USubUVComponent::ReloadTextureResource(std::wstring filename)
 	if (newTexture2DId < 0) return;
 	Texture2DId = newTexture2DId;
 	this->filename = filename;
+	Texture2Dinfo = FEngineServices::GetResourceManager()->GetTextureInfo(Texture2DId);
 
 }
 
@@ -146,6 +152,36 @@ bool USubUVComponent::RaycastMesh(const FRay& Ray, FHitResult& OutHitResult)
 	return false;
 }
 
+void USubUVComponent::Serialize(json::JSON& j) const {
+	UPrimitiveComponent::Serialize(j);
+	j["filename"]    = std::string(filename.begin(), filename.end());
+	j["PlayRate"]    = PlayRate;
+	j["bLoop"]       = bLoop;
+	j["CellRows"]	 = CellRows;
+	j["CellColumns"] = CellColumns;
+}
+
+void USubUVComponent::Deserialize(const json::JSON& j) {
+	UPrimitiveComponent::Deserialize(j);
+	auto& jj = const_cast<json::JSON&>(j);
+
+	std::string path = jj["filename"].ToString();
+	if (!path.empty())
+		filename = std::wstring(path.begin(), path.end());
+	PlayRate	 = jj["PlayRate"].ToInt();
+	bLoop		 = jj["bLoop"].ToBool();
+	CellRows	 = jj["CellRows"].ToInt();
+	CellColumns	 = jj["CellColumns"].ToInt();
+
+	// Recalculate derived values
+	FrameCount = CellRows * CellColumns;
+	Timer      = 1.f / PlayRate;
+	CellSizeX  = (1.f - OffsetLeftX - OffsetRightX) / CellRows;
+	CellSizeY  = (1.f - OffsetUpY   - OffsetBottomY) / CellColumns;
+	if (!filename.empty())
+		ReloadTextureResource(filename);
+}
+
 void USubUVComponent::UpdateWorldAABB()
 {
 	FVector forward = GetForwardVector();
@@ -162,8 +198,6 @@ void USubUVComponent::UpdateWorldAABB()
 		abs(forward.Y) * halfX + abs(right.Y) * halfY + abs(up.Y) * halfZ,
 		abs(forward.Z) * halfX + abs(right.Z) * halfY + abs(up.Z) * halfZ
 	};
-
-	extent.Z += LocalExtents.Z * 0.5f;
 
 	FVector WorldCenter = GetWorldLocation();
 	BoundingBox.WorldAABBMinLocation = WorldCenter - extent;

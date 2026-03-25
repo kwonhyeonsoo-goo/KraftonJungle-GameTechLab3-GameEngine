@@ -53,6 +53,7 @@ float4 PS_Sprite(PS_INPUT input) : SV_TARGET
     float maxColor = max(max(color.r, color.b), color.g);
     if (maxColor < 0.1f)
         discard;
-    return float4(color.rgb, maxColor);
+    //color.rgb *= color.a;
+    return color;
 
 }

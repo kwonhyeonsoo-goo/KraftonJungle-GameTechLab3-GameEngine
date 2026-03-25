@@ -1,3 +1,4 @@
+#pragma once
 #pragma comment( lib, "dxguid.lib")
 #include "RenderResourceManager.h"
 #include <d3d11.h>
@@ -8,30 +9,42 @@
 #include <filesystem>
 #include <iostream>
 
+
+
+
+
 void FRenderResourceManager::Create(FD3DDevice* device)
 {
     this->device = device;
+    CreateTexture(L"Assets/Icons/light_icon.png");
 }
 
 void FRenderResourceManager::Release()
 {
-    OutputDebugString(L"[Shutdown] 텍스처 정리 시작\n");
     for (auto& [id, data] : TextureMap)
     {
         if (data.ShaderResourceView) { data.ShaderResourceView->Release(); data.ShaderResourceView = nullptr; }
         if (data.Texture) { data.Texture->Release(); data.Texture = nullptr; }
     }
     TextureMap.clear();
-    OutputDebugString(L"[Shutdown] 텍스처 dhks\n");
-
+    FilePathMap.clear();
     this->device = nullptr;
 }
 
 int FRenderResourceManager::CreateTexture(std::wstring filepath)
 {
+
+    //이미 텍스쳐 파일이 존재한다면
+    if (FilePathMap.find(filepath) != FilePathMap.end()) {
+        int TextureID = FilePathMap.at(filepath);
+        return TextureID;
+    }
+
     TextureData data = {};
 
     ID3D11Resource* RawTexture = nullptr;
+
+    device->GetDeviceContext()->Flush();
 
     HRESULT Hr = CreateWICTextureFromFile(
         device->GetDevice(),
@@ -52,14 +65,31 @@ int FRenderResourceManager::CreateTexture(std::wstring filepath)
 
     int NewId = static_cast<int>(TextureMap.size());
     TextureMap.emplace(NewId, data);
+    FilePathMap.emplace(filepath, NewId);
 
     return NewId;
 }
 
-FString FRenderResourceManager::LoadResourceFilePath()
+TextureInfo FRenderResourceManager::GetTextureInfo(int id)
 {
-    FString FilePath = GetFileDialoguePath();
-    if (FilePath.empty()) { return ""; }
+    TextureInfo info = {};
+    D3D11_TEXTURE2D_DESC desc;
+    TextureMap.at(id).Texture->GetDesc(&desc);
+
+    info.TextureWidth = (float)desc.Width;
+    info.TextureHeight = (float)desc.Height;
+    info.TexelWidth = 1.f / desc.Width;
+    info.TexelHeight = 1.f / desc.Height;
+    info.MipLevels = desc.MipLevels;
+    info.Format = desc.Format;
+
+    return info;
+}
+
+std::wstring FRenderResourceManager::LoadResourceFilePath()
+{
+    std::wstring FilePath = GetFileDialoguePath();
+    if (FilePath.empty()) { return L""; }
     std::ifstream File(FilePath);
     if (!File.is_open()) {
         // Failed to open file at target destination
@@ -70,23 +100,23 @@ FString FRenderResourceManager::LoadResourceFilePath()
     return FilePath;
 }
 
-FString FRenderResourceManager::GetFileDialoguePath()
+std::wstring FRenderResourceManager::GetFileDialoguePath()
 {
-    std::string FileDestination;
-    char szFile[MAX_PATH] = {};
+    std::wstring FileDestination;
+    WCHAR szFile[MAX_PATH] = L"";
 
-    OPENFILENAMEA ofn = {};
+    OPENFILENAMEW ofn = {};
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = nullptr;
-    ofn.lpstrFilter = "Image Files (*.png;*.jpg;*.jpeg;*.PNG;)\0*.png;*.jpg;*.jpeg;*.PNG\0All Files (*.*)\0*.*\0";
+    ofn.lpstrFilter = L"Image Files (*.png;*.jpg;*.jpeg;*.PNG;)\0*.png;*.jpg;*.jpeg;*.PNG\0All Files (*.*)\0*.*\0";
     ofn.lpstrFile = szFile;
     ofn.nMaxFile = MAX_PATH;
-    ofn.lpstrDefExt = "png";
-    ofn.lpstrTitle = "Load Image";
+    ofn.lpstrDefExt = L"png";
+    ofn.lpstrTitle = L"Load Image";
+    ofn.lpstrInitialDir = L".";
     ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-
-    if (!GetOpenFileNameA(&ofn)) {
-        return "";
+    if (!GetOpenFileName(&ofn)) {
+        return L"";
     }
 
     FileDestination = szFile;
@@ -94,18 +124,18 @@ FString FRenderResourceManager::GetFileDialoguePath()
     const size_t DotPos = FileDestination.rfind('.');
     if (DotPos == std::string::npos) {
         std::cerr << "Invalid file: no extension found" << std::endl;
-        return "";
+        return L"";
     }
 
-    const std::string Extension = FileDestination.substr(DotPos);
+    const std::wstring Extension = FileDestination.substr(DotPos);
 
-    const std::vector<std::string> ValidExtensions = { ".png", ".jpg", ".jpeg", ".PNG"};
+    const std::vector<std::wstring> ValidExtensions = { L".png", L".jpg", L".jpeg", L".PNG"};
     const bool bValidExtension = std::any_of(ValidExtensions.begin(), ValidExtensions.end(),
-        [&Extension](const std::string& Ext) { return Extension == Ext; });
+        [&Extension](const std::wstring& Ext) { return Extension == Ext; });
 
     if (!bValidExtension) {
-        std::cerr << "Invalid file type: got " << Extension << std::endl;
-        return "";
+        std::cerr << "Invalid file type: got " << Extension.c_str() << std::endl;
+        return L"";
     }
     
     return FileDestination;

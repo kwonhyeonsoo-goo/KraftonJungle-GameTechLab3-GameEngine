@@ -6,7 +6,6 @@ FName::FName(char* pStr)
 {
     ComparisonIndex = FNamePool::InsertComparisonMap(pStr);
     DisplayIndex = FNamePool::InsertDisplayMap(pStr);
-
 }
 
 FName::FName(FString str)

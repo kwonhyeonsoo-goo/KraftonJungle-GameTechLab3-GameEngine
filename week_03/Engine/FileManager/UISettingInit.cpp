@@ -1,6 +1,13 @@
 #include "UISettingInit.h"
+#include <Windows.h>
+#include <filesystem>
 
-FString FUISettingInitializer::ViewportSavePath = "editor.ini";
+FString FUISettingInitializer::ViewportSavePath = [] {
+	char ExePath[512];
+	GetModuleFileNameA(NULL, ExePath, 512);
+	std::filesystem::path Path(ExePath);
+	return Path.parent_path().string() + "\\editor.ini";
+	}();
 float FUISettingInitializer::ViewCamMoveSpeed = 10.f;
 float FUISettingInitializer::ViewCamRotSpeed = 0.15;
 uint32 FUISettingInitializer::GridSize = 5.f;

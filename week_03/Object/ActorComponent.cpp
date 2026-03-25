@@ -1,4 +1,5 @@
 ﻿#include "ActorComponent.h"
+#include "SimpleJSON/json.hpp"
 
 DEFINE_CLASS(UActorComponent, UObject)
 
@@ -47,4 +48,15 @@ void UActorComponent::SetActive(bool bNewActive)
 	{
 		Deactivate();
 	}
+}
+
+void UActorComponent::Serialize(json::JSON& j) const {
+	json::JSON CompJSON = json::Object();
+	CompJSON["UUID"] = UUID;
+	CompJSON["ClassName"] = GetTypeInfo()->name;
+	j["Scene"]["Components"]["ActorComponents"].append(CompJSON);
+}
+
+void UActorComponent::Deserialize(const json::JSON& j) {
+
 }

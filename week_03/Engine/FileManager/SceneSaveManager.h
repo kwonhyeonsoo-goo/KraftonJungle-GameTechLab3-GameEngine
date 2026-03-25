@@ -37,20 +37,8 @@ private:
 	// Creates a .json save file at the given destination
 	static json::JSON SerializeObject(UObject* Object);
 
-	static json::JSON SerializeVector(float X, float Y, float Z);
-
-	//-----------------------------------------------------------------------------------
-	// Desrialization
-	// ----------------------------------------------------------------------------------
-	// Resolves parent-child and owning references between components, actors, and world
+	// Resolves parent-child and owning references after all objects are created
 	static UScene* LinkReferences(const TMap<uint32, UObject*>& uuidMap, json::JSON Savedata, UScene* Scene);
-	
-	// Generate spatial vectors for USceneCompoents from a json save
-	static void DeserializeSpaceVectors(USceneComponent* SceneComp, json::JSON& Savedata);
-
-	static void DecodeCamera(UCamera* Camera, json::JSON& Savedata);
-
-	static void DecodePrimitiveComponents(UPrimitiveComponent* Prim, json::JSON& Savedata);
 
 	static string GetCurrentTimeStamp();
 };

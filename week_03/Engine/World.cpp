@@ -1,4 +1,5 @@
 ﻿#include "World.h"
+#include <SimpleJSON/json.hpp>
 
 DEFINE_CLASS(UWorld, UObject)
 REGISTER_FACTORY(UWorld)
@@ -27,3 +28,14 @@ void UWorld::EndPlay() {
 	if (auto Scene = SceneManager.GetActiveScene().lock()) Scene->EndPlay();
 }
 
+void UWorld::Serialize(json::JSON& j) const {
+	SerializeHeader(j);
+	json::JSON SceneArray = json::Array();
+	for (UScene* Scene : SceneManager.GetScenes()) {
+		Scene->Serialize(SceneArray);
+	}
+}
+
+void UWorld::Deserialize(const json::JSON& j) {
+
+}
