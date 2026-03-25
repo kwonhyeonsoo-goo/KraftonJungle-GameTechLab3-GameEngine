@@ -45,7 +45,9 @@ struct FTypeInfo {
 
 namespace json { class JSON; }
 
+using std::make_unique;
 using std::make_shared;
+using std::unique_ptr;
 using std::shared_ptr;
 using std::weak_ptr;
 class UObject : public std::enable_shared_from_this<UObject>
@@ -129,7 +131,7 @@ public:
 		if (auto ptr = Obj.lock()) {
 			ptr->bPendingKill = true;
 			if (NumPendingToKill++ > GC_Threshold) {
-				CollectGarbage();
+				//CollectGarbage();
 			}
 		}
 	}
@@ -138,7 +140,7 @@ public:
 		if (Obj) {
 			Obj->bPendingKill = true;
 			if (NumPendingToKill++ > GC_Threshold) {
-				CollectGarbage();
+				//CollectGarbage();
 			}
 		}
 	}
