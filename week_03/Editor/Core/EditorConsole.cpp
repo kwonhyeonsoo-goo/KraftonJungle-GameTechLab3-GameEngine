@@ -24,8 +24,7 @@ void FEditorConsole::Draw(const char* Title, bool* p_open)
     );
     ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x * 1.0f, ConsoleHeight), ImGuiCond_Always);
 
-    if (!ImGui::Begin(Title, p_open, ImGuiWindowFlags_NoMove |        
-        ImGuiWindowFlags_NoResize |      
+    if (!ImGui::Begin(Title, p_open, ImGuiWindowFlags_NoMove |           
         ImGuiWindowFlags_NoCollapse |
         ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoScrollbar

@@ -93,7 +93,6 @@ void FEditorMainPanel::RenderControlTab(float DeltaTime, FViewOutput& ViewOutput
 
 	ImGui::Begin("Jungle Control Panel", nullptr,
 		ImGuiWindowFlags_NoMove |        // 드래그 이동 금지
-		ImGuiWindowFlags_NoResize |      // 크기 조절 금지
 		ImGuiWindowFlags_NoCollapse      // 접기 금지 (선택)
 	);
 
@@ -358,7 +357,6 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 
 	ImGui::Begin("Scene Manager", nullptr,
 		ImGuiWindowFlags_NoMove |        // 드래그 이동 금지
-		ImGuiWindowFlags_NoResize |      // 크기 조절 금지
 		ImGuiWindowFlags_NoCollapse      // 접기 금지 (선택)
 	);
 
@@ -461,7 +459,6 @@ void FEditorMainPanel::RenderPickedObjectWindow(UObject*& ObjectPicked) {
 
 	ImGui::Begin("Picked Object", nullptr,
 		ImGuiWindowFlags_NoMove |        // 드래그 이동 금지
-		ImGuiWindowFlags_NoResize |      // 크기 조절 금지
 		ImGuiWindowFlags_NoCollapse      // 접기 금지 (선택));
 	);
 
