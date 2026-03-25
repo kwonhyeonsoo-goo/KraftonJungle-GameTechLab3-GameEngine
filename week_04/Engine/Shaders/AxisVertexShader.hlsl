@@ -5,9 +5,6 @@ cbuffer FrameData : register(b0)
 	float4x4 Projection;
 };
 
-// b1: 오브젝트당
-
-
 struct VS_OUTPUT
 {
 	float4 Pos : SV_POSITION; // 클립 공간 좌표
@@ -48,23 +45,17 @@ VS_OUTPUT main(uint id : SV_VertexID)
         float3(0.0001f, 0.0f, -1.0f),
         float3(-0.0001f, 0.0f, 1.0f),
         float3(0.0001f, 0.0f, 1.0f)
-        
 	};
 	int planeno[3] = { 0, 1, 2 };
     
-	float3 worldPosition;
 	float range = 1000.0f;
 	float3 lPos = positions[id];
 	output.PlaneNo = planeno[id / 6];
-	if (output.PlaneNo == 0)
-		// TODO: 카메라 위치에 따라 Grid 그리는 영역 조절
-		// worldPosition = float3(CameraPos.x + lPos.x * range, CameraPos.y + lPos.y * range, 0.0f);
-		worldPosition = float3(lPos.x * range, lPos.y * range, 0.0f);
-	else
-		worldPosition = float3(lPos.x * range, lPos.y * range, lPos.z * range);
+	output.LocalPos = lPos;
+
+	float3 worldPosition = lPos * range;
 	output.WorldPos = worldPosition;
 	output.Pos = mul(float4(worldPosition, 1.0f), mul(View, Projection));
-	output.LocalPos = lPos;
     
 	return output;
 }

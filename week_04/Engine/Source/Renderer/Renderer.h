@@ -9,12 +9,11 @@
 #include <functional>
 #include <memory>
 #include "ShaderManager.h"
+#include "Primitive/PrimitiveBase.h"
 #include "PrimitiveVertex.h"
-#include "AxisRenderer.h"
 
 class FPixelShader;
 class FMaterial;
-struct FMeshData;
 class UScene;
 
 using FGUICallback = std::function<void()>;
@@ -58,7 +57,6 @@ public:
 	// 수집된 커맨드 정렬 후 실행
 	void ExecuteCommands();
 	void ExecuteRenderPass(ERenderLayer RenderLayer);
-	void ExecuteAxisRenderPass();
 	// TODO: 텍스트 렌더도 일반적인 Render Pass에 통합하고 이 함수는 삭제
 	void ExecuteTextRenderPass();	
 
@@ -158,8 +156,9 @@ private:
 	// SubUV 렌더링
 	CSubUVRenderer SubUVRenderer;
 
-	// Axis 렌더링
-	CAxisRenderer AxisRenderer;
+	// Grid 렌더링 (구 Axis)
+	std::unique_ptr<FMeshData> GridMesh;
+	std::shared_ptr<FMaterial> GridMaterial;
 
 	// Folder, File Icon 테스트용
 	ID3D11ShaderResourceView* FolderIconSRV;

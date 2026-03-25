@@ -110,6 +110,9 @@ public:
 	std::shared_ptr<FRasterizerState> GetRasterizerState() const { return RasterizerState; }
 	std::shared_ptr<FDepthStencilState> GetDepthStencilState() const { return DepthStencilState; }
 
+	// FDynamicMaterial에서 파라미터 설정 시 사용
+	bool SetParameterData(const FString& ParamName, const void* Data, uint32 DataSize);
+
 	// 상수 버퍼 슬롯 추가 (b2, b3, ... 순서대로)
 	int32 CreateConstantBuffer(ID3D11Device* Device, uint32 InSize);
 
@@ -128,8 +131,6 @@ public:
 	void Release();
 
 protected:
-	// FDynamicMaterial에서 파라미터 설정 시 사용
-	bool SetParameterData(const FString& ParamName, const void* Data, uint32 DataSize);
 
 	// TODO: ShaderId가 실제 사용하는 쉐이더를 반영하도록 변경
 	// NOTE: GetSortId에서 비트 연산 쓰는 경우 ShaderId가 32bit를 전부 쓰면 안 됨
