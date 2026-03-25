@@ -71,10 +71,10 @@ bool CSubUVRenderer::Initialize(CRenderer* InRenderer, const std::wstring& Textu
 	SubUVMaterial->SetRasterizerOption(rasterizerOption);
 	SubUVMaterial->SetRasterizerState(RS);
 
-	// 깊이 설정 (스프라이트는 보통 깊이 테스트는 하되 쓰기는 하지 않음)
+	// 깊이 설정
 	FDepthStencilStateOption depthOption;
 	depthOption.DepthEnable = true;
-	depthOption.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	depthOption.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
 	auto DSS = InRenderer->GetRenderStateManager()->GetOrCreateDepthStencilState(depthOption);
 	SubUVMaterial->SetDepthStencilOption(depthOption);
 	SubUVMaterial->SetDepthStencilState(DSS);
