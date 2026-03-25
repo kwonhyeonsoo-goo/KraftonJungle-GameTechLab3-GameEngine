@@ -312,7 +312,9 @@ void CEditorViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene,
 	{
 		for (auto it = OutQueue.Commands.begin(); it != OutQueue.Commands.end(); it++)
 		{
-			it->Material = WireFrameMaterial.get();
+			// TODO: 아래의 if문 삭제하고 UUID 렌더러를 컴포넌트가 아닌 EditorViewportClient의 기능으로 재구현
+			if(it->RenderLayer != ERenderLayer::Overlay)
+				it->Material = WireFrameMaterial.get();
 		}
 	}
 

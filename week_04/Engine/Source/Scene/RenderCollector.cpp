@@ -43,6 +43,8 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 					FRenderCommand Command;
 					Command.MeshData = TextMesh;
 					Command.Material = FontMat;
+					// TODO: UUID 렌더링 기능 재구현되면 아래 1줄 삭제
+					Command.RenderLayer = ERenderLayer::Overlay;
 					
 					const FVector WorldPos = TextComp->GetRenderWorldPosition();
 					const FVector Scale = TextComp->GetRenderWorldScale();
