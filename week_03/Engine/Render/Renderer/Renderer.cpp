@@ -296,8 +296,8 @@ void FRenderer::DrawString(ID3D11DeviceContext* InDeviceContext, FRenderBus& InR
 		MaxLineLen = (MaxLineLen > CurLen) ? MaxLineLen : CurLen;
 
 		FVector FontScale = Cmd.TextConstants.TextScale;
-		const float CellW = FontScale.Y / MaxLineLen;
-		const float CellH = FontScale.Z / LineLengths.size();
+		const float CellW = FontScale.Y;
+		const float CellH = FontScale.Z;
 		float TotalWidth = CellW * MaxLineLen;
 		float TotalHeight = CellH * LineLengths.size();
 

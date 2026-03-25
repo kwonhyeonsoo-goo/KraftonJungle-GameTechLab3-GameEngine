@@ -602,7 +602,8 @@ void FEditorMainPanel::DrawTextComponentUI(UTextComponent* TextComp)
 	std::wstring Current = TextComp->GetText();
 	WideCharToMultiByte(CP_UTF8, 0, Current.c_str(), -1, Buffer.data(), 256, nullptr, nullptr);
 
-	FString InputLabel = "Text##TextInput" + std::to_string(TextComp->UUID);
+	ImGui::Text("Text");
+	FString InputLabel = "##TextInput" + std::to_string(TextComp->UUID);
 	if (ImGui::InputTextMultiline(InputLabel.c_str(), Buffer.data(), Buffer.size(), ImVec2(-1, 50))) {
 		wchar_t Wide[256];
 		MultiByteToWideChar(CP_UTF8, 0, Buffer.data(), -1, Wide, 256);
