@@ -150,20 +150,39 @@ void CSubUVRenderer::UpdateAnimationParams(
 	float FrameFloat = ElapsedTime * FPS;
 	int32 AnimationFrame = static_cast<int32>(FrameFloat);
 
-	FirstFrame = std::max<int32>(0, std::min<int32>(FirstFrame, TotalFrames - 1));
-	LastFrame = std::max<int32>(0, std::min<int32>(LastFrame, TotalFrames - 1));
-	if (FirstFrame > LastFrame) std::swap(FirstFrame, LastFrame);
+	int32 FirstRow = FirstFrame / Columns;
+	int32 LastRow = LastFrame / Columns;
 
-	const int32 PlayableFrameCount = LastFrame - FirstFrame + 1;
-	int32 FrameIndex = FirstFrame;
-	if (PlayableFrameCount > 0)
+	FirstRow = std::max<int32>(0, std::min<int32>(FirstRow, Rows - 1));
+	LastRow = std::max<int32>(0, std::min<int32>(LastRow, Rows - 1));
+
+	if (FirstRow > LastRow)
 	{
-		FrameIndex = bLoop ? (FirstFrame + (AnimationFrame % PlayableFrameCount)) 
-			               : (FirstFrame + std::min<int32>(AnimationFrame, PlayableFrameCount - 1));
+		std::swap(FirstRow, LastRow);
 	}
+
+	const int32 PlayableRowCount = LastRow - FirstRow + 1;
+
+	int32 RowIndex = FirstRow;
+
+	if (PlayableRowCount > 0)
+	{
+		if (bLoop)
+		{
+			RowIndex = FirstRow + (AnimationFrame % PlayableRowCount);
+		}
+		else
+		{
+			RowIndex = FirstRow + std::min<int32>(AnimationFrame, PlayableRowCount - 1);
+		}
+	}
+
+	const int32 TargetColumn = 0;
+	int32 FrameIndex = RowIndex * Columns + TargetColumn;
 
 	const int32 Col = FrameIndex % Columns;
 	const int32 Row = FrameIndex / Columns;
+
 	FVector2 CellSize(1.0f / static_cast<float>(Columns), 1.0f / static_cast<float>(Rows));
 	FVector2 UVOffset(static_cast<float>(Col) * CellSize.X, static_cast<float>(Row) * CellSize.Y);
 

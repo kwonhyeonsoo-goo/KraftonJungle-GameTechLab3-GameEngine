@@ -210,7 +210,7 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 
 	if (!TextRenderer.Initialize(this)) return false;
 
-	std::filesystem::path SubUVTexturePath = FPaths::ContentDir() / FString("Textures/SubUVPenguin.png");
+	std::filesystem::path SubUVTexturePath = FPaths::ContentDir() / FString("Textures/SubUVDino.png");
 	if (!SubUVRenderer.Initialize(this, FPaths::ToWide(SubUVTexturePath.string())))
 	{
 		MessageBox(0, L"SubUVRenderer Initialize Failed.", 0, 0);

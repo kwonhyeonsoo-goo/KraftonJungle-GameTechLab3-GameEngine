@@ -44,12 +44,12 @@ private:
 	FVector2 Size = FVector2(0.3f, 0.3f);
 	FVector4 Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
 
-	int32 Columns = 9;
+	int32 Columns = 3;
 	int32 Rows = 4;
-	int32 TotalFrames = 36;
+	int32 TotalFrames = 12;
 
 	int32 FirstFrame = 0;
-	int32 LastFrame = 35;
+	int32 LastFrame = 11;
 
 	float FPS = 8.0f;
 

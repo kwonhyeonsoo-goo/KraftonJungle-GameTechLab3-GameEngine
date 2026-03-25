@@ -15,8 +15,8 @@ void ASubUVActor::PostSpawnInitialize()
 	if (SubUVComponent)
 	{
 		SubUVComponent->SetSize(FVector2(1.0f, 1.0f));
-		SubUVComponent->SetFirstFrame(14);
-		SubUVComponent->SetLastFrame(17);
+		SubUVComponent->SetFirstFrame(0);
+		SubUVComponent->SetLastFrame(11);
 	}
 
 	AActor::PostSpawnInitialize();
