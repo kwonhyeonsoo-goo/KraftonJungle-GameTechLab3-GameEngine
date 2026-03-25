@@ -478,6 +478,8 @@ std::wstring CEditorUI::GetEditorIniPathW() const
 
 void CEditorUI::Render()
 {
+	static bool bOpenAboutPopup = false;
+
 	if (!bViewportClientActive)
 	{
 		return;
@@ -656,7 +658,90 @@ void CEditorUI::Render()
 			}
 			ImGui::EndMenu();
 		}
+		if (ImGui::BeginMenu("Help"))
+		{
+			if (ImGui::MenuItem("About"))
+			{
+				bOpenAboutPopup = true;
+			}
+			ImGui::EndMenu();
+		}
 		ImGui::EndMainMenuBar();
+	}
+
+	if (bOpenAboutPopup)
+	{
+		ImGui::OpenPopup("AboutPopup"); 
+		ImGui::SetNextWindowSize(ImVec2(420, 320), ImGuiCond_Always); // ← 원하는 크기로 조절
+		bOpenAboutPopup = false;
+	}
+
+	if (ImGui::BeginPopupModal("AboutPopup", nullptr, ImGuiWindowFlags_NoTitleBar))
+	{
+		// 헤더 배경
+		ImDrawList* DrawList = ImGui::GetWindowDrawList();
+		ImVec2 WinPos = ImGui::GetWindowPos();
+		ImVec2 WinSize = ImGui::GetWindowSize();
+		DrawList->AddRectFilled(WinPos, ImVec2(WinPos.x + WinSize.x, WinPos.y + 60), IM_COL32(30, 30, 60, 255));
+
+		ImGui::SetCursorPosY(12);
+		ImGui::SetCursorPosX((WinSize.x - ImGui::CalcTextSize("Simple Engine Editor").x) * 0.5f);
+		ImGui::TextColored(ImVec4(0.6f, 0.8f, 1.0f, 1.0f), "Simple Engine Editor");
+
+		ImGui::SetCursorPosY(35);
+		ImGui::SetCursorPosX((WinSize.x - ImGui::CalcTextSize("v1.0.0").x) * 0.5f);
+		ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "v1.0.0");
+
+		ImGui::SetCursorPosY(70);
+		ImGui::SetCursorPosX(20);
+
+		// Contributors
+		ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.3f, 1.0f), "Contributors");
+		ImGui::SameLine();
+		ImGui::SetCursorPosX(20);
+		ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.9f, 0.7f, 0.3f, 0.5f));
+		ImGui::Separator();
+		ImGui::PopStyleColor();
+
+		ImGui::Spacing();
+
+		const char* Contributors[] = { "김지수", "김태현", "박세영", "조상현" };
+		for (const char* Name : Contributors)
+		{
+			ImGui::SetCursorPosX(20);
+			ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.6f, 1.0f), "•");
+			ImGui::SameLine();
+			ImGui::Text("%s", Name);
+		}
+
+		ImGui::Spacing();
+		ImGui::SetCursorPosX(20);
+		ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(1, 1, 1, 0.1f));
+		ImGui::Separator();
+		ImGui::PopStyleColor();
+		ImGui::Spacing();
+
+		ImGui::SetCursorPosX(20);
+		ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "Copyright (c) 2026  |  MIT License");
+
+		ImGui::Spacing();
+		ImGui::Spacing();
+
+		float ButtonWidth = 100.0f;
+		ImGui::SetCursorPosX((WinSize.x - ButtonWidth) * 0.5f);
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.4f, 0.8f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.5f, 1.0f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.3f, 0.7f, 1.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
+		if (ImGui::Button("Close", ImVec2(ButtonWidth, 28)))
+		{
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::PopStyleVar();
+		ImGui::PopStyleColor(3);
+
+		ImGui::Spacing();
+		ImGui::EndPopup();
 	}
 
 	ControlPanel.Render(Core);
