@@ -20,12 +20,13 @@ public:
 	int CreateTexture(std::wstring filepath);
 	int GetTextureSize() { return TextureMap.size(); }
 	int GetDefaultTexture() { return TextureMap.begin()->first; }
-	static FString LoadResourceFilePath();
+	static std::wstring LoadResourceFilePath();
 private:
 	TMap<int, TextureData> TextureMap; //id, 텍스쳐 맵
+	TMap<std::wstring, int> FilePathMap; //file path, texture id
 	uint8 nextID = 0;
 	FD3DDevice* device;
 
-	static FString GetFileDialoguePath();
+	static std::wstring GetFileDialoguePath();
 };
 

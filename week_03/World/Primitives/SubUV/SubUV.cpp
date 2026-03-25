@@ -39,10 +39,8 @@ USubUVComponent::USubUVComponent(std::wstring filename)
 	CellRows = CellColumns = 6;
 	FrameCount = CellRows * CellColumns;
 	CurrentFrameIndex = 0;
-	if (FEngineServices::GetResourceManager()->GetTextureSize() > 0) 
-		Texture2DId = FEngineServices::GetResourceManager()->GetDefaultTexture();
-	else
-		Texture2DId = FEngineServices::GetResourceManager()->CreateTexture(this->filename);
+
+	Texture2DId = FEngineServices::GetResourceManager()->CreateTexture(this->filename);
 	Timer = 1.f / PlayRate;
 
 	CellSizeX = (1.f - OffsetLeftX - OffsetRightX) / CellColumns;
