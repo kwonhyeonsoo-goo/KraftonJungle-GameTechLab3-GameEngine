@@ -8,6 +8,7 @@
 #include "Renderer/PrimitiveVertex.h"
 #include "Component/SubUVComponent.h"
 #include "Component/TextComponent.h"
+#include "Component/UUIDBillboardComponent.h"
 #include "Actor/SkySphereActor.h" 
 #include <limits>
 
@@ -130,7 +131,10 @@ AActor* CPicker::PickActor(UScene* Scene, int32 ScreenX, int32 ScreenY,
 			{
 				continue;
 			}
-
+			if (Component->IsA(UUUIDBillboardComponent::StaticClass()))
+			{
+				continue;
+			}
 			UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
 			if (!PrimitiveComponent)
 			{
