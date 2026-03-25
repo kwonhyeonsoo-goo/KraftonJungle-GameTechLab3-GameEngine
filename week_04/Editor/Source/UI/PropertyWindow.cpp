@@ -22,6 +22,7 @@ void CPropertyWindow::DrawTransformSection()
 
 	const float ResetBtnWidth = 14.0f;
 	const float Spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+	const float DragUIWidth = 200.f;
 
 	// Location
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.1f, 0.1f, 1.0f));
@@ -36,7 +37,8 @@ void CPropertyWindow::DrawTransformSection()
 	ImGui::PopStyleColor(3);
 
 	ImGui::SameLine(0, Spacing);
-	ImGui::PushItemWidth(-(ResetBtnWidth));
+	// ImGui::PushItemWidth(-(ResetBtnWidth));
+	ImGui::PushItemWidth(DragUIWidth);
 	if (ImGui::DragFloat3("Location", Loc, 0.1f, 0.0f, 0.0f, "%.2f"))
 	{
 		EditLocation = { Loc[0], Loc[1], Loc[2] };
@@ -57,7 +59,8 @@ void CPropertyWindow::DrawTransformSection()
 	ImGui::PopStyleColor(3);
 
 	ImGui::SameLine(0, Spacing);
-	ImGui::PushItemWidth(-(ResetBtnWidth));
+	// ImGui::PushItemWidth(-(ResetBtnWidth));
+	ImGui::PushItemWidth(DragUIWidth);
 	if (ImGui::DragFloat3("Rotation", Rot, 0.5f, -360.0f, 360.0f, "%.1f"))
 	{
 		EditRotation = { Rot[0], Rot[1], Rot[2] };
@@ -78,7 +81,8 @@ void CPropertyWindow::DrawTransformSection()
 	ImGui::PopStyleColor(3);
 
 	ImGui::SameLine(0, Spacing);
-	ImGui::PushItemWidth(-(ResetBtnWidth));
+	// ImGui::PushItemWidth(-(ResetBtnWidth));
+	ImGui::PushItemWidth(DragUIWidth);
 	if (ImGui::DragFloat3("Scale", Scl, 0.01f, 0.001f, 100.0f, "%.3f"))
 	{
 		EditScale = { Scl[0], Scl[1], Scl[2] };

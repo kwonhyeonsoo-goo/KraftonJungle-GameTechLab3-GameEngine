@@ -206,11 +206,10 @@ void CEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
 			}			
 			else
 			{
-				MessageBoxA(
-
+				MessageBoxW(
 					nullptr,
-					"Scene 정보가 잘못되었습니다.",
-					"Error",
+					L"Scene 정보가 잘못되었습니다.",
+					L"Error",
 					MB_OK | MB_ICONWARNING
 				);
 			}
