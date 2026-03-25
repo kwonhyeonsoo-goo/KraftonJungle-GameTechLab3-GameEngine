@@ -5,13 +5,14 @@
 class UPrimitiveComponent;
 class URandomColorComponent;
 class UObjComponent;
+struct ID3D11Device;
 
 class ENGINE_API AObjActor : public AActor
 {
 public:
 	DECLARE_RTTI(AObjActor, AActor)
 
-	void LoadObj(const FString& FilePath);
+	void LoadObj(ID3D11Device* Device, const FString& FilePath);
 	void PostSpawnInitialize() override;
 
 	UPrimitiveComponent* GetPrimitiveComponent() const { return PrimitiveComponent; }

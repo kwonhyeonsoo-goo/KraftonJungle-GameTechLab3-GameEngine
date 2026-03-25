@@ -154,7 +154,7 @@ bool FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 				{
 					AObjActor* ObjActor = static_cast<AObjActor*>(Actor);
 					if (ObjActor)
-						ObjActor->LoadObj(PrimitiveFileName);
+						ObjActor->LoadObj(Device, PrimitiveFileName);
 				}
 			}
 		}

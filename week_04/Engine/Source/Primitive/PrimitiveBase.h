@@ -34,6 +34,7 @@ struct ENGINE_API FMeshData
 	// CPU 데이터
 	TArray<FPrimitiveVertex> Vertices;
 	TArray<uint32> Indices;
+	TArray<FVector2> UVs;
 
 	// GPU 버퍼
 	ID3D11Buffer* VertexBuffer = nullptr;
