@@ -19,6 +19,7 @@
 #include "Object/ObjectGlobals.h"
 #include "Component/UUIDBillboardComponent.h"
 #include "Component/SubUVComponent.h"
+
 CCore::~CCore()
 {
 	Release();
@@ -30,8 +31,8 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupS
 	WindowWidth = Width;
 	WindowHeight = Height;
 
-	Renderer = std::make_unique<CRenderer>();
-	if (!Renderer->Initialize(Hwnd, Width, Height))
+	Renderer = std::make_unique<CRenderer>(Hwnd, Width, Height);
+	if (!Renderer)
 	{
 		return false;
 	}
@@ -124,7 +125,7 @@ void CCore::Release()
 
 	if (Renderer)
 	{
-		Renderer->Release();
+		// 렌더러 Release는 소멸자에서 자동 호출
 		Renderer.reset();
 	}
 }

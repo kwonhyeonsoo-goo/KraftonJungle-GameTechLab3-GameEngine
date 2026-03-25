@@ -27,11 +27,11 @@ using FPostRenderCallback = std::function<void(CRenderer*)>;
 class ENGINE_API CRenderer
 {
 public:
-	CRenderer() = default;
+	CRenderer(HWND InHwnd, int32 InWidth, int32 InHeight);
 	~CRenderer();
 
 	/** 시스템 초기화 및 D3D11 장치 생성 */
-	bool Initialize(HWND Hwnd, int32 Width, int32 Height);
+	bool Initialize(HWND InHwnd, int32 InWidth, int32 InHeight);
 	
 	/** 프레임 시작 처리 (렌더 타겟 클리어 등) */
 	void BeginFrame();

@@ -21,6 +21,11 @@ static FVector GetCameraWorldPositionFromViewMatrix(const FMatrix& ViewMatrix)
 	return FVector(InvView.M[3][0], InvView.M[3][1], InvView.M[3][2]);
 }
 
+CRenderer::CRenderer(HWND InHwnd, int32 InWidth, int32 InHeight)
+{
+	Initialize(InHwnd, InWidth, InHeight);
+}
+
 CRenderer::~CRenderer()
 {
 	Release();
