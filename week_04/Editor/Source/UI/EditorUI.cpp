@@ -685,8 +685,8 @@ void CEditorUI::Render()
 		DrawList->AddRectFilled(WinPos, ImVec2(WinPos.x + WinSize.x, WinPos.y + 60), IM_COL32(30, 30, 60, 255));
 
 		ImGui::SetCursorPosY(12);
-		ImGui::SetCursorPosX((WinSize.x - ImGui::CalcTextSize("Simple Engine Editor").x) * 0.5f);
-		ImGui::TextColored(ImVec4(0.6f, 0.8f, 1.0f, 1.0f), "Simple Engine Editor");
+		ImGui::SetCursorPosX((WinSize.x - ImGui::CalcTextSize("Dino Engine").x) * 0.5f);
+		ImGui::TextColored(ImVec4(0.6f, 0.8f, 1.0f, 1.0f), "Dino Engine");
 
 		ImGui::SetCursorPosY(35);
 		ImGui::SetCursorPosX((WinSize.x - ImGui::CalcTextSize("v1.0.0").x) * 0.5f);
