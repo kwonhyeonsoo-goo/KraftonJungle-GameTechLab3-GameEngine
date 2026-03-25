@@ -426,7 +426,25 @@ void CEditorUI::LoadEditorSettings()
 		VPC->SetGridSize(GridSize);
 		VPC->SetLineThickness(Thickness);
 		VPC->SetGridVisible(bShowGrid);
+		FShowFlags& ShowFlags = VPC->GetShowFlags();
+
+		GetPrivateProfileStringW(L"ShowFlags", L"Primitives", L"1", Buf, 64, Path.c_str());
+		ShowFlags.SetFlag(EEngineShowFlags::SF_Primitives, _wtoi(Buf) != 0);
+
+		GetPrivateProfileStringW(L"ShowFlags", L"UUID", L"1", Buf, 64, Path.c_str());
+		ShowFlags.SetFlag(EEngineShowFlags::SF_UUID, _wtoi(Buf) != 0);
+
+		GetPrivateProfileStringW(L"ShowFlags", L"DebugDraw", L"0", Buf, 64, Path.c_str());
+		ShowFlags.SetFlag(EEngineShowFlags::SF_DebugDraw, _wtoi(Buf) != 0);
+
+		GetPrivateProfileStringW(L"ShowFlags", L"WorldAxis", L"0", Buf, 64, Path.c_str());
+		ShowFlags.SetFlag(EEngineShowFlags::SF_WorldAxis, _wtoi(Buf) != 0);
+
+		GetPrivateProfileStringW(L"ShowFlags", L"Collision", L"0", Buf, 64, Path.c_str());
+		ShowFlags.SetFlag(EEngineShowFlags::SF_Collision, _wtoi(Buf) != 0);
+
 	}
+
 }
 
 void CEditorUI::SaveEditorSettings()
@@ -443,6 +461,13 @@ void CEditorUI::SaveEditorSettings()
 	WritePrivateProfileStringW(L"Grid", L"LineThickness", Buf, Path.c_str());
 
 	WritePrivateProfileStringW(L"Grid", L"ShowGrid", VPC->IsGridVisible() ? L"1" : L"0", Path.c_str());
+	FShowFlags& ShowFlags = VPC->GetShowFlags();
+	WritePrivateProfileStringW(L"ShowFlags", L"Primitives", ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives) ? L"1" : L"0", Path.c_str());
+	WritePrivateProfileStringW(L"ShowFlags", L"UUID", ShowFlags.HasFlag(EEngineShowFlags::SF_UUID) ? L"1" : L"0", Path.c_str());
+	WritePrivateProfileStringW(L"ShowFlags", L"DebugDraw", ShowFlags.HasFlag(EEngineShowFlags::SF_DebugDraw) ? L"1" : L"0", Path.c_str());
+	WritePrivateProfileStringW(L"ShowFlags", L"WorldAxis", ShowFlags.HasFlag(EEngineShowFlags::SF_WorldAxis) ? L"1" : L"0", Path.c_str());
+	WritePrivateProfileStringW(L"ShowFlags", L"Collision", ShowFlags.HasFlag(EEngineShowFlags::SF_Collision) ? L"1" : L"0", Path.c_str());
+
 }
 
 std::wstring CEditorUI::GetEditorIniPathW() const
@@ -591,28 +616,21 @@ void CEditorUI::Render()
 				// ===== Show Flags 섹션 =====
 				ImGui::SeparatorText("Show Flags");
 				// 각 플래그마다 Checkbox 하나씩
-				bool bPrimitives = ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives);
-				if (ImGui::Checkbox("Primitives", &bPrimitives))
+				auto ShowFlagCheckbox = [&](const char* Label, EEngineShowFlags Flag)
 				{
-					ShowFlags.SetFlag(EEngineShowFlags::SF_Primitives, bPrimitives);
-				}
-				bool bUUID = ShowFlags.HasFlag(EEngineShowFlags::SF_UUID);
-				if (ImGui::Checkbox("UUID", &bUUID))
-				{
-					ShowFlags.SetFlag(EEngineShowFlags::SF_UUID, bUUID);
-				}
+					bool bValue = ShowFlags.HasFlag(Flag);
+					if (ImGui::Checkbox(Label, &bValue))
+					{
+						ShowFlags.SetFlag(Flag, bValue);
+						SaveEditorSettings();
+					}
+				};
 
-				bool bDebugDraw = ShowFlags.HasFlag(EEngineShowFlags::SF_DebugDraw);
-				if (ImGui::Checkbox("Debug Draw", &bDebugDraw))
-					ShowFlags.SetFlag(EEngineShowFlags::SF_DebugDraw, bDebugDraw);
-
-				bool bWorldAxis = ShowFlags.HasFlag(EEngineShowFlags::SF_WorldAxis);
-				if (ImGui::Checkbox("World Axis", &bWorldAxis))
-					ShowFlags.SetFlag(EEngineShowFlags::SF_WorldAxis, bWorldAxis);
-
-				bool bCollision = ShowFlags.HasFlag(EEngineShowFlags::SF_Collision);
-				if (ImGui::Checkbox("Collision", &bCollision))
-					ShowFlags.SetFlag(EEngineShowFlags::SF_Collision, bCollision);
+				ShowFlagCheckbox("Primitives", EEngineShowFlags::SF_Primitives);
+				ShowFlagCheckbox("UUID", EEngineShowFlags::SF_UUID);
+				ShowFlagCheckbox("Debug Draw", EEngineShowFlags::SF_DebugDraw);
+				ShowFlagCheckbox("World Axis", EEngineShowFlags::SF_WorldAxis);
+				ShowFlagCheckbox("Collision", EEngineShowFlags::SF_Collision);
 
 				// ─── Grid ───
 				ImGui::SeparatorText("Grid");
