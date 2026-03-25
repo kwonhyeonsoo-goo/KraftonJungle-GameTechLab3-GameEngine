@@ -1,4 +1,5 @@
 #include "PrimitiveObj.h"
+#include "Core/Paths.h"
 #include <fstream>
 #include <sstream>
 
@@ -24,7 +25,7 @@ void CPrimitiveObj::LoadObj(const FString& FilePath)
 		return;
 	}
 
-	std::ifstream File(FilePath);
+	std::ifstream File(FPaths::ToAbsolutePath(FilePath));
 	if (!File.is_open())
 	{
 		printf("[OBJ] Failed to open: %s\n", FilePath.c_str());
