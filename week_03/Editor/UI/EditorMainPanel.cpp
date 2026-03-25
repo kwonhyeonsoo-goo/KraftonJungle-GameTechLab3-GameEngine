@@ -1,4 +1,4 @@
-﻿#include "Editor/UI/EditorMainPanel.h"
+#include "Editor/UI/EditorMainPanel.h"
 //#include "Editor/Viewport/EditorViewportClient.h"
 #include "Editor/EditorEngine.h"
 
@@ -158,13 +158,25 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 		if (Scene) {
 			Viewport->GetGizmoManager().SetVisibility(false);
 			ViewOutput.Object = nullptr;
-			//EditorEngine->GetWorld()->GetSceneManager().RemoveActiveScene();
 			SceneManager.AddScene(Scene);
 			SceneManager.SetActiveScene(Scene);
 			Viewport->ResetViewport();
 			EditorEngine->ResetViewportScene();
 			Sleep(50);	// Safeguard
 			SceneLoadNotificationTimer = common::constants::imgui::NotificationTimer;
+		}
+	}
+
+	if (ImGui::Button("Delete Current Scene")) {
+		if (SceneManager.GetScenes().size() > 1) {
+			auto Scenes = SceneManager.GetScenes();
+				Viewport->GetGizmoManager().SetVisibility(false);
+				ViewOutput.Object = nullptr;
+				uint32 RemovedIndex = SceneManager.RemoveActiveScene();
+				UScene* NewActiveScene = Scenes[RemovedIndex - 1];
+				SceneManager.SetActiveScene(NewActiveScene);
+				Viewport->ResetViewport();
+				EditorEngine->ResetViewportScene();
 		}
 	}
 
@@ -331,25 +343,13 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 	if (ImGui::CollapsingHeader("Scene Actors")) {
 		for (int i = 0; i < PrimitiveActors.size(); i++) {
 			AActor* Actor = PrimitiveActors[i];
-			FString Label = "Actor_" + std::to_string(Actor->UUID);
+			FString Label = Actor->Name.GetFString();
 
-			//bool bSelected = (SelectedActorIndex == Actor->UUID);
-			//if (ImGui::Selectable(Label.c_str(), bSelected)) {
-			//	SelectedActorIndex = Actor->UUID;
-			//	auto* TargetComponent = Actor->GetRootComponent();
-
-			//	// Move gizmo to target component
-			//	Viewport->GetGizmoManager().SetTarget(Actor->GetRootComponent());
-
-			//	// Let the viewoutput know about selected object
-			//	ViewOutput.Object = TargetComponent;
-			//	ViewOutput.ObjectPicked = TargetComponent->GetTypeInfo()->name;
-			//}
 			ImGui::Indent();
 			if (ImGui::CollapsingHeader(Label.c_str())) {
 				for (auto* Comps : Actor->GetComponents()) {
 					bool bSelected = (SelectedComponentIndex == Comps->UUID);
-					FString CompLabel = Comps->GetTypeInfo()->name + std::to_string(Comps->UUID);
+					FString CompLabel = Comps->Name.GetFString();
 					if (ImGui::Selectable(CompLabel.c_str(), bSelected)) {
 						SelectedComponentIndex = Comps->UUID;
 						Viewport->GetGizmoManager().SetTarget(Comps);
@@ -397,7 +397,21 @@ void FEditorMainPanel::RenderPickedObjectWindow(UObject*& ObjectPicked) {
 	if (ObjectPicked) {
 		ImGui::Text("Class: %s", ObjectPicked->GetTypeInfo()->name);
 		ImGui::Text("Object Size: %d", sizeof(*ObjectPicked));
-		//ImGui::Text("Object Name: %s", ObjectPicked->Name.GetFString().c_str());
+
+		auto ObjectName = ObjectPicked->Name.GetFString();
+		auto ObjectUUID = ObjectPicked->UUID;
+		static std::unordered_map<uint32, std::array<char, 256>> FNameBuffers;
+		auto& Buffer = FNameBuffers[ObjectUUID];
+		// Seed buffer if empty
+		if (Buffer[0] == '\0')
+		{
+			strncpy_s(Buffer.data(), Buffer.size(), ObjectName.c_str(), _TRUNCATE);
+		}
+		FString Current = ObjectPicked->Name.GetFString();
+		FString InputLabel = "##NameInput" + std::to_string(ObjectUUID);
+		if (ImGui::InputText(InputLabel.c_str(), Buffer.data(), Buffer.size())) {
+			ObjectPicked->SetNewName(FString(Buffer.data()));
+		}
 	}
 	if (ObjectPicked->IsA<USceneComponent>()) {
 		ImGui::Text("Transform");
@@ -451,8 +465,24 @@ void FEditorMainPanel::RenderPickedObjectWindow(UObject*& ObjectPicked) {
 }
 
 void FEditorMainPanel::RenderPickedActorWindow(AActor* Actor) {
+	ImGui::SeparatorText("Owning Actor");
+	auto ActorName = Actor->Name.GetFString();
+	auto ActorUUID = Actor->UUID;
+	static std::unordered_map<uint32, std::array<char, 256>> FNameBuffers;
+	auto& Buffer = FNameBuffers[ActorUUID];
+	// Seed buffer if empty
+	if (Buffer[0] == '\0')
+	{
+		strncpy_s(Buffer.data(), Buffer.size(), ActorName.c_str(), _TRUNCATE);
+	}
+	FString Current = Actor->Name.GetFString();
+	FString InputLabel = "##NameInput" + std::to_string(ActorUUID);
+	if (ImGui::InputText(InputLabel.c_str(), Buffer.data(), Buffer.size())) {
+		Actor->SetNewName(FString(Buffer.data()));
+	}
+
 	if (Actor->IsA<ASpotlight>()) {
-		SEPARATOR();
+		ImGui::SeparatorText("Spotlight");
 		ASpotlight* SpotlightActor = ASpotlight::Cast(Actor);
 		USpotlightComponent* Spotlight = SpotlightActor->GetSpotlightComp();
 		float SpotlightRot[2] = { Spotlight->GetYaw(), Spotlight->GetPitch()};

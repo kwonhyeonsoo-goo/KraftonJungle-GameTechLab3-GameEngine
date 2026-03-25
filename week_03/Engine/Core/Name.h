@@ -3,6 +3,7 @@
 
 struct FName
 {
+    FName() = default;
     FName(char* pStr);
     FName(FString str);
 

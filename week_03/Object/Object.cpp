@@ -8,7 +8,6 @@ UObject::UObject()
 {
 	UUID = EngineStatics::GenUUID();
 	bPendingKill = false;
-	//Name = FName("");	 // Set by UObjectManager::CreateObject
 	InternalIndex = 0;   // Set by UObjectManager::CreateObject
 	AllocationSize = 0;  // Set by UObjectManager::CreateObject
 }
@@ -34,6 +33,7 @@ UObject::~UObject()
 
 void UObject::SerializeHeader(json::JSON& j) const {
 	j["ClassName"] = GetTypeInfo()->name;
+	j["FName"] = Name.GetFString();
 	j["UUID"] = UUID;
 	j["InternalIndex"] = InternalIndex;
 }

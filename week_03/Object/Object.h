@@ -54,6 +54,7 @@ public:
 	uint32 UUID;
 	uint32 InternalIndex;
 	uint32 AllocationSize;
+	FName Name;
 	bool bPendingKill;
 
 	UObject();
@@ -78,6 +79,8 @@ public:
 ;		}
 	}
 
+	void SetNewName(FString NewName) { Name = FName(NewName); };
+	void SetNewName(const char* NewName) { Name = FName(NewName); };
 	void SerializeHeader(json::JSON& j) const;
 	void DeserializeHeader(const json::JSON& j);
 	virtual void Serialize(json::JSON& j) const {}
@@ -113,6 +116,7 @@ public:
 	template<typename T>
 	weak_ptr<T> CreateObject() {
 		auto Obj = make_shared<T>();
+		Obj->Name = FName(FString(Obj->GetTypeInfo()->name) + "_" + std::to_string(Obj->UUID));
 		Obj->InternalIndex = static_cast<uint32>(GUObjectArray.size());
 		Obj->AllocationSize = static_cast<uint32>(sizeof(T));
 		EngineStatics::OnAllocated(static_cast<uint32>(sizeof(T)));
@@ -138,15 +142,6 @@ public:
 			}
 		}
 	}
-
-	//void Tick(float DeltaTime) {
-	//	if (!bGCDirty) return;
-
-	//	GCTimer += DeltaTime;
-	//	if (GCTimer >= GCInterval) {
-	//		CollectGarbage();
-	//	}
-	//}
 
 	void CollectGarbage() {
 		GUObjectArray.erase(
@@ -178,8 +173,6 @@ public:
 	//	return GUObjectArray[Index];   // may be null if destroyed
 	//}
 
-	//// Used to kill the current rendering scene (i.e for loading a new savefile)
-	//void PurgeScene();
 
 private:
 	UObjectManager() = default;

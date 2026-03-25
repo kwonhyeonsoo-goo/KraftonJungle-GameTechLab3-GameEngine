@@ -26,7 +26,7 @@ void UScene::Tick(float DeltaTime) {
 
 void UScene::EndPlay() {
     Actors.clear();
-    ActiveCamera = nullptr;
+    if (ActiveCamera) ActiveCamera = nullptr;
 }
 
 void UScene::Serialize(json::JSON& j) const {

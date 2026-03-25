@@ -43,16 +43,38 @@ void FSceneManager::AddScene(UScene* Scene) {
     }
 }
 
-void FSceneManager::RemoveActiveScene() {  
-   if (LoadedScenes.empty() || !ActiveScene) {  
-       return;  
-   }  
-   UScene* CurrentActiveScene = ActiveScene;  
-   LoadedScenes.erase(std::remove_if(LoadedScenes.begin(), LoadedScenes.end(), [CurrentActiveScene](UScene* Scene) {  
-       return Scene->UUID == CurrentActiveScene->UUID;  
-   }), LoadedScenes.end());
+//uint32 FSceneManager::RemoveActiveScene() {  
+//   if (LoadedScenes.empty() || !ActiveScene) {  
+//       return -1;  
+//   }  
+//   UScene* CurrentActiveScene = ActiveScene;  
+//   LoadedScenes.erase(std::remove_if(LoadedScenes.begin(), LoadedScenes.end(), [CurrentActiveScene](UScene* Scene) {  
+//       return Scene->UUID == CurrentActiveScene->UUID;  
+//   }), LoadedScenes.end());
+//
+//   ActiveScene = nullptr;
+//}
 
-   ActiveScene = nullptr;
+uint32 FSceneManager::RemoveActiveScene()
+{
+    if (LoadedScenes.empty() || !ActiveScene)
+        return -1;
+
+    UScene* CurrentActiveScene = ActiveScene;
+
+    auto It = std::find_if(LoadedScenes.begin(), LoadedScenes.end(), [CurrentActiveScene](UScene* Scene) {
+        return Scene->UUID == CurrentActiveScene->UUID;
+        });
+
+    if (It == LoadedScenes.end())
+        return -1;
+
+    uint32 RemovedIndex = std::distance(LoadedScenes.begin(), It);
+
+    LoadedScenes.erase(It); // no need for remove_if since you found exactly one
+
+    ActiveScene = nullptr;
+    return RemovedIndex;
 }
 
 weak_ptr<UScene> FSceneManager::GetActiveScene() {

@@ -74,6 +74,7 @@ UScene* FSceneSaveManager::LoadSceneFromJSON(UWorld* World) {
         uint32 UUID = static_cast<uint32>(JSONObject["UUID"].ToInt());
         Obj->UUID          = UUID;
         Obj->InternalIndex = static_cast<uint32>(JSONObject["InternalIndex"].ToInt());
+        Obj->Name = FName(JSONObject["FName"].ToString());
         MaxUUID = (UUID > MaxUUID) ? UUID : MaxUUID;
 
         UUIDMap[UUID] = Obj;

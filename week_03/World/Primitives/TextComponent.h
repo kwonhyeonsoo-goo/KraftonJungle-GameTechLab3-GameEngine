@@ -16,6 +16,9 @@ public:
 	static constexpr EPrimitiveType PrimitiveType = EPrimitiveType::EPT_Text;
 	EPrimitiveType GetPrimitiveType() const override { return PrimitiveType; }
 
+	void Serialize(json::JSON& j) const override;
+	void Deserialize(const json::JSON& j) override;
+
 public:
 	std::wstring const& GetText() const { return Text; }
 	FVector4 const& GetColor() const { return Color; }

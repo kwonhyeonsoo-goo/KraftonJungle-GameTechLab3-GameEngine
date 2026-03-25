@@ -15,7 +15,7 @@ public:
 	void AddNewScene();
 
 	// Use with caution: this function may leave the world with 0 active scene
-	void RemoveActiveScene();
+	uint32 RemoveActiveScene();
 	bool IsEmpty() { return LoadedScenes.empty(); }
 
 	template <typename T>
