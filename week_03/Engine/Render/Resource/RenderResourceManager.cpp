@@ -1,3 +1,4 @@
+#pragma once
 #pragma comment( lib, "dxguid.lib")
 #include "RenderResourceManager.h"
 #include <d3d11.h>
@@ -7,6 +8,10 @@
 #include <fstream>
 #include <filesystem>
 #include <iostream>
+
+
+
+
 
 void FRenderResourceManager::Create(FD3DDevice* device)
 {
@@ -63,6 +68,22 @@ int FRenderResourceManager::CreateTexture(std::wstring filepath)
     FilePathMap.emplace(filepath, NewId);
 
     return NewId;
+}
+
+TextureInfo FRenderResourceManager::GetTextureInfo(int id)
+{
+    TextureInfo info = {};
+    D3D11_TEXTURE2D_DESC desc;
+    TextureMap.at(id).Texture->GetDesc(&desc);
+
+    info.TextureWidth = (float)desc.Width;
+    info.TextureHeight = (float)desc.Height;
+    info.TexelWidth = 1.f / desc.Width;
+    info.TexelHeight = 1.f / desc.Height;
+    info.MipLevels = desc.MipLevels;
+    info.Format = desc.Format;
+
+    return info;
 }
 
 std::wstring FRenderResourceManager::LoadResourceFilePath()

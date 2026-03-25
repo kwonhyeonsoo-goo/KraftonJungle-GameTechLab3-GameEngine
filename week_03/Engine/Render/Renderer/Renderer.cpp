@@ -83,6 +83,7 @@ void FRenderer::Release()
 	Resources.FontShader.Release();
 	Resources.SubUVShader.Release();
 
+	Resources.BatchedLineBuffer.Release();
 	Resources.PerObjectConstantBuffer.Release();
 	Resources.GizmoPerObjectConstantBuffer.Release();
 	Resources.OverlayConstantBuffer.Release();
@@ -173,7 +174,7 @@ void FRenderer::RenderOverlay(const FRenderBus& InRenderBus)
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	Device.SetDepthStencilState(EDepthStencilState::None);
-	Device.SetBlendState(EBlendState::Opaque);
+	Device.SetBlendState(EBlendState::AlphaBlend);
 	Resources.OverlayShader.Bind(context);
 
 	RenderOverlayPass(context, InRenderBus);
