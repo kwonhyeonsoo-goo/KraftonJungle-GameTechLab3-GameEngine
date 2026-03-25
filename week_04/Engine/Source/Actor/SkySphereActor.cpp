@@ -3,6 +3,7 @@
 #include "Object/ObjectFactory.h"
 #include "Scene/Scene.h"
 #include "Component/CameraComponent.h"
+#include "Renderer/MaterialManager.h"
 #include "Camera/Camera.h"
 #include "Object/Class.h"
 
@@ -13,7 +14,11 @@ void ASkySphereActor::PostSpawnInitialize()
 {
 	SkyComponent = FObjectFactory::ConstructObject<USkyComponent>(this);
 	AddOwnedComponent(SkyComponent);
-
+	std::shared_ptr<FMaterial> SkyMat = FMaterialManager::Get().FindByName("M_Sky");
+	if (SkyMat)
+	{
+		SkyComponent->SetMaterial(SkyMat.get());
+	}
 	// SceneComponent need SetRelativeScale3D,  SetWorldLocation
 	if (USceneComponent* Root = GetRootComponent())
 	{

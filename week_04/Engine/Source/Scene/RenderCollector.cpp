@@ -120,9 +120,17 @@ void FSceneRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 			}
 			else if (bIsSubUV)
 			{
+				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Billboard))
+				{
+					continue;
+				}
 			}
 			else if (bIsText)
 			{
+				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Text))
+				{
+					continue;
+				}
 			}
 			else
 			{

@@ -24,7 +24,7 @@
 #include "Component/CameraComponent.h"
 #include "Camera/Camera.h"
 #include "Serializer/SceneSerializer.h"
-
+#include "Actor/SkySphereActor.h" 
 #include "Actor/ObjActor.h"
 
 enum class EFileDialogType
@@ -274,6 +274,7 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 	
 			AActor* Selected = Core->GetSelectedActor();
 			if (Selected && !Selected->IsPendingDestroy() && Selected->IsVisible()
+				&& !Selected->IsA<ASkySphereActor>()
 				&& Core->GetViewportClient()->GetShowFlags().HasFlag(EEngineShowFlags::SF_Primitives))
 			{
 				for (UActorComponent* Component : Selected->GetComponents())

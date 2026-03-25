@@ -17,7 +17,7 @@
 #include "imgui_impl_win32.h"
 #include "Pawn/EditorCameraPawn.h"
 #include "Camera/Camera.h"
-
+#include "Actor/SkySphereActor.h"
 namespace
 {
 	constexpr const char* PreviewSceneContextName = "PreviewScene";
@@ -130,6 +130,7 @@ void FEditorEngine::PostInitialize()
 			}
 		});
 	// EditorPawn은 Scene에 등록하지 않음 — FEditorEngine이 직접 소유
+	
 	EditorPawn = FObjectFactory::ConstructObject<AEditorCameraPawn>(nullptr, "EditorCameraPawn");
 	EditorPawn->Initialize();
 	Core->GetActiveWorld()->SetActiveCameraComponent(EditorPawn->GetCameraComponent());
