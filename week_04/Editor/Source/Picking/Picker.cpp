@@ -21,8 +21,9 @@ FRay CPicker::ScreenToRay(const CCamera* Camera, int32 ScreenX, int32 ScreenY, i
 	const FMatrix ViewMatrix = Camera->GetViewMatrix();
 	const FMatrix ProjMatrix = Camera->GetProjectionMatrix();
 	const FMatrix ViewInverse = ViewMatrix.GetInverse();
-	const float NdcX = (2.0f * ScreenX / ScreenWidth) - 1.0f;
-	const float NdcY = 1.0f - (2.0f * ScreenY / ScreenHeight);
+	//Ndc convert missing center pixel lerp (0.5) Half-pixel offset added
+	const float NdcX = (2.0f * (ScreenX+0.5f) / ScreenWidth) - 1.0f;
+	const float NdcY = 1.0f - (2.0f * (ScreenY+0.5f) / ScreenHeight);
 
 	if (Camera->IsOrthographic())
 	{
