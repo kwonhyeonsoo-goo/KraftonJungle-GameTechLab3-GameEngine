@@ -27,36 +27,22 @@ bool UBillBoardComponent::GetRenderCommand(const FMatrix& ViewMatrix, const FMat
 
 	// Project camera right onto the world XY plane and renormalize.
 	// This prevents tilt when the camera is pitched (M[0][2] would otherwise bleed into world Z).
+	
+	FVector Forward = FVector(ViewMatrix.M[0][2], ViewMatrix.M[1][2], ViewMatrix.M[2][2]); Forward.Normalize();
+	FVector Right = FVector(ViewMatrix.M[0][0], ViewMatrix.M[1][0], ViewMatrix.M[2][0]); Right.Normalize();
 
+	FMatrix BillboardRotation(
+		Forward.X, Forward.Y, Forward.Z, 0,
+		-Right.X, -Right.Y, -Right.Z, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	);
 
-	// Get CameraPosition from ViewMatrix / Carmera World를 가져올 쉬운 방법이 필요함
 	FMatrix Scale = FMatrix::MakeScaleMatrix(FVector(Size, Size, Size));
 	FMatrix Translation = FMatrix::MakeTranslationMatrix(GetWorldLocation());
 
-	float Tx = ViewMatrix.M[3][0];
-	float Ty = ViewMatrix.M[3][1];
-	float Tz = ViewMatrix.M[3][2];
-
-	FVector CameraPosition = FVector(
-		-(Tx * ViewMatrix.M[0][0] + Ty * ViewMatrix.M[0][1] + Tz * ViewMatrix.M[0][2]),
-		-(Tx * ViewMatrix.M[1][0] + Ty * ViewMatrix.M[1][1] + Tz * ViewMatrix.M[1][2]),
-		-(Tx * ViewMatrix.M[2][0] + Ty * ViewMatrix.M[2][1] + Tz * ViewMatrix.M[2][2])
-	);
-
-	FVector BillBoardForward = CameraPosition - GetWorldLocation(); BillBoardForward.Normalize();
-	FVector BillBoardUp = FVector(0.f, 0.f, 1.f);
-	FVector BillBoardRight = BillBoardUp.Cross(BillBoardForward); BillBoardRight.Normalize();  BillBoardRight;
-
-
-	FMatrix BillBoarding{
-		BillBoardForward.X, BillBoardForward.Y, BillBoardForward.Z , 0.f , 
-		BillBoardRight.X, BillBoardRight.Y, BillBoardRight.Z , 0.f ,
-		BillBoardUp.X, BillBoardUp.Y, BillBoardUp.Z , 0.f ,
-		0, 0, 0, 1
-	};
-
 	OutCommand.Type = ERenderCommandType::SubUV;
-	OutCommand.TransformConstants.Model = Scale * BillBoarding * Translation; // SRT
+	OutCommand.TransformConstants.Model = Scale * BillboardRotation * Translation; // SRT
 	OutCommand.TransformConstants.View = ViewMatrix;
 	OutCommand.TransformConstants.Projection = ProjMatrix;
 	OutCommand.SubUVConstants = { 0, 0, 1, 1 };

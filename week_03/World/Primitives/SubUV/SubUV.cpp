@@ -65,30 +65,16 @@ bool USubUVComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix&
 	FVector Scale = GetScaleVector();
 	FMatrix Translation = FMatrix::MakeTranslationMatrix(GetWorldLocation());
 
-	float Tx = viewMatrix.M[3][0];
-	float Ty = viewMatrix.M[3][1];
-	float Tz = viewMatrix.M[3][2];
+	FVector Forward = FVector(viewMatrix.M[0][2], viewMatrix.M[1][2], viewMatrix.M[2][2]); Forward.Normalize();
+	FVector Right = FVector(viewMatrix.M[0][0], viewMatrix.M[1][0], viewMatrix.M[2][0]); Right.Normalize();
 
-	FVector CameraPosition = FVector(
-		-(Tx * viewMatrix.M[0][0] + Ty * viewMatrix.M[0][1] + Tz * viewMatrix.M[0][2]),
-		-(Tx * viewMatrix.M[1][0] + Ty * viewMatrix.M[1][1] + Tz * viewMatrix.M[1][2]),
-		-(Tx * viewMatrix.M[2][0] + Ty * viewMatrix.M[2][1] + Tz * viewMatrix.M[2][2])
-	);
-
-	FVector BillBoardForward = CameraPosition - GetWorldLocation(); BillBoardForward.Normalize();
-	FVector BillBoardUp = FVector(0.f, 0.f, 1.f);
-	FVector BillBoardRight = BillBoardUp.Cross(BillBoardForward); BillBoardRight.Normalize();
-
-
-	FMatrix BillBoarding{
-		BillBoardForward.X, BillBoardForward.Y, BillBoardForward.Z , 0.f ,
-		BillBoardRight.X, BillBoardRight.Y, BillBoardRight.Z , 0.f ,
-		BillBoardUp.X, BillBoardUp.Y, BillBoardUp.Z , 0.f ,
+	FMatrix BillboardRotation(
+		Forward.X, Forward.Y, Forward.Z, 0,
+		-Right.X, -Right.Y, -Right.Z, 0,
+		0, 0, 1, 0,
 		0, 0, 0, 1
-
-	};
-
-	FMatrix model = FMatrix::MakeScaleMatrix(GetScaleVector()) * BillBoarding
+	);
+	FMatrix model = FMatrix::MakeScaleMatrix(GetScaleVector()) * BillboardRotation
 					* FMatrix::MakeTranslationMatrix(GetWorldLocation());
 
 	OutCommand.Type = ERenderCommandType::SubUV;
