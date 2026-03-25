@@ -92,10 +92,9 @@ void CEditorViewportClient::CreateGridResource(CRenderer* Renderer)
 			GridMaterial->RegisterParameter("GridSize", SlotIndex, 12, 4);
 			GridMaterial->RegisterParameter("LineThickness", SlotIndex, 16, 4);
 
-			float DefaultGridSize = 10.0f;
-			float DefaultThickness = 1.0f;
-			GridMaterial->SetParameterData("GridSize", &DefaultGridSize, 4);
-			GridMaterial->SetParameterData("LineThickness", &DefaultThickness, 4);
+	
+			GridMaterial->SetParameterData("GridSize", &GridSize, 4);
+			GridMaterial->SetParameterData("LineThickness", &LineThickness, 4);
 		}
 	}
 }
@@ -324,7 +323,7 @@ void CEditorViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene,
 	}
 
 	// 그리드(Axis) 명령 삽입
-	if (GridMesh && GridMaterial)
+	if (GridMesh && GridMaterial&&bShowGrid)
 	{
 		FRenderCommand GridCmd;
 		GridCmd.MeshData = GridMesh.get();
@@ -338,5 +337,23 @@ void CEditorViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene,
 	if (GizmoTarget && !GizmoTarget->IsA<ASkySphereActor>())
 	{
 		Gizmo.BuildRenderCommands(GizmoTarget, Scene->GetCamera(), OutQueue);
+	}
+}
+
+void CEditorViewportClient::SetGridSize(float InSize)
+{
+	GridSize = InSize;
+	if (GridMaterial)
+	{
+		GridMaterial->SetParameterData("GridSize",&GridSize, 4);
+	}
+}
+
+void CEditorViewportClient::SetLineThickness(float InThickness)
+{
+	LineThickness = InThickness;
+	if (GridMaterial)
+	{
+		GridMaterial->SetParameterData("LineThickness", &LineThickness, 4);
 	}
 }

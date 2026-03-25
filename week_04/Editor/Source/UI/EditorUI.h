@@ -12,7 +12,7 @@ class CCore;
 class CWindow;
 class CRenderer;
 class AActor;
-
+class CEditorViewportClient;
 class CEditorUI
 {
 public:
@@ -30,7 +30,9 @@ public:
 
 private:
 	void BuildDefaultLayout(uint32 DockID);
-
+	void LoadEditorSettings();
+	void SaveEditorSettings();
+	std::wstring GetEditorIniPathW() const;
 	CCore* Core = nullptr;
 	TObjectPtr<AActor> CachedSelectedActor;
 
