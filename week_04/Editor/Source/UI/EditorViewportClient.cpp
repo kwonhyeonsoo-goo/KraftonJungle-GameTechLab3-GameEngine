@@ -11,6 +11,7 @@
 #include "Renderer/RenderStateManager.h"
 #include "Renderer/Materialmanager.h"
 #include "Renderer/Material.h"
+#include "Renderer/ShaderMap.h"
 #include "Scene/Scene.h"
 #include "Serializer/SceneSerializer.h"
 #include "Component/PrimitiveComponent.h"
@@ -37,12 +38,75 @@ void CEditorViewportClient::Attach(CCore* Core, CRenderer* Renderer)
 
 	// Wireframe 모드를 위한 머티리얼 가져와서 보관
 	WireFrameMaterial = FMaterialManager::Get().FindByName(WireframeMaterialName);
+
+	CreateGridResource(Renderer);
+}
+
+void CEditorViewportClient::CreateGridResource(CRenderer* Renderer)
+{
+	// 그리드 리소스 초기화
+	ID3D11Device* Device = Renderer->GetDevice();
+	if (Device)
+	{
+		// 그리드 메시 생성 (18개의 정점, SV_VertexID 호환용)
+		GridMesh = std::make_unique<FMeshData>();
+		GridMesh->Topology = EMeshTopology::EMT_TriangleList;
+		for (int i = 0; i < 18; ++i)
+		{
+			FPrimitiveVertex v;
+			GridMesh->Vertices.push_back(v);
+			GridMesh->Indices.push_back(i);
+		}
+		GridMesh->CreateVertexAndIndexBuffer(Device);
+
+		// 그리드 머티리얼 생성
+		std::wstring ShaderDirW = FPaths::ShaderDir();
+		std::wstring VSPath = ShaderDirW + L"AxisVertexShader.hlsl";
+		std::wstring PSPath = ShaderDirW + L"AxisPixelShader.hlsl";
+		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, VSPath.c_str());
+		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, PSPath.c_str());
+
+		GridMaterial = std::make_shared<FMaterial>();
+		GridMaterial->SetOriginName("M_EditorGrid");
+		GridMaterial->SetVertexShader(VS);
+		GridMaterial->SetPixelShader(PS);
+
+		FRasterizerStateOption rasterizerOption;
+		rasterizerOption.FillMode = D3D11_FILL_SOLID;
+		rasterizerOption.CullMode = D3D11_CULL_NONE;
+		auto RS = Renderer->GetRenderStateManager()->GetOrCreateRasterizerState(rasterizerOption);
+		GridMaterial->SetRasterizerOption(rasterizerOption);
+		GridMaterial->SetRasterizerState(RS);
+
+		FDepthStencilStateOption depthStencilOption;
+		depthStencilOption.DepthEnable = true;
+		depthStencilOption.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+		auto DSS = Renderer->GetRenderStateManager()->GetOrCreateDepthStencilState(depthStencilOption);
+		GridMaterial->SetDepthStencilOption(depthStencilOption);
+		GridMaterial->SetDepthStencilState(DSS);
+
+		// b2: Per-Material Constant Buffer (32 bytes)
+		int32 SlotIndex = GridMaterial->CreateConstantBuffer(Device, 32);
+		if (SlotIndex >= 0)
+		{
+			GridMaterial->RegisterParameter("GridSize", SlotIndex, 12, 4);
+			GridMaterial->RegisterParameter("LineThickness", SlotIndex, 16, 4);
+
+			float DefaultGridSize = 10.0f;
+			float DefaultThickness = 1.0f;
+			GridMaterial->SetParameterData("GridSize", &DefaultGridSize, 4);
+			GridMaterial->SetParameterData("LineThickness", &DefaultThickness, 4);
+		}
+	}
 }
 
 void CEditorViewportClient::Detach(CCore* Core, CRenderer* Renderer)
 {
 	Gizmo.EndDrag();
 	EditorUI.DetachFromRenderer(Renderer);
+
+	GridMesh.reset();
+	GridMaterial.reset();
 }
 
 void CEditorViewportClient::Tick(CCore* Core, float DeltaTime)
@@ -256,5 +320,17 @@ void CEditorViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene,
 	{
 		return;
 	}
+
+	// 그리드(Axis) 명령 삽입
+	if (GridMesh && GridMaterial)
+	{
+		FRenderCommand GridCmd;
+		GridCmd.MeshData = GridMesh.get();
+		GridCmd.Material = GridMaterial.get();
+		GridCmd.WorldMatrix = FMatrix::Identity;
+		GridCmd.RenderLayer = ERenderLayer::Default;
+		OutQueue.AddCommand(GridCmd);
+	}
+
 	Gizmo.BuildRenderCommands(Core->GetSelectedActor(), Scene->GetCamera(), OutQueue);
 }

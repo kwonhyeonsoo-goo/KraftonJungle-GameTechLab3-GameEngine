@@ -156,10 +156,6 @@ private:
 	// SubUV 렌더링
 	CSubUVRenderer SubUVRenderer;
 
-	// Grid 렌더링 (구 Axis)
-	std::unique_ptr<FMeshData> GridMesh;
-	std::shared_ptr<FMaterial> GridMaterial;
-
 	// Folder, File Icon 테스트용
 	ID3D11ShaderResourceView* FolderIconSRV;
 	ID3D11ShaderResourceView* FileIconSRV;

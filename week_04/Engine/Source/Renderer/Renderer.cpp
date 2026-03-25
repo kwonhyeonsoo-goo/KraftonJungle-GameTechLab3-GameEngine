@@ -251,64 +251,6 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		return false;
 	}
 
-	// 그리드 메시 생성 (18개의 정점, SV_VertexID 호환용)
-	{
-		GridMesh = std::make_unique<FMeshData>();
-		GridMesh->Topology = EMeshTopology::EMT_TriangleList;
-
-		// 18개의 더미 정점 (셰이더 내부의 positions[18] 사용)
-		for (int i = 0; i < 18; ++i)
-		{
-			FPrimitiveVertex v;
-			GridMesh->Vertices.push_back(v);
-			GridMesh->Indices.push_back(i);
-		}
-		GridMesh->CreateVertexAndIndexBuffer(Device);
-	}
-
-	// 그리드 머티리얼 생성 (기존 Axis 셰이더 사용)
-	{
-		std::wstring ShaderDirW = FPaths::ShaderDir();
-		std::wstring VSPath = ShaderDirW + L"AxisVertexShader.hlsl";
-		std::wstring PSPath = ShaderDirW + L"AxisPixelShader.hlsl";
-		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, VSPath.c_str());
-		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, PSPath.c_str());
-
-		GridMaterial = std::make_shared<FMaterial>();
-		GridMaterial->SetOriginName("M_Grid");
-		GridMaterial->SetVertexShader(VS);
-		GridMaterial->SetPixelShader(PS);
-
-		FRasterizerStateOption rasterizerOption;
-		rasterizerOption.FillMode = D3D11_FILL_SOLID; // 셰이더 내부에서 라인을 그리므로 SOLID 사용
-		rasterizerOption.CullMode = D3D11_CULL_NONE;
-		auto rasterizerState = RenderStateManager->GetOrCreateRasterizerState(rasterizerOption);
-		GridMaterial->SetRasterizerOption(rasterizerOption);
-		GridMaterial->SetRasterizerState(rasterizerState);
-
-		FDepthStencilStateOption depthStencilOption;
-		depthStencilOption.DepthEnable = true;
-		depthStencilOption.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-		auto depthStencilState = RenderStateManager->GetOrCreateDepthStencilState(depthStencilOption);
-		GridMaterial->SetDepthStencilOption(depthStencilOption);
-		GridMaterial->SetDepthStencilState(depthStencilState);
-
-		// b2: CameraBuffer (CameraPos(12), GridSize(4), LineThickness(4), padding(12)) = 32 bytes
-		int32 SlotIndex = GridMaterial->CreateConstantBuffer(Device, 32);
-		if (SlotIndex >= 0)
-		{
-			GridMaterial->RegisterParameter("CameraPos", SlotIndex, 0, 12);
-			GridMaterial->RegisterParameter("GridSize", SlotIndex, 12, 4);
-			GridMaterial->RegisterParameter("LineThickness", SlotIndex, 16, 4);
-
-			// 기본값 설정
-			float DefaultGridSize = 10.0f;
-			float DefaultThickness = 1.0f;
-			GridMaterial->SetParameterData("GridSize", &DefaultGridSize, 4);
-			GridMaterial->SetParameterData("LineThickness", &DefaultThickness, 4);
-		}
-	}
-
 	std::filesystem::path SubUVTexturePath = FPaths::ContentDir() / FString("Textures/SubUVPenguin.png");
 	FString SubUVTexturePathString = SubUVTexturePath.string();
 	if (!SubUVRenderer.Initialize(Device, DeviceContext, FPaths::ToWide(SubUVTexturePathString)))
@@ -463,17 +405,6 @@ void CRenderer::AddCommand(const FRenderCommand& Command)
 
 void CRenderer::ExecuteCommands()
 {
-	// 그리드(Axis) 명령 삽입 (ERenderLayer::Default)
-	if (GridMesh && GridMaterial)
-	{
-		FRenderCommand GridCmd;
-		GridCmd.MeshData = GridMesh.get();
-		GridCmd.Material = GridMaterial.get();
-		GridCmd.WorldMatrix = FMatrix::Identity;
-		GridCmd.RenderLayer = ERenderLayer::Default;
-		AddCommand(GridCmd);
-	}
-
 	std::sort(CommandList.begin(), CommandList.end(),
 		[](const FRenderCommand& A, const FRenderCommand& B)
 		{
@@ -908,9 +839,6 @@ void CRenderer::Release()
 
 	TextRenderer.Release();
 	SubUVRenderer.Release();
-
-	GridMesh.reset();
-	GridMaterial.reset();
 
 	ShaderManager.Release();
 	FShaderMap::Get().Clear();
