@@ -1,11 +1,11 @@
 #include "SubUV.h"
 #include "Engine/EngineServices/EngineServices.h"
-#include "Engine/Render/Resource/RenderResourceManager.h"
 #include "World/Mesh/MeshManager.h"
 #include "SimpleJSON/json.hpp"
 
 DEFINE_CLASS(USubUVComponent, UPrimitiveComponent)
 REGISTER_FACTORY(USubUVComponent, UPrimitiveComponent)
+
 
 void USubUVComponent::UpdateFrame(float deltaTime)
 {
@@ -41,6 +41,8 @@ USubUVComponent::USubUVComponent(std::wstring filename)
 	CurrentFrameIndex = 0;
 
 	Texture2DId = FEngineServices::GetResourceManager()->CreateTexture(this->filename);
+	Texture2Dinfo = FEngineServices::GetResourceManager()->GetTextureInfo(Texture2DId);
+
 	Timer = 1.f / PlayRate;
 
 	CellSizeX = (1.f - OffsetLeftX - OffsetRightX) / CellColumns;
@@ -68,7 +70,9 @@ bool USubUVComponent::GetRenderCommand(const FMatrix& viewMatrix, const FMatrix&
 						0,					0 ,	1 , 0,
 						0,					0,	0 ,	1 };
 
-	FMatrix model = FMatrix::MakeScaleMatrix(GetScaleVector()) * invesView
+	FVector localScale = GetRelativeScale();
+	localScale.Y *= (CellSizeX * Texture2Dinfo.TextureWidth) / (CellSizeY * Texture2Dinfo.TextureHeight);
+	FMatrix model = FMatrix::MakeScaleMatrix(localScale) * invesView
 					* FMatrix::MakeTranslationMatrix(GetWorldLocation());
 
 	OutCommand.Type = ERenderCommandType::SubUV;
@@ -97,6 +101,7 @@ void USubUVComponent::ReloadTextureResource(std::wstring filename)
 	if (newTexture2DId < 0) return;
 	Texture2DId = newTexture2DId;
 	this->filename = filename;
+	Texture2Dinfo = FEngineServices::GetResourceManager()->GetTextureInfo(Texture2DId);
 
 }
 
