@@ -27,6 +27,7 @@ private:
     ImGuiTextFilter Filter;
     static bool AutoScroll;
     static bool ScrollToBottom;
+    bool bIsOpen = false;
 
     //Command Dispatch System
     using CommandFn = std::function<void(const std::vector<std::string>& args)>;

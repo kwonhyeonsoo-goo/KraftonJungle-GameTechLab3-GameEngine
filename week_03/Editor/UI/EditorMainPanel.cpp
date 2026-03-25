@@ -54,6 +54,29 @@ void FEditorMainPanel::Release()
 
 void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 {
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+
+	ImGui::NewFrame();
+
+	// Control Tab
+	RenderControlTab(DeltaTime, ViewOutput);
+
+	// Console
+	ConsoleInstance.Draw("Console", &bShowConsole);
+
+	// Render Object
+	RenderObjectManager(ViewOutput);
+
+	// Picked Object
+	RenderPickedObjectWindow(ViewOutput.Object);
+
+	ImGui::Render();
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+}
+
+void FEditorMainPanel::RenderControlTab(float DeltaTime, FViewOutput& ViewOutput)
+{
 	auto& SceneManager = EditorEngine->GetWorld().lock()->GetSceneManager();
 	(void)DeltaTime;
 	if (!EditorEngine)
@@ -61,247 +84,284 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 		return;
 	}
 
-	ImGui_ImplDX11_NewFrame();
-	ImGui_ImplWin32_NewFrame();
+	// 매 프레임마다 위치/크기 강제 고정
+	float PanelWidth = std::clamp(ImGui::GetIO().DisplaySize.x * 0.3f, 200.0f, 400.0f);
 
-	ImGui::NewFrame();
-
+	ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Always, ImVec2(0.0f, 0.0f));
+	ImGui::SetNextWindowSize(ImVec2(PanelWidth, ImGui::GetIO().DisplaySize.y * 0.3f), ImGuiCond_Always);
 	ImGui::SetNextWindowCollapsed(false, ImGuiCond_Once);
-	ImGui::SetNextWindowSize(ImVec2(500.0f, 480.0f), ImGuiCond_Once);
 
-	ImGui::Begin("Jungle Control Panel");
+	ImGui::Begin("Jungle Control Panel", nullptr,
+		ImGuiWindowFlags_NoMove |        // 드래그 이동 금지
+		ImGuiWindowFlags_NoResize |      // 크기 조절 금지
+		ImGuiWindowFlags_NoCollapse      // 접기 금지 (선택)
+	);
 
-	ConsoleInstance.Draw("Console", &bShowConsole);
-
-	ImGui::Text("FPS : %.1f", EditorEngine->GetMainLoopFPS());
-
-	ImGui::SameLine();
-
-	ImGui::Text("Memory Allocated : %d", EngineStatics::GetTotalAllocationBytes());
-
-	ImGui::SameLine();
-
-	ImGui::Text("Times Allocated : %d", EngineStatics::GetTotalAllocationCount());
-
-	ImGui::SeparatorText("Spawn");
-
-	ImGui::Combo("Primitive", &SelectedPrimitiveType, PrimitiveTypes, IM_ARRAYSIZE(PrimitiveTypes));
-
-	if (ImGui::Button("Spawn Primitive Actor"))
+	if (ImGui::BeginTabBar("Jungle Control Panel"))
 	{
-		for (int i = 0; i < NumberOfSpawnedActors; i++) {
-			switch ((EPrimitiveType)SelectedPrimitiveType)
+		// FPS & Memory
+		if (ImGui::BeginTabItem("Memory"))
+		{
+			ImGui::SeparatorText("Memory");
+
+			ImGui::Text("FPS : %.1f", EditorEngine->GetMainLoopFPS());
+			ImGui::Text("Memory Allocated : %d", EngineStatics::GetTotalAllocationBytes());
+			ImGui::Text("Times Allocated : %d", EngineStatics::GetTotalAllocationCount());
+
+			ImGui::EndTabItem();
+		}
+
+		// Scene
+		if (ImGui::BeginTabItem("Scene"))
+		{
+			ImGui::SeparatorText("Spawn");
+
+			ImGui::Combo("Primitive", &SelectedPrimitiveType, PrimitiveTypes, IM_ARRAYSIZE(PrimitiveTypes));
+
+			if (ImGui::Button("Spawn Primitive Actor"))
 			{
-			case EPrimitiveType::EPT_Cube:
-				EditorEngine->SpawnNewPrimitiveActor<UCubeComponent>(CurSpawnPoint);
-				break;
-			case EPrimitiveType::EPT_Sphere:
-				EditorEngine->SpawnNewPrimitiveActor<USphereComponent>(CurSpawnPoint);
-				break;
-			case EPrimitiveType::EPT_Plane:
-				EditorEngine->SpawnNewPrimitiveActor<UPlaneComponent>(CurSpawnPoint);
-				break;
-			case EPrimitiveType::EPT_SubUV:
-				EditorEngine->SpawnNewPrimitiveActor<USubUVComponent>(CurSpawnPoint);
-				break;
-			case EPrimitiveType::EPT_Text:
-				EditorEngine->SpawnNewPrimitiveActor<UTextComponent>(CurSpawnPoint);
-				break;
+				for (int i = 0; i < NumberOfSpawnedActors; i++) {
+					switch ((EPrimitiveType)SelectedPrimitiveType)
+					{
+					case EPrimitiveType::EPT_Cube:
+						EditorEngine->SpawnNewPrimitiveActor<UCubeComponent>(CurSpawnPoint);
+						break;
+					case EPrimitiveType::EPT_Sphere:
+						EditorEngine->SpawnNewPrimitiveActor<USphereComponent>(CurSpawnPoint);
+						break;
+					case EPrimitiveType::EPT_Plane:
+						EditorEngine->SpawnNewPrimitiveActor<UPlaneComponent>(CurSpawnPoint);
+						break;
+					case EPrimitiveType::EPT_SubUV:
+						EditorEngine->SpawnNewPrimitiveActor<USubUVComponent>(CurSpawnPoint);
+						break;
+					case EPrimitiveType::EPT_Text:
+						EditorEngine->SpawnNewPrimitiveActor<UTextComponent>(CurSpawnPoint);
+						break;
+					}
+				}
+
+				NumberOfSpawnedActors = 1;
 			}
-		}
 
-		NumberOfSpawnedActors = 1;
-	}
-
-	ImGui::Combo("Utility", &SelectedUtilityActorType, UtilTypes, IM_ARRAYSIZE(UtilTypes));
-	if (ImGui::Button("Spawn Utility Actor"))
-	{
-		for (int i = 0; i < NumberOfSpawnedActors; i++) {
-			switch ((EUtilType)SelectedUtilityActorType)
+			ImGui::Combo("Utility", &SelectedUtilityActorType, UtilTypes, IM_ARRAYSIZE(UtilTypes));
+			if (ImGui::Button("Spawn Utility Actor"))
 			{
-			case EUtilType::EUT_Spotlight:
-				EditorEngine->SpawnNewUtilActor<ASpotlight>(CurSpawnPoint);
-				break;
+				for (int i = 0; i < NumberOfSpawnedActors; i++) {
+					switch ((EUtilType)SelectedUtilityActorType)
+					{
+					case EUtilType::EUT_Spotlight:
+						EditorEngine->SpawnNewUtilActor<ASpotlight>(CurSpawnPoint);
+						break;
+					}
+				}
+
+				NumberOfSpawnedActors = 1;
 			}
-		}
 
-		NumberOfSpawnedActors = 1;
-	}
+			ImGui::InputInt("Number of Spawn", &NumberOfSpawnedActors, 1, 10);
 
-	ImGui::InputInt("Number of Spawn", &NumberOfSpawnedActors, 1, 10);
+			ImGui::SeparatorText("Scene");
 
-	ImGui::SeparatorText("Scene");
-
-	if (ImGui::Button("New Scene")) {
-		Viewport->GetGizmoManager().SetVisibility(false);
-		ViewOutput.Object = nullptr;
-		EditorEngine->NewScene();
-		NewSceneNotificationTimer = common::constants::imgui::NotificationTimer;
-	}
-	if (NewSceneNotificationTimer > 0.0f) {
-		NewSceneNotificationTimer -= DeltaTime;
-		ImGui::SameLine();
-		ImGui::Text("New scene created");
-	}
-
-	if (ImGui::Button("Save Scene")) {
-		FSceneSaveManager::SaveSceneAsJSON(EditorEngine->GetWorld().lock()->GetActiveScene().lock().get());
-		SceneSaveNotificationTimer = common::constants::imgui::NotificationTimer;
-	}
-	if (SceneSaveNotificationTimer > 0.0f) {
-		SceneSaveNotificationTimer -= DeltaTime;
-		ImGui::Text("Scene saved");
-	}
-
-	if (ImGui::Button("Load Scene")) {
-		UScene* Scene = FSceneSaveManager::LoadSceneFromJSON(EditorEngine->GetWorld().lock().get());
-		if (Scene) {
-			Viewport->GetGizmoManager().SetVisibility(false);
-			ViewOutput.Object = nullptr;
-			SceneManager.AddScene(Scene);
-			SceneManager.SetActiveScene(Scene);
-			Viewport->ResetViewport();
-			EditorEngine->ResetViewportScene();
-			Sleep(50);	// Safeguard
-			SceneLoadNotificationTimer = common::constants::imgui::NotificationTimer;
-		}
-	}
-
-	if (ImGui::Button("Delete Current Scene")) {
-		if (SceneManager.GetScenes().size() > 1) {
-			auto Scenes = SceneManager.GetScenes();
+			if (ImGui::Button("New Scene")) {
 				Viewport->GetGizmoManager().SetVisibility(false);
 				ViewOutput.Object = nullptr;
-				uint32 RemovedIndex = SceneManager.RemoveActiveScene();
-				UScene* NewActiveScene = Scenes[RemovedIndex - 1];
-				SceneManager.SetActiveScene(NewActiveScene);
-				Viewport->ResetViewport();
-				EditorEngine->ResetViewportScene();
+				EditorEngine->NewScene();
+				NewSceneNotificationTimer = common::constants::imgui::NotificationTimer;
+			}
+			if (NewSceneNotificationTimer > 0.0f) {
+				NewSceneNotificationTimer -= DeltaTime;
+				ImGui::SameLine();
+				ImGui::Text("New scene created");
+			}
+
+			if (ImGui::Button("Save Scene")) {
+				FSceneSaveManager::SaveSceneAsJSON(EditorEngine->GetWorld().lock()->GetActiveScene().lock().get());
+				SceneSaveNotificationTimer = common::constants::imgui::NotificationTimer;
+			}
+			if (SceneSaveNotificationTimer > 0.0f) {
+				SceneSaveNotificationTimer -= DeltaTime;
+				ImGui::Text("Scene saved");
+			}
+
+			if (ImGui::Button("Load Scene")) {
+				UScene* Scene = FSceneSaveManager::LoadSceneFromJSON(EditorEngine->GetWorld().lock().get());
+				if (Scene) {
+					Viewport->GetGizmoManager().SetVisibility(false);
+					ViewOutput.Object = nullptr;
+					SceneManager.AddScene(Scene);
+					SceneManager.SetActiveScene(Scene);
+					Viewport->ResetViewport();
+					EditorEngine->ResetViewportScene();
+					Sleep(50);	// Safeguard
+					SceneLoadNotificationTimer = common::constants::imgui::NotificationTimer;
+				}
+			}
+
+			if (ImGui::Button("Delete Current Scene")) {
+				if (SceneManager.GetScenes().size() > 1) {
+					auto Scenes = SceneManager.GetScenes();
+					Viewport->GetGizmoManager().SetVisibility(false);
+					ViewOutput.Object = nullptr;
+					uint32 RemovedIndex = SceneManager.RemoveActiveScene();
+					UScene* NewActiveScene = Scenes[RemovedIndex - 1];
+					SceneManager.SetActiveScene(NewActiveScene);
+					Viewport->ResetViewport();
+					EditorEngine->ResetViewportScene();
+				}
+			}
+
+			if (SceneLoadNotificationTimer > 0.0f) {
+				SceneLoadNotificationTimer -= DeltaTime;
+				ImGui::Text("Scene loaded");
+			}
+
+			ImGui::EndTabItem();
 		}
-	}
 
-	if (SceneLoadNotificationTimer > 0.0f) {
-		SceneLoadNotificationTimer -= DeltaTime;
-		ImGui::Text("Scene loaded");
-	}
-
-	SEPARATOR();
-
-	FCameraState& CameraState = Viewport->GetCamera().lock()->GetCameraState();
-	ImGui::Checkbox("Orthographic", &(CameraState.bIsOrthogonal));
-
-	float CameraFOV_Deg = CameraState.FOV * (RAD_TO_DEG);
-	float OrthoWidth = CameraState.OrthoWidth;
-
-	if (!CameraState.bIsOrthogonal) {
-		if (ImGui::DragFloat("Camera FOV",
-			&CameraFOV_Deg,
-			0.5f,          // speed in degrees
-			1.0f,          // min deg
-			90.0f))        // max deg
+		// Camera
+		if (ImGui::BeginTabItem("Camera"))
 		{
-			CameraState.FOV = CameraFOV_Deg * (DEG_TO_RAD);
+			ImGui::SeparatorText("Camera");
+
+			FCameraState& CameraState = Viewport->GetCamera().lock()->GetCameraState();
+			ImGui::Checkbox("Orthographic", &(CameraState.bIsOrthogonal));
+
+			float CameraFOV_Deg = CameraState.FOV * (RAD_TO_DEG);
+			float OrthoWidth = CameraState.OrthoWidth;
+
+			if (!CameraState.bIsOrthogonal) {
+				if (ImGui::DragFloat("Camera FOV",
+					&CameraFOV_Deg,
+					0.5f,          // speed in degrees
+					1.0f,          // min deg
+					90.0f))        // max deg
+				{
+					CameraState.FOV = CameraFOV_Deg * (DEG_TO_RAD);
+				}
+			}
+			else {
+				float OrthoWidth = CameraState.OrthoWidth;
+				if (ImGui::DragFloat("Ortho Width", &OrthoWidth, 0.1f, 0.1f, 1000.0f))
+				{
+					CameraState.OrthoWidth = Clamp(OrthoWidth, 0.1f, 1000.0f);
+				}
+			}
+			UCamera* Camera = Viewport->GetCamera().lock().get();
+			FVector CamPos = Camera->GetWorldLocation();
+			float CameraLocation[3] = { CamPos.X, CamPos.Y, CamPos.Z };
+			if (ImGui::DragFloat3("Camera Location", CameraLocation, 0.1f))
+			{
+				Camera->SetWorldLocation(FVector(CameraLocation[0], CameraLocation[1], CameraLocation[2]));
+			}
+			FVector CamRot = Camera->GetRelativeRotation();
+			float CameraRotation[3] = { CamRot.X, CamRot.Y, CamRot.Z };
+			if (ImGui::DragFloat3("Camera Rotation", CameraRotation, 0.1f))
+			{
+				Camera->SetRelativeRotation(FVector(Clamp(CameraRotation[0], CamRot.X, CamRot.X), CameraRotation[1], CameraRotation[2]));
+			}
+
+			ImGui::SeparatorText("Camera Sensitivity");
+
+			float CamMoveSpeed = FUISettingInitializer::GetViewCamMoveSpeed();
+			if (ImGui::SliderFloat("Camera Movement Sensitivity", &CamMoveSpeed, 5.f, 30.f)) {
+				FUISettingInitializer::SetViewCamMoveSpeed(CamMoveSpeed);
+			}
+
+			float CamRotSpeed = FUISettingInitializer::GetViewCamRotSpeed();
+			if (ImGui::SliderFloat("Camera Rotation Sensitivity", &CamRotSpeed, 0.05f, 0.6f)) {
+				FUISettingInitializer::SetViewCamRotSpeed(CamRotSpeed);
+			}
+
+			ImGui::SeparatorText("Grid");
+
+			int GridSize = static_cast<int>(FUISettingInitializer::GetGridSize());
+			if (ImGui::DragInt("Grid Size", &GridSize, 1, 1, 100))
+			{
+				FUISettingInitializer::SetGridSize(static_cast<uint32>(GridSize));
+			}
+
+			ImGui::EndTabItem();
 		}
-	}
-	else {
-		float OrthoWidth = CameraState.OrthoWidth;
-		if (ImGui::DragFloat("Ortho Width", &OrthoWidth, 0.1f, 0.1f, 1000.0f))
+
+		// Gizmo
+		if (ImGui::BeginTabItem("Gizmo"))
 		{
-			CameraState.OrthoWidth = Clamp(OrthoWidth, 0.1f, 1000.0f);
+			ImGui::SeparatorText("Gizmo");
+
+			// Space Select Button(World or Local)
+			static int SelectedSpace = 0;
+			if (ImGui::RadioButton("World", &SelectedSpace, 0))
+			{
+				Viewport->GetGizmoManager().SetWorldSpace(true);
+				std::cout << "Switched to World Space\n";
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::RadioButton("Local", &SelectedSpace, 1))
+			{
+				Viewport->GetGizmoManager().SetWorldSpace(false);
+				std::cout << "Switched to Local Space\n";
+			}
+
+			ImGui::SeparatorText("Tools");
+
+			if (ImGui::Button("Translate")) Viewport->GetGizmoManager().SetTranslateMode();
+			ImGui::SameLine();
+			if (ImGui::Button("Rotate")) Viewport->GetGizmoManager().SetRotateMode();
+			ImGui::SameLine();
+			if (ImGui::Button("Scale")) Viewport->GetGizmoManager().SetScaleMode();
+
+			ImGui::EndTabItem();
 		}
+
+		// View Mode
+		if (ImGui::BeginTabItem("View"))
+		{
+			ImGui::SeparatorText("View Mode");
+
+			static int ViewMode = 0;
+			if (ImGui::RadioButton(ICON_FA_ADJUST" Lit", &ViewMode, 0)) {
+				Renderer->viewMode = EViewModeIndex::VMI_Unlit;
+			}
+
+			if (ImGui::RadioButton(ICON_FA_CIRCLE" Unlit", &ViewMode, 1)) {
+				Renderer->viewMode = EViewModeIndex::VMI_Unlit;
+			}
+
+			if (ImGui::RadioButton(ICON_FA_CODEPEN" Wireframe", &ViewMode, 2)) {
+				Renderer->viewMode = EViewModeIndex::VMI_Wireframe;
+			}
+
+			ImGui::SeparatorText("Common Show Flag");
+
+			ImGui::CheckboxFlags(ICON_FA_CUBES" Primitives", (int*)&Renderer->showFlag, (uint64)EEngineShowFlags::SF_Primitives);
+			ImGui::CheckboxFlags(ICON_FA_FONT " BillboardText", (int*)&Renderer->showFlag, (uint64)EEngineShowFlags::SF_BillboardText);
+
+			ImGui::EndTabItem();
+		}
+
+		ImGui::EndTabBar();
 	}
-	UCamera* Camera = Viewport->GetCamera().lock().get();
-	FVector CamPos = Camera->GetWorldLocation();
-	float CameraLocation[3] = { CamPos.X, CamPos.Y, CamPos.Z };
-	if (ImGui::DragFloat3("Camera Location", CameraLocation, 0.1f))
-	{
-		Camera->SetWorldLocation(FVector(CameraLocation[0], CameraLocation[1], CameraLocation[2]));
-	}
-	FVector CamRot = Camera->GetRelativeRotation();
-	float CameraRotation[3] = { CamRot.X, CamRot.Y, CamRot.Z };
-	if (ImGui::DragFloat3("Camera Rotation", CameraRotation, 0.1f))
-	{
-		Camera->SetRelativeRotation(FVector(Clamp(CameraRotation[0], CamRot.X, CamRot.X), CameraRotation[1], CameraRotation[2]));
-	}
-
-	int GridSize = static_cast<int>(FUISettingInitializer::GetGridSize());
-	if (ImGui::DragInt("Grid Size", &GridSize, 1, 1, 100))
-	{
-		FUISettingInitializer::SetGridSize(static_cast<uint32>(GridSize));
-	}
-
-	float CamMoveSpeed = FUISettingInitializer::GetViewCamMoveSpeed();
-	if (ImGui::SliderFloat("Camera Movement Sensitivity", &CamMoveSpeed, 5.f, 30.f)) {
-		FUISettingInitializer::SetViewCamMoveSpeed(CamMoveSpeed);
-	}
-
-	float CamRotSpeed = FUISettingInitializer::GetViewCamRotSpeed();
-	if (ImGui::SliderFloat("Camera Rotation Sensitivity", &CamRotSpeed, 0.05f, 0.6f)) {
-		FUISettingInitializer::SetViewCamRotSpeed(CamRotSpeed);
-	}
-
-	SEPARATOR();
-	ImGui::SeparatorText("Gizmo");
-
-	// Space Select Button(World or Local)
-	static int SelectedSpace = 0;
-	if (ImGui::RadioButton("World", &SelectedSpace, 0))
-	{
-		Viewport->GetGizmoManager().SetWorldSpace(true);
-		std::cout << "Switched to World Space\n";
-	}
-
-	ImGui::SameLine();
-
-	if (ImGui::RadioButton("Local", &SelectedSpace, 1))
-	{
-		Viewport->GetGizmoManager().SetWorldSpace(false);
-		std::cout << "Switched to Local Space\n";
-	}
-
-
-	ImGui::SeparatorText("Tools");
-
-	if (ImGui::Button("Translate")) Viewport->GetGizmoManager().SetTranslateMode();
-	ImGui::SameLine();
-	if (ImGui::Button("Rotate")) Viewport->GetGizmoManager().SetRotateMode();
-	ImGui::SameLine();
-	if (ImGui::Button("Scale")) Viewport->GetGizmoManager().SetScaleMode();
-
-	ImGui::SeparatorText("View Mode");
-
-	static int ViewMode = 0;
-	if (ImGui::RadioButton(ICON_FA_ADJUST" Lit", &ViewMode, 0)) {
-		Renderer->viewMode = EViewModeIndex::VMI_Unlit;
-	}
-
-	if (ImGui::RadioButton(ICON_FA_CIRCLE" Unlit", &ViewMode, 1)) {
-		Renderer->viewMode = EViewModeIndex::VMI_Unlit;
-	}
-
-	if (ImGui::RadioButton(ICON_FA_CODEPEN" Wireframe", &ViewMode, 2)) {
-		Renderer->viewMode = EViewModeIndex::VMI_Wireframe;
-	}
-
-	ImGui::SeparatorText("Common Show Flag");
-
-
-	ImGui::CheckboxFlags(ICON_FA_CUBES" Primitives", (int*)&Renderer->showFlag, (uint64)EEngineShowFlags::SF_Primitives);
-	ImGui::CheckboxFlags(ICON_FA_FONT " BillboardText", (int*)&Renderer->showFlag, (uint64)EEngineShowFlags::SF_BillboardText);
-
-
 
 	ImGui::End();
-
-	RenderPickedObjectWindow(ViewOutput.Object);
-	RenderObjectManager(ViewOutput);
-
-	ImGui::Render();
-	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
 
 void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
-	ImGui::Begin("Scene Manager");
+	// 매 프레임마다 위치/크기 강제 고정
+	float PanelWidth = std::clamp(ImGui::GetIO().DisplaySize.x * 0.25f, 200.0f, 350.0f);
+
+	ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x, 0.0f), ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+	ImGui::SetNextWindowSize(ImVec2(PanelWidth, ImGui::GetIO().DisplaySize.y * 0.3f), ImGuiCond_Always);
+	ImGui::SetNextWindowCollapsed(false, ImGuiCond_Once);
+
+	ImGui::Begin("Scene Manager", nullptr,
+		ImGuiWindowFlags_NoMove |        // 드래그 이동 금지
+		ImGuiWindowFlags_NoResize |      // 크기 조절 금지
+		ImGuiWindowFlags_NoCollapse      // 접기 금지 (선택)
+	);
+
 	auto& SceneManager = EditorEngine->GetWorld().lock()->GetSceneManager();
 
 	// Loaded scenes dropdown
@@ -392,7 +452,19 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 }
 
 void FEditorMainPanel::RenderPickedObjectWindow(UObject*& ObjectPicked) {
-	ImGui::Begin("Picked Object");
+	// 매 프레임마다 위치/크기 강제 고정
+	float PanelWidth = std::clamp(ImGui::GetIO().DisplaySize.x * 0.25f, 200.0f, 350.0f);
+
+	ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y * 0.3f), ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+	ImGui::SetNextWindowSize(ImVec2(PanelWidth, ImGui::GetIO().DisplaySize.y * 0.7f), ImGuiCond_Always);
+	ImGui::SetNextWindowCollapsed(false, ImGuiCond_Once);
+
+	ImGui::Begin("Picked Object", nullptr,
+		ImGuiWindowFlags_NoMove |        // 드래그 이동 금지
+		ImGuiWindowFlags_NoResize |      // 크기 조절 금지
+		ImGuiWindowFlags_NoCollapse      // 접기 금지 (선택));
+	);
+
 	if(!ObjectPicked) {
 		ImGui::End();
 		return;
