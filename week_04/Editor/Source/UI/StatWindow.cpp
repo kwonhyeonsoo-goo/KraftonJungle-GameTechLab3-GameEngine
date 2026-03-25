@@ -45,10 +45,13 @@ void CStatWindow::Render()
 	
 	ImGui::Separator();
 
+	/** Legacy code */
+	/*
 	if (ImGui::Button("Refresh Object List"))
 	{
 		RefreshObjectList();
 	}
+	*/
 
 	if (bShowObjectList && !ObjectEntries.empty())
 	{
