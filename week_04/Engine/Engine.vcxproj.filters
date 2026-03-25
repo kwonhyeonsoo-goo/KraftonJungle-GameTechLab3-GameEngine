@@ -304,7 +304,6 @@
     <ClCompile Include="Source\Actor\TextActor.cpp">
       <Filter>Source\Actor</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\AxisRenderer.cpp" />
     <ClCompile Include="Source\Actor\SkySphereActor.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -633,7 +632,6 @@
     <ClInclude Include="Source\Actor\TextActor.h">
       <Filter>Source\Actor</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\AxisRenderer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

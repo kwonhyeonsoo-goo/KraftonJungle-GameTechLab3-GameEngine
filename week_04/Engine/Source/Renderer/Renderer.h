@@ -160,11 +160,16 @@ private:
 
 	/** 기본 공유 리소스 */
 	std::shared_ptr<FMaterial> DefaultMaterial;
+	std::shared_ptr<FMaterial> DefaultTextureMaterial;
+
 	CTextMeshBuilder TextRenderer;
 	CSubUVRenderer SubUVRenderer;
 
 	ID3D11ShaderResourceView* FolderIconSRV = nullptr;
 	ID3D11ShaderResourceView* FileIconSRV = nullptr;
+
+	/** SubUV, Text 이외 일반 material texture sample 용도 */
+	ID3D11SamplerState* NormalSampler = nullptr;
 
 public:
 	CShaderManager ShaderManager;
