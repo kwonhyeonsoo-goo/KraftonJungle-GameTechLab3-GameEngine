@@ -53,6 +53,36 @@ std::wstring FPaths::ToWide(const FString& Path)
 	return std::wstring(Path.begin(), Path.end());
 }
 
+std::string FPaths::ToRelativePath(const FString& Path)
+{
+	FString Root = ProjectRoot().string();
+	FString RelativePath = Path;
+
+	if (RelativePath.starts_with(Root))
+	{
+		RelativePath = RelativePath.substr(Root.length(), RelativePath.length() - Root.length());
+	}
+	else
+		return Path;
+
+	return RelativePath;
+}
+
+std::string FPaths::ToAbsolutePath(const FString& Path)
+{
+	FString Root = ProjectRoot().string();
+	FString AbsolutePath = Path;
+
+	if (AbsolutePath.starts_with(Root))
+	{
+		return Path;
+	}
+	else
+		AbsolutePath = Root + Path;
+
+	return AbsolutePath;
+}
+
 void FPaths::SetRoot(const std::filesystem::path& InPath)
 {
 	Root = InPath;

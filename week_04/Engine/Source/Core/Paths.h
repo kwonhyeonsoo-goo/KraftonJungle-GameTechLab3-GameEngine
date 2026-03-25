@@ -31,6 +31,18 @@ public:
 	// FString → std::wstring 변환 (셰이더 로드 등 Win32 API용)
 	static std::wstring ToWide(const FString& Path);
 
+	/**
+	 * Path 의 시작이 Root 와 동일한 경우 절대 경로로 판단하여 Root 경로를 제외한 상대 경로 반환
+	 * Path 의 시작이 Root 와 동일하지 않은 경우 인자 그대로 반환
+	 */
+	static std::string ToRelativePath(const FString& Path);
+
+	/**
+	 * Path 의 시작이 Root 와 동일한 경우 절대 경로로 판단하여 인자 그대로 반환
+	 * Path 의 시작이 Root 와 동일하지 않은 경우 상대 경로로 판단하여 절대 경로를 붙여 반환
+	 */
+	static std::string ToAbsolutePath(const FString& Path);
+
 private:
 	static void SetRoot(const std::filesystem::path& InPath);
 

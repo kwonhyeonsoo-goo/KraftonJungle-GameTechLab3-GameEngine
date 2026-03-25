@@ -292,11 +292,9 @@ void CEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 
 			AObjActor* NewActor = Core->GetScene()->SpawnActor<AObjActor>("ObjActor");
 			
-			NewActor->LoadObj(Core->GetRenderer()->GetDevice(), FilePath);
+			NewActor->LoadObj(Core->GetRenderer()->GetDevice(), FPaths::ToRelativePath(FilePath));
 			FVector V = Ray.Origin + Ray.Direction * 5;
 			NewActor->SetActorLocation(V);
-
-
 		}
 	}
 }

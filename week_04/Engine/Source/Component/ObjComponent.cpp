@@ -39,7 +39,7 @@ void UObjComponent::LoadTexture(ID3D11Device* Device, const FString& FilePath)
 	int width = 0, height = 0, channels = 0;
 
 	unsigned char* data = stbi_load(
-		FilePath.c_str(),
+		FPaths::ToAbsolutePath(FilePath).c_str(),
 		&width,
 		&height,
 		&channels,
