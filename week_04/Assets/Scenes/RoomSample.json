@@ -1,0 +1,126 @@
+{
+  "Camera": {
+    "Position": [
+      7.673050880432129,
+      -8.095481872558594,
+      3.0397846698760986
+    ],
+    "Rotation": [
+      132.79971313476563,
+      -4.8000030517578125
+    ]
+  },
+  "Materials": [
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_Gizmos.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_Wireframe.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_Sky.json",
+    "Assets/Materials/M_TintYellow.json"
+  ],
+  "NextUUID": 26,
+  "Primitives": {
+    "0": {
+      "Billboard": true,
+      "Class": "AObjActor",
+      "ComponentUUIDs": [
+        14,
+        15,
+        16
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Material": "M_Default",
+      "PrimitiveFileName": "C:\\Projects\\Week3_Team5_DynoEngine\\Assets\\Meshes\\tiny-room-room.obj",
+      "Rotation": [
+        90.00000762939453,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 13
+    },
+    "1": {
+      "Billboard": true,
+      "Class": "AObjActor",
+      "ComponentUUIDs": [
+        18,
+        19,
+        20
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Material": "M_Default",
+      "PrimitiveFileName": "C:\\Projects\\Week3_Team5_DynoEngine\\Assets\\Meshes\\tiny-room-props.obj",
+      "Rotation": [
+        90.00000762939453,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 17
+    },
+    "2": {
+      "Billboard": true,
+      "Class": "ASkySphereActor",
+      "ComponentUUIDs": [
+        22,
+        23
+      ],
+      "Location": [
+        7.673050880432129,
+        -8.095481872558594,
+        3.0397846698760986
+      ],
+      "Material": "M_Sky",
+      "PrimitiveFileName": "",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        2000.0,
+        2000.0,
+        2000.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 21
+    }
+  }
+}
