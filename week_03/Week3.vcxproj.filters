@@ -142,6 +142,7 @@
     <ClInclude Include="ImGui\IconsFontAwesome4.h" />
     <ClInclude Include="World\Primitives\BillBoardComponent.h" />
     <ClInclude Include="World\Primitives\TextComponent.h" />
+    <ClInclude Include="Engine\EngineServices\EngineServices.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Fonts\DDS\AFont.dds" />
@@ -157,8 +158,6 @@
     <Image Include="Assets\Fonts\DDS\KFont_7.dds" />
     <Image Include="Assets\Fonts\DDS\KFont_8.dds" />
     <Image Include="Assets\Fonts\DDS\KFont_9.dds" />
-    <Image Include="Assets\Fonts\Font.dds" />
-    <Image Include="Assets\Fonts\Font.png" />
     <Image Include="Assets\Fonts\PNG\AFont.png" />
     <Image Include="Assets\Fonts\PNG\KFont_1.png" />
     <Image Include="Assets\Fonts\PNG\KFont_10.png" />
@@ -173,6 +172,7 @@
     <Image Include="Assets\Fonts\PNG\KFont_8.png" />
     <Image Include="Assets\Fonts\PNG\KFont_9.png" />
     <Image Include="..\..\..\..\..\Downloads\light_icon.png" />
+    <Image Include="Assets\Fonts\NanumGothic.dds" />
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />

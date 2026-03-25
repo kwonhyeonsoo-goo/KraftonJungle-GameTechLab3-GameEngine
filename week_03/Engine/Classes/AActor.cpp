@@ -8,7 +8,7 @@ REGISTER_FACTORY(AActor)
 AActor::~AActor() {
 	for (auto* Comp : Components) {
 		if (Comp) {
-			UObjectManager::Get().DestroyObject(Comp);
+			//UObjectManager::Get().DestroyObject(Comp);
 		}
 	}
 
