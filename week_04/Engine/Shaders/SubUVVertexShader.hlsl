@@ -1,34 +1,16 @@
-cbuffer FrameConstantBuffer : register(b0)
-{
-	matrix View;
-	matrix Projection;
-};
+#include "ShaderCommon.hlsli"
 
-cbuffer ObjectConstantBuffer : register(b1)
+VS_OUTPUT main(VS_INPUT Input)
 {
-	matrix World;
-};
-
-struct VSInput
-{
-	float3 Position : POSITION;
-	float2 UV : TEXCOORD0;
-};
-
-struct PSInput
-{
-	float4 Position : SV_POSITION;
-	float2 UV : TEXCOORD0;
-};
-
-PSInput main(VSInput Input)
-{
-	PSInput Output;
+	VS_OUTPUT Output;
 
 	float4 WorldPos = mul(float4(Input.Position, 1.0f), World);
 	float4 ViewPos = mul(WorldPos, View);
 	Output.Position = mul(ViewPos, Projection);
 
+	Output.Color = Input.Color;
+	Output.Normal = mul(Input.Normal, (float3x3) World);
 	Output.UV = Input.UV;
+	
 	return Output;
 }

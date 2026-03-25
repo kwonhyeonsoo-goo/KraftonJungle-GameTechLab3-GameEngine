@@ -273,7 +273,7 @@
     <ClCompile Include="Source\Renderer\SubUVRenderer.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\TextRenderer.cpp">
+    <ClCompile Include="Source\Renderer\TextMeshBuilder.cpp">
       <Filter>Source\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scene\RenderCollector.cpp">
@@ -552,7 +552,7 @@
     <ClInclude Include="Source\Renderer\SubUVRenderer.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\TextRenderer.h">
+    <ClInclude Include="Source\Renderer\TextMeshBuilder.h">
       <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\TextureVertex.h">

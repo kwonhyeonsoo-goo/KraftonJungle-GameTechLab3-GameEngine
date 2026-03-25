@@ -12,13 +12,14 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "ThirdParty/stb_image.h"
 
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "dxgi.lib")
+
 static FVector GetCameraWorldPositionFromViewMatrix(const FMatrix& ViewMatrix)
 {
 	const FMatrix InvView = ViewMatrix.GetInverse();
 	return FVector(InvView.M[3][0], InvView.M[3][1], InvView.M[3][2]);
 }
-#pragma comment(lib, "d3d11.lib")
-#pragma comment(lib, "dxgi.lib")
 
 CRenderer::~CRenderer()
 {
@@ -118,21 +119,14 @@ bool CRenderer::CreateDeviceAndSwapChain(HWND InHwnd, int32 Width, int32 Height)
 
 bool CRenderer::CreateRenderTargetAndDepthStencil(int32 Width, int32 Height)
 {
-	// RenderTargetView
 	ID3D11Texture2D* BackBuffer = nullptr;
 	HRESULT Hr = SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&BackBuffer);
-	if (FAILED(Hr))
-	{
-		return false;
-	}
+	if (FAILED(Hr)) return false;
+	
 	Hr = Device->CreateRenderTargetView(BackBuffer, nullptr, &RenderTargetView);
 	BackBuffer->Release();
-	if (FAILED(Hr))
-	{
-		return false;
-	}
+	if (FAILED(Hr)) return false;
 
-	// DepthStencilView
 	D3D11_TEXTURE2D_DESC DepthDesc = {};
 	DepthDesc.Width = Width;
 	DepthDesc.Height = Height;
@@ -145,33 +139,20 @@ bool CRenderer::CreateRenderTargetAndDepthStencil(int32 Width, int32 Height)
 
 	ID3D11Texture2D* DepthTex = nullptr;
 	Hr = Device->CreateTexture2D(&DepthDesc, nullptr, &DepthTex);
-	if (FAILED(Hr))
-	{
-		return false;
-	}
+	if (FAILED(Hr)) return false;
+	
 	Hr = Device->CreateDepthStencilView(DepthTex, nullptr, &DepthStencilView);
 	DepthTex->Release();
-	if (FAILED(Hr))
-	{
-		return false;
-	}
-
-	return true;
+	
+	return SUCCEEDED(Hr);
 }
 
 bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 {
 	Hwnd = InHwnd;
 
-	if (!CreateDeviceAndSwapChain(Hwnd, Width, Height))
-	{
-		return false;
-	}
-
-	if (!CreateRenderTargetAndDepthStencil(Width, Height))
-	{
-		return false;
-	}
+	if (!CreateDeviceAndSwapChain(Hwnd, Width, Height)) return false;
+	if (!CreateRenderTargetAndDepthStencil(Width, Height)) return false;
 
 	Viewport.TopLeftX = 0.f;
 	Viewport.TopLeftY = 0.f;
@@ -183,26 +164,17 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 	RenderStateManager = std::make_unique<CRenderStateManager>(Device, DeviceContext);
 	RenderStateManager->PrepareCommonStates();
 
-	if (!CreateConstantBuffers())
-	{
-		return false;
-	}
+	if (!CreateConstantBuffers()) return false;
 	SetConstantBuffers();
 
 	std::wstring ShaderDirW = FPaths::ShaderDir();
 	std::wstring VSPath = ShaderDirW + L"VertexShader.hlsl";
 	std::wstring PSPath = ShaderDirW + L"PixelShader.hlsl";
 
-	if (!ShaderManager.LoadVertexShader(Device, VSPath.c_str()))
-	{
-		return false;
-	}
-	if (!ShaderManager.LoadPixelShader(Device, PSPath.c_str()))
-	{
-		return false;
-	}
+	if (!ShaderManager.LoadVertexShader(Device, VSPath.c_str())) return false;
+	if (!ShaderManager.LoadPixelShader(Device, PSPath.c_str())) return false;
 
-	// 기본 Material 생성 (ColorPixelShader 사용, BaseColor 파라미터 포함)
+	/** 기본 Material 생성 */
 	{
 		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, VSPath.c_str());
 		std::wstring ColorPSPath = ShaderDirW + L"ColorPixelShader.hlsl";
@@ -212,22 +184,19 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		DefaultMaterial->SetVertexShader(VS);
 		DefaultMaterial->SetPixelShader(PS);
 
-		// Renderer State 채워넣기
 		FRasterizerStateOption rasterizerOption;
 		rasterizerOption.FillMode = D3D11_FILL_SOLID;
 		rasterizerOption.CullMode = D3D11_CULL_BACK;
-		rasterizerOption.DepthClipEnable = false;
-		rasterizerOption.DepthBias = 0;
-		auto rasterizerState = RenderStateManager.get()->GetOrCreateRasterizerState(rasterizerOption);
-		DefaultMaterial->SetRasterizerOption(rasterizerOption); // 디버그용 정보 삽입
-		DefaultMaterial->SetRasterizerState(rasterizerState);
+		auto RS = RenderStateManager->GetOrCreateRasterizerState(rasterizerOption);
+		DefaultMaterial->SetRasterizerOption(rasterizerOption);
+		DefaultMaterial->SetRasterizerState(RS);
+
 		FDepthStencilStateOption depthStencilOption;
 		depthStencilOption.DepthEnable = true;
 		depthStencilOption.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-		depthStencilOption.StencilEnable = false;
-		auto depthStencilState = RenderStateManager.get()->GetOrCreateDepthStencilState(depthStencilOption);
-		DefaultMaterial->SetDepthStencilOption(depthStencilOption); // 디버그용 정보 삽입
-		DefaultMaterial->SetDepthStencilState(depthStencilState);
+		auto DSS = RenderStateManager->GetOrCreateDepthStencilState(depthStencilOption);
+		DefaultMaterial->SetDepthStencilOption(depthStencilOption);
+		DefaultMaterial->SetDepthStencilState(DSS);
 
 		int32 SlotIndex = DefaultMaterial->CreateConstantBuffer(Device, 16);
 		if (SlotIndex >= 0)
@@ -236,108 +205,64 @@ bool CRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 			float White[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 			DefaultMaterial->GetConstantBuffer(SlotIndex)->SetData(White, sizeof(White));
 		}
-
 		FMaterialManager::Get().Register("M_Default", DefaultMaterial);
 	}
 
-	D3D11_DEPTH_STENCIL_DESC OverlayDepthDesc = {};
-	OverlayDepthDesc.DepthEnable = FALSE;
-	OverlayDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	OverlayDepthDesc.DepthFunc = D3D11_COMPARISON_ALWAYS;
-
-	if (!TextRenderer.Initialize(Device, DeviceContext))
-	{
-		MessageBox(0, L"TextRenderer Initialize Failed.", 0, 0);
-		return false;
-	}
+	if (!TextRenderer.Initialize(this)) return false;
 
 	std::filesystem::path SubUVTexturePath = FPaths::ContentDir() / FString("Textures/SubUVPenguin.png");
-	FString SubUVTexturePathString = SubUVTexturePath.string();
-	if (!SubUVRenderer.Initialize(Device, DeviceContext, FPaths::ToWide(SubUVTexturePathString)))
+	if (!SubUVRenderer.Initialize(this, FPaths::ToWide(SubUVTexturePath.string())))
 	{
 		MessageBox(0, L"SubUVRenderer Initialize Failed.", 0, 0);
 	}
 
 	std::filesystem::path FolderIconPath = FPaths::AssetDir() / FString("Textures/FolderIcon.png");
 	std::filesystem::path FileIconPath = FPaths::AssetDir() / FString("Textures/FileIcon.png");
-
-	FString FolderIconPathString = FolderIconPath.string();
-	FString FileIconPathString = FileIconPath.string();
-
-	CreateTextureFromSTB(Device, FolderIconPathString.c_str(), &FolderIconSRV);
-	CreateTextureFromSTB(Device, FileIconPathString.c_str(), &FileIconSRV);
+	CreateTextureFromSTB(Device, FolderIconPath.string().c_str(), &FolderIconSRV);
+	CreateTextureFromSTB(Device, FileIconPath.string().c_str(), &FileIconSRV);
 
 	return true;
 }
 
 void CRenderer::SetConstantBuffers()
 {
-	ID3D11Buffer* ConstantBuffers[2] = { FrameConstantBuffer, ObjectConstantBuffer };
-	DeviceContext->VSSetConstantBuffers(0, 2, ConstantBuffers);
+	ID3D11Buffer* CBs[2] = { FrameConstantBuffer, ObjectConstantBuffer };
+	DeviceContext->VSSetConstantBuffers(0, 2, CBs);
 }
 
 void CRenderer::BeginFrame()
 {
-	if (GUINewFrame)
-	{
-		GUINewFrame();
-	}
-
-	if (GUIUpdate)
-	{
-		GUIUpdate();
-	}
+	if (GUINewFrame) GUINewFrame();
+	if (GUIUpdate) GUIUpdate();
 
 	constexpr float ClearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
-	if (RenderTargetView)
-	{
-		DeviceContext->ClearRenderTargetView(RenderTargetView, ClearColor);
-	}
-	if (DepthStencilView)
-	{
-		DeviceContext->ClearDepthStencilView(DepthStencilView,
-			D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-	}
+	if (RenderTargetView) DeviceContext->ClearRenderTargetView(RenderTargetView, ClearColor);
+	if (DepthStencilView) DeviceContext->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-	ID3D11RenderTargetView* ActiveRenderTargetView = RenderTargetView;
-	ID3D11DepthStencilView* ActiveDepthStencilView = DepthStencilView;
-	D3D11_VIEWPORT ActiveViewport = Viewport;
+	ID3D11RenderTargetView* ActiveRTV = RenderTargetView;
+	ID3D11DepthStencilView* ActiveDSV = DepthStencilView;
+	D3D11_VIEWPORT ActiveVP = Viewport;
 
 	if (bUseSceneRenderTargetOverride)
 	{
-		ActiveRenderTargetView = SceneRenderTargetView;
-		ActiveDepthStencilView = SceneDepthStencilView;
-		ActiveViewport = SceneViewport;
-
-		if (ActiveRenderTargetView && ActiveRenderTargetView != RenderTargetView)
-		{
-			DeviceContext->ClearRenderTargetView(ActiveRenderTargetView, ClearColor);
-		}
-		if (ActiveDepthStencilView && ActiveDepthStencilView != DepthStencilView)
-		{
-			DeviceContext->ClearDepthStencilView(ActiveDepthStencilView,
-				D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-		}
+		ActiveRTV = SceneRenderTargetView;
+		ActiveDSV = SceneDepthStencilView;
+		ActiveVP = SceneViewport;
+		if (ActiveRTV && ActiveRTV != RenderTargetView) DeviceContext->ClearRenderTargetView(ActiveRTV, ClearColor);
+		if (ActiveDSV && ActiveDSV != DepthStencilView) DeviceContext->ClearDepthStencilView(ActiveDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	}
 
-	DeviceContext->OMSetRenderTargets(1, &ActiveRenderTargetView, ActiveDepthStencilView);
-	DeviceContext->RSSetViewports(1, &ActiveViewport);
+	DeviceContext->OMSetRenderTargets(1, &ActiveRTV, ActiveDSV);
+	DeviceContext->RSSetViewports(1, &ActiveVP);
 
 	ClearCommandList();
 }
 
 void CRenderer::ClearCommandList()
 {
-	// 기존과 같은 크기의 CommandList가 들어올 확률이 높다고 가정
 	PrevCommandCount = CommandList.size();
 	CommandList.clear();
 	CommandList.reserve(PrevCommandCount);	
-
-	TextCommandList.clear();
-	TextCommandList.reserve(PrevCommandCount);
-
-	SubUVCommandList.clear();
-	SubUVCommandList.reserve(PrevCommandCount);
 }
 
 void CRenderer::EndFrame()
@@ -348,83 +273,51 @@ void CRenderer::EndFrame()
 		DeviceContext->RSSetViewports(1, &Viewport);
 	}
 
-	if (GUIRender)
-	{
-		GUIRender();
-	}
+	if (GUIRender) GUIRender();
 
 	UINT SyncInterval = bVSyncEnabled ? 1 : 0;
 	HRESULT Hr = SwapChain->Present(SyncInterval, 0);
-	if (Hr == DXGI_STATUS_OCCLUDED)
-		bSwapChainOccluded = true;
+	if (Hr == DXGI_STATUS_OCCLUDED) bSwapChainOccluded = true;
 
-	if (GUIPostPresent)
-	{
-		GUIPostPresent();
-	}
+	if (GUIPostPresent) GUIPostPresent();
 }
 
 void CRenderer::SubmitCommands(const FRenderCommandQueue& Queue)
 {
-	// 큐의 카메라 데이터를 적용
 	ViewMatrix = Queue.ViewMatrix;
 	ProjectionMatrix = Queue.ProjectionMatrix;
 
-	// GPU 버퍼 보장 + 내부 CommandList로 이전
 	for (const auto& Cmd : Queue.Commands)
 	{
-		if (Cmd.MeshData)
-		{
-			Cmd.MeshData->UpdateVertexAndIndexBuffer(Device);
-		}
+		if (Cmd.MeshData) Cmd.MeshData->UpdateVertexAndIndexBuffer(Device);
 		AddCommand(Cmd);
 	}
-	for (const auto& TextCmd : Queue.TextCommands)
-	{
-		TextCommandList.push_back(TextCmd);
-	}
-	for (const auto& SubUVCmd : Queue.SubUVCommands)
-	{
-		SubUVCommandList.push_back(SubUVCmd);
-	}
-
 }
 
 void CRenderer::AddCommand(const FRenderCommand& Command)
 {
 	CommandList.push_back(Command);
 	FRenderCommand& Added = CommandList.back();
-
-	// Material 미지정 시 DefaultMaterial 할당
-	if (!Added.Material)
-	{
-		Added.Material = DefaultMaterial.get();
-	}
+	if (!Added.Material) Added.Material = DefaultMaterial.get();
 	Added.SortKey = FRenderCommand::MakeSortKey(Added.Material, Added.MeshData);
 }
 
 void CRenderer::ExecuteCommands()
 {
 	std::sort(CommandList.begin(), CommandList.end(),
-		[](const FRenderCommand& A, const FRenderCommand& B)
-		{
-			if (A.RenderLayer != B.RenderLayer)
-				return A.RenderLayer < B.RenderLayer;
+		[](const FRenderCommand& A, const FRenderCommand& B) {
+			if (A.RenderLayer != B.RenderLayer) return A.RenderLayer < B.RenderLayer;
 			return A.SortKey < B.SortKey;
 		});
 
-	// 프레임 상수 버퍼 업데이트 및 바인딩 (b0: Frame, b1: Object)
-	// ImGui에서 VSSetConstantBuffers를 호출하기 때문에 매 프레임마다 다시 Set해줘야 함
 	SetConstantBuffers();
 	UpdateFrameConstantBuffer();
 
 	ExecuteRenderPass(ERenderLayer::Default);
 	ClearDepthBuffer();
 	ExecuteRenderPass(ERenderLayer::Overlay);
-	if (PostRenderCallback) {
-		PostRenderCallback(this);
-	}
-	ExecuteTextRenderPass();
+	
+	if (PostRenderCallback) PostRenderCallback(this);
 }
 
 void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
@@ -432,35 +325,46 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 	FMaterial* CurrentMaterial = nullptr;
 	FMeshData* CurrentMesh = nullptr;
 	D3D11_PRIMITIVE_TOPOLOGY CurrentMeshTopology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
-	ID3D11RasterizerState* CurrentRasterizerState = nullptr;
-	ID3D11DepthStencilState* CurrentDepthStencilState = nullptr;
+
+	ID3D11ShaderResourceView* FontSRV = TextRenderer.GetAtlasSRV();
+	ID3D11SamplerState* FontSampler = TextRenderer.GetAtlasSampler();
+	ID3D11ShaderResourceView* SubUVSRV = SubUVRenderer.GetTextureSRV();
+	ID3D11SamplerState* SubUVSampler = SubUVRenderer.GetSamplerState();
 
 	FRenderCommand toFind;
 	toFind.RenderLayer = InRenderLayer;
 	auto it = std::lower_bound(CommandList.begin(), CommandList.end(), toFind,
-		[](const FRenderCommand& A, const FRenderCommand& B)
-		{ return A.RenderLayer < B.RenderLayer; }
-	);
+		[](const FRenderCommand& A, const FRenderCommand& B) { return A.RenderLayer < B.RenderLayer; });
 
-	// ImGui로 인해 RS 값 바뀐 것 되돌리기
 	RenderStateManager->RebindState();
 	for (; it != CommandList.end(); it++)
 	{
 		auto Cmd = *it;
-		if (Cmd.RenderLayer != InRenderLayer)
-			return;
-
-		if (!Cmd.MeshData || Cmd.MeshData->Indices.empty())
-		{
-			continue;
-		}
+		if (Cmd.RenderLayer != InRenderLayer) return;
+		if (!Cmd.MeshData || (Cmd.MeshData->Vertices.empty() && Cmd.MeshData->Indices.empty())) continue;
 
 		if (Cmd.Material != CurrentMaterial)
 		{
 			Cmd.Material->Bind(DeviceContext);
+			
+			// RenderStateManager를 통한 일괄 상태 바인딩 (캐싱 활용)
 			RenderStateManager->BindState(Cmd.Material->GetRasterizerState());
 			RenderStateManager->BindState(Cmd.Material->GetDepthStencilState());
+			RenderStateManager->BindState(Cmd.Material->GetBlendState());
+
 			CurrentMaterial = Cmd.Material;
+
+			/** 특수 머티리얼 아틀라스 바인딩 보조 */
+			if (CurrentMaterial->GetOriginName() == "M_Font")
+			{
+				DeviceContext->PSSetShaderResources(0, 1, &FontSRV);
+				DeviceContext->PSSetSamplers(0, 1, &FontSampler);
+			}
+			else if (CurrentMaterial->GetOriginName() == "M_SubUV")
+			{
+				DeviceContext->PSSetShaderResources(0, 1, &SubUVSRV);
+				DeviceContext->PSSetSamplers(0, 1, &SubUVSampler);
+			}
 		}
 
 		if (Cmd.MeshData != CurrentMesh)
@@ -469,87 +373,30 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 			CurrentMesh = Cmd.MeshData;
 		}
 
-		D3D11_PRIMITIVE_TOPOLOGY DesiredMeshTopology = (D3D11_PRIMITIVE_TOPOLOGY)CurrentMesh->Topology;
-		if (DesiredMeshTopology != CurrentMeshTopology)
+		D3D11_PRIMITIVE_TOPOLOGY DesiredTopology = (D3D11_PRIMITIVE_TOPOLOGY)CurrentMesh->Topology;
+		if (DesiredTopology != CurrentMeshTopology)
 		{
-			DeviceContext->IASetPrimitiveTopology(DesiredMeshTopology);
+			DeviceContext->IASetPrimitiveTopology(DesiredTopology);
+			CurrentMeshTopology = DesiredTopology;
 		}
 
 		UpdateObjectConstantBuffer(Cmd.WorldMatrix);
-		DeviceContext->DrawIndexed(Cmd.MeshData->Indices.size(), 0, 0);
+		
+		if (!Cmd.MeshData->Indices.empty())
+			DeviceContext->DrawIndexed(static_cast<UINT>(Cmd.MeshData->Indices.size()), 0, 0);
+		else if (!Cmd.MeshData->Vertices.empty())
+			DeviceContext->Draw(static_cast<UINT>(Cmd.MeshData->Vertices.size()), 0);
 	}
-}
-
-void CRenderer::ExecuteTextRenderPass()
-{
-	DeviceContext->OMSetDepthStencilState(nullptr, 0);
-	ShaderManager.Bind(DeviceContext);
-
-	const FVector CameraPosition = GetCameraWorldPositionFromViewMatrix(ViewMatrix);
-
-	TextRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
-
-	if (!TextCommandList.empty())
-	{
-		TextRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
-
-		for (const FTextRenderCommand& TextCmd : TextCommandList)
-		{
-			TextRenderer.DrawText(
-				TextCmd.Text,
-				TextCmd.WorldMatrix,
-				TextCmd.WorldScale,
-				TextCmd.bBillboard,
-				TextCmd.Color
-			);
-		}
-	}
-
-	if (!SubUVCommandList.empty())
-	{
-		SubUVRenderer.Begin(ViewMatrix, ProjectionMatrix, CameraPosition);
-
-		for (const FSubUVRenderCommand& Cmd : SubUVCommandList)
-		{
-			SubUVRenderer.DrawSubUV(
-				Cmd.WorldMatrix,
-				Cmd.Size,
-				Cmd.Columns,
-				Cmd.Rows,
-				Cmd.TotalFrames,
-				Cmd.FirstFrame,
-				Cmd.LastFrame,
-				Cmd.FPS,
-				Cmd.ElapsedTime,
-				Cmd.bLoop,
-				Cmd.bBillboard
-			);
-		}
-	}
-
-	// Text/SubUV 패스 후 잔여 상태 정리
-	ID3D11ShaderResourceView* NullSRV[1] = { nullptr };
-	ID3D11SamplerState* NullSampler[1] = { nullptr };
-	ID3D11Buffer* NullPSCB[1] = { nullptr };
-
-	DeviceContext->PSSetShaderResources(0, 1, NullSRV);
-	DeviceContext->PSSetSamplers(0, 1, NullSampler);
-	DeviceContext->PSSetConstantBuffers(2, 1, NullPSCB);
-
-	const float BlendFactor[4] = { 0, 0, 0, 0 };
-	DeviceContext->OMSetBlendState(nullptr, BlendFactor, 0xffffffff);
-	DeviceContext->OMSetDepthStencilState(nullptr, 0);
-	DeviceContext->RSSetState(nullptr);
-
-	// 기본 렌더 상태 다시 바인딩
-	ShaderManager.Bind(DeviceContext);
-	SetConstantBuffers();
-	RenderStateManager->RebindState();
 }
 
 void CRenderer::ClearDepthBuffer()
 {
-	DeviceContext->ClearDepthStencilView(SceneDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	if (SceneDepthStencilView) DeviceContext->ClearDepthStencilView(SceneDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+}
+
+FVector CRenderer::GetCameraPosition() const
+{
+	return GetCameraWorldPositionFromViewMatrix(ViewMatrix);
 }
 
 bool CRenderer::CreateConstantBuffers()
@@ -559,25 +406,11 @@ bool CRenderer::CreateConstantBuffers()
 	Desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	Desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-	// b0: Frame (View + Projection)
 	Desc.ByteWidth = sizeof(FFrameConstantBuffer);
-	HRESULT Hr = Device->CreateBuffer(&Desc, nullptr, &FrameConstantBuffer);
-	if (FAILED(Hr))
-	{
-		MessageBox(0, L"CreateConstantBuffer (Frame) Failed.", 0, 0);
-		return false;
-	}
+	if (FAILED(Device->CreateBuffer(&Desc, nullptr, &FrameConstantBuffer))) return false;
 
-	// b1: Object (World)
 	Desc.ByteWidth = sizeof(FObjectConstantBuffer);
-	Hr = Device->CreateBuffer(&Desc, nullptr, &ObjectConstantBuffer);
-	if (FAILED(Hr))
-	{
-		MessageBox(0, L"CreateConstantBuffer (Object) Failed.", 0, 0);
-		return false;
-	}
-
-	return true;
+	return SUCCEEDED(Device->CreateBuffer(&Desc, nullptr, &ObjectConstantBuffer));
 }
 
 void CRenderer::UpdateFrameConstantBuffer()
@@ -585,344 +418,175 @@ void CRenderer::UpdateFrameConstantBuffer()
 	FFrameConstantBuffer CBData;
 	CBData.View = ViewMatrix.GetTransposed();
 	CBData.Projection = ProjectionMatrix.GetTransposed();
-
 	D3D11_MAPPED_SUBRESOURCE Mapped;
-	DeviceContext->Map(FrameConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped);
-	memcpy(Mapped.pData, &CBData, sizeof(CBData));
-	DeviceContext->Unmap(FrameConstantBuffer, 0);
+	if (SUCCEEDED(DeviceContext->Map(FrameConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
+	{
+		memcpy(Mapped.pData, &CBData, sizeof(CBData));
+		DeviceContext->Unmap(FrameConstantBuffer, 0);
+	}
 }
 
 void CRenderer::UpdateObjectConstantBuffer(const FMatrix& WorldMatrix)
 {
 	FObjectConstantBuffer CBData;
 	CBData.World = WorldMatrix.GetTransposed();
-
 	D3D11_MAPPED_SUBRESOURCE Mapped;
-	DeviceContext->Map(ObjectConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped);
-	memcpy(Mapped.pData, &CBData, sizeof(CBData));
-	DeviceContext->Unmap(ObjectConstantBuffer, 0);
+	if (SUCCEEDED(DeviceContext->Map(ObjectConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
+	{
+		memcpy(Mapped.pData, &CBData, sizeof(CBData));
+		DeviceContext->Unmap(ObjectConstantBuffer, 0);
+	}
 }
 
-bool CRenderer::CreateTextureFromSTB(
-	ID3D11Device* Device,
-	const char* FilePath,
-	ID3D11ShaderResourceView** OutSRV)
+bool CRenderer::CreateTextureFromSTB(ID3D11Device* Device, const char* FilePath, ID3D11ShaderResourceView** OutSRV)
 {
-	int Width, Height, Channels;
-	unsigned char* Data = stbi_load(FilePath, &Width, &Height, &Channels, 4); // RGBA
+	int W, H, C;
+	unsigned char* Data = stbi_load(FilePath, &W, &H, &C, 4);
+	if (!Data) return false;
 
-	if (!Data)
-		return false;
-
-	// Texture 생성
 	D3D11_TEXTURE2D_DESC Desc = {};
-	Desc.Width = Width;
-	Desc.Height = Height;
-	Desc.MipLevels = 1;
-	Desc.ArraySize = 1;
-	Desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	Desc.SampleDesc.Count = 1;
-	Desc.Usage = D3D11_USAGE_DEFAULT;
-	Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	Desc.Width = W; Desc.Height = H; Desc.MipLevels = 1; Desc.ArraySize = 1;
+	Desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; Desc.SampleDesc.Count = 1;
+	Desc.Usage = D3D11_USAGE_DEFAULT; Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
-	D3D11_SUBRESOURCE_DATA InitData = {};
-	InitData.pSysMem = Data;
-	InitData.SysMemPitch = Width * 4;
-
-	ID3D11Texture2D* Texture = nullptr;
-	HRESULT hr = Device->CreateTexture2D(&Desc, &InitData, &Texture);
-
+	D3D11_SUBRESOURCE_DATA InitData = { Data, static_cast<UINT>(W * 4), 0 };
+	ID3D11Texture2D* Tex = nullptr;
+	HRESULT hr = Device->CreateTexture2D(&Desc, &InitData, &Tex);
 	stbi_image_free(Data);
+	if (FAILED(hr)) return false;
 
-	if (FAILED(hr))
-		return false;
-
-	// SRV 생성
-	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-	SRVDesc.Format = Desc.Format;
-	SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	SRVDesc.Texture2D.MipLevels = 1;
-
-	hr = Device->CreateShaderResourceView(Texture, &SRVDesc, OutSRV);
-
-	Texture->Release();
-
+	hr = Device->CreateShaderResourceView(Tex, nullptr, OutSRV);
+	Tex->Release();
 	return SUCCEEDED(hr);
 }
 
 bool CRenderer::InitOutlineResources()
 {
-	if (StencilWriteState && StencilTestState && OutlinePS)
-		return true;
+	if (StencilWriteState && StencilTestState && OutlinePS) return true;
 
-	// Pass 1: 통상 렌더 + Stencil에 1 쓰기
 	D3D11_DEPTH_STENCIL_DESC WriteDesc = {};
-	WriteDesc.DepthEnable = TRUE;
-	WriteDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	WriteDesc.DepthFunc = D3D11_COMPARISON_LESS;
-	WriteDesc.StencilEnable = TRUE;
-	WriteDesc.StencilReadMask = 0xFF;
-	WriteDesc.StencilWriteMask = 0xFF;
-	WriteDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_REPLACE;
-	WriteDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_REPLACE;
-	WriteDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-	WriteDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	WriteDesc.DepthEnable = TRUE; WriteDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL; WriteDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	WriteDesc.StencilEnable = TRUE; WriteDesc.StencilReadMask = 0xFF; WriteDesc.StencilWriteMask = 0xFF;
+	WriteDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_REPLACE; WriteDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_REPLACE;
+	WriteDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE; WriteDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 	WriteDesc.BackFace = WriteDesc.FrontFace;
+	if (FAILED(Device->CreateDepthStencilState(&WriteDesc, &StencilWriteState))) return false;
 
-	HRESULT Hr = Device->CreateDepthStencilState(&WriteDesc, &StencilWriteState);
-	if (FAILED(Hr)) return false;
-
-	// Pass 2: Stencil이 1이 아닌 곳에만 그리기 (아웃라인)
 	D3D11_DEPTH_STENCIL_DESC TestDesc = {};
-	TestDesc.DepthEnable = FALSE;
-	TestDesc.StencilEnable = TRUE;
-	TestDesc.StencilReadMask = 0xFF;
-	TestDesc.StencilWriteMask = 0xFF;
-	TestDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	TestDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-	TestDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	TestDesc.FrontFace.StencilFunc = D3D11_COMPARISON_NOT_EQUAL;
+	TestDesc.DepthEnable = FALSE; TestDesc.StencilEnable = TRUE; TestDesc.StencilReadMask = 0xFF; TestDesc.StencilWriteMask = 0xFF;
+	TestDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP; TestDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	TestDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP; TestDesc.FrontFace.StencilFunc = D3D11_COMPARISON_NOT_EQUAL;
 	TestDesc.BackFace = TestDesc.FrontFace;
+	if (FAILED(Device->CreateDepthStencilState(&TestDesc, &StencilTestState))) return false;
 
-	Hr = Device->CreateDepthStencilState(&TestDesc, &StencilTestState);
-	if (FAILED(Hr)) return false;
-
-	// 아웃라인 픽셀 셰이더 로드
-	FString OutlinePSPathString = (FPaths::ShaderDir() / "OutlinePixelShader.hlsl").string();
-	std::wstring OutlinePSPath = std::wstring(OutlinePSPathString.begin(), OutlinePSPathString.end());	
-
-	OutlinePS = FShaderMap::Get().GetOrCreatePixelShader(Device, OutlinePSPath.c_str());
+	FString PSPath = (FPaths::ShaderDir() / "OutlinePixelShader.hlsl").string();
+	OutlinePS = FShaderMap::Get().GetOrCreatePixelShader(Device, FPaths::ToWide(PSPath).c_str());
 	return OutlinePS != nullptr;
 }
 
 void CRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float OutlineScale)
 {
-	if (!Mesh || !InitOutlineResources())
-		return;
-
+	if (!Mesh || !InitOutlineResources()) return;
 	Mesh->UpdateVertexAndIndexBuffer(Device);
 	Mesh->Bind(DeviceContext);
 
-	ID3D11RenderTargetView* ActiveRenderTargetView = RenderTargetView;
-	ID3D11DepthStencilView* ActiveDepthStencilView = DepthStencilView;
-	if (bUseSceneRenderTargetOverride)
-	{
-		ActiveRenderTargetView = SceneRenderTargetView;
-		ActiveDepthStencilView = SceneDepthStencilView;
-	}
+	ID3D11RenderTargetView* ActiveRTV = bUseSceneRenderTargetOverride ? SceneRenderTargetView : RenderTargetView;
+	ID3D11DepthStencilView* ActiveDSV = bUseSceneRenderTargetOverride ? SceneDepthStencilView : DepthStencilView;
 
-	// Pass 1: 통상 렌더 X + Stencil 마킹 (Ref=1)
-	// NOTE: Gizmo도 stencil 마킹 사용함. Gizmo가 이미 그려진 픽셀에 아웃라인은 렌더링되지 않음
-	DeviceContext->OMSetRenderTargets(0, nullptr, ActiveDepthStencilView);
+	DeviceContext->OMSetRenderTargets(0, nullptr, ActiveDSV);
 	DeviceContext->OMSetDepthStencilState(StencilWriteState, 1);
 	UpdateObjectConstantBuffer(WorldMatrix);
-	DeviceContext->DrawIndexed(Mesh->Indices.size(), 0, 0);
+	DeviceContext->DrawIndexed(static_cast<UINT>(Mesh->Indices.size()), 0, 0);
 
-	// Pass 2: 확대된 메시를 아웃라인 셰이더로 그리기 (Stencil != 1인 곳만)
-	DeviceContext->OMSetRenderTargets(1, &ActiveRenderTargetView, ActiveDepthStencilView);
+	DeviceContext->OMSetRenderTargets(1, &ActiveRTV, ActiveDSV);
 	DeviceContext->OMSetDepthStencilState(StencilTestState, 1);
-
-	// 약간 확대한 WorldMatrix
-	FMatrix ScaleUp = FMatrix::MakeScale(OutlineScale);
-	FMatrix OutlineWorld = ScaleUp * WorldMatrix;
-	UpdateObjectConstantBuffer(OutlineWorld);
-
-	// 아웃라인 셰이더 바인딩
+	UpdateObjectConstantBuffer(FMatrix::MakeScale(OutlineScale) * WorldMatrix);
 	OutlinePS->Bind(DeviceContext);
+	DeviceContext->DrawIndexed(static_cast<UINT>(Mesh->Indices.size()), 0, 0);
 
-	DeviceContext->DrawIndexed(Mesh->Indices.size(), 0, 0);
-
-	// 원래 셰이더 복원
 	ShaderManager.Bind(DeviceContext);
-
-	// Stencil 상태 복원
 	DeviceContext->OMSetDepthStencilState(nullptr, 0);
 }
 
 void CRenderer::DrawLine(const FVector& Start, const FVector& End, const FVector4& Color)
 {
-	FVector Normal = { 0.0f, 0.0f, 0.0f };
-	LineVertices.push_back({ Start, Color, Normal });
-	LineVertices.push_back({ End, Color, Normal });
+	LineVertices.push_back({ Start, Color, FVector::ZeroVector });
+	LineVertices.push_back({ End, Color, FVector::ZeroVector });
 }
 
 void CRenderer::DrawCube(const FVector& Center, const FVector& BoxExtent, const FVector4& Color)
 {
-	// 8개 꼭짓점 생성
-	FVector v000 = Center + FVector(-BoxExtent.X, -BoxExtent.Y, -BoxExtent.Z);
-	FVector v001 = Center + FVector(-BoxExtent.X, -BoxExtent.Y, BoxExtent.Z);
-	FVector v010 = Center + FVector(-BoxExtent.X, BoxExtent.Y, -BoxExtent.Z);
-	FVector v011 = Center + FVector(-BoxExtent.X, BoxExtent.Y, BoxExtent.Z);
-	FVector v100 = Center + FVector(BoxExtent.X, -BoxExtent.Y, -BoxExtent.Z);
-	FVector v101 = Center + FVector(BoxExtent.X, -BoxExtent.Y, BoxExtent.Z);
-	FVector v110 = Center + FVector(BoxExtent.X, BoxExtent.Y, -BoxExtent.Z);
-	FVector v111 = Center + FVector(BoxExtent.X, BoxExtent.Y, BoxExtent.Z);
-
-	// --- 아래 사각형 (Z-)
-	DrawLine(v000, v100, Color);
-	DrawLine(v100, v110, Color);
-	DrawLine(v110, v010, Color);
-	DrawLine(v010, v000, Color);
-
-	// --- 위 사각형 (Z+)
-	DrawLine(v001, v101, Color);
-	DrawLine(v101, v111, Color);
-	DrawLine(v111, v011, Color);
-	DrawLine(v011, v001, Color);
-
-	// --- 수직 연결
-	DrawLine(v000, v001, Color);
-	DrawLine(v100, v101, Color);
-	DrawLine(v110, v111, Color);
-	DrawLine(v010, v011, Color);
+	FVector v[8] = {
+		Center + FVector(-BoxExtent.X, -BoxExtent.Y, -BoxExtent.Z), Center + FVector(-BoxExtent.X, -BoxExtent.Y, BoxExtent.Z),
+		Center + FVector(-BoxExtent.X, BoxExtent.Y, -BoxExtent.Z), Center + FVector(-BoxExtent.X, BoxExtent.Y, BoxExtent.Z),
+		Center + FVector(BoxExtent.X, -BoxExtent.Y, -BoxExtent.Z), Center + FVector(BoxExtent.X, -BoxExtent.Y, BoxExtent.Z),
+		Center + FVector(BoxExtent.X, BoxExtent.Y, -BoxExtent.Z), Center + FVector(BoxExtent.X, BoxExtent.Y, BoxExtent.Z)
+	};
+	DrawLine(v[0], v[4], Color); DrawLine(v[4], v[6], Color); DrawLine(v[6], v[2], Color); DrawLine(v[2], v[0], Color);
+	DrawLine(v[1], v[5], Color); DrawLine(v[5], v[7], Color); DrawLine(v[7], v[3], Color); DrawLine(v[3], v[1], Color);
+	DrawLine(v[0], v[1], Color); DrawLine(v[4], v[5], Color); DrawLine(v[6], v[7], Color); DrawLine(v[2], v[3], Color);
 }
 
 void CRenderer::ExecuteLineCommands()
 {
 	if (LineVertices.empty()) return;
-
-	// 기본 셰이더 복원 (ExecuteCommands 후 마지막 Material 셰이더가 남아있을 수 있음)
 	ShaderManager.Bind(DeviceContext);
 	DefaultMaterial->Bind(DeviceContext);
-	// 동적 버퍼 재사용, 불가능하면 새로 생성.
-	UINT BufferSize = static_cast<UINT>(LineVertices.size() * sizeof(FPrimitiveVertex));
-
-	if (LineVertexBuffer && LineVertexBufferSize < BufferSize)
-	{
-		LineVertexBuffer->Release();
-		LineVertexBuffer = nullptr;
-		LineVertexBufferSize = 0;
-	}
-
+	UINT Size = static_cast<UINT>(LineVertices.size() * sizeof(FPrimitiveVertex));
+	if (LineVertexBuffer && LineVertexBufferSize < Size) { LineVertexBuffer->Release(); LineVertexBuffer = nullptr; }
 	if (!LineVertexBuffer)
 	{
-		D3D11_BUFFER_DESC Desc = {};
-		Desc.ByteWidth = BufferSize;
-		Desc.Usage = D3D11_USAGE_DYNAMIC;
-		Desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		Desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-
+		D3D11_BUFFER_DESC Desc = { Size, D3D11_USAGE_DYNAMIC, D3D11_BIND_VERTEX_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
 		Device->CreateBuffer(&Desc, nullptr, &LineVertexBuffer);
-		LineVertexBufferSize = BufferSize;
+		LineVertexBufferSize = Size;
 	}
-
-	// 버퍼에 메모리 카피
 	D3D11_MAPPED_SUBRESOURCE Mapped;
 	if (SUCCEEDED(DeviceContext->Map(LineVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
 	{
-		memcpy(Mapped.pData, LineVertices.data(), BufferSize);
+		memcpy(Mapped.pData, LineVertices.data(), Size);
 		DeviceContext->Unmap(LineVertexBuffer, 0);
 	}
-
-	// 바인딩
-	UINT Stride = sizeof(FPrimitiveVertex);
-	UINT Offset = 0;
+	UINT Stride = sizeof(FPrimitiveVertex), Offset = 0;
 	DeviceContext->IASetVertexBuffers(0, 1, &LineVertexBuffer, &Stride, &Offset);
 	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
-
-	// WorldMatrix = Identity로 상수 버퍼 업데이트
-	// => 월드 좌표 (0,0,0) 기준으로 그리기
 	UpdateObjectConstantBuffer(FMatrix::Identity);
-
 	DeviceContext->Draw(static_cast<UINT>(LineVertices.size()), 0);
-
-	// Depth 상태 복원
 	DeviceContext->OMSetDepthStencilState(nullptr, 0);
-
 	LineVertices.clear();
 }
 
 void CRenderer::Release()
 {
-	ClearViewportCallbacks();
-	ClearSceneRenderTarget();
-
-	TextRenderer.Release();
-	SubUVRenderer.Release();
-
-	ShaderManager.Release();
-	FShaderMap::Get().Clear();
-	FMaterialManager::Get().Clear();
-	
-	if (StencilWriteState)
-	{
-		StencilWriteState->Release();
-		StencilWriteState = nullptr;
-	}
-	if (StencilTestState)
-	{
-		StencilTestState->Release();
-		StencilTestState = nullptr;
-	}
-	OutlinePS.reset();
-	DefaultMaterial.reset();
-	if (LineVertexBuffer)
-	{
-		LineVertexBuffer->Release();
-		LineVertexBuffer = nullptr;
-	}
-	if (FrameConstantBuffer)
-	{
-		FrameConstantBuffer->Release();
-		FrameConstantBuffer = nullptr;
-	}
-	if (ObjectConstantBuffer)
-	{
-		ObjectConstantBuffer->Release();
-		ObjectConstantBuffer = nullptr;
-	}
-	if (DepthStencilView)
-	{
-		DepthStencilView->Release();
-		DepthStencilView = nullptr;
-	}
-	if (RenderTargetView)
-	{
-		RenderTargetView->Release();
-		RenderTargetView = nullptr;
-	}
-	if (SwapChain)
-	{
-		SwapChain->Release();
-		SwapChain = nullptr;
-	}
-	if (DeviceContext)
-	{
-		DeviceContext->Release();
-		DeviceContext = nullptr;
-	}
-	if (Device)
-	{
-		Device->Release();
-		Device = nullptr;
-	}
+	ClearViewportCallbacks(); ClearSceneRenderTarget();
+	TextRenderer.Release(); SubUVRenderer.Release();
+	ShaderManager.Release(); FShaderMap::Get().Clear(); FMaterialManager::Get().Clear();
+	if (StencilWriteState) StencilWriteState->Release();
+	if (StencilTestState) StencilTestState->Release();
+	OutlinePS.reset(); DefaultMaterial.reset();
+	if (LineVertexBuffer) LineVertexBuffer->Release();
+	if (FrameConstantBuffer) FrameConstantBuffer->Release();
+	if (ObjectConstantBuffer) ObjectConstantBuffer->Release();
+	if (DepthStencilView) DepthStencilView->Release();
+	if (RenderTargetView) RenderTargetView->Release();
+	if (SwapChain) SwapChain->Release();
+	if (DeviceContext) DeviceContext->Release();
+	if (Device) Device->Release();
 }
 
 bool CRenderer::IsOccluded()
 {
-	if (bSwapChainOccluded &&
-		SwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
-		return true;
-
-	bSwapChainOccluded = false;
-	return false;
+	if (bSwapChainOccluded && SwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED) return true;
+	bSwapChainOccluded = false; return false;
 }
 
-void CRenderer::OnResize(int32 NewWidth, int32 NewHeight)
+void CRenderer::OnResize(int32 W, int32 H)
 {
-	if (NewWidth == 0 || NewHeight == 0) return;
-
+	if (W == 0 || H == 0) return;
 	ClearSceneRenderTarget();
-
 	DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
-
 	if (RenderTargetView) { RenderTargetView->Release(); RenderTargetView = nullptr; }
 	if (DepthStencilView) { DepthStencilView->Release(); DepthStencilView = nullptr; }
-
-	SwapChain->ResizeBuffers(0, NewWidth, NewHeight, DXGI_FORMAT_UNKNOWN, 0);
-
-	CreateRenderTargetAndDepthStencil(NewWidth, NewHeight);
-
-	Viewport.Width = static_cast<float>(NewWidth);
-	Viewport.Height = static_cast<float>(NewHeight);
+	SwapChain->ResizeBuffers(0, W, H, DXGI_FORMAT_UNKNOWN, 0);
+	CreateRenderTargetAndDepthStencil(W, H);
+	Viewport.Width = static_cast<float>(W); Viewport.Height = static_cast<float>(H);
 }

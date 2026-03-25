@@ -102,13 +102,17 @@ public:
 	void SetRasterizerState(const std::shared_ptr<FRasterizerState> InState) { RasterizerState = InState; }
 	void SetDepthStencilOption(const FDepthStencilStateOption InOption) { DepthStencilOption = InOption; }
 	void SetDepthStencilState(const std::shared_ptr<FDepthStencilState> InState) { DepthStencilState = InState; }
+	void SetBlendOption(const FBlendStateOption InOption) { BlendOption = InOption; }
+	void SetBlendState(const std::shared_ptr<FBlendState> InState) { BlendState = InState; }
 
 	FVertexShader* GetVertexShader() const { return VertexShader.get(); }
 	FPixelShader* GetPixelShader() const { return PixelShader.get(); }
 	const FRasterizerStateOption& GetRasterizerOption() const { return RasterizerOption; }
 	const FDepthStencilStateOption& GetDepthStencilOption() const { return DepthStencilOption; }
+	const FBlendStateOption& GetBlendOption() const { return BlendOption; }
 	std::shared_ptr<FRasterizerState> GetRasterizerState() const { return RasterizerState; }
 	std::shared_ptr<FDepthStencilState> GetDepthStencilState() const { return DepthStencilState; }
+	std::shared_ptr<FBlendState> GetBlendState() const { return BlendState; }
 
 	// FDynamicMaterial에서 파라미터 설정 시 사용
 	bool SetParameterData(const FString& ParamName, const void* Data, uint32 DataSize);
@@ -144,9 +148,11 @@ protected:
 	// RasterizerState를 생성하기 위한 옵션, Serialize.
 	FRasterizerStateOption RasterizerOption;
 	FDepthStencilStateOption DepthStencilOption;
+	FBlendStateOption BlendOption;
 	// 머티리얼 로드시에 생성되는 RasterizerState 포인터. No-Serialize.
 	std::shared_ptr<FRasterizerState> RasterizerState = nullptr;
 	std::shared_ptr<FDepthStencilState> DepthStencilState = nullptr;
+	std::shared_ptr<FBlendState> BlendState = nullptr;
 
 	TArray<FMaterialConstantBuffer> ConstantBuffers;
 	TMap<FString, FMaterialParameterInfo> ParameterMap;

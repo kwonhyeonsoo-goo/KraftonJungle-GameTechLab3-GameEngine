@@ -19,6 +19,7 @@ struct VS_INPUT
 	float3 Position : POSITION;
 	float4 Color : COLOR;
 	float3 Normal : NORMAL;
+	float2 UV : TEXCOORD0;
 };
 
 struct VS_OUTPUT
@@ -26,6 +27,7 @@ struct VS_OUTPUT
 	float4 Position : SV_POSITION;
 	float4 Color : COLOR;
 	float3 Normal : NORMAL;
+	float2 UV : TEXCOORD0;
 };
 
 #endif

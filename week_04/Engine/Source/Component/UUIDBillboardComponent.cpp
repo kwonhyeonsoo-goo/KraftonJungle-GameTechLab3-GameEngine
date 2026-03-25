@@ -1,13 +1,15 @@
 #include "UUIDBillboardComponent.h"
 #include "Actor/Actor.h"
 #include "Object/Class.h"
+#include "Primitive/PrimitiveBase.h"
 
 
 IMPLEMENT_RTTI(UUUIDBillboardComponent, UPrimitiveComponent)
 
 void UUUIDBillboardComponent::Initialize()
 {
-
+	// UUID 텍스트 렌더링용 메시 객체 생성
+	TextMesh = std::make_shared<FMeshData>();
 }
 
 FString UUUIDBillboardComponent::GetDisplayText() const

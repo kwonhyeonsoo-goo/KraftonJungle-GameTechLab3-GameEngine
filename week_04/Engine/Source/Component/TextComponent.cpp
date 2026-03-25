@@ -1,11 +1,23 @@
 #include "TextComponent.h"
 #include "Object/Class.h"
+#include "Primitive/PrimitiveBase.h"
 #include <algorithm>
 
 IMPLEMENT_RTTI(UTextComponent, UPrimitiveComponent)
 
 void UTextComponent::Initialize()
 {
+	// 폰트 렌더링용 메시 데이터 객체 생성
+	TextMesh = std::make_shared<FMeshData>();
+}
+
+void UTextComponent::SetText(const FString& InText)
+{
+	if (Text != InText)
+	{
+		Text = InText;
+		// NOTE: 실제 정점 데이터 갱신은 RenderCollector에서 TextRenderer를 통해 수행함
+	}
 }
 
 FBoxSphereBounds UTextComponent::GetWorldBounds() const

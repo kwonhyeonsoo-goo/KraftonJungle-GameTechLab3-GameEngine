@@ -15,36 +15,56 @@ void CRenderStateManager::PrepareCommonStates()
 			GetOrCreateRasterizerState(opt);
 		}
 	}
+
+	// 기본 블렌드 상태 (No Blend)
+	FBlendStateOption blendOpt;
+	GetOrCreateBlendState(blendOpt);
+
+	// 알파 블렌드 상태
+	blendOpt.BlendEnable = true;
+	blendOpt.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	blendOpt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	blendOpt.BlendOp = D3D11_BLEND_OP_ADD;
+	blendOpt.SrcBlendAlpha = D3D11_BLEND_ONE;
+	blendOpt.DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+	blendOpt.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	GetOrCreateBlendState(blendOpt);
 }
 
 std::shared_ptr<FRasterizerState> CRenderStateManager::GetOrCreateRasterizerState(const FRasterizerStateOption& opt)
 {
-	uint32_t key = opt.ToKey();
-
-	// 이미 만들어놓은 게 있다면 그것을 반환
+	uint32 key = opt.ToKey();
 	auto it = RasterizerStateMap.find(key);
 	if (it != RasterizerStateMap.end()) {
 		return it->second;
 	}
-
-	// 맵에 없으면 새로 생성
-	RasterizerStateMap[key] = FRasterizerState::Create(Device, opt);
-	return RasterizerStateMap[key];
+	auto state = FRasterizerState::Create(Device, opt);
+	RasterizerStateMap[key] = state;
+	return state;
 }
 
 std::shared_ptr<FDepthStencilState> CRenderStateManager::GetOrCreateDepthStencilState(const FDepthStencilStateOption& opt)
 {
-	uint32_t key = opt.ToKey();
-
-	// 이미 만들어놓은 게 있다면 그것을 반환
+	uint32 key = opt.ToKey();
 	auto it = DepthStencilStateMap.find(key);
 	if (it != DepthStencilStateMap.end()) {
 		return it->second;
 	}
+	auto state = FDepthStencilState::Create(Device, opt);
+	DepthStencilStateMap[key] = state;
+	return state;
+}
 
-	// 맵에 없으면 새로 생성
-	DepthStencilStateMap[key] = FDepthStencilState::Create(Device, opt);
-	return DepthStencilStateMap[key];
+std::shared_ptr<FBlendState> CRenderStateManager::GetOrCreateBlendState(const FBlendStateOption& opt)
+{
+	uint32 key = opt.ToKey();
+	auto it = BlendStateMap.find(key);
+	if (it != BlendStateMap.end()) {
+		return it->second;
+	}
+	auto state = FBlendState::Create(Device, opt);
+	BlendStateMap[key] = state;
+	return state;
 }
 
 void CRenderStateManager::BindState(std::shared_ptr<FRasterizerState> InRS)
@@ -65,10 +85,18 @@ void CRenderStateManager::BindState(std::shared_ptr<FDepthStencilState> InDSS)
 	}
 }
 
+void CRenderStateManager::BindState(std::shared_ptr<FBlendState> InBS)
+{
+	if (InBS != nullptr && CurrentBlendState != InBS)
+	{
+		InBS->Bind(DeviceContext);
+		CurrentBlendState = InBS;
+	}
+}
+
 void CRenderStateManager::RebindState()
 {
-	if(CurrentRasterizerState)
-		CurrentRasterizerState->Bind(DeviceContext);
-	if (CurrentDepthStencilState)
-		CurrentDepthStencilState->Bind(DeviceContext);
+	if (CurrentRasterizerState) CurrentRasterizerState->Bind(DeviceContext);
+	if (CurrentDepthStencilState) CurrentDepthStencilState->Bind(DeviceContext);
+	if (CurrentBlendState) CurrentBlendState->Bind(DeviceContext);
 }

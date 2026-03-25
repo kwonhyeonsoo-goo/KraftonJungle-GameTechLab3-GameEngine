@@ -5,7 +5,10 @@
 #include "Component/SubUVComponent.h"
 #include "Core/FEngine.h"
 #include "Component/TextComponent.h"
-
+#include "Renderer/Renderer.h"
+#include "Renderer/TextMeshBuilder.h"
+#include "Renderer/SubUVRenderer.h"
+#include "Renderer/Material.h"
 
 void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors, const FFrustum& Frustum,
 	const FShowFlags& ShowFlags, FRenderCommandQueue& OutQueue)
@@ -13,65 +16,113 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 	TArray<UPrimitiveComponent*> VisiblePrimitives;
 	FrustrumCull(Actors, Frustum, ShowFlags, VisiblePrimitives);
 
+	CRenderer* Renderer = GEngine->GetCore()->GetRenderer();
+	if (!Renderer) return;
+
+	CTextMeshBuilder& TextRenderer = Renderer->GetTextRenderer();
+	CSubUVRenderer& SubUVRenderer = Renderer->GetSubUVRenderer();
+
 	for (UPrimitiveComponent* PrimitiveComponent : VisiblePrimitives)
 	{
-		if (!PrimitiveComponent)
-		{
-			continue;
-		}
+		if (!PrimitiveComponent) continue;
+
+		// ─── UUID 텍스트 통합 ───
 		if (PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
 		{
-			UUUIDBillboardComponent* UUIDComponent =
-				static_cast<UUUIDBillboardComponent*>(PrimitiveComponent);
+			UUUIDBillboardComponent* UUIDComponent = static_cast<UUUIDBillboardComponent*>(PrimitiveComponent);
+			FMeshData* TextMesh = UUIDComponent->GetTextMesh();
+			if (TextMesh && TextRenderer.BuildTextMesh(UUIDComponent->GetDisplayText(), *TextMesh))
+			{
+				FMaterial* FontMat = TextRenderer.GetFontMaterial();
+				if (FontMat)
+				{
+					FVector4 Color = UUIDComponent->GetTextColor();
+					FontMat->SetParameterData("TextColor", &Color, 16);
 
-			FTextRenderCommand TextCmd;
-			TextCmd.Text = UUIDComponent->GetDisplayText();
-			TextCmd.WorldMatrix = FMatrix::MakeTranslation(UUIDComponent->GetTextWorldPosition());
-			const float Scale = UUIDComponent->GetWorldScale();
-			TextCmd.WorldScale = FVector(Scale, Scale, Scale);
-			TextCmd.bBillboard = true;
-			TextCmd.Color = UUIDComponent->GetTextColor();
-
-			OutQueue.AddTextCommand(TextCmd);
+					FRenderCommand Command;
+					Command.MeshData = TextMesh;
+					Command.Material = FontMat;
+					
+					const FVector CameraPos = Renderer->GetCameraPosition();
+					const FVector WorldPos = UUIDComponent->GetTextWorldPosition();
+					const float Scale = UUIDComponent->GetWorldScale();
+					Command.WorldMatrix = FMatrix::MakeScale(FVector(Scale, Scale, Scale)) * FMatrix::MakeBillboard(WorldPos, CameraPos);
+					
+					OutQueue.AddCommand(Command);
+				}
+			}
 			continue;
 		}
 
+		// ─── 일반 텍스트 통합 ───
 		if (PrimitiveComponent->IsA(UTextComponent::StaticClass()))
 		{
 			UTextComponent* TextComponent = static_cast<UTextComponent*>(PrimitiveComponent);
+			FMeshData* TextMesh = TextComponent->GetTextMesh();
+			if (TextMesh && TextRenderer.BuildTextMesh(TextComponent->GetText(), *TextMesh))
+			{
+				FMaterial* FontMat = TextRenderer.GetFontMaterial();
+				if (FontMat)
+				{
+					FVector4 Color = TextComponent->GetTextColor();
+					FontMat->SetParameterData("TextColor", &Color, 16);
 
-			FTextRenderCommand TextCmd;
-			TextCmd.Text = TextComponent->GetText();
-			TextCmd.WorldMatrix = TextComponent->GetWorldTransform();
-			TextCmd.WorldScale = TextComponent->GetWorldTransform().GetScaleVector();			
-			TextCmd.bBillboard = TextComponent->IsBillboard();
-			TextCmd.Color = TextComponent->GetTextColor();
+					FRenderCommand Command;
+					Command.MeshData = TextMesh;
+					Command.Material = FontMat;
+					Command.WorldMatrix = TextComponent->GetWorldTransform();
+					
+					if (TextComponent->IsBillboard())
+					{
+						const FVector CameraPos = Renderer->GetCameraPosition();
+						const FVector WorldPos = Command.WorldMatrix.GetTranslation();
+						const FVector Scale = Command.WorldMatrix.GetScaleVector();
+						Command.WorldMatrix = FMatrix::MakeScale(Scale) * FMatrix::MakeBillboard(WorldPos, CameraPos);
+					}
 
-			OutQueue.AddTextCommand(TextCmd);
+					OutQueue.AddCommand(Command);
+				}
+			}
 			continue;
 		}
 
+		// ─── SubUV 스프라이트 통합 ───
 		if (PrimitiveComponent->IsA(USubUVComponent::StaticClass()))
 		{
 			USubUVComponent* SubUVComponent = static_cast<USubUVComponent*>(PrimitiveComponent);
+			FMeshData* SubUVMesh = SubUVComponent->GetSubUVMesh();
+			if (SubUVMesh && SubUVRenderer.BuildSubUVMesh(SubUVComponent->GetSize(), *SubUVMesh))
+			{
+				float TotalTime = static_cast<float>(GEngine->GetCore()->GetTimer().GetTotalTime());
+				SubUVRenderer.UpdateAnimationParams(
+					SubUVComponent->GetColumns(), SubUVComponent->GetRows(), SubUVComponent->GetTotalFrames(),
+					SubUVComponent->GetFirstFrame(), SubUVComponent->GetLastFrame(),
+					SubUVComponent->GetFPS(), TotalTime, SubUVComponent->IsLoop()
+				);
 
-			FSubUVRenderCommand SubUVCmd;
-			SubUVCmd.WorldMatrix = SubUVComponent->GetWorldTransform();
-			SubUVCmd.Size = SubUVComponent->GetSize();
-			SubUVCmd.Columns = SubUVComponent->GetColumns();
-			SubUVCmd.Rows = SubUVComponent->GetRows();
-			SubUVCmd.TotalFrames = SubUVComponent->GetTotalFrames();
-			SubUVCmd.FPS = SubUVComponent->GetFPS();
-			SubUVCmd.ElapsedTime = static_cast<float>(GEngine->GetCore()->GetTimer().GetTotalTime());
-			SubUVCmd.bLoop = SubUVComponent->IsLoop();
-			SubUVCmd.bBillboard = SubUVComponent->IsBillboard();
-			SubUVCmd.FirstFrame = SubUVComponent->GetFirstFrame();
-			SubUVCmd.LastFrame = SubUVComponent->GetLastFrame();
+				FMaterial* SubUVMat = SubUVRenderer.GetSubUVMaterial();
+				if (SubUVMat)
+				{
+					FRenderCommand Command;
+					Command.MeshData = SubUVMesh;
+					Command.Material = SubUVMat;
+					Command.WorldMatrix = SubUVComponent->GetWorldTransform();
 
-			OutQueue.AddSubUVCommand(SubUVCmd);
+					if (SubUVComponent->IsBillboard())
+					{
+						const FVector CameraPos = Renderer->GetCameraPosition();
+						const FVector WorldPos = Command.WorldMatrix.GetTranslation();
+						const FVector Scale = Command.WorldMatrix.GetScaleVector();
+						Command.WorldMatrix = FMatrix::MakeScale(Scale) * FMatrix::MakeBillboard(WorldPos, CameraPos);
+					}
+
+					OutQueue.AddCommand(Command);
+				}
+			}
 			continue;
 		}
 
+		// ─── 일반 프리미티브 ───
 		if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
 		{
 			continue;
@@ -90,20 +141,12 @@ void FSceneRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 {
 	for (AActor* Actor : Actors)
 	{
-		if (!Actor || Actor->IsPendingDestroy())
-		{
-			continue;
-		}
-		if (!Actor->IsVisible())
-		{
-			continue;
-		}
+		if (!Actor || Actor->IsPendingDestroy()) continue;
+		if (!Actor->IsVisible()) continue;
+
 		for (UActorComponent* Component : Actor->GetComponents())
 		{
-			if (!Component->IsA(UPrimitiveComponent::StaticClass()))
-			{
-				continue;
-			}
+			if (!Component->IsA(UPrimitiveComponent::StaticClass())) continue;
 
 			UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
 
@@ -113,34 +156,22 @@ void FSceneRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 
 			if (bIsUUID)
 			{
-				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_UUID))
-				{
-					continue;
-				}
+				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_UUID)) continue;
 			}
-			else if (bIsSubUV)
+			else if (bIsSubUV || bIsText)
 			{
-			}
-			else if (bIsText)
-			{
+				// 특수 타입은 추가 체크 없이 통과 (필요 시 플래그 확장)
 			}
 			else
 			{
-				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives))
-				{
-					continue;
-				}
-
-				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
-				{
-					continue;
-				}
+				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives)) continue;
+				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData()) continue;
 			}
 
 			if (Frustum.IsVisible(PrimitiveComponent->GetWorldBounds()))
 			{
 				OutVisible.push_back(PrimitiveComponent);
 			}
-		}  // for Component
-	}  // for Actor
-}  // FrustrumCull ??
+		}
+	}
+}

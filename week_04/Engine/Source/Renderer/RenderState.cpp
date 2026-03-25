@@ -88,3 +88,37 @@ void FDepthStencilState::Bind(ID3D11DeviceContext* InDeviceContext) const
 {
 	InDeviceContext->OMSetDepthStencilState(State.Get(), 1);	// StencilRef 값은 1 고정
 }
+
+// ===== FBlendState =====
+
+std::shared_ptr<FBlendState> FBlendState::Create(
+	ID3D11Device* InDevice,
+	const FBlendStateOption& InOption)
+{
+	if (!InDevice) return nullptr;
+
+	std::shared_ptr<FBlendState> BS(new FBlendState());
+
+	D3D11_BLEND_DESC desc = {};
+	desc.AlphaToCoverageEnable = false;
+	desc.IndependentBlendEnable = false;
+	desc.RenderTarget[0].BlendEnable = InOption.BlendEnable;
+	desc.RenderTarget[0].SrcBlend = InOption.SrcBlend;
+	desc.RenderTarget[0].DestBlend = InOption.DestBlend;
+	desc.RenderTarget[0].BlendOp = InOption.BlendOp;
+	desc.RenderTarget[0].SrcBlendAlpha = InOption.SrcBlendAlpha;
+	desc.RenderTarget[0].DestBlendAlpha = InOption.DestBlendAlpha;
+	desc.RenderTarget[0].BlendOpAlpha = InOption.BlendOpAlpha;
+	desc.RenderTarget[0].RenderTargetWriteMask = InOption.RenderTargetWriteMask;
+
+	HRESULT Hr = InDevice->CreateBlendState(&desc, BS->State.GetAddressOf());
+	if (FAILED(Hr)) return nullptr;
+
+	return BS;
+}
+
+void FBlendState::Bind(ID3D11DeviceContext* InDeviceContext) const
+{
+	float BlendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	InDeviceContext->OMSetBlendState(State.Get(), BlendFactor, 0xFFFFFFFF);
+}
