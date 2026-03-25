@@ -14,7 +14,7 @@ private:
 	TArray<uint32>			Indices;
 
 public:
-	void Create(ID3D11Device* InDevice, uint32 MaxIndexCount = (1 << 20));
+	void Create(ID3D11Device* InDevice, uint32 MaxCount = (1 << 20));
 	void Release();
 
 	void AddGrid(int32 GridSize);

@@ -1,8 +1,11 @@
 #include "BatchedLine.h"
 
-void FBatchedLine::Create(ID3D11Device* InDevice, uint32 MaxIndexCount)
+void FBatchedLine::Create(ID3D11Device* InDevice, uint32 MaxCount)
 {
-	DynamicBuffer.CreateDynamic(InDevice, MaxIndexCount);
+	DynamicBuffer.CreateDynamic(InDevice, MaxCount);
+	Vertices.reserve(MaxCount);
+	Indices.reserve(MaxCount);
+
 }
 
 void FBatchedLine::Release()
@@ -98,6 +101,7 @@ void FBatchedLine::Update(ID3D11DeviceContext* InDeviceContext)
 
 void FBatchedLine::Clear()
 {
+
 	Vertices.clear();
 	Indices.clear();
 }

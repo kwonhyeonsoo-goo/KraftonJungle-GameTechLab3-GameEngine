@@ -89,6 +89,7 @@ void FRenderer::Release()
 	//Resources.EditorConstantBuffer.Release();
 	Resources.OutlineConstantBuffer.Release();
 	Resources.SubUVConstantBuffer.Release();
+	Resources.BatchedLineBuffer.Release();
 
 	FEngineServices::GetResourceManager()->Release();
 
@@ -120,8 +121,16 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 	//	Primitive
 	if (showFlag & (uint64)EEngineShowFlags::SF_Primitives) {
 		Device.SetDepthStencilState(EDepthStencilState::StencilWrite);
-		if (viewMode == EViewModeIndex::VMI_Wireframe) Device.SetRasterizerState(ERasterizerState::WireFrame);
-		else  Device.SetRasterizerState(ERasterizerState::SolidBackCull);
+		if (viewMode == EViewModeIndex::VMI_Wireframe)
+		{
+
+			Device.SetRasterizerState(ERasterizerState::WireFrame);
+		}
+		else
+		{
+			Device.SetRasterizerState(ERasterizerState::SolidBackCull);
+		}
+
 		Device.SetBlendState(EBlendState::Opaque);
 		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -144,7 +153,9 @@ void FRenderer::Render(FRenderBus& InRenderBus)
 	Device.SetBlendState(EBlendState::AlphaBlend);
 	DrawString(context, InRenderBus);
 
-	if (showFlag & (uint64)EEngineShowFlags::SF_Primitives) {
+	if (showFlag & (uint64)EEngineShowFlags::SF_Primitives &&
+		viewMode != EViewModeIndex::VMI_Wireframe)
+	{
 		//	Selection Outline (Stencil)
 		Device.SetDepthStencilState(EDepthStencilState::StencilOutline);
 		Device.SetRasterizerState(ERasterizerState::SolidFrontCull);
