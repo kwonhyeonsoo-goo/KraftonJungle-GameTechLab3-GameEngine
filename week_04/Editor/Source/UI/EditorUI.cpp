@@ -117,10 +117,10 @@ void CEditorUI::Initialize(CCore* InCore)
 
 					if (std::filesystem::exists(Dst))
 					{
-						int Result = MessageBoxA(
+						int Result = MessageBoxW(
 							nullptr,
-							"이미 같은 이름의 파일이 존재합니다.\n덮어쓰시겠습니까?",
-							"Overwrite",
+							L"이미 같은 이름의 파일이 존재합니다.\n덮어쓰시겠습니까?",
+							L"Overwrite",
 							MB_YESNO | MB_ICONWARNING
 						);
 
@@ -133,7 +133,7 @@ void CEditorUI::Initialize(CCore* InCore)
 						std::filesystem::remove(Dst, ec);
 						if (ec)
 						{
-							MessageBoxA(nullptr, ec.message().c_str(), "Delete Failed", MB_OK | MB_ICONERROR);
+							MessageBoxW(nullptr, L"Delete Failed", L"Error", MB_OK | MB_ICONERROR);
 							return;
 						}
 					}
@@ -180,8 +180,9 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 
 	std::filesystem::path FontPath = FPaths::ProjectRoot() / "Content" / "Fonts" / "NotoSansKR-Bold.ttf";
 	std::string FontPathString = FontPath.string();
+	std::wstring FontPathWString = FontPath.wstring();
 	InRenderer->SetGUICallbacks(
-		[Hwnd, Device, DeviceContext, FontPathString]()
+		[Hwnd, Device, DeviceContext, FontPathString, FontPathWString]()
 		{
 			IMGUI_CHECKVERSION();
 			ImGui::CreateContext();
@@ -210,7 +211,7 @@ void CEditorUI::AttachToRenderer(CRenderer* InRenderer)
 
 			if (!Font)
 			{
-				MessageBoxA(nullptr, FontPathString.c_str(), "Failed to load font", MB_OK);
+				MessageBoxW(nullptr, FontPathWString.c_str(), L"Failed to load font", MB_OK);
 				IO.Fonts->AddFontDefault();
 			}
 
@@ -500,10 +501,10 @@ void CEditorUI::Render()
 						}
 						else
 						{
-							MessageBoxA(
+							MessageBoxW(
 								nullptr,
-								"Scene 정보가 잘못되었습니다.",
-								"Error",
+								L"Scene 정보가 잘못되었습니다.",
+								L"Error",
 								MB_OK | MB_ICONWARNING
 							);
 						}
