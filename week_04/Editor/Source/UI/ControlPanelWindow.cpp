@@ -15,8 +15,9 @@
 #include "Object/ObjectFactory.h"
 #include "Camera/Camera.h"
 #include "Core/Paths.h"
-#include "Debug/EngineLog.h"
+#include "Debug/EngineLog.h"6
 #include "Component/CameraComponent.h"
+#include "Actor/SkySphereActor.h"
 #include "Controller/EditorViewportController.h"
 #include "Serializer/SceneSerializer.h"
 #include <filesystem>
@@ -191,7 +192,8 @@ void CControlPanelWindow::Render(CCore* Core)
 		ImGui::SeparatorText("Spawn");
 
 		static int32 SpawnTypeIndex = 0;
-		const char* SpawnTypes[] = { "Cube", "Sphere", "Plane", "AttachTest", "SubUV", "Text"};
+		const char* SpawnTypes[] = { "Cube", "Sphere", "Plane", "AttachTest", "SubUV", "Text", "SkySphere" };
+
 		ImGui::Combo("Type", &SpawnTypeIndex, SpawnTypes, IM_ARRAYSIZE(SpawnTypes));
 
 		static char SpawnTextBuffer[256] = "Text";
@@ -249,8 +251,15 @@ void CControlPanelWindow::Render(CCore* Core)
 					}
 				}
 			}
+			else if (SpawnTypeIndex == 6)
+			{
+				NewActor = Scene->SpawnActor<ASkySphereActor>(Name);
+			}
 
-			Core->SetSelectedActor(NewActor);
+			if (NewActor && !NewActor->IsA<ASkySphereActor>())
+			{
+				Core->SetSelectedActor(NewActor);
+			}
 			UE_LOG("Spawned %s: %s", SpawnTypes[SpawnTypeIndex], Name.c_str());
 		}
 

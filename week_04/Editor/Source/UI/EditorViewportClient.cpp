@@ -17,7 +17,7 @@
 #include "Core/Paths.h"
 #include "imgui.h"
 #include "Actor/ObjActor.h"
-
+#include "Actor/SkySphereActor.h"
 CEditorViewportClient::CEditorViewportClient(CEditorUI& InEditorUI, CWindow* InMainWindow)
 	: EditorUI(InEditorUI)
 	, MainWindow(InMainWindow)
@@ -255,5 +255,10 @@ void CEditorViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene,
 	{
 		return;
 	}
-	Gizmo.BuildRenderCommands(Core->GetSelectedActor(), Scene->GetCamera(), OutQueue);
+	AActor* GizmoTarget = Core->GetSelectedActor();
+	if (GizmoTarget && !GizmoTarget->IsA<ASkySphereActor>())
+	{
+		Gizmo.BuildRenderCommands(GizmoTarget, Scene->GetCamera(), OutQueue);
+	}
+
 }

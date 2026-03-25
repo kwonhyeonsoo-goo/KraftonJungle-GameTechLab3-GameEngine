@@ -8,7 +8,7 @@
 #include "Renderer/PrimitiveVertex.h"
 #include "Component/SubUVComponent.h"
 #include "Component/TextComponent.h"
-
+#include "Actor/SkySphereActor.h" 
 #include <limits>
 
 FRay CPicker::ScreenToRay(const CCamera* Camera, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const
@@ -120,7 +120,8 @@ AActor* CPicker::PickActor(UScene* Scene, int32 ScreenX, int32 ScreenY,
 		}
 		if (!Actor->IsVisible() )
 			continue;
-
+		if (Actor->IsA<ASkySphereActor>())
+			continue;
 		
 		for (UActorComponent* Component : Actor->GetComponents())
 		{
