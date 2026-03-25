@@ -533,7 +533,7 @@ void CEditorUI::Render()
 	}
 
 	ControlPanel.Render(Core);
-	Property.Render();
+	Property.Render(Core);
 	Console.Render();
 	Stat.Render();
 	Outliner.Render(Core);

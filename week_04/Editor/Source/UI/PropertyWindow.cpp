@@ -1,5 +1,9 @@
 #include "PropertyWindow.h"
-
+#include "Core/Core.h"
+#include "Actor/Actor.h"
+#include "Component/SubUVComponent.h"
+#include "Component/TextComponent.h"
+#include "Component/UUIDBillboardComponent.h"
 void CPropertyWindow::SetTarget(const FVector& Location, const FVector& Rotation,
 	const FVector& Scale, const char* ActorName)
 {
@@ -94,7 +98,7 @@ void CPropertyWindow::DrawTransformSection()
 		OnChanged(EditLocation, EditRotation, EditScale);
 }
 
-void CPropertyWindow::Render()
+void CPropertyWindow::Render(CCore* Core)
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
 	bool bOpen = ImGui::Begin("Properties");
@@ -120,6 +124,36 @@ void CPropertyWindow::Render()
 		DrawTransformSection();
 		ImGui::Unindent(8.0f);
 	}
+	if (Core)
+	{
+		AActor* SelectedActor = Core->GetSelectedActor();
+		if (SelectedActor)
+		{
+			if (ImGui::CollapsingHeader("Billboard", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				ImGui::Indent(8.0f);
+				for (UActorComponent* Component : SelectedActor->GetComponents())
+				{
+					if (!Component) continue;
 
+					if (Component->IsA(USubUVComponent::StaticClass()))
+					{
+						USubUVComponent* SubUVComp = static_cast<USubUVComponent*>(Component);
+						bool bBillboard = SubUVComp->IsBillboard();
+						if (ImGui::Checkbox("SubUV Billboard", &bBillboard))
+							SubUVComp->SetBillboard(bBillboard);
+					}
+					else if (Component->IsA(UTextComponent::StaticClass()) && !Component->IsA(UUUIDBillboardComponent::StaticClass()))
+					{
+						UTextComponent* TextComp = static_cast<UTextComponent*>(Component);
+						bool bBillboard = TextComp->IsBillboard();
+						if (ImGui::Checkbox("Text Billboard", &bBillboard))
+							TextComp->SetBillboard(bBillboard);
+					}
+				}
+				ImGui::Unindent(8.0f);
+			}
+		}
+	}
 	ImGui::End();
 }
