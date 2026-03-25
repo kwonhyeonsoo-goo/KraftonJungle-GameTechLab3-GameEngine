@@ -8,6 +8,7 @@
 #include "Actor/Actor.h"
 #include "Component/SubUVComponent.h"
 #include "Component/TextComponent.h"
+#include "Component/UUIDBillboardComponent.h"
 
 void COutlinerWindow::Render(CCore* Core)
 {
@@ -76,7 +77,8 @@ void COutlinerWindow::Render(CCore* Core)
 					SubUVComponent->SetBillboard(bBillboard);
 				}
 			}
-			else if (Component->IsA(UTextComponent::StaticClass()))
+			else if (Component->IsA(UTextComponent::StaticClass())
+				&& !Component->IsA(UUUIDBillboardComponent::StaticClass()))
 			{
 				UTextComponent* TextComponent = static_cast<UTextComponent*>(Component);
 				bool bBillboard = TextComponent->IsBillboard();

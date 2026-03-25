@@ -2,14 +2,15 @@
 #include "Actor/Actor.h"
 #include "Object/Class.h"
 #include "Primitive/PrimitiveBase.h"
+#include <limits>
 
-
-IMPLEMENT_RTTI(UUUIDBillboardComponent, UPrimitiveComponent)
+IMPLEMENT_RTTI(UUUIDBillboardComponent, UTextComponent)
 
 void UUUIDBillboardComponent::Initialize()
 {
-	// UUID 텍스트 렌더링용 메시 객체 생성
-	TextMesh = std::make_shared<FMeshData>();
+	UTextComponent::Initialize();
+	SetBillboard(true);
+	SetTextScale(0.3f); // UUID 빌보드의 기본 스케일 설정
 }
 
 FString UUUIDBillboardComponent::GetDisplayText() const
@@ -23,8 +24,7 @@ FString UUUIDBillboardComponent::GetDisplayText() const
 	return FString("UUID: ") + OwnerActor->GetUUIDString();
 }
 
-// 오브젝트 위쪽 위치 고려
-FVector UUUIDBillboardComponent::GetTextWorldPosition() const
+FVector UUUIDBillboardComponent::GetRenderWorldPosition() const
 {
 	AActor* OwnerActor = GetOwner();
 	if (!OwnerActor)
@@ -79,11 +79,17 @@ FVector UUUIDBillboardComponent::GetTextWorldPosition() const
 	return RootLocation + WorldOffset;
 }
 
+FVector UUUIDBillboardComponent::GetRenderWorldScale() const
+{
+	// 빌보드는 트랜스포메이션의 스케일과 상관없이 TextScale 만을 절대적으로 사용하는 것이 일반적임
+	return FVector(TextScale, TextScale, TextScale);
+}
+
 FBoxSphereBounds UUUIDBillboardComponent::GetWorldBounds() const
 {
-	const FVector Center = GetTextWorldPosition();
+	const FVector Center = GetRenderWorldPosition();
 	// radius 를 정사각형 extent 에 맞게 줄이기
-	const FVector Extent(BillboardScale * 3.0f * 0.707f, BillboardScale * 3.0f * 0.707f, BillboardScale * 3.0f * 0.707f);
+	const FVector Extent(TextScale * 3.0f * 0.707f, TextScale * 3.0f * 0.707f, TextScale * 3.0f * 0.707f);
 
 	return { Center, Extent.Size(), Extent };
 }

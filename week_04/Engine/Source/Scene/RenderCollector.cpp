@@ -26,58 +26,36 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 	{
 		if (!PrimitiveComponent) continue;
 
-		// ─── UUID 텍스트 통합 ───
-		if (PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass()))
-		{
-			UUUIDBillboardComponent* UUIDComponent = static_cast<UUUIDBillboardComponent*>(PrimitiveComponent);
-			FMeshData* TextMesh = UUIDComponent->GetTextMesh();
-			if (TextMesh && TextRenderer.BuildTextMesh(UUIDComponent->GetDisplayText(), *TextMesh))
-			{
-				FMaterial* FontMat = TextRenderer.GetFontMaterial();
-				if (FontMat)
-				{
-					FVector4 Color = UUIDComponent->GetTextColor();
-					FontMat->SetParameterData("TextColor", &Color, 16);
-
-					FRenderCommand Command;
-					Command.MeshData = TextMesh;
-					Command.Material = FontMat;
-					
-					const FVector CameraPos = Renderer->GetCameraPosition();
-					const FVector WorldPos = UUIDComponent->GetTextWorldPosition();
-					const float Scale = UUIDComponent->GetWorldScale();
-					Command.WorldMatrix = FMatrix::MakeScale(FVector(Scale, Scale, Scale)) * FMatrix::MakeBillboard(WorldPos, CameraPos);
-					
-					OutQueue.AddCommand(Command);
-				}
-			}
-			continue;
-		}
-
-		// ─── 일반 텍스트 통합 ───
+		// ─── 텍스트 컴포넌트 ───
 		if (PrimitiveComponent->IsA(UTextComponent::StaticClass()))
 		{
-			UTextComponent* TextComponent = static_cast<UTextComponent*>(PrimitiveComponent);
-			FMeshData* TextMesh = TextComponent->GetTextMesh();
-			if (TextMesh && TextRenderer.BuildTextMesh(TextComponent->GetText(), *TextMesh))
+			UTextComponent* TextComp = static_cast<UTextComponent*>(PrimitiveComponent);
+			FMeshData* TextMesh = TextComp->GetTextMesh();
+			
+			if (TextMesh && TextRenderer.BuildTextMesh(TextComp->GetDisplayText(), *TextMesh))
 			{
 				FMaterial* FontMat = TextRenderer.GetFontMaterial();
 				if (FontMat)
 				{
-					FVector4 Color = TextComponent->GetTextColor();
+					FVector4 Color = TextComp->GetTextColor();
 					FontMat->SetParameterData("TextColor", &Color, 16);
 
 					FRenderCommand Command;
 					Command.MeshData = TextMesh;
 					Command.Material = FontMat;
-					Command.WorldMatrix = TextComponent->GetWorldTransform();
 					
-					if (TextComponent->IsBillboard())
+					const FVector WorldPos = TextComp->GetRenderWorldPosition();
+					const FVector Scale = TextComp->GetRenderWorldScale();
+
+					if (TextComp->IsBillboard())
 					{
 						const FVector CameraPos = Renderer->GetCameraPosition();
-						const FVector WorldPos = Command.WorldMatrix.GetTranslation();
-						const FVector Scale = Command.WorldMatrix.GetScaleVector();
 						Command.WorldMatrix = FMatrix::MakeScale(Scale) * FMatrix::MakeBillboard(WorldPos, CameraPos);
+					}
+					else
+					{
+						// 빌보드가 아닐 경우 일반적인 변환 행렬 구성 (회전값 포함 가능 시 확장 필요)
+						Command.WorldMatrix = FMatrix::MakeScale(Scale) * FMatrix::MakeTranslation(WorldPos);
 					}
 
 					OutQueue.AddCommand(Command);
@@ -87,6 +65,7 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 		}
 
 		// ─── SubUV 스프라이트 통합 ───
+		// TODO: 일반적인 프리미티브와 RenderCommand build 경로 통합
 		if (PrimitiveComponent->IsA(USubUVComponent::StaticClass()))
 		{
 			USubUVComponent* SubUVComponent = static_cast<USubUVComponent*>(PrimitiveComponent);
