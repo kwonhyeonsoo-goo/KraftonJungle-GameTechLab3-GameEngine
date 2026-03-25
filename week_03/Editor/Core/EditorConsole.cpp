@@ -12,94 +12,115 @@ void FEditorConsole::AddLog(const char* fmt, ...) {
 
 void FEditorConsole::Draw(const char* Title, bool* p_open)
 {
-    ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin(Title, p_open))
+    ImVec2 DisplaySize = ImGui::GetIO().DisplaySize;
+    float ConsoleWidth = 1000.0f;
+    const float ButtonHeight = ImGui::GetFrameHeight();
+    const float ConsoleHeight = bIsOpen ? 300.0f : ButtonHeight;
+
+    ImGui::SetNextWindowPos(
+        ImVec2(0.0f, DisplaySize.y),  // 좌하단 기준
+        ImGuiCond_Always,
+        ImVec2(0.0f, 1.0f)            // 피벗 좌하단
+    );
+    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x * 1.0f, ConsoleHeight), ImGuiCond_Always);
+
+    if (!ImGui::Begin(Title, p_open, ImGuiWindowFlags_NoMove |        
+        ImGuiWindowFlags_NoResize |      
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoScrollbar
+    ))
     {
         ImGui::End();
         return;
     }
 
-    if (ImGui::BeginPopupContextItem())
+    if (bIsOpen)
     {
-        if (ImGui::MenuItem("Close Console"))
-            *p_open = false;
-        ImGui::EndPopup();
-    }
+        ImGui::BeginChild("Console Panel", ImVec2(0, -(ButtonHeight)), false);
 
-    //// TODO: display items starting from the bottom
+        //// TODO: display items starting from the bottom
 
-    if (ImGui::SmallButton("Clear")) { Clear(); }
-    //static float t = 0.0f; if (ImGui::GetTime() - t > 0.02f) { t = ImGui::GetTime(); AddLog("Spam %f", t); }
+        if (ImGui::SmallButton("Clear")) { Clear(); }
+        //static float t = 0.0f; if (ImGui::GetTime() - t > 0.02f) { t = ImGui::GetTime(); AddLog("Spam %f", t); }
 
-    ImGui::Separator();
+        ImGui::Separator();
 
-    //// Options menu
-    if (ImGui::BeginPopup("Options"))
-    {
-        ImGui::Checkbox("Auto-scroll", &AutoScroll);
-        ImGui::EndPopup();
-    }
-
-    // Options, Filter
-    ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_O, ImGuiInputFlags_Tooltip);
-    if (ImGui::Button("Options"))
-        ImGui::OpenPopup("Options");
-    ImGui::SameLine();
-    Filter.Draw("Filter (\"incl,-excl\") (\"error\")", 180);
-    ImGui::Separator();
-
-    const float footer_height = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-    if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height), false, ImGuiWindowFlags_HorizontalScrollbar)) {
-        for (auto& item : Messages) {
-            if (!Filter.PassFilter(item)) continue;
-
-            ImVec4 color;
-            bool has_color = false;
-            if (strncmp(item, "[ERROR]", 7) == 0) {
-                color = ImVec4(1, 0.4f, 0.4f, 1);
-                has_color = true;
-            }
-            else if (strncmp(item, "[WARN]", 6) == 0) {
-                color = ImVec4(1, 0.8f, 0.2f, 1);
-                has_color = true;
-            }
-            else if (strncmp(item, "#", 2) == 0) {
-                color = ImVec4(1, 0.8f, 0.6f, 1);
-                has_color = true;
-            }
-
-            if (has_color) {
-                ImGui::PushStyleColor(ImGuiCol_Text, color);
-            }
-            ImGui::TextUnformatted(item);
-            if (has_color) {
-                ImGui::PopStyleColor();
-            }
+        //// Options menu
+        if (ImGui::BeginPopup("Options"))
+        {
+            ImGui::Checkbox("Auto-scroll", &AutoScroll);
+            ImGui::EndPopup();
         }
 
-        if (ScrollToBottom || (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())) {
-            ImGui::SetScrollHereY(1.0f);
+        // Options, Filter
+        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_O, ImGuiInputFlags_Tooltip);
+        if (ImGui::Button("Options"))
+            ImGui::OpenPopup("Options");
+        ImGui::SameLine();
+        Filter.Draw("Filter (\"incl,-excl\") (\"error\")", 180);
+        ImGui::Separator();
+
+        const float footer_height = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+        if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footer_height), false, ImGuiWindowFlags_HorizontalScrollbar)) {
+            for (auto& item : Messages) {
+                if (!Filter.PassFilter(item)) continue;
+
+                ImVec4 color;
+                bool has_color = false;
+                if (strncmp(item, "[ERROR]", 7) == 0) {
+                    color = ImVec4(1, 0.4f, 0.4f, 1);
+                    has_color = true;
+                }
+                else if (strncmp(item, "[WARN]", 6) == 0) {
+                    color = ImVec4(1, 0.8f, 0.2f, 1);
+                    has_color = true;
+                }
+                else if (strncmp(item, "#", 2) == 0) {
+                    color = ImVec4(1, 0.8f, 0.6f, 1);
+                    has_color = true;
+                }
+
+                if (has_color) {
+                    ImGui::PushStyleColor(ImGuiCol_Text, color);
+                }
+                ImGui::TextUnformatted(item);
+                if (has_color) {
+                    ImGui::PopStyleColor();
+                }
+            }
+
+            if (ScrollToBottom || (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())) {
+                ImGui::SetScrollHereY(1.0f);
+            }
+            ScrollToBottom = false;
         }
-        ScrollToBottom = false;
-    }
-    ImGui::EndChild();
-    ImGui::Separator();
+        ImGui::EndChild();
+        ImGui::Separator();
 
-    // Input line
-    bool reclaim_focus = false;
-    ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue
-        | ImGuiInputTextFlags_EscapeClearsAll
-        | ImGuiInputTextFlags_CallbackHistory
-        | ImGuiInputTextFlags_CallbackCompletion;
-    if (ImGui::InputText("Input", InputBuf, sizeof(InputBuf), flags, &TextEditCallback, this)) {
-        ExecCommand(InputBuf);
-        strcpy_s(InputBuf, "");
-        reclaim_focus = true;
+        // Input line
+        bool reclaim_focus = false;
+        ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue
+            | ImGuiInputTextFlags_EscapeClearsAll
+            | ImGuiInputTextFlags_CallbackHistory
+            | ImGuiInputTextFlags_CallbackCompletion;
+        if (ImGui::InputText("Input", InputBuf, sizeof(InputBuf), flags, &TextEditCallback, this)) {
+            ExecCommand(InputBuf);
+            strcpy_s(InputBuf, "");
+            reclaim_focus = true;
+        }
+
+        ImGui::SetItemDefaultFocus();
+        if (reclaim_focus) {
+            ImGui::SetKeyboardFocusHere(-1);
+        }
+
+        ImGui::EndChild();
     }
 
-    ImGui::SetItemDefaultFocus();
-    if (reclaim_focus) {
-        ImGui::SetKeyboardFocusHere(-1);
+    if (ImGui::Button(bIsOpen ? "Console" : "Console"))
+    {
+        bIsOpen = !bIsOpen;
     }
 
     ImGui::End();

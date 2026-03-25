@@ -68,6 +68,7 @@ private:
 	int SelectedAlignment = 0;
 
 private:
+	void RenderControlTab(float DeltaTime, FViewOutput& ViewOutput);
 	void RenderObjectManager(FViewOutput& ViewOutput);
 	void RenderPickedObjectWindow(UObject*& Object);
 	void RenderPickedActorWindow(AActor* Actor);
