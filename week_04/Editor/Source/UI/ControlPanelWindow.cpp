@@ -182,12 +182,10 @@ void CControlPanelWindow::Render(CCore* Core)
 
 		static char SpawnTextBuffer[256] = "Text";
 
-		bSpawnTextInputActive = false;
 
 		if (SpawnTypeIndex == 5)
 		{
 			ImGui::InputText("Text", SpawnTextBuffer, IM_ARRAYSIZE(SpawnTextBuffer));
-			bSpawnTextInputActive = ImGui::IsItemActive();
 		}
 
 		if (ImGui::Button("Spawn"))
