@@ -1,4 +1,4 @@
-#include "Editor/UI/EditorMainPanel.h"
+﻿#include "Editor/UI/EditorMainPanel.h"
 //#include "Editor/Viewport/EditorViewportClient.h"
 #include "Editor/EditorEngine.h"
 
@@ -496,13 +496,20 @@ void FEditorMainPanel::RenderPickedActorWindow(AActor* Actor) {
 
 void FEditorMainPanel::RenderPicekdSubUVWindow(USubUVComponent* SubUVComp)
 {
-	std::wstring wFileName = SubUVComp->GetFileName();
-	std::string textureFileName(wFileName.begin(), wFileName.end());
+	std::wstring wFileName = L"Texture File: " + SubUVComp->GetFileName();
 
-	ImGui::Text( ("Texture File: " + textureFileName).c_str());
+	//wchar_t Wide[256];
+	//MultiByteToWideChar(CP_UTF8, 0, Buffer.data(), -1, Wide, 256);
+	//std::wstring WideStr(Wide);
+
+
+	char strMultibyte[256] = { 0, };
+	WideCharToMultiByte(CP_UTF8, 0, wFileName.c_str(), -1, strMultibyte, wFileName.size()*sizeof(WCHAR), NULL, NULL);
+
+	ImGui::Text(strMultibyte);
 
 	if (ImGui::Button("Load New Texture")) {
-		FString newFilePath = FEngineServices::GetResourceManager()->LoadResourceFilePath();
+		std::wstring newFilePath = FEngineServices::GetResourceManager()->LoadResourceFilePath();
 
 		std::replace(newFilePath.begin(), newFilePath.end(), '/', '\\');
 		std::wstring FileDestinationW(newFilePath.begin(), newFilePath.end());
