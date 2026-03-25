@@ -38,4 +38,8 @@ public:
 protected:
 	std::shared_ptr<CPrimitiveBase> Primitive;
 	FMaterial* Material = nullptr;
+	bool bDrawDebugBounds = true;
+public:
+	bool ShouldDrawDebugBounds() const { return bDrawDebugBounds; }
+	void SetDrawDebugBounds(bool bEnable) { bDrawDebugBounds = bEnable; }
 };

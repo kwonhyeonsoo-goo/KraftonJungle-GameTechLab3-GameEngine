@@ -34,26 +34,7 @@ bool CPhysicsManager::Linetrace(const UScene* Scene, const FVector& Start, const
 				}
 
 				UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
-
-				const bool bIsUUID = PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass());
-				const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
-				const bool bIsText = PrimitiveComponent->IsA(UTextComponent::StaticClass());
-
-				if (bIsUUID)
-				{
-					continue;
-				}
-			/*	SubUV, Text만 검사(일반 메시 스킵)
-					if (!bIsSubUV && !bIsText)
-					{
-						continue;
-					}*/
-
-				//SubUV, Text는 스킵 (일반 메시만 검사)
-				if (bIsSubUV || bIsText)
-				{
-					continue;
-				}
+				if (!PrimitiveComponent->ShouldDrawDebugBounds()) continue;
 				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
 				{
 					continue;

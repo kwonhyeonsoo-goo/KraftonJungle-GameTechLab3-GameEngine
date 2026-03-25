@@ -6,6 +6,7 @@ IMPLEMENT_RTTI(USkyComponent, UPrimitiveComponent)
 
 void USkyComponent::Initialize()
 {
+	bDrawDebugBounds = false;
 	Primitive = std::make_unique<CPrimitiveSky>();
 }
 

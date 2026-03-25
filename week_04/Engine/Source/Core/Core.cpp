@@ -19,7 +19,7 @@
 #include "Object/ObjectGlobals.h"
 #include "Component/UUIDBillboardComponent.h"
 #include "Component/SubUVComponent.h"
-
+#include "Actor/SkySphereActor.h"
 CCore::~CCore()
 {
 	Release();
@@ -176,29 +176,31 @@ void CCore::Physics(float DeltaTime)
 
 		if (bHit)
 		{
-			for (UActorComponent* ActorComp : HitResult.HitActor->GetComponents())
+			if (!HitResult.HitActor->IsA(ASkySphereActor::StaticClass()))
 			{
-				if (!ActorComp->IsA(UPrimitiveComponent::StaticClass()))
+				for (UActorComponent* ActorComp : HitResult.HitActor->GetComponents())
 				{
-					continue;
+
+					if (!ActorComp->IsA(UPrimitiveComponent::StaticClass()))
+					{
+						continue;
+					}
+					//discard Billboard subUv
+					UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(ActorComp);
+					if (!PrimComp->ShouldDrawDebugBounds()) continue;
+
+					FBoxSphereBounds Bound = PrimComp->GetWorldBounds();
+					//DebugDrawManager를 통해 그림 → Flush()에서 일괄 렌더
+
+					DebugDrawManager.DrawCube(Bound.Center, Bound.BoxExtent, FVector4(1, 0, 0, 1));
+
 				}
-				//discard Billboard subUv
-				UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(ActorComp);
-				if (PrimComp->IsA(UUUIDBillboardComponent::StaticClass()) ||
-					PrimComp->IsA(USubUVComponent::StaticClass()))
-					continue;
 
-				FBoxSphereBounds Bound = PrimComp->GetWorldBounds();
-				//DebugDrawManager를 통해 그림 → Flush()에서 일괄 렌더
 
-				DebugDrawManager.DrawCube(Bound.Center, Bound.BoxExtent, FVector4(1, 0, 0, 1));
-
+				//Renderer->DrawCube(HitResult.HitLocation, FVector(0.1, 0.1, 0.1), FVector4(0, 1, 0, 1));
+				//Renderer를 직접 호출 → DebugDrawManager를 거치지 않음
+				DebugDrawManager.DrawCube(HitResult.HitLocation, FVector(0.1, 0.1, 0.1), FVector4(0, 1, 0, 1));
 			}
-			
-
-			//Renderer->DrawCube(HitResult.HitLocation, FVector(0.1, 0.1, 0.1), FVector4(0, 1, 0, 1));
-			//Renderer를 직접 호출 → DebugDrawManager를 거치지 않음
-			DebugDrawManager.DrawCube(HitResult.HitLocation, FVector(0.1, 0.1, 0.1), FVector4(0, 1, 0, 1));
 		}
 
 		if (Renderer)
