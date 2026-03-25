@@ -190,6 +190,7 @@ std::unique_ptr<FDynamicMaterial> FMaterial::CreateDynamicMaterial() const
 	Dynamic->RasterizerState = RasterizerState;
 	Dynamic->DepthStencilState = DepthStencilState;
 	Dynamic->BlendState = BlendState;
+	Dynamic->SetMaterialTexture(MaterialTexture);
 
 	for (const auto& CB : ConstantBuffers)
 	{
