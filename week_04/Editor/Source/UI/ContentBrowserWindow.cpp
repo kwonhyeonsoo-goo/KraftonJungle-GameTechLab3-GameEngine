@@ -40,7 +40,7 @@ void CContentBrowserWindow::Render()
 	}
 
 	ImGui::SameLine();
-	ImGui::Text("%s", CurrentPath.string().c_str());
+	ImGui::Text("%s", CurrentPath.u8string().c_str());
 
 	ImGui::Separator();
 
@@ -105,7 +105,8 @@ void CContentBrowserWindow::DrawFolderTree(const std::filesystem::path& Path)
 			continue;
 
 		const auto& DirPath = Entry.path();
-		std::string Name = DirPath.filename().string();
+		auto NameUtf8 = DirPath.filename().u8string();
+		std::string Name(NameUtf8.begin(), NameUtf8.end());
 
 		ImGuiTreeNodeFlags Flags =
 			ImGuiTreeNodeFlags_OpenOnArrow |
@@ -157,7 +158,8 @@ void CContentBrowserWindow::DrawFileGrid()
 	{
 		const auto& 
 			Path = Entry.path();
-		std::string Name = Path.filename().string();
+		auto NameUtf8 = Path.filename().u8string();
+		std::string Name(NameUtf8.begin(), NameUtf8.end());
 
 		std::string Ext = Path.extension().string();
 		std::ranges::transform(Ext, Ext.begin(), [](unsigned char c) {
