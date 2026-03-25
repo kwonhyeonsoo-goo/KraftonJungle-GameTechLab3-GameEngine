@@ -7,11 +7,10 @@ class USkyComponent;
 class ENGINE_API ASkySphereActor : public AActor
 {
 public:
-	static UClass* StaticClass();
-
-	ASkySphereActor(UClass* InClass, const FString& InName, UObject* InOuter = nullptr);
-
+	DECLARE_RTTI(ASkySphereActor, AActor)
 	void PostSpawnInitialize() override;
+
+
 	void Tick(float DeltaTime) override;
 	USkyComponent* GetSkyComponent() const { return SkyComponent; }
 

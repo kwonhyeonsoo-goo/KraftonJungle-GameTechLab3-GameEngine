@@ -137,6 +137,7 @@
     <ClCompile Include="Source\Actor\CubeActor.cpp" />
     <ClCompile Include="Source\Actor\ObjActor.cpp" />
     <ClCompile Include="Source\Actor\PlaneActor.cpp" />
+    <ClCompile Include="Source\Actor\SkySphereActor.cpp" />
     <ClCompile Include="Source\Actor\SphereActor.cpp" />
     <ClCompile Include="Source\Actor\SubUVActor.cpp" />
     <ClCompile Include="Source\Actor\TextActor.cpp" />

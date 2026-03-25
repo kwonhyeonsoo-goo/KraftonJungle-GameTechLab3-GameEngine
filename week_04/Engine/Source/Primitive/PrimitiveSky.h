@@ -5,7 +5,7 @@ class ENGINE_API CPrimitiveSky : public CPrimitiveBase
 {
 public:
 	static const FString Key;
-	// static FString GetFilePath();
+
 
 	CPrimitiveSky(int32 Segments = 32, int32 Rings = 32);
 
