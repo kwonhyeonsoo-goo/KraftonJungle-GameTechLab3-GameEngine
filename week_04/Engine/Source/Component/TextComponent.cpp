@@ -27,7 +27,10 @@ FBoxSphereBounds UTextComponent::GetWorldBounds() const
 	const size_t TextLength = std::max<size_t>(DisplayText.size(), 1);
 
 	const FVector RenderScale = GetRenderWorldScale();
-	const float BaseScale = std::max(RenderScale.X, 0.3f);
+	const float BaseScale = std::max(
+		std::max(RenderScale.X, RenderScale.Y),
+		std::max(RenderScale.Z, 0.3f)
+	);
 
 	const float HalfWidth = static_cast<float>(TextLength) * BaseScale * 0.35f;
 	const float HalfHeight = BaseScale * 0.5f;

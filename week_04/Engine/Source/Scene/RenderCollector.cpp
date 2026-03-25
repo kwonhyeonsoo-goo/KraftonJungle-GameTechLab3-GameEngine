@@ -56,8 +56,10 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 					}
 					else
 					{
-						// 빌보드가 아닐 경우 일반적인 변환 행렬 구성 (회전값 포함 가능 시 확장 필요)
-						Command.WorldMatrix = FMatrix::MakeScale(Scale) * FMatrix::MakeTranslation(WorldPos);
+						const float TextScale = TextComp->GetTextScale();
+						Command.WorldMatrix =
+							FMatrix::MakeScale(FVector(TextScale, TextScale, TextScale)) *
+							TextComp->GetWorldTransform();
 					}
 
 					OutQueue.AddCommand(Command);
