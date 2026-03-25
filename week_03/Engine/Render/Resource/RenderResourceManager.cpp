@@ -4,10 +4,27 @@
 #include <d3dcompiler.h>
 #include "DirectXTK/WICTextureLoader.h"
 #include "Render/Device/D3DDevice.h"
+#include <fstream>
+#include <filesystem>
+#include <iostream>
 
 void FRenderResourceManager::Create(FD3DDevice* device)
 {
     this->device = device;
+}
+
+void FRenderResourceManager::Release()
+{
+    OutputDebugString(L"[Shutdown] 텍스처 정리 시작\n");
+    for (auto& [id, data] : TextureMap)
+    {
+        if (data.ShaderResourceView) { data.ShaderResourceView->Release(); data.ShaderResourceView = nullptr; }
+        if (data.Texture) { data.Texture->Release(); data.Texture = nullptr; }
+    }
+    TextureMap.clear();
+    OutputDebugString(L"[Shutdown] 텍스처 dhks\n");
+
+    this->device = nullptr;
 }
 
 int FRenderResourceManager::CreateTexture(std::wstring filepath)
@@ -37,4 +54,59 @@ int FRenderResourceManager::CreateTexture(std::wstring filepath)
     TextureMap.emplace(NewId, data);
 
     return NewId;
+}
+
+FString FRenderResourceManager::LoadResourceFilePath()
+{
+    FString FilePath = GetFileDialoguePath();
+    if (FilePath.empty()) { return ""; }
+    std::ifstream File(FilePath);
+    if (!File.is_open()) {
+        // Failed to open file at target destination
+        std::cerr << "Failed to open file at target destination" << std::endl;
+        return nullptr;
+    }
+
+    return FilePath;
+}
+
+FString FRenderResourceManager::GetFileDialoguePath()
+{
+    std::string FileDestination;
+    char szFile[MAX_PATH] = {};
+
+    OPENFILENAMEA ofn = {};
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = nullptr;
+    ofn.lpstrFilter = "Image Files (*.png;*.jpg;*.jpeg;*.PNG;)\0*.png;*.jpg;*.jpeg;*.PNG\0All Files (*.*)\0*.*\0";
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrDefExt = "png";
+    ofn.lpstrTitle = "Load Image";
+    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+
+    if (!GetOpenFileNameA(&ofn)) {
+        return "";
+    }
+
+    FileDestination = szFile;
+
+    const size_t DotPos = FileDestination.rfind('.');
+    if (DotPos == std::string::npos) {
+        std::cerr << "Invalid file: no extension found" << std::endl;
+        return "";
+    }
+
+    const std::string Extension = FileDestination.substr(DotPos);
+
+    const std::vector<std::string> ValidExtensions = { ".png", ".jpg", ".jpeg", ".PNG"};
+    const bool bValidExtension = std::any_of(ValidExtensions.begin(), ValidExtensions.end(),
+        [&Extension](const std::string& Ext) { return Extension == Ext; });
+
+    if (!bValidExtension) {
+        std::cerr << "Invalid file type: got " << Extension << std::endl;
+        return "";
+    }
+    
+    return FileDestination;
 }

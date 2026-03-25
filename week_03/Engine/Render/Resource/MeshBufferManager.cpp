@@ -24,6 +24,13 @@ void FMeshBufferManager::Release()
 		pair.second.Release();
 	}
 	MeshBufferMap.clear();
+
+	for (auto& pair : UVMeshBufferMap)
+	{
+		pair.second.Release();
+	}
+	UVMeshBufferMap.clear();
+
 }
 
 //	MeshBuffer는 VB, IB를 모두 포함하고 있습니다.

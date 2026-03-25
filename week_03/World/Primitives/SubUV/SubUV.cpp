@@ -10,12 +10,21 @@ void USubUVComponent::UpdateFrame(float deltaTime)
 {
 	ElaspedTime += deltaTime;
 
+	if (CellRows == 0 || CellColumns == 0 || PlayRate == 0) return; 
+
+	CellSizeX = (1.f - OffsetLeftX - OffsetRightX) / CellColumns;
+	CellSizeY = (1.f - OffsetUpY - OffsetBottomY) / CellRows;
+	FrameCount = CellRows * CellColumns;
+	Timer = 1.f / PlayRate;
+
+
 	if (ElaspedTime >= Timer) {
 		ElaspedTime = 0;
+		if (!bLoop && CurrentFrameIndex + 1 == FrameCount) return;
 		CurrentFrameIndex = (++CurrentFrameIndex)%FrameCount;
 	}
-	currentU = OffsetLeftX +(CurrentFrameIndex % CellCountX) * CellSizeX;
-	currentV = OffsetUpY +(CurrentFrameIndex / CellCountX) * CellSizeY;
+	currentU = OffsetLeftX +(CurrentFrameIndex % CellColumns) * CellSizeX;
+	currentV = OffsetUpY +(CurrentFrameIndex / CellColumns) * CellSizeY;
 
 }
 
@@ -26,14 +35,17 @@ USubUVComponent::USubUVComponent(std::wstring filename)
 	OffsetLeftX = 24.f / 857.f; OffsetUpY = 12.f / 852.f;
 	OffsetRightX = 17.f/857.f, OffsetBottomY = 22.f / 852.f;
 
-	CellCountX = CellCountY = 6;
-	FrameCount = CellCountX * CellCountY;
+	CellRows = CellColumns = 6;
+	FrameCount = CellRows * CellColumns;
 	CurrentFrameIndex = 0;
-	Texture2DId = FEngineServices::GetResourceManager()->CreateTexture(this->filename);
+	if (FEngineServices::GetResourceManager()->GetTextureSize() > 0) 
+		Texture2DId = FEngineServices::GetResourceManager()->GetDefaultTexture();
+	else
+		Texture2DId = FEngineServices::GetResourceManager()->CreateTexture(this->filename);
 	Timer = 1.f / PlayRate;
 
-	CellSizeX = (1.f - OffsetLeftX - OffsetRightX) / CellCountX;
-	CellSizeY = (1.f - OffsetUpY - OffsetBottomY) / CellCountY;
+	CellSizeX = (1.f - OffsetLeftX - OffsetRightX) / CellColumns;
+	CellSizeY = (1.f - OffsetUpY - OffsetBottomY) / CellRows;
 
 	currentU = OffsetLeftX; currentV = OffsetUpY;
 	UVMeshData = &FMeshManager::GetUVRect();
@@ -81,7 +93,11 @@ void USubUVComponent::Update(float deltatime)
 
 void USubUVComponent::ReloadTextureResource(std::wstring filename)
 {
-	Texture2DId = FEngineServices::GetResourceManager()->CreateTexture(this->filename);
+	
+	int newTexture2DId = FEngineServices::GetResourceManager()->CreateTexture(filename);
+	if (newTexture2DId < 0) return;
+	Texture2DId = newTexture2DId;
+	this->filename = filename;
 
 }
 

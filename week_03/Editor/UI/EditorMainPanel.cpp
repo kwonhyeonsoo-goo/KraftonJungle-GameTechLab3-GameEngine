@@ -8,7 +8,8 @@
 #include "ImGui/imgui_internal.h"
 // Merge icons into default tool font
 #include "ImGui/IconsFontAwesome4.h"
-
+#include "Engine/EngineServices/EngineServices.h"
+#include "Engine/Render/Resource/RenderResourceManager.h"
 #include "Render/Renderer/Renderer.h"
 #include "World/Gizmo/GizmoManager.h"
 #include "World/Primitives/Primitives.h"
@@ -16,6 +17,7 @@
 #include "Core/Common.h"
 #include "Engine/Core/InputSystem.h"
 #include "Classes/ASpotlight.h"
+#include "World/Primitives/SubUV/SubUV.h"
 
 #define SEPARATOR(); ImGui::Spacing(); ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing(); ImGui::Spacing();
 
@@ -360,29 +362,9 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 						// Text 컴포넌트면 입력창 표시
 						if (Comps->IsA<UTextComponent>()) {
 							UTextComponent* TextComp = static_cast<UTextComponent*>(Comps);
-
-							// UUID별로 버퍼 관리
-							static std::unordered_map<uint32, std::array<char, 256>> TextBuffers;
-							auto& Buffer = TextBuffers[Comps->UUID];
-
-							// 최초 1회 현재 텍스트로 초기화
-							if (bSelected) {
-								std::wstring Current = TextComp->GetText();
-								WideCharToMultiByte(CP_UTF8, 0, Current.c_str(), -1, Buffer.data(), 256, nullptr, nullptr);
-							}
-
-							FString InputLabel = "##TextInput" + std::to_string(Comps->UUID);
-							ImGui::Indent();
-							if (ImGui::InputText(InputLabel.c_str(), Buffer.data(), Buffer.size())) {
-								wchar_t Wide[256];
-								MultiByteToWideChar(CP_UTF8, 0, Buffer.data(), -1, Wide, 256);
-								std::wstring WideStr(Wide);
-								TextComp->SetText(WideStr);
-							}
-							ImGui::Unindent();
+							DrawTextComponentUI(TextComp);
 						}
 					}
-
 				}
 			}
 			ImGui::Unindent();
@@ -501,6 +483,104 @@ void FEditorMainPanel::RenderPickedActorWindow(AActor* Actor) {
 			Spotlight->SetColor(NewColor);
 		}
 	}
+
+	for (USceneComponent* comp : Actor->GetComponents()) {
+		if (comp->IsA< USubUVComponent>()) {
+			ImGui::SeparatorText("Sub UV");
+
+			RenderPicekdSubUVWindow(static_cast<USubUVComponent*>(comp));
+
+		}
+	}
+}
+
+void FEditorMainPanel::RenderPicekdSubUVWindow(USubUVComponent* SubUVComp)
+{
+	std::wstring wFileName = SubUVComp->GetFileName();
+	std::string textureFileName(wFileName.begin(), wFileName.end());
+
+	ImGui::Text( ("Texture File: " + textureFileName).c_str());
+
+	if (ImGui::Button("Load New Texture")) {
+		FString newFilePath = FEngineServices::GetResourceManager()->LoadResourceFilePath();
+
+		std::replace(newFilePath.begin(), newFilePath.end(), '/', '\\');
+		std::wstring FileDestinationW(newFilePath.begin(), newFilePath.end());
+		SubUVComp->ReloadTextureResource(FileDestinationW);
+	}
+
+	float offsetLeft, offsetRight, offsetUP, offsetBottom;
+	offsetLeft = SubUVComp->OffsetLeftX; offsetRight = SubUVComp->OffsetRightX; offsetUP = SubUVComp->OffsetUpY; offsetBottom = SubUVComp->OffsetBottomY;
+
+	int playRate = SubUVComp->PlayRate;
+	
+	ImGui::Checkbox("is Loop", &(SubUVComp->bLoop));
+
+	if (ImGui::DragInt("Play Rate", &playRate, 1, 60)) {
+		SubUVComp->PlayRate = playRate;
+	}
+
+	if (ImGui::DragFloat("Offset Left", &offsetLeft,
+		0.01f,          // speed in degrees
+		0.0f,          // min deg
+		1.0f))        // max deg
+	{
+		SubUVComp->OffsetLeftX = offsetLeft;
+	}
+;
+
+	if (ImGui::DragFloat("Offset Right", &offsetRight,0.01f,0.0f,1.0f))
+		SubUVComp->OffsetRightX = offsetRight;
+
+
+	if (ImGui::DragFloat("Offset Up", &offsetUP, 0.01f, 0.0f, 1.0f))
+		SubUVComp->OffsetUpY = offsetUP;
+
+
+	if (ImGui::DragFloat("Offset Bottom", &offsetBottom, 0.01f, 0.0f, 1.0f))
+		SubUVComp->OffsetBottomY = offsetBottom;
+
+	int rows, columns;
+	rows = SubUVComp->CellRows; columns = SubUVComp->CellColumns;
+
+	if (ImGui::DragInt("Rows", &rows, 1, 1, 10))
+		SubUVComp->CellRows = rows;
+
+
+	if (ImGui::DragInt("Columns", &columns, 1, 1, 10))
+		SubUVComp->CellColumns = columns;
+
+}
+
+void FEditorMainPanel::DrawTextComponentUI(UTextComponent* TextComp)
+{
+	// UUID별로 버퍼 관리
+	static std::unordered_map<uint32, std::array<char, 256>> TextBuffers;
+	auto& Buffer = TextBuffers[TextComp->UUID];
+
+	// 현재 텍스트로 초기화
+	std::wstring Current = TextComp->GetText();
+	WideCharToMultiByte(CP_UTF8, 0, Current.c_str(), -1, Buffer.data(), 256, nullptr, nullptr);
+
+	FString InputLabel = "##TextInput" + std::to_string(TextComp->UUID);
+	ImGui::Indent();
+	if (ImGui::InputText(InputLabel.c_str(), Buffer.data(), Buffer.size())) {
+		wchar_t Wide[256];
+		MultiByteToWideChar(CP_UTF8, 0, Buffer.data(), -1, Wide, 256);
+		std::wstring WideStr(Wide);
+		TextComp->SetText(WideStr);
+	}
+
+	// Color 조정
+	FVector4 Color = TextComp->GetColor();
+	float ColorArr[4] = { Color.X, Color.Y, Color.Z, Color.W };
+	FString ColorLabel = "Color##" + std::to_string(TextComp->UUID);
+	if (ImGui::ColorEdit4(ColorLabel.c_str(), ColorArr)) {
+		FVector4 NewColor(ColorArr[0], ColorArr[1], ColorArr[2], ColorArr[3]);
+		TextComp->SetTextColor(NewColor);
+	}
+
+	ImGui::Unindent();
 }
 
 void FEditorMainPanel::Update()

@@ -17,14 +17,23 @@ void FD3DDevice::Create(HWND InHWindow)
 void FD3DDevice::Release()
 {
 	DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
-
+	ID3D11Debug* d3dDebug = nullptr;
+	Device->QueryInterface(__uuidof(ID3D11Debug), (void**)&d3dDebug);
 	ReleaseSampler();
 	ReleaseBlendState();
 	ReleaseDepthStencilBuffer();
 	ReleaseRasterizerState();
 	ReleaseFrameBuffer();
 
+	
 	ReleaseDeviceAndSwapChain();
+
+	// 종료 시점에 호출
+	if (d3dDebug) {
+		OutputDebugString(L"=== ReportLiveDeviceObjects ===\n");
+		d3dDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+		d3dDebug->Release();
+	}
 }
 
 void FD3DDevice::BeginFrame()
@@ -373,5 +382,10 @@ void FD3DDevice::ReleaseSampler()
 	if (FontSampler) {
 		FontSampler->Release();
 		FontSampler = nullptr;
+	}
+
+	if (SubUVSampler) {
+		SubUVSampler->Release();
+		SubUVSampler = nullptr;
 	}
 }
