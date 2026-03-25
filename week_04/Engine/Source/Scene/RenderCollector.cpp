@@ -26,8 +26,16 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 
 			FTextRenderCommand TextCmd;
 			TextCmd.Text = UUIDComponent->GetDisplayText();
-			TextCmd.WorldMatrix = FMatrix::MakeTranslation(UUIDComponent->GetTextWorldPosition());
-			const float Scale = UUIDComponent->GetWorldScale();
+			FVector TextPos = UUIDComponent->GetTextWorldPosition();
+			TextCmd.WorldMatrix = FMatrix::MakeTranslation(TextPos);
+
+			// 카메라 거리에 비례해서 스케일 보정 -> 화면 크기 일정
+			FVector CameraPos = OutQueue.ViewMatrix.GetInverse().GetTranslation();
+			float Distance = (TextPos - CameraPos).Size();
+			float BaseDistance = 5.0f;
+			float DistanceScale = (Distance > BaseDistance) ? (Distance / BaseDistance) : 1.0f;
+
+			const float Scale = UUIDComponent->GetWorldScale() * DistanceScale;
 			TextCmd.WorldScale = FVector(Scale, Scale, Scale);
 			TextCmd.bBillboard = true;
 			TextCmd.Color = UUIDComponent->GetTextColor();
