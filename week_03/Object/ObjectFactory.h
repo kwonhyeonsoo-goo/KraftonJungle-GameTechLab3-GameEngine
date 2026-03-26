@@ -10,7 +10,7 @@ namespace {																							\
 		TypeName##_RegisterFactory() {																\
 				FObjectFactory::Get().Register(														\
 					#TypeName,																		\
-					[]()->UObject* { return UObjectManager::Get().CreateObject<TypeName>(); }		\
+					[]()->UObject* { return FObjectManager::Get().CreateObject<TypeName>(); }		\
 				);																					\
 		}																							\
 	};																								\

@@ -44,7 +44,7 @@ void AActor::RemoveComponent(USceneComponent* Component) {
 		? nullptr
 		: Components[0];
 
-	UObjectManager::Get().DestroyObject(Component);
+	FObjectManager::Get().DestroyObject(Component);
 }
 
 void AActor::SetRootComponent(USceneComponent* Comp) {

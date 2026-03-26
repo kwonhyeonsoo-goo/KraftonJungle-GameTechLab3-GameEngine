@@ -22,7 +22,7 @@ public:
 
 	template <typename T>
 	AActor* SpawnPrimitiveActor(const FVector& Location) {
-		AActor* Actor = UObjectManager::Get().CreateObject<AActor>();
+		AActor* Actor = FObjectManager::Get().CreateObject<AActor>();
 		Actor->SetOwnerUUID(UUID);
 		Actor->SetActorLocation(Location);
 		Actor->AddComponent<T>();
@@ -32,7 +32,7 @@ public:
 
 	template <typename T>
 	AActor* SpawnUtilActor(const FVector& Location) {
-		T* Actor = UObjectManager::Get().CreateObject<T>();
+		T* Actor = FObjectManager::Get().CreateObject<T>();
 		Actor->SetOwnerUUID(UUID);
 		Actor->SetActorLocation(Location);
 		Actors.push_back(Actor);

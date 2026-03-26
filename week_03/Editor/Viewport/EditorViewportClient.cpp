@@ -13,12 +13,12 @@ void FEditorViewportClient::Initialize(HWND InHWindow)
 {
 	HWindow = InHWindow;
 
-	UGizmoComponent* GizmoComp = UObjectManager::Get().CreateObject<UGizmoComponent>();
+	UGizmoComponent* GizmoComp = FObjectManager::Get().CreateObject<UGizmoComponent>();
 	GizmoComp->SetWorldLocation(FVector(0.0f, 0.0f, 0.0f));
 	GizmoManager.Initialize(GizmoComp);
 	GizmoManager.Deactivate();
 
-	Camera = UObjectManager::Get().CreateObject<UCamera>();
+	Camera = FObjectManager::Get().CreateObject<UCamera>();
 	ResetCamera(Camera);
 	Camera->ApplyCameraState();
 
@@ -205,9 +205,9 @@ void FEditorViewportClient::ResetViewport()
 		Comp->SetWorldLocation(FVector(0.0f, 0.0f, 0.0f));
 
 	Camera->bPendingKill = true;
-	UObjectManager::Get().CollectGarbage();
+	//UObjectManager::Get().CollectGarbage();
 
-	Camera = UObjectManager::Get().CreateObject<UCamera>();
+	Camera = FObjectManager::Get().CreateObject<UCamera>();
 	SetViewportSize(WindowWidth, WindowHeight);
 	Camera->ApplyCameraState();
 	ResetCamera(Camera);

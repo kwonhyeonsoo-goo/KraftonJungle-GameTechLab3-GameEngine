@@ -536,7 +536,7 @@ void FEditorMainPanel::RenderPickedObjectWindow(UObject*& ObjectPicked) {
 				USceneComponent* SceneComp = ObjectPicked->Cast<USceneComponent>();
 				if (SceneComp->GetOwningActor()) {
 					// TODO:: Do this recursively
-					UObjectManager::Get().DestroyObject(SceneComp->GetOwningActor());
+					FObjectManager::Get().DestroyObject(SceneComp->GetOwningActor());
 				}
 			}
 			Viewport->GetGizmoManager().SetVisibility(false);

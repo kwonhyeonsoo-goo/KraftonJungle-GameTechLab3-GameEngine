@@ -6,7 +6,7 @@ REGISTER_FACTORY(ASpotlight)
 
 ASpotlight::ASpotlight() {
 	// Creates an icon component as a clickable primitive root
-	UBillBoardComponent* Icon = UObjectManager::Get().CreateObject<UBillBoardComponent>();
+	UBillBoardComponent* Icon = FObjectManager::Get().CreateObject<UBillBoardComponent>();
 	Icon->LoadTexture(L"Assets/Icons/light_icon.png");
 	AddComponent(Icon);
 

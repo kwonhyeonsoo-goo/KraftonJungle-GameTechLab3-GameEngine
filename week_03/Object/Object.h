@@ -99,12 +99,12 @@ public:
 extern TArray<UObject*> GUObjectArray;
 
 
-class UObjectManager {
+class FObjectManager {
 public:
 	// Singleton
-	static UObjectManager& Get()
+	static FObjectManager& Get()
 	{
-		static UObjectManager instance;
+		static FObjectManager instance;
 		return instance;
 	}
 
@@ -128,18 +128,18 @@ public:
 		}
 	}
 
-	void CollectGarbage() {
-		if (bIsCollectingGarbage) return;
-		bIsCollectingGarbage = true;
-		for (int32 i = (int32)GUObjectArray.size() - 1; i >= 0; i--) {
-			if (!GUObjectArray[i] || GUObjectArray[i]->bPendingKill) {
-				delete GUObjectArray[i];
-				GUObjectArray.erase(GUObjectArray.begin() + i);
-			}
-		}
-		NumPendingToKill = 0;
-		bIsCollectingGarbage = false;
-	}
+	//void CollectGarbage() {
+	//	if (bIsCollectingGarbage) return;
+	//	bIsCollectingGarbage = true;
+	//	for (int32 i = (int32)GUObjectArray.size() - 1; i >= 0; i--) {
+	//		if (!GUObjectArray[i] || GUObjectArray[i]->bPendingKill) {
+	//			delete GUObjectArray[i];
+	//			GUObjectArray.erase(GUObjectArray.begin() + i);
+	//		}
+	//	}
+	//	NumPendingToKill = 0;
+	//	bIsCollectingGarbage = false;
+	//}
 
 	void ForceFlush() {
 		GUObjectArray.clear();  // shutdown only
@@ -162,8 +162,8 @@ public:
 
 
 private:
-	UObjectManager() = default;
-	~UObjectManager() { CollectGarbage(); }
+	FObjectManager() = default;
+	~FObjectManager() { /*CollectGarbage(); */}
 
 	uint32 NumPendingToKill = 0;
 	const uint32 GC_Threshold = 512;

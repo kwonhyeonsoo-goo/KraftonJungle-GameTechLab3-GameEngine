@@ -24,7 +24,7 @@ void FSceneManager::SetActiveScene(UScene* Scene) {
 }
 
 void FSceneManager::AddNewScene() {
-    UScene* Scene = UObjectManager::Get().CreateObject<UScene>();
+    UScene* Scene = FObjectManager::Get().CreateObject<UScene>();
     LoadedScenes.push_back(Scene);
     SetActiveScene(Scene);
 }

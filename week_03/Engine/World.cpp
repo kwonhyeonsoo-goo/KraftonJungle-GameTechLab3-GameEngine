@@ -11,7 +11,7 @@ UWorld::~UWorld(){
 void UWorld::Init() {
 	// Create a new scene if scene list in SceneManager is empty. It should be implicitly set active.
 	if (SceneManager.IsEmpty()) {
-		SceneManager.AddScene(UObjectManager::Get().CreateObject<UScene>());
+		SceneManager.AddScene(FObjectManager::Get().CreateObject<UScene>());
 	}
 }
 

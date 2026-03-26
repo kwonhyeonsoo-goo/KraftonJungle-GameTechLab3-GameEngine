@@ -11,7 +11,7 @@ void FEditorEngine::Create(HWND InHWindow)
 	Renderer.Create(HWindow);
 	FRenderCollector::Initialize(Renderer.GetFD3DDevice().GetDevice());
 	RenderBus.Create(Renderer.GetFD3DDevice().GetDevice());
-	EditorWorld = UObjectManager::Get().CreateObject<UWorld>();
+	EditorWorld = FObjectManager::Get().CreateObject<UWorld>();
 	EditorWorld->Init();
 	EditorWorld->SpawnPrimitiveActor<UCubeComponent>(FVector(-3.f, 0, 0));	// Test sample
 

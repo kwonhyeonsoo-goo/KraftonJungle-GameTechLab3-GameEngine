@@ -25,7 +25,7 @@ public:
 	// Component management
 	template<typename T>
 	T* AddComponent() {
-		T* component = UObjectManager::Get().CreateObject<T>();
+		T* component = FObjectManager::Get().CreateObject<T>();
 
 		component->SetOwningActor(this);
 
