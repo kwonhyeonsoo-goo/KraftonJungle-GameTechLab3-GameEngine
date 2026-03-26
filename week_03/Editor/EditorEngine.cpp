@@ -12,9 +12,8 @@ void FEditorEngine::Create(HWND InHWindow)
 	FRenderCollector::Initialize(Renderer.GetFD3DDevice().GetDevice());
 	RenderBus.Create(Renderer.GetFD3DDevice().GetDevice());
 	EditorWorld = UObjectManager::Get().CreateObject<UWorld>();
-	auto WorldPtr = EditorWorld.lock();
-	WorldPtr->Init();
-	WorldPtr->SpawnPrimitiveActor<UCubeComponent>(FVector(-3.f, 0, 0));	// Test sample
+	EditorWorld->Init();
+	EditorWorld->SpawnPrimitiveActor<UCubeComponent>(FVector(-3.f, 0, 0));	// Test sample
 
 	RECT rect;
 	GetClientRect(HWindow, &rect);
@@ -23,7 +22,7 @@ void FEditorEngine::Create(HWND InHWindow)
 
 	ViewportClient.Initialize(HWindow);
 	ViewportClient.SetViewportSize(WindowWidth, WindowHeight);
-	ViewportClient.SetScene(WorldPtr->GetActiveScene());
+	ViewportClient.SetScene(EditorWorld->GetActiveScene());
 
 	ViewportClient.SetViewportSize(WindowWidth, WindowHeight);
     MainPanel.Create(HWindow, Renderer, this, &ViewportClient);
@@ -46,20 +45,19 @@ void FEditorEngine::OnWindowResized(uint32 Width, uint32 Height)
 }
 
 void FEditorEngine::NewScene() {
-	auto Worldptr = EditorWorld.lock();
-	Worldptr->GetSceneManager().AddNewScene();
+	EditorWorld->GetSceneManager().AddNewScene();
 	ViewportClient.ResetViewport();
 	ResetViewportScene();
 }
 
 void FEditorEngine::ResetViewportScene() {
-	ViewportClient.SetScene(EditorWorld.lock()->GetActiveScene());
+	ViewportClient.SetScene(EditorWorld->GetActiveScene());
 }
 
 void FEditorEngine::Release()
 {
-	if (auto Worldptr = EditorWorld.lock()) {
-		Worldptr->EndPlay();
+	if (EditorWorld) {
+		EditorWorld->EndPlay();
 	}
 	FRenderCollector::Release();
 	MainPanel.Release();
@@ -70,8 +68,8 @@ void FEditorEngine::Release()
 
 void FEditorEngine::BeginPlay()
 {
-	if (auto Worldptr = EditorWorld.lock()) {
-		Worldptr->BeginPlay();
+	if (EditorWorld) {
+		EditorWorld->BeginPlay();
 	}
 }
 
@@ -107,19 +105,19 @@ void FEditorEngine::EndFrame()
 
 void FEditorEngine::UpdateWorld(float DeltaTime)
 {
-	if (auto Worldptr = EditorWorld.lock())
+	if (EditorWorld)
 	{
-		Worldptr->Tick(DeltaTime);
+		EditorWorld->Tick(DeltaTime);
 	}
 }
 
 void FEditorEngine::BuildRenderCommands()
 {
 	FRenderCollectorContext Context;
-	Context.Scene = EditorWorld.lock()->GetActiveScene().lock().get();
-	Context.Camera = ViewportClient.GetCamera().lock().get();
+	Context.Scene = EditorWorld->GetActiveScene();
+	Context.Camera = ViewportClient.GetCamera();
 	FGizmoManager& GizmoManager = ViewportClient.GetGizmoManager();
-	Context.Gizmo = GizmoManager.GetComponent().lock().get();
+	Context.Gizmo = GizmoManager.GetComponent();
 	Context.CursorOverlayState = &ViewportClient.GetCursorOverlayState();
 	Context.ViewportHeight = WindowHeight;
 	Context.ViewportWidth = WindowWidth;

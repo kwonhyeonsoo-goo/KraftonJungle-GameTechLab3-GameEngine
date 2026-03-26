@@ -8,7 +8,7 @@ public:
 	void LoadScene(const FString& SceneName);
 	void UnloadScene(UScene* Scene);
 	void SetActiveScene(UScene* Scene);
-	weak_ptr<UScene> GetActiveScene();
+	UScene* GetActiveScene();
 	TArray<UScene*> GetScenes() const { return LoadedScenes; }
 	void ReplaceScene(UScene* Scene);
 	void AddScene(UScene* Scene);

@@ -24,7 +24,7 @@ void FRenderCollector::Collect(const FRenderCollectorContext& Context, FRenderBu
 	//	Iterate through GUObjects, not context.scene. This is for extra encapsulation
 	for (const auto& ObjPtr : GUObjectArray)
 	{
-		auto* Object = ObjPtr.get();
+		auto* Object = ObjPtr;
 		if (Object && Object->IsA<AActor>() && !Object->bPendingKill)
 		{
 			auto* Actor = Object->Cast<AActor>();

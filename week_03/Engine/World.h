@@ -18,7 +18,7 @@ public:
     void EndPlay();
 
     FSceneManager& GetSceneManager() { return SceneManager; }
-    weak_ptr<UScene> GetActiveScene() { return SceneManager.GetActiveScene(); }
+    UScene* GetActiveScene() { return SceneManager.GetActiveScene(); }
 
     template <typename T>
     AActor* SpawnPrimitiveActor(const FVector& Location) {

@@ -66,10 +66,8 @@ UScene* FSceneSaveManager::LoadSceneFromJSON(UWorld* World) {
     // Pass 1: create all objects and restore their data
     for (auto& JSONObject : Root["Scene"]["Objects"].ArrayRange()) {
         string ClassName = JSONObject["ClassName"].ToString();
-        auto WeakObj = FObjectFactory::Get().Create(ClassName);
-        if (WeakObj.expired()) continue;
-
-        UObject* Obj = WeakObj.lock().get();
+        UObject* Obj = FObjectFactory::Get().Create(ClassName);
+        if (!Obj) continue;
 
         uint32 UUID = static_cast<uint32>(JSONObject["UUID"].ToInt());
         Obj->UUID          = UUID;

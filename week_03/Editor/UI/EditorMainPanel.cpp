@@ -77,7 +77,7 @@ void FEditorMainPanel::Render(float DeltaTime, FViewOutput& ViewOutput)
 
 void FEditorMainPanel::RenderControlTab(float DeltaTime, FViewOutput& ViewOutput)
 {
-	auto& SceneManager = EditorEngine->GetWorld().lock()->GetSceneManager();
+	auto& SceneManager = EditorEngine->GetWorld()->GetSceneManager();
 	(void)DeltaTime;
 	if (!EditorEngine)
 	{
@@ -174,28 +174,28 @@ void FEditorMainPanel::RenderControlTab(float DeltaTime, FViewOutput& ViewOutput
 				ImGui::Text("New scene created");
 			}
 
-			if (ImGui::Button("Save Scene")) {
-				FSceneSaveManager::SaveSceneAsJSON(EditorEngine->GetWorld().lock()->GetActiveScene().lock().get());
-				SceneSaveNotificationTimer = common::constants::imgui::NotificationTimer;
-			}
-			if (SceneSaveNotificationTimer > 0.0f) {
-				SceneSaveNotificationTimer -= DeltaTime;
-				ImGui::Text("Scene saved");
-			}
+	if (ImGui::Button("Save Scene")) {
+		FSceneSaveManager::SaveSceneAsJSON(EditorEngine->GetWorld()->GetActiveScene());
+		SceneSaveNotificationTimer = common::constants::imgui::NotificationTimer;
+	}
+	if (SceneSaveNotificationTimer > 0.0f) {
+		SceneSaveNotificationTimer -= DeltaTime;
+		ImGui::Text("Scene saved");
+	}
 
-			if (ImGui::Button("Load Scene")) {
-				UScene* Scene = FSceneSaveManager::LoadSceneFromJSON(EditorEngine->GetWorld().lock().get());
-				if (Scene) {
-					Viewport->GetGizmoManager().SetVisibility(false);
-					ViewOutput.Object = nullptr;
-					SceneManager.AddScene(Scene);
-					SceneManager.SetActiveScene(Scene);
-					Viewport->ResetViewport();
-					EditorEngine->ResetViewportScene();
-					Sleep(50);	// Safeguard
-					SceneLoadNotificationTimer = common::constants::imgui::NotificationTimer;
-				}
-			}
+	if (ImGui::Button("Load Scene")) {
+		UScene* Scene = FSceneSaveManager::LoadSceneFromJSON(EditorEngine->GetWorld());
+		if (Scene) {
+			Viewport->GetGizmoManager().SetVisibility(false);
+			ViewOutput.Object = nullptr;
+			SceneManager.AddScene(Scene);
+			SceneManager.SetActiveScene(Scene);
+			Viewport->ResetViewport();
+			EditorEngine->ResetViewportScene();
+			Sleep(50);	// Safeguard
+			SceneLoadNotificationTimer = common::constants::imgui::NotificationTimer;
+		}
+	}
 
 			if (ImGui::Button("Delete Current Scene")) {
 				if (SceneManager.GetScenes().size() > 1) {
@@ -223,7 +223,7 @@ void FEditorMainPanel::RenderControlTab(float DeltaTime, FViewOutput& ViewOutput
 		{
 			ImGui::SeparatorText("Camera");
 
-			FCameraState& CameraState = Viewport->GetCamera().lock()->GetCameraState();
+			FCameraState& CameraState = Viewport->GetCamera()->GetCameraState();
 			ImGui::Checkbox("Orthographic", &(CameraState.bIsOrthogonal));
 
 			float CameraFOV_Deg = CameraState.FOV * (RAD_TO_DEG);
@@ -246,7 +246,7 @@ void FEditorMainPanel::RenderControlTab(float DeltaTime, FViewOutput& ViewOutput
 					CameraState.OrthoWidth = Clamp(OrthoWidth, 0.1f, 1000.0f);
 				}
 			}
-			UCamera* Camera = Viewport->GetCamera().lock().get();
+			UCamera* Camera = Viewport->GetCamera();
 			FVector CamPos = Camera->GetWorldLocation();
 			float CameraLocation[3] = { CamPos.X, CamPos.Y, CamPos.Z };
 			if (ImGui::DragFloat3("Camera Location", CameraLocation, 0.1f))
@@ -360,7 +360,7 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 		ImGuiWindowFlags_NoCollapse      // 접기 금지 (선택)
 	);
 
-	auto& SceneManager = EditorEngine->GetWorld().lock()->GetSceneManager();
+	auto& SceneManager = EditorEngine->GetWorld()->GetSceneManager();
 
 	// Loaded scenes dropdown
 	if (ImGui::CollapsingHeader("Scenes")) {
@@ -384,7 +384,7 @@ void FEditorMainPanel::RenderObjectManager(FViewOutput& ViewOutput) {
 	// Load actors present in the current scene
 	TArray<AActor*> PrimitiveActors;
 	TArray<AActor*> NonPrimitiveActors;
-	const TArray<AActor*>& Actors = SceneManager.GetActiveScene().lock()->GetActors();
+	const TArray<AActor*>& Actors = SceneManager.GetActiveScene()->GetActors();
 	for (AActor* Actor : Actors) {
 		if (!Actor || Actor->bPendingKill) continue;
 

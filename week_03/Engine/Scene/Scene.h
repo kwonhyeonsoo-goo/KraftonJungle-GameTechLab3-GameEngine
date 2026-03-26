@@ -22,8 +22,7 @@ public:
 
 	template <typename T>
 	AActor* SpawnPrimitiveActor(const FVector& Location) {
-		auto WeakActor = UObjectManager::Get().CreateObject<AActor>();
-		AActor* Actor = WeakActor.lock().get();
+		AActor* Actor = UObjectManager::Get().CreateObject<AActor>();
 		Actor->SetOwnerUUID(UUID);
 		Actor->SetActorLocation(Location);
 		Actor->AddComponent<T>();
@@ -33,8 +32,7 @@ public:
 
 	template <typename T>
 	AActor* SpawnUtilActor(const FVector& Location) {
-		auto WeakActor = UObjectManager::Get().CreateObject<T>();
-		AActor* Actor = WeakActor.lock().get();
+		T* Actor = UObjectManager::Get().CreateObject<T>();
 		Actor->SetOwnerUUID(UUID);
 		Actor->SetActorLocation(Location);
 		Actors.push_back(Actor);

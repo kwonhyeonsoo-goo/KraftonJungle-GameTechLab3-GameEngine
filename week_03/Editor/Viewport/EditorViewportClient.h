@@ -19,16 +19,16 @@ class FEditorViewportClient
 {
 public:
 	void Initialize(HWND InHWindow);
-	weak_ptr<UCamera> GetCamera() { return Camera; }
-	void SetScene(weak_ptr<UScene> InScene) { Scene = InScene; }
-	void SetCamera(weak_ptr<UCamera> InCamera) { Camera = InCamera; }
+	UCamera* GetCamera() { return Camera; }
+	void SetScene(UScene* InScene) { Scene = InScene; }
+	void SetCamera(UCamera* InCamera) { Camera = InCamera; }
 	void SetViewportSize(float InWidth, float InHeight);
 
 	FGizmoManager& GetGizmoManager() { return GizmoManager; }
 
 	void Tick(float DeltaTime);
 
-	void ResetCamera(weak_ptr<UCamera> Camera);
+	void ResetCamera(UCamera* Camera);
 	void SyncCameraFromRenderHandler();
 	void ResetViewport();
 	void CloseViewport();
@@ -45,8 +45,8 @@ private:
 
 private:
 	HWND HWindow = nullptr;
-	weak_ptr<UScene>   Scene;
-	weak_ptr<UCamera>  Camera;
+	UScene*   Scene  = nullptr;
+	UCamera*  Camera = nullptr;
 	FGizmoManager      GizmoManager;
 
 	FVector InitViewPos = FVector(10, 0, 5);

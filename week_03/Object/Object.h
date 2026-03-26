@@ -2,7 +2,6 @@
 
 #include "EngineStatics.h"
 #include "Core/Name.h"
-#include <memory>
 
 #define DECLARE_CLASS(ClassName, ParentClass)                          \
     static const FTypeInfo s_TypeInfo;                                 \
@@ -45,13 +44,7 @@ struct FTypeInfo {
 
 namespace json { class JSON; }
 
-using std::make_unique;
-using std::make_shared;
-using std::unique_ptr;
-using std::shared_ptr;
-using std::weak_ptr;
-class UObject : public std::enable_shared_from_this<UObject>
-{
+class UObject {
 public:
 	uint32 UUID;
 	uint32 InternalIndex;
@@ -103,7 +96,7 @@ public:
 	static const FTypeInfo s_TypeInfo;
 };
 
-extern TArray<shared_ptr<UObject>> GUObjectArray;
+extern TArray<UObject*> GUObjectArray;
 
 
 class UObjectManager {
@@ -116,26 +109,16 @@ public:
 	}
 
 	template<typename T>
-	weak_ptr<T> CreateObject() {
-		auto Obj = make_shared<T>();
+	T* CreateObject() {
+		T* Obj = new T();
 		Obj->Name = FName(FString(Obj->GetTypeInfo()->name) + "_" + std::to_string(Obj->UUID));
 		Obj->InternalIndex = static_cast<uint32>(GUObjectArray.size());
 		Obj->AllocationSize = static_cast<uint32>(sizeof(T));
-		EngineStatics::OnAllocated(static_cast<uint32>(sizeof(T)));
 		GUObjectArray.push_back(Obj);
 		return Obj;
 	}
 
 	// Does not destroy the target object right away. Only marks for death
-	void DestroyObject(weak_ptr<UObject> Obj) {
-		if (auto ptr = Obj.lock()) {
-			ptr->bPendingKill = true;
-			if (NumPendingToKill++ > GC_Threshold) {
-				//CollectGarbage();
-			}
-		}
-	}
-
 	void DestroyObject(UObject* Obj) {
 		if (Obj) {
 			Obj->bPendingKill = true;
@@ -146,14 +129,16 @@ public:
 	}
 
 	void CollectGarbage() {
-		GUObjectArray.erase(
-			std::remove_if(GUObjectArray.begin(), GUObjectArray.end(),
-				[](const shared_ptr<UObject>& Obj) {
-					return !Obj || Obj->bPendingKill;
-				}),
-			GUObjectArray.end()
-		);
+		if (bIsCollectingGarbage) return;
+		bIsCollectingGarbage = true;
+		for (int32 i = (int32)GUObjectArray.size() - 1; i >= 0; i--) {
+			if (!GUObjectArray[i] || GUObjectArray[i]->bPendingKill) {
+				delete GUObjectArray[i];
+				GUObjectArray.erase(GUObjectArray.begin() + i);
+			}
+		}
 		NumPendingToKill = 0;
+		bIsCollectingGarbage = false;
 	}
 
 	void ForceFlush() {
@@ -182,4 +167,5 @@ private:
 
 	uint32 NumPendingToKill = 0;
 	const uint32 GC_Threshold = 512;
+	bool bIsCollectingGarbage = false;
 };

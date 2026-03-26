@@ -21,7 +21,7 @@ private:
 		int UpdateRate = 60;
 	};
 
-	weak_ptr<UWorld> EditorWorld;
+	UWorld* EditorWorld = nullptr;
 	HWND HWindow = nullptr;
 
 	float WindowWidth = 1920.f;
@@ -53,7 +53,7 @@ public:
 	void Render(float DeltaTime);
 	void EndFrame();
 
-	weak_ptr<UWorld> GetWorld() const { return EditorWorld; }
+	UWorld* GetWorld() const { return EditorWorld; }
 	void NewScene();
 	void ResetViewportScene();
 	void SetMainLoopFPS(float InFPS) { MainLoopFPS = InFPS; }
@@ -65,20 +65,14 @@ public:
 	void SetUpdateRate(int NewRate) { RuntimeSettings.UpdateRate = (NewRate < 1) ? 1 : NewRate; }
 
 	template <typename T>
-	weak_ptr<AActor> SpawnNewPrimitiveActor(const FVector& Location) {
-		auto World = EditorWorld.lock();
-		if (!World) { return {}; }
-		AActor* Actor = World->SpawnPrimitiveActor<T>(Location);
-		if (!Actor) { return {}; }
-		return std::dynamic_pointer_cast<AActor>(Actor->shared_from_this());
+	AActor* SpawnNewPrimitiveActor(const FVector& Location) {
+		if (!EditorWorld) return nullptr;
+		return EditorWorld->SpawnPrimitiveActor<T>(Location);
 	}
 
 	template <typename T>
-	weak_ptr<AActor> SpawnNewUtilActor(const FVector& Location) {
-		auto World = EditorWorld.lock();
-		if (!World) { return {}; }
-		AActor* Actor = World->SpawnUtilActor<T>(Location);
-		if (!Actor) { return {}; }
-		return std::dynamic_pointer_cast<AActor>(Actor->shared_from_this());
+	AActor* SpawnNewUtilActor(const FVector& Location) {
+		if (!EditorWorld) return nullptr;
+		return EditorWorld->SpawnUtilActor<T>(Location);
 	}
 };

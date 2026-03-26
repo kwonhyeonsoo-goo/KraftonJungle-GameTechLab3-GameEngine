@@ -10,7 +10,7 @@ class FGizmoManager
 public:
 	enum EGizmoMode { Translate, Rotate, Scale, End };
 
-	void Initialize(weak_ptr<UGizmoComponent> InComponent);
+	void Initialize(UGizmoComponent* InComponent);
 
 	// Target
 	void SetTarget(USceneComponent* NewTarget);
@@ -51,10 +51,10 @@ public:
 	bool IsPressedOnHandle()  const { return bPressedOnHandle; }
 
 	// Component access (for rendering / raycasting)
-	weak_ptr<UGizmoComponent> GetComponent() const { return Component; }
+	UGizmoComponent* GetComponent() const { return Component; }
 
 private:
-	weak_ptr<UGizmoComponent> Component;
+	UGizmoComponent* Component = nullptr;
 
 	USceneComponent*              TargetComponent    = nullptr;
 	std::vector<USceneComponent*> SelectedComponents;

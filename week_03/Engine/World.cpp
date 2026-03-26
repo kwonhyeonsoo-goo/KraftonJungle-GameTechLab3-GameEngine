@@ -11,21 +11,20 @@ UWorld::~UWorld(){
 void UWorld::Init() {
 	// Create a new scene if scene list in SceneManager is empty. It should be implicitly set active.
 	if (SceneManager.IsEmpty()) {
-		auto WeakScene = UObjectManager::Get().CreateObject<UScene>();
-		SceneManager.AddScene(WeakScene.lock().get());
+		SceneManager.AddScene(UObjectManager::Get().CreateObject<UScene>());
 	}
 }
 
 void UWorld::BeginPlay(){
-	if (auto Scene = SceneManager.GetActiveScene().lock()) Scene->BeginPlay();
+	if (UScene* Scene = SceneManager.GetActiveScene()) Scene->BeginPlay();
 }
 
 void UWorld::Tick(float DeltaTime) {
-	if (auto Scene = SceneManager.GetActiveScene().lock()) Scene->Tick(DeltaTime);
+	if (UScene* Scene = SceneManager.GetActiveScene()) Scene->Tick(DeltaTime);
 }
 
 void UWorld::EndPlay() {
-	if (auto Scene = SceneManager.GetActiveScene().lock()) Scene->EndPlay();
+	if (UScene* Scene = SceneManager.GetActiveScene()) Scene->EndPlay();
 }
 
 void UWorld::Serialize(json::JSON& j) const {

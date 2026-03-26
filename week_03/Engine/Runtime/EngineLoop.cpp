@@ -170,6 +170,9 @@ int FEngineLoop::Run()
 void FEngineLoop::Shutdown()
 {
 	Editor.Release();
+	for (auto* Obj : GUObjectArray) {
+		if (Obj) { delete Obj; Obj = nullptr; }
+	}
 	GUObjectArray.clear();
 	//UObjectManager::Get().CollectGarbage();
 

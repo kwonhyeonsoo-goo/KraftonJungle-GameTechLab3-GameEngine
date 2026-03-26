@@ -13,14 +13,14 @@ void FEditorViewportClient::Initialize(HWND InHWindow)
 {
 	HWindow = InHWindow;
 
-	auto GizmoComp = UObjectManager::Get().CreateObject<UGizmoComponent>();
-	GizmoComp.lock()->SetWorldLocation(FVector(0.0f, 0.0f, 0.0f));
+	UGizmoComponent* GizmoComp = UObjectManager::Get().CreateObject<UGizmoComponent>();
+	GizmoComp->SetWorldLocation(FVector(0.0f, 0.0f, 0.0f));
 	GizmoManager.Initialize(GizmoComp);
 	GizmoManager.Deactivate();
 
 	Camera = UObjectManager::Get().CreateObject<UCamera>();
 	ResetCamera(Camera);
-	Camera.lock()->ApplyCameraState();
+	Camera->ApplyCameraState();
 
 	UE_LOG("Hello ZZup Engine! %d", 2026);
 }
@@ -30,8 +30,8 @@ void FEditorViewportClient::SetViewportSize(float InWidth, float InHeight)
 	if (InWidth  > 0.0f) WindowWidth  = InWidth;
 	if (InHeight > 0.0f) WindowHeight = InHeight;
 
-	if (Camera.lock())
-		Camera.lock()->OnResize(static_cast<int>(WindowWidth), static_cast<int>(WindowHeight));
+	if (Camera)
+		Camera->OnResize(static_cast<int>(WindowWidth), static_cast<int>(WindowHeight));
 }
 
 void FEditorViewportClient::Tick(float DeltaTime)
@@ -44,12 +44,11 @@ void FEditorViewportClient::Tick(float DeltaTime)
 
 void FEditorViewportClient::TickInput(float DeltaTime)
 {
-	auto Cameraptr = Camera.lock();
-	if (!Cameraptr) return;
+	if (!Camera) return;
 
 	if (InputSystem::GuiInputState.bUsingKeyboard) return;
 
-	FCameraState& CameraState = Cameraptr->GetCameraState();
+	FCameraState& CameraState = Camera->GetCameraState();
 
 	FVector move = FVector(0, 0, 0);
 	float CameraVelocity = FUISettingInitializer::GetViewCamMoveSpeed();
@@ -61,7 +60,7 @@ void FEditorViewportClient::TickInput(float DeltaTime)
 	if (InputSystem::GetKey('E'))                               move.Z += CameraVelocity;
 
 	move *= DeltaTime;
-	Cameraptr->MoveLocal(move);
+	Camera->MoveLocal(move);
 
 	FVector rotation      = FVector(0, 0, 0);
 	FVector mouseRotation = FVector(0, 0, 0);
@@ -85,7 +84,7 @@ void FEditorViewportClient::TickInput(float DeltaTime)
 		GizmoManager.SetNextMode();
 
 	rotation *= DeltaTime;
-	Cameraptr->Rotate(rotation.Y + mouseRotation.Y, rotation.Z + mouseRotation.Z);
+	Camera->Rotate(rotation.Y + mouseRotation.Y, rotation.Z + mouseRotation.Z);
 
 	if (InputSystem::GetKeyDown('O'))
 		CameraState.bIsOrthogonal = !CameraState.bIsOrthogonal;
@@ -94,16 +93,14 @@ void FEditorViewportClient::TickInput(float DeltaTime)
 void FEditorViewportClient::TickInteraction(float DeltaTime)
 {
 	(void)DeltaTime;
-	auto Cameraptr = Camera.lock();
-	auto Sceneptr  = Scene.lock();
-	if (!Cameraptr || !Sceneptr) return;
+	if (!Camera || !Scene) return;
 
-	GizmoManager.ApplyScreenSpaceScaling(Cameraptr->GetWorldLocation());
+	GizmoManager.ApplyScreenSpaceScaling(Camera->GetWorldLocation());
 
 	if (InputSystem::GuiInputState.bUsingMouse) return;
 
-	FCameraState& CameraState = Cameraptr->GetCameraState();
-	uint32 zoomspeed = 300;
+	FCameraState& CameraState = Camera->GetCameraState();
+	uint32 zoomspeed = 30;
 
 	float scrollNotches = InputSystem::GetScrollNotches();
 	if (scrollNotches != 0.0f)
@@ -158,13 +155,13 @@ void FEditorViewportClient::TickInteraction(float DeltaTime)
 		if (!bIsCursorVisible) { while (ShowCursor(TRUE) < 0); bIsCursorVisible = true; }
 	}
 
-	FRay ray = Cameraptr->DeprojectScreenToWorld(mousepoint.x, mousepoint.y, WindowWidth, WindowHeight);
+	FRay ray = Camera->DeprojectScreenToWorld(mousepoint.x, mousepoint.y, WindowWidth, WindowHeight);
 	FHitResult hitResult;
 
 	// Hover — only when not dragging so SelectedAxis stays locked
 	if (!GizmoManager.IsHolding())
 	{
-		if (auto Comp = GizmoManager.GetComponent().lock())
+		if (UGizmoComponent* Comp = GizmoManager.GetComponent())
 			Comp->Raycast(ray, hitResult);
 	}
 
@@ -186,40 +183,40 @@ void FEditorViewportClient::TickInteraction(float DeltaTime)
 	}
 }
 
-void FEditorViewportClient::ResetCamera(weak_ptr<UCamera> InCamera)
+void FEditorViewportClient::ResetCamera(UCamera* InCamera)
 {
-	if (auto Cameraptr = InCamera.lock())
+	if (InCamera)
 	{
-		Cameraptr->SetWorldLocation(InitViewPos);
-		Cameraptr->LookAt(InitLookAt);
+		InCamera->SetWorldLocation(InitViewPos);
+		InCamera->LookAt(InitLookAt);
 	}
 }
 
 void FEditorViewportClient::SyncCameraFromRenderHandler()
 {
-	if (auto Cameraptr = Camera.lock())
-		Cameraptr->ApplyCameraState();
+	if (Camera)
+		Camera->ApplyCameraState();
 }
 
 void FEditorViewportClient::ResetViewport()
 {
 	GizmoManager.Deactivate();
-	if (auto Comp = GizmoManager.GetComponent().lock())
+	if (UGizmoComponent* Comp = GizmoManager.GetComponent())
 		Comp->SetWorldLocation(FVector(0.0f, 0.0f, 0.0f));
 
-	Camera.lock()->bPendingKill = true;
+	Camera->bPendingKill = true;
 	UObjectManager::Get().CollectGarbage();
 
 	Camera = UObjectManager::Get().CreateObject<UCamera>();
 	SetViewportSize(WindowWidth, WindowHeight);
-	Camera.lock()->ApplyCameraState();
-	ResetCamera(Camera.lock());
+	Camera->ApplyCameraState();
+	ResetCamera(Camera);
 	SyncCameraFromRenderHandler();
 }
 
 void FEditorViewportClient::HandleDragStart(const FRay& Ray)
 {
-	auto Comp = GizmoManager.GetComponent().lock();
+	UGizmoComponent* Comp = GizmoManager.GetComponent();
 	if (!Comp) return;
 
 	FHitResult hitResult{};
@@ -235,10 +232,9 @@ void FEditorViewportClient::HandleDragStart(const FRay& Ray)
 	UPrimitiveComponent* bestTarget  = nullptr;
 	float closestDistance = FLT_MAX;
 
-	auto Sceneptr = Scene.lock();
-	if (!Sceneptr) return;
+	if (!Scene) return;
 
-	for (auto* it : Sceneptr->GetActors())
+	for (auto* it : Scene->GetActors())
 	{
 		if (!it || it->bPendingKill || (it->GetRootComponent() && it->GetRootComponent()->bPendingKill))
 			continue;
@@ -296,6 +292,6 @@ void FEditorViewportClient::TickCursorOverlay(float DeltaTime)
 
 void FEditorViewportClient::CloseViewport()
 {
-	if (auto Comp = GizmoManager.GetComponent().lock())
+	if (UGizmoComponent* Comp = GizmoManager.GetComponent())
 		Comp->bPendingKill = true;
 }

@@ -2,7 +2,7 @@
 #include "EngineStatics.h"
 #include "SimpleJSON/json.hpp"
 
-TArray<shared_ptr<UObject>> GUObjectArray;
+TArray<UObject*> GUObjectArray;
 
 UObject::UObject()
 {

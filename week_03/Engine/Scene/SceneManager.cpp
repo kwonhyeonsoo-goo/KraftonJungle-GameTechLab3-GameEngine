@@ -24,8 +24,7 @@ void FSceneManager::SetActiveScene(UScene* Scene) {
 }
 
 void FSceneManager::AddNewScene() {
-    auto WeakScene = UObjectManager::Get().CreateObject<UScene>();
-    UScene* Scene = WeakScene.lock().get();
+    UScene* Scene = UObjectManager::Get().CreateObject<UScene>();
     LoadedScenes.push_back(Scene);
     SetActiveScene(Scene);
 }
@@ -77,7 +76,6 @@ uint32 FSceneManager::RemoveActiveScene()
     return RemovedIndex;
 }
 
-weak_ptr<UScene> FSceneManager::GetActiveScene() {
-	if (!ActiveScene) return {};
-	return std::dynamic_pointer_cast<UScene>(ActiveScene->shared_from_this());
+UScene* FSceneManager::GetActiveScene() {
+	return ActiveScene;
 }

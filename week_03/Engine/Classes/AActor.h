@@ -25,8 +25,7 @@ public:
 	// Component management
 	template<typename T>
 	T* AddComponent() {
-		auto WeakComp = UObjectManager::Get().CreateObject<T>();
-		T* component = WeakComp.lock().get();
+		T* component = UObjectManager::Get().CreateObject<T>();
 
 		component->SetOwningActor(this);
 

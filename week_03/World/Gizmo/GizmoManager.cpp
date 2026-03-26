@@ -3,7 +3,7 @@
 #include <cmath>
 #include <algorithm>
 
-void FGizmoManager::Initialize(weak_ptr<UGizmoComponent> InComponent)
+void FGizmoManager::Initialize(UGizmoComponent* InComponent)
 {
 	Component = InComponent;
 }
@@ -11,28 +11,27 @@ void FGizmoManager::Initialize(weak_ptr<UGizmoComponent> InComponent)
 void FGizmoManager::SetHolding(bool bHold)
 {
 	bIsHolding = bHold;
-	if (auto Comp = Component.lock())
-		Comp->SetHoldingState(bHold);
+	if (Component)
+		Component->SetHoldingState(bHold);
 }
 
 void FGizmoManager::SetVisibility(bool bVisible)
 {
-	if (auto Comp = Component.lock())
-		Comp->SetVisibility(bVisible);
+	if (Component)
+		Component->SetVisibility(bVisible);
 }
 
 void FGizmoManager::SetTarget(USceneComponent* NewTarget)
 {
 	if (!NewTarget) return;
-	auto Comp = Component.lock();
-	if (!Comp) return;
+	if (!Component) return;
 
 	SelectedComponents.clear();
 	SelectedComponents.push_back(NewTarget);
 	TargetComponent = NewTarget;
-	Comp->SetWorldLocation(TargetComponent->GetWorldLocation());
+	Component->SetWorldLocation(TargetComponent->GetWorldLocation());
 	UpdateGizmoTransform();
-	Comp->SetVisibility(true);
+	Component->SetVisibility(true);
 }
 
 void FGizmoManager::AddTarget(USceneComponent* NewTarget)
@@ -57,11 +56,10 @@ void FGizmoManager::AddTarget(USceneComponent* NewTarget)
 	SelectedComponents.push_back(NewTarget);
 	TargetComponent = NewTarget;
 
-	auto Comp = Component.lock();
-	if (!Comp) return;
-	Comp->SetWorldLocation(TargetComponent->GetWorldLocation());
+	if (!Component) return;
+	Component->SetWorldLocation(TargetComponent->GetWorldLocation());
 	UpdateGizmoTransform();
-	Comp->SetVisibility(true);
+	Component->SetVisibility(true);
 }
 
 
@@ -74,10 +72,8 @@ void FGizmoManager::Deactivate()
 {
 	SelectedComponents.clear();
 	TargetComponent = nullptr;
-	if (auto Comp = Component.lock())
-	{
-		Comp->Deactivate();
-	}
+	if (Component)
+		Component->Deactivate();
 }
 
 void FGizmoManager::SetNextMode()
@@ -93,20 +89,19 @@ void FGizmoManager::UpdateGizmoMode(EGizmoMode NewMode)
 
 void FGizmoManager::UpdateGizmoTransform()
 {
-	auto Comp = Component.lock();
-	if (!Comp || !TargetComponent) return;
+	if (!Component || !TargetComponent) return;
 
-	Comp->SetWorldLocation(TargetComponent->GetWorldLocation());
-	Comp->UpdateMeshForMode(static_cast<int>(CurMode));
+	Component->SetWorldLocation(TargetComponent->GetWorldLocation());
+	Component->UpdateMeshForMode(static_cast<int>(CurMode));
 
 	switch (CurMode)
 	{
 	case Scale:
-		Comp->SetRelativeRotation(TargetComponent->RelativeRotation);
+		Component->SetRelativeRotation(TargetComponent->RelativeRotation);
 		break;
 	case Rotate:
 	case Translate:
-		Comp->SetRelativeRotation(bIsWorldSpace ? FVector() : TargetComponent->RelativeRotation);
+		Component->SetRelativeRotation(bIsWorldSpace ? FVector() : TargetComponent->RelativeRotation);
 		break;
 	}
 }
@@ -137,12 +132,11 @@ void FGizmoManager::SetTargetScale(FVector NewScale)
 
 void FGizmoManager::ApplyScreenSpaceScaling(const FVector& CameraLocation)
 {
-	auto Comp = Component.lock();
-	if (!Comp) return;
-	float Distance = FVector::Distance(CameraLocation, Comp->GetWorldLocation());
+	if (!Component) return;
+	float Distance = FVector::Distance(CameraLocation, Component->GetWorldLocation());
 	float NewScale = Distance * 0.1f;
 	if (NewScale < 0.01f) NewScale = 0.01f;
-	Comp->SetRelativeScale(FVector(NewScale, NewScale, NewScale));
+	Component->SetRelativeScale(FVector(NewScale, NewScale, NewScale));
 }
 
 void FGizmoManager::SetWorldSpace(bool bWorldSpace)
@@ -153,23 +147,21 @@ void FGizmoManager::SetWorldSpace(bool bWorldSpace)
 
 FVector FGizmoManager::GetVectorForAxis(int32 Axis)
 {
-	auto Comp = Component.lock();
-	if (!Comp) return FVector(0, 0, 0);
+	if (!Component) return FVector(0, 0, 0);
 	switch (Axis)
 	{
-	case 0: return Comp->GetForwardVector();
-	case 1: return Comp->GetRightVector();
-	case 2: return Comp->GetUpVector();
+	case 0: return Component->GetForwardVector();
+	case 1: return Component->GetRightVector();
+	case 2: return Component->GetUpVector();
 	default: return FVector(0, 0, 0);
 	}
 }
 
 bool FGizmoManager::IntersectRayAxis(const FRay& Ray, FVector AxisEnd, float& OutRayT)
 {
-	auto Comp = Component.lock();
-	if (!Comp) return false;
+	if (!Component) return false;
 
-	FVector axisStart  = Comp->GetWorldLocation();
+	FVector axisStart  = Component->GetWorldLocation();
 	FVector axisVector = AxisEnd - axisStart;
 	FVector diffOrigin = Ray.Origin - axisStart;
 
@@ -223,10 +215,9 @@ void FGizmoManager::HandleDrag(float DragAmount)
 
 void FGizmoManager::TranslateTarget(float DragAmount)
 {
-	auto Comp = Component.lock();
-	if (!Comp || SelectedComponents.empty()) return;
-	FVector delta = GetVectorForAxis(Comp->GetSelectedAxis()) * DragAmount;
-	Comp->AddWorldOffset(delta);
+	if (!Component || SelectedComponents.empty()) return;
+	FVector delta = GetVectorForAxis(Component->GetSelectedAxis()) * DragAmount;
+	Component->AddWorldOffset(delta);
 	for (auto* target : SelectedComponents)
 	{
 		if (target)
@@ -239,9 +230,8 @@ void FGizmoManager::TranslateTarget(float DragAmount)
 
 void FGizmoManager::RotateTarget(float DragAmount)
 {
-	auto Comp = Component.lock();
-	if (!Comp || SelectedComponents.empty()) return;
-	FVector rotAxis     = GetVectorForAxis(Comp->GetSelectedAxis());
+	if (!Component || SelectedComponents.empty()) return;
+	FVector rotAxis     = GetVectorForAxis(Component->GetSelectedAxis());
 	FMatrix deltaMatrix = FMatrix::MakeRotationAxis(rotAxis, DragAmount);
 	for (auto* target : SelectedComponents)
 	{
@@ -256,10 +246,9 @@ void FGizmoManager::RotateTarget(float DragAmount)
 
 void FGizmoManager::ScaleTarget(float DragAmount)
 {
-	auto Comp = Component.lock();
-	if (!Comp || SelectedComponents.empty()) return;
+	if (!Component || SelectedComponents.empty()) return;
 	float scaleDelta = DragAmount * ScaleSensitivity;
-	int axis = Comp->GetSelectedAxis();
+	int axis = Component->GetSelectedAxis();
 	for (auto* target : SelectedComponents)
 	{
 		if (!target) continue;
@@ -277,17 +266,16 @@ void FGizmoManager::ScaleTarget(float DragAmount)
 
 void FGizmoManager::UpdateLinearDrag(const FRay& Ray)
 {
-	auto Comp = Component.lock();
-	if (!Comp) return;
+	if (!Component) return;
 
-	FVector axisVector = GetVectorForAxis(Comp->GetSelectedAxis());
+	FVector axisVector = GetVectorForAxis(Component->GetSelectedAxis());
 	FVector planeNormal = axisVector.Cross(Ray.Direction);
 	FVector projectDir  = planeNormal.Cross(axisVector);
 
 	float Denom = Ray.Direction.Dot(projectDir);
 	if (std::abs(Denom) < 1e-6f) return;
 
-	FVector Current = Ray.Origin + (Ray.Direction * ((Comp->GetWorldLocation() - Ray.Origin).Dot(projectDir) / Denom));
+	FVector Current = Ray.Origin + (Ray.Direction * ((Component->GetWorldLocation() - Ray.Origin).Dot(projectDir) / Denom));
 
 	if (bIsFirstFrameOfDrag) { LastIntersectionLocation = Current; bIsFirstFrameOfDrag = false; return; }
 
@@ -298,19 +286,18 @@ void FGizmoManager::UpdateLinearDrag(const FRay& Ray)
 
 void FGizmoManager::UpdateAngularDrag(const FRay& Ray)
 {
-	auto Comp = Component.lock();
-	if (!Comp) return;
+	if (!Component) return;
 
-	FVector planeNormal = GetVectorForAxis(Comp->GetSelectedAxis());
+	FVector planeNormal = GetVectorForAxis(Component->GetSelectedAxis());
 	float Denom = Ray.Direction.Dot(planeNormal);
 	if (std::abs(Denom) < 1e-6f) return;
 
-	FVector Current = Ray.Origin + (Ray.Direction * ((Comp->GetWorldLocation() - Ray.Origin).Dot(planeNormal) / Denom));
+	FVector Current = Ray.Origin + (Ray.Direction * ((Component->GetWorldLocation() - Ray.Origin).Dot(planeNormal) / Denom));
 
 	if (bIsFirstFrameOfDrag) { LastIntersectionLocation = Current; bIsFirstFrameOfDrag = false; return; }
 
-	FVector CenterToLast    = (LastIntersectionLocation - Comp->GetWorldLocation()).Normalized();
-	FVector CenterToCurrent = (Current                  - Comp->GetWorldLocation()).Normalized();
+	FVector CenterToLast    = (LastIntersectionLocation - Component->GetWorldLocation()).Normalized();
+	FVector CenterToCurrent = (Current                  - Component->GetWorldLocation()).Normalized();
 
 	float Dot   = Clamp(CenterToLast.Dot(CenterToCurrent), -1.0f, 1.0f);
 	float Angle = std::acos(Dot);
@@ -322,9 +309,8 @@ void FGizmoManager::UpdateAngularDrag(const FRay& Ray)
 
 void FGizmoManager::UpdateDrag(const FRay& Ray)
 {
-	auto Comp = Component.lock();
-	if (!bIsHolding || !Comp || !Comp->IsActive()) return;
-	if (Comp->GetSelectedAxis() == -1 || SelectedComponents.empty()) return;
+	if (!bIsHolding || !Component || !Component->IsActive()) return;
+	if (Component->GetSelectedAxis() == -1 || SelectedComponents.empty()) return;
 
 	if (CurMode == Rotate)
 		UpdateAngularDrag(Ray);
