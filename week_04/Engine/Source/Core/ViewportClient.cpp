@@ -14,15 +14,15 @@
 #include "Component/TextComponent.h"
 
 
-void IViewportClient::Attach(CCore* Core, CRenderer* Renderer)
+void IViewportClient::Attach(FCore* Core, FRenderer* Renderer)
 {
 }
 
-void IViewportClient::Detach(CCore* Core, CRenderer* Renderer)
+void IViewportClient::Detach(FCore* Core, FRenderer* Renderer)
 {
 }
 
-void IViewportClient::Tick(CCore* Core, float DeltaTime)
+void IViewportClient::Tick(FCore* Core, float DeltaTime)
 {
 	// instead Enhance input system controller
 	//if (!Core)
@@ -30,14 +30,14 @@ void IViewportClient::Tick(CCore* Core, float DeltaTime)
 	//	return;
 	//}
 
-	//CInputManager* InputManager = Core->GetInputManager();
+	//FInputManager* InputManager = Core->GetInputManager();
 	//ULevel* Level = ResolveLevel(Core);
 	//if (!InputManager || !Level)
 	//{
 	//	return;
 	//}
 
-	//CCamera* Camera = Level->GetCamera();
+	//FCamera* Camera = Level->GetCamera();
 	//if (!Camera)
 	//{
 	//	return;
@@ -50,7 +50,7 @@ void IViewportClient::Tick(CCore* Core, float DeltaTime)
 	//if (InputManager->IsKeyDown('E')) Camera->MoveUp(DeltaTime);
 	//if (InputManager->IsKeyDown('Q')) Camera->MoveUp(-DeltaTime);
 
-	//if (InputManager->IsMouseButtonDown(CInputManager::MOUSE_RIGHT))
+	//if (InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
 	//{
 	//	const float DeltaX = InputManager->GetMouseDeltaX();
 	//	const float DeltaY = InputManager->GetMouseDeltaY();
@@ -58,21 +58,21 @@ void IViewportClient::Tick(CCore* Core, float DeltaTime)
 	//}
 }
 
-void IViewportClient::HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+void IViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
 }
 
-ULevel* IViewportClient::ResolveLevel(CCore* Core) const
+ULevel* IViewportClient::ResolveLevel(FCore* Core) const
 {
 	return Core ? Core->GetActiveLevel() : nullptr;
 }
 
-UWorld* IViewportClient::ResolveWorld(CCore* Core) const
+UWorld* IViewportClient::ResolveWorld(FCore* Core) const
 {
 	return Core ? Core->GetActiveWorld() : nullptr;
 }
 
-void IViewportClient::BuildRenderCommands(CCore* Core, ULevel* Level, const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
+void IViewportClient::BuildRenderCommands(FCore* Core, ULevel* Level, const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
 	UWorld* World = ResolveWorld(Core);
 	if (!World) return;
@@ -92,7 +92,7 @@ void IViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 
 }
 
-void CGameViewportClient::Attach(CCore* Core, CRenderer* Renderer)
+void FGameViewportClient::Attach(FCore* Core, FRenderer* Renderer)
 {
 	if (Renderer)
 	{
@@ -100,7 +100,7 @@ void CGameViewportClient::Attach(CCore* Core, CRenderer* Renderer)
 	}
 }
 
-void CGameViewportClient::Detach(CCore* Core, CRenderer* Renderer)
+void FGameViewportClient::Detach(FCore* Core, FRenderer* Renderer)
 {
 	if (Renderer)
 	{

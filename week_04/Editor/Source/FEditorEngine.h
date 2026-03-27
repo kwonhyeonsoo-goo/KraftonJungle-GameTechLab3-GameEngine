@@ -23,12 +23,12 @@ protected:
 	ELevelType GetStartupLevelType() const override { return ELevelType::Editor; }
 	std::unique_ptr<IViewportClient> CreateViewportClient() override;
 
-	CEditorViewportController* GetViewportController();
+	FEditorViewportController* GetViewportController();
 private:
 	void SyncViewportClient();
 
-	CEditorUI EditorUI;
-	std::unique_ptr<CPreviewViewportClient> PreviewViewportClient;
+	FEditorUI EditorUI;
+	std::unique_ptr<FPreviewViewportClient> PreviewViewportClient;
 	AEditorCameraPawn* EditorPawn = nullptr;
-	CEditorViewportController ViewportController;
+	FEditorViewportController ViewportController;
 };

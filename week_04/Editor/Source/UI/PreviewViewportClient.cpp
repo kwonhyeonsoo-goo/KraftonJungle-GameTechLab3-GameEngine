@@ -7,14 +7,14 @@
 
 #include "imgui.h"
 
-CPreviewViewportClient::CPreviewViewportClient(CEditorUI& InEditorUI, CWindow* InMainWindow, FString InPreviewContextName)
+FPreviewViewportClient::FPreviewViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow, FString InPreviewContextName)
 	: EditorUI(InEditorUI)
 	, MainWindow(InMainWindow)
 	, PreviewContextName(std::move(InPreviewContextName))
 {
 }
 
-void CPreviewViewportClient::Attach(CCore* Core, CRenderer* Renderer)
+void FPreviewViewportClient::Attach(FCore* Core, FRenderer* Renderer)
 {
 	if (!Core || !Renderer || !MainWindow)
 	{
@@ -26,12 +26,12 @@ void CPreviewViewportClient::Attach(CCore* Core, CRenderer* Renderer)
 	EditorUI.AttachToRenderer(Renderer);
 }
 
-void CPreviewViewportClient::Detach(CCore* Core, CRenderer* Renderer)
+void FPreviewViewportClient::Detach(FCore* Core, FRenderer* Renderer)
 {
 	EditorUI.DetachFromRenderer(Renderer);
 }
 
-void CPreviewViewportClient::Tick(CCore* Core, float DeltaTime)
+void FPreviewViewportClient::Tick(FCore* Core, float DeltaTime)
 {
 	if (!Core)
 	{
@@ -55,7 +55,7 @@ void CPreviewViewportClient::Tick(CCore* Core, float DeltaTime)
 	IViewportClient::Tick(Core, DeltaTime);
 }
 
-ULevel* CPreviewViewportClient::ResolveLevel(CCore* Core) const
+ULevel* FPreviewViewportClient::ResolveLevel(FCore* Core) const
 {
 	if (!Core)
 	{

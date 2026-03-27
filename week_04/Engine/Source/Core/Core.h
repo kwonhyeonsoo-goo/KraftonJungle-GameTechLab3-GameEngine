@@ -10,24 +10,24 @@
 #include "World/WorldContext.h"
 #include <memory>
 #include "Debug/DebugDrawManager.h"
-class CEnhancedInputManager;
-class CInputManager;
+class FEnhancedInputManager;
+class FInputManager;
 
 class AActor;
 class ULevel;
 class ObjectManager;
 class IViewportClient;
 
-class ENGINE_API CCore
+class ENGINE_API FCore
 {
 public:
-	CCore() = default;
-	~CCore();
+	FCore() = default;
+	~FCore();
 
-	CCore(const CCore&) = delete;
-	CCore(CCore&&) = delete;
-	CCore& operator=(const CCore&) = delete;
-	CCore& operator=(CCore&&) = delete;
+	FCore(const FCore&) = delete;
+	FCore(FCore&&) = delete;
+	FCore& operator=(const FCore&) = delete;
+	FCore& operator=(FCore&&) = delete;
 
 	bool Initialize(HWND Hwnd, int32 Width, int32 Height, ELevelType StartupLevelType = ELevelType::Game);
 	void Release();
@@ -36,16 +36,16 @@ public:
 	void Tick(float DeltaTime);
 
 	void ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
-	CRenderer* GetRenderer() const { return Renderer.get(); }
+	FRenderer* GetRenderer() const { return Renderer.get(); }
 
 	IViewportClient* GetViewportClient() const { return ViewportClient; }
-	CInputManager* GetInputManager() const { return InputManager; }
+	FInputManager* GetInputManager() const { return InputManager; }
 	const FTimer& GetTimer() const { return Timer; }
 
 	void SetViewportClient(IViewportClient* InViewportClient);
 
 	void OnResize(int32 Width, int32 Height);
-	CEnhancedInputManager* GetEnhancedInputManager() const { return EnhancedInput; }
+	FEnhancedInputManager* GetEnhancedInputManager() const { return EnhancedInput; }
 	float GetDeltaTime() const { return Timer.GetDeltaTime(); }
 
 	FLevelManager* GetLevelManager() const { return LevelManager.get(); }
@@ -79,15 +79,15 @@ private:
 
 private:
 	FDebugDrawManager DebugDrawManager;
-	std::unique_ptr<CRenderer> Renderer;
-	CInputManager* InputManager = nullptr;
-	CEnhancedInputManager* EnhancedInput = nullptr;
+	std::unique_ptr<FRenderer> Renderer;
+	FInputManager* InputManager = nullptr;
+	FEnhancedInputManager* EnhancedInput = nullptr;
 
 	ObjectManager* ObjManager = nullptr;
 	IViewportClient* ViewportClient = nullptr;
 	std::unique_ptr<FLevelManager> LevelManager;
 
-	std::unique_ptr<CPhysicsManager> PhysicsManager;
+	std::unique_ptr<FPhysicsManager> PhysicsManager;
 
 	FTimer Timer;
 	double LastGCTime = 0.0;

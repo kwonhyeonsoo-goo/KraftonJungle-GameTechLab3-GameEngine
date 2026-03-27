@@ -1,7 +1,7 @@
 #pragma once
 #include "SceneComponent.h"
 
-class CCamera;
+class FCamera;
 
 class ENGINE_API UCameraComponent : public USceneComponent
 {
@@ -20,7 +20,7 @@ public:
 	void Rotate(float DeltaYaw, float DeltaPitch);
 
 	//Camera property getter
-	CCamera* GetCamera() const;
+	FCamera* GetCamera() const;
 	FMatrix GetViewMatrix() const;
 	FMatrix GetProjectionMatrix() const;
 
@@ -29,5 +29,5 @@ public:
 	void SetSpeed(float Inspeed);
 	void SetSensitivity(float InSetSensitivity);
 private:
-	CCamera* Camera = nullptr;
+	FCamera* Camera = nullptr;
 };

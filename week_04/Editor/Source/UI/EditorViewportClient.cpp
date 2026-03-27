@@ -19,13 +19,13 @@
 #include "imgui.h"
 #include "Actor/ObjActor.h"
 #include "Actor/SkySphereActor.h"
-CEditorViewportClient::CEditorViewportClient(CEditorUI& InEditorUI, CWindow* InMainWindow)
+FEditorViewportClient::FEditorViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow)
 	: EditorUI(InEditorUI)
 	, MainWindow(InMainWindow)
 {
 }
 
-void CEditorViewportClient::Attach(CCore* Core, CRenderer* Renderer)
+void FEditorViewportClient::Attach(FCore* Core, FRenderer* Renderer)
 {
 	if (!Core || !Renderer || !MainWindow)
 	{
@@ -42,7 +42,7 @@ void CEditorViewportClient::Attach(CCore* Core, CRenderer* Renderer)
 	CreateGridResource(Renderer);
 }
 
-void CEditorViewportClient::CreateGridResource(CRenderer* Renderer)
+void FEditorViewportClient::CreateGridResource(FRenderer* Renderer)
 {
 	// 그리드 리소스 초기화
 	ID3D11Device* Device = Renderer->GetDevice();
@@ -99,7 +99,7 @@ void CEditorViewportClient::CreateGridResource(CRenderer* Renderer)
 	}
 }
 
-void CEditorViewportClient::Detach(CCore* Core, CRenderer* Renderer)
+void FEditorViewportClient::Detach(FCore* Core, FRenderer* Renderer)
 {
 	Gizmo.EndDrag();
 	EditorUI.DetachFromRenderer(Renderer);
@@ -108,7 +108,7 @@ void CEditorViewportClient::Detach(CCore* Core, CRenderer* Renderer)
 	GridMaterial.reset();
 }
 
-void CEditorViewportClient::Tick(CCore* Core, float DeltaTime)
+void FEditorViewportClient::Tick(FCore* Core, float DeltaTime)
 {
 	if (!Core)
 	{
@@ -132,7 +132,7 @@ void CEditorViewportClient::Tick(CCore* Core, float DeltaTime)
 	IViewportClient::Tick(Core, DeltaTime);
 }
 
-void CEditorViewportClient::HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
 	if (!Core || !EditorUI.IsViewportInteractive())
 	{
@@ -160,7 +160,7 @@ void CEditorViewportClient::HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPAR
 		ScreenHeight);
 
 	const bool bRightMouseDown = Core->GetInputManager() &&
-		Core->GetInputManager()->IsMouseButtonDown(CInputManager::MOUSE_RIGHT);
+		Core->GetInputManager()->IsMouseButtonDown(FInputManager::MOUSE_RIGHT);
 
 	switch (Msg)
 	{
@@ -251,9 +251,9 @@ void CEditorViewportClient::HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPAR
 	}
 }
 
-void CEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
+void FEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
 {
-	CCore* Core = EditorUI.GetCore();
+	FCore* Core = EditorUI.GetCore();
 
 	if (Core)
 	{
@@ -280,9 +280,9 @@ void CEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
 	}
 }
 
-void CEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
+void FEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 {
-	CCore* Core = EditorUI.GetCore();
+	FCore* Core = EditorUI.GetCore();
 
 	if (Core && Core->GetRenderer())
 	{
@@ -299,7 +299,7 @@ void CEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 	}
 }
 
-void CEditorViewportClient::BuildRenderCommands(CCore* Core, ULevel* Level,
+void FEditorViewportClient::BuildRenderCommands(FCore* Core, ULevel* Level,
 	const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
 	IViewportClient::BuildRenderCommands(Core, Level, Frustum, OutQueue);  // non-const 부모 호출
@@ -338,7 +338,7 @@ void CEditorViewportClient::BuildRenderCommands(CCore* Core, ULevel* Level,
 	}
 }
 
-void CEditorViewportClient::SetGridSize(float InSize)
+void FEditorViewportClient::SetGridSize(float InSize)
 {
 	GridSize = InSize;
 	if (GridMaterial)
@@ -347,7 +347,7 @@ void CEditorViewportClient::SetGridSize(float InSize)
 	}
 }
 
-void CEditorViewportClient::SetLineThickness(float InThickness)
+void FEditorViewportClient::SetLineThickness(float InThickness)
 {
 	LineThickness = InThickness;
 	if (GridMaterial)

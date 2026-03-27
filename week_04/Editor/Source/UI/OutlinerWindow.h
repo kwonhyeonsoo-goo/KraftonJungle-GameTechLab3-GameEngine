@@ -1,10 +1,10 @@
 #pragma once
 #include "CoreMinimal.h"
 
-class CCore;
+class FCore;
 
-class COutlinerWindow
+class FOutlinerWindow
 {
 public:
-	void Render(CCore* Core);
+	void Render(FCore* Core);
 };

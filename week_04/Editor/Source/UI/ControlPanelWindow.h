@@ -1,12 +1,12 @@
 #pragma once
 #include "CoreMinimal.h"
 
-class CCore;
+class FCore;
 
-class CControlPanelWindow
+class FControlPanelWindow
 {
 public:
-	void Render(CCore* Core);
+	void Render(FCore* Core);
 
 private:
 	TArray<FString> LevelFiles;

@@ -2,17 +2,17 @@
 #include "CoreMinimal.h"
 #include "WindowTypes.h"
 
-class CWindow;
+class FWindow;
 
-class ENGINE_API CWindowApplication
+class ENGINE_API FWindowApplication
 {
 public:
-	static CWindowApplication& Get();
+	static FWindowApplication& Get();
 
 	bool Create(HINSTANCE InInstance, const WCHAR* ClassName = L"JungleEngineWindow");
 	void Destroy();
 
-	CWindow* MakeWindow(const WCHAR* Title, int Width, int Height, int X = 100, int Y = 100);
+	FWindow* MakeWindow(const WCHAR* Title, int Width, int Height, int X = 100, int Y = 100);
 	bool CreateMainWindow(const WCHAR* Title, int Width, int Height, int X = 100, int Y = 100);
 
 	// Returns false when WM_QUIT received
@@ -21,7 +21,7 @@ public:
 	HINSTANCE GetInstance() const { return Instance; }
 	const WCHAR* GetClassName() const { return WindowClassName; }
 
-	CWindow* GetMainWindow() const { return MainWindow; }
+	FWindow* GetMainWindow() const { return MainWindow; }
 	HWND GetHwnd() const;
 	int32 GetWindowWidth() const;
 	int32 GetWindowHeight() const;
@@ -31,8 +31,8 @@ public:
 	void ShowWindow();
 
 private:
-	CWindowApplication() = default;
-	~CWindowApplication() = default;
+	FWindowApplication() = default;
+	~FWindowApplication() = default;
 
 	static LRESULT CALLBACK StaticWndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 
@@ -40,13 +40,13 @@ private:
 	WNDCLASSEX WindowClass = {};
 	WCHAR WindowClassName[128] = {};
 	bool bClassRegistered = false;
-	CWindow* MainWindow = nullptr;
+	FWindow* MainWindow = nullptr;
 
-	// HWND -> CWindow mapping
-	static TMap<HWND, CWindow*> WindowMap;
+	// HWND -> FWindow mapping
+	static TMap<HWND, FWindow*> WindowMap;
 
-	void RegisterWindow(HWND Hwnd, CWindow* Window);
+	void RegisterWindow(HWND Hwnd, FWindow* Window);
 	void UnregisterWindow(HWND Hwnd);
 
-	friend class CWindow;
+	friend class FWindow;
 };

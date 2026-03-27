@@ -7,7 +7,7 @@
 class ULevel;
 class UWorld;
 class AActor;
-class CRenderer;
+class FRenderer;
 
 class ENGINE_API FLevelManager
 {
@@ -20,7 +20,7 @@ public:
 	FLevelManager& operator=(FLevelManager&&) = delete;
 
 	// 초기화
-	bool Initialize(float AspectRatio, ELevelType StartupLevelType, CRenderer* InRenderer);
+	bool Initialize(float AspectRatio, ELevelType StartupLevelType, FRenderer* InRenderer);
 	void Release();
 
 	// World 전환
@@ -69,5 +69,5 @@ private:
 	FEditorWorldContext EditorWorldContext;
 	TArray<std::unique_ptr<FEditorWorldContext>> PreviewWorldContexts;
 	FWorldContext* ActiveWorldContext = nullptr;
-	CRenderer* Renderer = nullptr;
+	FRenderer* Renderer = nullptr;
 };

@@ -13,7 +13,7 @@ FEngine::~FEngine()
 
 bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int32 Width, int32 Height)
 {
-	App = &CWindowApplication::Get();
+	App = &FWindowApplication::Get();
 	if (!App->Create(hInstance))
 	{
 		return false;
@@ -34,7 +34,7 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int32 Width,
 
 	PreInitialize();
 
-	Core = std::make_unique<CCore>();
+	Core = std::make_unique<FCore>();
 	if (!Core->Initialize(MainWindow->GetHwnd(), MainWindow->GetWidth(), MainWindow->GetHeight(), GetStartupLevelType()))
 	{
 		return false;
@@ -83,7 +83,7 @@ void FEngine::OnResize(int32 Width, int32 Height)
 
 std::unique_ptr<IViewportClient> FEngine::CreateViewportClient()
 {
-	return std::make_unique<CGameViewportClient>();
+	return std::make_unique<FGameViewportClient>();
 }
 
 void FEngine::Shutdown()

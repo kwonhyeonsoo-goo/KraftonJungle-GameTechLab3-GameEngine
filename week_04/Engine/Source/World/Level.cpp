@@ -33,7 +33,7 @@ ULevel::~ULevel()
 }
 
 
-CCamera* ULevel::GetCamera() const
+FCamera* ULevel::GetCamera() const
 {
 	UWorld* World = GetTypedOuter<UWorld>();
 	return World ? World->GetCamera() : nullptr;

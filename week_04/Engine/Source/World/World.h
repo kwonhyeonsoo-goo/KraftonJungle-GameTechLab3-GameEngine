@@ -7,7 +7,7 @@
 class ULevel;
 class AActor;
 class UCameraComponent;
-class CCamera;
+class FCamera;
 class FFrustum;
 struct FRenderCommandQueue;
 struct ID3D11Device;
@@ -38,7 +38,7 @@ public:
 	// 카메라
 	void SetActiveCameraComponent(UCameraComponent* InCamera);
 	UCameraComponent* GetActiveCameraComponent() const;
-	CCamera* GetCamera() const;
+	FCamera* GetCamera() const;
 
 	// 라이프사이클
 	void InitializeWorld(float AspectRatio, ID3D11Device* Device = nullptr);

@@ -2,15 +2,15 @@
 #include <d3d11.h>
 #include <CoreMinimal.h>
 
-class CCore;
-class CRenderer;
+class FCore;
+class FRenderer;
 
-class CViewport
+class FViewport
 {
 public:
-	~CViewport();
+	~FViewport();
 
-	void Render(CCore* Core, CRenderer* Renderer, HWND Hwnd);
+	void Render(FCore* Core, FRenderer* Renderer, HWND Hwnd);
 	void ReleaseLevelView();
 	bool GetMousePositionInViewport(int32 WindowMouseX, int32 WindowMouseY, int32& OutViewportX, int32& OutViewportY, int32& OutWidth, int32& OutHeight) const;
 	bool IsHovered() const { return bHovered; }

@@ -7,7 +7,7 @@
 #include "Core/ShowFlags.h"
 #include "World/RenderCollector.h"
 class AActor;
-class CCamera;
+class FCamera;
 class FFrustum;
 class UCameraComponent;
 class UPrimitiveComponent;
@@ -46,7 +46,7 @@ public:
 	bool IsGameLevel() const { return LevelType == ELevelType::Game || LevelType == ELevelType::PIE; }
 
   
-	CCamera* GetCamera() const;
+	FCamera* GetCamera() const;
 
 
 	void ClearActors();
