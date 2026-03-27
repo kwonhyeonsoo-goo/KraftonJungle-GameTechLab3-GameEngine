@@ -14,15 +14,15 @@
 #include "Component/TextComponent.h"
 
 
-void IViewportClient::Attach(FCore* Core, FRenderer* Renderer)
+void FViewportClient::Attach(FCore* Core, FRenderer* Renderer)
 {
 }
 
-void IViewportClient::Detach(FCore* Core, FRenderer* Renderer)
+void FViewportClient::Detach(FCore* Core, FRenderer* Renderer)
 {
 }
 
-void IViewportClient::Tick(FCore* Core, float DeltaTime)
+void FViewportClient::Tick(FCore* Core, float DeltaTime)
 {
 	// instead Enhance input system controller
 	//if (!Core)
@@ -58,21 +58,21 @@ void IViewportClient::Tick(FCore* Core, float DeltaTime)
 	//}
 }
 
-void IViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+void FViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
 }
 
-ULevel* IViewportClient::ResolveLevel(FCore* Core) const
+ULevel* FViewportClient::ResolveLevel(FCore* Core) const
 {
 	return Core ? Core->GetActiveLevel() : nullptr;
 }
 
-UWorld* IViewportClient::ResolveWorld(FCore* Core) const
+UWorld* FViewportClient::ResolveWorld(FCore* Core) const
 {
 	return Core ? Core->GetActiveWorld() : nullptr;
 }
 
-void IViewportClient::BuildRenderCommands(FCore* Core, ULevel* Level, const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
+void FViewportClient::BuildRenderCommands(FCore* Core, ULevel* Level, const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
 	UWorld* World = ResolveWorld(Core);
 	if (!World) return;
@@ -82,12 +82,12 @@ void IViewportClient::BuildRenderCommands(FCore* Core, ULevel* Level, const FFru
 	RenderCollector.CollectRenderCommands(AllActors, Frustum, ShowFlags, OutQueue);
 }
 
-void IViewportClient::HandleFileDoubleClick(const FString& FilePath)
+void FViewportClient::HandleFileDoubleClick(const FString& FilePath)
 {
 
 }
 
-void IViewportClient::HandleFileDropOnViewport(const FString& FilePath)
+void FViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 {
 
 }

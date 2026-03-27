@@ -161,7 +161,7 @@ void FEditorEngine::Tick(float DeltaTime)
 	SyncViewportClient();
 }
 
-std::unique_ptr<IViewportClient> FEditorEngine::CreateViewportClient()
+std::unique_ptr<FViewportClient> FEditorEngine::CreateViewportClient()
 {
 	return std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
 }
@@ -178,7 +178,7 @@ void FEditorEngine::SyncViewportClient()
 		return;
 	}
 
-	IViewportClient* TargetViewportClient = ViewportClient.get();
+	FViewportClient* TargetViewportClient = ViewportClient.get();
 	const FWorldContext* ActiveWorldContext = Core->GetActiveWorldContext();
 	if (ActiveWorldContext && ActiveWorldContext->WorldType == ELevelType::Preview && PreviewViewportClient)
 	{

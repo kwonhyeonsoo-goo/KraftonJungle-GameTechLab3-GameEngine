@@ -81,7 +81,7 @@ void FEngine::OnResize(int32 Width, int32 Height)
 	}
 }
 
-std::unique_ptr<IViewportClient> FEngine::CreateViewportClient()
+std::unique_ptr<FViewportClient> FEngine::CreateViewportClient()
 {
 	return std::make_unique<FGameViewportClient>();
 }

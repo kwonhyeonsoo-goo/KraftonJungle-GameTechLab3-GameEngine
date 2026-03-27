@@ -21,7 +21,7 @@ protected:
 	void PostInitialize() override;
 	void Tick(float DeltaTime) override;
 	ELevelType GetStartupLevelType() const override { return ELevelType::Editor; }
-	std::unique_ptr<IViewportClient> CreateViewportClient() override;
+	std::unique_ptr<FViewportClient> CreateViewportClient() override;
 
 	FEditorViewportController* GetViewportController();
 private:

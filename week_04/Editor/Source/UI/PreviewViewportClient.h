@@ -6,7 +6,7 @@
 class FEditorUI;
 class FWindow;
 
-class FPreviewViewportClient : public IViewportClient
+class FPreviewViewportClient : public FViewportClient
 {
 public:
 	FPreviewViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow, FString InPreviewContextName);

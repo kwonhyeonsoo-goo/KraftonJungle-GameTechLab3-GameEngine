@@ -63,7 +63,7 @@ bool FCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ELevelType StartupL
 
 
 
-void FCore::SetViewportClient(IViewportClient* InViewportClient)
+void FCore::SetViewportClient(FViewportClient* InViewportClient)
 {
 	if (ViewportClient == InViewportClient)
 	{

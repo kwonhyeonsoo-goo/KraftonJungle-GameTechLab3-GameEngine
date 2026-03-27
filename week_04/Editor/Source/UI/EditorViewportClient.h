@@ -17,7 +17,7 @@ enum class ERenderMode
 	Wireframe,
 };
 
-class FEditorViewportClient : public IViewportClient
+class FEditorViewportClient : public FViewportClient
 {
 public:
 	FEditorViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow);

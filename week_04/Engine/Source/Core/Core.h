@@ -16,7 +16,7 @@ class FInputManager;
 class AActor;
 class ULevel;
 class ObjectManager;
-class IViewportClient;
+class FViewportClient;
 
 class ENGINE_API FCore
 {
@@ -38,11 +38,11 @@ public:
 	void ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
 	FRenderer* GetRenderer() const { return Renderer.get(); }
 
-	IViewportClient* GetViewportClient() const { return ViewportClient; }
+	FViewportClient* GetViewportClient() const { return ViewportClient; }
 	FInputManager* GetInputManager() const { return InputManager; }
 	const FTimer& GetTimer() const { return Timer; }
 
-	void SetViewportClient(IViewportClient* InViewportClient);
+	void SetViewportClient(FViewportClient* InViewportClient);
 
 	void OnResize(int32 Width, int32 Height);
 	FEnhancedInputManager* GetEnhancedInputManager() const { return EnhancedInput; }
@@ -84,7 +84,7 @@ private:
 	FEnhancedInputManager* EnhancedInput = nullptr;
 
 	ObjectManager* ObjManager = nullptr;
-	IViewportClient* ViewportClient = nullptr;
+	FViewportClient* ViewportClient = nullptr;
 	std::unique_ptr<FLevelManager> LevelManager;
 
 	std::unique_ptr<FPhysicsManager> PhysicsManager;

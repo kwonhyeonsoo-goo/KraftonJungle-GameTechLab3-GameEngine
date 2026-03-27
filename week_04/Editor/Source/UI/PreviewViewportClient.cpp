@@ -52,7 +52,7 @@ void FPreviewViewportClient::Tick(FCore* Core, float DeltaTime)
 		return;
 	}
 
-	IViewportClient::Tick(Core, DeltaTime);
+	FViewportClient::Tick(Core, DeltaTime);
 }
 
 ULevel* FPreviewViewportClient::ResolveLevel(FCore* Core) const

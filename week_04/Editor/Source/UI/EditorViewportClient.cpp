@@ -129,7 +129,7 @@ void FEditorViewportClient::Tick(FCore* Core, float DeltaTime)
 		return;
 	}
 
-	IViewportClient::Tick(Core, DeltaTime);
+	FViewportClient::Tick(Core, DeltaTime);
 }
 
 void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
@@ -302,7 +302,7 @@ void FEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 void FEditorViewportClient::BuildRenderCommands(FCore* Core, ULevel* Level,
 	const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
-	IViewportClient::BuildRenderCommands(Core, Level, Frustum, OutQueue);  // non-const 부모 호출
+	FViewportClient::BuildRenderCommands(Core, Level, Frustum, OutQueue);  // non-const 부모 호출
 
 	// RenderMode 처리
 	if (RenderMode == ERenderMode::Wireframe)

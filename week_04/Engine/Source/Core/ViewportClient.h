@@ -14,10 +14,10 @@ class FFrustum;
 class UPrimitiveComponent;
 struct FRenderCommandQueue;
 class UWorld;
-class ENGINE_API IViewportClient
+class ENGINE_API FViewportClient
 {
 public:
-	virtual ~IViewportClient() = default;
+	virtual ~FViewportClient() = default;
 
 	virtual void Attach(FCore* Core, FRenderer* Renderer);
 	virtual void Detach(FCore* Core, FRenderer* Renderer);
@@ -37,7 +37,7 @@ protected:
 	FLevelRenderCollector RenderCollector;
 };
 
-class ENGINE_API FGameViewportClient : public IViewportClient
+class ENGINE_API FGameViewportClient : public FViewportClient
 {
 public:
 	void Attach(FCore* Core, FRenderer* Renderer) override;

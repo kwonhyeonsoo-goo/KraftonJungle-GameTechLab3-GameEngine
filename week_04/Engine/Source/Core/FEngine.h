@@ -30,12 +30,12 @@ protected:
 	virtual void PostInitialize() {}
 	virtual void Tick(float DeltaTime) {}
 	virtual ELevelType GetStartupLevelType() const { return ELevelType::Game; }
-	virtual std::unique_ptr<IViewportClient> CreateViewportClient();
+	virtual std::unique_ptr<FViewportClient> CreateViewportClient();
 
 	FWindowApplication* App = nullptr;
 	FWindow* MainWindow = nullptr;
 	std::unique_ptr<FCore> Core;
-	std::unique_ptr<IViewportClient> ViewportClient;
+	std::unique_ptr<FViewportClient> ViewportClient;
 
 private:
 	bool OnInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);

@@ -620,7 +620,7 @@ void FEditorUI::Render()
 				auto* VPC = static_cast<FEditorViewportClient*>(Core->GetViewportClient());
 			
 
-				IViewportClient* ViewportCli = Core->GetViewportClient();
+				FViewportClient* ViewportCli = Core->GetViewportClient();
 				if (!ViewportCli) { ImGui::End(); return; }
 
 				FShowFlags& ShowFlags = ViewportCli->GetShowFlags();
