@@ -11,17 +11,17 @@
 #include "Actor/SphereActor.h"
 #include "Actor/ObjActor.h"
 #include "Component/PrimitiveComponent.h"
-#include "Scene/Scene.h"
+#include "World/Level.h"
 #include "Object/ObjectFactory.h" 
 #include "Serializer/Archive.h"
 #include "Object/Class.h"
 #include <iomanip>
 #include <filesystem>
 #include <fstream>
-void FSceneSerializer::Save(UScene* Scene, const FString& FilePath)
+void FSceneSerializer::Save(ULevel* Level, const FString& FilePath)
 {
 	nlohmann::json Json;
-	CCamera* Camera = Scene->GetCamera();
+	CCamera* Camera = Level->GetCamera();
 	if (Camera)
 	{
 		const FVector Position = Camera->GetPosition();
@@ -47,7 +47,7 @@ void FSceneSerializer::Save(UScene* Scene, const FString& FilePath)
 	// Primitives
 	nlohmann::json Primitives;
 	int32 Index = 0;
-	for (AActor* Actor : Scene->GetActors())
+	for (AActor* Actor : Level->GetActors())
 	{
 		if (!Actor || Actor->IsPendingDestroy())
 			continue;
@@ -70,7 +70,7 @@ void FSceneSerializer::Save(UScene* Scene, const FString& FilePath)
 	}
 }
 
-bool FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device* Device)
+bool FSceneSerializer::Load(ULevel* Level, const FString& FilePath, ID3D11Device* Device)
 {
 	std::ifstream File(FilePath);
 	if (!File.is_open())
@@ -92,7 +92,7 @@ bool FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 	if (!Json.contains("Primitives"))
 		return false;
 
-	CCamera* Camera = Scene->GetCamera();
+	CCamera* Camera = Level->GetCamera();
 	if (Camera && Json.contains("Camera"))
 	{
 		auto& Cam = Json["Camera"];
@@ -119,14 +119,14 @@ bool FSceneSerializer::Load(UScene* Scene, const FString& FilePath, ID3D11Device
 			continue;
 		}
 		const FString ActorName = ClassName + "_" + std::to_string(ActorIndex);
-		AActor* Actor = static_cast<AActor*>(FObjectFactory::ConstructObject(ActorClass, Scene, ActorName));
+		AActor* Actor = static_cast<AActor*>(FObjectFactory::ConstructObject(ActorClass, Level, ActorName));
 		if (!Actor)
 		{
 			ActorIndex++;
 			continue;
 		}
 
-		Scene->RegisterActor(Actor);
+		Level->RegisterActor(Actor);
 		Actor->PostSpawnInitialize();
 		FArchive Ar(false);// loading
 		*static_cast<nlohmann::json*>(Ar.GetRawJson()) = Value;

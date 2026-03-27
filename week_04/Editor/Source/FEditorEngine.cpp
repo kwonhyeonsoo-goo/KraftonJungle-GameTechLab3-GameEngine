@@ -5,7 +5,7 @@
 #include "UI/PreviewViewportClient.h"
 #include "Core/Core.h"
 #include "Core/ConsoleVariableManager.h"
-#include "Scene/Scene.h"
+#include "World/Level.h"
 #include "Actor/Actor.h"
 
 #include "Component/CameraComponent.h"
@@ -20,15 +20,15 @@
 #include "Actor/SkySphereActor.h"
 namespace
 {
-	constexpr const char* PreviewSceneContextName = "PreviewScene";
+	constexpr const char* PreviewLevelContextName = "PreviewLevel";
 
-	void InitializeDefaultPreviewScene(CCore* Core)
+	void InitializeDefaultPreviewLevel(CCore* Core)
 	{
 		if (Core == nullptr)
 		{
 			return;
 		}
-		FEditorWorldContext* PreviewContext = Core->GetSceneManager()->CreatePreviewWorldContext(PreviewSceneContextName, 1280, 720);
+		FEditorWorldContext* PreviewContext = Core->GetLevelManager()->CreatePreviewWorldContext(PreviewLevelContextName, 1280, 720);
 		if (PreviewContext == nullptr || PreviewContext->World == nullptr)
 		{
 			return;
@@ -78,7 +78,7 @@ void FEditorEngine::Shutdown()
 		Core->SetViewportClient(nullptr);
 	}
 
-	// EditorPawn은 Scene 소속이 아니므로 직접 정리
+	// EditorPawn은 Level 소속이 아니므로 직접 정리
 	if (EditorPawn)
 	{
 		EditorPawn->Destroy();
@@ -103,8 +103,8 @@ void FEditorEngine::PreInitialize()
 
 void FEditorEngine::PostInitialize()
 {
-	InitializeDefaultPreviewScene(Core.get());
-	PreviewViewportClient = std::make_unique<CPreviewViewportClient>(EditorUI, MainWindow, PreviewSceneContextName);
+	InitializeDefaultPreviewLevel(Core.get());
+	PreviewViewportClient = std::make_unique<CPreviewViewportClient>(EditorUI, MainWindow, PreviewLevelContextName);
 
 	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
 
@@ -129,7 +129,7 @@ void FEditorEngine::PostInitialize()
 				FEngineLog::Get().Log("[error] Unknown command: '%s'", CommandLine);
 			}
 		});
-	// EditorPawn은 Scene에 등록하지 않음 — FEditorEngine이 직접 소유
+	// EditorPawn은 Level에 등록하지 않음 — FEditorEngine이 직접 소유
 	
 	EditorPawn = FObjectFactory::ConstructObject<AEditorCameraPawn>(nullptr, "EditorCameraPawn");
 	EditorPawn->Initialize();
@@ -146,9 +146,9 @@ void FEditorEngine::PostInitialize()
 
 void FEditorEngine::Tick(float DeltaTime)
 {
-	// Editor Scene에서는 EditorPawn 카메라가 항상 활성화되도록 보장
-	// (ClearActors 후 SceneCameraComponent로 폴백된 경우 복원)
-	if (EditorPawn && Core && Core->GetScene() && Core->GetScene()->IsEditorScene())
+	// Editor Level에서는 EditorPawn 카메라가 항상 활성화되도록 보장
+	// (ClearActors 후 LevelCameraComponent로 폴백된 경우 복원)
+	if (EditorPawn && Core && Core->GetLevel() && Core->GetLevel()->IsEditorLevel())
 	{
 		UCameraComponent* EditorCamera = EditorPawn->GetCameraComponent();
 		if (Core->GetActiveWorld()->GetActiveCameraComponent() != EditorCamera)
@@ -179,8 +179,8 @@ void FEditorEngine::SyncViewportClient()
 	}
 
 	IViewportClient* TargetViewportClient = ViewportClient.get();
-	const FWorldContext* ActiveSceneContext = Core->GetActiveWorldContext();
-	if (ActiveSceneContext && ActiveSceneContext->WorldType == ESceneType::Preview && PreviewViewportClient)
+	const FWorldContext* ActiveWorldContext = Core->GetActiveWorldContext();
+	if (ActiveWorldContext && ActiveWorldContext->WorldType == ELevelType::Preview && PreviewViewportClient)
 	{
 		TargetViewportClient = PreviewViewportClient.get();
 	}

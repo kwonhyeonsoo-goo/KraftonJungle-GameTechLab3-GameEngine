@@ -2,7 +2,7 @@
 
 #include "Core/Core.h"
 #include "Object/Object.h"
-#include "Scene/Scene.h"
+#include "World/Level.h"
 #include "Actor/Actor.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SceneComponent.h"
@@ -43,7 +43,7 @@ std::string GetFilePathUsingDialog(EFileDialogType Type)
 
 	OPENFILENAMEA Ofn = {};
 	Ofn.lStructSize = sizeof(OPENFILENAMEA);
-	Ofn.lpstrFilter = "Scene Files (*.json)\0*.json\0All Files (*.*)\0*.*\0";
+	Ofn.lpstrFilter = "Level Files (*.json)\0*.json\0All Files (*.*)\0*.*\0";
 	Ofn.lpstrFile = FileName;
 	Ofn.nMaxFile = MAX_PATH;
 	Ofn.lpstrDefExt = "json";
@@ -317,11 +317,11 @@ void CEditorUI::DetachFromRenderer(CRenderer* InRenderer)
 {
 	bViewportClientActive = false;
 	CurrentRenderer = nullptr;
-	Viewport.ReleaseSceneView();
+	Viewport.ReleaseLevelView();
 
 	if (InRenderer)
 	{
-		InRenderer->ClearSceneRenderTarget();
+		InRenderer->ClearLevelRenderTarget();
 		InRenderer->ClearViewportCallbacks();
 	}
 }
@@ -553,7 +553,7 @@ void CEditorUI::Render()
 	{
 		if (ImGui::BeginMenu("File"))
 		{
-			if (ImGui::MenuItem("New Scene"))
+			if (ImGui::MenuItem("New Level"))
 			{
 				if (Core)
 				{
@@ -564,32 +564,32 @@ void CEditorUI::Render()
 						Cam->GetCamera()->SetPosition({ -5.0f, 0.0f, 2.0f });
 						Cam->GetCamera()->SetRotation(0.f, 0.f);
 					}
-					Core->GetScene()->ClearActors();
-					UE_LOG("New scene created");
+					Core->GetLevel()->ClearActors();
+					UE_LOG("New Level created");
 				}
 			}
 
-			if (ImGui::MenuItem("Open Scene"))
+			if (ImGui::MenuItem("Open Level"))
 			{
-				if (Core && Core->GetActiveScene())
+				if (Core && Core->GetActiveLevel())
 				{
 					FString Path = GetFilePathUsingDialog(EFileDialogType::Open);
 
 					if (!Path.empty())
 					{
 						Core->SetSelectedActor(nullptr);
-						Core->GetScene()->ClearActors();
+						Core->GetLevel()->ClearActors();
 
-						bool bLoaded = FSceneSerializer::Load(Core->GetScene(), Path, Core->GetRenderer()->GetDevice());
+						bool bLoaded = FSceneSerializer::Load(Core->GetLevel(), Path, Core->GetRenderer()->GetDevice());
 						if (bLoaded)
 						{
-							UE_LOG("Scene loaded: %s", Path.c_str());
+							UE_LOG("Level loaded: %s", Path.c_str());
 						}
 						else
 						{
 							MessageBoxW(
 								nullptr,
-								L"Scene 정보가 잘못되었습니다.",
+								L"Level 정보가 잘못되었습니다.",
 								L"Error",
 								MB_OK | MB_ICONWARNING
 							);
@@ -598,15 +598,15 @@ void CEditorUI::Render()
 				}
 			}
 
-			if (ImGui::MenuItem("Save Scene As..."))
+			if (ImGui::MenuItem("Save Level As..."))
 			{
-				if (Core && Core->GetActiveScene())
+				if (Core && Core->GetActiveLevel())
 				{
 					FString Path = GetFilePathUsingDialog(EFileDialogType::Save);
 
 					if (!Path.empty())
 					{
-						FSceneSerializer::Save(Core->GetScene(),Path);
+						FSceneSerializer::Save(Core->GetLevel(),Path);
 					}
 				}
 			}

@@ -6,7 +6,7 @@
 #include "Renderer/Renderer.h"
 #include "Renderer/RenderCommand.h"
 #include "Renderer/Material.h"
-#include "Scene/Scene.h"
+#include "World/Level.h"
 #include "Debug/EngineLog.h"
 #include "Component/UUIDBillboardComponent.h"
 #include "Component/SubUVComponent.h"
@@ -31,13 +31,13 @@ void IViewportClient::Tick(CCore* Core, float DeltaTime)
 	//}
 
 	//CInputManager* InputManager = Core->GetInputManager();
-	//UScene* Scene = ResolveScene(Core);
-	//if (!InputManager || !Scene)
+	//ULevel* Level = ResolveLevel(Core);
+	//if (!InputManager || !Level)
 	//{
 	//	return;
 	//}
 
-	//CCamera* Camera = Scene->GetCamera();
+	//CCamera* Camera = Level->GetCamera();
 	//if (!Camera)
 	//{
 	//	return;
@@ -62,9 +62,9 @@ void IViewportClient::HandleMessage(CCore* Core, HWND Hwnd, UINT Msg, WPARAM WPa
 {
 }
 
-UScene* IViewportClient::ResolveScene(CCore* Core) const
+ULevel* IViewportClient::ResolveLevel(CCore* Core) const
 {
-	return Core ? Core->GetActiveScene() : nullptr;
+	return Core ? Core->GetActiveLevel() : nullptr;
 }
 
 UWorld* IViewportClient::ResolveWorld(CCore* Core) const
@@ -72,7 +72,7 @@ UWorld* IViewportClient::ResolveWorld(CCore* Core) const
 	return Core ? Core->GetActiveWorld() : nullptr;
 }
 
-void IViewportClient::BuildRenderCommands(CCore* Core, UScene* Scene, const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
+void IViewportClient::BuildRenderCommands(CCore* Core, ULevel* Level, const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
 {
 	UWorld* World = ResolveWorld(Core);
 	if (!World) return;

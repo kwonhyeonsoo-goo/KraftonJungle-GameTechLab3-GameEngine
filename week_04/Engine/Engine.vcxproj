@@ -106,11 +106,6 @@
     <ClInclude Include="Source\Renderer\SubUVRenderer.h" />
     <ClInclude Include="Source\Renderer\TextMeshBuilder.h" />
     <ClInclude Include="Source\Renderer\TextureVertex.h" />
-    <ClInclude Include="Source\Scene\RenderCollector.h" />
-    <ClInclude Include="Source\Scene\Scene.h" />
-    <ClInclude Include="Source\Scene\SceneContext.h" />
-    <ClInclude Include="Source\Scene\SceneManager.h" />
-    <ClInclude Include="Source\Scene\SceneTypes.h" />
     <ClInclude Include="Source\Serializer\Archive.h" />
     <ClInclude Include="Source\Serializer\SceneSerializer.h" />
     <ClInclude Include="Source\Types\Array.h" />
@@ -124,6 +119,11 @@
     <ClInclude Include="Source\Types\Set.h" />
     <ClInclude Include="Source\Types\StaticArray.h" />
     <ClInclude Include="Source\Types\String.h" />
+    <ClInclude Include="Source\World\Level.h" />
+    <ClInclude Include="Source\World\LevelManager.h" />
+    <ClInclude Include="Source\World\RenderCollector.h" />
+    <ClInclude Include="Source\World\LevelContext.h" />
+    <ClInclude Include="Source\World\LevelTypes.h" />
     <ClInclude Include="Source\World\World.h" />
     <ClInclude Include="Source\World\WorldContext.h" />
     <ClInclude Include="ThirdParty\stb_image.h" />
@@ -204,12 +204,12 @@
     <ClCompile Include="Source\Renderer\ShaderResource.cpp" />
     <ClCompile Include="Source\Renderer\SubUVRenderer.cpp" />
     <ClCompile Include="Source\Renderer\TextMeshBuilder.cpp" />
-    <ClCompile Include="Source\Scene\RenderCollector.cpp" />
-    <ClCompile Include="Source\Scene\Scene.cpp" />
-    <ClCompile Include="Source\Scene\SceneManager.cpp" />
     <ClCompile Include="Source\Serializer\Archive.cpp" />
     <ClCompile Include="Source\Serializer\SceneSerializer.cpp" />
     <ClCompile Include="Source\Types\Name.cpp" />
+    <ClCompile Include="Source\World\Level.cpp" />
+    <ClCompile Include="Source\World\RenderCollector.cpp" />
+    <ClCompile Include="Source\World\LevelManager.cpp" />
     <ClCompile Include="Source\World\World.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -3,9 +3,9 @@
 #include "Object/Object.h"
 #include "Object/ObjectFactory.h"
 #include <d3d11.h>
-#include "SceneTypes.h"
+#include "LevelTypes.h"
 #include "Core/ShowFlags.h"
-#include "RenderCollector.h"
+#include "World/RenderCollector.h"
 class AActor;
 class CCamera;
 class FFrustum;
@@ -13,11 +13,11 @@ class UCameraComponent;
 class UPrimitiveComponent;
 struct FRenderCommandQueue;
 
-class ENGINE_API UScene : public UObject
+class ENGINE_API ULevel : public UObject
 {
 public:
-	DECLARE_RTTI(UScene, UObject)
-	~UScene();
+	DECLARE_RTTI(ULevel, UObject)
+	~ULevel();
 
 	template <typename T>
 	T* SpawnActor(const FString& InName)
@@ -40,10 +40,10 @@ public:
 	void CleanupDestroyedActors();
 
 	const TArray<AActor*>& GetActors() const { return Actors; }
-	void SetSceneType(ESceneType InSceneType) { SceneType = InSceneType; }
-	ESceneType GetSceneType() const { return SceneType; }
-	bool IsEditorScene() const { return SceneType == ESceneType::Editor; }
-	bool IsGameScene() const { return SceneType == ESceneType::Game || SceneType == ESceneType::PIE; }
+	void SetLevelType(ELevelType InLevelType) { LevelType = InLevelType; }
+	ELevelType GetLevelType() const { return LevelType; }
+	bool IsEditorLevel() const { return LevelType == ELevelType::Editor; }
+	bool IsGameLevel() const { return LevelType == ELevelType::Game || LevelType == ELevelType::PIE; }
 
   
 	CCamera* GetCamera() const;
@@ -59,7 +59,7 @@ public:
 private:
 	TArray<AActor*> Actors;
 	bool bBegunPlay = false;
-	ESceneType SceneType = ESceneType::Game;
+	ELevelType LevelType = ELevelType::Game;
 
 
 };

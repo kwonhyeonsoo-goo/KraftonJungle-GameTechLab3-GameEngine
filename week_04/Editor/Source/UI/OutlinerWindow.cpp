@@ -4,7 +4,7 @@
 #include "Core/Core.h"
 #include "Core/ShowFlags.h"
 #include "Core/ViewportClient.h"
-#include "Scene/Scene.h"
+#include "World/Level.h"
 #include "Actor/Actor.h"
 #include "Component/SubUVComponent.h"
 #include "Component/TextComponent.h"
@@ -20,7 +20,7 @@ void COutlinerWindow::Render(CCore* Core)
 		ImGui::End();
 		return;
 	}
-	if (!Core || !Core->GetScene())
+	if (!Core || !Core->GetLevel())
 	{
 		ImGui::End();
 		return;
@@ -31,8 +31,8 @@ void COutlinerWindow::Render(CCore* Core)
 
 	ImGui::SeparatorText("Actors");
 
-	UScene* Scene = Core->GetScene();
-	const TArray<AActor*>& Actors = Scene->GetActors();
+	ULevel* Level = Core->GetLevel();
+	const TArray<AActor*>& Actors = Level->GetActors();
 	
 
 	for (AActor* Actor : Actors)

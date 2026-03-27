@@ -10,7 +10,7 @@
 #include "Renderer/RenderCommand.h"
 #include "Renderer/Material.h"
 #include "Renderer/MaterialManager.h"
-#include "Scene/Scene.h"
+#include "World/Level.h"
 #include "Math/MathUtility.h"
 
 #include <algorithm>
@@ -348,30 +348,30 @@ void CGizmo::BuildRenderCommands(AActor* SelectedActor, const CCamera* Camera, F
 	}
 }
 
-bool CGizmo::BeginDrag(AActor* SelectedActor, UScene* Scene, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
+bool CGizmo::BeginDrag(AActor* SelectedActor, ULevel* Level, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
 {
 	if (!SelectedActor || SelectedActor->IsPendingDestroy())
 	{
 		return false;
 	}
 
-	const EGizmoAxis Axis = HitTestAxis(SelectedActor, Scene, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	const EGizmoAxis Axis = HitTestAxis(SelectedActor, Level, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 	if (Axis == EGizmoAxis::None)
 	{
 		return false;
 	}
 
-	return BeginAxisDrag(Axis, SelectedActor, Scene, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	return BeginAxisDrag(Axis, SelectedActor, Level, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 }
 
-bool CGizmo::UpdateDrag(AActor* SelectedActor, UScene* Scene, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
+bool CGizmo::UpdateDrag(AActor* SelectedActor, ULevel* Level, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
 {
-	if (ActiveAxis == EGizmoAxis::None || !SelectedActor || SelectedActor->IsPendingDestroy() || !Scene || !Scene->GetCamera())
+	if (ActiveAxis == EGizmoAxis::None || !SelectedActor || SelectedActor->IsPendingDestroy() || !Level || !Level->GetCamera())
 	{
 		return false;
 	}
 
-	const FRay Ray = Picker.ScreenToRay(Scene->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	const FRay Ray = Picker.ScreenToRay(Level->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 
 	FVector Intersection = FVector::ZeroVector;
 	if (!IntersectPlane(Ray, DragStartGizmoLocation, DragPlaneNormal, Intersection))
@@ -421,7 +421,7 @@ bool CGizmo::UpdateDrag(AActor* SelectedActor, UScene* Scene, const CPicker& Pic
 	if (Mode == EGizmoMode::Scale)
 	{
 		FVector NewScale = DragStartActorScale;
-		const float GizmoScale = GetRenderGizmoScale(ComputeGizmoScale(DragStartGizmoLocation, Scene->GetCamera()));
+		const float GizmoScale = GetRenderGizmoScale(ComputeGizmoScale(DragStartGizmoLocation, Level->GetCamera()));
 		const float ScaleDenominator = (ScaleReferenceUnits * GizmoScale > ParallelTolerance)
 			? (ScaleReferenceUnits * GizmoScale)
 			: ScaleReferenceUnits;
@@ -483,7 +483,7 @@ bool CGizmo::UpdateDrag(AActor* SelectedActor, UScene* Scene, const CPicker& Pic
 	return false;
 }
 
-void CGizmo::UpdateHover(AActor* SelectedActor, UScene* Scene, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
+void CGizmo::UpdateHover(AActor* SelectedActor, ULevel* Level, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
 {
 	if (IsDragging())
 	{
@@ -496,7 +496,7 @@ void CGizmo::UpdateHover(AActor* SelectedActor, UScene* Scene, const CPicker& Pi
 		return;
 	}
 
-	HoveredAxis = HitTestAxis(SelectedActor, Scene, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	HoveredAxis = HitTestAxis(SelectedActor, Level, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 }
 
 void CGizmo::ClearHover()
@@ -666,9 +666,9 @@ bool CGizmo::EnsureScaleMeshes() const
 		&& ScaleCenterMesh;
 }
 
-EGizmoAxis CGizmo::HitTestAxis(AActor* SelectedActor, UScene* Scene, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const
+EGizmoAxis CGizmo::HitTestAxis(AActor* SelectedActor, ULevel* Level, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const
 {
-	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Scene || !Scene->GetCamera())
+	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Level || !Level->GetCamera())
 	{
 		return EGizmoAxis::None;
 	}
@@ -685,7 +685,7 @@ EGizmoAxis CGizmo::HitTestAxis(AActor* SelectedActor, UScene* Scene, const CPick
 	}
 	else if (Mode == EGizmoMode::Rotation)
 	{
-		if (!EnsureRotationMeshes(Scene->GetCamera(), WorldLocation))
+		if (!EnsureRotationMeshes(Level->GetCamera(), WorldLocation))
 		{
 			return EGizmoAxis::None;
 		}
@@ -705,8 +705,8 @@ EGizmoAxis CGizmo::HitTestAxis(AActor* SelectedActor, UScene* Scene, const CPick
 		return EGizmoAxis::None;
 	}
 
-	const FRay Ray = Picker.ScreenToRay(Scene->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
-	const float GizmoScale = GetRenderGizmoScale(ComputeGizmoScale(WorldLocation, Scene->GetCamera()));
+	const FRay Ray = Picker.ScreenToRay(Level->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	const float GizmoScale = GetRenderGizmoScale(ComputeGizmoScale(WorldLocation, Level->GetCamera()));
 	const FQuat GizmoRotation = GetGizmoRotation(SelectedActor);
 	const FMatrix AxisGizmoWorld = FTransform(GizmoRotation, WorldLocation, FVector(GizmoScale, GizmoScale, GizmoScale)).ToMatrixWithScale();
 	const FMatrix ScreenGizmoWorld = FTransform(FQuat::Identity, WorldLocation, FVector(GizmoScale, GizmoScale, GizmoScale)).ToMatrixWithScale();
@@ -775,38 +775,38 @@ EGizmoAxis CGizmo::HitTestAxis(AActor* SelectedActor, UScene* Scene, const CPick
 	return BestAxis;
 }
 
-bool CGizmo::BeginAxisDrag(EGizmoAxis AxisId, AActor* SelectedActor, UScene* Scene, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
+bool CGizmo::BeginAxisDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULevel* Level, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
 {
 	if (Mode == EGizmoMode::Location)
 	{
-		return BeginTranslationDrag(AxisId, SelectedActor, Scene, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+		return BeginTranslationDrag(AxisId, SelectedActor, Level, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 	}
 
 	if (Mode == EGizmoMode::Rotation)
 	{
-		return BeginRotationDrag(AxisId, SelectedActor, Scene, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+		return BeginRotationDrag(AxisId, SelectedActor, Level, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 	}
 
 	if (Mode == EGizmoMode::Scale)
 	{
-		return BeginScaleDrag(AxisId, SelectedActor, Scene, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+		return BeginScaleDrag(AxisId, SelectedActor, Level, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 	}
 
 	return false;
 }
 
-bool CGizmo::BeginTranslationDrag(EGizmoAxis AxisId, AActor* SelectedActor, UScene* Scene, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
+bool CGizmo::BeginTranslationDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULevel* Level, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
 {
-	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Scene || !Scene->GetCamera())
+	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Level || !Level->GetCamera())
 	{
 		return false;
 	}
 
-	const FRay Ray = Picker.ScreenToRay(Scene->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	const FRay Ray = Picker.ScreenToRay(Level->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 
 	const FVector GizmoLocation = GetActorWorldLocation(SelectedActor);
 	const FVector Axis = GetGizmoAxisVector(AxisId, SelectedActor);
-	const CCamera* Camera = Scene->GetCamera();
+	const CCamera* Camera = Level->GetCamera();
 
 	FVector PlaneNormal = FVector::ZeroVector;
 	if (AxisId >= EGizmoAxis::X && AxisId <= EGizmoAxis::Z)
@@ -854,17 +854,17 @@ bool CGizmo::BeginTranslationDrag(EGizmoAxis AxisId, AActor* SelectedActor, USce
 	return true;
 }
 
-bool CGizmo::BeginRotationDrag(EGizmoAxis AxisId, AActor* SelectedActor, UScene* Scene, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
+bool CGizmo::BeginRotationDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULevel* Level, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
 {
-	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Scene || !Scene->GetCamera())
+	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Level || !Level->GetCamera())
 	{
 		return false;
 	}
 
-	const FRay Ray = Picker.ScreenToRay(Scene->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	const FRay Ray = Picker.ScreenToRay(Level->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 
 	const FVector GizmoLocation = GetActorWorldLocation(SelectedActor);
-	const FVector Axis = (AxisId == EGizmoAxis::Screen) ? Scene->GetCamera()->GetForward() : GetGizmoAxisVector(AxisId, SelectedActor);
+	const FVector Axis = (AxisId == EGizmoAxis::Screen) ? Level->GetCamera()->GetForward() : GetGizmoAxisVector(AxisId, SelectedActor);
 	FVector Intersection = FVector::ZeroVector;
 	if (!IntersectPlane(Ray, GizmoLocation, Axis, Intersection))
 	{
@@ -887,17 +887,17 @@ bool CGizmo::BeginRotationDrag(EGizmoAxis AxisId, AActor* SelectedActor, UScene*
 	return true;
 }
 
-bool CGizmo::BeginScaleDrag(EGizmoAxis AxisId, AActor* SelectedActor, UScene* Scene, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
+bool CGizmo::BeginScaleDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULevel* Level, const CPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
 {
-	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Scene || !Scene->GetCamera())
+	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Level || !Level->GetCamera())
 	{
 		return false;
 	}
 
-	const FRay Ray = Picker.ScreenToRay(Scene->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	const FRay Ray = Picker.ScreenToRay(Level->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 
 	const FVector GizmoLocation = GetActorWorldLocation(SelectedActor);
-	const CCamera* Camera = Scene->GetCamera();
+	const CCamera* Camera = Level->GetCamera();
 
 	FVector PlaneNormal = FVector::ZeroVector;
 	if (AxisId >= EGizmoAxis::X && AxisId <= EGizmoAxis::Z)

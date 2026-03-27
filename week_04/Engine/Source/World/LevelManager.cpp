@@ -1,30 +1,30 @@
-#include "SceneManager.h"
-#include "Scene/Scene.h"
+#include "LevelManager.h"
+#include "World/Level.h"
 #include "World/World.h"
 #include "Object/ObjectFactory.h"
 #include "Renderer/Renderer.h"
 #include "Component/CameraComponent.h"
 #include "Camera/Camera.h"
 
-FSceneManager::~FSceneManager()
+FLevelManager::~FLevelManager()
 {
 	Release();
 }
 
-bool FSceneManager::Initialize(float AspectRatio, ESceneType StartupSceneType, CRenderer* InRenderer)
+bool FLevelManager::Initialize(float AspectRatio, ELevelType StartupLevelType, CRenderer* InRenderer)
 {
 	Renderer = InRenderer;
 
 	FWorldContext* StartupContext = &GameWorldContext;
-	FString ContextName = "GameScene";
+	FString ContextName = "GameLevel";
 
-	if (StartupSceneType == ESceneType::Editor)
+	if (StartupLevelType == ELevelType::Editor)
 	{
 		StartupContext = &EditorWorldContext;
-		ContextName = "EditorScene";
+		ContextName = "EditorLevel";
 	}
 
-	if (!CreateWorldContext(*StartupContext, ContextName, StartupSceneType, AspectRatio))
+	if (!CreateWorldContext(*StartupContext, ContextName, StartupLevelType, AspectRatio))
 	{
 		return false;
 	}
@@ -33,7 +33,7 @@ bool FSceneManager::Initialize(float AspectRatio, ESceneType StartupSceneType, C
 	return true;
 }
 
-void FSceneManager::Release()
+void FLevelManager::Release()
 {
 	ActiveWorldContext = nullptr;
 
@@ -53,8 +53,8 @@ void FSceneManager::Release()
 
 // ===== World Context 생성/파괴 =====
 
-bool FSceneManager::CreateWorldContext(FWorldContext& OutContext, const FString& ContextName,
-	ESceneType WorldType, float AspectRatio, bool bDefaultScene)
+bool FLevelManager::CreateWorldContext(FWorldContext& OutContext, const FString& ContextName,
+	ELevelType WorldType, float AspectRatio, bool bDefaultLevel)
 {
 	OutContext.ContextName = ContextName;
 	OutContext.WorldType = WorldType;
@@ -67,7 +67,7 @@ bool FSceneManager::CreateWorldContext(FWorldContext& OutContext, const FString&
 
 	OutContext.World->SetWorldType(WorldType);
 
-	if (bDefaultScene)
+	if (bDefaultLevel)
 	{
 		OutContext.World->InitializeWorld(AspectRatio, Renderer ? Renderer->GetDevice() : nullptr);
 	}
@@ -79,7 +79,7 @@ bool FSceneManager::CreateWorldContext(FWorldContext& OutContext, const FString&
 	return true;
 }
 
-void FSceneManager::DestroyWorldContext(FWorldContext& Context)
+void FLevelManager::DestroyWorldContext(FWorldContext& Context)
 {
 	if (Context.World)
 	{
@@ -89,7 +89,7 @@ void FSceneManager::DestroyWorldContext(FWorldContext& Context)
 	Context.Reset();
 }
 
-void FSceneManager::DestroyWorldContext(FEditorWorldContext& Context)
+void FLevelManager::DestroyWorldContext(FEditorWorldContext& Context)
 {
 	if (Context.World)
 	{
@@ -99,37 +99,37 @@ void FSceneManager::DestroyWorldContext(FEditorWorldContext& Context)
 	Context.Reset();
 }
 
-// ===== 하위 호환 Scene 접근자 =====
+// ===== 하위 호환 Level 접근자 =====
 
-UScene* FSceneManager::GetActiveScene() const
+ULevel* FLevelManager::GetActiveLevel() const
 {
 	UWorld* World = GetActiveWorld();
-	return World ? World->GetScene() : nullptr;
+	return World ? World->GetLevel() : nullptr;
 }
 
-UScene* FSceneManager::GetEditorScene() const
+ULevel* FLevelManager::GetEditorLevel() const
 {
-	return EditorWorldContext.World ? EditorWorldContext.World->GetScene() : nullptr;
+	return EditorWorldContext.World ? EditorWorldContext.World->GetLevel() : nullptr;
 }
 
-UScene* FSceneManager::GetGameScene() const
+ULevel* FLevelManager::GetGameLevel() const
 {
-	return GameWorldContext.World ? GameWorldContext.World->GetScene() : nullptr;
+	return GameWorldContext.World ? GameWorldContext.World->GetLevel() : nullptr;
 }
 
-UScene* FSceneManager::GetPreviewScene(const FString& ContextName) const
+ULevel* FLevelManager::GetPreviewLevel(const FString& ContextName) const
 {
 	const FEditorWorldContext* Context = FindPreviewWorld(ContextName);
 	if (Context && Context->World)
 	{
-		return Context->World->GetScene();
+		return Context->World->GetLevel();
 	}
 	return nullptr;
 }
 
 // ===== Activate =====
 
-bool FSceneManager::ActivatePreviewScene(const FString& ContextName)
+bool FLevelManager::ActivatePreviewLevel(const FString& ContextName)
 {
 	FEditorWorldContext* PreviewContext = FindPreviewWorld(ContextName);
 	if (PreviewContext == nullptr)
@@ -143,7 +143,7 @@ bool FSceneManager::ActivatePreviewScene(const FString& ContextName)
 
 // ===== Selected Actor =====
 
-FEditorWorldContext* FSceneManager::GetActiveEditorContext()
+FEditorWorldContext* FLevelManager::GetActiveEditorContext()
 {
 	if (ActiveWorldContext == &EditorWorldContext)
 	{
@@ -161,7 +161,7 @@ FEditorWorldContext* FSceneManager::GetActiveEditorContext()
 	return nullptr;
 }
 
-const FEditorWorldContext* FSceneManager::GetActiveEditorContext() const
+const FEditorWorldContext* FLevelManager::GetActiveEditorContext() const
 {
 	if (ActiveWorldContext == &EditorWorldContext)
 	{
@@ -179,7 +179,7 @@ const FEditorWorldContext* FSceneManager::GetActiveEditorContext() const
 	return nullptr;
 }
 
-void FSceneManager::SetSelectedActor(AActor* InActor)
+void FLevelManager::SetSelectedActor(AActor* InActor)
 {
 	FEditorWorldContext* ActiveEditorContext = GetActiveEditorContext();
 	if (ActiveEditorContext)
@@ -191,7 +191,7 @@ void FSceneManager::SetSelectedActor(AActor* InActor)
 	EditorWorldContext.SelectedActor = InActor;
 }
 
-AActor* FSceneManager::GetSelectedActor() const
+AActor* FLevelManager::GetSelectedActor() const
 {
 	const FEditorWorldContext* ActiveEditorContext = GetActiveEditorContext();
 	if (ActiveEditorContext)
@@ -204,7 +204,7 @@ AActor* FSceneManager::GetSelectedActor() const
 
 // ===== Preview =====
 
-FEditorWorldContext* FSceneManager::FindPreviewWorld(const FString& ContextName)
+FEditorWorldContext* FLevelManager::FindPreviewWorld(const FString& ContextName)
 {
 	for (const std::unique_ptr<FEditorWorldContext>& Context : PreviewWorldContexts)
 	{
@@ -216,7 +216,7 @@ FEditorWorldContext* FSceneManager::FindPreviewWorld(const FString& ContextName)
 	return nullptr;
 }
 
-const FEditorWorldContext* FSceneManager::FindPreviewWorld(const FString& ContextName) const
+const FEditorWorldContext* FLevelManager::FindPreviewWorld(const FString& ContextName) const
 {
 	for (const std::unique_ptr<FEditorWorldContext>& Context : PreviewWorldContexts)
 	{
@@ -228,7 +228,7 @@ const FEditorWorldContext* FSceneManager::FindPreviewWorld(const FString& Contex
 	return nullptr;
 }
 
-FEditorWorldContext* FSceneManager::CreatePreviewWorldContext(const FString& ContextName, int32 WindowWidth, int32 WindowHeight)
+FEditorWorldContext* FLevelManager::CreatePreviewWorldContext(const FString& ContextName, int32 WindowWidth, int32 WindowHeight)
 {
 	if (ContextName.empty())
 	{
@@ -245,7 +245,7 @@ FEditorWorldContext* FSceneManager::CreatePreviewWorldContext(const FString& Con
 		? (static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight))
 		: 1.0f;
 
-	if (!CreateWorldContext(*PreviewContext, ContextName, ESceneType::Preview, AspectRatio, false))
+	if (!CreateWorldContext(*PreviewContext, ContextName, ELevelType::Preview, AspectRatio, false))
 	{
 		return nullptr;
 	}
@@ -255,7 +255,7 @@ FEditorWorldContext* FSceneManager::CreatePreviewWorldContext(const FString& Con
 	return CreatedContext;
 }
 
-bool FSceneManager::DestroyPreviewWorld(const FString& ContextName)
+bool FLevelManager::DestroyPreviewWorld(const FString& ContextName)
 {
 	for (auto It = PreviewWorldContexts.begin(); It != PreviewWorldContexts.end(); ++It)
 	{
@@ -263,10 +263,10 @@ bool FSceneManager::DestroyPreviewWorld(const FString& ContextName)
 		{
 			if (ActiveWorldContext == It->get())
 			{
-				ActivateEditorScene();
+				ActivateEditorLevel();
 				if (ActiveWorldContext == nullptr)
 				{
-					ActivateGameScene();
+					ActivateGameLevel();
 				}
 			}
 
@@ -281,7 +281,7 @@ bool FSceneManager::DestroyPreviewWorld(const FString& ContextName)
 
 // ===== Resize =====
 
-void FSceneManager::OnResize(int32 Width, int32 Height)
+void FLevelManager::OnResize(int32 Width, int32 Height)
 {
 	if (Width == 0 || Height == 0)
 	{

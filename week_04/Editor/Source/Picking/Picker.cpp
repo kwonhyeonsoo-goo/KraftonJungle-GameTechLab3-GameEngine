@@ -1,6 +1,6 @@
 #include "Picker.h"
 
-#include "Scene/Scene.h"
+#include "World/Level.h"
 #include "Actor/Actor.h"
 #include "Camera/Camera.h"
 #include "Component/PrimitiveComponent.h"
@@ -100,21 +100,21 @@ bool CPicker::RayTriangleIntersect(const FRay& Ray,
 	return false;
 }
 
-AActor* CPicker::PickActor(UScene* Scene, int32 ScreenX, int32 ScreenY,
+AActor* CPicker::PickActor(ULevel* Level, int32 ScreenX, int32 ScreenY,
 						   int32 ScreenWidth, int32 ScreenHeight) const
 {
-	if (!Scene || !Scene->GetCamera())
+	if (!Level || !Level->GetCamera())
 	{
 		return nullptr;
 	}
 
-	CCamera* Camera = Scene->GetCamera();
+	CCamera* Camera = Level->GetCamera();
 	const FRay Ray = ScreenToRay(Camera, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 
 	AActor* ClosestActor = nullptr;
 	float ClosestDistance = (std::numeric_limits<float>::max)();
 
-	for (AActor* Actor : Scene->GetActors())
+	for (AActor* Actor : Level->GetActors())
 	{
 		if (!Actor || Actor->IsPendingDestroy())
 		{

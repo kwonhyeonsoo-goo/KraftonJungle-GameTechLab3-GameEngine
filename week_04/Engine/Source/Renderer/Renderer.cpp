@@ -31,20 +31,20 @@ CRenderer::~CRenderer()
 	Release();
 }
 
-void CRenderer::SetSceneRenderTarget(ID3D11RenderTargetView* InRenderTargetView, ID3D11DepthStencilView* InDepthStencilView, const D3D11_VIEWPORT& InViewport)
+void CRenderer::SetLevelRenderTarget(ID3D11RenderTargetView* InRenderTargetView, ID3D11DepthStencilView* InDepthStencilView, const D3D11_VIEWPORT& InViewport)
 {
-	SceneRenderTargetView = InRenderTargetView;
-	SceneDepthStencilView = InDepthStencilView;
-	SceneViewport = InViewport;
-	bUseSceneRenderTargetOverride = (SceneRenderTargetView != nullptr && SceneDepthStencilView != nullptr);
+	LevelRenderTargetView = InRenderTargetView;
+	LevelDepthStencilView = InDepthStencilView;
+	LevelViewport = InViewport;
+	bUseLevelRenderTargetOverride = (LevelRenderTargetView != nullptr && LevelDepthStencilView != nullptr);
 }
 
-void CRenderer::ClearSceneRenderTarget()
+void CRenderer::ClearLevelRenderTarget()
 {
-	SceneRenderTargetView = nullptr;
-	SceneDepthStencilView = nullptr;
-	SceneViewport = {};
-	bUseSceneRenderTargetOverride = false;
+	LevelRenderTargetView = nullptr;
+	LevelDepthStencilView = nullptr;
+	LevelViewport = {};
+	bUseLevelRenderTargetOverride = false;
 }
 
 void CRenderer::SetGUICallbacks(
@@ -282,11 +282,11 @@ void CRenderer::BeginFrame()
 	ID3D11DepthStencilView* ActiveDSV = DepthStencilView;
 	D3D11_VIEWPORT ActiveVP = Viewport;
 
-	if (bUseSceneRenderTargetOverride)
+	if (bUseLevelRenderTargetOverride)
 	{
-		ActiveRTV = SceneRenderTargetView;
-		ActiveDSV = SceneDepthStencilView;
-		ActiveVP = SceneViewport;
+		ActiveRTV = LevelRenderTargetView;
+		ActiveDSV = LevelDepthStencilView;
+		ActiveVP = LevelViewport;
 		if (ActiveRTV && ActiveRTV != RenderTargetView) DeviceContext->ClearRenderTargetView(ActiveRTV, ClearColor);
 		if (ActiveDSV && ActiveDSV != DepthStencilView) DeviceContext->ClearDepthStencilView(ActiveDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	}
@@ -435,7 +435,7 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 
 void CRenderer::ClearDepthBuffer()
 {
-	if (SceneDepthStencilView) DeviceContext->ClearDepthStencilView(SceneDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	if (LevelDepthStencilView) DeviceContext->ClearDepthStencilView(LevelDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
 
 FVector CRenderer::GetCameraPosition() const
@@ -534,8 +534,8 @@ void CRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float
 	Mesh->UpdateVertexAndIndexBuffer(Device);
 	Mesh->Bind(DeviceContext);
 
-	ID3D11RenderTargetView* ActiveRTV = bUseSceneRenderTargetOverride ? SceneRenderTargetView : RenderTargetView;
-	ID3D11DepthStencilView* ActiveDSV = bUseSceneRenderTargetOverride ? SceneDepthStencilView : DepthStencilView;
+	ID3D11RenderTargetView* ActiveRTV = bUseLevelRenderTargetOverride ? LevelRenderTargetView : RenderTargetView;
+	ID3D11DepthStencilView* ActiveDSV = bUseLevelRenderTargetOverride ? LevelDepthStencilView : DepthStencilView;
 
 	DeviceContext->OMSetRenderTargets(0, nullptr, ActiveDSV);
 	DeviceContext->OMSetDepthStencilState(StencilWriteState, 1);
@@ -601,7 +601,7 @@ void CRenderer::ExecuteLineCommands()
 
 void CRenderer::Release()
 {
-	ClearViewportCallbacks(); ClearSceneRenderTarget();
+	ClearViewportCallbacks(); ClearLevelRenderTarget();
 	TextRenderer.Release(); SubUVRenderer.Release();
 	ShaderManager.Release(); FShaderMap::Get().Clear(); FMaterialManager::Get().Clear();
 	if (NormalSampler) NormalSampler->Release();
@@ -629,7 +629,7 @@ bool CRenderer::IsOccluded()
 void CRenderer::OnResize(int32 W, int32 H)
 {
 	if (W == 0 || H == 0) return;
-	ClearSceneRenderTarget();
+	ClearLevelRenderTarget();
 	DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 	if (RenderTargetView) { RenderTargetView->Release(); RenderTargetView = nullptr; }
 	if (DepthStencilView) { DepthStencilView->Release(); DepthStencilView = nullptr; }

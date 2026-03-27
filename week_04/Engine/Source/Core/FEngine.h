@@ -1,6 +1,6 @@
 #pragma once
 #include "CoreMinimal.h"
-#include "Scene/SceneTypes.h"
+#include "World/LevelTypes.h"
 #include "Windows.h"
 #include "Core/Core.h"
 #include "ViewportClient.h"
@@ -29,7 +29,7 @@ protected:
 	virtual void PreInitialize() {}
 	virtual void PostInitialize() {}
 	virtual void Tick(float DeltaTime) {}
-	virtual ESceneType GetStartupSceneType() const { return ESceneType::Game; }
+	virtual ELevelType GetStartupLevelType() const { return ELevelType::Game; }
 	virtual std::unique_ptr<IViewportClient> CreateViewportClient();
 
 	CWindowApplication* App = nullptr;
