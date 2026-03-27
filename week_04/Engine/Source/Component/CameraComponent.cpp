@@ -40,6 +40,21 @@ void UCameraComponent::MoveUp(float Value)
 
 }
 
+void UCameraComponent::PanRight(float Value)
+{
+	const FVector Right = Camera->GetRight().GetSafeNormal();
+	Camera->SetPosition(Camera->GetPosition() + Right * (Value * Camera->GetSpeed()));
+}
+
+void UCameraComponent::PanUp(float Value)
+{
+	//카메라 기준 local up을 계산합니다.
+	const FVector Forward = Camera->GetForward().GetSafeNormal();
+	const FVector Right = Camera->GetRight().GetSafeNormal();
+	const FVector PanUp = FVector::CrossProduct(Forward, Right).GetSafeNormal();
+	Camera->SetPosition(Camera->GetPosition() + PanUp * (Value * Camera->GetSpeed()));
+}
+
 void UCameraComponent::Rotate(float DeltaYaw, float DeltaPitch)
 {
 	Camera->Rotate(DeltaYaw, DeltaPitch);
