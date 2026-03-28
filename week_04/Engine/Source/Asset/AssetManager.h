@@ -11,7 +11,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <functional>
-#include "ThirdParty/stb_image.h"
+#include "../ThirdParty/stb_image.h"
 #include "Renderer/RenderState.h"
 #include "d3d11.h"
 
@@ -343,7 +343,7 @@ public:
 	// Asset Manager
 	// =========================
 
-class FAssetManager
+class ENGINE_API FAssetManager
 {
 private:
 	static TMap<FString, FStaticMesh*> StaticMeshCache;// EX) \\Assets\\Meshes\\Dorumon.obj 가 key가됨
@@ -705,9 +705,36 @@ public:
 			return It->second;
 		return nullptr;
 	}
-
+	static const TArray<FMaterial*> GetAllMaterials()
+	{
+		TArray<FMaterial*> Materials;
+		for (const auto& Pair : MaterialCache)
+		{
+			Materials.push_back(Pair.second);
+		}
+		return Materials;
+	}
 	static UStaticMesh* LoadObjStaticMesh(const FString& PathFileName)
 	{
 		return nullptr;
+	}
+
+	static void CleanUp()
+	{
+		for (auto& Pair : StaticMeshCache)
+		{
+			delete Pair.second;
+		}
+		StaticMeshCache.clear();
+		for (auto& Pair : MaterialCache)
+		{
+			delete Pair.second;
+		}
+		MaterialCache.clear();
+		for (auto& Pair : TextureCache)
+		{
+			delete Pair.second;
+		}
+		TextureCache.clear();
 	}
 };

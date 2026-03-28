@@ -24,6 +24,7 @@
 #include "Templates/ObjectIterator.h"
 #include "Object/Mesh/StaticMesh.h"
 #include "Component/StaticMeshComponent.h"
+#include "Asset/AssetManager.h"
 
 CCore::~CCore()
 {
@@ -132,6 +133,8 @@ void CCore::Release()
 		// 렌더러 Release는 소멸자에서 자동 호출
 		Renderer.reset();
 	}
+
+	FAssetManager::CleanUp();
 }
 
 void CCore::Tick()
@@ -170,7 +173,7 @@ void CCore::Input(float DeltaTime)
 void CCore::Physics(float DeltaTime)
 {
 	ULevel* Level = ViewportClient ? ViewportClient->ResolveLevel(this) : GetActiveLevel();
-	
+
 	if (Level)
 	{
 		FVector LineStart(2, 2, 0), LineEnd(5, 5, 0);

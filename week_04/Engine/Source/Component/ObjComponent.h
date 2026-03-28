@@ -17,6 +17,7 @@ public:
 
 	FStaticMesh* GetStaticMesh() const { return StaticMesh; }
 	FMaterial* GetMaterialBySlot(int32 SlotIndex) const;
+	void SetMaterialSlot(int32 SlotIndex, FMaterial* Material);
 
 private:
 	// 기존 방식 소유권
