@@ -38,8 +38,3 @@ struct FStaticMesh
 	std::vector<SubMeshSection> Sections; //Material별로 섹션을 나누기 위함
 	TArray<class FMaterial*> Materials;
 };
-
-class UStaticMesh : public UObject
-{
-
-};
