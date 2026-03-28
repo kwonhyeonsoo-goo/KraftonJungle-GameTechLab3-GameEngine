@@ -118,7 +118,9 @@ void FViewport::Render(FCore* Core, FRenderer* Renderer, HWND Hwnd)
 	const uint32 NewHeight = ContentSize.y > 1.0f ? static_cast<uint32>(ContentSize.y) : 0;
 
 	bVisible = (NewWidth > 0 && NewHeight > 0);
+	//////
 
+	// 아래 렌더관련 설정 viewport , core 단위로 빼고와야함.
 	if (Hwnd)
 	{
 		POINT ClientPoint = {
@@ -152,7 +154,7 @@ void FViewport::Render(FCore* Core, FRenderer* Renderer, HWND Hwnd)
 
 		if (RenderTargetView && DepthStencilView)
 		{
-			D3D11_VIEWPORT LevelViewport = {};
+			//D3D11_VIEWPORT LevelViewport = {};
 			LevelViewport.TopLeftX = 0.0f;
 			LevelViewport.TopLeftY = 0.0f;
 			LevelViewport.Width = static_cast<float>(NewWidth);
@@ -171,6 +173,9 @@ void FViewport::Render(FCore* Core, FRenderer* Renderer, HWND Hwnd)
 	{
 		Core->GetLevel()->GetCamera()->SetAspectRatio(static_cast<float>(NewWidth) / static_cast<float>(NewHeight));
 	}
+
+
+	/////
 
 	if (ShaderResourceView)
 	{
