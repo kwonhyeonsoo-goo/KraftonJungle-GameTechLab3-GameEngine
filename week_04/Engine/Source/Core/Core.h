@@ -84,7 +84,9 @@ private:
 	FEnhancedInputManager* EnhancedInput = nullptr;
 
 	ObjectManager* ObjManager = nullptr;
-	IViewportClient* ViewportClient = nullptr;
+
+	TArray<IViewportClient*> ViewportClientArray = {};
+
 	std::unique_ptr<FLevelManager> LevelManager;
 
 	std::unique_ptr<FPhysicsManager> PhysicsManager;

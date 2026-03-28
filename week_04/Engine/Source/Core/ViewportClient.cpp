@@ -15,9 +15,12 @@
 #include "Camera/CameraInfo.h"
 #include "Component/CameraComponent.h"
 
-IViewportClient::IViewportClient(UCameraComponent* InCameraComponent)
+
+
+void IViewportClient::Initnalize(UCameraComponent* InCameraComponent)
 {
 	DefaultCamera = InCameraComponent;
+
 }
 
 void IViewportClient::Attach(FCore* Core, FRenderer* Renderer)
@@ -93,10 +96,7 @@ void IViewportClient::HandleFileDoubleClick(const FString& FilePath)
 
 }
 
-void IViewportClient::HandleFileDropOnViewport(const FString& FilePath)
-{
 
-}
 
 void IViewportClient::SetActiveCamera(UCameraComponent* InCamera)
 {

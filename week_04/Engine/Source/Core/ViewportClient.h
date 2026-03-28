@@ -20,6 +20,10 @@ struct FCameraViewInfo;
 class ENGINE_API IViewportClient
 {
 public:
+
+
+	void Initnalize(UCameraComponent* InCameraComponent);
+
 	virtual ~IViewportClient() = default;
 
 	virtual void Attach(FCore* Core, FRenderer* Renderer);
@@ -47,7 +51,7 @@ protected:
 private:
 
 	UCameraComponent* ActiveCamera;
-	UCameraComponent* DefaultCamera;
+	UCameraComponent* DefaultCamera; // world의 defaultcamera 생성과 동시에 소유
 };
 
 class ENGINE_API FGameViewportClient : public IViewportClient

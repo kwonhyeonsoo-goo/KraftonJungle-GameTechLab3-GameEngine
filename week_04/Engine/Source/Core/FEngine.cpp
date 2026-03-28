@@ -40,8 +40,8 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int32 Width,
 		return false;
 	}
 
-	ViewportClient = CreateViewportClient();
-	Core->SetViewportClient(ViewportClient.get());
+	CreateViewportClient();
+	Core->SetViewportClient(ViewportClientArray);
 
 	PostInitialize();
 
@@ -81,9 +81,12 @@ void FEngine::OnResize(int32 Width, int32 Height)
 	}
 }
 
-std::unique_ptr<IViewportClient> FEngine::CreateViewportClient()
+void FEngine::CreateViewportClient()
 {
-	return std::make_unique<FGameViewportClient>();
+	ViewportClientArray.reserve(5);
+	for (uint32 i = 0; i < 5; i++) {
+		ViewportClientArray[i] = std::make_unique<IViewportClient>();
+	}
 }
 
 void FEngine::Shutdown()
@@ -97,7 +100,10 @@ void FEngine::Shutdown()
 		Core.reset();
 	}
 
-	ViewportClient.reset();
+	for (auto& viewportClient : ViewportClientArray)
+	{
+		viewportClient.reset();
+	}
 
 	if (App)
 	{

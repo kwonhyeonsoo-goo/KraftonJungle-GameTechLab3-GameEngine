@@ -35,6 +35,8 @@ protected:
 	FWindowApplication* App = nullptr;
 	FWindow* MainWindow = nullptr;
 	std::unique_ptr<FCore> Core;
+
+	TArray< std::unique_ptr<IViewportClient>> ViewportClientArray;
 	std::unique_ptr<IViewportClient> ViewportClient;
 
 private:

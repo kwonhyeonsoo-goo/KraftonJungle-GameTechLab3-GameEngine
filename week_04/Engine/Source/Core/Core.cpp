@@ -63,24 +63,33 @@ bool FCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ELevelType StartupL
 
 
 
-void FCore::SetViewportClient(IViewportClient* InViewportClient)
+void FCore::SetViewportClient(TArray<std::unique_ptr<IViewportClient>>& InViewportClientArray)
 {
-	if (ViewportClient == InViewportClient)
+
+	// 검사를 해야할까?
+
+	for (uint32 Index = 0; Index < InViewportClientArray.size(); Index++)
 	{
-		return;
+		auto& viewportClient = InViewportClientArray[Index];
+
+		if (viewportClient.get() == nullptr or Renderer == nullptr)
+		{
+			continue;
+		}
+
+		viewportClient.get()->Detach(this, Renderer.get());
+		ViewportClientArray[Index] = viewportClient.get();
+		
+		if (ViewportClientArray[Index] == nullptr or Renderer == nullptr)
+		{
+			continue;
+		}
+		ViewportClientArray[Index]->Attach(this, Renderer.get());
 	}
 
-	if (ViewportClient && Renderer)
-	{
-		ViewportClient->Detach(this, Renderer.get());
-	}
 
-	ViewportClient = InViewportClient;
 
-	if (ViewportClient && Renderer)
-	{
-		ViewportClient->Attach(this, Renderer.get());
-	}
+
 }
 
 void FCore::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
@@ -90,6 +99,7 @@ void FCore::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 		InputManager->ProcessMessage(Hwnd, Msg, WParam, LParam);
 	}
 
+	// 다들 입력이 다를 수 있어서 별개처리해야함
 	if (ViewportClient)
 	{
 		ViewportClient->HandleMessage(this, Hwnd, Msg, WParam, LParam);
@@ -98,11 +108,19 @@ void FCore::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 
 void FCore::Release()
 {
-	if (ViewportClient && Renderer)
+
+
+	for (auto viewportClient : ViewportClientArray)
 	{
-		ViewportClient->Detach(this, Renderer.get());
+		if (Renderer == nullptr or viewportClient == nullptr)
+		{
+			continue;
+		}
+		viewportClient->Detach(this, Renderer.get());
+		viewportClient = nullptr; // uniqueptr 내부에서는 nullptr
 	}
-	ViewportClient = nullptr;
+
+
 	if (LevelManager)
 	{
 		LevelManager->Release();
@@ -157,16 +175,21 @@ void FCore::Input(float DeltaTime)
 		EnhancedInput->ProcessInput(InputManager, DeltaTime);
 	}
 
-	if (ViewportClient)
+
+	for (const auto& viewportClient : ViewportClientArray)
 	{
-		ViewportClient->Tick(this, DeltaTime);
+		viewportClient->Tick(this, DeltaTime);
 	}
 }
 
 void FCore::Physics(float DeltaTime)
 {
-	ULevel* Level = ViewportClient ? ViewportClient->ResolveLevel(this) : GetActiveLevel();
+	// viewportClient의 level이 바뀔 수 있어서? 하지만 지금은 의미없음
+	//ULevel* Level = ViewportClient ? ViewportClient->ResolveLevel(this) : GetActiveLevel();
 	
+	ULevel* Level = GetActiveLevel();
+
+
 	if (Level)
 	{
 		FVector LineStart(2, 2, 0), LineEnd(5, 5, 0);
@@ -236,7 +259,9 @@ void FCore::LateUpdate(float DeltaTime)
 
 void FCore::Render()
 {
-	ULevel* Level = ViewportClient ? ViewportClient->ResolveLevel(this) : GetActiveLevel();
+	//ULevel* Level = ViewportClient ? ViewportClient->ResolveLevel(this) : GetActiveLevel();
+	ULevel* Level = GetActiveLevel();
+
 	if (!Renderer || !Level || Renderer->IsOccluded())
 	{
 		return;
@@ -250,34 +275,60 @@ void FCore::Render()
 		Renderer->EndFrame();
 		return;
 	}
-	UCameraComponent* ActiveCamera = ActiveWorld->GetActiveCameraComponent();
-	if (!ActiveCamera)
+
+	// viewport 별로 camera initialize;
+	for (auto CurrentViewport : ViewportClientArray)
 	{
-		Renderer->EndFrame();
-		return;
+		CurrentViewport->Initnalize(ActiveWorld->GetActiveCameraComponent());
+		FCameraViewInfo CameraViewInfo = CurrentViewport->GetCameraViewInfo();
+		CommandQueue.Clear();
+		CommandQueue.Reserve(Renderer->GetPrevCommandCount());
+		CommandQueue.ViewMatrix = CameraViewInfo.ViewMatrix;
+		CommandQueue.ProjectionMatrix = CameraViewInfo.ProjectionMatrix;
+
+		FFrustum Frustum;
+		const FMatrix ViewProjection = CommandQueue.ViewMatrix * CommandQueue.ProjectionMatrix;
+		Frustum.ExtractFromVP(ViewProjection);
+
+		CurrentViewport->BuildRenderCommands(this, Level, Frustum, CommandQueue);
+		Renderer->SubmitCommands(CommandQueue);
+		Renderer->ExecuteCommands();
+		const FShowFlags& ShowFlags = CurrentViewport ? CurrentViewport->GetShowFlags() : FShowFlags();
+		DebugDrawManager.Flush(Renderer.get(), ShowFlags, ActiveWorld);
+
 	}
 
-	CommandQueue.Clear();
-	CommandQueue.Reserve(Renderer->GetPrevCommandCount());
-	CommandQueue.ViewMatrix = ActiveCamera->GetViewMatrix();
-	CommandQueue.ProjectionMatrix = ActiveCamera->GetProjectionMatrix();
+	//UCameraComponent* ActiveCamera = ActiveWorld->GetActiveCameraComponent();
+	//if (!ActiveCamera)
+	//{
+	//	Renderer->EndFrame();
+	//	return;
+	//}
 
-	FFrustum Frustum;
-	const FMatrix ViewProjection = CommandQueue.ViewMatrix * CommandQueue.ProjectionMatrix;
-	Frustum.ExtractFromVP(ViewProjection);
+	// default camera처리로 camera 보장
+	//FCameraViewInfo CameraViewInfo = ViewportClient->GetCameraViewInfo();
 
-	if (ViewportClient)
-	{
-		ViewportClient->BuildRenderCommands(this, Level, Frustum, CommandQueue);
-	}
-	else
-	{
-		// Level->CollectRenderCommands(Frustum, CommandQueue);
-	}
+	//CommandQueue.Clear();
+	//CommandQueue.Reserve(Renderer->GetPrevCommandCount());
+	//CommandQueue.ViewMatrix = CameraViewInfo.ViewMatrix;
+	//CommandQueue.ProjectionMatrix = CameraViewInfo.ProjectionMatrix;
 
-	Renderer->SubmitCommands(CommandQueue);
-	Renderer->ExecuteCommands();
-	const FShowFlags& ShowFlags = ViewportClient ? ViewportClient->GetShowFlags() : FShowFlags();
+	//FFrustum Frustum;
+	//const FMatrix ViewProjection = CommandQueue.ViewMatrix * CommandQueue.ProjectionMatrix;
+	//Frustum.ExtractFromVP(ViewProjection);
+
+	//if (ViewportClient)
+	//{
+	//	ViewportClient->BuildRenderCommands(this, Level, Frustum, CommandQueue);
+	//}
+	//else
+	//{
+	//	// Level->CollectRenderCommands(Frustum, CommandQueue);
+	//}
+
+	//Renderer->SubmitCommands(CommandQueue);
+	//Renderer->ExecuteCommands();
+	//const FShowFlags& ShowFlags = ViewportClient ? ViewportClient->GetShowFlags() : FShowFlags();
 	DebugDrawManager.Flush(Renderer.get(), ShowFlags, ActiveWorld);
 	Renderer->EndFrame();
 }
