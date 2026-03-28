@@ -12,7 +12,13 @@
 #include "Component/SubUVComponent.h"
 #include "Core/FEngine.h"
 #include "Component/TextComponent.h"
+#include "Camera/CameraInfo.h"
+#include "Component/CameraComponent.h"
 
+IViewportClient::IViewportClient(UCameraComponent* InCameraComponent)
+{
+	DefaultCamera = InCameraComponent;
+}
 
 void IViewportClient::Attach(FCore* Core, FRenderer* Renderer)
 {
@@ -90,6 +96,28 @@ void IViewportClient::HandleFileDoubleClick(const FString& FilePath)
 void IViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 {
 
+}
+
+void IViewportClient::SetActiveCamera(UCameraComponent* InCamera)
+{
+	
+	ActiveCamera = InCamera;
+
+	if (ActiveCamera == nullptr)
+	{
+		ActiveCamera = DefaultCamera;
+	}
+	
+}
+
+const FCameraViewInfo& IViewportClient::GetCameraViewInfo() const
+{
+	return (ActiveCamera == nullptr) ? DefaultCamera->GetViewInfo() : ActiveCamera->GetViewInfo();
+}
+
+void IViewportClient::OnViewportResied(uint32 InWidth, uint32 InHeight)
+{
+	ActiveCamera->SetAspectRatio(static_cast<float>(InWidth) / static_cast<float>(InHeight));
 }
 
 void FGameViewportClient::Attach(FCore* Core, FRenderer* Renderer)

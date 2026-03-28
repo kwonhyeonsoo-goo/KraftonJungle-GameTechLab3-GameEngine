@@ -199,13 +199,13 @@ void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPAR
 			return;
 		}
 
-		if (SelectedActor && Gizmo.BeginDrag(SelectedActor, Level, Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight))
+		if (SelectedActor && Gizmo.BeginDrag(SelectedActor, Level, this->GetCameraViewInfo(), Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight))
 		{
 			return;
 		}
 
 		{
-			AActor* PickedActor = Picker.PickActor(Level, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
+			AActor* PickedActor = Picker.PickActor(Level, this->GetCameraViewInfo(), ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
 			Core->SetSelectedActor(PickedActor);
 			EditorUI.SyncSelectedActorProperty();
 		}
@@ -220,11 +220,11 @@ void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPAR
 
 		if (!Gizmo.IsDragging())
 		{
-			Gizmo.UpdateHover(SelectedActor, Level, Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
+			Gizmo.UpdateHover(SelectedActor, Level, this->GetCameraViewInfo(), Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
 			return;
 		}
 
-		if (Gizmo.UpdateDrag(SelectedActor, Level, Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight))
+		if (Gizmo.UpdateDrag(SelectedActor, Level, this->GetCameraViewInfo(), Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight))
 		{
 			EditorUI.SyncSelectedActorProperty();
 		}
@@ -236,7 +236,7 @@ void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPAR
 			Gizmo.EndDrag();
 			if (bHasViewportMouse)
 			{
-				Gizmo.UpdateHover(SelectedActor, Level, Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
+				Gizmo.UpdateHover(SelectedActor, Level, this->GetCameraViewInfo(), Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
 			}
 			else
 			{
@@ -288,7 +288,7 @@ void FEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 	{
 		if (FilePath.ends_with(".obj"))
 		{
-			const FRay Ray = Picker.ScreenToRay(Core->GetLevel()->GetCamera(), ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
+			const FRay Ray = Picker.ScreenToRay(this->GetCameraViewInfo(), ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
 
 			AObjActor* NewActor = Core->GetLevel()->SpawnActor<AObjActor>("ObjActor");
 			
@@ -334,7 +334,7 @@ void FEditorViewportClient::BuildRenderCommands(FCore* Core, ULevel* Level,
 	AActor* GizmoTarget = Core->GetSelectedActor();
 	if (GizmoTarget && !GizmoTarget->IsA<ASkySphereActor>())
 	{
-		Gizmo.BuildRenderCommands(GizmoTarget, Level->GetCamera(), OutQueue);
+		Gizmo.BuildRenderCommands(GizmoTarget, this->GetCameraViewInfo(), OutQueue);
 	}
 }
 

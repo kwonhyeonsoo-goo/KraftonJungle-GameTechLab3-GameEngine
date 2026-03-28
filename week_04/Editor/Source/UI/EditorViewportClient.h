@@ -33,6 +33,8 @@ public:
 
 	void HandleFileDoubleClick(const FString& FilePath) override;
 	void HandleFileDropOnViewport(const FString& FilePath) override;
+
+
 	void BuildRenderCommands(FCore* Core, ULevel* Level,
 		const FFrustum& Frustum, FRenderCommandQueue& OutQueue) override;
 	float GetGridSize() const { return GridSize; }
