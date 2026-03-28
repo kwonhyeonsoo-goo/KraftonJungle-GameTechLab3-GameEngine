@@ -2,7 +2,7 @@
 #include "Types/Map.h"
 #include "Types/Array.h"
 #include "Types/String.h"
-#include "StaticMesh.h"
+#include "Renderer/Mesh/StaticMeshRenderData.h"
 #include "Renderer/Material.h"
 #include "Renderer/MaterialManager.h"
 #include "Renderer/ShaderMap.h"
@@ -15,7 +15,7 @@
 #include "Renderer/RenderState.h"
 #include "d3d11.h"
 
-class FTexture;
+struct FTexture;
 class UStaticMesh;
 // =========================
 // OBJ intermediate structs

@@ -6,7 +6,7 @@
 #include "MaterialManager.h"
 #include "Core/Paths.h"
 #include "Primitive/PrimitiveBase.h"
-#include "AssetManager.h"
+#include "Asset/AssetManager.h"
 #include <cassert>
 #include <algorithm>
 

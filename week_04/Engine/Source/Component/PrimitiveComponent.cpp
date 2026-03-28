@@ -1,8 +1,14 @@
 #include "PrimitiveComponent.h"
 #include "Object/Class.h"
 #include "Debug/EngineLog.h"
+#include "Actor/Actor.h"
 
 IMPLEMENT_RTTI(UPrimitiveComponent, USceneComponent)
+
+UPrimitiveComponent::~UPrimitiveComponent()
+{
+	OnUnregister();
+}
 
 FBoxSphereBounds UPrimitiveComponent::GetWorldBounds() const
 {
@@ -52,4 +58,36 @@ void UPrimitiveComponent::UpdateLocalBound()
 	{
 		MeshData->UpdateLocalBound();
 	}
+}
+
+void UPrimitiveComponent::OnRegister()
+{
+	// 추후 리팩토링 예정
+	/*
+	UWorld* World = GetOwner()->GetWorld();
+
+	if (World && World->GetScene())
+	{
+		SceneProxy = CreateProxy();
+		World->GetScene()->AddPrimitive(SceneProxy);
+	}
+	*/
+}
+
+void UPrimitiveComponent::OnUnregister()
+{
+	/*
+	if (SceneProxy)
+	{
+		GetOwner()->GetWorld()->GetScene()->RemovePrimitive(SceneProxy);
+
+		delete SceneProxy;
+		SceneProxy = nullptr;
+	}
+	*/
+}
+
+FMeshData* UPrimitiveComponent::CreateProxy() const
+{
+	return new FMeshData();
 }
