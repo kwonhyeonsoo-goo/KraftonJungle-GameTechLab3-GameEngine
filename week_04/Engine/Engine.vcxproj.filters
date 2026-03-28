@@ -632,6 +632,7 @@
     <ClInclude Include="Source\World\LevelTypes.h">
       <Filter>Source\World</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Camera\CameraInfo.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

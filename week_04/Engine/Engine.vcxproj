@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="PrimitiveLineBatch.h" />
     <ClInclude Include="Source\Actor\TextActor.h" />
+    <ClInclude Include="Source\Camera\CameraInfo.h" />
     <ClInclude Include="Source\Component\TextComponent.h" />
     <ClInclude Include="Source\CoreMinimal.h" />
     <ClInclude Include="Source\EngineAPI.h" />
