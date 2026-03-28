@@ -25,6 +25,7 @@ IViewportClient::IViewportClient()
 
 void IViewportClient::SetActiveCamera(UCameraComponent* InCamera)
 {
+	// 최초 등록에 대한 logic이 부족함
 	ActiveCamera = InCamera; // nullptr이면 GetActiveCamera()에서 DefaultCamera 반환
 }
 

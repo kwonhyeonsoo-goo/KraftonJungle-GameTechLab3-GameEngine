@@ -14,7 +14,6 @@
 #include "World/World.h"
 #include "imgui_impl_win32.h"
 #include "Pawn/EditorCameraPawn.h"
-#include "Actor/SkySphereActor.h"
 
 namespace
 {
@@ -23,8 +22,8 @@ namespace
 	void InitializeDefaultPreviewLevel(FCore* Core)
 	{
 		if (!Core) return;
-
-		FEditorWorldContext* PreviewContext = Core->GetLevelManager()->CreatePreviewWorldContext(PreviewLevelContextName, 1280, 720);
+		FEditorWorldContext* PreviewContext =
+			Core->GetLevelManager()->CreatePreviewWorldContext(PreviewLevelContextName, 1280, 720);
 		if (!PreviewContext || !PreviewContext->World) return;
 
 		UWorld* PreviewWorld = PreviewContext->World;
@@ -33,9 +32,9 @@ namespace
 			AActor* PreviewActor = PreviewWorld->SpawnActor<AActor>("PreviewCube");
 			if (PreviewActor)
 			{
-				UCubeComponent* PreviewComponent = FObjectFactory::ConstructObject<UCubeComponent>(PreviewActor);
-				PreviewActor->AddOwnedComponent(PreviewComponent);
-				PreviewActor->SetActorLocation({ 0.0f, 0.0f, 0.0f });
+				UCubeComponent* Comp = FObjectFactory::ConstructObject<UCubeComponent>(PreviewActor);
+				PreviewActor->AddOwnedComponent(Comp);
+				PreviewActor->SetActorLocation({ 0.f, 0.f, 0.f });
 			}
 		}
 	}
@@ -47,25 +46,14 @@ bool FEditorEngine::Initialize(HINSTANCE hInstance)
 	return FEngine::Initialize(hInstance, L"Jungle Editor", 1280, 720);
 }
 
-FEditorEngine::~FEditorEngine()
-{
-}
+FEditorEngine::~FEditorEngine() {}
 
 void FEditorEngine::Shutdown()
 {
-	if (EditorPawn)
-	{
-		EditorPawn->Destroy();
-		EditorPawn = nullptr;
-	}
-
+	if (EditorPawn) { EditorPawn->Destroy(); EditorPawn = nullptr; }
 	ViewportController.Cleanup();
-
-	// EditorViewportClient / PreviewViewportClient 포인터는
-	// ViewportClientArray가 소유 — FEngine::Shutdown()에서 정리됨
 	EditorViewportClient = nullptr;
 	PreviewViewportClient = nullptr;
-
 	FEngine::Shutdown();
 }
 
@@ -79,12 +67,12 @@ void FEditorEngine::PreInitialize()
 
 void FEditorEngine::CreateViewportClients()
 {
-	// EditorViewportClient
+	// [0] EditorViewportClient
 	auto EditorVP = std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
 	EditorViewportClient = EditorVP.get();
 	ViewportClientArray.push_back(std::move(EditorVP));
 
-	// PreviewViewportClient
+	// [1] PreviewViewportClient
 	auto PreviewVP = std::make_unique<FPreviewViewportClient>(EditorUI, MainWindow, PreviewLevelContextName);
 	PreviewViewportClient = PreviewVP.get();
 	ViewportClientArray.push_back(std::move(PreviewVP));
@@ -94,26 +82,26 @@ void FEditorEngine::PostInitialize()
 {
 	InitializeDefaultPreviewLevel(Core.get());
 
+	// ── FViewport ↔ IViewportClient 1:1 연결 ─────────────────────────
+	EditorUI.LinkViewportClient(0, EditorViewportClient);
+	EditorUI.LinkViewportClient(1, PreviewViewportClient);
+
+	// ── Console ───────────────────────────────────────────────────────
 	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
 	CVM.GetAllNames([this](const FString& Name)
 		{
 			EditorUI.GetConsole().RegisterCommand(Name.c_str());
 		});
-
 	EditorUI.GetConsole().SetCommandHandler([](const char* CommandLine)
 		{
 			FString Result;
 			if (FConsoleVariableManager::Get().Execute(CommandLine, Result))
-			{
 				FEngineLog::Get().Log("%s", Result.c_str());
-			}
 			else
-			{
 				FEngineLog::Get().Log("[error] Unknown command: '%s'", CommandLine);
-			}
 		});
 
-	// EditorPawn 생성 및 카메라를 EditorViewportClient에 연결
+	// ── EditorPawn / 카메라 연결 ──────────────────────────────────────
 	EditorPawn = FObjectFactory::ConstructObject<AEditorCameraPawn>(nullptr, "EditorCameraPawn");
 	EditorPawn->Initialize();
 
@@ -123,21 +111,17 @@ void FEditorEngine::PostInitialize()
 		EditorViewportClient->SetActiveCamera(EditorCamera);
 	}
 
-	// PreviewViewportClient는 PreviewWorld의 카메라를 사용
+	// PreviewViewportClient — World가 카메라를 소유하지 않으므로
+	// ViewportClient의 DefaultCamera를 직접 초기화
+	// World에 CameraActor를 배치하는 방식은 추후 확장 예정
 	if (PreviewViewportClient)
 	{
-		FEditorWorldContext* PreviewContext =
-			Core->GetLevelManager()->FindPreviewWorldContext(PreviewLevelContextName);
-		if (PreviewContext && PreviewContext->World)
+		UCameraComponent* PreviewCamera = PreviewViewportClient->GetActiveCamera();
+		if (PreviewCamera)
 		{
-			UCameraComponent* PreviewCamera = PreviewContext->World->GetActiveCameraComponent();
-			if (PreviewCamera)
-			{
-				PreviewCamera->SetPosition({ -8.0f, -8.0f, 6.0f });
-				PreviewCamera->SetRotation(45.0f, -20.0f);
-				PreviewCamera->SetFOV(50.0f);
-				PreviewViewportClient->SetActiveCamera(PreviewCamera);
-			}
+			PreviewCamera->SetPosition({ -8.f, -8.f, 6.f });
+			PreviewCamera->SetRotation(45.f, -20.f);
+			PreviewCamera->SetFOV(50.f);
 		}
 	}
 

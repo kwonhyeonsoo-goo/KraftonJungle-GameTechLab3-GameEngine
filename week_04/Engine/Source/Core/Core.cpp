@@ -257,13 +257,30 @@ void FCore::Render()
 		return;
 	}
 
+	// ── SkySphere 카메라 위치 주입 ─────────────────────────────────────
+	// 첫 번째 ViewportClient의 카메라 위치를 기준으로 SkySphere를 이동
+	// 다중 뷰포트에서는 주(primary) 뷰포트 기준
+	if (!ViewportClientArray.empty() && ViewportClientArray[0])
+	{
+		const FCameraViewInfo PrimaryViewInfo = ViewportClientArray[0]->GetCameraViewInfo();
+		for (AActor* Actor : Level->GetActors())
+		{
+			if (ASkySphereActor* Sky = dynamic_cast<ASkySphereActor*>(Actor))
+			{
+				Sky->SetCameraPosition(PrimaryViewInfo.Position);
+			}
+		}
+	}
+
 	for (IViewportClient* CurrentViewport : ViewportClientArray)
 	{
 		if (!CurrentViewport) continue;
 
-		// ── 1. D3D11_VIEWPORT 세팅 ─────────────────────────────────
+		// ── 1. RTV/DSV + D3D11_VIEWPORT 세팅 ──────────────────────
+		// FViewport가 매 프레임 SetViewportInfo()로 RTV/DSV와 크기를 채워줌
 		const FViewportInfo& VPInfo = CurrentViewport->GetViewportInfo();
 		if (VPInfo.Width <= 0.f || VPInfo.Height <= 0.f) continue;
+		if (!VPInfo.RTV || !VPInfo.DSV) continue;
 
 		D3D11_VIEWPORT D3DViewport = {};
 		D3DViewport.TopLeftX = VPInfo.TopLeftX;
@@ -272,7 +289,9 @@ void FCore::Render()
 		D3DViewport.Height = VPInfo.Height;
 		D3DViewport.MinDepth = VPInfo.MinDepth;
 		D3DViewport.MaxDepth = VPInfo.MaxDepth;
-		Renderer->SetD3DViewport(D3DViewport);
+
+		// Renderer API — RTV 바인딩 + D3D11_VIEWPORT 동시 설정
+		Renderer->SetLevelRenderTarget(VPInfo.RTV, VPInfo.DSV, D3DViewport);
 
 		// ── 2. 카메라 / 행렬 ───────────────────────────────────────
 		const FCameraViewInfo CameraViewInfo = CurrentViewport->GetCameraViewInfo();

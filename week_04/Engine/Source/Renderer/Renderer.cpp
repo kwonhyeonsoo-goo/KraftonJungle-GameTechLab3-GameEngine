@@ -31,20 +31,36 @@ FRenderer::~FRenderer()
 	Release();
 }
 
-void FRenderer::SetLevelRenderTarget(ID3D11RenderTargetView* InRenderTargetView, ID3D11DepthStencilView* InDepthStencilView, const D3D11_VIEWPORT& InViewport)
+void FRenderer::SetLevelRenderTarget(ID3D11RenderTargetView* InRTV,
+	ID3D11DepthStencilView* InDSV,
+	const D3D11_VIEWPORT& InViewport)
 {
-	LevelRenderTargetView = InRenderTargetView;
-	LevelDepthStencilView = InDepthStencilView;
+	LevelRenderTargetView = InRTV;
+	LevelDepthStencilView = InDSV;
 	LevelViewport = InViewport;
-	bUseLevelRenderTargetOverride = (LevelRenderTargetView != nullptr && LevelDepthStencilView != nullptr);
+	bUseLevelRenderTargetOverride = (InRTV != nullptr && InDSV != nullptr);
+
+	// 기존 코드 끝, 아래 3줄 추가
+	if (bUseLevelRenderTargetOverride)
+	{
+		constexpr float ClearColor[4] = { 0.f, 0.f, 0.f, 1.f };
+		DeviceContext->ClearRenderTargetView(LevelRenderTargetView, ClearColor);
+		DeviceContext->ClearDepthStencilView(LevelDepthStencilView,
+			D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0);
+		DeviceContext->OMSetRenderTargets(1, &LevelRenderTargetView, LevelDepthStencilView);
+		DeviceContext->RSSetViewports(1, &LevelViewport);
+	}
 }
 
 void FRenderer::ClearLevelRenderTarget()
 {
 	LevelRenderTargetView = nullptr;
 	LevelDepthStencilView = nullptr;
-	LevelViewport = {};
 	bUseLevelRenderTargetOverride = false;
+
+	// 기존 코드 끝, 아래 2줄 추가
+	DeviceContext->OMSetRenderTargets(1, &RenderTargetView, DepthStencilView);
+	DeviceContext->RSSetViewports(1, &Viewport);
 }
 
 void FRenderer::SetGUICallbacks(

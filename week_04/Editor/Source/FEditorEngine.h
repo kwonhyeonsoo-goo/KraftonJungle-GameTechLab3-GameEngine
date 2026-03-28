@@ -22,8 +22,6 @@ protected:
 	void PostInitialize() override;
 	void Tick(float DeltaTime) override;
 	ELevelType GetStartupLevelType() const override { return ELevelType::Editor; }
-
-	// ViewportClientArray에 EditorViewportClient, PreviewViewportClient 추가
 	void CreateViewportClients() override;
 
 	FEditorViewportController* GetViewportController();

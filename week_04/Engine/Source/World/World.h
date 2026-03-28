@@ -6,8 +6,7 @@
 // Forward declarations — include 최소화
 class ULevel;
 class AActor;
-class UCameraComponent;
-class FCamera;
+
 class FFrustum;
 struct FRenderCommandQueue;
 struct ID3D11Device;
@@ -35,10 +34,9 @@ public:
 	const TArray<AActor*>& GetActors() const;  // PersistentLevel만
 
 	ULevel* GetLevel() const { return PersistentLevel; }
-	// 카메라
-	void SetActiveCameraComponent(UCameraComponent* InCamera);
-	UCameraComponent* GetActiveCameraComponent() const;
-	FCamera* GetCamera() const;
+
+
+
 
 	// 라이프사이클
 	void InitializeWorld(float AspectRatio, ID3D11Device* Device = nullptr);
@@ -59,8 +57,8 @@ private:
 	float WorldTime = 0.f;
 	float DeltaSeconds = 0.f;
 	ELevelType WorldType = ELevelType::Game;
-	UCameraComponent* LevelCameraComponent = nullptr;    
-	TObjectPtr<UCameraComponent> ActiveCameraComponent;
+
+
 };
 #include "World/Level.h"
 

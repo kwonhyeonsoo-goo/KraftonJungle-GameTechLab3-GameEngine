@@ -4,7 +4,6 @@
 #include "Object/ObjectFactory.h"
 #include "Renderer/Renderer.h"
 #include "Component/CameraComponent.h"
-#include "Camera/Camera.h"
 
 FLevelManager::~FLevelManager()
 {
@@ -51,7 +50,7 @@ void FLevelManager::Release()
 	Renderer = nullptr;
 }
 
-// ===== World Context 생성/파괴 =====
+// ── World Context 생성/파괴 ────────────────────────────────────────────────
 
 bool FLevelManager::CreateWorldContext(FWorldContext& OutContext, const FString& ContextName,
 	ELevelType WorldType, float AspectRatio, bool bDefaultLevel)
@@ -60,10 +59,7 @@ bool FLevelManager::CreateWorldContext(FWorldContext& OutContext, const FString&
 	OutContext.WorldType = WorldType;
 
 	OutContext.World = FObjectFactory::ConstructObject<UWorld>(nullptr, ContextName);
-	if (!OutContext.World)
-	{
-		return false;
-	}
+	if (!OutContext.World) return false;
 
 	OutContext.World->SetWorldType(WorldType);
 
@@ -99,7 +95,7 @@ void FLevelManager::DestroyWorldContext(FEditorWorldContext& Context)
 	Context.Reset();
 }
 
-// ===== 하위 호환 Level 접근자 =====
+// ── Level 접근자 ───────────────────────────────────────────────────────────
 
 ULevel* FLevelManager::GetActiveLevel() const
 {
@@ -120,98 +116,68 @@ ULevel* FLevelManager::GetGameLevel() const
 ULevel* FLevelManager::GetPreviewLevel(const FString& ContextName) const
 {
 	const FEditorWorldContext* Context = FindPreviewWorld(ContextName);
-	if (Context && Context->World)
-	{
-		return Context->World->GetLevel();
-	}
-	return nullptr;
+	return (Context && Context->World) ? Context->World->GetLevel() : nullptr;
 }
 
-// ===== Activate =====
+// ── World 전환 ─────────────────────────────────────────────────────────────
 
 bool FLevelManager::ActivatePreviewLevel(const FString& ContextName)
 {
 	FEditorWorldContext* PreviewContext = FindPreviewWorld(ContextName);
-	if (PreviewContext == nullptr)
-	{
-		return false;
-	}
-
+	if (!PreviewContext) return false;
 	ActiveWorldContext = PreviewContext;
 	return true;
 }
 
-// ===== Selected Actor =====
+// ── 선택 Actor ─────────────────────────────────────────────────────────────
 
 FEditorWorldContext* FLevelManager::GetActiveEditorContext()
 {
 	if (ActiveWorldContext == &EditorWorldContext)
-	{
 		return &EditorWorldContext;
-	}
 
 	for (const std::unique_ptr<FEditorWorldContext>& Context : PreviewWorldContexts)
 	{
 		if (Context && Context.get() == ActiveWorldContext)
-		{
 			return Context.get();
-		}
 	}
-
 	return nullptr;
 }
 
 const FEditorWorldContext* FLevelManager::GetActiveEditorContext() const
 {
 	if (ActiveWorldContext == &EditorWorldContext)
-	{
 		return &EditorWorldContext;
-	}
 
 	for (const std::unique_ptr<FEditorWorldContext>& Context : PreviewWorldContexts)
 	{
 		if (Context && Context.get() == ActiveWorldContext)
-		{
 			return Context.get();
-		}
 	}
-
 	return nullptr;
 }
 
 void FLevelManager::SetSelectedActor(AActor* InActor)
 {
-	FEditorWorldContext* ActiveEditorContext = GetActiveEditorContext();
-	if (ActiveEditorContext)
-	{
-		ActiveEditorContext->SelectedActor = InActor;
-		return;
-	}
-
+	FEditorWorldContext* Ctx = GetActiveEditorContext();
+	if (Ctx) { Ctx->SelectedActor = InActor; return; }
 	EditorWorldContext.SelectedActor = InActor;
 }
 
 AActor* FLevelManager::GetSelectedActor() const
 {
-	const FEditorWorldContext* ActiveEditorContext = GetActiveEditorContext();
-	if (ActiveEditorContext)
-	{
-		return ActiveEditorContext->SelectedActor;
-	}
-
-	return EditorWorldContext.SelectedActor;
+	const FEditorWorldContext* Ctx = GetActiveEditorContext();
+	return Ctx ? Ctx->SelectedActor : EditorWorldContext.SelectedActor;
 }
 
-// ===== Preview =====
+// ── Preview ─────────────────────────────────────────────────────────────────
 
 FEditorWorldContext* FLevelManager::FindPreviewWorld(const FString& ContextName)
 {
 	for (const std::unique_ptr<FEditorWorldContext>& Context : PreviewWorldContexts)
 	{
 		if (Context && Context->ContextName == ContextName)
-		{
 			return Context.get();
-		}
 	}
 	return nullptr;
 }
@@ -221,24 +187,28 @@ const FEditorWorldContext* FLevelManager::FindPreviewWorld(const FString& Contex
 	for (const std::unique_ptr<FEditorWorldContext>& Context : PreviewWorldContexts)
 	{
 		if (Context && Context->ContextName == ContextName)
-		{
 			return Context.get();
-		}
 	}
 	return nullptr;
 }
 
+// public 래퍼 — FEditorEngine에서 호출
+FEditorWorldContext* FLevelManager::FindPreviewWorldContext(const FString& ContextName)
+{
+	return FindPreviewWorld(ContextName);
+}
+
+const FEditorWorldContext* FLevelManager::FindPreviewWorldContext(const FString& ContextName) const
+{
+	return FindPreviewWorld(ContextName);
+}
+
 FEditorWorldContext* FLevelManager::CreatePreviewWorldContext(const FString& ContextName, int32 WindowWidth, int32 WindowHeight)
 {
-	if (ContextName.empty())
-	{
-		return nullptr;
-	}
+	if (ContextName.empty()) return nullptr;
 
-	if (FEditorWorldContext* ExistingContext = FindPreviewWorld(ContextName))
-	{
-		return ExistingContext;
-	}
+	if (FEditorWorldContext* Existing = FindPreviewWorld(ContextName))
+		return Existing;
 
 	std::unique_ptr<FEditorWorldContext> PreviewContext = std::make_unique<FEditorWorldContext>();
 	const float AspectRatio = (WindowHeight > 0)
@@ -246,13 +216,11 @@ FEditorWorldContext* FLevelManager::CreatePreviewWorldContext(const FString& Con
 		: 1.0f;
 
 	if (!CreateWorldContext(*PreviewContext, ContextName, ELevelType::Preview, AspectRatio, false))
-	{
 		return nullptr;
-	}
 
-	FEditorWorldContext* CreatedContext = PreviewContext.get();
+	FEditorWorldContext* Created = PreviewContext.get();
 	PreviewWorldContexts.push_back(std::move(PreviewContext));
-	return CreatedContext;
+	return Created;
 }
 
 bool FLevelManager::DestroyPreviewWorld(const FString& ContextName)
@@ -264,48 +232,24 @@ bool FLevelManager::DestroyPreviewWorld(const FString& ContextName)
 			if (ActiveWorldContext == It->get())
 			{
 				ActivateEditorLevel();
-				if (ActiveWorldContext == nullptr)
-				{
-					ActivateGameLevel();
-				}
+				if (!ActiveWorldContext) ActivateGameLevel();
 			}
-
 			DestroyWorldContext(*(*It));
 			PreviewWorldContexts.erase(It);
 			return true;
 		}
 	}
-
 	return false;
 }
 
-// ===== Resize =====
+// ── Resize ─────────────────────────────────────────────────────────────────
+// AspectRatio 동기화는 ViewportClient::OnViewportResized() 책임
+// LevelManager는 Renderer 리사이즈만 알림
 
 void FLevelManager::OnResize(int32 Width, int32 Height)
 {
-	if (Width == 0 || Height == 0)
-	{
-		return;
-	}
-
-	const float NewAspect = static_cast<float>(Width) / static_cast<float>(Height);
-
-	auto UpdateAspect = [NewAspect](UWorld* World)
-	{
-		if (World && World->GetCamera())
-		{
-			World->GetCamera()->SetAspectRatio(NewAspect);
-		}
-	};
-
-	UpdateAspect(GameWorldContext.World);
-	UpdateAspect(EditorWorldContext.World);
-
-	for (const std::unique_ptr<FEditorWorldContext>& PreviewContext : PreviewWorldContexts)
-	{
-		if (PreviewContext)
-		{
-			UpdateAspect(PreviewContext->World);
-		}
-	}
+	// 의도적으로 비워둠
+	// 카메라 AspectRatio는 FViewport → SetViewportInfo() → OnViewportResized()로 처리됨
+	(void)Width;
+	(void)Height;
 }
