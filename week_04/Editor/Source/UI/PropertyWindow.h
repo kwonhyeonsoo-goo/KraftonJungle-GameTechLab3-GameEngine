@@ -2,13 +2,13 @@
 #include "Math/Vector.h"
 #include "imgui.h"
 #include <functional>
-class CCore;
+class FCore;
 using FPropertyChangedCallback = std::function<void(const FVector&, const FVector&, const FVector&)>;
 
-class CPropertyWindow
+class FPropertyWindow
 {
 public:
-	void Render(CCore* Core);
+	void Render(FCore* Core);
 	void SetTarget(const FVector& Location, const FVector& Rotation, const FVector& Scale,
 		const char* ActorName = nullptr);
 

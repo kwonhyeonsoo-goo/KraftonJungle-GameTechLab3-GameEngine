@@ -22,7 +22,7 @@ namespace
 {
 	constexpr const char* PreviewLevelContextName = "PreviewLevel";
 
-	void InitializeDefaultPreviewLevel(CCore* Core)
+	void InitializeDefaultPreviewLevel(FCore* Core)
 	{
 		if (Core == nullptr)
 		{
@@ -104,7 +104,7 @@ void FEditorEngine::PreInitialize()
 void FEditorEngine::PostInitialize()
 {
 	InitializeDefaultPreviewLevel(Core.get());
-	PreviewViewportClient = std::make_unique<CPreviewViewportClient>(EditorUI, MainWindow, PreviewLevelContextName);
+	PreviewViewportClient = std::make_unique<FPreviewViewportClient>(EditorUI, MainWindow, PreviewLevelContextName);
 
 	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
 
@@ -161,12 +161,12 @@ void FEditorEngine::Tick(float DeltaTime)
 	SyncViewportClient();
 }
 
-std::unique_ptr<IViewportClient> FEditorEngine::CreateViewportClient()
+std::unique_ptr<FViewportClient> FEditorEngine::CreateViewportClient()
 {
-	return std::make_unique<CEditorViewportClient>(EditorUI, MainWindow);
+	return std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
 }
 
-CEditorViewportController* FEditorEngine::GetViewportController()
+FEditorViewportController* FEditorEngine::GetViewportController()
 {
 	return &ViewportController;
 }
@@ -178,7 +178,7 @@ void FEditorEngine::SyncViewportClient()
 		return;
 	}
 
-	IViewportClient* TargetViewportClient = ViewportClient.get();
+	FViewportClient* TargetViewportClient = ViewportClient.get();
 	const FWorldContext* ActiveWorldContext = Core->GetActiveWorldContext();
 	if (ActiveWorldContext && ActiveWorldContext->WorldType == ELevelType::Preview && PreviewViewportClient)
 	{

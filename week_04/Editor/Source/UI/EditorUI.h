@@ -8,46 +8,46 @@
 #include "Types/ObjectPtr.h"
 #include "ContentBrowserWindow.h"
 
-class CCore;
-class CWindow;
-class CRenderer;
+class FCore;
+class FWindow;
+class FRenderer;
 class AActor;
-class CEditorViewportClient;
-class CEditorUI
+class FEditorViewportClient;
+class FEditorUI
 {
 public:
-	void Initialize(CCore* InCore);
-	void SetupWindow(CWindow* InWindow);
-	void AttachToRenderer(CRenderer* InRenderer);
-	void DetachFromRenderer(CRenderer* InRenderer);
+	void Initialize(FCore* InCore);
+	void SetupWindow(FWindow* InWindow);
+	void AttachToRenderer(FRenderer* InRenderer);
+	void DetachFromRenderer(FRenderer* InRenderer);
 	void Render();
 	void SyncSelectedActorProperty();
 	bool GetViewportMousePosition(int32 WindowMouseX, int32 WindowMouseY, int32& OutViewportX, int32& OutViewportY, int32& OutWidth, int32& OutHeight) const;
 	bool IsViewportInteractive() const;
 
-	CConsoleWindow& GetConsole() { return Console; }
-	CCore* GetCore() { return Core; }
+	FConsoleWindow& GetConsole() { return Console; }
+	FCore* GetCore() { return Core; }
 
 private:
 	void BuildDefaultLayout(uint32 DockID);
 	void LoadEditorSettings();
 	void SaveEditorSettings();
 	std::wstring GetEditorIniPathW() const;
-	CCore* Core = nullptr;
+	FCore* Core = nullptr;
 	TObjectPtr<AActor> CachedSelectedActor;
 
-	CWindow* MainWindow = nullptr;
+	FWindow* MainWindow = nullptr;
 
-	CControlPanelWindow ControlPanel;
-	CPropertyWindow Property;
-	CConsoleWindow Console;
-	CStatWindow Stat;
-	CViewport Viewport;
-	COutlinerWindow Outliner;
-	CContentBrowserWindow ContentBrowser;
+	FControlPanelWindow ControlPanel;
+	FPropertyWindow Property;
+	FConsoleWindow Console;
+	FStatWindow Stat;
+	FViewport Viewport;
+	FOutlinerWindow Outliner;
+	FContentBrowserWindow ContentBrowser;
 
 	bool bWindowSetup = false;
 	bool bViewportClientActive = false;
 	bool bLayoutInitialized = false;
-	CRenderer* CurrentRenderer = nullptr;
+	FRenderer* CurrentRenderer = nullptr;
 };

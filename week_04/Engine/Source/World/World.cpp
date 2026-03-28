@@ -213,7 +213,7 @@ UCameraComponent* UWorld::GetActiveCameraComponent() const
 	return ActiveCameraComponent ? ActiveCameraComponent.Get() : LevelCameraComponent;
 }
 
-CCamera* UWorld::GetCamera() const
+FCamera* UWorld::GetCamera() const
 {
 	UCameraComponent* Cam = GetActiveCameraComponent();
 	return Cam ? Cam->GetCamera() : nullptr;

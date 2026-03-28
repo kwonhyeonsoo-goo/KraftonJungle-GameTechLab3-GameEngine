@@ -10,7 +10,7 @@
 #include "Component/TextComponent.h"
 #include "Component/UUIDBillboardComponent.h"
 
-void COutlinerWindow::Render(CCore* Core)
+void FOutlinerWindow::Render(FCore* Core)
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
 	const bool bOpen = ImGui::Begin("Outliner");

@@ -11,7 +11,7 @@ FLevelManager::~FLevelManager()
 	Release();
 }
 
-bool FLevelManager::Initialize(float AspectRatio, ELevelType StartupLevelType, CRenderer* InRenderer)
+bool FLevelManager::Initialize(float AspectRatio, ELevelType StartupLevelType, FRenderer* InRenderer)
 {
 	Renderer = InRenderer;
 

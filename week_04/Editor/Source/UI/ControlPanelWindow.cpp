@@ -46,7 +46,7 @@ namespace
 	}
 }
 
-void CControlPanelWindow::Render(CCore* Core)
+void FControlPanelWindow::Render(FCore* Core)
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
 	const bool bOpen = ImGui::Begin("Control Panel");
@@ -130,7 +130,7 @@ void CControlPanelWindow::Render(CCore* Core)
 		}
 		*/
 		
-		if (CCamera* Camera = Core->GetLevel()->GetCamera())
+		if (FCamera* Camera = Core->GetLevel()->GetCamera())
 		{
 		
 			float Sensitivity = Camera->GetMouseSensitivity();
