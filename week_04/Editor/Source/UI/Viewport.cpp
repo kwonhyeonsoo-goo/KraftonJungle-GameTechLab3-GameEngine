@@ -1,148 +1,61 @@
 #include "Viewport.h"
 
-#include "EditorViewportClient.h"
-#include "Core/Core.h"
 #include "Core/ViewportClient.h"
 #include "Renderer/Renderer.h"
 #include "Camera/ViewportInfo.h"
-#include "imgui.h"
-
-namespace
-{
-	void ReleaseIfValid(IUnknown*& Resource)
-	{
-		if (Resource)
-		{
-			Resource->Release();
-			Resource = nullptr;
-		}
-	}
-
-	bool RenderGizmoModeButton(const char* Label, EGizmoMode Mode, FEditorViewportClient* ViewportClient)
-	{
-		if (!ViewportClient) return false;
-
-		const bool bSelected = (ViewportClient->GetGizmoMode() == Mode);
-		const float ButtonHeight = ImGui::GetFrameHeight();
-		const ImVec2 ButtonSize(ButtonHeight, ButtonHeight);
-
-		if (bSelected)
-		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.45f, 0.85f, 1.0f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.55f, 0.95f, 1.0f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.20f, 0.40f, 0.80f, 1.0f));
-		}
-
-		const bool bClicked = ImGui::Button(Label, ButtonSize);
-
-		if (bSelected) ImGui::PopStyleColor(3);
-		return bClicked;
-	}
-}
 
 FViewport::~FViewport()
 {
 	ReleaseLevelView();
 }
 
-void FViewport::Render(FCore* Core, FRenderer* Renderer, HWND Hwnd)
+// ── PrepareAndUpdate ───────────────────────────────────────────────────────
+// EditorUI가 4분할 영역 계산 후 호출
+// RTV 준비 + ViewportInfo 전달만 담당 (ImGui 창 관리 없음)
+
+void FViewport::PrepareAndUpdate(FRenderer* Renderer, HWND Hwnd,
+	float RegionX, float RegionY,
+	float RegionW, float RegionH)
 {
-	const bool bOpen = ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_MenuBar);
+	const uint32 W = RegionW > 1.f ? static_cast<uint32>(RegionW) : 0;
+	const uint32 H = RegionH > 1.f ? static_cast<uint32>(RegionH) : 0;
 
-	if (!bOpen)
-	{
-		bHovered = false;
-		bFocused = false;
-		bVisible = false;
-		if (Renderer) Renderer->ClearLevelRenderTarget();
-		ImGui::End();
-		return;
-	}
-
-	// ── 메뉴바 — 연결된 ViewportClient가 EditorViewportClient인 경우만 표시 ──
-	if (ImGui::BeginMenuBar())
-	{
-		FEditorViewportClient* EditorVP =
-			LinkedViewportClient
-			? dynamic_cast<FEditorViewportClient*>(LinkedViewportClient)
-			: nullptr;
-
-		if (EditorVP)
-		{
-			ImGui::Separator();
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, ImGui::GetStyle().ItemSpacing.y));
-
-			if (RenderGizmoModeButton("T", EGizmoMode::Location, EditorVP))
-				EditorVP->SetGizmoMode(EGizmoMode::Location);
-			if (RenderGizmoModeButton("R", EGizmoMode::Rotation, EditorVP))
-				EditorVP->SetGizmoMode(EGizmoMode::Rotation);
-			if (RenderGizmoModeButton("S", EGizmoMode::Scale, EditorVP))
-				EditorVP->SetGizmoMode(EGizmoMode::Scale);
-
-			ImGui::PopStyleVar();
-
-			float RenderModeComboWidth = 120.0f;
-			ImGui::SetCursorPosX(ImGui::GetWindowWidth() - RenderModeComboWidth);
-			ImGui::SetNextItemWidth(RenderModeComboWidth);
-			{
-				ERenderMode RenderMode = EditorVP->GetRenderMode();
-				ImGui::Combo("", (int*)&RenderMode, "Lighting\0No Lighting\0Wireframe", 3);
-				EditorVP->SetRenderMode(RenderMode);
-			}
-		}
-		ImGui::EndMenuBar();
-	}
-
-	bFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
-	bHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
-
-	// ── 크기 / 위치 계산 ──────────────────────────────────────────────────
-	const ImVec2 ContentPos = ImGui::GetCursorScreenPos();
-	const ImVec2 ContentSize = ImGui::GetContentRegionAvail();
-	const uint32 NewWidth = ContentSize.x > 1.0f ? static_cast<uint32>(ContentSize.x) : 0;
-	const uint32 NewHeight = ContentSize.y > 1.0f ? static_cast<uint32>(ContentSize.y) : 0;
-
-	bVisible = (NewWidth > 0 && NewHeight > 0);
-
-	if (Hwnd)
-	{
-		POINT ClientPoint = {
-			static_cast<LONG>(ContentPos.x),
-			static_cast<LONG>(ContentPos.y)
-		};
-		::ScreenToClient(Hwnd, &ClientPoint);
-		ClientPosX = ClientPoint.x;
-		ClientPosY = ClientPoint.y;
-	}
-	else
-	{
-		ClientPosX = 0;
-		ClientPosY = 0;
-	}
+	bVisible = (W > 0 && H > 0);
 
 	if (!bVisible)
 	{
 		ReleaseLevelView();
-		if (Renderer) Renderer->ClearLevelRenderTarget();
-		ImGui::End();
 		return;
 	}
 
-	// ── RTV/DSV 생성 ──────────────────────────────────────────────────────
+	// RTV 생성 / 갱신
 	if (Renderer)
 	{
-		ReadyLevelView(Renderer->GetDevice(), NewWidth, NewHeight);
+		ReadyLevelView(Renderer->GetDevice(), W, H);
 	}
 
-	// ── FViewportInfo 생성 후 LinkedViewportClient에 전달 ─────────────────
-	// Core::Render() 루프에서 이 정보를 읽어 D3D11_VIEWPORT 세팅 및 RTV 바인딩
+	// 클라이언트 오프셋 — 마우스 피킹용
+	if (Hwnd)
+	{
+		POINT Pt = { static_cast<LONG>(RegionX), static_cast<LONG>(RegionY) };
+		::ScreenToClient(Hwnd, &Pt);
+		ClientPosX = Pt.x;
+		ClientPosY = Pt.y;
+	}
+	else
+	{
+		ClientPosX = static_cast<int32>(RegionX);
+		ClientPosY = static_cast<int32>(RegionY);
+	}
+
+	// ViewportInfo 전달 — Core::Render()가 읽어서 SetLevelRenderTarget 호출
 	if (LinkedViewportClient && RenderTargetView && DepthStencilView)
 	{
 		FViewportInfo Info;
 		Info.TopLeftX = 0.f;
 		Info.TopLeftY = 0.f;
-		Info.Width = static_cast<float>(NewWidth);
-		Info.Height = static_cast<float>(NewHeight);
+		Info.Width = static_cast<float>(W);
+		Info.Height = static_cast<float>(H);
 		Info.MinDepth = 0.f;
 		Info.MaxDepth = 1.f;
 		Info.ClientPosX = ClientPosX;
@@ -150,24 +63,11 @@ void FViewport::Render(FCore* Core, FRenderer* Renderer, HWND Hwnd)
 		Info.RTV = RenderTargetView;
 		Info.DSV = DepthStencilView;
 
-		// SetViewportInfo 내부에서 OnViewportResized() 자동 호출 → AspectRatio 동기화
 		LinkedViewportClient->SetViewportInfo(Info);
 	}
-	else if (Renderer)
-	{
-		Renderer->ClearLevelRenderTarget();
-	}
-
-	// ── ImGui에 결과 텍스처 표시 ──────────────────────────────────────────
-	if (ShaderResourceView)
-	{
-		ImGui::Image(
-			reinterpret_cast<ImTextureID>(ShaderResourceView),
-			ImVec2(static_cast<float>(NewWidth), static_cast<float>(NewHeight)));
-	}
-
-	ImGui::End();
 }
+
+// ── ReleaseLevelView ───────────────────────────────────────────────────────
 
 void FViewport::ReleaseLevelView()
 {
@@ -186,12 +86,14 @@ void FViewport::ReleaseLevelView()
 	OffscreenHeight = 0;
 }
 
+// ── GetMousePositionInViewport ─────────────────────────────────────────────
+
 bool FViewport::GetMousePositionInViewport(int32 WindowMouseX, int32 WindowMouseY,
 	int32& OutViewportX, int32& OutViewportY,
 	int32& OutWidth, int32& OutHeight) const
 {
 	if (!bVisible || OffscreenWidth == 0 || OffscreenHeight == 0) return false;
-	if (WindowMouseX < ClientPosX || WindowMouseY < ClientPosY) return false;
+	if (WindowMouseX < ClientPosX || WindowMouseY < ClientPosY)   return false;
 
 	const int32 LocalX = WindowMouseX - ClientPosX;
 	const int32 LocalY = WindowMouseY - ClientPosY;
@@ -209,25 +111,22 @@ bool FViewport::GetMousePositionInViewport(int32 WindowMouseX, int32 WindowMouse
 	return true;
 }
 
+// ── ReadyLevelView ─────────────────────────────────────────────────────────
+
 void FViewport::ReadyLevelView(ID3D11Device* Device, uint32 Width, uint32 Height)
 {
 	if (!Device) return;
 
-	if (Width == 0 || Height == 0)
-	{
-		ReleaseLevelView();
-		return;
-	}
+	if (Width == 0 || Height == 0) { ReleaseLevelView(); return; }
 
 	if (RenderTargetView && ShaderResourceView && DepthStencilView &&
 		OffscreenWidth == Width && OffscreenHeight == Height)
 	{
-		return; // 크기 동일 — 재생성 불필요
+		return;
 	}
 
 	ReleaseLevelView();
 
-	// Color
 	D3D11_TEXTURE2D_DESC ColorDesc = {};
 	ColorDesc.Width = Width;
 	ColorDesc.Height = Height;
@@ -242,7 +141,6 @@ void FViewport::ReadyLevelView(ID3D11Device* Device, uint32 Width, uint32 Height
 	if (FAILED(Device->CreateRenderTargetView(RenderTargetTexture, nullptr, &RenderTargetView))) { ReleaseLevelView(); return; }
 	if (FAILED(Device->CreateShaderResourceView(RenderTargetTexture, nullptr, &ShaderResourceView))) { ReleaseLevelView(); return; }
 
-	// Depth
 	D3D11_TEXTURE2D_DESC DepthDesc = {};
 	DepthDesc.Width = Width;
 	DepthDesc.Height = Height;

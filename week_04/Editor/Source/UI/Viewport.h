@@ -2,7 +2,6 @@
 #include <d3d11.h>
 #include <CoreMinimal.h>
 
-class FCore;
 class FRenderer;
 class IViewportClient;
 
@@ -11,7 +10,15 @@ class FViewport
 public:
 	~FViewport();
 
-	void Render(FCore* Core, FRenderer* Renderer, HWND Hwnd);
+	// RTV 준비 + ViewportInfo 전달
+	// EditorUI가 4분할 영역 계산 후 호출
+	void PrepareAndUpdate(FRenderer* Renderer, HWND Hwnd,
+		float RegionX, float RegionY,
+		float RegionW, float RegionH);
+
+	// ImGui::Image용 SRV
+	ID3D11ShaderResourceView* GetSRV() const { return ShaderResourceView; }
+
 	void ReleaseLevelView();
 	bool GetMousePositionInViewport(int32 WindowMouseX, int32 WindowMouseY,
 		int32& OutViewportX, int32& OutViewportY,
@@ -21,10 +28,11 @@ public:
 	bool IsFocused()  const { return bFocused; }
 	bool IsVisible()  const { return bVisible; }
 
+	void SetHovered(bool b) { bHovered = b; }
+	void SetFocused(bool b) { bFocused = b; }
+
 	void ReadyLevelView(ID3D11Device* Device, uint32 Width, uint32 Height);
 
-	// 이 FViewport가 정보를 밀어넣을 ViewportClient
-	// 소유권 없음 — 수명은 FEditorEngine이 보장
 	void SetLinkedViewportClient(IViewportClient* InClient) { LinkedViewportClient = InClient; }
 	IViewportClient* GetLinkedViewportClient() const { return LinkedViewportClient; }
 
@@ -43,6 +51,5 @@ private:
 	bool   bFocused = false;
 	bool   bVisible = false;
 
-	// 연결된 ViewportClient — nullptr이면 렌더 정보 전달 생략
 	IViewportClient* LinkedViewportClient = nullptr;
 };

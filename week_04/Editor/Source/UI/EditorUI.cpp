@@ -63,7 +63,6 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM,
 
 void FEditorUI::LinkViewportClient(int32 Index, IViewportClient* InClient)
 {
-	// 배열 크기 자동 확장
 	if (Index >= static_cast<int32>(Viewports.size()))
 	{
 		Viewports.resize(Index + 1);
@@ -76,9 +75,7 @@ IViewportClient* FEditorUI::GetFocusedViewportClient() const
 	for (const FViewport& VP : Viewports)
 	{
 		if (VP.IsFocused() || VP.IsHovered())
-		{
 			return VP.GetLinkedViewportClient();
-		}
 	}
 	return GetPrimaryViewportClient();
 }
@@ -86,9 +83,7 @@ IViewportClient* FEditorUI::GetFocusedViewportClient() const
 IViewportClient* FEditorUI::GetPrimaryViewportClient() const
 {
 	if (!Viewports.empty())
-	{
 		return Viewports[0].GetLinkedViewportClient();
-	}
 	return nullptr;
 }
 
@@ -116,9 +111,7 @@ void FEditorUI::Initialize(FCore* InCore)
 	ContentBrowser.OnFileDoubleClickCallback = [this](const FString& FilePath)
 		{
 			if (IViewportClient* VP = GetFocusedViewportClient())
-			{
 				VP->HandleFileDoubleClick(FilePath);
-			}
 		};
 
 	ContentBrowser.OnFileDragEnd = [this](const FString& DraggingFilePath, const FString& ReleaseDirectory)
@@ -129,7 +122,6 @@ void FEditorUI::Initialize(FCore* InCore)
 				{
 					std::filesystem::path Src = DraggingFilePath;
 					std::filesystem::path Dst = std::filesystem::path(ReleaseDirectory) / Src.filename();
-
 					std::error_code ec;
 					if (std::filesystem::exists(Dst))
 					{
@@ -147,7 +139,6 @@ void FEditorUI::Initialize(FCore* InCore)
 			}
 			else
 			{
-				// 포커스된 뷰포트에 드롭
 				for (const FViewport& VP : Viewports)
 				{
 					if (VP.IsHovered())
@@ -169,7 +160,7 @@ void FEditorUI::Initialize(FCore* InCore)
 void FEditorUI::AttachToRenderer(FRenderer* InRenderer)
 {
 	if (!Core || !InRenderer) return;
-
+	if (bViewportActive) return;
 	bViewportActive = true;
 	CurrentRenderer = InRenderer;
 
@@ -265,9 +256,7 @@ void FEditorUI::AttachToRenderer(FRenderer* InRenderer)
 					if (!Component->IsA(UPrimitiveComponent::StaticClass())) continue;
 					UPrimitiveComponent* PC = static_cast<UPrimitiveComponent*>(Component);
 					if (PC->GetPrimitive())
-					{
 						Renderer->RenderOutline(PC->GetPrimitive()->GetMeshData(), PC->GetWorldTransform());
-					}
 				}
 			}
 		});
@@ -283,9 +272,7 @@ void FEditorUI::DetachFromRenderer(FRenderer* InRenderer)
 	CurrentRenderer = nullptr;
 
 	for (FViewport& VP : Viewports)
-	{
 		VP.ReleaseLevelView();
-	}
 
 	if (InRenderer)
 	{
@@ -364,11 +351,121 @@ void FEditorUI::Render()
 	ImGui::PopStyleVar();
 	ImGui::End();
 
-	// ── 뷰포트 배열 렌더 ────────────────────────────────────────────────
-	const HWND Hwnd = MainWindow ? MainWindow->GetHwnd() : nullptr;
-	for (FViewport& VP : Viewports)
+	// ── 4분할 씬 뷰포트 ─────────────────────────────────────────────────
+	// 하나의 ImGui 창 안에 4개의 씬을 배치
+	// Gizmo 버튼은 Viewports[0](주 뷰포트) 기준
 	{
-		VP.Render(Core, CurrentRenderer, Hwnd);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+		const bool bVPOpen = ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoScrollbar);
+		ImGui::PopStyleVar();
+
+		if (bVPOpen)
+		{
+			// ── 메뉴바 (Gizmo 버튼) ─────────────────────────────────
+			if (ImGui::BeginMenuBar())
+			{
+				FEditorViewportClient* EditorVP =
+					dynamic_cast<FEditorViewportClient*>(GetPrimaryViewportClient());
+
+				if (EditorVP)
+				{
+					ImGui::Separator();
+					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, ImGui::GetStyle().ItemSpacing.y));
+
+					auto GizmoBtn = [&](const char* Label, EGizmoMode Mode)
+						{
+							const bool bSel = EditorVP->GetGizmoMode() == Mode;
+							const float H = ImGui::GetFrameHeight();
+							if (bSel)
+							{
+								ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.45f, 0.85f, 1.f));
+								ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.55f, 0.95f, 1.f));
+								ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.20f, 0.40f, 0.80f, 1.f));
+							}
+							if (ImGui::Button(Label, ImVec2(H, H)))
+								EditorVP->SetGizmoMode(Mode);
+							if (bSel) ImGui::PopStyleColor(3);
+						};
+
+					GizmoBtn("T", EGizmoMode::Location);
+					GizmoBtn("R", EGizmoMode::Rotation);
+					GizmoBtn("S", EGizmoMode::Scale);
+					ImGui::PopStyleVar();
+
+					// RenderMode 콤보 — 오른쪽 정렬
+					float ComboW = 120.f;
+					ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ComboW);
+					ImGui::SetNextItemWidth(ComboW);
+					{
+						ERenderMode Mode = EditorVP->GetRenderMode();
+						ImGui::Combo("##RM", (int*)&Mode, "Lighting\0No Lighting\0Wireframe", 3);
+						EditorVP->SetRenderMode(Mode);
+					}
+				}
+				ImGui::EndMenuBar();
+			}
+
+			// ── 4분할 영역 계산 ──────────────────────────────────────
+			const ImVec2 Origin = ImGui::GetCursorScreenPos();
+			const ImVec2 Total = ImGui::GetContentRegionAvail();
+			const float  HalfW = Total.x * 0.5f;
+			const float  HalfH = Total.y * 0.5f;
+			const HWND   Hwnd = MainWindow ? MainWindow->GetHwnd() : nullptr;
+
+			// 4개 영역 정의 [좌상, 우상, 좌하, 우하]
+			struct Region { float X, Y, W, H; };
+			const Region Regions[4] =
+			{
+				{ Origin.x,         Origin.y,         HalfW, HalfH },
+				{ Origin.x + HalfW, Origin.y,         HalfW, HalfH },
+				{ Origin.x,         Origin.y + HalfH, HalfW, HalfH },
+				{ Origin.x + HalfW, Origin.y + HalfH, HalfW, HalfH },
+			};
+
+			const ImVec2 MousePos = ImGui::GetMousePos();
+
+			for (int i = 0; i < static_cast<int>(Viewports.size()) && i < 4; i++)
+			{
+				const Region& R = Regions[i];
+				FViewport& VP = Viewports[i];
+
+				// hover/focus 계산
+				const ImVec2 RMin(R.X, R.Y);
+				const ImVec2 RMax(R.X + R.W, R.Y + R.H);
+				const bool bHov = ImGui::IsMouseHoveringRect(RMin, RMax, false)
+					&& ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
+				const bool bFoc = bHov && ImGui::IsMouseDown(ImGuiMouseButton_Left);
+				VP.SetHovered(bHov);
+				VP.SetFocused(bFoc);
+
+				// RTV 준비 + ViewportInfo 전달
+				VP.PrepareAndUpdate(CurrentRenderer, Hwnd, R.X, R.Y, R.W, R.H);
+
+				// ImGui에 씬 텍스처 표시
+				ImGui::SetCursorScreenPos(RMin);
+				if (ID3D11ShaderResourceView* SRV = VP.GetSRV())
+				{
+					ImGui::Image(reinterpret_cast<ImTextureID>(SRV), ImVec2(R.W, R.H));
+				}
+
+				// 구분선 (오른쪽 / 아래)
+				ImDrawList* DL = ImGui::GetWindowDrawList();
+				if (i == 0 || i == 2) // 세로 구분선
+					DL->AddLine(ImVec2(R.X + R.W, R.Y), ImVec2(R.X + R.W, R.Y + R.H), IM_COL32(80, 80, 80, 255), 1.f);
+				if (i == 0 || i == 1) // 가로 구분선
+					DL->AddLine(ImVec2(R.X, R.Y + R.H), ImVec2(R.X + R.W, R.Y + R.H), IM_COL32(80, 80, 80, 255), 1.f);
+			}
+		}
+		else
+		{
+			// 창이 닫혔을 때 모든 VP 비활성
+			for (FViewport& VP : Viewports)
+			{
+				VP.SetHovered(false);
+				VP.SetFocused(false);
+			}
+		}
+		ImGui::End();
 	}
 
 	// ── Actor 선택 동기화 ────────────────────────────────────────────────
@@ -395,15 +492,10 @@ void FEditorUI::Render()
 				if (Core)
 				{
 					Core->SetSelectedActor(nullptr);
-					// UCameraComponent 직접 접근 — FCamera 제거됨
 					if (IViewportClient* VP = GetPrimaryViewportClient())
 					{
 						UCameraComponent* Cam = VP->GetActiveCamera();
-						if (Cam)
-						{
-							Cam->SetPosition({ -5.f, 0.f, 2.f });
-							Cam->SetRotation(0.f, 0.f);
-						}
+						if (Cam) { Cam->SetPosition({ -5.f, 0.f, 2.f }); Cam->SetRotation(0.f, 0.f); }
 					}
 					Core->GetLevel()->ClearActors();
 					UE_LOG("New Level created");
@@ -425,8 +517,7 @@ void FEditorUI::Render()
 							Cam = VP->GetActiveCamera();
 
 						bool bLoaded = FSceneSerializer::Load(
-							Core->GetLevel(), Path,
-							Core->GetRenderer()->GetDevice(), Cam);
+							Core->GetLevel(), Path, Core->GetRenderer()->GetDevice(), Cam);
 
 						if (bLoaded) UE_LOG("Level loaded: %s", Path.c_str());
 						else MessageBoxW(nullptr, L"Level 정보가 잘못되었습니다.", L"Error", MB_OK | MB_ICONWARNING);
@@ -444,18 +535,15 @@ void FEditorUI::Render()
 						UCameraComponent* Cam = nullptr;
 						if (IViewportClient* VP = GetPrimaryViewportClient())
 							Cam = VP->GetActiveCamera();
-
 						FSceneSerializer::Save(Core->GetLevel(), Path, Cam);
 					}
 				}
 			}
-
 			ImGui::EndMenu();
 		}
 
 		if (ImGui::BeginMenu("View"))
 		{
-			// 포커스된 뷰포트의 ViewportClient 기준으로 ShowFlags 편집
 			IViewportClient* FocusedVP = GetFocusedViewportClient();
 			FEditorViewportClient* EditorVP =
 				FocusedVP ? dynamic_cast<FEditorViewportClient*>(FocusedVP) : nullptr;
@@ -516,8 +604,7 @@ void FEditorUI::Render()
 	if (ImGui::BeginPopupModal("AboutPopup", nullptr, ImGuiWindowFlags_NoTitleBar))
 	{
 		ImDrawList* DrawList = ImGui::GetWindowDrawList();
-		ImVec2 WPos = ImGui::GetWindowPos();
-		ImVec2 WSize = ImGui::GetWindowSize();
+		ImVec2 WPos = ImGui::GetWindowPos(), WSize = ImGui::GetWindowSize();
 		DrawList->AddRectFilled(WPos, ImVec2(WPos.x + WSize.x, WPos.y + 60), IM_COL32(30, 30, 60, 255));
 
 		ImGui::SetCursorPosY(12); ImGui::SetCursorPosX((WSize.x - ImGui::CalcTextSize("Dino Engine").x) * 0.5f);
@@ -566,7 +653,6 @@ bool FEditorUI::GetViewportMousePosition(int32 WindowMouseX, int32 WindowMouseY,
 	int32& OutViewportX, int32& OutViewportY,
 	int32& OutWidth, int32& OutHeight) const
 {
-	// 포커스/호버된 뷰포트 우선, 없으면 첫 번째
 	for (const FViewport& VP : Viewports)
 	{
 		if (VP.IsHovered() || VP.IsFocused())
@@ -660,7 +746,6 @@ void FEditorUI::LoadEditorSettings()
 	GetPrivateProfileStringW(L"Grid", L"ShowGrid", L"1", Buf, 64, Path.c_str());
 	bool bShowGrid = (_wtoi(Buf) != 0);
 
-	// 기본 EditorViewportClient(Viewports[0])에 적용
 	if (FEditorViewportClient* EditorVP =
 		dynamic_cast<FEditorViewportClient*>(GetPrimaryViewportClient()))
 	{

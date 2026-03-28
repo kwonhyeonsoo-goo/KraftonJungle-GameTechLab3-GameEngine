@@ -2,7 +2,6 @@
 
 #include "imgui_impl_dx11.h"
 #include "UI/EditorViewportClient.h"
-#include "UI/PreviewViewportClient.h"
 #include "Core/Core.h"
 #include "Core/ConsoleVariableManager.h"
 #include "World/Level.h"
@@ -14,31 +13,6 @@
 #include "World/World.h"
 #include "imgui_impl_win32.h"
 #include "Pawn/EditorCameraPawn.h"
-
-namespace
-{
-	constexpr const char* PreviewLevelContextName = "PreviewLevel";
-
-	void InitializeDefaultPreviewLevel(FCore* Core)
-	{
-		if (!Core) return;
-		FEditorWorldContext* PreviewContext =
-			Core->GetLevelManager()->CreatePreviewWorldContext(PreviewLevelContextName, 1280, 720);
-		if (!PreviewContext || !PreviewContext->World) return;
-
-		UWorld* PreviewWorld = PreviewContext->World;
-		if (PreviewWorld->GetActors().empty())
-		{
-			AActor* PreviewActor = PreviewWorld->SpawnActor<AActor>("PreviewCube");
-			if (PreviewActor)
-			{
-				UCubeComponent* Comp = FObjectFactory::ConstructObject<UCubeComponent>(PreviewActor);
-				PreviewActor->AddOwnedComponent(Comp);
-				PreviewActor->SetActorLocation({ 0.f, 0.f, 0.f });
-			}
-		}
-	}
-}
 
 bool FEditorEngine::Initialize(HINSTANCE hInstance)
 {
@@ -52,8 +26,7 @@ void FEditorEngine::Shutdown()
 {
 	if (EditorPawn) { EditorPawn->Destroy(); EditorPawn = nullptr; }
 	ViewportController.Cleanup();
-	EditorViewportClient = nullptr;
-	PreviewViewportClient = nullptr;
+	for (auto& VP : SceneViewportClients) VP = nullptr;
 	FEngine::Shutdown();
 }
 
@@ -67,24 +40,25 @@ void FEditorEngine::PreInitialize()
 
 void FEditorEngine::CreateViewportClients()
 {
-	// [0] EditorViewportClient
-	auto EditorVP = std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
-	EditorViewportClient = EditorVP.get();
-	ViewportClientArray.push_back(std::move(EditorVP));
-
-	// [1] PreviewViewportClient
-	auto PreviewVP = std::make_unique<FPreviewViewportClient>(EditorUI, MainWindow, PreviewLevelContextName);
-	PreviewViewportClient = PreviewVP.get();
-	ViewportClientArray.push_back(std::move(PreviewVP));
+	// [0] Perspective — 주 에디터 뷰, Gizmo/Grid 포함
+	// [1] Top         — 위에서 아래 orthographic
+	// [2] Side        — 옆에서 orthographic
+	// [3] Bottom      — 아래에서 위 orthographic
+	for (int i = 0; i < 4; i++)
+	{
+		auto VP = std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
+		SceneViewportClients[i] = VP.get();
+		ViewportClientArray.push_back(std::move(VP));
+	}
 }
 
 void FEditorEngine::PostInitialize()
 {
-	InitializeDefaultPreviewLevel(Core.get());
-
 	// ── FViewport ↔ IViewportClient 1:1 연결 ─────────────────────────
-	EditorUI.LinkViewportClient(0, EditorViewportClient);
-	EditorUI.LinkViewportClient(1, PreviewViewportClient);
+	for (int i = 0; i < 4; i++)
+	{
+		EditorUI.LinkViewportClient(i, SceneViewportClients[i]);
+	}
 
 	// ── Console ───────────────────────────────────────────────────────
 	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
@@ -101,32 +75,49 @@ void FEditorEngine::PostInitialize()
 				FEngineLog::Get().Log("[error] Unknown command: '%s'", CommandLine);
 		});
 
-	// ── EditorPawn / 카메라 연결 ──────────────────────────────────────
+	// ── EditorPawn — Perspective 뷰포트(0번)에 연결 ──────────────────
 	EditorPawn = FObjectFactory::ConstructObject<AEditorCameraPawn>(nullptr, "EditorCameraPawn");
 	EditorPawn->Initialize();
 
-	UCameraComponent* EditorCamera = EditorPawn->GetCameraComponent();
-	if (EditorViewportClient)
+	UCameraComponent* PerspCam = EditorPawn->GetCameraComponent();
+	PerspCam->SetPosition({ -10.f, 0.f, 5.f });
+	PerspCam->SetRotation(0.f, -15.f);
+	PerspCam->SetFOV(60.f);
+	PerspCam->SetOrthographic(false);
+	SceneViewportClients[0]->SetActiveCamera(PerspCam);
+
+	// ── 나머지 3개 — 각자 DefaultCamera 직접 설정 ────────────────────
+
+	// [1] Top — 위에서 아래로 내려다봄
 	{
-		EditorViewportClient->SetActiveCamera(EditorCamera);
+		UCameraComponent* Cam = SceneViewportClients[1]->GetActiveCamera();
+		Cam->SetPosition({ 0.f, 0.f, 100.f });
+		Cam->SetRotation(0.f, -89.9f);   // 거의 수직 아래
+		Cam->SetOrthographic(true);
+		Cam->SetOrthoWidth(50.f);
 	}
 
-	// PreviewViewportClient — World가 카메라를 소유하지 않으므로
-	// ViewportClient의 DefaultCamera를 직접 초기화
-	// World에 CameraActor를 배치하는 방식은 추후 확장 예정
-	if (PreviewViewportClient)
+	// [2] Side — 오른쪽에서 왼쪽으로
 	{
-		UCameraComponent* PreviewCamera = PreviewViewportClient->GetActiveCamera();
-		if (PreviewCamera)
-		{
-			PreviewCamera->SetPosition({ -8.f, -8.f, 6.f });
-			PreviewCamera->SetRotation(45.f, -20.f);
-			PreviewCamera->SetFOV(50.f);
-		}
+		UCameraComponent* Cam = SceneViewportClients[2]->GetActiveCamera();
+		Cam->SetPosition({ 100.f, 0.f, 0.f });
+		Cam->SetRotation(180.f, 0.f);    // 왼쪽 방향
+		Cam->SetOrthographic(true);
+		Cam->SetOrthoWidth(50.f);
 	}
 
+	// [3] Bottom — 아래에서 위로 올려다봄 (Front 뷰로 대체하는 경우 많음)
+	{
+		UCameraComponent* Cam = SceneViewportClients[3]->GetActiveCamera();
+		Cam->SetPosition({ 0.f, -100.f, 0.f });
+		Cam->SetRotation(90.f, 0.f);     // 앞쪽 방향
+		Cam->SetOrthographic(true);
+		Cam->SetOrthoWidth(50.f);
+	}
+
+	// ── ViewportController — Perspective 뷰포트만 제어 ───────────────
 	ViewportController.Initialize(
-		EditorCamera,
+		PerspCam,
 		Core->GetInputManager(),
 		Core->GetEnhancedInputManager());
 

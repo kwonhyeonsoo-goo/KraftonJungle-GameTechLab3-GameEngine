@@ -6,7 +6,6 @@
 
 class AEditorCameraPawn;
 class FEditorViewportClient;
-class FPreviewViewportClient;
 
 class FEditorEngine : public FEngine
 {
@@ -31,7 +30,7 @@ private:
 	AEditorCameraPawn* EditorPawn = nullptr;
 	FEditorViewportController ViewportController;
 
-	// 배열 내 포인터 — 소유권은 ViewportClientArray
-	FEditorViewportClient* EditorViewportClient = nullptr;
-	FPreviewViewportClient* PreviewViewportClient = nullptr;
+	// [0] Perspective, [1] Top, [2] Side, [3] Bottom
+	// 소유권은 ViewportClientArray
+	FEditorViewportClient* SceneViewportClients[4] = { nullptr, nullptr, nullptr, nullptr };
 };
