@@ -142,10 +142,10 @@ void CCore::Tick()
 
 void CCore::Tick(const float DeltaTime)
 {
-	Input(DeltaTime);
+	Input(DeltaTime); //Init 단계에서 CEditorViewportClient가 ViewportClient로 설정됨 내부의 ViewportClient -> Tick()이 호출됨 → EditorViewportClient에서 마우스 위치 업데이트, Picking 처리 등 수행
 	Physics(DeltaTime);
-	GameLogic(DeltaTime);
-	Render();
+	GameLogic(DeltaTime); //GameLogic -> World - Tick() → Actor - Tick() → Component - Tick()
+	Render(); // SceneManager로부터 ActiveScene을 얻어와서 그로부터 RenderCommand를 생성함
 	LateUpdate(DeltaTime);
 }
 

@@ -8,16 +8,16 @@
 class FVertexShader;
 class FPixelShader;
 
-struct FMaterialTexture
+struct FTexture
 {
 	ID3D11ShaderResourceView* TextureSRV = nullptr;
 	ID3D11SamplerState* SamplerState = nullptr;
 
-	FMaterialTexture() = default;
-	~FMaterialTexture();
+	FTexture() = default;
+	~FTexture();
 
-	FMaterialTexture(const FMaterialTexture&) = delete;
-	FMaterialTexture& operator=(const FMaterialTexture&) = delete;
+	FTexture(const FTexture&) = delete;
+	FTexture& operator=(const FTexture&) = delete;
 
 	void Release();
 	void Bind(ID3D11DeviceContext* DeviceContext);
@@ -119,7 +119,7 @@ public:
 	void SetDepthStencilState(const std::shared_ptr<FDepthStencilState> InState) { DepthStencilState = InState; }
 	void SetBlendOption(const FBlendStateOption InOption) { BlendOption = InOption; }
 	void SetBlendState(const std::shared_ptr<FBlendState> InState) { BlendState = InState; }
-	void SetMaterialTexture(const std::shared_ptr<FMaterialTexture> InTexture) { MaterialTexture = InTexture; }
+	void SetMaterialTexture(const std::shared_ptr<FTexture> InTexture) { MaterialTexture = InTexture; }
 
 	FVertexShader* GetVertexShader() const { return VertexShader.get(); }
 	FPixelShader* GetPixelShader() const { return PixelShader.get(); }
@@ -129,7 +129,7 @@ public:
 	std::shared_ptr<FRasterizerState> GetRasterizerState() const { return RasterizerState; }
 	std::shared_ptr<FDepthStencilState> GetDepthStencilState() const { return DepthStencilState; }
 	std::shared_ptr<FBlendState> GetBlendState() const { return BlendState; }
-	std::shared_ptr<FMaterialTexture> GetMaterialTexture() const { return MaterialTexture; }
+	std::shared_ptr<FTexture> GetMaterialTexture() const { return MaterialTexture; }
 
 	// FDynamicMaterial에서 파라미터 설정 시 사용
 	bool SetParameterData(const FString& ParamName, const void* Data, uint32 DataSize);
@@ -171,7 +171,7 @@ protected:
 	std::shared_ptr<FDepthStencilState> DepthStencilState = nullptr;
 	std::shared_ptr<FBlendState> BlendState = nullptr;
 	// Texture
-	std::shared_ptr<FMaterialTexture> MaterialTexture = nullptr;
+	std::shared_ptr<FTexture> MaterialTexture = nullptr;
 
 	TArray<FMaterialConstantBuffer> ConstantBuffers;
 	TMap<FString, FMaterialParameterInfo> ParameterMap;

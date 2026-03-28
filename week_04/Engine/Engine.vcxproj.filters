@@ -641,6 +641,12 @@
     <ClInclude Include="Source\Component\StaticMeshComponent.h" />
     <ClInclude Include="Source\World\Scene.h" />
     <ClInclude Include="Source\Core\Templates\ObjectIterator.h" />
+    <ClInclude Include="AssetManager.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="StaticMesh.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
