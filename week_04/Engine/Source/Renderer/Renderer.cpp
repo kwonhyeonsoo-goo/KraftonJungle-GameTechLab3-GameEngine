@@ -6,6 +6,7 @@
 #include "MaterialManager.h"
 #include "Core/Paths.h"
 #include "Primitive/PrimitiveBase.h"
+#include "AssetManager.h"
 #include <cassert>
 #include <algorithm>
 
@@ -127,7 +128,7 @@ bool CRenderer::CreateRenderTargetAndDepthStencil(int32 Width, int32 Height)
 	ID3D11Texture2D* BackBuffer = nullptr;
 	HRESULT Hr = SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&BackBuffer);
 	if (FAILED(Hr)) return false;
-	
+
 	Hr = Device->CreateRenderTargetView(BackBuffer, nullptr, &RenderTargetView);
 	BackBuffer->Release();
 	if (FAILED(Hr)) return false;
@@ -145,10 +146,10 @@ bool CRenderer::CreateRenderTargetAndDepthStencil(int32 Width, int32 Height)
 	ID3D11Texture2D* DepthTex = nullptr;
 	Hr = Device->CreateTexture2D(&DepthDesc, nullptr, &DepthTex);
 	if (FAILED(Hr)) return false;
-	
+
 	Hr = Device->CreateDepthStencilView(DepthTex, nullptr, &DepthStencilView);
 	DepthTex->Release();
-	
+
 	return SUCCEEDED(Hr);
 }
 
@@ -301,7 +302,7 @@ void CRenderer::ClearCommandList()
 {
 	PrevCommandCount = CommandList.size();
 	CommandList.clear();
-	CommandList.reserve(PrevCommandCount);	
+	CommandList.reserve(PrevCommandCount);
 }
 
 void CRenderer::EndFrame()
@@ -355,7 +356,7 @@ void CRenderer::ExecuteCommands()
 	ExecuteRenderPass(ERenderLayer::Default);
 	ClearDepthBuffer();
 	ExecuteRenderPass(ERenderLayer::Overlay);
-	
+
 	if (PostRenderCallback) PostRenderCallback(this);
 }
 
@@ -369,6 +370,8 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 	ID3D11SamplerState* FontSampler = TextRenderer.GetAtlasSampler();
 	ID3D11ShaderResourceView* SubUVSRV = SubUVRenderer.GetTextureSRV();
 	ID3D11SamplerState* SubUVSampler = SubUVRenderer.GetSamplerState();
+
+	auto assets = FAssetManager::GetMaterialByName("M_Font");
 
 	FRenderCommand toFind;
 	toFind.RenderLayer = InRenderLayer;
@@ -385,7 +388,7 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 		if (Cmd.Material != CurrentMaterial)
 		{
 			Cmd.Material->Bind(DeviceContext);
-			
+
 			// RenderStateManager를 통한 일괄 상태 바인딩 (캐싱 활용)
 			RenderStateManager->BindState(Cmd.Material->GetRasterizerState());
 			RenderStateManager->BindState(Cmd.Material->GetDepthStencilState());
@@ -406,8 +409,7 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 			}
 			else
 			{
-				// SRV 는 일반 Material 안에서 bind
-				DeviceContext->PSSetSamplers(0, 1, &NormalSampler);
+				// SRV 와 Sampler 는 FTexture::Bind() 안에서 바인딩됨
 			}
 		}
 
@@ -425,9 +427,12 @@ void CRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 		}
 
 		UpdateObjectConstantBuffer(Cmd.WorldMatrix);
-		
+
 		if (!Cmd.MeshData->Indices.empty())
-			DeviceContext->DrawIndexed(static_cast<UINT>(Cmd.MeshData->Indices.size()), 0, 0);
+		{
+			UINT DrawCount = Cmd.IndexCount > 0 ? Cmd.IndexCount : static_cast<UINT>(Cmd.MeshData->Indices.size());
+			DeviceContext->DrawIndexed(DrawCount, Cmd.IndexStart, 0);
+		}
 		else if (!Cmd.MeshData->Vertices.empty())
 			DeviceContext->Draw(static_cast<UINT>(Cmd.MeshData->Vertices.size()), 0);
 	}

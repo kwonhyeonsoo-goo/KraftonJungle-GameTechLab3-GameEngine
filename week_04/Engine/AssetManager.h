@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <functional>
 #include "ThirdParty/stb_image.h"
+#include "Renderer/RenderState.h"
 #include "d3d11.h"
 
 class FTexture;
@@ -74,7 +75,7 @@ struct FObjMaterialInfo
 
 struct FObjInfo
 {
-	FString Mtllib; // 범용성 위해 배열로
+	FString Mtllib; //mtl 파일 이름  EX)Dorumon.mtl
 	TArray<FVector> Positions;
 	TArray<FVector2> UVs;
 	TArray<FVector> Normals;
@@ -329,6 +330,11 @@ public:
 				std::getline(SS >> std::ws, MaterialInfo.MapKd);
 			}
 		}
+		// 마지막 material은 루프 안에서 push되지 않으므로 여기서 추가
+		if (bHasMaterial)
+		{
+			Materials.push_back(MaterialInfo);
+		}
 		return Materials;
 	};
 };
@@ -340,9 +346,9 @@ public:
 class FAssetManager
 {
 private:
-	static TMap<FString, FStaticMesh*> StaticMeshCache;// .../dorumon.obj 파일 경로가 key가 됨
-	static TMap<FString, FMaterial*> MaterialCache;// newmtl에서 newmtl 이름(dorumon)이 key가 됨.
-	static TMap<FString, FTexture*> TextureCache; // map_Kd dorumon.png에서 dorumon.png이 key가 됨
+	static TMap<FString, FStaticMesh*> StaticMeshCache;// EX) \\Assets\\Meshes\\Dorumon.obj 가 key가됨
+	static TMap<FString, FTexture*> TextureCache; // mtl파일의 map_kd dorumon.png이면 \\Assets\\Meshes\\dorumon.png가 key가됨
+	static TMap<FString, FMaterial*> MaterialCache;// mtl파일에서 newmtl Dorumon이면 Dorumon이 key가됨
 
 private:
 	static int32 GetOrAddMaterialSlot(FStaticMesh* Mesh, const FString& MaterialName)
@@ -465,27 +471,18 @@ public:
 			printf("[OBJ] Invalid or empty obj : %s\n", PathFileName.c_str());
 			return nullptr;
 		}
-
-		for (auto& MatInfo : ObjInfo.Materials)
-		{
-			if (!MatInfo.MapKd.empty())
-			{
-				FString TexturePath = MatInfo.MapKd;
-				std::filesystem::path FullPath = FPaths::MeshDir() / TexturePath;
-				FTexture* Texture = LoadTextureAsset(FullPath.string(), Device);
-				if (Texture)
-				{
-					printf("[MTL] Loaded texture: %s\n", TexturePath.c_str());
-				}
-				else
-				{
-					printf("[MTL] Failed to load texture: %s\n", TexturePath.c_str());
-				}
-			}
-		}
-
 		FStaticMesh* Mesh = new FStaticMesh();
+		std::filesystem::path ParentDir = std::filesystem::path(PathFileName).parent_path();
+		std::filesystem::path MatfilePath = ParentDir / ObjInfo.Mtllib;//mtl파일 위치
+		LoadMaterialAsset(MatfilePath.string(), Device); //TextureCache와 MaterialCache 채우기
+
 		Mesh->Path = PathFileName;
+		if (!ObjInfo.Mtllib.empty())
+		{
+			// MTL은 OBJ와 같은 디렉토리에 있다고 가정
+			std::filesystem::path ObjAbsPath = FPaths::ToAbsolutePath(PathFileName);
+			Mesh->MtlPath = (ObjAbsPath.parent_path() / ObjInfo.Mtllib).string();
+		}
 
 		//Mesh->Sections.reserve(Mesh->MaterialSlotNames.size() + 16);
 
@@ -635,6 +632,7 @@ public:
 		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, VSPath.c_str());
 		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, PSPath.c_str());
 
+		TArray<FMaterial*> Materials;
 		FMaterial* FirstMat = nullptr;
 		for (const FObjMaterialInfo& Info : MatInfos)
 		{
@@ -650,23 +648,42 @@ public:
 			Mat->SetVertexShader(VS);
 			Mat->SetPixelShader(PS);
 
+			// RasterizerState 명시 설정 (없으면 이전 프레임 상태 상속되는 문제 방지)
+			{
+				FRasterizerStateOption RSOption;
+				RSOption.FillMode = D3D11_FILL_SOLID;
+				RSOption.CullMode = D3D11_CULL_NONE;  // blank spots 원인 확인용: culling 완전 비활성화
+				RSOption.DepthClipEnable = true;
+				auto RS = FRasterizerState::Create(Device, RSOption);
+				Mat->SetRasterizerOption(RSOption);
+				Mat->SetRasterizerState(RS);
+
+				FDepthStencilStateOption DSOption;
+				DSOption.DepthEnable = true;
+				DSOption.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+				auto DSS = FDepthStencilState::Create(Device, DSOption);
+				Mat->SetDepthStencilOption(DSOption);
+				Mat->SetDepthStencilState(DSS);
+			}
+
 			// b2: ColorTint(VS) + BaseColor(PS) — float4 하나 공유
 			int32 SlotIndex = Mat->CreateConstantBuffer(Device, 16);
 			if (SlotIndex >= 0)
 			{
 				Mat->RegisterParameter("ColorTint", SlotIndex, 0, 16);
-				Mat->RegisterParameter("BaseColor",  SlotIndex, 0, 16);
+				Mat->RegisterParameter("BaseColor", SlotIndex, 0, 16);
 
 				// 기본값 흰색
 				float White[4] = { 1.f, 1.f, 1.f, 1.f };
 				Mat->GetConstantBuffer(SlotIndex)->SetData(White, sizeof(White), 0);
 			}
 
-			// Diffuse 텍스처
+			// Diffuse 텍스처 (MTL 파일과 같은 디렉토리에서 탐색)
 			if (!Info.MapKd.empty())
 			{
-				std::filesystem::path TexFullPath = FPaths::MeshDir() / Info.MapKd;
-				FTexture* Tex = LoadTextureAsset(TexFullPath.string(), Device);
+				std::filesystem::path MtlDir = std::filesystem::path(PathFileName).parent_path();
+				std::filesystem::path TexFullPath = MtlDir / Info.MapKd;
+				FTexture* Tex = LoadTextureAsset(FPaths::ToRelativePath(TexFullPath.string()), Device);
 				if (Tex)
 				{
 					Mat->SetMaterialTexture(std::shared_ptr<FTexture>(Tex, [](FTexture*) {}));
@@ -678,9 +695,17 @@ public:
 				FirstMat = Mat;
 		}
 
-		MaterialCache[PathFileName] = FirstMat;
+		//MaterialCache[PathFileName] = FirstMat;
 		return FirstMat;
 	}
+	static FMaterial* GetMaterialByName(const FString& Name)
+	{
+		auto It = MaterialCache.find(Name);
+		if (It != MaterialCache.end())
+			return It->second;
+		return nullptr;
+	}
+
 	static UStaticMesh* LoadObjStaticMesh(const FString& PathFileName)
 	{
 		return nullptr;

@@ -3,12 +3,14 @@
 #include "Renderer/RenderCommand.h"
 #include "Actor/Actor.h"
 #include "Component/SubUVComponent.h"
+#include "Component/ObjComponent.h"
 #include "Core/FEngine.h"
 #include "Component/TextComponent.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/TextMeshBuilder.h"
 #include "Renderer/SubUVRenderer.h"
 #include "Renderer/Material.h"
+#include "StaticMesh.h"
 
 void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors, const FFrustum& Frustum,
 	const FShowFlags& ShowFlags, FRenderCommandQueue& OutQueue)
@@ -31,7 +33,7 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 		{
 			UTextComponent* TextComp = static_cast<UTextComponent*>(PrimitiveComponent);
 			FMeshData* TextMesh = TextComp->GetTextMesh();
-			
+
 			if (TextMesh && TextRenderer.BuildTextMesh(TextComp->GetDisplayText(), *TextMesh))
 			{
 				FMaterial* FontMat = TextRenderer.GetFontMaterial();
@@ -52,8 +54,8 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 					{
 						Command.RenderLayer = ERenderLayer::Overlay;
 					}
-				
-					
+
+
 					const FVector WorldPos = TextComp->GetRenderWorldPosition();
 					const FVector Scale = TextComp->GetRenderWorldScale();
 
@@ -111,6 +113,43 @@ void FSceneRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 				}
 			}
 			continue;
+		}
+
+		// ─── ObjComponent: 섹션별 멀티 드로우 ───
+		if (PrimitiveComponent->IsA(UObjComponent::StaticClass()))
+		{
+			UObjComponent* ObjComp = static_cast<UObjComponent*>(PrimitiveComponent);
+			FStaticMesh* SM = ObjComp->GetStaticMesh();
+			FMeshData* MeshData = ObjComp->GetPrimitive() ? ObjComp->GetPrimitive()->GetMeshData() : nullptr;
+
+			if (SM && MeshData)
+			{
+				for (const SubMeshSection& Section : SM->Sections)
+				{
+					FMaterial* Mat = ObjComp->GetMaterialBySlot(Section.MaterialIndex);
+					if (!Mat) continue;
+
+					FRenderCommand Command;
+					Command.MeshData = MeshData;
+					Command.WorldMatrix = ObjComp->GetWorldTransform();
+					Command.Material = Mat;
+					Command.IndexStart = static_cast<uint32>(Section.IndexStart);
+					Command.IndexCount = static_cast<uint32>(Section.IndexCount);
+					OutQueue.AddCommand(Command);
+				}
+				continue;
+
+				/*for (FMaterial* Material : SM->Materials)
+				{
+					if (!Material) continue;
+					FRenderCommand Command;
+					Command.MeshData = MeshData;
+					Command.WorldMatrix = ObjComp->GetWorldTransform();
+					Command.Material = Material;
+					Command.IndexStart = Section.IndexStart
+					OutQueue.AddCommand(Command);
+				}*/
+			}
 		}
 
 		// ─── 일반 프리미티브 ───

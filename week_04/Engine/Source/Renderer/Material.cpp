@@ -26,6 +26,10 @@ void FTexture::Release()
 void FTexture::Bind(ID3D11DeviceContext* DeviceContext)
 {
 	DeviceContext->PSSetShaderResources(0, 1, &TextureSRV);
+	if (SamplerState)
+	{
+		DeviceContext->PSSetSamplers(0, 1, &SamplerState);
+	}
 }
 
 // ─── FMaterialConstantBuffer ───
