@@ -11,6 +11,9 @@
 #include "Component/UUIDBillboardComponent.h"
 #include "Actor/SkySphereActor.h" 
 #include <limits>
+#include "Component/StaticMeshComponent.h"
+#include "Object/Mesh/StaticMesh.h"
+#include "Renderer/Mesh/StaticMeshRenderData.h"
 
 FRay FPicker::ScreenToRay(const FCamera* Camera, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const
 {
@@ -143,6 +146,7 @@ AActor* FPicker::PickActor(ULevel* Level, int32 ScreenX, int32 ScreenY,
 
 			const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
 			const bool bIsText = PrimitiveComponent->IsA(UTextComponent::StaticClass());
+			const bool bIsStaticMesh = PrimitiveComponent->IsA(UStaticMeshComponent::StaticClass());
 			if (bIsSubUV || bIsText)
 			{
 				const FBoxSphereBounds Bounds = PrimitiveComponent->GetWorldBounds();
@@ -166,13 +170,23 @@ AActor* FPicker::PickActor(ULevel* Level, int32 ScreenX, int32 ScreenY,
 
 				continue;
 			}
+			
+			FMeshData* Mesh;
 
-			if (!PrimitiveComponent->GetPrimitive())
+			if (bIsStaticMesh)
 			{
-				continue;
+				UStaticMeshComponent* StaticMeshComp = static_cast<UStaticMeshComponent*>(PrimitiveComponent);
+				Mesh = StaticMeshComp->GetStaticMesh()->GetAsset()->MeshData.get();
+			}
+			else
+			{
+				if (!PrimitiveComponent->GetPrimitive())
+				{
+					continue;
+				}
+				Mesh = PrimitiveComponent->GetPrimitive()->GetMeshData();
 			}
 
-			FMeshData* Mesh = PrimitiveComponent->GetPrimitive()->GetMeshData();
 			if (!Mesh)
 			{
 				continue;

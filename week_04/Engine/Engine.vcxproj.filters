@@ -311,6 +311,7 @@
     <ClCompile Include="Source\World\Scene.cpp" />
     <ClCompile Include="Source\Asset\AssetManager.cpp" />
     <ClCompile Include="Source\Renderer\Mesh\StaticMeshRenderData.cpp" />
+    <ClCompile Include="Source\Actor\StaticMeshActor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -647,6 +648,7 @@
       <Filter>Source\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Source\Renderer\Mesh\StaticMeshRenderData.h" />
+    <ClInclude Include="Source\Actor\StaticMeshActor.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

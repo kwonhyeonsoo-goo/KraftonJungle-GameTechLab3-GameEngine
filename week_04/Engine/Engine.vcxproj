@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Actor\StaticMeshActor.h" />
     <ClInclude Include="Source\Asset\AssetManager.h" />
     <ClInclude Include="PrimitiveLineBatch.h" />
     <ClInclude Include="Source\Actor\TextActor.h" />
@@ -137,6 +138,7 @@
     <ClInclude Include="ThirdParty\nlohmann\json.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Actor\StaticMeshActor.cpp" />
     <ClCompile Include="Source\Asset\AssetManager.cpp" />
     <ClCompile Include="PrimitiveLineBatch.cpp" />
     <ClCompile Include="Source\Actor\Actor.cpp" />

@@ -3,6 +3,8 @@
 #pragma once
 #include "Object/Object.h"
 
+struct FMeshData;
+
 // FPrimitiveVertex와 메모리 레이아웃 일치: Position, Color, Normal, UV
 struct FNormalVertex
 {
@@ -37,5 +39,6 @@ struct FStaticMesh
 	/** Multi-material 고려 (usemtl A, v... / usemtl B, v...) => Section Names A,B **/
 	std::vector<std::string> MaterialSlotNames; //Dorumon_body, Dorumon_eye
 	std::vector<SubMeshSection> Sections; //Material별로 섹션을 나누기 위함
-	TArray<class FMaterial*> Materials;
+
+	std::shared_ptr<FMeshData> MeshData;
 };

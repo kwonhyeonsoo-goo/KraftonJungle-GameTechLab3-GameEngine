@@ -28,7 +28,9 @@
 #include "Actor/SkySphereActor.h" 
 #include "Actor/ObjActor.h"
 #include "Core/ShowFlags.h"
-#include "EditorViewportClient.h"
+
+#include "Component/StaticMeshComponent.h"
+
 
 enum class EFileDialogType
 {
@@ -296,13 +298,30 @@ void FEditorUI::AttachToRenderer(FRenderer* InRenderer)
 						continue;
 					}
 
-					UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
-					if (PrimitiveComponent->GetPrimitive())
+					if (Component->IsA(UStaticMeshComponent::StaticClass()))
 					{
-						Renderer->RenderOutline(
-							PrimitiveComponent->GetPrimitive()->GetMeshData(),
-							PrimitiveComponent->GetWorldTransform()
-						);
+						UStaticMeshComponent* StaticMeshComponent = static_cast<UStaticMeshComponent*>(Component);
+						FMeshData* MeshData = StaticMeshComponent->GetMeshData();
+
+						if (MeshData)
+						{
+							Renderer->RenderOutline(
+								MeshData,
+								StaticMeshComponent->GetWorldTransform()
+							);
+						}
+					}
+					else
+					{
+						UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
+						if (PrimitiveComponent->GetPrimitive())
+						{
+							Renderer->RenderOutline(
+								PrimitiveComponent->GetPrimitive()->GetMeshData(),
+								PrimitiveComponent->GetWorldTransform()
+							);
+						}
+
 					}
 				}
 			}

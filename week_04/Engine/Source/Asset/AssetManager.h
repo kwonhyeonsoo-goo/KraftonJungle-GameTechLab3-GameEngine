@@ -11,9 +11,17 @@
 #include <sstream>
 #include <unordered_map>
 #include <functional>
-#include "ThirdParty/stb_image.h"
+#include "../ThirdParty/stb_image.h"
 #include "Renderer/RenderState.h"
+#include "Core/Templates/ObjectIterator.h"
 #include "d3d11.h"
+#include "Object/Mesh/StaticMesh.h"
+#include "Object/ObjectFactory.h"
+
+#include "Primitive/PrimitiveObj.h"
+#include "Object/Class.h"
+#include "Renderer/PrimitiveVertex.h"
+#include "Asset/AssetManager.h"
 
 struct FTexture;
 class UStaticMesh;
@@ -343,7 +351,7 @@ public:
 	// Asset Manager
 	// =========================
 
-class FAssetManager
+class ENGINE_API FAssetManager
 {
 private:
 	static TMap<FString, FStaticMesh*> StaticMeshCache;// EX) \\Assets\\Meshes\\Dorumon.obj 가 key가됨
@@ -523,6 +531,24 @@ public:
 				AppendTriangle(Mesh, SectionIndex, I0, I1, I2);
 			}
 		}
+
+		Mesh->MeshData = std::make_shared<FMeshData>();
+
+		Mesh->MeshData->Vertices.reserve(Mesh->Vertices.size());
+		for (const FNormalVertex& NV : Mesh->Vertices)
+		{
+			FPrimitiveVertex PV;
+			PV.Position = NV.Position;
+			PV.Color = NV.Color;
+			PV.Normal = NV.Normal;
+			PV.UV = NV.UV;
+			Mesh->MeshData->Vertices.push_back(PV);
+		}
+
+		Mesh->MeshData->Indices.assign(Mesh->Indices.begin(), Mesh->Indices.end());
+		Mesh->MeshData->Topology = EMeshTopology::EMT_TriangleList;
+		Mesh->MeshData->CreateVertexAndIndexBuffer(Device);
+		Mesh->MeshData->UpdateLocalBound();
 
 		StaticMeshCache[PathFileName] = Mesh;
 		return Mesh;
@@ -705,9 +731,50 @@ public:
 			return It->second;
 		return nullptr;
 	}
-
-	static UStaticMesh* LoadObjStaticMesh(const FString& PathFileName)
+	static const TArray<FMaterial*> GetAllMaterials()
 	{
-		return nullptr;
+		TArray<FMaterial*> Materials;
+		for (const auto& Pair : MaterialCache)
+		{
+			Materials.push_back(Pair.second);
+		}
+		return Materials;
+	}
+
+	static UStaticMesh* LoadObjStaticMesh(const FString& PathFileName, ID3D11Device* Device)
+	{
+		for (TObjectIterator<UStaticMesh> It; It; ++It)
+		{
+			UStaticMesh* StaticMesh = *It;
+			if (StaticMesh->GetAssetPath() == PathFileName)
+			{
+				return *It;
+			}
+		}
+
+		FStaticMesh* StaticMeshAsset = LoadObjStaticMeshAsset(PathFileName, Device);
+		UStaticMesh* StaticMesh = FObjectFactory::ConstructObject<UStaticMesh>();
+		StaticMesh->SetStaticMeshAsset(StaticMeshAsset);
+
+		return StaticMesh;
+	}
+
+	static void CleanUp()
+	{
+		for (auto& Pair : StaticMeshCache)
+		{
+			delete Pair.second;
+		}
+		StaticMeshCache.clear();
+		for (auto& Pair : MaterialCache)
+		{
+			delete Pair.second;
+		}
+		MaterialCache.clear();
+		for (auto& Pair : TextureCache)
+		{
+			delete Pair.second;
+		}
+		TextureCache.clear();
 	}
 };

@@ -12,7 +12,7 @@ public:
 	FStaticMesh* GetAsset() const { return MeshAsset; }
 
 	/** ProjectRoot/{상대 경로} 반환 **/
-	const FString& GetAssetPath() const { return ""; }
+	const FString& GetAssetPath() const;
 
 private:
 	FStaticMesh* MeshAsset = nullptr;

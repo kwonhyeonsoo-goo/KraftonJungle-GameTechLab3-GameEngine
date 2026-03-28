@@ -4,6 +4,13 @@
 #include "Component/SubUVComponent.h"
 #include "Component/TextComponent.h"
 #include "Component/UUIDBillboardComponent.h"
+#include "Component/ObjComponent.h"
+#include "Component/StaticMeshComponent.h"
+#include "Object/Mesh/StaticMesh.h"
+#include "Renderer/Mesh/StaticMeshRenderData.h"
+#include "Asset/AssetManager.h"
+
+
 void FPropertyWindow::SetTarget(const FVector& Location, const FVector& Rotation,
 	const FVector& Scale, const char* ActorName)
 {
@@ -149,6 +156,60 @@ void FPropertyWindow::Render(FCore* Core)
 						bool bBillboard = TextComp->IsBillboard();
 						if (ImGui::Checkbox("Text Billboard", &bBillboard))
 							TextComp->SetBillboard(bBillboard);
+					}
+				}
+				ImGui::Unindent(8.0f);
+			}
+			if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				ImGui::Indent(8.0f);
+				for (UActorComponent* Component : SelectedActor->GetComponents())
+				{
+					if (!Component) continue;
+
+					if (Component->IsA(UStaticMeshComponent::StaticClass()))
+					{
+						UStaticMeshComponent* StaticMeshComp = static_cast<UStaticMeshComponent*>(Component);
+						FStaticMesh* Mesh = StaticMeshComp->GetStaticMesh()->GetAsset();
+						if (!Mesh) continue;
+
+						const TArray<FMaterial*> AllMaterials = FAssetManager::GetAllMaterials();
+
+						// 드롭다운 선택에 사용할 이름 목록 빌드
+						TArray<const char*> MatNames;
+						MatNames.reserve(AllMaterials.size() + 1);
+						MatNames.push_back("(none)");
+						for (FMaterial* Mat : AllMaterials)
+						{
+							MatNames.push_back(Mat->GetName().c_str());
+						}
+
+						const int32 SlotCount = static_cast<int32>(Mesh->MaterialSlotNames.size());
+						for (int32 i = 0; i < SlotCount; ++i)
+						{
+							FMaterial* CurrentMat = StaticMeshComp->GetMaterial(i);
+
+							// 현재 슬롯에 할당된 머티리얼의 인덱스 찾기 (없으면 0 = "(none)")
+							int32 CurrentIndex = 0;
+							for (int32 j = 0; j < static_cast<int32>(AllMaterials.size()); ++j)
+							{
+								if (AllMaterials[j] == CurrentMat)
+								{
+									CurrentIndex = j + 1; // +1: index 0 = "(none)"
+									break;
+								}
+							}
+
+							// 슬롯 이름을 라벨로 사용
+							const FString& SlotName = Mesh->MaterialSlotNames[i];
+							FString Label = SlotName + "##MatSlot" + std::to_string(i);
+
+							if (ImGui::Combo(Label.c_str(), &CurrentIndex, MatNames.data(), static_cast<int>(MatNames.size())))
+							{
+								FMaterial* NewMat = (CurrentIndex == 0) ? nullptr : AllMaterials[CurrentIndex - 1];
+								StaticMeshComp->SetMaterial(i, NewMat);
+							}
+						}
 					}
 				}
 				ImGui::Unindent(8.0f);

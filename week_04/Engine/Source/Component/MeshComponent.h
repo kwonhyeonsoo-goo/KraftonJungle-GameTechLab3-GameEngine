@@ -1,7 +1,7 @@
 #pragma once
 #include "Component/PrimitiveComponent.h"
 
-class UMeshComponent : public UPrimitiveComponent
+class ENGINE_API UMeshComponent : public UPrimitiveComponent
 {
 public:
 	DECLARE_RTTI(UMeshComponent, UPrimitiveComponent)

@@ -11,6 +11,8 @@
 #include "Renderer/SubUVRenderer.h"
 #include "Renderer/Material.h"
 #include "Renderer/Mesh/StaticMeshRenderData.h"
+#include "Component/StaticMeshComponent.h"
+#include "Object/Mesh/StaticMesh.h"
 
 void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors, const FFrustum& Frustum,
 	const FShowFlags& ShowFlags, FRenderCommandQueue& OutQueue)
@@ -27,6 +29,31 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 	for (UPrimitiveComponent* PrimitiveComponent : VisiblePrimitives)
 	{
 		if (!PrimitiveComponent) continue;
+
+		if (PrimitiveComponent->IsA(UStaticMeshComponent::StaticClass()))
+		{
+			UStaticMeshComponent* StaticMeshComp = static_cast<UStaticMeshComponent*>(PrimitiveComponent);
+			FStaticMesh* SM = StaticMeshComp->GetStaticMesh()->GetAsset();
+			FMeshData* MeshData = SM->MeshData.get();
+
+			if (SM && MeshData)
+			{
+				for (const SubMeshSection& Section : SM->Sections)
+				{
+					FMaterial* Mat = StaticMeshComp->GetMaterial(Section.MaterialIndex);
+					if (!Mat) continue;
+
+					FRenderCommand Command;
+					Command.MeshData = MeshData;
+					Command.WorldMatrix = StaticMeshComp->GetWorldTransform();
+					Command.Material = Mat;
+					Command.IndexStart = static_cast<uint32>(Section.IndexStart);
+					Command.IndexCount = static_cast<uint32>(Section.IndexCount);
+					OutQueue.AddCommand(Command);
+				}
+				continue;
+			}
+		}
 
 		// ─── 텍스트 컴포넌트 ───
 		if (PrimitiveComponent->IsA(UTextComponent::StaticClass()))
@@ -183,6 +210,7 @@ void FLevelRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 			const bool bIsUUID = PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass());
 			const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
 			const bool bIsText = PrimitiveComponent->IsA(UTextComponent::StaticClass());
+			const bool bIsStaticMesh = PrimitiveComponent->IsA(UStaticMeshComponent::StaticClass());
 
 			if (bIsUUID)
 			{
@@ -201,6 +229,10 @@ void FLevelRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 				{
 					continue;
 				}
+			}
+			else if (bIsStaticMesh)
+			{
+				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives)) continue;
 			}
 			else
 			{

@@ -50,7 +50,7 @@ private:
 
 	void AdvanceToNextValidObject()
 	{
-		const int32 Count = GUObjectArray.size();
+		const SIZE_T Count = GUObjectArray.size();
 		while (CurrentIndex < Count)
 		{
 			UObject* Obj = GUObjectArray[CurrentIndex];

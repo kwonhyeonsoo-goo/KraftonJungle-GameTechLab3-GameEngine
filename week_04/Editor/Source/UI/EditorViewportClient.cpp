@@ -19,6 +19,9 @@
 #include "imgui.h"
 #include "Actor/ObjActor.h"
 #include "Actor/SkySphereActor.h"
+#include "Actor/StaticMeshActor.h"
+#include "Asset/AssetManager.h"
+
 FEditorViewportClient::FEditorViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow)
 	: EditorUI(InEditorUI)
 	, MainWindow(InMainWindow)
@@ -289,12 +292,14 @@ void FEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 		if (FilePath.ends_with(".obj"))
 		{
 			const FRay Ray = Picker.ScreenToRay(Core->GetLevel()->GetCamera(), ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
-
-			AObjActor* NewActor = Core->GetLevel()->SpawnActor<AObjActor>("ObjActor");
 			
-			NewActor->LoadObj(Core->GetRenderer()->GetDevice(), FPaths::ToRelativePath(FilePath));
+			AStaticMeshActor* NewActor = Core->GetLevel()->SpawnActor<AStaticMeshActor>("StaticMeshActor");
+			UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath(FilePath), Core->GetRenderer()->GetDevice());
+			NewActor->SetStaticMesh(StaticMesh);
+
 			FVector V = Ray.Origin + Ray.Direction * 5;
 			NewActor->SetActorLocation(V);
+
 		}
 	}
 }

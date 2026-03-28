@@ -43,6 +43,7 @@ void UObjComponent::Initialize()
 {
 }
 
+
 void UObjComponent::LoadStaticMeshAsset(ID3D11Device* Device, const FString& FilePath)
 {
 	// 1. FStaticMesh 로드 (캐시 히트 시 재사용)
@@ -82,4 +83,12 @@ FMaterial* UObjComponent::GetMaterialBySlot(int32 SlotIndex) const
 	if (SlotIndex >= 0 && SlotIndex < static_cast<int32>(MaterialSlots.size()))
 		return MaterialSlots[SlotIndex];
 	return nullptr;
+}
+
+void UObjComponent::SetMaterialSlot(int32 SlotIndex, FMaterial* Material)
+{
+	if (SlotIndex >= 0 && SlotIndex < static_cast<int32>(MaterialSlots.size()))
+	{
+		MaterialSlots[SlotIndex] = Material;
+	}
 }

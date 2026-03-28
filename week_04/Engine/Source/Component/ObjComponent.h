@@ -17,11 +17,9 @@ public:
 
 	FStaticMesh* GetStaticMesh() const { return StaticMesh; }
 	FMaterial* GetMaterialBySlot(int32 SlotIndex) const;
+	void SetMaterialSlot(int32 SlotIndex, FMaterial* Material);
 
 private:
-	// 기존 방식 소유권
-	std::unique_ptr<FMaterial> DynamicMaterialOwner;
-
 	// AssetManager 방식 (비소유, AssetManager가 수명 관리)
 	FStaticMesh* StaticMesh = nullptr;
 	TArray<FMaterial*> MaterialSlots;
