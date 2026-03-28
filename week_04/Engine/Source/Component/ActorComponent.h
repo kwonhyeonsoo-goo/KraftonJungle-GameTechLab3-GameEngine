@@ -1,5 +1,6 @@
 #pragma once
 #include "Object/Object.h"
+#include "Serializer/Archive.h"
 
 class AActor;
 
@@ -21,6 +22,7 @@ public:
 	bool HasBegunPlay() const { return bBegunPlay; }
 	bool CanTick() const { return bCanEverTick && bTickEnabled; }
 	void SetComponentTickEnabled(bool bEnabled) { bTickEnabled = bEnabled; }
+	virtual void Serialize(FArchive& Ar) {}
 
 protected:
 	TObjectPtr<AActor> Owner;

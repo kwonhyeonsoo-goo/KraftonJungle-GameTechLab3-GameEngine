@@ -305,6 +305,10 @@
     <ClCompile Include="Source\World\LevelManager.cpp">
       <Filter>Source\World</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Renderer\Mesh\StaticMesh.cpp" />
+    <ClCompile Include="Source\Component\MeshComponent.cpp" />
+    <ClCompile Include="Source\Component\StaticMeshComponent.cpp" />
+    <ClCompile Include="Source\World\Scene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -632,6 +636,11 @@
     <ClInclude Include="Source\World\LevelTypes.h">
       <Filter>Source\World</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Renderer\Mesh\StaticMesh.h" />
+    <ClInclude Include="Source\Component\MeshComponent.h" />
+    <ClInclude Include="Source\Component\StaticMeshComponent.h" />
+    <ClInclude Include="Source\World\Scene.h" />
+    <ClInclude Include="Source\Core\Templates\ObjectIterator.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

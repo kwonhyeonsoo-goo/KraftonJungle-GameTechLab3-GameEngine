@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 #include "Object/Object.h"
 #include "World/LevelTypes.h"
+#include "Scene.h"
 
 // Forward declarations — include 최소화
 class ULevel;
@@ -51,9 +52,15 @@ public:
 	float GetWorldTime() const { return WorldTime; }
 	float GetDeltaTime() const { return DeltaSeconds; }
 
+	FScene* GetScene() const { return Scene; }
+	void SetScene(FScene* InScene) { Scene = InScene; }
+
 private:
 	ULevel* PersistentLevel = nullptr;      
 	TArray<ULevel*> StreamingLevels;
+
+	/** 실제론 Renderer 에서 원본 소유 / CreateScene 을 통해 받아옴 */
+	FScene* Scene = nullptr;
 
 	bool bBegunPlay = false;
 	float WorldTime = 0.f;

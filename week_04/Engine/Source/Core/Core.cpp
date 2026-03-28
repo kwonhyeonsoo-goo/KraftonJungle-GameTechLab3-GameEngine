@@ -20,6 +20,10 @@
 #include "Component/UUIDBillboardComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Actor/SkySphereActor.h"
+
+#include "Templates/ObjectIterator.h"
+#include "Renderer/Mesh/StaticMesh.h"
+
 CCore::~CCore()
 {
 	Release();
@@ -60,7 +64,6 @@ bool CCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ELevelType StartupL
 
 	return true;
 }
-
 
 
 void CCore::SetViewportClient(IViewportClient* InViewportClient)
