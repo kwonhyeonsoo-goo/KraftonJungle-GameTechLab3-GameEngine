@@ -96,8 +96,6 @@ void IViewportClient::HandleFileDoubleClick(const FString& FilePath)
 
 }
 
-
-
 void IViewportClient::SetActiveCamera(UCameraComponent* InCamera)
 {
 	
@@ -108,6 +106,19 @@ void IViewportClient::SetActiveCamera(UCameraComponent* InCamera)
 		ActiveCamera = DefaultCamera;
 	}
 	
+}
+
+const FViewportInfo& IViewportClient::GetRenderViewportInfo()
+{
+	return ViewportInfo;
+}
+
+
+void IViewportClient::SetRenderViewportInfo(FViewportInfo InFViewportInfo)
+{
+
+	ViewportInfo = InFViewportInfo;
+
 }
 
 const FCameraViewInfo& IViewportClient::GetCameraViewInfo() const

@@ -4,8 +4,7 @@
 #include "Core/Core.h"
 #include "Renderer/Renderer.h"
 #include "World/Level.h"
-#include "Camera/Camera.h"
-
+#include "Camera/ViewportInfo.h"
 #include "imgui.h"
 
 namespace
@@ -73,7 +72,8 @@ void FViewport::Render(FCore* Core, FRenderer* Renderer, HWND Hwnd)
 
 	if (ImGui::BeginMenuBar())
 	{
-		FEditorViewportClient* EditorViewportClient = Core ? dynamic_cast<FEditorViewportClient*>(Core->GetViewportClient()) : nullptr;
+		// 1번 viewport 받도록 할 것임
+		FEditorViewportClient* EditorViewportClient = Core ? dynamic_cast<FEditorViewportClient*>(Core->Get) : nullptr;
 		if (EditorViewportClient)
 		{
 			// 도구 선택 버튼

@@ -38,7 +38,6 @@ public:
 	void ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
 	FRenderer* GetRenderer() const { return Renderer.get(); }
 
-	IViewportClient* GetViewportClient() const { return ViewportClient; }
 	FInputManager* GetInputManager() const { return InputManager; }
 	const FTimer& GetTimer() const { return Timer; }
 

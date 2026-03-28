@@ -7,32 +7,26 @@
 #include "Core/ConsoleVariableManager.h"
 #include "World/Level.h"
 #include "Actor/Actor.h"
-
 #include "Component/CameraComponent.h"
-
 #include "Component/CubeComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Debug/EngineLog.h"
 #include "World/World.h"
 #include "imgui_impl_win32.h"
 #include "Pawn/EditorCameraPawn.h"
-#include "Camera/Camera.h"
 #include "Actor/SkySphereActor.h"
+
 namespace
 {
 	constexpr const char* PreviewLevelContextName = "PreviewLevel";
 
 	void InitializeDefaultPreviewLevel(FCore* Core)
 	{
-		if (Core == nullptr)
-		{
-			return;
-		}
+		if (!Core) return;
+
 		FEditorWorldContext* PreviewContext = Core->GetLevelManager()->CreatePreviewWorldContext(PreviewLevelContextName, 1280, 720);
-		if (PreviewContext == nullptr || PreviewContext->World == nullptr)
-		{
-			return;
-		}
+		if (!PreviewContext || !PreviewContext->World) return;
+
 		UWorld* PreviewWorld = PreviewContext->World;
 		if (PreviewWorld->GetActors().empty())
 		{
@@ -44,51 +38,33 @@ namespace
 				PreviewActor->SetActorLocation({ 0.0f, 0.0f, 0.0f });
 			}
 		}
-
-		if (UCameraComponent* PreviewCamera = PreviewWorld->GetActiveCameraComponent())
-		{
-			PreviewCamera->GetCamera()->SetPosition({ -8.0f, -8.0f, 6.0f });
-			PreviewCamera->GetCamera()->SetRotation(45.0f, -20.0f);
-			PreviewCamera->SetFov(50.0f);
-		}
 	}
 }
 
 bool FEditorEngine::Initialize(HINSTANCE hInstance)
 {
 	ImGui_ImplWin32_EnableDpiAwareness();
-
-	if (!FEngine::Initialize(hInstance, L"Jungle Editor", 1280, 720))
-	{
-		return false;
-	}
-
-	return true;
+	return FEngine::Initialize(hInstance, L"Jungle Editor", 1280, 720);
 }
 
 FEditorEngine::~FEditorEngine()
 {
-	//Shutdown();
 }
 
 void FEditorEngine::Shutdown()
 {
-	if (Core && Core->GetViewportClient() == PreviewViewportClient.get())
-	{
-		Core->SetViewportClient(nullptr);
-	}
-
-	// EditorPawn은 Level 소속이 아니므로 직접 정리
 	if (EditorPawn)
 	{
 		EditorPawn->Destroy();
 		EditorPawn = nullptr;
 	}
 
-	PreviewViewportClient.reset();
-
-	// ViewportController가 EnhancedInput을 참조하므로, Engine이 해제하기 전에 정리
 	ViewportController.Cleanup();
+
+	// EditorViewportClient / PreviewViewportClient 포인터는
+	// ViewportClientArray가 소유 — FEngine::Shutdown()에서 정리됨
+	EditorViewportClient = nullptr;
+	PreviewViewportClient = nullptr;
 
 	FEngine::Shutdown();
 }
@@ -101,21 +77,28 @@ void FEditorEngine::PreInitialize()
 		});
 }
 
+void FEditorEngine::CreateViewportClients()
+{
+	// EditorViewportClient
+	auto EditorVP = std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
+	EditorViewportClient = EditorVP.get();
+	ViewportClientArray.push_back(std::move(EditorVP));
+
+	// PreviewViewportClient
+	auto PreviewVP = std::make_unique<FPreviewViewportClient>(EditorUI, MainWindow, PreviewLevelContextName);
+	PreviewViewportClient = PreviewVP.get();
+	ViewportClientArray.push_back(std::move(PreviewVP));
+}
+
 void FEditorEngine::PostInitialize()
 {
 	InitializeDefaultPreviewLevel(Core.get());
-	PreviewViewportClient = std::make_unique<FPreviewViewportClient>(EditorUI, MainWindow, PreviewLevelContextName);
 
 	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
-
-	// TArray<FString> VariableNames; 삭제
-	// CVM.GetAllNames(VariableNames); 삭제
-
-	// 이렇게 람다로 바로 받아서 등록하도록 변경합니다.
 	CVM.GetAllNames([this](const FString& Name)
-	{
-		EditorUI.GetConsole().RegisterCommand(Name.c_str());
-	});
+		{
+			EditorUI.GetConsole().RegisterCommand(Name.c_str());
+		});
 
 	EditorUI.GetConsole().SetCommandHandler([](const char* CommandLine)
 		{
@@ -129,64 +112,49 @@ void FEditorEngine::PostInitialize()
 				FEngineLog::Get().Log("[error] Unknown command: '%s'", CommandLine);
 			}
 		});
-	// EditorPawn은 Level에 등록하지 않음 — FEditorEngine이 직접 소유
-	
+
+	// EditorPawn 생성 및 카메라를 EditorViewportClient에 연결
 	EditorPawn = FObjectFactory::ConstructObject<AEditorCameraPawn>(nullptr, "EditorCameraPawn");
 	EditorPawn->Initialize();
-	Core->GetActiveWorld()->SetActiveCameraComponent(EditorPawn->GetCameraComponent());
+
+	UCameraComponent* EditorCamera = EditorPawn->GetCameraComponent();
+	if (EditorViewportClient)
+	{
+		EditorViewportClient->SetActiveCamera(EditorCamera);
+	}
+
+	// PreviewViewportClient는 PreviewWorld의 카메라를 사용
+	if (PreviewViewportClient)
+	{
+		FEditorWorldContext* PreviewContext =
+			Core->GetLevelManager()->FindPreviewWorldContext(PreviewLevelContextName);
+		if (PreviewContext && PreviewContext->World)
+		{
+			UCameraComponent* PreviewCamera = PreviewContext->World->GetActiveCameraComponent();
+			if (PreviewCamera)
+			{
+				PreviewCamera->SetPosition({ -8.0f, -8.0f, 6.0f });
+				PreviewCamera->SetRotation(45.0f, -20.0f);
+				PreviewCamera->SetFOV(50.0f);
+				PreviewViewportClient->SetActiveCamera(PreviewCamera);
+			}
+		}
+	}
+
 	ViewportController.Initialize(
-		EditorPawn->GetCameraComponent(),
+		EditorCamera,
 		Core->GetInputManager(),
 		Core->GetEnhancedInputManager());
 
-
-	SyncViewportClient();
 	UE_LOG("EditorEngine initialized");
 }
 
 void FEditorEngine::Tick(float DeltaTime)
 {
-	// Editor Level에서는 EditorPawn 카메라가 항상 활성화되도록 보장
-	// (ClearActors 후 LevelCameraComponent로 폴백된 경우 복원)
-	if (EditorPawn && Core && Core->GetLevel() && Core->GetLevel()->IsEditorLevel())
-	{
-		UCameraComponent* EditorCamera = EditorPawn->GetCameraComponent();
-		if (Core->GetActiveWorld()->GetActiveCameraComponent() != EditorCamera)
-		{
-			Core->GetActiveWorld()->SetActiveCameraComponent(EditorCamera);
-		}
-	}
-
 	ViewportController.Tick(DeltaTime);
-	SyncViewportClient();
-}
-
-std::unique_ptr<IViewportClient> FEditorEngine::CreateViewportClient()
-{
-	return std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
 }
 
 FEditorViewportController* FEditorEngine::GetViewportController()
 {
 	return &ViewportController;
-}
-
-void FEditorEngine::SyncViewportClient()
-{
-	if (!Core)
-	{
-		return;
-	}
-
-	IViewportClient* TargetViewportClient = ViewportClient.get();
-	const FWorldContext* ActiveWorldContext = Core->GetActiveWorldContext();
-	if (ActiveWorldContext && ActiveWorldContext->WorldType == ELevelType::Preview && PreviewViewportClient)
-	{
-		TargetViewportClient = PreviewViewportClient.get();
-	}
-
-	if (Core->GetViewportClient() != TargetViewportClient)
-	{
-		Core->SetViewportClient(TargetViewportClient);
-	}
 }

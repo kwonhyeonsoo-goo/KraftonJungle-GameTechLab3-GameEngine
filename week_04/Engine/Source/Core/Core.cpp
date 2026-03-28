@@ -76,16 +76,16 @@ void FCore::SetViewportClient(TArray<std::unique_ptr<IViewportClient>>& InViewpo
 		{
 			continue;
 		}
-		ViewportClientArray[Index]->Attach(this, Renderer.get());
+		ViewportClientArray[Index]->Detach(this, Renderer.get());
 
 		ViewportClientArray[Index] = viewportClient.get();
-		
+
 		if (ViewportClientArray[Index] == nullptr or Renderer == nullptr)
 		{
 			continue;
 		}
+		ViewportClientArray[Index]->Attach(this, Renderer.get());
 
-		viewportClient.get()->Detach(this, Renderer.get());
 
 	}
 
