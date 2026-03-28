@@ -17,7 +17,7 @@ class ENGINE_API UWorld : public UObject
 public:
 	DECLARE_RTTI(UWorld, UObject)
 	~UWorld();
-
+	  
 	template <typename T>
 	T* SpawnActor(const FString& InName);
 	void DestroyActor(AActor* InActor);

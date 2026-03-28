@@ -171,7 +171,13 @@ void FViewport::Render(FCore* Core, FRenderer* Renderer, HWND Hwnd)
 
 	if (Core && Core->GetLevel() && Core->GetLevel()->GetCamera())
 	{
-		Core->GetLevel()->GetCamera()->SetAspectRatio(static_cast<float>(NewWidth) / static_cast<float>(NewHeight));
+
+		for (auto ViewportClient : Core->GetViewportClients())
+		{
+			ViewportClient->OnViewportResized(NewWidth, NewHeight);
+		}
+
+		
 	}
 
 

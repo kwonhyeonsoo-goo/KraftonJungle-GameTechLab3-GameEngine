@@ -40,13 +40,17 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int32 Width,
 		return false;
 	}
 
-	CreateViewportClient();
-	Core->SetViewportClient(ViewportClientArray);
+	// 서브클래스가 ViewportClientArray를 채운 뒤 Core에 등록
+	CreateViewportClients();
+	Core->SetViewportClients(ViewportClientArray);
 
 	PostInitialize();
 
-	App->AddMessageFilter(std::bind(&FEngine::OnInput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-	App->SetOnResizeCallback(std::bind(&FEngine::OnResize, this, std::placeholders::_1, std::placeholders::_2));
+	App->AddMessageFilter(std::bind(&FEngine::OnInput, this,
+		std::placeholders::_1, std::placeholders::_2,
+		std::placeholders::_3, std::placeholders::_4));
+	App->SetOnResizeCallback(std::bind(&FEngine::OnResize, this,
+		std::placeholders::_1, std::placeholders::_2));
 	App->ShowWindow();
 
 	return true;
@@ -81,12 +85,11 @@ void FEngine::OnResize(int32 Width, int32 Height)
 	}
 }
 
-void FEngine::CreateViewportClient()
+void FEngine::CreateViewportClients()
 {
-	ViewportClientArray.reserve(5);
-	for (uint32 i = 0; i < 5; i++) {
-		ViewportClientArray.push_back(std::make_unique<FGameViewportClient>());
-	}
+	// 기본 구현: FGameViewportClient 하나
+	// 서브클래스(FEditorEngine 등)에서 override해서 필요한 ViewportClient 추가
+	ViewportClientArray.push_back(std::make_unique<FGameViewportClient>());
 }
 
 void FEngine::Shutdown()
@@ -95,15 +98,12 @@ void FEngine::Shutdown()
 
 	if (Core)
 	{
-		//Core->SetViewportClient(nullptr);
 		Core->Release();
 		Core.reset();
 	}
 
-	for (auto& viewportClient : ViewportClientArray)
-	{
-		viewportClient.reset();
-	}
+	// Core 해제 후 소유권 반환
+	ViewportClientArray.clear();
 
 	if (App)
 	{

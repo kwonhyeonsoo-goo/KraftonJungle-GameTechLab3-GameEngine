@@ -30,14 +30,16 @@ protected:
 	virtual void PostInitialize() {}
 	virtual void Tick(float DeltaTime) {}
 	virtual ELevelType GetStartupLevelType() const { return ELevelType::Game; }
-	virtual void CreateViewportClient();
+
+	// 서브클래스에서 ViewportClientArray에 push_back으로 채움
+	virtual void CreateViewportClients();
 
 	FWindowApplication* App = nullptr;
 	FWindow* MainWindow = nullptr;
 	std::unique_ptr<FCore> Core;
 
-	TArray< std::unique_ptr<IViewportClient>> ViewportClientArray;
-	//std::unique_ptr<IViewportClient> ViewportClient;
+	// 소유권은 FEngine
+	TArray<std::unique_ptr<IViewportClient>> ViewportClientArray;
 
 private:
 	bool OnInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);

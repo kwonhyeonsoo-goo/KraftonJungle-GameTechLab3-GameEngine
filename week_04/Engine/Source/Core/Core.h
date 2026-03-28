@@ -10,9 +10,9 @@
 #include "World/WorldContext.h"
 #include <memory>
 #include "Debug/DebugDrawManager.h"
+
 class FEnhancedInputManager;
 class FInputManager;
-
 class AActor;
 class ULevel;
 class ObjectManager;
@@ -41,15 +41,20 @@ public:
 	FInputManager* GetInputManager() const { return InputManager; }
 	const FTimer& GetTimer() const { return Timer; }
 
-	void SetViewportClient(TArray<std::unique_ptr<IViewportClient>>& InViewportClientArray);
+	// 소유권은 FEngine, Core는 raw pointer 배열만 참조
+	void SetViewportClients(TArray<std::unique_ptr<IViewportClient>>& InArray);
+
+	// 뷰포트 배열 접근
+	const TArray<IViewportClient*>& GetViewportClients() const { return ViewportClientArray; }
+	IViewportClient* GetViewportClientAt(int32 Index) const;
+	int32 GetViewportClientCount() const { return static_cast<int32>(ViewportClientArray.size()); }
 
 	void OnResize(int32 Width, int32 Height);
 	FEnhancedInputManager* GetEnhancedInputManager() const { return EnhancedInput; }
 	float GetDeltaTime() const { return Timer.GetDeltaTime(); }
-
 	FLevelManager* GetLevelManager() const { return LevelManager.get(); }
 
-	// Getter
+	// ── Level 접근자 ──────────────────────────────────────────────────
 	ULevel* GetLevel() const { return LevelManager->GetActiveLevel(); }
 	ULevel* GetActiveLevel() const { return LevelManager->GetActiveLevel(); }
 	ULevel* GetEditorLevel() const { return LevelManager->GetEditorLevel(); }
@@ -61,7 +66,7 @@ public:
 	void ActivateGameLevel() { LevelManager->ActivateGameLevel(); }
 	bool ActivatePreviewLevel(const FString& ContextName) { return LevelManager->ActivatePreviewLevel(ContextName); }
 
-	// ===== World 접근자 =====
+	// ── World 접근자 ──────────────────────────────────────────────────
 	UWorld* GetActiveWorld() const { return LevelManager->GetActiveWorld(); }
 	UWorld* GetEditorWorld() const { return LevelManager->GetEditorWorld(); }
 	UWorld* GetGameWorld() const { return LevelManager->GetGameWorld(); }
@@ -74,20 +79,18 @@ private:
 	void Render();
 	void LateUpdate(float DeltaTime);
 	void RegisterConsoleVariables();
-	FDebugDrawManager& GetDebugDrawManager() { return DebugDrawManager; }
 
 private:
 	FDebugDrawManager DebugDrawManager;
 	std::unique_ptr<FRenderer> Renderer;
 	FInputManager* InputManager = nullptr;
 	FEnhancedInputManager* EnhancedInput = nullptr;
-
 	ObjectManager* ObjManager = nullptr;
 
-	TArray<IViewportClient*> ViewportClientArray = {};
+	// 소유권 FEngine, Core는 참조만
+	TArray<IViewportClient*> ViewportClientArray;
 
 	std::unique_ptr<FLevelManager> LevelManager;
-
 	std::unique_ptr<FPhysicsManager> PhysicsManager;
 
 	FTimer Timer;
