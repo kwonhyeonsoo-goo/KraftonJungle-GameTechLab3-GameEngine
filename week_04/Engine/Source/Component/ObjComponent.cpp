@@ -12,12 +12,12 @@
 IMPLEMENT_RTTI(UObjComponent, UPrimitiveComponent)
 
 void UObjComponent::Initialize()
-{ 
+{
 }
 
 void UObjComponent::LoadPrimitive(const FString& FilePath)
 {
-	Primitive = std::make_unique<CPrimitiveObj>(FilePath);	
+	Primitive = std::make_unique<CPrimitiveObj>(FilePath);
 }
 
 void UObjComponent::LoadTexture(ID3D11Device* Device, const FString& FilePath)
@@ -91,7 +91,7 @@ void UObjComponent::LoadTexture(ID3D11Device* Device, const FString& FilePath)
 
 	stbi_image_free(data);
 
-	std::shared_ptr<FMaterialTexture> MT = std::make_shared<FMaterialTexture>();
+	std::shared_ptr<FTexture> MT = std::make_shared<FTexture>();
 	MT->TextureSRV = srv;
 	Material->SetMaterialTexture(MT);
 }

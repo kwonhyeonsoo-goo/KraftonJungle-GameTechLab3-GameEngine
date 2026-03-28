@@ -632,6 +632,12 @@
     <ClInclude Include="Source\Actor\TextActor.h">
       <Filter>Source\Actor</Filter>
     </ClInclude>
+    <ClInclude Include="AssetManager.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="StaticMesh.h">
+      <Filter>Source\Renderer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

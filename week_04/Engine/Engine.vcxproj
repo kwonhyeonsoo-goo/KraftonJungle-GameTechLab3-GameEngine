@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AssetManager.h" />
     <ClInclude Include="PrimitiveLineBatch.h" />
     <ClInclude Include="Source\Actor\TextActor.h" />
     <ClInclude Include="Source\Component\TextComponent.h" />
@@ -126,10 +127,12 @@
     <ClInclude Include="Source\Types\String.h" />
     <ClInclude Include="Source\World\World.h" />
     <ClInclude Include="Source\World\WorldContext.h" />
+    <ClInclude Include="StaticMesh.h" />
     <ClInclude Include="ThirdParty\stb_image.h" />
     <ClInclude Include="ThirdParty\nlohmann\json.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AssetManager.cpp" />
     <ClCompile Include="PrimitiveLineBatch.cpp" />
     <ClCompile Include="Source\Actor\Actor.cpp" />
     <ClCompile Include="Source\Actor\AttachTestActor.cpp" />
