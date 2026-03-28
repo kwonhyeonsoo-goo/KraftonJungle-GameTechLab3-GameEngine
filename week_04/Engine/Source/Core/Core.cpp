@@ -76,19 +76,18 @@ void FCore::SetViewportClient(TArray<std::unique_ptr<IViewportClient>>& InViewpo
 		{
 			continue;
 		}
+		ViewportClientArray[Index]->Attach(this, Renderer.get());
 
-		viewportClient.get()->Detach(this, Renderer.get());
 		ViewportClientArray[Index] = viewportClient.get();
 		
 		if (ViewportClientArray[Index] == nullptr or Renderer == nullptr)
 		{
 			continue;
 		}
-		ViewportClientArray[Index]->Attach(this, Renderer.get());
+
+		viewportClient.get()->Detach(this, Renderer.get());
+
 	}
-
-
-
 
 }
 
@@ -100,10 +99,16 @@ void FCore::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 	}
 
 	// 다들 입력이 다를 수 있어서 별개처리해야함
-	if (ViewportClient)
+
+	// 입력 만들어지면 그 때. 수정
+	for (auto& viewportClient : ViewportClientArray)
 	{
-		ViewportClient->HandleMessage(this, Hwnd, Msg, WParam, LParam);
+		viewportClient->HandleMessage(this, Hwnd, Msg, WParam, LParam);
 	}
+	//if (ViewportClient)
+	//{
+	//	ViewportClient->HandleMessage(this, Hwnd, Msg, WParam, LParam);
+	//}
 }
 
 void FCore::Release()
@@ -279,7 +284,7 @@ void FCore::Render()
 	// viewport 별로 camera initialize;
 	for (auto CurrentViewport : ViewportClientArray)
 	{
-		CurrentViewport->Initnalize(ActiveWorld->GetActiveCameraComponent());
+		//CurrentViewport->Initnalize(ActiveWorld->GetActiveCameraComponent());
 		FCameraViewInfo CameraViewInfo = CurrentViewport->GetCameraViewInfo();
 		CommandQueue.Clear();
 		CommandQueue.Reserve(Renderer->GetPrevCommandCount());
@@ -329,7 +334,7 @@ void FCore::Render()
 	//Renderer->SubmitCommands(CommandQueue);
 	//Renderer->ExecuteCommands();
 	//const FShowFlags& ShowFlags = ViewportClient ? ViewportClient->GetShowFlags() : FShowFlags();
-	DebugDrawManager.Flush(Renderer.get(), ShowFlags, ActiveWorld);
+	//DebugDrawManager.Flush(Renderer.get(), ShowFlags, ActiveWorld);
 	Renderer->EndFrame();
 }
 

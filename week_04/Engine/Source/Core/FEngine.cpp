@@ -85,7 +85,7 @@ void FEngine::CreateViewportClient()
 {
 	ViewportClientArray.reserve(5);
 	for (uint32 i = 0; i < 5; i++) {
-		ViewportClientArray[i] = std::make_unique<IViewportClient>();
+		ViewportClientArray.push_back(std::make_unique<FGameViewportClient>());
 	}
 }
 
@@ -95,7 +95,7 @@ void FEngine::Shutdown()
 
 	if (Core)
 	{
-		Core->SetViewportClient(nullptr);
+		//Core->SetViewportClient(nullptr);
 		Core->Release();
 		Core.reset();
 	}

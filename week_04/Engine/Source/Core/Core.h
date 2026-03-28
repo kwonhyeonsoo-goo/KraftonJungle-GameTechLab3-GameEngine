@@ -42,7 +42,7 @@ public:
 	FInputManager* GetInputManager() const { return InputManager; }
 	const FTimer& GetTimer() const { return Timer; }
 
-	void SetViewportClient(IViewportClient* InViewportClient);
+	void SetViewportClient(TArray<std::unique_ptr<IViewportClient>>& InViewportClientArray);
 
 	void OnResize(int32 Width, int32 Height);
 	FEnhancedInputManager* GetEnhancedInputManager() const { return EnhancedInput; }

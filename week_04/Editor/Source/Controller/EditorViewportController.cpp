@@ -88,13 +88,13 @@ void FEditorViewportController::SetupInputBindings()
 	EnhancedInput->BindAction(&LookXAction, ETriggerEvent::Triggered,
 		[this](const FInputActionValue& Value) {
 		if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
-			CameraComponent->Rotate(Value.Get() * CameraComponent->GetCamera()->GetMouseSensitivity(), 0.0f);
+			CameraComponent->Rotate(Value.Get() * CameraComponent->GetSensitivity(), 0.0f);
 	});
 
 	EnhancedInput->BindAction(&LookYAction, ETriggerEvent::Triggered,
 		[this](const FInputActionValue& Value) {
 		if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
-			CameraComponent->Rotate(0.0f, -Value.Get() * CameraComponent->GetCamera()->GetMouseSensitivity());
+			CameraComponent->Rotate(0.0f, -Value.Get() * CameraComponent->GetSensitivity());
 	});
 
 	EnhancedInput->BindAction(&LookXAction, ETriggerEvent::Triggered,
