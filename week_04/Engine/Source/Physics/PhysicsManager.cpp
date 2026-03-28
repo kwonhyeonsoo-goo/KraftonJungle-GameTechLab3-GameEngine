@@ -7,6 +7,7 @@
 #include "Component/SubUVComponent.h"
 #include "Component/UUIDBillboardComponent.h"
 #include "Component/TextComponent.h"
+#include "Component/StaticMeshComponent.h"
 
 bool FPhysicsManager::Linetrace(const ULevel* Level, const FVector& Start, const FVector& End, FHitResult& OutHit)
 {
@@ -35,7 +36,12 @@ bool FPhysicsManager::Linetrace(const ULevel* Level, const FVector& Start, const
 
 				UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
 				if (!PrimitiveComponent->ShouldDrawDebugBounds()) continue;
-				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
+
+				if (Component->IsA(UStaticMeshComponent::StaticClass()))
+				{
+					/** StaticMeshComponent는 지금 Primitive 없이 돌아가는거라 continue 당하지 않게 하기 위해 넣음 */
+				}
+				else if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
 				{
 					continue;
 				}

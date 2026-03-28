@@ -31,11 +31,6 @@ FBoxSphereBounds UStaticMeshComponent::GetWorldBounds() const
 {
 	FVector Center = GetWorldLocation();
 
-	if (!Primitive)
-	{
-		return { Center, 1, FVector(1, 1, 1) };
-	}
-
 	FMeshData* MeshData = StaticMesh->GetAsset()->MeshData.get();
 
 	if (MeshData)

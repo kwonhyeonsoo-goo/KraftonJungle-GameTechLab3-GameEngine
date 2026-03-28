@@ -7,7 +7,9 @@
 #include "Component/UUIDBillboardComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Component/SkyComponent.h"
+#include "Component/StaticMeshComponent.h"
 #include "Object/Class.h"
+
 void FDebugDrawManager::DrawLine(const FVector& Start, const FVector& End, const FVector4& Color)
 {
 	Lines.push_back({ Start, End, Color });
@@ -88,11 +90,15 @@ void FDebugDrawManager::DrawAllCollisionBounds(FRenderer* Renderer, UWorld* Worl
 			// 빌보드, SubUV 제외
 			if (!PrimComp->ShouldDrawDebugBounds()) continue;
 
-			if (!PrimComp->GetPrimitive() || !PrimComp->GetPrimitive()->GetMeshData())
+			if (PrimComp->IsA(UStaticMeshComponent::StaticClass()))
+			{
+				// UStaticMeshComponent 를 무시하는거 막기 위한 if, else if 임
+			}
+			else if (!PrimComp->GetPrimitive() || !PrimComp->GetPrimitive()->GetMeshData())
 				continue;
 
 			FBoxSphereBounds Bound = PrimComp->GetWorldBounds();
-			Renderer->DrawCube(Bound.Center, Bound.BoxExtent, FVector4(1, 0, 0, 1));  // 초록색
+			Renderer->DrawCube(Bound.Center, Bound.BoxExtent, FVector4(1, 0, 0, 1));
 		}
 	}
 }
