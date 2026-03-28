@@ -59,6 +59,8 @@ void AActor::AddOwnedComponent(UActorComponent* InComponent)
 	{
 		RootComponent = static_cast<USceneComponent*>(InComponent);
 	}
+
+
 }
 
 void AActor::RemoveOwnedComponent(UActorComponent* InComponent)

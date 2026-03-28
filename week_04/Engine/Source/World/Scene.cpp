@@ -2,25 +2,13 @@
 #include "Component/PrimitiveComponent.h"
 #include "Component/StaticMeshComponent.h"
 
-void FScene::AddComponent(UPrimitiveComponent* Comp)
+void FScene::AddPrimitive(FMeshData* InPrimitive)
 {
-	Primitives.push_back(Comp);
+	Primitives.push_back(InPrimitive);
 }
 
-void FScene::Clear()
+void FScene::RemovePrimitive(FMeshData* InPrimitive)
 {
-	Primitives.clear();
-}
-
-const TArray<UStaticMeshComponent*> FScene::GetStaticMeshComponents() const
-{
-	TArray<UStaticMeshComponent*> StaticMeshComps;
-
-	for (UPrimitiveComponent* Primitive : Primitives)
-	{
-		if (Primitive->IsA(UStaticMeshComponent::StaticClass()))
-			StaticMeshComps.push_back(static_cast<UStaticMeshComponent*>(Primitive));
-	}
-
-	return StaticMeshComps;
+	/** 삭제 시 기존 iterator 가 무효화되는 것 인지 (e.g., 반복문 안 삭제) */
+	std::erase(Primitives, InPrimitive);
 }

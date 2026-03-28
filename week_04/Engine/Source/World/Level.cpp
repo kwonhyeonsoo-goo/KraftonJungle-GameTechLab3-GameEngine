@@ -43,8 +43,6 @@ CCamera* ULevel::GetCamera() const
 
 void ULevel::ClearActors()
 {
-
-
 	for (AActor* Actor : Actors)
 	{
 		if (Actor)

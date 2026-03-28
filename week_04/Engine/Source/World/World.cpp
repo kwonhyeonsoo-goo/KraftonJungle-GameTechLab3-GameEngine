@@ -100,9 +100,6 @@ void UWorld::CleanupWorld()
 		ActiveCameraComponent = nullptr;
 	}
 
-	if (Scene)
-		Scene->Clear();
-
 	LevelCameraComponent = nullptr;
 	WorldTime = 0.f;
 	DeltaSeconds = 0.f;

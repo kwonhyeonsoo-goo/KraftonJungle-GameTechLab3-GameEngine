@@ -23,6 +23,7 @@
 
 #include "Templates/ObjectIterator.h"
 #include "Renderer/Mesh/StaticMesh.h"
+#include "Component/StaticMeshComponent.h"
 
 CCore::~CCore()
 {
