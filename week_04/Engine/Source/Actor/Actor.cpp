@@ -6,20 +6,20 @@
 #include "Component/TextComponent.h"
 #include "Component/SceneComponent.h"
 #include "Serializer/Archive.h"
-#include "Scene/Scene.h"
+#include "World/Level.h"
 IMPLEMENT_RTTI(AActor, UObject)
 
 namespace {
 	FVector GZeroVector{};
 }
 
-UScene* AActor::GetScene() const { return Scene; }
-void AActor::SetScene(UScene* InScene) { Scene = InScene; }
+ULevel* AActor::GetLevel() const { return Level; }
+void AActor::SetLevel(ULevel* InLevel) { Level = InLevel; }
 UWorld* AActor::GetWorld() const
 {
-	if (Scene)
+	if (Level)
 	{
-		return Scene->GetTypedOuter<UWorld>();
+		return Level->GetTypedOuter<UWorld>();
 	}
 	return nullptr;
 }

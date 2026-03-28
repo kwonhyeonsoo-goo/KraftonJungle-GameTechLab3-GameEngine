@@ -14,7 +14,7 @@ public:
 	void Attach(CCore* Core, CRenderer* Renderer) override;
 	void Detach(CCore* Core, CRenderer* Renderer) override;
 	void Tick(CCore* Core, float DeltaTime) override;
-	UScene* ResolveScene(CCore* Core) const override;
+	ULevel* ResolveLevel(CCore* Core) const override;
 
 private:
 	CEditorUI& EditorUI;

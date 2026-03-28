@@ -1,6 +1,6 @@
 #pragma once
 
-enum class ESceneType : unsigned char
+enum class ELevelType : unsigned char
 {
     Game,
     Editor,

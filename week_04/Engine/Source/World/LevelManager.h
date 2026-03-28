@@ -1,32 +1,32 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "World/WorldContext.h"
-#include "Scene/SceneTypes.h"
+#include "World/LevelTypes.h"
 #include <memory>
 
-class UScene;
+class ULevel;
 class UWorld;
 class AActor;
 class CRenderer;
 
-class ENGINE_API FSceneManager
+class ENGINE_API FLevelManager
 {
 public:
-	FSceneManager() = default;
-	~FSceneManager();
-	FSceneManager(const FSceneManager&) = delete;
-	FSceneManager& operator=(const FSceneManager&) = delete;
-	FSceneManager(FSceneManager&&) = delete;
-	FSceneManager& operator=(FSceneManager&&) = delete;
+	FLevelManager() = default;
+	~FLevelManager();
+	FLevelManager(const FLevelManager&) = delete;
+	FLevelManager& operator=(const FLevelManager&) = delete;
+	FLevelManager(FLevelManager&&) = delete;
+	FLevelManager& operator=(FLevelManager&&) = delete;
 
 	// 초기화
-	bool Initialize(float AspectRatio, ESceneType StartupSceneType, CRenderer* InRenderer);
+	bool Initialize(float AspectRatio, ELevelType StartupLevelType, CRenderer* InRenderer);
 	void Release();
 
 	// World 전환
-	void ActivateEditorScene() { ActiveWorldContext = EditorWorldContext.World ? &EditorWorldContext : nullptr; }
-	void ActivateGameScene() { ActiveWorldContext = GameWorldContext.World ? &GameWorldContext : nullptr; }
-	bool ActivatePreviewScene(const FString& ContextName);
+	void ActivateEditorLevel() { ActiveWorldContext = EditorWorldContext.World ? &EditorWorldContext : nullptr; }
+	void ActivateGameLevel() { ActiveWorldContext = GameWorldContext.World ? &GameWorldContext : nullptr; }
+	bool ActivatePreviewLevel(const FString& ContextName);
 
 	// Preview 관리
 	FEditorWorldContext* CreatePreviewWorldContext(const FString& ContextName, int32 WindowWidth, int32 WindowHeight);
@@ -40,11 +40,11 @@ public:
 	const FWorldContext* GetActiveWorldContext() const { return ActiveWorldContext; }
 	const TArray<std::unique_ptr<FEditorWorldContext>>& GetPreviewWorldContexts() const { return PreviewWorldContexts; }
 
-	// 하위 호환 — World 경유로 Scene 반환
-	UScene* GetActiveScene() const;
-	UScene* GetEditorScene() const;
-	UScene* GetGameScene() const;
-	UScene* GetPreviewScene(const FString& ContextName) const;
+	// 하위 호환 — World 경유로 Level 반환
+	ULevel* GetActiveLevel() const;
+	ULevel* GetEditorLevel() const;
+	ULevel* GetGameLevel() const;
+	ULevel* GetPreviewLevel(const FString& ContextName) const;
 
 	// 선택 Actor
 	void SetSelectedActor(AActor* InActor);
@@ -55,7 +55,7 @@ public:
 
 private:
 	bool CreateWorldContext(FWorldContext& OutContext, const FString& ContextName,
-		ESceneType WorldType, float AspectRatio, bool bDefaultScene = true);
+		ELevelType WorldType, float AspectRatio, bool bDefaultLevel = true);
 	void DestroyWorldContext(FWorldContext& Context);
 	void DestroyWorldContext(FEditorWorldContext& Context);
 

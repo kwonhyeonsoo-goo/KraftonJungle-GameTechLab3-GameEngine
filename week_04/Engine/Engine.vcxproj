@@ -22,8 +22,11 @@
     <ClInclude Include="AssetManager.h" />
     <ClInclude Include="PrimitiveLineBatch.h" />
     <ClInclude Include="Source\Actor\TextActor.h" />
+    <ClInclude Include="Source\Component\MeshComponent.h" />
+    <ClInclude Include="Source\Component\StaticMeshComponent.h" />
     <ClInclude Include="Source\Component\TextComponent.h" />
     <ClInclude Include="Source\CoreMinimal.h" />
+    <ClInclude Include="Source\Core\Templates\ObjectIterator.h" />
     <ClInclude Include="Source\EngineAPI.h" />
     <ClInclude Include="Source\Actor\Actor.h" />
     <ClInclude Include="Source\Actor\AttachTestActor.h" />
@@ -94,6 +97,7 @@
     <ClInclude Include="Source\Renderer\FontAtlas.h" />
     <ClInclude Include="Source\Renderer\Material.h" />
     <ClInclude Include="Source\Renderer\MaterialManager.h" />
+    <ClInclude Include="Source\Renderer\Mesh\StaticMesh.h" />
     <ClInclude Include="Source\Renderer\PrimitiveVertex.h" />
     <ClInclude Include="Source\Renderer\RenderCommand.h" />
     <ClInclude Include="Source\Renderer\RenderState.h" />
@@ -107,11 +111,6 @@
     <ClInclude Include="Source\Renderer\SubUVRenderer.h" />
     <ClInclude Include="Source\Renderer\TextMeshBuilder.h" />
     <ClInclude Include="Source\Renderer\TextureVertex.h" />
-    <ClInclude Include="Source\Scene\RenderCollector.h" />
-    <ClInclude Include="Source\Scene\Scene.h" />
-    <ClInclude Include="Source\Scene\SceneContext.h" />
-    <ClInclude Include="Source\Scene\SceneManager.h" />
-    <ClInclude Include="Source\Scene\SceneTypes.h" />
     <ClInclude Include="Source\Serializer\Archive.h" />
     <ClInclude Include="Source\Serializer\SceneSerializer.h" />
     <ClInclude Include="Source\Types\Array.h" />
@@ -125,6 +124,12 @@
     <ClInclude Include="Source\Types\Set.h" />
     <ClInclude Include="Source\Types\StaticArray.h" />
     <ClInclude Include="Source\Types\String.h" />
+    <ClInclude Include="Source\World\Level.h" />
+    <ClInclude Include="Source\World\LevelManager.h" />
+    <ClInclude Include="Source\World\RenderCollector.h" />
+    <ClInclude Include="Source\World\LevelContext.h" />
+    <ClInclude Include="Source\World\LevelTypes.h" />
+    <ClInclude Include="Source\World\Scene.h" />
     <ClInclude Include="Source\World\World.h" />
     <ClInclude Include="Source\World\WorldContext.h" />
     <ClInclude Include="StaticMesh.h" />
@@ -148,6 +153,7 @@
     <ClCompile Include="Source\Component\CameraComponent.cpp" />
     <ClCompile Include="Source\Component\CubeComponent.cpp" />
     <ClCompile Include="Source\Component\LineBatchComponent.cpp" />
+    <ClCompile Include="Source\Component\MeshComponent.cpp" />
     <ClCompile Include="Source\Component\ObjComponent.cpp" />
     <ClCompile Include="Source\Component\PlaneComponent.cpp" />
     <ClCompile Include="Source\Component\PrimitiveComponent.cpp" />
@@ -155,6 +161,7 @@
     <ClCompile Include="Source\Component\SceneComponent.cpp" />
     <ClCompile Include="Source\Component\SkyComponent.cpp" />
     <ClCompile Include="Source\Component\SphereComponent.cpp" />
+    <ClCompile Include="Source\Component\StaticMeshComponent.cpp" />
     <ClCompile Include="Source\Component\SubUVComponent.cpp" />
     <ClCompile Include="Source\Component\TextComponent.cpp" />
     <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp" />
@@ -197,6 +204,7 @@
     <ClCompile Include="Source\Renderer\FontAtlas.cpp" />
     <ClCompile Include="Source\Renderer\Material.cpp" />
     <ClCompile Include="Source\Renderer\MaterialManager.cpp" />
+    <ClCompile Include="Source\Renderer\Mesh\StaticMesh.cpp" />
     <ClCompile Include="Source\Renderer\RenderCommand.cpp" />
     <ClCompile Include="Source\Renderer\RenderState.cpp" />
     <ClCompile Include="Source\Renderer\RenderStateManager.cpp" />
@@ -207,12 +215,13 @@
     <ClCompile Include="Source\Renderer\ShaderResource.cpp" />
     <ClCompile Include="Source\Renderer\SubUVRenderer.cpp" />
     <ClCompile Include="Source\Renderer\TextMeshBuilder.cpp" />
-    <ClCompile Include="Source\Scene\RenderCollector.cpp" />
-    <ClCompile Include="Source\Scene\Scene.cpp" />
-    <ClCompile Include="Source\Scene\SceneManager.cpp" />
     <ClCompile Include="Source\Serializer\Archive.cpp" />
     <ClCompile Include="Source\Serializer\SceneSerializer.cpp" />
     <ClCompile Include="Source\Types\Name.cpp" />
+    <ClCompile Include="Source\World\Level.cpp" />
+    <ClCompile Include="Source\World\RenderCollector.cpp" />
+    <ClCompile Include="Source\World\LevelManager.cpp" />
+    <ClCompile Include="Source\World\Scene.cpp" />
     <ClCompile Include="Source\World\World.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

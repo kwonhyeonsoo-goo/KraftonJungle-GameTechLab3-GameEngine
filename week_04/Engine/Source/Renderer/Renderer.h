@@ -14,7 +14,7 @@
 
 class FPixelShader;
 class FMaterial;
-class UScene;
+class ULevel;
 
 using FGUICallback = std::function<void()>;
 class CRenderer;
@@ -49,8 +49,8 @@ public:
 	void OnResize(int32 NewWidth, int32 NewHeight);
 	
 	/** 씬 렌더 타겟 설정 (외부 오버라이드용) */
-	void SetSceneRenderTarget(ID3D11RenderTargetView* InRenderTargetView, ID3D11DepthStencilView* InDepthStencilView, const D3D11_VIEWPORT& InViewport);
-	void ClearSceneRenderTarget();
+	void SetLevelRenderTarget(ID3D11RenderTargetView* InRenderTargetView, ID3D11DepthStencilView* InDepthStencilView, const D3D11_VIEWPORT& InViewport);
+	void ClearLevelRenderTarget();
 
 	void SetVSync(bool bEnable) { bVSyncEnabled = bEnable; }
 	bool IsVSyncEnabled() const { return bVSyncEnabled; }
@@ -130,10 +130,10 @@ private:
 	FMatrix ProjectionMatrix;
 	D3D11_VIEWPORT Viewport = {};
 	
-	ID3D11RenderTargetView* SceneRenderTargetView = nullptr;
-	ID3D11DepthStencilView* SceneDepthStencilView = nullptr;
-	D3D11_VIEWPORT SceneViewport = {};
-	bool bUseSceneRenderTargetOverride = false;
+	ID3D11RenderTargetView* LevelRenderTargetView = nullptr;
+	ID3D11DepthStencilView* LevelDepthStencilView = nullptr;
+	D3D11_VIEWPORT LevelViewport = {};
+	bool bUseLevelRenderTargetOverride = false;
 	bool bVSyncEnabled = false;
 
 	/** 통합된 렌더링 명령 리스트 */

@@ -55,17 +55,17 @@ void CPreviewViewportClient::Tick(CCore* Core, float DeltaTime)
 	IViewportClient::Tick(Core, DeltaTime);
 }
 
-UScene* CPreviewViewportClient::ResolveScene(CCore* Core) const
+ULevel* CPreviewViewportClient::ResolveLevel(CCore* Core) const
 {
 	if (!Core)
 	{
 		return nullptr;
 	}
 
-	if (UScene* PreviewScene = Core->GetSceneManager()->GetPreviewScene(PreviewContextName))
+	if (ULevel* PreviewLevel = Core->GetLevelManager()->GetPreviewLevel(PreviewContextName))
 	{
-		return PreviewScene;
+		return PreviewLevel;
 	}
 
-	return Core->GetActiveScene();
+	return Core->GetActiveLevel();
 }

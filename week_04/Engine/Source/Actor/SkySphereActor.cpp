@@ -1,7 +1,7 @@
 #include "SkySphereActor.h"
 #include "Component/SkyComponent.h"
 #include "Object/ObjectFactory.h"
-#include "Scene/Scene.h"
+#include "World/Level.h"
 #include "Component/CameraComponent.h"
 #include "Renderer/MaterialManager.h"
 #include "Camera/Camera.h"

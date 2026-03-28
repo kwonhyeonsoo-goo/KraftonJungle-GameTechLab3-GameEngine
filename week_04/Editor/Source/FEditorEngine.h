@@ -20,7 +20,7 @@ protected:
 	void PreInitialize() override;
 	void PostInitialize() override;
 	void Tick(float DeltaTime) override;
-	ESceneType GetStartupSceneType() const override { return ESceneType::Editor; }
+	ELevelType GetStartupLevelType() const override { return ELevelType::Editor; }
 	std::unique_ptr<IViewportClient> CreateViewportClient() override;
 
 	CEditorViewportController* GetViewportController();

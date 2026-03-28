@@ -5,7 +5,7 @@
 
 class UActorComponent;
 class USceneComponent;
-class UScene;
+class ULevel;
 
 class FArchive;
 class ENGINE_API AActor : public UObject
@@ -14,8 +14,8 @@ public:
 	DECLARE_RTTI(AActor, UObject)
 	~AActor() override = default;
 
-	UScene* GetScene() const;
-	void SetScene(UScene* InScene);
+	ULevel* GetLevel() const;
+	void SetLevel(ULevel* InLevel);
 	UWorld* GetWorld() const;
 	// ULevel* GetLevel() const { return Level;
 	// void SetLevel(ULevel* InLevel) { Level = InLevel; }
@@ -61,7 +61,7 @@ public:
 	bool IsVisible() const { return bVisible; }
 	void SetVisible(bool bInVisible) { bVisible = bInVisible; }
 protected:
-	TObjectPtr<UScene> Scene;
+	TObjectPtr<ULevel> Level;
 	//ULevel* Level = nullptr;
 
 	USceneComponent* RootComponent = nullptr;

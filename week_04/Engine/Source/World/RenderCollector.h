@@ -7,13 +7,11 @@ class AActor;
 class FFrustum;
 struct FRenderCommandQueue;
 class UPrimitiveComponent;
-class ENGINE_API FSceneRenderCollector
+class ENGINE_API FLevelRenderCollector
 {
 public:
 	void CollectRenderCommands(const TArray<AActor*>& Actors, const FFrustum& Frustum,
 		const FShowFlags& ShowFlags, FRenderCommandQueue& OutQueue);
 	void FrustrumCull(const TArray<AActor*>& Actors, const FFrustum& Frustum,
 		const FShowFlags& ShowFlags, TArray<UPrimitiveComponent*>& OutVisible);
-
-
 };

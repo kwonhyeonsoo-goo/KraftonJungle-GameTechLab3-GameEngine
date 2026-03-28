@@ -11,13 +11,13 @@ public:
 	~CViewport();
 
 	void Render(CCore* Core, CRenderer* Renderer, HWND Hwnd);
-	void ReleaseSceneView();
+	void ReleaseLevelView();
 	bool GetMousePositionInViewport(int32 WindowMouseX, int32 WindowMouseY, int32& OutViewportX, int32& OutViewportY, int32& OutWidth, int32& OutHeight) const;
 	bool IsHovered() const { return bHovered; }
 	bool IsFocused() const { return bFocused; }
 	bool IsVisible() const { return bVisible; }
 
-	void ReadySceneView(ID3D11Device* Device, uint32 Width, uint32 Height);
+	void ReadyLevelView(ID3D11Device* Device, uint32 Width, uint32 Height);
 
 private:
 	ID3D11Texture2D* RenderTargetTexture = nullptr;

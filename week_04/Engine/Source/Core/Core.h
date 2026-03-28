@@ -3,10 +3,10 @@
 #include "CoreMinimal.h"
 #include "Windows.h"
 #include "Core/FTimer.h"
-#include "Scene/SceneTypes.h"
+#include "World/LevelTypes.h"
 #include "Renderer/Renderer.h"
 #include "Physics/PhysicsManager.h"
-#include "Scene/SceneManager.h"
+#include "World/LevelManager.h"
 #include "World/WorldContext.h"
 #include <memory>
 #include "Debug/DebugDrawManager.h"
@@ -14,7 +14,7 @@ class CEnhancedInputManager;
 class CInputManager;
 
 class AActor;
-class UScene;
+class ULevel;
 class ObjectManager;
 class IViewportClient;
 
@@ -29,7 +29,7 @@ public:
 	CCore& operator=(const CCore&) = delete;
 	CCore& operator=(CCore&&) = delete;
 
-	bool Initialize(HWND Hwnd, int32 Width, int32 Height, ESceneType StartupSceneType = ESceneType::Game);
+	bool Initialize(HWND Hwnd, int32 Width, int32 Height, ELevelType StartupLevelType = ELevelType::Game);
 	void Release();
 
 	void Tick();
@@ -48,25 +48,25 @@ public:
 	CEnhancedInputManager* GetEnhancedInputManager() const { return EnhancedInput; }
 	float GetDeltaTime() const { return Timer.GetDeltaTime(); }
 
-	FSceneManager* GetSceneManager() const { return SceneManager.get(); }
+	FLevelManager* GetLevelManager() const { return LevelManager.get(); }
 
 	// Getter
-	UScene* GetScene() const { return SceneManager->GetActiveScene(); }
-	UScene* GetActiveScene() const { return SceneManager->GetActiveScene(); }
-	UScene* GetEditorScene() const { return SceneManager->GetEditorScene(); }
-	UScene* GetGameScene() const { return SceneManager->GetGameScene(); }
+	ULevel* GetLevel() const { return LevelManager->GetActiveLevel(); }
+	ULevel* GetActiveLevel() const { return LevelManager->GetActiveLevel(); }
+	ULevel* GetEditorLevel() const { return LevelManager->GetEditorLevel(); }
+	ULevel* GetGameLevel() const { return LevelManager->GetGameLevel(); }
 
-	void SetSelectedActor(AActor* A) { SceneManager->SetSelectedActor(A); }
-	AActor* GetSelectedActor() const { return SceneManager->GetSelectedActor(); }
-	void ActivateEditorScene() { SceneManager->ActivateEditorScene(); }
-	void ActivateGameScene() { SceneManager->ActivateGameScene(); }
-	bool ActivatePreviewScene(const FString& ContextName) { return SceneManager->ActivatePreviewScene(ContextName); }
+	void SetSelectedActor(AActor* A) { LevelManager->SetSelectedActor(A); }
+	AActor* GetSelectedActor() const { return LevelManager->GetSelectedActor(); }
+	void ActivateEditorLevel() { LevelManager->ActivateEditorLevel(); }
+	void ActivateGameLevel() { LevelManager->ActivateGameLevel(); }
+	bool ActivatePreviewLevel(const FString& ContextName) { return LevelManager->ActivatePreviewLevel(ContextName); }
 
 	// ===== World 접근자 =====
-	UWorld* GetActiveWorld() const { return SceneManager->GetActiveWorld(); }
-	UWorld* GetEditorWorld() const { return SceneManager->GetEditorWorld(); }
-	UWorld* GetGameWorld() const { return SceneManager->GetGameWorld(); }
-	const FWorldContext* GetActiveWorldContext() const { return SceneManager->GetActiveWorldContext(); }
+	UWorld* GetActiveWorld() const { return LevelManager->GetActiveWorld(); }
+	UWorld* GetEditorWorld() const { return LevelManager->GetEditorWorld(); }
+	UWorld* GetGameWorld() const { return LevelManager->GetGameWorld(); }
+	const FWorldContext* GetActiveWorldContext() const { return LevelManager->GetActiveWorldContext(); }
 
 private:
 	void Input(float DeltaTime);
@@ -85,7 +85,7 @@ private:
 
 	ObjectManager* ObjManager = nullptr;
 	IViewportClient* ViewportClient = nullptr;
-	std::unique_ptr<FSceneManager> SceneManager;
+	std::unique_ptr<FLevelManager> LevelManager;
 
 	std::unique_ptr<CPhysicsManager> PhysicsManager;
 

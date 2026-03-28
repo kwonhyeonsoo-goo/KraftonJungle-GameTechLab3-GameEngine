@@ -1,10 +1,11 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "Object/Object.h"
-#include "Scene/SceneTypes.h"
+#include "World/LevelTypes.h"
+#include "Scene.h"
 
 // Forward declarations — include 최소화
-class UScene;
+class ULevel;
 class AActor;
 class UCameraComponent;
 class CCamera;
@@ -23,23 +24,22 @@ public:
 	void DestroyActor(AActor* InActor);
 
 	// ── Persistent Level ──
-	UScene* GetPersistentLevel() const { return PersistentLevel; }
+	ULevel* GetPersistentLevel() const { return PersistentLevel; }
 	// ── Streaming Levels ──
-	UScene* LoadStreamingLevel(const FString& LevelName, ID3D11Device* Device = nullptr);
+	ULevel* LoadStreamingLevel(const FString& LevelName, ID3D11Device* Device = nullptr);
 	void UnloadStreamingLevel(const FString& LevelName);
-	UScene* FindStreamingLevel(const FString& LevelName) const;
-	const TArray<UScene*>& GetStreamingLevels() const { return StreamingLevels; }
+	ULevel* FindStreamingLevel(const FString& LevelName) const;
+	const TArray<ULevel*>& GetStreamingLevels() const { return StreamingLevels; }
 
 	// ── 전체 액터 조회 (Persistent + Streaming 합산) ──
 	TArray<AActor*> GetAllActors() const;
 	const TArray<AActor*>& GetActors() const;  // PersistentLevel만
 
-	UScene* GetScene() const { return PersistentLevel; }
+	ULevel* GetLevel() const { return PersistentLevel; }
 	// 카메라
 	void SetActiveCameraComponent(UCameraComponent* InCamera);
 	UCameraComponent* GetActiveCameraComponent() const;
 	CCamera* GetCamera() const;
-
 
 	// 라이프사이클
 	void InitializeWorld(float AspectRatio, ID3D11Device* Device = nullptr);
@@ -47,25 +47,29 @@ public:
 	void Tick(float InDeltaTime);
 	void CleanupWorld();
 	
-
-
-	ESceneType GetWorldType() const { return WorldType; }
-	void SetWorldType(ESceneType InType) { WorldType = InType; }
+	ELevelType GetWorldType() const { return WorldType; }
+	void SetWorldType(ELevelType InType) { WorldType = InType; }
 	float GetWorldTime() const { return WorldTime; }
 	float GetDeltaTime() const { return DeltaSeconds; }
 
+	FScene* GetScene() const { return Scene; }
+	void SetScene(FScene* InScene) { Scene = InScene; }
+
 private:
-	UScene* PersistentLevel = nullptr;      
-	TArray<UScene*> StreamingLevels;
+	ULevel* PersistentLevel = nullptr;      
+	TArray<ULevel*> StreamingLevels;
+
+	/** 실제론 Renderer 에서 원본 소유 / CreateScene 을 통해 받아옴 */
+	FScene* Scene = nullptr;
 
 	bool bBegunPlay = false;
 	float WorldTime = 0.f;
 	float DeltaSeconds = 0.f;
-	ESceneType WorldType = ESceneType::Game;
-	UCameraComponent* SceneCameraComponent = nullptr;    
+	ELevelType WorldType = ELevelType::Game;
+	UCameraComponent* LevelCameraComponent = nullptr;    
 	TObjectPtr<UCameraComponent> ActiveCameraComponent;
 };
-#include "Scene/Scene.h"
+#include "World/Level.h"
 
 template <typename T>
 T* UWorld::SpawnActor(const FString& InName)

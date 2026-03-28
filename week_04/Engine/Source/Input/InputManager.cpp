@@ -40,10 +40,15 @@ void CInputManager::ProcessMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LP
 
 	case WM_MBUTTONDOWN:
 		EventQueue.push_back({ EInputEventType::MouseButtonDown, MOUSE_MIDDLE });
+		GetCursorPos(&LastMousePos);
+		bTrackingMouse = true;
+		SetCapture(Hwnd);
 		break;
 
 	case WM_MBUTTONUP:
 		EventQueue.push_back({ EInputEventType::MouseButtonUp, MOUSE_MIDDLE });
+		bTrackingMouse = false;
+		ReleaseCapture();
 		break;
 	}
 }

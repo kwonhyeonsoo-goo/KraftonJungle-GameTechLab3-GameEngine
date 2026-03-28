@@ -4,7 +4,7 @@
 #include "Math/Matrix.h"
 
 class AActor;
-class UScene;
+class ULevel;
 class CCamera;
 
 struct FRay
@@ -25,6 +25,6 @@ public:
                               float& OutDistance) const;
 
     // 씬의 모든 Actor를 대상으로 피킹 (가장 가까운 Actor 반환)
-    AActor* PickActor(UScene* Scene, int32 ScreenX, int32 ScreenY,
+    AActor* PickActor(ULevel* Level, int32 ScreenX, int32 ScreenY,
                       int32 ScreenWidth, int32 ScreenHeight) const;
 };

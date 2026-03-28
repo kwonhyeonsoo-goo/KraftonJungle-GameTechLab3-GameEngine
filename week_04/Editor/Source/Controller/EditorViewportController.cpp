@@ -97,4 +97,15 @@ void CEditorViewportController::SetupInputBindings()
 			CameraComponent->Rotate(0.0f, -Value.Get() * CameraComponent->GetCamera()->GetMouseSensitivity());
 	});
 
+	EnhancedInput->BindAction(&LookXAction, ETriggerEvent::Triggered,
+		[this](const FInputActionValue& Value) {
+			if (InputManager && InputManager->IsMouseButtonDown(CInputManager::MOUSE_MIDDLE))
+				CameraComponent->PanRight(-Value.Get() * CurrentDeltaTime);
+	});
+
+	EnhancedInput->BindAction(&LookYAction, ETriggerEvent::Triggered,
+		[this](const FInputActionValue& Value) {
+			if (InputManager && InputManager->IsMouseButtonDown(CInputManager::MOUSE_MIDDLE))
+				CameraComponent->PanUp(Value.Get() * CurrentDeltaTime);
+	});
 }

@@ -1,6 +1,6 @@
 #pragma once
 #include "CoreMinimal.h"
-#include "Scene/SceneTypes.h"
+#include "World/LevelTypes.h"
 
 class AActor;
 class UWorld;
@@ -8,14 +8,14 @@ class UWorld;
 struct ENGINE_API FWorldContext
 {
 	FString ContextName;
-	ESceneType WorldType = ESceneType::Game;
+	ELevelType WorldType = ELevelType::Game;
 	UWorld* World = nullptr;
 
 	bool IsValid() const { return World != nullptr; }
 	void Reset()
 	{
 		ContextName.clear();
-		WorldType = ESceneType::Game;
+		WorldType = ELevelType::Game;
 		World = nullptr;
 	}
 };

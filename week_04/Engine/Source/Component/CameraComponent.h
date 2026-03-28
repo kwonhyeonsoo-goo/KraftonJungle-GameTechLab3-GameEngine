@@ -1,3 +1,4 @@
+
 #pragma once
 #include "SceneComponent.h"
 
@@ -15,6 +16,8 @@ public:
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 	void MoveUp(float Value);
+	void PanRight(float Value);
+	void PanUp(float Value);
 	void Rotate(float DeltaYaw, float DeltaPitch);
 
 	//Camera property getter
