@@ -22,7 +22,7 @@
 #include "Actor/SkySphereActor.h"
 
 #include "Templates/ObjectIterator.h"
-#include "Renderer/Mesh/StaticMesh.h"
+#include "Object/Mesh/StaticMesh.h"
 #include "Component/StaticMeshComponent.h"
 
 CCore::~CCore()

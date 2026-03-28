@@ -14,7 +14,6 @@ public:
 	void AddPrimitive(FMeshData* InPrimitive);
 	void RemovePrimitive(FMeshData* InPrimitive);
 
-	uint32 Size() const { return Primitives.size(); }
 private:
 	TArray<FMeshData*> Primitives;
 };

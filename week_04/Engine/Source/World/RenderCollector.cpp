@@ -10,7 +10,7 @@
 #include "Renderer/TextMeshBuilder.h"
 #include "Renderer/SubUVRenderer.h"
 #include "Renderer/Material.h"
-#include "StaticMesh.h"
+#include "Renderer/Mesh/StaticMeshRenderData.h"
 
 void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors, const FFrustum& Frustum,
 	const FShowFlags& ShowFlags, FRenderCommandQueue& OutQueue)

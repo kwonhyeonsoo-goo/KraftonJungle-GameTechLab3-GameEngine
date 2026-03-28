@@ -6,9 +6,8 @@
 #include "Renderer/ShaderMap.h"
 #include "Renderer/PrimitiveVertex.h"
 #include "Core/Paths.h"
-#include "AssetManager.h"
-#include "StaticMesh.h"
-
+#include "Asset/AssetManager.h"
+#include "Renderer/Mesh/StaticMeshRenderData.h"
 #include "ThirdParty/stb_image.h"
 #include <d3d11.h>
 

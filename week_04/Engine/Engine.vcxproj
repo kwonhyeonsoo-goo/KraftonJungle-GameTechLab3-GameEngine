@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AssetManager.h" />
+    <ClInclude Include="Source\Asset\AssetManager.h" />
     <ClInclude Include="PrimitiveLineBatch.h" />
     <ClInclude Include="Source\Actor\TextActor.h" />
     <ClInclude Include="Source\Component\MeshComponent.h" />
@@ -97,7 +97,8 @@
     <ClInclude Include="Source\Renderer\FontAtlas.h" />
     <ClInclude Include="Source\Renderer\Material.h" />
     <ClInclude Include="Source\Renderer\MaterialManager.h" />
-    <ClInclude Include="Source\Renderer\Mesh\StaticMesh.h" />
+    <ClInclude Include="Source\Object\Mesh\StaticMesh.h" />
+    <ClInclude Include="Source\Renderer\Mesh\StaticMeshRenderData.h" />
     <ClInclude Include="Source\Renderer\PrimitiveVertex.h" />
     <ClInclude Include="Source\Renderer\RenderCommand.h" />
     <ClInclude Include="Source\Renderer\RenderState.h" />
@@ -132,12 +133,11 @@
     <ClInclude Include="Source\World\Scene.h" />
     <ClInclude Include="Source\World\World.h" />
     <ClInclude Include="Source\World\WorldContext.h" />
-    <ClInclude Include="StaticMesh.h" />
     <ClInclude Include="ThirdParty\stb_image.h" />
     <ClInclude Include="ThirdParty\nlohmann\json.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AssetManager.cpp" />
+    <ClCompile Include="Source\Asset\AssetManager.cpp" />
     <ClCompile Include="PrimitiveLineBatch.cpp" />
     <ClCompile Include="Source\Actor\Actor.cpp" />
     <ClCompile Include="Source\Actor\AttachTestActor.cpp" />
@@ -204,7 +204,8 @@
     <ClCompile Include="Source\Renderer\FontAtlas.cpp" />
     <ClCompile Include="Source\Renderer\Material.cpp" />
     <ClCompile Include="Source\Renderer\MaterialManager.cpp" />
-    <ClCompile Include="Source\Renderer\Mesh\StaticMesh.cpp" />
+    <ClCompile Include="Source\Object\Mesh\StaticMesh.cpp" />
+    <ClCompile Include="Source\Renderer\Mesh\StaticMeshRenderData.cpp" />
     <ClCompile Include="Source\Renderer\RenderCommand.cpp" />
     <ClCompile Include="Source\Renderer\RenderState.cpp" />
     <ClCompile Include="Source\Renderer\RenderStateManager.cpp" />
