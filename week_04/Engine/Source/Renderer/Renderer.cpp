@@ -216,11 +216,12 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 
 	/** Texture 용 Material 생성 */
 	{
-		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, VSPath.c_str());
+		std::wstring TextureVSPath = ShaderDirW + L"TextureVertexShader.hlsl";
 		std::wstring TexturePSPath = ShaderDirW + L"TexturePixelShader.hlsl";
+		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, TextureVSPath.c_str());
 		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, TexturePSPath.c_str());
 		DefaultTextureMaterial = std::make_shared<FMaterial>();
-		DefaultTextureMaterial->SetOriginName("M_Default");
+		DefaultTextureMaterial->SetOriginName("M_Default_Texture");
 		DefaultTextureMaterial->SetVertexShader(VS);
 		DefaultTextureMaterial->SetPixelShader(PS);
 
@@ -245,6 +246,10 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 			float White[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 			DefaultTextureMaterial->GetConstantBuffer(SlotIndex)->SetData(White, sizeof(White));
 		}
+
+		FTexture* Tex = FAssetManager::LoadTextureAsset("/Assets/Textures/DefaultTexture.png", Device);
+		DefaultTextureMaterial->SetMaterialTexture(std::shared_ptr<FTexture>(Tex, [](FTexture*) {}));
+
 		FMaterialManager::Get().Register("M_Default_Texture", DefaultTextureMaterial);
 	}
 
