@@ -51,6 +51,7 @@ public:
 	void SetOrthographic(bool bInOrthographic) { bIsOrthographic = bInOrthographic; }
 	void SetSpeed(float InSpeed) { Speed = InSpeed; }
 	void SetSensitivity(float InSensitivity) { Sensitivity = InSensitivity; }
+	void SetFocus(USceneComponent* InFocusTarget);
 
 private:
 	// ── Transform ─────────────────────────────────────────

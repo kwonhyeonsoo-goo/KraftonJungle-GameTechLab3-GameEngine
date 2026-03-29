@@ -87,8 +87,20 @@ void UCameraComponent::SetRotation(float InYaw, float InPitch)
 
 FMatrix UCameraComponent::GetViewMatrix() const
 {
-	const FVector Target = Position + GetForward();
-	return FMatrix::MakeViewLookAtLH(Position, Target, Up);
+	FVector Target, Origin;
+
+	if (FocusTarget)
+	{
+		Target = FocusTarget->GetWorldLocation();
+		Origin = Target - GetForward() * ZoomDist;
+	}
+	else
+	{
+		Origin = Position;
+		Target = Position + GetForward();
+	}
+
+	return FMatrix::MakeViewLookAtLH(Origin, Target, Up);
 }
 
 FMatrix UCameraComponent::GetProjectionMatrix() const
@@ -109,6 +121,7 @@ FMatrix UCameraComponent::GetProjectionMatrix() const
 FCameraViewInfo UCameraComponent::GetViewInfo() const
 {
 	FCameraViewInfo Info;
+
 	Info.Position = Position;
 	Info.Forward = GetForward();
 	Info.Right = GetRight();
@@ -140,8 +153,9 @@ void UCameraComponent::SetOrthoWidth(float InOrthoWidth)
 	OrthoWidth = FMath::Max(InOrthoWidth, 0.01f);
 }
 
+void UCameraComponent::SetFocus(USceneComponent* InFocusTarget)
+{
+	FocusTarget = InFocusTarget;
 
-//void UCameraComponent::SetFoucs(USceneComponent* InFocusTarget)
-//{
-//	Camera->SetFocus(InFocusTarget);
-//}
+	ZoomDist = FocusTarget->GetWorldTransform().GetScaleVector().Size() * 10;
+}

@@ -37,7 +37,7 @@ void FEditorViewportController::Tick(float DeltaTime)
 
 void FEditorViewportController::SetFocus(USceneComponent* InFocusTarget)
 {
-	//CameraComponent->SetFoucs(InFocusTarget);
+	CameraComponent->SetFocus(InFocusTarget);
 }
 
 void FEditorViewportController::SetupInputBindings()
