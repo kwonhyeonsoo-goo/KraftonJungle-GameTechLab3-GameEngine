@@ -72,6 +72,11 @@ void UCameraComponent::Rotate(float DeltaYaw, float DeltaPitch)
 	Pitch = std::clamp(Pitch, -89.0f, 89.0f);
 }
 
+void UCameraComponent::Zoom(float Value)
+{
+	ZoomDist += Value;
+}
+
 void UCameraComponent::SetRotation(float InYaw, float InPitch)
 {
 	Yaw = InYaw;

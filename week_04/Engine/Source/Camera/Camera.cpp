@@ -68,7 +68,7 @@ FMatrix FCamera::GetViewMatrix() const
 	if (FocusTarget)
 	{
 		Target = FocusTarget->GetWorldLocation();
-		Origin = Target - GetForward() * FocusTarget->GetWorldTransform().GetScaleVector().Size() * 15;
+		Origin = Target - GetForward() * ZoomDist;
 	}
 	else
 	{

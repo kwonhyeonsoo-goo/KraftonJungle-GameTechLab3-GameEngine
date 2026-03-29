@@ -206,7 +206,7 @@ void FPropertyWindow::Render(FCore* Core)
 
 							if (ImGui::Combo(Label.c_str(), &CurrentIndex, MatNames.data(), static_cast<int>(MatNames.size())))
 							{
-								FMaterial* NewMat = (CurrentIndex == 0) ? nullptr : AllMaterials[CurrentIndex - 1];
+								FMaterial* NewMat = (CurrentIndex == 0) ? FMaterialManager::Get().FindByName("M_Default_Texture").get() : AllMaterials[CurrentIndex - 1];
 								StaticMeshComp->SetMaterial(i, NewMat);
 							}
 						}

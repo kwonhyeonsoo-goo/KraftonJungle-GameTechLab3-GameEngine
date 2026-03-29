@@ -52,8 +52,10 @@ float4 main(VS_OUTPUT input) : SV_Target
 		float axisY = 1.0f - smoothstep(0.0f, axisDrawWidth.y + 0.001f, abs(input.WorldPos.y));
         
 		float3 color = float3(0.5f, 0.5f, 0.5f);
-		color = lerp(color, float3(0.2f, 1.0f, 0.2f), axisX); // Green (Y축 방향 선)
-		color = lerp(color, float3(1.0f, 0.2f, 0.2f), axisY); // Red (X축 방향 선)
+		
+		// X, Y 축 색깔 제거
+		// color = lerp(color, float3(0.2f, 1.0f, 0.2f), axisX); // Green (Y축 방향 선)
+		// color = lerp(color, float3(1.0f, 0.2f, 0.2f), axisY); // Red (X축 방향 선)
 
 		float fade = pow(saturate(1.0f - dist / maxDistance), 2.0f);
 		float finalAlpha = max(lineAlpha, max(axisX, axisY)) * fade;
@@ -64,6 +66,9 @@ float4 main(VS_OUTPUT input) : SV_Target
 	}
 	else
 	{
+		discard;
+		
+		/*
 		float WorldCoord = (input.PlaneNo == 1) ? input.WorldPos.y : input.WorldPos.x;
 		float derivative = fwidth(WorldCoord);
 		float axisZ = 1.0f - smoothstep(0.0f, derivative * 1.5f, abs(WorldCoord));
@@ -77,5 +82,8 @@ float4 main(VS_OUTPUT input) : SV_Target
 			discard;
 
 		return float4(color, finalAlpha);
+		*/
+		
+		return float4(0, 0, 0, 0);
 	}
 }

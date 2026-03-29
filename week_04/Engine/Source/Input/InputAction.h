@@ -7,6 +7,7 @@ enum class EInputKey : int32
 {
 	MouseX = 256,
 	MouseY = 257,
+	MouseWheel = 258,
 };
 
 enum class EInputActionValueType : uint32

@@ -214,6 +214,9 @@ void FLevelRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 
 			if (bIsUUID)
 			{
+#if IS_OBJ_VIEWER
+				continue;				
+#endif
 				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_UUID)) continue;
 			}
 			else if (bIsSubUV)
