@@ -23,6 +23,7 @@
     <ClInclude Include="Source\Actor\TextActor.h" />
     <ClInclude Include="Source\Component\TextComponent.h" />
     <ClInclude Include="Source\CoreMinimal.h" />
+    <ClInclude Include="Source\Core\Interface\Observable.h" />
     <ClInclude Include="Source\EngineAPI.h" />
     <ClInclude Include="Source\Actor\Actor.h" />
     <ClInclude Include="Source\Actor\AttachTestActor.h" />

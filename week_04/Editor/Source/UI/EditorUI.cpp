@@ -30,6 +30,7 @@
 #include "Core/ShowFlags.h"
 #include "EditorViewportClient.h"
 
+
 enum class EFileDialogType
 {
 	Open,
@@ -72,6 +73,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM,
 void FEditorUI::Initialize(FCore* InCore)
 {
 	Core = InCore;
+
 
 	Property.OnChanged = [this](const FVector& Loc, const FVector& Rot, const FVector& Scl)
 		{
@@ -343,6 +345,10 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 				return false;
 			}
 
+			const bool bIsMouseMessage =
+				Msg == WM_LBUTTONDOWN ||
+				Msg == WM_RBUTTONDOWN;
+
 			const bool bIsImeMessage =
 				Msg == WM_IME_STARTCOMPOSITION ||
 				Msg == WM_IME_COMPOSITION ||
@@ -356,7 +362,7 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 				Msg == WM_SYSCHAR ||
 				Msg == WM_UNICHAR;
 
-			if (bIsImeMessage || bIsCharMessage)
+			if ( bIsImeMessage || bIsCharMessage)
 			{
 				if (ImGui::GetCurrentContext())
 				{
@@ -381,6 +387,8 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 
 			return bHandledByImGui;
 		});
+	MainWindow->AddMessageFilter(std::bind(&FEditorUI::HandleInput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+
 }
 
 void FEditorUI::BuildDefaultLayout(uint32 DockID)
@@ -798,4 +806,18 @@ void FEditorUI::SyncSelectedActorProperty()
 bool FEditorUI::IsViewportInteractive() const
 {
 	return Viewport.IsVisible() && (Viewport.IsHovered() || Viewport.IsFocused());
+}
+
+bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+{
+	//SWindow 입력 처리 (ImGui -> Swindow -> InputManager)
+	//TODO : CControlPanel / CProperty 등 여러 UI에 뿌리기
+	//모두 한 클래스를 상속해서 일괄 처리하는것도 방법일듯 함.
+	if (Msg == WM_LBUTTONDOWN) {
+		POINTS mousePosition = MAKEPOINTS(LParam);
+
+		UE_LOG("EditorUI::HandleInput//ClickEvent - Msg: %u || WPARAM: %d || LPARAM: %d", Msg, mousePosition.x, mousePosition.y);
+
+	}
+	return false;
 }

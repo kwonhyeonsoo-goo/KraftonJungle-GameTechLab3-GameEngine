@@ -64,6 +64,9 @@
     <Filter Include="ThirdParty\nlohmann">
       <UniqueIdentifier>{c70e54eb-75c7-d408-4bdc-b003f49af18a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Core\Interface">
+      <UniqueIdentifier>{0457abf1-7da5-45c6-80b4-d29a36ce43f2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Actor\Actor.cpp">
@@ -631,6 +634,9 @@
     </ClInclude>
     <ClInclude Include="Source\World\LevelTypes.h">
       <Filter>Source\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Interface\Observable.h">
+      <Filter>Source\Core\Interface</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

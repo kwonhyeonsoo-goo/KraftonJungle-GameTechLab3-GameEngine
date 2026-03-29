@@ -13,6 +13,8 @@ class FWindow;
 class FRenderer;
 class AActor;
 class FEditorViewportClient;
+
+
 class FEditorUI
 {
 public:
@@ -24,7 +26,7 @@ public:
 	void SyncSelectedActorProperty();
 	bool GetViewportMousePosition(int32 WindowMouseX, int32 WindowMouseY, int32& OutViewportX, int32& OutViewportY, int32& OutWidth, int32& OutHeight) const;
 	bool IsViewportInteractive() const;
-
+	bool HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
 	FConsoleWindow& GetConsole() { return Console; }
 	FCore* GetCore() { return Core; }
 
@@ -37,6 +39,8 @@ private:
 	TObjectPtr<AActor> CachedSelectedActor;
 
 	FWindow* MainWindow = nullptr;
+
+
 
 	FControlPanelWindow ControlPanel;
 	FPropertyWindow Property;
