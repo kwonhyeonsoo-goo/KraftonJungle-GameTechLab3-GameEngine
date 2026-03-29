@@ -18,6 +18,10 @@
 #include "Pawn/EditorCameraPawn.h"
 #include "Camera/Camera.h"
 #include "Actor/SkySphereActor.h"
+
+#include "Actor/StaticMeshActor.h"
+#include "Asset/AssetManager.h"
+
 namespace
 {
 	constexpr const char* PreviewLevelContextName = "PreviewLevel";
@@ -139,9 +143,19 @@ void FEditorEngine::PostInitialize()
 		Core->GetInputManager(),
 		Core->GetEnhancedInputManager());
 
-
 	SyncViewportClient();
 	UE_LOG("EditorEngine initialized");
+
+#if IS_OBJ_VIEWER
+	AStaticMeshActor* NewActor = Core->GetLevel()->SpawnActor<AStaticMeshActor>("StaticMeshActor");
+	// UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath("/Assets/Meshes/Dorumon.obj"), Core->GetRenderer()->GetDevice());
+	UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath("/Assets/Meshes/12213_Bird_v1_l3.obj"), Core->GetRenderer()->GetDevice());
+	NewActor->SetStaticMesh(StaticMesh);
+	
+	ViewportController.SetFocus(NewActor->GetRootComponent());
+#else
+
+#endif
 }
 
 void FEditorEngine::Tick(float DeltaTime)

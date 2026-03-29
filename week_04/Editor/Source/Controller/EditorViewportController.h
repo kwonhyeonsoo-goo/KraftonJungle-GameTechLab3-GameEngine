@@ -6,6 +6,7 @@ class UCameraComponent;
 class FInputManager;
 class FEnhancedInputManager;
 struct FInputMappingContext;
+class USceneComponent;
 
 
 class FEditorViewportController
@@ -19,6 +20,7 @@ public:
 
 	void Tick(float DeltaTime);
 
+	void SetFocus(USceneComponent* InFocusTarget);
 
 
 private:

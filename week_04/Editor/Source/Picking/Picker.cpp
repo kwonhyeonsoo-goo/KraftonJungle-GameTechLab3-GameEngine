@@ -106,6 +106,10 @@ bool FPicker::RayTriangleIntersect(const FRay& Ray,
 AActor* FPicker::PickActor(ULevel* Level, int32 ScreenX, int32 ScreenY,
 						   int32 ScreenWidth, int32 ScreenHeight) const
 {
+#if IS_OBJ_VIEWER
+	return nullptr;
+#endif
+
 	if (!Level || !Level->GetCamera())
 	{
 		return nullptr;

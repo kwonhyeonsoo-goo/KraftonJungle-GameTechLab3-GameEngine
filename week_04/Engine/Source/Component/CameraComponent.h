@@ -29,6 +29,8 @@ public:
 	void SetFov(float inFov);
 	void SetSpeed(float Inspeed);
 	void SetSensitivity(float InSetSensitivity);
+
+	void SetFoucs(USceneComponent* InFocusTarget);
 private:
 	FCamera* Camera = nullptr;
 };

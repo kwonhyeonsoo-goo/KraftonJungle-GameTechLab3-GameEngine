@@ -89,3 +89,8 @@ void UCameraComponent::SetSensitivity(float InSetSensitivity)
 {
 	Camera->SetMouseSensitivity(InSetSensitivity);
 }
+
+void UCameraComponent::SetFoucs(USceneComponent* InFocusTarget)
+{
+	Camera->SetFocus(InFocusTarget);
+}

@@ -772,12 +772,18 @@ void FEditorUI::Render()
 		ImGui::EndPopup();
 	}
 
+#if IS_OBJ_VIEWER
+
+#else
 	ControlPanel.Render(Core);
 	Property.Render(Core);
 	Console.Render();
 	Stat.Render();
 	Outliner.Render(Core);
 	ContentBrowser.Render();
+
+#endif
+
 }
 
 bool FEditorUI::GetViewportMousePosition(int32 WindowMouseX, int32 WindowMouseY, int32& OutViewportX, int32& OutViewportY, int32& OutWidth, int32& OutHeight) const
