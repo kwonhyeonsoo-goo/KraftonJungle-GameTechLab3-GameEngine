@@ -5,6 +5,8 @@
 #include "Picking/Picker.h"
 #include "Types/CoreTypes.h"
 
+
+
 class FEditorUI;
 class FWindow;
 class FFrustum;
@@ -17,7 +19,7 @@ enum class ERenderMode
 	Wireframe,
 };
 
-class FEditorViewportClient : public FViewportClient
+class FEditorViewportClient : public IViewportClient
 {
 public:
 	FEditorViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow);
@@ -33,6 +35,8 @@ public:
 
 	void HandleFileDoubleClick(const FString& FilePath) override;
 	void HandleFileDropOnViewport(const FString& FilePath) override;
+
+
 	void BuildRenderCommands(FCore* Core, ULevel* Level,
 		const FFrustum& Frustum, FRenderCommandQueue& OutQueue) override;
 	float GetGridSize() const { return GridSize; }

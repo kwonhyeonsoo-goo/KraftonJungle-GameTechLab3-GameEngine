@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 
+class USceneComponent;
+
 enum class ECameraProjectionMode : uint8_t
 {
 	Perspective,
@@ -44,6 +46,8 @@ public:
 	float GetOrthoHeight() const;
 	void SetOrthoWidth(float InOrthoWidth);
 
+	void SetFocus(USceneComponent* InFocusTarget) { FocusTarget = InFocusTarget; }
+
 private:
 	FVector Position = { -5.0f, 0.0f, 2.0f };
 	FVector Up = { 0.0f, 0.0f, 1.0f };
@@ -58,4 +62,6 @@ private:
 	float OrthoWidth = 20.0f;
 	float NearPlane = 0.1f;
 	float FarPlane = 1000.0f;
+
+	USceneComponent* FocusTarget = nullptr;
 };

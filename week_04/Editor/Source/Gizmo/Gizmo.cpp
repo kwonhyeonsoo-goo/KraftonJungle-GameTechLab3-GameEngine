@@ -1,7 +1,7 @@
 #include "Gizmo.h"
 
 #include "Actor/Actor.h"
-#include "Camera/Camera.h"
+#include "Camera/CameraInfo.h"
 #include "Component/SceneComponent.h"
 #include "Math/Transform.h"
 #include "Picking/Picker.h"
@@ -105,15 +105,15 @@ void FGizmo::CycleMode()
 	EndDrag();
 }
 
-void FGizmo::BuildRenderCommands(AActor* SelectedActor, const FCamera* Camera, FRenderCommandQueue& OutQueue) const
+void FGizmo::BuildRenderCommands(AActor* SelectedActor, const FCameraViewInfo& ViewInfo, FRenderCommandQueue& OutQueue) const
 {
-	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Camera)
+	if (!SelectedActor || SelectedActor->IsPendingDestroy())
 	{
 		return;
 	}
 
 	const FVector WorldLocation = GetActorWorldLocation(SelectedActor);
-	const float GizmoScale = ComputeGizmoScale(WorldLocation, Camera);
+	const float GizmoScale = ComputeGizmoScale(WorldLocation, ViewInfo);
 	const float RenderGizmoScale = GetRenderGizmoScale(GizmoScale);
 	const FQuat GizmoRotation = GetGizmoRotation(SelectedActor);
 	const FMatrix AxisGizmoWorld = FTransform(GizmoRotation, WorldLocation, FVector(RenderGizmoScale, RenderGizmoScale, RenderGizmoScale)).ToMatrixWithScale();
@@ -125,7 +125,6 @@ void FGizmo::BuildRenderCommands(AActor* SelectedActor, const FCamera* Camera, F
 	Command.bDisableDepthTest = true;
 	Command.bDisableDepthWrite = true;
 	Command.bDisableCulling = true;
-	
 
 	switch (Mode)
 	{
@@ -139,7 +138,7 @@ void FGizmo::BuildRenderCommands(AActor* SelectedActor, const FCamera* Camera, F
 		break;
 
 	case EGizmoMode::Rotation:
-		if (!EnsureRotationMeshes(Camera, WorldLocation))
+		if (!EnsureRotationMeshes(ViewInfo, WorldLocation))
 		{
 			return;
 		}
@@ -180,56 +179,56 @@ void FGizmo::BuildRenderCommands(AActor* SelectedActor, const FCamera* Camera, F
 	if (DisplayAxis != EGizmoAxis::None)
 	{
 		auto AddHighlightCommand = [&](std::shared_ptr<FMeshData>& HighlightMeshSlot, const FMatrix& HighlightWorldMatrix, auto&& Factory)
-		{
-			if (!HighlightMeshSlot)
 			{
-				HighlightMeshSlot = Factory();
-			}
+				if (!HighlightMeshSlot)
+				{
+					HighlightMeshSlot = Factory();
+				}
 
-			if (HighlightMeshSlot)
-			{
-				FRenderCommand HighlightCommand = Command;
-				HighlightCommand.WorldMatrix = HighlightWorldMatrix;
-				HighlightCommand.MeshData = HighlightMeshSlot.get();
-				OutQueue.AddCommand(HighlightCommand);
-			}
-		};
+				if (HighlightMeshSlot)
+				{
+					FRenderCommand HighlightCommand = Command;
+					HighlightCommand.WorldMatrix = HighlightWorldMatrix;
+					HighlightCommand.MeshData = HighlightMeshSlot.get();
+					OutQueue.AddCommand(HighlightCommand);
+				}
+			};
 
 		auto AddTranslationAxisHighlight = [&](EAxis Axis)
-		{
-			const int32 AxisIndex = static_cast<int32>(Axis);
-			AddHighlightCommand(
-				HighlightTranslationAxes[AxisIndex],
-				AxisGizmoWorld,
-				[Axis]()
-				{
-					return CPrimitiveGizmo::CreateTranslationAxisMesh(Axis, ActiveAxisColor);
-				});
-		};
+			{
+				const int32 AxisIndex = static_cast<int32>(Axis);
+				AddHighlightCommand(
+					HighlightTranslationAxes[AxisIndex],
+					AxisGizmoWorld,
+					[Axis]()
+					{
+						return CPrimitiveGizmo::CreateTranslationAxisMesh(Axis, ActiveAxisColor);
+					});
+			};
 
 		auto AddRotationAxisHighlight = [&](EAxis Axis)
-		{
-			const int32 AxisIndex = static_cast<int32>(Axis);
-			AddHighlightCommand(
-				HighlightRotationAxes[AxisIndex],
-				AxisGizmoWorld,
-				[this, Camera, WorldLocation, Axis]()
-				{
-					return CPrimitiveGizmo::CreateRotationAxisMesh(Axis, BuildRotationDesc(Camera, WorldLocation), ActiveAxisColor);
-				});
-		};
+			{
+				const int32 AxisIndex = static_cast<int32>(Axis);
+				AddHighlightCommand(
+					HighlightRotationAxes[AxisIndex],
+					AxisGizmoWorld,
+					[this, &ViewInfo, WorldLocation, Axis]()
+					{
+						return CPrimitiveGizmo::CreateRotationAxisMesh(Axis, BuildRotationDesc(ViewInfo, WorldLocation), ActiveAxisColor);
+					});
+			};
 
 		auto AddScaleAxisHighlight = [&](EAxis Axis)
-		{
-			const int32 AxisIndex = static_cast<int32>(Axis);
-			AddHighlightCommand(
-				HighlightScaleAxes[AxisIndex],
-				AxisGizmoWorld,
-				[Axis]()
-				{
-					return CPrimitiveGizmo::CreateScaleAxisMesh(Axis, ActiveAxisColor);
-				});
-		};
+			{
+				const int32 AxisIndex = static_cast<int32>(Axis);
+				AddHighlightCommand(
+					HighlightScaleAxes[AxisIndex],
+					AxisGizmoWorld,
+					[Axis]()
+					{
+						return CPrimitiveGizmo::CreateScaleAxisMesh(Axis, ActiveAxisColor);
+					});
+			};
 
 		if (DisplayAxis >= EGizmoAxis::X && DisplayAxis <= EGizmoAxis::Z)
 		{
@@ -340,38 +339,38 @@ void FGizmo::BuildRenderCommands(AActor* SelectedActor, const FCamera* Camera, F
 			AddHighlightCommand(
 				HighlightRotationScreenMesh,
 				ScreenGizmoWorld,
-				[this, Camera, WorldLocation]()
+				[this, &ViewInfo, WorldLocation]()
 				{
-					return CPrimitiveGizmo::CreateRotationScreenMesh(BuildRotationDesc(Camera, WorldLocation), ActiveAxisColor);
+					return CPrimitiveGizmo::CreateRotationScreenMesh(BuildRotationDesc(ViewInfo, WorldLocation), ActiveAxisColor);
 				});
 		}
 	}
 }
 
-bool FGizmo::BeginDrag(AActor* SelectedActor, ULevel* Level, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
+bool FGizmo::BeginDrag(AActor* SelectedActor, ULevel* Level, const FCameraViewInfo& ViewInfo, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
 {
 	if (!SelectedActor || SelectedActor->IsPendingDestroy())
 	{
 		return false;
 	}
 
-	const EGizmoAxis Axis = HitTestAxis(SelectedActor, Level, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	const EGizmoAxis Axis = HitTestAxis(SelectedActor, Level, ViewInfo, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 	if (Axis == EGizmoAxis::None)
 	{
 		return false;
 	}
 
-	return BeginAxisDrag(Axis, SelectedActor, Level, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	return BeginAxisDrag(Axis, SelectedActor, Level, ViewInfo, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 }
 
-bool FGizmo::UpdateDrag(AActor* SelectedActor, ULevel* Level, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
+bool FGizmo::UpdateDrag(AActor* SelectedActor, ULevel* Level, const FCameraViewInfo& ViewInfo, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
 {
-	if (ActiveAxis == EGizmoAxis::None || !SelectedActor || SelectedActor->IsPendingDestroy() || !Level || !Level->GetCamera())
+	if (ActiveAxis == EGizmoAxis::None || !SelectedActor || SelectedActor->IsPendingDestroy())
 	{
 		return false;
 	}
 
-	const FRay Ray = Picker.ScreenToRay(Level->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	const FRay Ray = Picker.ScreenToRay(ViewInfo, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 
 	FVector Intersection = FVector::ZeroVector;
 	if (!IntersectPlane(Ray, DragStartGizmoLocation, DragPlaneNormal, Intersection))
@@ -421,7 +420,7 @@ bool FGizmo::UpdateDrag(AActor* SelectedActor, ULevel* Level, const FPicker& Pic
 	if (Mode == EGizmoMode::Scale)
 	{
 		FVector NewScale = DragStartActorScale;
-		const float GizmoScale = GetRenderGizmoScale(ComputeGizmoScale(DragStartGizmoLocation, Level->GetCamera()));
+		const float GizmoScale = GetRenderGizmoScale(ComputeGizmoScale(DragStartGizmoLocation, ViewInfo));
 		const float ScaleDenominator = (ScaleReferenceUnits * GizmoScale > ParallelTolerance)
 			? (ScaleReferenceUnits * GizmoScale)
 			: ScaleReferenceUnits;
@@ -483,7 +482,7 @@ bool FGizmo::UpdateDrag(AActor* SelectedActor, ULevel* Level, const FPicker& Pic
 	return false;
 }
 
-void FGizmo::UpdateHover(AActor* SelectedActor, ULevel* Level, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
+void FGizmo::UpdateHover(AActor* SelectedActor, ULevel* Level, const FCameraViewInfo& ViewInfo, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
 {
 	if (IsDragging())
 	{
@@ -496,7 +495,7 @@ void FGizmo::UpdateHover(AActor* SelectedActor, ULevel* Level, const FPicker& Pi
 		return;
 	}
 
-	HoveredAxis = HitTestAxis(SelectedActor, Level, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	HoveredAxis = HitTestAxis(SelectedActor, Level, ViewInfo, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 }
 
 void FGizmo::ClearHover()
@@ -573,14 +572,9 @@ bool FGizmo::EnsureTranslationMeshes() const
 		&& TranslationScreenMesh;
 }
 
-bool FGizmo::EnsureRotationMeshes(const FCamera* Camera, const FVector& GizmoWorldLocation) const
+bool FGizmo::EnsureRotationMeshes(const FCameraViewInfo& ViewInfo, const FVector& GizmoWorldLocation) const
 {
-	if (!Camera)
-	{
-		return false;
-	}
-
-	const RotationDesc Desc = BuildRotationDesc(Camera, GizmoWorldLocation);
+	const RotationDesc Desc = BuildRotationDesc(ViewInfo, GizmoWorldLocation);
 	const bool bViewChanged =
 		!CachedRotationCameraDirection.Equals(Desc.cameraDirection, 1.0e-4f) ||
 		!CachedRotationViewUp.Equals(Desc.viewUp, 1.0e-4f) ||
@@ -666,9 +660,9 @@ bool FGizmo::EnsureScaleMeshes() const
 		&& ScaleCenterMesh;
 }
 
-EGizmoAxis FGizmo::HitTestAxis(AActor* SelectedActor, ULevel* Level, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const
+EGizmoAxis FGizmo::HitTestAxis(AActor* SelectedActor, ULevel* Level, const FCameraViewInfo& ViewInfo, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const
 {
-	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Level || !Level->GetCamera())
+	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Level)
 	{
 		return EGizmoAxis::None;
 	}
@@ -685,7 +679,7 @@ EGizmoAxis FGizmo::HitTestAxis(AActor* SelectedActor, ULevel* Level, const FPick
 	}
 	else if (Mode == EGizmoMode::Rotation)
 	{
-		if (!EnsureRotationMeshes(Level->GetCamera(), WorldLocation))
+		if (!EnsureRotationMeshes(ViewInfo, WorldLocation))
 		{
 			return EGizmoAxis::None;
 		}
@@ -705,8 +699,8 @@ EGizmoAxis FGizmo::HitTestAxis(AActor* SelectedActor, ULevel* Level, const FPick
 		return EGizmoAxis::None;
 	}
 
-	const FRay Ray = Picker.ScreenToRay(Level->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
-	const float GizmoScale = GetRenderGizmoScale(ComputeGizmoScale(WorldLocation, Level->GetCamera()));
+	const FRay Ray = Picker.ScreenToRay(ViewInfo, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	const float GizmoScale = GetRenderGizmoScale(ComputeGizmoScale(WorldLocation, ViewInfo));
 	const FQuat GizmoRotation = GetGizmoRotation(SelectedActor);
 	const FMatrix AxisGizmoWorld = FTransform(GizmoRotation, WorldLocation, FVector(GizmoScale, GizmoScale, GizmoScale)).ToMatrixWithScale();
 	const FMatrix ScreenGizmoWorld = FTransform(FQuat::Identity, WorldLocation, FVector(GizmoScale, GizmoScale, GizmoScale)).ToMatrixWithScale();
@@ -715,34 +709,34 @@ EGizmoAxis FGizmo::HitTestAxis(AActor* SelectedActor, ULevel* Level, const FPick
 	float BestDistance = (std::numeric_limits<float>::max)();
 
 	const auto TestMesh = [&](const std::shared_ptr<FMeshData>& AxisMesh, const FMatrix& MeshWorld, EGizmoAxis Handle)
-	{
-		if (!AxisMesh)
 		{
-			return;
-		}
-
-		for (size_t TriangleIndex = 0; TriangleIndex + 2 < AxisMesh->Indices.size(); TriangleIndex += 3)
-		{
-			const uint32 Index0 = AxisMesh->Indices[TriangleIndex];
-			const uint32 Index1 = AxisMesh->Indices[TriangleIndex + 1];
-			const uint32 Index2 = AxisMesh->Indices[TriangleIndex + 2];
-			if (Index0 >= AxisMesh->Vertices.size() || Index1 >= AxisMesh->Vertices.size() || Index2 >= AxisMesh->Vertices.size())
+			if (!AxisMesh)
 			{
-				continue;
+				return;
 			}
 
-			const FVector Vertex0 = MeshWorld.TransformPosition(AxisMesh->Vertices[Index0].Position);
-			const FVector Vertex1 = MeshWorld.TransformPosition(AxisMesh->Vertices[Index1].Position);
-			const FVector Vertex2 = MeshWorld.TransformPosition(AxisMesh->Vertices[Index2].Position);
-
-			float HitDistance = 0.0f;
-			if (RayTriangleIntersectTwoSided(Ray, Vertex0, Vertex1, Vertex2, HitDistance) && HitDistance < BestDistance)
+			for (size_t TriangleIndex = 0; TriangleIndex + 2 < AxisMesh->Indices.size(); TriangleIndex += 3)
 			{
-				BestDistance = HitDistance;
-				BestAxis = Handle;
+				const uint32 Index0 = AxisMesh->Indices[TriangleIndex];
+				const uint32 Index1 = AxisMesh->Indices[TriangleIndex + 1];
+				const uint32 Index2 = AxisMesh->Indices[TriangleIndex + 2];
+				if (Index0 >= AxisMesh->Vertices.size() || Index1 >= AxisMesh->Vertices.size() || Index2 >= AxisMesh->Vertices.size())
+				{
+					continue;
+				}
+
+				const FVector Vertex0 = MeshWorld.TransformPosition(AxisMesh->Vertices[Index0].Position);
+				const FVector Vertex1 = MeshWorld.TransformPosition(AxisMesh->Vertices[Index1].Position);
+				const FVector Vertex2 = MeshWorld.TransformPosition(AxisMesh->Vertices[Index2].Position);
+
+				float HitDistance = 0.0f;
+				if (RayTriangleIntersectTwoSided(Ray, Vertex0, Vertex1, Vertex2, HitDistance) && HitDistance < BestDistance)
+				{
+					BestDistance = HitDistance;
+					BestAxis = Handle;
+				}
 			}
-		}
-	};
+		};
 
 	for (int32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
 	{
@@ -775,46 +769,45 @@ EGizmoAxis FGizmo::HitTestAxis(AActor* SelectedActor, ULevel* Level, const FPick
 	return BestAxis;
 }
 
-bool FGizmo::BeginAxisDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULevel* Level, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
+bool FGizmo::BeginAxisDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULevel* Level, const FCameraViewInfo& ViewInfo, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
 {
 	if (Mode == EGizmoMode::Location)
 	{
-		return BeginTranslationDrag(AxisId, SelectedActor, Level, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+		return BeginTranslationDrag(AxisId, SelectedActor, Level, ViewInfo, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 	}
 
 	if (Mode == EGizmoMode::Rotation)
 	{
-		return BeginRotationDrag(AxisId, SelectedActor, Level, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+		return BeginRotationDrag(AxisId, SelectedActor, Level, ViewInfo, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 	}
 
 	if (Mode == EGizmoMode::Scale)
 	{
-		return BeginScaleDrag(AxisId, SelectedActor, Level, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+		return BeginScaleDrag(AxisId, SelectedActor, Level, ViewInfo, Picker, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 	}
 
 	return false;
 }
 
-bool FGizmo::BeginTranslationDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULevel* Level, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
+bool FGizmo::BeginTranslationDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULevel* Level, const FCameraViewInfo& ViewInfo, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
 {
-	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Level || !Level->GetCamera())
+	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Level)
 	{
 		return false;
 	}
 
-	const FRay Ray = Picker.ScreenToRay(Level->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	const FRay Ray = Picker.ScreenToRay(ViewInfo, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 
 	const FVector GizmoLocation = GetActorWorldLocation(SelectedActor);
 	const FVector Axis = GetGizmoAxisVector(AxisId, SelectedActor);
-	const FCamera* Camera = Level->GetCamera();
 
 	FVector PlaneNormal = FVector::ZeroVector;
 	if (AxisId >= EGizmoAxis::X && AxisId <= EGizmoAxis::Z)
 	{
-		FVector PlaneTangent = FVector::CrossProduct(Camera->GetForward(), Axis);
+		FVector PlaneTangent = FVector::CrossProduct(ViewInfo.Forward, Axis);
 		if (PlaneTangent.SizeSquared() <= ParallelTolerance)
 		{
-			PlaneTangent = FVector::CrossProduct(Camera->GetRight(), Axis);
+			PlaneTangent = FVector::CrossProduct(ViewInfo.Right, Axis);
 		}
 		if (PlaneTangent.SizeSquared() <= ParallelTolerance)
 		{
@@ -825,7 +818,7 @@ bool FGizmo::BeginTranslationDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULev
 	}
 	else if (AxisId == EGizmoAxis::Screen)
 	{
-		PlaneNormal = Camera->GetForward();
+		PlaneNormal = ViewInfo.Forward;
 	}
 	else
 	{
@@ -854,17 +847,17 @@ bool FGizmo::BeginTranslationDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULev
 	return true;
 }
 
-bool FGizmo::BeginRotationDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULevel* Level, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
+bool FGizmo::BeginRotationDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULevel* Level, const FCameraViewInfo& ViewInfo, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
 {
-	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Level || !Level->GetCamera())
+	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Level)
 	{
 		return false;
 	}
 
-	const FRay Ray = Picker.ScreenToRay(Level->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	const FRay Ray = Picker.ScreenToRay(ViewInfo, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 
 	const FVector GizmoLocation = GetActorWorldLocation(SelectedActor);
-	const FVector Axis = (AxisId == EGizmoAxis::Screen) ? Level->GetCamera()->GetForward() : GetGizmoAxisVector(AxisId, SelectedActor);
+	const FVector Axis = (AxisId == EGizmoAxis::Screen) ? ViewInfo.Forward : GetGizmoAxisVector(AxisId, SelectedActor);
 	FVector Intersection = FVector::ZeroVector;
 	if (!IntersectPlane(Ray, GizmoLocation, Axis, Intersection))
 	{
@@ -887,26 +880,25 @@ bool FGizmo::BeginRotationDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULevel*
 	return true;
 }
 
-bool FGizmo::BeginScaleDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULevel* Level, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
+bool FGizmo::BeginScaleDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULevel* Level, const FCameraViewInfo& ViewInfo, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)
 {
-	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Level || !Level->GetCamera())
+	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !Level)
 	{
 		return false;
 	}
 
-	const FRay Ray = Picker.ScreenToRay(Level->GetCamera(), ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	const FRay Ray = Picker.ScreenToRay(ViewInfo, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 
 	const FVector GizmoLocation = GetActorWorldLocation(SelectedActor);
-	const FCamera* Camera = Level->GetCamera();
 
 	FVector PlaneNormal = FVector::ZeroVector;
 	if (AxisId >= EGizmoAxis::X && AxisId <= EGizmoAxis::Z)
 	{
 		const FVector Axis = GetGizmoAxisVector(AxisId, SelectedActor);
-		FVector PlaneTangent = FVector::CrossProduct(Camera->GetForward(), Axis);
+		FVector PlaneTangent = FVector::CrossProduct(ViewInfo.Forward, Axis);
 		if (PlaneTangent.SizeSquared() <= ParallelTolerance)
 		{
-			PlaneTangent = FVector::CrossProduct(Camera->GetRight(), Axis);
+			PlaneTangent = FVector::CrossProduct(ViewInfo.Right, Axis);
 		}
 		if (PlaneTangent.SizeSquared() <= ParallelTolerance)
 		{
@@ -921,7 +913,7 @@ bool FGizmo::BeginScaleDrag(EGizmoAxis AxisId, AActor* SelectedActor, ULevel* Le
 	}
 	else if (AxisId == EGizmoAxis::XYZ)
 	{
-		PlaneNormal = Camera->GetForward();
+		PlaneNormal = ViewInfo.Forward;
 	}
 
 	if (PlaneNormal.SizeSquared() <= ParallelTolerance)
@@ -1009,18 +1001,14 @@ FVector FGizmo::GetAxisVector(EGizmoAxis Axis)
 	}
 }
 
-RotationDesc FGizmo::BuildRotationDesc(const FCamera* Camera, const FVector& GizmoWorldLocation) const
+RotationDesc FGizmo::BuildRotationDesc(const FCameraViewInfo& ViewInfo, const FVector& GizmoWorldLocation) const
 {
 	RotationDesc Desc{};
-	if (!Camera)
-	{
-		return Desc;
-	}
 
-	const FVector Forward = Camera->GetForward().GetSafeNormal();
-	const FVector Right = Camera->GetRight().GetSafeNormal();
+	const FVector Forward = ViewInfo.Forward.GetSafeNormal();
+	const FVector Right = ViewInfo.Right.GetSafeNormal();
 	const FVector Up = FVector::CrossProduct(Forward, Right).GetSafeNormal();
-	const FVector CameraToGizmo = (GizmoWorldLocation - Camera->GetPosition()).GetSafeNormal();
+	const FVector CameraToGizmo = (GizmoWorldLocation - ViewInfo.Position).GetSafeNormal();
 
 	Desc.cameraDirection = CameraToGizmo.IsNearlyZero(ParallelTolerance) ? Forward : CameraToGizmo;
 	Desc.viewUp = Up;
@@ -1031,6 +1019,7 @@ RotationDesc FGizmo::BuildRotationDesc(const FCamera* Camera, const FVector& Giz
 	Desc.includeArcball = false;
 	Desc.dragging = (Mode == EGizmoMode::Rotation && ActiveAxis != EGizmoAxis::None);
 	Desc.deltaRotationDegrees = CurrentRotationDeltaDegrees;
+
 	switch (ActiveAxis)
 	{
 	case EGizmoAxis::X:
@@ -1237,22 +1226,17 @@ bool FGizmo::RayTriangleIntersectTwoSided(const FRay& Ray, const FVector& V0, co
 	return true;
 }
 
-float FGizmo::ComputeGizmoScale(const FVector& WorldPosition, const FCamera* Camera) const
+float FGizmo::ComputeGizmoScale(const FVector& WorldPosition, const FCameraViewInfo& ViewInfo) const
 {
-	if (!Camera)
-	{
-		return MinGizmoScale;
-	}
-
 	float VisibleHeight = 0.0f;
-	if (Camera->IsOrthographic())
+	if (ViewInfo.bIsOrthographic)
 	{
-		VisibleHeight = Camera->GetOrthoHeight();
+		VisibleHeight = ViewInfo.OrthoHeight;
 	}
 	else
 	{
-		const float Distance = (WorldPosition - Camera->GetPosition()).Size();
-		const float HalfFovRadians = FMath::DegreesToRadians(Camera->GetFOV() * 0.5f);
+		const float Distance = (WorldPosition - ViewInfo.Position).Size();
+		const float HalfFovRadians = FMath::DegreesToRadians(ViewInfo.FOV * 0.5f);
 		VisibleHeight = 2.0f * (std::max)(Distance, 1.0f) * std::tan(HalfFovRadians);
 	}
 

@@ -4,94 +4,91 @@
 #include "Renderer/MaterialManager.h"
 #include "Renderer/Material.h"
 #include "Renderer/ShaderMap.h"
+#include "Renderer/PrimitiveVertex.h"
 #include "Core/Paths.h"
-
+#include "Asset/AssetManager.h"
+#include "Renderer/Mesh/StaticMeshRenderData.h"
 #include "ThirdParty/stb_image.h"
 #include <d3d11.h>
+
+// FStaticMesh 데이터를 FMeshData(GPU 버퍼)로 변환하는 헬퍼
+class CPrimitiveStaticMesh : public CPrimitiveBase
+{
+public:
+	bool Init(const FStaticMesh* InStaticMesh, ID3D11Device* Device)
+	{
+		MeshData = std::make_shared<FMeshData>();
+
+		MeshData->Vertices.reserve(InStaticMesh->Vertices.size());
+		for (const FNormalVertex& NV : InStaticMesh->Vertices)
+		{
+			FPrimitiveVertex PV;
+			PV.Position = NV.Position;
+			PV.Color = NV.Color;
+			PV.Normal = NV.Normal;
+			PV.UV = NV.UV;
+			MeshData->Vertices.push_back(PV);
+		}
+
+		MeshData->Indices.assign(InStaticMesh->Indices.begin(), InStaticMesh->Indices.end());
+		MeshData->Topology = EMeshTopology::EMT_TriangleList;
+
+		return MeshData->CreateVertexAndIndexBuffer(Device);
+	}
+};
 
 IMPLEMENT_RTTI(UObjComponent, UPrimitiveComponent)
 
 void UObjComponent::Initialize()
-{ 
+{
 }
 
-void UObjComponent::LoadPrimitive(const FString& FilePath)
+
+void UObjComponent::LoadStaticMeshAsset(ID3D11Device* Device, const FString& FilePath)
 {
-	Primitive = std::make_unique<FPrimitiveObj>(FilePath);	
+	// 1. FStaticMesh 로드 (캐시 히트 시 재사용)
+	StaticMesh = FAssetManager::LoadObjStaticMeshAsset(FilePath, Device);
+	if (!StaticMesh)
+	{
+		printf("[ObjComponent] Failed to load static mesh: %s\n", FilePath.c_str());
+		return;
+	}
+
+	// 2. FStaticMesh → FMeshData (GPU 버퍼 생성)
+	auto PrimitiveSM = std::make_shared<CPrimitiveStaticMesh>();
+	if (!PrimitiveSM->Init(StaticMesh, Device))
+	{
+		printf("[ObjComponent] Failed to create GPU buffers: %s\n", FilePath.c_str());
+		return;
+	}
+	Primitive = PrimitiveSM;
+
+	// 3. MTL 머티리얼 로드 → 슬롯별 매핑
+	MaterialSlots.clear();
+	MaterialSlots.resize(StaticMesh->MaterialSlotNames.size(), nullptr);//Dorumon_body, Dorumon_eye ...등등 usemtl이 다를 수 있기 때문에
+
+	if (!StaticMesh->MtlPath.empty())
+	{
+		for (int32 i = 0; i < static_cast<int32>(StaticMesh->MaterialSlotNames.size()); ++i)
+		{
+			const FString& SlotName = StaticMesh->MaterialSlotNames[i];
+			FMaterial* Mat = FAssetManager::GetMaterialByName(SlotName);
+			MaterialSlots[i] = Mat;
+		}
+	}
 }
 
-void UObjComponent::LoadTexture(ID3D11Device* Device, const FString& FilePath)
+FMaterial* UObjComponent::GetMaterialBySlot(int32 SlotIndex) const
 {
-	if (DynamicMaterialOwner)
+	if (SlotIndex >= 0 && SlotIndex < static_cast<int32>(MaterialSlots.size()))
+		return MaterialSlots[SlotIndex];
+	return nullptr;
+}
+
+void UObjComponent::SetMaterialSlot(int32 SlotIndex, FMaterial* Material)
+{
+	if (SlotIndex >= 0 && SlotIndex < static_cast<int32>(MaterialSlots.size()))
 	{
-		Material = DynamicMaterialOwner.get();
+		MaterialSlots[SlotIndex] = Material;
 	}
-	else
-	{
-		std::shared_ptr<FMaterial> DefaultMaterial = FMaterialManager::Get().FindByName("M_Default_Texture");
-		/** 임시 객체 저장용 */
-		DynamicMaterialOwner = DefaultMaterial->CreateDynamicMaterial();
-		/** dangling pointer 위험성에 대해 인지 필요 (시간상...) */
-		Material = DynamicMaterialOwner.get();
-	}
-
-	/** 텍스쳐 로드 */
-	int width = 0, height = 0, channels = 0;
-
-	unsigned char* data = stbi_load(
-		FPaths::ToAbsolutePath(FilePath).c_str(),
-		&width,
-		&height,
-		&channels,
-		STBI_rgb_alpha // 강제 RGBA
-	);
-
-	if (!data)
-	{
-		// TODO: fallback texture
-		return;
-	}
-
-	ID3D11Texture2D* texture = nullptr;
-
-	D3D11_TEXTURE2D_DESC desc = {};
-	desc.Width = width;
-	desc.Height = height;
-	desc.MipLevels = 1;
-	desc.ArraySize = 1;
-	desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB; // ⭐ diffuse면 SRGB 추천
-	desc.SampleDesc.Count = 1;
-	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-
-	D3D11_SUBRESOURCE_DATA initData = {};
-	initData.pSysMem = data;
-	initData.SysMemPitch = width * 4;
-
-	HRESULT hr = Device->CreateTexture2D(&desc, &initData, &texture);
-
-	if (FAILED(hr))
-	{
-		stbi_image_free(data);
-		return;
-	}
-
-	ID3D11ShaderResourceView* srv = nullptr;
-
-	hr = Device->CreateShaderResourceView(texture, nullptr, &srv);
-
-	// Texture는 SRV 만들었으면 바로 버려도 됨
-	texture->Release();
-
-	if (FAILED(hr))
-	{
-		stbi_image_free(data);
-		return;
-	}
-
-	stbi_image_free(data);
-
-	std::shared_ptr<FMaterialTexture> MT = std::make_shared<FMaterialTexture>();
-	MT->TextureSRV = srv;
-	Material->SetMaterialTexture(MT);
 }

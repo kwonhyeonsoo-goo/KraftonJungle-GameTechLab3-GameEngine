@@ -1,5 +1,5 @@
 #pragma once
-#include "OutlinerWindow.h" 
+#include "OutlinerWindow.h"
 #include "ControlPanelWindow.h"
 #include "PropertyWindow.h"
 #include "ConsoleWindow.h"
@@ -7,13 +7,14 @@
 #include "Viewport.h"
 #include "Types/ObjectPtr.h"
 #include "ContentBrowserWindow.h"
+#include <vector>
 
 class FCore;
 class FWindow;
 class FRenderer;
 class AActor;
-class FEditorViewportClient;
 
+class IViewportClient;
 
 class FEditorUI
 {
@@ -24,20 +25,41 @@ public:
 	void DetachFromRenderer(FRenderer* InRenderer);
 	void Render();
 	void SyncSelectedActorProperty();
-	bool GetViewportMousePosition(int32 WindowMouseX, int32 WindowMouseY, int32& OutViewportX, int32& OutViewportY, int32& OutWidth, int32& OutHeight) const;
+
+	bool GetViewportMousePosition(int32 WindowMouseX, int32 WindowMouseY,
+		int32& OutViewportX, int32& OutViewportY,
+		int32& OutWidth, int32& OutHeight) const;
 	bool IsViewportInteractive() const;
 	bool HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
 	FConsoleWindow& GetConsole() { return Console; }
 	FCore* GetCore() { return Core; }
+
+	void LinkViewportClient(int32 Index, IViewportClient* InClient);
+
+	IViewportClient* GetFocusedViewportClient() const;
+	IViewportClient* GetPrimaryViewportClient() const;
+
+	// ── 뷰포트 배열 접근 ─────────────────────────────────────────────
+	std::vector<FViewport>& GetViewports() { return Viewports; }
+	const std::vector<FViewport>& GetViewports() const { return Viewports; }
+
+	// 현재 마우스가 올라가 있는 뷰포트 인덱스 (-1이면 없음)
+	int32 GetHoveredViewportIndex() const;
+
+	// 뷰포트 인덱스 기준 마우스 로컬 좌표 반환
+	bool GetMousePositionInViewport(int32 ViewportIndex,
+		int32 WindowMouseX, int32 WindowMouseY,
+		int32& OutLocalX, int32& OutLocalY,
+		int32& OutWidth, int32& OutHeight) const;
 
 private:
 	void BuildDefaultLayout(uint32 DockID);
 	void LoadEditorSettings();
 	void SaveEditorSettings();
 	std::wstring GetEditorIniPathW() const;
+
 	FCore* Core = nullptr;
 	TObjectPtr<AActor> CachedSelectedActor;
-
 	FWindow* MainWindow = nullptr;
 
 
@@ -46,12 +68,13 @@ private:
 	FPropertyWindow Property;
 	FConsoleWindow Console;
 	FStatWindow Stat;
-	FViewport Viewport;
 	FOutlinerWindow Outliner;
 	FContentBrowserWindow ContentBrowser;
 
+	std::vector<FViewport> Viewports;
+
 	bool bWindowSetup = false;
-	bool bViewportClientActive = false;
+	bool bViewportActive = false;
 	bool bLayoutInitialized = false;
 	FRenderer* CurrentRenderer = nullptr;
 };

@@ -5,18 +5,13 @@
 #include "Actor/CubeActor.h"
 #include "Actor/SphereActor.h"
 #include "Actor/SubUVActor.h"
-#include "Camera/Camera.h"
 #include "Component/CameraComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Component/PrimitiveComponent.h"
 #include "Object/Class.h"
-
 #include "Serializer/SceneSerializer.h"
-#include <algorithm>
-
-
-
 #include "Component/LineBatchComponent.h"
+#include <algorithm>
 
 IMPLEMENT_RTTI(ULevel, UObject)
 
@@ -32,19 +27,8 @@ ULevel::~ULevel()
 	Actors.clear();
 }
 
-
-FCamera* ULevel::GetCamera() const
-{
-	UWorld* World = GetTypedOuter<UWorld>();
-	return World ? World->GetCamera() : nullptr;
-}
-
-
-
 void ULevel::ClearActors()
 {
-
-
 	for (AActor* Actor : Actors)
 	{
 		if (Actor)
@@ -53,22 +37,15 @@ void ULevel::ClearActors()
 		}
 	}
 	Actors.clear();
-
 	bBegunPlay = false;
 }
 
 void ULevel::RegisterActor(AActor* InActor)
 {
-	if (!InActor)
-	{
-		return;
-	}
+	if (!InActor) return;
 
 	const auto It = std::find(Actors.begin(), Actors.end(), InActor);
-	if (It != Actors.end())
-	{
-		return;
-	}
+	if (It != Actors.end()) return;
 
 	Actors.push_back(InActor);
 	InActor->SetLevel(this);
@@ -76,12 +53,7 @@ void ULevel::RegisterActor(AActor* InActor)
 
 void ULevel::DestroyActor(AActor* InActor)
 {
-	if (!InActor)
-	{
-		return;
-	}
-
-
+	if (!InActor) return;
 	InActor->Destroy();
 }
 
@@ -98,11 +70,7 @@ void ULevel::CleanupDestroyedActors()
 
 void ULevel::BeginPlay()
 {
-	if (bBegunPlay)
-	{
-		return;
-	}
-
+	if (bBegunPlay) return;
 	bBegunPlay = true;
 
 	for (AActor* Actor : Actors)

@@ -18,6 +18,10 @@ struct ENGINE_API FRenderCommand
 	FMaterial* Material = nullptr;
 	uint64 SortKey = 0;
 
+	// 섹션 드로우: IndexCount > 0 이면 IndexStart부터 IndexCount개만 드로우
+	uint32 IndexStart = 0;
+	uint32 IndexCount = 0;
+
 	ERenderLayer RenderLayer = ERenderLayer::Default;
 	bool bDisableDepthTest = false;
 	bool bDisableDepthWrite = false;

@@ -2,10 +2,10 @@
 
 #include "Core/FEngine.h"
 #include "UI/EditorUI.h"
-#include "UI/PreviewViewportClient.h"
 #include "Controller/EditorViewportController.h"
 
 class AEditorCameraPawn;
+class FEditorViewportClient;
 
 class FEditorEngine : public FEngine
 {
@@ -21,14 +21,16 @@ protected:
 	void PostInitialize() override;
 	void Tick(float DeltaTime) override;
 	ELevelType GetStartupLevelType() const override { return ELevelType::Editor; }
-	std::unique_ptr<FViewportClient> CreateViewportClient() override;
+	void CreateViewportClients() override;
 
 	FEditorViewportController* GetViewportController();
-private:
-	void SyncViewportClient();
 
+private:
 	FEditorUI EditorUI;
-	std::unique_ptr<FPreviewViewportClient> PreviewViewportClient;
 	AEditorCameraPawn* EditorPawn = nullptr;
 	FEditorViewportController ViewportController;
+
+	// [0] Perspective, [1] Top, [2] Side, [3] Bottom
+	// 소유권은 ViewportClientArray
+	FEditorViewportClient* SceneViewportClients[4] = { nullptr, nullptr, nullptr, nullptr };
 };

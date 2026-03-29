@@ -64,9 +64,6 @@
     <Filter Include="ThirdParty\nlohmann">
       <UniqueIdentifier>{c70e54eb-75c7-d408-4bdc-b003f49af18a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Core\Interface">
-      <UniqueIdentifier>{0457abf1-7da5-45c6-80b4-d29a36ce43f2}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Actor\Actor.cpp">
@@ -89,9 +86,6 @@
     </ClCompile>
     <ClCompile Include="Source\Actor\SubUVActor.cpp">
       <Filter>Source\Actor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Camera\Camera.cpp">
-      <Filter>Source\Camera</Filter>
     </ClCompile>
     <ClCompile Include="Source\Component\ActorComponent.cpp">
       <Filter>Source\Component</Filter>
@@ -308,6 +302,13 @@
     <ClCompile Include="Source\World\LevelManager.cpp">
       <Filter>Source\World</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Object\Mesh\StaticMesh.cpp" />
+    <ClCompile Include="Source\Component\MeshComponent.cpp" />
+    <ClCompile Include="Source\Component\StaticMeshComponent.cpp" />
+    <ClCompile Include="Source\World\Scene.cpp" />
+    <ClCompile Include="Source\Asset\AssetManager.cpp" />
+    <ClCompile Include="Source\Renderer\Mesh\StaticMeshRenderData.cpp" />
+    <ClCompile Include="Source\Actor\StaticMeshActor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -339,9 +340,6 @@
     </ClInclude>
     <ClInclude Include="Source\Actor\SubUVActor.h">
       <Filter>Source\Actor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Camera\Camera.h">
-      <Filter>Source\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\ActorComponent.h">
       <Filter>Source\Component</Filter>
@@ -635,9 +633,18 @@
     <ClInclude Include="Source\World\LevelTypes.h">
       <Filter>Source\World</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\Interface\Observable.h">
-      <Filter>Source\Core\Interface</Filter>
+    <ClInclude Include="Source\Camera\CameraInfo.h" />
+    <ClInclude Include="Source\Camera\ViewportInfo.h" />
+    <ClInclude Include="Source\Object\Mesh\StaticMesh.h" />
+    <ClInclude Include="Source\Component\MeshComponent.h" />
+    <ClInclude Include="Source\Component\StaticMeshComponent.h" />
+    <ClInclude Include="Source\World\Scene.h" />
+    <ClInclude Include="Source\Core\Templates\ObjectIterator.h" />
+    <ClInclude Include="Source\Asset\AssetManager.h">
+      <Filter>Source\Renderer</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Renderer\Mesh\StaticMeshRenderData.h" />
+    <ClInclude Include="Source\Actor\StaticMeshActor.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

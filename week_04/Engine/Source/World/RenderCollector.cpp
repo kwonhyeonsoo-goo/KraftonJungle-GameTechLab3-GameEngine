@@ -3,12 +3,16 @@
 #include "Renderer/RenderCommand.h"
 #include "Actor/Actor.h"
 #include "Component/SubUVComponent.h"
+#include "Component/ObjComponent.h"
 #include "Core/FEngine.h"
 #include "Component/TextComponent.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/TextMeshBuilder.h"
 #include "Renderer/SubUVRenderer.h"
 #include "Renderer/Material.h"
+#include "Renderer/Mesh/StaticMeshRenderData.h"
+#include "Component/StaticMeshComponent.h"
+#include "Object/Mesh/StaticMesh.h"
 
 void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors, const FFrustum& Frustum,
 	const FShowFlags& ShowFlags, FRenderCommandQueue& OutQueue)
@@ -26,12 +30,37 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 	{
 		if (!PrimitiveComponent) continue;
 
+		if (PrimitiveComponent->IsA(UStaticMeshComponent::StaticClass()))
+		{
+			UStaticMeshComponent* StaticMeshComp = static_cast<UStaticMeshComponent*>(PrimitiveComponent);
+			FStaticMesh* SM = StaticMeshComp->GetStaticMesh()->GetAsset();
+			FMeshData* MeshData = SM->MeshData.get();
+
+			if (SM && MeshData)
+			{
+				for (const SubMeshSection& Section : SM->Sections)
+				{
+					FMaterial* Mat = StaticMeshComp->GetMaterial(Section.MaterialIndex);
+					if (!Mat) continue;
+
+					FRenderCommand Command;
+					Command.MeshData = MeshData;
+					Command.WorldMatrix = StaticMeshComp->GetWorldTransform();
+					Command.Material = Mat;
+					Command.IndexStart = static_cast<uint32>(Section.IndexStart);
+					Command.IndexCount = static_cast<uint32>(Section.IndexCount);
+					OutQueue.AddCommand(Command);
+				}
+				continue;
+			}
+		}
+
 		// ─── 텍스트 컴포넌트 ───
 		if (PrimitiveComponent->IsA(UTextComponent::StaticClass()))
 		{
 			UTextComponent* TextComp = static_cast<UTextComponent*>(PrimitiveComponent);
 			FMeshData* TextMesh = TextComp->GetTextMesh();
-			
+
 			if (TextMesh && TextRenderer.BuildTextMesh(TextComp->GetDisplayText(), *TextMesh))
 			{
 				FMaterial* FontMat = TextRenderer.GetFontMaterial();
@@ -52,8 +81,8 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 					{
 						Command.RenderLayer = ERenderLayer::Overlay;
 					}
-				
-					
+
+
 					const FVector WorldPos = TextComp->GetRenderWorldPosition();
 					const FVector Scale = TextComp->GetRenderWorldScale();
 
@@ -113,6 +142,43 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 			continue;
 		}
 
+		// ─── ObjComponent: 섹션별 멀티 드로우 ───
+		if (PrimitiveComponent->IsA(UObjComponent::StaticClass()))
+		{
+			UObjComponent* ObjComp = static_cast<UObjComponent*>(PrimitiveComponent);
+			FStaticMesh* SM = ObjComp->GetStaticMesh();
+			FMeshData* MeshData = ObjComp->GetPrimitive() ? ObjComp->GetPrimitive()->GetMeshData() : nullptr;
+
+			if (SM && MeshData)
+			{
+				for (const SubMeshSection& Section : SM->Sections)
+				{
+					FMaterial* Mat = ObjComp->GetMaterialBySlot(Section.MaterialIndex);
+					if (!Mat) continue;
+
+					FRenderCommand Command;
+					Command.MeshData = MeshData;
+					Command.WorldMatrix = ObjComp->GetWorldTransform();
+					Command.Material = Mat;
+					Command.IndexStart = static_cast<uint32>(Section.IndexStart);
+					Command.IndexCount = static_cast<uint32>(Section.IndexCount);
+					OutQueue.AddCommand(Command);
+				}
+				continue;
+
+				/*for (FMaterial* Material : SM->Materials)
+				{
+					if (!Material) continue;
+					FRenderCommand Command;
+					Command.MeshData = MeshData;
+					Command.WorldMatrix = ObjComp->GetWorldTransform();
+					Command.Material = Material;
+					Command.IndexStart = Section.IndexStart
+					OutQueue.AddCommand(Command);
+				}*/
+			}
+		}
+
 		// ─── 일반 프리미티브 ───
 		if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData())
 		{
@@ -144,6 +210,7 @@ void FLevelRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 			const bool bIsUUID = PrimitiveComponent->IsA(UUUIDBillboardComponent::StaticClass());
 			const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
 			const bool bIsText = PrimitiveComponent->IsA(UTextComponent::StaticClass());
+			const bool bIsStaticMesh = PrimitiveComponent->IsA(UStaticMeshComponent::StaticClass());
 
 			if (bIsUUID)
 			{
@@ -162,6 +229,10 @@ void FLevelRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 				{
 					continue;
 				}
+			}
+			else if (bIsStaticMesh)
+			{
+				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives)) continue;
 			}
 			else
 			{

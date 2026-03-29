@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include "Math/MathUtility.h"
+#include "Component/SceneComponent.h"
 
 void FCamera::SetPosition(const FVector& InPosition)
 {
@@ -61,8 +62,21 @@ void FCamera::Rotate(float DeltaYaw, float DeltaPitch)
 
 FMatrix FCamera::GetViewMatrix() const
 {
-	FVector Target = Position + GetForward();
-	return FMatrix::MakeViewLookAtLH(Position, Target, Up);
+	FVector Target;
+	FVector Origin;
+
+	if (FocusTarget)
+	{
+		Target = FocusTarget->GetWorldLocation();
+		Origin = Target - GetForward() * FocusTarget->GetWorldTransform().GetScaleVector().Size() * 15;
+	}
+	else
+	{
+		Origin = Position;
+		Target = Position + GetForward();
+	}
+
+	return FMatrix::MakeViewLookAtLH(Origin, Target, Up);
 }
 
 FMatrix FCamera::GetProjectionMatrix() const

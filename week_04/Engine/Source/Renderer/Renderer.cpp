@@ -6,6 +6,7 @@
 #include "MaterialManager.h"
 #include "Core/Paths.h"
 #include "Primitive/PrimitiveBase.h"
+#include "Asset/AssetManager.h"
 #include <cassert>
 #include <algorithm>
 
@@ -31,20 +32,36 @@ FRenderer::~FRenderer()
 	Release();
 }
 
-void FRenderer::SetLevelRenderTarget(ID3D11RenderTargetView* InRenderTargetView, ID3D11DepthStencilView* InDepthStencilView, const D3D11_VIEWPORT& InViewport)
+void FRenderer::SetLevelRenderTarget(ID3D11RenderTargetView* InRTV,
+	ID3D11DepthStencilView* InDSV,
+	const D3D11_VIEWPORT& InViewport)
 {
-	LevelRenderTargetView = InRenderTargetView;
-	LevelDepthStencilView = InDepthStencilView;
+	LevelRenderTargetView = InRTV;
+	LevelDepthStencilView = InDSV;
 	LevelViewport = InViewport;
-	bUseLevelRenderTargetOverride = (LevelRenderTargetView != nullptr && LevelDepthStencilView != nullptr);
+	bUseLevelRenderTargetOverride = (InRTV != nullptr && InDSV != nullptr);
+
+	// 기존 코드 끝, 아래 3줄 추가
+	if (bUseLevelRenderTargetOverride)
+	{
+		constexpr float ClearColor[4] = { 0.f, 0.f, 0.f, 1.f };
+		DeviceContext->ClearRenderTargetView(LevelRenderTargetView, ClearColor);
+		DeviceContext->ClearDepthStencilView(LevelDepthStencilView,
+			D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0);
+		DeviceContext->OMSetRenderTargets(1, &LevelRenderTargetView, LevelDepthStencilView);
+		DeviceContext->RSSetViewports(1, &LevelViewport);
+	}
 }
 
 void FRenderer::ClearLevelRenderTarget()
 {
 	LevelRenderTargetView = nullptr;
 	LevelDepthStencilView = nullptr;
-	LevelViewport = {};
 	bUseLevelRenderTargetOverride = false;
+
+	// 기존 코드 끝, 아래 2줄 추가
+	DeviceContext->OMSetRenderTargets(1, &RenderTargetView, DepthStencilView);
+	DeviceContext->RSSetViewports(1, &Viewport);
 }
 
 void FRenderer::SetGUICallbacks(
@@ -127,7 +144,7 @@ bool FRenderer::CreateRenderTargetAndDepthStencil(int32 Width, int32 Height)
 	ID3D11Texture2D* BackBuffer = nullptr;
 	HRESULT Hr = SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&BackBuffer);
 	if (FAILED(Hr)) return false;
-	
+
 	Hr = Device->CreateRenderTargetView(BackBuffer, nullptr, &RenderTargetView);
 	BackBuffer->Release();
 	if (FAILED(Hr)) return false;
@@ -145,10 +162,10 @@ bool FRenderer::CreateRenderTargetAndDepthStencil(int32 Width, int32 Height)
 	ID3D11Texture2D* DepthTex = nullptr;
 	Hr = Device->CreateTexture2D(&DepthDesc, nullptr, &DepthTex);
 	if (FAILED(Hr)) return false;
-	
+
 	Hr = Device->CreateDepthStencilView(DepthTex, nullptr, &DepthStencilView);
 	DepthTex->Release();
-	
+
 	return SUCCEEDED(Hr);
 }
 
@@ -301,7 +318,7 @@ void FRenderer::ClearCommandList()
 {
 	PrevCommandCount = CommandList.size();
 	CommandList.clear();
-	CommandList.reserve(PrevCommandCount);	
+	CommandList.reserve(PrevCommandCount);
 }
 
 void FRenderer::EndFrame()
@@ -355,7 +372,7 @@ void FRenderer::ExecuteCommands()
 	ExecuteRenderPass(ERenderLayer::Default);
 	ClearDepthBuffer();
 	ExecuteRenderPass(ERenderLayer::Overlay);
-	
+
 	if (PostRenderCallback) PostRenderCallback(this);
 }
 
@@ -369,6 +386,8 @@ void FRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 	ID3D11SamplerState* FontSampler = TextRenderer.GetAtlasSampler();
 	ID3D11ShaderResourceView* SubUVSRV = SubUVRenderer.GetTextureSRV();
 	ID3D11SamplerState* SubUVSampler = SubUVRenderer.GetSamplerState();
+
+	auto assets = FAssetManager::GetMaterialByName("M_Font");
 
 	FRenderCommand toFind;
 	toFind.RenderLayer = InRenderLayer;
@@ -385,7 +404,7 @@ void FRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 		if (Cmd.Material != CurrentMaterial)
 		{
 			Cmd.Material->Bind(DeviceContext);
-			
+
 			// RenderStateManager를 통한 일괄 상태 바인딩 (캐싱 활용)
 			RenderStateManager->BindState(Cmd.Material->GetRasterizerState());
 			RenderStateManager->BindState(Cmd.Material->GetDepthStencilState());
@@ -406,8 +425,7 @@ void FRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 			}
 			else
 			{
-				// SRV 는 일반 Material 안에서 bind
-				DeviceContext->PSSetSamplers(0, 1, &NormalSampler);
+				// SRV 와 Sampler 는 FTexture::Bind() 안에서 바인딩됨
 			}
 		}
 
@@ -425,9 +443,12 @@ void FRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 		}
 
 		UpdateObjectConstantBuffer(Cmd.WorldMatrix);
-		
+
 		if (!Cmd.MeshData->Indices.empty())
-			DeviceContext->DrawIndexed(static_cast<UINT>(Cmd.MeshData->Indices.size()), 0, 0);
+		{
+			UINT DrawCount = Cmd.IndexCount > 0 ? Cmd.IndexCount : static_cast<UINT>(Cmd.MeshData->Indices.size());
+			DeviceContext->DrawIndexed(DrawCount, Cmd.IndexStart, 0);
+		}
 		else if (!Cmd.MeshData->Vertices.empty())
 			DeviceContext->Draw(static_cast<UINT>(Cmd.MeshData->Vertices.size()), 0);
 	}

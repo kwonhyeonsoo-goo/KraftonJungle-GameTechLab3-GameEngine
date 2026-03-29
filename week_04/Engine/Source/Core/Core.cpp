@@ -20,6 +20,12 @@
 #include "Component/UUIDBillboardComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Actor/SkySphereActor.h"
+
+#include "Templates/ObjectIterator.h"
+#include "Object/Mesh/StaticMesh.h"
+#include "Component/StaticMeshComponent.h"
+#include "Asset/AssetManager.h"
+
 FCore::~FCore()
 {
 	Release();
@@ -39,18 +45,16 @@ bool FCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ELevelType StartupL
 
 	ObjManager = new ObjectManager();
 
-	// Material
 	FMaterialManager::Get().LoadAllMaterials(Renderer->GetDevice(), Renderer->GetRenderStateManager().get());
 
-	// InputManager
 	InputManager = new FInputManager();
 	EnhancedInput = new FEnhancedInputManager();
 
 	PhysicsManager = std::make_unique<FPhysicsManager>();
 
-	// Timer
 	Timer.Initialize();
 	RegisterConsoleVariables();
+
 	LevelManager = std::make_unique<FLevelManager>();
 	const float AspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
 	if (!LevelManager->Initialize(AspectRatio, StartupLevelType, Renderer.get()))
@@ -61,27 +65,40 @@ bool FCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ELevelType StartupL
 	return true;
 }
 
+// ── ViewportClient 배열 등록 ───────────────────────────────────────────────
+// 소유권은 FEngine(unique_ptr), Core는 raw pointer만 보관
 
-
-void FCore::SetViewportClient(FViewportClient* InViewportClient)
+void FCore::SetViewportClients(TArray<std::unique_ptr<IViewportClient>>& InArray)
 {
-	if (ViewportClient == InViewportClient)
+	// 기존 포인터 전부 Detach
+	for (IViewportClient* VP : ViewportClientArray)
 	{
-		return;
+		if (VP && Renderer)
+		{
+			VP->Detach(this, Renderer.get());
+		}
 	}
+	ViewportClientArray.clear();
 
-	if (ViewportClient && Renderer)
+	// 새 포인터 등록 후 Attach
+	for (auto& VP : InArray)
 	{
-		ViewportClient->Detach(this, Renderer.get());
-	}
-
-	ViewportClient = InViewportClient;
-
-	if (ViewportClient && Renderer)
-	{
-		ViewportClient->Attach(this, Renderer.get());
+		if (!VP) continue;
+		ViewportClientArray.push_back(VP.get());
+		VP->Attach(this, Renderer.get());
 	}
 }
+
+IViewportClient* FCore::GetViewportClientAt(int32 Index) const
+{
+	if (Index < 0 || Index >= static_cast<int32>(ViewportClientArray.size()))
+	{
+		return nullptr;
+	}
+	return ViewportClientArray[Index];
+}
+
+// ── 입력 ──────────────────────────────────────────────────────────────────
 
 void FCore::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
@@ -90,26 +107,35 @@ void FCore::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 		InputManager->ProcessMessage(Hwnd, Msg, WParam, LParam);
 	}
 
-	if (ViewportClient)
+	// TODO: 포커스된 뷰포트만 입력 수신하도록 개선 필요
+	for (IViewportClient* VP : ViewportClientArray)
 	{
-		ViewportClient->HandleMessage(this, Hwnd, Msg, WParam, LParam);
+		if (VP)
+		{
+			VP->HandleMessage(this, Hwnd, Msg, WParam, LParam);
+		}
 	}
 }
 
+// ── 해제 ──────────────────────────────────────────────────────────────────
+
 void FCore::Release()
 {
-	if (ViewportClient && Renderer)
+	for (IViewportClient* VP : ViewportClientArray)
 	{
-		ViewportClient->Detach(this, Renderer.get());
+		if (VP && Renderer)
+		{
+			VP->Detach(this, Renderer.get());
+		}
 	}
-	ViewportClient = nullptr;
+	ViewportClientArray.clear();
+
 	if (LevelManager)
 	{
 		LevelManager->Release();
 		LevelManager.reset();
 	}
 
-	// Level 해제 후 PendingKill 오브젝트를 GC로 정리
 	if (ObjManager)
 	{
 		ObjManager->FlushKilledObjects();
@@ -125,10 +151,13 @@ void FCore::Release()
 
 	if (Renderer)
 	{
-		// 렌더러 Release는 소멸자에서 자동 호출
 		Renderer.reset();
 	}
+
+	FAssetManager::CleanUp();
 }
+
+// ── Tick ──────────────────────────────────────────────────────────────────
 
 void FCore::Tick()
 {
@@ -138,10 +167,10 @@ void FCore::Tick()
 
 void FCore::Tick(const float DeltaTime)
 {
-	Input(DeltaTime);
+	Input(DeltaTime); //Init 단계에서 CEditorViewportClient가 ViewportClient로 설정됨 내부의 ViewportClient -> Tick()이 호출됨 → EditorViewportClient에서 마우스 위치 업데이트, Picking 처리 등 수행
 	Physics(DeltaTime);
-	GameLogic(DeltaTime);
-	Render();
+	GameLogic(DeltaTime); //GameLogic -> World - Tick() → Actor - Tick() → Component - Tick()
+	Render(); // SceneManager로부터 ActiveScene을 얻어와서 그로부터 RenderCommand를 생성함
 	LateUpdate(DeltaTime);
 }
 
@@ -157,56 +186,41 @@ void FCore::Input(float DeltaTime)
 		EnhancedInput->ProcessInput(InputManager, DeltaTime);
 	}
 
-	if (ViewportClient)
+	// TODO: 포커스된 뷰포트만 Tick 받도록 개선 필요
+	for (IViewportClient* VP : ViewportClientArray)
 	{
-		ViewportClient->Tick(this, DeltaTime);
+		if (VP)
+		{
+			VP->Tick(this, DeltaTime);
+		}
 	}
 }
 
 void FCore::Physics(float DeltaTime)
 {
-	ULevel* Level = ViewportClient ? ViewportClient->ResolveLevel(this) : GetActiveLevel();
-	
-	if (Level)
+	ULevel* Level = GetActiveLevel();
+	if (!Level) return;
+
+	FVector LineStart(2, 2, 0), LineEnd(5, 5, 0);
+	FHitResult HitResult;
+
+	bool bHit = PhysicsManager->Linetrace(Level, LineStart, LineEnd, HitResult);
+	if (bHit && !HitResult.HitActor->IsA(ASkySphereActor::StaticClass()))
 	{
-		FVector LineStart(2, 2, 0), LineEnd(5, 5, 0);
-		FHitResult HitResult;
-
-		bool bHit = PhysicsManager->Linetrace(Level, LineStart, LineEnd, HitResult);
-
-		if (bHit)
+		for (UActorComponent* ActorComp : HitResult.HitActor->GetComponents())
 		{
-			if (!HitResult.HitActor->IsA(ASkySphereActor::StaticClass()))
-			{
-				for (UActorComponent* ActorComp : HitResult.HitActor->GetComponents())
-				{
-
-					if (!ActorComp->IsA(UPrimitiveComponent::StaticClass()))
-					{
-						continue;
-					}
-					//discard Billboard subUv
-					UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(ActorComp);
-					if (!PrimComp->ShouldDrawDebugBounds()) continue;
-
-					FBoxSphereBounds Bound = PrimComp->GetWorldBounds();
-					//DebugDrawManager를 통해 그림 → Flush()에서 일괄 렌더
-
-					DebugDrawManager.DrawCube(Bound.Center, Bound.BoxExtent, FVector4(1, 0, 0, 1));
-
-				}
-
-
-				//Renderer->DrawCube(HitResult.HitLocation, FVector(0.1, 0.1, 0.1), FVector4(0, 1, 0, 1));
-				//Renderer를 직접 호출 → DebugDrawManager를 거치지 않음
-				DebugDrawManager.DrawCube(HitResult.HitLocation, FVector(0.1, 0.1, 0.1), FVector4(0, 1, 0, 1));
-			}
+			if (!ActorComp->IsA(UPrimitiveComponent::StaticClass())) continue;
+			UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(ActorComp);
+			if (!PrimComp->ShouldDrawDebugBounds()) continue;
+			FBoxSphereBounds Bound = PrimComp->GetWorldBounds();
+			DebugDrawManager.DrawCube(Bound.Center, Bound.BoxExtent, FVector4(1, 0, 0, 1));
 		}
+		DebugDrawManager.DrawCube(HitResult.HitLocation, FVector(0.1f, 0.1f, 0.1f), FVector4(0, 1, 0, 1));
+	}
 
-		if (Renderer)
-		{
-			DebugDrawManager.DrawLine(LineStart, LineEnd, FVector4(0, 1, 1, 1));
-		}
+	if (Renderer)
+	{
+		DebugDrawManager.DrawLine(LineStart, LineEnd, FVector4(0, 1, 1, 1));
 	}
 }
 
@@ -221,10 +235,7 @@ void FCore::GameLogic(float DeltaTime)
 
 void FCore::LateUpdate(float DeltaTime)
 {
-	if (GCInterval <= 0.0)
-	{
-		return;
-	}
+	if (GCInterval <= 0.0) return;
 
 	double CurrentTime = Timer.GetTotalTime();
 	if (ObjManager && (CurrentTime - LastGCTime) >= GCInterval)
@@ -234,9 +245,11 @@ void FCore::LateUpdate(float DeltaTime)
 	}
 }
 
+// ── 렌더 ──────────────────────────────────────────────────────────────────
+
 void FCore::Render()
 {
-	ULevel* Level = ViewportClient ? ViewportClient->ResolveLevel(this) : GetActiveLevel();
+	ULevel* Level = GetActiveLevel();
 	if (!Renderer || !Level || Renderer->IsOccluded())
 	{
 		return;
@@ -250,35 +263,63 @@ void FCore::Render()
 		Renderer->EndFrame();
 		return;
 	}
-	UCameraComponent* ActiveCamera = ActiveWorld->GetActiveCameraComponent();
-	if (!ActiveCamera)
+
+	// ── SkySphere 카메라 위치 주입 ─────────────────────────────────────
+	// 첫 번째 ViewportClient의 카메라 위치를 기준으로 SkySphere를 이동
+	// 다중 뷰포트에서는 주(primary) 뷰포트 기준
+	if (!ViewportClientArray.empty() && ViewportClientArray[0])
 	{
-		Renderer->EndFrame();
-		return;
+		const FCameraViewInfo PrimaryViewInfo = ViewportClientArray[0]->GetCameraViewInfo();
+		for (AActor* Actor : Level->GetActors())
+		{
+			if (ASkySphereActor* Sky = dynamic_cast<ASkySphereActor*>(Actor))
+			{
+				Sky->SetCameraPosition(PrimaryViewInfo.Position);
+			}
+		}
 	}
 
-	CommandQueue.Clear();
-	CommandQueue.Reserve(Renderer->GetPrevCommandCount());
-	CommandQueue.ViewMatrix = ActiveCamera->GetViewMatrix();
-	CommandQueue.ProjectionMatrix = ActiveCamera->GetProjectionMatrix();
-
-	FFrustum Frustum;
-	const FMatrix ViewProjection = CommandQueue.ViewMatrix * CommandQueue.ProjectionMatrix;
-	Frustum.ExtractFromVP(ViewProjection);
-
-	if (ViewportClient)
+	for (IViewportClient* CurrentViewport : ViewportClientArray)
 	{
-		ViewportClient->BuildRenderCommands(this, Level, Frustum, CommandQueue);
-	}
-	else
-	{
-		// Level->CollectRenderCommands(Frustum, CommandQueue);
+		if (!CurrentViewport) continue;
+
+		// ── 1. RTV/DSV + D3D11_VIEWPORT 세팅 ──────────────────────
+		// FViewport가 매 프레임 SetViewportInfo()로 RTV/DSV와 크기를 채워줌
+		const FViewportInfo& VPInfo = CurrentViewport->GetViewportInfo();
+		if (VPInfo.Width <= 0.f || VPInfo.Height <= 0.f) continue;
+		if (!VPInfo.RTV || !VPInfo.DSV) continue;
+
+		D3D11_VIEWPORT D3DViewport = {};
+		D3DViewport.TopLeftX = VPInfo.TopLeftX;
+		D3DViewport.TopLeftY = VPInfo.TopLeftY;
+		D3DViewport.Width = VPInfo.Width;
+		D3DViewport.Height = VPInfo.Height;
+		D3DViewport.MinDepth = VPInfo.MinDepth;
+		D3DViewport.MaxDepth = VPInfo.MaxDepth;
+
+		// Renderer API — RTV 바인딩 + D3D11_VIEWPORT 동시 설정
+		Renderer->SetLevelRenderTarget(VPInfo.RTV, VPInfo.DSV, D3DViewport);
+
+		// ── 2. 카메라 / 행렬 ───────────────────────────────────────
+		const FCameraViewInfo CameraViewInfo = CurrentViewport->GetCameraViewInfo();
+		CommandQueue.Clear();
+		CommandQueue.Reserve(Renderer->GetPrevCommandCount());
+		CommandQueue.ViewMatrix = CameraViewInfo.ViewMatrix;
+		CommandQueue.ProjectionMatrix = CameraViewInfo.ProjectionMatrix;
+
+		// ── 3. Frustum / 렌더 커맨드 ──────────────────────────────
+		FFrustum Frustum;
+		Frustum.ExtractFromVP(CameraViewInfo.ViewMatrix * CameraViewInfo.ProjectionMatrix);
+
+		CurrentViewport->BuildRenderCommands(this, Level, Frustum, CommandQueue);
+		Renderer->SubmitCommands(CommandQueue);
+		Renderer->ExecuteCommands();
+
+		// ── 4. Debug Draw ──────────────────────────────────────────
+		const FShowFlags& ShowFlags = CurrentViewport->GetShowFlags();
+		DebugDrawManager.Flush(Renderer.get(), ShowFlags, ActiveWorld);
 	}
 
-	Renderer->SubmitCommands(CommandQueue);
-	Renderer->ExecuteCommands();
-	const FShowFlags& ShowFlags = ViewportClient ? ViewportClient->GetShowFlags() : FShowFlags();
-	DebugDrawManager.Flush(Renderer.get(), ShowFlags, ActiveWorld);
 	Renderer->EndFrame();
 }
 
@@ -300,10 +341,7 @@ void FCore::RegisterConsoleVariables()
 	{
 		MaxFPSVar = CVM.Register("t.MaxFPS", 0.0f, "Maximum FPS limit (0 = unlimited)");
 	}
-	MaxFPSVar->SetOnChanged([this](FConsoleVariable* Var)
-		{
-			Timer.SetMaxFPS(Var->GetFloat());
-		});
+	MaxFPSVar->SetOnChanged([this](FConsoleVariable* Var) { Timer.SetMaxFPS(Var->GetFloat()); });
 	Timer.SetMaxFPS(MaxFPSVar->GetFloat());
 
 	FConsoleVariable* VSyncVar = CVM.Find("r.VSync");
@@ -313,15 +351,9 @@ void FCore::RegisterConsoleVariables()
 	}
 	VSyncVar->SetOnChanged([this](FConsoleVariable* Var)
 		{
-			if (Renderer)
-			{
-				Renderer->SetVSync(Var->GetInt() != 0);
-			}
+			if (Renderer) Renderer->SetVSync(Var->GetInt() != 0);
 		});
-	if (Renderer)
-	{
-		Renderer->SetVSync(VSyncVar->GetInt() != 0);
-	}
+	if (Renderer) Renderer->SetVSync(VSyncVar->GetInt() != 0);
 
 	FConsoleVariable* GCIntervalVar = CVM.Find("gc.Interval");
 	if (!GCIntervalVar)
@@ -348,4 +380,3 @@ void FCore::RegisterConsoleVariables()
 			}
 		}, "Force immediate garbage collection");
 }
-

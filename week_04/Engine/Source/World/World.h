@@ -2,12 +2,12 @@
 #include "CoreMinimal.h"
 #include "Object/Object.h"
 #include "World/LevelTypes.h"
+#include "Scene.h"
 
 // Forward declarations — include 최소화
 class ULevel;
 class AActor;
-class UCameraComponent;
-class FCamera;
+
 class FFrustum;
 struct FRenderCommandQueue;
 struct ID3D11Device;
@@ -17,7 +17,7 @@ class ENGINE_API UWorld : public UObject
 public:
 	DECLARE_RTTI(UWorld, UObject)
 	~UWorld();
-
+	  
 	template <typename T>
 	T* SpawnActor(const FString& InName);
 	void DestroyActor(AActor* InActor);
@@ -35,10 +35,9 @@ public:
 	const TArray<AActor*>& GetActors() const;  // PersistentLevel만
 
 	ULevel* GetLevel() const { return PersistentLevel; }
-	// 카메라
-	void SetActiveCameraComponent(UCameraComponent* InCamera);
-	UCameraComponent* GetActiveCameraComponent() const;
-	FCamera* GetCamera() const;
+
+
+
 
 	// 라이프사이클
 	void InitializeWorld(float AspectRatio, ID3D11Device* Device = nullptr);
@@ -51,16 +50,22 @@ public:
 	float GetWorldTime() const { return WorldTime; }
 	float GetDeltaTime() const { return DeltaSeconds; }
 
+	FScene* GetScene() const { return Scene; }
+	void SetScene(FScene* InScene) { Scene = InScene; }
+
 private:
 	ULevel* PersistentLevel = nullptr;      
 	TArray<ULevel*> StreamingLevels;
+
+	/** 실제론 Renderer 에서 원본 소유 / CreateScene 을 통해 받아옴 */
+	FScene* Scene = nullptr;
 
 	bool bBegunPlay = false;
 	float WorldTime = 0.f;
 	float DeltaSeconds = 0.f;
 	ELevelType WorldType = ELevelType::Game;
-	UCameraComponent* LevelCameraComponent = nullptr;    
-	TObjectPtr<UCameraComponent> ActiveCameraComponent;
+
+
 };
 #include "World/Level.h"
 

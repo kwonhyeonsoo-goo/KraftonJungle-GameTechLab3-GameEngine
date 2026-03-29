@@ -2,14 +2,11 @@
 
 #include "imgui_impl_dx11.h"
 #include "UI/EditorViewportClient.h"
-#include "UI/PreviewViewportClient.h"
 #include "Core/Core.h"
 #include "Core/ConsoleVariableManager.h"
 #include "World/Level.h"
 #include "Actor/Actor.h"
-
 #include "Component/CameraComponent.h"
-
 #include "Component/CubeComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Debug/EngineLog.h"
@@ -18,78 +15,24 @@
 #include "Pawn/EditorCameraPawn.h"
 #include "Camera/Camera.h"
 #include "Actor/SkySphereActor.h"
-namespace
-{
-	constexpr const char* PreviewLevelContextName = "PreviewLevel";
 
-	void InitializeDefaultPreviewLevel(FCore* Core)
-	{
-		if (Core == nullptr)
-		{
-			return;
-		}
-		FEditorWorldContext* PreviewContext = Core->GetLevelManager()->CreatePreviewWorldContext(PreviewLevelContextName, 1280, 720);
-		if (PreviewContext == nullptr || PreviewContext->World == nullptr)
-		{
-			return;
-		}
-		UWorld* PreviewWorld = PreviewContext->World;
-		if (PreviewWorld->GetActors().empty())
-		{
-			AActor* PreviewActor = PreviewWorld->SpawnActor<AActor>("PreviewCube");
-			if (PreviewActor)
-			{
-				UCubeComponent* PreviewComponent = FObjectFactory::ConstructObject<UCubeComponent>(PreviewActor);
-				PreviewActor->AddOwnedComponent(PreviewComponent);
-				PreviewActor->SetActorLocation({ 0.0f, 0.0f, 0.0f });
-			}
-		}
+#include "Actor/StaticMeshActor.h"
+#include "Asset/AssetManager.h"
 
-		if (UCameraComponent* PreviewCamera = PreviewWorld->GetActiveCameraComponent())
-		{
-			PreviewCamera->GetCamera()->SetPosition({ -8.0f, -8.0f, 6.0f });
-			PreviewCamera->GetCamera()->SetRotation(45.0f, -20.0f);
-			PreviewCamera->SetFov(50.0f);
-		}
-	}
-}
 
 bool FEditorEngine::Initialize(HINSTANCE hInstance)
 {
 	ImGui_ImplWin32_EnableDpiAwareness();
-
-	if (!FEngine::Initialize(hInstance, L"Jungle Editor", 1280, 720))
-	{
-		return false;
-	}
-
-	return true;
+	return FEngine::Initialize(hInstance, L"Jungle Editor", 1280, 720);
 }
 
-FEditorEngine::~FEditorEngine()
-{
-	//Shutdown();
-}
+FEditorEngine::~FEditorEngine() {}
 
 void FEditorEngine::Shutdown()
 {
-	if (Core && Core->GetViewportClient() == PreviewViewportClient.get())
-	{
-		Core->SetViewportClient(nullptr);
-	}
-
-	// EditorPawn은 Level 소속이 아니므로 직접 정리
-	if (EditorPawn)
-	{
-		EditorPawn->Destroy();
-		EditorPawn = nullptr;
-	}
-
-	PreviewViewportClient.reset();
-
-	// ViewportController가 EnhancedInput을 참조하므로, Engine이 해제하기 전에 정리
+	if (EditorPawn) { EditorPawn->Destroy(); EditorPawn = nullptr; }
 	ViewportController.Cleanup();
-
+	for (auto& VP : SceneViewportClients) VP = nullptr;
 	FEngine::Shutdown();
 }
 
@@ -101,92 +44,113 @@ void FEditorEngine::PreInitialize()
 		});
 }
 
+void FEditorEngine::CreateViewportClients()
+{
+	// [0] Perspective — 주 에디터 뷰, Gizmo/Grid 포함
+	// [1] Top         — 위에서 아래 orthographic
+	// [2] Side        — 옆에서 orthographic
+	// [3] Bottom      — 아래에서 위 orthographic
+	for (int i = 0; i < 4; i++)
+	{
+		auto VP = std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
+		SceneViewportClients[i] = VP.get();
+		ViewportClientArray.push_back(std::move(VP));
+	}
+}
+
 void FEditorEngine::PostInitialize()
 {
-	InitializeDefaultPreviewLevel(Core.get());
-	PreviewViewportClient = std::make_unique<FPreviewViewportClient>(EditorUI, MainWindow, PreviewLevelContextName);
-
-	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
-
-	// TArray<FString> VariableNames; 삭제
-	// CVM.GetAllNames(VariableNames); 삭제
-
-	// 이렇게 람다로 바로 받아서 등록하도록 변경합니다.
-	CVM.GetAllNames([this](const FString& Name)
+	// ── FViewport ↔ IViewportClient 1:1 연결 ─────────────────────────
+	for (int i = 0; i < 4; i++)
 	{
-		EditorUI.GetConsole().RegisterCommand(Name.c_str());
-	});
+		EditorUI.LinkViewportClient(i, SceneViewportClients[i]);
+	}
 
+	// ── Console ───────────────────────────────────────────────────────
+	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
+	CVM.GetAllNames([this](const FString& Name)
+		{
+			EditorUI.GetConsole().RegisterCommand(Name.c_str());
+		});
 	EditorUI.GetConsole().SetCommandHandler([](const char* CommandLine)
 		{
 			FString Result;
 			if (FConsoleVariableManager::Get().Execute(CommandLine, Result))
-			{
 				FEngineLog::Get().Log("%s", Result.c_str());
-			}
 			else
-			{
 				FEngineLog::Get().Log("[error] Unknown command: '%s'", CommandLine);
-			}
 		});
-	// EditorPawn은 Level에 등록하지 않음 — FEditorEngine이 직접 소유
-	
+
+	// ── EditorPawn — Perspective 뷰포트(0번)에 연결 ──────────────────
 	EditorPawn = FObjectFactory::ConstructObject<AEditorCameraPawn>(nullptr, "EditorCameraPawn");
 	EditorPawn->Initialize();
-	Core->GetActiveWorld()->SetActiveCameraComponent(EditorPawn->GetCameraComponent());
+
+	UCameraComponent* PerspCam = EditorPawn->GetCameraComponent();
+	PerspCam->SetPosition({ -10.f, 0.f, 5.f });
+	PerspCam->SetRotation(0.f, -15.f);
+	PerspCam->SetFOV(60.f);
+	PerspCam->SetOrthographic(false);
+	SceneViewportClients[0]->SetActiveCamera(PerspCam);
+
+	UE_LOG("EditorEngine initialized");
+
+#if IS_OBJ_VIEWER
+	AStaticMeshActor* NewActor = Core->GetLevel()->SpawnActor<AStaticMeshActor>("StaticMeshActor");
+	// UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath("/Assets/Meshes/Dorumon.obj"), Core->GetRenderer()->GetDevice());
+	UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath("/Assets/Meshes/12213_Bird_v1_l3.obj"), Core->GetRenderer()->GetDevice());
+	NewActor->SetStaticMesh(StaticMesh);
+
+	ViewportController.SetFocus(NewActor->GetRootComponent());
+#else
+
+#endif
+
+
+	// [1] Top — 위에서 아래로 내려다봄
+	{
+		UCameraComponent* Cam = SceneViewportClients[1]->GetActiveCamera();
+		Cam->SetPosition({ 0.f, 0.f, 100.f });
+		Cam->SetRotation(0.f, -89.9f);   // 거의 수직 아래
+		Cam->SetOrthographic(true);
+		Cam->SetOrthoWidth(25.f);
+	}
+
+	// [2] Side — 오른쪽에서 왼쪽으로
+	{
+		UCameraComponent* Cam = SceneViewportClients[2]->GetActiveCamera();
+		Cam->SetPosition({ 100.f, 0.f, 0.f });
+		Cam->SetRotation(180.f, 0.f);    // 왼쪽 방향
+		Cam->SetOrthographic(true);
+		Cam->SetOrthoWidth(25.f);
+	}
+
+	// [3] Bottom — 아래에서 위로 올려다봄 (Front 뷰로 대체하는 경우 많음)
+	{
+		UCameraComponent* Cam = SceneViewportClients[3]->GetActiveCamera();
+		Cam->SetPosition({ 0.f, -100.f, 0.f });
+		Cam->SetRotation(90.f, 0.f);     // 앞쪽 방향
+		Cam->SetOrthographic(true);
+		Cam->SetOrthoWidth(25.f);
+	}
+
+	// ── ViewportController — Perspective 뷰포트만 제어 ───────────────
 	ViewportController.Initialize(
-		EditorPawn->GetCameraComponent(),
+		PerspCam,
 		Core->GetInputManager(),
 		Core->GetEnhancedInputManager());
 
-
-	SyncViewportClient();
 	UE_LOG("EditorEngine initialized");
+
 }
+
+
 
 void FEditorEngine::Tick(float DeltaTime)
 {
-	// Editor Level에서는 EditorPawn 카메라가 항상 활성화되도록 보장
-	// (ClearActors 후 LevelCameraComponent로 폴백된 경우 복원)
-	if (EditorPawn && Core && Core->GetLevel() && Core->GetLevel()->IsEditorLevel())
-	{
-		UCameraComponent* EditorCamera = EditorPawn->GetCameraComponent();
-		if (Core->GetActiveWorld()->GetActiveCameraComponent() != EditorCamera)
-		{
-			Core->GetActiveWorld()->SetActiveCameraComponent(EditorCamera);
-		}
-	}
-
 	ViewportController.Tick(DeltaTime);
-	SyncViewportClient();
-}
-
-std::unique_ptr<FViewportClient> FEditorEngine::CreateViewportClient()
-{
-	return std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
 }
 
 FEditorViewportController* FEditorEngine::GetViewportController()
 {
 	return &ViewportController;
-}
-
-void FEditorEngine::SyncViewportClient()
-{
-	if (!Core)
-	{
-		return;
-	}
-
-	FViewportClient* TargetViewportClient = ViewportClient.get();
-	const FWorldContext* ActiveWorldContext = Core->GetActiveWorldContext();
-	if (ActiveWorldContext && ActiveWorldContext->WorldType == ELevelType::Preview && PreviewViewportClient)
-	{
-		TargetViewportClient = PreviewViewportClient.get();
-	}
-
-	if (Core->GetViewportClient() != TargetViewportClient)
-	{
-		Core->SetViewportClient(TargetViewportClient);
-	}
 }

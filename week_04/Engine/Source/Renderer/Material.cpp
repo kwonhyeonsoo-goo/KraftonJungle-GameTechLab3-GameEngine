@@ -3,12 +3,12 @@
 #include <cstring>
 
 
-FMaterialTexture::~FMaterialTexture()
+FTexture::~FTexture()
 {
 	Release();
 }
 
-void FMaterialTexture::Release()
+void FTexture::Release()
 {
 	if (TextureSRV)
 	{
@@ -23,9 +23,13 @@ void FMaterialTexture::Release()
 	}
 }
 
-void FMaterialTexture::Bind(ID3D11DeviceContext* DeviceContext)
+void FTexture::Bind(ID3D11DeviceContext* DeviceContext)
 {
 	DeviceContext->PSSetShaderResources(0, 1, &TextureSRV);
+	if (SamplerState)
+	{
+		DeviceContext->PSSetSamplers(0, 1, &SamplerState);
+	}
 }
 
 // ─── FMaterialConstantBuffer ───
