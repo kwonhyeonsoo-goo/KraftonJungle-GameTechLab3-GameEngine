@@ -37,7 +37,7 @@ void FEditorViewportController::Tick(float DeltaTime)
 
 void FEditorViewportController::SetFocus(USceneComponent* InFocusTarget)
 {
-	CameraComponent->SetFoucs(InFocusTarget);
+	//CameraComponent->SetFoucs(InFocusTarget);
 }
 
 void FEditorViewportController::SetupInputBindings()
@@ -94,7 +94,7 @@ void FEditorViewportController::SetupInputBindings()
 	EnhancedInput->BindAction(&LookXAction, ETriggerEvent::Triggered,
 		[this](const FInputActionValue& Value) {
 		if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
-			CameraComponent->Rotate(Value.Get() * CameraComponent->GetCamera()->GetMouseSensitivity(), 0.0f);
+			CameraComponent->Rotate(Value.Get() * CameraComponent->GetSensitivity(), 0.0f);
 		else if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_MIDDLE))
 			CameraComponent->PanRight(-Value.Get() * CurrentDeltaTime);
 
@@ -103,7 +103,7 @@ void FEditorViewportController::SetupInputBindings()
 	EnhancedInput->BindAction(&LookYAction, ETriggerEvent::Triggered,
 		[this](const FInputActionValue& Value) {
 		if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
-			CameraComponent->Rotate(0.0f, -Value.Get() * CameraComponent->GetCamera()->GetMouseSensitivity());
+			CameraComponent->Rotate(0.0f, -Value.Get() * CameraComponent->GetSensitivity());
 		else if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_MIDDLE))
 			CameraComponent->PanUp(Value.Get() * CurrentDeltaTime);
 	});

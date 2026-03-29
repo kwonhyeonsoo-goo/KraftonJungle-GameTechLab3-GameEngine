@@ -1,226 +1,105 @@
 #include "Viewport.h"
 
-#include "EditorViewportClient.h"
-#include "Core/Core.h"
+#include "Core/ViewportClient.h"
 #include "Renderer/Renderer.h"
-#include "World/Level.h"
-#include "Camera/Camera.h"
-
-#include "imgui.h"
-
-namespace
-{
-	void ReleaseIfValid(IUnknown*& Resource)
-	{
-		if (Resource)
-		{
-			Resource->Release();
-			Resource = nullptr;
-		}
-	}
-
-	bool RenderGizmoModeButton(const char* Label, EGizmoMode Mode, FEditorViewportClient* ViewportClient)
-	{
-		if (ViewportClient == nullptr)
-		{
-			return false;
-		}
-
-		const bool bSelected = (ViewportClient->GetGizmoMode() == Mode);
-		const float ButtonHeight = ImGui::GetFrameHeight();
-		const ImVec2 ButtonSize(ButtonHeight, ButtonHeight);
-		if (bSelected)
-		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.45f, 0.85f, 1.0f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.55f, 0.95f, 1.0f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.20f, 0.40f, 0.80f, 1.0f));
-		}
-
-		const bool bClicked = ImGui::Button(Label, ButtonSize);
-
-		if (bSelected)
-		{
-			ImGui::PopStyleColor(3);
-		}
-
-		return bClicked;
-	}
-}
+#include "Camera/ViewportInfo.h"
 
 FViewport::~FViewport()
 {
 	ReleaseLevelView();
 }
 
-void FViewport::Render(FCore* Core, FRenderer* Renderer, HWND Hwnd)
+// ── PrepareAndUpdate ───────────────────────────────────────────────────────
+// EditorUI가 4분할 영역 계산 후 호출
+// RTV 준비 + ViewportInfo 전달만 담당 (ImGui 창 관리 없음)
+
+void FViewport::PrepareAndUpdate(FRenderer* Renderer, HWND Hwnd,
+	float RegionX, float RegionY,
+	float RegionW, float RegionH)
 {
-	//ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	const bool bOpen = ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_MenuBar);
-	//ImGui::PopStyleVar();
+	const uint32 W = RegionW > 1.f ? static_cast<uint32>(RegionW) : 0;
+	const uint32 H = RegionH > 1.f ? static_cast<uint32>(RegionH) : 0;
 
-	if (!bOpen)
-	{
-		bHovered = false;
-		bFocused = false;
-		bVisible = false;
-		if (Renderer)
-		{
-			Renderer->ClearLevelRenderTarget();
-		}
-		ImGui::End();
-		return;
-	}
-
-	if (ImGui::BeginMenuBar())
-	{
-		FEditorViewportClient* EditorViewportClient = Core ? dynamic_cast<FEditorViewportClient*>(Core->GetViewportClient()) : nullptr;
-		if (EditorViewportClient)
-		{
-			// 도구 선택 버튼
-			ImGui::Separator();
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, ImGui::GetStyle().ItemSpacing.y));
-			if (RenderGizmoModeButton("T", EGizmoMode::Location, EditorViewportClient))
-			{
-				EditorViewportClient->SetGizmoMode(EGizmoMode::Location);
-			}
-
-			if (RenderGizmoModeButton("R", EGizmoMode::Rotation, EditorViewportClient))
-			{
-				EditorViewportClient->SetGizmoMode(EGizmoMode::Rotation);
-			}
-
-			if (RenderGizmoModeButton("S", EGizmoMode::Scale, EditorViewportClient))
-			{
-				EditorViewportClient->SetGizmoMode(EGizmoMode::Scale);
-			}
-			ImGui::PopStyleVar();
-		
-			// RenderMode 선택
-			float RenderModeComboWidth = 120.0f;
-			// 오른쪽 정렬
-			ImGui::SetCursorPosX(ImGui::GetWindowWidth() - RenderModeComboWidth);
-			ImGui::SetNextItemWidth(RenderModeComboWidth);
-			{
-				ERenderMode RenderMode = EditorViewportClient->GetRenderMode();
-				ImGui::Combo("", (int*) &RenderMode, "Lighting\0No Lighting\0Wireframe", 3);
-				EditorViewportClient->SetRenderMode(RenderMode);
-			}
-		}
-		ImGui::EndMenuBar();
-	}
-
-	bFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
-	bHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
-
-	const ImVec2 ContentPos = ImGui::GetCursorScreenPos();
-	const ImVec2 ContentSize = ImGui::GetContentRegionAvail();
-	const uint32 NewWidth = ContentSize.x > 1.0f ? static_cast<uint32>(ContentSize.x) : 0;
-	const uint32 NewHeight = ContentSize.y > 1.0f ? static_cast<uint32>(ContentSize.y) : 0;
-
-	bVisible = (NewWidth > 0 && NewHeight > 0);
-
-	if (Hwnd)
-	{
-		POINT ClientPoint = {
-			static_cast<LONG>(ContentPos.x),
-			static_cast<LONG>(ContentPos.y)
-		};
-		::ScreenToClient(Hwnd, &ClientPoint);
-		ClientPosX = ClientPoint.x;
-		ClientPosY = ClientPoint.y;
-	}
-	else
-	{
-		ClientPosX = 0;
-		ClientPosY = 0;
-	}
+	bVisible = (W > 0 && H > 0);
 
 	if (!bVisible)
 	{
 		ReleaseLevelView();
-		if (Renderer)
-		{
-			Renderer->ClearLevelRenderTarget();
-		}
-		ImGui::End();
 		return;
 	}
 
+	// RTV 생성 / 갱신
 	if (Renderer)
 	{
-		ReadyLevelView(Renderer->GetDevice(), NewWidth, NewHeight);
-
-		if (RenderTargetView && DepthStencilView)
-		{
-			D3D11_VIEWPORT LevelViewport = {};
-			LevelViewport.TopLeftX = 0.0f;
-			LevelViewport.TopLeftY = 0.0f;
-			LevelViewport.Width = static_cast<float>(NewWidth);
-			LevelViewport.Height = static_cast<float>(NewHeight);
-			LevelViewport.MinDepth = 0.0f;
-			LevelViewport.MaxDepth = 1.0f;
-			Renderer->SetLevelRenderTarget(RenderTargetView, DepthStencilView, LevelViewport);
-		}
-		else
-		{
-			Renderer->ClearLevelRenderTarget();
-		}
+		ReadyLevelView(Renderer->GetDevice(), W, H);
 	}
 
-	if (Core && Core->GetLevel() && Core->GetLevel()->GetCamera())
+	// 클라이언트 오프셋 — 마우스 피킹용
+	if (Hwnd)
 	{
-		Core->GetLevel()->GetCamera()->SetAspectRatio(static_cast<float>(NewWidth) / static_cast<float>(NewHeight));
+		POINT Pt = { static_cast<LONG>(RegionX), static_cast<LONG>(RegionY) };
+		::ScreenToClient(Hwnd, &Pt);
+		ClientPosX = Pt.x;
+		ClientPosY = Pt.y;
 	}
-
-	if (ShaderResourceView)
+	else
 	{
-		ImGui::Image(reinterpret_cast<ImTextureID>(ShaderResourceView), ImVec2(static_cast<float>(NewWidth), static_cast<float>(NewHeight)));
+		ClientPosX = static_cast<int32>(RegionX);
+		ClientPosY = static_cast<int32>(RegionY);
 	}
 
-	ImGui::End();
+	// ViewportInfo 전달 — Core::Render()가 읽어서 SetLevelRenderTarget 호출
+	if (LinkedViewportClient && RenderTargetView && DepthStencilView)
+	{
+		FViewportInfo Info;
+		Info.TopLeftX = 0.f;
+		Info.TopLeftY = 0.f;
+		Info.Width = static_cast<float>(W);
+		Info.Height = static_cast<float>(H);
+		Info.MinDepth = 0.f;
+		Info.MaxDepth = 1.f;
+		Info.ClientPosX = ClientPosX;
+		Info.ClientPosY = ClientPosY;
+		Info.RTV = RenderTargetView;
+		Info.DSV = DepthStencilView;
+
+		LinkedViewportClient->SetViewportInfo(Info);
+	}
 }
+
+// ── ReleaseLevelView ───────────────────────────────────────────────────────
 
 void FViewport::ReleaseLevelView()
 {
-	IUnknown* Resource = reinterpret_cast<IUnknown*>(DepthStencilView);
-	ReleaseIfValid(Resource);
-	DepthStencilView = nullptr;
+	auto Release = [](auto*& Ptr)
+		{
+			if (Ptr) { Ptr->Release(); Ptr = nullptr; }
+		};
 
-	Resource = reinterpret_cast<IUnknown*>(DepthStencilTexture);
-	ReleaseIfValid(Resource);
-	DepthStencilTexture = nullptr;
-
-	Resource = reinterpret_cast<IUnknown*>(ShaderResourceView);
-	ReleaseIfValid(Resource);
-	ShaderResourceView = nullptr;
-
-	Resource = reinterpret_cast<IUnknown*>(RenderTargetView);
-	ReleaseIfValid(Resource);
-	RenderTargetView = nullptr;
-
-	Resource = reinterpret_cast<IUnknown*>(RenderTargetTexture);
-	ReleaseIfValid(Resource);
-	RenderTargetTexture = nullptr;
+	Release(DepthStencilView);
+	Release(DepthStencilTexture);
+	Release(ShaderResourceView);
+	Release(RenderTargetView);
+	Release(RenderTargetTexture);
 
 	OffscreenWidth = 0;
 	OffscreenHeight = 0;
 }
 
-bool FViewport::GetMousePositionInViewport(int32 WindowMouseX, int32 WindowMouseY, int32& OutViewportX, int32& OutViewportY, int32& OutWidth, int32& OutHeight) const
-{
-	if (!bVisible || OffscreenWidth == 0 || OffscreenHeight == 0)
-	{
-		return false;
-	}
+// ── GetMousePositionInViewport ─────────────────────────────────────────────
 
-	if (WindowMouseX < ClientPosX || WindowMouseY < ClientPosY)
-	{
-		return false;
-	}
+bool FViewport::GetMousePositionInViewport(int32 WindowMouseX, int32 WindowMouseY,
+	int32& OutViewportX, int32& OutViewportY,
+	int32& OutWidth, int32& OutHeight) const
+{
+	if (!bVisible || OffscreenWidth == 0 || OffscreenHeight == 0) return false;
+	if (WindowMouseX < ClientPosX || WindowMouseY < ClientPosY)   return false;
 
 	const int32 LocalX = WindowMouseX - ClientPosX;
 	const int32 LocalY = WindowMouseY - ClientPosY;
-	if (LocalX < 0 || LocalY < 0 || LocalX >= static_cast<int32>(OffscreenWidth) || LocalY >= static_cast<int32>(OffscreenHeight))
+	if (LocalX < 0 || LocalY < 0 ||
+		LocalX >= static_cast<int32>(OffscreenWidth) ||
+		LocalY >= static_cast<int32>(OffscreenHeight))
 	{
 		return false;
 	}
@@ -232,18 +111,13 @@ bool FViewport::GetMousePositionInViewport(int32 WindowMouseX, int32 WindowMouse
 	return true;
 }
 
+// ── ReadyLevelView ─────────────────────────────────────────────────────────
+
 void FViewport::ReadyLevelView(ID3D11Device* Device, uint32 Width, uint32 Height)
 {
-	if (Device == nullptr)
-	{
-		return;
-	}
+	if (!Device) return;
 
-	if (Width == 0 || Height == 0)
-	{
-		ReleaseLevelView();
-		return;
-	}
+	if (Width == 0 || Height == 0) { ReleaseLevelView(); return; }
 
 	if (RenderTargetView && ShaderResourceView && DepthStencilView &&
 		OffscreenWidth == Width && OffscreenHeight == Height)
@@ -263,23 +137,9 @@ void FViewport::ReadyLevelView(ID3D11Device* Device, uint32 Width, uint32 Height
 	ColorDesc.Usage = D3D11_USAGE_DEFAULT;
 	ColorDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-	if (FAILED(Device->CreateTexture2D(&ColorDesc, nullptr, &RenderTargetTexture)))
-	{
-		ReleaseLevelView();
-		return;
-	}
-
-	if (FAILED(Device->CreateRenderTargetView(RenderTargetTexture, nullptr, &RenderTargetView)))
-	{
-		ReleaseLevelView();
-		return;
-	}
-
-	if (FAILED(Device->CreateShaderResourceView(RenderTargetTexture, nullptr, &ShaderResourceView)))
-	{
-		ReleaseLevelView();
-		return;
-	}
+	if (FAILED(Device->CreateTexture2D(&ColorDesc, nullptr, &RenderTargetTexture))) { ReleaseLevelView(); return; }
+	if (FAILED(Device->CreateRenderTargetView(RenderTargetTexture, nullptr, &RenderTargetView))) { ReleaseLevelView(); return; }
+	if (FAILED(Device->CreateShaderResourceView(RenderTargetTexture, nullptr, &ShaderResourceView))) { ReleaseLevelView(); return; }
 
 	D3D11_TEXTURE2D_DESC DepthDesc = {};
 	DepthDesc.Width = Width;
@@ -291,17 +151,8 @@ void FViewport::ReadyLevelView(ID3D11Device* Device, uint32 Width, uint32 Height
 	DepthDesc.Usage = D3D11_USAGE_DEFAULT;
 	DepthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 
-	if (FAILED(Device->CreateTexture2D(&DepthDesc, nullptr, &DepthStencilTexture)))
-	{
-		ReleaseLevelView();
-		return;
-	}
-
-	if (FAILED(Device->CreateDepthStencilView(DepthStencilTexture, nullptr, &DepthStencilView)))
-	{
-		ReleaseLevelView();
-		return;
-	}
+	if (FAILED(Device->CreateTexture2D(&DepthDesc, nullptr, &DepthStencilTexture))) { ReleaseLevelView(); return; }
+	if (FAILED(Device->CreateDepthStencilView(DepthStencilTexture, nullptr, &DepthStencilView))) { ReleaseLevelView(); return; }
 
 	OffscreenWidth = Width;
 	OffscreenHeight = Height;

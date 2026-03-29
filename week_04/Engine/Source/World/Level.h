@@ -6,10 +6,9 @@
 #include "LevelTypes.h"
 #include "Core/ShowFlags.h"
 #include "World/RenderCollector.h"
+
 class AActor;
-class FCamera;
 class FFrustum;
-class UCameraComponent;
 class UPrimitiveComponent;
 struct FRenderCommandQueue;
 
@@ -45,21 +44,12 @@ public:
 	bool IsEditorLevel() const { return LevelType == ELevelType::Editor; }
 	bool IsGameLevel() const { return LevelType == ELevelType::Game || LevelType == ELevelType::PIE; }
 
-  
-	FCamera* GetCamera() const;
-
-
 	void ClearActors();
 	void BeginPlay();
 	void Tick(float DeltaTime);
-
-	
-	
 
 private:
 	TArray<AActor*> Actors;
 	bool bBegunPlay = false;
 	ELevelType LevelType = ELevelType::Game;
-
-
 };

@@ -2,49 +2,47 @@
 
 #include "World/Level.h"
 #include "Actor/Actor.h"
-#include "Camera/Camera.h"
 #include "Component/PrimitiveComponent.h"
 #include "Primitive/PrimitiveBase.h"
 #include "Renderer/PrimitiveVertex.h"
 #include "Component/SubUVComponent.h"
 #include "Component/TextComponent.h"
 #include "Component/UUIDBillboardComponent.h"
-#include "Actor/SkySphereActor.h" 
+#include "Actor/SkySphereActor.h"
 #include <limits>
 #include "Component/StaticMeshComponent.h"
 #include "Object/Mesh/StaticMesh.h"
 #include "Renderer/Mesh/StaticMeshRenderData.h"
 
-FRay FPicker::ScreenToRay(const FCamera* Camera, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const
+FRay FPicker::ScreenToRay(const FCameraViewInfo& ViewInfo, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const
 {
-	if (!Camera || ScreenWidth <= 0 || ScreenHeight <= 0)
+	if (ScreenWidth <= 0 || ScreenHeight <= 0)
 	{
 		return { FVector::ZeroVector, FVector::ForwardVector };
 	}
 
-	const FMatrix ViewMatrix = Camera->GetViewMatrix();
-	const FMatrix ProjMatrix = Camera->GetProjectionMatrix();
-	const FMatrix ViewInverse = ViewMatrix.GetInverse();
-	//Ndc convert missing center pixel lerp (0.5) Half-pixel offset added
-	const float NdcX = (2.0f * (ScreenX+0.5f) / ScreenWidth) - 1.0f;
-	const float NdcY = 1.0f - (2.0f * (ScreenY+0.5f) / ScreenHeight);
+	const FMatrix ViewInverse = ViewInfo.ViewMatrix.GetInverse();
 
-	if (Camera->IsOrthographic())
+	// NDC 변환 (센터 픽셀 보정 0.5 적용)
+	const float NdcX = (2.0f * (ScreenX + 0.5f) / ScreenWidth) - 1.0f;
+	const float NdcY = 1.0f - (2.0f * (ScreenY + 0.5f) / ScreenHeight);
+
+	if (ViewInfo.bIsOrthographic)
 	{
-		const float ViewRight = NdcX * (Camera->GetOrthoWidth() * 0.5f);
-		const float ViewUp = NdcY * (Camera->GetOrthoHeight() * 0.5f);
+		const float ViewRight = NdcX * (ViewInfo.OrthoWidth * 0.5f);
+		const float ViewUp = NdcY * (ViewInfo.OrthoHeight * 0.5f);
 
 		FVector RayOrigin;
 		RayOrigin.X = ViewRight * ViewInverse.M[1][0] + ViewUp * ViewInverse.M[2][0] + ViewInverse.M[3][0];
 		RayOrigin.Y = ViewRight * ViewInverse.M[1][1] + ViewUp * ViewInverse.M[2][1] + ViewInverse.M[3][1];
 		RayOrigin.Z = ViewRight * ViewInverse.M[1][2] + ViewUp * ViewInverse.M[2][2] + ViewInverse.M[3][2];
 
-		return { RayOrigin, Camera->GetForward() };
+		return { RayOrigin, ViewInfo.Forward };
 	}
 
 	const float ViewForward = 1.0f;
-	const float ViewRight = NdcX / ProjMatrix.M[1][0];
-	const float ViewUp = NdcY / ProjMatrix.M[2][1];
+	const float ViewRight = NdcX / ViewInfo.ProjectionMatrix.M[1][0];
+	const float ViewUp = NdcY / ViewInfo.ProjectionMatrix.M[2][1];
 
 	FVector RayDirectionWorld;
 	RayDirectionWorld.X = ViewForward * ViewInverse.M[0][0] + ViewRight * ViewInverse.M[1][0] + ViewUp * ViewInverse.M[2][0];
@@ -61,8 +59,8 @@ FRay FPicker::ScreenToRay(const FCamera* Camera, int32 ScreenX, int32 ScreenY, i
 }
 
 bool FPicker::RayTriangleIntersect(const FRay& Ray,
-								   const FVector& V0, const FVector& V1, const FVector& V2,
-								   float& OutDistance) const
+	const FVector& V0, const FVector& V1, const FVector& V2,
+	float& OutDistance) const
 {
 	constexpr float Epsilon = 1.e-6f;
 
@@ -103,20 +101,19 @@ bool FPicker::RayTriangleIntersect(const FRay& Ray,
 	return false;
 }
 
-AActor* FPicker::PickActor(ULevel* Level, int32 ScreenX, int32 ScreenY,
-						   int32 ScreenWidth, int32 ScreenHeight) const
+AActor* FPicker::PickActor(ULevel* Level, const FCameraViewInfo& ViewInfo, int32 ScreenX, int32 ScreenY,
+	int32 ScreenWidth, int32 ScreenHeight) const
 {
 #if IS_OBJ_VIEWER
 	return nullptr;
 #endif
 
-	if (!Level || !Level->GetCamera())
+	if (!Level )
 	{
 		return nullptr;
 	}
 
-	FCamera* Camera = Level->GetCamera();
-	const FRay Ray = ScreenToRay(Camera, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	const FRay Ray = ScreenToRay(ViewInfo, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
 
 	AActor* ClosestActor = nullptr;
 	float ClosestDistance = (std::numeric_limits<float>::max)();
@@ -127,11 +124,15 @@ AActor* FPicker::PickActor(ULevel* Level, int32 ScreenX, int32 ScreenY,
 		{
 			continue;
 		}
-		if (!Actor->IsVisible() )
+		if (!Actor->IsVisible())
+		{
 			continue;
+		}
 		if (Actor->IsA<ASkySphereActor>())
+		{
 			continue;
-		
+		}
+
 		for (UActorComponent* Component : Actor->GetComponents())
 		{
 			if (!Component->IsA(UPrimitiveComponent::StaticClass()))

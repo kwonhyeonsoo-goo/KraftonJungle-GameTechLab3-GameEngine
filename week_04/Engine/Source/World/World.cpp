@@ -3,7 +3,7 @@
 #include "World/Level.h"
 #include "Object/ObjectFactory.h"
 #include "Component/CameraComponent.h"
-#include "Camera/Camera.h"
+
 #include "Serializer/SceneSerializer.h"
 #include "Core/Paths.h"
 #include "Actor/Actor.h"
@@ -24,18 +24,6 @@ void UWorld::InitializeWorld(float AspectRatio, ID3D11Device* Device)
 
 	PersistentLevel->SetLevelType(WorldType);
 
-	if (!LevelCameraComponent)
-	{
-		LevelCameraComponent = FObjectFactory::ConstructObject<UCameraComponent>(this, "LevelCamera");
-	}
-	if (!ActiveCameraComponent)
-	{
-		ActiveCameraComponent = LevelCameraComponent;
-	}
-	if (LevelCameraComponent->GetCamera())
-	{
-		LevelCameraComponent->GetCamera()->SetAspectRatio(AspectRatio);
-	}
 
 	if (Device)
 	{
@@ -91,16 +79,7 @@ void UWorld::CleanupWorld()
 		PersistentLevel->MarkPendingKill();
 		PersistentLevel = nullptr;
 	}
-	if (LevelCameraComponent)
-	{
-		LevelCameraComponent->MarkPendingKill();
-	}
-	if (ActiveCameraComponent == LevelCameraComponent)
-	{
-		ActiveCameraComponent = nullptr;
-	}
 
-	LevelCameraComponent = nullptr;
 	WorldTime = 0.f;
 	DeltaSeconds = 0.f;
 }
@@ -109,18 +88,6 @@ void UWorld::DestroyActor(AActor* InActor)
 {
 	if (!InActor || !PersistentLevel) return;
 
-
-	if (ActiveCameraComponent && ActiveCameraComponent != LevelCameraComponent)
-	{
-		for (UActorComponent* Component : InActor->GetComponents())
-		{
-			if (Component == ActiveCameraComponent)
-			{
-				ActiveCameraComponent = LevelCameraComponent;
-				break;
-			}
-		}
-	}
 
 	PersistentLevel->DestroyActor(InActor);
 }
@@ -201,21 +168,5 @@ const TArray<AActor*>& UWorld::GetActors() const
 		return PersistentLevel->GetActors();
 	}
 	return EmptyArray;
-}
-
-void UWorld::SetActiveCameraComponent(UCameraComponent* InCamera)
-{
-	ActiveCameraComponent = InCamera ? InCamera : LevelCameraComponent;
-}
-
-UCameraComponent* UWorld::GetActiveCameraComponent() const
-{
-	return ActiveCameraComponent ? ActiveCameraComponent.Get() : LevelCameraComponent;
-}
-
-FCamera* UWorld::GetCamera() const
-{
-	UCameraComponent* Cam = GetActiveCameraComponent();
-	return Cam ? Cam->GetCamera() : nullptr;
 }
 

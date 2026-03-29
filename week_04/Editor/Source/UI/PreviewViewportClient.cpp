@@ -21,14 +21,14 @@ void FPreviewViewportClient::Attach(FCore* Core, FRenderer* Renderer)
 		return;
 	}
 
-	EditorUI.Initialize(Core);
-	EditorUI.SetupWindow(MainWindow);
-	EditorUI.AttachToRenderer(Renderer);
+	//EditorUI.Initialize(Core);
+	//EditorUI.SetupWindow(MainWindow);
+	//EditorUI.AttachToRenderer(Renderer);
 }
 
 void FPreviewViewportClient::Detach(FCore* Core, FRenderer* Renderer)
 {
-	EditorUI.DetachFromRenderer(Renderer);
+	//EditorUI.DetachFromRenderer(Renderer);
 }
 
 void FPreviewViewportClient::Tick(FCore* Core, float DeltaTime)
@@ -52,7 +52,7 @@ void FPreviewViewportClient::Tick(FCore* Core, float DeltaTime)
 		return;
 	}
 
-	FViewportClient::Tick(Core, DeltaTime);
+	IViewportClient::Tick(Core, DeltaTime);
 }
 
 ULevel* FPreviewViewportClient::ResolveLevel(FCore* Core) const

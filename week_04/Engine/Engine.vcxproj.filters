@@ -87,9 +87,6 @@
     <ClCompile Include="Source\Actor\SubUVActor.cpp">
       <Filter>Source\Actor</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Camera\Camera.cpp">
-      <Filter>Source\Camera</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Component\ActorComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
@@ -343,9 +340,6 @@
     </ClInclude>
     <ClInclude Include="Source\Actor\SubUVActor.h">
       <Filter>Source\Actor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Camera\Camera.h">
-      <Filter>Source\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\ActorComponent.h">
       <Filter>Source\Component</Filter>
@@ -639,6 +633,8 @@
     <ClInclude Include="Source\World\LevelTypes.h">
       <Filter>Source\World</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Camera\CameraInfo.h" />
+    <ClInclude Include="Source\Camera\ViewportInfo.h" />
     <ClInclude Include="Source\Object\Mesh\StaticMesh.h" />
     <ClInclude Include="Source\Component\MeshComponent.h" />
     <ClInclude Include="Source\Component\StaticMeshComponent.h" />

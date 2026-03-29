@@ -31,6 +31,8 @@
     <ClInclude Include="Source\Asset\AssetManager.h" />
     <ClInclude Include="PrimitiveLineBatch.h" />
     <ClInclude Include="Source\Actor\TextActor.h" />
+    <ClInclude Include="Source\Camera\CameraInfo.h" />
+    <ClInclude Include="Source\Camera\ViewportInfo.h" />
     <ClInclude Include="Source\Component\MeshComponent.h" />
     <ClInclude Include="Source\Component\StaticMeshComponent.h" />
     <ClInclude Include="Source\Component\TextComponent.h" />
@@ -45,7 +47,6 @@
     <ClInclude Include="Source\Actor\SkySphereActor.h" />
     <ClInclude Include="Source\Actor\SphereActor.h" />
     <ClInclude Include="Source\Actor\SubUVActor.h" />
-    <ClInclude Include="Source\Camera\Camera.h" />
     <ClInclude Include="Source\Component\ActorComponent.h" />
     <ClInclude Include="Source\Component\CameraComponent.h" />
     <ClInclude Include="Source\Component\CubeComponent.h" />
@@ -158,7 +159,6 @@
     <ClCompile Include="Source\Actor\SphereActor.cpp" />
     <ClCompile Include="Source\Actor\SubUVActor.cpp" />
     <ClCompile Include="Source\Actor\TextActor.cpp" />
-    <ClCompile Include="Source\Camera\Camera.cpp" />
     <ClCompile Include="Source\Component\ActorComponent.cpp" />
     <ClCompile Include="Source\Component\CameraComponent.cpp" />
     <ClCompile Include="Source\Component\CubeComponent.cpp" />

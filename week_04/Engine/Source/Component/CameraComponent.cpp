@@ -1,96 +1,142 @@
 #include "CameraComponent.h"
 #include "Object/Class.h"
-#include "Camera/Camera.h"
+#include "Math/MathUtility.h"
+#include <algorithm>
+#include <cmath>
 
 IMPLEMENT_RTTI(UCameraComponent, USceneComponent)
 
-void UCameraComponent::Initialize()
-{
-	bCanEverTick = true;
-	Camera = new FCamera();
-}
-
-UCameraComponent::~UCameraComponent()
-{
-	delete Camera;
-	Camera = nullptr;
-}
+// ── Tick ───────────────────────────────────────────────────────────────────
 
 void UCameraComponent::Tick(float DeltaTime)
 {
 	USceneComponent::Tick(DeltaTime);
-
-	//TODO : will be add CameraArm, shake and interpolation  
+	// TODO: CameraArm, Shake, Interpolation
 }
+
+// ── 방향 벡터 ──────────────────────────────────────────────────────────────
+
+FVector UCameraComponent::GetForward() const
+{
+	const float RadYaw = FMath::DegreesToRadians(Yaw);
+	const float RadPitch = FMath::DegreesToRadians(Pitch);
+
+	FVector Forward;
+	Forward.X = cosf(RadPitch) * cosf(RadYaw);
+	Forward.Y = cosf(RadPitch) * sinf(RadYaw);
+	Forward.Z = sinf(RadPitch);
+	return Forward.GetSafeNormal();
+}
+
+FVector UCameraComponent::GetRight() const
+{
+	return FVector::CrossProduct(Up, GetForward()).GetSafeNormal();
+}
+
+// ── 이동 ───────────────────────────────────────────────────────────────────
 
 void UCameraComponent::MoveForward(float Value)
 {
-	Camera->MoveForward(Value);
+	Position += GetForward() * (Value * Speed);
 }
 
 void UCameraComponent::MoveRight(float Value)
 {
-	Camera->MoveRight(Value);
-
+	Position += GetRight() * (Value * Speed);
 }
 
 void UCameraComponent::MoveUp(float Value)
 {
-	Camera->MoveUp(Value);
-
+	Position += Up * (Value * Speed);
 }
 
 void UCameraComponent::PanRight(float Value)
 {
-	const FVector Right = Camera->GetRight().GetSafeNormal();
-	Camera->SetPosition(Camera->GetPosition() + Right * (Value * Camera->GetSpeed()));
+	Position += GetRight() * (Value * Speed);
 }
 
 void UCameraComponent::PanUp(float Value)
 {
-	//카메라 기준 local up을 계산합니다.
-	const FVector Forward = Camera->GetForward().GetSafeNormal();
-	const FVector Right = Camera->GetRight().GetSafeNormal();
-	const FVector PanUp = FVector::CrossProduct(Forward, Right).GetSafeNormal();
-	Camera->SetPosition(Camera->GetPosition() + PanUp * (Value * Camera->GetSpeed()));
+	const FVector Forward = GetForward();
+	const FVector Right = GetRight();
+	const FVector LocalUp = FVector::CrossProduct(Forward, Right).GetSafeNormal();
+	Position += LocalUp * (Value * Speed);
 }
+
+// ── 회전 ───────────────────────────────────────────────────────────────────
 
 void UCameraComponent::Rotate(float DeltaYaw, float DeltaPitch)
 {
-	Camera->Rotate(DeltaYaw, DeltaPitch);
+	Yaw += DeltaYaw;
+	Pitch += DeltaPitch;
+	Pitch = std::clamp(Pitch, -89.0f, 89.0f);
 }
 
-FCamera* UCameraComponent::GetCamera() const
+void UCameraComponent::SetRotation(float InYaw, float InPitch)
 {
-	return Camera;
+	Yaw = InYaw;
+	Pitch = std::clamp(InPitch, -89.0f, 89.0f);
 }
+
+// ── 행렬 ───────────────────────────────────────────────────────────────────
 
 FMatrix UCameraComponent::GetViewMatrix() const
 {
-	return Camera->GetViewMatrix();
+	const FVector Target = Position + GetForward();
+	return FMatrix::MakeViewLookAtLH(Position, Target, Up);
 }
 
 FMatrix UCameraComponent::GetProjectionMatrix() const
 {
-	return Camera->GetProjectionMatrix();
+	if (bIsOrthographic)
+	{
+		const float SafeWidth = FMath::Max(OrthoWidth, 0.01f);
+		const float SafeAspect = FMath::Max(AspectRatio, 0.01f);
+		return FMatrix::MakeOrthographicLH(SafeWidth, SafeWidth / SafeAspect, NearPlane, FarPlane);
+	}
+
+	return FMatrix::MakePerspectiveFovLH(
+		FMath::DegreesToRadians(FOV), AspectRatio, NearPlane, FarPlane);
 }
 
-void UCameraComponent::SetFov(float inFov)
+// ── ViewInfo 스냅샷 ────────────────────────────────────────────────────────
+
+FCameraViewInfo UCameraComponent::GetViewInfo() const
 {
-	Camera->SetFOV(inFov);
+	FCameraViewInfo Info;
+	Info.Position = Position;
+	Info.Forward = GetForward();
+	Info.Right = GetRight();
+	Info.Up = Up;
+	Info.ViewMatrix = GetViewMatrix();
+	Info.ProjectionMatrix = GetProjectionMatrix();
+	Info.FOV = FOV;
+	Info.AspectRatio = AspectRatio;
+	Info.OrthoWidth = OrthoWidth;
+	Info.OrthoHeight = GetOrthoHeight();
+	Info.bIsOrthographic = bIsOrthographic;
+	return Info;
 }
 
-void UCameraComponent::SetSpeed(float Inspeed)
+// ── Setter ─────────────────────────────────────────────────────────────────
+
+void UCameraComponent::SetFOV(float InFOV)
 {
-	Camera->SetSpeed(Inspeed);
+	FOV = std::clamp(InFOV, 1.0f, 179.0f);
 }
 
-void UCameraComponent::SetSensitivity(float InSetSensitivity)
+void UCameraComponent::SetAspectRatio(float InAspectRatio)
 {
-	Camera->SetMouseSensitivity(InSetSensitivity);
+	AspectRatio = FMath::Max(InAspectRatio, 0.01f);
 }
 
-void UCameraComponent::SetFoucs(USceneComponent* InFocusTarget)
+void UCameraComponent::SetOrthoWidth(float InOrthoWidth)
 {
-	Camera->SetFocus(InFocusTarget);
+	OrthoWidth = FMath::Max(InOrthoWidth, 0.01f);
 }
+
+
+//void UCameraComponent::SetFoucs(USceneComponent* InFocusTarget)
+//{
+//	Camera->SetFocus(InFocusTarget);
+//}
