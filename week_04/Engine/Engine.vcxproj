@@ -134,6 +134,7 @@
     <ClInclude Include="Source\Types\Set.h" />
     <ClInclude Include="Source\Types\StaticArray.h" />
     <ClInclude Include="Source\Types\String.h" />
+    <ClInclude Include="Source\Utility\FileIO.h" />
     <ClInclude Include="Source\World\Level.h" />
     <ClInclude Include="Source\World\LevelManager.h" />
     <ClInclude Include="Source\World\RenderCollector.h" />
@@ -229,6 +230,7 @@
     <ClCompile Include="Source\Serializer\Archive.cpp" />
     <ClCompile Include="Source\Serializer\SceneSerializer.cpp" />
     <ClCompile Include="Source\Types\Name.cpp" />
+    <ClCompile Include="Source\Utility\FileIO.cpp" />
     <ClCompile Include="Source\World\Level.cpp" />
     <ClCompile Include="Source\World\RenderCollector.cpp" />
     <ClCompile Include="Source\World\LevelManager.cpp" />
@@ -310,9 +312,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ObjViewerDebug|x64'">
     <OutDir>$(ProjectDir)Bin\$(Configuration)\</OutDir>
     <IntDir>Build\$(Configuration)\</IntDir>
-
-<NuGetConfiguration>Debug</NuGetConfiguration>
-
+    <NuGetConfiguration>Debug</NuGetConfiguration>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(ProjectDir)Bin\$(Configuration)\</OutDir>

@@ -60,6 +60,11 @@ void UCameraComponent::Rotate(float DeltaYaw, float DeltaPitch)
 	Camera->Rotate(DeltaYaw, DeltaPitch);
 }
 
+void UCameraComponent::Zoom(float Value)
+{
+	Camera->SetZoomDist(Camera->GetZoomDist() + Value);
+}
+
 FCamera* UCameraComponent::GetCamera() const
 {
 	return Camera;

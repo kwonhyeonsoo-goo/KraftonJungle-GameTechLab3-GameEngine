@@ -30,44 +30,7 @@
 #include "Core/ShowFlags.h"
 
 #include "Component/StaticMeshComponent.h"
-
-
-enum class EFileDialogType
-{
-	Open,
-	Save
-};
-
-std::string GetFilePathUsingDialog(EFileDialogType Type)
-{
-	char FileName[MAX_PATH] = "";
-	FString ContentDir = FPaths::ContentDir().string();
-
-	OPENFILENAMEA Ofn = {};
-	Ofn.lStructSize = sizeof(OPENFILENAMEA);
-	Ofn.lpstrFilter = "Level Files (*.json)\0*.json\0All Files (*.*)\0*.*\0";
-	Ofn.lpstrFile = FileName;
-	Ofn.nMaxFile = MAX_PATH;
-	Ofn.lpstrDefExt = "json";
-	Ofn.lpstrInitialDir = ContentDir.c_str();
-
-	if (Type == EFileDialogType::Save)
-	{
-		Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
-
-		if (GetSaveFileNameA(&Ofn))
-			return std::string(FileName);
-	}
-	else // Open
-	{
-		Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-
-		if (GetOpenFileNameA(&Ofn))
-			return std::string(FileName);
-	}
-
-	return "";
-}
+#include "Utility/FileIO.h"
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 
@@ -552,6 +515,10 @@ void FEditorUI::Render()
 
 	Viewport.Render(Core, CurrentRenderer, MainWindow ? MainWindow->GetHwnd() : nullptr);
 
+
+#if IS_OBJ_VIEWER
+
+#else
 	if (Core)
 	{
 		AActor* Selected = Core->GetSelectedActor();
@@ -564,6 +531,7 @@ void FEditorUI::Render()
 		Stat.SetFPS(Timer.GetDisplayFPS());
 		Stat.SetFrameTimeMs(Timer.GetFrameTimeMs());
 	}
+
 
 	Stat.SetObjectCount(UObject::TotalAllocationCounts);
 	Stat.SetHeapUsage(UObject::TotalAllocationBytes);
@@ -592,7 +560,7 @@ void FEditorUI::Render()
 			{
 				if (Core && Core->GetActiveLevel())
 				{
-					FString Path = GetFilePathUsingDialog(EFileDialogType::Open);
+					FString Path = GetJsonFilePath(EFileDialogType::Open);
 
 					if (!Path.empty())
 					{
@@ -621,7 +589,7 @@ void FEditorUI::Render()
 			{
 				if (Core && Core->GetActiveLevel())
 				{
-					FString Path = GetFilePathUsingDialog(EFileDialogType::Save);
+					FString Path = GetJsonFilePath(EFileDialogType::Save);
 
 					if (!Path.empty())
 					{
@@ -772,9 +740,6 @@ void FEditorUI::Render()
 		ImGui::EndPopup();
 	}
 
-#if IS_OBJ_VIEWER
-
-#else
 	ControlPanel.Render(Core);
 	Property.Render(Core);
 	Console.Render();

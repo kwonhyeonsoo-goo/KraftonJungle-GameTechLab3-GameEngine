@@ -286,7 +286,13 @@ void FCore::Render()
 	Renderer->SubmitCommands(CommandQueue);
 	Renderer->ExecuteCommands();
 	const FShowFlags& ShowFlags = ViewportClient ? ViewportClient->GetShowFlags() : FShowFlags();
+
+#if IS_OBJ_VIEWER
+
+#else
 	DebugDrawManager.Flush(Renderer.get(), ShowFlags, ActiveWorld);
+#endif
+
 	Renderer->EndFrame();
 }
 

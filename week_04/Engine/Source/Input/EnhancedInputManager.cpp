@@ -46,6 +46,8 @@ FInputActionValue FEnhancedInputManager::GetRawActionValue(FInputManager* Input,
 		return FInputActionValue(Input->GetMouseDeltaX());
 	if (Key == static_cast<int32>(EInputKey::MouseY))
 		return FInputActionValue(Input->GetMouseDeltaY());
+	if (Key == static_cast<int32>(EInputKey::MouseWheel))
+		return FInputActionValue(Input->GetMouseWheelDelta());
 	return FInputActionValue(Input->IsKeyDown(Key) ? 1.0f : 0.0f);
 }
 

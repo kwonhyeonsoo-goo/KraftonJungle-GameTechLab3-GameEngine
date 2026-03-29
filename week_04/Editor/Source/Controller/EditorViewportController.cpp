@@ -69,6 +69,7 @@ void FEditorViewportController::SetupInputBindings()
 
 	CameraContext->AddMapping(&LookXAction, static_cast<int32>(EInputKey::MouseX));
 	CameraContext->AddMapping(&LookYAction, static_cast<int32>(EInputKey::MouseY));
+	CameraContext->AddMapping(&MouseWheelAction, static_cast<int32>(EInputKey::MouseWheel));
 
 	EnhancedInput->AddMappingContext(CameraContext, 0);
 
@@ -106,5 +107,10 @@ void FEditorViewportController::SetupInputBindings()
 			CameraComponent->Rotate(0.0f, -Value.Get() * CameraComponent->GetCamera()->GetMouseSensitivity());
 		else if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_MIDDLE))
 			CameraComponent->PanUp(Value.Get() * CurrentDeltaTime);
+	});
+
+	EnhancedInput->BindAction(&MouseWheelAction, ETriggerEvent::Triggered,
+		[this](const FInputActionValue& Value) {
+			CameraComponent->Zoom(-Value.Get());
 	});
 }

@@ -27,7 +27,6 @@ void FDebugDrawManager::DrawWorldAxis(float Length)
 
 void FDebugDrawManager::Flush(FRenderer* Renderer, const FShowFlags& ShowFlags, UWorld* World)
 {
-
 	if (!Renderer) return;
 
 	// 디버그 드로우 전체 꺼져있으면 스킵
@@ -52,13 +51,12 @@ void FDebugDrawManager::Flush(FRenderer* Renderer, const FShowFlags& ShowFlags, 
 		Renderer->DrawLine(Line.Start, Line.End, Line.Color);
 	}
 
-
 	// 월드 축
 	if (ShowFlags.HasFlag(EEngineShowFlags::SF_WorldAxis))
 	{
-		Renderer->DrawLine({ 0,0,0 }, { 1000,0,0 }, { 1,0,0,1 });  // X: Red
-		Renderer->DrawLine({ 0,0,0 }, { 0,1000,0 }, { 0,1,0,1 });  // Y: Green
-		Renderer->DrawLine({ 0,0,0 }, { 0,0,1000 }, { 0,0,1,1 });  // Z: Blue
+		Renderer->DrawLine({ -1000,0,0 }, { 1000,0,0 }, { 1,0,0,1 });  // X: Red
+		Renderer->DrawLine({ 0,-1000,0 }, { 0,1000,0 }, { 0,1,0,1 });  // Y: Green
+		Renderer->DrawLine({ 0,0,-1000 }, { 0,0,1000 }, { 0,0,1,1 });  // Z: Blue
 	}
 
 	Renderer->ExecuteLineCommands();

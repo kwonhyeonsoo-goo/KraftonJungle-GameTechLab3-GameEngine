@@ -19,6 +19,7 @@ public:
 	void PanRight(float Value);
 	void PanUp(float Value);
 	void Rotate(float DeltaYaw, float DeltaPitch);
+	void Zoom(float Value);
 
 	//Camera property getter
 	FCamera* GetCamera() const;
