@@ -70,6 +70,28 @@ void FEditorUI::LinkViewportClient(int32 Index, IViewportClient* InClient)
 	Viewports[Index].SetLinkedViewportClient(InClient);
 }
 
+int32 FEditorUI::GetHoveredViewportIndex() const
+{
+	for (int32 i = 0; i < static_cast<int32>(Viewports.size()); i++)
+	{
+		if (Viewports[i].IsHovered()) return i;
+	}
+	return -1;
+}
+
+bool FEditorUI::GetMousePositionInViewport(int32 ViewportIndex,
+	int32 WindowMouseX, int32 WindowMouseY,
+	int32& OutLocalX, int32& OutLocalY,
+	int32& OutWidth, int32& OutHeight) const
+{
+	if (ViewportIndex < 0 || ViewportIndex >= static_cast<int32>(Viewports.size()))
+		return false;
+
+	return Viewports[ViewportIndex].GetMousePositionInViewport(
+		WindowMouseX, WindowMouseY,
+		OutLocalX, OutLocalY, OutWidth, OutHeight);
+}
+
 IViewportClient* FEditorUI::GetFocusedViewportClient() const
 {
 	for (const FViewport& VP : Viewports)
@@ -161,6 +183,7 @@ void FEditorUI::AttachToRenderer(FRenderer* InRenderer)
 {
 	if (!Core || !InRenderer) return;
 	if (bViewportActive) return;
+
 	bViewportActive = true;
 	CurrentRenderer = InRenderer;
 

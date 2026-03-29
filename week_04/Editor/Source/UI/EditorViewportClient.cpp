@@ -32,7 +32,7 @@ void FEditorViewportClient::Attach(FCore* Core, FRenderer* Renderer)
 
 	EditorUI.Initialize(Core);
 	EditorUI.SetupWindow(MainWindow);
-	EditorUI.AttachToRenderer(Renderer);
+	EditorUI.AttachToRenderer(Renderer); // bViewportActive 가드로 중복 방지
 
 	WireFrameMaterial = FMaterialManager::Get().FindByName(WireframeMaterialName);
 	CreateGridResource(Renderer);
@@ -95,16 +95,13 @@ void FEditorViewportClient::Detach(FCore* Core, FRenderer* Renderer)
 void FEditorViewportClient::Tick(FCore* Core, float DeltaTime)
 {
 	if (!Core) return;
-
 	if (ImGui::GetCurrentContext())
 	{
 		const ImGuiIO& IO = ImGui::GetIO();
 		if ((IO.WantCaptureKeyboard || IO.WantCaptureMouse) && !EditorUI.IsViewportInteractive())
 			return;
 	}
-
 	if (!EditorUI.IsViewportInteractive()) return;
-
 	IViewportClient::Tick(Core, DeltaTime);
 }
 
@@ -117,10 +114,38 @@ void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPAR
 	AActor* SelectedActor = Core->GetSelectedActor();
 	if (!Level) return;
 
-	const bool bHasViewportMouse = EditorUI.GetViewportMousePosition(
-		static_cast<int32>(static_cast<short>(LOWORD(LParam))),
-		static_cast<int32>(static_cast<short>(HIWORD(LParam))),
-		ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
+	// ── 윈도우 마우스 좌표 ──────────────────────────────────────────────
+	const int32 WindowMouseX = static_cast<int32>(static_cast<short>(LOWORD(LParam)));
+	const int32 WindowMouseY = static_cast<int32>(static_cast<short>(HIWORD(LParam)));
+
+	// ── 호버된 뷰포트 인덱스로 로컬 좌표 획득 ───────────────────────────
+	const int32 HoveredIndex = EditorUI.GetHoveredViewportIndex();
+	const bool bHasViewportMouse = (HoveredIndex >= 0) &&
+		EditorUI.GetMousePositionInViewport(
+			HoveredIndex,
+			WindowMouseX, WindowMouseY,
+			ScreenMouseX, ScreenMouseY,
+			ScreenWidth, ScreenHeight);
+
+	// ── 해당 뷰포트의 카메라 ViewInfo ───────────────────────────────────
+	// 이 ViewportClient 자신이 해당 뷰포트면 GetCameraViewInfo() 사용
+	// 아니면 EditorUI의 해당 뷰포트 ViewportClient에서 가져옴
+	FCameraViewInfo ActiveViewInfo;
+	if (HoveredIndex >= 0)
+	{
+		auto& VPs = EditorUI.GetViewports();
+		if (HoveredIndex < static_cast<int32>(VPs.size()))
+		{
+			if (IViewportClient* HoveredVP = VPs[HoveredIndex].GetLinkedViewportClient())
+			{
+				ActiveViewInfo = HoveredVP->GetCameraViewInfo();
+			}
+		}
+	}
+	else
+	{
+		ActiveViewInfo = GetCameraViewInfo();
+	}
 
 	const bool bRightMouseDown = Core->GetInputManager() &&
 		Core->GetInputManager()->IsMouseButtonDown(FInputManager::MOUSE_RIGHT);
@@ -143,11 +168,18 @@ void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPAR
 
 	case WM_LBUTTONDOWN:
 		if (!bHasViewportMouse) return;
-		if (SelectedActor && Gizmo.BeginDrag(SelectedActor, Level, GetCameraViewInfo(), Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight))
-			return;
+
+		if (SelectedActor && Gizmo.BeginDrag(SelectedActor, Level,
+			ActiveViewInfo, Picker,
+			ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight))
 		{
-			AActor* PickedActor = Picker.PickActor(Level, GetCameraViewInfo(), ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
-			Core->SetSelectedActor(PickedActor);
+			return;
+		}
+		{
+			// 호버된 뷰포트 카메라 기준으로 피킹
+			AActor* Picked = Picker.PickActor(Level, ActiveViewInfo,
+				ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
+			Core->SetSelectedActor(Picked);
 			EditorUI.SyncSelectedActorProperty();
 		}
 		return;
@@ -156,11 +188,15 @@ void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPAR
 		if (!bHasViewportMouse) { Gizmo.ClearHover(); return; }
 		if (!Gizmo.IsDragging())
 		{
-			Gizmo.UpdateHover(SelectedActor, Level, GetCameraViewInfo(), Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
+			Gizmo.UpdateHover(SelectedActor, Level, ActiveViewInfo, Picker,
+				ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
 			return;
 		}
-		if (Gizmo.UpdateDrag(SelectedActor, Level, GetCameraViewInfo(), Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight))
+		if (Gizmo.UpdateDrag(SelectedActor, Level, ActiveViewInfo, Picker,
+			ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight))
+		{
 			EditorUI.SyncSelectedActorProperty();
+		}
 		return;
 
 	case WM_LBUTTONUP:
@@ -168,7 +204,8 @@ void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPAR
 		{
 			Gizmo.EndDrag();
 			if (bHasViewportMouse)
-				Gizmo.UpdateHover(SelectedActor, Level, GetCameraViewInfo(), Picker, ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
+				Gizmo.UpdateHover(SelectedActor, Level, ActiveViewInfo, Picker,
+					ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
 			else
 				Gizmo.ClearHover();
 			EditorUI.SyncSelectedActorProperty();
@@ -189,7 +226,6 @@ void FEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
 		Core->SetSelectedActor(nullptr);
 		Core->GetLevel()->ClearActors();
 
-		// ActiveCamera를 함께 넘겨 카메라 상태 복원
 		bool bLoaded = FSceneSerializer::Load(
 			Core->GetLevel(), FilePath,
 			Core->GetRenderer()->GetDevice(),
@@ -207,7 +243,8 @@ void FEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 
 	if (FilePath.ends_with(".obj"))
 	{
-		const FRay Ray = Picker.ScreenToRay(GetCameraViewInfo(), ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
+		const FRay Ray = Picker.ScreenToRay(GetCameraViewInfo(),
+			ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
 
 		AObjActor* NewActor = Core->GetLevel()->SpawnActor<AObjActor>("ObjActor");
 		NewActor->LoadObj(Core->GetRenderer()->GetDevice(), FPaths::ToRelativePath(FilePath));
@@ -220,7 +257,6 @@ void FEditorViewportClient::BuildRenderCommands(FCore* Core, ULevel* Level,
 {
 	IViewportClient::BuildRenderCommands(Core, Level, Frustum, OutQueue);
 
-	// Wireframe 모드 처리
 	if (RenderMode == ERenderMode::Wireframe)
 	{
 		for (auto& Cmd : OutQueue.Commands)
@@ -232,7 +268,6 @@ void FEditorViewportClient::BuildRenderCommands(FCore* Core, ULevel* Level,
 
 	if (!Core || !Level) return;
 
-	// 그리드
 	if (GridMesh && GridMaterial && bShowGrid)
 	{
 		FRenderCommand GridCmd;
@@ -243,7 +278,6 @@ void FEditorViewportClient::BuildRenderCommands(FCore* Core, ULevel* Level,
 		OutQueue.AddCommand(GridCmd);
 	}
 
-	// Gizmo — FCameraViewInfo 전달
 	AActor* GizmoTarget = Core->GetSelectedActor();
 	if (GizmoTarget && !GizmoTarget->IsA<ASkySphereActor>())
 	{

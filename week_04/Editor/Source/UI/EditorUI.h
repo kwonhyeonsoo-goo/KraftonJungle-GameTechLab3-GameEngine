@@ -25,7 +25,6 @@ public:
 	void Render();
 	void SyncSelectedActorProperty();
 
-	// 포커스된 뷰포트 기준 마우스 위치 반환
 	bool GetViewportMousePosition(int32 WindowMouseX, int32 WindowMouseY,
 		int32& OutViewportX, int32& OutViewportY,
 		int32& OutWidth, int32& OutHeight) const;
@@ -34,16 +33,23 @@ public:
 	FConsoleWindow& GetConsole() { return Console; }
 	FCore* GetCore() { return Core; }
 
-	// FViewport[Index] ↔ IViewportClient 1:1 연결
-	// FEditorEngine::PostInitialize()에서 호출
 	void LinkViewportClient(int32 Index, IViewportClient* InClient);
 
-	// 포커스/호버된 FViewport에 연결된 ViewportClient 반환
-	// 없으면 Viewports[0]의 ViewportClient 반환
 	IViewportClient* GetFocusedViewportClient() const;
-
-	// Index 0 기준 EditorViewportClient 접근용
 	IViewportClient* GetPrimaryViewportClient() const;
+
+	// ── 뷰포트 배열 접근 ─────────────────────────────────────────────
+	std::vector<FViewport>& GetViewports() { return Viewports; }
+	const std::vector<FViewport>& GetViewports() const { return Viewports; }
+
+	// 현재 마우스가 올라가 있는 뷰포트 인덱스 (-1이면 없음)
+	int32 GetHoveredViewportIndex() const;
+
+	// 뷰포트 인덱스 기준 마우스 로컬 좌표 반환
+	bool GetMousePositionInViewport(int32 ViewportIndex,
+		int32 WindowMouseX, int32 WindowMouseY,
+		int32& OutLocalX, int32& OutLocalY,
+		int32& OutWidth, int32& OutHeight) const;
 
 private:
 	void BuildDefaultLayout(uint32 DockID);
@@ -62,7 +68,6 @@ private:
 	FOutlinerWindow Outliner;
 	FContentBrowserWindow ContentBrowser;
 
-	// 다중 뷰포트 — ViewportClientArray와 인덱스 1:1 대응
 	std::vector<FViewport> Viewports;
 
 	bool bWindowSetup = false;
