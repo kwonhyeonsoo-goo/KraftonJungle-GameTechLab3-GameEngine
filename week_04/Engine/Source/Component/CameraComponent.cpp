@@ -3,6 +3,7 @@
 #include "Math/MathUtility.h"
 #include <algorithm>
 #include <cmath>
+#include "Component/PrimitiveComponent.h"
 
 IMPLEMENT_RTTI(UCameraComponent, USceneComponent)
 
@@ -91,7 +92,18 @@ FMatrix UCameraComponent::GetViewMatrix() const
 
 	if (FocusTarget)
 	{
-		Target = FocusTarget->GetWorldLocation();
+		if (FocusTarget->IsA(UPrimitiveComponent::StaticClass()))
+		{
+			UPrimitiveComponent* PrimitiveComp = static_cast<UPrimitiveComponent*>(FocusTarget);
+			FBoxSphereBounds Bounds = PrimitiveComp->GetWorldBounds();
+
+			Target = Bounds.Center;
+		}
+		else
+		{
+			Target = FocusTarget->GetWorldLocation();
+		}
+
 		Origin = Target - GetForward() * ZoomDist;
 	}
 	else
