@@ -154,7 +154,7 @@ void IViewportClient::SetLinkedWorld(UWorld* InWorld , FCore* InCore)
 		LinkedWorld = ResolveWorld(InCore);
 		return;
 	}
-	LInkedWorld = InWorld;
+	LinkedWorld = InWorld;
 
 }
 UWorld* IViewportClient::GetLinkedWorld()

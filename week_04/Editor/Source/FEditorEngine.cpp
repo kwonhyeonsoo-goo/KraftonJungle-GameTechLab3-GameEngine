@@ -31,8 +31,12 @@ FEditorEngine::~FEditorEngine() {}
 
 void FEditorEngine::Shutdown()
 {
-	if (EditorPawn) { EditorPawn->Destroy(); EditorPawn = nullptr; }
-	ViewportController.Cleanup();
+
+	for (auto& viewportcontroller : ViewportControllerArray)
+	{
+		viewportcontroller.get()->Cleanup();
+	}
+
 	for (auto& VP : SceneViewportClients) VP = nullptr;
 	FEngine::Shutdown();
 }
@@ -51,11 +55,14 @@ void FEditorEngine::CreateViewportClients()
 	// [1] Top         — 위에서 아래 orthographic
 	// [2] Side        — 옆에서 orthographic
 	// [3] Bottom      — 아래에서 위 orthographic
+	ViewportControllerArray.reserve(4);
 	for (int i = 0; i < 4; i++)
 	{
 		auto VP = std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
 		SceneViewportClients[i] = VP.get();
 		
+		auto ViewportController = std::make_unique<FEditorViewportController>();
+		ViewportControllerArray.push_back(std::move(ViewportController));
 		ViewportClientArray.push_back(std::move(VP));
 	}
 }
@@ -66,6 +73,8 @@ void FEditorEngine::PostInitialize()
 	for (int i = 0; i < 4; i++)
 	{
 		EditorUI.LinkViewportClient(i, SceneViewportClients[i]);
+		SceneViewportClients[i]->SetLinkedWorld(Core->GetEditorWorld() , Core.get());
+		SceneViewportClients[i]->InitializeCameraFromWorld();
 	}
 
 	// ── Console ───────────────────────────────────────────────────────
@@ -83,17 +92,15 @@ void FEditorEngine::PostInitialize()
 				FEngineLog::Get().Log("[error] Unknown command: '%s'", CommandLine);
 		});
 
-	// ── EditorPawn — Perspective 뷰포트(0번)에 연결 ──────────────────
-	EditorPawn = FObjectFactory::ConstructObject<AEditorCameraPawn>(nullptr, "EditorCameraPawn");
-	EditorPawn->Initialize();
-	
-	UCameraComponent* PerspCam = EditorPawn->GetCameraComponent();
-	PerspCam->SetPosition({ -10.f, 0.f, 5.f });
-	PerspCam->SetRotation(0.f, -15.f);
-	PerspCam->SetFOV(60.f);
-	PerspCam->SetOrthographic(false);
-	SceneViewportClients[0]->SetActiveCamera(PerspCam);
+	{
+		UCameraComponent* Cam = SceneViewportClients[0]->GetActiveCamera();
+		Cam->SetPosition({ -10.f, 0.f, 5.f });
+		Cam->SetRotation(0.f, -15.f);
+		Cam->SetFOV(60.f);
+		Cam->SetOrthographic(false);
+		ViewportControllerArray[0].get()->Initialize(Cam, Core->GetInputManager(), Core->GetEnhancedInputManager());
 
+	}
 	UE_LOG("EditorEngine initialized");
 
 	// [1] Top — 위에서 아래로 내려다봄
@@ -103,6 +110,8 @@ void FEditorEngine::PostInitialize()
 		Cam->SetRotation(0.f, -89.9f);   // 거의 수직 아래
 		Cam->SetOrthographic(true);
 		Cam->SetOrthoWidth(15.f);
+		ViewportControllerArray[1].get()->Initialize(Cam, Core->GetInputManager(), Core->GetEnhancedInputManager());
+
 	}
 
 	// [2] Side — 오른쪽에서 왼쪽으로
@@ -112,6 +121,8 @@ void FEditorEngine::PostInitialize()
 		Cam->SetRotation(180.f, 0.f);    // 왼쪽 방향
 		Cam->SetOrthographic(true);
 		Cam->SetOrthoWidth(15.f);
+		ViewportControllerArray[2].get()->Initialize(Cam, Core->GetInputManager(), Core->GetEnhancedInputManager());
+
 	}
 
 	// [3] Bottom — 아래에서 위로 올려다봄 (Front 뷰로 대체하는 경우 많음)
@@ -121,14 +132,12 @@ void FEditorEngine::PostInitialize()
 		Cam->SetRotation(90.f, 0.f);     // 앞쪽 방향
 		Cam->SetOrthographic(true);
 		Cam->SetOrthoWidth(15.f);
+		ViewportControllerArray[3].get()->Initialize(Cam, Core->GetInputManager(), Core->GetEnhancedInputManager());
+
 	}
 
 	// ── ViewportController — Perspective 뷰포트만 제어 ───────────────
-	ViewportController.Initialize(
-		PerspCam,
-		Core->GetInputManager(),
-		Core->GetEnhancedInputManager()
-	);
+
 
 #if IS_OBJ_VIEWER
 	if (Core && Core->GetActiveLevel())
@@ -180,12 +189,21 @@ void FEditorEngine::PostInitialize()
 
 
 
+
 void FEditorEngine::Tick(float DeltaTime)
 {
-	ViewportController.Tick(DeltaTime);
+	
+	int32 FocusedIndex = EditorUI.GetHoveredViewportIndex();
+
+	if (FocusedIndex >= 0 and FocusedIndex < 4)
+	{
+		ViewportControllerArray[FocusedIndex]->Tick(DeltaTime);
+
+	}
+
 }
 
-FEditorViewportController* FEditorEngine::GetViewportController()
-{
-	return &ViewportController;
-}
+//FEditorViewportController* FEditorEngine::GetViewportController()
+//{
+//	return &ViewportController;
+//}

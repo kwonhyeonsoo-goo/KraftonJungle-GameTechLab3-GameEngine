@@ -53,6 +53,9 @@ public:
 	FCameraViewInfo GetCameraViewInfo() const;
 	void OnViewportResized(uint32 InWidth, uint32 InHeight);
 
+	void InitializeCameraFromWorld();
+
+
 	// ── 뷰포트 정보 ───────────────────────────────────────────────────
 	void SetViewportInfo(const FViewportInfo& InViewportInfo);
 	const FViewportInfo& GetViewportInfo() const { return ViewportInfo; }

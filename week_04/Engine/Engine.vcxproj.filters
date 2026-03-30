@@ -310,6 +310,7 @@
     <ClCompile Include="Source\Renderer\Mesh\StaticMeshRenderData.cpp" />
     <ClCompile Include="Source\Actor\StaticMeshActor.cpp" />
     <ClCompile Include="Source\Utility\FileIO.cpp" />
+    <ClCompile Include="Source\Actor\CameraPawn.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -647,6 +648,7 @@
     <ClInclude Include="Source\Renderer\Mesh\StaticMeshRenderData.h" />
     <ClInclude Include="Source\Actor\StaticMeshActor.h" />
     <ClInclude Include="Source\Utility\FileIO.h" />
+    <ClInclude Include="Source\Actor\CameraPawn.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

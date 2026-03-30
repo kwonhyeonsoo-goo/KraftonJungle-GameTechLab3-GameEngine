@@ -76,41 +76,47 @@ void FEditorViewportController::SetupInputBindings()
 
 	EnhancedInput->BindAction(&MoveForwardAction, ETriggerEvent::Triggered,
 		[this](const FInputActionValue& Value) {
-		if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
-			CameraComponent->MoveForward(Value.Get() * CurrentDeltaTime);
-	});
+			if (!bActive) return; // ← 이 줄 추가
+			if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
+				CameraComponent->MoveForward(Value.Get() * CurrentDeltaTime);
+		});
 
 	EnhancedInput->BindAction(&MoveRightAction, ETriggerEvent::Triggered,
 		[this](const FInputActionValue& Value) {
-		if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
-			CameraComponent->MoveRight(Value.Get() * CurrentDeltaTime);
-	});
+			if (!bActive) return; // ← 이 줄 추가
+			if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
+				CameraComponent->MoveRight(Value.Get() * CurrentDeltaTime);
+		});
 
 	EnhancedInput->BindAction(&MoveUpAction, ETriggerEvent::Triggered,
-		[this](const FInputActionValue& Value) {
-		if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
-			CameraComponent->MoveUp(Value.Get() * CurrentDeltaTime);
-	});
+		[this](const FInputActionValue& Value) {        
+			if (!bActive) return; // ← 이 줄 추가
+	if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
+		CameraComponent->MoveUp(Value.Get() * CurrentDeltaTime);
+		});
 
 	EnhancedInput->BindAction(&LookXAction, ETriggerEvent::Triggered,
-		[this](const FInputActionValue& Value) {
-		if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
-			CameraComponent->Rotate(Value.Get() * CameraComponent->GetSensitivity(), 0.0f);
-		else if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_MIDDLE))
-			CameraComponent->PanRight(-Value.Get() * CurrentDeltaTime);
+		[this](const FInputActionValue& Value) {        
+			if (!bActive) return; // ← 이 줄 추가
+	if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
+		CameraComponent->Rotate(Value.Get() * CameraComponent->GetSensitivity(), 0.0f);
+	else if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_MIDDLE))
+		CameraComponent->PanRight(-Value.Get() * CurrentDeltaTime);
 
-	});
+		});
 
 	EnhancedInput->BindAction(&LookYAction, ETriggerEvent::Triggered,
-		[this](const FInputActionValue& Value) {
-		if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
-			CameraComponent->Rotate(0.0f, -Value.Get() * CameraComponent->GetSensitivity());
-		else if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_MIDDLE))
-			CameraComponent->PanUp(Value.Get() * CurrentDeltaTime);
-	});
+		[this](const FInputActionValue& Value) {        
+			if (!bActive) return; // ← 이 줄 추가
+	if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
+		CameraComponent->Rotate(0.0f, -Value.Get() * CameraComponent->GetSensitivity());
+	else if (InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_MIDDLE))
+		CameraComponent->PanUp(Value.Get() * CurrentDeltaTime);
+		});
 
 	EnhancedInput->BindAction(&MouseWheelAction, ETriggerEvent::Triggered,
-		[this](const FInputActionValue& Value) {
+		[this](const FInputActionValue& Value) {       
+			if (!bActive) return; // ← 이 줄 추가
 			CameraComponent->Zoom(-Value.Get());
-	});
+		});
 }

@@ -21,7 +21,9 @@ public:
 	void Tick(float DeltaTime);
 
 	void SetFocus(USceneComponent* InFocusTarget);
-
+	// FEditorViewportController.h 추가
+	void SetActive(bool bInActive) { bActive = bInActive; }
+	bool IsActive() const { return bActive; }
 
 private:
 	void SetupInputBindings(); // 기존 ProcessCameraInput 대체
@@ -42,5 +44,6 @@ private:
 
 	float CurrentDeltaTime = 0.0f; // 콜백에서 DeltaTime 쓰기 위해 보관
 
+	bool bActive = true;
 
 };
