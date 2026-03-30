@@ -647,6 +647,7 @@
     <ClInclude Include="Source\Renderer\Mesh\StaticMeshRenderData.h" />
     <ClInclude Include="Source\Actor\StaticMeshActor.h" />
     <ClInclude Include="Source\Utility\FileIO.h" />
+    <ClInclude Include="Source\Renderer\RenderTypes.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

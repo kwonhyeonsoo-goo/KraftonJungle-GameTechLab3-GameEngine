@@ -696,12 +696,10 @@ public:
 			int32 SlotIndex = Mat->CreateConstantBuffer(Device, 16);
 			if (SlotIndex >= 0)
 			{
-				Mat->RegisterParameter("ColorTint", SlotIndex, 0, 16);
 				Mat->RegisterParameter("BaseColor", SlotIndex, 0, 16);
-
 				// 기본값 흰색
 				float White[4] = { 1.f, 1.f, 1.f, 1.f };
-				Mat->GetConstantBuffer(SlotIndex)->SetData(White, sizeof(White), 0);
+				Mat->SetParameterData("BaseColor", White, sizeof(White));
 			}
 
 			// Diffuse 텍스처 (MTL 파일과 같은 디렉토리에서 탐색)

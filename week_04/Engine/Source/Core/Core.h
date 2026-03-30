@@ -10,6 +10,7 @@
 #include "World/WorldContext.h"
 #include <memory>
 #include "Debug/DebugDrawManager.h"
+#include "Renderer/RenderTypes.h"
 
 class FEnhancedInputManager;
 class FInputManager;
@@ -101,4 +102,5 @@ private:
 	int32 WindowHeight = 0;
 
 	FRenderCommandQueue CommandQueue;
+	FFrameRenderParams FrameRenderParams;
 };
