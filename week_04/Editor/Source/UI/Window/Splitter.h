@@ -24,6 +24,7 @@ public:
 	virtual void AddIfMouseHoverOnBar(FPoint coord, TArray<SSplitter*>& outArray);	//자기 자신+모든 자식의 바가 호버되면 배열에 추가
 	bool IsAnyBarHovered(FPoint pt);	//자기 자신+모든 자식의 바 아무나 호버되면 true 반환
 
+	virtual void SetRatio(float newRatio) =0;
 	virtual void UpdateBarPosition(FPoint detlaCoord) = 0;
 	void SetSideLT(SWindow* sideLT) { SideLT = sideLT; }
 	void SetSideRB(SWindow* sideRB) { SideRB = sideRB; }
@@ -46,6 +47,9 @@ public:
 	void Initialize(FRect rect) override;
 
 	void UpdateBarPosition(FPoint detlaCoord) override;
+
+	virtual void SetRatio(float newRatio) override;
+
 };
 
 //split bar => |
@@ -59,7 +63,9 @@ public:
 	~SSplitterV();
 
 	void Initialize(FRect rect) override;
+
 	void UpdateBarPosition(FPoint detlaCoord) override;
 
+	virtual void SetRatio(float newRatio) override;
 
 };

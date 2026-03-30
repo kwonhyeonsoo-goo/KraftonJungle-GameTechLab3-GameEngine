@@ -86,12 +86,18 @@ void SSplitterH::UpdateBarPosition(FPoint detlaCoord)
 	float totalHeight = SideLT->GetWindowSize().Height + SideRB->GetWindowSize().Height;
 	if (totalHeight > 0.f)
 		SplitRatio += detlaCoord.PointY / totalHeight;
-	SplitRatio = max(0.1f, min(0.9f, SplitRatio));  // 범위 제한
+	SplitRatio = max(0.01f, min(0.99f, SplitRatio));  // 범위 제한
 
 	// Bar, SideLT, SideRB는 UpdateNewSize가 처리하게 위임
 	UpdateNewSize(Rect);
 
 	UE_LOG("New Bar Position : ( %f )", Bar.TopLeftY);
+}
+
+void SSplitterH::SetRatio(float newRatio)
+{
+	SplitRatio = newRatio;
+	UpdateNewSize(Rect);
 }
 
 //전체 크기가 바뀌었을때
@@ -190,6 +196,12 @@ void SSplitterV::UpdateBarPosition(FPoint detlaCoord)
 	UpdateNewSize(Rect);
 
 	UE_LOG("New Bar Position : ( %f, %f )", detlaCoord.PointX, detlaCoord.PointY);
+}
+
+void SSplitterV::SetRatio(float newRatio)
+{
+	SplitRatio = newRatio;
+	UpdateNewSize(Rect);
 }
 
 //전체 크기가 바뀌었을때
