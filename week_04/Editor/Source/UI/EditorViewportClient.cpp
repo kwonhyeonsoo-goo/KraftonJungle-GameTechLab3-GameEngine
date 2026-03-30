@@ -135,13 +135,9 @@ void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPAR
 	FCameraViewInfo ActiveViewInfo;
 	if (HoveredIndex >= 0)
 	{
-		auto& VPs = EditorUI.GetViewports();
-		if (HoveredIndex < static_cast<int32>(VPs.size()))
+		if (IViewportClient* HoveredVP = EditorUI.GetViewportClientAt(HoveredIndex))
 		{
-			if (IViewportClient* HoveredVP = VPs[HoveredIndex].GetLinkedViewportClient())
-			{
-				ActiveViewInfo = HoveredVP->GetCameraViewInfo();
-			}
+			ActiveViewInfo = HoveredVP->GetCameraViewInfo();
 		}
 	}
 	else
