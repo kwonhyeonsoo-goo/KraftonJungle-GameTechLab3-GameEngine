@@ -1,6 +1,8 @@
 #include "Splitter.h"
 #include "Debug/EngineLog.h"
+
 #include <algorithm>
+#include "UI/Viewport.h"
 float SSplitter::BarWidth = 50.f;
 
 
@@ -12,6 +14,25 @@ SSplitter::~SSplitter()
 {
 	delete SideLT;
 	delete SideRB;
+}
+
+void SSplitter::AddIfMouseHoverOnBar(FPoint coord, TArray<SSplitter*>& outArray)
+{
+	if (isMouseHoverOnBar(coord)) {
+		outArray.push_back(this);
+	}
+	if (SSplitter* splitterSideLT = dynamic_cast<SSplitter*>(SideLT))
+	{
+		splitterSideLT->AddIfMouseHoverOnBar(coord, outArray);
+
+	}
+
+	if (SSplitter* splitterSideRB = dynamic_cast<SSplitter*>(SideRB))
+	{
+		splitterSideRB->AddIfMouseHoverOnBar(coord, outArray);
+
+	}
+
 }
 
 
@@ -52,7 +73,7 @@ void SSplitterH::UpdateBarPosition(FPoint detlaCoord)
 	float totalHeight = SideLT->GetWindowSize().Height + SideRB->GetWindowSize().Height;
 	if (totalHeight > 0.f)
 		SplitRatio += detlaCoord.PointY / totalHeight;
-	SplitRatio = std::max(0.1f, std::min(0.9f, SplitRatio));  // 범위 제한
+	SplitRatio = max(0.1f, min(0.9f, SplitRatio));  // 범위 제한
 
 	// Bar, SideLT, SideRB는 UpdateNewSize가 처리하게 위임
 	UpdateNewSize(Rect);
@@ -66,7 +87,7 @@ void SSplitterH::UpdateNewSize(FRect newRect)
 	SWindow::UpdateNewSize(newRect);
 
 	float splitHeight = newRect.Height * SplitRatio;
-	splitHeight = std::max(1.f, std::min(newRect.Height - 1.f, splitHeight));
+	splitHeight = max(1.f, min(newRect.Height - 1.f, splitHeight));
 	Bar.Height = SSplitter::BarWidth;
 	Bar.Width = newRect.Width;
 	Bar.TopLeftX = newRect.TopLeftX;
@@ -90,7 +111,7 @@ void SSplitterH::UpdateNewSize(FRect newRect)
 	}
 }
 
-SSplitter* SSplitterH::isMouseHoverOnBar(FPoint coord)
+bool SSplitterH::isMouseHoverOnBar(FPoint coord)
 {
 	float minX = Bar.TopLeftX;
 	float maxX = Bar.TopLeftX + Bar.Width;
@@ -101,25 +122,12 @@ SSplitter* SSplitterH::isMouseHoverOnBar(FPoint coord)
 	if (coord.PointX >= minX && coord.PointX <= maxX
 		&& coord.PointY >= minY && coord.PointY <= maxY)
 	{
-		return this;
-	}
-	else {
-		if (SSplitter* splitterSideLT = dynamic_cast<SSplitter*>(SideLT))
-		{
-			SSplitter* result = splitterSideLT->isMouseHoverOnBar(coord);
-			if (result) return result;  
-		}
-
-		if (SSplitter* splitterSideRB = dynamic_cast<SSplitter*>(SideRB))
-		{
-			SSplitter* result = splitterSideRB->isMouseHoverOnBar(coord);
-			if (result) return result;  
-		}
-
+		return true;
 	}
 
-	return nullptr;
+	return false;
 }
+
 
 
 //split bar => |
@@ -164,7 +172,7 @@ void SSplitterV::UpdateBarPosition(FPoint detlaCoord)
 	float totalWidth = SideLT->GetWindowSize().Width + SideRB->GetWindowSize().Width;
 	if (totalWidth > 0.f)
 		SplitRatio += detlaCoord.PointX / totalWidth;
-	SplitRatio = std::max(0.1f, std::min(0.9f, SplitRatio));
+	SplitRatio = max(0.1f, min(0.9f, SplitRatio));
 
 	UpdateNewSize(Rect);
 
@@ -178,7 +186,7 @@ void SSplitterV::UpdateNewSize(FRect newRect)
 
 	float splitWidth = newRect.Width * SplitRatio;
 	// 최소 크기 보장
-	splitWidth = std::max(1.f, std::min(newRect.Width - 1.f, splitWidth));
+	splitWidth = max(1.f, min(newRect.Width - 1.f, splitWidth));
 	Bar.Width = SSplitter::BarWidth;
 	Bar.Height = newRect.Height;
 	Bar.TopLeftX = newRect.TopLeftX + splitWidth - Bar.Width / 2;
@@ -202,7 +210,7 @@ void SSplitterV::UpdateNewSize(FRect newRect)
 	}
 }
 
-SSplitter* SSplitterV::isMouseHoverOnBar(FPoint coord)
+bool SSplitterV::isMouseHoverOnBar(FPoint coord)
 {
 	float minX = Bar.TopLeftX;
 	float maxX = Bar.TopLeftX + Bar.Width;
@@ -214,20 +222,13 @@ SSplitter* SSplitterV::isMouseHoverOnBar(FPoint coord)
 	{
 		return this;
 	}
-	else {
-		if (SSplitter* splitterSideLT = dynamic_cast<SSplitter*>(SideLT))
-		{
-			SSplitter* result = splitterSideLT->isMouseHoverOnBar(coord);
-			if (result) return result;
-		}
-
-		if (SSplitter* splitterSideRB = dynamic_cast<SSplitter*>(SideRB))
-		{
-			SSplitter* result = splitterSideRB->isMouseHoverOnBar(coord);
-			if (result) return result;
-		}
-
+	UE_LOG("Bar: %f %f %f %f", Bar.TopLeftX, Bar.TopLeftY, Bar.TopLeftX + Bar.Width, Bar.TopLeftY + Bar.Height);
+	if (coord.PointX >= minX && coord.PointX <= maxX
+		&& coord.PointY >= minY && coord.PointY <= maxY)
+	{
+		return true;
 	}
 
-	return nullptr;
+	return false;
+
 }

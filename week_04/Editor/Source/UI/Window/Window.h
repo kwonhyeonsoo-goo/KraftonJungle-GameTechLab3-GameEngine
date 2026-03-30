@@ -23,6 +23,7 @@ class SWindow
 protected:
 	virtual void UpdateInput(uint32 Msg, uint32 Wparam, uint64 Lparam );
 	int WindowId;
+	std::unique_ptr<FViewport> Viewport; // 리프 노드일 때만 사용
 
 	FRect Rect;
 public :
@@ -33,8 +34,9 @@ public :
 
 	static int NextWindowId;
 
-	FViewport* Viewport; // 리프 노드일 때만 사용
 
+	FViewport* GetViewport() { return Viewport.get(); }
+	void SetViewport(std::unique_ptr<FViewport> viewport) { Viewport = std::move(viewport); }
 	virtual bool IsHover(FPoint coord) const;
 
 	virtual void UpdateNewSize(FRect newRect);

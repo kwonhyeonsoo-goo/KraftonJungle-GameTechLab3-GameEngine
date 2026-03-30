@@ -18,11 +18,15 @@ public:
 	SSplitter();
 	~SSplitter();
 	static float BarWidth;
-	virtual SSplitter* isMouseHoverOnBar(FPoint coord) = 0;
+	virtual bool isMouseHoverOnBar(FPoint coord) = 0;
+	virtual void AddIfMouseHoverOnBar(FPoint coord, TArray<SSplitter*>& outArray);
 	virtual void UpdateBarPosition(FPoint detlaCoord) = 0;
 
 	void SetSideLT(SWindow* sideLT) { SideLT = sideLT; }
 	void SetSideRB(SWindow* sideRB) { SideRB = sideRB; }
+
+	SWindow* GetSideLT() const { return SideLT; }
+	SWindow* GetSideRB() const { return SideRB; }
 
 };
 
@@ -31,7 +35,7 @@ class SSplitterH :public SSplitter
 {
 
 	void UpdateNewSize(FRect newRect) override;
-	virtual SSplitter* isMouseHoverOnBar(FPoint coord) override ;
+	virtual bool isMouseHoverOnBar(FPoint coord) override ;
 
 public:
 	~SSplitterH();
@@ -45,7 +49,7 @@ public:
 class SSplitterV : public SSplitter
 {
 	void UpdateNewSize(FRect newRect) override;
-	virtual SSplitter* isMouseHoverOnBar(FPoint coord) override;
+	virtual bool isMouseHoverOnBar(FPoint coord) override;
 
 public:
 	SSplitterV();

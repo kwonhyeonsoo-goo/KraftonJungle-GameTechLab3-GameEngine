@@ -70,18 +70,20 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM,
 
 void FEditorUI::LinkViewportClient(int32 Index, IViewportClient* InClient)
 {
-	if (Index >= static_cast<int32>(Viewports.size()))
+	/*if (Index >= static_cast<int32>(Viewports.size()))
 	{
 		Viewports.resize(Index + 1);
 	}
-	Viewports[Index].SetLinkedViewportClient(InClient);
+	Viewports[Index].SetLinkedViewportClient(InClient);*/
+	if (Index < 0 || Index >= (int32)Windows.size()) return;
+	GetViewportAt(Index)->SetLinkedViewportClient(InClient);
 }
 
 int32 FEditorUI::GetHoveredViewportIndex() const
 {
-	for (int32 i = 0; i < static_cast<int32>(Viewports.size()); i++)
+	for (int32 i = 0; i < static_cast<int32>(Windows.size()); i++)
 	{
-		if (Viewports[i].IsHovered()) return i;
+		if (Windows[i]->GetViewport()->IsHovered()) return i;
 	}
 	return -1;
 }
@@ -91,29 +93,45 @@ bool FEditorUI::GetMousePositionInViewport(int32 ViewportIndex,
 	int32& OutLocalX, int32& OutLocalY,
 	int32& OutWidth, int32& OutHeight) const
 {
-	if (ViewportIndex < 0 || ViewportIndex >= static_cast<int32>(Viewports.size()))
+	if (ViewportIndex < 0 || ViewportIndex >= static_cast<int32>(Windows.size()))
 		return false;
 
-	return Viewports[ViewportIndex].GetMousePositionInViewport(
+	return Windows[ViewportIndex]->GetViewport()->GetMousePositionInViewport(
 		WindowMouseX, WindowMouseY,
 		OutLocalX, OutLocalY, OutWidth, OutHeight);
 }
 
 IViewportClient* FEditorUI::GetFocusedViewportClient() const
 {
-	for (const FViewport& VP : Viewports)
+	/*for (const FViewport& VP : Viewports)
 	{
 		if (VP.IsFocused() || VP.IsHovered())
 			return VP.GetLinkedViewportClient();
+	}
+	return GetPrimaryViewportClient();*/
+
+	for (SWindow* Win : Windows)
+	{
+		const FViewport* VP = Win->GetViewport();
+		if (VP->IsFocused() || VP->IsHovered())
+			return VP->GetLinkedViewportClient();
 	}
 	return GetPrimaryViewportClient();
 }
 
 IViewportClient* FEditorUI::GetPrimaryViewportClient() const
 {
-	if (!Viewports.empty())
-		return Viewports[0].GetLinkedViewportClient();
+	if (!Windows.empty())
+		return Windows[0]->GetViewport()->GetLinkedViewportClient();
 	return nullptr;
+}
+
+IViewportClient* FEditorUI::GetViewportClientAt(int32 Index) const
+{
+	if (Index < 0 || Index >= (int32)Windows.size()) return nullptr;
+	FViewport* VP = Windows[Index]->GetViewport();
+	if (!VP) return nullptr;
+	return VP->GetLinkedViewportClient();
 }
 
 // ── Initialize ─────────────────────────────────────────────────────────────
@@ -169,11 +187,12 @@ void FEditorUI::Initialize(FCore* InCore)
 			}
 			else
 			{
-				for (const FViewport& VP : Viewports)
+				for (SWindow* Win : Windows)
 				{
-					if (VP.IsHovered())
+					FViewport* VP = Win->GetViewport();
+					if (VP->IsHovered())
 					{
-						if (IViewportClient* Client = VP.GetLinkedViewportClient())
+						if (IViewportClient* Client = VP->GetLinkedViewportClient())
 						{
 							UE_LOG("Drop On Viewport");
 							Client->HandleFileDropOnViewport(DraggingFilePath);
@@ -333,9 +352,12 @@ void FEditorUI::DetachFromRenderer(FRenderer* InRenderer)
 	bViewportActive = false;
 	CurrentRenderer = nullptr;
 
-	for (FViewport& VP : Viewports)
-		VP.ReleaseLevelView();
+	for (SWindow* Win : Windows)
+	{
+		FViewport* VP = Win->GetViewport();
+		VP->ReleaseLevelView();
 
+	}
 	if (InRenderer)
 	{
 		InRenderer->ClearLevelRenderTarget();
@@ -392,6 +414,11 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 
 	Windows.push_back(sideLeftUP); Windows.push_back(sideRightUp); Windows.push_back(sideLeftBottom); Windows.push_back(sideRightBottom);
 
+	// 각 리프 노드에 FViewport 생성
+	sideLeftUP->SetViewport(std::make_unique<FViewport>());
+	sideRightUp->SetViewport(std::make_unique<FViewport>());
+	sideLeftBottom->SetViewport(std::make_unique<FViewport>());
+	sideRightBottom->SetViewport(std::make_unique<FViewport>());
 
 	sideUP->SetSideLT(sideLeftUP); sideUP->SetSideRB(sideRightUp);
 	sideBottom->SetSideLT(sideLeftBottom); sideBottom->SetSideRB(sideRightBottom);
@@ -532,45 +559,49 @@ void FEditorUI::Render()
 
 			const ImVec2 MousePos = ImGui::GetMousePos();
 
-			for (int i = 0; i < static_cast<int>(Viewports.size()) && i < 4; i++)
+			for (int i = 0; i < static_cast<int>(Windows.size()) && i < 4; i++)
 			{
-				const Region& R = Regions[i];
-				FViewport& VP = Viewports[i];
+				/*const Region& R = Regions[i];
+				FViewport& VP = Viewports[i];*/
+				SWindow* Win = Windows[i];
+				FViewport* VP = Win->GetViewport();         // ← SWindow 소유
+				const FRect& R = Win->GetWindowSize(); // ← 같은 객체에서
 
 				// hover/focus 계산
-				const ImVec2 RMin(R.X, R.Y);
-				const ImVec2 RMax(R.X + R.W, R.Y + R.H);
+				const ImVec2 RMin(R.TopLeftX, R.TopLeftY);
+				const ImVec2 RMax(R.TopLeftX + R.Width, R.TopLeftY + R.Height);
 				const bool bHov = ImGui::IsMouseHoveringRect(RMin, RMax, false)
 					&& ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
 				const bool bFoc = bHov && ImGui::IsMouseDown(ImGuiMouseButton_Left);
-				VP.SetHovered(bHov);
-				VP.SetFocused(bFoc);
+				VP->SetHovered(bHov);
+				VP->SetFocused(bFoc);
 
 				// RTV 준비 + ViewportInfo 전달
-				VP.PrepareAndUpdate(CurrentRenderer, Hwnd, R.X, R.Y, R.W, R.H);
+				VP->PrepareAndUpdate(CurrentRenderer, Hwnd, R.TopLeftX, R.TopLeftY, R.Width, R.Height);
 
 				// ImGui에 씬 텍스처 표시
 				ImGui::SetCursorScreenPos(RMin);
-				if (ID3D11ShaderResourceView* SRV = VP.GetSRV())
+				if (ID3D11ShaderResourceView* SRV = VP->GetSRV())
 				{
-					ImGui::Image(reinterpret_cast<ImTextureID>(SRV), ImVec2(R.W, R.H));
+					ImGui::Image(reinterpret_cast<ImTextureID>(SRV), ImVec2(R.Width, R.Height));
 				}
 
 				// 구분선 (오른쪽 / 아래)
 				ImDrawList* DL = ImGui::GetWindowDrawList();
 				if (i == 0 || i == 2) // 세로 구분선
-					DL->AddLine(ImVec2(R.X + R.W, R.Y), ImVec2(R.X + R.W, R.Y + R.H), IM_COL32(80, 80, 80, 255), 1.f);
+					DL->AddLine(ImVec2(R.TopLeftX + R.Width, R.TopLeftY), ImVec2(R.TopLeftX + R.Width, R.TopLeftY + R.Height), IM_COL32(80, 80, 80, 255), 1.f);
 				if (i == 0 || i == 1) // 가로 구분선
-					DL->AddLine(ImVec2(R.X, R.Y + R.H), ImVec2(R.X + R.W, R.Y + R.H), IM_COL32(80, 80, 80, 255), 1.f);
+					DL->AddLine(ImVec2(R.TopLeftX, R.TopLeftY + R.Height), ImVec2(R.TopLeftX + R.Width, R.TopLeftY + R.Height), IM_COL32(80, 80, 80, 255), 1.f);
 			}
 		}
 		else
 		{
 			// 창이 닫혔을 때 모든 VP 비활성
-			for (FViewport& VP : Viewports)
+			for (SWindow* Win : Windows)
 			{
-				VP.SetHovered(false);
-				VP.SetFocused(false);
+				FViewport* VP = Win->GetViewport();
+				VP->SetHovered(false);
+				VP->SetFocused(false);
 			}
 		}
 		ImGui::End();
@@ -767,18 +798,19 @@ bool FEditorUI::GetViewportMousePosition(int32 WindowMouseX, int32 WindowMouseY,
 	int32& OutViewportX, int32& OutViewportY,
 	int32& OutWidth, int32& OutHeight) const
 {
-	for (const FViewport& VP : Viewports)
+	for (SWindow* Win : Windows)
 	{
-		if (VP.IsHovered() || VP.IsFocused())
+		FViewport* VP = Win->GetViewport();
+		if (VP->IsHovered() || VP->IsFocused())
 		{
-			return VP.GetMousePositionInViewport(
+			return VP->GetMousePositionInViewport(
 				WindowMouseX, WindowMouseY,
 				OutViewportX, OutViewportY, OutWidth, OutHeight);
 		}
 	}
-	if (!Viewports.empty())
+	if (!Windows.empty())
 	{
-		return Viewports[0].GetMousePositionInViewport(
+		return Windows[0]->GetViewport()->GetMousePositionInViewport(
 			WindowMouseX, WindowMouseY,
 			OutViewportX, OutViewportY, OutWidth, OutHeight);
 	}
@@ -787,9 +819,10 @@ bool FEditorUI::GetViewportMousePosition(int32 WindowMouseX, int32 WindowMouseY,
 
 bool FEditorUI::IsViewportInteractive() const
 {
-	for (const FViewport& VP : Viewports)
+	for (SWindow* Win : Windows)
 	{
-		if (VP.IsVisible() && (VP.IsHovered() || VP.IsFocused()))
+		FViewport* VP = Win->GetViewport();
+		if (VP->IsVisible() && (VP->IsHovered() || VP->IsFocused()))
 			return true;
 	}
 	return false;
@@ -855,13 +888,14 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 
 	POINTS mousePosition = MAKEPOINTS(LParam);
 	FPoint CurrentPos = { (float)mousePosition.x, (float)mousePosition.y };
+	POINT Pt = { static_cast<LONG>(mousePosition.x), static_cast<LONG>(mousePosition.y) };
+	::ClientToScreen(Hwnd, &Pt);	//윈도우 창 마우스 위치 -> imgui 좌표계로 변환
+
 
 	if (Msg == WM_LBUTTONDOWN)
 	{
-		POINT Pt = { static_cast<LONG>(mousePosition.x), static_cast<LONG>(mousePosition.y) };
-		::ClientToScreen(Hwnd, &Pt);	//윈도우 창 마우스 위치 -> imgui 좌표계로 변환
 
-		DraggedSplitter = RootWindow->isMouseHoverOnBar({ (float)Pt.x, (float)Pt.y });
+		RootWindow->AddIfMouseHoverOnBar({ (float)Pt.x, (float)Pt.y }, DraggedSplitters);
 
 		bIsCliked = true;
 		PreviousMousePoint = { (float)CurrentPos.PointX, (float)CurrentPos.PointY };
@@ -872,7 +906,7 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 	else if (Msg == WM_LBUTTONUP)
 	{
 		bIsCliked = false;
-		DraggedSplitter = nullptr;
+		DraggedSplitters.clear();
 	}
 	else if (Msg == WM_MOUSEMOVE)
 	{
@@ -883,12 +917,28 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 			PreviousMousePoint = { (float)CurrentPos.PointX, (float)CurrentPos.PointY };
 
 			// 드래그 중 재판정 없이 클릭 시점 상태 유지
-			if (DraggedSplitter)
-			{
-				DraggedSplitter->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
-				UE_LOG("Dragging bar: %f, %f", DeltaMouse.X, DeltaMouse.Y);
+			for (auto& DraggedSplitter : DraggedSplitters) {
+				{
+					//일반 레이아웃 
+					if (DraggedSplitter == RootWindow)
+						DraggedSplitter->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
+
+					else {
+						//특정 레이아웃일때
+						if (SSplitter* lt = dynamic_cast<SSplitter*>(RootWindow->GetSideLT())) {
+							lt->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
+						}
+						if (SSplitter* rb = dynamic_cast<SSplitter*>(RootWindow->GetSideRB())) {
+							rb->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
+						}
+					}
+					UE_LOG("Dragging bar: %f, %f", DeltaMouse.X, DeltaMouse.Y);
+				}
 			}
 		}
+
+		if(RootWindow->isMouseHoverOnBar({ (float)Pt.x, (float)Pt.y }))
+			SetCursor(LoadCursor(NULL, IDC_HAND)); // 손가락 모양으로 변경
 	}
 
 	return false;
@@ -954,4 +1004,10 @@ void FEditorUI::SaveEditorSettings()
 std::wstring FEditorUI::GetEditorIniPathW() const
 {
 	return (FPaths::ProjectRoot() / "editor.ini").wstring();
+}
+
+FViewport* FEditorUI::GetViewportAt(int32 Index)
+{
+	if (Index < 0 || Index >= (int32)Windows.size()) return nullptr;
+	return Windows[Index]->GetViewport();
 }

@@ -1,6 +1,8 @@
 #include "Window.h"
 #include "Debug/EngineLog.h"
+#include "UI/Viewport.h"
 #include <windows.h>
+#include <d3d11.h>
 
 int SWindow::NextWindowId = 0;
 
@@ -25,7 +27,11 @@ SWindow::~SWindow()
 
 void SWindow::Initialize(FRect rect)
 {
+
 	Rect = rect;
+
+
+
 }
 
 bool SWindow::IsHover(FPoint coord) const
@@ -48,6 +54,17 @@ bool SWindow::IsHover(FPoint coord) const
 void SWindow::UpdateNewSize(FRect newRect)
 {
 	Rect = newRect;
-	//UE_LOG("SWindow_New Bar Size: H%f W%f X%f Y%f", Rect.Height, Rect.Width, Rect.TopLeftX, Rect.TopLeftY);
+	if (newRect.Height <= 0) newRect.Height = 1;
+	if (newRect.Width <= 0) newRect.Width = 1;
 
+	//혹시 resize하다가 터지면 
+	//ID3D11ShaderResourceView* RTV = Viewport->GetSRV();
+	//RTV->Release();
+	//ID3D11Texture2D* backBuffer;
+	//SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer);
+
+	//// 새 RTV 생성
+	//Device->CreateRenderTargetView(backBuffer, NULL, &RenderTargetView);
+
+	//backBuffer->Release();
 }

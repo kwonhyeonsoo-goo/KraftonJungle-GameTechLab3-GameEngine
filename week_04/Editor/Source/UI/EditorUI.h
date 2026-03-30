@@ -41,10 +41,7 @@ public:
 
 	IViewportClient* GetFocusedViewportClient() const;
 	IViewportClient* GetPrimaryViewportClient() const;
-
-	// ── 뷰포트 배열 접근 ─────────────────────────────────────────────
-	std::vector<FViewport>& GetViewports() { return Viewports; }
-	const std::vector<FViewport>& GetViewports() const { return Viewports; }
+	IViewportClient* GetViewportClientAt(int32 Index) const;
 
 	// 현재 마우스가 올라가 있는 뷰포트 인덱스 (-1이면 없음)
 	int32 GetHoveredViewportIndex() const;
@@ -60,14 +57,15 @@ private:
 	void LoadEditorSettings();
 	void SaveEditorSettings();
 	std::wstring GetEditorIniPathW() const;
+	FViewport* GetViewportAt(int32 Index);
 
 	FCore* Core = nullptr;
 	TObjectPtr<AActor> CachedSelectedActor;
 	FWindow* MainWindow = nullptr;
 
 	SSplitter* RootWindow;
-	SSplitter* DraggedSplitter;
-	TArray<SWindow*> Windows;
+	TArray<SSplitter*> DraggedSplitters;
+	TArray<SWindow*> Windows;	//뷰포트를 소유한 Window만 저장
 
 	FControlPanelWindow ControlPanel;
 	FPropertyWindow Property;
@@ -75,8 +73,6 @@ private:
 	FStatWindow Stat;
 	FOutlinerWindow Outliner;
 	FContentBrowserWindow ContentBrowser;
-
-	std::vector<FViewport> Viewports;
 
 	bool bWindowSetup = false;
 	bool bViewportActive = false;
