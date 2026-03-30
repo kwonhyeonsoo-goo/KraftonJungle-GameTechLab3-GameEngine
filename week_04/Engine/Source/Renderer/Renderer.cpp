@@ -9,7 +9,7 @@
 #include "Asset/AssetManager.h"
 #include <cassert>
 #include <algorithm>
-
+#include "Asset/AssetManager.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "ThirdParty/stb_image.h"
 
@@ -174,6 +174,7 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 	Hwnd = InHwnd;
 
 	if (!CreateDeviceAndSwapChain(Hwnd, Width, Height)) return false;
+	FAssetManager::InjectDevice(Device);
 	if (!CreateRenderTargetAndDepthStencil(Width, Height)) return false;
 
 	Viewport.TopLeftX = 0.f;
@@ -263,7 +264,7 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 			DefaultTextureMaterial->GetConstantBuffer(SlotIndex)->SetData(White, sizeof(White));
 		}
 
-		FTexture* Tex = FAssetManager::LoadTextureAsset("/Assets/Textures/DefaultTexture.png", Device);
+		FTexture* Tex = FAssetManager::LoadTextureAsset("/Assets/Textures/DefaultTexture.png");
 		DefaultTextureMaterial->SetMaterialTexture(std::shared_ptr<FTexture>(Tex, [](FTexture*) {}));
 
 		FMaterialManager::Get().Register("M_Default_Texture", DefaultTextureMaterial);

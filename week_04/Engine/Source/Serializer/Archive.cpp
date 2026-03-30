@@ -17,9 +17,9 @@ FArchive::~FArchive()
 void FArchive::Serialize(const FString& Key, FString& Value)
 {
 	json& Json = *static_cast<json*>(JsonData);
-	if (bSaving)
+	if (bSaving) //save mode
 		Json[Key] = Value;
-	else if (Json.contains(Key))
+	else if (Json.contains(Key)) //load mode
 		Value = Json[Key].get<FString>();
 }
 

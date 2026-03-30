@@ -22,9 +22,12 @@
 #include "Object/Class.h"
 #include "Renderer/PrimitiveVertex.h"
 #include "Asset/AssetManager.h"
+#include "d3d11.h"
+
 
 struct FTexture;
 class UStaticMesh;
+
 // =========================
 // OBJ intermediate structs
 // =========================
@@ -357,6 +360,7 @@ private:
 	static TMap<FString, FStaticMesh*> StaticMeshCache;// EX) \\Assets\\Meshes\\Dorumon.obj 가 key가됨
 	static TMap<FString, FTexture*> TextureCache; // mtl파일의 map_kd dorumon.png이면 \\Assets\\Meshes\\dorumon.png가 key가됨
 	static TMap<FString, FMaterial*> MaterialCache;// mtl파일에서 newmtl Dorumon이면 Dorumon이 key가됨
+	static ID3D11Device* Device;
 
 private:
 	static int32 GetOrAddMaterialSlot(FStaticMesh* Mesh, const FString& MaterialName)
@@ -466,7 +470,7 @@ private:
 	}
 
 public:
-	static FStaticMesh* LoadObjStaticMeshAsset(const FString& PathFileName, ID3D11Device* Device)
+	static FStaticMesh* LoadObjStaticMeshAsset(const FString& PathFileName)
 	{
 		if (StaticMeshCache.contains(PathFileName))
 		{
@@ -482,7 +486,7 @@ public:
 		FStaticMesh* Mesh = new FStaticMesh();
 		std::filesystem::path ParentDir = std::filesystem::path(PathFileName).parent_path();
 		std::filesystem::path MatfilePath = ParentDir / ObjInfo.Mtllib;//mtl파일 위치
-		LoadMaterialAsset(MatfilePath.string(), Device); //TextureCache와 MaterialCache 채우기
+		LoadMaterialAsset(MatfilePath.string()); //TextureCache와 MaterialCache 채우기
 
 		Mesh->Path = PathFileName;
 		if (!ObjInfo.Mtllib.empty())
@@ -553,7 +557,7 @@ public:
 		StaticMeshCache[PathFileName] = Mesh;
 		return Mesh;
 	}
-	static FTexture* LoadTextureAsset(const FString& PathFileName, ID3D11Device* Device)
+	static FTexture* LoadTextureAsset(const FString& PathFileName)
 	{
 		if (TextureCache.contains(PathFileName))
 		{
@@ -636,7 +640,7 @@ public:
 
 		return MT;
 	}
-	static FMaterial* LoadMaterialAsset(const FString& PathFileName, ID3D11Device* Device)
+	static FMaterial* LoadMaterialAsset(const FString& PathFileName)
 	{
 		if (MaterialCache.contains(PathFileName))
 		{
@@ -709,7 +713,7 @@ public:
 			{
 				std::filesystem::path MtlDir = std::filesystem::path(PathFileName).parent_path();
 				std::filesystem::path TexFullPath = MtlDir / Info.MapKd;
-				FTexture* Tex = LoadTextureAsset(FPaths::ToRelativePath(TexFullPath.string()), Device);
+				FTexture* Tex = LoadTextureAsset(FPaths::ToRelativePath(TexFullPath.string()));
 				if (Tex)
 				{
 					Mat->SetMaterialTexture(std::shared_ptr<FTexture>(Tex, [](FTexture*) {}));
@@ -741,7 +745,7 @@ public:
 		return Materials;
 	}
 
-	static UStaticMesh* LoadObjStaticMesh(const FString& PathFileName, ID3D11Device* Device)
+	static UStaticMesh* LoadObjStaticMesh(const FString& PathFileName)
 	{
 		for (TObjectIterator<UStaticMesh> It; It; ++It)
 		{
@@ -752,7 +756,7 @@ public:
 			}
 		}
 
-		FStaticMesh* StaticMeshAsset = LoadObjStaticMeshAsset(PathFileName, Device);
+		FStaticMesh* StaticMeshAsset = LoadObjStaticMeshAsset(PathFileName);
 		UStaticMesh* StaticMesh = FObjectFactory::ConstructObject<UStaticMesh>();
 		StaticMesh->SetStaticMeshAsset(StaticMeshAsset);
 
@@ -777,4 +781,15 @@ public:
 		}
 		TextureCache.clear();
 	}
+
+
+	/*
+	* This is called at FRenderer::Initalize()
+	*/
+	static void InjectDevice(ID3D11Device* InDevice)
+	{
+		Device = InDevice;
+	}
+
+private:
 };
