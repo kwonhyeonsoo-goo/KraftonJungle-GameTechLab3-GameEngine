@@ -78,7 +78,7 @@ void SSplitterH::UpdateBarPosition(FPoint detlaCoord)
 	// Bar, SideLT, SideRB는 UpdateNewSize가 처리하게 위임
 	UpdateNewSize(Rect);
 
-	UE_LOG("New Bar Position : ( %f )", Bar.TopLeftY);
+	//UE_LOG("New Bar Position : ( %f )", Bar.TopLeftY);
 }
 
 //전체 크기가 바뀌었을때
@@ -118,7 +118,7 @@ bool SSplitterH::isMouseHoverOnBar(FPoint coord)
 	float minY = Bar.TopLeftY;
 	float maxY = Bar.TopLeftY + Bar.Height;
 	// isMouseHoverOnBar 안에서
-	UE_LOG("Bar: %f %f %f %f", Bar.TopLeftX, Bar.TopLeftY, Bar.TopLeftX + Bar.Width, Bar.TopLeftY + Bar.Height);
+	//UE_LOG("Bar: %f %f %f %f", Bar.TopLeftX, Bar.TopLeftY, Bar.TopLeftX + Bar.Width, Bar.TopLeftY + Bar.Height);
 	if (coord.PointX >= minX && coord.PointX <= maxX
 		&& coord.PointY >= minY && coord.PointY <= maxY)
 	{
@@ -176,7 +176,7 @@ void SSplitterV::UpdateBarPosition(FPoint detlaCoord)
 
 	UpdateNewSize(Rect);
 
-	UE_LOG("New Bar Position : ( %f, %f )", detlaCoord.PointX, detlaCoord.PointY);
+	//UE_LOG("New Bar Position : ( %f, %f )", detlaCoord.PointX, detlaCoord.PointY);
 }
 
 //전체 크기가 바뀌었을때
@@ -222,7 +222,7 @@ bool SSplitterV::isMouseHoverOnBar(FPoint coord)
 	{
 		return this;
 	}
-	UE_LOG("Bar: %f %f %f %f", Bar.TopLeftX, Bar.TopLeftY, Bar.TopLeftX + Bar.Width, Bar.TopLeftY + Bar.Height);
+	//UE_LOG("Bar: %f %f %f %f", Bar.TopLeftX, Bar.TopLeftY, Bar.TopLeftX + Bar.Width, Bar.TopLeftY + Bar.Height);
 	if (coord.PointX >= minX && coord.PointX <= maxX
 		&& coord.PointY >= minY && coord.PointY <= maxY)
 	{

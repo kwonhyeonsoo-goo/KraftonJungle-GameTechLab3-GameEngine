@@ -31,6 +31,7 @@
     <ClInclude Include="Source\Asset\AssetManager.h" />
     <ClInclude Include="PrimitiveLineBatch.h" />
     <ClInclude Include="Source\Actor\TextActor.h" />
+    <ClInclude Include="Source\Asset\FWindowsIO.h" />
     <ClInclude Include="Source\Camera\CameraInfo.h" />
     <ClInclude Include="Source\Camera\ViewportInfo.h" />
     <ClInclude Include="Source\Component\MeshComponent.h" />
@@ -161,6 +162,7 @@
     <ClCompile Include="Source\Actor\SphereActor.cpp" />
     <ClCompile Include="Source\Actor\SubUVActor.cpp" />
     <ClCompile Include="Source\Actor\TextActor.cpp" />
+    <ClCompile Include="Source\Asset\FWindowsIO.cpp" />
     <ClCompile Include="Source\Component\ActorComponent.cpp" />
     <ClCompile Include="Source\Component\CameraComponent.cpp" />
     <ClCompile Include="Source\Component\CubeComponent.cpp" />
