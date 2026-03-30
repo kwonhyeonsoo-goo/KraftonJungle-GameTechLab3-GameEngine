@@ -31,7 +31,7 @@ public:
 	void SetHovered(bool b) { bHovered = b; }
 	void SetFocused(bool b) { bFocused = b; }
 
-	void ReadyLevelView(ID3D11Device* Device, uint32 Width, uint32 Height);
+	void ReadyLevelView(ID3D11Device* Device, ID3D11DeviceContext* Context, uint32 Width, uint32 Height);
 
 	void SetLinkedViewportClient(IViewportClient* InClient) { LinkedViewportClient = InClient; }
 	IViewportClient* GetLinkedViewportClient() const { return LinkedViewportClient; }
