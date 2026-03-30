@@ -11,6 +11,8 @@
 #include <d3d11.h>
 #include <functional>
 #include <memory>
+#include "Renderer/Material.h"
+#include "Renderer/RenderTypes.h"
 
 class FPixelShader;
 class FMaterial;
@@ -34,7 +36,7 @@ public:
 	bool Initialize(HWND InHwnd, int32 InWidth, int32 InHeight);
 	
 	/** 프레임 시작 처리 (렌더 타겟 클리어 등) */
-	void BeginFrame();
+	void BeginFrame(const FFrameRenderParams& Params);
 	
 	/** 프레임 종료 처리 (Present) */
 	void EndFrame();
@@ -170,6 +172,8 @@ private:
 
 	/** SubUV, Text 이외 일반 material texture sample 용도 */
 	ID3D11SamplerState* NormalSampler = nullptr;
+
+	FMaterialConstantBuffer GlobalBuffer;
 
 public:
 	CShaderManager ShaderManager;

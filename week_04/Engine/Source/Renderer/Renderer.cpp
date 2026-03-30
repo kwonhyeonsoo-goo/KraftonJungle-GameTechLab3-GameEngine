@@ -190,6 +190,19 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 	if (!CreateConstantBuffers()) return false;
 	SetConstantBuffers();
 
+	/**
+	* 현재는 다음과 같이 GlobalBuffer Data 정의
+	 * cbuffer GlobalData : register(b3)
+	 * {
+	 *  	float Time;
+     * };
+	 *  
+	 */
+	if (!GlobalBuffer.Create(Device, 16))
+	{
+		return -1;
+	}
+
 	std::wstring ShaderDirW = FPaths::ShaderDir();
 	std::wstring VSPath = ShaderDirW + L"VertexShader.hlsl";
 	std::wstring PSPath = ShaderDirW + L"PixelShader.hlsl";
@@ -260,7 +273,7 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		if (SlotIndex >= 0)
 		{
 			DefaultTextureMaterial->RegisterParameter("BaseColor", SlotIndex, 0, 16);
-			float White[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+			float White[4] = { 1.f, 1.f, 1.f, 1.0f };
 			DefaultTextureMaterial->GetConstantBuffer(SlotIndex)->SetData(White, sizeof(White));
 		}
 
@@ -292,7 +305,7 @@ void FRenderer::SetConstantBuffers()
 	DeviceContext->VSSetConstantBuffers(0, 2, CBs);
 }
 
-void FRenderer::BeginFrame()
+void FRenderer::BeginFrame(const FFrameRenderParams& Params)
 {
 	if (GUINewFrame) GUINewFrame();
 	if (GUIUpdate) GUIUpdate();
@@ -318,6 +331,13 @@ void FRenderer::BeginFrame()
 	DeviceContext->RSSetViewports(1, &ActiveVP);
 
 	ClearCommandList();
+
+	/** Global Buffer 세팅 */
+	GlobalBuffer.SetData(&Params.Time, sizeof(Params.Time), 0);
+	/** Params.Time 이 4 byte 라는 가정 깔고감 */
+	GlobalBuffer.SetData(Params.UVScrollVelocity, sizeof(Params.UVScrollVelocity), 4);
+	GlobalBuffer.Upload(DeviceContext);
+	DeviceContext->PSSetConstantBuffers(3, 1, &GlobalBuffer.GPUBuffer);
 }
 
 void FRenderer::ClearCommandList()
@@ -401,6 +421,7 @@ void FRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 		[](const FRenderCommand& A, const FRenderCommand& B) { return A.RenderLayer < B.RenderLayer; });
 
 	RenderStateManager->RebindState();
+
 	for (; it != CommandList.end(); it++)
 	{
 		auto Cmd = *it;

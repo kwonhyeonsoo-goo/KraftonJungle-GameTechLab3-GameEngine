@@ -6,6 +6,7 @@ struct FAllocHeader
 {
 	uint32 MagicNumber;
 	SIZE_T Size;
+	/** 동적 데이터는 문제 발생 가능 (size 를 미리 알 수 없음) */
 };
 
 constexpr uint32 MALLOC_MAGIC = 0xDEADBEEF;

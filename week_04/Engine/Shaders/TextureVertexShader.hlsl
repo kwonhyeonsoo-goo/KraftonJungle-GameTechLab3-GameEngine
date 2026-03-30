@@ -3,6 +3,7 @@
 // Material 상수 버퍼 (b2) — VS에서 사용
 cbuffer MaterialData : register(b2)
 {
+	/** PixelShader 의 MaterialData Buffer 내 이름이랑 다를 이유가 없는거같은데 왜 다르게 했지? **/
 	float4 ColorTint;
 };
 
