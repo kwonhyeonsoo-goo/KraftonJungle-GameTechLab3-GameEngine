@@ -30,7 +30,7 @@
 
 #include "Component/StaticMeshComponent.h"
 
-
+#include "UI/Window/Splitter.h"
 
 enum class EFileDialogType
 {
@@ -183,6 +183,7 @@ void FEditorUI::Initialize(FCore* InCore)
 				}
 			}
 		};
+
 }
 
 // ── AttachToRenderer ────────────────────────────────────────────────────────
@@ -375,6 +376,30 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 		});
 	MainWindow->AddMessageFilter(std::bind(&FEditorUI::HandleInput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
+
+	//RootWindow 설정
+
+	RootWindow = new SSplitterH();	/* | */
+
+	SSplitterV* sideUP = new SSplitterV();	SSplitterV* sideBottom = new SSplitterV();
+
+	SWindow* sideLeftUP, * sideLeftBottom, * sideRightUp, * sideRightBottom;
+
+	sideLeftUP = new SWindow; sideLeftBottom = new SWindow; sideRightUp = new SWindow; sideRightBottom = new SWindow;
+
+	//sideLeftUP->Viewport = &Viewports[0]; sideRightUp->Viewport = &Viewports[1];
+	//sideLeftBottom->Viewport = &Viewports[2]; sideRightBottom->Viewport = &Viewports[3];
+
+	Windows.push_back(sideLeftUP); Windows.push_back(sideRightUp); Windows.push_back(sideLeftBottom); Windows.push_back(sideRightBottom);
+
+
+	sideUP->SetSideLT(sideLeftUP); sideUP->SetSideRB(sideRightUp);
+	sideBottom->SetSideLT(sideLeftBottom); sideBottom->SetSideRB(sideRightBottom);
+
+	RootWindow->SetSideLT(sideUP); RootWindow->SetSideRB(sideBottom);
+
+	FRect rect = { 0,0,1000,1000 };
+	RootWindow->Initialize(rect);
 }
 
 // ── Render ──────────────────────────────────────────────────────────────────
@@ -469,6 +494,7 @@ void FEditorUI::Render()
 				ImGui::EndMenuBar();
 			}
 
+
 			// ── 4분할 영역 계산 ──────────────────────────────────────
 			const ImVec2 Origin = ImGui::GetCursorScreenPos();
 			const ImVec2 Total = ImGui::GetContentRegionAvail();
@@ -476,14 +502,32 @@ void FEditorUI::Render()
 			const float  HalfH = Total.y * 0.5f;
 			const HWND   Hwnd = MainWindow ? MainWindow->GetHwnd() : nullptr;
 
+			//SWindow 크기 계산
+			// Render() 의 Viewport Begin 블록 안에서
+			ImVec2 windowPos = ImGui::GetWindowPos();
+			CachedViewportScreenPos = { Origin.x, Origin.y }; // ImVec2 멤버변수
+			const FRect NewRect = { Origin.x,Origin.y,Total.y, Total.x };
+			RootWindow->UpdateNewSize(NewRect);
+
+
+
+
 			// 4개 영역 정의 [좌상, 우상, 좌하, 우하]
 			struct Region { float X, Y, W, H; };
+			//const Region Regions[4] =
+			//{
+			//	{ Origin.x,         Origin.y,         HalfW, HalfH },
+			//	{ Origin.x + HalfW, Origin.y,         HalfW, HalfH },
+			//	{ Origin.x,         Origin.y + HalfH, HalfW, HalfH },
+			//	{ Origin.x + HalfW, Origin.y + HalfH, HalfW, HalfH },
+			//};
+
 			const Region Regions[4] =
 			{
-				{ Origin.x,         Origin.y,         HalfW, HalfH },
-				{ Origin.x + HalfW, Origin.y,         HalfW, HalfH },
-				{ Origin.x,         Origin.y + HalfH, HalfW, HalfH },
-				{ Origin.x + HalfW, Origin.y + HalfH, HalfW, HalfH },
+				{ Windows[0]->GetWindowSize().TopLeftX, Windows[0]->GetWindowSize().TopLeftY, Windows[0]->GetWindowSize().Width, Windows[0]->GetWindowSize().Height },
+				{ Windows[1]->GetWindowSize().TopLeftX, Windows[1]->GetWindowSize().TopLeftY, Windows[1]->GetWindowSize().Width, Windows[1]->GetWindowSize().Height },
+				{ Windows[2]->GetWindowSize().TopLeftX, Windows[2]->GetWindowSize().TopLeftY, Windows[2]->GetWindowSize().Width, Windows[2]->GetWindowSize().Height },
+				{ Windows[3]->GetWindowSize().TopLeftX, Windows[3]->GetWindowSize().TopLeftY, Windows[3]->GetWindowSize().Width, Windows[3]->GetWindowSize().Height },
 			};
 
 			const ImVec2 MousePos = ImGui::GetMousePos();
@@ -802,18 +846,51 @@ void FEditorUI::BuildDefaultLayout(uint32 DockID)
 	ImGui::DockBuilderFinish(DockID);
 }
 
+//Swindow 입력 처리
 
 bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
 	//SWindow 입력 처리 (ImGui -> Swindow -> InputManager)
 	//TODO : CControlPanel / CProperty 등 여러 UI에 뿌리기
-	//모두 한 클래스를 상속해서 일괄 처리하는것도 방법일듯 함.
-	if (Msg == WM_LBUTTONDOWN) {
-		POINTS mousePosition = MAKEPOINTS(LParam);
 
-		UE_LOG("EditorUI::HandleInput//ClickEvent - Msg: %u || WPARAM: %d || LPARAM: %d", Msg, mousePosition.x, mousePosition.y);
+	POINTS mousePosition = MAKEPOINTS(LParam);
+	FPoint CurrentPos = { (float)mousePosition.x, (float)mousePosition.y };
+
+	if (Msg == WM_LBUTTONDOWN)
+	{
+		POINT Pt = { static_cast<LONG>(mousePosition.x), static_cast<LONG>(mousePosition.y) };
+		::ClientToScreen(Hwnd, &Pt);	//윈도우 창 마우스 위치 -> imgui 좌표계로 변환
+
+		DraggedSplitter = RootWindow->isMouseHoverOnBar({ (float)Pt.x, (float)Pt.y });
+
+		bIsCliked = true;
+		PreviousMousePoint = { (float)CurrentPos.PointX, (float)CurrentPos.PointY };
+		DeltaMouse.X = 0;
+		DeltaMouse.Y = 0;
 
 	}
+	else if (Msg == WM_LBUTTONUP)
+	{
+		bIsCliked = false;
+		DraggedSplitter = nullptr;
+	}
+	else if (Msg == WM_MOUSEMOVE)
+	{
+		if (bIsCliked)
+		{
+			DeltaMouse.X = CurrentPos.PointX - PreviousMousePoint.X;
+			DeltaMouse.Y = CurrentPos.PointY - PreviousMousePoint.Y;
+			PreviousMousePoint = { (float)CurrentPos.PointX, (float)CurrentPos.PointY };
+
+			// 드래그 중 재판정 없이 클릭 시점 상태 유지
+			if (DraggedSplitter)
+			{
+				DraggedSplitter->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
+				UE_LOG("Dragging bar: %f, %f", DeltaMouse.X, DeltaMouse.Y);
+			}
+		}
+	}
+
 	return false;
 }
 

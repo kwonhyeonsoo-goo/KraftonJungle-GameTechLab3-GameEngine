@@ -4,7 +4,7 @@
 
 int SWindow::NextWindowId = 0;
 
-void SWindow::Update(uint32 Msg, uint32 Wparam, uint64 Lparam)
+void SWindow::UpdateInput(uint32 Msg, uint32 Wparam, uint64 Lparam)
 {
 	if (Msg == WM_LBUTTONDOWN) {
 		POINTS mousePosition = MAKEPOINTS(Lparam);
@@ -35,7 +35,7 @@ bool SWindow::IsHover(FPoint coord) const
 	float minY = Rect.TopLeftY;
 	float maxY = Rect.TopLeftY + Rect.Height;
 
-	if (coord.PointX >= minX && coord.PointY <= maxX
+	if (coord.PointX >= minX && coord.PointX <= maxX
 		&& coord.PointY >= minY && coord.PointY <= maxY)
 	{
 		UE_LOG("Current Window ID : %d", WindowId);
@@ -48,6 +48,6 @@ bool SWindow::IsHover(FPoint coord) const
 void SWindow::UpdateNewSize(FRect newRect)
 {
 	Rect = newRect;
-	UE_LOG("New Bar Size: H%d W%d X%d Y%d", Rect.Height, Rect.Width, Rect.TopLeftX, Rect.TopLeftY);
+	//UE_LOG("SWindow_New Bar Size: H%f W%f X%f Y%f", Rect.Height, Rect.Width, Rect.TopLeftX, Rect.TopLeftY);
 
 }

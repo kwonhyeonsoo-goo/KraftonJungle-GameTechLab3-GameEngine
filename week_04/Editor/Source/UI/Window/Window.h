@@ -21,7 +21,7 @@ class SWindow
 {
 
 protected:
-	virtual void Update(uint32 Msg, uint32 Wparam, uint64 Lparam );
+	virtual void UpdateInput(uint32 Msg, uint32 Wparam, uint64 Lparam );
 	int WindowId;
 
 	FRect Rect;

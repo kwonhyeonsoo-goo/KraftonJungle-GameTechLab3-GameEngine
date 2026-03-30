@@ -16,6 +16,9 @@ class AActor;
 
 class IViewportClient;
 
+class SWindow;
+class SSplitter;
+
 class FEditorUI
 {
 public:
@@ -62,7 +65,9 @@ private:
 	TObjectPtr<AActor> CachedSelectedActor;
 	FWindow* MainWindow = nullptr;
 
-
+	SSplitter* RootWindow;
+	SSplitter* DraggedSplitter;
+	TArray<SWindow*> Windows;
 
 	FControlPanelWindow ControlPanel;
 	FPropertyWindow Property;
@@ -77,4 +82,9 @@ private:
 	bool bViewportActive = false;
 	bool bLayoutInitialized = false;
 	FRenderer* CurrentRenderer = nullptr;
+
+	bool bIsCliked = false;
+	FVector2 PreviousMousePoint;
+	FVector2 DeltaMouse;
+	FVector2 CachedViewportScreenPos;
 };
