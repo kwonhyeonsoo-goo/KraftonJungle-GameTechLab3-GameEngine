@@ -34,7 +34,7 @@ void FEditorEngine::Shutdown()
 
 	for (auto& viewportcontroller : ViewportControllerArray)
 	{
-		viewportcontroller.get()->Cleanup();
+		viewportcontroller.reset();
 	}
 
 	for (auto& VP : SceneViewportClients) VP = nullptr;
@@ -98,7 +98,7 @@ void FEditorEngine::PostInitialize()
 		Cam->SetRotation(0.f, -15.f);
 		Cam->SetFOV(60.f);
 		Cam->SetOrthographic(false);
-		ViewportControllerArray[0].get()->Initialize(Cam, Core->GetInputManager(), Core->GetEnhancedInputManager());
+		ViewportControllerArray[0].get()->Initialize(Cam, Core->GetInputManager());
 
 	}
 	UE_LOG("EditorEngine initialized");
@@ -110,7 +110,7 @@ void FEditorEngine::PostInitialize()
 		Cam->SetRotation(0.f, -89.9f);   // 거의 수직 아래
 		Cam->SetOrthographic(true);
 		Cam->SetOrthoWidth(15.f);
-		ViewportControllerArray[1].get()->Initialize(Cam, Core->GetInputManager(), Core->GetEnhancedInputManager());
+		ViewportControllerArray[1].get()->Initialize(Cam, Core->GetInputManager());
 
 	}
 
@@ -121,7 +121,7 @@ void FEditorEngine::PostInitialize()
 		Cam->SetRotation(180.f, 0.f);    // 왼쪽 방향
 		Cam->SetOrthographic(true);
 		Cam->SetOrthoWidth(15.f);
-		ViewportControllerArray[2].get()->Initialize(Cam, Core->GetInputManager(), Core->GetEnhancedInputManager());
+		ViewportControllerArray[2].get()->Initialize(Cam, Core->GetInputManager());
 
 	}
 
@@ -132,7 +132,7 @@ void FEditorEngine::PostInitialize()
 		Cam->SetRotation(90.f, 0.f);     // 앞쪽 방향
 		Cam->SetOrthographic(true);
 		Cam->SetOrthoWidth(15.f);
-		ViewportControllerArray[3].get()->Initialize(Cam, Core->GetInputManager(), Core->GetEnhancedInputManager());
+		ViewportControllerArray[3].get()->Initialize(Cam, Core->GetInputManager());
 
 	}
 
