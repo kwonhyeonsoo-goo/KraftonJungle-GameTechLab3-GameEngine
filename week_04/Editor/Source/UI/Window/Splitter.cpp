@@ -35,6 +35,19 @@ void SSplitter::AddIfMouseHoverOnBar(FPoint coord, TArray<SSplitter*>& outArray)
 
 }
 
+bool SSplitter::IsAnyBarHovered(FPoint pt)
+{
+	if (isMouseHoverOnBar(pt)) return true;
+	if (SSplitter* it = dynamic_cast<SSplitter*>(GetSideLT())) {
+		if (it->IsAnyBarHovered(pt)) { return true; }
+	}
+
+	if (SSplitter* it = dynamic_cast<SSplitter*>(GetSideRB())) {
+		if (it->IsAnyBarHovered(pt)) { return true; }
+	}
+	return false;
+}
+
 
 //split bar => -------
 

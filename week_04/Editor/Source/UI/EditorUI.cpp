@@ -536,27 +536,6 @@ void FEditorUI::Render()
 			const FRect NewRect = { Origin.x,Origin.y,Total.y, Total.x };
 			RootWindow->UpdateNewSize(NewRect);
 
-
-
-
-			// 4개 영역 정의 [좌상, 우상, 좌하, 우하]
-			struct Region { float X, Y, W, H; };
-			//const Region Regions[4] =
-			//{
-			//	{ Origin.x,         Origin.y,         HalfW, HalfH },
-			//	{ Origin.x + HalfW, Origin.y,         HalfW, HalfH },
-			//	{ Origin.x,         Origin.y + HalfH, HalfW, HalfH },
-			//	{ Origin.x + HalfW, Origin.y + HalfH, HalfW, HalfH },
-			//};
-
-			const Region Regions[4] =
-			{
-				{ Windows[0]->GetWindowSize().TopLeftX, Windows[0]->GetWindowSize().TopLeftY, Windows[0]->GetWindowSize().Width, Windows[0]->GetWindowSize().Height },
-				{ Windows[1]->GetWindowSize().TopLeftX, Windows[1]->GetWindowSize().TopLeftY, Windows[1]->GetWindowSize().Width, Windows[1]->GetWindowSize().Height },
-				{ Windows[2]->GetWindowSize().TopLeftX, Windows[2]->GetWindowSize().TopLeftY, Windows[2]->GetWindowSize().Width, Windows[2]->GetWindowSize().Height },
-				{ Windows[3]->GetWindowSize().TopLeftX, Windows[3]->GetWindowSize().TopLeftY, Windows[3]->GetWindowSize().Width, Windows[3]->GetWindowSize().Height },
-			};
-
 			const ImVec2 MousePos = ImGui::GetMousePos();
 
 			for (int i = 0; i < static_cast<int>(Windows.size()) && i < 4; i++)
@@ -940,7 +919,7 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 			}
 		}
 
-		if(RootWindow->isMouseHoverOnBar({ (float)Pt.x, (float)Pt.y }))
+		if(RootWindow->IsAnyBarHovered({ (float)Pt.x, (float)Pt.y }))
 			SetCursor(LoadCursor(NULL, IDC_HAND)); // 손가락 모양으로 변경
 	}
 
