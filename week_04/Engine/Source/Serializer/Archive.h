@@ -16,6 +16,9 @@ public:
 	void Serialize(const FString& Key, bool& Value);
 	void Serialize(const FString& Key, FVector& Value);
 	void Serialize(const FString& Key, FVector4& Value);
+	void SerializeMaterialTexture(const FString& Key,
+		TArray<FString>& MaterialNames,
+		TArray<FString>& TextureNames);
 	// 배열
 	void SerializeUIntArray(const FString& Key, TArray<uint32>& Values);
 

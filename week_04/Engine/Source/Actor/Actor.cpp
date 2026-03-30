@@ -218,6 +218,17 @@ void AActor::Serialize(FArchive& Ar)
 		{
 			FString ObjStaticMeshAsset = SMComp->GetStaticMesh()->GetAsset()->Path;
 			Ar.Serialize("ObjStaticMeshAsset", ObjStaticMeshAsset);
+			TArray<FString> MaterialNames;
+			TArray<FString> TextureNames;
+			for (auto Mat : SMComp->GetOverrideMaterials())
+			{
+				if (Mat && !Mat->GetOriginName().empty())
+				{
+					MaterialNames.push_back(Mat->GetOriginName());
+					TextureNames.push_back(Mat->GetMaterialTexture()->FilePath);
+				}
+			}
+			Ar.SerializeMaterialTexture("MaterialOverrides", MaterialNames, TextureNames);
 		}
 	}
 	else//Load 
@@ -309,6 +320,16 @@ void AActor::Serialize(FArchive& Ar)
 				UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(ObjStaticMeshAsset);
 				SMComp->SetStaticMesh(StaticMesh);
 			}
+
+			TArray<FString> MaterialNames;
+			TArray<FString> TextureNames;
+			Ar.SerializeMaterialTexture("MaterialOverrides", MaterialNames, TextureNames);
+			for (int i = 0;i < MaterialNames.size();++i)
+			{
+				FAssetManager::LoadMaterialTexture(MaterialNames[i], TextureNames[i]);
+				SMComp->SetMaterial(i, FAssetManager::GetMaterialByName(MaterialNames[i]));
+			}
+			//FAssetManager::
 		}
 	}
 }

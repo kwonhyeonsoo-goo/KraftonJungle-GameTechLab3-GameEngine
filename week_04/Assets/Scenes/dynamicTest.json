@@ -1,0 +1,63 @@
+{
+  "Camera": {
+    "Position": [
+      -33.87173080444336,
+      2.3119211196899414,
+      14.971961975097656
+    ],
+    "Rotation": [
+      8.799996376037598,
+      -24.60001564025879
+    ]
+  },
+  "Materials": [
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_Gizmos.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_Wireframe.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_Sky.json",
+    "Assets/Materials/M_TintYellow.json"
+  ],
+  "NextUUID": 13,
+  "Primitives": {
+    "0": {
+      "Billboard": true,
+      "Class": "AStaticMeshActor",
+      "ComponentUUIDs": [
+        11,
+        12
+      ],
+      "Location": [
+        -21.978443145751953,
+        2.7725143432617188,
+        8.354545593261719
+      ],
+      "MaterialOverrides": [
+        {
+          "MapKd": "\\Assets\\Meshes\\12213_bird_diffuse.jpg",
+          "Name": "12213_bird"
+        }
+      ],
+      "ObjStaticMeshAsset": "\\Assets\\Meshes\\Dorumon.obj",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 10
+    }
+  }
+}

@@ -684,6 +684,63 @@ public:
 		Device = InDevice;
 	}
 
+	static FMaterial* LoadMaterialTexture(const FString& MaterialName, const FString& TexturePath)
+	{
+		auto MatIt = MaterialCache.find(MaterialName);
+		if (MatIt != MaterialCache.end())
+		{
+			return MatIt->second;
+		}
+		else
+		{
+			FMaterial* Mat = new FMaterial();
+			std::filesystem::path Root = FPaths::ProjectRoot();
+			std::wstring VSPath = (Root / "Engine/Shaders/TextureVertexShader.hlsl").wstring();
+			std::wstring PSPath = (Root / "Engine/Shaders/TexturePixelShader.hlsl").wstring();
+
+			auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, VSPath.c_str());
+			auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, PSPath.c_str());
+			Mat->SetVertexShader(VS);
+			Mat->SetPixelShader(PS);
+
+			// RasterizerState 명시 설정 (없으면 이전 프레임 상태 상속되는 문제 방지)
+			{
+				FRasterizerStateOption RSOption;
+				RSOption.FillMode = D3D11_FILL_SOLID;
+				RSOption.CullMode = D3D11_CULL_NONE;  // blank spots 원인 확인용: culling 완전 비활성화
+				RSOption.DepthClipEnable = true;
+				auto RS = FRasterizerState::Create(Device, RSOption);
+				Mat->SetRasterizerOption(RSOption);
+				Mat->SetRasterizerState(RS);
+
+				FDepthStencilStateOption DSOption;
+				DSOption.DepthEnable = true;
+				DSOption.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+				auto DSS = FDepthStencilState::Create(Device, DSOption);
+				Mat->SetDepthStencilOption(DSOption);
+				Mat->SetDepthStencilState(DSS);
+			}
+
+			// b2: ColorTint(VS) + BaseColor(PS) — float4 하나 공유
+			int32 SlotIndex = Mat->CreateConstantBuffer(Device, 16);
+			if (SlotIndex >= 0)
+			{
+				Mat->RegisterParameter("BaseColor", SlotIndex, 0, 16);
+				// 기본값 흰색
+				float White[4] = { 1.f, 1.f, 1.f, 1.f };
+				Mat->SetParameterData("BaseColor", White, sizeof(White));
+			}
+			Mat->SetOriginName(MaterialName);
+			// 텍스처 로드
+			FTexture* Tex = LoadTextureAsset(TexturePath);
+			if (Tex)
+			{
+				Mat->SetMaterialTexture(std::shared_ptr<FTexture>(Tex, [](FTexture*) {}));
+			}
+			MaterialCache[MaterialName] = Mat;
+			return Mat;
+		}
+	}
 	static FTexture* LoadTextureAsset(const FString& PathFileName)
 	{
 		if (TextureCache.contains(PathFileName))
@@ -763,6 +820,7 @@ public:
 		FTexture* MT = new FTexture();
 		MT->TextureSRV = srv;
 		MT->SamplerState = sampler;
+		MT->FilePath = PathFileName;
 		TextureCache[PathFileName] = MT;
 
 		return MT;
@@ -853,9 +911,11 @@ private:
 				FirstMat = Mat;
 		}
 
-		//MaterialCache[PathFileName] = FirstMat;
 		return FirstMat;
 	}
+
+
+
 	static void MakeMeshData(FStaticMesh* OutMesh)
 	{
 		OutMesh->MeshData = std::make_shared<FMeshData>();
