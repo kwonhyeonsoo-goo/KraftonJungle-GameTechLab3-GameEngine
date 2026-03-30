@@ -600,8 +600,7 @@ void FEditorUI::Render()
 				ShowFlagCheckbox("UUID", EEngineShowFlags::SF_UUID);
 				ShowFlagCheckbox("Debug Draw", EEngineShowFlags::SF_DebugDraw);
 				ShowFlagCheckbox("Collision", EEngineShowFlags::SF_Collision);
-
-				ImGui::SeparatorText("Grid");
+							ImGui::SeparatorText("Grid");
 				bool bShowGrid = EditorVP->IsGridVisible();
 				if (ImGui::Checkbox("Show Grid", &bShowGrid))
 				{
@@ -621,6 +620,7 @@ void FEditorUI::Render()
 					SaveEditorSettings();
 				}
 			}
+
 			ImGui::EndMenu();
 		}
 
