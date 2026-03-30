@@ -18,6 +18,7 @@
 
 #include "Actor/StaticMeshActor.h"
 #include "Asset/AssetManager.h"
+#include "Utility/FileIO.h"
 
 
 bool FEditorEngine::Initialize(HINSTANCE hInstance)
@@ -94,18 +95,6 @@ void FEditorEngine::PostInitialize()
 
 	UE_LOG("EditorEngine initialized");
 
-#if IS_OBJ_VIEWER
-	AStaticMeshActor* NewActor = Core->GetLevel()->SpawnActor<AStaticMeshActor>("StaticMeshActor");
-	// UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath("/Assets/Meshes/Dorumon.obj"), Core->GetRenderer()->GetDevice());
-	UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath("/Assets/Meshes/12213_Bird_v1_l3.obj"), Core->GetRenderer()->GetDevice());
-	NewActor->SetStaticMesh(StaticMesh);
-
-	ViewportController.SetFocus(NewActor->GetRootComponent());
-#else
-
-#endif
-
-
 	// [1] Top — 위에서 아래로 내려다봄
 	{
 		UCameraComponent* Cam = SceneViewportClients[1]->GetActiveCamera();
@@ -139,7 +128,51 @@ void FEditorEngine::PostInitialize()
 		Core->GetInputManager(),
 		Core->GetEnhancedInputManager());
 
+#if IS_OBJ_VIEWER
+	if (Core && Core->GetActiveLevel())
+	{
+		FString Path = GetObjFilePath(EFileDialogType::Open);
+
+		if (!Path.empty())
+		{
+			if (!Path.ends_with(".obj"))
+			{
+				MessageBoxW(
+					nullptr,
+					L"Obj 파일만 지원합니다.",
+					L"Error",
+					MB_OK | MB_ICONWARNING
+				);
+
+				assert(false);
+			}
+
+			AStaticMeshActor* NewActor = Core->GetLevel()->SpawnActor<AStaticMeshActor>("StaticMeshActor");
+			UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath(Path), Core->GetRenderer()->GetDevice());
+			NewActor->SetStaticMesh(StaticMesh);
+			ViewportController.SetFocus(NewActor->GetRootComponent());
+
+		}
+		else
+		{
+			MessageBoxW(
+				nullptr,
+				L"파일이 선택되지 않았습니다.",
+				L"Error",
+				MB_OK | MB_ICONWARNING
+			);
+
+			assert(false);
+		}
+	}
+
+#else
+
+#endif
+
 	UE_LOG("EditorEngine initialized");
+
+
 
 }
 

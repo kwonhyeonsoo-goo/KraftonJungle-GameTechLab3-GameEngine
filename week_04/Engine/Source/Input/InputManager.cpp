@@ -50,11 +50,17 @@ void FInputManager::ProcessMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LP
 		bTrackingMouse = false;
 		ReleaseCapture();
 		break;
+
+	case WM_MOUSEWHEEL:
+		EventQueue.push_back({ EInputEventType::MouseWheel, 0, static_cast<float>(GET_WHEEL_DELTA_WPARAM(WParam)) / static_cast<float>(WHEEL_DELTA) });
+		break;
 	}
 }
 
 void FInputManager::Tick()
 {
+	MouseWheelDelta = 0;
+
 	// Save previous frame state
 	std::memcpy(PrevKeyState, KeyState, sizeof(KeyState));
 	std::memcpy(PrevMouseButtonState, MouseButtonState, sizeof(MouseButtonState));
@@ -75,6 +81,9 @@ void FInputManager::Tick()
 			break;
 		case EInputEventType::MouseButtonUp:
 			MouseButtonState[Event.KeyOrButton] = false;
+			break;
+		case EInputEventType::MouseWheel:
+			MouseWheelDelta += Event.Value;
 			break;
 		}
 	}

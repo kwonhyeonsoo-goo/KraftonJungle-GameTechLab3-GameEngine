@@ -19,6 +19,7 @@ public:
 	void PanRight(float Value);
 	void PanUp(float Value);
 	void Rotate(float DeltaYaw, float DeltaPitch);
+	void Zoom(float Value);
 
 	// ── 행렬 ─────────────────────────────────────────────
 	FMatrix GetViewMatrix() const;
@@ -50,6 +51,7 @@ public:
 	void SetOrthographic(bool bInOrthographic) { bIsOrthographic = bInOrthographic; }
 	void SetSpeed(float InSpeed) { Speed = InSpeed; }
 	void SetSensitivity(float InSensitivity) { Sensitivity = InSensitivity; }
+	void SetFocus(USceneComponent* InFocusTarget);
 
 private:
 	// ── Transform ─────────────────────────────────────────
@@ -69,4 +71,7 @@ private:
 	// ── 컨트롤 파라미터 (추후 컨트롤러 레이어로 분리 예정) ──
 	float Speed = 5.0f;
 	float Sensitivity = 0.2f;
+	float ZoomDist = 0.f;
+
+	USceneComponent* FocusTarget = nullptr;
 };

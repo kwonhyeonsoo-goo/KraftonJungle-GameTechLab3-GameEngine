@@ -30,6 +30,7 @@
 
 #include "Component/StaticMeshComponent.h"
 
+
 #include "UI/Window/Splitter.h"
 
 enum class EFileDialogType
@@ -63,6 +64,9 @@ std::string GetFilePathUsingDialog(EFileDialogType Type)
 	}
 	return "";
 }
+
+#include "Utility/FileIO.h"
+
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 
@@ -607,7 +611,10 @@ void FEditorUI::Render()
 		ImGui::End();
 	}
 
-	// ── Actor 선택 동기화 ────────────────────────────────────────────────
+
+#if IS_OBJ_VIEWER
+
+#else
 	if (Core)
 	{
 		AActor* Selected = Core->GetSelectedActor();
@@ -617,6 +624,7 @@ void FEditorUI::Render()
 		Stat.SetFPS(Timer.GetDisplayFPS());
 		Stat.SetFrameTimeMs(Timer.GetFrameTimeMs());
 	}
+
 
 	Stat.SetObjectCount(UObject::TotalAllocationCounts);
 	Stat.SetHeapUsage(UObject::TotalAllocationBytes);
@@ -645,7 +653,8 @@ void FEditorUI::Render()
 			{
 				if (Core && Core->GetActiveLevel())
 				{
-					FString Path = GetFilePathUsingDialog(EFileDialogType::Open);
+					FString Path = GetJsonFilePath(EFileDialogType::Open);
+
 					if (!Path.empty())
 					{
 						Core->SetSelectedActor(nullptr);
@@ -668,7 +677,8 @@ void FEditorUI::Render()
 			{
 				if (Core && Core->GetActiveLevel())
 				{
-					FString Path = GetFilePathUsingDialog(EFileDialogType::Save);
+					FString Path = GetJsonFilePath(EFileDialogType::Save);
+
 					if (!Path.empty())
 					{
 						UCameraComponent* Cam = nullptr;
@@ -778,9 +788,6 @@ void FEditorUI::Render()
 		ImGui::Spacing(); ImGui::EndPopup();
 	}
 
-#if IS_OBJ_VIEWER
-
-#else
 	ControlPanel.Render(Core);
 	Property.Render(Core);
 	Console.Render();

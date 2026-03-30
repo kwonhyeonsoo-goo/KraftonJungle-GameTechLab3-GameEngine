@@ -3,6 +3,7 @@
 #include "Math/MathUtility.h"
 #include <algorithm>
 #include <cmath>
+#include "Component/PrimitiveComponent.h"
 
 IMPLEMENT_RTTI(UCameraComponent, USceneComponent)
 
@@ -72,6 +73,11 @@ void UCameraComponent::Rotate(float DeltaYaw, float DeltaPitch)
 	Pitch = std::clamp(Pitch, -89.0f, 89.0f);
 }
 
+void UCameraComponent::Zoom(float Value)
+{
+	ZoomDist += Value;
+}
+
 void UCameraComponent::SetRotation(float InYaw, float InPitch)
 {
 	Yaw = InYaw;
@@ -82,8 +88,31 @@ void UCameraComponent::SetRotation(float InYaw, float InPitch)
 
 FMatrix UCameraComponent::GetViewMatrix() const
 {
-	const FVector Target = Position + GetForward();
-	return FMatrix::MakeViewLookAtLH(Position, Target, Up);
+	FVector Target, Origin;
+
+	if (FocusTarget)
+	{
+		if (FocusTarget->IsA(UPrimitiveComponent::StaticClass()))
+		{
+			UPrimitiveComponent* PrimitiveComp = static_cast<UPrimitiveComponent*>(FocusTarget);
+			FBoxSphereBounds Bounds = PrimitiveComp->GetWorldBounds();
+
+			Target = Bounds.Center;
+		}
+		else
+		{
+			Target = FocusTarget->GetWorldLocation();
+		}
+
+		Origin = Target - GetForward() * ZoomDist;
+	}
+	else
+	{
+		Origin = Position;
+		Target = Position + GetForward();
+	}
+
+	return FMatrix::MakeViewLookAtLH(Origin, Target, Up);
 }
 
 FMatrix UCameraComponent::GetProjectionMatrix() const
@@ -104,6 +133,7 @@ FMatrix UCameraComponent::GetProjectionMatrix() const
 FCameraViewInfo UCameraComponent::GetViewInfo() const
 {
 	FCameraViewInfo Info;
+
 	Info.Position = Position;
 	Info.Forward = GetForward();
 	Info.Right = GetRight();
@@ -135,8 +165,9 @@ void UCameraComponent::SetOrthoWidth(float InOrthoWidth)
 	OrthoWidth = FMath::Max(InOrthoWidth, 0.01f);
 }
 
+void UCameraComponent::SetFocus(USceneComponent* InFocusTarget)
+{
+	FocusTarget = InFocusTarget;
 
-//void UCameraComponent::SetFoucs(USceneComponent* InFocusTarget)
-//{
-//	Camera->SetFocus(InFocusTarget);
-//}
+	ZoomDist = FocusTarget->GetWorldTransform().GetScaleVector().Size() * 10;
+}

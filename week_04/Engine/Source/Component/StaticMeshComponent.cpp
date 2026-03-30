@@ -22,7 +22,11 @@ void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InMesh)
 		{
 			const FString& SlotName = StaticMeshAsset->MaterialSlotNames[i];
 			FMaterial* Mat = FAssetManager::GetMaterialByName(SlotName);
-			OverrideMaterials[i] = Mat;
+
+			if (Mat)
+				OverrideMaterials[i] = Mat;
+			else
+				OverrideMaterials[i] = FMaterialManager::Get().FindByName("M_Default_Texture").get();
 		}
 	}
 }

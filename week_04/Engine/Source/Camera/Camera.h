@@ -47,6 +47,13 @@ public:
 	void SetOrthoWidth(float InOrthoWidth);
 
 	void SetFocus(USceneComponent* InFocusTarget) { FocusTarget = InFocusTarget; }
+	void SetZoomDist(float InZoomDist) 
+	{ 
+		ZoomDist = InZoomDist; 
+		/** 음수의 ZoomDist 는 배제 */
+		if (ZoomDist < 0) ZoomDist = 0;
+	}
+	float GetZoomDist() const { return ZoomDist; }
 
 private:
 	FVector Position = { -5.0f, 0.0f, 2.0f };
@@ -62,6 +69,8 @@ private:
 	float OrthoWidth = 20.0f;
 	float NearPlane = 0.1f;
 	float FarPlane = 1000.0f;
+
+	float ZoomDist = 10.f;
 
 	USceneComponent* FocusTarget = nullptr;
 };

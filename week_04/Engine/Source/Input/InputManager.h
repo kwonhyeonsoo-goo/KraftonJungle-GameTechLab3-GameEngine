@@ -9,12 +9,14 @@ enum class EInputEventType : unsigned char
 	KeyUp,
 	MouseButtonDown,
 	MouseButtonUp,
+	MouseWheel
 };
 
 struct FInputEvent
 {
 	EInputEventType Type;
 	int32 KeyOrButton;
+	float Value = 0.0f;
 };
 
 class ENGINE_API FInputManager
@@ -41,6 +43,7 @@ public:
 
 	float GetMouseDeltaX() const { return MouseDeltaX; }
 	float GetMouseDeltaY() const { return MouseDeltaY; }
+	float GetMouseWheelDelta() const { return MouseWheelDelta; }
 
 	static constexpr int32 MOUSE_LEFT = 0;
 	static constexpr int32 MOUSE_RIGHT = 1;
@@ -61,6 +64,7 @@ private:
 
 	float MouseDeltaX = 0.0f;
 	float MouseDeltaY = 0.0f;
+	float MouseWheelDelta = 0.0f;
 	POINT LastMousePos = {};
 	bool bTrackingMouse = false;
 };

@@ -312,12 +312,16 @@ void FCore::Render()
 		Frustum.ExtractFromVP(CameraViewInfo.ViewMatrix * CameraViewInfo.ProjectionMatrix);
 
 		CurrentViewport->BuildRenderCommands(this, Level, Frustum, CommandQueue);
+
 		Renderer->SubmitCommands(CommandQueue);
 		Renderer->ExecuteCommands();
-
-		// ── 4. Debug Draw ──────────────────────────────────────────
 		const FShowFlags& ShowFlags = CurrentViewport->GetShowFlags();
+
+#if IS_OBJ_VIEWER
+
+#else
 		DebugDrawManager.Flush(Renderer.get(), ShowFlags, ActiveWorld);
+#endif
 	}
 
 	Renderer->EndFrame();
