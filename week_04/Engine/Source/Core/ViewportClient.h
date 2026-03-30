@@ -34,8 +34,8 @@ public:
 	virtual ULevel* ResolveLevel(FCore* Core) const;
 	virtual UWorld* ResolveWorld(FCore* Core) const;
 
-	void SetLinkedWorld(UWorld InWorld);
-	void GetLinkedWorld();
+	void SetLinkedWorld(UWorld* InWorld, FCore* InCore);
+	UWorld* GetLinkedWorld();
 
 
 	FShowFlags& GetShowFlags() { return ShowFlags; }
@@ -69,7 +69,7 @@ private:
 
 	FViewportInfo ViewportInfo;
 
-	UWorld* LInkedWorld; 
+	UWorld* LinkedWorld; 
 };
 
 class ENGINE_API FGameViewportClient : public IViewportClient

@@ -21,11 +21,6 @@
 #include "Component/SubUVComponent.h"
 #include "Actor/SkySphereActor.h"
 
-#include "Templates/ObjectIterator.h"
-#include "Object/Mesh/StaticMesh.h"
-#include "Component/StaticMeshComponent.h"
-#include "Asset/AssetManager.h"
-
 FCore::~FCore()
 {
 	Release();
@@ -153,8 +148,6 @@ void FCore::Release()
 	{
 		Renderer.reset();
 	}
-
-	FAssetManager::CleanUp();
 }
 
 // ── Tick ──────────────────────────────────────────────────────────────────
@@ -167,10 +160,10 @@ void FCore::Tick()
 
 void FCore::Tick(const float DeltaTime)
 {
-	Input(DeltaTime); //Init 단계에서 CEditorViewportClient가 ViewportClient로 설정됨 내부의 ViewportClient -> Tick()이 호출됨 → EditorViewportClient에서 마우스 위치 업데이트, Picking 처리 등 수행
+	Input(DeltaTime);
 	Physics(DeltaTime);
-	GameLogic(DeltaTime); //GameLogic -> World - Tick() → Actor - Tick() → Component - Tick()
-	Render(); // SceneManager로부터 ActiveScene을 얻어와서 그로부터 RenderCommand를 생성함
+	GameLogic(DeltaTime);
+	Render();
 	LateUpdate(DeltaTime);
 }
 
@@ -249,32 +242,44 @@ void FCore::LateUpdate(float DeltaTime)
 
 void FCore::Render()
 {
-	ULevel* Level = GetActiveLevel();
-	if (!Renderer || !Level || Renderer->IsOccluded())
+	if (!Renderer || Renderer->IsOccluded()) return;
+
+	// 폴백용 ActiveLevel — LinkedWorld가 없는 VP에서 사용
+	ULevel* FallbackLevel = GetActiveLevel();
+	UWorld* FallbackWorld = GetActiveWorld();
+
+	if (!FallbackLevel)
 	{
 		return;
 	}
 
 	Renderer->BeginFrame();
 
-	UWorld* ActiveWorld = GetActiveWorld();
-	if (!ActiveWorld)
+	if (!FallbackWorld)
 	{
 		Renderer->EndFrame();
 		return;
 	}
 
 	// ── SkySphere 카메라 위치 주입 ─────────────────────────────────────
-	// 첫 번째 ViewportClient의 카메라 위치를 기준으로 SkySphere를 이동
-	// 다중 뷰포트에서는 주(primary) 뷰포트 기준
+	// VP[0]의 LinkedWorld 또는 FallbackWorld 기준
+	// VP[0]의 카메라 위치로 SkySphere 이동
 	if (!ViewportClientArray.empty() && ViewportClientArray[0])
 	{
-		const FCameraViewInfo PrimaryViewInfo = ViewportClientArray[0]->GetCameraViewInfo();
-		for (AActor* Actor : Level->GetActors())
+		IViewportClient* PrimaryVP = ViewportClientArray[0];
+		UWorld* PrimaryWorld = PrimaryVP->GetLinkedWorld()
+			? PrimaryVP->GetLinkedWorld()
+			: FallbackWorld;
+
+		const FCameraViewInfo PrimaryViewInfo = PrimaryVP->GetCameraViewInfo();
+		if (ULevel* PrimaryLevel = PrimaryWorld->GetLevel())
 		{
-			if (ASkySphereActor* Sky = dynamic_cast<ASkySphereActor*>(Actor))
+			for (AActor* Actor : PrimaryLevel->GetActors())
 			{
-				Sky->SetCameraPosition(PrimaryViewInfo.Position);
+				if (ASkySphereActor* Sky = dynamic_cast<ASkySphereActor*>(Actor))
+				{
+					Sky->SetCameraPosition(PrimaryViewInfo.Position);
+				}
 			}
 		}
 	}
@@ -283,8 +288,19 @@ void FCore::Render()
 	{
 		if (!CurrentViewport) continue;
 
+		// ── 0. VP의 LinkedWorld 우선, 없으면 FallbackLevel 사용 ────
+		// 방향 B: 모든 VP가 동일한 World를 보되 카메라만 다름
+		ULevel* Level = CurrentViewport->GetLinkedWorld()
+			? CurrentViewport->GetLinkedWorld()->GetLevel()
+			: FallbackLevel;
+
+		UWorld* CurrentWorld = CurrentViewport->GetLinkedWorld()
+			? CurrentViewport->GetLinkedWorld()
+			: FallbackWorld;
+
+		if (!Level) continue;
+
 		// ── 1. RTV/DSV + D3D11_VIEWPORT 세팅 ──────────────────────
-		// FViewport가 매 프레임 SetViewportInfo()로 RTV/DSV와 크기를 채워줌
 		const FViewportInfo& VPInfo = CurrentViewport->GetViewportInfo();
 		if (VPInfo.Width <= 0.f || VPInfo.Height <= 0.f) continue;
 		if (!VPInfo.RTV || !VPInfo.DSV) continue;
@@ -297,7 +313,6 @@ void FCore::Render()
 		D3DViewport.MinDepth = VPInfo.MinDepth;
 		D3DViewport.MaxDepth = VPInfo.MaxDepth;
 
-		// Renderer API — RTV 바인딩 + D3D11_VIEWPORT 동시 설정
 		Renderer->SetLevelRenderTarget(VPInfo.RTV, VPInfo.DSV, D3DViewport);
 
 		// ── 2. 카메라 / 행렬 ───────────────────────────────────────
@@ -312,16 +327,13 @@ void FCore::Render()
 		Frustum.ExtractFromVP(CameraViewInfo.ViewMatrix * CameraViewInfo.ProjectionMatrix);
 
 		CurrentViewport->BuildRenderCommands(this, Level, Frustum, CommandQueue);
-
 		Renderer->SubmitCommands(CommandQueue);
 		Renderer->ExecuteCommands();
+
+		// ── 4. Debug Draw ──────────────────────────────────────────
 		const FShowFlags& ShowFlags = CurrentViewport->GetShowFlags();
-
-#if IS_OBJ_VIEWER
-
-#else
-		DebugDrawManager.Flush(Renderer.get(), ShowFlags, ActiveWorld);
-#endif
+		DebugDrawManager.Flush(Renderer.get(), ShowFlags, CurrentWorld);
+		Renderer->ClearLevelRenderTarget();
 	}
 
 	Renderer->EndFrame();

@@ -11,6 +11,8 @@
 #include "Component/SubUVComponent.h"
 #include "Core/FEngine.h"
 #include "Component/TextComponent.h"
+#include "Actor/CameraPawn.h"
+
 
 // ── 생성자 ─────────────────────────────────────────────────────────────────
 
@@ -48,6 +50,14 @@ void IViewportClient::OnViewportResized(uint32 InWidth, uint32 InHeight)
 	}
 	// GetActiveCamera()를 통해 DefaultCamera/ActiveCamera 구분 없이 동일하게 반영
 	GetActiveCamera()->SetAspectRatio(static_cast<float>(InWidth) / static_cast<float>(InHeight));
+}
+
+void IViewportClient::InitializeCameraFromWorld()
+{
+
+	UCameraPawn* CameraPawn = LinkedWorld->SpawnActor<UCameraPawn>("CameraPawn");
+	SetActiveCamera(CameraPawn->GetCameraComponent());
+
 }
 
 // ── 뷰포트 정보 ────────────────────────────────────────────────────────────
@@ -111,12 +121,12 @@ void IViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WPa
 
 ULevel* IViewportClient::ResolveLevel(FCore* Core) const
 {
-	return Core ? Core->GetActiveLevel() : nullptr;
+	return LinkedWorld ? LinkedWorld->GetPersistentLevel() : Core->GetActiveLevel();
 }
 
 UWorld* IViewportClient::ResolveWorld(FCore* Core) const
-{
-	return Core ? Core->GetActiveWorld() : nullptr;
+{	
+	return LinkedWorld ? LinkedWorld : Core->GetActiveWorld();
 }
 
 void IViewportClient::BuildRenderCommands(FCore* Core, ULevel* Level, const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
@@ -135,7 +145,22 @@ void IViewportClient::HandleFileDoubleClick(const FString& FilePath)
 void IViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 {
 }
+// ======== World ==============
 
+void IViewportClient::SetLinkedWorld(UWorld* InWorld , FCore* InCore)
+{
+	if (InWorld == nullptr)
+	{
+		LinkedWorld = ResolveWorld(InCore);
+		return;
+	}
+	LInkedWorld = InWorld;
+
+}
+UWorld* IViewportClient::GetLinkedWorld()
+{
+	return LinkedWorld;
+}
 // ── FGameViewportClient ────────────────────────────────────────────────────
 
 void FGameViewportClient::Attach(FCore* Core, FRenderer* Renderer)
@@ -153,3 +178,4 @@ void FGameViewportClient::Detach(FCore* Core, FRenderer* Renderer)
 		Renderer->ClearViewportCallbacks();
 	}
 }
+
