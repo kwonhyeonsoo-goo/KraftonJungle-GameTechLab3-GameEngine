@@ -501,6 +501,9 @@ void FEditorUI::Render()
 
 		if (bVPOpen)
 		{
+
+#pragma region Render MultiViewport
+
 			// ── 메뉴바 (Gizmo 버튼) ─────────────────────────────────
 			if (ImGui::BeginMenuBar())
 			{
@@ -589,12 +592,32 @@ void FEditorUI::Render()
 					ImGui::Image(reinterpret_cast<ImTextureID>(SRV), ImVec2(R.Width, R.Height));
 				}
 
-				// 구분선 (오른쪽 / 아래)
-				ImDrawList* DL = ImGui::GetWindowDrawList();
-				if (i == 0 || i == 2) // 세로 구분선
-					DL->AddLine(ImVec2(R.TopLeftX + R.Width, R.TopLeftY), ImVec2(R.TopLeftX + R.Width, R.TopLeftY + R.Height), IM_COL32(80, 80, 80, 255), 1.f);
-				if (i == 0 || i == 1) // 가로 구분선
-					DL->AddLine(ImVec2(R.TopLeftX, R.TopLeftY + R.Height), ImVec2(R.TopLeftX + R.Width, R.TopLeftY + R.Height), IM_COL32(80, 80, 80, 255), 1.f);
+
+#pragma endregion
+
+#pragma region Viewport Splitter
+
+				ImGuiWindowFlags flags =
+					ImGuiWindowFlags_NoTitleBar |
+					ImGuiWindowFlags_NoResize |
+					ImGuiWindowFlags_NoScrollbar |
+					ImGuiWindowFlags_NoInputs |    // 입력은 기존 시스템이 처리
+					ImGuiWindowFlags_NoSavedSettings |
+					ImGuiWindowFlags_NoBringToFrontOnFocus;
+
+				ImDrawList* drawList = ImGui::GetWindowDrawList();
+				RenderSplitterBars(RootWindow, drawList);
+
+
+				//// 구분선 (오른쪽 / 아래)
+				//ImDrawList* DL = ImGui::GetWindowDrawList();
+				//if (i == 0 || i == 2) // 세로 구분선
+				//	DL->AddLine(ImVec2(R.TopLeftX + R.Width, R.TopLeftY), ImVec2(R.TopLeftX + R.Width, R.TopLeftY + R.Height), IM_COL32(80, 80, 80, 255), 1.f);
+				//if (i == 0 || i == 1) // 가로 구분선
+				//	DL->AddLine(ImVec2(R.TopLeftX, R.TopLeftY + R.Height), ImVec2(R.TopLeftX + R.Width, R.TopLeftY + R.Height), IM_COL32(80, 80, 80, 255), 1.f);
+			
+#pragma endregion
+			
 			}
 		}
 		else
@@ -923,23 +946,26 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 			PreviousMousePoint = { (float)CurrentPos.PointX, (float)CurrentPos.PointY };
 
 			// 드래그 중 재판정 없이 클릭 시점 상태 유지
-			for (auto& DraggedSplitter : DraggedSplitters) {
-				{
-					//일반 레이아웃 
-					if (DraggedSplitter == RootWindow)
-						DraggedSplitter->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
+			for (auto& DraggedSplitter : DraggedSplitters) 
+			{
+				//{
+				//	//일반 레이아웃 
+				//	if (DraggedSplitter == RootWindow)
+				//		DraggedSplitter->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
 
-					else {
-						//특정 레이아웃일때
-						if (SSplitter* lt = dynamic_cast<SSplitter*>(RootWindow->GetSideLT())) {
-							lt->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
-						}
-						if (SSplitter* rb = dynamic_cast<SSplitter*>(RootWindow->GetSideRB())) {
-							rb->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
-						}
-					}
-					UE_LOG("Dragging bar: %f, %f", DeltaMouse.X, DeltaMouse.Y);
-				}
+				//	else {
+				//		//특정 레이아웃일때
+				//		if (SSplitter* lt = dynamic_cast<SSplitter*>(RootWindow->GetSideLT())) {
+				//			lt->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
+				//		}
+				//		if (SSplitter* rb = dynamic_cast<SSplitter*>(RootWindow->GetSideRB())) {
+				//			rb->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
+				//		}
+				//	}
+				//	UE_LOG("Dragging bar: %f, %f", DeltaMouse.X, DeltaMouse.Y);
+				//}
+
+				DraggedSplitter->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
 			}
 		}
 
@@ -1016,4 +1042,37 @@ FViewport* FEditorUI::GetViewportAt(int32 Index)
 {
 	if (Index < 0 || Index >= (int32)Windows.size()) return nullptr;
 	return Windows[Index]->GetViewport();
+}
+
+void FEditorUI::RenderSplitterBars(SSplitter* splitter, ImDrawList* drawList)
+{
+	if (!splitter) return;
+
+	// 자식 스플리터도 재귀로 그리기
+	if (auto* childLT = dynamic_cast<SSplitter*>(splitter->GetSideLT()))
+		RenderSplitterBars(childLT, drawList);
+	if (auto* childRB = dynamic_cast<SSplitter*>(splitter->GetSideRB()))
+		RenderSplitterBars(childRB, drawList);
+
+
+	FRect bar = splitter->GetBarRect(); // 바 위치/크기 가져오기
+
+
+	// ImGui 좌표로 변환
+	ImVec2 barMin = ImVec2(bar.TopLeftX, bar.TopLeftY);
+	ImVec2 barMax = ImVec2(bar.TopLeftX + bar.Width, bar.TopLeftY + bar.Height);
+
+	// 마우스 호버 체크
+	ImVec2 mousePos = ImGui::GetMousePos();
+	FPoint mousePoint = { mousePos.x, mousePos.y };
+	bool bHovered = splitter->isMouseHoverOnBar(mousePoint);
+
+	// 호버면 흰색, 아니면 회색
+	ImU32 color = bHovered
+		? IM_COL32(255, 255, 255, 255)  // 흰색
+		: IM_COL32(100, 100, 100, 255); // 회색
+
+	drawList->AddRectFilled(barMin, barMax, color);
+
+	
 }

@@ -3,7 +3,7 @@
 
 #include <algorithm>
 #include "UI/Viewport.h"
-float SSplitter::BarWidth = 50.f;
+float SSplitter::BarWidth = 5.f;
 
 
 SSplitter::SSplitter()
@@ -191,7 +191,7 @@ void SSplitterV::UpdateBarPosition(FPoint detlaCoord)
 	float totalWidth = SideLT->GetWindowSize().Width + SideRB->GetWindowSize().Width;
 	if (totalWidth > 0.f)
 		SplitRatio += detlaCoord.PointX / totalWidth;
-	SplitRatio = max(0.1f, min(0.9f, SplitRatio));
+	SplitRatio = max(0.01f, min(0.99f, SplitRatio));
 
 	UpdateNewSize(Rect);
 
