@@ -32,7 +32,7 @@ void FEditorViewportController::Initialize(UCameraComponent* InCameraComp, FInpu
 
 void FEditorViewportController::Tick(float DeltaTime)
 {
-	CurrentDeltaTime = DeltaTime;
+	if(bActive)	CurrentDeltaTime = DeltaTime;
 }
 
 void FEditorViewportController::SetFocus(USceneComponent* InFocusTarget)

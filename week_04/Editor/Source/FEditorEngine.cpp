@@ -188,22 +188,15 @@ void FEditorEngine::PostInitialize()
 }
 
 
-
-
 void FEditorEngine::Tick(float DeltaTime)
 {
-	
 	int32 FocusedIndex = EditorUI.GetHoveredViewportIndex();
 
-	if (FocusedIndex >= 0 and FocusedIndex < 4)
+	for (int i = 0; i < 4; i++)
 	{
-		ViewportControllerArray[FocusedIndex]->Tick(DeltaTime);
-
+		bool bShouldBeActive = (i == FocusedIndex);
+		ViewportControllerArray[i]->SetActive(bShouldBeActive);
+		ViewportControllerArray[i]->Tick(DeltaTime);
 	}
-
 }
 
-//FEditorViewportController* FEditorEngine::GetViewportController()
-//{
-//	return &ViewportController;
-//}

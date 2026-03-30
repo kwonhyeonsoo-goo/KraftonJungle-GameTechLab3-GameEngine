@@ -44,6 +44,6 @@ private:
 
 	float CurrentDeltaTime = 0.0f; // 콜백에서 DeltaTime 쓰기 위해 보관
 
-	bool bActive = true;
-
+	bool bActive = {false};
+	
 };
