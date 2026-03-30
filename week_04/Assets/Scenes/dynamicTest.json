@@ -1,13 +1,13 @@
 {
   "Camera": {
     "Position": [
-      -33.87173080444336,
-      2.3119211196899414,
-      14.971961975097656
+      -26.884946823120117,
+      2.8134474754333496,
+      10.772481918334961
     ],
     "Rotation": [
-      8.799996376037598,
-      -24.60001564025879
+      0.0,
+      -15.0
     ]
   },
   "Materials": [
@@ -25,21 +25,21 @@
       "Billboard": true,
       "Class": "AStaticMeshActor",
       "ComponentUUIDs": [
-        11,
-        12
+        7,
+        8
       ],
       "Location": [
-        -21.978443145751953,
-        2.7725143432617188,
-        8.354545593261719
+        -6.187598705291748,
+        0.3299158215522766,
+        1.7818090915679932
       ],
       "MaterialOverrides": [
         {
-          "MapKd": "\\Assets\\Meshes\\12213_bird_diffuse.jpg",
-          "Name": "12213_bird"
+          "MapKd": "/Assets/Textures/DefaultTexture.png",
+          "Name": "M_Default_Texture"
         }
       ],
-      "ObjStaticMeshAsset": "\\Assets\\Meshes\\Dorumon.obj",
+      "ObjStaticMeshAsset": "\\Assets\\Meshes\\12213_Bird_v1_l3.obj",
       "Rotation": [
         -0.0,
         0.0,
@@ -57,7 +57,7 @@
         1.0,
         1.0
       ],
-      "UUID": 10
+      "UUID": 6
     }
   }
 }

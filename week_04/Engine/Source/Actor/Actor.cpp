@@ -222,11 +222,12 @@ void AActor::Serialize(FArchive& Ar)
 			TArray<FString> TextureNames;
 			for (auto Mat : SMComp->GetOverrideMaterials())
 			{
-				if (Mat && !Mat->GetOriginName().empty())
-				{
-					MaterialNames.push_back(Mat->GetOriginName());
-					TextureNames.push_back(Mat->GetMaterialTexture()->FilePath);
-				}
+				MaterialNames.push_back(Mat ? Mat->GetOriginName() : "");
+
+				FString TexPath = "";
+				if (Mat && Mat->GetMaterialTexture())
+					TexPath = Mat->GetMaterialTexture()->FilePath;
+				TextureNames.push_back(TexPath);
 			}
 			Ar.SerializeMaterialTexture("MaterialOverrides", MaterialNames, TextureNames);
 		}
