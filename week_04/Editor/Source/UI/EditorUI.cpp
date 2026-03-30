@@ -33,11 +33,9 @@
 
 #include "UI/Window/Splitter.h"
 
-enum class EFileDialogType
-{
-	Open,
-	Save
-};
+
+#include "Utility/FileIO.h"
+
 
 std::string GetFilePathUsingDialog(EFileDialogType Type)
 {
@@ -64,8 +62,6 @@ std::string GetFilePathUsingDialog(EFileDialogType Type)
 	}
 	return "";
 }
-
-#include "Utility/FileIO.h"
 
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
