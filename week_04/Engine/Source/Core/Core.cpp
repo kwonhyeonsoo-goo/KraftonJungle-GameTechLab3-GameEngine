@@ -264,30 +264,30 @@ void FCore::Render()
 	// ── SkySphere 카메라 위치 주입 ─────────────────────────────────────
 	// VP[0]의 LinkedWorld 또는 FallbackWorld 기준
 	// VP[0]의 카메라 위치로 SkySphere 이동
-	if (!ViewportClientArray.empty() && ViewportClientArray[0])
-	{
-		IViewportClient* PrimaryVP = ViewportClientArray[0];
-		UWorld* PrimaryWorld = PrimaryVP->GetLinkedWorld()
-			? PrimaryVP->GetLinkedWorld()
-			: FallbackWorld;
+	//if (!ViewportClientArray.empty() && ViewportClientArray[0])
+	//{
+	//	IViewportClient* PrimaryVP = ViewportClientArray[0];
+	//	UWorld* PrimaryWorld = PrimaryVP->GetLinkedWorld()
+	//		? PrimaryVP->GetLinkedWorld()
+	//		: FallbackWorld;
 
-		const FCameraViewInfo PrimaryViewInfo = PrimaryVP->GetCameraViewInfo();
-		if (ULevel* PrimaryLevel = PrimaryWorld->GetLevel())
-		{
-			for (AActor* Actor : PrimaryLevel->GetActors())
-			{
-				if (ASkySphereActor* Sky = dynamic_cast<ASkySphereActor*>(Actor))
-				{
-					Sky->SetCameraPosition(PrimaryViewInfo.Position);
-				}
-			}
-		}
-	}
-
+	//	const FCameraViewInfo PrimaryViewInfo = PrimaryVP->GetCameraViewInfo();
+	//	if (ULevel* PrimaryLevel = PrimaryWorld->GetLevel())
+	//	{
+	//		for (AActor* Actor : PrimaryLevel->GetActors())
+	//		{
+	//			if (ASkySphereActor* Sky = dynamic_cast<ASkySphereActor*>(Actor))
+	//			{
+	//				Sky->SetCameraPosition(PrimaryViewInfo.Position);
+	//			}
+	//		}
+	//	}
+	//}
+	uint32 temp = 0;
 	for (IViewportClient* CurrentViewport : ViewportClientArray)
 	{
 		if (!CurrentViewport) continue;
-
+		
 		// ── 0. VP의 LinkedWorld 우선, 없으면 FallbackLevel 사용 ────
 		// 방향 B: 모든 VP가 동일한 World를 보되 카메라만 다름
 		ULevel* Level = CurrentViewport->GetLinkedWorld()

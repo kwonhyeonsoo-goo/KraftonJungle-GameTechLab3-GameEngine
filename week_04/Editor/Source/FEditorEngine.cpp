@@ -117,7 +117,7 @@ void FEditorEngine::PostInitialize()
 	// [2] Side — 오른쪽에서 왼쪽으로
 	{
 		UCameraComponent* Cam = SceneViewportClients[2]->GetActiveCamera();
-		Cam->SetPosition({ 100.f, 0.f, 0.f });
+		Cam->SetPosition({ 100.f, 0.f, 2.f });
 		Cam->SetRotation(180.f, 0.f);    // 왼쪽 방향
 		Cam->SetOrthographic(true);
 		Cam->SetOrthoWidth(15.f);
@@ -128,7 +128,7 @@ void FEditorEngine::PostInitialize()
 	// [3] Bottom — 아래에서 위로 올려다봄 (Front 뷰로 대체하는 경우 많음)
 	{
 		UCameraComponent* Cam = SceneViewportClients[3]->GetActiveCamera();
-		Cam->SetPosition({ 0.f, -100.f, 0.f });
+		Cam->SetPosition({ 0.f, -100.f, 2.f });
 		Cam->SetRotation(90.f, 0.f);     // 앞쪽 방향
 		Cam->SetOrthographic(true);
 		Cam->SetOrthoWidth(15.f);
@@ -149,7 +149,7 @@ void FEditorEngine::PostInitialize()
 			if (!Path.ends_with(".obj"))
 			{
 				MessageBoxW(
-					nullptr,
+					nullptr,\
 					L"Obj 파일만 지원합니다.",
 					L"Error",
 					MB_OK | MB_ICONWARNING

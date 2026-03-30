@@ -26,7 +26,7 @@ void FEditorViewportController::ProcessCameraInput(float DeltaTime)
 
 	if (bRMB)
 	{
-		const float Speed = 10.f;  // 또는 CameraComponent에서 가져오기
+		const float Speed = CameraComponent->GetSpeed();  // 또는 CameraComponent에서 가져오기
 		if (InputManager->IsKeyDown('W')) CameraComponent->MoveForward(Speed * DeltaTime);
 		if (InputManager->IsKeyDown('S')) CameraComponent->MoveForward(-Speed * DeltaTime);
 		if (InputManager->IsKeyDown('D')) CameraComponent->MoveRight(Speed * DeltaTime);
