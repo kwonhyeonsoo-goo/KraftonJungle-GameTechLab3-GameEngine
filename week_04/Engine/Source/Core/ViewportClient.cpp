@@ -1,7 +1,6 @@
 #include "ViewportClient.h"
 #include "World/World.h"
 #include "Core/Core.h"
-#include "Input/InputManager.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/RenderCommand.h"
 #include "Renderer/Material.h"
@@ -87,32 +86,6 @@ void IViewportClient::Detach(FCore* Core, FRenderer* Renderer)
 
 void IViewportClient::Tick(FCore* Core, float DeltaTime)
 {
-	if (!Core)
-	{
-		return;
-	}
-
-	FInputManager* InputManager = Core->GetInputManager();
-	if (!InputManager)
-	{
-		return;
-	}
-
-	UCameraComponent* Camera = GetActiveCamera();
-
-	if (InputManager->IsKeyDown('W')) Camera->MoveForward(DeltaTime);
-	if (InputManager->IsKeyDown('S')) Camera->MoveForward(-DeltaTime);
-	if (InputManager->IsKeyDown('D')) Camera->MoveRight(DeltaTime);
-	if (InputManager->IsKeyDown('A')) Camera->MoveRight(-DeltaTime);
-	if (InputManager->IsKeyDown('E')) Camera->MoveUp(DeltaTime);
-	if (InputManager->IsKeyDown('Q')) Camera->MoveUp(-DeltaTime);
-
-	if (InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
-	{
-		const float DeltaX = InputManager->GetMouseDeltaX();
-		const float DeltaY = InputManager->GetMouseDeltaY();
-		Camera->Rotate(DeltaX * Camera->GetSensitivity(), -DeltaY * Camera->GetSensitivity());
-	}
 }
 
 void IViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
