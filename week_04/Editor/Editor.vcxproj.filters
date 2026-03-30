@@ -28,6 +28,9 @@
     <Filter Include="ThirdParty\imgui">
       <UniqueIdentifier>{f537fb77-e6d2-da20-075d-83fe43a0b307}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\UI\Window">
+      <UniqueIdentifier>{6c4d11d6-3451-4bea-bd7f-a6fd56345fac}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\FEditorEngine.cpp">
@@ -103,6 +106,12 @@
       <Filter>ThirdParty\imgui</Filter>
     </ClCompile>
     <ClCompile Include="EditorGlobals.cpp" />
+    <ClCompile Include="Source\UI\Window\Window.cpp">
+      <Filter>Source\UI\Window</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\Window\Splitter.cpp">
+      <Filter>Source\UI\Window</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\FEditorEngine.h">
@@ -178,6 +187,12 @@
       <Filter>ThirdParty\imgui</Filter>
     </ClInclude>
     <ClInclude Include="EditorGlobals.h" />
+    <ClInclude Include="Source\UI\Window\Window.h">
+      <Filter>Source\UI\Window</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\UI\Window\Splitter.h">
+      <Filter>Source\UI\Window</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="ThirdParty\imgui\imgui.natstepfilter">
