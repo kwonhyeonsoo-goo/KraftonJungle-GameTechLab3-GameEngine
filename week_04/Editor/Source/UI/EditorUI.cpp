@@ -401,16 +401,14 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 
 	//RootWindow 설정
 
-	RootWindow = new SSplitterH();	/* | */
+	/*
+	RootWindow = new SSplitterH();	//가로 splitter bar
 
 	SSplitterV* sideUP = new SSplitterV();	SSplitterV* sideBottom = new SSplitterV();
 
 	SWindow* sideLeftUP, * sideLeftBottom, * sideRightUp, * sideRightBottom;
 
 	sideLeftUP = new SWindow; sideLeftBottom = new SWindow; sideRightUp = new SWindow; sideRightBottom = new SWindow;
-
-	//sideLeftUP->Viewport = &Viewports[0]; sideRightUp->Viewport = &Viewports[1];
-	//sideLeftBottom->Viewport = &Viewports[2]; sideRightBottom->Viewport = &Viewports[3];
 
 	Windows.push_back(sideLeftUP); Windows.push_back(sideRightUp); Windows.push_back(sideLeftBottom); Windows.push_back(sideRightBottom);
 
@@ -427,6 +425,32 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 
 	FRect rect = { 0,0,1000,1000 };
 	RootWindow->Initialize(rect);
+
+	*/
+	RootWindow = new SSplitterV();	
+
+	SSplitterH* sideRight1 = new SSplitterH();	SSplitterH* sideRight2 = new SSplitterH();
+
+	SWindow* side1, * side2, * side3, * side4;	//왼쪽, 오른쪽 위, 오른쪽 중간, 오른쪽 하단
+
+	side1 = new SWindow; side2 = new SWindow; side3 = new SWindow; side4 = new SWindow;
+
+	Windows.push_back(side1); Windows.push_back(side2); Windows.push_back(side3); Windows.push_back(side4);
+
+	// 각 리프 노드에 FViewport 생성
+	side1->SetViewport(std::make_unique<FViewport>());
+	side2->SetViewport(std::make_unique<FViewport>());
+	side3->SetViewport(std::make_unique<FViewport>());
+	side4->SetViewport(std::make_unique<FViewport>());
+
+	sideRight1->SetSideLT(side2); sideRight1->SetSideRB(sideRight2);
+	sideRight2->SetSideLT(side3); sideRight2->SetSideRB(side4);
+
+	RootWindow->SetSideLT(side1); RootWindow->SetSideRB(sideRight1);
+
+	FRect rect = { 0,0,1000,1000 };
+	RootWindow->Initialize(rect);
+	sideRight1->SetRatio(0.3f);
 }
 
 // ── Render ──────────────────────────────────────────────────────────────────
@@ -535,27 +559,6 @@ void FEditorUI::Render()
 			CachedViewportScreenPos = { Origin.x, Origin.y }; // ImVec2 멤버변수
 			const FRect NewRect = { Origin.x,Origin.y,Total.y, Total.x };
 			RootWindow->UpdateNewSize(NewRect);
-
-
-
-
-			// 4개 영역 정의 [좌상, 우상, 좌하, 우하]
-			struct Region { float X, Y, W, H; };
-			//const Region Regions[4] =
-			//{
-			//	{ Origin.x,         Origin.y,         HalfW, HalfH },
-			//	{ Origin.x + HalfW, Origin.y,         HalfW, HalfH },
-			//	{ Origin.x,         Origin.y + HalfH, HalfW, HalfH },
-			//	{ Origin.x + HalfW, Origin.y + HalfH, HalfW, HalfH },
-			//};
-
-			const Region Regions[4] =
-			{
-				{ Windows[0]->GetWindowSize().TopLeftX, Windows[0]->GetWindowSize().TopLeftY, Windows[0]->GetWindowSize().Width, Windows[0]->GetWindowSize().Height },
-				{ Windows[1]->GetWindowSize().TopLeftX, Windows[1]->GetWindowSize().TopLeftY, Windows[1]->GetWindowSize().Width, Windows[1]->GetWindowSize().Height },
-				{ Windows[2]->GetWindowSize().TopLeftX, Windows[2]->GetWindowSize().TopLeftY, Windows[2]->GetWindowSize().Width, Windows[2]->GetWindowSize().Height },
-				{ Windows[3]->GetWindowSize().TopLeftX, Windows[3]->GetWindowSize().TopLeftY, Windows[3]->GetWindowSize().Width, Windows[3]->GetWindowSize().Height },
-			};
 
 			const ImVec2 MousePos = ImGui::GetMousePos();
 
@@ -940,7 +943,7 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 			}
 		}
 
-		if(RootWindow->isMouseHoverOnBar({ (float)Pt.x, (float)Pt.y }))
+		if(RootWindow->IsAnyBarHovered({ (float)Pt.x, (float)Pt.y }))
 			SetCursor(LoadCursor(NULL, IDC_HAND)); // 손가락 모양으로 변경
 	}
 
