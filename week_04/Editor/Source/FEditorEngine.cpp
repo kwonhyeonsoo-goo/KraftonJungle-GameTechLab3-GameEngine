@@ -55,6 +55,7 @@ void FEditorEngine::CreateViewportClients()
 	{
 		auto VP = std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
 		SceneViewportClients[i] = VP.get();
+		
 		ViewportClientArray.push_back(std::move(VP));
 	}
 }
@@ -85,7 +86,7 @@ void FEditorEngine::PostInitialize()
 	// ── EditorPawn — Perspective 뷰포트(0번)에 연결 ──────────────────
 	EditorPawn = FObjectFactory::ConstructObject<AEditorCameraPawn>(nullptr, "EditorCameraPawn");
 	EditorPawn->Initialize();
-
+	
 	UCameraComponent* PerspCam = EditorPawn->GetCameraComponent();
 	PerspCam->SetPosition({ -10.f, 0.f, 5.f });
 	PerspCam->SetRotation(0.f, -15.f);
@@ -101,7 +102,7 @@ void FEditorEngine::PostInitialize()
 		Cam->SetPosition({ 0.f, 0.f, 100.f });
 		Cam->SetRotation(0.f, -89.9f);   // 거의 수직 아래
 		Cam->SetOrthographic(true);
-		Cam->SetOrthoWidth(25.f);
+		Cam->SetOrthoWidth(15.f);
 	}
 
 	// [2] Side — 오른쪽에서 왼쪽으로
@@ -110,7 +111,7 @@ void FEditorEngine::PostInitialize()
 		Cam->SetPosition({ 100.f, 0.f, 0.f });
 		Cam->SetRotation(180.f, 0.f);    // 왼쪽 방향
 		Cam->SetOrthographic(true);
-		Cam->SetOrthoWidth(25.f);
+		Cam->SetOrthoWidth(15.f);
 	}
 
 	// [3] Bottom — 아래에서 위로 올려다봄 (Front 뷰로 대체하는 경우 많음)
@@ -119,14 +120,15 @@ void FEditorEngine::PostInitialize()
 		Cam->SetPosition({ 0.f, -100.f, 0.f });
 		Cam->SetRotation(90.f, 0.f);     // 앞쪽 방향
 		Cam->SetOrthographic(true);
-		Cam->SetOrthoWidth(25.f);
+		Cam->SetOrthoWidth(15.f);
 	}
 
 	// ── ViewportController — Perspective 뷰포트만 제어 ───────────────
 	ViewportController.Initialize(
 		PerspCam,
 		Core->GetInputManager(),
-		Core->GetEnhancedInputManager());
+		Core->GetEnhancedInputManager()
+	);
 
 #if IS_OBJ_VIEWER
 	if (Core && Core->GetActiveLevel())
