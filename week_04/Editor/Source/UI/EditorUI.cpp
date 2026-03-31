@@ -76,7 +76,7 @@ void FEditorUI::LinkViewportClient(int32 Index, IViewportClient* InClient)
 		Viewports.resize(Index + 1);
 	}
 	Viewports[Index].SetLinkedViewportClient(InClient);*/
-	if (Index < 0 || Index >= (int32)Windows.size()) return;
+	if (Index < 0 || Index >= static_cast<int32>(Windows.size())) return;
 	GetViewportAt(Index)->SetLinkedViewportClient(InClient);
 }
 
@@ -135,6 +135,29 @@ IViewportClient* FEditorUI::GetViewportClientAt(int32 Index) const
 	FViewport* VP = Windows[Index]->GetViewport();
 	if (!VP) return nullptr;
 	return VP->GetLinkedViewportClient();
+}
+
+// ── Destructor ──────────────────────────────────────────────────────────────
+
+FEditorUI::~FEditorUI()
+{
+	// SWindow 삭제 (리프 노드)
+	for (SWindow* Win : Windows)
+		delete Win;
+	Windows.clear();
+
+	// RootWindow 중간 SSplitter 노드 삭제
+	// 트리 구조: RootWindow(SSplitterH) -> sideUP(SSplitterV), sideBottom(SSplitterV)
+	// SWindow는 이미 위에서 삭제했으므로 SSplitter 노드만 삭제
+	if (RootWindow)
+	{
+		delete RootWindow->GetSideLT();  // sideUP
+		delete RootWindow->GetSideRB();  // sideBottom
+		delete RootWindow;
+		RootWindow = nullptr;
+	}
+
+	DraggedSplitters.clear();
 }
 
 // ── Initialize ─────────────────────────────────────────────────────────────
@@ -382,7 +405,7 @@ void FEditorUI::AttachToRenderer(FRenderer* InRenderer)
 						if (PrimitiveComponent->GetPrimitive())
 						{
 							Renderer->RenderOutline(
-								PrimitiveComponent->GetPrimitive()->GetMeshData(),	PrimitiveComponent->GetWorldTransform()
+								PrimitiveComponent->GetPrimitive()->GetMeshData(), PrimitiveComponent->GetWorldTransform()
 							);
 						}
 
@@ -392,9 +415,9 @@ void FEditorUI::AttachToRenderer(FRenderer* InRenderer)
 
 			const float AxisLength = 10000.0f;
 			const FVector Origin = { 0.0f, 0.0f, 0.0f };
-				
-			
-	});
+
+
+		});
 
 	LoadEditorSettings();
 }
@@ -454,7 +477,9 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 
 #pragma region MultiViewport Layout
 	//RootWindow 설정
+
 	SetViewportLayout(ViewportLayoutSetting);
+
 
 #pragma endregion
 }
@@ -500,6 +525,7 @@ void FEditorUI::Render()
 	// ── 4분할 씬 뷰포트 ─────────────────────────────────────────────────
 	// 하나의 ImGui 창 안에 4개의 씬을 배치
 	// Gizmo 버튼은 Viewports[0](주 뷰포트) 기준
+
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 		const bool bVPOpen = ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoScrollbar);
@@ -510,16 +536,19 @@ void FEditorUI::Render()
 
 #pragma region Render MultiViewport
 
+#if !IS_OBJ_VIEWER
 			// ── 메뉴바 (Gizmo 버튼) ─────────────────────────────────
 			if (ImGui::BeginMenuBar())
 			{
-				FEditorViewportClient* EditorVP =
-					dynamic_cast<FEditorViewportClient*>(GetPrimaryViewportClient());
 
-				if (EditorVP)
+
+				//FEditorViewportClient* EditorVP = dynamic_cast<FEditorViewportClient*>(GetPrimaryViewportClient());
+				FEditorViewportClient* EditorVP = dynamic_cast<FEditorViewportClient*>(GetFocusedViewportClient());
+				if (EditorVP != nullptr)
 				{
 					ImGui::Separator();
 					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, ImGui::GetStyle().ItemSpacing.y));
+
 
 					auto GizmoBtn = [&](const char* Label, EGizmoMode Mode)
 						{
@@ -532,14 +561,44 @@ void FEditorUI::Render()
 								ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.f, 0.f, 1.f, 1.f));	//얜 뭐지
 							}
 							if (ImGui::Button(Label, ImVec2(H, H)))
-								EditorVP->SetGizmoMode(Mode);
+							{
+								for (auto& window : Windows)
+								{
+
+									FEditorViewportClient* EditorVP = dynamic_cast<FEditorViewportClient*>(window->GetViewport()->GetLinkedViewportClient());
+									EditorVP->SetGizmoMode(Mode);
+
+								}
+
+							}
 							if (bSel) ImGui::PopStyleColor(3);
 						};
+
 
 					GizmoBtn("T", EGizmoMode::Location);
 					GizmoBtn("R", EGizmoMode::Rotation);
 					GizmoBtn("S", EGizmoMode::Scale);
+
 					ImGui::PopStyleVar();
+					// ── Viewport 모드 토글 버튼 ──────────────────────────
+					ImGui::SameLine();
+					ImGui::Separator();
+					ImGui::SameLine();
+					{
+						const bool bIsQuad = (ViewportMode == FViewportMode::Quad);
+						const float H = ImGui::GetFrameHeight();
+
+						if (bIsQuad)
+						{
+							ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.45f, 0.85f, 1.f));
+							ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.55f, 0.95f, 1.f));
+							ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.20f, 0.40f, 0.80f, 1.f));
+						}
+						if (ImGui::Button(bIsQuad ? "4" : "1", ImVec2(H, H)))
+							ViewportMode = bIsQuad ? FViewportMode::Single : FViewportMode::Quad;
+						if (bIsQuad)
+							ImGui::PopStyleColor(3);
+					}
 
 					// RenderMode 콤보 — 오른쪽 정렬
 					float ComboW = 120.f;
@@ -551,10 +610,11 @@ void FEditorUI::Render()
 						EditorVP->SetRenderMode(Mode);
 					}
 				}
+
 				ImGui::EndMenuBar();
+
 			}
-
-
+#endif
 			// ── 4분할 영역 계산 ──────────────────────────────────────
 			const ImVec2 Origin = ImGui::GetCursorScreenPos();
 			const ImVec2 Total = ImGui::GetContentRegionAvail();
@@ -567,17 +627,44 @@ void FEditorUI::Render()
 			ImVec2 windowPos = ImGui::GetWindowPos();
 			CachedViewportScreenPos = { Origin.x, Origin.y }; // ImVec2 멤버변수
 			const FRect NewRect = { Origin.x,Origin.y,Total.y, Total.x };
-			RootWindow->UpdateNewSize(NewRect);
+
+			// Quad 모드일 때만 스플리터 트리 크기 계산
+			if (ViewportMode == FViewportMode::Quad)
+			{
+				RootWindow->UpdateNewSize(NewRect);
+			}
+
+			// Single 모드 시 비활성 뷰포트(1~3) hover/focus 초기화
+			if (ViewportMode == FViewportMode::Single)
+			{
+				for (int i = 1; i < static_cast<int>(Windows.size()); i++)
+				{
+					FViewport* InactiveVP = Windows[i]->GetViewport();
+					InactiveVP->SetHovered(false);
+					InactiveVP->SetFocused(false);
+				}
+			}
 
 			const ImVec2 MousePos = ImGui::GetMousePos();
 
-			for (int i = 0; i < static_cast<int>(Windows.size()) && i < 4; i++)
+			// Single: Windows[0]만, Quad: 4개 모두
+			const int32 ActiveCount = (ViewportMode == FViewportMode::Single) ? 1 : static_cast<int32>(Windows.size());
+
+			for (int i = 0; i < ActiveCount && i < 4; i++)
 			{
-				/*const Region& R = Regions[i];
-				FViewport& VP = Viewports[i];*/
 				SWindow* Win = Windows[i];
-				FViewport* VP = Win->GetViewport();         // ← SWindow 소유
-				const FRect& R = Win->GetWindowSize(); // ← 같은 객체에서
+				FViewport* VP = Win->GetViewport();
+
+				// Single 모드: 전체 영역을 직접 사용 / Quad 모드: 스플리터 계산 결과 사용
+				FRect R;
+				if (ViewportMode == FViewportMode::Single)
+				{
+					R = { Origin.x, Origin.y, Total.y, Total.x };
+				}
+				else
+				{
+					R = Win->GetWindowSize();
+				}
 
 				// hover/focus 계산
 				const ImVec2 RMin(R.TopLeftX, R.TopLeftY);
@@ -765,32 +852,24 @@ void FEditorUI::Render()
 
 
 
-			
+
 			}
 #pragma region Viewport Splitter
 
-			ImGuiWindowFlags flags =
-				ImGuiWindowFlags_NoTitleBar |
-				ImGuiWindowFlags_NoResize |
-				ImGuiWindowFlags_NoScrollbar |
-				ImGuiWindowFlags_NoInputs |    // 입력은 기존 시스템이 처리
-				ImGuiWindowFlags_NoSavedSettings |
-				ImGuiWindowFlags_NoBringToFrontOnFocus;
-			ImDrawList* drawList = ImGui::GetWindowDrawList();
 
+			// Quad 모드에서만 스플리터 바 렌더링
+			if (ViewportMode == FViewportMode::Quad)
+			{
+				ImGuiWindowFlags flags =
+					ImGuiWindowFlags_NoTitleBar |
+					ImGuiWindowFlags_NoResize |
+					ImGuiWindowFlags_NoScrollbar |
+					ImGuiWindowFlags_NoInputs |    // 입력은 기존 시스템이 처리
+					ImGuiWindowFlags_NoSavedSettings |
+					ImGuiWindowFlags_NoBringToFrontOnFocus;
+				ImDrawList* drawList = ImGui::GetWindowDrawList();
+				RenderSplitterBars(RootWindow, drawList);
 
-			//hovered bar 그리기
-			RenderSplitterBars(RootWindow, drawList);
-
-			//dragged bar 그리기
-			for (SSplitter* splitterBar : DraggedSplitters) {
-				FRect bar = splitterBar->GetBarRect();
-				ImVec2 barMin = ImVec2(bar.TopLeftX, bar.TopLeftY);
-				ImVec2 barMax = ImVec2(bar.TopLeftX + bar.Width, bar.TopLeftY + bar.Height);
-				// 호버면 흰색, 아니면 회색
-				ImU32 color = IM_COL32(255, 255, 255, 255);
-
-				drawList->AddRectFilled(barMin, barMax, color);
 			}
 #pragma endregion
 		}
@@ -912,7 +991,7 @@ void FEditorUI::Render()
 				ShowFlagCheckbox("UUID", EEngineShowFlags::SF_UUID);
 				ShowFlagCheckbox("Debug Draw", EEngineShowFlags::SF_DebugDraw);
 				ShowFlagCheckbox("Collision", EEngineShowFlags::SF_Collision);
-							ImGui::SeparatorText("Grid");
+				ImGui::SeparatorText("Grid");
 				bool bShowGrid = EditorVP->IsGridVisible();
 				if (ImGui::Checkbox("Show Grid", &bShowGrid))
 				{
@@ -1116,8 +1195,8 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 
 	if (Msg == WM_LBUTTONDOWN)
 	{
-
-		RootWindow->AddIfMouseHoverOnBar({ (float)Pt.x, (float)Pt.y }, DraggedSplitters);
+		if (ViewportMode == FViewportMode::Quad)
+			RootWindow->AddIfMouseHoverOnBar({ (float)Pt.x, (float)Pt.y }, DraggedSplitters);
 
 		if (ViewportLayoutSetting == ViewportLayout::_2x2) {	//bar가 동시에 움직이게
 			SSplitter* addedSplitter = nullptr;
@@ -1148,20 +1227,25 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 	}
 	else if (Msg == WM_MOUSEMOVE)
 	{
-		if (bIsCliked)
+		if (bIsCliked && ViewportMode == FViewportMode::Quad)
 		{
 			DeltaMouse.X = CurrentPos.PointX - PreviousMousePoint.X;
 			DeltaMouse.Y = CurrentPos.PointY - PreviousMousePoint.Y;
 			PreviousMousePoint = { (float)CurrentPos.PointX, (float)CurrentPos.PointY };
 
 			// 드래그 중 재판정 없이 클릭 시점 상태 유지
-			for (auto& DraggedSplitter : DraggedSplitters) 
+			for (auto& DraggedSplitter : DraggedSplitters)
 			{
 				DraggedSplitter->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
 			}
 		}
+		else if (bIsCliked)
+		{
+			// Single 모드에서도 PreviousMousePoint는 갱신
+			PreviousMousePoint = { (float)CurrentPos.PointX, (float)CurrentPos.PointY };
+		}
 
-		if(RootWindow->IsAnyBarHovered({ (float)Pt.x, (float)Pt.y }))
+		if (ViewportMode == FViewportMode::Quad && RootWindow->IsAnyBarHovered({ (float)Pt.x, (float)Pt.y }))
 			SetCursor(LoadCursor(NULL, IDC_HAND)); // 손가락 모양으로 변경
 	}
 
@@ -1314,8 +1398,7 @@ void FEditorUI::RenderSplitterBars(SSplitter* splitter, ImDrawList* drawList)
 
 		
 
-	
-}
+
 
 void FEditorUI::SetViewportLayout(ViewportLayout layout)
 {
