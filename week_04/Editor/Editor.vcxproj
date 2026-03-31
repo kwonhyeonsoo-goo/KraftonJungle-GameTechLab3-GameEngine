@@ -211,7 +211,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="EditorGlobals.cpp" />
+    <ClCompile Include="Source\EditorGlobals.cpp" />
     <ClCompile Include="Source\Controller\OrthoViewportController.cpp" />
     <ClCompile Include="Source\FEditorEngine.cpp" />
     <ClCompile Include="Source\main.cpp" />
@@ -241,7 +241,7 @@
     <ClCompile Include="Source\UI\Window\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EditorGlobals.h" />
+    <ClInclude Include="Source\EditorGlobals.h" />
     <ClInclude Include="Source\Controller\OrthoViewportController.h" />
     <ClInclude Include="Source\FEditorEngine.h" />
     <ClInclude Include="Source\Axis\AxisRenderer.h" />

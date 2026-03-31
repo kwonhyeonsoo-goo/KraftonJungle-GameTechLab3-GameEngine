@@ -1,6 +1,7 @@
 #pragma once
 #include <d3d11.h>
 #include <CoreMinimal.h>
+#include "Core/ShowFlags.h"
 
 class FRenderer;
 class IViewportClient;
@@ -52,4 +53,5 @@ private:
 	bool   bVisible = false;
 
 	IViewportClient* LinkedViewportClient = nullptr;
+	FShowFlags ShowFlags;
 };

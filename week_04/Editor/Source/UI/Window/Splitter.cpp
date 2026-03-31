@@ -113,14 +113,14 @@ void SSplitterH::UpdateNewSize(FRect newRect)
 	Bar.Height = SSplitter::BarWidth;
 	Bar.Width = newRect.Width;
 	Bar.TopLeftX = newRect.TopLeftX;
-	Bar.TopLeftY = newRect.TopLeftY + splitHeight - halfBar;
+	Bar.TopLeftY = newRect.TopLeftY + splitHeight;
 
 	if (SideLT) {
 		FRect rectLT;
 		rectLT.TopLeftX = newRect.TopLeftX;
 		rectLT.TopLeftY = newRect.TopLeftY;
 		rectLT.Width = newRect.Width;
-		rectLT.Height = max(1.f, splitHeight - halfBar);  // 바 절반만큼 빼기
+		rectLT.Height = max(1.f, splitHeight+ halfBar);  
 		SideLT->UpdateNewSize(rectLT);
 	}
 	if (SideRB) {
@@ -128,7 +128,7 @@ void SSplitterH::UpdateNewSize(FRect newRect)
 		rectRB.TopLeftX = newRect.TopLeftX;
 		rectRB.TopLeftY = newRect.TopLeftY + splitHeight + halfBar;  // 바 절반만큼 밀기
 		rectRB.Width = newRect.Width;
-		rectRB.Height = max(1.f, newRect.Height - splitHeight - halfBar);
+		rectRB.Height = max(1.f, newRect.Height - splitHeight);
 		SideRB->UpdateNewSize(rectRB);
 	}
 }
@@ -219,14 +219,14 @@ void SSplitterV::UpdateNewSize(FRect newRect)
 
 	Bar.Width = SSplitter::BarWidth;
 	Bar.Height = newRect.Height;
-	Bar.TopLeftX = newRect.TopLeftX + splitWidth - halfBar;
+	Bar.TopLeftX = newRect.TopLeftX + splitWidth;
 	Bar.TopLeftY = newRect.TopLeftY;
 
 	if (SideLT) {
 		FRect rectLT;
 		rectLT.TopLeftX = newRect.TopLeftX;
 		rectLT.TopLeftY = newRect.TopLeftY;
-		rectLT.Width = max(1.f, splitWidth - halfBar);   // 바 절반만큼 빼기
+		rectLT.Width = max(1.f, splitWidth - Bar.Width + halfBar);   // 바 절반만큼 빼기
 		rectLT.Height = newRect.Height;
 		SideLT->UpdateNewSize(rectLT);
 	}
@@ -234,7 +234,7 @@ void SSplitterV::UpdateNewSize(FRect newRect)
 		FRect rectRB;
 		rectRB.TopLeftX = newRect.TopLeftX + splitWidth + halfBar;  // 바 절반만큼 밀기
 		rectRB.TopLeftY = newRect.TopLeftY;
-		rectRB.Width = max(1.f, newRect.Width - splitWidth - halfBar);
+		rectRB.Width = max(1.f, newRect.Width - splitWidth );
 		rectRB.Height = newRect.Height;
 		SideRB->UpdateNewSize(rectRB);
 	}

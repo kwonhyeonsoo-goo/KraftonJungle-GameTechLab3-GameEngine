@@ -18,6 +18,7 @@ public:
 
 	FMaterial* GetMaterial(int32 SlotIndex) const { return OverrideMaterials[SlotIndex]; }
 	void SetMaterial(int32 SlotIndex, FMaterial* InMat) { OverrideMaterials[SlotIndex] = InMat; }
+	const TArray<FMaterial*> GetOverrideMaterials() const { return OverrideMaterials; }
 
 	FBoxSphereBounds GetWorldBounds() const override;
 	FMeshData* GetMeshData() const;

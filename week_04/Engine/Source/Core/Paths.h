@@ -43,6 +43,16 @@ public:
 	 */
 	static std::string ToAbsolutePath(const FString& Path);
 
+
+	static std::filesystem::path ToU8String(const FString& Path);
+
+	// filesystem::path → UTF-8 FString 변환 (.string()은 CP_ACP라 한자 깨짐)
+	static FString FromPath(const std::filesystem::path& Path)
+	{
+		auto U8 = Path.u8string();
+		return FString(reinterpret_cast<const char*>(U8.data()), U8.size());
+	}
+
 private:
 	static void SetRoot(const std::filesystem::path& InPath);
 

@@ -65,9 +65,11 @@ public:
 		int32& OutWidth, int32& OutHeight) const;
 
 private:
+
 	void BuildDefaultLayout(uint32 DockID);
 	void LoadEditorSettings();
 	void SaveEditorSettings();
+
 	std::wstring GetEditorIniPathW() const;
 	FViewport* GetViewportAt(int32 Index);
 
@@ -98,6 +100,15 @@ private:
 	FVector2 DeltaMouse;
 	FVector2 CachedViewportScreenPos;
 
+	enum class ViewportLayout {
+		_1, _2x2, _1x3, _3x1
+	};
+
+	ViewportLayout ViewportLayoutSetting = ViewportLayout::_2x2;
+
+	void SetViewportLayout(ViewportLayout layout);
+
+
 #if IS_OBJ_VIEWER
 	FViewportMode ViewportMode = FViewportMode::Single;
 
@@ -105,4 +116,5 @@ private:
 	FViewportMode ViewportMode = FViewportMode::Quad;
 
 #endif
+
 };

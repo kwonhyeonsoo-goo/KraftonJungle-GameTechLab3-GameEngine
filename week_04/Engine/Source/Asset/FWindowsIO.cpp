@@ -1,9 +1,12 @@
 #include "FWindowsIO.h"
 #include "Core/Paths.h"
+#include <filesystem>
 
 FWindowsBinWriter::FWindowsBinWriter(const FString& Path)
 {
-	File.open(FPaths::ToAbsolutePath(Path), std::ios::binary | std::ios::out);
+	FString AbsolutePath = FPaths::ToAbsolutePath(Path);
+	std::filesystem::path path = FPaths::ToU8String(AbsolutePath);
+	File.open(path, std::ios::binary | std::ios::out);
 }
 
 void FWindowsBinWriter::WriteString(const FString& Str)
@@ -25,7 +28,9 @@ void FWindowsBinWriter::WriteStringArray(const TArray<FString>& Arr)
 
 FWindowsBinReader::FWindowsBinReader(const FString& Path)
 {
-	File.open(FPaths::ToAbsolutePath(Path), std::ios::binary | std::ios::in);
+	FString AbsolutePath = FPaths::ToAbsolutePath(Path);
+	std::filesystem::path path = FPaths::ToU8String(AbsolutePath);
+	File.open(path, std::ios::binary | std::ios::in);
 }
 
 void FWindowsBinReader::ReadString(FString& OutString)

@@ -95,7 +95,8 @@ struct FObjInfo
 	TArray<FVector2> UVs;
 	TArray<FVector> Normals;
 	TArray<FObjFace> Faces;
-	TArray<FObjMaterialInfo> Materials;
+	//각 face가 어떤 vertex를 참조하는지, 그리고 그 face의 group, object, material, smoothing group이 무엇인지
+	TArray<FObjMaterialInfo> Materials; //obj가 쓰는 Material이 어떤게 있는지
 };
 
 // =========================
@@ -161,8 +162,10 @@ public:
 		//TODO : Delete These Time;
 		auto StartTime = std::chrono::high_resolution_clock::now();
 
+		FString AbsolutePath = FPaths::ToAbsolutePath(PathFileName);
+		std::filesystem::path path = FPaths::ToU8String(AbsolutePath);
 
-		std::ifstream File(FPaths::ToAbsolutePath(PathFileName));
+		std::ifstream File(path);
 		if (!File.is_open())
 		{
 			printf("[OBJ] Failed to open : %s\n", PathFileName.c_str());
@@ -182,7 +185,6 @@ public:
 			if (Line.empty())
 				continue;
 
-			// [FIX] Windows CRLF 처리: \r 제거
 			if (!Line.empty() && Line.back() == '\r')
 			{
 				Line.pop_back();
@@ -243,8 +245,8 @@ public:
 				FString LibName;
 				std::getline(SS >> std::ws, LibName);
 				ObjInfo.Mtllib = LibName;
-				std::filesystem::path fullPath = FPaths::MeshDir() / LibName;
-				TArray<FObjMaterialInfo> MatInfos = LoadMtlFile(fullPath.string());
+				std::filesystem::path fullPath = FPaths::MeshDir() / FPaths::ToU8String(LibName);
+				TArray<FObjMaterialInfo> MatInfos = LoadMtlFile(FPaths::FromPath(fullPath));
 				for (FObjMaterialInfo& MatInfo : MatInfos)
 				{
 					if (!MatInfo.Name.empty())
@@ -289,7 +291,10 @@ public:
 	{
 		auto StartTime = std::chrono::high_resolution_clock::now();
 
-		std::ifstream File(FPaths::ToAbsolutePath(PathFileName));
+
+		FString AbsolutePath = FPaths::ToAbsolutePath(PathFileName);
+		std::filesystem::path path = FPaths::ToU8String(AbsolutePath);
+		std::ifstream File(path);
 		if (!File.is_open())
 		{
 			printf("[MTL] Failed to open : %s\n", PathFileName.c_str());
@@ -385,297 +390,15 @@ private:
 	static TMap<FString, FTexture*> TextureCache; // mtl파일의 map_kd dorumon.png이면 \\Assets\\Meshes\\dorumon.png가 key가됨
 	static TMap<FString, FMaterial*> MaterialCache;// mtl파일에서 newmtl Dorumon이면 Dorumon이 key가됨
 	static ID3D11Device* Device;
-
-private:
-	static int32 GetOrAddMaterialSlot(FStaticMesh* Mesh, const FString& MaterialName)
-	{
-		for (int32 i = 0; i < static_cast<int32>(Mesh->MaterialSlotNames.size()); ++i)
-		{
-			if (Mesh->MaterialSlotNames[i] == MaterialName)
-			{
-				return i;
-			}
-		}
-
-		Mesh->MaterialSlotNames.push_back(MaterialName);
-		return static_cast<int32>(Mesh->MaterialSlotNames.size()) - 1;
-	}
-
-	static int32 GetOrCreateSectionIndex(FStaticMesh* Mesh, int32 MaterialIndex)
-	{
-		for (int32 i = 0; i < static_cast<int32>(Mesh->Sections.size()); ++i)
-		{
-			if (Mesh->Sections[i].MaterialIndex == MaterialIndex)
-			{
-				return i;
-			}
-		}
-
-		SubMeshSection NewSection;
-		NewSection.IndexStart = static_cast<int32>(Mesh->Indices.size());
-		NewSection.IndexCount = 0;
-		NewSection.MaterialIndex = MaterialIndex;
-		Mesh->Sections.push_back(NewSection);
-		return static_cast<int32>(Mesh->Sections.size()) - 1;
-	}
-
-	static bool IsValidVertexRef(const FObjInfo& Obj, const FObjVertexRef& Ref)
-	{
-		if (Ref.V < 0 || Ref.V >= static_cast<int32>(Obj.Positions.size()))
-			return false;
-
-		if (Ref.VT != -1 && (Ref.VT < 0 || Ref.VT >= static_cast<int32>(Obj.UVs.size())))
-			return false;
-
-		if (Ref.VN != -1 && (Ref.VN < 0 || Ref.VN >= static_cast<int32>(Obj.Normals.size())))
-			return false;
-
-		return true;
-	}
-
-	static uint32 GetOrCreateVertexIndex(
-		FStaticMesh* Mesh,
-		const FObjInfo& Obj,
-		const FObjVertexRef& Ref,
-		std::unordered_map<FObjVertexRef, uint32, FObjVertexRefHasher>& VertexMap)
-	{
-		//Vertex가 이미 추가된적 있는 Vertex라면 Vertices의 몇번째 인덱스에 있는지를 리턴
-		auto It = VertexMap.find(Ref);
-		if (It != VertexMap.end())
-		{
-			return It->second;
-		}
-
-
-		//Vertex가 추가된적 없다면 Vertex정보를 생성하고 새로운 인덱스를 리턴
-		FNormalVertex Vertex{};
-
-		Vertex.Position = Obj.Positions[Ref.V];
-
-		if (Ref.VN != -1)
-		{
-			Vertex.Normal = Obj.Normals[Ref.VN];
-		}
-		else
-		{
-			Vertex.Normal = FVector(0.0f, 0.0f, 1.0f);
-		}
-
-		if (Ref.VT != -1)
-		{
-			Vertex.UV = Obj.UVs[Ref.VT];
-		}
-		else
-		{
-			Vertex.UV = FVector2(0.0f, 0.0f);
-		}
-
-		Vertex.Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
-
-		uint32 NewIndex = static_cast<uint32>(Mesh->Vertices.size());
-		Mesh->Vertices.push_back(Vertex);
-		VertexMap.emplace(Ref, NewIndex);
-
-		return NewIndex;
-	}
-
-	// [FIX] Section을 레퍼런스가 아닌 인덱스로 받아 안전하게 접근.
-	static void AppendTriangle(
-		FStaticMesh* Mesh,
-		int32 SectionIndex,
-		uint32 I0,
-		uint32 I1,
-		uint32 I2)
-	{
-		Mesh->Indices.push_back(I0);
-		Mesh->Indices.push_back(I1);
-		Mesh->Indices.push_back(I2);
-		Mesh->Sections[SectionIndex].IndexCount += 3;
-	}
-
 public:
-	static FStaticMesh* LoadObjStaticMeshAsset(const FString& PathFileName)
-	{
-		if (StaticMeshCache.contains(PathFileName))
-		{
-			return StaticMeshCache[PathFileName];
-		}
-
-		// bin 캐시가 있으면 OBJ 파싱 없이 바로 로드
-		FString BinPath = GetBinPath(PathFileName);
-		FStaticMesh* CachedMesh = LoadFromBin(BinPath);
-		if (CachedMesh)
-		{
-			LoadMaterialAsset(CachedMesh->MtlPath);//TextureCache와 MaterialCache 채우기
-			StaticMeshCache[PathFileName] = CachedMesh;
-			return CachedMesh;
-		}
-
-		FObjInfo ObjInfo = FObjImporter::LoadObjFile(PathFileName);
-		if (ObjInfo.Positions.empty() || ObjInfo.Faces.empty())
-		{
-			printf("[OBJ] Invalid or empty obj : %s\n", PathFileName.c_str());
-			return nullptr;
-		}
-		FStaticMesh* Mesh = new FStaticMesh();
-		std::filesystem::path ParentDir = std::filesystem::path(PathFileName).parent_path();
-		std::filesystem::path MatfilePath = ParentDir / ObjInfo.Mtllib;//mtl파일 위치
-		LoadMaterialAsset(MatfilePath.string()); //TextureCache와 MaterialCache 채우기
-
-		Mesh->Path = PathFileName;
-		if (!ObjInfo.Mtllib.empty())
-		{
-			// MTL은 OBJ와 같은 디렉토리에 있다고 가정
-			std::filesystem::path ObjAbsPath = FPaths::ToAbsolutePath(PathFileName);
-			Mesh->MtlPath = (ObjAbsPath.parent_path() / ObjInfo.Mtllib).string();
-		}
-
-		//Mesh->Sections.reserve(Mesh->MaterialSlotNames.size() + 16);
-
-		std::unordered_map<FObjVertexRef, uint32, FObjVertexRefHasher> VertexMap;
-
-		for (const FObjFace& Face : ObjInfo.Faces)
-		{
-			const int32 FaceVertexCount = static_cast<int32>(Face.VertexRefs.size());
-			if (FaceVertexCount < 3)
-			{
-				continue;
-			}
-
-
-			const int32 MaterialIndex = GetOrAddMaterialSlot(Mesh, Face.Context.MaterialName);
-			//같은 매터리얼(png파일?)이면 같은 섹션에 추가. 매터리얼이 바뀌면 새로운 섹션 생성.
-			const int32 SectionIndex = GetOrCreateSectionIndex(Mesh, MaterialIndex);
-
-			// fan triangulation: (0,1,2), (0,2,3), (0,3,4), ...
-			for (int32 i = 1; i + 1 < FaceVertexCount; ++i)
-			{
-				const FObjVertexRef& R0 = Face.VertexRefs[0];
-				const FObjVertexRef& R1 = Face.VertexRefs[i];
-				const FObjVertexRef& R2 = Face.VertexRefs[i + 1];
-
-				if (!IsValidVertexRef(ObjInfo, R0) ||
-					!IsValidVertexRef(ObjInfo, R1) ||
-					!IsValidVertexRef(ObjInfo, R2))
-				{
-					printf("[OBJ] Invalid face vertex ref in : %s\n", PathFileName.c_str());
-					continue;
-				}
-
-				const uint32 I0 = GetOrCreateVertexIndex(Mesh, ObjInfo, R0, VertexMap);
-				const uint32 I1 = GetOrCreateVertexIndex(Mesh, ObjInfo, R1, VertexMap);
-				const uint32 I2 = GetOrCreateVertexIndex(Mesh, ObjInfo, R2, VertexMap);
-
-				AppendTriangle(Mesh, SectionIndex, I0, I1, I2);
-			}
-		}
-
-		MakeMeshData(Mesh);
-		SaveAsBin(PathFileName, *Mesh);
-		StaticMeshCache[PathFileName] = Mesh;
-		return Mesh;
-	}
-	static FMaterial* GetMaterialByName(const FString& Name)
-	{
-		auto It = MaterialCache.find(Name);
-		if (It != MaterialCache.end())
-			return It->second;
-		return nullptr;
-	}
-	static const TArray<FMaterial*> GetAllMaterials()
-	{
-		TArray<FMaterial*> Materials;
-		for (const auto& Pair : MaterialCache)
-		{
-			Materials.push_back(Pair.second);
-		}
-		return Materials;
-	}
-	static UStaticMesh* LoadObjStaticMesh(const FString& PathFileName)
-	{
-		for (TObjectIterator<UStaticMesh> It; It; ++It)
-		{
-			UStaticMesh* StaticMesh = *It;
-			if (StaticMesh->GetAssetPath() == PathFileName)
-			{
-				return *It;
-			}
-		}
-
-		FStaticMesh* StaticMeshAsset = LoadObjStaticMeshAsset(PathFileName);
-		UStaticMesh* StaticMesh = FObjectFactory::ConstructObject<UStaticMesh>();
-		StaticMesh->SetStaticMeshAsset(StaticMeshAsset);
-
-		return StaticMesh;
-	}
-
-	static FString GetBinPath(const FString& PathFileName)
-	{
-		return PathFileName.substr(0, PathFileName.find_last_of('.')) + ".bin";
-	}
-
-	static void SaveAsBin(const FString& PathFileName, const FStaticMesh& Mesh)
-	{
-		FString BinPath = GetBinPath(PathFileName);
-		FWindowsBinWriter Writer(BinPath);
-
-		Writer.WriteString(Mesh.Path);
-		Writer.WriteString(Mesh.MtlPath);
-		Writer.WriteArray(Mesh.Vertices);
-		Writer.WriteArray(Mesh.Indices);
-		Writer.WriteStringArray(Mesh.MaterialSlotNames);
-		Writer.WriteArray(Mesh.Sections);
-	}
-
-	static FStaticMesh* LoadFromBin(const FString& BinPath)
-	{
-
-		//TODO : Delete These Time;
-		auto StartTime = std::chrono::high_resolution_clock::now();
-
-		FWindowsBinReader Reader(BinPath);
-		if (!Reader.IsOpen())
-			return nullptr;
-
-		FStaticMesh* Mesh = new FStaticMesh();
-		Reader.ReadString(Mesh->Path);
-		Reader.ReadString(Mesh->MtlPath);
-		Reader.ReadArray(Mesh->Vertices);
-		Reader.ReadArray(Mesh->Indices);
-		Reader.ReadStringArray(Mesh->MaterialSlotNames);
-		Reader.ReadArray(Mesh->Sections);
-
-		MakeMeshData(Mesh);
-
-		auto EndTime = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> Elapsed = EndTime - StartTime;
-
-		// [3] 로그 출력 (초 단위)
-		UE_LOG("[BIN_OBJ] Load Success: %s\n", BinPath.c_str());
-		UE_LOG("[BIN_OBJ] Execution Time: %.6f seconds\n", Elapsed.count());
-		return Mesh;
-	}
-
-	static void CleanUp()
-	{
-		for (auto& Pair : StaticMeshCache)
-		{
-			delete Pair.second;
-		}
-		StaticMeshCache.clear();
-		for (auto& Pair : MaterialCache)
-		{
-			delete Pair.second;
-		}
-		MaterialCache.clear();
-		for (auto& Pair : TextureCache)
-		{
-			delete Pair.second;
-		}
-		TextureCache.clear();
-	}
-
-
+	static FStaticMesh* LoadObjStaticMeshAsset(const FString& PathFileName);
+	static FMaterial* GetMaterialByName(const FString& Name);
+	static const TArray<FMaterial*> GetAllMaterials();
+	static UStaticMesh* LoadObjStaticMesh(const FString& PathFileName);
+	static FString GetBinPath(const FString& PathFileName);
+	static void SaveAsBin(const FString& PathFileName, const FStaticMesh& Mesh);
+	static FStaticMesh* LoadFromBin(const FString& BinPath);
+	static void CleanUp();
 	/*
 	* This is called at FRenderer::Initalize()
 	*/
@@ -683,195 +406,15 @@ public:
 	{
 		Device = InDevice;
 	}
-
-	static FTexture* LoadTextureAsset(const FString& PathFileName)
-	{
-		if (TextureCache.contains(PathFileName))
-		{
-			return TextureCache[PathFileName];
-		}
-		/** 텍스쳐 로드 */
-		int width = 0, height = 0, channels = 0;
-
-		unsigned char* data = stbi_load(
-			FPaths::ToAbsolutePath(PathFileName).c_str(),
-			&width,
-			&height,
-			&channels,
-			STBI_rgb_alpha // 강제 RGBA
-		);
-
-		if (!data)
-		{
-			// TODO: fallback texture
-			return nullptr;
-		}
-
-		ID3D11Texture2D* texture = nullptr;
-
-		D3D11_TEXTURE2D_DESC desc = {};
-		desc.Width = width;
-		desc.Height = height;
-		desc.MipLevels = 1;
-		desc.ArraySize = 1;
-		desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB; // ⭐ diffuse면 SRGB 추천
-		desc.SampleDesc.Count = 1;
-		desc.Usage = D3D11_USAGE_DEFAULT;
-		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-
-		D3D11_SUBRESOURCE_DATA initData = {};
-		initData.pSysMem = data;
-		initData.SysMemPitch = width * 4;
-
-		HRESULT hr = Device->CreateTexture2D(&desc, &initData, &texture);
-
-		if (FAILED(hr))
-		{
-			stbi_image_free(data);
-			return nullptr;
-		}
-
-		ID3D11ShaderResourceView* srv = nullptr;
-
-		hr = Device->CreateShaderResourceView(texture, nullptr, &srv);
-
-		// Texture는 SRV 만들었으면 바로 버려도 됨
-		texture->Release();
-
-		if (FAILED(hr))
-		{
-			stbi_image_free(data);
-			return nullptr;
-		}
-
-		stbi_image_free(data);
-
-
-		ID3D11SamplerState* sampler = nullptr;
-		D3D11_SAMPLER_DESC samplerDesc = {};
-		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-		samplerDesc.MipLODBias = 0.0f;
-		samplerDesc.MaxAnisotropy = 1;
-		samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-		samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-
-		Device->CreateSamplerState(&samplerDesc, &sampler);
-
-		FTexture* MT = new FTexture();
-		MT->TextureSRV = srv;
-		MT->SamplerState = sampler;
-		TextureCache[PathFileName] = MT;
-
-		return MT;
-	}
+	static FMaterial* LoadMaterialTexture(const FString& MaterialName, const FString& TexturePath);
+	static FTexture* LoadTextureAsset(const FString& PathFileName);
 private:
-
 	//HelperFunction
-	static FMaterial* LoadMaterialAsset(const FString& PathFileName)
-	{
-		if (MaterialCache.contains(PathFileName))
-		{
-			return MaterialCache[PathFileName];
-		}
-
-		TArray<FObjMaterialInfo> MatInfos = FObjImporter::LoadMtlFile(PathFileName);
-		if (MatInfos.empty())
-		{
-			printf("[MTL] No materials found in: %s\n", PathFileName.c_str());
-			return nullptr;
-		}
-
-		// 텍스처 셰이더 경로
-		std::filesystem::path Root = FPaths::ProjectRoot();
-		std::wstring VSPath = (Root / "Engine/Shaders/TextureVertexShader.hlsl").wstring();
-		std::wstring PSPath = (Root / "Engine/Shaders/TexturePixelShader.hlsl").wstring();
-
-		auto VS = FShaderMap::Get().GetOrCreateVertexShader(Device, VSPath.c_str());
-		auto PS = FShaderMap::Get().GetOrCreatePixelShader(Device, PSPath.c_str());
-
-		TArray<FMaterial*> Materials;
-		FMaterial* FirstMat = nullptr;
-		for (const FObjMaterialInfo& Info : MatInfos)
-		{
-			if (MaterialCache.contains(Info.Name))
-			{
-				if (!FirstMat)
-					FirstMat = MaterialCache[Info.Name];
-				continue;
-			}
-
-			FMaterial* Mat = new FMaterial();
-			Mat->SetOriginName(Info.Name);
-			Mat->SetVertexShader(VS);
-			Mat->SetPixelShader(PS);
-
-			// RasterizerState 명시 설정 (없으면 이전 프레임 상태 상속되는 문제 방지)
-			{
-				FRasterizerStateOption RSOption;
-				RSOption.FillMode = D3D11_FILL_SOLID;
-				RSOption.CullMode = D3D11_CULL_NONE;  // blank spots 원인 확인용: culling 완전 비활성화
-				RSOption.DepthClipEnable = true;
-				auto RS = FRasterizerState::Create(Device, RSOption);
-				Mat->SetRasterizerOption(RSOption);
-				Mat->SetRasterizerState(RS);
-
-				FDepthStencilStateOption DSOption;
-				DSOption.DepthEnable = true;
-				DSOption.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-				auto DSS = FDepthStencilState::Create(Device, DSOption);
-				Mat->SetDepthStencilOption(DSOption);
-				Mat->SetDepthStencilState(DSS);
-			}
-
-			// b2: ColorTint(VS) + BaseColor(PS) — float4 하나 공유
-			int32 SlotIndex = Mat->CreateConstantBuffer(Device, 16);
-			if (SlotIndex >= 0)
-			{
-				Mat->RegisterParameter("BaseColor", SlotIndex, 0, 16);
-				// 기본값 흰색
-				float White[4] = { 1.f, 1.f, 1.f, 1.f };
-				Mat->SetParameterData("BaseColor", White, sizeof(White));
-			}
-
-			// Diffuse 텍스처 (MTL 파일과 같은 디렉토리에서 탐색)
-			if (!Info.MapKd.empty())
-			{
-				std::filesystem::path MtlDir = std::filesystem::path(PathFileName).parent_path();
-				std::filesystem::path TexFullPath = MtlDir / Info.MapKd;
-				FTexture* Tex = LoadTextureAsset(FPaths::ToRelativePath(TexFullPath.string()));
-				if (Tex)
-				{
-					Mat->SetMaterialTexture(std::shared_ptr<FTexture>(Tex, [](FTexture*) {}));
-				}
-			}
-
-			MaterialCache[Info.Name] = Mat;
-			if (!FirstMat)
-				FirstMat = Mat;
-		}
-
-		//MaterialCache[PathFileName] = FirstMat;
-		return FirstMat;
-	}
-	static void MakeMeshData(FStaticMesh* OutMesh)
-	{
-		OutMesh->MeshData = std::make_shared<FMeshData>();
-		OutMesh->MeshData->Vertices.reserve(OutMesh->Vertices.size());
-		for (const FNormalVertex& NV : OutMesh->Vertices)
-		{
-			FPrimitiveVertex PV;
-			PV.Position = NV.Position;
-			PV.Color = NV.Color;
-			PV.Normal = NV.Normal;
-			PV.UV = NV.UV;
-			OutMesh->MeshData->Vertices.push_back(PV);
-		}
-		OutMesh->MeshData->Indices.assign(OutMesh->Indices.begin(), OutMesh->Indices.end());
-		OutMesh->MeshData->Topology = EMeshTopology::EMT_TriangleList;
-		OutMesh->MeshData->CreateVertexAndIndexBuffer(Device);
-		OutMesh->MeshData->UpdateLocalBound();
-	}
+	static int32 GetOrAddMaterialSlot(FStaticMesh* Mesh, const FString& MaterialName);
+	static int32 GetOrCreateSectionIndex(FStaticMesh* Mesh, int32 MaterialIndex);
+	static bool IsValidVertexRef(const FObjInfo& Obj, const FObjVertexRef& Ref);
+	static uint32 GetOrCreateVertexIndex(FStaticMesh* Mesh, const FObjInfo& Obj, const FObjVertexRef& Ref, std::unordered_map<FObjVertexRef, uint32, FObjVertexRefHasher>& VertexMap);
+	static void AppendTriangle(FStaticMesh* Mesh, int32 SectionIndex, uint32 I0, uint32 I1, uint32 I2);
+	static FMaterial* LoadMaterialAsset(const FString& PathFileName);
+	static void MakeMeshData(FStaticMesh* OutMesh);
 };
