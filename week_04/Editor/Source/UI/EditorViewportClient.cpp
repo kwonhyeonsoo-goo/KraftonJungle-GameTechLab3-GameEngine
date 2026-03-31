@@ -109,6 +109,13 @@ void FEditorViewportClient::Tick(FCore* Core, float DeltaTime)
 
 void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
+	/** ` 버튼 누를 시 Console 창 띄우는 것은 ImGui 위 이든 화면 위이든 상관 없이 작동해야함 */
+	if (Msg == WM_KEYDOWN && WParam == VK_OEM_3)
+	{
+		EditorUI.GetConsole().SetFocusWindow(true);
+		EditorUI.GetConsole().SetFocusInput(true);
+	}
+
 	if (!Core || !EditorUI.IsViewportInteractive()) return;
 	if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse && !EditorUI.IsViewportInteractive()) return;
 

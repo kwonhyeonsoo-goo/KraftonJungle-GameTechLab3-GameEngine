@@ -83,6 +83,10 @@ void FEditorEngine::PostInitialize()
 	// ── FViewport ↔ IViewportClient 1:1 연결 ─────────────────────────
 	for (int i = 0; i < 4; i++)
 	{
+		// render 전용 매크로
+#if IS_OBJ_VIEWER
+		if (i == 1) break;
+#endif
 		EditorUI.LinkViewportClient(i, SceneViewportClients[i]);
 		SceneViewportClients[i]->SetLinkedWorld(Core->GetEditorWorld() , Core.get());
 		SceneViewportClients[i]->InitializeCameraFromWorld();
@@ -105,7 +109,7 @@ void FEditorEngine::PostInitialize()
 
 	{
 		UCameraComponent* Cam = SceneViewportClients[0]->GetActiveCamera();
-		Cam->SetPosition({ -10.f, 0.f, 5.f });
+		Cam->SetPosition({ -10.f, 0.f, 5.f }); 
 		Cam->SetRotation(0.f, -15.f);
 		Cam->SetFOV(60.f);
 		Cam->SetOrthographic(false);

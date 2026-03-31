@@ -76,6 +76,13 @@ void FConsoleWindow::RegisterCommand(const char* Command)
 // --- Render ---
 void FConsoleWindow::Render()
 {
+	if (bFocusWindow)
+	{
+		/** 이 코드 다음에 대해 적용되므로 위치 중요 */
+		ImGui::SetNextWindowFocus();
+		bFocusWindow = false;
+	}
+
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
 	bool bOpen = ImGui::Begin("Console");
 	ImGui::PopStyleVar();
@@ -162,6 +169,14 @@ void FConsoleWindow::Render()
 		ImGuiInputTextFlags_CallbackHistory;
 
 	ImGui::SetNextItemWidth(-1.0f);
+
+	if (bFocusInput)
+	{
+		/** InputText 바로 직전에 해야 KeyboardFocus 적용 */
+		ImGui::SetKeyboardFocusHere();
+		bFocusInput = false;
+	}
+
 	if (ImGui::InputText("##Input", InputBuf, IM_COUNTOF(InputBuf),
 		InputFlags, &TextEditCallbackStub, this))
 	{

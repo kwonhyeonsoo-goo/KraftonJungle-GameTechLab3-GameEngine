@@ -35,7 +35,8 @@
 
 
 #include "Utility/FileIO.h"
-
+#include "Object/ObjectGlobals.h"
+#include "Memory/MemoryBase.h"
 
 std::string GetFilePathUsingDialog(EFileDialogType Type)
 {
@@ -75,7 +76,7 @@ void FEditorUI::LinkViewportClient(int32 Index, IViewportClient* InClient)
 		Viewports.resize(Index + 1);
 	}
 	Viewports[Index].SetLinkedViewportClient(InClient);*/
-	if (Index < 0 || Index >= (int32)Windows.size()) return;
+	if (Index < 0 || Index >= static_cast<int32>(Windows.size())) return;
 	GetViewportAt(Index)->SetLinkedViewportClient(InClient);
 }
 
@@ -114,7 +115,9 @@ IViewportClient* FEditorUI::GetFocusedViewportClient() const
 	{
 		const FViewport* VP = Win->GetViewport();
 		if (VP->IsFocused() || VP->IsHovered())
+		{
 			return VP->GetLinkedViewportClient();
+		}
 	}
 	return GetPrimaryViewportClient();
 }
@@ -132,6 +135,23 @@ IViewportClient* FEditorUI::GetViewportClientAt(int32 Index) const
 	FViewport* VP = Windows[Index]->GetViewport();
 	if (!VP) return nullptr;
 	return VP->GetLinkedViewportClient();
+}
+
+// ── Destructor ──────────────────────────────────────────────────────────────
+
+FEditorUI::~FEditorUI() 
+{
+	// SWindow 삭제 (리프 노드)
+
+	// RootWindow 중간 SSplitter 노드 삭제
+
+	if (RootWindow)
+	{
+		delete RootWindow;
+		RootWindow = nullptr;
+	}
+
+	DraggedSplitters.clear();
 }
 
 // ── Initialize ─────────────────────────────────────────────────────────────
@@ -259,18 +279,69 @@ void FEditorUI::AttachToRenderer(FRenderer* InRenderer)
 				MessageBoxW(nullptr, FontPathW.c_str(), L"Failed to load font", MB_OK);
 			}
 
+#pragma region ImGUI Style
 			ImGui::StyleColorsDark();
 			ImGuiStyle& Style = ImGui::GetStyle();
-			Style.WindowPadding = ImVec2(0, 0);
 			Style.DisplayWindowPadding = ImVec2(0, 0);
 			Style.DisplaySafeAreaPadding = ImVec2(0, 0);
 			Style.Colors[ImGuiCol_Text] = ImVec4(1.f, 1.f, 1.f, 1.f);
 			Style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.6f, 0.6f, 0.6f, 1.f);
+
+			Style.WindowRounding = 6.0f;
+			Style.FrameRounding = 4.0f;
+			Style.GrabRounding = 4.0f;
+			Style.ScrollbarRounding = 6.0f;
+			ImVec4* colors = Style.Colors;
+
+			// 배경
+			colors[ImGuiCol_WindowBg] = ImVec4(0.10f, 0.105f, 0.11f, 1.00f);
+			colors[ImGuiCol_WindowBg] = ImVec4(0.0f, 0.05f, 0.0f, 1.00f);
+
+			// 헤더 (콤보, 트리 등)
+			colors[ImGuiCol_Header] = ImVec4(0.20f, 0.205f, 0.21f, 1.00f);
+			colors[ImGuiCol_HeaderHovered] = ImVec4(0.30f, 0.305f, 0.31f, 1.00f);
+			colors[ImGuiCol_HeaderActive] = ImVec4(0.15f, 0.1505f, 0.151f, 1.00f);
+
+			//메뉴바
+			colors[ImGuiCol_MenuBarBg] = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+			
+			// 버튼
+			colors[ImGuiCol_Button] = ImVec4(0.20f, 0.205f, 0.21f, 1.00f);
+			colors[ImGuiCol_ButtonHovered] = ImVec4(0.30f, 0.305f, 0.31f, 1.00f);
+			colors[ImGuiCol_ButtonActive] = ImVec4(0.15f, 0.1505f, 0.151f, 1.00f);
+
+			// 프레임 (Input, Combo 등)
+			colors[ImGuiCol_FrameBg] = ImVec4(0.20f, 0.205f, 0.21f, 0.50f);
+			colors[ImGuiCol_FrameBgHovered] = ImVec4(0.30f, 0.305f, 0.31f, 0.75f);
+			colors[ImGuiCol_FrameBgActive] = ImVec4(0.15f, 0.1505f, 0.151f, 1.00f);
+
+			// 타이틀
+			colors[ImGuiCol_TitleBg] = ImVec4(0.15f, 0.1505f, 0.151f, 1.00f);
+			colors[ImGuiCol_TitleBgActive] = ImVec4(0.15f, 0.1505f, 0.151f, 1.00f);
+
+			// 체크박스
+			colors[ImGuiCol_CheckMark] = ImVec4(0.80f, 0.80f, 0.83f, 1.00f);
+
+			// 슬라이더
+			colors[ImGuiCol_SliderGrab] = ImVec4(0.28f, 0.28f, 0.28f, 1.00f);
+			colors[ImGuiCol_SliderGrabActive] = ImVec4(0.35f, 0.35f, 0.35f, 1.00f);
+
+			//탭
+			colors[ImGuiCol_Tab] = ImVec4(0.28f, 0.28f, 0.28f, 1.00f);
+			colors[ImGuiCol_TabActive] = ImVec4(0.0f, 0.0f, 0.0f, 1.00f);
+			colors[ImGuiCol_TabDimmed] = ImVec4(0.14f, 0.145f, 0.15f, 1.00f);
+			colors[ImGuiCol_TabDimmedSelected] = ImVec4(0.0f, 0.0f, 0.0f, 1.00f);
+			colors[ImGuiCol_TabDimmedSelectedOverline] = ImVec4(0.45f, 0.45f, 0.48f, 1.00f);
+			colors[ImGuiCol_TabHovered] = ImVec4(0.0f, 0.0f, 0.00f, 1.00f);
+
+
 			if (IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 			{
 				Style.WindowRounding = 0.f;
 				Style.Colors[ImGuiCol_WindowBg].w = 1.f;
 			}
+#pragma endregion
+
 			ImGui_ImplWin32_Init(Hwnd);
 			ImGui_ImplDX11_Init(Device, DC);
 		},
@@ -328,7 +399,7 @@ void FEditorUI::AttachToRenderer(FRenderer* InRenderer)
 						if (PrimitiveComponent->GetPrimitive())
 						{
 							Renderer->RenderOutline(
-								PrimitiveComponent->GetPrimitive()->GetMeshData(),	PrimitiveComponent->GetWorldTransform()
+								PrimitiveComponent->GetPrimitive()->GetMeshData(), PrimitiveComponent->GetWorldTransform()
 							);
 						}
 
@@ -338,9 +409,9 @@ void FEditorUI::AttachToRenderer(FRenderer* InRenderer)
 
 			const float AxisLength = 10000.0f;
 			const FVector Origin = { 0.0f, 0.0f, 0.0f };
-				
-			
-	});
+
+
+		});
 
 	LoadEditorSettings();
 }
@@ -401,56 +472,8 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 #pragma region MultiViewport Layout
 	//RootWindow 설정
 
-	
-	RootWindow = new SSplitterH();	//가로 splitter bar
+	SetViewportLayout(ViewportLayoutSetting);
 
-	SSplitterV* sideUP = new SSplitterV();	SSplitterV* sideBottom = new SSplitterV();
-
-	SWindow* sideLeftUP, * sideLeftBottom, * sideRightUp, * sideRightBottom;
-
-	sideLeftUP = new SWindow; sideLeftBottom = new SWindow; sideRightUp = new SWindow; sideRightBottom = new SWindow;
-
-	Windows.push_back(sideLeftUP); Windows.push_back(sideRightUp); Windows.push_back(sideLeftBottom); Windows.push_back(sideRightBottom);
-
-	// 각 리프 노드에 FViewport 생성
-	sideLeftUP->SetViewport(std::make_unique<FViewport>());
-	sideRightUp->SetViewport(std::make_unique<FViewport>());
-	sideLeftBottom->SetViewport(std::make_unique<FViewport>());
-	sideRightBottom->SetViewport(std::make_unique<FViewport>());
-
-	sideUP->SetSideLT(sideLeftUP); sideUP->SetSideRB(sideRightUp);
-	sideBottom->SetSideLT(sideLeftBottom); sideBottom->SetSideRB(sideRightBottom);
-
-	RootWindow->SetSideLT(sideUP); RootWindow->SetSideRB(sideBottom);
-
-	FRect rect = { 0,0,1000,1000 };
-	RootWindow->Initialize(rect);
-
-	
-	//RootWindow = new SSplitterV();	
-
-	//SSplitterH* sideRight1 = new SSplitterH();	SSplitterH* sideRight2 = new SSplitterH();
-
-	//SWindow* side1, * side2, * side3, * side4;	//왼쪽, 오른쪽 위, 오른쪽 중간, 오른쪽 하단
-
-	//side1 = new SWindow; side2 = new SWindow; side3 = new SWindow; side4 = new SWindow;
-
-	//Windows.push_back(side1); Windows.push_back(side2); Windows.push_back(side3); Windows.push_back(side4);
-
-	//// 각 리프 노드에 FViewport 생성
-	//side1->SetViewport(std::make_unique<FViewport>());
-	//side2->SetViewport(std::make_unique<FViewport>());
-	//side3->SetViewport(std::make_unique<FViewport>());
-	//side4->SetViewport(std::make_unique<FViewport>());
-
-	//sideRight1->SetSideLT(side2); sideRight1->SetSideRB(sideRight2);
-	//sideRight2->SetSideLT(side3); sideRight2->SetSideRB(side4);
-
-	//RootWindow->SetSideLT(side1); RootWindow->SetSideRB(sideRight1);
-
-	//FRect rect = { 0,0,1000,1000 };
-	//RootWindow->Initialize(rect);
-	//sideRight1->SetRatio(0.3f);
 
 #pragma endregion
 }
@@ -496,6 +519,7 @@ void FEditorUI::Render()
 	// ── 4분할 씬 뷰포트 ─────────────────────────────────────────────────
 	// 하나의 ImGui 창 안에 4개의 씬을 배치
 	// Gizmo 버튼은 Viewports[0](주 뷰포트) 기준
+
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 		const bool bVPOpen = ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoScrollbar);
@@ -506,16 +530,19 @@ void FEditorUI::Render()
 
 #pragma region Render MultiViewport
 
+#if !IS_OBJ_VIEWER
 			// ── 메뉴바 (Gizmo 버튼) ─────────────────────────────────
 			if (ImGui::BeginMenuBar())
 			{
-				FEditorViewportClient* EditorVP =
-					dynamic_cast<FEditorViewportClient*>(GetPrimaryViewportClient());
 
-				if (EditorVP)
+
+				//FEditorViewportClient* EditorVP = dynamic_cast<FEditorViewportClient*>(GetPrimaryViewportClient());
+				FEditorViewportClient* EditorVP = dynamic_cast<FEditorViewportClient*>(GetFocusedViewportClient());
+				if (EditorVP != nullptr)
 				{
 					ImGui::Separator();
 					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, ImGui::GetStyle().ItemSpacing.y));
+
 
 					auto GizmoBtn = [&](const char* Label, EGizmoMode Mode)
 						{
@@ -523,19 +550,49 @@ void FEditorUI::Render()
 							const float H = ImGui::GetFrameHeight();
 							if (bSel)
 							{
-								ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.45f, 0.85f, 1.f));
-								ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.55f, 0.95f, 1.f));
-								ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.20f, 0.40f, 0.80f, 1.f));
+								ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.45f, 0.45f, 0.45f, 1.f));
+								ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.45f, 0.45f, 1.f));
+								ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.f, 0.f, 1.f, 1.f));	//얜 뭐지
 							}
 							if (ImGui::Button(Label, ImVec2(H, H)))
-								EditorVP->SetGizmoMode(Mode);
+							{
+								for (auto& window : Windows)
+								{
+
+									FEditorViewportClient* EditorVP = dynamic_cast<FEditorViewportClient*>(window->GetViewport()->GetLinkedViewportClient());
+									EditorVP->SetGizmoMode(Mode);
+
+								}
+
+							}
 							if (bSel) ImGui::PopStyleColor(3);
 						};
+
 
 					GizmoBtn("T", EGizmoMode::Location);
 					GizmoBtn("R", EGizmoMode::Rotation);
 					GizmoBtn("S", EGizmoMode::Scale);
+
 					ImGui::PopStyleVar();
+					// ── Viewport 모드 토글 버튼 ──────────────────────────
+					ImGui::SameLine();
+					ImGui::Separator();
+					ImGui::SameLine();
+					{
+						const bool bIsQuad = (ViewportMode == FViewportMode::Quad);
+						const float H = ImGui::GetFrameHeight();
+
+						if (bIsQuad)
+						{
+							ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.45f, 0.85f, 1.f));
+							ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.55f, 0.95f, 1.f));
+							ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.20f, 0.40f, 0.80f, 1.f));
+						}
+						if (ImGui::Button(bIsQuad ? "4" : "1", ImVec2(H, H)))
+							ViewportMode = bIsQuad ? FViewportMode::Single : FViewportMode::Quad;
+						if (bIsQuad)
+							ImGui::PopStyleColor(3);
+					}
 
 					// RenderMode 콤보 — 오른쪽 정렬
 					float ComboW = 120.f;
@@ -547,10 +604,11 @@ void FEditorUI::Render()
 						EditorVP->SetRenderMode(Mode);
 					}
 				}
+
 				ImGui::EndMenuBar();
+
 			}
-
-
+#endif
 			// ── 4분할 영역 계산 ──────────────────────────────────────
 			const ImVec2 Origin = ImGui::GetCursorScreenPos();
 			const ImVec2 Total = ImGui::GetContentRegionAvail();
@@ -563,29 +621,59 @@ void FEditorUI::Render()
 			ImVec2 windowPos = ImGui::GetWindowPos();
 			CachedViewportScreenPos = { Origin.x, Origin.y }; // ImVec2 멤버변수
 			const FRect NewRect = { Origin.x,Origin.y,Total.y, Total.x };
-			RootWindow->UpdateNewSize(NewRect);
+
+			// Quad 모드일 때만 스플리터 트리 크기 계산
+			if (ViewportMode == FViewportMode::Quad)
+			{
+				RootWindow->UpdateNewSize(NewRect);
+			}
+
+			// Single 모드 시 비활성 뷰포트(1~3) hover/focus 초기화
+			if (ViewportMode == FViewportMode::Single)
+			{
+				for (int i = 1; i < static_cast<int>(Windows.size()); i++)
+				{
+					FViewport* InactiveVP = Windows[i]->GetViewport();
+					InactiveVP->SetHovered(false);
+					InactiveVP->SetFocused(false);
+				}
+			}
 
 			const ImVec2 MousePos = ImGui::GetMousePos();
 
-			for (int i = 0; i < static_cast<int>(Windows.size()) && i < 4; i++)
+			// Single: Windows[0]만, Quad: 4개 모두
+			const int32 ActiveCount = (ViewportMode == FViewportMode::Single) ? 1 : static_cast<int32>(Windows.size());
+
+			for (int i = 0; i < ActiveCount && i < 4; i++)
 			{
-				/*const Region& R = Regions[i];
-				FViewport& VP = Viewports[i];*/
 				SWindow* Win = Windows[i];
-				FViewport* VP = Win->GetViewport();         // ← SWindow 소유
-				const FRect& R = Win->GetWindowSize(); // ← 같은 객체에서
+				FViewport* VP = Win->GetViewport();
+
+				// Single 모드: 전체 영역을 직접 사용 / Quad 모드: 스플리터 계산 결과 사용
+				FRect R;
+				if (ViewportMode == FViewportMode::Single)
+				{
+					R = { Origin.x, Origin.y, Total.y, Total.x };
+				}
+				else
+				{
+					R = Win->GetWindowSize();
+				}
 
 				// hover/focus 계산
 				const ImVec2 RMin(R.TopLeftX, R.TopLeftY);
 				const ImVec2 RMax(R.TopLeftX + R.Width, R.TopLeftY + R.Height);
-				const bool bHov = ImGui::IsMouseHoveringRect(RMin, RMax, false)
-					&& ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
+				const ImVec2 RSize(R.Width, R.Height);
+
+				// hover / focus
+				const bool bHov = ImGui::IsMouseHoveringRect(RMin, RMax, false);
 				const bool bFoc = bHov && ImGui::IsMouseDown(ImGuiMouseButton_Left);
 				VP->SetHovered(bHov);
 				VP->SetFocused(bFoc);
 
-				// RTV 준비 + ViewportInfo 전달
+				// 렌더
 				VP->PrepareAndUpdate(CurrentRenderer, Hwnd, R.TopLeftX, R.TopLeftY, R.Width, R.Height);
+
 
 				// ImGui에 씬 텍스처 표시
 				ImGui::SetCursorScreenPos(RMin);
@@ -595,40 +683,185 @@ void FEditorUI::Render()
 				}
 
 
+				// DrawList
+				ImDrawList* DL = ImGui::GetForegroundDrawList();
+				DL->PushClipRect(RMin, RMax, true);
+
+				// =======================
+				// Scene
+				// =======================
+
+
+				// =======================
+				// Overlay
+				// =======================
+				FShowFlags& ShowFlags = VP->GetLinkedViewportClient()->GetShowFlags();
+
+				auto ToMB = [](size_t Bytes)
+					{
+						return Bytes / (1024.0f * 1024.0f);
+					};
+
+				// -----------------------
+				// FPS (좌상단)
+				// -----------------------
+				if (ShowFlags.HasFlag(EEngineShowFlags::SF_StatFPS))
+				{
+					char buf1[64];
+					char buf2[64];
+
+					sprintf_s(buf1, "%.2f FPS", Core->GetTimer().GetFPS());
+					sprintf_s(buf2, "%.2f ms", Core->GetTimer().GetFrameTimeMs());
+
+					ImVec2 pos = ImVec2(RMin.x + 8.0f, RMin.y + 8.0f);
+
+					DL->AddText(pos, IM_COL32(255, 255, 255, 255), buf1);
+					DL->AddText(
+						ImVec2(pos.x, pos.y + 16.0f),
+						IM_COL32(200, 200, 200, 255),
+						buf2
+					);
+				}
+
+				// -----------------------
+				// Memory (정중앙)
+				// -----------------------
+				if (ShowFlags.HasFlag(EEngineShowFlags::SF_StatMemory))
+				{
+					const FMallocStats MallocStats = GetGMalloc()->MallocStats;
+
+					char buf[256];
+					sprintf_s(buf,
+						"Memory\n"
+						"Used: %.2f MB\n"
+						"Allocs  : %u",
+						ToMB(MallocStats.CurrentAllocationBytes),
+						MallocStats.CurrentAllocationCount
+					);
+
+					ImVec2 textSize = ImGui::CalcTextSize(buf);
+
+					ImVec2 center = ImVec2(
+						RMin.x + RSize.x * 0.5f - textSize.x * 0.5f,
+						RMin.y + RSize.y * 0.5f - textSize.y * 0.5f
+					);
+
+					// 배경 박스 (옵션)
+					DL->AddRectFilled(
+						ImVec2(center.x - 4.0f, center.y - 4.0f),
+						ImVec2(center.x + textSize.x + 4.0f, center.y + textSize.y + 4.0f),
+						IM_COL32(0, 0, 0, 120),
+						4.0f
+					);
+
+					DL->AddText(center, IM_COL32(255, 255, 255, 255), buf);
+				}
+
+				DL->PopClipRect();
 #pragma endregion
 
-				////viewport당 imgui 출력
-				//FEditorViewportClient* EditorVP =
-				//	dynamic_cast<FEditorViewportClient*>(VP->GetLinkedViewportClient());
+				//viewport당 imgui 출력
+				FEditorViewportClient* EditorVP =
+					dynamic_cast<FEditorViewportClient*>(VP->GetLinkedViewportClient());
 
-				//if (EditorVP) {
-				//	float ComboW = 120.f;
-				//	ImGui::SetCursorPosX(Windows[i]->GetWindowSize().TopLeftX + ComboW);
-				//	ImGui::SetCursorPosY(Windows[i]->GetWindowSize().TopLeftY );
-
-				//	ImGui::SetNextItemWidth(ComboW);
-				//	{
-				//		ERenderMode Mode = EditorVP->GetRenderMode();
-				//		ImGui::Combo("##RM", (int*)&Mode, "Lighting\0No Lighting\0Wireframe", 3);
-				//		EditorVP->SetRenderMode(Mode);
-				//	}
-				//}
+				if (EditorVP) {
+					float ComboW = 120.f;
 
 
+					ImVec2 pos = {
+						Windows[i]->GetWindowSize().TopLeftX,
+						Windows[i]->GetWindowSize().TopLeftY
+					};
 
-			
+					ImGui::SetCursorScreenPos(pos);
+
+
+					//ViewMode
+					{
+						ImGui::SetNextItemWidth(ComboW);
+
+						ERenderMode Mode = EditorVP->GetRenderMode();
+						std::string id = "##RM" + std::to_string(i);
+						ImGui::Combo(id.c_str(), (int*)&Mode, "Lighting\0No Lighting\0Wireframe", 3);
+						EditorVP->SetRenderMode(Mode);
+					}
+
+					ImGui::SameLine();
+
+					//ShowFlag
+					{
+						ImGui::SetNextItemWidth(ComboW);
+
+						FShowFlags& ShowFlags = EditorVP->GetShowFlags();
+
+						// 콤보에 표시될 텍스트 (요약)
+						std::string preview = "Show Flags";
+						std::string id = "##ShowFlags" + std::to_string(i);
+
+						if (ImGui::BeginCombo(id.c_str(), preview.c_str()))
+						{
+							auto ShowFlagCheckbox = [&](const char* Label, EEngineShowFlags Flag)
+								{
+									bool bValue = ShowFlags.HasFlag(Flag);
+									if (ImGui::Checkbox(Label, &bValue))
+									{
+										ShowFlags.SetFlag(Flag, bValue);
+										SaveEditorSettings();
+									}
+								};
+
+							ShowFlagCheckbox("Primitives", EEngineShowFlags::SF_Primitives);
+							ShowFlagCheckbox("UUID", EEngineShowFlags::SF_UUID);
+							ShowFlagCheckbox("Debug Draw", EEngineShowFlags::SF_DebugDraw);
+							ShowFlagCheckbox("Collision", EEngineShowFlags::SF_Collision);
+
+							ImGui::SeparatorText("Grid");
+							ImGui::SetNextItemWidth(ComboW);
+							bool bShowGrid = EditorVP->IsGridVisible();
+							if (ImGui::Checkbox("Show Grid", &bShowGrid))
+							{
+								EditorVP->SetGridVisible(bShowGrid);
+								SaveEditorSettings();
+							}
+							ImGui::SetNextItemWidth(ComboW);
+							float GridSize = EditorVP->GetGridSize();
+							if (ImGui::SliderFloat("Grid Size", &GridSize, 1.f, 100.f, "%.1f"))
+							{
+								EditorVP->SetGridSize(GridSize);
+								SaveEditorSettings();
+							}
+							ImGui::SetNextItemWidth(ComboW);
+							float Thickness = EditorVP->GetLineThickness();
+							if (ImGui::SliderFloat("Line Thickness", &Thickness, 0.1f, 5.f, "%.2f"))
+							{
+								EditorVP->SetLineThickness(Thickness);
+								SaveEditorSettings();
+							}
+
+							ImGui::EndCombo();
+						}
+					
+					}
+				}
+
 			}
 #pragma region Viewport Splitter
 
-			ImGuiWindowFlags flags =
-				ImGuiWindowFlags_NoTitleBar |
-				ImGuiWindowFlags_NoResize |
-				ImGuiWindowFlags_NoScrollbar |
-				ImGuiWindowFlags_NoInputs |    // 입력은 기존 시스템이 처리
-				ImGuiWindowFlags_NoSavedSettings |
-				ImGuiWindowFlags_NoBringToFrontOnFocus;
-			ImDrawList* drawList = ImGui::GetWindowDrawList();
-			RenderSplitterBars(RootWindow, drawList);
+
+			// Quad 모드에서만 스플리터 바 렌더링
+			if (ViewportMode == FViewportMode::Quad)
+			{
+				ImGuiWindowFlags flags =
+					ImGuiWindowFlags_NoTitleBar |
+					ImGuiWindowFlags_NoResize |
+					ImGuiWindowFlags_NoScrollbar |
+					ImGuiWindowFlags_NoInputs |    // 입력은 기존 시스템이 처리
+					ImGuiWindowFlags_NoSavedSettings |
+					ImGuiWindowFlags_NoBringToFrontOnFocus;
+				ImDrawList* drawList = ImGui::GetWindowDrawList();
+				RenderSplitterBars(RootWindow, drawList);
+
+			}
 #pragma endregion
 		}
 		else
@@ -749,7 +982,7 @@ void FEditorUI::Render()
 				ShowFlagCheckbox("UUID", EEngineShowFlags::SF_UUID);
 				ShowFlagCheckbox("Debug Draw", EEngineShowFlags::SF_DebugDraw);
 				ShowFlagCheckbox("Collision", EEngineShowFlags::SF_Collision);
-							ImGui::SeparatorText("Grid");
+				ImGui::SeparatorText("Grid");
 				bool bShowGrid = EditorVP->IsGridVisible();
 				if (ImGui::Checkbox("Show Grid", &bShowGrid))
 				{
@@ -931,17 +1164,52 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 	POINT Pt = { static_cast<LONG>(mousePosition.x), static_cast<LONG>(mousePosition.y) };
 	::ClientToScreen(Hwnd, &Pt);	//윈도우 창 마우스 위치 -> imgui 좌표계로 변환
 
+	// 모든 마우스 입력 => 포커스 체크
+	const bool bIsMouseMsg =
+		Msg == WM_LBUTTONDOWN ||
+		Msg == WM_RBUTTONDOWN ||
+		Msg == WM_MOUSEWHEEL ||
+		Msg == WM_MOUSEHWHEEL;
+
+	if (bIsMouseMsg)
+	{
+		const FRect& R = RootWindow->GetWindowSize();
+		/** 화면에 해당하는 RootWindow 위에서만 Focus 체크 */
+		if (Pt.x >= R.TopLeftX && Pt.x <= R.TopLeftX + R.Width && Pt.y >= R.TopLeftY && Pt.y <= R.TopLeftY + R.Height)
+		{
+			Core->SetLastFocusedVP(GetFocusedViewportClient());
+			/** VP Focus 시 기존 Console Input Text 등 비활성화 */
+			ImGui::ClearActiveID();
+			GetConsole().ClearBuffer();
+		}
+	}
 
 	if (Msg == WM_LBUTTONDOWN)
 	{
+		if (ViewportMode == FViewportMode::Quad)
+			RootWindow->AddIfMouseHoverOnBar({ (float)Pt.x, (float)Pt.y }, DraggedSplitters);
 
-		RootWindow->AddIfMouseHoverOnBar({ (float)Pt.x, (float)Pt.y }, DraggedSplitters);
+		if (ViewportLayoutSetting == ViewportLayout::_2x2) {	//bar가 동시에 움직이게
+			SSplitter* addedSplitter = nullptr;
+			for (auto& DraggedSplitter : DraggedSplitters)
+			{
+				if (DraggedSplitter == RootWindow) continue;
+				else if (DraggedSplitter == dynamic_cast<SSplitter*>(RootWindow->GetSideLT())) {
+					addedSplitter = dynamic_cast<SSplitter*>(RootWindow->GetSideRB());
+				}
+				else if (DraggedSplitter == dynamic_cast<SSplitter*>(RootWindow->GetSideRB())){
+					addedSplitter = dynamic_cast<SSplitter*>(RootWindow->GetSideLT());
+
+				}
+
+			}
+			if (addedSplitter != nullptr) DraggedSplitters.push_back(addedSplitter);
+		}
 
 		bIsCliked = true;
 		PreviousMousePoint = { (float)CurrentPos.PointX, (float)CurrentPos.PointY };
 		DeltaMouse.X = 0;
 		DeltaMouse.Y = 0;
-
 	}
 	else if (Msg == WM_LBUTTONUP)
 	{
@@ -950,37 +1218,25 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 	}
 	else if (Msg == WM_MOUSEMOVE)
 	{
-		if (bIsCliked)
+		if (bIsCliked && ViewportMode == FViewportMode::Quad)
 		{
 			DeltaMouse.X = CurrentPos.PointX - PreviousMousePoint.X;
 			DeltaMouse.Y = CurrentPos.PointY - PreviousMousePoint.Y;
 			PreviousMousePoint = { (float)CurrentPos.PointX, (float)CurrentPos.PointY };
 
 			// 드래그 중 재판정 없이 클릭 시점 상태 유지
-			for (auto& DraggedSplitter : DraggedSplitters) 
+			for (auto& DraggedSplitter : DraggedSplitters)
 			{
-				{
-					//일반 레이아웃 
-					if (DraggedSplitter == RootWindow)
-						DraggedSplitter->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
-
-					else {
-						//특정 레이아웃일때
-						if (SSplitter* lt = dynamic_cast<SSplitter*>(RootWindow->GetSideLT())) {
-							lt->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
-						}
-						if (SSplitter* rb = dynamic_cast<SSplitter*>(RootWindow->GetSideRB())) {
-							rb->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
-						}
-					}
-					UE_LOG("Dragging bar: %f, %f", DeltaMouse.X, DeltaMouse.Y);
-				}
-
-				//DraggedSplitter->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
+				DraggedSplitter->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
 			}
 		}
+		else if (bIsCliked)
+		{
+			// Single 모드에서도 PreviousMousePoint는 갱신
+			PreviousMousePoint = { (float)CurrentPos.PointX, (float)CurrentPos.PointY };
+		}
 
-		if(RootWindow->IsAnyBarHovered({ (float)Pt.x, (float)Pt.y }))
+		if (ViewportMode == FViewportMode::Quad && RootWindow->IsAnyBarHovered({ (float)Pt.x, (float)Pt.y }))
 			SetCursor(LoadCursor(NULL, IDC_HAND)); // 손가락 모양으로 변경
 	}
 
@@ -1058,32 +1314,136 @@ FViewport* FEditorUI::GetViewportAt(int32 Index)
 void FEditorUI::RenderSplitterBars(SSplitter* splitter, ImDrawList* drawList)
 {
 	if (!splitter) return;
+	FRect bar;
+	if (ViewportLayoutSetting == ViewportLayout::_2x2) {
 
-	// 자식 스플리터도 재귀로 그리기
-	if (auto* childLT = dynamic_cast<SSplitter*>(splitter->GetSideLT()))
-		RenderSplitterBars(childLT, drawList);
-	if (auto* childRB = dynamic_cast<SSplitter*>(splitter->GetSideRB()))
-		RenderSplitterBars(childRB, drawList);
+		for (int i = 0; i < 3; i++)
+		{
+			if (i == 2) {
+				if (SSplitter* splitter = dynamic_cast<SSplitter*>(RootWindow))
+					bar = splitter->GetBarRect(); // 바 위치/크기 가져오기
+			}
+			else if (i == 1 && RootWindow)
+			{
+				if (SSplitter* splitter = dynamic_cast<SSplitter*>(RootWindow->GetSideLT())) {
+					//하드 코딩 바꾸기......
+					bar = splitter->GetBarRect(); // 바 위치/크기 가져오기
+					if (SSplitter* OtherSplitter = dynamic_cast<SSplitter*>(RootWindow->GetSideRB())) {
+						bar.Height += OtherSplitter->GetBarRect().Height;	//top이랑 bottom 합친 사이즈....
+					}
+				}
+			}
+			else if (i == 0 && RootWindow)
+			{
+				if (SSplitter* splitter = dynamic_cast<SSplitter*>(RootWindow->GetSideRB())) {
+					//하드코딩 바꾸기22...
+					bar = splitter->GetBarRect(); // 바 위치/크기 가져오기
+					if (SSplitter* OtherSplitter = dynamic_cast<SSplitter*>(RootWindow->GetSideRB())) {
+						bar.TopLeftY = OtherSplitter->GetBarRect().TopLeftY;	//top이랑 bottom 합친 사이즈....
+					}
+				}
+			}
+			// ImGui 좌표로 변환
+			ImVec2 barMin = ImVec2(bar.TopLeftX, bar.TopLeftY);
+			ImVec2 barMax = ImVec2(bar.TopLeftX + bar.Width, bar.TopLeftY + bar.Height);
+
+			// 마우스 호버 체크
+			ImVec2 mousePos = ImGui::GetMousePos();
+			FPoint mousePoint = { mousePos.x, mousePos.y };
+			bool bHovered = mousePos.x >= barMin.x && mousePos.x <= barMax.x && mousePos.y >= barMin.y && mousePos.y <= barMax.y;
+
+			// 호버면 흰색, 아니면 회색
+			ImU32 color = bHovered
+				? IM_COL32(255, 255, 255, 255)  // 흰색
+				: IM_COL32(100, 100, 100, 255); // 회색
+
+			drawList->AddRectFilled(barMin, barMax, color);
+		}
+	}
+
+	else {
+		// 자식 스플리터도 재귀로 그리기
+		if (auto* childLT = dynamic_cast<SSplitter*>(splitter->GetSideLT()))
+			RenderSplitterBars(childLT, drawList);
+		if (auto* childRB = dynamic_cast<SSplitter*>(splitter->GetSideRB()))
+			RenderSplitterBars(childRB, drawList);
+
+		bar = splitter->GetBarRect(); // 바 위치/크기 가져오기
+		// ImGui 좌표로 변환
+		ImVec2 barMin = ImVec2(bar.TopLeftX, bar.TopLeftY);
+		ImVec2 barMax = ImVec2(bar.TopLeftX + bar.Width, bar.TopLeftY + bar.Height);
+
+		// 마우스 호버 체크
+		ImVec2 mousePos = ImGui::GetMousePos();
+		FPoint mousePoint = { mousePos.x, mousePos.y };
+		bool bHovered = splitter->isMouseHoverOnBar(mousePoint);
+
+		// 호버면 흰색, 아니면 회색
+		ImU32 color = bHovered
+			? IM_COL32(255, 255, 255, 255)  // 흰색
+			: IM_COL32(100, 100, 100, 255); // 회색
+
+		drawList->AddRectFilled(barMin, barMax, color);
+	}
 
 
-	FRect bar = splitter->GetBarRect(); // 바 위치/크기 가져오기
+}
 
 
-	// ImGui 좌표로 변환
-	ImVec2 barMin = ImVec2(bar.TopLeftX, bar.TopLeftY);
-	ImVec2 barMax = ImVec2(bar.TopLeftX + bar.Width, bar.TopLeftY + bar.Height);
 
-	// 마우스 호버 체크
-	ImVec2 mousePos = ImGui::GetMousePos();
-	FPoint mousePoint = { mousePos.x, mousePos.y };
-	bool bHovered = splitter->isMouseHoverOnBar(mousePoint);
+void FEditorUI::SetViewportLayout(ViewportLayout layout)
+{
+	if (layout == ViewportLayout::_2x2) {
+		RootWindow = new SSplitterH();	//가로 splitter bar
 
-	// 호버면 흰색, 아니면 회색
-	ImU32 color = bHovered
-		? IM_COL32(255, 255, 255, 255)  // 흰색
-		: IM_COL32(100, 100, 100, 255); // 회색
+		SSplitterV* sideUP = new SSplitterV();	SSplitterV* sideBottom = new SSplitterV();
 
-	drawList->AddRectFilled(barMin, barMax, color);
+		SWindow* sideLeftUP, * sideLeftBottom, * sideRightUp, * sideRightBottom;
 
-	
+		sideLeftUP = new SWindow; sideLeftBottom = new SWindow; sideRightUp = new SWindow; sideRightBottom = new SWindow;
+
+		Windows.push_back(sideLeftUP); Windows.push_back(sideRightUp); Windows.push_back(sideLeftBottom); Windows.push_back(sideRightBottom);
+
+		// 각 리프 노드에 FViewport 생성
+		sideLeftUP->SetViewport(std::make_unique<FViewport>());
+		sideRightUp->SetViewport(std::make_unique<FViewport>());
+		sideLeftBottom->SetViewport(std::make_unique<FViewport>());
+		sideRightBottom->SetViewport(std::make_unique<FViewport>());
+
+		sideUP->SetSideLT(sideLeftUP); sideUP->SetSideRB(sideRightUp);
+		sideBottom->SetSideLT(sideLeftBottom); sideBottom->SetSideRB(sideRightBottom);
+
+		RootWindow->SetSideLT(sideUP); RootWindow->SetSideRB(sideBottom);
+
+		FRect rect = { 0,0,1000,1000 };
+		RootWindow->Initialize(rect);
+
+	}
+	else if (layout == ViewportLayout::_1x3) {
+		RootWindow = new SSplitterV();
+
+		SSplitterH* sideRight1 = new SSplitterH();	SSplitterH* sideRight2 = new SSplitterH();
+
+		SWindow* side1, * side2, * side3, * side4;	//왼쪽, 오른쪽 위, 오른쪽 중간, 오른쪽 하단
+
+		side1 = new SWindow; side2 = new SWindow; side3 = new SWindow; side4 = new SWindow;
+
+		Windows.push_back(side1); Windows.push_back(side2); Windows.push_back(side3); Windows.push_back(side4);
+
+		// 각 리프 노드에 FViewport 생성
+		side1->SetViewport(std::make_unique<FViewport>());
+		side2->SetViewport(std::make_unique<FViewport>());
+		side3->SetViewport(std::make_unique<FViewport>());
+		side4->SetViewport(std::make_unique<FViewport>());
+
+		sideRight1->SetSideLT(side2); sideRight1->SetSideRB(sideRight2);
+		sideRight2->SetSideLT(side3); sideRight2->SetSideRB(side4);
+
+		RootWindow->SetSideLT(side1); RootWindow->SetSideRB(sideRight1);
+
+		FRect rect = { 0,0,1000,1000 };
+		RootWindow->Initialize(rect);
+		sideRight1->SetRatio(0.3f);
+
+	}
 }

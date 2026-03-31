@@ -73,6 +73,8 @@ public:
 	UWorld* GetGameWorld() const { return LevelManager->GetGameWorld(); }
 	const FWorldContext* GetActiveWorldContext() const { return LevelManager->GetActiveWorldContext(); }
 
+	void SetLastFocusedVP(IViewportClient* InVP) { LastFocusedVP = InVP; }
+
 private:
 	void Input(float DeltaTime);
 	void Physics(float DeltaTime);
@@ -92,6 +94,7 @@ private:
 
 	ObjectManager* ObjManager = nullptr;
 	IViewportClient* ViewportClient = nullptr;
+
 	std::unique_ptr<FLevelManager> LevelManager;
 	std::unique_ptr<FPhysicsManager> PhysicsManager;
 
@@ -103,4 +106,6 @@ private:
 
 	FRenderCommandQueue CommandQueue;
 	FFrameRenderParams FrameRenderParams;
+
+	IViewportClient* LastFocusedVP = nullptr;
 };

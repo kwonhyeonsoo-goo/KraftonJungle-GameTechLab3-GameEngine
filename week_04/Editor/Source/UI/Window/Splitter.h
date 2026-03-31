@@ -17,7 +17,7 @@ protected:
 
 public:
 	SSplitter();
-	~SSplitter();
+	virtual ~SSplitter();
 	static float BarWidth;
 	
 	virtual bool isMouseHoverOnBar(FPoint coord) = 0;	//자기 자신의 바가 호버 되는지 체크

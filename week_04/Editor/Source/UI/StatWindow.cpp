@@ -38,7 +38,6 @@ void FStatWindow::Render()
 	}
 
 	ImGui::Text("FPS        : %.1f  (%.3f ms)", FPS, FrameTimeMs);
-	ImGui::Text("Objects    : %u", ObjectCount);
 
 	ImGui::Text("Current Heap Usage : %.2f KB", GetGMalloc()->MallocStats.CurrentAllocationBytes / 1024.0f);
 	ImGui::Text("Current Heap Count : %d", GetGMalloc()->MallocStats.CurrentAllocationCount);

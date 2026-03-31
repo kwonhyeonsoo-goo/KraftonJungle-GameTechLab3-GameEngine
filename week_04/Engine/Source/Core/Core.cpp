@@ -20,6 +20,7 @@
 #include "Component/UUIDBillboardComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Actor/SkySphereActor.h"
+#include "Debug/EngineLog.h"
 
 FCore::~FCore()
 {
@@ -286,11 +287,13 @@ void FCore::Render()
 	//		}
 	//	}
 	//}
-	uint32 temp = 0;
+
+
 	for (IViewportClient* CurrentViewport : ViewportClientArray)
 	{
 
 		if (!CurrentViewport) continue;
+
 		Renderer->ClearCommandList();
 
 		// ── 0. VP의 LinkedWorld 우선, 없으면 FallbackLevel 사용 ────
@@ -338,10 +341,15 @@ void FCore::Render()
 
 		// ── 4. Debug Draw ──────────────────────────────────────────
 		const FShowFlags& ShowFlags = CurrentViewport->GetShowFlags();
+		// 월드 축
+		Renderer->DrawLine({ -1000,0,0 }, { 1000,0,0 }, { 1,0,0,1 });  // X: Red
+		Renderer->DrawLine({ 0,-1000,0 }, { 0,1000,0 }, { 0,1,0,1 });  // Y: Green
+		Renderer->DrawLine({ 0,0,-1000 }, { 0,0,1000 }, { 0,0,1,1 });  // Z: Blue
+		Renderer->ExecuteLineCommands();
+
 		DebugDrawManager.Flush(Renderer.get(), ShowFlags, CurrentWorld);
 		Renderer->ClearLevelRenderTarget();
 	}
-
 	Renderer->EndFrame();
 }
 
@@ -357,6 +365,55 @@ void FCore::OnResize(int32 Width, int32 Height)
 void FCore::RegisterConsoleVariables()
 {
 	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
+
+	FConsoleVariable* StatVar = CVM.Find("t.MaxFPS");
+	if (!StatVar)
+	{
+		StatVar = CVM.Register("stat", "", "Show Stat On Last Focused Viewport");
+	}
+	
+	StatVar->SetOnChanged([this](FConsoleVariable* Var) {  
+		FString VarString = Var->GetString();
+
+		if (LastFocusedVP)
+		{
+			if (VarString == "fps")
+			{
+				// 임의 테스트
+				FShowFlags ShowFlags = LastFocusedVP->GetShowFlags();
+				if (ShowFlags.HasFlag(EEngineShowFlags::SF_StatFPS))
+				{
+					LastFocusedVP->GetShowFlags().SetFlag(EEngineShowFlags::SF_StatFPS, false);
+				}
+				else
+				{
+					LastFocusedVP->GetShowFlags().SetFlag(EEngineShowFlags::SF_StatFPS, true);
+				}
+			}
+			else if (VarString == "memory")
+			{
+				// 임의 테스트
+				FShowFlags ShowFlags = LastFocusedVP->GetShowFlags();
+				if (ShowFlags.HasFlag(EEngineShowFlags::SF_StatMemory))
+				{
+					LastFocusedVP->GetShowFlags().SetFlag(EEngineShowFlags::SF_StatMemory, false);
+				}
+				else
+				{
+					LastFocusedVP->GetShowFlags().SetFlag(EEngineShowFlags::SF_StatMemory, true);
+				}
+			}
+			else if (VarString == "none")
+			{
+				for (IViewportClient* VP : ViewportClientArray)
+				{
+					VP->GetShowFlags().SetFlag(EEngineShowFlags::SF_StatFPS, false);
+					VP->GetShowFlags().SetFlag(EEngineShowFlags::SF_StatMemory, false);
+				}
+			}
+		}
+		
+	});
 
 	FConsoleVariable* MaxFPSVar = CVM.Find("t.MaxFPS");
 	if (!MaxFPSVar)
