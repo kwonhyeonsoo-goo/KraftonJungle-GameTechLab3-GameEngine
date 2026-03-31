@@ -340,6 +340,12 @@ void FCore::Render()
 
 		// ── 4. Debug Draw ──────────────────────────────────────────
 		const FShowFlags& ShowFlags = CurrentViewport->GetShowFlags();
+		// 월드 축
+		Renderer->DrawLine({ -1000,0,0 }, { 1000,0,0 }, { 1,0,0,1 });  // X: Red
+		Renderer->DrawLine({ 0,-1000,0 }, { 0,1000,0 }, { 0,1,0,1 });  // Y: Green
+		Renderer->DrawLine({ 0,0,-1000 }, { 0,0,1000 }, { 0,0,1,1 });  // Z: Blue
+		Renderer->ExecuteLineCommands();
+
 		DebugDrawManager.Flush(Renderer.get(), ShowFlags, CurrentWorld);
 		Renderer->ClearLevelRenderTarget();
 	}
