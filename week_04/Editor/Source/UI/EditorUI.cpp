@@ -40,7 +40,7 @@
 std::string GetFilePathUsingDialog(EFileDialogType Type)
 {
 	char FileName[MAX_PATH] = "";
-	FString ContentDir = FPaths::FromPath(FPaths::ContentDir());
+	FString ContentDir = FPaths::ContentDir().string();
 
 	OPENFILENAMEA Ofn = {};
 	Ofn.lStructSize = sizeof(OPENFILENAMEA);
@@ -328,7 +328,7 @@ void FEditorUI::AttachToRenderer(FRenderer* InRenderer)
 						if (PrimitiveComponent->GetPrimitive())
 						{
 							Renderer->RenderOutline(
-								PrimitiveComponent->GetPrimitive()->GetMeshData(),	PrimitiveComponent->GetWorldTransform()
+								PrimitiveComponent->GetPrimitive()->GetMeshData(), PrimitiveComponent->GetWorldTransform()
 							);
 						}
 
@@ -338,9 +338,9 @@ void FEditorUI::AttachToRenderer(FRenderer* InRenderer)
 
 			const float AxisLength = 10000.0f;
 			const FVector Origin = { 0.0f, 0.0f, 0.0f };
-				
-			
-	});
+
+
+		});
 
 	LoadEditorSettings();
 }
@@ -401,7 +401,7 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 #pragma region MultiViewport Layout
 	//RootWindow 설정
 
-	
+
 	RootWindow = new SSplitterH();	//가로 splitter bar
 
 	SSplitterV* sideUP = new SSplitterV();	SSplitterV* sideBottom = new SSplitterV();
@@ -426,7 +426,7 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 	FRect rect = { 0,0,1000,1000 };
 	RootWindow->Initialize(rect);
 
-	
+
 	//RootWindow = new SSplitterV();	
 
 	//SSplitterH* sideRight1 = new SSplitterH();	SSplitterH* sideRight2 = new SSplitterH();
@@ -616,7 +616,7 @@ void FEditorUI::Render()
 
 
 
-			
+
 			}
 #pragma region Viewport Splitter
 
@@ -749,7 +749,7 @@ void FEditorUI::Render()
 				ShowFlagCheckbox("UUID", EEngineShowFlags::SF_UUID);
 				ShowFlagCheckbox("Debug Draw", EEngineShowFlags::SF_DebugDraw);
 				ShowFlagCheckbox("Collision", EEngineShowFlags::SF_Collision);
-							ImGui::SeparatorText("Grid");
+				ImGui::SeparatorText("Grid");
 				bool bShowGrid = EditorVP->IsGridVisible();
 				if (ImGui::Checkbox("Show Grid", &bShowGrid))
 				{
@@ -957,7 +957,7 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 			PreviousMousePoint = { (float)CurrentPos.PointX, (float)CurrentPos.PointY };
 
 			// 드래그 중 재판정 없이 클릭 시점 상태 유지
-			for (auto& DraggedSplitter : DraggedSplitters) 
+			for (auto& DraggedSplitter : DraggedSplitters)
 			{
 				{
 					//일반 레이아웃 
@@ -980,7 +980,7 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 			}
 		}
 
-		if(RootWindow->IsAnyBarHovered({ (float)Pt.x, (float)Pt.y }))
+		if (RootWindow->IsAnyBarHovered({ (float)Pt.x, (float)Pt.y }))
 			SetCursor(LoadCursor(NULL, IDC_HAND)); // 손가락 모양으로 변경
 	}
 
@@ -1085,5 +1085,5 @@ void FEditorUI::RenderSplitterBars(SSplitter* splitter, ImDrawList* drawList)
 
 	drawList->AddRectFilled(barMin, barMax, color);
 
-	
+
 }

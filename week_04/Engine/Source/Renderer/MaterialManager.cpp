@@ -68,7 +68,7 @@ void FMaterialManager::LoadAllMaterials(ID3D11Device* InDevice, FRenderStateMana
 		// 전부 캐시에 등록
 		for (const auto& entry : fs::directory_iterator(MaterialDir)) {
 			if (entry.is_regular_file() && entry.path().extension() == ".json") {
-				FString FilePath = FPaths::FromPath(entry.path());
+				FString FilePath = entry.path().string();
 				LoadFromFile(InDevice, InStateManager, FilePath);
 			}
 		}
@@ -79,8 +79,8 @@ void FMaterialManager::LoadAllMaterials(ID3D11Device* InDevice, FRenderStateMana
 }
 
 std::shared_ptr<FMaterial> FMaterialManager::LoadFromFile(
-	ID3D11Device* InDevice, 
-	FRenderStateManager* InStateManager, 
+	ID3D11Device* InDevice,
+	FRenderStateManager* InStateManager,
 	const FString& InFilePath
 )
 {

@@ -1,28 +1,28 @@
 {
   "Camera": {
-    "FOV": 91.3550033569336,
+    "FOV": 60.0,
     "FarClip": 1000.0,
     "NearClip": 0.10000000149011612,
     "Position": [
-      -11.025766372680664,
-      -41.42902755737305,
-      30.411766052246094
+      -19.382064819335938,
+      -5.6986517906188965,
+      12.951982498168945
     ],
     "Rotation": [
-      46.800025939941406,
-      -28.200035095214844
+      26.599992752075195,
+      -35.4000244140625
     ]
   },
   "Materials": [
+    "Assets/Materials/M_TintYellow.json",
     "Assets/Materials/M_BlueColor.json",
-    "Assets/Materials/M_Gizmos.json",
-    "Assets/Materials/M_GreenColor.json",
-    "Assets/Materials/M_Wireframe.json",
-    "Assets/Materials/M_RedColor.json",
     "Assets/Materials/M_Sky.json",
-    "Assets/Materials/M_TintYellow.json"
+    "Assets/Materials/M_Gizmos.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_Wireframe.json"
   ],
-  "NextUUID": 18,
+  "NextUUID": 38,
   "Primitives": {
     "0": {
       "Billboard": true,
@@ -152,13 +152,13 @@
       "Billboard": true,
       "Class": "AStaticMeshActor",
       "ComponentUUIDs": [
-        16,
-        17
+        20,
+        21
       ],
       "Location": [
-        -7.465122699737549,
-        -35.352359771728516,
-        25.971776962280273
+        -5.594376564025879,
+        0.7989869117736816,
+        2.774667501449585
       ],
       "MaterialOverrides": [
         {
@@ -194,12 +194,12 @@
           "Name": "衣服"
         },
         {
-          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
-          "Name": "裤子"
+          "MapKd": "\\Assets\\Meshes\\12213_bird_diffuse.jpg",
+          "Name": "12213_bird"
         },
         {
-          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
-          "Name": "背饰"
+          "MapKd": "\\Assets\\Meshes\\12213_bird_diffuse.jpg",
+          "Name": "12213_bird"
         },
         {
           "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
@@ -232,7 +232,45 @@
         1.0,
         1.0
       ],
-      "UUID": 15
+      "UUID": 19
+    },
+    "5": {
+      "Billboard": true,
+      "Class": "AStaticMeshActor",
+      "ComponentUUIDs": [
+        36,
+        37
+      ],
+      "Location": [
+        -9.633460998535156,
+        -6.775829792022705,
+        7.4612274169921875
+      ],
+      "MaterialOverrides": [
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/脸.png",
+          "Name": "脖子"
+        }
+      ],
+      "ObjStaticMeshAsset": "\\Assets\\Meshes\\12213_Bird_v1_l3.obj",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 35
     }
   }
 }

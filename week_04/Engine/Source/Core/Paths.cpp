@@ -57,6 +57,18 @@ std::wstring FPaths::ToWide(const FString& Path)
 	return Result;
 }
 
+std::wstring FPaths::ToWString(const FString& Path)
+{
+	return std::wstring(Path.begin(), Path.end());
+}
+
+std::wstring FPaths::ToShaderPath(const FString& Path)
+{
+	// 1. UTF-8 std::string을 std::filesystem::path로 변환 (char8_t 캐스팅 활용)
+	// 2. 해당 OS의 Wide String 형식으로 반환
+	return std::filesystem::path(reinterpret_cast<const char8_t*>(Path.c_str())).wstring();
+}
+
 std::string FPaths::ToRelativePath(const FString& Path)
 {
 	FString Root = FromPath(ProjectRoot());
