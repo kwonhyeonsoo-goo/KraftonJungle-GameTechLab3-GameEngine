@@ -53,6 +53,7 @@ public:
 		int32& OutWidth, int32& OutHeight) const;
 
 private:
+
 	void BuildDefaultLayout(uint32 DockID);
 	void LoadEditorSettings();
 	void SaveEditorSettings();
@@ -85,4 +86,10 @@ private:
 	FVector2 PreviousMousePoint;
 	FVector2 DeltaMouse;
 	FVector2 CachedViewportScreenPos;
+
+	enum class ViewportLayout {
+		_1, _2x2, _1x3, _3x1
+	};
+
+	ViewportLayout ViewportLayoutSetting = ViewportLayout::_1x3;
 };
