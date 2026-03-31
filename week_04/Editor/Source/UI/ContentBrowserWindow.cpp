@@ -82,7 +82,7 @@ void FContentBrowserWindow::Render()
 		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 		{
 			bFileOnDrag = false;
-			OnFileDragEnd(SelectedFilePath.string(), DirectoryPathUnderMouse.string());
+			OnFileDragEnd(FPaths::FromPath(SelectedFilePath), FPaths::FromPath(DirectoryPathUnderMouse));
 		}
 	}
 }
@@ -226,7 +226,7 @@ void FContentBrowserWindow::DrawFileGrid()
 				}
 				else
 				{
-					OnFileDoubleClickCallback(Path.string());
+					OnFileDoubleClickCallback(FPaths::FromPath(Path));
 				}
 			}
 			else if (!bFileOnDrag && ImGui::IsMouseDown(ImGuiMouseButton_Left) && !Entry.is_directory())

@@ -578,7 +578,7 @@ bool FRenderer::InitOutlineResources()
 	if (FAILED(Device->CreateDepthStencilState(&TestDesc, &StencilTestState))) return false;
 
 	FString PSPath = (FPaths::ShaderDir() / "OutlinePixelShader.hlsl").string();
-	OutlinePS = FShaderMap::Get().GetOrCreatePixelShader(Device, FPaths::ToWide(PSPath).c_str());
+	OutlinePS = FShaderMap::Get().GetOrCreatePixelShader(Device, FPaths::ToWString(PSPath).c_str());
 	return OutlinePS != nullptr;
 }
 

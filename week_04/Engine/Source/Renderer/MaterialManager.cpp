@@ -79,8 +79,8 @@ void FMaterialManager::LoadAllMaterials(ID3D11Device* InDevice, FRenderStateMana
 }
 
 std::shared_ptr<FMaterial> FMaterialManager::LoadFromFile(
-	ID3D11Device* InDevice, 
-	FRenderStateManager* InStateManager, 
+	ID3D11Device* InDevice,
+	FRenderStateManager* InStateManager,
 	const FString& InFilePath
 )
 {
