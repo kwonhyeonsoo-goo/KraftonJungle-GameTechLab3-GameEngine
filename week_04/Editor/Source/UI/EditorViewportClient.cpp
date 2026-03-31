@@ -244,7 +244,6 @@ void FEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 		{
 			const FRay Ray = Picker.ScreenToRay(GetCameraViewInfo(), ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
 
-
 			AStaticMeshActor* NewActor = Core->GetLevel()->SpawnActor<AStaticMeshActor>("StaticMeshActor");
 			UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath(FilePath));
 			NewActor->SetStaticMesh(StaticMesh);
@@ -285,7 +284,8 @@ void FEditorViewportClient::BuildRenderCommands(FCore* Core, ULevel* Level,
 	AActor* GizmoTarget = Core->GetSelectedActor();
 	if (GizmoTarget && !GizmoTarget->IsA<ASkySphereActor>())
 	{
-		Gizmo.BuildRenderCommands(GizmoTarget, GetCameraViewInfo(), OutQueue);
+		FCameraViewInfo Info = GetCameraViewInfo();
+		Gizmo.BuildRenderCommands(GizmoTarget, Info, OutQueue);
 	}
 }
 

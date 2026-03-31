@@ -195,8 +195,8 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 	 * cbuffer GlobalData : register(b3)
 	 * {
 	 *  	float Time;
-     * };
-	 *  
+	 * };
+	 *
 	 */
 	if (!GlobalBuffer.Create(Device, 16))
 	{
@@ -489,6 +489,11 @@ void FRenderer::ClearDepthBuffer()
 FVector FRenderer::GetCameraPosition() const
 {
 	return GetCameraWorldPositionFromViewMatrix(ViewMatrix);
+}
+
+void FRenderer::SetViewMatrix(FMatrix View)
+{
+	ViewMatrix = View;
 }
 
 bool FRenderer::CreateConstantBuffers()

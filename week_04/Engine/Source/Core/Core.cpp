@@ -289,6 +289,7 @@ void FCore::Render()
 	uint32 temp = 0;
 	for (IViewportClient* CurrentViewport : ViewportClientArray)
 	{
+
 		if (!CurrentViewport) continue;
 		Renderer->ClearCommandList();
 
@@ -320,6 +321,7 @@ void FCore::Render()
 		Renderer->SetLevelRenderTarget(VPInfo.RTV, VPInfo.DSV, D3DViewport);
 
 		// ── 2. 카메라 / 행렬 ───────────────────────────────────────
+		Renderer->SetViewMatrix(CurrentViewport->GetCameraViewInfo().ViewMatrix);
 		const FCameraViewInfo CameraViewInfo = CurrentViewport->GetCameraViewInfo();
 		CommandQueue.Clear();
 		CommandQueue.Reserve(Renderer->GetPrevCommandCount());
