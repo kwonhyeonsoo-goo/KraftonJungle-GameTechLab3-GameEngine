@@ -35,6 +35,8 @@
 
 
 #include "Utility/FileIO.h"
+#include "Object/ObjectGlobals.h"
+#include "Memory/MemoryBase.h"
 
 
 std::string GetFilePathUsingDialog(EFileDialogType Type)
@@ -114,7 +116,9 @@ IViewportClient* FEditorUI::GetFocusedViewportClient() const
 	{
 		const FViewport* VP = Win->GetViewport();
 		if (VP->IsFocused() || VP->IsHovered())
+		{
 			return VP->GetLinkedViewportClient();
+		}
 	}
 	return GetPrimaryViewportClient();
 }
@@ -578,23 +582,99 @@ void FEditorUI::Render()
 				// hover/focus 계산
 				const ImVec2 RMin(R.TopLeftX, R.TopLeftY);
 				const ImVec2 RMax(R.TopLeftX + R.Width, R.TopLeftY + R.Height);
-				const bool bHov = ImGui::IsMouseHoveringRect(RMin, RMax, false)
-					&& ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
+				const ImVec2 RSize(R.Width, R.Height);
+
+				// hover / focus
+				const bool bHov = ImGui::IsMouseHoveringRect(RMin, RMax, false);
 				const bool bFoc = bHov && ImGui::IsMouseDown(ImGuiMouseButton_Left);
 				VP->SetHovered(bHov);
 				VP->SetFocused(bFoc);
 
-				// RTV 준비 + ViewportInfo 전달
+				// 렌더
 				VP->PrepareAndUpdate(CurrentRenderer, Hwnd, R.TopLeftX, R.TopLeftY, R.Width, R.Height);
 
-				// ImGui에 씬 텍스처 표시
-				ImGui::SetCursorScreenPos(RMin);
+				// DrawList
+				ImDrawList* DL = ImGui::GetForegroundDrawList();
+				DL->PushClipRect(RMin, RMax, true);
+
+				// =======================
+				// Scene
+				// =======================
 				if (ID3D11ShaderResourceView* SRV = VP->GetSRV())
 				{
-					ImGui::Image(reinterpret_cast<ImTextureID>(SRV), ImVec2(R.Width, R.Height));
+					DL->AddImage(
+						reinterpret_cast<ImTextureID>(SRV),
+						RMin,
+						RMax
+					);
 				}
 
+				// =======================
+				// Overlay
+				// =======================
+				FShowFlags& ShowFlags = VP->GetLinkedViewportClient()->GetShowFlags();
 
+				auto ToMB = [](size_t Bytes)
+					{
+						return Bytes / (1024.0f * 1024.0f);
+					};
+
+				// -----------------------
+				// FPS (좌상단)
+				// -----------------------
+				if (ShowFlags.HasFlag(EEngineShowFlags::SF_StatFPS))
+				{
+					char buf1[64];
+					char buf2[64];
+
+					sprintf_s(buf1, "%.2f FPS", Core->GetTimer().GetFPS());
+					sprintf_s(buf2, "%.2f ms", Core->GetTimer().GetFrameTimeMs());
+
+					ImVec2 pos = ImVec2(RMin.x + 8.0f, RMin.y + 8.0f);
+
+					DL->AddText(pos, IM_COL32(255, 255, 255, 255), buf1);
+					DL->AddText(
+						ImVec2(pos.x, pos.y + 16.0f),
+						IM_COL32(200, 200, 200, 255),
+						buf2
+					);
+				}
+
+				// -----------------------
+				// Memory (정중앙)
+				// -----------------------
+				if (ShowFlags.HasFlag(EEngineShowFlags::SF_StatMemory))
+				{
+					const FMallocStats MallocStats = GetGMalloc()->MallocStats;
+
+					char buf[256];
+					sprintf_s(buf,
+						"Memory\n"
+						"Current: %.2f MB\n"
+						"Total  : %.2f MB",
+						ToMB(MallocStats.CurrentAllocationBytes),
+						ToMB(MallocStats.TotalAllocationBytes)
+					);
+
+					ImVec2 textSize = ImGui::CalcTextSize(buf);
+
+					ImVec2 center = ImVec2(
+						RMin.x + RSize.x * 0.5f - textSize.x * 0.5f,
+						RMin.y + RSize.y * 0.5f - textSize.y * 0.5f
+					);
+
+					// 배경 박스 (옵션)
+					DL->AddRectFilled(
+						ImVec2(center.x - 4.0f, center.y - 4.0f),
+						ImVec2(center.x + textSize.x + 4.0f, center.y + textSize.y + 4.0f),
+						IM_COL32(0, 0, 0, 120),
+						4.0f
+					);
+
+					DL->AddText(center, IM_COL32(255, 255, 255, 255), buf);
+				}
+
+				DL->PopClipRect();
 #pragma endregion
 
 				////viewport당 imgui 출력
@@ -931,7 +1011,6 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 	POINT Pt = { static_cast<LONG>(mousePosition.x), static_cast<LONG>(mousePosition.y) };
 	::ClientToScreen(Hwnd, &Pt);	//윈도우 창 마우스 위치 -> imgui 좌표계로 변환
 
-
 	if (Msg == WM_LBUTTONDOWN)
 	{
 
@@ -942,6 +1021,12 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 		DeltaMouse.X = 0;
 		DeltaMouse.Y = 0;
 
+		const FRect& R = RootWindow->GetWindowSize();
+
+		if (Pt.x >= R.TopLeftX && Pt.x <= R.TopLeftX + R.Width && Pt.y >= R.TopLeftY && Pt.y <= R.TopLeftY + R.Height)
+		{
+			Core->SetLastFocusedVP(GetFocusedViewportClient());
+		}
 	}
 	else if (Msg == WM_LBUTTONUP)
 	{

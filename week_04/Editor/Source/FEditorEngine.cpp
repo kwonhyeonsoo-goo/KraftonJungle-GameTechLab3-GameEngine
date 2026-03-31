@@ -62,7 +62,7 @@ void FEditorEngine::CreateViewportClients()
 	auto VP = std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
 	SceneViewportClients[0] = VP.get();
 
-	auto ViewportController = std::make_unique<FOrthoViewportController>();
+	auto ViewportController = std::make_unique<FViewportController>();
 	ViewportControllerArray.push_back(std::move(ViewportController));
 	ViewportClientArray.push_back(std::move(VP));
 

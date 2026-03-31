@@ -5,14 +5,16 @@ enum class EEngineShowFlags : uint64
 {
 	SF_Primitives = 1 << 0,
 	SF_UUID = 1 << 1,
-	SF_DebugDraw = 1 <<2,
-	SF_WorldAxis = 1 <<3,
-	SF_Collision =1<<4,
+	SF_DebugDraw = 1 << 2,
+	SF_WorldAxis = 1 << 3,
+	SF_Collision = 1 << 4,
 	SF_Billboard = 1 << 5,
 	SF_Text = 1 << 6,
-	SF_Grid = 1<<7,
-	 // SF_Grid        = 1 << 3,
-	 // SF_Fog         = 1 << 4,
+	SF_Grid = 1 << 7,
+	// SF_Grid        = 1 << 3,
+	// SF_Fog         = 1 << 4,
+	SF_StatFPS = 1 << 8,
+	SF_StatMemory = 1 << 9,
 };
 class ENGINE_API FShowFlags
 {

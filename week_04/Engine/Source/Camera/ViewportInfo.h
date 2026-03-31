@@ -1,6 +1,7 @@
 #pragma once
 #include "../CoreMinimal.h"
 #include "d3d11.h"
+#include "Core/ShowFlags.h"
 
 
 struct FViewportInfo {
