@@ -593,6 +593,15 @@ void FEditorUI::Render()
 				// 렌더
 				VP->PrepareAndUpdate(CurrentRenderer, Hwnd, R.TopLeftX, R.TopLeftY, R.Width, R.Height);
 
+
+				// ImGui에 씬 텍스처 표시
+				ImGui::SetCursorScreenPos(RMin);
+				if (ID3D11ShaderResourceView* SRV = VP->GetSRV())
+				{
+					ImGui::Image(reinterpret_cast<ImTextureID>(SRV), ImVec2(R.Width, R.Height));
+				}
+
+
 				// DrawList
 				ImDrawList* DL = ImGui::GetForegroundDrawList();
 				DL->PushClipRect(RMin, RMax, true);
@@ -600,14 +609,7 @@ void FEditorUI::Render()
 				// =======================
 				// Scene
 				// =======================
-				if (ID3D11ShaderResourceView* SRV = VP->GetSRV())
-				{
-					DL->AddImage(
-						reinterpret_cast<ImTextureID>(SRV),
-						RMin,
-						RMax
-					);
-				}
+
 
 				// =======================
 				// Overlay
@@ -775,7 +777,8 @@ void FEditorUI::Render()
 				ImGuiWindowFlags_NoSavedSettings |
 				ImGuiWindowFlags_NoBringToFrontOnFocus;
 			ImDrawList* drawList = ImGui::GetWindowDrawList();
-			
+
+
 			//hovered bar 그리기
 			RenderSplitterBars(RootWindow, drawList);
 
