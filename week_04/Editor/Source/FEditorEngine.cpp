@@ -109,7 +109,7 @@ void FEditorEngine::PostInitialize()
 
 	{
 		UCameraComponent* Cam = SceneViewportClients[0]->GetActiveCamera();
-		Cam->SetPosition({ -10.f, 0.f, 5.f });
+		Cam->SetPosition({ -10.f, 0.f, 5.f }); 
 		Cam->SetRotation(0.f, -15.f);
 		Cam->SetFOV(60.f);
 		Cam->SetOrthographic(false);

@@ -9,6 +9,7 @@
 #include "Component/SubUVComponent.h"
 #include "Component/TextComponent.h"
 #include "Component/UUIDBillboardComponent.h"
+#include "../Source/Actor/CameraPawn.h"
 
 void FOutlinerWindow::Render(FCore* Core)
 {
@@ -38,9 +39,9 @@ void FOutlinerWindow::Render(FCore* Core)
 	for (AActor* Actor : Actors)
 	{
 ;
-		if (!Actor || Actor->IsPendingDestroy())
+		if (!Actor || Actor->IsPendingDestroy() or Actor->IsA< UCameraPawn>())
 		{
-			continue;
+			continue;	
 		}
 
 		const bool bSelected = (Actor == SelectedActor);
