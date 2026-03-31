@@ -57,6 +57,7 @@ private:
 	void BuildDefaultLayout(uint32 DockID);
 	void LoadEditorSettings();
 	void SaveEditorSettings();
+
 	std::wstring GetEditorIniPathW() const;
 	FViewport* GetViewportAt(int32 Index);
 
@@ -91,5 +92,8 @@ private:
 		_1, _2x2, _1x3, _3x1
 	};
 
-	ViewportLayout ViewportLayoutSetting = ViewportLayout::_1x3;
+	ViewportLayout ViewportLayoutSetting = ViewportLayout::_2x2;
+
+	void SetViewportLayout(ViewportLayout layout);
+
 };

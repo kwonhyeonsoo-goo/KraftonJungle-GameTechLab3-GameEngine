@@ -450,60 +450,8 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 
 #pragma region MultiViewport Layout
 	//RootWindow 설정
+	SetViewportLayout(ViewportLayoutSetting);
 
-	if (ViewportLayoutSetting == ViewportLayout::_2x2) {
-		RootWindow = new SSplitterH();	//가로 splitter bar
-
-		SSplitterV* sideUP = new SSplitterV();	SSplitterV* sideBottom = new SSplitterV();
-
-		SWindow* sideLeftUP, * sideLeftBottom, * sideRightUp, * sideRightBottom;
-
-		sideLeftUP = new SWindow; sideLeftBottom = new SWindow; sideRightUp = new SWindow; sideRightBottom = new SWindow;
-
-		Windows.push_back(sideLeftUP); Windows.push_back(sideRightUp); Windows.push_back(sideLeftBottom); Windows.push_back(sideRightBottom);
-
-		// 각 리프 노드에 FViewport 생성
-		sideLeftUP->SetViewport(std::make_unique<FViewport>());
-		sideRightUp->SetViewport(std::make_unique<FViewport>());
-		sideLeftBottom->SetViewport(std::make_unique<FViewport>());
-		sideRightBottom->SetViewport(std::make_unique<FViewport>());
-
-		sideUP->SetSideLT(sideLeftUP); sideUP->SetSideRB(sideRightUp);
-		sideBottom->SetSideLT(sideLeftBottom); sideBottom->SetSideRB(sideRightBottom);
-
-		RootWindow->SetSideLT(sideUP); RootWindow->SetSideRB(sideBottom);
-
-		FRect rect = { 0,0,1000,1000 };
-		RootWindow->Initialize(rect);
-
-	}
-	else  {
-		RootWindow = new SSplitterV();	
-
-		SSplitterH* sideRight1 = new SSplitterH();	SSplitterH* sideRight2 = new SSplitterH();
-
-		SWindow* side1, * side2, * side3, * side4;	//왼쪽, 오른쪽 위, 오른쪽 중간, 오른쪽 하단
-
-		side1 = new SWindow; side2 = new SWindow; side3 = new SWindow; side4 = new SWindow;
-
-		Windows.push_back(side1); Windows.push_back(side2); Windows.push_back(side3); Windows.push_back(side4);
-
-		// 각 리프 노드에 FViewport 생성
-		side1->SetViewport(std::make_unique<FViewport>());
-		side2->SetViewport(std::make_unique<FViewport>());
-		side3->SetViewport(std::make_unique<FViewport>());
-		side4->SetViewport(std::make_unique<FViewport>());
-
-		sideRight1->SetSideLT(side2); sideRight1->SetSideRB(sideRight2);
-		sideRight2->SetSideLT(side3); sideRight2->SetSideRB(side4);
-
-		RootWindow->SetSideLT(side1); RootWindow->SetSideRB(sideRight1);
-
-		FRect rect = { 0,0,1000,1000 };
-		RootWindow->Initialize(rect);
-		sideRight1->SetRatio(0.3f);
-
-	}
 #pragma endregion
 }
 
@@ -1266,4 +1214,61 @@ void FEditorUI::RenderSplitterBars(SSplitter* splitter, ImDrawList* drawList)
 		
 
 	
+}
+
+void FEditorUI::SetViewportLayout(ViewportLayout layout)
+{
+	if (layout == ViewportLayout::_2x2) {
+		RootWindow = new SSplitterH();	//가로 splitter bar
+
+		SSplitterV* sideUP = new SSplitterV();	SSplitterV* sideBottom = new SSplitterV();
+
+		SWindow* sideLeftUP, * sideLeftBottom, * sideRightUp, * sideRightBottom;
+
+		sideLeftUP = new SWindow; sideLeftBottom = new SWindow; sideRightUp = new SWindow; sideRightBottom = new SWindow;
+
+		Windows.push_back(sideLeftUP); Windows.push_back(sideRightUp); Windows.push_back(sideLeftBottom); Windows.push_back(sideRightBottom);
+
+		// 각 리프 노드에 FViewport 생성
+		sideLeftUP->SetViewport(std::make_unique<FViewport>());
+		sideRightUp->SetViewport(std::make_unique<FViewport>());
+		sideLeftBottom->SetViewport(std::make_unique<FViewport>());
+		sideRightBottom->SetViewport(std::make_unique<FViewport>());
+
+		sideUP->SetSideLT(sideLeftUP); sideUP->SetSideRB(sideRightUp);
+		sideBottom->SetSideLT(sideLeftBottom); sideBottom->SetSideRB(sideRightBottom);
+
+		RootWindow->SetSideLT(sideUP); RootWindow->SetSideRB(sideBottom);
+
+		FRect rect = { 0,0,1000,1000 };
+		RootWindow->Initialize(rect);
+
+	}
+	else if (layout == ViewportLayout::_1x3) {
+		RootWindow = new SSplitterV();
+
+		SSplitterH* sideRight1 = new SSplitterH();	SSplitterH* sideRight2 = new SSplitterH();
+
+		SWindow* side1, * side2, * side3, * side4;	//왼쪽, 오른쪽 위, 오른쪽 중간, 오른쪽 하단
+
+		side1 = new SWindow; side2 = new SWindow; side3 = new SWindow; side4 = new SWindow;
+
+		Windows.push_back(side1); Windows.push_back(side2); Windows.push_back(side3); Windows.push_back(side4);
+
+		// 각 리프 노드에 FViewport 생성
+		side1->SetViewport(std::make_unique<FViewport>());
+		side2->SetViewport(std::make_unique<FViewport>());
+		side3->SetViewport(std::make_unique<FViewport>());
+		side4->SetViewport(std::make_unique<FViewport>());
+
+		sideRight1->SetSideLT(side2); sideRight1->SetSideRB(sideRight2);
+		sideRight2->SetSideLT(side3); sideRight2->SetSideRB(side4);
+
+		RootWindow->SetSideLT(side1); RootWindow->SetSideRB(sideRight1);
+
+		FRect rect = { 0,0,1000,1000 };
+		RootWindow->Initialize(rect);
+		sideRight1->SetRatio(0.3f);
+
+	}
 }
