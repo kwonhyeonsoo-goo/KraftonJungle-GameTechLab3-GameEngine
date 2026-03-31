@@ -23,6 +23,10 @@
 #include "Renderer/PrimitiveVertex.h"
 #include "Asset/AssetManager.h"
 #include "d3d11.h"
+#include "Asset/FWindowsIO.h"
+//TODO : Delete These Things
+#include "Debug/EngineLog.h"
+#include <chrono>
 
 
 struct FTexture;
@@ -153,6 +157,11 @@ private:
 public:
 	static FObjInfo LoadObjFile(const FString& PathFileName)
 	{
+
+		//TODO : Delete These Time;
+		auto StartTime = std::chrono::high_resolution_clock::now();
+
+
 		std::ifstream File(FPaths::ToAbsolutePath(PathFileName));
 		if (!File.is_open())
 		{
@@ -266,11 +275,20 @@ public:
 			}
 		}
 
+		// [2] 종료 시간 기록 및 차이 계산
+		auto EndTime = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> Elapsed = EndTime - StartTime;
+
+		// [3] 로그 출력 (초 단위)
+		UE_LOG("[OBJ] Load Success: %s\n", PathFileName.c_str());
+		UE_LOG("[OBJ] Execution Time: %.6f seconds\n", Elapsed.count());
 		return ObjInfo;
 	}
 
 	static TArray<FObjMaterialInfo> LoadMtlFile(const FString& PathFileName)
 	{
+		auto StartTime = std::chrono::high_resolution_clock::now();
+
 		std::ifstream File(FPaths::ToAbsolutePath(PathFileName));
 		if (!File.is_open())
 		{
@@ -346,6 +364,12 @@ public:
 		{
 			Materials.push_back(MaterialInfo);
 		}
+		auto EndTime = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> Elapsed = EndTime - StartTime;
+
+		// [3] 로그 출력 (초 단위)
+		UE_LOG("[MTL] Load Success: %s\n", PathFileName.c_str());
+		UE_LOG("[MTL] Execution Time: %.6f seconds\n", Elapsed.count());
 		return Materials;
 	};
 };
@@ -477,6 +501,16 @@ public:
 			return StaticMeshCache[PathFileName];
 		}
 
+		// bin 캐시가 있으면 OBJ 파싱 없이 바로 로드
+		FString BinPath = GetBinPath(PathFileName);
+		FStaticMesh* CachedMesh = LoadFromBin(BinPath);
+		if (CachedMesh)
+		{
+			LoadMaterialAsset(CachedMesh->MtlPath);//TextureCache와 MaterialCache 채우기
+			StaticMeshCache[PathFileName] = CachedMesh;
+			return CachedMesh;
+		}
+
 		FObjInfo ObjInfo = FObjImporter::LoadObjFile(PathFileName);
 		if (ObjInfo.Positions.empty() || ObjInfo.Faces.empty())
 		{
@@ -536,27 +570,120 @@ public:
 			}
 		}
 
-		Mesh->MeshData = std::make_shared<FMeshData>();
-
-		Mesh->MeshData->Vertices.reserve(Mesh->Vertices.size());
-		for (const FNormalVertex& NV : Mesh->Vertices)
-		{
-			FPrimitiveVertex PV;
-			PV.Position = NV.Position;
-			PV.Color = NV.Color;
-			PV.Normal = NV.Normal;
-			PV.UV = NV.UV;
-			Mesh->MeshData->Vertices.push_back(PV);
-		}
-
-		Mesh->MeshData->Indices.assign(Mesh->Indices.begin(), Mesh->Indices.end());
-		Mesh->MeshData->Topology = EMeshTopology::EMT_TriangleList;
-		Mesh->MeshData->CreateVertexAndIndexBuffer(Device);
-		Mesh->MeshData->UpdateLocalBound();
-
+		MakeMeshData(Mesh);
+		SaveAsBin(PathFileName, *Mesh);
 		StaticMeshCache[PathFileName] = Mesh;
 		return Mesh;
 	}
+	static FMaterial* GetMaterialByName(const FString& Name)
+	{
+		auto It = MaterialCache.find(Name);
+		if (It != MaterialCache.end())
+			return It->second;
+		return nullptr;
+	}
+	static const TArray<FMaterial*> GetAllMaterials()
+	{
+		TArray<FMaterial*> Materials;
+		for (const auto& Pair : MaterialCache)
+		{
+			Materials.push_back(Pair.second);
+		}
+		return Materials;
+	}
+	static UStaticMesh* LoadObjStaticMesh(const FString& PathFileName)
+	{
+		for (TObjectIterator<UStaticMesh> It; It; ++It)
+		{
+			UStaticMesh* StaticMesh = *It;
+			if (StaticMesh->GetAssetPath() == PathFileName)
+			{
+				return *It;
+			}
+		}
+
+		FStaticMesh* StaticMeshAsset = LoadObjStaticMeshAsset(PathFileName);
+		UStaticMesh* StaticMesh = FObjectFactory::ConstructObject<UStaticMesh>();
+		StaticMesh->SetStaticMeshAsset(StaticMeshAsset);
+
+		return StaticMesh;
+	}
+
+	static FString GetBinPath(const FString& PathFileName)
+	{
+		return PathFileName.substr(0, PathFileName.find_last_of('.')) + ".bin";
+	}
+
+	static void SaveAsBin(const FString& PathFileName, const FStaticMesh& Mesh)
+	{
+		FString BinPath = GetBinPath(PathFileName);
+		FWindowsBinWriter Writer(BinPath);
+
+		Writer.WriteString(Mesh.Path);
+		Writer.WriteString(Mesh.MtlPath);
+		Writer.WriteArray(Mesh.Vertices);
+		Writer.WriteArray(Mesh.Indices);
+		Writer.WriteStringArray(Mesh.MaterialSlotNames);
+		Writer.WriteArray(Mesh.Sections);
+	}
+
+	static FStaticMesh* LoadFromBin(const FString& BinPath)
+	{
+
+		//TODO : Delete These Time;
+		auto StartTime = std::chrono::high_resolution_clock::now();
+
+		FWindowsBinReader Reader(BinPath);
+		if (!Reader.IsOpen())
+			return nullptr;
+
+		FStaticMesh* Mesh = new FStaticMesh();
+		Reader.ReadString(Mesh->Path);
+		Reader.ReadString(Mesh->MtlPath);
+		Reader.ReadArray(Mesh->Vertices);
+		Reader.ReadArray(Mesh->Indices);
+		Reader.ReadStringArray(Mesh->MaterialSlotNames);
+		Reader.ReadArray(Mesh->Sections);
+
+		MakeMeshData(Mesh);
+
+		auto EndTime = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> Elapsed = EndTime - StartTime;
+
+		// [3] 로그 출력 (초 단위)
+		UE_LOG("[BIN_OBJ] Load Success: %s\n", BinPath.c_str());
+		UE_LOG("[BIN_OBJ] Execution Time: %.6f seconds\n", Elapsed.count());
+		return Mesh;
+	}
+
+	static void CleanUp()
+	{
+		for (auto& Pair : StaticMeshCache)
+		{
+			delete Pair.second;
+		}
+		StaticMeshCache.clear();
+		for (auto& Pair : MaterialCache)
+		{
+			delete Pair.second;
+		}
+		MaterialCache.clear();
+		for (auto& Pair : TextureCache)
+		{
+			delete Pair.second;
+		}
+		TextureCache.clear();
+	}
+
+
+	/*
+	* This is called at FRenderer::Initalize()
+	*/
+	static void InjectDevice(ID3D11Device* InDevice)
+	{
+		Device = InDevice;
+	}
+
 	static FTexture* LoadTextureAsset(const FString& PathFileName)
 	{
 		if (TextureCache.contains(PathFileName))
@@ -640,6 +767,9 @@ public:
 
 		return MT;
 	}
+private:
+
+	//HelperFunction
 	static FMaterial* LoadMaterialAsset(const FString& PathFileName)
 	{
 		if (MaterialCache.contains(PathFileName))
@@ -726,68 +856,22 @@ public:
 		//MaterialCache[PathFileName] = FirstMat;
 		return FirstMat;
 	}
-	static FMaterial* GetMaterialByName(const FString& Name)
+	static void MakeMeshData(FStaticMesh* OutMesh)
 	{
-		auto It = MaterialCache.find(Name);
-		if (It != MaterialCache.end())
-			return It->second;
-		return nullptr;
-	}
-	static const TArray<FMaterial*> GetAllMaterials()
-	{
-		TArray<FMaterial*> Materials;
-		for (const auto& Pair : MaterialCache)
+		OutMesh->MeshData = std::make_shared<FMeshData>();
+		OutMesh->MeshData->Vertices.reserve(OutMesh->Vertices.size());
+		for (const FNormalVertex& NV : OutMesh->Vertices)
 		{
-			Materials.push_back(Pair.second);
+			FPrimitiveVertex PV;
+			PV.Position = NV.Position;
+			PV.Color = NV.Color;
+			PV.Normal = NV.Normal;
+			PV.UV = NV.UV;
+			OutMesh->MeshData->Vertices.push_back(PV);
 		}
-		return Materials;
+		OutMesh->MeshData->Indices.assign(OutMesh->Indices.begin(), OutMesh->Indices.end());
+		OutMesh->MeshData->Topology = EMeshTopology::EMT_TriangleList;
+		OutMesh->MeshData->CreateVertexAndIndexBuffer(Device);
+		OutMesh->MeshData->UpdateLocalBound();
 	}
-
-	static UStaticMesh* LoadObjStaticMesh(const FString& PathFileName)
-	{
-		for (TObjectIterator<UStaticMesh> It; It; ++It)
-		{
-			UStaticMesh* StaticMesh = *It;
-			if (StaticMesh->GetAssetPath() == PathFileName)
-			{
-				return *It;
-			}
-		}
-
-		FStaticMesh* StaticMeshAsset = LoadObjStaticMeshAsset(PathFileName);
-		UStaticMesh* StaticMesh = FObjectFactory::ConstructObject<UStaticMesh>();
-		StaticMesh->SetStaticMeshAsset(StaticMeshAsset);
-
-		return StaticMesh;
-	}
-
-	static void CleanUp()
-	{
-		for (auto& Pair : StaticMeshCache)
-		{
-			delete Pair.second;
-		}
-		StaticMeshCache.clear();
-		for (auto& Pair : MaterialCache)
-		{
-			delete Pair.second;
-		}
-		MaterialCache.clear();
-		for (auto& Pair : TextureCache)
-		{
-			delete Pair.second;
-		}
-		TextureCache.clear();
-	}
-
-
-	/*
-	* This is called at FRenderer::Initalize()
-	*/
-	static void InjectDevice(ID3D11Device* InDevice)
-	{
-		Device = InDevice;
-	}
-
-private:
 };

@@ -311,6 +311,7 @@
     <ClCompile Include="Source\Actor\StaticMeshActor.cpp" />
     <ClCompile Include="Source\Utility\FileIO.cpp" />
     <ClCompile Include="Source\Actor\CameraPawn.cpp" />
+    <ClCompile Include="Source\Asset\FWindowsIO.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -652,7 +653,7 @@
     <ClInclude Include="Source\Actor\CameraPawn.h" />
 =======
     <ClInclude Include="Source\Renderer\RenderTypes.h" />
->>>>>>> feat/SWindows
+    <ClInclude Include="Source\Asset\FWindowsIO.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
