@@ -148,7 +148,7 @@ void FEditorEngine::PostInitialize()
 			}
 
 			AStaticMeshActor* NewActor = Core->GetLevel()->SpawnActor<AStaticMeshActor>("StaticMeshActor");
-			UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath(Path), Core->GetRenderer()->GetDevice());
+			UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath(Path));
 			NewActor->SetStaticMesh(StaticMesh);
 			ViewportController.SetFocus(NewActor->GetRootComponent());
 

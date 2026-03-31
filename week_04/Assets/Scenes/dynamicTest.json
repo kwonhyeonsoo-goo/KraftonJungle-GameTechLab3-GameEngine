@@ -1,13 +1,13 @@
 {
   "Camera": {
     "Position": [
-      -26.884946823120117,
-      2.8134474754333496,
-      10.772481918334961
+      -17.301929473876953,
+      0.7883870601654053,
+      8.580501556396484
     ],
     "Rotation": [
-      0.0,
-      -15.0
+      -18.79993438720703,
+      -24.20001792907715
     ]
   },
   "Materials": [
@@ -29,17 +29,65 @@
         8
       ],
       "Location": [
-        -6.187598705291748,
-        0.3299158215522766,
-        1.7818090915679932
+        -5.189637660980225,
+        -0.8301848769187927,
+        3.9177756309509277
       ],
       "MaterialOverrides": [
         {
-          "MapKd": "/Assets/Textures/DefaultTexture.png",
-          "Name": "M_Default_Texture"
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/头发.png",
+          "Name": "眼睛"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/脸.png",
+          "Name": "眼白"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/脸.png",
+          "Name": "脖子"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/脸.png",
+          "Name": "脸"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/头发.png",
+          "Name": "头发"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\12213_bird_diffuse.jpg",
+          "Name": "12213_bird"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\12213_bird_diffuse.jpg",
+          "Name": "12213_bird"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\12213_bird_diffuse.jpg",
+          "Name": "12213_bird"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
+          "Name": "裤子"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
+          "Name": "背饰"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
+          "Name": "裙子"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
+          "Name": "鞋子"
+        },
+        {
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
+          "Name": "手套"
         }
       ],
-      "ObjStaticMeshAsset": "\\Assets\\Meshes\\12213_Bird_v1_l3.obj",
+      "ObjStaticMeshAsset": "\\Assets\\Meshes\\Lumine\\LumineModel.obj",
       "Rotation": [
         -0.0,
         0.0,
