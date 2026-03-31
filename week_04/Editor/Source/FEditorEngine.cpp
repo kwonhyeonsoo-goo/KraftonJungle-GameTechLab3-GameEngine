@@ -20,6 +20,7 @@
 #include "Asset/AssetManager.h"
 #include "Utility/FileIO.h"
 
+#include "../Source/Controller/OrthoViewportController.h"
 
 bool FEditorEngine::Initialize(HINSTANCE hInstance)
 {
@@ -31,8 +32,12 @@ FEditorEngine::~FEditorEngine() {}
 
 void FEditorEngine::Shutdown()
 {
-	if (EditorPawn) { EditorPawn->Destroy(); EditorPawn = nullptr; }
-	ViewportController.Cleanup();
+
+	for (auto& viewportcontroller : ViewportControllerArray)
+	{
+		viewportcontroller.reset();
+	}
+
 	for (auto& VP : SceneViewportClients) VP = nullptr;
 	FEngine::Shutdown();
 }
@@ -51,10 +56,24 @@ void FEditorEngine::CreateViewportClients()
 	// [1] Top         — 위에서 아래 orthographic
 	// [2] Side        — 옆에서 orthographic
 	// [3] Bottom      — 아래에서 위 orthographic
-	for (int i = 0; i < 4; i++)
+	ViewportControllerArray.reserve(4);
+
+
+	auto VP = std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
+	SceneViewportClients[0] = VP.get();
+
+	auto ViewportController = std::make_unique<FViewportController>();
+	ViewportControllerArray.push_back(std::move(ViewportController));
+	ViewportClientArray.push_back(std::move(VP));
+
+
+	for (int i = 1; i < 4; i++)
 	{
 		auto VP = std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
 		SceneViewportClients[i] = VP.get();
+		
+		auto ViewportController = std::make_unique<FOrthoViewportController>();
+		ViewportControllerArray.push_back(std::move(ViewportController));
 		ViewportClientArray.push_back(std::move(VP));
 	}
 }
@@ -65,6 +84,8 @@ void FEditorEngine::PostInitialize()
 	for (int i = 0; i < 4; i++)
 	{
 		EditorUI.LinkViewportClient(i, SceneViewportClients[i]);
+		SceneViewportClients[i]->SetLinkedWorld(Core->GetEditorWorld() , Core.get());
+		SceneViewportClients[i]->InitializeCameraFromWorld();
 	}
 
 	// ── Console ───────────────────────────────────────────────────────
@@ -82,51 +103,52 @@ void FEditorEngine::PostInitialize()
 				FEngineLog::Get().Log("[error] Unknown command: '%s'", CommandLine);
 		});
 
-	// ── EditorPawn — Perspective 뷰포트(0번)에 연결 ──────────────────
-	EditorPawn = FObjectFactory::ConstructObject<AEditorCameraPawn>(nullptr, "EditorCameraPawn");
-	EditorPawn->Initialize();
+	{
+		UCameraComponent* Cam = SceneViewportClients[0]->GetActiveCamera();
+		Cam->SetPosition({ -10.f, 0.f, 5.f });
+		Cam->SetRotation(0.f, -15.f);
+		Cam->SetFOV(60.f);
+		Cam->SetOrthographic(false);
+		ViewportControllerArray[0].get()->Initialize(Cam, Core->GetInputManager());
 
-	UCameraComponent* PerspCam = EditorPawn->GetCameraComponent();
-	PerspCam->SetPosition({ -10.f, 0.f, 5.f });
-	PerspCam->SetRotation(0.f, -15.f);
-	PerspCam->SetFOV(60.f);
-	PerspCam->SetOrthographic(false);
-	SceneViewportClients[0]->SetActiveCamera(PerspCam);
-
+	}
 	UE_LOG("EditorEngine initialized");
 
 	// [1] Top — 위에서 아래로 내려다봄
 	{
 		UCameraComponent* Cam = SceneViewportClients[1]->GetActiveCamera();
 		Cam->SetPosition({ 0.f, 0.f, 100.f });
-		Cam->SetRotation(0.f, -89.9f);   // 거의 수직 아래
+		Cam->SetRotation(0.f, -90.f);   // 거의 수직 아래
 		Cam->SetOrthographic(true);
-		Cam->SetOrthoWidth(25.f);
+		Cam->SetOrthoWidth(15.f);
+		ViewportControllerArray[1].get()->Initialize(Cam, Core->GetInputManager());
+
 	}
 
 	// [2] Side — 오른쪽에서 왼쪽으로
 	{
 		UCameraComponent* Cam = SceneViewportClients[2]->GetActiveCamera();
-		Cam->SetPosition({ 100.f, 0.f, 0.f });
+		Cam->SetPosition({ 100.f, 0.f, 2.f });
 		Cam->SetRotation(180.f, 0.f);    // 왼쪽 방향
 		Cam->SetOrthographic(true);
-		Cam->SetOrthoWidth(25.f);
+		Cam->SetOrthoWidth(15.f);
+		ViewportControllerArray[2].get()->Initialize(Cam, Core->GetInputManager());
+
 	}
 
 	// [3] Bottom — 아래에서 위로 올려다봄 (Front 뷰로 대체하는 경우 많음)
 	{
 		UCameraComponent* Cam = SceneViewportClients[3]->GetActiveCamera();
-		Cam->SetPosition({ 0.f, -100.f, 0.f });
+		Cam->SetPosition({ 0.f, -100.f, 2.f });
 		Cam->SetRotation(90.f, 0.f);     // 앞쪽 방향
 		Cam->SetOrthographic(true);
-		Cam->SetOrthoWidth(25.f);
+		Cam->SetOrthoWidth(15.f);
+		ViewportControllerArray[3].get()->Initialize(Cam, Core->GetInputManager());
+
 	}
 
 	// ── ViewportController — Perspective 뷰포트만 제어 ───────────────
-	ViewportController.Initialize(
-		PerspCam,
-		Core->GetInputManager(),
-		Core->GetEnhancedInputManager());
+
 
 #if IS_OBJ_VIEWER
 	if (Core && Core->GetActiveLevel())
@@ -138,7 +160,7 @@ void FEditorEngine::PostInitialize()
 			if (!Path.ends_with(".obj"))
 			{
 				MessageBoxW(
-					nullptr,
+					nullptr,\
 					L"Obj 파일만 지원합니다.",
 					L"Error",
 					MB_OK | MB_ICONWARNING
@@ -150,7 +172,7 @@ void FEditorEngine::PostInitialize()
 			AStaticMeshActor* NewActor = Core->GetLevel()->SpawnActor<AStaticMeshActor>("StaticMeshActor");
 			UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath(Path));
 			NewActor->SetStaticMesh(StaticMesh);
-			ViewportController.SetFocus(NewActor->GetRootComponent());
+			ViewportControllerArray[0].get()->SetFocus(NewActor->GetRootComponent());
 
 		}
 		else
@@ -177,13 +199,15 @@ void FEditorEngine::PostInitialize()
 }
 
 
-
 void FEditorEngine::Tick(float DeltaTime)
 {
-	ViewportController.Tick(DeltaTime);
+	int32 FocusedIndex = EditorUI.GetHoveredViewportIndex();
+
+	for (int i = 0; i < 4; i++)
+	{
+		bool bShouldBeActive = (i == FocusedIndex);
+		ViewportControllerArray[i]->SetActive(bShouldBeActive);
+		ViewportControllerArray[i]->Tick(DeltaTime);
+	}
 }
 
-FEditorViewportController* FEditorEngine::GetViewportController()
-{
-	return &ViewportController;
-}

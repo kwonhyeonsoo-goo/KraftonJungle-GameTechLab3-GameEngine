@@ -24,14 +24,17 @@ public:
 	virtual void AddIfMouseHoverOnBar(FPoint coord, TArray<SSplitter*>& outArray);	//자기 자신+모든 자식의 바가 호버되면 배열에 추가
 	bool IsAnyBarHovered(FPoint pt);	//자기 자신+모든 자식의 바 아무나 호버되면 true 반환
 
+	float GetRatio() { return SplitRatio; }
 	virtual void SetRatio(float newRatio) =0;
 	virtual void UpdateBarPosition(FPoint detlaCoord) = 0;
+
 	void SetSideLT(SWindow* sideLT) { SideLT = sideLT; }
 	void SetSideRB(SWindow* sideRB) { SideRB = sideRB; }
 
 	SWindow* GetSideLT() const { return SideLT; }
 	SWindow* GetSideRB() const { return SideRB; }
 
+	FRect GetBarRect() const { return Bar; };
 };
 
 //split bar => -------

@@ -42,6 +42,7 @@ protected:
 	TArray<std::unique_ptr<IViewportClient>> ViewportClientArray;
 
 private:
+	void CameraSetting();
 	bool OnInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
 	void OnResize(int32 Width, int32 Height);
 };

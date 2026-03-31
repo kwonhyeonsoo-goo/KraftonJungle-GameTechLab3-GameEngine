@@ -59,6 +59,8 @@ private:
 	std::wstring GetEditorIniPathW() const;
 	FViewport* GetViewportAt(int32 Index);
 
+	void RenderSplitterBars(SSplitter* splitter, ImDrawList* drawList);
+
 	FCore* Core = nullptr;
 	TObjectPtr<AActor> CachedSelectedActor;
 	FWindow* MainWindow = nullptr;

@@ -23,12 +23,11 @@ protected:
 	ELevelType GetStartupLevelType() const override { return ELevelType::Editor; }
 	void CreateViewportClients() override;
 
-	FEditorViewportController* GetViewportController();
+	//FEditorViewportController* GetViewportController();
 
 private:
 	FEditorUI EditorUI;
-	AEditorCameraPawn* EditorPawn = nullptr;
-	FEditorViewportController ViewportController;
+	TArray<std::unique_ptr<FViewportController>> ViewportControllerArray;
 
 	// [0] Perspective, [1] Top, [2] Side, [3] Bottom
 	// 소유권은 ViewportClientArray

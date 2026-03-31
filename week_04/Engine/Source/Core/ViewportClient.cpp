@@ -1,7 +1,6 @@
 #include "ViewportClient.h"
 #include "World/World.h"
 #include "Core/Core.h"
-#include "Input/InputManager.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/RenderCommand.h"
 #include "Renderer/Material.h"
@@ -11,6 +10,8 @@
 #include "Component/SubUVComponent.h"
 #include "Core/FEngine.h"
 #include "Component/TextComponent.h"
+#include "Actor/CameraPawn.h"
+
 
 // ── 생성자 ─────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,14 @@ void IViewportClient::OnViewportResized(uint32 InWidth, uint32 InHeight)
 	GetActiveCamera()->SetAspectRatio(static_cast<float>(InWidth) / static_cast<float>(InHeight));
 }
 
+void IViewportClient::InitializeCameraFromWorld()
+{
+
+	UCameraPawn* CameraPawn = LinkedWorld->SpawnActor<UCameraPawn>("CameraPawn");
+	SetActiveCamera(CameraPawn->GetCameraComponent());
+
+}
+
 // ── 뷰포트 정보 ────────────────────────────────────────────────────────────
 
 void IViewportClient::SetViewportInfo(const FViewportInfo& InViewportInfo)
@@ -77,32 +86,6 @@ void IViewportClient::Detach(FCore* Core, FRenderer* Renderer)
 
 void IViewportClient::Tick(FCore* Core, float DeltaTime)
 {
-	if (!Core)
-	{
-		return;
-	}
-
-	FInputManager* InputManager = Core->GetInputManager();
-	if (!InputManager)
-	{
-		return;
-	}
-
-	UCameraComponent* Camera = GetActiveCamera();
-
-	if (InputManager->IsKeyDown('W')) Camera->MoveForward(DeltaTime);
-	if (InputManager->IsKeyDown('S')) Camera->MoveForward(-DeltaTime);
-	if (InputManager->IsKeyDown('D')) Camera->MoveRight(DeltaTime);
-	if (InputManager->IsKeyDown('A')) Camera->MoveRight(-DeltaTime);
-	if (InputManager->IsKeyDown('E')) Camera->MoveUp(DeltaTime);
-	if (InputManager->IsKeyDown('Q')) Camera->MoveUp(-DeltaTime);
-
-	if (InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT))
-	{
-		const float DeltaX = InputManager->GetMouseDeltaX();
-		const float DeltaY = InputManager->GetMouseDeltaY();
-		Camera->Rotate(DeltaX * Camera->GetSensitivity(), -DeltaY * Camera->GetSensitivity());
-	}
 }
 
 void IViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
@@ -111,12 +94,12 @@ void IViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WPa
 
 ULevel* IViewportClient::ResolveLevel(FCore* Core) const
 {
-	return Core ? Core->GetActiveLevel() : nullptr;
+	return LinkedWorld ? LinkedWorld->GetPersistentLevel() : Core->GetActiveLevel();
 }
 
 UWorld* IViewportClient::ResolveWorld(FCore* Core) const
-{
-	return Core ? Core->GetActiveWorld() : nullptr;
+{	
+	return LinkedWorld ? LinkedWorld : Core->GetActiveWorld();
 }
 
 void IViewportClient::BuildRenderCommands(FCore* Core, ULevel* Level, const FFrustum& Frustum, FRenderCommandQueue& OutQueue)
@@ -135,7 +118,22 @@ void IViewportClient::HandleFileDoubleClick(const FString& FilePath)
 void IViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 {
 }
+// ======== World ==============
 
+void IViewportClient::SetLinkedWorld(UWorld* InWorld , FCore* InCore)
+{
+	if (InWorld == nullptr)
+	{
+		LinkedWorld = ResolveWorld(InCore);
+		return;
+	}
+	LinkedWorld = InWorld;
+
+}
+UWorld* IViewportClient::GetLinkedWorld()
+{
+	return LinkedWorld;
+}
 // ── FGameViewportClient ────────────────────────────────────────────────────
 
 void FGameViewportClient::Attach(FCore* Core, FRenderer* Renderer)
@@ -153,3 +151,4 @@ void FGameViewportClient::Detach(FCore* Core, FRenderer* Renderer)
 		Renderer->ClearViewportCallbacks();
 	}
 }
+

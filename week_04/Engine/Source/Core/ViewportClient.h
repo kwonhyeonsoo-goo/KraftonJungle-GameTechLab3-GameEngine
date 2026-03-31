@@ -28,8 +28,15 @@ public:
 	virtual void Detach(FCore* Core, FRenderer* Renderer);
 	virtual void Tick(FCore* Core, float DeltaTime);
 	virtual void HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
+
+	// ===== [world] =====
+
 	virtual ULevel* ResolveLevel(FCore* Core) const;
 	virtual UWorld* ResolveWorld(FCore* Core) const;
+
+	void SetLinkedWorld(UWorld* InWorld, FCore* InCore);
+	UWorld* GetLinkedWorld();
+
 
 	FShowFlags& GetShowFlags() { return ShowFlags; }
 	const FShowFlags& GetShowFlags() const { return ShowFlags; }
@@ -46,6 +53,9 @@ public:
 	FCameraViewInfo GetCameraViewInfo() const;
 	void OnViewportResized(uint32 InWidth, uint32 InHeight);
 
+	void InitializeCameraFromWorld();
+
+
 	// ── 뷰포트 정보 ───────────────────────────────────────────────────
 	void SetViewportInfo(const FViewportInfo& InViewportInfo);
 	const FViewportInfo& GetViewportInfo() const { return ViewportInfo; }
@@ -61,6 +71,8 @@ private:
 	UCameraComponent* ActiveCamera = nullptr;
 
 	FViewportInfo ViewportInfo;
+
+	UWorld* LinkedWorld; 
 };
 
 class ENGINE_API FGameViewportClient : public IViewportClient
