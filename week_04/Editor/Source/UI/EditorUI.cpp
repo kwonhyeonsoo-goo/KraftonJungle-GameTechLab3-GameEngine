@@ -1324,16 +1324,16 @@ void FEditorUI::RenderSplitterBars(SSplitter* splitter, ImDrawList* drawList)
 {
 	if (!splitter) return;
 	FRect bar;
-	if(ViewportLayoutSetting == ViewportLayout::_2x2){
-	
-		for(int i=0;i<3;i++)
+	if (ViewportLayoutSetting == ViewportLayout::_2x2) {
+
+		for (int i = 0; i < 3; i++)
 		{
-			if (i == 2 ) {
-				if(SSplitter* splitter = dynamic_cast<SSplitter*>(RootWindow))
+			if (i == 2) {
+				if (SSplitter* splitter = dynamic_cast<SSplitter*>(RootWindow))
 					bar = splitter->GetBarRect(); // 바 위치/크기 가져오기
 			}
 			else if (i == 1 && RootWindow)
-			{ 
+			{
 				if (SSplitter* splitter = dynamic_cast<SSplitter*>(RootWindow->GetSideLT())) {
 					//하드 코딩 바꾸기......
 					bar = splitter->GetBarRect(); // 바 위치/크기 가져오기
@@ -1359,7 +1359,7 @@ void FEditorUI::RenderSplitterBars(SSplitter* splitter, ImDrawList* drawList)
 			// 마우스 호버 체크
 			ImVec2 mousePos = ImGui::GetMousePos();
 			FPoint mousePoint = { mousePos.x, mousePos.y };
-			bool bHovered = mousePos.x >= barMin.x && mousePos.x <= barMax.x &&	mousePos.y >= barMin.y &&mousePos.y <= barMax.y;
+			bool bHovered = mousePos.x >= barMin.x && mousePos.x <= barMax.x && mousePos.y >= barMin.y && mousePos.y <= barMax.y;
 
 			// 호버면 흰색, 아니면 회색
 			ImU32 color = bHovered
@@ -1396,7 +1396,7 @@ void FEditorUI::RenderSplitterBars(SSplitter* splitter, ImDrawList* drawList)
 	}
 
 
-		
+}
 
 
 
