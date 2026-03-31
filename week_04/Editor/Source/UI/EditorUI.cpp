@@ -136,7 +136,7 @@ IViewportClient* FEditorUI::GetViewportClientAt(int32 Index) const
 
 // ── Destructor ──────────────────────────────────────────────────────────────
 
-FEditorUI::~FEditorUI()
+FEditorUI::~FEditorUI() 
 {
 	// SWindow 삭제 (리프 노드)
 	for (SWindow* Win : Windows)
@@ -698,9 +698,6 @@ void FEditorUI::Render()
 				//		EditorVP->SetRenderMode(Mode);
 				//	}
 				//}
-
-
-
 
 			}
 #pragma region Viewport Splitter
