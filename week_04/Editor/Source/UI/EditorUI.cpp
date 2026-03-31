@@ -142,17 +142,11 @@ IViewportClient* FEditorUI::GetViewportClientAt(int32 Index) const
 FEditorUI::~FEditorUI() 
 {
 	// SWindow 삭제 (리프 노드)
-	for (SWindow* Win : Windows)
-		delete Win;
-	Windows.clear();
 
 	// RootWindow 중간 SSplitter 노드 삭제
-	// 트리 구조: RootWindow(SSplitterH) -> sideUP(SSplitterV), sideBottom(SSplitterV)
-	// SWindow는 이미 위에서 삭제했으므로 SSplitter 노드만 삭제
+
 	if (RootWindow)
 	{
-		delete RootWindow->GetSideLT();  // sideUP
-		delete RootWindow->GetSideRB();  // sideBottom
 		delete RootWindow;
 		RootWindow = nullptr;
 	}
