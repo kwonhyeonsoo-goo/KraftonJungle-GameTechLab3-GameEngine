@@ -498,6 +498,7 @@ void FRenderer::SetViewMatrix(FMatrix View)
 
 bool FRenderer::CreateConstantBuffers()
 {
+	int size = sizeof(FVector2);
 	D3D11_BUFFER_DESC Desc = {};
 	Desc.Usage = D3D11_USAGE_DYNAMIC;
 	Desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;

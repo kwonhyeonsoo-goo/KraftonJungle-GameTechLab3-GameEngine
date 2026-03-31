@@ -380,8 +380,8 @@ public:
 };
 
 // =========================
-	// Asset Manager
-	// =========================
+// Asset Manager
+// =========================
 
 class ENGINE_API FAssetManager
 {
@@ -395,7 +395,7 @@ public:
 	static FMaterial* GetMaterialByName(const FString& Name);
 	static const TArray<FMaterial*> GetAllMaterials();
 	static UStaticMesh* LoadObjStaticMesh(const FString& PathFileName);
-	static FString GetBinPath(const FString& PathFileName);
+	static FString ToBinPath(const FString& PathFileName);
 	static void SaveAsBin(const FString& PathFileName, const FStaticMesh& Mesh);
 	static FStaticMesh* LoadFromBin(const FString& BinPath);
 	static void CleanUp();

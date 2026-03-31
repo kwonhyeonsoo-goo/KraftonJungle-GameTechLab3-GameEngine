@@ -101,24 +101,26 @@ void FAssetManager::AppendTriangle(FStaticMesh* Mesh, int32 SectionIndex, uint32
 	Mesh->Sections[SectionIndex].IndexCount += 3;
 }
 
+//Relative Path Comes in
 FStaticMesh* FAssetManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 {
-	if (StaticMeshCache.contains(PathFileName))
+	//FString RelativePath = FPaths::ToRelativePath(PathFileName);
+	if (StaticMeshCache.contains(PathFileName))//캐시에 저장할때는 상대경로
 	{
 		return StaticMeshCache[PathFileName];
 	}
 
 	// bin 캐시가 있으면 OBJ 파싱 없이 바로 로드
-	FString BinPath = GetBinPath(PathFileName);
-	FStaticMesh* CachedMesh = LoadFromBin(BinPath);
+	FString BinPath = ToBinPath(PathFileName);
+	FStaticMesh* CachedMesh = LoadFromBin(FPaths::ToAbsolutePath(BinPath));
 	if (CachedMesh)
 	{
-		LoadMaterialAsset(CachedMesh->MtlPath);//TextureCache와 MaterialCache 채우기
+		LoadMaterialAsset(FPaths::ToAbsolutePath(CachedMesh->MtlPath));//TextureCache와 MaterialCache 채우기
 		StaticMeshCache[PathFileName] = CachedMesh;
 		return CachedMesh;
 	}
 
-	FObjInfo ObjInfo = FObjImporter::LoadObjFile(PathFileName);
+	FObjInfo ObjInfo = FObjImporter::LoadObjFile(FPaths::ToAbsolutePath(PathFileName));
 	if (ObjInfo.Positions.empty() || ObjInfo.Faces.empty())
 	{
 		printf("[OBJ] Invalid or empty obj : %s\n", PathFileName.c_str());
@@ -126,8 +128,8 @@ FStaticMesh* FAssetManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 	}
 	FStaticMesh* Mesh = new FStaticMesh();
 
-	FString AbsolutePath = FPaths::ToAbsolutePath(PathFileName);
-	std::filesystem::path path = FPaths::ToU8String(AbsolutePath);
+	FString RelativePath = FPaths::ToRelativePath(PathFileName);
+	std::filesystem::path path = FPaths::ToU8String(RelativePath);
 	std::filesystem::path ParentDir = path.parent_path();
 	std::filesystem::path MatfilePath = ParentDir / FPaths::ToU8String(ObjInfo.Mtllib);//mtl파일 위치
 	LoadMaterialAsset(FPaths::FromPath(MatfilePath)); //TextureCache와 MaterialCache 채우기
@@ -136,7 +138,7 @@ FStaticMesh* FAssetManager::LoadObjStaticMeshAsset(const FString& PathFileName)
 	if (!ObjInfo.Mtllib.empty())
 	{
 		// MTL은 OBJ와 같은 디렉토리에 있다고 가정
-		std::filesystem::path ObjAbsPath = FPaths::ToU8String(FPaths::ToAbsolutePath(PathFileName));
+		std::filesystem::path ObjAbsPath = FPaths::ToU8String(FPaths::ToRelativePath(PathFileName));
 		Mesh->MtlPath = FPaths::FromPath(ObjAbsPath.parent_path() / FPaths::ToU8String(ObjInfo.Mtllib));
 	}
 
@@ -203,7 +205,7 @@ const TArray<FMaterial*> FAssetManager::GetAllMaterials()
 	}
 	return Materials;
 }
-
+//Relative Path Comes in
 UStaticMesh* FAssetManager::LoadObjStaticMesh(const FString& PathFileName)
 {
 	for (TObjectIterator<UStaticMesh> It; It; ++It)
@@ -214,7 +216,6 @@ UStaticMesh* FAssetManager::LoadObjStaticMesh(const FString& PathFileName)
 			return *It;
 		}
 	}
-
 	FStaticMesh* StaticMeshAsset = LoadObjStaticMeshAsset(PathFileName);
 	UStaticMesh* StaticMesh = FObjectFactory::ConstructObject<UStaticMesh>();
 	StaticMesh->SetStaticMeshAsset(StaticMeshAsset);
@@ -222,24 +223,25 @@ UStaticMesh* FAssetManager::LoadObjStaticMesh(const FString& PathFileName)
 	return StaticMesh;
 }
 
-FString FAssetManager::GetBinPath(const FString& PathFileName)
+FString FAssetManager::ToBinPath(const FString& PathFileName)
 {
 	return PathFileName.substr(0, PathFileName.find_last_of('.')) + ".bin";
 }
 
 void FAssetManager::SaveAsBin(const FString& PathFileName, const FStaticMesh& Mesh)
 {
-	FString BinPath = GetBinPath(PathFileName);
+	FString BinPath = ToBinPath(PathFileName);
 	FWindowsBinWriter Writer(BinPath);
 
-	Writer.WriteString(Mesh.Path);
-	Writer.WriteString(Mesh.MtlPath);
-	Writer.WriteArray(Mesh.Vertices);
-	Writer.WriteArray(Mesh.Indices);
-	Writer.WriteStringArray(Mesh.MaterialSlotNames);
-	Writer.WriteArray(Mesh.Sections);
+	Writer.WriteString(FPaths::ToRelativePath(Mesh.Path));//String
+	Writer.WriteString(FPaths::ToRelativePath(Mesh.MtlPath));//String
+	Writer.WriteArray(Mesh.Vertices);//Array of FNormalVertex
+	Writer.WriteArray(Mesh.Indices);//Array of uint32
+	Writer.WriteStringArray(Mesh.MaterialSlotNames);//Array of String
+	Writer.WriteArray(Mesh.Sections);//Array of SubMeshSection
 }
 
+//Absolute Comes in
 FStaticMesh* FAssetManager::LoadFromBin(const FString& BinPath)
 {
 
@@ -253,6 +255,8 @@ FStaticMesh* FAssetManager::LoadFromBin(const FString& BinPath)
 	FStaticMesh* Mesh = new FStaticMesh();
 	Reader.ReadString(Mesh->Path);
 	Reader.ReadString(Mesh->MtlPath);
+	/*Mesh->Path = FPaths::ToAbsolutePath(Mesh->Path);
+	Mesh->Path = FPaths::ToAbsolutePath(Mesh->MtlPath);*/
 	Reader.ReadArray(Mesh->Vertices);
 	Reader.ReadArray(Mesh->Indices);
 	Reader.ReadStringArray(Mesh->MaterialSlotNames);
@@ -349,9 +353,10 @@ FMaterial* FAssetManager::LoadMaterialTexture(const FString& MaterialName, const
 
 FTexture* FAssetManager::LoadTextureAsset(const FString& PathFileName)
 {
-	if (TextureCache.contains(PathFileName))
+	FString RelativePath = FPaths::ToRelativePath(PathFileName);
+	if (TextureCache.contains(RelativePath))
 	{
-		return TextureCache[PathFileName];
+		return TextureCache[RelativePath];
 	}
 	/** 텍스쳐 로드 */
 	int width = 0, height = 0, channels = 0;
@@ -429,8 +434,8 @@ FTexture* FAssetManager::LoadTextureAsset(const FString& PathFileName)
 	FTexture* MT = new FTexture();
 	MT->TextureSRV = srv;
 	MT->SamplerState = sampler;
-	MT->FilePath = PathFileName;
-	TextureCache[PathFileName] = MT;
+	MT->FilePath = RelativePath;
+	TextureCache[RelativePath] = MT;
 
 	return MT;
 }
@@ -438,15 +443,17 @@ FTexture* FAssetManager::LoadTextureAsset(const FString& PathFileName)
 
 FMaterial* FAssetManager::LoadMaterialAsset(const FString& PathFileName)
 {
-	if (MaterialCache.contains(PathFileName))
+	FString RelativePath = FPaths::ToRelativePath(PathFileName);
+	FString AbsolutePath = FPaths::ToAbsolutePath(PathFileName);
+	if (MaterialCache.contains(RelativePath))
 	{
-		return MaterialCache[PathFileName];
+		return MaterialCache[RelativePath];
 	}
 
-	TArray<FObjMaterialInfo> MatInfos = FObjImporter::LoadMtlFile(PathFileName);
+	TArray<FObjMaterialInfo> MatInfos = FObjImporter::LoadMtlFile(AbsolutePath);
 	if (MatInfos.empty())
 	{
-		printf("[MTL] No materials found in: %s\n", PathFileName.c_str());
+		printf("[MTL] No materials found in: %s\n", AbsolutePath.c_str());
 		return nullptr;
 	}
 
@@ -505,8 +512,8 @@ FMaterial* FAssetManager::LoadMaterialAsset(const FString& PathFileName)
 		// Diffuse 텍스처 (MTL 파일과 같은 디렉토리에서 탐색)
 		if (!Info.MapKd.empty())
 		{
-			FString AbsolutePath = FPaths::ToAbsolutePath(PathFileName);
-			std::filesystem::path path = FPaths::ToU8String(AbsolutePath);
+			FString RelativePath = FPaths::ToRelativePath(PathFileName);
+			std::filesystem::path path = FPaths::ToU8String(RelativePath);
 			std::filesystem::path MtlDir = path.parent_path();
 			std::filesystem::path TexFullPath = MtlDir / FPaths::ToU8String(Info.MapKd);
 			FTexture* Tex = LoadTextureAsset(FPaths::ToRelativePath(FPaths::FromPath(TexFullPath)));

@@ -8,10 +8,10 @@ struct FMeshData;
 // FPrimitiveVertex와 메모리 레이아웃 일치: Position, Color, Normal, UV
 struct FNormalVertex
 {
-	FVector Position;
-	FVector4 Color;
-	FVector Normal;
-	FVector2 UV;
+	FVector Position; //12
+	FVector Normal; //4
+	FVector4 Color; //16
+	FVector2 UV; // 8
 };
 
 struct FMeshSection

@@ -89,7 +89,7 @@ void UCameraComponent::SetRotation(float InYaw, float InPitch)
 FMatrix UCameraComponent::GetViewMatrix() const
 {
 	FVector Target, Origin;
-
+	//TODO : nullptr인 이유를 찾아야할것 같음
 	if (FocusTarget)
 	{
 		if (FocusTarget->IsA(UPrimitiveComponent::StaticClass()))
