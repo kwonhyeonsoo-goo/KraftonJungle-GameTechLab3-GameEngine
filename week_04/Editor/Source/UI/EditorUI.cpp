@@ -528,18 +528,19 @@ void FEditorUI::Render()
 		{
 
 #pragma region Render MultiViewport
-#ifndef IS_OBJ_VIEWER
 
 			// ── 메뉴바 (Gizmo 버튼) ─────────────────────────────────
 			if (ImGui::BeginMenuBar())
 			{
-				FEditorViewportClient* EditorVP =
-					dynamic_cast<FEditorViewportClient*>(GetPrimaryViewportClient());
 
+
+				//FEditorViewportClient* EditorVP = dynamic_cast<FEditorViewportClient*>(GetPrimaryViewportClient());
+				FEditorViewportClient* EditorVP = dynamic_cast<FEditorViewportClient*>(GetFocusedViewportClient());
 				if (EditorVP)
 				{
 					ImGui::Separator();
 					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, ImGui::GetStyle().ItemSpacing.y));
+
 
 					auto GizmoBtn = [&](const char* Label, EGizmoMode Mode)
 						{
@@ -552,17 +553,24 @@ void FEditorUI::Render()
 								ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.20f, 0.40f, 0.80f, 1.f));
 							}
 							if (ImGui::Button(Label, ImVec2(H, H)))
-								EditorVP->SetGizmoMode(Mode);
+							{
+								for (auto& window : Windows)
+								{
+
+									FEditorViewportClient* EditorVP = dynamic_cast<FEditorViewportClient*>(window->GetViewport()->GetLinkedViewportClient());
+									EditorVP->SetGizmoMode(Mode);
+
+								}
+
+							}
 							if (bSel) ImGui::PopStyleColor(3);
 						};
-
-
-
 
 
 					GizmoBtn("T", EGizmoMode::Location);
 					GizmoBtn("R", EGizmoMode::Rotation);
 					GizmoBtn("S", EGizmoMode::Scale);
+
 					ImGui::PopStyleVar();
 					// ── Viewport 모드 토글 버튼 ──────────────────────────
 					ImGui::SameLine();
@@ -594,10 +602,10 @@ void FEditorUI::Render()
 						EditorVP->SetRenderMode(Mode);
 					}
 				}
+
 				ImGui::EndMenuBar();
 
 			}
-#endif
 
 			// ── 4분할 영역 계산 ──────────────────────────────────────
 			const ImVec2 Origin = ImGui::GetCursorScreenPos();
