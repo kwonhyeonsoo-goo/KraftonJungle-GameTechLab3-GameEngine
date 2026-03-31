@@ -519,6 +519,7 @@ void FEditorUI::Render()
 	// ── 4분할 씬 뷰포트 ─────────────────────────────────────────────────
 	// 하나의 ImGui 창 안에 4개의 씬을 배치
 	// Gizmo 버튼은 Viewports[0](주 뷰포트) 기준
+
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 		const bool bVPOpen = ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoScrollbar);
@@ -529,6 +530,7 @@ void FEditorUI::Render()
 
 #pragma region Render MultiViewport
 
+#if !IS_OBJ_VIEWER
 			// ── 메뉴바 (Gizmo 버튼) ─────────────────────────────────
 			if (ImGui::BeginMenuBar())
 			{
@@ -536,7 +538,7 @@ void FEditorUI::Render()
 
 				//FEditorViewportClient* EditorVP = dynamic_cast<FEditorViewportClient*>(GetPrimaryViewportClient());
 				FEditorViewportClient* EditorVP = dynamic_cast<FEditorViewportClient*>(GetFocusedViewportClient());
-				if (EditorVP)
+				if (EditorVP != nullptr)
 				{
 					ImGui::Separator();
 					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, ImGui::GetStyle().ItemSpacing.y));
@@ -606,7 +608,7 @@ void FEditorUI::Render()
 				ImGui::EndMenuBar();
 
 			}
-
+#endif
 			// ── 4분할 영역 계산 ──────────────────────────────────────
 			const ImVec2 Origin = ImGui::GetCursorScreenPos();
 			const ImVec2 Total = ImGui::GetContentRegionAvail();
