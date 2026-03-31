@@ -1,13 +1,16 @@
 {
   "Camera": {
+    "FOV": 91.3550033569336,
+    "FarClip": 1000.0,
+    "NearClip": 0.10000000149011612,
     "Position": [
-      -17.301929473876953,
-      0.7883870601654053,
-      8.580501556396484
+      -11.025766372680664,
+      -41.42902755737305,
+      30.411766052246094
     ],
     "Rotation": [
-      -18.79993438720703,
-      -24.20001792907715
+      46.800025939941406,
+      -28.200035095214844
     ]
   },
   "Materials": [
@@ -19,19 +22,143 @@
     "Assets/Materials/M_Sky.json",
     "Assets/Materials/M_TintYellow.json"
   ],
-  "NextUUID": 13,
+  "NextUUID": 18,
   "Primitives": {
     "0": {
       "Billboard": true,
-      "Class": "AStaticMeshActor",
+      "Class": "UCameraPawn",
       "ComponentUUIDs": [
-        7,
+        3,
+        5
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 4
+    },
+    "1": {
+      "Billboard": true,
+      "Class": "UCameraPawn",
+      "ComponentUUIDs": [
+        6,
         8
       ],
       "Location": [
-        -5.189637660980225,
-        -0.8301848769187927,
-        3.9177756309509277
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 7
+    },
+    "2": {
+      "Billboard": true,
+      "Class": "UCameraPawn",
+      "ComponentUUIDs": [
+        9,
+        11
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 10
+    },
+    "3": {
+      "Billboard": true,
+      "Class": "UCameraPawn",
+      "ComponentUUIDs": [
+        12,
+        14
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 13
+    },
+    "4": {
+      "Billboard": true,
+      "Class": "AStaticMeshActor",
+      "ComponentUUIDs": [
+        16,
+        17
+      ],
+      "Location": [
+        -7.465122699737549,
+        -35.352359771728516,
+        25.971776962280273
       ],
       "MaterialOverrides": [
         {
@@ -55,16 +182,16 @@
           "Name": "头发"
         },
         {
-          "MapKd": "\\Assets\\Meshes\\12213_bird_diffuse.jpg",
-          "Name": "12213_bird"
+          "MapKd": "",
+          "Name": "表情"
         },
         {
-          "MapKd": "\\Assets\\Meshes\\12213_bird_diffuse.jpg",
-          "Name": "12213_bird"
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
+          "Name": "皮肤"
         },
         {
-          "MapKd": "\\Assets\\Meshes\\12213_bird_diffuse.jpg",
-          "Name": "12213_bird"
+          "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
+          "Name": "衣服"
         },
         {
           "MapKd": "\\Assets\\Meshes\\Lumine\\Texture/衣服.png",
@@ -105,7 +232,7 @@
         1.0,
         1.0
       ],
-      "UUID": 6
+      "UUID": 15
     }
   }
 }
