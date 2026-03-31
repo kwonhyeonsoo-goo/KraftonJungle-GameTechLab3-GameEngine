@@ -398,10 +398,10 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 		});
 	MainWindow->AddMessageFilter(std::bind(&FEditorUI::HandleInput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
-
+#pragma region MultiViewport Layout
 	//RootWindow 설정
 
-	/*
+	
 	RootWindow = new SSplitterH();	//가로 splitter bar
 
 	SSplitterV* sideUP = new SSplitterV();	SSplitterV* sideBottom = new SSplitterV();
@@ -426,31 +426,33 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 	FRect rect = { 0,0,1000,1000 };
 	RootWindow->Initialize(rect);
 
-	*/
-	RootWindow = new SSplitterV();	
+	
+	//RootWindow = new SSplitterV();	
 
-	SSplitterH* sideRight1 = new SSplitterH();	SSplitterH* sideRight2 = new SSplitterH();
+	//SSplitterH* sideRight1 = new SSplitterH();	SSplitterH* sideRight2 = new SSplitterH();
 
-	SWindow* side1, * side2, * side3, * side4;	//왼쪽, 오른쪽 위, 오른쪽 중간, 오른쪽 하단
+	//SWindow* side1, * side2, * side3, * side4;	//왼쪽, 오른쪽 위, 오른쪽 중간, 오른쪽 하단
 
-	side1 = new SWindow; side2 = new SWindow; side3 = new SWindow; side4 = new SWindow;
+	//side1 = new SWindow; side2 = new SWindow; side3 = new SWindow; side4 = new SWindow;
 
-	Windows.push_back(side1); Windows.push_back(side2); Windows.push_back(side3); Windows.push_back(side4);
+	//Windows.push_back(side1); Windows.push_back(side2); Windows.push_back(side3); Windows.push_back(side4);
 
-	// 각 리프 노드에 FViewport 생성
-	side1->SetViewport(std::make_unique<FViewport>());
-	side2->SetViewport(std::make_unique<FViewport>());
-	side3->SetViewport(std::make_unique<FViewport>());
-	side4->SetViewport(std::make_unique<FViewport>());
+	//// 각 리프 노드에 FViewport 생성
+	//side1->SetViewport(std::make_unique<FViewport>());
+	//side2->SetViewport(std::make_unique<FViewport>());
+	//side3->SetViewport(std::make_unique<FViewport>());
+	//side4->SetViewport(std::make_unique<FViewport>());
 
-	sideRight1->SetSideLT(side2); sideRight1->SetSideRB(sideRight2);
-	sideRight2->SetSideLT(side3); sideRight2->SetSideRB(side4);
+	//sideRight1->SetSideLT(side2); sideRight1->SetSideRB(sideRight2);
+	//sideRight2->SetSideLT(side3); sideRight2->SetSideRB(side4);
 
-	RootWindow->SetSideLT(side1); RootWindow->SetSideRB(sideRight1);
+	//RootWindow->SetSideLT(side1); RootWindow->SetSideRB(sideRight1);
 
-	FRect rect = { 0,0,1000,1000 };
-	RootWindow->Initialize(rect);
-	sideRight1->SetRatio(0.3f);
+	//FRect rect = { 0,0,1000,1000 };
+	//RootWindow->Initialize(rect);
+	//sideRight1->SetRatio(0.3f);
+
+#pragma endregion
 }
 
 // ── Render ──────────────────────────────────────────────────────────────────
@@ -595,30 +597,39 @@ void FEditorUI::Render()
 
 #pragma endregion
 
-#pragma region Viewport Splitter
+				////viewport당 imgui 출력
+				//FEditorViewportClient* EditorVP =
+				//	dynamic_cast<FEditorViewportClient*>(VP->GetLinkedViewportClient());
 
-				ImGuiWindowFlags flags =
-					ImGuiWindowFlags_NoTitleBar |
-					ImGuiWindowFlags_NoResize |
-					ImGuiWindowFlags_NoScrollbar |
-					ImGuiWindowFlags_NoInputs |    // 입력은 기존 시스템이 처리
-					ImGuiWindowFlags_NoSavedSettings |
-					ImGuiWindowFlags_NoBringToFrontOnFocus;
+				//if (EditorVP) {
+				//	float ComboW = 120.f;
+				//	ImGui::SetCursorPosX(Windows[i]->GetWindowSize().TopLeftX + ComboW);
+				//	ImGui::SetCursorPosY(Windows[i]->GetWindowSize().TopLeftY );
 
-				ImDrawList* drawList = ImGui::GetWindowDrawList();
-				RenderSplitterBars(RootWindow, drawList);
+				//	ImGui::SetNextItemWidth(ComboW);
+				//	{
+				//		ERenderMode Mode = EditorVP->GetRenderMode();
+				//		ImGui::Combo("##RM", (int*)&Mode, "Lighting\0No Lighting\0Wireframe", 3);
+				//		EditorVP->SetRenderMode(Mode);
+				//	}
+				//}
 
 
-				//// 구분선 (오른쪽 / 아래)
-				//ImDrawList* DL = ImGui::GetWindowDrawList();
-				//if (i == 0 || i == 2) // 세로 구분선
-				//	DL->AddLine(ImVec2(R.TopLeftX + R.Width, R.TopLeftY), ImVec2(R.TopLeftX + R.Width, R.TopLeftY + R.Height), IM_COL32(80, 80, 80, 255), 1.f);
-				//if (i == 0 || i == 1) // 가로 구분선
-				//	DL->AddLine(ImVec2(R.TopLeftX, R.TopLeftY + R.Height), ImVec2(R.TopLeftX + R.Width, R.TopLeftY + R.Height), IM_COL32(80, 80, 80, 255), 1.f);
-			
-#pragma endregion
+
 			
 			}
+#pragma region Viewport Splitter
+
+			ImGuiWindowFlags flags =
+				ImGuiWindowFlags_NoTitleBar |
+				ImGuiWindowFlags_NoResize |
+				ImGuiWindowFlags_NoScrollbar |
+				ImGuiWindowFlags_NoInputs |    // 입력은 기존 시스템이 처리
+				ImGuiWindowFlags_NoSavedSettings |
+				ImGuiWindowFlags_NoBringToFrontOnFocus;
+			ImDrawList* drawList = ImGui::GetWindowDrawList();
+			RenderSplitterBars(RootWindow, drawList);
+#pragma endregion
 		}
 		else
 		{
@@ -948,24 +959,24 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 			// 드래그 중 재판정 없이 클릭 시점 상태 유지
 			for (auto& DraggedSplitter : DraggedSplitters) 
 			{
-				//{
-				//	//일반 레이아웃 
-				//	if (DraggedSplitter == RootWindow)
-				//		DraggedSplitter->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
+				{
+					//일반 레이아웃 
+					if (DraggedSplitter == RootWindow)
+						DraggedSplitter->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
 
-				//	else {
-				//		//특정 레이아웃일때
-				//		if (SSplitter* lt = dynamic_cast<SSplitter*>(RootWindow->GetSideLT())) {
-				//			lt->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
-				//		}
-				//		if (SSplitter* rb = dynamic_cast<SSplitter*>(RootWindow->GetSideRB())) {
-				//			rb->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
-				//		}
-				//	}
-				//	UE_LOG("Dragging bar: %f, %f", DeltaMouse.X, DeltaMouse.Y);
-				//}
+					else {
+						//특정 레이아웃일때
+						if (SSplitter* lt = dynamic_cast<SSplitter*>(RootWindow->GetSideLT())) {
+							lt->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
+						}
+						if (SSplitter* rb = dynamic_cast<SSplitter*>(RootWindow->GetSideRB())) {
+							rb->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
+						}
+					}
+					UE_LOG("Dragging bar: %f, %f", DeltaMouse.X, DeltaMouse.Y);
+				}
 
-				DraggedSplitter->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
+				//DraggedSplitter->UpdateBarPosition({ (float)DeltaMouse.X,(float)DeltaMouse.Y });
 			}
 		}
 
