@@ -83,6 +83,10 @@ void FEditorEngine::PostInitialize()
 	// ── FViewport ↔ IViewportClient 1:1 연결 ─────────────────────────
 	for (int i = 0; i < 4; i++)
 	{
+		// render 전용 매크로
+#if IS_OBJ_VIEWER
+		if (i == 1) break;
+#endif
 		EditorUI.LinkViewportClient(i, SceneViewportClients[i]);
 		SceneViewportClients[i]->SetLinkedWorld(Core->GetEditorWorld() , Core.get());
 		SceneViewportClients[i]->InitializeCameraFromWorld();
@@ -170,7 +174,7 @@ void FEditorEngine::PostInitialize()
 			}
 
 			AStaticMeshActor* NewActor = Core->GetLevel()->SpawnActor<AStaticMeshActor>("StaticMeshActor");
-			UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath(Path), Core->GetRenderer()->GetDevice());
+			UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath(Path));
 			NewActor->SetStaticMesh(StaticMesh);
 			ViewportControllerArray[0].get()->SetFocus(NewActor->GetRootComponent());
 

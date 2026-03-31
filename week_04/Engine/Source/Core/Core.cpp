@@ -286,9 +286,12 @@ void FCore::Render()
 	//		}
 	//	}
 	//}
-	uint32 temp = 0;
+
+
+
 	for (IViewportClient* CurrentViewport : ViewportClientArray)
 	{
+
 		if (!CurrentViewport) continue;
 		Renderer->ClearCommandList();
 
@@ -339,7 +342,6 @@ void FCore::Render()
 		DebugDrawManager.Flush(Renderer.get(), ShowFlags, CurrentWorld);
 		Renderer->ClearLevelRenderTarget();
 	}
-
 	Renderer->EndFrame();
 }
 

@@ -19,9 +19,17 @@ class IViewportClient;
 class SWindow;
 class SSplitter;
 
+enum FViewportMode : uint32
+{
+	Single,
+	Quad
+};
+
 class FEditorUI
 {
 public:
+	ENGINE_API ~FEditorUI();
+
 	void Initialize(FCore* InCore);
 	void SetupWindow(FWindow* InWindow);
 	void AttachToRenderer(FRenderer* InRenderer);
@@ -42,6 +50,10 @@ public:
 	IViewportClient* GetFocusedViewportClient() const;
 	IViewportClient* GetPrimaryViewportClient() const;
 	IViewportClient* GetViewportClientAt(int32 Index) const;
+
+	// inline이므로 ENGINE_API 불필요
+	void SetViewportMode(FViewportMode InMode) { ViewportMode = InMode; }
+	FViewportMode GetViewportMode() const { return ViewportMode; }
 
 	// 현재 마우스가 올라가 있는 뷰포트 인덱스 (-1이면 없음)
 	int32 GetHoveredViewportIndex() const;
@@ -65,7 +77,7 @@ private:
 	TObjectPtr<AActor> CachedSelectedActor;
 	FWindow* MainWindow = nullptr;
 
-	SSplitter* RootWindow;
+	SSplitter* RootWindow = nullptr;
 	TArray<SSplitter*> DraggedSplitters;
 	TArray<SWindow*> Windows;	//뷰포트를 소유한 Window만 저장
 
@@ -85,4 +97,12 @@ private:
 	FVector2 PreviousMousePoint;
 	FVector2 DeltaMouse;
 	FVector2 CachedViewportScreenPos;
+
+#if IS_OBJ_VIEWER
+	FViewportMode ViewportMode = FViewportMode::Single;
+
+#else
+	FViewportMode ViewportMode = FViewportMode::Quad;
+
+#endif
 };
