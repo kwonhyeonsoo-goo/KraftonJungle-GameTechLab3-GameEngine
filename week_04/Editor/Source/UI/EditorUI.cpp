@@ -650,10 +650,10 @@ void FEditorUI::Render()
 					char buf[256];
 					sprintf_s(buf,
 						"Memory\n"
-						"Current: %.2f MB\n"
-						"Total  : %.2f MB",
+						"Used: %.2f MB\n"
+						"Allocs  : %u",
 						ToMB(MallocStats.CurrentAllocationBytes),
-						ToMB(MallocStats.TotalAllocationBytes)
+						MallocStats.CurrentAllocationCount
 					);
 
 					ImVec2 textSize = ImGui::CalcTextSize(buf);
