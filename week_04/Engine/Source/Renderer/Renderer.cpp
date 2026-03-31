@@ -9,7 +9,7 @@
 #include "Asset/AssetManager.h"
 #include <cassert>
 #include <algorithm>
-
+#include "Asset/AssetManager.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "ThirdParty/stb_image.h"
 
@@ -174,6 +174,7 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 	Hwnd = InHwnd;
 
 	if (!CreateDeviceAndSwapChain(Hwnd, Width, Height)) return false;
+	FAssetManager::InjectDevice(Device);
 	if (!CreateRenderTargetAndDepthStencil(Width, Height)) return false;
 
 	Viewport.TopLeftX = 0.f;
@@ -188,6 +189,19 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 
 	if (!CreateConstantBuffers()) return false;
 	SetConstantBuffers();
+
+	/**
+	* 현재는 다음과 같이 GlobalBuffer Data 정의
+	 * cbuffer GlobalData : register(b3)
+	 * {
+	 *  	float Time;
+     * };
+	 *  
+	 */
+	if (!GlobalBuffer.Create(Device, 16))
+	{
+		return -1;
+	}
 
 	std::wstring ShaderDirW = FPaths::ShaderDir();
 	std::wstring VSPath = ShaderDirW + L"VertexShader.hlsl";
@@ -259,11 +273,11 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		if (SlotIndex >= 0)
 		{
 			DefaultTextureMaterial->RegisterParameter("BaseColor", SlotIndex, 0, 16);
-			float White[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+			float White[4] = { 1.f, 1.f, 1.f, 1.0f };
 			DefaultTextureMaterial->GetConstantBuffer(SlotIndex)->SetData(White, sizeof(White));
 		}
 
-		FTexture* Tex = FAssetManager::LoadTextureAsset("/Assets/Textures/DefaultTexture.png", Device);
+		FTexture* Tex = FAssetManager::LoadTextureAsset("/Assets/Textures/DefaultTexture.png");
 		DefaultTextureMaterial->SetMaterialTexture(std::shared_ptr<FTexture>(Tex, [](FTexture*) {}));
 
 		FMaterialManager::Get().Register("M_Default_Texture", DefaultTextureMaterial);
@@ -291,7 +305,7 @@ void FRenderer::SetConstantBuffers()
 	DeviceContext->VSSetConstantBuffers(0, 2, CBs);
 }
 
-void FRenderer::BeginFrame()
+void FRenderer::BeginFrame(const FFrameRenderParams& Params)
 {
 	if (GUINewFrame) GUINewFrame();
 	if (GUIUpdate) GUIUpdate();
@@ -316,7 +330,14 @@ void FRenderer::BeginFrame()
 	DeviceContext->OMSetRenderTargets(1, &ActiveRTV, ActiveDSV);
 	DeviceContext->RSSetViewports(1, &ActiveVP);
 
-	//ClearCommandList();
+	ClearCommandList();
+
+	/** Global Buffer 세팅 */
+	GlobalBuffer.SetData(&Params.Time, sizeof(Params.Time), 0);
+	/** Params.Time 이 4 byte 라는 가정 깔고감 */
+	GlobalBuffer.SetData(Params.UVScrollVelocity, sizeof(Params.UVScrollVelocity), 4);
+	GlobalBuffer.Upload(DeviceContext);
+	DeviceContext->PSSetConstantBuffers(3, 1, &GlobalBuffer.GPUBuffer);
 }
 
 void FRenderer::ClearCommandList()
@@ -400,6 +421,7 @@ void FRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 		[](const FRenderCommand& A, const FRenderCommand& B) { return A.RenderLayer < B.RenderLayer; });
 
 	RenderStateManager->RebindState();
+
 	for (; it != CommandList.end(); it++)
 	{
 		auto Cmd = *it;

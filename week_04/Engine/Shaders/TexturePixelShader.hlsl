@@ -6,12 +6,19 @@ SamplerState Sampler : register(s0);
 // Material 상수 버퍼 (b2)
 cbuffer MaterialData : register(b2)
 {
-	// TODO: 틴트 적용 추가하기
 	float4 BaseColor;
+};
+
+cbuffer GlobalData : register(b3)
+{
+	float Time;
+	float2 UVScrollVelocity;
+	float Padding;
 };
 
 float4 main(VS_OUTPUT Input) : SV_TARGET
 {
-	float4 Color = Texture.Sample(Sampler, Input.UV);
+	float2 UV = Input.UV + cos(Time) * UVScrollVelocity;
+	float4 Color = Texture.Sample(Sampler, UV);
 	return Color;
 }

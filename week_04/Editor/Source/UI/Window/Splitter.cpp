@@ -3,7 +3,7 @@
 
 #include <algorithm>
 #include "UI/Viewport.h"
-float SSplitter::BarWidth = 50.f;
+float SSplitter::BarWidth = 5.f;
 
 
 SSplitter::SSplitter()
@@ -33,6 +33,19 @@ void SSplitter::AddIfMouseHoverOnBar(FPoint coord, TArray<SSplitter*>& outArray)
 
 	}
 
+}
+
+bool SSplitter::IsAnyBarHovered(FPoint pt)
+{
+	if (isMouseHoverOnBar(pt)) return true;
+	if (SSplitter* it = dynamic_cast<SSplitter*>(GetSideLT())) {
+		if (it->IsAnyBarHovered(pt)) { return true; }
+	}
+
+	if (SSplitter* it = dynamic_cast<SSplitter*>(GetSideRB())) {
+		if (it->IsAnyBarHovered(pt)) { return true; }
+	}
+	return false;
 }
 
 
@@ -81,6 +94,12 @@ void SSplitterH::UpdateBarPosition(FPoint detlaCoord)
 	UE_LOG("New Bar Position : ( %f )", Bar.TopLeftY);
 }
 
+void SSplitterH::SetRatio(float newRatio)
+{
+	SplitRatio = newRatio;
+	UpdateNewSize(Rect);
+}
+
 //전체 크기가 바뀌었을때
 void SSplitterH::UpdateNewSize(FRect newRect)
 {
@@ -88,25 +107,28 @@ void SSplitterH::UpdateNewSize(FRect newRect)
 
 	float splitHeight = newRect.Height * SplitRatio;
 	splitHeight = max(1.f, min(newRect.Height - 1.f, splitHeight));
+
+	float halfBar = Bar.Height / 2;
+
 	Bar.Height = SSplitter::BarWidth;
 	Bar.Width = newRect.Width;
 	Bar.TopLeftX = newRect.TopLeftX;
-	Bar.TopLeftY = newRect.TopLeftY + splitHeight - Bar.Height / 2;
+	Bar.TopLeftY = newRect.TopLeftY + splitHeight - halfBar;
 
 	if (SideLT) {
 		FRect rectLT;
 		rectLT.TopLeftX = newRect.TopLeftX;
 		rectLT.TopLeftY = newRect.TopLeftY;
 		rectLT.Width = newRect.Width;
-		rectLT.Height = splitHeight;
+		rectLT.Height = max(1.f, splitHeight - halfBar);  // 바 절반만큼 빼기
 		SideLT->UpdateNewSize(rectLT);
 	}
 	if (SideRB) {
 		FRect rectRB;
 		rectRB.TopLeftX = newRect.TopLeftX;
-		rectRB.TopLeftY = newRect.TopLeftY + splitHeight;
+		rectRB.TopLeftY = newRect.TopLeftY + splitHeight + halfBar;  // 바 절반만큼 밀기
 		rectRB.Width = newRect.Width;
-		rectRB.Height = newRect.Height - splitHeight;
+		rectRB.Height = max(1.f, newRect.Height - splitHeight - halfBar);
 		SideRB->UpdateNewSize(rectRB);
 	}
 }
@@ -179,32 +201,40 @@ void SSplitterV::UpdateBarPosition(FPoint detlaCoord)
 	UE_LOG("New Bar Position : ( %f, %f )", detlaCoord.PointX, detlaCoord.PointY);
 }
 
+void SSplitterV::SetRatio(float newRatio)
+{
+	SplitRatio = newRatio;
+	UpdateNewSize(Rect);
+}
+
 //전체 크기가 바뀌었을때
 void SSplitterV::UpdateNewSize(FRect newRect)
 {
 	SWindow::UpdateNewSize(newRect);
 
 	float splitWidth = newRect.Width * SplitRatio;
-	// 최소 크기 보장
 	splitWidth = max(1.f, min(newRect.Width - 1.f, splitWidth));
+
+	float halfBar = Bar.Width / 2;  // = BarWidth / 2
+
 	Bar.Width = SSplitter::BarWidth;
 	Bar.Height = newRect.Height;
-	Bar.TopLeftX = newRect.TopLeftX + splitWidth - Bar.Width / 2;
+	Bar.TopLeftX = newRect.TopLeftX + splitWidth - halfBar;
 	Bar.TopLeftY = newRect.TopLeftY;
 
 	if (SideLT) {
 		FRect rectLT;
 		rectLT.TopLeftX = newRect.TopLeftX;
 		rectLT.TopLeftY = newRect.TopLeftY;
-		rectLT.Width = splitWidth;
+		rectLT.Width = max(1.f, splitWidth - halfBar);   // 바 절반만큼 빼기
 		rectLT.Height = newRect.Height;
 		SideLT->UpdateNewSize(rectLT);
 	}
 	if (SideRB) {
 		FRect rectRB;
-		rectRB.TopLeftX = newRect.TopLeftX + splitWidth;
+		rectRB.TopLeftX = newRect.TopLeftX + splitWidth + halfBar;  // 바 절반만큼 밀기
 		rectRB.TopLeftY = newRect.TopLeftY;
-		rectRB.Width = newRect.Width - splitWidth;
+		rectRB.Width = max(1.f, newRect.Width - splitWidth - halfBar);
 		rectRB.Height = newRect.Height;
 		SideRB->UpdateNewSize(rectRB);
 	}

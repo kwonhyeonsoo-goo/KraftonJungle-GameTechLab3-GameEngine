@@ -6,7 +6,11 @@
 #include "Component/TextComponent.h"
 #include "Component/SceneComponent.h"
 #include "Serializer/Archive.h"
+#include "Object/Mesh/StaticMesh.h"
+#include "Renderer/Mesh/StaticMeshRenderData.h"
+#include "Component/StaticMeshComponent.h"
 #include "World/Level.h"
+#include "Asset/AssetManager.h"
 IMPLEMENT_RTTI(AActor, UObject)
 
 namespace {
@@ -209,7 +213,11 @@ void AActor::Serialize(FArchive& Ar)
 			Ar.Serialize("Text", Text);
 			Ar.Serialize("TextColor", Color4);
 			Ar.Serialize("Billboard", bBillboard);
-		
+		}
+		if (UStaticMeshComponent* SMComp = GetComponentByClass<UStaticMeshComponent>())
+		{
+			FString ObjStaticMeshAsset = SMComp->GetStaticMesh()->GetAsset()->Path;
+			Ar.Serialize("ObjStaticMeshAsset", ObjStaticMeshAsset);
 		}
 	}
 	else//Load 
@@ -291,6 +299,16 @@ void AActor::Serialize(FArchive& Ar)
 			TC->SetText(Text);
 			TC->SetTextColor(TextColor);
 			TC->SetBillboard(bBillboard);
+		}
+		if (UStaticMeshComponent* SMComp = GetComponentByClass<UStaticMeshComponent>())
+		{
+			FString ObjStaticMeshAsset;
+			Ar.Serialize("ObjStaticMeshAsset", ObjStaticMeshAsset);
+			if (!ObjStaticMeshAsset.empty())
+			{
+				UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(ObjStaticMeshAsset);
+				SMComp->SetStaticMesh(StaticMesh);
+			}
 		}
 	}
 }

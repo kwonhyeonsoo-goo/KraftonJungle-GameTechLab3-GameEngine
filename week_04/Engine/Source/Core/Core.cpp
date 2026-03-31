@@ -32,6 +32,8 @@ bool FCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ELevelType StartupL
 	WindowWidth = Width;
 	WindowHeight = Height;
 
+	FrameRenderParams.UVScrollVelocity[1] = 0.5f;
+
 	Renderer = std::make_unique<FRenderer>(Hwnd, Width, Height);
 	if (!Renderer)
 	{
@@ -253,7 +255,8 @@ void FCore::Render()
 		return;
 	}
 
-	Renderer->BeginFrame();
+	FrameRenderParams.Time = Timer.GetTotalTime();
+	Renderer->BeginFrame(FrameRenderParams);
 
 	if (!FallbackWorld)
 	{

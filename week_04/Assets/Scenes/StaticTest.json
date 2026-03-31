@@ -1,0 +1,187 @@
+{
+  "Camera": {
+    "Position": [
+      -28.947500228881836,
+      -5.429805755615234,
+      11.019774436950684
+    ],
+    "Rotation": [
+      2.000000238418579,
+      -17.400028228759766
+    ]
+  },
+  "Materials": [
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_Gizmos.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_Wireframe.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_Sky.json",
+    "Assets/Materials/M_TintYellow.json"
+  ],
+  "NextUUID": 58,
+  "Primitives": {
+    "0": {
+      "Billboard": true,
+      "Class": "AStaticMeshActor",
+      "ComponentUUIDs": [
+        7,
+        8
+      ],
+      "Location": [
+        -5.247572898864746,
+        -0.33483001589775085,
+        3.4826583862304688
+      ],
+      "ObjStaticMeshAsset": "\\Assets\\Meshes\\Dorumon.obj",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 6
+    },
+    "1": {
+      "Billboard": true,
+      "Class": "ACubeActor",
+      "ComponentUUIDs": [
+        11,
+        12,
+        13
+      ],
+      "Location": [
+        0.0,
+        -9.67292594909668,
+        0.0
+      ],
+      "PrimitiveFileName": "",
+      "Rotation": [
+        43.74973678588867,
+        2.646354913711548,
+        -81.19491577148438
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 10
+    },
+    "2": {
+      "Billboard": true,
+      "Class": "ASphereActor",
+      "ComponentUUIDs": [
+        15,
+        16
+      ],
+      "Location": [
+        13.452756881713867,
+        0.0,
+        0.0
+      ],
+      "PrimitiveFileName": "",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 14
+    },
+    "3": {
+      "Billboard": true,
+      "Class": "APlaneActor",
+      "ComponentUUIDs": [
+        18,
+        19,
+        20
+      ],
+      "Location": [
+        9.882453918457031,
+        -10.111055374145508,
+        0.0
+      ],
+      "PrimitiveFileName": "",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 17
+    },
+    "4": {
+      "Billboard": true,
+      "Class": "AStaticMeshActor",
+      "ComponentUUIDs": [
+        22,
+        23
+      ],
+      "Location": [
+        -11.118974685668945,
+        -11.558364868164063,
+        7.039969444274902
+      ],
+      "ObjStaticMeshAsset": "\\Assets\\Meshes\\12213_Bird_v1_l3.obj",
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 21
+    }
+  }
+}

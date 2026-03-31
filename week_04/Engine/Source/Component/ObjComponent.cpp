@@ -47,7 +47,7 @@ void UObjComponent::Initialize()
 void UObjComponent::LoadStaticMeshAsset(ID3D11Device* Device, const FString& FilePath)
 {
 	// 1. FStaticMesh 로드 (캐시 히트 시 재사용)
-	StaticMesh = FAssetManager::LoadObjStaticMeshAsset(FilePath, Device);
+	StaticMesh = FAssetManager::LoadObjStaticMeshAsset(FilePath);
 	if (!StaticMesh)
 	{
 		printf("[ObjComponent] Failed to load static mesh: %s\n", FilePath.c_str());

@@ -648,7 +648,11 @@
     <ClInclude Include="Source\Renderer\Mesh\StaticMeshRenderData.h" />
     <ClInclude Include="Source\Actor\StaticMeshActor.h" />
     <ClInclude Include="Source\Utility\FileIO.h" />
+<<<<<<< HEAD
     <ClInclude Include="Source\Actor\CameraPawn.h" />
+=======
+    <ClInclude Include="Source\Renderer\RenderTypes.h" />
+>>>>>>> feat/SWindows
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

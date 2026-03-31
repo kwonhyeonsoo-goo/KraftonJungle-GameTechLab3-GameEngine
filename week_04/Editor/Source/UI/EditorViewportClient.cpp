@@ -243,10 +243,10 @@ void FEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 		if (FilePath.ends_with(".obj"))
 		{
 			const FRay Ray = Picker.ScreenToRay(GetCameraViewInfo(), ScreenMouseX, ScreenMouseY, ScreenWidth, ScreenHeight);
-			
-			
+
+
 			AStaticMeshActor* NewActor = Core->GetLevel()->SpawnActor<AStaticMeshActor>("StaticMeshActor");
-			UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath(FilePath), Core->GetRenderer()->GetDevice());
+			UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath(FilePath));
 			NewActor->SetStaticMesh(StaticMesh);
 
 			FVector V = Ray.Origin + Ray.Direction * 5;

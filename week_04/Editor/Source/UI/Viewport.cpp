@@ -31,7 +31,7 @@ void FViewport::PrepareAndUpdate(FRenderer* Renderer, HWND Hwnd,
 	// RTV 생성 / 갱신
 	if (Renderer)
 	{
-		ReadyLevelView(Renderer->GetDevice(), W, H);
+		ReadyLevelView(Renderer->GetDevice(), Renderer->GetDeviceContext(), W, H);
 	}
 
 	// 클라이언트 오프셋 — 마우스 피킹용
@@ -113,7 +113,7 @@ bool FViewport::GetMousePositionInViewport(int32 WindowMouseX, int32 WindowMouse
 
 // ── ReadyLevelView ─────────────────────────────────────────────────────────
 
-void FViewport::ReadyLevelView(ID3D11Device* Device, uint32 Width, uint32 Height)
+void FViewport::ReadyLevelView(ID3D11Device* Device, ID3D11DeviceContext* Context, uint32 Width, uint32 Height)
 {
 	if (!Device) return;
 
@@ -124,6 +124,14 @@ void FViewport::ReadyLevelView(ID3D11Device* Device, uint32 Width, uint32 Height
 	{
 		return;
 	}
+
+	//RTV SRV 해제
+	// 언바인딩 먼저
+	ID3D11RenderTargetView* nullRTV = nullptr;
+	Context->OMSetRenderTargets(1, &nullRTV, nullptr);
+
+	ID3D11ShaderResourceView* nullSRV = nullptr;
+	Context->PSSetShaderResources(0, 1, &nullSRV);
 
 	ReleaseLevelView();
 
