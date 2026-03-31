@@ -1,4 +1,5 @@
 #include "Archive.h"
+#include "Renderer/Material.h"
 #include "ThirdParty/nlohmann/json.hpp"
 
 using json = nlohmann::json;
@@ -61,6 +62,42 @@ void FArchive::Serialize(const FString& Key, FVector4& Value)
 		Value = { xyzw[0].get<float>(), xyzw[1].get<float>(), xyzw[2].get<float>(),xyzw[3].get<float>() };
 	}
 }
+
+void FArchive::SerializeMaterialTexture(const FString& Key,
+	TArray<FString>& MaterialNames,
+	TArray<FString>& TextureNames)
+{
+	json& Json = *static_cast<json*>(JsonData);
+	if (bSaving)
+	{
+		json Arr = json::array();
+		for (int i = 0;i < MaterialNames.size();++i)
+		{
+			json MatObj;
+			MatObj["Name"] = MaterialNames[i];
+			MatObj["MapKd"] = TextureNames[i];
+
+			Arr.push_back(MatObj);
+		}
+		Json[Key] = Arr;
+	}
+	else
+	{
+		if (Json.contains(Key) && Json[Key].is_array())
+		{
+			auto& JsonArr = Json[Key];
+			for (size_t i = 0;i < JsonArr.size();++i)
+			{
+				FString Name = JsonArr[i]["Name"].get<FString>();
+				FString MapKd = JsonArr[i]["MapKd"].get<FString>();
+
+				MaterialNames.push_back(Name);
+				TextureNames.push_back(MapKd);
+			}
+		}
+	}
+}
+
 void FArchive::SerializeUIntArray(const FString& Key, TArray<uint32>& Values)
 {
 	json& Json = *static_cast<json*>(JsonData);

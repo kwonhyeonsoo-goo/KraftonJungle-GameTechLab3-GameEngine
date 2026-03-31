@@ -18,6 +18,13 @@ public:
 	void RegisterCommand(const char* Command);
 	void SetCommandHandler(FCommandHandler Handler) { CommandHandler = Handler; }
 
+	void SetFocusWindow(bool bInFocusWindow) { bFocusWindow = bInFocusWindow; }
+	void SetFocusInput(bool bInFocusInput) { bFocusInput = bInFocusInput; }
+
+	void ClearBuffer() 
+	{
+		strcpy_s(InputBuf, "");
+	}
 private:
 	void ExecCommand(const char* CommandLine);
 
@@ -39,4 +46,7 @@ private:
 	bool              ScrollToBottom = false;
 
 	FCommandHandler   CommandHandler;
+
+	bool bFocusWindow = false;
+	bool bFocusInput = false;
 };

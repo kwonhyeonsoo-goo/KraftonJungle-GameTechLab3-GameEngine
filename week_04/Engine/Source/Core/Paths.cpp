@@ -83,6 +83,11 @@ std::string FPaths::ToAbsolutePath(const FString& Path)
 	return AbsolutePath;
 }
 
+std::filesystem::path FPaths::ToU8String(const FString& Path)
+{
+	return std::filesystem::path(std::u8string_view(reinterpret_cast<const char8_t*>(Path.data()), Path.size()));
+}
+
 void FPaths::SetRoot(const std::filesystem::path& InPath)
 {
 	Root = InPath;

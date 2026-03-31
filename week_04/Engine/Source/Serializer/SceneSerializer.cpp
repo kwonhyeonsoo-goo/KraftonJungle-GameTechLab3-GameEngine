@@ -27,6 +27,9 @@ void FSceneSerializer::Save(ULevel* Level, const FString& FilePath, UCameraCompo
 	{
 		Json["Camera"]["Position"] = { Camera->GetPosition().X, Camera->GetPosition().Y, Camera->GetPosition().Z };
 		Json["Camera"]["Rotation"] = { Camera->GetYaw(), Camera->GetPitch() };
+		Json["Camera"]["FOV"] = Camera->GetFOV();
+		Json["Camera"]["NearClip"] = Camera->GetNearPlane();
+		Json["Camera"]["FarClip"] = Camera->GetFarPlane();
 	}
 
 	// Materials
@@ -104,6 +107,18 @@ bool FSceneSerializer::Load(ULevel* Level, const FString& FilePath, ID3D11Device
 		{
 			auto& R = Cam["Rotation"];
 			Camera->SetRotation(R[0].get<float>(), R[1].get<float>());
+		}
+		if (Cam.contains("FOV"))
+		{
+			Camera->SetFOV(Cam["FOV"].get<float>());
+		}
+		if (Cam.contains("NearClip"))
+		{
+			Camera->SetNearPlane(Cam["NearClip"].get<float>());
+		}
+		if (Cam.contains("FarClip"))
+		{
+			Camera->SetFarPlane(Cam["FarClip"].get<float>());
 		}
 	}
 
