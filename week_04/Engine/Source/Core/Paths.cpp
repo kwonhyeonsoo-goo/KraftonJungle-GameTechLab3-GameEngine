@@ -50,12 +50,16 @@ void FPaths::Initialize()
 
 std::wstring FPaths::ToWide(const FString& Path)
 {
-	return std::wstring(Path.begin(), Path.end());
+	if (Path.empty()) return {};
+	int Len = MultiByteToWideChar(CP_UTF8, 0, Path.data(), static_cast<int>(Path.size()), nullptr, 0);
+	std::wstring Result(Len, L'\0');
+	MultiByteToWideChar(CP_UTF8, 0, Path.data(), static_cast<int>(Path.size()), Result.data(), Len);
+	return Result;
 }
 
 std::string FPaths::ToRelativePath(const FString& Path)
 {
-	FString Root = ProjectRoot().string();
+	FString Root = FromPath(ProjectRoot());
 	FString RelativePath = Path;
 
 	if (RelativePath.starts_with(Root))
@@ -70,7 +74,7 @@ std::string FPaths::ToRelativePath(const FString& Path)
 
 std::string FPaths::ToAbsolutePath(const FString& Path)
 {
-	FString Root = ProjectRoot().string();
+	FString Root = FromPath(ProjectRoot());
 	FString AbsolutePath = Path;
 
 	if (AbsolutePath.starts_with(Root))

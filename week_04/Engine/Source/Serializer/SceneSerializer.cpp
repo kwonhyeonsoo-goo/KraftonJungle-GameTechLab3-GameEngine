@@ -37,7 +37,7 @@ void FSceneSerializer::Save(ULevel* Level, const FString& FilePath, UCameraCompo
 	if (!LoadedPaths.empty())
 	{
 		nlohmann::json Materials = nlohmann::json::array();
-		FString Root = FPaths::ProjectRoot().string();
+		FString Root = FPaths::FromPath(FPaths::ProjectRoot());
 		for (const FString& AbsPath : LoadedPaths)
 		{
 			std::filesystem::path Rel = std::filesystem::relative(AbsPath, Root);

@@ -3,7 +3,7 @@
 std::string GetFilePathInternal(EFileDialogType Type, const char* Filter, const char* DefaultExt)
 {
 	char FileName[MAX_PATH] = "";
-	FString ContentDir = FPaths::ContentDir().string();
+	FString ContentDir = FPaths::FromPath(FPaths::ContentDir());
 
 	OPENFILENAMEA Ofn = {};
 	Ofn.lStructSize = sizeof(OPENFILENAMEA);
