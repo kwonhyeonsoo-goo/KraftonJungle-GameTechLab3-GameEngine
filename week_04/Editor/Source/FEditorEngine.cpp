@@ -118,7 +118,7 @@ void FEditorEngine::PostInitialize()
 	{
 		UCameraComponent* Cam = SceneViewportClients[1]->GetActiveCamera();
 		Cam->SetPosition({ 0.f, 0.f, 100.f });
-		Cam->SetRotation(0.f, -89.9f);   // 거의 수직 아래
+		Cam->SetRotation(0.f, -90.f);   // 거의 수직 아래
 		Cam->SetOrthographic(true);
 		Cam->SetOrthoWidth(15.f);
 		ViewportControllerArray[1].get()->Initialize(Cam, Core->GetInputManager());
@@ -170,7 +170,7 @@ void FEditorEngine::PostInitialize()
 			}
 
 			AStaticMeshActor* NewActor = Core->GetLevel()->SpawnActor<AStaticMeshActor>("StaticMeshActor");
-			UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath(Path), Core->GetRenderer()->GetDevice());
+			UStaticMesh* StaticMesh = FAssetManager::LoadObjStaticMesh(FPaths::ToRelativePath(Path));
 			NewActor->SetStaticMesh(StaticMesh);
 			ViewportControllerArray[0].get()->SetFocus(NewActor->GetRootComponent());
 

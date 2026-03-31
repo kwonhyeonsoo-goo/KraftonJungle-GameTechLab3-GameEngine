@@ -175,176 +175,176 @@ void FGizmo::BuildRenderCommands(AActor* SelectedActor, const FCameraViewInfo& V
 		return;
 	}
 
-	//const EGizmoAxis DisplayAxis = GetDisplayAxis();
-	//if (DisplayAxis != EGizmoAxis::None)
-	//{
-	//	auto AddHighlightCommand = [&](std::shared_ptr<FMeshData>& HighlightMeshSlot, const FMatrix& HighlightWorldMatrix, auto&& Factory)
-	//		{
-	//			if (!HighlightMeshSlot)
-	//			{
-	//				HighlightMeshSlot = Factory();
-	//			}
+	const EGizmoAxis DisplayAxis = GetDisplayAxis();
+	if (DisplayAxis != EGizmoAxis::None)
+	{
+		auto AddHighlightCommand = [&](std::shared_ptr<FMeshData>& HighlightMeshSlot, const FMatrix& HighlightWorldMatrix, auto&& Factory)
+			{
+				if (!HighlightMeshSlot)
+				{
+					HighlightMeshSlot = Factory();
+				}
 
-	//			if (HighlightMeshSlot)
-	//			{
-	//				FRenderCommand HighlightCommand = Command;
-	//				HighlightCommand.WorldMatrix = HighlightWorldMatrix;
-	//				HighlightCommand.MeshData = HighlightMeshSlot.get();
-	//				OutQueue.AddCommand(HighlightCommand);
-	//			}
-	//		};
+				if (HighlightMeshSlot)
+				{
+					FRenderCommand HighlightCommand = Command;
+					HighlightCommand.WorldMatrix = HighlightWorldMatrix;
+					HighlightCommand.MeshData = HighlightMeshSlot.get();
+					OutQueue.AddCommand(HighlightCommand);
+				}
+			};
 
-	//	auto AddTranslationAxisHighlight = [&](EAxis Axis)
-	//		{
-	//			const int32 AxisIndex = static_cast<int32>(Axis);
-	//			AddHighlightCommand(
-	//				HighlightTranslationAxes[AxisIndex],
-	//				AxisGizmoWorld,
-	//				[Axis]()
-	//				{
-	//					return CPrimitiveGizmo::CreateTranslationAxisMesh(Axis, ActiveAxisColor);
-	//				});
-	//		};
+		auto AddTranslationAxisHighlight = [&](EAxis Axis)
+			{
+				const int32 AxisIndex = static_cast<int32>(Axis);
+				AddHighlightCommand(
+					HighlightTranslationAxes[AxisIndex],
+					AxisGizmoWorld,
+					[Axis]()
+					{
+						return CPrimitiveGizmo::CreateTranslationAxisMesh(Axis, ActiveAxisColor);
+					});
+			};
 
-	//	auto AddRotationAxisHighlight = [&](EAxis Axis)
-	//		{
-	//			const int32 AxisIndex = static_cast<int32>(Axis);
-	//			AddHighlightCommand(
-	//				HighlightRotationAxes[AxisIndex],
-	//				AxisGizmoWorld,
-	//				[this, &ViewInfo, WorldLocation, Axis]()
-	//				{
-	//					return CPrimitiveGizmo::CreateRotationAxisMesh(Axis, BuildRotationDesc(ViewInfo, WorldLocation), ActiveAxisColor);
-	//				});
-	//		};
+		auto AddRotationAxisHighlight = [&](EAxis Axis)
+			{
+				const int32 AxisIndex = static_cast<int32>(Axis);
+				AddHighlightCommand(
+					HighlightRotationAxes[AxisIndex],
+					AxisGizmoWorld,
+					[this, &ViewInfo, WorldLocation, Axis]()
+					{
+						return CPrimitiveGizmo::CreateRotationAxisMesh(Axis, BuildRotationDesc(ViewInfo, WorldLocation), ActiveAxisColor);
+					});
+			};
 
-	//	auto AddScaleAxisHighlight = [&](EAxis Axis)
-	//		{
-	//			const int32 AxisIndex = static_cast<int32>(Axis);
-	//			AddHighlightCommand(
-	//				HighlightScaleAxes[AxisIndex],
-	//				AxisGizmoWorld,
-	//				[Axis]()
-	//				{
-	//					return CPrimitiveGizmo::CreateScaleAxisMesh(Axis, ActiveAxisColor);
-	//				});
-	//		};
+		auto AddScaleAxisHighlight = [&](EAxis Axis)
+			{
+				const int32 AxisIndex = static_cast<int32>(Axis);
+				AddHighlightCommand(
+					HighlightScaleAxes[AxisIndex],
+					AxisGizmoWorld,
+					[Axis]()
+					{
+						return CPrimitiveGizmo::CreateScaleAxisMesh(Axis, ActiveAxisColor);
+					});
+			};
 
-	//	if (DisplayAxis >= EGizmoAxis::X && DisplayAxis <= EGizmoAxis::Z)
-	//	{
-	//		const int32 AxisIndex = static_cast<int32>(DisplayAxis) - 1;
-	//		if (Mode == EGizmoMode::Location)
-	//		{
-	//			AddTranslationAxisHighlight(static_cast<EAxis>(AxisIndex));
-	//		}
-	//		else if (Mode == EGizmoMode::Rotation)
-	//		{
-	//			AddRotationAxisHighlight(static_cast<EAxis>(AxisIndex));
-	//		}
-	//		else if (Mode == EGizmoMode::Scale)
-	//		{
-	//			AddScaleAxisHighlight(static_cast<EAxis>(AxisIndex));
-	//		}
-	//	}
-	//	else if (Mode == EGizmoMode::Location && DisplayAxis >= EGizmoAxis::XY && DisplayAxis <= EGizmoAxis::YZ)
-	//	{
-	//		const int32 PlaneIndex = static_cast<int32>(DisplayAxis) - static_cast<int32>(EGizmoAxis::XY);
-	//		AddHighlightCommand(
-	//			HighlightTranslationPlanes[PlaneIndex],
-	//			AxisGizmoWorld,
-	//			[PlaneIndex]()
-	//			{
-	//				return CPrimitiveGizmo::CreateTranslationPlaneMesh(
-	//					static_cast<CPrimitiveGizmo::ETranslationPlane>(PlaneIndex),
-	//					ActiveAxisColor);
-	//			});
+		if (DisplayAxis >= EGizmoAxis::X && DisplayAxis <= EGizmoAxis::Z)
+		{
+			const int32 AxisIndex = static_cast<int32>(DisplayAxis) - 1;
+			if (Mode == EGizmoMode::Location)
+			{
+				AddTranslationAxisHighlight(static_cast<EAxis>(AxisIndex));
+			}
+			else if (Mode == EGizmoMode::Rotation)
+			{
+				AddRotationAxisHighlight(static_cast<EAxis>(AxisIndex));
+			}
+			else if (Mode == EGizmoMode::Scale)
+			{
+				AddScaleAxisHighlight(static_cast<EAxis>(AxisIndex));
+			}
+		}
+		else if (Mode == EGizmoMode::Location && DisplayAxis >= EGizmoAxis::XY && DisplayAxis <= EGizmoAxis::YZ)
+		{
+			const int32 PlaneIndex = static_cast<int32>(DisplayAxis) - static_cast<int32>(EGizmoAxis::XY);
+			AddHighlightCommand(
+				HighlightTranslationPlanes[PlaneIndex],
+				AxisGizmoWorld,
+				[PlaneIndex]()
+				{
+					return CPrimitiveGizmo::CreateTranslationPlaneMesh(
+						static_cast<CPrimitiveGizmo::ETranslationPlane>(PlaneIndex),
+						ActiveAxisColor);
+				});
 
-	//		switch (DisplayAxis)
-	//		{
-	//		case EGizmoAxis::XY:
-	//			AddTranslationAxisHighlight(EAxis::X);
-	//			AddTranslationAxisHighlight(EAxis::Y);
-	//			break;
+			switch (DisplayAxis)
+			{
+			case EGizmoAxis::XY:
+				AddTranslationAxisHighlight(EAxis::X);
+				AddTranslationAxisHighlight(EAxis::Y);
+				break;
 
-	//		case EGizmoAxis::XZ:
-	//			AddTranslationAxisHighlight(EAxis::X);
-	//			AddTranslationAxisHighlight(EAxis::Z);
-	//			break;
+			case EGizmoAxis::XZ:
+				AddTranslationAxisHighlight(EAxis::X);
+				AddTranslationAxisHighlight(EAxis::Z);
+				break;
 
-	//		case EGizmoAxis::YZ:
-	//			AddTranslationAxisHighlight(EAxis::Y);
-	//			AddTranslationAxisHighlight(EAxis::Z);
-	//			break;
+			case EGizmoAxis::YZ:
+				AddTranslationAxisHighlight(EAxis::Y);
+				AddTranslationAxisHighlight(EAxis::Z);
+				break;
 
-	//		default:
-	//			break;
-	//		}
-	//	}
-	//	else if (Mode == EGizmoMode::Scale && DisplayAxis >= EGizmoAxis::XY && DisplayAxis <= EGizmoAxis::YZ)
-	//	{
-	//		const int32 PlaneIndex = static_cast<int32>(DisplayAxis) - static_cast<int32>(EGizmoAxis::XY);
-	//		AddHighlightCommand(
-	//			HighlightScalePlanes[PlaneIndex],
-	//			AxisGizmoWorld,
-	//			[PlaneIndex]()
-	//			{
-	//				return CPrimitiveGizmo::CreateScalePlaneMesh(
-	//					static_cast<CPrimitiveGizmo::EScalePlane>(PlaneIndex),
-	//					ActiveAxisColor);
-	//			});
+			default:
+				break;
+			}
+		}
+		else if (Mode == EGizmoMode::Scale && DisplayAxis >= EGizmoAxis::XY && DisplayAxis <= EGizmoAxis::YZ)
+		{
+			const int32 PlaneIndex = static_cast<int32>(DisplayAxis) - static_cast<int32>(EGizmoAxis::XY);
+			AddHighlightCommand(
+				HighlightScalePlanes[PlaneIndex],
+				AxisGizmoWorld,
+				[PlaneIndex]()
+				{
+					return CPrimitiveGizmo::CreateScalePlaneMesh(
+						static_cast<CPrimitiveGizmo::EScalePlane>(PlaneIndex),
+						ActiveAxisColor);
+				});
 
-	//		switch (DisplayAxis)
-	//		{
-	//		case EGizmoAxis::XY:
-	//			AddScaleAxisHighlight(EAxis::X);
-	//			AddScaleAxisHighlight(EAxis::Y);
-	//			break;
+			switch (DisplayAxis)
+			{
+			case EGizmoAxis::XY:
+				AddScaleAxisHighlight(EAxis::X);
+				AddScaleAxisHighlight(EAxis::Y);
+				break;
 
-	//		case EGizmoAxis::XZ:
-	//			AddScaleAxisHighlight(EAxis::X);
-	//			AddScaleAxisHighlight(EAxis::Z);
-	//			break;
+			case EGizmoAxis::XZ:
+				AddScaleAxisHighlight(EAxis::X);
+				AddScaleAxisHighlight(EAxis::Z);
+				break;
 
-	//		case EGizmoAxis::YZ:
-	//			AddScaleAxisHighlight(EAxis::Y);
-	//			AddScaleAxisHighlight(EAxis::Z);
-	//			break;
+			case EGizmoAxis::YZ:
+				AddScaleAxisHighlight(EAxis::Y);
+				AddScaleAxisHighlight(EAxis::Z);
+				break;
 
-	//		default:
-	//			break;
-	//		}
-	//	}
-	//	else if (Mode == EGizmoMode::Scale && DisplayAxis == EGizmoAxis::XYZ)
-	//	{
-	//		AddHighlightCommand(
-	//			HighlightScaleCenterMesh,
-	//			AxisGizmoWorld,
-	//			[]()
-	//			{
-	//				return CPrimitiveGizmo::CreateScaleCenterMesh(ActiveAxisColor);
-	//			});
-	//	}
-	//	else if (Mode == EGizmoMode::Location && DisplayAxis == EGizmoAxis::Screen)
-	//	{
-	//		AddHighlightCommand(
-	//			HighlightTranslationScreenMesh,
-	//			AxisGizmoWorld,
-	//			[]()
-	//			{
-	//				return CPrimitiveGizmo::CreateTranslationScreenMesh(ActiveAxisColor);
-	//			});
-	//	}
-	//	else if (Mode == EGizmoMode::Rotation && DisplayAxis == EGizmoAxis::Screen)
-	//	{
-	//		AddHighlightCommand(
-	//			HighlightRotationScreenMesh,
-	//			ScreenGizmoWorld,
-	//			[this, &ViewInfo, WorldLocation]()
-	//			{
-	//				return CPrimitiveGizmo::CreateRotationScreenMesh(BuildRotationDesc(ViewInfo, WorldLocation), ActiveAxisColor);
-	//			});
-	//	}
-	//}
+			default:
+				break;
+			}
+		}
+		else if (Mode == EGizmoMode::Scale && DisplayAxis == EGizmoAxis::XYZ)
+		{
+			AddHighlightCommand(
+				HighlightScaleCenterMesh,
+				AxisGizmoWorld,
+				[]()
+				{
+					return CPrimitiveGizmo::CreateScaleCenterMesh(ActiveAxisColor);
+				});
+		}
+		else if (Mode == EGizmoMode::Location && DisplayAxis == EGizmoAxis::Screen)
+		{
+			AddHighlightCommand(
+				HighlightTranslationScreenMesh,
+				AxisGizmoWorld,
+				[]()
+				{
+					return CPrimitiveGizmo::CreateTranslationScreenMesh(ActiveAxisColor);
+				});
+		}
+		else if (Mode == EGizmoMode::Rotation && DisplayAxis == EGizmoAxis::Screen)
+		{
+			AddHighlightCommand(
+				HighlightRotationScreenMesh,
+				ScreenGizmoWorld,
+				[this, &ViewInfo, WorldLocation]()
+				{
+					return CPrimitiveGizmo::CreateRotationScreenMesh(BuildRotationDesc(ViewInfo, WorldLocation), ActiveAxisColor);
+				});
+		}
+	}
 }
 
 bool FGizmo::BeginDrag(AActor* SelectedActor, ULevel* Level, const FCameraViewInfo& ViewInfo, const FPicker& Picker, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight)

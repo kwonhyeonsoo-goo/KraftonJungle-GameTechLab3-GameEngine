@@ -41,6 +41,8 @@ public:
 	bool    IsOrthographic() const { return bIsOrthographic; }
 	float   GetSpeed()        const { return Speed; }
 	float   GetSensitivity()  const { return Sensitivity; }
+	float GetNearPlane() const { return NearPlane; }
+	float GetFarPlane() const { return FarPlane; }
 
 	// ── Setter ────────────────────────────────────────────
 	void SetPosition(const FVector& InPosition) { Position = InPosition; }
@@ -52,6 +54,8 @@ public:
 	void SetSpeed(float InSpeed) { Speed = InSpeed; }
 	void SetSensitivity(float InSensitivity) { Sensitivity = InSensitivity; }
 	void SetFocus(USceneComponent* InFocusTarget);
+	void SetNearPlane(float InNearPlane) { NearPlane = InNearPlane; }
+	void SetFarPlane(float InFarPlane) { FarPlane = InFarPlane; }
 
 private:
 	// ── Transform ─────────────────────────────────────────

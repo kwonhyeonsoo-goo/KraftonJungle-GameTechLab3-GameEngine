@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "RenderState.h"
+#include "Types/String.h"
 #include <d3d11.h>
 #include <memory>
 
@@ -12,6 +13,7 @@ struct FTexture
 {
 	ID3D11ShaderResourceView* TextureSRV = nullptr;
 	ID3D11SamplerState* SamplerState = nullptr;
+	FString FilePath;
 
 	FTexture() = default;
 	~FTexture();
