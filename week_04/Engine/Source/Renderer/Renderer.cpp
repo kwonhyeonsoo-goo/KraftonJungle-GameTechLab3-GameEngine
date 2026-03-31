@@ -316,7 +316,7 @@ void FRenderer::BeginFrame()
 	DeviceContext->OMSetRenderTargets(1, &ActiveRTV, ActiveDSV);
 	DeviceContext->RSSetViewports(1, &ActiveVP);
 
-	ClearCommandList();
+	//ClearCommandList();
 }
 
 void FRenderer::ClearCommandList()
@@ -376,7 +376,7 @@ void FRenderer::ExecuteCommands()
 
 	ExecuteRenderPass(ERenderLayer::Default);
 	ClearDepthBuffer();
-	//ExecuteRenderPass(ERenderLayer::Overlay);
+	ExecuteRenderPass(ERenderLayer::Overlay);
 
 	if (PostRenderCallback) PostRenderCallback(this);
 }

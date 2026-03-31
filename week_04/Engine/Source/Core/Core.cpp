@@ -287,7 +287,8 @@ void FCore::Render()
 	for (IViewportClient* CurrentViewport : ViewportClientArray)
 	{
 		if (!CurrentViewport) continue;
-		
+		Renderer->ClearCommandList();
+
 		// ── 0. VP의 LinkedWorld 우선, 없으면 FallbackLevel 사용 ────
 		// 방향 B: 모든 VP가 동일한 World를 보되 카메라만 다름
 		ULevel* Level = CurrentViewport->GetLinkedWorld()

@@ -69,6 +69,8 @@ public:
 	
 	/** 수집된 커맨드 정렬 및 실행 */
 	void ExecuteCommands();
+	void ClearCommandList();
+
 	
 	/** 특정 레이어의 명령들을 실제 드로우 콜로 변환 */
 	void ExecuteRenderPass(ERenderLayer RenderLayer);
@@ -103,7 +105,6 @@ public:
 private:
 	void SetConstantBuffers();
 	void AddCommand(const FRenderCommand& Command);
-	void ClearCommandList();
 	bool CreateDeviceAndSwapChain(HWND InHwnd, int32 Width, int32 Height);
 	bool CreateRenderTargetAndDepthStencil(int32 Width, int32 Height);
 	bool CreateConstantBuffers();
