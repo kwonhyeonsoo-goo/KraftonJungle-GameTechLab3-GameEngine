@@ -293,8 +293,8 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 
 	std::filesystem::path FolderIconPath = FPaths::AssetDir() / FString("Textures/FolderIcon.png");
 	std::filesystem::path FileIconPath = FPaths::AssetDir() / FString("Textures/FileIcon.png");
-	CreateTextureFromSTB(Device, FPaths::FromPath(FolderIconPath).c_str(), &FolderIconSRV);
-	CreateTextureFromSTB(Device, FPaths::FromPath(FileIconPath).c_str(), &FileIconSRV);
+	CreateTextureFromSTB(Device, FolderIconPath.string().c_str(), &FolderIconSRV);
+	CreateTextureFromSTB(Device, FileIconPath.string().c_str(), &FileIconSRV);
 
 	return true;
 }
