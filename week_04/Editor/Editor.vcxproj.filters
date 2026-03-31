@@ -112,6 +112,9 @@
     <ClCompile Include="Source\UI\Window\Splitter.cpp">
       <Filter>Source\UI\Window</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Controller\OrthoViewportController.cpp">
+      <Filter>Source\Controller</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\FEditorEngine.h">
@@ -192,6 +195,9 @@
     </ClInclude>
     <ClInclude Include="Source\UI\Window\Splitter.h">
       <Filter>Source\UI\Window</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\OrthoViewportController.h">
+      <Filter>Source\Controller</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

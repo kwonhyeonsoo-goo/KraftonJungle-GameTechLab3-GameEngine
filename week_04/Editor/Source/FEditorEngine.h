@@ -27,7 +27,7 @@ protected:
 
 private:
 	FEditorUI EditorUI;
-	TArray<std::unique_ptr<FEditorViewportController>> ViewportControllerArray;
+	TArray<std::unique_ptr<FViewportController>> ViewportControllerArray;
 
 	// [0] Perspective, [1] Top, [2] Side, [3] Bottom
 	// 소유권은 ViewportClientArray

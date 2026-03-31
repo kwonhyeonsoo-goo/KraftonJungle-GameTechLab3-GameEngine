@@ -4,10 +4,10 @@ class UCameraComponent;
 class FInputManager;
 class USceneComponent;
 
-class FEditorViewportController
+class FViewportController
 {
 public:
-	~FEditorViewportController() = default;
+	virtual ~FViewportController() = default;
 
 	void Initialize(UCameraComponent* InCameraComp, FInputManager* InInput);
 	void Tick(float DeltaTime);
@@ -16,8 +16,10 @@ public:
 	void SetActive(bool bInActive) { bActive = bInActive; }
 	bool IsActive() const { return bActive; }
 
-private:
-	void ProcessCameraInput(float DeltaTime);
+protected:
+	virtual void ProcessCameraInput(float DeltaTime);
+	virtual void KeyBoardProcess(float DeltaTime);
+	virtual void MouseProcess(float DeltaTime);
 
 	UCameraComponent* CameraComponent = nullptr;
 	FInputManager* InputManager = nullptr;

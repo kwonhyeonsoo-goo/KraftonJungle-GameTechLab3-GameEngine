@@ -20,6 +20,7 @@
 #include "Asset/AssetManager.h"
 #include "Utility/FileIO.h"
 
+#include "../Source/Controller/OrthoViewportController.h"
 
 bool FEditorEngine::Initialize(HINSTANCE hInstance)
 {
@@ -56,12 +57,22 @@ void FEditorEngine::CreateViewportClients()
 	// [2] Side        — 옆에서 orthographic
 	// [3] Bottom      — 아래에서 위 orthographic
 	ViewportControllerArray.reserve(4);
-	for (int i = 0; i < 4; i++)
+
+
+	auto VP = std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
+	SceneViewportClients[0] = VP.get();
+
+	auto ViewportController = std::make_unique<FOrthoViewportController>();
+	ViewportControllerArray.push_back(std::move(ViewportController));
+	ViewportClientArray.push_back(std::move(VP));
+
+
+	for (int i = 1; i < 4; i++)
 	{
 		auto VP = std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
 		SceneViewportClients[i] = VP.get();
 		
-		auto ViewportController = std::make_unique<FEditorViewportController>();
+		auto ViewportController = std::make_unique<FOrthoViewportController>();
 		ViewportControllerArray.push_back(std::move(ViewportController));
 		ViewportClientArray.push_back(std::move(VP));
 	}
