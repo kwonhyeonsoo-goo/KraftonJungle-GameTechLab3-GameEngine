@@ -371,7 +371,6 @@ void FCore::RegisterConsoleVariables()
 		{
 			if (VarString == "fps")
 			{
-				UE_LOG("FPS");
 				// 임의 테스트
 				FShowFlags ShowFlags = LastFocusedVP->GetShowFlags();
 				if (ShowFlags.HasFlag(EEngineShowFlags::SF_StatFPS))
@@ -385,7 +384,6 @@ void FCore::RegisterConsoleVariables()
 			}
 			else if (VarString == "memory")
 			{
-				UE_LOG("Memory");
 				// 임의 테스트
 				FShowFlags ShowFlags = LastFocusedVP->GetShowFlags();
 				if (ShowFlags.HasFlag(EEngineShowFlags::SF_StatMemory))

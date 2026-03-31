@@ -1011,6 +1011,26 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 	POINT Pt = { static_cast<LONG>(mousePosition.x), static_cast<LONG>(mousePosition.y) };
 	::ClientToScreen(Hwnd, &Pt);	//윈도우 창 마우스 위치 -> imgui 좌표계로 변환
 
+	// 모든 마우스 입력 => 포커스 체크
+	const bool bIsMouseMsg =
+		Msg == WM_LBUTTONDOWN ||
+		Msg == WM_RBUTTONDOWN ||
+		Msg == WM_MOUSEWHEEL ||
+		Msg == WM_MOUSEHWHEEL;
+
+	if (bIsMouseMsg)
+	{
+		const FRect& R = RootWindow->GetWindowSize();
+		/** 화면에 해당하는 RootWindow 위에서만 Focus 체크 */
+		if (Pt.x >= R.TopLeftX && Pt.x <= R.TopLeftX + R.Width && Pt.y >= R.TopLeftY && Pt.y <= R.TopLeftY + R.Height)
+		{
+			Core->SetLastFocusedVP(GetFocusedViewportClient());
+			/** VP Focus 시 기존 Console Input Text 등 비활성화 */
+			ImGui::ClearActiveID();
+			GetConsole().ClearBuffer();
+		}
+	}
+
 	if (Msg == WM_LBUTTONDOWN)
 	{
 
@@ -1020,13 +1040,6 @@ bool FEditorUI::HandleInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 		PreviousMousePoint = { (float)CurrentPos.PointX, (float)CurrentPos.PointY };
 		DeltaMouse.X = 0;
 		DeltaMouse.Y = 0;
-
-		const FRect& R = RootWindow->GetWindowSize();
-
-		if (Pt.x >= R.TopLeftX && Pt.x <= R.TopLeftX + R.Width && Pt.y >= R.TopLeftY && Pt.y <= R.TopLeftY + R.Height)
-		{
-			Core->SetLastFocusedVP(GetFocusedViewportClient());
-		}
 	}
 	else if (Msg == WM_LBUTTONUP)
 	{

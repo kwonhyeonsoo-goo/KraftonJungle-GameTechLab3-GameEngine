@@ -32,12 +32,14 @@ void FViewportController::KeyBoardProcess(float DeltaTime)
 	if (bRMB)
 	{
 		const float Speed = CameraComponent->GetSpeed();  // 또는 CameraComponent에서 가져오기
+		
 		if (InputManager->IsKeyDown('W')) CameraComponent->MoveForward(Speed * DeltaTime);
 		if (InputManager->IsKeyDown('S')) CameraComponent->MoveForward(-Speed * DeltaTime);
 		if (InputManager->IsKeyDown('D')) CameraComponent->MoveRight(Speed * DeltaTime);
 		if (InputManager->IsKeyDown('A')) CameraComponent->MoveRight(-Speed * DeltaTime);
 		if (InputManager->IsKeyDown('E')) CameraComponent->MoveUp(Speed * DeltaTime);
 		if (InputManager->IsKeyDown('Q')) CameraComponent->MoveUp(-Speed * DeltaTime);
+		
 	}
 
 }
