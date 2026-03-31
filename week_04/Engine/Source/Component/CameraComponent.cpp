@@ -81,7 +81,7 @@ void UCameraComponent::Zoom(float Value)
 void UCameraComponent::SetRotation(float InYaw, float InPitch)
 {
 	Yaw = InYaw;
-	Pitch = std::clamp(InPitch, -89.0f, 89.0f);
+	Pitch = std::clamp(InPitch, -89.99f, 89.99f);
 }
 
 // ── 행렬 ───────────────────────────────────────────────────────────────────
