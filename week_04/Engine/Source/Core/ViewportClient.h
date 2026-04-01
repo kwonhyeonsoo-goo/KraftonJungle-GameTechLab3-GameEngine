@@ -17,6 +17,8 @@ class FFrustum;
 class UPrimitiveComponent;
 struct FRenderCommandQueue;
 class UWorld;
+enum class CameraViewMode;
+
 
 class ENGINE_API IViewportClient
 {
@@ -55,7 +57,7 @@ public:
 
 	void InitializeCameraFromWorld();
 
-
+	void SetCameraMode(CameraViewMode mode);
 	// ── 뷰포트 정보 ───────────────────────────────────────────────────
 	void SetViewportInfo(const FViewportInfo& InViewportInfo);
 	const FViewportInfo& GetViewportInfo() const { return ViewportInfo; }

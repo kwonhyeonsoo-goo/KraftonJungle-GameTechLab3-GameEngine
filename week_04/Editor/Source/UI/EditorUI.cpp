@@ -842,6 +842,32 @@ void FEditorUI::Render()
 						}
 					
 					}
+
+					ImGui::SameLine();
+					//cameraveiwmode
+					{
+						ImGui::SetNextItemWidth(ComboW);
+
+						CameraViewMode Mode = VP->GetCameraViewMode();
+						std::string id = "##ViewMode" + std::to_string(i);
+
+						if (i == 0) {
+							int idx = 0;
+							if(ImGui::Combo(id.c_str(), &idx, "Perspective\0", 1))
+								VP->SetCameraViewMode(CameraViewMode::Perspective);
+						}
+						else {
+							// Top~Back 전용 뷰포트
+							// enum offset: Top=1, so comboIndex = (int)Mode - 1
+							int comboIndex = (int)Mode - 1;
+							if (comboIndex < 0) comboIndex = 0; // 혹시 Perspective가 세팅된 경우 보정
+
+							if (ImGui::Combo(id.c_str(), &comboIndex, "Top\0Bottom\0Left\0Right\0Front\0Back\0", 6)) {
+								Mode = (CameraViewMode)(comboIndex + 1); // +1 because Perspective is index 0
+								VP->SetCameraViewMode(Mode);
+							}
+						}
+					}
 				}
 
 			}
@@ -1410,6 +1436,12 @@ void FEditorUI::SetViewportLayout(ViewportLayout layout)
 		sideLeftBottom->SetViewport(std::make_unique<FViewport>());
 		sideRightBottom->SetViewport(std::make_unique<FViewport>());
 
+		sideLeftUP->GetViewport()->SetCameraViewMode(CameraViewMode::Perspective);
+		sideRightUp->GetViewport()->SetCameraViewMode(CameraViewMode::Top);
+		sideLeftBottom->GetViewport()->SetCameraViewMode(CameraViewMode::Right);
+		sideRightBottom->GetViewport()->SetCameraViewMode(CameraViewMode::Bottom);
+
+
 		sideUP->SetSideLT(sideLeftUP); sideUP->SetSideRB(sideRightUp);
 		sideBottom->SetSideLT(sideLeftBottom); sideBottom->SetSideRB(sideRightBottom);
 
@@ -1435,6 +1467,12 @@ void FEditorUI::SetViewportLayout(ViewportLayout layout)
 		side2->SetViewport(std::make_unique<FViewport>());
 		side3->SetViewport(std::make_unique<FViewport>());
 		side4->SetViewport(std::make_unique<FViewport>());
+
+
+		side1->GetViewport()->SetCameraViewMode(CameraViewMode::Perspective);
+		side2->GetViewport()->SetCameraViewMode(CameraViewMode::Top);
+		side3->GetViewport()->SetCameraViewMode(CameraViewMode::Right);
+		side4->GetViewport()->SetCameraViewMode(CameraViewMode::Bottom);
 
 		sideRight1->SetSideLT(side2); sideRight1->SetSideRB(sideRight2);
 		sideRight2->SetSideLT(side3); sideRight2->SetSideRB(side4);
