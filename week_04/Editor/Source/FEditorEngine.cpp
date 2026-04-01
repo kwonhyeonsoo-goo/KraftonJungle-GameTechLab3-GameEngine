@@ -40,6 +40,7 @@ void FEditorEngine::Shutdown()
 
 	for (auto& VP : SceneViewportClients) VP = nullptr;
 	FEngine::Shutdown();
+	FAssetManager::CleanUp();
 }
 
 void FEditorEngine::PreInitialize()
@@ -71,7 +72,7 @@ void FEditorEngine::CreateViewportClients()
 	{
 		auto VP = std::make_unique<FEditorViewportClient>(EditorUI, MainWindow);
 		SceneViewportClients[i] = VP.get();
-		
+
 		auto ViewportController = std::make_unique<FOrthoViewportController>();
 		ViewportControllerArray.push_back(std::move(ViewportController));
 		ViewportClientArray.push_back(std::move(VP));
@@ -88,7 +89,7 @@ void FEditorEngine::PostInitialize()
 		if (i == 1) break;
 #endif
 		EditorUI.LinkViewportClient(i, SceneViewportClients[i]);
-		SceneViewportClients[i]->SetLinkedWorld(Core->GetEditorWorld() , Core.get());
+		SceneViewportClients[i]->SetLinkedWorld(Core->GetEditorWorld(), Core.get());
 		SceneViewportClients[i]->InitializeCameraFromWorld();
 	}
 
@@ -109,7 +110,7 @@ void FEditorEngine::PostInitialize()
 
 	{
 		UCameraComponent* Cam = SceneViewportClients[0]->GetActiveCamera();
-		Cam->SetPosition({ -10.f, 0.f, 5.f }); 
+		Cam->SetPosition({ -10.f, 0.f, 5.f });
 		Cam->SetRotation(0.f, -15.f);
 		Cam->SetFOV(60.f);
 		Cam->SetOrthographic(false);
@@ -164,7 +165,7 @@ void FEditorEngine::PostInitialize()
 			if (!Path.ends_with(".obj"))
 			{
 				MessageBoxW(
-					nullptr,\
+					nullptr, \
 					L"Obj 파일만 지원합니다.",
 					L"Error",
 					MB_OK | MB_ICONWARNING
