@@ -11,7 +11,7 @@
 #include "Core/FEngine.h"
 #include "Component/TextComponent.h"
 #include "Actor/CameraPawn.h"
-
+#include "Core/ShowFlags.h"
 
 // ── 생성자 ─────────────────────────────────────────────────────────────────
 
@@ -58,7 +58,62 @@ void IViewportClient::InitializeCameraFromWorld()
 	SetActiveCamera(CameraPawn->GetCameraComponent());
 
 }
+void IViewportClient::SetCameraMode(CameraViewMode mode)
+{
+	UCameraComponent* Cam = ActiveCamera;
+	if (!Cam) return;
 
+	switch (mode)
+	{
+
+	case CameraViewMode::Perspective:
+		Cam->SetPosition({ -10.f, 0.f, 5.f });
+		Cam->SetRotation(0.f, -15.f);
+		Cam->SetFOV(60.f);
+		Cam->SetOrthographic(false);
+		break;
+	case CameraViewMode::Top:
+		Cam->SetPosition({ 0.f, 0.f, 100.f });
+		Cam->SetRotation(0.f, -90.f);   // 거의 수직 아래
+		Cam->SetOrthographic(true);
+		Cam->SetOrthoWidth(15.f);
+		break;
+	case CameraViewMode::Bottom:
+		Cam->SetPosition({ 0.f, 0.f,  -100.f });
+		Cam->SetRotation(0.f, 90.f);    
+		Cam->SetOrthographic(true);
+		Cam->SetOrthoWidth(15.f);
+		break;
+	case CameraViewMode::Left:
+		Cam->SetPosition({ 0.f, -100.f, 2.f });
+		Cam->SetRotation(90.f, 0.f);     // +Y 방향 바라봄
+		Cam->SetOrthographic(true);
+		Cam->SetOrthoWidth(15.f);
+		break;
+	case CameraViewMode::Right:
+		Cam->SetPosition({ 0.f, 100.f, 2.f });
+		Cam->SetRotation(-90.f, 0.f);    // -Y 방향(앞쪽 기준) 바라봄
+		Cam->SetOrthographic(true);
+		Cam->SetOrthoWidth(15.f);
+		break;
+	case CameraViewMode::Front:
+		Cam->SetPosition({ 100.f, 0.f, 2.f });
+		Cam->SetRotation(180.f, 0.f);    // 왼쪽 방향
+		Cam->SetOrthographic(true);
+		Cam->SetOrthoWidth(15.f);
+		
+		break;
+	case CameraViewMode::Back:
+
+		Cam->SetPosition({ -100.f, 0.f, 2.f });
+		Cam->SetRotation(0.f, 0.f);      // 오른쪽(+X) 방향을 바라봄
+		Cam->SetOrthographic(true);
+		Cam->SetOrthoWidth(15.f);
+		break;
+	default:
+		break;
+	}
+}
 // ── 뷰포트 정보 ────────────────────────────────────────────────────────────
 
 void IViewportClient::SetViewportInfo(const FViewportInfo& InViewportInfo)

@@ -132,8 +132,8 @@ void FEditorEngine::PostInitialize()
 	// [2] Side — 오른쪽에서 왼쪽으로
 	{
 		UCameraComponent* Cam = SceneViewportClients[2]->GetActiveCamera();
-		Cam->SetPosition({ 100.f, 0.f, 2.f });
-		Cam->SetRotation(180.f, 0.f);    // 왼쪽 방향
+		Cam->SetPosition({ 0.f, 100.f, 2.f });
+		Cam->SetRotation(-90.f, 0.f);    // -Y 방향(앞쪽 기준) 바라봄
 		Cam->SetOrthographic(true);
 		Cam->SetOrthoWidth(15.f);
 		ViewportControllerArray[2].get()->Initialize(Cam, Core->GetInputManager());
@@ -143,8 +143,8 @@ void FEditorEngine::PostInitialize()
 	// [3] Bottom — 아래에서 위로 올려다봄 (Front 뷰로 대체하는 경우 많음)
 	{
 		UCameraComponent* Cam = SceneViewportClients[3]->GetActiveCamera();
-		Cam->SetPosition({ 0.f, -100.f, 2.f });
-		Cam->SetRotation(90.f, 0.f);     // 앞쪽 방향
+		Cam->SetPosition({ 0.f, 0.f,  -100.f });
+		Cam->SetRotation(0.f, 90.f);
 		Cam->SetOrthographic(true);
 		Cam->SetOrthoWidth(15.f);
 		ViewportControllerArray[3].get()->Initialize(Cam, Core->GetInputManager());

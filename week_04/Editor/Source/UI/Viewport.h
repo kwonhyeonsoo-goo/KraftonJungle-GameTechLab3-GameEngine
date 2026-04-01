@@ -6,6 +6,8 @@
 class FRenderer;
 class IViewportClient;
 
+
+
 class FViewport
 {
 public:
@@ -35,6 +37,10 @@ public:
 	void ReadyLevelView(ID3D11Device* Device, ID3D11DeviceContext* Context, uint32 Width, uint32 Height);
 
 	void SetLinkedViewportClient(IViewportClient* InClient) { LinkedViewportClient = InClient; }
+
+	void SetCameraViewMode(CameraViewMode mode);
+	CameraViewMode GetCameraViewMode() { return CameraMode; }
+
 	IViewportClient* GetLinkedViewportClient() const { return LinkedViewportClient; }
 
 private:
@@ -54,4 +60,6 @@ private:
 
 	IViewportClient* LinkedViewportClient = nullptr;
 	FShowFlags ShowFlags;
+
+	CameraViewMode CameraMode = CameraViewMode::Perspective;
 };
