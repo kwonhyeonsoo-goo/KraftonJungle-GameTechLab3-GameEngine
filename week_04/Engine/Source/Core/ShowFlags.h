@@ -32,3 +32,7 @@ public:
 private:
 	uint64 Flags;
 };
+
+enum class CameraViewMode {
+	Perspective, Top, Bottom, Left, Right, Front, Back
+};

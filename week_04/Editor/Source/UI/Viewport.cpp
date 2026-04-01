@@ -165,3 +165,10 @@ void FViewport::ReadyLevelView(ID3D11Device* Device, ID3D11DeviceContext* Contex
 	OffscreenWidth = Width;
 	OffscreenHeight = Height;
 }
+
+void FViewport::SetCameraViewMode(CameraViewMode mode)
+{
+	CameraMode = mode;
+	if(LinkedViewportClient)
+		LinkedViewportClient->SetCameraMode(mode);
+}

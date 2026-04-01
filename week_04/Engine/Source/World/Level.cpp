@@ -5,6 +5,7 @@
 #include "Actor/CubeActor.h"
 #include "Actor/SphereActor.h"
 #include "Actor/SubUVActor.h"
+#include "Actor/CameraPawn.h"
 #include "Component/CameraComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Component/PrimitiveComponent.h"
@@ -31,6 +32,10 @@ void ULevel::ClearActors()
 {
 	for (AActor* Actor : Actors)
 	{
+		if (Actor->IsA<UCameraPawn>())
+		{
+			continue;
+		}
 		if (Actor)
 		{
 			Actor->Destroy();
