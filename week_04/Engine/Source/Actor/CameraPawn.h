@@ -13,7 +13,7 @@ class ENGINE_API UCameraPawn : public AActor
 public:
 	DECLARE_RTTI(UCameraPawn, AActor)
 	void Initialize();
-
+	virtual void PostSpawnInitialize() override;
 	UCameraComponent* GetCameraComponent() const { return CameraCompenent; }
 
 private:

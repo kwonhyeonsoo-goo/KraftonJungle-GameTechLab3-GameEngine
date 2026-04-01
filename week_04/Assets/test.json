@@ -1,0 +1,152 @@
+{
+  "Camera": {
+    "FOV": 60.0,
+    "FarClip": 1000.0,
+    "NearClip": 0.10000000149011612,
+    "Position": [
+      -10.0,
+      0.0,
+      5.0
+    ],
+    "Rotation": [
+      0.0,
+      -15.0
+    ]
+  },
+  "Materials": [
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_Gizmos.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_Wireframe.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_Sky.json",
+    "Assets/Materials/M_TintYellow.json"
+  ],
+  "NextUUID": 14,
+  "Primitives": {
+    "0": {
+      "Billboard": true,
+      "Class": "UCameraPawn",
+      "ComponentUUIDs": [
+        3,
+        5
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 4
+    },
+    "1": {
+      "Billboard": true,
+      "Class": "UCameraPawn",
+      "ComponentUUIDs": [
+        6,
+        8
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 7
+    },
+    "2": {
+      "Billboard": true,
+      "Class": "UCameraPawn",
+      "ComponentUUIDs": [
+        9,
+        11
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 10
+    },
+    "3": {
+      "Billboard": true,
+      "Class": "UCameraPawn",
+      "ComponentUUIDs": [
+        12,
+        14
+      ],
+      "Location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Rotation": [
+        -0.0,
+        0.0,
+        -0.0
+      ],
+      "Scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Text": "Text",
+      "TextColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "UUID": 13
+    }
+  }
+}
