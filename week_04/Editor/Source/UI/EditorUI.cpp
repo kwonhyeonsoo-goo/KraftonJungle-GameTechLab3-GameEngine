@@ -713,7 +713,7 @@ void FEditorUI::Render()
 					sprintf_s(buf1, "%.2f FPS", Core->GetTimer().GetFPS());
 					sprintf_s(buf2, "%.2f ms", Core->GetTimer().GetFrameTimeMs());
 
-					ImVec2 pos = ImVec2(RMin.x + 8.0f, RMin.y + 8.0f);
+					ImVec2 pos = ImVec2(RMin.x + 8.0f, RMin.y + 20.0f);
 
 					DL->AddText(pos, IM_COL32(255, 255, 255, 255), buf1);
 					DL->AddText(

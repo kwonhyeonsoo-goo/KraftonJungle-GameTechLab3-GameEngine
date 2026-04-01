@@ -24,7 +24,7 @@ void FViewport::PrepareAndUpdate(FRenderer* Renderer, HWND Hwnd,
 
 	if (!bVisible)
 	{
-		ReleaseLevelView();
+		//ReleaseLevelView();
 		return;
 	}
 
