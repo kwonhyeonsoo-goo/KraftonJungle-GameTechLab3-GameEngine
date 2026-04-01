@@ -70,7 +70,7 @@ void UCameraComponent::Rotate(float DeltaYaw, float DeltaPitch)
 {
 	Yaw += DeltaYaw;
 	Pitch += DeltaPitch;
-	Pitch = std::clamp(Pitch, -89.0f, 89.0f);
+	//Pitch = std::clamp(Pitch, -89.0f, 89.0f);
 }
 
 void UCameraComponent::Zoom(float Value)
@@ -81,7 +81,8 @@ void UCameraComponent::Zoom(float Value)
 void UCameraComponent::SetRotation(float InYaw, float InPitch)
 {
 	Yaw = InYaw;
-	Pitch = std::clamp(InPitch, -89.0f, 89.0f);
+	Pitch = std::clamp(InPitch, -89.99f, 89.99f);
+	//Pitch = InPitch;
 }
 
 // ── 행렬 ───────────────────────────────────────────────────────────────────
