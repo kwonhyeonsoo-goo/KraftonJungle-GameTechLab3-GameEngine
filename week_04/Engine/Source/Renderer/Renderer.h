@@ -34,22 +34,22 @@ public:
 
 	/** 시스템 초기화 및 D3D11 장치 생성 */
 	bool Initialize(HWND InHwnd, int32 InWidth, int32 InHeight);
-	
+
 	/** 프레임 시작 처리 (렌더 타겟 클리어 등) */
 	void BeginFrame(const FFrameRenderParams& Params);
-	
+
 	/** 프레임 종료 처리 (Present) */
 	void EndFrame();
-	
+
 	/** 리소스 해제 */
 	void Release();
-	
+
 	/** 화면 가림 여부 확인 */
 	bool IsOccluded();
-	
+
 	/** 뷰포트 크기 변경 대응 */
 	void OnResize(int32 NewWidth, int32 NewHeight);
-	
+
 	/** 씬 렌더 타겟 설정 (외부 오버라이드용) */
 	void SetLevelRenderTarget(ID3D11RenderTargetView* InRenderTargetView, ID3D11DepthStencilView* InDepthStencilView, const D3D11_VIEWPORT& InViewport);
 	void ClearLevelRenderTarget();
@@ -68,12 +68,12 @@ public:
 	// ─── 명령 실행 ───
 	/** 커맨드 큐 제출 및 GPU 버퍼 업데이트 */
 	void SubmitCommands(const FRenderCommandQueue& Queue);
-	
+
 	/** 수집된 커맨드 정렬 및 실행 */
 	void ExecuteCommands();
 	void ClearCommandList();
 
-	
+
 	/** 특정 레이어의 명령들을 실제 드로우 콜로 변환 */
 	void ExecuteRenderPass(ERenderLayer RenderLayer);
 
@@ -100,6 +100,7 @@ public:
 	FTextMeshBuilder& GetTextRenderer() { return TextRenderer; }
 	FSubUVRenderer& GetSubUVRenderer() { return SubUVRenderer; }
 	FVector GetCameraPosition() const;
+	void SetViewMatrix(FMatrix View);
 
 	ID3D11ShaderResourceView* GetFolderIconSRV() const { return FolderIconSRV; }
 	ID3D11ShaderResourceView* GetFileIconSRV() const { return FileIconSRV; }
@@ -125,14 +126,14 @@ private:
 	IDXGISwapChain* SwapChain = nullptr;
 	ID3D11RenderTargetView* RenderTargetView = nullptr;
 	ID3D11DepthStencilView* DepthStencilView = nullptr;
-	
+
 	ID3D11Buffer* FrameConstantBuffer = nullptr;
 	ID3D11Buffer* ObjectConstantBuffer = nullptr;
-	
+
 	FMatrix ViewMatrix;
 	FMatrix ProjectionMatrix;
 	D3D11_VIEWPORT Viewport = {};
-	
+
 	ID3D11RenderTargetView* LevelRenderTargetView = nullptr;
 	ID3D11DepthStencilView* LevelDepthStencilView = nullptr;
 	D3D11_VIEWPORT LevelViewport = {};

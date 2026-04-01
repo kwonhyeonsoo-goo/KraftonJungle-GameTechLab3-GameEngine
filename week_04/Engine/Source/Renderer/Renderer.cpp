@@ -195,8 +195,8 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 	 * cbuffer GlobalData : register(b3)
 	 * {
 	 *  	float Time;
-     * };
-	 *  
+	 * };
+	 *
 	 */
 	if (!GlobalBuffer.Create(Device, 16))
 	{
@@ -491,8 +491,14 @@ FVector FRenderer::GetCameraPosition() const
 	return GetCameraWorldPositionFromViewMatrix(ViewMatrix);
 }
 
+void FRenderer::SetViewMatrix(FMatrix View)
+{
+	ViewMatrix = View;
+}
+
 bool FRenderer::CreateConstantBuffers()
 {
+	int size = sizeof(FVector2);
 	D3D11_BUFFER_DESC Desc = {};
 	Desc.Usage = D3D11_USAGE_DYNAMIC;
 	Desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -572,7 +578,7 @@ bool FRenderer::InitOutlineResources()
 	if (FAILED(Device->CreateDepthStencilState(&TestDesc, &StencilTestState))) return false;
 
 	FString PSPath = (FPaths::ShaderDir() / "OutlinePixelShader.hlsl").string();
-	OutlinePS = FShaderMap::Get().GetOrCreatePixelShader(Device, FPaths::ToWide(PSPath).c_str());
+	OutlinePS = FShaderMap::Get().GetOrCreatePixelShader(Device, FPaths::ToWString(PSPath).c_str());
 	return OutlinePS != nullptr;
 }
 

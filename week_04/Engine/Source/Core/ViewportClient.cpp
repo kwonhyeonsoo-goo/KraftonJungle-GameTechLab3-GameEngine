@@ -153,7 +153,7 @@ ULevel* IViewportClient::ResolveLevel(FCore* Core) const
 }
 
 UWorld* IViewportClient::ResolveWorld(FCore* Core) const
-{	
+{
 	return LinkedWorld ? LinkedWorld : Core->GetActiveWorld();
 }
 
@@ -175,7 +175,7 @@ void IViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 }
 // ======== World ==============
 
-void IViewportClient::SetLinkedWorld(UWorld* InWorld , FCore* InCore)
+void IViewportClient::SetLinkedWorld(UWorld* InWorld, FCore* InCore)
 {
 	if (InWorld == nullptr)
 	{

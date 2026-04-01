@@ -188,8 +188,8 @@ void FEditorUI::Initialize(FCore* InCore)
 			{
 				if (ContentBrowser.IsMouseOnDirectory())
 				{
-					std::filesystem::path Src = DraggingFilePath;
-					std::filesystem::path Dst = std::filesystem::path(ReleaseDirectory) / Src.filename();
+					std::filesystem::path Src = FPaths::ToU8String(DraggingFilePath);
+					std::filesystem::path Dst = FPaths::ToU8String(ReleaseDirectory) / Src.filename();
 					std::error_code ec;
 					if (std::filesystem::exists(Dst))
 					{

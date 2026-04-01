@@ -74,7 +74,7 @@ private:
 
 	FViewportInfo ViewportInfo;
 
-	UWorld* LinkedWorld; 
+	UWorld* LinkedWorld;
 };
 
 class ENGINE_API FGameViewportClient : public IViewportClient

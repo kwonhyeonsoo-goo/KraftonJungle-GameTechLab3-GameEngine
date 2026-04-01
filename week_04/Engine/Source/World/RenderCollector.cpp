@@ -88,6 +88,7 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 
 					if (TextComp->IsBillboard())
 					{
+						//GEngine->GetCore()->GetActiveLevel()->GetPrimn
 						const FVector CameraPos = Renderer->GetCameraPosition();
 						Command.WorldMatrix = FMatrix::MakeScale(Scale) * FMatrix::MakeBillboard(WorldPos, CameraPos);
 					}
@@ -215,7 +216,7 @@ void FLevelRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 			if (bIsUUID)
 			{
 #if IS_OBJ_VIEWER
-				continue;				
+				continue;
 #endif
 				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_UUID)) continue;
 			}

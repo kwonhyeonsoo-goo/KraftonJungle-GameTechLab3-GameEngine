@@ -50,12 +50,28 @@ void FPaths::Initialize()
 
 std::wstring FPaths::ToWide(const FString& Path)
 {
+	if (Path.empty()) return {};
+	int Len = MultiByteToWideChar(CP_UTF8, 0, Path.data(), static_cast<int>(Path.size()), nullptr, 0);
+	std::wstring Result(Len, L'\0');
+	MultiByteToWideChar(CP_UTF8, 0, Path.data(), static_cast<int>(Path.size()), Result.data(), Len);
+	return Result;
+}
+
+std::wstring FPaths::ToWString(const FString& Path)
+{
 	return std::wstring(Path.begin(), Path.end());
+}
+
+std::wstring FPaths::ToShaderPath(const FString& Path)
+{
+	// 1. UTF-8 std::string을 std::filesystem::path로 변환 (char8_t 캐스팅 활용)
+	// 2. 해당 OS의 Wide String 형식으로 반환
+	return std::filesystem::path(reinterpret_cast<const char8_t*>(Path.c_str())).wstring();
 }
 
 std::string FPaths::ToRelativePath(const FString& Path)
 {
-	FString Root = ProjectRoot().string();
+	FString Root = FromPath(ProjectRoot());
 	FString RelativePath = Path;
 
 	if (RelativePath.starts_with(Root))
@@ -70,7 +86,7 @@ std::string FPaths::ToRelativePath(const FString& Path)
 
 std::string FPaths::ToAbsolutePath(const FString& Path)
 {
-	FString Root = ProjectRoot().string();
+	FString Root = FromPath(ProjectRoot());
 	FString AbsolutePath = Path;
 
 	if (AbsolutePath.starts_with(Root))

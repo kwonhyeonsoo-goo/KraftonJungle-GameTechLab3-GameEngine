@@ -33,8 +33,8 @@ void UWorld::InitializeWorld(float AspectRatio, ID3D11Device* Device)
 
 void UWorld::BeginPlay()
 {
-	if (bBegunPlay) return;  
-	bBegunPlay = true;     
+	if (bBegunPlay) return;
+	bBegunPlay = true;
 	if (PersistentLevel)
 	{
 		PersistentLevel->BeginPlay();
