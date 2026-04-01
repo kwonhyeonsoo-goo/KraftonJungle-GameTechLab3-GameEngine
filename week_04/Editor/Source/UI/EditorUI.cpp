@@ -595,14 +595,14 @@ void FEditorUI::Render()
 					}
 
 					// RenderMode 콤보 — 오른쪽 정렬
-					float ComboW = 120.f;
-					ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ComboW);
-					ImGui::SetNextItemWidth(ComboW);
-					{
-						ERenderMode Mode = EditorVP->GetRenderMode();
-						ImGui::Combo("##RM", (int*)&Mode, "Lighting\0No Lighting\0Wireframe", 3);
-						EditorVP->SetRenderMode(Mode);
-					}
+					//float ComboW = 120.f;
+					//ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ComboW);
+					//ImGui::SetNextItemWidth(ComboW);
+					//{
+					//	ERenderMode Mode = EditorVP->GetRenderMode();
+					//	ImGui::Combo("##RM", (int*)&Mode, "Lighting\0No Lighting\0Wireframe", 3);
+					//	EditorVP->SetRenderMode(Mode);
+					//}
 				}
 
 				ImGui::EndMenuBar();
