@@ -91,6 +91,7 @@ void AActor::PostSpawnInitialize()
 		UUUIDBillboardComponent* UUIDComponent =
 			FObjectFactory::ConstructObject<UUUIDBillboardComponent>(this, "UUIDBillboard");
 
+	
 		if (UUIDComponent)
 		{
 			AddOwnedComponent(UUIDComponent);
