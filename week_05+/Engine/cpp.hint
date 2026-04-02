@@ -1,0 +1,4 @@
+// Hint files help the Visual Studio IDE interpret Visual C++ identifiers
+// such as names of functions and macros.
+// For more information see https://go.microsoft.com/fwlink/?linkid=865984
+#define DECLARE_RTTI(ClassName, ParentClassName) public: static UClass* StaticClass(); virtual UClass* GetClass() const override { return ClassName::StaticClass(); } ClassName() : ParentClassName("") { InitializeIfAble(this); } ClassName(const FString& InName, UObject* InOuter = nullptr) : ParentClassName(InName, InOuter) { InitializeIfAble(this); }

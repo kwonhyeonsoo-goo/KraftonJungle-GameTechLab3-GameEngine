@@ -1,0 +1,252 @@
+{
+  "Camera": {
+    "Position": [
+      -3.0,
+      -3.0,
+      2.5
+    ],
+    "Rotation": [
+      45.0,
+      -30.0
+    ]
+  },
+  "Materials": [
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_Hologram.json",
+    "Assets/Materials/M_Gizmos.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_SolidWireframe.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_Sky.json",
+    "Assets/Materials/M_TintYellow.json",
+    "Assets/Materials/M_StaticMesh.json",
+    "Assets/Materials/M_Wireframe.json"
+  ],
+  "NextUUID": 17,
+  "PerspectiveCamera": {
+    "FOV": 45.0,
+    "FarClip": 1000.0,
+    "Location": [
+      -14.994002342224121,
+      -0.24424749612808228,
+      1.9825466871261597
+    ],
+    "NearClip": 0.10000000149011612,
+    "Rotation": [
+      2.8000011444091797,
+      0.19999997317790985
+    ]
+  },
+  "Primitives": {
+    "0": {
+      "Class": "AStaticMeshActor",
+      "ComponentUUIDs": [
+        5,
+        6
+      ],
+      "Name": "scene",
+      "RootComponent": {
+        "Location": [
+          4.654129981994629,
+          -0.735957145690918,
+          -0.5012252330780029
+        ],
+        "Material": "",
+        "Name": "None",
+        "PrimitiveFileName": "",
+        "Rotation": [
+          -0.0,
+          0.0,
+          -0.0
+        ],
+        "Scale": [
+          0.10000000149011612,
+          0.10000000149011612,
+          0.10000000149011612
+        ],
+        "SlotMaterials": [
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh"
+        ],
+        "SlotTextures": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "StaticMeshAsset": "Assets/Meshes/scene.dasset",
+        "bDrawDebugBounds": true,
+        "bTickEnabled": true
+      },
+      "UUID": 4
+    },
+    "1": {
+      "Class": "AStaticMeshActor",
+      "ComponentUUIDs": [
+        9,
+        10
+      ],
+      "Name": "warning_01",
+      "RootComponent": {
+        "Location": [
+          -0.5629367828369141,
+          2.087797164916992,
+          -0.5657262802124023
+        ],
+        "Material": "",
+        "Name": "None_0",
+        "PrimitiveFileName": "",
+        "Rotation": [
+          -0.0,
+          0.0,
+          -0.0
+        ],
+        "Scale": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "SlotMaterials": [
+          "M_Hologram"
+        ],
+        "SlotTextures": [
+          "Assets/Meshes/warning_bg_02.png"
+        ],
+        "StaticMeshAsset": "Assets/Meshes/warning_01.dasset",
+        "bDrawDebugBounds": true,
+        "bTickEnabled": true
+      },
+      "UUID": 8
+    }
+  }
+}

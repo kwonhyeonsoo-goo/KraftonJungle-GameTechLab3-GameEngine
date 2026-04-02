@@ -1,0 +1,666 @@
+{
+  "Camera": {
+    "Position": [
+      -3.0,
+      -3.0,
+      2.5
+    ],
+    "Rotation": [
+      45.0,
+      -30.0
+    ]
+  },
+  "Materials": [
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_Hologram.json",
+    "Assets/Materials/M_Gizmos.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_SolidWireframe.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_Sky.json",
+    "Assets/Materials/M_TintYellow.json",
+    "Assets/Materials/M_StaticMesh.json",
+    "Assets/Materials/M_Wireframe.json"
+  ],
+  "NextUUID": 11,
+  "PerspectiveCamera": {
+    "FOV": 45.0,
+    "FarClip": 1000.0,
+    "Location": [
+      -5.0,
+      0.0,
+      2.0
+    ],
+    "NearClip": 0.10000000149011612,
+    "Rotation": [
+      8.599998474121094,
+      -2.4000003337860107
+    ]
+  },
+  "Primitives": {
+    "0": {
+      "Class": "AStaticMeshActor",
+      "ComponentUUIDs": [
+        5,
+        6
+      ],
+      "Name": "scene",
+      "RootComponent": {
+        "Location": [
+          4.85270881652832,
+          -0.4884745180606842,
+          0.36124658584594727
+        ],
+        "Material": "",
+        "Name": "None",
+        "PrimitiveFileName": "",
+        "Rotation": [
+          -0.0,
+          0.0,
+          -0.0
+        ],
+        "Scale": [
+          0.10000000149011612,
+          0.10000000149011612,
+          0.10000000149011612
+        ],
+        "SlotMaterials": [
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh",
+          "M_StaticMesh"
+        ],
+        "SlotTextures": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "StaticMeshAsset": "Assets/Meshes/scene.dasset",
+        "UVEnabled_0": false,
+        "UVEnabled_1": false,
+        "UVEnabled_10": false,
+        "UVEnabled_11": false,
+        "UVEnabled_12": false,
+        "UVEnabled_13": false,
+        "UVEnabled_14": false,
+        "UVEnabled_15": false,
+        "UVEnabled_16": false,
+        "UVEnabled_17": false,
+        "UVEnabled_18": false,
+        "UVEnabled_19": false,
+        "UVEnabled_2": false,
+        "UVEnabled_20": false,
+        "UVEnabled_21": false,
+        "UVEnabled_22": false,
+        "UVEnabled_23": false,
+        "UVEnabled_24": false,
+        "UVEnabled_25": false,
+        "UVEnabled_26": false,
+        "UVEnabled_27": false,
+        "UVEnabled_28": false,
+        "UVEnabled_29": false,
+        "UVEnabled_3": false,
+        "UVEnabled_30": false,
+        "UVEnabled_31": false,
+        "UVEnabled_32": false,
+        "UVEnabled_33": false,
+        "UVEnabled_34": false,
+        "UVEnabled_35": false,
+        "UVEnabled_36": false,
+        "UVEnabled_37": false,
+        "UVEnabled_38": false,
+        "UVEnabled_39": false,
+        "UVEnabled_4": false,
+        "UVEnabled_40": false,
+        "UVEnabled_41": false,
+        "UVEnabled_42": false,
+        "UVEnabled_43": false,
+        "UVEnabled_44": false,
+        "UVEnabled_45": false,
+        "UVEnabled_46": false,
+        "UVEnabled_47": false,
+        "UVEnabled_48": false,
+        "UVEnabled_49": false,
+        "UVEnabled_5": false,
+        "UVEnabled_50": false,
+        "UVEnabled_51": false,
+        "UVEnabled_52": false,
+        "UVEnabled_53": false,
+        "UVEnabled_54": false,
+        "UVEnabled_55": false,
+        "UVEnabled_56": false,
+        "UVEnabled_57": false,
+        "UVEnabled_58": false,
+        "UVEnabled_59": false,
+        "UVEnabled_6": false,
+        "UVEnabled_60": false,
+        "UVEnabled_61": false,
+        "UVEnabled_62": false,
+        "UVEnabled_63": false,
+        "UVEnabled_64": false,
+        "UVEnabled_65": false,
+        "UVEnabled_66": false,
+        "UVEnabled_67": false,
+        "UVEnabled_7": false,
+        "UVEnabled_8": false,
+        "UVEnabled_9": false,
+        "UVSpeed_0": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_1": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_10": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_11": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_12": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_13": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_14": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_15": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_16": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_17": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_18": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_19": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_2": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_20": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_21": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_22": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_23": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_24": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_25": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_26": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_27": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_28": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_29": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_3": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_30": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_31": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_32": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_33": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_34": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_35": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_36": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_37": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_38": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_39": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_4": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_40": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_41": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_42": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_43": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_44": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_45": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_46": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_47": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_48": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_49": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_5": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_50": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_51": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_52": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_53": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_54": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_55": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_56": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_57": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_58": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_59": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_6": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_60": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_61": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_62": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_63": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_64": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_65": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_66": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_67": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_7": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_8": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "UVSpeed_9": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "bDrawDebugBounds": true,
+        "bTickEnabled": true
+      },
+      "UUID": 4
+    },
+    "1": {
+      "Class": "AStaticMeshActor",
+      "ComponentUUIDs": [
+        9,
+        10
+      ],
+      "Name": "warning_01",
+      "RootComponent": {
+        "Location": [
+          4.3572845458984375,
+          2.3623945713043213,
+          -0.6192224025726318
+        ],
+        "Material": "",
+        "Name": "None_0",
+        "PrimitiveFileName": "",
+        "Rotation": [
+          -0.0,
+          0.0,
+          -0.0
+        ],
+        "Scale": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "SlotMaterials": [
+          "M_Hologram"
+        ],
+        "SlotTextures": [
+          "Assets/Meshes/warning_bg_02.png"
+        ],
+        "StaticMeshAsset": "Assets/Meshes/warning_01.dasset",
+        "UVEnabled_0": true,
+        "UVSpeed_0": [
+          0.30000001192092896,
+          0.0,
+          0.0
+        ],
+        "bDrawDebugBounds": true,
+        "bTickEnabled": true
+      },
+      "UUID": 8
+    }
+  }
+}
