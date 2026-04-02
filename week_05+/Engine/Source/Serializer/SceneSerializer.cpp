@@ -149,17 +149,20 @@ bool FSceneSerializer::Load(ULevel* Level, const FString& FilePath, ID3D11Device
 
 	// Primitives 파싱
 	int32 ActorIndex = 0;
-	for (auto& [Key, Value] : Json["Primitives"].items())
+	auto Items = Json["Primitives"].items();
+	for (auto& [Key, Value] : Items)
 	{
 		// 1. "Class" 키가 없으면 "Type" 키로 Fallback
-		FString ClassName = Value.value("Class", "");
-		if (ClassName.empty()) 
-		{
-			ClassName = Value.value("Type", "");
-			
-			// [주의] 만약 엔진의 클래스 이름이 "AStaticMeshActor"인데 JSON에 "StaticMeshComp"로 적혀있다면 강제 매핑이 필요할 수 있습니다.
-			if (ClassName == "StaticMeshComp") ClassName = "AStaticMeshActor"; // 필요시 수정
-		}
+		FString ClassName;
+		//if (ClassName.empty()) 
+		//{
+		//	ClassName = Value.value("Type", "");
+		//	
+		//	// [주의] 만약 엔진의 클래스 이름이 "AStaticMeshActor"인데 JSON에 "StaticMeshComp"로 적혀있다면 강제 매핑이 필요할 수 있습니다.
+		//	if (ClassName == "StaticMeshComp") ClassName = "AStaticMeshActor"; // 필요시 수정
+		//}
+		ClassName = "AStaticMeshActor";
+
 
 		UClass* ActorClass = UClass::FindClass(ClassName);
 		if (!ActorClass)
