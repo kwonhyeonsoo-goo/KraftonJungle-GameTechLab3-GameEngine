@@ -30,9 +30,9 @@ struct ENGINE_API FMeshData
 	uint32 GetSortId() const { return SortId; }
 	UINT CurrentVBSize = 0;
 	UINT CurrentIBSize = 0;
-	bool bIsDirty = true;	// 최초 1회 초기화 보장
 
-	bool UpdateVertexAndIndexBuffer(ID3D11Device* Device);
+	bool IsDirty() const { return bIsDirty; }
+	bool UpdateVertexAndIndexBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context);
 	bool CreateVertexAndIndexBuffer(ID3D11Device* Device);
 	void Bind(ID3D11DeviceContext* Context);
 	void Release();
@@ -58,10 +58,10 @@ struct ENGINE_API FMeshData
 	FVector GetMaxCoord() const { return MaxCoord; }
 	FVector GetCenterCoord() const { return (MaxCoord - MinCoord) * 0.5 + MinCoord; }
 
+	bool bIsDirty = true;	// 최초 1회 초기화 보장
 private:
 	uint32 SortId = 0;
 	static inline uint32 NextSortId = 0;
-
 	FVector MinCoord = FVector(FLT_MAX, FLT_MAX, FLT_MAX);
 	FVector MaxCoord = FVector(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 	float LocalBoundRadius = 0.f;

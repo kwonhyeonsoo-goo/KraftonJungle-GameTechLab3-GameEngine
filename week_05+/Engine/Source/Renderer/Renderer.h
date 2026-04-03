@@ -78,9 +78,10 @@ public:
 	void DrawLine(const FVector& Start, const FVector& End, const FVector4& Color);
 	void DrawCube(const FVector& Center, const FVector& BoxExtent, const FVector4& Color);
 	void ExecuteLineCommands();
-	void DrawOverlayRect(float X, float Y, float Width, float Height, const FVector4& Color, int32 ViewportWidth, int32 ViewportHeight);
-	void DrawOverlayRectOutline(float X, float Y, float Width, float Height, const FVector4& Color, int32 ViewportWidth, int32 ViewportHeight);
-	void DrawOverlayText(const FString& Text, float X, float Y, const FVector4& Color, int32 ViewportWidth, int32 ViewportHeight);
+	void DrawImmediateMesh(FMeshData* MeshData, FMaterial* Material, const FMatrix& WorldMatrix, int32 ViewportWidth, int32 ViewportHeight, bool bUpdateMatrix);
+	void DrawOverlayRect(float X, float Y, float Width, float Height, const FVector4& Color, int32 ViewportWidth, int32 ViewportHeight, bool bUpdateMatrix = true);
+	void DrawOverlayRectOutline(float X, float Y, float Width, float Height, const FVector4& Color, int32 ViewportWidth, int32 ViewportHeight, bool bUpdateMatrix = true);
+	void DrawOverlayText(const FString& Text, float X, float Y, const FVector4& Color, int32 ViewportWidth, int32 ViewportHeight, bool bUpdateMatrix = true);
 	float GetOverlayTextLineHeight() const { return 16.0f; }
 
 	// ─── 특수 효과 ───
@@ -117,7 +118,6 @@ private:
 	void UpdateFrameConstantBuffer();
 	void UpdateObjectConstantBuffer(const FMatrix& WorldMatrix);
 	void ClearDepthBuffer();
-	void DrawImmediateMesh(FMeshData* MeshData, FMaterial* Material, const FMatrix& WorldMatrix, int32 ViewportWidth, int32 ViewportHeight);
 
 	bool CreateTextureFromSTB(ID3D11Device* Device, const wchar_t* FilePath, ID3D11ShaderResourceView** OutSRV);
 
@@ -173,7 +173,7 @@ private:
 
 	FTextMeshBuilder TextRenderer;
 	FSubUVRenderer SubUVRenderer;
-
+	TArray<FRenderCommand> LocalCommandList;
 	ID3D11ShaderResourceView* FolderIconSRV = nullptr;
 	ID3D11ShaderResourceView* FileIconSRV = nullptr;
 

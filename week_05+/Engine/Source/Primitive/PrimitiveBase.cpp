@@ -4,20 +4,18 @@
 
 // ─── FMeshData ───
 
-bool FMeshData::UpdateVertexAndIndexBuffer(ID3D11Device* Device)
+bool FMeshData::UpdateVertexAndIndexBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context)
 {
+	if (!bIsDirty) return true;
 	const UINT NewVBSize = static_cast<UINT>(sizeof(FPrimitiveVertex) * Vertices.size());
 	const UINT NewIBSize = static_cast<UINT>(sizeof(uint32) * Indices.size());
-	if (!bIsDirty) return true;
 
 
 	if (!VertexBuffer || !IndexBuffer || CurrentVBSize < NewVBSize || CurrentIBSize < NewIBSize)
 	{
 		return CreateVertexAndIndexBuffer(Device);
 	}
-	ID3D11DeviceContext* Context = nullptr;
-	Device->GetImmediateContext(&Context);
-	if (!Context) return false;
+
 
 	// Vertex Buffer 업데이트
 	D3D11_MAPPED_SUBRESOURCE Mapped;
@@ -33,10 +31,10 @@ bool FMeshData::UpdateVertexAndIndexBuffer(ID3D11Device* Device)
 		memcpy(Mapped.pData, Indices.data(), NewIBSize);
 		Context->Unmap(IndexBuffer, 0);
 	}
-	Context->Release(); // 중요: GetImmediateContext로 증가된 참조 횟수 감소
+
 	bIsDirty = false;
 	return true;
-	}
+}
 bool FMeshData::CreateVertexAndIndexBuffer(ID3D11Device* Device)
 {
 	Release();

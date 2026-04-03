@@ -388,28 +388,38 @@ void FRenderer::SubmitCommands(const FRenderCommandQueue& InQueue)
 
 	for (const auto& Cmd : InQueue.Commands)
 	{
-		if (Cmd.MeshData) Cmd.MeshData->UpdateVertexAndIndexBuffer(Device);
+		if (Cmd.MeshData && Cmd.MeshData->IsDirty())
+		{
+			Cmd.MeshData->UpdateVertexAndIndexBuffer(Device, DeviceContext); // 여기도 수정!
+		}
 		AddCommand(Cmd);
 	}
 }
 
 void FRenderer::ExecuteCommandQueue(const FRenderCommandQueue& InQueue)
 {
-	TArray<FRenderCommand> LocalCommandList;
-	LocalCommandList.reserve(InQueue.Commands.size());
+	LocalCommandList.clear();
 
+	if (LocalCommandList.capacity() < InQueue.Commands.size())
+	{
+		LocalCommandList.reserve(InQueue.Commands.size());
+	}
 	for (const FRenderCommand& Cmd : InQueue.Commands)
 	{
 		if (Cmd.MeshData)
 		{
-			Cmd.MeshData->UpdateVertexAndIndexBuffer(Device);
+		
+			if (Cmd.MeshData->IsDirty())
+			{
+				Cmd.MeshData->UpdateVertexAndIndexBuffer(Device, DeviceContext);
+			}
 		}
-
 		AddCommand(LocalCommandList, Cmd);
 	}
 
 	PrevCommandCount = InQueue.Commands.size();
 	ExecuteCommands(LocalCommandList, InQueue.ViewMatrix, InQueue.ProjectionMatrix);
+
 }
 
 void FRenderer::SetViewport(D3D11_VIEWPORT* Viewport)
@@ -648,7 +658,7 @@ bool FRenderer::InitOutlineResources()
 void FRenderer::RenderOutline(FMeshData* Mesh, const FMatrix& WorldMatrix, float OutlineScale)
 {
 	if (!Mesh || !InitOutlineResources()) return;
-	Mesh->UpdateVertexAndIndexBuffer(Device);
+	Mesh->UpdateVertexAndIndexBuffer(Device, DeviceContext);
 	Mesh->Bind(DeviceContext);
 
 	ID3D11RenderTargetView* ActiveRTV = bUseLevelRenderTargetOverride ? LevelRenderTargetView : RenderTargetView;
@@ -690,7 +700,7 @@ void FRenderer::DrawCube(const FVector& Center, const FVector& BoxExtent, const 
 	DrawLine(v[0], v[1], Color); DrawLine(v[4], v[5], Color); DrawLine(v[6], v[7], Color); DrawLine(v[2], v[3], Color);
 }
 
-void FRenderer::DrawOverlayRect(float X, float Y, float Width, float Height, const FVector4& Color, int32 ViewportWidth, int32 ViewportHeight)
+void FRenderer::DrawOverlayRect(float X, float Y, float Width, float Height, const FVector4& Color, int32 ViewportWidth, int32 ViewportHeight, bool bUpdateMatrix)
 {
 	if (!OverlayColorMaterial || Width <= 0.0f || Height <= 0.0f)
 	{
@@ -716,49 +726,44 @@ void FRenderer::DrawOverlayRect(float X, float Y, float Width, float Height, con
 	const float WorldY = X - static_cast<float>(ViewportWidth) * 0.5f;
 	const float WorldZ = static_cast<float>(ViewportHeight) * 0.5f - Y - Height;
 	const FMatrix WorldMatrix = FMatrix::MakeTranslation(FVector(0.0f, WorldY, WorldZ));
-	DrawImmediateMesh(&QuadMesh, OverlayColorMaterial.get(), WorldMatrix, ViewportWidth, ViewportHeight);
-}
 
-void FRenderer::DrawOverlayRectOutline(float X, float Y, float Width, float Height, const FVector4& Color, int32 ViewportWidth, int32 ViewportHeight)
+	// 최적화: bUpdateMatrix 전달
+	DrawImmediateMesh(&QuadMesh, OverlayColorMaterial.get(), WorldMatrix, ViewportWidth, ViewportHeight, bUpdateMatrix);
+}
+void FRenderer::DrawOverlayRectOutline(float X, float Y, float Width, float Height, const FVector4& Color, int32 ViewportWidth, int32 ViewportHeight, bool bUpdateMatrix)
 {
 	constexpr float Thickness = 1.0f;
-	DrawOverlayRect(X, Y, Width, Thickness, Color, ViewportWidth, ViewportHeight);
-	DrawOverlayRect(X, Y + Height - Thickness, Width, Thickness, Color, ViewportWidth, ViewportHeight);
-	DrawOverlayRect(X, Y, Thickness, Height, Color, ViewportWidth, ViewportHeight);
-	DrawOverlayRect(X + Width - Thickness, Y, Thickness, Height, Color, ViewportWidth, ViewportHeight);
+	// 첫 번째 사각형만 bUpdateMatrix를 따르고, 나머지는 이미 설정된 행렬을 재사용하도록 false 전달
+	DrawOverlayRect(X, Y, Width, Thickness, Color, ViewportWidth, ViewportHeight, bUpdateMatrix);
+	DrawOverlayRect(X, Y + Height - Thickness, Width, Thickness, Color, ViewportWidth, ViewportHeight, false);
+	DrawOverlayRect(X, Y, Thickness, Height, Color, ViewportWidth, ViewportHeight, false);
+	DrawOverlayRect(X + Width - Thickness, Y, Thickness, Height, Color, ViewportWidth, ViewportHeight, false);
 }
-
-void FRenderer::DrawOverlayText(const FString& Text, float X, float Y, const FVector4& Color, int32 ViewportWidth, int32 ViewportHeight)
+void FRenderer::DrawOverlayText(const FString& Text, float X, float Y, const FVector4& Color, int32 ViewportWidth, int32 ViewportHeight, bool bUpdateMatrix)
 {
-	if (Text.empty())
-	{
-		return;
-	}
+	if (Text.empty()) return;
 
 	FMeshData TextMesh;
-	if (!TextRenderer.BuildTextMesh(Text, TextMesh))
-	{
-		return;
-	}
-	TextMesh.UpdateLocalBound();
+	if (!TextRenderer.BuildTextMesh(Text, TextMesh)) return;
 
+	TextMesh.UpdateLocalBound();
 	FMaterial* FontMaterial = TextRenderer.GetFontMaterial();
-	if (!FontMaterial)
-	{
-		return;
-	}
+	if (!FontMaterial) return;
 
 	FontMaterial->SetParameterData("TextColor", &Color, 16);
 
 	constexpr float TextScale = 16.0f;
 	const FVector Min = TextMesh.GetMinCoord();
 	const FVector Max = TextMesh.GetMaxCoord();
-	const float WorldY = X - static_cast<float>(ViewportWidth) * 0.5f - Min.Y * TextScale;
-	const float WorldZ = static_cast<float>(ViewportHeight) * 0.5f - Y - Max.Z * TextScale;
+	const float WorldY = X - (float)ViewportWidth * 0.5f - Min.Y * TextScale;
+	const float WorldZ = (float)ViewportHeight * 0.5f - Y - Max.Z * TextScale;
+
 	const FMatrix WorldMatrix =
 		FMatrix::MakeScale(FVector(1.0f, TextScale, TextScale)) *
 		FMatrix::MakeTranslation(FVector(0.0f, WorldY, WorldZ));
-	DrawImmediateMesh(&TextMesh, FontMaterial, WorldMatrix, ViewportWidth, ViewportHeight);
+
+	// bUpdateMatrix를 전달하여 불필요한 GPU 행렬 업데이트 방지
+	DrawImmediateMesh(&TextMesh, FontMaterial, WorldMatrix, ViewportWidth, ViewportHeight, bUpdateMatrix);
 }
 
 void FRenderer::ExecuteLineCommands()
@@ -792,17 +797,14 @@ void FRenderer::ExecuteLineCommands()
 	LineVertices.clear();
 }
 
-void FRenderer::DrawImmediateMesh(FMeshData* MeshData, FMaterial* Material, const FMatrix& WorldMatrix, int32 ViewportWidth, int32 ViewportHeight)
+void FRenderer::DrawImmediateMesh(FMeshData* MeshData, FMaterial* Material, const FMatrix& WorldMatrix, int32 ViewportWidth, int32 ViewportHeight, bool bUpdateMatrix)
 {
 	if (!MeshData || !Material || ViewportWidth <= 0 || ViewportHeight <= 0)
 	{
 		return;
 	}
 
-	if (!MeshData->UpdateVertexAndIndexBuffer(Device))
-	{
-		return;
-	}
+	if (!MeshData->UpdateVertexAndIndexBuffer(Device, DeviceContext)) return;
 
 	const FMatrix PrevView = ViewMatrix;
 	const FMatrix PrevProjection = ProjectionMatrix;
