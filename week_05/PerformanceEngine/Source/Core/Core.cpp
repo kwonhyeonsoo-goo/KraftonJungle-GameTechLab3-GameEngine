@@ -171,6 +171,7 @@ void FCore::Tick()
 			RHI->GetViewportWidth(),
 			RHI->GetViewportHeight(),
 			PickState);
+		StatsSystem->RecordPickEvent(PickState);
 	}
 
 	StatsSystem->ApplyPickState(PickState);
@@ -243,6 +244,16 @@ void FCore::Release()
 	{
 		Scene->Release();
 		Scene.reset();
+	}
+
+	if (bInitialized && StatsSystem && RHI)
+	{
+		FBenchmarkRunMetadata Metadata;
+		Metadata.AdapterName = RHI->GetAdapterName();
+		Metadata.DedicatedVideoMemoryMB = RHI->GetAdapterDedicatedVideoMemoryMB();
+		Metadata.ViewportWidth = RHI->GetViewportWidth();
+		Metadata.ViewportHeight = RHI->GetViewportHeight();
+		StatsSystem->WriteBenchmarkLogs(Metadata);
 	}
 
 	if (RHI)
