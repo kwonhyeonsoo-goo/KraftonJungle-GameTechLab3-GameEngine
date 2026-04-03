@@ -606,6 +606,7 @@
     <ClInclude Include="Source\Asset\CookedAsset.h" />
     <ClInclude Include="Source\Primitive\PrimitiveSky.h" />
     <ClInclude Include="Source\World\Octree.h" />
+    <ClInclude Include="Source\Math\Ray.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

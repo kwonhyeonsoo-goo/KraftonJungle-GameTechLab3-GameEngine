@@ -1,6 +1,72 @@
 #include "Octree.h"
 #include "Component/PrimitiveComponent.h"
+#include "Component/MeshComponent.h"
 #include "Math/Frustum.h"
+#include "Debug/EngineLog.h"
+
+bool RayAABBIntersect(const FRay& Ray, const FVector& BoxMin, const FVector& BoxMax, float& OutDistance)
+{
+	float TEnter = 0.0f;
+	float TExit = 100000.0f;
+
+	for (int i = 0; i < 3; ++i)
+	{
+		float T1 = (BoxMin.XYZ[i] - Ray.Origin.XYZ[i]) * Ray.InvDirection.XYZ[i];
+		float T2 = (BoxMax.XYZ[i] - Ray.Origin.XYZ[i]) * Ray.InvDirection.XYZ[i];
+		float TMin = std::min(T1, T2);
+		float TMax = std::max(T1, T2);
+
+		TEnter = std::max(TEnter, TMin);
+		TExit = std::min(TExit, TMax);
+	}
+
+	if (TEnter > TExit || TExit < 0.0f)
+	{
+		return false;
+	}
+
+	OutDistance = std::max(0.0f, TEnter);
+	return true;
+}
+
+bool RayTriangleIntersect(const FRay& Ray, const FVector& V0, const FVector& V1, const FVector& V2, float& OutDistance)
+{
+	constexpr float Epsilon = 1.e-6f;
+
+	const FVector Edge1 = V1 - V0;
+	const FVector Edge2 = V2 - V0;
+
+	const FVector H = FVector::CrossProduct(Ray.Direction, Edge2);
+	const float A = FVector::DotProduct(Edge1, H);
+	if (A <= Epsilon)
+	{
+		return false;
+	}
+
+	const float F = 1.0f / A;
+	const FVector S = Ray.Origin - V0;
+	const float U = F * FVector::DotProduct(S, H);
+	if (U < 0.0f || U > 1.0f)
+	{
+		return false;
+	}
+
+	const FVector Q = FVector::CrossProduct(S, Edge1);
+	const float V = F * FVector::DotProduct(Ray.Direction, Q);
+	if (V < 0.0f || U + V > 1.0f)
+	{
+		return false;
+	}
+
+	const float T = F * FVector::DotProduct(Edge2, Q);
+	if (T > Epsilon)
+	{
+		OutDistance = T;
+		return true;
+	}
+
+	return false;
+}
 
 void FOctreeNode::Insert(UPrimitiveComponent* InPrimitive, int32 CurrDepth, int32 MaxDepth, int32 Capacity)
 {
@@ -143,6 +209,80 @@ void FOctreeNode::GatherAllPrimitives(TArray<UPrimitiveComponent*>& OutPrimitive
 	}
 }
 
+void FOctreeNode::Pick(const FRay& Ray, float& OutClosestDist, UPrimitiveComponent*& OutPrimitive) const
+{
+	float TEnter;
+	if (!RayAABBIntersect(Ray, Min, Max, TEnter) || TEnter > OutClosestDist)
+	{
+		return;
+	}
+
+	for (UPrimitiveComponent* Prim : Primitives)
+	{
+		FBoxSphereBounds Bounds = Prim->GetWorldBounds();
+		float PrimDist;
+		if (RayAABBIntersect(Ray, Bounds.Center - Bounds.BoxExtent, Bounds.Center + Bounds.BoxExtent, PrimDist))
+		{
+			if (PrimDist >= OutClosestDist) continue;
+			
+			FMeshData* Mesh = nullptr;
+			if (Prim->GetPrimitive())
+			{
+				Mesh = Prim->GetPrimitive()->GetMeshData();
+			}
+			else if (Prim->IsA(UMeshComponent::StaticClass()))
+			{
+				Mesh = static_cast<UMeshComponent*>(Prim)->GetMeshData();
+			}
+
+			if (Mesh && Mesh->Indices.size() >= 3)
+			{
+				const FMatrix World = Prim->GetWorldTransform();
+				bool bHitMesh = false;
+				float MeshClosestDist = OutClosestDist;
+
+				for (uint32 Index = 0; Index + 2 < Mesh->Indices.size(); Index += 3)
+				{
+					FVector V0 = World.TransformPosition(Mesh->Vertices[Mesh->Indices[Index]].Position);
+					FVector V1 = World.TransformPosition(Mesh->Vertices[Mesh->Indices[Index + 1]].Position);
+					FVector V2 = World.TransformPosition(Mesh->Vertices[Mesh->Indices[Index + 2]].Position);
+					float TriDist;
+					if (RayTriangleIntersect(Ray, V0, V1, V2, TriDist) && TriDist < OutClosestDist)
+					{
+						MeshClosestDist = TriDist;
+						bHitMesh = true;
+					}
+				}
+
+				if (bHitMesh && MeshClosestDist < OutClosestDist)
+				{
+					OutClosestDist = MeshClosestDist;
+					OutPrimitive = Prim;
+				}
+			}
+			else
+			{
+				if (PrimDist < OutClosestDist)
+				{
+					OutClosestDist = PrimDist;
+					OutPrimitive = Prim;
+				}
+			}
+		}
+	}
+
+	if (!bIsLeaf)
+	{
+		for (int i = 0; i < 8; ++i)
+		{
+			if (Children[i])
+			{
+				Children[i]->Pick(Ray, OutClosestDist, OutPrimitive);
+			}
+		}
+	}
+}
+
 
 FOctree::FOctree(const FVector& Center, float HalfExtent, int32 InMaxDepth, int32 InCapacity)
 	: Root(new FOctreeNode()), MaxDepth(InMaxDepth), Capacity(InCapacity)
@@ -186,4 +326,11 @@ void FOctree::ClearNode(FOctreeNode* Node)
 		}
 	}
 	Node->Primitives.clear();
+}
+
+void FOctree::Pick(const FRay& Ray, float& OutClosestDist, UPrimitiveComponent*& OutPrimitive) const
+{
+	if (!Root) return;
+
+	Root->Pick(Ray, OutClosestDist, OutPrimitive);
 }

@@ -71,6 +71,7 @@
     <ClInclude Include="Source\Input\InputModifier.h" />
     <ClInclude Include="Source\Input\inputTrigger.h" />
     <ClInclude Include="Source\Math\Point.h" />
+    <ClInclude Include="Source\Math\Ray.h" />
     <ClInclude Include="Source\Math\Rect.h" />
     <ClInclude Include="Source\Math\Frustum.h" />
     <ClInclude Include="Source\Math\MathUtility.h" />

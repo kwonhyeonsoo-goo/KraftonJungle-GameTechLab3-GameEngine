@@ -4,6 +4,7 @@
 #include "Math/Vector.h"
 #include "Math/Frustum.h"
 #include "Types/Array.h"
+#include "Math/Ray.h"
 
 class UPrimitiveComponent;
 
@@ -28,6 +29,8 @@ struct ENGINE_API FOctreeNode
 
 	void GetVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutPrimitives) const;
 	void GatherAllPrimitives(TArray<UPrimitiveComponent*>& OutPrimitives) const;
+
+	void Pick(const FRay& Ray, float& OutClosestDist, UPrimitiveComponent*& OutPrimitive) const;
 };
 
 class ENGINE_API FOctree
@@ -39,13 +42,12 @@ public:
 	void Insert(UPrimitiveComponent* InPrimitive);
 	void GetVisiblePrimitives(const FFrustum& Frustum, TArray<UPrimitiveComponent*>& OutPrimitives) const;
 
+	void Pick(const FRay& Ray, float& OutClosestDist, UPrimitiveComponent*& OutPrimitive) const;
+
 private:
 	void ClearNode(FOctreeNode* Node);
 
 private:
-	TArray<FOctreeNode> NodePool;
-	int32 NextFreeNodeIndex;
-
 	FOctreeNode* Root;
 	int32 MaxDepth;
 	int32 Capacity;
