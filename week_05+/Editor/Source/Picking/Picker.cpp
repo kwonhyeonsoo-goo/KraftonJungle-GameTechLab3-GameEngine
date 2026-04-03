@@ -10,6 +10,8 @@
 #include "Component/TextComponent.h"
 #include "Component/UUIDBillboardComponent.h"
 #include "Component/MeshComponent.h"
+#include "Core/FEngine.h"
+#include "World/Octree.h"
 #include "Actor/SkySphereActor.h"
 #include <limits>
 
@@ -54,7 +56,12 @@ FRay FPicker::ScreenToRay(const FCamera* Camera, int32 ScreenX, int32 ScreenY, i
 	RayOrigin.Y = ViewInverse.M[3][1];
 	RayOrigin.Z = ViewInverse.M[3][2];
 
-	return { RayOrigin, RayDirectionWorld };
+	FVector RayInvDirection;
+	RayInvDirection.X = 1.0f / RayDirectionWorld.X;
+	RayInvDirection.Y = 1.0f / RayDirectionWorld.Y;
+	RayInvDirection.Z = 1.0f / RayDirectionWorld.Z;
+
+	return { RayOrigin, RayDirectionWorld, RayInvDirection };
 }
 
 bool FPicker::RayTriangleIntersect(const FRay& Ray, const FVector& V0, const FVector& V1, const FVector& V2, float& OutDistance) const
@@ -94,6 +101,31 @@ bool FPicker::RayTriangleIntersect(const FRay& Ray, const FVector& V0, const FVe
 	}
 
 	return false;
+}
+
+bool FPicker::RayAABBIntersect(const FRay& Ray, const FVector& BoxMin, const FVector& BoxMax, float& OutDistance) const
+{
+	float TEnter = -FLT_MAX;
+	float TExit = FLT_MAX;
+
+	for (int i = 0; i < 3; ++i)
+	{
+		float T1 = (BoxMin.XYZ[i] - Ray.Origin.XYZ[i]) * Ray.InvDirection.XYZ[i];
+		float T2 = (BoxMax.XYZ[i] - Ray.Origin.XYZ[i]) * Ray.InvDirection.XYZ[i];
+		float TMin = min(T1, T2);
+		float TMax = max(T1, T2);
+
+		TEnter = max(TEnter, TMin);
+		TExit = min(TExit, TMax);
+	}
+
+	if (TEnter > TExit || TExit < 0.0f)
+	{
+		return false;
+	}
+
+	OutDistance = max(0.0f, TEnter);
+	return true;
 }
 
 AActor* FPicker::PickActor(const TArray<AActor*>& InActors, const FCamera* InCamera, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const
@@ -205,5 +237,24 @@ AActor* FPicker::PickActor(const TArray<AActor*>& InActors, const FCamera* InCam
 		}
 	}
 
+	return ClosestActor;
+}
+
+AActor* FPicker::PickActorWithOctree(const FCamera* InCamera, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const
+{
+	if (!InCamera)
+	{
+		return nullptr;
+	}
+
+	const FRay Ray = ScreenToRay(InCamera, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+
+	float ClosestDistance = 999999.0f;
+	UPrimitiveComponent* ClosestComponent = nullptr;
+
+	FOctree* Octree = GEngine->GetCore()->GetLevel()->GetOctree();
+	Octree->Pick(Ray, ClosestDistance, ClosestComponent);
+
+	AActor* ClosestActor = ClosestComponent ? ClosestComponent->GetOwner() : nullptr;
 	return ClosestActor;
 }

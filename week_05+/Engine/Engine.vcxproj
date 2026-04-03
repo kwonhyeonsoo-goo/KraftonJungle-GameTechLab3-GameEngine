@@ -71,6 +71,7 @@
     <ClInclude Include="Source\Input\InputModifier.h" />
     <ClInclude Include="Source\Input\inputTrigger.h" />
     <ClInclude Include="Source\Math\Point.h" />
+    <ClInclude Include="Source\Math\Ray.h" />
     <ClInclude Include="Source\Math\Rect.h" />
     <ClInclude Include="Source\Math\Frustum.h" />
     <ClInclude Include="Source\Math\MathUtility.h" />
@@ -138,6 +139,7 @@
     <ClInclude Include="Source\Types\String.h" />
     <ClInclude Include="Source\World\Level.h" />
     <ClInclude Include="Source\World\LevelManager.h" />
+    <ClInclude Include="Source\World\Octree.h" />
     <ClInclude Include="Source\World\RenderCollector.h" />
     <ClInclude Include="Source\World\LevelContext.h" />
     <ClInclude Include="Source\World\LevelTypes.h" />
@@ -228,6 +230,9 @@
     <ClCompile Include="Source\Serializer\SceneSerializer.cpp" />
     <ClCompile Include="Source\Types\Name.cpp" />
     <ClCompile Include="Source\World\Level.cpp" />
+    <ClCompile Include="Source\World\Octree.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Source\World\RenderCollector.cpp" />
     <ClCompile Include="Source\World\LevelManager.cpp" />
     <ClCompile Include="Source\World\World.cpp" />
