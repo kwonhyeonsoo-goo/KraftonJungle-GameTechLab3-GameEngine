@@ -68,13 +68,13 @@ void UWorld::Tick(float InDeltaTime)
 	{
 		PersistentLevel->Tick(InDeltaTime);
 	}
-	for (ULevel* Level : StreamingLevels)
-	{
-		if (Level)
-		{
-			Level->Tick(InDeltaTime);
-		}
-	}
+	//for (ULevel* Level : StreamingLevels)
+	//{
+	//	if (Level)
+	//	{
+	//		Level->Tick(InDeltaTime);
+	//	}
+	//}
 }
 
 void UWorld::CleanupWorld()

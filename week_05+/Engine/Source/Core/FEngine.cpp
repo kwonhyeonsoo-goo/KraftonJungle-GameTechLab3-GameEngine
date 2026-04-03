@@ -110,8 +110,8 @@ void FEngine::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 
 void FEngine::Tick(float DeltaTime)
 {
-	Input(Core->GetTimer().GetDeltaTime());
-	Render();
+	//Input(Core->GetTimer().GetDeltaTime());
+	//Render();
 }
 
 void FEngine::Shutdown()

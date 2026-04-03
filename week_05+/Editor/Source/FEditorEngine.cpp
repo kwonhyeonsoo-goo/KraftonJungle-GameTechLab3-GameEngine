@@ -178,32 +178,31 @@ void FEditorEngine::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LPar
 
 void FEditorEngine::Tick(float DeltaTime)
 {
-	Input(Core->GetTimer().GetDeltaTime());
+	Input(DeltaTime);
+
 	WindowManager.Tick(DeltaTime);
 #if IS_OBJ_VIEWER //뷰어는 활성 viewport가 준비된 뒤에만 startup load가 가능합니다.
-	TryRunPendingObjViewerStartupPrompt();
+	if (bPendingObjViewerStartupPrompt)
+	{
+		TryRunPendingObjViewerStartupPrompt();
+	}
 #endif
-	WindowManager.CheckParent();
 	Render();
 }
 
 void FEditorEngine::Render()
 {
-	if (!Core)
+	if (!Core || !GRenderer || GRenderer->IsOccluded())
 	{
 		return;
 	}
-
-	if (!GRenderer || GRenderer->IsOccluded())
-	{
-		return;
-	}
-
-	
 	SetViewportLayoutBounds(EditorUI.GetCentralDockSpaceRect());
+
 	GRenderer->BeginFrame();
 	WindowManager.RenderWindows();
+
 	GRenderer->EndFrame();
+
 }
 
 void FEditorEngine::OnMainWindowResized(int32 Width, int32 Height)

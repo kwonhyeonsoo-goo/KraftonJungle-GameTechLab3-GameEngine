@@ -28,6 +28,8 @@ struct ENGINE_API FMeshData
 	~FMeshData() { Release(); }
 
 	uint32 GetSortId() const { return SortId; }
+	UINT CurrentVBSize = 0;
+	UINT CurrentIBSize = 0;
 	bool bIsDirty = true;	// 최초 1회 초기화 보장
 
 	bool UpdateVertexAndIndexBuffer(ID3D11Device* Device);

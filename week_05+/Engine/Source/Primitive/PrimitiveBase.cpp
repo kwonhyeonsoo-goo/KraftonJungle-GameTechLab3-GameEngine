@@ -6,67 +6,66 @@
 
 bool FMeshData::UpdateVertexAndIndexBuffer(ID3D11Device* Device)
 {
-	if (!bIsDirty)
-		return true;
+	const UINT NewVBSize = static_cast<UINT>(sizeof(FPrimitiveVertex) * Vertices.size());
+	const UINT NewIBSize = static_cast<UINT>(sizeof(uint32) * Indices.size());
+	if (!bIsDirty) return true;
 
-	return CreateVertexAndIndexBuffer(Device);
-}
 
+	if (!VertexBuffer || !IndexBuffer || CurrentVBSize < NewVBSize || CurrentIBSize < NewIBSize)
+	{
+		return CreateVertexAndIndexBuffer(Device);
+	}
+	ID3D11DeviceContext* Context = nullptr;
+	Device->GetImmediateContext(&Context);
+	if (!Context) return false;
+
+	// Vertex Buffer 업데이트
+	D3D11_MAPPED_SUBRESOURCE Mapped;
+	if (SUCCEEDED(Context->Map(VertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
+	{
+		memcpy(Mapped.pData, Vertices.data(), NewVBSize);
+		Context->Unmap(VertexBuffer, 0);
+	}
+
+	// Index Buffer 업데이트
+	if (SUCCEEDED(Context->Map(IndexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
+	{
+		memcpy(Mapped.pData, Indices.data(), NewIBSize);
+		Context->Unmap(IndexBuffer, 0);
+	}
+	Context->Release(); // 중요: GetImmediateContext로 증가된 참조 횟수 감소
+	bIsDirty = false;
+	return true;
+	}
 bool FMeshData::CreateVertexAndIndexBuffer(ID3D11Device* Device)
 {
-	if (VertexBuffer)
-	{
-		VertexBuffer->Release();
-		VertexBuffer = nullptr;
-	}
-	if (IndexBuffer)
-	{
-		IndexBuffer->Release();
-		IndexBuffer = nullptr;
-	}
+	Release();
+	if (Vertices.empty() || Indices.empty()) return false;
 
-	if (Vertices.empty() || Indices.empty())
-	{
-		return false;
-	}
-
-	// Vertex Buffer
+	// 현재 크기 저장 (나중에 비교용)
+	CurrentVBSize = static_cast<UINT>(sizeof(FPrimitiveVertex) * Vertices.size());
+	CurrentIBSize = static_cast<UINT>(sizeof(uint32) * Indices.size());
 	D3D11_BUFFER_DESC VBDesc = {};
-	VBDesc.Usage = D3D11_USAGE_IMMUTABLE;
-	VBDesc.ByteWidth = static_cast<UINT>(sizeof(FPrimitiveVertex) * Vertices.size());
+	VBDesc.Usage = D3D11_USAGE_DYNAMIC;
+	VBDesc.ByteWidth = CurrentVBSize;
 	VBDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	VBDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	D3D11_SUBRESOURCE_DATA VBData = { Vertices.data(), 0, 0 };
+	if (FAILED(Device->CreateBuffer(&VBDesc, &VBData, &VertexBuffer))) return false;
 
-	D3D11_SUBRESOURCE_DATA VBData = {};
-	VBData.pSysMem = Vertices.data();
 
-	HRESULT Hr = Device->CreateBuffer(&VBDesc, &VBData, &VertexBuffer);
-	if (FAILED(Hr))
-	{
-		printf("[FMeshData] Failed to create vertex buffer\n");
-		return false;
-	}
-
-	// Index Buffer
 	D3D11_BUFFER_DESC IBDesc = {};
-	IBDesc.Usage = D3D11_USAGE_IMMUTABLE;
-	IBDesc.ByteWidth = static_cast<UINT>(sizeof(uint32) * Indices.size());
+	IBDesc.Usage = D3D11_USAGE_DYNAMIC;
+	IBDesc.ByteWidth = CurrentIBSize;
 	IBDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	IBDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-	D3D11_SUBRESOURCE_DATA IBData = {};
-	IBData.pSysMem = Indices.data();
+	D3D11_SUBRESOURCE_DATA IBData = { Indices.data(), 0, 0 };
+	if (FAILED(Device->CreateBuffer(&IBDesc, &IBData, &IndexBuffer))) return false;
 
-	Hr = Device->CreateBuffer(&IBDesc, &IBData, &IndexBuffer);
-	if (FAILED(Hr))
-	{
-		printf("[FMeshData] Failed to create index buffer\n");
-		VertexBuffer->Release();
-		VertexBuffer = nullptr;
-		return false;
-	}
 	bIsDirty = false;
 	return true;
 }
-
 void FMeshData::Bind(ID3D11DeviceContext* Context)
 {
 	UINT Stride = sizeof(FPrimitiveVertex);

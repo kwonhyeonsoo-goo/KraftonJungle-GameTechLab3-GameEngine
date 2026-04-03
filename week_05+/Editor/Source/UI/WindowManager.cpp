@@ -747,34 +747,31 @@ bool FWindowManager::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WPar
 
 void FWindowManager::Tick(float DeltaTime)
 {
-	for (SWindow* Window : Windows)
+	if (SWindow * Window=Windows.front())
 	{
-		if (Window)
-		{
-			Window->Tick(DeltaTime);
-		}
+		Window->Tick(DeltaTime);
 	}
+
+
 }
 
 void FWindowManager::RenderWindows() const
 {
-	for (SWindow* Window : Windows)
+	if (SWindow* Window = Windows.front())
 	{
-		if (Window)
-		{
-			Window->Render();
-		}
+	
+		Window->Render();
+	
 	}
 }
 
 void FWindowManager::DrawWindows() const
 {
-	for (SWindow* Window : Windows)
+	if (SWindow* Window = Windows.front())
 	{
-		if (Window)
-		{
-			Window->Draw();
-		}
+	
+		Window->Draw();
+		
 	}
 
 	const_cast<FWindowManager*>(this)->FlushPendingDestroyWindows();

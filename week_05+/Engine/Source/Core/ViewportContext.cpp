@@ -245,7 +245,7 @@ void FViewportContext::Render(FCore* Core, FRenderCommandQueue& CommandQueue)
 	}
 
 	CommandQueue.Clear();
-	TArray<AActor*> Actors = World->GetAllActors();
+	TArray<AActor*> Actors = World->GetActors();
 	PrepareView(CommandQueue, Actors);
 
 	D3D11_VIEWPORT D3DViewport = Viewport->GetD3D11Viewport();

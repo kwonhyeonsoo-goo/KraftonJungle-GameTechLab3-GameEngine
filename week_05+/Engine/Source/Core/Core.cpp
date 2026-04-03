@@ -233,15 +233,15 @@ void FCore::Release()
 void FCore::Tick()
 {
 	Timer.Tick();
-	Tick(Timer.GetDeltaTime());
+	//LateUpdate(Timer.GetDeltaTime());
 }
 
 void FCore::Tick(const float DeltaTime)
 {
-	Input(DeltaTime);
-	Physics(DeltaTime);
-	GameLogic(DeltaTime);
-	LateUpdate(DeltaTime);
+//	Input(DeltaTime);
+	//Physics(DeltaTime);
+	//GameLogic(DeltaTime);
+
 }
 
 void FCore::Input(float DeltaTime)
@@ -312,12 +312,12 @@ void FCore::LateUpdate(float DeltaTime)
 		return;
 	}
 
-	const double CurrentTime = Timer.GetTotalTime();
-	if (ObjManager && (CurrentTime - LastGCTime) >= GCInterval)
-	{
-		ObjManager->FlushKilledObjects();
-		LastGCTime = CurrentTime;
-	}
+	//const double CurrentTime = Timer.GetTotalTime();
+	//if (ObjManager && (CurrentTime - LastGCTime) >= GCInterval)
+	//{
+	//	ObjManager->FlushKilledObjects();
+	//	LastGCTime = CurrentTime;
+	//}
 }
 
 void FCore::OnResize(int32 Width, int32 Height)
@@ -344,60 +344,32 @@ void FCore::RegisterConsoleVariables()
 {
 	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
 
-	FConsoleVariable* MaxFPSVar = CVM.Find("t.MaxFPS");
-	if (!MaxFPSVar)
-	{
-		MaxFPSVar = CVM.Register("t.MaxFPS", 0.0f, "Maximum FPS limit (0 = unlimited)");
-	}
-	MaxFPSVar->SetOnChanged([this](FConsoleVariable* Var)
-		{
-			Timer.SetMaxFPS(Var->GetFloat());
-		});
-	Timer.SetMaxFPS(MaxFPSVar->GetFloat());
 
-	FConsoleVariable* VSyncVar = CVM.Find("r.VSync");
-	if (!VSyncVar)
-	{
-		VSyncVar = CVM.Register("r.VSync", 0, "Enable VSync (0 = off, 1 = on)");
-	}
-	VSyncVar->SetOnChanged([this](FConsoleVariable* Var)
-		{
-			if (GRenderer)
-			{
-				GRenderer->SetVSync(Var->GetInt() != 0);
-			}
-		});
+	FConsoleVariable* MaxFPSVar = CVM.Register("t.MaxFPS", 0.0f, "Maximum FPS limit (0 = unlimited)");
+	Timer.SetMaxFPS(0.0f);
+
+	FConsoleVariable* VSyncVar = CVM.Register("r.VSync", 0, "Enable VSync (0 = off, 1 = on)");
 	if (GRenderer)
 	{
-		GRenderer->SetVSync(VSyncVar->GetInt() != 0);
+		GRenderer->SetVSync(false);
 	}
 
-	FConsoleVariable* GCIntervalVar = CVM.Find("gc.Interval");
-	if (!GCIntervalVar)
+
+	VSyncVar->SetOnChanged([this](FConsoleVariable* Var)
 	{
-		GCIntervalVar = CVM.Register("gc.Interval", 30.0f, "GC interval in seconds (0 = disabled)");
-	}
-	GCIntervalVar->SetOnChanged([this](FConsoleVariable* Var)
+		if (GRenderer)
 		{
-			GCInterval = static_cast<double>(Var->GetFloat());
-		});
-	GCInterval = static_cast<double>(GCIntervalVar->GetFloat());
+			// 성능 테스트를 위해 강제로 false 고정 (사용자 입력을 무시하려면 false)
+			GRenderer->SetVSync(false);
+		}
+	});
 
-	CVM.RegisterCommand("ForceGC", [this](const FString&, FString& OutResult)
-		{
-			if (ObjManager)
-			{
-				ObjManager->FlushKilledObjects();
-				LastGCTime = Timer.GetTotalTime();
-				OutResult = "ForceGC: Garbage collection completed.";
-			}
-			else
-			{
-				OutResult = "ForceGC: ObjectManager is not available.";
-			}
-		}, "Force immediate garbage collection");
 
+	StatOverlayModeFlags |= GetStatOverlayModeFlag(EStatOverlayMode::FPS);
+
+	
 	CVM.RegisterCommand("stat", [this](const FString& InArgs, FString& OutResult)
+	
 		{
 			const FString Args = ToLowerCopy(TrimConsoleArg(InArgs));
 			if (Args.empty())
@@ -442,10 +414,12 @@ void FCore::RenderStatOverlay(FRenderer* Renderer, int32 ViewportWidth, int32 Vi
 		return;
 	}
 
-	constexpr float Margin = 90.0f;
+	bool bIsFirst = true;
+
+	constexpr float Margin = 30.0f;
 	constexpr float Padding = 5.0f;
 	constexpr float LineSpacing = 3.0f;
-	const FVector4 BackgroundColor(0.05f, 0.05f, 0.05f, 0.08f);
+	const FVector4 BackgroundColor(0.05f, 0.05f, 0.05f, 0.80f);
 	const FVector4 BorderColor(1.0f, 1.0f, 1.0f, 0.10f);
 	const FVector4 TitleColor(0.95f, 0.95f, 0.95f, 1.0f);
 	const FVector4 ValueColor(0.80f, 0.90f, 1.0f, 1.0f);
@@ -459,11 +433,12 @@ void FCore::RenderStatOverlay(FRenderer* Renderer, int32 ViewportWidth, int32 Vi
 			{
 				return;
 			}
-
 			const float BoxHeight = Padding * 2.0f + LineHeight * static_cast<float>(Lines.size()) + LineSpacing * static_cast<float>(Lines.size() - 1);
 			Renderer->DrawOverlayRect(BoxX, CursorBoxY, BoxWidth, BoxHeight, BackgroundColor, ViewportWidth, ViewportHeight);
-			Renderer->DrawOverlayRectOutline(BoxX, CursorBoxY, BoxWidth, BoxHeight, BorderColor, ViewportWidth, ViewportHeight);
+			bIsFirst = false; // 이후 모든 드로우 콜은 행렬 업데이트 생략
 
+
+			Renderer->DrawOverlayRectOutline(BoxX, CursorBoxY, BoxWidth, BoxHeight, BorderColor, ViewportWidth, ViewportHeight);
 			float CursorY = CursorBoxY + Padding;
 			for (size_t Index = 0; Index < Lines.size(); ++Index)
 			{
@@ -484,9 +459,10 @@ void FCore::RenderStatOverlay(FRenderer* Renderer, int32 ViewportWidth, int32 Vi
 		Lines.push_back(Buffer);
 		snprintf(Buffer, sizeof(Buffer), "%.2f ms", Timer.GetFrameTimeMs());
 		Lines.push_back(Buffer);
+
 		const float FPSBoxWidth = 320.0f;
-		float FPSCursorBoxY = Margin;
 		const float FPSBoxX = static_cast<float>(ViewportWidth) - Margin - FPSBoxWidth;
+		float FPSCursorBoxY = Margin;
 		DrawStatBox(Lines, FPSBoxWidth, FPSBoxX, FPSCursorBoxY);
 	}
 

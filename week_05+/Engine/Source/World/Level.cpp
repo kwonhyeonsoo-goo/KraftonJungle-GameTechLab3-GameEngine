@@ -128,15 +128,26 @@ void ULevel::Tick(float DeltaTime)
 		BeginPlay();
 	}
 
+	bool bAnyPendingDestroy = false;
+
 	for (AActor* Actor : Actors)
 	{
 		if (Actor && !Actor->IsPendingDestroy())
 		{
 			Actor->Tick(DeltaTime);
 		}
+		else
+		{
+			bAnyPendingDestroy = true;
+		}
 	}
 
-	CleanupDestroyedActors();
+	// 매 프레임 정산하는 대신, 삭제 대기 중인 액터가 있을 때만 실행
+	if (bAnyPendingDestroy)
+	{
+		CleanupDestroyedActors();
+	}
+
 }
 
 void ULevel::CreateOctree(const FVector& Center, float HalfExtent, int32 MaxDepth, int32 Capacity)
