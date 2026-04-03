@@ -319,28 +319,29 @@ void FSceneRenderer::Render(
 	const UINT Stride = sizeof(FStaticMeshVertex);
 	const UINT Offset = 0;
 
-	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
+	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
 	for (uint32 PrimitiveIndex : InVisibilityResults.VisiblePrimitiveIndices)
 	{
-		if (PrimitiveIndex >= RenderItems.size())
+		if (PrimitiveIndex >= PrimitiveRuntimeData.size())
 		{
 			continue;
 		}
 
-		const FRenderItem& RenderItem = RenderItems[PrimitiveIndex];
-		if (!RenderItem.StaticMesh || !RenderItem.StaticMesh->IsValid())
+		const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
+		FStaticMesh* StaticMesh = PrimitiveData.StaticMesh;
+		if (StaticMesh == nullptr || !StaticMesh->IsValid())
 		{
 			continue;
 		}
 
-		ID3D11Buffer* VertexBuffer = RenderItem.StaticMesh->GetVertexBuffer();
+		ID3D11Buffer* VertexBuffer = StaticMesh->GetVertexBuffer();
 		if (VertexBuffer != CurrentVertexBuffer)
 		{
 			DeviceContext->IASetVertexBuffers(0, 1, &VertexBuffer, &Stride, &Offset);
 			CurrentVertexBuffer = VertexBuffer;
 		}
 
-		ID3D11Buffer* IndexBuffer = RenderItem.StaticMesh->GetIndexBuffer();
+		ID3D11Buffer* IndexBuffer = StaticMesh->GetIndexBuffer();
 		if (IndexBuffer != CurrentIndexBuffer)
 		{
 			DeviceContext->IASetIndexBuffer(IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
@@ -348,8 +349,8 @@ void FSceneRenderer::Render(
 		}
 
 		FObjectConstants ObjectConstants = {};
-		ObjectConstants.World = RenderItem.Transform.ToMatrixWithScale();
-		if (RenderItem.PrimitiveId == InPickState.SelectedPrimitiveId)
+		ObjectConstants.World = PrimitiveData.WorldMatrix;
+		if (PrimitiveData.PrimitiveId == InPickState.SelectedPrimitiveId)
 		{
 			ObjectConstants.Tint[0] = 0.1f;
 			ObjectConstants.Tint[1] = 0.1f;
@@ -359,9 +360,9 @@ void FSceneRenderer::Render(
 
 		D3D11Utils::UpdateDynamicBuffer(DeviceContext, Resources->ObjectConstantBuffer.Get(), ObjectConstants);
 
-		for (const FStaticMesh::FSection& Section : RenderItem.StaticMesh->GetSections())
+		for (const FStaticMesh::FSection& Section : StaticMesh->GetSections())
 		{
-			ID3D11ShaderResourceView* TextureView = RenderItem.StaticMesh->GetMaterialTexture(Section.MaterialIndex);
+			ID3D11ShaderResourceView* TextureView = StaticMesh->GetMaterialTexture(Section.MaterialIndex);
 			if (TextureView == nullptr)
 			{
 				TextureView = Resources->WhiteTextureView.Get();

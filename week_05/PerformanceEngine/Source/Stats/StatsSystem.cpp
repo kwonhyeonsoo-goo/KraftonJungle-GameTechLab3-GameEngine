@@ -34,7 +34,7 @@ namespace
 		return SecondsPerCycle;
 	}
 
-#if defined(BENCHMARK)
+#ifdef BENCHMARK
 	struct FNumericSummary
 	{
 		double Average = 0.0;
@@ -220,7 +220,7 @@ void FStatsSystem::Reset()
 	TotalPickCount = 0;
 	FrameNumber = 0;
 
-#if defined(BENCHMARK)
+#ifdef BENCHMARK
 	FrameBenchmarkSamples.clear();
 	PickBenchmarkSamples.clear();
 #endif
@@ -248,7 +248,7 @@ void FStatsSystem::EndFrame()
 {
 	++FrameNumber;
 
-#if defined(BENCHMARK)
+#ifdef BENCHMARK
 	FrameBenchmarkSamples.push_back({ FrameNumber, FrameTimeMs, FramesPerSecond });
 #endif
 }
@@ -262,7 +262,7 @@ void FStatsSystem::ApplyPickState(const FPickState& InPickState)
 
 void FStatsSystem::RecordPickEvent(const FPickState& InPickState)
 {
-#if defined(BENCHMARK)
+#ifdef BENCHMARK
 	PickBenchmarkSamples.push_back({
 		FrameNumber + 1,
 		InPickState.LastPickTimeMs,
@@ -276,7 +276,7 @@ void FStatsSystem::RecordPickEvent(const FPickState& InPickState)
 
 void FStatsSystem::WriteBenchmarkLogs(const FBenchmarkRunMetadata& InMetadata) const
 {
-#if defined(BENCHMARK)
+#ifdef BENCHMARK
 	std::error_code ErrorCode;
 	const std::filesystem::path LogDirectory = GetBenchmarkLogDirectory();
 	std::filesystem::create_directories(LogDirectory, ErrorCode);

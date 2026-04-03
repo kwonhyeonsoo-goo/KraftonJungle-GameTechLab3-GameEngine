@@ -373,7 +373,7 @@ void FHudRenderer::Render(
 
 	TextStream
 		<< '\n'
-		<< "PRIMS: " << InScene.GetRenderItems().size() << '\n'
+		<< "PRIMS: " << InScene.GetPrimitiveCount() << '\n'
 		<< "SELECTED: " << InPickState.SelectedPrimitiveId;
 
 	DirectX::SpriteBatch& SpriteBatch = *Resources->SpriteBatch;

@@ -12,12 +12,11 @@ void FVisibilitySystem::Build(const FScene& InScene, const FCamera& InCamera, FV
 {
 	(void)InCamera;
 
-	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
 	OutResults.FrameNumber = NextFrameNumber++;
 	OutResults.VisiblePrimitiveIndices.clear();
-	OutResults.VisiblePrimitiveIndices.reserve(RenderItems.size());
+	OutResults.VisiblePrimitiveIndices.reserve(InScene.GetPrimitiveCount());
 
-	for (uint32 PrimitiveIndex = 0; PrimitiveIndex < static_cast<uint32>(RenderItems.size()); ++PrimitiveIndex)
+	for (uint32 PrimitiveIndex = 0; PrimitiveIndex < static_cast<uint32>(InScene.GetPrimitiveCount()); ++PrimitiveIndex)
 	{
 		OutResults.VisiblePrimitiveIndices.push_back(PrimitiveIndex);
 	}
