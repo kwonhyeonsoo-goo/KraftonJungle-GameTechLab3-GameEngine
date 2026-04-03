@@ -96,7 +96,7 @@ namespace D3D11Utils
 		}
 
 		UINT CompileFlags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if defined(_DEBUG)
+#ifdef _DEBUG
 		CompileFlags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
 
@@ -137,7 +137,7 @@ namespace D3D11Utils
 		}
 
 		UINT CompileFlags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if defined(_DEBUG)
+#ifdef _DEBUG
 		CompileFlags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
 

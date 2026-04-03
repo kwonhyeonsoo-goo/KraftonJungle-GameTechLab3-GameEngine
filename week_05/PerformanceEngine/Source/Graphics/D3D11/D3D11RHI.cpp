@@ -227,7 +227,7 @@ bool FD3D11RHI::Initialize(HWND InWindowHandle)
 	};
 
 	UINT CreateFlags = 0;
-#if defined(_DEBUG)
+#ifdef _DEBUG
 	CreateFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
@@ -248,7 +248,7 @@ bool FD3D11RHI::Initialize(HWND InWindowHandle)
 				RequestedFeatureLevels + 1,
 				_countof(RequestedFeatureLevels) - 1);
 		}
-#if defined(_DEBUG)
+#ifdef _DEBUG
 		if (FAILED(Result) && (CreateFlags & D3D11_CREATE_DEVICE_DEBUG) != 0)
 		{
 			const UINT FallbackFlags = CreateFlags & ~D3D11_CREATE_DEVICE_DEBUG;
@@ -292,7 +292,7 @@ bool FD3D11RHI::Initialize(HWND InWindowHandle)
 		{
 			Result = CreateDeviceAndSwapChain(CreateFlags, RequestedFeatureLevels + 1, _countof(RequestedFeatureLevels) - 1);
 		}
-#if defined(_DEBUG)
+#ifdef _DEBUG
 		if (FAILED(Result) && (CreateFlags & D3D11_CREATE_DEVICE_DEBUG) != 0)
 		{
 			CreateFlags &= ~D3D11_CREATE_DEVICE_DEBUG;
