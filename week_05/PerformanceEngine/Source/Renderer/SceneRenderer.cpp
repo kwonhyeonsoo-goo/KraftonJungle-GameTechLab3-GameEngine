@@ -384,9 +384,9 @@ void FSceneRenderer::Render(
 		ObjectConstants.World = RenderItem.Transform.ToMatrixWithScale();
 		if (RenderItem.PrimitiveId == InPickState.SelectedPrimitiveId)
 		{
-			ObjectConstants.Tint[0] = 1.0f;
-			ObjectConstants.Tint[1] = 0.6f;
-			ObjectConstants.Tint[2] = 0.25f;
+			ObjectConstants.Tint[0] = 0.1f;
+			ObjectConstants.Tint[1] = 0.1f;
+			ObjectConstants.Tint[2] = 0.1f;
 			ObjectConstants.Tint[3] = 1.0f;
 		}
 

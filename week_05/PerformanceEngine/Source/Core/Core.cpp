@@ -147,11 +147,6 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 
 void FCore::Tick()
 {
-	if (!bInitialized || !RHI || !Camera || !Input || !Scene || !SceneRenderer || !HudRenderer || !VisibilitySystem || !PickingSystem || !StatsSystem)
-	{
-		return;
-	}
-
 	StatsSystem->BeginFrame();
 	Input->Tick();
 	Camera->Update(*Input, static_cast<float>(StatsSystem->GetFrameTimeMs() * 0.001));
