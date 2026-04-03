@@ -16,7 +16,8 @@ Content/Shaders/*.cso
 *.slo
 *.lo
 *.o
-*.obj
+# Keep .obj available for Wavefront model assets.
+# Visual Studio intermediates are already covered by directory rules below.
 
 # Precompiled Headers
 *.gch
