@@ -15,10 +15,26 @@ void FVisibilitySystem::Build(const FScene& InScene, const FCamera& InCamera, FV
 {
 	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
 	OutResults.FrameNumber = NextFrameNumber++;
+
+	// 디버그 출력용
+	uint32 VisibleCount = static_cast<uint32>(CachedResults.VisiblePrimitiveIndices.size());
+	uint32 TotalCount = static_cast<uint32>(RenderItems.size());
+
+	if (!HasCameraChanged(InCamera))
+	{
+		OutResults.VisiblePrimitiveIndices = CachedResults.VisiblePrimitiveIndices;
+		OutputDebugStringA("VisibilitySystem: Reuse cached visible list\n");
+		std::string Msg = "Frustum Culling - Total: " + std::to_string(TotalCount)
+			+ ", Visible: " + std::to_string(VisibleCount) + "\n";
+		OutputDebugStringA(Msg.c_str());
+		return;
+	}
+
 	OutResults.VisiblePrimitiveIndices.clear();
 	OutResults.VisiblePrimitiveIndices.reserve(RenderItems.size());
 
-	const FFrustum Frustum = BuildFrustum(InCamera);
+	CachedFrustum = BuildFrustum(InCamera);
+
 	for (uint32 PrimitiveIndex = 0; PrimitiveIndex < static_cast<uint32>(RenderItems.size()); ++PrimitiveIndex)
 	{
 		const FRenderItem& Item = RenderItems[PrimitiveIndex];
@@ -28,16 +44,22 @@ void FVisibilitySystem::Build(const FScene& InScene, const FCamera& InCamera, FV
 			continue; // 정적 메시가 없는 경우 건너뜀
 		}
 
-		if (IntersectsAABB(Frustum, Item.WorldBoundsMin, Item.WorldBoundsMax))
+		if (IntersectsAABB(CachedFrustum, Item.WorldBoundsMin, Item.WorldBoundsMax))
 		{
 			OutResults.VisiblePrimitiveIndices.push_back(PrimitiveIndex);
 		}
 	}
 
-	// 디버그 출력
-	const uint32 VisibleCount = static_cast<uint32>(OutResults.VisiblePrimitiveIndices.size());
-	const uint32 TotalCount = static_cast<uint32>(RenderItems.size());
+	CachedResults.VisiblePrimitiveIndices = OutResults.VisiblePrimitiveIndices;
+	CachedResults.FrameNumber = OutResults.FrameNumber;
 
+	UpdateCachedCameraState(InCamera);
+
+	// 디버그 출력
+	VisibleCount = static_cast<uint32>(OutResults.VisiblePrimitiveIndices.size());
+	TotalCount = static_cast<uint32>(RenderItems.size());
+
+	OutputDebugStringA("VisibilitySystem: Camera changed, recomputed visible list\n");
 	std::string Msg = "Frustum Culling - Total: " + std::to_string(TotalCount)
 		+ ", Visible: " + std::to_string(VisibleCount) + "\n";
 
@@ -48,6 +70,11 @@ namespace
 {
 	FPlane MakePlaneFromPointNormal(const FVector& Point, const FVector& Normal);
 	FPlane MakePlaneFromPoints(const FVector& PointA, const FVector& PointB, const FVector& PointC, const FVector& InFrustumCenter);
+
+	float AbsFloat(float Value)
+	{
+		return (Value < 0.0f) ? -Value : Value;
+	}
 }
 
 FFrustum FVisibilitySystem::BuildFrustum(const FCamera& InCamera) const
@@ -113,6 +140,44 @@ bool FVisibilitySystem::IntersectsAABB(const FFrustum& InFrustum, const FVector&
 	return true; // AABB intersects or is inside the frustum
 }
 
+bool FVisibilitySystem::HasCameraChanged(const FCamera& InCamera) const
+{
+	if (!bHasCachedVisibility)
+	{
+		return true;
+	}
+
+	const float Epsilon = 1e-4f;
+
+	const FTransform& CameraTransform = InCamera.GetTransform();
+	const FVector CameraPos = CameraTransform.GetLocation();
+	const FVector Forward = CameraTransform.GetUnitAxis(EAxis::X).GetSafeNormal();
+	const FVector Up = CameraTransform.GetUnitAxis(EAxis::Z).GetSafeNormal();
+	const FVector Right = CameraTransform.GetUnitAxis(EAxis::Y).GetSafeNormal();
+
+	return !CameraPos.Equals(CachedCameraPosition, Epsilon)
+		|| !Forward.Equals(CachedCameraForward, Epsilon)
+		|| !Up.Equals(CachedCameraUp, Epsilon)
+		|| !Right.Equals(CachedCameraRight, Epsilon)
+		|| AbsFloat(InCamera.GetFOV() - CachedFOV) > Epsilon
+		|| AbsFloat(InCamera.GetAspectRatio() - CachedAspect) > Epsilon
+		|| AbsFloat(InCamera.GetNearClip() - CachedNearClip) > Epsilon
+		|| AbsFloat(InCamera.GetFarClip() - CachedFarClip) > Epsilon;
+}
+
+void FVisibilitySystem::UpdateCachedCameraState(const FCamera& InCamera)
+{
+	const FTransform& CameraTransform = InCamera.GetTransform();
+	CachedCameraPosition = CameraTransform.GetLocation();
+	CachedCameraForward = CameraTransform.GetUnitAxis(EAxis::X).GetSafeNormal();
+	CachedCameraUp = CameraTransform.GetUnitAxis(EAxis::Z).GetSafeNormal();
+	CachedCameraRight = CameraTransform.GetUnitAxis(EAxis::Y).GetSafeNormal();
+	CachedFOV = InCamera.GetFOV();
+	CachedAspect = InCamera.GetAspectRatio();
+	CachedNearClip = InCamera.GetNearClip();
+	CachedFarClip = InCamera.GetFarClip();
+	bHasCachedVisibility = true;
+}
 
 // 평면 생성 헬퍼
 namespace
