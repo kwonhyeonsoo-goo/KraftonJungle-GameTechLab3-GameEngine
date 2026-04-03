@@ -11,12 +11,14 @@
 #include "Renderer/Material.h"
 #include "Component/StaticMeshComponent.h"
 #include "Camera/Camera.h"
+#include "World/Octree.h"
 
 void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors, const FFrustum& Frustum,
 	const FShowFlags& ShowFlags, const FCamera* Camera, FRenderCommandQueue& OutQueue)
 {
 	TArray<UPrimitiveComponent*> VisiblePrimitives;
-	FrustrumCull(Actors, Frustum, ShowFlags, VisiblePrimitives);
+	VisiblePrimitives.reserve(50000);
+	GEngine->GetCore()->GetLevel()->GetOctree()->GetVisiblePrimitives(Frustum, VisiblePrimitives);
 
 	if (!GRenderer) return;
 

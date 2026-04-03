@@ -17,6 +17,8 @@ UWorld::~UWorld()
 void UWorld::InitializeWorld(float AspectRatio, ID3D11Device* Device)
 {
 	PersistentLevel = FObjectFactory::ConstructObject<ULevel>(this, "PersistentLevel");
+	PersistentLevel->CreateOctree(FVector::ZeroVector, 1000.f);
+
 	if (!PersistentLevel)
 	{
 		return;
@@ -126,7 +128,7 @@ void UWorld::DestroyActor(AActor* InActor)
 
 ULevel* UWorld::LoadStreamingLevel(const FString& LevelName, ID3D11Device* Device)
 {
-	// ÀÌ¹Ì ·ÎµåµÆ´ÂÁö È®ÀÎ
+	// Ã€ÃŒÂ¹ÃŒ Â·ÃÂµÃ¥ÂµÃ†Â´Ã‚ÃÃ¶ ÃˆÂ®Ã€Ã
 	if (ULevel* Existing = FindStreamingLevel(LevelName))
 	{
 		return Existing;
@@ -134,6 +136,7 @@ ULevel* UWorld::LoadStreamingLevel(const FString& LevelName, ID3D11Device* Devic
 	ULevel* NewLevel = FObjectFactory::ConstructObject<ULevel>(this, LevelName);
 	if (!NewLevel) return nullptr;
 	NewLevel->SetLevelType(WorldType);
+	NewLevel->CreateOctree(FVector::ZeroVector, 1000.f);
 
 	if (Device)
 	{
@@ -141,7 +144,7 @@ ULevel* UWorld::LoadStreamingLevel(const FString& LevelName, ID3D11Device* Devic
 	}
 	StreamingLevels.push_back(NewLevel);
 
-	// ÀÌ¹Ì °ÔÀÓ ÁøÇà ÁßÀÌ¸é BeginPlay È£Ãâ
+	// Ã€ÃŒÂ¹ÃŒ Â°Ã”Ã€Ã“ ÃÃ¸Ã‡Ã  ÃÃŸÃ€ÃŒÂ¸Ã© BeginPlay ÃˆÂ£ÃƒÃ¢
 	if (bBegunPlay)
 	{
 		NewLevel->BeginPlay();
