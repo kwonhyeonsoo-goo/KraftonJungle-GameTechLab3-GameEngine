@@ -159,13 +159,22 @@ namespace
 		}
 
 		const TArray<FStaticMeshVertex>& Vertices = InRenderItem.StaticMesh->GetVertices();
+		const TArray<uint32>& Indices = InRenderItem.StaticMesh->GetIndices();
 		bool bHit = false;
 
-		for (size_t VertexIndex = 0; VertexIndex + 2 < Vertices.size(); VertexIndex += 3)
+		for (size_t IndexOffset = 0; IndexOffset + 2 < Indices.size(); IndexOffset += 3)
 		{
-			const FVector A = InRenderItem.Transform.TransformPosition(Vertices[VertexIndex + 0].Position);
-			const FVector B = InRenderItem.Transform.TransformPosition(Vertices[VertexIndex + 1].Position);
-			const FVector C = InRenderItem.Transform.TransformPosition(Vertices[VertexIndex + 2].Position);
+			const uint32 IndexA = Indices[IndexOffset + 0];
+			const uint32 IndexB = Indices[IndexOffset + 1];
+			const uint32 IndexC = Indices[IndexOffset + 2];
+			if (IndexA >= Vertices.size() || IndexB >= Vertices.size() || IndexC >= Vertices.size())
+			{
+				continue;
+			}
+
+			const FVector A = InRenderItem.Transform.TransformPosition(Vertices[IndexA].Position);
+			const FVector B = InRenderItem.Transform.TransformPosition(Vertices[IndexB].Position);
+			const FVector C = InRenderItem.Transform.TransformPosition(Vertices[IndexC].Position);
 
 			float HitDistance = 0.0f;
 			FVector HitPosition = FVector::ZeroVector;

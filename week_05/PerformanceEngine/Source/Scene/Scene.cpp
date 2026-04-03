@@ -9,7 +9,6 @@
 
 #include "Math/MathUtility.h"
 #include "StaticMesh/StaticMesh.h"
-
 namespace
 {
 	struct FPendingPrimitive
@@ -283,26 +282,9 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 				}
 
 				const std::filesystem::path MeshPath = ResolveAssetPath(SceneFilePath, PendingPrimitive.MeshAssetPath);
-				const FString MeshCacheKey = MeshPath.lexically_normal().generic_string();
+				const FString MeshCacheKey = FStaticMeshManager::BuildAssetKey(MeshPath);
 
-				std::shared_ptr<FStaticMesh> SharedMesh;
-				const auto ExistingMeshIt = MeshCache.find(MeshCacheKey);
-				if (ExistingMeshIt != MeshCache.end())
-				{
-					SharedMesh = ExistingMeshIt->second;
-				}
-				else
-				{
-					SharedMesh = std::make_shared<FStaticMesh>();
-					if (!SharedMesh->LoadFromObj(InDevice, InDeviceContext, MeshPath))
-					{
-						SharedMesh.reset();
-					}
-					else
-					{
-						MeshCache.emplace(MeshCacheKey, SharedMesh);
-					}
-				}
+				std::shared_ptr<FStaticMesh> SharedMesh = MeshManager.LoadStaticMesh(InDevice, InDeviceContext, MeshPath);
 
 				if (!SharedMesh || !SharedMesh->IsValid())
 				{
@@ -397,7 +379,7 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 void FScene::Release()
 {
 	RenderItems.clear();
-	MeshCache.clear();
+	MeshManager.Release();
 	InitialCamera = FSceneCameraInitData();
 	RawCameraLocation = FVector::ZeroVector;
 	RawCameraRotation = FVector::ZeroVector;

@@ -8,6 +8,7 @@
 
 #include "Types/PlatformTypes.h"
 
+class FGrid;
 class FCamera;
 class FD3D11RHI;
 class FHudRenderer;
@@ -61,6 +62,7 @@ private:
 	std::unique_ptr<FVisibilitySystem> VisibilitySystem;
 	std::unique_ptr<FPickingSystem> PickingSystem;
 	std::unique_ptr<FStatsSystem> StatsSystem;
+	std::unique_ptr<FGrid> Grid;
 
 	FVisibilityResults VisibilityResults;
 	FPickState PickState;

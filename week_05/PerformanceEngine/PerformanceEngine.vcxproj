@@ -141,15 +141,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Graphics\D3D11\D3D11Utils.cpp" />
     <ClCompile Include="Source\Graphics\D3D11\D3D11RHI.cpp" />
     <ClCompile Include="Source\Camera\Camera.cpp" />
+    <ClCompile Include="Source\Grid\Grid.cpp" />
     <ClCompile Include="Source\Hud\HudRenderer.cpp" />
     <ClCompile Include="Source\Math\Matrix.cpp" />
     <ClCompile Include="Source\Math\Quat.cpp" />
     <ClCompile Include="Source\Math\Rotator.cpp" />
     <ClCompile Include="Source\Math\Transform.cpp" />
     <ClCompile Include="Source\Math\Vector.cpp" />
-    <ClCompile Include="Source\Object\Object.cpp" />
     <ClCompile Include="Source\Core\Windows\Loop.cpp" />
     <ClCompile Include="Source\Core\Core.cpp" />
     <ClCompile Include="Source\Core\Windows\PlatformGlobals.cpp" />
@@ -162,13 +163,17 @@
     <ClCompile Include="Source\Renderer\SceneRenderer.cpp" />
     <ClCompile Include="Source\Scene\Scene.cpp" />
     <ClCompile Include="Source\Stats\StatsSystem.cpp" />
+    <ClCompile Include="Source\StaticMesh\ObjParser.cpp" />
     <ClCompile Include="Source\StaticMesh\StaticMesh.cpp" />
+    <ClCompile Include="Source\StaticMesh\StaticMeshManager.cpp" />
     <ClCompile Include="Source\Visibility\VisibilitySystem.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Graphics\D3D11\D3D11Common.h" />
     <ClInclude Include="Source\Graphics\D3D11\D3D11RHI.h" />
+    <ClInclude Include="Source\Graphics\D3D11\D3D11Utils.h" />
     <ClInclude Include="Source\Camera\Camera.h" />
+    <ClInclude Include="Source\Grid\Grid.h" />
     <ClInclude Include="Source\Hud\HudRenderer.h" />
     <ClInclude Include="Source\Math\MathUtility.h" />
     <ClInclude Include="Source\Math\Matrix.h" />
@@ -178,7 +183,6 @@
     <ClInclude Include="Source\Math\Vector.h" />
     <ClInclude Include="Source\Math\Vector2.h" />
     <ClInclude Include="Source\Math\Vector4.h" />
-    <ClInclude Include="Source\Object\Object.h" />
     <ClInclude Include="Source\Core\Windows\Loop.h" />
     <ClInclude Include="Source\Core\Core.h" />
     <ClInclude Include="Source\Core\Windows\PlatformGlobals.h" />
@@ -192,7 +196,9 @@
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="Source\Scene\SceneTypes.h" />
     <ClInclude Include="Source\Stats\StatsSystem.h" />
+    <ClInclude Include="Source\StaticMesh\ObjParser.h" />
     <ClInclude Include="Source\StaticMesh\StaticMesh.h" />
+    <ClInclude Include="Source\StaticMesh\StaticMeshManager.h" />
     <ClInclude Include="Source\Types\Array.h" />
     <ClInclude Include="Source\Types\LinkedList.h" />
     <ClInclude Include="Source\Types\Map.h" />
@@ -205,6 +211,8 @@
     <ClInclude Include="Source\Visibility\VisibilitySystem.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Shader\Grid\GridPixelShader.hlsl" />
+    <None Include="Shader\Grid\GridVertexShader.hlsl" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

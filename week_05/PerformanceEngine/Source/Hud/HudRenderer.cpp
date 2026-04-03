@@ -18,199 +18,6 @@
 
 namespace
 {
-	template <typename T, size_t N>
-	void CaptureInterfaces(std::array<TComPtr<T>, N>& OutInterfaces, T* const* InRawInterfaces)
-	{
-		for (size_t Index = 0; Index < N; ++Index)
-		{
-			OutInterfaces[Index].Attach(InRawInterfaces[Index]);
-		}
-	}
-
-	template <typename T, size_t N>
-	std::array<T*, N> GetRawInterfaces(const std::array<TComPtr<T>, N>& InInterfaces)
-	{
-		std::array<T*, N> RawInterfaces = {};
-		for (size_t Index = 0; Index < N; ++Index)
-		{
-			RawInterfaces[Index] = InInterfaces[Index].Get();
-		}
-
-		return RawInterfaces;
-	}
-
-	template <typename T, size_t N>
-	UINT GetContiguousBoundCount(const std::array<TComPtr<T>, N>& InInterfaces)
-	{
-		UINT Count = 0;
-		while (Count < static_cast<UINT>(N) && InInterfaces[Count] != nullptr)
-		{
-			++Count;
-		}
-
-		return Count;
-	}
-
-	struct FD3D11PipelineStateSnapshot
-	{
-		TComPtr<ID3D11BlendState> BlendState;
-		FLOAT BlendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-		UINT SampleMask = 0xffffffffu;
-
-		TComPtr<ID3D11DepthStencilState> DepthStencilState;
-		UINT StencilRef = 0;
-
-		TComPtr<ID3D11RasterizerState> RasterizerState;
-		UINT ViewportCount = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-		std::array<D3D11_VIEWPORT, D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE> Viewports = {};
-		UINT ScissorRectCount = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-		std::array<D3D11_RECT, D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE> ScissorRects = {};
-
-		std::array<TComPtr<ID3D11RenderTargetView>, D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT> RenderTargetViews = {};
-		TComPtr<ID3D11DepthStencilView> DepthStencilView;
-
-		TComPtr<ID3D11InputLayout> InputLayout;
-		D3D11_PRIMITIVE_TOPOLOGY PrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
-		std::array<TComPtr<ID3D11Buffer>, D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT> VertexBuffers = {};
-		std::array<UINT, D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT> VertexStrides = {};
-		std::array<UINT, D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT> VertexOffsets = {};
-		TComPtr<ID3D11Buffer> IndexBuffer;
-		DXGI_FORMAT IndexFormat = DXGI_FORMAT_UNKNOWN;
-		UINT IndexOffset = 0;
-
-		TComPtr<ID3D11VertexShader> VertexShader;
-		std::array<TComPtr<ID3D11Buffer>, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT> VertexConstantBuffers = {};
-
-		TComPtr<ID3D11PixelShader> PixelShader;
-		std::array<TComPtr<ID3D11Buffer>, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT> PixelConstantBuffers = {};
-		std::array<TComPtr<ID3D11SamplerState>, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT> PixelSamplers = {};
-		std::array<TComPtr<ID3D11ShaderResourceView>, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT> PixelShaderResources = {};
-
-		void Capture(ID3D11DeviceContext* InDeviceContext)
-		{
-			if (InDeviceContext == nullptr)
-			{
-				return;
-			}
-
-			InDeviceContext->OMGetBlendState(BlendState.GetAddressOf(), BlendFactor, &SampleMask);
-			InDeviceContext->OMGetDepthStencilState(DepthStencilState.GetAddressOf(), &StencilRef);
-			InDeviceContext->RSGetState(RasterizerState.GetAddressOf());
-
-			ViewportCount = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-			InDeviceContext->RSGetViewports(&ViewportCount, Viewports.data());
-			ScissorRectCount = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-			InDeviceContext->RSGetScissorRects(&ScissorRectCount, ScissorRects.data());
-
-			std::array<ID3D11RenderTargetView*, D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT> RawRenderTargetViews = {};
-			InDeviceContext->OMGetRenderTargets(
-				static_cast<UINT>(RawRenderTargetViews.size()),
-				RawRenderTargetViews.data(),
-				DepthStencilView.GetAddressOf());
-			CaptureInterfaces(RenderTargetViews, RawRenderTargetViews.data());
-
-			InDeviceContext->IAGetInputLayout(InputLayout.GetAddressOf());
-			InDeviceContext->IAGetPrimitiveTopology(&PrimitiveTopology);
-
-			std::array<ID3D11Buffer*, D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT> RawVertexBuffers = {};
-			InDeviceContext->IAGetVertexBuffers(
-				0,
-				static_cast<UINT>(RawVertexBuffers.size()),
-				RawVertexBuffers.data(),
-				VertexStrides.data(),
-				VertexOffsets.data());
-			CaptureInterfaces(VertexBuffers, RawVertexBuffers.data());
-
-			InDeviceContext->IAGetIndexBuffer(IndexBuffer.GetAddressOf(), &IndexFormat, &IndexOffset);
-
-			InDeviceContext->VSGetShader(VertexShader.GetAddressOf(), nullptr, nullptr);
-			std::array<ID3D11Buffer*, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT> RawVertexConstantBuffers = {};
-			InDeviceContext->VSGetConstantBuffers(
-				0,
-				static_cast<UINT>(RawVertexConstantBuffers.size()),
-				RawVertexConstantBuffers.data());
-			CaptureInterfaces(VertexConstantBuffers, RawVertexConstantBuffers.data());
-
-			InDeviceContext->PSGetShader(PixelShader.GetAddressOf(), nullptr, nullptr);
-			std::array<ID3D11Buffer*, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT> RawPixelConstantBuffers = {};
-			InDeviceContext->PSGetConstantBuffers(
-				0,
-				static_cast<UINT>(RawPixelConstantBuffers.size()),
-				RawPixelConstantBuffers.data());
-			CaptureInterfaces(PixelConstantBuffers, RawPixelConstantBuffers.data());
-
-			std::array<ID3D11SamplerState*, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT> RawPixelSamplers = {};
-			InDeviceContext->PSGetSamplers(
-				0,
-				static_cast<UINT>(RawPixelSamplers.size()),
-				RawPixelSamplers.data());
-			CaptureInterfaces(PixelSamplers, RawPixelSamplers.data());
-
-			std::array<ID3D11ShaderResourceView*, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT> RawPixelShaderResources = {};
-			InDeviceContext->PSGetShaderResources(
-				0,
-				static_cast<UINT>(RawPixelShaderResources.size()),
-				RawPixelShaderResources.data());
-			CaptureInterfaces(PixelShaderResources, RawPixelShaderResources.data());
-		}
-
-		void Restore(ID3D11DeviceContext* InDeviceContext) const
-		{
-			if (InDeviceContext == nullptr)
-			{
-				return;
-			}
-
-			const std::array<ID3D11RenderTargetView*, D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT> RawRenderTargetViews = GetRawInterfaces(RenderTargetViews);
-			const UINT RenderTargetCount = GetContiguousBoundCount(RenderTargetViews);
-			InDeviceContext->OMSetRenderTargets(
-				RenderTargetCount,
-				RenderTargetCount > 0 ? RawRenderTargetViews.data() : nullptr,
-				DepthStencilView.Get());
-
-			InDeviceContext->OMSetBlendState(BlendState.Get(), BlendFactor, SampleMask);
-			InDeviceContext->OMSetDepthStencilState(DepthStencilState.Get(), StencilRef);
-			InDeviceContext->RSSetState(RasterizerState.Get());
-			InDeviceContext->RSSetViewports(ViewportCount, ViewportCount > 0 ? Viewports.data() : nullptr);
-			InDeviceContext->RSSetScissorRects(ScissorRectCount, ScissorRectCount > 0 ? ScissorRects.data() : nullptr);
-
-			const std::array<ID3D11Buffer*, D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT> RawVertexBuffers = GetRawInterfaces(VertexBuffers);
-			InDeviceContext->IASetInputLayout(InputLayout.Get());
-			InDeviceContext->IASetPrimitiveTopology(PrimitiveTopology);
-			InDeviceContext->IASetVertexBuffers(
-				0,
-				static_cast<UINT>(RawVertexBuffers.size()),
-				RawVertexBuffers.data(),
-				VertexStrides.data(),
-				VertexOffsets.data());
-			InDeviceContext->IASetIndexBuffer(IndexBuffer.Get(), IndexFormat, IndexOffset);
-
-			const std::array<ID3D11Buffer*, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT> RawVertexConstantBuffers = GetRawInterfaces(VertexConstantBuffers);
-			InDeviceContext->VSSetShader(VertexShader.Get(), nullptr, 0);
-			InDeviceContext->VSSetConstantBuffers(
-				0,
-				static_cast<UINT>(RawVertexConstantBuffers.size()),
-				RawVertexConstantBuffers.data());
-
-			const std::array<ID3D11Buffer*, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT> RawPixelConstantBuffers = GetRawInterfaces(PixelConstantBuffers);
-			const std::array<ID3D11SamplerState*, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT> RawPixelSamplers = GetRawInterfaces(PixelSamplers);
-			const std::array<ID3D11ShaderResourceView*, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT> RawPixelShaderResources = GetRawInterfaces(PixelShaderResources);
-			InDeviceContext->PSSetShader(PixelShader.Get(), nullptr, 0);
-			InDeviceContext->PSSetConstantBuffers(
-				0,
-				static_cast<UINT>(RawPixelConstantBuffers.size()),
-				RawPixelConstantBuffers.data());
-			InDeviceContext->PSSetSamplers(
-				0,
-				static_cast<UINT>(RawPixelSamplers.size()),
-				RawPixelSamplers.data());
-			InDeviceContext->PSSetShaderResources(
-				0,
-				static_cast<UINT>(RawPixelShaderResources.size()),
-				RawPixelShaderResources.data());
-		}
-	};
-
 	bool CreateWhiteTexture(ID3D11Device* InDevice, TComPtr<ID3D11ShaderResourceView>& OutTextureView)
 	{
 		const uint32 WhitePixel = 0xFFFFFFFFu;
@@ -468,6 +275,22 @@ namespace
 		};
 		InSpriteBatch.Draw(InWhiteTexture, CenterDotRect, DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 0.85f));
 	}
+
+	std::string SanitizeBitmapText(std::string InText)
+	{
+		for (char& Character : InText)
+		{
+			const unsigned char UnsignedCharacter = static_cast<unsigned char>(Character);
+			if (std::isalnum(UnsignedCharacter) != 0 || Character == ' ' || Character == '-' || Character == '.' || Character == ':')
+			{
+				continue;
+			}
+
+			Character = ' ';
+		}
+
+		return InText;
+	}
 }
 
 struct FHudRenderer::FResources
@@ -541,18 +364,27 @@ void FHudRenderer::Render(
 		<< "PICK LAST: " << InStatsSystem.GetLastPickTimeMs() << " MS\n"
 		<< "PICK COUNT: " << InStatsSystem.GetTotalPickCount() << '\n'
 		<< "PICK TOTAL: " << InStatsSystem.GetTotalPickTimeMs() << " MS\n"
+		<< "GPU: " << SanitizeBitmapText(InRHI.GetAdapterName().empty() ? std::string("UNKNOWN") : InRHI.GetAdapterName());
+
+	if (InRHI.GetAdapterDedicatedVideoMemoryMB() > 0)
+	{
+		TextStream << ' ' << InRHI.GetAdapterDedicatedVideoMemoryMB() << " MB";
+	}
+
+	TextStream
+		<< '\n'
 		<< "PRIMS: " << InScene.GetRenderItems().size() << '\n'
 		<< "SELECTED: " << InPickState.SelectedPrimitiveId;
 
 	DirectX::SpriteBatch& SpriteBatch = *Resources->SpriteBatch;
 	ID3D11ShaderResourceView* WhiteTexture = Resources->WhiteTextureView.Get();
-	FD3D11PipelineStateSnapshot PipelineStateSnapshot = {};
-	PipelineStateSnapshot.Capture(DeviceContext);
-
+	ID3D11RenderTargetView* RenderTargets[] = { InRHI.GetBackBufferRTV() };
+	const D3D11_VIEWPORT Viewport = InRHI.GetViewport();
+	DeviceContext->OMSetRenderTargets(1, RenderTargets, InRHI.GetDepthStencilView());
+	DeviceContext->RSSetViewports(1, &Viewport);
 	SpriteBatch.SetViewport(InRHI.GetViewport());
 	SpriteBatch.Begin();
 	DrawAxisGizmo(InCamera, InRHI, SpriteBatch, WhiteTexture);
 	DrawBitmapText(&SpriteBatch, WhiteTexture, TextStream.str(), 16.0f, 16.0f, 2.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	SpriteBatch.End();
-	PipelineStateSnapshot.Restore(DeviceContext);
 }

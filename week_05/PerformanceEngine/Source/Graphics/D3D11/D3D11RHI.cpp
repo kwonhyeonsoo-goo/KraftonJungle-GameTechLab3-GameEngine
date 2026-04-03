@@ -1,12 +1,145 @@
 #include "D3D11RHI.h"
 
 #include <algorithm>
+#include <sstream>
+#include <vector>
 
 namespace
 {
 	constexpr DXGI_FORMAT BackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	constexpr DXGI_FORMAT DepthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	constexpr float ClearColor[] = { 0.08f, 0.10f, 0.14f, 1.0f };
+
+	struct FAdapterCandidate
+	{
+		TComPtr<IDXGIAdapter1> Adapter;
+		DXGI_ADAPTER_DESC1 Desc = {};
+		bool bHighPerformancePreference = false;
+	};
+
+	bool IsSameAdapterLuid(const LUID& InA, const LUID& InB)
+	{
+		return InA.LowPart == InB.LowPart && InA.HighPart == InB.HighPart;
+	}
+
+	bool IsSoftwareAdapter(const DXGI_ADAPTER_DESC1& InDesc)
+	{
+		return (InDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) != 0;
+	}
+
+	bool ContainsAdapter(const std::vector<FAdapterCandidate>& InCandidates, const DXGI_ADAPTER_DESC1& InDesc)
+	{
+		return std::any_of(InCandidates.begin(), InCandidates.end(), [&](const FAdapterCandidate& Candidate)
+		{
+			return IsSameAdapterLuid(Candidate.Desc.AdapterLuid, InDesc.AdapterLuid);
+		});
+	}
+
+	void AppendHardwareAdapter(std::vector<FAdapterCandidate>& OutCandidates, IDXGIAdapter1* InAdapter, bool bInHighPerformancePreference)
+	{
+		if (InAdapter == nullptr)
+		{
+			return;
+		}
+
+		DXGI_ADAPTER_DESC1 Desc = {};
+		if (FAILED(InAdapter->GetDesc1(&Desc)) || IsSoftwareAdapter(Desc) || ContainsAdapter(OutCandidates, Desc))
+		{
+			return;
+		}
+
+		FAdapterCandidate Candidate = {};
+		Candidate.Adapter = InAdapter;
+		Candidate.Desc = Desc;
+		Candidate.bHighPerformancePreference = bInHighPerformancePreference;
+		OutCandidates.push_back(std::move(Candidate));
+	}
+
+	std::vector<FAdapterCandidate> CollectAdapterCandidates()
+	{
+		TComPtr<IDXGIFactory1> Factory;
+		if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf()))))
+		{
+			return {};
+		}
+
+		std::vector<FAdapterCandidate> Candidates;
+
+		TComPtr<IDXGIFactory6> Factory6;
+		if (SUCCEEDED(Factory.As(&Factory6)) && Factory6)
+		{
+			for (UINT AdapterIndex = 0;; ++AdapterIndex)
+			{
+				TComPtr<IDXGIAdapter1> Adapter;
+				const HRESULT Result = Factory6->EnumAdapterByGpuPreference(
+					AdapterIndex,
+					DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
+					IID_PPV_ARGS(Adapter.GetAddressOf()));
+				if (Result == DXGI_ERROR_NOT_FOUND)
+				{
+					break;
+				}
+
+				if (SUCCEEDED(Result))
+				{
+					AppendHardwareAdapter(Candidates, Adapter.Get(), true);
+				}
+			}
+		}
+
+		std::vector<FAdapterCandidate> FallbackCandidates;
+		for (UINT AdapterIndex = 0;; ++AdapterIndex)
+		{
+			TComPtr<IDXGIAdapter1> Adapter;
+			const HRESULT Result = Factory->EnumAdapters1(AdapterIndex, Adapter.GetAddressOf());
+			if (Result == DXGI_ERROR_NOT_FOUND)
+			{
+				break;
+			}
+
+			if (SUCCEEDED(Result))
+			{
+				AppendHardwareAdapter(FallbackCandidates, Adapter.Get(), false);
+			}
+		}
+
+		std::sort(FallbackCandidates.begin(), FallbackCandidates.end(), [](const FAdapterCandidate& A, const FAdapterCandidate& B)
+		{
+			return A.Desc.DedicatedVideoMemory > B.Desc.DedicatedVideoMemory;
+		});
+
+		for (const FAdapterCandidate& Candidate : FallbackCandidates)
+		{
+			if (!ContainsAdapter(Candidates, Candidate.Desc))
+			{
+				Candidates.push_back(Candidate);
+			}
+		}
+
+		return Candidates;
+	}
+
+	FString WideToUtf8(const wchar_t* InText)
+	{
+		if (InText == nullptr || InText[0] == L'\0')
+		{
+			return {};
+		}
+
+		const int RequiredChars = WideCharToMultiByte(CP_UTF8, 0, InText, -1, nullptr, 0, nullptr, nullptr);
+		if (RequiredChars <= 1)
+		{
+			return {};
+		}
+
+		std::vector<char> Buffer(static_cast<size_t>(RequiredChars), '\0');
+		if (WideCharToMultiByte(CP_UTF8, 0, InText, -1, Buffer.data(), RequiredChars, nullptr, nullptr) <= 0)
+		{
+			return {};
+		}
+
+		return FString(Buffer.data());
+	}
 }
 
 bool FD3D11RHI::Initialize(HWND InWindowHandle)
@@ -72,27 +205,105 @@ bool FD3D11RHI::Initialize(HWND InWindowHandle)
 			DeviceContext.GetAddressOf());
 	};
 
+	auto CreateDeviceAndSwapChainForAdapter = [&](IDXGIAdapter* InAdapter, D3D_DRIVER_TYPE InDriverType, UINT InFlags, const D3D_FEATURE_LEVEL* InFeatureLevels, UINT InFeatureLevelCount)
+	{
+		SwapChain.Reset();
+		Device.Reset();
+		DeviceContext.Reset();
+
+		return D3D11CreateDeviceAndSwapChain(
+			InAdapter,
+			InDriverType,
+			nullptr,
+			InFlags,
+			InFeatureLevels,
+			InFeatureLevelCount,
+			D3D11_SDK_VERSION,
+			&SwapChainDesc,
+			SwapChain.GetAddressOf(),
+			Device.GetAddressOf(),
+			&CreatedFeatureLevel,
+			DeviceContext.GetAddressOf());
+	};
+
 	UINT CreateFlags = 0;
 #if defined(_DEBUG)
 	CreateFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
-	HRESULT Result = CreateDeviceAndSwapChain(CreateFlags, RequestedFeatureLevels, _countof(RequestedFeatureLevels));
-	if (Result == E_INVALIDARG)
+	auto AttemptCreateDeviceAndSwapChain = [&](IDXGIAdapter* InAdapter, D3D_DRIVER_TYPE InDriverType)
 	{
-		Result = CreateDeviceAndSwapChain(CreateFlags, RequestedFeatureLevels + 1, _countof(RequestedFeatureLevels) - 1);
-	}
+		HRESULT Result = CreateDeviceAndSwapChainForAdapter(
+			InAdapter,
+			InDriverType,
+			CreateFlags,
+			RequestedFeatureLevels,
+			_countof(RequestedFeatureLevels));
+		if (Result == E_INVALIDARG)
+		{
+			Result = CreateDeviceAndSwapChainForAdapter(
+				InAdapter,
+				InDriverType,
+				CreateFlags,
+				RequestedFeatureLevels + 1,
+				_countof(RequestedFeatureLevels) - 1);
+		}
 #if defined(_DEBUG)
-	if (FAILED(Result) && (CreateFlags & D3D11_CREATE_DEVICE_DEBUG) != 0)
+		if (FAILED(Result) && (CreateFlags & D3D11_CREATE_DEVICE_DEBUG) != 0)
+		{
+			const UINT FallbackFlags = CreateFlags & ~D3D11_CREATE_DEVICE_DEBUG;
+			Result = CreateDeviceAndSwapChainForAdapter(
+				InAdapter,
+				InDriverType,
+				FallbackFlags,
+				RequestedFeatureLevels,
+				_countof(RequestedFeatureLevels));
+			if (Result == E_INVALIDARG)
+			{
+				Result = CreateDeviceAndSwapChainForAdapter(
+					InAdapter,
+					InDriverType,
+					FallbackFlags,
+					RequestedFeatureLevels + 1,
+					_countof(RequestedFeatureLevels) - 1);
+			}
+		}
+#endif
+		return Result;
+	};
+
+	HRESULT Result = E_FAIL;
+	bool bUsedHighPerformancePreference = false;
+
+	for (const FAdapterCandidate& Candidate : CollectAdapterCandidates())
 	{
-		CreateFlags &= ~D3D11_CREATE_DEVICE_DEBUG;
+		Result = AttemptCreateDeviceAndSwapChain(Candidate.Adapter.Get(), D3D_DRIVER_TYPE_UNKNOWN);
+		if (SUCCEEDED(Result))
+		{
+			bUsedHighPerformancePreference = Candidate.bHighPerformancePreference;
+			break;
+		}
+	}
+
+	if (FAILED(Result))
+	{
 		Result = CreateDeviceAndSwapChain(CreateFlags, RequestedFeatureLevels, _countof(RequestedFeatureLevels));
 		if (Result == E_INVALIDARG)
 		{
 			Result = CreateDeviceAndSwapChain(CreateFlags, RequestedFeatureLevels + 1, _countof(RequestedFeatureLevels) - 1);
 		}
-	}
+#if defined(_DEBUG)
+		if (FAILED(Result) && (CreateFlags & D3D11_CREATE_DEVICE_DEBUG) != 0)
+		{
+			CreateFlags &= ~D3D11_CREATE_DEVICE_DEBUG;
+			Result = CreateDeviceAndSwapChain(CreateFlags, RequestedFeatureLevels, _countof(RequestedFeatureLevels));
+			if (Result == E_INVALIDARG)
+			{
+				Result = CreateDeviceAndSwapChain(CreateFlags, RequestedFeatureLevels + 1, _countof(RequestedFeatureLevels) - 1);
+			}
+		}
 #endif
+	}
 
 	if (FAILED(Result))
 	{
@@ -100,6 +311,7 @@ bool FD3D11RHI::Initialize(HWND InWindowHandle)
 		return false;
 	}
 
+	UpdateAdapterInfo(bUsedHighPerformancePreference);
 	UpdateViewport(ClientWidth, ClientHeight);
 
 	if (!CreateBackBufferResources())
@@ -125,6 +337,11 @@ void FD3D11RHI::Shutdown()
 	SwapChain.Reset();
 	DeviceContext.Reset();
 	Device.Reset();
+	AdapterName.clear();
+	AdapterVendorId = 0;
+	AdapterDeviceId = 0;
+	AdapterDedicatedVideoMemoryMB = 0;
+	bHighPerformancePreferenceApplied = false;
 
 	WindowHandle = nullptr;
 	UpdateViewport(0, 0);
@@ -267,4 +484,58 @@ void FD3D11RHI::UpdateViewport(int32 InWidth, int32 InHeight)
 	Viewport.Height = static_cast<float>(std::max(InHeight, 0));
 	Viewport.MinDepth = D3D11_MIN_DEPTH;
 	Viewport.MaxDepth = D3D11_MAX_DEPTH;
+}
+
+void FD3D11RHI::UpdateAdapterInfo(bool bInHighPerformancePreferenceApplied)
+{
+	AdapterName.clear();
+	AdapterVendorId = 0;
+	AdapterDeviceId = 0;
+	AdapterDedicatedVideoMemoryMB = 0;
+	bHighPerformancePreferenceApplied = bInHighPerformancePreferenceApplied;
+
+	if (!Device)
+	{
+		return;
+	}
+
+	TComPtr<IDXGIDevice> DxgiDevice;
+	if (FAILED(Device.As(&DxgiDevice)) || !DxgiDevice)
+	{
+		return;
+	}
+
+	TComPtr<IDXGIAdapter> DxgiAdapter;
+	if (FAILED(DxgiDevice->GetAdapter(DxgiAdapter.GetAddressOf())) || !DxgiAdapter)
+	{
+		return;
+	}
+
+	TComPtr<IDXGIAdapter1> DxgiAdapter1;
+	if (FAILED(DxgiAdapter.As(&DxgiAdapter1)) || !DxgiAdapter1)
+	{
+		return;
+	}
+
+	DXGI_ADAPTER_DESC1 Desc = {};
+	if (FAILED(DxgiAdapter1->GetDesc1(&Desc)))
+	{
+		return;
+	}
+
+	AdapterName = WideToUtf8(Desc.Description);
+	AdapterVendorId = Desc.VendorId;
+	AdapterDeviceId = Desc.DeviceId;
+	AdapterDedicatedVideoMemoryMB = static_cast<uint64>(Desc.DedicatedVideoMemory / (1024ull * 1024ull));
+
+	std::ostringstream LogStream;
+	LogStream << "[D3D11RHI] Selected adapter: "
+		<< (AdapterName.empty() ? "Unknown" : AdapterName)
+		<< " | VRAM: " << AdapterDedicatedVideoMemoryMB << " MB";
+	if (bHighPerformancePreferenceApplied)
+	{
+		LogStream << " | HighPerformancePreference";
+	}
+	LogStream << '\n';
+	OutputDebugStringA(LogStream.str().c_str());
 }

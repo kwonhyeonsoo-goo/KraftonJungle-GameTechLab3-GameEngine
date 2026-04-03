@@ -4,10 +4,8 @@
 
 #include "Graphics/D3D11/D3D11Common.h"
 #include "Scene/SceneTypes.h"
+#include "StaticMesh/StaticMeshManager.h"
 #include "Types/Array.h"
-#include "Types/Map.h"
-
-class FStaticMesh;
 
 class FScene
 {
@@ -23,7 +21,7 @@ public:
 
 private:
 	TArray<FRenderItem> RenderItems;
-	TMap<FString, std::shared_ptr<FStaticMesh>> MeshCache;
+	FStaticMeshManager MeshManager;
 
 	FSceneCameraInitData InitialCamera;
 

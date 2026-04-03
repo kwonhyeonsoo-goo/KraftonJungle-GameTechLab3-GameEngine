@@ -5,6 +5,7 @@
 
 #include "Camera/Camera.h"
 #include "Graphics/D3D11/D3D11RHI.h"
+#include "Grid/Grid.h"
 #include "Hud/HudRenderer.h"
 #include "Input/Input.h"
 #include "Renderer/SceneRenderer.h"
@@ -105,6 +106,13 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 		return false;
 	}
 
+	Grid = std::make_unique<FGrid>();
+	if (Grid && !Grid->Initialize(*RHI))
+	{
+		OutputDebugStringA("[Core] Failed to initialize grid renderer. Continuing without grid.\n");
+		Grid.reset();
+	}
+
 	if (!LoadDefaultScene())
 	{
 		Release();
@@ -169,6 +177,12 @@ void FCore::Tick()
 
 	BeginFrame();
 	SceneRenderer->Render(*RHI, *Scene, *Camera, VisibilityResults, PickState);
+
+	if (Grid)
+	{
+		Grid->Render(*RHI, *Camera);
+	}
+
 	HudRenderer->Render(*RHI, *Camera, *Scene, *StatsSystem, PickState);
 	EndFrame();
 
@@ -207,6 +221,12 @@ void FCore::HandleResize(int32 Width, int32 Height)
 
 void FCore::Release()
 {
+	if (Grid)
+	{
+		Grid->Release();
+		Grid.reset();
+	}
+
 	if (HudRenderer)
 	{
 		HudRenderer->Shutdown();
