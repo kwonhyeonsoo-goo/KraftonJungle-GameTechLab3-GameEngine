@@ -3,7 +3,85 @@
 #include "Types/PlatformTypes.h"
 #include "Types/String.h"
 #include "Types/Array.h"
+#include <unordered_map>
+#include <functional>
+struct FDepthStencilKey
+{
+	BOOL DepthEnable;
+	D3D11_DEPTH_WRITE_MASK DepthWriteMask;
+	D3D11_COMPARISON_FUNC DepthFunc;
 
+	bool operator==(const FDepthStencilKey& Other) const
+	{
+		return DepthEnable == Other.DepthEnable &&
+			DepthWriteMask == Other.DepthWriteMask &&
+			DepthFunc == Other.DepthFunc;
+	}
+};
+
+struct FDepthStencilKeyHash
+{
+	std::size_t operator()(const FDepthStencilKey& Key) const
+	{
+		std::size_t Hash = std::hash<BOOL>()(Key.DepthEnable);
+		Hash ^= std::hash<int>()(static_cast<int>(Key.DepthWriteMask)) + 0x9e3779b9 + (Hash << 6) + (Hash >> 2);
+		Hash ^= std::hash<int>()(static_cast<int>(Key.DepthFunc)) + 0x9e3779b9 + (Hash << 6) + (Hash >> 2);
+		return Hash;
+	}
+};
+struct FBlendKey
+{
+	BOOL BlendEnable;
+	D3D11_BLEND SrcBlend;
+	D3D11_BLEND DestBlend;
+	D3D11_BLEND_OP BlendOp;
+	UINT8 RenderTargetWriteMask;
+
+	bool operator==(const FBlendKey& Other) const
+	{
+		return BlendEnable == Other.BlendEnable &&
+			SrcBlend == Other.SrcBlend &&
+			DestBlend == Other.DestBlend &&
+			BlendOp == Other.BlendOp &&
+			RenderTargetWriteMask == Other.RenderTargetWriteMask;
+	}
+};
+struct FBlendKeyHash
+{
+	std::size_t operator()(const FBlendKey& Key) const
+	{
+		std::size_t Hash = std::hash<BOOL>()(Key.BlendEnable);
+		Hash ^= std::hash<int>()(static_cast<int>(Key.SrcBlend)) + 0x9e3779b9 + (Hash << 6) + (Hash >> 2);
+		Hash ^= std::hash<int>()(static_cast<int>(Key.DestBlend)) + 0x9e3779b9 + (Hash << 6) + (Hash >> 2);
+		Hash ^= std::hash<int>()(static_cast<int>(Key.BlendOp)) + 0x9e3779b9 + (Hash << 6) + (Hash >> 2);
+		Hash ^= std::hash<UINT8>()(Key.RenderTargetWriteMask) + 0x9e3779b9 + (Hash << 6) + (Hash >> 2);
+		return Hash;
+	}
+};
+struct FRasterKey
+{
+	D3D11_FILL_MODE FillMode;
+	D3D11_CULL_MODE CullMode;
+	bool bFrontCounterClockwise;
+
+	bool operator==(const FRasterKey& Other) const
+	{
+		return FillMode == Other.FillMode &&
+			CullMode == Other.CullMode &&
+			bFrontCounterClockwise == Other.bFrontCounterClockwise;
+	}
+};
+
+struct FRasterKeyHash
+{
+	std::size_t operator()(const FRasterKey& Key) const
+	{
+		std::size_t Hash = std::hash<int>()(static_cast<int>(Key.FillMode));
+		Hash ^= std::hash<int>()(static_cast<int>(Key.CullMode)) + 0x9e3779b9 + (Hash << 6) + (Hash >> 2);
+		Hash ^= std::hash<bool>()(Key.bFrontCounterClockwise) + 0x9e3779b9 + (Hash << 6) + (Hash >> 2);
+		return Hash;
+	}
+};
 struct FInstanceData
 {
 	DirectX::XMFLOAT4X4 WorldMatrix;
@@ -45,7 +123,9 @@ public:
 	uint32 GetAdapterDeviceId() const { return AdapterDeviceId; }
 	uint64 GetAdapterDedicatedVideoMemoryMB() const { return AdapterDedicatedVideoMemoryMB; }
 	bool IsHighPerformancePreferenceApplied() const { return bHighPerformancePreferenceApplied; }
-
+	ID3D11RasterizerState* GetRasterizerState(D3D11_FILL_MODE FillMode, D3D11_CULL_MODE CullMode, bool bFrontCounterClockwise) const;
+	ID3D11DepthStencilState* GetDepthStencilState(BOOL bDepthEnable, D3D11_DEPTH_WRITE_MASK WriteMask, D3D11_COMPARISON_FUNC DepthFunc) const;
+	ID3D11BlendState* GetBlendState(BOOL bBlendEnable, D3D11_BLEND SrcBlend, D3D11_BLEND DestBlend, D3D11_BLEND_OP BlendOp, UINT8 RenderTargetWriteMask) const;
 	TComPtr<ID3D11Texture2D> HiZDepthTexture;
 	TComPtr<ID3D11ShaderResourceView> HiZFullSRV;
 	TArray<TComPtr<ID3D11ShaderResourceView>> HiZDepthSRVs;
@@ -96,7 +176,9 @@ private:
 	TComPtr<ID3D11Texture2D>        DepthStencilBuffer;
 	TComPtr<ID3D11DepthStencilView> DepthStencilView;
 	TComPtr<ID3D11ShaderResourceView> DepthStencilSRV;
-
+	mutable std::unordered_map<FRasterKey, TComPtr<ID3D11RasterizerState>, FRasterKeyHash> RasterCache;
+	mutable std::unordered_map<FDepthStencilKey, TComPtr<ID3D11DepthStencilState>, FDepthStencilKeyHash> DepthStencilCache;
+	mutable std::unordered_map<FBlendKey, TComPtr<ID3D11BlendState>, FBlendKeyHash> BlendCache;
 	D3D11_VIEWPORT Viewport = {};
 
 	FString AdapterName;

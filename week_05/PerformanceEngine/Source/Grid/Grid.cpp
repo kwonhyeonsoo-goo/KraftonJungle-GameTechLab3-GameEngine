@@ -143,9 +143,6 @@ struct FGrid::FResources
 	TComPtr<ID3D11Buffer> ConstantBuffer;
 	TComPtr<ID3D11Buffer> AxisVertexBuffer;
 	TComPtr<ID3D11Buffer> AxisConstantBuffer;
-	TComPtr<ID3D11RasterizerState> RasterizerState;
-	TComPtr<ID3D11DepthStencilState> DepthStencilState;
-	TComPtr<ID3D11BlendState> BlendState;
 	UINT IndexCount = 0;
 	UINT AxisVertexCount = 0;
 };
@@ -306,53 +303,7 @@ float4 PSMain(PSInput Input) : SV_TARGET
 		return false;
 	}
 
-	const D3D11_RASTERIZER_DESC RasterizerDesc =
-	{
-		D3D11_FILL_SOLID,
-		D3D11_CULL_NONE,
-		FALSE,
-		0,
-		0.0f,
-		0.0f,
-		TRUE,
-		FALSE,
-		FALSE,
-		FALSE
-	};
 
-	if (FAILED(Device->CreateRasterizerState(&RasterizerDesc, Resources->RasterizerState.GetAddressOf())))
-	{
-		Resources.reset();
-		return false;
-	}
-
-	D3D11_DEPTH_STENCIL_DESC DepthStencilDesc = {};
-	DepthStencilDesc.DepthEnable = TRUE;
-	DepthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	DepthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-	DepthStencilDesc.StencilEnable = FALSE;
-
-	if (FAILED(Device->CreateDepthStencilState(&DepthStencilDesc, Resources->DepthStencilState.GetAddressOf())))
-	{
-		Resources.reset();
-		return false;
-	}
-
-	D3D11_BLEND_DESC BlendDesc = {};
-	BlendDesc.RenderTarget[0].BlendEnable = TRUE;
-	BlendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-	BlendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-	BlendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	BlendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	BlendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	BlendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-	BlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-
-	if (FAILED(Device->CreateBlendState(&BlendDesc, Resources->BlendState.GetAddressOf())))
-	{
-		Resources.reset();
-		return false;
-	}
 
 	Resources->IndexCount = static_cast<UINT>(GridIndices.size());
 	Resources->AxisVertexCount = static_cast<UINT>(ZAxisVertices.size());
@@ -408,9 +359,9 @@ void FGrid::Render(const FD3D11RHI& InRHI, const FCamera& InCamera)
 	DeviceContext->PSSetShader(Resources->PixelShader.Get(), nullptr, 0);
 	DeviceContext->VSSetConstantBuffers(0, 1, ConstantBuffers);
 	DeviceContext->PSSetConstantBuffers(0, 1, ConstantBuffers);
-	DeviceContext->RSSetState(Resources->RasterizerState.Get());
-	DeviceContext->OMSetDepthStencilState(Resources->DepthStencilState.Get(), 0);
-	DeviceContext->OMSetBlendState(Resources->BlendState.Get(), nullptr, 0xffffffffu);
+	DeviceContext->RSSetState(InRHI.GetRasterizerState(D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE));
+	DeviceContext->OMSetDepthStencilState(InRHI.GetDepthStencilState(TRUE, D3D11_DEPTH_WRITE_MASK_ZERO, D3D11_COMPARISON_LESS_EQUAL), 0);
+	DeviceContext->OMSetBlendState(InRHI.GetBlendState(TRUE, D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_OP_ADD, D3D11_COLOR_WRITE_ENABLE_ALL), nullptr, 0xffffffffu);
 	DeviceContext->DrawIndexed(Resources->IndexCount, 0, 0);
 
 	FAxisConstants AxisConstants = {};
@@ -425,9 +376,9 @@ void FGrid::Render(const FD3D11RHI& InRHI, const FCamera& InCamera)
 		DeviceContext->PSSetShader(Resources->AxisPixelShader.Get(), nullptr, 0);
 		DeviceContext->VSSetConstantBuffers(0, 1, AxisConstantBuffers);
 		DeviceContext->PSSetConstantBuffers(0, 0, nullptr);
-		DeviceContext->RSSetState(Resources->RasterizerState.Get());
-		DeviceContext->OMSetDepthStencilState(Resources->DepthStencilState.Get(), 0);
-		DeviceContext->OMSetBlendState(Resources->BlendState.Get(), nullptr, 0xffffffffu);
+		DeviceContext->RSSetState(InRHI.GetRasterizerState(D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE));
+		DeviceContext->OMSetDepthStencilState(InRHI.GetDepthStencilState(TRUE, D3D11_DEPTH_WRITE_MASK_ZERO, D3D11_COMPARISON_LESS_EQUAL), 0);
+		DeviceContext->OMSetBlendState(InRHI.GetBlendState(TRUE, D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_OP_ADD, D3D11_COLOR_WRITE_ENABLE_ALL), nullptr, 0xffffffffu);
 		DeviceContext->Draw(Resources->AxisVertexCount, 0);
 	}
 }

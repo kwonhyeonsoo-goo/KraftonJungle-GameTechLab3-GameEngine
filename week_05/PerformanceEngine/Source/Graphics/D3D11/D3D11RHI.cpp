@@ -419,7 +419,94 @@ bool FD3D11RHI::Resize(int32 InWidth, int32 InHeight)
 	BindBackBuffer();
 	return true;
 }
+// RasterrizerState getter 없다면 생성
+ID3D11RasterizerState* FD3D11RHI::GetRasterizerState(D3D11_FILL_MODE FillMode, D3D11_CULL_MODE CullMode, bool bFrontCounterClockwise) const
+{
+	if (!Device) return nullptr;
 
+	FRasterKey Key = { FillMode, CullMode, bFrontCounterClockwise };
+
+
+	auto It = RasterCache.find(Key);
+	if (It != RasterCache.end())
+	{
+		return It->second.Get();
+	}
+
+	D3D11_RASTERIZER_DESC Desc = {};
+	Desc.FillMode = FillMode;
+	Desc.CullMode = CullMode;
+	Desc.FrontCounterClockwise = bFrontCounterClockwise;
+	Desc.DepthBias = 0;
+	Desc.DepthBiasClamp = 0.0f;
+	Desc.SlopeScaledDepthBias = 0.0f;
+	Desc.DepthClipEnable = TRUE;
+	Desc.ScissorEnable = FALSE;
+	Desc.MultisampleEnable = FALSE;
+	Desc.AntialiasedLineEnable = FALSE;
+
+	TComPtr<ID3D11RasterizerState> NewState;
+	if (SUCCEEDED(Device->CreateRasterizerState(&Desc, NewState.GetAddressOf())))
+	{
+		RasterCache[Key] = NewState; 
+		return NewState.Get();
+	}
+
+	return nullptr;
+}
+// DepthStencilState getter 없다면 생성
+ID3D11DepthStencilState* FD3D11RHI::GetDepthStencilState(BOOL bDepthEnable, D3D11_DEPTH_WRITE_MASK WriteMask, D3D11_COMPARISON_FUNC DepthFunc) const
+{
+	if (!Device) return nullptr;
+
+	FDepthStencilKey Key = { bDepthEnable, WriteMask, DepthFunc };
+
+	auto It = DepthStencilCache.find(Key);
+	if (It != DepthStencilCache.end()) return It->second.Get();
+
+	D3D11_DEPTH_STENCIL_DESC Desc = {};
+	Desc.DepthEnable = bDepthEnable;
+	Desc.DepthWriteMask = WriteMask;
+	Desc.DepthFunc = DepthFunc;
+	Desc.StencilEnable = FALSE;
+
+	TComPtr<ID3D11DepthStencilState> NewState;
+	if (SUCCEEDED(Device->CreateDepthStencilState(&Desc, NewState.GetAddressOf())))
+	{
+		DepthStencilCache[Key] = NewState;
+		return NewState.Get();
+	}
+	return nullptr;
+}
+//BlendState getter 없다면 생성
+ID3D11BlendState* FD3D11RHI::GetBlendState(BOOL bBlendEnable, D3D11_BLEND SrcBlend, D3D11_BLEND DestBlend, D3D11_BLEND_OP BlendOp, UINT8 RenderTargetWriteMask) const
+{
+	if (!Device) return nullptr;
+
+	FBlendKey Key = { bBlendEnable, SrcBlend, DestBlend, BlendOp, RenderTargetWriteMask };
+
+	auto It = BlendCache.find(Key);
+	if (It != BlendCache.end()) return It->second.Get();
+
+	D3D11_BLEND_DESC Desc = {};
+	Desc.RenderTarget[0].BlendEnable = bBlendEnable;
+	Desc.RenderTarget[0].SrcBlend = SrcBlend;
+	Desc.RenderTarget[0].DestBlend = DestBlend;
+	Desc.RenderTarget[0].BlendOp = BlendOp;
+
+	Desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+	Desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+	Desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	Desc.RenderTarget[0].RenderTargetWriteMask = RenderTargetWriteMask;
+
+	TComPtr<ID3D11BlendState> NewState;
+	if (SUCCEEDED(Device->CreateBlendState(&Desc, NewState.GetAddressOf())))
+	{
+		BlendCache[Key] = NewState;
+		return NewState.Get();
+	}
+	return nullptr;
+}
 bool FD3D11RHI::CreateBackBufferResources()
 {
 	if (!Device || !SwapChain || ViewportWidth <= 0 || ViewportHeight <= 0)

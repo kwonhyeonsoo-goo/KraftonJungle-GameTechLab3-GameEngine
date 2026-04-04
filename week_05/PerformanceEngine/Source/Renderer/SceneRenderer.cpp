@@ -12,6 +12,8 @@
 
 namespace
 {
+
+
 	bool CreateWhiteTexture(ID3D11Device* InDevice, TComPtr<ID3D11ShaderResourceView>& OutTextureView)
 	{
 		const uint32 WhitePixel = 0xFFFFFFFFu;
@@ -67,9 +69,6 @@ struct FSceneRenderer::FResources
 	TComPtr<ID3D11Buffer> FrameConstantBuffer;
 	TComPtr<ID3D11Buffer> ObjectConstantBuffer;
 	TComPtr<ID3D11SamplerState> LinearSampler;
-	TComPtr<ID3D11RasterizerState> RasterizerState;
-	TComPtr<ID3D11DepthStencilState> DepthStencilState;
-	TComPtr<ID3D11BlendState> BlendState;
 	TComPtr<ID3D11ShaderResourceView> WhiteTextureView;
 };
 
@@ -229,40 +228,6 @@ float4 PSMain(PSInput Input) : SV_Target
 		FALSE
 	};
 
-	if (FAILED(Device->CreateRasterizerState(&RasterizerDesc, Resources->RasterizerState.GetAddressOf())))
-	{
-		Resources.reset();
-		return false;
-	}
-
-	D3D11_DEPTH_STENCIL_DESC DepthStencilDesc = {};
-	DepthStencilDesc.DepthEnable = TRUE;
-	DepthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	DepthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-	DepthStencilDesc.StencilEnable = FALSE;
-
-	if (FAILED(Device->CreateDepthStencilState(&DepthStencilDesc, Resources->DepthStencilState.GetAddressOf())))
-	{
-		Resources.reset();
-		return false;
-	}
-
-	D3D11_BLEND_DESC BlendDesc = {};
-	BlendDesc.RenderTarget[0].BlendEnable = FALSE;
-	BlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-
-	if (FAILED(Device->CreateBlendState(&BlendDesc, Resources->BlendState.GetAddressOf())))
-	{
-		Resources.reset();
-		return false;
-	}
-
-	if (!CreateWhiteTexture(Device, Resources->WhiteTextureView))
-	{
-		Resources.reset();
-		return false;
-	}
-
 	return true;
 }
 
@@ -307,9 +272,10 @@ void FSceneRenderer::Render(
 	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	DeviceContext->VSSetShader(Resources->VertexShader.Get(), nullptr, 0);
 	DeviceContext->PSSetShader(Resources->PixelShader.Get(), nullptr, 0);
-	DeviceContext->RSSetState(Resources->RasterizerState.Get());
-	DeviceContext->OMSetDepthStencilState(Resources->DepthStencilState.Get(), 0);
-	DeviceContext->OMSetBlendState(Resources->BlendState.Get(), nullptr, 0xffffffffu);
+
+	DeviceContext->RSSetState(InRHI.GetRasterizerState(D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE));
+	DeviceContext->OMSetDepthStencilState(InRHI.GetDepthStencilState(TRUE, D3D11_DEPTH_WRITE_MASK_ALL, D3D11_COMPARISON_LESS_EQUAL), 0);
+	DeviceContext->OMSetBlendState(InRHI.GetBlendState(FALSE, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, D3D11_COLOR_WRITE_ENABLE_ALL), nullptr, 0xffffffffu);
 
 	ID3D11SamplerState* Samplers[] = { Resources->LinearSampler.Get() };
 	DeviceContext->PSSetSamplers(0, 1, Samplers);
@@ -439,7 +405,7 @@ void FSceneRenderer::Render(
 	ID3D11ShaderResourceView* SRVs[] = { InRHI.InstanceSRV.Get(), InRHI.HiZFullSRV.Get() };
 	DeviceContext->CSSetShaderResources(0, 2, SRVs);
 
-	DeviceContext->CSSetConstantBuffers(0, 1, Resources->FrameConstantBuffer.GetAddressOf()); //
+	DeviceContext->CSSetConstantBuffers(0, 1, Resources->FrameConstantBuffer.GetAddressOf()); 
 
 	ID3D11SamplerState* samplers[] = { InRHI.PointSampler.Get() };
 	DeviceContext->CSSetSamplers(0, 1, samplers);
