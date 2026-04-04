@@ -12,10 +12,10 @@ class FStaticMesh;
 class FStaticMeshManager
 {
 public:
-	std::shared_ptr<FStaticMesh> LoadStaticMesh(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, const std::filesystem::path& InAssetPath);
+	std::shared_ptr<FStaticMesh> LoadStaticMesh(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, const std::wstring& InAssetPath);
 	void Release();
 
-	static FString BuildAssetKey(const std::filesystem::path& InAssetPath);
+	static FString BuildAssetKey(const std::wstring& InAssetPath);
 
 private:
 	TMap<FString, std::shared_ptr<FStaticMesh>> MeshCache;

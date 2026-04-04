@@ -21,7 +21,7 @@ struct FStaticMeshSourceData
 	struct FMaterial
 	{
 		FString Name;
-		std::filesystem::path DiffuseTexturePath;
+		std::wstring DiffuseTexturePath;
 	};
 
 	struct FSection
@@ -31,7 +31,7 @@ struct FStaticMeshSourceData
 		int32 MaterialIndex = -1;
 	};
 
-	std::filesystem::path SourcePath;
+	std::wstring SourcePath;
 	TArray<FStaticMeshVertex> Vertices;
 	TArray<uint32> Indices;
 	TArray<FMaterial> Materials;
@@ -54,7 +54,7 @@ public:
 	struct FMaterial
 	{
 		FString Name;
-		std::filesystem::path DiffuseTexturePath;
+		std::wstring DiffuseTexturePath;
 		TComPtr<ID3D11ShaderResourceView> DiffuseTextureView;
 	};
 
