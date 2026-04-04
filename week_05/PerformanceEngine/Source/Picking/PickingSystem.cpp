@@ -109,6 +109,18 @@ namespace
 		const TArray<uint32>& Indices = StaticMesh->GetIndices();
 		bool bHit = false;
 
+		//버텍스를 전부 미리 transformposition 해놓기
+		TArray<FVector> TransformedVertices;
+		TransformedVertices.resize(Vertices.size());
+		const auto XM = InPrimitiveRuntimeData.WorldMatrix.ToXMMatrix();
+
+		for (size_t i = 0; i < Vertices.size(); ++i)
+		{
+			auto V = DirectX::XMLoadFloat3(reinterpret_cast<const DirectX::XMFLOAT3*>(&Vertices[i].Position));
+			auto T = DirectX::XMVector3TransformCoord(V, XM);
+			TransformedVertices[i] = FVector(T);
+		}
+
 		for (size_t IndexOffset = 0; IndexOffset + 2 < Indices.size(); IndexOffset += 3)
 		{
 			const uint32 IndexA = Indices[IndexOffset + 0];
@@ -116,9 +128,9 @@ namespace
 			const uint32 IndexC = Indices[IndexOffset + 2];
 			if (IndexA >= Vertices.size() || IndexB >= Vertices.size() || IndexC >= Vertices.size()) continue;
 
-			const FVector A = InPrimitiveRuntimeData.WorldMatrix.TransformPosition(Vertices[IndexA].Position);
-			const FVector B = InPrimitiveRuntimeData.WorldMatrix.TransformPosition(Vertices[IndexB].Position);
-			const FVector C = InPrimitiveRuntimeData.WorldMatrix.TransformPosition(Vertices[IndexC].Position);
+			const FVector A = TransformedVertices[IndexA];
+			const FVector B = TransformedVertices[IndexB];
+			const FVector C = TransformedVertices[IndexC];
 
 			float HitDistance = 0.0f;
 			FVector HitPosition = FVector::ZeroVector;
