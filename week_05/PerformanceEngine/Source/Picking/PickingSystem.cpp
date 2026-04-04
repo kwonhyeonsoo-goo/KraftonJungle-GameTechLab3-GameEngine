@@ -152,6 +152,18 @@ FRay FPickingSystem::BuildPickRay(const FCamera& InCamera, int32 InMouseX, int32
 
 	const FMatrix ViewProjection = InCamera.GetViewMatrix() * InCamera.GetProjectionMatrix();
 	const FMatrix InverseViewProjection = ViewProjection.GetInverse();
+	auto TransformProjected = [](const FMatrix& Mat, const FVector& V) -> FVector
+	{
+		float X = V.X * Mat.M[0][0] + V.Y * Mat.M[1][0] + V.Z * Mat.M[2][0] + Mat.M[3][0];
+		float Y = V.X * Mat.M[0][1] + V.Y * Mat.M[1][1] + V.Z * Mat.M[2][1] + Mat.M[3][1];
+		float Z = V.X * Mat.M[0][2] + V.Y * Mat.M[1][2] + V.Z * Mat.M[2][2] + Mat.M[3][2];
+		float W = V.X * Mat.M[0][3] + V.Y * Mat.M[1][3] + V.Z * Mat.M[2][3] + Mat.M[3][3];
+		if (std::abs(W) > 1e-8f)
+		{
+			return FVector(X / W, Y / W, Z / W); 
+		}
+		return FVector(X, Y, Z);
+	};
 	const FVector WorldNear = InverseViewProjection.TransformPosition(FVector(NdcX, NdcY, 0.0f));
 	const FVector WorldFar = InverseViewProjection.TransformPosition(FVector(NdcX, NdcY, 1.0f));
 	const FVector Direction = (WorldFar - WorldNear).GetSafeNormal();
@@ -185,7 +197,7 @@ void FPickingSystem::UpdatePick(
 	const FRay PickRay = BuildPickRay(InCamera, InMousePositionClient.x, InMousePositionClient.y, InViewportWidth, InViewportHeight);
 	const uint64 PickStartCycles = QueryCycles64();
 
-	// 1. 기즈모 피킹 판정 (최우선)
+	//기즈모 피킹 판정 
 	InOutPickState.bHitGizmo = false;
 	InOutPickState.HitGizmoAxis = EGizmoAxis::None;
 
@@ -201,7 +213,7 @@ void FPickingSystem::UpdatePick(
 		}
 	}
 
-	// 2. 씬 오브젝트 피킹
+	//씬 오브젝트 피킹
 	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
 	FPickHit BestHit;
 	BestHit.DistanceSquared = std::numeric_limits<float>::max();
