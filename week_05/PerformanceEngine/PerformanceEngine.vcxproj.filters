@@ -89,6 +89,12 @@
     <ClCompile Include="Source\StaticMesh\StaticMeshManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Math\BoundingBox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scene\BVH\BVH.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Graphics\D3D11\D3D11Utils.h">
@@ -209,6 +215,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\StaticMesh\StaticMeshManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Math\BoundingBox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\BVH\BVHNode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\BVH\BVH.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

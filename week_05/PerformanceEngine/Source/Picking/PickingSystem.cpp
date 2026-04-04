@@ -154,7 +154,7 @@ namespace
 			return false;
 		}
 
-		if (!IntersectRayAabb(InRay, InPrimitiveRuntimeData.WorldBoundsMin, InPrimitiveRuntimeData.WorldBoundsMax))
+		if (!IntersectRayAabb(InRay, InPrimitiveRuntimeData.WorldBounds.Min, InPrimitiveRuntimeData.WorldBounds.Max))
 		{
 			return false;
 		}
