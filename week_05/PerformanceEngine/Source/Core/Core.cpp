@@ -152,6 +152,9 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 	VisibilityResults = FVisibilityResults();
 	PickState = FPickState();
 	bInitialized = true;
+
+	VisibilitySystem->BuildBVH(*Scene);
+
 	return true;
 }
 
@@ -184,17 +187,11 @@ void FCore::Tick()
 		FInstanceData* InstanceData = static_cast<FInstanceData*>(MappedResource.pData);
 		for (int i = 0; i < 50000; ++i)
 		{
-			DirectX::XMStoreFloat4x4(&InstanceData[i].WorldMatrix, Scene->GetPrimitiveRuntimeData()[i].WorldMatrix.ToXMMatrix());
-			InstanceData[i].Center = {
-				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.X + Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.X) * 0.5f,
-				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.Y + Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.Y) * 0.5f,
-				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.Z + Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.Z) * 0.5f
-			};
-			InstanceData[i].Extents = {
-				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.X - Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.X) * 0.5f,
-				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.Y - Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.Y) * 0.5f,
-				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.Z - Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.Z) * 0.5f
-			};
+			FScenePrimitiveRuntimeData PrimitiveData = Scene->GetPrimitiveRuntimeData()[i];
+
+			DirectX::XMStoreFloat4x4(&InstanceData[i].WorldMatrix, PrimitiveData.WorldMatrix.ToXMMatrix());
+			InstanceData[i].Center = PrimitiveData.WorldBounds.GetCenter().ToXMFLOAT3();
+			InstanceData[i].Extents = PrimitiveData.WorldBounds.GetExtents().ToXMFLOAT3();
 		}
 		RHI->GetDeviceContext()->Unmap(RHI->InstanceBuffer.Get(), 0);
 	}

@@ -319,14 +319,14 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 					SharedMesh->GetBoundsMin(),
 					SharedMesh->GetBoundsMax(),
 					WorldTransform,
-					RuntimeData.WorldBoundsMin,
-					RuntimeData.WorldBoundsMax,
+					RuntimeData.WorldBounds.Min,
+					RuntimeData.WorldBounds.Max,
 					bHasRuntimeBounds);
 
 				if (bHasRuntimeBounds)
 				{
-					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBoundsMin);
-					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBoundsMax);
+					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBounds.Min);
+					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBounds.Max);
 				}
 
 				PrimitiveColdData.push_back(std::move(ColdData));
