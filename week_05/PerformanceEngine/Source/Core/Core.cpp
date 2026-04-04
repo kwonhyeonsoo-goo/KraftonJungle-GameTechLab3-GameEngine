@@ -14,6 +14,9 @@
 #include "Stats/StatsSystem.h"
 #include "Visibility/VisibilitySystem.h"
 #include "FileSystem/FileSystem.h"
+#include "Editor/EditorUI.h"
+
+#include "Thirdparty/ImGui/imgui.h"
 
 #include <algorithm>
 namespace
@@ -122,6 +125,9 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 		return false;
 	}
 
+	EditorUI = std::make_unique<FEditorUI>(this);
+	EditorUI->Initialize(Args.Hwnd, RHI->GetDevice(), RHI->GetDeviceContext());
+
 	const FSceneCameraInitData& InitialCamera = Scene->GetInitialCamera();
 	Camera->SetTransform(InitialCamera.Transform);
 	Camera->SetFOV(InitialCamera.FovDegrees);
@@ -167,7 +173,9 @@ void FCore::Tick()
 
 	VisibilitySystem->Build(*Scene, *Camera, VisibilityResults);
 
-	if (Input->IsMouseButtonPressed(FInput::MOUSE_LEFT))
+	ImGuiIO& io = ImGui::GetIO();
+
+	if (Input->IsMouseButtonPressed(FInput::MOUSE_LEFT) && !io.WantCaptureMouse)
 	{
 		PickingSystem->UpdatePick(
 			*Scene,
@@ -178,6 +186,15 @@ void FCore::Tick()
 			RHI->GetViewportHeight(),
 			PickState);
 		StatsSystem->RecordPickEvent(PickState);
+
+		if (PickState.bHit)
+		{
+			SelectedPrimitiveData = Scene->GetPrimitiveRuntimeDataById(PickState.SelectedPrimitiveId);
+		}
+		else
+		{
+			SelectedPrimitiveData = nullptr;
+		}
 	}
 
 	StatsSystem->ApplyPickState(PickState);
@@ -213,6 +230,9 @@ void FCore::Tick()
 	}
 
 	HudRenderer->Render(*RHI, *Camera, *Scene, *StatsSystem, PickState);
+
+	EditorUI->Render();
+
 	EndFrame();
 
 	StatsSystem->EndFrame();
@@ -250,6 +270,12 @@ void FCore::HandleResize(int32 Width, int32 Height)
 
 void FCore::Release()
 {
+	if (EditorUI)
+	{
+		EditorUI->Shutdown();
+		EditorUI.reset();
+	}
+
 	if (Grid)
 	{
 		Grid->Release();

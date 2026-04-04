@@ -16,6 +16,9 @@ public:
 	const TArray<FScenePrimitiveRuntimeData>& GetPrimitiveRuntimeData() const { return PrimitiveRuntimeData; }
 	const TArray<FScenePrimitiveColdData>& GetPrimitiveColdData() const { return PrimitiveColdData; }
 	size_t GetPrimitiveCount() const { return PrimitiveRuntimeData.size(); }
+
+	const FScenePrimitiveRuntimeData* GetPrimitiveRuntimeDataById(int32 PrimitiveId) const;
+
 	const FSceneCameraInitData& GetInitialCamera() const { return InitialCamera; }
 
 	const FVector& GetSceneBoundsMin() const { return SceneBoundsMin; }
