@@ -10,7 +10,7 @@ struct InstanceData
 StructuredBuffer<InstanceData> AllInstances : register(t0);
 Texture2D<float> HiZPyramid : register(t1);
 RWStructuredBuffer<uint> VisibilityResults : register(u0);
-SamplerState LinearSampler : register(s0);
+SamplerState PointSampler : register(s0);
 
 cbuffer CullingParams : register(b0)
 {
@@ -92,9 +92,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
     float height = (aabbRect.w - aabbRect.y) * RenderTargetSize.y;
     float mip = clamp(floor(log2(max(width, height))) - 1.0f, 0.0f, 10.0f);
     
-    float4 sample = HiZPyramid.Gather(LinearSampler, aabbRect.xy, mip);
+    float4 depthSamples;
+    depthSamples.x = HiZPyramid.SampleLevel(PointSampler, aabbRect.xy, mip).r;
+    depthSamples.y = HiZPyramid.SampleLevel(PointSampler, aabbRect.zy, mip).r;
+    depthSamples.z = HiZPyramid.SampleLevel(PointSampler, aabbRect.xw, mip).r;
+    depthSamples.w = HiZPyramid.SampleLevel(PointSampler, aabbRect.zw, mip).r;
     
-    float maxHizDepth = max(max(sample.x, sample.y), max(sample.z, sample.w));
+    float maxHizDepth = max(max(depthSamples.x, depthSamples.y), max(depthSamples.z, depthSamples.w));
     
     if (minZ <= maxHizDepth + 0.0001f)
     {

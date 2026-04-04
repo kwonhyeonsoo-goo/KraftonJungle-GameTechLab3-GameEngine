@@ -599,7 +599,7 @@ bool FD3D11RHI::CreateVisibilityBuffer()
 	Device->CreateBuffer(&stagingDesc, nullptr, StagingBuffer.GetAddressOf());
 	
 	D3D11_SAMPLER_DESC samplerDesc = {};
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
@@ -607,14 +607,14 @@ bool FD3D11RHI::CreateVisibilityBuffer()
 	samplerDesc.BorderColor[1] = 0;
 	samplerDesc.BorderColor[2] = 0;
 	samplerDesc.BorderColor[3] = 0;
-	Device->CreateSamplerState(&samplerDesc, LinearSampler.GetAddressOf());
+	Device->CreateSamplerState(&samplerDesc, PointSampler.GetAddressOf());
 
 	return true;
 }
 
 void FD3D11RHI::ReleaseVisibilityBuffer()
 {
-	LinearSampler.Reset();
+	PointSampler.Reset();
 	VisibilityUAV.Reset();
 	VisibilityBuffer.Reset();
 	StagingBuffer.Reset();

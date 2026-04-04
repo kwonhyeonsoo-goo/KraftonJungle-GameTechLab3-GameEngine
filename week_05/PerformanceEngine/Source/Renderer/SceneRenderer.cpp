@@ -441,7 +441,7 @@ void FSceneRenderer::Render(
 
 	DeviceContext->CSSetConstantBuffers(0, 1, Resources->FrameConstantBuffer.GetAddressOf()); //
 
-	ID3D11SamplerState* samplers[] = { InRHI.LinearSampler.Get() };
+	ID3D11SamplerState* samplers[] = { InRHI.PointSampler.Get() };
 	DeviceContext->CSSetSamplers(0, 1, samplers);
 
 	DeviceContext->CSSetUnorderedAccessViews(0, 1, InRHI.VisibilityUAV.GetAddressOf(), nullptr);
