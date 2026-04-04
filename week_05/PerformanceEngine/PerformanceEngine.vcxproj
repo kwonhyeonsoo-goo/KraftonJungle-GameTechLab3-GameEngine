@@ -166,6 +166,7 @@
     <ClCompile Include="Source\Renderer\SceneRenderer.cpp" />
     <ClCompile Include="Source\Scene\BVH\BVH.cpp" />
     <ClCompile Include="Source\Scene\Scene.cpp" />
+    <ClCompile Include="Source\Scene\SceneLoader.cpp" />
     <ClCompile Include="Source\Stats\StatsSystem.cpp" />
     <ClCompile Include="Source\StaticMesh\ObjParser.cpp" />
     <ClCompile Include="Source\StaticMesh\StaticMesh.cpp" />
@@ -203,6 +204,7 @@
     <ClInclude Include="Source\Scene\BVH\BVH.h" />
     <ClInclude Include="Source\Scene\BVH\BVHNode.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
+    <ClInclude Include="Source\Scene\SceneLoader.h" />
     <ClInclude Include="Source\Scene\SceneTypes.h" />
     <ClInclude Include="Source\Stats\StatsSystem.h" />
     <ClInclude Include="Source\StaticMesh\ObjParser.h" />

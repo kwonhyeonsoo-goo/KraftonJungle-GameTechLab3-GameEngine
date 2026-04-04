@@ -14,7 +14,7 @@
 #include "Stats/StatsSystem.h"
 #include "Visibility/VisibilitySystem.h"
 #include "FileSystem/FileSystem.h"
-
+#include "Scene/SceneLoader.h"
 #include <algorithm>
 namespace
 {
@@ -96,7 +96,9 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 	VisibilitySystem = std::make_unique<FVisibilitySystem>();
 	PickingSystem = std::make_unique<FPickingSystem>();
 	StatsSystem = std::make_unique<FStatsSystem>();
-
+	PickingSystem = std::make_unique<FPickingSystem>();
+	StatsSystem = std::make_unique<FStatsSystem>();
+	SceneLoader = std::make_unique<FSceneLoader>();
 	if (!Input || !Camera || !RHI || !Scene || !SceneRenderer || !HudRenderer || !VisibilitySystem || !PickingSystem || !StatsSystem)
 	{
 		Release();
@@ -180,8 +182,18 @@ void FCore::Tick()
 		StatsSystem->RecordPickEvent(PickState);
 	}
 
-	StatsSystem->ApplyPickState(PickState);
+	StatsSystem->BeginFrame();
 
+
+	
+	if (Input->IsKeyPressed('O'))
+	{
+		std::wstring SelectedPath;
+		if (SceneLoader->OpenSceneFileDialog(SelectedPath))
+		{
+			SceneLoader->LoadScene(SelectedPath, Scene.get(), RHI.get(), Camera.get(), VisibilitySystem.get(), PickingSystem.get());
+		}
+	}
 	D3D11_MAPPED_SUBRESOURCE MappedResource = {};
 	if (SUCCEEDED(RHI->GetDeviceContext()->Map(RHI->InstanceBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
 	{
@@ -319,16 +331,17 @@ void FCore::EndFrame()
 
 bool FCore::LoadDefaultScene()
 {
-	if (!Scene || !RHI)
-	{
-		return false;
-	}
+	if (!Scene || !RHI || !SceneLoader) return false;
 
-	const std::wstring ScenePath = FFileSystem::FindDefaultScenePath();// FindDefaultScenePath();
-	if (ScenePath.empty())
-	{
-		return false;
-	}
+	const std::filesystem::path ScenePath = FFileSystem::FindDefaultScenePath();
+	if (ScenePath.empty()) return false;
 
-	return Scene->LoadFromFile(RHI->GetDevice(), RHI->GetDeviceContext(), ScenePath);
+	return SceneLoader->LoadScene(
+		ScenePath.wstring(),
+		Scene.get(),
+		RHI.get(),
+		Camera.get(),
+		VisibilitySystem.get(),
+		PickingSystem.get()
+	);
 }

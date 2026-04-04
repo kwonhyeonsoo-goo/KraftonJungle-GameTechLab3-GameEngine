@@ -19,7 +19,7 @@ class FSceneRenderer;
 class FStatsSystem;
 class FVisibilitySystem;
 class FWindowsWindow;
-
+class FSceneLoader;
 struct FCoreInitArgs
 {
 	FWindowsWindow* MainWindow = nullptr;
@@ -66,6 +66,6 @@ private:
 
 	FVisibilityResults VisibilityResults;
 	FPickState PickState;
-
+	std::unique_ptr<FSceneLoader> SceneLoader;
 	bool bInitialized = false;
 };
