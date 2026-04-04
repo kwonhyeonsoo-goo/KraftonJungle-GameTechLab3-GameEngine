@@ -182,10 +182,7 @@ void FCore::Tick()
 		StatsSystem->RecordPickEvent(PickState);
 	}
 
-	StatsSystem->BeginFrame();
-
-
-	
+	StatsSystem->ApplyPickState(PickState);
 	if (Input->IsKeyPressed('O'))
 	{
 		std::wstring SelectedPath;
