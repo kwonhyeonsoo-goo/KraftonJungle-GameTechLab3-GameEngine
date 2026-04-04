@@ -8,6 +8,7 @@
 #include "Scene/Scene.h"
 #include "StaticMesh/StaticMesh.h"
 #include "Visibility/VisibilitySystem.h"
+#include "Scene/SceneGraph.h"
 #include "Gizmo/Gizmo.h"
 
 namespace
@@ -173,6 +174,7 @@ void FPickingSystem::UpdatePick(
 	POINT InMousePositionClient,
 	int32 InViewportWidth,
 	int32 InViewportHeight,
+	const FSceneGraph& InSceneGraph,
 	FGizmo* InGizmo,
 	const FMatrix* InSelectedMatrix,
 	FPickState& InOutPickState) const
@@ -204,7 +206,12 @@ void FPickingSystem::UpdatePick(
 	FPickHit BestHit;
 	BestHit.DistanceSquared = std::numeric_limits<float>::max();
 
-	for (uint32 PrimitiveIndex : InVisibilityResults.VisiblePrimitiveIndices)
+	//AABB true만 전달
+	TArray<int32> OutIndices;
+	InSceneGraph.Pick(PickRay, InVisibilityResults, OutIndices);
+
+	//for (uint32 PrimitiveIndex : InVisibilityResults.VisiblePrimitiveIndices)
+	for (uint32 PrimitiveIndex : OutIndices)
 	{
 		if (PrimitiveIndex >= PrimitiveRuntimeData.size()) continue;
 

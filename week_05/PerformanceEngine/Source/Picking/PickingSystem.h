@@ -8,6 +8,7 @@
 class FCamera;
 class FScene;
 struct FVisibilityResults;
+class FSceneGraph;
 class FGizmo;
 class FMatrix;
 enum class EGizmoAxis : uint8;
@@ -49,6 +50,7 @@ public:
 		POINT InMousePositionClient,
 		int32 InViewportWidth,
 		int32 InViewportHeight,
+		const FSceneGraph& InSceneGraph,
 		FGizmo* InGizmo,
 		const FMatrix* InSelectedMatrix,
 		FPickState& InOutPickState) const;

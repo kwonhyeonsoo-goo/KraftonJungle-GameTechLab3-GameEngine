@@ -3,6 +3,8 @@
 #include "Math/Vector.h"
 #include <algorithm>
 
+struct FRay;
+
 struct FBoundingBox
 {
 	FVector Min;
@@ -29,5 +31,5 @@ struct FBoundingBox
 			return 2;
 		}
 	}
-	
+	bool IntersectsRay(const FRay& Ray) const;
 };

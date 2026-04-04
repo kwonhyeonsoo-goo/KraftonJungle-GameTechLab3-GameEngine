@@ -19,6 +19,7 @@ class FSceneRenderer;
 class FStatsSystem;
 class FVisibilitySystem;
 class FWindowsWindow;
+class FSceneGraph;
 class FEditorUI;
 
 class FSceneLoader;
@@ -71,8 +72,8 @@ private:
 	std::unique_ptr<FPickingSystem> PickingSystem;
 	std::unique_ptr<FStatsSystem> StatsSystem;
 	std::unique_ptr<FGrid> Grid;
+	std::unique_ptr<FSceneGraph> SceneGraph;
 	std::unique_ptr<FEditorUI> EditorUI;
-
 	std::unique_ptr<FGizmo> Gizmo;
 	FVisibilityResults VisibilityResults;
 	FPickState PickState;
