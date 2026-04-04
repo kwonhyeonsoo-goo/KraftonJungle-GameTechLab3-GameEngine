@@ -53,6 +53,8 @@ struct alignas(16) FFrameConstants
 {
 	FMatrix ViewProjection = FMatrix::Identity;
 	FVector2 RenderTargetSize = { 1.0f, 1.0f };
+	uint32 PrimitiveCount = 0;
+	float Padding = 0.0f;
 };
 
 struct alignas(16) FObjectConstants
@@ -283,6 +285,7 @@ void FSceneRenderer::Render(
 	FFrameConstants FrameConstants = {};
 	FrameConstants.ViewProjection = InCamera.GetViewMatrix() * InCamera.GetProjectionMatrix();
 	FrameConstants.RenderTargetSize = { static_cast<float>(InRHI.GetViewportWidth()), static_cast<float>(InRHI.GetViewportHeight()) };
+	FrameConstants.PrimitiveCount = static_cast<uint32>(InScene.GetPrimitiveCount());
 	D3D11Utils::UpdateDynamicBuffer(DeviceContext, Resources->FrameConstantBuffer.Get(), FrameConstants);
 
 	ID3D11Buffer* VertexConstantBuffers[] = { Resources->FrameConstantBuffer.Get(), Resources->ObjectConstantBuffer.Get() };

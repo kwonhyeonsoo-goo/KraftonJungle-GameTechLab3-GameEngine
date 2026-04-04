@@ -15,7 +15,7 @@
 #include "Visibility/VisibilitySystem.h"
 #include "FileSystem/FileSystem.h"
 #include "Scene/SceneGraph.h"
-#include "StaticMesh/StaticMesh.h"
+#include "StaticMesh/StaticMesh.h" 
 #include "Editor/EditorUI.h"
 #include "Thirdparty/ImGui/imgui.h"
 #include "Scene/SceneLoader.h"
@@ -272,11 +272,12 @@ void FCore::Tick()
 			SceneLoader->LoadScene(SelectedPath, Scene.get(), RHI.get(), Camera.get(), VisibilitySystem.get(), PickingSystem.get());
 		}
 	}
+	const size_t PrimitiveCount = Scene->GetPrimitiveCount();
+	RHI->EnsureCullingBufferCapacity(static_cast<uint32>(PrimitiveCount));
 	D3D11_MAPPED_SUBRESOURCE MappedResource = {};
 	if (SUCCEEDED(RHI->GetDeviceContext()->Map(RHI->InstanceBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
 	{
 		FInstanceData* InstanceData = static_cast<FInstanceData*>(MappedResource.pData);
-		const size_t PrimitiveCount = Scene->GetPrimitiveCount();
 		for (size_t i = 0; i < PrimitiveCount; ++i)
 		{
 			FScenePrimitiveRuntimeData PrimitiveData = Scene->GetPrimitiveRuntimeData()[i];

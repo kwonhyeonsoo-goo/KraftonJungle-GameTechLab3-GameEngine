@@ -143,7 +143,7 @@ public:
 	TComPtr<ID3D11ShaderResourceView> InstanceSRV;
 
 	TComPtr<ID3D11SamplerState> PointSampler;
-
+	void EnsureCullingBufferCapacity(uint32 RequiredCount);
 private:
 	bool CreateBackBufferResources();
 	void ReleaseBackBufferResources();
@@ -180,7 +180,7 @@ private:
 	mutable std::unordered_map<FDepthStencilKey, TComPtr<ID3D11DepthStencilState>, FDepthStencilKeyHash> DepthStencilCache;
 	mutable std::unordered_map<FBlendKey, TComPtr<ID3D11BlendState>, FBlendKeyHash> BlendCache;
 	D3D11_VIEWPORT Viewport = {};
-
+	uint32 MaxInstanceCapacity = 50000;
 	FString AdapterName;
 	uint32 AdapterVendorId = 0;
 	uint32 AdapterDeviceId = 0;

@@ -16,6 +16,8 @@ cbuffer CullingParams : register(b0)
 {
     row_major float4x4 ViewProjection;
     float2 RenderTargetSize;
+    uint PrimitiveCount;
+    float Padding;
 };
 
 void GetScreenRect(float3 center, float3 extents, float4x4 viewProj, out float4 rect, out float minZ, out bool intersectsNearPlane)
@@ -72,7 +74,7 @@ void GetScreenRect(float3 center, float3 extents, float4x4 viewProj, out float4 
 void main(uint3 DTid : SV_DispatchThreadID)
 {
     uint idx = DTid.x;
-    if (idx >= 50000)
+    if (idx >= PrimitiveCount) 
         return;
 
     InstanceData data = AllInstances[idx];
