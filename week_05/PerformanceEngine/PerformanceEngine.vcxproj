@@ -192,6 +192,7 @@
     <ClInclude Include="Source\Input\Input.h" />
     <ClInclude Include="Source\Core\Windows\WindowsLaunch.h" />
     <ClInclude Include="Source\Picking\PickingSystem.h" />
+    <ClInclude Include="Source\RAII\ScopeCycleCounter.h" />
     <ClInclude Include="Source\Renderer\SceneRenderer.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="Source\Scene\SceneTypes.h" />
