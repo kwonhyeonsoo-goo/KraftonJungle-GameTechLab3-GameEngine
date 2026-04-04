@@ -13,7 +13,7 @@
 #include "Scene/Scene.h"
 #include "Stats/StatsSystem.h"
 #include "Visibility/VisibilitySystem.h"
-
+#include <algorithm>
 namespace
 {
 	constexpr float DefaultCameraSpeed = 20.0f;
@@ -181,7 +181,8 @@ void FCore::Tick()
 	if (SUCCEEDED(RHI->GetDeviceContext()->Map(RHI->InstanceBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
 	{
 		FInstanceData* InstanceData = static_cast<FInstanceData*>(MappedResource.pData);
-		for (int i = 0; i < 50000; ++i)
+		const size_t PrimitiveCount = Scene->GetPrimitiveCount();
+		for (size_t i = 0; i < PrimitiveCount; ++i)
 		{
 			DirectX::XMStoreFloat4x4(&InstanceData[i].WorldMatrix, Scene->GetPrimitiveRuntimeData()[i].WorldMatrix.ToXMMatrix());
 			InstanceData[i].Center = {
@@ -197,7 +198,13 @@ void FCore::Tick()
 		}
 		RHI->GetDeviceContext()->Unmap(RHI->InstanceBuffer.Get(), 0);
 	}
-
+	std::sort(VisibilityResults.VisiblePrimitiveIndices.begin(), VisibilityResults.VisiblePrimitiveIndices.end(), [&](uint32 A, uint32 B) {
+		const auto& DataA = Scene->GetPrimitiveRuntimeData()[A];
+		const auto& DataB = Scene->GetPrimitiveRuntimeData()[B];
+		if (!DataA.StaticMesh) return false;
+		if (!DataB.StaticMesh) return true;
+		return DataA.StaticMesh < DataB.StaticMesh;
+	});
 	BeginFrame();
 	SceneRenderer->Render(*RHI, *Scene, *Camera, VisibilityResults, PickState);
 

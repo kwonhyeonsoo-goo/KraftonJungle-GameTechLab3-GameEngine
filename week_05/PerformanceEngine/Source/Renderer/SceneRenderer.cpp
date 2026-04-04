@@ -446,7 +446,8 @@ void FSceneRenderer::Render(
 
 	DeviceContext->CSSetUnorderedAccessViews(0, 1, InRHI.VisibilityUAV.GetAddressOf(), nullptr);
 
-	InRHI.GetDeviceContext()->Dispatch(static_cast<UINT>(std::ceil(50000 / 64.0f)), 1, 1);
+	const size_t PrimitiveCount = InScene.GetPrimitiveCount();
+	InRHI.GetDeviceContext()->Dispatch(static_cast<UINT>(std::ceil(PrimitiveCount / 64.0f)), 1, 1);
 
 	ID3D11ShaderResourceView* nullSRVs[] = { nullptr, nullptr };
 	DeviceContext->CSSetShaderResources(0, 2, nullSRVs);
