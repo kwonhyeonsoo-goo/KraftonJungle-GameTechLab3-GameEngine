@@ -3,6 +3,7 @@
 #include <limits>
 #include <memory>
 
+#include "Math/BoundingBox.h"
 #include "Math/Matrix.h"
 #include "Math/Transform.h"
 #include "Types/PlatformTypes.h"
@@ -42,7 +43,6 @@ struct FScenePrimitiveRuntimeData
 {
 	int32 PrimitiveId = -1;
 	FMatrix WorldMatrix = FMatrix::Identity;
-	FVector WorldBoundsMin = FVector::ZeroVector;
-	FVector WorldBoundsMax = FVector::ZeroVector;
+	FBoundingBox WorldBounds;
 	FStaticMesh* StaticMesh = nullptr;
 };

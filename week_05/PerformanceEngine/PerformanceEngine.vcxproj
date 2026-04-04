@@ -141,11 +141,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\FileSystem\FileSystem.cpp" />
     <ClCompile Include="Source\Graphics\D3D11\D3D11Utils.cpp" />
     <ClCompile Include="Source\Graphics\D3D11\D3D11RHI.cpp" />
     <ClCompile Include="Source\Camera\Camera.cpp" />
     <ClCompile Include="Source\Grid\Grid.cpp" />
     <ClCompile Include="Source\Hud\HudRenderer.cpp" />
+    <ClCompile Include="Source\Math\BoundingBox.cpp" />
+    <ClCompile Include="Source\Math\Frustum.cpp" />
     <ClCompile Include="Source\Math\Matrix.cpp" />
     <ClCompile Include="Source\Math\Quat.cpp" />
     <ClCompile Include="Source\Math\Rotator.cpp" />
@@ -161,6 +164,7 @@
     <ClCompile Include="Source\main.cpp" />
     <ClCompile Include="Source\Picking\PickingSystem.cpp" />
     <ClCompile Include="Source\Renderer\SceneRenderer.cpp" />
+    <ClCompile Include="Source\Scene\BVH\BVH.cpp" />
     <ClCompile Include="Source\Scene\Scene.cpp" />
     <ClCompile Include="Source\Stats\StatsSystem.cpp" />
     <ClCompile Include="Source\StaticMesh\ObjParser.cpp" />
@@ -169,12 +173,15 @@
     <ClCompile Include="Source\Visibility\VisibilitySystem.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\FileSystem\FileSystem.h" />
     <ClInclude Include="Source\Graphics\D3D11\D3D11Common.h" />
     <ClInclude Include="Source\Graphics\D3D11\D3D11RHI.h" />
     <ClInclude Include="Source\Graphics\D3D11\D3D11Utils.h" />
     <ClInclude Include="Source\Camera\Camera.h" />
     <ClInclude Include="Source\Grid\Grid.h" />
     <ClInclude Include="Source\Hud\HudRenderer.h" />
+    <ClInclude Include="Source\Math\BoundingBox.h" />
+    <ClInclude Include="Source\Math\Frustum.h" />
     <ClInclude Include="Source\Math\MathUtility.h" />
     <ClInclude Include="Source\Math\Matrix.h" />
     <ClInclude Include="Source\Math\Quat.h" />
@@ -193,6 +200,8 @@
     <ClInclude Include="Source\Core\Windows\WindowsLaunch.h" />
     <ClInclude Include="Source\Picking\PickingSystem.h" />
     <ClInclude Include="Source\Renderer\SceneRenderer.h" />
+    <ClInclude Include="Source\Scene\BVH\BVH.h" />
+    <ClInclude Include="Source\Scene\BVH\BVHNode.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="Source\Scene\SceneTypes.h" />
     <ClInclude Include="Source\Stats\StatsSystem.h" />
@@ -211,8 +220,12 @@
     <ClInclude Include="Source\Visibility\VisibilitySystem.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shader\Grid\GridPixelShader.hlsl" />
-    <None Include="Shader\Grid\GridVertexShader.hlsl" />
+    <None Include="Shader\Grid\GridPixelShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="Shader\Grid\GridVertexShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

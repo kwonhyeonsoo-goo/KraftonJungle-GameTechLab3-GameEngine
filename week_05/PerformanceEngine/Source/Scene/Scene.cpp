@@ -9,6 +9,8 @@
 
 #include "Math/MathUtility.h"
 #include "StaticMesh/StaticMesh.h"
+#include "FileSystem/FileSystem.h"
+
 namespace
 {
 	struct FPendingPrimitive
@@ -163,37 +165,45 @@ namespace
 		}
 	}
 
-	std::filesystem::path ResolveAssetPath(const std::filesystem::path& InScenePath, const FString& InRelativeAssetPath)
+	std::wstring ResolveAssetPath(const std::wstring& InScenePath, const FString& InRelativeAssetPath)
 	{
-		const std::filesystem::path AssetPath(InRelativeAssetPath);
-		if (AssetPath.is_absolute() && std::filesystem::exists(AssetPath))
+		const char* RelativeAssetPathStr = InRelativeAssetPath.c_str();
+		int size_needed = MultiByteToWideChar(CP_UTF8, 0, RelativeAssetPathStr, -1, NULL, 0);
+		std::wstring RelativeAssetPathW(size_needed, 0);
+		MultiByteToWideChar(CP_UTF8, 0, RelativeAssetPathStr, -1, &RelativeAssetPathW[0], 256);
+		if (!RelativeAssetPathW.empty() && RelativeAssetPathW.back() == L'\0') RelativeAssetPathW.pop_back();
+
+		const std::wstring AssetPath = RelativeAssetPathW;
+		if ( FFileSystem::IsAbsolutePath(AssetPath) && FFileSystem::SafeExists(AssetPath))
 		{
 			return AssetPath;
 		}
 
-		std::filesystem::path Cursor = InScenePath.parent_path();
+		std::wstring Cursor = FFileSystem::GetParentPath(InScenePath);
 		for (int Depth = 0; Depth < 6; ++Depth)
 		{
-			const std::filesystem::path Candidate = (Cursor / AssetPath).lexically_normal();
-			if (std::filesystem::exists(Candidate))
+			std::wstring Combined = FFileSystem::JoinPath(Cursor, AssetPath);
+			std::wstring Candidate = FFileSystem::NormalizePath(Combined);
+
+			if (FFileSystem::SafeExists(Candidate))
 			{
 				return Candidate;
 			}
 
-			if (!Cursor.has_parent_path())
+			if (!FFileSystem::HasParentPath( Cursor))
 			{
 				break;
 			}
 
-			Cursor = Cursor.parent_path();
+			Cursor = FFileSystem::GetParentPath(Cursor);
 		}
 
-		return (InScenePath.parent_path() / AssetPath).lexically_normal();
+		return FFileSystem::JoinPath(InScenePath, AssetPath);
 	}
 
 }
 
-bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, const std::filesystem::path& InSceneFilePath)
+bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, const std::wstring& InSceneFilePath)
 {
 	Release();
 
@@ -202,8 +212,10 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 		return false;
 	}
 
-	const std::filesystem::path SceneFilePath = std::filesystem::absolute(InSceneFilePath);
-	std::ifstream SceneFile(SceneFilePath);
+	const std::wstring SceneFilePath = FFileSystem::GetAbsolutePath(InSceneFilePath);
+	FILE* SceneFile = nullptr;
+	_wfopen_s(&SceneFile, SceneFilePath.c_str(), L"rb"); // 읽기 모드
+
 	if (!SceneFile)
 	{
 		return false;
@@ -216,7 +228,7 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 
 	FPendingPrimitive PendingPrimitive;
 	std::string Line;
-	while (std::getline(SceneFile, Line))
+	while (FFileSystem::GetLineFromFile(SceneFile, Line))
 	{
 		const std::string TrimmedLine = Trim(Line);
 		if (TrimmedLine.empty())
@@ -281,7 +293,7 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 					continue;
 				}
 
-				const std::filesystem::path MeshPath = ResolveAssetPath(SceneFilePath, PendingPrimitive.MeshAssetPath);
+				const std::wstring MeshPath = ResolveAssetPath(SceneFilePath, PendingPrimitive.MeshAssetPath);
 				const FString MeshCacheKey = FStaticMeshManager::BuildAssetKey(MeshPath);
 
 				std::shared_ptr<FStaticMesh> SharedMesh = MeshManager.LoadStaticMesh(InDevice, InDeviceContext, MeshPath);
@@ -307,14 +319,14 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 					SharedMesh->GetBoundsMin(),
 					SharedMesh->GetBoundsMax(),
 					WorldTransform,
-					RuntimeData.WorldBoundsMin,
-					RuntimeData.WorldBoundsMax,
+					RuntimeData.WorldBounds.Min,
+					RuntimeData.WorldBounds.Max,
 					bHasRuntimeBounds);
 
 				if (bHasRuntimeBounds)
 				{
-					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBoundsMin);
-					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBoundsMax);
+					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBounds.Min);
+					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBounds.Max);
 				}
 
 				PrimitiveColdData.push_back(std::move(ColdData));

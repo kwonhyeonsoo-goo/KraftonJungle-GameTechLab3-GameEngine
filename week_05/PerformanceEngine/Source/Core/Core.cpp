@@ -13,13 +13,15 @@
 #include "Scene/Scene.h"
 #include "Stats/StatsSystem.h"
 #include "Visibility/VisibilitySystem.h"
+#include "FileSystem/FileSystem.h"
+
 #include <algorithm>
 namespace
 {
 	constexpr float DefaultCameraSpeed = 20.0f;
 	constexpr float DefaultCameraSensitivity = 0.12f;
 
-	std::filesystem::path SearchForSceneFrom(const std::filesystem::path& InStartDirectory)
+	/*std::filesystem::path SearchForSceneFrom(const std::filesystem::path& InStartDirectory)
 	{
 		static const std::array<std::filesystem::path, 2> RelativeCandidates =
 		{
@@ -72,7 +74,7 @@ namespace
 		}
 
 		return {};
-	}
+	}*/
 }
 
 FCore::FCore() = default;
@@ -151,6 +153,9 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 	VisibilityResults = FVisibilityResults();
 	PickState = FPickState();
 	bInitialized = true;
+
+	VisibilitySystem->BuildBVH(*Scene);
+
 	return true;
 }
 
@@ -184,17 +189,11 @@ void FCore::Tick()
 		const size_t PrimitiveCount = Scene->GetPrimitiveCount();
 		for (size_t i = 0; i < PrimitiveCount; ++i)
 		{
-			DirectX::XMStoreFloat4x4(&InstanceData[i].WorldMatrix, Scene->GetPrimitiveRuntimeData()[i].WorldMatrix.ToXMMatrix());
-			InstanceData[i].Center = {
-				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.X + Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.X) * 0.5f,
-				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.Y + Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.Y) * 0.5f,
-				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.Z + Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.Z) * 0.5f
-			};
-			InstanceData[i].Extents = {
-				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.X - Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.X) * 0.5f,
-				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.Y - Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.Y) * 0.5f,
-				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.Z - Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.Z) * 0.5f
-			};
+			FScenePrimitiveRuntimeData PrimitiveData = Scene->GetPrimitiveRuntimeData()[i];
+
+			DirectX::XMStoreFloat4x4(&InstanceData[i].WorldMatrix, PrimitiveData.WorldMatrix.ToXMMatrix());
+			InstanceData[i].Center = PrimitiveData.WorldBounds.GetCenter().ToXMFLOAT3();
+			InstanceData[i].Extents = PrimitiveData.WorldBounds.GetExtents().ToXMFLOAT3();
 		}
 		RHI->GetDeviceContext()->Unmap(RHI->InstanceBuffer.Get(), 0);
 	}
@@ -325,7 +324,7 @@ bool FCore::LoadDefaultScene()
 		return false;
 	}
 
-	const std::filesystem::path ScenePath = FindDefaultScenePath();
+	const std::wstring ScenePath = FFileSystem::FindDefaultScenePath();// FindDefaultScenePath();
 	if (ScenePath.empty())
 	{
 		return false;

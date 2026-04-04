@@ -6,6 +6,8 @@
 
 #include "Graphics/D3D11/D3D11Utils.h"
 
+#include "FileSystem/FileSystem.h"
+
 bool FStaticMesh::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FStaticMeshSourceData InSourceData)
 {
 	Release();
@@ -54,7 +56,7 @@ bool FStaticMesh::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDevi
 
 		if (!Material.DiffuseTexturePath.empty())
 		{
-			const std::string TextureKey = Material.DiffuseTexturePath.lexically_normal().generic_string();
+			const std::string TextureKey = FFileSystem::WideToUtf8( FFileSystem::ToGenericWString(FFileSystem::NormalizePath(Material.DiffuseTexturePath)));
 			const auto ExistingTextureIt = TextureViewCache.find(TextureKey);
 			if (ExistingTextureIt != TextureViewCache.end())
 			{

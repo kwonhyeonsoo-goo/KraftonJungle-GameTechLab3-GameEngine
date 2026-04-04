@@ -15,13 +15,31 @@ void FVisibilitySystem::Build(const FScene& InScene, const FCamera& InCamera, FV
 {
 	OutResults.FrameNumber = NextFrameNumber++;
 
-	// 디버그 출력용
+	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
+	TArray<FBoundingBox> BoundingBoxes;
+	BoundingBoxes.reserve(InScene.GetPrimitiveCount());
+
+	for (const FScenePrimitiveRuntimeData& PrimitiveData : PrimitiveRuntimeData)
+	{
+		BoundingBoxes.push_back(PrimitiveData.WorldBounds);
+	}
+
+	ViewFrustum.Update(InCamera.GetViewMatrix() * InCamera.GetProjectionMatrix());
 
 	OutResults.VisiblePrimitiveIndices.clear();
-	OutResults.VisiblePrimitiveIndices.reserve(InScene.GetPrimitiveCount());
+	BVH.GetVisibleObjects(ViewFrustum, InCamera.GetLocation(), BoundingBoxes, OutResults.VisiblePrimitiveIndices);
+}
 
-	for (uint32 PrimitiveIndex = 0; PrimitiveIndex < static_cast<uint32>(InScene.GetPrimitiveCount()); ++PrimitiveIndex)
+void FVisibilitySystem::BuildBVH(const FScene& InScene)
+{
+	TArray<FScenePrimitiveRuntimeData> Primitives = InScene.GetPrimitiveRuntimeData();
+	TArray<FBoundingBox> PrimitiveBoxes;
+	PrimitiveBoxes.reserve(Primitives.size());
+
+	for (const FScenePrimitiveRuntimeData& Primitive : Primitives)
 	{
-		OutResults.VisiblePrimitiveIndices.push_back(PrimitiveIndex);
+		PrimitiveBoxes.push_back(Primitive.WorldBounds);
 	}
+
+	BVH.Build(PrimitiveBoxes);
 }
