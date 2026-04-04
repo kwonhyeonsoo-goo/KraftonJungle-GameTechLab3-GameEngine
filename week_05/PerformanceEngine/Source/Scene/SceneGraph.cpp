@@ -1,7 +1,8 @@
 #include "SceneGraph.h"
 #include "Visibility/VisibilitySystem.h"
 #include "Scene/Scene.h"
-
+#include "Picking/PickingSystem.h"
+#include <limits>
 void FSceneGraph::Build(const TArray<FBoundingBox>& ObjectBoxes)
 {
     Nodes.clear();
@@ -42,18 +43,32 @@ void FSceneGraph::Pick(const FRay& InRay, const FVisibilityResults& CandidateVis
 {
     
     // 루트부터 재귀 순회
-    PickRecursive(RootIndex, InRay, CandidateVisibilityResults.VisiblePrimitiveIndices, OutCandidates);
+    int32 max = std::numeric_limits<int32>::max();
+    PickRecursive(RootIndex, InRay, CandidateVisibilityResults.VisiblePrimitiveIndices, OutCandidates, max);
 }
 
-void FSceneGraph::PickRecursive(int32 NodeIndex, const FRay& InRay, const TArray<int32>& Candidate, TArray<int32>& OutCandidates) const
+void FSceneGraph::PickRecursive(int32 NodeIndex, const FRay& InRay, const TArray<int32>& Candidate, TArray<int32>& OutCandidates, int32& MAX) const
 {
     if (NodeIndex == -1) return;
 
     const FSceneNode& Node = Nodes[NodeIndex];
 
+    auto DistanceSq3D = [](const FVector& A, const FVector& B)
+        {
+            float dx = A.X - B.X;
+            float dy = A.Y - B.Y;
+            float dz = A.Z - B.Z;
+            return dx * dx + dy * dy + dz * dz;
+        };
+
     // 레이-AABB 교차 테스트, 안 맞으면 자식 전체 스킵
     if (!Node.Volume.IntersectsRay(InRay)) return;
-
+    else if (DistanceSq3D(InRay.Origin, Node.Center) > MAX) {
+        return;
+    }
+    else {
+        MAX = DistanceSq3D(InRay.Origin, Node.Center);
+    }
     // 리프 노드
     if (Node.Children.empty())
     {
@@ -66,8 +81,10 @@ void FSceneGraph::PickRecursive(int32 NodeIndex, const FRay& InRay, const TArray
         return;
     }
 
-    for (int32 ChildIndex : Node.Children)
-        PickRecursive(ChildIndex, InRay, Candidate, OutCandidates);
+    for (int32 ChildIndex : Node.Children) {
+        int32 max = std::numeric_limits<int32>::max();
+        PickRecursive(ChildIndex, InRay, Candidate, OutCandidates, max);
+    }
 }
 
 int32 FSceneGraph::BuildRecursive(TArray<int32>& Indices, const FBoundingBox& NodeVolume, int32 Depth)
