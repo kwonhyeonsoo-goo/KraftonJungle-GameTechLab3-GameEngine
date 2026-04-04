@@ -176,8 +176,10 @@ FRay FPickingSystem::BuildPickRay(const FCamera& InCamera, int32 InMouseX, int32
 		}
 		return FVector(X, Y, Z);
 	};
-	const FVector WorldNear = InverseViewProjection.TransformPosition(FVector(NdcX, NdcY, 0.0f));
-	const FVector WorldFar = InverseViewProjection.TransformPosition(FVector(NdcX, NdcY, 1.0f));
+	// use TransformProjected
+	const FVector WorldNear = TransformProjected(InverseViewProjection, FVector(NdcX, NdcY, 0.0f));
+	const FVector WorldFar = TransformProjected(InverseViewProjection, FVector(NdcX, NdcY, 1.0f));
+
 	const FVector Direction = (WorldFar - WorldNear).GetSafeNormal();
 	if (!Direction.IsNearlyZero())
 	{
