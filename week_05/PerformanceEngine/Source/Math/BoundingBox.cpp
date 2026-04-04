@@ -1,6 +1,7 @@
 #include "BoundingBox.h"
 #include <algorithm>
 #include "Scene/SceneTypes.h"
+#include "Picking/PickingSystem.h"
 
 void FBoundingBox::Encapsulate(const FBoundingBox& Other)
 {
