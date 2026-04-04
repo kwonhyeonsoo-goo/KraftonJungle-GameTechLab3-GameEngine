@@ -22,6 +22,7 @@ class FWindowsWindow;
 class FEditorUI;
 
 class FSceneLoader;
+class FGizmo;
 struct FCoreInitArgs
 {
 	FWindowsWindow* MainWindow = nullptr;
@@ -72,6 +73,7 @@ private:
 	std::unique_ptr<FGrid> Grid;
 	std::unique_ptr<FEditorUI> EditorUI;
 
+	std::unique_ptr<FGizmo> Gizmo;
 	FVisibilityResults VisibilityResults;
 	FPickState PickState;
 
