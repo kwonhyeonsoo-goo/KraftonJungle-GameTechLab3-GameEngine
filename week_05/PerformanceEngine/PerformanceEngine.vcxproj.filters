@@ -89,9 +89,6 @@
     <ClCompile Include="Source\StaticMesh\StaticMeshManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\FileSystem\FileSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Graphics\D3D11\D3D11Utils.h">
@@ -214,9 +211,6 @@
     <ClInclude Include="Source\StaticMesh\StaticMeshManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\FileSystem\FileSystem.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shader\Grid\GridPixelShader.hlsl">
@@ -226,5 +220,10 @@
       <Filter>Source Files</Filter>
     </None>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shader\CopyDepth.hlsl" />
+    <FxCompile Include="Shader\Pyramid_CS.hlsl" />
+    <FxCompile Include="Shader\Culling_CS.hlsl" />
   </ItemGroup>
 </Project>

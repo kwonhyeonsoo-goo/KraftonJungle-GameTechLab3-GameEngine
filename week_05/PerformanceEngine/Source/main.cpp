@@ -17,6 +17,15 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	Config.Width = 1280;
 	Config.Height = 720;
 
+	HANDLE thread = GetCurrentThread();
+	DWORD_PTR mask = 1 << 2;
+	DWORD_PTR oldMask = SetThreadAffinityMask(thread, mask);
+	
+	if (oldMask == 0)
+	{
+		GetLastError();
+	}
+
 	FWindowsLaunch Launch;
 	return Launch.Run(hInstance, Config);
 }

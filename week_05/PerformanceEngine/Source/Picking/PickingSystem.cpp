@@ -146,20 +146,21 @@ namespace
 		return true;
 	}
 
-	bool IntersectRenderItem(const FRay& InRay, const FRenderItem& InRenderItem, FPickHit& InOutBestHit)
+	bool IntersectRenderItem(const FRay& InRay, const FScenePrimitiveRuntimeData& InPrimitiveRuntimeData, FPickHit& InOutBestHit)
 	{
-		if (!InRenderItem.StaticMesh || !InRenderItem.StaticMesh->IsValid())
+		FStaticMesh* StaticMesh = InPrimitiveRuntimeData.StaticMesh;
+		if (StaticMesh == nullptr || !StaticMesh->IsValid())
 		{
 			return false;
 		}
 
-		if (!IntersectRayAabb(InRay, InRenderItem.WorldBoundsMin, InRenderItem.WorldBoundsMax))
+		if (!IntersectRayAabb(InRay, InPrimitiveRuntimeData.WorldBoundsMin, InPrimitiveRuntimeData.WorldBoundsMax))
 		{
 			return false;
 		}
 
-		const TArray<FStaticMeshVertex>& Vertices = InRenderItem.StaticMesh->GetVertices();
-		const TArray<uint32>& Indices = InRenderItem.StaticMesh->GetIndices();
+		const TArray<FStaticMeshVertex>& Vertices = StaticMesh->GetVertices();
+		const TArray<uint32>& Indices = StaticMesh->GetIndices();
 		bool bHit = false;
 
 		for (size_t IndexOffset = 0; IndexOffset + 2 < Indices.size(); IndexOffset += 3)
@@ -172,9 +173,9 @@ namespace
 				continue;
 			}
 
-			const FVector A = InRenderItem.Transform.TransformPosition(Vertices[IndexA].Position);
-			const FVector B = InRenderItem.Transform.TransformPosition(Vertices[IndexB].Position);
-			const FVector C = InRenderItem.Transform.TransformPosition(Vertices[IndexC].Position);
+			const FVector A = InPrimitiveRuntimeData.WorldMatrix.TransformPosition(Vertices[IndexA].Position);
+			const FVector B = InPrimitiveRuntimeData.WorldMatrix.TransformPosition(Vertices[IndexB].Position);
+			const FVector C = InPrimitiveRuntimeData.WorldMatrix.TransformPosition(Vertices[IndexC].Position);
 
 			float HitDistance = 0.0f;
 			FVector HitPosition = FVector::ZeroVector;
@@ -190,7 +191,7 @@ namespace
 			}
 
 			InOutBestHit.DistanceSquared = DistanceSquared;
-			InOutBestHit.PrimitiveId = InRenderItem.PrimitiveId;
+			InOutBestHit.PrimitiveId = InPrimitiveRuntimeData.PrimitiveId;
 			InOutBestHit.WorldPosition = HitPosition;
 			bHit = true;
 		}
@@ -228,18 +229,18 @@ void FPickingSystem::UpdatePick(
 	const FRay PickRay = BuildPickRay(InCamera, InMousePositionClient.x, InMousePositionClient.y, InViewportWidth, InViewportHeight);
 	const uint64 PickStartCycles = QueryCycles64();
 
-	const TArray<FRenderItem>& RenderItems = InScene.GetRenderItems();
+	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
 	FPickHit BestHit;
 	BestHit.DistanceSquared = std::numeric_limits<float>::max();
 
 	for (uint32 PrimitiveIndex : InVisibilityResults.VisiblePrimitiveIndices)
 	{
-		if (PrimitiveIndex >= RenderItems.size())
+		if (PrimitiveIndex >= PrimitiveRuntimeData.size())
 		{
 			continue;
 		}
 
-		if (IntersectRenderItem(PickRay, RenderItems[PrimitiveIndex], BestHit))
+		if (IntersectRenderItem(PickRay, PrimitiveRuntimeData[PrimitiveIndex], BestHit))
 		{
 			BestHit.PrimitiveIndex = static_cast<int32>(PrimitiveIndex);
 		}
