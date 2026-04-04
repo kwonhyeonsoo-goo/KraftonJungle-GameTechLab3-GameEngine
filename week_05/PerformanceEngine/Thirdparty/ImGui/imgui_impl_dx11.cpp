@@ -549,7 +549,7 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
         D3D11_RASTERIZER_DESC desc;
         ZeroMemory(&desc, sizeof(desc));
         desc.FillMode = D3D11_FILL_SOLID;
-        desc.CullMode = D3D11_CULL_NONE;
+        desc.CullMode = D3D11_CULL_BACK;
         desc.ScissorEnable = true;
         desc.DepthClipEnable = true;
         bd->pd3dDevice->CreateRasterizerState(&desc, &bd->pRasterizerState);
