@@ -20,6 +20,7 @@ class FStatsSystem;
 class FVisibilitySystem;
 class FWindowsWindow;
 class FSceneLoader;
+class FGizmo;
 struct FCoreInitArgs
 {
 	FWindowsWindow* MainWindow = nullptr;
@@ -63,7 +64,7 @@ private:
 	std::unique_ptr<FPickingSystem> PickingSystem;
 	std::unique_ptr<FStatsSystem> StatsSystem;
 	std::unique_ptr<FGrid> Grid;
-
+	std::unique_ptr<FGizmo> Gizmo;
 	FVisibilityResults VisibilityResults;
 	FPickState PickState;
 	std::unique_ptr<FSceneLoader> SceneLoader;

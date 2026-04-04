@@ -40,21 +40,18 @@ bool FSceneLoader::LoadScene(
 	{
 		return false;
 	}
-
-	// 1. 기존 데이터 및 캐시, 가시성 상태 초기화
 	InRHI->GetDeviceContext()->ClearState();
 	InOutScene->Release();
 	InVisibilitySystem->Reset();
 	InPickingSystem->Reset();
 
-	// 2. 새 씬 로드
+
 	if (!InOutScene->LoadFromFile(InRHI->GetDevice(), InRHI->GetDeviceContext(), InScenePath))
 	{
 		OutputDebugStringA("[SceneLoader] Failed to load scene.\n");
 		return false;
 	}
 
-	// 3. 성공 시 경로 갱신 및 카메라 리셋
 	CurrentScenePath = InScenePath;
 
 	const FSceneCameraInitData& InitialCamera = InOutScene->GetInitialCamera();
