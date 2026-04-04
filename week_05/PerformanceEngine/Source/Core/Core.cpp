@@ -151,6 +151,9 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 	VisibilityResults = FVisibilityResults();
 	PickState = FPickState();
 	bInitialized = true;
+
+	VisibilitySystem->BuildBVH(*Scene);
+
 	return true;
 }
 

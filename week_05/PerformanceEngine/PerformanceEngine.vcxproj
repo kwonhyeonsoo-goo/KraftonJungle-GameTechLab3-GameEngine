@@ -147,6 +147,7 @@
     <ClCompile Include="Source\Grid\Grid.cpp" />
     <ClCompile Include="Source\Hud\HudRenderer.cpp" />
     <ClCompile Include="Source\Math\BoundingBox.cpp" />
+    <ClCompile Include="Source\Math\Frustum.cpp" />
     <ClCompile Include="Source\Math\Matrix.cpp" />
     <ClCompile Include="Source\Math\Quat.cpp" />
     <ClCompile Include="Source\Math\Rotator.cpp" />
@@ -178,6 +179,7 @@
     <ClInclude Include="Source\Grid\Grid.h" />
     <ClInclude Include="Source\Hud\HudRenderer.h" />
     <ClInclude Include="Source\Math\BoundingBox.h" />
+    <ClInclude Include="Source\Math\Frustum.h" />
     <ClInclude Include="Source\Math\MathUtility.h" />
     <ClInclude Include="Source\Math\Matrix.h" />
     <ClInclude Include="Source\Math\Quat.h" />

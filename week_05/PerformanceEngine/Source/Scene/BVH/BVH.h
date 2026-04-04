@@ -4,6 +4,7 @@
 #include "Types/Array.h"
 #include "Types/PlatformTypes.h"
 #include "Math/BoundingBox.h"
+#include "Math/Frustum.h"
 #include "Math/Vector.h"
 
 struct FBVHObjectInfo
@@ -17,6 +18,8 @@ class FBVH
 {
 public:
 	void Build(const TArray<FBoundingBox>& ObjectBoxes);
+
+	void GetVisibleObjects(const FFrustum& InFrustum, const FVector& CameraPos, const TArray<FBoundingBox>& ObjectBoxes, TArray<int32>& OutVisibleObjectIndices) const;
 
 private:
 	TArray<FBVHNode> Nodes;
