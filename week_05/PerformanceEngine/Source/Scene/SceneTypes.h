@@ -11,11 +11,7 @@
 
 class FStaticMesh;
 
-struct FRay
-{
-	FVector Origin = FVector::ZeroVector;
-	FVector Direction = FVector::ForwardVector;
-};
+
 
 struct FPickHit
 {

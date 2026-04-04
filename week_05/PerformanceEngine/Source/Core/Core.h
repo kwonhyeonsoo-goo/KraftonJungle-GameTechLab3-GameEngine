@@ -20,7 +20,10 @@ class FStatsSystem;
 class FVisibilitySystem;
 class FWindowsWindow;
 class FSceneGraph;
+class FEditorUI;
 
+class FSceneLoader;
+class FGizmo;
 struct FCoreInitArgs
 {
 	FWindowsWindow* MainWindow = nullptr;
@@ -48,6 +51,11 @@ public:
 
 	void Release();
 
+	FCamera* GetCamera() const { return Camera.get(); }
+	FPickingSystem* GetPickingSystem() const { return PickingSystem.get(); }
+
+	const FScenePrimitiveRuntimeData* GetSelectedPrimitiveData() const { return SelectedPrimitiveData; }
+
 private:
 	void BeginFrame();
 	void EndFrame();
@@ -65,8 +73,13 @@ private:
 	std::unique_ptr<FStatsSystem> StatsSystem;
 	std::unique_ptr<FGrid> Grid;
 	std::unique_ptr<FSceneGraph> SceneGraph;
+	std::unique_ptr<FEditorUI> EditorUI;
+	std::unique_ptr<FGizmo> Gizmo;
 	FVisibilityResults VisibilityResults;
 	FPickState PickState;
 
+	const FScenePrimitiveRuntimeData* SelectedPrimitiveData = nullptr;
+
+	std::unique_ptr<FSceneLoader> SceneLoader;
 	bool bInitialized = false;
 };

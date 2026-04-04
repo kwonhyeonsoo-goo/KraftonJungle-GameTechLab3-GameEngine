@@ -141,7 +141,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Editor\EditorConsolePanel.cpp" />
+    <ClCompile Include="Source\Editor\EditorConsolePanel.h" />
+    <ClCompile Include="Source\Editor\EditorControlPanel.cpp" />
+    <ClCompile Include="Source\Editor\EditorControlPanel.h" />
+    <ClCompile Include="Source\Editor\EditorPropertyPanel.cpp" />
+    <ClCompile Include="Source\Editor\EditorPropertyPanel.h" />
+    <ClCompile Include="Source\Editor\EditorUI.cpp" />
     <ClCompile Include="Source\FileSystem\FileSystem.cpp" />
+    <ClCompile Include="Source\Gizmo\Gizmo.cpp" />
+    <ClCompile Include="Source\Gizmo\UnrealEditorStyledGizmo.cpp" />
     <ClCompile Include="Source\Graphics\D3D11\D3D11Utils.cpp" />
     <ClCompile Include="Source\Graphics\D3D11\D3D11RHI.cpp" />
     <ClCompile Include="Source\Camera\Camera.cpp" />
@@ -166,15 +175,25 @@
     <ClCompile Include="Source\Renderer\SceneRenderer.cpp" />
     <ClCompile Include="Source\Scene\BVH\BVH.cpp" />
     <ClCompile Include="Source\Scene\Scene.cpp" />
-    <ClCompile Include="Source\Scene\SceneGraph.cpp" />
+    <ClCompile Include="Source\Scene\SceneLoader.cpp" />
     <ClCompile Include="Source\Stats\StatsSystem.cpp" />
     <ClCompile Include="Source\StaticMesh\ObjParser.cpp" />
     <ClCompile Include="Source\StaticMesh\StaticMesh.cpp" />
     <ClCompile Include="Source\StaticMesh\StaticMeshManager.cpp" />
     <ClCompile Include="Source\Visibility\VisibilitySystem.cpp" />
+    <ClCompile Include="Thirdparty\ImGui\imgui.cpp" />
+    <ClCompile Include="Thirdparty\ImGui\imgui_demo.cpp" />
+    <ClCompile Include="Thirdparty\ImGui\imgui_draw.cpp" />
+    <ClCompile Include="Thirdparty\ImGui\imgui_impl_dx11.cpp" />
+    <ClCompile Include="Thirdparty\ImGui\imgui_impl_win32.cpp" />
+    <ClCompile Include="Thirdparty\ImGui\imgui_tables.cpp" />
+    <ClCompile Include="Thirdparty\ImGui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Editor\EditorUI.h" />
     <ClInclude Include="Source\FileSystem\FileSystem.h" />
+    <ClInclude Include="Source\Gizmo\Gizmo.h" />
+    <ClInclude Include="Source\Gizmo\UnrealEditorStyledGizmo.h" />
     <ClInclude Include="Source\Graphics\D3D11\D3D11Common.h" />
     <ClInclude Include="Source\Graphics\D3D11\D3D11RHI.h" />
     <ClInclude Include="Source\Graphics\D3D11\D3D11Utils.h" />
@@ -204,7 +223,7 @@
     <ClInclude Include="Source\Scene\BVH\BVH.h" />
     <ClInclude Include="Source\Scene\BVH\BVHNode.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
-    <ClInclude Include="Source\Scene\SceneGraph.h" />
+    <ClInclude Include="Source\Scene\SceneLoader.h" />
     <ClInclude Include="Source\Scene\SceneTypes.h" />
     <ClInclude Include="Source\Stats\StatsSystem.h" />
     <ClInclude Include="Source\StaticMesh\ObjParser.h" />
@@ -220,6 +239,14 @@
     <ClInclude Include="Source\Types\StaticArray.h" />
     <ClInclude Include="Source\Types\String.h" />
     <ClInclude Include="Source\Visibility\VisibilitySystem.h" />
+    <ClInclude Include="Thirdparty\ImGui\imconfig.h" />
+    <ClInclude Include="Thirdparty\ImGui\imgui.h" />
+    <ClInclude Include="Thirdparty\ImGui\imgui_impl_dx11.h" />
+    <ClInclude Include="Thirdparty\ImGui\imgui_impl_win32.h" />
+    <ClInclude Include="Thirdparty\ImGui\imgui_internal.h" />
+    <ClInclude Include="Thirdparty\ImGui\imstb_rectpack.h" />
+    <ClInclude Include="Thirdparty\ImGui\imstb_textedit.h" />
+    <ClInclude Include="Thirdparty\ImGui\imstb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shader\Grid\GridPixelShader.hlsl">

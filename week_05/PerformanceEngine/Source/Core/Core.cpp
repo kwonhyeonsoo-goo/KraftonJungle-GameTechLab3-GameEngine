@@ -3,7 +3,7 @@
 #include <array>
 #include <filesystem>
 #include <cmath>
-
+#include "Gizmo/Gizmo.h"
 #include "Camera/Camera.h"
 #include "Graphics/D3D11/D3D11RHI.h"
 #include "Grid/Grid.h"
@@ -15,6 +15,9 @@
 #include "Visibility/VisibilitySystem.h"
 #include "FileSystem/FileSystem.h"
 #include "Scene/SceneGraph.h"
+#include "Editor/EditorUI.h"
+#include "Thirdparty/ImGui/imgui.h"
+#include "Scene/SceneLoader.h"
 #include <algorithm>
 namespace
 {
@@ -97,7 +100,8 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 	PickingSystem = std::make_unique<FPickingSystem>();
 	StatsSystem = std::make_unique<FStatsSystem>();
 	SceneGraph = std::make_unique<FSceneGraph>();
-
+	SceneLoader = std::make_unique<FSceneLoader>();
+	Gizmo = std::make_unique<FGizmo>();
 	if (!Input || !Camera || !RHI || !Scene || !SceneRenderer || !HudRenderer || !VisibilitySystem || !PickingSystem || !StatsSystem)
 	{
 		Release();
@@ -122,6 +126,9 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 		Release();
 		return false;
 	}
+
+	EditorUI = std::make_unique<FEditorUI>(this);
+	EditorUI->Initialize(Args.Hwnd, RHI->GetDevice(), RHI->GetDeviceContext());
 
 	const FSceneCameraInitData& InitialCamera = Scene->GetInitialCamera();
 	Camera->SetTransform(InitialCamera.Transform);
@@ -168,6 +175,13 @@ void FCore::Tick()
 
 	//1.Frumstum culling
 	VisibilitySystem->Build(*Scene, *Camera, VisibilityResults);
+	FMatrix* SelectedMatrixPtr = nullptr;
+	if (PickState.bHit && PickState.SelectedPrimitiveIndex >= 0 && PickState.SelectedPrimitiveIndex < Scene->GetPrimitiveRuntimeData().size())
+	{
+		SelectedMatrixPtr = const_cast<FMatrix*>(&Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex].WorldMatrix);
+	}
+	ImGuiIO& io = ImGui::GetIO();
+	FRay MouseRay = FPickingSystem::BuildPickRay(*Camera, Input->GetMouseX(), Input->GetMouseY(), RHI->GetViewportWidth(), RHI->GetViewportHeight());
 
 	if (Input->IsMouseButtonPressed(FInput::MOUSE_LEFT))
 	{
@@ -180,12 +194,57 @@ void FCore::Tick()
 			RHI->GetViewportWidth(),
 			RHI->GetViewportHeight(),
 			*SceneGraph,
+			Gizmo.get(),
+			SelectedMatrixPtr, 
+
 			PickState);
 		StatsSystem->RecordPickEvent(PickState);
+		if (PickState.bHitGizmo && SelectedMatrixPtr)
+		{
+			Gizmo->BeginDrag(SelectedMatrixPtr, Camera.get(), MouseRay, Input->GetMouseX(), Input->GetMouseY());
+		}
+		if (PickState.bHit)
+		{
+			SelectedPrimitiveData = Scene->GetPrimitiveRuntimeDataById(PickState.SelectedPrimitiveId);
+		}
+		else
+		{
+			SelectedPrimitiveData = nullptr;
+		}
+	}
+	else if (Input->IsMouseButtonDown(FInput::MOUSE_LEFT))
+	{
+		if (Gizmo->IsDragging() && SelectedMatrixPtr)
+		{
+			Gizmo->UpdateDrag(SelectedMatrixPtr, Camera.get(), MouseRay, Input->GetMouseX(), Input->GetMouseY());
+		}
+	}
+	else if (Input->IsMouseButtonReleased(FInput::MOUSE_LEFT))
+	{
+		Gizmo->EndDrag();
+	}
+	else
+	{
+
+		Gizmo->UpdateHover(SelectedMatrixPtr, Camera.get(), MouseRay);
 	}
 
 	StatsSystem->ApplyPickState(PickState);
 
+	// 3. 기즈모 모드 변경 단축키 (W: 이동, E: 회전, R: 스케일, Q: 로컬/월드 토글)
+	if (Input->IsKeyPressed('W')) Gizmo->SetMode(EGizmoMode::Location);
+	if (Input->IsKeyPressed('E')) Gizmo->SetMode(EGizmoMode::Rotation);
+	if (Input->IsKeyPressed('R')) Gizmo->SetMode(EGizmoMode::Scale);
+	if (Input->IsKeyPressed('Q')) Gizmo->ToggleCoordinateSpace();
+	StatsSystem->ApplyPickState(PickState);
+	if (Input->IsKeyPressed('O'))
+	{
+		std::wstring SelectedPath;
+		if (SceneLoader->OpenSceneFileDialog(SelectedPath))
+		{
+			SceneLoader->LoadScene(SelectedPath, Scene.get(), RHI.get(), Camera.get(), VisibilitySystem.get(), PickingSystem.get());
+		}
+	}
 	D3D11_MAPPED_SUBRESOURCE MappedResource = {};
 	if (SUCCEEDED(RHI->GetDeviceContext()->Map(RHI->InstanceBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
 	{
@@ -215,8 +274,14 @@ void FCore::Tick()
 	{
 		Grid->Render(*RHI, *Camera);
 	}
-
+	if (Gizmo && PickState.bHit && SelectedMatrixPtr)
+	{
+		Gizmo->Render(*RHI, *Camera, *SelectedMatrixPtr);
+	}
 	HudRenderer->Render(*RHI, *Camera, *Scene, *StatsSystem, PickState);
+
+	EditorUI->Render();
+
 	EndFrame();
 
 	StatsSystem->EndFrame();
@@ -254,6 +319,12 @@ void FCore::HandleResize(int32 Width, int32 Height)
 
 void FCore::Release()
 {
+	if (EditorUI)
+	{
+		EditorUI->Shutdown();
+		EditorUI.reset();
+	}
+
 	if (Grid)
 	{
 		Grid->Release();
@@ -323,16 +394,17 @@ void FCore::EndFrame()
 
 bool FCore::LoadDefaultScene()
 {
-	if (!Scene || !RHI)
-	{
-		return false;
-	}
+	if (!Scene || !RHI || !SceneLoader) return false;
 
-	const std::wstring ScenePath = FFileSystem::FindDefaultScenePath();// FindDefaultScenePath();
-	if (ScenePath.empty())
-	{
-		return false;
-	}
+	const std::filesystem::path ScenePath = FFileSystem::FindDefaultScenePath();
+	if (ScenePath.empty()) return false;
 
-	return Scene->LoadFromFile(RHI->GetDevice(), RHI->GetDeviceContext(), ScenePath);
+	return SceneLoader->LoadScene(
+		ScenePath.wstring(),
+		Scene.get(),
+		RHI.get(),
+		Camera.get(),
+		VisibilitySystem.get(),
+		PickingSystem.get()
+	);
 }
