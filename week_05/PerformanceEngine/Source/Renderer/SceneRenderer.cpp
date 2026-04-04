@@ -50,6 +50,7 @@ namespace
 struct alignas(16) FFrameConstants
 {
 	FMatrix ViewProjection = FMatrix::Identity;
+	FVector2 RenderTargetSize = { 1.0f, 1.0f };
 };
 
 struct alignas(16) FObjectConstants
@@ -288,6 +289,15 @@ void FSceneRenderer::Render(
 		return;
 	}
 
+	D3D11_MAPPED_SUBRESOURCE MappedResource = {};
+	HRESULT hr = InRHI.GetDeviceContext()->Map(InRHI.StagingBuffer.Get(), 0, D3D11_MAP_READ, 0, &MappedResource);
+
+	uint32* LastFrameVisibility = nullptr;
+	if (SUCCEEDED(hr))
+	{
+		LastFrameVisibility = static_cast<uint32*>(MappedResource.pData);
+	}
+
 	ID3D11RenderTargetView* RenderTargets[] = { InRHI.GetBackBufferRTV() };
 	const D3D11_VIEWPORT Viewport = InRHI.GetViewport();
 	DeviceContext->OMSetRenderTargets(1, RenderTargets, InRHI.GetDepthStencilView());
@@ -306,6 +316,7 @@ void FSceneRenderer::Render(
 
 	FFrameConstants FrameConstants = {};
 	FrameConstants.ViewProjection = InCamera.GetViewMatrix() * InCamera.GetProjectionMatrix();
+	FrameConstants.RenderTargetSize = { static_cast<float>(InRHI.GetViewportWidth()), static_cast<float>(InRHI.GetViewportHeight()) };
 	D3D11Utils::UpdateDynamicBuffer(DeviceContext, Resources->FrameConstantBuffer.Get(), FrameConstants);
 
 	ID3D11Buffer* VertexConstantBuffers[] = { Resources->FrameConstantBuffer.Get(), Resources->ObjectConstantBuffer.Get() };
@@ -325,6 +336,15 @@ void FSceneRenderer::Render(
 		if (PrimitiveIndex >= PrimitiveRuntimeData.size())
 		{
 			continue;
+		}
+		if (LastFrameVisibility)
+		{
+			uint32 IsVisible = LastFrameVisibility[PrimitiveIndex];
+
+			if (IsVisible == 0)
+			{
+				continue;
+			}
 		}
 
 		const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
@@ -377,4 +397,60 @@ void FSceneRenderer::Render(
 			DeviceContext->DrawIndexed(Section.IndexCount, Section.IndexStart, 0);
 		}
 	}
+
+	if (LastFrameVisibility)
+	{
+		InRHI.GetDeviceContext()->Unmap(InRHI.StagingBuffer.Get(), 0);
+	}
+
+	ID3D11RenderTargetView* NullRTVs[] = { nullptr };
+	DeviceContext->OMSetRenderTargets(1, NullRTVs, nullptr);
+
+	ID3D11ShaderResourceView* DSSRV = InRHI.GetDepthStencilSRV();
+
+	InRHI.GetDeviceContext()->CSSetShader(InRHI.HiZCopyDepthCS.Get(), nullptr, 0);
+	InRHI.GetDeviceContext()->CSSetShaderResources(0, 1, &DSSRV);
+	InRHI.GetDeviceContext()->CSSetUnorderedAccessViews(0, 1, InRHI.HiZDepthUAVs[0].GetAddressOf(), nullptr);
+
+	InRHI.GetDeviceContext()->Dispatch(64, 64, 1);
+
+	ID3D11ShaderResourceView* nullSRV = nullptr;
+	ID3D11UnorderedAccessView* nullUAV = nullptr;
+	InRHI.GetDeviceContext()->CSSetShaderResources(0, 1, &nullSRV);
+	InRHI.GetDeviceContext()->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
+
+	InRHI.GetDeviceContext()->CSSetShader(InRHI.HiZBuildMipsCS.Get(), nullptr, 0);
+
+	for (UINT i = 1; i <= 10; ++i)
+	{
+		InRHI.GetDeviceContext()->CSSetShaderResources(0, 1, InRHI.HiZDepthSRVs[i - 1].GetAddressOf());
+		InRHI.GetDeviceContext()->CSSetUnorderedAccessViews(0, 1, InRHI.HiZDepthUAVs[i].GetAddressOf(), nullptr);
+
+		UINT mipSize = std::max(1u, 1024u >> i);
+		UINT dispatchCount = (UINT)std::ceil(mipSize / 16.0f);
+		InRHI.GetDeviceContext()->Dispatch(dispatchCount, dispatchCount, 1);
+
+		InRHI.GetDeviceContext()->CSSetShaderResources(0, 1, &nullSRV);
+		InRHI.GetDeviceContext()->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
+	}
+
+	InRHI.GetDeviceContext()->CSSetShader(InRHI.HiZCullCS.Get(), nullptr, 0);
+
+	ID3D11ShaderResourceView* SRVs[] = { InRHI.InstanceSRV.Get(), InRHI.HiZFullSRV.Get() };
+	DeviceContext->CSSetShaderResources(0, 2, SRVs);
+
+	DeviceContext->CSSetConstantBuffers(0, 1, Resources->FrameConstantBuffer.GetAddressOf()); //
+
+	ID3D11SamplerState* samplers[] = { InRHI.LinearSampler.Get() };
+	DeviceContext->CSSetSamplers(0, 1, samplers);
+
+	DeviceContext->CSSetUnorderedAccessViews(0, 1, InRHI.VisibilityUAV.GetAddressOf(), nullptr);
+
+	InRHI.GetDeviceContext()->Dispatch(static_cast<UINT>(std::ceil(50000 / 64.0f)), 1, 1);
+
+	ID3D11ShaderResourceView* nullSRVs[] = { nullptr, nullptr };
+	DeviceContext->CSSetShaderResources(0, 2, nullSRVs);
+	DeviceContext->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
+
+	InRHI.GetDeviceContext()->CopyResource(InRHI.StagingBuffer.Get(), InRHI.VisibilityBuffer.Get());
 }

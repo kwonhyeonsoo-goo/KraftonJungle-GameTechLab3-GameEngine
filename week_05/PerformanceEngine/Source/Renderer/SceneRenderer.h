@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "Graphics/D3D11/D3D11Common.h"
+#include "Types/PlatformTypes.h"
 
 class FCamera;
 class FD3D11RHI;

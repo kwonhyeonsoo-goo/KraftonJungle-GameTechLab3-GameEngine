@@ -41,9 +41,6 @@
     <ClCompile Include="Source\Scene\Scene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Object\Object.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\StaticMesh\StaticMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -151,9 +148,6 @@
     <ClInclude Include="Source\Scene\Scene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Object\Object.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\StaticMesh\StaticMesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -226,5 +220,10 @@
       <Filter>Source Files</Filter>
     </None>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shader\CopyDepth.hlsl" />
+    <FxCompile Include="Shader\Pyramid_CS.hlsl" />
+    <FxCompile Include="Shader\Culling_CS.hlsl" />
   </ItemGroup>
 </Project>
