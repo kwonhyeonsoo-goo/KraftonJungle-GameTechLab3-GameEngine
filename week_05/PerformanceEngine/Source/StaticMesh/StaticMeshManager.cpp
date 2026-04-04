@@ -6,7 +6,7 @@
 
 #include "StaticMesh/ObjParser.h"
 #include "StaticMesh/StaticMesh.h"
-
+#include "FileSystem/FileSystem.h"
 namespace
 {
 	std::string ToLowerCopy(std::string InValue)
@@ -19,27 +19,33 @@ namespace
 	}
 }
 
-FString FStaticMeshManager::BuildAssetKey(const std::filesystem::path& InAssetPath)
+FString FStaticMeshManager::BuildAssetKey(const std::wstring& InAssetPath)
 {
 	if (InAssetPath.empty())
 	{
 		return {};
 	}
 
-	return std::filesystem::absolute(InAssetPath).lexically_normal().generic_string();
+	std::wstring NormalPath = FFileSystem::NormalizePath(FFileSystem::GetAbsolutePath(InAssetPath));
+	int size_needed = WideCharToMultiByte(CP_UTF8, 0, NormalPath.c_str(), (int)NormalPath.length(), NULL, 0, NULL, NULL);
+
+	std::string utf8Str(size_needed, 0);
+	WideCharToMultiByte(CP_UTF8, 0, NormalPath.c_str(), (int)NormalPath.length(), &utf8Str[0], size_needed, NULL, NULL);
+
+	return FString(utf8Str.c_str());
 }
 
 std::shared_ptr<FStaticMesh> FStaticMeshManager::LoadStaticMesh(
 	ID3D11Device* InDevice,
 	ID3D11DeviceContext* InDeviceContext,
-	const std::filesystem::path& InAssetPath)
+	const std::wstring& InAssetPath)
 {
 	if (InDevice == nullptr || InDeviceContext == nullptr || InAssetPath.empty())
 	{
 		return {};
 	}
 
-	const std::filesystem::path NormalizedPath = std::filesystem::absolute(InAssetPath).lexically_normal();
+	const std::wstring NormalizedPath = FFileSystem::NormalizePath(FFileSystem::GetAbsolutePath(InAssetPath));
 	const FString MeshCacheKey = BuildAssetKey(NormalizedPath);
 
 	const auto ExistingMeshIt = MeshCache.find(MeshCacheKey);
@@ -48,10 +54,11 @@ std::shared_ptr<FStaticMesh> FStaticMeshManager::LoadStaticMesh(
 		return ExistingMeshIt->second;
 	}
 
-	const std::string Extension = ToLowerCopy(NormalizedPath.extension().string());
+	const std::wstring ExtensionW = FFileSystem::GetExtension(NormalizedPath);
+	/*const std::string Extension = ToLowerCopy(NormalizedPath.extension().string());*/
 
 	FStaticMeshSourceData SourceData;
-	if (Extension == ".obj")
+	if (ExtensionW == L".obj")
 	{
 		if (!FObjParser::Parse(NormalizedPath, SourceData))
 		{

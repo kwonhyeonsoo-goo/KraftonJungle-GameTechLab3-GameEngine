@@ -297,7 +297,7 @@ bool FCore::LoadDefaultScene()
 		return false;
 	}
 
-	const std::filesystem::path ScenePath = FFileSystem::FindDefaultScenePath();// FindDefaultScenePath();
+	const std::wstring ScenePath = FFileSystem::FindDefaultScenePath();// FindDefaultScenePath();
 	if (ScenePath.empty())
 	{
 		return false;

@@ -10,7 +10,7 @@
 class FScene
 {
 public:
-	bool LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, const std::filesystem::path& InSceneFilePath);
+	bool LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, const std::wstring& InSceneFilePath);
 	void Release();
 
 	const TArray<FRenderItem>& GetRenderItems() const { return RenderItems; }
