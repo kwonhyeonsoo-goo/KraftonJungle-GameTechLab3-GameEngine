@@ -2,6 +2,7 @@
 
 #include <array>
 #include <filesystem>
+#include <cmath>
 
 #include "Camera/Camera.h"
 #include "Graphics/D3D11/D3D11RHI.h"
@@ -175,6 +176,27 @@ void FCore::Tick()
 	}
 
 	StatsSystem->ApplyPickState(PickState);
+
+	D3D11_MAPPED_SUBRESOURCE MappedResource = {};
+	if (SUCCEEDED(RHI->GetDeviceContext()->Map(RHI->InstanceBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
+	{
+		FInstanceData* InstanceData = static_cast<FInstanceData*>(MappedResource.pData);
+		for (int i = 0; i < 50000; ++i)
+		{
+			DirectX::XMStoreFloat4x4(&InstanceData[i].WorldMatrix, Scene->GetPrimitiveRuntimeData()[i].WorldMatrix.ToXMMatrix());
+			InstanceData[i].Center = {
+				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.X + Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.X) * 0.5f,
+				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.Y + Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.Y) * 0.5f,
+				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.Z + Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.Z) * 0.5f
+			};
+			InstanceData[i].Extents = {
+				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.X - Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.X) * 0.5f,
+				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.Y - Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.Y) * 0.5f,
+				(Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMax.Z - Scene->GetPrimitiveRuntimeData()[i].WorldBoundsMin.Z) * 0.5f
+			};
+		}
+		RHI->GetDeviceContext()->Unmap(RHI->InstanceBuffer.Get(), 0);
+	}
 
 	BeginFrame();
 	SceneRenderer->Render(*RHI, *Scene, *Camera, VisibilityResults, PickState);

@@ -1,5 +1,6 @@
 #include "D3D11RHI.h"
 
+#include <d3dcompiler.h>
 #include <algorithm>
 #include <sstream>
 #include <vector>
@@ -182,7 +183,7 @@ bool FD3D11RHI::Initialize(HWND InWindowHandle)
 		D3D_FEATURE_LEVEL_10_0,
 	};
 
-	D3D_FEATURE_LEVEL CreatedFeatureLevel = D3D_FEATURE_LEVEL_11_0;
+	D3D_FEATURE_LEVEL CreatedFeatureLevel = D3D_FEATURE_LEVEL_11_1;
 
 	auto CreateDeviceAndSwapChain = [&](UINT InFlags, const D3D_FEATURE_LEVEL* InFeatureLevels, UINT InFeatureLevelCount)
 	{
@@ -320,6 +321,18 @@ bool FD3D11RHI::Initialize(HWND InWindowHandle)
 		return false;
 	}
 
+	if (!CreateComputeShaders())
+	{
+		Shutdown();
+		return false;
+	}
+
+	if (!CreateVisibilityBuffer())
+	{
+		Shutdown();
+		return false;
+	}
+
 	BindBackBuffer();
 	return true;
 }
@@ -333,6 +346,8 @@ void FD3D11RHI::Shutdown()
 		DeviceContext->Flush();
 	}
 
+	ReleaseVisibilityBuffer();
+	ReleaseComputeShaders();
 	ReleaseBackBufferResources();
 	SwapChain.Reset();
 	DeviceContext.Reset();
@@ -430,11 +445,11 @@ bool FD3D11RHI::CreateBackBufferResources()
 	DepthStencilDesc.Height = static_cast<UINT>(ViewportHeight);
 	DepthStencilDesc.MipLevels = 1;
 	DepthStencilDesc.ArraySize = 1;
-	DepthStencilDesc.Format = DepthStencilFormat;
+	DepthStencilDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
 	DepthStencilDesc.SampleDesc.Count = 1;
 	DepthStencilDesc.SampleDesc.Quality = 0;
 	DepthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
-	DepthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	DepthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 
 	Result = Device->CreateTexture2D(&DepthStencilDesc, nullptr, DepthStencilBuffer.GetAddressOf());
 	if (FAILED(Result))
@@ -443,11 +458,63 @@ bool FD3D11RHI::CreateBackBufferResources()
 		return false;
 	}
 
-	Result = Device->CreateDepthStencilView(DepthStencilBuffer.Get(), nullptr, DepthStencilView.GetAddressOf());
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	Result = Device->CreateDepthStencilView(DepthStencilBuffer.Get(), &dsvDesc, DepthStencilView.GetAddressOf());
+
 	if (FAILED(Result))
 	{
 		ReleaseBackBufferResources();
 		return false;
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC mainDepthSRVDesc = {};
+	mainDepthSRVDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	mainDepthSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	mainDepthSRVDesc.Texture2D.MipLevels = 1;
+	Device->CreateShaderResourceView(DepthStencilBuffer.Get(), &mainDepthSRVDesc, DepthStencilSRV.GetAddressOf());
+
+	D3D11_TEXTURE2D_DESC HiZDepthDesc = {};
+	HiZDepthDesc.Width = 1024;
+	HiZDepthDesc.Height = 1024;
+	HiZDepthDesc.MipLevels = 11;
+	HiZDepthDesc.ArraySize = 1;
+	HiZDepthDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	HiZDepthDesc.SampleDesc.Count = 1;
+	HiZDepthDesc.Usage = D3D11_USAGE_DEFAULT;
+	HiZDepthDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+	HiZDepthDesc.CPUAccessFlags = 0;
+	HiZDepthDesc.MiscFlags = 0;
+
+	Result = Device->CreateTexture2D(&HiZDepthDesc, nullptr, HiZDepthTexture.GetAddressOf());
+
+	{
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.MipLevels = 11;
+		Device->CreateShaderResourceView(HiZDepthTexture.Get(), &srvDesc, HiZFullSRV.GetAddressOf());
+	}
+
+	HiZDepthSRVs.resize(11);
+	HiZDepthUAVs.resize(11);
+
+	for (UINT i = 0; i < 11; ++i)
+	{
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MostDetailedMip = i;
+		srvDesc.Texture2D.MipLevels = 1;
+		Device->CreateShaderResourceView(HiZDepthTexture.Get(), &srvDesc, HiZDepthSRVs[i].GetAddressOf());
+
+		D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+		uavDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+		uavDesc.Texture2D.MipSlice = i;
+		Device->CreateUnorderedAccessView(HiZDepthTexture.Get(), &uavDesc, HiZDepthUAVs[i].GetAddressOf());
 	}
 
 	return true;
@@ -459,6 +526,98 @@ void FD3D11RHI::ReleaseBackBufferResources()
 	DepthStencilBuffer.Reset();
 	BackBufferRTV.Reset();
 	BackBufferTexture.Reset();
+}
+
+bool FD3D11RHI::CreateComputeShaders()
+{
+	ID3DBlob* ShaderBlob = nullptr;
+	ID3DBlob* ErrorBlob = nullptr;
+
+	D3DCompileFromFile(L"Shader/CopyDepth.hlsl", nullptr, nullptr, "main", "cs_5_0", 0, 0, &ShaderBlob, &ErrorBlob);
+	Device->CreateComputeShader(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), nullptr, HiZCopyDepthCS.GetAddressOf());
+
+	D3DCompileFromFile(L"Shader/Pyramid_CS.hlsl", nullptr, nullptr, "main", "cs_5_0", 0, 0, &ShaderBlob, nullptr);
+	Device->CreateComputeShader(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), nullptr, HiZBuildMipsCS.GetAddressOf());
+
+	D3DCompileFromFile(L"Shader/Culling_CS.hlsl", nullptr, nullptr, "main", "cs_5_0", 0, 0, &ShaderBlob, nullptr);
+	Device->CreateComputeShader(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), nullptr, HiZCullCS.GetAddressOf());
+
+	ShaderBlob->Release();
+
+	D3D11_BUFFER_DESC desc = {};
+	desc.ByteWidth = sizeof(FInstanceData) * 50000;
+	desc.Usage = D3D11_USAGE_DYNAMIC;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	desc.StructureByteStride = sizeof(FInstanceData);
+	Device->CreateBuffer(&desc, nullptr, InstanceBuffer.GetAddressOf());
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	srvDesc.Buffer.FirstElement = 0;
+	srvDesc.Buffer.NumElements = 50000;
+	Device->CreateShaderResourceView(InstanceBuffer.Get(), &srvDesc, InstanceSRV.GetAddressOf());
+
+	return true;
+}
+
+void FD3D11RHI::ReleaseComputeShaders()
+{
+	HiZCopyDepthCS.Reset();
+	HiZBuildMipsCS.Reset();
+}
+
+bool FD3D11RHI::CreateVisibilityBuffer()
+{
+	D3D11_BUFFER_DESC desc = {};
+	desc.ByteWidth = sizeof(uint32) * 50000;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	desc.StructureByteStride = sizeof(uint32);
+
+	Device->CreateBuffer(&desc, nullptr, VisibilityBuffer.GetAddressOf());
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+	uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+	uavDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+	uavDesc.Buffer.FirstElement = 0;
+	uavDesc.Buffer.NumElements = 50000;
+
+	Device->CreateUnorderedAccessView(VisibilityBuffer.Get(), &uavDesc, VisibilityUAV.GetAddressOf());
+
+	D3D11_BUFFER_DESC stagingDesc = {};
+	stagingDesc.ByteWidth = sizeof(uint32) * 50000;
+	stagingDesc.Usage = D3D11_USAGE_STAGING;
+	stagingDesc.BindFlags = 0;
+	stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	stagingDesc.MiscFlags = 0;
+
+	Device->CreateBuffer(&stagingDesc, nullptr, StagingBuffer.GetAddressOf());
+	
+	D3D11_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+	samplerDesc.BorderColor[0] = 0;
+	samplerDesc.BorderColor[1] = 0;
+	samplerDesc.BorderColor[2] = 0;
+	samplerDesc.BorderColor[3] = 0;
+	Device->CreateSamplerState(&samplerDesc, PointSampler.GetAddressOf());
+
+	return true;
+}
+
+void FD3D11RHI::ReleaseVisibilityBuffer()
+{
+	PointSampler.Reset();
+	VisibilityUAV.Reset();
+	VisibilityBuffer.Reset();
+	StagingBuffer.Reset();
 }
 
 void FD3D11RHI::BindBackBuffer()

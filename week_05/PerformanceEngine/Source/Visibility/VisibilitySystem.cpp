@@ -31,11 +31,9 @@ void FVisibilitySystem::Build(const FScene& InScene, const FCamera& InCamera, FV
 	}
 
 	OutResults.VisiblePrimitiveIndices.clear();
-	OutResults.VisiblePrimitiveIndices.reserve(RenderItems.size());
+	OutResults.VisiblePrimitiveIndices.reserve(InScene.GetPrimitiveCount());
 
-	CachedFrustum = BuildFrustum(InCamera);
-
-	for (uint32 PrimitiveIndex = 0; PrimitiveIndex < static_cast<uint32>(RenderItems.size()); ++PrimitiveIndex)
+	for (uint32 PrimitiveIndex = 0; PrimitiveIndex < static_cast<uint32>(InScene.GetPrimitiveCount()); ++PrimitiveIndex)
 	{
 		const FRenderItem& Item = RenderItems[PrimitiveIndex];
 
