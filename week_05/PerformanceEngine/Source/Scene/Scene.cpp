@@ -405,3 +405,14 @@ void FScene::Release()
 	SceneBoundsMin = FVector::ZeroVector;
 	SceneBoundsMax = FVector::ZeroVector;
 }
+
+const FScenePrimitiveRuntimeData* FScene::GetPrimitiveRuntimeDataById(int32 PrimitiveId) const
+{
+	const FScenePrimitiveRuntimeData* Data = &PrimitiveRuntimeData[PrimitiveId];
+
+	if (Data)
+	{
+		return Data;
+	}
+	return nullptr;
+}
