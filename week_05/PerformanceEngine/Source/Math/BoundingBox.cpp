@@ -18,6 +18,8 @@ bool FBoundingBox::IntersectsRay(const FRay& Ray) const
     float tMin = 0.0f;
     float tMax = std::numeric_limits<float>::max();
 
+
+
     for (int32 i = 0; i < 3; i++)
     {
         float Origin = Ray.Origin[i];
