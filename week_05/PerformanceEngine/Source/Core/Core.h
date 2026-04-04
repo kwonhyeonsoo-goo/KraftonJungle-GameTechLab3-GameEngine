@@ -19,6 +19,7 @@ class FSceneRenderer;
 class FStatsSystem;
 class FVisibilitySystem;
 class FWindowsWindow;
+class FSceneGraph;
 
 struct FCoreInitArgs
 {
@@ -63,7 +64,7 @@ private:
 	std::unique_ptr<FPickingSystem> PickingSystem;
 	std::unique_ptr<FStatsSystem> StatsSystem;
 	std::unique_ptr<FGrid> Grid;
-
+	std::unique_ptr<FSceneGraph> SceneGraph;
 	FVisibilityResults VisibilityResults;
 	FPickState PickState;
 

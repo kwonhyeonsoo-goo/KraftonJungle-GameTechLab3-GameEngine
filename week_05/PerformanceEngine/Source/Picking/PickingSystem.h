@@ -8,6 +8,7 @@
 class FCamera;
 class FScene;
 struct FVisibilityResults;
+class FSceneGraph;
 
 struct FPickState
 {
@@ -31,5 +32,6 @@ public:
 		POINT InMousePositionClient,
 		int32 InViewportWidth,
 		int32 InViewportHeight,
+		const FSceneGraph& InSceneGraph,
 		FPickState& InOutPickState) const;
 };

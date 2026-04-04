@@ -14,7 +14,7 @@
 #include "Stats/StatsSystem.h"
 #include "Visibility/VisibilitySystem.h"
 #include "FileSystem/FileSystem.h"
-
+#include "Scene/SceneGraph.h"
 #include <algorithm>
 namespace
 {
@@ -96,6 +96,7 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 	VisibilitySystem = std::make_unique<FVisibilitySystem>();
 	PickingSystem = std::make_unique<FPickingSystem>();
 	StatsSystem = std::make_unique<FStatsSystem>();
+	SceneGraph = std::make_unique<FSceneGraph>();
 
 	if (!Input || !Camera || !RHI || !Scene || !SceneRenderer || !HudRenderer || !VisibilitySystem || !PickingSystem || !StatsSystem)
 	{
@@ -155,7 +156,7 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 	bInitialized = true;
 
 	VisibilitySystem->BuildBVH(*Scene);
-
+	SceneGraph->Build(*Scene);
 	return true;
 }
 
@@ -165,10 +166,12 @@ void FCore::Tick()
 	Input->Tick();
 	Camera->Update(*Input, static_cast<float>(StatsSystem->GetFrameTimeMs() * 0.001));
 
+	//1.Frumstum culling
 	VisibilitySystem->Build(*Scene, *Camera, VisibilityResults);
 
 	if (Input->IsMouseButtonPressed(FInput::MOUSE_LEFT))
 	{
+
 		PickingSystem->UpdatePick(
 			*Scene,
 			*Camera,
@@ -176,6 +179,7 @@ void FCore::Tick()
 			Input->GetMousePositionClient(),
 			RHI->GetViewportWidth(),
 			RHI->GetViewportHeight(),
+			*SceneGraph,
 			PickState);
 		StatsSystem->RecordPickEvent(PickState);
 	}

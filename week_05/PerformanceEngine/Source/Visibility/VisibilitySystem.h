@@ -25,6 +25,7 @@ public:
 
 	FBVH& GetBVH() { return BVH; }
 
+
 private:
 	FFrustum ViewFrustum;
 	FBVH BVH;
