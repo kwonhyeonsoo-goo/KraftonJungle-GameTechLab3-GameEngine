@@ -119,8 +119,15 @@ void FWindowsApplication::ShowWindow() const
 	}
 }
 
+extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+
 LRESULT FWindowsApplication::StaticWndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
+	if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
+	{
+		return true;
+	}
+
 	auto It = WindowMap.find(hWnd);
 	if (It != WindowMap.end())
 	{
