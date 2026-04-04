@@ -2,9 +2,26 @@
 
 #include "Types/Array.h"
 #include "Types/PlatformTypes.h"
+#include "Math/Vector.h"
 
 class FCamera;
 class FScene;
+
+struct FPlane
+{
+	FVector Normal = FVector::ForwardVector;
+	float Distance = 0.0f;
+
+	float GetSignedDistanceToPoint(const FVector& Point) const
+	{
+		return FVector::DotProduct(Normal, Point) + Distance;
+	}
+};
+
+struct FFrustum
+{
+	FPlane Planes[6];
+};
 
 struct FVisibilityResults
 {
@@ -19,5 +36,26 @@ public:
 	void Build(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults);
 
 private:
+	FFrustum BuildFrustum(const FCamera& InCamera) const;
+	bool IntersectsAABB(const FFrustum& InFrustum, const FVector& InBoxMin, const FVector& InBoxMax) const;
+	bool HasCameraChanged(const FCamera& InCamera) const;
+	void UpdateCachedCameraState(const FCamera& InCamera);
+
+private:
 	uint64 NextFrameNumber = 1;
+
+	FVisibilityResults CachedResults;
+	FFrustum CachedFrustum;
+
+	FVector CachedCameraPosition = FVector::ZeroVector;
+	FVector CachedCameraForward = FVector::ForwardVector;
+	FVector CachedCameraUp = FVector::UpVector;
+	FVector CachedCameraRight = FVector::RightVector;
+
+	float CachedFOV = 0.0f;
+	float CachedAspect = 0.0f;
+	float CachedNearClip = 0.0f;
+	float CachedFarClip = 0.0f;
+
+	bool bHasCachedVisibility = false;
 };
