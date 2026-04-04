@@ -141,6 +141,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\FileSystem\FileSystem.cpp" />
     <ClCompile Include="Source\Graphics\D3D11\D3D11Utils.cpp" />
     <ClCompile Include="Source\Graphics\D3D11\D3D11RHI.cpp" />
     <ClCompile Include="Source\Camera\Camera.cpp" />
@@ -169,6 +170,7 @@
     <ClCompile Include="Source\Visibility\VisibilitySystem.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\FileSystem\FileSystem.h" />
     <ClInclude Include="Source\Graphics\D3D11\D3D11Common.h" />
     <ClInclude Include="Source\Graphics\D3D11\D3D11RHI.h" />
     <ClInclude Include="Source\Graphics\D3D11\D3D11Utils.h" />
@@ -211,8 +213,12 @@
     <ClInclude Include="Source\Visibility\VisibilitySystem.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shader\Grid\GridPixelShader.hlsl" />
-    <None Include="Shader\Grid\GridVertexShader.hlsl" />
+    <None Include="Shader\Grid\GridPixelShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="Shader\Grid\GridVertexShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

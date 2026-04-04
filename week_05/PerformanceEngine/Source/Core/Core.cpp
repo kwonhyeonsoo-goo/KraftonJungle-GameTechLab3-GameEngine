@@ -12,13 +12,14 @@
 #include "Scene/Scene.h"
 #include "Stats/StatsSystem.h"
 #include "Visibility/VisibilitySystem.h"
+#include "FileSystem/FileSystem.h"
 
 namespace
 {
 	constexpr float DefaultCameraSpeed = 20.0f;
 	constexpr float DefaultCameraSensitivity = 0.12f;
 
-	std::filesystem::path SearchForSceneFrom(const std::filesystem::path& InStartDirectory)
+	/*std::filesystem::path SearchForSceneFrom(const std::filesystem::path& InStartDirectory)
 	{
 		static const std::array<std::filesystem::path, 2> RelativeCandidates =
 		{
@@ -71,7 +72,7 @@ namespace
 		}
 
 		return {};
-	}
+	}*/
 }
 
 FCore::FCore() = default;
@@ -296,7 +297,7 @@ bool FCore::LoadDefaultScene()
 		return false;
 	}
 
-	const std::filesystem::path ScenePath = FindDefaultScenePath();
+	const std::filesystem::path ScenePath = FFileSystem::FindDefaultScenePath();// FindDefaultScenePath();
 	if (ScenePath.empty())
 	{
 		return false;
