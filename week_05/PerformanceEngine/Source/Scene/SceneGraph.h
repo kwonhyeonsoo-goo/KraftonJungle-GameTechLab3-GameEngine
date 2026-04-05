@@ -31,9 +31,7 @@ private:
     void Build(const TArray<FBoundingBox>& ObjectBoxes);
 
     int32 BuildRecursive(const TArray<int32>& Indices, const FBoundingBox& NodeVolume, int32 Depth);
-
-    void PickRecursive(int32 NodeIndex, const FRay& InRay, const TArray<int32>& Candidate, TArray<int32>& OutCandidates, int32& MAX) const;
-
+    void PickRecursive(int32 NodeIndex, const FRay& InRay, const FVector& InvDir,const TArray<bool>& Candidate, TArray<int32>& OutCandidates, float& InOutMaxT) const ;  // float t값 공유
     TArray<FSceneNode> Nodes;
     int32 RootIndex = -1;
 };
