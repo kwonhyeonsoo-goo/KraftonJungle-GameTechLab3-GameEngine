@@ -3,6 +3,36 @@
 #include "Scene/Scene.h"
 #include "Picking/PickingSystem.h"
 #include <limits>
+
+namespace {
+
+    inline bool IntersectRayAabbFast(const FRay& InRay, const FVector& InvDir, const FVector& InMin, const FVector& InMax, float MaxDistance, float& OutDistance)
+    {
+        float tx1 = (InMin.X - InRay.Origin.X) * InvDir.X;
+        float tx2 = (InMax.X - InRay.Origin.X) * InvDir.X;
+        float tmin = std::min(tx1, tx2);
+        float tmax = std::max(tx1, tx2);
+
+        float ty1 = (InMin.Y - InRay.Origin.Y) * InvDir.Y;
+        float ty2 = (InMax.Y - InRay.Origin.Y) * InvDir.Y;
+        tmin = std::max(tmin, std::min(ty1, ty2));
+        tmax = std::min(tmax, std::max(ty1, ty2));
+
+        float tz1 = (InMin.Z - InRay.Origin.Z) * InvDir.Z;
+        float tz2 = (InMax.Z - InRay.Origin.Z) * InvDir.Z;
+        tmin = std::max(tmin, std::min(tz1, tz2));
+        tmax = std::min(tmax, std::max(tz1, tz2));
+
+        if (tmax >= tmin && tmax > 0.0f && tmin < MaxDistance)
+        {
+            // 광선 시작점이 박스 안에 있으면 tmin이 음수일 수 있으므로 0으로 보정
+            OutDistance = std::max(0.0f, tmin);
+            return true;
+        }
+        return false;
+    }
+
+}
 void FSceneGraph::Build(const TArray<FBoundingBox>& ObjectBoxes)
 {
     Nodes.clear();
@@ -47,12 +77,12 @@ void FSceneGraph::Pick(const FRay& InRay, const FVisibilityResults& CandidateVis
     PickRecursive(RootIndex, InRay, CandidateVisibilityResults.VisiblePrimitiveIndices, OutCandidates, max);
 }
 
-void FSceneGraph::PickRecursive(int32 NodeIndex, const FRay& InRay, const TArray<int32>& Candidate, TArray<int32>& OutCandidates, int32& MAX) const
+void FSceneGraph::PickRecursive(int32 NodeIndex, const FRay& InRay, const TArray<int32>& Candidate, TArray<int32>& OutCandidates, int32& InOutMaxT) const
 {
     if (NodeIndex == -1) return;
 
     const FSceneNode& Node = Nodes[NodeIndex];
-
+    float HitT;
     auto DistanceSq3D = [](const FVector& A, const FVector& B)
         {
             float dx = A.X - B.X;
@@ -61,29 +91,19 @@ void FSceneGraph::PickRecursive(int32 NodeIndex, const FRay& InRay, const TArray
             return dx * dx + dy * dy + dz * dz;
         };
 
-    // 레이-AABB 교차 테스트, 안 맞으면 자식 전체 스킵
-    if (!Node.Volume.IntersectsRay(InRay)) return;
-    else if (DistanceSq3D(InRay.Origin, Node.Center) > MAX) {
-        return;
-    }
-    else {
-        MAX = DistanceSq3D(InRay.Origin, Node.Center);
-    }
-    // 리프 노드
-    if (Node.Children.empty())
-    {
-        if (Node.PrimitiveIndex != -1)
-        {
-            auto It = std::find(Candidate.begin(), Candidate.end(), Node.PrimitiveIndex);
-            if (It != Candidate.end())
+    if (!IntersectRayAabbFast(InRay, InRay.Direction, Node.Volume.Min, Node.Volume.Max, InOutMaxT, HitT))
+        return;  // t >= InOutMaxT면 자동 컬링
+
+    if (Node.Children.empty()) {
+        if (Node.PrimitiveIndex != -1) {
+            if (std::find(Candidate.begin(), Candidate.end(), Node.PrimitiveIndex) != Candidate.end())
                 OutCandidates.push_back(Node.PrimitiveIndex);
         }
         return;
     }
 
     for (int32 ChildIndex : Node.Children) {
-        int32 max = std::numeric_limits<int32>::max();
-        PickRecursive(ChildIndex, InRay, Candidate, OutCandidates, max);
+        PickRecursive(ChildIndex, InRay, Candidate, OutCandidates, InOutMaxT);
     }
 }
 
