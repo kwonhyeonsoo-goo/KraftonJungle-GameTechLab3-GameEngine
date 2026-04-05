@@ -68,6 +68,31 @@ namespace
 		return true;
 	}
 
+	inline bool IntersectRayAabbFast(const FRay& InRay, const FVector& InvDir, const FVector& InMin, const FVector& InMax, float MaxDistance, float& OutDistance)
+	{
+		float tx1 = (InMin.X - InRay.Origin.X) * InvDir.X;
+		float tx2 = (InMax.X - InRay.Origin.X) * InvDir.X;
+		float tmin = std::min(tx1, tx2);
+		float tmax = std::max(tx1, tx2);
+
+		float ty1 = (InMin.Y - InRay.Origin.Y) * InvDir.Y;
+		float ty2 = (InMax.Y - InRay.Origin.Y) * InvDir.Y;
+		tmin = std::max(tmin, std::min(ty1, ty2));
+		tmax = std::min(tmax, std::max(ty1, ty2));
+
+		float tz1 = (InMin.Z - InRay.Origin.Z) * InvDir.Z;
+		float tz2 = (InMax.Z - InRay.Origin.Z) * InvDir.Z;
+		tmin = std::max(tmin, std::min(tz1, tz2));
+		tmax = std::min(tmax, std::max(tz1, tz2));
+
+		if (tmax >= tmin && tmax > 0.0f && tmin < MaxDistance)
+		{
+			// 광선 시작점이 박스 안에 있으면 tmin이 음수일 수 있으므로 0으로 보정
+			OutDistance = std::max(0.0f, tmin);
+			return true;
+		}
+		return false;
+	}
 	bool IntersectRayTriangle(
 		const FRay& InRay,
 		const FVector& InA,
@@ -107,52 +132,108 @@ namespace
 		FStaticMesh* StaticMesh = InPrimitiveRuntimeData.StaticMesh;
 		if (StaticMesh == nullptr || !StaticMesh->IsValid()) return false;
 
-		//AABB 거리 기반 Early-Out
-		float BoxDistance = 0.0f;
-		if (!IntersectRayAabb(InRay, InPrimitiveRuntimeData.WorldBounds.Min, InPrimitiveRuntimeData.WorldBounds.Max, BoxDistance)) return false;
-		if (BoxDistance * BoxDistance >= InOutBestHit.DistanceSquared) return false;
-		const TArray<FStaticMeshVertex>& Vertices = StaticMesh->GetVertices();
-		const TArray<uint32>& Indices = StaticMesh->GetIndices();
-		bool bHit = false;
+		// 1. 월드 바운딩 박스 1차 거르기
+		float distance = std::numeric_limits<float>::max();
+		if (!IntersectRayAabb(InRay, InPrimitiveRuntimeData.WorldBounds.Min, InPrimitiveRuntimeData.WorldBounds.Max, distance)) return false;
 
-		//버텍스를 전부 미리 transformposition 해놓기
-		const FMatrix InverseWorld = InPrimitiveRuntimeData.WorldMatrix.GetInverse();
+		const FBVHMesh& BVH = StaticMesh->GetBVH();
+		// 🚨 최적화 1: 반드시 참조(&)로 받아 복사 방지!
+		const TArray<FBVHMeshNode>& Nodes = BVH.GetNodes();
+		if (Nodes.empty()) return false;
+
+		// 2. 광선을 로컬 공간으로 변환
+		const auto XM = InPrimitiveRuntimeData.WorldMatrix.ToXMMatrix();
+		DirectX::XMVECTOR Determinant;
+		const auto WorldToLocalXM = DirectX::XMMatrixInverse(&Determinant, XM);
+
+		auto RayOrigin = DirectX::XMLoadFloat3(reinterpret_cast<const DirectX::XMFLOAT3*>(&InRay.Origin));
+		auto RayDir = DirectX::XMLoadFloat3(reinterpret_cast<const DirectX::XMFLOAT3*>(&InRay.Direction));
+
+		auto LocalOriginXM = DirectX::XMVector3TransformCoord(RayOrigin, WorldToLocalXM);
+		auto LocalDirXM = DirectX::XMVector3TransformNormal(RayDir, WorldToLocalXM);
+		LocalDirXM = DirectX::XMVector3Normalize(LocalDirXM);
+
 		FRay LocalRay;
-		LocalRay.Origin = InverseWorld.TransformPosition(InRay.Origin);
-		LocalRay.Direction = InverseWorld.TransformVector(InRay.Direction).GetSafeNormal();
-		float BestLocalDistance = std::numeric_limits<float>::max();
+		DirectX::XMStoreFloat3(reinterpret_cast<DirectX::XMFLOAT3*>(&LocalRay.Origin), LocalOriginXM);
+		DirectX::XMStoreFloat3(reinterpret_cast<DirectX::XMFLOAT3*>(&LocalRay.Direction), LocalDirXM);
+
+		// 🚨 최적화 2: AABB 검사용 나눗셈(InvDirection)을 1번만 미리 계산 (IEEE 754 0나누기 무한대 성질 이용)
+		FVector InvDir(
+			1.0f / (LocalRay.Direction.X != 0.0f ? LocalRay.Direction.X : 1e-8f),
+			1.0f / (LocalRay.Direction.Y != 0.0f ? LocalRay.Direction.Y : 1e-8f),
+			1.0f / (LocalRay.Direction.Z != 0.0f ? LocalRay.Direction.Z : 1e-8f)
+		);
+
+		bool bHit = false;
+		float ClosestLocalDistance = std::numeric_limits<float>::max();
 		FVector BestLocalHitPosition = FVector::ZeroVector;
 
-		for (size_t IndexOffset = 0; IndexOffset + 2 < Indices.size(); IndexOffset += 3)
+		// 🚨 최적화 3: std::vector 동적 할당 대신 고정 크기 스택 배열 사용
+		int32 Stack[64];
+		int32 StackPtr = 0;
+		Stack[StackPtr++] = 0; // 루트 노드(0번) 푸시
+
+		while (StackPtr > 0)
 		{
-			const uint32 IndexA = Indices[IndexOffset + 0];
-			const uint32 IndexB = Indices[IndexOffset + 1];
-			const uint32 IndexC = Indices[IndexOffset + 2];
-			if (IndexA >= Vertices.size() || IndexB >= Vertices.size() || IndexC >= Vertices.size()) continue;
+			int32 NodeIndex = Stack[--StackPtr];
+			const FBVHMeshNode& Node = Nodes[NodeIndex];
 
-			// 메모리 할당 및 행렬 곱셈 없이 원본 정점을 그대로 사용합니다.
-			const FVector& A = Vertices[IndexA].Position;
-			const FVector& B = Vertices[IndexB].Position;
-			const FVector& C = Vertices[IndexC].Position;
-
-			float HitDistance = 0.0f;
-			FVector HitPosition = FVector::ZeroVector;
-
-			// 백페이스 컬링이 적용된 IntersectRayTriangle 호출
-			if (!IntersectRayTriangle(LocalRay, A, B, C, HitDistance, HitPosition)) continue;
-
-			if (HitDistance < BestLocalDistance)
+			if (Node.IsLeaf())
 			{
-				BestLocalDistance = HitDistance;
-				BestLocalHitPosition = HitPosition;
-				bHit = true;
+				const TArray<Triangle>& Triangles = BVH.GetTriangles();
+				for (int32 i = Node.startIndex; i < Node.endIndex; ++i)
+				{
+					const Triangle& Tri = Triangles[i];
+					float HitDistance = 0.0f;
+					FVector HitPosition = FVector::ZeroVector;
+
+					if (IntersectRayTriangle(LocalRay, Tri.Vertex1, Tri.Vertex2, Tri.Vertex3, HitDistance, HitPosition))
+					{
+						// 🔥 여기서 ClosestLocalDistance가 줄어들면, 
+						// 이후의 AABB 검사에서 더 먼 박스들은 즉시 Culling 됩니다.
+						if (HitDistance < ClosestLocalDistance)
+						{
+							ClosestLocalDistance = HitDistance;
+							BestLocalHitPosition = HitPosition;
+							bHit = true;
+						}
+					}
+				}
+			}
+			else
+			{
+				// 자식 노드가 둘 다 있을 경우의 처리 (Front-to-Back Ordering)
+				float DistL = std::numeric_limits<float>::max();
+				float DistR = std::numeric_limits<float>::max();
+
+				bool bHitL = Node.LeftChild != -1 && IntersectRayAabbFast(LocalRay, InvDir, Nodes[Node.LeftChild].Bounds.Min, Nodes[Node.LeftChild].Bounds.Max, ClosestLocalDistance, DistL);
+				bool bHitR = Node.RightChild != -1 && IntersectRayAabbFast(LocalRay, InvDir, Nodes[Node.RightChild].Bounds.Min, Nodes[Node.RightChild].Bounds.Max, ClosestLocalDistance, DistR);
+
+				if (bHitL && bHitR)
+				{
+					// 거리가 더 먼 쪽을 먼저 Stack에 넣음 (나중에 꺼내게 됨)
+					if (DistL > DistR)
+					{
+						Stack[StackPtr++] = Node.LeftChild;
+						Stack[StackPtr++] = Node.RightChild;
+					}
+					else
+					{
+						Stack[StackPtr++] = Node.RightChild;
+						Stack[StackPtr++] = Node.LeftChild;
+					}
+				}
+				else if (bHitL) Stack[StackPtr++] = Node.LeftChild;
+				else if (bHitR) Stack[StackPtr++] = Node.RightChild;
 			}
 		}
-
-		// 충돌했다면 로컬 충돌점을 다시 월드 공간으로 변환하여 최종 거리 비교
 		if (bHit)
 		{
-			FVector WorldHitPosition = InPrimitiveRuntimeData.WorldMatrix.TransformPosition(BestLocalHitPosition);
+			auto BestLocalHitXM = DirectX::XMLoadFloat3(reinterpret_cast<const DirectX::XMFLOAT3*>(&BestLocalHitPosition));
+			auto WorldHitXM = DirectX::XMVector3TransformCoord(BestLocalHitXM, XM);
+			FVector WorldHitPosition;
+			DirectX::XMStoreFloat3(reinterpret_cast<DirectX::XMFLOAT3*>(&WorldHitPosition), WorldHitXM);
+
 			const float DistanceSquared = FVector::DistSquared(InRay.Origin, WorldHitPosition);
 
 			if (DistanceSquared < InOutBestHit.DistanceSquared)

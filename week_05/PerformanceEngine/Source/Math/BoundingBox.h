@@ -11,6 +11,7 @@ struct FBoundingBox
 	FVector Max;
 
 	void Encapsulate(const FBoundingBox& Other);
+	void Encapsulate(const FVector& Other);
 
 	inline FVector GetCenter() const { return (Min + Max) * 0.5f; }
 	inline FVector GetExtents() const { return (Max - Min) * 0.5f; }
@@ -32,4 +33,6 @@ struct FBoundingBox
 		}
 	}
 	bool IntersectsRay(const FRay& Ray) const;
+
+	bool Contains(const FVector& Center) const;
 };

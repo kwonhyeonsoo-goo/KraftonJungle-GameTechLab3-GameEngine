@@ -8,6 +8,7 @@
 #include "Math/Transform.h"
 #include "Types/PlatformTypes.h"
 #include "Types/String.h"
+#include "StaticMesh/BVH/BVHMesh.h"
 
 class FStaticMesh;
 

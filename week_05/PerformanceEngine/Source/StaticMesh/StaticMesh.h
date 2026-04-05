@@ -9,6 +9,9 @@
 #include "Types/Array.h"
 #include "Types/PlatformTypes.h"
 #include "Types/String.h"
+#include "BVH/BVHMesh.h"
+
+class FBVHMesh;
 
 struct FStaticMeshVertex
 {
@@ -90,7 +93,7 @@ public:
 	const FVector& GetBoundsMax() const { return BoundsMax; }
 	const std::shared_ptr<IStaticMeshSpatialData>& GetSpatialData() const { return SpatialData; }
 	void SetSpatialData(std::shared_ptr<IStaticMeshSpatialData> InSpatialData) { SpatialData = std::move(InSpatialData); }
-
+	const FBVHMesh& GetBVH() { return BVH; }
 	ID3D11ShaderResourceView* GetMaterialTexture(int32 InMaterialIndex) const
 	{
 		if (InMaterialIndex < 0 || static_cast<size_t>(InMaterialIndex) >= Materials.size())
@@ -114,4 +117,7 @@ private:
 
 	FVector BoundsMin = FVector::ZeroVector;
 	FVector BoundsMax = FVector::ZeroVector;
+
+	FBVHMesh BVH;
+
 };

@@ -23,6 +23,25 @@ bool FStaticMesh::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDevi
 	Vertices = std::move(InSourceData.Vertices);
 	Indices = std::move(InSourceData.Indices);
 
+	//BVH 작성
+	int numTriangles = Indices.size() / 3;
+	TArray<Triangle> Triangles;
+	Triangles.resize(numTriangles);
+
+	for (int i = 0; i < numTriangles; ++i)
+	{
+		int indexA = Indices[i * 3 + 0];
+		int indexB = Indices[i * 3 + 1];
+		int indexC = Indices[i * 3 + 2];
+		Triangles[i]= {
+			Vertices[indexA].Position,Vertices[indexB].Position,Vertices[indexC].Position,
+			Vertices[indexA].TexCoord,Vertices[indexB].TexCoord,Vertices[indexC].TexCoord,
+		};
+			
+	}
+	FBoundingBox box = { BoundsMin , BoundsMax };
+	BVH.Build(box, Triangles );
+
 	if (!D3D11Utils::CreateImmutableBuffer(
 			InDevice,
 			static_cast<UINT>(Vertices.size() * sizeof(FStaticMeshVertex)),
