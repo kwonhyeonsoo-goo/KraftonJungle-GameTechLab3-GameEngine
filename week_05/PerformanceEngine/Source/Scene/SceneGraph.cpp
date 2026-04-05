@@ -91,10 +91,6 @@ void FSceneGraph::Build(const TArray<FBoundingBox>& ObjectBoxes)
     Nodes.clear();
     PrimitiveIndexBuffer.clear(); // 🚨 방금 새로 만든 인덱스 버퍼도 꼭 비워줍니다!
 
-    // (VisibleFlags는 VisibilitySystem으로 넘기기로 했다면 여기서 지워도 되지만, 
-    // 일단 현재 구조를 유지한다면 사이즈만 맞춰줍니다)
-    //VisibleFlags.resize(ObjectBoxes.size(), 0);
-
     if (ObjectBoxes.empty()) return;
 
     // 2. 전체 씬 AABB 계산 및 초기 인덱스 배열 생성
@@ -108,9 +104,7 @@ void FSceneGraph::Build(const TArray<FBoundingBox>& ObjectBoxes)
         Indices.push_back(i);
     }
 
-    // 3. 루트 노드부터 재귀 빌드 시작!
-    // 🚨 주의: 이제 BuildRecursive가 오브젝트의 중심점과 AABB를 알기 위해 
-    // ObjectBoxes 배열 원본을 같이 넘겨받아야 합니다!
+    // 3. 루트 노드부터 재귀 빌드 시작
     RootIndex = BuildRecursive(Indices, ObjectBoxes, SceneVolume, 0);
 }
 
@@ -133,11 +127,6 @@ void FSceneGraph::Pick(const FRay& InRay, const FVisibilityResults& CandidateVis
     const auto& Flags = CandidateVisibilityResults.VisibleFlags; // 외부에서 온 플래그
     if (Visible.empty()) return;
 
-    //// 1. VisibleFlags 세팅 (추후 VisibilitySystem으로 이관 강력 권장!)
-    //int32 MaxIdx = *std::max_element(Visible.begin(), Visible.end());
-    //if (MaxIdx >= VisibleFlags.size()) VisibleFlags.resize(MaxIdx + 1, 0);
-    //for (int32 Idx : Visible) VisibleFlags[Idx] = 1;
-
     OutCandidates.reserve(Visible.size());
 
     // 2. InvDir 계산
@@ -148,7 +137,7 @@ void FSceneGraph::Pick(const FRay& InRay, const FVisibilityResults& CandidateVis
     );
     float MaxT = std::numeric_limits<float>::max();
 
-    // 🚨 3. 재귀 함수 제거 -> 로컬 스택을 사용한 Iterative 순회
+    // 
     int32 Stack[128]; // 옥트리 최대 깊이에 맞춰 넉넉하게
     int32 StackPtr = 0;
     Stack[StackPtr++] = RootIndex;
@@ -216,15 +205,12 @@ void FSceneGraph::Pick(const FRay& InRay, const FVisibilityResults& CandidateVis
         }
 
         // 7. 자식들을 스택에 푸시
-        // 배열의 역순으로 푸시해야, 꺼낼 때 가장 가까운 자식(Index 0)부터 꺼내게 됩니다!
         for (int32 i = HitCount - 1; i >= 0; --i)
         {
             Stack[StackPtr++] = ChildHits[i].Index;
         }
     }
 
-    // 8. VisibleFlags 정리
-    //for (int32 Idx : Visible) VisibleFlags[Idx] = 0;
 }
 
 int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const TArray<FBoundingBox>& ObjectBoxes, const FBoundingBox& NodeVolume, int32 Depth)
@@ -238,7 +224,6 @@ int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const TArray<FBo
     int32 GroupIndex = Nodes.size();
     Nodes.push_back(GroupNode);
 
-    // 🚨 1. 리프 노드 용량 증가 (1개가 아니라 16개 이하일 때 멈춤)
     // 트리의 깊이가 얕아져 메모리 점프가 줄어들고 속도가 급상승합니다.
     if (Indices.size() <= 1 || Depth >= 8)
     {

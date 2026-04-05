@@ -18,11 +18,11 @@ struct alignas(32) FSceneNode
     FVector Center;
     int32 Parent = -1;
 
-    // 🚨 기존 TArray<int32> Children 대신 고정 배열 사용 (할당 오버헤드 0)
+    // 대신 고정 배열 사용
     int32 ChildIndices[8];
     int32 ChildCount = 0;
 
-    // 🚨 8-Way SIMD 교차 검사를 위해 자식들의 AABB를 SoA 형태로 캐싱
+    // 8-Way SIMD 교차 검사를 위해 자식들의 AABB를 SoA 형태로 캐싱
     float ChildMinX[8];
     float ChildMinY[8];
     float ChildMinZ[8];
@@ -57,8 +57,7 @@ private:
   
     TArray<FSceneNode> Nodes;
     int32 RootIndex = -1;
-    ///mutable std::vector<uint8_t> VisibleFlags;
-    //모든 리프 노드의 오브젝트 인덱스가 차곡차곡 쌓일 1차원 배열
+
     TArray<int32> PrimitiveIndexBuffer;
 };
 
