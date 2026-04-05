@@ -27,6 +27,8 @@ struct FPickState
 	bool bHit = false;
 	FVector HitWorldPosition = FVector::ZeroVector;
 	double LastPickTimeMs = 0.0;
+	double LastMeshPickTimeMS = 0.0f;
+	double LastWorldPickTimeMs = 0.0f;
 	double TotalPickTimeMs = 0.0;
 	uint64 TotalPickCount = 0;
 

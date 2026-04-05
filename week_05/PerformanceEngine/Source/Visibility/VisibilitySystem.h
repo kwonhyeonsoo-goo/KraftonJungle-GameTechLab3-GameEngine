@@ -13,6 +13,8 @@ struct FVisibilityResults
 {
 	uint64 FrameNumber = 0;
 	TArray<int32> VisiblePrimitiveIndices;
+	// 🚨 피킹 시스템을 위해 새로 추가할 플래그 배열 (Zero-Allocation 용)
+	std::vector<uint8_t> VisibleFlags;
 };
 
 class FVisibilitySystem

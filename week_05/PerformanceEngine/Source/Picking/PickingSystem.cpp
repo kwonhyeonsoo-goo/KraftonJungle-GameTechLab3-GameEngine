@@ -331,6 +331,7 @@ void FPickingSystem::UpdatePick(
 			return; // 기즈모를 클릭했으므로 뒤에 있는 씬 오브젝트 피킹은 건너뜁니다.
 		}
 	}
+	const uint64 WorldPickStartCycles = QueryCycles64();
 
 	//씬 오브젝트 피킹
 	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
@@ -342,6 +343,9 @@ void FPickingSystem::UpdatePick(
 	InSceneGraph.Pick(PickRay, InVisibilityResults, OutIndices);
 
 	//for (uint32 PrimitiveIndex : InVisibilityResults.VisiblePrimitiveIndices)
+	const uint64 WorldPickEndCycles = QueryCycles64();
+	const uint64 MeshPickStartCycles = QueryCycles64();
+
 	for (uint32 PrimitiveIndex : OutIndices)
 	{
 		if (PrimitiveIndex >= PrimitiveRuntimeData.size()) continue;
@@ -351,11 +355,13 @@ void FPickingSystem::UpdatePick(
 			BestHit.PrimitiveIndex = static_cast<int32>(PrimitiveIndex);
 		}
 	}
-
+	const uint64 MeshPickEndCycles = QueryCycles64();
 	const uint64 PickEndCycles = QueryCycles64();
 	InOutPickState.LastPickTimeMs = CyclesToMilliseconds(PickStartCycles, PickEndCycles);
 	InOutPickState.TotalPickTimeMs += InOutPickState.LastPickTimeMs;
 	++InOutPickState.TotalPickCount;
+	InOutPickState.LastWorldPickTimeMs = CyclesToMilliseconds(WorldPickStartCycles, WorldPickEndCycles);
+	InOutPickState.LastMeshPickTimeMS = CyclesToMilliseconds(MeshPickStartCycles, MeshPickEndCycles);
 
 	// 기즈모를 누르지 않았을 때만 씬 오브젝트 선택 결과를 갱신합니다.
 	InOutPickState.bHit = BestHit.PrimitiveId >= 0;

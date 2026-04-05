@@ -258,6 +258,8 @@ void FStatsSystem::ApplyPickState(const FPickState& InPickState)
 	LastPickTimeMs = InPickState.LastPickTimeMs;
 	TotalPickTimeMs = InPickState.TotalPickTimeMs;
 	TotalPickCount = InPickState.TotalPickCount;
+	LastWorldPickTimeMs = InPickState.LastWorldPickTimeMs;
+	LastMeshPickTimeMS = InPickState.LastMeshPickTimeMS;
 }
 
 void FStatsSystem::RecordPickEvent(const FPickState& InPickState)

@@ -9,15 +9,37 @@
 struct FVisibilityResults;
 class FScene;
 
-class FSceneNode {
-public:
+// 32바이트 정렬을 맞춰주면 AVX 레지스터 로드 속도가 가장 빠릅니다.
+struct alignas(32) FSceneNode
+{
+    int32 PrimitiveIndex = -1;
     FBoundingBox Volume;
-    FVector Center = FVector::ZeroVector;
+    FVector Center;
     int32 Parent = -1;
-    TArray<int32> Children;
-    uint32 PrimitiveIndex = -1;
-    // 단일 인덱스 대신 배열로 변경하여 데이터 유실 원천 차단
-    TArray<int32> PrimitiveIndices;
+
+    // 🚨 기존 TArray<int32> Children 대신 고정 배열 사용 (할당 오버헤드 0)
+    int32 ChildIndices[8];
+    int32 ChildCount = 0;
+
+    // 🚨 8-Way SIMD 교차 검사를 위해 자식들의 AABB를 SoA 형태로 캐싱
+    float ChildMinX[8];
+    float ChildMinY[8];
+    float ChildMinZ[8];
+    float ChildMaxX[8];
+    float ChildMaxY[8];
+    float ChildMaxZ[8];
+
+    FSceneNode()
+    {
+        // 초기화 시 모든 자식 인덱스는 -1로, 
+        // 바운딩 박스는 절대 충돌할 수 없는 무한대 값으로 세팅합니다.
+        for (int i = 0; i < 8; ++i)
+        {
+            ChildIndices[i] = -1;
+            ChildMinX[i] = ChildMinY[i] = ChildMinZ[i] = std::numeric_limits<float>::infinity();
+            ChildMaxX[i] = ChildMaxY[i] = ChildMaxZ[i] = -std::numeric_limits<float>::infinity();
+        }
+    }
 };
 
 class FSceneGraph
@@ -31,8 +53,11 @@ private:
     void Build(const TArray<FBoundingBox>& ObjectBoxes);
 
     int32 BuildRecursive(const TArray<int32>& Indices, const FBoundingBox& NodeVolume, int32 Depth);
-    void PickRecursive(int32 NodeIndex, const FRay& InRay, const FVector& InvDir,const TArray<bool>& Candidate, TArray<int32>& OutCandidates, float& InOutMaxT) const ;  // float t값 공유
+    void PickRecursive(int32 NodeIndex, const FRay& InRay, const FVector& InvDir,
+        const std::vector<uint8_t>& VisibleFlags, TArray<int32>& OutCandidates,
+        float& InOutMaxT) const;
     TArray<FSceneNode> Nodes;
     int32 RootIndex = -1;
+    mutable std::vector<uint8_t> VisibleFlags;
 };
 
