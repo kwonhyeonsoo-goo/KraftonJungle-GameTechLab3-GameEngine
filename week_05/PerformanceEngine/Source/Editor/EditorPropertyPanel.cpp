@@ -23,6 +23,7 @@ void FEditorPropertyPanel::Render()
 			ImGui::DragFloat3("Location", &SelectedPrimitiveData->WorldMatrix.M[3][0], 0.1f);
 		}
 
-		ImGui::End();
+
 	}
+	ImGui::End();
 }

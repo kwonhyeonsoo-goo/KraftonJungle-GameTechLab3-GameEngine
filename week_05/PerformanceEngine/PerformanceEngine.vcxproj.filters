@@ -155,6 +155,9 @@
     <ClCompile Include="Source\Scene\SceneGraph.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\StaticMesh\BVH\BVHMesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Graphics\D3D11\D3D11Utils.h">
@@ -329,6 +332,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scene\SceneGraph.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\StaticMesh\BVH\BVHMesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\StaticMesh\BVH\BVHMeshNode.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -87,7 +87,7 @@ void FSceneGraph::PickRecursive(int32 NodeIndex, const FRay& InRay, const TArray
     }
 }
 
-int32 FSceneGraph::BuildRecursive(TArray<int32>& Indices, const FBoundingBox& NodeVolume, int32 Depth)
+int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const FBoundingBox& NodeVolume, int32 Depth)
 {
     // 그룹 노드 생성
     FSceneNode GroupNode;
