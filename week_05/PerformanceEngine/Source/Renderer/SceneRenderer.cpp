@@ -287,6 +287,10 @@ void FSceneRenderer::Render(
 	// 1st Pass - 이전 프레임의 가시성 결과를 기반으로 렌더링
 	TArray<int32> VisibleIndices;
 	TArray<int32> InvisibleIndices;
+
+	VisibleIndices.reserve(InVisibilityResults.VisiblePrimitiveIndices.size());
+	InvisibleIndices.reserve(InVisibilityResults.VisiblePrimitiveIndices.size());
+
 	for (uint32 PrimitiveIndex : InVisibilityResults.VisiblePrimitiveIndices)
 	{
 		if (MappedVisibilityData && MappedVisibilityData[PrimitiveIndex] > 0)
@@ -298,9 +302,11 @@ void FSceneRenderer::Render(
 			InvisibleIndices.push_back(PrimitiveIndex);
 		}
 	}
-	RenderPrimitives(InRHI, InScene, InCamera, VisibleIndices, InPickState);
 
 	if (MappedVisibilityData) InRHI.GetDeviceContext()->Unmap(InRHI.StagingBuffer.Get(), 0);
+
+	RenderPrimitives(InRHI, InScene, InCamera, VisibleIndices, InPickState);
+
 	ID3D11ShaderResourceView* NullSRVs[] = { nullptr, nullptr };
 	DeviceContext->VSSetShaderResources(0, 2, NullSRVs);
 
@@ -311,6 +317,7 @@ void FSceneRenderer::Render(
 	BuildHiZMipChain(InRHI, InScene);
 
 	TArray<int32> NewlyVisibleIndices;
+	NewlyVisibleIndices.reserve(InvisibleIndices.size());
 
 	hr = DeviceContext->Map(InRHI.StagingBuffer.Get(), 0, D3D11_MAP_READ, 0, &MappedResource);
 	if (SUCCEEDED(hr))

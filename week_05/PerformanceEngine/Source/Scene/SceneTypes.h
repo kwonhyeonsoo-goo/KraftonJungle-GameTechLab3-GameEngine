@@ -36,10 +36,20 @@ struct FScenePrimitiveColdData
 	std::shared_ptr<FStaticMesh> StaticMeshOwner;
 };
 
+struct FInstanceData
+{
+	DirectX::XMFLOAT4X4 WorldMatrix;
+	DirectX::XMFLOAT3 Center;
+	float Padding1 = 0.0f;
+	DirectX::XMFLOAT3 Extents;
+	float Padding2 = 0.0f;
+};
+
 struct FScenePrimitiveRuntimeData
 {
 	int32 PrimitiveId = -1;
 	FMatrix WorldMatrix = FMatrix::Identity;
 	FBoundingBox WorldBounds;
 	FStaticMesh* StaticMesh = nullptr;
+	FInstanceData CachedInstanceData;
 };
