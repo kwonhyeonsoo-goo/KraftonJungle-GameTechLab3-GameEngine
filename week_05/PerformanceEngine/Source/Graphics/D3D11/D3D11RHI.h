@@ -142,6 +142,10 @@ public:
 	TComPtr<ID3D11Buffer> InstanceBuffer;
 	TComPtr<ID3D11ShaderResourceView> InstanceSRV;
 
+	TComPtr<ID3D11Buffer> LastFrameVisibilityBuffer;
+	TComPtr<ID3D11ShaderResourceView> LastFrameVisibilitySRV;
+	TComPtr<ID3D11Buffer> LastFrameStagingBuffer;
+
 	TComPtr<ID3D11SamplerState> PointSampler;
 	void EnsureCullingBufferCapacity(uint32 RequiredCount);
 private:

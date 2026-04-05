@@ -13,8 +13,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
     if (DTid.x >= 1024 || DTid.y >= 1024)
         return;
     
+    // 1024x1024 해상도에서 1대1 샘플링
     float2 uv = (float2(DTid.xy) + 0.5f) / 1024.0f;
     uint2 mainPos = uint2(uv * RenderTargetSize);
+    
+    // 경계 처리
+    mainPos = clamp(mainPos, uint2(0, 0), uint2(RenderTargetSize - 1.0f));
     
     float d = MainDepth.Load(uint3(mainPos, 0));
     
