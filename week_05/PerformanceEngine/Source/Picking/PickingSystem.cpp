@@ -10,6 +10,7 @@
 #include "Visibility/VisibilitySystem.h"
 #include "Scene/SceneGraph.h"
 #include "Gizmo/Gizmo.h"
+#include <DirectXMath.h>
 
 namespace
 {
@@ -68,7 +69,7 @@ namespace
 		return true;
 	}
 
-	inline bool IntersectRayAabbFast(const FRay& InRay, const FVector& InvDir, const FVector& InMin, const FVector& InMax, float MaxDistance, float& OutDistance)
+	__forceinline bool IntersectRayAabbFast(const FRay& InRay, const FVector& InvDir, const FVector& InMin, const FVector& InMax, float MaxDistance, float& OutDistance)
 	{
 		float tx1 = (InMin.X - InRay.Origin.X) * InvDir.X;
 		float tx2 = (InMax.X - InRay.Origin.X) * InvDir.X;
@@ -93,7 +94,137 @@ namespace
 		}
 		return false;
 	}
-	bool IntersectRayTriangle(
+
+	inline uint32 IntersectRayTriangleAVX8(
+		const FRay& Ray,
+		const __m256& A_X, const __m256& A_Y, const __m256& A_Z,
+		const __m256& B_X, const __m256& B_Y, const __m256& B_Z,
+		const __m256& C_X, const __m256& C_Y, const __m256& C_Z,
+		float* OutDistances)
+	{
+		__m256 dir_x = _mm256_set1_ps(Ray.Direction.X);
+		__m256 dir_y = _mm256_set1_ps(Ray.Direction.Y);
+		__m256 dir_z = _mm256_set1_ps(Ray.Direction.Z);
+
+		__m256 orig_x = _mm256_set1_ps(Ray.Origin.X);
+		__m256 orig_y = _mm256_set1_ps(Ray.Origin.Y);
+		__m256 orig_z = _mm256_set1_ps(Ray.Origin.Z);
+
+		__m256 edge1_x = _mm256_sub_ps(B_X, A_X);
+		__m256 edge1_y = _mm256_sub_ps(B_Y, A_Y);
+		__m256 edge1_z = _mm256_sub_ps(B_Z, A_Z);
+
+		__m256 edge2_x = _mm256_sub_ps(C_X, A_X);
+		__m256 edge2_y = _mm256_sub_ps(C_Y, A_Y);
+		__m256 edge2_z = _mm256_sub_ps(C_Z, A_Z);
+
+		// pvec = dir X edge2
+		__m256 pvec_x = _mm256_sub_ps(_mm256_mul_ps(dir_y, edge2_z), _mm256_mul_ps(dir_z, edge2_y));
+		__m256 pvec_y = _mm256_sub_ps(_mm256_mul_ps(dir_z, edge2_x), _mm256_mul_ps(dir_x, edge2_z));
+		__m256 pvec_z = _mm256_sub_ps(_mm256_mul_ps(dir_x, edge2_y), _mm256_mul_ps(dir_y, edge2_x));
+
+		// det = edge1 . pvec
+		__m256 det = _mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(edge1_x, pvec_x), _mm256_mul_ps(edge1_y, pvec_y)), _mm256_mul_ps(edge1_z, pvec_z));
+
+		__m256 epsilon_v = _mm256_set1_ps(1e-8f);
+		__m256 zero = _mm256_setzero_ps();
+		// det > 1e-8f 만 유효 (Backface culling이 내장됨. 양면 처리 원할경우 fabs(det) 필요)
+		__m256 det_mask = _mm256_cmp_ps(det, epsilon_v, _CMP_GT_OQ);
+
+		__m256 inv_det = _mm256_div_ps(_mm256_set1_ps(1.0f), det);
+
+		// tvec = orig - A
+		__m256 tvec_x = _mm256_sub_ps(orig_x, A_X);
+		__m256 tvec_y = _mm256_sub_ps(orig_y, A_Y);
+		__m256 tvec_z = _mm256_sub_ps(orig_z, A_Z);
+
+		// u = (tvec . pvec) * inv_det
+		__m256 u = _mm256_mul_ps(_mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(tvec_x, pvec_x), _mm256_mul_ps(tvec_y, pvec_y)), _mm256_mul_ps(tvec_z, pvec_z)), inv_det);
+
+		__m256 one = _mm256_set1_ps(1.0f);
+		// 0.0 <= u <= 1.0
+		__m256 u_mask = _mm256_and_ps(_mm256_cmp_ps(u, zero, _CMP_GE_OQ), _mm256_cmp_ps(u, one, _CMP_LE_OQ));
+
+		// qvec = tvec X edge1
+		__m256 qvec_x = _mm256_sub_ps(_mm256_mul_ps(tvec_y, edge1_z), _mm256_mul_ps(tvec_z, edge1_y));
+		__m256 qvec_y = _mm256_sub_ps(_mm256_mul_ps(tvec_z, edge1_x), _mm256_mul_ps(tvec_x, edge1_z));
+		__m256 qvec_z = _mm256_sub_ps(_mm256_mul_ps(tvec_x, edge1_y), _mm256_mul_ps(tvec_y, edge1_x));
+
+		// v = (dir . qvec) * inv_det
+		__m256 v = _mm256_mul_ps(_mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(dir_x, qvec_x), _mm256_mul_ps(dir_y, qvec_y)), _mm256_mul_ps(dir_z, qvec_z)), inv_det);
+
+		// 0.0 <= v && u + v <= 1.0
+		__m256 u_plus_v = _mm256_add_ps(u, v);
+		__m256 v_mask = _mm256_and_ps(_mm256_cmp_ps(v, zero, _CMP_GE_OQ), _mm256_cmp_ps(u_plus_v, one, _CMP_LE_OQ));
+
+		// t = (edge2 . qvec) * inv_det
+		__m256 t = _mm256_mul_ps(_mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(edge2_x, qvec_x), _mm256_mul_ps(edge2_y, qvec_y)), _mm256_mul_ps(edge2_z, qvec_z)), inv_det);
+
+		// t > 0.0f
+		__m256 t_mask = _mm256_cmp_ps(t, zero, _CMP_GT_OQ);
+
+		// 모든 조건 만족 마스크
+		__m256 hit_mask = _mm256_and_ps(_mm256_and_ps(_mm256_and_ps(det_mask, u_mask), v_mask), t_mask);
+
+		_mm256_storeu_ps(OutDistances, t);
+
+		return _mm256_movemask_ps(hit_mask);
+	}
+
+
+	// 8개의 상자를 한 번에 검사하고, 광선과 충돌한 상자들의 결과를 반환합니다.
+	// 반환값: 하위 8비트가 각각 자식 0~7의 충돌 여부를 나타내는 비트마스크
+	inline uint32 IntersectRayAabbAVX(
+		const FRay& Ray, const FVector& InvDir, float MaxDistance,
+		const float* MinX, const float* MinY, const float* MinZ,
+		const float* MaxX, const float* MaxY, const float* MaxZ,
+		float* OutDistances) // 크기 8짜리 배열
+	{
+		// 1. 광선 데이터를 8개로 복제(Broadcast)
+		__m256 ox = _mm256_set1_ps(Ray.Origin.X);
+		__m256 oy = _mm256_set1_ps(Ray.Origin.Y);
+		__m256 oz = _mm256_set1_ps(Ray.Origin.Z);
+
+		__m256 idx = _mm256_set1_ps(InvDir.X);
+		__m256 idy = _mm256_set1_ps(InvDir.Y);
+		__m256 idz = _mm256_set1_ps(InvDir.Z);
+
+		// 2. X축 검사
+		__m256 tx1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_loadu_ps(MinX), ox), idx);
+		__m256 tx2 = _mm256_mul_ps(_mm256_sub_ps(_mm256_loadu_ps(MaxX), ox), idx);
+		__m256 tmin = _mm256_min_ps(tx1, tx2);
+		__m256 tmax = _mm256_max_ps(tx1, tx2);
+
+		// 3. Y축 검사
+		__m256 ty1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_loadu_ps(MinY), oy), idy);
+		__m256 ty2 = _mm256_mul_ps(_mm256_sub_ps(_mm256_loadu_ps(MaxY), oy), idy);
+		tmin = _mm256_max_ps(tmin, _mm256_min_ps(ty1, ty2));
+		tmax = _mm256_min_ps(tmax, _mm256_max_ps(ty1, ty2));
+
+		// 4. Z축 검사
+		__m256 tz1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_loadu_ps(MinZ), oz), idz);
+		__m256 tz2 = _mm256_mul_ps(_mm256_sub_ps(_mm256_loadu_ps(MaxZ), oz), idz);
+		tmin = _mm256_max_ps(tmin, _mm256_min_ps(tz1, tz2));
+		tmax = _mm256_min_ps(tmax, _mm256_max_ps(tz1, tz2));
+
+		// 5. 충돌 조건 판별: tmax >= tmin AND tmax > 0 AND tmin < MaxDistance
+		__m256 zero = _mm256_setzero_ps();
+		__m256 max_dist = _mm256_set1_ps(MaxDistance);
+
+		__m256 mask1 = _mm256_cmp_ps(tmax, tmin, _CMP_GE_OQ);
+		__m256 mask2 = _mm256_cmp_ps(tmax, zero, _CMP_GT_OQ);
+		__m256 mask3 = _mm256_cmp_ps(tmin, max_dist, _CMP_LT_OQ);
+		__m256 hit_mask = _mm256_and_ps(_mm256_and_ps(mask1, mask2), mask3);
+
+		// 결과 거리 저장 (음수면 0으로 보정)
+		__m256 out_t = _mm256_max_ps(zero, tmin);
+		_mm256_storeu_ps(OutDistances, out_t);
+
+		// 부딪힌 결과만 8비트 정수로 뽑아냄 (예: 1, 3, 4번 자식이 맞았다면 00011010)
+		return _mm256_movemask_ps(hit_mask);
+	}
+
+	__forceinline bool IntersectRayTriangle(
 		const FRay& InRay,
 		const FVector& InA,
 		const FVector& InB,
@@ -105,25 +236,29 @@ namespace
 		const FVector EdgeAC = InC - InA;
 		const FVector PVector = FVector::CrossProduct(InRay.Direction, EdgeAC);
 		const float Determinant = FVector::DotProduct(EdgeAB, PVector);
-		// std::abs(Determinant) < 1.e-8f 대신 부호를 체크합니다.
-		// D3D11 기준 시계방향(CW)이 앞면이므로, Determinant가 양수일 때만 앞면입니다.
-		// 광선이 뒷면을 때리면 (Determinant < 1.e-8f) 즉시 연산을 종료하여 연산량을 50% 줄입니다.
+
 		if (Determinant < 1.e-8f) return false;
 
 		const float InverseDeterminant = 1.0f / Determinant;
 		const FVector TVector = InRay.Origin - InA;
 		const float U = FVector::DotProduct(TVector, PVector) * InverseDeterminant;
+		
+		// U가 0~1 범위를 벗어나면 즉시 종료
 		if (U < 0.0f || U > 1.0f) return false;
 
 		const FVector QVector = FVector::CrossProduct(TVector, EdgeAB);
 		const float V = FVector::DotProduct(InRay.Direction, QVector) * InverseDeterminant;
+		
+		// V가 0 미만이거나 U+V가 1.0을 초과하면 즉시 종료
 		if (V < 0.0f || U + V > 1.0f) return false;
 
 		const float T = FVector::DotProduct(EdgeAC, QVector) * InverseDeterminant;
 		if (T <= 0.0f) return false;
 
 		OutDistance = T;
-		OutWorldPosition = InRay.Origin + InRay.Direction * T;
+		OutWorldPosition.X = InRay.Origin.X + InRay.Direction.X * T;
+		OutWorldPosition.Y = InRay.Origin.Y + InRay.Direction.Y * T;
+		OutWorldPosition.Z = InRay.Origin.Z + InRay.Direction.Z * T;
 		return true;
 	}
 
@@ -132,99 +267,159 @@ namespace
 		FStaticMesh* StaticMesh = InPrimitiveRuntimeData.StaticMesh;
 		if (StaticMesh == nullptr || !StaticMesh->IsValid()) return false;
 
-		// 1. 월드 바운딩 박스 1차 거르기
-		float distance = std::numeric_limits<float>::max();
-		if (!IntersectRayAabb(InRay, InPrimitiveRuntimeData.WorldBounds.Min, InPrimitiveRuntimeData.WorldBounds.Max, distance)) return false;
-
 		const FBVHMesh& BVH = StaticMesh->GetBVH();
-		// 🚨 최적화 1: 반드시 참조(&)로 받아 복사 방지!
 		const TArray<FBVHMeshNode>& Nodes = BVH.GetNodes();
 		if (Nodes.empty()) return false;
 
-		// 2. 광선을 로컬 공간으로 변환
-		const auto XM = InPrimitiveRuntimeData.GetComponentToWorld().ToXMMatrix();
-		DirectX::XMVECTOR Determinant;
-		const auto WorldToLocalXM = DirectX::XMMatrixInverse(&Determinant, XM);
+		const auto XM = InPrimitiveRuntimeData.WorldMatrix.ToXMMatrix();
+		const auto WorldToLocalXM = InPrimitiveRuntimeData.InverseWorldMatrix.ToXMMatrix();
 
 		auto RayOrigin = DirectX::XMLoadFloat3(reinterpret_cast<const DirectX::XMFLOAT3*>(&InRay.Origin));
 		auto RayDir = DirectX::XMLoadFloat3(reinterpret_cast<const DirectX::XMFLOAT3*>(&InRay.Direction));
 
 		auto LocalOriginXM = DirectX::XMVector3TransformCoord(RayOrigin, WorldToLocalXM);
-		auto LocalDirXM = DirectX::XMVector3TransformNormal(RayDir, WorldToLocalXM);
-		LocalDirXM = DirectX::XMVector3Normalize(LocalDirXM);
+
+		auto LocalDirUnnormXM = DirectX::XMVector3TransformNormal(RayDir, WorldToLocalXM);
+		auto LocalDirLengthXM = DirectX::XMVector3Length(LocalDirUnnormXM);
+		float LocalDirLength = DirectX::XMVectorGetX(LocalDirLengthXM);
+		
+		// 최적화: 길이가 거의 0인 경우 방어 및 빠른 Reciprocal 처리
+		if (LocalDirLength < 1e-8f) return false;
+		
+		auto LocalDirXM = DirectX::XMVectorDivide(LocalDirUnnormXM, LocalDirLengthXM);
 
 		FRay LocalRay;
 		DirectX::XMStoreFloat3(reinterpret_cast<DirectX::XMFLOAT3*>(&LocalRay.Origin), LocalOriginXM);
 		DirectX::XMStoreFloat3(reinterpret_cast<DirectX::XMFLOAT3*>(&LocalRay.Direction), LocalDirXM);
-
-		// 🚨 최적화 2: AABB 검사용 나눗셈(InvDirection)을 1번만 미리 계산 (IEEE 754 0나누기 무한대 성질 이용)
-		FVector InvDir(
-			1.0f / (LocalRay.Direction.X != 0.0f ? LocalRay.Direction.X : 1e-8f),
-			1.0f / (LocalRay.Direction.Y != 0.0f ? LocalRay.Direction.Y : 1e-8f),
-			1.0f / (LocalRay.Direction.Z != 0.0f ? LocalRay.Direction.Z : 1e-8f)
-		);
+		
+		LocalRay.InvDirection.X = 1.0f / (LocalRay.Direction.X != 0.0f ? LocalRay.Direction.X : 1e-8f);
+		LocalRay.InvDirection.Y = 1.0f / (LocalRay.Direction.Y != 0.0f ? LocalRay.Direction.Y : 1e-8f);
+		LocalRay.InvDirection.Z = 1.0f / (LocalRay.Direction.Z != 0.0f ? LocalRay.Direction.Z : 1e-8f);
 
 		bool bHit = false;
 		float ClosestLocalDistance = std::numeric_limits<float>::max();
+		if (InOutBestHit.DistanceSquared < std::numeric_limits<float>::max())
+		{
+			ClosestLocalDistance = std::sqrt(InOutBestHit.DistanceSquared) / LocalDirLength;
+		}
+
 		FVector BestLocalHitPosition = FVector::ZeroVector;
 
-		// 🚨 최적화 3: std::vector 동적 할당 대신 고정 크기 스택 배열 사용
+		// 최적화: 1. 방향 벡터의 부호에 따른 사전 로드 (ray-box 교차 최적화용 캐시)
+		int32 SignX = LocalRay.InvDirection.X < 0.0f ? 1 : 0;
+		int32 SignY = LocalRay.InvDirection.Y < 0.0f ? 1 : 0;
+		int32 SignZ = LocalRay.InvDirection.Z < 0.0f ? 1 : 0;
+
+		//최적화: 고정 크기 스택 사용 (캐시 로컬리티)
 		int32 Stack[64];
 		int32 StackPtr = 0;
-		Stack[StackPtr++] = 0; // 루트 노드(0번) 푸시
+		Stack[StackPtr++] = 0; // 8-Way 루트 노드(0번) 푸시
+
+		alignas(32) float HitDistances[8];
+		const Triangle* TrianglesPtr = BVH.GetTriangles().data();
+		// 만약 GetNodes8Way() 접근자 이름이 다르다면 맞춰서 수정해주세요
+		const FBVHMeshNode8* NodesPtr = BVH.GetNodes8Way().data(); 
 
 		while (StackPtr > 0)
 		{
 			int32 NodeIndex = Stack[--StackPtr];
-			const FBVHMeshNode& Node = Nodes[NodeIndex];
+			const FBVHMeshNode8& Node = NodesPtr[NodeIndex];
 
-			if (Node.IsLeaf())
+			// 8명의 자식을 단일 AVX 명령어로 교차 검사
+			uint32 HitMask = IntersectRayAabbAVX(
+				LocalRay, LocalRay.InvDirection, ClosestLocalDistance,
+				Node.ChildMinX, Node.ChildMinY, Node.ChildMinZ,
+				Node.ChildMaxX, Node.ChildMaxY, Node.ChildMaxZ,
+				HitDistances);
+
+			HitMask &= ((1 << Node.ValidChildCount) - 1);
+			if (HitMask == 0) continue;
+
+			struct ChildHit { int32 Index; float Dist; int32 TriStart; int32 TriCount; };
+			ChildHit ChildHits[8];
+			int32 HitCount = 0;
+
+			unsigned long BitIndex;
+			while (_BitScanForward(&BitIndex, HitMask))
 			{
-				const TArray<Triangle>& Triangles = BVH.GetTriangles();
-				for (int32 i = Node.startIndex; i < Node.endIndex; ++i)
-				{
-					const Triangle& Tri = Triangles[i];
-					float HitDistance = 0.0f;
-					FVector HitPosition = FVector::ZeroVector;
+				HitMask &= ~(1 << BitIndex);
+				ChildHits[HitCount++] = { Node.ChildIndices[BitIndex], HitDistances[BitIndex], Node.TriangleStart[BitIndex], Node.TriangleCount[BitIndex] };
+			}
 
-					if (IntersectRayTriangle(LocalRay, Tri.Vertex1, Tri.Vertex2, Tri.Vertex3, HitDistance, HitPosition))
+			// Front-to-Back 순회를 위해 거리가 먼 것을 스택에 먼저 넣습니다 (내림차순 정렬)
+			for (int32 i = 1; i < HitCount; ++i)
+			{
+				ChildHit Key = ChildHits[i];
+				int32 j = i - 1;
+				while (j >= 0 && ChildHits[j].Dist < Key.Dist)
+				{
+					ChildHits[j + 1] = ChildHits[j];
+					--j;
+				}
+				ChildHits[j + 1] = Key;
+			}
+
+			for (int32 i = 0; i < HitCount; ++i)
+			{
+				if (ChildHits[i].Index == -1) // 리프 노드 (삼각형)
+				{
+					int32 TriStart = ChildHits[i].TriStart;
+					int32 TriCount = ChildHits[i].TriCount;
+					int32 BlockCount = TriCount / 8;
+					int32 Remainder = TriCount % 8;
+
+					alignas(32) float HitDistancesTri[8];
+
+					for (int32 b = 0; b < BlockCount + (Remainder > 0 ? 1 : 0); ++b)
 					{
-						// 🔥 여기서 ClosestLocalDistance가 줄어들면, 
-						// 이후의 AABB 검사에서 더 먼 박스들은 즉시 Culling 됩니다.
-						if (HitDistance < ClosestLocalDistance)
+						int32 ProcessCount = (b == BlockCount) ? Remainder : 8;
+
+						alignas(32) float AX[8], AY[8], AZ[8];
+						alignas(32) float BX[8], BY[8], BZ[8];
+						alignas(32) float CX[8], CY[8], CZ[8];
+
+						for (int32 k = 0; k < ProcessCount; ++k)
 						{
-							ClosestLocalDistance = HitDistance;
-							BestLocalHitPosition = HitPosition;
-							bHit = true;
+							const Triangle& Tri = TrianglesPtr[TriStart + b * 8 + k];
+							AX[k] = Tri.Vertex1.X; AY[k] = Tri.Vertex1.Y; AZ[k] = Tri.Vertex1.Z;
+							BX[k] = Tri.Vertex2.X; BY[k] = Tri.Vertex2.Y; BZ[k] = Tri.Vertex2.Z;
+							CX[k] = Tri.Vertex3.X; CY[k] = Tri.Vertex3.Y; CZ[k] = Tri.Vertex3.Z;
+						}
+						// 미사용 칸은 0 처리
+						for (int32 k = ProcessCount; k < 8; ++k)
+						{
+							AX[k] = AY[k] = AZ[k] = BX[k] = BY[k] = BZ[k] = CX[k] = CY[k] = CZ[k] = 0.0f;
+						}
+
+						uint32 HitMask = IntersectRayTriangleAVX8(
+							LocalRay,
+							_mm256_loadu_ps(AX), _mm256_loadu_ps(AY), _mm256_loadu_ps(AZ),
+							_mm256_loadu_ps(BX), _mm256_loadu_ps(BY), _mm256_loadu_ps(BZ),
+							_mm256_loadu_ps(CX), _mm256_loadu_ps(CY), _mm256_loadu_ps(CZ),
+							HitDistancesTri);
+
+						HitMask &= ((1 << ProcessCount) - 1);
+
+						unsigned long BitIndex;
+						while (_BitScanForward(&BitIndex, HitMask))
+						{
+							HitMask &= ~(1 << BitIndex);
+							float HitDist = HitDistancesTri[BitIndex];
+							if (HitDist < ClosestLocalDistance)
+							{
+								ClosestLocalDistance = HitDist;
+								BestLocalHitPosition.X = LocalRay.Origin.X + LocalRay.Direction.X * HitDist;
+								BestLocalHitPosition.Y = LocalRay.Origin.Y + LocalRay.Direction.Y * HitDist;
+								BestLocalHitPosition.Z = LocalRay.Origin.Z + LocalRay.Direction.Z * HitDist;
+								bHit = true;
+							}
 						}
 					}
 				}
-			}
-			else
-			{
-				// 자식 노드가 둘 다 있을 경우의 처리 (Front-to-Back Ordering)
-				float DistL = std::numeric_limits<float>::max();
-				float DistR = std::numeric_limits<float>::max();
-
-				bool bHitL = Node.LeftChild != -1 && IntersectRayAabbFast(LocalRay, InvDir, Nodes[Node.LeftChild].Bounds.Min, Nodes[Node.LeftChild].Bounds.Max, ClosestLocalDistance, DistL);
-				bool bHitR = Node.RightChild != -1 && IntersectRayAabbFast(LocalRay, InvDir, Nodes[Node.RightChild].Bounds.Min, Nodes[Node.RightChild].Bounds.Max, ClosestLocalDistance, DistR);
-
-				if (bHitL && bHitR)
+				else // 내부 노드
 				{
-					// 거리가 더 먼 쪽을 먼저 Stack에 넣음 (나중에 꺼내게 됨)
-					if (DistL > DistR)
-					{
-						Stack[StackPtr++] = Node.LeftChild;
-						Stack[StackPtr++] = Node.RightChild;
-					}
-					else
-					{
-						Stack[StackPtr++] = Node.RightChild;
-						Stack[StackPtr++] = Node.LeftChild;
-					}
+					Stack[StackPtr++] = ChildHits[i].Index;
 				}
-				else if (bHitL) Stack[StackPtr++] = Node.LeftChild;
-				else if (bHitR) Stack[StackPtr++] = Node.RightChild;
 			}
 		}
 		if (bHit)
@@ -253,6 +448,11 @@ FRay FPickingSystem::BuildPickRay(const FCamera& InCamera, int32 InMouseX, int32
 	FRay Result = {};
 	Result.Origin = InCamera.GetLocation();
 	Result.Direction = InCamera.GetRotation().GetForwardVector();
+	Result.InvDirection = FVector(
+		1.0f / (Result.Direction.X != 0.0f ? Result.Direction.X : 1e-8f),
+		1.0f / (Result.Direction.Y != 0.0f ? Result.Direction.Y : 1e-8f),
+		1.0f / (Result.Direction.Z != 0.0f ? Result.Direction.Z : 1e-8f)
+	);
 
 	if (InViewportWidth <= 0 || InViewportHeight <= 0) return Result;
 
@@ -284,6 +484,11 @@ FRay FPickingSystem::BuildPickRay(const FCamera& InCamera, int32 InMouseX, int32
 	if (!Direction.IsNearlyZero())
 	{
 		Result.Direction = Direction;
+		Result.InvDirection = FVector(
+			1.0f / (Direction.X != 0.0f ? Direction.X : 1e-8f),
+			1.0f / (Direction.Y != 0.0f ? Direction.Y : 1e-8f),
+			1.0f / (Direction.Z != 0.0f ? Direction.Z : 1e-8f)
+		);
 	}
 
 	return Result;
@@ -326,24 +531,90 @@ void FPickingSystem::UpdatePick(
 			return; // 기즈모를 클릭했으므로 뒤에 있는 씬 오브젝트 피킹은 건너뜁니다.
 		}
 	}
-
-	//씬 오브젝트 피킹
 	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
+
 	FPickHit BestHit;
 	BestHit.DistanceSquared = std::numeric_limits<float>::max();
+	BestHit.PrimitiveId = -1;
 
-	//AABB true만 전달
-	TArray<int32> OutIndices;
-	InSceneGraph.Pick(PickRay, InVisibilityResults, OutIndices);
+	const auto& Flags = InVisibilityResults.VisibleFlags;
+	const auto& Nodes = InSceneGraph.GetNodes();
+	const auto& IndexBuffer = InSceneGraph.GetPrimitiveIndexBuffer();
 
-	//for (uint32 PrimitiveIndex : InVisibilityResults.VisiblePrimitiveIndices)
-	for (uint32 PrimitiveIndex : OutIndices)
+	if (Nodes.empty() || InSceneGraph.GetRootIndex() == -1) return;
+
+	struct FStackNode { int32 Index; float Dist; };
+	FStackNode Stack[128];
+	int32 StackPtr = 0;
+	Stack[StackPtr++] = { InSceneGraph.GetRootIndex(), 0.0f };
+
+	float MaxDistance = std::numeric_limits<float>::max();
+	alignas(32) float HitDistances[8];
+
+	while (StackPtr > 0)
 	{
-		if (PrimitiveIndex >= PrimitiveRuntimeData.size()) continue;
+		FStackNode Current = Stack[--StackPtr];
 
-		if (IntersectRenderItem(PickRay, PrimitiveRuntimeData[PrimitiveIndex], BestHit))
+		if (Current.Dist >= MaxDistance) continue;
+
+		int32 NodeIndex = Current.Index;
+		if (NodeIndex < 0 || NodeIndex >= Nodes.size()) continue;
+		const FSceneNode& Node = Nodes[NodeIndex];
+
+		if (Node.ChildCount == 0)
 		{
-			BestHit.PrimitiveIndex = static_cast<int32>(PrimitiveIndex);
+			int32 StartIdx = Node.PrimitiveStartIndex;
+			int32 EndIdx = StartIdx + Node.PrimitiveCount;
+
+			for (int32 i = StartIdx; i < EndIdx; ++i)
+			{
+				int32 ObjIdx = IndexBuffer[i];
+				if (ObjIdx != -1 && ObjIdx < Flags.size() && Flags[ObjIdx] == 1)
+				{
+					if (IntersectRenderItem(PickRay, PrimitiveRuntimeData[ObjIdx], BestHit))
+					{
+						BestHit.PrimitiveIndex = ObjIdx;
+						MaxDistance = std::sqrt(BestHit.DistanceSquared);
+					}
+				}
+			}
+			continue;
+		}
+
+		uint32 HitMask = IntersectRayAabbAVX(
+			PickRay, PickRay.InvDirection, MaxDistance,
+			Node.ChildMinX, Node.ChildMinY, Node.ChildMinZ,
+			Node.ChildMaxX, Node.ChildMaxY, Node.ChildMaxZ,
+			HitDistances);
+		HitMask &= ((1 << Node.ChildCount) - 1);
+		if (HitMask == 0) continue;
+
+		struct ChildHit { int32 Index; float Dist; };
+		ChildHit ChildHits[8];
+		int32 HitCount = 0;
+
+		unsigned long BitIndex;
+		while (_BitScanForward(&BitIndex, HitMask))
+		{
+			HitMask &= ~(1 << BitIndex);
+			ChildHits[HitCount++] = { Node.ChildIndices[BitIndex], HitDistances[BitIndex] };
+		}
+
+		for (int32 i = 1; i < HitCount; ++i)
+		{
+			ChildHit Key = ChildHits[i];
+			int32 j = i - 1;
+			while (j >= 0 && ChildHits[j].Dist < Key.Dist)
+			{
+				ChildHits[j + 1] = ChildHits[j];
+				--j;
+			}
+			ChildHits[j + 1] = Key;
+		}
+
+		for (int32 i = 0; i < HitCount; ++i)
+		{
+			Stack[StackPtr++] = { ChildHits[i].Index, ChildHits[i].Dist };
 		}
 	}
 

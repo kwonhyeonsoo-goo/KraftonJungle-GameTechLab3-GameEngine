@@ -28,6 +28,27 @@ void FVisibilitySystem::Build(const FScene& InScene, const FCamera& InCamera, FV
 
 	OutResults.VisiblePrimitiveIndices.clear();
 	BVH.GetVisibleObjects(ViewFrustum, InCamera.GetLocation(), BoundingBoxes, OutResults.VisiblePrimitiveIndices);
+
+	//피킹을 위한 플래그 캐싱 로직
+	const size_t TotalPrimitives = InScene.GetPrimitiveCount();
+
+	// 1. 크기가 부족하면 한 번만 늘려줍니다 (재할당 방지)
+	if (OutResults.VisibleFlags.size() < TotalPrimitives)
+	{
+		OutResults.VisibleFlags.resize(TotalPrimitives, 0);
+	}
+
+	// 2. 가장 빠른 속도로 전체 배열을 0으로 초기화 (메모리 통째로 밀기)
+	if (TotalPrimitives > 0)
+	{
+		std::memset(OutResults.VisibleFlags.data(), 0, OutResults.VisibleFlags.size());
+	}
+
+	// 3. 보이는 오브젝트의 인덱스만 1로 켭니다.
+	for (uint32 Idx : OutResults.VisiblePrimitiveIndices)
+	{
+		OutResults.VisibleFlags[Idx] = 1;
+	}
 }
 
 void FVisibilitySystem::BuildBVH(const FScene& InScene)

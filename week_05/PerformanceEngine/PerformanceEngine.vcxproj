@@ -139,7 +139,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>d3d11.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <Profile>false</Profile>
+      <Profile>true</Profile>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -158,6 +158,7 @@
     <ClCompile Include="Source\Camera\Camera.cpp" />
     <ClCompile Include="Source\Grid\Grid.cpp" />
     <ClCompile Include="Source\Hud\HudRenderer.cpp" />
+    <ClCompile Include="Source\Job\JobSystem.cpp" />
     <ClCompile Include="Source\Math\BoundingBox.cpp" />
     <ClCompile Include="Source\Math\Frustum.cpp" />
     <ClCompile Include="Source\Math\Matrix.cpp" />
@@ -205,6 +206,7 @@
     <ClInclude Include="Source\Camera\Camera.h" />
     <ClInclude Include="Source\Grid\Grid.h" />
     <ClInclude Include="Source\Hud\HudRenderer.h" />
+    <ClInclude Include="Source\Job\JobSystem.h" />
     <ClInclude Include="Source\Math\BoundingBox.h" />
     <ClInclude Include="Source\Math\Frustum.h" />
     <ClInclude Include="Source\Math\MathUtility.h" />
