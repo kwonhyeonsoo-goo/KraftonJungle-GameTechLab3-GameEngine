@@ -35,13 +35,21 @@ struct FScenePrimitiveColdData
 	FString MeshAssetPath;
 	std::shared_ptr<FStaticMesh> StaticMeshOwner;
 };
+struct FInstanceData
+{
+	DirectX::XMFLOAT4X4 WorldMatrix;
+	DirectX::XMFLOAT3 Center;
+	float Padding1 = 0.0f;
+	DirectX::XMFLOAT3 Extents;
+	float Padding2 = 0.0f;
+};
 #include "SceneComponent.h"
 struct FScenePrimitiveRuntimeData : public FSceneComponent
 {
 	int32 PrimitiveId = -1;
 	FBoundingBox WorldBounds;
 	FStaticMesh* StaticMesh = nullptr;
-
+	FInstanceData CachedInstanceData;
 	virtual void OnUpdateWorldTransform() override
 	{
 		if (StaticMesh)
@@ -71,6 +79,9 @@ struct FScenePrimitiveRuntimeData : public FSceneComponent
 
 			WorldBounds.Min = NewMin;
 			WorldBounds.Max = NewMax;
+			DirectX::XMStoreFloat4x4(&CachedInstanceData.WorldMatrix, DirectX::XMMatrixTranspose(WorldMat.ToXMMatrix()));
+			CachedInstanceData.Center = WorldBounds.GetCenter().ToXMFLOAT3();
+			CachedInstanceData.Extents = WorldBounds.GetExtents().ToXMFLOAT3();
 		}
 	}
 };

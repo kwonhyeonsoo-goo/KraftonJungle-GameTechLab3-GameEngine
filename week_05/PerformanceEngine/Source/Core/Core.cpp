@@ -258,14 +258,14 @@ void FCore::Tick()
 	if (SUCCEEDED(RHI->GetDeviceContext()->Map(RHI->InstanceBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
 	{
 		FInstanceData* InstanceData = static_cast<FInstanceData*>(MappedResource.pData);
+		const auto& PrimitiveRuntimeData = Scene->GetPrimitiveRuntimeData();
+
 		for (size_t i = 0; i < PrimitiveCount; ++i)
 		{
-			FScenePrimitiveRuntimeData PrimitiveData = Scene->GetPrimitiveRuntimeData()[i];
-			const FMatrix& WorldMat = PrimitiveData.GetComponentToWorld();
-			DirectX::XMStoreFloat4x4(&InstanceData[i].WorldMatrix, DirectX::XMMatrixTranspose(WorldMat.ToXMMatrix()));
-			InstanceData[i].Center = PrimitiveData.WorldBounds.GetCenter().ToXMFLOAT3();
-			InstanceData[i].Extents = PrimitiveData.WorldBounds.GetExtents().ToXMFLOAT3();
+		
+			InstanceData[i] = PrimitiveRuntimeData[i].CachedInstanceData;
 		}
+
 		RHI->GetDeviceContext()->Unmap(RHI->InstanceBuffer.Get(), 0);
 	}
 	std::sort(VisibilityResults.VisiblePrimitiveIndices.begin(), VisibilityResults.VisiblePrimitiveIndices.end(), [&](uint32 A, uint32 B) {

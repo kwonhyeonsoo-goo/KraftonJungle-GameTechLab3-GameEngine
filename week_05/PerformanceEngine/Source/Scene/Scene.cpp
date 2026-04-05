@@ -313,23 +313,13 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 				RuntimeData.PrimitiveId = PendingPrimitive.Id;
 
 				RuntimeData.StaticMesh = SharedMesh.get();
-				RuntimeData.SetWorldMatrix(WorldTransform.ToMatrixWithScale()); 
 
 
-				bool bHasRuntimeBounds = false;
-				ExpandBoundsWithTransformedAabb(
-					SharedMesh->GetBoundsMin(),
-					SharedMesh->GetBoundsMax(),
-					WorldTransform,
-					RuntimeData.WorldBounds.Min,
-					RuntimeData.WorldBounds.Max,
-					bHasRuntimeBounds);
-
-				if (bHasRuntimeBounds)
-				{
-					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBounds.Min);
-					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBounds.Max);
-				}
+				RuntimeData.SetWorldMatrix(WorldTransform.ToMatrixWithScale());
+				RuntimeData.GetComponentToWorld();
+		
+				ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBounds.Min);
+				ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBounds.Max);
 
 				PrimitiveColdData.push_back(std::move(ColdData));
 				PrimitiveRuntimeData.push_back(std::move(RuntimeData));
