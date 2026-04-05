@@ -57,12 +57,17 @@ struct alignas(16) FFrameConstants
 	float Padding = 0.0f;
 };
 
-struct alignas(16) FObjectConstants
+struct alignas(16) FInstanceIndexConstants
 {
-	FMatrix World = FMatrix::Identity;
+	uint32 InstanceIndex = 0;
+	float Padding[3] = { 0.0f, 0.0f, 0.0f };
 	float Tint[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 };
-
+struct alignas(16) FHighlightConstants
+{
+	uint32 SelectedPrimitiveIndex = static_cast<uint32>(-1);
+	float Padding[3] = { 0.0f, 0.0f, 0.0f };
+};
 struct FSceneRenderer::FResources
 {
 	TComPtr<ID3D11VertexShader> VertexShader;
@@ -72,6 +77,8 @@ struct FSceneRenderer::FResources
 	TComPtr<ID3D11Buffer> ObjectConstantBuffer;
 	TComPtr<ID3D11SamplerState> LinearSampler;
 	TComPtr<ID3D11ShaderResourceView> WhiteTextureView;
+	TComPtr<ID3D11Buffer> InstanceIndexConstantBuffer;
+	TComPtr<ID3D11Buffer> HighlightConstantBuffer;
 };
 
 FSceneRenderer::FSceneRenderer() = default;
@@ -96,14 +103,25 @@ bool FSceneRenderer::Initialize(FD3D11RHI& InRHI)
 cbuffer FrameCB : register(b0)
 {
     row_major float4x4 ViewProjection;
+	float2 RenderTargetSize;
+	uint PrimitiveCount;
+	float Padding;
 };
 
-cbuffer ObjectCB : register(b1)
+cbuffer InstanceIndexCB : register(b1)
 {
-    row_major float4x4 World;
-    float4 Tint;
+	uint InstanceIndex;
+	float3 Padding2;
 };
-
+struct InstanceData
+{
+	float4x4 WorldMatrix;
+	float3 Center;
+	float Padding1;
+	float3 Extents;
+	float Padding2;
+};
+StructuredBuffer<InstanceData> AllInstances : register(t1);
 struct VSInput
 {
     float3 Position : POSITION;
@@ -119,7 +137,10 @@ struct VSOutput
 VSOutput VSMain(VSInput Input)
 {
     VSOutput Output;
-    float4 WorldPosition = mul(float4(Input.Position, 1.0f), World);
+	float4x4 WorldMat = AllInstances[InstanceIndex].WorldMatrix;
+    
+	float4 WorldPosition = mul(float4(Input.Position, 1.0f), WorldMat);
+    
     Output.Position = mul(WorldPosition, ViewProjection);
     Output.TexCoord = Input.TexCoord;
     return Output;
@@ -127,12 +148,12 @@ VSOutput VSMain(VSInput Input)
 )";
 
 	static constexpr char PixelShaderSource[] = R"(
-cbuffer ObjectCB : register(b1)
+cbuffer InstanceIndexCB : register(b1)
 {
-    row_major float4x4 World;
+    uint InstanceIndex;
+    float3 Padding2;
     float4 Tint;
 };
-
 Texture2D DiffuseTexture : register(t0);
 SamplerState LinearSampler : register(s0);
 
@@ -147,7 +168,6 @@ float4 PSMain(PSInput Input) : SV_Target
     return DiffuseTexture.Sample(LinearSampler, Input.TexCoord) * Tint;
 }
 )";
-
 	TComPtr<ID3DBlob> VertexShaderBlob;
 	TComPtr<ID3DBlob> PixelShaderBlob;
 	if (!D3D11Utils::CompileShaderFromSource(VertexShaderSource, "VSMain", "vs_5_0", VertexShaderBlob, "SceneRenderer vertex shader")
@@ -189,13 +209,12 @@ float4 PSMain(PSInput Input) : SV_Target
 		return false;
 	}
 
-	if (!D3D11Utils::CreateDynamicConstantBuffer(Device, sizeof(FFrameConstants), Resources->FrameConstantBuffer)
-		|| !D3D11Utils::CreateDynamicConstantBuffer(Device, sizeof(FObjectConstants), Resources->ObjectConstantBuffer))
+	if (!D3D11Utils::CreateDynamicConstantBuffer(Device, sizeof(FFrameConstants), Resources->FrameConstantBuffer) ||
+		!D3D11Utils::CreateDynamicConstantBuffer(Device, sizeof(FInstanceIndexConstants), Resources->InstanceIndexConstantBuffer))
 	{
 		Resources.reset();
 		return false;
 	}
-
 	const D3D11_SAMPLER_DESC SamplerDesc =
 	{
 		D3D11_FILTER_MIN_MAG_MIP_LINEAR,
@@ -288,10 +307,15 @@ void FSceneRenderer::Render(
 	FrameConstants.PrimitiveCount = static_cast<uint32>(InScene.GetPrimitiveCount());
 	D3D11Utils::UpdateDynamicBuffer(DeviceContext, Resources->FrameConstantBuffer.Get(), FrameConstants);
 
-	ID3D11Buffer* VertexConstantBuffers[] = { Resources->FrameConstantBuffer.Get(), Resources->ObjectConstantBuffer.Get() };
-	ID3D11Buffer* PixelConstantBuffers[] = { nullptr, Resources->ObjectConstantBuffer.Get() };
-	DeviceContext->VSSetConstantBuffers(0, 2, VertexConstantBuffers);
-	DeviceContext->PSSetConstantBuffers(0, 2, PixelConstantBuffers);
+
+	//상수 버퍼 세팅 (b0: Frame, b1: InstanceIndex, b2: Highlight)
+	ID3D11Buffer* VSConstantBuffers[] = { Resources->FrameConstantBuffer.Get(), Resources->InstanceIndexConstantBuffer.Get() };
+	ID3D11Buffer* PSConstantBuffers[] = { nullptr, Resources->InstanceIndexConstantBuffer.Get(), Resources->HighlightConstantBuffer.Get() };
+	DeviceContext->VSSetConstantBuffers(0, 2, VSConstantBuffers);
+	DeviceContext->PSSetConstantBuffers(0, 3, PSConstantBuffers);;
+	//Vertex Shader에 AllInstances
+	ID3D11ShaderResourceView* InstanceSRVs[] = { nullptr, InRHI.InstanceSRV.Get() };
+	DeviceContext->VSSetShaderResources(0, 2, InstanceSRVs);
 
 	ID3D11Buffer* CurrentVertexBuffer = nullptr;
 	ID3D11Buffer* CurrentIndexBuffer = nullptr;
@@ -300,21 +324,17 @@ void FSceneRenderer::Render(
 	const UINT Offset = 0;
 
 	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
-	for (uint32 PrimitiveIndex : InVisibilityResults.VisiblePrimitiveIndices)
+	TArray<int32> SortedIndices = InVisibilityResults.VisiblePrimitiveIndices;
+	std::sort(SortedIndices.begin(), SortedIndices.end(), [&PrimitiveRuntimeData](int32 A, int32 B) {
+		return PrimitiveRuntimeData[A].StaticMesh < PrimitiveRuntimeData[B].StaticMesh;
+	});
+	for (uint32 PrimitiveIndex : SortedIndices)
 	{
 		if (PrimitiveIndex >= PrimitiveRuntimeData.size())
 		{
 			continue;
 		}
-		if (LastFrameVisibility)
-		{
-			uint32 IsVisible = LastFrameVisibility[PrimitiveIndex];
-
-			if (IsVisible == 0)
-			{
-				continue;
-			}
-		}
+		if (LastFrameVisibility && LastFrameVisibility[PrimitiveIndex] == 0) continue;
 
 		const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
 		FStaticMesh* StaticMesh = PrimitiveData.StaticMesh;
@@ -322,6 +342,7 @@ void FSceneRenderer::Render(
 		{
 			continue;
 		}
+
 
 		ID3D11Buffer* VertexBuffer = StaticMesh->GetVertexBuffer();
 		if (VertexBuffer != CurrentVertexBuffer)
@@ -337,40 +358,40 @@ void FSceneRenderer::Render(
 			CurrentIndexBuffer = IndexBuffer;
 		}
 
-		FObjectConstants ObjectConstants = {};
-		ObjectConstants.World = PrimitiveData.WorldMatrix;
+		FInstanceIndexConstants IndexData;
+		IndexData.InstanceIndex = PrimitiveIndex;
 		if (PrimitiveData.PrimitiveId == InPickState.SelectedPrimitiveId)
 		{
-			ObjectConstants.Tint[0] = 0.1f;
-			ObjectConstants.Tint[1] = 0.1f;
-			ObjectConstants.Tint[2] = 0.1f;
-			ObjectConstants.Tint[3] = 1.0f;
+			IndexData.Tint[0] = 1.0f;
+			IndexData.Tint[1] = 0.2f;
+			IndexData.Tint[2] = 0.2f;
+			IndexData.Tint[3] = 1.0f;
 		}
-
-		D3D11Utils::UpdateDynamicBuffer(DeviceContext, Resources->ObjectConstantBuffer.Get(), ObjectConstants);
-
+		else
+		{
+			IndexData.Tint[0] = 1.0f;
+			IndexData.Tint[1] = 1.0f;
+			IndexData.Tint[2] = 1.0f;
+			IndexData.Tint[3] = 1.0f;
+		}
+		D3D11Utils::UpdateDynamicBuffer(DeviceContext, Resources->InstanceIndexConstantBuffer.Get(), IndexData);
 		for (const FStaticMesh::FSection& Section : StaticMesh->GetSections())
 		{
 			ID3D11ShaderResourceView* TextureView = StaticMesh->GetMaterialTexture(Section.MaterialIndex);
-			if (TextureView == nullptr)
-			{
-				TextureView = Resources->WhiteTextureView.Get();
-			}
+			if (TextureView == nullptr) TextureView = Resources->WhiteTextureView.Get();
 
 			if (TextureView != CurrentTextureView)
 			{
-				DeviceContext->PSSetShaderResources(0, 1, &TextureView);
+				DeviceContext->PSSetShaderResources(0, 1, &TextureView); // t0에 텍스처 세팅
 				CurrentTextureView = TextureView;
 			}
-
 			DeviceContext->DrawIndexed(Section.IndexCount, Section.IndexStart, 0);
 		}
 	}
+	if (LastFrameVisibility) InRHI.GetDeviceContext()->Unmap(InRHI.StagingBuffer.Get(), 0);
+	ID3D11ShaderResourceView* NullSRVs[] = { nullptr, nullptr };
+	DeviceContext->VSSetShaderResources(0, 2, NullSRVs);
 
-	if (LastFrameVisibility)
-	{
-		InRHI.GetDeviceContext()->Unmap(InRHI.StagingBuffer.Get(), 0);
-	}
 
 	ID3D11RenderTargetView* NullRTVs[] = { nullptr };
 	DeviceContext->OMSetRenderTargets(1, NullRTVs, nullptr);
@@ -405,10 +426,14 @@ void FSceneRenderer::Render(
 
 	InRHI.GetDeviceContext()->CSSetShader(InRHI.HiZCullCS.Get(), nullptr, 0);
 
+	ID3D11ShaderResourceView* ClearSRVs[] = { nullptr, nullptr };
+	DeviceContext->VSSetShaderResources(0, 2, ClearSRVs);
+	DeviceContext->PSSetShaderResources(0, 2, ClearSRVs);
+
 	ID3D11ShaderResourceView* SRVs[] = { InRHI.InstanceSRV.Get(), InRHI.HiZFullSRV.Get() };
 	DeviceContext->CSSetShaderResources(0, 2, SRVs);
 
-	DeviceContext->CSSetConstantBuffers(0, 1, Resources->FrameConstantBuffer.GetAddressOf()); 
+	DeviceContext->CSSetConstantBuffers(0, 1, Resources->FrameConstantBuffer.GetAddressOf());
 
 	ID3D11SamplerState* samplers[] = { InRHI.PointSampler.Get() };
 	DeviceContext->CSSetSamplers(0, 1, samplers);

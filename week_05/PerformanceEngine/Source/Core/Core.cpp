@@ -282,7 +282,7 @@ void FCore::Tick()
 		{
 			FScenePrimitiveRuntimeData PrimitiveData = Scene->GetPrimitiveRuntimeData()[i];
 
-			DirectX::XMStoreFloat4x4(&InstanceData[i].WorldMatrix, PrimitiveData.WorldMatrix.ToXMMatrix());
+			DirectX::XMStoreFloat4x4(&InstanceData[i].WorldMatrix, DirectX::XMMatrixTranspose(PrimitiveData.WorldMatrix.ToXMMatrix()));
 			InstanceData[i].Center = PrimitiveData.WorldBounds.GetCenter().ToXMFLOAT3();
 			InstanceData[i].Extents = PrimitiveData.WorldBounds.GetExtents().ToXMFLOAT3();
 		}

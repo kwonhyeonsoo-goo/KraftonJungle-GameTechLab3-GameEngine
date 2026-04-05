@@ -1,6 +1,6 @@
 struct InstanceData
 {
-    row_major float4x4 WorldMatrix;
+    float4x4 WorldMatrix;
     float3 Center;
     float padding1;
     float3 Extents;
