@@ -179,8 +179,9 @@ void FCore::Tick()
 	FMatrix* SelectedMatrixPtr = nullptr;
 	if (PickState.bHit && PickState.SelectedPrimitiveIndex >= 0 && PickState.SelectedPrimitiveIndex < Scene->GetPrimitiveRuntimeData().size())
 	{
-		SelectedMatrixPtr = const_cast<FMatrix*>(&Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex].WorldMatrix);
+		SelectedMatrixPtr = const_cast<FMatrix*>(&Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex].GetComponentToWorld());
 	}
+	
 	ImGuiIO& io = ImGui::GetIO();
 	FRay MouseRay = FPickingSystem::BuildPickRay(*Camera, Input->GetMouseX(), Input->GetMouseY(), RHI->GetViewportWidth(), RHI->GetViewportHeight());
 
@@ -218,31 +219,10 @@ void FCore::Tick()
 		{
 			Gizmo->UpdateDrag(SelectedMatrixPtr, Camera.get(), MouseRay, Input->GetMouseX(), Input->GetMouseY());
 
-
 			auto& RuntimeData = const_cast<FScenePrimitiveRuntimeData&>(Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex]);
-			if (RuntimeData.StaticMesh)
-			{
-				FVector LocalMin = RuntimeData.StaticMesh->GetBoundsMin();
-				FVector LocalMax = RuntimeData.StaticMesh->GetBoundsMax();
 
-				const FVector Corners[8] = {
-					FVector(LocalMin.X, LocalMin.Y, LocalMin.Z), FVector(LocalMax.X, LocalMin.Y, LocalMin.Z),
-					FVector(LocalMin.X, LocalMax.Y, LocalMin.Z), FVector(LocalMax.X, LocalMax.Y, LocalMin.Z),
-					FVector(LocalMin.X, LocalMin.Y, LocalMax.Z), FVector(LocalMax.X, LocalMin.Y, LocalMax.Z),
-					FVector(LocalMin.X, LocalMax.Y, LocalMax.Z), FVector(LocalMax.X, LocalMax.Y, LocalMax.Z)
-				};
+			RuntimeData.SetWorldMatrix(*SelectedMatrixPtr);
 
-				FVector NewMin(FLT_MAX, FLT_MAX, FLT_MAX);
-				FVector NewMax(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-				for (int i = 0; i < 8; ++i)
-				{
-					FVector Transformed = RuntimeData.WorldMatrix.TransformPosition(Corners[i]);
-					NewMin = FVector::Min(NewMin, Transformed);
-					NewMax = FVector::Max(NewMax, Transformed);
-				}
-				RuntimeData.WorldBounds.Min = NewMin;
-				RuntimeData.WorldBounds.Max = NewMax;
-			}
 		}
 	}
 	else if (Input->IsMouseButtonReleased(FInput::MOUSE_LEFT))
@@ -278,10 +258,13 @@ void FCore::Tick()
 	{
 		FInstanceData* InstanceData = static_cast<FInstanceData*>(MappedResource.pData);
 		const auto& PrimitiveRuntimeData = Scene->GetPrimitiveRuntimeData();
+
 		for (size_t i = 0; i < PrimitiveCount; ++i)
 		{
+		
 			InstanceData[i] = PrimitiveRuntimeData[i].CachedInstanceData;
 		}
+
 		RHI->GetDeviceContext()->Unmap(RHI->InstanceBuffer.Get(), 0);
 	}
 

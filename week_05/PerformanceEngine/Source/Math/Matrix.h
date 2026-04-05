@@ -822,6 +822,17 @@ public:
 
 		return Result;
 	}
+	FVector ExtractScale() const 
+	{
+		DirectX::XMMATRIX Mat = ToXMMatrix();
+		DirectX::XMVECTOR Scale, Rot, Trans;
+		DirectX::XMMatrixDecompose(&Scale, &Rot, &Trans, Mat);
+
+		DirectX::XMFLOAT3 ScaleFloat;
+		DirectX::XMStoreFloat3(&ScaleFloat, Scale);
+		return FVector(ScaleFloat.x, ScaleFloat.y, ScaleFloat.z);
+	}
+	static FMatrix MakeRotation(const class FQuat& Rotation);
 };
 
 inline FMatrix operator*(float Scalar, const FMatrix& Matrix) noexcept
