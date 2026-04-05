@@ -7,6 +7,7 @@
 #include "Types/Set.h"
 
 struct FVisibilityResults;
+struct FScenePrimitiveRuntimeData;
 class FScene;
 
 // 32바이트 정렬을 맞춰주면 AVX 레지스터 로드 속도가 가장 빠릅니다.
@@ -47,8 +48,11 @@ class FSceneGraph
 {
 public:
     void Build(const FScene& InScene);
-    void Pick(const FRay& InRay, const FVisibilityResults& CandidateVisibilityResults, TArray<int32>& OutCandidates) const;
+    void Pick(const FRay& InRay, const FVisibilityResults& CandidateVisibilityResults, const TArray<FScenePrimitiveRuntimeData>& PrimitiveBoxes, TArray<int32>& OutCandidates) const;
 
+	const TArray<FSceneNode>& GetNodes() const { return Nodes; }
+	const TArray<int32>& GetPrimitiveIndexBuffer() const { return PrimitiveIndexBuffer; }
+    int32 GetRootIndex() const { return RootIndex; }
 
 private:
     void Build(const TArray<FBoundingBox>& ObjectBoxes);

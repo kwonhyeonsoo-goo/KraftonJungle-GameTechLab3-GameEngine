@@ -18,6 +18,7 @@ struct FRay
 {
 	FVector Origin = FVector::ZeroVector;
 	FVector Direction = FVector::ForwardVector;
+	FVector InvDirection = FVector::OneVector;
 };
 
 struct FPickState

@@ -15,6 +15,77 @@ void FBVHMesh::Build(const FBoundingBox& ObjectBoxes, TArray<Triangle> triangles
     Triangles = triangles;
     
 	SplitRecursive(ObjectBoxes, 0, Triangles.size(), 0);
+
+    Nodes8Way.clear();
+    if (!Nodes.empty())
+    {
+        CollapseTo8Way(0);
+    }
+}
+
+int32 FBVHMesh::CollapseTo8Way(int32 BinaryNodeIndex)
+{
+    int32 NewNodeIndex = Nodes8Way.size();
+    Nodes8Way.push_back(FBVHMeshNode8());
+
+    TArray<int32> BinaryNodesToProcess;
+	BinaryNodesToProcess.push_back(BinaryNodeIndex);
+
+    while (BinaryNodesToProcess.size() < 8)
+    {
+        int32 LargestInternalIndex = -1;
+        float MaxSurfaceArea = -1.0f;
+
+        for (int32 i = 0; i < BinaryNodesToProcess.size(); ++i)
+        {
+            int32 NodeIdx = BinaryNodesToProcess[i];
+            const FBVHMeshNode& BinNode = Nodes[NodeIdx];
+
+            if (!BinNode.IsLeaf())
+            {
+                float SurfaceArea = BinNode.Bounds.GetSurfaceArea();
+                if (SurfaceArea > MaxSurfaceArea)
+                {
+                    LargestInternalIndex = i;
+					MaxSurfaceArea = SurfaceArea;
+                }
+            }
+        }
+
+		if (LargestInternalIndex == -1) break;
+
+		int32 ParentToSplit = BinaryNodesToProcess[LargestInternalIndex];
+		BinaryNodesToProcess.erase(BinaryNodesToProcess.begin() + LargestInternalIndex);
+
+		BinaryNodesToProcess.push_back(Nodes[ParentToSplit].LeftChild);
+		BinaryNodesToProcess.push_back(Nodes[ParentToSplit].RightChild);
+    }
+
+	Nodes8Way[NewNodeIndex].ValidChildCount = BinaryNodesToProcess.size();
+    for (int32 i = 0; i < Nodes8Way[NewNodeIndex].ValidChildCount; ++i)
+    {
+		int32 BinNodeIdx = BinaryNodesToProcess[i];
+        const FBVHMeshNode& BinNode = Nodes[BinNodeIdx];
+
+        Nodes8Way[NewNodeIndex].ChildMinX[i] = BinNode.Bounds.Min.X;
+        Nodes8Way[NewNodeIndex].ChildMinY[i] = BinNode.Bounds.Min.Y;
+        Nodes8Way[NewNodeIndex].ChildMinZ[i] = BinNode.Bounds.Min.Z;
+        Nodes8Way[NewNodeIndex].ChildMaxX[i] = BinNode.Bounds.Max.X;
+        Nodes8Way[NewNodeIndex].ChildMaxY[i] = BinNode.Bounds.Max.Y;
+        Nodes8Way[NewNodeIndex].ChildMaxZ[i] = BinNode.Bounds.Max.Z;
+
+        if (BinNode.IsLeaf())
+        {
+            Nodes8Way[NewNodeIndex].ChildIndices[i] = -1;
+            Nodes8Way[NewNodeIndex].TriangleStart[i] = BinNode.startIndex;
+            Nodes8Way[NewNodeIndex].TriangleCount[i] = BinNode.endIndex - BinNode.startIndex;
+        }
+        else
+        {
+            Nodes8Way[NewNodeIndex].ChildIndices[i] = CollapseTo8Way(BinNodeIdx);
+        }
+    }
+    return NewNodeIndex;
 }
 
 int32 FBVHMesh::SplitRecursive(const FBoundingBox& CurrentBounds, int32 Start, int32 End, int32 Depth)
@@ -28,54 +99,44 @@ int32 FBVHMesh::SplitRecursive(const FBoundingBox& CurrentBounds, int32 Start, i
     NewNode.LeftChild = -1;
     NewNode.RightChild = -1;
     Nodes.push_back(NewNode);
+
     // 2. 종료 조건 (최대 깊이 도달 혹은 삼각형 개수가 너무 적음)
     int32 NumTris = End - Start;
-    if (Depth >= maxDepth || NumTris <= 4)  // 2→4로 변경
+    if (Depth >= maxDepth || NumTris <= 16)  // 2→4로 변경
         return CurrentNodeIndex;
 
     // 3. 분할 축 결정 (가장 긴 축)
     FVector Size = CurrentBounds.Max - CurrentBounds.Min;
-    int32 SplitAxis = 0;
-    if (Size.Y > Size.X && Size.Y > Size.Z) SplitAxis = 1;
-    else if (Size.Z > Size.X && Size.Z > Size.Y) SplitAxis = 2;
 
-    // 축 길이가 0이면 강제 분할
-    if (Size[SplitAxis] < 1e-8f)
-    {
-        int32 Mid = Start + NumTris / 2;
-        int32 LeftIdx = SplitRecursive(calcBounds(Triangles, Start, Mid), Start, Mid, Depth + 1);
-        int32 RightIdx = SplitRecursive(calcBounds(Triangles, Mid, End), Mid, End, Depth + 1);
-        Nodes[CurrentNodeIndex].LeftChild = LeftIdx;
-        Nodes[CurrentNodeIndex].RightChild = RightIdx;
-        return CurrentNodeIndex;
-    }
+	float ParentArea = SurfaceArea(CurrentBounds);
+	float BestCost = std::numeric_limits<float>::max();
+	int32 BestSplit = -1;
+	int BestAxis = -1;
 
-    // SAH 버킷 구성
-    struct Bucket { int32 Count = 0; FBoundingBox Bounds; };
     constexpr int32 NumBuckets = 12;
-    Bucket Buckets[NumBuckets];
+    struct Bucket { int32 Count = 0; FBoundingBox Bounds; };
 
-    float AxisMin = CurrentBounds.Min[SplitAxis];
-    float AxisLen = Size[SplitAxis];
-
-    for (int32 i = Start; i < End; ++i)
+    for (int32 Axis = 0; Axis < 3; ++Axis)
     {
-        FVector TriCenter = (Triangles[i].Vertex1 + Triangles[i].Vertex2 + Triangles[i].Vertex3) / 3.0f;
+        if (Size[Axis] < 1e-8f) continue;
 
-        int32 b = static_cast<int32>(NumBuckets * ((TriCenter[SplitAxis] - AxisMin) / AxisLen));
-        b = std::clamp(b, 0, NumBuckets - 1);
-        Buckets[b].Count++;
-        Buckets[b].Bounds.Encapsulate(Triangles[i].Vertex1);
-        Buckets[b].Bounds.Encapsulate(Triangles[i].Vertex2);
-        Buckets[b].Bounds.Encapsulate(Triangles[i].Vertex3);
-        // SAH 비용으로 최적 분할점 탐색
-        float ParentArea = SurfaceArea(CurrentBounds);
-        float BestCost = std::numeric_limits<float>::max();
-        int32 BestSplit = NumBuckets / 2;  // fallback
+        Bucket Buckets[NumBuckets];
+		float AxisMin = CurrentBounds.Min[Axis];
+        float AxisLen = Size[Axis];
+
+        for (int32 i = Start; i < End; ++i)
+        {
+            FVector TriCenter = (Triangles[i].Vertex1 + Triangles[i].Vertex2 + Triangles[i].Vertex3) / 3.0f;
+            int32 b = static_cast<int32>(NumBuckets * ((TriCenter[Axis] - AxisMin) / AxisLen));
+            b = std::clamp(b, 0, NumBuckets - 1);
+            Buckets[b].Count++;
+            Buckets[b].Bounds.Encapsulate(Triangles[i].Vertex1);
+            Buckets[b].Bounds.Encapsulate(Triangles[i].Vertex2);
+            Buckets[b].Bounds.Encapsulate(Triangles[i].Vertex3);
+		}
 
         for (int32 split = 1; split < NumBuckets; ++split)
         {
-            // 왼쪽 누적
             FBoundingBox LeftBounds;
             int32 LeftCount = 0;
             for (int32 i = 0; i < split; ++i)
@@ -86,10 +147,10 @@ int32 FBVHMesh::SplitRecursive(const FBoundingBox& CurrentBounds, int32 Start, i
                 LeftCount += Buckets[i].Count;
             }
 
-            // 오른쪽 누적
             FBoundingBox RightBounds;
             int32 RightCount = 0;
-            for (int32 i = split; i < NumBuckets; ++i) {
+            for (int32 i = split; i < NumBuckets; ++i)
+            {
                 if (Buckets[i].Count == 0) continue;
                 RightBounds.Encapsulate(Buckets[i].Bounds.Min);
                 RightBounds.Encapsulate(Buckets[i].Bounds.Max);
@@ -103,43 +164,50 @@ int32 FBVHMesh::SplitRecursive(const FBoundingBox& CurrentBounds, int32 Start, i
             {
                 BestCost = Cost;
                 BestSplit = split;
+                BestAxis = Axis;
             }
-        }
+		}
+    }
 
-        // BestSplit 기준으로 삼각형 재정렬 (std::partition)
-        float SplitPos = AxisMin + AxisLen * (static_cast<float>(BestSplit) / NumBuckets);
-        auto MidPtr = std::partition(Triangles.begin() + Start, Triangles.begin() + End,
-            [SplitAxis, SplitPos](const Triangle& Tri)
-            {
-                float Center = (Tri.Vertex1[SplitAxis] + Tri.Vertex2[SplitAxis] + Tri.Vertex3[SplitAxis]) / 3.0f;
-                return Center < SplitPos;
-            });
-
-        int32 Mid = static_cast<int32>(MidPtr - Triangles.begin());
-
-        // 한쪽으로 몰린 경우 강제 2등분
-        // 예외 처리: 한쪽으로 몰리는 경우 강제 분할
-        if (Mid == Start || Mid == End)
-        {
-            Mid = Start + NumTris / 2;
-        }
-
-        // 5. 자식 노드의 정확한 Bounds 계산
-        FBoundingBox LeftBounds = calcBounds(Triangles, Start, Mid);
-        FBoundingBox RightBounds = calcBounds(Triangles, Mid, End);
-
-        // 6. 재귀 호출 및 인덱스 연결
-        // 주의: Nodes.Add가 발생하면 메모리 위치가 변하므로, 
-        // 반드시 반환된 인덱스를 나중에 대입해야 합니다.
-        int32 LeftIdx = SplitRecursive(LeftBounds, Start, Mid, Depth + 1);
-        int32 RightIdx = SplitRecursive(RightBounds, Mid, End, Depth + 1);
-
-        // 인덱스를 통해 노드 데이터 갱신
-        Nodes[CurrentNodeIndex].LeftChild = LeftIdx;
-        Nodes[CurrentNodeIndex].RightChild = RightIdx;
-
+    // 3축 모두 분할에 실패했거나(축 길이 0) 비용 개선이 없는 경우 (Fallback)
+    if (BestAxis == -1)
+    {
+        int32 Mid = Start + NumTris / 2;
+        Nodes[CurrentNodeIndex].LeftChild = SplitRecursive(calcBounds(Triangles, Start, Mid), Start, Mid, Depth + 1);
+        Nodes[CurrentNodeIndex].RightChild = SplitRecursive(calcBounds(Triangles, Mid, End), Mid, End, Depth + 1);
         return CurrentNodeIndex;
     }
+
+    // 최적의 축과 비율을 기준으로 재정렬
+    float AxisMin = CurrentBounds.Min[BestAxis];
+    float AxisLen = Size[BestAxis];
+    float SplitPos = AxisMin + AxisLen * (static_cast<float>(BestSplit) / NumBuckets);
+
+    auto MidPtr = std::partition(Triangles.begin() + Start, Triangles.begin() + End,
+        [BestAxis, SplitPos](const Triangle& Tri)
+        {
+            float Center = (Tri.Vertex1[BestAxis] + Tri.Vertex2[BestAxis] + Tri.Vertex3[BestAxis]) / 3.0f;
+            return Center < SplitPos;
+        });
+
+    int32 Mid = static_cast<int32>(MidPtr - Triangles.begin());
+
+    // 예외 처리: 한쪽으로 몰리는 경우 강제 절반 분할
+    if (Mid == Start || Mid == End)
+    {
+        Mid = Start + NumTris / 2;
+    }
+
+    FBoundingBox LeftBounds = calcBounds(Triangles, Start, Mid);
+    FBoundingBox RightBounds = calcBounds(Triangles, Mid, End);
+
+    int32 LeftIdx = SplitRecursive(LeftBounds, Start, Mid, Depth + 1);
+    int32 RightIdx = SplitRecursive(RightBounds, Mid, End, Depth + 1);
+
+    Nodes[CurrentNodeIndex].LeftChild = LeftIdx;
+    Nodes[CurrentNodeIndex].RightChild = RightIdx;
+
+    return CurrentNodeIndex;
 }
 
 FBoundingBox FBVHMesh::calcBounds(const TArray<Triangle>& triangles, int start, int end)

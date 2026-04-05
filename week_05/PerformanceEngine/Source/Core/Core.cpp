@@ -197,7 +197,6 @@ void FCore::Tick()
 			*SceneGraph,
 			Gizmo.get(),
 			SelectedMatrixPtr, 
-
 			PickState);
 		StatsSystem->RecordPickEvent(PickState);
 		if (PickState.bHitGizmo && SelectedMatrixPtr)
@@ -285,9 +284,11 @@ void FCore::Tick()
 		}
 		RHI->GetDeviceContext()->Unmap(RHI->InstanceBuffer.Get(), 0);
 	}
+
+	const auto& PrimitiveRuntimeData = Scene->GetPrimitiveRuntimeData();
 	std::sort(VisibilityResults.VisiblePrimitiveIndices.begin(), VisibilityResults.VisiblePrimitiveIndices.end(), [&](uint32 A, uint32 B) {
-		const auto& DataA = Scene->GetPrimitiveRuntimeData()[A];
-		const auto& DataB = Scene->GetPrimitiveRuntimeData()[B];
+		const auto& DataA = PrimitiveRuntimeData[A];
+		const auto& DataB = PrimitiveRuntimeData[B];
 		if (!DataA.StaticMesh) return false;
 		if (!DataB.StaticMesh) return true;
 		return DataA.StaticMesh < DataB.StaticMesh;

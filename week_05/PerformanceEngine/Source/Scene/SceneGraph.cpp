@@ -1,6 +1,7 @@
 #include "SceneGraph.h"
 #include "Visibility/VisibilitySystem.h"
 #include "Scene/Scene.h"
+#include "Scene/SceneTypes.h"
 #include "Picking/PickingSystem.h"
 #include <limits>
 #include <immintrin.h> // AVX2 지원 필수
@@ -121,33 +122,32 @@ void FSceneGraph::Build(const FScene& InScene)
 
     Build(PrimitiveBoxes);
 }
-void FSceneGraph::Pick(const FRay& InRay, const FVisibilityResults& CandidateVisibilityResults, TArray<int32>& OutCandidates) const
+void FSceneGraph::Pick(const FRay& InRay, const FVisibilityResults& CandidateVisibilityResults, const TArray<FScenePrimitiveRuntimeData>& PrimitiveBoxes, TArray<int32>& OutCandidates) const
 {
     const auto& Visible = CandidateVisibilityResults.VisiblePrimitiveIndices;
     const auto& Flags = CandidateVisibilityResults.VisibleFlags; // 외부에서 온 플래그
     if (Visible.empty()) return;
 
-    OutCandidates.reserve(Visible.size());
+    OutCandidates.clear();
 
-    // 2. InvDir 계산
-    FVector InvDir(
-        1.0f / (std::abs(InRay.Direction.X) > 1e-8f ? InRay.Direction.X : 1e-8f),
-        1.0f / (std::abs(InRay.Direction.Y) > 1e-8f ? InRay.Direction.Y : 1e-8f),
-        1.0f / (std::abs(InRay.Direction.Z) > 1e-8f ? InRay.Direction.Z : 1e-8f)
-    );
     float MaxT = std::numeric_limits<float>::max();
+    int32 ClosestObjIdx = -1;
 
-    // 
-    int32 Stack[128]; // 옥트리 최대 깊이에 맞춰 넉넉하게
+    struct FStackNode { int32 Index; float T; };
+    FStackNode Stack[128]; // 옥트리 최대 깊이에 맞춰 넉넉하게
     int32 StackPtr = 0;
-    Stack[StackPtr++] = RootIndex;
+    Stack[StackPtr++] = { RootIndex, 0.0f };
 
     alignas(32) float HitDistances[8];
 
     while (StackPtr > 0)
     {
         // 스택에서 노드 꺼내기
-        int32 NodeIndex = Stack[--StackPtr];
+        FStackNode Current = Stack[--StackPtr];
+
+        if (Current.T >= MaxT) break;
+
+		int32 NodeIndex = Current.Index;
         if (NodeIndex < 0 || NodeIndex >= Nodes.size()) continue;
         const FSceneNode& Node = Nodes[NodeIndex];
 
@@ -163,7 +163,17 @@ void FSceneGraph::Pick(const FRay& InRay, const FVisibilityResults& CandidateVis
                 int32 ObjIdx = PrimitiveIndexBuffer[i];
                 if (ObjIdx != -1 && ObjIdx < Flags.size() && Flags[ObjIdx] == 1)
                 {
-                    OutCandidates.push_back(ObjIdx);
+                    float HitT = 0.0f;
+                    const FBoundingBox& ObjBox = PrimitiveBoxes[ObjIdx].WorldBounds;
+
+                    if (IntersectRayAabbFast(InRay, InRay.InvDirection, ObjBox.Min, ObjBox.Max, MaxT, HitT))
+                    {
+                        if (HitT < MaxT)
+                        {
+                            MaxT = HitT;
+                            ClosestObjIdx = ObjIdx;
+                        }
+                    }
                 }
             }
             continue;
@@ -171,7 +181,7 @@ void FSceneGraph::Pick(const FRay& InRay, const FVisibilityResults& CandidateVis
 
         // 🚨 4. AVX 8-Way 동시 검사 (loadu_ps로 정렬 문제 해결)
         uint32 HitMask = IntersectRayAabbAVX(
-            InRay, InvDir, MaxT,
+            InRay, InRay.InvDirection, MaxT,
             Node.ChildMinX, Node.ChildMinY, Node.ChildMinZ,
             Node.ChildMaxX, Node.ChildMaxY, Node.ChildMaxZ,
             HitDistances
@@ -207,10 +217,14 @@ void FSceneGraph::Pick(const FRay& InRay, const FVisibilityResults& CandidateVis
         // 7. 자식들을 스택에 푸시
         for (int32 i = HitCount - 1; i >= 0; --i)
         {
-            Stack[StackPtr++] = ChildHits[i].Index;
+            Stack[StackPtr++] = { ChildHits[i].Index, ChildHits[i].T };
         }
     }
 
+    if (ClosestObjIdx != -1)
+    {
+        OutCandidates.push_back(ClosestObjIdx);
+	}
 }
 
 int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const TArray<FBoundingBox>& ObjectBoxes, const FBoundingBox& NodeVolume, int32 Depth)
@@ -225,7 +239,7 @@ int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const TArray<FBo
     Nodes.push_back(GroupNode);
 
     // 트리의 깊이가 얕아져 메모리 점프가 줄어들고 속도가 급상승합니다.
-    if (Indices.size() <= 1 || Depth >= 8)
+    if (Indices.size() <= 32 || Depth >= 16)
     {
         // 1. 현재 버퍼의 끝부분을 시작점으로 기록
         Nodes[GroupIndex].PrimitiveStartIndex = PrimitiveIndexBuffer.size();
