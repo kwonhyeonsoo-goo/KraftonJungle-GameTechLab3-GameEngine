@@ -507,6 +507,55 @@ ID3D11BlendState* FD3D11RHI::GetBlendState(BOOL bBlendEnable, D3D11_BLEND SrcBle
 	}
 	return nullptr;
 }
+void FD3D11RHI::EnsureCullingBufferCapacity(uint32 RequiredCount)
+{
+	if (RequiredCount <= MaxInstanceCapacity)
+		return;
+
+	MaxInstanceCapacity = std::max(MaxInstanceCapacity+ (MaxInstanceCapacity / 2), RequiredCount);
+	InstanceSRV.Reset();
+	InstanceBuffer.Reset();
+	VisibilityUAV.Reset();
+	VisibilityBuffer.Reset();
+	StagingBuffer.Reset();
+
+	D3D11_BUFFER_DESC instDesc = {};
+	instDesc.ByteWidth = sizeof(FInstanceData) * MaxInstanceCapacity;
+	instDesc.Usage = D3D11_USAGE_DYNAMIC;
+	instDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	instDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	instDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	instDesc.StructureByteStride = sizeof(FInstanceData);
+	Device->CreateBuffer(&instDesc, nullptr, InstanceBuffer.GetAddressOf());
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC instSrvDesc = {};
+	instSrvDesc.Format = DXGI_FORMAT_UNKNOWN;
+	instSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	instSrvDesc.Buffer.FirstElement = 0;
+	instSrvDesc.Buffer.NumElements = MaxInstanceCapacity;
+	Device->CreateShaderResourceView(InstanceBuffer.Get(), &instSrvDesc, InstanceSRV.GetAddressOf());
+
+	D3D11_BUFFER_DESC visDesc = {};
+	visDesc.ByteWidth = sizeof(uint32) * MaxInstanceCapacity;
+	visDesc.Usage = D3D11_USAGE_DEFAULT;
+	visDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
+	visDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	visDesc.StructureByteStride = sizeof(uint32);
+	Device->CreateBuffer(&visDesc, nullptr, VisibilityBuffer.GetAddressOf());
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC visUavDesc = {};
+	visUavDesc.Format = DXGI_FORMAT_UNKNOWN;
+	visUavDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+	visUavDesc.Buffer.FirstElement = 0;
+	visUavDesc.Buffer.NumElements = MaxInstanceCapacity;
+	Device->CreateUnorderedAccessView(VisibilityBuffer.Get(), &visUavDesc, VisibilityUAV.GetAddressOf());
+
+	D3D11_BUFFER_DESC stagingDesc = {};
+	stagingDesc.ByteWidth = sizeof(uint32) * MaxInstanceCapacity;
+	stagingDesc.Usage = D3D11_USAGE_STAGING;
+	stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	Device->CreateBuffer(&stagingDesc, nullptr, StagingBuffer.GetAddressOf());
+}
 bool FD3D11RHI::CreateBackBufferResources()
 {
 	if (!Device || !SwapChain || ViewportWidth <= 0 || ViewportHeight <= 0)
@@ -632,7 +681,7 @@ bool FD3D11RHI::CreateComputeShaders()
 	ShaderBlob->Release();
 
 	D3D11_BUFFER_DESC desc = {};
-	desc.ByteWidth = sizeof(FInstanceData) * 50000;
+	desc.ByteWidth = sizeof(FInstanceData) * MaxInstanceCapacity;
 	desc.Usage = D3D11_USAGE_DYNAMIC;
 	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -644,7 +693,7 @@ bool FD3D11RHI::CreateComputeShaders()
 	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
 	srvDesc.Buffer.FirstElement = 0;
-	srvDesc.Buffer.NumElements = 50000;
+	srvDesc.Buffer.NumElements = MaxInstanceCapacity;
 	Device->CreateShaderResourceView(InstanceBuffer.Get(), &srvDesc, InstanceSRV.GetAddressOf());
 
 	return true;
@@ -659,7 +708,7 @@ void FD3D11RHI::ReleaseComputeShaders()
 bool FD3D11RHI::CreateVisibilityBuffer()
 {
 	D3D11_BUFFER_DESC desc = {};
-	desc.ByteWidth = sizeof(uint32) * 50000;
+	desc.ByteWidth = sizeof(uint32) * MaxInstanceCapacity;
 	desc.Usage = D3D11_USAGE_DEFAULT;
 	desc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
 	desc.CPUAccessFlags = 0;
@@ -672,12 +721,12 @@ bool FD3D11RHI::CreateVisibilityBuffer()
 	uavDesc.Format = DXGI_FORMAT_UNKNOWN;
 	uavDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
 	uavDesc.Buffer.FirstElement = 0;
-	uavDesc.Buffer.NumElements = 50000;
+	uavDesc.Buffer.NumElements = MaxInstanceCapacity;
 
 	Device->CreateUnorderedAccessView(VisibilityBuffer.Get(), &uavDesc, VisibilityUAV.GetAddressOf());
 
 	D3D11_BUFFER_DESC stagingDesc = {};
-	stagingDesc.ByteWidth = sizeof(uint32) * 50000;
+	stagingDesc.ByteWidth = sizeof(uint32) * MaxInstanceCapacity;
 	stagingDesc.Usage = D3D11_USAGE_STAGING;
 	stagingDesc.BindFlags = 0;
 	stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;

@@ -11,12 +11,13 @@ class FScene;
 
 class FSceneNode {
 public:
-    int32 PrimitiveIndex = -1;
-    FVector Center;
     FBoundingBox Volume;
-
+    FVector Center = FVector::ZeroVector;
     int32 Parent = -1;
-    TArray<int32> Children;  // 포인터 대신 인덱스
+    TArray<int32> Children;
+
+    // 단일 인덱스 대신 배열로 변경하여 데이터 유실 원천 차단
+    TArray<int32> PrimitiveIndices;
 };
 
 class FSceneGraph
@@ -29,7 +30,7 @@ public:
 private:
     void Build(const TArray<FBoundingBox>& ObjectBoxes);
 
-    int32 BuildRecursive(TArray<int32>& Indices, const FBoundingBox& NodeVolume, int32 Depth);
+    int32 BuildRecursive(const TArray<int32>& Indices, const TArray<FBoundingBox>& ObjectBoxes, const FBoundingBox& NodeVolume, int32 Depth);
 
     void PickRecursive(int32 NodeIndex, const FRay& InRay, const TArray<int32>& Candidate, TArray<int32>& OutCandidates, int32& MAX) const;
 

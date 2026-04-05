@@ -15,6 +15,7 @@
 #include "Visibility/VisibilitySystem.h"
 #include "FileSystem/FileSystem.h"
 #include "Scene/SceneGraph.h"
+#include "StaticMesh/StaticMesh.h" 
 #include "Editor/EditorUI.h"
 #include "Thirdparty/ImGui/imgui.h"
 #include "Scene/SceneLoader.h"
@@ -185,7 +186,7 @@ void FCore::Tick()
 
 	if (Input->IsMouseButtonPressed(FInput::MOUSE_LEFT))
 	{
-
+		SceneGraph->Build(*Scene);
 		PickingSystem->UpdatePick(
 			*Scene,
 			*Camera,
@@ -217,6 +218,32 @@ void FCore::Tick()
 		if (Gizmo->IsDragging() && SelectedMatrixPtr)
 		{
 			Gizmo->UpdateDrag(SelectedMatrixPtr, Camera.get(), MouseRay, Input->GetMouseX(), Input->GetMouseY());
+
+
+			auto& RuntimeData = const_cast<FScenePrimitiveRuntimeData&>(Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex]);
+			if (RuntimeData.StaticMesh)
+			{
+				FVector LocalMin = RuntimeData.StaticMesh->GetBoundsMin();
+				FVector LocalMax = RuntimeData.StaticMesh->GetBoundsMax();
+
+				const FVector Corners[8] = {
+					FVector(LocalMin.X, LocalMin.Y, LocalMin.Z), FVector(LocalMax.X, LocalMin.Y, LocalMin.Z),
+					FVector(LocalMin.X, LocalMax.Y, LocalMin.Z), FVector(LocalMax.X, LocalMax.Y, LocalMin.Z),
+					FVector(LocalMin.X, LocalMin.Y, LocalMax.Z), FVector(LocalMax.X, LocalMin.Y, LocalMax.Z),
+					FVector(LocalMin.X, LocalMax.Y, LocalMax.Z), FVector(LocalMax.X, LocalMax.Y, LocalMax.Z)
+				};
+
+				FVector NewMin(FLT_MAX, FLT_MAX, FLT_MAX);
+				FVector NewMax(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+				for (int i = 0; i < 8; ++i)
+				{
+					FVector Transformed = RuntimeData.WorldMatrix.TransformPosition(Corners[i]);
+					NewMin = FVector::Min(NewMin, Transformed);
+					NewMax = FVector::Max(NewMax, Transformed);
+				}
+				RuntimeData.WorldBounds.Min = NewMin;
+				RuntimeData.WorldBounds.Max = NewMax;
+			}
 		}
 	}
 	else if (Input->IsMouseButtonReleased(FInput::MOUSE_LEFT))
@@ -245,16 +272,17 @@ void FCore::Tick()
 			SceneLoader->LoadScene(SelectedPath, Scene.get(), RHI.get(), Camera.get(), VisibilitySystem.get(), PickingSystem.get());
 		}
 	}
+	const size_t PrimitiveCount = Scene->GetPrimitiveCount();
+	RHI->EnsureCullingBufferCapacity(static_cast<uint32>(PrimitiveCount));
 	D3D11_MAPPED_SUBRESOURCE MappedResource = {};
 	if (SUCCEEDED(RHI->GetDeviceContext()->Map(RHI->InstanceBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
 	{
 		FInstanceData* InstanceData = static_cast<FInstanceData*>(MappedResource.pData);
-		const size_t PrimitiveCount = Scene->GetPrimitiveCount();
 		for (size_t i = 0; i < PrimitiveCount; ++i)
 		{
 			FScenePrimitiveRuntimeData PrimitiveData = Scene->GetPrimitiveRuntimeData()[i];
 
-			DirectX::XMStoreFloat4x4(&InstanceData[i].WorldMatrix, PrimitiveData.WorldMatrix.ToXMMatrix());
+			DirectX::XMStoreFloat4x4(&InstanceData[i].WorldMatrix, DirectX::XMMatrixTranspose(PrimitiveData.WorldMatrix.ToXMMatrix()));
 			InstanceData[i].Center = PrimitiveData.WorldBounds.GetCenter().ToXMFLOAT3();
 			InstanceData[i].Extents = PrimitiveData.WorldBounds.GetExtents().ToXMFLOAT3();
 		}

@@ -36,7 +36,7 @@ namespace
 		return static_cast<double>(InEndCycles - InStartCycles) * GetSecondsPerCycle() * 1000.0;
 	}
 
-	bool IntersectRayAabb(const FRay& InRay, const FVector& InBoundsMin, const FVector& InBoundsMax)
+	bool IntersectRayAabb(const FRay& InRay, const FVector& InBoundsMin, const FVector& InBoundsMax, float& OutDistance)
 	{
 		float TMin = 0.0f;
 		float TMax = std::numeric_limits<float>::max();
@@ -64,6 +64,7 @@ namespace
 			if (TMin > TMax) return false;
 		}
 
+		OutDistance = TMin; 
 		return true;
 	}
 
@@ -79,7 +80,10 @@ namespace
 		const FVector EdgeAC = InC - InA;
 		const FVector PVector = FVector::CrossProduct(InRay.Direction, EdgeAC);
 		const float Determinant = FVector::DotProduct(EdgeAB, PVector);
-		if (std::fabs(Determinant) < 1.e-8f) return false;
+		// std::abs(Determinant) < 1.e-8f 대신 부호를 체크합니다.
+		// D3D11 기준 시계방향(CW)이 앞면이므로, Determinant가 양수일 때만 앞면입니다.
+		// 광선이 뒷면을 때리면 (Determinant < 1.e-8f) 즉시 연산을 종료하여 연산량을 50% 줄입니다.
+		if (Determinant < 1.e-8f) return false;
 
 		const float InverseDeterminant = 1.0f / Determinant;
 		const FVector TVector = InRay.Origin - InA;
@@ -103,23 +107,21 @@ namespace
 		FStaticMesh* StaticMesh = InPrimitiveRuntimeData.StaticMesh;
 		if (StaticMesh == nullptr || !StaticMesh->IsValid()) return false;
 
-		if (!IntersectRayAabb(InRay, InPrimitiveRuntimeData.WorldBounds.Min, InPrimitiveRuntimeData.WorldBounds.Max)) return false;
-
+		//AABB 거리 기반 Early-Out
+		float BoxDistance = 0.0f;
+		if (!IntersectRayAabb(InRay, InPrimitiveRuntimeData.WorldBounds.Min, InPrimitiveRuntimeData.WorldBounds.Max, BoxDistance)) return false;
+		if (BoxDistance * BoxDistance >= InOutBestHit.DistanceSquared) return false;
 		const TArray<FStaticMeshVertex>& Vertices = StaticMesh->GetVertices();
 		const TArray<uint32>& Indices = StaticMesh->GetIndices();
 		bool bHit = false;
 
 		//버텍스를 전부 미리 transformposition 해놓기
-		TArray<FVector> TransformedVertices;
-		TransformedVertices.resize(Vertices.size());
-		const auto XM = InPrimitiveRuntimeData.WorldMatrix.ToXMMatrix();
-
-		for (size_t i = 0; i < Vertices.size(); ++i)
-		{
-			auto V = DirectX::XMLoadFloat3(reinterpret_cast<const DirectX::XMFLOAT3*>(&Vertices[i].Position));
-			auto T = DirectX::XMVector3TransformCoord(V, XM);
-			TransformedVertices[i] = FVector(T);
-		}
+		const FMatrix InverseWorld = InPrimitiveRuntimeData.WorldMatrix.GetInverse();
+		FRay LocalRay;
+		LocalRay.Origin = InverseWorld.TransformPosition(InRay.Origin);
+		LocalRay.Direction = InverseWorld.TransformVector(InRay.Direction).GetSafeNormal();
+		float BestLocalDistance = std::numeric_limits<float>::max();
+		FVector BestLocalHitPosition = FVector::ZeroVector;
 
 		for (size_t IndexOffset = 0; IndexOffset + 2 < Indices.size(); IndexOffset += 3)
 		{
@@ -128,27 +130,43 @@ namespace
 			const uint32 IndexC = Indices[IndexOffset + 2];
 			if (IndexA >= Vertices.size() || IndexB >= Vertices.size() || IndexC >= Vertices.size()) continue;
 
-			const FVector A = TransformedVertices[IndexA];
-			const FVector B = TransformedVertices[IndexB];
-			const FVector C = TransformedVertices[IndexC];
+			// 메모리 할당 및 행렬 곱셈 없이 원본 정점을 그대로 사용합니다.
+			const FVector& A = Vertices[IndexA].Position;
+			const FVector& B = Vertices[IndexB].Position;
+			const FVector& C = Vertices[IndexC].Position;
 
 			float HitDistance = 0.0f;
 			FVector HitPosition = FVector::ZeroVector;
-			if (!IntersectRayTriangle(InRay, A, B, C, HitDistance, HitPosition)) continue;
 
-			const float DistanceSquared = FVector::DistSquared(InRay.Origin, HitPosition);
-			if (DistanceSquared >= InOutBestHit.DistanceSquared) continue;
+			// 백페이스 컬링이 적용된 IntersectRayTriangle 호출
+			if (!IntersectRayTriangle(LocalRay, A, B, C, HitDistance, HitPosition)) continue;
 
-			InOutBestHit.DistanceSquared = DistanceSquared;
-			InOutBestHit.PrimitiveId = InPrimitiveRuntimeData.PrimitiveId;
-			InOutBestHit.WorldPosition = HitPosition;
-			bHit = true;
+			if (HitDistance < BestLocalDistance)
+			{
+				BestLocalDistance = HitDistance;
+				BestLocalHitPosition = HitPosition;
+				bHit = true;
+			}
 		}
 
-		return bHit;
+		// 충돌했다면 로컬 충돌점을 다시 월드 공간으로 변환하여 최종 거리 비교
+		if (bHit)
+		{
+			FVector WorldHitPosition = InPrimitiveRuntimeData.WorldMatrix.TransformPosition(BestLocalHitPosition);
+			const float DistanceSquared = FVector::DistSquared(InRay.Origin, WorldHitPosition);
+
+			if (DistanceSquared < InOutBestHit.DistanceSquared)
+			{
+				InOutBestHit.DistanceSquared = DistanceSquared;
+				InOutBestHit.PrimitiveId = InPrimitiveRuntimeData.PrimitiveId;
+				InOutBestHit.WorldPosition = WorldHitPosition;
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
-
 FRay FPickingSystem::BuildPickRay(const FCamera& InCamera, int32 InMouseX, int32 InMouseY, int32 InViewportWidth, int32 InViewportHeight)
 {
 	FRay Result = {};
@@ -164,8 +182,23 @@ FRay FPickingSystem::BuildPickRay(const FCamera& InCamera, int32 InMouseX, int32
 
 	const FMatrix ViewProjection = InCamera.GetViewMatrix() * InCamera.GetProjectionMatrix();
 	const FMatrix InverseViewProjection = ViewProjection.GetInverse();
-	const FVector WorldNear = InverseViewProjection.TransformPosition(FVector(NdcX, NdcY, 0.0f));
-	const FVector WorldFar = InverseViewProjection.TransformPosition(FVector(NdcX, NdcY, 1.0f));
+	//projection inverse matrix
+	auto TransformProjected = [](const FMatrix& Mat, const FVector& V) -> FVector
+	{
+		float X = V.X * Mat.M[0][0] + V.Y * Mat.M[1][0] + V.Z * Mat.M[2][0] + Mat.M[3][0];
+		float Y = V.X * Mat.M[0][1] + V.Y * Mat.M[1][1] + V.Z * Mat.M[2][1] + Mat.M[3][1];
+		float Z = V.X * Mat.M[0][2] + V.Y * Mat.M[1][2] + V.Z * Mat.M[2][2] + Mat.M[3][2];
+		float W = V.X * Mat.M[0][3] + V.Y * Mat.M[1][3] + V.Z * Mat.M[2][3] + Mat.M[3][3];
+		if (std::abs(W) > 1e-8f)
+		{
+			return FVector(X / W, Y / W, Z / W); 
+		}
+		return FVector(X, Y, Z);
+	};
+	// use TransformProjected
+	const FVector WorldNear = TransformProjected(InverseViewProjection, FVector(NdcX, NdcY, 0.0f));
+	const FVector WorldFar = TransformProjected(InverseViewProjection, FVector(NdcX, NdcY, 1.0f));
+
 	const FVector Direction = (WorldFar - WorldNear).GetSafeNormal();
 	if (!Direction.IsNearlyZero())
 	{
@@ -197,7 +230,7 @@ void FPickingSystem::UpdatePick(
 	const FRay PickRay = BuildPickRay(InCamera, InMousePositionClient.x, InMousePositionClient.y, InViewportWidth, InViewportHeight);
 	const uint64 PickStartCycles = QueryCycles64();
 
-	// 1. 기즈모 피킹 판정 (최우선)
+	//기즈모 피킹 판정 
 	InOutPickState.bHitGizmo = false;
 	InOutPickState.HitGizmoAxis = EGizmoAxis::None;
 
@@ -213,7 +246,7 @@ void FPickingSystem::UpdatePick(
 		}
 	}
 
-	// 2. 씬 오브젝트 피킹
+	//씬 오브젝트 피킹
 	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
 	FPickHit BestHit;
 	BestHit.DistanceSquared = std::numeric_limits<float>::max();

@@ -34,6 +34,8 @@ struct FStaticMeshSourceData
 	std::wstring SourcePath;
 	TArray<FStaticMeshVertex> Vertices;
 	TArray<uint32> Indices;
+
+
 	TArray<FMaterial> Materials;
 	TArray<FSection> Sections;
 	FVector BoundsMin = FVector::ZeroVector;
