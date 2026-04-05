@@ -124,8 +124,8 @@ const FMatrix& FSceneComponent::GetComponentToWorld() const
 	// 움직이지 않았다면 예전 행렬을 그대로 반환 (연산량 0)
 	if (bIsWorldTransformDirty)
 	{
-		UpdateComponentToWorld();
 		bIsWorldTransformDirty = false;
+		UpdateComponentToWorld();
 	}
 	return ComponentToWorld;
 }

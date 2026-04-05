@@ -36,7 +36,6 @@ public:
 
 	// 자신과 자식들의 행렬 재계산 예약 (Dirty Flag 켜기)
 	void MarkRenderStateDirty();
-
 protected:
 	// 상속받은 클래스(MeshComponent 등)가 트랜스폼 변경 시 추가 작업을 할 수 있도록 지원
 	virtual void OnUpdateWorldTransform() {}

@@ -311,8 +311,10 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 
 				FScenePrimitiveRuntimeData RuntimeData;
 				RuntimeData.PrimitiveId = PendingPrimitive.Id;
-				RuntimeData.TransformComponent.SetWorldMatrix(WorldTransform.ToMatrixWithScale());
+
 				RuntimeData.StaticMesh = SharedMesh.get();
+				RuntimeData.SetWorldMatrix(WorldTransform.ToMatrixWithScale()); 
+
 
 				bool bHasRuntimeBounds = false;
 				ExpandBoundsWithTransformedAabb(

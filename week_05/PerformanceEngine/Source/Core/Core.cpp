@@ -179,7 +179,7 @@ void FCore::Tick()
 	FMatrix* SelectedMatrixPtr = nullptr;
 	if (PickState.bHit && PickState.SelectedPrimitiveIndex >= 0 && PickState.SelectedPrimitiveIndex < Scene->GetPrimitiveRuntimeData().size())
 	{
-		SelectedMatrixPtr = const_cast<FMatrix*>(&Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex].TransformComponent.GetComponentToWorld());
+		SelectedMatrixPtr = const_cast<FMatrix*>(&Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex].GetComponentToWorld());
 	}
 	
 	ImGuiIO& io = ImGui::GetIO();
@@ -220,32 +220,10 @@ void FCore::Tick()
 		{
 			Gizmo->UpdateDrag(SelectedMatrixPtr, Camera.get(), MouseRay, Input->GetMouseX(), Input->GetMouseY());
 
-
 			auto& RuntimeData = const_cast<FScenePrimitiveRuntimeData&>(Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex]);
-			RuntimeData.TransformComponent.SetWorldMatrix(*SelectedMatrixPtr);
-			if (RuntimeData.StaticMesh)
-			{
-				FVector LocalMin = RuntimeData.StaticMesh->GetBoundsMin();
-				FVector LocalMax = RuntimeData.StaticMesh->GetBoundsMax();
 
-				const FVector Corners[8] = {
-					FVector(LocalMin.X, LocalMin.Y, LocalMin.Z), FVector(LocalMax.X, LocalMin.Y, LocalMin.Z),
-					FVector(LocalMin.X, LocalMax.Y, LocalMin.Z), FVector(LocalMax.X, LocalMax.Y, LocalMin.Z),
-					FVector(LocalMin.X, LocalMin.Y, LocalMax.Z), FVector(LocalMax.X, LocalMin.Y, LocalMax.Z),
-					FVector(LocalMin.X, LocalMax.Y, LocalMax.Z), FVector(LocalMax.X, LocalMax.Y, LocalMax.Z)
-				};
+			RuntimeData.SetWorldMatrix(*SelectedMatrixPtr);
 
-				FVector NewMin(FLT_MAX, FLT_MAX, FLT_MAX);
-				FVector NewMax(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-				for (int i = 0; i < 8; ++i)
-				{
-					FVector Transformed = RuntimeData.TransformComponent.GetComponentToWorld().TransformPosition(Corners[i]);
-					NewMin = FVector::Min(NewMin, Transformed);
-					NewMax = FVector::Max(NewMax, Transformed);
-				}
-				RuntimeData.WorldBounds.Min = NewMin;
-				RuntimeData.WorldBounds.Max = NewMax;
-			}
 		}
 	}
 	else if (Input->IsMouseButtonReleased(FInput::MOUSE_LEFT))
@@ -283,7 +261,7 @@ void FCore::Tick()
 		for (size_t i = 0; i < PrimitiveCount; ++i)
 		{
 			FScenePrimitiveRuntimeData PrimitiveData = Scene->GetPrimitiveRuntimeData()[i];
-			const FMatrix& WorldMat = PrimitiveData.TransformComponent.GetComponentToWorld();
+			const FMatrix& WorldMat = PrimitiveData.GetComponentToWorld();
 			DirectX::XMStoreFloat4x4(&InstanceData[i].WorldMatrix, DirectX::XMMatrixTranspose(WorldMat.ToXMMatrix()));
 			InstanceData[i].Center = PrimitiveData.WorldBounds.GetCenter().ToXMFLOAT3();
 			InstanceData[i].Extents = PrimitiveData.WorldBounds.GetExtents().ToXMFLOAT3();

@@ -142,7 +142,7 @@ namespace
 		if (Nodes.empty()) return false;
 
 		// 2. 광선을 로컬 공간으로 변환
-		const auto XM = InPrimitiveRuntimeData.TransformComponent.GetComponentToWorld().ToXMMatrix();
+		const auto XM = InPrimitiveRuntimeData.GetComponentToWorld().ToXMMatrix();
 		DirectX::XMVECTOR Determinant;
 		const auto WorldToLocalXM = DirectX::XMMatrixInverse(&Determinant, XM);
 
