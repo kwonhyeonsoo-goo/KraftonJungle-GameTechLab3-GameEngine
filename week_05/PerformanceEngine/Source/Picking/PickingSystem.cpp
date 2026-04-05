@@ -10,6 +10,7 @@
 #include "Visibility/VisibilitySystem.h"
 #include "Scene/SceneGraph.h"
 #include "Gizmo/Gizmo.h"
+#include <DirectXMath.h>
 
 namespace
 {
@@ -93,6 +94,7 @@ namespace
 		}
 		return false;
 	}
+
 	bool IntersectRayTriangle(
 		const FRay& InRay,
 		const FVector& InA,
@@ -133,11 +135,11 @@ namespace
 		if (StaticMesh == nullptr || !StaticMesh->IsValid()) return false;
 
 		// 1. 월드 바운딩 박스 1차 거르기
-		float distance = std::numeric_limits<float>::max();
+		float distance = 0;
 		if (!IntersectRayAabb(InRay, InPrimitiveRuntimeData.WorldBounds.Min, InPrimitiveRuntimeData.WorldBounds.Max, distance)) return false;
-
+		if ((distance * distance) >= InOutBestHit.DistanceSquared) return false;
 		const FBVHMesh& BVH = StaticMesh->GetBVH();
-		// 🚨 최적화 1: 반드시 참조(&)로 받아 복사 방지!
+
 		const TArray<FBVHMeshNode>& Nodes = BVH.GetNodes();
 		if (Nodes.empty()) return false;
 
@@ -157,7 +159,7 @@ namespace
 		DirectX::XMStoreFloat3(reinterpret_cast<DirectX::XMFLOAT3*>(&LocalRay.Origin), LocalOriginXM);
 		DirectX::XMStoreFloat3(reinterpret_cast<DirectX::XMFLOAT3*>(&LocalRay.Direction), LocalDirXM);
 
-		// 🚨 최적화 2: AABB 검사용 나눗셈(InvDirection)을 1번만 미리 계산 (IEEE 754 0나누기 무한대 성질 이용)
+		//최적화 2: AABB 검사용 나눗셈(InvDirection)을 1번만 미리 계산 (IEEE 754 0나누기 무한대 성질 이용)
 		FVector InvDir(
 			1.0f / (LocalRay.Direction.X != 0.0f ? LocalRay.Direction.X : 1e-8f),
 			1.0f / (LocalRay.Direction.Y != 0.0f ? LocalRay.Direction.Y : 1e-8f),
@@ -168,28 +170,31 @@ namespace
 		float ClosestLocalDistance = std::numeric_limits<float>::max();
 		FVector BestLocalHitPosition = FVector::ZeroVector;
 
-		// 🚨 최적화 3: std::vector 동적 할당 대신 고정 크기 스택 배열 사용
+		//최적화 3: std::vector 동적 할당 대신 고정 크기 스택 배열 사용
 		int32 Stack[64];
 		int32 StackPtr = 0;
 		Stack[StackPtr++] = 0; // 루트 노드(0번) 푸시
+
+		const TArray<Triangle>& Triangles = BVH.GetTriangles();
 
 		while (StackPtr > 0)
 		{
 			int32 NodeIndex = Stack[--StackPtr];
 			const FBVHMeshNode& Node = Nodes[NodeIndex];
-
 			if (Node.IsLeaf())
 			{
-				const TArray<Triangle>& Triangles = BVH.GetTriangles();
+
 				for (int32 i = Node.startIndex; i < Node.endIndex; ++i)
 				{
 					const Triangle& Tri = Triangles[i];
 					float HitDistance = 0.0f;
 					FVector HitPosition = FVector::ZeroVector;
 
+					//if (IntersectRayTriangleSIMD(RayOrigin, RayDir, Tri.Vertex1, Tri.Vertex2, Tri.Vertex3, HitDistance, HitPosition))
 					if (IntersectRayTriangle(LocalRay, Tri.Vertex1, Tri.Vertex2, Tri.Vertex3, HitDistance, HitPosition))
+
 					{
-						// 🔥 여기서 ClosestLocalDistance가 줄어들면, 
+						// 여기서 ClosestLocalDistance가 줄어들면, 
 						// 이후의 AABB 검사에서 더 먼 박스들은 즉시 Culling 됩니다.
 						if (HitDistance < ClosestLocalDistance)
 						{
