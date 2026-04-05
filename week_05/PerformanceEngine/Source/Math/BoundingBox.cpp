@@ -13,6 +13,16 @@ void FBoundingBox::Encapsulate(const FBoundingBox& Other)
 	Max.Z = std::max(Max.Z, Other.Max.Z);
 }
 
+void FBoundingBox::Encapsulate(const FVector& Other)
+{
+    if (Other.X  < Min.X ) Min.X  = Other.X;
+    if (Other.Y  < Min.Y ) Min.Y  = Other.Y;
+    if (Other.Z  < Min.Z ) Min.Z  = Other.Z;
+    if (Other.X  > Max.X ) Max.X  = Other.X;
+    if (Other.Y  > Max.Y ) Max.Y  = Other.Y;
+    if (Other.Z  > Max.Z ) Max.Z  = Other.Z;
+}
+
 bool FBoundingBox::IntersectsRay(const FRay& Ray) const
 {
     float tMin = 0.0f;
@@ -43,4 +53,11 @@ bool FBoundingBox::IntersectsRay(const FRay& Ray) const
         }
     }
     return true;
+}
+
+bool FBoundingBox::Contains(const FVector& Center) const
+{
+    return (Center.X >= Min.X && Center.X <= Max.X) &&
+        (Center.Y >= Min.Y && Center.Y <= Max.Y) &&
+        (Center.Z >= Min.Z && Center.Z <= Max.Z);
 }

@@ -1,101 +1,108 @@
 #include "SceneGraph.h"
 #include "Visibility/VisibilitySystem.h"
 #include "Scene/Scene.h"
-
+#include "Picking/PickingSystem.h"
+#include <limits>
 void FSceneGraph::Build(const TArray<FBoundingBox>& ObjectBoxes)
 {
     Nodes.clear();
 
-    if (ObjectBoxes.empty())
-    {
-        RootIndex = -1;
-        return;
-    }
-
-    FBoundingBox SceneVolume = ObjectBoxes[0];
+    // 전체 씬 AABB 계산
+    FBoundingBox SceneVolume;
     TArray<int32> Indices;
-    Indices.reserve(ObjectBoxes.size());
-
     for (int32 i = 0; i < ObjectBoxes.size(); i++)
     {
+        FSceneNode Leaf;
+        Leaf.PrimitiveIndex = i;
+        Leaf.Volume = ObjectBoxes[i];
+        Leaf.Center = ObjectBoxes[i].GetCenter();
+        Nodes.push_back(Leaf);
+
         SceneVolume.Encapsulate(ObjectBoxes[i]);
         Indices.push_back(i);
     }
 
-    RootIndex = BuildRecursive(Indices, ObjectBoxes, SceneVolume, 0);
+    RootIndex = BuildRecursive(Indices, SceneVolume, 0);
 }
 
 void FSceneGraph::Build(const FScene& InScene)
 {
-    const TArray<FScenePrimitiveRuntimeData>& Primitives = InScene.GetPrimitiveRuntimeData();
-    if (Primitives.empty())
-    {
-        Nodes.clear();
-        RootIndex = -1;
-        return;
-    }
+    TArray<FScenePrimitiveRuntimeData> Primitives = InScene.GetPrimitiveRuntimeData();
     TArray<FBoundingBox> PrimitiveBoxes;
     PrimitiveBoxes.reserve(Primitives.size());
-    TArray<int32> Indices;
-    Indices.reserve(Primitives.size());
 
-    FBoundingBox SceneVolume = Primitives[0].WorldBounds;
-    for (size_t i = 0; i < Primitives.size(); i++)
+    for (const FScenePrimitiveRuntimeData& Primitive : Primitives)
     {
-        PrimitiveBoxes.push_back(Primitives[i].WorldBounds);
-        SceneVolume.Encapsulate(Primitives[i].WorldBounds);
-        Indices.push_back(static_cast<int32>(i));
+        PrimitiveBoxes.push_back(Primitive.WorldBounds);
     }
 
-    Nodes.clear();
-    RootIndex = BuildRecursive(Indices, PrimitiveBoxes, SceneVolume, 0);
+    Build(PrimitiveBoxes);
 }
 
 void FSceneGraph::Pick(const FRay& InRay, const FVisibilityResults& CandidateVisibilityResults, TArray<int32>& OutCandidates)const
 {
     
-    OutCandidates.clear();
-    PickRecursive(RootIndex, InRay, OutCandidates);
+    // 루트부터 재귀 순회
+    int32 max = std::numeric_limits<int32>::max();
+    PickRecursive(RootIndex, InRay, CandidateVisibilityResults.VisiblePrimitiveIndices, OutCandidates, max);
 }
 
-void FSceneGraph::PickRecursive(int32 NodeIndex, const FRay& InRay, TArray<int32>& OutCandidates) const
+void FSceneGraph::PickRecursive(int32 NodeIndex, const FRay& InRay, const TArray<int32>& Candidate, TArray<int32>& OutCandidates, int32& MAX) const
 {
-    if (NodeIndex < 0 || NodeIndex >= Nodes.size()) return;
+    if (NodeIndex == -1) return;
 
     const FSceneNode& Node = Nodes[NodeIndex];
 
+    auto DistanceSq3D = [](const FVector& A, const FVector& B)
+        {
+            float dx = A.X - B.X;
+            float dy = A.Y - B.Y;
+            float dz = A.Z - B.Z;
+            return dx * dx + dy * dy + dz * dz;
+        };
+
     // 레이-AABB 교차 테스트, 안 맞으면 자식 전체 스킵
     if (!Node.Volume.IntersectsRay(InRay)) return;
-
-    // 리프 노드일 경우 보관 중인 모든 오브젝트 반환
+    else if (DistanceSq3D(InRay.Origin, Node.Center) > MAX) {
+        return;
+    }
+    else {
+        MAX = DistanceSq3D(InRay.Origin, Node.Center);
+    }
+    // 리프 노드
     if (Node.Children.empty())
     {
-        for (int32 Idx : Node.PrimitiveIndices)
+        if (Node.PrimitiveIndex != -1)
         {
-            OutCandidates.push_back(Idx);
+            auto It = std::find(Candidate.begin(), Candidate.end(), Node.PrimitiveIndex);
+            if (It != Candidate.end())
+                OutCandidates.push_back(Node.PrimitiveIndex);
         }
         return;
     }
 
-    // 자식 노드 순회
-    for (int32 ChildIndex : Node.Children)
-    {
-        PickRecursive(ChildIndex, InRay, OutCandidates);
+    for (int32 ChildIndex : Node.Children) {
+        int32 max = std::numeric_limits<int32>::max();
+        PickRecursive(ChildIndex, InRay, Candidate, OutCandidates, max);
     }
 }
 
-int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const TArray<FBoundingBox>& ObjectBoxes, const FBoundingBox& NodeVolume, int32 Depth)
+int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const FBoundingBox& NodeVolume, int32 Depth)
 {
+    // 그룹 노드 생성
     FSceneNode GroupNode;
+    GroupNode.PrimitiveIndex = -1;
     GroupNode.Volume = NodeVolume;
     GroupNode.Center = NodeVolume.GetCenter();
 
     int32 GroupIndex = Nodes.size();
     Nodes.push_back(GroupNode);
-    // 리프 조건: 오브젝트가 1개 이하이거나 최대 깊이 도달
-    if (Indices.size() <= 1 || Depth >= 8)
+
+    // 리프 조건: 오브젝트 1개 or 최대 깊이
+    if (Indices.size() == 1 || Depth >= 8)
     {
-        Nodes[GroupIndex].PrimitiveIndices = Indices;
+        if (Indices.size() == 1)
+            Nodes[GroupIndex].PrimitiveIndex = Indices[0];
         return GroupIndex;
     }
 
@@ -105,18 +112,20 @@ int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const TArray<FBo
     TArray<int32> ChildIndices[8];
     for (int32 Idx : Indices)
     {
-        FVector C = ObjectBoxes[Idx].GetCenter();
+        FVector C = Nodes[Idx].Center;
         int32 Oct = 0;
         if (C.X > Mid.X) Oct |= 1;
         if (C.Y > Mid.Y) Oct |= 2;
         if (C.Z > Mid.Z) Oct |= 4;
         ChildIndices[Oct].push_back(Idx);
     }
-    // 비어있지 않은 자식만 재귀 생성
+
+    // 비어있지 않은 자식만 재귀
     for (int32 i = 0; i < 8; i++)
     {
         if (ChildIndices[i].empty()) continue;
 
+        // 자식 AABB 계산
         FBoundingBox ChildVolume;
         ChildVolume.Min.X = (i & 1) ? Mid.X : NodeVolume.Min.X;
         ChildVolume.Min.Y = (i & 2) ? Mid.Y : NodeVolume.Min.Y;
@@ -125,7 +134,7 @@ int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const TArray<FBo
         ChildVolume.Max.Y = (i & 2) ? NodeVolume.Max.Y : Mid.Y;
         ChildVolume.Max.Z = (i & 4) ? NodeVolume.Max.Z : Mid.Z;
 
-        int32 ChildIndex = BuildRecursive(ChildIndices[i], ObjectBoxes, ChildVolume, Depth + 1);
+        int32 ChildIndex = BuildRecursive(ChildIndices[i], ChildVolume, Depth + 1);
         Nodes[GroupIndex].Children.push_back(ChildIndex);
         Nodes[ChildIndex].Parent = GroupIndex;
     }

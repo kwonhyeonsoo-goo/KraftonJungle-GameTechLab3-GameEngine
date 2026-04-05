@@ -64,14 +64,15 @@ void FBVH::GetVisibleObjects(const FFrustum& InFrustum, const FVector& CameraPos
 {
 	if (Nodes.empty()) return;
 
-	TArray<int32> NodeStack;
-	NodeStack.push_back(0);
+	//TArray<int32> NodeStack;
+	//NodeStack.push_back(0);
+	int32 NodeStack[64];
+	int32 StackPtr = 0;
+	NodeStack[StackPtr++] = 0; // Root 노드 Push
 
-	while (NodeStack.size() > 0)
+	while (StackPtr > 0)
 	{
-		int32 CurrentIndex = NodeStack.back();
-		NodeStack.pop_back();
-
+		int32 CurrentIndex = NodeStack[--StackPtr];
 		const FBVHNode& Node = Nodes[CurrentIndex];
 
 		if (InFrustum.IsOutSide(Node.Bounds)) continue;
@@ -85,18 +86,13 @@ void FBVH::GetVisibleObjects(const FFrustum& InFrustum, const FVector& CameraPos
 			continue;
 		}
 
-		float DistSqL = FVector::DistSquared(CameraPos, Nodes[Node.LeftChild].Bounds.GetCenter());
-		float DistSqR = FVector::DistSquared(CameraPos, Nodes[Node.RightChild].Bounds.GetCenter());
+		//float DistSqL = FVector::DistSquared(CameraPos, Nodes[Node.LeftChild].Bounds.GetCenter());
+		//float DistSqR = FVector::DistSquared(CameraPos, Nodes[Node.RightChild].Bounds.GetCenter());
 
-		if (DistSqL > DistSqR)
+		if (StackPtr < 62)
 		{
-			NodeStack.push_back(Node.LeftChild);
-			NodeStack.push_back(Node.RightChild);
-		}
-		else
-		{
-			NodeStack.push_back(Node.RightChild);
-			NodeStack.push_back(Node.LeftChild);
+			NodeStack[StackPtr++] = Node.LeftChild;
+			NodeStack[StackPtr++] = Node.RightChild;
 		}
 	}
 }
