@@ -179,8 +179,9 @@ void FCore::Tick()
 	FMatrix* SelectedMatrixPtr = nullptr;
 	if (PickState.bHit && PickState.SelectedPrimitiveIndex >= 0 && PickState.SelectedPrimitiveIndex < Scene->GetPrimitiveRuntimeData().size())
 	{
-		SelectedMatrixPtr = const_cast<FMatrix*>(&Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex].WorldMatrix);
+		SelectedMatrixPtr = const_cast<FMatrix*>(&Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex].TransformComponent.GetComponentToWorld());
 	}
+	
 	ImGuiIO& io = ImGui::GetIO();
 	FRay MouseRay = FPickingSystem::BuildPickRay(*Camera, Input->GetMouseX(), Input->GetMouseY(), RHI->GetViewportWidth(), RHI->GetViewportHeight());
 
@@ -221,6 +222,7 @@ void FCore::Tick()
 
 
 			auto& RuntimeData = const_cast<FScenePrimitiveRuntimeData&>(Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex]);
+			RuntimeData.TransformComponent.SetWorldMatrix(*SelectedMatrixPtr);
 			if (RuntimeData.StaticMesh)
 			{
 				FVector LocalMin = RuntimeData.StaticMesh->GetBoundsMin();
@@ -237,7 +239,7 @@ void FCore::Tick()
 				FVector NewMax(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 				for (int i = 0; i < 8; ++i)
 				{
-					FVector Transformed = RuntimeData.WorldMatrix.TransformPosition(Corners[i]);
+					FVector Transformed = RuntimeData.TransformComponent.GetComponentToWorld().TransformPosition(Corners[i]);
 					NewMin = FVector::Min(NewMin, Transformed);
 					NewMax = FVector::Max(NewMax, Transformed);
 				}
@@ -281,8 +283,8 @@ void FCore::Tick()
 		for (size_t i = 0; i < PrimitiveCount; ++i)
 		{
 			FScenePrimitiveRuntimeData PrimitiveData = Scene->GetPrimitiveRuntimeData()[i];
-
-			DirectX::XMStoreFloat4x4(&InstanceData[i].WorldMatrix, DirectX::XMMatrixTranspose(PrimitiveData.WorldMatrix.ToXMMatrix()));
+			const FMatrix& WorldMat = PrimitiveData.TransformComponent.GetComponentToWorld();
+			DirectX::XMStoreFloat4x4(&InstanceData[i].WorldMatrix, DirectX::XMMatrixTranspose(WorldMat.ToXMMatrix()));
 			InstanceData[i].Center = PrimitiveData.WorldBounds.GetCenter().ToXMFLOAT3();
 			InstanceData[i].Extents = PrimitiveData.WorldBounds.GetExtents().ToXMFLOAT3();
 		}

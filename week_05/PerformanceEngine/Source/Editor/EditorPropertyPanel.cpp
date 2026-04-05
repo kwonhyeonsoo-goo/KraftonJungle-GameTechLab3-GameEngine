@@ -20,7 +20,12 @@ void FEditorPropertyPanel::Render()
 		FScenePrimitiveRuntimeData* SelectedPrimitiveData = const_cast<FScenePrimitiveRuntimeData*>(Core->GetSelectedPrimitiveData());
 		if (SelectedPrimitiveData)
 		{
-			ImGui::DragFloat3("Location", &SelectedPrimitiveData->WorldMatrix.M[3][0], 0.1f);
+			FVector Loc = SelectedPrimitiveData->TransformComponent.GetRelativeLocation();
+			float Pos[3] = { Loc.X, Loc.Y, Loc.Z };
+			if (ImGui::DragFloat3("Location", Pos, 0.1f))
+			{
+				SelectedPrimitiveData->TransformComponent.SetRelativeLocation(FVector(Pos[0], Pos[1], Pos[2]));
+			}
 		}
 
 

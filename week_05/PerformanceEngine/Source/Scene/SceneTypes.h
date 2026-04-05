@@ -35,11 +35,11 @@ struct FScenePrimitiveColdData
 	FString MeshAssetPath;
 	std::shared_ptr<FStaticMesh> StaticMeshOwner;
 };
-
+#include "SceneComponent.h"
 struct FScenePrimitiveRuntimeData
 {
 	int32 PrimitiveId = -1;
-	FMatrix WorldMatrix = FMatrix::Identity;
+	FSceneComponent TransformComponent;
 	FBoundingBox WorldBounds;
 	FStaticMesh* StaticMesh = nullptr;
 };
