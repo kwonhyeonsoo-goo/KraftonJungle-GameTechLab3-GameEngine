@@ -87,24 +87,31 @@ namespace {
 
 void FSceneGraph::Build(const TArray<FBoundingBox>& ObjectBoxes)
 {
+    // 1. 기존 데이터 초기화
     Nodes.clear();
-    VisibleFlags.resize(ObjectBoxes.size(), 0);
-    // 전체 씬 AABB 계산
-    FBoundingBox SceneVolume;
+    PrimitiveIndexBuffer.clear(); // 🚨 방금 새로 만든 인덱스 버퍼도 꼭 비워줍니다!
+
+    // (VisibleFlags는 VisibilitySystem으로 넘기기로 했다면 여기서 지워도 되지만, 
+    // 일단 현재 구조를 유지한다면 사이즈만 맞춰줍니다)
+    //VisibleFlags.resize(ObjectBoxes.size(), 0);
+
+    if (ObjectBoxes.empty()) return;
+
+    // 2. 전체 씬 AABB 계산 및 초기 인덱스 배열 생성
+    FBoundingBox SceneVolume = ObjectBoxes[0];
     TArray<int32> Indices;
+    Indices.reserve(ObjectBoxes.size());
+
     for (int32 i = 0; i < ObjectBoxes.size(); i++)
     {
-        FSceneNode Leaf;
-        Leaf.PrimitiveIndex = i;
-        Leaf.Volume = ObjectBoxes[i];
-        Leaf.Center = ObjectBoxes[i].GetCenter();
-        Nodes.push_back(Leaf);
-
         SceneVolume.Encapsulate(ObjectBoxes[i]);
         Indices.push_back(i);
     }
 
-    RootIndex = BuildRecursive(Indices, SceneVolume, 0);
+    // 3. 루트 노드부터 재귀 빌드 시작!
+    // 🚨 주의: 이제 BuildRecursive가 오브젝트의 중심점과 AABB를 알기 위해 
+    // ObjectBoxes 배열 원본을 같이 넘겨받아야 합니다!
+    RootIndex = BuildRecursive(Indices, ObjectBoxes, SceneVolume, 0);
 }
 
 void FSceneGraph::Build(const FScene& InScene)
@@ -158,10 +165,17 @@ void FSceneGraph::Pick(const FRay& InRay, const FVisibilityResults& CandidateVis
         // 리프 노드 처리
         if (Node.ChildCount == 0)
         {
-            int32 Idx = Node.PrimitiveIndex;
-            if (Idx != -1 && Idx < Flags.size() && Flags[Idx] == 1)
+            int32 StartIdx = Node.PrimitiveStartIndex;
+            int32 EndIdx = StartIdx + Node.PrimitiveCount;
+
+            // 버퍼에서 이 노드에 속한 오브젝트들만 초고속으로 검사
+            for (int32 i = StartIdx; i < EndIdx; ++i)
             {
-                OutCandidates.push_back(Idx);
+                int32 ObjIdx = PrimitiveIndexBuffer[i];
+                if (ObjIdx != -1 && ObjIdx < Flags.size() && Flags[ObjIdx] == 1)
+                {
+                    OutCandidates.push_back(ObjIdx);
+                }
             }
             continue;
         }
@@ -210,120 +224,44 @@ void FSceneGraph::Pick(const FRay& InRay, const FVisibilityResults& CandidateVis
     }
 
     // 8. VisibleFlags 정리
-    for (int32 Idx : Visible) VisibleFlags[Idx] = 0;
+    //for (int32 Idx : Visible) VisibleFlags[Idx] = 0;
 }
-void FSceneGraph::PickRecursive(int32 NodeIndex, const FRay& InRay, const FVector& InvDir,
-    const std::vector<uint8_t>& VisibleFlags, TArray<int32>& OutCandidates,
-    float& InOutMaxT) const
-{
-    const FSceneNode& Node = Nodes[NodeIndex];
-    float HitT;
 
-    // t >= InOutMaxT면 자동 컬링
-    if (!IntersectRayAabbFast(InRay, InvDir, Node.Volume.Min, Node.Volume.Max, InOutMaxT, HitT))
-        return;
-
-    // 리프 노드 처리
-    if (Node.ChildCount == 0)
-    {
-        int32 Idx = Node.PrimitiveIndex;
-        // std::vector<bool>의 느린 비트 연산 대신, 배열 직접 접근으로 초고속 확인
-        if (Idx != -1 && Idx < (int32)VisibleFlags.size() && VisibleFlags[Idx] == 1)
-        {
-            OutCandidates.push_back(Idx);
-        }
-        return;
-    }
-
-    // 자식 노드들 검사
-    //struct ChildHit { int32 Index; float T; };
-    //ChildHit ChildHits[8];
-    //int32 HitCount = 0;
-
-    //for (int32 ChildIndex : Node.Children)
-    //{
-    //    float ChildT;
-    //    const FSceneNode& Child = Nodes[ChildIndex];
-    //    if (IntersectRayAabbFast(InRay, InvDir, Child.Volume.Min, Child.Volume.Max, InOutMaxT, ChildT))
-    //    {
-    //        ChildHits[HitCount++] = { ChildIndex, ChildT };
-    //    }
-    //}
-    // --- PickRecursive 내부 ---
-
-    // 자식 노드 8개 동시 검사!
-    alignas(32) float HitDistances[8];
-    uint32 HitMask = IntersectRayAabbAVX(
-        InRay, InvDir, InOutMaxT,
-        Node.ChildMinX, Node.ChildMinY, Node.ChildMinZ,
-        Node.ChildMaxX, Node.ChildMaxY, Node.ChildMaxZ,
-        HitDistances
-    );
-
-    // 맞은 자식이 하나도 없으면 스킵
-    if (HitMask == 0) return;
-
-    struct ChildHit { int32 Index; float T; };
-    ChildHit ChildHits[8];
-    int32 HitCount = 0;
-
-    // 비트마스크를 확인하여 충돌한 자식만 추출
-    for (int i = 0; i < Node.ChildCount; ++i)
-    {
-        if (HitMask & (1 << i))
-        {
-            ChildHits[HitCount++] = { Node.ChildIndices[i], HitDistances[i] };
-        }
-    }
-
-    // 삽입 정렬로 Front-to-Back 정렬 후 재귀 (기존 코드와 동일)
-    // ...
-    // 3. std::sort 제거 및 인라인 삽입 정렬(Insertion Sort) 적용
-    // 최대 8개의 요소 정렬은 함수 오버헤드가 없는 삽입 정렬이 std::sort보다 훨씬 빠릅니다.
-    for (int32 i = 1; i < HitCount; ++i)
-    {
-        ChildHit Key = ChildHits[i];
-        int32 j = i - 1;
-        while (j >= 0 && ChildHits[j].T > Key.T)
-        {
-            ChildHits[j + 1] = ChildHits[j];
-            j = j - 1;
-        }
-        ChildHits[j + 1] = Key;
-    }
-
-    // Front-to-Back 순회
-    for (int32 i = 0; i < HitCount; i++)
-    {
-        PickRecursive(ChildHits[i].Index, InRay, InvDir, VisibleFlags, OutCandidates, InOutMaxT);
-    }
-}
-int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const FBoundingBox& NodeVolume, int32 Depth)
+int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const TArray<FBoundingBox>& ObjectBoxes, const FBoundingBox& NodeVolume, int32 Depth)
 {
     // 그룹 노드 생성
     FSceneNode GroupNode;
-    GroupNode.PrimitiveIndex = -1;
+    GroupNode.PrimitiveStartIndex = -1;
     GroupNode.Volume = NodeVolume;
     GroupNode.Center = NodeVolume.GetCenter();
 
     int32 GroupIndex = Nodes.size();
     Nodes.push_back(GroupNode);
 
-    // 리프 조건: 오브젝트 1개 or 최대 깊이
-    if (Indices.size() == 1 || Depth >= 8)
+    // 🚨 1. 리프 노드 용량 증가 (1개가 아니라 16개 이하일 때 멈춤)
+    // 트리의 깊이가 얕아져 메모리 점프가 줄어들고 속도가 급상승합니다.
+    if (Indices.size() <= 1 || Depth >= 8)
     {
-        if (Indices.size() == 1)
-            Nodes[GroupIndex].PrimitiveIndex = Indices[0];
+        // 1. 현재 버퍼의 끝부분을 시작점으로 기록
+        Nodes[GroupIndex].PrimitiveStartIndex = PrimitiveIndexBuffer.size();
+        Nodes[GroupIndex].PrimitiveCount = Indices.size();
+
+        // 2. 인덱스들을 글로벌 버퍼에 차곡차곡 이어 붙임
+        for (int32 Idx : Indices)
+        {
+            PrimitiveIndexBuffer.push_back(Idx);
+        }
+
+        Nodes[GroupIndex].ChildCount = 0; // 리프 노드 표시
         return GroupIndex;
     }
-
     FVector Mid = NodeVolume.GetCenter();
 
     // 8개 자식 공간으로 분류
     TArray<int32> ChildIndices[8];
     for (int32 Idx : Indices)
     {
-        FVector C = Nodes[Idx].Center;
+        FVector C = ObjectBoxes[Idx].GetCenter();
         int32 Oct = 0;
         if (C.X > Mid.X) Oct |= 1;
         if (C.Y > Mid.Y) Oct |= 2;
@@ -336,26 +274,25 @@ int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const FBoundingB
     {
         if (ChildIndices[i].empty()) continue;
 
-        // 자식 AABB 계산
-        FBoundingBox ChildVolume;
-        ChildVolume.Min.X = (i & 1) ? Mid.X : NodeVolume.Min.X;
-        ChildVolume.Min.Y = (i & 2) ? Mid.Y : NodeVolume.Min.Y;
-        ChildVolume.Min.Z = (i & 4) ? Mid.Z : NodeVolume.Min.Z;
-        ChildVolume.Max.X = (i & 1) ? NodeVolume.Max.X : Mid.X;
-        ChildVolume.Max.Y = (i & 2) ? NodeVolume.Max.Y : Mid.Y;
-        ChildVolume.Max.Z = (i & 4) ? NodeVolume.Max.Z : Mid.Z;
+        // 타이트한 AABB 재계산할 때도 ObjectBoxes 사용!
+        FBoundingBox TightVolume = ObjectBoxes[ChildIndices[i][0]]; // 🚨 여기 수정
+        for (int32 k = 1; k < ChildIndices[i].size(); ++k)
+        {
+            TightVolume.Encapsulate(ObjectBoxes[ChildIndices[i][k]]); // 🚨 여기 수정
+        }
 
-        int32 ChildIndex = BuildRecursive(ChildIndices[i], ChildVolume, Depth + 1);
+        // 재귀 호출 시 ObjectBoxes 그대로 전달
+        int32 ChildIndex = BuildRecursive(ChildIndices[i], ObjectBoxes, TightVolume, Depth + 1);
         int32 Cnt = Nodes[GroupIndex].ChildCount;
         Nodes[GroupIndex].ChildIndices[Cnt] = ChildIndex;
 
-        // 🚨 SIMD 연산을 위해 자식의 AABB 좌표를 부모의 SoA 배열에 등록!
-        Nodes[GroupIndex].ChildMinX[Cnt] = ChildVolume.Min.X;
-        Nodes[GroupIndex].ChildMinY[Cnt] = ChildVolume.Min.Y;
-        Nodes[GroupIndex].ChildMinZ[Cnt] = ChildVolume.Min.Z;
-        Nodes[GroupIndex].ChildMaxX[Cnt] = ChildVolume.Max.X;
-        Nodes[GroupIndex].ChildMaxY[Cnt] = ChildVolume.Max.Y;
-        Nodes[GroupIndex].ChildMaxZ[Cnt] = ChildVolume.Max.Z;
+        // 부모의 SIMD 배열에는 이 "타이트한 AABB"를 등록합니다.
+        Nodes[GroupIndex].ChildMinX[Cnt] = TightVolume.Min.X;
+        Nodes[GroupIndex].ChildMinY[Cnt] = TightVolume.Min.Y;
+        Nodes[GroupIndex].ChildMinZ[Cnt] = TightVolume.Min.Z;
+        Nodes[GroupIndex].ChildMaxX[Cnt] = TightVolume.Max.X;
+        Nodes[GroupIndex].ChildMaxY[Cnt] = TightVolume.Max.Y;
+        Nodes[GroupIndex].ChildMaxZ[Cnt] = TightVolume.Max.Z;
 
         Nodes[GroupIndex].ChildCount++;
         Nodes[ChildIndex].Parent = GroupIndex;

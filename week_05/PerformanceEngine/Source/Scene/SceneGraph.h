@@ -12,7 +12,8 @@ class FScene;
 // 32바이트 정렬을 맞춰주면 AVX 레지스터 로드 속도가 가장 빠릅니다.
 struct alignas(32) FSceneNode
 {
-    int32 PrimitiveIndex = -1;
+    int32 PrimitiveStartIndex = -1;
+    int32 PrimitiveCount = 0;//단일 인덱스 대신, 글로벌 배열의 범위를 가리킴
     FBoundingBox Volume;
     FVector Center;
     int32 Parent = -1;
@@ -52,12 +53,12 @@ public:
 private:
     void Build(const TArray<FBoundingBox>& ObjectBoxes);
 
-    int32 BuildRecursive(const TArray<int32>& Indices, const FBoundingBox& NodeVolume, int32 Depth);
-    void PickRecursive(int32 NodeIndex, const FRay& InRay, const FVector& InvDir,
-        const std::vector<uint8_t>& VisibleFlags, TArray<int32>& OutCandidates,
-        float& InOutMaxT) const;
+    int32 BuildRecursive(const TArray<int32>& Indices, const TArray<FBoundingBox>& ObjectBoxes, const FBoundingBox& NodeVolume, int32 Depth);    
+  
     TArray<FSceneNode> Nodes;
     int32 RootIndex = -1;
-    mutable std::vector<uint8_t> VisibleFlags;
+    ///mutable std::vector<uint8_t> VisibleFlags;
+    //모든 리프 노드의 오브젝트 인덱스가 차곡차곡 쌓일 1차원 배열
+    TArray<int32> PrimitiveIndexBuffer;
 };
 
