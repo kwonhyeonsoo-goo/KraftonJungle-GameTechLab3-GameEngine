@@ -15,6 +15,7 @@
 #include "Picking/PickingSystem.h"
 #include "Scene/Scene.h"
 #include "Stats/StatsSystem.h"
+#include "Renderer/SceneRenderer.h"
 
 namespace
 {
@@ -357,7 +358,7 @@ void FHudRenderer::Render(
 	}
 
 	std::ostringstream TextStream;
-	TextStream << std::fixed << std::setprecision(2);
+	TextStream << std::fixed << std::setprecision(6);
 	TextStream
 		<< "FPS: " << InStatsSystem.GetFramesPerSecond() << '\n'
 		<< "FRAME: " << InStatsSystem.GetFrameTimeMs() << " MS\n"
@@ -374,6 +375,7 @@ void FHudRenderer::Render(
 	TextStream
 		<< '\n'
 		<< "PRIMS: " << InScene.GetPrimitiveCount() << '\n'
+		<< "DRAWCALLS: " << FSceneRenderer::DrawCallCount << '\n'
 		<< "SELECTED: " << InPickState.SelectedPrimitiveId;
 
 	DirectX::SpriteBatch& SpriteBatch = *Resources->SpriteBatch;

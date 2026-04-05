@@ -555,6 +555,28 @@ void FD3D11RHI::EnsureCullingBufferCapacity(uint32 RequiredCount)
 	stagingDesc.Usage = D3D11_USAGE_STAGING;
 	stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 	Device->CreateBuffer(&stagingDesc, nullptr, StagingBuffer.GetAddressOf());
+
+	D3D11_BUFFER_DESC lastFrameBufDesc = {};
+	lastFrameBufDesc.ByteWidth = sizeof(uint32) * MaxInstanceCapacity;
+	lastFrameBufDesc.Usage = D3D11_USAGE_DEFAULT;
+	lastFrameBufDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	lastFrameBufDesc.CPUAccessFlags = 0;
+	lastFrameBufDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	lastFrameBufDesc.StructureByteStride = sizeof(uint32);
+	Device->CreateBuffer(&lastFrameBufDesc, nullptr, LastFrameVisibilityBuffer.GetAddressOf());
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC lastFrameVisSrvDesc = {};
+	lastFrameVisSrvDesc.Format = DXGI_FORMAT_UNKNOWN;
+	lastFrameVisSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	lastFrameVisSrvDesc.Buffer.FirstElement = 0;
+	lastFrameVisSrvDesc.Buffer.NumElements = MaxInstanceCapacity;
+	Device->CreateShaderResourceView(LastFrameVisibilityBuffer.Get(), &lastFrameVisSrvDesc, LastFrameVisibilitySRV.GetAddressOf());
+
+	D3D11_BUFFER_DESC lastFrameStagingDesc = {};
+	lastFrameStagingDesc.ByteWidth = sizeof(uint32) * MaxInstanceCapacity;
+	lastFrameStagingDesc.Usage = D3D11_USAGE_STAGING;
+	lastFrameStagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	Device->CreateBuffer(&lastFrameStagingDesc, nullptr, LastFrameStagingBuffer.GetAddressOf());
 }
 bool FD3D11RHI::CreateBackBufferResources()
 {
@@ -736,14 +758,34 @@ bool FD3D11RHI::CreateVisibilityBuffer()
 	
 	D3D11_SAMPLER_DESC samplerDesc = {};
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 	Device->CreateSamplerState(&samplerDesc, PointSampler.GetAddressOf());
+
+	D3D11_BUFFER_DESC lastFrameBufDesc = {};
+	lastFrameBufDesc.ByteWidth = sizeof(uint32) * MaxInstanceCapacity;
+	lastFrameBufDesc.Usage = D3D11_USAGE_DEFAULT;
+	lastFrameBufDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	lastFrameBufDesc.CPUAccessFlags = 0;
+	lastFrameBufDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	lastFrameBufDesc.StructureByteStride = sizeof(uint32);
+	Device->CreateBuffer(&lastFrameBufDesc, nullptr, LastFrameVisibilityBuffer.GetAddressOf());
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC lastFrameVisSrvDesc = {};
+	lastFrameVisSrvDesc.Format = DXGI_FORMAT_UNKNOWN;
+	lastFrameVisSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	lastFrameVisSrvDesc.Buffer.FirstElement = 0;
+	lastFrameVisSrvDesc.Buffer.NumElements = MaxInstanceCapacity;
+	Device->CreateShaderResourceView(LastFrameVisibilityBuffer.Get(), &lastFrameVisSrvDesc, LastFrameVisibilitySRV.GetAddressOf());
+
+	D3D11_BUFFER_DESC lastFrameStagingDesc = {};
+	lastFrameStagingDesc.ByteWidth = sizeof(uint32) * MaxInstanceCapacity;
+	lastFrameStagingDesc.Usage = D3D11_USAGE_STAGING;
+	lastFrameStagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	Device->CreateBuffer(&lastFrameStagingDesc, nullptr, LastFrameStagingBuffer.GetAddressOf());
 
 	return true;
 }

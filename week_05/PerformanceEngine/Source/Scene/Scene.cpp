@@ -323,6 +323,11 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 					RuntimeData.WorldBounds.Max,
 					bHasRuntimeBounds);
 
+				// GPU용 데이터 미리 계산 및 캐싱
+				DirectX::XMStoreFloat4x4(&RuntimeData.CachedInstanceData.WorldMatrix, DirectX::XMMatrixTranspose(RuntimeData.WorldMatrix.ToXMMatrix()));
+				RuntimeData.CachedInstanceData.Center = RuntimeData.WorldBounds.GetCenter().ToXMFLOAT3();
+				RuntimeData.CachedInstanceData.Extents = RuntimeData.WorldBounds.GetExtents().ToXMFLOAT3();
+
 				if (bHasRuntimeBounds)
 				{
 					ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBounds.Min);
