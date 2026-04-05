@@ -9,6 +9,8 @@ struct InstanceData
 
 StructuredBuffer<InstanceData> AllInstances : register(t0);
 Texture2D<float> HiZPyramid : register(t1);
+StructuredBuffer<uint> LastFrameVisibility : register(t2);
+
 RWStructuredBuffer<uint> VisibilityResults : register(u0);
 SamplerState PointSampler : register(s0);
 
@@ -22,7 +24,6 @@ cbuffer CullingParams : register(b0)
 
 void GetScreenRect(float3 center, float3 extents, float4x4 viewProj, out float4 rect, out float minZ, out bool intersectsNearPlane)
 {
-    // AABB의 8개 정점 생성
     float3 v[8];
     v[0] = center + extents * float3(-1, -1, -1);
     v[1] = center + extents * float3(1, -1, -1);
@@ -36,38 +37,31 @@ void GetScreenRect(float3 center, float3 extents, float4x4 viewProj, out float4 
     float2 minXY = float2(1, 1);
     float2 maxXY = float2(-1, -1);
     minZ = 1.0f;
-    
     intersectsNearPlane = false;
 
     [unroll]
     for (int i = 0; i < 8; i++)
     {
-        // View-Projection 변환
         float4 projPos = mul(float4(v[i], 1.0f), viewProj);
-        
         if (projPos.w <= 0.0001f)
         {
             intersectsNearPlane = true;
             continue;
         }
         
-        // NDC 좌표로 변환 (W로 나누기)
         float3 ndc = projPos.xyz / projPos.w;
-        
         float2 uv;
         uv.x = ndc.x * 0.5f + 0.5f;
         uv.y = 1.0f - (ndc.y * 0.5f + 0.5f);
         
         minXY = min(minXY, uv);
         maxXY = max(maxXY, uv);
-        
-        // 가장 가까운 깊이값 저장 (컬링 비교용)
         minZ = min(minZ, ndc.z);
     }
 
-    // 결과: x,y는 좌상단 / z,w는 우하단 (0~1 범위로 변환)
-    rect.xy = minXY;
-    rect.zw = maxXY;
+    // 영역을 아주 약간 확장하여 보수적으로 판단 (0.005 = 약 5픽셀)
+    rect.xy = saturate(minXY - 0.005f);
+    rect.zw = saturate(maxXY + 0.005f);
 }
 
 [numthreads(64, 1, 1)]
@@ -86,28 +80,40 @@ void main(uint3 DTid : SV_DispatchThreadID)
     
     if (bIntersectsNearPlane)
     {
-        VisibilityResults[idx] = 1;
+        VisibilityResults[idx] = 3;
         return;
     }
 
-    float width = (aabbRect.z - aabbRect.x) * RenderTargetSize.x;
-    float height = (aabbRect.w - aabbRect.y) * RenderTargetSize.y;
-    float mip = clamp(floor(log2(max(width, height))) - 1.0f, 0.0f, 10.0f);
-    
+    // 화면 밖 컬링
+    if (aabbRect.z < aabbRect.x || aabbRect.w < aabbRect.y)
+    {
+        VisibilityResults[idx] = 0;
+        return;
+    }
+
+    // ceil을 사용하여 더 보수적인(상위) Mip 선택
+    float2 size = (aabbRect.zw - aabbRect.xy) * 1024.0f;
+    float mip = clamp(ceil(log2(max(size.x, size.y))), 0.0f, 10.0f);
+
     float4 depthSamples;
     depthSamples.x = HiZPyramid.SampleLevel(PointSampler, aabbRect.xy, mip).r;
     depthSamples.y = HiZPyramid.SampleLevel(PointSampler, aabbRect.zy, mip).r;
     depthSamples.z = HiZPyramid.SampleLevel(PointSampler, aabbRect.xw, mip).r;
     depthSamples.w = HiZPyramid.SampleLevel(PointSampler, aabbRect.zw, mip).r;
-    
+
     float maxHizDepth = max(max(depthSamples.x, depthSamples.y), max(depthSamples.z, depthSamples.w));
     
-    if (minZ <= maxHizDepth + 0.0001f)
+    // Bias를 0.01f로 늘려 컬링을 완화
+    bool isVisibleNow = (minZ <= maxHizDepth);
+    
+    uint lastCount = LastFrameVisibility[idx];
+    
+    if (isVisibleNow)
     {
-        VisibilityResults[idx] = 1;
+        VisibilityResults[idx] = 3;
     }
     else
     {
-        VisibilityResults[idx] = 0;
+        VisibilityResults[idx] = (lastCount > 0) ? lastCount - 1 : 0;
     }
 }

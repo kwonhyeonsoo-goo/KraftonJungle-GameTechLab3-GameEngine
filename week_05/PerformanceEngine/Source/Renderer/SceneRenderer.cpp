@@ -84,6 +84,8 @@ struct FSceneRenderer::FResources
 FSceneRenderer::FSceneRenderer() = default;
 FSceneRenderer::~FSceneRenderer() = default;
 
+uint32 FSceneRenderer::DrawCallCount = 0;
+
 bool FSceneRenderer::Initialize(FD3D11RHI& InRHI)
 {
 	ID3D11Device* Device = InRHI.GetDevice();
@@ -264,25 +266,85 @@ void FSceneRenderer::Render(
 	const FVisibilityResults& InVisibilityResults,
 	const FPickState& InPickState)
 {
-	if (!Resources)
-	{
-		return;
-	}
+	if (!Resources) return;
 
 	ID3D11DeviceContext* DeviceContext = InRHI.GetDeviceContext();
-	if (DeviceContext == nullptr)
-	{
-		return;
-	}
+	if (DeviceContext == nullptr) return;
 
+	DrawCallCount = 0;
+
+	Prepare(InRHI, InScene, InCamera);
+
+	// 이전 프레임의 Depth Buffer를 통한 가시성 결과를 읽어서 이번 프레임에 렌더링할 프리미티브를 결정
 	D3D11_MAPPED_SUBRESOURCE MappedResource = {};
-	HRESULT hr = InRHI.GetDeviceContext()->Map(InRHI.StagingBuffer.Get(), 0, D3D11_MAP_READ, 0, &MappedResource);
-
-	uint32* LastFrameVisibility = nullptr;
+	HRESULT hr = DeviceContext->Map(InRHI.StagingBuffer.Get(), 0, D3D11_MAP_READ, 0, &MappedResource);
+	uint32* MappedVisibilityData = nullptr;
 	if (SUCCEEDED(hr))
 	{
-		LastFrameVisibility = static_cast<uint32*>(MappedResource.pData);
+		MappedVisibilityData = static_cast<uint32*>(MappedResource.pData);
 	}
+
+	// 1st Pass - 이전 프레임의 가시성 결과를 기반으로 렌더링
+	TArray<int32> VisibleIndices;
+	TArray<int32> InvisibleIndices;
+
+	VisibleIndices.reserve(InVisibilityResults.VisiblePrimitiveIndices.size());
+	InvisibleIndices.reserve(InVisibilityResults.VisiblePrimitiveIndices.size());
+
+	for (uint32 PrimitiveIndex : InVisibilityResults.VisiblePrimitiveIndices)
+	{
+		if (MappedVisibilityData && MappedVisibilityData[PrimitiveIndex] > 0)
+		{
+			VisibleIndices.push_back(PrimitiveIndex);
+		}
+		else
+		{
+			InvisibleIndices.push_back(PrimitiveIndex);
+		}
+	}
+
+	if (MappedVisibilityData) InRHI.GetDeviceContext()->Unmap(InRHI.StagingBuffer.Get(), 0);
+
+	RenderPrimitives(InRHI, InScene, InCamera, VisibleIndices, InPickState);
+
+	ID3D11ShaderResourceView* NullSRVs[] = { nullptr, nullptr };
+	DeviceContext->VSSetShaderResources(0, 2, NullSRVs);
+
+	ID3D11RenderTargetView* NullRTVs[] = { nullptr };
+	DeviceContext->OMSetRenderTargets(1, NullRTVs, nullptr);
+
+	// 이번 프레임의 depth를 기반으로 Hi-Z Mip Chain 생성
+	BuildHiZMipChain(InRHI, InScene);
+
+	TArray<int32> NewlyVisibleIndices;
+	NewlyVisibleIndices.reserve(InvisibleIndices.size());
+
+	hr = DeviceContext->Map(InRHI.StagingBuffer.Get(), 0, D3D11_MAP_READ, 0, &MappedResource);
+	if (SUCCEEDED(hr))
+	{
+		uint32* NewVisibilityData = static_cast<uint32*>(MappedResource.pData);
+		for (uint32 PrimitiveIndex : InvisibleIndices)
+		{
+			if (NewVisibilityData && NewVisibilityData[PrimitiveIndex] > 0)
+			{
+				NewlyVisibleIndices.push_back(PrimitiveIndex);
+			}
+		}
+		DeviceContext->Unmap(InRHI.StagingBuffer.Get(), 0);
+	}
+
+	if (NewlyVisibleIndices.size() > 0)
+	{
+		ID3D11RenderTargetView* RenderTargets[] = { InRHI.GetBackBufferRTV() };
+		DeviceContext->OMSetRenderTargets(1, RenderTargets, InRHI.GetDepthStencilView());
+
+		RenderPrimitives(InRHI, InScene, InCamera, NewlyVisibleIndices, InPickState);
+	}
+}
+
+void FSceneRenderer::Prepare(const FD3D11RHI& InRHI, const FScene& InScene, const FCamera& InCamera)
+{
+	ID3D11DeviceContext* DeviceContext = InRHI.GetDeviceContext();
 
 	ID3D11RenderTargetView* RenderTargets[] = { InRHI.GetBackBufferRTV() };
 	const D3D11_VIEWPORT Viewport = InRHI.GetViewport();
@@ -307,15 +369,25 @@ void FSceneRenderer::Render(
 	FrameConstants.PrimitiveCount = static_cast<uint32>(InScene.GetPrimitiveCount());
 	D3D11Utils::UpdateDynamicBuffer(DeviceContext, Resources->FrameConstantBuffer.Get(), FrameConstants);
 
-
 	//상수 버퍼 세팅 (b0: Frame, b1: InstanceIndex, b2: Highlight)
 	ID3D11Buffer* VSConstantBuffers[] = { Resources->FrameConstantBuffer.Get(), Resources->InstanceIndexConstantBuffer.Get() };
 	ID3D11Buffer* PSConstantBuffers[] = { nullptr, Resources->InstanceIndexConstantBuffer.Get(), Resources->HighlightConstantBuffer.Get() };
 	DeviceContext->VSSetConstantBuffers(0, 2, VSConstantBuffers);
-	DeviceContext->PSSetConstantBuffers(0, 3, PSConstantBuffers);;
+	DeviceContext->PSSetConstantBuffers(0, 3, PSConstantBuffers);
+
 	//Vertex Shader에 AllInstances
 	ID3D11ShaderResourceView* InstanceSRVs[] = { nullptr, InRHI.InstanceSRV.Get() };
 	DeviceContext->VSSetShaderResources(0, 2, InstanceSRVs);
+}
+
+void FSceneRenderer::RenderPrimitives(
+	const FD3D11RHI& InRHI,
+	const FScene& InScene,
+	const FCamera& InCamera,
+	const TArray<int32>& VisibleIndices,
+	const FPickState& InPickState)
+{
+	ID3D11DeviceContext* DeviceContext = InRHI.GetDeviceContext();
 
 	ID3D11Buffer* CurrentVertexBuffer = nullptr;
 	ID3D11Buffer* CurrentIndexBuffer = nullptr;
@@ -324,17 +396,13 @@ void FSceneRenderer::Render(
 	const UINT Offset = 0;
 
 	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
-	TArray<int32> SortedIndices = InVisibilityResults.VisiblePrimitiveIndices;
-	std::sort(SortedIndices.begin(), SortedIndices.end(), [&PrimitiveRuntimeData](int32 A, int32 B) {
-		return PrimitiveRuntimeData[A].StaticMesh < PrimitiveRuntimeData[B].StaticMesh;
-	});
-	for (uint32 PrimitiveIndex : SortedIndices)
+
+	for (uint32 PrimitiveIndex : VisibleIndices)
 	{
 		if (PrimitiveIndex >= PrimitiveRuntimeData.size())
 		{
 			continue;
 		}
-		if (LastFrameVisibility && LastFrameVisibility[PrimitiveIndex] == 0) continue;
 
 		const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
 		FStaticMesh* StaticMesh = PrimitiveData.StaticMesh;
@@ -386,52 +454,54 @@ void FSceneRenderer::Render(
 				CurrentTextureView = TextureView;
 			}
 			DeviceContext->DrawIndexed(Section.IndexCount, Section.IndexStart, 0);
+
+			++DrawCallCount;
 		}
 	}
-	if (LastFrameVisibility) InRHI.GetDeviceContext()->Unmap(InRHI.StagingBuffer.Get(), 0);
-	ID3D11ShaderResourceView* NullSRVs[] = { nullptr, nullptr };
-	DeviceContext->VSSetShaderResources(0, 2, NullSRVs);
 
+}
 
-	ID3D11RenderTargetView* NullRTVs[] = { nullptr };
-	DeviceContext->OMSetRenderTargets(1, NullRTVs, nullptr);
-
+void FSceneRenderer::BuildHiZMipChain(const FD3D11RHI& InRHI, const FScene& InScene)
+{
+	ID3D11DeviceContext* DeviceContext = InRHI.GetDeviceContext();
 	ID3D11ShaderResourceView* DSSRV = InRHI.GetDepthStencilSRV();
 
-	InRHI.GetDeviceContext()->CSSetShader(InRHI.HiZCopyDepthCS.Get(), nullptr, 0);
-	InRHI.GetDeviceContext()->CSSetShaderResources(0, 1, &DSSRV);
-	InRHI.GetDeviceContext()->CSSetUnorderedAccessViews(0, 1, InRHI.HiZDepthUAVs[0].GetAddressOf(), nullptr);
+	DeviceContext->CSSetConstantBuffers(0, 1, Resources->FrameConstantBuffer.GetAddressOf());
 
-	InRHI.GetDeviceContext()->Dispatch(64, 64, 1);
+	DeviceContext->CSSetShader(InRHI.HiZCopyDepthCS.Get(), nullptr, 0);
+	DeviceContext->CSSetShaderResources(0, 1, &DSSRV);
+	DeviceContext->CSSetUnorderedAccessViews(0, 1, InRHI.HiZDepthUAVs[0].GetAddressOf(), nullptr);
+
+	DeviceContext->Dispatch(64, 64, 1);
 
 	ID3D11ShaderResourceView* nullSRV = nullptr;
 	ID3D11UnorderedAccessView* nullUAV = nullptr;
-	InRHI.GetDeviceContext()->CSSetShaderResources(0, 1, &nullSRV);
-	InRHI.GetDeviceContext()->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
+	DeviceContext->CSSetShaderResources(0, 1, &nullSRV);
+	DeviceContext->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
 
-	InRHI.GetDeviceContext()->CSSetShader(InRHI.HiZBuildMipsCS.Get(), nullptr, 0);
+	DeviceContext->CSSetShader(InRHI.HiZBuildMipsCS.Get(), nullptr, 0);
 
 	for (UINT i = 1; i <= 10; ++i)
 	{
-		InRHI.GetDeviceContext()->CSSetShaderResources(0, 1, InRHI.HiZDepthSRVs[i - 1].GetAddressOf());
-		InRHI.GetDeviceContext()->CSSetUnorderedAccessViews(0, 1, InRHI.HiZDepthUAVs[i].GetAddressOf(), nullptr);
+		DeviceContext->CSSetShaderResources(0, 1, InRHI.HiZDepthSRVs[i - 1].GetAddressOf());
+		DeviceContext->CSSetUnorderedAccessViews(0, 1, InRHI.HiZDepthUAVs[i].GetAddressOf(), nullptr);
 
 		UINT mipSize = std::max(1u, 1024u >> i);
 		UINT dispatchCount = (UINT)std::ceil(mipSize / 16.0f);
-		InRHI.GetDeviceContext()->Dispatch(dispatchCount, dispatchCount, 1);
+		DeviceContext->Dispatch(dispatchCount, dispatchCount, 1);
 
-		InRHI.GetDeviceContext()->CSSetShaderResources(0, 1, &nullSRV);
-		InRHI.GetDeviceContext()->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
+		DeviceContext->CSSetShaderResources(0, 1, &nullSRV);
+		DeviceContext->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
 	}
 
-	InRHI.GetDeviceContext()->CSSetShader(InRHI.HiZCullCS.Get(), nullptr, 0);
+	DeviceContext->CSSetShader(InRHI.HiZCullCS.Get(), nullptr, 0);
 
 	ID3D11ShaderResourceView* ClearSRVs[] = { nullptr, nullptr };
 	DeviceContext->VSSetShaderResources(0, 2, ClearSRVs);
 	DeviceContext->PSSetShaderResources(0, 2, ClearSRVs);
 
-	ID3D11ShaderResourceView* SRVs[] = { InRHI.InstanceSRV.Get(), InRHI.HiZFullSRV.Get() };
-	DeviceContext->CSSetShaderResources(0, 2, SRVs);
+	ID3D11ShaderResourceView* SRVs[] = { InRHI.InstanceSRV.Get(), InRHI.HiZFullSRV.Get(), InRHI.LastFrameVisibilitySRV.Get()};
+	DeviceContext->CSSetShaderResources(0, 3, SRVs);
 
 	DeviceContext->CSSetConstantBuffers(0, 1, Resources->FrameConstantBuffer.GetAddressOf());
 
@@ -443,9 +513,10 @@ void FSceneRenderer::Render(
 	const size_t PrimitiveCount = InScene.GetPrimitiveCount();
 	InRHI.GetDeviceContext()->Dispatch(static_cast<UINT>(std::ceil(PrimitiveCount / 64.0f)), 1, 1);
 
-	ID3D11ShaderResourceView* nullSRVs[] = { nullptr, nullptr };
-	DeviceContext->CSSetShaderResources(0, 2, nullSRVs);
+	ID3D11ShaderResourceView* nullSRVs[] = { nullptr, nullptr, nullptr };
+	DeviceContext->CSSetShaderResources(0, 3, nullSRVs);
 	DeviceContext->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
 
-	InRHI.GetDeviceContext()->CopyResource(InRHI.StagingBuffer.Get(), InRHI.VisibilityBuffer.Get());
+	DeviceContext->CopyResource(InRHI.LastFrameVisibilityBuffer.Get(), InRHI.VisibilityBuffer.Get());
+	DeviceContext->CopyResource(InRHI.StagingBuffer.Get(), InRHI.VisibilityBuffer.Get());
 }
