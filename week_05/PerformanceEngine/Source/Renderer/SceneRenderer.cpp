@@ -233,8 +233,8 @@ float4 PSMain(PSInput Input) : SV_Target
 
 	float4 PSMain(VS_OUT In) : SV_Target {
 		float4 color = AlbedoAtlas.Sample(LinearSampler, In.UV);
-		if (color.r < 0.05 && color.g < 0.05 && color.b < 0.05) discard;
-		clip(color.a - 0.1);
+		float luminance = dot(color.rgb, float3(0.299, 0.587, 0.114));
+		clip(color.a * luminance - 0.08);
 		
 
 		float2 centerUV = In.LocalUV * 2.0 - 1.0; // -1 ~ 1
