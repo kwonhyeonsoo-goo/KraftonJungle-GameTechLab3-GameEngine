@@ -122,12 +122,6 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 		Grid.reset();
 	}
 
-	if (!LoadDefaultScene())
-	{
-		Release();
-		return false;
-	}
-
 	EditorUI = std::make_unique<FEditorUI>(this);
 	EditorUI->Initialize(Args.Hwnd, RHI->GetDevice(), RHI->GetDeviceContext());
 
@@ -162,6 +156,12 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 	VisibilityResults = FVisibilityResults();
 	PickState = FPickState();
 	bInitialized = true;
+
+	if (!LoadDefaultScene())
+	{
+		Release();
+		return false;
+	}
 
 	return true;
 }
