@@ -14,6 +14,28 @@
 
 namespace
 {
+	struct FLocalRayAVX
+	{
+		__m256 OrigX, OrigY, OrigZ;
+		__m256 DirX, DirY, DirZ;
+		__m256 InvDirX, InvDirY, InvDirZ;
+
+		FLocalRayAVX(const FRay& Ray)
+		{
+			OrigX = _mm256_set1_ps(Ray.Origin.X);
+			OrigY = _mm256_set1_ps(Ray.Origin.Y);
+			OrigZ = _mm256_set1_ps(Ray.Origin.Z);
+
+			DirX = _mm256_set1_ps(Ray.Direction.X);
+			DirY = _mm256_set1_ps(Ray.Direction.Y);
+			DirZ = _mm256_set1_ps(Ray.Direction.Z);
+
+			InvDirX = _mm256_set1_ps(Ray.InvDirection.X);
+			InvDirY = _mm256_set1_ps(Ray.InvDirection.Y);
+			InvDirZ = _mm256_set1_ps(Ray.InvDirection.Z);
+		}
+	};
+
 	uint64 QueryCycles64()
 	{
 		LARGE_INTEGER Counter = {};
@@ -121,39 +143,26 @@ namespace
 	// 8개의 상자를 한 번에 검사하고, 광선과 충돌한 상자들의 결과를 반환합니다.
 	// 반환값: 하위 8비트가 각각 자식 0~7의 충돌 여부를 나타내는 비트마스크
 	inline uint32 IntersectRayAabbAVX(
-		const FRay& Ray, const FVector& InvDir, float MaxDistance,
+		const FLocalRayAVX& RayAVX, float MaxDistance,
 		const float* MinX, const float* MinY, const float* MinZ,
 		const float* MaxX, const float* MaxY, const float* MaxZ,
-		float* OutDistances) // 크기 8짜리 배열
+		float* OutDistances)
 	{
-		// 1. 광선 데이터를 8개로 복제(Broadcast)
-		__m256 ox = _mm256_set1_ps(Ray.Origin.X);
-		__m256 oy = _mm256_set1_ps(Ray.Origin.Y);
-		__m256 oz = _mm256_set1_ps(Ray.Origin.Z);
-
-		__m256 idx = _mm256_set1_ps(InvDir.X);
-		__m256 idy = _mm256_set1_ps(InvDir.Y);
-		__m256 idz = _mm256_set1_ps(InvDir.Z);
-
-		// 2. X축 검사
-		__m256 tx1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_loadu_ps(MinX), ox), idx);
-		__m256 tx2 = _mm256_mul_ps(_mm256_sub_ps(_mm256_loadu_ps(MaxX), ox), idx);
+		__m256 tx1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_load_ps(MinX), RayAVX.OrigX), RayAVX.InvDirX);
+		__m256 tx2 = _mm256_mul_ps(_mm256_sub_ps(_mm256_load_ps(MaxX), RayAVX.OrigX), RayAVX.InvDirX);
 		__m256 tmin = _mm256_min_ps(tx1, tx2);
 		__m256 tmax = _mm256_max_ps(tx1, tx2);
 
-		// 3. Y축 검사
-		__m256 ty1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_loadu_ps(MinY), oy), idy);
-		__m256 ty2 = _mm256_mul_ps(_mm256_sub_ps(_mm256_loadu_ps(MaxY), oy), idy);
+		__m256 ty1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_load_ps(MinY), RayAVX.OrigY), RayAVX.InvDirY);
+		__m256 ty2 = _mm256_mul_ps(_mm256_sub_ps(_mm256_load_ps(MaxY), RayAVX.OrigY), RayAVX.InvDirY);
 		tmin = _mm256_max_ps(tmin, _mm256_min_ps(ty1, ty2));
 		tmax = _mm256_min_ps(tmax, _mm256_max_ps(ty1, ty2));
 
-		// 4. Z축 검사
-		__m256 tz1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_loadu_ps(MinZ), oz), idz);
-		__m256 tz2 = _mm256_mul_ps(_mm256_sub_ps(_mm256_loadu_ps(MaxZ), oz), idz);
+		__m256 tz1 = _mm256_mul_ps(_mm256_sub_ps(_mm256_load_ps(MinZ), RayAVX.OrigZ), RayAVX.InvDirZ);
+		__m256 tz2 = _mm256_mul_ps(_mm256_sub_ps(_mm256_load_ps(MaxZ), RayAVX.OrigZ), RayAVX.InvDirZ);
 		tmin = _mm256_max_ps(tmin, _mm256_min_ps(tz1, tz2));
 		tmax = _mm256_min_ps(tmax, _mm256_max_ps(tz1, tz2));
 
-		// 5. 충돌 조건 판별: tmax >= tmin AND tmax > 0 AND tmin < MaxDistance
 		__m256 zero = _mm256_setzero_ps();
 		__m256 max_dist = _mm256_set1_ps(MaxDistance);
 
@@ -162,14 +171,73 @@ namespace
 		__m256 mask3 = _mm256_cmp_ps(tmin, max_dist, _CMP_LT_OQ);
 		__m256 hit_mask = _mm256_and_ps(_mm256_and_ps(mask1, mask2), mask3);
 
-		// 결과 거리 저장 (음수면 0으로 보정)
-		__m256 out_t = _mm256_max_ps(zero, tmin);
-		_mm256_storeu_ps(OutDistances, out_t);
-
-		// 부딪힌 결과만 8비트 정수로 뽑아냄 (예: 1, 3, 4번 자식이 맞았다면 00011010)
+		_mm256_storeu_ps(OutDistances, _mm256_max_ps(zero, tmin));
 		return _mm256_movemask_ps(hit_mask);
 	}
 
+	// 2. 삼각형 검사 (미리 계산된 엣지 배열 사용, load_ps 적용)
+	inline uint32 IntersectRayTriangleAVX8(
+		const FLocalRayAVX& RayAVX,
+		const float* AX, const float* AY, const float* AZ,
+		const float* E1X, const float* E1Y, const float* E1Z,
+		const float* E2X, const float* E2Y, const float* E2Z,
+		float* OutDistances)
+	{
+		__m256 edge1_x = _mm256_load_ps(E1X);
+		__m256 edge1_y = _mm256_load_ps(E1Y);
+		__m256 edge1_z = _mm256_load_ps(E1Z);
+
+		__m256 edge2_x = _mm256_load_ps(E2X);
+		__m256 edge2_y = _mm256_load_ps(E2Y);
+		__m256 edge2_z = _mm256_load_ps(E2Z);
+
+		// pvec = dir X edge2
+		__m256 pvec_x = _mm256_sub_ps(_mm256_mul_ps(RayAVX.DirY, edge2_z), _mm256_mul_ps(RayAVX.DirZ, edge2_y));
+		__m256 pvec_y = _mm256_sub_ps(_mm256_mul_ps(RayAVX.DirZ, edge2_x), _mm256_mul_ps(RayAVX.DirX, edge2_z));
+		__m256 pvec_z = _mm256_sub_ps(_mm256_mul_ps(RayAVX.DirX, edge2_y), _mm256_mul_ps(RayAVX.DirY, edge2_x));
+
+		// det = edge1 . pvec
+		__m256 det = _mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(edge1_x, pvec_x), _mm256_mul_ps(edge1_y, pvec_y)), _mm256_mul_ps(edge1_z, pvec_z));
+
+		__m256 epsilon_v = _mm256_set1_ps(1e-8f);
+		__m256 zero = _mm256_setzero_ps();
+		__m256 det_mask = _mm256_cmp_ps(det, epsilon_v, _CMP_GT_OQ);
+
+		__m256 rcp_det = _mm256_rcp_ps(det);
+
+		// tvec = orig - A
+		__m256 tvec_x = _mm256_sub_ps(RayAVX.OrigX, _mm256_load_ps(AX));
+		__m256 tvec_y = _mm256_sub_ps(RayAVX.OrigY, _mm256_load_ps(AY));
+		__m256 tvec_z = _mm256_sub_ps(RayAVX.OrigZ, _mm256_load_ps(AZ));
+
+		// u = (tvec . pvec) * inv_det
+		__m256 u = _mm256_mul_ps(tvec_x, pvec_x);
+		u = _mm256_fmadd_ps(tvec_y, pvec_y, u);
+		u = _mm256_fmadd_ps(tvec_z, pvec_z, u);
+		u = _mm256_mul_ps(u, rcp_det);
+
+		__m256 one = _mm256_set1_ps(1.0f);
+		__m256 u_mask = _mm256_and_ps(_mm256_cmp_ps(u, zero, _CMP_GE_OQ), _mm256_cmp_ps(u, one, _CMP_LE_OQ));
+
+		// qvec = tvec X edge1
+		__m256 qvec_x = _mm256_sub_ps(_mm256_mul_ps(tvec_y, edge1_z), _mm256_mul_ps(tvec_z, edge1_y));
+		__m256 qvec_y = _mm256_sub_ps(_mm256_mul_ps(tvec_z, edge1_x), _mm256_mul_ps(tvec_x, edge1_z));
+		__m256 qvec_z = _mm256_sub_ps(_mm256_mul_ps(tvec_x, edge1_y), _mm256_mul_ps(tvec_y, edge1_x));
+
+		// v = (dir . qvec) * inv_det
+		__m256 v = _mm256_mul_ps(_mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(RayAVX.DirX, qvec_x), _mm256_mul_ps(RayAVX.DirY, qvec_y)), _mm256_mul_ps(RayAVX.DirZ, qvec_z)), rcp_det);
+		__m256 u_plus_v = _mm256_add_ps(u, v);
+		__m256 v_mask = _mm256_and_ps(_mm256_cmp_ps(v, zero, _CMP_GE_OQ), _mm256_cmp_ps(u_plus_v, one, _CMP_LE_OQ));
+
+		// t = (edge2 . qvec) * inv_det
+		__m256 t = _mm256_mul_ps(_mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(edge2_x, qvec_x), _mm256_mul_ps(edge2_y, qvec_y)), _mm256_mul_ps(edge2_z, qvec_z)), rcp_det);
+		__m256 t_mask = _mm256_cmp_ps(t, zero, _CMP_GT_OQ);
+
+		__m256 hit_mask = _mm256_and_ps(_mm256_and_ps(_mm256_and_ps(det_mask, u_mask), v_mask), t_mask);
+
+		_mm256_storeu_ps(OutDistances, t);
+		return _mm256_movemask_ps(hit_mask);
+	}
 	__forceinline bool IntersectRayTriangle(
 		const FRay& InRay,
 		const FVector& InA,
@@ -266,7 +334,7 @@ namespace
 		const FTriangleBlock8* TriangleBlocksPtr = BVH.GetTriangleBlocks().data();
 		// 만약 GetNodes8Way() 접근자 이름이 다르다면 맞춰서 수정해주세요
 		const FBVHMeshNode8* NodesPtr = BVH.GetNodes8Way().data(); 
-
+		FLocalRayAVX rayAVX = FLocalRayAVX(LocalRay);
 		while (StackPtr > 0)
 		{
 			FMeshStackNode CurrentNode = Stack[--StackPtr];
@@ -277,7 +345,7 @@ namespace
 
 			// 8명의 자식을 단일 AVX 명령어로 교차 검사
 			uint32 HitMask = IntersectRayAabbAVX(
-				LocalRay, LocalRay.InvDirection, ClosestLocalDistance,
+				rayAVX, ClosestLocalDistance,
 				Node.ChildMinX, Node.ChildMinY, Node.ChildMinZ,
 				Node.ChildMaxX, Node.ChildMaxY, Node.ChildMaxZ,
 				HitDistances);
@@ -504,7 +572,7 @@ void FPickingSystem::UpdatePick(
 		{7, 6, 5, 4, 3, 2, 1, 0}  // -X, -Y, -Z 방향
 	};
 	const int32* TraversalOrder = OctantOrder[RayOctant];
-
+	FLocalRayAVX rayAVX = FLocalRayAVX(PickRay);
 	while (StackPtr > 0)
 	{
 		FStackNode Current = Stack[--StackPtr];
@@ -536,41 +604,13 @@ void FPickingSystem::UpdatePick(
 		}
 
 		uint32 HitMask = IntersectRayAabbAVX(
-			PickRay, PickRay.InvDirection, MaxDistance,
+			rayAVX, MaxDistance,
 			Node.ChildMinX, Node.ChildMinY, Node.ChildMinZ,
 			Node.ChildMaxX, Node.ChildMaxY, Node.ChildMaxZ,
 			HitDistances);
 		HitMask &= ((1 << Node.ChildCount) - 1);
 		if (HitMask == 0) continue;
 
-		//struct ChildHit { int32 Index; float Dist; };
-		//ChildHit ChildHits[8];
-		//int32 HitCount = 0;
-
-		//unsigned long BitIndex;
-		//while (_BitScanForward(&BitIndex, HitMask))
-		//{
-		//	HitMask &= ~(1 << BitIndex);
-		//	ChildHits[HitCount++] = { Node.ChildIndices[BitIndex], HitDistances[BitIndex] };
-		//}
-
-		//for (int32 i = 1; i < HitCount; ++i)
-		//{
-		//	ChildHit Key = ChildHits[i];
-		//	int32 j = i - 1;
-		//	while (j >= 0 && ChildHits[j].Dist < Key.Dist)
-		//	{
-		//		ChildHits[j + 1] = ChildHits[j];
-		//		--j;
-		//	}
-		//	ChildHits[j + 1] = Key;
-		//}
-
-		//for (int32 i = 0; i < HitCount; ++i)
-		//{
-		//	Stack[StackPtr++] = { ChildHits[i].Index, ChildHits[i].Dist };
-		//}
-		// 
 		// 족보 순서대로 뒤에서부터(가장 먼 것부터) 스택에 푸시
 		for (int32 i = 7; i >= 0; --i)
 		{
