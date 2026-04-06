@@ -47,6 +47,8 @@ struct alignas(32) FSceneNode
 class FSceneGraph
 {
 public:
+    void Reset();
+
     void Build(const FScene& InScene);
     void Pick(const FRay& InRay, const FVisibilityResults& CandidateVisibilityResults, const TArray<FScenePrimitiveRuntimeData>& PrimitiveBoxes, TArray<int32>& OutCandidates) const;
 
