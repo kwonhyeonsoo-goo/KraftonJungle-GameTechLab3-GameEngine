@@ -15,19 +15,10 @@ void FVisibilitySystem::Build(const FScene& InScene, const FCamera& InCamera, FV
 {
 	OutResults.FrameNumber = NextFrameNumber++;
 
-	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
-	TArray<FBoundingBox> BoundingBoxes;
-	BoundingBoxes.reserve(InScene.GetPrimitiveCount());
-
-	for (const FScenePrimitiveRuntimeData& PrimitiveData : PrimitiveRuntimeData)
-	{
-		BoundingBoxes.push_back(PrimitiveData.WorldBounds);
-	}
-
 	ViewFrustum.Update(InCamera.GetViewMatrix() * InCamera.GetProjectionMatrix());
 
 	OutResults.VisiblePrimitiveIndices.clear();
-	BVH.GetVisibleObjects(ViewFrustum, InCamera.GetLocation(), BoundingBoxes, OutResults.VisiblePrimitiveIndices);
+	BVH.GetVisibleObjects(ViewFrustum, InCamera.GetLocation(), OutResults.VisiblePrimitiveIndices);
 
 	//피킹을 위한 플래그 캐싱 로직
 	const size_t TotalPrimitives = InScene.GetPrimitiveCount();

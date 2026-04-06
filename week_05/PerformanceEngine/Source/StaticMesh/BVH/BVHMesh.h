@@ -34,6 +34,14 @@ struct FBVHInfo
 	FBoundingBox Box;
 };
 
+struct FTriangleBlock8
+{
+	alignas(32) float AX[8] = {0}, AY[8] = {0}, AZ[8] = {0};
+	alignas(32) float BX[8] = {0}, BY[8] = {0}, BZ[8] = {0};
+	alignas(32) float CX[8] = {0}, CY[8] = {0}, CZ[8] = {0};
+	int32 TriCount = 0;
+};
+
 struct FBVHMeshNode8
 {
 	alignas(32) float ChildMinX[8];
@@ -62,10 +70,12 @@ public:
 	const TArray<FBVHMeshNode>& GetNodes() const { return Nodes; }
 	const TArray<Triangle>& GetTriangles() const { return Triangles; }
 	const TArray<FBVHMeshNode8>& GetNodes8Way() const { return Nodes8Way; }
+	const TArray<FTriangleBlock8>& GetTriangleBlocks() const { return TriangleBlocks; }
 	const static int32 maxDepth = 128;
 private:
 	TArray<FBVHMeshNode> Nodes;
 	TArray<FBVHMeshNode8> Nodes8Way;
+	TArray<FTriangleBlock8> TriangleBlocks;
 	FBVHMeshNode Root;
 
 	TArray<int32> OrderedIndices;

@@ -60,8 +60,8 @@ void GetScreenRect(float3 center, float3 extents, float4x4 viewProj, out float4 
     }
 
     // 영역을 아주 약간 확장하여 보수적으로 판단 (0.005 = 약 5픽셀)
-    rect.xy = saturate(minXY - 0.005f);
-    rect.zw = saturate(maxXY + 0.005f);
+    rect.xy = saturate(minXY);
+    rect.zw = saturate(maxXY);
 }
 
 [numthreads(64, 1, 1)]
@@ -80,7 +80,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     
     if (bIntersectsNearPlane)
     {
-        VisibilityResults[idx] = 3;
+        VisibilityResults[idx] = 1;
         return;
     }
 
@@ -110,10 +110,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
     
     if (isVisibleNow)
     {
-        VisibilityResults[idx] = 3;
+        VisibilityResults[idx] = 1;
     }
     else
     {
-        VisibilityResults[idx] = (lastCount > 0) ? lastCount - 1 : 0;
+        VisibilityResults[idx] = 0;
     }
 }

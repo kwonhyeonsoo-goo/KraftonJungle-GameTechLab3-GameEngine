@@ -19,7 +19,7 @@ class FBVH
 public:
 	void Build(const TArray<FBoundingBox>& ObjectBoxes);
 
-	void GetVisibleObjects(const FFrustum& InFrustum, const FVector& CameraPos, const TArray<FBoundingBox>& ObjectBoxes, TArray<int32>& OutVisibleObjectIndices) const;
+	void GetVisibleObjects(const FFrustum& InFrustum, const FVector& CameraPos, TArray<int32>& OutVisibleObjectIndices) const;
 
 private:
 	TArray<FBVHNode> Nodes;

@@ -60,7 +60,7 @@ int32 FBVH::BuildRecursive(TArray<FBVHObjectInfo>& Infos, int32 Start, int32 End
 	return NodeIndex;
 }
 
-void FBVH::GetVisibleObjects(const FFrustum& InFrustum, const FVector& CameraPos, const TArray<FBoundingBox>& ObjectBoxes, TArray<int32>& OutVisibleObjectIndices) const
+void FBVH::GetVisibleObjects(const FFrustum& InFrustum, const FVector& CameraPos, TArray<int32>& OutVisibleObjectIndices) const
 {
 	if (Nodes.empty()) return;
 

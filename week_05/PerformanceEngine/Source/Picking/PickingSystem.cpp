@@ -139,7 +139,10 @@ namespace
 		__m256 tvec_z = _mm256_sub_ps(orig_z, A_Z);
 
 		// u = (tvec . pvec) * inv_det
-		__m256 u = _mm256_mul_ps(_mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(tvec_x, pvec_x), _mm256_mul_ps(tvec_y, pvec_y)), _mm256_mul_ps(tvec_z, pvec_z)), inv_det);
+		__m256 u = _mm256_mul_ps(tvec_x, pvec_x);
+		u = _mm256_fmadd_ps(tvec_y, pvec_y, u);
+		u = _mm256_fmadd_ps(tvec_z, pvec_z, u);
+		u = _mm256_mul_ps(u, inv_det);
 
 		__m256 one = _mm256_set1_ps(1.0f);
 		// 0.0 <= u <= 1.0
@@ -311,18 +314,22 @@ namespace
 		int32 SignZ = LocalRay.InvDirection.Z < 0.0f ? 1 : 0;
 
 		//최적화: 고정 크기 스택 사용 (캐시 로컬리티)
-		int32 Stack[64];
+		struct FMeshStackNode { int32 Index; float Dist; };
+		FMeshStackNode Stack[64];
 		int32 StackPtr = 0;
-		Stack[StackPtr++] = 0; // 8-Way 루트 노드(0번) 푸시
+		Stack[StackPtr++] = { 0, 0.0f }; // 8-Way 루트 노드(0번) 푸시
 
 		alignas(32) float HitDistances[8];
-		const Triangle* TrianglesPtr = BVH.GetTriangles().data();
+		const FTriangleBlock8* TriangleBlocksPtr = BVH.GetTriangleBlocks().data();
 		// 만약 GetNodes8Way() 접근자 이름이 다르다면 맞춰서 수정해주세요
 		const FBVHMeshNode8* NodesPtr = BVH.GetNodes8Way().data(); 
 
 		while (StackPtr > 0)
 		{
-			int32 NodeIndex = Stack[--StackPtr];
+			FMeshStackNode CurrentNode = Stack[--StackPtr];
+			if (CurrentNode.Dist >= ClosestLocalDistance) continue;
+
+			int32 NodeIndex = CurrentNode.Index;
 			const FBVHMeshNode8& Node = NodesPtr[NodeIndex];
 
 			// 8명의 자식을 단일 AVX 명령어로 교차 검사
@@ -363,42 +370,23 @@ namespace
 			{
 				if (ChildHits[i].Index == -1) // 리프 노드 (삼각형)
 				{
-					int32 TriStart = ChildHits[i].TriStart;
-					int32 TriCount = ChildHits[i].TriCount;
-					int32 BlockCount = TriCount / 8;
-					int32 Remainder = TriCount % 8;
+					int32 BlockStart = ChildHits[i].TriStart;
+					int32 BlockCount = ChildHits[i].TriCount;
 
 					alignas(32) float HitDistancesTri[8];
 
-					for (int32 b = 0; b < BlockCount + (Remainder > 0 ? 1 : 0); ++b)
+					for (int32 b = 0; b < BlockCount; ++b)
 					{
-						int32 ProcessCount = (b == BlockCount) ? Remainder : 8;
-
-						alignas(32) float AX[8], AY[8], AZ[8];
-						alignas(32) float BX[8], BY[8], BZ[8];
-						alignas(32) float CX[8], CY[8], CZ[8];
-
-						for (int32 k = 0; k < ProcessCount; ++k)
-						{
-							const Triangle& Tri = TrianglesPtr[TriStart + b * 8 + k];
-							AX[k] = Tri.Vertex1.X; AY[k] = Tri.Vertex1.Y; AZ[k] = Tri.Vertex1.Z;
-							BX[k] = Tri.Vertex2.X; BY[k] = Tri.Vertex2.Y; BZ[k] = Tri.Vertex2.Z;
-							CX[k] = Tri.Vertex3.X; CY[k] = Tri.Vertex3.Y; CZ[k] = Tri.Vertex3.Z;
-						}
-						// 미사용 칸은 0 처리
-						for (int32 k = ProcessCount; k < 8; ++k)
-						{
-							AX[k] = AY[k] = AZ[k] = BX[k] = BY[k] = BZ[k] = CX[k] = CY[k] = CZ[k] = 0.0f;
-						}
-
+						const FTriangleBlock8& Block = TriangleBlocksPtr[BlockStart + b];
+						
 						uint32 HitMask = IntersectRayTriangleAVX8(
 							LocalRay,
-							_mm256_loadu_ps(AX), _mm256_loadu_ps(AY), _mm256_loadu_ps(AZ),
-							_mm256_loadu_ps(BX), _mm256_loadu_ps(BY), _mm256_loadu_ps(BZ),
-							_mm256_loadu_ps(CX), _mm256_loadu_ps(CY), _mm256_loadu_ps(CZ),
+							_mm256_load_ps(Block.AX), _mm256_load_ps(Block.AY), _mm256_load_ps(Block.AZ),
+							_mm256_load_ps(Block.BX), _mm256_load_ps(Block.BY), _mm256_load_ps(Block.BZ),
+							_mm256_load_ps(Block.CX), _mm256_load_ps(Block.CY), _mm256_load_ps(Block.CZ),
 							HitDistancesTri);
 
-						HitMask &= ((1 << ProcessCount) - 1);
+						HitMask &= ((1 << Block.TriCount) - 1);
 
 						unsigned long BitIndex;
 						while (_BitScanForward(&BitIndex, HitMask))
@@ -418,7 +406,7 @@ namespace
 				}
 				else // 내부 노드
 				{
-					Stack[StackPtr++] = ChildHits[i].Index;
+					Stack[StackPtr++] = { ChildHits[i].Index, ChildHits[i].Dist };
 				}
 			}
 		}

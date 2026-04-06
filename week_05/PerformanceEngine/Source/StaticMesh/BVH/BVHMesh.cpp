@@ -20,6 +20,48 @@ void FBVHMesh::Build(const FBoundingBox& ObjectBoxes, TArray<Triangle> triangles
     if (!Nodes.empty())
     {
         CollapseTo8Way(0);
+		
+		TriangleBlocks.clear();
+		for (auto& Node8 : Nodes8Way)
+		{
+			for (int32 i = 0; i < Node8.ValidChildCount; ++i)
+			{
+				if (Node8.ChildIndices[i] == -1) // Leaf node
+				{
+					int32 OriginalStart = Node8.TriangleStart[i];
+					int32 OriginalCount = Node8.TriangleCount[i];
+
+					int32 BlockStart = TriangleBlocks.size();
+					int32 NumBlocks = (OriginalCount + 7) / 8;
+
+					for (int32 b = 0; b < NumBlocks; ++b)
+					{
+						FTriangleBlock8 Block;
+						Block.TriCount = std::min(8, OriginalCount - b * 8);
+
+						for (int32 k = 0; k < Block.TriCount; ++k)
+						{
+							const Triangle& Tri = Triangles[OriginalStart + b * 8 + k];
+							Block.AX[k] = Tri.Vertex1.X; Block.AY[k] = Tri.Vertex1.Y; Block.AZ[k] = Tri.Vertex1.Z;
+							Block.BX[k] = Tri.Vertex2.X; Block.BY[k] = Tri.Vertex2.Y; Block.BZ[k] = Tri.Vertex2.Z;
+							Block.CX[k] = Tri.Vertex3.X; Block.CY[k] = Tri.Vertex3.Y; Block.CZ[k] = Tri.Vertex3.Z;
+						}
+						// fill the rest with 0
+						for (int32 k = Block.TriCount; k < 8; ++k)
+						{
+							Block.AX[k] = Block.AY[k] = Block.AZ[k] = 0.0f;
+							Block.BX[k] = Block.BY[k] = Block.BZ[k] = 0.0f;
+							Block.CX[k] = Block.CY[k] = Block.CZ[k] = 0.0f;
+						}
+						
+						TriangleBlocks.push_back(Block);
+					}
+
+					Node8.TriangleStart[i] = BlockStart;
+					Node8.TriangleCount[i] = NumBlocks;
+				}
+			}
+		}
     }
 }
 
