@@ -304,13 +304,15 @@ void FCore::Tick()
 			Gizmo->UpdateDrag(SelectedMatrixPtr, Camera.get(), MouseRay, Input->GetMouseX(), Input->GetMouseY());
 
 			auto& RuntimeData = const_cast<FScenePrimitiveRuntimeData&>(Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex]);
-			auto& ColdData = const_cast<FScenePrimitiveColdData&>(Scene->GetPrimitiveColdData()[PickState.SelectedPrimitiveIndex]);
 
 			RuntimeData.SetWorldMatrix(*SelectedMatrixPtr);
+
 			RuntimeData.SetRelativeLocation(ExtractLocaton(*SelectedMatrixPtr));
-			//RuntimeData.SetRelativeLocation(ExtractScale(*SelectedMatrixPtr));
+			RuntimeData.SetRelativeScale(ExtractScale(*SelectedMatrixPtr));
+
+			RuntimeData.SetRelativeRotation(ExtractRotation(*SelectedMatrixPtr));
+
 			RuntimeData.GetComponentToWorld();
-			//void FSceneComponent::UpdateComponentToWorld() const
 	
 		}
 	}
@@ -511,9 +513,6 @@ bool FCore::LoadDefaultScene()
 	// 씬의 모든 고유 메쉬에 대해 임포스터 베이킹
 	if (bLoaded && Scene->GetPrimitiveCount() > 0)
 	{
-		OutputDebugStringA("\n[Core] Impostor baking start...\n");
-
-		// 고유 메쉬 수집
 		std::unordered_set<FStaticMesh*> UniqueMeshes;
 		for (const auto& PrimData : Scene->GetPrimitiveRuntimeData())
 		{
@@ -528,13 +527,24 @@ bool FCore::LoadDefaultScene()
 		{
 			for (FStaticMesh* Mesh : UniqueMeshes)
 			{
-				// 메쉬 소스 경로에서 출력 파일명 생성
-				// 예: "Data/apple_mid.obj" → "Data/Scene/apple_mid_Impostor"
 				std::filesystem::path SrcPath = Mesh->GetSourcePath();
 				std::wstring Stem = SrcPath.stem().wstring();
 				std::wstring OutputPath = L"Data/Scene/" + Stem + L"_Impostor";
 
-				// 항상 새로 베이크 (렌더 스테이트 수정 반영)
+	
+				std::filesystem::path AlbedoFile = OutputPath + L"_Albedo.png";
+				std::filesystem::path NormalFile = OutputPath + L"_NormalDepth.png";
+
+	
+				if (std::filesystem::exists(AlbedoFile) && std::filesystem::exists(NormalFile))
+				{
+					char msg[512];
+					sprintf_s(msg, "[Core] Impostor already exists. Skipped baking for: %ls\n", Stem.c_str());
+					OutputDebugStringA(msg);
+					continue;
+				}
+
+			
 				Baker.Bake(RHI->GetDeviceContext(), Mesh, OutputPath);
 
 				char msg[512];

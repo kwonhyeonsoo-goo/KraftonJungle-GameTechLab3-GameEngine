@@ -553,26 +553,34 @@ void FSceneRenderer::RenderPrimitives(
 	TArray<uint32> MeshInstanceIndices;
 	std::unordered_map<FStaticMesh*, TArray<uint32>> ImpostorBatches;
 
+	//for (uint32 PrimitiveIndex : VisibleIndices)
+	//{
+	//	if (PrimitiveIndex >= PrimitiveRuntimeData.size()) continue;
+
+	//	const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
+
+	//	// 메쉬 중심점과 카메라 사이의 절대 거리를 구합니다.
+	//	float Distance = FVector::Dist(PrimitiveData.WorldBounds.GetCenter(), CameraPos);
+
+	//
+	//	if (Distance < 100.0f)
+	//	{
+	//		MeshInstanceIndices.push_back(PrimitiveIndex);
+	//	}
+	//	else
+	//	{
+	//		ImpostorBatches[PrimitiveData.StaticMesh].push_back(PrimitiveIndex);
+	//	}
+	//}
 	for (uint32 PrimitiveIndex : VisibleIndices)
 	{
 		if (PrimitiveIndex >= PrimitiveRuntimeData.size()) continue;
 
 		const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
 
-		// 메쉬 중심점과 카메라 사이의 절대 거리를 구합니다.
-		float Distance = FVector::Dist(PrimitiveData.WorldBounds.GetCenter(), CameraPos);
-
-	
-		if (Distance < 100.0f)
-		{
-			MeshInstanceIndices.push_back(PrimitiveIndex);
-		}
-		else
-		{
-			ImpostorBatches[PrimitiveData.StaticMesh].push_back(PrimitiveIndex);
-		}
+		// [수정됨] 임포스터 로직을 완전히 무시하고 전부 일반 메쉬로 렌더링하도록 강제합니다.
+		MeshInstanceIndices.push_back(PrimitiveIndex);
 	}
-
 	// =========================================================================
 	// 2. 일반 메쉬 렌더링 (기존 로직 그대로)
 	// =========================================================================
@@ -621,69 +629,69 @@ void FSceneRenderer::RenderPrimitives(
 		}
 	}
 
-	// =========================================================================
-	// 3. 임포스터 렌더링 (메쉬 묶음별로 따로 그리기)
-	// =========================================================================
-	if (!ImpostorBatches.empty() && Resources->ImpostorVS)
-	{
-		ID3D11Buffer* NullVB = nullptr;
-		UINT ZeroStride = 0, ZeroOffset = 0;
-		DeviceContext->IASetVertexBuffers(0, 1, &NullVB, &ZeroStride, &ZeroOffset);
-		DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		DeviceContext->IASetInputLayout(nullptr);
-		DeviceContext->RSSetState(InRHI.GetRasterizerState(D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE));
+	//// =========================================================================
+	//// 3. 임포스터 렌더링 (메쉬 묶음별로 따로 그리기)
+	//// =========================================================================
+	//if (!ImpostorBatches.empty() && Resources->ImpostorVS)
+	//{
+	//	ID3D11Buffer* NullVB = nullptr;
+	//	UINT ZeroStride = 0, ZeroOffset = 0;
+	//	DeviceContext->IASetVertexBuffers(0, 1, &NullVB, &ZeroStride, &ZeroOffset);
+	//	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	//	DeviceContext->IASetInputLayout(nullptr);
+	//	DeviceContext->RSSetState(InRHI.GetRasterizerState(D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE));
 
-		DeviceContext->VSSetShader(Resources->ImpostorVS.Get(), nullptr, 0);
-		DeviceContext->PSSetShader(Resources->ImpostorPS.Get(), nullptr, 0);
+	//	DeviceContext->VSSetShader(Resources->ImpostorVS.Get(), nullptr, 0);
+	//	DeviceContext->PSSetShader(Resources->ImpostorPS.Get(), nullptr, 0);
 
-		// 🔥 메쉬 묶음 단위로 루프를 돌면서 각각 그려줍니다.
-		for (auto& Pair : ImpostorBatches)
-		{
-			FStaticMesh* TargetMesh = Pair.first;
-			const TArray<uint32>& BatchIndices = Pair.second;
-			if (BatchIndices.empty()) continue;
+	//	// 🔥 메쉬 묶음 단위로 루프를 돌면서 각각 그려줍니다.
+	//	for (auto& Pair : ImpostorBatches)
+	//	{
+	//		FStaticMesh* TargetMesh = Pair.first;
+	//		const TArray<uint32>& BatchIndices = Pair.second;
+	//		if (BatchIndices.empty()) continue;
 
-			D3D11_BUFFER_DESC desc = {};
-			desc.ByteWidth = static_cast<UINT>(sizeof(uint32) * BatchIndices.size());
-			desc.Usage = D3D11_USAGE_DEFAULT;
-			desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-			desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-			desc.StructureByteStride = sizeof(uint32);
+	//		D3D11_BUFFER_DESC desc = {};
+	//		desc.ByteWidth = static_cast<UINT>(sizeof(uint32) * BatchIndices.size());
+	//		desc.Usage = D3D11_USAGE_DEFAULT;
+	//		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	//		desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	//		desc.StructureByteStride = sizeof(uint32);
 
-			D3D11_SUBRESOURCE_DATA initData = { BatchIndices.data(), 0, 0 };
-			TComPtr<ID3D11Buffer> TempIdxBuffer;
-			if (FAILED(InRHI.GetDevice()->CreateBuffer(&desc, &initData, TempIdxBuffer.GetAddressOf()))) continue;
+	//		D3D11_SUBRESOURCE_DATA initData = { BatchIndices.data(), 0, 0 };
+	//		TComPtr<ID3D11Buffer> TempIdxBuffer;
+	//		if (FAILED(InRHI.GetDevice()->CreateBuffer(&desc, &initData, TempIdxBuffer.GetAddressOf()))) continue;
 
-			TComPtr<ID3D11ShaderResourceView> TempIdxSRV;
-			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-			srvDesc.Format = DXGI_FORMAT_UNKNOWN;
-			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-			srvDesc.Buffer.FirstElement = 0;
-			srvDesc.Buffer.NumElements = static_cast<UINT>(BatchIndices.size());
-			InRHI.GetDevice()->CreateShaderResourceView(TempIdxBuffer.Get(), &srvDesc, TempIdxSRV.GetAddressOf());
+	//		TComPtr<ID3D11ShaderResourceView> TempIdxSRV;
+	//		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	//		srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+	//		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	//		srvDesc.Buffer.FirstElement = 0;
+	//		srvDesc.Buffer.NumElements = static_cast<UINT>(BatchIndices.size());
+	//		InRHI.GetDevice()->CreateShaderResourceView(TempIdxBuffer.Get(), &srvDesc, TempIdxSRV.GetAddressOf());
 
-			// 메쉬별 아틀라스 맵에서 조회
-			auto AtlasIt = Resources->ImpostorAtlasMap.find(TargetMesh);
-			if (AtlasIt == Resources->ImpostorAtlasMap.end() || !AtlasIt->second)
-			{
-				continue; // 아틀라스가 없으면 이 배치는 스킵
-			}
-			ID3D11ShaderResourceView* TargetAtlas = AtlasIt->second.Get();
+	//		// 메쉬별 아틀라스 맵에서 조회
+	//		auto AtlasIt = Resources->ImpostorAtlasMap.find(TargetMesh);
+	//		if (AtlasIt == Resources->ImpostorAtlasMap.end() || !AtlasIt->second)
+	//		{
+	//			continue; // 아틀라스가 없으면 이 배치는 스킵
+	//		}
+	//		ID3D11ShaderResourceView* TargetAtlas = AtlasIt->second.Get();
 
-			ID3D11ShaderResourceView* VS_SRVs[] = { TargetAtlas, InRHI.InstanceSRV.Get(), TempIdxSRV.Get() };
-			DeviceContext->VSSetShaderResources(0, 3, VS_SRVs);
-			DeviceContext->PSSetShaderResources(0, 1, &TargetAtlas);
+	//		ID3D11ShaderResourceView* VS_SRVs[] = { TargetAtlas, InRHI.InstanceSRV.Get(), TempIdxSRV.Get() };
+	//		DeviceContext->VSSetShaderResources(0, 3, VS_SRVs);
+	//		DeviceContext->PSSetShaderResources(0, 1, &TargetAtlas);
 
-			DeviceContext->DrawInstanced(4, (UINT)BatchIndices.size(), 0, 0);
-			DrawCallCount++;
-		}
+	//		DeviceContext->DrawInstanced(4, (UINT)BatchIndices.size(), 0, 0);
+	//		DrawCallCount++;
+	//	}
 
-		ID3D11ShaderResourceView* NullSRVs[] = { nullptr, nullptr, nullptr };
-		DeviceContext->VSSetShaderResources(0, 3, NullSRVs);
-		DeviceContext->RSSetState(InRHI.GetRasterizerState(D3D11_FILL_SOLID, D3D11_CULL_BACK, FALSE));
-		DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		DeviceContext->IASetInputLayout(Resources->InputLayout.Get());
-	}
+	//	ID3D11ShaderResourceView* NullSRVs[] = { nullptr, nullptr, nullptr };
+	//	DeviceContext->VSSetShaderResources(0, 3, NullSRVs);
+	//	DeviceContext->RSSetState(InRHI.GetRasterizerState(D3D11_FILL_SOLID, D3D11_CULL_BACK, FALSE));
+	//	DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//	DeviceContext->IASetInputLayout(Resources->InputLayout.Get());
+	//}
 }
 
 void FSceneRenderer::BuildHiZMipChain(const FD3D11RHI& InRHI, const FScene& InScene)
