@@ -6,6 +6,23 @@
 #include <wincodec.h>
 #include "Graphics/D3D11/D3D11Utils.h"
 #include <ScreenGrab.h>
+#include <cmath>
+namespace
+{
+	FVector OctDecode(const FVector2& InUV)
+	{
+		FVector Res(InUV.X, InUV.Y, 1.0f - std::abs(InUV.X) - std::abs(InUV.Y));
+		if (Res.Z < 0.0f)
+		{
+			float OldX = Res.X;
+			Res.X = (1.0f - std::abs(Res.Y)) * (OldX >= 0.0f ? 1.0f : -1.0f);
+			Res.Y = (1.0f - std::abs(OldX)) * (Res.Y >= 0.0f ? 1.0f : -1.0f);
+		}
+		Res.Normalize();
+		return Res;
+	}
+}
+
 FImpostorBaker::FImpostorBaker() = default;
 
 FImpostorBaker::~FImpostorBaker()
@@ -51,7 +68,7 @@ bool FImpostorBaker::Initialize(ID3D11Device* InDevice, int32 InAtlasResolution,
 	if (FAILED(InDevice->CreateShaderResourceView(AlbedoAtlasTex.Get(), nullptr, AlbedoSRV.GetAddressOf()))) return false;
 
 	// 2. Normal + Depth 텍스처 및 RTV 생성 (정밀도를 위해 FLOAT16 사용 권장)
-	TexDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	TexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	if (FAILED(InDevice->CreateTexture2D(&TexDesc, nullptr, NormalDepthAtlasTex.GetAddressOf()))) return false;
 	if (FAILED(InDevice->CreateRenderTargetView(NormalDepthAtlasTex.Get(), nullptr, NormalDepthRTV.GetAddressOf()))) return false;
 	if (FAILED(InDevice->CreateShaderResourceView(NormalDepthAtlasTex.Get(), nullptr, NormalDepthSRV.GetAddressOf()))) return false;
@@ -311,18 +328,22 @@ bool FImpostorBaker::Bake(ID3D11DeviceContext* InContext, FStaticMesh* InMesh, c
 		NormalPath.c_str()
 	);
 
-	if (FAILED(hr1) || FAILED(hr2))
+	char DebugMsg[512];
+	if (FAILED(hr1))
 	{
-		// 저장 실패 시 에러 처리 (로그 등)
-		OutputDebugStringA("[ImpostorBaker] Failed to save Impostor Atlas Textures to file!\n");
+		sprintf_s(DebugMsg, "[ImpostorBaker] Albedo 저장 실패! HRESULT: 0x%08X (경로 문제 또는 COM 초기화 누락)\n", hr1);
+		OutputDebugStringA(DebugMsg);
 	}
-	else
+	if (FAILED(hr2))
 	{
-		OutputDebugStringA("[ImpostorBaker] Impostor Atlas successfully baked and saved!\n");
+		sprintf_s(DebugMsg, "[ImpostorBaker] NormalDepth 저장 실패! HRESULT: 0x%08X\n", hr2);
+		OutputDebugStringA(DebugMsg);
 	}
 
-	// 원래 상태로 렌더 타겟 복구
-	InContext->OMSetRenderTargets(0, nullptr, nullptr);
+	if (SUCCEEDED(hr1) && SUCCEEDED(hr2))
+	{
+		OutputDebugStringA("[ImpostorBaker] Impostor Atlas 성공적으로 구워졌습니다!\n");
+	}
 
-	return true;
+	return (SUCCEEDED(hr1) && SUCCEEDED(hr2));
 }

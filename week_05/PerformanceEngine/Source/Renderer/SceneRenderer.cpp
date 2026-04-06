@@ -73,6 +73,9 @@ struct FSceneRenderer::FResources
 	TComPtr<ID3D11VertexShader> VertexShader;
 	TComPtr<ID3D11PixelShader> PixelShader;
 	TComPtr<ID3D11InputLayout> InputLayout;
+	TComPtr<ID3D11VertexShader> ImpostorVS;
+	TComPtr<ID3D11PixelShader> ImpostorPS;
+	TComPtr<ID3D11ShaderResourceView> ImpostorAlbedoAtlas;
 	TComPtr<ID3D11Buffer> FrameConstantBuffer;
 	TComPtr<ID3D11Buffer> ObjectConstantBuffer;
 	TComPtr<ID3D11SamplerState> LinearSampler;
@@ -170,6 +173,91 @@ float4 PSMain(PSInput Input) : SV_Target
     return DiffuseTexture.Sample(LinearSampler, Input.TexCoord) * Tint;
 }
 )";
+	const std::string ImpostorShaderSource = R"(
+	struct InstanceData {
+		float4x4 WorldMatrix;
+		float3 Center;
+		float Padding1;
+		float3 Extents;
+		float Padding2;
+	};
+
+	Texture2D AlbedoAtlas : register(t0);
+	StructuredBuffer<InstanceData> AllInstances : register(t1);
+	StructuredBuffer<uint> ImpostorIndices : register(t2);
+	SamplerState LinearSampler : register(s0);
+
+	cbuffer FrameCB : register(b0) {
+		row_major float4x4 ViewProj;
+		float2 RTSize;
+		uint PrimCount;
+		float Padding;
+		float4 CameraPos; 
+	};
+
+	struct VS_OUT { float4 Pos : SV_POSITION; float2 UV : TEXCOORD0; };
+
+	float2 SignNotZero(float2 v) { return float2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0); }
+	float2 OctEncode(float3 dir) {
+		float l1norm = abs(dir.x) + abs(dir.y) + abs(dir.z);
+		float2 res = dir.xy / l1norm;
+		if (dir.z < 0.0) res = (1.0 - abs(res.yx)) * SignNotZero(res);
+		return res;
+	}
+
+	VS_OUT VSMain(uint VertexID : SV_VertexID, uint InstanceID : SV_InstanceID) {
+		VS_OUT Out;
+		
+		uint RealIndex = ImpostorIndices[InstanceID];
+		InstanceData data = AllInstances[RealIndex];
+
+		// 일반 사과와 똑같은 100% 보장되는 월드 위치 계산
+		float3 worldPos = mul(float4(0.0f, 0.0f, 0.0f, 1.0f), data.WorldMatrix).xyz;
+
+		float3 dirToCamera = normalize(CameraPos.xyz - worldPos);
+		float3 upGuide = float3(0, 1, 0);
+		if (abs(dirToCamera.y) > 0.999f) { upGuide = float3(0, 0, 1); }
+		float3 right = normalize(cross(upGuide, dirToCamera));
+		float3 up = cross(dirToCamera, right);
+		
+		float2 quadPos;
+		quadPos.x = (VertexID % 2) ? 1.0 : -1.0;
+		quadPos.y = (VertexID / 2) ? -1.0 : 1.0;
+		
+		float2 localUV;
+		localUV.x = (VertexID % 2) ? 1.0 : 0.0;
+		localUV.y = (VertexID / 2) ? 1.0 : 0.0;
+
+		float2 octPos = OctEncode(dirToCamera); 
+		float2 atlasUV = octPos * 0.5 + 0.5;    
+		float2 gridPos = clamp(floor(atlasUV * 16.0), 0.0, 15.0); 
+		gridPos.y = 15.0 - gridPos.y;           
+
+		Out.UV = (gridPos + localUV) / 16.0;
+
+		// 사과 크기 보정 (Extents가 있다면 활용, 없으면 2.0)
+		float radius = max(data.Extents.x, max(data.Extents.y, data.Extents.z));
+		float scale = radius * 2.0f;
+		if (scale < 0.1f) scale = 2.0f;
+
+		worldPos += (right * quadPos.x * scale) + (up * quadPos.y * scale);
+		
+		Out.Pos = mul(float4(worldPos, 1.0), ViewProj);
+		return Out;
+	}
+
+	float4 PSMain(VS_OUT In) : SV_Target {
+		float4 color = AlbedoAtlas.Sample(LinearSampler, In.UV);
+		
+		// JPG 알파 이슈 완전 정복 (까만 배경 투명하게 날리기)
+		if (color.r < 0.05 && color.g < 0.05 && color.b < 0.05) {
+			discard;
+		}
+		clip(color.a - 0.1);
+		
+		return color;
+	}
+	)";
 	TComPtr<ID3DBlob> VertexShaderBlob;
 	TComPtr<ID3DBlob> PixelShaderBlob;
 	if (!D3D11Utils::CompileShaderFromSource(VertexShaderSource, "VSMain", "vs_5_0", VertexShaderBlob, "SceneRenderer vertex shader")
@@ -362,7 +450,7 @@ void FSceneRenderer::Prepare(const FD3D11RHI& InRHI, const FScene& InScene, cons
 	FrameConstants.PrimitiveCount = static_cast<uint32>(InScene.GetPrimitiveCount());
 	D3D11Utils::UpdateDynamicBuffer(DeviceContext, Resources->FrameConstantBuffer.Get(), FrameConstants);
 
-	//상수 버퍼 세팅 (b0: Frame, b1: InstanceIndex, b2: Highlight)
+
 	ID3D11Buffer* VSConstantBuffers[] = { Resources->FrameConstantBuffer.Get(), Resources->InstanceIndexConstantBuffer.Get() };
 	ID3D11Buffer* PSConstantBuffers[] = { nullptr, Resources->InstanceIndexConstantBuffer.Get(), Resources->HighlightConstantBuffer.Get() };
 	DeviceContext->VSSetConstantBuffers(0, 2, VSConstantBuffers);
@@ -381,14 +469,12 @@ void FSceneRenderer::RenderPrimitives(
 	const FPickState& InPickState)
 {
 	ID3D11DeviceContext* DeviceContext = InRHI.GetDeviceContext();
-
-	ID3D11Buffer* CurrentVertexBuffer = nullptr;
-	ID3D11Buffer* CurrentIndexBuffer = nullptr;
-	ID3D11ShaderResourceView* CurrentTextureView = nullptr;
-	const UINT Stride = sizeof(FStaticMeshVertex);
-	const UINT Offset = 0;
-
 	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
+
+
+	FVector CameraPos = InCamera.GetLocation();
+	TArray<uint32> MeshInstanceIndices;
+	TArray<uint32> ImpostorInstanceIndices;
 
 	for (uint32 PrimitiveIndex : VisibleIndices)
 	{
@@ -398,12 +484,33 @@ void FSceneRenderer::RenderPrimitives(
 		}
 
 		const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
-		FStaticMesh* StaticMesh = PrimitiveData.StaticMesh;
-		if (StaticMesh == nullptr || !StaticMesh->IsValid())
-		{
-			continue;
-		}
+		float Distance = FVector::Dist(PrimitiveData.WorldBounds.GetCenter(), CameraPos);
 
+		if (Distance < 15.0f) // 15미터 이내는 일반 메쉬
+		{
+			MeshInstanceIndices.push_back(PrimitiveIndex);
+		}
+		else                  // 15미터 밖은 임포스터
+		{
+			ImpostorInstanceIndices.push_back(PrimitiveIndex);
+		}
+	}
+
+	// =========================================================================
+	// 2. 일반 메쉬 (근거리) 렌더링
+	// =========================================================================
+	ID3D11Buffer* CurrentVertexBuffer = nullptr;
+	ID3D11Buffer* CurrentIndexBuffer = nullptr;
+	ID3D11ShaderResourceView* CurrentTextureView = nullptr;
+	const UINT Stride = sizeof(FStaticMeshVertex);
+	const UINT Offset = 0;
+
+	for (uint32 PrimitiveIndex : MeshInstanceIndices)
+	{
+		const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
+		FStaticMesh* StaticMesh = PrimitiveData.StaticMesh;
+
+		if (StaticMesh == nullptr || !StaticMesh->IsValid()) continue;
 
 		ID3D11Buffer* VertexBuffer = StaticMesh->GetVertexBuffer();
 		if (VertexBuffer != CurrentVertexBuffer)
@@ -436,6 +543,7 @@ void FSceneRenderer::RenderPrimitives(
 			IndexData.Tint[3] = 1.0f;
 		}
 		D3D11Utils::UpdateDynamicBuffer(DeviceContext, Resources->InstanceIndexConstantBuffer.Get(), IndexData);
+
 		for (const FStaticMesh::FSection& Section : StaticMesh->GetSections())
 		{
 			ID3D11ShaderResourceView* TextureView = StaticMesh->GetMaterialTexture(Section.MaterialIndex);
@@ -443,7 +551,7 @@ void FSceneRenderer::RenderPrimitives(
 
 			if (TextureView != CurrentTextureView)
 			{
-				DeviceContext->PSSetShaderResources(0, 1, &TextureView); // t0에 텍스처 세팅
+				DeviceContext->PSSetShaderResources(0, 1, &TextureView);
 				CurrentTextureView = TextureView;
 			}
 			DeviceContext->DrawIndexed(Section.IndexCount, Section.IndexStart, 0);
@@ -452,6 +560,71 @@ void FSceneRenderer::RenderPrimitives(
 		}
 	}
 
+	// =========================================================================
+	// 3. 임포스터 (원거리) 렌더링
+	// =========================================================================
+	if (!ImpostorInstanceIndices.empty() && Resources->ImpostorVS)
+	{
+
+		D3D11_BUFFER_DESC desc = {};
+		desc.ByteWidth = static_cast<UINT>(sizeof(uint32) * ImpostorInstanceIndices.size());
+		desc.Usage = D3D11_USAGE_DEFAULT;
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.StructureByteStride = sizeof(uint32);
+
+		D3D11_SUBRESOURCE_DATA initData = { ImpostorInstanceIndices.data(), 0, 0 };
+		TComPtr<ID3D11Buffer> TempIdxBuffer;
+
+		if (SUCCEEDED(InRHI.GetDevice()->CreateBuffer(&desc, &initData, TempIdxBuffer.GetAddressOf())))
+		{
+			TComPtr<ID3D11ShaderResourceView> TempIdxSRV;
+			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+			srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+			srvDesc.Buffer.FirstElement = 0;
+			srvDesc.Buffer.NumElements = static_cast<UINT>(ImpostorInstanceIndices.size());
+
+			if (SUCCEEDED(InRHI.GetDevice()->CreateShaderResourceView(TempIdxBuffer.Get(), &srvDesc, TempIdxSRV.GetAddressOf())))
+			{
+				// 파이프라인 정리 및 세팅
+				ID3D11Buffer* NullVB = nullptr;
+				UINT ZeroStride = 0, ZeroOffset = 0;
+				DeviceContext->IASetVertexBuffers(0, 1, &NullVB, &ZeroStride, &ZeroOffset);
+				DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+				DeviceContext->IASetInputLayout(nullptr);
+
+				// 뒷면이 컬링되지 않게 설정
+				DeviceContext->RSSetState(InRHI.GetRasterizerState(D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE));
+
+				DeviceContext->VSSetShader(Resources->ImpostorVS.Get(), nullptr, 0);
+				DeviceContext->PSSetShader(Resources->ImpostorPS.Get(), nullptr, 0);
+
+				// t0: 아틀라스, t1: 전체 인스턴스, t2: 임포스터 대상 인덱스
+				ID3D11ShaderResourceView* VS_SRVs[] = {
+					Resources->ImpostorAlbedoAtlas.Get(),
+					InRHI.InstanceSRV.Get(),
+					TempIdxSRV.Get()
+				};
+				DeviceContext->VSSetShaderResources(0, 3, VS_SRVs);
+
+				ID3D11ShaderResourceView* AlbedoSRV = Resources->ImpostorAlbedoAtlas.Get();
+				DeviceContext->PSSetShaderResources(0, 1, &AlbedoSRV);
+
+				// 분류된 임포스터 개수만큼 인스턴싱 렌더링
+				DeviceContext->DrawInstanced(4, (UINT)ImpostorInstanceIndices.size(), 0, 0);
+				DrawCallCount++;
+
+				// 리소스 락 해제 및 원래 렌더링 상태 복구
+				ID3D11ShaderResourceView* NullSRVs[] = { nullptr, nullptr, nullptr };
+				DeviceContext->VSSetShaderResources(0, 3, NullSRVs);
+
+				DeviceContext->RSSetState(InRHI.GetRasterizerState(D3D11_FILL_SOLID, D3D11_CULL_BACK, FALSE));
+				DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+				DeviceContext->IASetInputLayout(Resources->InputLayout.Get());
+			}
+		}
+	}
 }
 
 void FSceneRenderer::BuildHiZMipChain(const FD3D11RHI& InRHI, const FScene& InScene)

@@ -175,6 +175,7 @@
     <ClCompile Include="Source\Input\Input.cpp" />
     <ClCompile Include="Source\main.cpp" />
     <ClCompile Include="Source\Picking\PickingSystem.cpp" />
+    <ClCompile Include="Source\Renderer\ImpostorBaker.cpp" />
     <ClCompile Include="Source\Renderer\SceneRenderer.cpp" />
     <ClCompile Include="Source\Scene\BVH\BVH.cpp" />
     <ClCompile Include="Source\Scene\Scene.cpp" />
@@ -226,6 +227,7 @@
     <ClInclude Include="Source\Input\Input.h" />
     <ClInclude Include="Source\Core\Windows\WindowsLaunch.h" />
     <ClInclude Include="Source\Picking\PickingSystem.h" />
+    <ClInclude Include="Source\Renderer\ImpostorBaker.h" />
     <ClInclude Include="Source\Renderer\SceneRenderer.h" />
     <ClInclude Include="Source\Scene\BVH\BVH.h" />
     <ClInclude Include="Source\Scene\BVH\BVHNode.h" />
