@@ -15,7 +15,7 @@ namespace
 	constexpr float ParallelTolerance = 1.0e-6f;
 	constexpr float MinGizmoScale = 0.05f;
 	constexpr float MaxGizmoScale = 3.0f;
-	constexpr float GizmoViewportHeightRatio = 0.30f;
+	constexpr float GizmoViewportHeightRatio = 0.15f;
 	constexpr float TranslationAxisLengthUnits = 47.0f;
 	constexpr float ScaleAxisLengthUnits = 25.0f;
 	constexpr float ScaleReferenceUnits = 20.0f;
