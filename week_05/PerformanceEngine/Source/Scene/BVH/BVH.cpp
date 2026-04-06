@@ -34,7 +34,7 @@ int32 FBVH::BuildRecursive(TArray<FBVHObjectInfo>& Infos, int32 Start, int32 End
 	}
 
 	int32 Count = End - Start;
-	if (Count <= 8)
+	if (Count <= 16)
 	{
 		Nodes[NodeIndex].Bounds = NodeBounds;
 		Nodes[NodeIndex].ObjectIndicesStart = static_cast<int32>(OrderedIndices.size());

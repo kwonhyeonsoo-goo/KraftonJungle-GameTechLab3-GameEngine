@@ -504,7 +504,7 @@ void FSceneRenderer::BuildHiZMipChain(const FD3D11RHI& InRHI, const FScene& InSc
 	DeviceContext->CSSetUnorderedAccessViews(0, 1, InRHI.VisibilityUAV.GetAddressOf(), nullptr);
 
 	const size_t PrimitiveCount = InScene.GetPrimitiveCount();
-	InRHI.GetDeviceContext()->Dispatch(static_cast<UINT>(std::ceil(PrimitiveCount / 64.0f)), 1, 1);
+	DeviceContext->Dispatch(static_cast<UINT>(std::ceil(PrimitiveCount / 64.0f)), 1, 1);
 
 	ID3D11ShaderResourceView* nullSRVs[] = { nullptr, nullptr, nullptr };
 	DeviceContext->CSSetShaderResources(0, 3, nullSRVs);
