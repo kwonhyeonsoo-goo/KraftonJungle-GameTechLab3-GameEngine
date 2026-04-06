@@ -37,64 +37,6 @@ namespace
 		return static_cast<double>(InEndCycles - InStartCycles) * GetSecondsPerCycle() * 1000.0;
 	}
 
-	bool IntersectRayAabb(const FRay& InRay, const FVector& InBoundsMin, const FVector& InBoundsMax, float& OutDistance)
-	{
-		float TMin = 0.0f;
-		float TMax = std::numeric_limits<float>::max();
-
-		for (int32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
-		{
-			const float Origin = InRay.Origin[AxisIndex];
-			const float Direction = InRay.Direction[AxisIndex];
-			const float BoundsMin = InBoundsMin[AxisIndex];
-			const float BoundsMax = InBoundsMax[AxisIndex];
-
-			if (std::fabs(Direction) < 1.e-8f)
-			{
-				if (Origin < BoundsMin || Origin > BoundsMax) return false;
-				continue;
-			}
-
-			const float InverseDirection = 1.0f / Direction;
-			float T0 = (BoundsMin - Origin) * InverseDirection;
-			float T1 = (BoundsMax - Origin) * InverseDirection;
-			if (T0 > T1) std::swap(T0, T1);
-
-			TMin = std::max(TMin, T0);
-			TMax = std::min(TMax, T1);
-			if (TMin > TMax) return false;
-		}
-
-		OutDistance = TMin; 
-		return true;
-	}
-
-	__forceinline bool IntersectRayAabbFast(const FRay& InRay, const FVector& InvDir, const FVector& InMin, const FVector& InMax, float MaxDistance, float& OutDistance)
-	{
-		float tx1 = (InMin.X - InRay.Origin.X) * InvDir.X;
-		float tx2 = (InMax.X - InRay.Origin.X) * InvDir.X;
-		float tmin = std::min(tx1, tx2);
-		float tmax = std::max(tx1, tx2);
-
-		float ty1 = (InMin.Y - InRay.Origin.Y) * InvDir.Y;
-		float ty2 = (InMax.Y - InRay.Origin.Y) * InvDir.Y;
-		tmin = std::max(tmin, std::min(ty1, ty2));
-		tmax = std::min(tmax, std::max(ty1, ty2));
-
-		float tz1 = (InMin.Z - InRay.Origin.Z) * InvDir.Z;
-		float tz2 = (InMax.Z - InRay.Origin.Z) * InvDir.Z;
-		tmin = std::max(tmin, std::min(tz1, tz2));
-		tmax = std::min(tmax, std::max(tz1, tz2));
-
-		if (tmax >= tmin && tmax > 0.0f && tmin < MaxDistance)
-		{
-			// 광선 시작점이 박스 안에 있으면 tmin이 음수일 수 있으므로 0으로 보정
-			OutDistance = std::max(0.0f, tmin);
-			return true;
-		}
-		return false;
-	}
-
 	inline uint32 IntersectRayTriangleAVX8(
 		const FRay& Ray,
 		const __m256& A_X, const __m256& A_Y, const __m256& A_Z,
@@ -131,7 +73,8 @@ namespace
 		// det > 1e-8f 만 유효 (Backface culling이 내장됨. 양면 처리 원할경우 fabs(det) 필요)
 		__m256 det_mask = _mm256_cmp_ps(det, epsilon_v, _CMP_GT_OQ);
 
-		__m256 inv_det = _mm256_div_ps(_mm256_set1_ps(1.0f), det);
+		//__m256 inv_det = _mm256_div_ps(_mm256_set1_ps(1.0f), det);
+		__m256 rcp_det = _mm256_rcp_ps(det);
 
 		// tvec = orig - A
 		__m256 tvec_x = _mm256_sub_ps(orig_x, A_X);
@@ -142,7 +85,7 @@ namespace
 		__m256 u = _mm256_mul_ps(tvec_x, pvec_x);
 		u = _mm256_fmadd_ps(tvec_y, pvec_y, u);
 		u = _mm256_fmadd_ps(tvec_z, pvec_z, u);
-		u = _mm256_mul_ps(u, inv_det);
+		u = _mm256_mul_ps(u, rcp_det);
 
 		__m256 one = _mm256_set1_ps(1.0f);
 		// 0.0 <= u <= 1.0
@@ -154,14 +97,14 @@ namespace
 		__m256 qvec_z = _mm256_sub_ps(_mm256_mul_ps(tvec_x, edge1_y), _mm256_mul_ps(tvec_y, edge1_x));
 
 		// v = (dir . qvec) * inv_det
-		__m256 v = _mm256_mul_ps(_mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(dir_x, qvec_x), _mm256_mul_ps(dir_y, qvec_y)), _mm256_mul_ps(dir_z, qvec_z)), inv_det);
+		__m256 v = _mm256_mul_ps(_mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(dir_x, qvec_x), _mm256_mul_ps(dir_y, qvec_y)), _mm256_mul_ps(dir_z, qvec_z)), rcp_det);
 
 		// 0.0 <= v && u + v <= 1.0
 		__m256 u_plus_v = _mm256_add_ps(u, v);
 		__m256 v_mask = _mm256_and_ps(_mm256_cmp_ps(v, zero, _CMP_GE_OQ), _mm256_cmp_ps(u_plus_v, one, _CMP_LE_OQ));
 
 		// t = (edge2 . qvec) * inv_det
-		__m256 t = _mm256_mul_ps(_mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(edge2_x, qvec_x), _mm256_mul_ps(edge2_y, qvec_y)), _mm256_mul_ps(edge2_z, qvec_z)), inv_det);
+		__m256 t = _mm256_mul_ps(_mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(edge2_x, qvec_x), _mm256_mul_ps(edge2_y, qvec_y)), _mm256_mul_ps(edge2_z, qvec_z)), rcp_det);
 
 		// t > 0.0f
 		__m256 t_mask = _mm256_cmp_ps(t, zero, _CMP_GT_OQ);
@@ -504,6 +447,8 @@ void FPickingSystem::UpdatePick(
 	const FRay PickRay = BuildPickRay(InCamera, InMousePositionClient.x, InMousePositionClient.y, InViewportWidth, InViewportHeight);
 	const uint64 PickStartCycles = QueryCycles64();
 
+	const uint64 WorldPickStartCycles = QueryCycles64();
+
 	//기즈모 피킹 판정 
 	InOutPickState.bHitGizmo = false;
 	InOutPickState.HitGizmoAxis = EGizmoAxis::None;
@@ -531,6 +476,9 @@ void FPickingSystem::UpdatePick(
 
 	if (Nodes.empty() || InSceneGraph.GetRootIndex() == -1) return;
 
+	const uint64 WorldPickEndCycles = QueryCycles64();
+	const uint64 MeshPickStartCycles = QueryCycles64();
+
 	struct FStackNode { int32 Index; float Dist; };
 	FStackNode Stack[128];
 	int32 StackPtr = 0;
@@ -538,6 +486,24 @@ void FPickingSystem::UpdatePick(
 
 	float MaxDistance = std::numeric_limits<float>::max();
 	alignas(32) float HitDistances[8];
+
+	// Ray-Sign Traversal
+	int32 RaySignX = PickRay.InvDirection.X < 0.0f ? 1 : 0;
+	int32 RaySignY = PickRay.InvDirection.Y < 0.0f ? 1 : 0;
+	int32 RaySignZ = PickRay.InvDirection.Z < 0.0f ? 1 : 0;
+	int32 RayOctant = RaySignX | (RaySignY << 1) | (RaySignZ << 2);
+
+	static const int32 OctantOrder[8][8] = {
+		{0, 1, 2, 3, 4, 5, 6, 7}, // +X, +Y, +Z 방향
+		{1, 0, 3, 2, 5, 4, 7, 6}, // -X, +Y, +Z 방향
+		{2, 3, 0, 1, 6, 7, 4, 5}, // +X, -Y, +Z 방향
+		{3, 2, 1, 0, 7, 6, 5, 4}, // -X, -Y, +Z 방향
+		{4, 5, 6, 7, 0, 1, 2, 3}, // +X, +Y, -Z 방향
+		{5, 4, 7, 6, 1, 0, 3, 2}, // -X, +Y, -Z 방향
+		{6, 7, 4, 5, 2, 3, 0, 1}, // +X, -Y, -Z 방향
+		{7, 6, 5, 4, 3, 2, 1, 0}  // -X, -Y, -Z 방향
+	};
+	const int32* TraversalOrder = OctantOrder[RayOctant];
 
 	while (StackPtr > 0)
 	{
@@ -577,37 +543,52 @@ void FPickingSystem::UpdatePick(
 		HitMask &= ((1 << Node.ChildCount) - 1);
 		if (HitMask == 0) continue;
 
-		struct ChildHit { int32 Index; float Dist; };
-		ChildHit ChildHits[8];
-		int32 HitCount = 0;
+		//struct ChildHit { int32 Index; float Dist; };
+		//ChildHit ChildHits[8];
+		//int32 HitCount = 0;
 
-		unsigned long BitIndex;
-		while (_BitScanForward(&BitIndex, HitMask))
-		{
-			HitMask &= ~(1 << BitIndex);
-			ChildHits[HitCount++] = { Node.ChildIndices[BitIndex], HitDistances[BitIndex] };
-		}
+		//unsigned long BitIndex;
+		//while (_BitScanForward(&BitIndex, HitMask))
+		//{
+		//	HitMask &= ~(1 << BitIndex);
+		//	ChildHits[HitCount++] = { Node.ChildIndices[BitIndex], HitDistances[BitIndex] };
+		//}
 
-		for (int32 i = 1; i < HitCount; ++i)
+		//for (int32 i = 1; i < HitCount; ++i)
+		//{
+		//	ChildHit Key = ChildHits[i];
+		//	int32 j = i - 1;
+		//	while (j >= 0 && ChildHits[j].Dist < Key.Dist)
+		//	{
+		//		ChildHits[j + 1] = ChildHits[j];
+		//		--j;
+		//	}
+		//	ChildHits[j + 1] = Key;
+		//}
+
+		//for (int32 i = 0; i < HitCount; ++i)
+		//{
+		//	Stack[StackPtr++] = { ChildHits[i].Index, ChildHits[i].Dist };
+		//}
+		// 
+		// 족보 순서대로 뒤에서부터(가장 먼 것부터) 스택에 푸시
+		for (int32 i = 7; i >= 0; --i)
 		{
-			ChildHit Key = ChildHits[i];
-			int32 j = i - 1;
-			while (j >= 0 && ChildHits[j].Dist < Key.Dist)
+			int32 ChildIdx = TraversalOrder[i]; // 이번에 확인할 자식 인덱스
+
+			// 해당 자식이 광선과 부딪혔는지 마스크로 확인
+			if (HitMask & (1 << ChildIdx))
 			{
-				ChildHits[j + 1] = ChildHits[j];
-				--j;
+				// 부딪혔다면 스택에 푸시
+				Stack[StackPtr++] = { Node.ChildIndices[ChildIdx], HitDistances[ChildIdx] };
 			}
-			ChildHits[j + 1] = Key;
-		}
-
-		for (int32 i = 0; i < HitCount; ++i)
-		{
-			Stack[StackPtr++] = { ChildHits[i].Index, ChildHits[i].Dist };
 		}
 	}
-
+	const uint64 MeshPickEndCycles = QueryCycles64();
 	const uint64 PickEndCycles = QueryCycles64();
 	InOutPickState.LastPickTimeMs = CyclesToMilliseconds(PickStartCycles, PickEndCycles);
+	InOutPickState.LastWorldPickTimeMs = CyclesToMilliseconds(WorldPickStartCycles, WorldPickEndCycles);
+	InOutPickState.LastMeshPickTimeMS = CyclesToMilliseconds(MeshPickStartCycles, MeshPickEndCycles);
 	InOutPickState.TotalPickTimeMs += InOutPickState.LastPickTimeMs;
 	++InOutPickState.TotalPickCount;
 
