@@ -208,25 +208,27 @@ FVector FImpostorBaker::GetCameraDirection(int32 GridX, int32 GridY) const
 
 FMatrix FImpostorBaker::CalculateCameraTransform(const FVector& BoundsCenter, float BoundsRadius, const FVector& CameraDir) const
 {
-	// 카메라 거리 및 위치 설정
-	float CameraDistance = BoundsRadius * 2.0f + 10.0f;
-	FVector EyePosition = BoundsCenter - (CameraDir * CameraDistance);
 
-	// 짐벌락 방지용 Up 벡터 계산
+	float Radius = BoundsRadius;
+	if (Radius <= 0.01f)
+	{
+		Radius = 1.0f;
+	}
+
+	float CameraDistance = Radius * 2.0f + 10.0f;
+	FVector EyePosition = BoundsCenter + (CameraDir * CameraDistance);
+
 	FVector UpVector = FVector::UpVector;
 	if (std::abs(FVector::DotProduct(CameraDir, FVector::UpVector)) > 0.999f)
 	{
 		UpVector = FVector::RightVector;
 	}
 
-
 	FMatrix ViewMatrix = FMatrix::MakeLookAt(EyePosition, BoundsCenter, UpVector);
 
 
-	float OrthoSize = BoundsRadius * 2.2f;
-	if (OrthoSize < 0.1f) OrthoSize = 1.0f;
-
-	FMatrix ProjMatrix = FMatrix::MakeOrthographicLH(OrthoSize, OrthoSize, 0.1f, CameraDistance + BoundsRadius * 2.0f);
+	float OrthoSize = Radius * 4.0f;
+	FMatrix ProjMatrix = FMatrix::MakeOrthographicLH(OrthoSize, OrthoSize, 0.1f, CameraDistance + Radius * 2.0f);
 
 	return ViewMatrix * ProjMatrix;
 }
@@ -265,9 +267,9 @@ bool FImpostorBaker::Bake(ID3D11DeviceContext* InContext, FStaticMesh* InMesh, c
 			FMatrix ViewProj = CalculateCameraTransform(BoundsCenter, BoundsRadius, CamDir);
 			struct FBakeCB { FMatrix WVP; FMatrix World; } CBData;
 
-			CBData.WVP = ViewProj;
-			CBData.World = FMatrix::Identity;
-	
+		 
+			CBData.WVP = ViewProj.GetTransposed();
+			CBData.World = FMatrix::Identity.GetTransposed();
 
 			D3D11_MAPPED_SUBRESOURCE MappedResource = {};
 
@@ -281,7 +283,7 @@ bool FImpostorBaker::Bake(ID3D11DeviceContext* InContext, FStaticMesh* InMesh, c
 			ID3D11Buffer* CBs[] = { BakeConstantBuffer.Get() };
 			InContext->VSSetConstantBuffers(0, 1, CBs);
 
-			// 2. 임포스터 베이킹용 쉐이더 바인딩 (VS, PS, InputLayout)
+			// 2. 임포스터 7베이킹용 쉐이더 바인딩 (VS, PS, InputLayout)
 			InContext->VSSetShader(BakeVS.Get(), nullptr, 0);
 			InContext->PSSetShader(BakePS.Get(), nullptr, 0);
 			InContext->IASetInputLayout(BakeInputLayout.Get());

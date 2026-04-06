@@ -19,6 +19,7 @@
 #include "Editor/EditorUI.h"
 #include "Thirdparty/ImGui/imgui.h"
 #include "Scene/SceneLoader.h"
+#include "Renderer/ImpostorBaker.h"
 #include <algorithm>
 namespace
 {
@@ -406,7 +407,7 @@ bool FCore::LoadDefaultScene()
 	const std::filesystem::path ScenePath = FFileSystem::FindDefaultScenePath();
 	if (ScenePath.empty()) return false;
 
-	return SceneLoader->LoadScene(
+	bool bLoaded = SceneLoader->LoadScene(
 		ScenePath.wstring(),
 		this,
 		Scene.get(),
@@ -415,4 +416,22 @@ bool FCore::LoadDefaultScene()
 		VisibilitySystem.get(),
 		PickingSystem.get()
 	);
+
+	// 🔥 [팩트 폭격] 여기서 드디어 오븐 스위치를 켭니다!
+	if (bLoaded && Scene->GetPrimitiveCount() > 0)
+	{
+		OutputDebugStringA("\n[Core] 🔥 강제 임포스터 베이킹 시작...\n");
+
+		FImpostorBaker Baker;
+		if (Baker.Initialize(RHI->GetDevice(), 2048, 16))
+		{
+			// 씬의 0번째 물체(사과 메쉬)를 가져옵니다.
+			FStaticMesh* TargetMesh = Scene->GetPrimitiveRuntimeData()[0].StaticMesh;
+
+			// 베이킹 실행! (Data/Scene 폴더 안에 Apple_Impostor_Albedo.png가 생깁니다)
+			Baker.Bake(RHI->GetDeviceContext(), TargetMesh, L"Data/Scene/Apple_Impostor");
+		}
+	}
+
+	return bLoaded;
 }

@@ -9,7 +9,7 @@
 #include "Scene/Scene.h"
 #include "StaticMesh/StaticMesh.h"
 #include "Visibility/VisibilitySystem.h"
-
+#include <WICTextureLoader.h>
 namespace
 {
 
@@ -76,6 +76,7 @@ struct FSceneRenderer::FResources
 	TComPtr<ID3D11VertexShader> ImpostorVS;
 	TComPtr<ID3D11PixelShader> ImpostorPS;
 	TComPtr<ID3D11ShaderResourceView> ImpostorAlbedoAtlas;
+	TComPtr<ID3D11ShaderResourceView> ImpostorAlbedoAtlas_Bitten;
 	TComPtr<ID3D11Buffer> FrameConstantBuffer;
 	TComPtr<ID3D11Buffer> ObjectConstantBuffer;
 	TComPtr<ID3D11SamplerState> LinearSampler;
@@ -174,28 +175,16 @@ float4 PSMain(PSInput Input) : SV_Target
 }
 )";
 	const std::string ImpostorShaderSource = R"(
-	struct InstanceData {
-		float4x4 WorldMatrix;
-		float3 Center;
-		float Padding1;
-		float3 Extents;
-		float Padding2;
-	};
-
+	struct InstanceData { float4x4 WorldMatrix; float3 Center; float Padding1; float3 Extents; float Padding2; };
 	Texture2D AlbedoAtlas : register(t0);
 	StructuredBuffer<InstanceData> AllInstances : register(t1);
 	StructuredBuffer<uint> ImpostorIndices : register(t2);
 	SamplerState LinearSampler : register(s0);
 
-	cbuffer FrameCB : register(b0) {
-		row_major float4x4 ViewProj;
-		float2 RTSize;
-		uint PrimCount;
-		float Padding;
-		float4 CameraPos; 
-	};
+	cbuffer FrameCB : register(b0) { row_major float4x4 ViewProj; float2 RTSize; uint PrimCount; float Padding; float4 CameraPos; };
 
-	struct VS_OUT { float4 Pos : SV_POSITION; float2 UV : TEXCOORD0; };
+
+	struct VS_OUT { float4 Pos : SV_POSITION; float2 UV : TEXCOORD0; float2 LocalUV : TEXCOORD1; };
 
 	float2 SignNotZero(float2 v) { return float2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0); }
 	float2 OctEncode(float3 dir) {
@@ -207,13 +196,10 @@ float4 PSMain(PSInput Input) : SV_Target
 
 	VS_OUT VSMain(uint VertexID : SV_VertexID, uint InstanceID : SV_InstanceID) {
 		VS_OUT Out;
-		
 		uint RealIndex = ImpostorIndices[InstanceID];
 		InstanceData data = AllInstances[RealIndex];
 
-		// 일반 사과와 똑같은 100% 보장되는 월드 위치 계산
 		float3 worldPos = mul(float4(0.0f, 0.0f, 0.0f, 1.0f), data.WorldMatrix).xyz;
-
 		float3 dirToCamera = normalize(CameraPos.xyz - worldPos);
 		float3 upGuide = float3(0, 1, 0);
 		if (abs(dirToCamera.y) > 0.999f) { upGuide = float3(0, 0, 1); }
@@ -234,30 +220,48 @@ float4 PSMain(PSInput Input) : SV_Target
 		gridPos.y = 15.0 - gridPos.y;           
 
 		Out.UV = (gridPos + localUV) / 16.0;
+		Out.LocalUV = localUV; // 0.0 ~ 1.0 저장
 
-		// 사과 크기 보정 (Extents가 있다면 활용, 없으면 2.0)
 		float radius = max(data.Extents.x, max(data.Extents.y, data.Extents.z));
 		float scale = radius * 2.0f;
 		if (scale < 0.1f) scale = 2.0f;
 
 		worldPos += (right * quadPos.x * scale) + (up * quadPos.y * scale);
-		
 		Out.Pos = mul(float4(worldPos, 1.0), ViewProj);
 		return Out;
 	}
 
 	float4 PSMain(VS_OUT In) : SV_Target {
 		float4 color = AlbedoAtlas.Sample(LinearSampler, In.UV);
-		
-		// JPG 알파 이슈 완전 정복 (까만 배경 투명하게 날리기)
-		if (color.r < 0.05 && color.g < 0.05 && color.b < 0.05) {
-			discard;
-		}
+		if (color.r < 0.05 && color.g < 0.05 && color.b < 0.05) discard;
 		clip(color.a - 0.1);
 		
-		return color;
+
+		float2 centerUV = In.LocalUV * 2.0 - 1.0; // -1 ~ 1
+		float z = sqrt(max(0.001, 1.0 - dot(centerUV, centerUV)));
+		float3 fakeNormal = normalize(float3(centerUV.x, -centerUV.y, z));
+		
+		// 위에서 아래로 비스듬히 떨어지는 가상의 태양광
+		float3 lightDir = normalize(float3(0.5, 1.0, -0.5));
+		float ndotl = max(dot(fakeNormal, lightDir), 0.4); // 최소 밝기 0.4 보장
+		
+		return float4(color.rgb * ndotl, color.a);
 	}
 	)";
+	TComPtr<ID3DBlob> IVSBlob, IPSBlob;
+	if (!D3D11Utils::CompileShaderFromSource(ImpostorShaderSource.c_str(), "VSMain", "vs_5_0", IVSBlob, "ImpostorVS") ||
+		!D3D11Utils::CompileShaderFromSource(ImpostorShaderSource.c_str(), "PSMain", "ps_5_0", IPSBlob, "ImpostorPS"))
+	{
+		return false;
+	}
+
+	Device->CreateVertexShader(IVSBlob->GetBufferPointer(), IVSBlob->GetBufferSize(), nullptr, Resources->ImpostorVS.GetAddressOf());
+	Device->CreatePixelShader(IPSBlob->GetBufferPointer(), IPSBlob->GetBufferSize(), nullptr, Resources->ImpostorPS.GetAddressOf());
+
+	// 텍스처 로드 (PNG로 수정된 버전)
+	DirectX::CreateWICTextureFromFile(Device, DeviceContext, L"Data/Scene/Apple_Impostor_Albedo.png", nullptr, Resources->ImpostorAlbedoAtlas.GetAddressOf());
+	DirectX::CreateWICTextureFromFile(Device, DeviceContext, L"Data/Scene/bitten_apple_mid_Impostor_Albedo.png", nullptr, Resources->ImpostorAlbedoAtlas_Bitten.GetAddressOf());
+
 	TComPtr<ID3DBlob> VertexShaderBlob;
 	TComPtr<ID3DBlob> PixelShaderBlob;
 	if (!D3D11Utils::CompileShaderFromSource(VertexShaderSource, "VSMain", "vs_5_0", VertexShaderBlob, "SceneRenderer vertex shader")
@@ -474,30 +478,28 @@ void FSceneRenderer::RenderPrimitives(
 
 	FVector CameraPos = InCamera.GetLocation();
 	TArray<uint32> MeshInstanceIndices;
-	TArray<uint32> ImpostorInstanceIndices;
+	std::unordered_map<FStaticMesh*, TArray<uint32>> ImpostorBatches;
 
 	for (uint32 PrimitiveIndex : VisibleIndices)
 	{
-		if (PrimitiveIndex >= PrimitiveRuntimeData.size())
-		{
-			continue;
-		}
+		if (PrimitiveIndex >= PrimitiveRuntimeData.size()) continue;
 
 		const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
 		float Distance = FVector::Dist(PrimitiveData.WorldBounds.GetCenter(), CameraPos);
 
-		if (Distance < 15.0f) // 15미터 이내는 일반 메쉬
+		// 🔥 15m는 너무 티납니다! 40m 밖으로 밀어서 자연스럽게 전환되게 합니다.
+		if (Distance < 40.0f)
 		{
 			MeshInstanceIndices.push_back(PrimitiveIndex);
 		}
-		else                  // 15미터 밖은 임포스터
+		else
 		{
-			ImpostorInstanceIndices.push_back(PrimitiveIndex);
+			ImpostorBatches[PrimitiveData.StaticMesh].push_back(PrimitiveIndex);
 		}
 	}
 
 	// =========================================================================
-	// 2. 일반 메쉬 (근거리) 렌더링
+	// 2. 일반 메쉬 렌더링 (기존 로직 그대로)
 	// =========================================================================
 	ID3D11Buffer* CurrentVertexBuffer = nullptr;
 	ID3D11Buffer* CurrentIndexBuffer = nullptr;
@@ -509,121 +511,102 @@ void FSceneRenderer::RenderPrimitives(
 	{
 		const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
 		FStaticMesh* StaticMesh = PrimitiveData.StaticMesh;
-
 		if (StaticMesh == nullptr || !StaticMesh->IsValid()) continue;
 
 		ID3D11Buffer* VertexBuffer = StaticMesh->GetVertexBuffer();
-		if (VertexBuffer != CurrentVertexBuffer)
-		{
+		if (VertexBuffer != CurrentVertexBuffer) {
 			DeviceContext->IASetVertexBuffers(0, 1, &VertexBuffer, &Stride, &Offset);
 			CurrentVertexBuffer = VertexBuffer;
 		}
 
 		ID3D11Buffer* IndexBuffer = StaticMesh->GetIndexBuffer();
-		if (IndexBuffer != CurrentIndexBuffer)
-		{
+		if (IndexBuffer != CurrentIndexBuffer) {
 			DeviceContext->IASetIndexBuffer(IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 			CurrentIndexBuffer = IndexBuffer;
 		}
 
 		FInstanceIndexConstants IndexData;
 		IndexData.InstanceIndex = PrimitiveIndex;
-		if (PrimitiveData.PrimitiveId == InPickState.SelectedPrimitiveId)
-		{
-			IndexData.Tint[0] = 1.0f;
-			IndexData.Tint[1] = 0.2f;
-			IndexData.Tint[2] = 0.2f;
-			IndexData.Tint[3] = 1.0f;
-		}
-		else
-		{
-			IndexData.Tint[0] = 1.0f;
-			IndexData.Tint[1] = 1.0f;
-			IndexData.Tint[2] = 1.0f;
-			IndexData.Tint[3] = 1.0f;
-		}
+		IndexData.Tint[0] = (PrimitiveData.PrimitiveId == InPickState.SelectedPrimitiveId) ? 1.0f : 1.0f;
+		IndexData.Tint[1] = (PrimitiveData.PrimitiveId == InPickState.SelectedPrimitiveId) ? 0.2f : 1.0f;
+		IndexData.Tint[2] = (PrimitiveData.PrimitiveId == InPickState.SelectedPrimitiveId) ? 0.2f : 1.0f;
+		IndexData.Tint[3] = 1.0f;
 		D3D11Utils::UpdateDynamicBuffer(DeviceContext, Resources->InstanceIndexConstantBuffer.Get(), IndexData);
 
-		for (const FStaticMesh::FSection& Section : StaticMesh->GetSections())
-		{
+		for (const FStaticMesh::FSection& Section : StaticMesh->GetSections()) {
 			ID3D11ShaderResourceView* TextureView = StaticMesh->GetMaterialTexture(Section.MaterialIndex);
 			if (TextureView == nullptr) TextureView = Resources->WhiteTextureView.Get();
 
-			if (TextureView != CurrentTextureView)
-			{
+			if (TextureView != CurrentTextureView) {
 				DeviceContext->PSSetShaderResources(0, 1, &TextureView);
 				CurrentTextureView = TextureView;
 			}
 			DeviceContext->DrawIndexed(Section.IndexCount, Section.IndexStart, 0);
-
 			++DrawCallCount;
 		}
 	}
 
 	// =========================================================================
-	// 3. 임포스터 (원거리) 렌더링
+	// 3. 임포스터 렌더링 (메쉬 묶음별로 따로 그리기)
 	// =========================================================================
-	if (!ImpostorInstanceIndices.empty() && Resources->ImpostorVS)
+	if (!ImpostorBatches.empty() && Resources->ImpostorVS)
 	{
+		ID3D11Buffer* NullVB = nullptr;
+		UINT ZeroStride = 0, ZeroOffset = 0;
+		DeviceContext->IASetVertexBuffers(0, 1, &NullVB, &ZeroStride, &ZeroOffset);
+		DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		DeviceContext->IASetInputLayout(nullptr);
+		DeviceContext->RSSetState(InRHI.GetRasterizerState(D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE));
 
-		D3D11_BUFFER_DESC desc = {};
-		desc.ByteWidth = static_cast<UINT>(sizeof(uint32) * ImpostorInstanceIndices.size());
-		desc.Usage = D3D11_USAGE_DEFAULT;
-		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-		desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.StructureByteStride = sizeof(uint32);
+		DeviceContext->VSSetShader(Resources->ImpostorVS.Get(), nullptr, 0);
+		DeviceContext->PSSetShader(Resources->ImpostorPS.Get(), nullptr, 0);
 
-		D3D11_SUBRESOURCE_DATA initData = { ImpostorInstanceIndices.data(), 0, 0 };
-		TComPtr<ID3D11Buffer> TempIdxBuffer;
-
-		if (SUCCEEDED(InRHI.GetDevice()->CreateBuffer(&desc, &initData, TempIdxBuffer.GetAddressOf())))
+		// 🔥 메쉬 묶음 단위로 루프를 돌면서 각각 그려줍니다.
+		for (auto& Pair : ImpostorBatches)
 		{
+			FStaticMesh* TargetMesh = Pair.first;
+			const TArray<uint32>& BatchIndices = Pair.second;
+			if (BatchIndices.empty()) continue;
+
+			D3D11_BUFFER_DESC desc = {};
+			desc.ByteWidth = static_cast<UINT>(sizeof(uint32) * BatchIndices.size());
+			desc.Usage = D3D11_USAGE_DEFAULT;
+			desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+			desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+			desc.StructureByteStride = sizeof(uint32);
+
+			D3D11_SUBRESOURCE_DATA initData = { BatchIndices.data(), 0, 0 };
+			TComPtr<ID3D11Buffer> TempIdxBuffer;
+			if (FAILED(InRHI.GetDevice()->CreateBuffer(&desc, &initData, TempIdxBuffer.GetAddressOf()))) continue;
+
 			TComPtr<ID3D11ShaderResourceView> TempIdxSRV;
 			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 			srvDesc.Format = DXGI_FORMAT_UNKNOWN;
 			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
 			srvDesc.Buffer.FirstElement = 0;
-			srvDesc.Buffer.NumElements = static_cast<UINT>(ImpostorInstanceIndices.size());
+			srvDesc.Buffer.NumElements = static_cast<UINT>(BatchIndices.size());
+			InRHI.GetDevice()->CreateShaderResourceView(TempIdxBuffer.Get(), &srvDesc, TempIdxSRV.GetAddressOf());
 
-			if (SUCCEEDED(InRHI.GetDevice()->CreateShaderResourceView(TempIdxBuffer.Get(), &srvDesc, TempIdxSRV.GetAddressOf())))
+			// 🔥 [꼼수] 첫 번째 원시데이터 메쉬(일반 사과)와 같으면 일반 아틀라스, 아니면 깨문 아틀라스를 바인딩합니다.
+			ID3D11ShaderResourceView* TargetAtlas = Resources->ImpostorAlbedoAtlas.Get();
+			if (PrimitiveRuntimeData.size() > 0 && TargetMesh != PrimitiveRuntimeData[0].StaticMesh)
 			{
-				// 파이프라인 정리 및 세팅
-				ID3D11Buffer* NullVB = nullptr;
-				UINT ZeroStride = 0, ZeroOffset = 0;
-				DeviceContext->IASetVertexBuffers(0, 1, &NullVB, &ZeroStride, &ZeroOffset);
-				DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-				DeviceContext->IASetInputLayout(nullptr);
-
-				// 뒷면이 컬링되지 않게 설정
-				DeviceContext->RSSetState(InRHI.GetRasterizerState(D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE));
-
-				DeviceContext->VSSetShader(Resources->ImpostorVS.Get(), nullptr, 0);
-				DeviceContext->PSSetShader(Resources->ImpostorPS.Get(), nullptr, 0);
-
-				// t0: 아틀라스, t1: 전체 인스턴스, t2: 임포스터 대상 인덱스
-				ID3D11ShaderResourceView* VS_SRVs[] = {
-					Resources->ImpostorAlbedoAtlas.Get(),
-					InRHI.InstanceSRV.Get(),
-					TempIdxSRV.Get()
-				};
-				DeviceContext->VSSetShaderResources(0, 3, VS_SRVs);
-
-				ID3D11ShaderResourceView* AlbedoSRV = Resources->ImpostorAlbedoAtlas.Get();
-				DeviceContext->PSSetShaderResources(0, 1, &AlbedoSRV);
-
-				// 분류된 임포스터 개수만큼 인스턴싱 렌더링
-				DeviceContext->DrawInstanced(4, (UINT)ImpostorInstanceIndices.size(), 0, 0);
-				DrawCallCount++;
-
-				// 리소스 락 해제 및 원래 렌더링 상태 복구
-				ID3D11ShaderResourceView* NullSRVs[] = { nullptr, nullptr, nullptr };
-				DeviceContext->VSSetShaderResources(0, 3, NullSRVs);
-
-				DeviceContext->RSSetState(InRHI.GetRasterizerState(D3D11_FILL_SOLID, D3D11_CULL_BACK, FALSE));
-				DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-				DeviceContext->IASetInputLayout(Resources->InputLayout.Get());
+				TargetAtlas = Resources->ImpostorAlbedoAtlas_Bitten.Get();
 			}
+
+			ID3D11ShaderResourceView* VS_SRVs[] = { TargetAtlas, InRHI.InstanceSRV.Get(), TempIdxSRV.Get() };
+			DeviceContext->VSSetShaderResources(0, 3, VS_SRVs);
+			DeviceContext->PSSetShaderResources(0, 1, &TargetAtlas);
+
+			DeviceContext->DrawInstanced(4, (UINT)BatchIndices.size(), 0, 0);
+			DrawCallCount++;
 		}
+
+		ID3D11ShaderResourceView* NullSRVs[] = { nullptr, nullptr, nullptr };
+		DeviceContext->VSSetShaderResources(0, 3, NullSRVs);
+		DeviceContext->RSSetState(InRHI.GetRasterizerState(D3D11_FILL_SOLID, D3D11_CULL_BACK, FALSE));
+		DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		DeviceContext->IASetInputLayout(Resources->InputLayout.Get());
 	}
 }
 
