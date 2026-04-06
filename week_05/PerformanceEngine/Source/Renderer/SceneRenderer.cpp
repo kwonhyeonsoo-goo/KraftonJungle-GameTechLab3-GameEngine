@@ -189,8 +189,8 @@ float4 PSMain(PSInput Input) : SV_Target
 
 	struct VS_OUT {
 		float4 Pos      : SV_POSITION;
-		float2 LocalUV  : TEXCOORD0;  // 쿼드 내 UV (0~1, 정점마다 다름)
-		float2 GridPosF : TEXCOORD1;  // 연속적 그리드 좌표 (인스턴스마다 같음)
+		float2 LocalUV  : TEXCOORD0;  
+		float2 GridPosF : TEXCOORD1;  
 	};
 
 	float2 SignNotZero(float2 v) { return float2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0); }
@@ -206,12 +206,14 @@ float4 PSMain(PSInput Input) : SV_Target
 		uint RealIndex = ImpostorIndices[InstanceID];
 		InstanceData data = AllInstances[RealIndex];
 
-		float3 worldPos = mul(float4(0.0f, 0.0f, 0.0f, 1.0f), data.WorldMatrix).xyz;
-		float3 dirToCamera = normalize(CameraPos.xyz - worldPos);
+		float3 worldCenter = mul(float4(0.0f, 0.0f, 0.0f, 1.0f), data.WorldMatrix).xyz;
+		float3 dirToCameraWorld = normalize(CameraPos.xyz - worldCenter);
+		float3 dirToCameraLocal = normalize(mul((float3x3)data.WorldMatrix, dirToCameraWorld));
+
 		float3 upGuide = float3(0, 1, 0);
-		if (abs(dirToCamera.y) > 0.999f) { upGuide = float3(0, 0, 1); }
-		float3 right = normalize(cross(upGuide, dirToCamera));
-		float3 up = cross(dirToCamera, right);
+		if (abs(dirToCameraWorld.y) > 0.999f) { upGuide = float3(0, 0, 1); }
+		float3 right = normalize(cross(upGuide, dirToCameraWorld));
+		float3 up = normalize(cross(dirToCameraWorld, right));
 
 		float2 quadPos;
 		quadPos.x = (VertexID % 2) ? 1.0 : -1.0;
@@ -220,47 +222,51 @@ float4 PSMain(PSInput Input) : SV_Target
 		Out.LocalUV.x = (VertexID % 2) ? 1.0 : 0.0;
 		Out.LocalUV.y = (VertexID / 2) ? 1.0 : 0.0;
 
-		// 연속적 그리드 좌표를 PS에 넘김 (floor 하지 않음)
-		float2 octPos = OctEncode(dirToCamera);
+		float2 octPos = OctEncode(dirToCameraLocal);
 		float2 atlasUV = octPos * 0.5 + 0.5;
 		float2 gridPosF = atlasUV * 16.0;
-		gridPosF.y = 16.0 - gridPosF.y; // Y 뒤집기
+		gridPosF.y = 16.0 - gridPosF.y; 
 		Out.GridPosF = gridPosF;
 
 		float radius = max(data.Extents.x, max(data.Extents.y, data.Extents.z));
 		float scale = radius * 2.0f;
 		if (scale < 0.1f) scale = 2.0f;
 
-		worldPos += (right * quadPos.x * scale) + (up * quadPos.y * scale);
-		Out.Pos = mul(float4(worldPos, 1.0), ViewProj);
+		float3 finalWorldPos = worldCenter + (right * quadPos.x * scale) + (up * quadPos.y * scale);
+		Out.Pos = mul(float4(finalWorldPos, 1.0), ViewProj);
+		
 		return Out;
 	}
 
 	float4 SampleTile(float2 gridCell, float2 localUV) {
-		// 타일 1개 샘플링 (경계 안전하게 클램프)
 		float2 g = clamp(gridCell, 0.0, 15.0);
-		// 타일 내부 UV에 반픽셀 마진 → 인접 타일 색 블리딩 방지
-		float2 safeUV = clamp(localUV, 0.02, 0.98);
+		float2 safeUV = clamp(localUV, 0.02, 0.98); 
 		float2 uv = (g + safeUV) / 16.0;
 		return AlbedoAtlas.Sample(LinearSampler, uv);
 	}
 
 	float4 PSMain(VS_OUT In) : SV_Target {
-		float2 gf = In.GridPosF - 0.5; // 타일 중심 기준으로 오프셋
-		float2 g00 = floor(gf);         // 좌하단 타일
-		float2 blend = frac(gf);        // 블렌딩 가중치
+		float2 gf = In.GridPosF - 0.5; 
+		float2 g00 = floor(gf);         
+		float2 blend = frac(gf);        
 
-		// 인접 4개 타일 샘플링
 		float4 c00 = SampleTile(g00,                    In.LocalUV);
 		float4 c10 = SampleTile(g00 + float2(1.0, 0.0), In.LocalUV);
 		float4 c01 = SampleTile(g00 + float2(0.0, 1.0), In.LocalUV);
 		float4 c11 = SampleTile(g00 + float2(1.0, 1.0), In.LocalUV);
 
-		// 바이리니어 블렌딩
 		float4 color = lerp(lerp(c00, c10, blend.x), lerp(c01, c11, blend.x), blend.y);
 
-		float luminance = dot(color.rgb, float3(0.299, 0.587, 0.114));
-		clip(color.a * luminance - 0.08);
+		// [핵심 해결책] 배경의 검은색(0,0,0)이 블렌딩되면서 생긴 테두리 어두워짐 현상 제거
+		// RGB를 Alpha로 나누어 원래 색상으로 강제 복원합니다.
+		if (color.a > 0.001f) {
+			color.rgb /= color.a;
+		}
+
+		// 경계선 컷오프를 0.5로 올려서 투명해지기 시작하는 지저분한 픽셀을 과감히 잘라냄
+		clip(color.a - 0.5f);
+		
+		color.rgb = pow(abs(color.rgb), 1.0 / 2.2);
 
 		return color;
 	}
@@ -543,7 +549,6 @@ void FSceneRenderer::RenderPrimitives(
 	ID3D11DeviceContext* DeviceContext = InRHI.GetDeviceContext();
 	const TArray<FScenePrimitiveRuntimeData>& PrimitiveRuntimeData = InScene.GetPrimitiveRuntimeData();
 
-
 	FVector CameraPos = InCamera.GetLocation();
 	TArray<uint32> MeshInstanceIndices;
 	std::unordered_map<FStaticMesh*, TArray<uint32>> ImpostorBatches;
@@ -553,9 +558,12 @@ void FSceneRenderer::RenderPrimitives(
 		if (PrimitiveIndex >= PrimitiveRuntimeData.size()) continue;
 
 		const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
+
+		// 메쉬 중심점과 카메라 사이의 절대 거리를 구합니다.
 		float Distance = FVector::Dist(PrimitiveData.WorldBounds.GetCenter(), CameraPos);
 
-		if (Distance < 40.0f)
+	
+		if (Distance < 100.0f)
 		{
 			MeshInstanceIndices.push_back(PrimitiveIndex);
 		}

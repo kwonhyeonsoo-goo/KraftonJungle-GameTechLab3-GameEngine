@@ -355,6 +355,113 @@ bool FImpostorBaker::Bake(ID3D11DeviceContext* InContext, FStaticMesh* InMesh, c
 		}
 	}
 	InContext->OMSetRenderTargets(0, nullptr, nullptr);
+	TComPtr<ID3D11Device> Device;
+	InContext->GetDevice(Device.GetAddressOf());
+
+	D3D11_TEXTURE2D_DESC TexDesc;
+	AlbedoAtlasTex->GetDesc(&TexDesc);
+	TexDesc.Usage = D3D11_USAGE_STAGING;
+	TexDesc.BindFlags = 0;
+	TexDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE;
+
+	TComPtr<ID3D11Texture2D> StagingTex;
+	if (SUCCEEDED(Device->CreateTexture2D(&TexDesc, nullptr, StagingTex.GetAddressOf())))
+	{
+		// 렌더타겟에서 CPU가 읽고 쓸 수 있는 Staging 버퍼로 복사
+		InContext->CopyResource(StagingTex.Get(), AlbedoAtlasTex.Get());
+
+		D3D11_MAPPED_SUBRESOURCE Mapped;
+		if (SUCCEEDED(InContext->Map(StagingTex.Get(), 0, D3D11_MAP_READ_WRITE, 0, &Mapped)))
+		{
+			uint32_t Width = TexDesc.Width;
+			uint32_t Height = TexDesc.Height;
+			uint32_t Pitch = Mapped.RowPitch / 4; // uint32_t 단위 Pitch
+			uint32_t* Pixels = static_cast<uint32_t*>(Mapped.pData);
+
+			std::vector<uint32_t> Buffer1(Width * Height);
+			std::vector<uint32_t> Buffer2(Width * Height);
+
+			for (uint32_t y = 0; y < Height; ++y)
+			{
+				for (uint32_t x = 0; x < Width; ++x)
+				{
+					Buffer1[y * Width + x] = Pixels[y * Pitch + x];
+				}
+			}
+
+			// 8픽셀 두께만큼 색상을 바깥으로 확장 (충분한 패딩)
+			int DilationPasses = 8;
+			for (int pass = 0; pass < DilationPasses; ++pass)
+			{
+				Buffer2 = Buffer1;
+				for (int y = 0; y < (int)Height; ++y)
+				{
+					for (int x = 0; x < (int)Width; ++x)
+					{
+						uint32_t currentPixel = Buffer1[y * Width + x];
+						uint8_t alpha = (currentPixel >> 24) & 0xFF;
+
+						// 투명한 픽셀일 경우 상하좌우 탐색
+						if (alpha == 0)
+						{
+							uint32_t r = 0, g = 0, b = 0, count = 0;
+
+							auto CheckNeighbor = [&](int nx, int ny) {
+								if (nx >= 0 && nx < (int)Width && ny >= 0 && ny < (int)Height)
+								{
+									uint32_t neighbor = Buffer1[ny * Width + nx];
+									if (((neighbor >> 24) & 0xFF) > 0)
+									{
+										r += neighbor & 0xFF;           // R
+										g += (neighbor >> 8) & 0xFF;    // G
+										b += (neighbor >> 16) & 0xFF;   // B
+										count++;
+									}
+								}
+							};
+
+							CheckNeighbor(x - 1, y);
+							CheckNeighbor(x + 1, y);
+							CheckNeighbor(x, y - 1);
+							CheckNeighbor(x, y + 1);
+
+							// 인접한 색상이 있다면 평균을 내어 현재 픽셀에 채움
+							if (count > 0)
+							{
+								r /= count;
+								g /= count;
+								b /= count;
+								// 다음 패스에서 확장되도록 임시로 알파를 255로 설정
+								Buffer2[y * Width + x] = r | (g << 8) | (b << 16) | (255 << 24);
+							}
+						}
+					}
+				}
+				Buffer1 = Buffer2;
+			}
+
+			// 확장된 색상은 남겨두되, 투명도는 원본 그대로(Alpha=0) 복원하여 저장
+			for (uint32_t y = 0; y < Height; ++y)
+			{
+				for (uint32_t x = 0; x < Width; ++x)
+				{
+					uint32_t originalPixel = Pixels[y * Pitch + x];
+					uint32_t originalAlpha = (originalPixel >> 24) & 0xFF;
+
+					uint32_t dilatedPixel = Buffer1[y * Width + x];
+					uint32_t finalPixel = (dilatedPixel & 0x00FFFFFF) | (originalAlpha << 24);
+
+					Pixels[y * Pitch + x] = finalPixel;
+				}
+			}
+
+			InContext->Unmap(StagingTex.Get(), 0);
+			// 텍스처에 덮어쓰기
+			InContext->CopyResource(AlbedoAtlasTex.Get(), StagingTex.Get());
+		}
+	}
+	// =================================================================================
+
 	std::wstring AlbedoPath = InOutputFilePath + L"_Albedo.png";
 	std::wstring NormalPath = InOutputFilePath + L"_NormalDepth.png";
 
