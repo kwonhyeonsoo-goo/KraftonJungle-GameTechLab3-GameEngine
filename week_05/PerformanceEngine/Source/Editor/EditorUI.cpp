@@ -2,6 +2,7 @@
 #include "EditorControlPanel.h"
 #include "EditorConsolePanel.h"
 #include "EditorPropertyPanel.h"
+#include "EditorSceneManagerPanel.h"
 
 #include "Core/Core.h"
 
@@ -16,7 +17,6 @@ FEditorUI::FEditorUI(FCore* InCore)
 
 FEditorUI::~FEditorUI()
 {
-	Shutdown();
 }
 
 void FEditorUI::Initialize(HWND HWnd, ID3D11Device* Device, ID3D11DeviceContext* DeviceContext)
@@ -30,13 +30,19 @@ void FEditorUI::Initialize(HWND HWnd, ID3D11Device* Device, ID3D11DeviceContext*
 	ControlPanel = std::make_unique<FEditorControlPanel>(Core);
 	ConsolePanel = std::make_unique<FEditorConsolePanel>(Core);
 	PropertyPanel = std::make_unique<FEditorPropertyPanel>(Core);
+	SceneManagerPanel = std::make_unique<FEditorSceneManagerPanel>(Core);
 }
 
 void FEditorUI::Shutdown()
 {
+	if (SceneManagerPanel) SceneManagerPanel.reset();
 	if (PropertyPanel) PropertyPanel.reset();
 	if (ConsolePanel) ConsolePanel.reset();
 	if (ControlPanel) ControlPanel.reset();
+
+	ImGui_ImplDX11_Shutdown();
+	ImGui_ImplWin32_Shutdown();
+	ImGui::DestroyContext();
 }
 
 void FEditorUI::Render()
@@ -48,6 +54,7 @@ void FEditorUI::Render()
 	ControlPanel->Render();
 	ConsolePanel->Render();
 	PropertyPanel->Render();
+	SceneManagerPanel->Render();
 
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());

@@ -51,9 +51,14 @@ public:
 
 	void Release();
 
+	FD3D11RHI* GetRHI() const { return RHI.get(); }
 	FCamera* GetCamera() const { return Camera.get(); }
+	FScene* GetScene() const { return Scene.get(); }
 	FPickingSystem* GetPickingSystem() const { return PickingSystem.get(); }
 	FSceneGraph* GetSceneGraph() const { return SceneGraph.get(); }
+	FVisibilitySystem* GetVisibilitySystem() const { return VisibilitySystem.get(); }
+
+	FPickState& GetPickState() { return PickState; }
 
 	const FScenePrimitiveRuntimeData* GetSelectedPrimitiveData() const { return SelectedPrimitiveData; }
 

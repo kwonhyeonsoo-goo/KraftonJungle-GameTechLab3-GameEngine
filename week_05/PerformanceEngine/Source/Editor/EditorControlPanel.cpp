@@ -1,6 +1,8 @@
 #include "EditorControlPanel.h"
 
+#include "Graphics/D3D11/D3D11RHI.h"
 #include "Core/Core.h"
+#include "Scene/Scene.h"
 #include "Camera/Camera.h"
 
 FEditorControlPanel::FEditorControlPanel(FCore* InCore)
@@ -30,7 +32,7 @@ void FEditorControlPanel::Render()
 		{
 			Core->GetCamera()->SetRotation(CameraRotation);
 		}
-		if (ImGui::DragFloat3("Camera FOV", &CameraFOV, 1.0f, 179.0f))
+		if (ImGui::DragFloat("Camera FOV", &CameraFOV, 1.0f, 179.0f))
 		{
 			Core->GetCamera()->SetFOV(CameraFOV);
 		}
@@ -44,6 +46,13 @@ void FEditorControlPanel::Render()
 		if (ImGui::SliderFloat("Camera Sensitivity", &CameraSensitivity, 0.01f, 5.0f))
 		{
 			Core->GetCamera()->SetSensitivity(CameraSensitivity);
+		}
+
+		ImGui::Separator();
+
+		if (ImGui::Button("Spawn"))
+		{
+			Core->GetScene()->Spawn(Core);
 		}
 
 		ImGui::End();

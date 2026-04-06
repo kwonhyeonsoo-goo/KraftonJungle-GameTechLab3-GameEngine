@@ -258,6 +258,8 @@ void FCore::Tick()
 	Input->Tick();
 	Camera->Update(*Input, static_cast<float>(StatsSystem->GetFrameTimeMs() * 0.001));
 
+	Scene->Tick();
+
 	//1.Frumstum culling
 	VisibilitySystem->Build(*Scene, *Camera, VisibilityResults);
 	FMatrix* SelectedMatrixPtr = nullptr;
@@ -266,10 +268,10 @@ void FCore::Tick()
 		SelectedMatrixPtr = const_cast<FMatrix*>(&Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex].GetComponentToWorld());
 	}
 	
-
+	ImGuiIO& io = ImGui::GetIO();
 	FRay MouseRay = FPickingSystem::BuildPickRay(*Camera, Input->GetMouseX(), Input->GetMouseY(), RHI->GetViewportWidth(), RHI->GetViewportHeight());
 
-	if (Input->IsMouseButtonPressed(FInput::MOUSE_LEFT))
+	if (Input->IsMouseButtonPressed(FInput::MOUSE_LEFT) && !io.WantCaptureMouse)
 	{
 		PickingSystem->UpdatePick(
 			*Scene,
@@ -289,14 +291,14 @@ void FCore::Tick()
 		}
 		if (PickState.bHit)
 		{
-			SelectedPrimitiveData = Scene->GetPrimitiveRuntimeDataById(PickState.SelectedPrimitiveId);
+			SelectedPrimitiveData = Scene->GetPrimitiveRuntimeDataById(PickState.SelectedPrimitiveIndex);
 		}
 		else
 		{
 			SelectedPrimitiveData = nullptr;
 		}
 	}
-	else if (Input->IsMouseButtonDown(FInput::MOUSE_LEFT))
+	else if (Input->IsMouseButtonDown(FInput::MOUSE_LEFT) && !io.WantCaptureMouse)
 	{
 		if (Gizmo->IsDragging() && SelectedMatrixPtr)
 		{
@@ -304,21 +306,14 @@ void FCore::Tick()
 
 			auto& RuntimeData = const_cast<FScenePrimitiveRuntimeData&>(Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex]);
 
-			RuntimeData.SetWorldMatrix(*SelectedMatrixPtr);
-
-			RuntimeData.SetRelativeLocation(ExtractLocaton(*SelectedMatrixPtr));
-			RuntimeData.SetRelativeScale(ExtractScale(*SelectedMatrixPtr));
-
-			RuntimeData.SetRelativeRotation(ExtractRotation(*SelectedMatrixPtr));
-
-			RuntimeData.GetComponentToWorld();
-	
+			RuntimeData.SetWorldMatrix(*SelectedMatrixPtr);	
 		}
 	}
 	else if (Input->IsMouseButtonReleased(FInput::MOUSE_LEFT))
 	{
 		Gizmo->EndDrag();
 		SceneGraph->Build(*Scene);
+		VisibilitySystem->BuildBVH(*Scene);
 	}
 	else
 	{

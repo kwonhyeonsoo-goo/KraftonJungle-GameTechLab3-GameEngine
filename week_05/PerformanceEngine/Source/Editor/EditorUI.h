@@ -7,6 +7,7 @@ class FCore;
 class FEditorControlPanel;
 class FEditorConsolePanel;
 class FEditorPropertyPanel;
+class FEditorSceneManagerPanel;
 
 class FEditorUI
 {
@@ -26,4 +27,5 @@ private:
 	std::unique_ptr<FEditorControlPanel> ControlPanel;
 	std::unique_ptr<FEditorConsolePanel> ConsolePanel;
 	std::unique_ptr<FEditorPropertyPanel> PropertyPanel;
+	std::unique_ptr<FEditorSceneManagerPanel> SceneManagerPanel;
 };

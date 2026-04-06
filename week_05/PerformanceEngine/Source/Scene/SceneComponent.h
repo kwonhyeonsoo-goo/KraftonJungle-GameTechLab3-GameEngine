@@ -11,6 +11,8 @@ public:
 	FSceneComponent();
 	virtual ~FSceneComponent();
 
+	void Tick();
+
 	// 계층 구조 (Hierarchy)
 	void AttachTo(FSceneComponent* InParent);
 	void DetachFromParent();

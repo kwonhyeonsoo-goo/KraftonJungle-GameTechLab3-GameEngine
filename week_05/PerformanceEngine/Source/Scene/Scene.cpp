@@ -7,9 +7,13 @@
 #include <fstream>
 #include <string>
 
+#include "Core/Core.h"
+#include "Graphics/D3D11/D3D11RHI.h"
 #include "Math/MathUtility.h"
 #include "StaticMesh/StaticMesh.h"
+#include "Scene/SceneGraph.h"
 #include "FileSystem/FileSystem.h"
+#include "Visibility/VisibilitySystem.h"
 
 namespace
 {
@@ -315,7 +319,6 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 				RuntimeData.InverseWorldMatrix = WorldTransform.ToInverseMatrixWithScale();
 				RuntimeData.StaticMesh = SharedMesh.get();
 
-
 				RuntimeData.SetWorldMatrix(WorldTransform.ToMatrixWithScale());
 				RuntimeData.GetComponentToWorld();
 		
@@ -397,6 +400,45 @@ void FScene::Release()
 	RawCameraRotation = FVector::ZeroVector;
 	SceneBoundsMin = FVector::ZeroVector;
 	SceneBoundsMax = FVector::ZeroVector;
+}
+
+void FScene::Tick()
+{
+	for (auto& RuntimeData : PrimitiveRuntimeData)
+	{
+		RuntimeData.Tick();
+	}
+}
+
+void FScene::Spawn(FCore* InCore)
+{
+	ID3D11Device* Device = InCore->GetRHI()->GetDevice();
+	ID3D11DeviceContext* DeviceContext = InCore->GetRHI()->GetDeviceContext();
+
+	const FTransform WorldTransform = BuildSceneTransform(FVector::ZeroVector, FVector::ZeroVector, FVector::OneVector);
+
+	FScenePrimitiveRuntimeData RuntimeData;
+	RuntimeData.PrimitiveId = PrimitiveRuntimeData.size();
+	RuntimeData.WorldMatrix = FMatrix::Identity;
+	RuntimeData.InverseWorldMatrix = RuntimeData.WorldMatrix.GetInverse();
+
+	RuntimeData.SetWorldMatrix(WorldTransform.ToMatrixWithScale());
+
+	bool bHasSceneBounds = false;
+
+	ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBounds.Min);
+	ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBounds.Max);
+
+	const std::wstring SceneFilePath = FFileSystem::GetAbsolutePath(L"Data/Scene/Clear.scene");
+	const std::wstring MeshPath = ResolveAssetPath(SceneFilePath, "Data/apple_mid.obj");
+
+	std::shared_ptr<FStaticMesh> SharedMesh = MeshManager.LoadStaticMesh(Device, DeviceContext, MeshPath);
+	RuntimeData.StaticMesh = SharedMesh.get();
+
+	PrimitiveRuntimeData.push_back(std::move(RuntimeData));
+
+	InCore->GetSceneGraph()->Build(*this);
+	InCore->GetVisibilitySystem()->BuildBVH(*this);
 }
 
 const FScenePrimitiveRuntimeData* FScene::GetPrimitiveRuntimeDataById(int32 PrimitiveId) const

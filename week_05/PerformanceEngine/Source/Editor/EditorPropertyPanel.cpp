@@ -1,6 +1,7 @@
 #include "EditorPropertyPanel.h"
 
 #include "Core/Core.h"
+#include "Scene/SceneGraph.h"
 
 #include "Thirdparty/ImGui/imgui.h"
 
@@ -21,10 +22,26 @@ void FEditorPropertyPanel::Render()
 		if (SelectedPrimitiveData)
 		{
 			FVector Loc = SelectedPrimitiveData->GetRelativeLocation();
-			float Pos[3] = { Loc.X, Loc.Y, Loc.Z };
-			if (ImGui::DragFloat3("Location", Pos, 0.1f))
+			FRotator Rot = SelectedPrimitiveData->GetRelativeRotation().Rotator();
+			FVector Scale = SelectedPrimitiveData->GetRelativeScale();
+
+			if (ImGui::DragFloat3("Location", &Loc.X, 0.1f))
 			{
-				SelectedPrimitiveData->SetRelativeLocation(FVector(Pos[0], Pos[1], Pos[2]));
+				SelectedPrimitiveData->SetRelativeLocation(Loc);
+				Core->GetSceneGraph()->Build(*Core->GetScene());
+				Core->GetVisibilitySystem()->BuildBVH(*Core->GetScene());
+			}
+			if (ImGui::DragFloat3("Rotation", &Rot.Roll, 0.1f))
+			{
+				SelectedPrimitiveData->SetRelativeRotation(Rot.Quaternion());
+				Core->GetSceneGraph()->Build(*Core->GetScene());
+				Core->GetVisibilitySystem()->BuildBVH(*Core->GetScene());
+			}
+			if (ImGui::DragFloat3("Scale", &Scale.X, 0.1f, 0.01f))
+			{
+				SelectedPrimitiveData->SetRelativeScale(Scale);
+				Core->GetSceneGraph()->Build(*Core->GetScene());
+				Core->GetVisibilitySystem()->BuildBVH(*Core->GetScene());
 			}
 		}
 

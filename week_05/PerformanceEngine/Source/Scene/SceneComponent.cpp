@@ -16,6 +16,14 @@ FSceneComponent::~FSceneComponent()
 	}
 }
 
+void FSceneComponent::Tick()
+{
+	if (bIsWorldTransformDirty)
+	{
+		GetComponentToWorld();
+	}
+}
+
 void FSceneComponent::AttachTo(FSceneComponent* InParent)
 {
 	if (Parent == InParent) return;

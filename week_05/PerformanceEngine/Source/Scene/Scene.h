@@ -7,11 +7,17 @@
 #include "StaticMesh/StaticMeshManager.h"
 #include "Types/Array.h"
 
+class FCore;
+
 class FScene
 {
 public:
 	bool LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, const std::wstring& InSceneFilePath);
 	void Release();
+
+	void Tick();
+
+	void Spawn(FCore* InCore);
 
 	const TArray<FScenePrimitiveRuntimeData>& GetPrimitiveRuntimeData() const { return PrimitiveRuntimeData; }
 	const TArray<FScenePrimitiveColdData>& GetPrimitiveColdData() const { return PrimitiveColdData; }

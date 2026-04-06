@@ -149,6 +149,7 @@
     <ClCompile Include="Source\Editor\EditorControlPanel.h" />
     <ClCompile Include="Source\Editor\EditorPropertyPanel.cpp" />
     <ClCompile Include="Source\Editor\EditorPropertyPanel.h" />
+    <ClCompile Include="Source\Editor\EditorSceneManagerPanel.cpp" />
     <ClCompile Include="Source\Editor\EditorUI.cpp" />
     <ClCompile Include="Source\FileSystem\FileSystem.cpp" />
     <ClCompile Include="Source\Gizmo\Gizmo.cpp" />
@@ -197,6 +198,7 @@
     <ClCompile Include="Thirdparty\ImGui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Editor\EditorSceneManagerPanel.h" />
     <ClInclude Include="Source\Editor\EditorUI.h" />
     <ClInclude Include="Source\FileSystem\FileSystem.h" />
     <ClInclude Include="Source\Gizmo\Gizmo.h" />

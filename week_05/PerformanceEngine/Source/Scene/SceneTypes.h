@@ -72,6 +72,9 @@ struct FScenePrimitiveRuntimeData : public FSceneComponent
 			// 나의 최신 월드 행렬을 가져옴
 			const FMatrix& WorldMat = GetComponentToWorld();
 
+			WorldMatrix = WorldMat;
+			InverseWorldMatrix = WorldMat.GetInverse();
+
 			for (int i = 0; i < 8; ++i)
 			{
 				FVector Transformed = WorldMat.TransformPosition(Corners[i]);

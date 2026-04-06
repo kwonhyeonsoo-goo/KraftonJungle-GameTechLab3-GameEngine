@@ -118,6 +118,8 @@ void FSceneGraph::Build(const TArray<FBoundingBox>& ObjectBoxes)
 
 void FSceneGraph::Build(const FScene& InScene)
 {
+    Reset();
+
     TArray<FScenePrimitiveRuntimeData> Primitives = InScene.GetPrimitiveRuntimeData();
     TArray<FBoundingBox> PrimitiveBoxes;
     PrimitiveBoxes.reserve(Primitives.size());
@@ -129,6 +131,7 @@ void FSceneGraph::Build(const FScene& InScene)
 
     Build(PrimitiveBoxes);
 }
+
 void FSceneGraph::Pick(const FRay& InRay, const FVisibilityResults& CandidateVisibilityResults, const TArray<FScenePrimitiveRuntimeData>& PrimitiveBoxes, TArray<int32>& OutCandidates) const
 {
     const auto& Visible = CandidateVisibilityResults.VisiblePrimitiveIndices;
