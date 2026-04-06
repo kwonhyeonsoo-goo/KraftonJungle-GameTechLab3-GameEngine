@@ -269,7 +269,6 @@ void FCore::Tick()
 
 	if (Input->IsMouseButtonPressed(FInput::MOUSE_LEFT))
 	{
-		SceneGraph->Build(*Scene);
 		PickingSystem->UpdatePick(
 			*Scene,
 			*Camera,
