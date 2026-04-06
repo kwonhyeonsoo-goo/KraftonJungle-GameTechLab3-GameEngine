@@ -158,6 +158,12 @@
     <ClCompile Include="Source\StaticMesh\BVH\BVHMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Job\JobSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scene\SceneComponent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Graphics\D3D11\D3D11Utils.h">
@@ -337,7 +343,10 @@
     <ClInclude Include="Source\StaticMesh\BVH\BVHMesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\StaticMesh\BVH\BVHMeshNode.h">
+    <ClInclude Include="Source\Job\JobSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\SceneComponent.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

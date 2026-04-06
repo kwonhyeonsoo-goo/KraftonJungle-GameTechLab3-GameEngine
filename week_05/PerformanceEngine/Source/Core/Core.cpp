@@ -79,6 +79,90 @@ namespace
 
 		return {};
 	}*/
+
+	FVector ExtractLocaton(const FMatrix& matrix) {
+		return FVector{ matrix[3][0], matrix[3][1], matrix[3][2] };
+	}
+
+	FVector ExtractScale(const FMatrix& matrix) {
+		const float sx = std::sqrt(matrix[0][0] * matrix[0][0] + matrix[0][1] * matrix[0][1] + matrix[0][2] * matrix[0][2]);
+		const float sy = std::sqrt(matrix[1][0] * matrix[1][0] + matrix[1][1] * matrix[1][1] + matrix[1][2] * matrix[1][2]);
+		const float sz = std::sqrt(matrix[2][0] * matrix[2][0] + matrix[2][1] * matrix[2][1] + matrix[2][2] * matrix[2][2]);
+		return FVector{sx, sy, sz };
+	}
+
+	FQuat ExtractRotation(const FMatrix& mat)
+	{
+		FVector scale = ExtractScale(mat);
+
+		// scale 제거해서 순수 회전 행렬만 남김
+		// r[행][열]
+		float r[3][3] = {
+			{ mat[0][0] / scale.X,  mat[0][1] / scale.Y,  mat[0][2] / scale.Z },
+			{ mat[1][0] / scale.X,  mat[1][1] / scale.Y,  mat[1][2] / scale.Z },
+			{ mat[2][0] / scale.X,  mat[2][1] / scale.Y,  mat[2][2] / scale.Z },
+		};
+
+		// 회전 행렬 → 쿼터니언
+		float trace = r[0][0] + r[1][1] + r[2][2];
+		FQuat q;
+
+		if (trace > 0.0f) {
+			float s = 0.5f / sqrtf(trace + 1.0f);
+			q.W = 0.25f / s;
+			q.X = (r[2][1] - r[1][2]) * s;
+			q.Y = (r[0][2] - r[2][0]) * s;
+			q.Z = (r[1][0] - r[0][1]) * s;
+		}
+		else if (r[0][0] > r[1][1] && r[0][0] > r[2][2]) {
+			float s = 2.0f * sqrtf(1.0f + r[0][0] - r[1][1] - r[2][2]);
+			q.W = (r[2][1] - r[1][2]) / s;
+			q.X = 0.25f * s;
+			q.Y = (r[0][1] + r[1][0]) / s;
+			q.Z = (r[0][2] + r[2][0]) / s;
+		}
+		else if (r[1][1] > r[2][2]) {
+			float s = 2.0f * sqrtf(1.0f + r[1][1] - r[0][0] - r[2][2]);
+			q.W = (r[0][2] - r[2][0]) / s;
+			q.X = (r[0][1] + r[1][0]) / s;
+			q.Y = 0.25f * s;
+			q.Z = (r[1][2] + r[2][1]) / s;
+		}
+		else {
+			float s = 2.0f * sqrtf(1.0f + r[2][2] - r[0][0] - r[1][1]);
+			q.W = (r[1][0] - r[0][1]) / s;
+			q.X = (r[0][2] + r[2][0]) / s;
+			q.Y = (r[1][2] + r[2][1]) / s;
+			q.Z = 0.25f * s;
+		}
+
+		return q;
+	}
+
+	FRotator QuatToRotator(const FQuat& q)
+	{
+		const float RAD2DEG = 180.0f / 3.14159265f;
+
+		// Pitch (X)
+		float sinp = 2.0f * (q.W * q.Y - q.Z * q.X);
+		float pitch = (fabsf(sinp) >= 1.0f)
+			? copysignf(90.0f, sinp)
+			: asinf(sinp) * RAD2DEG;
+
+		// Yaw (Z)
+		float yaw = atan2f(
+			2.0f * (q.W * q.Z + q.X * q.Y),
+			1.0f - 2.0f * (q.Y * q.Y + q.Z * q.Z)
+		) * RAD2DEG;
+
+		// Roll (Y)
+		float roll = atan2f(
+			2.0f * (q.W * q.X + q.Y * q.Z),
+			1.0f - 2.0f * (q.X * q.X + q.Y * q.Y)
+		) * RAD2DEG;
+
+		return { roll, pitch, yaw };
+	}
 }
 
 FCore::FCore() = default;
@@ -180,7 +264,7 @@ void FCore::Tick()
 		SelectedMatrixPtr = const_cast<FMatrix*>(&Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex].GetComponentToWorld());
 	}
 	
-	ImGuiIO& io = ImGui::GetIO();
+
 	FRay MouseRay = FPickingSystem::BuildPickRay(*Camera, Input->GetMouseX(), Input->GetMouseY(), RHI->GetViewportWidth(), RHI->GetViewportHeight());
 
 	if (Input->IsMouseButtonPressed(FInput::MOUSE_LEFT))
@@ -218,14 +302,20 @@ void FCore::Tick()
 			Gizmo->UpdateDrag(SelectedMatrixPtr, Camera.get(), MouseRay, Input->GetMouseX(), Input->GetMouseY());
 
 			auto& RuntimeData = const_cast<FScenePrimitiveRuntimeData&>(Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex]);
+			auto& ColdData = const_cast<FScenePrimitiveColdData&>(Scene->GetPrimitiveColdData()[PickState.SelectedPrimitiveIndex]);
 
 			RuntimeData.SetWorldMatrix(*SelectedMatrixPtr);
-
+			RuntimeData.SetRelativeLocation(ExtractLocaton(*SelectedMatrixPtr));
+			//RuntimeData.SetRelativeLocation(ExtractScale(*SelectedMatrixPtr));
+			RuntimeData.GetComponentToWorld();
+			//void FSceneComponent::UpdateComponentToWorld() const
+	
 		}
 	}
 	else if (Input->IsMouseButtonReleased(FInput::MOUSE_LEFT))
 	{
 		Gizmo->EndDrag();
+		SceneGraph->Build(*Scene);
 	}
 	else
 	{
