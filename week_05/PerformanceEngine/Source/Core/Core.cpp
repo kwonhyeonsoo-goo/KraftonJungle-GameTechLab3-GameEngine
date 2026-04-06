@@ -265,7 +265,7 @@ void FCore::Tick()
 	FMatrix* SelectedMatrixPtr = nullptr;
 	if (PickState.bHit && PickState.SelectedPrimitiveIndex >= 0 && PickState.SelectedPrimitiveIndex < Scene->GetPrimitiveRuntimeData().size())
 	{
-		SelectedMatrixPtr = const_cast<FMatrix*>(&Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex].GetComponentToWorld());
+		SelectedMatrixPtr = const_cast<FMatrix*>(&Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex].WorldMatrix);
 	}
 	
 	ImGuiIO& io = ImGui::GetIO();
@@ -306,7 +306,16 @@ void FCore::Tick()
 
 			auto& RuntimeData = const_cast<FScenePrimitiveRuntimeData&>(Scene->GetPrimitiveRuntimeData()[PickState.SelectedPrimitiveIndex]);
 
-			RuntimeData.SetWorldMatrix(*SelectedMatrixPtr);	
+
+			RuntimeData.WorldMatrix = *SelectedMatrixPtr;
+
+	
+			RuntimeData.SetRelativeLocation(ExtractLocaton(*SelectedMatrixPtr));
+			RuntimeData.SetRelativeScale(ExtractScale(*SelectedMatrixPtr));
+
+		
+			RuntimeData.SetRelativeRotation(ExtractRotation(*SelectedMatrixPtr));
+	
 		}
 	}
 	else if (Input->IsMouseButtonReleased(FInput::MOUSE_LEFT))
@@ -334,9 +343,27 @@ void FCore::Tick()
 		std::wstring SelectedPath;
 		if (SceneLoader->OpenSceneFileDialog(SelectedPath))
 		{
+
+
+			VisibilitySystem->Reset();
+			VisibilityResults.VisiblePrimitiveIndices.clear();
+			VisibilityResults.VisibleFlags.clear();
+
+
+			PickState.bHit = false;
+			PickState.SelectedPrimitiveIndex = -1;
+			PickState.SelectedPrimitiveId = -1;
+			SelectedPrimitiveData = nullptr;
+			SelectedMatrixPtr = nullptr;
+			Gizmo->EndDrag();
 			SceneLoader->LoadScene(SelectedPath, this, Scene.get(), RHI.get(), Camera.get(), VisibilitySystem.get(), PickingSystem.get());
+
+
+			SceneGraph->Build(*Scene);
+			VisibilitySystem->BuildBVH(*Scene);
 		}
 	}
+
 	const size_t PrimitiveCount = Scene->GetPrimitiveCount();
 	RHI->EnsureCullingBufferCapacity(static_cast<uint32>(PrimitiveCount));
 	D3D11_MAPPED_SUBRESOURCE MappedResource = {};

@@ -19,7 +19,7 @@ struct alignas(32) FSceneNode
     FVector Center;
     int32 Parent = -1;
 
-    // 대신 고정 배열 사용
+    // 대신 고정 배열 사용 
     int32 ChildIndices[8];
     int32 ChildCount = 0;
 
