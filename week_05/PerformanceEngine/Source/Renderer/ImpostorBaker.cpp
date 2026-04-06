@@ -42,6 +42,10 @@ void FImpostorBaker::Release()
 
 	DepthDSV.Reset();
 	DepthStencilTex.Reset();
+
+	BakeSampler.Reset();
+	BakeRasterizerState.Reset();
+	BakeDepthStencilState.Reset();
 }
 
 bool FImpostorBaker::Initialize(ID3D11Device* InDevice, int32 InAtlasResolution, int32 InGridSize)
@@ -189,6 +193,39 @@ bool FImpostorBaker::Initialize(ID3D11Device* InDevice, int32 InAtlasResolution,
 		return false;
 	}
 
+	// 베이킹 전용 샘플러 (텍스처 샘플링에 필수)
+	D3D11_SAMPLER_DESC SampDesc = {};
+	SampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	SampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	SampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	SampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	SampDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+	SampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+	if (FAILED(InDevice->CreateSamplerState(&SampDesc, BakeSampler.GetAddressOf())))
+	{
+		return false;
+	}
+
+	// 베이킹 전용 래스터라이저 (양면 렌더링)
+	D3D11_RASTERIZER_DESC RastDesc = {};
+	RastDesc.FillMode = D3D11_FILL_SOLID;
+	RastDesc.CullMode = D3D11_CULL_NONE;
+	RastDesc.DepthClipEnable = TRUE;
+	if (FAILED(InDevice->CreateRasterizerState(&RastDesc, BakeRasterizerState.GetAddressOf())))
+	{
+		return false;
+	}
+
+	// 베이킹 전용 뎁스 스텐실 (뎁스 테스트 ON, 쓰기 ON)
+	D3D11_DEPTH_STENCIL_DESC DSDesc = {};
+	DSDesc.DepthEnable = TRUE;
+	DSDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	DSDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+	if (FAILED(InDevice->CreateDepthStencilState(&DSDesc, BakeDepthStencilState.GetAddressOf())))
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -249,56 +286,63 @@ bool FImpostorBaker::Bake(ID3D11DeviceContext* InContext, FStaticMesh* InMesh, c
 	// 렌더 타겟 2개(색상, 노말/깊이)를 동시에 바인딩 (MRT: Multiple Render Targets)
 	InContext->OMSetRenderTargets(2, RTVs, DepthDSV.Get());
 
+	// 베이킹 전용 렌더 스테이트 설정
+	InContext->RSSetState(BakeRasterizerState.Get());
+	InContext->OMSetDepthStencilState(BakeDepthStencilState.Get(), 0);
+	ID3D11SamplerState* Samplers[] = { BakeSampler.Get() };
+	InContext->PSSetSamplers(0, 1, Samplers);
+	InContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	// 셰이더 바인딩 (루프 밖에서 한 번만)
+	InContext->VSSetShader(BakeVS.Get(), nullptr, 0);
+	InContext->PSSetShader(BakePS.Get(), nullptr, 0);
+	InContext->IASetInputLayout(BakeInputLayout.Get());
+
+	// 메쉬 버퍼 바인딩 (루프 밖에서 한 번만)
+	UINT Stride = sizeof(FStaticMeshVertex);
+	UINT Offset = 0;
+	ID3D11Buffer* VertexBuffer = InMesh->GetVertexBuffer();
+	InContext->IASetVertexBuffers(0, 1, &VertexBuffer, &Stride, &Offset);
+	ID3D11Buffer* IndexBuffer = InMesh->GetIndexBuffer();
+	InContext->IASetIndexBuffer(IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+
 	FVector BoundsCenter = InMesh->GetBoundsMin() + (InMesh->GetBoundsMax() - InMesh->GetBoundsMin()) * 0.5f;
 	float BoundsRadius = FVector::Dist(InMesh->GetBoundsMax(), BoundsCenter);
 
-	// 2. 대망의 256방향 촬영 루프
+	// 256방향 촬영 루프
 	for (int32 y = 0; y < GridSize; ++y)
 	{
 		for (int32 x = 0; x < GridSize; ++x)
 		{
-			// 렌즈(Viewport)를 현재 타일 위치로 이동시킵니다.
+			// 타일별로 뎁스 클리어 (이전 타일 뎁스가 영향 안 주게)
+			D3D11_RECT ScissorRect;
+			ScissorRect.left = x * TileSize;
+			ScissorRect.top = y * TileSize;
+			ScissorRect.right = ScissorRect.left + TileSize;
+			ScissorRect.bottom = ScissorRect.top + TileSize;
+
 			TileViewport.TopLeftX = static_cast<float>(x * TileSize);
 			TileViewport.TopLeftY = static_cast<float>(y * TileSize);
 			InContext->RSSetViewports(1, &TileViewport);
 
-			// 현재 그리드의 방향을 구하고, 카메라 행렬(ViewProj)을 세팅합니다.
 			FVector CamDir = GetCameraDirection(x, y);
 			FMatrix ViewProj = CalculateCameraTransform(BoundsCenter, BoundsRadius, CamDir);
 			struct FBakeCB { FMatrix WVP; FMatrix World; } CBData;
 
-		 
 			CBData.WVP = ViewProj.GetTransposed();
 			CBData.World = FMatrix::Identity.GetTransposed();
 
 			D3D11_MAPPED_SUBRESOURCE MappedResource = {};
-
 			if (SUCCEEDED(InContext->Map(BakeConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource)))
 			{
 				memcpy(MappedResource.pData, &CBData, sizeof(FBakeCB));
 				InContext->Unmap(BakeConstantBuffer.Get(), 0);
 			}
 
-			// 버텍스 쉐이더의 0번 슬롯(b0)에 상수 버퍼 세팅
 			ID3D11Buffer* CBs[] = { BakeConstantBuffer.Get() };
 			InContext->VSSetConstantBuffers(0, 1, CBs);
 
-			// 2. 임포스터 7베이킹용 쉐이더 바인딩 (VS, PS, InputLayout)
-			InContext->VSSetShader(BakeVS.Get(), nullptr, 0);
-			InContext->PSSetShader(BakePS.Get(), nullptr, 0);
-			InContext->IASetInputLayout(BakeInputLayout.Get());
-
-
-			// 3. 사과 메쉬 버퍼 바인딩
-			UINT Stride = sizeof(FStaticMeshVertex);
-			UINT Offset = 0;
-			ID3D11Buffer* VertexBuffer = InMesh->GetVertexBuffer();
-			InContext->IASetVertexBuffers(0, 1, &VertexBuffer, &Stride, &Offset);
-
-			ID3D11Buffer* IndexBuffer = InMesh->GetIndexBuffer();
-			InContext->IASetIndexBuffer(IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
-
-			// 4. 섹션(머티리얼)별로 순회하며 그리기 
+			// 섹션(머티리얼)별로 순회하며 그리기
 			for (const FStaticMesh::FSection& Section : InMesh->GetSections())
 			{
 				ID3D11ShaderResourceView* TextureView = InMesh->GetMaterialTexture(Section.MaterialIndex);

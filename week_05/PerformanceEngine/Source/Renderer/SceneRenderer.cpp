@@ -1,6 +1,9 @@
 #include "Renderer/SceneRenderer.h"
 
 #include <cstddef>
+#include <unordered_map>
+#include <unordered_set>
+#include <filesystem>
 
 #include "Camera/Camera.h"
 #include "Graphics/D3D11/D3D11Utils.h"
@@ -55,6 +58,7 @@ struct alignas(16) FFrameConstants
 	FVector2 RenderTargetSize = { 1.0f, 1.0f };
 	uint32 PrimitiveCount = 0;
 	float Padding = 0.0f;
+	float CameraPos[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 };
 
 struct alignas(16) FInstanceIndexConstants
@@ -75,8 +79,8 @@ struct FSceneRenderer::FResources
 	TComPtr<ID3D11InputLayout> InputLayout;
 	TComPtr<ID3D11VertexShader> ImpostorVS;
 	TComPtr<ID3D11PixelShader> ImpostorPS;
-	TComPtr<ID3D11ShaderResourceView> ImpostorAlbedoAtlas;
-	TComPtr<ID3D11ShaderResourceView> ImpostorAlbedoAtlas_Bitten;
+	// 메쉬 포인터 → 해당 메쉬의 임포스터 아틀라스 SRV
+	std::unordered_map<FStaticMesh*, TComPtr<ID3D11ShaderResourceView>> ImpostorAtlasMap;
 	TComPtr<ID3D11Buffer> FrameConstantBuffer;
 	TComPtr<ID3D11Buffer> ObjectConstantBuffer;
 	TComPtr<ID3D11SamplerState> LinearSampler;
@@ -183,8 +187,11 @@ float4 PSMain(PSInput Input) : SV_Target
 
 	cbuffer FrameCB : register(b0) { row_major float4x4 ViewProj; float2 RTSize; uint PrimCount; float Padding; float4 CameraPos; };
 
-
-	struct VS_OUT { float4 Pos : SV_POSITION; float2 UV : TEXCOORD0; float2 LocalUV : TEXCOORD1; };
+	struct VS_OUT {
+		float4 Pos      : SV_POSITION;
+		float2 LocalUV  : TEXCOORD0;  // 쿼드 내 UV (0~1, 정점마다 다름)
+		float2 GridPosF : TEXCOORD1;  // 연속적 그리드 좌표 (인스턴스마다 같음)
+	};
 
 	float2 SignNotZero(float2 v) { return float2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0); }
 	float2 OctEncode(float3 dir) {
@@ -205,22 +212,20 @@ float4 PSMain(PSInput Input) : SV_Target
 		if (abs(dirToCamera.y) > 0.999f) { upGuide = float3(0, 0, 1); }
 		float3 right = normalize(cross(upGuide, dirToCamera));
 		float3 up = cross(dirToCamera, right);
-		
+
 		float2 quadPos;
 		quadPos.x = (VertexID % 2) ? 1.0 : -1.0;
 		quadPos.y = (VertexID / 2) ? -1.0 : 1.0;
-		
-		float2 localUV;
-		localUV.x = (VertexID % 2) ? 1.0 : 0.0;
-		localUV.y = (VertexID / 2) ? 1.0 : 0.0;
 
-		float2 octPos = OctEncode(dirToCamera); 
-		float2 atlasUV = octPos * 0.5 + 0.5;    
-		float2 gridPos = clamp(floor(atlasUV * 16.0), 0.0, 15.0); 
-		gridPos.y = 15.0 - gridPos.y;           
+		Out.LocalUV.x = (VertexID % 2) ? 1.0 : 0.0;
+		Out.LocalUV.y = (VertexID / 2) ? 1.0 : 0.0;
 
-		Out.UV = (gridPos + localUV) / 16.0;
-		Out.LocalUV = localUV; // 0.0 ~ 1.0 저장
+		// 연속적 그리드 좌표를 PS에 넘김 (floor 하지 않음)
+		float2 octPos = OctEncode(dirToCamera);
+		float2 atlasUV = octPos * 0.5 + 0.5;
+		float2 gridPosF = atlasUV * 16.0;
+		gridPosF.y = 16.0 - gridPosF.y; // Y 뒤집기
+		Out.GridPosF = gridPosF;
 
 		float radius = max(data.Extents.x, max(data.Extents.y, data.Extents.z));
 		float scale = radius * 2.0f;
@@ -231,21 +236,33 @@ float4 PSMain(PSInput Input) : SV_Target
 		return Out;
 	}
 
+	float4 SampleTile(float2 gridCell, float2 localUV) {
+		// 타일 1개 샘플링 (경계 안전하게 클램프)
+		float2 g = clamp(gridCell, 0.0, 15.0);
+		// 타일 내부 UV에 반픽셀 마진 → 인접 타일 색 블리딩 방지
+		float2 safeUV = clamp(localUV, 0.02, 0.98);
+		float2 uv = (g + safeUV) / 16.0;
+		return AlbedoAtlas.Sample(LinearSampler, uv);
+	}
+
 	float4 PSMain(VS_OUT In) : SV_Target {
-		float4 color = AlbedoAtlas.Sample(LinearSampler, In.UV);
+		float2 gf = In.GridPosF - 0.5; // 타일 중심 기준으로 오프셋
+		float2 g00 = floor(gf);         // 좌하단 타일
+		float2 blend = frac(gf);        // 블렌딩 가중치
+
+		// 인접 4개 타일 샘플링
+		float4 c00 = SampleTile(g00,                    In.LocalUV);
+		float4 c10 = SampleTile(g00 + float2(1.0, 0.0), In.LocalUV);
+		float4 c01 = SampleTile(g00 + float2(0.0, 1.0), In.LocalUV);
+		float4 c11 = SampleTile(g00 + float2(1.0, 1.0), In.LocalUV);
+
+		// 바이리니어 블렌딩
+		float4 color = lerp(lerp(c00, c10, blend.x), lerp(c01, c11, blend.x), blend.y);
+
 		float luminance = dot(color.rgb, float3(0.299, 0.587, 0.114));
 		clip(color.a * luminance - 0.08);
-		
 
-		float2 centerUV = In.LocalUV * 2.0 - 1.0; // -1 ~ 1
-		float z = sqrt(max(0.001, 1.0 - dot(centerUV, centerUV)));
-		float3 fakeNormal = normalize(float3(centerUV.x, -centerUV.y, z));
-		
-		// 위에서 아래로 비스듬히 떨어지는 가상의 태양광
-		float3 lightDir = normalize(float3(0.5, 1.0, -0.5));
-		float ndotl = max(dot(fakeNormal, lightDir), 0.4); // 최소 밝기 0.4 보장
-		
-		return float4(color.rgb * ndotl, color.a);
+		return color;
 	}
 	)";
 	TComPtr<ID3DBlob> IVSBlob, IPSBlob;
@@ -258,9 +275,7 @@ float4 PSMain(PSInput Input) : SV_Target
 	Device->CreateVertexShader(IVSBlob->GetBufferPointer(), IVSBlob->GetBufferSize(), nullptr, Resources->ImpostorVS.GetAddressOf());
 	Device->CreatePixelShader(IPSBlob->GetBufferPointer(), IPSBlob->GetBufferSize(), nullptr, Resources->ImpostorPS.GetAddressOf());
 
-	// 텍스처 로드 (PNG로 수정된 버전)
-	DirectX::CreateWICTextureFromFile(Device, DeviceContext, L"Data/Scene/Apple_Impostor_Albedo.png", nullptr, Resources->ImpostorAlbedoAtlas.GetAddressOf());
-	DirectX::CreateWICTextureFromFile(Device, DeviceContext, L"Data/Scene/bitten_apple_mid_Impostor_Albedo.png", nullptr, Resources->ImpostorAlbedoAtlas_Bitten.GetAddressOf());
+	// 아틀라스 텍스처는 씬 로드 후 LoadImpostorAtlases()에서 동적으로 로드
 
 	TComPtr<ID3DBlob> VertexShaderBlob;
 	TComPtr<ID3DBlob> PixelShaderBlob;
@@ -349,6 +364,54 @@ float4 PSMain(PSInput Input) : SV_Target
 void FSceneRenderer::Shutdown()
 {
 	Resources.reset();
+}
+
+void FSceneRenderer::LoadImpostorAtlases(FD3D11RHI& InRHI, const FScene& InScene)
+{
+	if (!Resources) return;
+
+	ID3D11Device* Device = InRHI.GetDevice();
+	ID3D11DeviceContext* DeviceContext = InRHI.GetDeviceContext();
+
+	// 기존 아틀라스 맵 초기화
+	Resources->ImpostorAtlasMap.clear();
+
+	// 씬의 모든 프리미티브에서 고유 메쉬 수집
+	std::unordered_set<FStaticMesh*> UniqueMeshes;
+	for (const auto& PrimData : InScene.GetPrimitiveRuntimeData())
+	{
+		if (PrimData.StaticMesh)
+		{
+			UniqueMeshes.insert(PrimData.StaticMesh);
+		}
+	}
+
+	// 각 고유 메쉬에 대해 베이크된 아틀라스 PNG 로드
+	for (FStaticMesh* Mesh : UniqueMeshes)
+	{
+		// 메쉬 소스 경로에서 아틀라스 파일 경로 생성
+		// 예: "Data/apple_mid.obj" → "Data/Scene/apple_mid_Impostor_Albedo.png"
+		std::filesystem::path SrcPath = Mesh->GetSourcePath();
+		std::wstring Stem = SrcPath.stem().wstring(); // 확장자 제거한 파일명
+
+		std::wstring AtlasPath = L"Data/Scene/" + Stem + L"_Impostor_Albedo.png";
+
+		TComPtr<ID3D11ShaderResourceView> AtlasSRV;
+		if (SUCCEEDED(DirectX::CreateWICTextureFromFile(Device, DeviceContext, AtlasPath.c_str(), nullptr, AtlasSRV.GetAddressOf())))
+		{
+			Resources->ImpostorAtlasMap[Mesh] = AtlasSRV;
+
+			char msg[512];
+			sprintf_s(msg, "[SceneRenderer] Impostor atlas loaded: %ls\n", AtlasPath.c_str());
+			OutputDebugStringA(msg);
+		}
+		else
+		{
+			char msg[512];
+			sprintf_s(msg, "[SceneRenderer] Impostor atlas NOT found: %ls\n", AtlasPath.c_str());
+			OutputDebugStringA(msg);
+		}
+	}
 }
 
 void FSceneRenderer::Render(
@@ -452,6 +515,11 @@ void FSceneRenderer::Prepare(const FD3D11RHI& InRHI, const FScene& InScene, cons
 	FrameConstants.ViewProjection = InCamera.GetViewMatrix() * InCamera.GetProjectionMatrix();
 	FrameConstants.RenderTargetSize = { static_cast<float>(InRHI.GetViewportWidth()), static_cast<float>(InRHI.GetViewportHeight()) };
 	FrameConstants.PrimitiveCount = static_cast<uint32>(InScene.GetPrimitiveCount());
+	FVector CamLoc = InCamera.GetLocation();
+	FrameConstants.CameraPos[0] = CamLoc.X;
+	FrameConstants.CameraPos[1] = CamLoc.Y;
+	FrameConstants.CameraPos[2] = CamLoc.Z;
+	FrameConstants.CameraPos[3] = 1.0f;
 	D3D11Utils::UpdateDynamicBuffer(DeviceContext, Resources->FrameConstantBuffer.Get(), FrameConstants);
 
 
@@ -487,7 +555,6 @@ void FSceneRenderer::RenderPrimitives(
 		const FScenePrimitiveRuntimeData& PrimitiveData = PrimitiveRuntimeData[PrimitiveIndex];
 		float Distance = FVector::Dist(PrimitiveData.WorldBounds.GetCenter(), CameraPos);
 
-		// 🔥 15m는 너무 티납니다! 40m 밖으로 밀어서 자연스럽게 전환되게 합니다.
 		if (Distance < 40.0f)
 		{
 			MeshInstanceIndices.push_back(PrimitiveIndex);
@@ -587,12 +654,13 @@ void FSceneRenderer::RenderPrimitives(
 			srvDesc.Buffer.NumElements = static_cast<UINT>(BatchIndices.size());
 			InRHI.GetDevice()->CreateShaderResourceView(TempIdxBuffer.Get(), &srvDesc, TempIdxSRV.GetAddressOf());
 
-			// 🔥 [꼼수] 첫 번째 원시데이터 메쉬(일반 사과)와 같으면 일반 아틀라스, 아니면 깨문 아틀라스를 바인딩합니다.
-			ID3D11ShaderResourceView* TargetAtlas = Resources->ImpostorAlbedoAtlas.Get();
-			if (PrimitiveRuntimeData.size() > 0 && TargetMesh != PrimitiveRuntimeData[0].StaticMesh)
+			// 메쉬별 아틀라스 맵에서 조회
+			auto AtlasIt = Resources->ImpostorAtlasMap.find(TargetMesh);
+			if (AtlasIt == Resources->ImpostorAtlasMap.end() || !AtlasIt->second)
 			{
-				TargetAtlas = Resources->ImpostorAlbedoAtlas_Bitten.Get();
+				continue; // 아틀라스가 없으면 이 배치는 스킵
 			}
+			ID3D11ShaderResourceView* TargetAtlas = AtlasIt->second.Get();
 
 			ID3D11ShaderResourceView* VS_SRVs[] = { TargetAtlas, InRHI.InstanceSRV.Get(), TempIdxSRV.Get() };
 			DeviceContext->VSSetShaderResources(0, 3, VS_SRVs);

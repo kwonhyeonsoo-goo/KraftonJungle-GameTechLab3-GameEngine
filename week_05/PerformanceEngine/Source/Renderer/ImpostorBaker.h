@@ -60,6 +60,9 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11VertexShader> BakeVS;
 	Microsoft::WRL::ComPtr<ID3D11PixelShader> BakePS;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> BakeInputLayout;
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> BakeSampler;
+	Microsoft::WRL::ComPtr<ID3D11RasterizerState> BakeRasterizerState;
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilState> BakeDepthStencilState;
 	// 타일 1개를 찍을 때마다 이동시킬 카메라 렌즈(뷰포트)
 	D3D11_VIEWPORT TileViewport;
 };

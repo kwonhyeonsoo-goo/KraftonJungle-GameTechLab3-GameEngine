@@ -21,6 +21,7 @@
 #include "Scene/SceneLoader.h"
 #include "Renderer/ImpostorBaker.h"
 #include <algorithm>
+#include <unordered_set>
 namespace
 {
 	constexpr float DefaultCameraSpeed = 20.0f;
@@ -417,19 +418,45 @@ bool FCore::LoadDefaultScene()
 		PickingSystem.get()
 	);
 
-	// 🔥 [팩트 폭격] 여기서 드디어 오븐 스위치를 켭니다!
+	// 씬의 모든 고유 메쉬에 대해 임포스터 베이킹
 	if (bLoaded && Scene->GetPrimitiveCount() > 0)
 	{
-		OutputDebugStringA("\n[Core] 🔥 강제 임포스터 베이킹 시작...\n");
+		OutputDebugStringA("\n[Core] Impostor baking start...\n");
+
+		// 고유 메쉬 수집
+		std::unordered_set<FStaticMesh*> UniqueMeshes;
+		for (const auto& PrimData : Scene->GetPrimitiveRuntimeData())
+		{
+			if (PrimData.StaticMesh)
+			{
+				UniqueMeshes.insert(PrimData.StaticMesh);
+			}
+		}
 
 		FImpostorBaker Baker;
 		if (Baker.Initialize(RHI->GetDevice(), 2048, 16))
 		{
-			// 씬의 0번째 물체(사과 메쉬)를 가져옵니다.
-			FStaticMesh* TargetMesh = Scene->GetPrimitiveRuntimeData()[0].StaticMesh;
+			for (FStaticMesh* Mesh : UniqueMeshes)
+			{
+				// 메쉬 소스 경로에서 출력 파일명 생성
+				// 예: "Data/apple_mid.obj" → "Data/Scene/apple_mid_Impostor"
+				std::filesystem::path SrcPath = Mesh->GetSourcePath();
+				std::wstring Stem = SrcPath.stem().wstring();
+				std::wstring OutputPath = L"Data/Scene/" + Stem + L"_Impostor";
 
-			// 베이킹 실행! (Data/Scene 폴더 안에 Apple_Impostor_Albedo.png가 생깁니다)
-			Baker.Bake(RHI->GetDeviceContext(), TargetMesh, L"Data/Scene/Apple_Impostor");
+				// 항상 새로 베이크 (렌더 스테이트 수정 반영)
+				Baker.Bake(RHI->GetDeviceContext(), Mesh, OutputPath);
+
+				char msg[512];
+				sprintf_s(msg, "[Core] Baked impostor for: %ls\n", Stem.c_str());
+				OutputDebugStringA(msg);
+			}
+		}
+
+		// 베이크 완료 후 SceneRenderer에 아틀라스 로드
+		if (SceneRenderer)
+		{
+			SceneRenderer->LoadImpostorAtlases(*RHI, *Scene);
 		}
 	}
 

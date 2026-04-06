@@ -22,6 +22,9 @@ public:
 	void Shutdown();
 	void Render(const FD3D11RHI& InRHI, const FScene& InScene, const FCamera& InCamera, const FVisibilityResults& InVisibilityResults, const FPickState& InPickState);
 
+	// 씬 로드 후 호출: 모든 고유 메쉬의 임포스터 아틀라스를 로드
+	void LoadImpostorAtlases(FD3D11RHI& InRHI, const FScene& InScene);
+
 private:
 	void Prepare(const FD3D11RHI& InRHI, const FScene& InScene, const FCamera& InCamera);
 	void RenderPrimitives(const FD3D11RHI& InRHI, const FScene& InScene, const FCamera& InCamera, const TArray<int32>& VisibleIndices, const FPickState& InPickState);
