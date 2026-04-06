@@ -163,8 +163,6 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 	PickState = FPickState();
 	bInitialized = true;
 
-	VisibilitySystem->BuildBVH(*Scene);
-	SceneGraph->Build(*Scene);
 	return true;
 }
 
@@ -187,7 +185,7 @@ void FCore::Tick()
 
 	if (Input->IsMouseButtonPressed(FInput::MOUSE_LEFT))
 	{
-		//SceneGraph->Build(*Scene);
+		SceneGraph->Build(*Scene);
 		PickingSystem->UpdatePick(
 			*Scene,
 			*Camera,
@@ -248,7 +246,7 @@ void FCore::Tick()
 		std::wstring SelectedPath;
 		if (SceneLoader->OpenSceneFileDialog(SelectedPath))
 		{
-			SceneLoader->LoadScene(SelectedPath, Scene.get(), RHI.get(), Camera.get(), VisibilitySystem.get(), PickingSystem.get());
+			SceneLoader->LoadScene(SelectedPath, this, Scene.get(), RHI.get(), Camera.get(), VisibilitySystem.get(), PickingSystem.get());
 		}
 	}
 	const size_t PrimitiveCount = Scene->GetPrimitiveCount();
@@ -410,6 +408,7 @@ bool FCore::LoadDefaultScene()
 
 	return SceneLoader->LoadScene(
 		ScenePath.wstring(),
+		this,
 		Scene.get(),
 		RHI.get(),
 		Camera.get(),

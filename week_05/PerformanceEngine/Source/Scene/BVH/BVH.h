@@ -17,6 +17,7 @@ struct FBVHObjectInfo
 class FBVH
 {
 public:
+	void Reset();
 	void Build(const TArray<FBoundingBox>& ObjectBoxes);
 
 	void GetVisibleObjects(const FFrustum& InFrustum, const FVector& CameraPos, TArray<int32>& OutVisibleObjectIndices) const;

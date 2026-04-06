@@ -1,6 +1,12 @@
 #include "BVH.h"
 #include <algorithm>
 
+void FBVH::Reset()
+{
+	Nodes.clear();
+	OrderedIndices.clear();
+}
+
 void FBVH::Build(const TArray<FBoundingBox>& ObjectBoxes)
 {
 	TArray<FBVHObjectInfo> ObjectInfos;

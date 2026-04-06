@@ -86,6 +86,13 @@ namespace {
     }
 }
 
+void FSceneGraph::Reset()
+{
+    Nodes.clear();
+    PrimitiveIndexBuffer.clear();
+	RootIndex = -1;
+}
+
 void FSceneGraph::Build(const TArray<FBoundingBox>& ObjectBoxes)
 {
     // 1. 기존 데이터 초기화

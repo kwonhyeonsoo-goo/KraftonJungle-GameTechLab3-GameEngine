@@ -9,6 +9,8 @@
 void FVisibilitySystem::Reset()
 {
 	NextFrameNumber = 1;
+
+	BVH.Reset();
 }
 
 void FVisibilitySystem::Build(const FScene& InScene, const FCamera& InCamera, FVisibilityResults& OutResults)

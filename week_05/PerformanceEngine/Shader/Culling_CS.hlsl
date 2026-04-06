@@ -59,7 +59,6 @@ void GetScreenRect(float3 center, float3 extents, float4x4 viewProj, out float4 
         minZ = min(minZ, ndc.z);
     }
 
-    // 영역을 아주 약간 확장하여 보수적으로 판단 (0.005 = 약 5픽셀)
     rect.xy = saturate(minXY);
     rect.zw = saturate(maxXY);
 }
@@ -85,7 +84,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     }
 
     // 화면 밖 컬링
-    if (aabbRect.z < aabbRect.x || aabbRect.w < aabbRect.y)
+    if (any(aabbRect.zw < 0.0f) || any(aabbRect.xy < 0.0f))
     {
         VisibilityResults[idx] = 0;
         return;
@@ -93,7 +92,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
     // ceil을 사용하여 더 보수적인(상위) Mip 선택
     float2 size = (aabbRect.zw - aabbRect.xy) * 1024.0f;
-    float mip = clamp(ceil(log2(max(size.x, size.y))), 0.0f, 10.0f);
+    float maxSize = max(size.x, size.y);
+    
+    float mip = clamp(ceil(log2(maxSize)), 0.0f, 10.0f);
 
     float4 depthSamples;
     depthSamples.x = HiZPyramid.SampleLevel(PointSampler, aabbRect.xy, mip).r;
@@ -103,17 +104,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
     float maxHizDepth = max(max(depthSamples.x, depthSamples.y), max(depthSamples.z, depthSamples.w));
     
-    // Bias를 0.01f로 늘려 컬링을 완화
     bool isVisibleNow = (minZ <= maxHizDepth);
-    
     uint lastCount = LastFrameVisibility[idx];
     
-    if (isVisibleNow)
-    {
-        VisibilityResults[idx] = 1;
-    }
-    else
-    {
-        VisibilityResults[idx] = 0;
-    }
+    VisibilityResults[idx] = isVisibleNow ? 1 : 0;
 }

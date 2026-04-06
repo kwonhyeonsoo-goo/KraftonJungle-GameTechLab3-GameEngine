@@ -2,7 +2,7 @@
 
 #include <string>
 
-
+class FCore;
 class FScene;
 class FD3D11RHI;
 class FCamera;
@@ -18,6 +18,7 @@ public:
 	void SetCurrentScenePath(const std::wstring& InPath) { CurrentScenePath = InPath; }
 	bool LoadScene(
 		const std::wstring& InScenePath,
+		FCore* InCore,
 		FScene* InOutScene,
 		FD3D11RHI* InRHI,
 		FCamera* InOutCamera,
