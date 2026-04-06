@@ -275,6 +275,16 @@ int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const TArray<FBo
         ChildIndices[Oct].push_back(Idx);
     }
 
+    for (int32 i = 0; i < 8; i++)
+    {
+        Nodes[GroupIndex].ChildIndices[i] = -1; // -1이면 자식이 없음
+
+        // 절대 광선과 충돌할 수 없는 무한대/음수무한대 박스로 설정 (AVX 검사용)
+        Nodes[GroupIndex].ChildMinX[i] = 1e30f; Nodes[GroupIndex].ChildMaxX[i] = -1e30f;
+        Nodes[GroupIndex].ChildMinY[i] = 1e30f; Nodes[GroupIndex].ChildMaxY[i] = -1e30f;
+        Nodes[GroupIndex].ChildMinZ[i] = 1e30f; Nodes[GroupIndex].ChildMaxZ[i] = -1e30f;
+    }
+    int32 ValidChildCount = 0;
     // 비어있지 않은 자식만 재귀
     for (int32 i = 0; i < 8; i++)
     {
@@ -289,20 +299,33 @@ int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const TArray<FBo
 
         // 재귀 호출 시 ObjectBoxes 그대로 전달
         int32 ChildIndex = BuildRecursive(ChildIndices[i], ObjectBoxes, TightVolume, Depth + 1);
-        int32 Cnt = Nodes[GroupIndex].ChildCount;
-        Nodes[GroupIndex].ChildIndices[Cnt] = ChildIndex;
+        //int32 Cnt = Nodes[GroupIndex].ChildCount;
+        //Nodes[GroupIndex].ChildIndices[Cnt] = ChildIndex;
 
-        // 부모의 SIMD 배열에는 이 "타이트한 AABB"를 등록합니다.
-        Nodes[GroupIndex].ChildMinX[Cnt] = TightVolume.Min.X;
-        Nodes[GroupIndex].ChildMinY[Cnt] = TightVolume.Min.Y;
-        Nodes[GroupIndex].ChildMinZ[Cnt] = TightVolume.Min.Z;
-        Nodes[GroupIndex].ChildMaxX[Cnt] = TightVolume.Max.X;
-        Nodes[GroupIndex].ChildMaxY[Cnt] = TightVolume.Max.Y;
-        Nodes[GroupIndex].ChildMaxZ[Cnt] = TightVolume.Max.Z;
+        //// 부모의 SIMD 배열에는 이 "타이트한 AABB"를 등록합니다.
+        //Nodes[GroupIndex].ChildMinX[Cnt] = TightVolume.Min.X;
+        //Nodes[GroupIndex].ChildMinY[Cnt] = TightVolume.Min.Y;
+        //Nodes[GroupIndex].ChildMinZ[Cnt] = TightVolume.Min.Z;
+        //Nodes[GroupIndex].ChildMaxX[Cnt] = TightVolume.Max.X;
+        //Nodes[GroupIndex].ChildMaxY[Cnt] = TightVolume.Max.Y;
+        //Nodes[GroupIndex].ChildMaxZ[Cnt] = TightVolume.Max.Z;
 
-        Nodes[GroupIndex].ChildCount++;
+        //Nodes[GroupIndex].ChildCount++;
+        //Nodes[ChildIndex].Parent = GroupIndex;
+
+        // ========================================================
+        Nodes[GroupIndex].ChildIndices[i] = ChildIndex;
+
+        Nodes[GroupIndex].ChildMinX[i] = TightVolume.Min.X;
+        Nodes[GroupIndex].ChildMinY[i] = TightVolume.Min.Y;
+        Nodes[GroupIndex].ChildMinZ[i] = TightVolume.Min.Z;
+        Nodes[GroupIndex].ChildMaxX[i] = TightVolume.Max.X;
+        Nodes[GroupIndex].ChildMaxY[i] = TightVolume.Max.Y;
+        Nodes[GroupIndex].ChildMaxZ[i] = TightVolume.Max.Z;
+
         Nodes[ChildIndex].Parent = GroupIndex;
+        ValidChildCount++;
     }
-
+    Nodes[GroupIndex].ChildCount = ValidChildCount;
     return GroupIndex;
 }

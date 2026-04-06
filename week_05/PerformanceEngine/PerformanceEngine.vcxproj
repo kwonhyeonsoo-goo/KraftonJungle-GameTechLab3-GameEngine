@@ -237,7 +237,6 @@
     <ClInclude Include="Source\Scene\SceneLoader.h" />
     <ClInclude Include="Source\Scene\SceneTypes.h" />
     <ClInclude Include="Source\StaticMesh\BVH\BVHMesh.h" />
-    <ClInclude Include="Source\StaticMesh\BVH\BVHMeshNode.h" />
     <ClInclude Include="Source\Stats\StatsSystem.h" />
     <ClInclude Include="Source\StaticMesh\ObjParser.h" />
     <ClInclude Include="Source\StaticMesh\StaticMesh.h" />

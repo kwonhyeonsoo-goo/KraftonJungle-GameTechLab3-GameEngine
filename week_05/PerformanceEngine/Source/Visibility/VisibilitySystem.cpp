@@ -6,6 +6,8 @@
 #include "Math/MathUtility.h"
 #include "Math/Vector.h"
 
+#include <algorithm>
+
 void FVisibilitySystem::Reset()
 {
 	NextFrameNumber = 1;
@@ -34,7 +36,7 @@ void FVisibilitySystem::Build(const FScene& InScene, const FCamera& InCamera, FV
 	// 2. 가장 빠른 속도로 전체 배열을 0으로 초기화 (메모리 통째로 밀기)
 	if (TotalPrimitives > 0)
 	{
-		std::memset(OutResults.VisibleFlags.data(), 0, OutResults.VisibleFlags.size());
+		std::fill(OutResults.VisibleFlags.begin(), OutResults.VisibleFlags.end(), 0);
 	}
 
 	// 3. 보이는 오브젝트의 인덱스만 1로 켭니다.

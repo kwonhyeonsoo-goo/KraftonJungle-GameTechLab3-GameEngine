@@ -7,7 +7,7 @@
 
 namespace
 {
-	constexpr DXGI_FORMAT BackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+	constexpr DXGI_FORMAT BackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	constexpr DXGI_FORMAT DepthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	constexpr float ClearColor[] = { 0.08f, 0.10f, 0.14f, 1.0f };
 
