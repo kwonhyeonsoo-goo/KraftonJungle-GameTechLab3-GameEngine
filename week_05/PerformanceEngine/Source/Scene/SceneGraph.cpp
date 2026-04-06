@@ -249,7 +249,7 @@ int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const TArray<FBo
     Nodes.push_back(GroupNode);
 
     // 트리의 깊이가 얕아져 메모리 점프가 줄어들고 속도가 급상승합니다.
-    if (Indices.size() <= 32 || Depth >= 16)
+    if (Indices.size() <= 16 || Depth >= 16)
     {
         // 1. 현재 버퍼의 끝부분을 시작점으로 기록
         Nodes[GroupIndex].PrimitiveStartIndex = PrimitiveIndexBuffer.size();
@@ -329,6 +329,6 @@ int32 FSceneGraph::BuildRecursive(const TArray<int32>& Indices, const TArray<FBo
         Nodes[ChildIndex].Parent = GroupIndex;
         ValidChildCount++;
     }
-    Nodes[GroupIndex].ChildCount = ValidChildCount;
+    Nodes[GroupIndex].ChildCount = 8;
     return GroupIndex;
 }

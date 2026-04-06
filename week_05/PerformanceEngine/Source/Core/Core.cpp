@@ -323,6 +323,7 @@ void FCore::Tick()
 		Gizmo->EndDrag();
 		SceneGraph->Build(*Scene);
 		VisibilitySystem->BuildBVH(*Scene);
+		OutputDebugStringA("Rebuild!\n");
 	}
 	else
 	{
@@ -390,7 +391,7 @@ void FCore::Tick()
 		return DataA.StaticMesh < DataB.StaticMesh;
 	});
 	BeginFrame();
-	SceneRenderer->Render(*RHI, *Scene, *Camera, VisibilityResults, PickState);
+	SceneRenderer->Render(*RHI, *Scene, *Camera, VisibilityResults, PickState, SceneGraph.get());
 
 	if (Grid)
 	{

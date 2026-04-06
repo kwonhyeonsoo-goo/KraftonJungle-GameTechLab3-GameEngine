@@ -13,6 +13,9 @@
 #include "StaticMesh/StaticMesh.h"
 #include "Visibility/VisibilitySystem.h"
 #include <WICTextureLoader.h>
+#include "Scene/SceneGraph.h"
+
+
 namespace
 {
 
@@ -87,6 +90,12 @@ struct FSceneRenderer::FResources
 	TComPtr<ID3D11ShaderResourceView> WhiteTextureView;
 	TComPtr<ID3D11Buffer> InstanceIndexConstantBuffer;
 	TComPtr<ID3D11Buffer> HighlightConstantBuffer;
+
+	// 디버그 AABB 렌더링용
+	TComPtr<ID3D11VertexShader>  DebugAABBVS;
+	TComPtr<ID3D11PixelShader>   DebugAABBPS;
+	TComPtr<ID3D11InputLayout>   DebugAABBInputLayout;
+	TComPtr<ID3D11Buffer>        DebugAABBVertexBuffer; // DYNAMIC
 };
 
 FSceneRenderer::FSceneRenderer() = default;
@@ -364,6 +373,77 @@ float4 PSMain(PSInput Input) : SV_Target
 		FALSE
 	};
 
+	// ── 디버그 AABB 셰이더 ──────────────────────────────────────────────────
+	static constexpr char DebugAABBShaderSource[] = R"(
+cbuffer FrameCB : register(b0)
+{
+    row_major float4x4 ViewProjection;
+    float2 RenderTargetSize;
+    uint PrimitiveCount;
+    float Padding;
+};
+
+struct VSInput
+{
+    float3 Position : POSITION;
+    float4 Color    : COLOR;
+};
+
+struct VSOutput
+{
+    float4 Position : SV_POSITION;
+    float4 Color    : COLOR;
+};
+
+VSOutput VSMain(VSInput Input)
+{
+    VSOutput Out;
+    Out.Position = mul(float4(Input.Position, 1.0f), ViewProjection);
+    Out.Color    = Input.Color;
+    return Out;
+}
+
+float4 PSMain(VSOutput Input) : SV_Target
+{
+    return Input.Color;
+}
+)";
+
+	TComPtr<ID3DBlob> DebugVSBlob, DebugPSBlob;
+	if (D3D11Utils::CompileShaderFromSource(DebugAABBShaderSource, "VSMain", "vs_5_0", DebugVSBlob, "DebugAABB_VS") &&
+		D3D11Utils::CompileShaderFromSource(DebugAABBShaderSource, "PSMain", "ps_5_0", DebugPSBlob, "DebugAABB_PS"))
+	{
+		Device->CreateVertexShader(
+			DebugVSBlob->GetBufferPointer(), DebugVSBlob->GetBufferSize(),
+			nullptr, Resources->DebugAABBVS.GetAddressOf());
+
+		Device->CreatePixelShader(
+			DebugPSBlob->GetBufferPointer(), DebugPSBlob->GetBufferSize(),
+			nullptr, Resources->DebugAABBPS.GetAddressOf());
+
+		const D3D11_INPUT_ELEMENT_DESC DebugElems[] =
+		{
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		};
+		Device->CreateInputLayout(
+			DebugElems, 2,
+			DebugVSBlob->GetBufferPointer(), DebugVSBlob->GetBufferSize(),
+			Resources->DebugAABBInputLayout.GetAddressOf());
+
+		// 최대 노드 수 * 24버텍스 (AABB 1개 = 모서리 12개 * 양 끝점 2개)
+		constexpr UINT MaxNodes = 65536;
+		constexpr UINT MaxVerts = MaxNodes * 24;
+		constexpr UINT VertexStride = sizeof(float) * 7; // float3 pos + float4 color
+
+		D3D11_BUFFER_DESC VBDesc = {};
+		VBDesc.ByteWidth = MaxVerts * VertexStride;
+		VBDesc.Usage = D3D11_USAGE_DYNAMIC;
+		VBDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		VBDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		Device->CreateBuffer(&VBDesc, nullptr, Resources->DebugAABBVertexBuffer.GetAddressOf());
+	}
+
 	return true;
 }
 
@@ -425,7 +505,8 @@ void FSceneRenderer::Render(
 	const FScene& InScene,
 	const FCamera& InCamera,
 	const FVisibilityResults& InVisibilityResults,
-	const FPickState& InPickState)
+	const FPickState& InPickState,
+	const FSceneGraph* InSceneGraph)
 {
 	if (!Resources) return;
 
@@ -470,6 +551,11 @@ void FSceneRenderer::Render(
 	// 이번 프레임의 depth를 기반으로 Hi-Z Mip Chain 생성
 	BuildHiZMipChain(InRHI, InScene);
 
+	// ── 디버그: SceneGraph AABB 시각화 ──
+	if (bDebugDrawSceneGraph)
+	{
+		RenderDebugSceneGraph(InRHI, *InSceneGraph);
+	}
 	//TArray<int32> NewlyVisibleIndices;
 	//NewlyVisibleIndices.reserve(InvisibleIndices.size());
 
@@ -537,6 +623,8 @@ void FSceneRenderer::Prepare(const FD3D11RHI& InRHI, const FScene& InScene, cons
 	//Vertex Shader에 AllInstances
 	ID3D11ShaderResourceView* InstanceSRVs[] = { nullptr, InRHI.InstanceSRV.Get() };
 	DeviceContext->VSSetShaderResources(0, 2, InstanceSRVs);
+
+
 }
 
 void FSceneRenderer::RenderPrimitives(
@@ -752,4 +840,140 @@ void FSceneRenderer::BuildHiZMipChain(const FD3D11RHI& InRHI, const FScene& InSc
 
 	DeviceContext->CopyResource(InRHI.LastFrameVisibilityBuffer.Get(), InRHI.VisibilityBuffer.Get());
 	DeviceContext->CopyResource(InRHI.StagingBuffer.Get(), InRHI.VisibilityBuffer.Get());
+}
+
+void FSceneRenderer::RenderDebugSceneGraph(
+	const FD3D11RHI& InRHI,
+	const FSceneGraph& InSceneGraph)
+{
+	if (!Resources->DebugAABBVS ||
+		!Resources->DebugAABBPS ||
+		!Resources->DebugAABBVertexBuffer) return;
+
+	const TArray<FSceneNode>& Nodes = InSceneGraph.GetNodes();
+	if (Nodes.empty()) return;
+
+	// ── 1. 깊이(depth) 계산 (BFS) ────────────────────────────────────────
+	TArray<int32> Depth(Nodes.size(), -1);
+	const int32 RootIndex = InSceneGraph.GetRootIndex();
+	if (RootIndex < 0) return;
+
+	struct FQueueItem { int32 NodeIdx; int32 D; };
+	TArray<FQueueItem> Queue;
+	Queue.push_back({ RootIndex, 0 });
+	for (int32 i = 0; i < static_cast<int32>(Queue.size()); ++i)
+	{
+		const auto [Ni, D] = Queue[i];
+		Depth[Ni] = D;
+		const FSceneNode& N = Nodes[Ni];
+		for (int32 c = 0; c < N.ChildCount; ++c)
+		{
+			if (N.ChildIndices[c] >= 0)
+				Queue.push_back({ N.ChildIndices[c], D + 1 });
+		}
+	}
+
+	// ── 2. 깊이별 색상 팔레트 ────────────────────────────────────────────
+	// 깊이 0(루트)=빨강 → 깊이 7+=흰색
+	constexpr float Palette[8][4] =
+	{
+		{ 1.0f, 0.0f, 0.0f, 1.0f }, // 0 빨강  (루트)
+		{ 1.0f, 0.5f, 0.0f, 1.0f }, // 1 주황
+		{ 1.0f, 1.0f, 0.0f, 1.0f }, // 2 노랑
+		{ 0.0f, 1.0f, 0.0f, 1.0f }, // 3 초록
+		{ 0.0f, 1.0f, 1.0f, 1.0f }, // 4 청록
+		{ 0.0f, 0.5f, 1.0f, 1.0f }, // 5 파랑
+		{ 0.5f, 0.0f, 1.0f, 1.0f }, // 6 보라
+		{ 1.0f, 1.0f, 1.0f, 1.0f }, // 7 흰색  (리프)
+	};
+
+	// ── 3. CPU에서 라인 버텍스 빌드 ──────────────────────────────────────
+	struct FDebugVert { float X, Y, Z, R, G, B, A; };
+
+	TArray<FDebugVert> Verts;
+	Verts.reserve(Nodes.size() * 24);
+
+	// AABB 코너 인덱스 → 모서리 12개
+	constexpr int EdgeA[12] = { 0,1,2,3, 4,5,6,7, 0,1,2,3 };
+	constexpr int EdgeB[12] = { 1,2,3,0, 5,6,7,4, 4,5,6,7 };
+
+	for (int32 i = 0; i < static_cast<int32>(Nodes.size()); ++i)
+	{
+		if (Depth[i] < 0) continue; // 트리에 속하지 않는 노드 스킵
+
+		const FSceneNode& Node = Nodes[i];
+		const float* C = Palette[std::min(Depth[i], 7)];
+
+		const FVector Min = Node.Volume.Min;
+		const FVector Max = Node.Volume.Max;
+
+		// 8 코너
+		const FVector Corners[8] =
+		{
+			{ Min.X, Min.Y, Min.Z },
+			{ Max.X, Min.Y, Min.Z },
+			{ Max.X, Max.Y, Min.Z },
+			{ Min.X, Max.Y, Min.Z },
+			{ Min.X, Min.Y, Max.Z },
+			{ Max.X, Min.Y, Max.Z },
+			{ Max.X, Max.Y, Max.Z },
+			{ Min.X, Max.Y, Max.Z },
+		};
+
+		for (int e = 0; e < 12; ++e)
+		{
+			const FVector& A = Corners[EdgeA[e]];
+			const FVector& B = Corners[EdgeB[e]];
+			Verts.push_back({ A.X, A.Y, A.Z, C[0], C[1], C[2], C[3] });
+			Verts.push_back({ B.X, B.Y, B.Z, C[0], C[1], C[2], C[3] });
+		}
+	}
+
+	if (Verts.empty()) return;
+
+	// ── 4. Dynamic VB 업로드 ──────────────────────────────────────────────
+	ID3D11DeviceContext* DC = InRHI.GetDeviceContext();
+
+	D3D11_MAPPED_SUBRESOURCE Mapped = {};
+	if (FAILED(DC->Map(Resources->DebugAABBVertexBuffer.Get(), 0,
+		D3D11_MAP_WRITE_DISCARD, 0, &Mapped))) return;
+
+	memcpy(Mapped.pData, Verts.data(), Verts.size() * sizeof(FDebugVert));
+	DC->Unmap(Resources->DebugAABBVertexBuffer.Get(), 0);
+
+	// ── 5. 렌더 스테이트 세팅 ────────────────────────────────────────────
+	ID3D11RenderTargetView* RTVs[] = { InRHI.GetBackBufferRTV() };
+	DC->OMSetRenderTargets(1, RTVs, InRHI.GetDepthStencilView());
+
+	DC->IASetInputLayout(Resources->DebugAABBInputLayout.Get());
+	DC->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+
+	const UINT Stride = sizeof(FDebugVert);
+	const UINT Offset = 0;
+	DC->IASetVertexBuffers(0, 1, Resources->DebugAABBVertexBuffer.GetAddressOf(), &Stride, &Offset);
+
+	DC->VSSetShader(Resources->DebugAABBVS.Get(), nullptr, 0);
+	DC->PSSetShader(Resources->DebugAABBPS.Get(), nullptr, 0);
+
+	// FrameCB는 Prepare()에서 이미 업로드됨, 바인딩만
+	DC->VSSetConstantBuffers(0, 1, Resources->FrameConstantBuffer.GetAddressOf());
+
+	// Depth test OFF — 항상 보임 (원하면 LESS_EQUAL로 바꿔서 가려지게 할 수 있음)
+	DC->OMSetDepthStencilState(
+		InRHI.GetDepthStencilState(FALSE, D3D11_DEPTH_WRITE_MASK_ZERO, D3D11_COMPARISON_ALWAYS), 0);
+	DC->OMSetBlendState(
+		InRHI.GetBlendState(FALSE, D3D11_BLEND_ONE, D3D11_BLEND_ZERO,
+			D3D11_BLEND_OP_ADD, D3D11_COLOR_WRITE_ENABLE_ALL),
+		nullptr, 0xFFFFFFFF);
+	DC->RSSetState(InRHI.GetRasterizerState(D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE));
+
+	// ── 6. Draw ──────────────────────────────────────────────────────────
+	DC->Draw(static_cast<UINT>(Verts.size()), 0);
+	++DrawCallCount;
+
+	// ── 7. 상태 복구 (이후 패스에 영향 없도록) ────────────────────────────
+	DC->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	DC->RSSetState(InRHI.GetRasterizerState(D3D11_FILL_SOLID, D3D11_CULL_BACK, FALSE));
+	DC->OMSetDepthStencilState(
+		InRHI.GetDepthStencilState(TRUE, D3D11_DEPTH_WRITE_MASK_ALL, D3D11_COMPARISON_LESS_EQUAL), 0);
 }
