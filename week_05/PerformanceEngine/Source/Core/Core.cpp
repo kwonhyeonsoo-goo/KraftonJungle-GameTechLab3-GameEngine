@@ -122,12 +122,6 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 		Grid.reset();
 	}
 
-	if (!LoadDefaultScene())
-	{
-		Release();
-		return false;
-	}
-
 	EditorUI = std::make_unique<FEditorUI>(this);
 	EditorUI->Initialize(Args.Hwnd, RHI->GetDevice(), RHI->GetDeviceContext());
 
@@ -163,8 +157,12 @@ bool FCore::Initialize(const FCoreInitArgs& Args)
 	PickState = FPickState();
 	bInitialized = true;
 
-	VisibilitySystem->BuildBVH(*Scene);
-	SceneGraph->Build(*Scene);
+	if (!LoadDefaultScene())
+	{
+		Release();
+		return false;
+	}
+
 	return true;
 }
 
@@ -198,7 +196,6 @@ void FCore::Tick()
 			*SceneGraph,
 			Gizmo.get(),
 			SelectedMatrixPtr, 
-
 			PickState);
 		StatsSystem->RecordPickEvent(PickState);
 		if (PickState.bHitGizmo && SelectedMatrixPtr)
@@ -249,7 +246,7 @@ void FCore::Tick()
 		std::wstring SelectedPath;
 		if (SceneLoader->OpenSceneFileDialog(SelectedPath))
 		{
-			SceneLoader->LoadScene(SelectedPath, Scene.get(), RHI.get(), Camera.get(), VisibilitySystem.get(), PickingSystem.get());
+			SceneLoader->LoadScene(SelectedPath, this, Scene.get(), RHI.get(), Camera.get(), VisibilitySystem.get(), PickingSystem.get());
 		}
 	}
 	const size_t PrimitiveCount = Scene->GetPrimitiveCount();
@@ -268,9 +265,11 @@ void FCore::Tick()
 
 		RHI->GetDeviceContext()->Unmap(RHI->InstanceBuffer.Get(), 0);
 	}
+
+	const auto& PrimitiveRuntimeData = Scene->GetPrimitiveRuntimeData();
 	std::sort(VisibilityResults.VisiblePrimitiveIndices.begin(), VisibilityResults.VisiblePrimitiveIndices.end(), [&](uint32 A, uint32 B) {
-		const auto& DataA = Scene->GetPrimitiveRuntimeData()[A];
-		const auto& DataB = Scene->GetPrimitiveRuntimeData()[B];
+		const auto& DataA = PrimitiveRuntimeData[A];
+		const auto& DataB = PrimitiveRuntimeData[B];
 		if (!DataA.StaticMesh) return false;
 		if (!DataB.StaticMesh) return true;
 		return DataA.StaticMesh < DataB.StaticMesh;
@@ -409,6 +408,7 @@ bool FCore::LoadDefaultScene()
 
 	return SceneLoader->LoadScene(
 		ScenePath.wstring(),
+		this,
 		Scene.get(),
 		RHI.get(),
 		Camera.get(),

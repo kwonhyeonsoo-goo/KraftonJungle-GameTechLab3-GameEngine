@@ -53,6 +53,7 @@ public:
 
 	FCamera* GetCamera() const { return Camera.get(); }
 	FPickingSystem* GetPickingSystem() const { return PickingSystem.get(); }
+	FSceneGraph* GetSceneGraph() const { return SceneGraph.get(); }
 
 	const FScenePrimitiveRuntimeData* GetSelectedPrimitiveData() const { return SelectedPrimitiveData; }
 

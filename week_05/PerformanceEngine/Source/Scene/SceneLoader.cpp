@@ -2,7 +2,9 @@
 #include <windows.h>
 #include <commdlg.h>
 
+#include "Core/Core.h"
 #include "Scene/Scene.h"
+#include "Scene/SceneGraph.h"
 #include "Graphics/D3D11/D3D11RHI.h"
 #include "Camera/Camera.h"
 #include "Visibility/VisibilitySystem.h"
@@ -30,6 +32,7 @@ bool FSceneLoader::OpenSceneFileDialog(std::wstring& OutSelectedPath) const
 
 bool FSceneLoader::LoadScene(
 	const std::wstring& InScenePath,
+	FCore* InCore,
 	FScene* InOutScene,
 	FD3D11RHI* InRHI,
 	FCamera* InOutCamera,
@@ -44,7 +47,7 @@ bool FSceneLoader::LoadScene(
 	InOutScene->Release();
 	InVisibilitySystem->Reset();
 	InPickingSystem->Reset();
-
+	InCore->GetSceneGraph()->Reset();
 
 	if (!InOutScene->LoadFromFile(InRHI->GetDevice(), InRHI->GetDeviceContext(), InScenePath))
 	{
@@ -59,6 +62,9 @@ bool FSceneLoader::LoadScene(
 	InOutCamera->SetFOV(InitialCamera.FovDegrees);
 	InOutCamera->SetNearClip(InitialCamera.NearClip);
 	InOutCamera->SetFarClip(InitialCamera.FarClip);
+
+	InCore->GetSceneGraph()->Build(*InOutScene);
+	InVisibilitySystem->BuildBVH(*InOutScene);
 
 	return true;
 }

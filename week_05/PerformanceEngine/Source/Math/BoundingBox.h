@@ -35,4 +35,10 @@ struct FBoundingBox
 	bool IntersectsRay(const FRay& Ray) const;
 
 	bool Contains(const FVector& Center) const;
+
+	float GetSurfaceArea() const
+	{
+		FVector Extents = GetExtents();
+		return 2.0f * (Extents.X * Extents.Y + Extents.Y * Extents.Z + Extents.Z * Extents.X);
+	}
 };

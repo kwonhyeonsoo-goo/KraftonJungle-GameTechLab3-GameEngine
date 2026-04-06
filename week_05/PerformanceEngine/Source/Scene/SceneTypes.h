@@ -47,6 +47,8 @@ struct FInstanceData
 struct FScenePrimitiveRuntimeData : public FSceneComponent
 {
 	int32 PrimitiveId = -1;
+	FMatrix WorldMatrix = FMatrix::Identity;
+	FMatrix InverseWorldMatrix = FMatrix::Identity;
 	FBoundingBox WorldBounds;
 	FStaticMesh* StaticMesh = nullptr;
 	FInstanceData CachedInstanceData;

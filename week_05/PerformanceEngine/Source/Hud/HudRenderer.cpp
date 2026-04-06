@@ -363,6 +363,9 @@ void FHudRenderer::Render(
 		<< "FPS: " << InStatsSystem.GetFramesPerSecond() << '\n'
 		<< "FRAME: " << InStatsSystem.GetFrameTimeMs() << " MS\n"
 		<< "PICK LAST: " << InStatsSystem.GetLastPickTimeMs() << " MS\n"
+		<< "World PICK LAST: " << InStatsSystem.GetWorldPickTimeMs() << " MS\n"
+		<< "Mesh PICK LAST: " << InStatsSystem.GetMeshPickTimeMs() << " MS\n"
+
 		<< "PICK COUNT: " << InStatsSystem.GetTotalPickCount() << '\n'
 		<< "PICK TOTAL: " << InStatsSystem.GetTotalPickTimeMs() << " MS\n"
 		<< "GPU: " << SanitizeBitmapText(InRHI.GetAdapterName().empty() ? std::string("UNKNOWN") : InRHI.GetAdapterName());

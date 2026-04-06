@@ -240,7 +240,7 @@ float4 PSMain(PSInput Input) : SV_Target
 	const D3D11_RASTERIZER_DESC RasterizerDesc =
 	{
 		D3D11_FILL_SOLID,
-		D3D11_CULL_NONE,
+		D3D11_CULL_BACK,
 		FALSE,
 		0,
 		0.0f,
@@ -282,14 +282,13 @@ void FSceneRenderer::Render(
 	if (SUCCEEDED(hr))
 	{
 		MappedVisibilityData = static_cast<uint32*>(MappedResource.pData);
+
+		if (MappedVisibilityData) InRHI.GetDeviceContext()->Unmap(InRHI.StagingBuffer.Get(), 0);
 	}
 
 	// 1st Pass - 이전 프레임의 가시성 결과를 기반으로 렌더링
 	TArray<int32> VisibleIndices;
-	TArray<int32> InvisibleIndices;
-
 	VisibleIndices.reserve(InVisibilityResults.VisiblePrimitiveIndices.size());
-	InvisibleIndices.reserve(InVisibilityResults.VisiblePrimitiveIndices.size());
 
 	for (uint32 PrimitiveIndex : InVisibilityResults.VisiblePrimitiveIndices)
 	{
@@ -297,13 +296,7 @@ void FSceneRenderer::Render(
 		{
 			VisibleIndices.push_back(PrimitiveIndex);
 		}
-		else
-		{
-			InvisibleIndices.push_back(PrimitiveIndex);
-		}
 	}
-
-	if (MappedVisibilityData) InRHI.GetDeviceContext()->Unmap(InRHI.StagingBuffer.Get(), 0);
 
 	RenderPrimitives(InRHI, InScene, InCamera, VisibleIndices, InPickState);
 
@@ -316,30 +309,30 @@ void FSceneRenderer::Render(
 	// 이번 프레임의 depth를 기반으로 Hi-Z Mip Chain 생성
 	BuildHiZMipChain(InRHI, InScene);
 
-	TArray<int32> NewlyVisibleIndices;
-	NewlyVisibleIndices.reserve(InvisibleIndices.size());
+	//TArray<int32> NewlyVisibleIndices;
+	//NewlyVisibleIndices.reserve(InvisibleIndices.size());
 
-	hr = DeviceContext->Map(InRHI.StagingBuffer.Get(), 0, D3D11_MAP_READ, 0, &MappedResource);
-	if (SUCCEEDED(hr))
-	{
-		uint32* NewVisibilityData = static_cast<uint32*>(MappedResource.pData);
-		for (uint32 PrimitiveIndex : InvisibleIndices)
-		{
-			if (NewVisibilityData && NewVisibilityData[PrimitiveIndex] > 0)
-			{
-				NewlyVisibleIndices.push_back(PrimitiveIndex);
-			}
-		}
-		DeviceContext->Unmap(InRHI.StagingBuffer.Get(), 0);
-	}
+	//hr = DeviceContext->Map(InRHI.StagingBuffer.Get(), 0, D3D11_MAP_READ, 0, &MappedResource);
+	//if (SUCCEEDED(hr))
+	//{
+	//	uint32* NewVisibilityData = static_cast<uint32*>(MappedResource.pData);
+	//	for (uint32 PrimitiveIndex : InvisibleIndices)
+	//	{
+	//		if (NewVisibilityData && NewVisibilityData[PrimitiveIndex] > 0)
+	//		{
+	//			NewlyVisibleIndices.push_back(PrimitiveIndex);
+	//		}
+	//	}
+	//	DeviceContext->Unmap(InRHI.StagingBuffer.Get(), 0);
+	//}
 
-	if (NewlyVisibleIndices.size() > 0)
-	{
-		ID3D11RenderTargetView* RenderTargets[] = { InRHI.GetBackBufferRTV() };
-		DeviceContext->OMSetRenderTargets(1, RenderTargets, InRHI.GetDepthStencilView());
+	//if (NewlyVisibleIndices.size() > 0)
+	//{
+	//	ID3D11RenderTargetView* RenderTargets[] = { InRHI.GetBackBufferRTV() };
+	//	DeviceContext->OMSetRenderTargets(1, RenderTargets, InRHI.GetDepthStencilView());
 
-		RenderPrimitives(InRHI, InScene, InCamera, NewlyVisibleIndices, InPickState);
-	}
+	//	RenderPrimitives(InRHI, InScene, InCamera, NewlyVisibleIndices, InPickState);
+	//}
 }
 
 void FSceneRenderer::Prepare(const FD3D11RHI& InRHI, const FScene& InScene, const FCamera& InCamera)
