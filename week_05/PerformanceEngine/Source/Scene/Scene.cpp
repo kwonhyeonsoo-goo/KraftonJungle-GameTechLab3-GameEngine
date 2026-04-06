@@ -8,9 +8,13 @@
 #include <string>
 #include <sstream> 
 
+#include "Core/Core.h"
+#include "Graphics/D3D11/D3D11RHI.h"
 #include "Math/MathUtility.h"
 #include "StaticMesh/StaticMesh.h"
+#include "Scene/SceneGraph.h"
 #include "FileSystem/FileSystem.h"
+#include "Visibility/VisibilitySystem.h"
 
 namespace
 {
@@ -36,7 +40,7 @@ namespace
 		return std::string(Begin, End);
 	}
 
-
+	// [수정됨] Array3처럼 stringstream을 사용하여 공백/줄바꿈 등에 안전하게 대응
 	bool TryParseFloatArray1(const std::string& InLine, float& OutValue)
 	{
 		size_t Start = InLine.find("[");
@@ -176,7 +180,10 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 		std::string TrimmedLine = Trim(Line);
 		if (TrimmedLine.empty()) continue;
 
-	
+		// =========================================================================
+		// [핵심 마법] 배열 인터셉터 (Array Interceptor)
+		// 여러 줄에 걸쳐진 배열 "[" ~ "]"을 감지하여 한 줄의 문자열로 강제로 압축합니다.
+		// =========================================================================
 		if (TrimmedLine.find('[') != std::string::npos && TrimmedLine.find(']') == std::string::npos)
 		{
 			std::string TempLine;
@@ -185,11 +192,11 @@ bool FScene::LoadFromFile(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceC
 				TrimmedLine += " " + Trim(TempLine);
 				if (TempLine.find(']') != std::string::npos)
 				{
-					break; 
+					break; // 닫는 대괄호를 찾으면 합치기 종료
 				}
 			}
 		}
-
+		// =========================================================================
 
 		if (!bInPrimitiveBlock && TrimmedLine.starts_with("\"PerspectiveCamera\"")) { bInCameraBlock = true; continue; }
 		if (!bInPrimitiveBlock && TrimmedLine.starts_with("\"Primitives\"")) { bInPrimitivesBlock = true; continue; }
@@ -304,4 +311,43 @@ const FScenePrimitiveRuntimeData* FScene::GetPrimitiveRuntimeDataById(int32 Prim
 	const FScenePrimitiveRuntimeData* Data = &PrimitiveRuntimeData[PrimitiveId];
 	if (Data) return Data;
 	return nullptr;
+}
+
+void FScene::Tick()
+{
+	for (auto& RuntimeData : PrimitiveRuntimeData)
+	{
+		RuntimeData.Tick();
+	}
+}
+
+void FScene::Spawn(FCore* InCore)
+{
+	ID3D11Device* Device = InCore->GetRHI()->GetDevice();
+	ID3D11DeviceContext* DeviceContext = InCore->GetRHI()->GetDeviceContext();
+
+	const FTransform WorldTransform = BuildSceneTransform(FVector::ZeroVector, FVector::ZeroVector, FVector::OneVector);
+
+	FScenePrimitiveRuntimeData RuntimeData;
+	RuntimeData.PrimitiveId = PrimitiveRuntimeData.size();
+	RuntimeData.WorldMatrix = FMatrix::Identity;
+	RuntimeData.InverseWorldMatrix = RuntimeData.WorldMatrix.GetInverse();
+
+	RuntimeData.SetWorldMatrix(WorldTransform.ToMatrixWithScale());
+
+	bool bHasSceneBounds = false;
+
+	ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBounds.Min);
+	ExpandBounds(SceneBoundsMin, SceneBoundsMax, bHasSceneBounds, RuntimeData.WorldBounds.Max);
+
+	const std::wstring SceneFilePath = FFileSystem::GetAbsolutePath(L"Data/Scene/Clear.scene");
+	const std::wstring MeshPath = ResolveAssetPath(SceneFilePath, "Data/apple_mid.obj");
+
+	std::shared_ptr<FStaticMesh> SharedMesh = MeshManager.LoadStaticMesh(Device, DeviceContext, MeshPath);
+	RuntimeData.StaticMesh = SharedMesh.get();
+
+	PrimitiveRuntimeData.push_back(std::move(RuntimeData));
+
+	InCore->GetSceneGraph()->Build(*this);
+	InCore->GetVisibilitySystem()->BuildBVH(*this);
 }
