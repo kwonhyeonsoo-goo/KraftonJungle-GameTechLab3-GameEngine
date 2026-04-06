@@ -54,7 +54,7 @@ void FEditorControlPanel::Render()
 		{
 			Core->GetScene()->Spawn(Core);
 		}
-
-		ImGui::End();
 	}
+
+	ImGui::End();
 }

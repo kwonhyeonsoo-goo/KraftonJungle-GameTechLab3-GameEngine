@@ -21,7 +21,7 @@ void FEditorSceneManagerPanel::Render()
 		FScene* Scene = Core->GetScene();
 		TArray<FScenePrimitiveRuntimeData> RuntimeData = Scene->GetPrimitiveRuntimeData();
 
-		if (ImGui::TreeNodeEx("Primitives", ImGuiTreeNodeFlags_DefaultOpen))
+		if (ImGui::TreeNodeEx("Primitives"))
 		{
 			for (const FScenePrimitiveRuntimeData& Primitive : RuntimeData)
 			{

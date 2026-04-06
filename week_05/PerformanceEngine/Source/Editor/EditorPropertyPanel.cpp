@@ -44,8 +44,6 @@ void FEditorPropertyPanel::Render()
 				Core->GetVisibilitySystem()->BuildBVH(*Core->GetScene());
 			}
 		}
-
-
 	}
 	ImGui::End();
 }
