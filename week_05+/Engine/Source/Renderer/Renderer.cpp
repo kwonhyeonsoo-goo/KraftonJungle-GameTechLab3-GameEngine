@@ -463,7 +463,7 @@ void FRenderer::AddCommand(const FRenderCommand& Command)
 	CommandList.push_back(Command);
 	FRenderCommand& Added = CommandList.back();
 	if (!Added.Material) Added.Material = DefaultMaterial.get();
-	Added.SortKey = FRenderCommand::MakeSortKey(Added.Material, Added.MeshData);
+	Added.SortKey = FRenderCommand::MakeSortKey(Added.Material, Added.MeshData, Added.FirstIndex);
 }
 
 void FRenderer::AddCommand(TArray<FRenderCommand>& CommandBuffer, const FRenderCommand& Command)
@@ -471,7 +471,7 @@ void FRenderer::AddCommand(TArray<FRenderCommand>& CommandBuffer, const FRenderC
 	CommandBuffer.push_back(Command);
 	FRenderCommand& Added = CommandBuffer.back();
 	if (!Added.Material) Added.Material = DefaultMaterial.get();
-	Added.SortKey = FRenderCommand::MakeSortKey(Added.Material, Added.MeshData);
+	Added.SortKey = FRenderCommand::MakeSortKey(Added.Material, Added.MeshData, Added.FirstIndex);
 }
 
 void FRenderer::ExecuteCommands()

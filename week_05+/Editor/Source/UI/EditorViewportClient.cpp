@@ -1444,8 +1444,9 @@ void FEditorViewportClient::BuildRenderCommands(TArray<AActor*>& InActors, FRend
 			if (Command.RenderLayer != ERenderLayer::Overlay)
 			{
 				Command.Material = WireFrameMaterial.get();
-				Command.SortKey = FRenderCommand::MakeSortKey(Command.Material, Command.MeshData);
+				Command.SortKey = FRenderCommand::MakeSortKey(Command.Material, Command.MeshData, Command.FirstIndex);
 			}
+			
 		}
 	}
 	else if (RenderMode == ERenderMode::SolidWireframe)
@@ -1462,7 +1463,7 @@ void FEditorViewportClient::BuildRenderCommands(TArray<AActor*>& InActors, FRend
 
 			if (!Device || !Command.MeshData || Command.MeshData->Topology != EMeshTopology::EMT_TriangleList)
 			{
-				Command.SortKey = FRenderCommand::MakeSortKey(Command.Material, Command.MeshData);
+				Command.SortKey = FRenderCommand::MakeSortKey(Command.Material, Command.MeshData, Command.FirstIndex);
 				continue;
 			}
 
@@ -1478,7 +1479,7 @@ void FEditorViewportClient::BuildRenderCommands(TArray<AActor*>& InActors, FRend
 				Command.MeshData = CachedIt->second.get();
 			}
 
-			Command.SortKey = FRenderCommand::MakeSortKey(Command.Material, Command.MeshData);
+			Command.SortKey = FRenderCommand::MakeSortKey(Command.Material, Command.MeshData, Command.FirstIndex);
 		}
 	}
 	else if (RenderMode == ERenderMode::UV)
@@ -1488,7 +1489,7 @@ void FEditorViewportClient::BuildRenderCommands(TArray<AActor*>& InActors, FRend
 			if (Command.RenderLayer != ERenderLayer::Overlay && ViewerUVMaterial)
 			{
 				Command.Material = ViewerUVMaterial.get();
-				Command.SortKey = FRenderCommand::MakeSortKey(Command.Material, Command.MeshData);
+				Command.SortKey = FRenderCommand::MakeSortKey(Command.Material, Command.MeshData, Command.FirstIndex);
 			}
 		}
 	}
@@ -1499,7 +1500,7 @@ void FEditorViewportClient::BuildRenderCommands(TArray<AActor*>& InActors, FRend
 			if (Command.RenderLayer != ERenderLayer::Overlay && ViewerNormalMaterial)
 			{
 				Command.Material = ViewerNormalMaterial.get();
-				Command.SortKey = FRenderCommand::MakeSortKey(Command.Material, Command.MeshData);
+				Command.SortKey = FRenderCommand::MakeSortKey(Command.Material, Command.MeshData, Command.FirstIndex);
 			}
 		}
 	}

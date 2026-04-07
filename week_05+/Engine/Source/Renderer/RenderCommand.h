@@ -25,7 +25,7 @@ struct ENGINE_API FRenderCommand
 	bool bDisableDepthWrite = false;
 	bool bDisableCulling = false;
 
-	static uint64 MakeSortKey(const FMaterial* InMaterial, const FMeshData* InMeshData);
+	static uint64 MakeSortKey(const FMaterial* InMaterial, const FMeshData* InMeshData, uint32 InFirstIndex);
 };
 
 /**
