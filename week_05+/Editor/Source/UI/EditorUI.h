@@ -5,7 +5,6 @@
 #include "ConsoleWindow.h"
 #include "ObjViewerPanel.h"
 #include "StatWindow.h"
-#include "Viewport.h"
 #include "Math/Rect.h"
 #include "Types/ObjectPtr.h"
 #include "ContentBrowserWindow.h"
@@ -56,7 +55,6 @@ private:
 	FConsoleWindow Console;
 	FObjViewerPanel ObjViewerPanel;
 	FStatWindow Stat;
-	FViewportLegacy ViewportLegacy;
 	FOutlinerWindow Outliner;
 	FContentBrowserWindow ContentBrowser;
 	FEditorToolbar Toolbar;

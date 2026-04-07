@@ -1,6 +1,6 @@
 #include "EditorToolbar.h"
-
 #include "FEditorEngine.h"
+#include <algorithm> // std::max
 
 namespace
 {
@@ -29,42 +29,100 @@ namespace
 	}
 }
 
-
 void FEditorToolbar::Render()
 {
-	EPIEState PIEState = GEditor->GetPIEState();
-	if (PIEState == EPIEState::Stopped)
+	// 일반 도킹 가능한 윈도우 스타일 플래그 (스크롤바만 제거)
+	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+	bool bOpen = ImGui::Begin("Toolbar", nullptr, windowFlags);
+	
+	if (!bOpen)
 	{
-		if (ImGui::Button("▶ Play"))
+		ImGui::End();
+		return;
+	}
+
+	EPIEState PIEState = GEditor->GetPIEState();
+
+	// 버튼 크기 및 둥근 모서리 설정
+	ImVec2 buttonSize(80, 28);
+	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+
+	// 3개의 버튼과 여백을 고려한 전체 폭
+	float spacing = ImGui::GetStyle().ItemSpacing.x;
+	float totalWidth = (buttonSize.x * 3) + (spacing * 2);
+
+	// 중앙 정렬 (가로)
+	float availWidth = ImGui::GetContentRegionAvail().x;
+	ImGui::SetCursorPosX(max(0.0f, (availWidth - totalWidth) * 0.5f));
+
+	// 중앙 정렬 (세로) - 도킹 패널 안에서 세로 중앙을 맞추기 위함
+	float availHeight = ImGui::GetContentRegionAvail().y;
+	if (availHeight > buttonSize.y)
+	{
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (availHeight - buttonSize.y) * 0.5f);
+	}
+
+	// -------------------------------------------------------------
+	// 1. Play / Resume 버튼
+	// -------------------------------------------------------------
+	bool bCanPlay = (PIEState == EPIEState::Stopped || PIEState == EPIEState::Paused);
+	const char* playText = (PIEState == EPIEState::Paused) ? "▶ Resume" : "▶ Play";
+
+	ImGui::BeginDisabled(!bCanPlay);
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.8f, 0.3f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.5f, 0.15f, 1.0f));
+
+	if (ImGui::Button(playText, buttonSize))
+	{
+		if (PIEState == EPIEState::Stopped)
 		{
-			GEditor->SetPIEState(EPIEState::Playing);
 			StartPIE();
 		}
+		GEditor->SetPIEState(EPIEState::Playing);
 	}
-	else if (PIEState == EPIEState::Playing)
+	ImGui::PopStyleColor(3);
+	ImGui::EndDisabled();
+
+	ImGui::SameLine();
+
+	// -------------------------------------------------------------
+	// 2. Pause 버튼
+	// -------------------------------------------------------------
+	bool bCanPause = (PIEState == EPIEState::Playing);
+
+	ImGui::BeginDisabled(!bCanPause);
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.6f, 0.0f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.75f, 0.0f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.4f, 0.0f, 1.0f));
+
+	if (ImGui::Button("Ⅱ", buttonSize))
 	{
-		if (ImGui::Button("Ⅱ Pause"))
-		{
-			GEditor->SetPIEState(EPIEState::Paused);
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("■ Stop"))
-		{
-			GEditor->SetPIEState(EPIEState::Stopped);
-			EndPIE();
-		}
+		GEditor->SetPIEState(EPIEState::Paused);
 	}
-	else if (PIEState == EPIEState::Paused)
+	ImGui::PopStyleColor(3);
+	ImGui::EndDisabled();
+
+	ImGui::SameLine();
+
+	// -------------------------------------------------------------
+	// 3. Stop 버튼
+	// -------------------------------------------------------------
+	bool bCanStop = (PIEState != EPIEState::Stopped);
+
+	ImGui::BeginDisabled(!bCanStop);
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.15f, 0.15f, 1.0f));
+
+	if (ImGui::Button("■", buttonSize))
 	{
-		if (ImGui::Button("▶ Resume"))
-		{
-			GEditor->SetPIEState(EPIEState::Playing);
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("■ Stop"))
-		{
-			GEditor->SetPIEState(EPIEState::Stopped);
-			EndPIE();
-		}
+		GEditor->SetPIEState(EPIEState::Stopped);
+		EndPIE();
 	}
+	ImGui::PopStyleColor(3);
+	ImGui::EndDisabled();
+
+	ImGui::PopStyleVar();
+	ImGui::End();
 }
