@@ -88,7 +88,7 @@ protected:
 	virtual void OnKeyUp(WPARAM WParam, LPARAM LParam);
 	bool CanUseEditingTools(FCore* Core, ULevel*& OutLevel, UWorld*& OutWorld) const;
 	void HandleEditorHotkeys(WPARAM WParam, bool bRightMouseDown);
-	void HandleSelectionClick(FCore* Core, UWorld* World, AActor* SelectedActor);
+	void HandleSelectionClick(FCore* Core, AActor* SelectedActor);
 	void HandleMouseMoveForTools(AActor* SelectedActor);
 	void HandleMouseReleaseForTools();
 	AActor* GetSelectedActor() const;
