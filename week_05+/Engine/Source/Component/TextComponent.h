@@ -37,6 +37,8 @@ public:
 	/** 폰트 렌더링용 메시 데이터 반환 */
 	struct FMeshData* GetTextMesh() const { return TextMesh.get(); }
 
+	void DuplicateSubObjects() override;
+
 protected:
 	FString Text = "Text";
 	FVector4 TextColor = FVector4(1.0f, 1.0f, 1.0f, 1.0f);

@@ -929,7 +929,7 @@ void FEditorViewportClient::HandleSelectionClick(FCore* Core, UWorld* World, AAc
 		return;
 	}
 
-	AActor* PickedActor = Picker.PickActorWithOctree(&CameraTransform, ViewportMouseX, ViewportMouseY, ViewportWidth, ViewportHeight);
+	AActor* PickedActor = Picker.PickActor(World->GetAllActors(), &CameraTransform, ViewportMouseX, ViewportMouseY, ViewportWidth, ViewportHeight);
 	Core->SetSelectedActor(PickedActor);
 	EditorUI.SyncSelectedActorProperty();
 }

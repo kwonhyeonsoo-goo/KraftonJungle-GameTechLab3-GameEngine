@@ -11,7 +11,6 @@
 #include "Component/UUIDBillboardComponent.h"
 #include "Component/MeshComponent.h"
 #include "Core/FEngine.h"
-#include "World/Octree.h"
 #include "Actor/SkySphereActor.h"
 #include <limits>
 
@@ -237,24 +236,5 @@ AActor* FPicker::PickActor(const TArray<AActor*>& InActors, const FCamera* InCam
 		}
 	}
 
-	return ClosestActor;
-}
-
-AActor* FPicker::PickActorWithOctree(const FCamera* InCamera, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const
-{
-	if (!InCamera)
-	{
-		return nullptr;
-	}
-
-	const FRay Ray = ScreenToRay(InCamera, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
-
-	float ClosestDistance = 999999.0f;
-	UPrimitiveComponent* ClosestComponent = nullptr;
-
-	FOctree* Octree = GEngine->GetCore()->GetLevel()->GetOctree();
-	Octree->Pick(Ray, ClosestDistance, ClosestComponent);
-
-	AActor* ClosestActor = ClosestComponent ? ClosestComponent->GetOwner() : nullptr;
 	return ClosestActor;
 }

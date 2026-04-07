@@ -57,9 +57,11 @@ public:
 	const FVector& GetActorLocation() const;
 	void SetActorLocation(const FVector& InLocation);
 
-
 	bool IsVisible() const { return bVisible; }
 	void SetVisible(bool bInVisible) { bVisible = bInVisible; }
+
+	virtual void DuplicateSubObjects() override;
+
 protected:
 	TObjectPtr<ULevel> Level;
 	//ULevel* Level = nullptr;

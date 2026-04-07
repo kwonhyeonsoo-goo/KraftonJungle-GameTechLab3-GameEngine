@@ -428,3 +428,25 @@ void UStaticMeshComponent::Serialize(FArchive& Ar)
 		}
 	}
 }
+
+void UStaticMeshComponent::DuplicateSubObjects()
+{
+	UMeshComponent::DuplicateSubObjects();
+
+	TMap<uint32, std::shared_ptr<FDynamicMaterial>> NewDynamicOwners;
+	for (const auto& Pair : DynamicMaterialOwners)
+	{
+		uint32 SlotIndex = Pair.first;
+		std::shared_ptr<FDynamicMaterial> OriginalMat = Pair.second;
+		if (OriginalMat)
+		{
+			std::shared_ptr<FDynamicMaterial> NewMat = OriginalMat->CreateDynamicMaterial();
+			if (NewMat)
+			{
+				NewDynamicOwners[SlotIndex] = NewMat;
+				SetMaterial(SlotIndex, NewMat.get());
+			}
+		}
+	}
+	DynamicMaterialOwners = std::move(NewDynamicOwners);
+}
