@@ -318,14 +318,14 @@ void FEditorEngine::RunObjViewerStartupTest()
 #if IS_OBJ_VIEWER //뷰어에서 OBJ를 다시 불러오기 전에 기본 축 매핑을 강제로 넣습니다
 	FObjImporter::SetImportAxisMapping(FObjImporter::MakeDefaultImportAxisMapping());
 #endif
-	Core->SetSelectedActor(nullptr);
+	GEditor->SetSelectedActor(nullptr);
 	Level->ClearActors();
 
 	AStaticMeshActor* MeshActor = Level->SpawnActor<AStaticMeshActor>("ObjViewerMesh");
 	if (MeshActor)
 	{
 		MeshActor->LoadStaticMesh(GRenderer->GetDevice(), AssetPath.string());
-		Core->SetSelectedActor(MeshActor);
+		GEditor->SetSelectedActor(MeshActor);
 	}
 	EditorUI.SyncSelectedActorProperty();
 

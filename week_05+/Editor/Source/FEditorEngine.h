@@ -27,6 +27,9 @@ public:
 	FWorldContext GetEditorWorldContext() const;
 	void RemoveEditorWorldContext(EWorldType WorldType);
 
+	AActor* GetSelectedActor() const { return SelectedActor; }
+	void SetSelectedActor(AActor* InActor) { SelectedActor = InActor; EditorUI.SyncSelectedActorProperty(); }
+
 protected:
 	void PreInitialize() override;
 	void PostInitialize() override;
@@ -40,6 +43,8 @@ protected:
 private:
 	bool TryRunPendingObjViewerStartupPrompt();
 	void RunObjViewerStartupTest();
+
+	AActor* SelectedActor = nullptr;
 
 	FEditorUI EditorUI;
 	FWindowManager WindowManager;

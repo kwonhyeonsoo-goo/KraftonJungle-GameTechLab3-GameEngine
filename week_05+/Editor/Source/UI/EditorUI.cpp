@@ -106,7 +106,7 @@ void FEditorUI::Initialize(FCore* InCore, FWindowManager* InWindowManager)
 				return;
 			}
 
-			AActor* Selected = Core->GetSelectedActor();
+			AActor* Selected = GEditor->GetSelectedActor();
 			if (!Selected)
 			{
 				return;
@@ -525,7 +525,7 @@ void FEditorUI::Render()
 
 	if (Core)
 	{
-		AActor* Selected = Core->GetSelectedActor();
+		AActor* Selected = GEditor->GetSelectedActor();
 		if (Selected != CachedSelectedActor)
 		{
 			SyncSelectedActorProperty();
@@ -549,10 +549,10 @@ void FEditorUI::Render()
 			{
 				if (Core)
 				{
-					ULevel* ActiveLevel = ActiveViewportClient ? ActiveViewportClient->ResolveLevel(Core) : Core->GetLevel();
+					ULevel* ActiveLevel = GWorld->GetLevel();
 					if (ActiveLevel)
 					{
-						Core->SetSelectedActor(nullptr);
+						GEditor->SetSelectedActor(nullptr);
 						ActiveLevel->ClearActors();
 
 						if (ActiveViewportClient && ActiveViewportClient->GetViewportType() == EEditorViewportType::Perspective)
@@ -571,13 +571,13 @@ void FEditorUI::Render()
 
 			if (ImGui::MenuItem("Open Level"))
 			{
-				ULevel* ActiveLevel = (Core && ActiveViewportClient) ? ActiveViewportClient->ResolveLevel(Core) : (Core ? Core->GetActiveLevel() : nullptr);
-				if (Core && ActiveLevel && GRenderer)
+				ULevel* ActiveLevel = GWorld->GetLevel();
+				if (ActiveLevel && GRenderer)
 				{
 					const FString Path = GetFilePathUsingDialog(EFileDialogType::Open);
 					if (!Path.empty())
 					{
-						Core->SetSelectedActor(nullptr);
+						GEditor->SetSelectedActor(nullptr);
 						ActiveLevel->ClearActors();
 
 						if (FSceneSerializer::Load(ActiveLevel, Path, GRenderer->GetDevice(), GetPerspectiveCamera()))
@@ -596,7 +596,7 @@ void FEditorUI::Render()
 
 			if (ImGui::MenuItem("Save Level As..."))
 			{
-				ULevel* ActiveLevel = (Core && ActiveViewportClient) ? ActiveViewportClient->ResolveLevel(Core) : (Core ? Core->GetActiveLevel() : nullptr);
+				ULevel* ActiveLevel = GWorld->GetLevel();
 				if (Core && ActiveLevel)
 				{
 					const FString Path = GetFilePathUsingDialog(EFileDialogType::Save);
@@ -772,6 +772,7 @@ void FEditorUI::Render()
 	Outliner.Render(Core);
 	ControlPanel.Render(Core, ActiveViewportClient);
 	ContentBrowser.Render();
+	Toolbar.Render();
 #endif
 }
 
@@ -782,7 +783,7 @@ void FEditorUI::SyncSelectedActorProperty()
 		return;
 	}
 
-	AActor* Selected = Core->GetSelectedActor();
+	AActor* Selected = GEditor->GetSelectedActor();
 	if (Selected)
 	{
 		if (USceneComponent* Root = Selected->GetRootComponent())
