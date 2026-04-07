@@ -302,3 +302,17 @@ void AActor::SetActorLocation(const FVector& InLocation)
 
 	RootComponent->SetRelativeLocation(InLocation);
 }
+
+void AActor::DuplicateSubObjects()
+{
+	UObject::DuplicateSubObjects();
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (Component)
+		{
+			UActorComponent* DuplicatedComp = static_cast<UActorComponent*>(Component->Duplicate());
+			DuplicatedComp->SetOwner(this);
+			AddOwnedComponent(DuplicatedComp);
+		}
+	}
+}

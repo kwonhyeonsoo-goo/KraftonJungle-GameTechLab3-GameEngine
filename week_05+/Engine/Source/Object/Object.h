@@ -121,6 +121,10 @@ public:
 	void MarkPendingKill();
 	bool IsPendingKill() const;
 	virtual void Serialize(class FArchive& Ar);
+
+	virtual void DuplicateSubObjects();
+	virtual UObject* Duplicate();
+
 private:
 	FString      Name;
 	UObject* Outer = nullptr;

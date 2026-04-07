@@ -33,6 +33,9 @@ public:
 	std::shared_ptr<FDynamicMaterial> GetOrCreateDynamicMaterialForSlot(uint32 SlotIndex);
 	void InitializeUVScrollParameters(uint32 SlotIndex, const std::shared_ptr<FDynamicMaterial>& DynamicMat);
 	TMap<uint32, std::shared_ptr<FDynamicMaterial>> DynamicMaterialOwners;
+
+	void DuplicateSubObjects() override;
+
 private:
 	struct FUVScrollState
 	{

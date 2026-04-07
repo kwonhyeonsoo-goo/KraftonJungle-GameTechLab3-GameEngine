@@ -65,3 +65,12 @@ void UTextComponent::Serialize(FArchive& Ar)
 		if (Ar.Contains("Billboard")) { bool B; Ar.Serialize("Billboard", B); SetBillboard(B); }
 	}
 }
+
+void UTextComponent::DuplicateSubObjects()
+{
+	UPrimitiveComponent::DuplicateSubObjects();
+	if (TextMesh)
+	{
+		TextMesh = std::make_shared<FMeshData>(*TextMesh);
+	}
+}
