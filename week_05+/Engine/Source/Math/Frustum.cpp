@@ -34,35 +34,3 @@ bool FFrustum::IsVisible(const FBoxSphereBounds& Sphere) const
 	}
 	return true;
 }
-
-EOverlapResult FFrustum::IntersectBox(const FVector& Min, const FVector& Max) const
-{
-	bool bIsPartial = false;
-
-	for (int32 i = 0; i < PlaneCount; ++i)
-	{
-		const FPlane4& Plane = Planes[i];
-
-		FVector P = Min;
-		if (Plane.A >= 0) P.X = Max.X;
-		if (Plane.B >= 0) P.Y = Max.Y;
-		if (Plane.C >= 0) P.Z = Max.Z;
-
-		if (Plane.DistanceTo(P) < 0)
-		{
-			return EOverlapResult::Outside;
-		}
-
-		FVector N = Max;
-		if (Plane.A >= 0) N.X = Min.X;
-		if (Plane.B >= 0) N.Y = Min.Y;
-		if (Plane.C >= 0) N.Z = Min.Z;
-
-		if (Plane.DistanceTo(N) < 0)
-		{
-			bIsPartial = true;
-		}
-	}
-
-	return bIsPartial ? EOverlapResult::Partial : EOverlapResult::Inside;
-}

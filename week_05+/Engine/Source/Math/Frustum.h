@@ -32,13 +32,6 @@ struct FBoundingSphere
 	float Radius;
 };
 
-enum class ENGINE_API EOverlapResult
-{
-	Outside,
-	Inside,
-	Partial
-};
-
 class ENGINE_API FFrustum
 {
 public:
@@ -46,8 +39,6 @@ public:
 
 	void ExtractFromVP(const FMatrix& VP);
 	bool IsVisible(const FBoxSphereBounds& Sphere) const;
-
-	EOverlapResult IntersectBox(const FVector& Min, const FVector& Max) const;
 
 private:
 	FPlane4 Planes[PlaneCount];

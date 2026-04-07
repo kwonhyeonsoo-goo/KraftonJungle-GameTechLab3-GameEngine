@@ -181,9 +181,9 @@ bool FSceneSerializer::Load(ULevel* Level, const FString& FilePath, ID3D11Device
 			continue;
 		}
 
+		Level->RegisterActor(Actor);
 
 		Actor->PostSpawnInitialize();
-		Level->RegisterActor(Actor);
 		
 		// 직렬화 로드
 		FArchive Ar(false);

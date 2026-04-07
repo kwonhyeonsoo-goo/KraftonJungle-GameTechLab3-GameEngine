@@ -12,7 +12,6 @@ class FFrustum;
 class UCameraComponent;
 class UPrimitiveComponent;
 struct FRenderCommandQueue;
-class FOctree;
 
 class ENGINE_API ULevel : public UObject
 {
@@ -54,14 +53,13 @@ public:
 	void BeginPlay();
 	void Tick(float DeltaTime);
 
-	void CreateOctree(const FVector& Center, float HalfExtent, int32 MaxDepth = 8, int32 Capacity = 32);
-	FOctree* GetOctree() const { return PrimitiveOctree; }
+	
+	
 
 private:
 	TArray<AActor*> Actors;
 	bool bBegunPlay = false;
 	ELevelType LevelType = ELevelType::Game;
 
-	FOctree* PrimitiveOctree = nullptr;
 
 };

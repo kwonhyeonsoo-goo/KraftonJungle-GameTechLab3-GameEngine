@@ -17,8 +17,6 @@
 
 #include "Component/LineBatchComponent.h"
 
-#include "World/Octree.h"
-
 IMPLEMENT_RTTI(ULevel, UObject)
 
 ULevel::~ULevel()
@@ -73,12 +71,6 @@ void ULevel::RegisterActor(AActor* InActor)
 
 	Actors.push_back(InActor);
 	InActor->SetLevel(this);
-
-	UPrimitiveComponent* Prim = InActor->GetComponentByClass<UPrimitiveComponent>();
-	if (Prim)
-	{
-		PrimitiveOctree->Insert(Prim);
-	}
 }
 
 void ULevel::DestroyActor(AActor* InActor)
@@ -148,13 +140,4 @@ void ULevel::Tick(float DeltaTime)
 		CleanupDestroyedActors();
 	}
 
-}
-
-void ULevel::CreateOctree(const FVector& Center, float HalfExtent, int32 MaxDepth, int32 Capacity)
-{
-	if (PrimitiveOctree)
-	{
-		delete PrimitiveOctree;
-	}
-	PrimitiveOctree = new FOctree(Center, HalfExtent, MaxDepth, Capacity);
 }
