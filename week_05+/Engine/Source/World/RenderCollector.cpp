@@ -167,8 +167,13 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 		Command.MeshData = PrimitiveComponent->GetPrimitive()->GetMeshData();
 		Command.WorldMatrix = PrimitiveComponent->GetWorldTransform();
 		Command.Material = PrimitiveComponent->GetMaterial();
+		if (AActor* OwnerActor = PrimitiveComponent->GetOwner())
+		{
+			Command.ObjectID = OwnerActor->GetUUID();
+		}
 		if (Command.Material && Command.Material->GetBlendOption().BlendEnable)
 			Command.RenderLayer = ERenderLayer::Translucent;
+
 		OutQueue.AddCommand(Command);
 	}
 	CachedQueue.Commands = OutQueue.Commands;
