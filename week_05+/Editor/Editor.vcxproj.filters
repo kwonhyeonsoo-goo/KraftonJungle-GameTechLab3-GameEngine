@@ -78,9 +78,6 @@
     <ClCompile Include="Source\UI\StatWindow.cpp">
       <Filter>Source\UI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\UI\Viewport.cpp">
-      <Filter>Source\UI</Filter>
-    </ClCompile>
     <ClCompile Include="ThirdParty\imgui\imgui.cpp">
       <Filter>ThirdParty\imgui</Filter>
     </ClCompile>
@@ -160,9 +157,6 @@
       <Filter>Source\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\UI\StatWindow.h">
-      <Filter>Source\UI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\UI\Viewport.h">
       <Filter>Source\UI</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imconfig.h">

@@ -240,7 +240,6 @@
     <ClCompile Include="Source\UI\PropertyWindow.cpp" />
     <ClCompile Include="Source\UI\StatWindow.cpp" />
     <ClCompile Include="Source\UI\SWindow.cpp" />
-    <ClCompile Include="Source\UI\Viewport.cpp" />
     <ClCompile Include="Source\UI\ViewportWindow.cpp" />
     <ClCompile Include="Source\UI\WindowManager.cpp" />
     <ClCompile Include="ThirdParty\imgui\imgui.cpp" />
@@ -277,7 +276,6 @@
     <ClInclude Include="Source\UI\PropertyWindow.h" />
     <ClInclude Include="Source\UI\StatWindow.h" />
     <ClInclude Include="Source\UI\SWindow.h" />
-    <ClInclude Include="Source\UI\Viewport.h" />
     <ClInclude Include="Source\UI\ViewportWindow.h" />
     <ClInclude Include="Source\UI\WindowManager.h" />
     <ClInclude Include="ThirdParty\imgui\imconfig.h" />
