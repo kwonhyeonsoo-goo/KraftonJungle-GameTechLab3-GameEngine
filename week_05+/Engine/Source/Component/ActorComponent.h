@@ -7,6 +7,7 @@ class ENGINE_API UActorComponent : public UObject
 {
 public:
 	DECLARE_RTTI(UActorComponent, UObject)
+	DECLARE_DUPLICATE(UActorComponent)
 
 	~UActorComponent() override = default;
 

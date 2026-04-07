@@ -5,6 +5,7 @@ class ENGINE_API UTextComponent : public UPrimitiveComponent
 {
 public:
 	DECLARE_RTTI(UTextComponent, UPrimitiveComponent)
+	DECLARE_DUPLICATE(UTextComponent)
 
 	virtual void Initialize();
 
@@ -36,6 +37,8 @@ public:
 
 	/** 폰트 렌더링용 메시 데이터 반환 */
 	struct FMeshData* GetTextMesh() const { return TextMesh.get(); }
+
+	void DuplicateSubObjects() override;
 
 protected:
 	FString Text = "Text";

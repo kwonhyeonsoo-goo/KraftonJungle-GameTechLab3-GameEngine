@@ -13,8 +13,8 @@
 #include "Renderer/Renderer.h"
 #include "Asset/AssetRegistry.h"
 #include "Asset/AssetManager.h"
-#include "Actor/Actor.h"
 #include "Debug/EngineLog.h"
+#include "FEditorEngine.h"
 #include <algorithm>
 #include <filesystem>
 
@@ -537,9 +537,10 @@ void FPropertyWindow::Render(FCore* Core)
 
 
 
-	if (Core && Core->GetSelectedActor())
+	if (GEditor && GEditor->GetSelectedActor())
 	{
-		AActor* SelectedActor = Core->GetSelectedActor();
+
+		AActor* SelectedActor = GEditor->GetSelectedActor();
 
 
 		// 위쪽 섹션

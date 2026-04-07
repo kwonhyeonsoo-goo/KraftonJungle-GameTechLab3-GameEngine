@@ -173,7 +173,7 @@ namespace
 	}
 }
 
-FEditorViewportClient::FEditorViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow, EEditorViewportType InViewportType, ELevelType InWorldType)
+FEditorViewportClient::FEditorViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow, EEditorViewportType InViewportType, EWorldType InWorldType)
 	: EditorUI(InEditorUI)
 	, MainWindow(InMainWindow)
 	, CameraViewType(InViewportType)
@@ -679,7 +679,7 @@ void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPAR
 	}
 
 	ULevel* Level = nullptr;
-	UWorld* World = nullptr;
+	UWorld* World = GWorld;
 	const bool bCanUseEditingTools = CanUseEditingTools(Core, Level, World);
 	AActor* SelectedActor = bCanUseEditingTools ? GetSelectedActor() : nullptr;
 	const bool bRightMouseDown = InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT);
@@ -706,7 +706,7 @@ void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPAR
 		OnMouseButtonDown(Msg, WParam, LParam);
 		if (Msg == WM_LBUTTONDOWN && bCanUseEditingTools)
 		{
-			HandleSelectionClick(Core, World, SelectedActor);
+			HandleSelectionClick(Core, SelectedActor);
 		}
 		return;
 	case WM_MOUSEMOVE:
@@ -918,7 +918,7 @@ void FEditorViewportClient::HandleEditorHotkeys(WPARAM WParam, bool bRightMouseD
 	}
 }
 
-void FEditorViewportClient::HandleSelectionClick(FCore* Core, UWorld* World, AActor* SelectedActor)
+void FEditorViewportClient::HandleSelectionClick(FCore* Core, AActor* SelectedActor)
 {
 #if IS_OBJ_VIEWER //뷰어에서는 차단되는 기능
 	return;
@@ -929,8 +929,8 @@ void FEditorViewportClient::HandleSelectionClick(FCore* Core, UWorld* World, AAc
 		return;
 	}
 
-	AActor* PickedActor = Picker.PickActor(World->GetAllActors(), &CameraTransform, ViewportMouseX, ViewportMouseY, ViewportWidth, ViewportHeight);
-	Core->SetSelectedActor(PickedActor);
+	AActor* PickedActor = Picker.PickActor(GWorld->GetActors(), &CameraTransform, ViewportMouseX, ViewportMouseY, ViewportWidth, ViewportHeight);
+	GEditor->SetSelectedActor(PickedActor);
 	EditorUI.SyncSelectedActorProperty();
 }
 
@@ -961,8 +961,7 @@ void FEditorViewportClient::HandleMouseReleaseForTools()
 
 AActor* FEditorViewportClient::GetSelectedActor() const
 {
-	FCore* Core = EditorUI.GetCore();
-	return Core ? Core->GetSelectedActor() : nullptr;
+	return GEditor->GetSelectedActor();
 }
 
 AActor* FEditorViewportClient::GetGizmoTarget() const
@@ -1361,19 +1360,18 @@ EEditorViewportType FEditorViewportClient::GetOrthoViewTypeFromViewportType(EEdi
 
 void FEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
 {
-	FCore* Core = EditorUI.GetCore();
-	if (!Core || !GRenderer || !FilePath.ends_with(".json"))
+	if (!GRenderer || !FilePath.ends_with(".json"))
 	{
 		return;
 	}
 
-	ULevel* Level = ResolveLevel(Core);
+	ULevel* Level = GWorld->GetLevel();
 	if (!Level)
 	{
 		return;
 	}
 
-	Core->SetSelectedActor(nullptr);
+	GEditor->SetSelectedActor(nullptr);
 	Level->ClearActors();
 
 	if (FSceneSerializer::Load(Level, FilePath, GRenderer->GetDevice(), EditorUI.GetPerspectiveCamera()))
@@ -1403,8 +1401,10 @@ void FEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 
 	const FRay Ray = Picker.ScreenToRay(&CameraTransform, ViewportMouseX, ViewportMouseY, ViewportWidth, ViewportHeight);
 	const FVector SpawnLocation = Ray.Origin + Ray.Direction * 10.0f;
-
-	AStaticMeshActor* MeshActor = Level->SpawnActor<AStaticMeshActor>(std::filesystem::path(FilePath).stem().string());
+	std::wstring WidePath = FPaths::ToWide(FilePath);
+	std::wstring WideStem = std::filesystem::path(WidePath).stem().wstring();
+	FString ActorName = FPaths::ToString(WideStem);
+	AStaticMeshActor* MeshActor = Level->SpawnActor<AStaticMeshActor>(ActorName);
 	if (MeshActor)
 	{
 		MeshActor->LoadStaticMesh(GRenderer->GetDevice(), FilePath);
@@ -1424,7 +1424,7 @@ void FEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 		RefreshObjViewerCameraPivot(MeshActor);
 		FrameObjViewerCamera(MeshActor, true);
 #else
-		Core->SetSelectedActor(MeshActor);
+		GEditor->SetSelectedActor(MeshActor);
 #endif
 	}
 
@@ -1543,7 +1543,7 @@ void FEditorViewportClient::PostRender(FCore* Core, FRenderer* Renderer)
 	return;
 #endif
 
-	AActor* SelectedActor = Core->GetSelectedActor();
+	AActor* SelectedActor = GEditor->GetSelectedActor();
 	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !SelectedActor->IsVisible() || SelectedActor->IsA<ASkySphereActor>())
 	{
 		return;

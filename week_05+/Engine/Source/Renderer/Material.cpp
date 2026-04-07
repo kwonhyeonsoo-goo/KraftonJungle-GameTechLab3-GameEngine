@@ -165,7 +165,7 @@ bool FMaterial::SetParameterData(const FString& ParamName, const void* Data, uin
 	return true;
 }
 
-std::unique_ptr<FDynamicMaterial> FMaterial::CreateDynamicMaterial() const
+std::shared_ptr<FDynamicMaterial> FMaterial::CreateDynamicMaterial() const
 {
 	ID3D11Device* Device = nullptr;
 	for (const auto& CB : ConstantBuffers)
@@ -181,7 +181,7 @@ std::unique_ptr<FDynamicMaterial> FMaterial::CreateDynamicMaterial() const
 		return nullptr;
 	}
 
-	auto Dynamic = std::make_unique<FDynamicMaterial>();
+	auto Dynamic = std::make_shared<FDynamicMaterial>();
 	Dynamic->OriginName = OriginName;
 	Dynamic->InstanceName = OriginName + "_Dynamic";
 	Dynamic->VertexShader = VertexShader;

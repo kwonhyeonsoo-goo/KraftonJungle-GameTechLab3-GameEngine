@@ -7,6 +7,7 @@ class ENGINE_API UUUIDBillboardComponent : public UTextComponent
 {
 public:
 	DECLARE_RTTI(UUUIDBillboardComponent, UTextComponent)
+	DECLARE_DUPLICATE(UUUIDBillboardComponent)
 
 	virtual void Initialize() override;
 

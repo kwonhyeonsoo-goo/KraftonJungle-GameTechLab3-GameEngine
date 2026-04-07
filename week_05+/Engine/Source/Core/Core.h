@@ -6,7 +6,6 @@
 #include "World/LevelTypes.h"
 #include "Renderer/Renderer.h"
 #include "Physics/PhysicsManager.h"
-#include "World/LevelManager.h"
 #include "World/WorldContext.h"
 #include <memory>
 #include "Debug/DebugDrawManager.h"
@@ -38,7 +37,7 @@ public:
 	FCore& operator=(const FCore&) = delete;
 	FCore& operator=(FCore&&) = delete;
 
-	bool Initialize(HWND Hwnd, int32 Width, int32 Height, ELevelType StartupLevelType = ELevelType::Game);
+	bool Initialize(HWND Hwnd, int32 Width, int32 Height, EWorldType StartupLevelType = EWorldType::Game);
 	void Release();
 
 	void Tick();
@@ -58,22 +57,6 @@ public:
 	//FEnhancedInputManager* GetEnhancedInputManager() const { return EnhancedInput; }
 	float GetDeltaTime() const { return Timer.GetDeltaTime(); }
 
-	FLevelManager* GetLevelManager() const { return LevelManager.get(); }
-
-	ULevel* GetLevel() const { return LevelManager->GetActiveLevel(); }
-	ULevel* GetActiveLevel() const { return LevelManager->GetActiveLevel(); }
-	ULevel* GetEditorLevel() const { return LevelManager->GetEditorLevel(); }
-	ULevel* GetGameLevel() const { return LevelManager->GetGameLevel(); }
-
-	void SetSelectedActor(AActor* A) { LevelManager->SetSelectedActor(A); }
-	AActor* GetSelectedActor() const { return LevelManager->GetSelectedActor(); }
-	void ActivateEditorLevel() { LevelManager->ActivateEditorLevel(); }
-	void ActivateGameLevel() { LevelManager->ActivateGameLevel(); }
-
-	UWorld* GetActiveWorld() const { return LevelManager->GetActiveWorld(); }
-	UWorld* GetEditorWorld() const { return LevelManager->GetEditorWorld(); }
-	UWorld* GetGameWorld() const { return LevelManager->GetGameWorld(); }
-	const FWorldContext* GetActiveWorldContext() const { return LevelManager->GetActiveWorldContext(); }
 	uint8 GetStatOverlayMode() const { return StatOverlayModeFlags; }
 	void SetStatOverlayMode(uint8 InFlags) { StatOverlayModeFlags = InFlags; }
 	void RenderStatOverlay(FRenderer* Renderer, int32 ViewportWidth, int32 ViewportHeight) const;
@@ -98,7 +81,6 @@ private:
 	ObjectManager* ObjManager = nullptr;
 	//FViewportClient* MainViewportClient = nullptr;
 	//TArray<FViewportClient*> ViewportClients;
-	std::unique_ptr<FLevelManager> LevelManager;
 
 	std::unique_ptr<FPhysicsManager> PhysicsManager;
 

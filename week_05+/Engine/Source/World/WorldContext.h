@@ -9,14 +9,14 @@ class UWorld;
 struct ENGINE_API FWorldContext
 {
 	FString ContextName;
-	ELevelType WorldType = ELevelType::Game;
+	EWorldType WorldType = EWorldType::Game;
 	UWorld* World = nullptr;
 
 	bool IsValid() const { return World != nullptr; }
 	void Reset()
 	{
 		ContextName.clear();
-		WorldType = ELevelType::Game;
+		WorldType = EWorldType::Game;
 		World = nullptr;
 	}
 };

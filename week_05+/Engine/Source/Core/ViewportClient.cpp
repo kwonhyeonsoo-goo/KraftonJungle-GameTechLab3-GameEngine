@@ -70,12 +70,12 @@ void FViewportClient::SetViewportInputState(int32 InMouseX, int32 InMouseY, cons
 	SetViewportRect(InRect);
 }
 
-void FViewportClient::SetWorldType(ELevelType InWorldType)
+void FViewportClient::SetWorldType(EWorldType InWorldType)
 {
 	WorldType = InWorldType;
 }
 
-ELevelType FViewportClient::GetWorldType() const
+EWorldType FViewportClient::GetWorldType() const
 {
 	return WorldType;
 }
@@ -90,28 +90,13 @@ void FViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WPa
 
 ULevel* FViewportClient::ResolveLevel(FCore* Core) const
 {
-	UWorld* World = ResolveWorld(Core);
+	UWorld* World = GWorld;
 	return World ? World->GetLevel() : nullptr;
 }
 
 UWorld* FViewportClient::ResolveWorld(FCore* Core) const
 {
-	if (!Core)
-	{
-		return nullptr;
-	}
-
-	switch (WorldType)
-	{
-	case ELevelType::Editor:
-		return Core->GetEditorWorld();
-	case ELevelType::Game:
-	case ELevelType::PIE:
-		return Core->GetGameWorld();
-	case ELevelType::Inactive:
-	default:
-		return Core->GetActiveWorld();
-	}
+	return GWorld;
 }
 
 FMatrix FViewportClient::GetViewMatrix() const

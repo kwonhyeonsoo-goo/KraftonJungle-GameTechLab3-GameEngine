@@ -12,6 +12,8 @@ class ENGINE_API AActor : public UObject
 {
 public:
 	DECLARE_RTTI(AActor, UObject)
+	DECLARE_DUPLICATE(AActor)
+
 	~AActor() override = default;
 
 	ULevel* GetLevel() const;
@@ -39,8 +41,6 @@ public:
 		}
 		return nullptr;
 	}
-
-	void Test() { int a = 5; }
 	
 	virtual void PostSpawnInitialize();
 	virtual void BeginPlay();
@@ -57,12 +57,16 @@ public:
 	const FVector& GetActorLocation() const;
 	void SetActorLocation(const FVector& InLocation);
 
-
 	bool IsVisible() const { return bVisible; }
 	void SetVisible(bool bInVisible) { bVisible = bInVisible; }
+
+	bool CanTickInEditor() const { return bTickInEditor; }
+	void SetCanTickInEditor(bool bInCanTickInEditor) { bTickInEditor = bInCanTickInEditor; }
+
+	virtual void DuplicateSubObjects() override;
+
 protected:
 	TObjectPtr<ULevel> Level;
-	//ULevel* Level = nullptr;
 
 	USceneComponent* RootComponent = nullptr;
 	TArray<UActorComponent*> OwnedComponents;
@@ -72,5 +76,6 @@ protected:
 	bool bActorBegunPlay = false;
 	bool bPendingDestroy = false;
 	bool bVisible = true;
+	bool bTickInEditor = true;
 };
 

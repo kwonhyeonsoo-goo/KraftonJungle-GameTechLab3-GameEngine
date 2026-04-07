@@ -8,6 +8,7 @@
 class ULineBatchComponent : public UPrimitiveComponent
 {
 	DECLARE_RTTI(ULineBatchComponent, UPrimitiveComponent)
+	DECLARE_DUPLICATE(ULineBatchComponent)
 
 public:
 	void Initialize();

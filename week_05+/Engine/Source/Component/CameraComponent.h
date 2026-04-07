@@ -7,6 +7,8 @@ class ENGINE_API UCameraComponent : public USceneComponent
 {
 public:
 	DECLARE_RTTI(UCameraComponent, USceneComponent)
+	DECLARE_DUPLICATE(UCameraComponent)
+
 	virtual ~UCameraComponent();
 
 	void Initialize();

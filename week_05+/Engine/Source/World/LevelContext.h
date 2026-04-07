@@ -9,14 +9,14 @@ class ULevel;
 struct ENGINE_API FLevelContext
 {
 	FString ContextName;
-	ELevelType LevelType = ELevelType::Game;
+	EWorldType LevelType = EWorldType::Game;
 	ULevel* Level = nullptr;
 
 	bool IsValid() const { return Level != nullptr; }
 	void Reset()
 	{
 		ContextName.clear();
-		LevelType = ELevelType::Game;
+		LevelType = EWorldType::Game;
 		Level = nullptr;
 	}
 };

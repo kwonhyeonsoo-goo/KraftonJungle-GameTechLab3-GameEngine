@@ -78,9 +78,6 @@
     <ClCompile Include="Source\UI\StatWindow.cpp">
       <Filter>Source\UI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\UI\Viewport.cpp">
-      <Filter>Source\UI</Filter>
-    </ClCompile>
     <ClCompile Include="ThirdParty\imgui\imgui.cpp">
       <Filter>ThirdParty\imgui</Filter>
     </ClCompile>
@@ -113,6 +110,8 @@
     <ClCompile Include="Source\CameraFuction\FOrthoToOrtho.cpp" />
     <ClCompile Include="Source\CameraFuction\FCameraOribit.cpp" />
     <ClCompile Include="Source\CameraFuction\FOrthoToPerspect.cpp" />
+    <ClCompile Include="Source\UI\EditorToolbar.h" />
+    <ClCompile Include="Source\UI\EditorToolbar.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\FEditorEngine.h">
@@ -160,9 +159,6 @@
     <ClInclude Include="Source\UI\StatWindow.h">
       <Filter>Source\UI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\UI\Viewport.h">
-      <Filter>Source\UI</Filter>
-    </ClInclude>
     <ClInclude Include="ThirdParty\imgui\imconfig.h">
       <Filter>ThirdParty\imgui</Filter>
     </ClInclude>
@@ -198,6 +194,7 @@
     <ClInclude Include="Source\CameraFuction\FOrthoToOrtho.h" />
     <ClInclude Include="Source\CameraFuction\FCameraOribit.h" />
     <ClInclude Include="Source\CameraFuction\FOrthoToPerspect.h" />
+    <ClInclude Include="Source\PIEState.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ThirdParty\imgui\imgui.natstepfilter">

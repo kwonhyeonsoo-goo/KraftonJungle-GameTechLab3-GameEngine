@@ -272,9 +272,6 @@
     <ClCompile Include="Source\World\RenderCollector.cpp">
       <Filter>Source\World</Filter>
     </ClCompile>
-    <ClCompile Include="Source\World\LevelManager.cpp">
-      <Filter>Source\World</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Component\MeshComponent.cpp" />
     <ClCompile Include="Source\Mesh\Mesh.cpp" />
     <ClCompile Include="Source\Component\StaticMeshComponent.cpp" />
@@ -289,7 +286,6 @@
     <ClCompile Include="Source\Asset\AssetRegistry.cpp" />
     <ClCompile Include="Source\Asset\AssetCooker.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveSky.cpp" />
-    <ClCompile Include="Source\World\Octree.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -572,9 +568,6 @@
     <ClInclude Include="Source\World\Level.h">
       <Filter>Source\World</Filter>
     </ClInclude>
-    <ClInclude Include="Source\World\LevelManager.h">
-      <Filter>Source\World</Filter>
-    </ClInclude>
     <ClInclude Include="Source\World\RenderCollector.h">
       <Filter>Source\World</Filter>
     </ClInclude>
@@ -605,7 +598,6 @@
     <ClInclude Include="Source\Asset\AssetCooker.h" />
     <ClInclude Include="Source\Asset\CookedAsset.h" />
     <ClInclude Include="Source\Primitive\PrimitiveSky.h" />
-    <ClInclude Include="Source\World\Octree.h" />
     <ClInclude Include="Source\Math\Ray.h" />
   </ItemGroup>
   <ItemGroup>

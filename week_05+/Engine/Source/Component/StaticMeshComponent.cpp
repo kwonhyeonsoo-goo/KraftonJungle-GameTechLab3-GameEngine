@@ -428,3 +428,8 @@ void UStaticMeshComponent::Serialize(FArchive& Ar)
 		}
 	}
 }
+
+void UStaticMeshComponent::DuplicateSubObjects()
+{
+	UMeshComponent::DuplicateSubObjects();
+}

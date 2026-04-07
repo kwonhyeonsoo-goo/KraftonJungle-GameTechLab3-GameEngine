@@ -14,6 +14,4 @@ public:
 	bool RayTriangleIntersect(const FRay& Ray, const FVector& V0, const FVector& V1, const FVector& V2, float& OutDistance) const;
 	bool RayAABBIntersect(const FRay& Ray, const FVector& BoxMin, const FVector& BoxMax, float& OutDistance) const;
 	AActor* PickActor(const TArray<AActor*>& InActors, const FCamera* InCamera, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const;
-
-	AActor* PickActorWithOctree(const FCamera* InCamera, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const;
 };
