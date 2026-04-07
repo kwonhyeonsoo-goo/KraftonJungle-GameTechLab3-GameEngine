@@ -145,7 +145,7 @@ void FControlPanelWindow::Render(FCore* Core, FEditorViewportClient* ActiveViewp
 			const FString Name = SpawnTypes[SpawnTypeIndex];
 
 			AActor* NewActor = nullptr;
-			ID3D11Device* Device = nullptr;
+			ID3D11Device* Device = GRenderer->GetDevice();
 			// 0:Cube, 1:Sphere, 2:Plane, 7:StaticMesh 모두 AStaticMeshActor로 통합 스폰
 			if (SpawnTypeIndex == 0 || SpawnTypeIndex == 1 || SpawnTypeIndex == 2 || SpawnTypeIndex == 7)
 			{
@@ -154,7 +154,6 @@ void FControlPanelWindow::Render(FCore* Core, FEditorViewportClient* ActiveViewp
 				{
 					AStaticMeshActor* SMActor = static_cast<AStaticMeshActor*>(NewActor);
 
-					// 주의: 현재 구조에서 ID3D11Device를 획득하는 코드(예: Core->GetDevice() 등)로 수정해 주셔야 합니다.
 				
 
 					if (SpawnTypeIndex == 0)
@@ -171,7 +170,6 @@ void FControlPanelWindow::Render(FCore* Core, FEditorViewportClient* ActiveViewp
 					}
 					else if (SpawnTypeIndex == 7)
 					{
-						// 외부 StaticMesh 스폰 로직 (필요시 파일 브라우저 연동 등)
 						SMActor->LoadStaticMesh(Device, "Engine/BasicShapes/Cube");
 					}
 				}

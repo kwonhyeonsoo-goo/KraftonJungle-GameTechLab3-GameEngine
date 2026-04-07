@@ -1403,8 +1403,10 @@ void FEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 
 	const FRay Ray = Picker.ScreenToRay(&CameraTransform, ViewportMouseX, ViewportMouseY, ViewportWidth, ViewportHeight);
 	const FVector SpawnLocation = Ray.Origin + Ray.Direction * 10.0f;
-
-	AStaticMeshActor* MeshActor = Level->SpawnActor<AStaticMeshActor>(std::filesystem::path(FilePath).stem().string());
+	std::wstring WidePath = FPaths::ToWide(FilePath);
+	std::wstring WideStem = std::filesystem::path(WidePath).stem().wstring();
+	FString ActorName = FPaths::ToString(WideStem);
+	AStaticMeshActor* MeshActor = Level->SpawnActor<AStaticMeshActor>(ActorName);
 	if (MeshActor)
 	{
 		MeshActor->LoadStaticMesh(GRenderer->GetDevice(), FilePath);
