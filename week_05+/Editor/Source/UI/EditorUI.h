@@ -9,6 +9,7 @@
 #include "Math/Rect.h"
 #include "Types/ObjectPtr.h"
 #include "ContentBrowserWindow.h"
+#include "EditorToolbar.h"
 
 class FCore;
 class FWindow;
@@ -58,6 +59,7 @@ private:
 	FViewportLegacy ViewportLegacy;
 	FOutlinerWindow Outliner;
 	FContentBrowserWindow ContentBrowser;
+	FEditorToolbar Toolbar;
 
 	bool bWindowSetup = false;
 	bool bViewportClientActive = false;

@@ -113,6 +113,8 @@
     <ClCompile Include="Source\CameraFuction\FOrthoToOrtho.cpp" />
     <ClCompile Include="Source\CameraFuction\FCameraOribit.cpp" />
     <ClCompile Include="Source\CameraFuction\FOrthoToPerspect.cpp" />
+    <ClCompile Include="Source\UI\EditorToolbar.h" />
+    <ClCompile Include="Source\UI\EditorToolbar.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\FEditorEngine.h">

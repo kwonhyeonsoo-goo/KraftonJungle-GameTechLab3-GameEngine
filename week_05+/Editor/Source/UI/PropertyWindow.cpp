@@ -13,8 +13,8 @@
 #include "Renderer/Renderer.h"
 #include "Asset/AssetRegistry.h"
 #include "Asset/AssetManager.h"
-#include "Actor/Actor.h"
 #include "Debug/EngineLog.h"
+#include "FEditorEngine.h"
 #include <algorithm>
 #include <filesystem>
 
@@ -451,9 +451,9 @@ void FPropertyWindow::Render(FCore* Core)
 		ImGui::Unindent(8.0f);
 	}
 
-	if (Core && Core->GetSelectedActor())
+	if (GEditor && GEditor->GetSelectedActor())
 	{
-		AActor* SelectedActor = Core->GetSelectedActor();
+		AActor* SelectedActor = GEditor->GetSelectedActor();
 		DrawBillboardSection(SelectedActor);
 
 		if (SelectedActor->IsA(AStaticMeshActor::StaticClass()))

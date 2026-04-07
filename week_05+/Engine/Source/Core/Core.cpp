@@ -194,24 +194,13 @@ bool FCore::Initialize(HWND Hwnd, int32 Width, int32 Height, EWorldType StartupL
 
 	Timer.Initialize();
 	RegisterConsoleVariables();
-	LevelManager = std::make_unique<FLevelManager>();
 	const float AspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
-	if (!LevelManager->Initialize(AspectRatio, StartupLevelType, GRenderer))
-	{
-		return false;
-	}
 
 	return true;
 }
 
 void FCore::Release()
 {
-	if (LevelManager)
-	{
-		LevelManager->Release();
-		LevelManager.reset();
-	}
-
 	if (ObjManager)
 	{
 		ObjManager->FlushKilledObjects();
@@ -253,7 +242,7 @@ void FCore::Physics(float DeltaTime)
 {
 	(void)DeltaTime;
 
-	ULevel* Level = LevelManager ? LevelManager->GetActiveLevel() : nullptr;
+	ULevel* Level = GWorld ? GWorld->GetLevel() : nullptr;
 	if (!Level)
 	{
 		return;
@@ -296,7 +285,7 @@ void FCore::Physics(float DeltaTime)
 
 void FCore::GameLogic(float DeltaTime)
 {
-	UWorld* World = GetActiveWorld();
+	UWorld* World = GWorld;
 	if (World)
 	{
 		World->Tick(DeltaTime);
@@ -333,10 +322,6 @@ void FCore::OnResize(int32 Width, int32 Height)
 	if (GRenderer)
 	{
 		GRenderer->OnResize(Width, Height);
-	}
-	if (LevelManager)
-	{
-		LevelManager->OnResize(Width, Height);
 	}
 }
 

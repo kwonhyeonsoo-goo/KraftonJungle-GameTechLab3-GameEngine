@@ -90,28 +90,13 @@ void FViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WPa
 
 ULevel* FViewportClient::ResolveLevel(FCore* Core) const
 {
-	UWorld* World = ResolveWorld(Core);
+	UWorld* World = GWorld;
 	return World ? World->GetLevel() : nullptr;
 }
 
 UWorld* FViewportClient::ResolveWorld(FCore* Core) const
 {
-	if (!Core)
-	{
-		return nullptr;
-	}
-
-	switch (WorldType)
-	{
-	case EWorldType::Editor:
-		return Core->GetEditorWorld();
-	case EWorldType::Game:
-	case EWorldType::PIE:
-		return Core->GetGameWorld();
-	case EWorldType::Inactive:
-	default:
-		return Core->GetActiveWorld();
-	}
+	return GWorld;
 }
 
 FMatrix FViewportClient::GetViewMatrix() const

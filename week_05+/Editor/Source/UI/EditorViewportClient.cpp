@@ -930,7 +930,7 @@ void FEditorViewportClient::HandleSelectionClick(FCore* Core, AActor* SelectedAc
 	}
 
 	AActor* PickedActor = Picker.PickActor(GWorld->GetActors(), &CameraTransform, ViewportMouseX, ViewportMouseY, ViewportWidth, ViewportHeight);
-	Core->SetSelectedActor(PickedActor);
+	GEditor->SetSelectedActor(PickedActor);
 	EditorUI.SyncSelectedActorProperty();
 }
 
@@ -961,8 +961,7 @@ void FEditorViewportClient::HandleMouseReleaseForTools()
 
 AActor* FEditorViewportClient::GetSelectedActor() const
 {
-	FCore* Core = EditorUI.GetCore();
-	return Core ? Core->GetSelectedActor() : nullptr;
+	return GEditor->GetSelectedActor();
 }
 
 AActor* FEditorViewportClient::GetGizmoTarget() const
@@ -1361,19 +1360,18 @@ EEditorViewportType FEditorViewportClient::GetOrthoViewTypeFromViewportType(EEdi
 
 void FEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
 {
-	FCore* Core = EditorUI.GetCore();
-	if (!Core || !GRenderer || !FilePath.ends_with(".json"))
+	if (!GRenderer || !FilePath.ends_with(".json"))
 	{
 		return;
 	}
 
-	ULevel* Level = ResolveLevel(Core);
+	ULevel* Level = GWorld->GetLevel();
 	if (!Level)
 	{
 		return;
 	}
 
-	Core->SetSelectedActor(nullptr);
+	GEditor->SetSelectedActor(nullptr);
 	Level->ClearActors();
 
 	if (FSceneSerializer::Load(Level, FilePath, GRenderer->GetDevice(), EditorUI.GetPerspectiveCamera()))
@@ -1426,7 +1424,7 @@ void FEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 		RefreshObjViewerCameraPivot(MeshActor);
 		FrameObjViewerCamera(MeshActor, true);
 #else
-		Core->SetSelectedActor(MeshActor);
+		GEditor->SetSelectedActor(MeshActor);
 #endif
 	}
 
@@ -1545,7 +1543,7 @@ void FEditorViewportClient::PostRender(FCore* Core, FRenderer* Renderer)
 	return;
 #endif
 
-	AActor* SelectedActor = Core->GetSelectedActor();
+	AActor* SelectedActor = GEditor->GetSelectedActor();
 	if (!SelectedActor || SelectedActor->IsPendingDestroy() || !SelectedActor->IsVisible() || SelectedActor->IsA<ASkySphereActor>())
 	{
 		return;

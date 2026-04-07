@@ -138,7 +138,6 @@
     <ClInclude Include="Source\Types\StaticArray.h" />
     <ClInclude Include="Source\Types\String.h" />
     <ClInclude Include="Source\World\Level.h" />
-    <ClInclude Include="Source\World\LevelManager.h" />
     <ClInclude Include="Source\World\RenderCollector.h" />
     <ClInclude Include="Source\World\LevelContext.h" />
     <ClInclude Include="Source\World\LevelTypes.h" />
@@ -230,7 +229,6 @@
     <ClCompile Include="Source\Types\Name.cpp" />
     <ClCompile Include="Source\World\Level.cpp" />
     <ClCompile Include="Source\World\RenderCollector.cpp" />
-    <ClCompile Include="Source\World\LevelManager.cpp" />
     <ClCompile Include="Source\World\World.cpp" />
     <ClCompile Include="Source\Core\Viewport.cpp" />
   </ItemGroup>

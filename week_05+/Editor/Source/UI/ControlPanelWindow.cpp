@@ -35,30 +35,6 @@ namespace
 			return "Unknown";
 		}
 	}
-
-	void StartPIE()
-	{
-		UWorld* EditorWorld = GEditor->GetEditorWorldContext().World;
-
-		UWorld* PIEWorld = UWorld::DuplicateWorldForPIE(EditorWorld);
-		GWorld = PIEWorld;
-
-		FEngine::CreateWorldContext(EWorldType::PIE, GWorld);
-
-		PIEWorld->BeginPlay();
-	}
-
-	void EndPIE()
-	{
-		if (GWorld && GWorld->GetWorldType() == EWorldType::PIE)
-		{
-			GWorld->CleanupWorld();
-			GEditor->RemoveEditorWorldContext(EWorldType::PIE);
-			delete GWorld;
-		}
-
-		GWorld = GEditor->GetEditorWorldContext().World;
-	}
 }
 
 void FControlPanelWindow::Render(FCore* Core, FEditorViewportClient* ActiveViewportClient)
@@ -73,43 +49,7 @@ void FControlPanelWindow::Render(FCore* Core, FEditorViewportClient* ActiveViewp
 		return;
 	}
 
-	EPIEState PIEState = GEditor->GetPIEState();
-	if (PIEState == EPIEState::Stopped)
-	{
-		if (ImGui::Button("▶ Play"))
-		{
-			GEditor->SetPIEState(EPIEState::Playing);
-			StartPIE();
-		}
-	}
-	else if (PIEState == EPIEState::Playing)
-	{
-		if (ImGui::Button("Ⅱ Pause"))
-		{
-			GEditor->SetPIEState(EPIEState::Paused);
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("■ Stop"))
-		{
-			GEditor->SetPIEState(EPIEState::Stopped);
-			EndPIE();
-		}
-	}
-	else if (PIEState == EPIEState::Paused)
-	{
-		if (ImGui::Button("▶ Resume"))
-		{
-			GEditor->SetPIEState(EPIEState::Playing);
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("■ Stop"))
-		{
-			GEditor->SetPIEState(EPIEState::Stopped);
-			EndPIE();
-		}
-	}
-
-	if (Core && Core->GetLevel())
+	if (GWorld && GWorld->GetLevel())
 	{
 		ImGui::SeparatorText("Spawn");
 
@@ -192,12 +132,12 @@ void FControlPanelWindow::Render(FCore* Core, FEditorViewportClient* ActiveViewp
 
 			if (NewActor && !NewActor->IsA<ASkySphereActor>())
 			{
-				Core->SetSelectedActor(NewActor);
+				GEditor->SetSelectedActor(NewActor);
 			}
 		}
 
 		ImGui::SameLine();
-		AActor* SelectedActor = Core->GetSelectedActor();
+		AActor* SelectedActor = GEditor->GetSelectedActor();
 		if (!SelectedActor)
 		{
 			ImGui::BeginDisabled();
@@ -205,8 +145,8 @@ void FControlPanelWindow::Render(FCore* Core, FEditorViewportClient* ActiveViewp
 
 		if (ImGui::Button("Delete"))
 		{
-			Core->GetLevel()->DestroyActor(SelectedActor);
-			Core->SetSelectedActor(nullptr);
+			GWorld->GetLevel()->DestroyActor(SelectedActor);
+			GEditor->SetSelectedActor(nullptr);
 		}
 
 		if (!SelectedActor)
