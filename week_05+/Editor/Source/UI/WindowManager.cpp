@@ -759,9 +759,7 @@ void FWindowManager::RenderWindows() const
 {
 	if (SWindow* Window = Windows.front())
 	{
-	
 		Window->Render();
-	
 	}
 }
 

@@ -1,6 +1,9 @@
 #include "ControlPanelWindow.h"
 #include "imgui.h"
 #include "Core/Core.h"
+#include "FEditorEngine.h"
+#include "PIEState.h"
+#include "World/World.h"
 #include "World/WorldContext.h"
 #include "World/Level.h"
 #include "Camera/Camera.h"
@@ -16,21 +19,45 @@
 
 namespace
 {
-	const char* GetLevelTypeLabel(ELevelType LevelType)
+	const char* GetLevelTypeLabel(EWorldType LevelType)
 	{
 		switch (LevelType)
 		{
-		case ELevelType::Game:
+		case EWorldType::Game:
 			return "Game";
-		case ELevelType::Editor:
+		case EWorldType::Editor:
 			return "Editor";
-		case ELevelType::PIE:
+		case EWorldType::PIE:
 			return "PIE";
-		case ELevelType::Inactive:
+		case EWorldType::Inactive:
 			return "Inactive";
 		default:
 			return "Unknown";
 		}
+	}
+
+	void StartPIE()
+	{
+		UWorld* EditorWorld = GEditor->GetEditorWorldContext().World;
+
+		UWorld* PIEWorld = UWorld::DuplicateWorldForPIE(EditorWorld);
+		GWorld = PIEWorld;
+
+		FEngine::CreateWorldContext(EWorldType::PIE, GWorld);
+
+		PIEWorld->BeginPlay();
+	}
+
+	void EndPIE()
+	{
+		if (GWorld && GWorld->GetWorldType() == EWorldType::PIE)
+		{
+			GWorld->CleanupWorld();
+			GEditor->RemoveEditorWorldContext(EWorldType::PIE);
+			delete GWorld;
+		}
+
+		GWorld = GEditor->GetEditorWorldContext().World;
 	}
 }
 
@@ -46,87 +73,44 @@ void FControlPanelWindow::Render(FCore* Core, FEditorViewportClient* ActiveViewp
 		return;
 	}
 
+	EPIEState PIEState = GEditor->GetPIEState();
+	if (PIEState == EPIEState::Stopped)
+	{
+		if (ImGui::Button("▶ Play"))
+		{
+			GEditor->SetPIEState(EPIEState::Playing);
+			StartPIE();
+		}
+	}
+	else if (PIEState == EPIEState::Playing)
+	{
+		if (ImGui::Button("Ⅱ Pause"))
+		{
+			GEditor->SetPIEState(EPIEState::Paused);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("■ Stop"))
+		{
+			GEditor->SetPIEState(EPIEState::Stopped);
+			EndPIE();
+		}
+	}
+	else if (PIEState == EPIEState::Paused)
+	{
+		if (ImGui::Button("▶ Resume"))
+		{
+			GEditor->SetPIEState(EPIEState::Playing);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("■ Stop"))
+		{
+			GEditor->SetPIEState(EPIEState::Stopped);
+			EndPIE();
+		}
+	}
+
 	if (Core && Core->GetLevel())
 	{
-	//	const FWorldContext* ActiveWorldContext = Core->GetActiveWorldContext();
-	//	FCamera* Camera = ActiveViewportClient ? ActiveViewportClient->GetCamera() : nullptr;
-
-	//	ImGui::SeparatorText("Viewport");
-	//	if (ActiveViewportClient)
-	//	{
-	//		ImGui::Text("Active: %s", ActiveViewportClient->GetViewportLabel());
-	//		ImGui::Text("World: %s", GetLevelTypeLabel(ActiveViewportClient->GetWorldType()));
-	//	}
-	//	else
-	//	{
-	//		ImGui::TextUnformatted("Active: None");
-	//	}
-
-	//	if (ActiveWorldContext)
-	//	{
-	//		ImGui::Text("Scene Context: %s", ActiveWorldContext->ContextName.c_str());
-	//	}
-
-	//	ImGui::SeparatorText("Camera");
-	//	if (Camera)
-	//	{
-	//		float Sensitivity = Camera->GetMouseSensitivity();
-	//		if (ImGui::SliderFloat("Mouse Sensitivity", &Sensitivity, 0.01f, 1.0f))
-	//		{
-	//			Camera->SetMouseSensitivity(Sensitivity);
-	//		}
-
-	//		float Speed = Camera->GetSpeed();
-	//		if (ImGui::SliderFloat("Move Speed", &Speed, 0.1f, 20.0f))
-	//		{
-	//			Camera->SetSpeed(Speed);
-	//		}
-
-	//		const FVector CameraPosition = Camera->GetPosition();
-	//		float Position[3] = { CameraPosition.X, CameraPosition.Y, CameraPosition.Z };
-	//		if (ImGui::DragFloat3("Position", Position, 0.1f))
-	//		{
-	//			Camera->SetPosition({ Position[0], Position[1], Position[2] });
-	//		}
-
-	//		float CameraYaw = Camera->GetYaw();
-	//		float CameraPitch = Camera->GetPitch();
-	//		bool bRotationChanged = false;
-	//		bRotationChanged |= ImGui::DragFloat("Yaw", &CameraYaw, 0.5f);
-	//		bRotationChanged |= ImGui::DragFloat("Pitch", &CameraPitch, 0.5f, -89.0f, 89.0f);
-	//		if (bRotationChanged)
-	//		{
-	//			Camera->SetRotation(CameraYaw, CameraPitch);
-	//		}
-
-	//		int ProjectionModeIndex = (Camera->GetProjectionMode() == ECameraProjectionMode::Orthographic) ? 1 : 0;
-	//		const char* ProjectionModes[] = { "Perspective", "Orthographic" };
-	//		if (ImGui::Combo("Projection", &ProjectionModeIndex, ProjectionModes, IM_ARRAYSIZE(ProjectionModes)))
-	//		{
-	//			Camera->SetProjectionMode(
-	//				ProjectionModeIndex == 0
-	//				? ECameraProjectionMode::Perspective
-	//				: ECameraProjectionMode::Orthographic);
-	//		}
-
-	//		if (Camera->IsOrthographic())
-	//		{
-	//			float OrthoWidth = Camera->GetOrthoWidth();
-	//			if (ImGui::DragFloat("Ortho Width", &OrthoWidth, 0.5f, 1.0f, 1000.0f))
-	//			{
-	//				Camera->SetOrthoWidth(OrthoWidth);
-	//			}
-	//		}
-	//		else
-	//		{
-	//			float CameraFOV = Camera->GetFOV();
-	//			if (ImGui::SliderFloat("FOV", &CameraFOV, 10.0f, 120.0f))
-	//			{
-	//				Camera->SetFOV(CameraFOV);
-	//			}
-	//		}
-	//	}
-
 		ImGui::SeparatorText("Spawn");
 
 		static int32 SpawnTypeIndex = 0;
@@ -141,7 +125,7 @@ void FControlPanelWindow::Render(FCore* Core, FEditorViewportClient* ActiveViewp
 
 		if (ImGui::Button("Spawn"))
 		{
-			ULevel* Level = Core->GetLevel();
+			ULevel* Level = GWorld->GetLevel();
 			const FString Name = SpawnTypes[SpawnTypeIndex];
 
 			AActor* NewActor = nullptr;

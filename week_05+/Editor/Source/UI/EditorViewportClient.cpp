@@ -173,7 +173,7 @@ namespace
 	}
 }
 
-FEditorViewportClient::FEditorViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow, EEditorViewportType InViewportType, ELevelType InWorldType)
+FEditorViewportClient::FEditorViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow, EEditorViewportType InViewportType, EWorldType InWorldType)
 	: EditorUI(InEditorUI)
 	, MainWindow(InMainWindow)
 	, CameraViewType(InViewportType)
@@ -679,7 +679,7 @@ void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPAR
 	}
 
 	ULevel* Level = nullptr;
-	UWorld* World = nullptr;
+	UWorld* World = GWorld;
 	const bool bCanUseEditingTools = CanUseEditingTools(Core, Level, World);
 	AActor* SelectedActor = bCanUseEditingTools ? GetSelectedActor() : nullptr;
 	const bool bRightMouseDown = InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT);
@@ -706,7 +706,7 @@ void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPAR
 		OnMouseButtonDown(Msg, WParam, LParam);
 		if (Msg == WM_LBUTTONDOWN && bCanUseEditingTools)
 		{
-			HandleSelectionClick(Core, World, SelectedActor);
+			HandleSelectionClick(Core, SelectedActor);
 		}
 		return;
 	case WM_MOUSEMOVE:
@@ -918,7 +918,7 @@ void FEditorViewportClient::HandleEditorHotkeys(WPARAM WParam, bool bRightMouseD
 	}
 }
 
-void FEditorViewportClient::HandleSelectionClick(FCore* Core, UWorld* World, AActor* SelectedActor)
+void FEditorViewportClient::HandleSelectionClick(FCore* Core, AActor* SelectedActor)
 {
 #if IS_OBJ_VIEWER //뷰어에서는 차단되는 기능
 	return;
@@ -929,7 +929,7 @@ void FEditorViewportClient::HandleSelectionClick(FCore* Core, UWorld* World, AAc
 		return;
 	}
 
-	AActor* PickedActor = Picker.PickActor(World->GetAllActors(), &CameraTransform, ViewportMouseX, ViewportMouseY, ViewportWidth, ViewportHeight);
+	AActor* PickedActor = Picker.PickActor(GWorld->GetActors(), &CameraTransform, ViewportMouseX, ViewportMouseY, ViewportWidth, ViewportHeight);
 	Core->SetSelectedActor(PickedActor);
 	EditorUI.SyncSelectedActorProperty();
 }

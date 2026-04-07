@@ -20,7 +20,7 @@ public:
 	FLevelManager& operator=(FLevelManager&&) = delete;
 
 	// 초기화
-	bool Initialize(float AspectRatio, ELevelType StartupLevelType, FRenderer* InRenderer);
+	bool Initialize(float AspectRatio, EWorldType StartupLevelType, FRenderer* InRenderer);
 	void Release();
 
 	// World 전환
@@ -50,7 +50,7 @@ public:
 
 private:
 	bool CreateWorldContext(FWorldContext& OutContext, const FString& ContextName,
-		ELevelType WorldType, float AspectRatio, bool bDefaultLevel = true);
+		EWorldType WorldType, float AspectRatio, bool bDefaultLevel = true);
 	void DestroyWorldContext(FWorldContext& Context);
 	void DestroyWorldContext(FEditorWorldContext& Context);
 

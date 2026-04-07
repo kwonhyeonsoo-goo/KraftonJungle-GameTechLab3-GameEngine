@@ -19,6 +19,7 @@ class ENGINE_API UPrimitiveComponent : public USceneComponent
 {
 public:
 	DECLARE_RTTI(UPrimitiveComponent, USceneComponent)
+	DECLARE_DUPLICATE(UPrimitiveComponent)
 
 	CPrimitiveBase* GetPrimitive() const { return Primitive.get(); }
 

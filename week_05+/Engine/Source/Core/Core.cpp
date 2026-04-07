@@ -169,7 +169,7 @@ FCore::~FCore()
 	Release();
 }
 
-bool FCore::Initialize(HWND Hwnd, int32 Width, int32 Height, ELevelType StartupLevelType)
+bool FCore::Initialize(HWND Hwnd, int32 Width, int32 Height, EWorldType StartupLevelType)
 {
 	FPaths::Initialize();
 	WindowWidth = Width;

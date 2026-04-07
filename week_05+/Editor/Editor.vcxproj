@@ -264,6 +264,7 @@
     <ClInclude Include="Source\Gizmo\Gizmo.h" />
     <ClInclude Include="Source\Pawn\EditorCameraPawn.h" />
     <ClInclude Include="Source\Picking\Picker.h" />
+    <ClInclude Include="Source\PIEState.h" />
     <ClInclude Include="Source\UI\ConsoleWindow.h" />
     <ClInclude Include="Source\UI\ContentBrowserWindow.h" />
     <ClInclude Include="Source\UI\ControlPanelWindow.h" />

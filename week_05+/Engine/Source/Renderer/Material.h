@@ -144,7 +144,7 @@ public:
 	void RegisterParameter(const FString& ParamName, int32 BufferIndex, uint32 Offset, uint32 Size);
 
 	// 독립적인 상수 버퍼를 가진 DynamicMaterial 복제본 생성
-	std::unique_ptr<class FDynamicMaterial> CreateDynamicMaterial() const;
+	std::shared_ptr<class FDynamicMaterial> CreateDynamicMaterial() const;
 
 	// 셰이더 바인딩 + Dirty 상수 버퍼 업로드 + 바인딩
 	void Bind(ID3D11DeviceContext* DeviceContext);

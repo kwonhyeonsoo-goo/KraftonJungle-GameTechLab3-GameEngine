@@ -238,7 +238,7 @@ void FViewportContext::Render(FCore* Core, FRenderCommandQueue& CommandQueue)
 		return;
 	}
 
-	UWorld* World = ResolveWorld(Core);
+	UWorld* World = GWorld;
 	if (!World)
 	{
 		return;

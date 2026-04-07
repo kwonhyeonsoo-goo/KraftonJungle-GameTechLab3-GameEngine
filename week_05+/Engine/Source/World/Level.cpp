@@ -42,8 +42,6 @@ FCamera* ULevel::GetCamera() const
 
 void ULevel::ClearActors()
 {
-
-
 	for (AActor* Actor : Actors)
 	{
 		if (Actor)
@@ -139,5 +137,19 @@ void ULevel::Tick(float DeltaTime)
 	{
 		CleanupDestroyedActors();
 	}
+}
 
+void ULevel::DuplicateSubObjects()
+{
+	TArray<AActor*> ActorsCopy = Actors;
+	Actors.clear();
+
+	for (AActor* Actor : ActorsCopy)
+	{
+		if (Actor)
+		{
+			AActor* NewActor = static_cast<AActor*>(Actor->Duplicate());
+			RegisterActor(NewActor);
+		}
+	}
 }

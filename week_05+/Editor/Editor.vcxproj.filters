@@ -198,6 +198,7 @@
     <ClInclude Include="Source\CameraFuction\FOrthoToOrtho.h" />
     <ClInclude Include="Source\CameraFuction\FCameraOribit.h" />
     <ClInclude Include="Source\CameraFuction\FOrthoToPerspect.h" />
+    <ClInclude Include="Source\PIEState.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ThirdParty\imgui\imgui.natstepfilter">

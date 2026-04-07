@@ -7,6 +7,7 @@ class ENGINE_API USceneComponent : public UActorComponent
 {
 public:
 	DECLARE_RTTI(USceneComponent, UActorComponent)
+	DECLARE_DUPLICATE(USceneComponent)
 
 	const FTransform& GetRelativeTransform() const { return RelativeTransform; }
 	void SetRelativeTransform(const FTransform& InTransform);
