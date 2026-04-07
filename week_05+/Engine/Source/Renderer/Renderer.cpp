@@ -493,12 +493,26 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 		[](const FRenderCommand& A, const FRenderCommand& B) { return A.RenderLayer < B.RenderLayer; });
 
 	RenderStateManager->RebindState();
-	for (; it != InCommandList.end(); it++)
+	while (it != InCommandList.end() && it->RenderLayer == InRenderLayer)
 	{
-		auto Cmd = *it;
-		if (Cmd.RenderLayer != InRenderLayer) return;
-		if (!Cmd.MeshData || (Cmd.MeshData->Vertices.empty() && Cmd.MeshData->Indices.empty())) continue;
-
+		auto batchStart = it;
+		auto batchEnd = it;
+		while (batchEnd != InCommandList.end() &&
+			batchEnd->RenderLayer == InRenderLayer &&
+			batchEnd->Material == batchStart->Material &&
+			batchEnd->MeshData == batchStart->MeshData &&
+			batchEnd->FirstIndex == batchStart->FirstIndex &&
+			batchEnd->IndexCount == batchStart->IndexCount)
+		{
+			++batchEnd;
+		}
+		uint32 InstanceCount = static_cast<uint32>(std::distance(batchStart, batchEnd));
+		FRenderCommand& Cmd = *batchStart;
+		if (!Cmd.MeshData || (Cmd.MeshData->Vertices.empty() && Cmd.MeshData->Indices.empty()))
+		{
+			it = batchEnd;
+			continue;
+		}
 		if (Cmd.Material != CurrentMaterial)
 		{
 			Cmd.Material->Bind(DeviceContext);
@@ -523,7 +537,6 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 			}
 			else
 			{
-				// SRV 는 일반 Material 안에서 bind
 				DeviceContext->PSSetSamplers(0, 1, &NormalSampler);
 			}
 		}
@@ -534,22 +547,37 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 			CurrentMesh = Cmd.MeshData;
 		}
 
-		D3D11_PRIMITIVE_TOPOLOGY DesiredTopology = (D3D11_PRIMITIVE_TOPOLOGY)CurrentMesh->Topology;
+		D3D11_PRIMITIVE_TOPOLOGY DesiredTopology = static_cast<D3D11_PRIMITIVE_TOPOLOGY>(CurrentMesh->Topology);
 		if (DesiredTopology != CurrentMeshTopology)
 		{
 			DeviceContext->IASetPrimitiveTopology(DesiredTopology);
 			CurrentMeshTopology = DesiredTopology;
 		}
-
-		UpdateObjectConstantBuffer(Cmd.WorldMatrix);
+		EnsureInstanceBufferCapacity(InstanceCount);
+		D3D11_MAPPED_SUBRESOURCE Mapped;
+		if (SUCCEEDED(DeviceContext->Map(InstanceBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
+		{
+			FMatrix* InstanceData = static_cast<FMatrix*>(Mapped.pData);
+			uint32 Index = 0;
+			for (auto curr = batchStart; curr != batchEnd; ++curr)
+			{
+				InstanceData[Index++] = curr->WorldMatrix.GetTransposed();
+			}
+			DeviceContext->Unmap(InstanceBuffer, 0);
+		}
+		UINT Stride = sizeof(FMatrix);
+		UINT Offset = 0;
+		DeviceContext->IASetVertexBuffers(1, 1, &InstanceBuffer, &Stride, &Offset);
 
 		if (Cmd.IndexCount > 0)
-			DeviceContext->DrawIndexed(Cmd.IndexCount, Cmd.FirstIndex, 0);
+			DeviceContext->DrawIndexedInstanced(Cmd.IndexCount, InstanceCount, Cmd.FirstIndex, 0, 0);
 		else if (!Cmd.MeshData->Indices.empty())
-			DeviceContext->DrawIndexed(static_cast<UINT>(Cmd.MeshData->Indices.size()), 0, 0);
+			DeviceContext->DrawIndexedInstanced(static_cast<UINT>(Cmd.MeshData->Indices.size()), InstanceCount, 0, 0, 0);
 		else if (!Cmd.MeshData->Vertices.empty())
-			DeviceContext->Draw(static_cast<UINT>(Cmd.MeshData->Vertices.size()), 0);
+			DeviceContext->DrawInstanced(static_cast<UINT>(Cmd.MeshData->Vertices.size()), InstanceCount, 0, 0);
 
+		// 루프 종료 후 다음 묶음으로 이동
+		it = batchEnd;
 	}
 }
 
@@ -561,6 +589,39 @@ void FRenderer::ClearDepthBuffer()
 FVector FRenderer::GetCameraPosition() const
 {
 	return GetCameraWorldPositionFromViewMatrix(ViewMatrix);
+}
+
+void FRenderer::EnsureInstanceBufferCapacity(uint32 Count)
+{
+	if (InstanceBufferCapacity >= Count)
+	{
+		return;
+	}
+
+	if (InstanceBuffer)
+	{
+		InstanceBuffer->Release();
+		InstanceBuffer = nullptr;
+	}
+	InstanceBufferCapacity = Count * 1.5f;
+	if (InstanceBufferCapacity < 128)
+	{
+		InstanceBufferCapacity = 128;
+	}
+
+	D3D11_BUFFER_DESC Desc = {};
+	Desc.Usage = D3D11_USAGE_DYNAMIC;
+	Desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;// 인스턴스 버퍼는 버텍스 버퍼로 바인딩됨
+	Desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	Desc.MiscFlags = 0;
+	Desc.StructureByteStride = 0;
+	Desc.ByteWidth = InstanceBufferCapacity* sizeof(FInstanceData);
+	HRESULT hr = Device->CreateBuffer(&Desc, nullptr, &InstanceBuffer);
+	if (FAILED(hr))
+	{
+		MessageBox(nullptr, L"InstanceBuffer Create Failed.", nullptr, 0);
+		InstanceBufferCapacity = 0; // 실패 시 용량 초기화
+	}
 }
 
 bool FRenderer::CreateConstantBuffers()
@@ -873,7 +934,7 @@ void FRenderer::Release()
 	FShaderMap::Get().Clear();
 	FMaterialManager::Get().Clear();
 	RenderStateManager.reset();
-
+	if (InstanceBuffer) { InstanceBuffer->Release(); InstanceBuffer = nullptr; }
 	if (NormalSampler) { NormalSampler->Release(); NormalSampler = nullptr; }
 	if (StencilWriteState) { StencilWriteState->Release(); StencilWriteState = nullptr; }
 	if (StencilTestState) { StencilTestState->Release(); StencilTestState = nullptr; }

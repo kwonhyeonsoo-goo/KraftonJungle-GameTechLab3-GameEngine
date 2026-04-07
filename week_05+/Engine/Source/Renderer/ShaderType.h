@@ -15,3 +15,9 @@ struct FObjectConstantBuffer
 {
 	FMatrix World;
 };
+struct FInstanceData
+{
+	FMatrix World;
+	uint32  ObjectID;
+	float   Padding[3];
+};

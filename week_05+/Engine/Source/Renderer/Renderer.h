@@ -102,7 +102,7 @@ public:
 	FTextMeshBuilder& GetTextRenderer() { return TextRenderer; }
 	FSubUVRenderer& GetSubUVRenderer() { return SubUVRenderer; }
 	FVector GetCameraPosition() const;
-
+	void EnsureInstanceBufferCapacity(uint32 Count);
 	ID3D11ShaderResourceView* GetFolderIconSRV() const { return FolderIconSRV; }
 	ID3D11ShaderResourceView* GetFileIconSRV() const { return FileIconSRV; }
 private:
@@ -117,6 +117,7 @@ private:
 	bool CreateConstantBuffers();
 	void UpdateFrameConstantBuffer();
 	void UpdateObjectConstantBuffer(const FMatrix& WorldMatrix);
+	void UpdateObjectInstanceBuffer(const FMatrix& WorldMatrix);
 	void ClearDepthBuffer();
 
 	bool CreateTextureFromSTB(ID3D11Device* Device, const wchar_t* FilePath, ID3D11ShaderResourceView** OutSRV);
@@ -179,7 +180,8 @@ private:
 
 	/** SubUV, Text 이외 일반 material texture sample 용도 */
 	ID3D11SamplerState* NormalSampler = nullptr;
-
+	ID3D11Buffer* InstanceBuffer;
+	uint32 InstanceBufferCapacity;
 public:
 	CShaderManager ShaderManager;
 };

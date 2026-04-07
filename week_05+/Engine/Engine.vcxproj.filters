@@ -289,7 +289,6 @@
     <ClCompile Include="Source\Asset\AssetRegistry.cpp" />
     <ClCompile Include="Source\Asset\AssetCooker.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveSky.cpp" />
-    <ClCompile Include="Source\World\Octree.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -605,7 +604,6 @@
     <ClInclude Include="Source\Asset\AssetCooker.h" />
     <ClInclude Include="Source\Asset\CookedAsset.h" />
     <ClInclude Include="Source\Primitive\PrimitiveSky.h" />
-    <ClInclude Include="Source\World\Octree.h" />
     <ClInclude Include="Source\Math\Ray.h" />
   </ItemGroup>
   <ItemGroup>
