@@ -48,8 +48,6 @@ void UStaticMeshComponent::SetStaticMeshData(ID3D11Device* Device, UStaticMesh* 
 
 	// 이전 메쉬가 쓰던 다이내믹 매테리얼 찌꺼기 초기화
 
-	DynamicMaterialOwners.clear();
-
 	if (!StaticMesh) return;
 
 	FStaticMeshRenderData* RenderData = StaticMesh->GetStaticMeshAsset();

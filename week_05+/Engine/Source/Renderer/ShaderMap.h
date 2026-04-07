@@ -21,7 +21,12 @@ public:
 		ID3D11Device* Device,
 		const wchar_t* FilePath
 	);
-
+	std::shared_ptr<FVertexShader> GetOrCreateVertexShaderWithLayout(
+		ID3D11Device* Device,
+		const wchar_t* FilePath,
+		const D3D11_INPUT_ELEMENT_DESC* Layout,
+		UINT LayoutCount
+	);
 	void Clear();
 
 	static FShaderMap& Get();

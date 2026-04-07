@@ -30,6 +30,7 @@ struct VS_OUTPUT
 	float4 Color : COLOR;
 	float3 Normal : NORMAL;
 	float2 UV : TEXCOORD0;
+	
 };
 
 #endif

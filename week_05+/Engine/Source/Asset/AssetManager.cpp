@@ -70,6 +70,7 @@ UStaticMesh* FAssetManager::LoadBasicShape(const FString& ShapeName)
 	RenderData->SetMeshData(MeshData);
 	RenderData->SetAssetPath(FullPath);
 
+
 	// 4. UStaticMesh 객체 생성 및 GC 보호
 	UStaticMesh* NewMesh = FObjectFactory::ConstructObject<UStaticMesh>(nullptr, ShapeName);
 	NewMesh->SetStaticMeshAsset(RenderData);

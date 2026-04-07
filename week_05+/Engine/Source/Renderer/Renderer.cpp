@@ -10,7 +10,7 @@
 #include <cassert>
 #include <algorithm>
 #include <cctype>
-
+#include "Debug/EngineLog.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "ThirdParty/stb_image.h"
 #include <Asset/AssetManager.h>
@@ -187,10 +187,40 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		SamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 		if (FAILED(Device->CreateSamplerState(&SamplerDesc, &NormalSampler))) return false;
 	}
+
+
 	std::wstring ShaderDirW = FPaths::ShaderDir();
 	std::wstring VSPath = ShaderDirW + L"VertexShader.hlsl";
 	std::wstring PSPath = ShaderDirW + L"PixelShader.hlsl";
 
+	std::wstring InstancedVSPath = ShaderDirW + L"InstancedVertexShader.hlsl";
+
+	D3D11_INPUT_ELEMENT_DESC InstancedLayout[] =
+	{
+		// slot 0: per-vertex
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 0,                            D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT,  0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT,     0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,        0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		// slot 1: per-instance
+		{ "WORLD",    0, DXGI_FORMAT_R32G32B32A32_FLOAT,  1, 0,                            D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "WORLD",    1, DXGI_FORMAT_R32G32B32A32_FLOAT,  1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "WORLD",    2, DXGI_FORMAT_R32G32B32A32_FLOAT,  1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "WORLD",    3, DXGI_FORMAT_R32G32B32A32_FLOAT,  1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "OBJECTID", 0, DXGI_FORMAT_R32_UINT,            1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+	};
+
+	InstancedVertexShader = FShaderMap::Get().GetOrCreateVertexShaderWithLayout(
+		Device,
+		InstancedVSPath.c_str(),
+		InstancedLayout,
+		ARRAYSIZE(InstancedLayout)
+	);
+	if (!InstancedVertexShader)
+	{
+		MessageBox(0, L"Instanced Vertex Shader Load Failed.", 0, 0);
+		return false;
+	}
 	if (!ShaderManager.LoadVertexShader(Device, VSPath.c_str())) return false;
 	if (!ShaderManager.LoadPixelShader(Device, PSPath.c_str())) return false;
 
@@ -516,7 +546,7 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 		if (Cmd.Material != CurrentMaterial)
 		{
 			Cmd.Material->Bind(DeviceContext);
-			
+			InstancedVertexShader->Bind(DeviceContext);
 			// RenderStateManager를 통한 일괄 상태 바인딩 (캐싱 활용)
 			RenderStateManager->BindState(Cmd.Material->GetRasterizerState());
 			RenderStateManager->BindState(Cmd.Material->GetDepthStencilState());
@@ -557,15 +587,17 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 		D3D11_MAPPED_SUBRESOURCE Mapped;
 		if (SUCCEEDED(DeviceContext->Map(InstanceBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
 		{
-			FMatrix* InstanceData = static_cast<FMatrix*>(Mapped.pData);
+			FInstanceData* InstanceData = static_cast<FInstanceData*>(Mapped.pData);
 			uint32 Index = 0;
 			for (auto curr = batchStart; curr != batchEnd; ++curr)
 			{
-				InstanceData[Index++] = curr->WorldMatrix.GetTransposed();
+				InstanceData[Index].World = curr->WorldMatrix;
+				InstanceData[Index].ObjectID = 0;
+				Index++;
 			}
 			DeviceContext->Unmap(InstanceBuffer, 0);
 		}
-		UINT Stride = sizeof(FMatrix);
+		UINT Stride = sizeof(FInstanceData);
 		UINT Offset = 0;
 		DeviceContext->IASetVertexBuffers(1, 1, &InstanceBuffer, &Stride, &Offset);
 
@@ -575,10 +607,12 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 			DeviceContext->DrawIndexedInstanced(static_cast<UINT>(Cmd.MeshData->Indices.size()), InstanceCount, 0, 0, 0);
 		else if (!Cmd.MeshData->Vertices.empty())
 			DeviceContext->DrawInstanced(static_cast<UINT>(Cmd.MeshData->Vertices.size()), InstanceCount, 0, 0);
-
+	
+		UE_LOG("Batch Instancing Check! Mesh is drawn with InstanceCount: %u\n", InstanceCount); // 추가
 		// 루프 종료 후 다음 묶음으로 이동
 		it = batchEnd;
 	}
+
 }
 
 void FRenderer::ClearDepthBuffer()

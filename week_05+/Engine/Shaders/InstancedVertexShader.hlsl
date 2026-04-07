@@ -33,6 +33,7 @@ struct VS_OUTPUT
 	float3 Normal : NORMAL;
 	float2 UV : TEXCOORD0;
 	float3 WorldPos : POSITION1;
+	uint ObjID : OBJECTID;
 };
 
 VS_OUTPUT main(VS_INPUT input)
@@ -58,6 +59,6 @@ VS_OUTPUT main(VS_INPUT input)
     // 노멀 행렬 변환 (Uniform Scale 가정)
 	output.Normal = normalize(mul(input.Normal, (float3x3) instanceWorld));
 	output.UV = input.UV;
-    
+	output.ObjID = input.ObjID;
 	return output;
 }

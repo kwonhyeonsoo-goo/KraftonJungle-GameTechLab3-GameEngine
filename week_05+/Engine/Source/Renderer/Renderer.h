@@ -117,7 +117,6 @@ private:
 	bool CreateConstantBuffers();
 	void UpdateFrameConstantBuffer();
 	void UpdateObjectConstantBuffer(const FMatrix& WorldMatrix);
-	void UpdateObjectInstanceBuffer(const FMatrix& WorldMatrix);
 	void ClearDepthBuffer();
 
 	bool CreateTextureFromSTB(ID3D11Device* Device, const wchar_t* FilePath, ID3D11ShaderResourceView** OutSRV);
@@ -158,6 +157,7 @@ private:
 	ID3D11DepthStencilState* StencilWriteState = nullptr;
 	ID3D11DepthStencilState* StencilTestState = nullptr;
 	std::shared_ptr<FPixelShader> OutlinePS;
+	std::shared_ptr<FVertexShader> InstancedVertexShader;
 
 	FGUICallback GUIInit;
 	FGUICallback GUIShutdown;
@@ -180,8 +180,8 @@ private:
 
 	/** SubUV, Text 이외 일반 material texture sample 용도 */
 	ID3D11SamplerState* NormalSampler = nullptr;
-	ID3D11Buffer* InstanceBuffer;
-	uint32 InstanceBufferCapacity;
+	ID3D11Buffer* InstanceBuffer=nullptr;
+	uint32 InstanceBufferCapacity=0;
 public:
 	CShaderManager ShaderManager;
 };
