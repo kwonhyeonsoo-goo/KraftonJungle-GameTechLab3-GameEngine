@@ -306,16 +306,17 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 
 	if (!TextRenderer.Initialize(this)) return false;
 
-	std::filesystem::path SubUVTexturePath = FPaths::ContentDir() / FString("Textures/SubUVDino.png");
-	if (!SubUVRenderer.Initialize(this, (SubUVTexturePath.wstring())))
+	FString SubUVPathStr = FPaths::ToAbsolutePath("Content/Textures/SubUVDino.png");
+	if (!SubUVRenderer.Initialize(this, FPaths::ToWide(SubUVPathStr)))
 	{
 		MessageBox(0, L"SubUVRenderer Initialize Failed.", 0, 0);
 	}
 
-	std::filesystem::path FolderIconPath = FPaths::AssetDir() / FString("Textures/FolderIcon.png");
-	std::filesystem::path FileIconPath = FPaths::AssetDir() / FString("Textures/FileIcon.png");
-	CreateTextureFromSTB(Device, FolderIconPath.wstring().c_str(), &FolderIconSRV);
-	CreateTextureFromSTB(Device, FileIconPath.wstring().c_str(), &FileIconSRV);
+	FString FolderIconPathStr = FPaths::ToAbsolutePath("Assets/Textures/FolderIcon.png");
+	FString FileIconPathStr = FPaths::ToAbsolutePath("Assets/Textures/FileIcon.png");
+
+	CreateTextureFromSTB(Device, FPaths::ToWide(FolderIconPathStr).c_str(), &FolderIconSRV);
+	CreateTextureFromSTB(Device, FPaths::ToWide(FileIconPathStr).c_str(), &FileIconSRV);
 
 	return true;
 }
@@ -650,7 +651,7 @@ bool FRenderer::InitOutlineResources()
 	TestDesc.BackFace = TestDesc.FrontFace;
 	if (FAILED(Device->CreateDepthStencilState(&TestDesc, &StencilTestState))) return false;
 
-	FString PSPath = (FPaths::ShaderDir() / "OutlinePixelShader.hlsl").string();
+	FString PSPath = FPaths::ToAbsolutePath("Engine/Shaders/OutlinePixelShader.hlsl");
 	OutlinePS = FShaderMap::Get().GetOrCreatePixelShader(Device, FPaths::ToWide(PSPath).c_str());
 	return OutlinePS != nullptr;
 }

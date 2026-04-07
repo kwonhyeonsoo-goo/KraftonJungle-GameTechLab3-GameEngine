@@ -7,7 +7,7 @@
 #include "Core/Paths.h"
 #include "Actor/Actor.h"
 #include "Actor/AttachTestActor.h"
-#include "Renderer/Renderer.h" /
+#include "Renderer/Renderer.h"
 #include "Component/PrimitiveComponent.h"
 #include "World/Level.h"
 #include "Object/ObjectFactory.h" 
@@ -48,8 +48,8 @@ void FSceneSerializer::Save(ULevel* Level, const FString& FilePath, const FCamer
 		for (const FString& AbsPath : LoadedPaths)
 		{
 			// 절대 경로 → 프로젝트 루트 기준 상대 경로
-			std::filesystem::path Rel = std::filesystem::relative(AbsPath, Root);
-			Materials.push_back(Rel.generic_string());
+			FString Rel = FPaths::ToRelativePath(AbsPath);
+			Materials.push_back(Rel);
 		}
 		Json["Materials"] = Materials;
 	}
@@ -73,7 +73,7 @@ void FSceneSerializer::Save(ULevel* Level, const FString& FilePath, const FCamer
 
 	Json["Primitives"] = Primitives;
 	Json["NextUUID"] = FObjectFactory::GetLastUUID();
-	std::ofstream File(std::filesystem::path(FilePath).wstring());
+	std::ofstream File(FPaths::ToWide(FilePath));
 	if (File.is_open())
 	{
 		File << std::setw(2) << Json << std::endl;
@@ -81,7 +81,7 @@ void FSceneSerializer::Save(ULevel* Level, const FString& FilePath, const FCamer
 }
 bool FSceneSerializer::Load(ULevel* Level, const FString& FilePath, ID3D11Device* Device, FCamera* PerspectiveCamera)
 {
-	std::ifstream File(std::filesystem::path(FilePath).wstring());
+	std::ifstream File(FPaths::ToWide(FilePath));
 	if (!File.is_open()) return false;
 
 	nlohmann::json Json;
@@ -95,7 +95,7 @@ bool FSceneSerializer::Load(ULevel* Level, const FString& FilePath, ID3D11Device
 	{
 		for (const auto& MatPath : Json["Materials"])
 		{
-			FString FullPath = (FPaths::ProjectRoot() / MatPath.get<std::string>()).string();
+			FString FullPath = FPaths::ToAbsolutePath(MatPath.get<std::string>());
 			if (GRenderer && GRenderer->GetRenderStateManager())
 			{
 				FMaterialManager::Get().LoadFromFile(Device, GRenderer->GetRenderStateManager().get(), FullPath);
@@ -140,11 +140,9 @@ bool FSceneSerializer::Load(ULevel* Level, const FString& FilePath, ID3D11Device
 			PerspectiveCamera->SetRotation(PCamJson["Rotation"][0].get<float>(), PCamJson["Rotation"][1].get<float>());
 		}
 		
-		// GetFloatSafe 람다를 써서 [60.0] 배열이든 60.0 단일 값이든 터지지 않게 보호!
 		if (PCamJson.contains("FOV"))       PerspectiveCamera->SetFOV(GetFloatSafe(PCamJson["FOV"]));
 		if (PCamJson.contains("NearClip"))  PerspectiveCamera->SetNearClip(GetFloatSafe(PCamJson["NearClip"]));
 		
-		// if (PCamJson.contains("FarClip")) PerspectiveCamera->SetFarClip(GetFloatSafe(PCamJson["FarClip"])); // 아무도 나를 막을 수 없음 ㅋㅋㅋ
 	}
 
 	// Primitives 파싱
@@ -152,23 +150,17 @@ bool FSceneSerializer::Load(ULevel* Level, const FString& FilePath, ID3D11Device
 	auto Items = Json["Primitives"].items();
 	for (auto& [Key, Value] : Items)
 	{
-		// 1. "Class" 키가 없으면 "Type" 키로 Fallback
+	
 		FString ClassName;
-		//if (ClassName.empty()) 
-		//{
-		//	ClassName = Value.value("Type", "");
-		//	
-		//	// [주의] 만약 엔진의 클래스 이름이 "AStaticMeshActor"인데 JSON에 "StaticMeshComp"로 적혀있다면 강제 매핑이 필요할 수 있습니다.
-		//	if (ClassName == "StaticMeshComp") ClassName = "AStaticMeshActor"; // 필요시 수정
-		//}
+		
+	
 		ClassName = "AStaticMeshActor";
 
 
 		UClass* ActorClass = UClass::FindClass(ClassName);
 		if (!ActorClass)
 		{
-			// 클래스를 못 찾았을 때를 위한 에러 로그 (디버깅용)
-			// UE_LOG("Failed to find class: %s", ClassName.c_str());
+
 			ActorIndex++;
 			continue;
 		}
