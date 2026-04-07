@@ -281,7 +281,11 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		PickRasterOption.CullMode = D3D11_CULL_BACK;
 		PickingMaterial->SetRasterizerOption(PickRasterOption);
 		PickingMaterial->SetRasterizerState(RenderStateManager->GetOrCreateRasterizerState(PickingMaterial->GetRasterizerOption()));
-		PickingMaterial->SetDepthStencilOption({ true, D3D11_DEPTH_WRITE_MASK_ALL });
+		FDepthStencilStateOption PickDepthOption;
+		PickDepthOption.DepthEnable = true;
+		PickDepthOption.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+		PickingMaterial->SetDepthStencilOption(PickDepthOption);
+		PickingMaterial->SetDepthStencilState(RenderStateManager->GetOrCreateDepthStencilState(PickDepthOption));
 		FBlendStateOption PickBlendOption;
 		PickBlendOption.BlendEnable = false;
 		PickingMaterial->SetBlendOption(PickBlendOption);
@@ -569,6 +573,7 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 		for (const FCachedBatch& Batch : CachedBatches)
 		{
 			//머티리얼 바인딩
+			if (!Batch.MeshData) continue;
 			if (Batch.Material != CurrentMaterial)
 			{
 				Batch.Material->Bind(DeviceContext);
@@ -691,7 +696,7 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 	}
 
 	DeviceContext->Unmap(InstanceBuffer, 0);
-
+	bInstanceBufferDirty = false;
 
 	UINT Stride = sizeof(FInstanceData);
 	UINT Offset = 0;
@@ -744,12 +749,20 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 void FRenderer::RenderPickingPass()
 {
 	if (!PickingRTV || !PickingDSV || !PickingMaterial) return;
-
+	SetConstantBuffers();
+	UpdateFrameConstantBuffer();
 	// 피킹 타겟 클리어 (배경은 0 = 선택 안 됨)
-	const uint32 ClearColor[4] = { 0, 0, 0, 0 };
+	const float ClearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	DeviceContext->ClearRenderTargetView(PickingRTV, ClearColor);
 	DeviceContext->ClearRenderTargetView(PickingRTV, reinterpret_cast<const float*>(ClearColor));
 	DeviceContext->ClearDepthStencilView(PickingDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
-	D3D11_VIEWPORT ActiveVP = bUseLevelRenderTargetOverride ? LevelViewport : Viewport;
+	D3D11_VIEWPORT ActiveVP = {};
+	ActiveVP.TopLeftX = 0.0f;
+	ActiveVP.TopLeftY = 0.0f;
+	ActiveVP.Width = bUseLevelRenderTargetOverride ? LevelViewport.Width : Viewport.Width;
+	ActiveVP.Height = bUseLevelRenderTargetOverride ? LevelViewport.Height : Viewport.Height;
+	ActiveVP.MinDepth = 0.0f;
+	ActiveVP.MaxDepth = 1.0f;
 
 	DeviceContext->OMSetRenderTargets(1, &PickingRTV, PickingDSV);
 	DeviceContext->RSSetViewports(1, &ActiveVP);
@@ -763,9 +776,19 @@ void FRenderer::RenderPickingPass()
 	UINT Stride = sizeof(FInstanceData);
 	UINT Offset = 0;
 	DeviceContext->IASetVertexBuffers(1, 1, &InstanceBuffer, &Stride, &Offset);
+	const auto& PickBatches = LayerCachedBatches[ERenderLayer::Default];
+	if (PickBatches.empty())
+	{
+		// 캐시 비어있으면 렌더타겟 복원 후 리턴
+		ID3D11RenderTargetView* ActiveRTV = bUseLevelRenderTargetOverride ? LevelRenderTargetView : RenderTargetView;
+		ID3D11DepthStencilView* ActiveDepth = bUseLevelRenderTargetOverride ? LevelDepthStencilView : DepthStencilView;
+		DeviceContext->OMSetRenderTargets(1, &ActiveRTV, ActiveDepth);
+		return;
+	}
 
 	for (const FCachedBatch& Batch : LayerCachedBatches[ERenderLayer::Default])
 	{
+		if (!Batch.MeshData) continue;
 		Batch.MeshData->Bind(DeviceContext);
 		DeviceContext->IASetPrimitiveTopology(static_cast<D3D11_PRIMITIVE_TOPOLOGY>(Batch.MeshData->Topology));
 
