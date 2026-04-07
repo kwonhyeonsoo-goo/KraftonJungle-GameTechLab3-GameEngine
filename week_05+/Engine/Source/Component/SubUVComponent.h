@@ -5,6 +5,7 @@ class ENGINE_API USubUVComponent : public UPrimitiveComponent
 {
 public:
 	DECLARE_RTTI(USubUVComponent, UPrimitiveComponent)
+	DECLARE_DUPLICATE(USubUVComponent)
 
 	void Initialize();
 

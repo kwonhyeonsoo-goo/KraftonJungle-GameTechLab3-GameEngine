@@ -11,6 +11,8 @@ class ENGINE_API URandomColorComponent : public UActorComponent
 {
 public:
 	DECLARE_RTTI(URandomColorComponent, UActorComponent)
+	DECLARE_DUPLICATE(URandomColorComponent)
+
 	void Initialize();
 	~URandomColorComponent() override;
 

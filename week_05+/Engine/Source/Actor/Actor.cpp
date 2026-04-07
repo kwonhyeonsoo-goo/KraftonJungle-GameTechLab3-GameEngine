@@ -306,13 +306,25 @@ void AActor::SetActorLocation(const FVector& InLocation)
 void AActor::DuplicateSubObjects()
 {
 	UObject::DuplicateSubObjects();
-	for (UActorComponent* Component : OwnedComponents)
+
+	TArray<UActorComponent*> OldComponents = OwnedComponents;
+	USceneComponent* OldRoot = RootComponent;
+
+	OwnedComponents.clear();
+	RootComponent = nullptr;
+
+	for (UActorComponent* Component : OldComponents)
 	{
 		if (Component)
 		{
 			UActorComponent* DuplicatedComp = static_cast<UActorComponent*>(Component->Duplicate());
 			DuplicatedComp->SetOwner(this);
-			AddOwnedComponent(DuplicatedComp);
+			OwnedComponents.push_back(DuplicatedComp);
+
+			if (Component == OldRoot)
+			{
+				RootComponent = static_cast<USceneComponent*>(DuplicatedComp);
+			}
 		}
 	}
 }

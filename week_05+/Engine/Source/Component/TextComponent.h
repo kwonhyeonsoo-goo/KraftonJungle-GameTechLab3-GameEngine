@@ -5,6 +5,7 @@ class ENGINE_API UTextComponent : public UPrimitiveComponent
 {
 public:
 	DECLARE_RTTI(UTextComponent, UPrimitiveComponent)
+	DECLARE_DUPLICATE(UTextComponent)
 
 	virtual void Initialize();
 

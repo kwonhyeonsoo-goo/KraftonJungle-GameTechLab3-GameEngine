@@ -9,6 +9,7 @@ class ENGINE_API UStaticMeshComponent : public UMeshComponent
 {
 public:
 	DECLARE_RTTI(UStaticMeshComponent, UMeshComponent)
+	DECLARE_DUPLICATE(UStaticMeshComponent)
 
 	void Initialize();
 

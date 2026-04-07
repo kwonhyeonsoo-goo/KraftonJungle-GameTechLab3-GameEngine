@@ -56,8 +56,8 @@ public:
 	virtual void Tick(float DeltaTime);
 	virtual void SetViewportRect(const FRect& InRect);
 	virtual void SetViewportInputState(int32 InMouseX, int32 InMouseY, const FRect& InRect);
-	void SetWorldType(ELevelType InWorldType);
-	ELevelType GetWorldType() const;
+	void SetWorldType(EWorldType InWorldType);
+	EWorldType GetWorldType() const;
 	int32 GetViewportWidth() const { return ViewportWidth; }
 	int32 GetViewportHeight() const { return ViewportHeight; }
 
@@ -83,7 +83,7 @@ protected:
 	int32 ViewportHeight = 0;
 	int32 ViewportMouseX = 0;
 	int32 ViewportMouseY = 0;
-	ELevelType WorldType = ELevelType::Game;
+	EWorldType WorldType = EWorldType::Game;
 	SViewportWindow* ViewportWindow = nullptr;
 
 };

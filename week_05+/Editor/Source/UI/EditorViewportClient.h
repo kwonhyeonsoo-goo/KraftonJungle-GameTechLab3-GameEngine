@@ -44,7 +44,7 @@ enum class EEditorViewportType : uint8_t
 class FEditorViewportClient : public FViewportClient
 {
 public:
-	FEditorViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow, EEditorViewportType InViewportType, ELevelType InWorldType);
+	FEditorViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow, EEditorViewportType InViewportType, EWorldType InWorldType);
 
 	void Attach(FCore* Core) override;
 	void Detach() override;
@@ -56,7 +56,7 @@ public:
 	ERenderMode GetRenderMode() const { return RenderMode; }
 	void SetRenderMode(ERenderMode InRenderMode) { RenderMode = InRenderMode; }
 	EEditorViewportType GetViewportType() const { return CameraViewType; }
-	bool SupportsEditingTools() const { return WorldType == ELevelType::Editor; }
+	bool SupportsEditingTools() const { return WorldType == EWorldType::Editor; }
 	void DrawUI() override;
 	void HandleFileDoubleClick(const FString& FilePath);
 	void HandleFileDropOnViewport(const FString& FilePath);

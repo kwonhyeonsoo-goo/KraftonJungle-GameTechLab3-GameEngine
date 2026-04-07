@@ -173,7 +173,7 @@ namespace
 	}
 }
 
-FEditorViewportClient::FEditorViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow, EEditorViewportType InViewportType, ELevelType InWorldType)
+FEditorViewportClient::FEditorViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow, EEditorViewportType InViewportType, EWorldType InWorldType)
 	: EditorUI(InEditorUI)
 	, MainWindow(InMainWindow)
 	, CameraViewType(InViewportType)
@@ -929,7 +929,7 @@ void FEditorViewportClient::HandleSelectionClick(FCore* Core, UWorld* World, AAc
 		return;
 	}
 
-	AActor* PickedActor = Picker.PickActor(World->GetAllActors(), &CameraTransform, ViewportMouseX, ViewportMouseY, ViewportWidth, ViewportHeight);
+	AActor* PickedActor = Picker.PickActor(World->GetActors(), &CameraTransform, ViewportMouseX, ViewportMouseY, ViewportWidth, ViewportHeight);
 	Core->SetSelectedActor(PickedActor);
 	EditorUI.SyncSelectedActorProperty();
 }

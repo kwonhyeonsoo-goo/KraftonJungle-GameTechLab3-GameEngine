@@ -70,12 +70,12 @@ void FViewportClient::SetViewportInputState(int32 InMouseX, int32 InMouseY, cons
 	SetViewportRect(InRect);
 }
 
-void FViewportClient::SetWorldType(ELevelType InWorldType)
+void FViewportClient::SetWorldType(EWorldType InWorldType)
 {
 	WorldType = InWorldType;
 }
 
-ELevelType FViewportClient::GetWorldType() const
+EWorldType FViewportClient::GetWorldType() const
 {
 	return WorldType;
 }
@@ -103,12 +103,12 @@ UWorld* FViewportClient::ResolveWorld(FCore* Core) const
 
 	switch (WorldType)
 	{
-	case ELevelType::Editor:
+	case EWorldType::Editor:
 		return Core->GetEditorWorld();
-	case ELevelType::Game:
-	case ELevelType::PIE:
+	case EWorldType::Game:
+	case EWorldType::PIE:
 		return Core->GetGameWorld();
-	case ELevelType::Inactive:
+	case EWorldType::Inactive:
 	default:
 		return Core->GetActiveWorld();
 	}

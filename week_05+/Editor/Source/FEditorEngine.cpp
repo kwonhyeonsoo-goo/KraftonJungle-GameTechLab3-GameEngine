@@ -28,27 +28,6 @@
 
 namespace
 {
-	void SnapObjViewerActorBottomToZero(AActor* Actor, FEditorViewportClient* ViewportClient)
-	{
-		if (!Actor || !ViewportClient)
-		{
-			return;
-		}
-
-		USceneComponent* Root = Actor->GetRootComponent();
-		if (!Root)
-		{
-			return;
-		}
-
-		FTransform Transform = Root->GetRelativeTransform();
-		FVector Location = Transform.GetLocation();
-		Location.Z -= ViewportClient->GetObjViewerBottomZ(Actor);
-		Transform.SetLocation(Location);
-		Root->SetRelativeTransform(Transform);
-		ViewportClient->RefreshObjViewerCameraPivot(Actor);
-	}
-
 	FString PromptForObjFilePath()
 	{
 		char FileName[MAX_PATH] = "";
@@ -72,8 +51,13 @@ namespace
 	}
 }
 
+FEditorEngine* GEditor = nullptr;
+
 bool FEditorEngine::Initialize(HINSTANCE hInstance)
 {
+	GEngine = this;
+	GEditor = this;
+
 	ImGui_ImplWin32_EnableDpiAwareness();
 
 	if (!FEngine::Initialize(hInstance, L"Jungle Editor", 1280, 720))
@@ -94,6 +78,9 @@ bool FEditorEngine::Initialize(HINSTANCE hInstance)
 	WindowManager.AddWindow(new SViewportWindow(
 		FRect(0.0f, 0.0f, Width, Height),
 		CreateEditorViewportContext(FRect(0.0f, 0.0f, Width, Height), EEditorViewportType::Perspective)));
+
+	FWorldContext& EditorWorldContext = FEngine::CreateWorldContext(EWorldType::Editor);
+	GWorld = EditorWorldContext.World;
 
 	return true;
 }
@@ -170,6 +157,27 @@ void FEditorEngine::SetViewportLayoutBounds(FRect InRect)
 	WindowManager.SetRootRect(InRect);
 }
 
+FWorldContext FEditorEngine::GetEditorWorldContext() const
+{
+	for (const FWorldContext& Context : WorldContexts)
+	{
+		if (Context.WorldType == EWorldType::Editor)
+		{
+			return Context;
+		}
+	}
+	return FWorldContext();
+}
+
+void FEditorEngine::RemoveEditorWorldContext(EWorldType WorldType)
+{
+	WorldContexts.erase(std::remove_if(WorldContexts.begin(), WorldContexts.end(),
+		[WorldType](const FWorldContext& Context)
+		{
+			return Context.WorldType == WorldType;
+		}), WorldContexts.end());
+}
+
 void FEditorEngine::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
 	FEngine::ProcessInput(Hwnd, Msg, WParam, LParam);
@@ -179,6 +187,37 @@ void FEditorEngine::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LPar
 void FEditorEngine::Tick(float DeltaTime)
 {
 	Input(DeltaTime);
+
+	for (FWorldContext& Context : WorldContexts)
+	{
+		UWorld* EditorWorld = Context.World;
+		if (EditorWorld && EditorWorld->GetWorldType() == EWorldType::Editor)
+		{
+			ULevel* Level = EditorWorld->GetLevel();
+			{
+				for (AActor* Actor : Level->GetActors())
+				{
+					if (Actor && Actor->CanTickInEditor() && Actor->CanTick())
+					{
+						Actor->Tick(DeltaTime);
+					}
+				}
+			}
+		}
+		else if (EditorWorld && EditorWorld->GetWorldType() == EWorldType::PIE)
+		{
+			ULevel* Level = EditorWorld->GetLevel();
+			{
+				for (AActor* Actor : Level->GetActors())
+				{
+					if (Actor && Actor->CanTick())
+					{
+						Actor->Tick(DeltaTime);
+					}
+				}
+			}
+		}
+	}
 
 	WindowManager.Tick(DeltaTime);
 #if IS_OBJ_VIEWER //뷰어는 활성 viewport가 준비된 뒤에만 startup load가 가능합니다.
@@ -202,7 +241,6 @@ void FEditorEngine::Render()
 	WindowManager.RenderWindows();
 
 	GRenderer->EndFrame();
-
 }
 
 void FEditorEngine::OnMainWindowResized(int32 Width, int32 Height)
@@ -216,19 +254,19 @@ void FEditorEngine::OnMainWindowResized(int32 Width, int32 Height)
 
 FViewportClient* FEditorEngine::CreateViewportClient()
 {
-	return CreateEditorViewportClient(EEditorViewportType::Perspective, ELevelType::Editor);
+	return CreateEditorViewportClient(EEditorViewportType::Perspective, EWorldType::Editor);
 }
 
 FViewportContext* FEditorEngine::CreateEditorViewportContext(const FRect& InRect, EEditorViewportType InViewportType)
 {
-	FViewportClient* ViewportClient = CreateEditorViewportClient(InViewportType, ELevelType::Editor);
+	FViewportClient* ViewportClient = CreateEditorViewportClient(InViewportType, EWorldType::Editor);
 	FViewport* Viewport = new FViewport(InRect);
 	FViewportContext* ViewportContext = new FViewportContext(Viewport, ViewportClient);
 	ViewportContext->Initialize(Core.get(), InputManager, EnhancedInput);
 	return ViewportContext;
 }
 
-FEditorViewportClient* FEditorEngine::CreateEditorViewportClient(EEditorViewportType InViewportType, ELevelType InWorldType)
+FEditorViewportClient* FEditorEngine::CreateEditorViewportClient(EEditorViewportType InViewportType, EWorldType InWorldType)
 {
 	return new FEditorViewportClient(EditorUI, MainWindow, InViewportType, InWorldType);
 }

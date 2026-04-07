@@ -31,6 +31,15 @@ inline void InitializeIfAble(T* obj) {
 			InitializeIfAble(this); \
 		}
 
+#define DECLARE_DUPLICATE(ClassName) \
+	public: \
+		virtual UObject* Duplicate() override \
+		{ \
+			ClassName* NewObject = new ClassName(*this); \
+			NewObject->DuplicateSubObjects(); \
+			return NewObject; \
+		}
+
 #define IMPLEMENT_RTTI(ClassName, ParentClassName) \
     namespace { \
         UObject* Create##ClassName##Instance(UObject* InOuter, const FString& InName) { \

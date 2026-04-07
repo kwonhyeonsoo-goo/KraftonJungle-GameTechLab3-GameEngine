@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PIEState.h"
 #include "Core/FEngine.h"
 #include "UI/EditorViewportClient.h"
 #include "UI/EditorUI.h"
@@ -16,9 +17,15 @@ public:
 	void Shutdown() override;
 	FWindowManager& GetWindowManager() { return WindowManager; }
 	FViewportContext* CreateEditorViewportContext(const FRect& InRect, EEditorViewportType InViewportType);
-	FEditorViewportClient* CreateEditorViewportClient(EEditorViewportType InViewportType, ELevelType InWorldType = ELevelType::Editor);
+	FEditorViewportClient* CreateEditorViewportClient(EEditorViewportType InViewportType, EWorldType InWorldType = EWorldType::Editor);
 	void SaveEditorSettings();
 	void SetViewportLayoutBounds(FRect InRect);
+
+	EPIEState GetPIEState() const { return PIEState; }
+	void SetPIEState(EPIEState NewState) { PIEState = NewState; }
+
+	FWorldContext GetEditorWorldContext() const;
+	void RemoveEditorWorldContext(EWorldType WorldType);
 
 protected:
 	void PreInitialize() override;
@@ -27,7 +34,7 @@ protected:
 	void Tick(float DeltaTime) override;
 	void Render() override;
 	void OnMainWindowResized(int32 Width, int32 Height) override;
-	ELevelType GetStartupLevelType() const override { return ELevelType::Editor; }
+	EWorldType GetStartupLevelType() const override { return EWorldType::Editor; }
 	FViewportClient* CreateViewportClient() override;
 
 private:
@@ -38,4 +45,7 @@ private:
 	FWindowManager WindowManager;
 	bool bPendingObjViewerStartupPrompt = false;
 
+	EPIEState PIEState = EPIEState::Stopped;
 };
+
+extern FEditorEngine* GEditor;

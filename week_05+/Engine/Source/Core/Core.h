@@ -38,7 +38,7 @@ public:
 	FCore& operator=(const FCore&) = delete;
 	FCore& operator=(FCore&&) = delete;
 
-	bool Initialize(HWND Hwnd, int32 Width, int32 Height, ELevelType StartupLevelType = ELevelType::Game);
+	bool Initialize(HWND Hwnd, int32 Width, int32 Height, EWorldType StartupLevelType = EWorldType::Game);
 	void Release();
 
 	void Tick();

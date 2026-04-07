@@ -11,14 +11,14 @@ FLevelManager::~FLevelManager()
 	Release();
 }
 
-bool FLevelManager::Initialize(float AspectRatio, ELevelType StartupLevelType, FRenderer* InRenderer)
+bool FLevelManager::Initialize(float AspectRatio, EWorldType StartupLevelType, FRenderer* InRenderer)
 {
 	Renderer = InRenderer;
 
 	FWorldContext* StartupContext = &GameWorldContext;
 	FString ContextName = "GameLevel";
 
-	if (StartupLevelType == ELevelType::Editor)
+	if (StartupLevelType == EWorldType::Editor)
 	{
 		StartupContext = &EditorWorldContext;
 		ContextName = "EditorLevel";
@@ -45,7 +45,7 @@ void FLevelManager::Release()
 // ===== World Context 생성/파괴 =====
 
 bool FLevelManager::CreateWorldContext(FWorldContext& OutContext, const FString& ContextName,
-	ELevelType WorldType, float AspectRatio, bool bDefaultLevel)
+	EWorldType WorldType, float AspectRatio, bool bDefaultLevel)
 {
 	OutContext.ContextName = ContextName;
 	OutContext.WorldType = WorldType;
@@ -60,11 +60,11 @@ bool FLevelManager::CreateWorldContext(FWorldContext& OutContext, const FString&
 
 	if (bDefaultLevel)
 	{
-		OutContext.World->InitializeWorld(AspectRatio, Renderer ? Renderer->GetDevice() : nullptr);
+		OutContext.World->InitializeWorld();
 	}
 	else
 	{
-		OutContext.World->InitializeWorld(AspectRatio);
+		OutContext.World->InitializeWorld();
 	}
 
 	return true;
