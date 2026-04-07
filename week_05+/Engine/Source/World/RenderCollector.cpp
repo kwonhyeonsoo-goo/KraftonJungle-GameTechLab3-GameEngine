@@ -9,16 +9,28 @@
 #include "Renderer/TextMeshBuilder.h"
 #include "Renderer/SubUVRenderer.h"
 #include "Renderer/Material.h"
+#include "Actor/Actor.h"
 #include "Component/StaticMeshComponent.h"
 #include "Camera/Camera.h"
 
 void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors, const FFrustum& Frustum,
 	const FShowFlags& ShowFlags, const FCamera* Camera, FRenderCommandQueue& OutQueue)
 {
+	bool bFrustumChanged = !PrevFrustum.Equals(Frustum);
+	bool bShowFlagsChanged = (PrevShowFlagsBits != ShowFlags.GetFlags());
+
+	if (!bCommandsDirty && !bFrustumChanged && !bShowFlagsChanged)
+	{
+		OutQueue.Commands = CachedQueue.Commands;
+		return;
+	}
+
 	TArray<UPrimitiveComponent*> VisiblePrimitives;
 	FrustrumCull(Actors, Frustum, ShowFlags, VisiblePrimitives);
 
 	if (!GRenderer) return;
+
+	OutQueue.Clear();
 
 	FTextMeshBuilder& TextRenderer = GRenderer->GetTextRenderer();
 	FSubUVRenderer& SubUVRenderer = GRenderer->GetSubUVRenderer();
@@ -27,9 +39,9 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 	{
 		if (!PrimitiveComponent) continue;
 
-		// ─── 텍스트 컴포넌트 ───
 		if (PrimitiveComponent->IsA(UTextComponent::StaticClass()))
 		{
+			if (!PrimitiveComponent) continue;
 			UTextComponent* TextComp = static_cast<UTextComponent*>(PrimitiveComponent);
 			FMeshData* TextMesh = TextComp->GetTextMesh();
 			
@@ -134,6 +146,13 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 
 				if (Command.Material && Command.Material->GetBlendOption().BlendEnable)
 					Command.RenderLayer = ERenderLayer::Translucent;
+				Command.WorldMatrix = MeshComp->GetWorldTransform();
+				Command.SortKey = FRenderCommand::MakeSortKey(Command.Material, Command.MeshData, Command.FirstIndex);
+
+				if (AActor* OwnerActor = PrimitiveComponent->GetOwner())
+				{
+					Command.ObjectID = OwnerActor->GetUUID();
+				}
 				OutQueue.AddCommand(Command);
 			}
 			continue;
@@ -152,6 +171,10 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 			Command.RenderLayer = ERenderLayer::Translucent;
 		OutQueue.AddCommand(Command);
 	}
+	CachedQueue.Commands = OutQueue.Commands;
+	PrevFrustum = Frustum;
+	PrevShowFlagsBits = ShowFlags.GetFlags();
+	bCommandsDirty = false;
 }
 
 void FLevelRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FFrustum& Frustum,

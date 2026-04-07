@@ -15,5 +15,6 @@ VS_OUTPUT main(VS_INPUT Input)
 	Output.Color = Input.Color * ColorTint;
 	Output.Normal = mul(Input.Normal, (float3x3) World);
 	Output.UV = Input.UV;
+	Output.ObjID = 0;
 	return Output;
 }

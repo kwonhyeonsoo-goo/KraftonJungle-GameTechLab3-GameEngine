@@ -105,6 +105,9 @@ public:
 	void EnsureInstanceBufferCapacity(uint32 Count);
 	ID3D11ShaderResourceView* GetFolderIconSRV() const { return FolderIconSRV; }
 	ID3D11ShaderResourceView* GetFileIconSRV() const { return FileIconSRV; }
+	void MarkInstanceBufferDirty() { bInstanceBufferDirty = true; }
+	void RenderPickingPass();
+	uint32 ReadPixelID(int32 ScreenX, int32 ScreenY);
 private:
 	void SetConstantBuffers();
 	void AddCommand(const FRenderCommand& Command);
@@ -120,7 +123,6 @@ private:
 	void ClearDepthBuffer();
 
 	bool CreateTextureFromSTB(ID3D11Device* Device, const wchar_t* FilePath, ID3D11ShaderResourceView** OutSRV);
-
 private:
 	std::unique_ptr<FRenderStateManager> RenderStateManager = nullptr;
 
@@ -182,7 +184,27 @@ private:
 	ID3D11SamplerState* NormalSampler = nullptr;
 	ID3D11Buffer* InstanceBuffer=nullptr;
 	uint32 InstanceBufferCapacity=0;
+	bool bInstanceBufferDirty = true;
+	ID3D11Texture2D* PickingTexture = nullptr;
+	ID3D11RenderTargetView* PickingRTV = nullptr;
+	ID3D11ShaderResourceView* PickingSRV = nullptr;
+	ID3D11Texture2D* PickingStagingTexture = nullptr;
+	ID3D11DepthStencilView* PickingDSV = nullptr;
+	std::shared_ptr<FMaterial> PickingMaterial;
+	struct FCachedBatch
+	{
+		FMaterial* Material;
+		FMeshData* MeshData;
+		uint32 FirstIndex;
+		uint32 IndexCount;
+		uint32 InstanceCount;
+		uint32 InstanceBufferOffset; 
+	};
+
+	// 레이어별로 캐시를 따로 관리해야 섞이지 않습니다.
+	std::unordered_map<ERenderLayer, TArray<FCachedBatch>> LayerCachedBatches;
 public:
+
 	CShaderManager ShaderManager;
 };
 

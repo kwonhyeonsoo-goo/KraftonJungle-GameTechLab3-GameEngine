@@ -153,7 +153,30 @@ bool FRenderer::CreateRenderTargetAndDepthStencil(int32 Width, int32 Height)
 	
 	Hr = Device->CreateDepthStencilView(DepthTex, nullptr, &DepthStencilView);
 	DepthTex->Release();
-	
+	D3D11_TEXTURE2D_DESC PickDesc = {};
+	PickDesc.Width = Width;
+	PickDesc.Height = Height;
+	PickDesc.MipLevels = 1;
+	PickDesc.ArraySize = 1;
+	PickDesc.Format = DXGI_FORMAT_R32_UINT;
+	PickDesc.SampleDesc.Count = 1;
+	PickDesc.Usage = D3D11_USAGE_DEFAULT;
+	PickDesc.BindFlags = D3D11_BIND_RENDER_TARGET;
+	if (FAILED(Device->CreateTexture2D(&PickDesc, nullptr, &PickingTexture))) return false;
+	if (FAILED(Device->CreateRenderTargetView(PickingTexture, nullptr, &PickingRTV))) return false;
+
+	// --- 피킹용 Staging 텍스처 (CPU 읽기용) ---
+	PickDesc.Usage = D3D11_USAGE_STAGING;
+	PickDesc.BindFlags = 0;
+	PickDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	if (FAILED(Device->CreateTexture2D(&PickDesc, nullptr, &PickingStagingTexture))) return false;
+
+	// --- 피킹용 전용 깊이 버퍼 ---
+	D3D11_TEXTURE2D_DESC PickDepthDesc = DepthDesc; // 기존 DepthDesc 재사용
+	ID3D11Texture2D* PickDepthTex = nullptr;
+	if (FAILED(Device->CreateTexture2D(&PickDepthDesc, nullptr, &PickDepthTex))) return false;
+	if (FAILED(Device->CreateDepthStencilView(PickDepthTex, nullptr, &PickingDSV))) return false;
+	PickDepthTex->Release();
 	return SUCCEEDED(Hr);
 }
 
@@ -248,6 +271,21 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		DefaultMaterial->SetDepthStencilOption(depthStencilOption);
 		DefaultMaterial->SetDepthStencilState(DSS);
 
+		auto PickingPS = FShaderMap::Get().GetOrCreatePixelShader(Device, (ShaderDirW + L"PickingPixelShader.hlsl").c_str());
+		PickingMaterial = std::make_shared<FMaterial>();
+		PickingMaterial->SetOriginName("M_Picking");
+		PickingMaterial->SetVertexShader(InstancedVertexShader);
+		PickingMaterial->SetPixelShader(PickingPS);
+		FRasterizerStateOption PickRasterOption;
+		PickRasterOption.FillMode = D3D11_FILL_SOLID;
+		PickRasterOption.CullMode = D3D11_CULL_BACK;
+		PickingMaterial->SetRasterizerOption(PickRasterOption);
+		PickingMaterial->SetRasterizerState(RenderStateManager->GetOrCreateRasterizerState(PickingMaterial->GetRasterizerOption()));
+		PickingMaterial->SetDepthStencilOption({ true, D3D11_DEPTH_WRITE_MASK_ALL });
+		FBlendStateOption PickBlendOption;
+		PickBlendOption.BlendEnable = false;
+		PickingMaterial->SetBlendOption(PickBlendOption);
+		PickingMaterial->SetBlendState(RenderStateManager->GetOrCreateBlendState(PickBlendOption));
 		int32 SlotIndex = DefaultMaterial->CreateConstantBuffer(Device, 16);
 		if (SlotIndex >= 0)
 		{
@@ -517,64 +555,175 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 	ID3D11ShaderResourceView* SubUVSRV = SubUVRenderer.GetTextureSRV();
 	ID3D11SamplerState* SubUVSampler = SubUVRenderer.GetSamplerState();
 
+	auto& CachedBatches = LayerCachedBatches[InRenderLayer];
+
+	RenderStateManager->RebindState();
+
+	//캐시가 유효하면 버퍼 업로드 및 커맨드 정렬을 전부 스킵합니다!
+	if (!bInstanceBufferDirty && !CachedBatches.empty())
+	{
+		UINT Stride = sizeof(FInstanceData);
+		UINT Offset = 0;
+		DeviceContext->IASetVertexBuffers(1, 1, &InstanceBuffer, &Stride, &Offset);
+
+		for (const FCachedBatch& Batch : CachedBatches)
+		{
+			//머티리얼 바인딩
+			if (Batch.Material != CurrentMaterial)
+			{
+				Batch.Material->Bind(DeviceContext);
+				InstancedVertexShader->Bind(DeviceContext);
+				RenderStateManager->BindState(Batch.Material->GetRasterizerState());
+				RenderStateManager->BindState(Batch.Material->GetDepthStencilState());
+				RenderStateManager->BindState(Batch.Material->GetBlendState());
+
+				CurrentMaterial = Batch.Material;
+
+				if (CurrentMaterial->GetOriginName() == "M_Font") {
+					DeviceContext->PSSetShaderResources(0, 1, &FontSRV);
+					DeviceContext->PSSetSamplers(0, 1, &FontSampler);
+				}
+				else if (CurrentMaterial->GetOriginName() == "M_SubUV") {
+					DeviceContext->PSSetShaderResources(0, 1, &SubUVSRV);
+					DeviceContext->PSSetSamplers(0, 1, &SubUVSampler);
+				}
+				else {
+					DeviceContext->PSSetSamplers(0, 1, &NormalSampler);
+				}
+			}
+
+			// 메쉬 바인딩
+			if (Batch.MeshData != CurrentMesh)
+			{
+				Batch.MeshData->Bind(DeviceContext);
+				CurrentMesh = Batch.MeshData;
+			}
+
+			D3D11_PRIMITIVE_TOPOLOGY DesiredTopology = static_cast<D3D11_PRIMITIVE_TOPOLOGY>(CurrentMesh->Topology);
+			if (DesiredTopology != CurrentMeshTopology)
+			{
+				DeviceContext->IASetPrimitiveTopology(DesiredTopology);
+				CurrentMeshTopology = DesiredTopology;
+			}
+
+			// 인스턴스 드로우 (StartInstanceLocation을 통해 내 데이터 위치 지정)
+			if (Batch.IndexCount > 0)
+				DeviceContext->DrawIndexedInstanced(Batch.IndexCount, Batch.InstanceCount, Batch.FirstIndex, 0, Batch.InstanceBufferOffset);
+			else if (!Batch.MeshData->Indices.empty())
+				DeviceContext->DrawIndexedInstanced(static_cast<UINT>(Batch.MeshData->Indices.size()), Batch.InstanceCount, 0, 0, Batch.InstanceBufferOffset);
+			else if (!Batch.MeshData->Vertices.empty())
+				DeviceContext->DrawInstanced(static_cast<UINT>(Batch.MeshData->Vertices.size()), Batch.InstanceCount, 0, Batch.InstanceBufferOffset);
+		}
+		return; 
+	}
+
+	// Dirty 상태일 때, 캐시와 버퍼를 재구축합니다.
+	CachedBatches.clear();
+
 	FRenderCommand toFind;
 	toFind.RenderLayer = InRenderLayer;
 	auto it = std::lower_bound(InCommandList.begin(), InCommandList.end(), toFind,
 		[](const FRenderCommand& A, const FRenderCommand& B) { return A.RenderLayer < B.RenderLayer; });
 
-	RenderStateManager->RebindState();
+	if (it == InCommandList.end() || it->RenderLayer != InRenderLayer)
+		return;
+
+	//이번 레이어에 필요한 총 인스턴스 수를 먼저 구해서 버퍼 확보
+	uint32 TotalInstancesForLayer = 0;
+	auto countIt = it;
+	while (countIt != InCommandList.end() && countIt->RenderLayer == InRenderLayer)
+	{
+		TotalInstancesForLayer++;
+		countIt++;
+	}
+	EnsureInstanceBufferCapacity(TotalInstancesForLayer);
+
+	// Map을 딱 한 번만 수행!
+	D3D11_MAPPED_SUBRESOURCE Mapped;
+	if (FAILED(DeviceContext->Map(InstanceBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
+		return;
+
+	FInstanceData* InstanceData = static_cast<FInstanceData*>(Mapped.pData);
+	uint32 CurrentBufferOffset = 0;
+
+	//배치를 묶으며 데이터를 채우고 캐시 기록
 	while (it != InCommandList.end() && it->RenderLayer == InRenderLayer)
 	{
 		auto batchStart = it;
 		auto batchEnd = it;
 		while (batchEnd != InCommandList.end() &&
 			batchEnd->RenderLayer == InRenderLayer &&
-			batchEnd->Material == batchStart->Material &&
-			batchEnd->MeshData == batchStart->MeshData &&
-			batchEnd->FirstIndex == batchStart->FirstIndex &&
-			batchEnd->IndexCount == batchStart->IndexCount)
+			batchEnd->SortKey == batchStart->SortKey)
 		{
 			++batchEnd;
 		}
+
 		uint32 InstanceCount = static_cast<uint32>(std::distance(batchStart, batchEnd));
 		FRenderCommand& Cmd = *batchStart;
+
 		if (!Cmd.MeshData || (Cmd.MeshData->Vertices.empty() && Cmd.MeshData->Indices.empty()))
 		{
 			it = batchEnd;
 			continue;
 		}
-		if (Cmd.Material != CurrentMaterial)
+
+		// 행렬 복사
+		uint32 Index = 0;
+		for (auto curr = batchStart; curr != batchEnd; ++curr)
 		{
-			Cmd.Material->Bind(DeviceContext);
+			InstanceData[CurrentBufferOffset + Index].World = curr->WorldMatrix;
+			InstanceData[CurrentBufferOffset + Index].ObjectID = curr->ObjectID;
+			Index++;
+		}
+
+		// 캐시에 배치 정보 저장
+		FCachedBatch NewBatch;
+		NewBatch.Material = Cmd.Material;
+		NewBatch.MeshData = Cmd.MeshData;
+		NewBatch.FirstIndex = Cmd.FirstIndex;
+		NewBatch.IndexCount = Cmd.IndexCount;
+		NewBatch.InstanceCount = InstanceCount;
+		NewBatch.InstanceBufferOffset = CurrentBufferOffset;
+		CachedBatches.push_back(NewBatch);
+
+		CurrentBufferOffset += InstanceCount;
+		it = batchEnd;
+	}
+
+	DeviceContext->Unmap(InstanceBuffer, 0);
+
+
+	UINT Stride = sizeof(FInstanceData);
+	UINT Offset = 0;
+	DeviceContext->IASetVertexBuffers(1, 1, &InstanceBuffer, &Stride, &Offset);
+
+	for (const FCachedBatch& Batch : CachedBatches)
+	{
+		if (Batch.Material != CurrentMaterial)
+		{
+			Batch.Material->Bind(DeviceContext);
 			InstancedVertexShader->Bind(DeviceContext);
-			// RenderStateManager를 통한 일괄 상태 바인딩 (캐싱 활용)
-			RenderStateManager->BindState(Cmd.Material->GetRasterizerState());
-			RenderStateManager->BindState(Cmd.Material->GetDepthStencilState());
-			RenderStateManager->BindState(Cmd.Material->GetBlendState());
-
-			CurrentMaterial = Cmd.Material;
-
-			/** 특수 머티리얼 아틀라스 바인딩 보조 */
-			if (CurrentMaterial->GetOriginName() == "M_Font")
-			{
+			RenderStateManager->BindState(Batch.Material->GetRasterizerState());
+			RenderStateManager->BindState(Batch.Material->GetDepthStencilState());
+			RenderStateManager->BindState(Batch.Material->GetBlendState());
+			CurrentMaterial = Batch.Material;
+			if (CurrentMaterial->GetOriginName() == "M_Font") {
 				DeviceContext->PSSetShaderResources(0, 1, &FontSRV);
 				DeviceContext->PSSetSamplers(0, 1, &FontSampler);
 			}
-			else if (CurrentMaterial->GetOriginName() == "M_SubUV")
-			{
+			else if (CurrentMaterial->GetOriginName() == "M_SubUV") {
 				DeviceContext->PSSetShaderResources(0, 1, &SubUVSRV);
 				DeviceContext->PSSetSamplers(0, 1, &SubUVSampler);
 			}
-			else
-			{
+			else {
 				DeviceContext->PSSetSamplers(0, 1, &NormalSampler);
 			}
 		}
 
-		if (Cmd.MeshData != CurrentMesh)
+		if (Batch.MeshData != CurrentMesh)
 		{
-			Cmd.MeshData->Bind(DeviceContext);
-			CurrentMesh = Cmd.MeshData;
+			Batch.MeshData->Bind(DeviceContext);
+			CurrentMesh = Batch.MeshData;
 		}
 
 		D3D11_PRIMITIVE_TOPOLOGY DesiredTopology = static_cast<D3D11_PRIMITIVE_TOPOLOGY>(CurrentMesh->Topology);
@@ -583,38 +732,83 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 			DeviceContext->IASetPrimitiveTopology(DesiredTopology);
 			CurrentMeshTopology = DesiredTopology;
 		}
-		EnsureInstanceBufferCapacity(InstanceCount);
-		D3D11_MAPPED_SUBRESOURCE Mapped;
-		if (SUCCEEDED(DeviceContext->Map(InstanceBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
-		{
-			FInstanceData* InstanceData = static_cast<FInstanceData*>(Mapped.pData);
-			uint32 Index = 0;
-			for (auto curr = batchStart; curr != batchEnd; ++curr)
-			{
-				InstanceData[Index].World = curr->WorldMatrix;
-				InstanceData[Index].ObjectID = 0;
-				Index++;
-			}
-			DeviceContext->Unmap(InstanceBuffer, 0);
-		}
-		UINT Stride = sizeof(FInstanceData);
-		UINT Offset = 0;
-		DeviceContext->IASetVertexBuffers(1, 1, &InstanceBuffer, &Stride, &Offset);
 
-		if (Cmd.IndexCount > 0)
-			DeviceContext->DrawIndexedInstanced(Cmd.IndexCount, InstanceCount, Cmd.FirstIndex, 0, 0);
-		else if (!Cmd.MeshData->Indices.empty())
-			DeviceContext->DrawIndexedInstanced(static_cast<UINT>(Cmd.MeshData->Indices.size()), InstanceCount, 0, 0, 0);
-		else if (!Cmd.MeshData->Vertices.empty())
-			DeviceContext->DrawInstanced(static_cast<UINT>(Cmd.MeshData->Vertices.size()), InstanceCount, 0, 0);
-	
-		UE_LOG("Batch Instancing Check! Mesh is drawn with InstanceCount: %u\n", InstanceCount); // 추가
-		// 루프 종료 후 다음 묶음으로 이동
-		it = batchEnd;
+		if (Batch.IndexCount > 0)
+			DeviceContext->DrawIndexedInstanced(Batch.IndexCount, Batch.InstanceCount, Batch.FirstIndex, 0, Batch.InstanceBufferOffset);
+		else if (!Batch.MeshData->Indices.empty())
+			DeviceContext->DrawIndexedInstanced(static_cast<UINT>(Batch.MeshData->Indices.size()), Batch.InstanceCount, 0, 0, Batch.InstanceBufferOffset);
+		else if (!Batch.MeshData->Vertices.empty())
+			DeviceContext->DrawInstanced(static_cast<UINT>(Batch.MeshData->Vertices.size()), Batch.InstanceCount, 0, Batch.InstanceBufferOffset);
 	}
-
 }
+void FRenderer::RenderPickingPass()
+{
+	if (!PickingRTV || !PickingDSV || !PickingMaterial) return;
 
+	// 피킹 타겟 클리어 (배경은 0 = 선택 안 됨)
+	const uint32 ClearColor[4] = { 0, 0, 0, 0 };
+	DeviceContext->ClearRenderTargetView(PickingRTV, reinterpret_cast<const float*>(ClearColor));
+	DeviceContext->ClearDepthStencilView(PickingDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	D3D11_VIEWPORT ActiveVP = bUseLevelRenderTargetOverride ? LevelViewport : Viewport;
+
+	DeviceContext->OMSetRenderTargets(1, &PickingRTV, PickingDSV);
+	DeviceContext->RSSetViewports(1, &ActiveVP);
+	PickingMaterial->Bind(DeviceContext);
+	RenderStateManager->BindState(PickingMaterial->GetRasterizerState());
+	RenderStateManager->BindState(PickingMaterial->GetDepthStencilState());
+	RenderStateManager->BindState(PickingMaterial->GetBlendState());
+
+
+
+	UINT Stride = sizeof(FInstanceData);
+	UINT Offset = 0;
+	DeviceContext->IASetVertexBuffers(1, 1, &InstanceBuffer, &Stride, &Offset);
+
+	for (const FCachedBatch& Batch : LayerCachedBatches[ERenderLayer::Default])
+	{
+		Batch.MeshData->Bind(DeviceContext);
+		DeviceContext->IASetPrimitiveTopology(static_cast<D3D11_PRIMITIVE_TOPOLOGY>(Batch.MeshData->Topology));
+
+		if (Batch.IndexCount > 0)
+			DeviceContext->DrawIndexedInstanced(Batch.IndexCount, Batch.InstanceCount, Batch.FirstIndex, 0, Batch.InstanceBufferOffset);
+		else if (!Batch.MeshData->Indices.empty())
+			DeviceContext->DrawIndexedInstanced(static_cast<UINT>(Batch.MeshData->Indices.size()), Batch.InstanceCount, 0, 0, Batch.InstanceBufferOffset);
+	}
+	ID3D11RenderTargetView* ActiveRTV = bUseLevelRenderTargetOverride ? LevelRenderTargetView : RenderTargetView;
+	ID3D11DepthStencilView* ActiveDepth = bUseLevelRenderTargetOverride ? LevelDepthStencilView : DepthStencilView;
+
+	DeviceContext->OMSetRenderTargets(1, &ActiveRTV, ActiveDepth);
+	DeviceContext->RSSetViewports(1, &ActiveVP);
+}
+uint32 FRenderer::ReadPixelID(int32 ScreenX, int32 ScreenY)
+{
+	int32 MaxWidth = bUseLevelRenderTargetOverride ? static_cast<int32>(LevelViewport.Width) : static_cast<int32>(Viewport.Width);
+	int32 MaxHeight = bUseLevelRenderTargetOverride ? static_cast<int32>(LevelViewport.Height) : static_cast<int32>(Viewport.Height);
+
+	if (!PickingTexture || !PickingStagingTexture || ScreenX < 0 || ScreenY < 0 || ScreenX >= MaxWidth || ScreenY >= MaxHeight)
+		return 0;
+
+
+	D3D11_BOX Box;
+	Box.left = ScreenX;
+	Box.right = ScreenX + 1;
+	Box.top = ScreenY;
+	Box.bottom = ScreenY + 1;
+	Box.front = 0;
+	Box.back = 1;
+
+	DeviceContext->CopySubresourceRegion(PickingStagingTexture, 0, 0, 0, 0, PickingTexture, 0, &Box);
+
+	// CPU로 읽어오기
+	D3D11_MAPPED_SUBRESOURCE Mapped;
+	if (SUCCEEDED(DeviceContext->Map(PickingStagingTexture, 0, D3D11_MAP_READ, 0, &Mapped)))
+	{
+		uint32 PickedID = *static_cast<uint32*>(Mapped.pData);
+		DeviceContext->Unmap(PickingStagingTexture, 0);
+		return PickedID;
+	}
+	return 0;
+}
 void FRenderer::ClearDepthBuffer()
 {
 	if (LevelDepthStencilView) DeviceContext->ClearDepthStencilView(LevelDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
@@ -968,6 +1162,10 @@ void FRenderer::Release()
 	FShaderMap::Get().Clear();
 	FMaterialManager::Get().Clear();
 	RenderStateManager.reset();
+	if (PickingTexture) { PickingTexture->Release(); PickingTexture = nullptr; }
+	if (PickingRTV) { PickingRTV->Release(); PickingRTV = nullptr; }
+	if (PickingStagingTexture) { PickingStagingTexture->Release(); PickingStagingTexture = nullptr; }
+	if (PickingDSV) { PickingDSV->Release(); PickingDSV = nullptr; }
 	if (InstanceBuffer) { InstanceBuffer->Release(); InstanceBuffer = nullptr; }
 	if (NormalSampler) { NormalSampler->Release(); NormalSampler = nullptr; }
 	if (StencilWriteState) { StencilWriteState->Release(); StencilWriteState = nullptr; }
@@ -1004,10 +1202,15 @@ bool FRenderer::IsOccluded()
 void FRenderer::OnResize(int32 W, int32 H)
 {
 	if (W == 0 || H == 0) return;
+
 	ClearLevelRenderTarget();
 	DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 	if (RenderTargetView) { RenderTargetView->Release(); RenderTargetView = nullptr; }
 	if (DepthStencilView) { DepthStencilView->Release(); DepthStencilView = nullptr; }
+	if (PickingTexture) { PickingTexture->Release(); PickingTexture = nullptr; }
+	if (PickingRTV) { PickingRTV->Release(); PickingRTV = nullptr; }
+	if (PickingStagingTexture) { PickingStagingTexture->Release(); PickingStagingTexture = nullptr; }
+	if (PickingDSV) { PickingDSV->Release(); PickingDSV = nullptr; }
 	SwapChain->ResizeBuffers(0, W, H, DXGI_FORMAT_UNKNOWN, 0);
 	CreateRenderTargetAndDepthStencil(W, H);
 	Viewport.Width = static_cast<float>(W); Viewport.Height = static_cast<float>(H);

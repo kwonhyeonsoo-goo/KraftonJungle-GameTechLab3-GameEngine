@@ -27,6 +27,7 @@ public:
 	void SetFlag(EEngineShowFlags InFlag, bool bEnabled);
 	bool HasFlag(EEngineShowFlags InFlag)const;
 	void ToggleFlag(EEngineShowFlags InFlag);
+	uint64 GetFlags() const { return Flags; }
 private:
 	uint64 Flags;
 };

@@ -7,6 +7,7 @@
 #include "Primitive/PrimitiveBase.h"
 #include "Renderer/PrimitiveVertex.h"
 #include "Component/SubUVComponent.h"
+#include "Renderer/Renderer.h"
 #include "Component/TextComponent.h"
 #include "Component/UUIDBillboardComponent.h"
 #include "Component/MeshComponent.h"
@@ -103,107 +104,21 @@ AActor* FPicker::PickActor(const TArray<AActor*>& InActors, const FCamera* InCam
 		return nullptr;
 	}
 
-	const FRay Ray = ScreenToRay(InCamera, ScreenX, ScreenY, ScreenWidth, ScreenHeight);
+	GRenderer->RenderPickingPass();
 
-	AActor* ClosestActor = nullptr;
-	float ClosestDistance = (std::numeric_limits<float>::max)();
+	// 2. 픽셀 ID 읽어오기
+	uint32 PickedID = GRenderer->ReadPixelID(ScreenX, ScreenY);
 
+	if (PickedID == 0) return nullptr; // 배경을 클릭함
+
+	// 3. ID로 액터 찾기 (InActors 배열에서 검색)
 	for (AActor* Actor : InActors)
 	{
-		if (!Actor || Actor->IsPendingDestroy() || !Actor->IsVisible() || Actor->IsA<ASkySphereActor>())
+		if (Actor && Actor->GetUUID() == PickedID)
 		{
-			continue;
-		}
-
-		for (UActorComponent* Component : Actor->GetComponents())
-		{
-			if (!Component->IsA(UPrimitiveComponent::StaticClass()) || Component->IsA(UUUIDBillboardComponent::StaticClass()))
-			{
-				continue;
-			}
-
-			UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
-			if (!PrimitiveComponent)
-			{
-				continue;
-			}
-
-			const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
-			const bool bIsText = PrimitiveComponent->IsA(UTextComponent::StaticClass());
-			if (bIsSubUV || bIsText)
-			{
-				const FBoxSphereBounds Bounds = PrimitiveComponent->GetWorldBounds();
-
-				FVector ToCenter = Bounds.Center - Ray.Origin;
-				float T = FVector::DotProduct(ToCenter, Ray.Direction);
-				if (T < 0.0f)
-				{
-					continue;
-				}
-
-				const FVector ClosestPoint = Ray.Origin + Ray.Direction * T;
-				const float DistSq = (ClosestPoint - Bounds.Center).SizeSquared();
-				const float RadiusSq = Bounds.Radius * Bounds.Radius;
-
-				if (DistSq <= RadiusSq && T < ClosestDistance)
-				{
-					ClosestDistance = T;
-					ClosestActor = Actor;
-				}
-
-				continue;
-			}
-			FMeshData* Mesh = nullptr;
-			if (PrimitiveComponent->GetPrimitive())
-
-
-			{
-				Mesh = PrimitiveComponent->GetPrimitive()->GetMeshData();
-			}
-
-			else if (PrimitiveComponent->IsA(UMeshComponent::StaticClass()))
-			{
-				Mesh = static_cast<UMeshComponent*>(PrimitiveComponent)->GetMeshData();
-			}
-
-			if (!Mesh)
-			{
-				continue;
-			}
-
-			const FMatrix World = PrimitiveComponent->GetWorldTransform();
-
-			for (uint32 Index = 0; Index + 2 < Mesh->Indices.size(); Index += 3)
-			{
-				const FVector& P0 = Mesh->Vertices[Mesh->Indices[Index]].Position;
-				const FVector& P1 = Mesh->Vertices[Mesh->Indices[Index + 1]].Position;
-				const FVector& P2 = Mesh->Vertices[Mesh->Indices[Index + 2]].Position;
-
-				const FVector W0 = {
-					P0.X * World.M[0][0] + P0.Y * World.M[1][0] + P0.Z * World.M[2][0] + World.M[3][0],
-					P0.X * World.M[0][1] + P0.Y * World.M[1][1] + P0.Z * World.M[2][1] + World.M[3][1],
-					P0.X * World.M[0][2] + P0.Y * World.M[1][2] + P0.Z * World.M[2][2] + World.M[3][2]
-				};
-				const FVector W1 = {
-					P1.X * World.M[0][0] + P1.Y * World.M[1][0] + P1.Z * World.M[2][0] + World.M[3][0],
-					P1.X * World.M[0][1] + P1.Y * World.M[1][1] + P1.Z * World.M[2][1] + World.M[3][1],
-					P1.X * World.M[0][2] + P1.Y * World.M[1][2] + P1.Z * World.M[2][2] + World.M[3][2]
-				};
-				const FVector W2 = {
-					P2.X * World.M[0][0] + P2.Y * World.M[1][0] + P2.Z * World.M[2][0] + World.M[3][0],
-					P2.X * World.M[0][1] + P2.Y * World.M[1][1] + P2.Z * World.M[2][1] + World.M[3][1],
-					P2.X * World.M[0][2] + P2.Y * World.M[1][2] + P2.Z * World.M[2][2] + World.M[3][2]
-				};
-
-				float Distance = 0.0f;
-				if (RayTriangleIntersect(Ray, W0, W1, W2, Distance) && Distance < ClosestDistance)
-				{
-					ClosestDistance = Distance;
-					ClosestActor = Actor;
-				}
-			}
+			return Actor;
 		}
 	}
 
-	return ClosestActor;
+	return nullptr;
 }

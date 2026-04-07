@@ -110,7 +110,15 @@ FMaterial::~FMaterial()
 
 uint64 FMaterial::GetSortId() const
 {
-	return ShaderId;
+	size_t Hash = 0;
+	if (VertexShader)  Hash ^= reinterpret_cast<size_t>(VertexShader.get());
+	if (PixelShader)   Hash ^= reinterpret_cast<size_t>(PixelShader.get()) * 2654435761;
+	if (MaterialTexture && MaterialTexture->TextureSRV)
+		Hash ^= reinterpret_cast<size_t>(MaterialTexture->TextureSRV) * 40503;
+	Hash ^= static_cast<size_t>(RasterizerOption.ToKey()) << 16;
+	Hash ^= static_cast<size_t>(DepthStencilOption.ToKey()) << 32;
+	Hash ^= static_cast<size_t>(BlendOption.ToKey()) << 48;
+	return static_cast<uint64>(Hash);
 }
 
 int32 FMaterial::CreateConstantBuffer(ID3D11Device* Device, uint32 InSize)
