@@ -110,14 +110,10 @@ void AActor::PostSpawnInitialize()
 		if (BillboardComp)
 		{
 			AddOwnedComponent(BillboardComp);
-
-			// 루트에 부착해서 같이 움직이게 만듭니다.
 			if (RootComponent)
 			{
 				BillboardComp->AttachTo(RootComponent);
 			}
-
-			// 텍스트(0.3f)보다 살짝 더 위에(0.8f) 띄워줍니다.
 			BillboardComp->SetRelativeLocation(FVector(0.0f, 0.0f, 0.8f));
 
 			// 기본 크기 설정

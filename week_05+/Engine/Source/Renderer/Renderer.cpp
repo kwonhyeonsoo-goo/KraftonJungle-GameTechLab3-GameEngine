@@ -437,6 +437,83 @@ void FRenderer::ClearCommandList()
 	CommandList.reserve(PrevCommandCount);	
 }
 
+void FRenderer::RebuildAllLayerInstanceBuffers(TArray<FRenderCommand>& InCommandList)
+{
+	if (!bInstanceBufferDirty) return;
+
+	// 전체 인스턴스 수 계산
+	uint32 TotalInstances = static_cast<uint32>(InCommandList.size());
+	if (TotalInstances == 0) return;
+	EnsureInstanceBufferCapacity(TotalInstances);
+
+	//  모든 레이어의 캐시 클리어
+	for (auto& [Layer, Batches] : LayerCachedBatches)
+		Batches.clear();
+
+	//한 번의 Map으로 전체 인스턴스 데이터 기록
+	D3D11_MAPPED_SUBRESOURCE Mapped;
+	if (FAILED(DeviceContext->Map(InstanceBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
+		return;
+
+	FInstanceData* InstanceData = static_cast<FInstanceData*>(Mapped.pData);
+	uint32 GlobalOffset = 0;
+
+	// 커맨드 리스트는 이미 (RenderLayer, SortKey) 순으로 정렬됨
+	auto it = InCommandList.begin();
+	while (it != InCommandList.end())
+	{
+		ERenderLayer CurrentLayer = it->RenderLayer;
+		auto& CachedBatches = LayerCachedBatches[CurrentLayer];
+
+		// 이 레이어의 커맨드들을 배치로 묶으며 인스턴스 데이터 기록
+		while (it != InCommandList.end() && it->RenderLayer == CurrentLayer)
+		{
+			auto batchStart = it;
+			auto batchEnd = it;
+			while (batchEnd != InCommandList.end() &&
+				batchEnd->RenderLayer == CurrentLayer &&
+				batchEnd->SortKey == batchStart->SortKey)
+			{
+				++batchEnd;
+			}
+
+			uint32 InstanceCount = static_cast<uint32>(std::distance(batchStart, batchEnd));
+			FRenderCommand& Cmd = *batchStart;
+
+			if (!Cmd.MeshData || (Cmd.MeshData->Vertices.empty() && Cmd.MeshData->Indices.empty()))
+			{
+				it = batchEnd;
+				continue;
+			}
+
+			// 인스턴스 데이터 복사
+			uint32 Index = 0;
+			for (auto curr = batchStart; curr != batchEnd; ++curr)
+			{
+				InstanceData[GlobalOffset + Index].World = curr->WorldMatrix;
+				InstanceData[GlobalOffset + Index].ObjectID = curr->ObjectID;
+				Index++;
+			}
+
+			// 캐시에 배치 정보 저장
+			FCachedBatch NewBatch;
+			NewBatch.Material = Cmd.Material;
+			NewBatch.MeshData = Cmd.MeshData;
+			NewBatch.FirstIndex = Cmd.FirstIndex;
+			NewBatch.IndexCount = Cmd.IndexCount;
+			NewBatch.InstanceCount = InstanceCount;
+			NewBatch.InstanceBufferOffset = GlobalOffset; 
+			NewBatch.WorldMatrix = Cmd.WorldMatrix;
+			CachedBatches.push_back(NewBatch);
+
+			GlobalOffset += InstanceCount;
+			it = batchEnd;
+		}
+	}
+
+	DeviceContext->Unmap(InstanceBuffer, 0);
+}
+
 void FRenderer::EndFrame()
 {
 	if (RenderTargetView)
@@ -543,20 +620,24 @@ void FRenderer::ExecuteCommands(TArray<FRenderCommand>& InCommandList, const FMa
 	SetConstantBuffers();
 	UpdateFrameConstantBuffer();
 
+	if (bInstanceBufferDirty)
+	{
+		// ★ 모든 레이어를 한 번에 인스턴스 버퍼에 기록
+		RebuildAllLayerInstanceBuffers(InCommandList);
+	}
+
+	// 각 패스는 캐시된 배치만 사용 (버퍼 재기록 안 함)
 	ExecuteRenderPass(InCommandList, ERenderLayer::Default);
 	ExecuteRenderPass(InCommandList, ERenderLayer::Translucent);
 	ClearDepthBuffer();
 	ExecuteRenderPass(InCommandList, ERenderLayer::Overlay);
 	bInstanceBufferDirty = false;
-
-	if (PostRenderCallback) PostRenderCallback(this);
 }
 
 void FRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 {
 	ExecuteRenderPass(CommandList, InRenderLayer);
 }
-
 void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERenderLayer InRenderLayer)
 {
 	FMaterial* CurrentMaterial = nullptr;
@@ -569,143 +650,9 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 	ID3D11SamplerState* SubUVSampler = SubUVRenderer.GetSamplerState();
 
 	auto& CachedBatches = LayerCachedBatches[InRenderLayer];
+	if (CachedBatches.empty()) return;
 
 	RenderStateManager->RebindState();
-
-	//캐시가 유효하면 버퍼 업로드 및 커맨드 정렬을 전부 스킵합니다!
-	if (!bInstanceBufferDirty && !CachedBatches.empty())
-	{
-		UINT Stride = sizeof(FInstanceData);
-		UINT Offset = 0;
-		DeviceContext->IASetVertexBuffers(1, 1, &InstanceBuffer, &Stride, &Offset);
-
-		for (const FCachedBatch& Batch : CachedBatches)
-		{
-			//머티리얼 바인딩
-			if (!Batch.MeshData) continue;
-			if (Batch.Material != CurrentMaterial)
-			{
-				Batch.Material->Bind(DeviceContext);
-				InstancedVertexShader->Bind(DeviceContext);
-				RenderStateManager->BindState(Batch.Material->GetRasterizerState());
-				RenderStateManager->BindState(Batch.Material->GetDepthStencilState());
-				RenderStateManager->BindState(Batch.Material->GetBlendState());
-
-				CurrentMaterial = Batch.Material;
-
-				if (CurrentMaterial->GetOriginName() == "M_Font") {
-					DeviceContext->PSSetShaderResources(0, 1, &FontSRV);
-					DeviceContext->PSSetSamplers(0, 1, &FontSampler);
-				}
-				else if (CurrentMaterial->GetOriginName() == "M_SubUV") {
-					DeviceContext->PSSetShaderResources(0, 1, &SubUVSRV);
-					DeviceContext->PSSetSamplers(0, 1, &SubUVSampler);
-				}
-				else {
-					DeviceContext->PSSetSamplers(0, 1, &NormalSampler);
-				}
-			}
-
-			// 메쉬 바인딩
-			if (Batch.MeshData != CurrentMesh)
-			{
-				Batch.MeshData->Bind(DeviceContext);
-				CurrentMesh = Batch.MeshData;
-			}
-
-			D3D11_PRIMITIVE_TOPOLOGY DesiredTopology = static_cast<D3D11_PRIMITIVE_TOPOLOGY>(CurrentMesh->Topology);
-			if (DesiredTopology != CurrentMeshTopology)
-			{
-				DeviceContext->IASetPrimitiveTopology(DesiredTopology);
-				CurrentMeshTopology = DesiredTopology;
-			}
-
-			// 인스턴스 드로우 (StartInstanceLocation을 통해 내 데이터 위치 지정)
-			if (Batch.IndexCount > 0)
-				DeviceContext->DrawIndexedInstanced(Batch.IndexCount, Batch.InstanceCount, Batch.FirstIndex, 0, Batch.InstanceBufferOffset);
-			else if (!Batch.MeshData->Indices.empty())
-				DeviceContext->DrawIndexedInstanced(static_cast<UINT>(Batch.MeshData->Indices.size()), Batch.InstanceCount, 0, 0, Batch.InstanceBufferOffset);
-			else if (!Batch.MeshData->Vertices.empty())
-				DeviceContext->DrawInstanced(static_cast<UINT>(Batch.MeshData->Vertices.size()), Batch.InstanceCount, 0, Batch.InstanceBufferOffset);
-		}
-		return; 
-	}
-
-	// Dirty 상태일 때, 캐시와 버퍼를 재구축합니다.
-	CachedBatches.clear();
-
-	FRenderCommand toFind;
-	toFind.RenderLayer = InRenderLayer;
-	auto it = std::lower_bound(InCommandList.begin(), InCommandList.end(), toFind,
-		[](const FRenderCommand& A, const FRenderCommand& B) { return A.RenderLayer < B.RenderLayer; });
-
-	if (it == InCommandList.end() || it->RenderLayer != InRenderLayer)
-		return;
-
-	//이번 레이어에 필요한 총 인스턴스 수를 먼저 구해서 버퍼 확보
-	uint32 TotalInstancesForLayer = 0;
-	auto countIt = it;
-	while (countIt != InCommandList.end() && countIt->RenderLayer == InRenderLayer)
-	{
-		TotalInstancesForLayer++;
-		countIt++;
-	}
-	EnsureInstanceBufferCapacity(TotalInstancesForLayer);
-
-	// Map을 딱 한 번만 수행!
-	D3D11_MAPPED_SUBRESOURCE Mapped;
-	if (FAILED(DeviceContext->Map(InstanceBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
-		return;
-
-	FInstanceData* InstanceData = static_cast<FInstanceData*>(Mapped.pData);
-	uint32 CurrentBufferOffset = 0;
-
-	//배치를 묶으며 데이터를 채우고 캐시 기록
-	while (it != InCommandList.end() && it->RenderLayer == InRenderLayer)
-	{
-		auto batchStart = it;
-		auto batchEnd = it;
-		while (batchEnd != InCommandList.end() &&
-			batchEnd->RenderLayer == InRenderLayer &&
-			batchEnd->SortKey == batchStart->SortKey)
-		{
-			++batchEnd;
-		}
-
-		uint32 InstanceCount = static_cast<uint32>(std::distance(batchStart, batchEnd));
-		FRenderCommand& Cmd = *batchStart;
-
-		if (!Cmd.MeshData || (Cmd.MeshData->Vertices.empty() && Cmd.MeshData->Indices.empty()))
-		{
-			it = batchEnd;
-			continue;
-		}
-
-		// 행렬 복사
-		uint32 Index = 0;
-		for (auto curr = batchStart; curr != batchEnd; ++curr)
-		{
-			InstanceData[CurrentBufferOffset + Index].World = curr->WorldMatrix;
-			InstanceData[CurrentBufferOffset + Index].ObjectID = curr->ObjectID;
-			Index++;
-		}
-
-		// 캐시에 배치 정보 저장
-		FCachedBatch NewBatch;
-		NewBatch.Material = Cmd.Material;
-		NewBatch.MeshData = Cmd.MeshData;
-		NewBatch.FirstIndex = Cmd.FirstIndex;
-		NewBatch.IndexCount = Cmd.IndexCount;
-		NewBatch.InstanceCount = InstanceCount;
-		NewBatch.InstanceBufferOffset = CurrentBufferOffset;
-		NewBatch.WorldMatrix = Cmd.WorldMatrix;
-		CachedBatches.push_back(NewBatch);
-
-		CurrentBufferOffset += InstanceCount;
-		it = batchEnd;
-	}
-
-	DeviceContext->Unmap(InstanceBuffer, 0);
 
 	UINT Stride = sizeof(FInstanceData);
 	UINT Offset = 0;
@@ -713,6 +660,8 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 
 	for (const FCachedBatch& Batch : CachedBatches)
 	{
+		if (!Batch.MeshData) continue;
+
 		if (Batch.Material != CurrentMaterial)
 		{
 			Batch.Material->Bind(DeviceContext);
@@ -724,6 +673,7 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 			RenderStateManager->BindState(Batch.Material->GetDepthStencilState());
 			RenderStateManager->BindState(Batch.Material->GetBlendState());
 			CurrentMaterial = Batch.Material;
+
 			if (CurrentMaterial->GetOriginName() == "M_Font") {
 				DeviceContext->PSSetShaderResources(0, 1, &FontSRV);
 				DeviceContext->PSSetSamplers(0, 1, &FontSampler);
@@ -749,6 +699,7 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 			DeviceContext->IASetPrimitiveTopology(DesiredTopology);
 			CurrentMeshTopology = DesiredTopology;
 		}
+
 		UpdateObjectConstantBuffer(Batch.WorldMatrix);
 		if (Batch.IndexCount > 0)
 			DeviceContext->DrawIndexedInstanced(Batch.IndexCount, Batch.InstanceCount, Batch.FirstIndex, 0, Batch.InstanceBufferOffset);
@@ -758,6 +709,7 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 			DeviceContext->DrawInstanced(static_cast<UINT>(Batch.MeshData->Vertices.size()), Batch.InstanceCount, 0, Batch.InstanceBufferOffset);
 	}
 }
+
 void FRenderer::RenderPickingPass()
 {
 	if (!PickingRTV || !PickingDSV || !PickingMaterial) return;

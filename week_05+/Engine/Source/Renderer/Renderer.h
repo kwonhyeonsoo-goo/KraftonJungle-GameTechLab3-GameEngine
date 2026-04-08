@@ -114,6 +114,7 @@ private:
 	void AddCommand(const FRenderCommand& Command);
 	void AddCommand(TArray<FRenderCommand>& CommandBuffer, const FRenderCommand& Command);
 	void ClearCommandList();
+	void RebuildAllLayerInstanceBuffers(TArray<FRenderCommand>& InCommandList);
 	void ExecuteCommands(TArray<FRenderCommand>& InCommandList, const FMatrix& InViewMatrix, const FMatrix& InProjectionMatrix);
 	void ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERenderLayer RenderLayer);
 	bool CreateDeviceAndSwapChain(HWND InHwnd, int32 Width, int32 Height);

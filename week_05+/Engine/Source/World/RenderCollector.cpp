@@ -115,10 +115,8 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 					if (auto DefaultMat = FMaterialManager::Get().FindByName("M_Default_Texture"))
 						Command.Material = DefaultMat.get();
 				}
-
-				
-				if (Command.Material && Command.Material->GetBlendOption().BlendEnable)
-					Command.RenderLayer = ERenderLayer::Translucent;
+			
+			
 #if !IS_OBJ_VIEWER // 뷰어가 아닐 때만 아이콘 렌더링
 				const FVector2& Size = BillComp->GetSize();
 				const FVector WorldPos = BillComp->GetWorldLocation();
