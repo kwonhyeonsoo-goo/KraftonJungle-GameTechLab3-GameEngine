@@ -41,10 +41,6 @@ public:
 	ID3D11SamplerState* GetSamplerState() const { return SamplerState; }
 
 private:
-	/** SubUV 전용 머티리얼 생성 및 설정 */
-	bool CreateSubUVMaterial();
-
-private:
 	ID3D11Device* Device = nullptr;
 	ID3D11DeviceContext* DeviceContext = nullptr;
 

@@ -6,7 +6,7 @@
 #include "ShowFlags.h"
 #include "Renderer/RenderCommand.h"
 #include "World/RenderCollector.h"
-#include "World/LevelTypes.h"
+#include "World/WorldType.h"
 #include "Input/InputManager.h"
 #include "Camera/Camera.h"
 #include "Input/InputAction.h"

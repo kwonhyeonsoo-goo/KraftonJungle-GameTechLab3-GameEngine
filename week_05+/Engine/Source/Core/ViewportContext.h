@@ -19,7 +19,7 @@ struct ENGINE_API FViewportContext
 	bool bActive = false;
 	bool bCapturing = false;
 
-	FViewportContext();
+	FViewportContext() = default;
 	FViewportContext(FViewport* InViewport, FViewportClient* InViewportClient);
 	FViewportContext(FViewportContext&& Other) noexcept;
 	FViewportContext& operator=(FViewportContext&& Other) noexcept;

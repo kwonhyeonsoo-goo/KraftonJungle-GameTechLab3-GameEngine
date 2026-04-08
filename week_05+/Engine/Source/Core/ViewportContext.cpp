@@ -27,8 +27,6 @@ namespace
 	}
 }
 
-FViewportContext::FViewportContext() = default;
-
 FViewportContext::FViewportContext(FViewport* InViewport, FViewportClient* InViewportClient)
 	: Viewport(InViewport)
 	, ViewportClient(InViewportClient)

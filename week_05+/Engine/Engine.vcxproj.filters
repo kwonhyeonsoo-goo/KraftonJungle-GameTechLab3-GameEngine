@@ -174,12 +174,6 @@
     <ClCompile Include="Source\Object\ObjectGlobals.cpp">
       <Filter>Source\Object</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Object\ObjectManager.cpp">
-      <Filter>Source\Object</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Physics\PhysicsManager.cpp">
-      <Filter>Source\Physics</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp">
       <Filter>Source\Platform\Windows</Filter>
     </ClCompile>
@@ -423,14 +417,8 @@
     <ClInclude Include="Source\Object\ObjectGlobals.h">
       <Filter>Source\Object</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Object\ObjectManager.h">
-      <Filter>Source\Object</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Object\ObjectTypes.h">
       <Filter>Source\Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Physics\PhysicsManager.h">
-      <Filter>Source\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h">
       <Filter>Source\Platform\Windows</Filter>
@@ -577,7 +565,7 @@
     <ClInclude Include="Source\World\LevelContext.h">
       <Filter>Source\World</Filter>
     </ClInclude>
-    <ClInclude Include="Source\World\LevelTypes.h">
+    <ClInclude Include="Source\World\WorldType.h">
       <Filter>Source\World</Filter>
     </ClInclude>
     <ClInclude Include="Source\Actor\StaticMeshActor.h" />

@@ -228,11 +228,24 @@ void FEditorEngine::Tick(float DeltaTime)
 	}
 #endif
 	Render();
+
+	// PendingKill 상태인 액터 제거
+	for (int32 idx = 0; idx < GUObjectArray.size(); ++idx)
+	{
+		UObject* Obj = GUObjectArray[idx];
+		if (!Obj) continue;
+
+		if (Obj->IsPendingKill())
+		{
+			delete Obj;
+			GUObjectArray[idx] = nullptr; // 슬롯을 nullptr로 마킹하여 삭제된 객체임을 표시
+		}
+	}
 }
 
 void FEditorEngine::Render()
 {
-	if (!Core || !GRenderer || GRenderer->IsOccluded())
+	if (!GRenderer || GRenderer->IsOccluded())
 	{
 		return;
 	}

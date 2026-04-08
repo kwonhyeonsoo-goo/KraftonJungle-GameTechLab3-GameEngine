@@ -60,8 +60,3 @@ void FObjManager::ClearAssetCache(const FString& PathFileName)
 		++It;
 	}
 }
-
-void FObjManager::Clear()
-{
-	ObjStaticMeshMap.clear();
-}

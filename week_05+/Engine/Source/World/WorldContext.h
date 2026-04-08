@@ -1,6 +1,6 @@
 #pragma once
 #include "CoreMinimal.h"
-#include "World/LevelTypes.h"
+#include "World/WorldType.h"
 #include "Actor/Actor.h"
 
 class AActor;

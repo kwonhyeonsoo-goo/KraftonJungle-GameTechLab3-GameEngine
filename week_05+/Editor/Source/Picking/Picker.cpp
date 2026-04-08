@@ -153,14 +153,12 @@ AActor* FPicker::PickActor(const TArray<AActor*>& InActors, const FCamera* InCam
 
 				continue;
 			}
+
 			FMeshData* Mesh = nullptr;
 			if (PrimitiveComponent->GetPrimitive())
-
-
 			{
 				Mesh = PrimitiveComponent->GetPrimitive()->GetMeshData();
 			}
-
 			else if (PrimitiveComponent->IsA(UMeshComponent::StaticClass()))
 			{
 				Mesh = static_cast<UMeshComponent*>(PrimitiveComponent)->GetMeshData();
