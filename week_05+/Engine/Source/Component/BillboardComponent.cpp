@@ -67,6 +67,27 @@ void UBillboardComponent::Serialize(FArchive& Ar)
 	}
 }
 
+void UBillboardComponent::DuplicateSubObjects()
+{
+	UObject::DuplicateSubObjects();
+
+	// 복제 시 독립적인 메시와 머티리얼을 가지도록 재초기화
+	BillboardMesh.reset();
+	DynamicMaterial.reset();
+	SetMaterial(nullptr);
+
+	Initialize();
+
+	if (!TexturePath.empty())
+	{
+		extern ENGINE_API class FRenderer* GRenderer;
+		if (GRenderer)
+		{
+			SetTexturePath(GRenderer->GetDevice(), TexturePath);
+		}
+	}
+}
+
 void UBillboardComponent::SetTexturePath(ID3D11Device* Device, const FString& InPath)
 {
 	TexturePath = InPath;

@@ -30,7 +30,6 @@ void APawn::PostSpawnInitialize()
 
 		if (Billboard)
 		{
-			Billboard->Initialize();
 			AddOwnedComponent(Billboard);
 			if (RootComponent && RootComponent != Billboard)
 			{

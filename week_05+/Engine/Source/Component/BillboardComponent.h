@@ -9,6 +9,7 @@ class ENGINE_API UBillboardComponent : public UPrimitiveComponent
 {
 public:
 	DECLARE_RTTI(UBillboardComponent, UPrimitiveComponent)
+	DECLARE_DUPLICATE(UBillboardComponent)
 
 	void Initialize();
 
@@ -25,6 +26,8 @@ public:
 
 	const FString& GetTexturePath() const { return TexturePath; }
 	void SetTexturePath(ID3D11Device* Device, const FString& InPath);
+
+	virtual void DuplicateSubObjects() override;
 private:
 
 	FVector2 Size = FVector2(1.0f, 1.0f);

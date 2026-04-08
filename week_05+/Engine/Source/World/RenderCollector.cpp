@@ -23,8 +23,9 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 	}
 	bool bFrustumChanged = !PrevFrustum.Equals(Frustum);
 	bool bShowFlagsChanged = (PrevShowFlagsBits != ShowFlags.GetFlags());
+	bool bActorCountChanged = (PrevActorCount != Actors.size());
 
-	if (!bCommandsDirty && !bFrustumChanged && !bShowFlagsChanged)
+	if (!bCommandsDirty && !bFrustumChanged && !bShowFlagsChanged && !bActorCountChanged)
 	{
 		OutQueue.Commands = CachedQueue.Commands;
 		return;
@@ -115,8 +116,10 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 					if (auto DefaultMat = FMaterialManager::Get().FindByName("M_Default_Texture"))
 						Command.Material = DefaultMat.get();
 				}
-			
-			
+
+		
+				if (!Command.Material) continue;
+
 #if !IS_OBJ_VIEWER // 뷰어가 아닐 때만 아이콘 렌더링
 				const FVector2& Size = BillComp->GetSize();
 				const FVector WorldPos = BillComp->GetWorldLocation();
@@ -238,6 +241,7 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 	CachedQueue.Commands = OutQueue.Commands;
 	PrevFrustum = Frustum;
 	PrevShowFlagsBits = ShowFlags.GetFlags();
+	PrevActorCount = Actors.size();
 	bCommandsDirty = false;
 }
 
