@@ -44,7 +44,7 @@ private:
 	void DrawAddComponentButton(AActor* SelectedActor);
 	void DrawComponentHierarchy(USceneComponent* Component, USceneComponent*& SelectedUIComponent);
 
-	void DrawDeleteComponentButton(AActor* SelectedActor, USceneComponent* SceneComp);
+	bool DrawDeleteComponentButton(AActor* SelectedActor, USceneComponent* SceneComp);
 
 	FVector EditLocation = { 0.0f, 0.0f, 0.0f };
 	FVector EditRotation = { 0.0f, 0.0f, 0.0f };

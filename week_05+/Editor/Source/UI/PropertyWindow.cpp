@@ -722,6 +722,11 @@ void FPropertyWindow::DrawComponentHierarchy(USceneComponent* Component, USceneC
 	if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
 	{
 		SelectedUIComponent = Component;
+		EditLocation = SelectedUIComponent->GetRelativeLocation();
+		FRotator rotator = SelectedUIComponent->GetRelativeTransform().GetRotation().Rotator();
+		EditRotation = { rotator.Pitch, rotator.Yaw, rotator.Roll };
+		EditScale = SelectedUIComponent->GetRelativeTransform().GetScale3D();
+
 	}
 
 	// 자식 노드 순회
@@ -735,7 +740,7 @@ void FPropertyWindow::DrawComponentHierarchy(USceneComponent* Component, USceneC
 	}
 }
 
-void FPropertyWindow::DrawDeleteComponentButton(AActor* SelectedActor, USceneComponent* SceneComp)
+bool FPropertyWindow::DrawDeleteComponentButton(AActor* SelectedActor, USceneComponent* SceneComp)
 {
 	if (ImGui::Button("Delete Component")) {
 		USceneComponent* parent = SceneComp->GetAttachParent();
@@ -747,8 +752,19 @@ void FPropertyWindow::DrawDeleteComponentButton(AActor* SelectedActor, USceneCom
 		for (USceneComponent* child : children) {
 			child->AttachTo(parent);
 		}
+
+		auto components = SelectedActor->GetComponents();
+		for (auto it = components.begin(); it != components.end(); ++it) {
+			if (*it == SceneComp) {
+				components.erase(it);
+				break;
+			}
+		}
+		delete SceneComp;
+		return true;
 	}
 
+	return false;
 }
 
 void FPropertyWindow::Render(FCore* Core)
@@ -796,32 +812,35 @@ void FPropertyWindow::Render(FCore* Core)
 
 			ImGui::SameLine();
 
-			DrawDeleteComponentButton(SelectedActor, SelectedComponent);
+			if (!DrawDeleteComponentButton(SelectedActor, SelectedComponent)) {
 
-			if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
-			{
-				ImGui::Indent(8.0f);
-				DrawComponentTransformSection(*SelectedComponent);
-				ImGui::Unindent(8.0f);
-			}
 
-			//DrawBillboardSection(SelectedActor);
 
-			if (SelectedComponent->IsA(UStaticMeshComponent::StaticClass())) {
-
-				if (ImGui::CollapsingHeader("StaticMeshComponent", ImGuiTreeNodeFlags_DefaultOpen))
+				if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
 				{
-					DrawStaticMeshSection(Core, static_cast<AStaticMeshActor*>(SelectedActor), static_cast<UStaticMeshComponent*>(SelectedComponent));
+					ImGui::Indent(8.0f);
+					DrawComponentTransformSection(*SelectedComponent);
+					ImGui::Unindent(8.0f);
 				}
+
+				//DrawBillboardSection(SelectedActor);
+
+				if (SelectedComponent->IsA(UStaticMeshComponent::StaticClass())) {
+
+					if (ImGui::CollapsingHeader("StaticMeshComponent", ImGuiTreeNodeFlags_DefaultOpen))
+					{
+						DrawStaticMeshSection(Core, static_cast<AStaticMeshActor*>(SelectedActor), static_cast<UStaticMeshComponent*>(SelectedComponent));
+					}
+				}
+				//else if (SelectedComponent->IsA(USubUVComponent::StaticClass())) {
+				//	if (ImGui::CollapsingHeader("SubUVComponent", ImGuiTreeNodeFlags_DefaultOpen))
+				//		DrawSubUVSection(SelectedActor, static_cast<USubUVComponent*>(SelectedComponent));
+				//}
+				//else if(SelectedComponent->IsA(UTextComponent::StaticClass())) {
+				//	if (ImGui::CollapsingHeader("TextComponent", ImGuiTreeNodeFlags_DefaultOpen))
+				//		DrawTextSection(SelectedActor, static_cast<UTextComponent*>(SelectedComponent));
+				//}
 			}
-			//else if (SelectedComponent->IsA(USubUVComponent::StaticClass())) {
-			//	if (ImGui::CollapsingHeader("SubUVComponent", ImGuiTreeNodeFlags_DefaultOpen))
-			//		DrawSubUVSection(SelectedActor, static_cast<USubUVComponent*>(SelectedComponent));
-			//}
-			//else if(SelectedComponent->IsA(UTextComponent::StaticClass())) {
-			//	if (ImGui::CollapsingHeader("TextComponent", ImGuiTreeNodeFlags_DefaultOpen))
-			//		DrawTextSection(SelectedActor, static_cast<UTextComponent*>(SelectedComponent));
-			//}
 		}
 		ImGui::EndChild();
 
