@@ -6,7 +6,7 @@
 IMPLEMENT_RTTI(AStaticMeshActor, AActor)
 void AStaticMeshActor::PostSpawnInitialize()
 {
-	StaticMeshComponent = FObjectFactory::ConstructObject<UStaticMeshComponent>(this);
+	StaticMeshComponent = FObjectFactory::ConstructObject<UStaticMeshComponent>(this,"StaticMeshComponent");
 	SetRootComponent(StaticMeshComponent);
 	AddOwnedComponent(StaticMeshComponent);
 	if (bUseRandomColor)
