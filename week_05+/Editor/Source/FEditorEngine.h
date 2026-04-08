@@ -54,10 +54,6 @@ public:
 		FViewportClient* GameViewportClient = new FGameViewportClient();
 
 		FViewportContext* ViewportContext = WindowManager.FindPerspectiveViewportContext();
-		if (ViewportContext == nullptr)
-		{
-			ViewportContext = WindowManager.FindViewportContext();
-		}
 
 		OldViewportClient = ViewportContext->ViewportClient;
 
@@ -69,10 +65,10 @@ public:
 
 	void RestoreEditorViewportClient()
 	{
-		FViewportContext* ViewportContext = WindowManager.FindPerspectiveViewportContext();
+		FViewportContext* ViewportContext = WindowManager.FindGameViewportContext();
 		if (ViewportContext == nullptr)
 		{
-			ViewportContext = WindowManager.FindViewportContext();
+			ViewportContext = WindowManager.FindPerspectiveViewportContext();
 		}
 		if (OldViewportClient)
 		{

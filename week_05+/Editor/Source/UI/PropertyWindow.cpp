@@ -1,5 +1,5 @@
 #include "PropertyWindow.h"
-
+#include "UI/EditorViewportClient.h"
 #include "Actor/Actor.h"
 #include "Actor/StaticMeshActor.h"
 #include "Component/StaticMeshComponent.h"
@@ -129,33 +129,33 @@ void FPropertyWindow::DrawComponentTransformSection(USceneComponent& selected)
 	const float DragUIWidth = 200.0f;
 
 	auto DrawTransformRow = [&](const char* Label, const char* BtnID, FVector& Vec, const FVector& ResetVal, const ImVec4& BaseColor, float Step, float Min, float Max, const char* Format)
+	{
+		float Value[3] = { Vec.X, Vec.Y, Vec.Z };
+
+		ImGui::PushStyleColor(ImGuiCol_Button, BaseColor);
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(BaseColor.x + 0.2f, BaseColor.y + 0.1f, BaseColor.z + 0.1f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(BaseColor.x + 0.4f, BaseColor.y + 0.2f, BaseColor.z + 0.2f, 1.0f));
+
+		if (ImGui::Button(BtnID, ImVec2(ResetBtnWidth, 0)))
 		{
-			float Value[3] = { Vec.X, Vec.Y, Vec.Z };
+			Vec = ResetVal;
+			bModified = true;
+		}
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("Reset %s", Label);
+		}
+		ImGui::PopStyleColor(3);
 
-			ImGui::PushStyleColor(ImGuiCol_Button, BaseColor);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(BaseColor.x + 0.2f, BaseColor.y + 0.1f, BaseColor.z + 0.1f, 1.0f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(BaseColor.x + 0.4f, BaseColor.y + 0.2f, BaseColor.z + 0.2f, 1.0f));
-
-			if (ImGui::Button(BtnID, ImVec2(ResetBtnWidth, 0)))
-			{
-				Vec = ResetVal;
-				bModified = true;
-			}
-			if (ImGui::IsItemHovered())
-			{
-				ImGui::SetTooltip("Reset %s", Label);
-			}
-			ImGui::PopStyleColor(3);
-
-			ImGui::SameLine(0, Spacing);
-			ImGui::PushItemWidth(DragUIWidth);
-			if (ImGui::DragFloat3(Label, Value, Step, Min, Max, Format))
-			{
-				Vec = { Value[0], Value[1], Value[2] };
-				bModified = true;
-			}
-			ImGui::PopItemWidth();
-		};
+		ImGui::SameLine(0, Spacing);
+		ImGui::PushItemWidth(DragUIWidth);
+		if (ImGui::DragFloat3(Label, Value, Step, Min, Max, Format))
+		{
+			Vec = { Value[0], Value[1], Value[2] };
+			bModified = true;
+		}
+		ImGui::PopItemWidth();
+	};
 
 	DrawTransformRow("Location", "##RL", EditLocation, { 0.f, 0.f, 0.f }, ImVec4(0.5f, 0.1f, 0.1f, 1.0f), 0.1f, 0.0f, 0.0f, "%.2f");
 	DrawTransformRow("Rotation", "##RR", EditRotation, { 0.f, 0.f, 0.f }, ImVec4(0.1f, 0.4f, 0.1f, 1.0f), 0.5f, -360.0f, 360.0f, "%.1f");
@@ -167,7 +167,7 @@ void FPropertyWindow::DrawComponentTransformSection(USceneComponent& selected)
 
 	}
 }
-void FPropertyWindow::DrawBillboardSection(AActor * SelectedActor, USceneComponent* Component)
+void FPropertyWindow::DrawBillboardSection(AActor* SelectedActor, USceneComponent* Component)
 {
 	if (!ImGui::CollapsingHeader("Billboard", ImGuiTreeNodeFlags_DefaultOpen))
 	{
@@ -176,98 +176,112 @@ void FPropertyWindow::DrawBillboardSection(AActor * SelectedActor, USceneCompone
 
 	ImGui::Indent(8.0f);
 
-		if (!Component) return;
-
-		if (Component->IsA(UTextRenderComponent::StaticClass()) && !Component->IsA(UBillboardComponent::StaticClass()))
+	if (!Component) return;
+	bool bNeedsRenderUpdate = false;
+	if (Component->IsA(UTextRenderComponent::StaticClass()) && !Component->IsA(UBillboardComponent::StaticClass()))
+	{
+		if (ImGui::TreeNodeEx("Text Render", ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			if (ImGui::TreeNodeEx("Text Render", ImGuiTreeNodeFlags_DefaultOpen))
+			auto* TextComp = static_cast<UTextRenderComponent*>(Component);
+
+			// 텍스트 내용 변경
+			char TextBuf[256];
+			snprintf(TextBuf, sizeof(TextBuf), "%s", TextComp->GetText().c_str());
+			if (ImGui::InputText("Text", TextBuf, sizeof(TextBuf))) {
+				TextComp->SetText(TextBuf);
+			}
+
+			// 텍스트 색상 변경
+			FVector4 Color = TextComp->GetTextColor();
+			float Col[4] = { Color.X, Color.Y, Color.Z, Color.W };
+			if (ImGui::ColorEdit4("Color", Col)) {
+				TextComp->SetTextColor(FVector4(Col[0], Col[1], Col[2], Col[3]));
+			}
+
+			// 텍스트 스케일 변경
+			float Scale = TextComp->GetTextScale();
+			if (ImGui::DragFloat("Scale", &Scale, 0.01f, 0.1f, 100.0f)) {
+				TextComp->SetTextScale(Scale);
+			}
+
+			bool bBillboard = TextComp->IsBillboard();
+			if (ImGui::Checkbox("Is Billboard", &bBillboard)) {
+				TextComp->SetBillboard(bBillboard);
+			}
+			ImGui::TreePop();
+		}
+	}
+
+	// 2. 빌보드 컴포넌트 (텍스처 아이콘) UI
+	else if (Component->IsA(UBillboardComponent::StaticClass()))
+	{
+		if (ImGui::TreeNodeEx("Billboard Sprite", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			auto* BillComp = static_cast<UBillboardComponent*>(Component);
+
+			// 텍스처 선택 콤보박스
+			TArray<FAssetData> TextureAssets = FAssetRegistry::Get().GetAssetsByClass("Texture");
+			std::vector<const char*> TexItems = { "None" };
+			for (const auto& Asset : TextureAssets) TexItems.push_back(Asset.AssetName.c_str());
+
+			int SelectedTexIdx = 0;
+			FString CurrentTex = BillComp->GetTexturePath();
+			for (int i = 0; i < (int)TextureAssets.size(); i++) {
+				if (std::filesystem::path(TextureAssets[i].AssetPath).lexically_normal() == std::filesystem::path(CurrentTex).lexically_normal()) {
+					SelectedTexIdx = i + 1; break;
+				}
+			}
+
+			if (ImGui::Combo("Texture", &SelectedTexIdx, TexItems.data(), static_cast<int>(TexItems.size())) && GRenderer && SelectedTexIdx > 0)
 			{
-				auto* TextComp = static_cast<UTextRenderComponent*>(Component);
-
-				// 텍스트 내용 변경
-				char TextBuf[256];
-				snprintf(TextBuf, sizeof(TextBuf), "%s", TextComp->GetText().c_str());
-				if (ImGui::InputText("Text", TextBuf, sizeof(TextBuf))) {
-					TextComp->SetText(TextBuf);
-				}
-
-				// 텍스트 색상 변경
-				FVector4 Color = TextComp->GetTextColor();
-				float Col[4] = { Color.X, Color.Y, Color.Z, Color.W };
-				if (ImGui::ColorEdit4("Color", Col)) {
-					TextComp->SetTextColor(FVector4(Col[0], Col[1], Col[2], Col[3]));
-				}
-
-				// 텍스트 스케일 변경
-				float Scale = TextComp->GetTextScale();
-				if (ImGui::DragFloat("Scale", &Scale, 0.01f, 0.1f, 100.0f)) {
-					TextComp->SetTextScale(Scale);
-				}
-
-				bool bBillboard = TextComp->IsBillboard();
-				if (ImGui::Checkbox("Is Billboard", &bBillboard)) {
-					TextComp->SetBillboard(bBillboard);
-				}
-				ImGui::TreePop();
+				BillComp->SetTexturePath(GRenderer->GetDevice(), TextureAssets[SelectedTexIdx - 1].AssetPath);
 			}
+
+			// 텍스처 드래그 앤 드롭 지원
+			ProcessDragDrop({ ".png", ".jpg", ".jpeg" }, [&](const std::string& AbsPath, const std::string& RelPath) {
+				if (GRenderer) {
+					BillComp->SetTexturePath(GRenderer->GetDevice(), RelPath);
+				}
+			});
+
+			// 크기 조절
+			FVector2 Size = BillComp->GetSize();
+			float SizeArr[2] = { Size.X, Size.Y };
+			if (ImGui::DragFloat2("Size", SizeArr, 0.1f)) {
+				BillComp->SetSize(FVector2(SizeArr[0], SizeArr[1]));
+			}
+			ImGui::TreePop();
+		}
+	}
+
+	// 3. SubUV 호환 유지
+	else if (Component->IsA(USubUVComponent::StaticClass()))
+	{
+		auto* SubUVComp = static_cast<USubUVComponent*>(Component);
+		bool bBillboard = SubUVComp->IsBillboard();
+		if (ImGui::Checkbox("SubUV Billboard", &bBillboard)) {
+			SubUVComp->SetBillboard(bBillboard);
+		}
+		bool bPreview = SubUVComp->IsPreview();
+		if (ImGui::Checkbox("SubUV Preview", &bPreview)) {
+			SubUVComp->SetPreview(bPreview);
+		}
+	}
+	if (bNeedsRenderUpdate)
+	{
+		if (GRenderer)
+		{
+			GRenderer->ClearCachedBatches();
 		}
 
-		// 2. 빌보드 컴포넌트 (텍스처 아이콘) UI
-		else if (Component->IsA(UBillboardComponent::StaticClass()))
+		if (GEditor)
 		{
-			if (ImGui::TreeNodeEx("Billboard Sprite", ImGuiTreeNodeFlags_DefaultOpen))
+			if (auto* VC = GEditor->GetEditorUI().FindPerspectiveViewportClient())
 			{
-				auto* BillComp = static_cast<UBillboardComponent*>(Component);
-
-				// 텍스처 선택 콤보박스
-				TArray<FAssetData> TextureAssets = FAssetRegistry::Get().GetAssetsByClass("Texture");
-				std::vector<const char*> TexItems = { "None" };
-				for (const auto& Asset : TextureAssets) TexItems.push_back(Asset.AssetName.c_str());
-
-				int SelectedTexIdx = 0;
-				FString CurrentTex = BillComp->GetTexturePath();
-				for (int i = 0; i < (int)TextureAssets.size(); i++) {
-					if (std::filesystem::path(TextureAssets[i].AssetPath).lexically_normal() == std::filesystem::path(CurrentTex).lexically_normal()) {
-						SelectedTexIdx = i + 1; break;
-					}
-				}
-
-				if (ImGui::Combo("Texture", &SelectedTexIdx, TexItems.data(), static_cast<int>(TexItems.size())) && GRenderer && SelectedTexIdx > 0)
-				{
-					BillComp->SetTexturePath(GRenderer->GetDevice(), TextureAssets[SelectedTexIdx - 1].AssetPath);
-				}
-
-				// 텍스처 드래그 앤 드롭 지원
-				ProcessDragDrop({ ".png", ".jpg", ".jpeg" }, [&](const std::string& AbsPath, const std::string& RelPath) {
-					if (GRenderer) {
-						BillComp->SetTexturePath(GRenderer->GetDevice(), RelPath);
-					}
-					});
-
-				// 크기 조절
-				FVector2 Size = BillComp->GetSize();
-				float SizeArr[2] = { Size.X, Size.Y };
-				if (ImGui::DragFloat2("Size", SizeArr, 0.1f)) {
-					BillComp->SetSize(FVector2(SizeArr[0], SizeArr[1]));
-				}
-				ImGui::TreePop();
+				VC->GetRenderCollector().MarkDirty();
 			}
 		}
-
-		// 3. SubUV 호환 유지
-		else if (Component->IsA(USubUVComponent::StaticClass()))
-		{
-			auto* SubUVComp = static_cast<USubUVComponent*>(Component);
-			bool bBillboard = SubUVComp->IsBillboard();
-			if (ImGui::Checkbox("SubUV Billboard", &bBillboard)) {
-				SubUVComp->SetBillboard(bBillboard);
-			}
-			bool bPreview = SubUVComp->IsPreview();
-			if (ImGui::Checkbox("SubUV Preview", &bPreview)) {
-				SubUVComp->SetPreview(bPreview);
-			}
-		}
-	
+	}
 	ImGui::Unindent(8.0f);
 }
 
@@ -440,7 +454,7 @@ void FPropertyWindow::DrawMaterialSlots(FCore* Core, UStaticMeshComponent* SMCom
 
 /**
  * UV scroll을 키고 끌 수 있는 기능을 패널에 추가합니다.
- * 
+ *
  * \param SMComp
  * \param SlotIdx
  */
@@ -597,7 +611,7 @@ void FPropertyWindow::DrawStaticMeshSection(FCore* Core, AStaticMeshActor* SMAct
 				SMComp->SetStaticMeshData(GRenderer->GetDevice(), LoadedMesh);
 			}
 		}
-		});
+	});
 
 	if (!CurrentAsset.empty())
 	{
@@ -617,7 +631,7 @@ void FPropertyWindow::DrawAddComponentButton(AActor* SelectedActor)
 	const char* SpawnTypes[] = {
 		"Cube Component", "Sphere Component", "Plane Component",
 		"SubUV Component", "Text Component", "StaticMesh Component",
-		"Billboard Component"};
+		"Billboard Component" };
 	ImGui::Combo("##Type", &SpawnTypeIndex, SpawnTypes, IM_ARRAYSIZE(SpawnTypes));
 
 	static char SpawnTextBuffer[256] = "Text";
@@ -715,7 +729,7 @@ void FPropertyWindow::DrawComponentHierarchy(USceneComponent* Component, USceneC
 	if (!Component) return;
 
 	const TArray<USceneComponent*>& Children = Component->GetAttachChildren();
-	bool bIsLeaf = (Children.size() == 0); 
+	bool bIsLeaf = (Children.size() == 0);
 
 	// 화살표 클릭 시 열림, 가로 전체 선택 영역 확장
 	ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_OpenOnArrow |
@@ -729,8 +743,8 @@ void FPropertyWindow::DrawComponentHierarchy(USceneComponent* Component, USceneC
 		NodeFlags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 	}
 
-	 FString Name = Component->GetName();
-	 const char* NodeName = Name.c_str();
+	FString Name = Component->GetName();
+	const char* NodeName = Name.c_str();
 
 	// 트리 노드 그리기 (Component 포인터를 고유 ID로 사용)
 	bool bNodeOpen = ImGui::TreeNodeEx((void*)Component, NodeFlags, "%s", NodeName);
@@ -828,7 +842,7 @@ void FPropertyWindow::Render(FCore* Core)
 			if (DrawDeleteComponentButton(SelectedActor, SelectedComponent)) {
 				SelectedComponent = nullptr;
 			}
-			else{
+			else {
 
 				if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
 				{

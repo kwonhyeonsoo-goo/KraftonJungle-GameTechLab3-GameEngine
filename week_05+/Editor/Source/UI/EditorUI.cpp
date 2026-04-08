@@ -816,7 +816,7 @@ void FEditorUI::SyncSelectedActorProperty()
 
 FViewportContext* FEditorUI::FindPerspectiveViewportContext() const
 {
-	return WindowManager ? WindowManager->FindPerspectiveViewportContext() : nullptr;
+	return WindowManager ? WindowManager->FindGameViewportContext() : nullptr;
 }
 
 FEditorViewportClient* FEditorUI::FindPerspectiveViewportClient() const

@@ -18,6 +18,7 @@ void UTextRenderComponent::SetText(const FString& InText)
 	if (Text != InText)
 	{
 		Text = InText;
+		if (TextMesh) TextMesh->MarkDirty();
 	}
 	MarkTransformDirty();
 }
