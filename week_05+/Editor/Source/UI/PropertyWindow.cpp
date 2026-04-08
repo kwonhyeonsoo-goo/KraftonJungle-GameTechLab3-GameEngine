@@ -99,9 +99,15 @@ void FPropertyWindow::DrawBillboardSection(AActor* SelectedActor)
 		{
 			auto* SubUVComp = static_cast<USubUVComponent*>(Component);
 			bool bBillboard = SubUVComp->IsBillboard();
+			bool bPreview = SubUVComp->IsPreview();
+
 			if (ImGui::Checkbox("SubUV Billboard", &bBillboard))
 			{
 				SubUVComp->SetBillboard(bBillboard);
+			}
+			if (ImGui::Checkbox("SubUV Preview", &bPreview))
+			{
+				SubUVComp->SetPreview(bPreview);
 			}
 		}
 		else if (Component->IsA(UTextComponent::StaticClass()) && !Component->IsA(UUUIDBillboardComponent::StaticClass()))
