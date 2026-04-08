@@ -82,6 +82,11 @@ public:
 			OldViewportClient = nullptr;
 			ViewportContext->ViewportClient->Initialize(InputManager, EnhancedInput);
 			ViewportContext->ViewportClient->Attach();
+
+			// PIE 종료 후 캐시 무효화 — 피킹이 에디터 월드 UUID를 사용하도록
+			ViewportContext->ViewportClient->GetRenderCollector().MarkDirty();
+			extern ENGINE_API class FRenderer* GRenderer;
+			if (GRenderer) GRenderer->ClearCachedBatches();
 		}
 	}
 

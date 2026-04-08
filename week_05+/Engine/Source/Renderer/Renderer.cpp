@@ -712,6 +712,20 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 	}
 }
 
+void FRenderer::ClearCachedBatches()
+{
+	for (auto& [Layer, Batches] : LayerCachedBatches)
+	{
+		Batches.clear();
+	}
+
+
+	bInstanceBufferDirty = true;
+	PrevCommandCount = -1;
+	CommandList.clear();
+	LocalCommandList.clear();
+}
+
 void FRenderer::RenderPickingPass()
 {
 	if (!PickingRTV || !PickingDSV || !PickingMaterial) return;
@@ -753,6 +767,11 @@ void FRenderer::RenderPickingPass()
 	}
 
 	// Default와 Overlay 레이어 모두 피킹 대상에 포함 (빌보드 선택 지원)
+	UE_LOG("[PickingPass] VP=%.0fx%.0f, Default=%d, Overlay=%d, Override=%d",
+		ActiveVP.Width, ActiveVP.Height,
+		static_cast<int>(LayerCachedBatches[ERenderLayer::Default].size()),
+		static_cast<int>(LayerCachedBatches[ERenderLayer::Overlay].size()),
+		static_cast<int>(bUseLevelRenderTargetOverride));
 	ERenderLayer PickLayers[] = { ERenderLayer::Default, ERenderLayer::Overlay };
 	for (ERenderLayer Layer : PickLayers)
 	{
@@ -780,8 +799,15 @@ uint32 FRenderer::ReadPixelID(int32 ScreenX, int32 ScreenY)
 	int32 MaxWidth = bUseLevelRenderTargetOverride ? static_cast<int32>(LevelViewport.Width) : static_cast<int32>(Viewport.Width);
 	int32 MaxHeight = bUseLevelRenderTargetOverride ? static_cast<int32>(LevelViewport.Height) : static_cast<int32>(Viewport.Height);
 
+	UE_LOG("[ReadPixelID] Screen=(%d,%d), Max=(%d,%d), Override=%d, PickTex=%p",
+		ScreenX, ScreenY, MaxWidth, MaxHeight,
+		static_cast<int>(bUseLevelRenderTargetOverride), PickingTexture);
+
 	if (!PickingTexture || !PickingStagingTexture || ScreenX < 0 || ScreenY < 0 || ScreenX >= MaxWidth || ScreenY >= MaxHeight)
+	{
+		UE_LOG("[ReadPixelID] REJECTED: out of bounds or null texture");
 		return 0;
+	}
 
 
 	D3D11_BOX Box;

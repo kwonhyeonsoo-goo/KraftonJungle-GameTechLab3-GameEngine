@@ -14,7 +14,12 @@ class ENGINE_API FLevelRenderCollector
 public:
 	FLevelRenderCollector() = default;
 
-	void MarkDirty() { bCommandsDirty = true; }
+	void MarkDirty()
+	{
+		bCommandsDirty = true;
+		CachedQueue.Clear();
+		PrevActorCount = -1;
+	}
 	void CollectRenderCommands(const TArray<AActor*>& Actors, const FFrustum& Frustum,
 		const FShowFlags& ShowFlags, const FCamera* Camera, FRenderCommandQueue& OutQueue);
 	void FrustrumCull(const TArray<AActor*>& Actors, const FFrustum& Frustum,

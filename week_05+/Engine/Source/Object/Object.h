@@ -1,7 +1,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "ObjectTypes.h"
-
+#include "ObjectFactory.h"
 template <typename T>
 concept HasInitialize = requires(T t) {
 	{ t.Initialize() } -> std::same_as<void>;

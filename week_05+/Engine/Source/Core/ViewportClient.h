@@ -56,6 +56,7 @@ public:
 	virtual void SetViewportInputState(int32 InMouseX, int32 InMouseY, const FRect& InRect);
 	int32 GetViewportWidth() const { return ViewportWidth; }
 	int32 GetViewportHeight() const { return ViewportHeight; }
+	FLevelRenderCollector& GetRenderCollector() { return RenderCollector; }
 
 protected:
 	FCamera CameraTransform;

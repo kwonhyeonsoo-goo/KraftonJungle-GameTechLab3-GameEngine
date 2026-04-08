@@ -1,5 +1,6 @@
 #include "Object/Object.h"
 #include "Object/Class.h"
+
 #include "Serializer/Archive.h"
 // 조건 1: 전역 오브젝트 배열 정의
 TArray<UObject*> GUObjectArray;
@@ -8,7 +9,7 @@ TArray<UObject*> GUObjectArray;
 uint32_t ExtractUObjectUUID(const void* Ptr)
 {
 	return Ptr ? static_cast<const UObject*>(Ptr)->UUID : 0;
-}
+} 
 
 // ─────────────────────────────────────────────────────────────
 //  생성 / 소멸
@@ -135,7 +136,11 @@ void UObject::MarkPendingKill()
 {
 	if (UUID != 0)
 	{
-		GUUIDToObjectMap.erase(UUID);
+		auto It = GUUIDToObjectMap.find(UUID);
+		if (It != GUUIDToObjectMap.end() && It->second == this)
+		{
+			GUUIDToObjectMap.erase(It);
+		}
 	}
 	AddFlags(EObjectFlags::PendingKill);
 }
@@ -167,6 +172,16 @@ void UObject::DuplicateSubObjects()
 UObject* UObject::Duplicate()
 {
 	UObject* NewObject = new UObject(*this);
+
+	uint32 NewUUID = FObjectFactory::GetLastUUID() + 1;
+	FObjectFactory::SetLastUUID(NewUUID);
+	NewObject->UUID = NewUUID;
+
+	NewObject->InternalIndex = static_cast<uint32>(GUObjectArray.size());
+	GUObjectArray.push_back(NewObject);
+	GUUIDToObjectMap[NewObject->UUID] = NewObject;
+
 	NewObject->DuplicateSubObjects();
+
 	return NewObject;
 }

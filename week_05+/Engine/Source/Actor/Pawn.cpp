@@ -3,6 +3,7 @@
 #include "Controller.h"
 #include "Component/CameraComponent.h"
 #include "Component/BillboardComponent.h"
+#include "Component/TextRenderComponent.h"
 #include "Camera/Camera.h"
 #include "Math/MathUtility.h"
 #include "Object/Class.h"
@@ -22,6 +23,13 @@ void APawn::PostSpawnInitialize()
 
 	Camera = FObjectFactory::ConstructObject<UCameraComponent>(this, "Camera");
 	AddOwnedComponent(Camera);
+	SetRootComponent(Camera);
+
+	// TextComponent가 AActor::PostSpawnInitialize에서 root로 생성됐으므로 Camera에 re-attach
+	if (UTextRenderComponent* TextComp = GetComponentByClass<UTextRenderComponent>())
+	{
+		TextComp->AttachTo(Camera);
+	}
 
 	if (GetComponentByClass<UBillboardComponent>() == nullptr)
 	{
@@ -31,10 +39,7 @@ void APawn::PostSpawnInitialize()
 		if (Billboard)
 		{
 			AddOwnedComponent(Billboard);
-			if (RootComponent && RootComponent != Billboard)
-			{
-				Billboard->AttachTo(RootComponent);
-			}
+			Billboard->AttachTo(Camera);
 
 			extern ENGINE_API class FRenderer* GRenderer;
 			if (GRenderer)

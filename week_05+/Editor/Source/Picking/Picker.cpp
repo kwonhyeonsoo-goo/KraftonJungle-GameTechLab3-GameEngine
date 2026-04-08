@@ -12,6 +12,7 @@
 #include "Component/BillboardComponent.h"
 #include "Component/MeshComponent.h"
 #include "Actor/SkySphereActor.h"
+#include "Debug/EngineLog.h"
 #include <limits>
 
 FRay FPicker::ScreenToRay(const FCamera* Camera, int32 ScreenX, int32 ScreenY, int32 ScreenWidth, int32 ScreenHeight) const
@@ -106,18 +107,22 @@ AActor* FPicker::PickActor(const TArray<AActor*>& InActors, const FCamera* InCam
 
 	GRenderer->RenderPickingPass();
 
-	// 2. �ȼ� ID �о����
 	uint32 PickedID = GRenderer->ReadPixelID(ScreenX, ScreenY);
 
-	if (PickedID == 0) return nullptr; // ����� Ŭ����
+	if (PickedID == 0) return nullptr;
 
-	// 3. ID�� ���� ã�� (InActors �迭���� �˻�)
 	for (AActor* Actor : InActors)
 	{
 		if (Actor && Actor->GetUUID() == PickedID)
 		{
 			return Actor;
 		}
+	}
+
+	UE_LOG("Pick failed: PixelID=%u, ActorCount=%d", PickedID, static_cast<int>(InActors.size()));
+	for (AActor* Actor : InActors)
+	{
+		if (Actor) UE_LOG("  Actor '%s' UUID=%u", Actor->GetName().c_str(), Actor->GetUUID());
 	}
 
 	return nullptr;

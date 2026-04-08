@@ -107,6 +107,7 @@ public:
 	ID3D11ShaderResourceView* GetFileIconSRV() const { return FileIconSRV; }
 	void MarkInstanceBufferDirty() { bInstanceBufferDirty = true; }
 	bool IsInstanceBufferDirty() const { return bInstanceBufferDirty; }
+	void ClearCachedBatches();
 	void RenderPickingPass();
 	uint32 ReadPixelID(int32 ScreenX, int32 ScreenY);
 private:
