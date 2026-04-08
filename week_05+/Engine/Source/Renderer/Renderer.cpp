@@ -490,6 +490,10 @@ void FRenderer::ExecuteCommandQueue(const FRenderCommandQueue& InQueue)
 		AddCommand(LocalCommandList, Cmd);
 	}
 
+	if (PrevCommandCount != InQueue.Commands.size())
+	{
+		bInstanceBufferDirty = true;
+	}
 	PrevCommandCount = InQueue.Commands.size();
 	ExecuteCommands(LocalCommandList, InQueue.ViewMatrix, InQueue.ProjectionMatrix);
 
@@ -523,6 +527,10 @@ void FRenderer::ExecuteCommands()
 
 void FRenderer::ExecuteCommands(TArray<FRenderCommand>& InCommandList, const FMatrix& InViewMatrix, const FMatrix& InProjectionMatrix)
 {
+	if (ViewMatrix != InViewMatrix || ProjectionMatrix != InProjectionMatrix)
+	{
+		bInstanceBufferDirty = true;
+	}
 	ViewMatrix = InViewMatrix;
 	ProjectionMatrix = InProjectionMatrix;
 
@@ -539,7 +547,8 @@ void FRenderer::ExecuteCommands(TArray<FRenderCommand>& InCommandList, const FMa
 	ExecuteRenderPass(InCommandList, ERenderLayer::Translucent);
 	ClearDepthBuffer();
 	ExecuteRenderPass(InCommandList, ERenderLayer::Overlay);
-	
+	bInstanceBufferDirty = false;
+
 	if (PostRenderCallback) PostRenderCallback(this);
 }
 
@@ -696,7 +705,6 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 	}
 
 	DeviceContext->Unmap(InstanceBuffer, 0);
-	bInstanceBufferDirty = false;
 
 	UINT Stride = sizeof(FInstanceData);
 	UINT Offset = 0;
