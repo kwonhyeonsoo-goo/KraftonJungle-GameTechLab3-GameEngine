@@ -743,6 +743,9 @@ void FPropertyWindow::DrawComponentHierarchy(USceneComponent* Component, USceneC
 bool FPropertyWindow::DrawDeleteComponentButton(AActor* SelectedActor, USceneComponent* SceneComp)
 {
 	if (ImGui::Button("Delete Component")) {
+		if (SelectedActor->GetRootComponent() == SceneComp) {
+			return false;
+		}
 		USceneComponent* parent = SceneComp->GetAttachParent();
 
 		const TArray<USceneComponent*>& children = SceneComp->GetAttachChildren();
@@ -752,17 +755,12 @@ bool FPropertyWindow::DrawDeleteComponentButton(AActor* SelectedActor, USceneCom
 		for (USceneComponent* child : children) {
 			child->AttachTo(parent);
 		}
+		SelectedActor->RemoveOwnedComponent(SceneComp);
 
-		auto components = SelectedActor->GetComponents();
-		for (auto it = components.begin(); it != components.end(); ++it) {
-			if (*it == SceneComp) {
-				components.erase(it);
-				break;
-			}
-		}
 		delete SceneComp;
 		return true;
 	}
+
 
 	return false;
 }
@@ -812,9 +810,10 @@ void FPropertyWindow::Render(FCore* Core)
 
 			ImGui::SameLine();
 
-			if (!DrawDeleteComponentButton(SelectedActor, SelectedComponent)) {
-
-
+			if (DrawDeleteComponentButton(SelectedActor, SelectedComponent)) {
+				SelectedComponent = nullptr;
+			}
+			else{
 
 				if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
 				{
