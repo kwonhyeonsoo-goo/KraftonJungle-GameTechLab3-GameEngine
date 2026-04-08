@@ -34,6 +34,8 @@ private:
 
 	void DrawStaticMeshSection(FCore* Core, AStaticMeshActor* SMActor);
 
+	void DrawAddComponentButton(AActor* SelectedActor);
+
 	FVector EditLocation = { 0.0f, 0.0f, 0.0f };
 	FVector EditRotation = { 0.0f, 0.0f, 0.0f };
 	FVector EditScale = { 1.0f, 1.0f, 1.0f };

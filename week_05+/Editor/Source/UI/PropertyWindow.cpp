@@ -432,6 +432,97 @@ void FPropertyWindow::DrawStaticMeshSection(FCore* Core, AStaticMeshActor* SMAct
 	ImGui::Unindent(8.0f);
 }
 
+void FPropertyWindow::DrawAddComponentButton(AActor* SelectedActor)
+{
+
+
+	ImGui::SeparatorText("Add Component");
+
+	static int32 SpawnTypeIndex = 0;
+	const char* SpawnTypes[] = {
+		"Cube Component", "Sphere Component", "Plane Component",
+		"SubUV Component", "Text Component", "StaticMesh Component" };
+	ImGui::Combo("##Type", &SpawnTypeIndex, SpawnTypes, IM_ARRAYSIZE(SpawnTypes));
+
+	static char SpawnTextBuffer[256] = "Text";
+	if (SpawnTypeIndex == 5)
+	{
+		ImGui::InputText("Text", SpawnTextBuffer, IM_ARRAYSIZE(SpawnTextBuffer));
+	}
+
+
+	ImGui::SameLine();
+
+	if (ImGui::Button("Add Component")) {
+		if (SpawnTypeIndex == 0 || SpawnTypeIndex == 1 || SpawnTypeIndex == 2 || SpawnTypeIndex == 5)
+		{
+
+			//// 주의: 현재 구조에서 ID3D11Device를 획득하는 코드(예: Core->GetDevice() 등)로 수정해 주셔야 합니다.
+			ID3D11Device* Device = nullptr;
+
+			UStaticMeshComponent* StaticMeshComponent = FObjectFactory::ConstructObject<UStaticMeshComponent>(SelectedActor, "StaticMeshComponent");
+
+			SelectedActor->AddOwnedComponent(StaticMeshComponent);
+
+			if (SpawnTypeIndex == 0)
+			{
+
+				StaticMeshComponent->LoadStaticMesh(Device, "Engine/BasicShapes/Cube");
+
+			}
+			else if (SpawnTypeIndex == 1)
+			{
+				StaticMeshComponent->LoadStaticMesh(Device, "Engine/BasicShapes/Sphere");
+
+			}
+			else if (SpawnTypeIndex == 2)
+			{
+				StaticMeshComponent->LoadStaticMesh(Device, "Engine/BasicShapes/Plane");
+
+			}
+			else if (SpawnTypeIndex == 5)
+			{
+				// 외부 StaticMesh 스폰 로직 (필요시 파일 브라우저 연동 등)
+				StaticMeshComponent->LoadStaticMesh(Device, "Engine/BasicShapes/Cube");
+
+			}
+
+			StaticMeshComponent->AttachTo(SelectedActor->GetRootComponent());
+
+			StaticMeshComponent = nullptr;
+
+		}
+
+		else if (SpawnTypeIndex == 3)	//SubUV comp
+		{
+			USubUVComponent* SubUVComponent = FObjectFactory::ConstructObject<USubUVComponent>(SelectedActor, "SubUVComponent");
+
+			SelectedActor->AddOwnedComponent(SubUVComponent);
+			if (SubUVComponent)
+			{
+				SubUVComponent->SetSize(FVector2(100.0f, 100.0f));
+				SubUVComponent->SetFirstFrame(0);
+				SubUVComponent->SetLastFrame(11);
+			}
+			SubUVComponent->AttachTo(SelectedActor->GetRootComponent());
+
+			SubUVComponent == nullptr;
+
+		}
+		else if (SpawnTypeIndex == 4)	//TextComponent
+		{
+			UTextComponent* TextComponent = FObjectFactory::ConstructObject<UTextComponent>(SelectedActor, "TextComponent");
+
+			SelectedActor->AddOwnedComponent(TextComponent);
+
+			TextComponent->AttachTo(SelectedActor->GetRootComponent());
+
+			TextComponent == nullptr;
+
+		}
+	}
+}
+
 void FPropertyWindow::Render(FCore* Core)
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
@@ -450,23 +541,46 @@ void FPropertyWindow::Render(FCore* Core)
 	ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.4f, 1.0f), "%s", ActorNameBuf);
 	ImGui::Separator();
 
-	if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
-	{
-		ImGui::Indent(8.0f);
-		DrawTransformSection();
-		ImGui::Unindent(8.0f);
-	}
+
 
 	if (GEditor && GEditor->GetSelectedActor())
 	{
+
 		AActor* SelectedActor = GEditor->GetSelectedActor();
+
+
+		// 위쪽 섹션
+		ImGui::BeginChild("Component Hierachy", ImVec2(0, 200), true); // 높이 200, 가로는 자동
+		{
+			for (int i = 0; i < 50; i++)
+				ImGui::Text(" ", i);
+		}
+		ImGui::EndChild();
+
+		ImGui::BeginChild("Details", ImVec2(0, 0), true); // 남은 공간 전부 사용
+
+
+		if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			ImGui::Indent(8.0f);
+			DrawTransformSection();
+			ImGui::Unindent(8.0f);
+		}
+
 		DrawBillboardSection(SelectedActor);
 
 		if (SelectedActor->IsA(AStaticMeshActor::StaticClass()))
 		{
 			DrawStaticMeshSection(Core, static_cast<AStaticMeshActor*>(SelectedActor));
 		}
+
+		DrawAddComponentButton(SelectedActor);
+
+		ImGui::EndChild();
+
+
 	}
+
 
 	ImGui::End();
 }
