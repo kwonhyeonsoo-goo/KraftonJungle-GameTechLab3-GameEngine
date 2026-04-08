@@ -13,6 +13,8 @@ void FGameViewportClient::Attach()
 
 	if (InputManager)
 		InputManager->SetGameMode(true);
+	//뷰포트가 교체될 때 렌더 캐시를 강제로 비워 첫 프레임 누락을 방지
+	RenderCollector.MarkDirty();
 }
 
 void FGameViewportClient::Detach()

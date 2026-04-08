@@ -354,21 +354,23 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 		const bool bHandledByImGui = ImGui_ImplWin32_WndProcHandler(Hwnd, Msg, WParam, LParam) != 0;
 
 		ImGuiIO& IO = ImGui::GetIO();
-
+		bool bIsPIE = false;
+		if (GEditor && GEditor->GetPIEState() == EPIEState::Playing)
+		{
+			bIsPIE = true;
+		}
 		// 키보드 입력 처리
 		if (Msg == WM_KEYDOWN || Msg == WM_KEYUP || Msg == WM_SYSKEYDOWN || Msg == WM_SYSKEYUP)
 		{
-			// 사용자가 텍스트 창에 글씨를 쓰고 있거나, ImGui 창이 포커스를 먹고 있다면 엔진으로 안 넘김
-			if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
-				return false;
+	
+			if (Msg == WM_KEYUP || Msg == WM_SYSKEYUP) return false;
 
-			//그 외의 경우 (뷰포트 조작 중) 에는 엔진(FCore -> InputManager)이 처리하도록 false 반환
-			if (IO.WantCaptureKeyboard || IO.WantTextInput)
-			{
-				return true; // ImGui
-			}
-			
-			return false;// 뷰포트 조작 중이 아닐 때는 기본적으로 엔진도 입력을 받도록 허용
+			if (bIsPIE && !IO.WantTextInput) return false;
+
+			if (ImGui::IsMouseDown(ImGuiMouseButton_Right)) return false;
+
+			if (IO.WantCaptureKeyboard || IO.WantTextInput) return true; 
+			return false;
 		}
 
 		// 마우스 입력 처리
@@ -376,28 +378,25 @@ void FEditorUI::SetupWindow(FWindow* InWindow)
 			Msg == WM_RBUTTONDOWN || Msg == WM_RBUTTONUP || Msg == WM_MBUTTONDOWN || Msg == WM_MBUTTONUP ||
 			Msg == WM_MOUSEWHEEL || Msg == WM_MOUSEHWHEEL)
 		{
-			// 마우스가 ImGui UI(버튼, 패널 등) 위에 올려져 있으면 엔진으로 클릭 안 넘김
+			if (bIsPIE) return false;
+
 			if (IO.WantCaptureMouse)
 			{
-				// 단, 마우스 우클릭으로 카메라 회전 중일 때는 밖으로 나가도 계속 드래그를 유지해야 하므로 예외 처리
 				if (ImGui::IsMouseDragging(ImGuiMouseButton_Right) || ImGui::IsMouseDragging(ImGuiMouseButton_Left))
 				{
-					return false; // 엔진으로 넘겨서 드래그 계속 처리!
+					return false;
 				}
-				return true; // ImGui가 소유
+				return true;
 			}
-
-			// 뷰포트 위에서 마우스를 굴리거나 클릭할 때는 무조건 엔진으로 넘깁니다
 			return false;
 		}
 
-		// 문자 입력 등 기타 메시지
 		const bool bIsImeMessage = Msg == WM_IME_STARTCOMPOSITION || Msg == WM_IME_COMPOSITION || Msg == WM_IME_ENDCOMPOSITION || Msg == WM_IME_NOTIFY || Msg == WM_IME_SETCONTEXT || Msg == WM_IME_CHAR;
 		const bool bIsCharMessage = Msg == WM_CHAR || Msg == WM_SYSCHAR || Msg == WM_UNICHAR;
 
 		if (bIsImeMessage || bIsCharMessage)
 		{
-			if (!IO.WantTextInput) return true; // 텍스트 입력 중 아니면 무시
+			if (!IO.WantTextInput) return true;
 		}
 
 		return bHandledByImGui;
