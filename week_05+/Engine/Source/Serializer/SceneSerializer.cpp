@@ -151,11 +151,11 @@ bool FSceneSerializer::Load(ULevel* Level, const FString& FilePath, ID3D11Device
 	for (auto& [Key, Value] : Items)
 	{
 	
-		FString ClassName;
-		
-	
-		ClassName = "AStaticMeshActor";
-
+		FString ClassName = Value.value("Class", "");
+		if (ClassName.empty())
+		{
+			ClassName = Value.value("Type", "");
+		}
 
 		UClass* ActorClass = UClass::FindClass(ClassName);
 		if (!ActorClass)
