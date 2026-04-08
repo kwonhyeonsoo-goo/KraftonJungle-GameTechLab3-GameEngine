@@ -56,7 +56,7 @@ FViewportContext* FEngine::CreateContext(FRect InRect)
 	auto Viewport = new FViewport(InRect);
 	
 	FViewportContext* ViewportContext = new FViewportContext(Viewport, ViewportClient);
-	ViewportContext->Initialize(Core.get(), InputManager, EnhancedInput);
+	ViewportContext->Initialize(InputManager, EnhancedInput);
 	return ViewportContext;
 }
 

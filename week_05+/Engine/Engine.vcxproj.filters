@@ -286,6 +286,9 @@
     <ClCompile Include="Source\Asset\AssetRegistry.cpp" />
     <ClCompile Include="Source\Asset\AssetCooker.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveSky.cpp" />
+    <ClCompile Include="Source\Core\GameViewportClient.cpp" />
+    <ClCompile Include="Source\Actor\Pawn.cpp" />
+    <ClCompile Include="Source\Actor\Controller.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -599,6 +602,9 @@
     <ClInclude Include="Source\Asset\CookedAsset.h" />
     <ClInclude Include="Source\Primitive\PrimitiveSky.h" />
     <ClInclude Include="Source\Math\Ray.h" />
+    <ClInclude Include="Source\Core\GameViewportClient.h" />
+    <ClInclude Include="Source\Actor\Pawn.h" />
+    <ClInclude Include="Source\Actor\Controller.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

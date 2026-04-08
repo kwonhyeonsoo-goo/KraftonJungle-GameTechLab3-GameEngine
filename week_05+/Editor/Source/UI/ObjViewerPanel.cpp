@@ -351,7 +351,7 @@ void FObjViewerPanel::ApplyDisplayedLocation(AActor* Actor, FEditorViewportClien
 void FObjViewerPanel::Render(FCore* Core, FEditorViewportClient* ActiveViewportClient, FEditorUI& EditorUI)
 {
 	if (!Core || !ActiveViewportClient || !GRenderer) return;
-	ULevel* Level = ActiveViewportClient->ResolveLevel(Core);
+	ULevel* Level = GWorld->GetLevel();
 	if (!Level) return;
 	AStaticMeshActor* MeshActor = FindObjViewerMeshActor(Level);
 	if (!MeshActor) return;

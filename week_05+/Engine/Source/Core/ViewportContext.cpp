@@ -149,12 +149,12 @@ void FViewportContext::UpdateInteractionState(int32 WindowMouseX, int32 WindowMo
 	SetCapturing(bInCapturing);
 }
 
-void FViewportContext::Initialize(FCore* Core, FInputManager* InInputManager, FEnhancedInputManager* InEnhancedInput)
+void FViewportContext::Initialize(FInputManager* InInputManager, FEnhancedInputManager* InEnhancedInput)
 {
 	if (ViewportClient)
 	{
 		ViewportClient->Initialize(InInputManager, InEnhancedInput);
-		ViewportClient->Attach(Core);
+		ViewportClient->Attach();
 	}
 }
 
@@ -163,9 +163,9 @@ bool FViewportContext::IsInteractive() const
 	return AcceptsInput() && Viewport && Viewport->IsVisible() && ViewportClient != nullptr;
 }
 
-void FViewportContext::Tick(FCore* Core, float DeltaTime)
+void FViewportContext::Tick(float DeltaTime)
 {
-	if (!Core || !IsEnabled() || ViewportClient == nullptr)
+	if (!IsEnabled() || ViewportClient == nullptr)
 	{
 		return;
 	}
@@ -176,12 +176,12 @@ void FViewportContext::Tick(FCore* Core, float DeltaTime)
 	}
 
 	ViewportClient->Tick(DeltaTime);
-	ViewportClient->ProcessCameraInput(Core, DeltaTime);
+	ViewportClient->ProcessCameraInput(DeltaTime);
 }
 
-bool FViewportContext::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+bool FViewportContext::HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
-	if (!Core || !AcceptsInput() || ViewportClient == nullptr || Viewport == nullptr)
+	if (!AcceptsInput() || ViewportClient == nullptr || Viewport == nullptr)
 	{
 		return false;
 	}
@@ -205,18 +205,8 @@ bool FViewportContext::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WP
 		}
 	}
 
-	ViewportClient->HandleMessage(Core, Hwnd, Msg, WParam, LParam);
+	ViewportClient->HandleMessage(Hwnd, Msg, WParam, LParam);
 	return true;
-}
-
-UWorld* FViewportContext::ResolveWorld(FCore* Core) const
-{
-	if (!Core || !ViewportClient)
-	{
-		return nullptr;
-	}
-
-	return ViewportClient->ResolveWorld(Core);
 }
 
 void FViewportContext::PrepareView(FRenderCommandQueue& CommandQueue, TArray<AActor*>& OutActors) const

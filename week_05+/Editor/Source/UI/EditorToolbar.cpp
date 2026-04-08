@@ -1,6 +1,6 @@
 #include "EditorToolbar.h"
 #include "FEditorEngine.h"
-#include <algorithm> // std::max
+#include "Core/GameViewportClient.h"
 
 namespace
 {
@@ -13,6 +13,7 @@ namespace
 
 		FEngine::CreateWorldContext(EWorldType::PIE, GWorld);
 
+		GEditor->ChangeViewportClient(new FGameViewportClient());
 		PIEWorld->BeginPlay();
 	}
 
@@ -26,6 +27,7 @@ namespace
 		}
 
 		GWorld = GEditor->GetEditorWorldContext().World;
+		GEditor->ChangeViewportClient(new FEditorViewportClient(GEditor->GetEditorUI(), EEditorViewportType::Perspective));
 	}
 }
 

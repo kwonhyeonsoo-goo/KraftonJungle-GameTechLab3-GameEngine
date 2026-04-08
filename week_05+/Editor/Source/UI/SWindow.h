@@ -46,7 +46,7 @@ public:
 	virtual void Tick(float DeltaTime) {}
 	virtual void Render() {}
 	virtual void Draw() {}
-	virtual bool HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam) { return false; }
+	virtual bool HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam) { return false; }
 	virtual void ReplaceSide(SWindow* OldSide, SWindow* NewSide);
 	SSplitter* Split(SWindow* InNewWindow, SplitDirection InDirection, SplitOption InSplitOption);
 	SSplitterC* Split4(SWindow* InNewWindow1, SWindow* InNewWindow2, SWindow* InNewWindow3, SplitOption InSplitOption);
@@ -95,7 +95,7 @@ public:
 	float GetSplitterThickness() const { return SplitterThickness; }
 	virtual void Tick(float DeltaTime) override;
 	virtual void Render() override;
-	virtual bool HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam) override;
+	virtual bool HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam) override;
 	virtual void Draw() override;
 
 };
@@ -199,6 +199,6 @@ public:
 	float GetSplitterThickness() const { return SplitterThickness; }
 	virtual void Tick(float DeltaTime) override;
 	virtual void Render() override;
-	virtual bool HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam) override;
+	virtual bool HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam) override;
 	virtual void Draw() override;
 };

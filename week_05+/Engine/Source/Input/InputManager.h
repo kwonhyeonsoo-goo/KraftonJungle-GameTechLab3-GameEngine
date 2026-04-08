@@ -22,7 +22,7 @@ struct FInputEvent
 class ENGINE_API FInputManager
 {
 public:
-	FInputManager() = default;
+	FInputManager();
 	~FInputManager() = default;
 
 	FInputManager(const FInputManager&) = delete;
@@ -68,3 +68,5 @@ private:
 	POINT LastMousePos = {};
 	bool bTrackingMouse = false;
 };
+
+extern ENGINE_API FInputManager* GInput;

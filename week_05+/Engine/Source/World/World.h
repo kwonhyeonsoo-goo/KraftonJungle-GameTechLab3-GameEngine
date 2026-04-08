@@ -6,6 +6,8 @@
 // Forward declarations ? include 최소화
 class ULevel;
 class AActor;
+class APawn;
+class AController;
 class UCameraComponent;
 class FCamera;
 class FFrustum;
@@ -43,6 +45,9 @@ public:
 	float GetWorldTime() const { return WorldTime; }
 	float GetDeltaTime() const { return DeltaSeconds; }
 
+	AController* GetDefaultController() const { return DefaultController; }
+	APawn* GetDefaultPawn() const { return DefaultPawn; }
+
 	static UWorld* DuplicateWorldForPIE(UWorld* SourceWorld);
 
 private:
@@ -52,8 +57,11 @@ private:
 	bool bBegunPlay = false;
 	float WorldTime = 0.f;
 	float DeltaSeconds = 0.f;
-	UCameraComponent* LevelCameraComponent = nullptr;    
+	UCameraComponent* LevelCameraComponent = nullptr;
 	TObjectPtr<UCameraComponent> ActiveCameraComponent;
+
+	AController* DefaultController = nullptr;
+	APawn* DefaultPawn = nullptr;
 };
 #include "World/Level.h"
 

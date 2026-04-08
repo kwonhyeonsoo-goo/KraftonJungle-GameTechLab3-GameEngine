@@ -8,13 +8,9 @@
 #include "Serializer/Archive.h"
 #include "Component/StaticMeshComponent.h"
 #include "ThirdParty/nlohmann/json.hpp"
-#include "Serializer/Archive.h"
 #include "World/Level.h"
-IMPLEMENT_RTTI(AActor, UObject)
 
-namespace {
-	FVector GZeroVector{};
-}
+IMPLEMENT_RTTI(AActor, UObject)
 
 ULevel* AActor::GetLevel() const { return Level; }
 void AActor::SetLevel(ULevel* InLevel) { Level = InLevel; }
@@ -83,20 +79,20 @@ void AActor::RemoveOwnedComponent(UActorComponent* InComponent)
 
 void AActor::PostSpawnInitialize()
 {
-	if (GetComponentByClass<UUUIDBillboardComponent>() == nullptr)
-	{
-		UUUIDBillboardComponent* UUIDComponent =
-			FObjectFactory::ConstructObject<UUUIDBillboardComponent>(this, "UUIDBillboard");
+	//if (GetComponentByClass<UUUIDBillboardComponent>() == nullptr)
+	//{
+	//	UUUIDBillboardComponent* UUIDComponent =
+	//		FObjectFactory::ConstructObject<UUUIDBillboardComponent>(this, "UUIDBillboard");
 
-		if (UUIDComponent)
-		{
-			AddOwnedComponent(UUIDComponent);
+	//	if (UUIDComponent)
+	//	{
+	//		AddOwnedComponent(UUIDComponent);
 
-			UUIDComponent->SetWorldOffset(FVector(0.0f, 0.0f, 0.3f));
-			UUIDComponent->SetWorldScale(0.3f);
-			UUIDComponent->SetTextColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
-		}
-	}
+	//		UUIDComponent->SetWorldOffset(FVector(0.0f, 0.0f, 0.3f));
+	//		UUIDComponent->SetWorldScale(0.3f);
+	//		UUIDComponent->SetTextColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+	//	}
+	//}
 
 	for (UActorComponent* Component : OwnedComponents)
 	{
@@ -287,7 +283,7 @@ const FVector& AActor::GetActorLocation() const
 {
 	if (RootComponent == nullptr)
 	{
-		return GZeroVector;
+		return FVector::ZeroVector;
 	}
 
 	return RootComponent->GetRelativeLocation();
@@ -317,6 +313,12 @@ void AActor::DuplicateSubObjects()
 	{
 		if (Component)
 		{
+			UUUIDBillboardComponent* UUIDComp = dynamic_cast<UUUIDBillboardComponent*>(Component);
+			if (UUIDComp)
+			{
+				continue; // UUIDBillboardComponent는 복제하지 않음
+			}
+
 			UActorComponent* DuplicatedComp = static_cast<UActorComponent*>(Component->Duplicate());
 			DuplicatedComp->SetOwner(this);
 			OwnedComponents.push_back(DuplicatedComp);

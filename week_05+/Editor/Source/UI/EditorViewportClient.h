@@ -44,19 +44,17 @@ enum class EEditorViewportType : uint8_t
 class FEditorViewportClient : public FViewportClient
 {
 public:
-	FEditorViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow, EEditorViewportType InViewportType, EWorldType InWorldType);
+	FEditorViewportClient(FEditorUI& InEditorUI, EEditorViewportType InViewportType);
 
-	void Attach(FCore* Core) override;
+	void Attach() override;
 	void Detach() override;
-	void HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam) override;
-	UWorld* ResolveWorld(FCore* Core) const override;
+	void HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam) override;
 	const char* GetViewportLabel() const override;
 	EGizmoMode GetGizmoMode() const { return Gizmo.GetMode(); }
 	void SetGizmoMode(EGizmoMode InMode) { Gizmo.SetMode(InMode); }
 	ERenderMode GetRenderMode() const { return RenderMode; }
 	void SetRenderMode(ERenderMode InRenderMode) { RenderMode = InRenderMode; }
 	EEditorViewportType GetViewportType() const { return CameraViewType; }
-	bool SupportsEditingTools() const { return WorldType == EWorldType::Editor; }
 	void DrawUI() override;
 	void HandleFileDoubleClick(const FString& FilePath);
 	void HandleFileDropOnViewport(const FString& FilePath);
@@ -79,16 +77,16 @@ protected:
 	virtual void ConfigureDefaultView();
 	virtual void DrawControllerOptions();
 	virtual void DrawViewportSpecificOptions();
-	virtual void ProcessCameraInput(FCore* Core, float DeltaTime) override;
+	virtual void ProcessCameraInput(float DeltaTime) override;
 	virtual void OnMouseButtonDown(UINT Msg, WPARAM WParam, LPARAM LParam);
 	virtual void OnMouseButtonUp(UINT Msg, WPARAM WParam, LPARAM LParam);
 	virtual void OnMouseMove(WPARAM WParam, LPARAM LParam);
 	virtual void OnMouseWheel(float WheelDelta, WPARAM WParam, LPARAM LParam);
 	virtual void OnKeyDown(WPARAM WParam, LPARAM LParam);
 	virtual void OnKeyUp(WPARAM WParam, LPARAM LParam);
-	bool CanUseEditingTools(FCore* Core, ULevel*& OutLevel, UWorld*& OutWorld) const;
+	bool CanUseEditingTools(ULevel*& OutLevel, UWorld*& OutWorld) const;
 	void HandleEditorHotkeys(WPARAM WParam, bool bRightMouseDown);
-	void HandleSelectionClick(FCore* Core, AActor* SelectedActor);
+	void HandleSelectionClick(AActor* SelectedActor);
 	void HandleMouseMoveForTools(AActor* SelectedActor);
 	void HandleMouseReleaseForTools();
 	AActor* GetSelectedActor() const;
@@ -114,7 +112,6 @@ protected:
 	FMatrix GetGridWorldMatrix() const;
 
 	FEditorUI& EditorUI;
-	FWindow* MainWindow = nullptr;
 	FPicker Picker;
 	mutable FGizmo Gizmo;
 

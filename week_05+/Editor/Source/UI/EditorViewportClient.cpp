@@ -173,12 +173,10 @@ namespace
 	}
 }
 
-FEditorViewportClient::FEditorViewportClient(FEditorUI& InEditorUI, FWindow* InMainWindow, EEditorViewportType InViewportType, EWorldType InWorldType)
+FEditorViewportClient::FEditorViewportClient(FEditorUI& InEditorUI, EEditorViewportType InViewportType)
 	: EditorUI(InEditorUI)
-	, MainWindow(InMainWindow)
 	, CameraViewType(InViewportType)
 {
-	SetWorldType(InWorldType);
 	SetGridVisible(bShowGrid);
 
 	FocusCameraFunction.SetCamera(&CameraTransform);
@@ -190,9 +188,9 @@ FEditorViewportClient::FEditorViewportClient(FEditorUI& InEditorUI, FWindow* InM
 	SaveInitialCameraState();
 }
 
-void FEditorViewportClient::Attach(FCore* Core)
+void FEditorViewportClient::Attach()
 {
-	if (!Core || !GRenderer || !MainWindow)
+	if (!GRenderer)
 	{
 		return;
 	}
@@ -410,11 +408,6 @@ void FEditorViewportClient::ShowViewOptionPanel()
 	}
 }
 
-UWorld* FEditorViewportClient::ResolveWorld(FCore* Core) const
-{
-	return FViewportClient::ResolveWorld(Core);
-}
-
 const char* FEditorViewportClient::GetViewportLabel() const
 {
 	return GetViewportTypeLabel(CameraViewType);
@@ -578,10 +571,8 @@ void FEditorViewportClient::DrawControllerOptions()
 	}
 }
 
-void FEditorViewportClient::ProcessCameraInput(FCore* Core, float DeltaTime)
+void FEditorViewportClient::ProcessCameraInput(float DeltaTime)
 {
-	(void)Core;
-
 	if (!InputManager)
 	{
 		return;
@@ -669,18 +660,11 @@ void FEditorViewportClient::ProcessCameraInput(FCore* Core, float DeltaTime)
 	UpdateOrthoCameraTransform();
 }
 
-void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+void FEditorViewportClient::HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
-	(void)Hwnd;
-
-	if (EditorUI.GetActiveViewportClient() != this)
-	{
-		EditorUI.SetActiveViewportClient(this);
-	}
-
 	ULevel* Level = nullptr;
-	UWorld* World = GWorld;
-	const bool bCanUseEditingTools = CanUseEditingTools(Core, Level, World);
+	UWorld* World = nullptr;
+	const bool bCanUseEditingTools = CanUseEditingTools(Level, World);
 	AActor* SelectedActor = bCanUseEditingTools ? GetSelectedActor() : nullptr;
 	const bool bRightMouseDown = InputManager && InputManager->IsMouseButtonDown(FInputManager::MOUSE_RIGHT);
 
@@ -706,7 +690,7 @@ void FEditorViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPAR
 		OnMouseButtonDown(Msg, WParam, LParam);
 		if (Msg == WM_LBUTTONDOWN && bCanUseEditingTools)
 		{
-			HandleSelectionClick(Core, SelectedActor);
+			HandleSelectionClick(SelectedActor);
 		}
 		return;
 	case WM_MOUSEMOVE:
@@ -867,11 +851,11 @@ void FEditorViewportClient::FrameObjViewerCamera(AActor* TargetActor, bool bSave
 	}
 }
 
-bool FEditorViewportClient::CanUseEditingTools(FCore* Core, ULevel*& OutLevel, UWorld*& OutWorld) const
+bool FEditorViewportClient::CanUseEditingTools(ULevel*& OutLevel, UWorld*& OutWorld) const
 {
-	OutLevel = ResolveLevel(Core);
-	OutWorld = ResolveWorld(Core);
-	return SupportsEditingTools() && OutLevel != nullptr && OutWorld != nullptr;
+	OutLevel = GWorld->GetLevel();
+	OutWorld = GWorld;
+	return OutLevel != nullptr && OutWorld != nullptr && OutWorld->GetWorldType() == EWorldType::Editor;
 }
 
 void FEditorViewportClient::HandleEditorHotkeys(WPARAM WParam, bool bRightMouseDown)
@@ -918,7 +902,7 @@ void FEditorViewportClient::HandleEditorHotkeys(WPARAM WParam, bool bRightMouseD
 	}
 }
 
-void FEditorViewportClient::HandleSelectionClick(FCore* Core, AActor* SelectedActor)
+void FEditorViewportClient::HandleSelectionClick(AActor* SelectedActor)
 {
 #if IS_OBJ_VIEWER //뷰어에서는 차단되는 기능
 	return;
@@ -1393,7 +1377,7 @@ void FEditorViewportClient::HandleFileDropOnViewport(const FString& FilePath)
 		return;
 	}
 
-	ULevel* Level = ResolveLevel(Core);
+	ULevel* Level = GWorld->GetLevel();
 	if (!Level)
 	{
 		return;
