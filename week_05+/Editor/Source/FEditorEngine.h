@@ -22,7 +22,23 @@ public:
 	void SetViewportLayoutBounds(FRect InRect);
 
 	EPIEState GetPIEState() const { return PIEState; }
-	void SetPIEState(EPIEState NewState) { PIEState = NewState; }
+	void SetPIEState(EPIEState NewState)
+	{
+		if (PIEState == NewState)
+		{
+			return;
+		}
+		if (PIEState == EPIEState::Paused)
+		{
+			Timer->Resume();
+		}
+
+		PIEState = NewState;
+		if (PIEState == EPIEState::Paused)
+		{
+			Timer->Pause();
+		}
+	}
 
 	FWorldContext GetEditorWorldContext() const;
 	void RemoveEditorWorldContext(EWorldType WorldType);

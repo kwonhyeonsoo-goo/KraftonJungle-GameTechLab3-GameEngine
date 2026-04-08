@@ -7,6 +7,12 @@ void FTimer::Initialize()
 
 void FTimer::Tick()
 {
+	if (bPaused)
+	{
+		DeltaTime = 0.0f;
+		return;
+	}
+
 	if (TargetFrameTime > 0.0f)
 	{
 		Clock::time_point Now;

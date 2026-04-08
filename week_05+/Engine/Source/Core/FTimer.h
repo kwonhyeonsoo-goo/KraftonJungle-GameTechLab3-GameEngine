@@ -18,6 +18,9 @@ public:
 	void SetMaxFPS(float InMaxFPS);
 	float GetMaxFPS() const { return MaxFPS; }
 
+	void Pause() { bPaused = true; }
+	void Resume() { bPaused = false; }
+
 private:
 	using Clock = std::chrono::high_resolution_clock;
 	Clock::time_point LastTime = {};
@@ -28,4 +31,6 @@ private:
 	float TargetFrameTime = 0.0f;
 
 	float SmoothedFPS = 0.0f;
+
+	bool bPaused = false;
 };
