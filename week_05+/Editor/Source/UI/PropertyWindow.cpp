@@ -18,6 +18,8 @@
 #include <algorithm>
 #include <filesystem>
 
+USceneComponent* FPropertyWindow::SelectedComponent = nullptr;
+
 auto ProcessDragDrop = [](const std::vector<std::string>& TargetExts, auto OnDropValid)
 {
 	if (!ImGui::BeginDragDropTarget())
@@ -803,7 +805,6 @@ void FPropertyWindow::Render(FCore* Core)
 	{
 
 		AActor* SelectedActor = GEditor->GetSelectedActor();
-		static USceneComponent* SelectedComponent = nullptr;
 
 		// 위쪽 섹션 : componenet hierachy
 		ImGui::BeginChild("Component Hierachy", ImVec2(0, 200), true); // 높이 200, 가로는 자동

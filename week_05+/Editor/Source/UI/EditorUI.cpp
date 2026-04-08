@@ -585,6 +585,8 @@ void FEditorUI::Render()
 							SavePerspectiveCameraInitialState();
 							SyncSelectedActorProperty();
 							UE_LOG("Level loaded: %s", Path.c_str());
+
+							FPropertyWindow::SelectedComponent = nullptr;
 						}
 						else
 						{

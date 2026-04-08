@@ -234,91 +234,38 @@ void AActor::Serialize(FArchive& Ar)
 			if (Comp)
 				Comp->SetOwner(this);
 	}
-	// RootComponent 직렬화 
-	// 만약 루트가 StaticMeshComponent라면, 위치/회전/크기부터 메쉬/매테리얼/텍스처까지 연쇄적으로 싹 다 자동 저장&로드
-	if (USceneComponent* Root = GetRootComponent())
+	// 컴포넌트 데이터 직렬화
+	if (Ar.IsSaving())
 	{
-		if (Ar.IsSaving())
+		auto& ParentJson = *static_cast<nlohmann::json*>(Ar.GetRawJson());
+		nlohmann::json ComponentsJson = nlohmann::json::array();
+		for (UActorComponent* Comp : GetComponents())
 		{
-			FArchive CompAr(true); // RootComponent 전용 빈 도화지 생성
-			Root->Serialize(CompAr); // 여기에 마음껏 쓰게 함
-
-			// 다 쓴 도화지를 액터 도화지의 "RootComponent" 폴더에 통째
-			(*static_cast<nlohmann::json*>(Ar.GetRawJson()))["RootComponent"] = *static_cast<nlohmann::json*>(CompAr.GetRawJson());
-		}
-		else // IsLoading
-		{
-			auto& ParentJson = *static_cast<nlohmann::json*>(Ar.GetRawJson());
-			if (ParentJson.contains("RootComponent"))
+			if (Comp)
 			{
-				FArchive CompAr(false);
-				*static_cast<nlohmann::json*>(CompAr.GetRawJson()) = ParentJson["RootComponent"];
-				Root->Serialize(CompAr);
-			}
-			else
-			{
-				Root->Serialize(Ar);
+				FArchive CompAr(true);
+				Comp->Serialize(CompAr);
+				ComponentsJson.push_back(*static_cast<nlohmann::json*>(CompAr.GetRawJson()));
 			}
 		}
+		ParentJson["ComponentsData"] = ComponentsJson;
 	}
-
-	// 2. TextComponent 직렬화 (UUIDBillboardComponent와 충돌하지 않도록 필터링)
-	UTextRenderComponent* RealTC = nullptr;
-	for (UActorComponent* Comp : GetComponents())
+	else
 	{
-		// UUID빌보드가 아닌 진짜 순수 TextComponent만 
-		if (Comp->IsA(UTextRenderComponent::StaticClass()) && !Comp->IsA(UBillboardComponent::StaticClass()))
+		auto& ParentJson = *static_cast<nlohmann::json*>(Ar.GetRawJson());
+		if (ParentJson.contains("ComponentsData") && ParentJson["ComponentsData"].is_array())
 		{
-			RealTC = static_cast<UTextRenderComponent*>(Comp);
-			break;
-		}
-	}
-
-	if (RealTC)
-	{
-		if (Ar.IsSaving())
-		{
-			FArchive CompAr(true);
-			RealTC->Serialize(CompAr);
-			(*static_cast<nlohmann::json*>(Ar.GetRawJson()))["TextComponent"] = *static_cast<nlohmann::json*>(CompAr.GetRawJson());
-		}
-		else
-		{
-			auto& ParentJson = *static_cast<nlohmann::json*>(Ar.GetRawJson());
-			if (ParentJson.contains("TextComponent"))
+			const auto& ComponentsJson = ParentJson["ComponentsData"];
+			const TArray<UActorComponent*>& Components = GetComponents();
+			size_t Count = std::min((size_t)Components.size(), ComponentsJson.size());
+			for (size_t i = 0; i < Count; ++i)
 			{
-				FArchive CompAr(false);
-				*static_cast<nlohmann::json*>(CompAr.GetRawJson()) = ParentJson["TextComponent"];
-				RealTC->Serialize(CompAr);
-			}
-		}
-	}
-	UBillboardComponent* RealBC = nullptr;
-	for (UActorComponent* Comp : GetComponents())
-	{
-		if (Comp->IsA(UBillboardComponent::StaticClass()))
-		{
-			RealBC = static_cast<UBillboardComponent*>(Comp);
-			break;
-		}
-	}
-
-	if (RealBC)
-	{
-		if (Ar.IsSaving())
-		{
-			FArchive CompAr(true);
-			RealBC->Serialize(CompAr);
-			(*static_cast<nlohmann::json*>(Ar.GetRawJson()))["BillboardComponent"] = *static_cast<nlohmann::json*>(CompAr.GetRawJson());
-		}
-		else
-		{
-			auto& ParentJson = *static_cast<nlohmann::json*>(Ar.GetRawJson());
-			if (ParentJson.contains("BillboardComponent"))
-			{
-				FArchive CompAr(false);
-				*static_cast<nlohmann::json*>(CompAr.GetRawJson()) = ParentJson["BillboardComponent"];
-				RealBC->Serialize(CompAr);
+				if (Components[i])
+				{
+					FArchive CompAr(false);
+					*static_cast<nlohmann::json*>(CompAr.GetRawJson()) = ComponentsJson[i];
+					Components[i]->Serialize(CompAr);
+				}
 			}
 		}
 	}
