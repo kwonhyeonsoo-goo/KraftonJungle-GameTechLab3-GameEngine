@@ -11,6 +11,7 @@
 
 #include "Serializer/Archive.h"
 #include "World/Level.h"
+#include <unordered_map>
 
 IMPLEMENT_RTTI(AActor, UObject)
 
@@ -352,23 +353,38 @@ void AActor::DuplicateSubObjects()
 	OwnedComponents.clear();
 	RootComponent = nullptr;
 
+	std::unordered_map<UActorComponent*, UActorComponent*> CompMap;
+
 	for (UActorComponent* Component : OldComponents)
 	{
 		if (Component)
 		{
-			UTextRenderComponent* UUIDComp = dynamic_cast<UTextRenderComponent*>(Component);
-			if (UUIDComp)
-			{
-				continue; // UUIDBillboardComponent는 복제하지 않음
-			}
-
 			UActorComponent* DuplicatedComp = static_cast<UActorComponent*>(Component->Duplicate());
 			DuplicatedComp->SetOwner(this);
 			OwnedComponents.push_back(DuplicatedComp);
 
+			CompMap[Component] = DuplicatedComp;
+
 			if (Component == OldRoot)
 			{
 				RootComponent = static_cast<USceneComponent*>(DuplicatedComp);
+			}
+		}
+	}
+
+	for (UActorComponent* Component : OldComponents)
+	{
+		USceneComponent* OldSceneComp = dynamic_cast<USceneComponent*>(Component);
+		if (OldSceneComp && OldSceneComp->GetAttachParent())
+		{
+			if (CompMap.count(Component) && CompMap.count(OldSceneComp->GetAttachParent()))
+			{
+				USceneComponent* NewSceneComp = static_cast<USceneComponent*>(CompMap[Component]);
+				USceneComponent* NewParent = static_cast<USceneComponent*>(CompMap[OldSceneComp->GetAttachParent()]);
+				if (NewSceneComp && NewParent)
+				{
+					NewSceneComp->AttachTo(NewParent);
+				}
 			}
 		}
 	}

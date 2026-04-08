@@ -29,7 +29,7 @@ private:
 	void UpdateWorldTransform() const;
 
 	FTransform RelativeTransform{};
-	TObjectPtr<USceneComponent> AttachParent;
+	USceneComponent* AttachParent;
 	TArray<USceneComponent*> AttachChildren;
 
 	mutable FMatrix CachedWorldTransform;

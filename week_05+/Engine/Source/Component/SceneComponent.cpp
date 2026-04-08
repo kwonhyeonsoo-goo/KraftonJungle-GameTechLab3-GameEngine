@@ -2,6 +2,8 @@
 #include "Renderer/Renderer.h"
 #include "Object/Class.h"
 #include "Serializer/Archive.h"
+#include "Actor/Actor.h"
+
 IMPLEMENT_RTTI(USceneComponent, UActorComponent)
 
 void USceneComponent::SetRelativeTransform(const FTransform& InTransform)
