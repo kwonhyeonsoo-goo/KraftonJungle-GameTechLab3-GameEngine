@@ -100,10 +100,15 @@ void FInputManager::Tick()
 	EventQueue.clear();
 
 	// Mouse delta
-	if (bTrackingMouse)
+	if (bTrackingMouse || bGameMode)
 	{
 		POINT CurrentPos;
 		GetCursorPos(&CurrentPos);
+		if (!bTrackingMouse && bGameMode && (LastMousePos.x == 0 && LastMousePos.y == 0))
+		{
+			// 게임 모드 첫 프레임: 델타 없이 위치만 초기화
+			LastMousePos = CurrentPos;
+		}
 		MouseDeltaX = static_cast<float>(CurrentPos.x - LastMousePos.x);
 		MouseDeltaY = static_cast<float>(CurrentPos.y - LastMousePos.y);
 		LastMousePos = CurrentPos;

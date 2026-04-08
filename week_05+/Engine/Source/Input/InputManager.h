@@ -45,6 +45,10 @@ public:
 	float GetMouseDeltaY() const { return MouseDeltaY; }
 	float GetMouseWheelDelta() const { return MouseWheelDelta; }
 
+	// 게임 모드: 마우스 버튼 없이도 항상 델타 추적
+	void SetGameMode(bool bEnable) { bGameMode = bEnable; }
+	bool IsGameMode() const { return bGameMode; }
+
 	static constexpr int32 MOUSE_LEFT = 0;
 	static constexpr int32 MOUSE_RIGHT = 1;
 	static constexpr int32 MOUSE_MIDDLE = 2;
@@ -67,6 +71,7 @@ private:
 	float MouseWheelDelta = 0.0f;
 	POINT LastMousePos = {};
 	bool bTrackingMouse = false;
+	bool bGameMode = false;
 };
 
 extern ENGINE_API FInputManager* GInput;

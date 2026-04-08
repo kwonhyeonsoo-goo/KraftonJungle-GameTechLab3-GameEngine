@@ -10,10 +10,16 @@ void FGameViewportClient::Attach()
 {
 	ShowFlags.SetFlag(EEngineShowFlags::SF_UUID, false);
 	ShowFlags.SetFlag(EEngineShowFlags::SF_Collision, false);
+
+	if (InputManager)
+		InputManager->SetGameMode(true);
 }
 
 void FGameViewportClient::Detach()
 {
+	if (InputManager)
+		InputManager->SetGameMode(false);
+
 	// Controller의 입력 바인딩 해제
 	AController* Controller = GWorld ? GWorld->GetDefaultController() : nullptr;
 	if (Controller)
