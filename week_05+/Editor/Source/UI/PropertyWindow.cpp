@@ -817,9 +817,14 @@ void FPropertyWindow::Render(FCore* Core)
 
 	if (GEditor && GEditor->GetSelectedActor())
 	{
+		static AActor* PreviousSelectedActor = nullptr;
 
 		AActor* SelectedActor = GEditor->GetSelectedActor();
 
+		if (PreviousSelectedActor != SelectedActor) {
+			SelectedComponent = nullptr;
+			PreviousSelectedActor = SelectedActor;
+		}
 		// 위쪽 섹션 : componenet hierachy
 		ImGui::BeginChild("Component Hierachy", ImVec2(0, 200), true); // 높이 200, 가로는 자동
 		{
@@ -833,6 +838,7 @@ void FPropertyWindow::Render(FCore* Core)
 
 		ImGui::BeginChild("Details", ImVec2(0, 0), true); // 남은 공간 전부 사용
 
+		if (!SelectedActor) SelectedComponent = nullptr;
 		if (SelectedComponent) {
 			//아래쪽 섹션component Detail
 			ImGui::Text("Selected Component: %s", SelectedComponent->GetName().c_str());
