@@ -13,7 +13,7 @@ namespace
 
 		FEngine::CreateWorldContext(EWorldType::PIE, GWorld);
 
-		GEditor->ChangeViewportClient(new FGameViewportClient());
+		GEditor->ChangeGameViewportClient();
 		PIEWorld->BeginPlay();
 	}
 
@@ -27,7 +27,7 @@ namespace
 		}
 
 		GWorld = GEditor->GetEditorWorldContext().World;
-		GEditor->ChangeViewportClient(new FEditorViewportClient(GEditor->GetEditorUI(), EEditorViewportType::Perspective));
+		GEditor->RestoreEditorViewportClient();
 	}
 }
 

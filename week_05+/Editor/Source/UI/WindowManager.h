@@ -65,5 +65,6 @@ public:
 	bool LoadLayoutFromIni(const std::wstring& IniPath, const FRect& RootRect);
 
 	FViewportContext* FindPerspectiveViewportContext() const;
+	FViewportContext* FindViewportContext() const;
 	FEditorViewportClient* FindPerspectiveViewportClient() const;
 };
