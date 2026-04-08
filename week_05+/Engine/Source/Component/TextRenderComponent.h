@@ -17,7 +17,7 @@ public:
 
 
 
-	void SetTextColor(const FVector4& InColor) { TextColor = InColor; }
+	void SetTextColor(const FVector4& InColor);
 	const FVector4& GetTextColor() const { return TextColor; }
 
 	void SetBillboard(bool bInBillboard) { bBillboard = bInBillboard; }
@@ -40,7 +40,7 @@ public:
 	struct FMeshData* GetTextMesh() const { return TextMesh.get(); }
 
 	void DuplicateSubObjects() override;
-
+	class FDynamicMaterial* GetOrCreateDynamicMaterial();
 protected:
 	FString Text = "";
 	FVector4 TextColor = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -49,4 +49,5 @@ protected:
 	FVector WorldOffset = FVector(0.0f, 0.0f, 0.3f);
 
 	std::shared_ptr<struct FMeshData> TextMesh;
+	std::shared_ptr<class FDynamicMaterial> DynamicMaterial;
 };

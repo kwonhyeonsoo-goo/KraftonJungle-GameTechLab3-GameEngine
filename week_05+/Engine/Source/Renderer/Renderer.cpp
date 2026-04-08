@@ -772,7 +772,7 @@ void FRenderer::RenderPickingPass()
 		static_cast<int>(LayerCachedBatches[ERenderLayer::Default].size()),
 		static_cast<int>(LayerCachedBatches[ERenderLayer::Overlay].size()),
 		static_cast<int>(bUseLevelRenderTargetOverride));
-	ERenderLayer PickLayers[] = { ERenderLayer::Default, ERenderLayer::Overlay };
+	ERenderLayer PickLayers[] = { ERenderLayer::Default, ERenderLayer::Translucent, ERenderLayer::Overlay };
 	for (ERenderLayer Layer : PickLayers)
 	{
 		for (const FCachedBatch& Batch : LayerCachedBatches[Layer])

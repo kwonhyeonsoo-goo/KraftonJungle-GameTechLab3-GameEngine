@@ -196,12 +196,14 @@ void FPropertyWindow::DrawBillboardSection(AActor* SelectedActor, USceneComponen
 			float Col[4] = { Color.X, Color.Y, Color.Z, Color.W };
 			if (ImGui::ColorEdit4("Color", Col)) {
 				TextComp->SetTextColor(FVector4(Col[0], Col[1], Col[2], Col[3]));
+				bNeedsRenderUpdate = true;
 			}
 
 			// 텍스트 스케일 변경
 			float Scale = TextComp->GetTextScale();
 			if (ImGui::DragFloat("Scale", &Scale, 0.01f, 0.1f, 100.0f)) {
 				TextComp->SetTextScale(Scale);
+				bNeedsRenderUpdate = true;
 			}
 
 			bool bBillboard = TextComp->IsBillboard();
@@ -274,11 +276,18 @@ void FPropertyWindow::DrawBillboardSection(AActor* SelectedActor, USceneComponen
 			GRenderer->ClearCachedBatches();
 		}
 
+
 		if (GEditor)
 		{
-			if (auto* VC = GEditor->GetEditorUI().FindPerspectiveViewportClient())
+
+			if (auto* ActiveVC = GEditor->GetEditorUI().GetActiveViewportClient())
 			{
-				VC->GetRenderCollector().MarkDirty();
+				ActiveVC->GetRenderCollector().MarkDirty();
+			}
+
+			if (auto* PerspVC = GEditor->GetEditorUI().FindPerspectiveViewportClient())
+			{
+				PerspVC->GetRenderCollector().MarkDirty();
 			}
 		}
 	}

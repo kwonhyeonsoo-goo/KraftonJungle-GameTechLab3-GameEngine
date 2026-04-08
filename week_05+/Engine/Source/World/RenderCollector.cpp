@@ -54,15 +54,13 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 
 			if (TextMesh && TextRenderer.BuildTextMesh(TextComp->GetDisplayText(), *TextMesh))
 			{
-				FMaterial* FontMat = TextRenderer.GetFontMaterial();
-				if (FontMat)
+				FMaterial* MatToUse = TextComp->GetOrCreateDynamicMaterial();
+				if (!MatToUse) MatToUse = TextRenderer.GetFontMaterial(); // 예외 상황 대비
+				if (MatToUse)
 				{
-					FVector4 Color = TextComp->GetTextColor();
-					FontMat->SetParameterData("TextColor", &Color, 16);
-
 					FRenderCommand Command;
 					Command.MeshData = TextMesh;
-					Command.Material = FontMat;
+					Command.Material = MatToUse;;
 
 					// 텍스트는 오브젝트를 뚫고 보이도록 Overlay 처리
 					Command.RenderLayer = ERenderLayer::Overlay;
@@ -120,7 +118,10 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 
 		
 				if (!Command.Material) continue;
-
+				if (Command.Material->GetBlendOption().BlendEnable)
+				{
+					Command.RenderLayer = ERenderLayer::Translucent;
+				}
 #if !IS_OBJ_VIEWER // 뷰어가 아닐 때만 아이콘 렌더링
 				const FVector2& Size = BillComp->GetSize();
 				const FVector WorldPos = BillComp->GetWorldLocation();

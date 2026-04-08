@@ -1,4 +1,5 @@
 #include "TextRenderComponent.h"
+#include "Renderer/Renderer.h"
 #include "Object/Class.h"
 #include "Actor/Actor.h"
 #include "Primitive/PrimitiveBase.h"
@@ -22,6 +23,16 @@ void UTextRenderComponent::SetText(const FString& InText)
 	}
 	MarkTransformDirty();
 }
+void UTextRenderComponent::SetTextColor(const FVector4& InColor)
+{
+	TextColor = InColor;
+
+	if (DynamicMaterial)
+	{
+		DynamicMaterial->SetParameterData("TextColor", &TextColor, 16);
+	}
+	MarkTransformDirty();
+}
 FString UTextRenderComponent::GetDisplayText() const
 {
 	if (Text.empty())
@@ -36,6 +47,26 @@ FString UTextRenderComponent::GetDisplayText() const
 }
 void UTextRenderComponent::DuplicateSubObjects()
 {
+	DynamicMaterial.reset();
+	SetMaterial(nullptr);
+}
+FDynamicMaterial* UTextRenderComponent::GetOrCreateDynamicMaterial()
+{
+	if (!DynamicMaterial)
+	{
+		extern ENGINE_API FRenderer* GRenderer;
+		if (GRenderer)
+		{
+			FMaterial* BaseFontMat = GRenderer->GetTextRenderer().GetFontMaterial();
+			if (BaseFontMat)
+			{
+				DynamicMaterial = BaseFontMat->CreateDynamicMaterial();
+				DynamicMaterial->SetParameterData("TextColor", &TextColor, 16);
+				SetMaterial(DynamicMaterial.get());
+			}
+		}
+	}
+	return DynamicMaterial.get();
 }
 FBoxSphereBounds UTextRenderComponent::GetWorldBounds() const
 {

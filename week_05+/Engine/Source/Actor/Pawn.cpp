@@ -44,7 +44,7 @@ void APawn::PostSpawnInitialize()
 			extern ENGINE_API class FRenderer* GRenderer;
 			if (GRenderer)
 			{
-				Billboard->SetTexturePath(GRenderer->GetDevice(), "Editor/Icon/Pawn_64x.png");
+				Billboard->SetTexturePath(GRenderer->GetDevice(), GetDefaultBillboardIconPath());
 			}
 		}
 	}
@@ -146,4 +146,11 @@ void APawn::DuplicateSubObjects()
 	AActor::DuplicateSubObjects();
 	Controller = nullptr;
 	Camera = nullptr;
+}
+
+FString APawn::GetDefaultBillboardIconPath() const
+{
+	std::wstring AbsoluteWPath = (FPaths::EditorIconDir() / L"Pawn_64x.png").wstring();
+	FString AbsolutePath = FPaths::ToString(AbsoluteWPath);
+	return FPaths::ToRelativePath(AbsolutePath);
 }

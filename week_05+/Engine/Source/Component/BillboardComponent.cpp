@@ -120,6 +120,12 @@ void UBillboardComponent::SetTexturePath(ID3D11Device* Device, const FString& In
 			BlendOpt.BlendOpAlpha = D3D11_BLEND_OP_ADD;
 			DynamicMaterial->SetBlendOption(BlendOpt);
 			DynamicMaterial->SetBlendState(RSM->GetOrCreateBlendState(BlendOpt));
+
+			FDepthStencilStateOption DepthOpt;
+			DepthOpt.DepthEnable = true;
+			DepthOpt.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+			DynamicMaterial->SetDepthStencilOption(DepthOpt);
+			DynamicMaterial->SetDepthStencilState(RSM->GetOrCreateDepthStencilState(DepthOpt));
 		}
 
 	

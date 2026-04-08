@@ -3,7 +3,7 @@
 #include "EngineAPI.h"
 #include "Actor.h"
 #include "Input/InputManager.h"
-
+#include "Core/Paths.h"
 class AController;
 class UCameraComponent;
 class UBillboardComponent;
@@ -29,7 +29,8 @@ public:
 	virtual void UnPossessed();
 
 	virtual void DuplicateSubObjects() override;
-
+protected:
+	virtual FString GetDefaultBillboardIconPath() const;
 private:
 	AController* Controller = nullptr;
 

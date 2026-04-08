@@ -23,6 +23,7 @@ public:
 	static std::filesystem::path ContentDir();
 	static std::filesystem::path ShaderCacheDir();
 	static std::filesystem::path IntermediateDir();
+	static std::filesystem::path EditorIconDir();
 	/*
 	// 경로 결합
 	static FString Combine(const FString& Base, const FString& Relative);

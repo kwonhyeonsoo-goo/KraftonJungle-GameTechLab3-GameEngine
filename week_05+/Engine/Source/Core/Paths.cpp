@@ -170,6 +170,11 @@ std::filesystem::path FPaths::IntermediateDir()
 	return Root / "Intermediate/";
 }
 
+std::filesystem::path FPaths::EditorIconDir()
+{
+	return Root / L"Editor/Icon/";
+}
+
 /*
 FString FPaths::Combine(const FString& Base, const FString& Relative)
 {
