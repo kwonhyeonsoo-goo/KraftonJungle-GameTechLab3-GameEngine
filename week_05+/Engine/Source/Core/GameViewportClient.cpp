@@ -2,6 +2,7 @@
 
 #include "Actor/Controller.h"
 #include "Component/CameraComponent.h"
+#include "Input/EnhancedInputManager.h"
 #include "Math/Frustum.h"
 #include "World/World.h"
 
@@ -13,45 +14,24 @@ void FGameViewportClient::Attach()
 
 void FGameViewportClient::Detach()
 {
-
+	// Controller의 입력 바인딩 해제
+	AController* Controller = GWorld ? GWorld->GetDefaultController() : nullptr;
+	if (Controller)
+	{
+		Controller->SetupInput(nullptr, nullptr);
+	}
 }
 
 void FGameViewportClient::ProcessCameraInput(float DeltaTime)
 {
 	AController* Controller = GWorld->GetDefaultController();
-	if (Controller)
+	if (!Controller) return;
+
+	// Controller에 입력 시스템 연결 (최초 1회 또는 재연결 시)
+	if (EnhancedInput)
 	{
-		for (int32 key = 0; key < 256; ++key)
-		{
-			if (InputManager->IsKeyDown(key))
-			{
-				Controller->ProcessInput(key, EInputEventType::KeyDown);
-				continue;
-			}
-			else if (InputManager->IsKeyReleased(key))
-			{
-				Controller->ProcessInput(key, EInputEventType::KeyUp);
-				continue;
-			}
-		}
-
-		if (InputManager->IsMouseButtonPressed(FInputManager::MOUSE_LEFT))
-		{
-			Controller->ProcessInput(FInputManager::MOUSE_LEFT, EInputEventType::MouseButtonDown);
-		}
-		else if (InputManager->IsMouseButtonReleased(FInputManager::MOUSE_LEFT))
-		{
-			Controller->ProcessInput(FInputManager::MOUSE_LEFT, EInputEventType::MouseButtonUp);
-		}
-
-		if (InputManager->IsMouseButtonPressed(FInputManager::MOUSE_RIGHT))
-		{
-			Controller->ProcessInput(FInputManager::MOUSE_RIGHT, EInputEventType::MouseButtonDown);
-		}
-		else if (InputManager->IsMouseButtonReleased(FInputManager::MOUSE_RIGHT))
-		{
-			Controller->ProcessInput(FInputManager::MOUSE_RIGHT, EInputEventType::MouseButtonUp);
-		}
+		Controller->SetupInput(InputManager, EnhancedInput);
+		EnhancedInput->ProcessInput(InputManager, DeltaTime);
 	}
 }
 
@@ -65,7 +45,7 @@ void FGameViewportClient::BuildRenderCommands(TArray<AActor*>& InActors, FRender
 
 	if (Controller && Controller->GetCamera())
 	{
-		Camera = Controller->GetCamera()->GetCamera(); 
+		Camera = Controller->GetCamera()->GetCamera();
 
 		Camera->SetPosition(Controller->GetCamera()->GetWorldLocation());
 	}

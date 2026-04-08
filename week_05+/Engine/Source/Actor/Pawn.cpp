@@ -10,6 +10,10 @@
 #include "Object/ObjectFactory.h"
 #include "Debug/EngineLog.h"
 #include "Renderer/Renderer.h"
+#include "Input/EnhancedInputManager.h"
+#include "Input/InputMappingContext.h"
+#include "Input/InputTrigger.h"
+#include "Input/InputModifier.h"
 
 IMPLEMENT_RTTI(APawn, AActor)
 
@@ -65,34 +69,16 @@ void APawn::Tick(float DeltaTime)
 {
 	AActor::Tick(DeltaTime);
 
-	if (Camera)
+	if (Camera && !MoveDirection.IsNearlyZero())
 	{
-		if (!MoveDirection.IsNearlyZero())
-		{
-			FVector NormalizedDir = MoveDirection.GetSafeNormal();
-			FVector ForwardDirection = Camera->GetCamera()->GetForward().GetSafeNormal();
-			FVector RightDirection = Camera->GetCamera()->GetRight().GetSafeNormal();
+		FVector NormalizedDir = MoveDirection.GetSafeNormal();
+		FVector ForwardDirection = Camera->GetCamera()->GetForward().GetSafeNormal();
+		FVector RightDirection = Camera->GetCamera()->GetRight().GetSafeNormal();
 
-			FVector MovementOffset = ForwardDirection * NormalizedDir.Y + RightDirection * NormalizedDir.X;
+		FVector MovementOffset = ForwardDirection * NormalizedDir.Y + RightDirection * NormalizedDir.X;
 
-			FVector NewLocation = GetActorLocation() + MovementOffset * 5.0f * DeltaTime;
-			SetActorLocation(NewLocation);
-		}
-
-
-		FCamera* CameraTransform = Camera->GetCamera();
-		if (CameraTransform)
-		{
-			float MouseX = GInput->GetMouseDeltaX();
-			float MouseY = GInput->GetMouseDeltaY();
-
-			const float NewYaw = CameraTransform->GetYaw() + MouseX * CameraTransform->GetMouseSensitivity();
-			const float NewPitch = FMath::Clamp<float>(
-				CameraTransform->GetPitch() - MouseY * CameraTransform->GetMouseSensitivity(),
-				-89.0f,
-				89.0f);
-			CameraTransform->SetRotation(NewYaw, NewPitch);
-		}
+		FVector NewLocation = GetActorLocation() + MovementOffset * 5.0f * DeltaTime;
+		SetActorLocation(NewLocation);
 	}
 }
 
@@ -106,27 +92,74 @@ void APawn::EndPlay()
 	AActor::EndPlay();
 }
 
-void APawn::ProcessInput(int32 KeyCode, EInputEventType EventType)
+void APawn::SetupPlayerInputComponent(FEnhancedInputManager* EnhancedInput, FInputMappingContext* InputContext)
 {
-	float Value = 0.0f;
-	if (EventType == EInputEventType::KeyDown)
+	// ─── 이동: WASD → Axis2D (X=좌우, Y=전후) ───
 	{
-		Value = 1.0f;
+		auto& Forward = InputContext->AddMapping(&MoveAction, 'W');
+		Forward.Triggers.push_back(new FTriggerDown());
+		auto* Swizzle = new FModifierSwizzleAxis();
+		Swizzle->Order = FModifierSwizzleAxis::ESwizzleOrder::YXZ; // X값 → Y로
+		Forward.Modifiers.push_back(Swizzle);
 	}
-	else if (EventType == EInputEventType::KeyUp)
 	{
-		Value = 0.0f;
+		auto& Backward = InputContext->AddMapping(&MoveAction, 'S');
+		Backward.Triggers.push_back(new FTriggerDown());
+		auto* Swizzle = new FModifierSwizzleAxis();
+		Swizzle->Order = FModifierSwizzleAxis::ESwizzleOrder::YXZ;
+		Backward.Modifiers.push_back(Swizzle);
+		Backward.Modifiers.push_back(new FModifierNegative());
+	}
+	{
+		auto& Right = InputContext->AddMapping(&MoveAction, 'D');
+		Right.Triggers.push_back(new FTriggerDown());
+	}
+	{
+		auto& Left = InputContext->AddMapping(&MoveAction, 'A');
+		Left.Triggers.push_back(new FTriggerDown());
+		Left.Modifiers.push_back(new FModifierNegative());
 	}
 
-	MoveDirection = FVector::Zero();
-
-	switch (KeyCode)
+	// ─── 시야: Mouse Delta → Axis2D (X=Yaw, Y=Pitch) ───
 	{
-	case 'W': MoveDirection.Y = Value; break;
-	case 'S': MoveDirection.Y = -Value; break;
-	case 'D': MoveDirection.X = Value; break;
-	case 'A': MoveDirection.X = -Value; break;
+		auto& LookX = InputContext->AddMapping(&LookAction, static_cast<int32>(EInputKey::MouseX));
+		LookX.Triggers.push_back(new FTriggerDown());
 	}
+	{
+		auto& LookY = InputContext->AddMapping(&LookAction, static_cast<int32>(EInputKey::MouseY));
+		LookY.Triggers.push_back(new FTriggerDown());
+		auto* Swizzle = new FModifierSwizzleAxis();
+		Swizzle->Order = FModifierSwizzleAxis::ESwizzleOrder::YXZ; // X값 → Y로
+		LookY.Modifiers.push_back(Swizzle);
+	}
+
+	// ─── 콜백 바인딩 ───
+	EnhancedInput->BindAction(&MoveAction, ETriggerEvent::Triggered,
+		[this](const FInputActionValue& Value) {
+			MoveDirection = Value.GetVector();
+		});
+
+	EnhancedInput->BindAction(&MoveAction, ETriggerEvent::Completed,
+		[this](const FInputActionValue&) {
+			MoveDirection = FVector::Zero();
+		});
+
+	EnhancedInput->BindAction(&LookAction, ETriggerEvent::Triggered,
+		[this](const FInputActionValue& Value) {
+			if (Camera)
+			{
+				FCamera* Cam = Camera->GetCamera();
+				if (Cam)
+				{
+					FVector Look = Value.GetVector();
+					float NewYaw = Cam->GetYaw() + Look.X * Cam->GetMouseSensitivity();
+					float NewPitch = FMath::Clamp<float>(
+						Cam->GetPitch() - Look.Y * Cam->GetMouseSensitivity(),
+						-89.0f, 89.0f);
+					Cam->SetRotation(NewYaw, NewPitch);
+				}
+			}
+		});
 }
 
 void APawn::PossessedBy(AController* NewController)
