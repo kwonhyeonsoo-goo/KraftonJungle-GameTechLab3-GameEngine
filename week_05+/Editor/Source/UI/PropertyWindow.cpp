@@ -4,8 +4,8 @@
 #include "Actor/StaticMeshActor.h"
 #include "Component/StaticMeshComponent.h"
 #include "Component/SubUVComponent.h"
-#include "Component/TextComponent.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/TextRenderComponent.h"
+#include "Component/BillboardComponent.h"
 #include "Core/Core.h"
 #include "Core/Paths.h"
 #include "Object/StaticMesh.h"
@@ -17,6 +17,46 @@
 #include "Debug/EngineLog.h"
 #include <algorithm>
 #include <filesystem>
+
+auto ProcessDragDrop = [](const std::vector<std::string>& TargetExts, auto OnDropValid)
+{
+	if (!ImGui::BeginDragDropTarget())
+	{
+		return;
+	}
+	//Accept하기 전에 현재 마우스에 매달려 있는 Payload 데이터를 확인
+	if (const ImGuiPayload* Payload = ImGui::GetDragDropPayload())
+	{
+		if (Payload->IsDataType("CONTENT_BROWSER_ITEM"))
+		{
+			std::string AbsolutePath = static_cast<const char*>(Payload->Data);
+			std::string LowerPath = AbsolutePath;
+			std::transform(LowerPath.begin(), LowerPath.end(), LowerPath.begin(), ::tolower);
+
+			bool bValid = false;
+			for (const auto& Ext : TargetExts)
+			{
+				if (LowerPath.find(Ext) != std::string::npos)
+				{
+					bValid = true;
+					break;
+				}
+			}
+
+			// 원하는 확장자일 때만 진짜로 Accept
+			if (bValid)
+			{
+				if (ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
+				{
+					std::string RelativePath = FPaths::ToRelativePath(AbsolutePath);
+					OnDropValid(AbsolutePath, RelativePath);
+				}
+			}
+		}
+	}
+
+	ImGui::EndDragDropTarget();
+};
 
 void FPropertyWindow::SetTarget(const FVector& Location, const FVector& Rotation, const FVector& Scale, const char* ActorName)
 {
@@ -90,72 +130,96 @@ void FPropertyWindow::DrawBillboardSection(AActor* SelectedActor)
 	ImGui::Indent(8.0f);
 	for (UActorComponent* Component : SelectedActor->GetComponents())
 	{
-		if (!Component)
+		if (!Component) continue;
+
+		if (Component->IsA(UTextRenderComponent::StaticClass()) && !Component->IsA(UBillboardComponent::StaticClass()))
 		{
-			continue;
+			if (ImGui::TreeNodeEx("Text Render", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				auto* TextComp = static_cast<UTextRenderComponent*>(Component);
+
+				// 텍스트 내용 변경
+				char TextBuf[256];
+				snprintf(TextBuf, sizeof(TextBuf), "%s", TextComp->GetText().c_str());
+				if (ImGui::InputText("Text", TextBuf, sizeof(TextBuf))) {
+					TextComp->SetText(TextBuf);
+				}
+
+				// 텍스트 색상 변경
+				FVector4 Color = TextComp->GetTextColor();
+				float Col[4] = { Color.X, Color.Y, Color.Z, Color.W };
+				if (ImGui::ColorEdit4("Color", Col)) {
+					TextComp->SetTextColor(FVector4(Col[0], Col[1], Col[2], Col[3]));
+				}
+
+				// 텍스트 스케일 변경
+				float Scale = TextComp->GetTextScale();
+				if (ImGui::DragFloat("Scale", &Scale, 0.01f, 0.1f, 100.0f)) {
+					TextComp->SetTextScale(Scale);
+				}
+
+				bool bBillboard = TextComp->IsBillboard();
+				if (ImGui::Checkbox("Is Billboard", &bBillboard)) {
+					TextComp->SetBillboard(bBillboard);
+				}
+				ImGui::TreePop();
+			}
 		}
 
-		if (Component->IsA(USubUVComponent::StaticClass()))
+		// 2. 빌보드 컴포넌트 (텍스처 아이콘) UI
+		else if (Component->IsA(UBillboardComponent::StaticClass()))
+		{
+			if (ImGui::TreeNodeEx("Billboard Sprite", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				auto* BillComp = static_cast<UBillboardComponent*>(Component);
+
+				// 텍스처 선택 콤보박스
+				TArray<FAssetData> TextureAssets = FAssetRegistry::Get().GetAssetsByClass("Texture");
+				std::vector<const char*> TexItems = { "None" };
+				for (const auto& Asset : TextureAssets) TexItems.push_back(Asset.AssetName.c_str());
+
+				int SelectedTexIdx = 0;
+				FString CurrentTex = BillComp->GetTexturePath();
+				for (int i = 0; i < (int)TextureAssets.size(); i++) {
+					if (std::filesystem::path(TextureAssets[i].AssetPath).lexically_normal() == std::filesystem::path(CurrentTex).lexically_normal()) {
+						SelectedTexIdx = i + 1; break;
+					}
+				}
+
+				if (ImGui::Combo("Texture", &SelectedTexIdx, TexItems.data(), static_cast<int>(TexItems.size())) && GRenderer && SelectedTexIdx > 0)
+				{
+					BillComp->SetTexturePath(GRenderer->GetDevice(), TextureAssets[SelectedTexIdx - 1].AssetPath);
+				}
+
+				// 텍스처 드래그 앤 드롭 지원
+				ProcessDragDrop({ ".png", ".jpg", ".jpeg" }, [&](const std::string& AbsPath, const std::string& RelPath) {
+					if (GRenderer) {
+						BillComp->SetTexturePath(GRenderer->GetDevice(), RelPath);
+					}
+				});
+
+				// 크기 조절
+				FVector2 Size = BillComp->GetSize();
+				float SizeArr[2] = { Size.X, Size.Y };
+				if (ImGui::DragFloat2("Size", SizeArr, 0.1f)) {
+					BillComp->SetSize(FVector2(SizeArr[0], SizeArr[1]));
+				}
+				ImGui::TreePop();
+			}
+		}
+
+		// 3. SubUV 호환 유지
+		else if (Component->IsA(USubUVComponent::StaticClass()))
 		{
 			auto* SubUVComp = static_cast<USubUVComponent*>(Component);
 			bool bBillboard = SubUVComp->IsBillboard();
-			if (ImGui::Checkbox("SubUV Billboard", &bBillboard))
-			{
+			if (ImGui::Checkbox("SubUV Billboard", &bBillboard)) {
 				SubUVComp->SetBillboard(bBillboard);
-			}
-		}
-		else if (Component->IsA(UTextComponent::StaticClass()) && !Component->IsA(UUUIDBillboardComponent::StaticClass()))
-		{
-			auto* TextComp = static_cast<UTextComponent*>(Component);
-			bool bBillboard = TextComp->IsBillboard();
-			if (ImGui::Checkbox("Text Billboard", &bBillboard))
-			{
-				TextComp->SetBillboard(bBillboard);
 			}
 		}
 	}
 	ImGui::Unindent(8.0f);
 }
-
-auto ProcessDragDrop = [](const std::vector<std::string>& TargetExts, auto OnDropValid)
-{
-	if (!ImGui::BeginDragDropTarget())
-	{
-		return;
-	}
-	//Accept하기 전에 현재 마우스에 매달려 있는 Payload 데이터를 확인
-	if (const ImGuiPayload* Payload = ImGui::GetDragDropPayload())
-	{
-		if (Payload->IsDataType("CONTENT_BROWSER_ITEM"))
-		{
-			std::string AbsolutePath = static_cast<const char*>(Payload->Data);
-			std::string LowerPath = AbsolutePath;
-			std::transform(LowerPath.begin(), LowerPath.end(), LowerPath.begin(), ::tolower);
-
-			bool bValid = false;
-			for (const auto& Ext : TargetExts)
-			{
-				if (LowerPath.find(Ext) != std::string::npos)
-				{
-					bValid = true;
-					break;
-				}
-			}
-
-			// 원하는 확장자일 때만 진짜로 Accept
-			if (bValid)
-			{
-				if (ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
-				{
-					std::string RelativePath = FPaths::ToRelativePath(AbsolutePath);
-					OnDropValid(AbsolutePath, RelativePath);
-				}
-			}
-		}
-	}
-
-	ImGui::EndDragDropTarget();
-};
 
 void FPropertyWindow::DrawMaterialSlots(FCore* Core, UStaticMeshComponent* SMComp, AActor* SelectedActor)
 {

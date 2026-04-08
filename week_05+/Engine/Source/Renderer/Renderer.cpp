@@ -698,6 +698,7 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 		NewBatch.IndexCount = Cmd.IndexCount;
 		NewBatch.InstanceCount = InstanceCount;
 		NewBatch.InstanceBufferOffset = CurrentBufferOffset;
+		NewBatch.WorldMatrix = Cmd.WorldMatrix;
 		CachedBatches.push_back(NewBatch);
 
 		CurrentBufferOffset += InstanceCount;
@@ -715,7 +716,10 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 		if (Batch.Material != CurrentMaterial)
 		{
 			Batch.Material->Bind(DeviceContext);
-			InstancedVertexShader->Bind(DeviceContext);
+			if (Batch.Material->GetOriginName() != "M_EditorGrid")
+			{
+				InstancedVertexShader->Bind(DeviceContext);
+			}
 			RenderStateManager->BindState(Batch.Material->GetRasterizerState());
 			RenderStateManager->BindState(Batch.Material->GetDepthStencilState());
 			RenderStateManager->BindState(Batch.Material->GetBlendState());
@@ -745,7 +749,7 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 			DeviceContext->IASetPrimitiveTopology(DesiredTopology);
 			CurrentMeshTopology = DesiredTopology;
 		}
-
+		UpdateObjectConstantBuffer(Batch.WorldMatrix);
 		if (Batch.IndexCount > 0)
 			DeviceContext->DrawIndexedInstanced(Batch.IndexCount, Batch.InstanceCount, Batch.FirstIndex, 0, Batch.InstanceBufferOffset);
 		else if (!Batch.MeshData->Indices.empty())

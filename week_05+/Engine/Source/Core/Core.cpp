@@ -4,7 +4,7 @@
 #include "Actor/SkySphereActor.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SubUVComponent.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/BillboardComponent.h"
 #include "Core/ConsoleVariableManager.h"
 #include "Core/Paths.h"
 #include "Input/EnhancedInputManager.h"

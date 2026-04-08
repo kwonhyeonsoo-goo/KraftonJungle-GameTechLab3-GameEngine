@@ -7,8 +7,8 @@
 #include "World/Level.h"
 #include "Actor/Actor.h"
 #include "Component/SubUVComponent.h"
-#include "Component/TextComponent.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/TextRenderComponent.h"
+#include "Component/BillboardComponent.h"
 
 void FOutlinerWindow::Render(FCore* Core)
 {

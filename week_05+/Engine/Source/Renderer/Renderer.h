@@ -106,6 +106,7 @@ public:
 	ID3D11ShaderResourceView* GetFolderIconSRV() const { return FolderIconSRV; }
 	ID3D11ShaderResourceView* GetFileIconSRV() const { return FileIconSRV; }
 	void MarkInstanceBufferDirty() { bInstanceBufferDirty = true; }
+	bool IsInstanceBufferDirty() const { return bInstanceBufferDirty; }
 	void RenderPickingPass();
 	uint32 ReadPixelID(int32 ScreenX, int32 ScreenY);
 private:
@@ -199,6 +200,7 @@ private:
 		uint32 IndexCount;
 		uint32 InstanceCount;
 		uint32 InstanceBufferOffset; 
+		FMatrix WorldMatrix;
 	};
 
 	// 레이어별로 캐시를 따로 관리해야 섞이지 않습니다.

@@ -26,6 +26,6 @@ private:
 	// ─── 캐싱 관련 멤버 ───
 	FRenderCommandQueue CachedQueue;
 	FFrustum PrevFrustum;
-	uint32 PrevShowFlagsBits = 0; // ShowFlags 변경 감지용
+	uint64 PrevShowFlagsBits = 0; // ShowFlags 변경 감지용
 	bool bCommandsDirty = true;
 };

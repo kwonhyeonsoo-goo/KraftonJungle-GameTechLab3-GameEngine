@@ -32,6 +32,7 @@ struct ENGINE_API FMeshData
 	UINT CurrentIBSize = 0;
 
 	bool IsDirty() const { return bIsDirty; }
+	void MarkDirty() { bIsDirty = true; }
 	bool UpdateVertexAndIndexBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context);
 	bool CreateVertexAndIndexBuffer(ID3D11Device* Device);
 	void Bind(ID3D11DeviceContext* Context);

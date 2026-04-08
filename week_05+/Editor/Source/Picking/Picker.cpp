@@ -8,8 +8,8 @@
 #include "Renderer/PrimitiveVertex.h"
 #include "Component/SubUVComponent.h"
 #include "Renderer/Renderer.h"
-#include "Component/TextComponent.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/TextRenderComponent.h"
+#include "Component/BillboardComponent.h"
 #include "Component/MeshComponent.h"
 #include "Actor/SkySphereActor.h"
 #include <limits>

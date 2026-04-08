@@ -11,7 +11,7 @@
 #include "Actor/SubUVActor.h"
 #include "Actor/SkySphereActor.h"
 #include "Actor/TextActor.h"
-#include "Component/TextComponent.h"
+#include "Component/TextRenderComponent.h"
 #include "UI/EditorViewportClient.h"
 
 namespace
@@ -188,7 +188,7 @@ void FControlPanelWindow::Render(FCore* Core, FEditorViewportClient* ActiveViewp
 				if (NewActor)
 				{
 					ATextActor* TextActor = static_cast<ATextActor*>(NewActor);
-					if (UTextComponent* TextComponent = TextActor->GetTextComponent())
+					if (UTextRenderComponent* TextComponent = TextActor->GetTextComponent())
 					{
 						TextComponent->SetText(SpawnTextBuffer[0] != '\0' ? SpawnTextBuffer : "Text");
 					}

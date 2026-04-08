@@ -1522,6 +1522,7 @@ void FEditorViewportClient::BuildRenderCommands(TArray<AActor*>& InActors, FRend
 		GridCommand.Material = GridMaterial.get();
 		GridCommand.WorldMatrix = GetGridWorldMatrix();
 		GridCommand.RenderLayer = ERenderLayer::Default;
+		GridCommand.SortKey = FRenderCommand::MakeSortKey(GridCommand.Material, GridCommand.MeshData, 0);
 		OutQueue.AddCommand(GridCommand);
 	}
 

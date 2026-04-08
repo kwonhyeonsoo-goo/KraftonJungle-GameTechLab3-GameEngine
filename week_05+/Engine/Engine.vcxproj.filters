@@ -102,7 +102,7 @@
     <ClCompile Include="Source\Component\SubUVComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp">
+    <ClCompile Include="Source\Component\BillboardComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\ConsoleVariableManager.cpp">
@@ -259,7 +259,7 @@
       <Filter>Source\World</Filter>
     </ClCompile>
     <ClCompile Include="PrimitiveLineBatch.cpp" />
-    <ClCompile Include="Source\Component\TextComponent.cpp">
+    <ClCompile Include="Source\Component\TextRenderComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Actor\TextActor.cpp">
@@ -333,7 +333,7 @@
     <ClInclude Include="Source\Component\SubUVComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Component\UUIDBillboardComponent.h">
+    <ClInclude Include="Source\Component\BillboardComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\ConsoleVariableManager.h">
@@ -562,7 +562,7 @@
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
     <ClInclude Include="PrimitiveLineBatch.h" />
-    <ClInclude Include="Source\Component\TextComponent.h">
+    <ClInclude Include="Source\Component\TextRenderComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Actor\TextActor.h">

@@ -7,10 +7,10 @@
 #include "Renderer/Material.h"
 #include "World/Level.h"
 #include "Debug/EngineLog.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/BillboardComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Core/FEngine.h"
-#include "Component/TextComponent.h"
+#include "Component/TextRenderComponent.h"
 #include "Input/InputMappingContext.h"
 
 void FViewportClient::Attach(FCore* Core)
