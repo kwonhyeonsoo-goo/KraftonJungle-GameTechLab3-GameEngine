@@ -914,6 +914,21 @@ FViewportContext* FWindowManager::FindPerspectiveViewportContext() const
 	return nullptr;
 }
 
+FViewportContext* FWindowManager::FindViewportContext() const
+{
+	TArray<SViewportWindow*> ViewportWindows;
+	for (SWindow* RootWindow : Windows)
+	{
+		CollectViewportWindowsRecursive(RootWindow, ViewportWindows);
+	}
+
+	if (ViewportWindows.empty())
+	{
+		return nullptr;
+	}
+	return ViewportWindows[0]->GetViewportContext();
+}
+
 FEditorViewportClient* FWindowManager::FindPerspectiveViewportClient() const
 {
 	TArray<SViewportWindow*> ViewportWindows;

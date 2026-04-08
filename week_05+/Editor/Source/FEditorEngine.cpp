@@ -78,7 +78,6 @@ bool FEditorEngine::Initialize(HINSTANCE hInstance)
 
 	FViewportContext* EditorViewportContext = CreateEditorViewportContext(FRect(0.0f, 0.0f, Width, Height), EEditorViewportType::Perspective);
 	WindowManager.AddWindow(new SViewportWindow(FRect(0.0f, 0.0f, Width, Height), EditorViewportContext));
-	ViewportContexts.push_back(EditorViewportContext);
 
 	FWorldContext& EditorWorldContext = FEngine::CreateWorldContext(EWorldType::Editor);
 	GWorld = EditorWorldContext.World;

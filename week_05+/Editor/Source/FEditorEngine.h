@@ -2,6 +2,7 @@
 
 #include "PIEState.h"
 #include "Core/FEngine.h"
+#include "Core/GameViewportClient.h"
 #include "UI/EditorViewportClient.h"
 #include "UI/EditorUI.h"
 #include "UI/WindowManager.h"
@@ -48,13 +49,40 @@ public:
 	AActor* GetSelectedActor() const { return SelectedActor; }
 	void SetSelectedActor(AActor* InActor) { SelectedActor = InActor; EditorUI.SyncSelectedActorProperty(); }
 
-	void ChangeViewportClient(FViewportClient* NewViewportClient)
+	void ChangeGameViewportClient()
 	{
-		FViewportContext* ViewportContext = ViewportContexts[0];
+		FViewportClient* GameViewportClient = new FGameViewportClient();
+
+		FViewportContext* ViewportContext = WindowManager.FindPerspectiveViewportContext();
+		if (ViewportContext == nullptr)
+		{
+			ViewportContext = WindowManager.FindViewportContext();
+		}
+
+		OldViewportClient = ViewportContext->ViewportClient;
+
 		ViewportContext->ViewportClient->Detach();
-		ViewportContext->ViewportClient = NewViewportClient;
+		ViewportContext->ViewportClient = GameViewportClient;
 		ViewportContext->ViewportClient->Initialize(InputManager, EnhancedInput);
 		ViewportContext->ViewportClient->Attach();
+	}
+
+	void RestoreEditorViewportClient()
+	{
+		FViewportContext* ViewportContext = WindowManager.FindPerspectiveViewportContext();
+		if (ViewportContext == nullptr)
+		{
+			ViewportContext = WindowManager.FindViewportContext();
+		}
+		if (OldViewportClient)
+		{
+			ViewportContext->ViewportClient->Detach();
+			delete ViewportContext->ViewportClient;
+			ViewportContext->ViewportClient = OldViewportClient;
+			OldViewportClient = nullptr;
+			ViewportContext->ViewportClient->Initialize(InputManager, EnhancedInput);
+			ViewportContext->ViewportClient->Attach();
+		}
 	}
 
 protected:
@@ -79,7 +107,7 @@ private:
 
 	EPIEState PIEState = EPIEState::Stopped;
 
-	TArray<FViewportContext*> ViewportContexts;
+	FViewportClient* OldViewportClient = nullptr;
 };
 
 extern FEditorEngine* GEditor;
