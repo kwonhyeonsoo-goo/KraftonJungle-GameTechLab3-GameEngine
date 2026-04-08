@@ -11,11 +11,8 @@
 
 #include "Serializer/Archive.h"
 #include "World/Level.h"
-IMPLEMENT_RTTI(AActor, UObject)
 
-namespace {
-	FVector GZeroVector{};
-}
+IMPLEMENT_RTTI(AActor, UObject)
 
 ULevel* AActor::GetLevel() const { return Level; }
 void AActor::SetLevel(ULevel* InLevel) { Level = InLevel; }
@@ -346,7 +343,7 @@ const FVector& AActor::GetActorLocation() const
 {
 	if (RootComponent == nullptr)
 	{
-		return GZeroVector;
+		return FVector::ZeroVector;
 	}
 
 	return RootComponent->GetRelativeLocation();
@@ -360,4 +357,36 @@ void AActor::SetActorLocation(const FVector& InLocation)
 	}
 
 	RootComponent->SetRelativeLocation(InLocation);
+}
+
+void AActor::DuplicateSubObjects()
+{
+	UObject::DuplicateSubObjects();
+
+	TArray<UActorComponent*> OldComponents = OwnedComponents;
+	USceneComponent* OldRoot = RootComponent;
+
+	OwnedComponents.clear();
+	RootComponent = nullptr;
+
+	for (UActorComponent* Component : OldComponents)
+	{
+		if (Component)
+		{
+			UUUIDBillboardComponent* UUIDComp = dynamic_cast<UUUIDBillboardComponent*>(Component);
+			if (UUIDComp)
+			{
+				continue; // UUIDBillboardComponent는 복제하지 않음
+			}
+
+			UActorComponent* DuplicatedComp = static_cast<UActorComponent*>(Component->Duplicate());
+			DuplicatedComp->SetOwner(this);
+			OwnedComponents.push_back(DuplicatedComp);
+
+			if (Component == OldRoot)
+			{
+				RootComponent = static_cast<USceneComponent*>(DuplicatedComp);
+			}
+		}
+	}
 }

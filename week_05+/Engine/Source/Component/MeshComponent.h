@@ -12,6 +12,7 @@ class FArchive;
 class ENGINE_API UMeshComponent : public UPrimitiveComponent
 {
 	DECLARE_RTTI(UMeshComponent, UPrimitiveComponent)
+	DECLARE_DUPLICATE(UMeshComponent)
 
 	virtual FMeshData* GetMeshData() const { return nullptr; }
 	virtual const TArray<FMeshSection>& GetSections() const;

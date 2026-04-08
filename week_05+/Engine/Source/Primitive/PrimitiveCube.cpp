@@ -3,8 +3,6 @@
 
 const FString CPrimitiveCube::Key = "Cube";
 
-// FString CPrimitiveCube::GetFilePath() { return FPaths::MeshDir() + "Cube.mesh"; }
-
 CPrimitiveCube::CPrimitiveCube()
 {
 	auto Cached = GetCached(Key);
@@ -22,12 +20,6 @@ void CPrimitiveCube::Generate()
 {
 	auto Data = std::make_shared<FMeshData>();
 
-	//FVector4 Red = { 1.0f, 0.3f, 0.3f, 1.0f };
-	//FVector4 Green = { 0.3f, 1.0f, 0.3f, 1.0f };
-	//FVector4 Blue = { 0.3f, 0.3f, 1.0f, 1.0f };
-	//FVector4 Yellow = { 1.0f, 1.0f, 0.3f, 1.0f };
-	//FVector4 Cyan = { 0.3f, 1.0f, 1.0f, 1.0f };
-	//FVector4 Magenta = { 1.0f, 0.3f, 1.0f, 1.0f };
 	FVector4 White = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 	// Front face (x = +0.5)

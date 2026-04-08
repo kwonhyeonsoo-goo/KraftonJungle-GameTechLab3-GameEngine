@@ -31,6 +31,8 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int32 Width,
 		return false;
 	}
 
+	Timer = new FTimer();
+
 	PreInitialize();
 
 	Core = std::make_unique<FCore>();
@@ -56,19 +58,35 @@ FViewportContext* FEngine::CreateContext(FRect InRect)
 	auto Viewport = new FViewport(InRect);
 	
 	FViewportContext* ViewportContext = new FViewportContext(Viewport, ViewportClient);
-	ViewportContext->Initialize(Core.get(), InputManager, EnhancedInput);
+	ViewportContext->Initialize(InputManager, EnhancedInput);
 	return ViewportContext;
+}
+
+FWorldContext& FEngine::CreateWorldContext(EWorldType WorldType, UWorld* InWorld)
+{
+	FWorldContext NewContext;
+	NewContext.ContextName = "";
+	NewContext.WorldType = WorldType;
+	NewContext.World = InWorld;
+
+	if (!NewContext.World)
+	{
+		UWorld* World = FObjectFactory::ConstructObject<UWorld>(nullptr, NewContext.ContextName);
+		World->SetWorldType(WorldType);
+		World->InitializeWorld();
+
+		NewContext.World = World;
+	}
+
+	return GEngine->AddWorldContext(NewContext);
 }
 
 void FEngine::Run()
 {
 	while (App->PumpMessages())
 	{
-		if (Core)
-		{
-			Tick(Core->GetTimer().GetDeltaTime());
-			Core->Tick();
-		}
+		Timer->Tick();
+		Tick(Timer->GetDeltaTime());
 	}
 }
 
@@ -110,8 +128,7 @@ void FEngine::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 
 void FEngine::Tick(float DeltaTime)
 {
-	//Input(Core->GetTimer().GetDeltaTime());
-	//Render();
+	Timer->Tick();
 }
 
 void FEngine::Shutdown()

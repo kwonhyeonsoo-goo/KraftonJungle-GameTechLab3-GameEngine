@@ -21,7 +21,7 @@ void SViewportWindow::Tick(float DeltaTime)
 {
 	if (ViewportContext && GEngine)
 	{
-		ViewportContext->Tick(GEngine->GetCore(), DeltaTime);
+		ViewportContext->Tick(DeltaTime);
 	}
 }
 
@@ -48,12 +48,12 @@ void SViewportWindow::OnResize()
 	ViewportContext->SetRect(GetRect());
 }
 
-bool SViewportWindow::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+bool SViewportWindow::HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
-	if (!ViewportContext || !Core)
+	if (!ViewportContext)
 	{
 		return false;
 	}
 
-	return ViewportContext->HandleMessage(Core, Hwnd, Msg, WParam, LParam);
+	return ViewportContext->HandleMessage(Hwnd, Msg, WParam, LParam);
 }

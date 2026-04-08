@@ -1,11 +1,13 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "Object/Object.h"
-#include "World/LevelTypes.h"
+#include "World/WorldType.h"
 
 // Forward declarations ? include 최소화
 class ULevel;
 class AActor;
+class APawn;
+class AController;
 class UCameraComponent;
 class FCamera;
 class FFrustum;
@@ -22,45 +24,43 @@ public:
 	T* SpawnActor(const FString& InName);
 	void DestroyActor(AActor* InActor);
 
-	// ── Persistent Level ──
-	ULevel* GetPersistentLevel() const { return PersistentLevel; }
-	// ── Streaming Levels ──
-	ULevel* LoadStreamingLevel(const FString& LevelName, ID3D11Device* Device = nullptr);
-	void UnloadStreamingLevel(const FString& LevelName);
-	ULevel* FindStreamingLevel(const FString& LevelName) const;
-	const TArray<ULevel*>& GetStreamingLevels() const { return StreamingLevels; }
+	ULevel* GetLevel() const { return Level; }
 
-	// ── 전체 액터 조회 (Persistent + Streaming 합산) ──
-	TArray<AActor*> GetAllActors() const;
-	const TArray<AActor*>& GetActors() const;  // PersistentLevel만
+	TArray<AActor*> GetActors() const;
 
-	ULevel* GetLevel() const { return PersistentLevel; }
 	// 카메라
 	void SetActiveCameraComponent(UCameraComponent* InCamera);
 	UCameraComponent* GetActiveCameraComponent() const;
 	FCamera* GetCamera() const;
 
 	// 라이프사이클
-	void InitializeWorld(float AspectRatio, ID3D11Device* Device = nullptr);
+	void InitializeWorld();
 	void BeginPlay();
 	void Tick(float InDeltaTime);
 	void CleanupWorld();
 	
-	ELevelType GetWorldType() const { return WorldType; }
-	void SetWorldType(ELevelType InType) { WorldType = InType; }
+	EWorldType GetWorldType() const { return WorldType; }
+	void SetWorldType(EWorldType InType) { WorldType = InType; }
 	float GetWorldTime() const { return WorldTime; }
 	float GetDeltaTime() const { return DeltaSeconds; }
 
+	AController* GetDefaultController() const { return DefaultController; }
+	APawn* GetDefaultPawn() const { return DefaultPawn; }
+
+	static UWorld* DuplicateWorldForPIE(UWorld* SourceWorld);
+
 private:
-	ULevel* PersistentLevel = nullptr;      
-	TArray<ULevel*> StreamingLevels;
+	ULevel* Level = nullptr;
+	EWorldType WorldType = EWorldType::Game;
 
 	bool bBegunPlay = false;
 	float WorldTime = 0.f;
 	float DeltaSeconds = 0.f;
-	ELevelType WorldType = ELevelType::Game;
-	UCameraComponent* LevelCameraComponent = nullptr;    
+	UCameraComponent* LevelCameraComponent = nullptr;
 	TObjectPtr<UCameraComponent> ActiveCameraComponent;
+
+	AController* DefaultController = nullptr;
+	APawn* DefaultPawn = nullptr;
 };
 #include "World/Level.h"
 
@@ -68,6 +68,8 @@ template <typename T>
 T* UWorld::SpawnActor(const FString& InName)
 {
 	static_assert(std::is_base_of_v<AActor, T>, "T must derive from AActor");
-	if (!PersistentLevel) return nullptr;
-	return PersistentLevel->SpawnActor<T>(InName);
+	if (!Level) return nullptr;
+	return Level->SpawnActor<T>(InName);
 }
+
+extern ENGINE_API UWorld* GWorld;

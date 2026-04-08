@@ -231,6 +231,8 @@
     <ClCompile Include="Source\UI\ConsoleWindow.cpp" />
     <ClCompile Include="Source\UI\ContentBrowserWindow.cpp" />
     <ClCompile Include="Source\UI\ControlPanelWindow.cpp" />
+    <ClCompile Include="Source\UI\EditorToolbar.cpp" />
+    <ClCompile Include="Source\UI\EditorToolbar.h" />
     <ClCompile Include="Source\UI\EditorUI.cpp" />
     <ClCompile Include="Source\UI\EditorViewportClient.cpp" />
     <ClCompile Include="Source\UI\ObjViewerPanel.cpp" />
@@ -238,7 +240,6 @@
     <ClCompile Include="Source\UI\PropertyWindow.cpp" />
     <ClCompile Include="Source\UI\StatWindow.cpp" />
     <ClCompile Include="Source\UI\SWindow.cpp" />
-    <ClCompile Include="Source\UI\Viewport.cpp" />
     <ClCompile Include="Source\UI\ViewportWindow.cpp" />
     <ClCompile Include="Source\UI\WindowManager.cpp" />
     <ClCompile Include="ThirdParty\imgui\imgui.cpp" />
@@ -264,6 +265,7 @@
     <ClInclude Include="Source\Gizmo\Gizmo.h" />
     <ClInclude Include="Source\Pawn\EditorCameraPawn.h" />
     <ClInclude Include="Source\Picking\Picker.h" />
+    <ClInclude Include="Source\PIEState.h" />
     <ClInclude Include="Source\UI\ConsoleWindow.h" />
     <ClInclude Include="Source\UI\ContentBrowserWindow.h" />
     <ClInclude Include="Source\UI\ControlPanelWindow.h" />
@@ -274,7 +276,6 @@
     <ClInclude Include="Source\UI\PropertyWindow.h" />
     <ClInclude Include="Source\UI\StatWindow.h" />
     <ClInclude Include="Source\UI\SWindow.h" />
-    <ClInclude Include="Source\UI\Viewport.h" />
     <ClInclude Include="Source\UI\ViewportWindow.h" />
     <ClInclude Include="Source\UI\WindowManager.h" />
     <ClInclude Include="ThirdParty\imgui\imconfig.h" />

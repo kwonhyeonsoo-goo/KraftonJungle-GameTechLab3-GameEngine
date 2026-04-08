@@ -13,7 +13,7 @@
 #include "Component/TextRenderComponent.h"
 #include "Input/InputMappingContext.h"
 
-void FViewportClient::Attach(FCore* Core)
+void FViewportClient::Attach()
 {
 }
 
@@ -44,10 +44,8 @@ void FViewportClient::Tick(float DeltaTime)
 	CurrentDeltaTime = DeltaTime;
 }
 
-void FViewportClient::ProcessCameraInput(FCore* Core, float DeltaTime)
+void FViewportClient::ProcessCameraInput(float DeltaTime)
 {
-	(void)Core;
-	(void)DeltaTime;
 }
 
 void FViewportClient::SetViewportRect(const FRect& InRect)
@@ -70,48 +68,12 @@ void FViewportClient::SetViewportInputState(int32 InMouseX, int32 InMouseY, cons
 	SetViewportRect(InRect);
 }
 
-void FViewportClient::SetWorldType(ELevelType InWorldType)
-{
-	WorldType = InWorldType;
-}
-
-ELevelType FViewportClient::GetWorldType() const
-{
-	return WorldType;
-}
-
 void FViewportClient::SetupInputBindings()
 {
 }
 
-void FViewportClient::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+void FViewportClient::HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
-}
-
-ULevel* FViewportClient::ResolveLevel(FCore* Core) const
-{
-	UWorld* World = ResolveWorld(Core);
-	return World ? World->GetLevel() : nullptr;
-}
-
-UWorld* FViewportClient::ResolveWorld(FCore* Core) const
-{
-	if (!Core)
-	{
-		return nullptr;
-	}
-
-	switch (WorldType)
-	{
-	case ELevelType::Editor:
-		return Core->GetEditorWorld();
-	case ELevelType::Game:
-	case ELevelType::PIE:
-		return Core->GetGameWorld();
-	case ELevelType::Inactive:
-	default:
-		return Core->GetActiveWorld();
-	}
 }
 
 FMatrix FViewportClient::GetViewMatrix() const
@@ -157,21 +119,4 @@ void FViewportClient::DrawUI()
 void FViewportClient::SetViewportWindow(SViewportWindow* InViewportWindow)
 {
 	ViewportWindow = InViewportWindow;
-}
-
-void FGameViewportClient::Attach(FCore* Core)
-{
-	(void)Core;
-	if (GRenderer)
-	{
-		GRenderer->ClearViewportCallbacks();
-	}
-}
-
-void FGameViewportClient::Detach()
-{
-	if (GRenderer)
-	{
-		GRenderer->ClearViewportCallbacks();
-	}
 }

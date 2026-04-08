@@ -7,22 +7,27 @@
 #include "Serializer/SceneSerializer.h"
 #include "Core/Paths.h"
 #include "Actor/Actor.h"
+#include "Actor/Pawn.h"
+#include "Actor/Controller.h"
+
 IMPLEMENT_RTTI(UWorld, UObject)
+
+UWorld* GWorld = nullptr;
 
 UWorld::~UWorld()
 {
 	CleanupWorld();
 }
 
-void UWorld::InitializeWorld(float AspectRatio, ID3D11Device* Device)
+void UWorld::InitializeWorld()
 {
-	PersistentLevel = FObjectFactory::ConstructObject<ULevel>(this, "PersistentLevel");
-	if (!PersistentLevel)
+	Level = FObjectFactory::ConstructObject<ULevel>(this, "Level");
+	if (!Level)
 	{
 		return;
 	}
 
-	PersistentLevel->SetLevelType(WorldType);
+	Level->SetLevelType(WorldType);
 
 	if (!LevelCameraComponent)
 	{
@@ -32,28 +37,33 @@ void UWorld::InitializeWorld(float AspectRatio, ID3D11Device* Device)
 	{
 		ActiveCameraComponent = LevelCameraComponent;
 	}
-	if (LevelCameraComponent->GetCamera())
-	{
-		LevelCameraComponent->GetCamera()->SetAspectRatio(AspectRatio);
-	}
-
-	if (Device)
-	{
-		FSceneSerializer::Load(PersistentLevel, (FPaths::LevelDir() / "DefaultLevel.json").string(), Device);
-	}
 }
 
 void UWorld::BeginPlay()
 {
 	if (bBegunPlay) return;  
-	bBegunPlay = true;     
-	if (PersistentLevel)
+	bBegunPlay = true;
+
+	DefaultPawn = nullptr;
+	DefaultController = nullptr;
+
+	// í˜„ìž¬ëŠ” Defualt Pawnê³¼ Controllerë¥¼ ì²˜ìŒ ë°œê²¬ëœ ê°ì²´ë¡œ ì§€ì •í•©ë‹ˆë‹¤. TODO: ìˆ˜ì • í•„ìš”
+	for (AActor* Actor : GetActors())
 	{
-		PersistentLevel->BeginPlay();
+		if (APawn* Pawn = dynamic_cast<APawn*>(Actor))
+		{
+			DefaultPawn = Pawn;
+		}
+
+		if (AController* Controller = dynamic_cast<AController*>(Actor))
+		{
+			DefaultController = Controller;
+		}
 	}
-	for (ULevel* Level : StreamingLevels)
+
+	if (Level)
 	{
-		if (Level) Level->BeginPlay();
+		Level->BeginPlay();
 	}
 }
 
@@ -62,34 +72,18 @@ void UWorld::Tick(float InDeltaTime)
 	DeltaSeconds = InDeltaTime;
 	WorldTime += InDeltaTime;
 
-	if (PersistentLevel)
+	if (Level)
 	{
-		PersistentLevel->Tick(InDeltaTime);
+		Level->Tick(InDeltaTime);
 	}
-	//for (ULevel* Level : StreamingLevels)
-	//{
-	//	if (Level)
-	//	{
-	//		Level->Tick(InDeltaTime);
-	//	}
-	//}
 }
 
 void UWorld::CleanupWorld()
 {
-	for (ULevel* Level : StreamingLevels)
+	if (Level)
 	{
-		if (Level)
-		{
-			Level->ClearActors();
-			Level->MarkPendingKill();
-		}
-	}
-	if (PersistentLevel)
-	{
-		PersistentLevel->ClearActors();
-		PersistentLevel->MarkPendingKill();
-		PersistentLevel = nullptr;
+		Level->ClearActors();
+		Level->MarkPendingKill();
 	}
 	if (LevelCameraComponent)
 	{
@@ -106,8 +100,7 @@ void UWorld::CleanupWorld()
 
 void UWorld::DestroyActor(AActor* InActor)
 {
-	if (!InActor || !PersistentLevel) return;
-
+	if (!InActor || !Level) return;
 
 	if (ActiveCameraComponent && ActiveCameraComponent != LevelCameraComponent)
 	{
@@ -121,85 +114,19 @@ void UWorld::DestroyActor(AActor* InActor)
 		}
 	}
 
-	PersistentLevel->DestroyActor(InActor);
+	Level->DestroyActor(InActor);
 }
 
-ULevel* UWorld::LoadStreamingLevel(const FString& LevelName, ID3D11Device* Device)
-{
-	// ÀÌ¹Ì ·ÎµåµÆ´ÂÁö È®ÀÎ
-	if (ULevel* Existing = FindStreamingLevel(LevelName))
-	{
-		return Existing;
-	}
-	ULevel* NewLevel = FObjectFactory::ConstructObject<ULevel>(this, LevelName);
-	if (!NewLevel) return nullptr;
-	NewLevel->SetLevelType(WorldType);
-
-	if (Device)
-	{
-		FSceneSerializer::Load(NewLevel, (FPaths::LevelDir() / (LevelName + ".json")).string(), Device);
-	}
-	StreamingLevels.push_back(NewLevel);
-
-	// ÀÌ¹Ì °ÔÀÓ ÁøÇà ÁßÀÌ¸é BeginPlay È£Ãâ
-	if (bBegunPlay)
-	{
-		NewLevel->BeginPlay();
-	}
-	return NewLevel;
-}
-
-void UWorld::UnloadStreamingLevel(const FString& LevelName)
-{
-	auto It = std::find_if(StreamingLevels.begin(), StreamingLevels.end(),
-		[&](ULevel* Level) { return Level->GetName() == LevelName; });
-	if (It != StreamingLevels.end())
-	{
-		(*It)->ClearActors();
-		(*It)->MarkPendingKill();
-		StreamingLevels.erase(It);
-	}
-}
-
-ULevel* UWorld::FindStreamingLevel(const FString& LevelName) const
-{
-	for (ULevel* Level : StreamingLevels)
-	{
-		if (Level && Level->GetName() == LevelName)
-		{
-			return Level;
-		}
-	}
-	return nullptr;
-}
-
-TArray<AActor*> UWorld::GetAllActors() const
+TArray<AActor*> UWorld::GetActors() const
 {
 	TArray<AActor*> AllActors;
-	if (PersistentLevel)
+	if (Level)
 	{
-		const auto& PersistentActors = PersistentLevel->GetActors();
-		AllActors.insert(AllActors.end(), PersistentActors.begin(), PersistentActors.end());
+		const auto& LevelActors = Level->GetActors();
+		AllActors.insert(AllActors.end(), LevelActors.begin(), LevelActors.end());
 	}
-	for (ULevel* Level : StreamingLevels)
-	{
-		if (Level)
-		{
-			const auto& LevelActors = Level->GetActors();
-			AllActors.insert(AllActors.end(), LevelActors.begin(), LevelActors.end());
-		}
-	}
-	return AllActors;
-}
 
-const TArray<AActor*>& UWorld::GetActors() const
-{
-	static TArray<AActor*> EmptyArray;
-	if (PersistentLevel)
-	{
-		return PersistentLevel->GetActors();
-	}
-	return EmptyArray;
+	return AllActors;
 }
 
 void UWorld::SetActiveCameraComponent(UCameraComponent* InCamera)
@@ -218,3 +145,26 @@ FCamera* UWorld::GetCamera() const
 	return Cam ? Cam->GetCamera() : nullptr;
 }
 
+UWorld* UWorld::DuplicateWorldForPIE(UWorld* SourceWorld)
+{
+	if (!SourceWorld) return nullptr;
+
+	UWorld* NewWorld = FObjectFactory::ConstructObject<UWorld>(nullptr, SourceWorld->GetName() + "_PIE");
+	if (!NewWorld) return nullptr;
+
+	NewWorld->SetWorldType(EWorldType::PIE);
+	NewWorld->InitializeWorld();
+
+	// Level ë³µì œ
+	if (SourceWorld->GetLevel())
+	{
+		ULevel* NewLevel = static_cast<ULevel*>(SourceWorld->GetLevel()->Duplicate());
+		if (NewLevel)
+		{
+			NewLevel->SetLevelType(EWorldType::PIE);
+			NewWorld->Level = NewLevel;
+		}
+	}
+
+	return NewWorld;
+}

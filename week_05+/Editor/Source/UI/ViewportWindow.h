@@ -17,6 +17,6 @@ public:
 	virtual void Render() override;
 	virtual void Draw() override;
 	virtual void OnResize() override;
-	virtual bool HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam) override;
+	virtual bool HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam) override;
 };
 

@@ -28,6 +28,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PrimitiveLineBatch.h" />
+    <ClInclude Include="Source\Actor\Controller.h" />
+    <ClInclude Include="Source\Actor\Pawn.h" />
     <ClInclude Include="Source\Actor\StaticMeshActor.h" />
     <ClInclude Include="Source\Actor\TextActor.h" />
     <ClInclude Include="Source\Asset\AssetCooker.h" />
@@ -40,6 +42,7 @@
     <ClInclude Include="Source\Component\StaticMeshComponent.h" />
     <ClInclude Include="Source\Component\TextRenderComponent.h" />
     <ClInclude Include="Source\CoreMinimal.h" />
+    <ClInclude Include="Source\Core\GameViewportClient.h" />
     <ClInclude Include="Source\Core\ViewportContext.h" />
     <ClInclude Include="Source\EngineAPI.h" />
     <ClInclude Include="Source\Actor\Actor.h" />
@@ -93,10 +96,8 @@
     <ClInclude Include="Source\Object\ObjectFactory.h" />
     <ClInclude Include="Source\Object\ObjectGlobals.h" />
     <ClInclude Include="Source\Object\ObjectIterator.h" />
-    <ClInclude Include="Source\Object\ObjectManager.h" />
     <ClInclude Include="Source\Object\ObjectTypes.h" />
     <ClInclude Include="Source\Object\StaticMesh.h" />
-    <ClInclude Include="Source\Physics\PhysicsManager.h" />
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h" />
     <ClInclude Include="Source\Platform\Windows\Window.h" />
     <ClInclude Include="Source\Platform\Windows\WindowApplication.h" />
@@ -138,10 +139,9 @@
     <ClInclude Include="Source\Types\StaticArray.h" />
     <ClInclude Include="Source\Types\String.h" />
     <ClInclude Include="Source\World\Level.h" />
-    <ClInclude Include="Source\World\LevelManager.h" />
     <ClInclude Include="Source\World\RenderCollector.h" />
     <ClInclude Include="Source\World\LevelContext.h" />
-    <ClInclude Include="Source\World\LevelTypes.h" />
+    <ClInclude Include="Source\World\WorldType.h" />
     <ClInclude Include="Source\World\World.h" />
     <ClInclude Include="Source\World\WorldContext.h" />
     <ClInclude Include="ThirdParty\stb_image.h" />
@@ -150,8 +150,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PrimitiveLineBatch.cpp" />
+    <ClCompile Include="Source\Actor\Controller.cpp" />
+    <ClCompile Include="Source\Actor\Pawn.cpp" />
     <ClCompile Include="Source\Asset\AssetCooker.cpp" />
     <ClCompile Include="Source\Asset\AssetRegistry.cpp" />
+    <ClCompile Include="Source\Core\GameViewportClient.cpp" />
     <ClCompile Include="Source\Math\Rect.cpp" />
     <ClCompile Include="Source\Actor\Actor.cpp" />
     <ClCompile Include="Source\Actor\AttachTestActor.cpp" />
@@ -199,9 +202,7 @@
     <ClCompile Include="Source\Object\Object.cpp" />
     <ClCompile Include="Source\Object\ObjectFactory.cpp" />
     <ClCompile Include="Source\Object\ObjectGlobals.cpp" />
-    <ClCompile Include="Source\Object\ObjectManager.cpp" />
     <ClCompile Include="Source\Object\StaticMesh.cpp" />
-    <ClCompile Include="Source\Physics\PhysicsManager.cpp" />
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp" />
     <ClCompile Include="Source\Platform\Windows\Window.cpp" />
     <ClCompile Include="Source\Platform\Windows\WindowApplication.cpp" />
@@ -230,7 +231,6 @@
     <ClCompile Include="Source\Types\Name.cpp" />
     <ClCompile Include="Source\World\Level.cpp" />
     <ClCompile Include="Source\World\RenderCollector.cpp" />
-    <ClCompile Include="Source\World\LevelManager.cpp" />
     <ClCompile Include="Source\World\World.cpp" />
     <ClCompile Include="Source\Core\Viewport.cpp" />
   </ItemGroup>

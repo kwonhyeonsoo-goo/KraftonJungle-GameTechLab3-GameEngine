@@ -40,8 +40,8 @@ class FWindowManager
 	bool IsInWindowSubtree(SWindow* Window, SWindow* CandidateAncestor) const;
 	void FlushPendingDestroyWindows();
 	void ResetWindowTree();
-	bool RouteMouseMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
-	bool RouteKeyboardMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
+	bool RouteMouseMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
+	bool RouteKeyboardMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
 	void CollectViewportWindowsRecursive(SWindow* Window, TArray<SViewportWindow*>& OutViewportWindows) const;
 
 public:
@@ -52,7 +52,7 @@ public:
 	void SetRootRect(const FRect& InRect);
 	void CheckParent();
 	SWindow* GetWindowAtPoint(const FPoint& Point) const;
-	bool HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
+	bool HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
 	void Tick(float DeltaTime);
 	void RenderWindows() const;
 	void DrawWindows() const;
@@ -63,5 +63,7 @@ public:
 	FViewportContext* CreateViewportContext(const FRect& Rect) const;
 	bool SaveLayoutToIni(const std::wstring& IniPath) const;
 	bool LoadLayoutFromIni(const std::wstring& IniPath, const FRect& RootRect);
+
+	FViewportContext* FindPerspectiveViewportContext() const;
 	FEditorViewportClient* FindPerspectiveViewportClient() const;
 };

@@ -1,6 +1,13 @@
 #include "InputManager.h"
 #include <cstring>
 
+FInputManager* GInput = nullptr;
+
+FInputManager::FInputManager()
+{
+	GInput = this;
+}
+
 void FInputManager::ProcessMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
 	switch (Msg)

@@ -5,15 +5,16 @@
 #include "ConsoleWindow.h"
 #include "ObjViewerPanel.h"
 #include "StatWindow.h"
-#include "Viewport.h"
 #include "Math/Rect.h"
 #include "Types/ObjectPtr.h"
 #include "ContentBrowserWindow.h"
+#include "EditorToolbar.h"
 
 class FCore;
 class FWindow;
 class FRenderer;
 class AActor;
+class FViewportContext;
 class FEditorViewportClient;
 class FWindowManager;
 class FCamera;
@@ -31,6 +32,7 @@ public:
 	void SetActiveViewportClient(FEditorViewportClient* InViewportClient) { ActiveViewportClient = InViewportClient; }
 	FEditorViewportClient* GetActiveViewportClient() const { return ActiveViewportClient; }
 	bool HasActiveViewportClient() const { return ActiveViewportClient != nullptr; }
+	FViewportContext* FindPerspectiveViewportContext() const;
 	FEditorViewportClient* FindPerspectiveViewportClient() const;
 	FCamera* GetPerspectiveCamera() const;
 	FRect GetCentralDockSpaceRect() const;
@@ -55,9 +57,9 @@ private:
 	FConsoleWindow Console;
 	FObjViewerPanel ObjViewerPanel;
 	FStatWindow Stat;
-	FViewportLegacy ViewportLegacy;
 	FOutlinerWindow Outliner;
 	FContentBrowserWindow ContentBrowser;
+	FEditorToolbar Toolbar;
 
 	bool bWindowSetup = false;
 	bool bViewportClientActive = false;

@@ -18,6 +18,7 @@
 #include "UI/EditorViewportClient.h"
 #include "World/Level.h"
 #include "imgui.h"
+#include "FEditorEngine.h"
 
 #include <cmath>
 #include <filesystem>
@@ -350,7 +351,7 @@ void FObjViewerPanel::ApplyDisplayedLocation(AActor* Actor, FEditorViewportClien
 void FObjViewerPanel::Render(FCore* Core, FEditorViewportClient* ActiveViewportClient, FEditorUI& EditorUI)
 {
 	if (!Core || !ActiveViewportClient || !GRenderer) return;
-	ULevel* Level = ActiveViewportClient->ResolveLevel(Core);
+	ULevel* Level = GWorld->GetLevel();
 	if (!Level) return;
 	AStaticMeshActor* MeshActor = FindObjViewerMeshActor(Level);
 	if (!MeshActor) return;
@@ -572,7 +573,7 @@ void FObjViewerPanel::Render(FCore* Core, FEditorViewportClient* ActiveViewportC
 					// reload 과정에서 원점/바닥 기준이 달라질 수 있으므로 이전 표시 위치를 기준으로 다시 복원합니다.
 					MeshActor->GetRootComponent()->SetRelativeTransform(PreviousTransform);
 					SnapObjViewerActorBottomTo(MeshActor, ActiveViewportClient, PreviousDisplayedLocation.Z);
-					Core->SetSelectedActor(MeshActor);
+					GEditor->SetSelectedActor(MeshActor);
 					ActiveViewportClient->FrameObjViewerCamera(MeshActor, true);
 					EditorUI.SyncSelectedActorProperty();
 					DraftAxisAssetPath = MeshAssetPath;

@@ -3,7 +3,7 @@
 #include "Object/Object.h"
 #include "Object/ObjectFactory.h"
 #include <d3d11.h>
-#include "LevelTypes.h"
+#include "WorldType.h"
 #include "Core/ShowFlags.h"
 #include "World/RenderCollector.h"
 class AActor;
@@ -17,6 +17,8 @@ class ENGINE_API ULevel : public UObject
 {
 public:
 	DECLARE_RTTI(ULevel, UObject)
+	DECLARE_DUPLICATE(ULevel)
+
 	~ULevel();
 
 	template <typename T>
@@ -40,10 +42,10 @@ public:
 	void CleanupDestroyedActors();
 
 	const TArray<AActor*>& GetActors() const { return Actors; }
-	void SetLevelType(ELevelType InLevelType) { LevelType = InLevelType; }
-	ELevelType GetLevelType() const { return LevelType; }
-	bool IsEditorLevel() const { return LevelType == ELevelType::Editor; }
-	bool IsGameLevel() const { return LevelType == ELevelType::Game || LevelType == ELevelType::PIE; }
+	void SetLevelType(EWorldType InLevelType) { LevelType = InLevelType; }
+	EWorldType GetLevelType() const { return LevelType; }
+	bool IsEditorLevel() const { return LevelType == EWorldType::Editor; }
+	bool IsGameLevel() const { return LevelType == EWorldType::Game || LevelType == EWorldType::PIE; }
 
   
 	FCamera* GetCamera() const;
@@ -53,13 +55,12 @@ public:
 	void BeginPlay();
 	void Tick(float DeltaTime);
 
-	
-	
+	void DuplicateSubObjects() override;
 
 private:
 	TArray<AActor*> Actors;
 	bool bBegunPlay = false;
-	ELevelType LevelType = ELevelType::Game;
+	EWorldType LevelType = EWorldType::Game;
 
 
 };

@@ -78,7 +78,7 @@ void FDebugDrawManager::Clear()
 
 void FDebugDrawManager::DrawAllCollisionBounds(FRenderer* Renderer, UWorld* World)
 {
-	TArray<AActor*> AllActors = World->GetAllActors();
+	TArray<AActor*> AllActors = World->GetActors();
 	for (AActor* Actor : AllActors)
 	{
 		if (!Actor || Actor->IsPendingDestroy() || !Actor->IsVisible())

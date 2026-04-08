@@ -106,12 +106,12 @@ AActor* FPicker::PickActor(const TArray<AActor*>& InActors, const FCamera* InCam
 
 	GRenderer->RenderPickingPass();
 
-	// 2. 픽셀 ID 읽어오기
+	// 2. �ȼ� ID �о����
 	uint32 PickedID = GRenderer->ReadPixelID(ScreenX, ScreenY);
 
-	if (PickedID == 0) return nullptr; // 배경을 클릭함
+	if (PickedID == 0) return nullptr; // ����� Ŭ����
 
-	// 3. ID로 액터 찾기 (InActors 배열에서 검색)
+	// 3. ID�� ���� ã�� (InActors �迭���� �˻�)
 	for (AActor* Actor : InActors)
 	{
 		if (Actor && Actor->GetUUID() == PickedID)

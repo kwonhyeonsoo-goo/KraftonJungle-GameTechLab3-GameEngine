@@ -159,3 +159,14 @@ void UObject::Serialize(FArchive& Ar)
 		}
 	}
 }
+
+void UObject::DuplicateSubObjects()
+{
+}
+
+UObject* UObject::Duplicate()
+{
+	UObject* NewObject = new UObject(*this);
+	NewObject->DuplicateSubObjects();
+	return NewObject;
+}

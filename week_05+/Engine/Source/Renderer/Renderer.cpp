@@ -859,7 +859,7 @@ void FRenderer::UpdateFrameConstantBuffer()
 	FFrameConstantBuffer CBData;
 	CBData.View = ViewMatrix.GetTransposed();
 	CBData.Projection = ProjectionMatrix.GetTransposed();
-	CBData.TotalTime = (GEngine && GEngine->GetCore()) ? static_cast<float>(GEngine->GetCore()->GetTimer().GetTotalTime()) : 0.0f;
+	CBData.TotalTime = GEngine ? static_cast<float>(GEngine->GetTimer()->GetTotalTime()) : 0.0f;
 	D3D11_MAPPED_SUBRESOURCE Mapped;
 	if (SUCCEEDED(DeviceContext->Map(FrameConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
 	{

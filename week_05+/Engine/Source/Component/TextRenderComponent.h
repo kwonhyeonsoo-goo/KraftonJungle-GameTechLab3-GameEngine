@@ -5,6 +5,7 @@ class ENGINE_API UTextRenderComponent : public UPrimitiveComponent
 {
 public:
 	DECLARE_RTTI(UTextRenderComponent, UPrimitiveComponent)
+	DECLARE_DUPLICATE(UTextRenderComponent)
 
 	virtual void Initialize();
 	virtual FBoxSphereBounds GetWorldBounds() const override;
@@ -37,6 +38,8 @@ public:
 	void SetWorldOffset(const FVector& InOffset) { WorldOffset = InOffset; }
 
 	struct FMeshData* GetTextMesh() const { return TextMesh.get(); }
+
+	void DuplicateSubObjects() override;
 
 protected:
 	FString Text = "";

@@ -174,12 +174,6 @@
     <ClCompile Include="Source\Object\ObjectGlobals.cpp">
       <Filter>Source\Object</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Object\ObjectManager.cpp">
-      <Filter>Source\Object</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Physics\PhysicsManager.cpp">
-      <Filter>Source\Physics</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp">
       <Filter>Source\Platform\Windows</Filter>
     </ClCompile>
@@ -272,9 +266,6 @@
     <ClCompile Include="Source\World\RenderCollector.cpp">
       <Filter>Source\World</Filter>
     </ClCompile>
-    <ClCompile Include="Source\World\LevelManager.cpp">
-      <Filter>Source\World</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Component\MeshComponent.cpp" />
     <ClCompile Include="Source\Mesh\Mesh.cpp" />
     <ClCompile Include="Source\Component\StaticMeshComponent.cpp" />
@@ -289,6 +280,9 @@
     <ClCompile Include="Source\Asset\AssetRegistry.cpp" />
     <ClCompile Include="Source\Asset\AssetCooker.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveSky.cpp" />
+    <ClCompile Include="Source\Core\GameViewportClient.cpp" />
+    <ClCompile Include="Source\Actor\Pawn.cpp" />
+    <ClCompile Include="Source\Actor\Controller.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -423,14 +417,8 @@
     <ClInclude Include="Source\Object\ObjectGlobals.h">
       <Filter>Source\Object</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Object\ObjectManager.h">
-      <Filter>Source\Object</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Object\ObjectTypes.h">
       <Filter>Source\Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Physics\PhysicsManager.h">
-      <Filter>Source\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h">
       <Filter>Source\Platform\Windows</Filter>
@@ -571,16 +559,13 @@
     <ClInclude Include="Source\World\Level.h">
       <Filter>Source\World</Filter>
     </ClInclude>
-    <ClInclude Include="Source\World\LevelManager.h">
-      <Filter>Source\World</Filter>
-    </ClInclude>
     <ClInclude Include="Source\World\RenderCollector.h">
       <Filter>Source\World</Filter>
     </ClInclude>
     <ClInclude Include="Source\World\LevelContext.h">
       <Filter>Source\World</Filter>
     </ClInclude>
-    <ClInclude Include="Source\World\LevelTypes.h">
+    <ClInclude Include="Source\World\WorldType.h">
       <Filter>Source\World</Filter>
     </ClInclude>
     <ClInclude Include="Source\Actor\StaticMeshActor.h" />
@@ -605,6 +590,9 @@
     <ClInclude Include="Source\Asset\CookedAsset.h" />
     <ClInclude Include="Source\Primitive\PrimitiveSky.h" />
     <ClInclude Include="Source\Math\Ray.h" />
+    <ClInclude Include="Source\Core\GameViewportClient.h" />
+    <ClInclude Include="Source\Actor\Pawn.h" />
+    <ClInclude Include="Source\Actor\Controller.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

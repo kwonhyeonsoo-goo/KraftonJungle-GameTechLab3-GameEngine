@@ -6,7 +6,7 @@
 #include "ShowFlags.h"
 #include "Renderer/RenderCommand.h"
 #include "World/RenderCollector.h"
-#include "World/LevelTypes.h"
+#include "World/WorldType.h"
 #include "Input/InputManager.h"
 #include "Camera/Camera.h"
 #include "Input/InputAction.h"
@@ -31,11 +31,9 @@ public:
 	FViewportClient() = default;
 	virtual ~FViewportClient() = default;
 
-	virtual void Attach(FCore* Core);
+	virtual void Attach();
 	virtual void Detach();
-	virtual void HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
-	virtual ULevel* ResolveLevel(FCore* Core) const;
-	virtual UWorld* ResolveWorld(FCore* Core) const;
+	virtual void HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
 	virtual const char* GetViewportLabel() const { return "Viewport"; }
 	virtual FMatrix GetViewMatrix() const;
 	virtual FMatrix GetProjectionMatrix(float AspectRatio) const;
@@ -51,13 +49,11 @@ public:
 
 	virtual void Initialize(FInputManager* InInput, FEnhancedInputManager* InEnhancedInput);
 	virtual void SetupInputBindings();
-	virtual void ProcessCameraInput(FCore* Core, float DeltaTime);
+	virtual void ProcessCameraInput(float DeltaTime);
 	virtual void Cleanup();
 	virtual void Tick(float DeltaTime);
 	virtual void SetViewportRect(const FRect& InRect);
 	virtual void SetViewportInputState(int32 InMouseX, int32 InMouseY, const FRect& InRect);
-	void SetWorldType(ELevelType InWorldType);
-	ELevelType GetWorldType() const;
 	int32 GetViewportWidth() const { return ViewportWidth; }
 	int32 GetViewportHeight() const { return ViewportHeight; }
 
@@ -83,14 +79,7 @@ protected:
 	int32 ViewportHeight = 0;
 	int32 ViewportMouseX = 0;
 	int32 ViewportMouseY = 0;
-	ELevelType WorldType = ELevelType::Game;
+	EWorldType WorldType = EWorldType::Game;
 	SViewportWindow* ViewportWindow = nullptr;
 
-};
-
-class ENGINE_API FGameViewportClient : public FViewportClient
-{
-public:
-	void Attach(FCore* Core) override;
-	void Detach() override;
 };

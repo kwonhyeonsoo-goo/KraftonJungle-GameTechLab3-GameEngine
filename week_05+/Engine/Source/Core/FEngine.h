@@ -1,6 +1,6 @@
 #pragma once
 #include "CoreMinimal.h"
-#include "World/LevelTypes.h"
+#include "World/WorldType.h"
 #include "Windows.h"
 #include "Core/Core.h"
 #include "Core/ViewportContext.h"
@@ -26,9 +26,13 @@ public:
 	virtual void Shutdown();
 
 	FCore* GetCore() const { return Core.get(); }
+	FTimer* GetTimer() const { return Timer; }
 	FRenderCommandQueue& GetCommandQueue() { return CommandQueue; }
 	FWindowApplication* GetApp() const { return App; }
 	FViewportContext* CreateContext(FRect InRect);
+
+	static FWorldContext& CreateWorldContext(EWorldType WorldType, UWorld* InWorld = nullptr);
+	FWorldContext& AddWorldContext(FWorldContext& Context) { WorldContexts.push_back(Context); return Context; }
 
 protected:
 	virtual void PreInitialize() {}
@@ -37,17 +41,20 @@ protected:
 	virtual void ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
 	virtual void Tick(float DeltaTime);
 	virtual void Render();
-	virtual ELevelType GetStartupLevelType() const { return ELevelType::Game; }
+	virtual EWorldType GetStartupLevelType() const { return EWorldType::Game; }
 	virtual FViewportClient* CreateViewportClient() = 0;
 	virtual void OnMainWindowResized(int32 Width, int32 Height) {}
 	virtual void OnActiveViewportContextChanged(FViewportContext* NewActiveContext, FViewportContext* PreviousActiveContext) {}
 
 	FWindowApplication* App = nullptr;
 	FWindow* MainWindow = nullptr;
+	FTimer* Timer;
 	std::unique_ptr<FCore> Core;
 	FRenderCommandQueue CommandQueue;
 	FInputManager* InputManager = nullptr;
 	FEnhancedInputManager* EnhancedInput = nullptr;
+
+	TArray<FWorldContext> WorldContexts;
 
 private:
 	bool OnInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);

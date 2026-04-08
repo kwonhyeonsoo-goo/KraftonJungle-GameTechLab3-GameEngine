@@ -13,8 +13,6 @@
 #include "Serializer/SceneSerializer.h"
 #include <algorithm>
 
-
-
 #include "Component/LineBatchComponent.h"
 
 IMPLEMENT_RTTI(ULevel, UObject)
@@ -31,19 +29,14 @@ ULevel::~ULevel()
 	Actors.clear();
 }
 
-
 FCamera* ULevel::GetCamera() const
 {
 	UWorld* World = GetTypedOuter<UWorld>();
 	return World ? World->GetCamera() : nullptr;
 }
 
-
-
 void ULevel::ClearActors()
 {
-
-
 	for (AActor* Actor : Actors)
 	{
 		if (Actor)
@@ -63,12 +56,6 @@ void ULevel::RegisterActor(AActor* InActor)
 		return;
 	}
 
-	//const auto It = std::find(Actors.begin(), Actors.end(), InActor);
-	//if (It != Actors.end())
-	//{
-	//	return;
-	//}
-
 	Actors.push_back(InActor);
 	InActor->SetLevel(this);
 }
@@ -80,7 +67,7 @@ void ULevel::DestroyActor(AActor* InActor)
 		return;
 	}
 
-
+	Actors.erase(std::remove(Actors.begin(), Actors.end(), InActor), Actors.end());
 	InActor->Destroy();
 }
 
@@ -139,5 +126,19 @@ void ULevel::Tick(float DeltaTime)
 	{
 		CleanupDestroyedActors();
 	}
+}
 
+void ULevel::DuplicateSubObjects()
+{
+	TArray<AActor*> ActorsCopy = Actors;
+	Actors.clear();
+
+	for (AActor* Actor : ActorsCopy)
+	{
+		if (Actor)
+		{
+			AActor* NewActor = static_cast<AActor*>(Actor->Duplicate());
+			RegisterActor(NewActor);
+		}
+	}
 }

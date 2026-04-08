@@ -10,6 +10,8 @@
 #include "Component/TextRenderComponent.h"
 #include "Component/BillboardComponent.h"
 
+#include "FEditorEngine.h"
+
 void FOutlinerWindow::Render(FCore* Core)
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
@@ -20,24 +22,22 @@ void FOutlinerWindow::Render(FCore* Core)
 		ImGui::End();
 		return;
 	}
-	if (!Core || !Core->GetLevel())
+	if (!GWorld || !GWorld->GetLevel())
 	{
 		ImGui::End();
 		return;
 	}
 
 
-	AActor* SelectedActor = Core->GetSelectedActor();
+	AActor* SelectedActor = GEditor->GetSelectedActor();
 
 	ImGui::SeparatorText("Actors");
 
-	ULevel* Level = Core->GetLevel();
+	ULevel* Level = GWorld->GetLevel();
 	const TArray<AActor*>& Actors = Level->GetActors();
 	
-
 	for (AActor* Actor : Actors)
 	{
-;
 		if (!Actor || Actor->IsPendingDestroy())
 		{
 			continue;
@@ -54,11 +54,10 @@ void FOutlinerWindow::Render(FCore* Core)
 
 		if (ImGui::Selectable(Actor->GetName().c_str(), bSelected))
 		{
-			Core->SetSelectedActor(Actor);
+			GEditor->SetSelectedActor(Actor);
 		}
 		ImGui::PopID();
 	}
 
 	ImGui::End();
-
 }

@@ -144,11 +144,12 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 			FMeshData* SubUVMesh = SubUVComponent->GetSubUVMesh();
 			if (SubUVMesh && SubUVRenderer.BuildSubUVMesh(SubUVComponent->GetSize(), *SubUVMesh))
 			{
-				float TotalTime = static_cast<float>(GEngine->GetCore()->GetTimer().GetTotalTime());
+				float TotalTime = static_cast<float>(GEngine->GetTimer()->GetTotalTime());
 				SubUVRenderer.UpdateAnimationParams(
 					SubUVComponent->GetColumns(), SubUVComponent->GetRows(), SubUVComponent->GetTotalFrames(),
 					SubUVComponent->GetFirstFrame(), SubUVComponent->GetLastFrame(),
-					SubUVComponent->GetFPS(), TotalTime, SubUVComponent->IsLoop()
+					SubUVComponent->GetFPS(), TotalTime, SubUVComponent->IsLoop(),
+					SubUVComponent->IsPreview()
 				);
 
 				FMaterial* SubUVMat = SubUVRenderer.GetSubUVMaterial();

@@ -662,7 +662,7 @@ SWindow* FWindowManager::GetWindowAtPoint(const FPoint& Point) const
 	return nullptr;
 }
 
-bool FWindowManager::RouteMouseMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+bool FWindowManager::RouteMouseMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
 	FPoint ClientPoint;
 	if (!TryGetClientMousePoint(Hwnd, Msg, LParam, ClientPoint))
@@ -691,7 +691,7 @@ bool FWindowManager::RouteMouseMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM 
 			SetActiveViewportWindow(TargetViewportWindow);
 		}
 
-		return HitWindow->HandleMessage(Core, Hwnd, Msg, WParam, RoutedLParam);
+		return HitWindow->HandleMessage(Hwnd, Msg, WParam, RoutedLParam);
 	}
 
 	if (IsMouseButtonUpMessage(Msg))
@@ -702,7 +702,7 @@ bool FWindowManager::RouteMouseMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM 
 			return false;
 		}
 
-		const bool bHandled = TargetWindow->HandleMessage(Core, Hwnd, Msg, WParam, RoutedLParam);
+		const bool bHandled = TargetWindow->HandleMessage(Hwnd, Msg, WParam, RoutedLParam);
 		SetPressedWindow(nullptr);
 		if (!HasAnyMouseButtonPressed())
 		{
@@ -713,33 +713,28 @@ bool FWindowManager::RouteMouseMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM 
 
 	if (IsMouseWheelMessage(Msg))
 	{
-		return HitWindow ? HitWindow->HandleMessage(Core, Hwnd, Msg, WParam, RoutedLParam) : false;
+		return HitWindow ? HitWindow->HandleMessage(Hwnd, Msg, WParam, RoutedLParam) : false;
 	}
 
 	SWindow* TargetWindow = MouseCaptureWindow ? MouseCaptureWindow : HitWindow;
-	return TargetWindow ? TargetWindow->HandleMessage(Core, Hwnd, Msg, WParam, RoutedLParam) : false;
+	return TargetWindow ? TargetWindow->HandleMessage(Hwnd, Msg, WParam, RoutedLParam) : false;
 }
 
-bool FWindowManager::RouteKeyboardMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+bool FWindowManager::RouteKeyboardMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
-	return KeyboardFocusWindow ? KeyboardFocusWindow->HandleMessage(Core, Hwnd, Msg, WParam, LParam) : false;
+	return KeyboardFocusWindow ? KeyboardFocusWindow->HandleMessage(Hwnd, Msg, WParam, LParam) : false;
 }
 
-bool FWindowManager::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+bool FWindowManager::HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
-	if (!Core)
-	{
-		return false;
-	}
-
 	if (IsMouseMessage(Msg))
 	{
-		return RouteMouseMessage(Core, Hwnd, Msg, WParam, LParam);
+		return RouteMouseMessage(Hwnd, Msg, WParam, LParam);
 	}
 
 	if (IsKeyboardMessage(Msg))
 	{
-		return RouteKeyboardMessage(Core, Hwnd, Msg, WParam, LParam);
+		return RouteKeyboardMessage(Hwnd, Msg, WParam, LParam);
 	}
 
 	return false;
@@ -759,9 +754,7 @@ void FWindowManager::RenderWindows() const
 {
 	if (SWindow* Window = Windows.front())
 	{
-	
 		Window->Render();
-	
 	}
 }
 
@@ -893,6 +886,32 @@ void FWindowManager::CollectViewportWindowsRecursive(SWindow* Window, TArray<SVi
 		CollectViewportWindowsRecursive(SplitterC->GetSideRT(), OutViewportWindows);
 		CollectViewportWindowsRecursive(SplitterC->GetSideRB(), OutViewportWindows);
 	}
+}
+
+FViewportContext* FWindowManager::FindPerspectiveViewportContext() const
+{
+	TArray<SViewportWindow*> ViewportWindows;
+	for (SWindow* RootWindow : Windows)
+	{
+		CollectViewportWindowsRecursive(RootWindow, ViewportWindows);
+	}
+
+	for (SViewportWindow* ViewportWindow : ViewportWindows)
+	{
+		if (ViewportWindow == nullptr)
+		{
+			continue;
+		}
+
+		FViewportContext* Context = ViewportWindow->GetViewportContext();
+		FEditorViewportClient* EditorViewportClient = dynamic_cast<FEditorViewportClient*>(Context ? Context->GetViewportClient() : nullptr);
+		if (EditorViewportClient && EditorViewportClient->GetViewportType() == EEditorViewportType::Perspective)
+		{
+			return Context;
+		}
+	}
+
+	return nullptr;
 }
 
 FEditorViewportClient* FWindowManager::FindPerspectiveViewportClient() const
