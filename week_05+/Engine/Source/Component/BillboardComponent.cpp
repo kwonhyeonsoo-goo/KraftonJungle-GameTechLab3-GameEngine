@@ -75,15 +75,37 @@ void UBillboardComponent::SetTexturePath(ID3D11Device* Device, const FString& In
 	{
 		DynamicMaterial = BaseMat->CreateDynamicMaterial();
 
-		// AssetManager를 통해 텍스처 로드 (raw pointer 반환)
+	
+		extern ENGINE_API FRenderer* GRenderer;
+		if (GRenderer)
+		{
+			auto& RSM = GRenderer->GetRenderStateManager();
+
+			
+			FRasterizerStateOption RasterOpt = DynamicMaterial->GetRasterizerOption();
+			RasterOpt.CullMode = D3D11_CULL_NONE;
+			DynamicMaterial->SetRasterizerOption(RasterOpt);
+			DynamicMaterial->SetRasterizerState(RSM->GetOrCreateRasterizerState(RasterOpt));
+
+	
+			FBlendStateOption BlendOpt;
+			BlendOpt.BlendEnable = true;
+			BlendOpt.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+			BlendOpt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+			BlendOpt.BlendOp = D3D11_BLEND_OP_ADD;
+			BlendOpt.SrcBlendAlpha = D3D11_BLEND_ONE;
+			BlendOpt.DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+			BlendOpt.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+			DynamicMaterial->SetBlendOption(BlendOpt);
+			DynamicMaterial->SetBlendState(RSM->GetOrCreateBlendState(BlendOpt));
+		}
+
+	
 		if (ID3D11ShaderResourceView* LoadedSRV = FAssetManager::Get().LoadTexture(Device, TexturePath))
 		{
-			//  에러 수정: 날것의 SRV를 FMaterialTexture 구조체로 안전하게 래핑합니다.
 			auto MatTex = std::make_shared<FMaterialTexture>();
 			MatTex->TextureSRV = LoadedSRV;
 			MatTex->AssetPath = TexturePath;
-
-			// 래핑된 객체를 머티리얼에 주입
 			DynamicMaterial->SetMaterialTexture(MatTex);
 		}
 		SetMaterial(DynamicMaterial.get());

@@ -102,6 +102,7 @@ void AActor::PostSpawnInitialize()
 			TextComponent->SetTextColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
 		}
 	}
+	//TODO** 삭제 빌보드 테스트 끝나면
 	if (GetComponentByClass<UBillboardComponent>() == nullptr)
 	{
 		UBillboardComponent* BillboardComp =
@@ -116,7 +117,6 @@ void AActor::PostSpawnInitialize()
 			}
 			BillboardComp->SetRelativeLocation(FVector(0.0f, 0.0f, 0.8f));
 
-			// 기본 크기 설정
 			BillboardComp->SetSize(FVector2(1.0f, 1.0f));
 		}
 	}
