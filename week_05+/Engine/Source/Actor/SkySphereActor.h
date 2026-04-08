@@ -2,14 +2,15 @@
 
 #include "Actor.h"
 
-
 class UStaticMeshComponent;
+
 class ENGINE_API ASkySphereActor : public AActor
 {
 public:
 	DECLARE_RTTI(ASkySphereActor, AActor)
-	void PostSpawnInitialize() override;
+	DECLARE_DUPLICATE(ASkySphereActor)
 
+	void PostSpawnInitialize() override;
 
 	void Tick(float DeltaTime) override;
 	void LoadSkyMesh(ID3D11Device* Device);

@@ -19,8 +19,6 @@ public:
 	ULevel* GetLevel() const;
 	void SetLevel(ULevel* InLevel);
 	UWorld* GetWorld() const;
-	// ULevel* GetLevel() const { return Level;
-	// void SetLevel(ULevel* InLevel) { Level = InLevel; }
 
 	USceneComponent* GetRootComponent() const;
 	void SetRootComponent(USceneComponent* InRootComponent);

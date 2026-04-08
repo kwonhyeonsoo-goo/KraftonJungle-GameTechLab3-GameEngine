@@ -811,6 +811,11 @@ void FEditorUI::SyncSelectedActorProperty()
 	CachedSelectedActor = Selected;
 }
 
+FViewportContext* FEditorUI::FindPerspectiveViewportContext() const
+{
+	return WindowManager ? WindowManager->FindPerspectiveViewportContext() : nullptr;
+}
+
 FEditorViewportClient* FEditorUI::FindPerspectiveViewportClient() const
 {
 	return WindowManager ? WindowManager->FindPerspectiveViewportClient() : nullptr;

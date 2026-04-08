@@ -27,8 +27,19 @@ public:
 	FWorldContext GetEditorWorldContext() const;
 	void RemoveEditorWorldContext(EWorldType WorldType);
 
+	FEditorUI& GetEditorUI() { return EditorUI; }
+
 	AActor* GetSelectedActor() const { return SelectedActor; }
 	void SetSelectedActor(AActor* InActor) { SelectedActor = InActor; EditorUI.SyncSelectedActorProperty(); }
+
+	void ChangeViewportClient(FViewportClient* NewViewportClient)
+	{
+		FViewportContext* ViewportContext = ViewportContexts[0];
+		ViewportContext->ViewportClient->Detach();
+		ViewportContext->ViewportClient = NewViewportClient;
+		ViewportContext->ViewportClient->Initialize(InputManager, EnhancedInput);
+		ViewportContext->ViewportClient->Attach();
+	}
 
 protected:
 	void PreInitialize() override;
@@ -51,6 +62,8 @@ private:
 	bool bPendingObjViewerStartupPrompt = false;
 
 	EPIEState PIEState = EPIEState::Stopped;
+
+	TArray<FViewportContext*> ViewportContexts;
 };
 
 extern FEditorEngine* GEditor;

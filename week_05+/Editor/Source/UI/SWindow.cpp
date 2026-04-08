@@ -454,7 +454,7 @@ void SSplitter::Draw()
 	DrawSplitterHandle();
 }
 
-bool SSplitter::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+bool SSplitter::HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
 	if (bDragging && IsMouseMessage(Msg))
 	{
@@ -466,23 +466,23 @@ bool SSplitter::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, L
 		const FPoint MousePoint(static_cast<float>(GET_X_LPARAM(LParam)), static_cast<float>(GET_Y_LPARAM(LParam)));
 		if (SideLT && SideLT->ISHover(MousePoint))
 		{
-			return SideLT->HandleMessage(Core, Hwnd, Msg, WParam, LParam);
+			return SideLT->HandleMessage(Hwnd, Msg, WParam, LParam);
 		}
 
 		if (SideRB && SideRB->ISHover(MousePoint))
 		{
-			return SideRB->HandleMessage(Core, Hwnd, Msg, WParam, LParam);
+			return SideRB->HandleMessage(Hwnd, Msg, WParam, LParam);
 		}
 
 		return false;
 	}
 
-	if (SideLT && SideLT->HandleMessage(Core, Hwnd, Msg, WParam, LParam))
+	if (SideLT && SideLT->HandleMessage(Hwnd, Msg, WParam, LParam))
 	{
 		return true;
 	}
 
-	if (SideRB && SideRB->HandleMessage(Core, Hwnd, Msg, WParam, LParam))
+	if (SideRB && SideRB->HandleMessage(Hwnd, Msg, WParam, LParam))
 	{
 		return true;
 	}
@@ -992,7 +992,7 @@ SWindow* SSplitterC::GetWindow(FPoint coord)
 	return nullptr;
 }
 
-bool SSplitterC::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+bool SSplitterC::HandleMessage(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
 	if (bDragging && IsMouseMessage(Msg))
 	{
@@ -1001,7 +1001,7 @@ bool SSplitterC::HandleMessage(FCore* Core, HWND Hwnd, UINT Msg, WPARAM WParam, 
 
 	auto DispatchToChild = [&](SWindow* Child) -> bool
 	{
-		return Child && Child->HandleMessage(Core, Hwnd, Msg, WParam, LParam);
+		return Child && Child->HandleMessage(Hwnd, Msg, WParam, LParam);
 	};
 
 	if (IsMouseMessage(Msg))

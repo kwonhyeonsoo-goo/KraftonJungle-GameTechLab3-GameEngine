@@ -61,12 +61,6 @@ void ULevel::RegisterActor(AActor* InActor)
 		return;
 	}
 
-	//const auto It = std::find(Actors.begin(), Actors.end(), InActor);
-	//if (It != Actors.end())
-	//{
-	//	return;
-	//}
-
 	Actors.push_back(InActor);
 	InActor->SetLevel(this);
 }
@@ -77,7 +71,6 @@ void ULevel::DestroyActor(AActor* InActor)
 	{
 		return;
 	}
-
 
 	InActor->Destroy();
 }
