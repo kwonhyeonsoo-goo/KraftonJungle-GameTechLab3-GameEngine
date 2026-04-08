@@ -7,6 +7,8 @@
 
 void FGameViewportClient::Attach()
 {
+	ShowFlags.SetFlag(EEngineShowFlags::SF_UUID, false);
+	ShowFlags.SetFlag(EEngineShowFlags::SF_Collision, false);
 }
 
 void FGameViewportClient::Detach()
