@@ -23,7 +23,9 @@ public:
 			static_cast<uint64>(EEngineShowFlags::SF_UUID) |
 			static_cast<uint64>(EEngineShowFlags::SF_Billboard) |
 			static_cast<uint64>(EEngineShowFlags::SF_Text) |
-			static_cast<uint64>(EEngineShowFlags::SF_Grid)) {
+			static_cast<uint64>(EEngineShowFlags::SF_Grid) |
+		static_cast<uint64>(EEngineShowFlags::SF_DebugDraw) |   
+		static_cast<uint64>(EEngineShowFlags::SF_Collision)) {
 	}
 	void SetFlag(EEngineShowFlags InFlag, bool bEnabled);
 	bool HasFlag(EEngineShowFlags InFlag)const;

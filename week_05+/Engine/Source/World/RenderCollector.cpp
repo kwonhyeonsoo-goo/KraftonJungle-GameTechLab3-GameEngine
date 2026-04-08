@@ -116,7 +116,7 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 						Command.Material = DefaultMat.get();
 				}
 
-				Command.RenderLayer = ERenderLayer::Default;
+				
 				if (Command.Material && Command.Material->GetBlendOption().BlendEnable)
 					Command.RenderLayer = ERenderLayer::Translucent;
 #if !IS_OBJ_VIEWER // 뷰어가 아닐 때만 아이콘 렌더링
