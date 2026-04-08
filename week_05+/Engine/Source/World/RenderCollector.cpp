@@ -25,7 +25,7 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 	bool bShowFlagsChanged = (PrevShowFlagsBits != ShowFlags.GetFlags());
 	bool bActorCountChanged = (PrevActorCount != Actors.size());
 
-	if (!bCommandsDirty && !bFrustumChanged && !bShowFlagsChanged && !bActorCountChanged)
+	if (!bCommandsDirty && !bFrustumChanged && !bShowFlagsChanged && !bActorCountChanged && !bHasAnimatedComponents)
 	{
 		OutQueue.Commands = CachedQueue.Commands;
 		return;
@@ -37,6 +37,7 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 	if (!GRenderer) return;
 
 	OutQueue.Clear();
+	bHasAnimatedComponents = false;
 
 	FTextMeshBuilder& TextRenderer = GRenderer->GetTextRenderer();
 	FSubUVRenderer& SubUVRenderer = GRenderer->GetSubUVRenderer();
@@ -143,6 +144,7 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 		// ─── 3. SubUV 스프라이트 ───
 		if (PrimitiveComponent->IsA(USubUVComponent::StaticClass()))
 		{
+			bHasAnimatedComponents = true;
 			USubUVComponent* SubUVComponent = static_cast<USubUVComponent*>(PrimitiveComponent);
 			FMeshData* SubUVMesh = SubUVComponent->GetSubUVMesh();
 			if (SubUVMesh && SubUVRenderer.BuildSubUVMesh(SubUVComponent->GetSize(), *SubUVMesh))

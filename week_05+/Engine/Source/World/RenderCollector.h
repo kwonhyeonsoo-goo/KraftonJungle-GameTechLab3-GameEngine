@@ -27,6 +27,7 @@ private:
 	FRenderCommandQueue CachedQueue;
 	FFrustum PrevFrustum;
 	uint64 PrevShowFlagsBits = 0; // ShowFlags 변경 감지용
-	size_t PrevActorCount = 0; 
+	size_t PrevActorCount = 0;
 	bool bCommandsDirty = true;
+	bool bHasAnimatedComponents = false; // SubUV 등 매 프레임 갱신 필요
 };
