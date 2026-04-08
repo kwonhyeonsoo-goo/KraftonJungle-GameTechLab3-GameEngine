@@ -822,7 +822,7 @@ void FPropertyWindow::Render(FCore* Core)
 					ImGui::Unindent(8.0f);
 				}
 
-				//DrawBillboardSection(SelectedActor);
+				DrawBillboardSection(SelectedActor);
 
 				if (SelectedComponent->IsA(UStaticMeshComponent::StaticClass())) {
 
