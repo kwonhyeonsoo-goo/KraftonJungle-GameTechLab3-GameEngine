@@ -29,6 +29,9 @@ public:
 	void SetOnChanged(FPropertyChangedCallback Callback) { OnChanged = Callback; }
 
 	FPropertyChangedCallback OnChanged;
+
+	static USceneComponent* SelectedComponent;
+	
 private:
 	void DrawTransformSection();
 	void DrawComponentTransformSection(USceneComponent& selected);

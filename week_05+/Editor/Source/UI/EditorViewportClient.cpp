@@ -1365,6 +1365,8 @@ void FEditorViewportClient::HandleFileDoubleClick(const FString& FilePath)
 	{
 		EditorUI.SavePerspectiveCameraInitialState();
 		UE_LOG("Level loaded: %s", FilePath.c_str());
+
+		FPropertyWindow::SelectedComponent = nullptr;
 	}
 	else
 	{
