@@ -9,6 +9,7 @@ class AActor;
 class USceneComponent;
 class USubUVComponent;
 class UTextComponent;
+class UBillboardComponent;
 
 using FPropertyChangedCallback = std::function<void(USceneComponent&, const FVector&, const FVector&, const FVector&)>;
 
@@ -32,7 +33,7 @@ private:
 	void DrawTransformSection();
 	void DrawComponentTransformSection(USceneComponent& selected);
 
-	void DrawBillboardSection(AActor* SelectedActor);
+	void DrawBillboardSection(AActor* SelectedActor, USceneComponent* Component);
 
 	//Property 패널에서 머테리얼 슬롯 및 UV 스크롤을 컨트롤합니다.
 	void DrawMaterialSlots(FCore* Core, UStaticMeshComponent* SMComp, AActor* SelectedActor);
@@ -55,4 +56,5 @@ private:
 	int SelectedTextureIndex = -1;
 	int SelectedMaterialIndex = -1;
 	bool    bModified = false;
+
 };
