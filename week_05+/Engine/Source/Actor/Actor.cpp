@@ -12,6 +12,7 @@
 #include "Serializer/Archive.h"
 #include "World/Level.h"
 #include <unordered_map>
+#include <Component/SubUVComponent.h>
 
 IMPLEMENT_RTTI(AActor, UObject)
 
@@ -171,34 +172,54 @@ void AActor::Serialize(FArchive& Ar)
 {
 	UObject::Serialize(Ar);
 
-	if (Ar.IsSaving()) // Save Actor property
+	if (Ar.IsSaving()) // Save
 	{
 		FString ClassName = GetClass()->GetName();
 		Ar.Serialize("Class", ClassName);
 		Ar.Serialize("UUID", UUID);
 
 		TArray<uint32> CompUUIDs;
+		auto& ParentJson = *static_cast<nlohmann::json*>(Ar.GetRawJson());
+		nlohmann::json ComponentsJson = nlohmann::json::array();
+
 		for (UActorComponent* Comp : GetComponents())
+		{
 			if (Comp)
 			{
 				Comp->SetOwner(this);
+				CompUUIDs.push_back(Comp->GetUUID());
 
-				if (RootComponent && Comp != RootComponent && Comp->IsA(USceneComponent::StaticClass()))
+				FArchive CompAr(true);
+				Comp->Serialize(CompAr);
+
+				auto& CompJson = *static_cast<nlohmann::json*>(CompAr.GetRawJson());
+				CompJson["Class"] = Comp->GetClass()->GetName();
+
+				// 부모-자식 계층 유지를 위해 AttachParent의 UUID 기록
+				if (Comp->IsA(USceneComponent::StaticClass()))
 				{
-					static_cast<USceneComponent*>(Comp)->AttachTo(RootComponent);
+					USceneComponent* SceneComp = static_cast<USceneComponent*>(Comp);
+					if (SceneComp->GetAttachParent())
+					{
+						CompJson["AttachParentUUID"] = SceneComp->GetAttachParent()->GetUUID();
+					}
 				}
+
+				ComponentsJson.push_back(CompJson);
 			}
+		}
+
 		Ar.SerializeUIntArray("ComponentUUIDs", CompUUIDs);
+		ParentJson["ComponentsData"] = ComponentsJson;
 	}
 	else // Load 
 	{
+		//액터 UUID 복원
 		if (Ar.Contains("UUID"))
 		{
 			uint32 SavedUUID = 0;
 			Ar.Serialize("UUID", SavedUUID);
-			// 기존 UUID 제거
 			GUUIDToObjectMap.erase(UUID);
-			// 충돌하는 UUID가 이미 있으면 기존 것 제거
 			if (auto It = GUUIDToObjectMap.find(SavedUUID); It != GUUIDToObjectMap.end() && It->second != this)
 			{
 				It->second->UUID = 0;
@@ -208,62 +229,38 @@ void AActor::Serialize(FArchive& Ar)
 			GUUIDToObjectMap[SavedUUID] = this;
 		}
 
-		// Components UUID Restore
-		if (Ar.Contains("ComponentUUIDs"))
-		{
-			TArray<uint32> CompUUIDs;
-			Ar.SerializeUIntArray("ComponentUUIDs", CompUUIDs);
-			const TArray<UActorComponent*>& Components = GetComponents();
-			for (size_t i = 0; i < CompUUIDs.size(); i++)
-			{
-				GUUIDToObjectMap.erase(Components[i]->UUID);
-				if (auto It = GUUIDToObjectMap.find(CompUUIDs[i]);
-					It != GUUIDToObjectMap.end() &&
-					It->second != Components[i])
-				{
-					It->second->UUID = 0;
-					GUUIDToObjectMap.erase(It);
-				}
-				Components[i]->UUID = CompUUIDs[i];
-				GUUIDToObjectMap[CompUUIDs[i]] = Components[i];
-			}
-		}
-
-		// Setting Owner
-		for (UActorComponent* Comp : GetComponents())
-			if (Comp)
-				Comp->SetOwner(this);
-	}
-	// 컴포넌트 데이터 직렬화
-	if (Ar.IsSaving())
-	{
-		auto& ParentJson = *static_cast<nlohmann::json*>(Ar.GetRawJson());
-		nlohmann::json ComponentsJson = nlohmann::json::array();
-		for (UActorComponent* Comp : GetComponents())
-		{
-			if (Comp)
-			{
-				FArchive CompAr(true);
-				Comp->Serialize(CompAr);
-				ComponentsJson.push_back(*static_cast<nlohmann::json*>(CompAr.GetRawJson()));
-			}
-		}
-		ParentJson["ComponentsData"] = ComponentsJson;
-	}
-	else
-	{
 		auto& ParentJson = *static_cast<nlohmann::json*>(Ar.GetRawJson());
 		if (ParentJson.contains("ComponentsData") && ParentJson["ComponentsData"].is_array())
 		{
 			const auto& ComponentsJson = ParentJson["ComponentsData"];
+			const TArray<UActorComponent*>& Components = GetComponents();
+
+			//기존 컴포넌트 UUID 복원
+			if (Ar.Contains("ComponentUUIDs"))
+			{
+				TArray<uint32> CompUUIDs;
+				Ar.SerializeUIntArray("ComponentUUIDs", CompUUIDs);
+				for (size_t i = 0; i < CompUUIDs.size() && i < Components.size(); i++)
+				{
+					GUUIDToObjectMap.erase(Components[i]->GetUUID());
+					if (auto It = GUUIDToObjectMap.find(CompUUIDs[i]); It != GUUIDToObjectMap.end() && It->second != Components[i])
+					{
+						It->second->UUID = 0;
+						GUUIDToObjectMap.erase(It);
+					}
+					Components[i]->UUID = CompUUIDs[i];
+					GUUIDToObjectMap[CompUUIDs[i]] = Components[i];
+				}
+			}
+
+			//컴포넌트 생성 및 직렬화 데이터 세팅
 			for (size_t i = 0; i < ComponentsJson.size(); ++i)
 			{
-				const TArray<UActorComponent*>& CComps = GetComponents();
 				UActorComponent* TargetComp = nullptr;
 
-				if (i < CComps.size())
+				if (i < Components.size())
 				{
-					TargetComp = CComps[i];
+					TargetComp = Components[i];
 				}
 				else
 				{
@@ -273,12 +270,22 @@ void AActor::Serialize(FArchive& Ar)
 						UClass* CompClass = UClass::FindClass(ClassName);
 						if (CompClass)
 						{
-							std::string CompName = ComponentsJson[i].value("Name", "");
+							std::string CompName = ComponentsJson[i].value("Name", "LoadedComponent");
 							TargetComp = static_cast<UActorComponent*>(FObjectFactory::ConstructObject(CompClass, this, CompName));
 							if (TargetComp)
 							{
 								TargetComp->SetOwner(this);
 								OwnedComponents.push_back(TargetComp);
+
+								// 동적 생성된 컴포넌트 초기화
+								if (TargetComp->IsA(UTextRenderComponent::StaticClass()))
+									static_cast<UTextRenderComponent*>(TargetComp)->Initialize();
+								else if (TargetComp->IsA(UBillboardComponent::StaticClass()))
+									static_cast<UBillboardComponent*>(TargetComp)->Initialize();
+								else if (TargetComp->IsA(USubUVComponent::StaticClass()))
+									static_cast<USubUVComponent*>(TargetComp)->Initialize();
+								else if (TargetComp->IsA(UStaticMeshComponent::StaticClass()))
+									static_cast<UStaticMeshComponent*>(TargetComp)->Initialize();
 							}
 						}
 					}
@@ -286,22 +293,38 @@ void AActor::Serialize(FArchive& Ar)
 
 				if (TargetComp)
 				{
+					TargetComp->SetOwner(this);
 					FArchive CompAr(false);
 					*static_cast<nlohmann::json*>(CompAr.GetRawJson()) = ComponentsJson[i];
 					TargetComp->Serialize(CompAr);
 				}
 			}
 
-			const TArray<UActorComponent*>& Components = GetComponents();
-			if (!Components.empty() && Components[0] != nullptr && Components[0]->IsA(USceneComponent::StaticClass()))
+	
+			RootComponent = nullptr;
+			for (size_t i = 0; i < ComponentsJson.size(); ++i)
 			{
-				RootComponent = static_cast<USceneComponent*>(Components[0]);
-				for (size_t i = 1; i < Components.size(); ++i)
+				if (i >= OwnedComponents.size()) continue;
+
+				USceneComponent* SceneComp = dynamic_cast<USceneComponent*>(OwnedComponents[i]);
+				if (!SceneComp) continue;
+
+				if (ComponentsJson[i].contains("AttachParentUUID"))
 				{
-					if (Components[i] != nullptr && Components[i]->IsA(USceneComponent::StaticClass()))
+					uint32 ParentUUID = ComponentsJson[i]["AttachParentUUID"].get<uint32>();
+					if (GUUIDToObjectMap.count(ParentUUID))
 					{
-						static_cast<USceneComponent*>(Components[i])->AttachTo(RootComponent);
+						USceneComponent* ParentComp = dynamic_cast<USceneComponent*>(GUUIDToObjectMap[ParentUUID]);
+						if (ParentComp)
+						{
+							SceneComp->AttachTo(ParentComp);
+						}
 					}
+				}
+				else if (!RootComponent)
+				{
+					// 부모 UUID가 기록되지 않았다면 이 컴포넌트가 최상단 RootComponent
+					RootComponent = SceneComp;
 				}
 			}
 		}
