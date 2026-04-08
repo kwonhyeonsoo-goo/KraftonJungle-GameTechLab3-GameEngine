@@ -165,7 +165,7 @@ void FPropertyWindow::DrawComponentTransformSection(USceneComponent& selected)
 
 	}
 }
-void FPropertyWindow::DrawBillboardSection(AActor * SelectedActor)
+void FPropertyWindow::DrawBillboardSection(AActor * SelectedActor, USceneComponent* Component)
 {
 	if (!ImGui::CollapsingHeader("Billboard", ImGuiTreeNodeFlags_DefaultOpen))
 	{
@@ -173,9 +173,8 @@ void FPropertyWindow::DrawBillboardSection(AActor * SelectedActor)
 	}
 
 	ImGui::Indent(8.0f);
-	for (UActorComponent* Component : SelectedActor->GetComponents())
-	{
-		if (!Component) continue;
+
+		if (!Component) return;
 
 		if (Component->IsA(UTextRenderComponent::StaticClass()) && !Component->IsA(UBillboardComponent::StaticClass()))
 		{
@@ -262,7 +261,7 @@ void FPropertyWindow::DrawBillboardSection(AActor * SelectedActor)
 				SubUVComp->SetBillboard(bBillboard);
 			}
 		}
-	}
+	
 	ImGui::Unindent(8.0f);
 }
 
@@ -611,7 +610,8 @@ void FPropertyWindow::DrawAddComponentButton(AActor* SelectedActor)
 	static int32 SpawnTypeIndex = 0;
 	const char* SpawnTypes[] = {
 		"Cube Component", "Sphere Component", "Plane Component",
-		"SubUV Component", "Text Component", "StaticMesh Component" };
+		"SubUV Component", "Text Component", "StaticMesh Component",
+		"Billboard Component"};
 	ImGui::Combo("##Type", &SpawnTypeIndex, SpawnTypes, IM_ARRAYSIZE(SpawnTypes));
 
 	static char SpawnTextBuffer[256] = "Text";
@@ -657,6 +657,7 @@ void FPropertyWindow::DrawAddComponentButton(AActor* SelectedActor)
 
 			}
 
+
 			StaticMeshComponent->AttachTo(SelectedActor->GetRootComponent());
 
 			StaticMeshComponent = nullptr;
@@ -689,6 +690,15 @@ void FPropertyWindow::DrawAddComponentButton(AActor* SelectedActor)
 
 			TextComponent == nullptr;
 
+		}
+		else if (SpawnTypeIndex == 6) {
+			UBillboardComponent* component = FObjectFactory::ConstructObject<UBillboardComponent>(SelectedActor, "BillboardComponent");
+
+			SelectedActor->AddOwnedComponent(component);
+
+			component->AttachTo(SelectedActor->GetRootComponent());
+
+			component == nullptr;
 		}
 	}
 }
@@ -822,11 +832,23 @@ void FPropertyWindow::Render(FCore* Core)
 					ImGui::Unindent(8.0f);
 				}
 
-				DrawBillboardSection(SelectedActor);
+				//DrawBillboardSection(SelectedActor);
 
 				if (SelectedComponent->IsA(UStaticMeshComponent::StaticClass())) {
 
 					DrawStaticMeshSection(Core, static_cast<AStaticMeshActor*>(SelectedActor), static_cast<UStaticMeshComponent*>(SelectedComponent));
+				}
+				else if (SelectedComponent->IsA(UBillboardComponent::StaticClass())) {
+
+					DrawBillboardSection(SelectedActor, static_cast<UBillboardComponent*>(SelectedComponent));
+				}
+				else if (SelectedComponent->IsA(UTextRenderComponent::StaticClass())) {
+
+					DrawBillboardSection(SelectedActor, static_cast<UTextRenderComponent*>(SelectedComponent));
+				}
+				else if (SelectedComponent->IsA(USubUVComponent::StaticClass())) {
+
+					DrawBillboardSection(SelectedActor, static_cast<USubUVComponent*>(SelectedComponent));
 				}
 				//else if (SelectedComponent->IsA(USubUVComponent::StaticClass())) {
 				//	if (ImGui::CollapsingHeader("SubUVComponent", ImGuiTreeNodeFlags_DefaultOpen))
