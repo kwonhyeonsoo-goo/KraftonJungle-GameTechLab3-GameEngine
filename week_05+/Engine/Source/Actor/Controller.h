@@ -16,6 +16,8 @@ public:
 	~AController() override = default;
 
 public:
+	void PostSpawnInitialize() override;
+
 	void BeginPlay() override;
 	void Tick(float DeltaTime) override;
 	void EndPlay() override;

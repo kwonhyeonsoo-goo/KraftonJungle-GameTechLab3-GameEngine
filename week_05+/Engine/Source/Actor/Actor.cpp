@@ -89,7 +89,7 @@ void AActor::PostSpawnInitialize()
 		if (TextComponent)
 		{
 			AddOwnedComponent(TextComponent);
-			if (RootComponent)
+			if (RootComponent && RootComponent != TextComponent)
 			{
 				TextComponent->AttachTo(RootComponent);
 			}

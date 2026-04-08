@@ -61,6 +61,15 @@ void UWorld::BeginPlay()
 		}
 	}
 
+	if (DefaultPawn == nullptr)
+	{
+		DefaultPawn = Level->SpawnActor<APawn>("DefaultPawn");
+	}
+	if (DefaultController == nullptr)
+	{
+		DefaultController = Level->SpawnActor<AController>("DefaultController");
+	}
+
 	if (Level)
 	{
 		Level->BeginPlay();

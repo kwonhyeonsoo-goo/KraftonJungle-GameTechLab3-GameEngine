@@ -49,6 +49,7 @@ class ENGINE_API FConsoleVariableManager
 {
 public:
 	static FConsoleVariableManager& Get();
+	~FConsoleVariableManager();
 
 	FConsoleVariable* Register(const FString& Name, int32 Default, const FString& Help = "");
 	FConsoleVariable* Register(const FString& Name, float Default, const FString& Help = "");

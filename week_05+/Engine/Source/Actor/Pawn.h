@@ -15,6 +15,8 @@ public:
 
 	~APawn() override = default;
 
+	void PostSpawnInitialize() override;
+
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void EndPlay() override;
