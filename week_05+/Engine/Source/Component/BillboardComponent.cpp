@@ -17,12 +17,13 @@ void UBillboardComponent::Initialize()
 	BillboardMesh->Topology = EMeshTopology::EMT_TriangleList;
 
 	FPrimitiveVertex V0, V1, V2, V3;
-	V0.Position = FVector(-0.5f, 0.5f, 0.0f);   V0.UV = FVector2(0.0f, 0.0f);
-	V1.Position = FVector(0.5f, 0.5f, 0.0f);    V1.UV = FVector2(1.0f, 0.0f);
-	V2.Position = FVector(0.5f, -0.5f, 0.0f);   V2.UV = FVector2(1.0f, 1.0f);
-	V3.Position = FVector(-0.5f, -0.5f, 0.0f);  V3.UV = FVector2(0.0f, 1.0f);
+	// YZ 평면 (X=0) — MakeBillboard이 Y→Right, Z→Up으로 변환
+	V0.Position = FVector(0.0f, -0.5f, 0.5f);  V0.UV = FVector2(0.0f, 0.0f);
+	V1.Position = FVector(0.0f, 0.5f, 0.5f);  V1.UV = FVector2(1.0f, 0.0f);
+	V2.Position = FVector(0.0f, 0.5f, -0.5f);  V2.UV = FVector2(1.0f, 1.0f);
+	V3.Position = FVector(0.0f, -0.5f, -0.5f);  V3.UV = FVector2(0.0f, 1.0f);
 
-	FVector Normal(0.0f, 0.0f, -1.0f);
+	FVector Normal(1.0f, 0.0f, 0.0f);  // +X (Forward 방향)
 	V0.Normal = V1.Normal = V2.Normal = V3.Normal = Normal;
 	V0.Color = V1.Color = V2.Color = V3.Color = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
 
