@@ -757,8 +757,7 @@ void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERender
 void FRenderer::RenderPickingPass()
 {
 	if (!PickingRTV || !PickingDSV || !PickingMaterial) return;
-	SetConstantBuffers();
-	UpdateFrameConstantBuffer();
+
 	// 피킹 타겟 클리어 (배경은 0 = 선택 안 됨)
 	const float ClearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	DeviceContext->ClearRenderTargetView(PickingRTV, ClearColor);
@@ -774,6 +773,7 @@ void FRenderer::RenderPickingPass()
 	DeviceContext->OMSetRenderTargets(1, &PickingRTV, PickingDSV);
 	DeviceContext->RSSetViewports(1, &ActiveVP);
 	SetConstantBuffers();
+	UpdateFrameConstantBuffer();
 
 	PickingMaterial->Bind(DeviceContext);
 	InstancedVertexShader->Bind(DeviceContext);

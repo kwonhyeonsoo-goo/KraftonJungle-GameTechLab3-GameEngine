@@ -106,18 +106,22 @@ void FViewportLegacy::Render(HWND Hwnd)
 	const uint32 NewWidth = ContentSize.x > 1.0f ? static_cast<uint32>(ContentSize.x) : 0;
 	const uint32 NewHeight = ContentSize.y > 1.0f ? static_cast<uint32>(ContentSize.y) : 0;
 
-	//if (GRenderer)
-	//{
-	//	if (FEditorEngine* EditorEngine = dynamic_cast<FEditorEngine*>(GEngine))
-	//	{
-	//		POINT ViewportClientPoint = {
-	//			static_cast<LONG>(ContentMin.x),
-	//			static_cast<LONG>(ContentMin.y)
-	//		};
-	//		::ScreenToClient(GRenderer->GetHwnd(), &ViewportClientPoint);
-	//		EditorEngine->SetViewportLayoutBounds(ViewportClientPoint.x, ViewportClientPoint.y, NewWidth, NewHeight);
-	//	}
-	//}
+	if (GRenderer)
+	{
+		if (FEditorEngine* EditorEngine = dynamic_cast<FEditorEngine*>(GEngine))
+		{
+			POINT ViewportClientPoint = {
+				static_cast<LONG>(ContentMin.x),
+				static_cast<LONG>(ContentMin.y)
+			};
+			::ScreenToClient(GRenderer->GetHwnd(), &ViewportClientPoint);
+			EditorEngine->SetViewportLayoutBounds(FRect(
+				static_cast<float>(ViewportClientPoint.x),
+				static_cast<float>(ViewportClientPoint.y),
+				static_cast<float>(NewWidth),
+				static_cast<float>(NewHeight)));
+		}
+	}
 
 	if (NewWidth == 0 || NewHeight == 0)
 	{

@@ -196,8 +196,6 @@ void FEditorEngine::Render()
 	{
 		return;
 	}
-	SetViewportLayoutBounds(EditorUI.GetCentralDockSpaceRect());
-
 	GRenderer->BeginFrame();
 	WindowManager.RenderWindows();
 
