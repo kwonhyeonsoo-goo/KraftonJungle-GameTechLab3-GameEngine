@@ -260,6 +260,10 @@ void FPropertyWindow::DrawBillboardSection(AActor * SelectedActor, USceneCompone
 			if (ImGui::Checkbox("SubUV Billboard", &bBillboard)) {
 				SubUVComp->SetBillboard(bBillboard);
 			}
+			bool bPreview = SubUVComp->IsPreview();
+			if (ImGui::Checkbox("SubUV Preview", &bPreview)) {
+				SubUVComp->SetPreview(bPreview);
+			}
 		}
 	
 	ImGui::Unindent(8.0f);
