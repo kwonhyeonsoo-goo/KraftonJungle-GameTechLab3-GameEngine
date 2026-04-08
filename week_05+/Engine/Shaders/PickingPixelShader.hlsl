@@ -7,7 +7,7 @@ struct PS_INPUT
 	float3 Normal : NORMAL;
 	float2 UV : TEXCOORD0;
 	float3 WorldPos : POSITION1;
-	uint ObjID : OBJECTID;
+	uint ObjID : BLENDINDICES0;
 };
 
 uint main(PS_INPUT Input) : SV_TARGET

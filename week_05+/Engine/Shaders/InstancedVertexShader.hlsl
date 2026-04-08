@@ -23,7 +23,7 @@ struct VS_INPUT
 	float4 World1 : WORLD1;
 	float4 World2 : WORLD2;
 	float4 World3 : WORLD3;
-	uint ObjID : OBJECTID;
+	uint ObjID : BLENDINDICES0;
 };
 
 struct VS_OUTPUT
@@ -33,7 +33,7 @@ struct VS_OUTPUT
 	float3 Normal : NORMAL;
 	float2 UV : TEXCOORD0;
 	float3 WorldPos : POSITION1;
-	uint ObjID : OBJECTID;
+	uint ObjID : BLENDINDICES0;
 };
 
 VS_OUTPUT main(VS_INPUT input)

@@ -230,7 +230,7 @@ bool FRenderer::Initialize(HWND InHwnd, int32 Width, int32 Height)
 		{ "WORLD",    1, DXGI_FORMAT_R32G32B32A32_FLOAT,  1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		{ "WORLD",    2, DXGI_FORMAT_R32G32B32A32_FLOAT,  1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		{ "WORLD",    3, DXGI_FORMAT_R32G32B32A32_FLOAT,  1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
-		{ "OBJECTID", 0, DXGI_FORMAT_R32_UINT,            1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "BLENDINDICES", 0, DXGI_FORMAT_R32_UINT,         1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 	};
 
 	InstancedVertexShader = FShaderMap::Get().GetOrCreateVertexShaderWithLayout(
@@ -754,7 +754,6 @@ void FRenderer::RenderPickingPass()
 	// 피킹 타겟 클리어 (배경은 0 = 선택 안 됨)
 	const float ClearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	DeviceContext->ClearRenderTargetView(PickingRTV, ClearColor);
-	DeviceContext->ClearRenderTargetView(PickingRTV, reinterpret_cast<const float*>(ClearColor));
 	DeviceContext->ClearDepthStencilView(PickingDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
 	D3D11_VIEWPORT ActiveVP = {};
 	ActiveVP.TopLeftX = 0.0f;
@@ -766,12 +765,13 @@ void FRenderer::RenderPickingPass()
 
 	DeviceContext->OMSetRenderTargets(1, &PickingRTV, PickingDSV);
 	DeviceContext->RSSetViewports(1, &ActiveVP);
+	SetConstantBuffers();
+
 	PickingMaterial->Bind(DeviceContext);
+	InstancedVertexShader->Bind(DeviceContext);
 	RenderStateManager->BindState(PickingMaterial->GetRasterizerState());
 	RenderStateManager->BindState(PickingMaterial->GetDepthStencilState());
 	RenderStateManager->BindState(PickingMaterial->GetBlendState());
-
-
 
 	UINT Stride = sizeof(FInstanceData);
 	UINT Offset = 0;
@@ -801,7 +801,8 @@ void FRenderer::RenderPickingPass()
 	ID3D11DepthStencilView* ActiveDepth = bUseLevelRenderTargetOverride ? LevelDepthStencilView : DepthStencilView;
 
 	DeviceContext->OMSetRenderTargets(1, &ActiveRTV, ActiveDepth);
-	DeviceContext->RSSetViewports(1, &ActiveVP);
+	D3D11_VIEWPORT MainVP = bUseLevelRenderTargetOverride ? LevelViewport : Viewport;
+	DeviceContext->RSSetViewports(1, &MainVP);
 }
 uint32 FRenderer::ReadPixelID(int32 ScreenX, int32 ScreenY)
 {
