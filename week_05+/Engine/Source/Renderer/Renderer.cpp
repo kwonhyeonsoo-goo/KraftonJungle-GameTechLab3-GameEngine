@@ -640,6 +640,8 @@ void FRenderer::ExecuteRenderPass(ERenderLayer InRenderLayer)
 }
 void FRenderer::ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERenderLayer InRenderLayer)
 {
+	if (InCommandList.empty()) return;
+
 	FMaterial* CurrentMaterial = nullptr;
 	FMeshData* CurrentMesh = nullptr;
 	D3D11_PRIMITIVE_TOPOLOGY CurrentMeshTopology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;

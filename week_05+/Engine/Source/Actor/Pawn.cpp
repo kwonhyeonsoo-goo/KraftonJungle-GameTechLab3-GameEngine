@@ -14,11 +14,15 @@ IMPLEMENT_RTTI(APawn, AActor)
 
 APawn::~APawn()
 {
-
 }
 
 void APawn::PostSpawnInitialize()
 {
+	AActor::PostSpawnInitialize();
+
+	Camera = FObjectFactory::ConstructObject<UCameraComponent>(this, "Camera");
+	AddOwnedComponent(Camera);
+
 	if (GetComponentByClass<UBillboardComponent>() == nullptr)
 	{
 		UBillboardComponent* Billboard =
@@ -40,15 +44,17 @@ void APawn::PostSpawnInitialize()
 			}
 		}
 	}
-
-	AActor::PostSpawnInitialize();
 }
 
 void APawn::BeginPlay()
 {
 	AActor::BeginPlay();
 
-	Camera = GetComponentByClass<UCameraComponent>();
+	if (Camera == nullptr)
+	{
+		Camera = GetComponentByClass<UCameraComponent>();
+	}
+	SetRootComponent(Camera);
 }
 
 void APawn::Tick(float DeltaTime)
