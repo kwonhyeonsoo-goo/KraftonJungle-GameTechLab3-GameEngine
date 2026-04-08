@@ -888,6 +888,29 @@ void FWindowManager::CollectViewportWindowsRecursive(SWindow* Window, TArray<SVi
 	}
 }
 
+FViewportContext* FWindowManager::FindGameViewportContext() const
+{
+	TArray<SViewportWindow*> ViewportWindows;
+	for (SWindow* RootWindow : Windows)
+	{
+		CollectViewportWindowsRecursive(RootWindow, ViewportWindows);
+	}
+
+	for (SViewportWindow* ViewportWindow : ViewportWindows)
+	{
+		if (ViewportWindow == nullptr)
+		{
+			continue;
+		}
+		FViewportClient* ViewportClient = ViewportWindow->GetViewportContext()->GetViewportClient();
+		if (!dynamic_cast<FGameViewportClient*>(ViewportClient)) continue;
+
+		return ViewportWindow->GetViewportContext();
+	}
+
+	return nullptr;
+}
+
 FViewportContext* FWindowManager::FindPerspectiveViewportContext() const
 {
 	TArray<SViewportWindow*> ViewportWindows;
@@ -902,7 +925,6 @@ FViewportContext* FWindowManager::FindPerspectiveViewportContext() const
 		{
 			continue;
 		}
-
 		FViewportContext* Context = ViewportWindow->GetViewportContext();
 		FEditorViewportClient* EditorViewportClient = dynamic_cast<FEditorViewportClient*>(Context ? Context->GetViewportClient() : nullptr);
 		if (EditorViewportClient && EditorViewportClient->GetViewportType() == EEditorViewportType::Perspective)
@@ -911,22 +933,11 @@ FViewportContext* FWindowManager::FindPerspectiveViewportContext() const
 		}
 	}
 
+	if (!ViewportWindows.empty())
+	{
+		return ViewportWindows[0]->GetViewportContext();
+	}
 	return nullptr;
-}
-
-FViewportContext* FWindowManager::FindViewportContext() const
-{
-	TArray<SViewportWindow*> ViewportWindows;
-	for (SWindow* RootWindow : Windows)
-	{
-		CollectViewportWindowsRecursive(RootWindow, ViewportWindows);
-	}
-
-	if (ViewportWindows.empty())
-	{
-		return nullptr;
-	}
-	return ViewportWindows[0]->GetViewportContext();
 }
 
 FEditorViewportClient* FWindowManager::FindPerspectiveViewportClient() const

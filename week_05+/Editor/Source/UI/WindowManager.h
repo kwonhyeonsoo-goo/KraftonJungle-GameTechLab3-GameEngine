@@ -64,7 +64,7 @@ public:
 	bool SaveLayoutToIni(const std::wstring& IniPath) const;
 	bool LoadLayoutFromIni(const std::wstring& IniPath, const FRect& RootRect);
 
+	FViewportContext* FindGameViewportContext() const;
 	FViewportContext* FindPerspectiveViewportContext() const;
-	FViewportContext* FindViewportContext() const;
 	FEditorViewportClient* FindPerspectiveViewportClient() const;
 };
