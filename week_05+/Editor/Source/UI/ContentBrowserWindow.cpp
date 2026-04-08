@@ -63,7 +63,7 @@ void FContentBrowserWindow::Render()
 	{
 		if (OnFileDragEnd && !SelectedFilePath.empty())
 		{
-			OnFileDragEnd(SelectedFilePath.string(), DirectoryPathUnderMouse.string());
+			OnFileDragEnd(FPaths::ToFString(SelectedFilePath), FPaths::ToFString(DirectoryPathUnderMouse));
 		}
 
 		bFileOnDrag = false;
@@ -155,7 +155,7 @@ void FContentBrowserWindow::DrawGridItem(const std::filesystem::directory_entry&
 	// 1. 파일 확장자 필터링 (텍스처 포맷 추가!)
 	if (Entry.is_regular_file())
 	{
-		std::string Ext = Path.extension().string();
+		std::string Ext = FPaths::ToFString(Path.extension());
 		std::ranges::transform(Ext, Ext.begin(), [](unsigned char c) { return std::tolower(c); });
 
 		if (Ext != ".json" && Ext != ".dasset" && Ext != ".png" && Ext != ".jpg" && Ext != ".jpeg")
@@ -178,7 +178,7 @@ void FContentBrowserWindow::DrawGridItem(const std::filesystem::directory_entry&
 	{
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
 		{
-			std::string PayloadPath = Path.string();
+			std::string PayloadPath = FPaths::ToFString(Path);
 			std::replace(PayloadPath.begin(), PayloadPath.end(), '\\', '/');
 			ImGui::SetDragDropPayload("CONTENT_BROWSER_ITEM", PayloadPath.c_str(), PayloadPath.size() + 1);
 			bFileOnDrag = true;
@@ -231,7 +231,7 @@ void FContentBrowserWindow::DrawGridItem(const std::filesystem::directory_entry&
 			}
 			else
 			{
-				OnFileDoubleClickCallback(Path.string());
+				OnFileDoubleClickCallback(FPaths::ToFString(Path));
 			}
 		}
 	}

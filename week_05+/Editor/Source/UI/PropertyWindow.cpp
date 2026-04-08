@@ -229,7 +229,7 @@ void FPropertyWindow::DrawBillboardSection(AActor* SelectedActor, USceneComponen
 			int SelectedTexIdx = 0;
 			FString CurrentTex = BillComp->GetTexturePath();
 			for (int i = 0; i < (int)TextureAssets.size(); i++) {
-				if (std::filesystem::path(TextureAssets[i].AssetPath).lexically_normal() == std::filesystem::path(CurrentTex).lexically_normal()) {
+				if (FPaths::MakePath(TextureAssets[i].AssetPath).lexically_normal() == FPaths::MakePath(CurrentTex).lexically_normal()) {
 					SelectedTexIdx = i + 1; break;
 				}
 			}
@@ -339,7 +339,7 @@ void FPropertyWindow::DrawMaterialSlots(FCore* Core, UStaticMeshComponent* SMCom
 			SlotMatIndices[SlotIdx] = 0; // Default로 일단 세팅
 			for (int j = 0; j < (int)MaterialAssets.size(); ++j)
 			{
-				FString AssetName = std::filesystem::path(MaterialAssets[j].AssetName).stem().string();
+				FString AssetName = FPaths::ToFString(FPaths::MakePath(MaterialAssets[j].AssetName).stem());
 				if (AssetName == MatName)
 				{
 					SlotMatIndices[SlotIdx] = j + 1; // 0은 Default이므로 +1
@@ -379,7 +379,7 @@ void FPropertyWindow::DrawMaterialSlots(FCore* Core, UStaticMeshComponent* SMCom
 			if (ImGui::Combo("Material", &SlotMatIndices[SlotIdx], MatItems.data(), static_cast<int>(MatItems.size())) && Core && SlotMatIndices[SlotIdx] > 0)
 			{
 				FString MatFileName = MaterialAssets[SlotMatIndices[SlotIdx] - 1].AssetName;
-				FString MatName = std::filesystem::path(MatFileName).stem().string();
+				FString MatName = FPaths::ToFString(FPaths::MakePath(MatFileName).stem());
 				if (auto Mat = FMaterialManager::Get().FindByName(MatName))
 				{
 					std::shared_ptr<FMaterialTexture> OldTex = GDefaultWhiteTexture;
@@ -402,7 +402,7 @@ void FPropertyWindow::DrawMaterialSlots(FCore* Core, UStaticMeshComponent* SMCom
 
 			// Material 콤보박스용 드래그 앤 드롭
 			ProcessDragDrop({ ".mat", ".json" }, [&](const std::string& AbsPath, const std::string& RelPath) {
-				std::string MatName = std::filesystem::path(RelPath).stem().string();
+				std::string MatName = FPaths::ToFString(FPaths::MakePath(RelPath).stem());
 				if (auto Mat = FMaterialManager::Get().FindByName(MatName.c_str()))
 				{
 					std::shared_ptr<FMaterialTexture> OldTex = GDefaultWhiteTexture;

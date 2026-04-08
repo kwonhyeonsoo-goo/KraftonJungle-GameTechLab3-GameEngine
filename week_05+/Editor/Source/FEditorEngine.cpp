@@ -30,21 +30,21 @@ namespace
 {
 	FString PromptForObjFilePath()
 	{
-		char FileName[MAX_PATH] = "";
-		const FString MeshDir = FPaths::MeshDir().string();
+		wchar_t FileName[MAX_PATH] = L"";
+		const std::wstring MeshDirW = FPaths::ToWide(FPaths::ToFString(FPaths::MeshDir()));
 
-		OPENFILENAMEA Ofn = {};
-		Ofn.lStructSize = sizeof(OPENFILENAMEA);
-		Ofn.lpstrFilter = "Mesh Files (*.obj;*.dasset)\0*.obj;*.dasset\0OBJ Files (*.obj)\0*.obj\0DinoAsset Files (*.dasset)\0*.dasset\0All Files (*.*)\0*.*\0";
+		OPENFILENAMEW Ofn = {};
+		Ofn.lStructSize = sizeof(OPENFILENAMEW);
+		Ofn.lpstrFilter = L"Mesh Files (*.obj;*.dasset)\0*.obj;*.dasset\0OBJ Files (*.obj)\0*.obj\0DinoAsset Files (*.dasset)\0*.dasset\0All Files (*.*)\0*.*\0";
 		Ofn.lpstrFile = FileName;
 		Ofn.nMaxFile = MAX_PATH;
-		Ofn.lpstrDefExt = "obj";
-		Ofn.lpstrInitialDir = MeshDir.c_str();
+		Ofn.lpstrDefExt = L"obj";
+		Ofn.lpstrInitialDir = MeshDirW.c_str();
 		Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
-		if (GetOpenFileNameA(&Ofn))
+		if (GetOpenFileNameW(&Ofn))
 		{
-			return FString(FileName);
+			return FPaths::ToString(std::wstring(FileName));
 		}
 
 		return "";
@@ -318,7 +318,7 @@ void FEditorEngine::RunObjViewerStartupTest()
 		return;
 	}
 
-	const std::filesystem::path AssetPath = FPaths::ToAbsolutePath(SelectedPath);
+	const std::filesystem::path AssetPath = FPaths::MakePath(FPaths::ToAbsolutePath(SelectedPath));
 	const std::filesystem::path Extension = AssetPath.extension();
 	if (!std::filesystem::exists(AssetPath) || (Extension != ".obj" && Extension != ".OBJ" && Extension != ".dasset"))
 	{
@@ -335,7 +335,7 @@ void FEditorEngine::RunObjViewerStartupTest()
 	AStaticMeshActor* MeshActor = Level->SpawnActor<AStaticMeshActor>("ObjViewerMesh");
 	if (MeshActor)
 	{
-		MeshActor->LoadStaticMesh(GRenderer->GetDevice(), AssetPath.string());
+		MeshActor->LoadStaticMesh(GRenderer->GetDevice(), FPaths::ToFString(AssetPath));
 		GEditor->SetSelectedActor(MeshActor);
 	}
 	EditorUI.SyncSelectedActorProperty();

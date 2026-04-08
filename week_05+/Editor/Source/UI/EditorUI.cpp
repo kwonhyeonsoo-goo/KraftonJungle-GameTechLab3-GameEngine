@@ -60,31 +60,31 @@ namespace
 
 	std::string GetFilePathUsingDialog(EFileDialogType Type)
 	{
-		char FileName[MAX_PATH] = "";
-		const FString ContentDir = FPaths::ContentDir().string();
+		wchar_t FileName[MAX_PATH] = L"";
+		const std::wstring ContentDirW = FPaths::ToWide(FPaths::ToFString(FPaths::ContentDir()));
 
-		OPENFILENAMEA Ofn = {};
-		Ofn.lStructSize = sizeof(OPENFILENAMEA);
-		Ofn.lpstrFilter = "Level Files (*.json)\0*.json\0All Files (*.*)\0*.*\0";
+		OPENFILENAMEW Ofn = {};
+		Ofn.lStructSize = sizeof(OPENFILENAMEW);
+		Ofn.lpstrFilter = L"Level Files (*.json)\0*.json\0All Files (*.*)\0*.*\0";
 		Ofn.lpstrFile = FileName;
 		Ofn.nMaxFile = MAX_PATH;
-		Ofn.lpstrDefExt = "json";
-		Ofn.lpstrInitialDir = ContentDir.c_str();
+		Ofn.lpstrDefExt = L"json";
+		Ofn.lpstrInitialDir = ContentDirW.c_str();
 
 		if (Type == EFileDialogType::Save)
 		{
 			Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
-			if (GetSaveFileNameA(&Ofn))
+			if (GetSaveFileNameW(&Ofn))
 			{
-				return std::string(FileName);
+				return FPaths::ToString(std::wstring(FileName));
 			}
 		}
 		else
 		{
 			Ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-			if (GetOpenFileNameA(&Ofn))
+			if (GetOpenFileNameW(&Ofn))
 			{
-				return std::string(FileName);
+				return FPaths::ToString(std::wstring(FileName));
 			}
 		}
 
@@ -173,7 +173,7 @@ void FEditorUI::Initialize(FCore* InCore, FWindowManager* InWindowManager)
 				}
 				else
 				{
-					UE_LOG("Moved: %s -> %s", Src.string().c_str(), Dst.string().c_str());
+					UE_LOG("Moved: %s -> %s", FPaths::ToFString(Src).c_str(), FPaths::ToFString(Dst).c_str());
 				}
 			}
 			else if (ActiveViewportClient)

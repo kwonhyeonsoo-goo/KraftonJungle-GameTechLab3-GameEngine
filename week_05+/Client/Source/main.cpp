@@ -11,6 +11,8 @@ protected:
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
+	setlocale(LC_ALL, ".UTF-8");
+
 	HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 	if (FAILED(hr) && hr != RPC_E_CHANGED_MODE)
 	{

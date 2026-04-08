@@ -103,6 +103,16 @@ std::string FPaths::ToAbsolutePath(const FString& Path)
 	return AbsolutePath;
 }
 
+std::filesystem::path FPaths::MakePath(const FString& Utf8Path)
+{
+	return fs::path(ToWide(Utf8Path));
+}
+
+FString FPaths::ToFString(const std::filesystem::path& InPath)
+{
+	return ToString(InPath.wstring());
+}
+
 FString FPaths::ToString(const std::wstring& WPath)
 {
 	if (WPath.empty()) return FString();

@@ -180,7 +180,7 @@ bool FCore::Initialize(HWND Hwnd, int32 Width, int32 Height, EWorldType StartupL
 		return false;
 	}
 
-	FString AssetRootDir = (FPaths::ProjectRoot() / "Assets").string();
+	FString AssetRootDir = FPaths::ToFString(FPaths::ProjectRoot() / "Assets");
 	FAssetRegistry::Get().SearchAllAssets(AssetRootDir);
 	// Material
 	FMaterialManager::Get().LoadAllMaterials(GRenderer->GetDevice(), GRenderer->GetRenderStateManager().get());

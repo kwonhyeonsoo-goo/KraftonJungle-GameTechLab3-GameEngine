@@ -1,4 +1,5 @@
 #include "PrimitiveBase.h"
+#include "Core/Paths.h"
 #include <fstream>
 #include <cstdio>
 
@@ -160,7 +161,7 @@ void CPrimitiveBase::ClearCache()
 // [uint32 * IndexCount] Indices
 std::shared_ptr<FMeshData> CPrimitiveBase::LoadFromFile(const FString& FilePath)
 {
-	std::ifstream File(FilePath, std::ios::binary);
+	std::ifstream File(FPaths::ToWide(FPaths::ToAbsolutePath(FilePath)), std::ios::binary);
 	if (!File.is_open())
 	{
 		printf("[PrimitiveBase] Failed to open mesh file: %s\n", FilePath.c_str());

@@ -44,7 +44,7 @@ void FSceneSerializer::Save(ULevel* Level, const FString& FilePath, const FCamer
 	if (!LoadedPaths.empty())
 	{
 		nlohmann::json Materials = nlohmann::json::array();
-		FString Root = FPaths::ProjectRoot().string();
+		FString Root = FPaths::ToFString(FPaths::ProjectRoot());
 		for (const FString& AbsPath : LoadedPaths)
 		{
 			// 절대 경로 → 프로젝트 루트 기준 상대 경로

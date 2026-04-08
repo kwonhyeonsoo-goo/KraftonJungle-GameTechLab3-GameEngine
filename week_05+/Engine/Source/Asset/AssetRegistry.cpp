@@ -20,13 +20,14 @@ void FAssetRegistry::SearchAllAssets(const FString& RootDir)
 		auto U8Str = PathObj.generic_u8string();
 		return std::string(U8Str.begin(), U8Str.end());
 	};
-	if (!fs::exists(RootDir))
+	fs::path RootPath = FPaths::MakePath(RootDir);
+	if (!fs::exists(RootPath))
 	{
 		UE_LOG("[AssetRegistry] Root dir does not exist: %s\n", RootDir.c_str());
 		return;
 	}
 	RegistryData.clear();
-	for (const auto& entry : fs::recursive_directory_iterator(RootDir))
+	for (const auto& entry : fs::recursive_directory_iterator(RootPath))
 	{
 		if (entry.is_regular_file())
 		{

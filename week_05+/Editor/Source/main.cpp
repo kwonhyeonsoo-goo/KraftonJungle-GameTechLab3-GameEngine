@@ -3,9 +3,11 @@
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
+	// CRT narrow API가 UTF-8로 동작하도록 설정 (Windows 10 1903+)
+	setlocale(LC_ALL, ".UTF-8");
 	try
 	{
-		std::locale::global(std::locale(".UTF8"));
+		std::locale::global(std::locale(".UTF-8"));
 	}
 	catch (const std::exception& e)
 	{
