@@ -750,16 +750,21 @@ void FRenderer::RenderPickingPass()
 		return;
 	}
 
-	for (const FCachedBatch& Batch : LayerCachedBatches[ERenderLayer::Default])
+	// Default와 Overlay 레이어 모두 피킹 대상에 포함 (빌보드 선택 지원)
+	ERenderLayer PickLayers[] = { ERenderLayer::Default, ERenderLayer::Overlay };
+	for (ERenderLayer Layer : PickLayers)
 	{
-		if (!Batch.MeshData) continue;
-		Batch.MeshData->Bind(DeviceContext);
-		DeviceContext->IASetPrimitiveTopology(static_cast<D3D11_PRIMITIVE_TOPOLOGY>(Batch.MeshData->Topology));
+		for (const FCachedBatch& Batch : LayerCachedBatches[Layer])
+		{
+			if (!Batch.MeshData) continue;
+			Batch.MeshData->Bind(DeviceContext);
+			DeviceContext->IASetPrimitiveTopology(static_cast<D3D11_PRIMITIVE_TOPOLOGY>(Batch.MeshData->Topology));
 
-		if (Batch.IndexCount > 0)
-			DeviceContext->DrawIndexedInstanced(Batch.IndexCount, Batch.InstanceCount, Batch.FirstIndex, 0, Batch.InstanceBufferOffset);
-		else if (!Batch.MeshData->Indices.empty())
-			DeviceContext->DrawIndexedInstanced(static_cast<UINT>(Batch.MeshData->Indices.size()), Batch.InstanceCount, 0, 0, Batch.InstanceBufferOffset);
+			if (Batch.IndexCount > 0)
+				DeviceContext->DrawIndexedInstanced(Batch.IndexCount, Batch.InstanceCount, Batch.FirstIndex, 0, Batch.InstanceBufferOffset);
+			else if (!Batch.MeshData->Indices.empty())
+				DeviceContext->DrawIndexedInstanced(static_cast<UINT>(Batch.MeshData->Indices.size()), Batch.InstanceCount, 0, 0, Batch.InstanceBufferOffset);
+		}
 	}
 	ID3D11RenderTargetView* ActiveRTV = bUseLevelRenderTargetOverride ? LevelRenderTargetView : RenderTargetView;
 	ID3D11DepthStencilView* ActiveDepth = bUseLevelRenderTargetOverride ? LevelDepthStencilView : DepthStencilView;
