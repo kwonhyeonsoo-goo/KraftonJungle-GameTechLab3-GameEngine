@@ -24,13 +24,13 @@ UObject* FObjectFactory::ConstructObject(
 	FString FinalName = InName;
 	// GUObjectArray 돌면서 같은 이름 있으면 넘버링
 	int32 Suffix = 0;
-	//for (auto* Obj : GUObjectArray)
-	//{
-	//	if (Obj && Obj->GetName() == FinalName)
-	//	{
-	//		FinalName = InName + "_" + std::to_string(Suffix++);
-	//	}
-	//}
+	for (auto* Obj : GUObjectArray)
+	{
+		if (Obj && Obj->GetName() == FinalName)
+		{
+			FinalName = InName + "_" + std::to_string(Suffix++);
+		}
+	}
 	UObject* NewObj = InClass->CreateInstance(InOuter, FinalName);
 	if (!NewObj)
 	{

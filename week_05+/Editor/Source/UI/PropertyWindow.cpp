@@ -18,6 +18,22 @@
 #include <algorithm>
 #include <filesystem>
 
+namespace {
+	// 유틸리티 함수 구현
+		std::string WCharToUTF8(const wchar_t* wstr)
+	{
+		if (!wstr) return std::string();
+
+		// 변환에 필요한 버퍼 크기 계산
+		int size_needed = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
+
+		// 버퍼 할당 및 변환
+		std::string strTo(size_needed, 0);
+		WideCharToMultiByte(CP_UTF8, 0, wstr, -1, &strTo[0], size_needed, NULL, NULL);
+
+		return strTo;
+	}
+}
 void FPropertyWindow::SetTarget(const FVector& Location, const FVector& Rotation, const FVector& Scale, const char* ActorName)
 {
 	EditLocation = Location;
@@ -76,43 +92,71 @@ void FPropertyWindow::DrawTransformSection()
 
 	if (bModified && OnChanged)
 	{
-		OnChanged(EditLocation, EditRotation, EditScale);
+		//OnChanged(EditLocation, EditRotation, EditScale);
 	}
 }
 
-void FPropertyWindow::DrawBillboardSection(AActor* SelectedActor)
+void FPropertyWindow::DrawComponentTransformSection(USceneComponent& selected)
 {
-	if (!ImGui::CollapsingHeader("Billboard", ImGuiTreeNodeFlags_DefaultOpen))
+	const float ResetBtnWidth = 14.0f;
+	const float Spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+	const float DragUIWidth = 200.0f;
+
+	auto DrawTransformRow = [&](const char* Label, const char* BtnID, FVector& Vec, const FVector& ResetVal, const ImVec4& BaseColor, float Step, float Min, float Max, const char* Format)
+		{
+			float Value[3] = { Vec.X, Vec.Y, Vec.Z };
+
+			ImGui::PushStyleColor(ImGuiCol_Button, BaseColor);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(BaseColor.x + 0.2f, BaseColor.y + 0.1f, BaseColor.z + 0.1f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(BaseColor.x + 0.4f, BaseColor.y + 0.2f, BaseColor.z + 0.2f, 1.0f));
+
+			if (ImGui::Button(BtnID, ImVec2(ResetBtnWidth, 0)))
+			{
+				Vec = ResetVal;
+				bModified = true;
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Reset %s", Label);
+			}
+			ImGui::PopStyleColor(3);
+
+			ImGui::SameLine(0, Spacing);
+			ImGui::PushItemWidth(DragUIWidth);
+			if (ImGui::DragFloat3(Label, Value, Step, Min, Max, Format))
+			{
+				Vec = { Value[0], Value[1], Value[2] };
+				bModified = true;
+			}
+			ImGui::PopItemWidth();
+		};
+
+	DrawTransformRow("Location", "##RL", EditLocation, { 0.f, 0.f, 0.f }, ImVec4(0.5f, 0.1f, 0.1f, 1.0f), 0.1f, 0.0f, 0.0f, "%.2f");
+	DrawTransformRow("Rotation", "##RR", EditRotation, { 0.f, 0.f, 0.f }, ImVec4(0.1f, 0.4f, 0.1f, 1.0f), 0.5f, -360.0f, 360.0f, "%.1f");
+	DrawTransformRow("Scale", "##RS", EditScale, { 1.f, 1.f, 1.f }, ImVec4(0.1f, 0.2f, 0.5f, 1.0f), 0.01f, 0.001f, 100.0f, "%.3f");
+
+	if (bModified && OnChanged)
 	{
-		return;
+		OnChanged(selected, EditLocation, EditRotation, EditScale);
 	}
+}
 
-	ImGui::Indent(8.0f);
-	for (UActorComponent* Component : SelectedActor->GetComponents())
+void FPropertyWindow::DrawTextSection(AActor* SelectedActor, UTextComponent* SelectedComp)
+{
+	bool bBillboard = SelectedComp->IsBillboard();
+	if (ImGui::Checkbox("Text Billboard", &bBillboard))
 	{
-		if (!Component)
-		{
-			continue;
-		}
+		SelectedComp->SetBillboard(bBillboard);
+	}
+	ImGui::Unindent(8.0f);
+}
 
-		if (Component->IsA(USubUVComponent::StaticClass()))
-		{
-			auto* SubUVComp = static_cast<USubUVComponent*>(Component);
-			bool bBillboard = SubUVComp->IsBillboard();
-			if (ImGui::Checkbox("SubUV Billboard", &bBillboard))
-			{
-				SubUVComp->SetBillboard(bBillboard);
-			}
-		}
-		else if (Component->IsA(UTextComponent::StaticClass()) && !Component->IsA(UUUIDBillboardComponent::StaticClass()))
-		{
-			auto* TextComp = static_cast<UTextComponent*>(Component);
-			bool bBillboard = TextComp->IsBillboard();
-			if (ImGui::Checkbox("Text Billboard", &bBillboard))
-			{
-				TextComp->SetBillboard(bBillboard);
-			}
-		}
+void FPropertyWindow::DrawSubUVSection(AActor* SelectedActor, USubUVComponent* SelectedComp)
+{
+	bool bBillboard = SelectedComp->IsBillboard();
+	if (ImGui::Checkbox("SubUV Billboard", &bBillboard))
+	{
+		SelectedComp->SetBillboard(bBillboard);
 	}
 	ImGui::Unindent(8.0f);
 }
@@ -357,8 +401,76 @@ void FPropertyWindow::DrawUVScrollControls(UStaticMeshComponent* SMComp, uint32 
 		SMComp->SetUVScrollSpeed(SlotIdx, FVector2(SpeedValues[0], SpeedValues[1]));
 	}
 }
+//
+//void FPropertyWindow::DrawStaticMeshSection(FCore* Core, AStaticMeshActor* SMActor)
+//{
+//	if (!ImGui::CollapsingHeader("Static Mesh", ImGuiTreeNodeFlags_DefaultOpen))
+//	{
+//		return;
+//	}
+//
+//	ImGui::Indent(8.0f);
+//	UStaticMeshComponent* SMComp = SMActor->GetStaticMeshComponent();
+//	if (!SMComp)
+//	{
+//		ImGui::Unindent(8.0f);
+//		return;
+//	}
+//
+//	//  AssetRegistry에서 StaticMesh 목록을 가져옴 
+//	TArray<FAssetData> MeshAssets = FAssetRegistry::Get().GetAssetsByClass("StaticMesh");
+//
+//	std::vector<const char*> Items = { "None" };
+//	for (const auto& Asset : MeshAssets)
+//	{
+//		Items.push_back(Asset.AssetName.c_str());
+//	}
+//
+//	int SelectedMeshIndex = 0;
+//	FString CurrentAsset = SMComp->GetStaticMeshAsset();
+//	std::replace(CurrentAsset.begin(), CurrentAsset.end(), '\\', '/');
+//
+//	namespace fs = std::filesystem;
+//	for (int i = 0; i < (int)MeshAssets.size(); ++i) {
+//		FString AssetPath = MeshAssets[i].AssetPath;
+//		if (fs::path(FPaths::ToWide(AssetPath)).lexically_normal() == fs::path(FPaths::ToWide(CurrentAsset)).lexically_normal()) {
+//			SelectedMeshIndex = i + 1;
+//			break;
+//		}
+//	}
+//
+//	// 지연 로딩: 사용자가 콤보박스를 클릭했을 때만 AssetManager를 통해 로드!
+//	if (ImGui::Combo("Mesh Asset", &SelectedMeshIndex, Items.data(), static_cast<int>(Items.size())) && Core && SelectedMeshIndex > 0 && GRenderer)
+//	{
+//		FString SelectedPath = MeshAssets[SelectedMeshIndex - 1].AssetPath;
+//		UStaticMesh* LoadedMesh = FAssetManager::Get().LoadStaticMesh(GRenderer->GetDevice(), SelectedPath);
+//		if (LoadedMesh)
+//		{
+//			SMComp->SetStaticMeshData(GRenderer->GetDevice(), LoadedMesh);
+//		}
+//	}
+//
+//	//  사용자가 드래그 앤 드롭 했을 때만 AssetManager를 통해 로드
+//	ProcessDragDrop({ ".dasset" }, [&](const std::string& AbsPath, const std::string& RelPath) {
+//		if (GRenderer)
+//		{
+//			UStaticMesh* LoadedMesh = FAssetManager::Get().LoadStaticMesh(GRenderer->GetDevice(), RelPath);
+//			if (LoadedMesh)
+//			{
+//				SMComp->SetStaticMeshData(GRenderer->GetDevice(), LoadedMesh);
+//			}
+//		}
+//	});
+//
+//	if (!CurrentAsset.empty())
+//	{
+//		DrawMaterialSlots(Core, SMComp, SMActor);
+//	}
+//
+//	ImGui::Unindent(8.0f);
+//}
 
-void FPropertyWindow::DrawStaticMeshSection(FCore* Core, AStaticMeshActor* SMActor)
+void FPropertyWindow::DrawStaticMeshSection(FCore* Core, AStaticMeshActor* SMActor, UStaticMeshComponent* SMComp)
 {
 	if (!ImGui::CollapsingHeader("Static Mesh", ImGuiTreeNodeFlags_DefaultOpen))
 	{
@@ -366,7 +478,6 @@ void FPropertyWindow::DrawStaticMeshSection(FCore* Core, AStaticMeshActor* SMAct
 	}
 
 	ImGui::Indent(8.0f);
-	UStaticMeshComponent* SMComp = SMActor->GetStaticMeshComponent();
 	if (!SMComp)
 	{
 		ImGui::Unindent(8.0f);
@@ -416,7 +527,7 @@ void FPropertyWindow::DrawStaticMeshSection(FCore* Core, AStaticMeshActor* SMAct
 				SMComp->SetStaticMeshData(GRenderer->GetDevice(), LoadedMesh);
 			}
 		}
-	});
+		});
 
 	if (!CurrentAsset.empty())
 	{
@@ -517,6 +628,64 @@ void FPropertyWindow::DrawAddComponentButton(AActor* SelectedActor)
 	}
 }
 
+// 컴포넌트 트리를 재귀적으로 그리는 함수
+void FPropertyWindow::DrawComponentHierarchy(USceneComponent* Component, USceneComponent*& SelectedUIComponent)
+{
+	if (!Component) return;
+
+	const TArray<USceneComponent*>& Children = Component->GetAttachChildren();
+	bool bIsLeaf = (Children.size() == 0); 
+
+	// 화살표 클릭 시 열림, 가로 전체 선택 영역 확장
+	ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_OpenOnArrow |
+		ImGuiTreeNodeFlags_OpenOnDoubleClick |
+		ImGuiTreeNodeFlags_SpanAvailWidth |
+		ImGuiTreeNodeFlags_DefaultOpen; // 기본적으로 열려있게 하려면 추가
+
+	// 자식이 없으면
+	if (bIsLeaf)
+	{
+		NodeFlags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+	}
+
+	 FString Name = Component->GetName();
+	 const char* NodeName = Name.c_str();
+
+	// 트리 노드 그리기 (Component 포인터를 고유 ID로 사용)
+	bool bNodeOpen = ImGui::TreeNodeEx((void*)Component, NodeFlags, "%s", NodeName);
+
+	if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+	{
+		SelectedUIComponent = Component;
+	}
+
+	// 자식 노드 순회
+	if (bNodeOpen && !bIsLeaf)
+	{
+		for (USceneComponent* Child : Children)
+		{
+			DrawComponentHierarchy(Child, SelectedUIComponent);
+		}
+		ImGui::TreePop(); // 자식이 있는 트리가 열렸을 경우 반드시 TreePop() 호출
+	}
+}
+
+void FPropertyWindow::DrawDeleteComponentButton(AActor* SelectedActor, USceneComponent* SceneComp)
+{
+	if (ImGui::Button("Delete Component")) {
+		USceneComponent* parent = SceneComp->GetAttachParent();
+
+		const TArray<USceneComponent*>& children = SceneComp->GetAttachChildren();
+
+		SceneComp->DetachFromParent();
+
+		for (USceneComponent* child : children) {
+			child->AttachTo(parent);
+		}
+	}
+
+}
+
 void FPropertyWindow::Render(FCore* Core)
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
@@ -541,35 +710,54 @@ void FPropertyWindow::Render(FCore* Core)
 	{
 
 		AActor* SelectedActor = GEditor->GetSelectedActor();
+		static USceneComponent* SelectedComponent = nullptr;
 
-
-		// 위쪽 섹션
+		// 위쪽 섹션 : componenet hierachy
 		ImGui::BeginChild("Component Hierachy", ImVec2(0, 200), true); // 높이 200, 가로는 자동
 		{
-			for (int i = 0; i < 50; i++)
-				ImGui::Text(" ", i);
+			if (USceneComponent* Root = SelectedActor->GetRootComponent())
+			{
+				DrawComponentHierarchy(Root, SelectedComponent);
+				DrawAddComponentButton(SelectedActor);
+			}
 		}
 		ImGui::EndChild();
 
 		ImGui::BeginChild("Details", ImVec2(0, 0), true); // 남은 공간 전부 사용
 
+		if (SelectedComponent) {
+			//아래쪽 섹션component Detail
+			ImGui::Text("Selected Component: %s", SelectedComponent->GetName().c_str());
 
-		if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
-		{
-			ImGui::Indent(8.0f);
-			DrawTransformSection();
-			ImGui::Unindent(8.0f);
+			ImGui::SameLine();
+
+			DrawDeleteComponentButton(SelectedActor, SelectedComponent);
+
+			if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				ImGui::Indent(8.0f);
+				DrawComponentTransformSection(*SelectedComponent);
+				ImGui::Unindent(8.0f);
+			}
+
+			//DrawBillboardSection(SelectedActor);
+
+			if (SelectedComponent->IsA(UStaticMeshComponent::StaticClass())) {
+
+				if (ImGui::CollapsingHeader("StaticMeshComponent", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					DrawStaticMeshSection(Core, static_cast<AStaticMeshActor*>(SelectedActor), static_cast<UStaticMeshComponent*>(SelectedComponent));
+				}
+			}
+			else if (SelectedComponent->IsA(USubUVComponent::StaticClass())) {
+				if (ImGui::CollapsingHeader("SubUVComponent", ImGuiTreeNodeFlags_DefaultOpen))
+					DrawSubUVSection(SelectedActor, static_cast<USubUVComponent*>(SelectedComponent));
+			}
+			else if(SelectedComponent->IsA(UTextComponent::StaticClass())) {
+				if (ImGui::CollapsingHeader("TextComponent", ImGuiTreeNodeFlags_DefaultOpen))
+					DrawTextSection(SelectedActor, static_cast<UTextComponent*>(SelectedComponent));
+			}
 		}
-
-		DrawBillboardSection(SelectedActor);
-
-		if (SelectedActor->IsA(AStaticMeshActor::StaticClass()))
-		{
-			DrawStaticMeshSection(Core, static_cast<AStaticMeshActor*>(SelectedActor));
-		}
-
-		DrawAddComponentButton(SelectedActor);
-
 		ImGui::EndChild();
 
 

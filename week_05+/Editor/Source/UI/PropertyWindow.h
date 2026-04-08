@@ -6,7 +6,12 @@ class FCore;
 class UStaticMeshComponent;
 class AStaticMeshActor;
 class AActor;
-using FPropertyChangedCallback = std::function<void(const FVector&, const FVector&, const FVector&)>;
+class USceneComponent;
+class USubUVComponent;
+class UTextComponent;
+
+using FPropertyChangedCallback = std::function<void(USceneComponent&, const FVector&, const FVector&, const FVector&)>;
+
 
 class FPropertyWindow
 {
@@ -25,16 +30,23 @@ public:
 	FPropertyChangedCallback OnChanged;
 private:
 	void DrawTransformSection();
+	void DrawComponentTransformSection(USceneComponent& selected);
 
-	void DrawBillboardSection(AActor* SelectedActor);
+	//void DrawBillboardSection(AActor* SelectedActor);
+	void DrawTextSection(AActor* SelectedActor, UTextComponent* SelectedComp);
+	void DrawSubUVSection(AActor* SelectedActor, USubUVComponent* SelectedComp);
 
 	//Property 패널에서 머테리얼 슬롯 및 UV 스크롤을 컨트롤합니다.
 	void DrawMaterialSlots(FCore* Core, UStaticMeshComponent* SMComp, AActor* SelectedActor);
 	void DrawUVScrollControls(UStaticMeshComponent* SMComp, uint32 SlotIdx);
 
-	void DrawStaticMeshSection(FCore* Core, AStaticMeshActor* SMActor);
+	//void DrawStaticMeshSection(FCore* Core, AStaticMeshActor* SMActor);
+	void DrawStaticMeshSection(FCore* Core, AStaticMeshActor* SMActor, UStaticMeshComponent* SMComp);
 
 	void DrawAddComponentButton(AActor* SelectedActor);
+	void DrawComponentHierarchy(USceneComponent* Component, USceneComponent*& SelectedUIComponent);
+
+	void DrawDeleteComponentButton(AActor* SelectedActor, USceneComponent* SceneComp);
 
 	FVector EditLocation = { 0.0f, 0.0f, 0.0f };
 	FVector EditRotation = { 0.0f, 0.0f, 0.0f };

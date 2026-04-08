@@ -99,7 +99,7 @@ void FEditorUI::Initialize(FCore* InCore, FWindowManager* InWindowManager)
 	Core = InCore;
 	WindowManager = InWindowManager;
 
-	Property.OnChanged = [this](const FVector& Loc, const FVector& Rot, const FVector& Scl)
+	Property.OnChanged = [this](USceneComponent& selected, const FVector& Loc, const FVector& Rot, const FVector& Scl)
 		{
 			if (!Core)
 			{
@@ -107,12 +107,12 @@ void FEditorUI::Initialize(FCore* InCore, FWindowManager* InWindowManager)
 			}
 
 			AActor* Selected = GEditor->GetSelectedActor();
-			if (!Selected)
+			if (!&selected)
 			{
 				return;
 			}
 
-			if (USceneComponent* Root = Selected->GetRootComponent())
+			if (USceneComponent* Root = &selected)
 			{
 				FTransform Transform = Root->GetRelativeTransform();
 				Transform.SetRotation(FRotator::MakeFromEuler(Rot));
