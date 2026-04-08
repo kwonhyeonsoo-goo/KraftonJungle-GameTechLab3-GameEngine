@@ -8,6 +8,7 @@
 #include "Renderer/Renderer.h"
 #include "Renderer/TextMeshBuilder.h"
 #include "Renderer/SubUVRenderer.h"
+#include "Renderer/MaterialManager.h"
 #include "Renderer/Material.h"
 #include "Component/StaticMeshComponent.h"
 #include "Camera/Camera.h"
@@ -100,11 +101,24 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 
 			if (BillMesh)
 			{
+				if (BillMesh->IsDirty() || BillMesh->VertexBuffer == nullptr)
+				{
+					BillMesh->UpdateVertexAndIndexBuffer(GRenderer->GetDevice(), GRenderer->GetDeviceContext());
+					BillMesh->bIsDirty = false;
+				}
 				FRenderCommand Command;
 				Command.MeshData = BillMesh;
 				Command.Material = BillComp->GetMaterial();
 				Command.RenderLayer = ERenderLayer::Overlay;
+				if (!Command.Material)
+				{
+					if (auto DefaultMat = FMaterialManager::Get().FindByName("M_Default_Texture"))
+						Command.Material = DefaultMat.get();
+				}
 
+				Command.RenderLayer = ERenderLayer::Default;
+				if (Command.Material && Command.Material->GetBlendOption().BlendEnable)
+					Command.RenderLayer = ERenderLayer::Translucent;
 #if !IS_OBJ_VIEWER // 뷰어가 아닐 때만 아이콘 렌더링
 				const FVector2& Size = BillComp->GetSize();
 				const FVector WorldPos = BillComp->GetWorldLocation();
@@ -205,7 +219,11 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 		Command.MeshData = PrimitiveComponent->GetPrimitive()->GetMeshData();
 		Command.WorldMatrix = PrimitiveComponent->GetWorldTransform();
 		Command.Material = PrimitiveComponent->GetMaterial();
-
+		if (!Command.Material)
+		{
+			if (auto DefaultMat = FMaterialManager::Get().FindByName("M_Default"))
+				Command.Material = DefaultMat.get();
+		}
 		if (AActor* OwnerActor = PrimitiveComponent->GetOwner())
 		{
 			Command.ObjectID = OwnerActor->GetUUID();
@@ -269,8 +287,11 @@ void FLevelRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 			}
 			else // 일반 도형
 			{
-				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives)) continue;
-				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData()) continue;
+				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives) && !ShowFlags.HasFlag(EEngineShowFlags::SF_Collision))
+					continue;
+
+				if (!PrimitiveComponent->GetPrimitive() || !PrimitiveComponent->GetPrimitive()->GetMeshData()) 
+					continue;
 			}
 
 			// 바운드 박스 컬링
