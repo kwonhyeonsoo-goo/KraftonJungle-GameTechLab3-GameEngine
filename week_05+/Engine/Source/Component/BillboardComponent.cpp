@@ -106,6 +106,14 @@ void UBillboardComponent::SetTexturePath(ID3D11Device* Device, const FString& In
 			auto MatTex = std::make_shared<FMaterialTexture>();
 			MatTex->TextureSRV = LoadedSRV;
 			MatTex->AssetPath = TexturePath;
+
+			D3D11_SAMPLER_DESC SampDesc = {};
+			SampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+			SampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+			SampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+			SampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+			Device->CreateSamplerState(&SampDesc, &MatTex->SamplerState);
+
 			DynamicMaterial->SetMaterialTexture(MatTex);
 		}
 		SetMaterial(DynamicMaterial.get());
