@@ -44,6 +44,9 @@ void UWorld::BeginPlay()
 	if (bBegunPlay) return;  
 	bBegunPlay = true;
 
+	DefaultPawn = nullptr;
+	DefaultController = nullptr;
+
 	// 현재는 Defualt Pawn과 Controller를 처음 발견된 객체로 지정합니다. TODO: 수정 필요
 	for (AActor* Actor : GetActors())
 	{

@@ -2,9 +2,17 @@
 #include "CoreMinimal.h"
 
 #include"MeshComponent.h"
+
 class UStaticMesh;
 class FArchive;
 class FDynamicMaterial;
+
+struct FUVScrollState
+{
+	bool bEnabled = false;
+	FVector2 Speed = FVector2(0.0f, 0.0f);
+};
+
 class ENGINE_API UStaticMeshComponent : public UMeshComponent
 {
 public:
@@ -38,12 +46,6 @@ public:
 	void DuplicateSubObjects() override;
 
 private:
-	struct FUVScrollState
-	{
-		bool bEnabled = false;
-		FVector2 Speed = FVector2(0.0f, 0.0f);
-	};
-
 
 
 	TMap<uint32, FUVScrollState> UVScrollStates;

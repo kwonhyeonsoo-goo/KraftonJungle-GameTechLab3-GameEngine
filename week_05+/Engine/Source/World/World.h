@@ -1,7 +1,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "Object/Object.h"
-#include "World/LevelTypes.h"
+#include "World/WorldType.h"
 
 // Forward declarations ? include 최소화
 class ULevel;
@@ -26,7 +26,6 @@ public:
 
 	ULevel* GetLevel() const { return Level; }
 
-	// ── 전체 액터 조회 (Persistent + Streaming 합산) ──
 	TArray<AActor*> GetActors() const;
 
 	// 카메라

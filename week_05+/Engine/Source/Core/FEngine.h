@@ -1,6 +1,6 @@
 #pragma once
 #include "CoreMinimal.h"
-#include "World/LevelTypes.h"
+#include "World/WorldType.h"
 #include "Windows.h"
 #include "Core/Core.h"
 #include "Core/ViewportContext.h"
@@ -26,6 +26,7 @@ public:
 	virtual void Shutdown();
 
 	FCore* GetCore() const { return Core.get(); }
+	FTimer* GetTimer() const { return Timer; }
 	FRenderCommandQueue& GetCommandQueue() { return CommandQueue; }
 	FWindowApplication* GetApp() const { return App; }
 	FViewportContext* CreateContext(FRect InRect);
@@ -47,6 +48,7 @@ protected:
 
 	FWindowApplication* App = nullptr;
 	FWindow* MainWindow = nullptr;
+	FTimer* Timer;
 	std::unique_ptr<FCore> Core;
 	FRenderCommandQueue CommandQueue;
 	FInputManager* InputManager = nullptr;

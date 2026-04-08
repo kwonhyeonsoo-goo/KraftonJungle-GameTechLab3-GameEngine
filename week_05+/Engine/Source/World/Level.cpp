@@ -13,8 +13,6 @@
 #include "Serializer/SceneSerializer.h"
 #include <algorithm>
 
-
-
 #include "Component/LineBatchComponent.h"
 
 IMPLEMENT_RTTI(ULevel, UObject)
@@ -31,14 +29,11 @@ ULevel::~ULevel()
 	Actors.clear();
 }
 
-
 FCamera* ULevel::GetCamera() const
 {
 	UWorld* World = GetTypedOuter<UWorld>();
 	return World ? World->GetCamera() : nullptr;
 }
-
-
 
 void ULevel::ClearActors()
 {
@@ -72,6 +67,7 @@ void ULevel::DestroyActor(AActor* InActor)
 		return;
 	}
 
+	Actors.erase(std::remove(Actors.begin(), Actors.end(), InActor), Actors.end());
 	InActor->Destroy();
 }
 

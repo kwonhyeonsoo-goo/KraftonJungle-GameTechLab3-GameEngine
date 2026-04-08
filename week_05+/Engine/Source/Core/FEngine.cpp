@@ -31,6 +31,8 @@ bool FEngine::Initialize(HINSTANCE hInstance, const wchar_t* Title, int32 Width,
 		return false;
 	}
 
+	Timer = new FTimer();
+
 	PreInitialize();
 
 	Core = std::make_unique<FCore>();
@@ -83,11 +85,8 @@ void FEngine::Run()
 {
 	while (App->PumpMessages())
 	{
-		if (Core)
-		{
-			Core->Tick();
-			Tick(Core->GetTimer().GetDeltaTime());
-		}
+		Timer->Tick();
+		Tick(Timer->GetDeltaTime());
 	}
 }
 
@@ -129,8 +128,7 @@ void FEngine::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 
 void FEngine::Tick(float DeltaTime)
 {
-	//Input(Core->GetTimer().GetDeltaTime());
-	//Render();
+	Timer->Tick();
 }
 
 void FEngine::Shutdown()
