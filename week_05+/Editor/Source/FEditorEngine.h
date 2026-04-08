@@ -7,6 +7,8 @@
 #include "UI/EditorUI.h"
 #include "UI/WindowManager.h"
 
+class USceneComponent;
+
 class FEditorEngine : public FEngine
 {
 public:
@@ -47,7 +49,10 @@ public:
 	FEditorUI& GetEditorUI() { return EditorUI; }
 
 	AActor* GetSelectedActor() const { return SelectedActor; }
-	void SetSelectedActor(AActor* InActor) { SelectedActor = InActor; EditorUI.SyncSelectedActorProperty(); }
+	void SetSelectedActor(AActor* InActor) { SelectedActor = InActor; SelectedComponent = nullptr; EditorUI.SyncSelectedActorProperty(); }
+
+	USceneComponent* GetSelectedComponent() const { return SelectedComponent; }
+	void SetSelectedComponent(USceneComponent* InComponent) { SelectedComponent = InComponent; }
 
 	void ChangeGameViewportClient()
 	{
@@ -101,6 +106,7 @@ private:
 	void RunObjViewerStartupTest();
 
 	AActor* SelectedActor = nullptr;
+	USceneComponent* SelectedComponent = nullptr;
 
 	FEditorUI EditorUI;
 	FWindowManager WindowManager;

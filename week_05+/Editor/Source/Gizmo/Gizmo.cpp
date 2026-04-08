@@ -1068,8 +1068,13 @@ FVector FGizmo::GetPlaneNormal(EGizmoAxis Axis)
 	}
 }
 
-FVector FGizmo::GetActorWorldLocation(const AActor* Actor)
+FVector FGizmo::GetActorWorldLocation(const AActor* Actor) const
 {
+	if (TargetComponent)
+	{
+		return TargetComponent->GetWorldLocation();
+	}
+
 	if (!Actor || !Actor->GetRootComponent())
 	{
 		return FVector::ZeroVector;
@@ -1078,8 +1083,13 @@ FVector FGizmo::GetActorWorldLocation(const AActor* Actor)
 	return Actor->GetRootComponent()->GetWorldLocation();
 }
 
-FQuat FGizmo::GetActorWorldRotation(const AActor* Actor)
+FQuat FGizmo::GetActorWorldRotation(const AActor* Actor) const
 {
+	if (TargetComponent)
+	{
+		return FTransform(TargetComponent->GetWorldTransform()).GetRotation();
+	}
+
 	if (!Actor || !Actor->GetRootComponent())
 	{
 		return FQuat::Identity;
@@ -1105,8 +1115,13 @@ FQuat FGizmo::GetComponentWorldRotationIgnoringScale(const USceneComponent* Comp
 	return (LocalRotation * GetComponentWorldRotationIgnoringScale(Parent)).GetNormalized();
 }
 
-FVector FGizmo::GetActorRelativeScale(const AActor* Actor)
+FVector FGizmo::GetActorRelativeScale(const AActor* Actor) const
 {
+	if (TargetComponent)
+	{
+		return TargetComponent->GetRelativeTransform().GetScale3D();
+	}
+
 	if (!Actor || !Actor->GetRootComponent())
 	{
 		return FVector::OneVector;
@@ -1117,70 +1132,55 @@ FVector FGizmo::GetActorRelativeScale(const AActor* Actor)
 
 bool FGizmo::ApplyActorWorldLocation(AActor* Actor, const FVector& NewWorldLocation)
 {
-	if (!Actor)
+	USceneComponent* Target = TargetComponent ? TargetComponent : (Actor ? Actor->GetRootComponent() : nullptr);
+	if (!Target)
 	{
 		return false;
 	}
 
-	USceneComponent* RootComponent = Actor->GetRootComponent();
-	if (!RootComponent)
-	{
-		return false;
-	}
-
-	if (USceneComponent* AttachParent = RootComponent->GetAttachParent())
+	if (USceneComponent* AttachParent = Target->GetAttachParent())
 	{
 		const FMatrix ParentInverse = AttachParent->GetWorldTransform().GetInverse();
-		RootComponent->SetRelativeLocation(ParentInverse.TransformPosition(NewWorldLocation));
+		Target->SetRelativeLocation(ParentInverse.TransformPosition(NewWorldLocation));
 		return true;
 	}
 
-	RootComponent->SetRelativeLocation(NewWorldLocation);
+	Target->SetRelativeLocation(NewWorldLocation);
 	return true;
 }
 
 bool FGizmo::ApplyActorWorldRotation(AActor* Actor, const FQuat& NewWorldRotation)
 {
-	if (!Actor)
+	USceneComponent* Target = TargetComponent ? TargetComponent : (Actor ? Actor->GetRootComponent() : nullptr);
+	if (!Target)
 	{
 		return false;
 	}
 
-	USceneComponent* RootComponent = Actor->GetRootComponent();
-	if (!RootComponent)
-	{
-		return false;
-	}
-
-	FTransform RelativeTransform = RootComponent->GetRelativeTransform();
+	FTransform RelativeTransform = Target->GetRelativeTransform();
 	FQuat NewRelativeRotation = NewWorldRotation.GetNormalized();
-	if (USceneComponent* AttachParent = RootComponent->GetAttachParent())
+	if (USceneComponent* AttachParent = Target->GetAttachParent())
 	{
 		const FQuat ParentWorldRotation = FTransform(AttachParent->GetWorldTransform()).GetRotation();
 		NewRelativeRotation = (NewWorldRotation * ParentWorldRotation.Inverse()).GetNormalized();
 	}
 
 	RelativeTransform.SetRotation(NewRelativeRotation);
-	RootComponent->SetRelativeTransform(RelativeTransform);
+	Target->SetRelativeTransform(RelativeTransform);
 	return true;
 }
 
 bool FGizmo::ApplyActorRelativeScale(AActor* Actor, const FVector& NewRelativeScale)
 {
-	if (!Actor)
+	USceneComponent* Target = TargetComponent ? TargetComponent : (Actor ? Actor->GetRootComponent() : nullptr);
+	if (!Target)
 	{
 		return false;
 	}
 
-	USceneComponent* RootComponent = Actor->GetRootComponent();
-	if (!RootComponent)
-	{
-		return false;
-	}
-
-	FTransform RelativeTransform = RootComponent->GetRelativeTransform();
+	FTransform RelativeTransform = Target->GetRelativeTransform();
 	RelativeTransform.SetScale3D(NewRelativeScale);
-	RootComponent->SetRelativeTransform(RelativeTransform);
+	Target->SetRelativeTransform(RelativeTransform);
 	return true;
 }
 

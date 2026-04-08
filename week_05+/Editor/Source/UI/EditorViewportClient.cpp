@@ -908,6 +908,8 @@ void FEditorViewportClient::HandleSelectionClick(AActor* SelectedActor)
 	return;
 #endif
 
+	Gizmo.SetTargetComponent(GEditor->GetSelectedComponent());
+
 	if (SelectedActor && Gizmo.BeginDrag(SelectedActor, &CameraTransform, Picker, ViewportMouseX, ViewportMouseY, ViewportWidth, ViewportHeight))
 	{
 		return;
@@ -920,6 +922,8 @@ void FEditorViewportClient::HandleSelectionClick(AActor* SelectedActor)
 
 void FEditorViewportClient::HandleMouseMoveForTools(AActor* SelectedActor)
 {
+	Gizmo.SetTargetComponent(GEditor->GetSelectedComponent());
+
 	if (!Gizmo.IsDragging())
 	{
 		Gizmo.UpdateHover(SelectedActor, &CameraTransform, Picker, ViewportMouseX, ViewportMouseY, ViewportWidth, ViewportHeight);
@@ -1516,6 +1520,7 @@ void FEditorViewportClient::BuildRenderCommands(TArray<AActor*>& InActors, FRend
 #if !IS_OBJ_VIEWER
 	if (AActor* GizmoTarget = GetGizmoTarget())
 	{
+		Gizmo.SetTargetComponent(GEditor->GetSelectedComponent());
 		Gizmo.BuildRenderCommands(GizmoTarget, &CameraTransform, OutQueue);
 	}
 #endif
@@ -1545,14 +1550,11 @@ void FEditorViewportClient::PostRender(FCore* Core, FRenderer* Renderer)
 		return;
 	}
 
-	for (UActorComponent* Component : SelectedActor->GetComponents())
-	{
-		if (!Component->IsA(UPrimitiveComponent::StaticClass()))
-		{
-			continue;
-		}
+	// 선택된 컴포넌트가 있으면 그 컴포넌트만 아웃라인, 없으면 액터 전체 아웃라인
+	USceneComponent* SelectedComp = GEditor->GetSelectedComponent();
 
-		UPrimitiveComponent* PrimitiveComponent = static_cast<UPrimitiveComponent*>(Component);
+	auto RenderComponentOutline = [&](UPrimitiveComponent* PrimitiveComponent)
+	{
 		if (PrimitiveComponent->IsA(UMeshComponent::StaticClass()))
 		{
 			UMeshComponent* MeshComponent = static_cast<UMeshComponent*>(PrimitiveComponent);
@@ -1560,12 +1562,28 @@ void FEditorViewportClient::PostRender(FCore* Core, FRenderer* Renderer)
 			{
 				Renderer->RenderOutline(MeshData, MeshComponent->GetWorldTransform());
 			}
-			continue;
+			return;
 		}
 
 		if (PrimitiveComponent->GetPrimitive() && PrimitiveComponent->GetPrimitive()->GetMeshData())
 		{
 			Renderer->RenderOutline(PrimitiveComponent->GetPrimitive()->GetMeshData(), PrimitiveComponent->GetWorldTransform());
+		}
+	};
+
+	if (SelectedComp && SelectedComp->IsA(UPrimitiveComponent::StaticClass()))
+	{
+		RenderComponentOutline(static_cast<UPrimitiveComponent*>(SelectedComp));
+	}
+	else
+	{
+		for (UActorComponent* Component : SelectedActor->GetComponents())
+		{
+			if (!Component->IsA(UPrimitiveComponent::StaticClass()))
+			{
+				continue;
+			}
+			RenderComponentOutline(static_cast<UPrimitiveComponent*>(Component));
 		}
 	}
 }

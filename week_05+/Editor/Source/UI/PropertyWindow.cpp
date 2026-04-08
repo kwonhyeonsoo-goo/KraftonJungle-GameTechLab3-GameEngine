@@ -766,6 +766,8 @@ void FPropertyWindow::DrawComponentHierarchy(USceneComponent* Component, USceneC
 		EditRotation = { rotator.Pitch, rotator.Yaw, rotator.Roll };
 		EditScale = SelectedUIComponent->GetRelativeTransform().GetScale3D();
 
+		// 에디터 전역 선택 컴포넌트 동기화 (기즈모 + 아웃라인)
+		if (GEditor) GEditor->SetSelectedComponent(SelectedUIComponent);
 	}
 
 	// 자식 노드 순회

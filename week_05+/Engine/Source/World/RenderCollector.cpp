@@ -12,6 +12,7 @@
 #include "Renderer/Material.h"
 #include "Component/StaticMeshComponent.h"
 #include "Camera/Camera.h"
+#include "World/World.h"
 
 void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors, const FFrustum& Frustum,
 	const FShowFlags& ShowFlags, const FCamera* Camera, FRenderCommandQueue& OutQueue)
@@ -93,9 +94,11 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 			continue;
 		}
 
-		// ─── 2. 빌보드 컴포넌트 (에디터 아이콘, 새로 추가됨) ───
+		// ─── 2. 빌보드 컴포넌트 (에디터 아이콘, PIE에서는 숨김) ───
 		if (PrimitiveComponent->IsA(UBillboardComponent::StaticClass()))
 		{
+			if (GWorld && GWorld->GetWorldType() == EWorldType::PIE)
+				continue;
 			UBillboardComponent* BillComp = static_cast<UBillboardComponent*>(PrimitiveComponent);
 			FMeshData* BillMesh = BillComp->GetBillboardMesh();
 
@@ -247,14 +250,14 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 	PrevActorCount = Actors.size();
 	bCommandsDirty = false;
 }
-
+#include "World/World.h"
 void FLevelRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FFrustum& Frustum,
 	const FShowFlags& ShowFlags, TArray<UPrimitiveComponent*>& OutVisible)
 {
 	for (AActor* Actor : Actors)
 	{
 		if (!Actor || Actor->IsPendingDestroy() || !Actor->IsVisible()) continue;
-
+		bool bIsPIE = (Actor->GetWorld() && Actor->GetWorld()->GetWorldType() == EWorldType::PIE);
 		for (UActorComponent* Component : Actor->GetComponents())
 		{
 			if (!Component->IsA(UPrimitiveComponent::StaticClass())) continue;
@@ -266,11 +269,18 @@ void FLevelRenderCollector::FrustrumCull(const TArray<AActor*>& Actors, const FF
 			const bool bIsSubUV = PrimitiveComponent->IsA(USubUVComponent::StaticClass());
 			const bool bIsText = PrimitiveComponent->IsA(UTextRenderComponent::StaticClass()) && !bIsTextureBillboard;
 			const bool bIsMeshComp = PrimitiveComponent->IsA(UMeshComponent::StaticClass());
-
-			// 플래그 검사 (텍스처 빌보드와 SubUV는 SF_Billboard를 따름)
-			if (bIsTextureBillboard || bIsSubUV)
+			if (bIsPIE && bIsTextureBillboard)
+			{
+				continue;
+			}
+	
+			if (bIsTextureBillboard)
 			{
 				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Billboard)) continue;
+			}
+			else if (bIsSubUV)
+			{
+				if (!ShowFlags.HasFlag(EEngineShowFlags::SF_Primitives)) continue;
 			}
 			else if (bIsText)
 			{

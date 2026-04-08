@@ -789,9 +789,12 @@ void FEditorUI::SyncSelectedActorProperty()
 	AActor* Selected = GEditor->GetSelectedActor();
 	if (Selected)
 	{
-		if (USceneComponent* Root = Selected->GetRootComponent())
+		USceneComponent* DisplayComp = GEditor->GetSelectedComponent();
+		if (!DisplayComp) DisplayComp = Selected->GetRootComponent();
+
+		if (DisplayComp)
 		{
-			const FTransform Transform = Root->GetRelativeTransform();
+			const FTransform Transform = DisplayComp->GetRelativeTransform();
 			FVector DisplayLocation = Transform.GetLocation();
 #if IS_OBJ_VIEWER //프로퍼티 패널에서 액터의 위치를 나타낼 때, 바닥 기준 위치를 사용합니다.
 			if (ActiveViewportClient)

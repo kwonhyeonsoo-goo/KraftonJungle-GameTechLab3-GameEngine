@@ -63,6 +63,9 @@ public:
 
 	bool IsDragging() const { return ActiveAxis != EGizmoAxis::None; }
 
+	void SetTargetComponent(USceneComponent* InComponent) { TargetComponent = InComponent; }
+	USceneComponent* GetTargetComponent() const { return TargetComponent; }
+
 private:
 	bool EnsureTranslationMeshes() const;
 	bool EnsureRotationMeshes(const FCamera* Camera, const FVector& GizmoWorldLocation) const;
@@ -80,13 +83,13 @@ private:
 
 	static FVector GetAxisVector(EGizmoAxis Axis);
 	static FVector GetPlaneNormal(EGizmoAxis Axis);
-	static FVector GetActorWorldLocation(const AActor* Actor);
-	static FQuat GetActorWorldRotation(const AActor* Actor);
+	FVector GetActorWorldLocation(const AActor* Actor) const;
+	FQuat GetActorWorldRotation(const AActor* Actor) const;
 	static FQuat GetComponentWorldRotationIgnoringScale(const USceneComponent* Component);
-	static FVector GetActorRelativeScale(const AActor* Actor);
-	static bool ApplyActorWorldLocation(AActor* Actor, const FVector& NewWorldLocation);
-	static bool ApplyActorWorldRotation(AActor* Actor, const FQuat& NewWorldRotation);
-	static bool ApplyActorRelativeScale(AActor* Actor, const FVector& NewRelativeScale);
+	FVector GetActorRelativeScale(const AActor* Actor) const;
+	bool ApplyActorWorldLocation(AActor* Actor, const FVector& NewWorldLocation);
+	bool ApplyActorWorldRotation(AActor* Actor, const FQuat& NewWorldRotation);
+	bool ApplyActorRelativeScale(AActor* Actor, const FVector& NewRelativeScale);
 	static bool RayTriangleIntersectTwoSided(const FRay& Ray, const FVector& V0, const FVector& V1, const FVector& V2, float& OutDistance);
 	static bool IntersectPlane(const FRay& Ray, const FVector& PlaneOrigin, const FVector& PlaneNormal, FVector& OutIntersection);
 
@@ -94,6 +97,7 @@ private:
 	float GetRenderGizmoScale(float BaseGizmoScale) const;
 
 private:
+	USceneComponent* TargetComponent = nullptr;
 	EGizmoMode Mode = EGizmoMode::Location;
 	EGizmoCoordinateSpace CoordinateSpace = EGizmoCoordinateSpace::World;
 	EGizmoAxis ActiveAxis = EGizmoAxis::None;
