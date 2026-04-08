@@ -125,7 +125,7 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 				const FVector2& Size = BillComp->GetSize();
 				const FVector WorldPos = BillComp->GetWorldLocation();
 				const FVector CurrentScale = BillComp->GetWorldTransform().GetScaleVector();
-				FVector FinalScale(CurrentScale.X * Size.X, CurrentScale.Y * Size.Y, CurrentScale.Z);
+				FVector FinalScale(CurrentScale.X, CurrentScale.Y * Size.X, CurrentScale.Z *Size.Y);
 
 				if (Camera)
 				{
