@@ -3,6 +3,15 @@
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
+	try
+	{
+		std::locale::global(std::locale(".UTF8"));
+	}
+	catch (const std::exception& e)
+	{
+		MessageBoxA(nullptr, ("Failed to set global locale: " + std::string(e.what())).c_str(), "Locale Error", MB_OK);
+	}
+
 	HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 	if (FAILED(hr) && hr != RPC_E_CHANGED_MODE)
 	{
