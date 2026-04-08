@@ -256,18 +256,43 @@ void AActor::Serialize(FArchive& Ar)
 		if (ParentJson.contains("ComponentsData") && ParentJson["ComponentsData"].is_array())
 		{
 			const auto& ComponentsJson = ParentJson["ComponentsData"];
-			const TArray<UActorComponent*>& Components = GetComponents();
-			size_t Count = std::min((size_t)Components.size(), ComponentsJson.size());
-			for (size_t i = 0; i < Count; ++i)
+			for (size_t i = 0; i < ComponentsJson.size(); ++i)
 			{
-				if (Components[i])
+				const TArray<UActorComponent*>& CComps = GetComponents();
+				UActorComponent* TargetComp = nullptr;
+
+				if (i < CComps.size())
+				{
+					TargetComp = CComps[i];
+				}
+				else
+				{
+					std::string ClassName = ComponentsJson[i].value("Class", "");
+					if (!ClassName.empty())
+					{
+						UClass* CompClass = UClass::FindClass(ClassName);
+						if (CompClass)
+						{
+							std::string CompName = ComponentsJson[i].value("Name", "");
+							TargetComp = static_cast<UActorComponent*>(FObjectFactory::ConstructObject(CompClass, this, CompName));
+							if (TargetComp)
+							{
+								TargetComp->SetOwner(this);
+								OwnedComponents.push_back(TargetComp);
+							}
+						}
+					}
+				}
+
+				if (TargetComp)
 				{
 					FArchive CompAr(false);
 					*static_cast<nlohmann::json*>(CompAr.GetRawJson()) = ComponentsJson[i];
-					Components[i]->Serialize(CompAr);
+					TargetComp->Serialize(CompAr);
 				}
 			}
 
+			const TArray<UActorComponent*>& Components = GetComponents();
 			if (!Components.empty() && Components[0] != nullptr && Components[0]->IsA(USceneComponent::StaticClass()))
 			{
 				RootComponent = static_cast<USceneComponent*>(Components[0]);
