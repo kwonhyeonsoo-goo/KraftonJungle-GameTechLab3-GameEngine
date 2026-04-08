@@ -569,7 +569,7 @@ void FPropertyWindow::DrawAddComponentButton(AActor* SelectedActor)
 		}
 		else if (SpawnTypeIndex == 4)	//TextComponent
 		{
-			UTextComponent* TextComponent = FObjectFactory::ConstructObject<UTextComponent>(SelectedActor, "TextComponent");
+			UTextRenderComponent* TextComponent = FObjectFactory::ConstructObject<UTextRenderComponent>(SelectedActor, "TextComponent");
 
 			SelectedActor->AddOwnedComponent(TextComponent);
 

@@ -33,6 +33,9 @@ FString UTextRenderComponent::GetDisplayText() const
 	}
 	return Text;
 }
+void UTextRenderComponent::DuplicateSubObjects()
+{
+}
 FBoxSphereBounds UTextRenderComponent::GetWorldBounds() const
 {
 	const FVector Center = GetRenderWorldPosition();

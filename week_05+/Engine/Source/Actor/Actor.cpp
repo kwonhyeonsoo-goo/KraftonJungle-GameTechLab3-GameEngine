@@ -373,7 +373,7 @@ void AActor::DuplicateSubObjects()
 	{
 		if (Component)
 		{
-			UUUIDBillboardComponent* UUIDComp = dynamic_cast<UUUIDBillboardComponent*>(Component);
+			UTextRenderComponent* UUIDComp = dynamic_cast<UTextRenderComponent*>(Component);
 			if (UUIDComp)
 			{
 				continue; // UUIDBillboardComponent는 복제하지 않음

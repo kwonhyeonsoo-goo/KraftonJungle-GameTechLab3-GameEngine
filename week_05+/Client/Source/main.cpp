@@ -1,5 +1,5 @@
 #include "Core/FEngine.h"
-
+#include "Core/GameViewportClient.h"
 class FClientEngine : public FEngine
 {
 protected:
