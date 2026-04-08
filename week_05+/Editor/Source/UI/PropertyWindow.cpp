@@ -670,7 +670,7 @@ void FPropertyWindow::DrawAddComponentButton(AActor* SelectedActor)
 			SelectedActor->AddOwnedComponent(SubUVComponent);
 			if (SubUVComponent)
 			{
-				SubUVComponent->SetSize(FVector2(100.0f, 100.0f));
+				SubUVComponent->SetSize(FVector2(1.0f, 1.0f));
 				SubUVComponent->SetFirstFrame(0);
 				SubUVComponent->SetLastFrame(11);
 			}
