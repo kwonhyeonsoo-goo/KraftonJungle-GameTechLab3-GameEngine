@@ -826,10 +826,7 @@ void FPropertyWindow::Render(FCore* Core)
 
 				if (SelectedComponent->IsA(UStaticMeshComponent::StaticClass())) {
 
-					if (ImGui::CollapsingHeader("StaticMeshComponent", ImGuiTreeNodeFlags_DefaultOpen))
-					{
-						DrawStaticMeshSection(Core, static_cast<AStaticMeshActor*>(SelectedActor), static_cast<UStaticMeshComponent*>(SelectedComponent));
-					}
+					DrawStaticMeshSection(Core, static_cast<AStaticMeshActor*>(SelectedActor), static_cast<UStaticMeshComponent*>(SelectedComponent));
 				}
 				//else if (SelectedComponent->IsA(USubUVComponent::StaticClass())) {
 				//	if (ImGui::CollapsingHeader("SubUVComponent", ImGuiTreeNodeFlags_DefaultOpen))
