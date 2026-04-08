@@ -109,7 +109,7 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 				FRenderCommand Command;
 				Command.MeshData = BillMesh;
 				Command.Material = BillComp->GetMaterial();
-				Command.RenderLayer = ERenderLayer::Overlay;
+				Command.RenderLayer = ERenderLayer::Default;
 				if (!Command.Material)
 				{
 					if (auto DefaultMat = FMaterialManager::Get().FindByName("M_Default_Texture"))

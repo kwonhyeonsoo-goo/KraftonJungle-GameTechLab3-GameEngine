@@ -2,18 +2,59 @@
 
 #include "Controller.h"
 #include "Component/CameraComponent.h"
+#include "Component/BillboardComponent.h"
 #include "Camera/Camera.h"
 #include "Math/MathUtility.h"
 #include "Object/Class.h"
+#include "Object/ObjectFactory.h"
 #include "Debug/EngineLog.h"
+#include "Renderer/Renderer.h"
 
 IMPLEMENT_RTTI(APawn, AActor)
+
+APawn::~APawn()
+{
+}
+
+void APawn::PostSpawnInitialize()
+{
+	AActor::PostSpawnInitialize();
+
+	Camera = FObjectFactory::ConstructObject<UCameraComponent>(this, "Camera");
+	AddOwnedComponent(Camera);
+
+	if (GetComponentByClass<UBillboardComponent>() == nullptr)
+	{
+		UBillboardComponent* Billboard =
+			FObjectFactory::ConstructObject<UBillboardComponent>(this, "BillboardComponent");
+
+		if (Billboard)
+		{
+			Billboard->Initialize();
+			AddOwnedComponent(Billboard);
+			if (RootComponent && RootComponent != Billboard)
+			{
+				Billboard->AttachTo(RootComponent);
+			}
+
+			extern ENGINE_API class FRenderer* GRenderer;
+			if (GRenderer)
+			{
+				Billboard->SetTexturePath(GRenderer->GetDevice(), "Editor/Icon/Pawn_64x.png");
+			}
+		}
+	}
+}
 
 void APawn::BeginPlay()
 {
 	AActor::BeginPlay();
 
-	Camera = GetComponentByClass<UCameraComponent>();
+	if (Camera == nullptr)
+	{
+		Camera = GetComponentByClass<UCameraComponent>();
+	}
+	SetRootComponent(Camera);
 }
 
 void APawn::Tick(float DeltaTime)

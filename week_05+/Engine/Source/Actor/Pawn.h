@@ -6,6 +6,7 @@
 
 class AController;
 class UCameraComponent;
+class UBillboardComponent;
 
 class ENGINE_API APawn : public AActor
 {
@@ -13,8 +14,9 @@ public:
 	DECLARE_RTTI(APawn, AActor)
 	DECLARE_DUPLICATE(APawn)
 
-	~APawn() override = default;
+	~APawn() override;
 
+	virtual void PostSpawnInitialize() override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void EndPlay() override;

@@ -138,6 +138,7 @@
     <ClInclude Include="Source\Types\Set.h" />
     <ClInclude Include="Source\Types\StaticArray.h" />
     <ClInclude Include="Source\Types\String.h" />
+    <ClInclude Include="Source\Types\WeakObjectPtr.h" />
     <ClInclude Include="Source\World\Level.h" />
     <ClInclude Include="Source\World\RenderCollector.h" />
     <ClInclude Include="Source\World\LevelContext.h" />

@@ -593,6 +593,7 @@
     <ClInclude Include="Source\Core\GameViewportClient.h" />
     <ClInclude Include="Source\Actor\Pawn.h" />
     <ClInclude Include="Source\Actor\Controller.h" />
+    <ClInclude Include="Source\Types\WeakObjectPtr.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

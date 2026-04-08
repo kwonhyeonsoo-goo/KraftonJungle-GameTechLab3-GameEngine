@@ -141,10 +141,23 @@ void FEngine::Shutdown()
 		Core.reset();
 	}
 
+	for (FWorldContext& Context : WorldContexts)
+	{
+		if (Context.World)
+		{
+			Context.World->CleanupWorld();
+			delete Context.World;
+		}
+	}
+	WorldContexts.clear();
+
 	delete EnhancedInput;
 	EnhancedInput = nullptr;
 	delete InputManager;
 	InputManager = nullptr;
+
+	delete Timer;
+	Timer = nullptr;
 
 	if (App)
 	{

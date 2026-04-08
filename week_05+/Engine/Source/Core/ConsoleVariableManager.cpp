@@ -63,6 +63,18 @@ FConsoleVariableManager& FConsoleVariableManager::Get()
 	return Instance;
 }
 
+FConsoleVariableManager::~FConsoleVariableManager()
+{
+	for (auto& Pair : Variables)
+	{
+		if (Pair.second)
+		{
+			delete Pair.second;
+		}
+	}
+	Variables.clear();
+}
+
 FConsoleVariable* FConsoleVariableManager::Register(const FString& Name, int32 Default, const FString& Help)
 {
 	FConsoleVariable* Var = new FConsoleVariable(Name, Default, Help);

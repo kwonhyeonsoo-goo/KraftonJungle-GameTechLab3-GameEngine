@@ -89,7 +89,7 @@ void AActor::PostSpawnInitialize()
 		if (TextComponent)
 		{
 			AddOwnedComponent(TextComponent);
-			if (RootComponent)
+			if (RootComponent && RootComponent != TextComponent)
 			{
 				TextComponent->AttachTo(RootComponent);
 			}
@@ -99,24 +99,7 @@ void AActor::PostSpawnInitialize()
 			TextComponent->SetTextColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
 		}
 	}
-	//TODO** 삭제 빌보드 테스트 끝나면
-	if (GetComponentByClass<UBillboardComponent>() == nullptr)
-	{
-		UBillboardComponent* BillboardComp =
-			FObjectFactory::ConstructObject<UBillboardComponent>(this, "BillboardIcon");
 
-		if (BillboardComp)
-		{
-			AddOwnedComponent(BillboardComp);
-			if (RootComponent)
-			{
-				BillboardComp->AttachTo(RootComponent);
-			}
-			BillboardComp->SetRelativeLocation(FVector(0.0f, 0.0f, 0.8f));
-
-			BillboardComp->SetSize(FVector2(1.0f, 1.0f));
-		}
-	}
 	for (UActorComponent* Component : OwnedComponents)
 	{
 		if (Component && !Component->IsRegistered())

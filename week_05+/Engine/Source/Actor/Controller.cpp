@@ -6,6 +6,10 @@
 
 IMPLEMENT_RTTI(AController, AActor)
 
+void AController::PostSpawnInitialize()
+{
+}
+
 void AController::BeginPlay()
 {
 	AActor::BeginPlay();
