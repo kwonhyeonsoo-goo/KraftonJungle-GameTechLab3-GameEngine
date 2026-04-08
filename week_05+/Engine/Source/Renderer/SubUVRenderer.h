@@ -34,7 +34,8 @@ public:
 	void UpdateAnimationParams(
 		int32 Columns, int32 Rows, int32 TotalFrames,
 		int32 FirstFrame, int32 LastFrame,
-		float FPS, float ElapsedTime, bool bLoop);
+		float FPS, float ElapsedTime, bool bLoop,
+		bool bPreview);
 
 	/** SubUV 텍스처 및 샘플러 리소스 반환 */
 	ID3D11ShaderResourceView* GetTextureSRV() const { return TextureSRV; }

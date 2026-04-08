@@ -91,7 +91,8 @@ void FLevelRenderCollector::CollectRenderCommands(const TArray<AActor*>& Actors,
 				SubUVRenderer.UpdateAnimationParams(
 					SubUVComponent->GetColumns(), SubUVComponent->GetRows(), SubUVComponent->GetTotalFrames(),
 					SubUVComponent->GetFirstFrame(), SubUVComponent->GetLastFrame(),
-					SubUVComponent->GetFPS(), TotalTime, SubUVComponent->IsLoop()
+					SubUVComponent->GetFPS(), TotalTime, SubUVComponent->IsLoop(),
+					SubUVComponent->IsPreview()
 				);
 
 				FMaterial* SubUVMat = SubUVRenderer.GetSubUVMaterial();

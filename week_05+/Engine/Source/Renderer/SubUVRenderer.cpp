@@ -9,6 +9,7 @@
 #include "Renderer/RenderStateManager.h"
 #include "Primitive/PrimitiveBase.h"
 #include "Core/Paths.h"
+#include "World/World.h"
 #include <WICTextureLoader.h>
 #include <cstring>
 #include <algorithm>
@@ -143,12 +144,18 @@ bool FSubUVRenderer::BuildSubUVMesh(const FVector2& Size, FMeshData& OutMesh) co
 void FSubUVRenderer::UpdateAnimationParams(
 	int32 Columns, int32 Rows, int32 TotalFrames,
 	int32 FirstFrame, int32 LastFrame,
-	float FPS, float ElapsedTime, bool bLoop)
+	float FPS, float ElapsedTime, bool bLoop,
+	bool bPreview)
 {
 	if (!SubUVMaterial || Columns <= 0 || Rows <= 0) return;
 
 	float FrameFloat = ElapsedTime * FPS;
 	int32 AnimationFrame = static_cast<int32>(FrameFloat);
+	
+	if (GWorld->GetWorldType() == EWorldType::Editor && !bPreview)
+	{
+		AnimationFrame = 0;
+	}
 
 	int32 FirstRow = FirstFrame / Columns;
 	int32 LastRow = LastFrame / Columns;
