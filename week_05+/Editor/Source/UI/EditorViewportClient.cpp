@@ -967,11 +967,14 @@ void FEditorViewportClient::DrawUI()
 	}
 
 	FRect WindowRect = ViewportWindow->GetRect();
-	ImGui::SetNextWindowPos(ImVec2(WindowRect.Position.X, WindowRect.Position.Y));
+	ImGuiViewport* MainViewport = ImGui::GetMainViewport();
+	float SafeX = WindowRect.Position.X + 8.0f;
+	float SafeY = (std::max)(WindowRect.Position.Y, MainViewport->WorkPos.y) + 8.0f;
 
+	ImGui::SetNextWindowPos(ImVec2(SafeX, SafeY));
 	char WindowName[128];
 	sprintf_s(WindowName, "ViewportButtonFrame##%p", this);
-
+	ImGui::SetNextWindowBgAlpha(0.85f);
 	if (!ImGui::Begin(WindowName, nullptr, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar))
 	{
 		ImGui::End();

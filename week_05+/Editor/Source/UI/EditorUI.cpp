@@ -430,6 +430,7 @@ void FEditorUI::BuildDefaultLayout(uint32 DockID)
 	ImGui::DockBuilderDockWindow("Properties", DockRightTop);
 	ImGui::DockBuilderDockWindow("Control Panel", DockRightBottom);
 	ImGui::DockBuilderDockWindow("Console", DockBottom);
+
 	ImGui::DockBuilderFinish(DockID);
 }
 
@@ -471,67 +472,6 @@ void FEditorUI::Render()
 	{
 		return;
 	}
-
-	ImGuiViewport* MainViewport = ImGui::GetMainViewport();
-	ImGui::SetNextWindowPos(MainViewport->WorkPos);
-	ImGui::SetNextWindowSize(MainViewport->WorkSize);
-	ImGui::SetNextWindowViewport(MainViewport->ID);
-
-	ImGuiWindowFlags HostFlags =
-		ImGuiWindowFlags_NoTitleBar |
-		ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoMove |
-		ImGuiWindowFlags_NoBringToFrontOnFocus |
-		ImGuiWindowFlags_NoNavFocus |
-		ImGuiWindowFlags_NoBackground;
-
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-	ImGui::Begin("##DockSpaceHost", nullptr, HostFlags);
-	ImGui::PopStyleVar(3);
-
-	ImGuiID DockID = ImGui::GetID("MainDockSpace");
-	if (!bLayoutInitialized)
-	{
-		bLayoutInitialized = true;
-
-		ImGuiDockNode* Node = ImGui::DockBuilderGetNode(DockID);
-		if (!Node || Node->IsEmpty())
-		{
-			BuildDefaultLayout(DockID);
-		}
-	}
-
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-	ImGui::DockSpace(DockID, ImVec2(0, 0), ImGuiDockNodeFlags_PassthruCentralNode);
-	ImGui::PopStyleVar();
-
-	CachedCentralDockSpaceRect = FRect();
-	if (ImGuiDockNode* RootNode = ImGui::DockBuilderGetNode(DockID))
-	{
-		if (ImGuiDockNode* CentralNode = FindCentralDockNode(RootNode))
-		{
-			CachedCentralDockSpaceRect = FRect(
-				CentralNode->Pos.x,
-				CentralNode->Pos.y,
-				CentralNode->Size.x,
-				CentralNode->Size.y);
-		}
-	}
-
-	ImGui::End();
-
-	if (Core)
-	{
-		AActor* Selected = GEditor->GetSelectedActor();
-		if (Selected != CachedSelectedActor)
-		{
-			SyncSelectedActorProperty();
-		}
-	}
-
 	if (ImGui::BeginMainMenuBar())
 	{
 		if (ImGui::BeginMenu("File"))
@@ -622,13 +562,13 @@ void FEditorUI::Render()
 			{
 				FShowFlags& ShowFlags = ActiveViewportClient->GetShowFlags(); // -> 수정
 				auto ShowFlagCheckbox = [&ShowFlags](const char* Label, EEngineShowFlags Flag)
+				{
+					bool bValue = ShowFlags.HasFlag(Flag);
+					if (ImGui::Checkbox(Label, &bValue))
 					{
-						bool bValue = ShowFlags.HasFlag(Flag);
-						if (ImGui::Checkbox(Label, &bValue))
-						{
-							ShowFlags.SetFlag(Flag, bValue);
-						}
-					};
+						ShowFlags.SetFlag(Flag, bValue);
+					}
+				};
 
 				ImGui::SeparatorText(ActiveViewportClient->GetViewportLabel()); // -> 수정
 
@@ -684,6 +624,67 @@ void FEditorUI::Render()
 
 		ImGui::EndMainMenuBar();
 	}
+	ImGuiViewport* MainViewport = ImGui::GetMainViewport();
+	ImGui::SetNextWindowPos(MainViewport->WorkPos);
+	ImGui::SetNextWindowSize(MainViewport->WorkSize);
+	ImGui::SetNextWindowViewport(MainViewport->ID);
+
+	ImGuiWindowFlags HostFlags =
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoBringToFrontOnFocus |
+		ImGuiWindowFlags_NoNavFocus |
+		ImGuiWindowFlags_NoBackground;
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	ImGui::Begin("##DockSpaceHost", nullptr, HostFlags);
+	ImGui::PopStyleVar(3);
+
+	ImGuiID DockID = ImGui::GetID("MainDockSpace");
+	if (!bLayoutInitialized)
+	{
+		bLayoutInitialized = true;
+
+		ImGuiDockNode* Node = ImGui::DockBuilderGetNode(DockID);
+		if (!Node || Node->IsEmpty())
+		{
+			BuildDefaultLayout(DockID);
+		}
+	}
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+	ImGui::DockSpace(DockID, ImVec2(0, 0), ImGuiDockNodeFlags_PassthruCentralNode);
+	ImGui::PopStyleVar();
+
+	CachedCentralDockSpaceRect = FRect();
+	if (ImGuiDockNode* RootNode = ImGui::DockBuilderGetNode(DockID))
+	{
+		if (ImGuiDockNode* CentralNode = FindCentralDockNode(RootNode))
+		{
+			CachedCentralDockSpaceRect = FRect(
+				CentralNode->Pos.x,
+				CentralNode->Pos.y,
+				CentralNode->Size.x,
+				CentralNode->Size.y);
+		}
+	}
+
+	ImGui::End();
+
+	if (Core)
+	{
+		AActor* Selected = GEditor->GetSelectedActor();
+		if (Selected != CachedSelectedActor)
+		{
+			SyncSelectedActorProperty();
+		}
+	}
+
+	
 
 	if (bOpenAboutPopup)
 	{
