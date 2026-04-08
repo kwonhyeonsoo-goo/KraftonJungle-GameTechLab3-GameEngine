@@ -267,6 +267,18 @@ void AActor::Serialize(FArchive& Ar)
 					Components[i]->Serialize(CompAr);
 				}
 			}
+
+			if (!Components.empty() && Components[0] != nullptr && Components[0]->IsA(USceneComponent::StaticClass()))
+			{
+				RootComponent = static_cast<USceneComponent*>(Components[0]);
+				for (size_t i = 1; i < Components.size(); ++i)
+				{
+					if (Components[i] != nullptr && Components[i]->IsA(USceneComponent::StaticClass()))
+					{
+						static_cast<USceneComponent*>(Components[i])->AttachTo(RootComponent);
+					}
+				}
+			}
 		}
 	}
 }
