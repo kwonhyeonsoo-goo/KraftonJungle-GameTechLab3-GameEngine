@@ -2,7 +2,8 @@
 #include "CoreMinimal.h"
 #include "EngineAPI.h"
 #include "Core/ShowFlags.h"
-
+#include "Renderer/RenderCommand.h"
+#include "Math/Frustum.h"
 class AActor;
 class FCamera;
 class FFrustum;
@@ -11,8 +12,20 @@ class UPrimitiveComponent;
 class ENGINE_API FLevelRenderCollector
 {
 public:
+	FLevelRenderCollector() = default;
+
+	void MarkDirty() { bCommandsDirty = true; }
 	void CollectRenderCommands(const TArray<AActor*>& Actors, const FFrustum& Frustum,
 		const FShowFlags& ShowFlags, const FCamera* Camera, FRenderCommandQueue& OutQueue);
 	void FrustrumCull(const TArray<AActor*>& Actors, const FFrustum& Frustum,
 		const FShowFlags& ShowFlags, TArray<UPrimitiveComponent*>& OutVisible);
+
+private:
+
+
+	// ─── 캐싱 관련 멤버 ───
+	FRenderCommandQueue CachedQueue;
+	FFrustum PrevFrustum;
+	uint64 PrevShowFlagsBits = 0; // ShowFlags 변경 감지용
+	bool bCommandsDirty = true;
 };

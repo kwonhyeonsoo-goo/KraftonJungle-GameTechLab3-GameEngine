@@ -9,12 +9,15 @@
 #include "Camera/Camera.h"
 #include "Actor/Actor.h"
 #include "Actor/AttachTestActor.h"
-
+#include "Actor/Pawn.h"
+#include "Actor/Controller.h"
 #include "Actor/StaticMeshActor.h"
 #include "Actor/SubUVActor.h"
 #include "Actor/SkySphereActor.h"
 #include "Actor/TextActor.h"
-#include "Component/TextComponent.h"
+
+#include "Component/CameraComponent.h"
+#include "Component/TextRenderComponent.h"
 #include "UI/EditorViewportClient.h"
 
 namespace
@@ -54,7 +57,7 @@ void FControlPanelWindow::Render(FCore* Core, FEditorViewportClient* ActiveViewp
 		ImGui::SeparatorText("Spawn");
 
 		static int32 SpawnTypeIndex = 0;
-		const char* SpawnTypes[] = { "Cube", "Sphere", "Plane", "AttachTest", "SubUV", "Text", "SkySphere", "StaticMesh" };
+		const char* SpawnTypes[] = { "Cube", "Sphere", "Plane", "AttachTest", "SubUV", "Text", "SkySphere", "StaticMesh", "Pawn", "Controller" };
 		ImGui::Combo("Type", &SpawnTypeIndex, SpawnTypes, IM_ARRAYSIZE(SpawnTypes));
 
 		static char SpawnTextBuffer[256] = "Text";
@@ -71,14 +74,17 @@ void FControlPanelWindow::Render(FCore* Core, FEditorViewportClient* ActiveViewp
 			AActor* NewActor = nullptr;
 			ID3D11Device* Device = GRenderer->GetDevice();
 			// 0:Cube, 1:Sphere, 2:Plane, 7:StaticMesh 모두 AStaticMeshActor로 통합 스폰
-			if (SpawnTypeIndex == 0 || SpawnTypeIndex == 1 || SpawnTypeIndex == 2 || SpawnTypeIndex == 7)
+			switch (SpawnTypeIndex)
+			{
+			case 0:
+			case 1:
+			case 2:
+			case 7:
 			{
 				NewActor = Level->SpawnActor<AStaticMeshActor>(Name);
 				if (NewActor)
 				{
 					AStaticMeshActor* SMActor = static_cast<AStaticMeshActor*>(NewActor);
-
-				
 
 					if (SpawnTypeIndex == 0)
 					{
@@ -97,37 +103,54 @@ void FControlPanelWindow::Render(FCore* Core, FEditorViewportClient* ActiveViewp
 						SMActor->LoadStaticMesh(Device, "Engine/BasicShapes/Cube");
 					}
 				}
+				break;
 			}
-			else if (SpawnTypeIndex == 3)
+			case 3:
 			{
 				NewActor = Level->SpawnActor<AAttachTestActor>(Name);
+				break;
 			}
-			else if (SpawnTypeIndex == 4)
+			case 4:
 			{
 				NewActor = Level->SpawnActor<ASubUVActor>(Name);
+				break;
 			}
-			else if (SpawnTypeIndex == 5)
+			case 5:
 			{
 				NewActor = Level->SpawnActor<ATextActor>(Name);
 				if (NewActor)
 				{
 					ATextActor* TextActor = static_cast<ATextActor*>(NewActor);
-					if (UTextComponent* TextComponent = TextActor->GetTextComponent())
+					if (UTextRenderComponent* TextComponent = TextActor->GetTextComponent())
 					{
 						TextComponent->SetText(SpawnTextBuffer[0] != '\0' ? SpawnTextBuffer : "Text");
 					}
 				}
+				break;
 			}
-			else if (SpawnTypeIndex == 6)
+			case 6:
 			{
 				NewActor = Level->SpawnActor<ASkySphereActor>(Name);
 				if (NewActor)
 				{
 					ASkySphereActor* SkyActor = static_cast<ASkySphereActor*>(NewActor);
-
-		
 					SkyActor->LoadSkyMesh(Device);
 				}
+				break;
+			}
+			case 8:
+			{
+				NewActor = Level->SpawnActor<APawn>(Name);
+				UCameraComponent* PawnCamera = FObjectFactory::ConstructObject<UCameraComponent>(NewActor, Name + "_Camera");
+				PawnCamera->SetRelativeTransform(FTransform::Identity);
+				NewActor->AddOwnedComponent(PawnCamera);
+				break;
+			}
+			case 9:
+			{
+				NewActor = Level->SpawnActor<AController>(Name);
+				break;
+			}
 			}
 
 			if (NewActor && !NewActor->IsA<ASkySphereActor>())

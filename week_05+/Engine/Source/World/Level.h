@@ -3,7 +3,7 @@
 #include "Object/Object.h"
 #include "Object/ObjectFactory.h"
 #include <d3d11.h>
-#include "LevelTypes.h"
+#include "WorldType.h"
 #include "Core/ShowFlags.h"
 #include "World/RenderCollector.h"
 class AActor;

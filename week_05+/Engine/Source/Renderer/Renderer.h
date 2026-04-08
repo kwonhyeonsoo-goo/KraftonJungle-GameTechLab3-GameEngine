@@ -102,14 +102,19 @@ public:
 	FTextMeshBuilder& GetTextRenderer() { return TextRenderer; }
 	FSubUVRenderer& GetSubUVRenderer() { return SubUVRenderer; }
 	FVector GetCameraPosition() const;
-
+	void EnsureInstanceBufferCapacity(uint32 Count);
 	ID3D11ShaderResourceView* GetFolderIconSRV() const { return FolderIconSRV; }
 	ID3D11ShaderResourceView* GetFileIconSRV() const { return FileIconSRV; }
+	void MarkInstanceBufferDirty() { bInstanceBufferDirty = true; }
+	bool IsInstanceBufferDirty() const { return bInstanceBufferDirty; }
+	void RenderPickingPass();
+	uint32 ReadPixelID(int32 ScreenX, int32 ScreenY);
 private:
 	void SetConstantBuffers();
 	void AddCommand(const FRenderCommand& Command);
 	void AddCommand(TArray<FRenderCommand>& CommandBuffer, const FRenderCommand& Command);
 	void ClearCommandList();
+	void RebuildAllLayerInstanceBuffers(TArray<FRenderCommand>& InCommandList);
 	void ExecuteCommands(TArray<FRenderCommand>& InCommandList, const FMatrix& InViewMatrix, const FMatrix& InProjectionMatrix);
 	void ExecuteRenderPass(TArray<FRenderCommand>& InCommandList, ERenderLayer RenderLayer);
 	bool CreateDeviceAndSwapChain(HWND InHwnd, int32 Width, int32 Height);
@@ -120,7 +125,6 @@ private:
 	void ClearDepthBuffer();
 
 	bool CreateTextureFromSTB(ID3D11Device* Device, const wchar_t* FilePath, ID3D11ShaderResourceView** OutSRV);
-
 private:
 	std::unique_ptr<FRenderStateManager> RenderStateManager = nullptr;
 
@@ -157,6 +161,7 @@ private:
 	ID3D11DepthStencilState* StencilWriteState = nullptr;
 	ID3D11DepthStencilState* StencilTestState = nullptr;
 	std::shared_ptr<FPixelShader> OutlinePS;
+	std::shared_ptr<FVertexShader> InstancedVertexShader;
 
 	FGUICallback GUIInit;
 	FGUICallback GUIShutdown;
@@ -179,8 +184,30 @@ private:
 
 	/** SubUV, Text 이외 일반 material texture sample 용도 */
 	ID3D11SamplerState* NormalSampler = nullptr;
+	ID3D11Buffer* InstanceBuffer=nullptr;
+	uint32 InstanceBufferCapacity=0;
+	bool bInstanceBufferDirty = true;
+	ID3D11Texture2D* PickingTexture = nullptr;
+	ID3D11RenderTargetView* PickingRTV = nullptr;
+	ID3D11ShaderResourceView* PickingSRV = nullptr;
+	ID3D11Texture2D* PickingStagingTexture = nullptr;
+	ID3D11DepthStencilView* PickingDSV = nullptr;
+	std::shared_ptr<FMaterial> PickingMaterial;
+	struct FCachedBatch
+	{
+		FMaterial* Material;
+		FMeshData* MeshData;
+		uint32 FirstIndex;
+		uint32 IndexCount;
+		uint32 InstanceCount;
+		uint32 InstanceBufferOffset; 
+		FMatrix WorldMatrix;
+	};
 
+	// 레이어별로 캐시를 따로 관리해야 섞이지 않습니다.
+	std::unordered_map<ERenderLayer, TArray<FCachedBatch>> LayerCachedBatches;
 public:
+
 	CShaderManager ShaderManager;
 };
 

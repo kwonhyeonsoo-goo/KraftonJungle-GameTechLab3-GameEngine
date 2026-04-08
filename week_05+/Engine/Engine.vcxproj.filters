@@ -102,7 +102,7 @@
     <ClCompile Include="Source\Component\SubUVComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp">
+    <ClCompile Include="Source\Component\BillboardComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\ConsoleVariableManager.cpp">
@@ -173,12 +173,6 @@
     </ClCompile>
     <ClCompile Include="Source\Object\ObjectGlobals.cpp">
       <Filter>Source\Object</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Object\ObjectManager.cpp">
-      <Filter>Source\Object</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Physics\PhysicsManager.cpp">
-      <Filter>Source\Physics</Filter>
     </ClCompile>
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp">
       <Filter>Source\Platform\Windows</Filter>
@@ -259,7 +253,7 @@
       <Filter>Source\World</Filter>
     </ClCompile>
     <ClCompile Include="PrimitiveLineBatch.cpp" />
-    <ClCompile Include="Source\Component\TextComponent.cpp">
+    <ClCompile Include="Source\Component\TextRenderComponent.cpp">
       <Filter>Source\Component</Filter>
     </ClCompile>
     <ClCompile Include="Source\Actor\TextActor.cpp">
@@ -286,6 +280,9 @@
     <ClCompile Include="Source\Asset\AssetRegistry.cpp" />
     <ClCompile Include="Source\Asset\AssetCooker.cpp" />
     <ClCompile Include="Source\Primitive\PrimitiveSky.cpp" />
+    <ClCompile Include="Source\Core\GameViewportClient.cpp" />
+    <ClCompile Include="Source\Actor\Pawn.cpp" />
+    <ClCompile Include="Source\Actor\Controller.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\CoreMinimal.h">
@@ -330,7 +327,7 @@
     <ClInclude Include="Source\Component\SubUVComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Component\UUIDBillboardComponent.h">
+    <ClInclude Include="Source\Component\BillboardComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\ConsoleVariableManager.h">
@@ -420,14 +417,8 @@
     <ClInclude Include="Source\Object\ObjectGlobals.h">
       <Filter>Source\Object</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Object\ObjectManager.h">
-      <Filter>Source\Object</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Object\ObjectTypes.h">
       <Filter>Source\Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Physics\PhysicsManager.h">
-      <Filter>Source\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h">
       <Filter>Source\Platform\Windows</Filter>
@@ -559,7 +550,7 @@
       <Filter>ThirdParty\nlohmann</Filter>
     </ClInclude>
     <ClInclude Include="PrimitiveLineBatch.h" />
-    <ClInclude Include="Source\Component\TextComponent.h">
+    <ClInclude Include="Source\Component\TextRenderComponent.h">
       <Filter>Source\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Actor\TextActor.h">
@@ -574,7 +565,7 @@
     <ClInclude Include="Source\World\LevelContext.h">
       <Filter>Source\World</Filter>
     </ClInclude>
-    <ClInclude Include="Source\World\LevelTypes.h">
+    <ClInclude Include="Source\World\WorldType.h">
       <Filter>Source\World</Filter>
     </ClInclude>
     <ClInclude Include="Source\Actor\StaticMeshActor.h" />
@@ -599,6 +590,9 @@
     <ClInclude Include="Source\Asset\CookedAsset.h" />
     <ClInclude Include="Source\Primitive\PrimitiveSky.h" />
     <ClInclude Include="Source\Math\Ray.h" />
+    <ClInclude Include="Source\Core\GameViewportClient.h" />
+    <ClInclude Include="Source\Actor\Pawn.h" />
+    <ClInclude Include="Source\Actor\Controller.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

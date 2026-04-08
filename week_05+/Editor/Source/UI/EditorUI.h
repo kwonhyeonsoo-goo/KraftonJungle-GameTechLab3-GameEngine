@@ -14,6 +14,7 @@ class FCore;
 class FWindow;
 class FRenderer;
 class AActor;
+class FViewportContext;
 class FEditorViewportClient;
 class FWindowManager;
 class FCamera;
@@ -31,6 +32,7 @@ public:
 	void SetActiveViewportClient(FEditorViewportClient* InViewportClient) { ActiveViewportClient = InViewportClient; }
 	FEditorViewportClient* GetActiveViewportClient() const { return ActiveViewportClient; }
 	bool HasActiveViewportClient() const { return ActiveViewportClient != nullptr; }
+	FViewportContext* FindPerspectiveViewportContext() const;
 	FEditorViewportClient* FindPerspectiveViewportClient() const;
 	FCamera* GetPerspectiveCamera() const;
 	FRect GetCentralDockSpaceRect() const;

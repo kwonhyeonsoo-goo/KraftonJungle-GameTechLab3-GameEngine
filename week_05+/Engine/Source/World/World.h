@@ -1,11 +1,13 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "Object/Object.h"
-#include "World/LevelTypes.h"
+#include "World/WorldType.h"
 
 // Forward declarations ? include 최소화
 class ULevel;
 class AActor;
+class APawn;
+class AController;
 class UCameraComponent;
 class FCamera;
 class FFrustum;
@@ -24,7 +26,6 @@ public:
 
 	ULevel* GetLevel() const { return Level; }
 
-	// ── 전체 액터 조회 (Persistent + Streaming 합산) ──
 	TArray<AActor*> GetActors() const;
 
 	// 카메라
@@ -43,6 +44,9 @@ public:
 	float GetWorldTime() const { return WorldTime; }
 	float GetDeltaTime() const { return DeltaSeconds; }
 
+	AController* GetDefaultController() const { return DefaultController; }
+	APawn* GetDefaultPawn() const { return DefaultPawn; }
+
 	static UWorld* DuplicateWorldForPIE(UWorld* SourceWorld);
 
 private:
@@ -52,8 +56,11 @@ private:
 	bool bBegunPlay = false;
 	float WorldTime = 0.f;
 	float DeltaSeconds = 0.f;
-	UCameraComponent* LevelCameraComponent = nullptr;    
+	UCameraComponent* LevelCameraComponent = nullptr;
 	TObjectPtr<UCameraComponent> ActiveCameraComponent;
+
+	AController* DefaultController = nullptr;
+	APawn* DefaultPawn = nullptr;
 };
 #include "World/Level.h"
 

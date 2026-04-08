@@ -17,6 +17,7 @@ public:
 	void Serialize(const FString& Key, float& Value);
 	void Serialize(const FString& Key, FVector& Value);
 	void Serialize(const FString& Key, FVector4& Value);
+	void Serialize(const FString& Key, struct FVector2& Value);
 	// 배열
 	void SerializeUIntArray(const FString& Key, TArray<uint32>& Values);
 	void SerializeStringArray(const FString& Key, TArray<FString>& Values);

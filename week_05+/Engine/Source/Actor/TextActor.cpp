@@ -1,5 +1,5 @@
 #include "TextActor.h"
-#include "Component/TextComponent.h"
+#include "Component/TextRenderComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Object/Class.h"
 
@@ -7,7 +7,7 @@ IMPLEMENT_RTTI(ATextActor, AActor)
 
 void ATextActor::PostSpawnInitialize()
 {
-	TextComponent = FObjectFactory::ConstructObject<UTextComponent>(this, "TextComponent");
+	TextComponent = FObjectFactory::ConstructObject<UTextRenderComponent>(this, "TextComponent");
 	AddOwnedComponent(TextComponent);
 
 	SetActorLocation(FVector(0.0f, 0.0f, 0.0f));

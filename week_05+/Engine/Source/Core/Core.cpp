@@ -1,10 +1,11 @@
 #include "Core.h"
 
+#include "FEngine.h"
 #include "Actor/Actor.h"
 #include "Actor/SkySphereActor.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SubUVComponent.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/BillboardComponent.h"
 #include "Core/ConsoleVariableManager.h"
 #include "Core/Paths.h"
 #include "Input/EnhancedInputManager.h"
@@ -15,7 +16,6 @@
 #include "Object/Object.h"
 #include "Object/ObjectFactory.h"
 #include "Object/ObjectGlobals.h"
-#include "Object/ObjectManager.h"
 #include "Primitive/PrimitiveBase.h"
 #include "Renderer/MaterialManager.h"
 #include "Renderer/RenderCommand.h"
@@ -27,7 +27,6 @@
 #include <cstdio>
 #include <algorithm>
 #include <cctype>
-#include "Mesh/ObjManager.h"
 #include "Asset/AssetRegistry.h"
 #include "Asset/AssetManager.h"
 #include <psapi.h>
@@ -181,35 +180,18 @@ bool FCore::Initialize(HWND Hwnd, int32 Width, int32 Height, EWorldType StartupL
 		return false;
 	}
 
-	ObjManager = new ObjectManager();
-
-
 	FString AssetRootDir = (FPaths::ProjectRoot() / "Assets").string();
 	FAssetRegistry::Get().SearchAllAssets(AssetRootDir);
 	// Material
 	FMaterialManager::Get().LoadAllMaterials(GRenderer->GetDevice(), GRenderer->GetRenderStateManager().get());
 
-
-	PhysicsManager = std::make_unique<FPhysicsManager>();
-
-	Timer.Initialize();
 	RegisterConsoleVariables();
-	const float AspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
 
 	return true;
 }
 
 void FCore::Release()
 {
-	if (ObjManager)
-	{
-		ObjManager->FlushKilledObjects();
-		delete ObjManager;
-		ObjManager = nullptr;
-	}
-
-
-	FObjManager::Clear();//shared_ptr<FStaticMeshRenderData> 해제
 	CPrimitiveBase::ClearCache();//shared_ptr<FMeshData> 해제
 	 
 	if (GRenderer)
@@ -217,96 +199,6 @@ void FCore::Release()
 		delete GRenderer;
 		GRenderer = nullptr;
 	}
-}
-
-void FCore::Tick()
-{
-	Timer.Tick();
-	//LateUpdate(Timer.GetDeltaTime());
-}
-
-void FCore::Tick(const float DeltaTime)
-{
-//	Input(DeltaTime);
-	//Physics(DeltaTime);
-	//GameLogic(DeltaTime);
-
-}
-
-void FCore::Input(float DeltaTime)
-{
-	(void)DeltaTime;
-}
-
-void FCore::Physics(float DeltaTime)
-{
-	(void)DeltaTime;
-
-	ULevel* Level = GWorld ? GWorld->GetLevel() : nullptr;
-	if (!Level)
-	{
-		return;
-	}
-
-	FVector LineStart(2, 2, 0);
-	FVector LineEnd(5, 5, 0);
-	FHitResult HitResult;
-
-	if (PhysicsManager->Linetrace(Level, LineStart, LineEnd, HitResult))
-	{
-		if (!HitResult.HitActor->IsA(ASkySphereActor::StaticClass()))
-		{
-			for (UActorComponent* ActorComp : HitResult.HitActor->GetComponents())
-			{
-				if (!ActorComp->IsA(UPrimitiveComponent::StaticClass()))
-				{
-					continue;
-				}
-
-				UPrimitiveComponent* PrimComp = static_cast<UPrimitiveComponent*>(ActorComp);
-				if (!PrimComp->ShouldDrawDebugBounds())
-				{
-					continue;
-				}
-
-				const FBoxSphereBounds Bounds = PrimComp->GetWorldBounds();
-				DebugDrawManager.DrawCube(Bounds.Center, Bounds.BoxExtent, FVector4(1, 0, 0, 1));
-			}
-
-			DebugDrawManager.DrawCube(HitResult.HitLocation, FVector(0.1, 0.1, 0.1), FVector4(0, 1, 0, 1));
-		}
-	}
-
-	if (GRenderer)
-	{
-		DebugDrawManager.DrawLine(LineStart, LineEnd, FVector4(0, 1, 1, 1));
-	}
-}
-
-void FCore::GameLogic(float DeltaTime)
-{
-	UWorld* World = GWorld;
-	if (World)
-	{
-		World->Tick(DeltaTime);
-	}
-}
-
-void FCore::LateUpdate(float DeltaTime)
-{
-	(void)DeltaTime;
-
-	if (GCInterval <= 0.0)
-	{
-		return;
-	}
-
-	//const double CurrentTime = Timer.GetTotalTime();
-	//if (ObjManager && (CurrentTime - LastGCTime) >= GCInterval)
-	//{
-	//	ObjManager->FlushKilledObjects();
-	//	LastGCTime = CurrentTime;
-	//}
 }
 
 void FCore::OnResize(int32 Width, int32 Height)
@@ -328,10 +220,6 @@ void FCore::OnResize(int32 Width, int32 Height)
 void FCore::RegisterConsoleVariables()
 {
 	FConsoleVariableManager& CVM = FConsoleVariableManager::Get();
-
-
-	FConsoleVariable* MaxFPSVar = CVM.Register("t.MaxFPS", 0.0f, "Maximum FPS limit (0 = unlimited)");
-	Timer.SetMaxFPS(0.0f);
 
 	FConsoleVariable* VSyncVar = CVM.Register("r.VSync", 0, "Enable VSync (0 = off, 1 = on)");
 	if (GRenderer)
@@ -440,9 +328,9 @@ void FCore::RenderStatOverlay(FRenderer* Renderer, int32 ViewportWidth, int32 Vi
 		TArray<FString> Lines;
 		char Buffer[128] = {};
 		Lines.push_back("STAT FPS");
-		snprintf(Buffer, sizeof(Buffer), "%.2f FPS", Timer.GetDisplayFPS());
+		snprintf(Buffer, sizeof(Buffer), "%.2f FPS", GEngine->GetTimer()->GetDisplayFPS());
 		Lines.push_back(Buffer);
-		snprintf(Buffer, sizeof(Buffer), "%.2f ms", Timer.GetFrameTimeMs());
+		snprintf(Buffer, sizeof(Buffer), "%.2f ms", GEngine->GetTimer()->GetFrameTimeMs());
 		Lines.push_back(Buffer);
 
 		const float FPSBoxWidth = 320.0f;

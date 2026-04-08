@@ -28,6 +28,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PrimitiveLineBatch.h" />
+    <ClInclude Include="Source\Actor\Controller.h" />
+    <ClInclude Include="Source\Actor\Pawn.h" />
     <ClInclude Include="Source\Actor\StaticMeshActor.h" />
     <ClInclude Include="Source\Actor\TextActor.h" />
     <ClInclude Include="Source\Asset\AssetCooker.h" />
@@ -38,8 +40,9 @@
     <ClInclude Include="Source\Asset\CookedStaticMesh.h" />
     <ClInclude Include="Source\Component\MeshComponent.h" />
     <ClInclude Include="Source\Component\StaticMeshComponent.h" />
-    <ClInclude Include="Source\Component\TextComponent.h" />
+    <ClInclude Include="Source\Component\TextRenderComponent.h" />
     <ClInclude Include="Source\CoreMinimal.h" />
+    <ClInclude Include="Source\Core\GameViewportClient.h" />
     <ClInclude Include="Source\Core\ViewportContext.h" />
     <ClInclude Include="Source\EngineAPI.h" />
     <ClInclude Include="Source\Actor\Actor.h" />
@@ -54,7 +57,7 @@
     <ClInclude Include="Source\Component\RandomColorComponent.h" />
     <ClInclude Include="Source\Component\SceneComponent.h" />
     <ClInclude Include="Source\Component\SubUVComponent.h" />
-    <ClInclude Include="Source\Component\UUIDBillboardComponent.h" />
+    <ClInclude Include="Source\Component\BillboardComponent.h" />
     <ClInclude Include="Source\Core\ConsoleVariableManager.h" />
     <ClInclude Include="Source\Core\Core.h" />
     <ClInclude Include="Source\Core\FEngine.h" />
@@ -93,10 +96,8 @@
     <ClInclude Include="Source\Object\ObjectFactory.h" />
     <ClInclude Include="Source\Object\ObjectGlobals.h" />
     <ClInclude Include="Source\Object\ObjectIterator.h" />
-    <ClInclude Include="Source\Object\ObjectManager.h" />
     <ClInclude Include="Source\Object\ObjectTypes.h" />
     <ClInclude Include="Source\Object\StaticMesh.h" />
-    <ClInclude Include="Source\Physics\PhysicsManager.h" />
     <ClInclude Include="Source\Platform\Windows\PlatformGlobals.h" />
     <ClInclude Include="Source\Platform\Windows\Window.h" />
     <ClInclude Include="Source\Platform\Windows\WindowApplication.h" />
@@ -140,7 +141,7 @@
     <ClInclude Include="Source\World\Level.h" />
     <ClInclude Include="Source\World\RenderCollector.h" />
     <ClInclude Include="Source\World\LevelContext.h" />
-    <ClInclude Include="Source\World\LevelTypes.h" />
+    <ClInclude Include="Source\World\WorldType.h" />
     <ClInclude Include="Source\World\World.h" />
     <ClInclude Include="Source\World\WorldContext.h" />
     <ClInclude Include="ThirdParty\stb_image.h" />
@@ -149,8 +150,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PrimitiveLineBatch.cpp" />
+    <ClCompile Include="Source\Actor\Controller.cpp" />
+    <ClCompile Include="Source\Actor\Pawn.cpp" />
     <ClCompile Include="Source\Asset\AssetCooker.cpp" />
     <ClCompile Include="Source\Asset\AssetRegistry.cpp" />
+    <ClCompile Include="Source\Core\GameViewportClient.cpp" />
     <ClCompile Include="Source\Math\Rect.cpp" />
     <ClCompile Include="Source\Actor\Actor.cpp" />
     <ClCompile Include="Source\Actor\AttachTestActor.cpp" />
@@ -169,8 +173,8 @@
     <ClCompile Include="Source\Component\SceneComponent.cpp" />
     <ClCompile Include="Source\Component\StaticMeshComponent.cpp" />
     <ClCompile Include="Source\Component\SubUVComponent.cpp" />
-    <ClCompile Include="Source\Component\TextComponent.cpp" />
-    <ClCompile Include="Source\Component\UUIDBillboardComponent.cpp" />
+    <ClCompile Include="Source\Component\TextRenderComponent.cpp" />
+    <ClCompile Include="Source\Component\BillboardComponent.cpp" />
     <ClCompile Include="Source\Core\ConsoleVariableManager.cpp" />
     <ClCompile Include="Source\Core\Core.cpp" />
     <ClCompile Include="Source\Core\FEngine.cpp" />
@@ -198,9 +202,7 @@
     <ClCompile Include="Source\Object\Object.cpp" />
     <ClCompile Include="Source\Object\ObjectFactory.cpp" />
     <ClCompile Include="Source\Object\ObjectGlobals.cpp" />
-    <ClCompile Include="Source\Object\ObjectManager.cpp" />
     <ClCompile Include="Source\Object\StaticMesh.cpp" />
-    <ClCompile Include="Source\Physics\PhysicsManager.cpp" />
     <ClCompile Include="Source\Platform\Windows\PlatformGlobals.cpp" />
     <ClCompile Include="Source\Platform\Windows\Window.cpp" />
     <ClCompile Include="Source\Platform\Windows\WindowApplication.cpp" />

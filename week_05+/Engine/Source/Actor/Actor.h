@@ -19,8 +19,6 @@ public:
 	ULevel* GetLevel() const;
 	void SetLevel(ULevel* InLevel);
 	UWorld* GetWorld() const;
-	// ULevel* GetLevel() const { return Level;
-	// void SetLevel(ULevel* InLevel) { Level = InLevel; }
 
 	USceneComponent* GetRootComponent() const;
 	void SetRootComponent(USceneComponent* InRootComponent);
@@ -56,6 +54,7 @@ public:
 	void SetActorTickEnabled(bool bEnabled) { bTickEnabled = bEnabled; }
 	const FVector& GetActorLocation() const;
 	void SetActorLocation(const FVector& InLocation);
+	uint32 GetUUID() const { return ExtractUObjectUUID(this); }
 
 	bool IsVisible() const { return bVisible; }
 	void SetVisible(bool bInVisible) { bVisible = bInVisible; }

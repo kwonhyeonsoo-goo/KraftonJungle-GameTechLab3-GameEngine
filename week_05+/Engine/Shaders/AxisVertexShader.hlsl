@@ -61,6 +61,6 @@ VS_OUTPUT main(uint id : SV_VertexID)
 	float3 worldPosition = mul(float4(output.LocalPos, 1.0f), World).xyz;
 	output.WorldPos = worldPosition;
 	output.Pos = mul(float4(worldPosition, 1.0f), mul(View, Projection));
-    
+
 	return output;
 }

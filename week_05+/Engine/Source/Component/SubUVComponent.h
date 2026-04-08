@@ -38,6 +38,9 @@ public:
 	void SetBillboard(bool bInBillboard) { bBillboard = bInBillboard; }
 	bool IsBillboard() const { return bBillboard; }
 
+	void SetPreview(bool bInPreview) { bPreview = bInPreview; }
+	bool IsPreview() const { return bPreview; }
+
 	/** SubUV 렌더링용 메시 데이터 반환 */
 	struct FMeshData* GetSubUVMesh() const { return SubUVMesh.get(); }
 
@@ -56,6 +59,7 @@ private:
 
 	bool bLoop = true;
 	bool bBillboard = false;
+	bool bPreview = false;
 
 	/** SubUV 렌더링을 위해 생성된 동적 메시 데이터 */
 	std::shared_ptr<struct FMeshData> SubUVMesh;

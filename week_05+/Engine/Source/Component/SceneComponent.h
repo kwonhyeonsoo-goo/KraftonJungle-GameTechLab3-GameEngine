@@ -23,8 +23,9 @@ public:
 	FVector GetWorldLocation() const;
 	const FMatrix& GetWorldTransform() const;
 	virtual void Serialize(class FArchive& Ar) override;
-private:
+protected:
 	void MarkTransformDirty();
+private:
 	void UpdateWorldTransform() const;
 
 	FTransform RelativeTransform{};

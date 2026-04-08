@@ -1,20 +1,18 @@
 #include "Actor.h"
 #include "Object/ObjectFactory.h"
-#include "Component/UUIDBillboardComponent.h"
+#include "Component/BillboardComponent.h"
 #include "Object/Class.h"
 #include "Renderer/Material.h"
-#include "Component/TextComponent.h"
+#include "Component/TextRenderComponent.h"
 #include "Component/SceneComponent.h"
 #include "Serializer/Archive.h"
 #include "Component/StaticMeshComponent.h"
 #include "ThirdParty/nlohmann/json.hpp"
+
 #include "Serializer/Archive.h"
 #include "World/Level.h"
-IMPLEMENT_RTTI(AActor, UObject)
 
-namespace {
-	FVector GZeroVector{};
-}
+IMPLEMENT_RTTI(AActor, UObject)
 
 ULevel* AActor::GetLevel() const { return Level; }
 void AActor::SetLevel(ULevel* InLevel) { Level = InLevel; }
@@ -83,21 +81,42 @@ void AActor::RemoveOwnedComponent(UActorComponent* InComponent)
 
 void AActor::PostSpawnInitialize()
 {
-	if (GetComponentByClass<UUUIDBillboardComponent>() == nullptr)
+	if (GetComponentByClass<UTextRenderComponent>() == nullptr)
 	{
-		UUUIDBillboardComponent* UUIDComponent =
-			FObjectFactory::ConstructObject<UUUIDBillboardComponent>(this, "UUIDBillboard");
+		UTextRenderComponent* TextComponent =
+			FObjectFactory::ConstructObject<UTextRenderComponent>(this, "TextComponent");
 
-		if (UUIDComponent)
+		if (TextComponent)
 		{
-			AddOwnedComponent(UUIDComponent);
+			AddOwnedComponent(TextComponent);
+			if (RootComponent)
+			{
+				TextComponent->AttachTo(RootComponent);
+			}
 
-			UUIDComponent->SetWorldOffset(FVector(0.0f, 0.0f, 0.3f));
-			UUIDComponent->SetWorldScale(0.3f);
-			UUIDComponent->SetTextColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+			TextComponent->SetWorldOffset(FVector(0.0f, 0.0f, 0.5f));
+			TextComponent->SetWorldScale(0.3f);
+			TextComponent->SetTextColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
 		}
 	}
+	//TODO** 삭제 빌보드 테스트 끝나면
+	if (GetComponentByClass<UBillboardComponent>() == nullptr)
+	{
+		UBillboardComponent* BillboardComp =
+			FObjectFactory::ConstructObject<UBillboardComponent>(this, "BillboardIcon");
 
+		if (BillboardComp)
+		{
+			AddOwnedComponent(BillboardComp);
+			if (RootComponent)
+			{
+				BillboardComp->AttachTo(RootComponent);
+			}
+			BillboardComp->SetRelativeLocation(FVector(0.0f, 0.0f, 0.8f));
+
+			BillboardComp->SetSize(FVector2(1.0f, 1.0f));
+		}
+	}
 	for (UActorComponent* Component : OwnedComponents)
 	{
 		if (Component && !Component->IsRegistered())
@@ -176,7 +195,15 @@ void AActor::Serialize(FArchive& Ar)
 
 		TArray<uint32> CompUUIDs;
 		for (UActorComponent* Comp : GetComponents())
-			if (Comp) CompUUIDs.push_back(Comp->UUID);
+			if (Comp)
+			{
+				Comp->SetOwner(this);
+
+				if (RootComponent && Comp != RootComponent && Comp->IsA(USceneComponent::StaticClass()))
+				{
+					static_cast<USceneComponent*>(Comp)->AttachTo(RootComponent);
+				}
+			}
 		Ar.SerializeUIntArray("ComponentUUIDs", CompUUIDs);
 	}
 	else // Load 
@@ -252,13 +279,13 @@ void AActor::Serialize(FArchive& Ar)
 	}
 
 	// 2. TextComponent 직렬화 (UUIDBillboardComponent와 충돌하지 않도록 필터링)
-	UTextComponent* RealTC = nullptr;
+	UTextRenderComponent* RealTC = nullptr;
 	for (UActorComponent* Comp : GetComponents())
 	{
 		// UUID빌보드가 아닌 진짜 순수 TextComponent만 
-		if (Comp->IsA(UTextComponent::StaticClass()) && !Comp->IsA(UUUIDBillboardComponent::StaticClass()))
+		if (Comp->IsA(UTextRenderComponent::StaticClass()) && !Comp->IsA(UBillboardComponent::StaticClass()))
 		{
-			RealTC = static_cast<UTextComponent*>(Comp);
+			RealTC = static_cast<UTextRenderComponent*>(Comp);
 			break;
 		}
 	}
@@ -282,12 +309,41 @@ void AActor::Serialize(FArchive& Ar)
 			}
 		}
 	}
+	UBillboardComponent* RealBC = nullptr;
+	for (UActorComponent* Comp : GetComponents())
+	{
+		if (Comp->IsA(UBillboardComponent::StaticClass()))
+		{
+			RealBC = static_cast<UBillboardComponent*>(Comp);
+			break;
+		}
+	}
+
+	if (RealBC)
+	{
+		if (Ar.IsSaving())
+		{
+			FArchive CompAr(true);
+			RealBC->Serialize(CompAr);
+			(*static_cast<nlohmann::json*>(Ar.GetRawJson()))["BillboardComponent"] = *static_cast<nlohmann::json*>(CompAr.GetRawJson());
+		}
+		else
+		{
+			auto& ParentJson = *static_cast<nlohmann::json*>(Ar.GetRawJson());
+			if (ParentJson.contains("BillboardComponent"))
+			{
+				FArchive CompAr(false);
+				*static_cast<nlohmann::json*>(CompAr.GetRawJson()) = ParentJson["BillboardComponent"];
+				RealBC->Serialize(CompAr);
+			}
+		}
+	}
 }
 const FVector& AActor::GetActorLocation() const
 {
 	if (RootComponent == nullptr)
 	{
-		return GZeroVector;
+		return FVector::ZeroVector;
 	}
 
 	return RootComponent->GetRelativeLocation();
@@ -317,6 +373,12 @@ void AActor::DuplicateSubObjects()
 	{
 		if (Component)
 		{
+			UTextRenderComponent* UUIDComp = dynamic_cast<UTextRenderComponent*>(Component);
+			if (UUIDComp)
+			{
+				continue; // UUIDBillboardComponent는 복제하지 않음
+			}
+
 			UActorComponent* DuplicatedComp = static_cast<UActorComponent*>(Component->Duplicate());
 			DuplicatedComp->SetOwner(this);
 			OwnedComponents.push_back(DuplicatedComp);

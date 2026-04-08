@@ -75,9 +75,10 @@ bool FEditorEngine::Initialize(HINSTANCE hInstance)
 	const float Width = MainWindow ? static_cast<float>(MainWindow->GetWidth()) : 1280.0f;
 	const float Height = MainWindow ? static_cast<float>(MainWindow->GetHeight()) : 720.0f;
 	WindowManager.SetRootRect(FRect(0.0f, 0.0f, Width, Height));
-	WindowManager.AddWindow(new SViewportWindow(
-		FRect(0.0f, 0.0f, Width, Height),
-		CreateEditorViewportContext(FRect(0.0f, 0.0f, Width, Height), EEditorViewportType::Perspective)));
+
+	FViewportContext* EditorViewportContext = CreateEditorViewportContext(FRect(0.0f, 0.0f, Width, Height), EEditorViewportType::Perspective);
+	WindowManager.AddWindow(new SViewportWindow(FRect(0.0f, 0.0f, Width, Height), EditorViewportContext));
+	ViewportContexts.push_back(EditorViewportContext);
 
 	FWorldContext& EditorWorldContext = FEngine::CreateWorldContext(EWorldType::Editor);
 	GWorld = EditorWorldContext.World;
@@ -181,7 +182,7 @@ void FEditorEngine::RemoveEditorWorldContext(EWorldType WorldType)
 void FEditorEngine::ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
 	FEngine::ProcessInput(Hwnd, Msg, WParam, LParam);
-	WindowManager.HandleMessage(Core.get(), Hwnd, Msg, WParam, LParam);
+	WindowManager.HandleMessage(Hwnd, Msg, WParam, LParam);
 }
 
 void FEditorEngine::Tick(float DeltaTime)
@@ -227,16 +228,27 @@ void FEditorEngine::Tick(float DeltaTime)
 	}
 #endif
 	Render();
+
+	// PendingKill 상태인 액터 제거
+	for (int32 idx = 0; idx < GUObjectArray.size(); ++idx)
+	{
+		UObject* Obj = GUObjectArray[idx];
+		if (!Obj) continue;
+
+		if (Obj->IsPendingKill())
+		{
+			delete Obj;
+			GUObjectArray[idx] = nullptr; // 슬롯을 nullptr로 마킹하여 삭제된 객체임을 표시
+		}
+	}
 }
 
 void FEditorEngine::Render()
 {
-	if (!Core || !GRenderer || GRenderer->IsOccluded())
+	if (!GRenderer || GRenderer->IsOccluded())
 	{
 		return;
 	}
-	SetViewportLayoutBounds(EditorUI.GetCentralDockSpaceRect());
-
 	GRenderer->BeginFrame();
 	WindowManager.RenderWindows();
 
@@ -262,13 +274,13 @@ FViewportContext* FEditorEngine::CreateEditorViewportContext(const FRect& InRect
 	FViewportClient* ViewportClient = CreateEditorViewportClient(InViewportType, EWorldType::Editor);
 	FViewport* Viewport = new FViewport(InRect);
 	FViewportContext* ViewportContext = new FViewportContext(Viewport, ViewportClient);
-	ViewportContext->Initialize(Core.get(), InputManager, EnhancedInput);
+	ViewportContext->Initialize(InputManager, EnhancedInput);
 	return ViewportContext;
 }
 
 FEditorViewportClient* FEditorEngine::CreateEditorViewportClient(EEditorViewportType InViewportType, EWorldType InWorldType)
 {
-	return new FEditorViewportClient(EditorUI, MainWindow, InViewportType, InWorldType);
+	return new FEditorViewportClient(EditorUI, InViewportType);
 }
 
 void FEditorEngine::RunObjViewerStartupTest()
@@ -293,8 +305,8 @@ void FEditorEngine::RunObjViewerStartupTest()
 		return;
 	}
 
-	ULevel* Level = ViewportClient->ResolveLevel(Core.get());
-	UWorld* World = ViewportClient->ResolveWorld(Core.get());
+	ULevel* Level = GWorld->GetLevel();
+	UWorld* World = GWorld;
 	if (!Level || !World)
 	{
 		return;

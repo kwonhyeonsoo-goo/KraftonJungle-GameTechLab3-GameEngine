@@ -48,8 +48,6 @@ void UStaticMeshComponent::SetStaticMeshData(ID3D11Device* Device, UStaticMesh* 
 
 	// 이전 메쉬가 쓰던 다이내믹 매테리얼 찌꺼기 초기화
 
-	DynamicMaterialOwners.clear();
-
 	if (!StaticMesh) return;
 
 	FStaticMeshRenderData* RenderData = StaticMesh->GetStaticMeshAsset();
@@ -377,7 +375,7 @@ void UStaticMeshComponent::Serialize(FArchive& Ar)
 				}
 			}
 
-			// 텍스처 경로가 있다면 로드
+
 			if (i < TexturePaths.size() && !TexturePaths[i].empty() && GRenderer)
 			{
 				FString DefaultTexPath = "";
@@ -387,7 +385,7 @@ void UStaticMeshComponent::Serialize(FArchive& Ar)
 					DefaultTexPath = DefaultMat->GetMaterialTexture()->AssetPath;
 				}
 
-				// 저장된 텍스처가 원본과 다를 때만 개별(Dynamic) 머티리얼을 생성해서 덮어씌움
+			
 				if (TexturePaths[i] != DefaultTexPath)
 				{
 					LoadTextureToSlot(GRenderer->GetDevice(), TexturePaths[i], i);

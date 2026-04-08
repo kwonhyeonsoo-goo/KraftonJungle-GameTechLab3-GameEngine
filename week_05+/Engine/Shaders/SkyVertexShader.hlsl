@@ -11,5 +11,6 @@ VS_OUTPUT main(VS_INPUT Input)
 	Output.Position = ClipPos; 
 	Output.Color = Input.Color;
 	Output.Normal = mul(Input.Normal, (float3x3) World);
+	output.ObjID = input.ObjID;
 	return Output;
 }

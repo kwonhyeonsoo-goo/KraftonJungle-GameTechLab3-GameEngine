@@ -3,9 +3,8 @@
 #include "CoreMinimal.h"
 #include "Windows.h"
 #include "Core/FTimer.h"
-#include "World/LevelTypes.h"
+#include "World/WorldType.h"
 #include "Renderer/Renderer.h"
-#include "Physics/PhysicsManager.h"
 #include "World/WorldContext.h"
 #include <memory>
 #include "Debug/DebugDrawManager.h"
@@ -40,56 +39,23 @@ public:
 	bool Initialize(HWND Hwnd, int32 Width, int32 Height, EWorldType StartupLevelType = EWorldType::Game);
 	void Release();
 
-	void Tick();
-	void Tick(float DeltaTime);
-
 	void ProcessInput(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
-	//FRenderer* GetRenderer() const { return Renderer.get(); }
-
-	//FViewportClient* GetViewportClient() const { return MainViewportClient; }
-	//FInputManager* GetInputManager() const { return InputManager; }
-	const FTimer& GetTimer() const { return Timer; }
-
-	//void SetViewportClient(FViewportClient* InViewportClient);
-	//void AddViewportClient(FViewportClient* InViewportClient);
 
 	void OnResize(int32 Width, int32 Height);
-	//FEnhancedInputManager* GetEnhancedInputManager() const { return EnhancedInput; }
-	float GetDeltaTime() const { return Timer.GetDeltaTime(); }
 
 	uint8 GetStatOverlayMode() const { return StatOverlayModeFlags; }
 	void SetStatOverlayMode(uint8 InFlags) { StatOverlayModeFlags = InFlags; }
 	void RenderStatOverlay(FRenderer* Renderer, int32 ViewportWidth, int32 ViewportHeight) const;
 
-	//void RenderViewport(TArray<AActor*>& Actors, FViewportContext& ViewportContext);
 	FDebugDrawManager& GetDebugDrawManager() { return DebugDrawManager; }
 
 private:
-	void Input(float DeltaTime);
-	void Physics(float DeltaTime);
-	void GameLogic(float DeltaTime);
-	//void Render();
-	void LateUpdate(float DeltaTime);
 	void RegisterConsoleVariables();
 
 private:
 	FDebugDrawManager DebugDrawManager;
-	//std::unique_ptr<FRenderer> Renderer;
-	//FInputManager* InputManager = nullptr;
-	//FEnhancedInputManager* EnhancedInput = nullptr;
 
-	ObjectManager* ObjManager = nullptr;
-	//FViewportClient* MainViewportClient = nullptr;
-	//TArray<FViewportClient*> ViewportClients;
-
-	std::unique_ptr<FPhysicsManager> PhysicsManager;
-
-	FTimer Timer;
-	double LastGCTime = 0.0;
-	double GCInterval = 30.0;
 	int32 WindowWidth = 0;
 	int32 WindowHeight = 0;
 	uint8 StatOverlayModeFlags = static_cast<uint8>(EStatOverlayMode::None);
-
-	//FRenderCommandQueue CommandQueue;
 };

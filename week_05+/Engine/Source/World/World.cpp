@@ -7,6 +7,9 @@
 #include "Serializer/SceneSerializer.h"
 #include "Core/Paths.h"
 #include "Actor/Actor.h"
+#include "Actor/Pawn.h"
+#include "Actor/Controller.h"
+
 IMPLEMENT_RTTI(UWorld, UObject)
 
 UWorld* GWorld = nullptr;
@@ -40,6 +43,23 @@ void UWorld::BeginPlay()
 {
 	if (bBegunPlay) return;  
 	bBegunPlay = true;
+
+	DefaultPawn = nullptr;
+	DefaultController = nullptr;
+
+	// 현재는 Defualt Pawn과 Controller를 처음 발견된 객체로 지정합니다. TODO: 수정 필요
+	for (AActor* Actor : GetActors())
+	{
+		if (APawn* Pawn = dynamic_cast<APawn*>(Actor))
+		{
+			DefaultPawn = Pawn;
+		}
+
+		if (AController* Controller = dynamic_cast<AController*>(Actor))
+		{
+			DefaultController = Controller;
+		}
+	}
 
 	if (Level)
 	{
