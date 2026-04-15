@@ -1,14 +1,11 @@
 {
-  "BlendState" : "",
-  "DepthStencilState" : "",
   "Parameters" : {
     "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000]
   },
-  "PathFileName" : "Asset/Materials/Hair.json",
-  "RasterizerState" : "",
+  "PathFileName" : "Asset/Materials/clean_retro_light_mat.002.json",
   "RenderPass" : "Opaque",
   "ShaderPath" : "Shaders/StaticMeshShader.hlsl",
   "Textures" : {
-    "DiffuseTexture" : "Data/Lumine/Texture/Hair.png"
+    "DiffuseTexture" : "Data/Retro-light/Texture/Clean_retro_light_albedo.png"
   }
 }
