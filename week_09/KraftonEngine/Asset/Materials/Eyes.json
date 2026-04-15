@@ -4,11 +4,11 @@
   "Parameters" : {
     "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000]
   },
-  "PathFileName" : "Asset/Materials/BasicShapeMaterial.json",
+  "PathFileName" : "Asset/Materials/Eyes.json",
   "RasterizerState" : "",
   "RenderPass" : "Opaque",
   "ShaderPath" : "Shaders/StaticMeshShader.hlsl",
   "Textures" : {
-    "DiffuseTexture" : "Data/BasicShape/BasicShape.png"
+    "DiffuseTexture" : "Data/Lumine/Texture/Hair.png"
   }
 }
