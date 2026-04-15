@@ -2058,7 +2058,7 @@ Ks 0.000000 0.000000 0.000000
 Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 illum 1
-map_Kd Textures/f15_c.jpg
+map_Kd Textures/f15_c.png
 map_d Textures/f15_o.jpg
 
 newmtl f16_mat
