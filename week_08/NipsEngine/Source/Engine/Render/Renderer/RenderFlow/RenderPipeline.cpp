@@ -69,7 +69,7 @@ bool FRenderPipeline::Initialize()
     RenderPasses.push_back(LightRenderPass);
 
     RenderPasses.push_back(FogRenderPass);
-    RenderPasses.push_back(FXAARenderPass);   
+    RenderPasses.push_back(FXAARenderPass); 
 	RenderPasses.push_back(FontRenderPass);
     RenderPasses.push_back(SubUVRenderPass);
     RenderPasses.push_back(TranslucentRenderPass);
