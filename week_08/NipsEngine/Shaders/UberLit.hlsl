@@ -12,6 +12,10 @@ struct FAmbientLightInfo
 struct FDirectionalLightInfo
 {
 	// TODO : 정렬 맞추십쇼
+    float4 DirectionLightDirection;
+    float4 DirectionLightColor;
+    float4 DirectionLightAmbient;
+    float4 DirectionLightSpecular;
 };
 
 struct FPointLightInfo

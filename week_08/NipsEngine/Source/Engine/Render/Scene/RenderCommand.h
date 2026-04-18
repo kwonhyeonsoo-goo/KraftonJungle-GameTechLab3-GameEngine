@@ -218,16 +218,6 @@ struct FLightData
 	float	Padding[3];
 };
 
-struct FLightPassConstants 
-{
-	FVector CameraWorldPos;
-	uint32	LightCount;
-
-	uint32 ViewMode;   // 4 bytes (필요시 더 압축해서 보냅니다.)
-	uint32 WorldLit;  // 4 bytes
-	float  Padding[2]; // 8 bytes
-};
-
 struct FRenderCommand
 {
 	FPerObjectConstants PerObjectConstants = {};
@@ -249,7 +239,6 @@ struct FRenderCommand
 		FBillboardConstants Billboard;  // ← 추가
         FFogConstants Fog;
         FFXAAConstants FXAA;
-		FLightPassConstants Light;
 	} Constants;
 
 	ERenderCommandType Type = ERenderCommandType::Primitive;
