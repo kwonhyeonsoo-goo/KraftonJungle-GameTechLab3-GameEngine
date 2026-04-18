@@ -926,17 +926,6 @@ void FSceneSaveManager::DeserializePropertyValue(FPropertyDescriptor& Prop, json
 		break;
 	}
 
-	// case EPropertyType::Material: {
-	// 	auto& Arr = *static_cast<TArray<UMaterialInterface*>*>(Prop.ValuePtr);
-	// 	Arr.clear();
-	// 	for (auto& elem : Value.ArrayRange())
-	// 	{
-	// 		UMaterialInterface* Mat = FResourceManager::Get().GetMaterialInterface(elem.ToString());
-	// 		Arr.push_back(Mat);
-	// 	}
-	// 	break;
-	// }
-
 	default:
 		break;
 	}
