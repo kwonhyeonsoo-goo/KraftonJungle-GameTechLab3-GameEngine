@@ -13,6 +13,8 @@
 #include "Component/HeightFogComponent.h"
 #include "Component/Light/AmbientLightComponent.h"
 #include "Component/Light/DirectionalLightComponent.h"
+#include "Component/Light/PointLightComponent.h"
+#include "Component/Light/SpotLightComponent.h"
 #include "Core/ResourceManager.h"
 #include "Engine/Geometry/Frustum.h"
 #include "Engine/Asset/StaticMesh.h"
@@ -216,7 +218,7 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus)
             const UAmbientLightComponent* AmbientLight = Cast<UAmbientLightComponent>(Slot.LightData);
             if (AmbientLight == nullptr || !AmbientLight->IsVisible())
             {
-                return;
+                continue;
             }
 
             const FColor& LightColor = AmbientLight->GetLightColor();
@@ -228,7 +230,7 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus)
             const UDirectionalLightComponent* DirectionalLight = Cast<UDirectionalLightComponent>(Slot.LightData);
             if (DirectionalLight == nullptr || !DirectionalLight->IsVisible())
             {
-                return;
+                continue;
             }
 
             FVector DirectionToLight = DirectionalLight->GetForwardVector() * -1.0f;
@@ -241,6 +243,44 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus)
                 FVector(LightColor.r, LightColor.g, LightColor.b) * Intensity,
                 Intensity);
 		}
+        else if (Slot.LightData->IsA<USpotLightComponent>())
+        {
+            const USpotLightComponent* SpotLight = Cast<USpotLightComponent>(Slot.LightData);
+            if (SpotLight == nullptr || !SpotLight->IsVisible())
+            {
+                continue;
+            }
+
+            const FColor& LightColor = SpotLight->GetLightColor();
+            const float Intensity = SpotLight->GetIntensity();
+
+            FLightData LightData = {};
+            LightData.WorldPos = SpotLight->GetWorldLocation();
+            LightData.Radius = SpotLight->GetAttenuationRadius();
+            LightData.Color = FVector(LightColor.r, LightColor.g, LightColor.b) * Intensity;
+            LightData.Intensity = Intensity;
+            LightData.RadiusFalloff = SpotLight->GetLightFalloffExponent();
+            RenderBus.AddLight(LightData);
+        }
+        else if (Slot.LightData->IsA<UPointLightComponent>())
+        {
+            const UPointLightComponent* PointLight = Cast<UPointLightComponent>(Slot.LightData);
+            if (PointLight == nullptr || !PointLight->IsVisible())
+            {
+                continue;
+            }
+
+            const FColor& LightColor = PointLight->GetLightColor();
+            const float Intensity = PointLight->GetIntensity();
+
+            FLightData LightData = {};
+            LightData.WorldPos = PointLight->GetWorldLocation();
+            LightData.Radius = PointLight->GetAttenuationRadius();
+            LightData.Color = FVector(LightColor.r, LightColor.g, LightColor.b) * Intensity;
+            LightData.Intensity = Intensity;
+            LightData.RadiusFalloff = PointLight->GetLightFalloffExponent();
+            RenderBus.AddLight(LightData);
+        }
 	}
 }
 

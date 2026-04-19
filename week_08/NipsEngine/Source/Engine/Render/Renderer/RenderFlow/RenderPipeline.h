@@ -15,6 +15,7 @@ class FEditorRenderPass;
 class FDepthLessRenderPass;
 class FPostProcessOutlineRenderPass;
 class FOpaqueRenderPass;
+class FLightCullingPass;
 class FBaseRenderPass;
 
 class FRenderPipeline
@@ -27,6 +28,7 @@ public:
 	ID3D11ShaderResourceView* GetOutSRV() const { return OutSRV; }
 
 private:
+    std::shared_ptr<FLightCullingPass> LightCullingPass;
     std::shared_ptr<FOpaqueRenderPass> OpaqueRenderPass;
     std::shared_ptr<FDecalRenderPass> DecalRenderPass;
     std::shared_ptr<FFogRenderPass> FogRenderPass;
