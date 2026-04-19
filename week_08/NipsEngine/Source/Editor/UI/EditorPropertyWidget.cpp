@@ -75,6 +75,41 @@ namespace
 		snprintf(OutBuf, BufSize, "xbtn_%p", Ptr);
 	}
 
+	static bool RenderStringComboOrInput(const char* Label, FString& Value, const TArray<FString>& Options)
+	{
+		if (!Options.empty())
+		{
+			bool bChanged = false;
+			if (ImGui::BeginCombo(Label, Value.empty() ? "<None>" : Value.c_str()))
+			{
+				for (const FString& Path : Options)
+				{
+					bool bSelected = (Value == Path);
+					if (ImGui::Selectable(Path.c_str(), bSelected))
+					{
+						Value = Path;
+						bChanged = true;
+					}
+					if (bSelected)
+						ImGui::SetItemDefaultFocus();
+				}
+				ImGui::EndCombo();
+			}
+			return bChanged;
+		}
+		else
+		{
+			char Buf[256];
+			strncpy_s(Buf, sizeof(Buf), Value.c_str(), _TRUNCATE);
+			if (ImGui::InputText(Label, Buf, sizeof(Buf)))
+			{
+				Value = Buf;
+				return true;
+			}
+			return false;
+		}
+	}
+
 	static FString GetMovementComponentDisplayName(UMovementComponent* MoveComp)
     {
         if (!MoveComp) return "None";
@@ -766,106 +801,23 @@ void FEditorPropertyWidget::RenderPropertyWidget(FPropertyDescriptor& Prop)
 	case EPropertyType::String:
 	{
 		FString* Val = static_cast<FString*>(Prop.ValuePtr);
-
-		if (strcmp(Prop.Name, "StaticMesh") == 0)
-		{
-			TArray<FString> MeshPaths = FResourceManager::Get().GetStaticMeshPaths();
-			if (!MeshPaths.empty())
-			{
-				const FString Current = *Val;
-				if (ImGui::BeginCombo(Prop.Name, Current.empty() ? "<None>" : Current.c_str()))
-				{
-					for (const FString& Path : MeshPaths)
-					{
-						const bool bSelected = (Current == Path);
-						if (ImGui::Selectable(Path.c_str(), bSelected))
-						{
-							*Val = Path;
-							bChanged = true;
-						}
-						if (bSelected)
-						{
-							ImGui::SetItemDefaultFocus();
-						}
-					}
-					ImGui::EndCombo();
-				}
-			}
-		}
-		else if (strcmp(Prop.Name, "Texture Path") == 0)
-		{
-			const TArray<FString>& TexturePaths = FResourceManager::Get().GetTextureFilePath();
-			if (!TexturePaths.empty())
-			{
-				const FString Current = *Val;
-				if (ImGui::BeginCombo(Prop.Name, Current.empty() ? "<None>" : Current.c_str()))
-				{
-					for (const FString& Path : TexturePaths)
-					{
-						const bool bSelected = (Current == Path);
-						if (ImGui::Selectable(Path.c_str(), bSelected))
-						{
-							*Val = Path;
-							bChanged = true;
-						}
-						if (bSelected)
-							ImGui::SetItemDefaultFocus();
-					}
-					ImGui::EndCombo();
-				}
-			}
-		}
-		else
-		{
-			char Buf[256];
-			strncpy_s(Buf, sizeof(Buf), Val->c_str(), _TRUNCATE);
-			if (ImGui::InputText(Prop.Name, Buf, sizeof(Buf)))
-			{
-				*Val = Buf;
-				bChanged = true;
-			}
-		}
+		TArray<FString> Options;
+		if      (strcmp(Prop.Name, "Texture Path") == 0) Options = FResourceManager::Get().GetTextureFilePath();
+		else if (strcmp(Prop.Name, "StaticMesh")   == 0) Options = FResourceManager::Get().GetStaticMeshPaths();
+		bChanged = RenderStringComboOrInput(Prop.Name, *Val, Options);
 		break;
 	}
 	case EPropertyType::Name:
 	{
 		FName* Val = static_cast<FName*>(Prop.ValuePtr);
 		FString Current = Val->ToString();
-
-		// 리소스 키와 매칭되는 프로퍼티면 콤보 박스로 렌더링
-		TArray<FString> Names;
-		if (strcmp(Prop.Name, "Font") == 0)
-			Names = FResourceManager::Get().GetFontNames();
-		else if (strcmp(Prop.Name, "Particle") == 0)
-			Names = FResourceManager::Get().GetParticleNames();
-
-		if (!Names.empty())
+		TArray<FString> Options;
+		if      (strcmp(Prop.Name, "Font")     == 0) Options = FResourceManager::Get().GetFontNames();
+		else if (strcmp(Prop.Name, "Particle") == 0) Options = FResourceManager::Get().GetParticleNames();
+		if (RenderStringComboOrInput(Prop.Name, Current, Options))
 		{
-			if (ImGui::BeginCombo(Prop.Name, Current.c_str()))
-			{
-				for (const auto& Name : Names)
-				{
-					bool bSelected = (Current == Name);
-					if (ImGui::Selectable(Name.c_str(), bSelected))
-					{
-						*Val = FName(Name);
-						bChanged = true;
-					}
-					if (bSelected)
-						ImGui::SetItemDefaultFocus();
-				}
-				ImGui::EndCombo();
-			}
-		}
-		else
-		{
-			char Buf[256];
-			strncpy_s(Buf, sizeof(Buf), Current.c_str(), _TRUNCATE);
-			if (ImGui::InputText(Prop.Name, Buf, sizeof(Buf)))
-			{
-				*Val = FName(Buf);
-				bChanged = true;
-			}
+			*Val = FName(Current);
+			bChanged = true;
 		}
 		break;
 	}
