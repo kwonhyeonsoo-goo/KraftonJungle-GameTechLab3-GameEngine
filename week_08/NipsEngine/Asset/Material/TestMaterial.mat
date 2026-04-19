@@ -1,7 +1,8 @@
 {
     "Name": "TestMaterial",
-    "Shader": "Shaders/ShaderStaticMesh.hlsl",
+    "Shader": "Shaders/UberLit.hlsl",
+    "LightingModel": "Phong",
     "Params": [
-        { "Name": "Diffuse", "Type": "FVector4", "Value": [1.0, 1.0, 1.0, 1.0] }
+        { "Name": "DiffuseColor", "Type": "Vector3", "Value": [1.0, 1.0, 1.0] }
     ]
 }

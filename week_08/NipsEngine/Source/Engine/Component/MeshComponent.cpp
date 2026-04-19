@@ -4,6 +4,11 @@
 
 DEFINE_CLASS(UMeshComponent, UPrimitiveComponent)
 
+UMeshComponent::~UMeshComponent()
+{
+	ReleaseOwnedMaterialInstances();
+}
+
 // UpdateWorldAABB 등의 함수를 오버라이드하지 않았기 때문에 UMeshComponent도 추상 클래스가 됩니다.
 // 추후에 MeshComponent를 사용할 일이 있다면 Duplicate의 주석을 해제하고 수정하시면 됩니다.
 
@@ -35,10 +40,12 @@ void UMeshComponent::Serialize(FArchive& Ar)
 
 	if (Ar.IsLoading())
 	{
+		ReleaseOwnedMaterialInstances();
+		Materials.clear();
 		Ar << "Materials" << MaterialPaths;
 
 		Materials.resize(MaterialPaths.size());
-		for (size_t i = 0; i < MaterialPaths.size(); ++i)
+		for (int32 i = 0; i < static_cast<int32>(MaterialPaths.size()); ++i)
 		{
 			if (!MaterialPaths[i].empty())
 			{
@@ -54,6 +61,12 @@ void UMeshComponent::Serialize(FArchive& Ar)
 	{
 		for (auto& Mat : Materials)
 		{
+			if (UMaterialInstance* MatInst = Cast<UMaterialInstance>(Mat))
+			{
+				MaterialPaths.push_back(MatInst->IsComponentTransient() ? "" : MatInst->GetName());
+				continue;
+			}
+
 			MaterialPaths.push_back(Mat ? Mat->GetName() : "");
 		}
 		Ar << "Materials" << MaterialPaths;
@@ -77,13 +90,30 @@ void UMeshComponent::SetMaterial(int32 SlotIndex, UMaterialInterface* InMaterial
 
 	if (Materials[SlotIndex] != InMaterial)
 	{
-		if (UMaterialInstance* MatInst = Cast<UMaterialInstance>(Materials[SlotIndex]))
-		{
-			delete MatInst;
-		}
+		ReleaseOwnedMaterialSlot(Materials[SlotIndex]);
 	}
 
 	Materials[SlotIndex] = InMaterial;
+}
+
+void UMeshComponent::ReleaseOwnedMaterialInstances()
+{
+	for (UMaterialInterface*& Material : Materials)
+	{
+		ReleaseOwnedMaterialSlot(Material);
+	}
+}
+
+void UMeshComponent::ReleaseOwnedMaterialSlot(UMaterialInterface*& InOutMaterial)
+{
+	UMaterialInstance* MatInst = Cast<UMaterialInstance>(InOutMaterial);
+	if (!MatInst || !MatInst->IsComponentTransient())
+	{
+		return;
+	}
+
+	UObjectManager::Get().DestroyObject(MatInst);
+	InOutMaterial = nullptr;
 }
 
 UMaterialInterface* UMeshComponent::GetMaterial(int32 SlotIndex) const

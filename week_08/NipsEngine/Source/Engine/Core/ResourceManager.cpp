@@ -4,10 +4,13 @@
 #include "SimpleJSON/json.hpp"
 
 #include <algorithm>
-#include <fstream>
-#include <filesystem>
 #include <chrono>
+#include <filesystem>
+#include <fstream>
 #include <ranges>
+#include <string>
+#include <unordered_set>
+#include <vector>
 
 #include "Asset/FileUtils.h"
 
@@ -20,6 +23,97 @@
 #include "Asset/StaticMeshSimplifier.h"
 #include "Render/Scene/RenderCommand.h"
 #include "Render/Resource/ObjMtlLoader.h"
+
+namespace
+{
+	constexpr const char* DefaultUberLitShaderPath = "Shaders/UberLit.hlsl";
+
+	TArray<FShaderMacro> NormalizeShaderMacros(TArray<FShaderMacro> Macros)
+	{
+		std::sort(Macros.begin(), Macros.end(), [](const FShaderMacro& Left, const FShaderMacro& Right)
+		{
+			if (Left.Name != Right.Name)
+			{
+				return Left.Name < Right.Name;
+			}
+
+			return Left.Value < Right.Value;
+		});
+
+		Macros.erase(std::unique(Macros.begin(), Macros.end()), Macros.end());
+		return Macros;
+	}
+
+	TArray<FShaderMacro> BuildShaderMacros(const D3D_SHADER_MACRO* Defines)
+	{
+		TArray<FShaderMacro> Macros;
+		if (Defines == nullptr)
+		{
+			return Macros;
+		}
+
+		for (const D3D_SHADER_MACRO* Define = Defines; Define->Name != nullptr; ++Define)
+		{
+			FShaderMacro Macro;
+			Macro.Name = Define->Name;
+			Macro.Value = Define->Definition ? Define->Definition : "";
+			Macros.push_back(Macro);
+		}
+
+		return NormalizeShaderMacros(std::move(Macros));
+	}
+
+	FShaderCompileKey NormalizeShaderCompileKey(FShaderCompileKey CompileKey)
+	{
+		CompileKey.Macros = NormalizeShaderMacros(std::move(CompileKey.Macros));
+		return CompileKey;
+	}
+
+	FShaderCompileKey BuildShaderCompileKey(const FString& FilePath,
+	                                       const FString& VSEntryPoint,
+	                                       const FString& PSEntryPoint,
+	                                       const D3D_SHADER_MACRO* Defines)
+	{
+		FShaderCompileKey CompileKey;
+		CompileKey.FilePath = FilePath;
+		CompileKey.VSEntryPoint = VSEntryPoint;
+		CompileKey.PSEntryPoint = PSEntryPoint;
+		CompileKey.Macros = BuildShaderMacros(Defines);
+		return CompileKey;
+	}
+
+	struct FCompiledShaderMacroData
+	{
+		std::vector<std::string> Names;
+		std::vector<std::string> Values;
+		std::vector<D3D_SHADER_MACRO> Macros;
+	};
+
+	FCompiledShaderMacroData BuildCompiledShaderMacroData(const TArray<FShaderMacro>& Macros)
+	{
+		FCompiledShaderMacroData MacroData;
+		MacroData.Names.reserve(Macros.size());
+		MacroData.Values.reserve(Macros.size());
+		for (const FShaderMacro& Macro : Macros)
+		{
+			MacroData.Names.emplace_back(Macro.Name);
+			MacroData.Values.emplace_back(Macro.Value);
+		}
+
+		MacroData.Macros.reserve(Macros.size() + 1);
+		for (size_t Index = 0; Index < Macros.size(); ++Index)
+		{
+			MacroData.Macros.push_back(
+			{
+				MacroData.Names[Index].c_str(),
+				MacroData.Values[Index].c_str()
+			});
+		}
+
+		MacroData.Macros.push_back({ nullptr, nullptr });
+		return MacroData;
+	}
+}
 
 #pragma region __BINARY__
 
@@ -170,9 +264,9 @@ void FResourceManager::LoadFromAssetDirectory(const FString& Path)
 		}
 		else if (Extension == L".mtl")
 		{
-			// TODO: 현재는 임의로 static mesh shader로 로드하도록 설정
+			// TODO: 현재는 UberLit을 기본 static mesh shader로 사용
 			MaterialFilePaths.push_back(RelativePath);
-			LoadMaterial(RelativePath, "Shaders/ShaderStaticMesh.hlsl", CachedDevice.Get());
+			LoadMaterial(RelativePath, DefaultUberLitShaderPath, CachedDevice.Get());
 		}
 		else if (Extension == L".mat")
 		{
@@ -287,11 +381,15 @@ void FResourceManager::RefreshFromAssetDirectory(const FString& Path)
 			else if (Extension == L".mtl")
 			{
 				MaterialFilePaths.push_back(RelativePath);
-				LoadMaterial(RelativePath, "Shaders/ShaderStaticMesh.hlsl", CachedDevice.Get());
+				LoadMaterial(RelativePath, DefaultUberLitShaderPath, CachedDevice.Get());
 			}
 			else if (Extension == L".mat")
 			{
 				MaterialFilePaths.push_back(RelativePath);
+				DeserializeMaterial(RelativePath);
+			}
+			else if (Extension == L".matinst")
+			{
 				DeserializeMaterial(RelativePath);
 			}
 			else if (
@@ -551,7 +649,7 @@ void FResourceManager::InitializeDefaultResources(ID3D11Device* Device)
 		Textures["DefaultWhite"] = DefaultTexture;
 	}
 
-	UMaterial* DefaultMat = GetOrCreateMaterial("DefaultWhite", "Shaders/ShaderStaticMesh.hlsl");
+	UMaterial* DefaultMat = GetOrCreateMaterial("DefaultWhite", DefaultUberLitShaderPath);
 	DefaultMat->MaterialParams["AmbientColor"] = FMaterialParamValue(DefaultMat->MaterialData.AmbientColor);
 	DefaultMat->MaterialParams["DiffuseColor"] = FMaterialParamValue(DefaultMat->MaterialData.DiffuseColor);
 	DefaultMat->MaterialParams["SpecularColor"] = FMaterialParamValue(DefaultMat->MaterialData.SpecularColor);
@@ -625,14 +723,29 @@ void FResourceManager::ReleaseGPUResources()
 	}
 	MaterialInstances.clear();
 
+	std::unordered_set<UShader*> UniqueShaders;
 	for (auto& [Key, Shader] : Shaders)
 	{
 		if (Shader)
 		{
-			UObjectManager::Get().DestroyObject(Shader);
+			UniqueShaders.insert(Shader);
 		}
 	}
 	Shaders.clear();
+
+	for (auto& [Key, Shader] : ShaderVariants)
+	{
+		if (Shader)
+		{
+			UniqueShaders.insert(Shader);
+		}
+	}
+	ShaderVariants.clear();
+
+	for (UShader* Shader : UniqueShaders)
+	{
+		UObjectManager::Get().DestroyObject(Shader);
+	}
 
 	for (auto& [Key, Font] : FontResources)
 	{
@@ -669,54 +782,115 @@ void FResourceManager::ReleaseGPUResources()
 	CachedDevice.Reset();
 }
 
-bool FResourceManager::LoadShader(const FString& FilePath, const FString& VSEntryPoint, const FString& PSEntryPoint,
-                                  const D3D11_INPUT_ELEMENT_DESC* InputElements, UINT InputElementCount, const D3D_SHADER_MACRO* Defines)
+bool FResourceManager::LoadShader(const FString& FilePath,
+                                  const FString& VSEntryPoint,
+                                  const FString& PSEntryPoint,
+                                  const D3D_SHADER_MACRO* Defines)
 {
+	return LoadShaderInternal(
+		BuildShaderCompileKey(FilePath, VSEntryPoint, PSEntryPoint, Defines),
+		nullptr,
+		0,
+		true);
+}
+
+bool FResourceManager::LoadShader(const FString& FilePath,
+                                  const FString& VSEntryPoint,
+                                  const FString& PSEntryPoint,
+                                  const D3D11_INPUT_ELEMENT_DESC* InputElements,
+                                  UINT InputElementCount,
+                                  const D3D_SHADER_MACRO* Defines)
+{
+	return LoadShaderInternal(
+		BuildShaderCompileKey(FilePath, VSEntryPoint, PSEntryPoint, Defines),
+		InputElements,
+		InputElementCount,
+		true);
+}
+
+bool FResourceManager::LoadShader(const FShaderCompileKey& CompileKey)
+{
+	return LoadShaderInternal(CompileKey, nullptr, 0, false);
+}
+
+bool FResourceManager::LoadShader(const FShaderCompileKey& CompileKey,
+                                  const D3D11_INPUT_ELEMENT_DESC* InputElements,
+                                  UINT InputElementCount)
+{
+	return LoadShaderInternal(CompileKey, InputElements, InputElementCount, false);
+}
+
+bool FResourceManager::LoadShaderInternal(const FShaderCompileKey& CompileKey,
+                                          const D3D11_INPUT_ELEMENT_DESC* InputElements,
+                                          UINT InputElementCount,
+                                          bool bRegisterPathAlias)
+{
+	if (!CachedDevice.Get())
+	{
+		return false;
+	}
+
+	const FShaderCompileKey NormalizedKey = NormalizeShaderCompileKey(CompileKey);
+	if (UShader* ExistingShader = GetShaderVariant(NormalizedKey))
+	{
+		if (bRegisterPathAlias && NormalizedKey.Macros.empty())
+		{
+			Shaders[NormalizedKey.FilePath] = ExistingShader;
+		}
+		return true;
+	}
+
 	UShader* Shader = UObjectManager::Get().CreateObject<UShader>();
-	Shader->FilePath = FilePath;
+	Shader->FilePath = NormalizedKey.FilePath;
 
 	TComPtr<ID3DBlob> VSBlob;
 	TComPtr<ID3DBlob> PSBlob;
 	TComPtr<ID3DBlob> ErrorBlob;
+	const FCompiledShaderMacroData MacroData = BuildCompiledShaderMacroData(NormalizedKey.Macros);
+	const D3D_SHADER_MACRO* RawMacros = MacroData.Macros.empty() ? nullptr : MacroData.Macros.data();
 
-	HRESULT hr = D3DCompileFromFile(FPaths::ToWide(FilePath).c_str(), Defines, D3D_COMPILE_STANDARD_FILE_INCLUDE,
-		VSEntryPoint.c_str(), "vs_5_0", 0, 0, &VSBlob, &ErrorBlob);
+	HRESULT hr = D3DCompileFromFile(FPaths::ToWide(NormalizedKey.FilePath).c_str(), RawMacros, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+		NormalizedKey.VSEntryPoint.c_str(), "vs_5_0", 0, 0, &VSBlob, &ErrorBlob);
 	if (FAILED(hr))
 	{
 		if (ErrorBlob)
 		{
-			UE_LOG("Vertex Shader Compile Error (%s): %s", FilePath.c_str(), static_cast<const char*>(ErrorBlob->GetBufferPointer()));
+			UE_LOG("Vertex Shader Compile Error (%s): %s", NormalizedKey.FilePath.c_str(), static_cast<const char*>(ErrorBlob->GetBufferPointer()));
 		}
 		else
 		{
-			UE_LOG("Failed to compile vertex shader: %s", FilePath.c_str());
+			UE_LOG("Failed to compile vertex shader: %s", NormalizedKey.FilePath.c_str());
 		}
+		UObjectManager::Get().DestroyObject(Shader);
 		return false;
 	}
 	if (!Shader->ReflectShader(VSBlob.Get(), CachedDevice.Get(), EShaderStage::Vertex))
 	{
-		UE_LOG("Failed to reflect vertex shader: %s", FilePath.c_str());
+		UE_LOG("Failed to reflect vertex shader: %s", NormalizedKey.FilePath.c_str());
+		UObjectManager::Get().DestroyObject(Shader);
 		return false;
 	}
 	ErrorBlob.Reset();
 
-	hr = D3DCompileFromFile(FPaths::ToWide(FilePath).c_str(), Defines, D3D_COMPILE_STANDARD_FILE_INCLUDE,
-		PSEntryPoint.c_str(), "ps_5_0", 0, 0, &PSBlob, &ErrorBlob);
+	hr = D3DCompileFromFile(FPaths::ToWide(NormalizedKey.FilePath).c_str(), RawMacros, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+		NormalizedKey.PSEntryPoint.c_str(), "ps_5_0", 0, 0, &PSBlob, &ErrorBlob);
 	if (FAILED(hr))
 	{
 		if (ErrorBlob)
 		{
-			UE_LOG("Pixel Shader Compile Error (%s): %s", FilePath.c_str(), static_cast<const char*>(ErrorBlob->GetBufferPointer()));
+			UE_LOG("Pixel Shader Compile Error (%s): %s", NormalizedKey.FilePath.c_str(), static_cast<const char*>(ErrorBlob->GetBufferPointer()));
 		}
 		else
 		{
-			UE_LOG("Failed to compile pixel shader: %s", FilePath.c_str());
+			UE_LOG("Failed to compile pixel shader: %s", NormalizedKey.FilePath.c_str());
 		}
+		UObjectManager::Get().DestroyObject(Shader);
 		return false;
 	}
 	if (!Shader->ReflectShader(PSBlob.Get(), CachedDevice.Get(), EShaderStage::Pixel))
 	{
-		UE_LOG("Failed to reflect pixel shader: %s", FilePath.c_str());
+		UE_LOG("Failed to reflect pixel shader: %s", NormalizedKey.FilePath.c_str());
+		UObjectManager::Get().DestroyObject(Shader);
 		return false;
 	}
 
@@ -724,7 +898,8 @@ bool FResourceManager::LoadShader(const FString& FilePath, const FString& VSEntr
 		&Shader->ShaderData.VS);
 	if (FAILED(hr))
 	{
-		UE_LOG("Failed to create vertex shader: %s", FilePath.c_str());
+		UE_LOG("Failed to create vertex shader: %s", NormalizedKey.FilePath.c_str());
+		UObjectManager::Get().DestroyObject(Shader);
 		return false;
 	}
 
@@ -732,22 +907,34 @@ bool FResourceManager::LoadShader(const FString& FilePath, const FString& VSEntr
 		&Shader->ShaderData.PS);
 	if (FAILED(hr))
 	{
-		UE_LOG("Failed to create pixel shader: %s", FilePath.c_str());
+		UE_LOG("Failed to create pixel shader: %s", NormalizedKey.FilePath.c_str());
+		UObjectManager::Get().DestroyObject(Shader);
 		return false;
 	}
 
-	if (Shader->ShaderData.InputLayout == nullptr && InputElements != nullptr && InputElementCount > 0)
+	if (InputElements != nullptr && InputElementCount > 0)
 	{
+		if (Shader->ShaderData.InputLayout)
+		{
+			Shader->ShaderData.InputLayout->Release();
+			Shader->ShaderData.InputLayout = nullptr;
+		}
+
 		hr = CachedDevice->CreateInputLayout(InputElements, InputElementCount, VSBlob->GetBufferPointer(),
 			VSBlob->GetBufferSize(), &Shader->ShaderData.InputLayout);
 		if (FAILED(hr))
 		{
-			UE_LOG("Failed to create input layout: %s", FilePath.c_str());
+			UE_LOG("Failed to create input layout: %s", NormalizedKey.FilePath.c_str());
+			UObjectManager::Get().DestroyObject(Shader);
 			return false;
 		}
 	}
 
-	Shaders[FilePath] = Shader;
+	ShaderVariants[NormalizedKey] = Shader;
+	if (bRegisterPathAlias && NormalizedKey.Macros.empty())
+	{
+		Shaders[NormalizedKey.FilePath] = Shader;
+	}
 
 	return true;
 }
@@ -794,6 +981,13 @@ UShader* FResourceManager::GetShader(const FString& FilePath) const
 {
 	auto It = Shaders.find(FilePath);
 	return (It != Shaders.end()) ? It->second : nullptr;
+}
+
+UShader* FResourceManager::GetShaderVariant(const FShaderCompileKey& CompileKey) const
+{
+	const FShaderCompileKey NormalizedKey = NormalizeShaderCompileKey(CompileKey);
+	auto It = ShaderVariants.find(NormalizedKey);
+	return (It != ShaderVariants.end()) ? It->second : nullptr;
 }
 
 TArray<FString> FResourceManager::GetMaterialNames() const
@@ -912,10 +1106,21 @@ bool FResourceManager::LoadMaterial(const FString& MtlFilePath, const FString& S
 
 UMaterialInstance* FResourceManager::CreateMaterialInstance(const FString& Path, UMaterial* Parent)
 {
+	if (UMaterialInstance* ExistingInstance = GetMaterialInstance(Path))
+	{
+		ExistingInstance->Parent = Parent;
+		ExistingInstance->OverridedParams.clear();
+		ExistingInstance->ClearLightingModelOverride();
+		ExistingInstance->SetOwnership(EMaterialInstanceOwnership::ResourceManaged);
+		ExistingInstance->ShaderBinding.reset();
+		return ExistingInstance;
+	}
+
 	UMaterialInstance* Instance = UObjectManager::Get().CreateObject<UMaterialInstance>();
 	Instance->Parent = Parent;
 	Instance->Name = Path;
 	Instance->FilePath = Path;
+	Instance->SetOwnership(EMaterialInstanceOwnership::ResourceManaged);
 	MaterialInstances[Path] = Instance;
 	return Instance;
 }
@@ -942,6 +1147,7 @@ bool FResourceManager::SerializeMaterial(const FString& MatFilePath, const UMate
 	JSON Root = JSON::Make(JSON::Class::Object);
 	Root["Name"] = Material->Name;
 	Root["Shader"] = Material->Shader ? Material->Shader->FilePath : "";
+	Root["LightingModel"] = ToLightingModelString(Material->GetEffectiveLightingModel());
 
 	JSON Params = JSON::Make(JSON::Class::Array);
 	for (const auto& [ParamName, ParamValue] : Material->MaterialParams)
@@ -1027,6 +1233,10 @@ bool FResourceManager::SerializeMaterialInstance(const FString& MatInstFilePath,
 	JSON Root = JSON::Make(JSON::Class::Object);
 	Root["Name"] = MaterialInstance->GetName();
 	Root["Parent"] = MaterialInstance->Parent->Name;
+	if (MaterialInstance->HasLightingModelOverride())
+	{
+		Root["LightingModel"] = ToLightingModelString(MaterialInstance->GetLightingModelOverride());
+	}
 	JSON Params = JSON::Make(JSON::Class::Array);
 	for (const auto& [ParamName, ParamValue] : MaterialInstance->OverridedParams)
 	{
@@ -1140,6 +1350,18 @@ bool FResourceManager::DeserializeMaterial(const FString& MatFilePath)
 		}
 
 		UMaterialInstance* MatInstance = CreateMaterialInstance(MatName, ParentMat);
+		if (Root.hasKey("LightingModel"))
+		{
+			ELightingModel LightingModel = ELightingModel::Phong;
+			if (TryParseLightingModel(Root["LightingModel"].ToString(), LightingModel))
+			{
+				MatInstance->SetLightingModelOverride(LightingModel);
+			}
+		}
+		else
+		{
+			MatInstance->ClearLightingModelOverride();
+		}
 
 		for (auto& Param : Root["OverridedParams"].ArrayRange())
 		{
@@ -1219,6 +1441,16 @@ bool FResourceManager::DeserializeMaterial(const FString& MatFilePath)
 	FString MatName = Root["Name"].ToString();
 	FString ShaderPath = Root["Shader"].ToString();
 	UMaterial* Material = GetOrCreateMaterial(MatName, MatFilePath, ShaderPath);
+	Material->FilePath = MatFilePath;
+	Material->SetShader(GetShader(ShaderPath));
+	Material->MaterialParams.clear();
+
+	ELightingModel LightingModel = ELightingModel::Phong;
+	if (Root.hasKey("LightingModel"))
+	{
+		TryParseLightingModel(Root["LightingModel"].ToString(), LightingModel);
+	}
+	Material->SetLightingModel(LightingModel);
 
 	for (auto& Param : Root["Params"].ArrayRange())
 	{
@@ -1413,7 +1645,7 @@ UStaticMesh* FResourceManager::LoadStaticMesh(const FString& Path)
 		return FoundMesh;
 	}
 
- 	LoadMaterial(Path, "Shaders/ShaderStaticMesh.hlsl");
+ 	LoadMaterial(Path, DefaultUberLitShaderPath);
 
 	FStaticMeshLoadOptions LoadOptions = {};
 

@@ -5,6 +5,24 @@
 #include "Render/Resource/Material.h"
 #include "Core/ResourceManager.h"
 
+namespace
+{
+	UShader* ResolveOpaqueShaderOverride(const FRenderPassContext* Context)
+	{
+		if (!Context || !Context->RenderBus)
+		{
+			return nullptr;
+		}
+
+		if (Context->RenderBus->GetViewMode() != EViewMode::Unlit)
+		{
+			return nullptr;
+		}
+
+		return FResourceManager::Get().GetShader("Shaders/UberUnlit.hlsl");
+	}
+}
+
 bool FOpaqueRenderPass::Initialize()
 {
     return true;
@@ -38,6 +56,8 @@ bool FOpaqueRenderPass::DrawCommand(const FRenderPassContext* Context)
     if (Commands.empty())
         return true;
 
+    UShader* ShaderOverride = ResolveOpaqueShaderOverride(Context);
+
     for (const FRenderCommand& Cmd : Commands)
     {
         if (Cmd.Type == ERenderCommandType::PostProcessOutline)
@@ -66,7 +86,7 @@ bool FOpaqueRenderPass::DrawCommand(const FRenderPassContext* Context)
 
         if (Cmd.Material)
         {
-            Cmd.Material->Bind(Context->DeviceContext, Context->RenderBus, &Cmd.PerObjectConstants);
+            Cmd.Material->Bind(Context->DeviceContext, Context->RenderBus, &Cmd.PerObjectConstants, ShaderOverride);
         }
 
 		CheckOverrideViewMode(Context);

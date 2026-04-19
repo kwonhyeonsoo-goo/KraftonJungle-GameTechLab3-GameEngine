@@ -17,6 +17,38 @@
 
 namespace
 {
+	bool IsEditableBaseMaterial(const UMaterialInterface* Material)
+	{
+		const UMaterial* BaseMaterial = Cast<UMaterial>(Material);
+		if (BaseMaterial == nullptr || BaseMaterial->GetFilePath().empty())
+		{
+			return false;
+		}
+
+		return std::filesystem::path(BaseMaterial->GetFilePath()).extension() == ".mat";
+	}
+
+	void PersistMaterialAsset(UMaterialInterface* Material)
+	{
+		if (Material == nullptr || Material->GetFilePath().empty())
+		{
+			return;
+		}
+
+		if (UMaterialInstance* MaterialInstance = Cast<UMaterialInstance>(Material))
+		{
+			FResourceManager::Get().SerializeMaterialInstance(MaterialInstance->GetFilePath(), MaterialInstance);
+			return;
+		}
+
+		if (UMaterial* BaseMaterial = Cast<UMaterial>(Material))
+		{
+			if (IsEditableBaseMaterial(BaseMaterial))
+			{
+				FResourceManager::Get().SerializeMaterial(BaseMaterial->GetFilePath(), BaseMaterial);
+			}
+		}
+	}
 }
 
 #define MAT_SEPARATOR() ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
@@ -285,6 +317,108 @@ void FEditorMaterialWidget::RenderMaterialDetails(UPrimitiveComponent* Primitive
 	if (!SelectedMaterialPtr)
 		return;
 
+	UMaterialInstance* MaterialInstance = Cast<UMaterialInstance>(SelectedMaterialPtr);
+	UMaterial* BaseMaterial = Cast<UMaterial>(SelectedMaterialPtr);
+	const bool bIsMaterialInstance = (MaterialInstance != nullptr);
+	const bool bCanEditBaseMaterial = IsEditableBaseMaterial(BaseMaterial);
+	const bool bCanEditLightingModel = bIsMaterialInstance || bCanEditBaseMaterial;
+	FString LightingPreviewLabel;
+
+	if (bIsMaterialInstance)
+	{
+		if (MaterialInstance->HasLightingModelOverride())
+		{
+			LightingPreviewLabel = ToLightingModelString(MaterialInstance->GetLightingModelOverride());
+		}
+		else
+		{
+			LightingPreviewLabel = "Inherited (";
+			LightingPreviewLabel += ToLightingModelString(MaterialInstance->GetEffectiveLightingModel());
+			LightingPreviewLabel += ")";
+		}
+	}
+	else if (BaseMaterial)
+	{
+		LightingPreviewLabel = ToLightingModelString(BaseMaterial->GetEffectiveLightingModel());
+	}
+	else
+	{
+		LightingPreviewLabel = "Phong";
+	}
+
+	if (!bCanEditLightingModel)
+	{
+		ImGui::BeginDisabled();
+	}
+
+	ImGui::SetNextItemWidth(-1);
+	if (ImGui::BeginCombo("Lighting Model", LightingPreviewLabel.c_str()))
+	{
+		if (bIsMaterialInstance)
+		{
+			const bool bInheritedSelected = !MaterialInstance->HasLightingModelOverride();
+			FString InheritedLabel = "Inherited (";
+			InheritedLabel += ToLightingModelString(MaterialInstance->Parent ? MaterialInstance->Parent->GetEffectiveLightingModel() : ELightingModel::Phong);
+			InheritedLabel += ")";
+
+			if (ImGui::Selectable(InheritedLabel.c_str(), bInheritedSelected))
+			{
+				MaterialInstance->ClearLightingModelOverride();
+				PersistMaterialAsset(MaterialInstance);
+			}
+
+			if (bInheritedSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+
+		const ELightingModel LightingModels[] =
+		{
+			ELightingModel::Gouraud,
+			ELightingModel::Lambert,
+			ELightingModel::Phong
+		};
+
+		for (ELightingModel LightingModel : LightingModels)
+		{
+			const bool bSelected = bIsMaterialInstance
+				? (MaterialInstance->HasLightingModelOverride() && MaterialInstance->GetLightingModelOverride() == LightingModel)
+				: (BaseMaterial && BaseMaterial->GetEffectiveLightingModel() == LightingModel);
+
+			if (ImGui::Selectable(ToLightingModelString(LightingModel), bSelected))
+			{
+				if (bIsMaterialInstance)
+				{
+					MaterialInstance->SetLightingModelOverride(LightingModel);
+					PersistMaterialAsset(MaterialInstance);
+				}
+				else if (BaseMaterial)
+				{
+					BaseMaterial->SetLightingModel(LightingModel);
+					PersistMaterialAsset(BaseMaterial);
+				}
+			}
+
+			if (bSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+
+		ImGui::EndCombo();
+	}
+
+	if (!bCanEditLightingModel)
+	{
+		ImGui::EndDisabled();
+	}
+
+	if (BaseMaterial && !bCanEditBaseMaterial)
+	{
+		ImGui::TextDisabled("Base .mtl materials are read-only. Create an instance to override parameters.");
+	}
+
 	MAT_SEPARATOR();
 	RenderMaterialProperties();
 }
@@ -295,8 +429,10 @@ void FEditorMaterialWidget::RenderMaterialProperties()
 
 	SelectedMaterialPtr->GatherAllParams(DisplayParams);
 	bool bIsInstanced = SelectedMaterialPtr->IsA<UMaterialInstance>();
+	const bool bCanEditBaseMaterial = IsEditableBaseMaterial(SelectedMaterialPtr);
+	const bool bCanEditParams = bIsInstanced || bCanEditBaseMaterial;
 
-	if (!bIsInstanced)
+	if (!bCanEditParams)
 	{
 		ImGui::BeginDisabled();
 	}
@@ -309,49 +445,49 @@ void FEditorMaterialWidget::RenderMaterialProperties()
 			if (ImGui::Checkbox(ParamName.c_str(), &std::get<bool>(ParamValue.Value)))
 			{
 				SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-				FResourceManager::Get().SerializeMaterialInstance(SelectedMaterialPtr->GetFilePath(), Cast<UMaterialInstance>(SelectedMaterialPtr));
+				PersistMaterialAsset(SelectedMaterialPtr);
 			}
 			break;
 		case EMaterialParamType::Int:
 			if (ImGui::DragInt(ParamName.c_str(), &std::get<int32>(ParamValue.Value)))
 			{
 				SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-				FResourceManager::Get().SerializeMaterialInstance(SelectedMaterialPtr->GetFilePath(), Cast<UMaterialInstance>(SelectedMaterialPtr));
+				PersistMaterialAsset(SelectedMaterialPtr);
 			}
 			break;
 		case EMaterialParamType::UInt:
 			if (ImGui::DragInt(ParamName.c_str(), reinterpret_cast<int32*>(&std::get<uint32>(ParamValue.Value))))
 			{
 				SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-				FResourceManager::Get().SerializeMaterialInstance(SelectedMaterialPtr->GetFilePath(), Cast<UMaterialInstance>(SelectedMaterialPtr));
+				PersistMaterialAsset(SelectedMaterialPtr);
 			}
 			break;
 		case EMaterialParamType::Float:
 			if (ImGui::DragFloat(ParamName.c_str(), &std::get<float>(ParamValue.Value), 0.01f))
 			{
 				SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-				FResourceManager::Get().SerializeMaterialInstance(SelectedMaterialPtr->GetFilePath(), Cast<UMaterialInstance>(SelectedMaterialPtr));
+				PersistMaterialAsset(SelectedMaterialPtr);
 			}
 			break;
 		case EMaterialParamType::Vector2:
 			if (ImGui::DragFloat2(ParamName.c_str(), &std::get<FVector2>(ParamValue.Value).X, 0.01f))
 			{
 				SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-				FResourceManager::Get().SerializeMaterialInstance(SelectedMaterialPtr->GetFilePath(), Cast<UMaterialInstance>(SelectedMaterialPtr));
+				PersistMaterialAsset(SelectedMaterialPtr);
 			}
 			break;
 		case EMaterialParamType::Vector3:
 			if (ImGui::DragFloat3(ParamName.c_str(), &std::get<FVector>(ParamValue.Value).X, 0.01f))
 			{
 				SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-				FResourceManager::Get().SerializeMaterialInstance(SelectedMaterialPtr->GetFilePath(), Cast<UMaterialInstance>(SelectedMaterialPtr));
+				PersistMaterialAsset(SelectedMaterialPtr);
 			}
 			break;
 		case EMaterialParamType::Vector4:
 			if (ImGui::DragFloat4(ParamName.c_str(), &std::get<FVector4>(ParamValue.Value).X, 0.01f))
 			{
 				SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-				FResourceManager::Get().SerializeMaterialInstance(SelectedMaterialPtr->GetFilePath(), Cast<UMaterialInstance>(SelectedMaterialPtr));
+				PersistMaterialAsset(SelectedMaterialPtr);
 			}
 			break;
 		case EMaterialParamType::Texture:
@@ -385,7 +521,7 @@ void FEditorMaterialWidget::RenderMaterialProperties()
 						{
 							ParamValue.Value = Texture;
 							SelectedMaterialPtr->SetParam(ParamName, ParamValue);
-							FResourceManager::Get().SerializeMaterialInstance(SelectedMaterialPtr->GetFilePath(), Cast<UMaterialInstance>(SelectedMaterialPtr));
+							PersistMaterialAsset(SelectedMaterialPtr);
 						}
 						if (bSelected) ImGui::SetItemDefaultFocus();
 					}
@@ -399,7 +535,7 @@ void FEditorMaterialWidget::RenderMaterialProperties()
 		}
 	}
 
-	if (!bIsInstanced)
+	if (!bCanEditParams)
 	{
 		ImGui::EndDisabled();
 	}

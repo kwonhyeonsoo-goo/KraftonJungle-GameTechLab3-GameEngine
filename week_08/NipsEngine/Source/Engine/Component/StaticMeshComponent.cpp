@@ -30,8 +30,16 @@ void UStaticMeshComponent::PostDuplicate(UObject* Original)
 	{
 		if (UMaterialInstance* OrigMatInst = Cast<UMaterialInstance>(Orig->Materials[i]))
 		{
-			UMaterialInstance* MatInst = UMaterialInstance::Create(OrigMatInst->Parent);
+			UMaterialInstance* MatInst = UMaterialInstance::CreateTransient(OrigMatInst->Parent);
 			MatInst->OverridedParams = OrigMatInst->OverridedParams;
+			if (OrigMatInst->HasLightingModelOverride())
+			{
+				MatInst->SetLightingModelOverride(OrigMatInst->GetLightingModelOverride());
+			}
+			else
+			{
+				MatInst->ClearLightingModelOverride();
+			}
 			Materials[i] = MatInst;
 		}
 		else
@@ -63,6 +71,7 @@ void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InStaticMesh)
     }
 
     StaticMeshAsset = InStaticMesh;
+	ReleaseOwnedMaterialInstances();
     Materials.clear();
 
     if (StaticMeshAsset != nullptr)

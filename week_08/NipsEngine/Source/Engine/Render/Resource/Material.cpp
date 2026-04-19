@@ -7,6 +7,34 @@ DEFINE_CLASS(UMaterialInstance, UMaterialInterface)
 
 namespace
 {
+	bool IsUberSurfaceShader(const UShader* Shader)
+	{
+		return Shader &&
+			(Shader->FilePath == "Shaders/UberLit.hlsl" || Shader->FilePath == "Shaders/UberUnlit.hlsl");
+	}
+
+	bool IsUberLitShader(const UShader* Shader)
+	{
+		return Shader && Shader->FilePath == "Shaders/UberLit.hlsl";
+	}
+
+	UShader* ResolveEffectiveMaterialShader(const UMaterialInterface& MaterialInterface, UShader* BaseShader, UShader* ShaderOverride)
+	{
+		if (ShaderOverride)
+		{
+			return ShaderOverride;
+		}
+
+		if (!IsUberLitShader(BaseShader))
+		{
+			return BaseShader;
+		}
+
+		UShader* VariantShader = FResourceManager::Get().GetShaderVariant(
+			MakeUberLitShaderCompileKey(MaterialInterface.GetEffectiveLightingModel()));
+		return VariantShader ? VariantShader : BaseShader;
+	}
+
 	void ApplyMaterialParam(FShaderBindingInstance& Binding, const FString& Name, const FMaterialParamValue& ParamValue)
 	{
 		switch (ParamValue.Type)
@@ -44,6 +72,77 @@ namespace
 	}
 }
 
+const char* ToLightingModelString(ELightingModel LightingModel)
+{
+	switch (LightingModel)
+	{
+	case ELightingModel::Gouraud:
+		return "Gouraud";
+	case ELightingModel::Lambert:
+		return "Lambert";
+	case ELightingModel::Phong:
+	default:
+		return "Phong";
+	}
+}
+
+bool TryParseLightingModel(const FString& Value, ELightingModel& OutLightingModel)
+{
+	if (Value == "Gouraud")
+	{
+		OutLightingModel = ELightingModel::Gouraud;
+		return true;
+	}
+
+	if (Value == "Lambert")
+	{
+		OutLightingModel = ELightingModel::Lambert;
+		return true;
+	}
+
+	if (Value == "Phong")
+	{
+		OutLightingModel = ELightingModel::Phong;
+		return true;
+	}
+
+	return false;
+}
+
+FShaderCompileKey MakeUberLitShaderCompileKey(ELightingModel LightingModel)
+{
+	FShaderCompileKey Key;
+	Key.FilePath = "Shaders/UberLit.hlsl";
+	Key.VSEntryPoint = "mainVS";
+	Key.PSEntryPoint = "mainPS";
+
+	switch (LightingModel)
+	{
+	case ELightingModel::Gouraud:
+		Key.Macros.push_back({ "LIGHTING_MODEL_GOURAUD", "1" });
+		break;
+	case ELightingModel::Lambert:
+		Key.Macros.push_back({ "LIGHTING_MODEL_LAMBERT", "1" });
+		break;
+	case ELightingModel::Phong:
+	default:
+		Key.Macros.push_back({ "LIGHTING_MODEL_PHONG", "1" });
+		break;
+	}
+
+	return Key;
+}
+
+UMaterialInstance* UMaterialInstance::CreateTransient(UMaterial* Material)
+{
+	UMaterialInstance* Instance = UObjectManager::Get().CreateObject<UMaterialInstance>();
+	Instance->Parent = Material;
+	Instance->Name = Instance->GetFName().ToString();
+	Instance->FilePath.clear();
+	Instance->SetOwnership(EMaterialInstanceOwnership::ComponentTransient);
+	return Instance;
+}
+
 ID3D11SamplerState* UMaterial::ApplyRenderStates(ID3D11DeviceContext* Context) const
 {
 	if (!Context)
@@ -63,20 +162,25 @@ ID3D11SamplerState* UMaterial::ApplyRenderStates(ID3D11DeviceContext* Context) c
 	return Sampler;
 }
 
-void UMaterial::EnsureShaderBinding(ID3D11Device* Device) const
+void UMaterial::EnsureShaderBinding(ID3D11Device* Device, UShader* ShaderToBind) const
 {
-	if (!Shader)
+	if (!ShaderToBind)
 	{
 		ShaderBinding.reset();
 		return;
 	}
 
-	if (ShaderBinding && ShaderBinding->GetShader() == Shader)
+	if (ShaderBinding && ShaderBinding->GetShader() == ShaderToBind)
 	{
 		return;
 	}
 
-	ShaderBinding = Shader->CreateBindingInstance(Device);
+	ShaderBinding = ShaderToBind->CreateBindingInstance(Device);
+}
+
+void UMaterial::EnsureShaderBinding(ID3D11Device* Device) const
+{
+	EnsureShaderBinding(Device, Shader);
 }
 
 void UMaterial::ApplyParams(FShaderBindingInstance& Binding, const TMap<FString, FMaterialParamValue>& Params) const
@@ -89,12 +193,18 @@ void UMaterial::ApplyParams(FShaderBindingInstance& Binding, const TMap<FString,
 
 void UMaterial::Bind(ID3D11DeviceContext* Context, const FRenderBus* RenderBus, const FPerObjectConstants* PerObject) const
 {
-	if (!Context || !Shader)
+	Bind(Context, RenderBus, PerObject, nullptr);
+}
+
+void UMaterial::Bind(ID3D11DeviceContext* Context, const FRenderBus* RenderBus, const FPerObjectConstants* PerObject, UShader* ShaderOverride) const
+{
+	UShader* EffectiveShader = ResolveEffectiveMaterialShader(*this, Shader, ShaderOverride);
+	if (!Context || !EffectiveShader)
 	{
 		return;
 	}
 
-	EnsureShaderBinding(FResourceManager::Get().GetCachedDevice());
+	EnsureShaderBinding(FResourceManager::Get().GetCachedDevice(), EffectiveShader);
 	if (!ShaderBinding)
 	{
 		return;
@@ -110,7 +220,14 @@ void UMaterial::Bind(ID3D11DeviceContext* Context, const FRenderBus* RenderBus, 
 
 	if (PerObject)
 	{
-		ShaderBinding->ApplyPerObjectParameters(*PerObject);
+		if (IsUberSurfaceShader(EffectiveShader))
+		{
+			ShaderBinding->ApplyUberPerObjectParameters(*PerObject);
+		}
+		else
+		{
+			ShaderBinding->ApplyPerObjectParameters(*PerObject);
+		}
 	}
 
 	ApplyParams(*ShaderBinding, MaterialParams);
@@ -119,7 +236,13 @@ void UMaterial::Bind(ID3D11DeviceContext* Context, const FRenderBus* RenderBus, 
 
 void UMaterialInstance::Bind(ID3D11DeviceContext* Context, const FRenderBus* RenderBus, const FPerObjectConstants* PerObject) const
 {
-	if (!Context || !Parent || !Parent->Shader)
+	Bind(Context, RenderBus, PerObject, nullptr);
+}
+
+void UMaterialInstance::Bind(ID3D11DeviceContext* Context, const FRenderBus* RenderBus, const FPerObjectConstants* PerObject, UShader* ShaderOverride) const
+{
+	UShader* EffectiveShader = ResolveEffectiveMaterialShader(*this, Parent ? Parent->Shader : nullptr, ShaderOverride);
+	if (!Context || !Parent || !EffectiveShader)
 	{
 		return;
 	}
@@ -131,9 +254,9 @@ void UMaterialInstance::Bind(ID3D11DeviceContext* Context, const FRenderBus* Ren
 		CombinedParams[Name] = Value;
 	}
 
-	if (!ShaderBinding || ShaderBinding->GetShader() != Parent->Shader)
+	if (!ShaderBinding || ShaderBinding->GetShader() != EffectiveShader)
 	{
-		ShaderBinding = Parent->Shader->CreateBindingInstance(FResourceManager::Get().GetCachedDevice());
+		ShaderBinding = EffectiveShader->CreateBindingInstance(FResourceManager::Get().GetCachedDevice());
 	}
 
 	if (!ShaderBinding)
@@ -151,7 +274,14 @@ void UMaterialInstance::Bind(ID3D11DeviceContext* Context, const FRenderBus* Ren
 
 	if (PerObject)
 	{
-		ShaderBinding->ApplyPerObjectParameters(*PerObject);
+		if (IsUberSurfaceShader(EffectiveShader))
+		{
+			ShaderBinding->ApplyUberPerObjectParameters(*PerObject);
+		}
+		else
+		{
+			ShaderBinding->ApplyPerObjectParameters(*PerObject);
+		}
 	}
 
 	Parent->ApplyParams(*ShaderBinding, CombinedParams);

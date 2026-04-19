@@ -28,6 +28,8 @@ struct SAHCandidate
 class FKDTree
 {
   public:
+    ~FKDTree();
+    void Clear();
     void     Build(const TArray<FNormalVertex>& Vertices, const TArray<uint32>& Indices);
     FKDNode* BuildRecursive(const FAABB& CurrentBounds, TArray<uint32>& TriangleIndices, uint32 Depth);
     float    FindBestSplit(const FAABB& Bounds, const TArray<uint32>& TriangleIndices,
@@ -44,6 +46,7 @@ class FKDTree
                                                  float& OutT);
 
   private:
+    void ClearRecursive(FKDNode* Node);
     FKDNode*      Root = nullptr;
     TArray<FAABB> TriangleAABBs;
     int32 MaxLeafSize = 2;

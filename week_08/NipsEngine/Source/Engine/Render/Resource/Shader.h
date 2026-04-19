@@ -54,6 +54,24 @@ struct FSamplerBindDesc
 	uint32 BindPoint = 0;
 };
 
+struct FShaderMacro
+{
+	FString Name;
+	FString Value;
+
+	bool operator==(const FShaderMacro& Other) const = default;
+};
+
+struct FShaderCompileKey
+{
+	FString FilePath;
+	FString VSEntryPoint;
+	FString PSEntryPoint;
+	TArray<FShaderMacro> Macros;
+
+	bool operator==(const FShaderCompileKey& Other) const = default;
+};
+
 struct FReflectResult
 {
 	TMap<FString, FConstantBufferDesc> CBuffers;
@@ -161,6 +179,7 @@ public:
 
 	void ApplyFrameParameters(const FRenderBus& RenderBus);
 	void ApplyPerObjectParameters(const FPerObjectConstants& Constants);
+	void ApplyUberPerObjectParameters(const FPerObjectConstants& Constants);
 
 	void Bind(ID3D11DeviceContext* Context);
 
@@ -176,3 +195,35 @@ private:
 	TMap<FString, FTextureRuntime> Textures[static_cast<uint32>(EShaderStage::Count)];
 	TMap<FString, FSamplerRuntime> Samplers[static_cast<uint32>(EShaderStage::Count)];
 };
+
+namespace std
+{
+	template<>
+	struct hash<FShaderMacro>
+	{
+		size_t operator()(const FShaderMacro& Macro) const noexcept
+		{
+			size_t Hash = std::hash<FString>{}(Macro.Name);
+			Hash ^= std::hash<FString>{}(Macro.Value) + 0x9e3779b9u + (Hash << 6) + (Hash >> 2);
+			return Hash;
+		}
+	};
+
+	template<>
+	struct hash<FShaderCompileKey>
+	{
+		size_t operator()(const FShaderCompileKey& Key) const noexcept
+		{
+			size_t Hash = std::hash<FString>{}(Key.FilePath);
+			Hash ^= std::hash<FString>{}(Key.VSEntryPoint) + 0x9e3779b9u + (Hash << 6) + (Hash >> 2);
+			Hash ^= std::hash<FString>{}(Key.PSEntryPoint) + 0x9e3779b9u + (Hash << 6) + (Hash >> 2);
+
+			for (const FShaderMacro& Macro : Key.Macros)
+			{
+				Hash ^= std::hash<FShaderMacro>{}(Macro) + 0x9e3779b9u + (Hash << 6) + (Hash >> 2);
+			}
+
+			return Hash;
+		}
+	};
+}
