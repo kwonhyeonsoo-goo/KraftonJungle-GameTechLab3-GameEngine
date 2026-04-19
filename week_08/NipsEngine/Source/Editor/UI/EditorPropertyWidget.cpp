@@ -3,6 +3,12 @@
 #include "Editor/EditorEngine.h"
 #include "ImGui/imgui.h"
 #include "GameFramework/PrimitiveActors.h"
+#include "Core/PropertyTypes.h"
+#include "Math/Color.h"
+#include "Core/ResourceManager.h"
+#include "Object/FName.h"
+#include <functional>
+
 #include "Component/StaticMeshComponent.h"
 #include "Component/BillboardComponent.h"
 #include "Component/TextRenderComponent.h"
@@ -12,14 +18,12 @@
 #include "Component/Movement/ProjectileMovementComponent.h"
 #include "Component/Movement/InterpToMovementComponent.h"
 #include "Component/Movement/PursuitMovementComponent.h"
-#include "Core/PropertyTypes.h"
-#include "Math/Color.h"
-#include "Core/ResourceManager.h"
-#include "Object/FName.h"
-#include <functional>
-#include "Component/HeightFogComponent.h"
-#include "Component/Light/LightComponent.h"
 #include "Selection/SelectionManager.h"
+#include "Component/HeightFogComponent.h"
+#include "Component/Light/AmbientLightComponent.h"
+#include "Component/Light/DirectionalLightComponent.h"
+#include "Component/Light/PointLightComponent.h"
+#include "Component/Light/SpotLightComponent.h"
 
 #define SEPARATOR(); ImGui::Spacing(); ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing(); ImGui::Spacing();
 
@@ -223,13 +227,33 @@ static const TArray<FComponentMenuEntry> ComponentMenuRegistry = {
 		}
 	},
     {
-        "Light Component",
-      [](AActor* Actor) -> UActorComponent*
-      {
-          ULightComponent* Comp = Actor->AddComponent<ULightComponent>();
-          return Comp;
-      }
+        "AmbientLight Component",
+		[](AActor* Actor) -> UActorComponent*
+		{
+			return Actor->AddComponent<UAmbientLightComponent>();
+		}
     },
+	{
+		"DirectionalLight Component",
+		[](AActor* Actor) -> UActorComponent*
+		{
+			return Actor->AddComponent<UDirectionalLightComponent>();;
+		}
+	},
+	{
+		"PointLight Component",
+		[](AActor* Actor) -> UActorComponent*
+		{
+			return Actor->AddComponent<UPointLightComponent>();
+		}
+	},
+	{
+		"SpotLight Component",
+		[](AActor* Actor) -> UActorComponent*
+		{
+			return Actor->AddComponent<USpotLightComponent>();
+		}
+	}
 };
 
 void FEditorPropertyWidget::Initialize(UEditorEngine* InEditorEngine)
