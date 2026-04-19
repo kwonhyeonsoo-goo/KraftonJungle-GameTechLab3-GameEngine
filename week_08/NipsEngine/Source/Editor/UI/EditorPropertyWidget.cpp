@@ -436,8 +436,8 @@ void FEditorPropertyWidget::RenderComponentTree(AActor* Actor)
     for (UActorComponent* Comp : Actor->GetComponents())
     {
         // SceneComponent는 위의 트리 렌더링에서 처리되었으므로 패스
-        if (!Comp || Comp->IsA<USceneComponent>())
-            continue;
+        if (!Comp || Comp->IsA<USceneComponent>()) { continue; }
+        if (Comp->IsVisualizationComponent()) { continue; }
 
         ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
         if (!bActorSelected && SelectedComponent == Comp)
@@ -495,13 +495,22 @@ void FEditorPropertyWidget::RenderComponentTree(AActor* Actor)
 void FEditorPropertyWidget::RenderSceneComponentNode(AActor* Actor, USceneComponent* Comp, UActorComponent*& OutCompToDelete)
 {
     if (!Comp) return;
+    if (Comp->IsVisualizationComponent()) return;
 
     FString Name = Comp->GetFName().ToString();
     if (Name.empty()) Name = Comp->GetTypeInfo()->name;
 
     const auto& Children = Comp->GetChildren();
 
-    bool bHasChildren = !Children.empty(); // 자식 무브먼트 체크 제거
+    bool bHasChildren = false;
+    for (USceneComponent* Child : Children)
+    {
+        if (!Child->IsVisualizationComponent())
+        {
+            bHasChildren = true;
+            break;
+        }
+    }
 
     ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen;
     if (!bHasChildren) Flags |= ImGuiTreeNodeFlags_Leaf;
