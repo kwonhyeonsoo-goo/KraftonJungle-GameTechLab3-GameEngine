@@ -68,6 +68,23 @@ struct FMaterialParamValue
 	std::variant<bool, int32, uint32, float, FVector2, FVector, FVector4, FMatrix, UTexture*> Value;
 };
 
+enum class EMaterialInstanceOwnership : uint8
+{
+	ResourceManaged,
+	ComponentTransient,
+};
+
+enum class ELightingModel : uint8
+{
+	Gouraud = 0,
+	Lambert,
+	Phong,
+};
+
+const char* ToLightingModelString(ELightingModel LightingModel);
+bool TryParseLightingModel(const FString& Value, ELightingModel& OutLightingModel);
+FShaderCompileKey MakeUberLitShaderCompileKey(ELightingModel LightingModel);
+
 class UMaterialInterface : public UObject
 {
 public:
@@ -78,8 +95,14 @@ public:
 	virtual const FString& GetFilePath() const = 0;
 	virtual FString& GetFilePathRef() = 0;
 	
-	virtual void Bind(ID3D11DeviceContext* Context, const FRenderBus* RenderBus = nullptr, const FPerObjectConstants* PerObject = nullptr) const = 0;
+	void Bind(ID3D11DeviceContext* Context, const FRenderBus* RenderBus = nullptr, const FPerObjectConstants* PerObject = nullptr) const
+	{
+		Bind(Context, RenderBus, PerObject, nullptr);
+	}
+
+	virtual void Bind(ID3D11DeviceContext* Context, const FRenderBus* RenderBus, const FPerObjectConstants* PerObject, UShader* ShaderOverride) const = 0;
 	virtual bool GetParam(const FString& Name, FMaterialParamValue& OutValue) const = 0;
+	virtual ELightingModel GetEffectiveLightingModel() const = 0;
 
 	virtual void SetParam(const FString& Name, const FMaterialParamValue& Value) = 0;
 
@@ -115,16 +138,23 @@ public:
 	EBlendType BlendType = EBlendType::Opaque;
 	ERasterizerType RasterizerType = ERasterizerType::SolidBackCull;
 	D3D11_PRIMITIVE_TOPOLOGY PrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	ELightingModel LightingModel = ELightingModel::Phong;
 
 	const FString& GetName() const override { return Name; }
 	FString& GetNameRef() override { return Name; }
 	const FString& GetFilePath() const override { return FilePath; }
 	FString& GetFilePathRef() override { return FilePath; }
+	ELightingModel GetEffectiveLightingModel() const override { return LightingModel; }
 
 	void SetShader(UShader* InShader)
 	{
 		Shader = InShader;
 		ShaderBinding.reset();
+	}
+
+	void SetLightingModel(ELightingModel InLightingModel)
+	{
+		LightingModel = InLightingModel;
 	}
 
 	void SetParam(const FString& Name, const FMaterialParamValue& Value)
@@ -142,7 +172,8 @@ public:
 		return false;
 	}
 
-	virtual void Bind(ID3D11DeviceContext* Context, const FRenderBus* RenderBus = nullptr, const FPerObjectConstants* PerObject = nullptr) const override;
+	void Bind(ID3D11DeviceContext* Context, const FRenderBus* RenderBus = nullptr, const FPerObjectConstants* PerObject = nullptr) const;
+	void Bind(ID3D11DeviceContext* Context, const FRenderBus* RenderBus, const FPerObjectConstants* PerObject, UShader* ShaderOverride) const override;
 
 	void ApplyParams(FShaderBindingInstance& Binding, const TMap<FString, FMaterialParamValue>& Params) const;
 
@@ -156,6 +187,7 @@ public:
 
 	ID3D11SamplerState* ApplyRenderStates(ID3D11DeviceContext* Context) const;
 	void EnsureShaderBinding(ID3D11Device* Device) const;
+	void EnsureShaderBinding(ID3D11Device* Device, UShader* ShaderToBind) const;
 };
 
 class UMaterialInstance : public UMaterialInterface
@@ -175,12 +207,32 @@ public:
 	FString& GetNameRef() override { return Name; }
 	const FString& GetFilePath() const override { return FilePath; }
 	FString& GetFilePathRef() override { return FilePath; }
-
-	static UMaterialInstance* Create(UMaterial* Material)
+	ELightingModel GetEffectiveLightingModel() const override
 	{
-		UMaterialInstance* Instance = new UMaterialInstance();
-		Instance->Parent = Material;
-		return Instance;
+		if (bOverrideLightingModel)
+		{
+			return LightingModelOverride;
+		}
+
+		return Parent ? Parent->GetEffectiveLightingModel() : ELightingModel::Phong;
+	}
+
+	static UMaterialInstance* CreateTransient(UMaterial* Material);
+
+	void SetOwnership(EMaterialInstanceOwnership InOwnership) { Ownership = InOwnership; }
+	EMaterialInstanceOwnership GetOwnership() const { return Ownership; }
+	bool IsResourceManaged() const { return Ownership == EMaterialInstanceOwnership::ResourceManaged; }
+	bool IsComponentTransient() const { return Ownership == EMaterialInstanceOwnership::ComponentTransient; }
+	bool HasLightingModelOverride() const { return bOverrideLightingModel; }
+	ELightingModel GetLightingModelOverride() const { return LightingModelOverride; }
+	void SetLightingModelOverride(ELightingModel InLightingModel)
+	{
+		bOverrideLightingModel = true;
+		LightingModelOverride = InLightingModel;
+	}
+	void ClearLightingModelOverride()
+	{
+		bOverrideLightingModel = false;
 	}
 
 	void SetParam(const FString& Name, const FMaterialParamValue& Value)
@@ -198,7 +250,8 @@ public:
 		return Parent ? Parent->GetParam(Name, OutValue) : false;
 	}
 
-	void Bind(ID3D11DeviceContext* Context, const FRenderBus* RenderBus = nullptr, const FPerObjectConstants* PerObject = nullptr) const override;
+	void Bind(ID3D11DeviceContext* Context, const FRenderBus* RenderBus = nullptr, const FPerObjectConstants* PerObject = nullptr) const;
+	void Bind(ID3D11DeviceContext* Context, const FRenderBus* RenderBus, const FPerObjectConstants* PerObject, UShader* ShaderOverride) const override;
 
 	void GatherAllParams(TMap<FString, FMaterialParamValue>& OutParams) const override
 	{
@@ -212,4 +265,11 @@ public:
 			OutParams[Key] = Param;
 		}
 	}
+
+private:
+	EMaterialInstanceOwnership Ownership = EMaterialInstanceOwnership::ResourceManaged;
+	bool bOverrideLightingModel = false;
+	ELightingModel LightingModelOverride = ELightingModel::Phong;
+
+	friend class FResourceManager;
 };

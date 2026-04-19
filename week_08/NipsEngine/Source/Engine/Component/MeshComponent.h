@@ -7,6 +7,7 @@ class UMeshComponent : public UPrimitiveComponent
 {
 public:
 	DECLARE_CLASS(UMeshComponent, UPrimitiveComponent)
+	~UMeshComponent() override;
 
 	virtual void Serialize(FArchive& Ar) override;
 
@@ -21,6 +22,10 @@ public:
 	void PostEditProperty(const char * PropertyName) override;
 	
 	virtual void TickComponent(float DeltaTime) override;
+
+protected:
+	void ReleaseOwnedMaterialInstances();
+	void ReleaseOwnedMaterialSlot(UMaterialInterface*& InOutMaterial);
 
 protected:
 	TArray<UMaterialInterface*> Materials;

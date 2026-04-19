@@ -1,4 +1,28 @@
-﻿#include "KDTree.h"
+#include "KDTree.h"
+
+FKDTree::~FKDTree()
+{
+    Clear();
+}
+
+void FKDTree::Clear()
+{
+    ClearRecursive(Root);
+    Root = nullptr;
+    TriangleAABBs.clear();
+}
+
+void FKDTree::ClearRecursive(FKDNode* Node)
+{
+    if (!Node)
+    {
+        return;
+    }
+
+    ClearRecursive(Node->Left);
+    ClearRecursive(Node->Right);
+    delete Node;
+}
 
 FAABB FKDTree::CalculateTriangleAABB(const TArray<FNormalVertex>& Vertices,
                                      const TArray<uint32>& Indices, uint32 TriIdx)
@@ -16,7 +40,7 @@ FAABB FKDTree::CalculateTriangleAABB(const TArray<FNormalVertex>& Vertices,
 
 void FKDTree::Build(const TArray<FNormalVertex>& Vertices, const TArray<uint32>& Indices)
 {
-    Root = nullptr;
+    Clear();
 
 	uint32 TriangleCount = static_cast<int32>(Indices.size() / 3);
     if (TriangleCount <= 0)

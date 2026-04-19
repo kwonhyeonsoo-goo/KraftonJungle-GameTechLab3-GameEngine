@@ -11,6 +11,7 @@
 #include "Component/SubUVComponent.h"
 #include "Component/DecalComponent.h"
 #include "Component/HeightFogComponent.h"
+#include "Component/Light/DirectionalLightComponent.h"
 #include "Core/ResourceManager.h"
 #include "Engine/Geometry/Frustum.h"
 #include "Engine/Asset/StaticMesh.h"
@@ -153,6 +154,35 @@ namespace
 		// 화면에 차지하는 비율이 가장 낮을 경우 최하위 LOD 반환
 		return MaxLOD;
 	}
+
+	void TryCollectDirectionalLight(const AActor* Actor, FRenderBus& RenderBus)
+	{
+		if (Actor == nullptr || !Actor->IsVisible() || RenderBus.HasDirectionalLight())
+		{
+			return;
+		}
+
+		if (!Actor->IsA<ADirectionalLightActor>())
+		{
+			return;
+		}
+
+		const UDirectionalLightComponent* DirectionalLight = Cast<UDirectionalLightComponent>(Actor->GetRootComponent());
+		if (DirectionalLight == nullptr || !DirectionalLight->IsVisible())
+		{
+			return;
+		}
+
+		FVector DirectionToLight = DirectionalLight->GetForwardVector() * -1.0f;
+		DirectionToLight.NormalizeSafe();
+
+		const FColor& LightColor = DirectionalLight->GetLightColor();
+		const float Intensity = DirectionalLight->GetIntensity();
+		RenderBus.SetDirectionalLight(
+			DirectionToLight,
+			FVector(LightColor.r, LightColor.g, LightColor.b) * Intensity,
+			Intensity);
+	}
 }
 
 void FRenderCollector::CollectWorld(UWorld* World, const FShowFlags& ShowFlags, EViewMode ViewMode, FRenderBus& RenderBus,
@@ -174,6 +204,7 @@ void FRenderCollector::CollectWorld(UWorld* World, const FShowFlags& ShowFlags, 
 		AActor* Actor = *Iter;
 
 		if (!Actor || !Actor->IsVisible()) continue;
+		TryCollectDirectionalLight(Actor, RenderBus);
 
 		for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
 		{	
@@ -225,6 +256,8 @@ void FRenderCollector::CollectWorldWithFrustum(UWorld* World, const FFrustum& Vi
 		{
 			continue;
 		}
+
+		TryCollectDirectionalLight(Actor, RenderBus);
 
 		if (Actor->IsA<ASpotLightActor>())
 		{
@@ -801,4 +834,9 @@ void FRenderCollector::CollectOBBCommand(UPrimitiveComponent* PrimitiveComponent
 	const FAABB AABB = PrimitiveComponent->GetWorldAABB();
 	const FOBB Box = FOBB::FromAABB(AABB, PrimitiveComponent->GetWorldMatrix());
 	CollectOBBCommand(Box, FColor::Green(), RenderBus);
+}
+
+void FRenderCollector::CollectSpotLightCommand(const ASpotLightActor* SpotlightActor, const FShowFlags& ShowFlags, FRenderBus& RenderBus)
+{
+
 }

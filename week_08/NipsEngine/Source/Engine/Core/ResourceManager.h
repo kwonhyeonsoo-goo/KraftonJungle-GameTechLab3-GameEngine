@@ -99,8 +99,14 @@ public:
 	const TArray<FString>& GetTextureFilePath() const;
 
 	UShader* GetShader(const FString& FilePath) const;
+	UShader* GetShaderVariant(const FShaderCompileKey& CompileKey) const;
+	bool LoadShader(const FString& FilePath, const FString& VSEntryPoint, const FString& PSEntryPoint,
+	                const D3D_SHADER_MACRO* Defines = nullptr);
 	bool LoadShader(const FString& FilePath, const FString& VSEntryPoint, const FString& PSEntryPoint,
                     const D3D11_INPUT_ELEMENT_DESC* InputElements, UINT InputElementCount, const D3D_SHADER_MACRO* Defines);
+	bool LoadShader(const FShaderCompileKey& CompileKey);
+	bool LoadShader(const FShaderCompileKey& CompileKey,
+	                const D3D11_INPUT_ELEMENT_DESC* InputElements, UINT InputElementCount);
     //ID3DBlob* CompileShaderWithDefines(const WCHAR* filename,
     //                                   const D3D_SHADER_MACRO* defines,
     //                                   const char* entryPoint,
@@ -149,6 +155,10 @@ private:
 	FString MakeStaticMeshBinaryPath(const FString& SourcePath) const;
 	bool IsStaticMeshBinaryValid(const FString& SourcePath, const FString& BinaryPath) const;
 	void PreloadStaticMeshes();
+	bool LoadShaderInternal(const FShaderCompileKey& CompileKey,
+	                        const D3D11_INPUT_ELEMENT_DESC* InputElements,
+	                        UINT InputElementCount,
+	                        bool bRegisterPathAlias);
 	
 	FTextureAssetMeta LoadOrCreateTextureMeta(const std::filesystem::path& FilePath) const;
 
@@ -172,6 +182,7 @@ private:
 
 	TMap<FString, UStaticMesh*> StaticMeshes;
 	TMap<FString, UShader*> Shaders;
+	TMap<FShaderCompileKey, UShader*> ShaderVariants;
 	TMap<FString, UTexture*> Textures;
 	TMap<FString, UMaterial*> Materials;
 	TMap<FString, UMaterialInstance*> MaterialInstances;

@@ -3,6 +3,43 @@
 #include "Render/Scene/RenderBus.h"
 #include "Render/Resource/Material.h"
 
+namespace
+{
+	void BindOutlineMaskSRV(UMaterialInterface* Material, ID3D11Device* Device, ID3D11ShaderResourceView* MaskSRV)
+	{
+		if (!Material || !Device)
+		{
+			return;
+		}
+
+		if (UMaterial* BaseMaterial = Cast<UMaterial>(Material))
+		{
+			BaseMaterial->EnsureShaderBinding(Device);
+			if (BaseMaterial->ShaderBinding)
+			{
+				BaseMaterial->ShaderBinding->SetSRV("SelectionMaskTexture", MaskSRV);
+			}
+			return;
+		}
+
+		UMaterialInstance* MaterialInstance = Cast<UMaterialInstance>(Material);
+		if (!MaterialInstance || !MaterialInstance->Parent || !MaterialInstance->Parent->Shader)
+		{
+			return;
+		}
+
+		if (!MaterialInstance->ShaderBinding || MaterialInstance->ShaderBinding->GetShader() != MaterialInstance->Parent->Shader)
+		{
+			MaterialInstance->ShaderBinding = MaterialInstance->Parent->Shader->CreateBindingInstance(Device);
+		}
+
+		if (MaterialInstance->ShaderBinding)
+		{
+			MaterialInstance->ShaderBinding->SetSRV("SelectionMaskTexture", MaskSRV);
+		}
+	}
+}
+
 bool FPostProcessOutlineRenderPass::Initialize()
 {
     return true;
@@ -17,9 +54,6 @@ bool FPostProcessOutlineRenderPass::Begin(const FRenderPassContext* Context)
 {
     ID3D11RenderTargetView* RTV = PrevPassRTV;
     Context->DeviceContext->OMSetRenderTargets(1, &RTV, nullptr);
-
-    ID3D11ShaderResourceView* maskSRV = Context->RenderTargets->SelectionMaskSRV;
-    Context->DeviceContext->PSSetShaderResources(7, 1, &maskSRV);
 
     Context->DeviceContext->IASetInputLayout(nullptr);
     Context->DeviceContext->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
@@ -43,6 +77,7 @@ bool FPostProcessOutlineRenderPass::DrawCommand(const FRenderPassContext* Contex
     {
         if (Cmd.Material != nullptr)
         {
+            BindOutlineMaskSRV(Cmd.Material, Context->Device, Context->RenderTargets->SelectionMaskSRV);
             Cmd.Material->Bind(Context->DeviceContext, Context->RenderBus);
         }
         Context->DeviceContext->Draw(3, 0);

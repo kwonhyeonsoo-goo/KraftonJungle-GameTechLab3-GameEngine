@@ -499,6 +499,10 @@ void FShaderBindingInstance::ApplyFrameParameters(const FRenderBus& RenderBus)
 	SetFloat("bIsWireframe", RenderBus.GetViewMode() == EViewMode::Wireframe ? 1.0f : 0.0f);
 	SetVector3("WireframeRGB", RenderBus.GetWireframeColor());
 	SetVector2("ViewportSize", RenderBus.GetViewportSize());
+	SetUInt("bHasDirectionalLight", RenderBus.HasDirectionalLight() ? 1u : 0u);
+	SetVector3("DirectionalLightDirection", RenderBus.GetDirectionalLightDirection());
+	SetVector3("DirectionalLightColor", RenderBus.GetDirectionalLightColor());
+	SetFloat("DirectionalLightIntensity", RenderBus.GetDirectionalLightIntensity());
 }
 
 void FShaderBindingInstance::ApplyPerObjectParameters(const FPerObjectConstants& Constants)
@@ -510,6 +514,13 @@ void FShaderBindingInstance::ApplyPerObjectParameters(const FPerObjectConstants&
 	// 추후 UberLit 등 다른 naming convention과의 호환을 위한 alias
 	SetMatrix4("World", Constants.Model);
 	SetMatrix4("WorldInvTans", Constants.WorldInvTrans);
+}
+
+void FShaderBindingInstance::ApplyUberPerObjectParameters(const FPerObjectConstants& Constants)
+{
+	SetMatrix4("World", Constants.Model);
+	SetMatrix4("WorldInverseTranspose", Constants.WorldInvTrans);
+	SetVector4("PrimitiveColor", Constants.Color);
 }
 
 void FShaderBindingInstance::UploadConstantBuffers(ID3D11DeviceContext* Context)
