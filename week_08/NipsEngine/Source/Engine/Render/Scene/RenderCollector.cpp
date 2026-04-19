@@ -55,7 +55,7 @@ namespace
 	FMatrix MakeViewBillboardMatrix(const UPrimitiveComponent* Primitive, const FRenderBus& RenderBus)
 	{
 		const FMatrix WorldMatrix = Primitive->GetWorldMatrix();
-		return UBillboardComponent::MakeBillboardWorldMatrix(
+		return USubUVComponent::MakeBillboardWorldMatrix(
 			WorldMatrix.GetOrigin(),
 			WorldMatrix.GetScaleVector(),
 			RenderBus.GetCameraForward(),
@@ -66,7 +66,7 @@ namespace
 	FMatrix MakeViewSubUVSelectionMatrix(const USubUVComponent* SubUVComp, const FRenderBus& RenderBus)
 	{
 		const FVector WorldScale = SubUVComp->GetWorldScale();
-		return UBillboardComponent::MakeBillboardWorldMatrix(
+		return USubUVComponent::MakeBillboardWorldMatrix(
 			SubUVComp->GetWorldLocation(),
 			FVector(
 				WorldScale.X > 0.01f ? WorldScale.X : 0.01f,
