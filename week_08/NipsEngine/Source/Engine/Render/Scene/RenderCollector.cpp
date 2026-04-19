@@ -830,8 +830,3 @@ void FRenderCollector::CollectOBBCommand(UPrimitiveComponent* PrimitiveComponent
 	const FOBB Box = FOBB::FromAABB(AABB, PrimitiveComponent->GetWorldMatrix());
 	CollectOBBCommand(Box, FColor::Green(), RenderBus);
 }
-//
-//void FRenderCollector::CollectSpotLightCommand(const ASpotLightActor* SpotlightActor, const FShowFlags& ShowFlags, FRenderBus& RenderBus)
-//{
-//
-//}
