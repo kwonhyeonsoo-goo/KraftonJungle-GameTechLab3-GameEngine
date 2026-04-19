@@ -7,6 +7,26 @@
 class UCameraComponent;
 class ULineBatchComponent;
 class FViewportCamera;
+class ULightComponentBase;
+
+/**
+ * 원래는 데이터 복사본을 넣고 Dirty 여부에 따라 업데이트 해줘야 하지만
+ * SceneProxy 개념 도입 전이므로 아래와 같이 포인터를 통해 접근
+ * Pointer 에 대한 안전 체크는 Slot 을 통해 처리
+ */
+struct FLightSlot
+{
+    ULightComponentBase* LightData = nullptr;
+    uint32 Generation = 0;
+    bool bAlive = false;
+};
+
+struct FLightHandle
+{
+    uint32 Index;
+    // Invalidate 검증용
+    uint32 Generation;
+};
 
 class UWorld : public UObject {
 public:
@@ -78,10 +98,16 @@ public:
 	EWorldType GetWorldType() const { return WorldType; }
 	void SetWorldType(EWorldType InWorldType) { WorldType = InWorldType; }
 
+	FLightHandle RegisterLight(ULightComponentBase* Comp);
+    void UnregisterLight(ULightComponentBase* Comp);
+
 private:
 	EWorldType WorldType = EWorldType::Editor;
 	ULevel* PersistentLevel = nullptr;
 	FViewportCamera* ActiveCamera = nullptr;
     FWorldSpatialIndex SpatialIndex;
     bool bHasBegunPlay = false;
+
+	TArray<FLightSlot> WorldLightSlots;
+    TArray<uint32> FreeLightSlotList;  // 삭제된 Light 의 Index 만 Free 로 등록
 };

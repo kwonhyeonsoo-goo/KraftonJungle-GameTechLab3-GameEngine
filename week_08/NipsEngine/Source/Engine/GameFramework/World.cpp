@@ -1,4 +1,5 @@
 ﻿#include "GameFramework/World.h"
+#include "Component/Light/LightComponent.h"
 
 DEFINE_CLASS(UWorld, UObject)
 REGISTER_FACTORY(UWorld)
@@ -87,4 +88,55 @@ void UWorld::RebuildSpatialIndex()
 void UWorld::SyncSpatialIndex()
 {
     SpatialIndex.FlushDirtyBounds();
+}
+
+FLightHandle UWorld::RegisterLight(ULightComponentBase* Comp)
+{
+    FLightHandle LightHandle;
+    FLightSlot LightSlot;
+
+	if (FreeLightSlotList.empty())
+	{
+		// 새로 생성
+        uint32 Index = WorldLightSlots.size();
+		LightSlot.LightData = Comp;
+        LightSlot.Generation = 0;
+        LightSlot.bAlive = true;
+
+		WorldLightSlots.push_back(LightSlot);
+
+        LightHandle.Index = Index;
+        LightHandle.Generation = WorldLightSlots[Index].Generation;
+	}
+	else
+	{
+		// Free Slot 사용
+        uint32 Index = FreeLightSlotList.back();
+        FreeLightSlotList.pop_back();
+        WorldLightSlots[Index].Generation += 1;
+        WorldLightSlots[Index].LightData = Comp;
+        WorldLightSlots[Index].bAlive = true;
+
+        LightHandle.Index = Index;
+        LightHandle.Generation = WorldLightSlots[Index].Generation;
+	}
+
+	Comp->SetLightHandle(LightHandle);
+
+	return LightHandle;
+}
+
+void UWorld::UnregisterLight(ULightComponentBase* Comp)
+{
+    FLightHandle LightHandle = Comp->GetLightHandle();
+
+	if (WorldLightSlots[LightHandle.Index].Generation != LightHandle.Generation)
+	{
+		// 해당 Slot 에 다른 데이터 들어가있음
+        return;
+	}
+
+	WorldLightSlots[LightHandle.Index].bAlive = false;
+    WorldLightSlots[LightHandle.Index].LightData = nullptr;
+    FreeLightSlotList.push_back(LightHandle.Index);
 }

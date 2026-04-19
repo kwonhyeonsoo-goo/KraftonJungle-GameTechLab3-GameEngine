@@ -40,6 +40,7 @@ void ULightComponentBase::BeginPlay()
 void ULightComponentBase::EndPlay()
 {
     USceneComponent::EndPlay();
+    Owner->GetFocusedWorld()->UnregisterLight(this);
 }
 
 void ULightComponentBase::PostDuplicate(UObject* Original)
@@ -53,6 +54,7 @@ void ULightComponentBase::PostDuplicate(UObject* Original)
     LightColor = Orig->LightColor;
     Intensity = Orig->Intensity;
     bVisible = Orig->bVisible;
+    LightHandle = Orig->LightHandle;
 }
 
 ULightComponent::ULightComponent() = default;

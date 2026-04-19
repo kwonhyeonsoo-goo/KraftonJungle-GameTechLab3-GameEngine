@@ -299,8 +299,7 @@ void AActor::NotifyComponentRegistered(UActorComponent* Component)
     
 	if (ULightComponent* Light = Cast<ULightComponent>(Component))
 	{
-	    // TODO : Renderer에 Light 추가
-
+        OwningWorld->RegisterLight(Light);
 	}
 }
 
@@ -319,7 +318,7 @@ void AActor::NotifyComponentUnregistered(UActorComponent* Component)
 
 	if (ULightComponent* Light = Cast<ULightComponent>(Component))
 	{
-	    // TODO : Renderer에 Light Unregister 해야함.
+        OwningWorld->UnregisterLight(Light);
 	}
 
 }

@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Component/SceneComponent.h"
 #include "Render/Common/RenderTypes.h"
+#include "GameFramework/World.h"
 
 class ULightComponentBase : public USceneComponent
 {
@@ -28,11 +29,16 @@ public:
     void SetLightColor(const FColor& InColor) { LightColor = InColor; }
     void SetIntensity(float InIntensity) { Intensity = InIntensity; }
     void SetVisible(bool bInVisible) { bVisible = bInVisible; }
+	
+	const FLightHandle& GetLightHandle() const { return LightHandle; }
+    void SetLightHandle(const FLightHandle& InLightHandle) { LightHandle = InLightHandle; }
 
 private:
     FColor LightColor = FColor(1.0f, 1.0f, 1.0f, 1.0f);
     float Intensity = 1.0f;
     bool bVisible = true;
+
+	FLightHandle LightHandle;
 };
 
 class ULightComponent : public ULightComponentBase
