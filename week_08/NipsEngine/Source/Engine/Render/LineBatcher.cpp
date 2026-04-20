@@ -279,51 +279,11 @@ void FLineBatcher::AddOBB(const FOBB& Box, const FColor& InColor)
 	}
 }
 
-void FLineBatcher::AddSpotLight(const FVector& Position, const FVector& Direction, float Range,
-	float InnerConeAngleDeg, float OuterConeAngleDeg, const FColor& InColor)
-{
-	const FVector4 LineColor = InColor.ToVector4();
-	const uint32 BaseVertex = static_cast<uint32>(IndexedVertices.size());
-
-	FVector Forward = Direction.GetSafeNormal();
-	FVector Up, Right;
-	Forward.FindBestAxisVectors(Up, Right);
-
-	const float OuterRad = MathUtil::DegreesToRadians(OuterConeAngleDeg);
-	const float ConeRadius = Range * std::tan(OuterRad);
-	const FVector ConeBaseCenter = Position + (Forward * Range);
-
-	const int32 Segments = 32;
-	for (int32 i = 0; i < Segments; ++i)
-	{
-		float Angle = (static_cast<float>(i) / Segments) * MathUtil::TwoPi;
-		float CosA = std::cos(Angle);
-		float SinA = std::sin(Angle);
-
-		FVector VertexPos = ConeBaseCenter + (Right * CosA * ConeRadius) + (Up * SinA * ConeRadius);
-		IndexedVertices.emplace_back(VertexPos, LineColor);
-	}
-
-	for (int32 i = 0; i < Segments; ++i)
-	{
-		Indices.push_back(BaseVertex + i);
-		Indices.push_back(BaseVertex + ((i + 1) % Segments));
-	
-		{
-			uint32 TipIdx = static_cast<uint32>(IndexedVertices.size());
-			IndexedVertices.emplace_back(Position, LineColor);
-
-			Indices.push_back(TipIdx);
-			Indices.push_back(BaseVertex + i);
-		}
-	}
-}
-
 void FLineBatcher::AddWorldHelpers(const FShowFlags& ShowFlags, float GridSpacing, int32 GridHalfLineCount,
 	const FVector& CameraPosition, const FVector& CameraForward, bool bOrthographic)
 {
 	const float Spacing = GridSpacing;
-	const int32 BaseHalfCount = std::max(GridHalfLineCount, 1);
+	const int32 BaseHalfCount = (std::max)(GridHalfLineCount, 1);
 
 	if (Spacing <= 0.0f) return;
 
@@ -347,25 +307,25 @@ void FLineBatcher::AddWorldHelpers(const FShowFlags& ShowFlags, float GridSpacin
 	// 카메라가 속한 셀까지 범위를 확장 (카메라 위치 기반)
 	const float CameraA    = GetComp(CameraPosition, Desc.A);
 	const float CameraB    = GetComp(CameraPosition, Desc.B);
-	const float MinA = std::min(FocusMinA, SnapDownToGrid(CameraA, Spacing));
-	const float MaxA = std::max(FocusMaxA, SnapUpToGrid(CameraA, Spacing));
-	const float MinB = std::min(FocusMinB, SnapDownToGrid(CameraB, Spacing));
-	const float MaxB = std::max(FocusMaxB, SnapUpToGrid(CameraB, Spacing));
+	const float MinA = (std::min)(FocusMinA, SnapDownToGrid(CameraA, Spacing));
+	const float MaxA = (std::max)(FocusMaxA, SnapUpToGrid(CameraA, Spacing));
+	const float MinB = (std::min)(FocusMinB, SnapDownToGrid(CameraB, Spacing));
+	const float MaxB = (std::max)(FocusMaxB, SnapUpToGrid(CameraB, Spacing));
 
 	const int32 MinAIdx = static_cast<int32>(std::floor((MinA - CenterA) / Spacing));
 	const int32 MaxAIdx = static_cast<int32>(std::ceil( (MaxA - CenterA) / Spacing));
 	const int32 MinBIdx = static_cast<int32>(std::floor((MinB - CenterB) / Spacing));
 	const int32 MaxBIdx = static_cast<int32>(std::ceil( (MaxB - CenterB) / Spacing));
 
-	const float ExtentA       = std::max(std::fabs(MinA - GetComp(FocusPoint, Desc.A)),
+	const float ExtentA       = (std::max)(std::fabs(MinA - GetComp(FocusPoint, Desc.A)),
 	                                     std::fabs(MaxA - GetComp(FocusPoint, Desc.A)));
-	const float ExtentB       = std::max(std::fabs(MinB - GetComp(FocusPoint, Desc.B)),
+	const float ExtentB       = (std::max)(std::fabs(MinB - GetComp(FocusPoint, Desc.B)),
 	                                     std::fabs(MaxB - GetComp(FocusPoint, Desc.B)));
 	const float FadeStartA    = ExtentA * GridFadeStartRatio;
 	const float FadeStartB    = ExtentB * GridFadeStartRatio;
 	const float AxisFadeStA   = ExtentA * AxisFadeStartRatio;
 	const float AxisFadeStB   = ExtentB * AxisFadeStartRatio;
-	const float AxisBias      = std::max(Spacing * 0.001f, 0.001f);
+	const float AxisBias      = (std::max)(Spacing * 0.001f, 0.001f);
 
 	// 축선 표시 여부: 해당 축이 그리드 범위 안에 들어오는지 확인
 	const bool bShowAxisA = (MinB <= 0.0f) && (MaxB >= 0.0f); // B=0 라인 (A 축)
@@ -518,3 +478,147 @@ uint32 FLineBatcher::GetLineCount() const
 	return static_cast<uint32>(Indices.size() / 2);
 }
 
+void FLineBatcher::AddSpotLight(const FVector& Position, const FVector& Direction, const FVector& DirectionRight, float AttenuationRadius,
+	float InnerConeAngle, float OuterConeAngle)
+{
+	const FVector4 OuterConeColor = FColor(198, 255, 255).ToVector4();
+	const FVector4 InnerConeColor = FColor(149, 198, 255).ToVector4();
+
+	const uint32 BaseVertex = static_cast<uint32>(IndexedVertices.size());
+
+	FVector Forward = Direction.GetSafeNormal();
+	FVector Right = DirectionRight.GetSafeNormal();
+	FVector Up = Forward.CrossProduct(DirectionRight).GetSafeNormal();
+
+	const float OuterConeAltitude = AttenuationRadius * std::cos(MathUtil::DegreesToRadians(OuterConeAngle));
+	const float InnerConeAltitude = AttenuationRadius * std::cos(MathUtil::DegreesToRadians(InnerConeAngle));
+	const FVector OuterConeBaseCenter = Position + (Forward * OuterConeAltitude);
+	const FVector InnerConeBaseCenter = Position + (Forward * InnerConeAltitude);
+	const float OuterConeRadius = AttenuationRadius * std::sin(MathUtil::DegreesToRadians(OuterConeAngle));
+	const float InnerConeRadius = AttenuationRadius * std::sin(MathUtil::DegreesToRadians(InnerConeAngle));
+
+	constexpr int32 ConeSegments = 32;
+
+	// Outer Cone
+	const uint32 OuterBaseVertex = BaseVertex;
+	for (int32 i = 0; i < ConeSegments; ++i)
+	{
+		float Angle = (static_cast<float>(i) / ConeSegments) * MathUtil::TwoPi;
+		float CosA = std::cos(Angle);
+		float SinA = std::sin(Angle);
+
+	    FVector VertexPos = OuterConeBaseCenter + (DirectionRight * CosA * OuterConeRadius) + (Up * SinA * OuterConeRadius);
+		IndexedVertices.emplace_back(VertexPos, OuterConeColor);
+	}
+
+	// Inner Cone
+	const uint32 InnerBaseVertex = static_cast<uint32>(IndexedVertices.size());
+	for (int32 i = 0; i < ConeSegments; ++i)
+	{
+		float Angle = (static_cast<float>(i) / ConeSegments) * MathUtil::TwoPi;
+		float CosA = std::cos(Angle);
+		float SinA = std::sin(Angle);
+
+		FVector VertexPos = InnerConeBaseCenter + (DirectionRight * CosA * InnerConeRadius) + (Up * SinA * InnerConeRadius);
+		IndexedVertices.emplace_back(VertexPos, InnerConeColor);
+	}
+
+	const uint32 TipIdx = static_cast<uint32>(IndexedVertices.size());
+	IndexedVertices.emplace_back(Position, InnerConeColor);
+
+	for (int32 i = 0; i < ConeSegments; ++i)
+	{
+		Indices.push_back(OuterBaseVertex + i);
+		Indices.push_back(OuterBaseVertex + ((i + 1) % ConeSegments));
+		Indices.push_back(TipIdx);
+		Indices.push_back(OuterBaseVertex + i);
+
+		Indices.push_back(InnerBaseVertex + i);
+		Indices.push_back(InnerBaseVertex + ((i + 1) % ConeSegments));
+		Indices.push_back(TipIdx);
+		Indices.push_back(InnerBaseVertex + i);
+	}
+
+	AddArc(Position, Forward, Up,    OuterConeAngle, AttenuationRadius, TipIdx, OuterConeColor);
+	AddArc(Position, Forward, Up,    InnerConeAngle, AttenuationRadius, TipIdx, InnerConeColor);
+	AddArc(Position, Forward, Right, OuterConeAngle, AttenuationRadius, TipIdx, OuterConeColor);
+	AddArc(Position, Forward, Right, InnerConeAngle, AttenuationRadius, TipIdx, InnerConeColor);
+}
+
+void FLineBatcher::AddCircle(const FVector& Center, const FVector& AxisA, const FVector& AxisB, float Radius, const FVector4& Color)
+{
+	constexpr int32 CircleSegments = 25;
+	const uint32 BaseVertex = static_cast<uint32>(IndexedVertices.size());
+
+	for (int32 i = 0; i < CircleSegments; ++i)
+	{
+		float Angle = (static_cast<float>(i) / CircleSegments) * MathUtil::TwoPi;
+		FVector VertexPos = Center + (AxisA * std::cos(Angle) + AxisB * std::sin(Angle)) * Radius;
+		IndexedVertices.emplace_back(VertexPos, Color);
+	}
+
+	for (int32 i = 0; i < CircleSegments; ++i)
+	{
+		Indices.push_back(BaseVertex + i);
+		Indices.push_back(BaseVertex + ((i + 1) % CircleSegments));
+	}
+}
+
+void FLineBatcher::AddPointLight(const FVector& Position, float AttenuationRadius, const FVector& Right, const FVector& Up)
+{
+	const FVector4 LineColor = FColor(198, 255, 198).ToVector4();
+
+	FVector AxisX = Right.GetSafeNormal();
+	FVector AxisY = Up.GetSafeNormal();
+	FVector AxisZ = AxisX.CrossProduct(AxisY).GetSafeNormal();
+
+	AddCircle(Position, AxisX, AxisZ, AttenuationRadius, LineColor);
+	AddCircle(Position, AxisY, AxisZ, AttenuationRadius, LineColor);
+	AddCircle(Position, AxisX, AxisY, AttenuationRadius, LineColor);
+}
+
+void FLineBatcher::AddDirectionalLight(const FVector& Position, const FVector& Direction, const FVector& DirectionRight)
+{
+	const FVector4 LineColor = FColor(255, 255, 255).ToVector4();
+	const float LineLength = 1.0f;
+
+	FVector Forward = Direction.GetSafeNormal();
+	FVector Right = DirectionRight.GetSafeNormal();
+	FVector Up = Forward.CrossProduct(Right).GetSafeNormal();
+
+	FVector End = Position + (Forward * LineLength);
+	AddLine(Position, End, LineColor);
+
+	constexpr float ArrowSize = 0.3f;
+	constexpr int32 ArrowSegments = 8;
+	for (int32 i = 0; i < ArrowSegments; ++i)
+	{
+		float Angle = (static_cast<float>(i) / ArrowSegments) * MathUtil::TwoPi;
+		FVector ArrowDir = (Right * std::cos(Angle) + Up * std::sin(Angle)).GetSafeNormal();
+		FVector ArrowEnd = End - (Forward * ArrowSize) + (ArrowDir * ArrowSize * 0.5f);
+		AddLine(End, ArrowEnd, LineColor);
+	}
+	AddCircle(End - (Forward * ArrowSize), Right, Up, ArrowSize * 0.5f, LineColor);
+}
+
+void FLineBatcher::AddArc(const FVector& Position, const FVector& Forward, const FVector& Axis,
+                          float ConeAngle, float Radius, uint32 TipIdx, const FVector4& Color)
+{
+	constexpr int32 ArcSegments = 10;
+	const uint32 ArcBase = static_cast<uint32>(IndexedVertices.size());
+
+	for (int32 i = 0; i <= ArcSegments; ++i)
+	{
+		float A = MathUtil::DegreesToRadians(-ConeAngle + (static_cast<float>(i) / ArcSegments) * (2.0f * ConeAngle));
+		IndexedVertices.emplace_back(Position + (Forward * std::cos(A) + Axis * std::sin(A)) * Radius, Color);
+	}
+
+	for (int32 i = 0; i < ArcSegments; ++i)
+	{
+		Indices.push_back(ArcBase + i);
+		Indices.push_back(ArcBase + i + 1);
+	}
+
+	Indices.push_back(TipIdx); Indices.push_back(ArcBase);
+	Indices.push_back(TipIdx); Indices.push_back(ArcBase + ArcSegments);
+}

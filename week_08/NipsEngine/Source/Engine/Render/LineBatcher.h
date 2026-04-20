@@ -64,9 +64,6 @@ public:
 	// OBB 와이어프레임 (12개 Edge)
 	void AddOBB(const FOBB& Box, const FColor& Color);
 
-	// SpotLight의 원뿔 와이어프레임
-	void AddSpotLight(const FVector& Position, const FVector& Direction, float Range, float InnerConeAngleDeg, float OuterConeAngleDeg, const FColor& Color);
-
 	/**
 	 * @brief 카메라 기준의 grid patch와 축 보조선을 생성합니다.
 	 * @details 카메라 위치와 forward 벡터를 이용해 바닥면 위의 focus point를 계산하고,
@@ -89,6 +86,12 @@ public:
 
 	// 현재 축적된 라인 개수
 	uint32 GetLineCount() const;
+
+	void AddArc(const FVector& Position, const FVector& Forward, const FVector& Axis, float ConeAngle, float Radius, uint32 TipIdx, const FVector4& Color);
+	void AddCircle(const FVector& Center, const FVector& AxisA, const FVector& AxisB, float Radius, const FVector4& Color);
+	void AddSpotLight(const FVector& Position, const FVector& Direction, const FVector& DirectionRight, float AttenuationRadius, float InnerConeAngle, float OuterConeAngle);
+	void AddPointLight(const FVector& Position, float AttenuationRadius, const FVector& Right, const FVector& Up);
+	void AddDirectionalLight(const FVector& Position, const FVector& Direction, const FVector& DirectionRight);
 
 private:
 	UMaterialInterface* Material = nullptr;

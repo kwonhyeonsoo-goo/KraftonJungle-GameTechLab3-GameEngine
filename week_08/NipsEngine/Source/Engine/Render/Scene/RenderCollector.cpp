@@ -241,15 +241,19 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus)
 		switch (LightComponent->GetLightType())
 		{
 		case ELightType::LightType_AmbientLight:
+		{
 			RenderBus.AddLight(RenderLight);
 			break;
+		}
 
 		case ELightType::LightType_Directional:
 		{
-			FVector DirectionToLight = LightComponent->GetForwardVector() * -1.0f;
+			FVector DirectionToLight = (LightComponent->GetForwardVector() * -1.0f);
 			DirectionToLight.Normalize();
 			RenderLight.Direction = DirectionToLight;
 			RenderBus.AddLight(RenderLight);
+
+			LineBatcher->AddDirectionalLight(LightComponent->GetWorldLocation(), RenderLight.Direction, LightComponent->GetRightVector());
 			break;
 		}
 
@@ -265,6 +269,8 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus)
 			RenderLight.Radius = PointLight->GetAttenuationRadius();
 			RenderLight.FalloffExponent = PointLight->GetLightFalloffExponent();
 			RenderBus.AddLight(RenderLight);
+
+			LineBatcher->AddPointLight(RenderLight.Position, RenderLight.Radius, PointLight->GetRightVector(), PointLight->GetUpVector());
 			break;
 		}
 
@@ -277,12 +283,10 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus)
 			}
 
 			const float InnerAngleDegrees = MathUtil::Clamp(SpotLight->GetInnerConeAngle(), 0.0f, 89.0f);
-			const float OuterAngleDegrees = MathUtil::Clamp(
-				std::max(SpotLight->GetOuterConeAngle(), InnerAngleDegrees),
-				0.0f,
-				89.0f);
+			const float OuterAngleDegrees = MathUtil::Clamp((std::max)(SpotLight->GetOuterConeAngle(), InnerAngleDegrees), 0.0f, 89.0f);
 
-			FVector LightDirection = SpotLight->GetForwardVector();
+			// -z 축을 forward로 사용
+			FVector LightDirection = SpotLight->GetUpVector() * -1.0f;
 			LightDirection.Normalize();
 
 			RenderLight.Position = SpotLight->GetWorldLocation();
@@ -292,6 +296,8 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus)
 			RenderLight.SpotInnerCos = std::cos(MathUtil::DegreesToRadians(InnerAngleDegrees));
 			RenderLight.SpotOuterCos = std::cos(MathUtil::DegreesToRadians(OuterAngleDegrees));
 			RenderBus.AddLight(RenderLight);
+
+			LineBatcher->AddSpotLight(RenderLight.Position, RenderLight.Direction, SpotLight->GetRightVector() * -1.0f, RenderLight.Radius, InnerAngleDegrees, OuterAngleDegrees);
 			break;
 		}
 

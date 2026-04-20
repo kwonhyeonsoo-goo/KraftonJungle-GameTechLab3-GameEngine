@@ -127,7 +127,7 @@ void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
         float CameraMoveSpeed = FocusedClient->GetMoveSpeed();
 
         ImGui::SetNextItemWidth(ItemWidth); // 너비 설정
-        if (ImGui::SliderFloat("Dolly Speed", &CameraMoveSpeed, 10.0f, 2000.0f, "%.0f"))
+        if (ImGui::SliderFloat("Dolly Speed", &CameraMoveSpeed, 0.01f, 30.0f, "%.2f", ImGuiSliderFlags_Logarithmic))
         {
             FocusedClient->SetMoveSpeed(CameraMoveSpeed);
         }
