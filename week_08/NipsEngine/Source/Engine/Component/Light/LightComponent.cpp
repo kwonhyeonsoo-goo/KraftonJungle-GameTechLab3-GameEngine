@@ -94,6 +94,7 @@ void ULightComponentBase::PostDuplicate(UObject* Original)
     Intensity = Orig->Intensity;
     bVisible = Orig->bVisible;
     LightHandle = Orig->LightHandle;
+    VisualizationComponent = Orig->VisualizationComponent;
 }
 
 ULightComponent::ULightComponent() = default;
