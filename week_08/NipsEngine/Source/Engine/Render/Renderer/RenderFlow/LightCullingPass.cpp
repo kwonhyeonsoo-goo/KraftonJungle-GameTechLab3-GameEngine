@@ -4,6 +4,7 @@
 #include "Render/Scene/RenderCommand.h"
 #include <cstring>
 #include "UI/EditorConsoleWidget.h"
+#include <cmath>
 
 namespace
 {
@@ -122,6 +123,7 @@ bool FLightCullingPass::DrawCommand(const FRenderPassContext* Context)
     TArray<FLightCullingLight> CullingLights;
     const TArray<FRenderLight>& SceneLights = Context->RenderBus->GetLights();
     CullingLights.reserve(SceneLights.size());
+    const uint32 MaxLocalLightNum = 512;
 
     for (const FRenderLight& Light : SceneLights)
     {
@@ -142,6 +144,10 @@ bool FLightCullingPass::DrawCommand(const FRenderPassContext* Context)
         CullingLight.Direction = Light.Direction;
 
         CullingLights.push_back(CullingLight);
+
+		// 최대 개수 제한
+		if (CullingLights.size() >= MaxLocalLightNum)
+            break;
     }
 
     const uint32 LightCount = static_cast<uint32>(CullingLights.size());
