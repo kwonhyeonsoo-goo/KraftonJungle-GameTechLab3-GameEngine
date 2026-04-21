@@ -26,14 +26,18 @@ namespace
         float Padding[2] = { 0.0f, 0.0f };
     };
 
-    struct FLightCullingLight
+	struct FLightCullingLight
     {
         FVector WorldPos = FVector::ZeroVector;
         float Radius = 0.0f;
         FVector Color = FVector::ZeroVector;
         float Intensity = 0.0f;
         float RadiusFalloff = 1.0f;
-        float Padding[3] = { 0.0f, 0.0f, 0.0f };
+        uint32 Type = 0; // 0=Point, 1=Spot
+        float SpotInnerCos = 1.0f;
+        float SpotOuterCos = 0.0f;
+        FVector Direction = FVector::ZeroVector;
+        float _Pad = 0.0f;
     };
 
     uint32 CeilDivide(uint32 Numerator, uint32 Denominator)
@@ -132,6 +136,11 @@ bool FLightCullingPass::DrawCommand(const FRenderPassContext* Context)
         CullingLight.Color = Light.Color;
         CullingLight.Intensity = Light.Intensity;
         CullingLight.RadiusFalloff = Light.FalloffExponent;
+        CullingLight.Type = (Light.Type == static_cast<uint32>(ELightType::LightType_Spot)) ? 1u : 0u;
+        CullingLight.SpotInnerCos = Light.SpotInnerCos;
+        CullingLight.SpotOuterCos = Light.SpotOuterCos;
+        CullingLight.Direction = Light.Direction;
+
         CullingLights.push_back(CullingLight);
     }
 

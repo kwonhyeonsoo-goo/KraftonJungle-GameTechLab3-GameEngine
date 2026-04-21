@@ -94,7 +94,7 @@ void mainCS(
 
             const float4 ViewPosition = mul(float4(WorldPos, 1.0f), View);
             const float EyeDepth = ViewPosition.x;
-
+            
             // 카메라 뒤
             if (EyeDepth + Radius <= 1e-4f)
             {
@@ -126,7 +126,7 @@ void mainCS(
                         const float2 Closest = clamp(ScreenPos, TileMin, TileMax);
                         const float2 Delta = ScreenPos - Closest;
                         const bool bIntersects = dot(Delta, Delta) <= (ProjectedRadius * ProjectedRadius);
-
+                        
                         if (bIntersects)
                         {
                             uint Slot;
