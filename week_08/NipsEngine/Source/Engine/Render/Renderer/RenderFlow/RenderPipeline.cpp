@@ -1,5 +1,6 @@
 ﻿#include "RenderPipeline.h"
 #include "LightCullingPass.h"
+#include "SkyRenderPass.h"
 #include "OpaqueRenderPass.h"
 #include "DecalRenderPass.h"
 #include "BufferVisualizationRenderPass.h"
@@ -18,6 +19,9 @@ bool FRenderPipeline::Initialize()
 {
     LightCullingPass = std::make_shared<FLightCullingPass>();
     LightCullingPass->Initialize();
+
+    SkyRenderPass = std::make_shared<FSkyRenderPass>();
+    SkyRenderPass->Initialize();
 
     OpaqueRenderPass = std::make_shared<FOpaqueRenderPass>();
     OpaqueRenderPass->Initialize();
@@ -68,6 +72,7 @@ bool FRenderPipeline::Initialize()
 	 * 마지막 패스가 남긴 OutSRV/OutRTV 가 RenderTargets.FinalSRV/FinalRTV 가 된다.
 	 */
     RenderPasses.push_back(LightCullingPass);
+    RenderPasses.push_back(SkyRenderPass);
 	RenderPasses.push_back(OpaqueRenderPass);
     RenderPasses.push_back(DecalRenderPass);
     // SceneColor를 만든 뒤 fog/fxaa 전에 덮어쓸 수 있는 view mode 확장 지점이다.
@@ -114,6 +119,12 @@ void FRenderPipeline::Release()
     {
         LightCullingPass->Release();
         LightCullingPass.reset();
+    }
+
+    if (SkyRenderPass)
+    {
+        SkyRenderPass->Release();
+        SkyRenderPass.reset();
     }
 
 	if (OpaqueRenderPass)

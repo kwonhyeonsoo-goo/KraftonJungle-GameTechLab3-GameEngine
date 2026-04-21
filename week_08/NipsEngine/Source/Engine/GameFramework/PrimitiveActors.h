@@ -90,3 +90,11 @@ public:
 
 	void InitDefaultComponents();
 };
+
+class ASkyAtmosphereActor : public AActor {
+public:
+	DECLARE_CLASS(ASkyAtmosphereActor, AActor)
+	ASkyAtmosphereActor() = default;
+
+	void InitDefaultComponents();
+};

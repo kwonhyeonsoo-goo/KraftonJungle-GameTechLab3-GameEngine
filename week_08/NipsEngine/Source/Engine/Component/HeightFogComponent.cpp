@@ -12,6 +12,8 @@ UHeightFogComponent::UHeightFogComponent()
 
 void UHeightFogComponent::OnRegister()
 {
+    UPrimitiveComponent::OnRegister();
+
     if (VisualizationComponent) { return; }
 
     AActor* Owner = GetOwner();
@@ -25,13 +27,17 @@ void UHeightFogComponent::OnRegister()
 
 void UHeightFogComponent::OnUnregister()
 {
-    if (!VisualizationComponent) { return; }
-    AActor* Owner = GetOwner();
-    if (Owner)
+    if (VisualizationComponent)
     {
-        Owner->RemoveComponent(VisualizationComponent);
+        AActor* Owner = GetOwner();
+        if (Owner)
+        {
+            Owner->RemoveComponent(VisualizationComponent);
+        }
+        VisualizationComponent = nullptr;
     }
-    VisualizationComponent = nullptr;
+
+    UPrimitiveComponent::OnUnregister();
 }
 
 void UHeightFogComponent::Serialize(FArchive& Ar)

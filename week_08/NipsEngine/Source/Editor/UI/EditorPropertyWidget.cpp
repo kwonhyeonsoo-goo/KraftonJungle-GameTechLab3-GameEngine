@@ -18,6 +18,7 @@
 #include "Component/Movement/ProjectileMovementComponent.h"
 #include "Component/Movement/InterpToMovementComponent.h"
 #include "Component/Movement/PursuitMovementComponent.h"
+#include "Component/SkyAtmosphereComponent.h"
 #include "Selection/SelectionManager.h"
 #include "Component/HeightFogComponent.h"
 #include "Component/Light/AmbientLightComponent.h"
@@ -252,6 +253,13 @@ static const TArray<FComponentMenuEntry> ComponentMenuRegistry = {
 		[](AActor* Actor) -> UActorComponent*
 		{
 			return Actor->AddComponent<USpotLightComponent>();
+		}
+	},
+	{
+		"SkyAtmosphere Component",
+		[](AActor* Actor) -> UActorComponent*
+		{
+			return Actor->AddComponent<USkyAtmosphereComponent>();
 		}
 	}
 };

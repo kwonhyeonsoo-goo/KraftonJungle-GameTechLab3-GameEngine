@@ -4,6 +4,7 @@
 
 class FFXAARenderPass;
 class FFogRenderPass;
+class FSkyRenderPass;
 class FLightRenderPass;
 class FDecalRenderPass;
 class FBufferVisualizationRenderPass;
@@ -30,6 +31,7 @@ public:
 
 private:
     std::shared_ptr<FLightCullingPass> LightCullingPass;
+    std::shared_ptr<FSkyRenderPass> SkyRenderPass;
     std::shared_ptr<FOpaqueRenderPass> OpaqueRenderPass;
     std::shared_ptr<FDecalRenderPass> DecalRenderPass;
     std::shared_ptr<FBufferVisualizationRenderPass> BufferVisualizationRenderPass;

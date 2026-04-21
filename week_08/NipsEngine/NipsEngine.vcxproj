@@ -235,6 +235,7 @@
     <ClCompile Include="Source\Engine\Component\DecalComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\GizmoComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\HeightFogComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\SkyAtmosphereComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Light\AmbientLightComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Light\DirectionalLightComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Light\LightComponent.cpp" />
@@ -306,6 +307,7 @@
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\RenderPassContext.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\RenderPipeline.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\SelectionMaskRenderPass.cpp" />
+    <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\SkyRenderPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\SubUVRenderPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\TranslucentRenderPass.cpp" />
     <ClCompile Include="Source\Engine\Render\Renderer\RenderTarget\DepthStencilBuilder.cpp" />
@@ -401,6 +403,7 @@
     <ClInclude Include="Source\Engine\Component\DecalComponent.h" />
     <ClInclude Include="Source\Engine\Component\GizmoComponent.h" />
     <ClInclude Include="Source\Engine\Component\HeightFogComponent.h" />
+    <ClInclude Include="Source\Engine\Component\SkyAtmosphereComponent.h" />
     <ClInclude Include="Source\Engine\Component\Light\AmbientLightComponent.h" />
     <ClInclude Include="Source\Engine\Component\Light\DirectionalLightComponent.h" />
     <ClInclude Include="Source\Engine\Component\Light\LightComponent.h" />
@@ -503,6 +506,7 @@
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\RenderPassContext.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\RenderPipeline.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\SelectionMaskRenderPass.h" />
+    <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\SkyRenderPass.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\SubUVRenderPass.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\TranslucentRenderPass.h" />
     <ClInclude Include="Source\Engine\Render\Renderer\RenderTarget\DepthStencilBuilder.h" />
@@ -662,6 +666,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Shaders\Multipass\FogPass.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Shaders\Multipass\SkyPass.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ObjViewer|x64'">true</ExcludedFromBuild>

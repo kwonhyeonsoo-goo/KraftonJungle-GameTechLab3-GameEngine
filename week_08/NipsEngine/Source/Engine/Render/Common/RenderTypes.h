@@ -31,6 +31,7 @@ enum class EPrimitiveType
 	EPT_Billboard,
 	EPT_Text, // TextRenderComponent — MeshBuffer 없음, FontBatcher가 처리
 	EPT_SubUV, // SubUVComponent     — MeshBuffer 없음, SubUVBatcher가 처리
+	EPT_SKY,
 	EPT_FOG,
 	EPT_Decal,
     MAX
@@ -38,6 +39,7 @@ enum class EPrimitiveType
 
 enum class ERenderPass : uint32
 {
+	Sky,
 	Opaque,
 	Decal,
 	Light,

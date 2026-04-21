@@ -4,6 +4,7 @@
 #include "Component/StaticMeshComponent.h"
 #include "Component/TextRenderComponent.h"
 #include "Component/HeightFogComponent.h"
+#include "Component/SkyAtmosphereComponent.h"
 #include "Component/Movement/RotatingMovementComponent.h"
 #include "Component/Light/DirectionalLightComponent.h"
 #include "Component/Light/AmbientLightComponent.h"
@@ -43,6 +44,9 @@ REGISTER_FACTORY(APointLightActor)
 
 DEFINE_CLASS(ASpotLightActor, AActor)
 REGISTER_FACTORY(ASpotLightActor)
+
+DEFINE_CLASS(ASkyAtmosphereActor, AActor)
+REGISTER_FACTORY(ASkyAtmosphereActor)
 
 void ASceneActor::InitDefaultComponents()
 {
@@ -120,4 +124,10 @@ void ASpotLightActor::InitDefaultComponents()
 {
 	USpotLightComponent* SpotLight = AddComponent<USpotLightComponent>();
 	SetRootComponent(SpotLight);
+}
+
+void ASkyAtmosphereActor::InitDefaultComponents()
+{
+	USkyAtmosphereComponent* SkyAtmosphere = AddComponent<USkyAtmosphereComponent>();
+	SetRootComponent(SkyAtmosphere);
 }

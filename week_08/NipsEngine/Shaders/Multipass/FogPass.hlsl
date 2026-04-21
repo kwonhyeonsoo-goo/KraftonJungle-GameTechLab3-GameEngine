@@ -50,6 +50,11 @@ float4 mainPS(VSOutput input) : SV_TARGET
     int2 ip = int2(input.ClipPos.xy);
     float rawDepth = SceneDepth.Load(int3(ip, 0)).r;
     float4 prevPassColor = ScenePrevPassColor.Load(int3(ip, 0));
+    if (rawDepth >= 0.99999f)
+    {
+        return prevPassColor;
+    }
+
     float3 worldPos = SceneWorldPos.Load(int3(ip, 0)).xyz;
     float dist = length(worldPos - CameraPosition.xyz);
 

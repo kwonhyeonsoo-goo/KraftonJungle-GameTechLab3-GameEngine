@@ -35,6 +35,7 @@ enum class ERenderCommandType
 	StaticMesh,	// UStaticMeshComponent — OBJ 메시 퐁셰이딩
 	Decal,
 	Light,
+	Sky,
 };
 
 //PerObject
@@ -203,6 +204,21 @@ struct FFXAAConstants
     float  Padding;
 };
 
+struct FSkyConstants
+{
+	FMatrix InvView = FMatrix::Identity;
+	FMatrix InvProjection = FMatrix::Identity;
+	FVector4 SkyZenithColor = FVector4(0.11f, 0.27f, 0.58f, 1.0f);
+	FVector4 SkyHorizonColor = FVector4(0.68f, 0.82f, 0.95f, 1.0f);
+	FVector4 SunColor = FVector4(1.0f, 0.92f, 0.82f, 1.0f);
+	FVector4 SunDirectionAndDiskSize = FVector4(0.0f, 0.0f, 1.0f, 1.5f);
+	FVector4 SkyParams0 = FVector4(14.0f, 2.0f, 1.5f, 0.0f);
+	FVector4 SkyParams1 = FVector4(0.0f, 0.0f, 1.0f, 0.0f);
+	FVector4 CameraForward = FVector4(1.0f, 0.0f, 0.0f, 0.0f);
+	FVector4 CameraRight = FVector4(0.0f, 1.0f, 0.0f, 0.0f);
+	FVector4 CameraUp = FVector4(0.0f, 0.0f, 1.0f, 0.0f);
+};
+
 struct alignas(16) FGPULight
 {
     uint32 Type = static_cast<uint32>(ELightType::Max);
@@ -243,6 +259,7 @@ struct FRenderCommand
 		FFontConstants Font;
 		FSubUVConstants SubUV;
 		FBillboardConstants Billboard;  // ← 추가
+        FSkyConstants Sky;
         FFogConstants Fog;
         FFXAAConstants FXAA;
 	} Constants;
