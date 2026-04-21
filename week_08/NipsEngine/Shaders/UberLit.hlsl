@@ -5,7 +5,7 @@
 #endif
 
 // ─────────────────────────────────────────────
-// 기존 전체-라이트 cbuffer / 구조체 (Directional, Ambient용)
+// Directional / Ambient 전용 cbuffer + 구조체
 // ─────────────────────────────────────────────
 cbuffer UberLighting : register(b3)
 {
@@ -30,8 +30,12 @@ struct FGPULight
     float Padding0;
 };
 
-StructuredBuffer<FGPULight> SceneLights : register(t3);
+// Directional, Ambienet Light 같은 Tile 과 관련 없는 전역 Light 보관
+StructuredBuffer<FGPULight> GlobalLights : register(t3);
 
+// ─────────────────────────────────────────────
+// Tile-Culled Point/Spot 버퍼
+// ─────────────────────────────────────────────
 cbuffer VisibleLightInfo : register(b4)
 {
     uint TileCountX;
@@ -49,7 +53,11 @@ struct FVisibleLightData
     float3 Color;
     float Intensity;
     float RadiusFalloff;
-    float3 Padding;
+    uint Type;
+    float SpotInnerCos;
+    float SpotOuterCos;
+    float3 Direction;
+    float _Pad;
 };
 
 StructuredBuffer<FVisibleLightData> VisibleLights : register(t8);
@@ -78,19 +86,18 @@ float ComputeDistanceAttenuation(float Distance, float Radius, float FalloffExpo
 {
     if (Radius <= 0.0f)
         return 0.0f;
-
-    const float RadiusFactor = saturate(1.0f - (Distance / max(Radius, 1.0e-4f)));
-    return pow(RadiusFactor, max(FalloffExponent, 1.0e-4f));
+    const float t = saturate(1.0f - (Distance / max(Radius, 1.0e-4f)));
+    return pow(t, max(FalloffExponent, 1.0e-4f));
 }
 
 // ─────────────────────────────────────────────
-// 직접광 누적 (Directional / 기존 Point·Spot 공용)
+// 직접광 누적
 // ─────────────────────────────────────────────
 void AccumulateDirectLight(float3 WorldPos, float3 N, float3 V,
                            float3 L, float3 LightContribution,
                            inout FLightingResult Result)
 {
-    const float NdotL = saturate(dot(N, L));
+    const float NdotL = saturate(dot(N, L) * 0.5f + 0.5f);
     if (NdotL <= 0.0f)
         return;
 
@@ -103,19 +110,13 @@ void AccumulateDirectLight(float3 WorldPos, float3 N, float3 V,
 #endif
 }
 
-// ─────────────────────────────────────────────
-// [NEW] Tile-Culled Point/Spot 라이트 누적
-// ScreenPos : SV_Position.xy (픽셀 좌표)
-// ─────────────────────────────────────────────
 void AccumulateVisiblePointLights(float3 WorldPos, float3 N, float3 V,
                                   float2 ScreenPos,
                                   inout FLightingResult Result)
 {
     if (VisibleLightCount == 0u || TileCountX == 0u ||
         TileCountY == 0u || TileSize == 0u || MaxLightsPerTile == 0u)
-    {
         return;
-    }
 
     const uint TileX = min((uint) ScreenPos.x / TileSize, TileCountX - 1u);
     const uint TileY = min((uint) ScreenPos.y / TileSize, TileCountY - 1u);
@@ -135,43 +136,48 @@ void AccumulateVisiblePointLights(float3 WorldPos, float3 N, float3 V,
 
         const float3 ToLight = Light.WorldPos - WorldPos;
         const float Distance = length(ToLight);
-
         if (Distance <= 1.0e-4f || Distance >= Light.Radius)
             continue;
 
         const float3 L = ToLight / Distance;
-        const float Att = ComputeDistanceAttenuation(Distance, Light.Radius, Light.RadiusFalloff);
+        float Att = ComputeDistanceAttenuation(Distance, Light.Radius, Light.RadiusFalloff);
         if (Att <= 0.0f)
             continue;
+        
+        if (Light.Type == LIGHT_TYPE_SPOT) // Spot
+        {
+            const float3 SpotDir = normalize(Light.Direction);
+            const float CosAngle = dot(SpotDir, -L); // 빛 방향과 픽셀 방향 내적
+            const float ConeRange = max(Light.SpotInnerCos - Light.SpotOuterCos, 1.0e-4f);
+            const float ConeAtt = saturate((CosAngle - Light.SpotOuterCos) / ConeRange);
+            Att *= ConeAtt;
+            if (Att <= 0.0f)
+                continue;
+        }
 
-        const float3 LightContrib = Light.Color * Light.Intensity * Att;
-        AccumulateDirectLight(WorldPos, N, V, L, LightContrib, Result);
+        AccumulateDirectLight(WorldPos, N, V, L,
+                              Light.Color * Light.Intensity * Att,
+                              Result);
     }
 }
 
-// ─────────────────────────────────────────────
-// 픽셀 셰이더용 — ScreenPos 있음 (tile culling 사용)
-// Directional / Ambient → SceneLights 루프
-// Point / Spot          → Tile-culled VisibleLights
-// ─────────────────────────────────────────────
 FLightingResult EvaluateLightingFromWorld(float3 WorldPos, float3 WorldNormal, float2 ScreenPos)
 {
     FLightingResult Result;
-    
     Result.Diffuse = 0.0f.xxx;
     Result.Specular = 0.0f.xxx;
-
+    
     const float3 N = normalize(WorldNormal);
     const float3 V = normalize(CameraPosition - WorldPos);
 
     float3 AmbientContribution = DEFAULT_AMBIENT_COLOR;
     uint bHasAmbientLight = 0u;
 
-    // Directional / Ambient 만 순회 (Point·Spot 은 아래 tile path 처리)
+    // Ambient, Directional Light 처리
     [loop]
     for (uint LightIndex = 0u; LightIndex < SceneLightCount; ++LightIndex)
     {
-        const FGPULight Light = SceneLights[LightIndex];
+        const FGPULight Light = GlobalLights[LightIndex];
         const float3 LightColor = Light.Color * Light.Intensity;
 
         if (Light.Type == LIGHT_TYPE_AMBIENT)
@@ -187,26 +193,21 @@ FLightingResult EvaluateLightingFromWorld(float3 WorldPos, float3 WorldNormal, f
 
         if (Light.Type == LIGHT_TYPE_DIRECTIONAL)
         {
-            const float3 L = normalize(Light.Direction);
-            AccumulateDirectLight(WorldPos, N, V, L, LightColor, Result);
+            AccumulateDirectLight(WorldPos, N, V,
+                                  normalize(Light.Direction),
+                                  LightColor, Result);
             continue;
         }
-
-        // Point / Spot 은 tile path에서 처리하므로 skip
     }
-
+    
     Result.Diffuse += AmbientContribution;
-
-    // Tile-culled Point / Spot
+    
+    // Point / Spot Light 처리
     AccumulateVisiblePointLights(WorldPos, N, V, ScreenPos, Result);
 
     return Result;
 }
 
-// ─────────────────────────────────────────────
-// 버텍스 셰이더용 (Gouraud) — ScreenPos 없으므로
-// 기존 SceneLights 전체 순회 유지
-// ─────────────────────────────────────────────
 FLightingResult EvaluateLightingFromWorldVertex(float3 WorldPos, float3 WorldNormal)
 {
     FLightingResult Result;
@@ -219,16 +220,17 @@ FLightingResult EvaluateLightingFromWorldVertex(float3 WorldPos, float3 WorldNor
     [loop]
     for (uint LightIndex = 0u; LightIndex < SceneLightCount; ++LightIndex)
     {
-        const FGPULight Light = SceneLights[LightIndex];
+        const FGPULight Light = GlobalLights[LightIndex];
         const float3 LightColor = Light.Color * Light.Intensity;
 
         if (Light.Type == LIGHT_TYPE_AMBIENT)
-            continue; // Diffuse 초기값에 ambient 포함됨
+            continue;
 
         if (Light.Type == LIGHT_TYPE_DIRECTIONAL)
         {
-            const float3 L = normalize(Light.Direction);
-            AccumulateDirectLight(WorldPos, N, V, L, LightColor, Result);
+            AccumulateDirectLight(WorldPos, N, V,
+                                  normalize(Light.Direction),
+                                  LightColor, Result);
             continue;
         }
 
@@ -240,22 +242,21 @@ FLightingResult EvaluateLightingFromWorldVertex(float3 WorldPos, float3 WorldNor
                 continue;
 
             const float3 L = ToLight / Distance;
-            float Attenuation = ComputeDistanceAttenuation(Distance, Light.Radius, Light.FalloffExponent);
-            if (Attenuation <= 0.0f)
+            float Att = ComputeDistanceAttenuation(Distance, Light.Radius, Light.FalloffExponent);
+            if (Att <= 0.0f)
                 continue;
 
             if (Light.Type == LIGHT_TYPE_SPOT)
             {
-                const float3 LightToSurface = -L;
-                const float ConeFactor = dot(normalize(Light.Direction), LightToSurface);
+                const float3 SpotDir = normalize(Light.Direction);
+                const float CosAngle = dot(SpotDir, -L);
                 const float ConeRange = max(Light.SpotInnerCos - Light.SpotOuterCos, 1.0e-4f);
-                const float ConeAtt = saturate((ConeFactor - Light.SpotOuterCos) / ConeRange);
-                Attenuation *= ConeAtt;
-                if (Attenuation <= 0.0f)
+                Att *= saturate((CosAngle - Light.SpotOuterCos) / ConeRange);
+                if (Att <= 0.0f)
                     continue;
             }
 
-            AccumulateDirectLight(WorldPos, N, V, L, LightColor * Attenuation, Result);
+            AccumulateDirectLight(WorldPos, N, V, L, LightColor * Att, Result);
         }
     }
 
@@ -278,32 +279,23 @@ float3 GetTileDebugColor(float2 ScreenPos)
     if (TileCountX == 0u || TileCountY == 0u || TileSize == 0u)
         return float3(0, 0, 0);
 
-    // 1. 현재 픽셀의 타일 인덱스 계산
     const uint TileX = min((uint) ScreenPos.x / TileSize, TileCountX - 1u);
     const uint TileY = min((uint) ScreenPos.y / TileSize, TileCountY - 1u);
     const uint TileIndex = TileY * TileCountX + TileX;
 
-    // 2. 해당 타일의 라이트 개수 가져오기
     const uint LocalCount = TileVisibleLightCount[TileIndex];
-    
-    // 3. 시각화 비율 계산 (MaxLightsPerTile 대비 현재 몇 개인지)
-    // 예: 라이트가 0개면 검정, Max에 가까울수록 빨강
-    float Ratio = (float) LocalCount / (float) max(MaxLightsPerTile, 1u);
+    const float Ratio = (float) LocalCount / (float) max(MaxLightsPerTile, 1u);
 
-    // Heatmap 색상 계산 (간단한 선형 보간)
-    float3 Color = float3(0, 0, 0);
+    float3 Color = 0.0f.xxx;
     if (LocalCount > 0)
     {
-        Color = lerp(float3(0, 0, 1), float3(0, 1, 0), saturate(Ratio * 2.0f)); // Blue to Green
-        Color = lerp(Color, float3(1, 0, 0), saturate((Ratio - 0.5f) * 2.0f)); // Green to Red
+        Color = lerp(float3(0, 0, 1), float3(0, 1, 0), saturate(Ratio * 2.0f));
+        Color = lerp(Color, float3(1, 0, 0), saturate((Ratio - 0.5f) * 2.0f));
     }
 
-    // 타일 경계선 추가 (격자 보기)
     uint2 PixelInTile = (uint2) ScreenPos % TileSize;
     if (PixelInTile.x == 0 || PixelInTile.y == 0)
-    {
         Color += float3(0.2f, 0.2f, 0.2f);
-    }
 
     return Color;
 }
@@ -316,10 +308,9 @@ FUberPSInput mainVS(FUberVSInput Input)
     FUberPSInput Output = BuildSurfaceVertex(Input);
 
 #if LIGHTING_MODEL_GOURAUD
-    // Vertex 단계엔 tile 정보 없으므로 전체 순회 버전 사용
     const FLightingResult Lighting = EvaluateLightingFromWorldVertex(Output.WorldPos, Output.WorldNormal);
-    Output.VertexDiffuseLighting  = Lighting.Diffuse;
-    Output.VertexSpecularLighting = Lighting.Specular;
+    Output.VertexDiffuseLighting   = Lighting.Diffuse;
+    Output.VertexSpecularLighting  = Lighting.Specular;
 #endif
 
     return Output;
@@ -344,7 +335,6 @@ FUberPSOutput mainPS(FUberPSInput Input)
 #endif
 
     return ComposeOutput(Surface, ApplyLighting(Surface, Lighting));
-    
+
     // return ComposeOutput(Surface, GetTileDebugColor(Input.ClipPos.xy));
 }
-
