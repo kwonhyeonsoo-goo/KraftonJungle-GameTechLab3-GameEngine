@@ -574,9 +574,9 @@ void FSceneSaveManager::Load(const FString& FilePath, FWorldContext& OutWorldCon
 		
 		AActor* NewActor = Cast<AActor>(FObjectFactory::Get().Create(InferActorClass(CompType)));
 		if (NewActor)
-		{
+        {
+            NewActor->SetWorld(World);
 			NewActor->InitDefaultComponents();
-			NewActor->SetWorld(World);
 			if (ULevel* Level = World->GetPersistentLevel())
 				Level->AddActor(NewActor);
 
