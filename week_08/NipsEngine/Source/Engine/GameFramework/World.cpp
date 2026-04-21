@@ -98,7 +98,7 @@ FLightHandle UWorld::RegisterLight(ULightComponentBase* Comp)
 	if (FreeLightSlotList.empty())
 	{
 		// 새로 생성
-        uint32 Index = WorldLightSlots.size();
+        uint32 Index = static_cast<uint32>(WorldLightSlots.size());
 		LightSlot.LightData = Comp;
         LightSlot.Generation = 0;
         LightSlot.bAlive = true;
