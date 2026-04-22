@@ -1,13 +1,13 @@
 {
   "ClassName" : "UWorld",
   "Name" : "Scene_02_LightingModels_Decal",
-  "NextUUID" : 1341,
+  "NextUUID" : 1343,
   "PerspectiveCamera" : {
     "FOV" : 85.999969,
     "FarClip" : 2000.000000,
-    "Location" : [2.195326, 61.110950, 3.503988],
+    "Location" : [-3.424572, -1.912449, 3.196635],
     "NearClip" : 0.100000,
-    "Rotation" : [1.095422, 15.913295, -3.989258]
+    "Rotation" : [-5.150909, 6.517073, 38.457333]
   },
   "Primitives" : {
     "1064" : {
