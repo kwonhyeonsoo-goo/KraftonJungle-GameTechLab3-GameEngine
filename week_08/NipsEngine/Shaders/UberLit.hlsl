@@ -192,7 +192,6 @@ FLightingResult EvaluateLightingFromWorld(float3 WorldPos, float3 WorldNormal, f
 
     return Result;
 }
-
 FLightingResult EvaluateLightingFromWorldVertex(float3 WorldPos, float3 WorldNormal)
 {
     FLightingResult Result;
@@ -202,53 +201,79 @@ FLightingResult EvaluateLightingFromWorldVertex(float3 WorldPos, float3 WorldNor
     const float3 N = normalize(WorldNormal);
     const float3 V = normalize(CameraPosition - WorldPos);
 
+    float3 AmbientAccum = 0.0f.xxx;
+    uint HasAmbient = 0u;
+
+    // =========================
+    // 1. Scene Global Lights (Directional + Ambient)
+    // =========================
     [loop]
-    for (uint LightIndex = 0u; LightIndex < SceneGlobalLightCount; ++LightIndex)
+    for (uint i = 0u; i < SceneGlobalLightCount; ++i)
     {
-        const FGPULight Light = GlobalLights[LightIndex];
+        const FGPULight Light = GlobalLights[i];
         const float3 LightColor = Light.Color * Light.Intensity;
 
         if (Light.Type == LIGHT_TYPE_AMBIENT)
         {
+            if (HasAmbient == 0u)
+            {
+                AmbientAccum = 0.0f.xxx;
+                HasAmbient = 1u;
+            }
+
+            AmbientAccum += LightColor;
             continue;
         }
 
         if (Light.Type == LIGHT_TYPE_DIRECTIONAL)
         {
-            AccumulateDirectLight(WorldPos, N, V, normalize(Light.Direction), LightColor, Result);
+            const float3 L = normalize(Light.Direction);
+            AccumulateDirectLight(WorldPos, N, V, L, LightColor, Result);
+        }
+    }
+
+    Result.Diffuse += AmbientAccum;
+    
+    if (VisibleLightCount == 0)
+    {
+        Result.Diffuse = float3(0, 0, 1);
+        return Result;
+    }
+
+    // =========================
+    // 2. Local Lights (Point / Spot) - brute force
+    // 해당 함수는 구로 셰이딩 모드에서만 들어오고, 픽셀 단위 컬링을 쓰지 않기 때문에 전체 순회
+    // =========================
+    [loop]
+    for (uint j = 0u; j < VisibleLightCount; ++j)
+    {
+        const FVisibleLightData Light = VisibleLights[j];
+
+        const float3 ToLight = Light.WorldPos - WorldPos;
+        const float Dist = length(ToLight);
+
+        if (Dist <= 1.0e-4f || Dist >= Light.Radius)
             continue;
-        }
 
-        if (Light.Type == LIGHT_TYPE_POINT || Light.Type == LIGHT_TYPE_SPOT)
+        const float3 L = ToLight / Dist;
+
+        float Att = ComputeDistanceAttenuation(Dist, Light.Radius, Light.RadiusFalloff);
+        
+        if (Att <= 0.0f)
+            continue;
+
+        if (Light.Type == LIGHT_TYPE_SPOT)
         {
-            const float3 ToLight = Light.Position - WorldPos;
-            const float Distance = length(ToLight);
-            if (Distance <= 1.0e-4f)
-            {
-                continue;
-            }
+            const float3 SpotDir = normalize(Light.Direction);
+            const float CosAngle = dot(SpotDir, -L);
+            const float ConeRange = max(Light.SpotInnerCos - Light.SpotOuterCos, 1.0e-4f);
 
-            const float3 L = ToLight / Distance;
-            float Att = ComputeDistanceAttenuation(Distance, Light.Radius, Light.FalloffExponent);
+            Att *= saturate((CosAngle - Light.SpotOuterCos) / ConeRange);
             if (Att <= 0.0f)
-            {
                 continue;
-            }
-
-            if (Light.Type == LIGHT_TYPE_SPOT)
-            {
-                const float3 SpotDir = normalize(Light.Direction);
-                const float CosAngle = dot(SpotDir, -L);
-                const float ConeRange = max(Light.SpotInnerCos - Light.SpotOuterCos, 1.0e-4f);
-                Att *= saturate((CosAngle - Light.SpotOuterCos) / ConeRange);
-                if (Att <= 0.0f)
-                {
-                    continue;
-                }
-            }
-
-            AccumulateDirectLight(WorldPos, N, V, L, LightColor * Att, Result);
         }
+
+        AccumulateDirectLight(WorldPos, N, V, L, Light.Color * Light.Intensity * Att, Result);
     }
 
     return Result;
@@ -351,6 +376,7 @@ FUberPSOutput mainPS(FUberPSInput Input)
 #if defined(LIGHTING_MODEL_GOURAUD)
     Lighting.Diffuse = Input.VertexDiffuseLighting;
     Lighting.Specular = Input.VertexSpecularLighting;
+    
 #elif defined(LIGHTING_MODEL_LAMBERT)
     Lighting = EvaluateLightingFromWorld(Surface.WorldPos, Surface.WorldNormal, Input.ClipPos.xy);
     Lighting.Specular = 0.0f.xxx;
