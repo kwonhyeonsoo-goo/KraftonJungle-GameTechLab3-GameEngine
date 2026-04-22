@@ -34,6 +34,7 @@ enum class ERenderCommandType
 	Decal,
 	Light,
 	Sky,
+	ToonOutline
 };
 
 //PerObject

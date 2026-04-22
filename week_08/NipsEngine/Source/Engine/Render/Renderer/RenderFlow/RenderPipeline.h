@@ -2,6 +2,7 @@
 #include "Core/CoreMinimal.h"
 #include "RenderPassContext.h"
 
+class FToonOutlineRenderPass;
 class FFXAARenderPass;
 class FFogRenderPass;
 class FSkyRenderPass;
@@ -47,6 +48,8 @@ private:
     std::shared_ptr<FEditorRenderPass> EditorRenderPass;
     std::shared_ptr<FDepthLessRenderPass> DepthLessRenderPass;
     std::shared_ptr<FPostProcessOutlineRenderPass> PostProcessOutlineRenderPass;
+    std::shared_ptr<FToonOutlineRenderPass> ToonOutlineRenderPass;
+
     ID3D11ShaderResourceView* OutSRV = nullptr;
     ID3D11RenderTargetView* OutRTV = nullptr;
 

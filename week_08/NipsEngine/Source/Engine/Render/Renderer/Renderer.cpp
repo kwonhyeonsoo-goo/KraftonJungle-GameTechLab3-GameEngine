@@ -34,6 +34,7 @@ void FRenderer::Create(HWND hWindow)
     FResourceManager::Get().LoadShader(MakeUberLitShaderCompileKey(EMaterialDomain::Surface, ELightingModel::Gouraud), NormalVertexInputLayout, ARRAYSIZE(NormalVertexInputLayout));
     FResourceManager::Get().LoadShader(MakeUberLitShaderCompileKey(EMaterialDomain::Surface, ELightingModel::Lambert), NormalVertexInputLayout, ARRAYSIZE(NormalVertexInputLayout));
     FResourceManager::Get().LoadShader(MakeUberLitShaderCompileKey(EMaterialDomain::Surface, ELightingModel::Phong), NormalVertexInputLayout, ARRAYSIZE(NormalVertexInputLayout));
+    FResourceManager::Get().LoadShader(MakeUberLitShaderCompileKey(EMaterialDomain::Surface, ELightingModel::Toon), NormalVertexInputLayout, ARRAYSIZE(NormalVertexInputLayout));
     FResourceManager::Get().LoadShader(MakeUberLitShaderCompileKey(EMaterialDomain::Decal), NormalVertexInputLayout, ARRAYSIZE(NormalVertexInputLayout));
     FResourceManager::Get().LoadShader("Shaders/UberUnlit.hlsl", "mainVS", "mainPS", NormalVertexInputLayout, ARRAYSIZE(NormalVertexInputLayout), nullptr);
     FResourceManager::Get().LoadShader("Shaders/Multipass/LightPass.hlsl", "mainVS", "mainPS", nullptr, 0, nullptr);
@@ -44,6 +45,7 @@ void FRenderer::Create(HWND hWindow)
     FResourceManager::Get().LoadShader("Shaders/ShaderFont.hlsl", "VS", "PS", TextureVertexInputLayout, ARRAYSIZE(TextureVertexInputLayout), nullptr);
     FResourceManager::Get().LoadShader("Shaders/ShaderLine.hlsl", "mainVS", "mainPS", PrimitiveInputLayout, ARRAYSIZE(PrimitiveInputLayout), nullptr);
     FResourceManager::Get().LoadShader("Shaders/ShaderBillboard.hlsl", "mainVS", "mainPS", TextureVertexInputLayout, ARRAYSIZE(TextureVertexInputLayout), nullptr);
+    FResourceManager::Get().LoadShader("Shaders/Multipass/ToonOutlinePass.hlsl", "mainVS", "mainPS", NormalVertexInputLayout, ARRAYSIZE(NormalVertexInputLayout), nullptr);
 }
 
 void FRenderer::CreateResources()

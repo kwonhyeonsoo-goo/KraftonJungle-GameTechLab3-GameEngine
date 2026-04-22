@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "LightCullingPass.h"
 #include "Render/Common/ComPtr.h"
@@ -65,10 +65,13 @@ namespace SceneLightBinding
 			Outputs.TileLightCountSRV,
 			Outputs.TileLightIndexSRV
 		};
+		
 		Context->DeviceContext->PSSetShaderResources(8, 3, SRVs);
-
 		ID3D11Buffer* CBuffer = VisibleLightConstantBuffer.Get();
 		Context->DeviceContext->PSSetConstantBuffers(4, 1, &CBuffer);
+
+		Context->DeviceContext->VSSetShaderResources(8, 3, SRVs);
+        Context->DeviceContext->VSSetConstantBuffers(4, 1, &CBuffer);
 	}
 
 	inline void UnbindResources(ID3D11DeviceContext* DeviceContext)

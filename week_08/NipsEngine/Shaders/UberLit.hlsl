@@ -1,6 +1,6 @@
 #include "UberSurface.hlsli"
 
-#if !defined(MATERIAL_DOMAIN_DECAL) && !defined(LIGHTING_MODEL_GOURAUD) && !defined(LIGHTING_MODEL_LAMBERT) && !defined(LIGHTING_MODEL_PHONG)
+#if !defined(MATERIAL_DOMAIN_DECAL) && !defined(LIGHTING_MODEL_GOURAUD) && !defined(LIGHTING_MODEL_LAMBERT) && !defined(LIGHTING_MODEL_PHONG) && !defined(LIGHTING_MODEL_TOON)
 #define LIGHTING_MODEL_PHONG 1
 #endif
 
@@ -82,6 +82,33 @@ float ComputeDistanceAttenuation(float Distance, float Radius, float FalloffExpo
 
 void AccumulateDirectLight(float3 WorldPos, float3 N, float3 V, float3 L, float3 LightContribution, inout FLightingResult Result)
 {
+#if defined(LIGHTING_MODEL_TOON)
+    // --- Diffuse: 3-band 계단 처리 ---
+    const float HalfLambert = dot(N, L) * 0.5f + 0.5f;    
+
+    float ToonDiffuse;
+    if (HalfLambert > 0.75f)
+        ToonDiffuse = 1.0f;       // 밝은 영역
+    else if (HalfLambert > 0.4f)
+        ToonDiffuse = 0.6f;       // 중간 영역
+    else
+        ToonDiffuse = 0.15f;      // 그림자 영역
+
+    Result.Diffuse += LightContribution * ToonDiffuse;
+
+    /*
+    const float3 H = normalize(L + V);
+    const float NdotH = saturate(dot(N, H));
+    const float ToonSpec = step(0.97f, pow(NdotH, max(Shininess, 1.0e-4f)));
+    Result.Specular += SpecularColor * LightContribution * ToonSpec;
+    
+    const float RimDot = 1.0f - saturate(dot(N, V));
+    // step으로 끊어서 툰 느낌 유지
+    const float RimIntensity = step(0.6f, RimDot * saturate(dot(L, V) + 0.5f));
+    Result.Diffuse += LightContribution * RimIntensity * 0.4f;
+    */    
+    
+#else
     const float NdotL = saturate(dot(N, L) * 0.5f + 0.5f);
     if (NdotL <= 0.0f)
     {
@@ -94,6 +121,7 @@ void AccumulateDirectLight(float3 WorldPos, float3 N, float3 V, float3 L, float3
     const float3 H = normalize(L + V);
     const float SpecularPower = pow(saturate(dot(N, H)), max(Shininess, 1.0e-4f));
     Result.Specular += SpecularColor * LightContribution * SpecularPower;
+#endif
 #endif
 }
 
@@ -192,7 +220,6 @@ FLightingResult EvaluateLightingFromWorld(float3 WorldPos, float3 WorldNormal, f
 
     return Result;
 }
-
 FLightingResult EvaluateLightingFromWorldVertex(float3 WorldPos, float3 WorldNormal)
 {
     FLightingResult Result;
@@ -202,53 +229,73 @@ FLightingResult EvaluateLightingFromWorldVertex(float3 WorldPos, float3 WorldNor
     const float3 N = normalize(WorldNormal);
     const float3 V = normalize(CameraPosition - WorldPos);
 
+    float3 AmbientAccum = 0.0f.xxx;
+    uint HasAmbient = 0u;
+
+    // =========================
+    // 1. Scene Global Lights (Directional + Ambient)
+    // =========================
     [loop]
-    for (uint LightIndex = 0u; LightIndex < SceneGlobalLightCount; ++LightIndex)
+    for (uint i = 0u; i < SceneGlobalLightCount; ++i)
     {
-        const FGPULight Light = GlobalLights[LightIndex];
+        const FGPULight Light = GlobalLights[i];
         const float3 LightColor = Light.Color * Light.Intensity;
 
         if (Light.Type == LIGHT_TYPE_AMBIENT)
         {
+            if (HasAmbient == 0u)
+            {
+                AmbientAccum = 0.0f.xxx;
+                HasAmbient = 1u;
+            }
+
+            AmbientAccum += LightColor;
             continue;
         }
 
         if (Light.Type == LIGHT_TYPE_DIRECTIONAL)
         {
-            AccumulateDirectLight(WorldPos, N, V, normalize(Light.Direction), LightColor, Result);
+            const float3 L = normalize(Light.Direction);
+            AccumulateDirectLight(WorldPos, N, V, L, LightColor, Result);
+        }
+    }
+
+    Result.Diffuse += AmbientAccum;
+
+    // =========================
+    // 2. Local Lights (Point / Spot) - brute force
+    // 해당 함수는 구로 셰이딩 모드에서만 들어오고, 픽셀 단위 컬링을 쓰지 않기 때문에 전체 순회
+    // =========================
+    [loop]
+    for (uint j = 0u; j < VisibleLightCount; ++j)
+    {
+        const FVisibleLightData Light = VisibleLights[j];
+
+        const float3 ToLight = Light.WorldPos - WorldPos;
+        const float Dist = length(ToLight);
+
+        if (Dist <= 1.0e-4f || Dist >= Light.Radius)
             continue;
-        }
 
-        if (Light.Type == LIGHT_TYPE_POINT || Light.Type == LIGHT_TYPE_SPOT)
+        const float3 L = ToLight / Dist;
+
+        float Att = ComputeDistanceAttenuation(Dist, Light.Radius, Light.RadiusFalloff);
+        
+        if (Att <= 0.0f)
+            continue;
+
+        if (Light.Type == LIGHT_TYPE_SPOT)
         {
-            const float3 ToLight = Light.Position - WorldPos;
-            const float Distance = length(ToLight);
-            if (Distance <= 1.0e-4f)
-            {
-                continue;
-            }
+            const float3 SpotDir = normalize(Light.Direction);
+            const float CosAngle = dot(SpotDir, -L);
+            const float ConeRange = max(Light.SpotInnerCos - Light.SpotOuterCos, 1.0e-4f);
 
-            const float3 L = ToLight / Distance;
-            float Att = ComputeDistanceAttenuation(Distance, Light.Radius, Light.FalloffExponent);
+            Att *= saturate((CosAngle - Light.SpotOuterCos) / ConeRange);
             if (Att <= 0.0f)
-            {
                 continue;
-            }
-
-            if (Light.Type == LIGHT_TYPE_SPOT)
-            {
-                const float3 SpotDir = normalize(Light.Direction);
-                const float CosAngle = dot(SpotDir, -L);
-                const float ConeRange = max(Light.SpotInnerCos - Light.SpotOuterCos, 1.0e-4f);
-                Att *= saturate((CosAngle - Light.SpotOuterCos) / ConeRange);
-                if (Att <= 0.0f)
-                {
-                    continue;
-                }
-            }
-
-            AccumulateDirectLight(WorldPos, N, V, L, LightColor * Att, Result);
         }
+
+        AccumulateDirectLight(WorldPos, N, V, L, Light.Color * Light.Intensity * Att, Result);
     }
 
     return Result;
@@ -351,13 +398,16 @@ FUberPSOutput mainPS(FUberPSInput Input)
 #if defined(LIGHTING_MODEL_GOURAUD)
     Lighting.Diffuse = Input.VertexDiffuseLighting;
     Lighting.Specular = Input.VertexSpecularLighting;
+    
 #elif defined(LIGHTING_MODEL_LAMBERT)
     Lighting = EvaluateLightingFromWorld(Surface.WorldPos, Surface.WorldNormal, Input.ClipPos.xy);
     Lighting.Specular = 0.0f.xxx;
 #else
+    // TOON | PHONG (함수 내에서 내부적으로 계산 흐름 분리)
     Lighting = EvaluateLightingFromWorld(Surface.WorldPos, Surface.WorldNormal, Input.ClipPos.xy);
-#endif
 
+
+#endif
     return ComposeOutput(Surface, ApplyLighting(Surface, Lighting));
 }
 
