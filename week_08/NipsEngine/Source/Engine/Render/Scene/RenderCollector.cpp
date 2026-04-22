@@ -12,6 +12,7 @@
 #include "Component/SubUVComponent.h"
 #include "Component/DecalComponent.h"
 #include "Component/HeightFogComponent.h"
+#include "Component/SkyAtmosphereComponent.h"
 #include "Component/Light/AmbientLightComponent.h"
 #include "Component/Light/DirectionalLightComponent.h"
 #include "Component/Light/PointLightComponent.h"
@@ -855,6 +856,22 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
         RenderBus.AddCommand(ERenderPass::Fog, Cmd);
         break;
     }
+	case EPrimitiveType::EPT_SKY:
+	{
+		if (!RenderBus.GetCommands(ERenderPass::Sky).empty())
+		{
+			return;
+		}
+
+		USkyAtmosphereComponent* SkyComponent = static_cast<USkyAtmosphereComponent*>(Primitive);
+		SkyComponent->RefreshSkyStateFromWorld();
+
+		FRenderCommand Cmd = {};
+		Cmd.Type = ERenderCommandType::Sky;
+		SkyComponent->FillSkyConstants(RenderBus, Cmd.Constants.Sky);
+		RenderBus.AddCommand(ERenderPass::Sky, Cmd);
+		break;
+	}
 	default:
 		if (PrimType == EPrimitiveType::EPT_TransGizmo || PrimType == EPrimitiveType::EPT_RotGizmo || PrimType == EPrimitiveType::EPT_ScaleGizmo)
 		{

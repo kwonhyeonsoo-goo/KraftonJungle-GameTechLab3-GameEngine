@@ -26,12 +26,16 @@ enum class ERenderCommandType
 	SelectionMask,
 	PostProcessOutline,
 	Billboard,
+	DebugBox,
+	DebugOBB,
+	DebugSpotlight,
 	Grid,		// Grid 패스 — LineBatcher 경유
 	Font,		// TextRenderComponent — FontBatcher 경유
 	SubUV,		// SubUVComponent     — SubUVBatcher 경유
 	StaticMesh,	// UStaticMeshComponent — OBJ 메시 퐁셰이딩
 	Decal,
 	Light,
+	Sky,
 };
 
 //PerObject
@@ -81,6 +85,37 @@ struct FOutlineConstants
 	float OutlineThicknessPixels = 2.0f;
 	FVector2 ViewportSize = FVector2(1.0f, 1.0f);
 	float Padding0 = 0.0f;
+};
+
+struct FAABBConstants
+{
+	FVector Min;
+	float Padding0;
+
+	FVector Max;
+	float Padding1;
+
+	FColor Color;
+};
+
+struct FOBBConstants
+{
+	FVector Center;
+	float Padding0;
+	FVector Extents;
+	float Padding1;
+	FMatrix Rotation; // 월드 회전 행렬 (회전만 포함, 평행 이동과 스케일 제외)
+	FColor Color;
+};
+
+struct FSpotLightConstants
+{
+	FVector Position;
+	FVector Direction;
+	float InnerAngle;
+	float OuterAngle;
+	float Range;
+	FColor Color;
 };
 
 struct FGridConstants
@@ -167,6 +202,21 @@ struct FFXAAConstants
     float  Padding;
 };
 
+struct FSkyConstants
+{
+	FMatrix InvView = FMatrix::Identity;
+	FMatrix InvProjection = FMatrix::Identity;
+	FVector4 SkyZenithColor = FVector4(0.11f, 0.27f, 0.58f, 1.0f);
+	FVector4 SkyHorizonColor = FVector4(0.68f, 0.82f, 0.95f, 1.0f);
+	FVector4 SunColor = FVector4(1.0f, 0.92f, 0.82f, 1.0f);
+	FVector4 SunDirectionAndDiskSize = FVector4(0.0f, 0.0f, 1.0f, 1.5f);
+	FVector4 SkyParams0 = FVector4(14.0f, 2.0f, 1.5f, 0.0f);
+	FVector4 SkyParams1 = FVector4(0.0f, 0.0f, 1.0f, 0.0f);
+	FVector4 CameraForward = FVector4(1.0f, 0.0f, 0.0f, 0.0f);
+	FVector4 CameraRight = FVector4(0.0f, 1.0f, 0.0f, 0.0f);
+	FVector4 CameraUp = FVector4(0.0f, 0.0f, 1.0f, 0.0f);
+};
+
 struct alignas(16) FGPULight
 {
     uint32 Type = static_cast<uint32>(ELightType::Max);
@@ -203,10 +253,14 @@ struct FRenderCommand
 
 	union
 	{
+		FAABBConstants AABB;
+		FOBBConstants OBB;
+		FSpotLightConstants SpotLight;
 		FGridConstants Grid;
 		FFontConstants Font;
 		FSubUVConstants SubUV;
 		FBillboardConstants Billboard;
+        FSkyConstants Sky;
         FFogConstants Fog;
         FFXAAConstants FXAA;
 	} Constants;

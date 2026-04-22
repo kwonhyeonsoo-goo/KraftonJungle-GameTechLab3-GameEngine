@@ -122,6 +122,13 @@ void FEditorControlWidget::Render(float DeltaTime)
 					Actor->SetActorLocation(CurSpawnPoint);
 					break;
 				}
+				case 10: // Sky Atmosphere
+				{
+					ASkyAtmosphereActor* Actor = World->SpawnActor<ASkyAtmosphereActor>();
+					Actor->InitDefaultComponents();
+					Actor->SetActorLocation(CurSpawnPoint);
+					break;
+				}
 			}
 		}
 		NumberOfSpawnedActors = 1;
