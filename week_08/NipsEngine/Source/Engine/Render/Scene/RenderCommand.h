@@ -24,6 +24,7 @@ enum class ERenderCommandType
 	Primitive,
 	Gizmo,
 	SelectionMask,
+	BillboardSelectionMask,
 	PostProcessOutline,
 	Billboard,
 	DebugBox,
