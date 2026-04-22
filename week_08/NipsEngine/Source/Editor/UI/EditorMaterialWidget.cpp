@@ -426,6 +426,9 @@ void FEditorMaterialWidget::RenderMaterialDetails(UPrimitiveComponent* Primitive
 
 void FEditorMaterialWidget::RenderMaterialProperties()
 {
+	if (!SelectedMaterialPtr)
+		return;
+
 	TMap<FString, FMaterialParamValue> DisplayParams;
 
 	SelectedMaterialPtr->GatherAllParams(DisplayParams);

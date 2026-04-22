@@ -38,7 +38,9 @@ void UDecalComponent::PostDuplicate(UObject* Original)
 void UDecalComponent::Serialize(FArchive& Ar)
 {
 	UPrimitiveComponent::Serialize(Ar);
-	Ar << "Material" << Materials[0]->GetNameRef();
+
+	FString MaterialName = (Materials[0] != nullptr) ? Materials[0]->GetName() : FString();
+	Ar << "Material" << MaterialName;
 	Ar << "Size" << DecalSize;
 	Ar << "Color" << DecalColor;
 	Ar << "Fade Start Delay" << FadeStartDelay;
@@ -49,9 +51,9 @@ void UDecalComponent::Serialize(FArchive& Ar)
 
 	if (Ar.IsLoading())
 	{
-		if (!Materials[0]->GetName().empty())
+		if (!MaterialName.empty())
 		{
-			SetMaterial(FResourceManager::Get().GetMaterialInterface(Materials[0]->GetName()));
+			SetMaterial(FResourceManager::Get().GetMaterialInterface(MaterialName));
 		}
 	}
 }
