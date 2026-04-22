@@ -672,6 +672,14 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
 		{
 			const FStaticMeshSection& Section = Sections[SectionIdx];
 			UMaterialInterface* Material = Cast<UMaterialInterface>(StaticMeshComp->GetMaterial(SectionIdx));
+			if (Material == nullptr)
+			{
+				Material = FResourceManager::Get().GetMaterial("DefaultWhite");
+				if (Material == nullptr)
+				{
+					continue;
+				}
+			}
 
 			FRenderCommand Cmd = {};
 			Cmd.PerObjectConstants = FPerObjectConstants{ Primitive->GetWorldMatrix(), FColor::White().ToVector4() };

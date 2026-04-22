@@ -73,7 +73,12 @@ void UStaticMeshComponent::Serialize(FArchive& Ar)
 		const int32 RestoreCount = static_cast<int32>(std::min(SavedMaterials.size(), Materials.size()));
 		for (int32 i = 0; i < RestoreCount; ++i)
 		{
-			SetMaterial(i, SavedMaterials[i]);
+			// 구형 scene 에서 빈 문자열은 "override 없음" 의미로 저장되므로
+			// null 슬롯은 mesh 기본 material 을 유지합니다.
+			if (SavedMaterials[i] != nullptr)
+			{
+				SetMaterial(i, SavedMaterials[i]);
+			}
 		}
 	}
 }
