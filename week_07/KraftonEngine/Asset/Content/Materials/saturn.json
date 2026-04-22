@@ -6,12 +6,12 @@
     "SpecularPower" : 250.000000,
     "SpecularStrength" : 0.500000
   },
-  "PathFileName" : "Asset/Content/Materials/earth.json",
+  "PathFileName" : "Asset/Content/Materials/saturn.json",
   "RasterizerState" : "SolidBackCull",
   "RenderPass" : "Opaque",
   "ShaderPath" : "Shaders/Materials/StaticMeshShader.hlsl",
   "Textures" : {
-    "DiffuseTexture" : "Asset/Content/Models/SolarSystem/textures/2k_earth.jpg",
-    "NormalTexture" : "Asset/Content/Models/SolarSystem/textures/2k_earth_normal.png"
+    "DiffuseTexture" : "Asset/Content/Models/SolarSystem/textures/2k_saturn.jpg",
+    "NormalTexture" : "Asset/Content/Models/SolarSystem/textures/2k_saturn_normal.png"
   }
 }

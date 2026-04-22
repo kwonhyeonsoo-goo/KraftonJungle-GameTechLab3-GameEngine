@@ -6,7 +6,7 @@
     "SpecularPower" : 250.000000,
     "SpecularStrength" : 0.500000
   },
-  "PathFileName" : "Asset/Content/Materials/earth.json",
+  "PathFileName" : "Asset/Content/Materials/SolarSystem/textures/earth.json",
   "RasterizerState" : "SolidBackCull",
   "RenderPass" : "Opaque",
   "ShaderPath" : "Shaders/Materials/StaticMeshShader.hlsl",
