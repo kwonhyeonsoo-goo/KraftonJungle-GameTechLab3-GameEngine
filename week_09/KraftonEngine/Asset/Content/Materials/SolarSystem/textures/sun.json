@@ -6,10 +6,10 @@
     "SpecularPower" : 250.000000,
     "SpecularStrength" : 0.500000
   },
-  "PathFileName" : "Asset/Content/Materials/SolarSystem/textures/jupiter.json",
+  "PathFileName" : "Asset/Content/Materials/SolarSystem/textures/sun.json",
   "RasterizerState" : "SolidBackCull",
   "Textures" : {
-    "DiffuseTexture" : "Asset/Content/Models/SolarSystem/textures/2k_jupiter.jpg",
-    "NormalTexture" : "Asset/Content/Models/SolarSystem/textures/2k_jupiter_normal.png"
+    "DiffuseTexture" : "Asset/Content/Models/SolarSystem/textures/2k_sun.jpg",
+    "NormalTexture" : "Asset/Content/Models/SolarSystem/textures/2k_sun_normal.png"
   }
 }
