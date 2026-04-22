@@ -1,13 +1,13 @@
 {
   "ClassName" : "UWorld",
-  "Name" : "Scene_LightComponents13",
-  "NextUUID" : 748,
+  "Name" : "Scene_01_LightComponents",
+  "NextUUID" : 823,
   "PerspectiveCamera" : {
-    "FOV" : 87.999962,
+    "FOV" : 87.999954,
     "FarClip" : 2000.000000,
-    "Location" : [1.512937, 46.321617, 2.834780],
+    "Location" : [-4.554194, -1.030102, 3.660223],
     "NearClip" : 0.100000,
-    "Rotation" : [-6.838501, 8.524529, 38.973785]
+    "Rotation" : [-2.758148, 3.698665, 36.752617]
   },
   "Primitives" : {
     "109" : {
@@ -342,11 +342,25 @@
       "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
       "LightFalloffExponent" : 1.000000,
       "LightType" : 2,
-      "Location" : [5.298025, 63.076687, 4.057227],
+      "Location" : [5.804380, 62.365677, 4.057227],
       "OuterConeAngle" : 30.000000,
       "Rotation" : [-19.850739, -6.987732, -21.262726],
       "Scale" : [1.000000, 1.000000, 1.000000],
       "Type" : "USpotLightComponent",
+      "Visible" : true
+    },
+    "821" : {
+      "Editor Only" : false,
+      "Enable Cull" : true,
+      "Enable Tick" : true,
+      "Location" : [0.000000, 0.000000, 0.000000],
+      "Materials" : ["UnrealMaterial.098", "UnrealMaterial.001", "UnrealMaterial.003", "UnrealMaterial.171", "UnrealMaterial.172", "UnrealMaterial.253", "UnrealMaterial.254"],
+      "ObjStaticMeshAsset" : "Asset\\Mesh\\ContentExamples\\ContentExamples.obj",
+      "Rotation" : [0.000000, 0.000000, 0.000000],
+      "Scale" : [1.000000, 1.000000, 1.000000],
+      "Scroll U" : 0.000000,
+      "Scroll V" : 0.000000,
+      "Type" : "UStaticMeshComponent",
       "Visible" : true
     }
   },
