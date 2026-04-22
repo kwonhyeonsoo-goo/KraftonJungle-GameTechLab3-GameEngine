@@ -82,6 +82,33 @@ float ComputeDistanceAttenuation(float Distance, float Radius, float FalloffExpo
 
 void AccumulateDirectLight(float3 WorldPos, float3 N, float3 V, float3 L, float3 LightContribution, inout FLightingResult Result)
 {
+#if defined(LIGHTING_MODEL_TOON)
+    // --- Diffuse: 3-band 계단 처리 ---
+    const float HalfLambert = dot(N, L) * 0.5f + 0.5f;    
+
+    float ToonDiffuse;
+    if (HalfLambert > 0.75f)
+        ToonDiffuse = 1.0f;       // 밝은 영역
+    else if (HalfLambert > 0.4f)
+        ToonDiffuse = 0.6f;       // 중간 영역
+    else
+        ToonDiffuse = 0.15f;      // 그림자 영역
+
+    Result.Diffuse += LightContribution * ToonDiffuse;
+
+    /*
+    const float3 H = normalize(L + V);
+    const float NdotH = saturate(dot(N, H));
+    const float ToonSpec = step(0.97f, pow(NdotH, max(Shininess, 1.0e-4f)));
+    Result.Specular += SpecularColor * LightContribution * ToonSpec;
+    
+    const float RimDot = 1.0f - saturate(dot(N, V));
+    // step으로 끊어서 툰 느낌 유지
+    const float RimIntensity = step(0.6f, RimDot * saturate(dot(L, V) + 0.5f));
+    Result.Diffuse += LightContribution * RimIntensity * 0.4f;
+    */    
+    
+#else
     const float NdotL = saturate(dot(N, L) * 0.5f + 0.5f);
     if (NdotL <= 0.0f)
     {
@@ -94,6 +121,7 @@ void AccumulateDirectLight(float3 WorldPos, float3 N, float3 V, float3 L, float3
     const float3 H = normalize(L + V);
     const float SpecularPower = pow(saturate(dot(N, H)), max(Shininess, 1.0e-4f));
     Result.Specular += SpecularColor * LightContribution * SpecularPower;
+#endif
 #endif
 }
 
@@ -374,11 +402,8 @@ FUberPSOutput mainPS(FUberPSInput Input)
 #elif defined(LIGHTING_MODEL_LAMBERT)
     Lighting = EvaluateLightingFromWorld(Surface.WorldPos, Surface.WorldNormal, Input.ClipPos.xy);
     Lighting.Specular = 0.0f.xxx;
-#elif defined(LIGHTING_MODEL_TOON)
-    Lighting.Diffuse = float3(1, 0, 0);
-    Lighting.Specular = 0.0f.xxx;
-
 #else
+    // TOON | PHONG (함수 내에서 내부적으로 계산 흐름 분리)
     Lighting = EvaluateLightingFromWorld(Surface.WorldPos, Surface.WorldNormal, Input.ClipPos.xy);
 
 
