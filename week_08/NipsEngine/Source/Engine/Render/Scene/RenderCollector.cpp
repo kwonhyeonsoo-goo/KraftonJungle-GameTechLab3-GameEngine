@@ -1,4 +1,4 @@
-﻿#include "RenderCollector.h"
+#include "RenderCollector.h"
 
 #include "Render/LineBatcher.h"
 #include "GameFramework/World.h"
@@ -262,6 +262,7 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus)
 			RenderLight.Direction = DirectionToLight;
 			RenderBus.AddLight(RenderLight);
 
+			// TODO: PIE에서도 화살표를 보여주고 있음.. PIE 월드를 감지할 필요가 있다.
             LineBatcher->AddDirectionalLight(
                 LightComponent->GetWorldLocation(),
                 RenderLight.Direction * -1.0f,
@@ -817,7 +818,7 @@ void FRenderCollector::CollectFromComponent(UPrimitiveComponent* Primitive, cons
 			UStaticMeshComponent* StaticMeshComp = static_cast<UStaticMeshComponent*>(Prim);
 			const UStaticMesh* StaticMesh = StaticMeshComp->GetStaticMesh();
 
-			if (!StaticMesh || !StaticMesh->HasValidMeshData()) return;
+			if (!StaticMesh || !StaticMesh->HasValidMeshData()) continue;
 
 			// 1. 카메라 정보 및 AABB 가져오기
 			FVector CameraPos = RenderBus.GetCameraPosition();

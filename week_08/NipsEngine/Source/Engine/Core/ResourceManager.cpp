@@ -1,4 +1,4 @@
-﻿#include "Core/ResourceManager.h"
+#include "Core/ResourceManager.h"
 
 #include "Core/Paths.h"
 #include "SimpleJSON/json.hpp"
@@ -1294,19 +1294,31 @@ bool FResourceManager::SerializeMaterial(const FString& MatFilePath, const UMate
 		{
 			const FVector2& Vec = std::get<FVector2>(ParamValue.Value);
 			Param["Type"] = "Vector2";
-			Param["Value"] = {Vec.X, Vec.Y};
+			JSON VecArray2 = JSON::Make(JSON::Class::Array);
+			VecArray2.append(Vec.X);
+			VecArray2.append(Vec.Y);
+			Param["Value"] = VecArray2;
 		}
 		else if (std::holds_alternative<FVector>(ParamValue.Value))
 		{
 			const FVector& Vec = std::get<FVector>(ParamValue.Value);
 			Param["Type"] = "Vector3";
-			Param["Value"] = {Vec.X, Vec.Y, Vec.Z};
+			JSON VecArray3 = JSON::Make(JSON::Class::Array);
+			VecArray3.append(Vec.X);
+			VecArray3.append(Vec.Y);
+			VecArray3.append(Vec.Z);
+			Param["Value"] = VecArray3;
 		}
 		else if (std::holds_alternative<FVector4>(ParamValue.Value))
 		{
 			const FVector4& Vec = std::get<FVector4>(ParamValue.Value);
 			Param["Type"] = "Vector4";
-			Param["Value"] = { Vec.X, Vec.Y, Vec.Z, Vec.W };
+			JSON VecArray4 = JSON::Make(JSON::Class::Array);
+			VecArray4.append(Vec.X);
+			VecArray4.append(Vec.Y);
+			VecArray4.append(Vec.Z);
+			VecArray4.append(Vec.W);
+			Param["Value"] = VecArray4;
 		}
 		else if (std::holds_alternative<FMatrix>(ParamValue.Value))
 		{
