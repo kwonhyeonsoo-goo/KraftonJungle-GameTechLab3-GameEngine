@@ -129,6 +129,13 @@ void FEditorControlWidget::Render(float DeltaTime)
 					Actor->SetActorLocation(CurSpawnPoint);
 					break;
 				}
+				case 11: // Exponential Height Fog
+				{
+					AHeightFogActor* Actor = World->SpawnActor<AHeightFogActor>();
+					Actor->InitDefaultComponents();
+					Actor->SetActorLocation(CurSpawnPoint);
+					break;
+				}
 			}
 		}
 		NumberOfSpawnedActors = 1;

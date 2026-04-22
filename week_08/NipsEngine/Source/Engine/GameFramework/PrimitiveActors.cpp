@@ -10,6 +10,7 @@
 #include "Component/Light/AmbientLightComponent.h"
 #include "Component/Light/PointLightComponent.h"
 #include "Component/Light/SpotLightComponent.h"
+#include "Component/HeightFogComponent.h"
 #include "Component/BillboardComponent.h"
 #include "Component/SubUVComponent.h"
 #include "Core/ResourceManager.h"
@@ -47,6 +48,9 @@ REGISTER_FACTORY(ASpotLightActor)
 
 DEFINE_CLASS(ASkyAtmosphereActor, AActor)
 REGISTER_FACTORY(ASkyAtmosphereActor)
+
+DEFINE_CLASS(AHeightFogActor, AActor)
+REGISTER_FACTORY(AHeightFogActor)
 
 void ASceneActor::InitDefaultComponents()
 {
@@ -130,4 +134,10 @@ void ASkyAtmosphereActor::InitDefaultComponents()
 {
 	USkyAtmosphereComponent* SkyAtmosphere = AddComponent<USkyAtmosphereComponent>();
 	SetRootComponent(SkyAtmosphere);
+}
+
+void AHeightFogActor::InitDefaultComponents()
+{
+	UHeightFogComponent* HeightFog = AddComponent<UHeightFogComponent>();
+	SetRootComponent(HeightFog);
 }
