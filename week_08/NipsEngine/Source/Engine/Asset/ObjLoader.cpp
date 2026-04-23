@@ -135,7 +135,13 @@ FStaticMesh* FObjLoader::Load(const FString& Path, const FStaticMeshLoadOptions&
 		UE_LOG("[ObjLoader] Failed to parse OBJ: %s", Path.c_str());
 		return nullptr;
 	}
-	
+
+	/* Normalize positions before building if requested */
+	if (LoadOptions.bNormalizeToUnitCube)
+	{
+		NormalizeObjRawData(RawData);
+	}
+
 	/* Build Cooked Data from Raw Data */
 	if (!BuildStaticMesh(Path, StaticMesh, RawData))
 	{
@@ -579,7 +585,10 @@ uint32 FObjLoader::GetOrCreateVertexIndex(const FObjRawIndex& RawIndex, TMap<FOb
 	return NewIndex;
 }
 
-void FObjLoader::NormalizeRawPositionsToUnitCube(FObjRawData& RawData)
+// Static Mesh Raw Data를 단위 큐브 크기로 정규화합니다. 
+// - 원본 메시 파일과 서로 다른 binary cache를 갖습니다.
+// - 개별 StaticMesh 컴포넌트에서 Import할 때 Normalize On Import 설정을 켜고 꺼서 조절할 수 있습니다.
+void FObjLoader::NormalizeObjRawData(FObjRawData& RawData)
 {
 	if (RawData.Positions.empty())
 	{

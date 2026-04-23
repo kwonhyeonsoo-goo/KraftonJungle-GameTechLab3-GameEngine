@@ -34,7 +34,7 @@ private:
 	FNormalVertex MakeVertex(const FObjRawIndex& RawIndex, FObjRawData& RawData) const;
 	uint32 GetOrCreateVertexIndex(const FObjRawIndex& RawIndex, TMap<FObjVertexKey, uint32>& VertexMap, FStaticMesh* StaticMesh, FObjRawData& RawData);
 	
-	void NormalizeRawPositionsToUnitCube(FObjRawData& RawData);
+	void NormalizeObjRawData(FObjRawData& RawData);
 	void NormalizeRawSizeToUnitCube(FObjRawData& RawData);
 	
 	int32 GetOrAddMaterialSlot(const FString& MaterialName);

@@ -14,12 +14,24 @@ struct FLightCullingOutputs
     uint32 LightCount = 0;
 };
 
+struct FLightCullingDebugStats
+{
+    uint32 LightCount        = 0;
+    uint32 TileCountX        = 0;
+    uint32 TileCountY        = 0;
+    uint32 TileCount         = 0;
+    uint32 NonZeroTileCount  = 0;
+    uint32 MaxLightsInTile   = 0;
+    float  AvgLightsPerTile  = 0.0f;
+};
+
 class FLightCullingPass : public FBaseRenderPass
 {
 public:
     bool Initialize() override;
     bool Release() override;
     static const FLightCullingOutputs& GetOutputs();
+    static const FLightCullingDebugStats& GetDebugStats();
 
 private:
     bool Begin(const FRenderPassContext* Context) override;

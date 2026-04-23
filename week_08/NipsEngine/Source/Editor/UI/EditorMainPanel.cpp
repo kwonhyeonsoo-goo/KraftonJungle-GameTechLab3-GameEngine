@@ -227,7 +227,7 @@ void FEditorMainPanel::Update()
         if (IO.WantTextInput)
         {
             // InputText 포커스 중 — 기본 IME 컨텍스트 복원
-            ImmAssociateContextEx(hWnd, NULL, IACE_DEFAULT);
+            ImmAssociateContextEx(hWnd, (HIMC)INVALID_HANDLE_VALUE, IACE_DEFAULT);
         }
         else
         {
@@ -270,7 +270,7 @@ void FEditorMainPanel::RenderViewportHostWindow()
 		
 		uint32 ViewportNum = EditorEngine->GetViewportLayout().IsSingleViewportMode() ? 1 : 4;
 
-		for (int i = 0; i < ViewportNum; i++)
+		for (uint32 i = 0; i < ViewportNum; i++)
         {
             auto& VP = EditorEngine->GetViewportLayout().GetSceneViewport(i);
 
@@ -443,6 +443,8 @@ void FEditorMainPanel::RenderViewportMenuBarForIndex(int32 Index)
     {
         ImGui::MenuItem("FPS", nullptr, &State.bShowStatFPS);
         ImGui::MenuItem("Memory", nullptr, &State.bShowStatMemory);
+        ImGui::MenuItem("Nametable", nullptr, &State.bShowStatNameTable);
+        ImGui::MenuItem("Lightcull", nullptr, &State.bShowStatLightCull);
         ImGui::EndMenu();
     }
 }

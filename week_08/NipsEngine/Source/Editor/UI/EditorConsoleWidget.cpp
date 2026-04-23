@@ -219,8 +219,7 @@ void FEditorConsoleWidget::CmdStat(const TArray<FString>& Args)
 {
 	if (Args.size() < 2)
 	{
-		AddLog("[WARN] Usage: stat <fps|memory|nametable|none>\n");
-		AddLog("[WARN]        stat nametable list  -- dump all entries\n");
+		AddLog("[WARN] Usage: stat <fps|memory|nametable|lightcull|none>\n");
 		return;
 	}
 
@@ -246,24 +245,15 @@ void FEditorConsoleWidget::CmdStat(const TArray<FString>& Args)
 	}
 	else if (Target == "nametable")
 	{
-		// "stat nametable list" → 콘솔에 전체 덤프
-		if (Args.size() >= 3 && Args[2] == "list")
-		{
-			FNamePool& Pool = FNamePool::Get();
-			const uint32 Count = Pool.GetEntryCount();
-			AddLog("--- FNamePool NameTable (%u entries) ---\n", Count);
-			const TArray<FString>& Entries = Pool.GetEntries();
-			for (uint32 j = 0; j < Count; ++j)
-			{
-				AddLog("  [%u] %s\n", j, Entries[j].c_str());
-			}
-			AddLog("----------------------------------------\n");
-		}
-		else
-		{
-			// 뷰포트 오버레이 토글
-			AddLog("  'stat nametable list' to dump all entries to console.\n");
-		}
+		bool& bFlag = Layout.GetViewportState(FocusedIdx).bShowStatNameTable;
+		bFlag = !bFlag;
+		AddLog("Stat NameTable %s (viewport %d)\n", bFlag ? "Enabled" : "Disabled", FocusedIdx);
+	}
+	else if (Target == "lightcull")
+	{
+		bool& bFlag = Layout.GetViewportState(FocusedIdx).bShowStatLightCull;
+		bFlag = !bFlag;
+		AddLog("Stat LightCull %s (viewport %d)\n", bFlag ? "Enabled" : "Disabled", FocusedIdx);
 	}
 	else if (Target == "none")
 	{
@@ -272,6 +262,7 @@ void FEditorConsoleWidget::CmdStat(const TArray<FString>& Args)
 			Layout.GetViewportState(i).bShowStatFPS       = false;
 			Layout.GetViewportState(i).bShowStatMemory    = false;
 			Layout.GetViewportState(i).bShowStatNameTable = false;
+			Layout.GetViewportState(i).bShowStatLightCull = false;
 		}
 		AddLog("All Stats Disabled\n");
 	}
