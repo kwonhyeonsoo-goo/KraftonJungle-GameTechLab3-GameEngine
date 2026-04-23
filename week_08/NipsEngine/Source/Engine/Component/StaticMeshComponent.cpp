@@ -23,6 +23,7 @@ void UStaticMeshComponent::PostDuplicate(UObject* Original)
 
     const UStaticMeshComponent* Orig = Cast<UStaticMeshComponent>(Original);
     StaticMeshAsset = Orig->StaticMeshAsset;
+    bNormalizeOnImport = Orig->bNormalizeOnImport;
     bBoundsDirty = true;
     bRenderStateDirty = true;
 
@@ -54,6 +55,7 @@ void UStaticMeshComponent::Serialize(FArchive& Ar)
 {
 	UMeshComponent::Serialize(Ar);
 	Ar << "ObjStaticMeshAsset" << StaticMeshAssetPath;
+	Ar << "NormalizeOnImport" << bNormalizeOnImport;
 
 	if (Ar.IsLoading())
 	{
@@ -61,7 +63,7 @@ void UStaticMeshComponent::Serialize(FArchive& Ar)
 
 		if (!StaticMeshAssetPath.empty())
 		{
-			SetStaticMesh(FResourceManager::Get().LoadStaticMesh(StaticMeshAssetPath));
+			SetStaticMesh(FResourceManager::Get().LoadStaticMesh(StaticMeshAssetPath, bNormalizeOnImport));
 		}
 		else
 		{
@@ -131,13 +133,14 @@ void UStaticMeshComponent::GetEditableProperties(TArray<FPropertyDescriptor>& Ou
 {
     UMeshComponent::GetEditableProperties(OutProps);
     OutProps.push_back({ "StaticMesh", EPropertyType::String, &StaticMeshAssetPath });
+    OutProps.push_back({ "Normalize On Import", EPropertyType::Bool, &bNormalizeOnImport });
 }
 
 void UStaticMeshComponent::PostEditProperty(const char* PropertyName)
 {
     UMeshComponent::PostEditProperty(PropertyName);
 
-    //	추후에 FNAme으로 바꿔도 될 듯 싶긴한데 보류
+    //	추후에 FName으로 바꿔도 될 듯 싶긴한데 보류
     if (std::strcmp(PropertyName, "StaticMesh") == 0)
     {
 		if (StaticMeshAssetPath.empty())
@@ -146,10 +149,17 @@ void UStaticMeshComponent::PostEditProperty(const char* PropertyName)
 			return;
 		}
 
-		UStaticMesh* Mesh = FResourceManager::Get().LoadStaticMesh(StaticMeshAssetPath);
-
+		UStaticMesh* Mesh = FResourceManager::Get().LoadStaticMesh(StaticMeshAssetPath, bNormalizeOnImport);
 		SetStaticMesh(Mesh);
     }
+	else if (std::strcmp(PropertyName, "Normalize On Import") == 0)
+	{
+		if (!StaticMeshAssetPath.empty())
+		{
+			UStaticMesh* Mesh = FResourceManager::Get().LoadStaticMesh(StaticMeshAssetPath, bNormalizeOnImport);
+			SetStaticMesh(Mesh);
+		}
+	}
 	else if (std::strcmp(PropertyName, "Materials") == 0)
 	{
 		for (int32 i = 0; i < static_cast<int32>(Materials.size()); ++i)

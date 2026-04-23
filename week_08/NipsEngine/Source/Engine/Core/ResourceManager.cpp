@@ -227,7 +227,7 @@ uint64 FResourceManager::GetFileWriteTimeTicks(const FString& Path) const
 		std::chrono::duration_cast<std::chrono::seconds>(Duration).count());
 }
 
-FString FResourceManager::MakeStaticMeshBinaryPath(const FString& SourcePath) const
+FString FResourceManager::MakeStaticMeshBinaryPath(const FString& SourcePath, bool bNormalized) const
 {
 	namespace fs = std::filesystem;
 
@@ -241,8 +241,12 @@ FString FResourceManager::MakeStaticMeshBinaryPath(const FString& SourcePath) co
 		fs::create_directories(BinDir);
 	}
 
-	//	파일명만 따와서 .bin 으로 저장
+	//	파일명만 따와서 .bin 으로 저장 (normalized 버전은 _norm 접미사 추가)
 	fs::path BinaryFileName = SourceFsPath.stem();
+	if (bNormalized)
+	{
+		BinaryFileName += "_norm";
+	}
 	BinaryFileName += ".bin";
 
 	fs::path BinaryPath = BinDir / BinaryFileName;
@@ -1792,14 +1796,6 @@ TArray<FString> FResourceManager::GetParticleNames() const
 
 UStaticMesh* FResourceManager::LoadStaticMesh(const FString& Path)
 {
-	// 메모리 캐시 확인
-	if (UStaticMesh* FoundMesh = FindStaticMesh(Path))
-	{
-		return FoundMesh;
-	}
-
- 	LoadMaterial(Path, DefaultUberLitShaderPath);
-
 	FStaticMeshLoadOptions LoadOptions = {};
 
 	for (const auto& [Key, Resource] : StaticMeshRegistry)
@@ -1811,7 +1807,30 @@ UStaticMesh* FResourceManager::LoadStaticMesh(const FString& Path)
 		}
 	}
 
-	const FString BinaryPath = MakeStaticMeshBinaryPath(Path);
+	return LoadStaticMeshWithOptions(Path, LoadOptions);
+}
+
+UStaticMesh* FResourceManager::LoadStaticMesh(const FString& Path, bool bNormalizeToUnitCube)
+{
+	FStaticMeshLoadOptions LoadOptions;
+	LoadOptions.bNormalizeToUnitCube = bNormalizeToUnitCube;
+	return LoadStaticMeshWithOptions(Path, LoadOptions);
+}
+
+UStaticMesh* FResourceManager::LoadStaticMeshWithOptions(const FString& Path, const FStaticMeshLoadOptions& LoadOptions)
+{
+	// 캐시 키: normalize 여부에 따라 구분
+	const FString CacheKey = LoadOptions.bNormalizeToUnitCube ? (Path + "|norm") : Path;
+
+	// 메모리 캐시 확인
+	if (UStaticMesh* FoundMesh = FindStaticMesh(CacheKey))
+	{
+		return FoundMesh;
+	}
+
+ 	LoadMaterial(Path, DefaultUberLitShaderPath);
+
+	const FString BinaryPath = MakeStaticMeshBinaryPath(Path, LoadOptions.bNormalizeToUnitCube);
 
 	FStaticMesh* LoadedMeshData = nullptr;
 	double BinaryLoadSec = 0.0;
@@ -1894,8 +1913,8 @@ UStaticMesh* FResourceManager::LoadStaticMesh(const FString& Path)
         UE_LOG("[StaticMeshLoad] LOD generation skipped for %s (Enable LOD is off)", Path.c_str());
     }
 
-    StaticMeshes.insert({Path, LoadedMesh});
-    
+    StaticMeshes.insert({CacheKey, LoadedMesh});
+
     return LoadedMesh;
 }
 

@@ -137,6 +137,7 @@ public:
 	TArray<FString> GetParticleNames() const;
 
 	UStaticMesh* LoadStaticMesh(const FString& Path);
+	UStaticMesh* LoadStaticMesh(const FString& Path, bool bNormalizeToUnitCube);
 	UStaticMesh* FindStaticMesh(const FString& Path) const;
 	TArray<FString> GetStaticMeshPaths() const;
 
@@ -152,9 +153,10 @@ public:
 
 private:
 	uint64 GetFileWriteTimeTicks(const FString& Path) const;
-	FString MakeStaticMeshBinaryPath(const FString& SourcePath) const;
+	FString MakeStaticMeshBinaryPath(const FString& SourcePath, bool bNormalized = false) const;
 	bool IsStaticMeshBinaryValid(const FString& SourcePath, const FString& BinaryPath) const;
 	void PreloadStaticMeshes();
+	UStaticMesh* LoadStaticMeshWithOptions(const FString& Path, const FStaticMeshLoadOptions& LoadOptions);
 	bool LoadShaderInternal(const FShaderCompileKey& CompileKey,
 	                        const D3D11_INPUT_ELEMENT_DESC* InputElements,
 	                        UINT InputElementCount,

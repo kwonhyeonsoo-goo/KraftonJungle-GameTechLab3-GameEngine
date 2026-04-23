@@ -44,7 +44,7 @@ struct FStaticMeshResource
 	bool bNormalizeToUnitCube = false;
 };
 
-//	ResouceManager -> ObjLoader로 전달되는 옵션 구조체
+//	ResourceManager -> ObjLoader로 전달되는 옵션 구조체
 struct FStaticMeshLoadOptions
 {
 	bool bNormalizeToUnitCube = false;
