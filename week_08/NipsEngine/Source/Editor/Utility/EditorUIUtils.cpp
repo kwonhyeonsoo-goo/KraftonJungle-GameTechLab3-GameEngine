@@ -1,4 +1,4 @@
-﻿#include "Editor/Utility/EditorUtils.h"
+﻿#include "Editor/Utility/EditorUIUtils.h"
 #include "ImGui/imgui.h"
 #include "Engine/Component/Movement/MovementComponent.h"
 #include "Engine/Component/SceneComponent.h"
@@ -6,7 +6,8 @@
 #include <cstdio>
 #include <cstring>
 
-namespace EditorUtils
+// Editor Widget에서 공통적으로 사용될 수 있는 잡다한 UI 함수들을 정의합니다.
+namespace EditorUIUtils
 {
     bool DrawXButton(const char* id, float size)
     {

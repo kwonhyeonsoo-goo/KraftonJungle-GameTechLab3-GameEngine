@@ -272,7 +272,7 @@
     <ClCompile Include="Source\Editor\Utility\EditorComponentFactory.cpp">
       <Filter>Source\Editor\Utility</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\Utility\EditorUtils.cpp">
+    <ClCompile Include="Source\Editor\Utility\EditorUIUtils.cpp">
       <Filter>Source\Editor\Utility</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\Viewport\EditorViewportClient.cpp">
@@ -761,7 +761,7 @@
     <ClInclude Include="Source\Editor\Utility\EditorComponentFactory.h">
       <Filter>Source\Editor\Utility</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\Utility\EditorUtils.h">
+    <ClInclude Include="Source\Editor\Utility\EditorUIUtils.h">
       <Filter>Source\Editor\Utility</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\Viewport\CursorOverlayState.h">

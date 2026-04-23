@@ -5,7 +5,7 @@
 
 class UMovementComponent;
 
-// Editor Widget에서 공통적으로 사용될 수 있는 잡다한 상수 및 함수들을 정의합니다.
+// Editor Widget에서 공통적으로 사용될 수 있는 잡다한 UI 관련 상수들을 정의합니다.
 namespace UIConstants
 {
 	constexpr float XButtonSize     = 20.0f;
@@ -14,7 +14,8 @@ namespace UIConstants
 	constexpr float MinScrollHeight = 50.0f;
 }
 
-namespace EditorUtils
+// Editor Widget에서 공통적으로 사용될 수 있는 잡다한 UI 함수들을 정의합니다.
+namespace EditorUIUtils
 {
     bool DrawXButton(const char* id, float size = UIConstants::XButtonSize);
     void MakeXButtonId(char* OutBuf, size_t BufSize, const void* Ptr);
