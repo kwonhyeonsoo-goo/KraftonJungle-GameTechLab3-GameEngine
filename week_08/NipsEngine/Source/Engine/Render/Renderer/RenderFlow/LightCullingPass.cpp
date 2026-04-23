@@ -236,7 +236,7 @@ bool FLightCullingPass::DrawCommand(const FRenderPassContext* Context)
     GLightCullingOutputs.LightCount = LightCount;
 
     // TODO: 디버그용
-    // EmitDebugStats(Context, TileCountX, TileCountY);
+     EmitDebugStats(Context, TileCountX, TileCountY);
 
     return true;
 }

@@ -1,0 +1,13 @@
+{
+        "Name" : "Asset/Material/DecalMat_Inst_0.matinst",
+        "OverridedParams" : [{
+            "Name" : "DiffuseMap",
+            "Type" : "Texture",
+            "Value" : "Asset\\Texture\\Normal.png"
+          }, {
+            "Name" : "Opacity",
+            "Type" : "Float",
+            "Value" : 5.890000
+          }],
+        "Parent" : "DecalMat"
+      }
