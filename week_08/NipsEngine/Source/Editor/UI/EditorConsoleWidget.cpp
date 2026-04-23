@@ -219,7 +219,7 @@ void FEditorConsoleWidget::CmdStat(const TArray<FString>& Args)
 {
 	if (Args.size() < 2)
 	{
-		AddLog("[WARN] Usage: stat <fps|memory|nametable|none>\n");
+		AddLog("[WARN] Usage: stat <fps|memory|nametable|lightcull|none>\n");
 		return;
 	}
 
@@ -249,6 +249,12 @@ void FEditorConsoleWidget::CmdStat(const TArray<FString>& Args)
 		bFlag = !bFlag;
 		AddLog("Stat NameTable %s (viewport %d)\n", bFlag ? "Enabled" : "Disabled", FocusedIdx);
 	}
+	else if (Target == "lightcull")
+	{
+		bool& bFlag = Layout.GetViewportState(FocusedIdx).bShowStatLightCull;
+		bFlag = !bFlag;
+		AddLog("Stat LightCull %s (viewport %d)\n", bFlag ? "Enabled" : "Disabled", FocusedIdx);
+	}
 	else if (Target == "none")
 	{
 		for (int32 i = 0; i < FEditorViewportLayout::MaxViewports; ++i)
@@ -256,6 +262,7 @@ void FEditorConsoleWidget::CmdStat(const TArray<FString>& Args)
 			Layout.GetViewportState(i).bShowStatFPS       = false;
 			Layout.GetViewportState(i).bShowStatMemory    = false;
 			Layout.GetViewportState(i).bShowStatNameTable = false;
+			Layout.GetViewportState(i).bShowStatLightCull = false;
 		}
 		AddLog("All Stats Disabled\n");
 	}

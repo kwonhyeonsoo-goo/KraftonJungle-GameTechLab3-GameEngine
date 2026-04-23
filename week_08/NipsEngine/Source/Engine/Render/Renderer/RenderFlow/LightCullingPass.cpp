@@ -49,6 +49,7 @@ namespace
     }
 
     FLightCullingOutputs GLightCullingOutputs = {};
+    FLightCullingDebugStats GDebugStats = {};
 }
 
 bool FLightCullingPass::Initialize()
@@ -78,6 +79,11 @@ bool FLightCullingPass::Release()
 const FLightCullingOutputs& FLightCullingPass::GetOutputs()
 {
     return GLightCullingOutputs;
+}
+
+const FLightCullingDebugStats& FLightCullingPass::GetDebugStats()
+{
+    return GDebugStats;
 }
 
 bool FLightCullingPass::Begin(const FRenderPassContext* Context)
@@ -501,22 +507,19 @@ void FLightCullingPass::EmitDebugStats(const FRenderPassContext* Context, uint32
     {
         const uint32 Count = Counts[TileIndex];
         TotalVisibleLights += Count;
-        if (Count > MaxVisibleLightsInTile)
-        {
-            MaxVisibleLightsInTile = Count;
-        }
-        if (Count > 0)
-        {
-            ++NonZeroTileCount;
-        }
+        if (Count > MaxVisibleLightsInTile) MaxVisibleLightsInTile = Count;
+        if (Count > 0) ++NonZeroTileCount;
     }
 
     Context->DeviceContext->Unmap(TileLightCountReadbackBuffer.Get(), 0);
 
-    // const float AverageVisibleLightsPerTile =
-    //    (TileCount > 0) ? static_cast<float>(TotalVisibleLights) / static_cast<float>(TileCount) : 0.0f;
-
-    // UE_LOG("[LightCulling] lights=%u tiles=%ux%u (%u), nonZeroTiles=%u, avgVisiblePerTile=%.2f, maxVisiblePerTile=%u",
-	//		GLightCullingOutputs.LightCount, TileCountX, TileCountY, TileCount, NonZeroTileCount, AverageVisibleLightsPerTile, MaxVisibleLightsInTile);
-
+    GDebugStats.LightCount       = GLightCullingOutputs.LightCount;
+    GDebugStats.TileCountX       = TileCountX;
+    GDebugStats.TileCountY       = TileCountY;
+    GDebugStats.TileCount        = TileCount;
+    GDebugStats.NonZeroTileCount = NonZeroTileCount;
+    GDebugStats.MaxLightsInTile  = MaxVisibleLightsInTile;
+    GDebugStats.AvgLightsPerTile = (TileCount > 0)
+        ? static_cast<float>(TotalVisibleLights) / static_cast<float>(TileCount)
+        : 0.0f;
 }
