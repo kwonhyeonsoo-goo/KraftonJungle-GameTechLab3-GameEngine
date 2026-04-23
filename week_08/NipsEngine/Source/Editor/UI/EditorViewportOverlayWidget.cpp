@@ -166,7 +166,7 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 {
 	if (!EditorEngine) return;
 
-	constexpr ImGuiWindowFlags kFlags =
+	constexpr ImGuiWindowFlags kStatFlags =
 		ImGuiWindowFlags_NoDecoration      |
 		ImGuiWindowFlags_AlwaysAutoResize  |
 		ImGuiWindowFlags_NoSavedSettings   |
@@ -174,6 +174,16 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 		ImGuiWindowFlags_NoNav             |
 		ImGuiWindowFlags_NoMove            |
 		ImGuiWindowFlags_NoInputs;
+
+	// NameTable 창: 스크롤이 필요하므로 NoInputs 제거, 고정 크기
+	constexpr ImGuiWindowFlags kNameTableFlags =
+		ImGuiWindowFlags_NoTitleBar        |
+		ImGuiWindowFlags_NoResize          |
+		ImGuiWindowFlags_NoScrollbar       |
+		ImGuiWindowFlags_NoSavedSettings   |
+		ImGuiWindowFlags_NoFocusOnAppearing|
+		ImGuiWindowFlags_NoNav             |
+		ImGuiWindowFlags_NoMove;
 
 	FEditorViewportLayout& Layout = EditorEngine->GetViewportLayout();
 	const FEditorRenderPipeline* RenderPipeline = EditorEngine->GetEditorRenderPipeline();
@@ -185,110 +195,157 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 
 		if (!VS.bShowStatFPS && !VS.bShowStatMemory && !VS.bShowStatNameTable) continue;
         if (ViewportRect.Width <= 0 || ViewportRect.Height <= 0)
-            continue; // 비활성 뷰포트 스킵
+            continue;
 
-		// 툴바 바로 아래 좌측에 고정
-		ImGui::SetNextWindowPos(
-            ImVec2(static_cast<float>(ViewportRect.X) + 8.f,
-                   static_cast<float>(ViewportRect.Y) + 32.f),
-			ImGuiCond_Always);
-		ImGui::SetNextWindowBgAlpha(0.3f);
+		const ImVec2 BasePos(
+			static_cast<float>(ViewportRect.X) + 8.f,
+			static_cast<float>(ViewportRect.Y) + 32.f);
 
-		char WinId[32];
-		snprintf(WinId, sizeof(WinId), "##StatOverlay_%d", i);
+		ImVec2 MainWindowSize(0.f, 0.f);
 
-		if (ImGui::Begin(WinId, nullptr, kFlags))
+		// ── FPS / Culling / Decal / Memory 창 ─────────────────────────────
+		if (VS.bShowStatFPS || VS.bShowStatMemory)
 		{
-			const FRenderCollector::FCullingStats* CullingStats =
-				(RenderPipeline != nullptr) ? &RenderPipeline->GetViewportCullingStats(i) : nullptr;
+			ImGui::SetNextWindowPos(BasePos, ImGuiCond_Always);
+			ImGui::SetNextWindowBgAlpha(0.3f);
 
-			// FPS 출력 (초록색 텍스트)
-			if (VS.bShowStatFPS)
-			{
-				const float FPS = (DeltaTime > 0.f) ? (1.f / DeltaTime) : 0.f;
-				ImGui::TextColored(ImVec4(0.f, 1.f, 0.f, 1.f), "FPS: %.1f (%.2f ms)", FPS, DeltaTime * 1000.f);
-			}
+			char WinId[32];
+			snprintf(WinId, sizeof(WinId), "##StatOverlay_%d", i);
 
-			if (CullingStats != nullptr)
+			if (ImGui::Begin(WinId, nullptr, kStatFlags))
 			{
-				const int32 CulledPrimitiveCount = std::max(
-					0,
-					CullingStats->TotalVisiblePrimitiveCount -
-						(CullingStats->BVHPassedPrimitiveCount + CullingStats->FallbackPassedPrimitiveCount));
+				const FRenderCollector::FCullingStats* CullingStats =
+					(RenderPipeline != nullptr) ? &RenderPipeline->GetViewportCullingStats(i) : nullptr;
 
 				if (VS.bShowStatFPS)
 				{
-					ImGui::Separator();
+					const float FPS = (DeltaTime > 0.f) ? (1.f / DeltaTime) : 0.f;
+					ImGui::TextColored(ImVec4(0.f, 1.f, 0.f, 1.f), "FPS: %.1f (%.2f ms)", FPS, DeltaTime * 1000.f);
 				}
 
-				ImGui::TextColored(ImVec4(0.25f, 0.9f, 1.0f, 1.0f), "Culling");
-				ImGui::TextColored(
-					ImVec4(0.25f, 0.9f, 1.0f, 1.0f), "- Total Visible: %d", CullingStats->TotalVisiblePrimitiveCount);
-				ImGui::TextColored(
-					ImVec4(0.25f, 0.9f, 1.0f, 1.0f), "- BVH Passed: %d", CullingStats->BVHPassedPrimitiveCount);
-				ImGui::TextColored(
-					ImVec4(0.25f, 0.9f, 1.0f, 1.0f), "- Fallback Passed: %d",
-					CullingStats->FallbackPassedPrimitiveCount);
-				ImGui::TextColored(ImVec4(0.25f, 0.9f, 1.0f, 1.0f), "- Culled: %d", CulledPrimitiveCount);
-			}
-
-			const FRenderCollector::FDecalStats* DecalStats =
-				(RenderPipeline != nullptr) ? &RenderPipeline->GetViewportDecalStats(i) : nullptr;
-
-			if (DecalStats != nullptr)
-			{
-				if (CullingStats != nullptr || VS.bShowStatFPS)
+				if (CullingStats != nullptr)
 				{
-					ImGui::Separator();
-				}
+					const int32 CulledPrimitiveCount = std::max(
+						0,
+						CullingStats->TotalVisiblePrimitiveCount -
+							(CullingStats->BVHPassedPrimitiveCount + CullingStats->FallbackPassedPrimitiveCount));
 
-				ImGui::TextColored(ImVec4(1.f, 0.5f, 0.f, 1.f), "Decal");
-				ImGui::TextColored(ImVec4(1.f, 0.5f, 0.f, 1.f), "- Total Decals: %d", DecalStats->TotalDecalCount);
-				ImGui::TextColored(ImVec4(1.f, 0.5f, 0.f, 1.f), "- Decal Time: %.4f ms", DecalStats->CollectTimeMS / 1000.f);
-			}
-
-			// Memory 출력 (노란색 텍스트)
-			if (VS.bShowStatMemory)
-			{
-				if (CullingStats != nullptr || VS.bShowStatFPS)
-				{
-					ImGui::Separator();
-				}
-
-				size_t MeshMemoryBytes = 0;
-				for (TObjectIterator<UStaticMesh> It; It; ++It)
-				{
-					UStaticMesh* Mesh = *It;
-					if (Mesh && Mesh->HasValidMeshData())
+					if (VS.bShowStatFPS)
 					{
-						MeshMemoryBytes += sizeof(UStaticMesh)
-							+ Mesh->GetVertices().size()  * sizeof(FNormalVertex)
-							+ Mesh->GetIndices().size()   * sizeof(uint32)
-							+ Mesh->GetSections().size()  * sizeof(FStaticMeshSection);
+						ImGui::Separator();
 					}
+
+					ImGui::TextColored(ImVec4(0.25f, 0.9f, 1.0f, 1.0f), "Culling");
+					ImGui::TextColored(
+						ImVec4(0.25f, 0.9f, 1.0f, 1.0f), "- Total Visible: %d", CullingStats->TotalVisiblePrimitiveCount);
+					ImGui::TextColored(
+						ImVec4(0.25f, 0.9f, 1.0f, 1.0f), "- BVH Passed: %d", CullingStats->BVHPassedPrimitiveCount);
+					ImGui::TextColored(
+						ImVec4(0.25f, 0.9f, 1.0f, 1.0f), "- Fallback Passed: %d",
+						CullingStats->FallbackPassedPrimitiveCount);
+					ImGui::TextColored(ImVec4(0.25f, 0.9f, 1.0f, 1.0f), "- Culled: %d", CulledPrimitiveCount);
 				}
 
-				const size_t MatMemoryBytes   = FResourceManager::Get().GetMaterialMemorySize();
-				const size_t TotalMemoryBytes = MeshMemoryBytes + MatMemoryBytes;
+				const FRenderCollector::FDecalStats* DecalStats =
+					(RenderPipeline != nullptr) ? &RenderPipeline->GetViewportDecalStats(i) : nullptr;
 
-				ImGui::TextColored(ImVec4(1.f, 1.f, 0.f, 1.f), "Memory Stat");
-				ImGui::TextColored(ImVec4(1.f, 1.f, 0.f, 1.f), "- Mesh: %.2f KB",     MeshMemoryBytes / 1024.f);
-				ImGui::TextColored(ImVec4(1.f, 1.f, 0.f, 1.f), "- Material: %.2f KB", MatMemoryBytes  / 1024.f);
-				ImGui::Separator();
+				if (DecalStats != nullptr)
+				{
+					if (CullingStats != nullptr || VS.bShowStatFPS)
+					{
+						ImGui::Separator();
+					}
 
-				FNamePool& Pool = FNamePool::Get();
-				ImGui::TextColored(ImVec4(1.f, 0.5f, 0.5f, 1.f), "FName Stat");
-				ImGui::TextColored(ImVec4(1.f, 0.5f, 0.5f, 1.f), "- Entries: %u",   Pool.GetEntryCount());
-				ImGui::TextColored(ImVec4(1.f, 0.5f, 0.5f, 1.f), "- Size: %.2f KB", Pool.GetTotalBytes() / 1024.f);
+					ImGui::TextColored(ImVec4(1.f, 0.5f, 0.f, 1.f), "Decal");
+					ImGui::TextColored(ImVec4(1.f, 0.5f, 0.f, 1.f), "- Total Decals: %d", DecalStats->TotalDecalCount);
+					ImGui::TextColored(ImVec4(1.f, 0.5f, 0.f, 1.f), "- Decal Time: %.4f ms", DecalStats->CollectTimeMS / 1000.f);
+				}
 
-				ImGui::Separator();
+				if (VS.bShowStatMemory)
+				{
+					if (CullingStats != nullptr || VS.bShowStatFPS)
+					{
+						ImGui::Separator();
+					}
 
-				ImGui::TextColored(ImVec4(1.f, 1.f, 1.f, 1.f), "- Total Allocated Counts: %d", EngineStatics::GetTotalAllocationCount());
-				ImGui::TextColored(ImVec4(1.f, 1.f, 1.f, 1.f), "- Total Allocated Bytes: %.2f KB", EngineStatics::GetTotalAllocationBytes() / 1024.f);
+					size_t MeshMemoryBytes = 0;
+					for (TObjectIterator<UStaticMesh> It; It; ++It)
+					{
+						UStaticMesh* Mesh = *It;
+						if (Mesh && Mesh->HasValidMeshData())
+						{
+							MeshMemoryBytes += sizeof(UStaticMesh)
+								+ Mesh->GetVertices().size()  * sizeof(FNormalVertex)
+								+ Mesh->GetIndices().size()   * sizeof(uint32)
+								+ Mesh->GetSections().size()  * sizeof(FStaticMeshSection);
+						}
+					}
+
+					const size_t MatMemoryBytes   = FResourceManager::Get().GetMaterialMemorySize();
+					const size_t TotalMemoryBytes = MeshMemoryBytes + MatMemoryBytes;
+
+					ImGui::TextColored(ImVec4(1.f, 1.f, 0.f, 1.f), "Memory Stat");
+					ImGui::TextColored(ImVec4(1.f, 1.f, 0.f, 1.f), "- Mesh: %.2f KB",     MeshMemoryBytes / 1024.f);
+					ImGui::TextColored(ImVec4(1.f, 1.f, 0.f, 1.f), "- Material: %.2f KB", MatMemoryBytes  / 1024.f);
+					ImGui::Separator();
+
+					FNamePool& Pool = FNamePool::Get();
+					ImGui::TextColored(ImVec4(1.f, 0.5f, 0.5f, 1.f), "FName Stat");
+					ImGui::TextColored(ImVec4(1.f, 0.5f, 0.5f, 1.f), "- Entries: %u",   Pool.GetEntryCount());
+					ImGui::TextColored(ImVec4(1.f, 0.5f, 0.5f, 1.f), "- Size: %.2f KB", Pool.GetTotalBytes() / 1024.f);
+					ImGui::Separator();
+
+					ImGui::TextColored(ImVec4(1.f, 1.f, 1.f, 1.f), "- Total Allocated Counts: %d", EngineStatics::GetTotalAllocationCount());
+					ImGui::TextColored(ImVec4(1.f, 1.f, 1.f, 1.f), "- Total Allocated Bytes: %.2f KB", EngineStatics::GetTotalAllocationBytes() / 1024.f);
+				}
+
+				// NameTable 창 위치 계산을 위해 이 프레임의 실제 창 크기를 저장
+				MainWindowSize = ImGui::GetWindowSize();
 			}
+			ImGui::End();
 		}
 
-		ImGui::End();
+		// ── NameTable 창 (FPS/Memory 창 오른쪽, 없으면 같은 자리) ──────────
+		if (VS.bShowStatNameTable)
+		{
+			ImVec2 NameTablePos = BasePos;
+			if (MainWindowSize.x > 0.f)
+				NameTablePos.x += MainWindowSize.x + 8.f;
+
+			ImGui::SetNextWindowPos(NameTablePos, ImGuiCond_Always);
+			ImGui::SetNextWindowBgAlpha(0.3f);
+			ImGui::SetNextWindowSize(ImVec2(280.f, 300.f), ImGuiCond_Always);
+
+			char NTWinId[32];
+			snprintf(NTWinId, sizeof(NTWinId), "##NameTableOverlay_%d", i);
+
+			if (ImGui::Begin(NTWinId, nullptr, kNameTableFlags))
+			{
+				FNamePool& Pool = FNamePool::Get();
+				const uint32 Count = Pool.GetEntryCount();
+				const TArray<FString>& Entries = Pool.GetEntries();
+
+				ImGui::TextColored(ImVec4(0.8f, 0.8f, 1.0f, 1.0f), "FName Table (%u entries)", Count);
+				ImGui::Separator();
+
+				// 헤더 고정, 목록만 스크롤
+				ImGui::BeginChild("##NTScroll", ImVec2(0.f, 0.f), false);
+				ImGuiListClipper Clipper;
+				Clipper.Begin(static_cast<int>(Count));
+				while (Clipper.Step())
+				{
+					for (int j = Clipper.DisplayStart; j < Clipper.DisplayEnd; ++j)
+					{
+						ImGui::TextColored(
+							ImVec4(0.8f, 0.8f, 1.0f, 1.0f),
+							"[%d] %s", j, Entries[static_cast<uint32>(j)].c_str());
+					}
+				}
+				Clipper.End();
+				ImGui::EndChild();
+			}
+			ImGui::End();
+		}
 	}
 }
 

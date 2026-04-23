@@ -40,6 +40,9 @@
     <Filter Include="Source\Engine\Component">
       <UniqueIdentifier>{20a3ff62-6666-58c6-dd73-8a4513da2ca3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Component\Light">
+      <UniqueIdentifier>{1daf6c6d-1874-958b-b9e2-685d9ca6646b}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Component\Movement">
       <UniqueIdentifier>{a5b9b888-60c7-ef17-a883-5cc31c907635}</UniqueIdentifier>
     </Filter>
@@ -139,17 +142,11 @@
     <Filter Include="ThirdParty\SimpleJSON">
       <UniqueIdentifier>{60f3c5d4-2dd4-3746-7c69-104344277d07}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Engine\Component\Movement\PostProcess">
-      <UniqueIdentifier>{b30cd8bc-9ce0-4127-87a8-3c3551a0fd41}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Engine\Component\Movement\PostProcess\Light">
-      <UniqueIdentifier>{f4549eb7-0fb9-4d85-b0b6-15b046011043}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Engine\Component\Light">
-      <UniqueIdentifier>{e184a9e6-dc3c-4d16-bfc1-fdb38f9dc7ce}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="Shaders\BillboardSelectionMask.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\Common.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
@@ -180,34 +177,45 @@
     <FxCompile Include="Shaders\SelectionMask.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\ShaderBillboard.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\ShaderFont.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\ShaderLine.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\ShaderSubUV.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\UberLit.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\UberSurface.hlsli">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\UberUnlit.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\ShaderSubUV.hlsl">
+    <FxCompile Include="Shaders\Util.hlsli">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\Multipass\FXAAPass.hlsl">
+    <FxCompile Include="Shaders\Multipass\BufferVisualizationPass.hlsl">
       <Filter>Shaders\Multipass</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\Multipass\BufferVisualizationPass.hlsl">
+    <FxCompile Include="Shaders\Multipass\FXAAPass.hlsl">
       <Filter>Shaders\Multipass</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Multipass\FogPass.hlsl">
       <Filter>Shaders\Multipass</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Multipass\LightCullingCS.hlsl">
+      <Filter>Shaders\Multipass</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\Multipass\SkyPass.hlsl">
       <Filter>Shaders\Multipass</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\Multipass\LightPass.hlsl">
     <FxCompile Include="Shaders\Multipass\ToonOutlinePass.hlsl">
       <Filter>Shaders\Multipass</Filter>
     </FxCompile>
@@ -312,9 +320,6 @@
     <ClCompile Include="Source\Engine\Component\HeightFogComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Component\SkyAtmosphereComponent.cpp">
-      <Filter>Source\Engine\Component</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Component\LineBatchComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
@@ -327,6 +332,9 @@
     <ClCompile Include="Source\Engine\Component\SceneComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\SkyAtmosphereComponent.cpp">
+      <Filter>Source\Engine\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\StaticMeshComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
@@ -335,6 +343,21 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\TextRenderComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Light\AmbientLightComponent.cpp">
+      <Filter>Source\Engine\Component\Light</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Light\DirectionalLightComponent.cpp">
+      <Filter>Source\Engine\Component\Light</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Light\LightComponent.cpp">
+      <Filter>Source\Engine\Component\Light</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Light\PointLightComponent.cpp">
+      <Filter>Source\Engine\Component\Light</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Light\SpotLightComponent.cpp">
+      <Filter>Source\Engine\Component\Light</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Movement\InterpToMovementComponent.cpp">
       <Filter>Source\Engine\Component\Movement</Filter>
@@ -468,10 +491,13 @@
     <ClCompile Include="Source\Engine\Render\Renderer\Renderer.cpp">
       <Filter>Source\Engine\Render\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\DecalRenderPass.cpp">
+    <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\BillboardRenderPass.cpp">
       <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\BufferVisualizationRenderPass.cpp">
+      <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\DecalRenderPass.cpp">
       <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\DepthLessRenderPass.cpp">
@@ -517,6 +543,9 @@
       <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\SubUVRenderPass.cpp">
+      <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\ToonOutlineRenderPass.cpp">
       <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\TranslucentRenderPass.cpp">
@@ -584,6 +613,12 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Runtime\WindowsWindow.cpp">
       <Filter>Source\Engine\Runtime</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Serialization\JsonReader.cpp">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Serialization\JsonWriter.cpp">
+      <Filter>Source\Engine\Serialization</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp">
       <Filter>Source\Engine\Serialization</Filter>
@@ -667,24 +702,6 @@
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Source\Engine\Serialization\JsonReader.h" />
-    <ClCompile Include="Source\Engine\Serialization\JsonWriter.cpp" />
-    <ClCompile Include="Source\Engine\Serialization\JsonReader.cpp" />
-    <ClCompile Include="Source\Engine\Component\Light\LightComponent.cpp">
-      <Filter>Source\Engine\Component\Light</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Component\Light\AmbientLightComponent.cpp">
-      <Filter>Source\Engine\Component\Light</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Component\Light\DirectionalLightComponent.cpp">
-      <Filter>Source\Engine\Component\Light</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Component\Light\SpotLightComponent.cpp">
-      <Filter>Source\Engine\Component\Light</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Component\Light\PointLightComponent.cpp" />
-    <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\BillboardRenderPass.cpp" />
-    <ClCompile Include="Source\Engine\Render\Renderer\RenderFlow\ToonOutlineRenderPass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -804,9 +821,6 @@
     <ClInclude Include="Source\Engine\Component\HeightFogComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Component\SkyAtmosphereComponent.h">
-      <Filter>Source\Engine\Component</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Component\LineBatchComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
@@ -819,6 +833,9 @@
     <ClInclude Include="Source\Engine\Component\SceneComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Component\SkyAtmosphereComponent.h">
+      <Filter>Source\Engine\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Component\StaticMeshComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
@@ -827,6 +844,21 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\TextRenderComponent.h">
       <Filter>Source\Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Light\AmbientLightComponent.h">
+      <Filter>Source\Engine\Component\Light</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Light\DirectionalLightComponent.h">
+      <Filter>Source\Engine\Component\Light</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Light\LightComponent.h">
+      <Filter>Source\Engine\Component\Light</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Light\PointLightComponent.h">
+      <Filter>Source\Engine\Component\Light</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Light\SpotLightComponent.h">
+      <Filter>Source\Engine\Component\Light</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Movement\InterpToMovementComponent.h">
       <Filter>Source\Engine\Component\Movement</Filter>
@@ -1053,10 +1085,13 @@
     <ClInclude Include="Source\Engine\Render\Renderer\Renderer.h">
       <Filter>Source\Engine\Render\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\DecalRenderPass.h">
+    <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\BillboardRenderPass.h">
       <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\BufferVisualizationRenderPass.h">
+      <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\DecalRenderPass.h">
       <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\DepthLessRenderPass.h">
@@ -1095,6 +1130,9 @@
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\RenderPipeline.h">
       <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\SceneLightBinding.h">
+      <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\SelectionMaskRenderPass.h">
       <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
     </ClInclude>
@@ -1102,6 +1140,9 @@
       <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\SubUVRenderPass.h">
+      <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\ToonOutlineRenderPass.h">
       <Filter>Source\Engine\Render\Renderer\RenderFlow</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\TranslucentRenderPass.h">
@@ -1193,6 +1234,18 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Runtime\Stats\ScopeCycleCounter.h">
       <Filter>Source\Engine\Runtime\Stats</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Serialization\Archive.h">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Serialization\JsonReader.h">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Serialization\JsonWriter.h">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Serialization\MemoryWriter.h">
+      <Filter>Source\Engine\Serialization</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Serialization\SceneSaveManager.h">
       <Filter>Source\Engine\Serialization</Filter>
@@ -1290,23 +1343,5 @@
     <ClInclude Include="ThirdParty\SimpleJSON\json.hpp">
       <Filter>ThirdParty\SimpleJSON</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Serialization\Archive.h" />
-    <ClInclude Include="Source\Engine\Serialization\MemoryWriter.h" />
-    <ClInclude Include="Source\Engine\Serialization\JsonWriter.h" />
-    <ClInclude Include="Source\Engine\Component\Light\LightComponent.h">
-      <Filter>Source\Engine\Component\Light</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Component\Light\AmbientLightComponent.h">
-      <Filter>Source\Engine\Component\Light</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Component\Light\DirectionalLightComponent.h">
-      <Filter>Source\Engine\Component\Light</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Component\Light\SpotLightComponent.h">
-      <Filter>Source\Engine\Component\Light</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Component\Light\PointLightComponent.h" />
-    <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\BillboardRenderPass.h" />
-    <ClInclude Include="Source\Engine\Render\Renderer\RenderFlow\ToonOutlineRenderPass.h" />
   </ItemGroup>
 </Project>

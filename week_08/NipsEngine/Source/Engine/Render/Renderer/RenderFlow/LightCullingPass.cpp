@@ -513,17 +513,10 @@ void FLightCullingPass::EmitDebugStats(const FRenderPassContext* Context, uint32
 
     Context->DeviceContext->Unmap(TileLightCountReadbackBuffer.Get(), 0);
 
-    const float AverageVisibleLightsPerTile =
-        (TileCount > 0) ? static_cast<float>(TotalVisibleLights) / static_cast<float>(TileCount) : 0.0f;
+    // const float AverageVisibleLightsPerTile =
+    //    (TileCount > 0) ? static_cast<float>(TotalVisibleLights) / static_cast<float>(TileCount) : 0.0f;
 
-    UE_LOG(
-        "[LightCulling] lights=%u tiles=%ux%u (%u), nonZeroTiles=%u, avgVisiblePerTile=%.2f, maxVisiblePerTile=%u",
-        GLightCullingOutputs.LightCount,
-        TileCountX,
-        TileCountY,
-        TileCount,
-        NonZeroTileCount,
-        AverageVisibleLightsPerTile,
-        MaxVisibleLightsInTile);
+    // UE_LOG("[LightCulling] lights=%u tiles=%ux%u (%u), nonZeroTiles=%u, avgVisiblePerTile=%.2f, maxVisiblePerTile=%u",
+	//		GLightCullingOutputs.LightCount, TileCountX, TileCountY, TileCount, NonZeroTileCount, AverageVisibleLightsPerTile, MaxVisibleLightsInTile);
 
 }
