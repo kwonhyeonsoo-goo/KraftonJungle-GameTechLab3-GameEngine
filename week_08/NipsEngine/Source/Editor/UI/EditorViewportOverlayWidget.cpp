@@ -58,7 +58,7 @@ namespace
     const ImVec4 ColorPink   = ImVec4(1.0f, 0.5f, 0.5f, 1.0f);
 }
 
-// 뷰포트 타입 → 표시 이름
+// 뷰포트 타입(Enum)을 UI에 표시할 문자열로 변환합니다.
 static const char* GetViewportTypeName(EEditorViewportType Type)
 {
 	switch (Type)
@@ -74,6 +74,7 @@ static const char* GetViewportTypeName(EEditorViewportType Type)
 	}
 }
 
+// 뷰 모드(Enum)를 UI에 표시할 문자열로 변환합니다.
 static const char* GetViewModeName(EViewMode Mode)
 {
 	switch (Mode)
@@ -87,6 +88,7 @@ static const char* GetViewModeName(EViewMode Mode)
 	}
 }
 
+// ──────────── FEditorViewPortOverlayWidget의 메인 렌더링 함수입니다. ────────────
 void FEditorViewportOverlayWidget::Render(float DeltaTime)
 {
 	if (bShowViewportSettings)
@@ -99,6 +101,7 @@ void FEditorViewportOverlayWidget::Render(float DeltaTime)
 	RenderShortcutsWindow();
 }
 
+// 뷰포트 설정(표시 플래그, 그리드, 카메라 감도, BVH 관리 정책 등)을 조작하는 창을 렌더링합니다.
 void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
 {
     FEditorSettings& Settings = FEditorSettings::Get();
@@ -134,11 +137,10 @@ void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
 
     // Grid Settings
     ImGui::Text("Grid");
-    
-    ImGui::SetNextItemWidth(ItemWidth); // 너비 설정
+    ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("Spacing", &Settings.GridSpacing, 0.1f, 10.0f, "%.1f");
     
-    ImGui::SetNextItemWidth(ItemWidth); // 너비 설정
+    ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderInt("Half Line Count", &Settings.GridHalfLineCount, 10, 500);
 
     ImGui::Separator();
@@ -150,10 +152,10 @@ void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
     // Camera Sensitivity
     ImGui::Text("Camera");
 
-    ImGui::SetNextItemWidth(ItemWidth); // 너비 설정
+    ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("Move Sensitivity", &Settings.CameraMoveSensitivity, 0.1f, 5.0f, "%.1f");
     
-    ImGui::SetNextItemWidth(ItemWidth); // 너비 설정
+    ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("Rotate Sensitivity", &Settings.CameraRotateSensitivity, 0.1f, 5.0f, "%.1f");
 
     if (EditorEngine)
@@ -199,7 +201,7 @@ void FEditorViewportOverlayWidget::RenderViewportSettings(float DeltaTime)
     ImGui::End();
 }
 
-// FPS, Culling, Decal, Memory 창에 대한 디버그 정보를 화면에 출력합니다.
+// 활성화된 뷰포트를 순회하며 설정에 따라 디버그 스탯(FPS, Culling, Memory 등) 오버레이를 화면에 배치하고 렌더링합니다.
 void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 {
     if (!EditorEngine) return;
@@ -219,29 +221,28 @@ void FEditorViewportOverlayWidget::RenderDebugStats(float DeltaTime)
 
         ImVec2 CurrentDrawPos(static_cast<float>(ViewportRect.X) + 8.f, static_cast<float>(ViewportRect.Y) + 32.f);
 
-        // ──────────── 일반 스탯 창 (FPS, Culling, Decal, Memory) ────────────
         float GeneralWidth = RenderGeneralStatsWindow(i, VS, CurrentDrawPos, DeltaTime);
         if (GeneralWidth > 0.f)
             CurrentDrawPos.x += GeneralWidth + 8.f;
 
-        // ──────────── NameTable 창 ────────────
         float NTWidth = RenderNameTableWindow(i, VS, CurrentDrawPos);
         if (NTWidth > 0.f)
             CurrentDrawPos.x += NTWidth + 8.f;
 
-        // ──────────── LightCull 창 ────────────
-        RenderLightCullWindow(i, VS, CurrentDrawPos);
+        float LightCullWidth = RenderLightCullWindow(i, VS, CurrentDrawPos);
+
+		// [중요] 통계를 띄우고 싶을 경우엔 여기에 위의 양식과 똑같이 추가합니다.
     }
 }
 
-// 스플리터 바 시각화
+// 다중 뷰포트 모드에서 뷰포트 간의 경계선(Splitter) 및 교차점(Cross)을 드래그 시 강조해 렌더링합니다.
 void FEditorViewportOverlayWidget::RenderSplitterBar()
 {
-
-	 // Capture 중이거나 middle dragging 중이라면 하이라이트를 하지 않습니다.
+	 // 뷰포트를 클릭했거나, 휠 드래그를 하고 있을 때 강조하지 않습니다.
 	if (FSlateApplication::Get().GetCapturedWidget() || InputSystem::Get().GetMiddleDragging())
 		 return;
-	// 우클릭 + 기즈모 홀딩 중에는 하이라이트를 표시하지 않음
+
+	// 기즈모를 잡고 있을 때 강조하지 않습니다.
 	bool bIsHodingGizmo = EditorEngine->GetGizmo()->IsHolding();
 
 	 if (bIsHodingGizmo || InputSystem::Get().GetRightDragging())
@@ -253,7 +254,7 @@ void FEditorViewportOverlayWidget::RenderSplitterBar()
 	
 	FEditorViewportLayout& ViewportLayout = EditorEngine->GetViewportLayout();
 
-	// 1개 모드일 때는 바를 그리지 않음
+	// 뷰포트가 1개일 때 Splitter Bar를 띄우지 않습니다.
 	if (!ViewportLayout.IsSingleViewportMode())
 	{
 		ImDrawList* DrawList = ImGui::GetForegroundDrawList();
@@ -296,7 +297,6 @@ void FEditorViewportOverlayWidget::RenderSplitterBar()
 				Color);
 		}
 
-		// 교차점 핸들 렌더링 (4개 뷰포트 동시 조정)
 		if (Cross)
 		{
 			const FRect CR = Cross->GetCrossRect();
@@ -308,6 +308,7 @@ void FEditorViewportOverlayWidget::RenderSplitterBar()
 	}
 }
 
+// 마우스 드래그를 통한 다중 선택(Box Selection) 시 뷰포트 위에 반투명한 선택 영역 박스를 렌더링합니다.
 void FEditorViewportOverlayWidget::RenderBoxSelectionOverlay()
 {
 	if (!EditorEngine)
@@ -351,6 +352,7 @@ void FEditorViewportOverlayWidget::RenderBoxSelectionOverlay()
 	}
 }
 
+// 현재 에디터에서 사용 가능한 단축키 목록을 보여주는 팝업 창을 렌더링합니다.
 void FEditorViewportOverlayWidget::RenderShortcutsWindow()
 {
 	if (!bShowShortcutsWindow)
@@ -457,7 +459,7 @@ void FEditorViewportOverlayWidget::RenderShortcutsWindow()
 
 // ──────────── 헬퍼 함수  ────────────
 
-// FPS, Memory, FName, Decal Culling 정보에 대해 출력합니다.
+// 특정 뷰포트의 일반적인 렌더링 통계(FPS, Culling, Decal, Memory) 정보를 출력하는 창을 그립니다.
 float FEditorViewportOverlayWidget::RenderGeneralStatsWindow(int32 ViewportIndex, const FEditorViewportState& VS, const ImVec2& Pos, float DeltaTime)
 {
     if (!VS.bShowStatFPS && !VS.bShowStatMemory) 
@@ -549,6 +551,7 @@ float FEditorViewportOverlayWidget::RenderGeneralStatsWindow(int32 ViewportIndex
     return WindowWidth;
 }
 
+// 현재 엔진의 FNamePool에 등록된 전체 문자열 목록을 스크롤 가능한 창으로 렌더링합니다.
 float FEditorViewportOverlayWidget::RenderNameTableWindow(int32 ViewportIndex, const FEditorViewportState& VS, const ImVec2& Pos)
 {
     if (!VS.bShowStatNameTable) 
@@ -588,10 +591,11 @@ float FEditorViewportOverlayWidget::RenderNameTableWindow(int32 ViewportIndex, c
     return 280.f;
 }
 
-void FEditorViewportOverlayWidget::RenderLightCullWindow(int32 ViewportIndex, const FEditorViewportState& VS, const ImVec2& Pos)
+// 라이트 컬링(Light Culling) 패스의 디버그 통계(타일 수, 타일당 라이트 개수 등)를 출력하는 창을 그립니다.
+float FEditorViewportOverlayWidget::RenderLightCullWindow(int32 ViewportIndex, const FEditorViewportState& VS, const ImVec2& Pos)
 {
     if (!VS.bShowStatLightCull) 
-        return;
+        return 0.f;
 
     ImGui::SetNextWindowPos(Pos, ImGuiCond_Always);
     ImGui::SetNextWindowBgAlpha(0.3f);
@@ -613,4 +617,6 @@ void FEditorViewportOverlayWidget::RenderLightCullWindow(int32 ViewportIndex, co
         ImGui::TextColored(ColorPaleBlue, "- Avg / Tile: %.2f", S.AvgLightsPerTile);
     }
     ImGui::End();
+
+	return 280.0f;
 }
