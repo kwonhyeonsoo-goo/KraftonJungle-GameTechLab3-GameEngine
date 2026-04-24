@@ -1,4 +1,4 @@
-// dear imgui: Renderer Backend for DirectX11
+﻿// dear imgui: Renderer Backend for DirectX11
 // This needs to be used along with a Platform Backend (e.g. Win32)
 
 // Implemented features:
@@ -102,7 +102,7 @@ struct VERTEX_CONSTANT_BUFFER_DX11
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
 static ImGui_ImplDX11_Data* ImGui_ImplDX11_GetBackendData()
 {
-    return ImGui::GetCurrentContext() ? (ImGui_ImplDX11_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
+    return ImGui::GetCurrentContext() ? static_cast<ImGui_ImplDX11_Data*>(ImGui::GetIO().BackendRendererUserData) : nullptr;
 }
 
 // Forward Declarations
@@ -128,7 +128,7 @@ static void ImGui_ImplDX11_SetupRenderState(const ImDrawData* draw_data, ID3D11D
     D3D11_MAPPED_SUBRESOURCE mapped_resource;
     if (device_ctx->Map(bd->pVertexConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource) == S_OK)
     {
-        VERTEX_CONSTANT_BUFFER_DX11* constant_buffer = (VERTEX_CONSTANT_BUFFER_DX11*)mapped_resource.pData;
+        VERTEX_CONSTANT_BUFFER_DX11* constant_buffer = static_cast<VERTEX_CONSTANT_BUFFER_DX11*>(mapped_resource.pData);
         float L = draw_data->DisplayPos.x;
         float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
         float T = draw_data->DisplayPos.y;
@@ -217,8 +217,8 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
         return;
     if (device->Map(bd->pIB, 0, D3D11_MAP_WRITE_DISCARD, 0, &idx_resource) != S_OK)
         return;
-    ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resource.pData;
-    ImDrawIdx* idx_dst = (ImDrawIdx*)idx_resource.pData;
+    ImDrawVert* vtx_dst = static_cast<ImDrawVert*>(vtx_resource.pData);
+    ImDrawIdx* idx_dst = static_cast<ImDrawIdx*>(idx_resource.pData);
     for (const ImDrawList* draw_list : draw_data->CmdLists)
     {
         memcpy(vtx_dst, draw_list->VtxBuffer.Data, draw_list->VtxBuffer.Size * sizeof(ImDrawVert));
@@ -316,7 +316,7 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
                     continue;
 
                 // Apply scissor/clipping rectangle
-                const D3D11_RECT r = { (LONG)clip_min.x, (LONG)clip_min.y, (LONG)clip_max.x, (LONG)clip_max.y };
+                const D3D11_RECT r = { static_cast<LONG>(clip_min.x), static_cast<LONG>(clip_min.y), static_cast<LONG>(clip_max.x), static_cast<LONG>(clip_max.y) };
                 device->RSSetScissorRects(1, &r);
 
                 // Bind texture, Draw
@@ -352,9 +352,9 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
 
 static void ImGui_ImplDX11_DestroyTexture(ImTextureData* tex)
 {
-    if (ImGui_ImplDX11_Texture* backend_tex = (ImGui_ImplDX11_Texture*)tex->BackendUserData)
+    if (ImGui_ImplDX11_Texture* backend_tex = static_cast<ImGui_ImplDX11_Texture*>(tex->BackendUserData))
     {
-        IM_ASSERT(backend_tex->pTextureView == (ID3D11ShaderResourceView*)(intptr_t)tex->TexID);
+        IM_ASSERT(backend_tex->pTextureView == (ID3D11ShaderResourceView*)static_cast<intptr_t>(tex->TexID));
         backend_tex->pTextureView->Release();
         backend_tex->pTexture->Release();
         IM_DELETE(backend_tex);
@@ -375,14 +375,14 @@ void ImGui_ImplDX11_UpdateTexture(ImTextureData* tex)
         //IMGUI_DEBUG_LOG("UpdateTexture #%03d: WantCreate %dx%d\n", tex->UniqueID, tex->Width, tex->Height);
         IM_ASSERT(tex->TexID == ImTextureID_Invalid && tex->BackendUserData == nullptr);
         IM_ASSERT(tex->Format == ImTextureFormat_RGBA32);
-        unsigned int* pixels = (unsigned int*)tex->GetPixels();
+        unsigned int* pixels = static_cast<unsigned int*>(tex->GetPixels());
         ImGui_ImplDX11_Texture* backend_tex = IM_NEW(ImGui_ImplDX11_Texture)();
 
         // Create texture
         D3D11_TEXTURE2D_DESC desc;
         ZeroMemory(&desc, sizeof(desc));
-        desc.Width = (UINT)tex->Width;
-        desc.Height = (UINT)tex->Height;
+        desc.Width = static_cast<UINT>(tex->Width);
+        desc.Height = static_cast<UINT>(tex->Height);
         desc.MipLevels = 1;
         desc.ArraySize = 1;
         desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -408,7 +408,7 @@ void ImGui_ImplDX11_UpdateTexture(ImTextureData* tex)
         IM_ASSERT(backend_tex->pTextureView != nullptr && "Backend failed to create texture!");
 
         // Store identifiers
-        tex->SetTexID((ImTextureID)(intptr_t)backend_tex->pTextureView);
+        tex->SetTexID(static_cast<ImTextureID>((intptr_t)backend_tex->pTextureView));
         tex->SetStatus(ImTextureStatus_OK);
         tex->BackendUserData = backend_tex;
     }
@@ -416,12 +416,12 @@ void ImGui_ImplDX11_UpdateTexture(ImTextureData* tex)
     {
         // Update selected blocks. We only ever write to textures regions which have never been used before!
         // This backend choose to use tex->Updates[] but you can use tex->UpdateRect to upload a single region.
-        ImGui_ImplDX11_Texture* backend_tex = (ImGui_ImplDX11_Texture*)tex->BackendUserData;
-        IM_ASSERT(backend_tex->pTextureView == (ID3D11ShaderResourceView*)(intptr_t)tex->TexID);
+        ImGui_ImplDX11_Texture* backend_tex = static_cast<ImGui_ImplDX11_Texture*>(tex->BackendUserData);
+        IM_ASSERT(backend_tex->pTextureView == (ID3D11ShaderResourceView*)static_cast<intptr_t>(tex->TexID));
         for (ImTextureRect& r : tex->Updates)
         {
-            D3D11_BOX box = { (UINT)r.x, (UINT)r.y, (UINT)0, (UINT)(r.x + r.w), (UINT)(r.y + r .h), (UINT)1 };
-            bd->pd3dDeviceContext->UpdateSubresource(backend_tex->pTexture, 0, &box, tex->GetPixelsAt(r.x, r.y), (UINT)tex->GetPitch(), 0);
+            D3D11_BOX box = { static_cast<UINT>(r.x), static_cast<UINT>(r.y), static_cast<UINT>(0), static_cast<UINT>(r.x + r.w), static_cast<UINT>(r.y + r.h), static_cast<UINT>(1) };
+            bd->pd3dDeviceContext->UpdateSubresource(backend_tex->pTexture, 0, &box, tex->GetPixelsAt(r.x, r.y), static_cast<UINT>(tex->GetPitch()), 0);
         }
         tex->SetStatus(ImTextureStatus_OK);
     }
@@ -484,9 +484,9 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
         // Create the input layout
         D3D11_INPUT_ELEMENT_DESC local_layout[] =
         {
-            { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)offsetof(ImDrawVert, pos), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)offsetof(ImDrawVert, uv),  D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (UINT)offsetof(ImDrawVert, col), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, static_cast<UINT>(offsetof(ImDrawVert, pos)), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, static_cast<UINT>(offsetof(ImDrawVert, uv)),  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, static_cast<UINT>(offsetof(ImDrawVert, col)), D3D11_INPUT_PER_VERTEX_DATA, 0 },
         };
         if (bd->pd3dDevice->CreateInputLayout(local_layout, 3, vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), &bd->pInputLayout) != S_OK)
         {
@@ -630,7 +630,7 @@ bool    ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_co
 
     // Setup backend capabilities flags
     ImGui_ImplDX11_Data* bd = IM_NEW(ImGui_ImplDX11_Data)();
-    io.BackendRendererUserData = (void*)bd;
+    io.BackendRendererUserData = static_cast<void*>(bd);
     io.BackendRendererName = "imgui_impl_dx11";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
     io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // We can honor ImGuiPlatformIO::Textures[] requests during render.
@@ -726,7 +726,7 @@ static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport)
 
     // PlatformHandleRaw should always be a HWND, whereas PlatformHandle might be a higher-level handle (e.g. GLFWWindow*, SDL's WindowID).
     // Some backends will leave PlatformHandleRaw == 0, in which case we assume PlatformHandle will contain the HWND.
-    HWND hwnd = viewport->PlatformHandleRaw ? (HWND)viewport->PlatformHandleRaw : (HWND)viewport->PlatformHandle;
+    HWND hwnd = viewport->PlatformHandleRaw ? static_cast<HWND>(viewport->PlatformHandleRaw) : static_cast<HWND>(viewport->PlatformHandle);
     IM_ASSERT(hwnd != 0);
     IM_ASSERT(vd->SwapChain == nullptr && vd->RTView == nullptr);
 
@@ -736,8 +736,8 @@ static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport)
     {
         IM_ASSERT(sd_template.BufferDesc.Width == 0 && sd_template.BufferDesc.Height == 0 && sd_template.OutputWindow == nullptr);
         DXGI_SWAP_CHAIN_DESC sd = sd_template;
-        sd.BufferDesc.Width = (UINT)viewport->Size.x;
-        sd.BufferDesc.Height = (UINT)viewport->Size.y;
+        sd.BufferDesc.Width = static_cast<UINT>(viewport->Size.x);
+        sd.BufferDesc.Height = static_cast<UINT>(viewport->Size.y);
         sd.OutputWindow = hwnd;
         hr = bd->pFactory->CreateSwapChain(bd->pd3dDevice, &sd, &vd->SwapChain);
         if (SUCCEEDED(hr))
@@ -759,7 +759,7 @@ static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport)
 static void ImGui_ImplDX11_DestroyWindow(ImGuiViewport* viewport)
 {
     // The main viewport (owned by the application) will always have RendererUserData == nullptr since we didn't create the data for it.
-    if (ImGui_ImplDX11_ViewportData* vd = (ImGui_ImplDX11_ViewportData*)viewport->RendererUserData)
+    if (ImGui_ImplDX11_ViewportData* vd = static_cast<ImGui_ImplDX11_ViewportData*>(viewport->RendererUserData))
     {
         if (vd->SwapChain)
             vd->SwapChain->Release();
@@ -775,7 +775,7 @@ static void ImGui_ImplDX11_DestroyWindow(ImGuiViewport* viewport)
 static void ImGui_ImplDX11_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
-    ImGui_ImplDX11_ViewportData* vd = (ImGui_ImplDX11_ViewportData*)viewport->RendererUserData;
+    ImGui_ImplDX11_ViewportData* vd = static_cast<ImGui_ImplDX11_ViewportData*>(viewport->RendererUserData);
     if (vd->RTView)
     {
         vd->RTView->Release();
@@ -784,7 +784,7 @@ static void ImGui_ImplDX11_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     if (vd->SwapChain)
     {
         ID3D11Texture2D* pBackBuffer = nullptr;
-        vd->SwapChain->ResizeBuffers(0, (UINT)size.x, (UINT)size.y, DXGI_FORMAT_UNKNOWN, 0);
+        vd->SwapChain->ResizeBuffers(0, static_cast<UINT>(size.x), static_cast<UINT>(size.y), DXGI_FORMAT_UNKNOWN, 0);
         vd->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
         if (pBackBuffer == nullptr) { fprintf(stderr, "ImGui_ImplDX11_SetWindowSize() failed creating buffers.\n"); return; }
         bd->pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &vd->RTView);
@@ -795,7 +795,7 @@ static void ImGui_ImplDX11_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 static void ImGui_ImplDX11_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
-    ImGui_ImplDX11_ViewportData* vd = (ImGui_ImplDX11_ViewportData*)viewport->RendererUserData;
+    ImGui_ImplDX11_ViewportData* vd = static_cast<ImGui_ImplDX11_ViewportData*>(viewport->RendererUserData);
     ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
     bd->pd3dDeviceContext->OMSetRenderTargets(1, &vd->RTView, nullptr);
     if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
@@ -805,7 +805,7 @@ static void ImGui_ImplDX11_RenderWindow(ImGuiViewport* viewport, void*)
 
 static void ImGui_ImplDX11_SwapBuffers(ImGuiViewport* viewport, void*)
 {
-    ImGui_ImplDX11_ViewportData* vd = (ImGui_ImplDX11_ViewportData*)viewport->RendererUserData;
+    ImGui_ImplDX11_ViewportData* vd = static_cast<ImGui_ImplDX11_ViewportData*>(viewport->RendererUserData);
     if (vd->SwapChain)
         vd->SwapChain->Present(0, 0); // Present without vsync
 }

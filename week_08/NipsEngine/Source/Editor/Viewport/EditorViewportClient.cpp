@@ -468,8 +468,8 @@ void FEditorViewportClient::LockCursorToViewport()
     POINT Origin = { Viewport->GetRect().X, Viewport->GetRect().Y };
 	if (Window)
 		::ClientToScreen(Window->GetHWND(), &Origin);
-	InputSystem::Get().LockMouse(true, (float)Origin.x, (float)Origin.y,
-                                 (float)Viewport->GetRect().Width, (float)Viewport->GetRect().Height);
+	InputSystem::Get().LockMouse(true, static_cast<float>(Origin.x), static_cast<float>(Origin.y),
+                                 static_cast<float>(Viewport->GetRect().Width), static_cast<float>(Viewport->GetRect().Height));
 }
 
 bool FEditorViewportClient::TryProjectWorldToViewport(const FVector& WorldPos, float& OutViewportX, float& OutViewportY, float& OutDepth) const

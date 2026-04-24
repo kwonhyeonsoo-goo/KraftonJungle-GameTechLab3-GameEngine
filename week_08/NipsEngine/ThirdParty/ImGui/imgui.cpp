@@ -1,4 +1,4 @@
-// dear imgui, v1.92.7 WIP
+﻿// dear imgui, v1.92.7 WIP
 // (main code and documentation)
 
 // Help:
@@ -1803,7 +1803,7 @@ void ImGuiIO::ClearInputKeys()
     ImGuiContext& g = *Ctx;
     for (int key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key++)
     {
-        if (ImGui::IsMouseKey((ImGuiKey)key))
+        if (ImGui::IsMouseKey(static_cast<ImGuiKey>(key)))
             continue;
         ImGuiKeyData* key_data = &g.IO.KeysData[key - ImGuiKey_NamedKey_BEGIN];
         key_data->Down = false;
@@ -1817,7 +1817,7 @@ void ImGuiIO::ClearInputKeys()
 
 void ImGuiIO::ClearInputMouse()
 {
-    for (ImGuiKey key = ImGuiKey_Mouse_BEGIN; key < ImGuiKey_Mouse_END; key = (ImGuiKey)(key + 1))
+    for (ImGuiKey key = ImGuiKey_Mouse_BEGIN; key < ImGuiKey_Mouse_END; key = static_cast<ImGuiKey>(key + 1))
     {
         ImGuiKeyData* key_data = &KeysData[key - ImGuiKey_NamedKey_BEGIN];
         key_data->Down = false;
@@ -1910,12 +1910,12 @@ void ImGuiIO::SetKeyEventNativeData(ImGuiKey key, int native_keycode, int native
 {
     if (key == ImGuiKey_None)
         return;
-    IM_ASSERT(ImGui::IsNamedKey(key)); // >= 512
-    IM_ASSERT(native_legacy_index == -1 || ImGui::IsLegacyKey((ImGuiKey)native_legacy_index)); // >= 0 && <= 511
-    IM_UNUSED(key);                 // Yet unused
-    IM_UNUSED(native_keycode);      // Yet unused
-    IM_UNUSED(native_scancode);     // Yet unused
-    IM_UNUSED(native_legacy_index); // Yet unused
+    IM_ASSERT(ImGui::IsNamedKey(key));                                                                      // >= 512
+    IM_ASSERT(native_legacy_index == -1 || ImGui::IsLegacyKey(static_cast<ImGuiKey>(native_legacy_index))); // >= 0 && <= 511
+    IM_UNUSED(key);                                                                                         // Yet unused
+    IM_UNUSED(native_keycode);                                                                              // Yet unused
+    IM_UNUSED(native_scancode);                                                                             // Yet unused
+    IM_UNUSED(native_legacy_index);                                                                         // Yet unused
 }
 
 // Set master flag for accepting key/mouse/text events (default to true). Useful if you have native dialog boxes that are interrupting your application loop/refresh, and you want to disable events being queued while your app is frozen.
@@ -2084,7 +2084,7 @@ ImVec2 ImBezierCubicClosestPoint(const ImVec2& p1, const ImVec2& p2, const ImVec
     ImVec2 p_last = p1;
     ImVec2 p_closest;
     float p_closest_dist2 = FLT_MAX;
-    float t_step = 1.0f / (float)num_segments;
+    float t_step = 1.0f / static_cast<float>(num_segments);
     for (int i_step = 1; i_step <= num_segments; i_step++)
     {
         ImVec2 p_current = ImBezierCubicCalc(p1, p2, p3, p4, t_step * i_step);
@@ -2226,7 +2226,7 @@ char* ImStrdup(const char* str)
 {
     size_t len = ImStrlen(str);
     void* buf = IM_ALLOC(len + 1);
-    return (char*)memcpy(buf, (const void*)str, len + 1);
+    return static_cast<char*>(memcpy(buf, (const void*)str, len + 1));
 }
 
 void* ImMemdup(const void* src, size_t size)
@@ -2242,16 +2242,16 @@ char* ImStrdupcpy(char* dst, size_t* p_dst_size, const char* src)
     if (dst_buf_size < src_size)
     {
         IM_FREE(dst);
-        dst = (char*)IM_ALLOC(src_size);
+        dst = static_cast<char*>(IM_ALLOC(src_size));
         if (p_dst_size)
             *p_dst_size = src_size;
     }
-    return (char*)memcpy(dst, (const void*)src, src_size);
+    return static_cast<char*>(memcpy(dst, (const void*)src, src_size));
 }
 
 const char* ImStrchrRange(const char* str, const char* str_end, char c)
 {
-    const char* p = (const char*)ImMemchr(str, (int)c, str_end - str);
+    const char* p = static_cast<const char*>(ImMemchr(str, (int)c, str_end - str));
     return p;
 }
 
@@ -2266,7 +2266,7 @@ int ImStrlenW(const ImWchar* str)
 // Find end-of-line. Return pointer will point to either first \n, either str_end.
 const char* ImStreolRange(const char* str, const char* str_end)
 {
-    const char* p = (const char*)ImMemchr(str, '\n', str_end - str);
+    const char* p = static_cast<const char*>(ImMemchr(str, '\n', str_end - str));
     return p ? p : str_end;
 }
 
@@ -2359,8 +2359,8 @@ int ImFormatString(char* buf, size_t buf_size, const char* fmt, ...)
     va_end(args);
     if (buf == NULL)
         return w;
-    if (w == -1 || w >= (int)buf_size)
-        w = (int)buf_size - 1;
+    if (w == -1 || w >= static_cast<int>(buf_size))
+        w = static_cast<int>(buf_size) - 1;
     buf[w] = 0;
     return w;
 }
@@ -2374,8 +2374,8 @@ int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args)
 #endif
     if (buf == NULL)
         return w;
-    if (w == -1 || w >= (int)buf_size)
-        w = (int)buf_size - 1;
+    if (w == -1 || w >= static_cast<int>(buf_size))
+        w = static_cast<int>(buf_size) - 1;
     buf[w] = 0;
     return w;
 }
@@ -2476,8 +2476,8 @@ static const ImU32 GCrc32LookupTable[256] =
 ImGuiID ImHashData(const void* data_p, size_t data_size, ImGuiID seed)
 {
     ImU32 crc = ~seed;
-    const unsigned char* data = (const unsigned char*)data_p;
-    const unsigned char *data_end = (const unsigned char*)data_p + data_size;
+    const unsigned char* data = static_cast<const unsigned char*>(data_p);
+    const unsigned char *data_end = static_cast<const unsigned char*>(data_p) + data_size;
 #ifndef IMGUI_ENABLE_SSE4_2_CRC
     const ImU32* crc32_lut = GCrc32LookupTable;
     while (data < data_end)
@@ -2589,7 +2589,7 @@ ImFileHandle ImFileOpen(const char* filename, const char* mode)
 
 // We should in theory be using fseeko()/ftello() with off_t and _fseeki64()/_ftelli64() with __int64, waiting for the PR that does that in a very portable pre-C++11 zero-warnings way.
 bool    ImFileClose(ImFileHandle f)     { return fclose(f) == 0; }
-ImU64   ImFileGetSize(ImFileHandle f)   { long off = 0, sz = 0; return ((off = ftell(f)) != -1 && !fseek(f, 0, SEEK_END) && (sz = ftell(f)) != -1 && !fseek(f, off, SEEK_SET)) ? (ImU64)sz : (ImU64)-1; }
+ImU64   ImFileGetSize(ImFileHandle f)   { long off = 0, sz = 0; return ((off = ftell(f)) != -1 && !fseek(f, 0, SEEK_END) && (sz = ftell(f)) != -1 && !fseek(f, off, SEEK_SET)) ? static_cast<ImU64>(sz) : static_cast<ImU64>(-1); }
 ImU64   ImFileRead(void* data, ImU64 sz, ImU64 count, ImFileHandle f)           { return fread(data, (size_t)sz, (size_t)count, f); }
 ImU64   ImFileWrite(const void* data, ImU64 sz, ImU64 count, ImFileHandle f)    { return fwrite(data, (size_t)sz, (size_t)count, f); }
 #endif // #ifndef IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS
@@ -2608,7 +2608,7 @@ void*   ImFileLoadToMemory(const char* filename, const char* mode, size_t* out_f
         return NULL;
 
     size_t file_size = (size_t)ImFileGetSize(f);
-    if (file_size == (size_t)-1)
+    if (file_size == static_cast<size_t>(-1))
     {
         ImFileClose(f);
         return NULL;
@@ -2627,7 +2627,7 @@ void*   ImFileLoadToMemory(const char* filename, const char* mode, size_t* out_f
         return NULL;
     }
     if (padding_bytes > 0)
-        memset((void*)(((char*)file_data) + file_size), 0, (size_t)padding_bytes);
+        memset((void*)(static_cast<char*>(file_data) + file_size), 0, static_cast<size_t>(padding_bytes));
 
     ImFileClose(f);
     if (out_file_size)
@@ -2668,10 +2668,10 @@ int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* 
     s[3] = in_text + 3 < in_text_end ? in_text[3] : 0;
 
     // Assume a four-byte character and load four bytes. Unused bits are shifted out.
-    *out_char  = (uint32_t)(s[0] & masks[len]) << 18;
-    *out_char |= (uint32_t)(s[1] & 0x3f) << 12;
-    *out_char |= (uint32_t)(s[2] & 0x3f) <<  6;
-    *out_char |= (uint32_t)(s[3] & 0x3f) <<  0;
+    *out_char  = static_cast<uint32_t>(s[0] & masks[len]) << 18;
+    *out_char |= static_cast<uint32_t>(s[1] & 0x3f) << 12;
+    *out_char |= static_cast<uint32_t>(s[2] & 0x3f) <<  6;
+    *out_char |= static_cast<uint32_t>(s[3] & 0x3f) <<  0;
     *out_char >>= shiftc[len];
 
     // Accumulate the various error conditions.
@@ -2706,12 +2706,12 @@ int ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const cha
     {
         unsigned int c;
         in_text += ImTextCharFromUtf8(&c, in_text, in_text_end);
-        *buf_out++ = (ImWchar)c;
+        *buf_out++ = static_cast<ImWchar>(c);
     }
     *buf_out = 0;
     if (in_text_remaining)
         *in_text_remaining = in_text;
-    return (int)(buf_out - buf);
+    return static_cast<int>(buf_out - buf);
 }
 
 int ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end)
@@ -2731,31 +2731,31 @@ static inline int ImTextCharToUtf8_inline(char* buf, int buf_size, unsigned int 
 {
     if (c < 0x80)
     {
-        buf[0] = (char)c;
+        buf[0] = static_cast<char>(c);
         return 1;
     }
     if (c < 0x800)
     {
         if (buf_size < 2) return 0;
-        buf[0] = (char)(0xc0 + (c >> 6));
-        buf[1] = (char)(0x80 + (c & 0x3f));
+        buf[0] = static_cast<char>(0xc0 + (c >> 6));
+        buf[1] = static_cast<char>(0x80 + (c & 0x3f));
         return 2;
     }
     if (c < 0x10000)
     {
         if (buf_size < 3) return 0;
-        buf[0] = (char)(0xe0 + (c >> 12));
-        buf[1] = (char)(0x80 + ((c >> 6) & 0x3f));
-        buf[2] = (char)(0x80 + ((c ) & 0x3f));
+        buf[0] = static_cast<char>(0xe0 + (c >> 12));
+        buf[1] = static_cast<char>(0x80 + ((c >> 6) & 0x3f));
+        buf[2] = static_cast<char>(0x80 + ((c) & 0x3f));
         return 3;
     }
     if (c <= 0x10FFFF)
     {
         if (buf_size < 4) return 0;
-        buf[0] = (char)(0xf0 + (c >> 18));
-        buf[1] = (char)(0x80 + ((c >> 12) & 0x3f));
-        buf[2] = (char)(0x80 + ((c >> 6) & 0x3f));
-        buf[3] = (char)(0x80 + ((c ) & 0x3f));
+        buf[0] = static_cast<char>(0xf0 + (c >> 18));
+        buf[1] = static_cast<char>(0x80 + ((c >> 12) & 0x3f));
+        buf[2] = static_cast<char>(0x80 + ((c >> 6) & 0x3f));
+        buf[3] = static_cast<char>(0x80 + ((c) & 0x3f));
         return 4;
     }
     // Invalid code point, the max unicode is 0x10FFFF
@@ -2793,12 +2793,12 @@ int ImTextStrToUtf8(char* out_buf, int out_buf_size, const ImWchar* in_text, con
     {
         unsigned int c = (unsigned int)(*in_text++);
         if (c < 0x80)
-            *buf_p++ = (char)c;
+            *buf_p++ = static_cast<char>(c);
         else
-            buf_p += ImTextCharToUtf8_inline(buf_p, (int)(buf_end - buf_p - 1), c);
+            buf_p += ImTextCharToUtf8_inline(buf_p, static_cast<int>(buf_end - buf_p - 1), c);
     }
     *buf_p = 0;
-    return (int)(buf_p - out_buf);
+    return static_cast<int>(buf_p - out_buf);
 }
 
 int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end)
@@ -2833,7 +2833,7 @@ const char* ImTextFindValidUtf8CodepointEnd(const char* in_text_start, const cha
     const char* prev = ImTextFindPreviousUtf8Codepoint(in_text_start, in_p);
     unsigned int prev_c;
     int prev_c_len = ImTextCharFromUtf8(&prev_c, prev, in_text_end);
-    if (prev_c != IM_UNICODE_CODEPOINT_INVALID && prev_c_len <= (int)(in_p - prev))
+    if (prev_c != IM_UNICODE_CODEPOINT_INVALID && prev_c_len <= static_cast<int>(in_p - prev))
         return in_p;
     return prev;
 }
@@ -2845,7 +2845,7 @@ int ImTextCountLines(const char* in_text, const char* in_text_end)
     int count = 0;
     while (in_text < in_text_end)
     {
-        const char* line_end = (const char*)ImMemchr(in_text, '\n', in_text_end - in_text);
+        const char* line_end = static_cast<const char*>(ImMemchr(in_text, '\n', in_text_end - in_text));
         in_text = line_end ? line_end + 1 : in_text_end;
         count++;
     }
@@ -2862,9 +2862,9 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 IMGUI_API ImU32 ImAlphaBlendColors(ImU32 col_a, ImU32 col_b)
 {
     float t = ((col_b >> IM_COL32_A_SHIFT) & 0xFF) / 255.f;
-    int r = ImLerp((int)(col_a >> IM_COL32_R_SHIFT) & 0xFF, (int)(col_b >> IM_COL32_R_SHIFT) & 0xFF, t);
-    int g = ImLerp((int)(col_a >> IM_COL32_G_SHIFT) & 0xFF, (int)(col_b >> IM_COL32_G_SHIFT) & 0xFF, t);
-    int b = ImLerp((int)(col_a >> IM_COL32_B_SHIFT) & 0xFF, (int)(col_b >> IM_COL32_B_SHIFT) & 0xFF, t);
+    int r = ImLerp(static_cast<int>(col_a >> IM_COL32_R_SHIFT) & 0xFF, static_cast<int>(col_b >> IM_COL32_R_SHIFT) & 0xFF, t);
+    int g = ImLerp(static_cast<int>(col_a >> IM_COL32_G_SHIFT) & 0xFF, static_cast<int>(col_b >> IM_COL32_G_SHIFT) & 0xFF, t);
+    int b = ImLerp(static_cast<int>(col_a >> IM_COL32_B_SHIFT) & 0xFF, static_cast<int>(col_b >> IM_COL32_B_SHIFT) & 0xFF, t);
     return IM_COL32(r, g, b, 0xFF);
 }
 
@@ -2881,10 +2881,10 @@ ImVec4 ImGui::ColorConvertU32ToFloat4(ImU32 in)
 ImU32 ImGui::ColorConvertFloat4ToU32(const ImVec4& in)
 {
     ImU32 out;
-    out  = ((ImU32)IM_F32_TO_INT8_SAT(in.x)) << IM_COL32_R_SHIFT;
-    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.y)) << IM_COL32_G_SHIFT;
-    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.z)) << IM_COL32_B_SHIFT;
-    out |= ((ImU32)IM_F32_TO_INT8_SAT(in.w)) << IM_COL32_A_SHIFT;
+    out  = static_cast<ImU32>(IM_F32_TO_INT8_SAT(in.x)) << IM_COL32_R_SHIFT;
+    out |= static_cast<ImU32>(IM_F32_TO_INT8_SAT(in.y)) << IM_COL32_G_SHIFT;
+    out |= static_cast<ImU32>(IM_F32_TO_INT8_SAT(in.z)) << IM_COL32_B_SHIFT;
+    out |= static_cast<ImU32>(IM_F32_TO_INT8_SAT(in.w)) << IM_COL32_A_SHIFT;
     return out;
 }
 
@@ -2922,8 +2922,8 @@ void ImGui::ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float&
     }
 
     h = ImFmod(h, 1.0f) / (60.0f / 360.0f);
-    int   i = (int)h;
-    float f = h - (float)i;
+    int   i = static_cast<int>(h);
+    float f = h - static_cast<float>(i);
     float p = v * (1.0f - s);
     float q = v * (1.0f - s * f);
     float t = v * (1.0f - s * (1.0f - f));
@@ -2948,7 +2948,7 @@ void ImGui::ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float&
 ImGuiStoragePair* ImLowerBound(ImGuiStoragePair* in_begin, ImGuiStoragePair* in_end, ImGuiID key)
 {
     ImGuiStoragePair* in_p = in_begin;
-    for (size_t count = (size_t)(in_end - in_p); count > 0; )
+    for (size_t count = static_cast<size_t>(in_end - in_p); count > 0; )
     {
         size_t count2 = count >> 1;
         ImGuiStoragePair* mid = in_p + count2;
@@ -2969,15 +2969,15 @@ IM_MSVC_RUNTIME_CHECKS_OFF
 static int IMGUI_CDECL PairComparerByID(const void* lhs, const void* rhs)
 {
     // We can't just do a subtraction because qsort uses signed integers and subtracting our ID doesn't play well with that.
-    ImGuiID lhs_v = ((const ImGuiStoragePair*)lhs)->key;
-    ImGuiID rhs_v = ((const ImGuiStoragePair*)rhs)->key;
+    ImGuiID lhs_v = static_cast<const ImGuiStoragePair*>(lhs)->key;
+    ImGuiID rhs_v = static_cast<const ImGuiStoragePair*>(rhs)->key;
     return (lhs_v > rhs_v ? +1 : lhs_v < rhs_v ? -1 : 0);
 }
 
 // For quicker full rebuild of a storage (instead of an incremental one), you may add all your contents and then sort once.
 void ImGuiStorage::BuildSortByKey()
 {
-    ImQsort(Data.Data, (size_t)Data.Size, sizeof(ImGuiStoragePair), PairComparerByID);
+    ImQsort(Data.Data, static_cast<size_t>(Data.Size), sizeof(ImGuiStoragePair), PairComparerByID);
 }
 
 int ImGuiStorage::GetInt(ImGuiID key, int default_val) const
@@ -3194,7 +3194,7 @@ char ImGuiTextBuffer::EmptyString[1] = { 0 };
 
 void ImGuiTextBuffer::append(const char* str, const char* str_end)
 {
-    int len = str_end ? (int)(str_end - str) : (int)ImStrlen(str);
+    int len = str_end ? static_cast<int>(str_end - str) : static_cast<int>(ImStrlen(str));
 
     // Add zero-terminator the first time
     const int write_off = (Buf.Size != 0) ? Buf.Size : 1;
@@ -3206,7 +3206,7 @@ void ImGuiTextBuffer::append(const char* str, const char* str_end)
     }
 
     Buf.resize(needed_sz);
-    memcpy(&Buf[write_off - 1], str, (size_t)len);
+    memcpy(&Buf[write_off - 1], str, static_cast<size_t>(len));
     Buf[write_off - 1 + len] = 0;
 }
 
@@ -3241,7 +3241,7 @@ void ImGuiTextBuffer::appendfv(const char* fmt, va_list args)
     }
 
     Buf.resize(needed_sz);
-    ImFormatStringV(&Buf[write_off - 1], (size_t)len + 1, fmt, args_copy);
+    ImFormatStringV(&Buf[write_off - 1], static_cast<size_t>(len) + 1, fmt, args_copy);
     va_end(args_copy);
 }
 
@@ -3254,9 +3254,9 @@ void ImGuiTextIndex::append(const char* base, int old_size, int new_size)
     if (EndOffset == 0 || base[EndOffset - 1] == '\n')
         Offsets.push_back(EndOffset);
     const char* base_end = base + new_size;
-    for (const char* p = base + old_size; (p = (const char*)ImMemchr(p, '\n', base_end - p)) != 0; )
+    for (const char* p = base + old_size; (p = static_cast<const char*>(ImMemchr(p, '\n', base_end - p))) != 0; )
         if (++p < base_end) // Don't push a trailing offset on last \n
-            Offsets.push_back((int)(intptr_t)(p - base));
+            Offsets.push_back(static_cast<int>((intptr_t)(p - base)));
     EndOffset = ImMax(EndOffset, new_size);
 }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
@@ -3315,7 +3315,7 @@ static void ImGuiListClipper_SeekCursorAndSetupPrevLine(ImGuiListClipper* clippe
     {
         if (table->IsInsideRow)
             ImGui::TableEndRow(table);
-        const int row_increase = (int)((off_y / line_height) + 0.5f);
+        const int row_increase = static_cast<int>((off_y / line_height) + 0.5f);
         if (row_increase > 0 && (clipper->Flags & ImGuiListClipperFlags_NoSetTableRowCounters) == 0) // If your clipper item height is != from actual table row height, consider using ImGuiListClipperFlags_NoSetTableRowCounters. See #8886.
         {
             table->CurrentRow += row_increase;
@@ -3366,7 +3366,7 @@ void ImGuiListClipper::Begin(int items_count, float items_height)
 
 void ImGuiListClipper::End()
 {
-    if (ImGuiListClipperData* data = (ImGuiListClipperData*)TempData)
+    if (ImGuiListClipperData* data = static_cast<ImGuiListClipperData*>(TempData))
     {
         // In theory here we should assert that we are already at the right position, but it seems saner to just seek at the end and not assert/crash the user.
         ImGuiContext& g = *Ctx;
@@ -3390,7 +3390,7 @@ void ImGuiListClipper::End()
 
 void ImGuiListClipper::IncludeItemsByIndex(int item_begin, int item_end)
 {
-    ImGuiListClipperData* data = (ImGuiListClipperData*)TempData;
+    ImGuiListClipperData* data = static_cast<ImGuiListClipperData*>(TempData);
     IM_ASSERT(DisplayStart < 0); // Only allowed after Begin() and if there has not been a specified range yet.
     IM_ASSERT(item_begin <= item_end);
     if (item_begin < item_end)
@@ -3404,7 +3404,7 @@ void ImGuiListClipper::SeekCursorForItem(int item_n)
     // - Perform the add and multiply with double to allow seeking through larger ranges.
     // - StartPosY starts from ItemsFrozen, by adding SeekOffsetY we generally cancel that out (SeekOffsetY == LossynessOffset - ItemsFrozen * ItemsHeight).
     // - The reason we store SeekOffsetY instead of inferring it, is because we want to allow user to perform Seek after the last step, where ImGuiListClipperData is already done.
-    float pos_y = (float)((double)StartPosY + StartSeekOffsetY + (double)item_n * ItemsHeight);
+    float pos_y = static_cast<float>((double)StartPosY + StartSeekOffsetY + (double)item_n * ItemsHeight);
     ImGuiListClipper_SeekCursorAndSetupPrevLine(this, pos_y, ItemsHeight);
 }
 
@@ -3412,7 +3412,7 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
 {
     ImGuiContext& g = *clipper->Ctx;
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiListClipperData* data = (ImGuiListClipperData*)clipper->TempData;
+    ImGuiListClipperData* data = static_cast<ImGuiListClipperData*>(clipper->TempData);
     IM_ASSERT(data != NULL && "Called ImGuiListClipper::Step() too many times, or before ImGuiListClipper::Begin() ?");
 
     ImGuiTable* table = g.CurrentTable;
@@ -3458,16 +3458,16 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
         if (table)
             IM_ASSERT(table->RowPosY1 == clipper->StartPosY && table->RowPosY2 == window->DC.CursorPos.y);
 
-        bool affected_by_floating_point_precision = ImIsFloatAboveGuaranteedIntegerPrecision((float)clipper->StartPosY) || ImIsFloatAboveGuaranteedIntegerPrecision(window->DC.CursorPos.y);
+        bool affected_by_floating_point_precision = ImIsFloatAboveGuaranteedIntegerPrecision(static_cast<float>(clipper->StartPosY)) || ImIsFloatAboveGuaranteedIntegerPrecision(window->DC.CursorPos.y);
         if (affected_by_floating_point_precision)
         {
             // Mitigation/hack for very large range: assume last time height constitute line height.
             clipper->ItemsHeight = window->DC.PrevLineSize.y + g.Style.ItemSpacing.y; // FIXME: Technically wouldn't allow multi-line entries.
-            window->DC.CursorPos.y = (float)(clipper->StartPosY + clipper->ItemsHeight);
+            window->DC.CursorPos.y = static_cast<float>(clipper->StartPosY + clipper->ItemsHeight);
         }
         else
         {
-            clipper->ItemsHeight = (float)(window->DC.CursorPos.y - clipper->StartPosY) / (float)(clipper->DisplayEnd - clipper->DisplayStart);
+            clipper->ItemsHeight = static_cast<float>(window->DC.CursorPos.y - clipper->StartPosY) / static_cast<float>(clipper->DisplayEnd - clipper->DisplayStart);
         }
         if (clipper->ItemsHeight == 0.0f && clipper->ItemsCount == INT_MAX) // Accept that no item have been submitted if in indeterminate mode.
             return false;
@@ -3480,7 +3480,7 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
     if (calc_clipping)
     {
         // Record seek offset, this is so ImGuiListClipper::Seek() can be called after ImGuiListClipperData is done
-        clipper->StartSeekOffsetY = (double)data->LossynessOffset - data->ItemsFrozen * (double)clipper->ItemsHeight;
+        clipper->StartSeekOffsetY = static_cast<double>(data->LossynessOffset) - data->ItemsFrozen * static_cast<double>(clipper->ItemsHeight);
 
         if (g.LogEnabled)
         {
@@ -3536,8 +3536,8 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
         for (ImGuiListClipperRange& range : data->Ranges)
             if (range.PosToIndexConvert)
             {
-                int m1 = (int)(((double)range.Min - window->DC.CursorPos.y - data->LossynessOffset) / clipper->ItemsHeight);
-                int m2 = (int)((((double)range.Max - window->DC.CursorPos.y - data->LossynessOffset) / clipper->ItemsHeight) + 0.999999f);
+                int m1 = static_cast<int>(((double)range.Min - window->DC.CursorPos.y - data->LossynessOffset) / clipper->ItemsHeight);
+                int m2 = static_cast<int>((((double)range.Max - window->DC.CursorPos.y - data->LossynessOffset) / clipper->ItemsHeight) + 0.999999f);
                 range.Min = ImClamp(already_submitted + m1 + range.PosToIndexOffsetMin, already_submitted, clipper->ItemsCount - 1);
                 range.Max = ImClamp(already_submitted + m2 + range.PosToIndexOffsetMax, range.Min + 1, clipper->ItemsCount);
                 range.PosToIndexConvert = false;
@@ -3592,8 +3592,8 @@ bool ImGuiListClipper::Step()
 // Generic helper, equivalent to old ImGui::CalcListClipping() but stateless
 void ImGui::CalcClipRectVisibleItemsY(const ImRect& clip_rect, const ImVec2& pos, float items_height, int* out_visible_start, int* out_visible_end)
 {
-    *out_visible_start = ImMax((int)((clip_rect.Min.y - pos.y) / items_height), 0);
-    *out_visible_end = ImMax((int)ImCeil((clip_rect.Max.y - pos.y) / items_height), *out_visible_start);
+    *out_visible_start = ImMax(static_cast<int>((clip_rect.Min.y - pos.y) / items_height), 0);
+    *out_visible_end = ImMax(static_cast<int>(ImCeil((clip_rect.Max.y - pos.y) / items_height)), *out_visible_start);
 }
 
 //-----------------------------------------------------------------------------
@@ -3635,7 +3635,7 @@ ImU32 ImGui::GetColorU32(ImU32 col, float alpha_mul)
     if (alpha_mul >= 1.0f)
         return col;
     ImU32 a = (col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
-    a = (ImU32)(a * alpha_mul); // We don't need to clamp 0..255 because alpha is in 0..1 range.
+    a = static_cast<ImU32>(a * alpha_mul); // We don't need to clamp 0..255 because alpha is in 0..1 range.
     return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
 }
 
@@ -3686,48 +3686,48 @@ static const ImGuiCol GWindowDockStyleColors[ImGuiWindowDockStyleCol_COUNT] =
 
 static const ImGuiStyleVarInfo GStyleVarsInfo[] =
 {
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, Alpha) },                     // ImGuiStyleVar_Alpha
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, DisabledAlpha) },             // ImGuiStyleVar_DisabledAlpha
-    { 2, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, WindowPadding) },             // ImGuiStyleVar_WindowPadding
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, WindowRounding) },            // ImGuiStyleVar_WindowRounding
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, WindowBorderSize) },          // ImGuiStyleVar_WindowBorderSize
-    { 2, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, WindowMinSize) },             // ImGuiStyleVar_WindowMinSize
-    { 2, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, WindowTitleAlign) },          // ImGuiStyleVar_WindowTitleAlign
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, ChildRounding) },             // ImGuiStyleVar_ChildRounding
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, ChildBorderSize) },           // ImGuiStyleVar_ChildBorderSize
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, PopupRounding) },             // ImGuiStyleVar_PopupRounding
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, PopupBorderSize) },           // ImGuiStyleVar_PopupBorderSize
-    { 2, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, FramePadding) },              // ImGuiStyleVar_FramePadding
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, FrameRounding) },             // ImGuiStyleVar_FrameRounding
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, FrameBorderSize) },           // ImGuiStyleVar_FrameBorderSize
-    { 2, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, ItemSpacing) },               // ImGuiStyleVar_ItemSpacing
-    { 2, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, ItemInnerSpacing) },          // ImGuiStyleVar_ItemInnerSpacing
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, IndentSpacing) },             // ImGuiStyleVar_IndentSpacing
-    { 2, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, CellPadding) },               // ImGuiStyleVar_CellPadding
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, ScrollbarSize) },             // ImGuiStyleVar_ScrollbarSize
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, ScrollbarRounding) },         // ImGuiStyleVar_ScrollbarRounding
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, ScrollbarPadding) },          // ImGuiStyleVar_ScrollbarPadding
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, GrabMinSize) },               // ImGuiStyleVar_GrabMinSize
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, GrabRounding) },              // ImGuiStyleVar_GrabRounding
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, ImageRounding) },             // ImGuiStyleVar_ImageRounding
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, ImageBorderSize) },           // ImGuiStyleVar_ImageBorderSize
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, TabRounding) },               // ImGuiStyleVar_TabRounding
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, TabBorderSize) },             // ImGuiStyleVar_TabBorderSize
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, TabMinWidthBase) },           // ImGuiStyleVar_TabMinWidthBase
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, TabMinWidthShrink) },         // ImGuiStyleVar_TabMinWidthShrink
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, TabBarBorderSize) },          // ImGuiStyleVar_TabBarBorderSize
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, TabBarOverlineSize) },        // ImGuiStyleVar_TabBarOverlineSize
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, TableAngledHeadersAngle)},    // ImGuiStyleVar_TableAngledHeadersAngle
-    { 2, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, TableAngledHeadersTextAlign)},// ImGuiStyleVar_TableAngledHeadersTextAlign
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, TreeLinesSize)},              // ImGuiStyleVar_TreeLinesSize
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, TreeLinesRounding)},          // ImGuiStyleVar_TreeLinesRounding
-    { 2, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, ButtonTextAlign) },           // ImGuiStyleVar_ButtonTextAlign
-    { 2, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, SelectableTextAlign) },       // ImGuiStyleVar_SelectableTextAlign
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, SeparatorSize)},              // ImGuiStyleVar_SeparatorSize
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, SeparatorTextBorderSize)},    // ImGuiStyleVar_SeparatorTextBorderSize
-    { 2, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, SeparatorTextAlign) },        // ImGuiStyleVar_SeparatorTextAlign
-    { 2, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, SeparatorTextPadding) },      // ImGuiStyleVar_SeparatorTextPadding
-    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, DockingSeparatorSize) },      // ImGuiStyleVar_DockingSeparatorSize
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, Alpha)) },                      // ImGuiStyleVar_Alpha
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, DisabledAlpha)) },              // ImGuiStyleVar_DisabledAlpha
+    { 2, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, WindowPadding)) },              // ImGuiStyleVar_WindowPadding
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, WindowRounding)) },             // ImGuiStyleVar_WindowRounding
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, WindowBorderSize)) },           // ImGuiStyleVar_WindowBorderSize
+    { 2, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, WindowMinSize)) },              // ImGuiStyleVar_WindowMinSize
+    { 2, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, WindowTitleAlign)) },           // ImGuiStyleVar_WindowTitleAlign
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, ChildRounding)) },              // ImGuiStyleVar_ChildRounding
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, ChildBorderSize)) },            // ImGuiStyleVar_ChildBorderSize
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, PopupRounding)) },              // ImGuiStyleVar_PopupRounding
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, PopupBorderSize)) },            // ImGuiStyleVar_PopupBorderSize
+    { 2, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, FramePadding)) },               // ImGuiStyleVar_FramePadding
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, FrameRounding)) },              // ImGuiStyleVar_FrameRounding
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, FrameBorderSize)) },            // ImGuiStyleVar_FrameBorderSize
+    { 2, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, ItemSpacing)) },                // ImGuiStyleVar_ItemSpacing
+    { 2, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, ItemInnerSpacing)) },           // ImGuiStyleVar_ItemInnerSpacing
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, IndentSpacing)) },              // ImGuiStyleVar_IndentSpacing
+    { 2, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, CellPadding)) },                // ImGuiStyleVar_CellPadding
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, ScrollbarSize)) },              // ImGuiStyleVar_ScrollbarSize
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, ScrollbarRounding)) },          // ImGuiStyleVar_ScrollbarRounding
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, ScrollbarPadding)) },           // ImGuiStyleVar_ScrollbarPadding
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, GrabMinSize)) },                // ImGuiStyleVar_GrabMinSize
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, GrabRounding)) },               // ImGuiStyleVar_GrabRounding
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, ImageRounding)) },              // ImGuiStyleVar_ImageRounding
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, ImageBorderSize)) },            // ImGuiStyleVar_ImageBorderSize
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, TabRounding)) },                // ImGuiStyleVar_TabRounding
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, TabBorderSize)) },              // ImGuiStyleVar_TabBorderSize
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, TabMinWidthBase)) },            // ImGuiStyleVar_TabMinWidthBase
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, TabMinWidthShrink)) },          // ImGuiStyleVar_TabMinWidthShrink
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, TabBarBorderSize)) },           // ImGuiStyleVar_TabBarBorderSize
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, TabBarOverlineSize)) },         // ImGuiStyleVar_TabBarOverlineSize
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, TableAngledHeadersAngle))},     // ImGuiStyleVar_TableAngledHeadersAngle
+    { 2, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, TableAngledHeadersTextAlign))}, // ImGuiStyleVar_TableAngledHeadersTextAlign
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, TreeLinesSize))},               // ImGuiStyleVar_TreeLinesSize
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, TreeLinesRounding))},           // ImGuiStyleVar_TreeLinesRounding
+    { 2, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, ButtonTextAlign)) },            // ImGuiStyleVar_ButtonTextAlign
+    { 2, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, SelectableTextAlign)) },        // ImGuiStyleVar_SelectableTextAlign
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, SeparatorSize))},               // ImGuiStyleVar_SeparatorSize
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, SeparatorTextBorderSize))},     // ImGuiStyleVar_SeparatorTextBorderSize
+    { 2, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, SeparatorTextAlign)) },         // ImGuiStyleVar_SeparatorTextAlign
+    { 2, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, SeparatorTextPadding)) },       // ImGuiStyleVar_SeparatorTextPadding
+    { 1, ImGuiDataType_Float, static_cast<ImU32>(offsetof(ImGuiStyle, DockingSeparatorSize)) },       // ImGuiStyleVar_DockingSeparatorSize
 };
 
 const ImGuiStyleVarInfo* ImGui::GetStyleVarInfo(ImGuiStyleVar idx)
@@ -3742,7 +3742,7 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
     ImGuiContext& g = *GImGui;
     const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(idx);
     IM_ASSERT_USER_ERROR_RET(var_info->DataType == ImGuiDataType_Float && var_info->Count == 1, "Calling PushStyleVar() variant with wrong type!");
-    float* pvar = (float*)var_info->GetVarPtr(&g.Style);
+    float* pvar = static_cast<float*>(var_info->GetVarPtr(&g.Style));
     g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
     *pvar = val;
 }
@@ -3752,7 +3752,7 @@ void ImGui::PushStyleVarX(ImGuiStyleVar idx, float val_x)
     ImGuiContext& g = *GImGui;
     const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(idx);
     IM_ASSERT_USER_ERROR_RET(var_info->DataType == ImGuiDataType_Float && var_info->Count == 2, "Calling PushStyleVar() variant with wrong type!");
-    ImVec2* pvar = (ImVec2*)var_info->GetVarPtr(&g.Style);
+    ImVec2* pvar = static_cast<ImVec2*>(var_info->GetVarPtr(&g.Style));
     g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
     pvar->x = val_x;
 }
@@ -3762,7 +3762,7 @@ void ImGui::PushStyleVarY(ImGuiStyleVar idx, float val_y)
     ImGuiContext& g = *GImGui;
     const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(idx);
     IM_ASSERT_USER_ERROR_RET(var_info->DataType == ImGuiDataType_Float && var_info->Count == 2, "Calling PushStyleVar() variant with wrong type!");
-    ImVec2* pvar = (ImVec2*)var_info->GetVarPtr(&g.Style);
+    ImVec2* pvar = static_cast<ImVec2*>(var_info->GetVarPtr(&g.Style));
     g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
     pvar->y = val_y;
 }
@@ -3772,7 +3772,7 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
     ImGuiContext& g = *GImGui;
     const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(idx);
     IM_ASSERT_USER_ERROR_RET(var_info->DataType == ImGuiDataType_Float && var_info->Count == 2, "Calling PushStyleVar() variant with wrong type!");
-    ImVec2* pvar = (ImVec2*)var_info->GetVarPtr(&g.Style);
+    ImVec2* pvar = static_cast<ImVec2*>(var_info->GetVarPtr(&g.Style));
     g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
     *pvar = val;
 }
@@ -3791,8 +3791,8 @@ void ImGui::PopStyleVar(int count)
         ImGuiStyleMod& backup = g.StyleVarStack.back();
         const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(backup.VarIdx);
         void* data = var_info->GetVarPtr(&g.Style);
-        if (var_info->DataType == ImGuiDataType_Float && var_info->Count == 1)      { ((float*)data)[0] = backup.BackupFloat[0]; }
-        else if (var_info->DataType == ImGuiDataType_Float && var_info->Count == 2) { ((float*)data)[0] = backup.BackupFloat[0]; ((float*)data)[1] = backup.BackupFloat[1]; }
+        if (var_info->DataType == ImGuiDataType_Float && var_info->Count == 1)      { static_cast<float*>(data)[0] = backup.BackupFloat[0]; }
+        else if (var_info->DataType == ImGuiDataType_Float && var_info->Count == 2) { static_cast<float*>(data)[0] = backup.BackupFloat[0]; static_cast<float*>(data)[1] = backup.BackupFloat[1]; }
         g.StyleVarStack.pop_back();
         count--;
     }
@@ -3969,7 +3969,7 @@ void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, cons
 {
     // Hide anything after a '##' string
     const char* text_display_end = FindRenderedTextEnd(text, text_end);
-    const int text_len = (int)(text_display_end - text);
+    const int text_len = static_cast<int>(text_display_end - text);
     if (text_len == 0)
         return;
 
@@ -4125,7 +4125,7 @@ void ImGui::RenderMouseCursor(ImVec2 base_pos, float base_scale, ImGuiMouseCurso
         draw_list->AddImage(tex_ref, pos,                        pos + size * scale,                  uv[0], uv[1], col_fill);
         if (mouse_cursor == ImGuiMouseCursor_Wait || mouse_cursor == ImGuiMouseCursor_Progress)
         {
-            float a_min = ImFmod((float)g.Time * 5.0f, 2.0f * IM_PI);
+            float a_min = ImFmod(static_cast<float>(g.Time) * 5.0f, 2.0f * IM_PI);
             float a_max = a_min + IM_PI * 1.65f;
             draw_list->PathArcTo(pos + ImVec2(14, -1) * scale, 6.0f * scale, a_min, a_max);
             draw_list->PathStroke(col_fill, ImDrawFlags_None, 3.0f * scale);
@@ -4495,7 +4495,7 @@ void ImGui::Initialize()
     g.PlatformIO.Viewports.push_back(g.Viewports[0]);
 
     // Build KeysMayBeCharInput[] lookup table (1 bit per named key)
-    for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
+    for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = static_cast<ImGuiKey>(key + 1))
         if ((key >= ImGuiKey_0 && key <= ImGuiKey_9) || (key >= ImGuiKey_A && key <= ImGuiKey_Z) || (key >= ImGuiKey_Keypad0 && key <= ImGuiKey_Keypad9)
             || key == ImGuiKey_Tab || key == ImGuiKey_Space || key == ImGuiKey_Apostrophe || key == ImGuiKey_Comma || key == ImGuiKey_Minus || key == ImGuiKey_Period
             || key == ImGuiKey_Slash || key == ImGuiKey_Semicolon || key == ImGuiKey_Equal || key == ImGuiKey_LeftBracket || key == ImGuiKey_RightBracket || key == ImGuiKey_GraveAccent
@@ -4667,7 +4667,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* ctx, const char* name) : DrawListInst(NUL
     memset((void*)this, 0, sizeof(*this));
     Ctx = ctx;
     Name = ImStrdup(name);
-    NameBufLen = (int)ImStrlen(name) + 1;
+    NameBufLen = static_cast<int>(ImStrlen(name)) + 1;
     ID = ImHashStr(name);
     IDStack.push_back(ID);
     ViewportAllowPlatformMonitorExtend = -1;
@@ -4743,8 +4743,8 @@ void ImGui::GcCompactTransientMiscBuffers()
 void ImGui::GcCompactTransientWindowBuffers(ImGuiWindow* window)
 {
     window->MemoryCompacted = true;
-    window->MemoryDrawListIdxCapacity = ImMin((int)(window->DrawList->IdxBuffer.Size * 1.05f), window->DrawList->IdxBuffer.Capacity);
-    window->MemoryDrawListVtxCapacity = ImMin((int)(window->DrawList->VtxBuffer.Size * 1.05f), window->DrawList->VtxBuffer.Capacity);
+    window->MemoryDrawListIdxCapacity = ImMin(static_cast<int>(window->DrawList->IdxBuffer.Size * 1.05f), window->DrawList->IdxBuffer.Capacity);
+    window->MemoryDrawListVtxCapacity = ImMin(static_cast<int>(window->DrawList->VtxBuffer.Size * 1.05f), window->DrawList->VtxBuffer.Capacity);
     window->IDStack.clear();
     window->DrawList->_ClearFreeMemory();
     window->DC.ChildWindows.clear();
@@ -5201,7 +5201,7 @@ void ImGui::MemFree(void* ptr)
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
     if (ptr != NULL)
         if (ImGuiContext* ctx = GImGui)
-            DebugAllocHook(&ctx->DebugAllocInfo, ctx->FrameCount, ptr, (size_t)-1);
+            DebugAllocHook(&ctx->DebugAllocInfo, ctx->FrameCount, ptr, static_cast<size_t>(-1));
 #endif
     return (*GImAllocatorFreeFunc)(ptr, GImAllocatorUserData);
 }
@@ -5225,7 +5225,7 @@ void ImGui::DebugAllocHook(ImGuiDebugAllocInfo* info, int frame_count, void* ptr
         entry->FrameCount = frame_count;
         entry->AllocCount = entry->FreeCount = 0;
     }
-    if (size != (size_t)-1)
+    if (size != static_cast<size_t>(-1))
     {
         //printf("[%05d] MemAlloc(%d) -> 0x%p\n", frame_count, (int)size, ptr);
         entry->AllocCount++;
@@ -5316,12 +5316,12 @@ static ImDrawList* GetViewportBgFgDrawList(ImGuiViewportP* viewport, size_t draw
     }
 
     // Our ImDrawList system requires that there is always a command
-    if (viewport->BgFgDrawListsLastTimeActive[drawlist_no] != (float)g.Time)
+    if (viewport->BgFgDrawListsLastTimeActive[drawlist_no] != static_cast<float>(g.Time))
     {
         draw_list->_ResetForNewFrame();
         draw_list->PushTexture(g.IO.Fonts->TexRef);
         draw_list->PushClipRect(viewport->Pos, viewport->Pos + viewport->Size, false);
-        viewport->BgFgDrawListsLastTimeActive[drawlist_no] = (float)g.Time;
+        viewport->BgFgDrawListsLastTimeActive[drawlist_no] = static_cast<float>(g.Time);
     }
     return draw_list;
 }
@@ -5330,14 +5330,14 @@ ImDrawList* ImGui::GetBackgroundDrawList(ImGuiViewport* viewport)
 {
     if (viewport == NULL)
         viewport = GImGui->CurrentWindow->Viewport;
-    return GetViewportBgFgDrawList((ImGuiViewportP*)viewport, 0, "##Background");
+    return GetViewportBgFgDrawList(static_cast<ImGuiViewportP*>(viewport), 0, "##Background");
 }
 
 ImDrawList* ImGui::GetForegroundDrawList(ImGuiViewport* viewport)
 {
     if (viewport == NULL)
         viewport = GImGui->CurrentWindow->Viewport;
-    return GetViewportBgFgDrawList((ImGuiViewportP*)viewport, 1, "##Foreground");
+    return GetViewportBgFgDrawList(static_cast<ImGuiViewportP*>(viewport), 1, "##Foreground");
 }
 
 ImDrawListSharedData* ImGui::GetDrawListSharedData()
@@ -5705,7 +5705,7 @@ void ImGui::NewFrame()
     g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx] = g.IO.DeltaTime;
     g.FramerateSecPerFrameIdx = (g.FramerateSecPerFrameIdx + 1) % IM_COUNTOF(g.FramerateSecPerFrame);
     g.FramerateSecPerFrameCount = ImMin(g.FramerateSecPerFrameCount + 1, IM_COUNTOF(g.FramerateSecPerFrame));
-    g.IO.Framerate = (g.FramerateSecPerFrameAccum > 0.0f) ? (1.0f / (g.FramerateSecPerFrameAccum / (float)g.FramerateSecPerFrameCount)) : FLT_MAX;
+    g.IO.Framerate = (g.FramerateSecPerFrameAccum > 0.0f) ? (1.0f / (g.FramerateSecPerFrameAccum / static_cast<float>(g.FramerateSecPerFrameCount))) : FLT_MAX;
 
     // Process input queue (trickle as many events as possible), turn events into writes to IO structure
     g.InputEventsTrail.resize(0);
@@ -5863,7 +5863,7 @@ void ImGui::NewFrame()
     // Mark all windows as not visible and compact unused memory.
     IM_ASSERT(g.WindowsFocusOrder.Size <= g.Windows.Size);
     const bool gc_all = (g.GcCompactAll || g.IO.ConfigMemoryCompactTimer < 0.0f);
-    const float memory_compact_start_time = gc_all ? FLT_MAX : (float)g.Time - g.IO.ConfigMemoryCompactTimer;
+    const float memory_compact_start_time = gc_all ? FLT_MAX : static_cast<float>(g.Time) - g.IO.ConfigMemoryCompactTimer;
     for (ImGuiWindow* window : g.Windows)
     {
         window->WasActive = window->Active;
@@ -5973,8 +5973,8 @@ void ImGui::NewFrame()
 // FIXME: Add a more explicit sort order in the window structure.
 static int IMGUI_CDECL ChildWindowComparer(const void* lhs, const void* rhs)
 {
-    const ImGuiWindow* const a = *(const ImGuiWindow* const *)lhs;
-    const ImGuiWindow* const b = *(const ImGuiWindow* const *)rhs;
+    const ImGuiWindow* const a = *static_cast<const ImGuiWindow* const *>(lhs);
+    const ImGuiWindow* const b = *static_cast<const ImGuiWindow* const *>(rhs);
     if (int d = (a->Flags & ImGuiWindowFlags_Popup) - (b->Flags & ImGuiWindowFlags_Popup))
         return d;
     if (int d = (a->Flags & ImGuiWindowFlags_Tooltip) - (b->Flags & ImGuiWindowFlags_Tooltip))
@@ -5988,7 +5988,7 @@ static void AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, Im
     if (window->Active)
     {
         int count = window->DC.ChildWindows.Size;
-        ImQsort(window->DC.ChildWindows.Data, (size_t)count, sizeof(ImGuiWindow*), ChildWindowComparer);
+        ImQsort(window->DC.ChildWindows.Data, static_cast<size_t>(count), sizeof(ImGuiWindow*), ChildWindowComparer);
         for (int i = 0; i < count; i++)
         {
             ImGuiWindow* child = window->DC.ChildWindows[i];
@@ -6350,7 +6350,7 @@ void ImGui::Render()
     for (ImGuiViewportP* viewport : g.Viewports)
     {
         InitViewportDrawData(viewport);
-        if (viewport->BgFgDrawLists[0] != NULL && viewport->BgFgDrawListsLastTimeActive[0] == (float)g.Time)
+        if (viewport->BgFgDrawLists[0] != NULL && viewport->BgFgDrawListsLastTimeActive[0] == static_cast<float>(g.Time))
             AddDrawListToDrawDataEx(&viewport->DrawDataP, viewport->DrawDataBuilder.Layers[0], GetBackgroundDrawList(viewport));
     }
 
@@ -6382,7 +6382,7 @@ void ImGui::Render()
         FlattenDrawDataIntoSingleLayer(&viewport->DrawDataBuilder);
 
         // Add foreground ImDrawList (for each active viewport)
-        if (viewport->BgFgDrawLists[1] != NULL && viewport->BgFgDrawListsLastTimeActive[1] == (float)g.Time)
+        if (viewport->BgFgDrawLists[1] != NULL && viewport->BgFgDrawListsLastTimeActive[1] == static_cast<float>(g.Time))
             AddDrawListToDrawDataEx(&viewport->DrawDataP, viewport->DrawDataBuilder.Layers[0], GetForegroundDrawList(viewport));
 
         // We call _PopUnusedDrawCmd() last thing, as RenderDimmedBackgrounds() rely on a valid command being there (especially in docking branch).
@@ -6477,7 +6477,7 @@ void ImGui::FindHoveredWindowEx(const ImVec2& pos, bool find_first_and_in_any_vi
         // FIXME: Consider generalizing hit-testing override (with more generic data, callback, etc.) (#1512)
         if (window->HitTestHoleSize.x != 0)
         {
-            ImVec2 hole_pos(window->Pos.x + (float)window->HitTestHoleOffset.x, window->Pos.y + (float)window->HitTestHoleOffset.y);
+            ImVec2 hole_pos(window->Pos.x + static_cast<float>(window->HitTestHoleOffset.x), window->Pos.y + static_cast<float>(window->HitTestHoleOffset.y));
             ImVec2 hole_size((float)window->HitTestHoleSize.x, (float)window->HitTestHoleSize.y);
             if (ImRect(hole_pos, hole_pos + hole_size).Contains(pos))
                 continue;
@@ -6878,7 +6878,7 @@ static void SetWindowConditionAllowFlags(ImGuiWindow* window, ImGuiCond flags, b
 ImGuiWindow* ImGui::FindWindowByID(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
-    return (ImGuiWindow*)g.WindowsById.GetVoidPtr(id);
+    return static_cast<ImGuiWindow*>(g.WindowsById.GetVoidPtr(id));
 }
 
 ImGuiWindow* ImGui::FindWindowByName(const char* name)
@@ -7191,7 +7191,7 @@ ImGuiID ImGui::GetWindowResizeCornerID(ImGuiWindow* window, int n)
 ImGuiID ImGui::GetWindowResizeBorderID(ImGuiWindow* window, ImGuiDir dir)
 {
     IM_ASSERT(dir >= 0 && dir < 4);
-    int n = (int)dir + 4;
+    int n = static_cast<int>(dir) + 4;
     ImGuiID id = window->DockIsActive ? window->DockNode->HostWindow->ID : window->ID;
     id = ImHashStr("#RESIZE", 0, id);
     id = ImHashData(&n, sizeof(int), id);
@@ -7499,7 +7499,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
         {
             bool is_docking_transparent_payload = false;
             if (g.DragDropActive && (g.FrameCount - g.DragDropAcceptFrameCount) <= 1 && g.IO.ConfigDockingTransparentPayload)
-                if (g.DragDropPayload.IsDataType(IMGUI_PAYLOAD_TYPE_WINDOW) && *(ImGuiWindow**)g.DragDropPayload.Data == window)
+                if (g.DragDropPayload.IsDataType(IMGUI_PAYLOAD_TYPE_WINDOW) && *static_cast<ImGuiWindow**>(g.DragDropPayload.Data) == window)
                     is_docking_transparent_payload = true;
 
             ImU32 bg_col = GetColorU32(GetWindowBgColorIdx(window));
@@ -7712,7 +7712,7 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
         if (marker_pos.x > layout_r.Min.x)
         {
             RenderBullet(window->DrawList, marker_pos, GetColorU32(ImGuiCol_UnsavedMarker));
-            clip_r.Max.x = ImMin(clip_r.Max.x, marker_pos.x - (int)(marker_size_x * 0.5f));
+            clip_r.Max.x = ImMin(clip_r.Max.x, marker_pos.x - static_cast<int>(marker_size_x * 0.5f));
         }
     }
     //if (g.IO.KeyShift) window->DrawList->AddRect(layout_r.Min, layout_r.Max, IM_COL32(255, 128, 0, 255)); // [DEBUG]
@@ -7832,9 +7832,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->Flags = (ImGuiWindowFlags)flags;
         window->ChildFlags = (g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasChildFlags) ? g.NextWindowData.ChildFlags : 0;
         window->LastFrameActive = current_frame;
-        window->LastTimeActive = (float)g.Time;
+        window->LastTimeActive = static_cast<float>(g.Time);
         window->BeginOrderWithinParent = 0;
-        window->BeginOrderWithinContext = (short)(g.WindowsActiveCount++);
+        window->BeginOrderWithinContext = static_cast<short>(g.WindowsActiveCount++);
     }
     else
     {
@@ -8033,9 +8033,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window_title_visible_elsewhere = true;
         if ((window_title_visible_elsewhere || window_just_activated_by_user) && !window_just_created && strcmp(name, window->Name) != 0)
         {
-            size_t buf_len = (size_t)window->NameBufLen;
+            size_t buf_len = static_cast<size_t>(window->NameBufLen);
             window->Name = ImStrdupcpy(window->Name, &buf_len, name);
-            window->NameBufLen = (int)buf_len;
+            window->NameBufLen = static_cast<int>(buf_len);
         }
 
         // UPDATE CONTENTS SIZE, UPDATE HIDDEN STATUS
@@ -8197,7 +8197,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         if (flags & ImGuiWindowFlags_ChildWindow)
         {
             IM_ASSERT(parent_window && parent_window->Active);
-            window->BeginOrderWithinParent = (short)parent_window->DC.ChildWindows.Size;
+            window->BeginOrderWithinParent = static_cast<short>(parent_window->DC.ChildWindows.Size);
             parent_window->DC.ChildWindows.push_back(window);
             if (!(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api && !window_is_child_tooltip)
                 window->Pos = parent_window->DC.CursorPos;
@@ -8330,8 +8330,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 if (auto_fit_mask & (1 << ImGuiAxis_Y))
                     use_current_size_for_scrollbar_y = true;
             }
-        window->ResizeBorderHovered = (signed char)border_hovered;
-        window->ResizeBorderHeld = (signed char)border_held;
+        window->ResizeBorderHovered = static_cast<signed char>(border_hovered);
+        window->ResizeBorderHeld = static_cast<signed char>(border_held);
 
         // Synchronize window --> viewport again and one last time (clamping and manual resize may have affected either)
         if (window->ViewportOwned)
@@ -8518,10 +8518,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Record the loss of precision of CursorStartPos which can happen due to really large scrolling amount.
         // This is used by clipper to compensate and fix the most common use case of large scroll area. Easy and cheap, next best thing compared to switching everything to double or ImU64.
-        double start_pos_highp_x = (double)window->Pos.x + window->WindowPadding.x - (double)window->Scroll.x + window->DecoOuterSizeX1 + window->DC.ColumnsOffset.x;
-        double start_pos_highp_y = (double)window->Pos.y + window->WindowPadding.y - (double)window->Scroll.y + window->DecoOuterSizeY1;
-        window->DC.CursorStartPos  = ImVec2((float)start_pos_highp_x, (float)start_pos_highp_y);
-        window->DC.CursorStartPosLossyness = ImVec2((float)(start_pos_highp_x - window->DC.CursorStartPos.x), (float)(start_pos_highp_y - window->DC.CursorStartPos.y));
+        double start_pos_highp_x = static_cast<double>(window->Pos.x) + window->WindowPadding.x - static_cast<double>(window->Scroll.x) + window->DecoOuterSizeX1 + window->DC.ColumnsOffset.x;
+        double start_pos_highp_y = static_cast<double>(window->Pos.y) + window->WindowPadding.y - static_cast<double>(window->Scroll.y) + window->DecoOuterSizeY1;
+        window->DC.CursorStartPos  = ImVec2(static_cast<float>(start_pos_highp_x), static_cast<float>(start_pos_highp_y));
+        window->DC.CursorStartPosLossyness = ImVec2(static_cast<float>(start_pos_highp_x - window->DC.CursorStartPos.x), static_cast<float>(start_pos_highp_y - window->DC.CursorStartPos.y));
         window->DC.CursorPos = window->DC.CursorStartPos;
         window->DC.CursorPosPrevLine = window->DC.CursorPos;
         window->DC.CursorMaxPos = window->DC.CursorStartPos;
@@ -8598,7 +8598,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         if (!(flags & ImGuiWindowFlags_NoTitleBar) && !window->DockIsActive)
             RenderWindowTitleBarContents(window, ImRect(title_bar_rect.Min.x + window->WindowBorderSize, title_bar_rect.Min.y, title_bar_rect.Max.x - window->WindowBorderSize, title_bar_rect.Max.y), name, p_open);
         else if (!(flags & ImGuiWindowFlags_NoTitleBar) && window->DockIsActive)
-            LogText("%.*s\n", (int)(FindRenderedTextEnd(window->Name) - window->Name), window->Name);
+            LogText("%.*s\n", static_cast<int>(FindRenderedTextEnd(window->Name) - window->Name), window->Name);
 
         // Clear hit test shape every frame
         window->HitTestHoleSize.x = window->HitTestHoleSize.y = 0;
@@ -9553,7 +9553,7 @@ static void ImGui::UpdateTexturesEndFrame()
         {
             // We provide this information so backends can decide whether to destroy textures.
             // This means in practice that if N imgui contexts are created with a shared atlas, we assume all of them have a backend initialized.
-            tex->RefCount = (unsigned short)atlas->RefCount;
+            tex->RefCount = static_cast<unsigned short>(atlas->RefCount);
             g.PlatformIO.Textures.push_back(tex);
         }
     for (ImTextureData* tex : g.UserTextures)
@@ -9627,7 +9627,7 @@ void ImGui::RegisterFontAtlas(ImFontAtlas* atlas)
     g.FontAtlases.push_back(atlas);
     ImFontAtlasAddDrawListSharedData(atlas, &g.DrawListSharedData);
     for (ImTextureData* tex : atlas->TexList)
-        tex->RefCount = (unsigned short)atlas->RefCount;
+        tex->RefCount = static_cast<unsigned short>(atlas->RefCount);
 }
 
 void ImGui::UnregisterFontAtlas(ImFontAtlas* atlas)
@@ -9638,7 +9638,7 @@ void ImGui::UnregisterFontAtlas(ImFontAtlas* atlas)
     g.FontAtlases.find_erase(atlas);
     atlas->RefCount--;
     for (ImTextureData* tex : atlas->TexList)
-        tex->RefCount = (unsigned short)atlas->RefCount;
+        tex->RefCount = static_cast<unsigned short>(atlas->RefCount);
 }
 
 // Use ImDrawList::_SetTexture(), making our shared g.FontStack[] authoritative against window-local ImDrawList.
@@ -9802,7 +9802,7 @@ ImGuiID ImGuiWindow::GetID(int n)
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
     ImGuiContext& g = *Ctx;
     if (g.DebugHookIdInfoId == id)
-        ImGui::DebugHookIdInfo(id, ImGuiDataType_S32, (void*)(intptr_t)n, NULL);
+        ImGui::DebugHookIdInfo(id, ImGuiDataType_S32, (void*)static_cast<intptr_t>(n), NULL);
 #endif
     return id;
 }
@@ -9890,7 +9890,7 @@ ImGuiID ImGui::GetIDWithSeed(int n, ImGuiID seed)
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
     ImGuiContext& g = *GImGui;
     if (g.DebugHookIdInfoId == id)
-        DebugHookIdInfo(id, ImGuiDataType_S32, (void*)(intptr_t)n, NULL);
+        DebugHookIdInfo(id, ImGuiDataType_S32, (void*)static_cast<intptr_t>(n), NULL);
 #endif
     return id;
 }
@@ -10009,7 +10009,7 @@ static ImGuiKeyChord GetModForLRModKey(ImGuiKey key)
 ImGuiKeyChord ImGui::FixupKeyChord(ImGuiKeyChord key_chord)
 {
     // Add ImGuiMod_XXXX when a corresponding ImGuiKey_LeftXXX/ImGuiKey_RightXXX is specified.
-    ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
+    ImGuiKey key = static_cast<ImGuiKey>(key_chord & ~ImGuiMod_Mask_);
     if (IsLRModKey(key))
         key_chord |= GetModForLRModKey(key);
     return key_chord;
@@ -10073,7 +10073,7 @@ const char* ImGui::GetKeyChordName(ImGuiKeyChord key_chord)
 {
     ImGuiContext& g = *GImGui;
 
-    const ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
+    const ImGuiKey key = static_cast<ImGuiKey>(key_chord & ~ImGuiMod_Mask_);
     if (IsLRModKey(key))
         key_chord &= ~GetModForLRModKey(key); // Return "Ctrl+LeftShift" instead of "Ctrl+Shift+LeftShift"
     ImFormatString(g.TempKeychordName, IM_COUNTOF(g.TempKeychordName), "%s%s%s%s%s",
@@ -10101,8 +10101,8 @@ int ImGui::CalcTypematicRepeatAmount(float t0, float t1, float repeat_delay, flo
         return 0;
     if (repeat_rate <= 0.0f)
         return t0 < repeat_delay && t1 >= repeat_delay;
-    const int count_t0 = (t0 < repeat_delay) ? -1 : (int)((t0 - repeat_delay) / repeat_rate);
-    const int count_t1 = (t1 < repeat_delay) ? -1 : (int)((t1 - repeat_delay) / repeat_rate);
+    const int count_t0 = (t0 < repeat_delay) ? -1 : static_cast<int>((t0 - repeat_delay) / repeat_rate);
+    const int count_t1 = (t1 < repeat_delay) ? -1 : static_cast<int>((t1 - repeat_delay) / repeat_rate);
     const int count = count_t1 - count_t0;
     return count;
 }
@@ -10146,7 +10146,7 @@ static void ImGui::UpdateKeyRoutingTable(ImGuiKeyRoutingTable* rt)
 {
     ImGuiContext& g = *GImGui;
     rt->EntriesNext.resize(0);
-    for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
+    for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = static_cast<ImGuiKey>(key + 1))
     {
         const int new_routing_start_idx = rt->EntriesNext.Size;
         ImGuiKeyRoutingData* routing_entry;
@@ -10175,9 +10175,9 @@ static void ImGui::UpdateKeyRoutingTable(ImGuiKeyRoutingTable* rt)
         }
 
         // Rewrite linked-list
-        rt->Index[key - ImGuiKey_NamedKey_BEGIN] = (ImGuiKeyRoutingIndex)(new_routing_start_idx < rt->EntriesNext.Size ? new_routing_start_idx : -1);
+        rt->Index[key - ImGuiKey_NamedKey_BEGIN] = static_cast<ImGuiKeyRoutingIndex>(new_routing_start_idx < rt->EntriesNext.Size ? new_routing_start_idx : -1);
         for (int n = new_routing_start_idx; n < rt->EntriesNext.Size; n++)
-            rt->EntriesNext[n].NextEntryIndex = (ImGuiKeyRoutingIndex)((n + 1 < rt->EntriesNext.Size) ? n + 1 : -1);
+            rt->EntriesNext[n].NextEntryIndex = static_cast<ImGuiKeyRoutingIndex>((n + 1 < rt->EntriesNext.Size) ? n + 1 : -1);
     }
     rt->Entries.swap(rt->EntriesNext); // Swap new and old indexes
 }
@@ -10200,8 +10200,8 @@ ImGuiKeyRoutingData* ImGui::GetShortcutRoutingData(ImGuiKeyChord key_chord)
     ImGuiContext& g = *GImGui;
     ImGuiKeyRoutingTable* rt = &g.KeysRoutingTable;
     ImGuiKeyRoutingData* routing_data;
-    ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
-    ImGuiKey mods = (ImGuiKey)(key_chord & ImGuiMod_Mask_);
+    ImGuiKey key = static_cast<ImGuiKey>(key_chord & ~ImGuiMod_Mask_);
+    ImGuiKey mods = static_cast<ImGuiKey>(key_chord & ImGuiMod_Mask_);
     if (key == ImGuiKey_None)
         key = ConvertSingleModFlagToKey(mods);
     IM_ASSERT(IsNamedKey(key));
@@ -10216,10 +10216,10 @@ ImGuiKeyRoutingData* ImGui::GetShortcutRoutingData(ImGuiKeyChord key_chord)
     }
 
     // Add to linked-list
-    ImGuiKeyRoutingIndex routing_data_idx = (ImGuiKeyRoutingIndex)rt->Entries.Size;
+    ImGuiKeyRoutingIndex routing_data_idx = static_cast<ImGuiKeyRoutingIndex>(rt->Entries.Size);
     rt->Entries.push_back(ImGuiKeyRoutingData());
     routing_data = &rt->Entries[routing_data_idx];
-    routing_data->Mods = (ImU16)mods;
+    routing_data->Mods = static_cast<ImU16>(mods);
     routing_data->NextEntryIndex = rt->Index[key - ImGuiKey_NamedKey_BEGIN]; // Setup linked list
     rt->Index[key - ImGuiKey_NamedKey_BEGIN] = routing_data_idx;
     return routing_data;
@@ -10292,13 +10292,13 @@ static bool IsKeyChordPotentiallyCharInput(ImGuiKeyChord key_chord)
     ImGuiContext& g = *GImGui;
 
     // When the right mods are pressed it cannot be a char input so we won't filter the shortcut out.
-    ImGuiKey mods = (ImGuiKey)(key_chord & ImGuiMod_Mask_);
+    ImGuiKey mods = static_cast<ImGuiKey>(key_chord & ImGuiMod_Mask_);
     const bool ignore_char_inputs = ((mods & ImGuiMod_Ctrl) && !(mods & ImGuiMod_Alt)) || (g.IO.ConfigMacOSXBehaviors && (mods & ImGuiMod_Ctrl));
     if (ignore_char_inputs)
         return false;
 
     // Return true for A-Z, 0-9 and other keys associated to char inputs. Other keys such as F1-F12 won't be filtered.
-    ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
+    ImGuiKey key = static_cast<ImGuiKey>(key_chord & ~ImGuiMod_Mask_);
     if (key == ImGuiKey_None)
         return false;
     return g.KeysMayBeCharInput.TestBit(key);
@@ -10360,9 +10360,9 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiInputFlags flags, I
         // ActiveIdUsingAllKeyboardKeys trumps all for ActiveId
         if ((flags & ImGuiInputFlags_RouteOverActive) == 0 && g.ActiveIdUsingAllKeyboardKeys)
         {
-            ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
+            ImGuiKey key = static_cast<ImGuiKey>(key_chord & ~ImGuiMod_Mask_);
             if (key == ImGuiKey_None)
-                key = ConvertSingleModFlagToKey((ImGuiKey)(key_chord & ImGuiMod_Mask_));
+                key = ConvertSingleModFlagToKey(static_cast<ImGuiKey>(key_chord & ImGuiMod_Mask_));
             if (key >= ImGuiKey_Keyboard_BEGIN && key < ImGuiKey_Keyboard_END)
                 return false;
         }
@@ -10385,7 +10385,7 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiInputFlags flags, I
     if (score > routing_data->RoutingNextScore)
     {
         routing_data->RoutingNext = owner_id;
-        routing_data->RoutingNextScore = (ImU16)score;
+        routing_data->RoutingNextScore = static_cast<ImU16>(score);
     }
 
     // Return routing state for CURRENT frame
@@ -10543,7 +10543,7 @@ bool ImGui::IsMouseReleasedWithDelay(ImGuiMouseButton button, float delay)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
-    const float time_since_release = (float)(g.Time - g.IO.MouseReleasedTime[button]);
+    const float time_since_release = static_cast<float>(g.Time - g.IO.MouseReleasedTime[button]);
     return !IsMouseDown(button) && (time_since_release - g.IO.DeltaTime < delay) && (time_since_release >= delay);
 }
 
@@ -10762,7 +10762,7 @@ static void ImGui::UpdateKeyboardInputs()
         key_data->DownDuration = key_data->Down ? (key_data->DownDuration < 0.0f ? 0.0f : key_data->DownDuration + io.DeltaTime) : -1.0f;
         if (key_data->DownDuration == 0.0f)
         {
-            if (IsKeyboardKey((ImGuiKey)key))
+            if (IsKeyboardKey(static_cast<ImGuiKey>(key)))
                 g.LastKeyboardKeyPressTime = g.Time;
             else if (key == ImGuiKey_ReservedForModCtrl || key == ImGuiKey_ReservedForModShift || key == ImGuiKey_ReservedForModAlt || key == ImGuiKey_ReservedForModSuper)
                 g.LastKeyboardKeyPressTime = g.Time;
@@ -10770,7 +10770,7 @@ static void ImGui::UpdateKeyboardInputs()
     }
 
     // Update keys/input owner (named keys only): one entry per key
-    for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
+    for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = static_cast<ImGuiKey>(key + 1))
     {
         ImGuiKeyData* key_data = &io.KeysData[key - ImGuiKey_NamedKey_BEGIN];
         ImGuiKeyOwnerData* owner_data = &g.KeysOwnerData[key - ImGuiKey_NamedKey_BEGIN];
@@ -10829,7 +10829,7 @@ static void ImGui::UpdateMouseInputs()
         if (io.MouseClicked[i])
         {
             bool is_repeated_click = false;
-            if ((float)(g.Time - io.MouseClickedTime[i]) < io.MouseDoubleClickTime)
+            if (static_cast<float>(g.Time - io.MouseClickedTime[i]) < io.MouseDoubleClickTime)
             {
                 ImVec2 delta_from_click_pos = IsMousePosValid(&io.MousePos) ? (io.MousePos - io.MouseClickedPos[i]) : ImVec2(0.0f, 0.0f);
                 if (ImLengthSqr(delta_from_click_pos) < io.MouseDoubleClickMaxDist * io.MouseDoubleClickMaxDist)
@@ -11123,7 +11123,7 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
             ImGuiKey key = e->Key.Key;
             IM_ASSERT(key != ImGuiKey_None);
             ImGuiKeyData* key_data = GetKeyData(key);
-            const int key_data_index = (int)(key_data - g.IO.KeysData);
+            const int key_data_index = static_cast<int>(key_data - g.IO.KeysData);
             if (trickle_fast_inputs && key_data->Down != e->Key.Down && (key_changed_mask.TestBit(key_data_index) || mouse_button_changed != 0))
                 break;
 
@@ -11152,7 +11152,7 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
             if (trickle_interleaved_nonchar_keys_and_text && key_changed_nonchar)
                 break;
             unsigned int c = e->Text.Char;
-            io.InputQueueCharacters.push_back(c <= IM_UNICODE_CODEPOINT_MAX ? (ImWchar)c : IM_UNICODE_CODEPOINT_INVALID);
+            io.InputQueueCharacters.push_back(c <= IM_UNICODE_CODEPOINT_MAX ? static_cast<ImWchar>(c) : IM_UNICODE_CODEPOINT_INVALID);
             if (trickle_interleaved_nonchar_keys_and_text)
                 text_inputted = true;
         }
@@ -11276,7 +11276,7 @@ void ImGui::SetKeyOwnersForKeyChord(ImGuiKeyChord key_chord, ImGuiID owner_id, I
     if (key_chord & ImGuiMod_Shift)     { SetKeyOwner(ImGuiMod_Shift, owner_id, flags); }
     if (key_chord & ImGuiMod_Alt)       { SetKeyOwner(ImGuiMod_Alt, owner_id, flags); }
     if (key_chord & ImGuiMod_Super)     { SetKeyOwner(ImGuiMod_Super, owner_id, flags); }
-    if (key_chord & ~ImGuiMod_Mask_)    { SetKeyOwner((ImGuiKey)(key_chord & ~ImGuiMod_Mask_), owner_id, flags); }
+    if (key_chord & ~ImGuiMod_Mask_)    { SetKeyOwner(static_cast<ImGuiKey>(key_chord & ~ImGuiMod_Mask_), owner_id, flags); }
 }
 
 // This is more or less equivalent to:
@@ -11316,12 +11316,12 @@ bool ImGui::IsKeyChordPressed(ImGuiKeyChord key_chord, ImGuiInputFlags flags, Im
 {
     ImGuiContext& g = *GImGui;
     key_chord = FixupKeyChord(key_chord);
-    ImGuiKey mods = (ImGuiKey)(key_chord & ImGuiMod_Mask_);
+    ImGuiKey mods = static_cast<ImGuiKey>(key_chord & ImGuiMod_Mask_);
     if (g.IO.KeyMods != mods)
         return false;
 
     // Special storage location for mods
-    ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
+    ImGuiKey key = static_cast<ImGuiKey>(key_chord & ~ImGuiMod_Mask_);
     if (key == ImGuiKey_None)
         key = ConvertSingleModFlagToKey(mods);
     if (!IsKeyPressed(key, (flags & ImGuiInputFlags_RepeatMask_), owner_id))
@@ -11613,16 +11613,16 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
 void ImGui::ErrorRecoveryStoreState(ImGuiErrorRecoveryState* state_out)
 {
     ImGuiContext& g = *GImGui;
-    state_out->SizeOfWindowStack = (short)g.CurrentWindowStack.Size;
-    state_out->SizeOfIDStack = (short)g.CurrentWindow->IDStack.Size;
-    state_out->SizeOfTreeStack = (short)g.CurrentWindow->DC.TreeDepth; // NOT g.TreeNodeStack.Size which is a partial stack!
-    state_out->SizeOfColorStack = (short)g.ColorStack.Size;
-    state_out->SizeOfStyleVarStack = (short)g.StyleVarStack.Size;
-    state_out->SizeOfFontStack = (short)g.FontStack.Size;
-    state_out->SizeOfFocusScopeStack = (short)g.FocusScopeStack.Size;
-    state_out->SizeOfGroupStack = (short)g.GroupStack.Size;
-    state_out->SizeOfItemFlagsStack = (short)g.ItemFlagsStack.Size;
-    state_out->SizeOfBeginPopupStack = (short)g.BeginPopupStack.Size;
+    state_out->SizeOfWindowStack = static_cast<short>(g.CurrentWindowStack.Size);
+    state_out->SizeOfIDStack = static_cast<short>(g.CurrentWindow->IDStack.Size);
+    state_out->SizeOfTreeStack = static_cast<short>(g.CurrentWindow->DC.TreeDepth); // NOT g.TreeNodeStack.Size which is a partial stack!
+    state_out->SizeOfColorStack = static_cast<short>(g.ColorStack.Size);
+    state_out->SizeOfStyleVarStack = static_cast<short>(g.StyleVarStack.Size);
+    state_out->SizeOfFontStack = static_cast<short>(g.FontStack.Size);
+    state_out->SizeOfFocusScopeStack = static_cast<short>(g.FocusScopeStack.Size);
+    state_out->SizeOfGroupStack = static_cast<short>(g.GroupStack.Size);
+    state_out->SizeOfItemFlagsStack = static_cast<short>(g.ItemFlagsStack.Size);
+    state_out->SizeOfBeginPopupStack = static_cast<short>(g.BeginPopupStack.Size);
     state_out->SizeOfDisabledStack = (short)g.DisabledStackSize;
 }
 
@@ -12904,7 +12904,7 @@ void ImGui::OpenPopupEx(ImGuiID id, ImGuiPopupFlags popup_flags)
     const int current_stack_size = g.BeginPopupStack.Size;
 
     if (popup_flags & ImGuiPopupFlags_NoOpenOverExistingPopup)
-        if (IsPopupOpen((ImGuiID)0, ImGuiPopupFlags_AnyPopupId))
+        if (IsPopupOpen(static_cast<ImGuiID>(0), ImGuiPopupFlags_AnyPopupId))
             return;
 
     ImGuiPopupData popup_ref; // Tagged as new ref as Window will be set back to NULL if we write this into OpenPopupStack.
@@ -13525,7 +13525,7 @@ static void ImGui::UpdateWindowInFocusOrderList(ImGuiWindow* window, bool just_c
     {
         IM_ASSERT(!g.WindowsFocusOrder.contains(window));
         g.WindowsFocusOrder.push_back(window);
-        window->FocusOrder = (short)(g.WindowsFocusOrder.Size - 1);
+        window->FocusOrder = static_cast<short>(g.WindowsFocusOrder.Size - 1);
     }
     else if (!just_created && child_flag_changed && new_is_explicit_child)
     {
@@ -13556,7 +13556,7 @@ void ImGui::BringWindowToFocusFront(ImGuiWindow* window)
         IM_ASSERT(g.WindowsFocusOrder[n]->FocusOrder == n);
     }
     g.WindowsFocusOrder[new_order] = window;
-    window->FocusOrder = (short)new_order;
+    window->FocusOrder = static_cast<short>(new_order);
 }
 
 // Note technically focus related but rather adjacent and close to BringWindowToFocusFront()
@@ -13570,7 +13570,7 @@ void ImGui::BringWindowToDisplayFront(ImGuiWindow* window)
     for (int i = g.Windows.Size - 2; i >= 0; i--) // We can ignore the top-most window
         if (g.Windows[i] == window)
         {
-            memmove(&g.Windows[i], &g.Windows[i + 1], (size_t)(g.Windows.Size - i - 1) * sizeof(ImGuiWindow*));
+            memmove(&g.Windows[i], &g.Windows[i + 1], static_cast<size_t>(g.Windows.Size - i - 1) * sizeof(ImGuiWindow*));
             g.Windows[g.Windows.Size - 1] = window;
             break;
         }
@@ -13584,7 +13584,7 @@ void ImGui::BringWindowToDisplayBack(ImGuiWindow* window)
     for (int i = 0; i < g.Windows.Size; i++)
         if (g.Windows[i] == window)
         {
-            memmove(&g.Windows[1], &g.Windows[0], (size_t)i * sizeof(ImGuiWindow*));
+            memmove(&g.Windows[1], &g.Windows[0], static_cast<size_t>(i) * sizeof(ImGuiWindow*));
             g.Windows[0] = window;
             break;
         }
@@ -14408,7 +14408,7 @@ float ImGui::GetNavTweakPressedAmount(ImGuiAxis axis)
         key_less = (axis == ImGuiAxis_X) ? ImGuiKey_LeftArrow : ImGuiKey_UpArrow;
         key_more = (axis == ImGuiAxis_X) ? ImGuiKey_RightArrow : ImGuiKey_DownArrow;
     }
-    float amount = (float)GetKeyPressedAmount(key_more, repeat_delay, repeat_rate) - (float)GetKeyPressedAmount(key_less, repeat_delay, repeat_rate);
+    float amount = static_cast<float>(GetKeyPressedAmount(key_more, repeat_delay, repeat_rate)) - static_cast<float>(GetKeyPressedAmount(key_less, repeat_delay, repeat_rate));
     if (amount != 0.0f && IsKeyDown(key_less) && IsKeyDown(key_more)) // Cancel when opposite directions are held, regardless of repeat phase
         amount = 0.0f;
     return amount;
@@ -14670,7 +14670,7 @@ void ImGui::NavUpdateCreateMoveRequest()
         g.NavMoveScrollFlags = ImGuiScrollFlags_None;
         if (window && !g.NavWindowingTarget && !(window->Flags & ImGuiWindowFlags_NoNavInputs))
         {
-            const ImGuiInputFlags repeat_mode = ImGuiInputFlags_Repeat | (ImGuiInputFlags)ImGuiInputFlags_RepeatRateNavMove;
+            const ImGuiInputFlags repeat_mode = ImGuiInputFlags_Repeat | static_cast<ImGuiInputFlags>(ImGuiInputFlags_RepeatRateNavMove);
             if (!IsActiveIdUsingNavDir(ImGuiDir_Left)  && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadLeft,  repeat_mode, ImGuiKeyOwner_NoOwner)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_LeftArrow,  repeat_mode, ImGuiKeyOwner_NoOwner)))) { g.NavMoveDir = ImGuiDir_Left; }
             if (!IsActiveIdUsingNavDir(ImGuiDir_Right) && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadRight, repeat_mode, ImGuiKeyOwner_NoOwner)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_RightArrow, repeat_mode, ImGuiKeyOwner_NoOwner)))) { g.NavMoveDir = ImGuiDir_Right; }
             if (!IsActiveIdUsingNavDir(ImGuiDir_Up)    && ((nav_gamepad_active && IsKeyPressed(ImGuiKey_GamepadDpadUp,    repeat_mode, ImGuiKeyOwner_NoOwner)) || (nav_keyboard_active && IsKeyPressed(ImGuiKey_UpArrow,    repeat_mode, ImGuiKeyOwner_NoOwner)))) { g.NavMoveDir = ImGuiDir_Up; }
@@ -15287,7 +15287,7 @@ static void ImGui::NavUpdateWindowing()
             g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingTimer - NAV_WINDOWING_HIGHLIGHT_DELAY) / 0.05f));
 
             // Select window to focus
-            const int focus_change_dir = (int)IsKeyPressed(ImGuiKey_GamepadL1) - (int)IsKeyPressed(ImGuiKey_GamepadR1);
+            const int focus_change_dir = static_cast<int>(IsKeyPressed(ImGuiKey_GamepadL1)) - static_cast<int>(IsKeyPressed(ImGuiKey_GamepadR1));
             if (focus_change_dir != 0 && !just_started_windowing_from_null_focus)
             {
                 NavUpdateWindowingTarget(focus_change_dir);
@@ -15406,7 +15406,7 @@ static void ImGui::NavUpdateWindowing()
         }
 
         // Toggle layer
-        const ImGuiNavLayer new_nav_layer = (g.NavWindow->DC.NavLayersActiveMask & (1 << ImGuiNavLayer_Menu)) ? (ImGuiNavLayer)((int)g.NavLayer ^ 1) : ImGuiNavLayer_Main;
+        const ImGuiNavLayer new_nav_layer = (g.NavWindow->DC.NavLayersActiveMask & (1 << ImGuiNavLayer_Menu)) ? static_cast<ImGuiNavLayer>((int)g.NavLayer ^ 1) : ImGuiNavLayer_Main;
         if (new_nav_layer != g.NavLayer)
         {
             // Reinitialize navigation when entering menu bar with the Alt key (FIXME: could be a properly of the layer?)
@@ -15660,22 +15660,22 @@ bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_s
         if (data_size > sizeof(g.DragDropPayloadBufLocal))
         {
             // Store in heap
-            g.DragDropPayloadBufHeap.resize((int)data_size);
+            g.DragDropPayloadBufHeap.resize(static_cast<int>(data_size));
             payload.Data = g.DragDropPayloadBufHeap.Data;
-            memcpy(payload.Data, data, (size_t)(int)data_size);
+            memcpy(payload.Data, data, static_cast<size_t>((int)data_size));
         }
         else if (data_size > 0)
         {
             // Store locally
             memset(&g.DragDropPayloadBufLocal, 0, sizeof(g.DragDropPayloadBufLocal));
             payload.Data = g.DragDropPayloadBufLocal;
-            memcpy(payload.Data, data, (size_t)(int)data_size);
+            memcpy(payload.Data, data, static_cast<size_t>((int)data_size));
         }
         else
         {
             payload.Data = NULL;
         }
-        payload.DataSize = (int)data_size;
+        payload.DataSize = static_cast<int>(data_size);
     }
     payload.DataFrameCount = g.FrameCount;
 
@@ -15718,7 +15718,7 @@ bool ImGui::BeginDragDropTargetViewport(ImGuiViewport* viewport, const ImRect* p
     if (!g.DragDropActive)
         return false;
 
-    ImRect bb = p_bb ? *p_bb : ((ImGuiViewportP*)viewport)->GetWorkRect();
+    ImRect bb = p_bb ? *p_bb : static_cast<ImGuiViewportP*>(viewport)->GetWorkRect();
     ImGuiID id = viewport->ID;
     if (g.MouseViewport != viewport || !IsMouseHoveringRect(bb.Min, bb.Max, false) || (id == g.DragDropPayload.SourceId))
         return false;
@@ -15880,7 +15880,7 @@ static inline void LogTextV(ImGuiContext& g, const char* fmt, va_list args)
     {
         g.LogBuffer.Buf.resize(0);
         g.LogBuffer.appendfv(fmt, args);
-        ImFileWrite(g.LogBuffer.c_str(), sizeof(char), (ImU64)g.LogBuffer.size(), g.LogFile);
+        ImFileWrite(g.LogBuffer.c_str(), sizeof(char), static_cast<ImU64>(g.LogBuffer.size()), g.LogFile);
     }
     else
     {
@@ -15951,7 +15951,7 @@ void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char*
         const bool is_last_line = (line_end == text_end);
         if (line_start != line_end || !is_last_line)
         {
-            const int line_length = (int)(line_end - line_start);
+            const int line_length = static_cast<int>(line_end - line_start);
             const int indentation = g.LogLineFirstItem ? tree_depth * 4 : 1;
             LogText("%*s%.*s", indentation, "", line_length, line_start);
             g.LogLineFirstItem = false;
@@ -16213,7 +16213,7 @@ void ImGui::ClearIniSettings()
 void ImGui::LoadIniSettingsFromDisk(const char* ini_filename)
 {
     size_t file_data_size = 0;
-    char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", &file_data_size);
+    char* file_data = static_cast<char*>(ImFileLoadToMemory(ini_filename, "rb", &file_data_size));
     if (!file_data)
         return;
     if (file_data_size > 0)
@@ -16234,7 +16234,7 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
     // For our convenience and to make the code simpler, we'll also write zero-terminators within the buffer. So let's create a writable copy..
     if (ini_size == 0)
         ini_size = ImStrlen(ini_data);
-    g.SettingsIniData.Buf.resize((int)ini_size + 1);
+    g.SettingsIniData.Buf.resize(static_cast<int>(ini_size) + 1);
     char* const buf = g.SettingsIniData.Buf.Data;
     char* const buf_end = buf + ini_size;
     memcpy(buf, ini_data, ini_size);
@@ -16267,7 +16267,7 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
             line_end[-1] = 0;
             const char* name_end = line_end - 1;
             const char* type_start = line + 1;
-            char* type_end = (char*)(void*)ImStrchrRange(type_start, name_end, ']');
+            char* type_end = static_cast<char*>((void*)ImStrchrRange(type_start, name_end, ']'));
             const char* name_start = type_end ? ImStrchrRange(type_end + 1, name_end, '[') : NULL;
             if (!type_end || !name_start)
                 continue;
@@ -16319,7 +16319,7 @@ const char* ImGui::SaveIniSettingsToMemory(size_t* out_size)
     for (ImGuiSettingsHandler& handler : g.SettingsHandlers)
         handler.WriteAllFn(&g, &handler, &g.SettingsIniData);
     if (out_size)
-        *out_size = (size_t)g.SettingsIniData.size();
+        *out_size = static_cast<size_t>(g.SettingsIniData.size());
     return g.SettingsIniData.c_str();
 }
 
@@ -16402,17 +16402,17 @@ static void* WindowSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*
 
 static void WindowSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line)
 {
-    ImGuiWindowSettings* settings = (ImGuiWindowSettings*)entry;
+    ImGuiWindowSettings* settings = static_cast<ImGuiWindowSettings*>(entry);
     int x, y;
     int i;
     ImU32 u1;
-    if (sscanf(line, "Pos=%i,%i", &x, &y) == 2)             { settings->Pos = ImVec2ih((short)x, (short)y); }
-    else if (sscanf(line, "Size=%i,%i", &x, &y) == 2)       { settings->Size = ImVec2ih((short)x, (short)y); }
+    if (sscanf(line, "Pos=%i,%i", &x, &y) == 2)             { settings->Pos = ImVec2ih(static_cast<short>(x), static_cast<short>(y)); }
+    else if (sscanf(line, "Size=%i,%i", &x, &y) == 2)       { settings->Size = ImVec2ih(static_cast<short>(x), static_cast<short>(y)); }
     else if (sscanf(line, "ViewportId=0x%08X", &u1) == 1)   { settings->ViewportId = u1; }
-    else if (sscanf(line, "ViewportPos=%i,%i", &x, &y) == 2){ settings->ViewportPos = ImVec2ih((short)x, (short)y); }
+    else if (sscanf(line, "ViewportPos=%i,%i", &x, &y) == 2){ settings->ViewportPos = ImVec2ih(static_cast<short>(x), static_cast<short>(y)); }
     else if (sscanf(line, "Collapsed=%d", &i) == 1)         { settings->Collapsed = (i != 0); }
     else if (sscanf(line, "IsChild=%d", &i) == 1)           { settings->IsChild = (i != 0); }
-    else if (sscanf(line, "DockId=0x%X,%d", &u1, &i) == 2)  { settings->DockId = u1; settings->DockOrder = (short)i; }
+    else if (sscanf(line, "DockId=0x%X,%d", &u1, &i) == 2)  { settings->DockId = u1; settings->DockOrder = static_cast<short>(i); }
     else if (sscanf(line, "DockId=0x%X", &u1) == 1)         { settings->DockId = u1; settings->DockOrder = -1; }
     else if (sscanf(line, "ClassId=0x%X", &u1) == 1)        { settings->ClassId = u1; }
 }
@@ -16854,7 +16854,7 @@ static void ImGui::UpdateViewportsNewFrame()
     }
     AddUpdateViewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, main_viewport_pos, main_viewport_size, ImGuiViewportFlags_OwnedByApp | ImGuiViewportFlags_CanHostOtherWindows);
 
-    const float memory_compact_start_time = (g.GcCompactAll || g.IO.ConfigMemoryCompactTimer < 0.0f) ? FLT_MAX : (float)g.Time - g.IO.ConfigMemoryCompactTimer;
+    const float memory_compact_start_time = (g.GcCompactAll || g.IO.ConfigMemoryCompactTimer < 0.0f) ? FLT_MAX : static_cast<float>(g.Time) - g.IO.ConfigMemoryCompactTimer;
 
     g.CurrentDpiScale = 0.0f;
     g.CurrentViewport = NULL;
@@ -16983,7 +16983,7 @@ static void ImGui::UpdateViewportsNewFrame()
     ImGuiViewportP* viewport_hovered = NULL;
     if (g.IO.BackendFlags & ImGuiBackendFlags_HasMouseHoveredViewport)
     {
-        viewport_hovered = g.IO.MouseHoveredViewport ? (ImGuiViewportP*)FindViewportByID(g.IO.MouseHoveredViewport) : NULL;
+        viewport_hovered = g.IO.MouseHoveredViewport ? static_cast<ImGuiViewportP*>(FindViewportByID(g.IO.MouseHoveredViewport)) : NULL;
         if (viewport_hovered && (viewport_hovered->Flags & ImGuiViewportFlags_NoInputs))
             viewport_hovered = FindHoveredViewportFromPlatformWindowStack(g.IO.MousePos); // Backend failed to handle _NoInputs viewport: revert to our fallback.
     }
@@ -17063,7 +17063,7 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
             flags |= ImGuiViewportFlags_NoFocusOnAppearing;
     }
 
-    ImGuiViewportP* viewport = (ImGuiViewportP*)FindViewportByID(id);
+    ImGuiViewportP* viewport = static_cast<ImGuiViewportP*>(FindViewportByID(id));
     if (viewport)
     {
         // Always update for main viewport as we are already pulling correct platform pos/size (see #4900)
@@ -17149,7 +17149,7 @@ static void ImGui::WindowSelectViewport(ImGuiWindow* window)
     window->ViewportAllowPlatformMonitorExtend = -1;
 
     // Restore main viewport if multi-viewport is not supported by the backend
-    ImGuiViewportP* main_viewport = (ImGuiViewportP*)(void*)GetMainViewport();
+    ImGuiViewportP* main_viewport = static_cast<ImGuiViewportP*>((void*)GetMainViewport());
     if (!(g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable))
     {
         SetWindowViewport(window, main_viewport);
@@ -17173,7 +17173,7 @@ static void ImGui::WindowSelectViewport(ImGuiWindow* window)
         // Attempt to restore saved viewport id (= window that hasn't been activated yet), try to restore the viewport based on saved 'window->ViewportPos' restored from .ini file
         if (window->Viewport == NULL && window->ViewportId != 0)
         {
-            window->Viewport = (ImGuiViewportP*)FindViewportByID(window->ViewportId);
+            window->Viewport = static_cast<ImGuiViewportP*>(FindViewportByID(window->ViewportId));
             if (window->Viewport == NULL && window->ViewportPos.x != FLT_MAX && window->ViewportPos.y != FLT_MAX)
                 window->Viewport = AddUpdateViewport(window, window->ID, window->ViewportPos, window->Size, ImGuiViewportFlags_None);
         }
@@ -17183,7 +17183,7 @@ static void ImGui::WindowSelectViewport(ImGuiWindow* window)
     if (g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasViewport)
     {
         // Code explicitly request a viewport
-        window->Viewport = (ImGuiViewportP*)FindViewportByID(g.NextWindowData.ViewportId);
+        window->Viewport = static_cast<ImGuiViewportP*>(FindViewportByID(g.NextWindowData.ViewportId));
         window->ViewportId = g.NextWindowData.ViewportId; // Store ID even if Viewport isn't resolved yet.
         if (window->Viewport && (window->Flags & ImGuiWindowFlags_DockNodeHost) != 0 && window->Viewport->Window != NULL)
         {
@@ -17360,7 +17360,7 @@ void ImGui::WindowSyncOwnedViewport(ImGuiWindow* window, ImGuiWindow* parent_win
 
     // Update parent viewport ID
     // (the !IsFallbackWindow test mimic the one done in WindowSelectViewport())
-    if (window->WindowClass.ParentViewportId != (ImGuiID)-1)
+    if (window->WindowClass.ParentViewportId != static_cast<ImGuiID>(-1))
     {
         ImGuiID old_parent_viewport_id = window->Viewport->ParentViewportId;
         window->Viewport->ParentViewportId = window->WindowClass.ParentViewportId;
@@ -17559,14 +17559,14 @@ static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
 // Update monitor from viewport rectangle (we'll use this info to clamp windows and save windows lost in a removed monitor)
 static void ImGui::UpdateViewportPlatformMonitor(ImGuiViewportP* viewport)
 {
-    viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetMainRect());
+    viewport->PlatformMonitor = static_cast<short>(FindPlatformMonitorForRect(viewport->GetMainRect()));
 }
 
 // Return value is always != NULL, but don't hold on it across frames.
 const ImGuiPlatformMonitor* ImGui::GetViewportPlatformMonitor(ImGuiViewport* viewport_p)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiViewportP* viewport = (ImGuiViewportP*)(void*)viewport_p;
+    ImGuiViewportP* viewport = static_cast<ImGuiViewportP*>((void*)viewport_p);
     int monitor_idx = viewport->PlatformMonitor;
     if (monitor_idx >= 0 && monitor_idx < g.PlatformIO.Monitors.Size)
         return &g.PlatformIO.Monitors[monitor_idx];
@@ -17860,7 +17860,7 @@ void ImGui::DockContextShutdown(ImGuiContext* ctx)
 {
     ImGuiDockContext* dc = &ctx->DockContext;
     for (int n = 0; n < dc->Nodes.Data.Size; n++)
-        if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
+        if (ImGuiDockNode* node = static_cast<ImGuiDockNode*>(dc->Nodes.Data[n].val_p))
             DockContextDeleteNode(ctx, node);
 }
 
@@ -17901,7 +17901,7 @@ void ImGui::DockContextNewFrameUpdateUndocking(ImGuiContext* ctx)
     // Setting NoSplit at runtime merges all nodes
     if (g.IO.ConfigDockingNoSplit)
         for (int n = 0; n < dc->Nodes.Data.Size; n++)
-            if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
+            if (ImGuiDockNode* node = static_cast<ImGuiDockNode*>(dc->Nodes.Data[n].val_p))
                 if (node->IsRootNode() && node->IsSplitNode())
                 {
                     DockBuilderRemoveNodeChildNodes(node->ID);
@@ -17958,7 +17958,7 @@ void ImGui::DockContextNewFrameUpdateDocking(ImGuiContext* ctx)
     // Create windows for each automatic docking nodes
     // We can have NULL pointers when we delete nodes, but because ID are recycled this should amortize nicely (and our node count will never be very high)
     for (int n = 0; n < dc->Nodes.Data.Size; n++)
-        if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
+        if (ImGuiDockNode* node = static_cast<ImGuiDockNode*>(dc->Nodes.Data[n].val_p))
             if (node->IsFloatingNode())
                 DockNodeUpdate(node);
 }
@@ -17969,7 +17969,7 @@ void ImGui::DockContextEndFrame(ImGuiContext* ctx)
     ImGuiContext& g = *ctx;
     ImGuiDockContext* dc = &g.DockContext;
     for (int n = 0; n < dc->Nodes.Data.Size; n++)
-        if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
+        if (ImGuiDockNode* node = static_cast<ImGuiDockNode*>(dc->Nodes.Data[n].val_p))
             if (node->LastFrameActive == g.FrameCount && node->IsVisible && node->HostWindow && node->IsLeafNode() && !node->IsBgDrawnThisFrame)
             {
                 ImRect bg_rect(node->Pos + ImVec2(0.0f, GetFrameHeight()), node->Pos + node->Size);
@@ -17981,7 +17981,7 @@ void ImGui::DockContextEndFrame(ImGuiContext* ctx)
 
 ImGuiDockNode* ImGui::DockContextFindNodeByID(ImGuiContext* ctx, ImGuiID id)
 {
-    return (ImGuiDockNode*)ctx->DockContext.Nodes.GetVoidPtr(id);
+    return static_cast<ImGuiDockNode*>(ctx->DockContext.Nodes.GetVoidPtr(id));
 }
 
 ImGuiID ImGui::DockContextGenNodeID(ImGuiContext* ctx)
@@ -18053,8 +18053,8 @@ static void ImGui::DockContextDeleteNode(ImGuiContext* ctx, ImGuiDockNode* node)
 
 static int IMGUI_CDECL DockNodeComparerDepthMostFirst(const void* lhs, const void* rhs)
 {
-    const ImGuiDockNode* a = *(const ImGuiDockNode* const*)lhs;
-    const ImGuiDockNode* b = *(const ImGuiDockNode* const*)rhs;
+    const ImGuiDockNode* a = *static_cast<const ImGuiDockNode* const*>(lhs);
+    const ImGuiDockNode* b = *static_cast<const ImGuiDockNode* const*>(rhs);
     return ImGui::DockNodeGetDepth(b) - ImGui::DockNodeGetDepth(a);
 }
 
@@ -18168,7 +18168,7 @@ static void ImGui::DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDoc
         else if (node->ParentNode && node->ParentNode->ChildNodes[1] == NULL)
             node->ParentNode->ChildNodes[1] = node;
         node->SelectedTabId = settings->SelectedTabId;
-        node->SplitAxis = (ImGuiAxis)settings->SplitAxis;
+        node->SplitAxis = static_cast<ImGuiAxis>(settings->SplitAxis);
         node->SetLocalFlags(settings->Flags & ImGuiDockNodeFlags_SavedFlagsMask_);
 
         // Bind host window immediately if it already exist (in case of a rebuild)
@@ -19182,7 +19182,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     bool central_node_hole_register_hit_test_hole = central_node_hole;
     if (central_node_hole)
         if (const ImGuiPayload* payload = ImGui::GetDragDropPayload())
-            if (payload->IsDataType(IMGUI_PAYLOAD_TYPE_WINDOW) && DockNodeIsDropAllowed(host_window, *(ImGuiWindow**)payload->Data))
+            if (payload->IsDataType(IMGUI_PAYLOAD_TYPE_WINDOW) && DockNodeIsDropAllowed(host_window, *static_cast<ImGuiWindow**>(payload->Data)))
                 central_node_hole_register_hit_test_hole = false;
     if (central_node_hole_register_hit_test_hole)
     {
@@ -19288,8 +19288,8 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 // Compare TabItem nodes given the last known DockOrder (will persist in .ini file as hint), used to sort tabs when multiple tabs are added on the same frame.
 static int IMGUI_CDECL TabItemComparerByDockOrder(const void* lhs, const void* rhs)
 {
-    ImGuiWindow* a = ((const ImGuiTabItem*)lhs)->Window;
-    ImGuiWindow* b = ((const ImGuiTabItem*)rhs)->Window;
+    ImGuiWindow* a = static_cast<const ImGuiTabItem*>(lhs)->Window;
+    ImGuiWindow* b = static_cast<const ImGuiTabItem*>(rhs)->Window;
     if (int d = ((a->DockOrder == -1) ? INT_MAX : a->DockOrder) - ((b->DockOrder == -1) ? INT_MAX : b->DockOrder))
         return d;
     return (a->BeginOrderWithinContext - b->BeginOrderWithinContext);
@@ -19910,9 +19910,9 @@ static void ImGui::DockNodePreviewDockSetup(ImGuiWindow* host_window, ImGuiDockN
                 continue;
             if (dir != ImGuiDir_None && !data->IsSidesAvailable)
                 continue;
-            if (DockNodeCalcDropRectsAndTestMousePos(data->FutureNode.Rect(), (ImGuiDir)dir, data->DropRectsDraw[dir+1], is_outer_docking, &g.IO.MousePos))
+            if (DockNodeCalcDropRectsAndTestMousePos(data->FutureNode.Rect(), static_cast<ImGuiDir>(dir), data->DropRectsDraw[dir+1], is_outer_docking, &g.IO.MousePos))
             {
-                data->SplitDir = (ImGuiDir)dir;
+                data->SplitDir = static_cast<ImGuiDir>(dir);
                 data->IsSplitDirExplicit = true;
             }
         }
@@ -20039,7 +20039,7 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
             ImRect draw_r = data->DropRectsDraw[dir + 1];
             ImRect draw_r_in = draw_r;
             draw_r_in.Expand(-2.0f);
-            ImU32 overlay_col = (data->SplitDir == (ImGuiDir)dir && data->IsSplitDirExplicit) ? overlay_col_drop_hovered : overlay_col_drop;
+            ImU32 overlay_col = (data->SplitDir == static_cast<ImGuiDir>(dir) && data->IsSplitDirExplicit) ? overlay_col_drop_hovered : overlay_col_drop;
             for (int overlay_n = 0; overlay_n < overlay_draw_lists_count; overlay_n++)
             {
                 ImVec2 center = ImFloor(draw_r_in.GetCenter());
@@ -20764,7 +20764,7 @@ void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiID root_id)
     // Process active windows
     ImVector<ImGuiDockNode*> nodes_to_remove;
     for (int n = 0; n < dc->Nodes.Data.Size; n++)
-        if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
+        if (ImGuiDockNode* node = static_cast<ImGuiDockNode*>(dc->Nodes.Data[n].val_p))
         {
             bool want_removal = (root_id == 0) || (node->ID != root_id && DockNodeGetRootNode(node)->ID == root_id);
             if (want_removal)
@@ -21243,7 +21243,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     // Save new dock order only if the window has been visible once already
     // This allows multiple windows to be created in the same frame and have their respective dock orders preserved.
     if (node->TabBar && window->WasActive)
-        window->DockOrder = (short)DockNodeGetTabOrder(window);
+        window->DockOrder = static_cast<short>(DockNodeGetTabOrder(window));
 
     if ((node->WantCloseAll || node->WantCloseTabId == window->TabId) && p_open != NULL)
         *p_open = false;
@@ -21300,13 +21300,13 @@ void ImGui::BeginDockableDragDropTarget(ImGuiWindow* window)
     // Peek into the payload before calling AcceptDragDropPayload() so we can handle overlapping dock nodes with filtering
     // (this is a little unusual pattern, normally most code would call AcceptDragDropPayload directly)
     const ImGuiPayload* payload = &g.DragDropPayload;
-    if (!payload->IsDataType(IMGUI_PAYLOAD_TYPE_WINDOW) || !DockNodeIsDropAllowed(window, *(ImGuiWindow**)payload->Data))
+    if (!payload->IsDataType(IMGUI_PAYLOAD_TYPE_WINDOW) || !DockNodeIsDropAllowed(window, *static_cast<ImGuiWindow**>(payload->Data)))
     {
         EndDragDropTarget();
         return;
     }
 
-    ImGuiWindow* payload_window = *(ImGuiWindow**)payload->Data;
+    ImGuiWindow* payload_window = *static_cast<ImGuiWindow**>(payload->Data);
     if (AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_WINDOW, ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
     {
         // Select target node
@@ -21471,12 +21471,12 @@ static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* ctx, ImGuiSettings
     if (sscanf(line, " Window=0x%08X%n", &node.ParentWindowId, &r) ==1) { line += r; if (node.ParentWindowId == 0) return; }
     if (node.ParentNodeId == 0)
     {
-        if (sscanf(line, " Pos=%i,%i%n",  &x, &y, &r) == 2)         { line += r; node.Pos = ImVec2ih((short)x, (short)y); } else return;
-        if (sscanf(line, " Size=%i,%i%n", &x, &y, &r) == 2)         { line += r; node.Size = ImVec2ih((short)x, (short)y); } else return;
+        if (sscanf(line, " Pos=%i,%i%n",  &x, &y, &r) == 2)         { line += r; node.Pos = ImVec2ih(static_cast<short>(x), static_cast<short>(y)); } else return;
+        if (sscanf(line, " Size=%i,%i%n", &x, &y, &r) == 2)         { line += r; node.Size = ImVec2ih(static_cast<short>(x), static_cast<short>(y)); } else return;
     }
     else
     {
-        if (sscanf(line, " SizeRef=%i,%i%n", &x, &y, &r) == 2)      { line += r; node.SizeRef = ImVec2ih((short)x, (short)y); }
+        if (sscanf(line, " SizeRef=%i,%i%n", &x, &y, &r) == 2)      { line += r; node.SizeRef = ImVec2ih(static_cast<short>(x), static_cast<short>(y)); }
     }
     if (sscanf(line, " Split=%c%n", &c, &r) == 1)                   { line += r; if (c == 'X') node.SplitAxis = ImGuiAxis_X; else if (c == 'Y') node.SplitAxis = ImGuiAxis_Y; }
     if (sscanf(line, " NoResize=%d%n", &x, &r) == 1)                { line += r; if (x != 0) node.Flags |= ImGuiDockNodeFlags_NoResize; }
@@ -21500,8 +21500,8 @@ static void DockSettingsHandler_DockNodeToSettings(ImGuiDockContext* dc, ImGuiDo
     node_settings.ParentNodeId = node->ParentNode ? node->ParentNode->ID : 0;
     node_settings.ParentWindowId = (node->IsDockSpace() && node->HostWindow && node->HostWindow->ParentWindow) ? node->HostWindow->ParentWindow->ID : 0;
     node_settings.SelectedTabId = node->SelectedTabId;
-    node_settings.SplitAxis = (signed char)(node->IsSplitNode() ? node->SplitAxis : ImGuiAxis_None);
-    node_settings.Depth = (char)depth;
+    node_settings.SplitAxis = static_cast<signed char>(node->IsSplitNode() ? node->SplitAxis : ImGuiAxis_None);
+    node_settings.Depth = static_cast<char>(depth);
     node_settings.Flags = (node->LocalFlags & ImGuiDockNodeFlags_SavedFlagsMask_);
     node_settings.Pos = ImVec2ih(node->Pos);
     node_settings.Size = ImVec2ih(node->Size);
@@ -21525,13 +21525,13 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
     dc->NodesSettings.resize(0);
     dc->NodesSettings.reserve(dc->Nodes.Data.Size);
     for (int n = 0; n < dc->Nodes.Data.Size; n++)
-        if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
+        if (ImGuiDockNode* node = static_cast<ImGuiDockNode*>(dc->Nodes.Data[n].val_p))
             if (node->IsRootNode())
                 DockSettingsHandler_DockNodeToSettings(dc, node, 0);
 
     int max_depth = 0;
     for (int node_n = 0; node_n < dc->NodesSettings.Size; node_n++)
-        max_depth = ImMax((int)dc->NodesSettings[node_n].Depth, max_depth);
+        max_depth = ImMax(static_cast<int>(dc->NodesSettings[node_n].Depth), max_depth);
 
     // Write to text buffer
     buf->appendf("[%s][Data]\n", handler->TypeName);
@@ -21621,7 +21621,7 @@ static const char* Platform_GetClipboardTextFn_DefaultImpl(ImGuiContext* ctx)
         ::CloseClipboard();
         return NULL;
     }
-    if (const WCHAR* wbuf_global = (const WCHAR*)::GlobalLock(wbuf_handle))
+    if (const WCHAR* wbuf_global = static_cast<const WCHAR*>(::GlobalLock(wbuf_handle)))
     {
         int buf_len = ::WideCharToMultiByte(CP_UTF8, 0, wbuf_global, -1, NULL, 0, NULL, NULL);
         g.ClipboardHandlerData.resize(buf_len);
@@ -21637,13 +21637,13 @@ static void Platform_SetClipboardTextFn_DefaultImpl(ImGuiContext*, const char* t
     if (!::OpenClipboard(NULL))
         return;
     const int wbuf_length = ::MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0);
-    HGLOBAL wbuf_handle = ::GlobalAlloc(GMEM_MOVEABLE, (SIZE_T)wbuf_length * sizeof(WCHAR));
+    HGLOBAL wbuf_handle = ::GlobalAlloc(GMEM_MOVEABLE, static_cast<SIZE_T>(wbuf_length) * sizeof(WCHAR));
     if (wbuf_handle == NULL)
     {
         ::CloseClipboard();
         return;
     }
-    WCHAR* wbuf_global = (WCHAR*)::GlobalLock(wbuf_handle);
+    WCHAR* wbuf_global = static_cast<WCHAR*>(::GlobalLock(wbuf_handle));
     ::MultiByteToWideChar(CP_UTF8, 0, text, -1, wbuf_global, wbuf_length);
     ::GlobalUnlock(wbuf_handle);
     ::EmptyClipboard();
@@ -21797,7 +21797,7 @@ static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char*) { ret
 static void Platform_SetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport* viewport, ImGuiPlatformImeData* data)
 {
     // Notify OS Input Method Editor of text input position
-    HWND hwnd = (HWND)viewport->PlatformHandleRaw;
+    HWND hwnd = static_cast<HWND>(viewport->PlatformHandleRaw);
     if (hwnd == 0)
         return;
 
@@ -21805,14 +21805,14 @@ static void Platform_SetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport* view
     if (HIMC himc = ::ImmGetContext(hwnd))
     {
         COMPOSITIONFORM composition_form = {};
-        composition_form.ptCurrentPos.x = (LONG)(data->InputPos.x - viewport->Pos.x);
-        composition_form.ptCurrentPos.y = (LONG)(data->InputPos.y - viewport->Pos.y);
+        composition_form.ptCurrentPos.x = static_cast<LONG>(data->InputPos.x - viewport->Pos.x);
+        composition_form.ptCurrentPos.y = static_cast<LONG>(data->InputPos.y - viewport->Pos.y);
         composition_form.dwStyle = CFS_FORCE_POSITION;
         ::ImmSetCompositionWindow(himc, &composition_form);
         CANDIDATEFORM candidate_form = {};
         candidate_form.dwStyle = CFS_CANDIDATEPOS;
-        candidate_form.ptCurrentPos.x = (LONG)(data->InputPos.x - viewport->Pos.x);
-        candidate_form.ptCurrentPos.y = (LONG)(data->InputPos.y - viewport->Pos.y);
+        candidate_form.ptCurrentPos.x = static_cast<LONG>(data->InputPos.x - viewport->Pos.x);
+        candidate_form.ptCurrentPos.y = static_cast<LONG>(data->InputPos.y - viewport->Pos.y);
         ::ImmSetCandidateWindow(himc, &candidate_form);
         ::ImmReleaseContext(hwnd, himc);
     }
@@ -21934,8 +21934,8 @@ static void RenderViewportsThumbnails()
 
 static int IMGUI_CDECL ViewportComparerByLastFocusedStampCount(const void* lhs, const void* rhs)
 {
-    const ImGuiViewportP* a = *(const ImGuiViewportP* const*)lhs;
-    const ImGuiViewportP* b = *(const ImGuiViewportP* const*)rhs;
+    const ImGuiViewportP* a = *static_cast<const ImGuiViewportP* const*>(lhs);
+    const ImGuiViewportP* b = *static_cast<const ImGuiViewportP* const*>(rhs);
     return b->LastFocusedStampCount - a->LastFocusedStampCount;
 }
 
@@ -22006,23 +22006,23 @@ void ImGui::DebugTextEncoding(const char* str)
         unsigned int c;
         const int c_utf8_len = ImTextCharFromUtf8(&c, p, str_end);
         TableNextColumn();
-        Text("%d", (int)(p - str));
+        Text("%d", static_cast<int>(p - str));
         TableNextColumn();
         for (int byte_index = 0; byte_index < c_utf8_len; byte_index++)
         {
             if (byte_index > 0)
                 SameLine();
-            Text("0x%02X", (int)(unsigned char)p[byte_index]);
+            Text("0x%02X", static_cast<int>((unsigned char)p[byte_index]));
         }
         TableNextColumn();
         TextUnformatted(p, p + c_utf8_len);
-        if (!GetFont()->IsGlyphInFont((ImWchar)c))
+        if (!GetFont()->IsGlyphInFont(static_cast<ImWchar>(c)))
         {
             SameLine();
             TextUnformatted("[missing]");
         }
         TableNextColumn();
-        Text("U+%04X", (int)c);
+        Text("U+%04X", static_cast<int>(c));
         p += c_utf8_len;
     }
     EndTable();
@@ -22187,8 +22187,8 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
             SameLine();
         Text("Tex: %dx%d", tex->Width, tex->Height);
     }
-    const int packed_surface_sqrt = (int)sqrtf((float)atlas->Builder->RectsPackedSurface);
-    const int discarded_surface_sqrt = (int)sqrtf((float)atlas->Builder->RectsDiscardedSurface);
+    const int packed_surface_sqrt = static_cast<int>(sqrtf((float)atlas->Builder->RectsPackedSurface));
+    const int discarded_surface_sqrt = static_cast<int>(sqrtf((float)atlas->Builder->RectsDiscardedSurface));
     Text("Packed rects: %d, area: about %d px ~%dx%d px", atlas->Builder->RectsPackedCount, atlas->Builder->RectsPackedSurface, packed_surface_sqrt, packed_surface_sqrt);
     Text("incl. Discarded rects: %d, area: about %d px ~%dx%d px", atlas->Builder->RectsDiscardedCount, atlas->Builder->RectsDiscardedSurface, discarded_surface_sqrt, discarded_surface_sqrt);
 
@@ -22243,9 +22243,9 @@ void ImGui::DebugNodeTexture(ImTextureData* tex, int int_id, const ImFontAtlasRe
         PushStyleVar(ImGuiStyleVar_ImageBorderSize, ImMax(1.0f, g.Style.ImageBorderSize));
         ImVec2 p = GetCursorScreenPos();
         if (tex->WantDestroyNextFrame)
-            Dummy(ImVec2((float)tex->Width, (float)tex->Height));
+            Dummy(ImVec2(static_cast<float>(tex->Width), static_cast<float>(tex->Height)));
         else
-            ImageWithBg(tex->GetTexRef(), ImVec2((float)tex->Width, (float)tex->Height), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+            ImageWithBg(tex->GetTexRef(), ImVec2(static_cast<float>(tex->Width), static_cast<float>(tex->Height)), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
         if (cfg->ShowTextureUsedRect)
             GetWindowDrawList()->AddRect(ImVec2(p.x + tex->UsedRect.x, p.y + tex->UsedRect.y), ImVec2(p.x + tex->UsedRect.x + tex->UsedRect.w, p.y + tex->UsedRect.y + tex->UsedRect.h), IM_COL32(255, 0, 255, 255));
         if (highlight_rect != NULL)
@@ -22469,8 +22469,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             for (ImGuiWindow* window : g.Windows)
                 if (window->LastFrameActive + 1 >= g.FrameCount)
                     temp_buffer.push_back(window);
-            struct Func { static int IMGUI_CDECL WindowComparerByBeginOrder(const void* lhs, const void* rhs) { return ((int)(*(const ImGuiWindow* const *)lhs)->BeginOrderWithinContext - (*(const ImGuiWindow* const*)rhs)->BeginOrderWithinContext); } };
-            ImQsort(temp_buffer.Data, (size_t)temp_buffer.Size, sizeof(ImGuiWindow*), Func::WindowComparerByBeginOrder);
+            struct Func { static int IMGUI_CDECL WindowComparerByBeginOrder(const void* lhs, const void* rhs) { return (static_cast<int>((*(const ImGuiWindow* const *)lhs)->BeginOrderWithinContext) - (*static_cast<const ImGuiWindow* const*>(rhs))->BeginOrderWithinContext); } };
+            ImQsort(temp_buffer.Data, static_cast<size_t>(temp_buffer.Size), sizeof(ImGuiWindow*), Func::WindowComparerByBeginOrder);
             DebugNodeWindowsListByBeginStackParent(temp_buffer.Data, temp_buffer.Size, NULL);
             TreePop();
         }
@@ -22633,7 +22633,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         SameLine();
         if (SmallButton("Rebuild all")) { dc->WantFullRebuild = true; }
         for (int n = 0; n < dc->Nodes.Data.Size; n++)
-            if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
+            if (ImGuiDockNode* node = static_cast<ImGuiDockNode*>(dc->Nodes.Data[n].val_p))
                 if (!root_nodes_only || node->IsRootNode())
                     DebugNodeDockNode(node, "Node");
         TreePop();
@@ -22706,7 +22706,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
         if (TreeNode("SettingsIniData", "Settings unpacked data (.ini): %d bytes", g.SettingsIniData.size()))
         {
-            InputTextMultiline("##Ini", (char*)(void*)g.SettingsIniData.c_str(), g.SettingsIniData.Buf.Size, ImVec2(-FLT_MIN, GetTextLineHeight() * 20), ImGuiInputTextFlags_ReadOnly);
+            InputTextMultiline("##Ini", static_cast<char*>((void*)g.SettingsIniData.c_str()), g.SettingsIniData.Buf.Size, ImVec2(-FLT_MIN, GetTextLineHeight() * 20), ImGuiInputTextFlags_ReadOnly);
             TreePop();
         }
         TreePop();
@@ -22740,11 +22740,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         {
             // User code should never have to go through such hoops! You can generally iterate between ImGuiKey_NamedKey_BEGIN and ImGuiKey_NamedKey_END.
             Indent();
-            Text("Keys down:");         for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1)) { if (!IsKeyDown(key)) continue;     SameLine(); Text(IsNamedKey(key) ? "\"%s\"" : "\"%s\" %d", GetKeyName(key), key); SameLine(); Text("(%.02f)", GetKeyData(key)->DownDuration); }
-            Text("Keys pressed:");      for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1)) { if (!IsKeyPressed(key)) continue;  SameLine(); Text(IsNamedKey(key) ? "\"%s\"" : "\"%s\" %d", GetKeyName(key), key); }
-            Text("Keys released:");     for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1)) { if (!IsKeyReleased(key)) continue; SameLine(); Text(IsNamedKey(key) ? "\"%s\"" : "\"%s\" %d", GetKeyName(key), key); }
+            Text("Keys down:");         for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = static_cast<ImGuiKey>(key + 1)) { if (!IsKeyDown(key)) continue;     SameLine(); Text(IsNamedKey(key) ? "\"%s\"" : "\"%s\" %d", GetKeyName(key), key); SameLine(); Text("(%.02f)", GetKeyData(key)->DownDuration); }
+            Text("Keys pressed:");      for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = static_cast<ImGuiKey>(key + 1)) { if (!IsKeyPressed(key)) continue;  SameLine(); Text(IsNamedKey(key) ? "\"%s\"" : "\"%s\" %d", GetKeyName(key), key); }
+            Text("Keys released:");     for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = static_cast<ImGuiKey>(key + 1)) { if (!IsKeyReleased(key)) continue; SameLine(); Text(IsNamedKey(key) ? "\"%s\"" : "\"%s\" %d", GetKeyName(key), key); }
             Text("Keys mods: %s%s%s%s", io.KeyCtrl ? "Ctrl " : "", io.KeyShift ? "Shift " : "", io.KeyAlt ? "Alt " : "", io.KeySuper ? "Super " : "");
-            Text("Chars queue:");       for (int i = 0; i < io.InputQueueCharacters.Size; i++) { ImWchar c = io.InputQueueCharacters[i]; SameLine(); Text("\'%c\' (0x%04X)", (c > ' ' && c <= 255) ? (char)c : '?', c); } // FIXME: We should convert 'c' to UTF-8 here but the functions are not public.
+            Text("Chars queue:");       for (int i = 0; i < io.InputQueueCharacters.Size; i++) { ImWchar c = io.InputQueueCharacters[i]; SameLine(); Text("\'%c\' (0x%04X)", (c > ' ' && c <= 255) ? static_cast<char>(c) : '?', c); } // FIXME: We should convert 'c' to UTF-8 here but the functions are not public.
             DebugRenderKeyboardPreview(GetWindowDrawList());
             Unindent();
         }
@@ -22781,7 +22781,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         {
             Indent();
             if (BeginChild("##owners", ImVec2(-FLT_MIN, GetTextLineHeightWithSpacing() * 8), ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeY, ImGuiWindowFlags_NoSavedSettings))
-                for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
+                for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = static_cast<ImGuiKey>(key + 1))
                 {
                     ImGuiKeyOwnerData* owner_data = GetKeyOwnerData(&g, key);
                     if (owner_data->OwnerCurr == ImGuiKeyOwner_NoOwner)
@@ -22799,7 +22799,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         {
             Indent();
             if (BeginChild("##routes", ImVec2(-FLT_MIN, GetTextLineHeightWithSpacing() * 8), ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeY, ImGuiWindowFlags_NoSavedSettings))
-                for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
+                for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = static_cast<ImGuiKey>(key + 1))
                 {
                     ImGuiKeyRoutingTable* rt = &g.KeysRoutingTable;
                     for (ImGuiKeyRoutingIndex idx = rt->Index[key - ImGuiKey_NamedKey_BEGIN]; idx != -1; )
@@ -22938,8 +22938,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         p += ImFormatString(p, buf + IM_COUNTOF(buf) - p, "Size: (%.0f, %.0f)\n", node->Size.x, node->Size.y);
         p += ImFormatString(p, buf + IM_COUNTOF(buf) - p, "SizeRef: (%.0f, %.0f)\n", node->SizeRef.x, node->SizeRef.y);
         int depth = DockNodeGetDepth(node);
-        overlay_draw_list->AddRect(node->Pos + ImVec2(3, 3) * (float)depth, node->Pos + node->Size - ImVec2(3, 3) * (float)depth, IM_COL32(200, 100, 100, 255));
-        ImVec2 pos = node->Pos + ImVec2(3, 3) * (float)depth;
+        overlay_draw_list->AddRect(node->Pos + ImVec2(3, 3) * static_cast<float>(depth), node->Pos + node->Size - ImVec2(3, 3) * static_cast<float>(depth), IM_COL32(200, 100, 100, 255));
+        ImVec2 pos = node->Pos + ImVec2(3, 3) * static_cast<float>(depth);
         overlay_draw_list->AddRectFilled(pos - ImVec2(1, 1), pos + CalcTextSize(buf) + ImVec2(1, 1), IM_COL32(200, 100, 100, 255));
         overlay_draw_list->AddText(NULL, 0.0f, pos, IM_COL32(255, 255, 255, 255), buf);
     }
@@ -23009,11 +23009,11 @@ bool ImGui::DebugBreakButton(const char* label, const char* description_of_locat
 // [DEBUG] Display contents of Columns
 void ImGui::DebugNodeColumns(ImGuiOldColumns* columns)
 {
-    if (!TreeNode((void*)(uintptr_t)columns->ID, "Columns Id: 0x%08X, Count: %d, Flags: 0x%04X", columns->ID, columns->Count, columns->Flags))
+    if (!TreeNode((void*)static_cast<uintptr_t>(columns->ID), "Columns Id: 0x%08X, Count: %d, Flags: 0x%04X", columns->ID, columns->Count, columns->Flags))
         return;
     BulletText("Width: %.1f (MinX: %.1f, MaxX: %.1f)", columns->OffMaxX - columns->OffMinX, columns->OffMinX, columns->OffMaxX);
     for (ImGuiOldColumnData& column : columns->Columns)
-        BulletText("Column %02d: OffsetNorm %.3f (= %.1f px)", (int)columns->Columns.index_from_ptr(&column), column.OffsetNorm, GetColumnOffsetFromNorm(columns, column.OffsetNorm));
+        BulletText("Column %02d: OffsetNorm %.3f (= %.1f px)", static_cast<int>(columns->Columns.index_from_ptr(&column)), column.OffsetNorm, GetColumnOffsetFromNorm(columns, column.OffsetNorm));
     TreePop();
 }
 
@@ -23056,9 +23056,9 @@ void ImGui::DebugNodeDockNode(ImGuiDockNode* node, const char* label)
     bool open;
     ImGuiTreeNodeFlags tree_node_flags = node->IsFocused ? ImGuiTreeNodeFlags_Selected : ImGuiTreeNodeFlags_None;
     if (node->Windows.Size > 0)
-        open = TreeNodeEx((void*)(intptr_t)node->ID, tree_node_flags, "%s 0x%04X%s: %d windows (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", node->Windows.Size, node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
+        open = TreeNodeEx((void*)static_cast<intptr_t>(node->ID), tree_node_flags, "%s 0x%04X%s: %d windows (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", node->Windows.Size, node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
     else
-        open = TreeNodeEx((void*)(intptr_t)node->ID, tree_node_flags, "%s 0x%04X%s: %s (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", (node->SplitAxis == ImGuiAxis_X) ? "horizontal split" : (node->SplitAxis == ImGuiAxis_Y) ? "vertical split" : "empty", node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
+        open = TreeNodeEx((void*)static_cast<intptr_t>(node->ID), tree_node_flags, "%s 0x%04X%s: %s (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", (node->SplitAxis == ImGuiAxis_X) ? "horizontal split" : (node->SplitAxis == ImGuiAxis_Y) ? "vertical split" : "empty", node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
     if (!is_alive) { PopStyleColor(); }
     if (is_active && IsItemHovered())
         if (ImGuiWindow* window = node->HostWindow ? node->HostWindow : node->VisibleWindow)
@@ -23237,7 +23237,7 @@ static int CalcFontGlyphSrcOverlapMask(ImFontAtlas* atlas, ImFont* font, unsigne
     for (int src_n = 0; src_n < font->Sources.Size; src_n++)
     {
         ImFontConfig* src = font->Sources[src_n];
-        if (!(src->FontLoader ? src->FontLoader : atlas->FontLoader)->FontSrcContainsGlyph(atlas, src, (ImWchar)codepoint))
+        if (!(src->FontLoader ? src->FontLoader : atlas->FontLoader)->FontSrcContainsGlyph(atlas, src, static_cast<ImWchar>(codepoint)))
             continue;
         mask |= (1 << src_n);
         count++;
@@ -23340,7 +23340,7 @@ void ImGui::DebugNodeFont(ImFont* font)
                     unsigned int c_end = c + 1;
                     while (c_end < 0x10000 && CalcFontGlyphSrcOverlapMask(atlas, font, c_end) == overlap_mask)
                         c_end++;
-                    if (TableNextColumn() && TreeNode((void*)(intptr_t)c, "U+%04X-U+%04X: %d codepoints in %d inputs", c, c_end - 1, c_end - c, ImCountSetBits(overlap_mask)))
+                    if (TableNextColumn() && TreeNode((void*)static_cast<intptr_t>(c), "U+%04X-U+%04X: %d codepoints in %d inputs", c, c_end - 1, c_end - c, ImCountSetBits(overlap_mask)))
                     {
                         char utf8_buf[5];
                         for (unsigned int n = c; n < c_end; n++)
@@ -23375,9 +23375,9 @@ void ImGui::DebugNodeFont(ImFont* font)
         {
             if (SmallButton("Load all"))
                 for (unsigned int base = 0; base <= IM_UNICODE_CODEPOINT_MAX; base++)
-                    baked->FindGlyph((ImWchar)base);
+                    baked->FindGlyph(static_cast<ImWchar>(base));
 
-            const int surface_sqrt = (int)ImSqrt((float)baked->MetricsTotalSurface);
+            const int surface_sqrt = static_cast<int>(ImSqrt((float)baked->MetricsTotalSurface));
             Text("Ascent: %f, Descent: %f, Ascent-Descent: %f", baked->Ascent, baked->Descent, baked->Ascent - baked->Descent);
             Text("Texture Area: about %d px ~%dx%d px", baked->MetricsTotalSurface, surface_sqrt, surface_sqrt);
             for (int src_n = 0; src_n < font->Sources.Size; src_n++)
@@ -23417,12 +23417,12 @@ void ImGui::DebugNodeFontGlyphsForSrcMask(ImFont* font, ImFontBaked* baked, int 
 
         int count = 0;
         for (unsigned int n = 0; n < 256; n++)
-            if (const ImFontGlyph* glyph = baked->IsGlyphLoaded((ImWchar)(base + n)) ? baked->FindGlyph((ImWchar)(base + n)) : NULL)
+            if (const ImFontGlyph* glyph = baked->IsGlyphLoaded(static_cast<ImWchar>(base + n)) ? baked->FindGlyph(static_cast<ImWchar>(base + n)) : NULL)
                 if (src_mask & (1 << glyph->SourceIdx))
                     count++;
         if (count <= 0)
             continue;
-        if (!TreeNode((void*)(intptr_t)base, "U+%04X..U+%04X (%d %s)", base, base + 255, count, count > 1 ? "glyphs" : "glyph"))
+        if (!TreeNode((void*)static_cast<intptr_t>(base), "U+%04X..U+%04X (%d %s)", base, base + 255, count, count > 1 ? "glyphs" : "glyph"))
             continue;
 
         // Draw a 16x16 grid of glyphs
@@ -23433,11 +23433,11 @@ void ImGui::DebugNodeFontGlyphsForSrcMask(ImFont* font, ImFontBaked* baked, int 
             // available here and thus cannot easily generate a zero-terminated UTF-8 encoded string.
             ImVec2 cell_p1(base_pos.x + (n % 16) * (cell_size + cell_spacing), base_pos.y + (n / 16) * (cell_size + cell_spacing));
             ImVec2 cell_p2(cell_p1.x + cell_size, cell_p1.y + cell_size);
-            const ImFontGlyph* glyph = baked->IsGlyphLoaded((ImWchar)(base + n)) ? baked->FindGlyph((ImWchar)(base + n)) : NULL;
+            const ImFontGlyph* glyph = baked->IsGlyphLoaded(static_cast<ImWchar>(base + n)) ? baked->FindGlyph(static_cast<ImWchar>(base + n)) : NULL;
             draw_list->AddRect(cell_p1, cell_p2, glyph ? IM_COL32(255, 255, 255, 100) : IM_COL32(255, 255, 255, 50));
             if (!glyph || (src_mask & (1 << glyph->SourceIdx)) == 0)
                 continue;
-            font->RenderChar(draw_list, cell_size, cell_p1, glyph_col, (ImWchar)(base + n));
+            font->RenderChar(draw_list, cell_size, cell_p1, glyph_col, static_cast<ImWchar>(base + n));
             if (IsMouseHoveringRect(cell_p1, cell_p2) && BeginTooltip())
             {
                 DebugNodeFontGlyph(font, glyph);
@@ -23523,7 +23523,7 @@ void ImGui::DebugNodeViewport(ImGuiViewportP* viewport)
 {
     ImGuiContext& g = *GImGui;
     SetNextItemOpen(true, ImGuiCond_Once);
-    bool open = TreeNode((void*)(intptr_t)viewport->ID, "Viewport #%d, ID: 0x%08X, Parent: 0x%08X, Window: \"%s\"", viewport->Idx, viewport->ID, viewport->ParentViewportId, viewport->Window ? viewport->Window->Name : "N/A");
+    bool open = TreeNode((void*)static_cast<intptr_t>(viewport->ID), "Viewport #%d, ID: 0x%08X, Parent: 0x%08X, Window: \"%s\"", viewport->Idx, viewport->ID, viewport->ParentViewportId, viewport->Window ? viewport->Window->Name : "N/A");
     if (IsItemHovered())
         g.DebugMetricsConfig.HighlightViewportID = viewport->ID;
     if (open)
@@ -23962,7 +23962,7 @@ void ImGui::UpdateDebugToolItemPicker()
     }
     for (int mouse_button = 0; mouse_button < 3; mouse_button++)
         if (change_mapping && IsMouseClicked(mouse_button))
-            g.DebugItemPickerMouseButton = (ImU8)mouse_button;
+            g.DebugItemPickerMouseButton = static_cast<ImU8>(mouse_button);
     SetNextWindowBgAlpha(0.70f);
     if (!BeginTooltip())
         return;
@@ -24062,10 +24062,10 @@ void ImGui::DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* dat
         switch (data_type)
         {
         case ImGuiDataType_S32:
-            ImFormatStringToTempBuffer(&result, &result_end, "%d", (int)(intptr_t)data_id);
+            ImFormatStringToTempBuffer(&result, &result_end, "%d", static_cast<int>((intptr_t)data_id));
             break;
         case ImGuiDataType_String:
-            ImFormatStringToTempBuffer(&result, &result_end, "%.*s", data_id_end ? (int)((const char*)data_id_end - (const char*)data_id) : (int)ImStrlen((const char*)data_id), (const char*)data_id);
+            ImFormatStringToTempBuffer(&result, &result_end, "%.*s", data_id_end ? static_cast<int>((const char*)data_id_end - (const char*)data_id) : static_cast<int>(ImStrlen((const char*)data_id)), static_cast<const char*>(data_id));
             break;
         case ImGuiDataType_Pointer:
             ImFormatStringToTempBuffer(&result, &result_end, "(void*)0x%p", data_id);
@@ -24082,7 +24082,7 @@ void ImGui::DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* dat
     }
     info->QuerySuccess = true;
     if (info->DataType == -1)
-        info->DataType = (ImS8)data_type;
+        info->DataType = static_cast<ImS8>(data_type);
 }
 
 static int DebugItemPathQuery_FormatLevelInfo(ImGuiDebugItemPathQuery* query, int n, bool format_for_ui, char* buf, size_t buf_size)
@@ -24120,7 +24120,7 @@ static const char* DebugItemPathQuery_GetResultAsPath(ImGuiDebugItemPathQuery* q
             if (c < 256 || !hex_encode_non_ascii_chars)
                 buf->append(p, p_next);
             else for (; p < p_next; p++)
-                buf->appendf("\\x%02x", (unsigned char)*p);
+                buf->appendf("\\x%02x", static_cast<unsigned char>(*p));
             p = p_next;
         }
     }
@@ -24148,7 +24148,7 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
     MetricsHelpMarker("Hover an item with the mouse to display elements of the ID Stack leading to the item's final ID.\nEach level of the stack correspond to a PushID() call.\nAll levels of the stack are hashed together to make the final ID of a widget (ID displayed at the bottom level of the stack).\nRead FAQ entry about the ID stack for details.");
 
     // Ctrl+C to copy path
-    const float time_since_copy = (float)g.Time - tool->CopyToClipboardLastTime;
+    const float time_since_copy = static_cast<float>(g.Time) - tool->CopyToClipboardLastTime;
     PushStyleVarY(ImGuiStyleVar_FramePadding, 0.0f);
     Checkbox("Hex-encode non-ASCII", &tool->OptHexEncodeNonAsciiChars);
     SameLine();
@@ -24158,7 +24158,7 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
     TextColored((time_since_copy >= 0.0f && time_since_copy < 0.75f && ImFmod(time_since_copy, 0.25f) < 0.25f * 0.5f) ? ImVec4(1.f, 1.f, 0.3f, 1.f) : ImVec4(), "*COPIED*");
     if (tool->OptCopyToClipboardOnCtrlC && Shortcut(ImGuiMod_Ctrl | ImGuiKey_C, ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverFocused))
     {
-        tool->CopyToClipboardLastTime = (float)g.Time;
+        tool->CopyToClipboardLastTime = static_cast<float>(g.Time);
         SetClipboardText(result_path);
     }
 

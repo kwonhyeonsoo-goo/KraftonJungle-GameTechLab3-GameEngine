@@ -1,4 +1,4 @@
-// [DEAR IMGUI]
+﻿// [DEAR IMGUI]
 // This is a slightly modified version of stb_rect_pack.h 1.01.
 // Grep for [DEAR IMGUI] to find the changes.
 // 
@@ -527,8 +527,8 @@ static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, i
 
 static int STBRP__CDECL rect_height_compare(const void *a, const void *b)
 {
-   const stbrp_rect *p = (const stbrp_rect *) a;
-   const stbrp_rect *q = (const stbrp_rect *) b;
+   const stbrp_rect *p = static_cast<const stbrp_rect*>(a);
+   const stbrp_rect *q = static_cast<const stbrp_rect*>(b);
    if (p->h > q->h)
       return -1;
    if (p->h < q->h)
@@ -538,8 +538,8 @@ static int STBRP__CDECL rect_height_compare(const void *a, const void *b)
 
 static int STBRP__CDECL rect_original_order(const void *a, const void *b)
 {
-   const stbrp_rect *p = (const stbrp_rect *) a;
-   const stbrp_rect *q = (const stbrp_rect *) b;
+   const stbrp_rect *p = static_cast<const stbrp_rect*>(a);
+   const stbrp_rect *q = static_cast<const stbrp_rect*>(b);
    return (p->was_packed < q->was_packed) ? -1 : (p->was_packed > q->was_packed);
 }
 

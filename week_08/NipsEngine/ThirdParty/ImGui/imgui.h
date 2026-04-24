@@ -1,4 +1,4 @@
-// dear imgui, v1.92.7 WIP
+﻿// dear imgui, v1.92.7 WIP
 // (headers)
 
 // Help:
@@ -302,8 +302,8 @@ struct ImVec2
     float                                   x, y;
     constexpr ImVec2()                      : x(0.0f), y(0.0f) { }
     constexpr ImVec2(float _x, float _y)    : x(_x), y(_y) { }
-    float& operator[] (size_t idx)          { IM_ASSERT(idx == 0 || idx == 1); return ((float*)(void*)(char*)this)[idx]; } // We very rarely use this [] operator, so the assert overhead is fine.
-    float  operator[] (size_t idx) const    { IM_ASSERT(idx == 0 || idx == 1); return ((const float*)(const void*)(const char*)this)[idx]; }
+    float& operator[] (size_t idx)          { IM_ASSERT(idx == 0 || idx == 1); return static_cast<float*>((void*)(char*)this)[idx]; } // We very rarely use this [] operator, so the assert overhead is fine.
+    float  operator[] (size_t idx) const    { IM_ASSERT(idx == 0 || idx == 1); return static_cast<const float*>((const void*)(const char*)this)[idx]; }
 #ifdef IM_VEC2_CLASS_EXTRA
     IM_VEC2_CLASS_EXTRA     // Define additional constructors and implicit cast operators in imconfig.h to convert back and forth between your math types and ImVec2.
 #endif
@@ -2305,7 +2305,7 @@ struct ImVector
     // Constructors, destructor
     inline ImVector()                                       { Size = Capacity = 0; Data = NULL; }
     inline ImVector(const ImVector<T>& src)                 { Size = Capacity = 0; Data = NULL; operator=(src); }
-    inline ImVector<T>& operator=(const ImVector<T>& src)   { clear(); resize(src.Size); if (Data && src.Data) memcpy(Data, src.Data, (size_t)Size * sizeof(T)); return *this; }
+    inline ImVector<T>& operator=(const ImVector<T>& src)   { clear(); resize(src.Size); if (Data && src.Data) memcpy(Data, src.Data, static_cast<size_t>(Size) * sizeof(T)); return *this; }
     inline ~ImVector()                                      { if (Data) IM_FREE(Data); } // Important: does not destruct anything
 
     inline void         clear()                             { if (Data) { Size = Capacity = 0; IM_FREE(Data); Data = NULL; } }  // Important: does not destruct anything
@@ -2314,8 +2314,8 @@ struct ImVector
 
     inline bool         empty() const                       { return Size == 0; }
     inline int          size() const                        { return Size; }
-    inline int          size_in_bytes() const               { return Size * (int)sizeof(T); }
-    inline int          max_size() const                    { return 0x7FFFFFFF / (int)sizeof(T); }
+    inline int          size_in_bytes() const               { return Size * static_cast<int>(sizeof(T)); }
+    inline int          max_size() const                    { return 0x7FFFFFFF / static_cast<int>(sizeof(T)); }
     inline int          capacity() const                    { return Capacity; }
     inline T&           operator[](int i)                   { IM_ASSERT(i >= 0 && i < Size); return Data[i]; }
     inline const T&     operator[](int i) const             { IM_ASSERT(i >= 0 && i < Size); return Data[i]; }
@@ -2334,24 +2334,24 @@ struct ImVector
     inline void         resize(int new_size)                { if (new_size > Capacity) reserve(_grow_capacity(new_size)); Size = new_size; }
     inline void         resize(int new_size, const T& v)    { if (new_size > Capacity) reserve(_grow_capacity(new_size)); if (new_size > Size) for (int n = Size; n < new_size; n++) memcpy(&Data[n], &v, sizeof(v)); Size = new_size; }
     inline void         shrink(int new_size)                { IM_ASSERT(new_size <= Size); Size = new_size; } // Resize a vector to a smaller size, guaranteed not to cause a reallocation
-    inline void         reserve(int new_capacity)           { if (new_capacity <= Capacity) return; T* new_data = (T*)IM_ALLOC((size_t)new_capacity * sizeof(T)); if (Data) { memcpy(new_data, Data, (size_t)Size * sizeof(T)); IM_FREE(Data); } Data = new_data; Capacity = new_capacity; }
-    inline void         reserve_discard(int new_capacity)   { if (new_capacity <= Capacity) return; if (Data) IM_FREE(Data); Data = (T*)IM_ALLOC((size_t)new_capacity * sizeof(T)); Capacity = new_capacity; }
+    inline void         reserve(int new_capacity)           { if (new_capacity <= Capacity) return; T* new_data = static_cast<T*>(IM_ALLOC((size_t)new_capacity * sizeof(T))); if (Data) { memcpy(new_data, Data, static_cast<size_t>(Size) * sizeof(T)); IM_FREE(Data); } Data = new_data; Capacity = new_capacity; }
+    inline void         reserve_discard(int new_capacity)   { if (new_capacity <= Capacity) return; if (Data) IM_FREE(Data); Data = static_cast<T*>(IM_ALLOC((size_t)new_capacity * sizeof(T))); Capacity = new_capacity; }
 
     // NB: It is illegal to call push_back/push_front/insert with a reference pointing inside the ImVector data itself! e.g. v.push_back(v[10]) is forbidden.
     inline void         push_back(const T& v)               { if (Size == Capacity) reserve(_grow_capacity(Size + 1)); memcpy(&Data[Size], &v, sizeof(v)); Size++; }
     inline void         pop_back()                          { IM_ASSERT(Size > 0); Size--; }
     inline void         push_front(const T& v)              { if (Size == 0) push_back(v); else insert(Data, v); }
-    inline T*           erase(const T* it)                  { IM_ASSERT(it >= Data && it < Data + Size); const ptrdiff_t off = it - Data; memmove(Data + off, Data + off + 1, ((size_t)Size - (size_t)off - 1) * sizeof(T)); Size--; return Data + off; }
-    inline T*           erase(const T* it, const T* it_last){ IM_ASSERT(it >= Data && it < Data + Size && it_last >= it && it_last <= Data + Size); const ptrdiff_t count = it_last - it; const ptrdiff_t off = it - Data; memmove(Data + off, Data + off + count, ((size_t)Size - (size_t)off - (size_t)count) * sizeof(T)); Size -= (int)count; return Data + off; }
+    inline T*           erase(const T* it)                  { IM_ASSERT(it >= Data && it < Data + Size); const ptrdiff_t off = it - Data; memmove(Data + off, Data + off + 1, (static_cast<size_t>(Size) - static_cast<size_t>(off) - 1) * sizeof(T)); Size--; return Data + off; }
+    inline T*           erase(const T* it, const T* it_last){ IM_ASSERT(it >= Data && it < Data + Size && it_last >= it && it_last <= Data + Size); const ptrdiff_t count = it_last - it; const ptrdiff_t off = it - Data; memmove(Data + off, Data + off + count, (static_cast<size_t>(Size) - static_cast<size_t>(off) - static_cast<size_t>(count)) * sizeof(T)); Size -= static_cast<int>(count); return Data + off; }
     inline T*           erase_unsorted(const T* it)         { IM_ASSERT(it >= Data && it < Data + Size);  const ptrdiff_t off = it - Data; if (it < Data + Size - 1) memcpy(Data + off, Data + Size - 1, sizeof(T)); Size--; return Data + off; }
-    inline T*           insert(const T* it, const T& v)     { IM_ASSERT(it >= Data && it <= Data + Size); const ptrdiff_t off = it - Data; if (Size == Capacity) reserve(_grow_capacity(Size + 1)); if (off < (int)Size) memmove(Data + off + 1, Data + off, ((size_t)Size - (size_t)off) * sizeof(T)); memcpy(&Data[off], &v, sizeof(v)); Size++; return Data + off; }
+    inline T*           insert(const T* it, const T& v)     { IM_ASSERT(it >= Data && it <= Data + Size); const ptrdiff_t off = it - Data; if (Size == Capacity) reserve(_grow_capacity(Size + 1)); if (off < (int)Size) memmove(Data + off + 1, Data + off, (static_cast<size_t>(Size) - static_cast<size_t>(off)) * sizeof(T)); memcpy(&Data[off], &v, sizeof(v)); Size++; return Data + off; }
     inline bool         contains(const T& v) const          { const T* data = Data;  const T* data_end = Data + Size; while (data < data_end) if (*data++ == v) return true; return false; }
     inline T*           find(const T& v)                    { T* data = Data;  const T* data_end = Data + Size; while (data < data_end) if (*data == v) break; else ++data; return data; }
     inline const T*     find(const T& v) const              { const T* data = Data;  const T* data_end = Data + Size; while (data < data_end) if (*data == v) break; else ++data; return data; }
-    inline int          find_index(const T& v) const        { const T* data_end = Data + Size; const T* it = find(v); if (it == data_end) return -1; const ptrdiff_t off = it - Data; return (int)off; }
+    inline int          find_index(const T& v) const        { const T* data_end = Data + Size; const T* it = find(v); if (it == data_end) return -1; const ptrdiff_t off = it - Data; return static_cast<int>(off); }
     inline bool         find_erase(const T& v)              { const T* it = find(v); if (it < Data + Size) { erase(it); return true; } return false; }
     inline bool         find_erase_unsorted(const T& v)     { const T* it = find(v); if (it < Data + Size) { erase_unsorted(it); return true; } return false; }
-    inline int          index_from_ptr(const T* it) const   { IM_ASSERT(it >= Data && it < Data + Size); const ptrdiff_t off = it - Data; return (int)off; }
+    inline int          index_from_ptr(const T* it) const   { IM_ASSERT(it >= Data && it < Data + Size); const ptrdiff_t off = it - Data; return static_cast<int>(off); }
 };
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
@@ -2810,7 +2810,7 @@ struct ImGuiWindowClass
     bool                DockingAlwaysTabBar;        // Set to true to enforce single floating windows of this class always having their own docking node (equivalent of setting the global io.ConfigDockingAlwaysTabBar)
     bool                DockingAllowUnclassed;      // Set to true to allow windows of this class to be docked/merged with an unclassed window. // FIXME-DOCK: Move to DockNodeFlags override?
 
-    ImGuiWindowClass() { memset((void*)this, 0, sizeof(*this)); ParentViewportId = (ImGuiID)-1; DockingAllowUnclassed = true; }
+    ImGuiWindowClass() { memset((void*)this, 0, sizeof(*this)); ParentViewportId = static_cast<ImGuiID>(-1); DockingAllowUnclassed = true; }
 };
 
 // Data payload for Drag and Drop operations: AcceptDragDropPayload(), GetDragDropPayload()
@@ -3095,8 +3095,8 @@ struct ImColor
     constexpr ImColor()                                             { }
     constexpr ImColor(float r, float g, float b, float a = 1.0f)    : Value(r, g, b, a) { }
     constexpr ImColor(const ImVec4& col)                            : Value(col) {}
-    constexpr ImColor(int r, int g, int b, int a = 255)             : Value((float)r * (1.0f / 255.0f), (float)g * (1.0f / 255.0f), (float)b * (1.0f / 255.0f), (float)a* (1.0f / 255.0f)) {}
-    constexpr ImColor(ImU32 rgba)                                   : Value((float)((rgba >> IM_COL32_R_SHIFT) & 0xFF) * (1.0f / 255.0f), (float)((rgba >> IM_COL32_G_SHIFT) & 0xFF) * (1.0f / 255.0f), (float)((rgba >> IM_COL32_B_SHIFT) & 0xFF) * (1.0f / 255.0f), (float)((rgba >> IM_COL32_A_SHIFT) & 0xFF) * (1.0f / 255.0f)) {}
+    constexpr ImColor(int r, int g, int b, int a = 255)             : Value(static_cast<float>(r) * (1.0f / 255.0f), static_cast<float>(g) * (1.0f / 255.0f), static_cast<float>(b) * (1.0f / 255.0f), static_cast<float>(a)* (1.0f / 255.0f)) {}
+    constexpr ImColor(ImU32 rgba)                                   : Value(static_cast<float>((rgba >> IM_COL32_R_SHIFT) & 0xFF) * (1.0f / 255.0f), static_cast<float>((rgba >> IM_COL32_G_SHIFT) & 0xFF) * (1.0f / 255.0f), static_cast<float>((rgba >> IM_COL32_B_SHIFT) & 0xFF) * (1.0f / 255.0f), static_cast<float>((rgba >> IM_COL32_A_SHIFT) & 0xFF) * (1.0f / 255.0f)) {}
     inline operator ImU32() const                                   { return ImGui::ColorConvertFloat4ToU32(Value); }
     inline operator ImVec4() const                                  { return Value; }
 
@@ -3534,7 +3534,7 @@ struct ImDrawList
     IMGUI_API void  PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d, const ImVec2& uv_a, const ImVec2& uv_b, const ImVec2& uv_c, const ImVec2& uv_d, ImU32 col);
     inline    void  PrimWriteVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)    { _VtxWritePtr->pos = pos; _VtxWritePtr->uv = uv; _VtxWritePtr->col = col; _VtxWritePtr++; _VtxCurrentIdx++; }
     inline    void  PrimWriteIdx(ImDrawIdx idx)                                     { *_IdxWritePtr = idx; _IdxWritePtr++; }
-    inline    void  PrimVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)         { PrimWriteIdx((ImDrawIdx)_VtxCurrentIdx); PrimWriteVtx(pos, uv, col); } // Write vertex with unique index
+    inline    void  PrimVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)         { PrimWriteIdx(static_cast<ImDrawIdx>(_VtxCurrentIdx)); PrimWriteVtx(pos, uv, col); } // Write vertex with unique index
 
     // Obsolete names
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
@@ -3738,13 +3738,13 @@ struct ImFontGlyphRangesBuilder
     ImVector<ImU32> UsedChars;            // Store 1-bit per Unicode code point (0=unused, 1=used)
 
     ImFontGlyphRangesBuilder()              { Clear(); }
-    inline void     Clear()                 { int size_in_bytes = (IM_UNICODE_CODEPOINT_MAX + 1) / 8; UsedChars.resize(size_in_bytes / (int)sizeof(ImU32)); memset(UsedChars.Data, 0, (size_t)size_in_bytes); }
-    inline bool     GetBit(size_t n) const  { int off = (int)(n >> 5); ImU32 mask = 1u << (n & 31); return (UsedChars[off] & mask) != 0; }  // Get bit n in the array
-    inline void     SetBit(size_t n)        { int off = (int)(n >> 5); ImU32 mask = 1u << (n & 31); UsedChars[off] |= mask; }               // Set bit n in the array
-    inline void     AddChar(ImWchar c)      { SetBit(c); }                      // Add character
-    IMGUI_API void  AddText(const char* text, const char* text_end = NULL);     // Add string (each character of the UTF-8 string are added)
-    IMGUI_API void  AddRanges(const ImWchar* ranges);                           // Add ranges, e.g. builder.AddRanges(ImFontAtlas::GetGlyphRangesDefault()) to force add all of ASCII/Latin+Ext
-    IMGUI_API void  BuildRanges(ImVector<ImWchar>* out_ranges);                 // Output new ranges
+    inline void     Clear()                 { int size_in_bytes = (IM_UNICODE_CODEPOINT_MAX + 1) / 8; UsedChars.resize(size_in_bytes / static_cast<int>(sizeof(ImU32))); memset(UsedChars.Data, 0, static_cast<size_t>(size_in_bytes)); }
+    inline bool     GetBit(size_t n) const  { int off = static_cast<int>(n >> 5); ImU32 mask = 1u << (n & 31); return (UsedChars[off] & mask) != 0; } // Get bit n in the array
+    inline void     SetBit(size_t n)        { int off = static_cast<int>(n >> 5); ImU32 mask = 1u << (n & 31); UsedChars[off] |= mask; }              // Set bit n in the array
+    inline void     AddChar(ImWchar c)      { SetBit(c); }                                                                                            // Add character
+    IMGUI_API void  AddText(const char* text, const char* text_end = NULL);                                                                           // Add string (each character of the UTF-8 string are added)
+    IMGUI_API void  AddRanges(const ImWchar* ranges);                                                                                                 // Add ranges, e.g. builder.AddRanges(ImFontAtlas::GetGlyphRangesDefault()) to force add all of ASCII/Latin+Ext
+    IMGUI_API void  BuildRanges(ImVector<ImWchar>* out_ranges);                                                                                       // Output new ranges
 };
 
 // An opaque identifier to a rectangle in the atlas. -1 when invalid.

@@ -1,4 +1,4 @@
-#include "RenderCollector.h"
+﻿#include "RenderCollector.h"
 
 #include "Render/LineBatcher.h"
 #include "GameFramework/World.h"
@@ -453,7 +453,7 @@ void FRenderCollector::CollectGizmo(UGizmoComponent* Gizmo, const FShowFlags& Sh
 		Material->SetVector4("GizmoColorTint", FVector4(1.0f, 1.0f, 1.0f, 1.0f));
 		Material->SetBool("bIsInnerGizmo", bInner);
 		Material->SetBool("bClicking", bHolding);
-		Material->SetUInt("SelectedAxis", (SelectedAxis >= 0 && bIsActiveOperation) ? (uint32)SelectedAxis : 0xffffffffu);
+		Material->SetUInt("SelectedAxis", (SelectedAxis >= 0 && bIsActiveOperation) ? static_cast<uint32>(SelectedAxis) : 0xffffffffu);
 		Material->SetFloat("HoveredAxisOpacity", 0.3f);
 
 		return Cmd;

@@ -1,4 +1,4 @@
-// dear imgui, v1.92.7 WIP
+﻿// dear imgui, v1.92.7 WIP
 // (demo code)
 
 // Help:
@@ -495,7 +495,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             // The "NoMouse" option can get us stuck with a disabled mouse! Let's provide an alternative way to fix it:
             if (io.ConfigFlags & ImGuiConfigFlags_NoMouse)
             {
-                if (fmodf((float)ImGui::GetTime(), 0.40f) < 0.20f)
+                if (fmodf(static_cast<float>(ImGui::GetTime()), 0.40f) < 0.20f)
                 {
                     ImGui::SameLine();
                     ImGui::Text("<<PRESS SPACE TO DISABLE>>");
@@ -879,7 +879,7 @@ static ExampleTreeNode* ExampleTree_CreateDemoTree()
     {
         snprintf(name_buf, IM_COUNTOF(name_buf), "%s %d", category_names[idx_L0 / (ROOT_ITEMS_COUNT / category_count)], idx_L0 % (ROOT_ITEMS_COUNT / category_count));
         ExampleTreeNode* node_L1 = ExampleTree_CreateNode(name_buf, ++uid, node_L0);
-        const int number_of_childs = (int)strlen(node_L1->Name);
+        const int number_of_childs = static_cast<int>(strlen(node_L1->Name));
         for (int idx_L1 = 0; idx_L1 < number_of_childs; idx_L1++)
         {
             snprintf(name_buf, IM_COUNTOF(name_buf), "Child %d", idx_L1);
@@ -937,9 +937,9 @@ static void DemoWindowWidgetsBasic()
             if (i > 0)
                 ImGui::SameLine();
             ImGui::PushID(i);
-            ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(i / 7.0f, 0.6f, 0.6f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(i / 7.0f, 0.7f, 0.7f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(i / 7.0f, 0.8f, 0.8f));
+            ImGui::PushStyleColor(ImGuiCol_Button, static_cast<ImVec4>(ImColor::HSV(i / 7.0f, 0.6f, 0.6f)));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, static_cast<ImVec4>(ImColor::HSV(i / 7.0f, 0.7f, 0.7f)));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, static_cast<ImVec4>(ImColor::HSV(i / 7.0f, 0.8f, 0.8f)));
             ImGui::Button("Click");
             ImGui::PopStyleColor(3);
             ImGui::PopID();
@@ -1456,7 +1456,7 @@ static void DemoWindowWidgetsComboBoxes()
 
         // Simplified one-liner Combo() using an accessor function
         static int item_current_4 = 0;
-        ImGui::Combo("combo 5 (function)", &item_current_4, [](void* data, int n) { return ((const char**)data)[n]; }, items, IM_COUNTOF(items));
+        ImGui::Combo("combo 5 (function)", &item_current_4, [](void* data, int n) { return static_cast<const char**>(data)[n]; }, items, IM_COUNTOF(items));
 
         ImGui::TreePop();
     }
@@ -1510,9 +1510,9 @@ static void DemoWindowWidgetsDataTypes()
         static short  s16_v = 32767;
         static ImU16  u16_v = 65535;
         static ImS32  s32_v = -1;
-        static ImU32  u32_v = (ImU32)-1;
+        static ImU32  u32_v = static_cast<ImU32>(-1);
         static ImS64  s64_v = -1;
-        static ImU64  u64_v = (ImU64)-1;
+        static ImU64  u64_v = static_cast<ImU64>(-1);
         static float  f32_v = 0.123f;
         static double f64_v = 90000.01234567890123456789;
 
@@ -1680,7 +1680,7 @@ static void DemoWindowWidgetsDragAndDrop()
                     if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_DEMO_CELL"))
                     {
                         IM_ASSERT(payload->DataSize == sizeof(int));
-                        int payload_n = *(const int*)payload->Data;
+                        int payload_n = *static_cast<const int*>(payload->Data);
                         if (mode == Mode_Copy)
                         {
                             names[n] = names[payload_n];
@@ -1876,8 +1876,8 @@ static void DemoWindowWidgetsImages()
         ImTextureRef my_tex_id = io.Fonts->TexRef;
 
         // Regular user code should never have to care about TexData-> fields, but since we want to display the entire texture here, we pull Width/Height from it.
-        float my_tex_w = (float)io.Fonts->TexData->Width;
-        float my_tex_h = (float)io.Fonts->TexData->Height;
+        float my_tex_w = static_cast<float>(io.Fonts->TexData->Width);
+        float my_tex_h = static_cast<float>(io.Fonts->TexData->Height);
 
         {
             ImGui::Text("%.0fx%.0f", my_tex_w, my_tex_h);
@@ -2098,7 +2098,7 @@ static void DemoWindowWidgetsPlotting()
             float average = 0.0f;
             for (int n = 0; n < IM_COUNTOF(values); n++)
                 average += values[n];
-            average /= (float)IM_COUNTOF(values);
+            average /= static_cast<float>(IM_COUNTOF(values));
             char overlay[32];
             sprintf(overlay, "avg %f", average);
             ImGui::PlotLines("Lines", values, IM_COUNTOF(values), values_offset, overlay, -1.0f, 1.0f, ImVec2(0, 80.0f));
@@ -2150,12 +2150,12 @@ static void DemoWindowWidgetsProgressBars()
         ImGui::Text("Progress Bar");
 
         char buf[32];
-        sprintf(buf, "%d/%d", (int)(progress * 1753), 1753);
+        sprintf(buf, "%d/%d", static_cast<int>(progress * 1753), 1753);
         ImGui::ProgressBar(progress, ImVec2(0.f, 0.f), buf);
 
         // Pass an animated negative value, e.g. -1.0f * (float)ImGui::GetTime() is the recommended value.
         // Adjust the factor if you want to adjust the animation speed.
-        ImGui::ProgressBar(-1.0f * (float)ImGui::GetTime(), ImVec2(0.0f, 0.0f), "Searching..");
+        ImGui::ProgressBar(-1.0f * static_cast<float>(ImGui::GetTime()), ImVec2(0.0f, 0.0f), "Searching..");
         ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
         ImGui::Text("Indeterminate");
 
@@ -2492,7 +2492,7 @@ static void DemoWindowWidgetsSelectables()
             static char selected[4][4] = { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
 
             // Add in a bit of silly fun...
-            const float time = (float)ImGui::GetTime();
+            const float time = static_cast<float>(ImGui::GetTime());
             const bool winning_state = memchr(selected, 0, sizeof(selected)) == NULL; // If all cells are selected...
             if (winning_state)
                 ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.5f + 0.5f * cosf(time * 2.0f), 0.5f + 0.5f * sinf(time * 3.0f)));
@@ -2534,7 +2534,7 @@ static void DemoWindowWidgetsSelectables()
             {
                 for (int x = 0; x < 3; x++)
                 {
-                    ImVec2 alignment = ImVec2((float)x / 2.0f, (float)y / 2.0f);
+                    ImVec2 alignment = ImVec2(static_cast<float>(x) / 2.0f, static_cast<float>(y) / 2.0f);
                     char name[32];
                     sprintf(name, "(%.1f,%.1f)", alignment.x, alignment.y);
                     if (x > 0) ImGui::SameLine();
@@ -2579,7 +2579,7 @@ struct ExampleSelectionWithDeletion : ImGuiSelectionBasicStorage
             return -1;
 
         // If focused item is not selected...
-        const int focused_idx = (int)ms_io->NavIdItem;  // Index of currently focused item
+        const int focused_idx = static_cast<int>(ms_io->NavIdItem);  // Index of currently focused item
         if (ms_io->NavIdSelected == false)  // This is merely a shortcut, == Contains(adapter->IndexToStorage(items, focused_idx))
         {
             ms_io->RangeSrcReset = true;    // Request to recover RangeSrc from NavId next frame. Would be ok to reset even when NavIdSelected==true, but it would take an extra frame to recover RangeSrc when deleting a selected item.
@@ -2663,18 +2663,18 @@ struct ExampleDualListBox
     {
         // In this example we store item id in selection (instead of item index)
         Selections[side].UserData = Items[side].Data;
-        Selections[side].AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { ImGuiID* items = (ImGuiID*)self->UserData; return items[idx]; };
+        Selections[side].AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { ImGuiID* items = static_cast<ImGuiID*>(self->UserData); return items[idx]; };
         Selections[side].ApplyRequests(ms_io);
     }
     static int IMGUI_CDECL CompareItemsByValue(const void* lhs, const void* rhs)
     {
-        const int* a = (const int*)lhs;
-        const int* b = (const int*)rhs;
+        const int* a = static_cast<const int*>(lhs);
+        const int* b = static_cast<const int*>(rhs);
         return *a - *b;
     }
     void SortItems(int n)
     {
-        qsort(Items[n].Data, (size_t)Items[n].Size, sizeof(Items[n][0]), CompareItemsByValue);
+        qsort(Items[n].Data, static_cast<size_t>(Items[n].Size), sizeof(Items[n][0]), CompareItemsByValue);
     }
     void Show()
     {
@@ -2859,7 +2859,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                 {
                     char label[64];
                     sprintf(label, "Object %05d: %s", n, ExampleNames[n % IM_COUNTOF(ExampleNames)]);
-                    bool item_is_selected = selection.Contains((ImGuiID)n);
+                    bool item_is_selected = selection.Contains(static_cast<ImGuiID>(n));
                     ImGui::SetNextItemSelectionUserData(n);
                     ImGui::Selectable(label, item_is_selected);
                 }
@@ -2892,14 +2892,14 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                 ImGuiListClipper clipper;
                 clipper.Begin(ITEMS_COUNT);
                 if (ms_io->RangeSrcItem != -1)
-                    clipper.IncludeItemByIndex((int)ms_io->RangeSrcItem); // Ensure RangeSrc item is not clipped.
+                    clipper.IncludeItemByIndex(static_cast<int>(ms_io->RangeSrcItem)); // Ensure RangeSrc item is not clipped.
                 while (clipper.Step())
                 {
                     for (int n = clipper.DisplayStart; n < clipper.DisplayEnd; n++)
                     {
                         char label[64];
                         sprintf(label, "Object %05d: %s", n, ExampleNames[n % IM_COUNTOF(ExampleNames)]);
-                        bool item_is_selected = selection.Contains((ImGuiID)n);
+                        bool item_is_selected = selection.Contains(static_cast<ImGuiID>(n));
                         ImGui::SetNextItemSelectionUserData(n);
                         ImGui::Selectable(label, item_is_selected);
                     }
@@ -2927,8 +2927,8 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
             // Use a custom selection.Adapter: store item identifier in Selection (instead of index)
             static ImVector<ImGuiID> items;
             static ExampleSelectionWithDeletion selection;
-            selection.UserData = (void*)&items;
-            selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { ImVector<ImGuiID>* p_items = (ImVector<ImGuiID>*)self->UserData; return (*p_items)[idx]; }; // Index -> ID
+            selection.UserData = static_cast<void*>(&items);
+            selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self, int idx) { ImVector<ImGuiID>* p_items = static_cast<ImVector<ImGuiID>*>(self->UserData); return (*p_items)[idx]; }; // Index -> ID
 
             ImGui::Text("Added features:");
             ImGui::BulletText("Dynamic list with Delete key support.");
@@ -2987,7 +2987,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
             static ExampleDualListBox dlb;
             if (dlb.Items[0].Size == 0 && dlb.Items[1].Size == 0)
                 for (int item_id = 0; item_id < IM_COUNTOF(ExampleNames); item_id++)
-                    dlb.Items[0].push_back((ImGuiID)item_id);
+                    dlb.Items[0].push_back(static_cast<ImGuiID>(item_id));
 
             // Show
             dlb.Show();
@@ -3017,7 +3017,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                 ImGuiListClipper clipper;
                 clipper.Begin(ITEMS_COUNT);
                 if (ms_io->RangeSrcItem != -1)
-                    clipper.IncludeItemByIndex((int)ms_io->RangeSrcItem); // Ensure RangeSrc item is not clipped.
+                    clipper.IncludeItemByIndex(static_cast<int>(ms_io->RangeSrcItem)); // Ensure RangeSrc item is not clipped.
                 while (clipper.Step())
                 {
                     for (int n = clipper.DisplayStart; n < clipper.DisplayEnd; n++)
@@ -3027,7 +3027,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                         ImGui::PushID(n);
                         char label[64];
                         sprintf(label, "Object %05d: %s", n, ExampleNames[n % IM_COUNTOF(ExampleNames)]);
-                        bool item_is_selected = selection.Contains((ImGuiID)n);
+                        bool item_is_selected = selection.Contains(static_cast<ImGuiID>(n));
                         ImGui::SetNextItemSelectionUserData(n);
                         ImGui::Selectable(label, item_is_selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap);
                         ImGui::TableNextColumn();
@@ -3062,8 +3062,8 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
             {
                 ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, -1, IM_COUNTOF(items));
                 ImGuiSelectionExternalStorage storage_wrapper;
-                storage_wrapper.UserData = (void*)items;
-                storage_wrapper.AdapterSetItemSelected = [](ImGuiSelectionExternalStorage* self, int n, bool selected) { bool* array = (bool*)self->UserData; array[n] = selected; };
+                storage_wrapper.UserData = static_cast<void*>(items);
+                storage_wrapper.AdapterSetItemSelected = [](ImGuiSelectionExternalStorage* self, int n, bool selected) { bool* array = static_cast<bool*>(self->UserData); array[n] = selected; };
                 storage_wrapper.ApplyRequests(ms_io);
                 for (int n = 0; n < 20; n++)
                 {
@@ -3112,7 +3112,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                 {
                     char label[64];
                     sprintf(label, "Object %05d: %s", n, ExampleNames[n % IM_COUNTOF(ExampleNames)]);
-                    bool item_is_selected = selection->Contains((ImGuiID)n);
+                    bool item_is_selected = selection->Contains(static_cast<ImGuiID>(n));
                     ImGui::SetNextItemSelectionUserData(n);
                     ImGui::Selectable(label, item_is_selected);
                 }
@@ -3159,13 +3159,13 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                     tree_node_flags |= ImGuiTreeNodeFlags_NavLeftJumpsToParent; // Enable pressing left to jump to parent
                     if (node->Childs.Size == 0)
                         tree_node_flags |= ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_Leaf;
-                    if (selection->Contains((ImGuiID)node->UID))
+                    if (selection->Contains(static_cast<ImGuiID>(node->UID)))
                         tree_node_flags |= ImGuiTreeNodeFlags_Selected;
 
                     // Using SetNextItemStorageID() to specify storage id, so we can easily peek into
                     // the storage holding open/close stage, using our TreeNodeGetOpen/TreeNodeSetOpen() functions.
                     ImGui::SetNextItemSelectionUserData((ImGuiSelectionUserData)(intptr_t)node);
-                    ImGui::SetNextItemStorageID((ImGuiID)node->UID);
+                    ImGui::SetNextItemStorageID(static_cast<ImGuiID>(node->UID));
                     if (ImGui::TreeNodeEx(node->Name, tree_node_flags))
                     {
                         for (ExampleTreeNode* child : node->Childs)
@@ -3184,16 +3184,16 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                 static int TreeCloseAndUnselectChildNodes(ExampleTreeNode* node, ImGuiSelectionBasicStorage* selection, int depth = 0)
                 {
                     // Recursive close (the test for depth == 0 is because we call this on a node that was just closed!)
-                    int unselected_count = selection->Contains((ImGuiID)node->UID) ? 1 : 0;
-                    if (depth == 0 || ImGui::TreeNodeGetOpen((ImGuiID)node->UID))
+                    int unselected_count = selection->Contains(static_cast<ImGuiID>(node->UID)) ? 1 : 0;
+                    if (depth == 0 || ImGui::TreeNodeGetOpen(static_cast<ImGuiID>(node->UID)))
                     {
                         for (ExampleTreeNode* child : node->Childs)
                             unselected_count += TreeCloseAndUnselectChildNodes(child, selection, depth + 1);
-                        ImGui::TreeNodeSetOpen((ImGuiID)node->UID, false);
+                        ImGui::TreeNodeSetOpen(static_cast<ImGuiID>(node->UID), false);
                     }
 
                     // Select root node if any of its child was selected, otherwise unselect
-                    selection->SetItemSelected((ImGuiID)node->UID, (depth == 0 && unselected_count > 0));
+                    selection->SetItemSelected(static_cast<ImGuiID>(node->UID), (depth == 0 && unselected_count > 0));
                     return unselected_count;
                 }
 
@@ -3214,7 +3214,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                             ExampleTreeNode* first_node = (ExampleTreeNode*)(intptr_t)req.RangeFirstItem;
                             ExampleTreeNode* last_node = (ExampleTreeNode*)(intptr_t)req.RangeLastItem;
                             for (ExampleTreeNode* node = first_node; node != NULL; node = TreeGetNextNodeInVisibleOrder(node, last_node))
-                                selection->SetItemSelected((ImGuiID)node->UID, req.Selected);
+                                selection->SetItemSelected(static_cast<ImGuiID>(node->UID), req.Selected);
                         }
                     }
                 }
@@ -3222,8 +3222,8 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                 static void TreeSetAllInOpenNodes(ExampleTreeNode* node, ImGuiSelectionBasicStorage* selection, bool selected)
                 {
                     if (node->Parent != NULL) // Root node isn't visible nor selectable in our scheme
-                        selection->SetItemSelected((ImGuiID)node->UID, selected);
-                    if (node->Parent == NULL || ImGui::TreeNodeGetOpen((ImGuiID)node->UID))
+                        selection->SetItemSelected(static_cast<ImGuiID>(node->UID), selected);
+                    if (node->Parent == NULL || ImGui::TreeNodeGetOpen(static_cast<ImGuiID>(node->UID)))
                         for (ExampleTreeNode* child : node->Childs)
                             TreeSetAllInOpenNodes(child, selection, selected);
                 }
@@ -3243,7 +3243,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                         return NULL;
 
                     // Recurse into childs. Query storage to tell if the node is open.
-                    if (curr_node->Childs.Size > 0 && ImGui::TreeNodeGetOpen((ImGuiID)curr_node->UID))
+                    if (curr_node->Childs.Size > 0 && ImGui::TreeNodeGetOpen(static_cast<ImGuiID>(curr_node->UID)))
                         return curr_node->Childs[0];
 
                     // Next sibling, then into our own parent
@@ -3381,7 +3381,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                     if (item_curr_idx_to_focus != -1)
                         clipper.IncludeItemByIndex(item_curr_idx_to_focus); // Ensure focused item is not clipped.
                     if (ms_io->RangeSrcItem != -1)
-                        clipper.IncludeItemByIndex((int)ms_io->RangeSrcItem); // Ensure RangeSrc item is not clipped.
+                        clipper.IncludeItemByIndex(static_cast<int>(ms_io->RangeSrcItem)); // Ensure RangeSrc item is not clipped.
                 }
 
                 while (!use_clipper || clipper.Step())
@@ -3408,13 +3408,13 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                         // of the selection scope doesn't erroneously alter our selection.
                         if (show_color_button)
                         {
-                            ImU32 dummy_col = (ImU32)((unsigned int)n * 0xC250B74B) | IM_COL32_A_MASK;
+                            ImU32 dummy_col = (ImU32)(static_cast<unsigned int>(n) * 0xC250B74B) | IM_COL32_A_MASK;
                             ImGui::ColorButton("##", ImColor(dummy_col), ImGuiColorEditFlags_NoTooltip, color_button_sz);
                             ImGui::SameLine();
                         }
 
                         // Submit item
-                        bool item_is_selected = selection.Contains((ImGuiID)n);
+                        bool item_is_selected = selection.Contains(static_cast<ImGuiID>(n));
                         bool item_is_open = false;
                         ImGui::SetNextItemSelectionUserData(n);
                         if (widget_type == WidgetType_Selectable)
@@ -3447,14 +3447,14 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                                     payload_items.push_back(item_id);
                                 else
                                     while (selection.GetNextSelectedItem(&it, &id))
-                                        payload_items.push_back((int)id);
-                                ImGui::SetDragDropPayload("MULTISELECT_DEMO_ITEMS", payload_items.Data, (size_t)payload_items.size_in_bytes());
+                                        payload_items.push_back(static_cast<int>(id));
+                                ImGui::SetDragDropPayload("MULTISELECT_DEMO_ITEMS", payload_items.Data, static_cast<size_t>(payload_items.size_in_bytes()));
                             }
 
                             // Display payload content in tooltip
                             const ImGuiPayload* payload = ImGui::GetDragDropPayload();
-                            const int* payload_items = (int*)payload->Data;
-                            const int payload_count = (int)payload->DataSize / (int)sizeof(int);
+                            const int* payload_items = static_cast<int*>(payload->Data);
+                            const int payload_count = static_cast<int>(payload->DataSize) / static_cast<int>(sizeof(int));
                             if (payload_count == 1)
                                 ImGui::Text("Object %05d: %s", payload_items[0], ExampleNames[payload_items[0] % IM_COUNTOF(ExampleNames)]);
                             else
@@ -3484,7 +3484,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                             ImGui::TableNextColumn();
                             ImGui::SetNextItemWidth(-FLT_MIN);
                             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-                            ImGui::InputText("##NoLabel", (char*)(void*)item_category, strlen(item_category), ImGuiInputTextFlags_ReadOnly);
+                            ImGui::InputText("##NoLabel", static_cast<char*>((void*)item_category), strlen(item_category), ImGuiInputTextFlags_ReadOnly);
                             ImGui::PopStyleVar();
                         }
 
@@ -3877,7 +3877,7 @@ static void DemoWindowWidgetsTextInput()
                 // Return 0 (pass) if the character is 'i' or 'm' or 'g' or 'u' or 'i', otherwise return 1 (filter out)
                 static int FilterImGuiLetters(ImGuiInputTextCallbackData* data)
                 {
-                    if (data->EventChar < 256 && strchr("imgui", (char)data->EventChar))
+                    if (data->EventChar < 256 && strchr("imgui", static_cast<char>(data->EventChar)))
                         return 0;
                     return 1;
                 }
@@ -3938,7 +3938,7 @@ static void DemoWindowWidgetsTextInput()
                         data->BufDirty = true;
 
                         // Increment a counter
-                        int* p_int = (int*)data->UserData;
+                        int* p_int = static_cast<int*>(data->UserData);
                         *p_int = *p_int + 1;
                     }
                     return 0;
@@ -3981,7 +3981,7 @@ static void DemoWindowWidgetsTextInput()
                 {
                     if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
                     {
-                        ImVector<char>* my_str = (ImVector<char>*)data->UserData;
+                        ImVector<char>* my_str = static_cast<ImVector<char>*>(data->UserData);
                         IM_ASSERT(my_str->begin() == data->Buf);
                         my_str->resize(data->BufSize); // NB: On resizing calls, generally data->BufSize == data->BufTextLen + 1
                         data->Buf = my_str->begin();
@@ -3994,7 +3994,7 @@ static void DemoWindowWidgetsTextInput()
                 static bool MyInputTextMultiline(const char* label, ImVector<char>* my_str, const ImVec2& size = ImVec2(0, 0), ImGuiInputTextFlags flags = 0)
                 {
                     IM_ASSERT((flags & ImGuiInputTextFlags_CallbackResize) == 0);
-                    return ImGui::InputTextMultiline(label, my_str->begin(), (size_t)my_str->size(), size, flags | ImGuiInputTextFlags_CallbackResize, Funcs::MyResizeCallback, (void*)my_str);
+                    return ImGui::InputTextMultiline(label, my_str->begin(), static_cast<size_t>(my_str->size()), size, flags | ImGuiInputTextFlags_CallbackResize, Funcs::MyResizeCallback, (void*)my_str);
                 }
             };
 
@@ -4008,7 +4008,7 @@ static void DemoWindowWidgetsTextInput()
             if (my_str.empty())
                 my_str.push_back(0);
             Funcs::MyInputTextMultiline("##MyStr", &my_str, ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 16), flags);
-            ImGui::Text("Data: %p\nSize: %d\nCapacity: %d", (void*)my_str.begin(), my_str.size(), my_str.capacity());
+            ImGui::Text("Data: %p\nSize: %d\nCapacity: %d", static_cast<void*>(my_str.begin()), my_str.size(), my_str.capacity());
             ImGui::TreePop();
         }
 
@@ -4073,7 +4073,7 @@ static void DemoWindowWidgetsTooltips()
             ImGui::Text("I am a fancy tooltip");
             static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
             ImGui::PlotLines("Curve", arr, IM_COUNTOF(arr));
-            ImGui::Text("Sin(time) = %f", sinf((float)ImGui::GetTime()));
+            ImGui::Text("Sin(time) = %f", sinf(static_cast<float>(ImGui::GetTime())));
             ImGui::EndTooltip();
         }
 
@@ -4091,7 +4091,7 @@ static void DemoWindowWidgetsTooltips()
             ImGui::SetTooltip("I am following you around.");
         else if (always_on == 2 && ImGui::BeginTooltip())
         {
-            ImGui::ProgressBar(sinf((float)ImGui::GetTime()) * 0.5f + 0.5f, ImVec2(ImGui::GetFontSize() * 25, 0.0f));
+            ImGui::ProgressBar(sinf(static_cast<float>(ImGui::GetTime())) * 0.5f + 0.5f, ImVec2(ImGui::GetFontSize() * 25, 0.0f));
             ImGui::EndTooltip();
         }
 
@@ -4261,7 +4261,7 @@ static void DemoWindowWidgetsTreeNodes()
                 if (i < 3)
                 {
                     // Items 0..2 are Tree Node
-                    bool node_open = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Node %d", i);
+                    bool node_open = ImGui::TreeNodeEx((void*)static_cast<intptr_t>(i), node_flags, "Selectable Node %d", i);
                     if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
                         node_clicked = i;
                     if (test_drag_and_drop && ImGui::BeginDragDropSource())
@@ -4290,7 +4290,7 @@ static void DemoWindowWidgetsTreeNodes()
                     // The only reason we use TreeNode at all is to allow selection of the leaf. Otherwise we can
                     // use BulletText() or advance the cursor by GetTreeNodeToLabelSpacing() and call Text().
                     node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen; // ImGuiTreeNodeFlags_Bullet
-                    ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Leaf %d", i);
+                    ImGui::TreeNodeEx((void*)static_cast<intptr_t>(i), node_flags, "Selectable Leaf %d", i);
                     if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
                         node_clicked = i;
                     if (test_drag_and_drop && ImGui::BeginDragDropSource())
@@ -4340,10 +4340,10 @@ static void DemoWindowWidgetsVerticalSliders()
         {
             if (i > 0) ImGui::SameLine();
             ImGui::PushID(i);
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, (ImVec4)ImColor::HSV(i / 7.0f, 0.5f, 0.5f));
-            ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, (ImVec4)ImColor::HSV(i / 7.0f, 0.6f, 0.5f));
-            ImGui::PushStyleColor(ImGuiCol_FrameBgActive, (ImVec4)ImColor::HSV(i / 7.0f, 0.7f, 0.5f));
-            ImGui::PushStyleColor(ImGuiCol_SliderGrab, (ImVec4)ImColor::HSV(i / 7.0f, 0.9f, 0.9f));
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, static_cast<ImVec4>(ImColor::HSV(i / 7.0f, 0.5f, 0.5f)));
+            ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, static_cast<ImVec4>(ImColor::HSV(i / 7.0f, 0.6f, 0.5f)));
+            ImGui::PushStyleColor(ImGuiCol_FrameBgActive, static_cast<ImVec4>(ImColor::HSV(i / 7.0f, 0.7f, 0.5f)));
+            ImGui::PushStyleColor(ImGuiCol_SliderGrab, static_cast<ImVec4>(ImColor::HSV(i / 7.0f, 0.9f, 0.9f)));
             ImGui::VSliderFloat("##v", ImVec2(18, 160), &values[i], 0.0f, 1.0f, "");
             if (ImGui::IsItemActive() || ImGui::IsItemHovered())
                 ImGui::SetTooltip("%.3f", values[i]);
@@ -4356,7 +4356,7 @@ static void DemoWindowWidgetsVerticalSliders()
         ImGui::PushID("set2");
         static float values2[4] = { 0.20f, 0.80f, 0.40f, 0.25f };
         const int rows = 3;
-        const ImVec2 small_slider_size(18, (float)(int)((160.0f - (rows - 1) * spacing) / rows));
+        const ImVec2 small_slider_size(18, static_cast<float>((int)((160.0f - (rows - 1) * spacing) / rows)));
         for (int nx = 0; nx < 4; nx++)
         {
             if (nx > 0) ImGui::SameLine();
@@ -4564,7 +4564,7 @@ static void DemoWindowLayout()
             if (child_flags & ImGuiChildFlags_FrameStyle)
                 override_bg_color = false;
 
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (float)offset_x);
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + static_cast<float>(offset_x));
             if (override_bg_color)
                 ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(255, 0, 0, 100));
             ImGui::BeginChild("Red", ImVec2(200, 100), child_flags, ImGuiWindowFlags_None);
@@ -4902,7 +4902,7 @@ static void DemoWindowLayout()
                 ImGui::TreePop();
             }
 
-            const float padding = (float)(int)(ImGui::GetFontSize() * 1.20f); // Large padding
+            const float padding = static_cast<float>((int)(ImGui::GetFontSize() * 1.20f)); // Large padding
             ImGui::PushStyleVarY(ImGuiStyleVar_FramePadding, padding);
             ImGui::Button("Button##2");
             ImGui::PopStyleVar();
@@ -4984,7 +4984,7 @@ static void DemoWindowLayout()
             ImGui::TextUnformatted(names[i]);
 
             const ImGuiWindowFlags child_flags = enable_extra_decorations ? ImGuiWindowFlags_MenuBar : 0;
-            const ImGuiID child_id = ImGui::GetID((void*)(intptr_t)i);
+            const ImGuiID child_id = ImGui::GetID((void*)static_cast<intptr_t>(i));
             const bool child_is_visible = ImGui::BeginChild(child_id, ImVec2(child_w, 200.0f), ImGuiChildFlags_Borders, child_flags);
             if (ImGui::BeginMenuBar())
             {
@@ -5031,7 +5031,7 @@ static void DemoWindowLayout()
         {
             float child_height = ImGui::GetTextLineHeight() + style.ScrollbarSize + style.WindowPadding.y * 2.0f;
             ImGuiWindowFlags child_flags = ImGuiWindowFlags_HorizontalScrollbar | (enable_extra_decorations ? ImGuiWindowFlags_AlwaysVerticalScrollbar : 0);
-            ImGuiID child_id = ImGui::GetID((void*)(intptr_t)i);
+            ImGuiID child_id = ImGui::GetID((void*)static_cast<intptr_t>(i));
             bool child_is_visible = ImGui::BeginChild(child_id, ImVec2(-100, child_height), ImGuiChildFlags_Borders, child_flags);
             if (scroll_to_off)
                 ImGui::SetScrollX(scroll_to_off_px);
@@ -5090,10 +5090,10 @@ static void DemoWindowLayout()
                 sprintf(num_buf, "%d", n);
                 const char* label = (!(n % 15)) ? "FizzBuzz" : (!(n % 3)) ? "Fizz" : (!(n % 5)) ? "Buzz" : num_buf;
                 float hue = n * 0.05f;
-                ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(hue, 0.6f, 0.6f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(hue, 0.7f, 0.7f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(hue, 0.8f, 0.8f));
-                ImGui::Button(label, ImVec2(40.0f + sinf((float)(line + n)) * 20.0f, 0.0f));
+                ImGui::PushStyleColor(ImGuiCol_Button, static_cast<ImVec4>(ImColor::HSV(hue, 0.6f, 0.6f)));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, static_cast<ImVec4>(ImColor::HSV(hue, 0.7f, 0.7f)));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, static_cast<ImVec4>(ImColor::HSV(hue, 0.8f, 0.8f)));
+                ImGui::Button(label, ImVec2(40.0f + sinf(static_cast<float>(line + n)) * 20.0f, 0.0f));
                 ImGui::PopStyleColor(3);
                 ImGui::PopID();
             }
@@ -5663,15 +5663,15 @@ struct MyItem
     {
         s_current_sort_specs = sort_specs; // Store in variable accessible by the sort function.
         if (items_count > 1)
-            qsort(items, (size_t)items_count, sizeof(items[0]), MyItem::CompareWithSortSpecs);
+            qsort(items, static_cast<size_t>(items_count), sizeof(items[0]), MyItem::CompareWithSortSpecs);
         s_current_sort_specs = NULL;
     }
 
     // Compare function to be used by qsort()
     static int IMGUI_CDECL CompareWithSortSpecs(const void* lhs, const void* rhs)
     {
-        const MyItem* a = (const MyItem*)lhs;
-        const MyItem* b = (const MyItem*)rhs;
+        const MyItem* a = static_cast<const MyItem*>(lhs);
+        const MyItem* b = static_cast<const MyItem*>(rhs);
         for (int n = 0; n < s_current_sort_specs->SpecsCount; n++)
         {
             // Here we identify columns using the ColumnUserID value that we ourselves passed to TableSetupColumn()
@@ -5705,8 +5705,8 @@ const ImGuiTableSortSpecs* MyItem::s_current_sort_specs = NULL;
 static void PushStyleCompact()
 {
     ImGuiStyle& style = ImGui::GetStyle();
-    ImGui::PushStyleVarY(ImGuiStyleVar_FramePadding, (float)(int)(style.FramePadding.y * 0.60f));
-    ImGui::PushStyleVarY(ImGuiStyleVar_ItemSpacing, (float)(int)(style.ItemSpacing.y * 0.60f));
+    ImGui::PushStyleVarY(ImGuiStyleVar_FramePadding, static_cast<float>((int)(style.FramePadding.y * 0.60f)));
+    ImGui::PushStyleVarY(ImGuiStyleVar_ItemSpacing, static_cast<float>((int)(style.ItemSpacing.y * 0.60f)));
 }
 
 static void PopStyleCompact()
@@ -6554,7 +6554,7 @@ static void DemoWindowTables()
             ImGui::TableHeadersRow();
             for (int column = 0; column < column_count; column++)
                 column_flags_out[column] = ImGui::TableGetColumnFlags(column);
-            float indent_step = (float)((int)TEXT_BASE_WIDTH / 2);
+            float indent_step = static_cast<float>((int)TEXT_BASE_WIDTH / 2);
             for (int row = 0; row < 8; row++)
             {
                 // Add some indentation to demonstrate usage of per-column IndentEnable/IndentDisable flags.
@@ -6700,7 +6700,7 @@ static void DemoWindowTables()
         {
             for (int row = 0; row < 8; row++)
             {
-                float min_row_height = (float)(int)(TEXT_BASE_HEIGHT * 0.30f * row + ImGui::GetStyle().CellPadding.y * 2.0f);
+                float min_row_height = static_cast<float>((int)(TEXT_BASE_HEIGHT * 0.30f * row + ImGui::GetStyle().CellPadding.y * 2.0f));
                 ImGui::TableNextRow(ImGuiTableRowFlags_None, min_row_height);
                 ImGui::TableNextColumn();
                 ImGui::Text("min_row_height = %.2f", min_row_height);
@@ -7869,7 +7869,7 @@ static void DemoWindowColumns()
         ImGui::Columns(2, "tree", true);
         for (int x = 0; x < 3; x++)
         {
-            bool open1 = ImGui::TreeNode((void*)(intptr_t)x, "Node%d", x);
+            bool open1 = ImGui::TreeNode((void*)static_cast<intptr_t>(x), "Node%d", x);
             ImGui::NextColumn();
             ImGui::Text("Node contents");
             ImGui::NextColumn();
@@ -7877,7 +7877,7 @@ static void DemoWindowColumns()
             {
                 for (int y = 0; y < 3; y++)
                 {
-                    bool open2 = ImGui::TreeNode((void*)(intptr_t)y, "Node%d.%d", x, y);
+                    bool open2 = ImGui::TreeNode((void*)static_cast<intptr_t>(y), "Node%d.%d", x, y);
                     ImGui::NextColumn();
                     ImGui::Text("Node contents");
                     if (open2)
@@ -7941,9 +7941,9 @@ static void DemoWindowInputs()
             // You can generally iterate between ImGuiKey_NamedKey_BEGIN and ImGuiKey_NamedKey_END.
             struct funcs { static bool IsLegacyNativeDupe(ImGuiKey) { return false; } };
             ImGuiKey start_key = ImGuiKey_NamedKey_BEGIN;
-            ImGui::Text("Keys down:");         for (ImGuiKey key = start_key; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1)) { if (funcs::IsLegacyNativeDupe(key) || !ImGui::IsKeyDown(key)) continue; ImGui::SameLine(); ImGui::Text((key < ImGuiKey_NamedKey_BEGIN) ? "\"%s\"" : "\"%s\" %d", ImGui::GetKeyName(key), key); }
+            ImGui::Text("Keys down:");         for (ImGuiKey key = start_key; key < ImGuiKey_NamedKey_END; key = static_cast<ImGuiKey>(key + 1)) { if (funcs::IsLegacyNativeDupe(key) || !ImGui::IsKeyDown(key)) continue; ImGui::SameLine(); ImGui::Text((key < ImGuiKey_NamedKey_BEGIN) ? "\"%s\"" : "\"%s\" %d", ImGui::GetKeyName(key), key); }
             ImGui::Text("Keys mods: %s%s%s%s", io.KeyCtrl ? "CTRL " : "", io.KeyShift ? "SHIFT " : "", io.KeyAlt ? "ALT " : "", io.KeySuper ? "SUPER " : "");
-            ImGui::Text("Chars queue:");       for (int i = 0; i < io.InputQueueCharacters.Size; i++) { ImWchar c = io.InputQueueCharacters[i]; ImGui::SameLine();  ImGui::Text("\'%c\' (0x%04X)", (c > ' ' && c <= 255) ? (char)c : '?', c); } // FIXME: We should convert 'c' to UTF-8 here but the functions are not public.
+            ImGui::Text("Chars queue:");       for (int i = 0; i < io.InputQueueCharacters.Size; i++) { ImWchar c = io.InputQueueCharacters[i]; ImGui::SameLine();  ImGui::Text("\'%c\' (0x%04X)", (c > ' ' && c <= 255) ? static_cast<char>(c) : '?', c); } // FIXME: We should convert 'c' to UTF-8 here but the functions are not public.
 
             ImGui::TreePop();
         }
@@ -8266,8 +8266,8 @@ void ImGui::ShowAboutWindow(bool* p_open)
 
         ImGui::Text("Dear ImGui %s (%d)", IMGUI_VERSION, IMGUI_VERSION_NUM);
         ImGui::Separator();
-        ImGui::Text("sizeof(size_t): %d, sizeof(ImDrawIdx): %d, sizeof(ImDrawVert): %d", (int)sizeof(size_t), (int)sizeof(ImDrawIdx), (int)sizeof(ImDrawVert));
-        ImGui::Text("define: __cplusplus=%d", (int)__cplusplus);
+        ImGui::Text("sizeof(size_t): %d, sizeof(ImDrawIdx): %d, sizeof(ImDrawVert): %d", static_cast<int>(sizeof(size_t)), static_cast<int>(sizeof(ImDrawIdx)), static_cast<int>(sizeof(ImDrawVert)));
+        ImGui::Text("define: __cplusplus=%d", static_cast<int>(__cplusplus));
 #ifdef IMGUI_ENABLE_TEST_ENGINE
         ImGui::Text("define: IMGUI_ENABLE_TEST_ENGINE");
 #endif
@@ -8320,7 +8320,7 @@ void ImGui::ShowAboutWindow(bool* p_open)
         ImGui::Text("define: _MSC_VER=%d", _MSC_VER);
 #endif
 #ifdef _MSVC_LANG
-        ImGui::Text("define: _MSVC_LANG=%d", (int)_MSVC_LANG);
+        ImGui::Text("define: _MSVC_LANG=%d", static_cast<int>(_MSVC_LANG));
 #endif
 #ifdef __MINGW32__
         ImGui::Text("define: __MINGW32__");
@@ -8357,7 +8357,7 @@ void ImGui::ShowAboutWindow(bool* p_open)
         // - 16 is > strlen("((void)(_EXPR))") which we suggested in our imconfig.h template as a possible way to disable.
         int assert_runs_expression = 0;
         IM_ASSERT(++assert_runs_expression);
-        int assert_expand_len = (int)strlen(IM_STRINGIFY((IM_ASSERT(true))));
+        int assert_expand_len = static_cast<int>(strlen(IM_STRINGIFY((IM_ASSERT(true)))));
         bool assert_maybe_disabled = (!assert_runs_expression || assert_expand_len <= 16);
         ImGui::Text("IM_ASSERT: runs expression: %s. expand size: %s%s",
             assert_runs_expression ? "OK" : "KO", (assert_expand_len > 16) ? "OK" : "KO", assert_maybe_disabled ? " (MAYBE DISABLED?!)" : "");
@@ -8496,7 +8496,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
     // The logic behind dynamically changing 'max_border_size' is to not encourage people to increase border size too much: it'll likely reveal lots of subtle rendering artifacts and this isn't a priority right now.
     // Note that _MainScale is currently internal PLEASE DO NOT USE IN YOUR CODE.
-    const float default_border_size = (float)(int)style._MainScale;
+    const float default_border_size = static_cast<float>((int)style._MainScale);
     const float max_border_size = IM_MAX(default_border_size, 2.0f);
 
     PushItemWidth(GetWindowWidth() * 0.50f);
@@ -8613,7 +8613,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             SliderFloat("WindowBorderHoverPadding", &style.WindowBorderHoverPadding, 1.0f, 20.0f, "%.0f");
             int window_menu_button_position = style.WindowMenuButtonPosition + 1;
             if (Combo("WindowMenuButtonPosition", (int*)&window_menu_button_position, "None\0Left\0Right\0"))
-                style.WindowMenuButtonPosition = (ImGuiDir)(window_menu_button_position - 1);
+                style.WindowMenuButtonPosition = static_cast<ImGuiDir>(window_menu_button_position - 1);
 
             SeparatorText("Widgets");
             SliderFloat("ColorMarkerSize", &style.ColorMarkerSize, 0.0f, 8.0f, "%.0f");
@@ -8672,7 +8672,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                     const char* name = GetStyleColorName(i);
                     if (!output_only_modified || memcmp(&col, &ref->Colors[i], sizeof(ImVec4)) != 0)
                         LogText("colors[ImGuiCol_%s]%*s= ImVec4(%.2ff, %.2ff, %.2ff, %.2ff);" IM_NEWLINE,
-                            name, 23 - (int)strlen(name), "", col.x, col.y, col.z, col.w);
+                            name, 23 - static_cast<int>(strlen(name)), "", col.x, col.y, col.z, col.w);
                 }
                 LogFinish();
             }
@@ -8783,7 +8783,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 {
                     const float RAD_MIN = 5.0f;
                     const float RAD_MAX = 70.0f;
-                    const float rad = RAD_MIN + (RAD_MAX - RAD_MIN) * (float)n / (8.0f - 1.0f);
+                    const float rad = RAD_MIN + (RAD_MAX - RAD_MIN) * static_cast<float>(n) / (8.0f - 1.0f);
 
                     BeginGroup();
 
@@ -9030,7 +9030,7 @@ struct ExampleAppConsole
     // Portable helpers
     static int   Stricmp(const char* s1, const char* s2)         { int d; while ((d = toupper(*s2) - toupper(*s1)) == 0 && *s1) { s1++; s2++; } return d; }
     static int   Strnicmp(const char* s1, const char* s2, int n) { int d = 0; while (n > 0 && (d = toupper(*s2) - toupper(*s1)) == 0 && *s1) { s1++; s2++; n--; } return d; }
-    static char* Strdup(const char* s)                           { IM_ASSERT(s); size_t len = strlen(s) + 1; void* buf = ImGui::MemAlloc(len); IM_ASSERT(buf); return (char*)memcpy(buf, (const void*)s, len); }
+    static char* Strdup(const char* s)                           { IM_ASSERT(s); size_t len = strlen(s) + 1; void* buf = ImGui::MemAlloc(len); IM_ASSERT(buf); return static_cast<char*>(memcpy(buf, (const void*)s, len)); }
     static void  Strtrim(char* s)                                { char* str_end = s + strlen(s); while (str_end > s && str_end[-1] == ' ') str_end--; *str_end = 0; }
 
     void    ClearLog()
@@ -9240,7 +9240,7 @@ struct ExampleAppConsole
     // In C++11 you'd be better off using lambdas for this sort of forwarding callbacks
     static int TextEditCallbackStub(ImGuiInputTextCallbackData* data)
     {
-        ExampleAppConsole* console = (ExampleAppConsole*)data->UserData;
+        ExampleAppConsole* console = static_cast<ExampleAppConsole*>(data->UserData);
         return console->TextEditCallback(data);
     }
 
@@ -9267,18 +9267,18 @@ struct ExampleAppConsole
                 // Build a list of candidates
                 ImVector<const char*> candidates;
                 for (int i = 0; i < Commands.Size; i++)
-                    if (Strnicmp(Commands[i], word_start, (int)(word_end - word_start)) == 0)
+                    if (Strnicmp(Commands[i], word_start, static_cast<int>(word_end - word_start)) == 0)
                         candidates.push_back(Commands[i]);
 
                 if (candidates.Size == 0)
                 {
                     // No match
-                    AddLog("No match for \"%.*s\"!\n", (int)(word_end - word_start), word_start);
+                    AddLog("No match for \"%.*s\"!\n", static_cast<int>(word_end - word_start), word_start);
                 }
                 else if (candidates.Size == 1)
                 {
                     // Single match. Delete the beginning of the word and replace it entirely so we've got nice casing.
-                    data->DeleteChars((int)(word_start - data->Buf), (int)(word_end - word_start));
+                    data->DeleteChars(static_cast<int>(word_start - data->Buf), static_cast<int>(word_end - word_start));
                     data->InsertChars(data->CursorPos, candidates[0]);
                     data->InsertChars(data->CursorPos, " ");
                 }
@@ -9286,7 +9286,7 @@ struct ExampleAppConsole
                 {
                     // Multiple matches. Complete as much as we can..
                     // So inputting "C"+Tab will complete to "CL" then display "CLEAR" and "CLASSIFY" as matches.
-                    int match_len = (int)(word_end - word_start);
+                    int match_len = static_cast<int>(word_end - word_start);
                     for (;;)
                     {
                         int c = 0;
@@ -9303,7 +9303,7 @@ struct ExampleAppConsole
 
                     if (match_len > 0)
                     {
-                        data->DeleteChars((int)(word_start - data->Buf), (int)(word_end - word_start));
+                        data->DeleteChars(static_cast<int>(word_start - data->Buf), static_cast<int>(word_end - word_start));
                         data->InsertChars(data->CursorPos, candidates[0], candidates[0] + match_len);
                     }
 
@@ -9659,7 +9659,7 @@ struct ExampleAppPropertyEditor
                         case ImGuiDataType_Bool:
                         {
                             IM_ASSERT(field_desc.DataCount == 1);
-                            ImGui::Checkbox("##Editor", (bool*)field_ptr);
+                            ImGui::Checkbox("##Editor", static_cast<bool*>(field_ptr));
                             break;
                         }
                         case ImGuiDataType_S32:
@@ -9755,7 +9755,7 @@ struct ExampleAppPropertyEditor
             }
             else
             {
-                is_open = (node->Childs.Size > 0 && ImGui::TreeNodeGetOpen((ImGuiID)node->UID));
+                is_open = (node->Childs.Size > 0 && ImGui::TreeNodeGetOpen(static_cast<ImGuiID>(node->UID)));
                 if (is_open)
                     ImGui::TreePush(node->Name);
             }
@@ -9798,8 +9798,8 @@ struct ExampleAppPropertyEditor
             tree_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen; // Use _NoTreePushOnOpen + set is_open=false to avoid unnecessarily push/pop on leaves.
         if (node->DataMyBool == false)
             ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-        ImGui::SetNextItemStorageID((ImGuiID)node->UID);        // Use node->UID as storage id
-        bool is_open = ImGui::TreeNodeEx((void*)(intptr_t)node->UID, tree_flags, "%s", node->Name);
+        ImGui::SetNextItemStorageID(static_cast<ImGuiID>(node->UID));        // Use node->UID as storage id
+        bool is_open = ImGui::TreeNodeEx((void*)static_cast<intptr_t>(node->UID), tree_flags, "%s", node->Name);
         if (node->Childs.Size == 0)
             is_open = false;
         if (node->DataMyBool == false)
@@ -9932,8 +9932,8 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
         // FIXME: None of the three demos works consistently when resizing from borders.
         static void AspectRatio(ImGuiSizeCallbackData* data)
         {
-            float aspect_ratio = *(float*)data->UserData;
-            data->DesiredSize.y = (float)(int)(data->DesiredSize.x / aspect_ratio);
+            float aspect_ratio = *static_cast<float*>(data->UserData);
+            data->DesiredSize.y = static_cast<float>((int)(data->DesiredSize.x / aspect_ratio));
         }
         static void Square(ImGuiSizeCallbackData* data)
         {
@@ -9941,8 +9941,8 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
         }
         static void Step(ImGuiSizeCallbackData* data)
         {
-            float step = *(float*)data->UserData;
-            data->DesiredSize = ImVec2((int)(data->DesiredSize.x / step + 0.5f) * step, (int)(data->DesiredSize.y / step + 0.5f) * step);
+            float step = *static_cast<float*>(data->UserData);
+            data->DesiredSize = ImVec2(static_cast<int>(data->DesiredSize.x / step + 0.5f) * step, static_cast<int>(data->DesiredSize.y / step + 0.5f) * step);
         }
     };
 
@@ -10142,7 +10142,7 @@ static void ShowExampleAppWindowTitles(bool*)
 
     // Using "###" to display a changing title but keep a static identifier "AnimatedTitle"
     char buf[128];
-    sprintf(buf, "Animated title %c %d###AnimatedTitle", "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3], ImGui::GetFrameCount());
+    sprintf(buf, "Animated title %c %d###AnimatedTitle", "|/-\\"[static_cast<int>(ImGui::GetTime() / 0.25f) & 3], ImGui::GetFrameCount());
     ImGui::SetNextWindowPos(ImVec2(base_pos.x + 100, base_pos.y + 300), ImGuiCond_FirstUseEver);
     ImGui::Begin(buf);
     IMGUI_DEMO_MARKER("Examples/Manipulating window titles##3");
@@ -10159,7 +10159,7 @@ static void PathConcaveShape(ImDrawList* draw_list, float x, float y, float sz)
 {
     const ImVec2 pos_norms[] = { { 0.0f, 0.0f }, { 0.3f, 0.0f }, { 0.3f, 0.7f }, { 0.7f, 0.7f }, { 0.7f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f } };
     for (const ImVec2& p : pos_norms)
-        draw_list->PathLineTo(ImVec2(x + 0.5f + (int)(sz * p.x), y + 0.5f + (int)(sz * p.y)));
+        draw_list->PathLineTo(ImVec2(x + 0.5f + static_cast<int>(sz * p.x), y + 0.5f + static_cast<int>(sz * p.y)));
 }
 
 // Demonstrate using the low-level ImDrawList to draw custom shapes.
@@ -11031,21 +11031,21 @@ struct ExampleAsset
     {
         s_current_sort_specs = sort_specs; // Store in variable accessible by the sort function.
         if (items_count > 1)
-            qsort(items, (size_t)items_count, sizeof(items[0]), ExampleAsset::CompareWithSortSpecs);
+            qsort(items, static_cast<size_t>(items_count), sizeof(items[0]), ExampleAsset::CompareWithSortSpecs);
         s_current_sort_specs = NULL;
     }
 
     // Compare function to be used by qsort()
     static int IMGUI_CDECL CompareWithSortSpecs(const void* lhs, const void* rhs)
     {
-        const ExampleAsset* a = (const ExampleAsset*)lhs;
-        const ExampleAsset* b = (const ExampleAsset*)rhs;
+        const ExampleAsset* a = static_cast<const ExampleAsset*>(lhs);
+        const ExampleAsset* b = static_cast<const ExampleAsset*>(rhs);
         for (int n = 0; n < s_current_sort_specs->SpecsCount; n++)
         {
             const ImGuiTableColumnSortSpecs* sort_spec = &s_current_sort_specs->Specs[n];
             int delta = 0;
             if (sort_spec->ColumnIndex == 0)
-                delta = ((int)a->ID - (int)b->ID);
+                delta = (static_cast<int>(a->ID) - static_cast<int>(b->ID));
             else if (sort_spec->ColumnIndex == 1)
                 delta = (a->Type - b->Type);
             if (delta > 0)
@@ -11053,7 +11053,7 @@ struct ExampleAsset
             if (delta < 0)
                 return (sort_spec->SortDirection == ImGuiSortDirection_Ascending) ? -1 : +1;
         }
-        return (int)a->ID - (int)b->ID;
+        return static_cast<int>(a->ID) - static_cast<int>(b->ID);
     }
 };
 const ImGuiTableSortSpecs* ExampleAsset::s_current_sort_specs = NULL;
@@ -11113,7 +11113,7 @@ struct ExampleAssetsBrowser
     void UpdateLayoutSizes(float avail_width)
     {
         // Layout: when not stretching: allow extending into right-most spacing.
-        LayoutItemSpacing = (float)IconSpacing;
+        LayoutItemSpacing = static_cast<float>(IconSpacing);
         if (StretchSpacing == false)
             avail_width += floorf(LayoutItemSpacing * 0.5f);
 
@@ -11246,7 +11246,7 @@ struct ExampleAssetsBrowser
 
             // Use custom selection adapter: store ID in selection (recommended)
             Selection.UserData = this;
-            Selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self_, int idx) { ExampleAssetsBrowser* self = (ExampleAssetsBrowser*)self_->UserData; return self->Items[idx].ID; };
+            Selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self_, int idx) { ExampleAssetsBrowser* self = static_cast<ExampleAssetsBrowser*>(self_->UserData); return self->Items[idx].ID; };
             Selection.ApplyRequests(ms_io);
 
             const bool want_delete = (ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_Repeat) && (Selection.Size > 0)) || RequestDelete;
@@ -11272,7 +11272,7 @@ struct ExampleAssetsBrowser
             if (item_curr_idx_to_focus != -1)
                 clipper.IncludeItemByIndex(item_curr_idx_to_focus / column_count); // Ensure focused item line is not clipped.
             if (ms_io->RangeSrcItem != -1)
-                clipper.IncludeItemByIndex((int)ms_io->RangeSrcItem / column_count); // Ensure RangeSrc item line is not clipped.
+                clipper.IncludeItemByIndex(static_cast<int>(ms_io->RangeSrcItem) / column_count); // Ensure RangeSrc item line is not clipped.
             while (clipper.Step())
             {
                 for (int line_idx = clipper.DisplayStart; line_idx < clipper.DisplayEnd; line_idx++)
@@ -11282,7 +11282,7 @@ struct ExampleAssetsBrowser
                     for (int item_idx = item_min_idx_for_current_line; item_idx < item_max_idx_for_current_line; ++item_idx)
                     {
                         ExampleAsset* item_data = &Items[item_idx];
-                        ImGui::PushID((int)item_data->ID);
+                        ImGui::PushID(static_cast<int>(item_data->ID));
 
                         // Position item
                         ImVec2 pos = ImVec2(start_pos.x + (item_idx % column_count) * LayoutItemStep.x, start_pos.y + line_idx * LayoutItemStep.y);
@@ -11317,13 +11317,13 @@ struct ExampleAssetsBrowser
                                 else
                                     while (Selection.GetNextSelectedItem(&it, &id))
                                         payload_items.push_back(id);
-                                ImGui::SetDragDropPayload("ASSETS_BROWSER_ITEMS", payload_items.Data, (size_t)payload_items.size_in_bytes());
+                                ImGui::SetDragDropPayload("ASSETS_BROWSER_ITEMS", payload_items.Data, static_cast<size_t>(payload_items.size_in_bytes()));
                             }
 
                             // Display payload content in tooltip, by extracting it from the payload data
                             // (we could read from selection, but it is more correct and reusable to read from payload)
                             const ImGuiPayload* payload = ImGui::GetDragDropPayload();
-                            const int payload_count = (int)payload->DataSize / (int)sizeof(ImGuiID);
+                            const int payload_count = static_cast<int>(payload->DataSize) / static_cast<int>(sizeof(ImGuiID));
                             ImGui::Text("%d assets", payload_count);
 
                             ImGui::EndDragDropSource();
@@ -11384,19 +11384,19 @@ struct ExampleAssetsBrowser
                     // FIXME: Locking aiming on 'hovered_item_idx' (with a cool-down timer) would ensure zoom keeps on it.
                     const float hovered_item_nx = (io.MousePos.x - start_pos.x + LayoutItemSpacing * 0.5f) / LayoutItemStep.x;
                     const float hovered_item_ny = (io.MousePos.y - start_pos.y + LayoutItemSpacing * 0.5f) / LayoutItemStep.y;
-                    const int hovered_item_idx = ((int)hovered_item_ny * LayoutColumnCount) + (int)hovered_item_nx;
+                    const int hovered_item_idx = (static_cast<int>(hovered_item_ny) * LayoutColumnCount) + static_cast<int>(hovered_item_nx);
                     //ImGui::SetTooltip("%f,%f -> item %d", hovered_item_nx, hovered_item_ny, hovered_item_idx); // Move those 4 lines in block above for easy debugging
 
                     // Zoom
-                    IconSize *= powf(1.1f, (float)(int)ZoomWheelAccum);
+                    IconSize *= powf(1.1f, static_cast<float>((int)ZoomWheelAccum));
                     IconSize = IM_CLAMP(IconSize, 16.0f, 128.0f);
-                    ZoomWheelAccum -= (int)ZoomWheelAccum;
+                    ZoomWheelAccum -= static_cast<int>(ZoomWheelAccum);
                     UpdateLayoutSizes(avail_width);
 
                     // Manipulate scroll to that we will land at the same Y location of currently hovered item.
                     // - Calculate next frame position of item under mouse
                     // - Set new scroll position to be used in next ImGui::BeginChild() call.
-                    float hovered_item_rel_pos_y = ((float)(hovered_item_idx / LayoutColumnCount) + fmodf(hovered_item_ny, 1.0f)) * LayoutItemStep.y;
+                    float hovered_item_rel_pos_y = (static_cast<float>(hovered_item_idx / LayoutColumnCount) + fmodf(hovered_item_ny, 1.0f)) * LayoutItemStep.y;
                     hovered_item_rel_pos_y += ImGui::GetStyle().WindowPadding.y;
                     float mouse_local_y = io.MousePos.y - ImGui::GetWindowPos().y;
                     ImGui::SetScrollY(hovered_item_rel_pos_y - mouse_local_y);

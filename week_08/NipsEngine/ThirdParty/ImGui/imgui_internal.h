@@ -1,4 +1,4 @@
-// dear imgui, v1.92.7 WIP
+﻿// dear imgui, v1.92.7 WIP
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend Dear ImGui features but we don't provide any guarantee of forward compatibility.
@@ -517,7 +517,7 @@ inline double ImRsqrt(double x)          { return 1.0 / sqrt(x); }
 template<typename T> T ImMin(T lhs, T rhs)                              { return lhs < rhs ? lhs : rhs; }
 template<typename T> T ImMax(T lhs, T rhs)                              { return lhs >= rhs ? lhs : rhs; }
 template<typename T> T ImClamp(T v, T mn, T mx)                         { return (v < mn) ? mn : (v > mx) ? mx : v; }
-template<typename T> T ImLerp(T a, T b, float t)                        { return (T)(a + (b - a) * t); }
+template<typename T> T ImLerp(T a, T b, float t)                        { return static_cast<T>(a + (b - a) * t); }
 template<typename T> void ImSwap(T& a, T& b)                            { T tmp = a; a = b; b = tmp; }
 template<typename T> T ImAddClampOverflow(T a, T b, T mn, T mx)         { if (b < 0 && (a < mn - b)) return mn; if (b > 0 && (a > mx - b)) return mx; return a + b; }
 template<typename T> T ImSubClampOverflow(T a, T b, T mn, T mx)         { if (b > 0 && (a < mn + b)) return mn; if (b < 0 && (a > mx + b)) return mx; return a - b; }
@@ -532,12 +532,12 @@ inline float  ImSaturate(float f)                                       { return
 inline float  ImLengthSqr(const ImVec2& lhs)                            { return (lhs.x * lhs.x) + (lhs.y * lhs.y); }
 inline float  ImLengthSqr(const ImVec4& lhs)                            { return (lhs.x * lhs.x) + (lhs.y * lhs.y) + (lhs.z * lhs.z) + (lhs.w * lhs.w); }
 inline float  ImInvLength(const ImVec2& lhs, float fail_value)          { float d = (lhs.x * lhs.x) + (lhs.y * lhs.y); if (d > 0.0f) return ImRsqrt(d); return fail_value; }
-inline float  ImTrunc(float f)                                          { return (float)(int)(f); }
-inline ImVec2 ImTrunc(const ImVec2& v)                                  { return ImVec2((float)(int)(v.x), (float)(int)(v.y)); }
-inline float  ImFloor(float f)                                          { return (float)((f >= 0 || (float)(int)f == f) ? (int)f : (int)f - 1); } // Decent replacement for floorf()
+inline float  ImTrunc(float f)                                          { return static_cast<float>((int)(f)); }
+inline ImVec2 ImTrunc(const ImVec2& v)                                  { return ImVec2(static_cast<float>((int)(v.x)), static_cast<float>((int)(v.y))); }
+inline float  ImFloor(float f)                                          { return static_cast<float>((f >= 0 || (float)(int)f == f) ? (int)f : (int)f - 1); } // Decent replacement for floorf()
 inline ImVec2 ImFloor(const ImVec2& v)                                  { return ImVec2(ImFloor(v.x), ImFloor(v.y)); }
-inline float  ImTrunc64(float f)                                        { return (float)(ImS64)(f); }
-inline float  ImRound64(float f)                                        { return (float)(ImS64)(f + 0.5f); } // FIXME: Positive values only.
+inline float  ImTrunc64(float f)                                        { return static_cast<float>((ImS64)(f)); }
+inline float  ImRound64(float f)                                        { return static_cast<float>((ImS64)(f + 0.5f)); } // FIXME: Positive values only.
 inline int    ImModPositive(int a, int b)                               { return (a + b) % b; }
 inline float  ImDot(const ImVec2& a, const ImVec2& b)                   { return a.x * b.x + a.y * b.y; }
 inline ImVec2 ImRotate(const ImVec2& v, float cos_a, float sin_a)       { return ImVec2(v.x * cos_a - v.y * sin_a, v.x * sin_a + v.y * cos_a); }
@@ -545,7 +545,7 @@ inline float  ImLinearSweep(float current, float target, float speed)   { if (cu
 inline float  ImLinearRemapClamp(float s0, float s1, float d0, float d1, float x) { return ImSaturate((x - s0) / (s1 - s0)) * (d1 - d0) + d0; }
 inline ImVec2 ImMul(const ImVec2& lhs, const ImVec2& rhs)               { return ImVec2(lhs.x * rhs.x, lhs.y * rhs.y); }
 inline bool   ImIsFloatAboveGuaranteedIntegerPrecision(float f)         { return f <= -16777216 || f >= 16777216; }
-inline float  ImExponentialMovingAverage(float avg, float sample, int n){ avg -= avg / (float)n; avg += sample / (float)n; return avg; }
+inline float  ImExponentialMovingAverage(float avg, float sample, int n){ avg -= avg / static_cast<float>(n); avg += sample / static_cast<float>(n); return avg; }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 // Helpers: Geometry
@@ -584,7 +584,7 @@ struct ImVec2ih
     short   x, y;
     constexpr ImVec2ih()                           : x(0), y(0) {}
     constexpr ImVec2ih(short _x, short _y)         : x(_x), y(_y) {}
-    constexpr explicit ImVec2ih(const ImVec2& rhs) : x((short)rhs.x), y((short)rhs.y) {}
+    constexpr explicit ImVec2ih(const ImVec2& rhs) : x(static_cast<short>(rhs.x)), y(static_cast<short>(rhs.y)) {}
 };
 
 // Helper: ImRect (2D axis aligned bounding-box)
@@ -629,11 +629,11 @@ struct IMGUI_API ImRect
 // Helper: ImBitArray
 #define         IM_BITARRAY_TESTBIT(_ARRAY, _N)                 ((_ARRAY[(_N) >> 5] & ((ImU32)1 << ((_N) & 31))) != 0) // Macro version of ImBitArrayTestBit(): ensure args have side-effect or are costly!
 #define         IM_BITARRAY_CLEARBIT(_ARRAY, _N)                ((_ARRAY[(_N) >> 5] &= ~((ImU32)1 << ((_N) & 31))))    // Macro version of ImBitArrayClearBit(): ensure args have side-effect or are costly!
-inline size_t   ImBitArrayGetStorageSizeInBytes(int bitcount)   { return (size_t)((bitcount + 31) >> 5) << 2; }
+inline size_t   ImBitArrayGetStorageSizeInBytes(int bitcount)   { return static_cast<size_t>((bitcount + 31) >> 5) << 2; }
 inline void     ImBitArrayClearAllBits(ImU32* arr, int bitcount){ memset(arr, 0, ImBitArrayGetStorageSizeInBytes(bitcount)); }
-inline bool     ImBitArrayTestBit(const ImU32* arr, int n)      { ImU32 mask = (ImU32)1 << (n & 31); return (arr[n >> 5] & mask) != 0; }
-inline void     ImBitArrayClearBit(ImU32* arr, int n)           { ImU32 mask = (ImU32)1 << (n & 31); arr[n >> 5] &= ~mask; }
-inline void     ImBitArraySetBit(ImU32* arr, int n)             { ImU32 mask = (ImU32)1 << (n & 31); arr[n >> 5] |= mask; }
+inline bool     ImBitArrayTestBit(const ImU32* arr, int n)      { ImU32 mask = static_cast<ImU32>(1) << (n & 31); return (arr[n >> 5] & mask) != 0; }
+inline void     ImBitArrayClearBit(ImU32* arr, int n)           { ImU32 mask = static_cast<ImU32>(1) << (n & 31); arr[n >> 5] &= ~mask; }
+inline void     ImBitArraySetBit(ImU32* arr, int n)             { ImU32 mask = static_cast<ImU32>(1) << (n & 31); arr[n >> 5] |= mask; }
 inline void     ImBitArraySetBitRange(ImU32* arr, int n, int n2) // Works on range [n..n2)
 {
     n2--;
@@ -641,7 +641,7 @@ inline void     ImBitArraySetBitRange(ImU32* arr, int n, int n2) // Works on ran
     {
         int a_mod = (n & 31);
         int b_mod = (n2 > (n | 31) ? 31 : (n2 & 31)) + 1;
-        ImU32 mask = (ImU32)(((ImU64)1 << b_mod) - 1) & ~(ImU32)(((ImU64)1 << a_mod) - 1);
+        ImU32 mask = static_cast<ImU32>(((ImU64)1 << b_mod) - 1) & ~static_cast<ImU32>(((ImU64)1 << a_mod) - 1);
         arr[n >> 5] |= mask;
         n = (n + 32) & ~31;
     }
@@ -670,7 +670,7 @@ struct ImBitArray
 struct IMGUI_API ImBitVector
 {
     ImVector<ImU32> Storage;
-    void            Create(int sz)              { Storage.resize((sz + 31) >> 5); memset(Storage.Data, 0, (size_t)Storage.Size * sizeof(Storage.Data[0])); }
+    void            Create(int sz)              { Storage.resize((sz + 31) >> 5); memset(Storage.Data, 0, static_cast<size_t>(Storage.Size) * sizeof(Storage.Data[0])); }
     void            Clear()                     { Storage.clear(); }
     bool            TestBit(int n) const        { IM_ASSERT(n < (Storage.Size << 5)); return IM_BITARRAY_TESTBIT(Storage.Data, n); }
     void            SetBit(int n)               { IM_ASSERT(n < (Storage.Size << 5)); ImBitArraySetBit(Storage.Data, n); }
@@ -693,8 +693,8 @@ struct ImSpan
 
     inline void         set(T* data, int size)      { Data = data; DataEnd = data + size; }
     inline void         set(T* data, T* data_end)   { Data = data; DataEnd = data_end; }
-    inline int          size() const                { return (int)(ptrdiff_t)(DataEnd - Data); }
-    inline int          size_in_bytes() const       { return (int)(ptrdiff_t)(DataEnd - Data) * (int)sizeof(T); }
+    inline int          size() const                { return static_cast<int>((ptrdiff_t)(DataEnd - Data)); }
+    inline int          size_in_bytes() const       { return static_cast<int>((ptrdiff_t)(DataEnd - Data)) * static_cast<int>(sizeof(T)); }
     inline T&           operator[](int i)           { T* p = Data + i; IM_ASSERT(p >= Data && p < DataEnd); return *p; }
     inline const T&     operator[](int i) const     { const T* p = Data + i; IM_ASSERT(p >= Data && p < DataEnd); return *p; }
 
@@ -704,7 +704,7 @@ struct ImSpan
     inline const T*     end() const                 { return DataEnd; }
 
     // Utilities
-    inline int  index_from_ptr(const T* it) const   { IM_ASSERT(it >= Data && it < DataEnd); const ptrdiff_t off = it - Data; return (int)off; }
+    inline int  index_from_ptr(const T* it) const   { IM_ASSERT(it >= Data && it < DataEnd); const ptrdiff_t off = it - Data; return static_cast<int>(off); }
 };
 
 // Helper: ImSpanAllocator<>
@@ -719,14 +719,14 @@ struct ImSpanAllocator
     int     Offsets[CHUNKS];
     int     Sizes[CHUNKS];
 
-    ImSpanAllocator()                               { memset((void*)this, 0, sizeof(*this)); }
-    inline void  Reserve(int n, size_t sz, int a=4) { IM_ASSERT(n == CurrIdx && n < CHUNKS); CurrOff = IM_MEMALIGN(CurrOff, a); Offsets[n] = CurrOff; Sizes[n] = (int)sz; CurrIdx++; CurrOff += (int)sz; }
+    ImSpanAllocator()                               { memset(static_cast<void*>(this), 0, sizeof(*this)); }
+    inline void  Reserve(int n, size_t sz, int a=4) { IM_ASSERT(n == CurrIdx && n < CHUNKS); CurrOff = IM_MEMALIGN(CurrOff, a); Offsets[n] = CurrOff; Sizes[n] = static_cast<int>(sz); CurrIdx++; CurrOff += static_cast<int>(sz); }
     inline int   GetArenaSizeInBytes()              { return CurrOff; }
-    inline void  SetArenaBasePtr(void* base_ptr)    { BasePtr = (char*)base_ptr; }
-    inline void* GetSpanPtrBegin(int n)             { IM_ASSERT(n >= 0 && n < CHUNKS && CurrIdx == CHUNKS); return (void*)(BasePtr + Offsets[n]); }
-    inline void* GetSpanPtrEnd(int n)               { IM_ASSERT(n >= 0 && n < CHUNKS && CurrIdx == CHUNKS); return (void*)(BasePtr + Offsets[n] + Sizes[n]); }
+    inline void  SetArenaBasePtr(void* base_ptr)    { BasePtr = static_cast<char*>(base_ptr); }
+    inline void* GetSpanPtrBegin(int n)             { IM_ASSERT(n >= 0 && n < CHUNKS && CurrIdx == CHUNKS); return static_cast<void*>(BasePtr + Offsets[n]); }
+    inline void* GetSpanPtrEnd(int n)               { IM_ASSERT(n >= 0 && n < CHUNKS && CurrIdx == CHUNKS); return static_cast<void*>(BasePtr + Offsets[n] + Sizes[n]); }
     template<typename T>
-    inline void  GetSpan(int n, ImSpan<T>* span)    { span->set((T*)GetSpanPtrBegin(n), (T*)GetSpanPtrEnd(n)); }
+    inline void  GetSpan(int n, ImSpan<T>* span)    { span->set(static_cast<T*>(GetSpanPtrBegin(n)), static_cast<T*>(GetSpanPtrEnd(n))); }
 };
 
 // Helper: ImStableVector<>
@@ -754,12 +754,12 @@ struct ImStableVector
             return;
         Blocks.resize(new_count);
         for (int n = old_count; n < new_count; n++)
-            Blocks[n] = (T*)IM_ALLOC(sizeof(T) * BLOCKSIZE);
+            Blocks[n] = static_cast<T*>(IM_ALLOC(sizeof(T) * BLOCKSIZE));
         Capacity = new_cap;
     }
     inline T&           operator[](int i)           { IM_ASSERT(i >= 0 && i < Size); return Blocks[i / BLOCKSIZE][i % BLOCKSIZE]; }
     inline const T&     operator[](int i) const     { IM_ASSERT(i >= 0 && i < Size); return Blocks[i / BLOCKSIZE][i % BLOCKSIZE]; }
-    inline T*           push_back(const T& v)       { int i = Size; IM_ASSERT(i >= 0); if (Size == Capacity) reserve(Capacity + BLOCKSIZE); void* ptr = &Blocks[i / BLOCKSIZE][i % BLOCKSIZE]; memcpy(ptr, &v, sizeof(v)); Size++; return (T*)ptr; }
+    inline T*           push_back(const T& v)       { int i = Size; IM_ASSERT(i >= 0); if (Size == Capacity) reserve(Capacity + BLOCKSIZE); void* ptr = &Blocks[i / BLOCKSIZE][i % BLOCKSIZE]; memcpy(ptr, &v, sizeof(v)); Size++; return static_cast<T*>(ptr); }
 };
 
 // Helper: ImPool<>
@@ -778,13 +778,13 @@ struct ImPool
     ~ImPool()   { Clear(); }
     T*          GetByKey(ImGuiID key)               { int idx = Map.GetInt(key, -1); return (idx != -1) ? &Buf[idx] : NULL; }
     T*          GetByIndex(ImPoolIdx n)             { return &Buf[n]; }
-    ImPoolIdx   GetIndex(const T* p) const          { IM_ASSERT(p >= Buf.Data && p < Buf.Data + Buf.Size); return (ImPoolIdx)(p - Buf.Data); }
+    ImPoolIdx   GetIndex(const T* p) const          { IM_ASSERT(p >= Buf.Data && p < Buf.Data + Buf.Size); return static_cast<ImPoolIdx>(p - Buf.Data); }
     T*          GetOrAddByKey(ImGuiID key)          { int* p_idx = Map.GetIntRef(key, -1); if (*p_idx != -1) return &Buf[*p_idx]; *p_idx = FreeIdx; return Add(); }
     bool        Contains(const T* p) const          { return (p >= Buf.Data && p < Buf.Data + Buf.Size); }
     void        Clear()                             { for (int n = 0; n < Map.Data.Size; n++) { int idx = Map.Data[n].val_i; if (idx != -1) Buf[idx].~T(); } Map.Clear(); Buf.clear(); FreeIdx = AliveCount = 0; }
-    T*          Add()                               { int idx = FreeIdx; if (idx == Buf.Size) { Buf.resize(Buf.Size + 1); FreeIdx++; } else { FreeIdx = *(int*)&Buf[idx]; } IM_PLACEMENT_NEW(&Buf[idx]) T(); AliveCount++; return &Buf[idx]; }
+    T*          Add()                               { int idx = FreeIdx; if (idx == Buf.Size) { Buf.resize(Buf.Size + 1); FreeIdx++; } else { FreeIdx = *static_cast<int*>(&Buf[idx]); } IM_PLACEMENT_NEW(&Buf[idx]) T(); AliveCount++; return &Buf[idx]; }
     void        Remove(ImGuiID key, const T* p)     { Remove(key, GetIndex(p)); }
-    void        Remove(ImGuiID key, ImPoolIdx idx)  { Buf[idx].~T(); *(int*)&Buf[idx] = FreeIdx; FreeIdx = idx; Map.SetInt(key, -1); AliveCount--; }
+    void        Remove(ImGuiID key, ImPoolIdx idx)  { Buf[idx].~T(); *static_cast<int*>(&Buf[idx]) = FreeIdx; FreeIdx = idx; Map.SetInt(key, -1); AliveCount--; }
     void        Reserve(int capacity)               { Buf.reserve(capacity); Map.Data.reserve(capacity); }
 
     // To iterate a ImPool: for (int n = 0; n < pool.GetMapSize(); n++) if (T* t = pool.TryGetMapData(n)) { ... }
@@ -808,13 +808,13 @@ struct ImChunkStream
     void    clear()                     { Buf.clear(); }
     bool    empty() const               { return Buf.Size == 0; }
     int     size() const                { return Buf.Size; }
-    T*      alloc_chunk(size_t sz)      { size_t HDR_SZ = 4; sz = IM_MEMALIGN(HDR_SZ + sz, 4u); int off = Buf.Size; Buf.resize(off + (int)sz); ((int*)(void*)(Buf.Data + off))[0] = (int)sz; return (T*)(void*)(Buf.Data + off + (int)HDR_SZ); }
-    T*      begin()                     { size_t HDR_SZ = 4; if (!Buf.Data) return NULL; return (T*)(void*)(Buf.Data + HDR_SZ); }
-    T*      next_chunk(T* p)            { size_t HDR_SZ = 4; IM_ASSERT(p >= begin() && p < end()); p = (T*)(void*)((char*)(void*)p + chunk_size(p)); if (p == (T*)(void*)((char*)end() + HDR_SZ)) return (T*)0; IM_ASSERT(p < end()); return p; }
-    int     chunk_size(const T* p)      { return ((const int*)p)[-1]; }
-    T*      end()                       { return (T*)(void*)(Buf.Data + Buf.Size); }
-    int     offset_from_ptr(const T* p) { IM_ASSERT(p >= begin() && p < end()); const ptrdiff_t off = (const char*)p - Buf.Data; return (int)off; }
-    T*      ptr_from_offset(int off)    { IM_ASSERT(off >= 4 && off < Buf.Size); return (T*)(void*)(Buf.Data + off); }
+    T*      alloc_chunk(size_t sz)      { size_t HDR_SZ = 4; sz = IM_MEMALIGN(HDR_SZ + sz, 4u); int off = Buf.Size; Buf.resize(off + static_cast<int>(sz)); static_cast<int*>((void*)(Buf.Data + off))[0] = static_cast<int>(sz); return static_cast<T*>((void*)(Buf.Data + off + (int)HDR_SZ)); }
+    T*      begin()                     { size_t HDR_SZ = 4; if (!Buf.Data) return NULL; return static_cast<T*>((void*)(Buf.Data + HDR_SZ)); }
+    T*      next_chunk(T* p)            { size_t HDR_SZ = 4; IM_ASSERT(p >= begin() && p < end()); p = static_cast<T*>((void*)((char*)(void*)p + chunk_size(p))); if (p == static_cast<T*>((void*)((char*)end() + HDR_SZ))) return (T*)0; IM_ASSERT(p < end()); return p; }
+    int     chunk_size(const T* p)      { return static_cast<const int*>(p)[-1]; }
+    T*      end()                       { return static_cast<T*>((void*)(Buf.Data + Buf.Size)); }
+    int     offset_from_ptr(const T* p) { IM_ASSERT(p >= begin() && p < end()); const ptrdiff_t off = static_cast<const char*>(p) - Buf.Data; return static_cast<int>(off); }
+    T*      ptr_from_offset(int off)    { IM_ASSERT(off >= 4 && off < Buf.Size); return static_cast<T*>((void*)(Buf.Data + off)); }
     void    swap(ImChunkStream<T>& rhs) { rhs.Buf.swap(Buf); }
 };
 
@@ -919,7 +919,7 @@ struct ImGuiStyleVarInfo
     ImU32           Count : 8;      // 1+
     ImGuiDataType   DataType : 8;
     ImU32           Offset : 16;    // Offset in parent structure
-    void* GetVarPtr(void* parent) const { return (void*)((unsigned char*)parent + Offset); }
+    void* GetVarPtr(void* parent) const { return (void*)(static_cast<unsigned char*>(parent) + Offset); }
 };
 
 // Stacked color modifier, backup of modified data so we can restore it
@@ -1682,7 +1682,7 @@ struct ImGuiListClipperRange
     ImS8    PosToIndexOffsetMax;    // Add to Min after converting to indices
 
     static ImGuiListClipperRange    FromIndices(int min, int max)                               { ImGuiListClipperRange r = { min, max, false, 0, 0 }; return r; }
-    static ImGuiListClipperRange    FromPositions(float y1, float y2, int off_min, int off_max) { ImGuiListClipperRange r = { (int)y1, (int)y2, true, (ImS8)off_min, (ImS8)off_max }; return r; }
+    static ImGuiListClipperRange    FromPositions(float y1, float y2, int off_min, int off_max) { ImGuiListClipperRange r = { static_cast<int>(y1), static_cast<int>(y2), true, static_cast<ImS8>(off_min), static_cast<ImS8>(off_max) }; return r; }
 };
 
 // Temporary clipper data, buffers shared/reused between instances
@@ -1998,10 +1998,10 @@ enum ImGuiDockNodeFlagsPrivate_
 
     // Masks
     ImGuiDockNodeFlags_SharedFlagsInheritMask_  = ~0,
-    ImGuiDockNodeFlags_NoResizeFlagsMask_       = (int)ImGuiDockNodeFlags_NoResize | ImGuiDockNodeFlags_NoResizeX | ImGuiDockNodeFlags_NoResizeY,
+    ImGuiDockNodeFlags_NoResizeFlagsMask_       = static_cast<int>(ImGuiDockNodeFlags_NoResize) | ImGuiDockNodeFlags_NoResizeX | ImGuiDockNodeFlags_NoResizeY,
 
     // When splitting, those local flags are moved to the inheriting child, never duplicated
-    ImGuiDockNodeFlags_LocalFlagsTransferMask_  = (int)ImGuiDockNodeFlags_NoDockingSplit | ImGuiDockNodeFlags_NoResizeFlagsMask_ | (int)ImGuiDockNodeFlags_AutoHideTabBar | ImGuiDockNodeFlags_CentralNode | ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_HiddenTabBar | ImGuiDockNodeFlags_NoWindowMenuButton | ImGuiDockNodeFlags_NoCloseButton,
+    ImGuiDockNodeFlags_LocalFlagsTransferMask_  = static_cast<int>(ImGuiDockNodeFlags_NoDockingSplit) | ImGuiDockNodeFlags_NoResizeFlagsMask_ | static_cast<int>(ImGuiDockNodeFlags_AutoHideTabBar) | ImGuiDockNodeFlags_CentralNode | ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_HiddenTabBar | ImGuiDockNodeFlags_NoWindowMenuButton | ImGuiDockNodeFlags_NoCloseButton,
     ImGuiDockNodeFlags_SavedFlagsMask_          = ImGuiDockNodeFlags_NoResizeFlagsMask_ | ImGuiDockNodeFlags_DockSpace | ImGuiDockNodeFlags_CentralNode | ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_HiddenTabBar | ImGuiDockNodeFlags_NoWindowMenuButton | ImGuiDockNodeFlags_NoCloseButton,
 };
 
@@ -3161,7 +3161,7 @@ struct ImGuiTableColumn
         PrevEnabledColumn = NextEnabledColumn = -1;
         SortOrder = -1;
         SortDirection = ImGuiSortDirection_None;
-        DrawChannelCurrent = DrawChannelFrozen = DrawChannelUnfrozen = (ImU8)-1;
+        DrawChannelCurrent = DrawChannelFrozen = DrawChannelUnfrozen = static_cast<ImU8>(-1);
     }
 };
 
@@ -3636,7 +3636,7 @@ namespace ImGui
     IMGUI_API ImGuiKeyData* GetKeyData(ImGuiContext* ctx, ImGuiKey key);
     inline ImGuiKeyData*    GetKeyData(ImGuiKey key)                                    { ImGuiContext& g = *GImGui; return GetKeyData(&g, key); }
     IMGUI_API const char*   GetKeyChordName(ImGuiKeyChord key_chord);
-    inline ImGuiKey         MouseButtonToKey(ImGuiMouseButton button)                   { IM_ASSERT(button >= 0 && button < ImGuiMouseButton_COUNT); return (ImGuiKey)(ImGuiKey_MouseLeft + button); }
+    inline ImGuiKey         MouseButtonToKey(ImGuiMouseButton button)                   { IM_ASSERT(button >= 0 && button < ImGuiMouseButton_COUNT); return static_cast<ImGuiKey>(ImGuiKey_MouseLeft + button); }
     IMGUI_API bool          IsMouseDragPastThreshold(ImGuiMouseButton button, float lock_threshold = -1.0f);
     IMGUI_API ImVec2        GetKeyMagnitude2d(ImGuiKey key_left, ImGuiKey key_right, ImGuiKey key_up, ImGuiKey key_down);
     IMGUI_API float         GetNavTweakPressedAmount(ImGuiAxis axis);
@@ -4127,7 +4127,7 @@ inline bool operator!=(const ImTextureRef& lhs, const ImTextureRef& rhs)    { re
 #define ImFontAtlasRectId_GenerationMask_   (0x3FF00000)    // 10-bits: entry generation, so each ID is unique and get can safely detected old identifiers.
 #define ImFontAtlasRectId_GenerationShift_  (20)
 inline int               ImFontAtlasRectId_GetIndex(ImFontAtlasRectId id)       { return (id & ImFontAtlasRectId_IndexMask_); }
-inline unsigned int      ImFontAtlasRectId_GetGeneration(ImFontAtlasRectId id)  { return (unsigned int)(id & ImFontAtlasRectId_GenerationMask_) >> ImFontAtlasRectId_GenerationShift_; }
+inline unsigned int      ImFontAtlasRectId_GetGeneration(ImFontAtlasRectId id)  { return static_cast<unsigned int>(id & ImFontAtlasRectId_GenerationMask_) >> ImFontAtlasRectId_GenerationShift_; }
 inline ImFontAtlasRectId ImFontAtlasRectId_Make(int index_idx, int gen_idx)     { IM_ASSERT(index_idx >= 0 && index_idx <= ImFontAtlasRectId_IndexMask_ && gen_idx <= (ImFontAtlasRectId_GenerationMask_ >> ImFontAtlasRectId_GenerationShift_)); return (ImFontAtlasRectId)(index_idx | (gen_idx << ImFontAtlasRectId_GenerationShift_)); }
 
 // Packed rectangle lookup entry (we need an indirection to allow removing/reordering rectangles)

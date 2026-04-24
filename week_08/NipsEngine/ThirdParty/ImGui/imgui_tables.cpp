@@ -1,4 +1,4 @@
-// dear imgui, v1.92.7 WIP
+﻿// dear imgui, v1.92.7 WIP
 // (tables and columns code)
 
 /*
@@ -378,12 +378,12 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->ColumnsCount = columns_count;
     table->IsLayoutLocked = false;
     table->InnerWidth = inner_width;
-    table->NavLayer = (ImS8)outer_window->DC.NavLayerCurrent;
+    table->NavLayer = static_cast<ImS8>(outer_window->DC.NavLayerCurrent);
     temp_data->UserOuterSize = outer_size;
 
     // Instance data (for instance 0, TableID == TableInstanceID)
     ImGuiID instance_id;
-    table->InstanceCurrent = (ImS16)instance_no;
+    table->InstanceCurrent = static_cast<ImS16>(instance_no);
     if (instance_no > 0)
     {
         IM_ASSERT(table->ColumnsCount == columns_count && "BeginTable(): Cannot change columns count mid-frame while preserving same ID");
@@ -555,8 +555,8 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // Mark as used to avoid GC
     if (table_idx >= g.TablesLastTimeActive.Size)
         g.TablesLastTimeActive.resize(table_idx + 1, -1.0f);
-    g.TablesLastTimeActive[table_idx] = (float)g.Time;
-    temp_data->LastTimeActive = (float)g.Time;
+    g.TablesLastTimeActive[table_idx] = static_cast<float>(g.Time);
+    temp_data->LastTimeActive = static_cast<float>(g.Time);
     table->MemoryCompacted = false;
 
     // Setup memory buffer (clear data if columns count changed)
@@ -602,7 +602,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
                 column->WidthAuto = width_auto;
                 column->IsPreserveWidthAuto = true; // Preserve WidthAuto when reinitializing a live table: not technically necessary but remove a visible flicker
                 column->IsEnabled = column->IsUserEnabled = column->IsUserEnabledNextFrame = true;
-                column->DisplayOrder = (ImGuiTableColumnIdx)n;
+                column->DisplayOrder = static_cast<ImGuiTableColumnIdx>(n);
             }
             table->DisplayOrderToIndex[n] = column->DisplayOrder;
         }
@@ -657,7 +657,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 void ImGui::TableBeginInitMemory(ImGuiTable* table, int columns_count)
 {
     // Allocate single buffer for our arrays
-    const int columns_bit_array_size = (int)ImBitArrayGetStorageSizeInBytes(columns_count);
+    const int columns_bit_array_size = static_cast<int>(ImBitArrayGetStorageSizeInBytes(columns_count));
     ImSpanAllocator<6> span_allocator;
     span_allocator.Reserve(0, columns_count * sizeof(ImGuiTableColumn));
     span_allocator.Reserve(1, columns_count * sizeof(ImGuiTableColumnIdx));
@@ -670,9 +670,9 @@ void ImGui::TableBeginInitMemory(ImGuiTable* table, int columns_count)
     span_allocator.GetSpan(0, &table->Columns);
     span_allocator.GetSpan(1, &table->DisplayOrderToIndex);
     span_allocator.GetSpan(2, &table->RowCellData);
-    table->EnabledMaskByDisplayOrder = (ImU32*)span_allocator.GetSpanPtrBegin(3);
-    table->EnabledMaskByIndex = (ImU32*)span_allocator.GetSpanPtrBegin(4);
-    table->VisibleMaskByIndex = (ImU32*)span_allocator.GetSpanPtrBegin(5);
+    table->EnabledMaskByDisplayOrder = static_cast<ImU32*>(span_allocator.GetSpanPtrBegin(3));
+    table->EnabledMaskByIndex = static_cast<ImU32*>(span_allocator.GetSpanPtrBegin(4));
+    table->VisibleMaskByIndex = static_cast<ImU32*>(span_allocator.GetSpanPtrBegin(5));
 }
 
 // Apply queued resizing/reordering/hiding requests
@@ -724,7 +724,7 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
     if (table->IsResetDisplayOrderRequest)
     {
         for (int n = 0; n < table->ColumnsCount; n++)
-            table->DisplayOrderToIndex[n] = table->Columns[n].DisplayOrder = (ImGuiTableColumnIdx)n;
+            table->DisplayOrderToIndex[n] = table->Columns[n].DisplayOrder = static_cast<ImGuiTableColumnIdx>(n);
         table->IsResetDisplayOrderRequest = false;
         table->IsSettingsDirty = true;
     }
@@ -743,15 +743,15 @@ void ImGui::TableSetColumnDisplayOrder(ImGuiTable* table, int column_n, int dst_
         return;
     const int reorder_dir = (dst_order < src_order) ? -1 : +1;
 
-    src_column->DisplayOrder = (ImGuiTableColumnIdx)dst_order;
+    src_column->DisplayOrder = static_cast<ImGuiTableColumnIdx>(dst_order);
     for (int order_n = src_order + reorder_dir; order_n != dst_order + reorder_dir; order_n += reorder_dir)
-        table->Columns[table->DisplayOrderToIndex[order_n]].DisplayOrder -= (ImGuiTableColumnIdx)reorder_dir;
+        table->Columns[table->DisplayOrderToIndex[order_n]].DisplayOrder -= static_cast<ImGuiTableColumnIdx>(reorder_dir);
     //IM_ASSERT(dst_column->DisplayOrder == dst_order - reorder_dir);
 
     // Display order is stored in both columns->IndexDisplayOrder and table->DisplayOrder[]. Rebuild later from the former.
     // FIXME-OPT: If this is called multiple times we'd effectively have a O(N^2) thing going on.
     for (int n = 0; n < table->ColumnsCount; n++)
-        table->DisplayOrderToIndex[table->Columns[n].DisplayOrder] = (ImGuiTableColumnIdx)n;
+        table->DisplayOrderToIndex[table->Columns[n].DisplayOrder] = static_cast<ImGuiTableColumnIdx>(n);
     table->IsSettingsDirty = true;
 }
 
@@ -804,9 +804,9 @@ static void TableSetupColumnFlags(ImGuiTable* table, ImGuiTableColumn* column, I
         if ((flags & ImGuiTableColumnFlags_PreferSortAscending)  == 0 && (flags & ImGuiTableColumnFlags_NoSortAscending)  == 0) { mask |= 1 << ImGuiSortDirection_Ascending;  list |= ImGuiSortDirection_Ascending  << (count << 1); count++; }
         if ((flags & ImGuiTableColumnFlags_PreferSortDescending) == 0 && (flags & ImGuiTableColumnFlags_NoSortDescending) == 0) { mask |= 1 << ImGuiSortDirection_Descending; list |= ImGuiSortDirection_Descending << (count << 1); count++; }
         if ((table->Flags & ImGuiTableFlags_SortTristate) || count == 0) { mask |= 1 << ImGuiSortDirection_None; count++; }
-        column->SortDirectionsAvailList = (ImU8)list;
-        column->SortDirectionsAvailMask = (ImU8)mask;
-        column->SortDirectionsAvailCount = (ImU8)count;
+        column->SortDirectionsAvailList = static_cast<ImU8>(list);
+        column->SortDirectionsAvailMask = static_cast<ImU8>(mask);
+        column->SortDirectionsAvailCount = static_cast<ImU8>(count);
         ImGui::TableFixColumnSortDirection(table, column);
     }
 }
@@ -882,12 +882,12 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         }
 
         // Mark as enabled and link to previous/next enabled column
-        column->PrevEnabledColumn = (ImGuiTableColumnIdx)prev_visible_column_idx;
+        column->PrevEnabledColumn = static_cast<ImGuiTableColumnIdx>(prev_visible_column_idx);
         column->NextEnabledColumn = -1;
         if (prev_visible_column_idx != -1)
-            table->Columns[prev_visible_column_idx].NextEnabledColumn = (ImGuiTableColumnIdx)column_n;
+            table->Columns[prev_visible_column_idx].NextEnabledColumn = static_cast<ImGuiTableColumnIdx>(column_n);
         else
-            table->LeftMostEnabledColumn = (ImGuiTableColumnIdx)column_n;
+            table->LeftMostEnabledColumn = static_cast<ImGuiTableColumnIdx>(column_n);
         column->IndexWithinEnabledSet = table->ColumnsEnabledCount++;
         ImBitArraySetBit(table->EnabledMaskByIndex, column_n);
         ImBitArraySetBit(table->EnabledMaskByDisplayOrder, column->DisplayOrder);
@@ -921,7 +921,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     }
     if ((table->Flags & ImGuiTableFlags_Sortable) && table->SortSpecsCount == 0 && !(table->Flags & ImGuiTableFlags_SortTristate))
         table->IsSortSpecsDirty = true;
-    table->RightMostEnabledColumn = (ImGuiTableColumnIdx)prev_visible_column_idx;
+    table->RightMostEnabledColumn = static_cast<ImGuiTableColumnIdx>(prev_visible_column_idx);
     IM_ASSERT(table->LeftMostEnabledColumn >= 0 && table->RightMostEnabledColumn >= 0);
 
     // [Part 2] Disable child window clipping while fitting columns. This is not strictly necessary but makes it possible to avoid
@@ -982,14 +982,14 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
             stretch_sum_weights += column->StretchWeight;
             if (table->LeftMostStretchedColumn == -1 || table->Columns[table->LeftMostStretchedColumn].DisplayOrder > column->DisplayOrder)
-                table->LeftMostStretchedColumn = (ImGuiTableColumnIdx)column_n;
+                table->LeftMostStretchedColumn = static_cast<ImGuiTableColumnIdx>(column_n);
             if (table->RightMostStretchedColumn == -1 || table->Columns[table->RightMostStretchedColumn].DisplayOrder < column->DisplayOrder)
-                table->RightMostStretchedColumn = (ImGuiTableColumnIdx)column_n;
+                table->RightMostStretchedColumn = static_cast<ImGuiTableColumnIdx>(column_n);
         }
         column->IsPreserveWidthAuto = false;
         sum_width_requests += table->CellPaddingX * 2.0f;
     }
-    table->ColumnsEnabledFixedCount = (ImGuiTableColumnIdx)count_fixed;
+    table->ColumnsEnabledFixedCount = static_cast<ImGuiTableColumnIdx>(count_fixed);
     table->ColumnsStretchSumWeights = stretch_sum_weights;
 
     // [Part 4] Apply final widths based on requested widths
@@ -1075,7 +1075,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         ImGuiTableColumn* column = &table->Columns[column_n];
 
         // Initial nav layer: using FreezeRowsCount, NOT FreezeRowsRequest, so Header line changes layer when frozen
-        column->NavLayerCurrent = (ImS8)(table->FreezeRowsCount > 0 ? ImGuiNavLayer_Menu : (ImGuiNavLayer)table->NavLayer);
+        column->NavLayerCurrent = static_cast<ImS8>(table->FreezeRowsCount > 0 ? ImGuiNavLayer_Menu : (ImGuiNavLayer)table->NavLayer);
 
         if (offset_x_frozen && table->FreezeColumnsCount == visible_n)
         {
@@ -1160,7 +1160,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         if (is_hovering_table && mouse_skewed_x >= column->ClipRect.Min.x && mouse_skewed_x < column->ClipRect.Max.x)
         {
             column->Flags |= ImGuiTableColumnFlags_IsHovered;
-            table->HoveredColumnBody = (ImGuiTableColumnIdx)column_n;
+            table->HoveredColumnBody = static_cast<ImGuiTableColumnIdx>(column_n);
         }
 
         // Alignment
@@ -1218,7 +1218,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     const float unused_x1 = ImMax(table->WorkRect.Min.x, table->Columns[table->RightMostEnabledColumn].ClipRect.Max.x);
     if (is_hovering_table && table->HoveredColumnBody == -1)
         if (mouse_skewed_x >= unused_x1)
-            table->HoveredColumnBody = (ImGuiTableColumnIdx)table->ColumnsCount;
+            table->HoveredColumnBody = static_cast<ImGuiTableColumnIdx>(table->ColumnsCount);
     if (has_resizable == false && (table->Flags & ImGuiTableFlags_Resizable))
         table->Flags &= ~ImGuiTableFlags_Resizable;
 
@@ -1347,12 +1347,12 @@ void ImGui::TableUpdateBorders(ImGuiTable* table)
         {
             if (table->LastResizedColumn == -1)
                 table->ResizeLockMinContentsX2 = table->RightMostEnabledColumn != -1 ? table->Columns[table->RightMostEnabledColumn].MaxX : -FLT_MAX;
-            table->ResizedColumn = (ImGuiTableColumnIdx)column_n;
+            table->ResizedColumn = static_cast<ImGuiTableColumnIdx>(column_n);
             table->InstanceInteracted = table->InstanceCurrent;
         }
         if ((hovered && g.HoveredIdTimer > TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER) || held)
         {
-            table->HoveredColumnBorder = (ImGuiTableColumnIdx)column_n;
+            table->HoveredColumnBorder = static_cast<ImGuiTableColumnIdx>(column_n);
             SetMouseCursor(ImGuiMouseCursor_ResizeEW);
         }
     }
@@ -1594,14 +1594,14 @@ static void TableInitColumnDefaults(ImGuiTable* table, ImGuiTableColumn* column,
             column->AutoFitQueue = 0x00;
     }
     if (init_mask & ImGuiTableFlags_Reorderable)
-        column->DisplayOrder = (ImGuiTableColumnIdx)table->Columns.index_from_ptr(column);
+        column->DisplayOrder = static_cast<ImGuiTableColumnIdx>(table->Columns.index_from_ptr(column));
     if (init_mask & ImGuiTableFlags_Hideable)
         column->IsUserEnabled = column->IsUserEnabledNextFrame = (flags & ImGuiTableColumnFlags_DefaultHide) ? 0 : 1;
     if (init_mask & ImGuiTableFlags_Sortable)
     {
         // Multiple columns using _DefaultSort will be reassigned unique SortOrder values when building the sort specs.
         column->SortOrder = (flags & ImGuiTableColumnFlags_DefaultSort) ? 0 : -1;
-        column->SortDirection = (flags & ImGuiTableColumnFlags_DefaultSort) ? ((flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending)) : (ImS8)ImGuiSortDirection_None;
+        column->SortDirection = (flags & ImGuiTableColumnFlags_DefaultSort) ? ((flags & ImGuiTableColumnFlags_PreferSortDescending) ? static_cast<ImS8>(ImGuiSortDirection_Descending) : static_cast<ImU8>(ImGuiSortDirection_Ascending)) : static_cast<ImS8>(ImGuiSortDirection_None);
     }
 }
 
@@ -1654,7 +1654,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     column->NameOffset = -1;
     if (label != NULL && label[0] != 0)
     {
-        column->NameOffset = (ImS16)table->ColumnsNames.size();
+        column->NameOffset = static_cast<ImS16>(table->ColumnsNames.size());
         table->ColumnsNames.append(label, label + ImStrlen(label) + 1);
     }
 }
@@ -1669,9 +1669,9 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
     IM_ASSERT(columns >= 0 && columns < IMGUI_TABLE_MAX_COLUMNS);
     IM_ASSERT(rows >= 0 && rows < 128); // Arbitrary limit
 
-    table->FreezeColumnsRequest = (table->Flags & ImGuiTableFlags_ScrollX) ? (ImGuiTableColumnIdx)ImMin(columns, table->ColumnsCount) : 0;
+    table->FreezeColumnsRequest = (table->Flags & ImGuiTableFlags_ScrollX) ? static_cast<ImGuiTableColumnIdx>(ImMin(columns, table->ColumnsCount)) : 0;
     table->FreezeColumnsCount = (table->InnerWindow->Scroll.x != 0.0f) ? table->FreezeColumnsRequest : 0;
-    table->FreezeRowsRequest = (table->Flags & ImGuiTableFlags_ScrollY) ? (ImGuiTableColumnIdx)rows : 0;
+    table->FreezeRowsRequest = (table->Flags & ImGuiTableFlags_ScrollY) ? static_cast<ImGuiTableColumnIdx>(rows) : 0;
     table->FreezeRowsCount = (table->InnerWindow->Scroll.y != 0.0f) ? table->FreezeRowsRequest : 0;
     table->IsUnfrozenRows = (table->FreezeRowsCount == 0); // Make sure this is set before TableUpdateLayout() so ImGuiListClipper can benefit from it.b
 
@@ -1840,7 +1840,7 @@ void ImGui::TableSetBgColor(ImGuiTableBgTarget target, ImU32 color, int column_n
             table->RowCellDataCurrent++;
         ImGuiTableCellData* cell_data = &table->RowCellData[table->RowCellDataCurrent];
         cell_data->BgColor = color;
-        cell_data->Column = (ImGuiTableColumnIdx)column_n;
+        cell_data->Column = static_cast<ImGuiTableColumnIdx>(column_n);
         break;
     }
     case ImGuiTableBgTarget_RowBg0:
@@ -2174,7 +2174,7 @@ void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
     window->DC.ColumnsOffset.x = start_x - window->Pos.x - window->DC.Indent.x; // FIXME-WORKRECT
     window->DC.CursorPosPrevLine.x = window->DC.CursorPos.x; // PrevLine.y is preserved. This allows users to call SameLine() to share LineSize between columns.
     window->DC.CurrLineTextBaseOffset = table->RowTextBaseline;
-    window->DC.NavLayerCurrent = (ImGuiNavLayer)column->NavLayerCurrent;
+    window->DC.NavLayerCurrent = static_cast<ImGuiNavLayer>(column->NavLayerCurrent);
 
     // Note how WorkRect.Max.y is only set once during layout
     window->WorkRect.Min.y = window->DC.CursorPos.y;
@@ -2389,7 +2389,7 @@ void ImGui::TableSetColumnWidthAutoSingle(ImGuiTable* table, int column_n)
     if (!column->IsEnabled)
         return;
     column->CannotSkipItemsQueue = (1 << 0);
-    table->AutoFitSingleColumn = (ImGuiTableColumnIdx)column_n;
+    table->AutoFitSingleColumn = static_cast<ImGuiTableColumnIdx>(column_n);
 }
 
 void ImGui::TableSetColumnWidthAutoAll(ImGuiTable* table)
@@ -2527,9 +2527,9 @@ void ImGui::TableSetupDrawChannels(ImGuiTable* table)
     const int channels_for_dummy = (table->ColumnsEnabledCount < table->ColumnsCount || (memcmp(table->VisibleMaskByIndex, table->EnabledMaskByIndex, ImBitArrayGetStorageSizeInBytes(table->ColumnsCount)) != 0)) ? +1 : 0;
     const int channels_total = channels_for_bg + (channels_for_row * freeze_row_multiplier) + channels_for_dummy;
     table->DrawSplitter->Split(table->InnerWindow->DrawList, channels_total);
-    table->DummyDrawChannel = (ImGuiTableDrawChannelIdx)((channels_for_dummy > 0) ? channels_total - 1 : -1);
+    table->DummyDrawChannel = static_cast<ImGuiTableDrawChannelIdx>((channels_for_dummy > 0) ? channels_total - 1 : -1);
     table->Bg2DrawChannelCurrent = TABLE_DRAW_CHANNEL_BG2_FROZEN;
-    table->Bg2DrawChannelUnfrozen = (ImGuiTableDrawChannelIdx)((table->FreezeRowsCount > 0) ? 2 + channels_for_row : TABLE_DRAW_CHANNEL_BG2_FROZEN);
+    table->Bg2DrawChannelUnfrozen = static_cast<ImGuiTableDrawChannelIdx>((table->FreezeRowsCount > 0) ? 2 + channels_for_row : TABLE_DRAW_CHANNEL_BG2_FROZEN);
 
     int draw_channel_current = 2;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
@@ -2537,8 +2537,8 @@ void ImGui::TableSetupDrawChannels(ImGuiTable* table)
         ImGuiTableColumn* column = &table->Columns[column_n];
         if (column->IsVisibleX && column->IsVisibleY)
         {
-            column->DrawChannelFrozen = (ImGuiTableDrawChannelIdx)(draw_channel_current);
-            column->DrawChannelUnfrozen = (ImGuiTableDrawChannelIdx)(draw_channel_current + (table->FreezeRowsCount > 0 ? channels_for_row + 1 : 0));
+            column->DrawChannelFrozen = static_cast<ImGuiTableDrawChannelIdx>(draw_channel_current);
+            column->DrawChannelUnfrozen = static_cast<ImGuiTableDrawChannelIdx>(draw_channel_current + (table->FreezeRowsCount > 0 ? channels_for_row + 1 : 0));
             if (!(table->Flags & ImGuiTableFlags_NoClip))
                 draw_channel_current++;
         }
@@ -2607,12 +2607,12 @@ void ImGui::TableMergeDrawChannels(ImGuiTable* table)
 
     // Use a reusable temp buffer for the merge masks as they are dynamically sized.
     const int max_draw_channels = (4 + table->ColumnsCount * 2);
-    const int size_for_masks_bitarrays_one = (int)ImBitArrayGetStorageSizeInBytes(max_draw_channels);
+    const int size_for_masks_bitarrays_one = static_cast<int>(ImBitArrayGetStorageSizeInBytes(max_draw_channels));
     g.TempBuffer.reserve(size_for_masks_bitarrays_one * 5);
     memset(g.TempBuffer.Data, 0, size_for_masks_bitarrays_one * 5);
     for (int n = 0; n < IM_COUNTOF(merge_groups); n++)
-        merge_groups[n].ChannelsMask = (ImBitArrayPtr)(void*)(g.TempBuffer.Data + (size_for_masks_bitarrays_one * n));
-    ImBitArrayPtr remaining_mask = (ImBitArrayPtr)(void*)(g.TempBuffer.Data + (size_for_masks_bitarrays_one * 4));
+        merge_groups[n].ChannelsMask = static_cast<ImBitArrayPtr>((void*)(g.TempBuffer.Data + (size_for_masks_bitarrays_one * n)));
+    ImBitArrayPtr remaining_mask = static_cast<ImBitArrayPtr>((void*)(g.TempBuffer.Data + (size_for_masks_bitarrays_one * 4)));
 
     // 1. Scan channels and take note of those which can be merged
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
@@ -2661,7 +2661,7 @@ void ImGui::TableMergeDrawChannels(ImGuiTable* table)
 
         // Invalidate current draw channel
         // (we don't clear DrawChannelFrozen/DrawChannelUnfrozen solely to facilitate debugging/later inspection of data)
-        column->DrawChannelCurrent = (ImGuiTableDrawChannelIdx)-1;
+        column->DrawChannelCurrent = static_cast<ImGuiTableDrawChannelIdx>(-1);
     }
 
     // [DEBUG] Display merge groups
@@ -2893,7 +2893,7 @@ ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
 static inline ImGuiSortDirection TableGetColumnAvailSortDirection(ImGuiTableColumn* column, int n)
 {
     IM_ASSERT(n < column->SortDirectionsAvailCount);
-    return (ImGuiSortDirection)((column->SortDirectionsAvailList >> (n << 1)) & 0x03);
+    return static_cast<ImGuiSortDirection>((column->SortDirectionsAvailList >> (n << 1)) & 0x03);
 }
 
 // Fix sort direction if currently set on a value which is unavailable (e.g. activating NoSortAscending/NoSortDescending)
@@ -2901,7 +2901,7 @@ void ImGui::TableFixColumnSortDirection(ImGuiTable* table, ImGuiTableColumn* col
 {
     if (column->SortOrder == -1 || (column->SortDirectionsAvailMask & (1 << column->SortDirection)) != 0)
         return;
-    column->SortDirection = (ImU8)TableGetColumnAvailSortDirection(column, 0);
+    column->SortDirection = static_cast<ImU8>(TableGetColumnAvailSortDirection(column, 0));
     table->IsSortSpecsDirty = true;
 }
 
@@ -2939,7 +2939,7 @@ void ImGui::TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_di
             sort_order_max = ImMax(sort_order_max, table->Columns[other_column_n].SortOrder);
 
     ImGuiTableColumn* column = &table->Columns[column_n];
-    column->SortDirection = (ImU8)sort_direction;
+    column->SortDirection = static_cast<ImU8>(sort_direction);
     if (column->SortDirection == ImGuiSortDirection_None)
         column->SortOrder = -1;
     else if (column->SortOrder == -1 || !append_to_sort_specs)
@@ -2971,11 +2971,11 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
         if (column->SortOrder == -1)
             continue;
         sort_order_count++;
-        sort_order_mask |= ((ImU64)1 << column->SortOrder);
-        IM_ASSERT(sort_order_count < (int)sizeof(sort_order_mask) * 8);
+        sort_order_mask |= (static_cast<ImU64>(1) << column->SortOrder);
+        IM_ASSERT(sort_order_count < static_cast<int>(sizeof(sort_order_mask)) * 8);
     }
 
-    const bool need_fix_linearize = ((ImU64)1 << sort_order_count) != (sort_order_mask + 1);
+    const bool need_fix_linearize = (static_cast<ImU64>(1) << sort_order_count) != (sort_order_mask + 1);
     const bool need_fix_single_sort_order = (sort_order_count > 1) && !(table->Flags & ImGuiTableFlags_SortMulti);
     if (need_fix_linearize || need_fix_single_sort_order)
     {
@@ -2986,12 +2986,12 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
             // (e.g. SortOrder 0 disappeared, SortOrder 1..2 exists --> rewrite then as SortOrder 0..1)
             int column_with_smallest_sort_order = -1;
             for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-                if ((fixed_mask & ((ImU64)1 << (ImU64)column_n)) == 0 && table->Columns[column_n].SortOrder != -1)
+                if ((fixed_mask & (static_cast<ImU64>(1) << static_cast<ImU64>(column_n))) == 0 && table->Columns[column_n].SortOrder != -1)
                     if (column_with_smallest_sort_order == -1 || table->Columns[column_n].SortOrder < table->Columns[column_with_smallest_sort_order].SortOrder)
                         column_with_smallest_sort_order = column_n;
             IM_ASSERT(column_with_smallest_sort_order != -1);
-            fixed_mask |= ((ImU64)1 << column_with_smallest_sort_order);
-            table->Columns[column_with_smallest_sort_order].SortOrder = (ImGuiTableColumnIdx)sort_n;
+            fixed_mask |= (static_cast<ImU64>(1) << column_with_smallest_sort_order);
+            table->Columns[column_with_smallest_sort_order].SortOrder = static_cast<ImGuiTableColumnIdx>(sort_n);
 
             // Fix: Make sure only one column has a SortOrder if ImGuiTableFlags_MultiSortable is not set.
             if (need_fix_single_sort_order)
@@ -3014,12 +3014,12 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
             {
                 sort_order_count = 1;
                 column->SortOrder = 0;
-                column->SortDirection = (ImU8)TableGetColumnAvailSortDirection(column, 0);
+                column->SortDirection = static_cast<ImU8>(TableGetColumnAvailSortDirection(column, 0));
                 break;
             }
         }
 
-    table->SortSpecsCount = (ImGuiTableColumnIdx)sort_order_count;
+    table->SortSpecsCount = static_cast<ImGuiTableColumnIdx>(sort_order_count);
 }
 
 void ImGui::TableSortSpecsBuild(ImGuiTable* table)
@@ -3045,9 +3045,9 @@ void ImGui::TableSortSpecsBuild(ImGuiTable* table)
             IM_ASSERT(column->SortOrder < table->SortSpecsCount);
             ImGuiTableColumnSortSpecs* sort_spec = &sort_specs[column->SortOrder];
             sort_spec->ColumnUserID = column->UserID;
-            sort_spec->ColumnIndex = (ImGuiTableColumnIdx)column_n;
+            sort_spec->ColumnIndex = static_cast<ImGuiTableColumnIdx>(column_n);
             sort_spec->SortOrder = (ImGuiTableColumnIdx)column->SortOrder;
-            sort_spec->SortDirection = (ImGuiSortDirection)column->SortDirection;
+            sort_spec->SortDirection = static_cast<ImGuiSortDirection>(column->SortDirection);
         }
 
     table->SortSpecs.Specs = sort_specs;
@@ -3217,7 +3217,7 @@ void ImGui::TableHeader(const char* label)
     }
     RenderNavCursor(bb, id, ImGuiNavRenderCursorFlags_Compact | ImGuiNavRenderCursorFlags_NoRounding);
     if (held)
-        table->HeldHeaderColumn = (ImGuiTableColumnIdx)column_n;
+        table->HeldHeaderColumn = static_cast<ImGuiTableColumnIdx>(column_n);
     window->DC.CursorPos.y -= g.Style.ItemSpacing.y * 0.5f;
 
     // Drag and drop to re-order columns.
@@ -3225,7 +3225,7 @@ void ImGui::TableHeader(const char* label)
     if (held && (table->Flags & ImGuiTableFlags_Reorderable) && IsMouseDragging(0) && !g.DragDropActive)
     {
         // While moving a column it will jump on the other side of the mouse, so we also test for MouseDelta.x
-        table->ReorderColumn = (ImGuiTableColumnIdx)column_n;
+        table->ReorderColumn = static_cast<ImGuiTableColumnIdx>(column_n);
         table->InstanceInteracted = table->InstanceCurrent;
 
         // We don't reorder: through the frozen<>unfrozen line, or through a column that is marked with ImGuiTableColumnFlags_NoReorder.
@@ -3274,7 +3274,7 @@ void ImGui::TableHeader(const char* label)
 
     const bool text_clipped = label_size.x > (ellipsis_max - label_pos.x);
     if (text_clipped && hovered && g.ActiveId == 0)
-        SetItemTooltip("%.*s", (int)(label_end - label), label);
+        SetItemTooltip("%.*s", static_cast<int>(label_end - label), label);
 
     // We don't use BeginPopupContextItem() because we want the popup to stay up even after the column is hidden
     if (IsMouseReleased(1) && IsItemHovered())
@@ -3309,7 +3309,7 @@ void ImGui::TableAngledHeadersRow()
             ImGuiTableColumn* column = &table->Columns[column_n];
             if ((column->Flags & ImGuiTableColumnFlags_AngledHeader) == 0) // Note: can't rely on ImGuiTableColumnFlags_IsVisible test here.
                 continue;
-            ImGuiTableHeaderData request = { (ImGuiTableColumnIdx)column_n, col_text, col_header_bg, (column_n == highlight_column_n) ? GetColorU32(ImGuiCol_Header) : 0 };
+            ImGuiTableHeaderData request = { static_cast<ImGuiTableColumnIdx>(column_n), col_text, col_header_bg, (column_n == highlight_column_n) ? GetColorU32(ImGuiCol_Header) : 0 };
             temp_data->AngledHeadersRequests.push_back(request);
         }
 
@@ -3472,7 +3472,7 @@ void ImGui::TableOpenContextMenu(int column_n)
     if (table->Flags & (ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
     {
         table->IsContextPopupOpen = true;
-        table->ContextPopupColumn = (ImGuiTableColumnIdx)column_n;
+        table->ContextPopupColumn = static_cast<ImGuiTableColumnIdx>(column_n);
         table->InstanceInteracted = table->InstanceCurrent;
         const ImGuiID context_menu_id = ImHashStr("##ContextMenu", 0, table->ID);
         OpenPopupEx(context_menu_id, ImGuiPopupFlags_None);
@@ -3621,14 +3621,14 @@ static void TableSettingsInit(ImGuiTableSettings* settings, ImGuiID id, int colu
     for (int n = 0; n < columns_count_max; n++, settings_column++)
         IM_PLACEMENT_NEW(settings_column) ImGuiTableColumnSettings();
     settings->ID = id;
-    settings->ColumnsCount = (ImGuiTableColumnIdx)columns_count;
-    settings->ColumnsCountMax = (ImGuiTableColumnIdx)columns_count_max;
+    settings->ColumnsCount = static_cast<ImGuiTableColumnIdx>(columns_count);
+    settings->ColumnsCountMax = static_cast<ImGuiTableColumnIdx>(columns_count_max);
     settings->WantApply = true;
 }
 
 static size_t TableSettingsCalcChunkSize(int columns_count)
 {
-    return sizeof(ImGuiTableSettings) + (size_t)columns_count * sizeof(ImGuiTableColumnSettings);
+    return sizeof(ImGuiTableSettings) + static_cast<size_t>(columns_count) * sizeof(ImGuiTableColumnSettings);
 }
 
 ImGuiTableSettings* ImGui::TableSettingsCreate(ImGuiID id, int columns_count)
@@ -3688,7 +3688,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
         settings = TableSettingsCreate(table->ID, table->ColumnsCount);
         table->SettingsOffset = g.SettingsTables.offset_from_ptr(settings);
     }
-    settings->ColumnsCount = (ImGuiTableColumnIdx)table->ColumnsCount;
+    settings->ColumnsCount = static_cast<ImGuiTableColumnIdx>(table->ColumnsCount);
 
     // Serialize ImGuiTable/ImGuiTableColumn into ImGuiTableSettings/ImGuiTableColumnSettings
     IM_ASSERT(settings->ID == table->ID);
@@ -3702,7 +3702,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
     {
         const float width_or_weight = (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? column->StretchWeight : column->WidthRequest;
         column_settings->WidthOrWeight = width_or_weight;
-        column_settings->Index = (ImGuiTableColumnIdx)n;
+        column_settings->Index = static_cast<ImGuiTableColumnIdx>(n);
         column_settings->DisplayOrder = column->DisplayOrder;
         column_settings->SortOrder = column->SortOrder;
         column_settings->SortDirection = column->SortDirection;
@@ -3791,7 +3791,7 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
     if (settings->SaveFlags & ImGuiTableFlags_Reorderable)
         TableFixDisplayOrder(table);
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-        table->DisplayOrderToIndex[table->Columns[column_n].DisplayOrder] = (ImGuiTableColumnIdx)column_n;
+        table->DisplayOrderToIndex[table->Columns[column_n].DisplayOrder] = static_cast<ImGuiTableColumnIdx>(column_n);
 }
 
 struct ImGuiTableFixDisplayOrderColumnData
@@ -3803,9 +3803,9 @@ struct ImGuiTableFixDisplayOrderColumnData
 // Sort by DisplayOrder and then Index
 static int IMGUI_CDECL TableFixDisplayOrderComparer(const void* lhs, const void* rhs)
 {
-    const ImGuiTable* table = ((const ImGuiTableFixDisplayOrderColumnData*)lhs)->Table;
-    const ImGuiTableColumnIdx lhs_idx = ((const ImGuiTableFixDisplayOrderColumnData*)lhs)->Idx;
-    const ImGuiTableColumnIdx rhs_idx = ((const ImGuiTableFixDisplayOrderColumnData*)rhs)->Idx;
+    const ImGuiTable* table = static_cast<const ImGuiTableFixDisplayOrderColumnData*>(lhs)->Table;
+    const ImGuiTableColumnIdx lhs_idx = static_cast<const ImGuiTableFixDisplayOrderColumnData*>(lhs)->Idx;
+    const ImGuiTableColumnIdx rhs_idx = static_cast<const ImGuiTableFixDisplayOrderColumnData*>(rhs)->Idx;
     const int order_delta = (table->Columns[lhs_idx].DisplayOrder - table->Columns[rhs_idx].DisplayOrder);
     return (order_delta > 0) ? +1 : (order_delta < 0) ? -1 : (lhs_idx > rhs_idx) ? +1 : -1;
 }
@@ -3814,16 +3814,16 @@ static int IMGUI_CDECL TableFixDisplayOrderComparer(const void* lhs, const void*
 void ImGui::TableFixDisplayOrder(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
-    g.TempBuffer.reserve((int)(sizeof(ImGuiTableFixDisplayOrderColumnData) * table->ColumnsCount)); // FIXME: Maybe wrap those two lines as a helper.
-    ImGuiTableFixDisplayOrderColumnData* fdo_columns = (ImGuiTableFixDisplayOrderColumnData*)(void*)g.TempBuffer.Data;
+    g.TempBuffer.reserve(static_cast<int>(sizeof(ImGuiTableFixDisplayOrderColumnData) * table->ColumnsCount)); // FIXME: Maybe wrap those two lines as a helper.
+    ImGuiTableFixDisplayOrderColumnData* fdo_columns = static_cast<ImGuiTableFixDisplayOrderColumnData*>((void*)g.TempBuffer.Data);
     for (int n = 0; n < table->ColumnsCount; n++)
     {
-        fdo_columns[n].Idx = (ImGuiTableColumnIdx)n;
+        fdo_columns[n].Idx = static_cast<ImGuiTableColumnIdx>(n);
         fdo_columns[n].Table = table;
     }
-    ImQsort(fdo_columns, (size_t)table->ColumnsCount, sizeof(ImGuiTableFixDisplayOrderColumnData), TableFixDisplayOrderComparer);
+    ImQsort(fdo_columns, static_cast<size_t>(table->ColumnsCount), sizeof(ImGuiTableFixDisplayOrderColumnData), TableFixDisplayOrderComparer);
     for (int n = 0; n < table->ColumnsCount; n++)
-        table->Columns[fdo_columns[n].Idx].DisplayOrder = (ImGuiTableColumnIdx)n;
+        table->Columns[fdo_columns[n].Idx].DisplayOrder = static_cast<ImGuiTableColumnIdx>(n);
 }
 
 static void TableSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
@@ -3869,7 +3869,7 @@ static void* TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*,
 static void TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line)
 {
     // "Column 0  UserID=0x42AD2D21 Width=100 Visible=1 Order=0 Sort=0v"
-    ImGuiTableSettings* settings = (ImGuiTableSettings*)entry;
+    ImGuiTableSettings* settings = static_cast<ImGuiTableSettings*>(entry);
     float f = 0.0f;
     int column_n = 0, r = 0, n = 0;
 
@@ -3882,13 +3882,13 @@ static void TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, 
         line = ImStrSkipBlank(line + r);
         char c = 0;
         ImGuiTableColumnSettings* column = settings->GetColumnSettings() + column_n;
-        column->Index = (ImGuiTableColumnIdx)column_n;
-        if (sscanf(line, "UserID=0x%08X%n", (ImU32*)&n, &r)==1) { line = ImStrSkipBlank(line + r); column->UserID = (ImGuiID)n; }
-        if (sscanf(line, "Width=%d%n", &n, &r) == 1)            { line = ImStrSkipBlank(line + r); column->WidthOrWeight = (float)n; column->IsStretch = 0; settings->SaveFlags |= ImGuiTableFlags_Resizable; }
+        column->Index = static_cast<ImGuiTableColumnIdx>(column_n);
+        if (sscanf(line, "UserID=0x%08X%n", (ImU32*)&n, &r)==1) { line = ImStrSkipBlank(line + r); column->UserID = static_cast<ImGuiID>(n); }
+        if (sscanf(line, "Width=%d%n", &n, &r) == 1)            { line = ImStrSkipBlank(line + r); column->WidthOrWeight = static_cast<float>(n); column->IsStretch = 0; settings->SaveFlags |= ImGuiTableFlags_Resizable; }
         if (sscanf(line, "Weight=%f%n", &f, &r) == 1)           { line = ImStrSkipBlank(line + r); column->WidthOrWeight = f; column->IsStretch = 1; settings->SaveFlags |= ImGuiTableFlags_Resizable; }
-        if (sscanf(line, "Visible=%d%n", &n, &r) == 1)          { line = ImStrSkipBlank(line + r); column->IsEnabled = (ImU8)n; settings->SaveFlags |= ImGuiTableFlags_Hideable; }
-        if (sscanf(line, "Order=%d%n", &n, &r) == 1)            { line = ImStrSkipBlank(line + r); column->DisplayOrder = (ImGuiTableColumnIdx)n; settings->SaveFlags |= ImGuiTableFlags_Reorderable; }
-        if (sscanf(line, "Sort=%d%c%n", &n, &c, &r) == 2)       { line = ImStrSkipBlank(line + r); column->SortOrder = (ImGuiTableColumnIdx)n; column->SortDirection = (c == '^') ? ImGuiSortDirection_Descending : ImGuiSortDirection_Ascending; settings->SaveFlags |= ImGuiTableFlags_Sortable; }
+        if (sscanf(line, "Visible=%d%n", &n, &r) == 1)          { line = ImStrSkipBlank(line + r); column->IsEnabled = static_cast<ImU8>(n); settings->SaveFlags |= ImGuiTableFlags_Hideable; }
+        if (sscanf(line, "Order=%d%n", &n, &r) == 1)            { line = ImStrSkipBlank(line + r); column->DisplayOrder = static_cast<ImGuiTableColumnIdx>(n); settings->SaveFlags |= ImGuiTableFlags_Reorderable; }
+        if (sscanf(line, "Sort=%d%c%n", &n, &c, &r) == 2)       { line = ImStrSkipBlank(line + r); column->SortOrder = static_cast<ImGuiTableColumnIdx>(n); column->SortDirection = (c == '^') ? ImGuiSortDirection_Descending : ImGuiSortDirection_Ascending; settings->SaveFlags |= ImGuiTableFlags_Sortable; }
     }
 }
 
@@ -3922,7 +3922,7 @@ static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandle
             buf->appendf("Column %-2d", column_n);
             if (column->UserID != 0)                    { buf->appendf(" UserID=%08X", column->UserID); }
             if (save_size && column->IsStretch)         { buf->appendf(" Weight=%.4f", column->WidthOrWeight); }
-            if (save_size && !column->IsStretch)        { buf->appendf(" Width=%d", (int)column->WidthOrWeight); }
+            if (save_size && !column->IsStretch)        { buf->appendf(" Width=%d", static_cast<int>(column->WidthOrWeight)); }
             if (save_visible)                           { buf->appendf(" Visible=%d", column->IsEnabled); }
             if (save_order)                             { buf->appendf(" Order=%d", column->DisplayOrder); }
             if (save_sort && column->SortOrder != -1)   { buf->appendf(" Sort=%d%c", column->SortOrder, (column->SortDirection == ImGuiSortDirection_Ascending) ? 'v' : '^'); }
@@ -3994,7 +3994,7 @@ void ImGui::TableGcCompactSettings()
     int required_memory = 0;
     for (ImGuiTableSettings* settings = g.SettingsTables.begin(); settings != NULL; settings = g.SettingsTables.next_chunk(settings))
         if (settings->ID != 0)
-            required_memory += (int)TableSettingsCalcChunkSize(settings->ColumnsCount);
+            required_memory += static_cast<int>(TableSettingsCalcChunkSize(settings->ColumnsCount));
     if (required_memory == g.SettingsTables.Buf.Size)
         return;
     ImChunkStream<ImGuiTableSettings> new_chunk_stream;
@@ -4100,14 +4100,14 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
 
 void ImGui::DebugNodeTableSettings(ImGuiTableSettings* settings)
 {
-    if (!TreeNode((void*)(intptr_t)settings->ID, "Settings 0x%08X (%d columns)", settings->ID, settings->ColumnsCount))
+    if (!TreeNode((void*)static_cast<intptr_t>(settings->ID), "Settings 0x%08X (%d columns)", settings->ID, settings->ColumnsCount))
         return;
     BulletText("SaveFlags: 0x%08X", settings->SaveFlags);
     BulletText("ColumnsCount: %d (max %d)", settings->ColumnsCount, settings->ColumnsCountMax);
     for (int n = 0; n < settings->ColumnsCount; n++)
     {
         ImGuiTableColumnSettings* column_settings = &settings->GetColumnSettings()[n];
-        ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? (ImGuiSortDirection)column_settings->SortDirection : ImGuiSortDirection_None;
+        ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? static_cast<ImGuiSortDirection>(column_settings->SortDirection) : ImGuiSortDirection_None;
         BulletText("Column %d Order %d SortOrder %d %s Vis %d %s %7.3f UserID 0x%08X",
             n, column_settings->DisplayOrder, column_settings->SortOrder,
             (sort_dir == ImGuiSortDirection_Ascending) ? "Asc" : (sort_dir == ImGuiSortDirection_Descending) ? "Des" : "---",
@@ -4191,7 +4191,7 @@ static float GetDraggedColumnOffset(ImGuiOldColumns* columns, int column_index)
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     IM_ASSERT(column_index > 0); // We are not supposed to drag column 0.
-    IM_ASSERT(g.ActiveId == columns->ID + ImGuiID(column_index));
+    IM_ASSERT(g.ActiveId == columns->ID + static_cast<ImGuiID>(column_index));
 
     float x = g.IO.MousePos.x - g.ActiveIdClickOffset.x + ImTrunc(COLUMNS_HIT_RECT_HALF_THICKNESS * g.CurrentDpiScale) - window->Pos.x;
     x = ImMax(x, ImGui::GetColumnOffset(column_index - 1) + g.Style.ColumnsMinSpacing);
@@ -4385,7 +4385,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiOldColumnFl
         for (int n = 0; n < columns_count + 1; n++)
         {
             ImGuiOldColumnData column;
-            column.OffsetNorm = n / (float)columns_count;
+            column.OffsetNorm = n / static_cast<float>(columns_count);
             columns->Columns.push_back(column);
         }
     }
@@ -4507,7 +4507,7 @@ void ImGui::EndColumns()
         {
             ImGuiOldColumnData* column = &columns->Columns[n];
             float x = window->Pos.x + GetColumnOffset(n);
-            const ImGuiID column_id = columns->ID + ImGuiID(n);
+            const ImGuiID column_id = columns->ID + static_cast<ImGuiID>(n);
             const float column_hit_hw = ImTrunc(COLUMNS_HIT_RECT_HALF_THICKNESS * g.CurrentDpiScale);
             const ImRect column_hit_rect(ImVec2(x - column_hit_hw, y1), ImVec2(x + column_hit_hw, y2));
             if (!ItemAdd(column_hit_rect, column_id, NULL, ImGuiItemFlags_NoNav))
