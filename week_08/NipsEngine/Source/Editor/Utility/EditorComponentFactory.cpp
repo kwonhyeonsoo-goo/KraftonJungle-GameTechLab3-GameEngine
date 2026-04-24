@@ -20,9 +20,9 @@
 
 // 새로운 컴포넌트를 레지스트리에 등록합니다. 특수한 설정이 필요한 컴포넌트는 직접 설정합니다.
 template<typename ComponentType>
-static UActorComponent* Register(AActor* Actor)
+UActorComponent* FEditorComponentFactory::Register(AActor* Actor)
 {
-	return Actor->AddComponent<ComponentType>();
+    return Actor->AddComponent<ComponentType>();
 }
 
 // 새로운 컴포넌트를 레지스트리에 등록합니다. 특수한 설정이 필요한 컴포넌트는 직접 설정합니다.
