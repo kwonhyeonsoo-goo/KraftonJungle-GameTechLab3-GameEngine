@@ -194,7 +194,7 @@ void FEditorPropertyWidget::RenderAddComponentPopup(AActor* PrimaryActor)
     if (ImGui::BeginPopup("AddComponentPopup"))
     {
         const char* CurrentCategory = nullptr;
-        for (const FComponentMenuEntry& Entry : FComponentFactory::GetMenuRegistry())
+        for (const FComponentMenuEntry& Entry : FEditorComponentFactory::GetMenuRegistry())
         {
             if (CurrentCategory == nullptr || strcmp(CurrentCategory, Entry.Category) != 0)
             {

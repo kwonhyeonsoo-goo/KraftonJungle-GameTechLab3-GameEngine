@@ -18,8 +18,16 @@
 #include "Component/Light/PointLightComponent.h"
 #include "Component/Light/SpotLightComponent.h"
 
-// 특수한 설정이 필요한 컴포넌트라면 아래와 같이 직접 설정해줍니다.
-UActorComponent* FComponentFactory::CreateSubUV(AActor* Actor)
+// 새로운 컴포넌트를 레지스트리에 등록합니다. 특수한 설정이 필요한 컴포넌트는 직접 설정합니다.
+template<typename ComponentType>
+static UActorComponent* Register(AActor* Actor)
+{
+	return Actor->AddComponent<ComponentType>();
+}
+
+// 새로운 컴포넌트를 레지스트리에 등록합니다. 특수한 설정이 필요한 컴포넌트는 직접 설정합니다.
+template <>
+UActorComponent* FEditorComponentFactory::Register<USubUVComponent>(AActor* Actor)
 {
     auto* Comp = Actor->AddComponent<USubUVComponent>();
     Comp->SetParticle(FName("Explosion"));
@@ -28,7 +36,9 @@ UActorComponent* FComponentFactory::CreateSubUV(AActor* Actor)
     return Comp;
 }
 
-UActorComponent* FComponentFactory::CreateTextRender(AActor* Actor)
+// 새로운 컴포넌트를 레지스트리에 등록합니다. 특수한 설정이 필요한 컴포넌트는 직접 설정합니다.
+template <>
+UActorComponent* FEditorComponentFactory::Register<UTextRenderComponent>(AActor* Actor)
 {
     auto* Comp = Actor->AddComponent<UTextRenderComponent>();
     Comp->SetFont(FName("Default"));
@@ -36,14 +46,18 @@ UActorComponent* FComponentFactory::CreateTextRender(AActor* Actor)
     return Comp;
 }
 
-UActorComponent* FComponentFactory::CreateBillboard(AActor* Actor)
+// 새로운 컴포넌트를 레지스트리에 등록합니다. 특수한 설정이 필요한 컴포넌트는 직접 설정합니다.
+template <>
+UActorComponent* FEditorComponentFactory::Register<UBillboardComponent>(AActor* Actor)
 {
     auto* Comp = Actor->AddComponent<UBillboardComponent>();
     Comp->SetTexturePath("Asset/Texture/Pawn_64x.png");
     return Comp;
 }
 
-UActorComponent* FComponentFactory::CreateHeightFog(AActor* Actor)
+// 새로운 컴포넌트를 레지스트리에 등록합니다. 특수한 설정이 필요한 컴포넌트는 직접 설정합니다.
+template <>
+UActorComponent* FEditorComponentFactory::Register<UHeightFogComponent>(AActor* Actor)
 {
     auto* Comp = Actor->AddComponent<UHeightFogComponent>();
     Comp->SetFogDensity(0);
@@ -52,26 +66,26 @@ UActorComponent* FComponentFactory::CreateHeightFog(AActor* Actor)
 }
 
 // EditorPropertyWidget에 출력될 데이터를 담고 있는 배열입니다. 이 리스트만 관리하면 됩니다.
-const TArray<FComponentMenuEntry>& FComponentFactory::GetMenuRegistry()
+const TArray<FComponentMenuEntry>& FEditorComponentFactory::GetMenuRegistry()
 {
     static const TArray<FComponentMenuEntry> Registry = {
-        { "Scene Component", "Common", CreateDefault<USceneComponent> },
-        { "StaticMesh Component", "Common", CreateDefault<UStaticMeshComponent> },
-        { "SubUV Component", "Common", CreateSubUV },
-        { "TextRender Component", "Common", CreateTextRender },
-        { "Billboard Component", "Common", CreateBillboard },
-        { "HeightFog Component", "Common", CreateHeightFog },
-        { "SkyAtmosphere Component", "Common", CreateDefault<USkyAtmosphereComponent> },
+        { "Scene Component", "Common", Register<USceneComponent> },
+        { "StaticMesh Component", "Common", Register<UStaticMeshComponent> },
+        { "SubUV Component", "Common", Register<USubUVComponent> },
+        { "TextRender Component", "Common", Register<UTextRenderComponent> },
+        { "Billboard Component", "Common", Register<UBillboardComponent> },
+        { "HeightFog Component", "Common", Register<UHeightFogComponent> },
+        { "SkyAtmosphere Component", "Common", Register<USkyAtmosphereComponent> },
 
-        { "RotatingMovement Component", "Movement", CreateDefault<URotatingMovementComponent> },
-        { "InterpToMovement Component", "Movement", CreateDefault<UInterpToMovementComponent> },
-        { "PursuitMovement Component", "Movement", CreateDefault<UPursuitMovementComponent> },
-        { "ProjectileMovement Component", "Movement", CreateDefault<UProjectileMovementComponent> },
+        { "RotatingMovement Component", "Movement", Register<URotatingMovementComponent> },
+        { "InterpToMovement Component", "Movement", Register<UInterpToMovementComponent> },
+        { "PursuitMovement Component", "Movement", Register<UPursuitMovementComponent> },
+        { "ProjectileMovement Component", "Movement", Register<UProjectileMovementComponent> },
 
-        { "AmbientLight Component", "Light", CreateDefault<UAmbientLightComponent> },
-        { "DirectionalLight Component", "Light", CreateDefault<UDirectionalLightComponent> },
-        { "PointLight Component", "Light", CreateDefault<UPointLightComponent> },
-        { "SpotLight Component", "Light", CreateDefault<USpotLightComponent> },
+        { "AmbientLight Component", "Light", Register<UAmbientLightComponent> },
+        { "DirectionalLight Component", "Light", Register<UDirectionalLightComponent> },
+        { "PointLight Component", "Light", Register<UPointLightComponent> },
+        { "SpotLight Component", "Light", Register<USpotLightComponent> },
     };
 
     return Registry;
