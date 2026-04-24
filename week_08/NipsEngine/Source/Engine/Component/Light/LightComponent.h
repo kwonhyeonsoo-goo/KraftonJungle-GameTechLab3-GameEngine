@@ -42,6 +42,7 @@ private:
     FColor LightColor = FColor(1.0f, 1.0f, 1.0f, 1.0f);
     float Intensity = 1.0f;
     bool bVisible = true;
+	bool bCastShadows = true;
 
 	FLightHandle LightHandle;
     UBillboardComponent* VisualizationComponent = nullptr;
@@ -69,4 +70,9 @@ protected:
 
 private:
     ELightType LightType = ELightType::Max;
+
+	float ShadowResolutionScale = 1.0f;
+	float ShadowBias = 0.5f;
+	float ShadowSlopeBias = 0.5f;
+	float ShadowSharpen = 0.0f; 
 };
