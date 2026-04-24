@@ -189,32 +189,68 @@ void FRenderCollector::CollectWorld(UWorld* World, const FShowFlags& ShowFlags, 
 	ResetDecalStats();
 
 	if (!World) return;
-
-	if (ViewFrustum != nullptr)
-	{
-		CollectWorldWithFrustum(World, *ViewFrustum, ShowFlags, ViewMode, RenderBus);
-		return;
-	}
-
+	
 	CollectLight(World, RenderBus);
 
+	if (ViewFrustum)
+	{
+		VisiblePrimitiveScratch.clear();
+		World->GetSpatialIndex().FrustumQueryPrimitives(*ViewFrustum, VisiblePrimitiveScratch, FrustumQueryScratch);
+
+		for (UPrimitiveComponent* Primitive : VisiblePrimitiveScratch)
+		{
+			if (Primitive == nullptr || UsesCameraDependentRenderBounds(Primitive) || !Primitive->IsEnableCull()) continue;
+			++LastCullingStats.BVHPassedPrimitiveCount;
+			CollectFromComponent(Primitive, ShowFlags, ViewMode, RenderBus, World->GetWorldType());
+		}
+	}
+
+	std::unordered_set<UPrimitiveComponent*> CollectCameraDependentPrimitives;
+	if (ViewFrustum)
+	{
+		CollectCameraDependentPrimitives.reserve(32);
+	}
+	
+	// Frustum이 없다면 액터 단위로 통째로 수집하고, 그렇지 않다면 BVH에서 누락된 컴포넌트들을 개별 수집
 	for (TActorIterator<AActor> Iter(World); Iter; ++Iter)
 	{
 		AActor* Actor = *Iter;
-
 		if (!Actor || !Actor->IsVisible()) continue;
 
-		for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
-		{	
-			if (Primitive != nullptr && Primitive->IsVisible())
-			{
-				++LastCullingStats.TotalVisiblePrimitiveCount;
+		if (!ViewFrustum)
+		{
+			for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
+			{	
+				if (Primitive != nullptr && Primitive->IsVisible())
+				{
+					++LastCullingStats.TotalVisiblePrimitiveCount;
+				}
 			}
+			CollectFromActor(Actor, ShowFlags, ViewMode, RenderBus, World->GetWorldType());
+			continue; // early-continue
 		}
 
-		CollectFromActor(Actor, ShowFlags, ViewMode, RenderBus, World->GetWorldType());
-	}
+		// 이미 처리된 컴포넌트, 중복된 컴포넌트는 제외하고 Frustum Culling 수행
+		for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
+		{
+			if (!Primitive || Primitive->IsVisible()) continue;
 
+			++LastCullingStats.TotalVisiblePrimitiveCount;
+
+			const bool bIsCameraDependent = UsesCameraDependentRenderBounds(Primitive);
+			if (!bIsCameraDependent && Primitive->IsEnableCull()) continue;
+			if (!CollectCameraDependentPrimitives.insert(Primitive).second) continue;
+
+			if (bIsCameraDependent && Primitive->IsEnableCull())
+			{
+				if (ViewFrustum->Intersects(BuildRenderAABB(Primitive, RenderBus)) == FFrustum::EFrustumIntersectResult::Outside)
+					continue;
+			}
+
+			++LastCullingStats.FallbackPassedPrimitiveCount;
+            CollectFromComponent(Primitive, ShowFlags, ViewMode, RenderBus, World->GetWorldType());
+		}
+	}
 }
 
 void FRenderCollector::ResetCullingStats()
@@ -227,7 +263,7 @@ void FRenderCollector::ResetDecalStats()
 	LastDecalStats = {};
 }
 
-void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus)
+void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus, const FFrustum* ViewFrustum)
 {
     const TArray<FLightSlot>& LightSlots = World->GetWorldLightSlots();
 
@@ -314,69 +350,6 @@ void FRenderCollector::CollectLight(UWorld* World, FRenderBus& RenderBus)
 
 		default:
 			break;
-		}
-	}
-}
-
-void FRenderCollector::CollectWorldWithFrustum(UWorld* World, const FFrustum& ViewFrustum, const FShowFlags& ShowFlags, EViewMode ViewMode, FRenderBus& RenderBus)
-{
-	VisiblePrimitiveScratch.clear();
-	World->GetSpatialIndex().FrustumQueryPrimitives(ViewFrustum, VisiblePrimitiveScratch, FrustumQueryScratch);
-
-	for (UPrimitiveComponent* Primitive : VisiblePrimitiveScratch)
-	{
-		if (Primitive == nullptr || UsesCameraDependentRenderBounds(Primitive) || !Primitive->IsEnableCull())
-		{
-			continue;
-		}
-
-		++LastCullingStats.BVHPassedPrimitiveCount;
-		CollectFromComponent(Primitive, ShowFlags, ViewMode, RenderBus, World->GetWorldType());
-	}
-
-	std::unordered_set<UPrimitiveComponent*> CollectedCameraDependentPrimitives;
-	CollectedCameraDependentPrimitives.reserve(32);
-
-	CollectLight(World, RenderBus);
-
-	for (TActorIterator<AActor> Iter(World); Iter; ++Iter)
-	{
-		AActor* Actor = *Iter;
-		if (Actor == nullptr || !Actor->IsVisible())
-		{
-			continue;
-		}
-
-		for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
-		{
-			if (Primitive == nullptr || !Primitive->IsVisible())
-			{
-				continue;
-			}
-
-			++LastCullingStats.TotalVisiblePrimitiveCount;
-
-			const bool bIsCameraDependent = UsesCameraDependentRenderBounds(Primitive);
-			const bool bIsUncullable = !Primitive->IsEnableCull();
-
-			if (!bIsCameraDependent && !bIsUncullable)
-			{
-				continue;
-			}
-
-			if (!CollectedCameraDependentPrimitives.insert(Primitive).second)
-			{
-				continue;
-			}
-
-			if (bIsCameraDependent && !bIsUncullable &&
-				ViewFrustum.Intersects(BuildRenderAABB(Primitive, RenderBus)) == FFrustum::EFrustumIntersectResult::Outside)
-			{
-				continue;
-			}
-
-			++LastCullingStats.FallbackPassedPrimitiveCount;
-			CollectFromComponent(Primitive, ShowFlags, ViewMode, RenderBus, World->GetWorldType());
 		}
 	}
 }
