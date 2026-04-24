@@ -578,7 +578,6 @@ bool FRenderCollector::CollectFromSelectedActor(AActor* Actor, const FShowFlags&
 	}
 
     // 선택된 Light Components의 Bounding 시각화
-    // TODO: AActor::GetComponentsByClass 가 없어서 비효율?적으로 모든 컴포넌트를 순회하였음
     for (UActorComponent* Component : Actor->GetComponents())
     {
         const ULightComponent* LightComponent = Cast<ULightComponent>(Component);
