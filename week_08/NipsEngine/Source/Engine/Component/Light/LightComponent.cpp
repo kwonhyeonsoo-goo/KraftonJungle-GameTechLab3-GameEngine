@@ -15,6 +15,7 @@ void ULightComponentBase::GetEditableProperties(TArray<FPropertyDescriptor>& Out
     OutProps.push_back({ "LightColor", EPropertyType::Color, &LightColor });
     OutProps.push_back({ "Intensity", EPropertyType::Float, &Intensity });
     OutProps.push_back({ "Visible", EPropertyType::Bool, &bVisible });
+	OutProps.push_back({ "Cast Shadows", EPropertyType::Bool, &bCastShadows });
 }
 
 void ULightComponentBase::PostEditProperty(const char* PropertyName)
@@ -29,6 +30,7 @@ void ULightComponentBase::Serialize(FArchive& Ar)
     Ar << "LightColor" << LightColor;
     Ar << "Intensity" << Intensity;
     Ar << "Visible" << bVisible;
+	Ar << "CastShadows" << bCastShadows;
 }
 
 void ULightComponentBase::BeginPlay()
@@ -98,13 +100,28 @@ void ULightComponentBase::PostDuplicate(UObject* Original)
 
 ULightComponent::ULightComponent() = default;
 
+void ULightComponent::GetEditableProperties(TArray<FPropertyDescriptor>& OutProps)
+{
+    ULightComponentBase::GetEditableProperties(OutProps);
+
+    OutProps.push_back({ "Shadow Resolution Scale", EPropertyType::Float, &ShadowResolutionScale });
+    OutProps.push_back({ "Shadow Bias", EPropertyType::Float, &ShadowBias });
+    OutProps.push_back({ "Shadow Slope Bias", EPropertyType::Float, &ShadowSlopeBias });
+    OutProps.push_back({ "Shadow Sharpen", EPropertyType::Float, &ShadowSharpen });
+}
+
 void ULightComponent::Serialize(FArchive& Ar)
 {
     ULightComponentBase::Serialize(Ar);
 
     uint32 LightTypeValue = static_cast<uint32>(LightType);
     Ar << "LightType" << LightTypeValue;
-    LightType = static_cast<ELightType>(LightTypeValue);
+    LightType = static_cast<ELightType>(LightTypeValue); // 불러올 때만 사용되는 코드
+
+	Ar << "ShadowResolutionScale" << ShadowResolutionScale;
+	Ar << "ShadowBias" << ShadowBias;
+	Ar << "ShadowSlopeBias" << ShadowSlopeBias;
+	Ar << "ShadowSharpen" << ShadowSharpen;
 }
 
 void ULightComponent::PostDuplicate(UObject* Original)

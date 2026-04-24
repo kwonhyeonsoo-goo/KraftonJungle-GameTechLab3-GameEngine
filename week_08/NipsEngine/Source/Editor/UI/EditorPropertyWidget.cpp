@@ -339,7 +339,7 @@ void FEditorPropertyWidget::RenderSceneComponentNode(AActor* Actor, USceneCompon
     {
         if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("DND_SCENE_COMP"))
         {
-            USceneComponent* DraggedComp = *(USceneComponent**)Payload->Data;
+            USceneComponent* DraggedComp = *static_cast<USceneComponent**>(Payload->Data);
             
             // 조상 여부 체크 (순환 참조 방지)
             bool bIsAncestor = false;
@@ -351,7 +351,7 @@ void FEditorPropertyWidget::RenderSceneComponentNode(AActor* Actor, USceneCompon
         }
         if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("DND_MOVE_COMP"))
         {
-            if (auto* DraggedMoveComp = *(UMovementComponent**)Payload->Data)
+            if (auto* DraggedMoveComp = *static_cast<UMovementComponent**>(Payload->Data))
                 DraggedMoveComp->SetUpdatedComponent(Comp);
         }
         ImGui::EndDragDropTarget();

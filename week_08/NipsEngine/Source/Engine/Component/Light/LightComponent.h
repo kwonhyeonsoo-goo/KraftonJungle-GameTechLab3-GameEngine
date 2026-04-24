@@ -59,6 +59,7 @@ public:
     ULightComponent();
     ~ULightComponent() override = default;
 
+	void GetEditableProperties(TArray<FPropertyDescriptor>& OutProps) override;
     void Serialize(FArchive& Ar) override;
     void PostDuplicate(UObject* Original) override;
 
