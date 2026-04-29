@@ -2,7 +2,7 @@
   "Actors" : [{
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
-      "PrimitiveKey" : "12",
+      "PrimitiveKey" : "10",
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
@@ -13,7 +13,7 @@
               "Font Size" : 1.000000,
               "Is Editor Helper" : true,
               "Location" : [0.000000, 0.000000, 1.300000],
-              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Text" : "UUID : 10",
               "Visible" : true,
@@ -28,9 +28,9 @@
             "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
           },
           "Is Editor Helper" : false,
-          "Location" : [0.000000, 0.000000, -1.000000],
-          "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [10.000000, 10.000000, 1.000000],
+          "Location" : [0.000000, 0.000000, 0.000000],
+          "Rotation" : [-0.000000, 0.000000, 0.000000],
+          "Scale" : [100.000000, 100.000000, 1.000000],
           "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
           "Visible" : true,
           "Visible In Editor" : true,
@@ -42,7 +42,7 @@
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
-      "PrimitiveKey" : "15",
+      "PrimitiveKey" : "13",
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
@@ -53,7 +53,7 @@
               "Font Size" : 1.000000,
               "Is Editor Helper" : true,
               "Location" : [0.000000, 0.000000, 1.300000],
-              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Text" : "UUID : 13",
               "Visible" : true,
@@ -68,48 +68,8 @@
             "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
           },
           "Is Editor Helper" : false,
-          "Location" : [3.660555, -1.982667, 1.000000],
-          "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
-          "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
-          "Visible" : true,
-          "Visible In Editor" : true,
-          "Visible In Game" : true,
-          "bTickEnable" : true
-        }
-      },
-      "bVisible" : true
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "NonSceneComponents" : [],
-      "PrimitiveKey" : "18",
-      "RootComponent" : {
-        "Children" : [{
-            "Children" : [],
-            "ClassName" : "UTextRenderComponent",
-            "Properties" : {
-              "Billboard" : true,
-              "Font" : "Default",
-              "Font Size" : 1.000000,
-              "Is Editor Helper" : true,
-              "Location" : [0.000000, 0.000000, 1.300000],
-              "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 16",
-              "Visible" : true,
-              "Visible In Editor" : true,
-              "Visible In Game" : false,
-              "bTickEnable" : true
-            }
-          }],
-        "ClassName" : "UStaticMeshComponent",
-        "Properties" : {
-          "Element 0" : {
-            "Path" : "Asset/Content/Materials/_Basic/BasicShapeMaterial.json"
-          },
-          "Is Editor Helper" : false,
-          "Location" : [-6.109001, 5.378220, 1.000000],
-          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Location" : [0.000000, 0.000000, 3.000000],
+          "Rotation" : [-0.000000, 0.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
           "Static Mesh" : "Asset/Content/Models/_Basic/Cube.OBJ",
           "Visible" : true,
@@ -132,9 +92,9 @@
               "Font Size" : 1.000000,
               "Is Editor Helper" : true,
               "Location" : [0.000000, 0.000000, 1.300000],
-              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
-              "Text" : "UUID : 21",
+              "Text" : "UUID : 16",
               "Visible" : true,
               "Visible In Editor" : true,
               "Visible In Game" : false,
@@ -150,7 +110,7 @@
               "Material" : {
                 "Path" : "Asset/Editor/Icons/Materials/DirectionalLightIcon.json"
               },
-              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Rotation" : [-0.000000, 0.000000, 0.000000],
               "Scale" : [1.000000, 1.000000, 1.000000],
               "Visible" : true,
               "Visible In Editor" : true,
@@ -161,19 +121,21 @@
           }],
         "ClassName" : "UDirectionalLightComponent",
         "Properties" : {
-          "Depth Bias" : 0.001000,
+          "Bias" : 0.000000,
           "CSM Max Distance" : 2000.000000,
           "Cascade Count" : 4,
           "Cascade Distribution" : 1.000000,
-          "Intensity" : 1.000000,
+          "Cast Shadows" : true,
+          "ESM Exponent" : 40.000000,
+          "Intensity" : 2.500000,
           "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-          "Location" : [-6.524245, -3.935364, 5.062817],
+          "Location" : [0.000000, 0.000000, 12.000000],
           "Normal Bias" : 0.000000,
-          "Rotation" : [60.000000, 70.000000, 0.000000],
+          "Rotation" : [30.000000, 30.000000, 0.000000],
           "Scale" : [1.000000, 1.000000, 1.000000],
+          "Shadow Sharpen" : 0.000000,
           "Slope Bias" : 0.000000,
           "bAffectsWorld" : true,
-          "bCastShadows" : true,
           "bTickEnable" : false
         }
       },
@@ -182,31 +144,24 @@
   "ClassName" : "UWorld",
   "ContextHandle" : "Default",
   "ContextName" : "Default",
-  "Name" : "ShadowTest",
+  "Name" : "Directional Light",
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-7.820542, 10.420608, 10.285184],
+    "Location" : [-3.312336, 16.600136, 14.689810],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000003, 51.659744, -63.418911]
+    "Rotation" : [0.000000, 17.640106, -78.307114]
   },
   "Primitives" : {
-    "12" : {
-      "Location" : [0.000000, 0.000000, -1.000000],
+    "10" : {
+      "Location" : [0.000000, 0.000000, 0.000000],
       "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
       "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [10.000000, 10.000000, 1.000000],
+      "Scale" : [100.000000, 100.000000, 1.000000],
       "Type" : "StaticMeshComp"
     },
-    "15" : {
-      "Location" : [3.660555, -1.982667, 1.000000],
-      "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
-      "Rotation" : [0.000000, -0.000000, 0.000000],
-      "Scale" : [1.000000, 1.000000, 1.000000],
-      "Type" : "StaticMeshComp"
-    },
-    "18" : {
-      "Location" : [-6.109001, 5.378220, 1.000000],
+    "13" : {
+      "Location" : [0.000000, 0.000000, 3.000000],
       "ObjStaticMeshAsset" : "Asset/Content/Models/_Basic/Cube.OBJ",
       "Rotation" : [0.000000, -0.000000, 0.000000],
       "Scale" : [1.000000, 1.000000, 1.000000],
