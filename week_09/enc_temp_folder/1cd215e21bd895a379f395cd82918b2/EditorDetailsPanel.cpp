@@ -499,6 +499,28 @@ static uint64 HashShadowViewProj(const FMatrix& Matrix)
     return Hash;
 }
 
+void LuaScriptEditOpen(const FString& LuaFilePath)
+{
+    std::string FullPath = FPaths::ContentRelativePath("Scripts") + "/" + LuaFilePath;
+    std::string absoluteLuaScriptPath = std::filesystem::absolute(FullPath).string();
+
+    std::wstring WidePath = FPaths::ToWide(absoluteLuaScriptPath);
+
+    HINSTANCE hInstance = ShellExecuteW(
+        NULL,
+        L"open",
+        WidePath.c_str(),
+        NULL,
+        NULL,
+        SW_SHOWNORMAL
+    );
+
+    if ((INT_PTR)hInstance <= 32)
+    {
+        UE_LOG(UI, Error, "Error: Failed to open script file: %s\n", LuaFilePath.c_str());
+    }
+}
+
 static bool CompareShadowMapDataStable(const FShadowMapData& A, const FShadowMapData& B)
 {
     if (A.AtlasPageIndex != B.AtlasPageIndex)
@@ -801,29 +823,7 @@ void FEditorDetailsPanel::RenderActorProperties(AActor* PrimaryActor, const TArr
     bool bVisible = PrimaryActor->IsVisible();
     if (ImGui::Checkbox("Visible", &bVisible))
     {
-        for (AActor* Actor : SelectedActors)
-        {
-            if (Actor)
-            {
-                Actor->SetVisible(bVisible);
-            }
-        }
-    }
-
-	ImGui::Separator();
-    ImGui::Text("Tick");
-    ImGui::Spacing();
-
-    bool bActorTickEnabled = PrimaryActor->IsActorTickEnabled();
-    if (ImGui::Checkbox("Actor Tick Enabled", &bActorTickEnabled))
-    {
-        for (AActor* Actor : SelectedActors)
-        {
-            if (Actor)
-            {
-                Actor->SetActorTickEnabled(bActorTickEnabled);
-            }
-        }
+        PrimaryActor->SetVisible(bVisible);
     }
 }
 
