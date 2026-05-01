@@ -499,6 +499,28 @@ static uint64 HashShadowViewProj(const FMatrix& Matrix)
     return Hash;
 }
 
+void LuaScriptEditOpen(const FString& LuaFilePath)
+{
+    std::string FullPath = FPaths::ContentRelativePath("Scripts") + "/" + LuaFilePath;
+    std::string absoluteLuaScriptPath = std::filesystem::absolute(FullPath).string();
+
+    std::wstring WidePath = FPaths::ToWide(absoluteLuaScriptPath);
+
+    HINSTANCE hInstance = ShellExecuteW(
+        NULL,
+        L"open",
+        WidePath.c_str(),
+        NULL,
+        NULL,
+        SW_SHOWNORMAL
+    );
+
+    if ((INT_PTR)hInstance <= 32)
+    {
+        UE_LOG(UI, Error, "Error: Failed to open script file: %s\n", LuaFilePath.c_str());
+    }
+}
+
 static bool CompareShadowMapDataStable(const FShadowMapData& A, const FShadowMapData& B)
 {
     if (A.AtlasPageIndex != B.AtlasPageIndex)
