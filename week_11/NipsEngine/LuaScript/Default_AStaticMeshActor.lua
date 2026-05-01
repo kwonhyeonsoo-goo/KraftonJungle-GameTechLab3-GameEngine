@@ -11,5 +11,6 @@ function OnOverlap(OtherActor)
 end
 
 function Tick(dt)
-    --Log("[OnOverlap]"  .. Actor.UUID)
+
+    Actor.Location = Actor.Location + Vector3(0, 0, 0.1) * dt
 end
