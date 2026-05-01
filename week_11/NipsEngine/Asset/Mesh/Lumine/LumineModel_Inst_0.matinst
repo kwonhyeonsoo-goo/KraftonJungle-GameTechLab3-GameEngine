@@ -1,5 +1,9 @@
 {
         "Name" : "Asset/Mesh/Lumine/LumineModel_Inst_0.matinst",
-        "OverridedParams" : [],
-        "Parent" : "眼睛"
+        "OverridedParams" : [{
+            "Name" : "DiffuseMap",
+            "Type" : "Texture",
+            "Value" : "Asset/Mesh/cottage/cottage_textures/cottage_diffuse.png"
+          }],
+        "Parent" : "Asset/Material/Auto/LumineModel_______.mat"
       }
