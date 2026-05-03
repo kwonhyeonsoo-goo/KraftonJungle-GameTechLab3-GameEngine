@@ -1,0 +1,9 @@
+{
+        "Name" : "Asset/Mesh/cyberpunk_arm/cyberpunk_arm_right_Inst_0.matinst",
+        "OverridedParams" : [{
+            "Name" : "DiffuseMap",
+            "Type" : "Texture",
+            "Value" : "Asset/Texture/Dice.JPG"
+          }],
+        "Parent" : "Asset/Mesh/cyberpunk_arm/cyberpunk_arm_right.obj"
+      }
