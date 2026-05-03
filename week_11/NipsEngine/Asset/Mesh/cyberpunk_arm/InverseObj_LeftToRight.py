@@ -35,4 +35,4 @@ def mirror_obj_x(input_path, output_path):
 
 
 # 사용 예시
-mirror_obj_x("cyberpunk_arm.obj", "cyberpunk_arm_right.obj")
+mirror_obj_x("cyber_arm_left_small.obj", "cyber_arm_right_small.obj")
