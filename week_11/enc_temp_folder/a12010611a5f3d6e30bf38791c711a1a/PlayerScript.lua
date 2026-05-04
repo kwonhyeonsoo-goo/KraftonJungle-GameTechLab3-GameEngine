@@ -394,7 +394,7 @@ function Script:Tick(dt)
     -- -------------------------------------------------------
     -- Q: 내려찍기 슬램 (슬램/일반어택 중 아닐 때만)
     -- -------------------------------------------------------
-    if not self.bDoingAttack and player and Engine.API.Input.IsKeyPressed("R") then
+    if not self.bDoingAttack and player and Engine.API.Input.IsKeyPressed("Q") then
         StartCoroutine(function()
             self:SlamAttack()
         end)
