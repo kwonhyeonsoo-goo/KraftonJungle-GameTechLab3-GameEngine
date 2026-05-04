@@ -352,7 +352,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -2197,7 +2197,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -2419,7 +2419,7 @@
         }
       },
       "Tags" : ["DocumentCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [{
@@ -3683,7 +3683,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -3739,7 +3739,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -3795,7 +3795,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -3851,7 +3851,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -3907,7 +3907,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -3963,7 +3963,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4019,7 +4019,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4075,7 +4075,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4131,7 +4131,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4187,7 +4187,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4304,7 +4304,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4360,7 +4360,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4416,7 +4416,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4472,7 +4472,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4528,7 +4528,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4584,7 +4584,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4640,7 +4640,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4696,7 +4696,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4752,7 +4752,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4808,7 +4808,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4864,7 +4864,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -4964,7 +4964,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -5020,7 +5020,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -5076,7 +5076,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -5132,7 +5132,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -5188,7 +5188,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -5725,7 +5725,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -6272,7 +6272,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -6616,7 +6616,7 @@
         }
       },
       "Tags" : ["TurretCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -8207,7 +8207,7 @@
         }
       },
       "Tags" : ["DocumentCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -8263,7 +8263,7 @@
         }
       },
       "Tags" : ["DocumentCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -8319,7 +8319,7 @@
         }
       },
       "Tags" : ["DocumentCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -8375,7 +8375,7 @@
         }
       },
       "Tags" : ["DocumentCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -8431,7 +8431,7 @@
         }
       },
       "Tags" : ["DocumentCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -8487,7 +8487,7 @@
         }
       },
       "Tags" : ["DocumentCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -8543,7 +8543,7 @@
         }
       },
       "Tags" : ["DocumentCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -8599,7 +8599,7 @@
         }
       },
       "Tags" : ["DocumentCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -8655,7 +8655,7 @@
         }
       },
       "Tags" : ["DocumentCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -9281,7 +9281,7 @@
         }
       },
       "Tags" : ["DocumentCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -9337,7 +9337,7 @@
         }
       },
       "Tags" : ["DocumentCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -9387,7 +9387,7 @@
         }
       },
       "Tags" : ["BatteryCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -9437,7 +9437,7 @@
         }
       },
       "Tags" : ["BatteryCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -9487,7 +9487,7 @@
         }
       },
       "Tags" : ["BatteryCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -9537,7 +9537,7 @@
         }
       },
       "Tags" : ["BatteryCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -9587,7 +9587,7 @@
         }
       },
       "Tags" : [],
-      "bVisible" : false
+      "bVisible" : true
     }, {
       "ClassName" : "AStaticMeshActor",
       "NonSceneComponents" : [],
@@ -9637,18 +9637,18 @@
         }
       },
       "Tags" : ["BatteryCandidate"],
-      "bVisible" : false
+      "bVisible" : true
     }],
   "ClassName" : "UWorld",
   "ContextHandle" : "Default",
   "ContextName" : "Default",
-  "Name" : "DroneLevel",
+  "Name" : "DroneLevel-Backup",
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [67.204498, -184.048416, 179.672363],
+    "Location" : [-0.463609, -71.832130, 307.060364],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 52.100624, 107.162224]
+    "Rotation" : [-0.000011, 81.080215, 93.123337]
   },
   "Primitives" : {
     "102" : {
