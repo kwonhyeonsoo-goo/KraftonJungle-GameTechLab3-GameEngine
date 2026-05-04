@@ -93,7 +93,7 @@ function Script:Tick(dt)
         local targetYaw = math.atan2(direction.Y, direction.X) * (180 / math.pi)
         local currentRot = self.owner.Rotation
         local diff = (targetYaw - currentRot.Z + 540) % 360 - 180
-        local newYaw = currentRot.Z + diff * math.min(1.0, dt * 10)
+        local newYaw = currentRot.Z + diff * math.min(1.0, dt * self.RotationSpeed)
         self.owner.Rotation = Vector(currentRot.X, currentRot.Y, newYaw)
 
         -- 이동
