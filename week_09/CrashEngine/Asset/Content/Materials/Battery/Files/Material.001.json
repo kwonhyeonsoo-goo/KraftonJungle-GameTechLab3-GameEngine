@@ -3,12 +3,12 @@
   "DepthStencilState" : "Default",
   "Parameters" : {
     "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
-    "SpecularPower" : 250.000000,
+    "SpecularPower" : 96.078430,
     "SpecularStrength" : 0.500000
   },
-  "PathFileName" : "Asset/Content/Materials/Aquarium/Aquarium.json",
+  "PathFileName" : "Asset/Content/Materials/Battery/Files/Material.001.json",
   "RasterizerState" : "SolidBackCull",
   "Textures" : {
-    "DiffuseTexture" : "Asset/Content/Models/Aquarium/Image_10.png"
+    "DiffuseTexture" : "Asset/Content/Models/Battery/Files/battery 9V.jpg"
   }
 }
