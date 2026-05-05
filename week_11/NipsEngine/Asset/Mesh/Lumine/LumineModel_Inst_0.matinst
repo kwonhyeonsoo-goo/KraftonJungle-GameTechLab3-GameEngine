@@ -17,5 +17,5 @@
             "Type" : "Vector3",
             "Value" : [0.740000, 0.800000, 0.820000]
           }],
-        "Parent" : "Asset/Material/Auto/LumineModel_______.mat"
+        "Parent" : "Asset/Material/Auto/LumineModel_Mat_0.mat"
       }
