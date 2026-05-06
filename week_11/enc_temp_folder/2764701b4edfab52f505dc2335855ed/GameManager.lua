@@ -102,7 +102,7 @@ function GameManager:StartRun()
     self.invulnerableRemaining = 0.0
     self.timeSlowActive = false
     self.timeSlowRemaining = 0.0
-    self.timeSlowScale = 1.0
+    self.timeSlowScale = 0.5
     self.finishReason = "None"
     self.isClear = false
 
