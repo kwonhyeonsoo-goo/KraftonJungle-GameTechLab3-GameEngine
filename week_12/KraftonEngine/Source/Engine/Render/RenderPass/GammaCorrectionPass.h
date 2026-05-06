@@ -1,11 +1,11 @@
-﻿#pragma once
+#pragma once
 
 #include "Render/RenderPass/RenderPassBase.h"
 
-class FFXAAPass final : public FRenderPassBase
+class FGammaCorrectionPass final : public FRenderPassBase
 {
 public:
-	FFXAAPass();
+	FGammaCorrectionPass();
 	bool BeginPass(const FPassContext& Ctx) override;
 	void EndPass(const FPassContext& Ctx) override;
 };

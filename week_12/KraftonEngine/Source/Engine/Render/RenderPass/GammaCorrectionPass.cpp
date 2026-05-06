@@ -1,25 +1,27 @@
-﻿#include "FXAAPass.h"
+#include "GammaCorrectionPass.h"
 #include "RenderPassRegistry.h"
 
 #include "Render/Device/D3DDevice.h"
-
-REGISTER_RENDER_PASS(FFXAAPass)
 #include "Render/Types/FrameContext.h"
 #include "Render/Types/RenderConstants.h"
 #include "Render/Command/DrawCommandList.h"
 
-FFXAAPass::FFXAAPass()
+REGISTER_RENDER_PASS(FGammaCorrectionPass)
+
+FGammaCorrectionPass::FGammaCorrectionPass()
 {
-	PassType    = ERenderPass::FXAA;
+	PassType = ERenderPass::GammaCorrection;
 	RenderState = { EDepthStencilState::NoDepth, EBlendState::Opaque,
-	                ERasterizerState::SolidNoCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, false };
+					ERasterizerState::SolidNoCull, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, false };
 }
 
-bool FFXAAPass::BeginPass(const FPassContext& Ctx)
+bool FGammaCorrectionPass::BeginPass(const FPassContext& Ctx)
 {
 	const FFrameContext& Frame = Ctx.Frame;
-	if (!Frame.SceneColorCopyTexture || !Frame.ViewportRenderTexture)
+	if (!Frame.SceneColorCopyTexture || !Frame.ViewportRenderTexture || !Frame.SceneColorCopySRV)
+	{
 		return false;
+	}
 
 	ID3D11DeviceContext* DC = Ctx.Device.GetDeviceContext();
 	FStateCache& Cache = Ctx.Cache;
@@ -27,14 +29,14 @@ bool FFXAAPass::BeginPass(const FPassContext& Ctx)
 	DC->CopyResource(Frame.SceneColorCopyTexture, Frame.ViewportRenderTexture);
 	DC->OMSetRenderTargets(1, &Cache.RTV, Cache.DSV);
 
-	ID3D11ShaderResourceView* sceneColorSRV = Frame.SceneColorCopySRV;
-	DC->PSSetShaderResources(ESystemTexSlot::SceneColor, 1, &sceneColorSRV);
+	ID3D11ShaderResourceView* SceneColorSRV = Frame.SceneColorCopySRV;
+	DC->PSSetShaderResources(ESystemTexSlot::SceneColor, 1, &SceneColorSRV);
 
 	Cache.bForceAll = true;
 	return true;
 }
 
-void FFXAAPass::EndPass(const FPassContext& Ctx)
+void FGammaCorrectionPass::EndPass(const FPassContext& Ctx)
 {
 	ID3D11ShaderResourceView* NullSRV = nullptr;
 	Ctx.Device.GetDeviceContext()->PSSetShaderResources(ESystemTexSlot::SceneColor, 1, &NullSRV);
