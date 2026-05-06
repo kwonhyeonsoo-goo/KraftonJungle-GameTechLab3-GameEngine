@@ -1,15 +1,17 @@
 #include "Common.hlsl"
 
-cbuffer SelectionMaskBuffer : register(b12)
+cbuffer EditorPickingBuffer : register(b12)
 {
+    uint PickingId;
     uint UseAlphaTest;
     float AlphaCutoff;
+    float PickingPadding0;
     float2 UVOffset;
     float2 UVScale;
 }
 
-Texture2D MaskTexture : register(t0);
-SamplerState MaskSampler : register(s0);
+Texture2D PickTexture : register(t0);
+SamplerState PickSampler : register(s0);
 
 struct VSInputPrimitive
 {
@@ -44,14 +46,6 @@ VSOutputPrimitive VSPrimitive(VSInputPrimitive Input)
     return Output;
 }
 
-VSOutputTextured VSStaticMesh(VSInputStaticMesh Input)
-{
-    VSOutputTextured Output;
-    Output.Position = ApplyMVP(Input.Position);
-    Output.UV = UVOffset + Input.UV * UVScale;
-    return Output;
-}
-
 VSOutputTextured VSBillboard(VSInputPrimitive Input)
 {
     VSOutputTextured Output;
@@ -61,21 +55,28 @@ VSOutputTextured VSBillboard(VSInputPrimitive Input)
     return Output;
 }
 
-float4 PSPrimitive(VSOutputPrimitive Input) : SV_TARGET
+VSOutputTextured VSStaticMesh(VSInputStaticMesh Input)
 {
-    return float4(1.0f, 1.0f, 1.0f, 1.0f);
+    VSOutputTextured Output;
+    Output.Position = ApplyMVP(Input.Position);
+    Output.UV = UVOffset + Input.UV * UVScale;
+    return Output;
 }
 
-float4 PSTextured(VSOutputTextured Input) : SV_TARGET
+uint PSOpaque(VSOutputPrimitive Input) : SV_TARGET
+{
+    return PickingId;
+}
+
+uint PSTextured(VSOutputTextured Input) : SV_TARGET
 {
     if (UseAlphaTest != 0)
     {
-        float Alpha = MaskTexture.Sample(MaskSampler, Input.UV).a;
+        float Alpha = PickTexture.Sample(PickSampler, Input.UV).a;
         if (Alpha <= AlphaCutoff)
         {
             discard;
         }
     }
-
-    return float4(1.0f, 1.0f, 1.0f, 1.0f);
+    return PickingId;
 }
