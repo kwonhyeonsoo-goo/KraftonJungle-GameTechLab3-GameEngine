@@ -1,23 +1,23 @@
-﻿#include "FloatCurveManager.h"
-#include "FloatCurveAsset.h"
+﻿#include "CameraShakeManager.h"
+#include "CameraShakeAsset.h"
 #include "Platform/Paths.h"
 
-UFloatCurveAsset* FFloatCurveManager::Load(const FString& Path)
+UCameraShakeAsset* FCameraShakeManager::Load(const FString& Path)
 {
 	FString NormalizedPath = FPaths::MakeProjectRelative(Path);
 
-	auto it = LoadedCurves.find(NormalizedPath);
-	if (it != LoadedCurves.end())
+	auto it = LoadedShakes.find(NormalizedPath);
+	if (it != LoadedShakes.end())
 	{
 		return it->second;
 	}
 
-	UFloatCurveAsset* NewAsset = UObjectManager::Get().CreateObject<UFloatCurveAsset>();
+	UCameraShakeAsset* NewAsset = UObjectManager::Get().CreateObject<UCameraShakeAsset>();
 	const FString FullPath = FPaths::ToUtf8(FPaths::Combine(FPaths::RootDir(), FPaths::ToWide(NormalizedPath)));
 	if (NewAsset->LoadFromFile(FullPath))
 	{
 		NewAsset->SetSourcePath(NormalizedPath);
-		LoadedCurves.emplace(NormalizedPath, NewAsset);
+		LoadedShakes.emplace(NormalizedPath, NewAsset);
 		return NewAsset;
 	}
 	else
@@ -27,15 +27,14 @@ UFloatCurveAsset* FFloatCurveManager::Load(const FString& Path)
 	}
 }
 
-UFloatCurveAsset* FFloatCurveManager::Find(const FString& Path) const
+UCameraShakeAsset* FCameraShakeManager::Find(const FString& Path) const
 {
 	FString NormalizedPath = FPaths::MakeProjectRelative(Path);
-
-	auto it = LoadedCurves.find(NormalizedPath);
-	return it != LoadedCurves.end() ? it->second : nullptr;
+	auto it = LoadedShakes.find(NormalizedPath);
+	return it != LoadedShakes.end() ? it->second : nullptr;
 }
 
-void FFloatCurveManager::Save(UFloatCurveAsset* Asset)
+void FCameraShakeManager::Save(UCameraShakeAsset* Asset)
 {
 	if (!Asset)
 	{
@@ -43,7 +42,6 @@ void FFloatCurveManager::Save(UFloatCurveAsset* Asset)
 	}
 	const FString& Path = Asset->GetSourcePath();
 	const FString FullPath = FPaths::ToUtf8(FPaths::Combine(FPaths::RootDir(), FPaths::ToWide(Path)));
-
 	if (Path.empty())
 	{
 		return;
