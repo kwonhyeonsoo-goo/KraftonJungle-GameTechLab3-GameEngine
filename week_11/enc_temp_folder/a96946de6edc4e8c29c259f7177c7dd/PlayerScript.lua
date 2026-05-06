@@ -50,6 +50,8 @@ local function PlayerWaitForSeconds(seconds)
     -- Apply HitStop Scale / Don't Apply SlowMotion Scale
     scale = scale / _G.GameJam.GetSlowMotionScale()
 
+    Log("HitStopScale" .. tostring(_G.GameJam.GetSlowMotionScale()))
+
     return WaitForSeconds((tonumber(seconds) or 0.0) * scale)
 end
 
@@ -789,17 +791,16 @@ function Script:Tick(dt)
         slash.Scale = Vector(scale_x, 2, scale_z)
 
         StartCoroutine(function()
-            self:DestroyActorAfter(slash, 0.1)
-        end)
-        
-        StartCoroutine(function()
-            self:FinishAttackAfter(attackId, 0.14)
-        end)
-
-        StartCoroutine(function()
             self:Attack(mode, degree, yaw)
         end)
 
+        StartCoroutine(function()
+            self:DestroyActorAfter(slash, 0.1)
+        end)
+
+        StartCoroutine(function()
+            self:FinishAttackAfter(attackId, 0.14)
+        end)
     end
 
     -- -------------------------------------------------------
