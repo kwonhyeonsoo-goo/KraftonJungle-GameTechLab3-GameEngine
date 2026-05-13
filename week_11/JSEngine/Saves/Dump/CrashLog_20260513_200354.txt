@@ -1,0 +1,28 @@
+========================================
+[Engine Crash Report]
+Exception Code: 0xc0000005
+Call Stack:
+[0] WriteCrashLog (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Core\CrashDump.cpp : 98)
+[1] ReportCrash (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Core\CrashDump.cpp : 141)
+[2] `Launch'::`1'::filt$0 (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\Launch.cpp : 28)
+[3] _C_specific_handler (Address: 0x7ffc0c25e83b)
+[4] _chkstk (Address: 0x7ffc2892623f)
+[5] RtlLocateExtendedFeature (Address: 0x7ffc287d2397)
+[6] KiUserExceptionDispatcher (Address: 0x7ffc28925b7e)
+[7] FPIESession::GetControlMode (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\PIE\PIESession.h : 39)
+[8] FEditorViewportPIEController::AllowsEditorWorldControl (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\Viewport\EditorViewportPIEController.cpp : 102)
+[9] FEditorViewportClient::AllowsEditorWorldControl (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\Viewport\EditorViewportClient.cpp : 280)
+[10] UEditorEngine::WorldTick (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\EditorEngine.cpp : 577)
+[11] UEditorEngine::Tick (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\EditorEngine.cpp : 294)
+[12] FEngineLoop::Run (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\EngineLoop.cpp : 83)
+[13] `anonymous namespace'::GuardedMain (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\Launch.cpp : 16)
+[14] Launch (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\Launch.cpp : 26)
+[15] wWinMain (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\main.cpp : 40)
+[16] invoke_main (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl : 123)
+[17] __scrt_common_main_seh (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl : 288)
+[18] __scrt_common_main (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl : 331)
+[19] wWinMainCRTStartup (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_wwinmain.cpp : 17)
+[20] BaseThreadInitThunk (Address: 0x7ffc279ce8d7)
+[21] RtlUserThreadStart (Address: 0x7ffc2884c3fc)
+========================================
+

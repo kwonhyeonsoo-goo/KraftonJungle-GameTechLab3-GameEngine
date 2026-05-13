@@ -1,0 +1,36 @@
+========================================
+[Engine Crash Report]
+Exception Code: 0x80000003
+Call Stack:
+[0] WriteCrashLog (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Core\CrashDump.cpp : 98)
+[1] ReportCrash (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Core\CrashDump.cpp : 141)
+[2] `Launch'::`1'::filt$0 (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\Launch.cpp : 28)
+[3] _C_specific_handler (Address: 0x7ffc0c4ce83b)
+[4] _chkstk (Address: 0x7ffc2892623f)
+[5] RtlLocateExtendedFeature (Address: 0x7ffc287d2397)
+[6] KiUserExceptionDispatcher (Address: 0x7ffc28925b7e)
+[7] get_wide_winmain_command_line (Address: 0x7ffb124df575)
+[8] get_wide_winmain_command_line (Address: 0x7ffb124df393)
+[9] wassert (Address: 0x7ffb124e1c7f)
+[10] ImGui::ErrorCheckUsingSetCursorPosToExtendParentBoundaries (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\ThirdParty\ImGui\imgui.cpp : 11476)
+[11] ImGui::End (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\ThirdParty\ImGui\imgui.cpp : 8797)
+[12] ImGui::EndChild (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\ThirdParty\ImGui\imgui.cpp : 6829)
+[13] FEditorMainPanel::RenderViewportHostWindow (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\UI\EditorMainPanelViewportHost.cpp : 249)
+[14] FEditorMainPanel::RenderMainViewport (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\UI\EditorMainPanelFrame.cpp : 69)
+[15] FEditorMainPanel::Render (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\UI\EditorMainPanelFrame.cpp : 16)
+[16] UEditorEngine::RenderUI (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\EditorEngine.cpp : 738)
+[17] FEditorRenderPipeline::Execute (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\EditorRenderPipeline.cpp : 180)
+[18] UEngine::Render (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\Engine.cpp : 79)
+[19] UEditorEngine::Tick (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\EditorEngine.cpp : 290)
+[20] FEngineLoop::Run (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\EngineLoop.cpp : 83)
+[21] `anonymous namespace'::GuardedMain (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\Launch.cpp : 16)
+[22] Launch (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\Launch.cpp : 26)
+[23] wWinMain (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\main.cpp : 40)
+[24] invoke_main (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl : 123)
+[25] __scrt_common_main_seh (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl : 288)
+[26] __scrt_common_main (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl : 331)
+[27] wWinMainCRTStartup (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_wwinmain.cpp : 17)
+[28] BaseThreadInitThunk (Address: 0x7ffc279ce8d7)
+[29] RtlUserThreadStart (Address: 0x7ffc2884c3fc)
+========================================
+

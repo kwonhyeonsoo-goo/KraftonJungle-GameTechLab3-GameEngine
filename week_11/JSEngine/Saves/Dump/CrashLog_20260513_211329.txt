@@ -1,0 +1,36 @@
+========================================
+[Engine Crash Report]
+Exception Code: 0xe06d7363
+Call Stack:
+[0] WriteCrashLog (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Core\CrashDump.cpp : 98)
+[1] ReportCrash (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Core\CrashDump.cpp : 141)
+[2] `Launch'::`1'::filt$0 (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\Launch.cpp : 28)
+[3] _C_specific_handler (Address: 0x7ffc00ece83b)
+[4] _chkstk (Address: 0x7ffc2892623f)
+[5] RtlLocateExtendedFeature (Address: 0x7ffc287d2397)
+[6] RtlRaiseException (Address: 0x7ffc287ca951)
+[7] RaiseException (Address: 0x7ffc25c779da)
+[8] CxxThrowException (Address: 0x7ffc00eb9362)
+[9] std::_Xlength_error (Address: 0x7ffb11955459)
+[10] std::_Xlen_string (C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\xstring : 531)
+[11] std::basic_string<char,std::char_traits<char>,std::allocator<char> >::_Reallocate_for<`std::basic_string<char,std::char_traits<char>,std::allocator<char> >::assign'::`2'::<lambda_1>,char const *> (C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\xstring : 2999)
+[12] std::basic_string<char,std::char_traits<char>,std::allocator<char> >::assign (C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\xstring : 1635)
+[13] std::basic_string<char,std::char_traits<char>,std::allocator<char> >::operator= (C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\xstring : 1434)
+[14] FEditorMainPanel::RenderEditorPanelWindows (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\UI\EditorMainPanelFrame.cpp : 150)
+[15] FEditorMainPanel::Render (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\UI\EditorMainPanelFrame.cpp : 21)
+[16] UEditorEngine::RenderUI (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\EditorEngine.cpp : 817)
+[17] FEditorRenderPipeline::Execute (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\EditorRenderPipeline.cpp : 180)
+[18] UEngine::Render (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\Engine.cpp : 79)
+[19] UEditorEngine::Tick (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\EditorEngine.cpp : 300)
+[20] FEngineLoop::Run (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\EngineLoop.cpp : 83)
+[21] `anonymous namespace'::GuardedMain (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\Launch.cpp : 16)
+[22] Launch (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\Launch.cpp : 26)
+[23] wWinMain (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\main.cpp : 40)
+[24] invoke_main (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl : 123)
+[25] __scrt_common_main_seh (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl : 288)
+[26] __scrt_common_main (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl : 331)
+[27] wWinMainCRTStartup (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_wwinmain.cpp : 17)
+[28] BaseThreadInitThunk (Address: 0x7ffc279ce8d7)
+[29] RtlUserThreadStart (Address: 0x7ffc2884c3fc)
+========================================
+

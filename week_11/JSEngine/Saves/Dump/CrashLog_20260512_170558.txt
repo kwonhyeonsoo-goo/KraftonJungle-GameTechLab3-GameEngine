@@ -1,0 +1,32 @@
+========================================
+[Engine Crash Report]
+Exception Code: 0xc0000005
+Call Stack:
+[0] WriteCrashLog (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Core\CrashDump.cpp : 98)
+[1] ReportCrash (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Core\CrashDump.cpp : 141)
+[2] `Launch'::`1'::filt$0 (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\Launch.cpp : 28)
+[3] _C_specific_handler (Address: 0x7ffc0a85e83b)
+[4] _chkstk (Address: 0x7ffc2892623f)
+[5] RtlLocateExtendedFeature (Address: 0x7ffc287d2397)
+[6] KiUserExceptionDispatcher (Address: 0x7ffc28925b7e)
+[7] AActor::GetFocusedWorld (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\GameFramework\AActor.h : 131)
+[8] UPrimitiveComponent::NotifySpatialIndexDirty (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Component\PrimitiveComponent.cpp : 206)
+[9] UPrimitiveComponent::SetVisibility (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Component\PrimitiveComponent.cpp : 77)
+[10] FEditorTransformInteraction::ApplyTransformModeToGizmo (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\Viewport\EditorTransformInteraction.cpp : 51)
+[11] FEditorTransformInteraction::SyncGizmoVisualState (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\Viewport\EditorTransformInteraction.cpp : 94)
+[12] FEditorViewportClient::SyncGizmoVisualState (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\Viewport\EditorViewportClient.cpp : 1281)
+[13] FEditorViewportClient::Tick (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\Viewport\EditorViewportClient.cpp : 376)
+[14] FEditorViewportLayout::Tick (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\Viewport\ViewportLayout.cpp : 232)
+[15] UEditorEngine::Tick (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Editor\EditorEngine.cpp : 301)
+[16] FEngineLoop::Run (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\EngineLoop.cpp : 83)
+[17] `anonymous namespace'::GuardedMain (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\Launch.cpp : 16)
+[18] Launch (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\Source\Engine\Runtime\Launch.cpp : 26)
+[19] wWinMain (C:\Users\jungle\Desktop\YG\Week10\Projects\W10_Team01_Engine\NipsEngine\main.cpp : 40)
+[20] invoke_main (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl : 123)
+[21] __scrt_common_main_seh (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl : 288)
+[22] __scrt_common_main (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl : 331)
+[23] wWinMainCRTStartup (D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_wwinmain.cpp : 17)
+[24] BaseThreadInitThunk (Address: 0x7ffc279ce8d7)
+[25] RtlUserThreadStart (Address: 0x7ffc2884c3fc)
+========================================
+
