@@ -32,13 +32,13 @@ function Script.new(component, properties)
     return self
 end
 
-
+--LifeCycle
 function Script:BeginPlay()
-    local comp = self.owner:GetComponentByType("SubUVComponent")
-    local subuv = comp and comp:AsSubUVComponent()
+    local comp = self.owner:GetComponentByType("StaticMeshComponent")
+    local subuv = comp and comp:AsStaticMeshComponent()
 
     if subuv == nil then
-        Log("[LuaTest] SubUVComponent not found")
+        Log("[LuaTest] SubUStaticMeshComponentVComponent not found")
         return
     end
 
@@ -53,11 +53,17 @@ function Script:BeginPlay()
     local scale = subuv:GetProperty("RelativeScale3D")
     Log("[LuaTest] before Scale = " .. tostring(scale.X) .. ", " .. tostring(scale.Y) .. ", " .. tostring(scale.Z))
 
-    subuv:SetProperty("RelativeScale3D", Vector(20.0, 20.0, 20.0))
+    subuv:SetProperty("RelativeScale3D", Vector(2.0, 2.0, 2.0))
 
     local newScale = subuv:GetProperty("RelativeScale3D")
     Log("[LuaTest] after Scale = " .. tostring(newScale.X) .. ", " .. tostring(newScale.Y) .. ", " .. tostring(newScale.Z))
 
+end
+
+function Script:Tick(dt)
+    if not self.bCanTick then
+        return
+    end
 end
 
 function Script:EndPlay()
