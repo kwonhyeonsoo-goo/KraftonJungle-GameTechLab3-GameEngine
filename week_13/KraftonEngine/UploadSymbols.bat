@@ -1,6 +1,11 @@
 @echo off
 setlocal
 
+if /I not "%UPLOAD_SYMBOLS%"=="1" (
+    echo [Info] Symbol upload disabled. Set UPLOAD_SYMBOLS=1 to enable.
+    exit /b 0
+)
+
 :: ==========================================
 :: 1. 환경 설정 (프로젝트에 맞게 수정하세요)
 :: ==========================================
@@ -26,6 +31,16 @@ set COMMENT="Auto Upload by Build Script"
 
 :: symstore.exe 파일이 있는 실제 경로 (Windows SDK 버전에 따라 다를 수 있음)
 set "SYMSTORE_EXE=C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\symstore.exe"
+
+if not exist "%SYMSTORE_EXE%" (
+    echo [Warn] symstore.exe not found. Skipping symbol upload.
+    exit /b 0
+)
+
+if not exist "%SYMBOL_SERVER%" (
+    echo [Warn] Symbol server not reachable. Skipping symbol upload.
+    exit /b 0
+)
 
 :: ==========================================
 :: 2. 업로드 실행
