@@ -57,6 +57,27 @@ function Copy-FilesToFallback([array]$Files, [string]$FallbackDir) {
     }
 }
 
+function Clear-SymbolServerMisses([string]$SymbolServer, [string]$FileName) {
+    $FileStoreDir = Join-Path $SymbolServer $FileName
+    if (-not (Test-Path -LiteralPath $FileStoreDir)) {
+        return
+    }
+
+    $MissFiles = @(Get-ChildItem -LiteralPath $FileStoreDir -Recurse -Filter "symsrv.miss.txt" -File -ErrorAction SilentlyContinue)
+    foreach ($MissFile in $MissFiles) {
+        Write-Step "Removing stale symbol miss cache: $($MissFile.FullName)"
+        Remove-Item -LiteralPath $MissFile.FullName -Force -ErrorAction SilentlyContinue
+    }
+
+    $Dirs = @(Get-ChildItem -LiteralPath $FileStoreDir -Recurse -Directory -ErrorAction SilentlyContinue | Sort-Object FullName -Descending)
+    foreach ($Dir in $Dirs) {
+        $Children = @(Get-ChildItem -LiteralPath $Dir.FullName -Force -ErrorAction SilentlyContinue)
+        if ($Children.Count -eq 0) {
+            Remove-Item -LiteralPath $Dir.FullName -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 function Add-FileToSymbolStore(
     [string]$SymStore,
     [string]$FilePath,
@@ -65,10 +86,16 @@ function Add-FileToSymbolStore(
     [string]$BuildName,
     [string]$Commit
 ) {
+    Clear-SymbolServerMisses $SymbolServer (Split-Path -Leaf $FilePath)
     Write-Step "Registering file to symbol server: $FilePath"
     & $SymStore add /f $FilePath /s $SymbolServer /t $ProductName /v $BuildName /c "Commit $Commit"
     if ($LASTEXITCODE -ne 0) {
-        Write-Skip "symstore.exe failed for $FilePath. Continuing without failing the build."
+        Write-Skip "symstore.exe failed for $FilePath. Removing stale miss cache and retrying once."
+        Clear-SymbolServerMisses $SymbolServer (Split-Path -Leaf $FilePath)
+        & $SymStore add /f $FilePath /s $SymbolServer /t $ProductName /v $BuildName /c "Commit $Commit"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Skip "symstore.exe failed for $FilePath. Continuing without failing the build."
+        }
     }
 }
 
@@ -138,6 +165,20 @@ try {
     }
 
     $BinaryFiles = @(Get-BinaryFiles $OutDir)
+    Write-Step "PDB files found: $($PdbFiles.Count)"
+    foreach ($Pdb in $PdbFiles) {
+        Write-Step "PDB: $($Pdb.FullName)"
+    }
+
+    Write-Step "Binary files found: $($BinaryFiles.Count)"
+    foreach ($Binary in $BinaryFiles) {
+        Write-Step "Binary: $($Binary.FullName)"
+    }
+
+    if ($BinaryFiles.Count -eq 0) {
+        Write-Skip "No .exe/.dll files found in build output. Dumps from another machine may fail with 'No matching binary found'."
+    }
+
     $Commit = (git -C $RepoRoot rev-parse HEAD 2>$null).Trim()
     if (-not $Commit) {
         Write-Skip "Cannot resolve git commit. Skipping symbol upload."
