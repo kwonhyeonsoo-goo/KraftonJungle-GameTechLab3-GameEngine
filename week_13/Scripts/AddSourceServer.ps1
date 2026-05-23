@@ -7,6 +7,7 @@ param(
     [string]$DebuggerToolsDir = "",
     [string]$SrcToolPath = "",
     [string]$PdbStrPath = "",
+    [string]$FetchScriptPath = "",
     [switch]$KeepStreamFiles
 )
 
@@ -141,6 +142,7 @@ function Write-SourceServerStream {
         [string]$GitRepo,
         [string]$GitCommit,
         [string]$GitExe,
+        [string]$FetchScript,
         [System.Collections.Generic.HashSet[string]]$GitPaths
     )
 
@@ -153,8 +155,9 @@ function Write-SourceServerStream {
     $Lines.Add("SRCSRV: variables ------------------------------------------")
     $Lines.Add("GIT_EXE=$GitExe")
     $Lines.Add("GIT_REPO=$GitRepo")
+    $Lines.Add("FETCH_SCRIPT=$FetchScript")
     $Lines.Add("SRCSRVTRG=%targ%\%fnfile%(%var2%)")
-    $Lines.Add('SRCSRVCMD=cmd /d /c mkdir "%targ%" 2>nul & "%GIT_EXE%" --git-dir="%GIT_REPO%" show "%var3%:%var2%" > %SRCSRVTRG% 2> "%targ%\srcsrv_git_error.txt"')
+    $Lines.Add('SRCSRVCMD=cmd /d /c call "%FETCH_SCRIPT%" "%GIT_EXE%" "%GIT_REPO%" "%var3%" "%var2%" %SRCSRVTRG% "%targ%"')
     $Lines.Add("SRCSRV: source files ---------------------------------------")
 
     $MappedCount = 0
@@ -277,9 +280,20 @@ $PdbStr = Resolve-DebuggingTool -ToolName "pdbstr.exe" -ExplicitPath $PdbStrPath
 $GitExe = Resolve-GitExe
 $GitPaths = Get-GitTreePathSet -GitExe $GitExe -GitRepo $SourceRepo -GitCommit $Commit
 
+if (-not $FetchScriptPath) {
+    $FetchScriptPath = Join-Path $PSScriptRoot "FetchSourceFromGit.cmd"
+}
+
+if (-not (Test-Path -LiteralPath $FetchScriptPath)) {
+    throw "Source server fetch script not found: $FetchScriptPath"
+}
+
+$ResolvedFetchScript = (Resolve-Path -LiteralPath $FetchScriptPath).Path
+
 Write-Host "SrcTool   : $SrcTool"
 Write-Host "PdbStr    : $PdbStr"
 Write-Host "GitExe    : $GitExe"
+Write-Host "FetchCmd  : $ResolvedFetchScript"
 Write-Host "RepoRoot  : $ResolvedRepoRoot"
 Write-Host "SourceRepo: $SourceRepo"
 Write-Host "Commit    : $Commit"
@@ -295,7 +309,7 @@ foreach ($PdbFile in $PdbFiles) {
     }
 
     $StreamPath = Join-Path ([System.IO.Path]::GetTempPath()) ("srcsrv_{0}.txt" -f ([System.Guid]::NewGuid().ToString("N")))
-    $MappedCount = Write-SourceServerStream -StreamPath $StreamPath -PdbFile $PdbFile -SourceFiles $SourceFiles -Root $ResolvedRepoRoot -GitRepo $SourceRepo -GitCommit $Commit -GitExe $GitExe -GitPaths $GitPaths
+    $MappedCount = Write-SourceServerStream -StreamPath $StreamPath -PdbFile $PdbFile -SourceFiles $SourceFiles -Root $ResolvedRepoRoot -GitRepo $SourceRepo -GitCommit $Commit -GitExe $GitExe -FetchScript $ResolvedFetchScript -GitPaths $GitPaths
 
     & $PdbStr -w "-p:$PdbFile" "-i:$StreamPath" -s:srcsrv
     if ($LASTEXITCODE -ne 0) {

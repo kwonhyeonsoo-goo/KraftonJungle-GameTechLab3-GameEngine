@@ -91,6 +91,17 @@ function Ensure-SourceRepo([string]$RepoRoot, [string]$RepoPath, [string]$Commit
     }
 }
 
+function Publish-FetchScript([string]$SymbolServer) {
+    $LocalFetchScript = Join-Path $PSScriptRoot "FetchSourceFromGit.cmd"
+    if (-not (Test-Path -LiteralPath $LocalFetchScript)) {
+        throw "FetchSourceFromGit.cmd not found: $LocalFetchScript"
+    }
+
+    $RemoteFetchScript = Join-Path $SymbolServer "FetchSourceFromGit.cmd"
+    Copy-Item -LiteralPath $LocalFetchScript -Destination $RemoteFetchScript -Force
+    return $RemoteFetchScript
+}
+
 try {
     $RepoRoot = if ($ProjectRoot) {
         Resolve-FullPath $ProjectRoot
@@ -161,6 +172,7 @@ try {
 
             try {
                 Ensure-SourceRepo $RepoRoot $SourceRepo $Commit
+                $FetchScript = Publish-FetchScript $SymbolServer
 
                 $SourceArgs = @(
                     "-ExecutionPolicy", "Bypass",
@@ -168,7 +180,8 @@ try {
                     "-BuildDir", $OutDir,
                     "-RepoRoot", $RepoRoot,
                     "-SourceRepo", $SourceRepo,
-                    "-Commit", $Commit
+                    "-Commit", $Commit,
+                    "-FetchScriptPath", $FetchScript
                 )
 
                 if ($DebuggerToolsDir) {
