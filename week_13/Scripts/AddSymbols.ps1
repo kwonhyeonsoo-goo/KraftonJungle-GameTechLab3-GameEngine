@@ -17,7 +17,7 @@ function Write-Step([string]$Message) {
 }
 
 function Write-Skip([string]$Message) {
-    Write-Warning $Message
+    Write-Host "[Warn] $Message"
 }
 
 function Resolve-FullPath([string]$Path) {
@@ -81,10 +81,19 @@ function Clear-SymbolServerMisses([string]$SymbolServer, [string]$FileName) {
 function Invoke-GitChecked {
     param(
         [string[]]$Arguments,
-        [string]$FailureMessage
+        [string]$FailureMessage,
+        [string[]]$SafeDirectories = @()
     )
 
-    $Output = @(& git @Arguments 2>&1)
+    $GitArgs = @()
+    foreach ($SafeDirectory in $SafeDirectories) {
+        if ($SafeDirectory) {
+            $GitArgs += @("-c", "safe.directory=$SafeDirectory")
+        }
+    }
+
+    $GitArgs += $Arguments
+    $Output = @(& git @GitArgs 2>&1)
     foreach ($Line in $Output) {
         if ($Line) {
             Write-Host "    git: $Line"
@@ -136,7 +145,7 @@ function Ensure-SourceRepo([string]$RepoRoot, [string]$RepoPath, [string]$Commit
     Write-Step "Updating bare source repo with commit: $Commit"
     $PushError = $null
     try {
-        Invoke-GitChecked @("-C", $RepoRoot, "push", $RepoPath, "$Commit`:refs/heads/source-server-latest", "--force") "git push failed for source repo: $RepoPath"
+        Invoke-GitChecked @("-C", $RepoRoot, "push", $RepoPath, "$Commit`:refs/heads/source-server-latest", "--force") "git push failed for source repo: $RepoPath" @($RepoPath)
     } catch {
         $PushError = $_.Exception.Message
         Write-Skip "git push failed. Checking whether the commit already exists in the bare source repo."
@@ -144,7 +153,7 @@ function Ensure-SourceRepo([string]$RepoRoot, [string]$RepoPath, [string]$Commit
 
     Write-Step "Verifying bare source repo contains commit: $Commit"
     try {
-        Invoke-GitChecked @("--git-dir=$RepoPath", "cat-file", "-e", "$Commit^{commit}") "Source repo does not contain commit after push: $Commit"
+        Invoke-GitChecked @("--git-dir=$RepoPath", "cat-file", "-e", "$Commit^{commit}") "Source repo does not contain commit after push: $Commit" @($RepoPath)
     } catch {
         if ($PushError) {
             throw "git push failed and the source repo does not already contain commit '$Commit'. Push error: $PushError"
@@ -154,7 +163,7 @@ function Ensure-SourceRepo([string]$RepoRoot, [string]$RepoPath, [string]$Commit
     }
 
     $CrashDumpPath = "KraftonEngine/Source/Engine/Platform/CrashDump.cpp"
-    Invoke-GitChecked @("--git-dir=$RepoPath", "cat-file", "-e", "$Commit`:$CrashDumpPath") "Source repo does not contain expected source path after push: $CrashDumpPath"
+    Invoke-GitChecked @("--git-dir=$RepoPath", "cat-file", "-e", "$Commit`:$CrashDumpPath") "Source repo does not contain expected source path after push: $CrashDumpPath" @($RepoPath)
     Write-Step "Verified source path in bare repo: $CrashDumpPath"
 }
 
@@ -301,7 +310,7 @@ try {
 } catch {
     Write-Skip "Symbol upload skipped because of an unexpected error: $($_.Exception.Message)"
     if ($_.InvocationInfo -and $_.InvocationInfo.PositionMessage) {
-        Write-Warning $_.InvocationInfo.PositionMessage
+        Write-Host "[Warn] $($_.InvocationInfo.PositionMessage)"
     }
     exit 0
 }

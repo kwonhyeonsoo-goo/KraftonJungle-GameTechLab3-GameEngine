@@ -109,7 +109,7 @@ function Get-GitTreePathSet {
 
     $ErrorPath = Join-Path ([System.IO.Path]::GetTempPath()) ("srcsrv_git_tree_{0}.err" -f ([System.Guid]::NewGuid().ToString("N")))
     try {
-        $Paths = @(& $GitExe --git-dir="$GitRepo" ls-tree -r --name-only $GitCommit 2>$ErrorPath)
+        $Paths = @(& $GitExe -c "safe.directory=$GitRepo" --git-dir="$GitRepo" ls-tree -r --name-only $GitCommit 2>$ErrorPath)
         if ($LASTEXITCODE -ne 0) {
             $Detail = ""
             if (Test-Path -LiteralPath $ErrorPath) {
