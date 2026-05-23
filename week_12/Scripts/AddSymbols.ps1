@@ -78,6 +78,31 @@ function Clear-SymbolServerMisses([string]$SymbolServer, [string]$FileName) {
     }
 }
 
+function Invoke-GitChecked {
+    param(
+        [string[]]$Arguments,
+        [string]$FailureMessage
+    )
+
+    $Output = @(& git @Arguments 2>&1)
+    foreach ($Line in $Output) {
+        if ($Line) {
+            Write-Host "    git: $Line"
+        }
+    }
+
+    if ($LASTEXITCODE -ne 0) {
+        $Detail = ($Output | Out-String).Trim()
+        if ($Detail) {
+            throw "$FailureMessage Detail: $Detail"
+        }
+
+        throw $FailureMessage
+    }
+
+    return $Output
+}
+
 function Add-FileToSymbolStore(
     [string]$SymStore,
     [string]$FilePath,
@@ -105,17 +130,32 @@ function Ensure-SourceRepo([string]$RepoRoot, [string]$RepoPath, [string]$Commit
 
     if (-not (Test-Path -LiteralPath $RepoPath)) {
         Write-Step "Creating bare source repo: $RepoPath"
-        & git clone --bare $RepoRoot $RepoPath
-        if ($LASTEXITCODE -ne 0) {
-            throw "git clone --bare failed for source repo: $RepoPath"
-        }
+        Invoke-GitChecked @("clone", "--bare", $RepoRoot, $RepoPath) "git clone --bare failed for source repo: $RepoPath"
     }
 
     Write-Step "Updating bare source repo with commit: $Commit"
-    & git -C $RepoRoot push $RepoPath "$Commit`:refs/heads/source-server-latest" --force
-    if ($LASTEXITCODE -ne 0) {
-        throw "git push failed for source repo: $RepoPath"
+    $PushError = $null
+    try {
+        Invoke-GitChecked @("-C", $RepoRoot, "push", $RepoPath, "$Commit`:refs/heads/source-server-latest", "--force") "git push failed for source repo: $RepoPath"
+    } catch {
+        $PushError = $_.Exception.Message
+        Write-Skip "git push failed. Checking whether the commit already exists in the bare source repo."
     }
+
+    Write-Step "Verifying bare source repo contains commit: $Commit"
+    try {
+        Invoke-GitChecked @("--git-dir=$RepoPath", "cat-file", "-e", "$Commit^{commit}") "Source repo does not contain commit after push: $Commit"
+    } catch {
+        if ($PushError) {
+            throw "git push failed and the source repo does not already contain commit '$Commit'. Push error: $PushError"
+        }
+
+        throw
+    }
+
+    $CrashDumpPath = "KraftonEngine/Source/Engine/Platform/CrashDump.cpp"
+    Invoke-GitChecked @("--git-dir=$RepoPath", "cat-file", "-e", "$Commit`:$CrashDumpPath") "Source repo does not contain expected source path after push: $CrashDumpPath"
+    Write-Step "Verified source path in bare repo: $CrashDumpPath"
 }
 
 function Publish-FetchScript([string]$SymbolServer) {
