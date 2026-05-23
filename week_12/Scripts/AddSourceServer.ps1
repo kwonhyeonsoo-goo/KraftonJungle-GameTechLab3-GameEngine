@@ -22,7 +22,7 @@ function Resolve-DebuggingTool {
 
     if ($ExplicitPath) {
         if (Test-Path -LiteralPath $ExplicitPath) {
-            return (Resolve-Path -LiteralPath $ExplicitPath).Path
+            return (Resolve-Path -LiteralPath $ExplicitPath).ProviderPath
         }
 
         throw "$ToolName not found at '$ExplicitPath'."
@@ -31,7 +31,7 @@ function Resolve-DebuggingTool {
     if ($DebuggerToolsDir) {
         $Candidate = Join-Path $DebuggerToolsDir $ToolName
         if (Test-Path -LiteralPath $Candidate) {
-            return (Resolve-Path -LiteralPath $Candidate).Path
+            return (Resolve-Path -LiteralPath $Candidate).ProviderPath
         }
     }
 
@@ -92,7 +92,7 @@ function Resolve-GitExe {
     if ($FromPath) {
         foreach ($Candidate in @($FromPath.Path, $FromPath.Source)) {
             if ($Candidate -and [System.IO.Path]::IsPathRooted($Candidate) -and (Test-Path -LiteralPath $Candidate)) {
-                return (Resolve-Path -LiteralPath $Candidate).Path
+                return (Resolve-Path -LiteralPath $Candidate).ProviderPath
             }
         }
     }
@@ -243,7 +243,7 @@ function Test-SourceServerStream {
     }
 }
 
-$ResolvedRepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
+$ResolvedRepoRoot = (Resolve-Path -LiteralPath $RepoRoot).ProviderPath
 
 try {
     $SourceRepoExists = Test-Path -LiteralPath $SourceRepo
@@ -263,9 +263,9 @@ if (-not $Commit) {
 }
 
 if ($PdbPath) {
-    $PdbFiles = @((Resolve-Path -LiteralPath $PdbPath).Path)
+    $PdbFiles = @((Resolve-Path -LiteralPath $PdbPath).ProviderPath)
 } elseif ($BuildDir) {
-    $ResolvedBuildDir = (Resolve-Path -LiteralPath $BuildDir).Path
+    $ResolvedBuildDir = (Resolve-Path -LiteralPath $BuildDir).ProviderPath
     $PdbFiles = @(Get-ChildItem -LiteralPath $ResolvedBuildDir -Recurse -Filter "*.pdb" -File | ForEach-Object { $_.FullName })
 } else {
     throw "Pass either -PdbPath or -BuildDir."
@@ -288,7 +288,7 @@ if (-not (Test-Path -LiteralPath $FetchScriptPath)) {
     throw "Source server fetch script not found: $FetchScriptPath"
 }
 
-$ResolvedFetchScript = (Resolve-Path -LiteralPath $FetchScriptPath).Path
+$ResolvedFetchScript = (Resolve-Path -LiteralPath $FetchScriptPath).ProviderPath
 
 Write-Host "SrcTool   : $SrcTool"
 Write-Host "PdbStr    : $PdbStr"
