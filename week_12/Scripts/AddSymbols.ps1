@@ -156,6 +156,32 @@ function Write-SourceServerFile(
     Set-Content -Path $OutputPath -Value $Lines -Encoding ASCII
 }
 
+function Get-BinaryFiles([string]$Directory) {
+    return Get-ChildItem -Path $Directory -File |
+        Where-Object { $_.Extension -in @(".exe", ".dll") }
+}
+
+function Copy-FilesToFallback([array]$Files, [string]$FallbackDir) {
+    New-Item -ItemType Directory -Force -Path $FallbackDir | Out-Null
+    foreach ($File in $Files) {
+        Copy-Item -LiteralPath $File.FullName -Destination $FallbackDir -Force
+    }
+}
+
+function Add-FileToSymbolStore(
+    [string]$SymStore,
+    [string]$FilePath,
+    [string]$SymbolServer,
+    [string]$BuildName,
+    [string]$Commit
+) {
+    Write-Step "Registering file to symbol server: $FilePath"
+    & $SymStore add /f $FilePath /s $SymbolServer /t "KraftonEngine" /v $BuildName /c "Commit $Commit"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Skip "symstore.exe failed for $FilePath. Continuing without failing the build."
+    }
+}
+
 try {
     $RepoRoot = if ($ProjectRoot) {
         Resolve-FullPath $ProjectRoot
@@ -193,6 +219,7 @@ try {
         Write-Skip "No PDB files found in: $OutDir"
         exit 0
     }
+    $BinaryFiles = @(Get-BinaryFiles $OutDir)
 
     $Commit = (git -C $RepoRoot rev-parse HEAD 2>$null).Trim()
     if (-not $Commit) {
@@ -252,18 +279,17 @@ try {
 
     if (-not $SymStore) {
         $FallbackDir = Join-Path $SymbolServer ("_fallback\{0}\{1}_{2}" -f $env:COMPUTERNAME, $Configuration, $Platform)
-        Write-Skip "symstore.exe not found. Copying PDB files to fallback folder: $FallbackDir"
-        New-Item -ItemType Directory -Force -Path $FallbackDir | Out-Null
-        Copy-Item -Path (Join-Path $OutDir "*.pdb") -Destination $FallbackDir -Force
+        Write-Skip "symstore.exe not found. Copying PDB and binary files to fallback folder: $FallbackDir"
+        Copy-FilesToFallback (@($PdbFiles) + @($BinaryFiles)) $FallbackDir
         exit 0
     }
 
     foreach ($Pdb in $PdbFiles) {
-        Write-Step "Registering PDB to symbol server: $($Pdb.FullName)"
-        & $SymStore add /f $Pdb.FullName /s $SymbolServer /t "KraftonEngine" /v $BuildName /c "Commit $Commit"
-        if ($LASTEXITCODE -ne 0) {
-            Write-Skip "symstore.exe failed for $($Pdb.FullName). Continuing without failing the build."
-        }
+        Add-FileToSymbolStore $SymStore $Pdb.FullName $SymbolServer $BuildName $Commit
+    }
+
+    foreach ($Binary in $BinaryFiles) {
+        Add-FileToSymbolStore $SymStore $Binary.FullName $SymbolServer $BuildName $Commit
     }
 
     if ($EnableSourceServer -and $SourceIndexed) {
