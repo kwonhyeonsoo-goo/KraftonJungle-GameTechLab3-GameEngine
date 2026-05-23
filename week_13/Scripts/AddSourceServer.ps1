@@ -115,6 +115,43 @@ function Write-SourceServerStream {
     return $MappedCount
 }
 
+function Get-TrackedSourceFiles {
+    param([string]$Root)
+
+    $Files = @()
+    git -C $Root ls-files | ForEach-Object {
+        $RelativePath = $_.Trim()
+        if ($RelativePath -match '\.(c|cc|cpp|cxx|h|hh|hpp|hxx|inl)$') {
+            $LocalPath = Join-Path $Root ($RelativePath -replace '/', '\')
+            if (Test-Path -LiteralPath $LocalPath) {
+                $Files += [System.IO.Path]::GetFullPath($LocalPath)
+            }
+        }
+    }
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "git ls-files failed for '$Root'."
+    }
+
+    return $Files | Sort-Object -Unique
+}
+
+function Get-PdbSourceFiles {
+    param(
+        [string]$SrcTool,
+        [string]$PdbFile,
+        [string]$Root
+    )
+
+    $SourceFiles = @(& $SrcTool -r $PdbFile 2>$null | Where-Object { $_ -match "^[A-Za-z]:\\|^\\\\" } | Sort-Object -Unique)
+    if ($LASTEXITCODE -eq 0 -and $SourceFiles.Count -gt 0) {
+        return $SourceFiles
+    }
+
+    Write-Warning "srctool.exe failed or returned no source files for '$PdbFile'. Falling back to git tracked source files."
+    return @(Get-TrackedSourceFiles -Root $Root)
+}
+
 function Test-SourceServerStream {
     param(
         [string]$PdbStr,
@@ -180,9 +217,9 @@ Write-Host "PDB Count : $($PdbFiles.Count)"
 foreach ($PdbFile in $PdbFiles) {
     Write-Host "Processing: $PdbFile"
 
-    $SourceFiles = @(& $SrcTool $PdbFile | Where-Object { $_ -match "^[A-Za-z]:\\|^\\\\" } | Sort-Object -Unique)
-    if ($LASTEXITCODE -ne 0) {
-        throw "srctool.exe failed for '$PdbFile' with exit code $LASTEXITCODE."
+    $SourceFiles = @(Get-PdbSourceFiles -SrcTool $SrcTool -PdbFile $PdbFile -Root $ResolvedRepoRoot)
+    if ($SourceFiles.Count -eq 0) {
+        throw "No source files found for '$PdbFile'."
     }
 
     $StreamPath = Join-Path ([System.IO.Path]::GetTempPath()) ("srcsrv_{0}.txt" -f ([System.Guid]::NewGuid().ToString("N")))
