@@ -71,6 +71,67 @@ function Convert-ToGitPath {
     return $FullPath.Substring($FullRoot.Length).Replace("\", "/")
 }
 
+function Resolve-GitExe {
+    $Candidates = @(
+        "${env:LocalAppData}\Programs\Git\cmd\git.exe",
+        "${env:LocalAppData}\Programs\Git\bin\git.exe",
+        "${env:ProgramFiles}\Git\cmd\git.exe",
+        "${env:ProgramFiles}\Git\bin\git.exe",
+        "${env:ProgramFiles(x86)}\Git\cmd\git.exe",
+        "${env:ProgramFiles(x86)}\Git\bin\git.exe"
+    )
+
+    foreach ($Candidate in $Candidates) {
+        if ($Candidate -and (Test-Path -LiteralPath $Candidate)) {
+            return $Candidate
+        }
+    }
+
+    $FromPath = Get-Command "git.exe" -ErrorAction SilentlyContinue
+    if ($FromPath) {
+        foreach ($Candidate in @($FromPath.Path, $FromPath.Source)) {
+            if ($Candidate -and [System.IO.Path]::IsPathRooted($Candidate) -and (Test-Path -LiteralPath $Candidate)) {
+                return (Resolve-Path -LiteralPath $Candidate).Path
+            }
+        }
+    }
+
+    throw "git.exe not found. Install Git for Windows or add git.exe to PATH."
+}
+
+function Get-GitTreePathSet {
+    param(
+        [string]$GitExe,
+        [string]$GitRepo,
+        [string]$GitCommit
+    )
+
+    $ErrorPath = Join-Path ([System.IO.Path]::GetTempPath()) ("srcsrv_git_tree_{0}.err" -f ([System.Guid]::NewGuid().ToString("N")))
+    try {
+        $Paths = @(& $GitExe --git-dir="$GitRepo" ls-tree -r --name-only $GitCommit 2>$ErrorPath)
+        if ($LASTEXITCODE -ne 0) {
+            $Detail = ""
+            if (Test-Path -LiteralPath $ErrorPath) {
+                $Detail = (Get-Content -LiteralPath $ErrorPath -Raw).Trim()
+            }
+
+            throw "Cannot read source repo '$GitRepo' at commit '$GitCommit'. git ls-tree failed. $Detail"
+        }
+
+        $Set = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+        foreach ($Path in $Paths) {
+            $Trimmed = $Path.Trim()
+            if ($Trimmed) {
+                [void]$Set.Add($Trimmed)
+            }
+        }
+
+        return $Set
+    } finally {
+        Remove-Item -LiteralPath $ErrorPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Write-SourceServerStream {
     param(
         [string]$StreamPath,
@@ -78,7 +139,9 @@ function Write-SourceServerStream {
         [string[]]$SourceFiles,
         [string]$Root,
         [string]$GitRepo,
-        [string]$GitCommit
+        [string]$GitCommit,
+        [string]$GitExe,
+        [System.Collections.Generic.HashSet[string]]$GitPaths
     )
 
     $Lines = New-Object System.Collections.Generic.List[string]
@@ -88,16 +151,21 @@ function Write-SourceServerStream {
     $Lines.Add("VERCTRL=Git")
     $Lines.Add("DATETIME=$(Get-Date -Format o)")
     $Lines.Add("SRCSRV: variables ------------------------------------------")
-    $Lines.Add("GIT_EXE=git.exe")
+    $Lines.Add("GIT_EXE=$GitExe")
     $Lines.Add("GIT_REPO=$GitRepo")
     $Lines.Add("SRCSRVTRG=%targ%\%fnfile%(%var2%)")
-    $Lines.Add('SRCSRVCMD=cmd /c if not exist "%targ%" mkdir "%targ%" & "%GIT_EXE%" --git-dir="%GIT_REPO%" show %var3%:%var2% > %SRCSRVTRG%')
+    $Lines.Add('SRCSRVCMD=cmd /c if not exist "%targ%" mkdir "%targ%" & "%GIT_EXE%" --git-dir="%GIT_REPO%" show %var3%:%var2% > "%SRCSRVTRG%" 2> "%targ%\srcsrv_git_error.txt"')
     $Lines.Add("SRCSRV: source files ---------------------------------------")
 
     $MappedCount = 0
     foreach ($SourceFile in $SourceFiles) {
         $RelativePath = Convert-ToGitPath -Path $SourceFile -Root $Root
         if (-not $RelativePath) {
+            continue
+        }
+
+        if ($GitPaths -and -not $GitPaths.Contains($RelativePath)) {
+            Write-Warning "Skipping source file not found in commit $GitCommit`: $RelativePath"
             continue
         }
 
@@ -206,12 +274,16 @@ if (-not $PdbFiles) {
 
 $SrcTool = Resolve-DebuggingTool -ToolName "srctool.exe" -ExplicitPath $SrcToolPath -DebuggerToolsDir $DebuggerToolsDir
 $PdbStr = Resolve-DebuggingTool -ToolName "pdbstr.exe" -ExplicitPath $PdbStrPath -DebuggerToolsDir $DebuggerToolsDir
+$GitExe = Resolve-GitExe
+$GitPaths = Get-GitTreePathSet -GitExe $GitExe -GitRepo $SourceRepo -GitCommit $Commit
 
 Write-Host "SrcTool   : $SrcTool"
 Write-Host "PdbStr    : $PdbStr"
+Write-Host "GitExe    : $GitExe"
 Write-Host "RepoRoot  : $ResolvedRepoRoot"
 Write-Host "SourceRepo: $SourceRepo"
 Write-Host "Commit    : $Commit"
+Write-Host "Git Files : $($GitPaths.Count)"
 Write-Host "PDB Count : $($PdbFiles.Count)"
 
 foreach ($PdbFile in $PdbFiles) {
@@ -223,7 +295,7 @@ foreach ($PdbFile in $PdbFiles) {
     }
 
     $StreamPath = Join-Path ([System.IO.Path]::GetTempPath()) ("srcsrv_{0}.txt" -f ([System.Guid]::NewGuid().ToString("N")))
-    $MappedCount = Write-SourceServerStream -StreamPath $StreamPath -PdbFile $PdbFile -SourceFiles $SourceFiles -Root $ResolvedRepoRoot -GitRepo $SourceRepo -GitCommit $Commit
+    $MappedCount = Write-SourceServerStream -StreamPath $StreamPath -PdbFile $PdbFile -SourceFiles $SourceFiles -Root $ResolvedRepoRoot -GitRepo $SourceRepo -GitCommit $Commit -GitExe $GitExe -GitPaths $GitPaths
 
     & $PdbStr -w "-p:$PdbFile" "-i:$StreamPath" -s:srcsrv
     if ($LASTEXITCODE -ne 0) {
