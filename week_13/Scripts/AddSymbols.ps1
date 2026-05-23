@@ -98,12 +98,35 @@ function Get-SourceFilesFromPdb([string]$PdbPath, [string]$SrcTool, [string]$Roo
     return $Files | Sort-Object LocalPath -Unique
 }
 
-function Copy-SourceSnapshot([array]$SourceFiles, [string]$SnapshotRoot) {
+function Convert-ToCmdEscaped([string]$Value) {
+    return $Value.Replace('"', '\"')
+}
+
+function Copy-FileFromCommit(
+    [string]$Root,
+    [string]$Commit,
+    [string]$RepoPath,
+    [string]$TargetPath
+) {
+    $TargetDir = Split-Path -Parent $TargetPath
+    New-Item -ItemType Directory -Force -Path $TargetDir | Out-Null
+
+    $EscapedRoot = Convert-ToCmdEscaped $Root
+    $EscapedTarget = Convert-ToCmdEscaped $TargetPath
+    $GitObject = "{0}:{1}" -f $Commit, $RepoPath
+    $EscapedGitObject = Convert-ToCmdEscaped $GitObject
+    $Command = 'git -C "{0}" show "{1}" > "{2}"' -f $EscapedRoot, $EscapedGitObject, $EscapedTarget
+
+    & cmd.exe /d /s /c $Command
+    if ($LASTEXITCODE -ne 0) {
+        throw "git show failed for $GitObject"
+    }
+}
+
+function Copy-SourceSnapshot([array]$SourceFiles, [string]$SnapshotRoot, [string]$Root, [string]$Commit) {
     foreach ($File in $SourceFiles) {
         $TargetPath = Join-Path $SnapshotRoot ($File.RepoPath -replace '/', '\')
-        $TargetDir = Split-Path -Parent $TargetPath
-        New-Item -ItemType Directory -Force -Path $TargetDir | Out-Null
-        Copy-Item -LiteralPath $File.LocalPath -Destination $TargetPath -Force
+        Copy-FileFromCommit $Root $Commit $File.RepoPath $TargetPath
     }
 }
 
@@ -202,9 +225,14 @@ try {
             if ($SourceFiles.Count -eq 0) {
                 Write-Skip "No source files found. Source server data will not be embedded."
             } else {
+                $DirtyFiles = @(git -C $RepoRoot status --short 2>$null)
+                if ($DirtyFiles.Count -gt 0) {
+                    Write-Skip "Working tree has uncommitted changes. Source snapshot will use committed files from $Commit."
+                }
+
                 $SnapshotRoot = Join-Path $SymbolServer ("SourceRepos\Snapshots\{0}" -f $Commit)
-                Write-Step "Copying source snapshot: $SnapshotRoot"
-                Copy-SourceSnapshot $SourceFiles $SnapshotRoot
+                Write-Step "Creating source snapshot from commit $Commit`: $SnapshotRoot"
+                Copy-SourceSnapshot $SourceFiles $SnapshotRoot $RepoRoot $Commit
 
                 foreach ($Pdb in $PdbFiles) {
                     $SrcSrvFile = Join-Path $env:TEMP ("{0}.{1}.srcsrv" -f $Pdb.BaseName, $Commit.Substring(0, [Math]::Min(12, $Commit.Length)))
