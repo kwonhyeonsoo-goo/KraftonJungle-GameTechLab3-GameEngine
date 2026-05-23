@@ -141,15 +141,15 @@ function Write-SourceServerFile(
         "INDEXVERSION=2",
         "VERCTRL=Snapshot",
         "SRCSRV: variables ------------------------------------------",
-        "SRCSRVTRG=%targ%\%var4%",
-        'SRCSRVCMD=cmd /c copy /y "%var3%" "%SRCSRVTRG%"',
+        "SRCSRVTRG=%targ%\%var3%",
+        'SRCSRVCMD=cmd.exe /d /c copy /y "%var2%" "%SRCSRVTRG%"',
         "SRCSRV: source files ---------------------------------------"
     )
 
     foreach ($File in $SourceFiles) {
         $SnapshotPath = Join-Path $SnapshotRoot ($File.RepoPath -replace '/', '\')
         $CacheName = $File.RepoPath -replace '[\\/:\s]', '_'
-        $Lines += "$($File.LocalPath)*$($File.RepoPath)*$SnapshotPath*$CacheName"
+        $Lines += "$($File.LocalPath)*$SnapshotPath*$CacheName"
     }
 
     $Lines += "SRCSRV: end ------------------------------------------------"
