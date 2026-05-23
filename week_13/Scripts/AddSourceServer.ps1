@@ -115,6 +115,26 @@ function Write-SourceServerStream {
     return $MappedCount
 }
 
+function Test-SourceServerStream {
+    param(
+        [string]$PdbStr,
+        [string]$PdbFile
+    )
+
+    $ReadBackPath = Join-Path ([System.IO.Path]::GetTempPath()) ("srcsrv_read_{0}.txt" -f ([System.Guid]::NewGuid().ToString("N")))
+    try {
+        & $PdbStr -r "-p:$PdbFile" "-i:$ReadBackPath" -s:srcsrv
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $ReadBackPath)) {
+            return $false
+        }
+
+        $Content = Get-Content -LiteralPath $ReadBackPath -Raw
+        return ($Content -match "SRCSRV: source files" -and $Content -match "SRCSRVCMD=")
+    } finally {
+        Remove-Item -LiteralPath $ReadBackPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 $ResolvedRepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 
 try {
@@ -171,6 +191,10 @@ foreach ($PdbFile in $PdbFiles) {
     & $PdbStr -w "-p:$PdbFile" "-i:$StreamPath" -s:srcsrv
     if ($LASTEXITCODE -ne 0) {
         throw "pdbstr.exe failed for '$PdbFile' with exit code $LASTEXITCODE."
+    }
+
+    if (-not (Test-SourceServerStream -PdbStr $PdbStr -PdbFile $PdbFile)) {
+        throw "Source server stream verification failed for '$PdbFile'."
     }
 
     Write-Host "Embedded source server stream. Source Count: $MappedCount"
