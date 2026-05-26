@@ -179,20 +179,20 @@ function Ensure-SourceRepo([string]$RepoRoot, [string]$RepoPath, [string]$Commit
     }
 
     Write-Step "Updating bare source repo with commit: $Commit"
-    $PushError = $null
+    $FetchError = $null
     try {
-        Invoke-GitChecked @("-C", $RepoRoot, "push", $RepoPath, "$Commit`:refs/heads/source-server-latest", "--force") "git push failed for source repo: $RepoPath" @($RepoPath)
+        Invoke-GitChecked @("--git-dir=$RepoPath", "fetch", $RepoRoot, "+$Commit`:refs/heads/source-server-latest") "git fetch failed for source repo: $RepoPath" @($RepoPath, $RepoRoot)
     } catch {
-        $PushError = $_.Exception.Message
-        Write-Skip "git push failed. Checking whether the commit already exists in the bare source repo."
+        $FetchError = $_.Exception.Message
+        Write-Skip "git fetch failed. Checking whether the commit already exists in the bare source repo."
     }
 
     Write-Step "Verifying bare source repo contains commit: $Commit"
     try {
-        Invoke-GitChecked @("--git-dir=$RepoPath", "cat-file", "-e", "$Commit^{commit}") "Source repo does not contain commit after push: $Commit" @($RepoPath)
+        Invoke-GitChecked @("--git-dir=$RepoPath", "cat-file", "-e", "$Commit^{commit}") "Source repo does not contain commit after fetch: $Commit" @($RepoPath)
     } catch {
-        if ($PushError) {
-            throw "git push failed and the source repo does not already contain commit '$Commit'. Push error: $PushError"
+        if ($FetchError) {
+            throw "git fetch failed and the source repo does not already contain commit '$Commit'. Fetch error: $FetchError"
         }
 
         throw
