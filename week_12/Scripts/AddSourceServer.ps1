@@ -29,9 +29,17 @@ function Resolve-DebuggingTool {
     }
 
     if ($DebuggerToolsDir) {
-        $Candidate = Join-Path $DebuggerToolsDir $ToolName
-        if (Test-Path -LiteralPath $Candidate) {
-            return (Resolve-Path -LiteralPath $Candidate).ProviderPath
+        $Candidates = @(
+            (Join-Path $DebuggerToolsDir $ToolName),
+            (Join-Path (Join-Path $DebuggerToolsDir "srcsrv") $ToolName),
+            (Join-Path (Join-Path (Join-Path $DebuggerToolsDir "Debuggers") "x64") $ToolName),
+            (Join-Path (Join-Path (Join-Path (Join-Path $DebuggerToolsDir "Debuggers") "x64") "srcsrv") $ToolName)
+        )
+
+        foreach ($Candidate in $Candidates) {
+            if (Test-Path -LiteralPath $Candidate) {
+                return (Resolve-Path -LiteralPath $Candidate).ProviderPath
+            }
         }
     }
 
