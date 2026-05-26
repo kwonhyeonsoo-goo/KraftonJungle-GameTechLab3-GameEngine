@@ -331,7 +331,12 @@ try {
         }
     }
 
-    $SymStore = Resolve-DebuggingTool "symstore.exe" $DebuggerToolsDir
+    $SymStoreToolsDir = $DebuggerToolsDir
+    if (-not $SymStoreToolsDir -and $SourceServerToolsDir) {
+        $SymStoreToolsDir = $SourceServerToolsDir
+    }
+
+    $SymStore = Resolve-DebuggingTool "symstore.exe" $SymStoreToolsDir
     if (-not $SymStore) {
         $FallbackDir = Join-Path $SymbolServer ("_fallback\{0}\{1}_{2}" -f $env:COMPUTERNAME, $Configuration, $Platform)
         Write-Skip "symstore.exe not found. Copying PDB and binary files to fallback folder: $FallbackDir"
