@@ -26,8 +26,16 @@ function Resolve-FullPath([string]$Path) {
 
 function Resolve-DebuggingTool([string]$ToolName, [string]$DebuggerToolsDir) {
     if ($DebuggerToolsDir) {
-        $Candidate = Join-Path $DebuggerToolsDir $ToolName
-        if (Test-Path -LiteralPath $Candidate) { return (Resolve-Path -LiteralPath $Candidate).Path }
+        $Candidates = @(
+            (Join-Path $DebuggerToolsDir $ToolName),
+            (Join-Path (Join-Path $DebuggerToolsDir "srcsrv") $ToolName),
+            (Join-Path (Join-Path (Join-Path $DebuggerToolsDir "Debuggers") "x64") $ToolName),
+            (Join-Path (Join-Path (Join-Path (Join-Path $DebuggerToolsDir "Debuggers") "x64") "srcsrv") $ToolName)
+        )
+
+        foreach ($Candidate in $Candidates) {
+            if (Test-Path -LiteralPath $Candidate) { return (Resolve-Path -LiteralPath $Candidate).ProviderPath }
+        }
     }
 
     $FromPath = Get-Command $ToolName -ErrorAction SilentlyContinue
@@ -43,6 +51,34 @@ function Resolve-DebuggingTool([string]$ToolName, [string]$DebuggerToolsDir) {
     }
 
     return $null
+}
+
+function Resolve-SourceServerToolsDir([string]$SymbolServer, [string]$DebuggerToolsDir) {
+    $Candidates = @()
+    if ($DebuggerToolsDir) {
+        $Candidates += $DebuggerToolsDir
+    }
+
+    $Candidates += @(
+        (Join-Path $SymbolServer "_tools\srcsrv"),
+        (Join-Path $SymbolServer "_tools\Debuggers\x64\srcsrv"),
+        (Join-Path $SymbolServer "_tools\Debuggers\x64"),
+        (Join-Path $SymbolServer "_tools")
+    )
+
+    foreach ($CandidateDir in $Candidates) {
+        if (-not $CandidateDir) {
+            continue
+        }
+
+        $PdbStr = Resolve-DebuggingTool "pdbstr.exe" $CandidateDir
+        $SrcTool = Resolve-DebuggingTool "srctool.exe" $CandidateDir
+        if ($PdbStr -and $SrcTool) {
+            return (Split-Path -Parent $PdbStr)
+        }
+    }
+
+    return ""
 }
 
 function Get-BinaryFiles([string]$Directory) {
@@ -263,6 +299,12 @@ try {
             try {
                 Ensure-SourceRepo $RepoRoot $SourceRepo $Commit
                 $FetchScript = Publish-FetchScript $SymbolServer
+                $SourceServerToolsDir = Resolve-SourceServerToolsDir $SymbolServer $DebuggerToolsDir
+                if ($SourceServerToolsDir) {
+                    Write-Step "Source server tools: $SourceServerToolsDir"
+                } else {
+                    Write-Skip "pdbstr.exe/srctool.exe not found locally or in '$SymbolServer\_tools'. Source server data may not be embedded on this PC."
+                }
 
                 $SourceArgs = @(
                     "-ExecutionPolicy", "Bypass",
@@ -274,8 +316,8 @@ try {
                     "-FetchScriptPath", $FetchScript
                 )
 
-                if ($DebuggerToolsDir) {
-                    $SourceArgs += @("-DebuggerToolsDir", $DebuggerToolsDir)
+                if ($SourceServerToolsDir) {
+                    $SourceArgs += @("-DebuggerToolsDir", $SourceServerToolsDir)
                 }
 
                 Write-Step "Embedding source server data before symbol registration..."
