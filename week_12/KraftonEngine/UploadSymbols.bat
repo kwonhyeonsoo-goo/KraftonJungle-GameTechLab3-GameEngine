@@ -14,17 +14,23 @@ set "PLATFORM=%~3"
 if "%PLATFORM%"=="" set "PLATFORM=x64"
 
 set "SCRIPT_PATH=%~dp0..\Scripts\AddSymbols.ps1"
+set "STRICT_ARGS=-VerifySymbols"
+if /I "%CONFIGURATION%"=="Release" set "STRICT_ARGS=-VerifySymbols -FailOnError -RequireCleanSource"
+if /I "%CONFIGURATION%"=="Game" set "STRICT_ARGS=-VerifySymbols -FailOnError -RequireCleanSource"
+if /I "%CONFIGURATION%"=="Demo" set "STRICT_ARGS=-VerifySymbols -FailOnError -RequireCleanSource"
 
 echo [Info] Running symbol upload script...
 echo [Info] BuildDir: %BUILD_DIR%
 echo [Info] Configuration: %CONFIGURATION%
 echo [Info] Platform: %PLATFORM%
 echo [Info] SymbolServer: %SYMBOL_SERVER%
+echo [Info] StrictArgs: %STRICT_ARGS%
 
-powershell -ExecutionPolicy Bypass -File "%SCRIPT_PATH%" -BuildDir "%BUILD_DIR%" -Configuration "%CONFIGURATION%" -Platform "%PLATFORM%" -SymbolServer "%SYMBOL_SERVER%" -EnableSourceServer
+powershell -ExecutionPolicy Bypass -File "%SCRIPT_PATH%" -BuildDir "%BUILD_DIR%" -Configuration "%CONFIGURATION%" -Platform "%PLATFORM%" -SymbolServer "%SYMBOL_SERVER%" -EnableSourceServer %STRICT_ARGS%
 
 if not "%ERRORLEVEL%"=="0" (
-    echo [Warn] Symbol upload script returned %ERRORLEVEL%. Build will continue.
+    echo [Error] Symbol upload script returned %ERRORLEVEL%.
+    exit /b %ERRORLEVEL%
 )
 
 endlocal
