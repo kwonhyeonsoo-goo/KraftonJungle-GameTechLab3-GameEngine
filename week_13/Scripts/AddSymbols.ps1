@@ -7,7 +7,10 @@ param(
     [string]$ProjectRoot = "",
     [string]$DebuggerToolsDir = "",
     [switch]$EnableSourceServer,
-    [string]$SourceRepo = ""
+    [string]$SourceRepo = "",
+    [switch]$VerifySymbols,
+    [switch]$FailOnError,
+    [switch]$RequireCleanSource
 )
 
 $ErrorActionPreference = "Stop"
@@ -18,6 +21,27 @@ function Write-Step([string]$Message) {
 
 function Write-Skip([string]$Message) {
     Write-Host "[Warn] $Message"
+}
+
+function Write-ErrorStep([string]$Message) {
+    Write-Host "[Error] $Message"
+}
+
+function Warn-OrThrow([string]$Message) {
+    if ($FailOnError) {
+        throw $Message
+    }
+
+    Write-Skip $Message
+}
+
+function Skip-OrFail([string]$Message) {
+    if ($FailOnError) {
+        throw $Message
+    }
+
+    Write-Skip $Message
+    exit 0
 }
 
 function Resolve-FullPath([string]$Path) {
@@ -164,7 +188,7 @@ function Add-FileToSymbolStore(
         Clear-SymbolServerMisses $SymbolServer (Split-Path -Leaf $FilePath)
         & $SymStore add /f $FilePath /s $SymbolServer /t $ProductName /v $BuildName /c "Commit $Commit"
         if ($LASTEXITCODE -ne 0) {
-            Write-Skip "symstore.exe failed for $FilePath. Continuing without failing the build."
+            throw "symstore.exe failed for '$FilePath' after retry."
         }
     }
 }
@@ -214,6 +238,84 @@ function Publish-FetchScript([string]$SymbolServer) {
     return $RemoteFetchScript
 }
 
+function Test-PdbHasSourceServerStream([string]$PdbStr, [string]$PdbFile) {
+    $ReadBackPath = Join-Path ([System.IO.Path]::GetTempPath()) ("srcsrv_verify_{0}.txt" -f ([System.Guid]::NewGuid().ToString("N")))
+    try {
+        & $PdbStr -r "-p:$PdbFile" "-i:$ReadBackPath" -s:srcsrv | Out-Null
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $ReadBackPath)) {
+            return $false
+        }
+
+        $Content = Get-Content -LiteralPath $ReadBackPath -Raw
+        return ($Content -match "SRCSRV: source files" -and $Content -match "SRCSRVCMD=")
+    } finally {
+        Remove-Item -LiteralPath $ReadBackPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Assert-SourceServerStreams([array]$PdbFiles, [string]$PdbStr) {
+    if (-not $PdbStr) {
+        throw "pdbstr.exe is required to verify source server streams."
+    }
+
+    foreach ($Pdb in $PdbFiles) {
+        Write-Step "Verifying source server stream: $($Pdb.FullName)"
+        if (-not (Test-PdbHasSourceServerStream $PdbStr $Pdb.FullName)) {
+            throw "Source server stream is missing or invalid in '$($Pdb.FullName)'."
+        }
+    }
+}
+
+function Get-BinariesWithSiblingPdb([array]$BinaryFiles) {
+    $Result = @()
+    foreach ($Binary in $BinaryFiles) {
+        $PdbPath = [System.IO.Path]::ChangeExtension($Binary.FullName, ".pdb")
+        if (Test-Path -LiteralPath $PdbPath) {
+            $Result += $Binary
+        }
+    }
+
+    return $Result
+}
+
+function Assert-SymbolServerLoadsPrivateSymbols(
+    [string]$SymChk,
+    [array]$BinaryFiles,
+    [string]$SymbolServer
+) {
+    if (-not $SymChk) {
+        throw "symchk.exe is required to verify symbol server registration."
+    }
+
+    $CacheDir = Join-Path ([System.IO.Path]::GetTempPath()) ("KraftonSymbolVerify_{0}" -f ([System.Guid]::NewGuid().ToString("N")))
+    New-Item -ItemType Directory -Force -Path $CacheDir | Out-Null
+
+    try {
+        foreach ($Binary in $BinaryFiles) {
+            Write-Step "Verifying symbol server can load private symbols: $($Binary.FullName)"
+            $PreviousErrorActionPreference = $ErrorActionPreference
+            $ErrorActionPreference = "Continue"
+            try {
+                $Output = @(& $SymChk /v $Binary.FullName /s "srv*$CacheDir*$SymbolServer" 2>&1 | ForEach-Object { $_.ToString() })
+            } finally {
+                $ErrorActionPreference = $PreviousErrorActionPreference
+            }
+
+            if ($LASTEXITCODE -ne 0) {
+                $Detail = ($Output | Out-String).Trim()
+                throw "symchk.exe failed for '$($Binary.FullName)'. Detail: $Detail"
+            }
+
+            $OutputText = ($Output | Out-String)
+            if ($OutputText -notmatch "private symbols & lines" -or $OutputText -notmatch "Line numbers:\s+TRUE") {
+                throw "Symbol server did not return private symbols and line information for '$($Binary.FullName)'."
+            }
+        }
+    } finally {
+        Remove-Item -LiteralPath $CacheDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
 try {
     $RepoRoot = if ($ProjectRoot) {
         Resolve-FullPath $ProjectRoot
@@ -229,24 +331,20 @@ try {
     }
 
     if (-not (Test-Path -LiteralPath $OutDir)) {
-        Write-Skip "Build output directory not found: $OutDir"
-        exit 0
+        Skip-OrFail "Build output directory not found: $OutDir"
     }
 
     try {
         if (-not (Test-Path -LiteralPath $SymbolServer)) {
-            Write-Skip "Symbol server is not reachable: $SymbolServer"
-            exit 0
+            Skip-OrFail "Symbol server is not reachable: $SymbolServer"
         }
     } catch {
-        Write-Skip "Cannot access symbol server '$SymbolServer'. Detail: $($_.Exception.Message)"
-        exit 0
+        Skip-OrFail "Cannot access symbol server '$SymbolServer'. Detail: $($_.Exception.Message)"
     }
 
     $PdbFiles = @(Get-ChildItem -LiteralPath $OutDir -Filter "*.pdb" -File)
     if ($PdbFiles.Count -eq 0) {
-        Write-Skip "No PDB files found in: $OutDir"
-        exit 0
+        Skip-OrFail "No PDB files found in: $OutDir"
     }
 
     $BinaryFiles = @(Get-BinaryFiles $OutDir)
@@ -266,8 +364,7 @@ try {
 
     $Commit = (git -C $RepoRoot rev-parse HEAD 2>$null).Trim()
     if (-not $Commit) {
-        Write-Skip "Cannot resolve git commit. Skipping symbol upload."
-        exit 0
+        Skip-OrFail "Cannot resolve git commit. Skipping symbol upload."
     }
 
     if (-not $BuildName) {
@@ -293,7 +390,12 @@ try {
         } else {
             $DirtyFiles = @(git -C $RepoRoot status --short 2>$null)
             if ($DirtyFiles.Count -gt 0) {
-                Write-Skip "Working tree has uncommitted changes. Source server will use committed files from $Commit."
+                $DirtyMessage = "Working tree has uncommitted changes. Source server can only recover committed files from $Commit."
+                if ($RequireCleanSource) {
+                    throw $DirtyMessage
+                }
+
+                Write-Skip $DirtyMessage
             }
 
             try {
@@ -303,7 +405,7 @@ try {
                 if ($SourceServerToolsDir) {
                     Write-Step "Source server tools: $SourceServerToolsDir"
                 } else {
-                    Write-Skip "pdbstr.exe/srctool.exe not found locally or in '$SymbolServer\_tools'. Source server data may not be embedded on this PC."
+                    Warn-OrThrow "pdbstr.exe/srctool.exe not found locally or in '$SymbolServer\_tools'. Source server data may not be embedded on this PC."
                 }
 
                 $SourceArgs = @(
@@ -323,11 +425,20 @@ try {
                 Write-Step "Embedding source server data before symbol registration..."
                 & powershell @SourceArgs
                 if ($LASTEXITCODE -ne 0) {
-                    Write-Skip "AddSourceServer.ps1 failed with exit code $LASTEXITCODE."
+                    Warn-OrThrow "AddSourceServer.ps1 failed with exit code $LASTEXITCODE."
                 }
             } catch {
-                Write-Skip "Source server data was not embedded. Detail: $($_.Exception.Message)"
+                Warn-OrThrow "Source server data was not embedded. Detail: $($_.Exception.Message)"
             }
+        }
+    }
+
+    if ($EnableSourceServer -and ($VerifySymbols -or $FailOnError)) {
+        $PdbStrForVerification = Resolve-DebuggingTool "pdbstr.exe" $SourceServerToolsDir
+        if ($PdbStrForVerification) {
+            Assert-SourceServerStreams $PdbFiles $PdbStrForVerification
+        } else {
+            Warn-OrThrow "pdbstr.exe was not found. Cannot verify source server streams."
         }
     }
 
@@ -339,6 +450,10 @@ try {
     $SymStore = Resolve-DebuggingTool "symstore.exe" $SymStoreToolsDir
     if (-not $SymStore) {
         $FallbackDir = Join-Path $SymbolServer ("_fallback\{0}\{1}_{2}" -f $env:COMPUTERNAME, $Configuration, $Platform)
+        if ($FailOnError) {
+            throw "symstore.exe not found. Cannot register exact PDBs to the symbol server."
+        }
+
         Write-Skip "symstore.exe not found. Copying PDB and binary files to fallback folder: $FallbackDir"
         Copy-FilesToFallback (@($PdbFiles) + @($BinaryFiles)) $FallbackDir
         exit 0
@@ -352,12 +467,35 @@ try {
         Add-FileToSymbolStore $SymStore $Binary.FullName $SymbolServer "KraftonEngine" $BuildName $Commit
     }
 
+    if ($VerifySymbols -or $FailOnError) {
+        $SymChk = Resolve-DebuggingTool "symchk.exe" $SymStoreToolsDir
+        $BinariesToVerify = @(Get-BinariesWithSiblingPdb $BinaryFiles)
+        if ($BinariesToVerify.Count -eq 0) {
+            Warn-OrThrow "No binaries with sibling PDBs were found for symbol server verification."
+        } elseif ($SymChk) {
+            Assert-SymbolServerLoadsPrivateSymbols $SymChk $BinariesToVerify $SymbolServer
+        } else {
+            Warn-OrThrow "symchk.exe was not found. Cannot verify exact PDBs from the symbol server."
+        }
+    }
+
     Write-Step "Symbol upload step finished."
     exit 0
 } catch {
-    Write-Skip "Symbol upload skipped because of an unexpected error: $($_.Exception.Message)"
+    $FinalMessage = "Symbol upload failed because of an unexpected error: $($_.Exception.Message)"
+    if ($FailOnError) {
+        Write-ErrorStep $FinalMessage
+    } else {
+        Write-Skip $FinalMessage
+    }
+
     if ($_.InvocationInfo -and $_.InvocationInfo.PositionMessage) {
         Write-Host "[Warn] $($_.InvocationInfo.PositionMessage)"
     }
+
+    if ($FailOnError) {
+        exit 1
+    }
+
     exit 0
 }
