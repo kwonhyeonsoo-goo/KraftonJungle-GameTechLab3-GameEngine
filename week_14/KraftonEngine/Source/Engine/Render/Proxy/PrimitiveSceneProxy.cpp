@@ -5,6 +5,7 @@
 #include "Render/Command/DrawCommand.h"
 #include "Materials/Material.h"
 #include "Object/Reflection/ObjectFactory.h"
+#include "Object/GarbageCollection.h"
 
 // ============================================================
 // FPrimitiveSceneProxy — 기본 구현
@@ -12,7 +13,8 @@
 FPrimitiveSceneProxy::FPrimitiveSceneProxy(UPrimitiveComponent* InComponent)
 	: Owner(InComponent)
 {
-	if (!Owner->SupportsOutline())
+	UPrimitiveComponent* OwnerComponent = GetOwner();
+	if (OwnerComponent && !OwnerComponent->SupportsOutline())
 		ProxyFlags &= ~EPrimitiveProxyFlags::SupportsOutline;
 }
 
@@ -25,25 +27,46 @@ FPrimitiveSceneProxy::~FPrimitiveSceneProxy() noexcept
 	}
 }
 
+void FPrimitiveSceneProxy::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	Collector.AddReferencedObject(DefaultMaterial);
+	for (const FMeshSectionDraw& Draw : SectionDraws)
+	{
+		Collector.AddReferencedObject(Draw.Material);
+	}
+}
+
+bool FPrimitiveSceneProxy::HasValidOwner() const
+{
+	return GetOwner() != nullptr;
+}
+
 ERenderPass FPrimitiveSceneProxy::GetRenderPass() const
 {
-	if (!SectionDraws.empty() && SectionDraws[0].Material)
+	if (!SectionDraws.empty() && IsValid(SectionDraws[0].Material))
 		return SectionDraws[0].Material->GetRenderPass();
 	return ERenderPass::Opaque;
 }
 
 FShader* FPrimitiveSceneProxy::GetShader() const
 {
-	if (!SectionDraws.empty() && SectionDraws[0].Material)
+	if (!SectionDraws.empty() && IsValid(SectionDraws[0].Material))
 		return SectionDraws[0].Material->GetShader();
 	return nullptr;
 }
 
 void FPrimitiveSceneProxy::UpdateTransform()
 {
-	PerObjectConstants = FPerObjectConstants::FromWorldMatrix(Owner->GetWorldMatrix());
+	UPrimitiveComponent* OwnerComponent = GetOwner();
+	if (!OwnerComponent)
+	{
+		bVisible = false;
+		return;
+	}
+
+	PerObjectConstants = FPerObjectConstants::FromWorldMatrix(OwnerComponent->GetWorldMatrix());
 	CachedWorldPos = PerObjectConstants.Model.GetLocation();
-	CachedBounds = Owner->GetWorldBoundingBox();
+	CachedBounds = OwnerComponent->GetWorldBoundingBox();
 	LastLODUpdateFrame = UINT32_MAX;
 	MarkPerObjectCBDirty();
 }
@@ -55,20 +78,36 @@ void FPrimitiveSceneProxy::UpdateMaterial()
 
 void FPrimitiveSceneProxy::UpdateVisibility()
 {
-	bVisible = Owner->IsVisible();
+	UPrimitiveComponent* OwnerComponent = GetOwner();
+	if (!OwnerComponent)
+	{
+		bVisible = false;
+		return;
+	}
+
+	bVisible = OwnerComponent->IsVisible();
 	if (bVisible)
 	{
-		AActor* OwnerActor = Owner->GetOwner();
-		if (OwnerActor && !OwnerActor->IsVisible())
+		AActor* OwnerActor = OwnerComponent->GetOwner();
+		if (!IsValid(OwnerActor) || !OwnerActor->IsVisible())
 			bVisible = false;
 	}
-	bCastShadow = Owner->GetCastShadow();
-	bCastShadowAsTwoSided = Owner->GetCastShadowAsTwoSided();
+	bCastShadow = OwnerComponent->GetCastShadow();
+	bCastShadowAsTwoSided = OwnerComponent->GetCastShadowAsTwoSided();
 }
 
 void FPrimitiveSceneProxy::UpdateMesh()
 {
-	MeshBuffer = Owner->GetMeshBuffer();
+	UPrimitiveComponent* OwnerComponent = GetOwner();
+	if (!OwnerComponent)
+	{
+		MeshBuffer = nullptr;
+		SectionDraws.clear();
+		bVisible = false;
+		return;
+	}
+
+	MeshBuffer = OwnerComponent->GetMeshBuffer();
 
 	if (!DefaultMaterial)
 	{

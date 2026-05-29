@@ -1,7 +1,14 @@
-﻿#pragma once
+#pragma once
 #include "Object/Object.h"
 #include "Object/Reflection/ObjectMacros.h"
 #include "Source/Engine/Particle/Distributions/Distribution.generated.h"
+
+UENUM()
+enum ERawDistributionOperation
+{
+	RDO_Uninitialized,
+	RDO_None,
+};
 
 UCLASS()
 class UDistribution : public UObject

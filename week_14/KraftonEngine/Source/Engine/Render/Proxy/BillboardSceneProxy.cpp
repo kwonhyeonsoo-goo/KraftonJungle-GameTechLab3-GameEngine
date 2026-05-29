@@ -43,7 +43,7 @@ void FBillboardSceneProxy::UpdateMesh()
 	UBillboardComponent* Comp = GetBillboardComponent();
 	UMaterial* Mat = Comp ? Comp->GetMaterial() : nullptr;
 
-	if (Mat)
+	if (IsValid(Mat))
 	{
 		// TexturedQuad (FVertexPNCT with UVs)
 		MeshBuffer = &FMeshBufferManager::Get().GetMeshBuffer(EMeshShape::TexturedQuad);

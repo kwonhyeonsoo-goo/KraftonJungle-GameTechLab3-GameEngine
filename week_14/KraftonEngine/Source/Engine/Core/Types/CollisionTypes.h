@@ -62,6 +62,64 @@ enum class ECollisionEnabled : uint8
 	COUNT
 };
 
+UENUM()
+// ECollisionShape: Sweep geometry 종류
+enum class ECollisionShape : uint8
+{
+	Sphere,
+	Capsule,
+	Box,
+
+	COUNT
+};
+
+// FCollisionShape: Sweep에 사용할 geometry 기술자
+// 각 shape별 파라미터를 union으로 보관, 팩토리 함수로 생성
+USTRUCT()
+struct FCollisionShape
+{
+	GENERATED_BODY()
+	ECollisionShape ShapeType = ECollisionShape::Sphere;
+	union
+	{
+		struct { float Radius; }                    Sphere;
+		struct { float Radius; float HalfHeight; }  Capsule;
+		struct { float HalfX; float HalfY; float HalfZ; } Box;
+	};
+
+	static FCollisionShape MakeSphere(float Radius)
+	{
+		FCollisionShape S;
+		S.ShapeType = ECollisionShape::Sphere;
+		S.Sphere.Radius = Radius;
+		return S;
+	}
+
+	static FCollisionShape MakeCapsule(float Radius, float HalfHeight)
+	{
+		FCollisionShape S;
+		S.ShapeType = ECollisionShape::Capsule;
+		S.Capsule.Radius = Radius;
+		S.Capsule.HalfHeight = HalfHeight;
+		return S;
+	}
+
+	static FCollisionShape MakeBox(const FVector& Extent)
+	{
+		FCollisionShape S;
+		S.ShapeType = ECollisionShape::Box;
+		S.Box.HalfX = Extent.X;
+		S.Box.HalfY = Extent.Y;
+		S.Box.HalfZ = Extent.Z;
+		return S;
+	}
+
+	float GetSphereRadius()      const { return Sphere.Radius; }
+	float GetCapsuleRadius()     const { return Capsule.Radius; }
+	float GetCapsuleHalfHeight() const { return Capsule.HalfHeight; }
+	FVector GetExtent()          const { return FVector(Box.HalfX, Box.HalfY, Box.HalfZ); }
+};
+
 // ============================================================
 // FCollisionResponseContainer — 채널별 응답 테이블
 // ============================================================
@@ -122,6 +180,8 @@ struct FHitResult
 	FVector WorldNormal = { 0, 0, 0 };
 	FVector ImpactNormal = { 0, 0, 0 };
 	int FaceIndex = -1;
+
+	bool bStartPenetrating = false;
 
 	bool bHit = false;
 };

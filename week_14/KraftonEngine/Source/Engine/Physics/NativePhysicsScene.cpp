@@ -3,6 +3,7 @@
 #include "Component/PrimitiveComponent.h"
 #include "GameFramework/World.h"
 #include "GameFramework/AActor.h"
+#include "Object/Object.h"
 
 #include <algorithm>
 
@@ -22,9 +23,70 @@ void FNativePhysicsScene::Shutdown()
 	World = nullptr;
 }
 
+void FNativePhysicsScene::ErasePairsWithInvalidComponents(std::unordered_set<FOverlapPair>& Pairs)
+{
+	for (auto It = Pairs.begin(); It != Pairs.end();)
+	{
+		if (!IsValid(It->A) || !IsValid(It->B))
+		{
+			It = Pairs.erase(It);
+		}
+		else
+		{
+			++It;
+		}
+	}
+}
+
+void FNativePhysicsScene::ErasePairsWithComponent(std::unordered_set<FOverlapPair>& Pairs, UPrimitiveComponent* Comp)
+{
+	for (auto It = Pairs.begin(); It != Pairs.end();)
+	{
+		if (It->A == Comp || It->B == Comp)
+		{
+			It = Pairs.erase(It);
+		}
+		else
+		{
+			++It;
+		}
+	}
+}
+
+void FNativePhysicsScene::CompactInvalidComponents()
+{
+	RegisteredComponents.erase(
+		std::remove_if(
+			RegisteredComponents.begin(),
+			RegisteredComponents.end(),
+			[](UPrimitiveComponent* Comp)
+			{
+				return !IsValid(Comp);
+			}),
+		RegisteredComponents.end());
+
+	for (auto It = BodyStates.begin(); It != BodyStates.end();)
+	{
+		if (!IsValid(It->first))
+		{
+			It = BodyStates.erase(It);
+		}
+		else
+		{
+			++It;
+		}
+	}
+
+	ErasePairsWithInvalidComponents(PreviousOverlaps);
+	ErasePairsWithInvalidComponents(CurrentOverlaps);
+	ErasePairsWithInvalidComponents(PreviousBlockPairs);
+	ErasePairsWithInvalidComponents(CurrentBlockPairs);
+}
+
 void FNativePhysicsScene::RegisterComponent(UPrimitiveComponent* Comp)
 {
-	if (!Comp) return;
+	CompactInvalidComponents();
+	if (!IsValid(Comp)) return;
 
 	for (UPrimitiveComponent* Existing : RegisteredComponents)
 	{
@@ -38,6 +100,9 @@ void FNativePhysicsScene::RegisterComponent(UPrimitiveComponent* Comp)
 
 void FNativePhysicsScene::RebuildBody(UPrimitiveComponent* Comp)
 {
+	CompactInvalidComponents();
+	if (!IsValid(Comp)) return;
+
 	auto It = BodyStates.find(Comp);
 	if (It == BodyStates.end()) return; // 등록 안 됨 — skip
 	// Native는 SimulatePhysics/ObjectType/Response를 매 Tick에서 컴포넌트로부터 직접 읽으므로
@@ -48,7 +113,8 @@ void FNativePhysicsScene::RebuildBody(UPrimitiveComponent* Comp)
 
 void FNativePhysicsScene::UnregisterComponent(UPrimitiveComponent* Comp)
 {
-	if (!Comp) return;
+	CompactInvalidComponents();
+	if (!IsAliveObject(Comp)) return;
 
 	auto It = std::find(RegisteredComponents.begin(), RegisteredComponents.end(), Comp);
 	if (It == RegisteredComponents.end()) return;
@@ -59,11 +125,11 @@ void FNativePhysicsScene::UnregisterComponent(UPrimitiveComponent* Comp)
 	auto PairIt = PreviousOverlaps.begin();
 	while (PairIt != PreviousOverlaps.end())
 	{
-		if (PairIt->A == Comp || PairIt->B == Comp)
+			if (PairIt->A == Comp || PairIt->B == Comp)
 		{
 			UPrimitiveComponent* Other = (PairIt->A == Comp) ? PairIt->B : PairIt->A;
 
-			if (Other->GetGenerateOverlapEvents())
+				if (IsValid(Other) && IsValid(Comp) && Other->GetGenerateOverlapEvents())
 			{
 				AActor* CompOwner = Comp->GetOwner();
 				Other->NotifyComponentEndOverlap(Other, CompOwner, Comp, 0);
@@ -77,38 +143,20 @@ void FNativePhysicsScene::UnregisterComponent(UPrimitiveComponent* Comp)
 		}
 	}
 
-	// CurrentOverlaps에서도 제거
-	auto CurIt = CurrentOverlaps.begin();
-	while (CurIt != CurrentOverlaps.end())
-	{
-		if (CurIt->A == Comp || CurIt->B == Comp)
-			CurIt = CurrentOverlaps.erase(CurIt);
-		else
-			++CurIt;
-	}
-
-	// BlockPairs에서도 제거
-	auto EraseFromSet = [Comp](std::unordered_set<FOverlapPair>& Set) {
-		auto It = Set.begin();
-		while (It != Set.end())
-		{
-			if (It->A == Comp || It->B == Comp)
-				It = Set.erase(It);
-			else
-				++It;
-		}
-	};
-	EraseFromSet(PreviousBlockPairs);
-	EraseFromSet(CurrentBlockPairs);
+	ErasePairsWithComponent(CurrentOverlaps, Comp);
+	ErasePairsWithComponent(PreviousBlockPairs, Comp);
+	ErasePairsWithComponent(CurrentBlockPairs, Comp);
 }
 
 void FNativePhysicsScene::Tick(float DeltaTime)
 {
 	if (!World) return;
+	CompactInvalidComponents();
 
 	// ── 힘 적분 + 중력: bSimulatePhysics인 컴포넌트에 적용 ──
 	for (UPrimitiveComponent* Comp : RegisteredComponents)
 	{
+		if (!IsValid(Comp)) continue;
 		if (!Comp->GetSimulatePhysics()) continue;
 
 		FBodyState& State = BodyStates[Comp];
@@ -141,6 +189,7 @@ void FNativePhysicsScene::Tick(float DeltaTime)
 		{
 			UPrimitiveComponent* A = RegisteredComponents[i];
 			UPrimitiveComponent* B = RegisteredComponents[j];
+				if (!IsValid(A) || !IsValid(B)) continue;
 
 			if (A->GetOwner() == B->GetOwner()) continue;
 
@@ -253,6 +302,11 @@ void FNativePhysicsScene::Tick(float DeltaTime)
 	{
 		if (PreviousOverlaps.find(Pair) == PreviousOverlaps.end())
 		{
+			if (!IsValid(Pair.A) || !IsValid(Pair.B))
+			{
+				continue;
+			}
+
 			FHitResult DummyHit;
 
 			if (Pair.A->GetGenerateOverlapEvents())
@@ -268,6 +322,11 @@ void FNativePhysicsScene::Tick(float DeltaTime)
 	{
 		if (CurrentOverlaps.find(Pair) == CurrentOverlaps.end())
 		{
+			if (!IsValid(Pair.A) || !IsValid(Pair.B))
+			{
+				continue;
+			}
+
 			if (Pair.A->GetGenerateOverlapEvents())
 				Pair.A->NotifyComponentEndOverlap(Pair.A, Pair.B->GetOwner(), Pair.B, 0);
 
@@ -281,6 +340,11 @@ void FNativePhysicsScene::Tick(float DeltaTime)
 	{
 		if (CurrentBlockPairs.find(Pair) == CurrentBlockPairs.end())
 		{
+			if (!IsValid(Pair.A) || !IsValid(Pair.B))
+			{
+				continue;
+			}
+
 			Pair.A->NotifyComponentEndHit(Pair.A, Pair.B->GetOwner(), Pair.B);
 			Pair.B->NotifyComponentEndHit(Pair.B, Pair.A->GetOwner(), Pair.A);
 		}
@@ -296,6 +360,7 @@ void FNativePhysicsScene::Tick(float DeltaTime)
 
 void FNativePhysicsScene::AddForce(UPrimitiveComponent* Comp, const FVector& Force)
 {
+	if (!IsValid(Comp)) return;
 	auto It = BodyStates.find(Comp);
 	if (It == BodyStates.end()) return;
 	It->second.AccumulatedForce = It->second.AccumulatedForce + Force;
@@ -303,6 +368,7 @@ void FNativePhysicsScene::AddForce(UPrimitiveComponent* Comp, const FVector& For
 
 void FNativePhysicsScene::AddForceAtLocation(UPrimitiveComponent* Comp, const FVector& Force, const FVector& WorldLocation)
 {
+	if (!IsValid(Comp)) return;
 	auto It = BodyStates.find(Comp);
 	if (It == BodyStates.end()) return;
 
@@ -321,6 +387,7 @@ void FNativePhysicsScene::AddForceAtLocation(UPrimitiveComponent* Comp, const FV
 
 void FNativePhysicsScene::AddTorque(UPrimitiveComponent* Comp, const FVector& Torque)
 {
+	if (!IsValid(Comp)) return;
 	auto It = BodyStates.find(Comp);
 	if (It == BodyStates.end()) return;
 	It->second.AccumulatedTorque = It->second.AccumulatedTorque + Torque;
@@ -332,6 +399,7 @@ void FNativePhysicsScene::AddTorque(UPrimitiveComponent* Comp, const FVector& To
 
 FVector FNativePhysicsScene::GetLinearVelocity(UPrimitiveComponent* Comp) const
 {
+	if (!IsValid(Comp)) return { 0, 0, 0 };
 	auto It = BodyStates.find(Comp);
 	if (It == BodyStates.end()) return { 0, 0, 0 };
 	return It->second.Velocity;
@@ -339,6 +407,7 @@ FVector FNativePhysicsScene::GetLinearVelocity(UPrimitiveComponent* Comp) const
 
 void FNativePhysicsScene::SetLinearVelocity(UPrimitiveComponent* Comp, const FVector& Vel)
 {
+	if (!IsValid(Comp)) return;
 	auto It = BodyStates.find(Comp);
 	if (It == BodyStates.end()) return;
 	It->second.Velocity = Vel;
@@ -346,6 +415,7 @@ void FNativePhysicsScene::SetLinearVelocity(UPrimitiveComponent* Comp, const FVe
 
 FVector FNativePhysicsScene::GetAngularVelocity(UPrimitiveComponent* Comp) const
 {
+	if (!IsValid(Comp)) return { 0, 0, 0 };
 	auto It = BodyStates.find(Comp);
 	if (It == BodyStates.end()) return { 0, 0, 0 };
 	return It->second.AngularVelocity;
@@ -353,6 +423,7 @@ FVector FNativePhysicsScene::GetAngularVelocity(UPrimitiveComponent* Comp) const
 
 void FNativePhysicsScene::SetAngularVelocity(UPrimitiveComponent* Comp, const FVector& Vel)
 {
+	if (!IsValid(Comp)) return;
 	auto It = BodyStates.find(Comp);
 	if (It == BodyStates.end()) return;
 	It->second.AngularVelocity = Vel;
@@ -364,6 +435,7 @@ void FNativePhysicsScene::SetAngularVelocity(UPrimitiveComponent* Comp, const FV
 
 void FNativePhysicsScene::SetMass(UPrimitiveComponent* Comp, float Mass)
 {
+	if (!IsValid(Comp)) return;
 	auto It = BodyStates.find(Comp);
 	if (It == BodyStates.end()) return;
 	It->second.Mass = (Mass > 0.0f) ? Mass : 1.0f;
@@ -371,6 +443,7 @@ void FNativePhysicsScene::SetMass(UPrimitiveComponent* Comp, float Mass)
 
 float FNativePhysicsScene::GetMass(UPrimitiveComponent* Comp) const
 {
+	if (!IsValid(Comp)) return 1.0f;
 	auto It = BodyStates.find(Comp);
 	if (It == BodyStates.end()) return 1.0f;
 	return It->second.Mass;
@@ -378,6 +451,7 @@ float FNativePhysicsScene::GetMass(UPrimitiveComponent* Comp) const
 
 void FNativePhysicsScene::SetCenterOfMass(UPrimitiveComponent* Comp, const FVector& LocalOffset)
 {
+	if (!IsValid(Comp)) return;
 	auto It = BodyStates.find(Comp);
 	if (It == BodyStates.end()) return;
 	It->second.CenterOfMassLocal = LocalOffset;
@@ -385,6 +459,7 @@ void FNativePhysicsScene::SetCenterOfMass(UPrimitiveComponent* Comp, const FVect
 
 FVector FNativePhysicsScene::GetCenterOfMass(UPrimitiveComponent* Comp) const
 {
+	if (!IsValid(Comp)) return { 0, 0, 0 };
 	auto It = BodyStates.find(Comp);
 	if (It == BodyStates.end()) return { 0, 0, 0 };
 	return It->second.CenterOfMassLocal;
@@ -416,7 +491,7 @@ namespace
 
 		for (UPrimitiveComponent* Comp : RegisteredComponents)
 		{
-			if (!Comp) continue;
+			if (!IsValid(Comp)) continue;
 			if (IgnoreActor && Comp->GetOwner() == IgnoreActor) continue;
 			if (!AcceptComponent(Comp)) continue;
 

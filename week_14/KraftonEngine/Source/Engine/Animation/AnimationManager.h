@@ -1,4 +1,5 @@
 #pragma once
+#include "Object/GarbageCollection.h"
 
 #include "Core/Types/CoreTypes.h"
 #include "Asset/AssetRegistry.h"
@@ -17,7 +18,7 @@ struct FAnimationImportRequest
     TSet<int32> SelectedAnimationStackIndices;
 };
 
-class FAnimationManager
+class FAnimationManager : public FGCObject
 {
 public:
     static FAnimationManager& Get();
@@ -65,6 +66,10 @@ public:
 
     void RefreshAvailableMontages();
     const TArray<FAssetListItem>& GetAvailableMontageFiles() const { return AvailableMontageFiles; }
+
+    const char* GetReferencerName() const override { return "FAnimationManager"; }
+    void AddReferencedObjects(FReferenceCollector& Collector) override;
+    void ClearCache();
 
 private:
     FAnimationManager() = default;

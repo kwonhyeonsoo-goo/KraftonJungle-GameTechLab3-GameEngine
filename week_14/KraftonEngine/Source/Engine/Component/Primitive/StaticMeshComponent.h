@@ -33,11 +33,27 @@ public:
 	// 구체 프록시 생성 (FStaticMeshSceneProxy)
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
 
+	UFUNCTION(Callable, Category="Mesh")
 	void SetStaticMesh(UStaticMesh* InMesh);
+	UFUNCTION(Callable, Exec, Category="Mesh")
+	bool SetStaticMeshByPath(const FString& InPath);
+	UFUNCTION(Callable, Exec, Category="Mesh")
+	void ClearStaticMesh();
+	UFUNCTION(Pure, Category="Mesh")
 	UStaticMesh* GetStaticMesh() const;
+	UFUNCTION(Pure, Category="Mesh")
+	FString GetStaticMeshPathValue() const { return StaticMeshPath.ToString(); }
 
+	UFUNCTION(Callable, Category="Materials")
 	void SetMaterial(int32 ElementIndex, UMaterial* InMaterial);
+	UFUNCTION(Callable, Exec, Category="Materials")
+	bool SetMaterialByPath(int32 ElementIndex, const FString& MaterialPath);
+	UFUNCTION(Pure, Category="Materials")
 	UMaterial* GetMaterial(int32 ElementIndex) const;
+	UFUNCTION(Pure, Category="Materials")
+	FString GetMaterialPath(int32 ElementIndex) const;
+	UFUNCTION(Pure, Category="Materials")
+	int32 GetMaterialSlotCount() const { return static_cast<int32>(MaterialSlots.size()); }
 	const TArray<UMaterial*>& GetOverrideMaterials() const { return OverrideMaterials; }
 
 	void PostDuplicate() override;

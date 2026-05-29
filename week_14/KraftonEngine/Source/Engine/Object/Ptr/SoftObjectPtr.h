@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "Core/Types/CoreTypes.h"
 
 class UObject;
@@ -44,17 +45,17 @@ public:
 	void SetPath(const FString& InPath)
 	{
 		ObjectPath = FSoftObjectPath(InPath);
-		CachedObject = nullptr;
+		CachedObject.Reset();
 	}
 
 	void Reset()
 	{
 		ObjectPath.Reset();
-		CachedObject = nullptr;
+		CachedObject.Reset();
 	}
 
-	UObject* Get() const { return CachedObject; }
-	void SetCachedObject(UObject* InObject) const { CachedObject = InObject; }
+	UObject* Get() const { return CachedObject.Get(); }
+	void SetCachedObject(UObject* InObject) const { CachedObject.Reset(InObject); }
 
 	FSoftObjectPtr& operator=(const FString& InPath)
 	{
@@ -76,5 +77,5 @@ public:
 
 private:
 	FSoftObjectPath ObjectPath;
-	mutable UObject* CachedObject = nullptr;
+	mutable TWeakObjectPtr<UObject> CachedObject;
 };

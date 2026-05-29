@@ -216,7 +216,7 @@ public:
 
 		for (const auto& Pair : ConstantBufferMap)
 		{
-			if (Pair.second->SlotIndex == InSlot)
+			if (Pair.second && Pair.second->SlotIndex == InSlot)
 				return Pair.second->GetConstantBuffer();
 		}
 		return nullptr;
@@ -227,7 +227,7 @@ public:
 	{
 		for (auto& Pair : ConstantBufferMap)
 		{
-			if (Pair.second->bDirty)
+			if (Pair.second && Pair.second->bDirty)
 				Pair.second->Upload(Ctx);
 		}
 		// Per-shader override CB (Gizmo/SubUV/Decal 등)
@@ -253,7 +253,14 @@ public:
 	{
 		for (auto& Pair : ConstantBufferMap)
 		{
-			if (Pair.second) Pair.second->Release();
+			if (Pair.second)
+			{
+				Pair.second->Release();
+			}
+		}
+		for (int s = 0; s < (int)EMaterialTextureSlot::Max; ++s)
+		{
+			CachedSRVs[s] = nullptr;
 		}
 	}
 

@@ -397,7 +397,7 @@ void FEditorViewportClient::TickEditorShortcuts()
 
 void FEditorViewportClient::SetLightViewOverride(ULightComponentBase* Light)
 {
-	LightViewOverride = Light;
+	LightViewOverride.Reset(Light);
 	PointLightFaceIndex = 0;
 
 	if (Light && SelectionManager)
@@ -408,7 +408,7 @@ void FEditorViewportClient::SetLightViewOverride(ULightComponentBase* Light)
 
 void FEditorViewportClient::ClearLightViewOverride()
 {
-	LightViewOverride = nullptr;
+	LightViewOverride.Reset();
 }
 
 void FEditorViewportClient::TickInput(float DeltaTime)

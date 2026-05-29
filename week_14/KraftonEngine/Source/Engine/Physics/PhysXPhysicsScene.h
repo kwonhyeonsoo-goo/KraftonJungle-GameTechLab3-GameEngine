@@ -89,6 +89,7 @@ private:
 	const FBodyMapping* FindMappingByActor(AActor* OwnerActor) const;
 	FBodyMapping* FindMappingByComponent(UPrimitiveComponent* Comp);
 	const FBodyMapping* FindMappingByComponent(UPrimitiveComponent* Comp) const;
+	void CompactInvalidMappings();
 
 	// Comp의 geometry를 Mapping의 PxRigidActor에 shape로 추가. 실패 시 nullptr.
 	physx::PxShape* AddShapeForComponent(FBodyMapping& Mapping, UPrimitiveComponent* Comp);

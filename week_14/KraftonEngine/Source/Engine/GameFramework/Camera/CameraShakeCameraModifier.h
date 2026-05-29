@@ -24,6 +24,7 @@ public:
 	~UCameraModifier_CameraShake() override = default;
 
 	bool ModifyCamera(float DeltaTime, FMinimalViewInfo& InOutPOV) override;
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	// PlayerCameraManager::StartCameraShake 가 위임.
 	UCameraShakeBase* StartShake(

@@ -1,4 +1,4 @@
-﻿#include "ContentBrowser.h"
+#include "ContentBrowser.h"
 
 #include "Asset/AssetPackage.h"
 #include "Animation/Graph/AnimGraphAsset.h"
@@ -11,6 +11,8 @@
 #include "Editor/UI/Util/EditorTextureManager.h"
 #include "FloatCurve/FloatCurveAsset.h"
 #include "FloatCurve/FloatCurveManager.h"
+#include "LuaBlueprint/LuaBlueprintAsset.h"
+#include "LuaBlueprint/LuaBlueprintManager.h"
 #include "Mesh/MeshManager.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Editor/UI/Asset/Mesh/MeshEditorWidget.h"
@@ -479,6 +481,9 @@ void FEditorContentBrowserWidget::RefreshContent()
 				case EAssetPackageType::ParticleSystem:
 					Element = std::make_shared<ParticleSystemElement>();
 					break;
+				case EAssetPackageType::LuaBlueprint:
+					Element = std::make_shared<LuaBlueprintElement>();
+					break;
 				case EAssetPackageType::Material:
 					Element = std::make_shared<MaterialElement>();
 					break;
@@ -648,7 +653,22 @@ void FEditorContentBrowserWidget::DrawContents()
 						Refresh();
 					}
 				}
-				if (ImGui::MenuItem("Particle System"))
+				if (ImGui::MenuItem("Lua Blueprint"))
+			{
+				FString CreatedPath;
+				if (FAssetFactory::CreateLuaBlueprint(FPaths::ToUtf8(BrowserContext.CurrentPath), "NewLuaBlueprint", CreatedPath))
+				{
+					Refresh();
+					if (BrowserContext.EditorEngine)
+					{
+						if (ULuaBlueprintAsset* Asset = FLuaBlueprintManager::Get().Load(CreatedPath))
+						{
+							BrowserContext.EditorEngine->OpenAssetEditorForObject(Asset);
+						}
+					}
+				}
+			}
+			if (ImGui::MenuItem("Particle System"))
 			{
 				FString CreatedPath;
 				if (FAssetFactory::CreateParticleSystem(

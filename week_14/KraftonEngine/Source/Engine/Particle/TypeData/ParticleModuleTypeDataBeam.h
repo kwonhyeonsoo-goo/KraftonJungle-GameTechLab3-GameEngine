@@ -6,6 +6,53 @@
 
 #include "Source/Engine/Particle/TypeData/ParticleModuleTypeDataBeam.generated.h"
 
+UENUM()
+enum Beam2SourceTargetMethod : int
+{
+	PEB2STM_Default,
+	PEB2STM_UserSet,
+	PEB2STM_Emitter,
+	PEB2STM_Particle,
+	PEB2STM_Actor,
+	PEB2STM_MAX,
+};
+
+UENUM()
+enum Beam2SourceTargetTangentMethod : int
+{
+	PEB2STTM_Direct,
+	PEB2STTM_UserSet,
+	PEB2STTM_Distribution,
+	PEB2STTM_Emitter,
+	PEB2STTM_MAX,
+};
+
+UENUM()
+enum BeamModifierType : int
+{
+	PEB2MT_Source,
+	PEB2MT_Target,
+	PEB2MT_MAX,
+};
+
+UENUM()
+enum EBeam2Method : int
+{
+	PEB2M_Distance,
+	PEB2M_Target,
+	PEB2M_Branch,
+	PEB2M_MAX,
+};
+
+UENUM()
+enum EBeamTaperMethod : int
+{
+	PEBTM_None,
+	PEBTM_Full,
+	PEBTM_Partial,
+	PEBTM_MAX,
+};
+
 // =============================================================================
 // UParticleModuleTypeDataBeam
 //   Beam Emitter — Source ↔ Target 두 endpoint 사이에 tessellated quad-strip
@@ -19,17 +66,6 @@ public:
 	GENERATED_BODY()
 	UParticleModuleTypeDataBeam();
 
-	enum class EBeam2Method : uint8
-	{
-		Distance = 0,
-		Target,
-	};
-
-	enum class EBeamTaperMethod : uint8
-	{
-		None = 0,
-		Full,
-	};
 
 	const char* GetDisplayName() const override { return "TypeData Beam"; }
 
@@ -40,7 +76,7 @@ public:
 
 	// Distance: Source + local X * Distance. Target: Beam Target module/default target 사용.
 	UPROPERTY(Edit, Save, Category="Beam", DisplayName="Beam Method", Enum=EBeam2Method)
-	EBeam2Method BeamMethod = EBeam2Method::Target;
+	EBeam2Method BeamMethod = PEB2M_Target;
 
 	// 0이면 Source에서 Target까지 즉시 연결한다. 0보다 크면 초당 해당 거리만큼 beam이 자라난다.
 	UPROPERTY(Edit, Save, Category="Beam", DisplayName="Speed", Min=0.0f, Max=100000.0f)
@@ -61,7 +97,7 @@ public:
 	bool bTileUV = true;
 
 	UPROPERTY(Edit, Save, Category="Beam", DisplayName="Taper Method", Enum=EBeamTaperMethod)
-	EBeamTaperMethod TaperMethod = EBeamTaperMethod::None;
+	EBeamTaperMethod TaperMethod = PEBTM_None;
 
 	// TaperMethod == Full일 때 target 쪽 폭 배율. 0이면 끝이 뾰족해지고, 1이면 동일 폭이다.
 	UPROPERTY(Edit, Save, Category="Beam", DisplayName="Taper Factor", Min=0.0f, Max=10.0f)

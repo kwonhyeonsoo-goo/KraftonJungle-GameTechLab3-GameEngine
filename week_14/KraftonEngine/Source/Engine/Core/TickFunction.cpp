@@ -2,12 +2,13 @@
 #include "Component/ActorComponent.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
+#include "Object/Object.h"
 
 namespace
 {
 	bool ShouldDispatchActorTick(const AActor* Actor, ELevelTick TickType)
 	{
-		if (!Actor)
+		if (!IsValid(Actor))
 		{
 			return false;
 		}
@@ -94,7 +95,7 @@ void FTickManager::GatherTickFunctions(UWorld* World, ELevelTick TickType)
 
 		for (UActorComponent* Component : Actor->GetComponents())
 		{
-			if (!Component)
+			if (!IsValid(Component))
 			{
 				continue;
 			}
@@ -116,7 +117,7 @@ void FTickManager::QueueTickFunction(FTickFunction& TickFunction)
 
 void FActorTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickType)
 {
-	if (Target)
+	if (IsValid(Target))
 	{
 		Target->TickActor(DeltaTime, TickType, *this);
 	}
@@ -124,12 +125,12 @@ void FActorTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickType)
 
 const char* FActorTickFunction::GetDebugName() const
 {
-	return Target ? Target->GetClass()->GetName() : "FActorTickFunction";
+	return IsValid(Target) ? Target->GetClass()->GetName() : "FActorTickFunction";
 }
 
 void FActorComponentTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickType)
 {
-	if (Target)
+	if (IsValid(Target))
 	{
 		Target->TickComponent(DeltaTime, TickType, *this);
 	}
@@ -137,5 +138,5 @@ void FActorComponentTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickTy
 
 const char* FActorComponentTickFunction::GetDebugName() const
 {
-	return Target ? Target->GetClass()->GetName() : "FActorComponentTickFunction";
+	return IsValid(Target) ? Target->GetClass()->GetName() : "FActorComponentTickFunction";
 }

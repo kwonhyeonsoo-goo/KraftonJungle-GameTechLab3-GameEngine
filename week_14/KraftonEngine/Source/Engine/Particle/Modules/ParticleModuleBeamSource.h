@@ -18,6 +18,7 @@ public:
 	GENERATED_BODY()
 	UParticleModuleBeamSource();
 
+	UENUM()
 	enum class EBeam2SourceMethod : uint8
 	{
 		Default = 0,

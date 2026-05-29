@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Core/Types/CoreTypes.h"
 #include "Serialization/Archive.h"
@@ -16,6 +16,7 @@ enum class EAssetPackageType : uint32
 	AnimMontage,
 	AnimGraph,
 	ParticleSystem,
+	LuaBlueprint,
 };
 
 enum class EAssetPackageSerializationVersion : uint32

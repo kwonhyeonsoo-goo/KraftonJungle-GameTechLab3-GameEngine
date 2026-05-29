@@ -25,15 +25,31 @@ public:
 	~USkinnedMeshComponent() override = default;
 
 	// Mesh assignment 섹션: SkeletalMesh 교체 시 필요한 캐시와 dirty 처리를 한 번의 흐름으로 끝낸다.
+	UFUNCTION(Callable, Category="Mesh")
 	virtual void SetSkeletalMesh(USkeletalMesh* InMesh);
+	UFUNCTION(Callable, Exec, Category="Mesh")
+	bool SetSkeletalMeshByPath(const FString& InPath);
+	UFUNCTION(Callable, Exec, Category="Mesh")
+	void ClearSkeletalMesh();
+	UFUNCTION(Pure, Category="Mesh")
 	USkeletalMesh* GetSkeletalMesh() const;
+	UFUNCTION(Pure, Category="Mesh")
+	FString GetSkeletalMeshPathValue() const { return SkeletalMeshPath.ToString(); }
 
 	// Bounds 섹션: SkeletalMesh는 local asset bounds 대신 실제 skinned vertex 기준으로 culling bounds를 만든다.
 	void UpdateWorldAABB() const override;
 
 	// Material 섹션: editor slot 경로와 runtime override 포인터를 같이 유지한다.
+	UFUNCTION(Callable, Category="Materials")
 	void SetMaterial(int32 ElementIndex, UMaterial* InMaterial);
+	UFUNCTION(Callable, Exec, Category="Materials")
+	bool SetMaterialByPath(int32 ElementIndex, const FString& MaterialPath);
+	UFUNCTION(Pure, Category="Materials")
 	UMaterial* GetMaterial(int32 ElementIndex) const;
+	UFUNCTION(Pure, Category="Materials")
+	FString GetMaterialPath(int32 ElementIndex) const;
+	UFUNCTION(Pure, Category="Materials")
+	int32 GetMaterialSlotCount() const { return static_cast<int32>(MaterialSlots.size()); }
 	const TArray<UMaterial*>& GetOverrideMaterials() const { return OverrideMaterials; }
 
 	// Serialization/editor 섹션: asset pointer는 저장하지 않고 path를 저장한 뒤 로드 후 SetSkeletalMesh 흐름으로 복원한다.

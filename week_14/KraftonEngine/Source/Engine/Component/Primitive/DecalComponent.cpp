@@ -151,7 +151,7 @@ void UDecalComponent::UpdateReceivers()
 
 	UpdateDecalVolumeFromTransform();
 
-	UWorld* World = GetOwner() ? GetOwner()->GetWorld() : nullptr;
+	UWorld* World = GetWorld();
 	if (!World)
 	{
 		return;
@@ -197,7 +197,8 @@ void UDecalComponent::UpdateReceivers()
 
 UBillboardComponent* UDecalComponent::EnsureEditorBillboard()
 {
-	if (!Owner)
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
 	{
 		return nullptr;
 	}
@@ -214,7 +215,7 @@ UBillboardComponent* UDecalComponent::EnsureEditorBillboard()
 		}
 	}
 
-	UBillboardComponent* Billboard = Owner->AddComponent<UBillboardComponent>();
+	UBillboardComponent* Billboard = OwnerActor->AddComponent<UBillboardComponent>();
 	if (Billboard)
 	{
 		Billboard->AttachToComponent(this);

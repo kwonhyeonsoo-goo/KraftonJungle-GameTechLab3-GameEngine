@@ -33,6 +33,7 @@ public:
 	void OnBecomeRelevant(const FAnimationInitializeContext& Context) override;
 	void Update(const FAnimationUpdateContext& Context) override;
 	void Evaluate(FPoseContext& Output) override;
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	const FTransform& GetLastRootMotionDelta() const override { return InputLastRM; }
 

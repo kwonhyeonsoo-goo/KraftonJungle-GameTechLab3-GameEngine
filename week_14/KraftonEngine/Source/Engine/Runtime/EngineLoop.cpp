@@ -1,5 +1,6 @@
-﻿#include "Engine/Runtime/EngineLoop.h"
+#include "Engine/Runtime/EngineLoop.h"
 #include "Profiling/StartupProfiler.h"
+#include "Object/GarbageCollection.h"
 
 FEngineLoop::FEngineLoop(FCreateEngineFn InEngineFactory)
 	: EngineFactory(InEngineFactory)
@@ -79,7 +80,9 @@ void FEngineLoop::Shutdown()
 	if (GEngine)
 	{
 		GEngine->Shutdown();
+		GEngine->RemoveFromRoot();
 		UObjectManager::Get().DestroyObject(GEngine);
+		FGarbageCollector::Get().CollectGarbage();
 		GEngine = nullptr;
 	}
 }

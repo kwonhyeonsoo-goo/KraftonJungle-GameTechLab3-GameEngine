@@ -1,4 +1,6 @@
 #include "AnimGraphManager.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 
 #include "Animation/Graph/AnimGraphAsset.h"
 #include "Asset/AssetPackage.h"
@@ -15,7 +17,11 @@ UAnimGraphAsset* FAnimGraphManager::Load(const FString& Path)
 	auto It = LoadedGraphs.find(NormalizedPath);
 	if (It != LoadedGraphs.end())
 	{
-		return It->second;
+		if (IsValid(It->second))
+		{
+			return It->second;
+		}
+		LoadedGraphs.erase(It);
 	}
 
 	if (!FAssetPackage::IsAssetPackagePath(NormalizedPath)) return nullptr;
@@ -45,7 +51,15 @@ UAnimGraphAsset* FAnimGraphManager::Find(const FString& Path) const
 {
 	const FString NormalizedPath = FPaths::MakeProjectRelative(Path);
 	auto It = LoadedGraphs.find(NormalizedPath);
-	return It != LoadedGraphs.end() ? It->second : nullptr;
+	if (It == LoadedGraphs.end())
+	{
+		return nullptr;
+	}
+	if (IsValid(It->second))
+	{
+		return It->second;
+	}
+	return nullptr;
 }
 
 bool FAnimGraphManager::Save(UAnimGraphAsset* Asset)
@@ -98,4 +112,19 @@ void FAnimGraphManager::RefreshAvailableGraphs()
 		Item.FullPath    = RelPath;
 		AvailableGraphFiles.push_back(std::move(Item));
 	}
+}
+
+
+void FAnimGraphManager::AddReferencedObjects(FReferenceCollector& Collector)
+{
+    for (auto& Pair : LoadedGraphs)
+    {
+        Collector.AddReferencedObject(Pair.second, "FAnimGraphManager.LoadedGraphs");
+    }
+}
+
+void FAnimGraphManager::ClearCache()
+{
+    LoadedGraphs.clear();
+    AvailableGraphFiles.clear();
 }

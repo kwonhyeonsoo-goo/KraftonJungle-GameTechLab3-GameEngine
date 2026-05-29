@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Object/Object.h"
 #include "Particle/ParticleHelper.h"
@@ -35,6 +35,9 @@ public:
 	UPROPERTY(Edit, Save, Category="Emitter", DisplayName="Enabled")
 	bool bEnabled = true;
 
+	UPROPERTY(Edit, Save, Category="Emitter", DisplayName="Quality Spawn Rate Scale", Min=0.0f, Max=10.0f, Speed=0.05f)
+	float QualityLevelSpawnRateScale = 1.0f;
+
 	// Asset-side stored LOD graph. Runtime still consumes these fully materialized
 	// LOD objects directly today. The longer-term direction is for stored data to
 	// become more compact/override-oriented while runtime may consume a separate
@@ -69,6 +72,16 @@ public:
 	UParticleLODLevel* GetCurrentLODLevel(int32 InCurrentLODIdx) const; // 안전 clamp
 
 	int32 GetLODCount() const { return static_cast<int32>(LODLevels.size()); }
+
+	UFUNCTION(Pure, Category="Particle")
+	bool IsEnabled() const { return bEnabled; }
+	UFUNCTION(Callable, Exec, Category="Particle")
+	void SetEnabled(bool bInEnabled) { bEnabled = bInEnabled; }
+
+	UFUNCTION(Pure, Category="Particle")
+	float GetQualityLevelSpawnRateMult() const { return QualityLevelSpawnRateScale; }
+	UFUNCTION(Callable, Exec, Category="Particle")
+	void SetQualityLevelSpawnRateMult(float InScale) { QualityLevelSpawnRateScale = InScale < 0.0f ? 0.0f : InScale; }
 
 	// 모듈을 훑어 입자 1개의 총 크기 / Module → byte offset 을 계산.
 	// PSC 가 EmitterInstance 를 만들 때 1회 호출되어야 한다.

@@ -1,4 +1,5 @@
 #include "SkeletonManager.h"
+#include "Object/GarbageCollection.h"
 
 #include "Animation/Skeleton/Skeleton.h"
 #include "Asset/AssetPackage.h"
@@ -422,7 +423,11 @@ USkeleton* FSkeletonManager::LoadSkeleton(const FString& PackagePath)
     auto It = SkeletonCaches.find(NormalizedPath);
     if (It != SkeletonCaches.end())
     {
-        return It->second;
+        if (IsValid(It->second))
+        {
+            return It->second;
+        }
+        SkeletonCaches.erase(It);
     }
 
     FWindowsBinReader Reader(NormalizedPath);
@@ -531,4 +536,19 @@ bool FSkeletonManager::SaveSkeleton(USkeleton* Skeleton, const FString& PackageP
     }
 
     return true;
+}
+
+
+void FSkeletonManager::AddReferencedObjects(FReferenceCollector& Collector)
+{
+    for (auto& Pair : SkeletonCaches)
+    {
+        Collector.AddReferencedObject(Pair.second, "FSkeletonManager.SkeletonCaches");
+    }
+}
+
+void FSkeletonManager::ClearCache()
+{
+    SkeletonCaches.clear();
+    AvailableSkeletonFiles.clear();
 }

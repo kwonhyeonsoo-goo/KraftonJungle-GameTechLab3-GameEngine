@@ -38,11 +38,11 @@ HIDE_FROM_COMPONENT_LIST(UPrimitiveComponent)
 
 UPrimitiveComponent::~UPrimitiveComponent()
 {
-	if (Owner)
+	if (UWorld* World = GetWorldEvenIfPendingKill())
 	{
-		if (UWorld* World = Owner->GetWorld())
+		if (IPhysicsScene* PS = World->GetPhysicsScene())
 		{
-			World->GetPhysicsScene()->UnregisterComponent(this);
+			PS->UnregisterComponent(this);
 		}
 	}
 	DestroyRenderState();
@@ -57,11 +57,11 @@ void UPrimitiveComponent::BeginPlay()
 	// PhysX/Native가 정확한 값으로 body를 생성한다.
 	if (IsQueryCollisionEnabled())
 	{
-		if (Owner)
+		if (UWorld* World = GetWorld())
 		{
-			if (UWorld* World = Owner->GetWorld())
+			if (IPhysicsScene* PS = World->GetPhysicsScene())
 			{
-				World->GetPhysicsScene()->RegisterComponent(this);
+				PS->RegisterComponent(this);
 			}
 		}
 	}
@@ -77,20 +77,17 @@ void UPrimitiveComponent::EndPlay()
 	// 참조해 crash. dtor에도 같은 호출이 있지만 (raw 포인터라 OwnedComponents의 컴포넌트들이
 	// 자동 delete되지 않아) dtor가 안 불릴 수 있어 EndPlay에서 명시적으로 보장한다.
 	// 이중 호출은 mapping/proxy 부재로 noop.
-	if (Owner)
+	if (UWorld* World = GetWorldEvenIfPendingKill())
 	{
-		if (UWorld* World = Owner->GetWorld())
+		if (IPhysicsScene* PS = World->GetPhysicsScene())
 		{
-			if (IPhysicsScene* PS = World->GetPhysicsScene())
-			{
-				PS->UnregisterComponent(this);
-			}
-
-			// SpatialPartition에서도 즉시 제거. World::DestroyActor가 Partition.RemoveActor를
-			// 호출하지만, 그 시점에 OctreeNode 캐시가 이미 stale일 수 있는 경로(스폰 폭주 시
-			// RebuildRootBounds 등)가 있어 EndPlay에서 한 번 더 보장한다. 중복 제거는 noop.
-			World->GetPartition().RemoveSinglePrimitive(this);
+			PS->UnregisterComponent(this);
 		}
+
+		// SpatialPartition에서도 즉시 제거. World::DestroyActor가 Partition.RemoveActor를
+		// 호출하지만, 그 시점에 OctreeNode 캐시가 이미 stale일 수 있는 경로(스폰 폭주 시
+		// RebuildRootBounds 등)가 있어 EndPlay에서 한 번 더 보장한다. 중복 제거는 noop.
+		World->GetPartition().RemoveSinglePrimitive(this);
 	}
 	// 캐시는 어떤 경로로도 다음 frame까지 살아있으면 안 된다 (FOctree node가 TryMerge로
 	// 사라지면 dangling). RemoveSinglePrimitive 후에도 명시적으로 한 번 더 클리어.
@@ -102,11 +99,47 @@ void UPrimitiveComponent::EndPlay()
 	USceneComponent::EndPlay();
 }
 
+void UPrimitiveComponent::RouteComponentDestroyed()
+{
+	if (bComponentDestroyRouted)
+	{
+		return;
+	}
+
+	if (UWorld* World = GetWorldEvenIfPendingKill())
+	{
+		if (IPhysicsScene* PS = World->GetPhysicsScene())
+		{
+			PS->UnregisterComponent(this);
+		}
+
+		World->GetPartition().RemoveSinglePrimitive(this);
+		World->MarkWorldPrimitivePickingBVHDirty();
+	}
+
+	ClearOctreeLocation();
+	DestroyRenderState();
+	bComponentHasBegunPlay = false;
+
+	USceneComponent::RouteComponentDestroyed();
+}
+
+void UPrimitiveComponent::BeginDestroy()
+{
+	if (HasAnyFlags(RF_BeginDestroy))
+	{
+		return;
+	}
+
+	// Let the base BeginDestroy order call EndPlay() while owner/world links are
+	// still available, then route destruction through the virtual override.
+	USceneComponent::BeginDestroy();
+}
+
 void UPrimitiveComponent::NotifyPhysicsBodyDirty()
 {
 	if (!bComponentHasBegunPlay) return;
-	if (!Owner) return;
-	UWorld* World = Owner->GetWorld();
+	UWorld* World = GetWorld();
 	if (!World) return;
 	if (IPhysicsScene* PS = World->GetPhysicsScene())
 	{
@@ -130,8 +163,11 @@ void UPrimitiveComponent::SetKinematic(bool bInKinematic)
 
 void UPrimitiveComponent::MarkProxyDirty(EDirtyFlag Flag) const
 {
-	if (!SceneProxy || !Owner || !Owner->GetWorld()) return;
-	Owner->GetWorld()->GetScene().MarkProxyDirty(SceneProxy, Flag);
+	if (!SceneProxy) return;
+	if (UWorld* World = GetWorld())
+	{
+		World->GetScene().MarkProxyDirty(SceneProxy, Flag);
+	}
 }
 
 void UPrimitiveComponent::SetVisibility(bool bNewVisible)
@@ -158,7 +194,7 @@ void UPrimitiveComponent::MarkRenderTransformDirty()
 	MarkProxyDirty(EDirtyFlag::Transform);
 
 	AActor* OwnerActor = GetOwner();
-	if (!OwnerActor) return;
+	if (!IsValid(OwnerActor)) return;
 	UWorld* World = OwnerActor->GetWorld();
 	if (!World) return;
 
@@ -171,7 +207,7 @@ void UPrimitiveComponent::MarkRenderVisibilityDirty()
 	MarkProxyDirty(EDirtyFlag::Visibility);
 
 	AActor* OwnerActor = GetOwner();
-	if (!OwnerActor) return;
+	if (!IsValid(OwnerActor)) return;
 	UWorld* World = OwnerActor->GetWorld();
 	if (!World) return;
 
@@ -349,19 +385,19 @@ void UPrimitiveComponent::CreateRenderState()
 
 void UPrimitiveComponent::DestroyRenderState()
 {
-	// SceneProxy가 없더라도 Octree에는 등록돼 있을 수 있으므로 partition 정리는 항상 시도한다.
-	if (Owner)
+	// GC sweep은 RF_Garbage를 BeginDestroy보다 먼저 세운다. 이때 Owner.Get()/GetWorld()는
+	// null을 반환하므로 cleanup 경로에서는 pending/garbage owner도 따라가야 한다.
+	UWorld* World = GetWorldEvenIfPendingKill();
+	if (World)
 	{
-		if (UWorld* World = Owner->GetWorld())
-		{
-			World->GetPartition().RemoveSinglePrimitive(this);
-			World->MarkWorldPrimitivePickingBVHDirty();
+		// SceneProxy가 없더라도 Octree에는 등록돼 있을 수 있으므로 partition 정리는 항상 시도한다.
+		World->GetPartition().RemoveSinglePrimitive(this);
+		World->MarkWorldPrimitivePickingBVHDirty();
 
-			if (SceneProxy)
-			{
-				// Scene.RemovePrimitive 가 VisibleProxies 캐시도 일관되게 정리한다.
-				World->GetScene().RemovePrimitive(SceneProxy);
-			}
+		if (SceneProxy)
+		{
+			// Scene.RemovePrimitive 가 VisibleProxies 캐시도 일관되게 정리한다.
+			World->GetScene().RemovePrimitive(SceneProxy);
 		}
 	}
 	SceneProxy = nullptr;

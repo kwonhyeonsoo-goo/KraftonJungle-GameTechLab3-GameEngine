@@ -1,5 +1,7 @@
 #include "D3DDevice.h"
 
+#include <array>
+
 //	Safe Release Macro
 #define SAFE_RELEASE(Obj) if (Obj) { Obj->Release(); Obj = nullptr; }
 
@@ -12,13 +14,93 @@ void FD3DDevice::Create(HWND InHWindow)
 
 void FD3DDevice::Release()
 {
-	DeviceContext->ClearState();
-	DeviceContext->Flush();
+	// Idempotent shutdown. Some editor/viewport paths can already have torn down render targets
+	// before the renderer itself is released. Never touch a null or already-released context.
+	if (!Device && !DeviceContext && !SwapChain)
+	{
+		return;
+	}
+
+	// First detach everything from the immediate context. This is intentionally broader than
+	// ClearState-only: D3D debug layer is much happier when RTV/DSV/SRV/UAV/IA/SO bindings are
+	// explicitly nulled before owner objects start releasing their COM references.
+	ReleaseImmediateContextBindings(false);
 
 	ReleaseDepthStencilBuffer();
 	ReleaseFrameBuffer();
 
 	ReleaseDeviceAndSwapChain();
+}
+
+void FD3DDevice::ReleaseImmediateContextBindings(bool bFlush)
+{
+	ID3D11DeviceContext* Ctx = DeviceContext;
+	if (!Ctx)
+	{
+		return;
+	}
+
+	// Output merger
+	Ctx->OMSetRenderTargets(0, nullptr, nullptr);
+	ID3D11RenderTargetView* NullRTVs[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+	Ctx->OMSetRenderTargets(D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, NullRTVs, nullptr);
+
+	// UAVs can be bound by compute/tile-culling passes. D3D11.0 exposes 8 CS UAV slots.
+	ID3D11UnorderedAccessView* NullUAVs[D3D11_PS_CS_UAV_REGISTER_COUNT] = {};
+	UINT InitialCounts[D3D11_PS_CS_UAV_REGISTER_COUNT] = {};
+	Ctx->CSSetUnorderedAccessViews(0, D3D11_PS_CS_UAV_REGISTER_COUNT, NullUAVs, InitialCounts);
+
+	// Shader resources
+	ID3D11ShaderResourceView* NullSRVs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
+	Ctx->VSSetShaderResources(0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, NullSRVs);
+	Ctx->HSSetShaderResources(0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, NullSRVs);
+	Ctx->DSSetShaderResources(0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, NullSRVs);
+	Ctx->GSSetShaderResources(0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, NullSRVs);
+	Ctx->PSSetShaderResources(0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, NullSRVs);
+	Ctx->CSSetShaderResources(0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, NullSRVs);
+
+	// Constant buffers
+	ID3D11Buffer* NullCBs[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT] = {};
+	Ctx->VSSetConstantBuffers(0, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, NullCBs);
+	Ctx->HSSetConstantBuffers(0, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, NullCBs);
+	Ctx->DSSetConstantBuffers(0, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, NullCBs);
+	Ctx->GSSetConstantBuffers(0, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, NullCBs);
+	Ctx->PSSetConstantBuffers(0, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, NullCBs);
+	Ctx->CSSetConstantBuffers(0, D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, NullCBs);
+
+	// Samplers
+	ID3D11SamplerState* NullSamplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT] = {};
+	Ctx->VSSetSamplers(0, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT, NullSamplers);
+	Ctx->HSSetSamplers(0, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT, NullSamplers);
+	Ctx->DSSetSamplers(0, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT, NullSamplers);
+	Ctx->GSSetSamplers(0, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT, NullSamplers);
+	Ctx->PSSetSamplers(0, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT, NullSamplers);
+	Ctx->CSSetSamplers(0, D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT, NullSamplers);
+
+	// Shaders
+	Ctx->VSSetShader(nullptr, nullptr, 0);
+	Ctx->HSSetShader(nullptr, nullptr, 0);
+	Ctx->DSSetShader(nullptr, nullptr, 0);
+	Ctx->GSSetShader(nullptr, nullptr, 0);
+	Ctx->PSSetShader(nullptr, nullptr, 0);
+	Ctx->CSSetShader(nullptr, nullptr, 0);
+
+	// Input assembler / stream output
+	ID3D11Buffer* NullVBs[D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT] = {};
+	UINT NullStrides[D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT] = {};
+	UINT NullOffsets[D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT] = {};
+	Ctx->IASetVertexBuffers(0, D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT, NullVBs, NullStrides, NullOffsets);
+	Ctx->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
+	Ctx->IASetInputLayout(nullptr);
+	ID3D11Buffer* NullSOTargets[D3D11_SO_BUFFER_SLOT_COUNT] = {};
+	UINT NullSOOffsets[D3D11_SO_BUFFER_SLOT_COUNT] = {};
+	Ctx->SOSetTargets(D3D11_SO_BUFFER_SLOT_COUNT, NullSOTargets, NullSOOffsets);
+
+	Ctx->ClearState();
+	if (bFlush)
+	{
+		Ctx->Flush();
+	}
 }
 
 void FD3DDevice::BeginFrame()
@@ -130,11 +212,8 @@ void FD3DDevice::CreateDeviceAndSwapChain(HWND InHWindow)
 
 void FD3DDevice::ReleaseDeviceAndSwapChain()
 {
-	//	Flush first
-	if (DeviceContext)
-	{
-		DeviceContext->Flush();
-	}
+	// Final detach/flush before releasing swap chain and context.
+	ReleaseImmediateContextBindings(true);
 
 	SAFE_RELEASE(SwapChain);
 	SAFE_RELEASE(DeviceContext);

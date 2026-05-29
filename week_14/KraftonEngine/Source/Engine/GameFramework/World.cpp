@@ -15,18 +15,81 @@
 #include "Profiling/Stats/Stats.h"
 #include "Profiling/Time/Timer.h"
 #include "Runtime/Engine.h"
+#include "Object/GarbageCollection.h"
 #include <algorithm>
 
 UWorld::~UWorld()
 {
-	if (PersistentLevel && !PersistentLevel->GetActors().empty())
+	if (!HasAnyFlags(RF_BeginDestroy))
 	{
-		EndPlay();
+		BeginDestroy();
 	}
+}
+
+void UWorld::BeginDestroy()
+{
+	if (HasAnyFlags(RF_BeginDestroy))
+	{
+		return;
+	}
+
+	RouteWorldDestroyed();
+	EditorPOVProvider = nullptr;
+	GameMode.Reset();
+	GameModeClass = nullptr;
+	SetOuter(nullptr);
+	UObject::BeginDestroy();
+}
+
+void UWorld::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UObject::AddReferencedObjects(Collector);
+	Collector.AddReferencedObject(PersistentLevel, "UWorld.PersistentLevel");
+	Collector.AddReferencedObject(GameMode.Get(), "UWorld.GameMode");
+	Scene.AddReferencedObjects(Collector);
+}
+
+
+void UWorld::ShutdownPhysicsScene()
+{
+	if (PhysicsScene)
+	{
+		PhysicsScene->Shutdown();
+		PhysicsScene.reset();
+	}
+}
+
+void UWorld::RouteWorldDestroyed()
+{
+	if (bWorldDestroyRouted)
+	{
+		return;
+	}
+
+	bWorldDestroyRouted = true;
+	EndPlay();
+	ShutdownPhysicsScene();
+	Partition.Reset(FBoundingBox());
+	MarkWorldPrimitivePickingBVHDirty();
+
+	if (PersistentLevel)
+	{
+		PersistentLevel->RouteLevelDestroyed();
+		PersistentLevel->MarkPendingKill();
+		PersistentLevel = nullptr;
+	}
+
+	if (AGameModeBase* ExistingGameMode = GameMode.GetEvenIfPendingKill())
+	{
+		ExistingGameMode->MarkPendingKill();
+	}
+	GameMode.Reset();
+	MarkPendingKill();
 }
 
 UObject* UWorld::Duplicate(UObject* NewOuter) const
 {
+	FScopedGarbageCollectionBlocker DuplicateGCBlocker;
 	// UE의 CreatePIEWorldByDuplication 대응 (간소화 버전).
 	// 새 UWorld를 만들고, 소스의 Actor들을 하나씩 복제해 NewWorld를 Outer로 삼아 등록한다.
 	// AActor::Duplicate 내부에서 Dup->GetTypedOuter<UWorld>() 경유 AddActor가 호출되므로
@@ -100,12 +163,12 @@ AActor* UWorld::SpawnActorByClass(UClass* Class)
 
 AGameStateBase* UWorld::GetGameState() const
 {
-	return GameMode ? GameMode->GetGameState() : nullptr;
+	return GetGameMode() ? GetGameMode()->GetGameState() : nullptr;
 }
 
 APlayerController* UWorld::GetFirstPlayerController() const
 {
-	return GameMode ? GameMode->GetPlayerController() : nullptr;
+	return GetGameMode() ? GetGameMode()->GetPlayerController() : nullptr;
 }
 
 // PC 의 PlayerCameraManager 우선, fallback 으로 IPOVProvider pull.
@@ -312,7 +375,7 @@ void UWorld::BeginPlay()
 	if (WorldType != EWorldType::Editor && GameModeClass)
 	{
 		AActor* Spawned = SpawnActorByClass(GameModeClass);
-		GameMode = Cast<AGameModeBase>(Spawned);
+		GameMode.Reset(Cast<AGameModeBase>(Spawned));
 	}
 
 	if (PersistentLevel)
@@ -322,9 +385,9 @@ void UWorld::BeginPlay()
 
 	// 모든 액터 BeginPlay 완료 후 매치 시작 — 페이즈 변경 브로드캐스트가
 	// 이때 모든 리스너에게 안전하게 도달한다.
-	if (GameMode)
+	if (AGameModeBase* GameModeActor = GetGameMode())
 	{
-		GameMode->StartMatch();
+		GameModeActor->StartMatch();
 	}
 
 	// E.2/3: AutoPossessDefaultCamera 는 PC 의 BeginPlay 가 처리.
@@ -346,6 +409,11 @@ void UWorld::Tick(float DeltaTime, ELevelTick TickType)
 	{
 		TickPlayerCamera();
 		return;
+	}
+
+	if (bHasBegunPlay)
+	{
+		GameTimeSeconds += DeltaTime;
 	}
 
 	if (bHasBegunPlay && PhysicsScene)
@@ -379,36 +447,22 @@ void UWorld::TickPlayerCamera() const
 
 void UWorld::EndPlay()
 {
-	if (GameMode)
+	if (AGameModeBase* GameModeActor = GetGameMode())
 	{
-		GameMode->EndMatch();
+		GameModeActor->EndMatch();
 	}
 
 	bHasBegunPlay = false;
 	TickManager.Reset();
 
-	if (!PersistentLevel)
+	if (PersistentLevel)
 	{
-		return;
+		PersistentLevel->EndPlay();
 	}
 
-	PersistentLevel->EndPlay();
-
-	// 물리 시스템 정리 — 액터/컴포넌트가 아직 살아있는 동안 해제
-	if (PhysicsScene)
-	{
-		PhysicsScene->Shutdown();
-	}
-
-	// Clear spatial partition while actors/components are still alive.
-	// Otherwise Octree teardown can dereference stale primitive pointers during shutdown.
+	// Stop external systems while actors/components are still addressable. Object
+	// memory ownership remains with GC; this function only tears down gameplay state.
+	ShutdownPhysicsScene();
 	Partition.Reset(FBoundingBox());
-
-	PersistentLevel->Clear();
-	GameMode = nullptr; // 액터 리스트가 비워지면서 dangling 되므로 명시적으로 해제
 	MarkWorldPrimitivePickingBVHDirty();
-
-	// PersistentLevel은 CreateObject로 생성되었으므로 DestroyObject로 해제해야 alloc count가 맞음
-	UObjectManager::Get().DestroyObject(PersistentLevel);
-	PersistentLevel = nullptr;
 }

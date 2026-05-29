@@ -70,11 +70,15 @@ struct FObjectProperty : FObjectPropertyBase
 	}
 
 	EPropertyType GetType() const override { return EPropertyType::ObjectRef; }
+	bool ContainsObjectReference() const override { return true; }
+	EGCReferenceTokenType GetReferenceTokenType() const override { return EGCReferenceTokenType::Object; }
 	const FObjectProperty* AsObjectProperty() const override { return this; }
 	UObject* GetObjectValue(void* Container) const;
 	void SetObjectValue(void* Container, UObject* Object) const;
 	UObject* GetObjectValueFromValuePtr(void* ValuePtr) const;
 	void SetObjectValueFromValuePtr(void* ValuePtr, UObject* Object) const;
+
+	void AddReferencedObjects(void* ValuePtr, FReferenceCollector& Collector) const override;
 
 	void	   Serialize(UObject* Object, FArchive& Ar) const override;
 	void	   SerializeValue(void* ValuePtr, FArchive& Ar) const override;

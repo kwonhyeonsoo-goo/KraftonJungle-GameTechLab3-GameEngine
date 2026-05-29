@@ -1,4 +1,6 @@
-﻿#include "MaterialManager.h"
+#include "MaterialManager.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 #include <filesystem>
 #include <fstream>
 #include "Materials/Material.h"
@@ -116,7 +118,11 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
 	auto It = MaterialCache.find(UassetPath);
 	if (It != MaterialCache.end())
 	{
-		return It->second;
+		if (IsValid(It->second))
+		{
+			return It->second;
+		}
+		MaterialCache.erase(It);
 	}
 
 	// 2. 바이너리 .uasset 존재 시 우선 로드
@@ -336,37 +342,65 @@ FMaterialTemplate* FMaterialManager::GetOrCreateTemplate(const FString& ShaderPa
 
 FMaterialManager::~FMaterialManager()
 {
-	// Device 가 살아있을 때(명시적 Release 미호출 시) GPU 버퍼/템플릿을 해제. Release 가 Device 를 null 로 만든다.
-	if (Device)
-	{
-		Release();
-	}
+	Release();
+}
 
+void FMaterialManager::PurgeInvalidMaterialCacheEntries()
+{
+	for (auto It = MaterialCache.begin(); It != MaterialCache.end(); )
+	{
+		UMaterial* Material = It->second;
+		if (!IsValid(Material))
+		{
+			It = MaterialCache.erase(It);
+			continue;
+		}
+		++It;
+	}
 }
 
 void FMaterialManager::Release()
 {
-	// 1. TemplateCache 메모리 해제
-	// GetOrCreateTemplate()에서 new FMaterialTemplate()로 직접 할당했으므로 여기서 delete 해줍니다.
-	for (auto& Pair : TemplateCache)
+	if (bReleased)
 	{
-		if (Pair.second != nullptr)
-		{
-			delete Pair.second;
-			Pair.second = nullptr;
-		}
+		return;
 	}
+	bReleased = true;
 
-	TemplateCache.clear();
-
-	// 2. GPU 버퍼를 Device 해제 전에 명시 해제, UObject 수명은 UObjectManager가 관리
-	for (auto& [Key, Mat] : MaterialCache)
+	// MaterialCache 는 UObject raw pointer 캐시다. GC 종료/씬 전환 중 캐시된
+	// 머티리얼이 이미 PendingKill/Garbage 또는 완전 삭제된 상태일 수 있으므로
+	// 절대 바로 Mat->ReleaseGPUBuffers() 로 역참조하지 않는다.
+	for (auto& Pair : MaterialCache)
 	{
-		if (Mat) Mat->ReleaseGPUBuffers();
+		UMaterial* Mat = Pair.second;
+		if (IsAliveObject(Mat))
+		{
+			Mat->ReleaseGPUBuffers();
+		}
 	}
 	MaterialCache.clear();
 
-	// 3. Device 참조 해제
+	// TemplateCache 는 UMaterial::Template 이 non-owning 으로 가리킨다.
+	// 살아 있는 UMaterial GPU buffer 해제를 먼저 끝낸 뒤 template 을 해제해야 한다.
+	for (auto& Pair : TemplateCache)
+	{
+		delete Pair.second;
+		Pair.second = nullptr;
+	}
+	TemplateCache.clear();
+
 	// 외부에서 주입받은 리소스이므로 포인터만 초기화합니다.
 	Device = nullptr;
+}
+
+
+void FMaterialManager::AddReferencedObjects(FReferenceCollector& Collector)
+{
+    for (auto& Pair : MaterialCache)
+    {
+        if (IsValid(Pair.second))
+        {
+            Collector.AddReferencedObject(Pair.second, "FMaterialManager.MaterialCache");
+        }
+    }
 }

@@ -11,6 +11,7 @@
 #include "Core/Types/RayTypes.h"
 #include "Core/Types/CollisionTypes.h"
 #include "Math/Rotator.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "imgui.h"
 
 class UWorld;
@@ -94,8 +95,8 @@ public:
 	// Light View Override — 라이트 시점으로 카메라 오버라이드
 	void SetLightViewOverride(ULightComponentBase* Light);
 	void ClearLightViewOverride();
-	bool IsViewingFromLight() const { return LightViewOverride != nullptr; }
-	ULightComponentBase* GetLightViewOverride() const { return LightViewOverride; }
+	bool IsViewingFromLight() const { return LightViewOverride.Get() != nullptr; }
+	ULightComponentBase* GetLightViewOverride() const { return LightViewOverride.Get(); }
 
 	// PointLight face index (0~5: +X,-X,+Y,-Y,+Z,-Z)
 	int32 GetPointLightFaceIndex() const { return PointLightFaceIndex; }
@@ -119,7 +120,7 @@ private:
 	const FEditorSettings* Settings = nullptr;
 	FSelectionManager* SelectionManager = nullptr;
 	FViewportRenderOptions RenderOptions;
-	ULightComponentBase* LightViewOverride = nullptr;
+	TWeakObjectPtr<ULightComponentBase> LightViewOverride;
 	int32 PointLightFaceIndex = 0;
 
 	// Editor 카메라 데이터 SoT

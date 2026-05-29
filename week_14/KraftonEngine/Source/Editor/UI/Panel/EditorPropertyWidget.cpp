@@ -1,4 +1,4 @@
-﻿#include "Editor/UI/Panel/EditorPropertyWidget.h"
+#include "Editor/UI/Panel/EditorPropertyWidget.h"
 #include "Editor/EditorEngine.h"
 
 #include "ImGui/imgui.h"
@@ -28,6 +28,7 @@
 #include "Object/FName.h"
 #include "Object/ObjectIterator.h"
 #include "Object/Ptr/SoftObjectPtr.h"
+#include "Object/GarbageCollection.h"
 #include "Materials/Material.h"
 #include "Mesh/Importer/MeshImportOptions.h"
 #include "Mesh/MeshManager.h"
@@ -229,11 +230,12 @@ namespace
 		const char* OverridePropertyName = nullptr,
 		const char* OverrideDisplayName = nullptr)
 	{
-		if (!Prop.Object)
+		if (!IsValid(Prop.Object))
 		{
 			return;
 		}
 
+		FScopedGarbageCollectionBlocker GCBlocker;
 		FPropertyChangedEvent Event;
 		Event.Object = Prop.Object;
 		Event.Property = Prop.Property;

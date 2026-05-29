@@ -1,4 +1,6 @@
-﻿#include "FloatCurveManager.h"
+#include "FloatCurveManager.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 #include "FloatCurveAsset.h"
 #include "Platform/Paths.h"
 #include "Asset/AssetPackage.h"
@@ -11,7 +13,11 @@ UFloatCurveAsset* FFloatCurveManager::Load(const FString& Path)
 	auto it = LoadedCurves.find(NormalizedPath);
 	if (it != LoadedCurves.end())
 	{
-		return it->second;
+		if (IsValid(it->second))
+		{
+			return it->second;
+		}
+		LoadedCurves.erase(it);
 	}
 
 	if (!FAssetPackage::IsAssetPackagePath(NormalizedPath)) return nullptr;
@@ -42,7 +48,15 @@ UFloatCurveAsset* FFloatCurveManager::Find(const FString& Path) const
 	FString NormalizedPath = FPaths::MakeProjectRelative(Path);
 
 	auto it = LoadedCurves.find(NormalizedPath);
-	return it != LoadedCurves.end() ? it->second : nullptr;
+	if (it == LoadedCurves.end())
+	{
+		return nullptr;
+	}
+	if (IsValid(it->second))
+	{
+		return it->second;
+	}
+	return nullptr;
 }
 
 bool FFloatCurveManager::Save(UFloatCurveAsset* Asset)
@@ -68,4 +82,18 @@ bool FFloatCurveManager::Save(UFloatCurveAsset* Asset)
 	Asset->Serialize(Ar);
 
 	return Ar.IsValid();
+}
+
+
+void FFloatCurveManager::AddReferencedObjects(FReferenceCollector& Collector)
+{
+    for (auto& Pair : LoadedCurves)
+    {
+        Collector.AddReferencedObject(Pair.second, "FFloatCurveManager.LoadedCurves");
+    }
+}
+
+void FFloatCurveManager::ClearCache()
+{
+    LoadedCurves.clear();
 }

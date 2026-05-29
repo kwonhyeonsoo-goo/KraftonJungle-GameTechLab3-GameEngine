@@ -6,17 +6,21 @@
 #include "Editor/Slate/SWindow.h"
 
 #include <d3d11.h>
+#include "Object/GarbageCollection.h"
 
 class FWindowsWindow;
 class UStaticMeshComponent;
 class UWorld;
 class AActor;
 
-class FStaticMeshEditorViewportClient : public FViewportClient, public IEditorPreviewViewportClient
+class FStaticMeshEditorViewportClient : public FViewportClient, public IEditorPreviewViewportClient, public FGCObject
 {
 public:
 	void Initialize(ID3D11Device* Device, uint32 Width, uint32 Height);
 	void Release();
+
+	const char* GetReferencerName() const override { return "FStaticMeshEditorViewportClient"; }
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	void ResetCameraToPreviewBounds();
 

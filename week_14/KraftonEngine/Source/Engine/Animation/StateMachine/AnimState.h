@@ -8,6 +8,7 @@
 class UAnimSequenceBase;
 class UAnimInstance;
 struct FPoseContext;
+class FReferenceCollector;
 
 // FAnimNode_StateMachine 의 한 상태. 상태별 시퀀스/속도/루프 등을 들고, 진입 시 LocalTime
 // 을 리셋, Tick 에서 시간 진행, Evaluate 에서 포즈 샘플링.
@@ -45,6 +46,7 @@ public:
 	// AddAnimNotifies 가 가시성 임계 가드에 사용. default 1.0 (단일 진입).
 	virtual void Tick   (UAnimInstance* Instance, float DeltaSeconds, float Weight = 1.0f);
 	virtual void Evaluate(UAnimInstance* Instance, FPoseContext& Output);
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	float GetLocalTime() const { return LocalTime; }
 	void  SetLocalTime(float T) { LocalTime = T; }

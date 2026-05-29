@@ -134,7 +134,7 @@ void AppendReplayDrawSection(
 	FMeshSectionDraw Section;
 	Section.FirstIndex = 0;
 	Section.IndexCount = Spec.IndexCount;
-	Section.Material = SectionMaterial;
+	Section.Material = IsValid(SectionMaterial) ? SectionMaterial : nullptr;
 	Section.VertexFactory = ResolveReplaySectionVertexFactoryType(Replay.EmitterType);
 
 	// 입자 섹션은 자체 대표 위치로 translucent depth 정렬 (proxy 단위 정렬의 부정확 보완).

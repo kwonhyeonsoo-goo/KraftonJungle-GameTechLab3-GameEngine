@@ -51,6 +51,7 @@ namespace
 			FMemoryArchive PayloadAr(true /*bIsSaving*/);
 			if (OutPtr)
 			{
+				OutPtr->PreSaveForArchive(PayloadAr);
 				OutPtr->SerializeProperties(PayloadAr, PF_Save);
 			}
 			const TArray<uint8>& Buffer = PayloadAr.GetBuffer();
@@ -98,6 +99,7 @@ namespace
 		{
 			FMemoryArchive PayloadAr(Payload, false /*bIsSaving*/);
 			OutPtr->SerializeProperties(PayloadAr, PF_Save);
+			OutPtr->PostLoadFromArchive(PayloadAr);
 		}
 	}
 }

@@ -17,9 +17,13 @@ public:
 
 	void UpdateMaterial() override;
 	void UpdateMesh() override;
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	// Collector가 Receiver 프록시 목록에 접근 (Owner 역참조 없이)
 	const TArray<FPrimitiveSceneProxy*>& GetReceiverProxies() const { return CachedReceiverProxies; }
+
+	void RemoveReceiverProxy(FPrimitiveSceneProxy* ReceiverProxy);
+	void InvalidateReceiverCache();
 
 private:
 	UDecalComponent* GetDecalComponent() const;

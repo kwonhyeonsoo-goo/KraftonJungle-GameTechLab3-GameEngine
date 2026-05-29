@@ -6,6 +6,7 @@
 #include "Component/PrimitiveComponent.h"
 #include "Render/Proxy/PrimitiveSceneProxy.h"
 #include "GameFramework/AActor.h"
+#include "Object/Object.h"
 #include <algorithm>
 
 namespace
@@ -438,7 +439,9 @@ void FSpatialPartition::InsertPrimitive(UPrimitiveComponent* Primitive)
 
 void FSpatialPartition::RemoveSinglePrimitive(UPrimitiveComponent* Primitive)
 {
-	if (!IsValid(Primitive)) return;
+	// DestroyRenderState/GC cleanup 경로에서는 Primitive가 이미 RF_Garbage일 수 있다.
+	// Octree에서 제거하는 데 필요한 것은 메모리상 생존 여부이므로 IsValid가 아니라 IsAliveObject를 쓴다.
+	if (!IsAliveObject(Primitive)) return;
 
 	if (Primitive->IsInOctreeOverflow())
 	{

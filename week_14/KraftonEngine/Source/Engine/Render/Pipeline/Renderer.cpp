@@ -59,6 +59,11 @@ void FRenderer::Create(HWND hWindow)
 
 void FRenderer::Release()
 {
+	// Break every immediate-context binding before individual resource owners release COM refs.
+	// This covers viewport RTV/SRV, shadow maps, tile/cluster culling UAV/SRV, ImGui leftovers,
+	// and state objects that may still be cached by the D3D11 immediate context.
+	Device.ReleaseImmediateContextBindings(false);
+
 	FGPUProfiler::Get().Shutdown();
 
 	Builder.Release();
@@ -69,6 +74,9 @@ void FRenderer::Release()
 	Resources.Release();
 	FShaderManager::Get().Release();
 	FMaterialManager::Get().Release();
+
+	// One more detach after managers have released resources, then release the device itself.
+	Device.ReleaseImmediateContextBindings(false);
 	Device.Release();
 }
 

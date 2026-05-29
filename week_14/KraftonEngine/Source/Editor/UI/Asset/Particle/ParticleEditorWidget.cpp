@@ -3263,7 +3263,7 @@ void FParticleEditorWidget::RenderPropertyPanel(ImVec2 Size)
 				{
 					static const char* BeamMethodNames[] = { "Distance", "Target" };
 					int32 BeamMethod = static_cast<int32>(Beam->BeamMethod);
-					if (ComboInt("Beam Method", BeamMethod, BeamMethodNames, 2)) { Beam->BeamMethod = static_cast<UParticleModuleTypeDataBeam::EBeam2Method>(BeamMethod); bChanged = true; }
+					if (ComboInt("Beam Method", BeamMethod, BeamMethodNames, 2)) { Beam->BeamMethod = static_cast<EBeam2Method>(BeamMethod); bChanged = true; }
 					bChanged |= ImGui::DragFloat("Speed", &Beam->Speed, 0.1f, 0.0f, 100000.0f, "%.2f");
 					bChanged |= ImGui::DragInt("Interpolation Points", &Beam->InterpolationPoints, 1.0f, 0, 128);
 					EnsureFloatConstantDistribution(Beam->WidthDistribution, Beam, Beam->Width);
@@ -3274,7 +3274,7 @@ void FParticleEditorWidget::RenderPropertyPanel(ImVec2 Size)
 					bChanged |= ImGui::Checkbox("Tile UV", &Beam->bTileUV);
 					static const char* TaperNames[] = { "None", "Full" };
 					int32 Taper = static_cast<int32>(Beam->TaperMethod);
-					if (ComboInt("Taper Method", Taper, TaperNames, 2)) { Beam->TaperMethod = static_cast<UParticleModuleTypeDataBeam::EBeamTaperMethod>(Taper); bChanged = true; }
+					if (ComboInt("Taper Method", Taper, TaperNames, 2)) { Beam->TaperMethod = static_cast<EBeamTaperMethod>(Taper); bChanged = true; }
 					bChanged |= ImGui::DragFloat("Taper Factor", &Beam->TaperFactor, 0.01f, 0.0f, 10.0f, "%.2f");
 					bChanged |= ImGui::Checkbox("Render Geometry", &Beam->bRenderGeometry);
 					bChanged |= DragFloat3Field("Default Source", Beam->DefaultSource, 0.1f);

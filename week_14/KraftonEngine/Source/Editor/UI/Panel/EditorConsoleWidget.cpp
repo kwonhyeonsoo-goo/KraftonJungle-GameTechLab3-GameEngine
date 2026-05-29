@@ -1,4 +1,5 @@
 #include "Editor/UI/Panel/EditorConsoleWidget.h"
+#include "Object/GarbageCollection.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/Viewport/Level/LevelEditorViewportClient.h"
 #include "Editor/Viewport/EditorPreviewViewportClient.h"
@@ -233,6 +234,14 @@ void FEditorConsoleWidget::RegisterDiagnosticsCommands()
 {
 	RegisterCommand("obj list", [this](const TArray<FString>& Args) { HandleObjList(Args); },
 		"Diagnostics", "obj list [<ClassName>]", "Lists live UObject counts and memory by class.");
+	RegisterCommand("gc dump", [this](const TArray<FString>& Args) { HandleGCDump(Args); },
+		"Diagnostics", "gc dump [all|unreachable|pending]", "Runs GC mark-only and lists object GC states.");
+	RegisterCommand("gc mark", [this](const TArray<FString>& Args) { HandleGCMark(Args); },
+		"Diagnostics", "gc mark", "Runs GC mark-only without purging objects.");
+	RegisterCommand("gc collect", [this](const TArray<FString>& Args) { HandleGCCollect(Args); },
+		"Diagnostics", "gc collect", "Runs full GC sweep at an explicit editor safe point.");
+	RegisterCommand("gc refs", [this](const TArray<FString>& Args) { HandleGCRefs(Args); },
+		"Diagnostics", "gc refs <ObjectName>", "Prints the last mark-only reference chain for an object.");
 	RegisterCommand("stat fps", [this](const TArray<FString>& Args) { HandleStatFPS(Args); },
 		"Diagnostics", "stat fps", "Shows the FPS overlay stat.");
 	RegisterCommand("stat memory", [this](const TArray<FString>& Args) { HandleStatMemory(Args); },
@@ -817,6 +826,113 @@ void FEditorConsoleWidget::HandleObjList(const TArray<FString>& Args)
 	AddLog("%-35s %8u %10.1f\n", "TOTAL", TotalCount, TotalBytes / 1024.0);
 	AddLog("GUObjectArray capacity: %zu\n", GUObjectArray.capacity());
 }
+
+void FEditorConsoleWidget::HandleGCDump(const TArray<FString>& Args)
+{
+	const FString Mode = Args.empty() ? FString("unreachable") : ToLower(Args[0]);
+	FGarbageCollector::Get().CollectGarbageMarkOnly();
+
+	uint32 Total = 0;
+	uint32 Marked = 0;
+	uint32 Unreachable = 0;
+	uint32 Pending = 0;
+	uint32 Garbage = 0;
+
+	AddLog("%-35s %8s %10s %10s\n", "Object", "Flags", "Class", "Name");
+	AddLog("--------------------------------------------------------------------------\n");
+	for (UObject* Obj : GUObjectArray)
+	{
+		if (!IsAliveObject(Obj))
+		{
+			continue;
+		}
+
+		++Total;
+		const bool bMarked = Obj->HasAnyFlags(RF_Marked);
+		const bool bUnreachable = Obj->HasAnyFlags(RF_Unreachable);
+		const bool bPending = Obj->HasAnyFlags(RF_PendingKill);
+		const bool bGarbage = Obj->HasAnyFlags(RF_Garbage);
+		Marked += bMarked ? 1 : 0;
+		Unreachable += bUnreachable ? 1 : 0;
+		Pending += bPending ? 1 : 0;
+		Garbage += bGarbage ? 1 : 0;
+
+		if (Mode == "unreachable" && !bUnreachable) continue;
+		if (Mode == "pending" && !bPending && !bGarbage) continue;
+		if (Mode != "all" && Mode != "unreachable" && Mode != "pending" && !bUnreachable) continue;
+
+		FString Flags;
+		if (Obj->IsRooted()) Flags += "Root|";
+		if (bMarked) Flags += "Marked|";
+		if (bUnreachable) Flags += "Unreach|";
+		if (bPending) Flags += "Pending|";
+		if (bGarbage) Flags += "Garbage|";
+		if (Flags.empty()) Flags = "None";
+
+		UClass* Cls = Obj->GetClass();
+		AddLog("%-35s %8u %10s %10s\n", Obj->GetName().c_str(), Obj->GetObjectFlags(), Cls ? Cls->GetName() : "<null>", Flags.c_str());
+	}
+
+	AddLog("GC mark-only: total=%u marked=%u unreachable=%u pending=%u garbage=%u\n", Total, Marked, Unreachable, Pending, Garbage);
+}
+
+void FEditorConsoleWidget::HandleGCMark(const TArray<FString>& Args)
+{
+	(void)Args;
+	FGarbageCollector::Get().CollectGarbageMarkOnly();
+	AddLog("GC mark-only complete. Use 'gc dump' or 'gc refs <ObjectName>' for diagnostics.\n");
+}
+
+void FEditorConsoleWidget::HandleGCCollect(const TArray<FString>& Args)
+{
+	(void)Args;
+	const size_t Before = GUObjectArray.size();
+	FGarbageCollector::Get().RequestGarbageCollection();
+	AddLog("GC collect requested. Objects now=%zu, pending purge=%zu. Full sweep will run at the next safe point.\n", Before, FGarbageCollector::Get().GetObjectsPendingPurge().size());
+}
+
+void FEditorConsoleWidget::HandleGCRefs(const TArray<FString>& Args)
+{
+	if (Args.empty())
+	{
+		AddLog("Usage: gc refs <ObjectName>\n");
+		return;
+	}
+
+	FGarbageCollector::Get().CollectGarbageMarkOnly();
+	const FString Query = ToLower(Args[0]);
+	UObject* Found = nullptr;
+	for (UObject* Obj : GUObjectArray)
+	{
+		if (!IsAliveObject(Obj)) continue;
+		FString Name = ToLower(Obj->GetName());
+		if (Name.find(Query) != FString::npos)
+		{
+			Found = Obj;
+			break;
+		}
+	}
+
+	if (!Found)
+	{
+		AddLog("[ERROR] No live UObject matched '%s'.\n", Args[0].c_str());
+		return;
+	}
+
+	TArray<FString> Chain;
+	if (!FGarbageCollector::Get().GetLastReferenceChain(Found, Chain))
+	{
+		AddLog("No root reference chain for %s. It is probably unreachable.\n", Found->GetName().c_str());
+		return;
+	}
+
+	AddLog("Reference chain for %s:\n", Found->GetName().c_str());
+	for (const FString& Line : Chain)
+	{
+		AddLog("  %s\n", Line.c_str());
+	}
+}
+
 
 void FEditorConsoleWidget::HandleStatFPS(const TArray<FString>& Args)
 {

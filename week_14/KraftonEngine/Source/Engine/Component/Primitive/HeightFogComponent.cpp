@@ -19,8 +19,7 @@ void UHeightFogComponent::CreateRenderState()
 
 void UHeightFogComponent::DestroyRenderState()
 {
-	if (!Owner) return;
-	UWorld* World = Owner->GetWorld();
+	UWorld* World = GetWorldEvenIfPendingKill();
 	if (!World) return;
 
 	World->GetScene().GetEnvironment().RemoveFog(this);
@@ -34,8 +33,7 @@ void UHeightFogComponent::OnTransformDirty()
 
 void UHeightFogComponent::PushToScene()
 {
-	if (!Owner) return;
-	UWorld* World = Owner->GetWorld();
+	UWorld* World = GetWorld();
 	if (!World) return;
 
 	FFogParams Params;
@@ -58,7 +56,8 @@ void UHeightFogComponent::PostEditProperty(const char* PropertyName)
 
 UBillboardComponent* UHeightFogComponent::EnsureEditorBillboard()
 {
-	if (!Owner)
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
 	{
 		return nullptr;
 	}
@@ -75,7 +74,7 @@ UBillboardComponent* UHeightFogComponent::EnsureEditorBillboard()
 		}
 	}
 
-	UBillboardComponent* Billboard = Owner->AddComponent<UBillboardComponent>();
+	UBillboardComponent* Billboard = OwnerActor->AddComponent<UBillboardComponent>();
 	if (Billboard)
 	{
 		Billboard->AttachToComponent(this);

@@ -2,6 +2,7 @@
 #include "Object/Reflection/ObjectFactory.h"
 #include "Serialization/Archive.h"
 #include "GameFramework/AActor.h"
+#include "Object/GarbageCollection.h"
 
 HIDE_FROM_COMPONENT_LIST(UActorComponent)
 
@@ -28,7 +29,14 @@ void UActorComponent::Deactivate()
 
 UWorld* UActorComponent::GetWorld() const
 {
-	return Owner ? Owner->GetWorld() : nullptr;
+	AActor* OwnerActor = GetOwner();
+	return OwnerActor ? OwnerActor->GetWorld() : nullptr;
+}
+
+UWorld* UActorComponent::GetWorldEvenIfPendingKill() const
+{
+	AActor* OwnerActor = GetOwnerEvenIfPendingKill();
+	return OwnerActor ? OwnerActor->GetWorldEvenIfPendingKill() : nullptr;
 }
 
 void UActorComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
@@ -66,12 +74,51 @@ void UActorComponent::SetEditorOnly(bool bInEditorOnly)
 
 void UActorComponent::SetOwner(AActor* Actor)
 {
-	Owner = Actor;
+	Owner.Reset(Actor);
 	PrimaryComponentTick.Target = this;
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bTickEnabled = bTickEnable;
 	PrimaryComponentTick.bStartWithTickEnabled = true;
 }
+
+void UActorComponent::RouteComponentDestroyed()
+{
+	if (bComponentDestroyRouted)
+	{
+		return;
+	}
+
+	bComponentDestroyRouted = true;
+	PrimaryComponentTick.UnRegisterTickFunction();
+	DestroyRenderState();
+
+	if (AActor* OwnerActor = GetOwnerEvenIfPendingKill())
+	{
+		OwnerActor->OnComponentBeingDestroyed(this);
+	}
+
+	Owner.Reset();
+	SetOuter(nullptr);
+}
+
+void UActorComponent::BeginDestroy()
+{
+	if (HasAnyFlags(RF_BeginDestroy))
+	{
+		return;
+	}
+
+	EndPlay();
+	RouteComponentDestroyed();
+	UObject::BeginDestroy();
+}
+
+void UActorComponent::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	// Owner is intentionally weak. Actor owns components, not the other way around.
+	UObject::AddReferencedObjects(Collector);
+}
+
 
 void UActorComponent::PostEditProperty(const char* PropertyName)
 {

@@ -4,6 +4,7 @@
 #include "Math/Transform.h"
 
 struct FPoseContext;
+class FReferenceCollector;
 
 // 모든 anim 노드의 베이스. UAnimInstance::RootNode 가 트리의 root 를 보유, 매 frame
 // SkeletalMeshComponent::EvaluateAnimInstance 가 UpdateAnimation → EvaluatePose 흐름에서
@@ -61,6 +62,12 @@ public:
 	// LayeredBlendPerBone 가 BlendPose 의 이 값을 자동 weight 로 사용해 montage 없을 때
 	// 자연스럽게 base 100% 가 되도록.
 	virtual float GetEffectiveBlendWeight() const { return 1.0f; }
+
+	// Non-UObject anim nodes may still hold strong runtime references to UObject assets
+	// or instanced UAnimState objects. UAnimInstance forwards GC marking through this
+	// hook so plain anim graph nodes do not leave stale raw UObject* behind after PIE
+	// world switches or explicit GC.
+	virtual void AddReferencedObjects(FReferenceCollector& Collector) { (void)Collector; }
 
 	virtual const char* GetDebugName() const { return "AnimNode"; }
 

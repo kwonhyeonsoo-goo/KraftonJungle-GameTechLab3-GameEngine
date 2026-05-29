@@ -3,6 +3,7 @@
 #include "Core/Types/CoreTypes.h"
 #include "Engine/Platform/DirectoryWatcher.h"
 #include "Input/InputSystem.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 #include <sol/sol.hpp>
 #include <mutex>
 
@@ -23,6 +24,7 @@ public:
 	static bool ReadScriptFileContent(const FString& ScriptFile, FString& OutContent);
 
 	static sol::state& GetState();
+	static bool IsInitialized();
 	static void RegisterBindings(sol::state& Lua);
 
 	static FInputSystemSnapshot GetLuaInputSnapshot();
@@ -48,6 +50,7 @@ private:
 	static void RegisterLuaHelpers(sol::state& Lua);
 	static void RegisterCoreBindings(sol::state& Lua);
 	static void RegisterMathBindings(sol::state& Lua);
+	static void RegisterReflectionBindings(sol::state& Lua);
 	static void RegisterActorBindings(sol::state& Lua);
 	static void RegisterUIBindings(sol::state& Lua);
 
@@ -59,7 +62,7 @@ private:
 	static std::unique_ptr<sol::state> Lua;
 	static sol::protected_function OnEscapePressedCallback;
 	static std::mutex ComponentMutex;
-	static TArray<ULuaScriptComponent*> RegisteredComponents;
-	static TArray<ULuaAnimInstance*>    RegisteredAnimInstances;
+	static TArray<TWeakObjectPtr<ULuaScriptComponent>> RegisteredComponents;
+	static TArray<TWeakObjectPtr<ULuaAnimInstance>>    RegisteredAnimInstances;
 	static FSubscriptionID WatchSub;
 };

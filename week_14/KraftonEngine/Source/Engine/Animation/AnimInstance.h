@@ -17,6 +17,7 @@ class UAnimSequenceBase;
 class UAnimMontage;
 class UAnimMontageInstance;
 class UAnimNotifyState;
+class FReferenceCollector;
 class APawn;
 
 // 큐에 적재된 한 프레임 분의 notify — dispatch 시 Sequence 컨텍스트 보존 위해 같이 들고 다님.
@@ -75,12 +76,16 @@ public:
 	// 매 프레임 호출. NativeUpdate → DispatchQueuedAnimEvents → (호출자가) EvaluatePose.
 	void UpdateAnimation(float DeltaSeconds);
 	void EvaluatePose(FPoseContext& Output);
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
+	void BeginDestroy() override;
 
 	// ── 컴포넌트 접근 ──
 	void SetOwningComponent(USkeletalMeshComponent* InComp) { OwningComponent = InComp; }
-	USkeletalMeshComponent* GetOwningComponent() const { return OwningComponent; }
+	USkeletalMeshComponent* GetOwningComponent() const;
+	UFUNCTION(Pure, Category="Animation")
 	USkeletalMesh*          GetSkeletalMesh()    const;
 
+	UFUNCTION(Pure, Category="Animation")
 	APawn* TryGetPawnOwner() const;
 
 	// ── Notify ──
@@ -114,7 +119,9 @@ public:
 	void AccumulateRootMotion(const FTransform& Delta);
 	FTransform ConsumeRootMotion();
 
+	UFUNCTION(Pure, Category="Animation|RootMotion")
 	ERootMotionMode GetRootMotionMode() const { return RootMotionMode; }
+	UFUNCTION(Callable, Exec, Category="Animation|RootMotion")
 	void            SetRootMotionMode(ERootMotionMode InMode) { RootMotionMode = InMode; }
 
 	// ── Montage (Phase 2.1+: slot 별 보유) ──
@@ -123,18 +130,25 @@ public:
 	// Phase 2.2 에서 FAnimNode_Slot 이 GetMontageInstanceForSlot 으로 trees 안에서 조회.
 	static const FName DefaultMontageSlot;
 
+	UFUNCTION(Callable, Category="Animation|Montage")
 	void  PlayMontage(UAnimMontage* Montage, FName StartSection = FName::None,
 	                  float PlayRate = 1.0f, float BlendInTime = -1.0f,
 	                  FName SlotName = FName::None);
+	UFUNCTION(Callable, Exec, Category="Animation|Montage")
 	void  StopMontage(float BlendOutTime = -1.0f, FName SlotName = FName::None);
+	UFUNCTION(Callable, Exec, Category="Animation|Montage")
 	void  Montage_JumpToSection(FName SectionName, FName SlotName = FName::None);
+	UFUNCTION(Callable, Exec, Category="Animation|Montage")
 	void  Montage_SetNextSection(FName From, FName To, FName SlotName = FName::None);
+	UFUNCTION(Pure, Category="Animation|Montage")
 	bool  IsMontagePlaying(UAnimMontage* Montage = nullptr, FName SlotName = FName::None) const;
 
 	// Slot 별 montage instance 조회. 없으면 nullptr.
+	UFUNCTION(Pure, Category="Animation|Montage")
 	UAnimMontageInstance* GetMontageInstanceForSlot(FName SlotName) const;
 
 	// Legacy alias — DefaultSlot 의 instance. 새 코드는 GetMontageInstanceForSlot 권장.
+	UFUNCTION(Pure, Category="Animation|Montage")
 	UAnimMontageInstance* GetMontageInstance() const;
 
 	// ── AnimGraph (Phase 1.4+) ──

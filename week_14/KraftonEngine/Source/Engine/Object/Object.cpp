@@ -3,14 +3,20 @@
 #include "Serialization/Archive.h"
 #include "Serialization/DuplicateArchive.h"
 #include "Object/Reflection/ObjectFactory.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Reflection/UStruct.h"
 
 TArray<UObject*> GUObjectArray;
 TSet<UObject*> GUObjectSet;
 
+static uint32 GNextObjectSerialNumber = 1;
+
 UObject::UObject()
 {
 	UUID = UUIDGenerator::GenUUID();
+	SerialNumber = GNextObjectSerialNumber++;
 	InternalIndex = static_cast<uint32>(GUObjectArray.size());
+	ObjectFlags = RF_None;
 	GUObjectArray.push_back(this);
 	GUObjectSet.insert(this);
 }
@@ -19,13 +25,21 @@ UObject::~UObject()
 {
 	GUObjectSet.erase(this);
 
+	if (GUObjectArray.empty())
+	{
+		return;
+	}
+
 	uint32 LastIndex = static_cast<uint32>(GUObjectArray.size() - 1);
 
 	if (InternalIndex != LastIndex)
 	{
 		UObject* LastObject = GUObjectArray[LastIndex];
 		GUObjectArray[InternalIndex] = LastObject;
-		LastObject->InternalIndex = InternalIndex;
+		if (LastObject)
+		{
+			LastObject->InternalIndex = InternalIndex;
+		}
 	}
 
 	GUObjectArray.pop_back();
@@ -45,6 +59,7 @@ UObject* UObject::Duplicate(UObject* NewOuter) const
 
 UObject* UObject::DuplicateWithArchiveContext(UObject* NewOuter, FDuplicateArchiveContext& DuplicateContext) const
 {
+	FScopedGarbageCollectionBlocker GCBlocker;
 	// FObjectFactory 기반 같은 타입 인스턴스 생성 → Serialize 왕복.
 	// UUID/Name은 생성자에서 새로 발급되며, Serialize에서 덮어쓰지 않는 것이 규칙이다.
 	// NewOuter가 nullptr이면 원본의 Outer를 그대로 승계.
@@ -91,9 +106,10 @@ void UObject::Serialize(FArchive& Ar)
 
 void UObject::SerializeIdentity(FArchive& Ar)
 {
-	// 기본 UObject는 손수 직렬화할 상태가 ObjectName 뿐.
-	// UUID/InternalIndex/Name은 직렬화 금지 (복제 시 새로 발급).
-	Ar << ObjectName;
+	// 옛 에셋 포맷 호환을 위해 저장 시 ObjectName을 기록하되, 로드/복제
+	// 경로에서는 현재 세션에서 새로 부여된 런타임 identity를 덮어쓰지 않는다.
+	FName SerializedName = Ar.IsSaving() ? ObjectName : FName();
+	Ar << SerializedName;
 }
 
 void UObject::SerializeProperties(FArchive& Ar, uint32 RequiredFlags)
@@ -181,4 +197,51 @@ void UObject::RegisterProperties(UStruct* Class)
 	(void)Class;
 }
 
+void UObject::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	const TArray<FGCReferenceToken>& Tokens = GetClass()->GetReferenceTokenStream();
+	for (const FGCReferenceToken& Token : Tokens)
+	{
+		const FProperty* Property = Token.Property;
+		if (!Property)
+		{
+			continue;
+		}
+
+		FScopedReferenceName Scope(Collector, Property->Name);
+		Property->AddReferencedObjects(Property->GetValuePtrFor(this), Collector);
+	}
+}
+
+void UObject::BeginDestroy()
+{
+	if (HasAnyFlags(RF_BeginDestroy))
+	{
+		return;
+	}
+
+	SetFlags(RF_BeginDestroy | RF_PendingKill);
+}
+
+void UObject::FinishDestroy()
+{
+	SetFlags(RF_FinishDestroy);
+}
+
 UClass UObject::StaticClassInstance("UObject", nullptr, sizeof(UObject), CF_None);
+
+bool UObject::ProcessEvent(const FFunction* Function, void* ParametersStorage, void* ReturnValueStorage)
+{
+    if (!Function)
+    {
+        return false;
+    }
+
+    if (!Function->IsStatic() && !IsValid(this))
+    {
+        return false;
+    }
+
+    return Function->Invoke(this, ParametersStorage, ReturnValueStorage);
+}
+

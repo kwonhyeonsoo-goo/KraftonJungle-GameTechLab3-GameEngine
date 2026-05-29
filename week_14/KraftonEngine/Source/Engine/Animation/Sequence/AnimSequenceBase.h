@@ -5,6 +5,7 @@
 
 struct FPoseContext;
 struct FAnimExtractContext;
+class FReferenceCollector;
 
 // 시퀀스류 애셋의 공통 베이스. PlayLength/Notify 등 시간축이 있는 모든 자식의 공통 인터페이스.
 // 실제 본 키프레임 샘플링은 UAnimSequence 가 구현한다.
@@ -20,6 +21,7 @@ public:
     ~UAnimSequenceBase() override = default;
 
     void Serialize(FArchive& Ar) override;
+    void AddReferencedObjects(FReferenceCollector& Collector) override;
     // 수동 바이너리 포맷 — 반사 직렬화 비활성 (UAnimSequence/UAnimMontage 도 상속).
     bool ShouldReflectProperties() const override { return false; }
 

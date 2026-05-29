@@ -11,6 +11,8 @@
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
 #include "Serialization/Archive.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 
 namespace
 {
@@ -18,6 +20,10 @@ namespace
 	{
 		if (Path.empty() || Path == "None") return nullptr;
 		UAnimSequenceBase* Loaded = FAnimationManager::Get().LoadAnimation(Path);
+		if (!IsValid(Loaded))
+		{
+			Loaded = nullptr;
+		}
 		if (!Loaded)
 		{
 			UE_LOG("UAnimGraphInstance: 시퀀스 로드 실패. Path=%s", Path.c_str());
@@ -36,6 +42,11 @@ void UAnimGraphInstance::NativeInitializeAnimation()
 	if (!MeshAsset || MeshAsset->Bones.empty()) return;
 
 	// GraphAsset resolve 우선순위: 외부 SetGraphAsset > GraphAssetPath 로 디스크 로드 > 자동 transient.
+	if (GraphAsset && !IsValid(GraphAsset))
+	{
+		GraphAsset = nullptr;
+		CompiledAssetVersion = 0;
+	}
 	if (!GraphAsset)
 	{
 		const FString GraphPathStr = GraphAssetPath.ToString();
@@ -51,7 +62,19 @@ void UAnimGraphInstance::NativeInitializeAnimation()
 	if (!GraphAsset)
 	{
 		GraphAsset = UObjectManager::Get().CreateObject<UAnimGraphAsset>(this);
-		GraphAsset->InitializeDefault();
+		if (GraphAsset)
+		{
+			GraphAsset->InitializeDefault();
+		}
+	}
+
+	if (!IsValid(GraphAsset))
+	{
+		GraphAsset = nullptr;
+		RootNode = nullptr;
+		OwnedNodes.clear();
+		CompiledAssetVersion = 0;
+		return;
 	}
 
 	// Version 강제 mismatch 로 첫 컴파일 트리거. (자산이 fresh load 라면 Version 이 0 이지만,
@@ -71,7 +94,14 @@ void UAnimGraphInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 void UAnimGraphInstance::RecompileTreeIfDirty()
 {
-	if (!GraphAsset) return;
+	if (!IsValid(GraphAsset))
+	{
+		GraphAsset = nullptr;
+		RootNode = nullptr;
+		OwnedNodes.clear();
+		CompiledAssetVersion = 0;
+		return;
+	}
 	if (GraphAsset->GetVersion() == CompiledAssetVersion) return;
 
 	// 노드별 SequenceRef 재해상 (per-node SequencePath > Instance.DefaultSequencePath > nullptr).
@@ -82,7 +112,7 @@ void UAnimGraphInstance::RecompileTreeIfDirty()
 
 		UAnimSequenceBase* Seq = LoadByPath(Node.SequencePath);
 		if (!Seq) Seq = LoadByPath(DefaultPathStr);
-		Node.SequenceRef = Seq;
+		Node.SequenceRef = IsValid(Seq) ? Seq : nullptr;
 	}
 
 	// 기존 트리 폐기 — RootNode 먼저 nullptr 로 끊은 뒤 OwnedNodes clear.
@@ -115,4 +145,31 @@ void UAnimGraphInstance::Serialize(FArchive& Ar)
 		DefaultSequencePath = FSoftObjectPtr(SeqPathStr);
 		GraphAssetPath      = FSoftObjectPtr(GraphPathStr);
 	}
+}
+
+
+UAnimGraphAsset* UAnimGraphInstance::GetGraphAsset() const
+{
+	return IsValid(GraphAsset) ? GraphAsset : nullptr;
+}
+
+void UAnimGraphInstance::SetGraphAsset(UAnimGraphAsset* InAsset)
+{
+	GraphAsset = IsValid(InAsset) ? InAsset : nullptr;
+	CompiledAssetVersion = 0;
+	RootNode = nullptr;
+	OwnedNodes.clear();
+}
+
+void UAnimGraphInstance::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UAnimInstance::AddReferencedObjects(Collector);
+	Collector.AddReferencedObject(GraphAsset, "AnimGraphInstance.GraphAsset");
+}
+
+void UAnimGraphInstance::BeginDestroy()
+{
+	GraphAsset = nullptr;
+	CompiledAssetVersion = 0;
+	UAnimInstance::BeginDestroy();
 }

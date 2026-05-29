@@ -1,7 +1,34 @@
-﻿#include "StructProperty.h"
+#include "StructProperty.h"
 
 #include "Serialization/Archive.h"
 #include "Object/Reflection/UStruct.h"
+
+bool FStructProperty::ContainsObjectReference() const
+{
+	return StructType && StructType->HasObjectReferences();
+}
+
+void FStructProperty::AddReferencedObjects(void* ValuePtr, FReferenceCollector& Collector) const
+{
+	if (!ValuePtr || !StructType)
+	{
+		return;
+	}
+
+	FScopedReferenceName Scope(Collector, Name);
+	const TArray<FGCReferenceToken>& Tokens = StructType->GetReferenceTokenStream();
+	for (const FGCReferenceToken& Token : Tokens)
+	{
+		const FProperty* Child = Token.Property;
+		if (!Child)
+		{
+			continue;
+		}
+
+		FScopedReferenceName ChildReferenceScope(Collector, Child->Name);
+		Child->AddReferencedObjects(Child->GetValuePtrFor(ValuePtr), Collector);
+	}
+}
 
 namespace
 {

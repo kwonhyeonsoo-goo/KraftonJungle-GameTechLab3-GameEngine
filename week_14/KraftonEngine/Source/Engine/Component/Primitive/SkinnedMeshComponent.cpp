@@ -3,6 +3,7 @@
 #include "Serialization/Archive.h"
 #include "Runtime/Engine.h"
 #include "Mesh/MeshManager.h"
+#include "Materials/MaterialManager.h"
 #include "Collision/Ray/RayUtils.h"
 #include "Core/Logging/Log.h"
 #include "Render/Types/ViewTypes.h"
@@ -169,6 +170,35 @@ void USkinnedMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 USkeletalMesh* USkinnedMeshComponent::GetSkeletalMesh() const
 {
 	return SkeletalMesh;
+}
+
+bool USkinnedMeshComponent::SetSkeletalMeshByPath(const FString& InPath)
+{
+	if (InPath.empty() || InPath == "None")
+	{
+		ClearSkeletalMesh();
+		return true;
+	}
+
+	if (!GEngine)
+	{
+		return false;
+	}
+
+	ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
+	USkeletalMesh* Loaded = FMeshManager::LoadSkeletalMesh(InPath, Device);
+	if (!Loaded)
+	{
+		return false;
+	}
+
+	SetSkeletalMesh(Loaded);
+	return true;
+}
+
+void USkinnedMeshComponent::ClearSkeletalMesh()
+{
+	SetSkeletalMesh(nullptr);
 }
 
 // Bounds 섹션: SkeletalMesh culling은 asset local bounds가 아니라 실제 CPU-skinned vertices를 기준으로 한다.
@@ -1109,6 +1139,39 @@ UMaterial* USkinnedMeshComponent::GetMaterial(int32 ElementIndex) const
 	}
 
 	return nullptr;
+}
+
+bool USkinnedMeshComponent::SetMaterialByPath(int32 ElementIndex, const FString& MaterialPath)
+{
+	if (ElementIndex < 0 || ElementIndex >= static_cast<int32>(MaterialSlots.size()))
+	{
+		return false;
+	}
+
+	if (MaterialPath.empty() || MaterialPath == "None")
+	{
+		SetMaterial(ElementIndex, nullptr);
+		return true;
+	}
+
+	UMaterial* LoadedMat = FMaterialManager::Get().GetOrCreateMaterial(MaterialPath);
+	if (!LoadedMat)
+	{
+		return false;
+	}
+
+	SetMaterial(ElementIndex, LoadedMat);
+	return true;
+}
+
+FString USkinnedMeshComponent::GetMaterialPath(int32 ElementIndex) const
+{
+	if (ElementIndex >= 0 && ElementIndex < static_cast<int32>(MaterialSlots.size()))
+	{
+		return MaterialSlots[ElementIndex].ToString();
+	}
+
+	return "None";
 }
 
 // Duplicate/load 섹션: 저장된 path를 실제 asset pointer로 복원하되 dirty 처리는 SetSkeletalMesh에 위임한다.

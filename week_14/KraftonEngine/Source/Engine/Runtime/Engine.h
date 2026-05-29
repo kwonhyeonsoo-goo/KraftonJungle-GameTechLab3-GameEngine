@@ -27,6 +27,7 @@ public:
 	virtual void Shutdown();
 	virtual void BeginPlay();
 	virtual void Tick(float DeltaTime);
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	virtual void OnWindowResized(uint32 Width, uint32 Height);
 

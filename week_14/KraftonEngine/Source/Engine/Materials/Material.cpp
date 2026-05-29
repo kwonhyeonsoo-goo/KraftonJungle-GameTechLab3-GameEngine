@@ -80,16 +80,14 @@ void FMaterialConstantBuffer::Release()
 
 UMaterial::~UMaterial()
 {
-	for (auto& Pair : ConstantBufferMap)
-	{
-		Pair.second->Release();
-	}
+	ReleaseGPUBuffers();
 	ConstantBufferMap.clear();
 
 	for (auto& Pair : TextureParameters)
 	{
 		Pair.second = nullptr;
 	}
+	TextureParameters.clear();
 }
 
 void UMaterial::Create(const FString& InPathFileName, FMaterialTemplate* InTemplate,

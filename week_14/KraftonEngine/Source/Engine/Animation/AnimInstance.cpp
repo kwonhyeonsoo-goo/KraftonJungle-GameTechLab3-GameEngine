@@ -9,6 +9,8 @@
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "GameFramework/Pawn/Pawn.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 
 #include <algorithm>
 
@@ -17,6 +19,14 @@ const FName UAnimInstance::DefaultMontageSlot = FName("DefaultSlot");
 
 void UAnimInstance::UpdateAnimation(float DeltaSeconds)
 {
+	if (!IsValid(GetOwningComponent()))
+	{
+		NotifyQueue.clear();
+		ActiveNotifyStates.clear();
+		PendingRootMotion = FTransform();
+		return;
+	}
+
 	// Stale guard: 이전 frame 의 PendingRootMotion 이 남아있으면 누구도 consume 안 한 것 — drop.
 	// ACharacter 외 actor 에 root motion 켠 anim 을 붙이면 CMC 가 없어 영원히 누적될 위험
 	// (AccumulateRootMotion 이 매트릭스 곱 → 큰 transform → NaN). 매 frame reset 으로 차단.
@@ -57,7 +67,7 @@ void UAnimInstance::UpdateAnimation(float DeltaSeconds)
 	{
 		for (FMontageSlotEntry& Entry : MontageSlots)
 		{
-			if (Entry.Instance && Entry.Instance->IsActive())
+			if (IsValid(Entry.Instance) && Entry.Instance->IsActive())
 			{
 				Entry.Instance->Tick(DeltaSeconds, this);
 			}
@@ -73,9 +83,9 @@ void UAnimInstance::UpdateAnimation(float DeltaSeconds)
 		FActiveAnimNotifyState& A = ActiveNotifyStates[i];
 		if (!A.bSeenThisFrame)
 		{
-			if (A.State)
+			if (IsValid(A.State) && IsValid(GetOwningComponent()))
 			{
-				A.State->NotifyEnd(OwningComponent, const_cast<UAnimSequenceBase*>(A.Sequence));
+				A.State->NotifyEnd(GetOwningComponent(), const_cast<UAnimSequenceBase*>(A.Sequence));
 			}
 			ActiveNotifyStates.erase(ActiveNotifyStates.begin() + i);
 		}
@@ -84,6 +94,12 @@ void UAnimInstance::UpdateAnimation(float DeltaSeconds)
 
 void UAnimInstance::EvaluatePose(FPoseContext& Output)
 {
+	if (!IsValid(GetOwningComponent()))
+	{
+		Output.ResetToRefPose();
+		return;
+	}
+
 	if (RootNode)
 	{
 		// RootNode 경로 — 트리 안의 FAnimNode_Slot 이 montage 처리. EvaluatePose 가
@@ -156,7 +172,13 @@ void UAnimInstance::SetRootNode(FAnimNode_Base* InRoot)
 
 USkeletalMesh* UAnimInstance::GetSkeletalMesh() const
 {
-	return OwningComponent ? OwningComponent->GetSkeletalMesh() : nullptr;
+	USkeletalMeshComponent* OwnerComponent = GetOwningComponent();
+	return OwnerComponent ? OwnerComponent->GetSkeletalMesh() : nullptr;
+}
+
+USkeletalMeshComponent* UAnimInstance::GetOwningComponent() const
+{
+	return IsValid(OwningComponent) ? OwningComponent : nullptr;
 }
 
 APawn* UAnimInstance::TryGetPawnOwner() const
@@ -173,7 +195,8 @@ APawn* UAnimInstance::TryGetPawnOwner() const
 
 void UAnimInstance::AddAnimNotifies(float PreviousTime, float CurrentTime, const UAnimSequenceBase* Sequence)
 {
-	if (!Sequence) return;
+	USkeletalMeshComponent* OwnerComponent = GetOwningComponent();
+	if (!OwnerComponent || !IsValid(Sequence)) return;
 
 	const TArray<FAnimNotifyEvent>& Notifies = Sequence->GetNotifies();
 	const float Length = Sequence->GetPlayLength();
@@ -212,7 +235,7 @@ void UAnimInstance::AddAnimNotifies(float PreviousTime, float CurrentTime, const
 	for (const FAnimNotifyEvent& Notify : Notifies)
 	{
 		// ── State notify (Duration > 0 + NotifyState 객체) ──
-		if (Notify.NotifyState && Notify.Duration > 0.0f)
+		if (IsValid(Notify.NotifyState) && Notify.Duration > 0.0f)
 		{
 			const float EvStart = Notify.TriggerTime;
 			const float EvEnd   = Notify.TriggerTime + Notify.Duration;
@@ -244,13 +267,13 @@ void UAnimInstance::AddAnimNotifies(float PreviousTime, float CurrentTime, const
 					ActiveNotifyStates.push_back(NewEntry);
 					// push_back 후 reference 무효화 가능 — 인덱스 재조회.
 					A = &ActiveNotifyStates.back();
-					A->State->NotifyBegin(OwningComponent, const_cast<UAnimSequenceBase*>(Sequence), Notify.Duration);
+					if (IsValid(A->State)) A->State->NotifyBegin(OwnerComponent, const_cast<UAnimSequenceBase*>(Sequence), Notify.Duration);
 				}
 				else
 				{
 					A->bSeenThisFrame = true;
 				}
-				A->State->NotifyTick(OwningComponent, const_cast<UAnimSequenceBase*>(Sequence), Overlap);
+				if (IsValid(A->State)) A->State->NotifyTick(OwnerComponent, const_cast<UAnimSequenceBase*>(Sequence), Overlap);
 			}
 			continue;
 		}
@@ -268,7 +291,7 @@ UAnimMontageInstance* UAnimInstance::GetMontageInstanceForSlot(FName SlotName) c
 	const FName Key = (SlotName == FName::None) ? DefaultMontageSlot : SlotName;
 	for (const FMontageSlotEntry& Entry : MontageSlots)
 	{
-		if (Entry.SlotName == Key) return Entry.Instance;
+		if (Entry.SlotName == Key && IsValid(Entry.Instance)) return Entry.Instance;
 	}
 	return nullptr;
 }
@@ -280,14 +303,14 @@ UAnimMontageInstance* UAnimInstance::GetMontageInstance() const
 
 void UAnimInstance::PlayMontage(UAnimMontage* Montage, FName StartSection, float PlayRate, float BlendInTime, FName SlotName)
 {
-	if (!Montage) return;
+	if (!IsValid(Montage) || !IsValid(GetOwningComponent())) return;
 	const FName Key = (SlotName == FName::None) ? DefaultMontageSlot : SlotName;
 
 	// 기존 slot entry 찾거나 새로 만들기 — 첫 PlayMontage 호출 시 lazy 생성.
 	UAnimMontageInstance* Instance = nullptr;
 	for (FMontageSlotEntry& Entry : MontageSlots)
 	{
-		if (Entry.SlotName == Key) { Instance = Entry.Instance; break; }
+		if (Entry.SlotName == Key && IsValid(Entry.Instance)) { Instance = Entry.Instance; break; }
 	}
 	if (!Instance)
 	{
@@ -326,7 +349,7 @@ bool UAnimInstance::IsMontagePlaying(UAnimMontage* Montage, FName SlotName) cons
 	UAnimMontageInstance* MI = GetMontageInstanceForSlot(SlotName);
 	if (!MI || !MI->IsActive()) return false;
 	if (!Montage) return true;
-	return MI->GetCurrentMontage() == Montage;
+	return IsValid(Montage) && MI->GetCurrentMontage() == Montage;
 }
 
 void UAnimInstance::AccumulateRootMotion(const FTransform& Delta)
@@ -354,13 +377,20 @@ FTransform UAnimInstance::ConsumeRootMotion()
 
 void UAnimInstance::DispatchQueuedAnimEvents()
 {
+	USkeletalMeshComponent* OwnerComponent = GetOwningComponent();
+	if (!OwnerComponent)
+	{
+		NotifyQueue.clear();
+		return;
+	}
+
 	for (const FQueuedAnimNotify& Q : NotifyQueue)
 	{
 		// 1) UE 패턴 — 로직 객체가 박혀 있으면 자기 Notify() 실행. 시퀀스가 자기 로직 소유.
-		if (Q.Event.Notify)
+		if (IsValid(Q.Event.Notify) && IsValid(Q.Sequence))
 		{
 			// UAnimNotify::Notify 시그니처가 비-const 라 const_cast.
-			Q.Event.Notify->Notify(OwningComponent, const_cast<UAnimSequenceBase*>(Q.Sequence));
+			Q.Event.Notify->Notify(OwnerComponent, const_cast<UAnimSequenceBase*>(Q.Sequence));
 		}
 
 		// 2) AnimInstance 자식이 NotifyName 매칭으로 추가 처리할 수 있도록 fallback 후크.
@@ -374,4 +404,65 @@ void UAnimInstance::DispatchQueuedAnimEvents()
 		}
 	}
 	NotifyQueue.clear();
+}
+
+
+void UAnimInstance::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UObject::AddReferencedObjects(Collector);
+
+	// OwningComponent is a non-owning back pointer. The skeletal component owns this
+	// instance through its UPROPERTY and must not be kept alive by the instance.
+	for (const FMontageSlotEntry& Entry : MontageSlots)
+	{
+		Collector.AddReferencedObject(Entry.Instance, "AnimInstance.MontageInstance");
+	}
+	for (const FQueuedAnimNotify& Q : NotifyQueue)
+	{
+		Collector.AddReferencedObject(Q.Event.Notify, "AnimInstance.NotifyQueue.Notify");
+		Collector.AddReferencedObject(Q.Event.NotifyState, "AnimInstance.NotifyQueue.NotifyState");
+		Collector.AddReferencedObject(const_cast<UAnimSequenceBase*>(Q.Sequence), "AnimInstance.NotifyQueue.Sequence");
+	}
+	for (const FActiveAnimNotifyState& A : ActiveNotifyStates)
+	{
+		Collector.AddReferencedObject(A.State, "AnimInstance.ActiveNotifyState");
+		Collector.AddReferencedObject(const_cast<UAnimSequenceBase*>(A.Sequence), "AnimInstance.ActiveNotifySequence");
+	}
+	for (const FQueuedAnimNotify& Q : RecentNotifies)
+	{
+		Collector.AddReferencedObject(Q.Event.Notify, "AnimInstance.RecentNotify.Notify");
+		Collector.AddReferencedObject(Q.Event.NotifyState, "AnimInstance.RecentNotify.NotifyState");
+		Collector.AddReferencedObject(const_cast<UAnimSequenceBase*>(Q.Sequence), "AnimInstance.RecentNotify.Sequence");
+	}
+	for (const std::unique_ptr<FAnimNode_Base>& Node : OwnedNodes)
+	{
+		if (Node)
+		{
+			Node->AddReferencedObjects(Collector);
+		}
+	}
+	if (RootNode)
+	{
+		RootNode->AddReferencedObjects(Collector);
+	}
+}
+
+void UAnimInstance::BeginDestroy()
+{
+	NotifyQueue.clear();
+	ActiveNotifyStates.clear();
+	RecentNotifies.clear();
+	for (FMontageSlotEntry& Entry : MontageSlots)
+	{
+		if (IsValid(Entry.Instance))
+		{
+			UObjectManager::Get().DestroyObject(Entry.Instance);
+		}
+		Entry.Instance = nullptr;
+	}
+	MontageSlots.clear();
+	RootNode = nullptr;
+	OwnedNodes.clear();
+	OwningComponent = nullptr;
+	UObject::BeginDestroy();
 }

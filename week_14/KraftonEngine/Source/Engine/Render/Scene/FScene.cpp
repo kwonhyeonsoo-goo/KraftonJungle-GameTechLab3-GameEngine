@@ -1,10 +1,12 @@
 #include "Render/Scene/FScene.h"
+#include "Render/Proxy/DecalSceneProxy.h"
 #include "Component/PrimitiveComponent.h"
 #include "GameFramework/AActor.h"
 #include "Profiling/Stats/Stats.h"
 #include "Debug/DrawDebugHelpers.h"
 #include "Render/Types/LightFrustumUtils.h"
 #include "Render/Types/ShadowSettings.h"
+#include "Object/Object.h"
 #include <algorithm>
 
 void FScene::EnqueueDirtyProxy(TArray<FPrimitiveSceneProxy*>& DirtyList, FPrimitiveSceneProxy* Proxy)
@@ -39,11 +41,35 @@ void FScene::RemoveSelectedProxyFast(TArray<FPrimitiveSceneProxy*>& SelectedList
 	{
 		FPrimitiveSceneProxy* LastProxy = SelectedList.back();
 		SelectedList[Index] = LastProxy;
-		LastProxy->SelectedListIndex = Index;
+		if (LastProxy)
+		{
+			LastProxy->SelectedListIndex = Index;
+		}
 	}
 
 	SelectedList.pop_back();
 	Proxy->SelectedListIndex = UINT32_MAX;
+}
+
+void FScene::RemoveReceiverProxyFromDecalCaches(FPrimitiveSceneProxy* RemovedProxy)
+{
+    if (!RemovedProxy)
+    {
+        return;
+    }
+
+    for (FPrimitiveSceneProxy* Proxy : Proxies)
+    {
+        if (!Proxy || Proxy == RemovedProxy)
+        {
+            continue;
+        }
+
+        if (Proxy->HasProxyFlag(EPrimitiveProxyFlags::Decal))
+        {
+            static_cast<FDecalSceneProxy*>(Proxy)->RemoveReceiverProxy(RemovedProxy);
+        }
+    }
 }
 
 // ============================================================
@@ -58,8 +84,22 @@ FScene::~FScene()
 	Proxies.clear();
 	DirtyProxies.clear();
 	SelectedProxies.clear();
+	SelectedActors.clear();
 	NeverCullProxies.clear();
 	FreeSlots.clear();
+	Environment.Clear();
+}
+
+void FScene::AddReferencedObjects(FReferenceCollector& Collector)
+{
+    TArray<FPrimitiveSceneProxy*> ProxySnapshot = Proxies;
+    for (FPrimitiveSceneProxy* Proxy : ProxySnapshot)
+	{
+		if (Proxy)
+		{
+			Proxy->AddReferencedObjects(Collector);
+		}
+	}
 }
 
 // ============================================================
@@ -67,9 +107,14 @@ FScene::~FScene()
 // ============================================================
 void FScene::RegisterProxy(FPrimitiveSceneProxy* Proxy)
 {
-	if (!Proxy) return;
+	if (!Proxy || !Proxy->HasValidOwner()) return;
 
 	Proxy->DirtyFlags = EDirtyFlag::All; // 초기 등록 시 전체 갱신
+	if (++NextProxyGeneration == 0)
+	{
+		++NextProxyGeneration;
+	}
+	Proxy->ProxyGeneration = NextProxyGeneration;
 
 	// 빈 슬롯 재활용 또는 새 슬롯 할당
 	if (!FreeSlots.empty())
@@ -98,7 +143,7 @@ void FScene::RegisterProxy(FPrimitiveSceneProxy* Proxy)
 // ============================================================
 FPrimitiveSceneProxy* FScene::AddPrimitive(UPrimitiveComponent* Component)
 {
-	if (!Component) return nullptr;
+	if (!IsValid(Component)) return nullptr;
 
 	// 컴포넌트가 자신에 맞는 구체 프록시를 생성 (다형성)
 	FPrimitiveSceneProxy* Proxy = Component->CreateSceneProxy();
@@ -134,14 +179,15 @@ void FScene::RemovePrimitive(FPrimitiveSceneProxy* Proxy)
 	{
 		RemoveSelectedProxyFast(SelectedProxies, Proxy);
 
-		// SelectedActors에서도 정리 — 같은 Actor의 다른 프록시가 없으면 제거
-		AActor* Actor = Proxy->Owner ? Proxy->Owner->GetOwner() : nullptr;
-		if (Actor)
+		UPrimitiveComponent* OwnerComponent = Proxy->GetOwnerEvenIfPendingKill();
+		AActor* Actor = OwnerComponent ? OwnerComponent->GetOwnerEvenIfPendingKill() : nullptr;
+		if (IsAliveObject(Actor))
 		{
 			bool bActorStillSelected = false;
 			for (const FPrimitiveSceneProxy* P : SelectedProxies)
 			{
-				if (P && P->Owner && P->Owner->GetOwner() == Actor)
+				UPrimitiveComponent* OtherOwner = P ? P->GetOwner() : nullptr;
+				if (OtherOwner && OtherOwner->GetOwner() == Actor)
 				{
 					bActorStillSelected = true;
 					break;
@@ -157,6 +203,10 @@ void FScene::RemovePrimitive(FPrimitiveSceneProxy* Proxy)
 		auto it = std::find(NeverCullProxies.begin(), NeverCullProxies.end(), Proxy);
 		if (it != NeverCullProxies.end()) NeverCullProxies.erase(it);
 	}
+
+    // Decal receiver cache는 FPrimitiveSceneProxy*를 non-owning으로 들고 있다.
+    // 제거되는 proxy를 다른 decal proxy들이 계속 들고 있으면 다음 render frame에서 stale pointer가 된다.
+    RemoveReceiverProxyFromDecalCaches(Proxy);
 
 	// 슬롯 비우고 재활용 목록에 추가
 	Proxies[Slot] = nullptr;
@@ -185,7 +235,10 @@ void FScene::UpdateDirtyProxies()
 		}
 
 		Proxy->bQueuedForDirtyUpdate = false;
-		if (!Proxy->Owner) continue;
+		if (!Proxy->HasValidOwner())
+		{
+			continue;
+		}
 
 		// 현재 프레임에 처리할 dirty만 캡처하고, 처리 중 새로 발생한 dirty는
 		// 다음 배치/다음 프레임에 남겨둔다.
@@ -219,7 +272,7 @@ void FScene::UpdateDirtyProxies()
 // ============================================================
 void FScene::MarkProxyDirty(FPrimitiveSceneProxy* Proxy, EDirtyFlag Flag)
 {
-	if (!Proxy) return;
+	if (!Proxy || !Proxy->HasValidOwner()) return;
 	Proxy->MarkDirty(Flag);
 	EnqueueDirtyProxy(DirtyProxies, Proxy);
 }
@@ -228,7 +281,7 @@ void FScene::MarkAllPerObjectCBDirty()
 {
 	for (FPrimitiveSceneProxy* Proxy : Proxies)
 	{
-		if (Proxy)
+		if (Proxy && Proxy->HasValidOwner())
 		{
 			Proxy->MarkPerObjectCBDirty();
 		}
@@ -240,10 +293,11 @@ void FScene::MarkAllPerObjectCBDirty()
 // ============================================================
 void FScene::SetProxySelected(FPrimitiveSceneProxy* Proxy, bool bSelected)
 {
-	if (!Proxy) return;
+	if (!Proxy || !Proxy->HasValidOwner()) return;
 	Proxy->bSelected = bSelected;
 
-	AActor* Actor = Proxy->Owner ? Proxy->Owner->GetOwner() : nullptr;
+	UPrimitiveComponent* OwnerComponent = Proxy->GetOwner();
+	AActor* Actor = OwnerComponent ? OwnerComponent->GetOwner() : nullptr;
 
 	if (bSelected)
 	{
@@ -252,7 +306,7 @@ void FScene::SetProxySelected(FPrimitiveSceneProxy* Proxy, bool bSelected)
 			Proxy->SelectedListIndex = static_cast<uint32>(SelectedProxies.size());
 			SelectedProxies.push_back(Proxy);
 		}
-		if (Actor)
+		if (IsValid(Actor))
 			SelectedActors.insert(Actor);
 	}
 	else
@@ -260,12 +314,13 @@ void FScene::SetProxySelected(FPrimitiveSceneProxy* Proxy, bool bSelected)
 		RemoveSelectedProxyFast(SelectedProxies, Proxy);
 
 		// Actor의 다른 프록시가 아직 선택 중인지 확인
-		if (Actor)
+		if (IsValid(Actor))
 		{
 			bool bActorStillSelected = false;
 			for (const FPrimitiveSceneProxy* P : SelectedProxies)
 			{
-				if (P && P->Owner && P->Owner->GetOwner() == Actor)
+				UPrimitiveComponent* OtherOwner = P ? P->GetOwner() : nullptr;
+				if (OtherOwner && OtherOwner->GetOwner() == Actor)
 				{
 					bActorStillSelected = true;
 					break;
@@ -279,7 +334,7 @@ void FScene::SetProxySelected(FPrimitiveSceneProxy* Proxy, bool bSelected)
 
 void FScene::SetProxyOutlineOnly(FPrimitiveSceneProxy* Proxy, bool bEnabled)
 {
-	if (!Proxy) return;
+	if (!Proxy || !Proxy->HasValidOwner()) return;
 	Proxy->bSelected = bEnabled;
 
 	if (bEnabled)
@@ -297,7 +352,21 @@ void FScene::SetProxyOutlineOnly(FPrimitiveSceneProxy* Proxy, bool bEnabled)
 
 bool FScene::IsProxySelected(const FPrimitiveSceneProxy* Proxy) const
 {
-	return Proxy && Proxy->SelectedListIndex != UINT32_MAX;
+	return Proxy && Proxy->HasValidOwner() && Proxy->SelectedListIndex != UINT32_MAX;
+}
+
+TArray<AActor*> FScene::GetSelectedActors() const
+{
+	TArray<AActor*> Result;
+	Result.reserve(SelectedActors.size());
+	for (AActor* Actor : SelectedActors)
+	{
+		if (IsValid(Actor))
+		{
+			Result.push_back(Actor);
+		}
+	}
+	return Result;
 }
 
 // ============================================================

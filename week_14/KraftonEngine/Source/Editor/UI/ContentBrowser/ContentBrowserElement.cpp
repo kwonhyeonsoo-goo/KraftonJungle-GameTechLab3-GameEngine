@@ -1,4 +1,4 @@
-﻿#include "ContentBrowserElement.h"
+#include "ContentBrowserElement.h"
 
 #include "Asset/AssetPackage.h"
 #include "Editor/EditorEngine.h"
@@ -9,6 +9,8 @@
 #include "CameraShake/CameraShakeManager.h"
 #include "Animation/Graph/AnimGraphAsset.h"
 #include "Animation/Graph/AnimGraphManager.h"
+#include "LuaBlueprint/LuaBlueprintAsset.h"
+#include "LuaBlueprint/LuaBlueprintManager.h"
 #include "Platform/Paths.h"
 #include "Serialization/SceneSaveManager.h"
 #include "Mesh/Static/StaticMesh.h"
@@ -21,6 +23,8 @@
 #include "Animation/Skeleton/Skeleton.h"
 #include "Animation/Skeleton/SkeletonManager.h"
 #include "Asset/AssetRegistry.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialManager.h"
 #include "Editor/UI/Dialog/FbxImportOptionsDialog.h"
 #include "Editor/UI/Asset/Mesh/MeshEditorWidget.h"
 
@@ -642,6 +646,20 @@ void AnimGraphElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 	}
 }
 
+void LuaBlueprintElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
+{
+	if (!Context.EditorEngine)
+	{
+		return;
+	}
+	const FString FilePath = FPaths::ToUtf8(ContentItem.Path.wstring());
+	if (ULuaBlueprintAsset* BlueprintAsset = FLuaBlueprintManager::Get().Load(FilePath))
+	{
+		Context.EditorEngine->OpenAssetEditorForObject(BlueprintAsset);
+	}
+}
+
+
 void MeshElement::RenderContextMenu(ContentBrowserContext& Context)
 {
 	FString Extension = FPaths::ToUtf8(ContentItem.Path.extension());
@@ -834,6 +852,21 @@ void MaterialElement::OnLeftClicked(ContentBrowserContext& Context)
 {
 	MaterialInspector = { ContentItem.Path };
 }
+
+void MaterialElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
+{
+	if (!Context.EditorEngine)
+	{
+		return;
+	}
+
+	const FString MatPath = FPaths::ToUtf8(ContentItem.Path.wstring());
+	if (UMaterial* Material = FMaterialManager::Get().GetOrCreateMaterial(MatPath))
+	{
+		Context.EditorEngine->OpenAssetEditorForObject(Material);
+	}
+}
+
 
 void MaterialElement::RenderDetail()
 {

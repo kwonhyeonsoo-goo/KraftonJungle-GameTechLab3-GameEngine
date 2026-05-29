@@ -6,6 +6,7 @@
 #include "Engine/Platform/Paths.h"
 #include "Collision/Ray/RayUtils.h"
 #include "Mesh/Static/StaticMeshAsset.h"
+#include "Materials/MaterialManager.h"
 #include "Engine/Runtime/Engine.h"
 #include "Render/Shader/ShaderManager.h"
 #include "Texture/Texture2D.h"
@@ -75,6 +76,35 @@ UStaticMesh* UStaticMeshComponent::GetStaticMesh() const
 	return StaticMesh;
 }
 
+bool UStaticMeshComponent::SetStaticMeshByPath(const FString& InPath)
+{
+	if (InPath.empty() || InPath == "None")
+	{
+		ClearStaticMesh();
+		return true;
+	}
+
+	if (!GEngine)
+	{
+		return false;
+	}
+
+	ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
+	UStaticMesh* Loaded = FMeshManager::LoadStaticMesh(InPath, Device);
+	if (!Loaded)
+	{
+		return false;
+	}
+
+	SetStaticMesh(Loaded);
+	return true;
+}
+
+void UStaticMeshComponent::ClearStaticMesh()
+{
+	SetStaticMesh(nullptr);
+}
+
 void UStaticMeshComponent::SetMaterial(int32 ElementIndex, UMaterial* InMaterial)
 {
 	if (ElementIndex >= 0 && ElementIndex < static_cast<int32>(OverrideMaterials.size()))
@@ -101,6 +131,39 @@ UMaterial* UStaticMeshComponent::GetMaterial(int32 ElementIndex) const
 		return OverrideMaterials[ElementIndex];
 	}
 	return nullptr;
+}
+
+bool UStaticMeshComponent::SetMaterialByPath(int32 ElementIndex, const FString& MaterialPath)
+{
+	if (ElementIndex < 0 || ElementIndex >= static_cast<int32>(MaterialSlots.size()))
+	{
+		return false;
+	}
+
+	if (MaterialPath.empty() || MaterialPath == "None")
+	{
+		SetMaterial(ElementIndex, nullptr);
+		return true;
+	}
+
+	UMaterial* LoadedMat = FMaterialManager::Get().GetOrCreateMaterial(MaterialPath);
+	if (!LoadedMat)
+	{
+		return false;
+	}
+
+	SetMaterial(ElementIndex, LoadedMat);
+	return true;
+}
+
+FString UStaticMeshComponent::GetMaterialPath(int32 ElementIndex) const
+{
+	if (ElementIndex >= 0 && ElementIndex < static_cast<int32>(MaterialSlots.size()))
+	{
+		return MaterialSlots[ElementIndex].ToString();
+	}
+
+	return "None";
 }
 
 FMeshBuffer* UStaticMeshComponent::GetMeshBuffer() const

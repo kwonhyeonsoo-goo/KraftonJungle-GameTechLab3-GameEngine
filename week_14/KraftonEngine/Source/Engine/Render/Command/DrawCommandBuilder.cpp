@@ -1,4 +1,4 @@
-﻿#include "DrawCommandBuilder.h"
+#include "DrawCommandBuilder.h"
 
 #include "Resource/ResourceManager.h"
 #include "Render/Types/RenderTypes.h"
@@ -183,10 +183,15 @@ void FDrawCommandBuilder::ApplyMaterialRenderState(FDrawCommandRenderState& OutS
 }
 
 // 섹션의 효과 패스 — PassOverride(MAX=없음) 우선, 아니면 머티리얼 GetRenderPass(), 둘 다 없으면 Opaque.
+static UMaterial* GetValidSectionMaterial(const FMeshSectionDraw& Section)
+{
+	return IsValid(Section.Material) ? Section.Material : nullptr;
+}
+
 static ERenderPass SectionRenderPass(const FMeshSectionDraw& Section)
 {
 	if (Section.PassOverride != ERenderPass::MAX) return Section.PassOverride;
-	if (Section.Material) return Section.Material->GetRenderPass();
+	if (UMaterial* Material = GetValidSectionMaterial(Section)) return Material->GetRenderPass();
 	return ERenderPass::Opaque;
 }
 
@@ -263,21 +268,22 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 			: ProxyBuffer;
 		if (!EffBuffer.IB) continue;
 
-		// 셰이더 도출: custom override 우선, 아니면 (Domain × VertexFactory × Pass × ViewMode).
-		FShader* EffectiveShader;
-		if (Section.Material)
-		{
-			const EVertexFactoryType VFType =
-				(Section.VertexFactory != EVertexFactoryType::Auto) ? Section.VertexFactory
-				: (bSkeletal ? EVertexFactoryType::SkeletalMesh : EVertexFactoryType::StaticMesh);
-				// Translucent 패스 섹션(fog 패스 뒤에 그려짐)은 self-fog 변형 선택 → 거리 fog를 자기 깊이로 적용.
-				EffectiveShader = ResolveSectionShader(Section.Material, VFType, CollectViewMode, bGPUSkinning, bWeightBoneHeatMap, SecPass == ERenderPass::Translucent);
-		}
-		else
-		{
-			// 머티리얼 없는 섹션(예외) — 기존 Proxy 셰이더 경로 보존.
-			EffectiveShader = SelectEffectiveShader(Proxy.GetShader(), CollectViewMode, bGPUSkinning, bWeightBoneHeatMap, SecPass == ERenderPass::Translucent);
-		}
+			// 셰이더 도출: custom override 우선, 아니면 (Domain × VertexFactory × Pass × ViewMode).
+			UMaterial* SectionMaterial = GetValidSectionMaterial(Section);
+			FShader* EffectiveShader;
+			if (SectionMaterial)
+			{
+				const EVertexFactoryType VFType =
+					(Section.VertexFactory != EVertexFactoryType::Auto) ? Section.VertexFactory
+					: (bSkeletal ? EVertexFactoryType::SkeletalMesh : EVertexFactoryType::StaticMesh);
+					// Translucent 패스 섹션(fog 패스 뒤에 그려짐)은 self-fog 변형 선택 → 거리 fog를 자기 깊이로 적용.
+					EffectiveShader = ResolveSectionShader(SectionMaterial, VFType, CollectViewMode, bGPUSkinning, bWeightBoneHeatMap, SecPass == ERenderPass::Translucent);
+			}
+			else
+			{
+				// 머티리얼 없는 섹션(예외) — 기존 Proxy 셰이더 경로 보존.
+				EffectiveShader = SelectEffectiveShader(Proxy.GetShader(), CollectViewMode, bGPUSkinning, bWeightBoneHeatMap, SecPass == ERenderPass::Translucent);
+			}
 
 		FDrawCommand& Cmd = DrawCommandList.AddCommand();
 		Cmd.Pass = Pass;
@@ -294,9 +300,9 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 			: nullptr;
 		Cmd.Bindings.BoneHeatMapCB = bWeightBoneHeatMap ? &BoneHeatMapCB : nullptr;
 	
-		if (!bDepthOnly && Section.Material)
+		if (!bDepthOnly && SectionMaterial)
 		{
-			UMaterial* Mat = Section.Material;
+			UMaterial* Mat = SectionMaterial;
 
 			// dirty CB 업로드 (ConstantBufferMap + PerShaderOverride)
 			Mat->FlushDirtyBuffers(CachedDevice, Ctx);
@@ -332,8 +338,8 @@ void FDrawCommandBuilder::BuildDecalCommandForReceiver(FScene& Scene, const FPri
 {
 	if (!ReceiverProxy.GetMeshBuffer() || !ReceiverProxy.GetMeshBuffer()->IsValid()) return;
 
-	// Decal Material은 SectionDraws[0]에 저장됨
-	UMaterial* DecalMat = DecalProxy.GetSectionDraws().empty() ? nullptr : DecalProxy.GetSectionDraws()[0].Material;
+	// Decal Material은 SectionDraws[0]에 저장됨. GC/Destroy 중인 material은 즉시 제외한다.
+	UMaterial* DecalMat = DecalProxy.GetSectionDraws().empty() ? nullptr : GetValidSectionMaterial(DecalProxy.GetSectionDraws()[0]);
 	if (!DecalMat || !DecalMat->GetShader()) return;
 
 	ID3D11DeviceContext* Ctx = CachedContext;

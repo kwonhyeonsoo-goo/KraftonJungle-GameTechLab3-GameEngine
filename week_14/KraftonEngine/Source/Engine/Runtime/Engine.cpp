@@ -16,10 +16,20 @@
 #include "Texture/Texture2D.h"
 #include "GameFramework/World.h"
 #include "GameFramework/AActor.h"
+#include "Viewport/GameViewportClient.h"
 #include "Core/TickFunction.h"
 #include "Lua/LuaScriptManager.h"
 #include "UI/UIManager.h"
 #include "Audio/AudioManager.h"
+#include "Object/GarbageCollection.h"
+#include "LuaBlueprint/LuaBlueprintManager.h"
+#include "FloatCurve/FloatCurveManager.h"
+#include "CameraShake/CameraShakeManager.h"
+#include "Particle/ParticleSystemManager.h"
+#include "Animation/Graph/AnimGraphManager.h"
+#include "Animation/Skeleton/SkeletonManager.h"
+#include "Animation/AnimationManager.h"
+#include "Materials/MaterialManager.h"
 
 UEngine* GEngine = nullptr;
 
@@ -41,8 +51,20 @@ namespace
 	}
 }
 
+void UEngine::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UObject::AddReferencedObjects(Collector);
+	for (FWorldContext& Context : WorldList)
+	{
+		Collector.AddReferencedObject(Context.World, "WorldContext.World");
+	}
+	Collector.AddReferencedObject(GameViewportClient, "GameViewportClient");
+}
+
+
 void UEngine::Init(FWindowsWindow* InWindow)
 {
+	AddToRoot();
 	Window = InWindow;
 
 	// 싱글턴 초기화 순서 보장
@@ -96,12 +118,29 @@ void UEngine::Shutdown()
 	FAudioManager::Get().Shutdown();
 	FDirectoryWatcher::Get().Shutdown();
 	FLogManager::Get().Shutdown();
+
+	// Any render pass/UI/viewport can leave resources bound on the immediate context.
+	// Detach before tearing down GPU resource owners so COM refcounts and debug-layer state
+	// do not keep stale bindings alive until FD3DDevice::Release().
+	Renderer.GetFD3DDevice().ReleaseImmediateContextBindings(false);
 	RenderPipeline.reset();
+	Renderer.GetFD3DDevice().ReleaseImmediateContextBindings(false);
 	FResourceManager::Get().ReleaseGPUResources();
 	UTexture2D::ReleaseAllGPU();
 	FMeshManager::ReleaseAllGPU();
+	FMaterialManager::Get().Release();
+
+	FAnimationManager::Get().ClearCache();
+	FSkeletonManager::Get().ClearCache();
+	FAnimGraphManager::Get().ClearCache();
+	FLuaBlueprintManager::Get().ClearCache();
+	FParticleSystemManager::Get().ClearCache();
+	FCameraShakeManager::Get().ClearCache();
+	FFloatCurveManager::Get().ClearCache();
+
 	FMeshBufferManager::Get().Release();
 	Renderer.Release();
+	RemoveFromRoot();
 }
 
 void UEngine::BeginPlay()

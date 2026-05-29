@@ -12,6 +12,7 @@
 #include "Editor/UI/Panel/EditorWorldSettingsWidget.h"
 #include "Editor/UI/ContentBrowser/ContentBrowser.h"
 #include "Editor/UI/Asset/AssetEditorManager.h"
+#include "Object/GarbageCollection.h"
 #include "Math/Vector.h"
 
 class AActor;
@@ -43,6 +44,7 @@ public:
 	void OpenAssetEditorForObject(UObject* Object);
 	void CollectAssetEditorPreviewViewportClients(TArray<IEditorPreviewViewportClient*>& OutClients) const { AssetEditorManager.CollectPreviewViewportClients(OutClients); }
 	bool IsMouseOverAssetEditorPreviewViewport() const { return AssetEditorManager.IsMouseOverAnyEditorViewport(); }
+	void AddReferencedObjects(FReferenceCollector& Collector) { AssetEditorManager.AddReferencedObjects(Collector); }
 
 private:
 	void RenderMainMenuBar();

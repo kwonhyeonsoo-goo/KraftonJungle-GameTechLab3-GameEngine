@@ -1,4 +1,4 @@
-﻿#include "Editor/UI/EditorMainPanel.h"
+#include "Editor/UI/EditorMainPanel.h"
 
 #include "Editor/EditorEngine.h"
 #include "Editor/Settings/EditorSettings.h"
@@ -25,6 +25,7 @@
 #include "Editor/UI/Asset/Mesh/MeshEditorWidget.h"
 #include "Editor/UI/Asset/Mesh/StaticMeshEditorWidget.h"
 #include "Editor/UI/Asset/Animation/AnimGraphEditorWidget.h"
+#include "Editor/UI/Asset/LuaBlueprint/LuaBlueprintEditorWidget.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -93,6 +94,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 	ContentBrowserWidget.Initialize(InEditorEngine, InRenderer.GetFD3DDevice().GetDevice());
 	ShadowMapDebugWidget.Initialize(InEditorEngine);
 	AnimationDebugWidget.Initialize(InEditorEngine);
+	AssetEditorManager.Initialize(InEditorEngine);
 
 	AssetEditorManager.RegisterEditor<FFloatCurveEditorWidget>();
 	AssetEditorManager.RegisterEditor<FCameraShakeEditorWidget>();
@@ -100,6 +102,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 	AssetEditorManager.RegisterEditor<FStaticMeshEditorWidget>();
 	AssetEditorManager.RegisterEditor<FAnimGraphEditorWidget>();
 	AssetEditorManager.RegisterEditor<FParticleEditorWidget>();
+	AssetEditorManager.RegisterEditor<FLuaBlueprintEditorWidget>();
 }
 
 void FEditorMainPanel::Release()

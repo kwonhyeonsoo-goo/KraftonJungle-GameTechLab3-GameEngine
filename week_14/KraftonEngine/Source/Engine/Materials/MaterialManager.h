@@ -1,4 +1,5 @@
 #pragma once
+#include "Object/GarbageCollection.h"
 
 #include "Core/Singleton.h"
 #include "Core/Types/CoreTypes.h"
@@ -18,7 +19,7 @@ struct FMaterialAssetListItem
 	FString FullPath;
 };
 
-class FMaterialManager : public TSingleton<FMaterialManager>
+class FMaterialManager : public TSingleton<FMaterialManager>, public FGCObject
 {
 	friend class TSingleton<FMaterialManager>;
 
@@ -33,7 +34,7 @@ class FMaterialManager : public TSingleton<FMaterialManager>
 public:
 	~FMaterialManager(); // 선언만 남김
 
-	void Initialize(ID3D11Device* InDevice) { Device = InDevice; }
+	void Initialize(ID3D11Device* InDevice) { Device = InDevice; bReleased = false; }
 
 	// 지정된 디렉토리 내의 모든 머티리얼을 미리 로드
 	void LoadAllMaterials(ID3D11Device* Device);
@@ -66,7 +67,13 @@ public:
 	bool SetMaterialShader(UMaterial* Material, const FString& ShaderPath);
 
 	void Release();
+	const char* GetReferencerName() const override { return "FMaterialManager"; }
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
+
 private:
+	void PurgeInvalidMaterialCacheEntries();
+	bool bReleased = false;
+
 	// 셰이더로 Template 생성 또는 캐시에서 반환
 	FMaterialTemplate* GetOrCreateTemplate(const FString& ShaderPath);
 

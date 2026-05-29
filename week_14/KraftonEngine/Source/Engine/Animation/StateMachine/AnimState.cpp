@@ -2,10 +2,16 @@
 #include "Animation/AnimInstance.h"
 #include "Animation/PoseContext.h"
 #include "Animation/Nodes/AnimNodeContexts.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 
 // 외부 public 필드 → 내부 Player 로 동기화.
 static void SyncToPlayer(UAnimState& S, FAnimNode_SequencePlayer& Player)
 {
+	if (!IsValid(S.Sequence))
+	{
+		S.Sequence = nullptr;
+	}
 	Player.Sequence  = S.Sequence;
 	Player.PlayRate  = S.PlayRate;
 	Player.bLooping  = S.bLooping;
@@ -73,5 +79,16 @@ void UAnimState::Evaluate(UAnimInstance* /*Instance*/, FPoseContext& Output)
 	{
 		SyncToPlayer(*this, Player);
 		Player.Evaluate(Output);
+	}
+}
+
+
+void UAnimState::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UObject::AddReferencedObjects(Collector);
+	Collector.AddReferencedObject(Sequence, "AnimState.Sequence");
+	if (SubGraphOverride)
+	{
+		SubGraphOverride->AddReferencedObjects(Collector);
 	}
 }

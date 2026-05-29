@@ -22,8 +22,12 @@ struct FStructProperty : FProperty
 	}
 
 	EPropertyType GetType() const override { return EPropertyType::Struct; }
+	bool ContainsObjectReference() const override;
+	EGCReferenceTokenType GetReferenceTokenType() const override { return EGCReferenceTokenType::Struct; }
 	UStruct* GetStructType() const override { return StructType; }
 	const FStructProperty* AsStructProperty() const override { return this; }
+
+	void AddReferencedObjects(void* ValuePtr, FReferenceCollector& Collector) const override;
 
 	void	   SerializeValue(void* ValuePtr, FArchive& Ar) const override;
 	void	   SerializeValue(void* ValuePtr, FArchive& Ar, const FPropertySerializeContext& Context) const override;

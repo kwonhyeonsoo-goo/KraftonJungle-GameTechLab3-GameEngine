@@ -6,6 +6,7 @@
 #include "Particle/ParticleEventManager.h"
 #include "Particle/ParticleSystemManager.h"
 #include "GameFramework/World.h"
+#include "Object/GarbageCollection.h"
 #include "Render/Proxy/Particle/ParticleSystemSceneProxy.h"
 #include "Serialization/Archive.h"
 #include "Core/Logging/Log.h"
@@ -52,6 +53,16 @@ void UParticleSystemComponent::SetTemplate(UParticleSystem* InTemplate)
 
 	PushDynamicDataToProxy();
 	MarkWorldBoundsDirty();
+}
+
+void UParticleSystemComponent::SetEventManager(AParticleEventManager* InMgr)
+{
+	EventManager = InMgr;
+}
+
+AParticleEventManager* UParticleSystemComponent::GetEventManager() const
+{
+	return EventManager.Get();
 }
 
 void UParticleSystemComponent::LoadTemplateFromPath()
@@ -138,8 +149,15 @@ void UParticleSystemComponent::EndPlay()
 {
 	Deactivate();
 	DestroyEmitterInstances();
+	SetEventManager(nullptr);
 
 	UPrimitiveComponent::EndPlay();
+}
+
+void UParticleSystemComponent::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UPrimitiveComponent::AddReferencedObjects(Collector);
+	Collector.AddReferencedObject(Template, "UParticleSystemComponent.Template");
 }
 
 void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -147,7 +165,7 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 {
 	UPrimitiveComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (!EventManager)
+	if (!GetEventManager())
 	{
 		// BeginPlay ordering can leave PSC briefly unbound even though a manager registers
 		// later in the same runtime startup path. Re-query the provider, but do not do
@@ -223,7 +241,7 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 		AccumulatedTime = 0.0f;
 	}
 
-	if (!EventManager)
+	if (!GetEventManager())
 	{
 		MissingEventManagerTimeSeconds += StepDeltaTime;
 	}
@@ -523,7 +541,7 @@ void UParticleSystemComponent::CreateEmitterInstances()
 void UParticleSystemComponent::RefreshEventManagerBinding()
 {
 	SetEventManager(FParticleSystemManager::Get().GetDefaultEventManager());
-	if (EventManager)
+	if (GetEventManager())
 	{
 		MissingEventManagerTimeSeconds = 0.0f;
 	}
@@ -664,7 +682,8 @@ void UParticleSystemComponent::DispatchEventsToReceivers()
 
 void UParticleSystemComponent::DispatchEventsToManager()
 {
-	if (!EventManager)
+	AParticleEventManager* Manager = GetEventManager();
+	if (!Manager)
 	{
 		const float WarningDelaySeconds = 0.5f;
 		if (!bHasWarnedMissingEventManager &&
@@ -682,10 +701,10 @@ void UParticleSystemComponent::DispatchEventsToManager()
 	}
 
 	MissingEventManagerTimeSeconds = 0.0f;
-	EventManager->HandleParticleSpawnEvents    (this, PendingEvents.Spawn);
-	EventManager->HandleParticleDeathEvents    (this, PendingEvents.Death);
-	EventManager->HandleParticleCollisionEvents(this, PendingEvents.Collision);
-	EventManager->HandleParticleBurstEvents    (this, PendingEvents.Burst);
+	Manager->HandleParticleSpawnEvents    (this, PendingEvents.Spawn);
+	Manager->HandleParticleDeathEvents    (this, PendingEvents.Death);
+	Manager->HandleParticleCollisionEvents(this, PendingEvents.Collision);
+	Manager->HandleParticleBurstEvents    (this, PendingEvents.Burst);
 	PendingEvents = {};
 }
 

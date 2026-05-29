@@ -1,4 +1,4 @@
-﻿#include "SceneSaveManager.h"
+#include "SceneSaveManager.h"
 
 #include <iostream>
 #include <fstream>
@@ -14,11 +14,13 @@
 #include "Component/Primitive/HeightFogComponent.h"
 #include "Component/Light/LightComponentBase.h"
 #include "Object/Object.h"
+#include "Object/GarbageCollection.h"
 #include "Object/Reflection/ObjectFactory.h"
 #include "Core/Types/PropertyTypes.h"
 #include "Object/FName.h"
 #include "Serialization/JsonArchive.h"
 #include "Profiling/Time/PlatformTime.h"
+#include "Core/Logging/Log.h"
 
 // ---- JSON vector helpers ---------------------------------------------------
 
@@ -42,6 +44,34 @@ static FVector ReadVec3(json::JSON& Arr)
 		++i;
 	}
 	return out;
+}
+
+static bool IsSceneSerializableObject(const UObject* Object)
+{
+	return IsValid(Object);
+}
+
+static bool IsSceneComponentReachableFromRootTree(const USceneComponent* Root, const USceneComponent* Target)
+{
+	if (!IsSceneSerializableObject(Root) || !IsSceneSerializableObject(Target))
+	{
+		return false;
+	}
+
+	if (Root == Target)
+	{
+		return true;
+	}
+
+	for (USceneComponent* Child : Root->GetChildren())
+	{
+		if (IsSceneComponentReachableFromRootTree(Child, Target))
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -105,7 +135,7 @@ private:
 
 uint32 FSceneSaveManager::FSceneSaveContext::RegisterSceneObject(const UObject* Object)
 {
-	if (!Object)
+	if (!IsSceneSerializableObject(Object))
 	{
 		return 0;
 	}
@@ -123,7 +153,7 @@ uint32 FSceneSaveManager::FSceneSaveContext::RegisterSceneObject(const UObject* 
 
 uint32 FSceneSaveManager::FSceneSaveContext::FindObjectId(const UObject* Object) const
 {
-	if (!Object)
+	if (!IsSceneSerializableObject(Object))
 	{
 		return 0;
 	}
@@ -134,7 +164,7 @@ uint32 FSceneSaveManager::FSceneSaveContext::FindObjectId(const UObject* Object)
 
 void FSceneSaveManager::FSceneLoadContext::RegisterLoadedObject(json::JSON& Node, UObject* Object)
 {
-	if (!Object || !Node.hasKey(SceneKeys::ObjectId))
+	if (!IsSceneSerializableObject(Object) || !Node.hasKey(SceneKeys::ObjectId))
 	{
 		return;
 	}
@@ -154,7 +184,7 @@ UObject* FSceneSaveManager::FSceneLoadContext::FindObjectById(uint32 ObjectId) c
 
 void FSceneSaveManager::FSceneLoadContext::QueueProperties(UObject* Object, json::JSON& Properties)
 {
-	if (!Object)
+	if (!IsSceneSerializableObject(Object))
 	{
 		return;
 	}
@@ -227,8 +257,9 @@ static EWorldType StringToWorldType(const string& Str)
 void FSceneSaveManager::SaveSceneAsJSON(const string& InSceneName, FWorldContext& WorldContext, const FMinimalViewInfo* PerspectivePOV)
 {
 	using namespace json;
+	FScopedGarbageCollectionBlocker GCBlocker;
 
-	if (!WorldContext.World) return;
+	if (!IsSceneSerializableObject(WorldContext.World)) return;
 
 	string FinalName = InSceneName.empty()
 		? "Save_" + GetCurrentTimeStamp()
@@ -255,7 +286,7 @@ void FSceneSaveManager::SaveSceneAsJSON(const string& InSceneName, FWorldContext
 
 void FSceneSaveManager::CollectWorldObjectIds(UWorld* World, FSceneSaveContext& Context)
 {
-	if (!World)
+	if (!IsSceneSerializableObject(World))
 	{
 		return;
 	}
@@ -269,20 +300,20 @@ void FSceneSaveManager::CollectWorldObjectIds(UWorld* World, FSceneSaveContext& 
 
 void FSceneSaveManager::CollectActorObjectIds(AActor* Actor, FSceneSaveContext& Context)
 {
-	if (!Actor)
+	if (!IsSceneSerializableObject(Actor))
 	{
 		return;
 	}
 
 	Context.RegisterSceneObject(Actor);
-	if (Actor->GetRootComponent())
+	if (IsSceneSerializableObject(Actor->GetRootComponent()))
 	{
 		CollectSceneComponentObjectIds(Actor->GetRootComponent(), Context);
 	}
 
 	for (UActorComponent* Comp : Actor->GetComponents())
 	{
-		if (!Comp)
+		if (!IsSceneSerializableObject(Comp))
 		{
 			continue;
 		}
@@ -293,7 +324,7 @@ void FSceneSaveManager::CollectActorObjectIds(AActor* Actor, FSceneSaveContext& 
 
 void FSceneSaveManager::CollectSceneComponentObjectIds(USceneComponent* Comp, FSceneSaveContext& Context)
 {
-	if (!Comp)
+	if (!IsSceneSerializableObject(Comp))
 	{
 		return;
 	}
@@ -301,6 +332,10 @@ void FSceneSaveManager::CollectSceneComponentObjectIds(USceneComponent* Comp, FS
 	Context.RegisterSceneObject(Comp);
 	for (USceneComponent* Child : Comp->GetChildren())
 	{
+		if (!IsSceneSerializableObject(Child))
+		{
+			continue;
+		}
 		CollectSceneComponentObjectIds(Child, Context);
 	}
 }
@@ -326,7 +361,7 @@ json::JSON FSceneSaveManager::SerializeWorld(UWorld* World, const FWorldContext&
 	// ---- Actors ----
 	JSON Actors = json::Array();
 	for (AActor* Actor : World->GetActors()) {
-		if (!Actor) continue;
+		if (!IsSceneSerializableObject(Actor)) continue;
 		Actors.append(SerializeActor(Actor, Context));
 	}
 	w[SceneKeys::Actors] = Actors;
@@ -350,15 +385,26 @@ json::JSON FSceneSaveManager::SerializeActor(AActor* Actor, FSceneSaveContext& C
 	a[SceneKeys::Properties] = SerializeProperties(Actor, Context);
 
 	// RootComponent 트리 직렬화
-	if (Actor->GetRootComponent()) {
+	if (IsSceneSerializableObject(Actor->GetRootComponent())) {
 		a[SceneKeys::RootComponent] = SerializeSceneComponentTree(Actor->GetRootComponent(), Context);
 	}
 
 	// Non-scene components
 	JSON NonScene = json::Array();
 	for (UActorComponent* Comp : Actor->GetComponents()) {
-		if (!Comp) continue;
-		if (Comp->IsA<USceneComponent>()) continue;
+		if (!IsSceneSerializableObject(Comp)) continue;
+		if (Comp->IsA<USceneComponent>())
+		{
+			USceneComponent* SceneComp = static_cast<USceneComponent*>(Comp);
+			if (!IsSceneComponentReachableFromRootTree(Actor->GetRootComponent(), SceneComp))
+			{
+				UE_LOG("[SceneSave] Skipping detached SceneComponent not reachable from RootComponent tree. Actor=%s Component=%s Class=%s",
+					Actor->GetName().c_str(),
+					SceneComp->GetName().c_str(),
+					SceneComp->GetClass()->GetName());
+			}
+			continue;
+		}
 
 		JSON c = json::Object();
 		c[SceneKeys::ClassName] = Comp->GetClass()->GetName();
@@ -376,6 +422,10 @@ json::JSON FSceneSaveManager::SerializeSceneComponentTree(USceneComponent* Comp,
 {
 	using namespace json;
 	JSON c = json::Object();
+	if (!IsSceneSerializableObject(Comp))
+	{
+		return c;
+	}
 	c[SceneKeys::ClassName] = Comp->GetClass()->GetName();
 	c[SceneKeys::ObjectId] = static_cast<int>(Context.RegisterSceneObject(Comp));
 	c[SceneKeys::Properties] = SerializeProperties(Comp, Context);
@@ -383,7 +433,7 @@ json::JSON FSceneSaveManager::SerializeSceneComponentTree(USceneComponent* Comp,
 
 	JSON Children = json::Array();
 	for (USceneComponent* Child : Comp->GetChildren()) {
-		if (!Child) continue;
+		if (!IsSceneSerializableObject(Child)) continue;
 		Children.append(SerializeSceneComponentTree(Child, Context));
 	}
 	c[SceneKeys::Children] = Children;
@@ -395,9 +445,10 @@ json::JSON FSceneSaveManager::SerializeProperties(UObject* Obj, FSceneSaveContex
 {
 	using namespace json;
 	JSON Props = json::Object();
-	if (!Obj) return Props;
+	if (!IsSceneSerializableObject(Obj)) return Props;
 
 	FSceneJsonSaveArchive Ar(Props, Context);
+	Obj->PreSaveForArchive(Ar);
 	Obj->SerializeProperties(Ar, PF_Save);
 	return Props;
 }
@@ -453,6 +504,7 @@ void FSceneSaveManager::DeserializeCamera(json::JSON& CameraJSON, FPerspectiveCa
 void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext& OutWorldContext, FPerspectiveCameraData& OutCam, const EWorldType* OverrideWorldType)
 {
 	using json::JSON;
+	FScopedGarbageCollectionBlocker GCBlocker;
 	std::ifstream File(std::filesystem::path(FPaths::ToWide(filepath)));
 	if (!File.is_open()) {
 		std::cerr << "Failed to open file at target destination" << std::endl;
@@ -570,15 +622,42 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 
 	for (FPendingPropertyLoad& Pending : LoadContextState.PendingProperties)
 	{
-		if (Pending.Object && Pending.Properties)
+		if (IsSceneSerializableObject(Pending.Object) && Pending.Properties)
 		{
 			DeserializeProperties(Pending.Object, *Pending.Properties, LoadContextState);
 		}
 	}
 
+	// Components are registered while the object graph is being created so object-id
+	// references can be resolved. Some render resources, however, depend on properties
+	// that are only applied in the deferred pass above. Rebuild render state once after
+	// all reflected properties/PostLoad fixups are complete.
 	for (AActor* Actor : World->GetActors())
 	{
-		if (!Actor)
+		if (!IsValid(Actor))
+		{
+			continue;
+		}
+
+		for (UActorComponent* Component : Actor->GetComponents())
+		{
+			if (!IsValid(Component))
+			{
+				continue;
+			}
+
+			Component->DestroyRenderState();
+			if (USceneComponent* SceneComponent = Cast<USceneComponent>(Component))
+			{
+				SceneComponent->MarkTransformDirty();
+			}
+			Component->CreateRenderState();
+		}
+	}
+
+	for (AActor* Actor : World->GetActors())
+	{
+		if (!IsSceneSerializableObject(Actor))
 		{
 			continue;
 		}
@@ -595,9 +674,14 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 
 USceneComponent* FSceneSaveManager::DeserializeSceneComponentTree(json::JSON& Node, AActor* Owner, FSceneLoadContext& Context)
 {
+	if (!IsSceneSerializableObject(Owner))
+	{
+		return nullptr;
+	}
+
 	string ClassName = Node[SceneKeys::ClassName].ToString();
 	UObject* Obj = FObjectFactory::Get().Create(ClassName, Owner);
-	if (!Obj || !Obj->IsA<USceneComponent>()) return nullptr;
+	if (!IsSceneSerializableObject(Obj) || !Obj->IsA<USceneComponent>()) return nullptr;
 
 	USceneComponent* Comp = static_cast<USceneComponent*>(Obj);
 	Context.RegisterLoadedObject(Node, Comp);
@@ -628,7 +712,7 @@ USceneComponent* FSceneSaveManager::DeserializeSceneComponentTree(json::JSON& No
 
 void FSceneSaveManager::DeserializeProperties(UObject* Obj, json::JSON& PropsJSON, FSceneLoadContext& Context)
 {
-	if (!Obj) return;
+	if (!IsSceneSerializableObject(Obj)) return;
 
 	TArray<const FProperty*> Properties;
 	Obj->GetClass()->GetPropertyRefs(Properties);
@@ -688,6 +772,8 @@ void FSceneSaveManager::DeserializeProperties(UObject* Obj, json::JSON& PropsJSO
 		Obj->PostEditChangeProperty(Event);
 	}
 
+	FSceneJsonLoadArchive PostLoadArchive(PropsJSON, Context);
+	Obj->PostLoadFromArchive(PostLoadArchive);
 }
 
 // ============================================================

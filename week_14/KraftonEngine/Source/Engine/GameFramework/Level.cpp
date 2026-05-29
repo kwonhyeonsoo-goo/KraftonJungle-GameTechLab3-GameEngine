@@ -1,24 +1,47 @@
 #include "GameFramework/Level.h"
 #include "Object/Reflection/ObjectFactory.h"
 #include <GameFramework/World.h>
+#include "Object/GarbageCollection.h"
+#include <algorithm>
 
 ULevel::ULevel(UWorld* OwingWorld)
-	: OwingWorld(OwingWorld)
 {
+	SetWorld(OwingWorld);
 	Actors.clear();
 }
 
-ULevel::ULevel(const TArray<AActor*>& Actors, UWorld* World)
-	: Actors(Actors)
+ULevel::ULevel(const TArray<AActor*>& InActors, UWorld* World)
+	: Actors(InActors)
 {
-	OwingWorld = World;
+	SetWorld(World);
 }
 
 ULevel::~ULevel()
 {
-	Clear();
-	OwingWorld = nullptr;
+	if (!HasAnyFlags(RF_BeginDestroy))
+	{
+		BeginDestroy();
+	}
 }
+
+void ULevel::BeginDestroy()
+{
+	if (HasAnyFlags(RF_BeginDestroy))
+	{
+		return;
+	}
+
+	RouteLevelDestroyed();
+	SetOuter(nullptr);
+	UObject::BeginDestroy();
+}
+
+void ULevel::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UObject::AddReferencedObjects(Collector);
+	Collector.AddReferencedObjects(Actors, "Actors");
+}
+
 
 void ULevel::AddActor(AActor* Actor)
 {
@@ -49,21 +72,16 @@ void ULevel::RemoveActor(AActor* Actor)
 
 void ULevel::Clear()
 {
-	for (AActor* Actor : Actors)
-	{
-		if (Actor)
-		{
-			Actor->SetOuter(nullptr);
-		}
-	}
-
-	Actors.clear();
+	// Clear is a destructive level operation. Do not orphan actors by only nulling
+	// Outer; route actor/component teardown so delegates, render/physics state, and
+	// GC pending-kill flags are all consistent.
+	RouteLevelDestroyed();
 }
 
 void ULevel::Tick(float DeltaTime) {
 	for (AActor* Actor : Actors)
 	{
-		if (Actor)
+		if (IsValid(Actor))
 		{
 			Actor->Tick(DeltaTime);
 		}
@@ -76,7 +94,7 @@ void ULevel::BeginPlay()
 	for (size_t i = 0; i < InitialCount; ++i)
 	{
 		AActor* Actor = Actors[i];
-		if (Actor && !Actor->HasActorBegunPlay())
+		if (IsValid(Actor) && !Actor->HasActorBegunPlay())
 		{
 			Actor->BeginPlay();
 		}
@@ -87,18 +105,45 @@ void ULevel::EndPlay()
 {
 	for (AActor* Actor : Actors)
 	{
-		if (Actor)
+		if (IsValid(Actor))
 		{
 			Actor->EndPlay();
 		}
 	}
+}
 
+void ULevel::RouteLevelDestroyed()
+{
+	if (bLevelDestroyRouted)
+	{
+		return;
+	}
+
+	bLevelDestroyRouted = true;
+	EndPlay();
+
+	TArray<AActor*> ActorsToDestroy;
+	ActorsToDestroy.reserve(Actors.size());
 	for (AActor* Actor : Actors)
 	{
-		if (Actor)
+		if (IsAliveObject(Actor))
 		{
-			UObjectManager::Get().DestroyObject(Actor);
+			ActorsToDestroy.push_back(Actor);
 		}
 	}
+
+	for (AActor* Actor : ActorsToDestroy)
+	{
+		if (!IsAliveObject(Actor))
+		{
+			continue;
+		}
+
+		Actor->RouteActorDestroyed();
+		Actor->MarkPendingKill();
+	}
+
 	Actors.clear();
+	OwingWorld.Reset();
+	MarkPendingKill();
 }

@@ -47,6 +47,10 @@ public:
 		uint32 ObjectTypeMask, const AActor* IgnoreActor = nullptr) const override;
 
 private:
+	void CompactInvalidComponents();
+	void ErasePairsWithInvalidComponents(std::unordered_set<FOverlapPair>& Pairs);
+	void ErasePairsWithComponent(std::unordered_set<FOverlapPair>& Pairs, UPrimitiveComponent* Comp);
+
 	UWorld* World = nullptr;
 	std::vector<UPrimitiveComponent*> RegisteredComponents;
 

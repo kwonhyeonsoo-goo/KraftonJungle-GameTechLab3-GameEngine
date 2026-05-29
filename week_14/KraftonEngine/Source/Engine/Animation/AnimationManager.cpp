@@ -1,4 +1,5 @@
 #include "AnimationManager.h"
+#include "Object/GarbageCollection.h"
 
 #include "Animation/Sequence/AnimSequence.h"
 #include "Animation/Montage/AnimMontage.h"
@@ -184,7 +185,11 @@ UAnimSequence* FAnimationManager::LoadAnimation(const FString& PackagePath)
     auto It = AnimationCaches.find(NormalizedPath);
     if (It != AnimationCaches.end())
     {
-        return It->second;
+        if (IsValid(It->second))
+        {
+            return It->second;
+        }
+        AnimationCaches.erase(It);
     }
 
     FWindowsBinReader Reader(NormalizedPath);
@@ -500,7 +505,11 @@ UAnimMontage* FAnimationManager::LoadMontage(const FString& PackagePath)
     auto It = MontageCaches.find(NormalizedPath);
     if (It != MontageCaches.end())
     {
-        return It->second;
+        if (IsValid(It->second))
+        {
+            return It->second;
+        }
+        MontageCaches.erase(It);
     }
 
     FWindowsBinReader Reader(NormalizedPath);
@@ -668,4 +677,25 @@ void FAnimationManager::RefreshAvailableMontages()
         Item.FullPath    = RelPath;
         AvailableMontageFiles.push_back(std::move(Item));
     }
+}
+
+
+void FAnimationManager::AddReferencedObjects(FReferenceCollector& Collector)
+{
+    for (auto& Pair : AnimationCaches)
+    {
+        Collector.AddReferencedObject(Pair.second, "FAnimationManager.AnimationCaches");
+    }
+    for (auto& Pair : MontageCaches)
+    {
+        Collector.AddReferencedObject(Pair.second, "FAnimationManager.MontageCaches");
+    }
+}
+
+void FAnimationManager::ClearCache()
+{
+    AnimationCaches.clear();
+    MontageCaches.clear();
+    AvailableAnimationFiles.clear();
+    AvailableMontageFiles.clear();
 }

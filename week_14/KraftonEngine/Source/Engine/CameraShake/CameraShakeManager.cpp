@@ -1,4 +1,6 @@
-﻿#include "CameraShakeManager.h"
+#include "CameraShakeManager.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 #include "CameraShakeAsset.h"
 #include "Asset/AssetPackage.h"
 #include "Platform/Paths.h"
@@ -11,7 +13,11 @@ UCameraShakeAsset* FCameraShakeManager::Load(const FString& Path)
 	auto it = LoadedShakes.find(NormalizedPath);
 	if (it != LoadedShakes.end())
 	{
-		return it->second;
+		if (IsValid(it->second))
+		{
+			return it->second;
+		}
+		LoadedShakes.erase(it);
 	}
 
 	if (FAssetPackage::IsAssetPackagePath(NormalizedPath))
@@ -56,7 +62,15 @@ UCameraShakeAsset* FCameraShakeManager::Find(const FString& Path) const
 {
 	FString NormalizedPath = FPaths::MakeProjectRelative(Path);
 	auto it = LoadedShakes.find(NormalizedPath);
-	return it != LoadedShakes.end() ? it->second : nullptr;
+	if (it == LoadedShakes.end())
+	{
+		return nullptr;
+	}
+	if (IsValid(it->second))
+	{
+		return it->second;
+	}
+	return nullptr;
 }
 
 bool FCameraShakeManager::Save(UCameraShakeAsset* Asset)
@@ -90,4 +104,18 @@ bool FCameraShakeManager::Save(UCameraShakeAsset* Asset)
 	Asset->Serialize(Ar);
 
 	return Ar.IsValid();
+}
+
+
+void FCameraShakeManager::AddReferencedObjects(FReferenceCollector& Collector)
+{
+    for (auto& Pair : LoadedShakes)
+    {
+        Collector.AddReferencedObject(Pair.second, "FCameraShakeManager.LoadedShakes");
+    }
+}
+
+void FCameraShakeManager::ClearCache()
+{
+    LoadedShakes.clear();
 }

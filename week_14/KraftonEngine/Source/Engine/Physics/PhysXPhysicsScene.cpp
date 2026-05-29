@@ -120,7 +120,7 @@ public:
 
 			auto* CompA = CP.shapes[0] ? static_cast<UPrimitiveComponent*>(CP.shapes[0]->userData) : nullptr;
 			auto* CompB = CP.shapes[1] ? static_cast<UPrimitiveComponent*>(CP.shapes[1]->userData) : nullptr;
-			if (!CompA || !CompB) continue;
+			if (!IsValid(CompA) || !IsValid(CompB)) continue;
 
 			if (bEnd)
 			{
@@ -195,7 +195,7 @@ public:
 
 			auto* TriggerComp = TP.triggerShape ? static_cast<UPrimitiveComponent*>(TP.triggerShape->userData) : nullptr;
 			auto* OtherComp   = TP.otherShape   ? static_cast<UPrimitiveComponent*>(TP.otherShape->userData)   : nullptr;
-			if (!TriggerComp || !OtherComp) continue;
+			if (!IsValid(TriggerComp) || !IsValid(OtherComp)) continue;
 
 			const bool bBegin = (TP.status == PxPairFlag::eNOTIFY_TOUCH_FOUND);
 			const bool bEnd   = (TP.status == PxPairFlag::eNOTIFY_TOUCH_LOST);
@@ -226,7 +226,7 @@ public:
 
 		for (FQueuedHit& E : HitsToDispatch)
 		{
-			if (!IsAliveObject(E.Self) || !IsAliveObject(E.Other)) continue;
+			if (!IsValid(E.Self) || !IsValid(E.Other)) continue;
 			AActor* OtherActor = E.Other->GetOwner();
 			if (E.bBegin)
 			{
@@ -240,7 +240,7 @@ public:
 
 		for (FQueuedTrigger& E : TriggersToDispatch)
 		{
-			if (!IsAliveObject(E.Self) || !IsAliveObject(E.Other)) continue;
+			if (!IsValid(E.Self) || !IsValid(E.Other)) continue;
 			AActor* OtherActor = E.Other->GetOwner();
 			if (E.bBegin)
 			{
@@ -467,6 +467,65 @@ void FPhysXPhysicsScene::Shutdown()
 	World = nullptr;
 }
 
+void FPhysXPhysicsScene::CompactInvalidMappings()
+{
+	if (!Scene)
+	{
+		BodyMappings.clear();
+		return;
+	}
+
+	for (auto It = BodyMappings.begin(); It != BodyMappings.end();)
+	{
+		FBodyMapping& Mapping = *It;
+		const bool bMappingOwnerInvalid = !IsValid(Mapping.OwnerActor);
+		const bool bMappingActorInvalid = Mapping.Actor == nullptr;
+		const bool bRootInvalid = !IsValid(Mapping.RootComp);
+
+		if (bMappingOwnerInvalid || bMappingActorInvalid || bRootInvalid)
+		{
+			if (Mapping.Actor)
+			{
+				Scene->removeActor(*Mapping.Actor);
+				Mapping.Actor->release();
+				Mapping.Actor = nullptr;
+			}
+			It = BodyMappings.erase(It);
+			continue;
+		}
+
+		Mapping.Components.erase(
+			std::remove_if(
+				Mapping.Components.begin(),
+				Mapping.Components.end(),
+				[this, &Mapping](UPrimitiveComponent* Comp)
+				{
+					if (IsValid(Comp))
+					{
+						return false;
+					}
+
+					DetachShapeForComponent(Mapping, Comp);
+					return true;
+				}),
+			Mapping.Components.end());
+
+		if (Mapping.Components.empty())
+		{
+			if (Mapping.Actor)
+			{
+				Scene->removeActor(*Mapping.Actor);
+				Mapping.Actor->release();
+				Mapping.Actor = nullptr;
+			}
+			It = BodyMappings.erase(It);
+			continue;
+		}
+
+		++It;
+	}
+}
+
 // ============================================================
 // Body 관리 — Actor 단위 compound
 //
@@ -477,17 +536,18 @@ void FPhysXPhysicsScene::Shutdown()
 
 void FPhysXPhysicsScene::RegisterComponent(UPrimitiveComponent* Comp)
 {
-	if (!Comp || !Scene || !Physics || !DefaultMaterial) return;
+	CompactInvalidMappings();
+	if (!IsValid(Comp) || !Scene || !Physics || !DefaultMaterial) return;
 	if (FindMappingByComponent(Comp)) return; // 이미 등록됨
 
 	AActor* OwnerActor = Comp->GetOwner();
-	if (!OwnerActor) return;
+	if (!IsValid(OwnerActor)) return;
 
 	FBodyMapping* Mapping = FindMappingByActor(OwnerActor);
 
 	if (!Mapping)
 	{
-		UPrimitiveComponent* RootPrim = Cast<UPrimitiveComponent>(OwnerActor->GetRootComponent());
+			UPrimitiveComponent* RootPrim = Cast<UPrimitiveComponent>(OwnerActor->GetRootComponent());
 		if (!RootPrim) RootPrim = Comp;
 
 		// SimulatePhysics 가 우선. 아니면서 Kinematic 이면 RigidDynamic + eKINEMATIC
@@ -536,7 +596,8 @@ void FPhysXPhysicsScene::RegisterComponent(UPrimitiveComponent* Comp)
 
 void FPhysXPhysicsScene::UnregisterComponent(UPrimitiveComponent* Comp)
 {
-	if (!Comp || !Scene) return;
+	CompactInvalidMappings();
+	if (!IsAliveObject(Comp) || !Scene) return;
 
 	FBodyMapping* Mapping = FindMappingByComponent(Comp);
 	if (!Mapping) return;
@@ -576,10 +637,11 @@ void FPhysXPhysicsScene::RebuildBody(UPrimitiveComponent* Comp)
 	// SimulatePhysics 변경(Dynamic ↔ Static)은 PxActor type 변경이라 actor를 통째 재생성해야 한다.
 	// 또한 ObjectType/Response 변경은 shape filterData도 새로 계산해야 정확.
 	// 단순화 위해 같은 액터의 모든 컴포넌트를 unregister + register로 일괄 재구성.
-	if (!Comp || !Scene) return;
+	CompactInvalidMappings();
+	if (!IsValid(Comp) || !Scene) return;
 
 	AActor* OwnerActor = Comp->GetOwner();
-	if (!OwnerActor) return;
+	if (!IsValid(OwnerActor)) return;
 
 	FBodyMapping* Mapping = FindMappingByActor(OwnerActor);
 	if (!Mapping) return; // 등록 안 됨 — skip
@@ -589,10 +651,12 @@ void FPhysXPhysicsScene::RebuildBody(UPrimitiveComponent* Comp)
 
 	for (UPrimitiveComponent* C : CompList)
 	{
+		if (!IsValid(C)) continue;
 		UnregisterComponent(C);
 	}
 	for (UPrimitiveComponent* C : CompList)
 	{
+		if (!IsValid(C)) continue;
 		RegisterComponent(C);
 	}
 }
@@ -604,6 +668,7 @@ void FPhysXPhysicsScene::RebuildBody(UPrimitiveComponent* Comp)
 void FPhysXPhysicsScene::Tick(float DeltaTime)
 {
 	if (!Scene || DeltaTime <= 0.0f) return;
+	CompactInvalidMappings();
 
 	// 어떤 이유로든 frame hitch (씬 로드 / 큰 OBJ 동기 로딩 / Alt-Tab / OS 스파이크) 가
 	// 발생해도 PhysX 가 큰 dt 한 번에 적분해 차량·메테오가 콜리전을 뚫는 tunneling 사고를
@@ -632,7 +697,7 @@ void FPhysXPhysicsScene::Tick(float DeltaTime)
 
 	for (auto& Mapping : BodyMappings)
 	{
-		if (!Mapping.RootComp || !Mapping.Actor) continue;
+		if (!IsValid(Mapping.RootComp) || !Mapping.Actor) continue;
 
 		PxTransform NewPose = GetPxTransform(Mapping.RootComp);
 
@@ -672,7 +737,7 @@ void FPhysXPhysicsScene::Tick(float DeltaTime)
 	// RootComp에만 transform 적용 → 자식 컴포넌트는 attach로 자동 따라감.
 	for (auto& Mapping : BodyMappings)
 	{
-		if (!Mapping.RootComp || !Mapping.Actor) continue;
+		if (!IsValid(Mapping.RootComp) || !Mapping.Actor) continue;
 
 		PxRigidDynamic* Dynamic = Mapping.Actor->is<PxRigidDynamic>();
 		if (!Dynamic) continue;
@@ -703,7 +768,7 @@ void FPhysXPhysicsScene::Tick(float DeltaTime)
 
 PxShape* FPhysXPhysicsScene::AddShapeForComponent(FBodyMapping& Mapping, UPrimitiveComponent* Comp)
 {
-	if (!Mapping.Actor || !DefaultMaterial || !Comp) return nullptr;
+	if (!Mapping.Actor || !DefaultMaterial || !IsValid(Comp) || !IsValid(Mapping.RootComp)) return nullptr;
 
 	// Shape Component 타입에 따라 PxGeometry 결정
 	PxGeometryHolder Geom;
@@ -830,18 +895,20 @@ void FPhysXPhysicsScene::DetachShapeForComponent(FBodyMapping& Mapping, UPrimiti
 
 FPhysXPhysicsScene::FBodyMapping* FPhysXPhysicsScene::FindMappingByActor(AActor* OwnerActor)
 {
+	if (!IsValid(OwnerActor)) return nullptr;
 	for (auto& M : BodyMappings)
 	{
-		if (M.OwnerActor == OwnerActor) return &M;
+		if (IsValid(M.OwnerActor) && M.OwnerActor == OwnerActor) return &M;
 	}
 	return nullptr;
 }
 
 const FPhysXPhysicsScene::FBodyMapping* FPhysXPhysicsScene::FindMappingByActor(AActor* OwnerActor) const
 {
+	if (!IsValid(OwnerActor)) return nullptr;
 	for (const auto& M : BodyMappings)
 	{
-		if (M.OwnerActor == OwnerActor) return &M;
+		if (IsValid(M.OwnerActor) && M.OwnerActor == OwnerActor) return &M;
 	}
 	return nullptr;
 }
@@ -851,12 +918,12 @@ const FPhysXPhysicsScene::FBodyMapping* FPhysXPhysicsScene::FindMappingByActor(A
 // 다른 컴포넌트의 shape를 통해 force가 잘못 적용되지 않도록 nullptr 반환.
 FPhysXPhysicsScene::FBodyMapping* FPhysXPhysicsScene::FindMappingByComponent(UPrimitiveComponent* Comp)
 {
-	if (!Comp) return nullptr;
+	if (!IsValid(Comp)) return nullptr;
 	for (auto& M : BodyMappings)
 	{
 		for (UPrimitiveComponent* C : M.Components)
 		{
-			if (C == Comp) return &M;
+			if (IsValid(C) && C == Comp) return &M;
 		}
 	}
 	return nullptr;
@@ -864,12 +931,12 @@ FPhysXPhysicsScene::FBodyMapping* FPhysXPhysicsScene::FindMappingByComponent(UPr
 
 const FPhysXPhysicsScene::FBodyMapping* FPhysXPhysicsScene::FindMappingByComponent(UPrimitiveComponent* Comp) const
 {
-	if (!Comp) return nullptr;
+	if (!IsValid(Comp)) return nullptr;
 	for (const auto& M : BodyMappings)
 	{
 		for (UPrimitiveComponent* C : M.Components)
 		{
-			if (C == Comp) return &M;
+			if (IsValid(C) && C == Comp) return &M;
 		}
 	}
 	return nullptr;
@@ -881,6 +948,7 @@ const FPhysXPhysicsScene::FBodyMapping* FPhysXPhysicsScene::FindMappingByCompone
 
 void FPhysXPhysicsScene::AddForce(UPrimitiveComponent* Comp, const FVector& Force)
 {
+	CompactInvalidMappings();
 	FBodyMapping* M = FindMappingByComponent(Comp);
 	if (!M || !M->Actor) return;
 	PxRigidDynamic* Dyn = M->Actor->is<PxRigidDynamic>();
@@ -890,6 +958,7 @@ void FPhysXPhysicsScene::AddForce(UPrimitiveComponent* Comp, const FVector& Forc
 
 void FPhysXPhysicsScene::AddForceAtLocation(UPrimitiveComponent* Comp, const FVector& Force, const FVector& WorldLocation)
 {
+	CompactInvalidMappings();
 	FBodyMapping* M = FindMappingByComponent(Comp);
 	if (!M || !M->Actor) return;
 	PxRigidDynamic* Dyn = M->Actor->is<PxRigidDynamic>();
@@ -899,6 +968,7 @@ void FPhysXPhysicsScene::AddForceAtLocation(UPrimitiveComponent* Comp, const FVe
 
 void FPhysXPhysicsScene::AddTorque(UPrimitiveComponent* Comp, const FVector& Torque)
 {
+	CompactInvalidMappings();
 	FBodyMapping* M = FindMappingByComponent(Comp);
 	if (!M || !M->Actor) return;
 	PxRigidDynamic* Dyn = M->Actor->is<PxRigidDynamic>();
@@ -921,6 +991,7 @@ FVector FPhysXPhysicsScene::GetLinearVelocity(UPrimitiveComponent* Comp) const
 
 void FPhysXPhysicsScene::SetLinearVelocity(UPrimitiveComponent* Comp, const FVector& Vel)
 {
+	CompactInvalidMappings();
 	FBodyMapping* M = FindMappingByComponent(Comp);
 	if (!M || !M->Actor) return;
 	PxRigidDynamic* Dyn = M->Actor->is<PxRigidDynamic>();
@@ -939,6 +1010,7 @@ FVector FPhysXPhysicsScene::GetAngularVelocity(UPrimitiveComponent* Comp) const
 
 void FPhysXPhysicsScene::SetAngularVelocity(UPrimitiveComponent* Comp, const FVector& Vel)
 {
+	CompactInvalidMappings();
 	FBodyMapping* M = FindMappingByComponent(Comp);
 	if (!M || !M->Actor) return;
 	PxRigidDynamic* Dyn = M->Actor->is<PxRigidDynamic>();
@@ -952,6 +1024,7 @@ void FPhysXPhysicsScene::SetAngularVelocity(UPrimitiveComponent* Comp, const FVe
 
 void FPhysXPhysicsScene::SetMass(UPrimitiveComponent* Comp, float NewMass)
 {
+	CompactInvalidMappings();
 	FBodyMapping* M = FindMappingByComponent(Comp);
 	if (!M || !M->Actor) return;
 	PxRigidDynamic* Dyn = M->Actor->is<PxRigidDynamic>();
@@ -960,7 +1033,7 @@ void FPhysXPhysicsScene::SetMass(UPrimitiveComponent* Comp, float NewMass)
 	// setMassAndUpdateInertia(rigid, mass, com=NULL)는 COM을 shape 분포로
 	// 자동 재계산하면서 이전 setCMassLocalPose를 덮어쓴다. RootComp의
 	// CenterOfMassOffset을 명시 전달해 보존.
-	PxVec3 LocalCOM = M->RootComp ? ToPxVec3(M->RootComp->GetCenterOfMass()) : PxVec3(0);
+	PxVec3 LocalCOM = IsValid(M->RootComp) ? ToPxVec3(M->RootComp->GetCenterOfMass()) : PxVec3(0);
 	PxRigidBodyExt::setMassAndUpdateInertia(*Dyn, NewMass, &LocalCOM);
 }
 
@@ -975,6 +1048,7 @@ float FPhysXPhysicsScene::GetMass(UPrimitiveComponent* Comp) const
 
 void FPhysXPhysicsScene::SetCenterOfMass(UPrimitiveComponent* Comp, const FVector& LocalOffset)
 {
+	CompactInvalidMappings();
 	FBodyMapping* M = FindMappingByComponent(Comp);
 	if (!M || !M->Actor) return;
 	PxRigidDynamic* Dyn = M->Actor->is<PxRigidDynamic>();
@@ -1059,12 +1133,25 @@ bool FPhysXPhysicsScene::Raycast(const FVector& Start, const FVector& Dir, float
 
 	if (Block.shape && Block.shape->userData)
 	{
-		OutHit.HitComponent = static_cast<UPrimitiveComponent*>(Block.shape->userData);
-		OutHit.HitActor = OutHit.HitComponent->GetOwner();
+		UPrimitiveComponent* HitComp = static_cast<UPrimitiveComponent*>(Block.shape->userData);
+		if (IsValid(HitComp))
+		{
+			OutHit.HitComponent = HitComp;
+			OutHit.HitActor = HitComp->GetOwner();
+		}
 	}
 	else if (Block.actor && Block.actor->userData)
 	{
-		OutHit.HitActor = static_cast<AActor*>(Block.actor->userData);
+		AActor* HitActor = static_cast<AActor*>(Block.actor->userData);
+		if (IsValid(HitActor))
+		{
+			OutHit.HitActor = HitActor;
+		}
+	}
+	if (!OutHit.HitComponent && !OutHit.HitActor)
+	{
+		OutHit.bHit = false;
+		return false;
 	}
 
 	return true;
@@ -1130,12 +1217,25 @@ bool FPhysXPhysicsScene::RaycastByObjectTypes(const FVector& Start, const FVecto
 
 	if (Block.shape && Block.shape->userData)
 	{
-		OutHit.HitComponent = static_cast<UPrimitiveComponent*>(Block.shape->userData);
-		OutHit.HitActor = OutHit.HitComponent->GetOwner();
+		UPrimitiveComponent* HitComp = static_cast<UPrimitiveComponent*>(Block.shape->userData);
+		if (IsValid(HitComp))
+		{
+			OutHit.HitComponent = HitComp;
+			OutHit.HitActor = HitComp->GetOwner();
+		}
 	}
 	else if (Block.actor && Block.actor->userData)
 	{
-		OutHit.HitActor = static_cast<AActor*>(Block.actor->userData);
+		AActor* HitActor = static_cast<AActor*>(Block.actor->userData);
+		if (IsValid(HitActor))
+		{
+			OutHit.HitActor = HitActor;
+		}
+	}
+	if (!OutHit.HitComponent && !OutHit.HitActor)
+	{
+		OutHit.bHit = false;
+		return false;
 	}
 
 	return true;

@@ -2,6 +2,8 @@
 
 #include "Animation/AnimInstance.h"
 #include "Animation/PoseContext.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 
 void FAnimNode_Root::Initialize(const FAnimationInitializeContext& Context)
 {
@@ -29,7 +31,7 @@ void FAnimNode_Root::Update(const FAnimationUpdateContext& Context)
 	// lerp(0, montageRM, w) = montageRM*w 만 노출하므로 ChildPose.LastRM 자체가 이미
 	// "montage 만" 의 결과. 외부에서 또 분기로 막으면 montage RM 도 누적 안 되는
 	// 버그가 됨. IgnoreRootMotion 가드는 AccumulateRootMotion 내부에서 처리.
-	if (UAnimInstance* Owner = Context.AnimInstance)
+	if (UAnimInstance* Owner = IsValid(Context.AnimInstance) ? Context.AnimInstance : nullptr)
 	{
 		Owner->AccumulateRootMotion(ChildPose->GetLastRootMotionDelta());
 	}
@@ -52,4 +54,13 @@ const FTransform& FAnimNode_Root::GetLastRootMotionDelta() const
 	// pass-through. 일반적으로 Root 위에 부모는 없지만 (이게 root), 안전 차원.
 	static const FTransform Identity;
 	return ChildPose ? ChildPose->GetLastRootMotionDelta() : Identity;
+}
+
+
+void FAnimNode_Root::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	if (ChildPose)
+	{
+		ChildPose->AddReferencedObjects(Collector);
+	}
 }

@@ -1,5 +1,7 @@
 #include "Texture/Texture2D.h"
 #include "Object/Reflection/ObjectFactory.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 #include "Core/Logging/Log.h"
 #include "Platform/Paths.h"
 #include "WICTextureLoader.h"
@@ -13,6 +15,24 @@
 #include <vector>
 
 std::map<FString, UTexture2D*> UTexture2D::TextureCache;
+
+class FTexture2DCacheRoot final : public FGCObject
+{
+public:
+	const char* GetReferencerName() const override { return "FTexture2DCacheRoot"; }
+	void AddReferencedObjects(FReferenceCollector& Collector) override
+	{
+		for (auto& Pair : UTexture2D::TextureCache)
+		{
+			Collector.AddReferencedObject(Pair.second, "TextureCache");
+		}
+	}
+};
+
+namespace
+{
+	FTexture2DCacheRoot GTexture2DCacheRoot;
+}
 
 FString UTexture2D::MakeCacheKey(const FString& FilePath, ETextureColorSpace ColorSpace)
 {
@@ -45,7 +65,12 @@ void UTexture2D::ReleaseAllGPU()
 {
 	for (auto& [Path, Texture] : TextureCache)
 	{
-		if (Texture && Texture->SRV)
+		if (!IsAliveObject(Texture))
+		{
+			continue;
+		}
+
+		if (Texture->SRV)
 		{
 			if (Texture->TrackedTextureMemory > 0)
 			{
@@ -68,7 +93,11 @@ UTexture2D* UTexture2D::LoadFromFile(const FString& FilePath, ID3D11Device* Devi
 	auto It = TextureCache.find(CacheKey);
 	if (It != TextureCache.end())
 	{
-		return It->second;
+		if (IsValid(It->second))
+		{
+			return It->second;
+		}
+		TextureCache.erase(It);
 	}
 
 	// 새 UTexture2D 생성
@@ -90,7 +119,11 @@ UTexture2D* UTexture2D::LoadFromCached(const FString& FilePath, ETextureColorSpa
 	auto It = TextureCache.find(MakeCacheKey(FilePath, InColorSpace));
 	if (It != TextureCache.end())
 	{
-		return It->second;
+		if (IsValid(It->second))
+		{
+			return It->second;
+		}
+		TextureCache.erase(It);
 	}
 
 	return nullptr;

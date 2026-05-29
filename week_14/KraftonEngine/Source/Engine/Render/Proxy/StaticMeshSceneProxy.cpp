@@ -54,7 +54,15 @@ void FStaticMeshSceneProxy::UpdateMaterial()
 // ============================================================
 void FStaticMeshSceneProxy::UpdateMesh()
 {
-	MeshBuffer = GetOwner()->GetMeshBuffer();
+	UStaticMeshComponent* SMC = GetStaticMeshComponent();
+	if (!SMC)
+	{
+		MeshBuffer = nullptr;
+		SectionDraws.clear();
+		return;
+	}
+
+	MeshBuffer = SMC->GetMeshBuffer();
 	RebuildSectionDraws();
 }
 
@@ -83,7 +91,7 @@ void FStaticMeshSceneProxy::UpdateLOD(uint32 LODLevel)
 void FStaticMeshSceneProxy::RebuildSectionDraws()
 {
 	UStaticMeshComponent* SMC = GetStaticMeshComponent();
-	UStaticMesh* Mesh = SMC->GetStaticMesh();
+	UStaticMesh* Mesh = SMC ? SMC->GetStaticMesh() : nullptr;
 	if (!Mesh || !Mesh->GetStaticMeshAsset())
 	{
 		for (uint32 lod = 0; lod < MAX_LOD; ++lod)
@@ -121,9 +129,9 @@ void FStaticMeshSceneProxy::RebuildSectionDraws()
 			int32 i = Section.MaterialIndex;
 			if (i >= 0 && i < static_cast<int32>(Slots.size()))
 			{
-				if (i < static_cast<int32>(Overrides.size()) && Overrides[i])
+				if (i < static_cast<int32>(Overrides.size()) && IsValid(Overrides[i]))
 					Draw.Material = Overrides[i];
-				else if (Slots[i].MaterialInterface)
+				else if (IsValid(Slots[i].MaterialInterface))
 					Draw.Material = Slots[i].MaterialInterface;
 			}
 

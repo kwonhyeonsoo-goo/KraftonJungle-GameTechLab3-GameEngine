@@ -11,6 +11,44 @@
 
 #include <algorithm>
 
+#include "Object/GarbageCollection.h"
+
+namespace
+{
+	void AddUniqueComponent(TArray<UActorComponent*>& Components, TSet<UActorComponent*>& Seen, UActorComponent* Component)
+	{
+		if (!IsAliveObject(Component))
+		{
+			return;
+		}
+
+		if (Seen.insert(Component).second)
+		{
+			Components.push_back(Component);
+		}
+	}
+
+	void GatherSceneComponentSubtree(USceneComponent* Root, TArray<UActorComponent*>& Components, TSet<UActorComponent*>& Seen)
+	{
+		if (!IsAliveObject(Root))
+		{
+			return;
+		}
+
+		AddUniqueComponent(Components, Seen, Root);
+		for (USceneComponent* Child : Root->GetChildren())
+		{
+			GatherSceneComponentSubtree(Child, Components, Seen);
+		}
+	}
+
+	bool ContainsComponent(const TArray<UActorComponent*>& Components, const UActorComponent* Component)
+	{
+		return std::find(Components.begin(), Components.end(), Component) != Components.end();
+	}
+
+}
+
 AActor::AActor()
 {
 	PrimaryActorTick.SetTarget(this);
@@ -22,19 +60,127 @@ AActor::~AActor()
 {
 	PrimaryActorTick.UnRegisterTickFunction();
 
-	// 계층 구조 파괴 시 OwnedComponents가 재귀적으로 수정되므로
-	// 리스트가 비워질 때까지 뒤에서부터 하나씩 제거
-	// (Iterator Invalidation 방지)
-	while (!OwnedComponents.empty())
-	{
-		UActorComponent* Comp = OwnedComponents.back();
-		// OwnedComponents.erase()는 RemoveComponent 내부에서 실행되므로 따로 해 줄 필요 없음
-		RemoveComponent(Comp);
-	}
-
+    OwnedComponents.clear();
+    PrimitiveCache.clear();
 	RootComponent = nullptr;
 }
 
+
+bool AActor::OwnsComponent(const UActorComponent* Comp) const
+{
+	if (!Comp)
+	{
+		return false;
+	}
+
+	return std::find_if(
+		OwnedComponents.begin(),
+		OwnedComponents.end(),
+		[Comp](const TObjectPtr<UActorComponent>& ExistingComponent)
+		{
+			return ExistingComponent.GetRaw() == Comp;
+		}) != OwnedComponents.end();
+}
+
+
+bool AActor::CanRegisterComponent(UActorComponent* Comp) const
+{
+	if (!IsValid(Comp))
+	{
+		return false;
+	}
+
+	AActor* ExistingOwner = Comp->GetOwnerEvenIfPendingKill();
+	if (ExistingOwner && ExistingOwner != this)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+
+void AActor::OnComponentBeingDestroyed(UActorComponent* Component)
+{
+	if (!Component || Component->GetOwnerEvenIfPendingKill() != this)
+	{
+		return;
+	}
+
+	const bool bComponentWasOwned = OwnsComponent(Component) || RootComponent.GetRaw() == Component;
+	if (!bComponentWasOwned)
+	{
+		return;
+	}
+
+	TArray<UActorComponent*> ComponentsToDetach;
+	TSet<UActorComponent*> Seen;
+	if (USceneComponent* SceneComponent = Cast<USceneComponent>(Component))
+	{
+		GatherSceneComponentSubtree(SceneComponent, ComponentsToDetach, Seen);
+	}
+	else
+	{
+		AddUniqueComponent(ComponentsToDetach, Seen, Component);
+	}
+
+	if (ComponentsToDetach.empty())
+	{
+		return;
+	}
+
+	for (UActorComponent* DetachedComponent : ComponentsToDetach)
+	{
+		OnOwnedComponentRemoved(DetachedComponent);
+	}
+
+	if (ContainsComponent(ComponentsToDetach, RootComponent.GetRaw()))
+	{
+		RootComponent = nullptr;
+	}
+
+	for (UActorComponent* ExistingComponent : OwnedComponents)
+	{
+		if (!IsAliveObject(ExistingComponent))
+		{
+			continue;
+		}
+
+		UMovementComponent* MovementComponent = Cast<UMovementComponent>(ExistingComponent);
+		if (!MovementComponent || ContainsComponent(ComponentsToDetach, MovementComponent))
+		{
+			continue;
+		}
+
+		for (UActorComponent* DetachedComponent : ComponentsToDetach)
+		{
+			if (USceneComponent* DetachedSceneComponent = Cast<USceneComponent>(DetachedComponent))
+			{
+				MovementComponent->ClearUpdatedComponentIfMatches(DetachedSceneComponent);
+			}
+		}
+	}
+
+	OwnedComponents.erase(
+		std::remove_if(
+			OwnedComponents.begin(),
+			OwnedComponents.end(),
+			[&ComponentsToDetach](const TObjectPtr<UActorComponent>& ExistingComponent)
+			{
+				return !IsAliveObject(ExistingComponent.GetRaw()) || ContainsComponent(ComponentsToDetach, ExistingComponent.GetRaw());
+			}),
+		OwnedComponents.end());
+
+	bPrimitiveCacheDirty = true;
+	PrimitiveCache.clear();
+	MarkPickingDirty();
+}
+
+
+void AActor::OnOwnedComponentRemoved(UActorComponent* Component)
+{
+	(void)Component;
+}
 
 UActorComponent* AActor::AddComponentByClass(UClass* Class)
 {
@@ -44,81 +190,201 @@ UActorComponent* AActor::AddComponentByClass(UClass* Class)
 	if (!Obj) return nullptr;
 
 	UActorComponent* Comp = Cast<UActorComponent>(Obj);
-	if (!Comp) {
+	if (!Comp)
+	{
 		UObjectManager::Get().DestroyObject(Obj);
 		return nullptr;
 	}
 
-	Comp->SetOwner(this);
-	OwnedComponents.push_back(Comp);
-	bPrimitiveCacheDirty = true;
-	Comp->CreateRenderState();
-	MarkPickingDirty();
+	RegisterComponent(Comp);
+	if (!IsValid(Comp) || Comp->GetOwner() != this)
+	{
+		if (IsAliveObject(Comp))
+		{
+			Comp->RouteComponentDestroyed();
+			UObjectManager::Get().DestroyObject(Comp);
+		}
+		return nullptr;
+	}
+
 	return Comp;
 }
 
+
 void AActor::RegisterComponent(UActorComponent* Comp)
 {
-	if (!Comp) return;
+	if (!CanRegisterComponent(Comp))
+	{
+		return;
+	}
 
-	auto it = std::find(OwnedComponents.begin(), OwnedComponents.end(), Comp);
-	if (it == OwnedComponents.end()) {
+	if (USceneComponent* SceneComponent = Cast<USceneComponent>(Comp))
+	{
+		USceneComponent* Parent = SceneComponent->GetParent();
+		if (IsValid(Parent) && Parent->GetOwner() != this)
+		{
+			SceneComponent->SetParent(nullptr);
+		}
+	}
+
+	if (!OwnsComponent(Comp))
+	{
 		Comp->SetOwner(this);
 		Comp->SetOuter(this);
 		OwnedComponents.push_back(Comp);
-		bPrimitiveCacheDirty = true;
-		MarkPickingDirty();
-		Comp->CreateRenderState();
 	}
+	else if (Comp->GetOwnerEvenIfPendingKill() != this)
+	{
+		Comp->SetOwner(this);
+	}
+
+	bPrimitiveCacheDirty = true;
+	PrimitiveCache.clear();
+	MarkPickingDirty();
+	Comp->CreateRenderState();
 }
+
 
 void AActor::RemoveComponent(UActorComponent* Component)
 {
-	if (!Component) return;
+    if (!IsValid(Component) || Component->GetOwner() != this)
+    {
+        return;
+    }
 
-	USceneComponent* RemovedSceneComponent = Cast<USceneComponent>(Component);
-	if (RemovedSceneComponent)
+	TArray<UActorComponent*> ComponentsToRemove;
+	TSet<UActorComponent*> Seen;
+	if (USceneComponent* SceneComponent = Cast<USceneComponent>(Component))
 	{
-		for (UActorComponent* ExistingComponent : OwnedComponents)
+		GatherSceneComponentSubtree(SceneComponent, ComponentsToRemove, Seen);
+	}
+	else
+	{
+		AddUniqueComponent(ComponentsToRemove, Seen, Component);
+	}
+
+	if (ComponentsToRemove.empty())
+	{
+		return;
+	}
+
+	if (ContainsComponent(ComponentsToRemove, RootComponent.GetRaw()))
+	{
+		RootComponent = nullptr;
+	}
+
+	for (UActorComponent* ExistingComponent : OwnedComponents)
+	{
+		if (!IsValid(ExistingComponent))
 		{
-			UMovementComponent* MovementComponent = Cast<UMovementComponent>(ExistingComponent);
-			if (MovementComponent && ExistingComponent != Component)
+			continue;
+		}
+
+		UMovementComponent* MovementComponent = Cast<UMovementComponent>(ExistingComponent);
+		if (!MovementComponent || ContainsComponent(ComponentsToRemove, MovementComponent))
+		{
+			continue;
+		}
+
+		for (UActorComponent* RemovedComponent : ComponentsToRemove)
+		{
+			if (USceneComponent* RemovedSceneComponent = Cast<USceneComponent>(RemovedComponent))
 			{
 				MovementComponent->ClearUpdatedComponentIfMatches(RemovedSceneComponent);
 			}
 		}
 	}
 
-	Component->PrimaryComponentTick.UnRegisterTickFunction();
+	for (UActorComponent* RemovedComponent : ComponentsToRemove)
+	{
+		if (!IsAliveObject(RemovedComponent))
+		{
+			continue;
+		}
 
-	// PrimitiveComponent::DestroyRenderState 가 Scene/Partition/PickingBVH/VisibleSet
-	// 정리를 모두 책임지므로 여기서는 단순히 호출만 한다.
-	Component->DestroyRenderState();
-
-	auto it = std::find(OwnedComponents.begin(), OwnedComponents.end(), Component);
-	if (it != OwnedComponents.end()) {
-		OwnedComponents.erase(it);
-		bPrimitiveCacheDirty = true;
-		MarkPickingDirty();
+		RemovedComponent->EndPlay();
+		RemovedComponent->RouteComponentDestroyed();
 	}
 
-	// RootComponent가 제거되면 nullptr로
-	if (RootComponent == Component)
-		RootComponent = nullptr;
+	OwnedComponents.erase(
+		std::remove_if(
+			OwnedComponents.begin(),
+			OwnedComponents.end(),
+			[&ComponentsToRemove](const TObjectPtr<UActorComponent>& ExistingComponent)
+			{
+				return !IsValid(ExistingComponent.GetRaw()) || ContainsComponent(ComponentsToRemove, ExistingComponent.GetRaw());
+			}),
+		OwnedComponents.end());
 
-	UObjectManager::Get().DestroyObject(Component);
+	bPrimitiveCacheDirty = true;
+	PrimitiveCache.clear();
+	MarkPickingDirty();
+
+	for (UActorComponent* RemovedComponent : ComponentsToRemove)
+	{
+		if (IsAliveObject(RemovedComponent))
+		{
+			UObjectManager::Get().DestroyObject(RemovedComponent);
+		}
+	}
 }
 
 void AActor::SetRootComponent(USceneComponent* Comp)
 {
-	if (!Comp) return;
-	RootComponent = Comp;
+	if (!Comp)
+	{
+		RootComponent = nullptr;
+		return;
+	}
+
+	if (!CanRegisterComponent(Comp))
+	{
+		return;
+	}
+
+	if (!OwnsComponent(Comp))
+	{
+		RegisterComponent(Comp);
+	}
+
+	if (IsValid(Comp) && Comp->GetOwner() == this && OwnsComponent(Comp))
+	{
+		RootComponent = Comp;
+	}
+}
+
+TArray<UActorComponent*> AActor::GetComponents() const
+{
+	TArray<UActorComponent*> Result;
+	Result.reserve(OwnedComponents.size());
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (IsValid(Component))
+		{
+			Result.push_back(Component);
+		}
+	}
+	return Result;
 }
 
 UWorld* AActor::GetWorld() const
 {
+	if (!IsValid(this))
+	{
+		return nullptr;
+	}
 	return GetTypedOuter<UWorld>();
 }
+
+UWorld* AActor::GetWorldEvenIfPendingKill() const
+{
+	if (!IsAliveObject(this))
+	{
+		return nullptr;
+	}
+	return GetTypedOuterEvenIfPendingKill<UWorld>();
+}
+
 
 ULevel* AActor::GetLevel() const
 {
@@ -127,6 +393,7 @@ ULevel* AActor::GetLevel() const
 
 void AActor::SetVisible(bool Visible)
 {
+	PendingActorVisible = Visible;
 	if (bVisible == Visible)
 	{
 		return;
@@ -154,9 +421,9 @@ void AActor::MarkPickingDirty()
 
 FVector AActor::GetActorLocation() const
 {
-	if (RootComponent)
+	if (USceneComponent* Root = GetRootComponent())
 	{
-		return RootComponent->GetWorldLocation();
+		return Root->GetWorldLocation();
 	}
 	return FVector(0, 0, 0);
 }
@@ -165,17 +432,18 @@ void AActor::SetActorLocation(const FVector& NewLocation)
 {
 	PendingActorLocation = NewLocation;
 
-	if (RootComponent)
+	if (USceneComponent* Root = GetRootComponent())
 	{
-		RootComponent->SetWorldLocation(NewLocation);
+		Root->SetWorldLocation(NewLocation);
 	}
 }
 
 void AActor::AddActorWorldOffset(const FVector& Delta)
 {
-	if (RootComponent)
+	if (USceneComponent* Root = GetRootComponent())
 	{
-		RootComponent->AddWorldOffset(Delta);
+		Root->AddWorldOffset(Delta);
+		PendingActorLocation = Root->GetWorldLocation();
 	}
 }
 
@@ -188,7 +456,10 @@ void AActor::BeginPlay()
 	// UE 순서: 컴포넌트 BeginPlay 먼저, 그다음 Actor 본인 (오버라이드 측 Super 호출 시).
 	for (UActorComponent* Comp : OwnedComponents)
 	{
-		if (Comp) Comp->BeginPlay();
+        if (IsValid(Comp))
+        {
+            Comp->BeginPlay();
+        }
 	}
 }
 
@@ -210,7 +481,7 @@ void AActor::EndPlay()
 
 	for (UActorComponent* Comp : OwnedComponents)
 	{
-		if (Comp)
+        if (IsValid(Comp))
 		{
 			Comp->PrimaryComponentTick.UnRegisterTickFunction();
 			Comp->EndPlay();
@@ -228,45 +499,54 @@ void AActor::Tick(float DeltaTime)
 
 FRotator AActor::GetActorRotation() const
 {
-	return RootComponent ? RootComponent->GetRelativeRotation() : FRotator();
+	if (USceneComponent* Root = GetRootComponent())
+	{
+		return Root->GetRelativeRotation();
+	}
+	return FRotator();
 }
 
 void AActor::SetActorRotation(const FRotator& NewRotation)
 {
 	PendingActorRotation = NewRotation;
-	if (RootComponent)
+	if (USceneComponent* Root = GetRootComponent())
 	{
-		RootComponent->SetRelativeRotation(NewRotation);
+		Root->SetRelativeRotation(NewRotation);
 	}
 }
 
 void AActor::SetActorRotation(const FVector& EulerRotation)
 {
 	PendingActorRotation = FRotator(EulerRotation);
-	if (RootComponent)
+	if (USceneComponent* Root = GetRootComponent())
 	{
-		RootComponent->SetRelativeRotation(EulerRotation);
+		Root->SetRelativeRotation(EulerRotation);
 	}
 }
 
 FVector AActor::GetActorScale() const
 {
-	return RootComponent ? RootComponent->GetRelativeScale() : FVector(1, 1, 1);
+	if (USceneComponent* Root = GetRootComponent())
+	{
+		return Root->GetRelativeScale();
+	}
+	return FVector(1, 1, 1);
 }
 
 void AActor::SetActorScale(const FVector& NewScale)
 {
-	if (RootComponent)
+	PendingActorScale = NewScale;
+	if (USceneComponent* Root = GetRootComponent())
 	{
-		RootComponent->SetRelativeScale(NewScale);
+		Root->SetRelativeScale(NewScale);
 	}
 }
 
 FVector AActor::GetActorForward() const
 {
-	if (RootComponent)
+	if (USceneComponent* Root = GetRootComponent())
 	{
-		return RootComponent->GetForwardVector();
+		return Root->GetForwardVector();
 	}
 
 	return FVector(0, 0, 1);
@@ -274,9 +554,9 @@ FVector AActor::GetActorForward() const
 
 FVector AActor::GetActorRight() const
 {
-	if (RootComponent)
+	if (USceneComponent* Root = GetRootComponent())
 	{
-		return RootComponent->GetRightVector();
+		return Root->GetRightVector();
 	}
 	
 	return FVector(0, 1, 0);
@@ -321,14 +601,26 @@ void AActor::AddTag(const FName& Tag)
 {
 	if (HasTag(Tag)) return;
 	Tags.push_back(Tag);
+	PendingTagsString = JoinTagsCommaSep(Tags);
 }
 
 void AActor::RemoveTag(const FName& Tag)
 {
 	for (auto it = Tags.begin(); it != Tags.end(); ++it)
 	{
-		if (*it == Tag) { Tags.erase(it); return; }
+		if (*it == Tag)
+		{
+			Tags.erase(it);
+			PendingTagsString = JoinTagsCommaSep(Tags);
+			return;
+		}
 	}
+}
+
+void AActor::SetTags(TArray<FName> InTags)
+{
+	Tags = std::move(InTags);
+	PendingTagsString = JoinTagsCommaSep(Tags);
 }
 
 namespace
@@ -405,6 +697,7 @@ static USceneComponent* DuplicateSceneSubtree(
 
 UObject* AActor::Duplicate(UObject* NewOuter) const
 {
+	FScopedGarbageCollectionBlocker DuplicateGCBlocker;
 	// 1) 같은 타입 액터를 팩토리로 생성 (공유 DuplicateContext로 Serialize 왕복)
 	//    NewOuter 미지정 시 원본의 Outer(World)를 승계 → 이후 AddActor가 다시 보강.
 	FDuplicateArchiveContext DuplicateContext;
@@ -423,9 +716,9 @@ UObject* AActor::Duplicate(UObject* NewOuter) const
 	TSet<const UActorComponent*> Visited;
 
 	// 3a) Root 서브트리 재귀 복제 — 도달 가능한 모든 SceneComponent를 처리
-	if (RootComponent)
+	if (USceneComponent* SourceRoot = GetRootComponent())
 	{
-		USceneComponent* DupRoot = DuplicateSceneSubtree(RootComponent, Dup, nullptr, Visited, DuplicateContext);
+		USceneComponent* DupRoot = DuplicateSceneSubtree(SourceRoot, Dup, nullptr, Visited, DuplicateContext);
 		if (DupRoot)
 		{
 			Dup->SetRootComponent(DupRoot);
@@ -435,7 +728,7 @@ UObject* AActor::Duplicate(UObject* NewOuter) const
 	// 3b) 트리에 포함되지 않은 나머지(비씬 컴포넌트 + 분리된 씬 컴포넌트) 평면 복제
 	for (UActorComponent* Comp : OwnedComponents)
 	{
-		if (!Comp || Visited.count(Comp)) continue;
+		if (!IsValid(Comp) || Visited.count(Comp)) continue;
 
 		UActorComponent* DupComp = Cast<UActorComponent>(Comp->DuplicateWithArchiveContext(Dup, DuplicateContext));
 		if (!DupComp) continue;
@@ -448,7 +741,7 @@ UObject* AActor::Duplicate(UObject* NewOuter) const
 
 	for (UActorComponent* DupComp : Dup->OwnedComponents)
 	{
-		if (DupComp)
+		if (IsValid(DupComp))
 		{
 			DupComp->PostDuplicate();
 		}
@@ -511,7 +804,7 @@ const TArray<UPrimitiveComponent*>& AActor::GetPrimitiveComponents() const
 		PrimitiveCache.clear();
 		for (UActorComponent* Comp : OwnedComponents)
 		{
-			if (Comp && Comp->IsA<UPrimitiveComponent>())
+            if (IsValid(Comp) && Comp->IsA<UPrimitiveComponent>())
 			{
 				PrimitiveCache.emplace_back(static_cast<UPrimitiveComponent*>(Comp));
 			}
@@ -519,4 +812,65 @@ const TArray<UPrimitiveComponent*>& AActor::GetPrimitiveComponents() const
 		bPrimitiveCacheDirty = false;
 	}
 	return PrimitiveCache;
+}
+
+void AActor::AddReferencedObjects(FReferenceCollector& Collector)
+{
+    UObject::AddReferencedObjects(Collector);
+
+    Collector.AddReferencedObject(RootComponent, "AActor.RootComponent");
+    Collector.AddReferencedObjects(OwnedComponents, "AActor.OwnedComponents");
+}
+
+void AActor::RouteActorDestroyed()
+{
+    if (bActorDestroyRouted)
+    {
+        return;
+    }
+
+    bActorDestroyRouted = true;
+
+    EndPlay();
+    PrimaryActorTick.UnRegisterTickFunction();
+
+    TArray<UActorComponent*> ComponentsToDestroy;
+    ComponentsToDestroy.reserve(OwnedComponents.size());
+    for (UActorComponent* Component : OwnedComponents)
+    {
+        if (IsAliveObject(Component))
+        {
+            ComponentsToDestroy.push_back(Component);
+        }
+    }
+
+    for (UActorComponent* Component : ComponentsToDestroy)
+    {
+        if (!IsAliveObject(Component))
+        {
+            continue;
+        }
+
+        // Actor::EndPlay()/Level::EndPlay 경로에서 컴포넌트 EndPlay 는 이미 처리된다.
+        // 여기서 다시 호출하면 Lua EndPlay/sol cleanup 이 PIE 종료 중 재진입할 수 있다.
+        Component->RouteComponentDestroyed();
+        Component->MarkPendingKill();
+    }
+
+    OwnedComponents.clear();
+    PrimitiveCache.clear();
+    RootComponent = nullptr;
+    bPrimitiveCacheDirty = true;
+    MarkPendingKill();
+}
+
+void AActor::BeginDestroy()
+{
+    if (HasAnyFlags(RF_BeginDestroy))
+    {
+        return;
+    }
+
+    RouteActorDestroyed();
+    UObject::BeginDestroy();
 }

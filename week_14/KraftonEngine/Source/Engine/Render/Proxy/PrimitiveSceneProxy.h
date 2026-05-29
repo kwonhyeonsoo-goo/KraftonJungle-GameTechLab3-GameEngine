@@ -4,12 +4,14 @@
 #include "Render/Proxy/DirtyFlag.h"
 #include "Render/Types/RenderConstants.h"
 #include "Render/Types/RenderTypes.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 class UPrimitiveComponent;
 class FShader;
 class FMeshBuffer;
 class FScene;
 class UMaterial;
+class FReferenceCollector;
 struct FDrawCommandBuffer;
 struct FFrameContext;
 
@@ -18,19 +20,19 @@ struct FFrameContext;
 // ============================================================
 enum class EPrimitiveProxyFlags : uint16
 {
-	None            = 0,
-	PerViewportUpdate = 1 << 0,		// 매 프레임 카메라 기반 갱신 (Billboard, Gizmo)
-	FontBatched     = 1 << 1,		// FFontGeometry 배칭 경로 (TextRender)
-	Decal           = 1 << 2,		// Decal 프록시 (Receiver 순회 필요)
-	NeverCull       = 1 << 3,		// Frustum culling 제외 (Gizmo 등)
-	SupportsOutline = 1 << 4,		// 선택 시 아웃라인 지원
-	ShowAABB        = 1 << 5,		// 선택 시 AABB 표시
-	EditorOnly      = 1 << 6,		// 에디터 전용 — PIE/Game 월드에서 비가시
-	WireShape       = 1 << 7,		// 와이어프레임 Shape — EditorLines 패스에 라인 기여
-	BoneDebug		= 1 << 8,		// 본 디버그 프록시 (본 위치/방향 표시)
-	StaticMesh		= 1 << 9,
-	SkeletalMesh	= 1 << 10,
-	Particle		= 1 << 11,		// ParticleSystemComponent 프록시 — ShowFlags.bParticles로 토글
+	None              = 0,
+	PerViewportUpdate = 1 << 0, // 매 프레임 카메라 기반 갱신 (Billboard, Gizmo)
+	FontBatched       = 1 << 1, // FFontGeometry 배칭 경로 (TextRender)
+	Decal             = 1 << 2, // Decal 프록시 (Receiver 순회 필요)
+	NeverCull         = 1 << 3, // Frustum culling 제외 (Gizmo 등)
+	SupportsOutline   = 1 << 4, // 선택 시 아웃라인 지원
+	ShowAABB          = 1 << 5, // 선택 시 AABB 표시
+	EditorOnly        = 1 << 6, // 에디터 전용 — PIE/Game 월드에서 비가시
+	WireShape         = 1 << 7, // 와이어프레임 Shape — EditorLines 패스에 라인 기여
+	BoneDebug         = 1 << 8, // 본 디버그 프록시 (본 위치/방향 표시)
+	StaticMesh        = 1 << 9,
+	SkeletalMesh      = 1 << 10,
+	Particle          = 1 << 11,
 };
 
 inline EPrimitiveProxyFlags  operator|(EPrimitiveProxyFlags A, EPrimitiveProxyFlags B)  { return static_cast<EPrimitiveProxyFlags>(static_cast<uint16>(A) | static_cast<uint16>(B)); }
@@ -51,12 +53,16 @@ public:
 	FPrimitiveSceneProxy(UPrimitiveComponent* InComponent);
 	virtual ~FPrimitiveSceneProxy();
 
+	virtual void AddReferencedObjects(FReferenceCollector& Collector);
+	bool HasValidOwner() const;
+
 	// ================================================================
 	// 읽기 전용 인터페이스 (DrawCommandBuilder, RenderCollector용)
 	// ================================================================
 
 	// --- 식별 ---
 	uint32                GetProxyId()    const { return ProxyId; }
+	uint32                GetProxyGeneration() const { return ProxyGeneration; }
 	EPrimitiveProxyFlags  GetProxyFlags() const { return ProxyFlags; }
 	bool HasProxyFlag(EPrimitiveProxyFlags F) const { return (ProxyFlags & F) != EPrimitiveProxyFlags::None; }
 
@@ -67,7 +73,7 @@ public:
 	bool CastsShadowAsTwoSided() const { return bCastShadowAsTwoSided; }
 
 	// --- 렌더 데이터 (DrawCommandBuilder가 읽음) ---
-	virtual ERenderPass GetRenderPass()  const; // 빌보드 등 일부 프록시가 전용 패스로 오버라이드
+	virtual ERenderPass GetRenderPass() const;
 	FShader*           GetShader()      const;
 	FMeshBuffer*       GetMeshBuffer()  const { return MeshBuffer; }
 
@@ -104,9 +110,10 @@ protected:
 	// 서브클래스용 — Update*()에서 쓰기 가능한 캐시 데이터
 	// ================================================================
 
-	// Owner 접근 — protected이므로 서브클래스의 Update*() 안에서만 사용.
-	// UpdatePerViewport()에서는 가급적 캐싱된 값을 사용할 것.
-	UPrimitiveComponent* GetOwner() const { return Owner; }
+	// Owner 접근 — valid owner만 반환한다. PendingKill/Garbage cleanup 경로는
+	// GetOwnerEvenIfPendingKill()를 명시적으로 사용해야 한다.
+	UPrimitiveComponent* GetOwner() const { return Owner.Get(); }
+	UPrimitiveComponent* GetOwnerEvenIfPendingKill() const { return Owner.GetEvenIfPendingKill(); }
 
 	// 프록시 특성 플래그 (서브클래스 생성자에서 설정)
 	EPrimitiveProxyFlags ProxyFlags = EPrimitiveProxyFlags::SupportsOutline
@@ -138,10 +145,11 @@ private:
 	// ================================================================
 	friend class FScene;
 
-	UPrimitiveComponent* Owner = nullptr;
+	TWeakObjectPtr<UPrimitiveComponent> Owner;
 
 	FScene*		Scene			  = nullptr;
 	uint32      ProxyId           = UINT32_MAX;
+	uint32      ProxyGeneration   = 0;
 	uint32      SelectedListIndex = UINT32_MAX;
 	EDirtyFlag  DirtyFlags        = EDirtyFlag::All;
 	bool        bQueuedForDirtyUpdate = false;

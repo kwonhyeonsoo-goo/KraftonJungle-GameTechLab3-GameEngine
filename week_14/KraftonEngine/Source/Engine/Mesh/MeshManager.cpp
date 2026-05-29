@@ -1,4 +1,6 @@
 #include "MeshManager.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 #include "Mesh/Static/StaticMesh.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Mesh/Importer/ObjImporter.h"
@@ -26,6 +28,28 @@
 
 TMap<FString, UStaticMesh*> FMeshManager::StaticMeshCache;
 TMap<FString, USkeletalMesh*> FMeshManager::SkeletalMeshCache;
+
+namespace
+{
+    class FMeshManagerCacheRoot final : public FGCObject
+    {
+    public:
+        const char* GetReferencerName() const override { return "FMeshManagerCacheRoot"; }
+        void AddReferencedObjects(FReferenceCollector& Collector) override
+        {
+            for (auto& Pair : FMeshManager::StaticMeshCache)
+            {
+                Collector.AddReferencedObject(Pair.second, "FMeshManager.StaticMeshCache");
+            }
+            for (auto& Pair : FMeshManager::SkeletalMeshCache)
+            {
+                Collector.AddReferencedObject(Pair.second, "FMeshManager.SkeletalMeshCache");
+            }
+        }
+    };
+
+    FMeshManagerCacheRoot GMeshManagerCacheRoot;
+}
 TArray<FAssetListItem> FMeshManager::AvailableStaticMeshFiles;
 TArray<FAssetListItem> FMeshManager::AvailableStaticMeshSourceFiles;
 TArray<FAssetListItem> FMeshManager::AvailableSkeletalMeshFiles;
@@ -676,7 +700,11 @@ UStaticMesh* FMeshManager::LoadStaticMesh(const FString& PathFileName, ID3D11Dev
 	auto It = StaticMeshCache.find(CacheKey);
 	if (It != StaticMeshCache.end())
 	{
-		return It->second;
+		if (IsValid(It->second))
+		{
+			return It->second;
+		}
+		StaticMeshCache.erase(It);
 	}
 
 	const std::filesystem::path BinaryPath(FPaths::ToWide(CacheKey));
@@ -774,22 +802,24 @@ void FMeshManager::ReleaseAllGPU()
 	// Static Mesh
 	for (auto& [Key, Mesh] : StaticMeshCache)
 	{
-		if (Mesh)
+		if (!IsAliveObject(Mesh))
 		{
-			FStaticMesh* Asset = Mesh->GetStaticMeshAsset();
-			if (Asset && Asset->RenderBuffer)
+			continue;
+		}
+
+		FStaticMesh* Asset = Mesh->GetStaticMeshAsset();
+		if (Asset && Asset->RenderBuffer)
+		{
+			Asset->RenderBuffer->Release();
+			Asset->RenderBuffer.reset();
+		}
+		// LOD 버퍼도 해제
+		for (uint32 LOD = 1; LOD < UStaticMesh::MAX_LOD_COUNT; ++LOD)
+		{
+			FMeshBuffer* LODBuffer = Mesh->GetLODMeshBuffer(LOD);
+			if (LODBuffer)
 			{
-				Asset->RenderBuffer->Release();
-				Asset->RenderBuffer.reset();
-			}
-			// LOD 버퍼도 해제
-			for (uint32 LOD = 1; LOD < UStaticMesh::MAX_LOD_COUNT; ++LOD)
-			{
-				FMeshBuffer* LODBuffer = Mesh->GetLODMeshBuffer(LOD);
-				if (LODBuffer)
-				{
-					LODBuffer->Release();
-				}
+				LODBuffer->Release();
 			}
 		}
 	}
@@ -798,14 +828,16 @@ void FMeshManager::ReleaseAllGPU()
 	// Skeletal Mesh
 	for (auto& [Key, Mesh] : SkeletalMeshCache)
 	{
-		if (Mesh)
+		if (!IsAliveObject(Mesh))
 		{
-			FSkeletalMesh* Asset = Mesh->GetSkeletalMeshAsset();
-			if (Asset && Asset->RenderBuffer)
-			{
-				Asset->RenderBuffer->Release();
-				Asset->RenderBuffer.reset();
-			}
+			continue;
+		}
+
+		FSkeletalMesh* Asset = Mesh->GetSkeletalMeshAsset();
+		if (Asset && Asset->RenderBuffer)
+		{
+			Asset->RenderBuffer->Release();
+			Asset->RenderBuffer.reset();
 		}
 	}
 	SkeletalMeshCache.clear();
@@ -897,7 +929,11 @@ USkeletalMesh* FMeshManager::LoadSkeletalMesh(const FString& PathFileName, ID3D1
 	auto It = SkeletalMeshCache.find(CacheKey);
 	if (It != SkeletalMeshCache.end())
 	{
-		return It->second;
+		if (IsValid(It->second))
+		{
+			return It->second;
+		}
+		SkeletalMeshCache.erase(It);
 	}
 
 	const std::filesystem::path BinaryPath(FPaths::ToWide(CacheKey));

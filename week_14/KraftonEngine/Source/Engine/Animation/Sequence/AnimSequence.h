@@ -8,6 +8,7 @@
 class USkeletalMesh;
 class USkeleton;
 class UAnimDataModel;
+class FReferenceCollector;
 
 // 본별 키프레임을 가진 표준 시퀀스.
 // 실제 애니메이션 데이터는 UAnimDataModel 하나만 소유하고, 이 클래스는 평가/호환성/에셋 메타데이터를 담당한다.
@@ -23,13 +24,11 @@ public:
     ~UAnimSequence() override = default;
 
     void Serialize(FArchive& Ar) override;
+    void AddReferencedObjects(FReferenceCollector& Collector) override;
 
     void SetDataModel(UAnimDataModel* InModel);
 
-    UAnimDataModel* GetDataModel() const
-    {
-        return DataModel;
-    }
+    UAnimDataModel* GetDataModel() const;
 
     // UAnimSequenceBase:
     // 균등 간격 키 가정 (key i 의 시간 = i * PlayLength / (NumKeys - 1)).

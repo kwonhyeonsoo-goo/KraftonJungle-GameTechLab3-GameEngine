@@ -4,6 +4,8 @@
 #include "Animation/AnimExtractContext.h"
 #include "Animation/AnimationManager.h"
 #include "Animation/PoseContext.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 
 FArchive& operator<<(FArchive& Ar, FCompositeSection& S)
 {
@@ -25,7 +27,7 @@ void UAnimMontage::Serialize(FArchive& Ar)
     // SourceSequence 는 path 로만 저장. Load 시 LoadAnimation 으로 resolve.
     if (Ar.IsSaving())
     {
-        SourceSequencePath = SourceSequence ? SourceSequence->GetAssetPathFileName() : FString("None");
+        SourceSequencePath = IsValid(SourceSequence) ? SourceSequence->GetAssetPathFileName() : FString("None");
     }
     Ar << SourceSequencePath;
 
@@ -53,12 +55,12 @@ void UAnimMontage::Serialize(FArchive& Ar)
 
 void UAnimMontage::SetSourceSequence(UAnimSequence* InSeq)
 {
-    SourceSequence = InSeq;
-    if (InSeq)
+    SourceSequence = IsValid(InSeq) ? InSeq : nullptr;
+    if (SourceSequence)
     {
-        PlayLength         = InSeq->GetPlayLength();
-        FrameRate          = InSeq->GetFrameRate();
-        SourceSequencePath = InSeq->GetAssetPathFileName();
+        PlayLength         = SourceSequence->GetPlayLength();
+        FrameRate          = SourceSequence->GetFrameRate();
+        SourceSequencePath = SourceSequence->GetAssetPathFileName();
         EnsureDefaultSection();
     }
     else
@@ -73,7 +75,7 @@ void UAnimMontage::EnsureDefaultSection()
     FCompositeSection Default;
     Default.SectionName     = FName("Default");
     Default.StartTime       = 0.0f;
-    Default.LinkTime        = SourceSequence ? SourceSequence->GetPlayLength() : 0.0f;
+    Default.LinkTime        = IsValid(SourceSequence) ? SourceSequence->GetPlayLength() : 0.0f;
     Default.NextSectionName = FName::None;
     Sections.push_back(Default);
 }
@@ -98,7 +100,7 @@ int32 UAnimMontage::GetSectionIndex(FName Name) const
 
 void UAnimMontage::GetBonePose(FPoseContext& Output, const FAnimExtractContext& Ctx) const
 {
-    if (SourceSequence)
+    if (IsValid(SourceSequence))
     {
         // SourceSequence 가 위임 — Ctx.CurrentTime 은 sequence 시간 그대로.
         // Montage v1 에서는 source 의 ForceRootLock/RootMotion 옵션이 그대로 적용됨.
@@ -108,4 +110,16 @@ void UAnimMontage::GetBonePose(FPoseContext& Output, const FAnimExtractContext& 
     {
         Output.ResetToRefPose();
     }
+}
+
+
+UAnimSequence* UAnimMontage::GetSourceSequence() const
+{
+    return IsValid(SourceSequence) ? SourceSequence : nullptr;
+}
+
+void UAnimMontage::AddReferencedObjects(FReferenceCollector& Collector)
+{
+    UAnimSequenceBase::AddReferencedObjects(Collector);
+    Collector.AddReferencedObject(SourceSequence, "AnimMontage.SourceSequence");
 }

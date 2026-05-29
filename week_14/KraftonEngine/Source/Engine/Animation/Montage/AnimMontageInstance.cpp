@@ -6,12 +6,14 @@
 #include "Animation/AnimExtractContext.h"
 #include "Animation/PoseContext.h"
 #include "Core/Logging/Log.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 
 #include <algorithm>
 
 void UAnimMontageInstance::Play(UAnimMontage* InMontage, FName StartSection, float InPlayRate, float InBlendInTime)
 {
-    if (!InMontage)
+    if (!IsValid(InMontage))
     {
         UE_LOG("Montage Play: null montage.");
         return;
@@ -37,12 +39,12 @@ void UAnimMontageInstance::Play(UAnimMontage* InMontage, FName StartSection, flo
 void UAnimMontageInstance::Stop(float InBlendOutTime)
 {
     if (State == EState::Inactive) return;
-    EnterBlendingOut(InBlendOutTime > 0.0f ? InBlendOutTime : (CurrentMontage ? CurrentMontage->GetBlendOutTime() : 0.25f));
+    EnterBlendingOut(InBlendOutTime > 0.0f ? InBlendOutTime : (IsValid(CurrentMontage) ? CurrentMontage->GetBlendOutTime() : 0.25f));
 }
 
 void UAnimMontageInstance::JumpToSection(FName Name)
 {
-    if (!CurrentMontage) return;
+    if (!IsValid(CurrentMontage)) { FinishStop(); return; }
     const int32 Idx = CurrentMontage->GetSectionIndex(Name);
     if (Idx < 0)
     {
@@ -55,7 +57,7 @@ void UAnimMontageInstance::JumpToSection(FName Name)
 
 void UAnimMontageInstance::SetNextSection(FName From, FName To)
 {
-    if (!CurrentMontage) return;
+    if (!IsValid(CurrentMontage)) { FinishStop(); return; }
     // 현재 section 이 From 이면 다음 advance 시 To 로 이동 (1회). From 가 다른 section 이면 무시.
     const FName CurName = GetCurrentSectionName();
     if (CurName == From)
@@ -66,7 +68,7 @@ void UAnimMontageInstance::SetNextSection(FName From, FName To)
 
 FName UAnimMontageInstance::GetCurrentSectionName() const
 {
-    if (!CurrentMontage) return FName::None;
+    if (!IsValid(CurrentMontage)) return FName::None;
     const auto& Sections = CurrentMontage->GetSections();
     if (CurrentSectionIndex < 0 || CurrentSectionIndex >= static_cast<int32>(Sections.size())) return FName::None;
     return Sections[CurrentSectionIndex].SectionName;
@@ -119,7 +121,7 @@ void UAnimMontageInstance::FinishStop()
 
 bool UAnimMontageInstance::AdvanceSection(UAnimInstance* Owner)
 {
-    if (!CurrentMontage) return false;
+    if (!IsValid(CurrentMontage)) { FinishStop(); return false; }
     const auto& Sections = CurrentMontage->GetSections();
     if (CurrentSectionIndex < 0 || CurrentSectionIndex >= static_cast<int32>(Sections.size())) return false;
 
@@ -153,7 +155,7 @@ bool UAnimMontageInstance::AdvanceSection(UAnimInstance* Owner)
 
 void UAnimMontageInstance::Tick(float DeltaSeconds, UAnimInstance* Owner)
 {
-    if (State == EState::Inactive || !CurrentMontage) return;
+    if (State == EState::Inactive || !IsValid(CurrentMontage)) { FinishStop(); return; }
 
     // Blend 진행.
     if (State == EState::BlendingIn)
@@ -200,9 +202,9 @@ void UAnimMontageInstance::Tick(float DeltaSeconds, UAnimInstance* Owner)
     const float              CurLen  = std::max(Cur.LinkTime - Cur.StartTime, 0.0f);
 
     // Notify 큐 적재 + Root motion 누적 — 둘 다 source sequence 의 시간 구간 [PrevSeqTime, NextSeqTime).
-    if (Owner && CurrentMontage->GetSourceSequence() && CurLen > 0.0f)
+    UAnimSequence* SrcSeq = IsValid(CurrentMontage) ? CurrentMontage->GetSourceSequence() : nullptr;
+    if (IsValid(Owner) && IsValid(SrcSeq) && CurLen > 0.0f)
     {
-        UAnimSequence* SrcSeq       = CurrentMontage->GetSourceSequence();
         const float    PrevSeqTime  = Cur.StartTime + SectionTime;
         const float    NextSeqTime  = Cur.StartTime + std::min(SectionTime + Step, CurLen);
 
@@ -263,7 +265,7 @@ void UAnimMontageInstance::Tick(float DeltaSeconds, UAnimInstance* Owner)
 
 void UAnimMontageInstance::EvaluateMontagePose(FPoseContext& OutMontagePose)
 {
-    if (!CurrentMontage || CurrentSectionIndex < 0)
+    if (!IsValid(CurrentMontage) || CurrentSectionIndex < 0)
     {
         OutMontagePose.ResetToRefPose();
         return;
@@ -281,5 +283,30 @@ void UAnimMontageInstance::EvaluateMontagePose(FPoseContext& OutMontagePose)
     FAnimExtractContext Ctx;
     Ctx.CurrentTime = Cur.StartTime + std::min(SectionTime, std::max(Cur.LinkTime - Cur.StartTime, 0.0f));
     Ctx.bLooping    = false;   // section 내부에서는 wrap 없음 — chain 으로 처리.
-    CurrentMontage->GetBonePose(OutMontagePose, Ctx);
+    if (IsValid(CurrentMontage))
+    {
+        CurrentMontage->GetBonePose(OutMontagePose, Ctx);
+    }
+    else
+    {
+        OutMontagePose.ResetToRefPose();
+    }
+}
+
+
+UAnimMontage* UAnimMontageInstance::GetCurrentMontage() const
+{
+    return IsValid(CurrentMontage) ? CurrentMontage : nullptr;
+}
+
+void UAnimMontageInstance::AddReferencedObjects(FReferenceCollector& Collector)
+{
+    UObject::AddReferencedObjects(Collector);
+    Collector.AddReferencedObject(CurrentMontage, "AnimMontageInstance.CurrentMontage");
+}
+
+void UAnimMontageInstance::BeginDestroy()
+{
+    FinishStop();
+    UObject::BeginDestroy();
 }

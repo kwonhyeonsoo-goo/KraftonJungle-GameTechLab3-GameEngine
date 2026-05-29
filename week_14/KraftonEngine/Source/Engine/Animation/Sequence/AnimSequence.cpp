@@ -1,6 +1,8 @@
 #include "AnimSequence.h"
 
 #include "Animation/Sequence/AnimDataModel.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 #include "Animation/Notify/AnimNotify_LogMessage.h"
 #include "Animation/PoseContext.h"
 #include "Animation/AnimExtractContext.h"
@@ -487,21 +489,27 @@ void UAnimSequence::Serialize(FArchive& Ar)
     Ar << bEnableRootMotion;
     Ar << RootMotionBoneName;
 
-    if (!DataModel)
+    if (!IsValid(DataModel))
     {
         DataModel = UObjectManager::Get().CreateObject<UAnimDataModel>(this);
     }
 
-    DataModel->Serialize(Ar);
+    if (IsValid(DataModel))
+    {
+        DataModel->Serialize(Ar);
+    }
 
-    PlayLength = DataModel->PlayLength;
-    FrameRate  = DataModel->FrameRate;
-    Notifies   = DataModel->Notifies;
+    if (IsValid(DataModel))
+    {
+        PlayLength = DataModel->PlayLength;
+        FrameRate  = DataModel->FrameRate;
+        Notifies   = DataModel->Notifies;
+    }
 }
 
 void UAnimSequence::SetDataModel(UAnimDataModel* InModel)
 {
-    DataModel = InModel;
+    DataModel = IsValid(InModel) ? InModel : nullptr;
 
     if (DataModel)
     {
@@ -509,6 +517,17 @@ void UAnimSequence::SetDataModel(UAnimDataModel* InModel)
         FrameRate  = DataModel->FrameRate;
         Notifies   = DataModel->Notifies;
     }
+}
+
+UAnimDataModel* UAnimSequence::GetDataModel() const
+{
+    return IsValid(DataModel) ? DataModel : nullptr;
+}
+
+void UAnimSequence::AddReferencedObjects(FReferenceCollector& Collector)
+{
+    UAnimSequenceBase::AddReferencedObjects(Collector);
+    Collector.AddReferencedObject(DataModel, "AnimSequence.DataModel");
 }
 
 const TArray<FBoneAnimationTrack>& UAnimSequence::GetBoneTracks() const

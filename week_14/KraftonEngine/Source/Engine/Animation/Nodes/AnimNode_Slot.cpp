@@ -4,6 +4,8 @@
 #include "Animation/Montage/AnimMontageInstance.h"
 #include "Animation/AnimationRuntime.h"
 #include "Animation/PoseContext.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 
 void FAnimNode_Slot::Initialize(const FAnimationInitializeContext& Context)
 {
@@ -31,7 +33,7 @@ void FAnimNode_Slot::Update(const FAnimationUpdateContext& Context)
 	// 자기 slot 의 montage tick + RM 합성 — Slot 이 단일 책임자.
 	// Pose 합성과 동일 weight 로 LastRM 도 lerp(InputPose.LastRM, MontageRM, W). Montage 의
 	// LastRM 은 raw delta (W 곱 안 함) 라 Slot 측에서 lerp.
-	if (OwnerAnimInstance)
+	if (IsValid(OwnerAnimInstance))
 	{
 		UAnimMontageInstance* MI = OwnerAnimInstance->GetMontageInstanceForSlot(SlotName);
 		if (MI && MI->IsActive())
@@ -52,7 +54,7 @@ void FAnimNode_Slot::Update(const FAnimationUpdateContext& Context)
 
 float FAnimNode_Slot::GetEffectiveBlendWeight() const
 {
-	if (!OwnerAnimInstance) return 0.0f;
+	if (!IsValid(OwnerAnimInstance)) return 0.0f;
 	UAnimMontageInstance* MI = OwnerAnimInstance->GetMontageInstanceForSlot(SlotName);
 	if (!MI || !MI->IsActive()) return 0.0f;
 	return MI->GetBlendWeight();
@@ -71,7 +73,7 @@ void FAnimNode_Slot::Evaluate(FPoseContext& Output)
 	}
 
 	// 2) 이 slot 의 active montage 조회. 없거나 weight 0 이면 pass-through.
-	if (!OwnerAnimInstance) return;
+	if (!IsValid(OwnerAnimInstance)) return;
 	UAnimMontageInstance* MI = OwnerAnimInstance->GetMontageInstanceForSlot(SlotName);
 	if (!MI || !MI->IsActive()) return;
 
@@ -93,5 +95,15 @@ void FAnimNode_Slot::Evaluate(FPoseContext& Output)
 	else
 	{
 		FAnimationRuntime::BlendTwoPosesTogether(Output, MontagePose, Weight, Output);
+	}
+}
+
+
+void FAnimNode_Slot::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	// OwnerAnimInstance is a non-owning back pointer; do not add it.
+	if (InputPose)
+	{
+		InputPose->AddReferencedObjects(Collector);
 	}
 }

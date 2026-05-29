@@ -4,6 +4,8 @@
 #include "Animation/AnimationRuntime.h"
 #include "Animation/PoseContext.h"
 #include "Math/Quat.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 
 #include <algorithm>
 
@@ -54,7 +56,7 @@ void FAnimNode_BlendListByEnum::Update(const FAnimationUpdateContext& Context)
 {
 	// AnimGraph 컴파일러가 박은 SelectorFn 이 있으면 매 frame ActiveChildIndex 갱신.
 	// UCharacterAnimInstance 처럼 외부가 ActiveChildIndex 직접 박는 흐름은 SelectorFn 미설정.
-	if (SelectorFn)
+	if (SelectorFn && IsValid(Context.AnimInstance))
 	{
 		ActiveChildIndex = SelectorFn(Context.AnimInstance);
 	}
@@ -77,7 +79,7 @@ void FAnimNode_BlendListByEnum::Update(const FAnimationUpdateContext& Context)
 		// initialize context — adapter 로 변환.
 		FAnimationInitializeContext InitCtx;
 		InitCtx.AnimInstance = Context.AnimInstance;
-		InitCtx.SkeletalMesh = Context.AnimInstance ? Context.AnimInstance->GetSkeletalMesh() : nullptr;
+		InitCtx.SkeletalMesh = IsValid(Context.AnimInstance) ? Context.AnimInstance->GetSkeletalMesh() : nullptr;
 		InputPoses[CurrentChildIndex]->OnBecomeRelevant(InitCtx);
 
 		// Instant cut — Previous 즉시 OnDormant 후 잊음.
@@ -172,4 +174,16 @@ void FAnimNode_BlendListByEnum::Evaluate(FPoseContext& Output)
 	InputPoses[CurrentChildIndex]->Evaluate(CurPose);
 
 	FAnimationRuntime::BlendTwoPosesTogether(PrevPose, CurPose, BlendAlpha, Output);
+}
+
+
+void FAnimNode_BlendListByEnum::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	for (FAnimNode_Base* Pose : InputPoses)
+	{
+		if (Pose)
+		{
+			Pose->AddReferencedObjects(Collector);
+		}
+	}
 }

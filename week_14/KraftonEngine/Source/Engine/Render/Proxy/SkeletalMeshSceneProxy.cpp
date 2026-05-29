@@ -205,7 +205,7 @@ void FSkeletalMeshSceneProxy::RebuildSectionDraws()
 	SectionDraws.clear();
 
 	USkeletalMeshComponent* SMC = GetSkeletalMeshComponent();
-	USkeletalMesh* Mesh = SMC->GetSkeletalMesh();
+	USkeletalMesh* Mesh = SMC ? SMC->GetSkeletalMesh() : nullptr;
 	if (!Mesh || !Mesh->GetSkeletalMeshAsset())
 	{
 		MeshBuffer = nullptr;

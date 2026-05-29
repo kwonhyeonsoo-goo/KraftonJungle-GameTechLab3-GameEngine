@@ -1,4 +1,4 @@
-﻿#include "AssetRegistry.h"
+#include "AssetRegistry.h"
 #include "Mesh/MeshManager.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Animation/AnimationManager.h"
@@ -13,6 +13,7 @@
 #include <filesystem>
 
 #include "Particle/ParticleSystemManager.h"
+#include "LuaBlueprint/LuaBlueprintManager.h"
 
 namespace FAssetRegistry
 {
@@ -51,6 +52,11 @@ namespace FAssetRegistry
             FParticleSystemManager::Get().RefreshAvailableParticleSystems();
             return FParticleSystemManager::Get().GetAvailableParticleSystemFiles();
         }
+		if (std::strcmp(AssetTypeName, "ULuaBlueprintAsset") == 0)
+		{
+			FLuaBlueprintManager::Get().RefreshAvailableBlueprints();
+			return FLuaBlueprintManager::Get().GetAvailableBlueprintFiles();
+		}
 		if (std::strcmp(AssetTypeName, "LuaAnimScript") == 0)
 		{
 			// Content/Script/Anim/ 하위 .lua 파일 즉석 스캔. 콤보 열 때만 호출되므로 비용 무시.

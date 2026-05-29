@@ -10,8 +10,7 @@ UAmbientLightComponent::UAmbientLightComponent()
 
 void UAmbientLightComponent::PushToScene()
 {
-	if (!Owner) return;
-	UWorld* World = Owner->GetWorld();
+	UWorld* World = GetWorld();
 	if (!World) return;
 	FGlobalAmbientLightParams Params;
 	Params.Intensity = Intensity;
@@ -23,8 +22,7 @@ void UAmbientLightComponent::PushToScene()
 
 void UAmbientLightComponent::DestroyFromScene()
 {
-	if (!Owner) return;
-	UWorld* World = Owner->GetWorld();
+	UWorld* World = GetWorldEvenIfPendingKill();
 	if (!World) return;
 
 	World->GetScene().GetEnvironment().RemoveGlobalAmbientLight(this);

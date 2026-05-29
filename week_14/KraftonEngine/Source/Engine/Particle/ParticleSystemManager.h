@@ -1,4 +1,6 @@
-﻿#pragma once
+#pragma once
+#include "Object/GarbageCollection.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Core/Types/CoreTypes.h"
 #include "Core/Singleton.h"
@@ -7,7 +9,7 @@
 
 class AParticleEventManager;
 
-class FParticleSystemManager : public TSingleton<FParticleSystemManager>
+class FParticleSystemManager : public TSingleton<FParticleSystemManager>, public FGCObject
 {
 	friend class TSingleton<FParticleSystemManager>;
 
@@ -27,11 +29,15 @@ public:
 	void SetDefaultEventManager(AParticleEventManager* InManager);
 	AParticleEventManager* GetDefaultEventManager() const;
 
+	const char* GetReferencerName() const override { return "FParticleSystemManager"; }
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
+	void ClearCache();
+
 private:
 	TMap<FString, UParticleSystem*> LoadedParticleSystems;
 	TArray<FAssetListItem> AvailableParticleSystemFiles;
 
 	// Non-owning reference provided by a higher-level runtime/bootstrap layer.
 	// ParticleSystemManager does not create/destroy it; PSC consumes this provider state.
-	AParticleEventManager* DefaultEventManager = nullptr;
+	TWeakObjectPtr<AParticleEventManager> DefaultEventManager;
 };

@@ -31,6 +31,7 @@ public:
 	void OnBecomeRelevant(const FAnimationInitializeContext& Context) override;
 	void Update(const FAnimationUpdateContext& Context) override;
 	void Evaluate(FPoseContext& Output) override;
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	// Root motion 은 BasePose 의 LastRM 만 반영 (보통 base 가 locomotion).
 	// BlendPose 측 RM 도 weight 합성하려면 phase 3 정리 후보.

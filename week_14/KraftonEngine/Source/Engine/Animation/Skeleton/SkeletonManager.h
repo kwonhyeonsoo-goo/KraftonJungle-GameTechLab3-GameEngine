@@ -1,4 +1,5 @@
 #pragma once
+#include "Object/GarbageCollection.h"
 
 #include "Core/Types/CoreTypes.h"
 #include "Asset/AssetRegistry.h"
@@ -6,7 +7,7 @@
 
 class USkeleton;
 
-class FSkeletonManager
+class FSkeletonManager : public FGCObject
 {
 public:
     static FSkeletonManager& Get();
@@ -40,6 +41,10 @@ public:
         FSkeletonCompatibilityReport* OutReport            = nullptr,
         bool                          bRequireExactBoneSet = true
         );
+
+    const char* GetReferencerName() const override { return "FSkeletonManager"; }
+    void AddReferencedObjects(FReferenceCollector& Collector) override;
+    void ClearCache();
 
 private:
     FSkeletonManager() = default;

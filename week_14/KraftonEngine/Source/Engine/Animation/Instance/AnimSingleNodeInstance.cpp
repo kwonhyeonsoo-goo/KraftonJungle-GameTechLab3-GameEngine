@@ -4,10 +4,16 @@
 #include "Animation/AnimExtractContext.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Core/Logging/Log.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 
 #include <cmath>
 void UAnimSingleNodeInstance::SetAnimationAsset(UAnimSequenceBase* InAsset)
 {
+    if (InAsset && !IsValid(InAsset))
+    {
+        InAsset = nullptr;
+    }
     if (UAnimSequence* Sequence = Cast<UAnimSequence>(InAsset))
     {
         if (USkeletalMeshComponent* Component = GetOwningComponent())
@@ -22,13 +28,17 @@ void UAnimSingleNodeInstance::SetAnimationAsset(UAnimSequenceBase* InAsset)
         }
     }
 
-	CurrentAsset = InAsset;
+	CurrentAsset = IsValid(InAsset) ? InAsset : nullptr;
 	CurrentTime = 0.0f;
 }
 
 void UAnimSingleNodeInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
-	if (!bPlaying || !CurrentAsset) return;
+	if (!bPlaying || !IsValid(CurrentAsset))
+	{
+		CurrentAsset = nullptr;
+		return;
+	}
 
 	const float PreviousTime = CurrentTime;
 	AdvanceTime(DeltaSeconds);
@@ -49,8 +59,9 @@ void UAnimSingleNodeInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 void UAnimSingleNodeInstance::EvaluateAnimation(FPoseContext& Output)
 {
-	if (!CurrentAsset)
+	if (!IsValid(CurrentAsset))
 	{
+		CurrentAsset = nullptr;
 		Output.ResetToRefPose();
 		return;
 	}
@@ -63,6 +74,11 @@ void UAnimSingleNodeInstance::EvaluateAnimation(FPoseContext& Output)
 
 void UAnimSingleNodeInstance::AdvanceTime(float DeltaSeconds)
 {
+	if (!IsValid(CurrentAsset))
+	{
+		CurrentAsset = nullptr;
+		return;
+	}
 	const float Length = CurrentAsset->GetPlayLength();
 	if (Length <= 0.0f) return;
 
@@ -79,4 +95,22 @@ void UAnimSingleNodeInstance::AdvanceTime(float DeltaSeconds)
 		if (CurrentTime < 0.0f)    { CurrentTime = 0.0f;    bPlaying = false; }
 		if (CurrentTime > Length)  { CurrentTime = Length;  bPlaying = false; }
 	}
+}
+
+
+UAnimSequenceBase* UAnimSingleNodeInstance::GetAnimationAsset() const
+{
+	return IsValid(CurrentAsset) ? CurrentAsset : nullptr;
+}
+
+void UAnimSingleNodeInstance::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UAnimInstance::AddReferencedObjects(Collector);
+	Collector.AddReferencedObject(CurrentAsset, "AnimSingleNodeInstance.CurrentAsset");
+}
+
+void UAnimSingleNodeInstance::BeginDestroy()
+{
+	CurrentAsset = nullptr;
+	UAnimInstance::BeginDestroy();
 }

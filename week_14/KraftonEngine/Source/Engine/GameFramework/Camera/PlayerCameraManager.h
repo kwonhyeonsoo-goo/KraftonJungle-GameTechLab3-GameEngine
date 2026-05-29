@@ -33,8 +33,8 @@ public:
 	bool ToggleActiveCameraForActor(const FString& ActorName, float BlendTime = 0.0f);
 	bool ToggleActiveCameraForActor(const AActor* Actor, float BlendTime = 0.0f);
 
-	UCameraComponent* GetActiveCamera() const { return ActiveCamera; }
-	void SetActiveCamera(UCameraComponent* NewCamera) { ActiveCamera = NewCamera; }
+	UCameraComponent* GetActiveCamera() const;
+	void SetActiveCamera(UCameraComponent* NewCamera);
 
 	// ActiveCamera 단위 blend — 같은 액터의 다른 카메라 컴포넌트 사이 부드럽게 전환.
 	// (UE 의 SetViewTargetWithBlend 가 Actor 단위인 것과 별개로, 본 엔진은 Pawn 안에 여러
@@ -46,16 +46,16 @@ public:
 		float BlendTime,
 		EViewTargetBlendFunction BlendFunction = EViewTargetBlendFunction::VTBlend_Linear);
 
-	UCameraComponent* GetPossessedCamera() const { return PossessedCamera; }
-	void Possess(UCameraComponent* NewCamera) { PossessedCamera = NewCamera; }
+	UCameraComponent* GetPossessedCamera() const;
+	void Possess(UCameraComponent* NewCamera);
 
 	// ─── View Target ──────────────────────────────────────────────
 	// PlayerController::SetViewTargetWithBlend 가 위임. 현재 view target → New 로 전환.
 	// UE: APlayerCameraManager::SetViewTarget
 	virtual void SetViewTarget(AActor* NewViewTarget, FViewTargetTransitionParams TransitionParams = FViewTargetTransitionParams());
 
-	AActor* GetViewTarget() const { return ViewTarget; }
-	AActor* GetPendingViewTarget() const { return PendingViewTarget; }
+	AActor* GetViewTarget() const;
+	AActor* GetPendingViewTarget() const;
 
 	// ─── Camera Shake ─────────────────────────────────────────────
 	// UE: APlayerCameraManager::StartCameraShake
@@ -145,6 +145,7 @@ public:
 	// World::Tick 에서 매 프레임 호출. ActiveCamera base POV 산출 → Shake 누적 →
 	// CameraCachePOV 에 저장. Fade / ViewTarget blend 도 같이 갱신.
 	virtual void UpdateCamera(float DeltaTime);
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	// ─── POV Cache ────────────────────────────────────────────────
 	// UE: APlayerCameraManager::GetCameraCachePOV. UpdateCamera 가 매 프레임 채운

@@ -605,17 +605,45 @@ void UUIManager::Shutdown()
 
 UUserWidget* UUIManager::CreateWidget(APlayerController* OwningPlayer, const FString& DocumentPath)
 {
+	CompactInvalidWidgets();
 	UUserWidget* Widget = UObjectManager::Get().CreateObject<UUserWidget>();
 	Widget->Initialize(OwningPlayer, DocumentPath);
 	CreatedWidgets.push_back(Widget);
 	return Widget;
 }
 
+void UUIManager::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	Collector.AddReferencedObjects(CreatedWidgets, "UUIManager.CreatedWidgets");
+	Collector.AddReferencedObjects(ViewportWidgets, "UUIManager.ViewportWidgets");
+	Collector.AddReferencedObjects(PendingRemoveWidgets, "UUIManager.PendingRemoveWidgets");
+}
+
+void UUIManager::CompactInvalidWidgets()
+{
+	auto RemoveInvalid = [](TArray<UUserWidget*>& Widgets)
+	{
+		Widgets.erase(
+			std::remove_if(
+				Widgets.begin(),
+				Widgets.end(),
+				[](UUserWidget* Widget)
+				{
+					return !IsValid(Widget);
+				}),
+			Widgets.end());
+	};
+
+	RemoveInvalid(ViewportWidgets);
+	RemoveInvalid(CreatedWidgets);
+	RemoveInvalid(PendingRemoveWidgets);
+}
+
 bool UUIManager::AnyViewportWidgetWantsMouse() const
 {
 	for (const UUserWidget* Widget : ViewportWidgets)
 	{
-		if (Widget && Widget->WantsMouse())
+		if (IsValid(Widget) && Widget->WantsMouse())
 		{
 			return true;
 		}
@@ -625,7 +653,8 @@ bool UUIManager::AnyViewportWidgetWantsMouse() const
 
 void UUIManager::AddToViewport(UUserWidget* Widget, int32 /*ZOrder*/)
 {
-	if (!Widget)
+	CompactInvalidWidgets();
+	if (!IsValid(Widget))
 	{
 		return;
 	}
@@ -650,9 +679,15 @@ void UUIManager::AddToViewport(UUserWidget* Widget, int32 /*ZOrder*/)
 
 void UUIManager::RemoveFromViewport(UUserWidget* Widget)
 {
+	CompactInvalidWidgets();
+	if (!IsAliveObject(Widget))
+	{
+		return;
+	}
+
 	if (bDispatchingRmlEvents)
 	{
-		if (Widget && std::find(PendingRemoveWidgets.begin(), PendingRemoveWidgets.end(), Widget) == PendingRemoveWidgets.end())
+		if (std::find(PendingRemoveWidgets.begin(), PendingRemoveWidgets.end(), Widget) == PendingRemoveWidgets.end())
 		{
 			PendingRemoveWidgets.push_back(Widget);
 			Widget->MarkRemovedFromViewport();
@@ -667,7 +702,7 @@ void UUIManager::RemoveFromViewportImmediate(UUserWidget* Widget)
 {
 	ViewportWidgets.erase(std::remove(ViewportWidgets.begin(), ViewportWidgets.end(), Widget), ViewportWidgets.end());
 	CloseDocument(Widget);
-	if (Widget)
+	if (IsAliveObject(Widget))
 	{
 		Widget->MarkRemovedFromViewport();
 	}
@@ -684,9 +719,9 @@ void UUIManager::ClearViewport()
 
 	for (UUserWidget* Widget : ViewportWidgets)
 	{
-		CloseDocument(Widget);
-		if (Widget)
+		if (IsAliveObject(Widget))
 		{
+			CloseDocument(Widget);
 			Widget->MarkRemovedFromViewport();
 		}
 	}
@@ -701,6 +736,7 @@ void UUIManager::ClearViewport()
 void UUIManager::DestroyAllWidgets()
 {
 	ClearViewport();
+	CompactInvalidWidgets();
 
 	for (UUserWidget* Widget : CreatedWidgets)
 	{
@@ -714,7 +750,7 @@ void UUIManager::DestroyAllWidgets()
 
 bool UUIManager::LoadDocument(UUserWidget* Widget)
 {
-	if (!Widget)
+	if (!IsValid(Widget))
 	{
 		return false;
 	}
@@ -749,7 +785,7 @@ bool UUIManager::LoadDocument(UUserWidget* Widget)
 
 void UUIManager::CloseDocument(UUserWidget* Widget)
 {
-	if (!Widget || !Widget->GetDocument())
+	if (!IsAliveObject(Widget) || !Widget->GetDocument())
 	{
 		return;
 	}
@@ -761,6 +797,7 @@ void UUIManager::CloseDocument(UUserWidget* Widget)
 
 void UUIManager::Render(const FPassContext& Ctx)
 {
+	CompactInvalidWidgets();
 	if (!RmlContext || !RenderInterface || ViewportWidgets.empty() || Ctx.Frame.ViewportWidth <= 0.0f || Ctx.Frame.ViewportHeight <= 0.0f)
 	{
 		return;

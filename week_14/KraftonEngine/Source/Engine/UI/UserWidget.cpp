@@ -4,6 +4,22 @@
 #include "UI/UIManager.h"
 
 
+void UUserWidget::BeginDestroy()
+{
+	// Rml::ElementDocument and Rml event listeners are external runtime resources,
+	// not UObject references. GC can destroy a widget without going through the
+	// regular UIManager shutdown path, so detach listeners and release the document
+	// handle before the UObject enters PendingKill/Garbage state.
+	ClearEventListeners();
+	if (Document)
+	{
+		Document->Close();
+		ClearDocument();
+	}
+	bInViewport = false;
+	UObject::BeginDestroy();
+}
+
 
 void UUserWidget::Initialize(APlayerController* InOwningPlayer, const FString& InDocumentPath)
 {

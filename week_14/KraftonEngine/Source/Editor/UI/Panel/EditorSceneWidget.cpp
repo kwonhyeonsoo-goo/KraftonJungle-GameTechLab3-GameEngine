@@ -35,7 +35,7 @@ void FEditorSceneWidget::RenderActorOutliner()
 	UWorld* World = EditorEngine->GetWorld();
 	if (!World) return;
 
-	const TArray<AActor*>& Actors = World->GetActors();
+	TArray<AActor*> Actors = World->GetActors();
 
 	// null이 아닌 유효 Actor 인덱스만 수집 (Clipper는 연속 인덱스 필요)
 	ValidActorIndices.clear();

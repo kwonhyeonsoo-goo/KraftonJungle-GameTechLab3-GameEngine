@@ -4,6 +4,7 @@
 #include "Object/FName.h"
 
 class UAnimSequence;
+class FReferenceCollector;
 
 // Montage 의 한 section — 소스 sequence 의 시간 구간 + 다음 section 링크.
 //   StartTime/LinkTime: 소스 sequence 내 시간 (sec).
@@ -40,13 +41,14 @@ public:
     ~UAnimMontage() override = default;
 
     void Serialize(FArchive& Ar) override;
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
     // 본 pose 평가 — Ctx.CurrentTime 은 SOURCE SEQUENCE 의 시간으로 해석.
     // (UAnimMontageInstance 가 section + sectionTime → sequence time 으로 변환 후 호출.)
     void GetBonePose(FPoseContext& Output, const FAnimExtractContext& Ctx) const override;
 
     // ── Source ──
-    UAnimSequence* GetSourceSequence() const { return SourceSequence; }
+    UAnimSequence* GetSourceSequence() const;
     void           SetSourceSequence(UAnimSequence* InSeq);   // PlayLength/FrameRate 자동 동기화
 
     // ── Sections ──

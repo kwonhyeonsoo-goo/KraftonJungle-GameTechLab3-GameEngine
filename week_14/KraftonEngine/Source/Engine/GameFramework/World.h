@@ -1,5 +1,6 @@
 #pragma once
 #include "Object/Object.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "Core/Types/RayTypes.h"
 #include "Core/Types/CollisionTypes.h"
 #include "Collision/BVH/WorldPrimitivePickingBVH.h"
@@ -32,6 +33,8 @@ public:
 	GENERATED_BODY()
 	UWorld() = default;
 	~UWorld() override;
+	void BeginDestroy() override;
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	// --- 월드 타입 ---
 	EWorldType GetWorldType() const { return WorldType; }
@@ -60,7 +63,7 @@ public:
 	void WarmupPickingData() const;
 	bool RaycastPrimitives(const FRay& Ray, FHitResult& OutHitResult, AActor*& OutActor) const;
 
-	const TArray<AActor*>& GetActors() const { return PersistentLevel->GetActors(); }
+	const TArray<AActor*>& GetActors() const { static const TArray<AActor*> EmptyActors; return PersistentLevel ? PersistentLevel->GetActors() : EmptyActors; }
 
 	// LOD 컨텍스트를 FFrameContext에 전달 (Collect 단계에서 LOD 인라인 갱신용)
 	FLODUpdateContext PrepareLODContext();
@@ -68,12 +71,15 @@ public:
 	void InitWorld();      // Set up the world before gameplay begins
 	void BeginPlay();      // Triggers BeginPlay on all actors
 	void Tick(float DeltaTime, ELevelTick TickType);  // Drives the game loop every frame
-	void EndPlay();        // Cleanup before world is destroyed
+	float GetGameTimeSeconds() const { return GameTimeSeconds; }
+	void EndPlay();        // Stop gameplay without owning memory lifetime.
+	void RouteWorldDestroyed();
 
 private:
 	// PlayerCameraManager 갱신 — Slomo / HitStop 등 TimeDilation 의 영향을 받지 않도록
 	// FTimer 의 raw delta 를 직접 사용한다. Tick 의 paused / 정상 흐름 양쪽에서 호출.
 	void TickPlayerCamera() const;
+	void ShutdownPhysicsScene();
 
 public:
 
@@ -119,6 +125,8 @@ private:
 	EWorldType WorldType = EWorldType::Editor;
 	bool bHasBegunPlay = false;
 	bool bPaused = false;
+	float GameTimeSeconds = 0.0f;
+	bool bWorldDestroyRouted = false;
 	FWorldSettings WorldSettings;
 	bool bHasLastFullLODUpdateCameraPos = false;
 	mutable FWorldPrimitivePickingBVH WorldPrimitivePickingBVH;
@@ -134,7 +142,7 @@ private:
 	std::unique_ptr<IPhysicsScene> PhysicsScene;
 
 	// Game flow — Editor 월드에서는 nullptr로 유지된다.
-	AGameModeBase* GameMode = nullptr;
+	TWeakObjectPtr<AGameModeBase> GameMode;
 	UClass* GameModeClass = nullptr;  // GameEngine 등이 BeginPlay 전에 세팅
 
 public:
@@ -155,7 +163,7 @@ public:
 	// --- Game flow ---
 	// BeginPlay 이전에 호출. WorldType이 Editor면 무시된다.
 	void SetGameModeClass(UClass* InClass) { GameModeClass = InClass; }
-	AGameModeBase* GetGameMode() const { return GameMode; }
+	AGameModeBase* GetGameMode() const { return GameMode.Get(); }
 	AGameStateBase* GetGameState() const;
 	APlayerController* GetFirstPlayerController() const;
 };

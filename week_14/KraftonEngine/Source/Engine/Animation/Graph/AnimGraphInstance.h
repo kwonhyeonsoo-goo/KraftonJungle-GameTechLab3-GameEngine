@@ -4,6 +4,7 @@
 #include "Object/Ptr/SoftObjectPtr.h"
 
 class UAnimGraphAsset;
+class FReferenceCollector;
 
 // 자산(UAnimGraphAsset) 으로 기술된 AnimGraph 를 컴파일해 평가하는 AnimInstance.
 //
@@ -33,9 +34,11 @@ public:
 	void NativeInitializeAnimation()                override;
 	void NativeUpdateAnimation(float DeltaSeconds)  override;
 	void Serialize(FArchive& Ar)                    override;
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
+	void BeginDestroy() override;
 
-	UAnimGraphAsset* GetGraphAsset() const { return GraphAsset; }
-	void             SetGraphAsset(UAnimGraphAsset* InAsset) { GraphAsset = InAsset; }
+	UAnimGraphAsset* GetGraphAsset() const;
+	void             SetGraphAsset(UAnimGraphAsset* InAsset);
 
 	// Editor PropertyWidget 의 자산 콤보로 노출 (AssetType meta). NativeInitialize 에서 LoadAnimation.
 	// "None" / empty / 로드 실패 시 SequenceRef=nullptr — SequencePlayer 가 ref pose 유지.

@@ -19,6 +19,7 @@
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
 #include "Object/Reflection/UClass.h"
+#include "Object/Object.h"
 
 #include <cmath>
 
@@ -71,7 +72,7 @@ namespace
 	{
 		return [VariableName](UAnimInstance* AI) -> float
 		{
-			if (!AI || VariableName == FName::None) return 0.0f;
+			if (!IsValid(AI) || VariableName == FName::None) return 0.0f;
 
 			UClass* Cls = AI->GetClass();
 			if (!Cls) return 0.0f;

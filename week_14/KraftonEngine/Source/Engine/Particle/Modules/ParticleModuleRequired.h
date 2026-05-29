@@ -7,6 +7,43 @@
 
 #include "Source/Engine/Particle/Modules/ParticleModuleRequired.generated.h"
 
+UENUM()
+enum class EParticleUVFlipMode : uint8
+{
+	None,
+	FlipUV,
+	FlipUOnly,
+	FlipVOnly,
+	RandomFlipUV,
+	RandomFlipUOnly,
+	RandomFlipVOnly,
+	RandomFlipUVIndependent,
+};
+
+UENUM()
+enum EParticleScreenAlignment : int
+{
+	PSA_FacingCameraPosition,
+	PSA_Square,
+	PSA_Rectangle,
+	PSA_Velocity,
+	PSA_AwayFromCenter,
+	PSA_TypeSpecific,
+	PSA_FacingCameraDistanceBlend,
+	PSA_MAX,
+};
+
+UENUM()
+enum EParticleSortMode : int
+{
+	PSORTMODE_None,
+	PSORTMODE_ViewProjDepth,
+	PSORTMODE_DistanceToView,
+	PSORTMODE_Age_OldestFirst,
+	PSORTMODE_Age_NewestFirst,
+	PSORTMODE_MAX,
+};
+
 class UMaterial;
 
 // =============================================================================
@@ -54,11 +91,13 @@ public:
 	int32 EmitterLoops = 0; // 0 = infinite
 
 	// --- Sort ---
+	UENUM()
 	enum class ESortMode : uint8 { None, ViewProjDepth, ViewDistance, Age_OldestFirst, Age_NewestFirst };
 	UPROPERTY(Edit, Save, Category="Required", DisplayName="Sort Mode", Enum=ESortMode)
 	ESortMode SortMode = ESortMode::None;
 
 	// --- Screen alignment (Sprite 전용) ---
+	UENUM()
 	enum class EScreenAlignment : uint8 { Square, Rectangle, Velocity, FacingCameraPosition };
 	UPROPERTY(Edit, Save, Category="Required", DisplayName="Screen Alignment", Enum=EScreenAlignment)
 	EScreenAlignment ScreenAlignment = EScreenAlignment::Square;

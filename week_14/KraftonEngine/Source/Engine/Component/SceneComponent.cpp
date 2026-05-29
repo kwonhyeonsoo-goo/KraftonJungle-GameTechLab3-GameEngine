@@ -2,6 +2,8 @@
 #include "Object/Reflection/ObjectFactory.h"
 #include <GameFramework/World.h>
 #include "Serialization/Archive.h"
+#include "Object/GarbageCollection.h"
+#include "Core/Logging/Log.h"
 
 HIDE_FROM_COMPONENT_LIST(USceneComponent)
 
@@ -111,45 +113,95 @@ USceneComponent::USceneComponent()
 
 USceneComponent::~USceneComponent()
 {
-	// 1. 부모로부터 자신을 제거 (댕글링 방지)
-	if (ParentComponent)
+	if (!HasAnyFlags(RF_BeginDestroy))
 	{
-		ParentComponent->RemoveChild(this);
-		ParentComponent = nullptr;
-	}
-
-	// 2. 자식들을 먼저 제거 (재귀적으로 subtree 파괴)
-	while (!ChildComponents.empty())
-	{
-		USceneComponent* Child = ChildComponents.back();
-		if (Child && Owner)
-		{
-			Owner->RemoveComponent(Child);
-		}
-		else
-		{
-			ChildComponents.pop_back();
-		}
+		BeginDestroy();
 	}
 }
+
+void USceneComponent::RouteComponentDestroyed()
+{
+	if (bComponentDestroyRouted)
+	{
+		return;
+	}
+
+	TArray<USceneComponent*> Children;
+	Children.reserve(ChildComponents.size());
+	for (USceneComponent* Child : ChildComponents)
+	{
+		if (IsAliveObject(Child))
+		{
+			Children.push_back(Child);
+		}
+	}
+
+	UActorComponent::RouteComponentDestroyed();
+
+	if (USceneComponent* Parent = ParentComponent.GetEvenIfPendingKill())
+	{
+		Parent->RemoveChild(this);
+	}
+	ParentComponent.Reset();
+	ChildComponents.clear();
+
+	for (USceneComponent* Child : Children)
+	{
+		if (!IsAliveObject(Child))
+		{
+			continue;
+		}
+
+		Child->ParentComponent.Reset();
+		Child->RouteComponentDestroyed();
+		Child->MarkPendingKill();
+	}
+}
+
+void USceneComponent::BeginDestroy()
+{
+	if (HasAnyFlags(RF_BeginDestroy))
+	{
+		return;
+	}
+
+	// UActorComponent::BeginDestroy() deliberately calls virtual EndPlay() before
+	// virtual RouteComponentDestroyed(). Scene/Camera/Primitive components may need
+	// Owner/Outer/World during EndPlay teardown; routing first resets those links
+	// and can make EndPlay dereference a null owner during scene reload GC.
+	UActorComponent::BeginDestroy();
+}
+
+void USceneComponent::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UActorComponent::AddReferencedObjects(Collector);
+	Collector.AddReferencedObjects(ChildComponents, "ChildComponents");
+}
+
 
 
 void USceneComponent::SetParent(USceneComponent* NewParent)
 {
-	if (NewParent == ParentComponent || NewParent == this)
+	if (NewParent == ParentComponent.Get() || NewParent == this)
 	{
 		return;
 	}
-	
-	if (ParentComponent)
+
+	if (NewParent && NewParent->IsDescendantOf(this))
 	{
-		ParentComponent->RemoveChild(this);
+		UE_LOG("SceneComponent hierarchy cycle rejected: %s cannot be attached under its descendant %s", GetName().c_str(), NewParent->GetName().c_str());
+		return;
+	}
+	
+	if (USceneComponent* OldParent = ParentComponent.Get())
+	{
+		OldParent->RemoveChild(this);
 	}
 
-	ParentComponent = NewParent;
-	if (ParentComponent)
+	ParentComponent.Reset(NewParent);
+	if (USceneComponent* Parent = ParentComponent.Get())
 	{
-		ParentComponent->ChildComponents.push_back(this);
+		Parent->ChildComponents.push_back(this);
 	}
 
 	// 부모 변경 시 자신 및 하위 자식의 월드 행렬을 갱신하도록 dirty 마킹
@@ -177,9 +229,9 @@ void USceneComponent::RemoveChild(USceneComponent* Child)
 
 	if (iter != ChildComponents.end())
 	{
-		if ((*iter)->ParentComponent == this)
+		if ((*iter)->ParentComponent.GetEvenIfPendingKill() == this)
 		{
-			(*iter)->ParentComponent = nullptr;
+			(*iter)->ParentComponent.Reset();
 		}
 
 		ChildComponents.erase(iter);
@@ -197,6 +249,33 @@ bool USceneComponent::ContainsChild(const USceneComponent* Child) const
 		ChildComponents.end(), Child) != ChildComponents.end();
 }
 
+bool USceneComponent::IsDescendantOf(const USceneComponent* MaybeAncestor) const
+{
+	if (!MaybeAncestor)
+	{
+		return false;
+	}
+
+	TSet<const USceneComponent*> Visited;
+	const USceneComponent* Current = this;
+	while (Current)
+	{
+		if (Visited.find(Current) != Visited.end())
+		{
+			return false;
+		}
+		Visited.insert(Current);
+
+		if (Current == MaybeAncestor)
+		{
+			return true;
+		}
+
+		Current = Current->ParentComponent.Get();
+	}
+	return false;
+}
+
 void USceneComponent::UpdateWorldMatrix() const
 {
 	if (bTransformDirty == false)
@@ -206,16 +285,16 @@ void USceneComponent::UpdateWorldMatrix() const
 
 	FMatrix RelativeMatrix = GetRelativeMatrix();
 
-	if (ParentComponent != nullptr)
+	if (USceneComponent* Parent = ParentComponent.Get())
 	{
 		if (bAbsoluteScale)
 		{
 			// 에디터 아이콘 빌보드는 부모 스케일과 분리해 화면상 크기 변화를 막는다.
-			CachedWorldMatrix = RelativeMatrix * GetRotationTranslationWithoutScale(ParentComponent->GetWorldMatrix());
+			CachedWorldMatrix = RelativeMatrix * GetRotationTranslationWithoutScale(Parent->GetWorldMatrix());
 		}
 		else
 		{
-			CachedWorldMatrix = RelativeMatrix * ParentComponent->GetWorldMatrix();
+			CachedWorldMatrix = RelativeMatrix * Parent->GetWorldMatrix();
 		}
 	}
 	else
@@ -228,19 +307,19 @@ void USceneComponent::UpdateWorldMatrix() const
 
 void USceneComponent::AddWorldOffset(const FVector& WorldDelta)
 {
-	if (ParentComponent == nullptr)
+	if (USceneComponent* Parent = ParentComponent.Get())
 	{
-		Move(WorldDelta);
-	}
-	else
-	{
-		const FMatrix& parentWorldMatrix = ParentComponent->GetWorldMatrix();
+		const FMatrix& parentWorldMatrix = Parent->GetWorldMatrix();
 
 		FMatrix parentWorldInverseMatrix = parentWorldMatrix.GetInverse();
 
 		FVector localDelta = parentWorldInverseMatrix.TransformVector(WorldDelta);
 
 		Move(localDelta);
+	}
+	else
+	{
+		Move(WorldDelta);
 	}
 }
 
@@ -382,15 +461,14 @@ const FMatrix& USceneComponent::GetWorldInverseMatrix() const
 
 void USceneComponent::SetWorldLocation(FVector NewWorldLocation)
 {
-	if (ParentComponent != nullptr)
+	if (USceneComponent* Parent = ParentComponent.Get())
 	{
-		const FMatrix& parentWorldInverseMatrix = ParentComponent->GetWorldMatrix().GetInverse();
+		const FMatrix& parentWorldInverseMatrix = Parent->GetWorldMatrix().GetInverse();
 
 		FVector newRelativeLocation = NewWorldLocation * parentWorldInverseMatrix;
 
 		SetRelativeLocation(newRelativeLocation);
 	}
-
 	else
 	{
 		SetRelativeLocation(NewWorldLocation);
@@ -407,11 +485,11 @@ FRotator USceneComponent::GetWorldRotation() const
 {
 	FQuat WorldQuat = RelativeTransform.Rotation.GetNormalized();
 
-	const USceneComponent* CurrentParent = ParentComponent;
+	const USceneComponent* CurrentParent = ParentComponent.Get();
 	while (CurrentParent)
 	{
 		WorldQuat = (WorldQuat * CurrentParent->RelativeTransform.Rotation).GetNormalized();
-		CurrentParent = CurrentParent->ParentComponent;
+		CurrentParent = CurrentParent->ParentComponent.Get();
 	}
 
 	return WorldQuat.ToRotator();

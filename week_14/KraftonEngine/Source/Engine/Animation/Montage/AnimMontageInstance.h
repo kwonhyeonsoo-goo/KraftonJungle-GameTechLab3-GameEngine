@@ -5,6 +5,7 @@
 #include "Math/Transform.h"
 
 class UAnimMontage;
+class FReferenceCollector;
 class UAnimInstance;
 struct FPoseContext;
 
@@ -41,7 +42,7 @@ public:
     // ── 상태 조회 ──
     bool          IsActive()       const { return State != EState::Inactive; }
     bool          IsBlendingOut()  const { return State == EState::BlendingOut; }
-    UAnimMontage* GetCurrentMontage() const { return CurrentMontage; }
+    UAnimMontage* GetCurrentMontage() const;
     FName         GetCurrentSectionName() const;
     float         GetSectionTime() const { return SectionTime; }
     float         GetBlendWeight() const;
@@ -53,6 +54,9 @@ public:
     // 매 Tick 이 채우는 raw root motion delta (BlendWeight 곱 안 함). Slot 노드가 GetBlendWeight
     // 로 InputPose.LastRM 과 lerp 합성. 외부 누적은 RootNode 한 곳 (UAnimInstance::UpdateAnimation 끝).
     const FTransform& GetLastRootMotionDelta() const { return LastRootMotionDelta; }
+
+    void AddReferencedObjects(FReferenceCollector& Collector) override;
+    void BeginDestroy() override;
 
 private:
     void EnterBlendingIn(float InBlendInTime);

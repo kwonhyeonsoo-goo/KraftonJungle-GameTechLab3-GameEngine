@@ -8,6 +8,7 @@
 class AActor;
 class UPrimitiveComponent;
 class UWorld;
+class FReferenceCollector;
 struct FFrameContext;
 
 // ============================================================
@@ -21,6 +22,8 @@ class FScene
 public:
 	FScene() = default;
 	~FScene();
+
+	void AddReferencedObjects(FReferenceCollector& Collector);
 
 	// --- 프록시 등록/해제 ---
 	FPrimitiveSceneProxy* AddPrimitive(UPrimitiveComponent* Component);
@@ -36,7 +39,7 @@ public:
 	void SetProxySelected(FPrimitiveSceneProxy* Proxy, bool bSelected);
 	void SetProxyOutlineOnly(FPrimitiveSceneProxy* Proxy, bool bEnabled);
 	bool IsProxySelected(const FPrimitiveSceneProxy* Proxy) const;
-	const TSet<AActor*>& GetSelectedActors() const { return SelectedActors; }
+	TArray<AActor*> GetSelectedActors() const;
 
 	// --- 조회 ---
 	const TArray<FPrimitiveSceneProxy*>& GetAllProxies() const { return Proxies; }
@@ -83,6 +86,7 @@ private:
 	// --- 내부 헬퍼 (friend 경유로 Proxy private 멤버 접근) ---
 	static void EnqueueDirtyProxy(TArray<FPrimitiveSceneProxy*>& DirtyList, FPrimitiveSceneProxy* Proxy);
 	static void RemoveSelectedProxyFast(TArray<FPrimitiveSceneProxy*>& SelectedList, FPrimitiveSceneProxy* Proxy);
+	void RemoveReceiverProxyFromDecalCaches(FPrimitiveSceneProxy* RemovedProxy);
 
 	// 전체 프록시 목록 (ProxyId = 인덱스)
 	TArray<FPrimitiveSceneProxy*> Proxies;
@@ -101,6 +105,9 @@ private:
 
 	// 삭제된 슬롯 재활용
 	TArray<uint32> FreeSlots;
+
+	// ProxyId slot reuse와 다중 프레임 GPU readback 결과를 구분하기 위한 세대값.
+	uint32 NextProxyGeneration = 0;
 
 	// --- Per-frame ephemeral data ---
 	TArray<FOverlayText> OverlayTexts;

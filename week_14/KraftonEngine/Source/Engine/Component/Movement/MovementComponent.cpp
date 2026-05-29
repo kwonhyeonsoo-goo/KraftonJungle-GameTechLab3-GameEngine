@@ -6,6 +6,7 @@
 #include "Serialization/Archive.h"
 
 #include <cstring>
+#include <Object/GarbageCollection.h>
 
 // Base movement logic only; concrete movement types should be added instead.
 HIDE_FROM_COMPONENT_LIST(UMovementComponent)
@@ -14,7 +15,7 @@ namespace
 {
 	void GatherSceneComponentsRecursive(USceneComponent* Component, TArray<USceneComponent*>& OutComponents)
 	{
-		if (!Component)
+		if (!IsValid(Component))
 		{
 			return;
 		}
@@ -58,20 +59,43 @@ void UMovementComponent::PostEditProperty(const char* PropertyName)
 	}
 }
 
+
+void UMovementComponent::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UActorComponent::AddReferencedObjects(Collector);
+
+	Collector.AddReferencedObject(UpdatedComponent, "UMovementComponent.UpdatedComponent");
+}
+
 void UMovementComponent::SetUpdatedComponent(USceneComponent* NewUpdatedComponent)
 {
+	if (!IsValid(NewUpdatedComponent))
+	{
+		UpdatedComponent = nullptr;
+		bAutoRegisterUpdatedComponent = true;
+		return;
+	}
+
+	AActor* OwnerActor = GetOwner();
+	if (!IsValid(OwnerActor) || NewUpdatedComponent->GetOwner() != OwnerActor)
+	{
+		UpdatedComponent = nullptr;
+		bAutoRegisterUpdatedComponent = true;
+		return;
+	}
+
 	UpdatedComponent = NewUpdatedComponent;
-	bAutoRegisterUpdatedComponent = UpdatedComponent == nullptr;
+	bAutoRegisterUpdatedComponent = false;
 }
 
 USceneComponent* UMovementComponent::GetUpdatedComponent() const
 {
-	return UpdatedComponent;
+	return IsValid(UpdatedComponent.GetRaw()) ? UpdatedComponent.GetRaw() : nullptr;
 }
 
 void UMovementComponent::ClearUpdatedComponentIfMatches(const USceneComponent* RemovedComponent)
 {
-	if (!RemovedComponent || UpdatedComponent != RemovedComponent)
+	if (!RemovedComponent || UpdatedComponent.GetRaw() != RemovedComponent)
 	{
 		return;
 	}
@@ -94,7 +118,8 @@ void UMovementComponent::TryAutoRegisterUpdatedComponent()
 		return;
 	}
 
-	UpdatedComponent = OwnerActor->GetRootComponent();
+	USceneComponent* RootComponent = OwnerActor->GetRootComponent();
+	UpdatedComponent = IsValid(RootComponent) ? RootComponent : nullptr;
 }
 
 TArray<USceneComponent*> UMovementComponent::GetOwnerSceneComponents() const
@@ -129,11 +154,11 @@ FString UMovementComponent::GetUpdatedComponentDisplayName() const
 
 bool UMovementComponent::ResolveUpdatedComponent()
 {
-	if (UpdatedComponent)
+	if (USceneComponent* CurrentUpdatedComponent = GetUpdatedComponent())
 	{
 		for (USceneComponent* Candidate : GetOwnerSceneComponents())
 		{
-			if (Candidate == UpdatedComponent)
+			if (Candidate == CurrentUpdatedComponent)
 			{
 				bAutoRegisterUpdatedComponent = false;
 				return true;

@@ -1,4 +1,4 @@
-﻿#include "ParticleEmitterInstance.h"
+#include "ParticleEmitterInstance.h"
 
 #include "Particle/ParticleEmitter.h"
 #include "Particle/ParticleLODLevel.h"
@@ -332,9 +332,9 @@ namespace
 			OutData.bRenderGeometry = BeamTypeData->bRenderGeometry;
 			OutData.TaperFactor = BeamTypeData->TaperFactor;
 			OutData.bTaperFull =
-				BeamTypeData->TaperMethod == UParticleModuleTypeDataBeam::EBeamTaperMethod::Full;
+				BeamTypeData->TaperMethod == PEBTM_Full;
 
-			if (BeamTypeData->BeamMethod == UParticleModuleTypeDataBeam::EBeam2Method::Distance)
+			if (BeamTypeData->BeamMethod == PEB2M_Distance)
 			{
 				const FVector LocalXDistance(BeamDistance, 0.0f, 0.0f);
 				InOutResolvedTarget = InOutResolvedSource +
@@ -370,7 +370,7 @@ namespace
 		}
 
 		// Source가 모듈에 의해 바뀐 뒤 Distance Beam target을 다시 계산한다.
-		if (BeamTypeData && BeamTypeData->BeamMethod == UParticleModuleTypeDataBeam::EBeam2Method::Distance)
+		if (BeamTypeData && BeamTypeData->BeamMethod == PEB2M_Distance)
 		{
 			const FVector LocalXDistance(BeamDistance, 0.0f, 0.0f);
 			InOutResolvedTarget = InOutResolvedSource +

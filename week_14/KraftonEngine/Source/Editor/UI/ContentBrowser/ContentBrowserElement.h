@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Core/Types/ClassTypes.h"
 #include "Editor/UI/ContentBrowser/ContentBrowserContext.h"
 #include "ContentItem.h"
@@ -160,9 +160,21 @@ class MaterialElement final : public ContentBrowserElement
 {
 public:
 	virtual void OnLeftClicked(ContentBrowserContext& Context) override;
+	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
 	virtual const char* GetDragItemType() override { return "MaterialContentItem"; }
 	virtual void RenderDetail() override;
 
 private:
 	FEditorMaterialInspector MaterialInspector;
+};
+
+
+class LuaBlueprintElement final : public ContentBrowserElement
+{
+public:
+	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
+
+protected:
+	const char* GetTypeLabel() const override { return "Lua Blueprint"; }
+	uint32 GetAccentColor() const override { return IM_COL32(90, 180, 230, 255); }
 };

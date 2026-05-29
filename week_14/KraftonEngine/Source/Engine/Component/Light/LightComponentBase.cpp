@@ -9,7 +9,8 @@ HIDE_FROM_COMPONENT_LIST(ULightComponentBase)
 
 UBillboardComponent* ULightComponentBase::EnsureEditorBillboard()
 {
-	if (!Owner)
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
 	{
 		return nullptr;
 	}
@@ -48,7 +49,7 @@ UBillboardComponent* ULightComponentBase::EnsureEditorBillboard()
 		}
 	}
 
-	UBillboardComponent* Billboard = Owner->AddComponent<UBillboardComponent>();
+	UBillboardComponent* Billboard = OwnerActor->AddComponent<UBillboardComponent>();
 	if (Billboard)
 	{
 		Billboard->AttachToComponent(this);

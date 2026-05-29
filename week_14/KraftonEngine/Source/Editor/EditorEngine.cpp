@@ -27,6 +27,7 @@
 #include "Materials/MaterialManager.h"
 #include "Engine/Platform/Paths.h"
 #include "Lua/LuaScriptManager.h"
+#include "Object/GarbageCollection.h"
 #include <filesystem>
 
 #include "Mesh/Skeletal/SkeletalMesh.h"
@@ -117,13 +118,18 @@ void UEditorEngine::Shutdown()
 	FEditorSettings::Get().SaveToFile(FEditorSettings::GetDefaultSettingsPath());
 	CloseScene();
 	SelectionManager.Shutdown();
+
+	// UI/viewport release 전에 마지막 프레임에서 남은 RTV/SRV/DSV/ImGui 바인딩을 먼저 끊는다.
+	Renderer.GetFD3DDevice().ReleaseImmediateContextBindings(false);
 	MainPanel.Release();
 
 	// 뷰포트 레이아웃 해제
+	Renderer.GetFD3DDevice().ReleaseImmediateContextBindings(false);
 	ViewportLayout.Release();
 	FEditorTextureManager::Get().Shutdown();
 
 	// 엔진 공통 해제 (Renderer, D3D 등)
+	Renderer.GetFD3DDevice().ReleaseImmediateContextBindings(false);
 	UEngine::Shutdown();
 }
 
@@ -164,6 +170,7 @@ void UEditorEngine::Tick(float DeltaTime)
 	MainPanel.TickAssetEditors(DeltaTime);
 
 	WorldTick(DeltaTime);
+	FGarbageCollector::Get().TryCollectGarbage();
 	Render(DeltaTime);
 	SelectionManager.Tick();
 }
@@ -435,6 +442,10 @@ void UEditorEngine::EndPlayMap()
 
 	UUIManager::Get().ClearViewport();
 
+	// PIE WorldContext 제거 전에 require 캐시/코루틴/registry 의 월드 참조를 먼저 끊는다.
+	// DestroyWorldContext 중 Lua EndPlay 가 돌 수 있으므로 stale UObject 를 들고 있는 Lua 전역 상태를 선제 정리한다.
+	FLuaScriptManager::FireWorldReset();
+
 	// PIE WorldContext 제거 (DestroyWorldContext가 EndPlay + DestroyObject 수행).
 	DestroyWorldContext(FName("PIE"));
 
@@ -588,7 +599,7 @@ void UEditorEngine::ClearScene()
 
 		if (Ctx.World)
 		{
-			Ctx.World->EndPlay();
+			Ctx.World->RouteWorldDestroyed();
 			UObjectManager::Get().DestroyObject(Ctx.World);
 		}
 
@@ -646,6 +657,7 @@ void UEditorEngine::RestoreViewportCamera(const FPerspectiveCameraData& CamData)
 
 bool UEditorEngine::SaveSceneAs(const FString& InSceneName)
 {
+	FScopedGarbageCollectionBlocker GCBlocker;
 	if (InSceneName.empty())
 	{
 		return false;
@@ -703,6 +715,7 @@ bool UEditorEngine::SaveSceneAsWithDialog()
 
 bool UEditorEngine::LoadSceneFromPath(const FString& InScenePath)
 {
+	FScopedGarbageCollectionBlocker GCBlocker;
 	if (InScenePath.empty())
 	{
 		return false;

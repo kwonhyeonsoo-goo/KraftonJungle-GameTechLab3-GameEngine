@@ -7,6 +7,7 @@
 #include "Source/Engine/Animation/Graph/AnimGraphAsset.generated.h"
 
 class FArchive;
+class FReferenceCollector;
 
 // AnimGraph (시각 노드 그래프) 자산.
 // 데이터 모델만 보유 — 런타임 FAnimNode_* 트리 컴파일은 후속 단계에서 별도 컴파일러가 담당.
@@ -67,6 +68,7 @@ public:
 	FAnimGraphNode*       FindFirstNodeOfType(EAnimGraphNodeType Type);
 
 	void Serialize(FArchive& Ar) override;
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	// ── Live preview / 재컴파일 트리거 ──
 	// UAnimGraphInstance 가 매 frame 비교 → 다르면 자기 RootNode 재컴파일.

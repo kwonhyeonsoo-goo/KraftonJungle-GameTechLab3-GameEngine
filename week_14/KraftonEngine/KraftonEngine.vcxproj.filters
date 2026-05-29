@@ -67,6 +67,9 @@
     <Filter Include="Source\Editor\UI\Asset\Curve">
       <UniqueIdentifier>{a9a5d4ee-210d-8455-10fc-cd6653ca56e6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\UI\Asset\LuaBlueprint">
+      <UniqueIdentifier>{903d88fe-2f81-8e0e-87f8-e3f4e8c4c1cc}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Editor\UI\Asset\Mesh">
       <UniqueIdentifier>{5084842c-4071-bc7f-36a2-4a3bf67026e8}</UniqueIdentifier>
     </Filter>
@@ -228,6 +231,9 @@
     </Filter>
     <Filter Include="Source\Engine\Lua">
       <UniqueIdentifier>{1e8146b0-d168-a83f-beb4-0488da76dd65}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\LuaBlueprint">
+      <UniqueIdentifier>{8c80bb50-e755-58da-f8e5-099ac3178d11}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Materials">
       <UniqueIdentifier>{0d06ac75-3073-6c4d-1a46-4fbda12823ff}</UniqueIdentifier>
@@ -698,6 +704,9 @@
     <ClCompile Include="Source\Editor\UI\Asset\Curve\FloatCurveEditorWidget.cpp">
       <Filter>Source\Editor\UI\Asset\Curve</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\Asset\LuaBlueprint\LuaBlueprintEditorWidget.cpp">
+      <Filter>Source\Editor\UI\Asset\LuaBlueprint</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\Asset\Mesh\MeshEditorWidget.cpp">
       <Filter>Source\Editor\UI\Asset\Mesh</Filter>
     </ClCompile>
@@ -1031,6 +1040,9 @@
     <ClCompile Include="Source\Engine\Component\Primitive\TextRenderComponent.cpp">
       <Filter>Source\Engine\Component\Primitive</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Script\LuaBlueprintComponent.cpp">
+      <Filter>Source\Engine\Component\Script</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\Script\LuaScriptComponent.cpp">
       <Filter>Source\Engine\Component\Script</Filter>
     </ClCompile>
@@ -1214,6 +1226,15 @@
     <ClCompile Include="Source\Engine\Lua\LuaScriptManager.cpp">
       <Filter>Source\Engine\Lua</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\LuaBlueprint\LuaBlueprintAsset.cpp">
+      <Filter>Source\Engine\LuaBlueprint</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\LuaBlueprint\LuaBlueprintCompiler.cpp">
+      <Filter>Source\Engine\LuaBlueprint</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\LuaBlueprint\LuaBlueprintManager.cpp">
+      <Filter>Source\Engine\LuaBlueprint</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Materials\Material.cpp">
       <Filter>Source\Engine\Materials</Filter>
     </ClCompile>
@@ -1290,6 +1311,9 @@
       <Filter>Source\Engine\Mesh\Static</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Object\FName.cpp">
+      <Filter>Source\Engine\Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Object\GarbageCollection.cpp">
       <Filter>Source\Engine\Object</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Object\Object.cpp">
@@ -1835,6 +1859,9 @@
     <ClInclude Include="Source\Editor\UI\Asset\Curve\FloatCurveEditorWidget.h">
       <Filter>Source\Editor\UI\Asset\Curve</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\UI\Asset\LuaBlueprint\LuaBlueprintEditorWidget.h">
+      <Filter>Source\Editor\UI\Asset\LuaBlueprint</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\UI\Asset\Mesh\MeshEditorWidget.h">
       <Filter>Source\Editor\UI\Asset\Mesh</Filter>
     </ClInclude>
@@ -2216,6 +2243,9 @@
     <ClInclude Include="Source\Engine\Component\Primitive\TextRenderComponent.h">
       <Filter>Source\Engine\Component\Primitive</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Script\LuaBlueprintComponent.h">
+      <Filter>Source\Engine\Component\Script</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Component\Script\LuaScriptComponent.h">
       <Filter>Source\Engine\Component\Script</Filter>
     </ClInclude>
@@ -2435,6 +2465,18 @@
     <ClInclude Include="Source\Engine\Lua\LuaScriptManager.h">
       <Filter>Source\Engine\Lua</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\LuaBlueprint\LuaBlueprintAsset.h">
+      <Filter>Source\Engine\LuaBlueprint</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\LuaBlueprint\LuaBlueprintCompiler.h">
+      <Filter>Source\Engine\LuaBlueprint</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\LuaBlueprint\LuaBlueprintManager.h">
+      <Filter>Source\Engine\LuaBlueprint</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\LuaBlueprint\LuaBlueprintTypes.h">
+      <Filter>Source\Engine\LuaBlueprint</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Materials\Material.h">
       <Filter>Source\Engine\Materials</Filter>
     </ClInclude>
@@ -2537,6 +2579,9 @@
     <ClInclude Include="Source\Engine\Object\FName.h">
       <Filter>Source\Engine\Object</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Object\GarbageCollection.h">
+      <Filter>Source\Engine\Object</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Object\Object.h">
       <Filter>Source\Engine\Object</Filter>
     </ClInclude>
@@ -2553,6 +2598,9 @@
       <Filter>Source\Engine\Object\Ptr</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Object\Ptr\SubclassOf.h">
+      <Filter>Source\Engine\Object\Ptr</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Object\Ptr\WeakObjectPtr.h">
       <Filter>Source\Engine\Object\Ptr</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Object\Reflection\ObjectFactory.h">
@@ -2708,10 +2756,10 @@
     <ClInclude Include="Source\Engine\Physics\PhysXPhysicsScene.h">
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Platform\ConsoleHelper.h">
+    <ClInclude Include="Source\Engine\Platform\BuildInfo.h">
       <Filter>Source\Engine\Platform</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Platform\BuildInfo.h">
+    <ClInclude Include="Source\Engine\Platform\ConsoleHelper.h">
       <Filter>Source\Engine\Platform</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Platform\CrashDump.h">

@@ -1,4 +1,4 @@
-﻿#include "ObjectProperty.h"
+#include "ObjectProperty.h"
 
 #include "Object/Object.h"
 #include "Object/Reflection/ObjectFactory.h"
@@ -33,6 +33,16 @@ void FObjectProperty::SetObjectValueFromValuePtr(void* ValuePtr, UObject* Object
 	{
 		Ops->SetObject(ValuePtr, Object);
 	}
+}
+
+void FObjectProperty::AddReferencedObjects(void* ValuePtr, FReferenceCollector& Collector) const
+{
+	if (!ValuePtr)
+	{
+		return;
+	}
+
+	Collector.AddReferencedObject(GetObjectValueFromValuePtr(ValuePtr), Name);
 }
 
 void FObjectProperty::SerializeValue(void* ValuePtr, FArchive& Ar, const FPropertySerializeContext& Context) const
@@ -93,7 +103,15 @@ void FObjectProperty::SerializeValue(void* ValuePtr, FArchive& Ar, const FProper
 	if (InstancedObject)
 	{
 		Ar.BeginProperty(InstancedPropertiesKey);
+		if (Ar.IsSaving())
+		{
+			InstancedObject->PreSaveForArchive(Ar);
+		}
 		InstancedObject->SerializeProperties(Ar, PF_Save);
+		if (Ar.IsLoading())
+		{
+			InstancedObject->PostLoadFromArchive(Ar);
+		}
 		Ar.EndProperty();
 	}
 

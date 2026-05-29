@@ -10,4 +10,5 @@ public:
 	static bool CreateAnimGraph(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath);
 	static bool CreateParticleSystem(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath);
 	static bool CreateMaterial(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath);
+	static bool CreateLuaBlueprint(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath);
 };

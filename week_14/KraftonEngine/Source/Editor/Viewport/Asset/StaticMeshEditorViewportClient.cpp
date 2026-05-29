@@ -1,6 +1,8 @@
 #include "StaticMeshEditorViewportClient.h"
 
 #include "Component/Primitive/StaticMeshComponent.h"
+#include "GameFramework/AActor.h"
+#include "GameFramework/World.h"
 #include "Input/InputSystem.h"
 #include "Math/MathUtils.h"
 #include "Render/Types/MinimalViewInfo.h"
@@ -18,6 +20,13 @@ void FStaticMeshEditorViewportClient::Initialize(ID3D11Device* Device, uint32 Wi
 	Viewport->SetClient(this);
 
 	bIsRenderable = true;
+}
+
+void FStaticMeshEditorViewportClient::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	Collector.AddReferencedObject(PreviewWorld);
+	Collector.AddReferencedObject(PreviewActor);
+	Collector.AddReferencedObject(PreviewMeshComponent);
 }
 
 void FStaticMeshEditorViewportClient::Release()

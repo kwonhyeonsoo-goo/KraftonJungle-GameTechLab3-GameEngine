@@ -3,6 +3,7 @@
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "Math/Quat.h"
 #include "Object/Reflection/ObjectFactory.h"
+#include "Object/GarbageCollection.h"
 #include "Object/Reflection/UClass.h"
 #include "Render/Types/MinimalViewInfo.h"
 #include <algorithm>
@@ -38,6 +39,14 @@ UCameraModifier_CameraShake::UCameraModifier_CameraShake()
 	Priority = 100.0f;
 }
 
+
+void UCameraModifier_CameraShake::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UCameraModifier::AddReferencedObjects(Collector);
+	Collector.AddReferencedObjects(ActiveShakes, "UCameraModifier_CameraShake.ActiveShakes");
+}
+
+
 bool UCameraModifier_CameraShake::ModifyCamera(float DeltaTime, FMinimalViewInfo& InOutPOV)
 {
 	// 베이스가 alpha 페이드 갱신 후 exclusive=false 반환.
@@ -47,7 +56,7 @@ bool UCameraModifier_CameraShake::ModifyCamera(float DeltaTime, FMinimalViewInfo
 	FCameraShakeUpdateResult Sum;
 	for (UCameraShakeBase* Shake : ActiveShakes)
 	{
-		if (!Shake || Shake->IsFinished()) continue;
+		if (!IsValid(Shake) || Shake->IsFinished()) continue;
 
 		FCameraShakeUpdateResult Per;
 		Shake->UpdateAndApplyCameraShake(DeltaTime, Per);
@@ -66,7 +75,7 @@ bool UCameraModifier_CameraShake::ModifyCamera(float DeltaTime, FMinimalViewInfo
 	// 종료된 셰이크 정리 — UpdateAndApplyCameraShake 안에서 IsFinished 토글된 것 포함.
 	ActiveShakes.erase(
 		std::remove_if(ActiveShakes.begin(), ActiveShakes.end(),
-			[](UCameraShakeBase* S) { return !S || S->IsFinished(); }),
+			[](UCameraShakeBase* S) { return !IsValid(S) || S->IsFinished(); }),
 		ActiveShakes.end());
 
 	// Alpha 가 0 이면 효과 죽음 (Disable 진행 후) — 가산 skip.
@@ -89,14 +98,19 @@ UCameraShakeBase* UCameraModifier_CameraShake::StartShake(
 	ECameraShakePlaySpace PlaySpace,
 	FRotator UserPlaySpaceRot)
 {
-	if (!ShakeClass) return nullptr;
+	if (!ShakeClass || !IsValid(CameraOwner)) return nullptr;
+
+	ActiveShakes.erase(
+		std::remove_if(ActiveShakes.begin(), ActiveShakes.end(),
+			[](UCameraShakeBase* S) { return !IsValid(S) || S->IsFinished(); }),
+		ActiveShakes.end());
 
 	// bSingleInstance 처리 — UE 동작 미러: 같은 ShakeClass 의 인스턴스가 이미 활성이고
 	// 그 인스턴스가 bSingleInstance=true 면 새로 생성하지 않고 그 인스턴스를 재시작.
 	// (CDO 미지원 환경이라 "기존 인스턴스의 플래그" 로 판정 — 첫 인스턴스 이후 효과 적용.)
 	for (UCameraShakeBase* Existing : ActiveShakes)
 	{
-		if (Existing && !Existing->IsFinished()
+		if (IsValid(Existing) && !Existing->IsFinished()
 			&& Existing->bSingleInstance
 			&& Existing->GetClass()->IsA(ShakeClass))
 		{
@@ -120,7 +134,7 @@ UCameraShakeBase* UCameraModifier_CameraShake::StartShake(
 
 void UCameraModifier_CameraShake::StopShake(UCameraShakeBase* ShakeInstance, bool bImmediately)
 {
-	if (!ShakeInstance) return;
+	if (!IsValid(ShakeInstance)) return;
 	ShakeInstance->StopShake(bImmediately);
 }
 
@@ -128,8 +142,12 @@ void UCameraModifier_CameraShake::StopAllShakes(bool bImmediately)
 {
 	for (UCameraShakeBase* Shake : ActiveShakes)
 	{
-		if (Shake) Shake->StopShake(bImmediately);
+		if (IsValid(Shake)) Shake->StopShake(bImmediately);
 	}
+	ActiveShakes.erase(
+		std::remove_if(ActiveShakes.begin(), ActiveShakes.end(),
+			[](UCameraShakeBase* S) { return !IsValid(S) || S->IsFinished(); }),
+		ActiveShakes.end());
 }
 
 void UCameraModifier_CameraShake::StopAllInstancesOfShake(UClass* ShakeClass, bool bImmediately)
@@ -137,9 +155,13 @@ void UCameraModifier_CameraShake::StopAllInstancesOfShake(UClass* ShakeClass, bo
 	if (!ShakeClass) return;
 	for (UCameraShakeBase* Shake : ActiveShakes)
 	{
-		if (Shake && Shake->GetClass()->IsA(ShakeClass))
+		if (IsValid(Shake) && Shake->GetClass()->IsA(ShakeClass))
 		{
 			Shake->StopShake(bImmediately);
 		}
 	}
+	ActiveShakes.erase(
+		std::remove_if(ActiveShakes.begin(), ActiveShakes.end(),
+			[](UCameraShakeBase* S) { return !IsValid(S) || S->IsFinished(); }),
+		ActiveShakes.end());
 }

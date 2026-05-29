@@ -3,6 +3,8 @@
 #include "Animation/AnimInstance.h"
 #include "Animation/Sequence/AnimSequenceBase.h"
 #include "Animation/Sequence/AnimSequence.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 #include "Animation/AnimExtractContext.h"
 #include "Animation/PoseContext.h"
 #include "Object/Object.h"   // Cast<>
@@ -17,7 +19,12 @@ void FAnimNode_SequencePlayer::OnBecomeRelevant(const FAnimationInitializeContex
 
 void FAnimNode_SequencePlayer::Update(const FAnimationUpdateContext& Context)
 {
-	if (!Sequence) return;
+	if (!IsValid(Sequence))
+	{
+		Sequence = nullptr;
+		LastRootMotionDelta = FTransform();
+		return;
+	}
 	const float Length = Sequence->GetPlayLength();
 	if (Length <= 0.0f) return;
 
@@ -36,7 +43,7 @@ void FAnimNode_SequencePlayer::Update(const FAnimationUpdateContext& Context)
 
 	// Notify dispatch — 안 보이는 가지의 notify 발사 방지. UAnimInstance 가 큐 적재만 받고
 	// UpdateAnimation 끝에서 일괄 dispatch.
-	if (Context.AnimInstance && Context.FinalBlendWeight > ZERO_ANIMWEIGHT_THRESH)
+	if (IsValid(Context.AnimInstance) && Context.FinalBlendWeight > ZERO_ANIMWEIGHT_THRESH)
 	{
 		Context.AnimInstance->AddAnimNotifies(PreviousTime, LocalTime, Sequence);
 	}
@@ -54,8 +61,9 @@ void FAnimNode_SequencePlayer::Update(const FAnimationUpdateContext& Context)
 
 void FAnimNode_SequencePlayer::Evaluate(FPoseContext& Output)
 {
-	if (!Sequence)
+	if (!IsValid(Sequence))
 	{
+		Sequence = nullptr;
 		Output.ResetToRefPose();
 		return;
 	}
@@ -63,4 +71,10 @@ void FAnimNode_SequencePlayer::Evaluate(FPoseContext& Output)
 	Ctx.CurrentTime = LocalTime;
 	Ctx.bLooping    = bLooping;
 	Sequence->GetBonePose(Output, Ctx);
+}
+
+
+void FAnimNode_SequencePlayer::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	Collector.AddReferencedObject(Sequence, "SequencePlayer.Sequence");
 }

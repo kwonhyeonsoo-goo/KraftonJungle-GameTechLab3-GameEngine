@@ -4,6 +4,8 @@
 #include "Animation/Sequence/BoneAnimationTrack.h"
 #include "Animation/Notify/AnimNotifyEvent.h"
 
+class FReferenceCollector;
+
 // AnimSequence 의 직렬화 가능한 "원본" 데이터 모델.
 // 압축/디시메이션은 추후 옵션. 현재는 raw 키프레임 + notify 만 보관.
 
@@ -18,6 +20,7 @@ public:
     ~UAnimDataModel() override = default;
 
     void Serialize(FArchive& Ar) override;
+    void AddReferencedObjects(FReferenceCollector& Collector) override;
     // 수동 바이너리 포맷 — 반사 직렬화 비활성.
     bool ShouldReflectProperties() const override { return false; }
 

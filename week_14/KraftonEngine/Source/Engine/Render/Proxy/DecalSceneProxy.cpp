@@ -7,6 +7,9 @@
 #include "Materials/Material.h"
 #include "Texture/Texture2D.h"
 #include "Object/Reflection/ObjectFactory.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
+#include <algorithm>
 
 namespace
 {
@@ -29,6 +32,8 @@ FDecalSceneProxy::FDecalSceneProxy(UDecalComponent* InComponent)
 
 FDecalSceneProxy::~FDecalSceneProxy()
 {
+	InvalidateReceiverCache();
+
 	if (DecalCB)
 	{
 		DecalCB->Release();
@@ -44,13 +49,37 @@ FDecalSceneProxy::~FDecalSceneProxy()
 
 UDecalComponent* FDecalSceneProxy::GetDecalComponent() const
 {
-	return static_cast<UDecalComponent*>(GetOwner());
+	return Cast<UDecalComponent>(GetOwner());
+}
+
+void FDecalSceneProxy::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	FPrimitiveSceneProxy::AddReferencedObjects(Collector);
+	Collector.AddReferencedObject(DecalMaterial, "DecalMaterial");
+	Collector.AddReferencedObject(DecalProxyMaterial, "DecalProxyMaterial");
+}
+
+void FDecalSceneProxy::RemoveReceiverProxy(FPrimitiveSceneProxy* ReceiverProxy)
+{
+	if (!ReceiverProxy)
+	{
+		return;
+	}
+
+	CachedReceiverProxies.erase(
+		std::remove(CachedReceiverProxies.begin(), CachedReceiverProxies.end(), ReceiverProxy),
+		CachedReceiverProxies.end());
+}
+
+void FDecalSceneProxy::InvalidateReceiverCache()
+{
+	CachedReceiverProxies.clear();
 }
 
 void FDecalSceneProxy::UpdateMaterial()
 {
 	UDecalComponent* DecalComp = GetDecalComponent();
-	if (!DecalComp) return;
+	if (!IsValid(DecalComp)) return;
 
 	DecalMaterial = DecalComp->GetMaterial();
 
@@ -101,14 +130,14 @@ void FDecalSceneProxy::RebuildReceiverProxies()
 	CachedReceiverProxies.clear();
 
 	UDecalComponent* DecalComp = GetDecalComponent();
-	if (!DecalComp) return;
+	if (!IsValid(DecalComp)) return;
 
 	for (UStaticMeshComponent* Receiver : DecalComp->GetReceivers())
 	{
-		if (Receiver)
+		if (IsValid(Receiver))
 		{
 			FPrimitiveSceneProxy* ReceiverProxy = Receiver->GetSceneProxy();
-			if (ReceiverProxy)
+			if (ReceiverProxy && ReceiverProxy->HasValidOwner())
 				CachedReceiverProxies.push_back(ReceiverProxy);
 		}
 	}

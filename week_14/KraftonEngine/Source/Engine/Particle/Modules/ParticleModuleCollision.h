@@ -52,6 +52,7 @@ public:
 	UParticleModuleCollision() = default;
 
 	// Immediate response answers "what should happen on this hit?"
+	UENUM()
 	enum class ECollisionResponseMode : uint8
 	{
 		Bounce,
@@ -60,6 +61,7 @@ public:
 	};
 
 	// Completion mode answers "what should happen once MaxCollisions is reached?"
+	UENUM()
 	enum class ECollisionCompletionMode : uint8
 	{
 		Kill,

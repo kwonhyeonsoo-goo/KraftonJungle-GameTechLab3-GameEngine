@@ -3,6 +3,8 @@
 #include "Editor/UI/Asset/AssetEditorWidget.h"
 #include "Viewport/EditorPreviewViewportClient.h"
 
+#include <algorithm>
+
 FAssetEditorManager::~FAssetEditorManager() = default;
 
 void FAssetEditorManager::Tick(float DeltaTime)
@@ -55,6 +57,7 @@ bool FAssetEditorManager::OpenEditorForObject(UObject* Object)
 	{
 		if (Editor->CanEdit(Object) && !Editor->AllowsMultipleInstances())
 		{
+			Editor->Initialize(EditorEngine);
 			Editor->Open(Object);
 			return true;
 		}
@@ -65,6 +68,7 @@ bool FAssetEditorManager::OpenEditorForObject(UObject* Object)
 		auto Editor = Factory();
 		if (!Editor || !Editor->CanEdit(Object)) continue;
 
+		Editor->Initialize(EditorEngine);
 		Editor->Open(Object);
 		OpenEditors.push_back(std::move(Editor));
 		return true;
@@ -95,6 +99,18 @@ bool FAssetEditorManager::IsMouseOverAnyEditorViewport() const
 	}
 
 	return false;
+}
+
+
+void FAssetEditorManager::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	for (const auto& Editor : OpenEditors)
+	{
+		if (Editor && Editor->IsOpen())
+		{
+			Editor->AddReferencedObjects(Collector);
+		}
+	}
 }
 
 void FAssetEditorManager::RemoveClosedEditors()

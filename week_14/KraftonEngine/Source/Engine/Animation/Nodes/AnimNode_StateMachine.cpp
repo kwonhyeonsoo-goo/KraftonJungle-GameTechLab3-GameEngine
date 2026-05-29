@@ -5,15 +5,30 @@
 #include "Animation/AnimationRuntime.h"
 #include "Animation/PoseContext.h"
 #include "Math/Quat.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
+
+namespace
+{
+	bool IsUsableAnimState(UAnimState* State)
+	{
+		return IsValid(State);
+	}
+
+	FTransform GetStateRootMotion(UAnimState* State)
+	{
+		return IsUsableAnimState(State) ? State->GetLastRootMotionDelta() : FTransform();
+	}
+}
 
 void FAnimNode_StateMachine::RegisterState(UAnimState* State)
 {
-	if (!State) return;
+	if (!IsUsableAnimState(State)) return;
 
 	// 같은 이름 재등록 → 교체.
 	for (UAnimState*& Existing : States)
 	{
-		if (Existing && Existing->StateName == State->StateName)
+		if (IsUsableAnimState(Existing) && Existing->StateName == State->StateName)
 		{
 			Existing = State;
 			return;
@@ -46,13 +61,13 @@ void FAnimNode_StateMachine::SetInitialState(FName StateName)
 void FAnimNode_StateMachine::Initialize(const FAnimationInitializeContext& Context)
 {
 	// 트리 build 직후 1 회 — 첫 CurrentState 의 OnEnter 호출해 sub-graph 까지 재귀 init.
-	if (CurrentState) CurrentState->OnEnter(Context.AnimInstance);
+	if (IsUsableAnimState(CurrentState)) CurrentState->OnEnter(Context.AnimInstance);
 }
 
 void FAnimNode_StateMachine::OnBecomeRelevant(const FAnimationInitializeContext& Context)
 {
 	// 부모 SM 의 state 가 이 sub-SM 으로 전환된 경우 — 자기 current state 진입을 알림.
-	if (CurrentState) CurrentState->OnEnter(Context.AnimInstance);
+	if (IsUsableAnimState(CurrentState)) CurrentState->OnEnter(Context.AnimInstance);
 }
 
 void FAnimNode_StateMachine::OnDormant()
@@ -61,15 +76,15 @@ void FAnimNode_StateMachine::OnDormant()
 	// 진행중 BlendingFroms 의 잔여 alpha 가 다음 OnBecomeRelevant 후 잘못 적용되는 것을 막음.
 	for (FBlendingFrom& BF : BlendingFroms)
 	{
-		if (BF.State) BF.State->OnExit(nullptr);
+		if (IsUsableAnimState(BF.State)) BF.State->OnExit(nullptr);
 	}
 	BlendingFroms.clear();
-	if (CurrentState) CurrentState->OnExit(nullptr);
+	if (IsUsableAnimState(CurrentState)) CurrentState->OnExit(nullptr);
 }
 
 void FAnimNode_StateMachine::Update(const FAnimationUpdateContext& Context)
 {
-	if (!CurrentState) return;
+	if (!IsUsableAnimState(CurrentState)) { CurrentState = nullptr; return; }
 
 	UAnimInstance* Owner = Context.AnimInstance;
 	const float    DeltaSeconds = Context.DeltaSeconds;
@@ -93,7 +108,7 @@ void FAnimNode_StateMachine::Update(const FAnimationUpdateContext& Context)
 	TArray<UAnimState*> Ticked;
 	auto TryTick = [&](UAnimState* S, float W)
 	{
-		if (!S) return;
+		if (!IsUsableAnimState(S)) return;
 		for (UAnimState* T : Ticked) if (T == S) return;
 		S->Tick(Owner, DeltaSeconds, W);
 		Ticked.push_back(S);
@@ -120,7 +135,7 @@ void FAnimNode_StateMachine::Update(const FAnimationUpdateContext& Context)
 
 			if (BF.Alpha >= 1.0f)
 			{
-				if (BF.State) BF.State->OnExit(Owner);
+				if (IsUsableAnimState(BF.State)) BF.State->OnExit(Owner);
 			}
 			else
 			{
@@ -138,22 +153,22 @@ void FAnimNode_StateMachine::Update(const FAnimationUpdateContext& Context)
 	//
 	// RootMotionFromMontagesOnly mode 일 때 base FSM 측 RM 은 0 — Montage 만 적용되도록.
 	// 자식 state 의 RM 합성을 통째 skip 해서 LastRM = identity.
-	if (Owner && Owner->GetRootMotionMode() == ERootMotionMode::RootMotionFromMontagesOnly)
+	if (IsValid(Owner) && Owner->GetRootMotionMode() == ERootMotionMode::RootMotionFromMontagesOnly)
 	{
 		LastRootMotionDelta = FTransform();
 	}
 	else if (BlendingFroms.empty())
 	{
-		LastRootMotionDelta = CurrentState->GetLastRootMotionDelta();
+		LastRootMotionDelta = GetStateRootMotion(CurrentState);
 	}
 	else
 	{
-		LastRootMotionDelta = BlendingFroms[0].State->GetLastRootMotionDelta();
+		LastRootMotionDelta = GetStateRootMotion(BlendingFroms[0].State);
 		for (size_t i = 0; i < BlendingFroms.size(); ++i)
 		{
-			const FTransform& Next = (i + 1 < BlendingFroms.size())
-				? BlendingFroms[i + 1].State->GetLastRootMotionDelta()
-				: CurrentState->GetLastRootMotionDelta();
+			const FTransform Next = (i + 1 < BlendingFroms.size())
+					? GetStateRootMotion(BlendingFroms[i + 1].State)
+					: GetStateRootMotion(CurrentState);
 			const float a = BlendingFroms[i].Alpha;
 			LastRootMotionDelta.Location = LastRootMotionDelta.Location * (1.0f - a) + Next.Location * a;
 			LastRootMotionDelta.Rotation = FQuat::Slerp(LastRootMotionDelta.Rotation.GetNormalized(),
@@ -164,10 +179,24 @@ void FAnimNode_StateMachine::Update(const FAnimationUpdateContext& Context)
 
 void FAnimNode_StateMachine::Evaluate(FPoseContext& Output)
 {
-	if (!CurrentState)
+	if (!IsUsableAnimState(CurrentState))
 	{
+		CurrentState = nullptr;
 		Output.ResetToRefPose();
 		return;
+	}
+
+	TArray<FBlendingFrom> ValidBlends;
+	for (const FBlendingFrom& BF : BlendingFroms)
+	{
+		if (IsUsableAnimState(BF.State))
+		{
+			ValidBlends.push_back(BF);
+		}
+	}
+	if (ValidBlends.size() != BlendingFroms.size())
+	{
+		BlendingFroms = ValidBlends;
 	}
 
 	if (BlendingFroms.empty())
@@ -177,9 +206,6 @@ void FAnimNode_StateMachine::Evaluate(FPoseContext& Output)
 	}
 
 	// N-pose sequential lerp.
-	//   Acc = BlendingFroms[0].pose
-	//   for i: Next = (i+1<N) ? BlendingFroms[i+1].pose : Current.pose
-	//          Acc = lerp(Acc, Next, BlendingFroms[i].Alpha)    (in-place 안전)
 	FPoseContext Acc;
 	Acc.SkeletalMesh = Output.SkeletalMesh;
 	Acc.ResetToRefPose();
@@ -193,6 +219,10 @@ void FAnimNode_StateMachine::Evaluate(FPoseContext& Output)
 	for (size_t i = 0; i < N; ++i)
 	{
 		UAnimState* NextState = (i + 1 < N) ? BlendingFroms[i + 1].State : CurrentState;
+		if (!IsUsableAnimState(NextState))
+		{
+			continue;
+		}
 
 		Scratch.ResetToRefPose();
 		NextState->Evaluate(nullptr, Scratch);
@@ -212,7 +242,7 @@ UAnimState* FAnimNode_StateMachine::FindState(FName Name) const
 {
 	for (UAnimState* S : States)
 	{
-		if (S && S->StateName == Name) return S;
+		if (IsUsableAnimState(S) && S->StateName == Name) return S;
 	}
 	return nullptr;
 }
@@ -222,23 +252,23 @@ void FAnimNode_StateMachine::EnterState(UAnimInstance* Owner, FName NewState)
 	UAnimState* Target = FindState(NewState);
 	if (!Target) return;
 
-	if (CurrentState) CurrentState->OnExit(Owner);
+	if (IsUsableAnimState(CurrentState)) CurrentState->OnExit(Owner);
 	CurrentState     = Target;
 	CurrentStateName = NewState;
-	CurrentState->OnEnter(Owner);
+	if (IsUsableAnimState(CurrentState)) CurrentState->OnEnter(Owner);
 }
 
 void FAnimNode_StateMachine::BeginBlend(UAnimInstance* Owner, FName NewState, float Duration)
 {
 	UAnimState* Target = FindState(NewState);
-	if (!Target || Target == CurrentState) return;
+	if (!IsUsableAnimState(Target) || Target == CurrentState) return;
 
 	// 상한 초과 시 oldest 강제 정리 — OnExit 후 erase.
 	if (BlendingFroms.size() >= static_cast<size_t>(MaxBlendingFroms))
 	{
 		if (UAnimState* Oldest = BlendingFroms[0].State)
 		{
-			Oldest->OnExit(Owner);
+			if (IsUsableAnimState(Oldest)) Oldest->OnExit(Owner);
 		}
 		BlendingFroms.erase(BlendingFroms.begin());
 	}
@@ -248,15 +278,29 @@ void FAnimNode_StateMachine::BeginBlend(UAnimInstance* Owner, FName NewState, fl
 
 	CurrentState     = Target;
 	CurrentStateName = NewState;
-	CurrentState->OnEnter(Owner);
+	if (IsUsableAnimState(CurrentState)) CurrentState->OnEnter(Owner);
 
 	if (Duration <= 0.0f)
 	{
 		// Instant cut — 진행중 모든 from 즉시 OnExit + clear.
 		for (FBlendingFrom& BF : BlendingFroms)
 		{
-			if (BF.State) BF.State->OnExit(Owner);
+			if (IsUsableAnimState(BF.State)) BF.State->OnExit(Owner);
 		}
 		BlendingFroms.clear();
+	}
+}
+
+
+void FAnimNode_StateMachine::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	for (UAnimState* State : States)
+	{
+		Collector.AddReferencedObject(State, "StateMachine.States");
+	}
+	Collector.AddReferencedObject(CurrentState, "StateMachine.CurrentState");
+	for (const FBlendingFrom& BF : BlendingFroms)
+	{
+		Collector.AddReferencedObject(BF.State, "StateMachine.BlendingFrom");
 	}
 }

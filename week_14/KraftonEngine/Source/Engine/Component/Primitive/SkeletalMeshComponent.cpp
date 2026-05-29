@@ -54,7 +54,7 @@ void USkeletalMeshComponent::StopAnimation()
     SetAnimation(nullptr);
     SetPlaying(false);
 
-    if (UAnimSingleNodeInstance* SingleNode = Cast<UAnimSingleNodeInstance>(AnimInstance))
+    if (UAnimSingleNodeInstance* SingleNode = (IsValid(AnimInstance) ? Cast<UAnimSingleNodeInstance>(AnimInstance) : nullptr))
     {
         SingleNode->SetCurrentTime(0.0f);
     }
@@ -118,16 +118,47 @@ void USkeletalMeshComponent::SetAnimation(UAnimSequenceBase* InAsset)
         AnimationData.AnimToPlayPath = "None";
     }
 
-    if (UAnimSingleNodeInstance* SingleNode = Cast<UAnimSingleNodeInstance>(AnimInstance))
+    if (UAnimSingleNodeInstance* SingleNode = (IsValid(AnimInstance) ? Cast<UAnimSingleNodeInstance>(AnimInstance) : nullptr))
     {
         SingleNode->SetAnimationAsset(InAsset);
     }
 }
 
+bool USkeletalMeshComponent::SetAnimationByPath(const FString& AnimationPath)
+{
+    if (AnimationPath.empty() || AnimationPath == "None")
+    {
+        SetAnimation(nullptr);
+        return true;
+    }
+
+    UAnimSequence* LoadedAnimation = FAnimationManager::Get().LoadAnimation(AnimationPath);
+    if (!LoadedAnimation || !CanUseAnimation(LoadedAnimation))
+    {
+        return false;
+    }
+
+    SetAnimation(LoadedAnimation);
+    return true;
+}
+
+bool USkeletalMeshComponent::PlayAnimationByPath(const FString& AnimationPath, bool bLooping)
+{
+    if (!SetAnimationByPath(AnimationPath))
+    {
+        return false;
+    }
+
+    SetAnimationMode(EAnimationMode::AnimationSingleNode);
+    SetLooping(bLooping);
+    SetPlaying(AnimationData.AnimToPlay != nullptr);
+    return AnimationData.AnimToPlay != nullptr;
+}
+
 void USkeletalMeshComponent::SetPlayRate(float InRate)
 {
     AnimationData.PlayRate = InRate;
-    if (UAnimSingleNodeInstance* SingleNode = Cast<UAnimSingleNodeInstance>(AnimInstance))
+    if (UAnimSingleNodeInstance* SingleNode = (IsValid(AnimInstance) ? Cast<UAnimSingleNodeInstance>(AnimInstance) : nullptr))
     {
         SingleNode->SetPlayRate(InRate);
     }
@@ -136,7 +167,7 @@ void USkeletalMeshComponent::SetPlayRate(float InRate)
 void USkeletalMeshComponent::SetLooping(bool bInLoop)
 {
     AnimationData.bLooping = bInLoop;
-    if (UAnimSingleNodeInstance* SingleNode = Cast<UAnimSingleNodeInstance>(AnimInstance))
+    if (UAnimSingleNodeInstance* SingleNode = (IsValid(AnimInstance) ? Cast<UAnimSingleNodeInstance>(AnimInstance) : nullptr))
     {
         SingleNode->SetLooping(bInLoop);
     }
@@ -145,7 +176,7 @@ void USkeletalMeshComponent::SetLooping(bool bInLoop)
 void USkeletalMeshComponent::SetPlaying(bool bInPlay)
 {
     AnimationData.bPlaying = bInPlay;
-    if (UAnimSingleNodeInstance* SingleNode = Cast<UAnimSingleNodeInstance>(AnimInstance))
+    if (UAnimSingleNodeInstance* SingleNode = (IsValid(AnimInstance) ? Cast<UAnimSingleNodeInstance>(AnimInstance) : nullptr))
     {
         SingleNode->SetPlaying(bInPlay);
     }
@@ -163,10 +194,11 @@ void USkeletalMeshComponent::SetAnimInstanceClass(UClass* InClass)
 
 void USkeletalMeshComponent::SetAnimInstance(UAnimInstance* InInstance)
 {
+    if (InInstance && !IsValid(InInstance)) return;
     if (AnimInstance == InInstance) return;
     ClearAnimInstance();
     AnimInstance = InInstance;
-    if (AnimInstance)
+    if (IsValid(AnimInstance))
     {
         AnimInstance->SetOuter(this);
         AnimInstance->SetOwningComponent(this);
@@ -177,7 +209,7 @@ void USkeletalMeshComponent::SetAnimInstance(UAnimInstance* InInstance)
 UAnimSingleNodeInstance* USkeletalMeshComponent::GetAnimNodeInstance(FName NodeName) const
 {
     (void)NodeName;
-    return Cast<UAnimSingleNodeInstance>(AnimInstance);
+    return IsValid(AnimInstance) ? Cast<UAnimSingleNodeInstance>(AnimInstance) : nullptr;
 }
 
 void USkeletalMeshComponent::LoadAnimationFromPath()
@@ -253,7 +285,7 @@ void USkeletalMeshComponent::InitializeAnimation()
             return;
         }
 
-        if (AnimInstance && AnimInstance->GetClass() == DesiredClass)
+        if (IsValid(AnimInstance) && AnimInstance->GetClass() == DesiredClass)
         {
             AnimInstance->SetOuter(this);
             AnimInstance->SetOwningComponent(this);
@@ -283,15 +315,22 @@ void USkeletalMeshComponent::InitializeAnimation()
 
 void USkeletalMeshComponent::ClearAnimInstance()
 {
-    if (AnimInstance)
+    UAnimInstance* InstanceToDestroy = IsValid(AnimInstance) ? AnimInstance : nullptr;
+    AnimInstance = nullptr;
+    if (InstanceToDestroy)
     {
-        UObjectManager::Get().DestroyObject(AnimInstance);
-        AnimInstance = nullptr;
+        InstanceToDestroy->SetOwningComponent(nullptr);
+        UObjectManager::Get().DestroyObject(InstanceToDestroy);
     }
 }
 
 void USkeletalMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
+    if (!IsValid(this) || IsPendingKill())
+    {
+        return;
+    }
+
     if (EvaluateAnimInstance(DeltaTime))
     {
         UMeshComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -310,7 +349,7 @@ void USkeletalMeshComponent::GetEditableProperties(TArray<FPropertyValue>& OutPr
 
     // AnimInstance 자체 properties (Speed 등) 도 패널에 같이 노출 — 컴포넌트가 forward.
     // 자식이 자기 카테고리(예: "Animation|Character") 로 그룹화.
-    if (AnimInstance) AnimInstance->GetEditableProperties(OutProps);
+    if (IsValid(AnimInstance)) AnimInstance->GetEditableProperties(OutProps);
 }
 
 void USkeletalMeshComponent::PostEditProperty(const char* PropertyName)
@@ -331,7 +370,7 @@ void USkeletalMeshComponent::PostEditProperty(const char* PropertyName)
     {
         LoadAnimationFromPath();
 
-        if (AnimInstance)
+        if (IsValid(AnimInstance))
         {
             InitializeAnimation();
         }
@@ -347,11 +386,11 @@ void USkeletalMeshComponent::PostEditProperty(const char* PropertyName)
             AnimationMode = EAnimationMode::AnimationSingleNode;
         }
 
-        if (!AnimInstance)
+        if (!IsValid(AnimInstance))
         {
             InitializeAnimation();
         }
-        else if (UAnimSingleNodeInstance* SingleNode = Cast<UAnimSingleNodeInstance>(AnimInstance))
+        else if (UAnimSingleNodeInstance* SingleNode = (IsValid(AnimInstance) ? Cast<UAnimSingleNodeInstance>(AnimInstance) : nullptr))
         {
             if (!CanUseAnimation(AnimationData.AnimToPlay))
             {
@@ -379,7 +418,7 @@ void USkeletalMeshComponent::PostEditProperty(const char* PropertyName)
 
     // AnimInstance 자체 properties 는 자식이 자체 PostEdit 처리. 컴포넌트는 dispatch 만.
     // 컴포넌트가 인식한 이름과 겹치지 않는 한 무해 (자식이 모르는 이름은 no-op).
-    if (AnimInstance) AnimInstance->PostEditProperty(PropertyName);
+    if (IsValid(AnimInstance)) AnimInstance->PostEditProperty(PropertyName);
 }
 
 void USkeletalMeshComponent::Serialize(FArchive& Ar)
@@ -405,14 +444,19 @@ void USkeletalMeshComponent::Serialize(FArchive& Ar)
 
 bool USkeletalMeshComponent::EvaluateAnimInstance(float DeltaTime)
 {
-    if (!AnimInstance) return false;
+    if (!IsValid(this) || IsPendingKill()) return false;
+    if (!IsValid(AnimInstance))
+    {
+        AnimInstance = nullptr;
+        return false;
+    }
 
     USkeletalMesh* Mesh = GetSkeletalMesh();
     if (!Mesh) return false;
     FSkeletalMesh* Asset = Mesh->GetSkeletalMeshAsset();
     if (!Asset || Asset->Bones.empty()) return false;
 
-    if (UAnimSingleNodeInstance* SingleNode = Cast<UAnimSingleNodeInstance>(AnimInstance))
+    if (UAnimSingleNodeInstance* SingleNode = (IsValid(AnimInstance) ? Cast<UAnimSingleNodeInstance>(AnimInstance) : nullptr))
     {
         if (!CanUseAnimation(SingleNode->GetAnimationAsset()))
         {
@@ -422,6 +466,11 @@ bool USkeletalMeshComponent::EvaluateAnimInstance(float DeltaTime)
     }
 
     AnimInstance->UpdateAnimation(DeltaTime);
+    if (!IsValid(AnimInstance))
+    {
+        AnimInstance = nullptr;
+        return false;
+    }
 
     // Root motion 적용은 UCharacterMovementComponent 가 책임.
     // CMC::TickComponent (TG_DuringPhysics) 가 매 frame 이 AnimInstance->ConsumeRootMotion 으로
@@ -436,8 +485,20 @@ bool USkeletalMeshComponent::EvaluateAnimInstance(float DeltaTime)
     Out.SkeletalMesh = Mesh;
     Out.Pose.resize(Asset->Bones.size());
     Out.ResetToRefPose();
+    if (!IsValid(AnimInstance))
+    {
+        AnimInstance = nullptr;
+        return false;
+    }
     AnimInstance->EvaluatePose(Out);
 
     SetAnimationPose(Out.Pose, Out.MorphWeights);
     return true;
+}
+
+
+void USkeletalMeshComponent::BeginDestroy()
+{
+    ClearAnimInstance();
+    Super::BeginDestroy();
 }

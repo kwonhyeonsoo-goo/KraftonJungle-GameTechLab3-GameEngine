@@ -2,6 +2,7 @@
 
 #include "Component/PrimitiveComponent.h"
 #include "Object/Ptr/SoftObjectPtr.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "Particle/ParticleHelper.h"
 #include "Particle/ParticleEvents.h"
 #include "Core/Delegate.h"
@@ -43,6 +44,7 @@ public:
 	// --- 컴포넌트 라이프사이클 ---
 	void BeginPlay() override;
 	void EndPlay() override;
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
 	void CreateRenderState()  override;
@@ -59,8 +61,8 @@ public:
 	// --- 이벤트 (외부 바인딩) ---
 	FParticleSystemFinishedSignature OnSystemFinished;
 
-	void SetEventManager(AParticleEventManager* InMgr) { EventManager = InMgr; }
-	AParticleEventManager* GetEventManager() const     { return EventManager; }
+	void SetEventManager(AParticleEventManager* InMgr);
+	AParticleEventManager* GetEventManager() const;
 
 	// --- Emitter Instance 접근 ---
 	int32 GetEmitterInstanceCount() const { return static_cast<int32>(EmitterInstances.size()); }
@@ -134,7 +136,7 @@ protected:
 	// PSC는 이 manager를 직접 찾거나 만들지 않는다.
 	// EventManager가 없어도 particle playback/rendering은 계속 가능하지만,
 	// 외부 gameplay/event-delivery use case는 manager registration을 기대한다.
-	AParticleEventManager* EventManager = nullptr;
+	TWeakObjectPtr<AParticleEventManager> EventManager;
 	bool bHasWarnedMissingEventManager = false;
 	float MissingEventManagerTimeSeconds = 0.0f;
 

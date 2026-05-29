@@ -49,6 +49,7 @@ public:
 	void OnDormant() override;
 	void Update(const FAnimationUpdateContext& Context) override;
 	void Evaluate(FPoseContext& Output) override;
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 	const FTransform& GetLastRootMotionDelta() const override { return LastRootMotionDelta; }
 	const char* GetDebugName() const override { return "StateMachine"; }
 

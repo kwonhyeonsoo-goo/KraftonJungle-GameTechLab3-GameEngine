@@ -1,8 +1,11 @@
-﻿#include "ParticleSystemManager.h"
+#include "ParticleSystemManager.h"
+#include "Object/GarbageCollection.h"
+#include "Object/Object.h"
 
 #include "Asset/AssetPackage.h"
 #include "Platform/Paths.h"
 #include "Particle/ParticleEmitter.h"
+#include "Particle/ParticleEventManager.h"
 #include "Particle/ParticleLODLevel.h"
 #include "Particle/Modules/ParticleModuleCollision.h"
 #include "Serialization/WindowsArchive.h"
@@ -88,7 +91,11 @@ UParticleSystem* FParticleSystemManager::Load(const FString& Path)
 	auto It = LoadedParticleSystems.find(NormalizedPath);
 	if (It != LoadedParticleSystems.end())
 	{
-		return It->second;
+		if (IsValid(It->second))
+		{
+			return It->second;
+		}
+		LoadedParticleSystems.erase(It);
 	}
 
 	if (!FAssetPackage::IsAssetPackagePath(NormalizedPath))
@@ -136,7 +143,15 @@ UParticleSystem* FParticleSystemManager::Find(const FString& Path) const
 	const FString NormalizedPath = FPaths::MakeProjectRelative(Path);
 
 	auto It = LoadedParticleSystems.find(NormalizedPath);
-	return It != LoadedParticleSystems.end() ? It->second : nullptr;
+	if (It == LoadedParticleSystems.end())
+	{
+		return nullptr;
+	}
+	if (IsValid(It->second))
+	{
+		return It->second;
+	}
+	return nullptr;
 }
 
 bool FParticleSystemManager::Save(UParticleSystem* Asset)
@@ -216,7 +231,7 @@ void FParticleSystemManager::SetDefaultEventManager(AParticleEventManager* InMan
 
 AParticleEventManager* FParticleSystemManager::GetDefaultEventManager() const
 {
-	return DefaultEventManager;
+	return DefaultEventManager.Get();
 }
 
 void FParticleSystemManager::RefreshAvailableParticleSystems()
@@ -271,4 +286,20 @@ void FParticleSystemManager::RefreshAvailableParticleSystems()
 const TArray<FAssetListItem>& FParticleSystemManager::GetAvailableParticleSystemFiles() const
 {
 	return AvailableParticleSystemFiles;
+}
+
+
+void FParticleSystemManager::AddReferencedObjects(FReferenceCollector& Collector)
+{
+    for (auto& Pair : LoadedParticleSystems)
+    {
+        Collector.AddReferencedObject(Pair.second, "FParticleSystemManager.LoadedParticleSystems");
+    }
+}
+
+void FParticleSystemManager::ClearCache()
+{
+    LoadedParticleSystems.clear();
+    AvailableParticleSystemFiles.clear();
+	DefaultEventManager.Reset();
 }

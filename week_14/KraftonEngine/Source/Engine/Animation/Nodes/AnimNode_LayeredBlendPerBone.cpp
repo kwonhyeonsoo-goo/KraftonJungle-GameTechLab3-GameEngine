@@ -4,6 +4,7 @@
 #include "Math/Quat.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
+#include "Object/GarbageCollection.h"
 
 #include <algorithm>
 #include <queue>
@@ -126,4 +127,17 @@ TArray<bool> BuildBoneMaskFromRoot(USkeletalMesh* Mesh, const FString& RootBoneN
 	}
 
 	return Mask;
+}
+
+
+void FAnimNode_LayeredBlendPerBone::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	if (BasePose)
+	{
+		BasePose->AddReferencedObjects(Collector);
+	}
+	if (BlendPose)
+	{
+		BlendPose->AddReferencedObjects(Collector);
+	}
 }

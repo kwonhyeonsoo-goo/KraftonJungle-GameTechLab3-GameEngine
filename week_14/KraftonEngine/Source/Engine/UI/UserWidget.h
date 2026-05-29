@@ -2,6 +2,7 @@
 
 #include "Object/Object.h"
 #include "Core/Logging/Log.h"
+#include "Object/GarbageCollection.h"
 #include "Source/Engine/UI/UserWidget.generated.h"
 #include <sol/sol.hpp>
 #include <utility>
@@ -34,6 +35,7 @@ public:
 			return;
 		}
 
+		FScopedGarbageCollectionBlocker GCBlocker;
 		sol::protected_function_result Result = Callback();
 		if (!Result.valid())
 		{
@@ -56,6 +58,7 @@ public:
 	GENERATED_BODY()
 	UUserWidget() = default;
 	~UUserWidget() override = default;
+	void BeginDestroy() override;
 
 	void Initialize(APlayerController* InOwningPlayer, const FString& InDocumentPath);
 	void AddToViewport(int32 InZOrder = 0);
