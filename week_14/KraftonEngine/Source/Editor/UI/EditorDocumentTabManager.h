@@ -9,6 +9,7 @@ enum class EEditorDocumentTabKind : uint8
 	SkeletalMeshEditor,
 	ParticleEditor,
 	AnimGraphEditor,
+	LuaBlueprintEditor,
 	Unsupported,
 };
 

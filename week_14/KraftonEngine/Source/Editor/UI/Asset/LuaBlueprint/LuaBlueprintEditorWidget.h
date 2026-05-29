@@ -22,6 +22,12 @@ public:
 	void Open(UObject* Object) override;
 	void Close() override;
 	void Render(float DeltaTime) override;
+	void RenderDocument(float DeltaTime) override;
+	bool AllowsMultipleInstances() const override { return true; }
+	bool IsEditingObject(UObject* Object) const override;
+	FString GetDocumentTitle() const override;
+	FString GetDocumentPayloadId() const override;
+	EEditorDocumentTabKind GetDocumentTabKind() const override { return EEditorDocumentTabKind::LuaBlueprintEditor; }
 
 private:
 	void EnsureContext();
@@ -112,4 +118,6 @@ private:
 	bool bQueuedGroupSelected = false;
 	bool bPendingInitialContentFit = false;
 	bool bPendingNodeGeometryEdit = false;
+	bool bSuppressInitialGeometryDirty = false;
+	bool bRenderingDocument = false;
 };

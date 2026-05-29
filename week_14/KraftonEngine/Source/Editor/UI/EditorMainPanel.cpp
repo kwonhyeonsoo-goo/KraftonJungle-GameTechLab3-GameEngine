@@ -81,6 +81,8 @@ FDocumentTabVisual GetDocumentTabVisual(EEditorDocumentTabKind Kind)
 		return { ImVec4(0.72f, 0.42f, 0.95f, 1.0f), "Particle Editor" };
 	case EEditorDocumentTabKind::AnimGraphEditor:
 		return { ImVec4(0.86f, 0.58f, 0.22f, 1.0f), "Anim Graph Editor" };
+	case EEditorDocumentTabKind::LuaBlueprintEditor:
+		return { ImVec4(0.36f, 0.52f, 0.94f, 1.0f), "Lua Blueprint Editor" };
 	case EEditorDocumentTabKind::Unsupported:
 	default:
 		return { ImVec4(0.58f, 0.62f, 0.70f, 1.0f), "Editor Tab" };
@@ -96,6 +98,7 @@ const char* GetDocumentTabKindName(EEditorDocumentTabKind Kind)
 	case EEditorDocumentTabKind::SkeletalMeshEditor: return "SkeletalMesh";
 	case EEditorDocumentTabKind::ParticleEditor: return "Particle";
 	case EEditorDocumentTabKind::AnimGraphEditor: return "AnimGraph";
+	case EEditorDocumentTabKind::LuaBlueprintEditor: return "LuaBlueprint";
 	case EEditorDocumentTabKind::Unsupported:
 	default:
 		return "Unsupported";

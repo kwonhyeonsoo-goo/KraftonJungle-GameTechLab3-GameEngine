@@ -1022,6 +1022,24 @@ bool FLuaBlueprintEditorWidget::CanEdit(UObject* Object) const
     return Cast<ULuaBlueprintAsset>(Object) != nullptr;
 }
 
+bool FLuaBlueprintEditorWidget::IsEditingObject(UObject* Object) const
+{
+    if (FAssetEditorWidget::IsEditingObject(Object))
+    {
+        return true;
+    }
+
+    const ULuaBlueprintAsset* CurrentBlueprint = Cast<ULuaBlueprintAsset>(EditedObject);
+    const ULuaBlueprintAsset* RequestedBlueprint = Cast<ULuaBlueprintAsset>(Object);
+    if (!IsOpen() || !CurrentBlueprint || !RequestedBlueprint)
+    {
+        return false;
+    }
+
+    const FString& CurrentPath = CurrentBlueprint->GetSourcePath();
+    return !CurrentPath.empty() && CurrentPath == RequestedBlueprint->GetSourcePath();
+}
+
 void FLuaBlueprintEditorWidget::Open(UObject* Object)
 {
     if (!CanEdit(Object)) return;
@@ -1031,6 +1049,7 @@ void FLuaBlueprintEditorWidget::Open(UObject* Object)
     bPositionsPushed = false;
     bPendingInitialContentFit = true;
     bPendingNodeGeometryEdit = false;
+    bSuppressInitialGeometryDirty = true;
 
     if (ULuaBlueprintAsset* Blueprint = GetBlueprint())
     {
@@ -1065,6 +1084,7 @@ void FLuaBlueprintEditorWidget::Close()
     ClipboardLinks.clear();
     bPendingInitialContentFit = false;
     bPendingNodeGeometryEdit = false;
+    bSuppressInitialGeometryDirty = false;
     FAssetEditorWidget::Close();
 }
 
@@ -1082,7 +1102,8 @@ void FLuaBlueprintEditorWidget::Render(float /*DeltaTime*/)
     // 표시 라벨은 dirty mark(*) 때문에 바뀔 수 있지만, ### 뒤 ID 는 자산 인스턴스로 고정한다.
     // ## 는 표시 suffix 만 숨길 뿐 앞 라벨까지 ID 에 포함되므로 dirty toggle 시 다른 창으로 취급될 수 있다.
     const FString DisplayLabel = (Blueprint->GetSourcePath().empty() ? Blueprint->GetName() : Blueprint->GetSourcePath());
-    const FString DirtyMark    = (IsDirty() || Blueprint->IsCompileDirty()) ? FString("*") : FString();
+    const bool bShowDirtyState = !bSuppressInitialGeometryDirty && (IsDirty() || Blueprint->IsCompileDirty());
+    const FString DirtyMark    = bShowDirtyState ? FString("*") : FString();
     char WindowTitleBuf[512];
     std::snprintf(
         WindowTitleBuf,
@@ -1094,8 +1115,11 @@ void FLuaBlueprintEditorWidget::Render(float /*DeltaTime*/)
     );
 
     bool bWindowOpen = IsOpen();
-    ImGui::SetNextWindowSize(ImVec2(1440.0f, 900.0f), ImGuiCond_Once);
-    if (!ImGui::Begin(WindowTitleBuf, &bWindowOpen, ImGuiWindowFlags_MenuBar))
+    if (!bRenderingDocument)
+    {
+        ImGui::SetNextWindowSize(ImVec2(1440.0f, 900.0f), ImGuiCond_Once);
+    }
+    if (!bRenderingDocument && !ImGui::Begin(WindowTitleBuf, &bWindowOpen, ImGuiWindowFlags_MenuBar))
     {
         ImGui::End();
         if (!bWindowOpen) Close();
@@ -1163,8 +1187,41 @@ void FLuaBlueprintEditorWidget::Render(float /*DeltaTime*/)
         ImGui::EndTabBar();
     }
 
-    ImGui::End();
-    if (!bWindowOpen) Close();
+    if (!bRenderingDocument)
+    {
+        ImGui::End();
+        if (!bWindowOpen) Close();
+    }
+}
+
+void FLuaBlueprintEditorWidget::RenderDocument(float DeltaTime)
+{
+    if (ImGui::BeginChild("##LuaBlueprintDocument", ImVec2(0, 0), ImGuiChildFlags_None, ImGuiWindowFlags_MenuBar))
+    {
+        bRenderingDocument = true;
+        Render(DeltaTime);
+        bRenderingDocument = false;
+    }
+    ImGui::EndChild();
+}
+
+FString FLuaBlueprintEditorWidget::GetDocumentTitle() const
+{
+    const ULuaBlueprintAsset* Blueprint = Cast<ULuaBlueprintAsset>(EditedObject);
+    if (!Blueprint)
+    {
+        return FString("Lua Blueprint");
+    }
+
+    const FString& SourcePath = Blueprint->GetSourcePath();
+    return SourcePath.empty() ? FString("Lua Blueprint - " + Blueprint->GetName()) : FString("Lua Blueprint - " + SourcePath);
+}
+
+FString FLuaBlueprintEditorWidget::GetDocumentPayloadId() const
+{
+    const ULuaBlueprintAsset* Blueprint = Cast<ULuaBlueprintAsset>(EditedObject);
+    const FString SourcePath = Blueprint ? Blueprint->GetSourcePath() : FString();
+    return SourcePath.empty() ? FAssetEditorWidget::GetDocumentPayloadId() : SourcePath;
 }
 
 void FLuaBlueprintEditorWidget::EnsureContext()
@@ -1206,7 +1263,7 @@ void FLuaBlueprintEditorWidget::RenderToolbar(ULuaBlueprintAsset* Blueprint)
 {
     if (!ImGui::BeginMenuBar()) return;
 
-    const bool bDirtyNow = IsDirty() || Blueprint->IsCompileDirty();
+    const bool bDirtyNow = !bSuppressInitialGeometryDirty && (IsDirty() || Blueprint->IsCompileDirty());
     // dirty 면 Save 버튼 강조 — Material editor 패턴.
     if (bDirtyNow) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.85f, 0.35f, 1.0f));
     if (ImGui::MenuItem(bDirtyNow ? "Save*" : "Save"))
@@ -1582,7 +1639,21 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
     // Node-editor drag/resize updates can arrive every frame. Keep the data model live so hit tests,
     // grouping and saving use current coordinates, but push only one undo snapshot when the drag ends.
     const bool bMouseDownForGeometryDrag = ImGui::IsMouseDown(ImGuiMouseButton_Left);
-    if (bAnyNodeGeometryChangedThisFrame)
+    if (bSuppressInitialGeometryDirty)
+    {
+    	// 블루프린트 더블클릭해서 열었을 때 MouseDown => Drag로 판정되어 Dirty로 표시되는 것 방지
+        if (bAnyNodeGeometryChangedThisFrame || bPendingNodeGeometryEdit)
+        {
+            CaptureInitialUndoSnapshot(Blueprint);
+            ClearDirty();
+             bPendingNodeGeometryEdit = false;
+        }
+        if (!bMouseDownForGeometryDrag)
+        {
+            bSuppressInitialGeometryDirty = false;
+        }
+    }
+    else if (bAnyNodeGeometryChangedThisFrame)
     {
         bPendingNodeGeometryEdit = true;
         if (!bMouseDownForGeometryDrag)
