@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "GameFramework/AActor.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/GameFramework/Actor/ParticleSystemActor.generated.h"
 class UParticleSystemComponent;
@@ -19,5 +20,5 @@ public:
 	UParticleSystemComponent* GetParticleSystemComponent() const { return ParticleSystemComponent; }
 
 private:
-	UParticleSystemComponent* ParticleSystemComponent = nullptr;
+	TWeakObjectPtr<UParticleSystemComponent> ParticleSystemComponent = nullptr;
 };

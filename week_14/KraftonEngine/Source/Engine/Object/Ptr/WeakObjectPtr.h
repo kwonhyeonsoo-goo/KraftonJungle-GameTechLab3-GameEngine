@@ -74,12 +74,6 @@ public:
 	explicit operator bool() const { return IsValid(); }
 	operator T*() const { return Get(); }
 	T* operator->() const { return Get(); }
-
-	bool operator==(std::nullptr_t) const { return Get() == nullptr; }
-	bool operator!=(std::nullptr_t) const { return Get() != nullptr; }
-	bool operator==(const T* Other) const { return Get() == Other; }
-	bool operator!=(const T* Other) const { return Get() != Other; }
-
 private:
 	T* TypedObject = nullptr;
 	UObject* Object = nullptr;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameFramework/AActor.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/GameFramework/Light/PointLightActor.generated.h"
 class UBillboardComponent;
@@ -14,6 +15,6 @@ public:
 	void InitDefaultComponents();
 
 private:
-	UPointLightComponent* LightComponent = nullptr;
-	UBillboardComponent* BillboardComponent = nullptr;
+	TWeakObjectPtr<UPointLightComponent> LightComponent = nullptr;
+	TWeakObjectPtr<UBillboardComponent> BillboardComponent = nullptr;
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameFramework/Pawn/Pawn.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 class UCapsuleComponent;
 class USkeletalMeshComponent;
@@ -40,9 +41,9 @@ public:
 	void Jump();
 
 	UFUNCTION(Pure, Category="Character|Components")
-	UCapsuleComponent*           GetCapsuleComponent()  const { return CapsuleComponent; }
+	UCapsuleComponent* GetCapsuleComponent()  const { return CapsuleComponent; }
 	UFUNCTION(Pure, Category="Character|Components")
-	USkeletalMeshComponent*      GetMesh()              const { return Mesh; }
+	USkeletalMeshComponent* GetMesh()              const { return Mesh; }
 	UFUNCTION(Pure, Category="Character|Components")
 	UCharacterMovementComponent* GetCharacterMovement() const { return CharacterMovement; }
 
@@ -65,7 +66,7 @@ protected:
 	// 자동 mouse look + 향후 다른 per-frame 입력 처리.
 	void Tick(float DeltaTime) override;
 
-	UCapsuleComponent*           CapsuleComponent  = nullptr;
-	USkeletalMeshComponent*      Mesh              = nullptr;
-	UCharacterMovementComponent* CharacterMovement = nullptr;
+	TWeakObjectPtr<UCapsuleComponent>           CapsuleComponent  = nullptr;
+	TWeakObjectPtr<USkeletalMeshComponent>      Mesh              = nullptr;
+	TWeakObjectPtr<UCharacterMovementComponent> CharacterMovement = nullptr;
 };

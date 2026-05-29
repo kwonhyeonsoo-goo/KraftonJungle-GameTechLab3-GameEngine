@@ -4,6 +4,7 @@
 #include "Object/FName.h"
 #include "Math/Vector.h"
 
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "Source/Engine/GameFramework/Actor/TriggerVolumeBase.generated.h"
 class UBoxComponent;
 class UPrimitiveComponent;
@@ -63,7 +64,7 @@ protected:
 		UPrimitiveComponent* OtherComp,
 		int32 OtherBodyIndex);
 
-	UBoxComponent* TriggerBox = nullptr;
+	TWeakObjectPtr<UBoxComponent> TriggerBox;
 	UPROPERTY(Edit, Save, Category="Trigger", DisplayName="TriggerTag")
 	FName TriggerTag;  // 직렬화 — 디자이너가 씬에서 식별자를 지정
 };

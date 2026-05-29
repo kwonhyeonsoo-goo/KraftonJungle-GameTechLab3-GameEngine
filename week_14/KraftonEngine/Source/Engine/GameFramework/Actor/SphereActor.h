@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameFramework/AActor.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/GameFramework/Actor/SphereActor.generated.h"
 class USphereComponent;
@@ -19,5 +20,5 @@ public:
 	USphereComponent* GetSphereComponent() const { return SphereComponent; }
 
 private:
-	USphereComponent* SphereComponent = nullptr;
+	TWeakObjectPtr<USphereComponent> SphereComponent;
 };

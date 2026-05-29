@@ -10,7 +10,7 @@
 
 #include <algorithm>
 
-TArray<UActionComponent*> UActionComponent::TimeDilationComponents;
+TArray<TWeakObjectPtr<UActionComponent>> UActionComponent::TimeDilationComponents;
 bool UActionComponent::bHasCapturedGlobalBaseTimeDilation = false;
 float UActionComponent::GlobalBaseTimeDilation = 1.0f;
 
@@ -296,10 +296,9 @@ void UActionComponent::StopLocalHitStop()
 		OwnerActor->PrimaryActorTick.SetTickEnabled(LocalHitStopAction.bActorTickWasEnabled);
 	}
 
-	for (const TPair<UActorComponent*, bool>& State : LocalHitStopAction.ComponentTickStates)
+	for (const TPair<TWeakObjectPtr<UActorComponent>, bool>& State : LocalHitStopAction.ComponentTickStates)
 	{
-		UActorComponent* Component = State.first;
-		if (IsAliveObject(Component))
+		if (UActorComponent* Component = State.first.Get())
 		{
 			Component->SetComponentTickEnabled(State.second);
 		}
@@ -413,8 +412,8 @@ void UActionComponent::RefreshGlobalTimeDilation()
 	auto It = TimeDilationComponents.begin();
 	while (It != TimeDilationComponents.end())
 	{
-		UActionComponent* Component = *It;
-		if (!IsAliveObject(Component) || !Component->HasActiveTimeDilation())
+		UActionComponent* Component = It->Get();
+		if (!Component || !Component->HasActiveTimeDilation())
 		{
 			It = TimeDilationComponents.erase(It);
 			continue;
@@ -433,8 +432,9 @@ void UActionComponent::RefreshGlobalTimeDilation()
 
 	if (!bHasHitStop)
 	{
-		for (UActionComponent* Component : TimeDilationComponents)
+		for (const TWeakObjectPtr<UActionComponent>& WeakComponent : TimeDilationComponents)
 		{
+			UActionComponent* Component = WeakComponent.Get();
 			if (!Component || !Component->HasActiveTimeDilationAction(Component->SlomoAction))
 			{
 				continue;

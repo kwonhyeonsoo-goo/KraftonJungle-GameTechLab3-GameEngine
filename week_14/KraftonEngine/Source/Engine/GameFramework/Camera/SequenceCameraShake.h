@@ -20,6 +20,7 @@ public:
 		FRotator InUserPlaySpaceRot) override;
 
 	void UpdateAndApplyCameraShake(float DeltaTime, FCameraShakeUpdateResult& OutResult) override;
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	void StopShake(bool bImmediately = true) override;
 

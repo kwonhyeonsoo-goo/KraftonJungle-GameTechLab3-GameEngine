@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameFramework/AActor.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/GameFramework/Actor/StaticMeshActor.generated.h"
 class UStaticMeshComponent;
@@ -19,7 +20,7 @@ public:
 	void InitDefaultComponents(const FString& UStaticMeshFileName = "Content/Data/BasicShape/Cylinder.obj");
 
 private:
-	UStaticMeshComponent* StaticMeshComponent = nullptr;
-	//UTextRenderComponent* TextRenderComponent = nullptr;
+	TWeakObjectPtr<UStaticMeshComponent> StaticMeshComponent = nullptr;
+	//TWeakObjectPtr<UTextRenderComponent> TextRenderComponent = nullptr;
 	//USubUVComponent* SubUVComponent = nullptr;
 };

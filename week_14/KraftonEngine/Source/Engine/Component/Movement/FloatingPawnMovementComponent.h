@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MovementComponent.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/Component/Movement/FloatingPawnMovementComponent.generated.h"
 #include <algorithm>
@@ -30,7 +31,7 @@ public:
 	}
 
 private:
-	UPrimitiveComponent* UpdatedPrimitive = nullptr;
+	TWeakObjectPtr<UPrimitiveComponent> UpdatedPrimitive;
 
 	float MoveInput = 0.0f;
 	float RightMoveInput = 0.0f;

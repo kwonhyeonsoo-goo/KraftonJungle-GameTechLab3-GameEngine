@@ -39,7 +39,7 @@ void UTemporaryBoneAnimatorComponent::TickComponent(float DeltaTime, ELevelTick 
 	ResolveTargetMeshComponent();
 	RefreshTargetBone();
 
-	if (!TargetMeshComponent || CachedBoneIndex < 0)
+	if (!TargetMeshComponent.Get() || CachedBoneIndex < 0)
 	{
 		return;
 	}
@@ -49,30 +49,32 @@ void UTemporaryBoneAnimatorComponent::TickComponent(float DeltaTime, ELevelTick 
 
 void UTemporaryBoneAnimatorComponent::ResolveTargetMeshComponent()
 {
-	if (TargetMeshComponent && TargetMeshComponent->GetOwner() == GetOwner())
+	USkeletalMeshComponent* CurrentTarget = TargetMeshComponent.Get();
+	if (CurrentTarget && CurrentTarget->GetOwner() == GetOwner())
 	{
 		return;
 	}
 
 	AActor* OwnerActor = GetOwner();
 	TargetMeshComponent = OwnerActor ? OwnerActor->GetComponentByClass<USkeletalMeshComponent>() : nullptr;
-	CachedSkeletalMesh = nullptr;
+	CachedSkeletalMesh.Reset();
 	CachedBoneIndex = -1;
 	bHasCapturedBasePose = false;
 }
 
 void UTemporaryBoneAnimatorComponent::RefreshTargetBone()
 {
-	if (!TargetMeshComponent)
+	USkeletalMeshComponent* CurrentTarget = TargetMeshComponent.Get();
+	if (!CurrentTarget)
 	{
-		CachedSkeletalMesh = nullptr;
+		CachedSkeletalMesh.Reset();
 		CachedBoneIndex = -1;
 		bHasCapturedBasePose = false;
 		return;
 	}
 
-	USkeletalMesh* SkeletalMesh = TargetMeshComponent->GetSkeletalMesh();
-	if (CachedSkeletalMesh != SkeletalMesh || CachedBoneName != TargetBoneName)
+	USkeletalMesh* SkeletalMesh = CurrentTarget->GetSkeletalMesh();
+	if (CachedSkeletalMesh.Get() != SkeletalMesh || CachedBoneName != TargetBoneName)
 	{
 		CachedSkeletalMesh = SkeletalMesh;
 		CachedBoneName = TargetBoneName;
@@ -112,13 +114,14 @@ int32 UTemporaryBoneAnimatorComponent::FindBoneIndexByName(const USkeletalMesh* 
 
 void UTemporaryBoneAnimatorComponent::CaptureBasePose()
 {
-	if (!TargetMeshComponent || CachedBoneIndex < 0)
+	USkeletalMeshComponent* CurrentTarget = TargetMeshComponent.Get();
+	if (!CurrentTarget || CachedBoneIndex < 0)
 	{
 		bHasCapturedBasePose = false;
 		return;
 	}
 
-	BaseBoneLocalTransform = TargetMeshComponent->GetBoneLocalTransformByIndex(CachedBoneIndex);
+	BaseBoneLocalTransform = CurrentTarget->GetBoneLocalTransformByIndex(CachedBoneIndex);
 	bHasCapturedBasePose = true;
 	ElapsedTime = 0.0f;
 }
@@ -145,7 +148,15 @@ void UTemporaryBoneAnimatorComponent::ApplyAnimatedBonePose(float DeltaTime)
 	FTransform AnimatedTransform = BaseBoneLocalTransform;
 	AnimatedTransform.SetRotation(AnimatedRotation);
 
-	TargetMeshComponent->SetBoneLocalTransformByIndex(CachedBoneIndex, AnimatedTransform);
+	if (USkeletalMeshComponent* CurrentTarget = TargetMeshComponent.Get())
+	{
+		CurrentTarget->SetBoneLocalTransformByIndex(CachedBoneIndex, AnimatedTransform);
+	}
+	else
+	{
+		bHasCapturedBasePose = false;
+	}
+
 }
 
 #endif

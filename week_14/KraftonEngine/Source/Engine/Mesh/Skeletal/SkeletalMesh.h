@@ -3,6 +3,7 @@
 #include "Object/Object.h"
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
 #include "Animation/Skeleton/SkeletonTypes.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 class USkeleton;
 
@@ -54,5 +55,5 @@ private:
     TArray<FSkeletalMaterial> SkeletalMaterials;
 
     FSkeletonBinding SkeletonBinding;
-    USkeleton*       Skeleton = nullptr;
+    TWeakObjectPtr<USkeleton> Skeleton;
 };

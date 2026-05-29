@@ -97,9 +97,10 @@ void USkeletalMesh::SetSkeleton(USkeleton* InSkeleton)
 {
 	Skeleton = InSkeleton;
 
-	if (Skeleton)
+	USkeleton* ValidSkeleton = Skeleton.Get();
+	if (ValidSkeleton)
 	{
-        SetSkeletonBinding(Skeleton->GetSkeletonBinding());
+        SetSkeletonBinding(ValidSkeleton->GetSkeletonBinding());
 	}
 	else
 	{
@@ -110,7 +111,7 @@ void USkeletalMesh::SetSkeleton(USkeleton* InSkeleton)
 
 USkeleton* USkeletalMesh::GetSkeleton() const
 {
-	return Skeleton;
+	return Skeleton.Get();
 }
 
 void USkeletalMesh::SetSkeletonBinding(const FSkeletonBinding& InBinding)

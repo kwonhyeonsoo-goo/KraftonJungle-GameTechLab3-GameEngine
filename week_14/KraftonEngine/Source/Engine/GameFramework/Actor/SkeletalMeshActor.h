@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameFramework/AActor.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/GameFramework/Actor/SkeletalMeshActor.generated.h"
 class USkeletalMeshComponent;
@@ -17,5 +18,5 @@ public:
 	void InitDefaultComponents(const FString& SkeletalMeshFileName = "Content/Data/Samba Dancing (10).fbx");
 
 private:
-	USkeletalMeshComponent* SkeletalMeshComponent = nullptr;
+	TWeakObjectPtr<USkeletalMeshComponent> SkeletalMeshComponent = nullptr;
 };

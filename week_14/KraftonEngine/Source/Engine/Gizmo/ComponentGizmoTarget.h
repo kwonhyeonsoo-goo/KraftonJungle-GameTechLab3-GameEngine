@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "GizmoTransformTarget.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 class USceneComponent;
 
@@ -32,5 +33,5 @@ public:
 	void AddScaleDelta(const FVector& Delta) override;
 
 private:
-	USceneComponent* Component = nullptr;
+	TWeakObjectPtr<USceneComponent> Component;
 };

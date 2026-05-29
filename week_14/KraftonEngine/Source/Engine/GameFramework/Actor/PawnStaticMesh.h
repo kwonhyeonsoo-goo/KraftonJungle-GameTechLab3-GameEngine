@@ -2,6 +2,7 @@
 
 #include "GameFramework/Pawn/Pawn.h"
 
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "Source/Engine/GameFramework/Actor/PawnStaticMesh.generated.h"
 class UStaticMeshComponent;
 
@@ -27,5 +28,5 @@ public:
 	UStaticMeshComponent* GetStaticMeshComponent() const { return StaticMeshComponent; }
 
 private:
-	UStaticMeshComponent* StaticMeshComponent = nullptr;
+	TWeakObjectPtr<UStaticMeshComponent> StaticMeshComponent;
 };

@@ -7,6 +7,7 @@
 
 class AActor;
 
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "Source/Engine/Component/SceneComponent.generated.h"
 
 UCLASS()

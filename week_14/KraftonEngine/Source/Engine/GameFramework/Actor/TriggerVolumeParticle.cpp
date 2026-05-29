@@ -34,8 +34,9 @@ void ATriggerVolumeParticle::OnPossessedPawnEntered(APawn* /*Pawn*/)
 	if (OverlapCount++ != 0) return;
 	if (!bActivateOnTriggerEnter) return;
 
-	for (UParticleSystemComponent* PSC : CachedComponents)
+	for (const TWeakObjectPtr<UParticleSystemComponent>& WeakPSC : CachedComponents)
 	{
+		UParticleSystemComponent* PSC = WeakPSC.Get();
 		if (PSC) PSC->Activate();  // bReset=false — 기존 상태 유지하며 spawn 재개
 	}
 }
@@ -47,8 +48,9 @@ void ATriggerVolumeParticle::OnPossessedPawnExited(APawn* /*Pawn*/)
 	OverlapCount = 0;  // 음수 방어 (Enter/Exit 비대칭 시)
 	if (!bDeactivateOnTriggerExit) return;
 
-	for (UParticleSystemComponent* PSC : CachedComponents)
+	for (const TWeakObjectPtr<UParticleSystemComponent>& WeakPSC : CachedComponents)
 	{
+		UParticleSystemComponent* PSC = WeakPSC.Get();
 		if (PSC) PSC->Deactivate();  // graceful — 기존 입자는 수명대로 소멸
 	}
 }

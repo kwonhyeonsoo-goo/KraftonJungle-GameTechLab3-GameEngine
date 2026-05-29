@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameFramework/AActor.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/GameFramework/Actor/CapsuleActor.generated.h"
 class UCapsuleComponent;
@@ -18,5 +19,5 @@ public:
 	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
 
 private:
-	UCapsuleComponent* CapsuleComponent = nullptr;
+	TWeakObjectPtr<UCapsuleComponent> CapsuleComponent = nullptr;
 };

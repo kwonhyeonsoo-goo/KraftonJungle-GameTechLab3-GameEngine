@@ -2,6 +2,7 @@
 
 #include "GameFramework/AActor.h"
 
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "Source/Engine/GameFramework/GameMode/GameModeBase.generated.h"
 class AGameStateBase;
 class ATriggerVolumeBase;
@@ -59,7 +60,8 @@ protected:
 	UClass* GameStateClass = nullptr;
 	UClass* PlayerControllerClass = nullptr;
 
-	// GameMode가 BeginPlay/StartMatch에서 spawn하여 소유.
-	AGameStateBase* GameState = nullptr;
-	APlayerController* PlayerController = nullptr;
+	// GameMode가 BeginPlay/StartMatch에서 spawn하지만, 실제 Actor lifetime은 World/Level이 소유한다.
+	// GameMode는 관계 참조만 유지하므로 stale actor 접근을 피하기 위해 weak로 둔다.
+	TWeakObjectPtr<AGameStateBase> GameState;
+	TWeakObjectPtr<APlayerController> PlayerController;
 };

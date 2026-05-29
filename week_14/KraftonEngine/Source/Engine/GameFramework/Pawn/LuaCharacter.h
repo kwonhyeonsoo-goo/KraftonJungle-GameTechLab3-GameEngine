@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameFramework/Pawn/Character.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 class ULuaScriptComponent;
 class USpringArmComponent;
@@ -38,10 +39,10 @@ public:
 
 	ULuaScriptComponent* GetLuaScriptComponent() const { return LuaScriptComponent; }
 	USpringArmComponent* GetSpringArm()          const { return SpringArm; }
-	UCameraComponent*    GetCamera()             const { return Camera; }
+	UCameraComponent* GetCamera()             const { return Camera; }
 
 protected:
-	ULuaScriptComponent* LuaScriptComponent = nullptr;
-	USpringArmComponent* SpringArm          = nullptr;
-	UCameraComponent*    Camera             = nullptr;
+	TWeakObjectPtr<ULuaScriptComponent> LuaScriptComponent = nullptr;
+	TWeakObjectPtr<USpringArmComponent> SpringArm          = nullptr;
+	TWeakObjectPtr<UCameraComponent>    Camera             = nullptr;
 };

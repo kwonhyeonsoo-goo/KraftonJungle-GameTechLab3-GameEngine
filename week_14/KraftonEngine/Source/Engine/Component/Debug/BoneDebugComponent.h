@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Component/PrimitiveComponent.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/Component/Debug/BoneDebugComponent.generated.h"
 class USkeletalMeshComponent;
@@ -22,7 +23,7 @@ public:
 
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
 
-	USkeletalMeshComponent* GetTargetMeshComponent() const { return TargetMeshComponent; }
+	USkeletalMeshComponent* GetTargetMeshComponent() const { return TargetMeshComponent.Get(); }
 	void SetTargetMeshComponent(USkeletalMeshComponent* InMeshComponent) { TargetMeshComponent = InMeshComponent; MarkRenderStateDirty(); }
 
 	int32 GetSelectedBoneIndex() const { return SelectedBoneIndex; }
@@ -32,7 +33,7 @@ public:
 	void SetDrawMode(EBoneDebugDrawMode InDrawMode) { DrawMode = InDrawMode; MarkRenderStateDirty(); }
 
 private:
-	USkeletalMeshComponent* TargetMeshComponent = nullptr;
+	TWeakObjectPtr<USkeletalMeshComponent> TargetMeshComponent;
 	int32 SelectedBoneIndex = -1;
 	EBoneDebugDrawMode DrawMode = EBoneDebugDrawMode::SelectedOnly;
 };

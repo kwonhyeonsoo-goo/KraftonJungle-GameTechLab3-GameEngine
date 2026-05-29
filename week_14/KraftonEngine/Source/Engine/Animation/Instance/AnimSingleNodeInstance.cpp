@@ -34,9 +34,14 @@ void UAnimSingleNodeInstance::SetAnimationAsset(UAnimSequenceBase* InAsset)
 
 void UAnimSingleNodeInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
-	if (!bPlaying || !IsValid(CurrentAsset))
+	if (!IsValid(CurrentAsset))
 	{
 		CurrentAsset = nullptr;
+		return;
+	}
+
+	if (!bPlaying)
+	{
 		return;
 	}
 

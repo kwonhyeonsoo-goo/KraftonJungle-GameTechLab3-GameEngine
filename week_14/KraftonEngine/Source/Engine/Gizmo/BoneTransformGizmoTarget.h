@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "GizmoTransformTarget.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 class USkeletalMeshComponent;
 
@@ -32,6 +33,6 @@ public:
 	void AddScaleDelta(const FVector& Delta) override;
 
 private:
-	USkeletalMeshComponent* MeshComponent = nullptr;
+	TWeakObjectPtr<USkeletalMeshComponent> MeshComponent;
 	int32 BoneIndex = -1;
 };

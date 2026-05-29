@@ -4,6 +4,7 @@
 #include "Math/Rotator.h"
 #include "Math/Transform.h"
 #include "Math/Vector.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/Component/Debug/TemporaryBoneAnimatorComponent.generated.h"
 class USkeletalMesh;
@@ -50,8 +51,8 @@ private:
 	UPROPERTY(Edit, Save, Category="Temp Bone Animator", DisplayName="Enabled")
 	bool bEnabled = true;
 
-	USkeletalMeshComponent* TargetMeshComponent = nullptr;
-	USkeletalMesh* CachedSkeletalMesh = nullptr;
+	TWeakObjectPtr<USkeletalMeshComponent> TargetMeshComponent;
+	TWeakObjectPtr<USkeletalMesh> CachedSkeletalMesh;
 	int32 CachedBoneIndex = -1;
 	FString CachedBoneName;
 	FTransform BaseBoneLocalTransform;

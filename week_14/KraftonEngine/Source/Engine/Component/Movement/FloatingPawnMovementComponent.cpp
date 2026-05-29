@@ -44,7 +44,8 @@ void UFloatingPawnMovementComponent::TickComponent(float DeltaTime, ELevelTick T
 	UMovementComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	UpdatedPrimitive = Cast<UPrimitiveComponent>(GetUpdatedComponent());
-	if (!UpdatedPrimitive)
+	UPrimitiveComponent* CurrentUpdatedPrimitive = UpdatedPrimitive.Get();
+	if (!CurrentUpdatedPrimitive)
 	{
 		return;
 	}
@@ -54,8 +55,8 @@ void UFloatingPawnMovementComponent::TickComponent(float DeltaTime, ELevelTick T
 	const float MouseYawDelta = LookInputX * MouseSensitivity;
 	const float MousePitchDelta = LookInputY * MouseSensitivity;
 
-	USceneComponent* RotationComponent = UpdatedPrimitive;
-	const TArray<USceneComponent*>& Children = UpdatedPrimitive->GetChildren();
+	USceneComponent* RotationComponent = CurrentUpdatedPrimitive;
+	const TArray<USceneComponent*>& Children = CurrentUpdatedPrimitive->GetChildren();
 	if (!Children.empty() && Children[0])
 	{
 		RotationComponent = Children[0];
@@ -75,7 +76,7 @@ void UFloatingPawnMovementComponent::TickComponent(float DeltaTime, ELevelTick T
 		MoveDirection.Normalize();
 	}
 
-	UpdatedPrimitive->SetLinearVelocity(MoveDirection * Speed);
+	CurrentUpdatedPrimitive->SetLinearVelocity(MoveDirection * Speed);
 
 	if (MouseYawDelta != 0.0f || MousePitchDelta != 0.0f)
 	{

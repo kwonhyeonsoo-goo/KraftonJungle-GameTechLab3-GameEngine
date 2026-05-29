@@ -1,4 +1,6 @@
 #include "AnimSequenceBase.h"
+#include "Animation/Notify/AnimNotify.h"
+#include "Animation/Notify/AnimNotifyState.h"
 #include "Object/GarbageCollection.h"
 #include "Object/Object.h"
 void UAnimSequenceBase::Serialize(FArchive& Ar)

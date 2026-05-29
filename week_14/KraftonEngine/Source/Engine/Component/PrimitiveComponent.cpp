@@ -119,6 +119,10 @@ void UPrimitiveComponent::RouteComponentDestroyed()
 
 	ClearOctreeLocation();
 	DestroyRenderState();
+	OnComponentBeginOverlap.Clear();
+	OnComponentEndOverlap.Clear();
+	OnComponentHit.Clear();
+	OnComponentEndHit.Clear();
 	bComponentHasBegunPlay = false;
 
 	USceneComponent::RouteComponentDestroyed();

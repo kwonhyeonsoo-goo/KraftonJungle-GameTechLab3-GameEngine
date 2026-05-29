@@ -37,6 +37,7 @@
 #include "Particle/ParticleSystemManager.h"
 #include "Particle/Distributions/Distribution.h"
 #include "Editor/UI/Asset/Mesh/MeshEditorWidget.h"
+#include "Editor/UI/ContentBrowser/ContentItem.h"
 #include "Platform/Paths.h"
 #include "Serialization/MemoryArchive.h"
 
@@ -221,6 +222,104 @@ namespace
 		}
 		return Label;
 	}
+
+    FString MakeProjectRelativeContentPath(const std::filesystem::path& Path)
+    {
+        std::filesystem::path Normalized  = Path.lexically_normal();
+        std::filesystem::path RootPath    = std::filesystem::path(FPaths::RootDir());
+        std::filesystem::path RelPath     = Normalized.lexically_relative(RootPath);
+        const std::wstring    RelPathText = RelPath.wstring();
+        if (RelPath.empty() || RelPathText == L".." || RelPathText.rfind(L"..\\", 0) == 0 || RelPathText.rfind(L"../", 0) == 0)
+        {
+            return FPaths::ToUtf8(Normalized.generic_wstring());
+        }
+        return FPaths::ToUtf8(RelPath.generic_wstring());
+    }
+
+    bool TryAcceptAssetPathDrop(const char* PayloadType, FString& OutPath)
+    {
+        if (!PayloadType || PayloadType[0] == '\0')
+        {
+            return false;
+        }
+
+        if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(PayloadType))
+        {
+            const FContentItem ContentItem = *reinterpret_cast<const FContentItem*>(Payload->Data);
+            if (!ContentItem.bIsDirectory)
+            {
+                OutPath = MakeProjectRelativeContentPath(ContentItem.Path);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool TryRenderRegisteredAssetPicker(
+        const FString& AssetType,
+        const FString& CurrentPath,
+        const char*    ComboId,
+        FString&       OutSelectedPath
+    )
+    {
+        if (AssetType.empty())
+        {
+            return false;
+        }
+
+        const TArray<FAssetListItem>& Items = FAssetRegistry::ListByTypeName(AssetType.c_str());
+
+        FString Preview = "None";
+        if (!CurrentPath.empty() && CurrentPath != "None")
+        {
+            size_t SlashPos = CurrentPath.find_last_of("/\\");
+            Preview         = (SlashPos == FString::npos) ? CurrentPath : CurrentPath.substr(SlashPos + 1);
+            size_t DotPos   = Preview.find_last_of('.');
+            if (DotPos != FString::npos)
+            {
+                Preview = Preview.substr(0, DotPos);
+            }
+        }
+        bool bChanged = false;
+        if (ImGui::BeginCombo(ComboId, Preview.c_str()))
+        {
+            const bool bSelectedNone = (CurrentPath.empty() || CurrentPath == "None");
+            if (ImGui::Selectable("None", bSelectedNone))
+            {
+                OutSelectedPath = "None";
+                bChanged        = true;
+            }
+            if (bSelectedNone)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+
+            if (Items.empty())
+            {
+                ImGui::TextDisabled("No %s assets found", AssetType.c_str());
+            }
+
+            for (const FAssetListItem& Item : Items)
+            {
+                const bool bSelected = (CurrentPath == Item.FullPath);
+                if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+                {
+                    OutSelectedPath = Item.FullPath;
+                    bChanged        = true;
+                }
+                if (bSelected)
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("%s", Item.FullPath.c_str());
+                }
+            }
+            ImGui::EndCombo();
+        }
+        return bChanged;
+    }
 
 	void DispatchPostEditChange(
 		const FPropertyValue& Prop,
@@ -551,6 +650,15 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 	ImGui::Begin("Property Window");
 
 	FSelectionManager& Selection = EditorEngine->GetSelectionManager();
+    if (SelectedComponent && !IsValid(SelectedComponent))
+    {
+        SelectedComponent = nullptr;
+        bActorSelected    = true;
+    }
+    if (LastSelectedActor && !IsValid(LastSelectedActor))
+    {
+        LastSelectedActor = nullptr;
+    }
 	AActor* PrimaryActor = Selection.GetPrimarySelection();
 	if (!PrimaryActor)
 	{
@@ -563,7 +671,7 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 	}
 
 	// Actor 선택이 바뀌면 초기화
-	if (PrimaryActor != LastSelectedActor)
+    if (LastSelectedActor != PrimaryActor)
 	{
 		SelectedComponent = nullptr;
 		LastSelectedActor = PrimaryActor;
@@ -1110,8 +1218,8 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 	bool bIsRoot = false;
 	if (SelectedComponent->IsA<USceneComponent>())
 	{
-		USceneComponent* SceneComp = static_cast<USceneComponent*>(SelectedComponent);
-		bIsRoot = (SceneComp->GetParent() == nullptr);
+        USceneComponent* SceneComp = static_cast<USceneComponent*>(SelectedComponent.Get());
+		bIsRoot                    = (SceneComp->GetParent() == nullptr);
 	}
 
 	// 카테고리 순서 수집 (등장 순 유지)
@@ -1215,7 +1323,7 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 	// 실제 변경이 있었을 때만 Transform dirty 마킹
 	if (bAnyChanged && SelectedComponent->IsA<USceneComponent>())
 	{
-		static_cast<USceneComponent*>(SelectedComponent)->MarkTransformDirty();
+        static_cast<USceneComponent*>(SelectedComponent.Get())->MarkTransformDirty();
 	}
 }
 
@@ -1585,6 +1693,37 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 		}
 		return bChanged;
 	}
+
+    {
+        FString SelectedAssetPath;
+        if (TryRenderRegisteredAssetPicker(AssetType, CurrentPath, "##RegisteredAsset", SelectedAssetPath))
+        {
+            SetPath(SelectedAssetPath);
+            return true;
+        }
+
+        if (ImGui::BeginDragDropTarget())
+        {
+            FString DroppedPath;
+            if (TryAcceptAssetPathDrop("ObjectContentItem", DroppedPath) || TryAcceptAssetPathDrop("MaterialContentItem", DroppedPath) || TryAcceptAssetPathDrop("FloatCurveContentItem", DroppedPath) || TryAcceptAssetPathDrop("PNGElement", DroppedPath)
+                || TryAcceptAssetPathDrop("LuaBlueprintContentItem", DroppedPath)
+                || TryAcceptAssetPathDrop("AnimGraphContentItem", DroppedPath)
+                || TryAcceptAssetPathDrop("ParticleSystemContentItem", DroppedPath))
+            {
+                SetPath(DroppedPath);
+                bChanged = true;
+            }
+            ImGui::EndDragDropTarget();
+        }
+        if (bChanged)
+        {
+            return true;
+        }
+        if (!AssetType.empty() && AssetType != "LuaAnimScript")
+        {
+            return false;
+        }
+    }
 
 	if (AssetType == "LuaAnimScript")
 	{
@@ -1996,7 +2135,7 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyValue>& Props, 
 			Rot->Yaw = RotXYZ[2];
 			if (SelectedComponent && SelectedComponent->IsA<USceneComponent>())
 			{
-				static_cast<USceneComponent*>(SelectedComponent)->ApplyCachedEditRotator();
+                static_cast<USceneComponent*>(SelectedComponent.Get())->ApplyCachedEditRotator();
 			}
 		}
 		break;

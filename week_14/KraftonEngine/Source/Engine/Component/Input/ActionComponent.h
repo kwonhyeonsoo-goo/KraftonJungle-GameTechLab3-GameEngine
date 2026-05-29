@@ -2,6 +2,7 @@
 
 #include "Component/ActorComponent.h"
 #include "Math/Vector.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/Component/Input/ActionComponent.generated.h"
 class USceneComponent;
@@ -63,7 +64,7 @@ private:
 		float Duration = 0.0f;
 		float RemainingTime = 0.0f;
 		bool bActorTickWasEnabled = true;
-		TArray<TPair<UActorComponent*, bool>> ComponentTickStates;
+		TArray<TPair<TWeakObjectPtr<UActorComponent>, bool>> ComponentTickStates;
 	};
 
 	struct FKnockbackAction
@@ -83,7 +84,7 @@ private:
 	FLocalHitStopAction LocalHitStopAction;
 	FKnockbackAction KnockbackAction;
 
-	static TArray<UActionComponent*> TimeDilationComponents;
+	static TArray<TWeakObjectPtr<UActionComponent>> TimeDilationComponents;
 	static bool bHasCapturedGlobalBaseTimeDilation;
 	static float GlobalBaseTimeDilation;
 };

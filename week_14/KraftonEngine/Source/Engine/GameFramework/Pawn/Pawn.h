@@ -3,6 +3,7 @@
 #include "GameFramework/AActor.h"
 #include "Math/Rotator.h"
 
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "Source/Engine/GameFramework/Pawn/Pawn.generated.h"
 class APlayerController;
 class UInputComponent;
@@ -84,13 +85,13 @@ public:
 	bool bUseControllerRotationRoll  = false;
 
 protected:
-	APlayerController* Controller = nullptr;  // 직렬화 제외 — 런타임에 PC가 세팅
+	TWeakObjectPtr<APlayerController> Controller;  // 직렬화 제외 — 런타임에 PC가 세팅
 
 	UPROPERTY(Edit, Save, Category="Pawn", DisplayName="Auto Possess Player")
 	bool bAutoPossessPlayer = true;            // 직렬화 — GameMode가 시작 시 자동 Possess할 후보로 사용
 
 	// BeginPlay 가 자동 추가 — 자식의 SetupInputComponent 가 mapping/binding 등록.
-	UInputComponent* InputComponent = nullptr;
+	TWeakObjectPtr<UInputComponent> InputComponent;
 
 	// "사용자가 보는 방향" — capsule yaw 와 분리. SpringArm 이 inherit.
 	FRotator ControlRotation;

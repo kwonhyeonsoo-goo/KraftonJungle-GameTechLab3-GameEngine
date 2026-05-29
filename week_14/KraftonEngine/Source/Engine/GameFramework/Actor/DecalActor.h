@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameFramework/AActor.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/GameFramework/Actor/DecalActor.generated.h"
 class UTextRenderComponent;
@@ -19,9 +20,9 @@ public:
 	UDecalComponent* GetDecalComponent() const { return DecalComponent; }
 
 private:
-	UDecalComponent* DecalComponent;
-	UBillboardComponent* BillboardComponent = nullptr;
-	UTextRenderComponent* TextRenderComponent = nullptr;
+	TWeakObjectPtr<UDecalComponent> DecalComponent;
+	TWeakObjectPtr<UBillboardComponent> BillboardComponent = nullptr;
+	TWeakObjectPtr<UTextRenderComponent> TextRenderComponent = nullptr;
 	
 	const FString DefaultDecalMaterialPath = "Content/Material/Editor/DefaultDecal.uasset";
 };

@@ -28,13 +28,22 @@ public:
 
     void                SetBlueprintPath(const FString& InPath);
     const FString&      GetBlueprintPath() const { return BlueprintPath; }
-    ULuaBlueprintAsset* GetBlueprintAsset() const { return BlueprintAsset; }
+
+    ULuaBlueprintAsset* GetBlueprintAsset() const
+    {
+        return GetValidBlueprintAsset();
+    }
 
     void BeginPlay() override;
     void EndPlay() override;
     void RouteComponentDestroyed() override;
     void BeginDestroy() override;
     void AddReferencedObjects(FReferenceCollector& Collector) override;
+
+    // FLuaScriptManager::Shutdown 이 lua_State 종료(Lua.reset()) 직전에 호출한다.
+    // sol 핸들을 살아있는 lua_State 에서 미리 해제해, 이후 최종 GC sweep 의 ClearLuaRuntime 이
+    // 닫힌 lua_State 에 luaL_unref 를 호출하며 lua51.dll 내부에서 크래시나는 것을 막는다.
+    void ReleaseLuaRuntimeForShutdown();
     void PreGetEditableProperties() override;
     void PostEditProperty(const char* PropertyName) override;
 
@@ -42,21 +51,23 @@ protected:
     void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
 private:
-    bool     LoadBlueprintAsset();
-    bool     InitializeLua();
-    void     ClearLuaRuntime();
-    void     BindOwnerCollisionEvents();
-    void     ClearCollisionBindings();
-    FString  GetRuntimeName() const;
-    void     InitializeRuntimeObjectVariables();
-    void     InitRuntimeObjectVariable(const FString& Name, bool bStrong);
-    void     SetRuntimeObjectVariable(const FString& Name, sol::object Value);
-    UObject* GetRuntimeObjectVariable(const FString& Name) const;
-    bool     ReadEventFlag(const char* EventName) const;
-    void     ScheduleLuaDelay(float Seconds, sol::protected_function Callback, uint32 Generation);
-    bool     IsLuaRuntimeGenerationValid(uint32 Generation) const;
-    void     InvokeLuaEndPlay();
-    void     HandleDeferredLuaCleanup();
+    bool                LoadBlueprintAsset();
+    ULuaBlueprintAsset* GetValidBlueprintAsset() const;
+    void                ClearInvalidBlueprintAsset();
+    bool                InitializeLua();
+    void                ClearLuaRuntime();
+    void                BindOwnerCollisionEvents();
+    void                ClearCollisionBindings();
+    FString             GetRuntimeName() const;
+    void                InitializeRuntimeObjectVariables();
+    void                InitRuntimeObjectVariable(const FString& Name, bool bStrong);
+    void                SetRuntimeObjectVariable(const FString& Name, sol::object Value);
+    UObject*            GetRuntimeObjectVariable(const FString& Name) const;
+    bool                ReadEventFlag(const char* EventName) const;
+    void                ScheduleLuaDelay(float Seconds, sol::protected_function Callback, uint32 Generation);
+    bool                IsLuaRuntimeGenerationValid(uint32 Generation) const;
+    void                InvokeLuaEndPlay();
+    void                HandleDeferredLuaCleanup();
 
     void HandleBeginOverlap(
         UPrimitiveComponent* OverlappedComponent,

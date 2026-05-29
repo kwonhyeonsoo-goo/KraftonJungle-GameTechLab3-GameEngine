@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Object/Object.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "GameFramework/Camera/CameraTypes.h"
 
 #include "Source/Engine/GameFramework/Camera/CameraShakeBase.generated.h"
@@ -48,7 +49,7 @@ public:
 	bool bSingleInstance = false;
 
 protected:
-	APlayerCameraManager* OwnerCameraManager = nullptr;
+	TWeakObjectPtr<APlayerCameraManager> OwnerCameraManager;
 	float Scale = 1.0f;
 	ECameraShakePlaySpace PlaySpace = ECameraShakePlaySpace::CameraLocal;
 	FRotator UserPlaySpaceRot;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameFramework/AActor.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/GameFramework/Actor/BoxActor.generated.h"
 class UBoxComponent;
@@ -18,5 +19,5 @@ public:
 	UBoxComponent* GetBoxComponent() const { return BoxComponent; }
 
 private:
-	UBoxComponent* BoxComponent = nullptr;
+	TWeakObjectPtr<UBoxComponent> BoxComponent = nullptr;
 };

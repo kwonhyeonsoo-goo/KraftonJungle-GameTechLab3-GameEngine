@@ -164,9 +164,12 @@ void ULuaBlueprintComponent::TickComponent(
 {
     UActorComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-    if (BlueprintAsset && LoadedBlueprintRuntimeVersion != BlueprintAsset->GetRuntimeVersion())
+    if (ULuaBlueprintAsset* ValidAsset = GetValidBlueprintAsset())
     {
-        ReloadBlueprint();
+        if (LoadedBlueprintRuntimeVersion != ValidAsset->GetRuntimeVersion())
+        {
+            ReloadBlueprint();
+        }
     }
 
     if (bWantsTick && LuaTick)
@@ -181,8 +184,31 @@ void ULuaBlueprintComponent::TickComponent(
     }
 }
 
+ULuaBlueprintAsset* ULuaBlueprintComponent::GetValidBlueprintAsset() const
+{
+    // BlueprintAsset 는 raw 포인터다. 보통 FLuaBlueprintManager 가 루트로 잡아 살아있지만,
+    // ClearCache() 이후 GC sweep 이 에셋을 회수하면 dangling 이 될 수 있다. 접근 직전마다
+    // 검증하여 stale 포인터를 정리한 뒤 valid 포인터(또는 nullptr)만 노출한다.
+    const_cast<ULuaBlueprintComponent*>(this)->ClearInvalidBlueprintAsset();
+    return BlueprintAsset;
+}
+
+void ULuaBlueprintComponent::ClearInvalidBlueprintAsset()
+{
+    // IsValid 는 GetAliveObjectFromAddress 기반이라 dangling/freed 포인터가 들어와도
+    // deref 없이 안전하게 살아있는 UObject 인지 검사한다.
+    if (BlueprintAsset && !IsValid(BlueprintAsset))
+    {
+        BlueprintAsset                = nullptr;
+        LoadedBlueprintVersion        = 0;
+        LoadedBlueprintRuntimeVersion = 0;
+    }
+}
+
 bool ULuaBlueprintComponent::LoadBlueprintAsset()
 {
+    ClearInvalidBlueprintAsset();
+
     if (BlueprintAsset && LoadedBlueprintRuntimeVersion == BlueprintAsset->GetRuntimeVersion())
     {
         return BlueprintAsset->HasRunnableLuaSource();
@@ -324,6 +350,14 @@ bool ULuaBlueprintComponent::InitializeLua()
     return true;
 }
 
+void ULuaBlueprintComponent::ReleaseLuaRuntimeForShutdown()
+{
+    // lua_State 가 아직 valid 한 동안(FLuaScriptManager::Shutdown 의 Lua.reset() 이전) 호출되어,
+    // 보유 중인 sol 핸들을 지금 deref 해 둔다. 이후 최종 GC sweep 이 이 컴포넌트를 destroy 하며
+    // ClearLuaRuntime 을 다시 타더라도, 핸들이 비어 있어 닫힌 lua_State 를 건드리지 않는다.
+    ClearLuaRuntime();
+}
+
 void ULuaBlueprintComponent::ClearLuaRuntime()
 {
     ++LuaRuntimeGeneration;
@@ -453,9 +487,10 @@ FString ULuaBlueprintComponent::GetRuntimeName() const
     {
         return BlueprintPath;
     }
-    if (BlueprintAsset && !BlueprintAsset->GetSourcePath().empty())
+    ULuaBlueprintAsset* ValidAsset = GetValidBlueprintAsset();
+    if (ValidAsset && !ValidAsset->GetSourcePath().empty())
     {
-        return BlueprintAsset->GetSourcePath();
+        return ValidAsset->GetSourcePath();
     }
     return "TransientLuaBlueprint";
 }
@@ -463,12 +498,13 @@ FString ULuaBlueprintComponent::GetRuntimeName() const
 void ULuaBlueprintComponent::InitializeRuntimeObjectVariables()
 {
     RuntimeObjectVariables.clear();
-    if (!BlueprintAsset)
+    ULuaBlueprintAsset* ValidAsset = GetValidBlueprintAsset();
+    if (!ValidAsset)
     {
         return;
     }
 
-    for (const FLuaBlueprintVariable& Variable : BlueprintAsset->GetVariables())
+    for (const FLuaBlueprintVariable& Variable : ValidAsset->GetVariables())
     {
         if (Variable.Type == ELuaBlueprintPinType::Object)
         {

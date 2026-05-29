@@ -178,7 +178,7 @@ USkeletalMesh* UAnimInstance::GetSkeletalMesh() const
 
 USkeletalMeshComponent* UAnimInstance::GetOwningComponent() const
 {
-	return IsValid(OwningComponent) ? OwningComponent : nullptr;
+	return OwningComponent.Get();
 }
 
 APawn* UAnimInstance::TryGetPawnOwner() const
@@ -463,6 +463,6 @@ void UAnimInstance::BeginDestroy()
 	MontageSlots.clear();
 	RootNode = nullptr;
 	OwnedNodes.clear();
-	OwningComponent = nullptr;
+	OwningComponent.Reset();
 	UObject::BeginDestroy();
 }

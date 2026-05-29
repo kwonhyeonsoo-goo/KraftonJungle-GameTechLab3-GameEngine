@@ -4,6 +4,7 @@
 #include "Object/Object.h"
 #include "Asset/AssetRegistry.h"
 #include "Editor/UI/Dialog/FbxImportOptionsDialog.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 class UActorComponent;
 class AActor;
@@ -36,8 +37,8 @@ private:
 	static FString OpenStaticMeshFileDialog();
 	static FString OpenFbxFileDialog();
 
-	UActorComponent* SelectedComponent = nullptr;
-	AActor* LastSelectedActor = nullptr;
+	TWeakObjectPtr<UActorComponent> SelectedComponent = nullptr;
+	TWeakObjectPtr<AActor> LastSelectedActor = nullptr;
 	bool bActorSelected = true; // true: Actor details, false: Component details
 	bool bShowEditorOnlyComponents = false;
 

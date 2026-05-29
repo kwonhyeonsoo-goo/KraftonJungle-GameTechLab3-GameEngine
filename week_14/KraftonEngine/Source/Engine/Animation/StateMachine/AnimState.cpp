@@ -2,6 +2,7 @@
 #include "Animation/AnimInstance.h"
 #include "Animation/PoseContext.h"
 #include "Animation/Nodes/AnimNodeContexts.h"
+#include "Animation/Sequence/AnimSequenceBase.h"
 #include "Object/GarbageCollection.h"
 #include "Object/Object.h"
 

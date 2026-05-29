@@ -101,6 +101,7 @@ class AnimGraphElement final : public ContentBrowserElement
 {
 public:
 	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
+	const char* GetDragItemType() override { return "AnimGraphContentItem"; }
 
 protected:
 	const char* GetTypeLabel() const override { return "Anim Graph"; }
@@ -143,6 +144,7 @@ class ParticleSystemElement final : public ContentBrowserElement
 {
 public:
 	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
+	const char* GetDragItemType() override { return "ParticleSystemContentItem"; }
 
 protected:
 	const char* GetTypeLabel() const override { return "Particle System"; }
@@ -173,6 +175,7 @@ class LuaBlueprintElement final : public ContentBrowserElement
 {
 public:
 	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
+	const char* GetDragItemType() override { return "LuaBlueprintContentItem"; }
 
 protected:
 	const char* GetTypeLabel() const override { return "Lua Blueprint"; }

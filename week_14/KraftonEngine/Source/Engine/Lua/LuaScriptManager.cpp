@@ -5,6 +5,7 @@
 #include "Audio/AudioManager.h"
 #include "Component/Input/ActionComponent.h"
 #include "Component/Script/LuaScriptComponent.h"
+#include "Component/Script/LuaBlueprintComponent.h"
 #include "Component/Input/InputComponent.h"
 #include "Animation/Instance/LuaAnimInstance.h"
 #include "Component/Movement/FloatingPawnMovementComponent.h"
@@ -438,6 +439,19 @@ void FLuaScriptManager::Shutdown()
 				Instance->ReleaseLuaRuntimeForShutdown();
 			}
 		}
+	}
+
+	// ULuaBlueprintComponent 는 ULuaScriptComponent/ULuaAnimInstance 와 달리 별도 레지스트리에
+	// 등록되지 않으므로, 전역 객체 배열을 훑어 lua_State 가 살아있는 동안 sol 핸들을 해제한다.
+	// (누락 시 FEngineLoop::Shutdown 의 최종 GC sweep → BeginDestroy → ClearLuaRuntime 이
+	//  이미 닫힌 lua_State 에 luaL_unref 를 호출하며 lua51.dll 에서 크래시)
+	for (UObject* Obj : GUObjectArray)
+	{
+		if (!IsAliveObject(Obj) || !Obj->IsA<ULuaBlueprintComponent>())
+		{
+			continue;
+		}
+		static_cast<ULuaBlueprintComponent*>(Obj)->ReleaseLuaRuntimeForShutdown();
 	}
 
 	{
@@ -2741,7 +2755,17 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 		sol::table Result = FLuaScriptManager::GetState().create_table();
 		if (!GEngine || !GEngine->GetWorld()) return Result;
 		UClass* Cls = UClass::FindByName(ClassName.c_str());
-		if (!Cls) return Result;
+		if (!Cls)
+		{
+			static TSet<FString> WarnedUnknownClasses;
+			if (WarnedUnknownClasses.find(ClassName) == WarnedUnknownClasses.end())
+			{
+				WarnedUnknownClasses.insert(ClassName);
+				UE_LOG("World.FindActorsByClass: 등록되지 않은 액터 클래스 '%s' — 빈 리스트 반환 "
+				       "(클래스 이름 오타/미설정 확인)", ClassName.c_str());
+			}
+			return Result;
+		}
 		int Idx = 1;
 		for (AActor* Actor : GEngine->GetWorld()->GetActors())
 		{

@@ -7,6 +7,7 @@
 #include "Object/FName.h"
 #include "Animation/AnimationMode.h"
 #include "Animation/Nodes/AnimNode_Base.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include <memory>
 #include <utility>
@@ -170,7 +171,7 @@ public:
 	}
 
 protected:
-	USkeletalMeshComponent*       OwningComponent = nullptr;
+	TWeakObjectPtr<USkeletalMeshComponent> OwningComponent;
 	TArray<FQueuedAnimNotify>     NotifyQueue;
 
 	// 디버그용 최근 발사 notify 이력. DispatchQueuedAnimEvents 에서 push.

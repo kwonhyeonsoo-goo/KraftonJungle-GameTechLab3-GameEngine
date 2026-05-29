@@ -1,8 +1,9 @@
 #include "AnimGraphAsset.h"
 
-#include "Serialization/Archive.h"
+#include "Animation/Sequence/AnimSequenceBase.h"
 #include "Object/GarbageCollection.h"
 #include "Object/Object.h"
+#include "Serialization/Archive.h"
 
 #include <algorithm>
 

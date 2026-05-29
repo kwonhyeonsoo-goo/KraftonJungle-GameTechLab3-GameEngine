@@ -4,6 +4,7 @@
 #include "Core/Types/CoreTypes.h"
 #include "Object/FName.h"
 
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "Source/Engine/GameFramework/Actor/TriggerVolumeParticle.generated.h"
 class APawn;
 class UParticleSystemComponent;
@@ -43,6 +44,6 @@ private:
 	UPROPERTY(Edit, Save, Category="Particle Trigger", DisplayName="Deactivate On Trigger Exit")
 	bool bDeactivateOnTriggerExit = true;
 
-	TArray<UParticleSystemComponent*> CachedComponents;  // BeginPlay 1회 lookup 캐시
+	TArray<TWeakObjectPtr<UParticleSystemComponent>> CachedComponents;  // BeginPlay 1회 lookup 캐시
 	int32 OverlapCount = 0;                              // 다중 Pawn 동시 진입 보호
 };

@@ -3,6 +3,7 @@
 #include "Object/Object.h"
 #include "Core/Logging/Log.h"
 #include "Object/GarbageCollection.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "Source/Engine/UI/UserWidget.generated.h"
 #include <sol/sol.hpp>
 #include <utility>
@@ -88,7 +89,7 @@ public:
 	void ClearDocument() { Document = nullptr; bDocumentLoaded = false; }
 
 private:
-	APlayerController* OwningPlayer = nullptr;
+	TWeakObjectPtr<APlayerController> OwningPlayer;
 	Rml::ElementDocument* Document = nullptr;
 	FString DocumentPath;
 	TArray<std::pair<FString, sol::protected_function>> PendingClickBindings;

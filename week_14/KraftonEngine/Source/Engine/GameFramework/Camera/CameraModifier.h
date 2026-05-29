@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Object/Object.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/GameFramework/Camera/CameraModifier.generated.h"
 class APlayerCameraManager;
@@ -38,7 +39,7 @@ public:
 
 	bool IsDisabled() const { return bDisabled && Alpha <= 0.0f; }
 
-	APlayerCameraManager* CameraOwner = nullptr;
+	TWeakObjectPtr<APlayerCameraManager> CameraOwner;
 
 	// Priority 낮은 순서대로 ModifyCamera 호출. 같은 priority 면 추가 순.
 	float Priority = 50.0f;

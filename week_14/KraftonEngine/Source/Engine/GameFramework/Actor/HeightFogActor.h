@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameFramework/AActor.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/GameFramework/Actor/HeightFogActor.generated.h"
 class UHeightFogComponent;
@@ -17,6 +18,6 @@ public:
 	UHeightFogComponent* GetFogComponent() const { return FogComponent; }
 
 private:
-	UHeightFogComponent* FogComponent = nullptr;
-	UBillboardComponent* BillboardComponent = nullptr;
+	TWeakObjectPtr<UHeightFogComponent> FogComponent = nullptr;
+	TWeakObjectPtr<UBillboardComponent> BillboardComponent = nullptr;
 };

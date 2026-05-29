@@ -52,7 +52,9 @@ namespace FAssetRegistry
             FParticleSystemManager::Get().RefreshAvailableParticleSystems();
             return FParticleSystemManager::Get().GetAvailableParticleSystemFiles();
         }
-		if (std::strcmp(AssetTypeName, "ULuaBlueprintAsset") == 0)
+		if (std::strcmp(AssetTypeName, "ULuaBlueprintAsset") == 0
+			|| std::strcmp(AssetTypeName, "LuaBlueprint") == 0
+			|| std::strcmp(AssetTypeName, "Lua Blueprint") == 0)
 		{
 			FLuaBlueprintManager::Get().RefreshAvailableBlueprints();
 			return FLuaBlueprintManager::Get().GetAvailableBlueprintFiles();
