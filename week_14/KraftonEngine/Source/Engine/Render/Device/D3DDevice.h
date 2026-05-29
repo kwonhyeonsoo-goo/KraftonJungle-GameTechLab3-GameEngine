@@ -1,6 +1,7 @@
-#pragma once
+﻿#pragma once
 #include "Render/Types/RenderTypes.h"
 #include "Core/Types/CoreTypes.h"
+#include <d3d11sdklayers.h>
 
 class FD3DDevice
 {

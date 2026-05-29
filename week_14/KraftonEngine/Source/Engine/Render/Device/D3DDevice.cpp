@@ -1,4 +1,4 @@
-#include "D3DDevice.h"
+﻿#include "D3DDevice.h"
 
 #include <array>
 
@@ -191,6 +191,24 @@ void FD3DDevice::CreateDeviceAndSwapChain(HWND InHWindow)
 	D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
 		CreateDeviceFlags, featureLevels, ARRAYSIZE(featureLevels), D3D11_SDK_VERSION,
 		&swapChainDesc, &SwapChain, &Device, nullptr, &DeviceContext);
+
+#ifdef _DEBUG
+	ID3D11InfoQueue* InfoQueue = nullptr;
+	if (SUCCEEDED(Device->QueryInterface(__uuidof(ID3D11InfoQueue), (void**)&InfoQueue)))
+	{
+		D3D11_MESSAGE_ID HideMessages[] =
+		{
+					 D3D11_MESSAGE_ID_DEVICE_DRAW_RENDERTARGETVIEW_NOT_SET, // Warning #3146081 무시
+		};
+
+		D3D11_INFO_QUEUE_FILTER Filter = {};
+		Filter.DenyList.NumIDs = ARRAYSIZE(HideMessages);
+		Filter.DenyList.pIDList = HideMessages;
+
+		InfoQueue->AddStorageFilterEntries(&Filter);
+		InfoQueue->Release();
+	}
+#endif
 
 	// CPU가 GPU보다 1프레임 이상 앞서지 못하게 제한
 	// (기본값 3 → Present 큐 깊이로 인한 FPS 톱니파 현상 방지)
