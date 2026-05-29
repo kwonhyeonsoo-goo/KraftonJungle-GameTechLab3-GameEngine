@@ -1797,6 +1797,18 @@
     <ClCompile Include="Intermediate\Generated\Reflection.generated.cpp">
       <Filter>Intermediate\Generated</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleVectorField.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\VectorField\VectorFieldAsset.cpp">
+      <Filter>Source\Engine\Particle\VectorField</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\VectorField\VectorFieldFgaImporter.cpp">
+      <Filter>Source\Engine\Particle\VectorField</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\VectorField\VectorFieldManager.cpp">
+      <Filter>Source\Engine\Particle\VectorField</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -4850,8 +4862,23 @@
     <ClInclude Include="ThirdParty\sol2\include\sol\utility\to_string.hpp">
       <Filter>ThirdParty\sol2\include\sol\utility</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleVectorField.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\VectorField\VectorFieldAsset.h">
+      <Filter>Source\Engine\Particle\VectorField</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\VectorField\VectorFieldFgaImporter.h">
+      <Filter>Source\Engine\Particle\VectorField</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\VectorField\VectorFieldManager.h">
+      <Filter>Source\Engine\Particle\VectorField</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
