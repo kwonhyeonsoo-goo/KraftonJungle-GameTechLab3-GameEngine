@@ -15,6 +15,7 @@
 #include <filesystem>
 
 #include "Particle/ParticleSystemManager.h"
+#include "Particle/VectorField/VectorFieldManager.h"
 #include "LuaBlueprint/LuaBlueprintManager.h"
 
 namespace FAssetRegistry
@@ -62,6 +63,11 @@ namespace FAssetRegistry
 		{
 			FLuaBlueprintManager::Get().RefreshAvailableBlueprints();
 			return FLuaBlueprintManager::Get().GetAvailableBlueprintFiles();
+		}
+		if (std::strcmp(AssetTypeName, "UVectorFieldAsset") == 0)
+		{
+			FVectorFieldManager::Get().RefreshAvailableVectorFields();
+			return FVectorFieldManager::Get().GetAvailableVectorFieldFiles();
 		}
 		if (std::strcmp(AssetTypeName, "LuaAnimScript") == 0)
 		{

@@ -268,6 +268,9 @@
     <Filter Include="Source\Engine\Particle">
       <UniqueIdentifier>{1613146e-ae48-8d4a-1d6a-1540318e1782}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Particle\VectorField">
+      <UniqueIdentifier>{d5119377-6c2e-4a88-b5fe-173d6d3496b1}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Particle\Distributions">
       <UniqueIdentifier>{2aa03ec2-c0d8-8e9e-81b0-9a922ea9d7a5}</UniqueIdentifier>
     </Filter>
@@ -508,7 +511,7 @@
     <Filter Include="ThirdParty\sol2\include\sol\utility">
       <UniqueIdentifier>{9665cc4b-2b87-76ba-7eb3-a148e4c5a694}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
+</ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\ConstantBuffers.hlsli">
       <Filter>Shaders\Common</Filter>
@@ -1779,7 +1782,19 @@
     <ClCompile Include="Intermediate\Generated\Reflection.generated.cpp">
       <Filter>Intermediate\Generated</Filter>
     </ClCompile>
-  </ItemGroup>
+      <ClCompile Include="Source\Engine\Particle\ParticleModuleVectorField.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\VectorField\VectorFieldAsset.cpp">
+      <Filter>Source\Engine\Particle\VectorField</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\VectorField\VectorFieldFgaImporter.cpp">
+      <Filter>Source\Engine\Particle\VectorField</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\VectorField\VectorFieldManager.cpp">
+      <Filter>Source\Engine\Particle\VectorField</Filter>
+    </ClCompile>
+</ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
       <Filter>Source\Editor</Filter>
@@ -4817,7 +4832,19 @@
     <ClInclude Include="ThirdParty\sol2\include\sol\utility\to_string.hpp">
       <Filter>ThirdParty\sol2\include\sol\utility</Filter>
     </ClInclude>
-  </ItemGroup>
+      <ClInclude Include="Source\Engine\Particle\ParticleModuleVectorField.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\VectorField\VectorFieldAsset.h">
+      <Filter>Source\Engine\Particle\VectorField</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\VectorField\VectorFieldFgaImporter.h">
+      <Filter>Source\Engine\Particle\VectorField</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\VectorField\VectorFieldManager.h">
+      <Filter>Source\Engine\Particle\VectorField</Filter>
+    </ClInclude>
+</ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />
   </ItemGroup>

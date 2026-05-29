@@ -446,7 +446,14 @@ USkeleton* FSkeletonManager::LoadSkeleton(const FString& PackagePath)
     }
 
     USkeleton* Skeleton = UObjectManager::Get().CreateObject<USkeleton>();
-    Skeleton->Serialize(Reader);
+    if (Header.Version >= static_cast<uint32>(EAssetPackageSerializationVersion::SkeletonSocketPayload))
+    {
+        Skeleton->SerializeCurrentPayload(Reader);
+    }
+    else
+    {
+        Skeleton->SerializeLegacyPayload(Reader);
+    }
     Skeleton->SetAssetPathFileName(NormalizedPath);
 
     if (Skeleton->GetCompatibilitySignature().empty())
@@ -467,6 +474,10 @@ USkeleton* FSkeletonManager::LoadSkeleton(const FString& PackagePath)
     }
 
     SkeletonCaches[NormalizedPath] = Skeleton;
+    UE_LOG("Skeleton loaded. Path=%s Version=%u SocketCount=%d",
+        NormalizedPath.c_str(),
+        Header.Version,
+        static_cast<int32>(Skeleton->GetSockets().size()));
     return Skeleton;
 }
 
@@ -488,6 +499,7 @@ bool FSkeletonManager::SaveSkeleton(USkeleton* Skeleton, const FString& PackageP
     {
         Skeleton->SetSkeletonAssetGuid(MakeSkeletonAssetGuid(NormalizedPath, Skeleton->GetCompatibilitySignature()));
     }
+    Skeleton->RebuildReferenceSkeletonDerivedData();
     Skeleton->RebuildBoneNameCache();
 
     FWindowsBinWriter Writer(NormalizedPath);
@@ -504,7 +516,7 @@ bool FSkeletonManager::SaveSkeleton(USkeleton* Skeleton, const FString& PackageP
         UE_LOG("Skeleton save failed: package prelude write failed. Path=%s", NormalizedPath.c_str());
         return false;
     }
-    Skeleton->Serialize(Writer);
+    Skeleton->SerializeCurrentPayload(Writer);
 
     if (!Writer.IsValid())
     {
@@ -513,6 +525,9 @@ bool FSkeletonManager::SaveSkeleton(USkeleton* Skeleton, const FString& PackageP
     }
 
     SkeletonCaches[NormalizedPath] = Skeleton;
+    UE_LOG("Skeleton saved. Path=%s SocketCount=%d",
+        NormalizedPath.c_str(),
+        static_cast<int32>(Skeleton->GetSockets().size()));
 
     auto ListIt = std::find_if(
         AvailableSkeletonFiles.begin(),

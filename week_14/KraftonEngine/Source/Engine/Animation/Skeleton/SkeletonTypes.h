@@ -2,6 +2,8 @@
 
 #include "Core/Types/CoreTypes.h"
 #include "Math/Matrix.h"
+#include "Math/Transform.h"
+#include "Object/FName.h"
 #include "Serialization/Archive.h"
 
 inline void SerializeReferenceSkeletonMatrix(FArchive& Ar, FMatrix& Matrix)
@@ -54,6 +56,30 @@ struct FReferenceSkeleton
     friend FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& Skeleton)
     {
         Ar << Skeleton.Bones;
+        return Ar;
+    }
+};
+
+struct FSkeletalMeshSocket
+{
+    FName    Name = FName::None;
+    FName    BoneName = FName::None;
+    FVector  RelativeLocation = FVector::ZeroVector;
+    FRotator RelativeRotation;
+    FVector  RelativeScale = FVector(1.0f, 1.0f, 1.0f);
+
+    FMatrix GetRelativeTransform() const
+    {
+        return FTransform(RelativeLocation, RelativeRotation, RelativeScale).ToMatrix();
+    }
+
+    friend FArchive& operator<<(FArchive& Ar, FSkeletalMeshSocket& Socket)
+    {
+        Ar << Socket.Name;
+        Ar << Socket.BoneName;
+        Ar << Socket.RelativeLocation;
+        Ar << Socket.RelativeRotation;
+        Ar << Socket.RelativeScale;
         return Ar;
     }
 };

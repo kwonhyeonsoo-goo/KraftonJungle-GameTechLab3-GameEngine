@@ -637,6 +637,10 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Particle\ParticleModule.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSystem.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSystemManager.cpp" />
+    <ClCompile Include="Source\Engine\Particle\VectorField\VectorFieldManager.cpp" />
+    <ClCompile Include="Source\Engine\Particle\VectorField\VectorFieldFgaImporter.cpp" />
+    <ClCompile Include="Source\Engine\Particle\VectorField\VectorFieldAsset.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleModuleVectorField.cpp" />
     <ClCompile Include="Source\Engine\Particle\Distributions\Distribution.cpp" />
     <ClCompile Include="Source\Engine\Particle\Distributions\DistributionFLoat.cpp" />
     <ClCompile Include="Source\Engine\Particle\Distributions\DistributionFloatConstant.cpp" />
@@ -1072,6 +1076,10 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Particle\ParticleModule.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleSystem.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleSystemManager.h" />
+    <ClInclude Include="Source\Engine\Particle\VectorField\VectorFieldManager.h" />
+    <ClInclude Include="Source\Engine\Particle\VectorField\VectorFieldFgaImporter.h" />
+    <ClInclude Include="Source\Engine\Particle\VectorField\VectorFieldAsset.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleModuleVectorField.h" />
     <ClInclude Include="Source\Engine\Particle\Distributions\Distribution.h" />
     <ClInclude Include="Source\Engine\Particle\Distributions\DistributionFloat.h" />
     <ClInclude Include="Source\Engine\Particle\Distributions\DistributionFloatConstant.h" />

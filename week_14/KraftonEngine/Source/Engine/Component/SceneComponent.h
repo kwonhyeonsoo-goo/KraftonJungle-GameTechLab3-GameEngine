@@ -4,6 +4,7 @@
 #include "Math/Rotator.h"
 #include "Component/ActorComponent.h"
 #include "Math/MathUtils.h"
+#include "Object/FName.h"
 
 class AActor;
 
@@ -24,7 +25,7 @@ public:
 
 	// Parent Relation Manager
 	UFUNCTION(Callable, Category="Scene|Hierarchy")
-	void AttachToComponent(USceneComponent* InParent);
+    void AttachToComponent(USceneComponent* InParent, const FName& InSocketName = FName::None);
 	UFUNCTION(Callable, Category="Scene|Hierarchy")
 	void SetParent(USceneComponent* NewParent);
 	UFUNCTION(Pure, Category="Scene|Hierarchy")
@@ -35,6 +36,8 @@ public:
 	void RemoveChild(USceneComponent* Child);
 	UFUNCTION(Pure, Category="Scene|Hierarchy")
 	bool ContainsChild(const USceneComponent* Child) const;
+    UFUNCTION(Pure, Category="Scene|Hierarchy")
+    FName GetAttachSocketName() const { return AttachSocketName; }
 	bool IsDescendantOf(const USceneComponent* MaybeAncestor) const;
 	const TArray<USceneComponent*>& GetChildren() const { return ChildComponents; }
 
@@ -46,6 +49,8 @@ public:
 	void OnPostLoad(FArchive& Ar) override;
 
 	virtual void UpdateWorldMatrix() const;
+	virtual bool HasSocket(const FName& SocketName) const;
+	virtual FTransform GetSocketTransform(const FName& SocketName) const;
 	UFUNCTION(Callable, Category="Scene|Transform")
 	virtual void AddWorldOffset(const FVector& WorldDelta);
 	UFUNCTION(Callable, Category="Scene|Transform")
@@ -121,11 +126,14 @@ protected:
 	UPROPERTY(Edit, Save, Category="Transform", DisplayName="Rotation", Type=Rotator, Min=0.0f, Max=0.0f, Speed=0.1f)
 	mutable FRotator CachedEditRotator;	// 에디터 프로퍼티 바인딩용 (Euler 캐시)
 	mutable bool bCachedEulerDirty = true;	// Quat가 외부에서 변경됐을 때만 Euler 재계산
+	UPROPERTY(Edit, Save, Category="Transform", DisplayName="Attach Socket")
+	FName AttachSocketName = FName::None;
 
 	//world matrix caching
 	mutable FMatrix CachedWorldMatrix{};
 	//inverse world matrix caching
 	mutable FMatrix CachedInverseWorldMatrix{};
 	mutable bool bInverseWorldDirty = true;
+	mutable FName LastInvalidAttachSocketWarning = FName::None;
 };
 

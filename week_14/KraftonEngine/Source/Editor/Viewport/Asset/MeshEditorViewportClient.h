@@ -17,6 +17,7 @@ class FWindowsWindow;
 class UWorld;
 class AActor;
 class USkeletalMesh;
+class USkeleton;
 
 class FMeshEditorViewportClient : public FViewportClient, public IEditorPreviewViewportClient, public FGCObject
 {
@@ -57,7 +58,10 @@ public:
 	void Tick(float DeltaTime);
 
 	void SetSelectedBone(USkeletalMesh* Mesh, int32 BoneIndex);
+	void SetSelectedSocket(USkeletalMesh* Mesh, USkeleton* Skeleton, int32 SocketIndex);
 	const FBone* GetSelectedBone() const;
+	bool ConsumeSocketGizmoModified();
+	void RefreshBoneDebug();
 
 	EBoneDebugDrawMode GetBoneDebugDrawMode() const;
 	void SetBoneDebugDrawMode(EBoneDebugDrawMode InDrawMode);
@@ -78,12 +82,14 @@ private:
 private:
 	USkeletalMesh* SelectedMesh = nullptr;
 	int32 SelectedBoneIndex = -1;
+	int32 SelectedSocketIndex = -1;
 
 	FViewport* Viewport = nullptr;
 	FWindowsWindow* Window = nullptr;
 	FViewportRenderOptions RenderOptions;
 
 	FBoneTransformGizmoTarget BoneTarget;
+	FSocketTransformGizmoTarget SocketTarget;
 	UGizmoComponent* Gizmo = nullptr;
 	USkeletalMeshComponent* PreviewMeshComponent = nullptr;
 	UBoneDebugComponent* BoneDebugComponent = nullptr;

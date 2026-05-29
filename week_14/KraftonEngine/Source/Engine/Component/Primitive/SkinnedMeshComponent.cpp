@@ -1,5 +1,6 @@
 #include "SkinnedMeshComponent.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
+#include "Animation/Skeleton/Skeleton.h"
 #include "Serialization/Archive.h"
 #include "Runtime/Engine.h"
 #include "Mesh/MeshManager.h"
@@ -170,6 +171,55 @@ void USkinnedMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 USkeletalMesh* USkinnedMeshComponent::GetSkeletalMesh() const
 {
 	return SkeletalMesh;
+}
+
+bool USkinnedMeshComponent::HasSocket(const FName& SocketName) const
+{
+	USkeleton* Skeleton = SkeletalMesh ? SkeletalMesh->GetSkeleton() : nullptr;
+	if (!Skeleton)
+	{
+		return false;
+	}
+
+	const FSkeletalMeshSocket* Socket = Skeleton->FindSocket(SocketName);
+	if (!Socket)
+	{
+		return false;
+	}
+
+	int32 BoneIndex = -1;
+	return Skeleton->ResolveSocketBoneIndex(*Socket, BoneIndex);
+}
+
+FTransform USkinnedMeshComponent::GetSocketTransform(const FName& SocketName) const
+{
+	USkeleton* Skeleton = SkeletalMesh ? SkeletalMesh->GetSkeleton() : nullptr;
+	if (!Skeleton)
+	{
+		return FTransform(GetWorldMatrix());
+	}
+
+	const FSkeletalMeshSocket* Socket = Skeleton->FindSocket(SocketName);
+	if (!Socket)
+	{
+		return FTransform(GetWorldMatrix());
+	}
+
+	int32 BoneIndex = -1;
+	if (!Skeleton->ResolveSocketBoneIndex(*Socket, BoneIndex))
+	{
+		return FTransform(GetWorldMatrix());
+	}
+
+	TArray<FMatrix> BoneGlobals;
+	GetCurrentBoneGlobalMatrices(BoneGlobals);
+	if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(BoneGlobals.size()))
+	{
+		return FTransform(GetWorldMatrix());
+	}
+
+	const FMatrix SocketWorldMatrix = Socket->GetRelativeTransform() * BoneGlobals[BoneIndex] * GetWorldMatrix();
+	return FTransform(SocketWorldMatrix);
 }
 
 bool USkinnedMeshComponent::SetSkeletalMeshByPath(const FString& InPath)
@@ -1086,16 +1136,30 @@ void USkinnedMeshComponent::RefreshSkinningAfterPoseChanged()
 	if (SkinningModeRuntime::Get() == ESkinningMode::CPU || HasActiveMorphTargets())
 	{
 		UpdateCPUSkinning();
+		MarkSocketAttachedChildrenDirty();
 		return;
 	}
 
 	// GPU skinning은 같은 revision을 matrix SRV 갱신 신호로 사용한다.
 	++SkinnedRevision;
+	MarkSocketAttachedChildrenDirty();
 }
 
 void USkinnedMeshComponent::RefreshSkinningAfterMorphChanged()
 {
 	UpdateCPUSkinning();
+	MarkSocketAttachedChildrenDirty();
+}
+
+void USkinnedMeshComponent::MarkSocketAttachedChildrenDirty()
+{
+	for (USceneComponent* Child : GetChildren())
+	{
+		if (Child && Child->GetAttachSocketName().IsValid() && Child->GetAttachSocketName() != FName::None)
+		{
+			Child->MarkTransformDirty();
+		}
+	}
 }
 
 void USkinnedMeshComponent::BuildBoneEditGlobalTransforms(TArray<FTransform>& OutGlobals) const

@@ -1,6 +1,9 @@
 #include "BoneTransformGizmoTarget.h"
 
+#include "Animation/Skeleton/Skeleton.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
+
+#include <algorithm>
 
 FBoneTransformGizmoTarget::FBoneTransformGizmoTarget()
 	: MeshComponent(nullptr), BoneIndex(-1)
@@ -111,4 +114,192 @@ void FBoneTransformGizmoTarget::AddScaleDelta(const FVector& Delta)
 		FVector NewScale = CurrentScale + Delta;
 		MeshComponent->SetBoneScaleByIndex(BoneIndex, NewScale);
 	}
+}
+
+FSocketTransformGizmoTarget::FSocketTransformGizmoTarget()
+	: MeshComponent(nullptr), Skeleton(nullptr), SocketIndex(-1)
+{
+}
+
+FSocketTransformGizmoTarget::FSocketTransformGizmoTarget(USkeletalMeshComponent* InMeshComp, USkeleton* InSkeleton, int32 InSocketIndex)
+	: MeshComponent(InMeshComp), Skeleton(InSkeleton), SocketIndex(InSocketIndex)
+{
+}
+
+void FSocketTransformGizmoTarget::SetSocket(USkeletalMeshComponent* MeshComp, USkeleton* InSkeleton, int32 InSocketIndex)
+{
+	MeshComponent = MeshComp;
+	Skeleton = InSkeleton;
+	SocketIndex = InSocketIndex;
+	bModified = false;
+}
+
+bool FSocketTransformGizmoTarget::ConsumeModified()
+{
+	const bool bWasModified = bModified;
+	bModified = false;
+	return bWasModified;
+}
+
+bool FSocketTransformGizmoTarget::IsValid() const
+{
+	if (!MeshComponent || !Skeleton || SocketIndex < 0 || SocketIndex >= static_cast<int32>(Skeleton->GetSockets().size()))
+	{
+		return false;
+	}
+
+	int32 BoneIndex = -1;
+	return Skeleton->ResolveSocketBoneIndex(Skeleton->GetSockets()[SocketIndex], BoneIndex);
+}
+
+UWorld* FSocketTransformGizmoTarget::GetWorld() const
+{
+	return MeshComponent ? MeshComponent->GetWorld() : nullptr;
+}
+
+FVector FSocketTransformGizmoTarget::GetWorldLocation() const
+{
+	FTransform SocketWorld;
+	return GetSocketWorldTransform(SocketWorld) ? SocketWorld.Location : FVector::ZeroVector;
+}
+
+FRotator FSocketTransformGizmoTarget::GetWorldRotation() const
+{
+	FTransform SocketWorld;
+	return GetSocketWorldTransform(SocketWorld) ? SocketWorld.GetRotator() : FRotator::ZeroRotator;
+}
+
+FQuat FSocketTransformGizmoTarget::GetWorldQuat() const
+{
+	FTransform SocketWorld;
+	return GetSocketWorldTransform(SocketWorld) ? SocketWorld.Rotation : FQuat::Identity;
+}
+
+FVector FSocketTransformGizmoTarget::GetWorldScale() const
+{
+	FTransform SocketWorld;
+	return GetSocketWorldTransform(SocketWorld) ? SocketWorld.Scale : FVector::OneVector;
+}
+
+void FSocketTransformGizmoTarget::SetWorldLocation(const FVector& NewLocation)
+{
+	FTransform SocketWorld;
+	if (GetSocketWorldTransform(SocketWorld))
+	{
+		SocketWorld.Location = NewLocation;
+		ApplySocketWorldTransform(SocketWorld);
+	}
+}
+
+void FSocketTransformGizmoTarget::SetWorldRotation(const FRotator& NewRotation)
+{
+	SetWorldRotation(NewRotation.ToQuaternion());
+}
+
+void FSocketTransformGizmoTarget::SetWorldRotation(const FQuat& NewQuat)
+{
+	FTransform SocketWorld;
+	if (GetSocketWorldTransform(SocketWorld))
+	{
+		SocketWorld.Rotation = NewQuat.GetNormalized();
+		ApplySocketWorldTransform(SocketWorld);
+	}
+}
+
+void FSocketTransformGizmoTarget::SetWorldScale(const FVector& NewScale)
+{
+	FTransform SocketWorld;
+	if (GetSocketWorldTransform(SocketWorld))
+	{
+		SocketWorld.Scale = FVector(
+			std::max(NewScale.X, 0.01f),
+			std::max(NewScale.Y, 0.01f),
+			std::max(NewScale.Z, 0.01f));
+		ApplySocketWorldTransform(SocketWorld);
+	}
+}
+
+void FSocketTransformGizmoTarget::AddWorldOffset(const FVector& Delta)
+{
+	SetWorldLocation(GetWorldLocation() + Delta);
+}
+
+void FSocketTransformGizmoTarget::AddWorldRotation(const FQuat& Delta, bool bWorldSpace)
+{
+	FTransform SocketWorld;
+	if (GetSocketWorldTransform(SocketWorld))
+	{
+		SocketWorld.Rotation = bWorldSpace
+			? (Delta * SocketWorld.Rotation).GetNormalized()
+			: (SocketWorld.Rotation * Delta).GetNormalized();
+		ApplySocketWorldTransform(SocketWorld);
+	}
+}
+
+void FSocketTransformGizmoTarget::AddScaleDelta(const FVector& Delta)
+{
+	SetWorldScale(GetWorldScale() + Delta);
+}
+
+bool FSocketTransformGizmoTarget::GetSocketWorldTransform(FTransform& OutTransform) const
+{
+	if (!IsValid())
+	{
+		return false;
+	}
+
+	const FSkeletalMeshSocket& Socket = Skeleton->GetSockets()[SocketIndex];
+
+	int32 BoneIndex = -1;
+	if (!Skeleton->ResolveSocketBoneIndex(Socket, BoneIndex))
+	{
+		return false;
+	}
+
+	TArray<FMatrix> BoneGlobals;
+	MeshComponent->GetCurrentBoneGlobalMatrices(BoneGlobals);
+	if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(BoneGlobals.size()))
+	{
+		return false;
+	}
+
+	const FMatrix SocketWorldMatrix = Socket.GetRelativeTransform() * BoneGlobals[BoneIndex] * MeshComponent->GetWorldMatrix();
+	OutTransform = FTransform(SocketWorldMatrix);
+	return true;
+}
+
+bool FSocketTransformGizmoTarget::ApplySocketWorldTransform(const FTransform& NewWorldTransform)
+{
+	if (!IsValid())
+	{
+		return false;
+	}
+
+	FSkeletalMeshSocket& Socket = Skeleton->GetMutableSockets()[SocketIndex];
+
+	int32 BoneIndex = -1;
+	if (!Skeleton->ResolveSocketBoneIndex(Socket, BoneIndex))
+	{
+		return false;
+	}
+
+	TArray<FMatrix> BoneGlobals;
+	MeshComponent->GetCurrentBoneGlobalMatrices(BoneGlobals);
+	if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(BoneGlobals.size()))
+	{
+		return false;
+	}
+
+	const FMatrix SocketBaseWorldMatrix = BoneGlobals[BoneIndex] * MeshComponent->GetWorldMatrix();
+	const FMatrix RelativeMatrix = NewWorldTransform.ToMatrix() * SocketBaseWorldMatrix.GetInverse();
+	const FTransform RelativeTransform(RelativeMatrix);
+
+	Socket.RelativeLocation = RelativeTransform.Location;
+	Socket.RelativeRotation = RelativeTransform.GetRotator();
+	Socket.RelativeScale = FVector(
+		std::max(RelativeTransform.Scale.X, 0.01f),
+		std::max(RelativeTransform.Scale.Y, 0.01f),
+		std::max(RelativeTransform.Scale.Z, 0.01f));
+	bModified = true;
+	return true;
 }

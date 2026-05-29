@@ -7,9 +7,12 @@
 #include "Materials/MaterialManager.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleEmitter.h"
+#include "Particle/ParticleEmitterInstance.h"
 #include "Particle/ParticleLODLevel.h"
 #include "Particle/Modules/ParticleModuleRequired.h"
+#include "Particle/ParticleModuleVectorField.h"
 #include "Render/Particle/ParticleVertexFactory.h"
+#include "Render/Scene/FScene.h"
 #include "Render/Shader/ShaderManager.h"
 #include "Render/Types/FrameContext.h"
 #include "Render/Command/DrawCommand.h"
@@ -226,6 +229,49 @@ FParticleVertexFactory* FParticleSystemSceneProxy::GetOrCreateFactory(EDynamicEm
 UParticleSystemComponent* FParticleSystemSceneProxy::GetPSC() const
 {
 	return static_cast<UParticleSystemComponent*>(GetOwner());
+}
+
+void FParticleSystemSceneProxy::AppendVectorFieldDebugLines(FScene& Scene) const
+{
+	UParticleSystemComponent* Component = GetPSC();
+	UParticleSystem* Template = Component ? Component->GetTemplate() : nullptr;
+	if (!Component || !Template)
+	{
+		return;
+	}
+
+	const FMatrix ComponentToWorld = Component->GetWorldMatrix();
+	const int32 LODIndex = Component->GetCurrentLODIndex();
+	for (int32 EmitterIndex = 0; EmitterIndex < Template->GetEmitterCount(); ++EmitterIndex)
+	{
+		UParticleEmitter* Emitter = Template->GetEmitter(EmitterIndex);
+		if (!Emitter || !Emitter->bEnabled)
+		{
+			continue;
+		}
+
+		UParticleLODLevel* LODLevel = Emitter->GetCurrentLODLevel(LODIndex);
+		if (!LODLevel || !LODLevel->bEnabled)
+		{
+			continue;
+		}
+
+		FParticleEmitterInstance* EmitterInstance = Component->GetEmitterInstance(EmitterIndex);
+		const float EmitterTime = EmitterInstance ? EmitterInstance->GetEmitterTimeSeconds() : 0.0f;
+
+		for (UParticleModule* Module : LODLevel->Modules)
+		{
+			if (!Module || !Module->IsEnabled())
+			{
+				continue;
+			}
+
+			if (UParticleModuleVectorFieldLocal* VectorField = Cast<UParticleModuleVectorFieldLocal>(Module))
+			{
+				VectorField->AppendFieldDebugLines(Scene, ComponentToWorld, LODLevel, EmitterTime);
+			}
+		}
+	}
 }
 
 void FParticleSystemSceneProxy::SetDynamicData(UParticleSystemComponent::FDynamicData* InData)

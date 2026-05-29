@@ -453,6 +453,10 @@ void FDrawCommandBuilder::BuildProxyCommands(const FFrameContext& Frame, FScene&
 			{
 				DebugBoneLines.AddLine(Line.Start, Line.End, BoneProxy->GetParentBoneColor());
 			}
+			for (const FWireLine& Line : BoneProxy->GetCachedSocketLines())
+			{
+				DebugBoneLines.AddLine(Line.Start, Line.End, BoneProxy->GetSocketColor());
+			}
 		}
 		else if (Proxy->HasProxyFlag(EPrimitiveProxyFlags::WireShape))
 		{

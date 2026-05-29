@@ -19,6 +19,8 @@
 #include "Particle/ParticleSystemManager.h"
 #include "Particle/ParticleEmitter.h"
 #include "Particle/ParticleLODLevel.h"
+#include "Particle/VectorField/VectorFieldAsset.h"
+#include "Particle/VectorField/VectorFieldManager.h"
 
 namespace
 {
@@ -190,6 +192,46 @@ bool FAssetFactory::CreateParticleSystem(
 
 	OutCreatedPath = CreatedPath;
 	UE_LOG("[ParticleSystemFactory] Create success. Path=%s", OutCreatedPath.c_str());
+	return true;
+}
+
+
+bool FAssetFactory::CreateVectorField(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath, int32 SizeX, int32 SizeY, int32 SizeZ)
+{
+	const std::filesystem::path Directory(FPaths::ToWide(DirectoryPath));
+	if (!std::filesystem::exists(Directory) || !std::filesystem::is_directory(Directory))
+	{
+		return false;
+	}
+
+	if (SizeX <= 0) SizeX = 16;
+	if (SizeY <= 0) SizeY = 16;
+	if (SizeZ <= 0) SizeZ = 16;
+
+	const FString EffectiveName = AssetName.empty() ? FString("NewVectorField") : AssetName;
+	const std::filesystem::path AssetPath = BuildUniqueAssetPath(Directory, EffectiveName, L".uasset");
+
+	TArray<FVector> ZeroVectors;
+	ZeroVectors.resize(static_cast<size_t>(SizeX) * static_cast<size_t>(SizeY) * static_cast<size_t>(SizeZ), FVector::ZeroVector);
+
+	UVectorFieldAsset* NewAsset = UObjectManager::Get().CreateObject<UVectorFieldAsset>();
+	if (!NewAsset)
+	{
+		return false;
+	}
+
+	NewAsset->SetSourcePath(FPaths::ToUtf8(AssetPath.wstring()));
+	NewAsset->SetGridData(SizeX, SizeY, SizeZ, FVector(-1.0f, -1.0f, -1.0f), FVector(1.0f, 1.0f, 1.0f), ZeroVectors);
+
+	bool bSaved = FVectorFieldManager::Get().Save(NewAsset);
+	UObjectManager::Get().DestroyObject(NewAsset);
+
+	if (!bSaved)
+	{
+		return false;
+	}
+
+	OutCreatedPath = FPaths::ToUtf8(AssetPath.wstring());
 	return true;
 }
 

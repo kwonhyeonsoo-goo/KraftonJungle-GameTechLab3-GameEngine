@@ -29,11 +29,15 @@ public:
 	int32 GetSelectedBoneIndex() const { return SelectedBoneIndex; }
 	void SetSelectedBoneIndex(int32 InBoneIndex) { SelectedBoneIndex = InBoneIndex; MarkRenderStateDirty(); }
 
+	int32 GetSelectedSocketIndex() const { return SelectedSocketIndex; }
+	void SetSelectedSocketIndex(int32 InSocketIndex) { SelectedSocketIndex = InSocketIndex; MarkRenderStateDirty(); }
+
 	EBoneDebugDrawMode GetDrawMode() const { return DrawMode; }
 	void SetDrawMode(EBoneDebugDrawMode InDrawMode) { DrawMode = InDrawMode; MarkRenderStateDirty(); }
 
 private:
 	TWeakObjectPtr<USkeletalMeshComponent> TargetMeshComponent;
 	int32 SelectedBoneIndex = -1;
+	int32 SelectedSocketIndex = -1;
 	EBoneDebugDrawMode DrawMode = EBoneDebugDrawMode::SelectedOnly;
 };
