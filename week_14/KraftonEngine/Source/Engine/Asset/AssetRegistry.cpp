@@ -8,8 +8,10 @@
 #include "Animation/Skeleton/Skeleton.h"
 #include "Animation/Skeleton/SkeletonManager.h"
 #include "Platform/Paths.h"
+#include "Core/Logging/Log.h"
 
 #include <cstring>
+#include <exception>
 #include <filesystem>
 
 #include "Particle/ParticleSystemManager.h"
@@ -22,6 +24,8 @@ namespace FAssetRegistry
 		static const TArray<FAssetListItem> Empty;
 		if (!AssetTypeName) return Empty;
 
+		try
+		{
 		if (std::strcmp(AssetTypeName, "UStaticMesh") == 0)
 		{
 			return FMeshManager::GetAvailableStaticMeshFiles();
@@ -84,6 +88,12 @@ namespace FAssetRegistry
 				}
 			}
 			return Cache;
+		}
+		}
+		catch (const std::exception& Ex)
+		{
+			UE_LOG("FAssetRegistry::ListByTypeName('%s') 디렉토리 스캔 예외: %s", AssetTypeName, Ex.what());
+			return Empty;
 		}
 
 		return Empty;

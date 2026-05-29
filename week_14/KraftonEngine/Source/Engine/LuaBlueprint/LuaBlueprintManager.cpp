@@ -95,14 +95,21 @@ bool FLuaBlueprintManager::Save(ULuaBlueprintAsset* Asset)
 void FLuaBlueprintManager::RefreshAvailableBlueprints()
 {
     const std::filesystem::path ContentRoot = std::filesystem::path(FPaths::RootDir()) / L"Content";
-    if (!std::filesystem::exists(ContentRoot)) return;
+    std::error_code ExistsError;
+    if (!std::filesystem::exists(ContentRoot, ExistsError) || ExistsError) return;
 
     const std::filesystem::path ProjectRoot(FPaths::RootDir());
     AvailableBlueprintFiles.clear();
 
-    for (const auto& Entry : std::filesystem::recursive_directory_iterator(ContentRoot))
+    std::error_code IterError;
+    for (std::filesystem::recursive_directory_iterator It(
+             ContentRoot, std::filesystem::directory_options::skip_permission_denied, IterError), End;
+         !IterError && It != End;
+         It.increment(IterError))
     {
-        if (!Entry.is_regular_file()) continue;
+        const std::filesystem::directory_entry& Entry = *It;
+        std::error_code EntryError;
+        if (!Entry.is_regular_file(EntryError) || EntryError) continue;
 
         std::wstring Ext = Entry.path().extension().wstring();
         std::transform(Ext.begin(), Ext.end(), Ext.begin(), ::towlower);

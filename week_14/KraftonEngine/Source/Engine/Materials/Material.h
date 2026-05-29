@@ -128,11 +128,21 @@ public:
 
 	const TMap<FString, std::shared_ptr<FMaterialParameterInfo>>& GetParameterInfo() const { return Template->GetParameterInfo(); }
 
+	UFUNCTION(Callable, Category="Material|Parameters")
 	virtual bool SetScalarParameter(const FString& ParamName, float Value);
+	UFUNCTION(Callable, Category="Material|Parameters")
 	virtual bool SetVector3Parameter(const FString& ParamName, const FVector& Value);
+	UFUNCTION(Callable, Category="Material|Parameters")
 	virtual bool SetVector4Parameter(const FString& ParamName, const FVector4& Value);
 	virtual bool SetTextureParameter(const FString& ParamName, UTexture2D* Texture);
 	virtual bool SetMatrixParameter(const FString& ParamName, const FMatrix& Value);
+
+	UFUNCTION(Pure, Category="Material|Parameters")
+	float GetScalarParameterValue(const FString& ParamName) const { float Value = 0.0f; GetScalarParameter(ParamName, Value); return Value; }
+	UFUNCTION(Pure, Category="Material|Parameters")
+	FVector GetVector3ParameterValue(const FString& ParamName) const { FVector Value(0, 0, 0); GetVector3Parameter(ParamName, Value); return Value; }
+	UFUNCTION(Pure, Category="Material|Parameters")
+	FVector4 GetVector4ParameterValue(const FString& ParamName) const { FVector4 Value{}; GetVector4Parameter(ParamName, Value); return Value; }
 
 	virtual bool GetScalarParameter(const FString& ParamName, float& OutValue) const;
 	virtual bool GetVector3Parameter(const FString& ParamName, FVector& OutValue) const;

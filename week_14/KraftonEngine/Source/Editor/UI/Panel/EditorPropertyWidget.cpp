@@ -267,8 +267,6 @@ namespace
             return false;
         }
 
-        const TArray<FAssetListItem>& Items = FAssetRegistry::ListByTypeName(AssetType.c_str());
-
         FString Preview = "None";
         if (!CurrentPath.empty() && CurrentPath != "None")
         {
@@ -283,6 +281,9 @@ namespace
         bool bChanged = false;
         if (ImGui::BeginCombo(ComboId, Preview.c_str()))
         {
+            // 콤보가 열렸을 때만 디스크 재스캔 — 매 프레임 recursive_directory_iterator 호출 방지.
+            const TArray<FAssetListItem>& Items = FAssetRegistry::ListByTypeName(AssetType.c_str());
+
             const bool bSelectedNone = (CurrentPath.empty() || CurrentPath == "None");
             if (ImGui::Selectable("None", bSelectedNone))
             {

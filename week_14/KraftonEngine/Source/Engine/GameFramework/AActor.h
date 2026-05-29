@@ -68,6 +68,9 @@ public:
 
 	TArray<UActorComponent*> GetComponents() const;
 
+	UFUNCTION(Pure, Category="Actor|Components")
+	UActorComponent* GetComponentByClass(UClass* ComponentClass) const;
+
 	// 특정 클래스의 컴포넌트를 검색하여 반환 (없으면 nullptr)
 	template<typename T>
 	T* GetComponentByClass() const {
@@ -111,6 +114,14 @@ public:
 	FVector GetActorForward() const;
 	UFUNCTION(Pure, Category="Actor|Transform")
 	FVector GetActorRight() const;
+	UFUNCTION(Pure, Category="Actor|Transform")
+	FVector GetActorUp() const;
+
+	// 게임 로직 유틸리티 — 거리/속도 질의
+	UFUNCTION(Pure, Category="Actor|Gameplay")
+	float GetDistanceTo(AActor* Other) const;
+	UFUNCTION(Pure, Category="Actor|Gameplay")
+	FVector GetVelocity() const;
 
 	UWorld* GetWorld() const;
 	UWorld* GetWorldEvenIfPendingKill() const;

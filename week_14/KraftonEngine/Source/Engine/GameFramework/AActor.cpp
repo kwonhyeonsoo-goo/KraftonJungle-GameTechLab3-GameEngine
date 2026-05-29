@@ -367,6 +367,40 @@ TArray<UActorComponent*> AActor::GetComponents() const
 	return Result;
 }
 
+UActorComponent* AActor::GetComponentByClass(UClass* ComponentClass) const
+{
+	if (!ComponentClass)
+	{
+		return nullptr;
+	}
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (IsValid(Component) && Component->GetClass()->IsA(ComponentClass))
+		{
+			return Component;
+		}
+	}
+	return nullptr;
+}
+
+float AActor::GetDistanceTo(AActor* Other) const
+{
+	if (!IsValid(Other))
+	{
+		return 0.0f;
+	}
+	return (GetActorLocation() - Other->GetActorLocation()).Length();
+}
+
+FVector AActor::GetVelocity() const
+{
+	if (UPrimitiveComponent* RootPrimitive = Cast<UPrimitiveComponent>(GetRootComponent()))
+	{
+		return RootPrimitive->GetLinearVelocity();
+	}
+	return FVector(0, 0, 0);
+}
+
 UWorld* AActor::GetWorld() const
 {
 	if (!IsValid(this))
@@ -558,8 +592,18 @@ FVector AActor::GetActorRight() const
 	{
 		return Root->GetRightVector();
 	}
-	
+
 	return FVector(0, 1, 0);
+}
+
+FVector AActor::GetActorUp() const
+{
+	if (USceneComponent* Root = GetRootComponent())
+	{
+		return Root->GetUpVector();
+	}
+
+	return FVector(0, 0, 1);
 }
 
 namespace
