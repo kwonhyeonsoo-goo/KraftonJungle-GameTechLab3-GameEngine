@@ -13,8 +13,10 @@
 #include "Component/Light/LightComponentBase.h"
 #include "Component/Primitive/DecalComponent.h"
 #include "Component/Primitive/HeightFogComponent.h"
+#include "Component/Primitive/SkinnedMeshComponent.h"
 #include "GameFramework/AActor.h"
 #include "Asset/AssetRegistry.h"
+#include "Animation/Skeleton/Skeleton.h"
 #include "Core/Property/ClassProperty.h"
 #include "Core/Property/ArrayProperty.h"
 #include "Core/Property/NumericProperty.h"
@@ -1897,6 +1899,115 @@ bool FEditorPropertyWidget::RenderArrayPropertyWidget(FPropertyValue& Prop, bool
 	return bChanged;
 }
 
+bool FEditorPropertyWidget::RenderAttachSocketNameProperty(FPropertyValue& Prop)
+{
+	FName* Value = static_cast<FName*>(Prop.GetValuePtr());
+	if (!Value)
+	{
+		return false;
+	}
+
+	const FString CurrentName = Value->ToString();
+	const bool bHasCurrentName = Value->IsValid() && *Value != FName::None && !CurrentName.empty();
+
+	USceneComponent* SceneComp = Cast<USceneComponent>(SelectedComponent);
+	USceneComponent* ParentComp = SceneComp ? SceneComp->GetParent() : nullptr;
+	USkinnedMeshComponent* SkinnedParent = Cast<USkinnedMeshComponent>(ParentComp);
+	USkeletalMesh* ParentMesh = SkinnedParent ? SkinnedParent->GetSkeletalMesh() : nullptr;
+	USkeleton* ParentSkeleton = ParentMesh ? ParentMesh->GetSkeleton() : nullptr;
+	const TArray<FSkeletalMeshSocket>* Sockets = ParentSkeleton ? &ParentSkeleton->GetSockets() : nullptr;
+
+	const bool bCurrentSocketFound = !bHasCurrentName || (SkinnedParent && SkinnedParent->HasSocket(*Value));
+	const bool bShowInvalid = bHasCurrentName && !bCurrentSocketFound;
+
+	FString Preview = bHasCurrentName ? CurrentName : FString("None");
+	if (bShowInvalid)
+	{
+		Preview += " (not found)";
+	}
+
+	if (bShowInvalid)
+	{
+		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.36f, 0.06f, 0.06f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.48f, 0.08f, 0.08f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.78f, 0.78f, 1.0f));
+	}
+
+	bool bChanged = false;
+	if (ImGui::BeginCombo("##AttachSocketName", Preview.c_str()))
+	{
+		const bool bSelectedNone = !bHasCurrentName;
+		if (ImGui::Selectable("None", bSelectedNone))
+		{
+			*Value = FName::None;
+			bChanged = true;
+		}
+		if (bSelectedNone)
+		{
+			ImGui::SetItemDefaultFocus();
+		}
+
+		if (Sockets)
+		{
+			for (const FSkeletalMeshSocket& Socket : *Sockets)
+			{
+				const FString SocketName = Socket.Name.ToString();
+				if (SocketName.empty())
+				{
+					continue;
+				}
+
+				const bool bSelected = bHasCurrentName && Socket.Name == *Value;
+				if (ImGui::Selectable(SocketName.c_str(), bSelected))
+				{
+					*Value = Socket.Name;
+					bChanged = true;
+				}
+				if (bSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+		}
+		else
+		{
+			ImGui::BeginDisabled();
+			ImGui::Selectable("No socket source", false);
+			ImGui::EndDisabled();
+		}
+
+		if (bShowInvalid)
+		{
+			ImGui::Separator();
+			ImGui::BeginDisabled();
+			ImGui::Selectable(CurrentName.c_str(), true);
+			ImGui::EndDisabled();
+		}
+
+		ImGui::EndCombo();
+	}
+
+	if (bShowInvalid && ImGui::IsItemHovered())
+	{
+		const FString ParentName = ParentComp ? ParentComp->GetName() : FString("None");
+		const FString ParentClass = ParentComp && ParentComp->GetClass() ? ParentComp->GetClass()->GetName() : FString("None");
+		const FString SkeletonPath = ParentSkeleton ? ParentSkeleton->GetAssetPathFileName() : FString("None");
+		ImGui::SetTooltip(
+			"Socket not found.\nParent: %s (%s)\nSkeleton: %s\nSocket: %s",
+			ParentName.c_str(),
+			ParentClass.c_str(),
+			SkeletonPath.c_str(),
+			CurrentName.c_str());
+	}
+
+	if (bShowInvalid)
+	{
+		ImGui::PopStyleColor(3);
+	}
+
+	return bChanged;
+}
+
 bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyValue>& Props, int32& Index, bool bDispatchChange, const FString& PropertyPath)
 {
 	ImGui::PushID(Index);
@@ -2305,6 +2416,12 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyValue>& Props, 
 	case EPropertyType::Name:
 	{
 		FName* Val = static_cast<FName*>(Prop.GetValuePtr());
+		if (Prop.GetName() == "AttachSocketName" || FString(Prop.GetDisplayName()) == "Attach Socket")
+		{
+			bChanged = RenderAttachSocketNameProperty(Prop);
+			break;
+		}
+
 		FString Current = Val->ToString();
 
 		// 리소스 키와 매칭되는 프로퍼티면 콤보 박스로 렌더링
