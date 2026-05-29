@@ -4,6 +4,7 @@
 #include "Math/Rotator.h"
 #include "Component/ActorComponent.h"
 #include "Math/MathUtils.h"
+#include "Object/FName.h"
 
 class AActor;
 
@@ -19,9 +20,10 @@ public:
 	~USceneComponent();
 
 	// Parent Relation Manager
-	void AttachToComponent(USceneComponent* InParent);
+	void AttachToComponent(USceneComponent* InParent, const FName& InSocketName = FName::None);
 	void SetParent(USceneComponent* NewParent);
 	USceneComponent* GetParent() const { return ParentComponent; }
+	const FName& GetAttachSocketName() const { return AttachSocketName; }
 	void AddChild(USceneComponent* NewChild);
 	void RemoveChild(USceneComponent* Child);
 	bool ContainsChild(const USceneComponent* Child) const;
@@ -35,6 +37,8 @@ public:
 	void OnPostLoad(FArchive& Ar) override;
 
 	virtual void UpdateWorldMatrix() const;
+	virtual bool HasSocket(const FName& SocketName) const;
+	virtual FTransform GetSocketTransform(const FName& SocketName) const;
 	virtual void AddWorldOffset(const FVector& WorldDelta);
 	virtual void SetRelativeLocation(const FVector& NewLocation);
 	virtual void SetRelativeRotation(const FRotator& NewRotation);
@@ -90,11 +94,14 @@ protected:
 	UPROPERTY(Edit, Save, Category="Transform", DisplayName="Rotation", Type=Rotator, Min=0.0f, Max=0.0f, Speed=0.1f)
 	mutable FRotator CachedEditRotator;	// 에디터 프로퍼티 바인딩용 (Euler 캐시)
 	mutable bool bCachedEulerDirty = true;	// Quat가 외부에서 변경됐을 때만 Euler 재계산
+	UPROPERTY(Edit, Save, Category="Transform", DisplayName="Attach Socket")
+	FName AttachSocketName = FName::None;
 
 	//world matrix caching
 	mutable FMatrix CachedWorldMatrix{};
 	//inverse world matrix caching
 	mutable FMatrix CachedInverseWorldMatrix{};
 	mutable bool bInverseWorldDirty = true;
+	mutable FName LastInvalidAttachSocketWarning = FName::None;
 };
 

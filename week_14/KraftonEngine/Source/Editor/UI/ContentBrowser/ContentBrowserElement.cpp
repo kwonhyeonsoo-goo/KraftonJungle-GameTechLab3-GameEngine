@@ -734,16 +734,25 @@ static USkeletalMesh* ResolveCompatibleSkeletalMeshForBinding(ContentBrowserCont
 
 	ID3D11Device* Device = Context.EditorEngine->GetRenderer().GetFD3DDevice().GetDevice();
 
-	const TArray<FAssetListItem> Meshes = FAssetRegistry::ListMeshesForSkeleton(Binding, /*bAllowSameStructure=*/true);
-	for (const FAssetListItem& Item : Meshes)
+	auto LoadFirstMesh = [Device](const TArray<FAssetListItem>& Meshes) -> USkeletalMesh*
 	{
-		if (USkeletalMesh* Mesh = FMeshManager::LoadSkeletalMesh(Item.FullPath, Device))
+		for (const FAssetListItem& Item : Meshes)
 		{
-			return Mesh;
+			if (USkeletalMesh* Mesh = FMeshManager::LoadSkeletalMesh(Item.FullPath, Device))
+			{
+				return Mesh;
+			}
 		}
-	}
+		return nullptr;
+	};
 
-	return nullptr;
+	// 정확하게 매칭되는 USkeletalMesh 우선 검색
+	if (USkeletalMesh* ExactMesh = LoadFirstMesh(FAssetRegistry::ListMeshesForSkeleton(Binding, /*bAllowSameStructure=*/false)))
+	{
+		return ExactMesh;
+	}
+	// 안되면 호환 가능한 USkeletalMesh들 중에서 검색
+	return LoadFirstMesh(FAssetRegistry::ListMeshesForSkeleton(Binding, /*bAllowSameStructure=*/true));
 }
 
 void AnimationElement::OnDoubleLeftClicked(ContentBrowserContext& Context)

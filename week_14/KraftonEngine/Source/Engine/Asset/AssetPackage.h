@@ -22,6 +22,7 @@ enum class EAssetPackageSerializationVersion : uint32
 {
 	LegacyBinaryLayout = 1,
 	HeaderVersionedFormat = 2,
+	SkeletonSocketPayload = 3,
 };
 
 enum class EAssetPackageFormatBranch : uint8
@@ -35,7 +36,7 @@ struct FAssetPackageHeader
 {
 	static constexpr uint32 MagicValue = 0x54455341; // ASET
 	static constexpr uint32 LegacyVersion = static_cast<uint32>(EAssetPackageSerializationVersion::LegacyBinaryLayout);
-	static constexpr uint32 CurrentVersion = static_cast<uint32>(EAssetPackageSerializationVersion::HeaderVersionedFormat);
+	static constexpr uint32 CurrentVersion = static_cast<uint32>(EAssetPackageSerializationVersion::SkeletonSocketPayload);
 
 	uint32 Magic = MagicValue;
 	uint32 Version = CurrentVersion;
@@ -65,6 +66,7 @@ struct FAssetPackageHeader
 	bool IsKnownVersion() const
 	{
 		return Version == LegacyVersion
+			|| Version == static_cast<uint32>(EAssetPackageSerializationVersion::HeaderVersionedFormat)
 			|| Version == CurrentVersion;
 	}
 
@@ -75,7 +77,8 @@ struct FAssetPackageHeader
 
 	bool IsVersionedFormat() const
 	{
-		return Version == CurrentVersion;
+		return Version >= static_cast<uint32>(EAssetPackageSerializationVersion::HeaderVersionedFormat)
+			&& Version <= CurrentVersion;
 	}
 
 	EAssetPackageFormatBranch GetFormatBranch() const

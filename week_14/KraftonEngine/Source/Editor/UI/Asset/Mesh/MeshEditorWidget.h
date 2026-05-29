@@ -5,8 +5,10 @@
 #include "Asset/AssetRegistry.h"
 
 struct FSkeletalMesh;
+struct FReferenceSkeleton;
 struct ImDrawList;
 struct ImVec2;
+class USkeleton;
 class UAnimSequence;
 class UAnimMontage;
 class UAnimSingleNodeInstance;
@@ -79,8 +81,11 @@ private:
 
 	// Shared helpers
 	void RenderViewportPanel(ImVec2 Size);
-	void RenderBoneTree(const FSkeletalMesh* Asset, int32 Index);
+	void RenderBoneTree(USkeleton* Skeleton, const FReferenceSkeleton& RefSkeleton, int32 Index);
+	void RenderSocketTreeNode(USkeleton* Skeleton, int32 SocketIndex);
 	void RenderMeshStatsOverlay(ImDrawList* DrawList, const ImVec2& ViewportPos) const;
+	void SaveCurrentSkeleton();
+	void RefreshSelectedSocketEditBuffers(USkeleton* Skeleton);
 
 	// Animation tab helpers
 	void ApplyAnimationToComponent();
@@ -101,6 +106,11 @@ private:
 
 	// Skeleton tab state
 	int32 SelectedBoneIndex = -1;
+	int32 SelectedSocketIndex = -1;
+	bool bSkeletonDirty = false;
+	int32 BufferedSocketIndex = -2;
+	char SocketNameBuffer[128] = {};
+	char SocketBoneNameBuffer[128] = {};
 	float HierarchyWidth    = 250.0f;
 	float DetailsWidth      = 300.0f;
 
