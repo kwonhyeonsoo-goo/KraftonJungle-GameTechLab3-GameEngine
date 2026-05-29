@@ -13,6 +13,7 @@
 #include <filesystem>
 
 #include "Particle/ParticleSystemManager.h"
+#include "Particle/VectorField/VectorFieldManager.h"
 
 namespace FAssetRegistry
 {
@@ -51,6 +52,11 @@ namespace FAssetRegistry
             FParticleSystemManager::Get().RefreshAvailableParticleSystems();
             return FParticleSystemManager::Get().GetAvailableParticleSystemFiles();
         }
+		if (std::strcmp(AssetTypeName, "UVectorFieldAsset") == 0)
+		{
+			FVectorFieldManager::Get().RefreshAvailableVectorFields();
+			return FVectorFieldManager::Get().GetAvailableVectorFieldFiles();
+		}
 		if (std::strcmp(AssetTypeName, "LuaAnimScript") == 0)
 		{
 			// Content/Script/Anim/ 하위 .lua 파일 즉석 스캔. 콤보 열 때만 호출되므로 비용 무시.

@@ -16,6 +16,7 @@ enum class EAssetPackageType : uint32
 	AnimMontage,
 	AnimGraph,
 	ParticleSystem,
+	VectorField,
 };
 
 enum class EAssetPackageSerializationVersion : uint32

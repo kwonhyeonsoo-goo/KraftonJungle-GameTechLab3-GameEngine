@@ -23,6 +23,10 @@
 #include "Particle/ParticleLODLevel.h"
 #include "Particle/ParticleModule.h"
 #include "Particle/ParticleEmitterInstance.h"
+#include "Particle/ParticleModuleVectorField.h"
+#include "Particle/VectorField/VectorFieldManager.h"
+#include "Editor/UI/ContentBrowser/ContentItem.h"
+#include "Platform/Paths.h"
 #include "Math/FloatCurve.h"
 #include "Particle/Distributions/DistributionFloat.h"
 #include "Particle/Distributions/DistributionFloatConstant.h"
@@ -387,6 +391,31 @@ namespace
 		return AssetComboField(Label, Value, FMeshManager::Get().GetAvailableStaticMeshFiles());
 	}
 
+	bool VectorFieldComboField(const char* Label, FSoftObjectPtr& Value)
+	{
+		FVectorFieldManager::Get().RefreshAvailableVectorFields();
+		bool bChanged = AssetComboField(Label, Value, FVectorFieldManager::Get().GetAvailableVectorFieldFiles());
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("VectorFieldContentItem"))
+			{
+				if (Payload->DataSize == sizeof(FContentItem))
+				{
+					const FContentItem* Item = static_cast<const FContentItem*>(Payload->Data);
+					if (Item)
+					{
+						Value.SetPath(FPaths::ToUtf8(Item->Path.lexically_relative(FPaths::RootDir()).generic_wstring()));
+						bChanged = true;
+					}
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
+
+		return bChanged;
+	}
+
 	bool DragFloat3Field(const char* Label, FVector& Value, float Speed = 0.1f, float Min = 0.0f, float Max = 0.0f)
 	{
 		float Data[3] = { Value.X, Value.Y, Value.Z };
@@ -407,6 +436,19 @@ namespace
 			Value.Z = Data[2];
 		}
 		return bChanged;
+	}
+
+	bool DragRotatorField(const char* Label, FRotator& Value, float Speed = 0.1f)
+	{
+		float Data[3] = { Value.Pitch, Value.Yaw, Value.Roll };
+		if (ImGui::DragFloat3(Label, Data, Speed, 0.0f, 0.0f, "%.3f"))
+		{
+			Value.Pitch = Data[0];
+			Value.Yaw = Data[1];
+			Value.Roll = Data[2];
+			return true;
+		}
+		return false;
 	}
 
 	bool Color4Field(const char* Label, FVector4& Value)
@@ -2143,6 +2185,9 @@ void FParticleEditorWidget::RenderToolbar()
 	}
 
 	ImGui::SameLine();
+	ImGui::Checkbox("Vector Field", &ViewportClient.GetRenderOptions().bParticleVectorFieldDebug);
+
+	ImGui::SameLine();
 	ImGui::Checkbox("Bounds", &bShowBounds);
 	ViewportClient.GetRenderOptions().ShowFlags.bParticleBounds = bShowBounds;
 
@@ -3028,6 +3073,31 @@ void FParticleEditorWidget::RenderPropertyPanel(ImVec2 Size)
 					bChanged |= ImGui::Checkbox("In World Space", &Velocity->bInWorldSpace);
 				}
 			}
+			else if (UParticleModuleVectorFieldLocal* VectorField = Cast<UParticleModuleVectorFieldLocal>(Module))
+			{
+				if (ImGui::CollapsingHeader("Local Vector Field", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					if (VectorFieldComboField("Vector Field", VectorField->VectorFieldPath))
+					{
+						bChanged = true;
+					}
+					bChanged |= ImGui::DragFloat("Intensity", &VectorField->Intensity, 0.1f, 0.0f, 10000.0f, "%.3f");
+					bChanged |= DragFloat3Field("Field Bounds Offset", VectorField->FieldBoundsOffset, 0.1f);
+					bChanged |= DragFloat3Field("Field Bounds Scale", VectorField->FieldBoundsScale, 0.1f, 0.001f, 100000.0f);
+					bChanged |= ImGui::Checkbox("Use Trilinear Sampling", &VectorField->bUseTrilinearSampling);
+					bChanged |= ImGui::Checkbox("Draw Bounds", &VectorField->bDrawBounds);
+					bChanged |= ImGui::Checkbox("Draw Vectors", &VectorField->bDrawVectors);
+					bChanged |= ImGui::DragFloat("Vector Draw Scale", &VectorField->DebugVectorScale, 0.1f, 0.0f, 10000.0f, "%.3f");
+				}
+			}
+			else if (UParticleModuleVectorFieldRotation* VectorFieldRotation = Cast<UParticleModuleVectorFieldRotation>(Module))
+			{
+				if (ImGui::CollapsingHeader("Vector Field Rotation", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					bChanged |= DragRotatorField("Rotation", VectorFieldRotation->Rotation, 0.1f);
+					bChanged |= DragRotatorField("Rotation Rate", VectorFieldRotation->RotationRate, 0.1f);
+				}
+			}
 			else if (UParticleModuleAcceleration* Acceleration = Cast<UParticleModuleAcceleration>(Module))
 			{
 				if (ImGui::CollapsingHeader("Const Acceleration", ImGuiTreeNodeFlags_DefaultOpen))
@@ -3763,6 +3833,8 @@ void FParticleEditorWidget::RenderAddModulePopup()
 		AddRegular("Lifetime", UParticleModule::EModuleCategory::Lifetime, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleLifetime>(LOD, Emitter); });
 		AddRegular("Initial Location", UParticleModule::EModuleCategory::Location, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleLocation>(LOD, Emitter); });
 		AddRegular("Initial Velocity", UParticleModule::EModuleCategory::Velocity, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleVelocity>(LOD, Emitter); });
+		AddRegular("Local Vector Field", UParticleModule::EModuleCategory::Velocity, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleVectorFieldLocal>(LOD, Emitter); });
+		AddRegular("Vector Field Rotation", UParticleModule::EModuleCategory::Rotation, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleVectorFieldRotation>(LOD, Emitter); });
 		AddRegular("Const Acceleration", UParticleModule::EModuleCategory::Acceleration, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleAcceleration>(LOD, Emitter); });
 		AddRegular("Initial Color", UParticleModule::EModuleCategory::Color, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleColor>(LOD, Emitter); });
 		AddRegular("Color Over Life", UParticleModule::EModuleCategory::Color, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleColorOverLife>(LOD, Emitter); });

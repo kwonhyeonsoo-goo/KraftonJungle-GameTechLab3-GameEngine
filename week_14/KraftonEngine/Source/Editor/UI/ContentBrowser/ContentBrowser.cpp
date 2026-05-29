@@ -115,6 +115,7 @@ void FEditorContentBrowserWidget::Initialize(UEditorEngine* InEditor, ID3D11Devi
 	IconFileMap[".mat"] = L"Sphere_64x.png";
 	IconFileMap[".shake"] = L"StartMerge_42x.png";
 	IconFileMap[".fbx"] = L"icon_MatEd_Mesh_40x.png";
+	IconFileMap[".fga"] = L"StartMerge_42x.png";
 	IconFileMap[".uasset"] = L"icon_MatEd_Mesh_40x.png";
 
 	ContentBrowserContext Context;
@@ -438,6 +439,10 @@ void FEditorContentBrowserWidget::RefreshContent()
 		{
 			Element = std::make_shared<MeshElement>();
 		}
+		else if (Extension == ".fga")
+		{
+			Element = std::make_shared<VectorFieldSourceElement>();
+		}
 		else if (Extension == ".png")
 		{
 			Element = std::make_shared<PNGElement>();
@@ -478,6 +483,9 @@ void FEditorContentBrowserWidget::RefreshContent()
 					break;
 				case EAssetPackageType::ParticleSystem:
 					Element = std::make_shared<ParticleSystemElement>();
+					break;
+				case EAssetPackageType::VectorField:
+					Element = std::make_shared<VectorFieldElement>();
 					break;
 				case EAssetPackageType::Material:
 					Element = std::make_shared<MaterialElement>();
@@ -666,6 +674,14 @@ void FEditorContentBrowserWidget::DrawContents()
 					}
 				}
 			}
+				if (ImGui::MenuItem("Vector Field"))
+				{
+					FString CreatedPath;
+					if (FAssetFactory::CreateVectorField(FPaths::ToUtf8(BrowserContext.CurrentPath), "NewVectorField", CreatedPath))
+					{
+						Refresh();
+					}
+				}
 			ImGui::EndMenu();
 		}
 

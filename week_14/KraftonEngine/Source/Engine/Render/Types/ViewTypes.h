@@ -109,6 +109,9 @@ struct FViewportRenderOptions
 	float HeatMapMax = 20.0f;
 	bool Enable25DCulling = true;
 
+	// Particle editor vector field debug visualization
+	bool bParticleVectorFieldDebug = false;
+
 	// Mesh editor bone weight visualization
 	bool bWeightBoneHeatMap = false;
 	int32 WeightBoneHeatMapBoneIndex = -1;
