@@ -4,6 +4,7 @@
 #include "Viewport/Viewport.h"
 #include "Math/MathUtils.h"
 #include "Input/InputSystem.h"
+#include "Animation/Skeleton/Skeleton.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
 #include "GameFramework/AActor.h"
@@ -60,6 +61,7 @@ void FMeshEditorViewportClient::CreateBoneDebugComponent()
 	BoneDebugComponent = PreviewActor->AddComponent<UBoneDebugComponent>();
 	BoneDebugComponent->SetTargetMeshComponent(PreviewMeshComponent);
 	BoneDebugComponent->SetSelectedBoneIndex(SelectedBoneIndex);
+	BoneDebugComponent->SetSelectedSocketIndex(SelectedSocketIndex);
 	BoneDebugComponent->CreateRenderState();
 }
 
@@ -170,6 +172,7 @@ void FMeshEditorViewportClient::SetSelectedBone(USkeletalMesh* Mesh, int32 BoneI
 {
 	SelectedMesh = Mesh;
 	SelectedBoneIndex = BoneIndex;
+	SelectedSocketIndex = -1;
 	RenderOptions.WeightBoneHeatMapBoneIndex = BoneIndex;
 
 	if (Gizmo && PreviewMeshComponent && BoneIndex >= 0)
@@ -186,6 +189,50 @@ void FMeshEditorViewportClient::SetSelectedBone(USkeletalMesh* Mesh, int32 BoneI
 	{
 		BoneDebugComponent->SetTargetMeshComponent(PreviewMeshComponent);
 		BoneDebugComponent->SetSelectedBoneIndex(BoneIndex);
+		BoneDebugComponent->SetSelectedSocketIndex(-1);
+	}
+}
+
+void FMeshEditorViewportClient::SetSelectedSocket(USkeletalMesh* Mesh, USkeleton* Skeleton, int32 SocketIndex)
+{
+	SelectedMesh = Mesh;
+	SelectedBoneIndex = -1;
+	SelectedSocketIndex = SocketIndex;
+	RenderOptions.WeightBoneHeatMapBoneIndex = -1;
+
+	if (Gizmo && PreviewMeshComponent && Skeleton && SocketIndex >= 0)
+	{
+		SocketTarget.SetSocket(PreviewMeshComponent, Skeleton, SocketIndex);
+		Gizmo->SetTarget(&SocketTarget);
+	}
+	else if (Gizmo)
+	{
+		Gizmo->Deactivate();
+	}
+
+	if (BoneDebugComponent)
+	{
+		BoneDebugComponent->SetTargetMeshComponent(PreviewMeshComponent);
+		BoneDebugComponent->SetSelectedBoneIndex(-1);
+		BoneDebugComponent->SetSelectedSocketIndex(SocketIndex);
+	}
+}
+
+bool FMeshEditorViewportClient::ConsumeSocketGizmoModified()
+{
+	const bool bModified = SocketTarget.ConsumeModified();
+	if (bModified)
+	{
+		RefreshBoneDebug();
+	}
+	return bModified;
+}
+
+void FMeshEditorViewportClient::RefreshBoneDebug()
+{
+	if (BoneDebugComponent)
+	{
+		BoneDebugComponent->MarkRenderStateDirty();
 	}
 }
 
@@ -220,10 +267,22 @@ void FMeshEditorViewportClient::TickShortcuts()
 
 	if (InputSystem::Get().GetKeyDown('F'))
 	{
-		if (const FBone* SelectedBone = GetSelectedBone())
-		{
-			FVector TargetLoc = PreviewMeshComponent->GetBoneLocationByIndex(SelectedBoneIndex);
+		FVector TargetLoc = FVector::ZeroVector;
+		bool bHasFocusTarget = false;
 
+		if (GetSelectedBone())
+		{
+			TargetLoc = PreviewMeshComponent->GetBoneLocationByIndex(SelectedBoneIndex);
+			bHasFocusTarget = true;
+		}
+		else if (SocketTarget.IsValid())
+		{
+			TargetLoc = SocketTarget.GetWorldLocation();
+			bHasFocusTarget = true;
+		}
+
+		if (bHasFocusTarget)
+		{
 			FVector OriginalLoc = ViewTransform.ViewLocation;
 			FRotator OriginalRot = ViewTransform.ViewRotation;
 
@@ -443,6 +502,9 @@ void FMeshEditorViewportClient::SyncGizmo()
 	if (!Gizmo || !PreviewActor) return;
 
 	if (const FBone* SelectedBone = GetSelectedBone())
+	{
+	}
+	else if (SocketTarget.IsValid())
 	{
 	}
 	else

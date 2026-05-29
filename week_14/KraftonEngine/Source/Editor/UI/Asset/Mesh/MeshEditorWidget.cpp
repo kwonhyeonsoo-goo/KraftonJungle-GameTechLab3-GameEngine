@@ -359,6 +359,10 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 	if (ViewportClient.IsRenderable())
 	{
 		ViewportClient.Tick(DeltaTime);
+		if (ViewportClient.ConsumeSocketGizmoModified())
+		{
+			bSkeletonDirty = true;
+		}
 	}
 
 	if (ActiveTab == EMeshEditorTab::Animation)
@@ -781,6 +785,7 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 		RefreshSelectedSocketEditBuffers(Skeleton);
 		TArray<FSkeletalMeshSocket>& Sockets = Skeleton->GetMutableSockets();
 		FSkeletalMeshSocket& Socket = Sockets[SelectedSocketIndex];
+		bool bSocketChanged = false;
 
 		ImGui::Text("Socket Details");
 		ImGui::Text("Index: %d", SelectedSocketIndex);
@@ -793,6 +798,7 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 			{
 				Socket.Name = NewName;
 				bSkeletonDirty = true;
+				bSocketChanged = true;
 			}
 		}
 
@@ -803,12 +809,14 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 			{
 				Socket.BoneName = NewBoneName;
 				bSkeletonDirty = true;
+				bSocketChanged = true;
 			}
 		}
 
 		if (ImGui::DragFloat3("Location", &Socket.RelativeLocation.X, 0.1f))
 		{
 			bSkeletonDirty = true;
+			bSocketChanged = true;
 		}
 
 		FVector Rotation = Socket.RelativeRotation.ToVector();
@@ -816,6 +824,7 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 		{
 			Socket.RelativeRotation = FRotator(Rotation);
 			bSkeletonDirty = true;
+			bSocketChanged = true;
 		}
 
 		if (ImGui::DragFloat3("Scale", &Socket.RelativeScale.X, 0.1f, 0.01f))
@@ -824,6 +833,12 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 			Socket.RelativeScale.Y = std::max(Socket.RelativeScale.Y, 0.01f);
 			Socket.RelativeScale.Z = std::max(Socket.RelativeScale.Z, 0.01f);
 			bSkeletonDirty = true;
+			bSocketChanged = true;
+		}
+
+		if (bSocketChanged)
+		{
+			ViewportClient.SetSelectedSocket(Cast<USkeletalMesh>(EditedObject), Skeleton, SelectedSocketIndex);
 		}
 	}
 	else if (Skeleton && SelectedBoneIndex != -1)
@@ -1612,7 +1627,7 @@ void FMeshEditorWidget::RenderBoneTree(USkeleton* Skeleton, const FReferenceSkel
 			SelectedBoneIndex = -1;
 			SelectedSocketIndex = static_cast<int32>(Skeleton->GetSockets().size()) - 1;
 			BufferedSocketIndex = -2;
-			ViewportClient.SetSelectedBone(Cast<USkeletalMesh>(EditedObject), -1);
+			ViewportClient.SetSelectedSocket(Cast<USkeletalMesh>(EditedObject), Skeleton, SelectedSocketIndex);
 			bSkeletonDirty = true;
 		}
 		ImGui::EndPopup();
@@ -1662,7 +1677,7 @@ void FMeshEditorWidget::RenderSocketTreeNode(USkeleton* Skeleton, int32 SocketIn
 		SelectedBoneIndex = -1;
 		SelectedSocketIndex = SocketIndex;
 		BufferedSocketIndex = -2;
-		ViewportClient.SetSelectedBone(Cast<USkeletalMesh>(EditedObject), -1);
+		ViewportClient.SetSelectedSocket(Cast<USkeletalMesh>(EditedObject), Skeleton, SocketIndex);
 	}
 
 	if (ImGui::BeginPopupContextItem())
@@ -1673,6 +1688,7 @@ void FMeshEditorWidget::RenderSocketTreeNode(USkeleton* Skeleton, int32 SocketIn
 			Sockets.erase(Sockets.begin() + SocketIndex);
 			SelectedSocketIndex = -1;
 			BufferedSocketIndex = -2;
+			ViewportClient.SetSelectedBone(Cast<USkeletalMesh>(EditedObject), -1);
 			bSkeletonDirty = true;
 		}
 		ImGui::EndPopup();
