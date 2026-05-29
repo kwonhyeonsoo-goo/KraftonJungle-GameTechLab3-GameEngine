@@ -14,6 +14,8 @@ public:
     ~USkeleton() override = default;
 
     void Serialize(FArchive& Ar) override;
+    void SerializeLegacyPayload(FArchive& Ar);	// Socket 개념 추가 이전의 에셋 데이터 호환
+    void SerializeCurrentPayload(FArchive& Ar);	// Socket 개념 추가된 최신 버전 에셋 직렬화
     // 수동 바이너리 포맷 — 반사 직렬화 비활성.
     bool ShouldReflectProperties() const override { return false; }
 
@@ -66,7 +68,23 @@ public:
         return ReferenceSkeleton;
     }
 
+    const TArray<FSkeletalMeshSocket>& GetSockets() const
+    {
+        return Sockets;
+    }
+
+    TArray<FSkeletalMeshSocket>& GetMutableSockets()
+    {
+        return Sockets;
+    }
+
+    const FSkeletalMeshSocket* FindSocket(const FName& Name) const;
+    bool HasSocket(const FName& Name) const;
+    int32 FindSocketIndex(const FName& Name) const;
+    bool ResolveSocketBoneIndex(const FSkeletalMeshSocket& Socket, int32& OutBoneIndex) const;
+
     void RebuildBoneNameCache();
+    void RebuildReferenceSkeletonDerivedData();
 
     int32 FindBoneIndex(const FString& BoneName) const;
 
@@ -75,5 +93,6 @@ private:
     FString            SkeletonAssetGuid;
     FString            CompatibilitySignature;
     FReferenceSkeleton ReferenceSkeleton;
+    TArray<FSkeletalMeshSocket> Sockets;
     TMap<FString, int32> BoneNameToIndex;
 };

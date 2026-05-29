@@ -1,7 +1,11 @@
 #include "SceneComponent.h"
 #include "Object/Reflection/ObjectFactory.h"
+#include "Object/Reflection/UClass.h"
 #include <GameFramework/World.h>
+#include "Core/Logging/Log.h"
 #include "Serialization/Archive.h"
+
+#include <cctype>
 
 HIDE_FROM_COMPONENT_LIST(USceneComponent)
 
@@ -45,9 +49,45 @@ static FMatrix GetRotationTranslationWithoutScale(const FMatrix& Matrix)
 	return Result;
 }
 
-void USceneComponent::AttachToComponent(USceneComponent* InParent)
+static bool IsSocketAttachmentNameSet(const FName& SocketName)
+{
+	return SocketName.IsValid() && SocketName != FName::None;
+}
+
+static const char* GetObjectClassName(const UObject* Object)
+{
+	return Object && Object->GetClass() ? Object->GetClass()->GetName() : "None";
+}
+
+static FString TrimWhitespace(FString Value)
+{
+	while (!Value.empty() && std::isspace(static_cast<unsigned char>(Value.front())))
+	{
+		Value.erase(Value.begin());
+	}
+	while (!Value.empty() && std::isspace(static_cast<unsigned char>(Value.back())))
+	{
+		Value.pop_back();
+	}
+	return Value;
+}
+
+static FName NormalizeSocketAttachmentName(const FName& SocketName)
+{
+	if (!SocketName.IsValid() || SocketName == FName::None)
+	{
+		return FName::None;
+	}
+
+	const FString TrimmedName = TrimWhitespace(SocketName.ToString());
+	return TrimmedName.empty() ? FName::None : FName(TrimmedName);
+}
+
+void USceneComponent::AttachToComponent(USceneComponent* InParent, const FName& InSocketName)
 {
 	if (!InParent || InParent == this) return;
+	AttachSocketName = NormalizeSocketAttachmentName(InSocketName);
+	LastInvalidAttachSocketWarning = FName::None;
 	SetParent(InParent);
 }
 
@@ -68,7 +108,9 @@ void USceneComponent::PostEditProperty(const char* PropertyName)
 								|| strcmp(PropertyName, "CachedEditRotator") == 0
 								|| strcmp(PropertyName, "Location") == 0
 								|| strcmp(PropertyName, "Rotation") == 0
-								|| strcmp(PropertyName, "Scale") == 0);
+								|| strcmp(PropertyName, "Scale") == 0
+								|| strcmp(PropertyName, "AttachSocketName") == 0
+								|| strcmp(PropertyName, "Attach Socket") == 0);
 
 	if (strcmp(PropertyName, "CachedEditRotator") == 0 || strcmp(PropertyName, "Rotation") == 0)
 	{
@@ -76,6 +118,11 @@ void USceneComponent::PostEditProperty(const char* PropertyName)
 	}
 	else
 	{
+		if (strcmp(PropertyName, "AttachSocketName") == 0 || strcmp(PropertyName, "Attach Socket") == 0)
+		{
+			AttachSocketName = NormalizeSocketAttachmentName(AttachSocketName);
+			LastInvalidAttachSocketWarning = FName::None;
+		}
 		MarkTransformDirty();
 	}
 
@@ -147,6 +194,7 @@ void USceneComponent::SetParent(USceneComponent* NewParent)
 	}
 
 	ParentComponent = NewParent;
+	LastInvalidAttachSocketWarning = FName::None;
 	if (ParentComponent)
 	{
 		ParentComponent->ChildComponents.push_back(this);
@@ -208,14 +256,50 @@ void USceneComponent::UpdateWorldMatrix() const
 
 	if (ParentComponent != nullptr)
 	{
-		if (bAbsoluteScale)
+		const bool bHasAttachSocketName = IsSocketAttachmentNameSet(AttachSocketName);
+		const bool bParentHasSocket = bHasAttachSocketName && ParentComponent->HasSocket(AttachSocketName);
+
+		if (bParentHasSocket)
 		{
-			// 에디터 아이콘 빌보드는 부모 스케일과 분리해 화면상 크기 변화를 막는다.
-			CachedWorldMatrix = RelativeMatrix * GetRotationTranslationWithoutScale(ParentComponent->GetWorldMatrix());
+			const FMatrix SocketMatrix = ParentComponent->GetSocketTransform(AttachSocketName).ToMatrix();
+			CachedWorldMatrix = bAbsoluteScale
+				? RelativeMatrix * GetRotationTranslationWithoutScale(SocketMatrix)
+				: RelativeMatrix * SocketMatrix;
+		}
+		else if (bHasAttachSocketName)
+		{
+			if (LastInvalidAttachSocketWarning != AttachSocketName)
+			{
+				UE_LOG("Attach socket not found, falling back to parent transform. Component=%s ComponentClass=%s Parent=%s ParentClass=%s Socket='%s'",
+					GetName().c_str(),
+					GetObjectClassName(this),
+					ParentComponent ? ParentComponent->GetName().c_str() : "None",
+					GetObjectClassName(ParentComponent),
+					AttachSocketName.ToString().c_str());
+				LastInvalidAttachSocketWarning = AttachSocketName;
+			}
+
+			if (bAbsoluteScale)
+			{
+				// 에디터 아이콘 빌보드는 부모 스케일과 분리해 화면상 크기 변화를 막는다.
+				CachedWorldMatrix = RelativeMatrix * GetRotationTranslationWithoutScale(ParentComponent->GetWorldMatrix());
+			}
+			else
+			{
+				CachedWorldMatrix = RelativeMatrix * ParentComponent->GetWorldMatrix();
+			}
 		}
 		else
 		{
-			CachedWorldMatrix = RelativeMatrix * ParentComponent->GetWorldMatrix();
+			if (bAbsoluteScale)
+			{
+				// 에디터 아이콘 빌보드는 부모 스케일과 분리해 화면상 크기 변화를 막는다.
+				CachedWorldMatrix = RelativeMatrix * GetRotationTranslationWithoutScale(ParentComponent->GetWorldMatrix());
+			}
+			else
+			{
+				CachedWorldMatrix = RelativeMatrix * ParentComponent->GetWorldMatrix();
+			}
 		}
 	}
 	else
@@ -224,6 +308,16 @@ void USceneComponent::UpdateWorldMatrix() const
 	}
 
 	bTransformDirty = false;
+}
+
+bool USceneComponent::HasSocket(const FName& /*SocketName*/) const
+{
+	return false;
+}
+
+FTransform USceneComponent::GetSocketTransform(const FName& /*SocketName*/) const
+{
+	return FTransform(GetWorldMatrix());
 }
 
 void USceneComponent::AddWorldOffset(const FVector& WorldDelta)

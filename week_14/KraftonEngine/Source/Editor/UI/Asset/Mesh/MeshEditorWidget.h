@@ -5,8 +5,10 @@
 #include "Asset/AssetRegistry.h"
 
 struct FSkeletalMesh;
+struct FReferenceSkeleton;
 struct ImDrawList;
 struct ImVec2;
+class USkeleton;
 class UAnimSequence;
 class UAnimMontage;
 class UAnimSingleNodeInstance;
@@ -36,6 +38,8 @@ struct FAnimationTabState
 	TArray<FAssetListItem> CachedMontageFiles;
 	FSkeletonBinding       CachedAnimationListBinding;
 	bool                   bAnimationListDirty = true;
+	TSet<UAnimSequence*>   DirtySequences;
+	TSet<UAnimMontage*>    DirtyMontages;
 
 	float         AnimListWidth                = 200.0f;
 	float         AnimDetailsWidth             = 280.0f;
@@ -79,8 +83,12 @@ private:
 
 	// Shared helpers
 	void RenderViewportPanel(ImVec2 Size);
-	void RenderBoneTree(const FSkeletalMesh* Asset, int32 Index);
+	void RenderBoneTree(USkeleton* Skeleton, const FReferenceSkeleton& RefSkeleton, int32 Index);
+	void RenderSocketTreeNode(USkeleton* Skeleton, int32 SocketIndex);
 	void RenderMeshStatsOverlay(ImDrawList* DrawList, const ImVec2& ViewportPos) const;
+	void SaveCurrentSkeleton();
+	void SaveCurrentAnimationAsset();
+	void RefreshSelectedSocketEditBuffers(USkeleton* Skeleton);
 
 	// Animation tab helpers
 	void ApplyAnimationToComponent();
@@ -89,6 +97,8 @@ private:
 	void ApplyMorphPreviewOverrides(TArray<float>& InOutMorphWeights) const;
 	void RefreshAnimationPreviewPose();
 	void MarkAnimationListDirty();
+	bool IsCurrentAnimationDirty() const;
+	void MarkCurrentAnimationDirty();
 	const TArray<FAssetListItem>& GetCachedAnimationFilesForCurrentSkeleton();
 	const TArray<FAssetListItem>& GetCachedMontageFilesForCurrentSkeleton();
 
@@ -101,6 +111,11 @@ private:
 
 	// Skeleton tab state
 	int32 SelectedBoneIndex = -1;
+	int32 SelectedSocketIndex = -1;
+	bool bSkeletonDirty = false;
+	int32 BufferedSocketIndex = -2;
+	char SocketNameBuffer[128] = {};
+	char SocketBoneNameBuffer[128] = {};
 	float HierarchyWidth    = 250.0f;
 	float DetailsWidth      = 300.0f;
 

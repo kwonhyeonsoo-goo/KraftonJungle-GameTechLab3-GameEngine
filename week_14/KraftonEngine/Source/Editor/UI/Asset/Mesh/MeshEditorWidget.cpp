@@ -22,6 +22,9 @@
 #include "Animation/Instance/AnimSingleNodeInstance.h"
 #include "Animation/AnimationManager.h"
 #include "Animation/Sequence/AnimDataModel.h"
+#include "Animation/Skeleton/Skeleton.h"
+#include "Animation/Skeleton/SkeletonManager.h"
+#include "Asset/AssetPackage.h"
 #include "Asset/AssetRegistry.h"
 #include "UI/Asset/Animation/AnimationTransportBar.h"
 #include "UI/Asset/Animation/AnimationTimelinePanel.h"
@@ -92,6 +95,73 @@ namespace
 
 		auto It = GMeshImportDurationsByAssetPath.find(AssetPath);
 		return It != GMeshImportDurationsByAssetPath.end() ? It->second : -1.0;
+	}
+
+	USkeleton* GetEditingSkeleton(USkeletalMesh* Mesh)
+	{
+		if (!Mesh)
+		{
+			return nullptr;
+		}
+
+		if (USkeleton* Skeleton = Mesh->GetSkeleton())
+		{
+			return Skeleton;
+		}
+
+		const FSkeletonBinding& Binding = Mesh->GetSkeletonBinding();
+		if (!Binding.HasSkeletonPath())
+		{
+			return nullptr;
+		}
+
+		USkeleton* Skeleton = FSkeletonManager::Get().LoadSkeleton(Binding.SkeletonPath);
+		if (Skeleton)
+		{
+			Mesh->SetSkeleton(Skeleton);
+		}
+		return Skeleton;
+	}
+
+	void CopyStringToBuffer(const FString& Source, char* Buffer, size_t BufferSize)
+	{
+		if (!Buffer || BufferSize == 0)
+		{
+			return;
+		}
+
+		std::snprintf(Buffer, BufferSize, "%s", Source.c_str());
+	}
+	
+	FString GenerateUniqueSocketName(USkeleton* Skeleton, const char* Base)
+	{
+		const FString Prefix = (Base && Base[0] != '\0') ? FString(Base) : FString("Socket");
+		if (!Skeleton->HasSocket(FName(Prefix)))
+		{
+			return Prefix;
+		}
+
+		for (int32 Suffix = 1; Suffix < 10000; ++Suffix)
+		{
+			const FString Candidate = Prefix + std::to_string(Suffix);
+			if (!Skeleton->HasSocket(FName(Candidate)))
+			{
+				return Candidate;
+			}
+		}
+
+		return Prefix + std::to_string(static_cast<int32>(Skeleton->GetSockets().size()));
+	}
+
+	bool IsSocketNameValidForSave(const USkeleton* Skeleton, const FName& Name, int32 CurrentSocketIndex)
+	{
+		if (!Skeleton || !Name.IsValid() || Name == FName::None)
+		{
+			return false;
+		}
+
+		const int32 ExistingIndex = Skeleton->FindSocketIndex(Name);
+		return ExistingIndex < 0 || ExistingIndex == CurrentSocketIndex;
 	}
 
 	FMorphTargetCurve& FindOrAddMorphCurve(UAnimSequence* Seq, const FString& MorphTargetName)
@@ -257,6 +327,11 @@ void FMeshEditorWidget::Open(UObject* Object)
 	ActiveTab         = EMeshEditorTab::Skeleton;
 	AnimTabState      = FAnimationTabState {};
 	SelectedBoneIndex = -1;
+	SelectedSocketIndex = -1;
+	bSkeletonDirty = false;
+	BufferedSocketIndex = -2;
+	SocketNameBuffer[0] = '\0';
+	SocketBoneNameBuffer[0] = '\0';
 }
 
 void FMeshEditorWidget::Close()
@@ -284,6 +359,10 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 	if (ViewportClient.IsRenderable())
 	{
 		ViewportClient.Tick(DeltaTime);
+		if (ViewportClient.ConsumeSocketGizmoModified())
+		{
+			bSkeletonDirty = true;
+		}
 	}
 
 	if (ActiveTab == EMeshEditorTab::Animation)
@@ -379,6 +458,16 @@ void FMeshEditorWidget::Render(float DeltaTime)
 	if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
 	{
 		FSlateApplication::Get().BringViewportToFront(&ViewportClient);
+
+		const ImGuiIO& IO = ImGui::GetIO();
+		if (ActiveTab == EMeshEditorTab::Animation &&
+			IsCurrentAnimationDirty() &&
+			IO.KeyCtrl &&
+			!IO.KeyAlt &&
+			ImGui::IsKeyPressed(ImGuiKey_S, false))
+		{
+			SaveCurrentAnimationAsset();
+		}
 	}
 
 	RenderTabBar();
@@ -420,6 +509,31 @@ void FMeshEditorWidget::RenderTabBar()
 	const float     BarWidth  = ImGui::GetContentRegionAvail().x;
 	DrawList->AddRectFilled(BarPos, ImVec2(BarPos.x + BarWidth, BarPos.y + BarHeight),
 	                        IM_COL32(38, 38, 38, 255));
+
+	const bool bCanSaveSkeleton = ActiveTab == EMeshEditorTab::Skeleton && bSkeletonDirty;
+	const bool bCanSaveAnimation = ActiveTab == EMeshEditorTab::Animation && IsCurrentAnimationDirty();
+	const bool bCanSave = bCanSaveSkeleton || bCanSaveAnimation;
+	const bool bShowDirtySave = bSkeletonDirty || IsCurrentAnimationDirty();
+	if (!bCanSave)
+	{
+		ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.45f);
+	}
+	if (ImGui::Button(bShowDirtySave ? "Save*" : "Save", ImVec2(68.0f, BarHeight)))
+	{
+		if (bCanSaveSkeleton)
+		{
+			SaveCurrentSkeleton();
+		}
+		else if (bCanSaveAnimation)
+		{
+			SaveCurrentAnimationAsset();
+		}
+	}
+	if (!bCanSave)
+	{
+		ImGui::PopStyleVar();
+	}
+	ImGui::SameLine(0.0f, 8.0f);
 
 	auto TabButton = [&](const char* Label, const wchar_t* IconFile, EMeshEditorTab Tab)
 	{
@@ -572,25 +686,126 @@ void FMeshEditorWidget::RenderViewportPanel(ImVec2 Size)
 // Skeleton tab
 // ─────────────────────────────────────────────────────────────────────────────
 
+void FMeshEditorWidget::SaveCurrentSkeleton()
+{
+	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
+	USkeleton* Skeleton = GetEditingSkeleton(SkeletalMesh);
+	if (!SkeletalMesh || !Skeleton)
+	{
+		return;
+	}
+
+	Skeleton->RebuildReferenceSkeletonDerivedData();
+	Skeleton->RebuildBoneNameCache();
+	const FString& SkeletonPath = Skeleton->GetAssetPathFileName();
+	if (SkeletonPath.empty() || SkeletonPath == "None")
+	{
+		return;
+	}
+
+	FAssetImportMetadata Metadata;
+	FAssetPackage::ReadMetadata(SkeletonPath, EAssetPackageType::Skeleton, Metadata);
+	if (FSkeletonManager::Get().SaveSkeleton(Skeleton, SkeletonPath, Metadata.SourcePath))
+	{
+		SkeletalMesh->SetSkeleton(Skeleton);
+		if (USkeletalMeshComponent* PreviewMeshComponent = ViewportClient.GetPreviewMeshComponent())
+		{
+			PreviewMeshComponent->ApplyBoneEditBasePose();
+		}
+		bSkeletonDirty = false;
+	}
+}
+
+void FMeshEditorWidget::SaveCurrentAnimationAsset()
+{
+	if (AnimTabState.bMontageSelected)
+	{
+		UAnimMontage* Montage = AnimTabState.CurrentMontage;
+		if (Montage && FAnimationManager::Get().SaveMontagePreservingMetadata(Montage))
+		{
+			AnimTabState.DirtyMontages.erase(Montage);
+			FAnimationManager::Get().RefreshAvailableMontages();
+			MarkAnimationListDirty();
+		}
+		return;
+	}
+
+	UAnimSequence* Sequence = AnimTabState.CurrentSequence;
+	if (Sequence && FAnimationManager::Get().SaveAnimationPreservingMetadata(Sequence))
+	{
+		AnimTabState.DirtySequences.erase(Sequence);
+		FAnimationManager::Get().RefreshAvailableAnimations();
+		MarkAnimationListDirty();
+	}
+}
+
+bool FMeshEditorWidget::IsCurrentAnimationDirty() const
+{
+	if (AnimTabState.bMontageSelected)
+	{
+		return AnimTabState.CurrentMontage && AnimTabState.DirtyMontages.count(AnimTabState.CurrentMontage) > 0;
+	}
+
+	return AnimTabState.CurrentSequence && AnimTabState.DirtySequences.count(AnimTabState.CurrentSequence) > 0;
+}
+
+void FMeshEditorWidget::MarkCurrentAnimationDirty()
+{
+	if (AnimTabState.bMontageSelected)
+	{
+		if (AnimTabState.CurrentMontage)
+		{
+			AnimTabState.DirtyMontages.insert(AnimTabState.CurrentMontage);
+		}
+		return;
+	}
+
+	if (AnimTabState.CurrentSequence)
+	{
+		AnimTabState.DirtySequences.insert(AnimTabState.CurrentSequence);
+	}
+}
+
+void FMeshEditorWidget::RefreshSelectedSocketEditBuffers(USkeleton* Skeleton)
+{
+	if (!Skeleton ||
+		SelectedSocketIndex < 0 ||
+		SelectedSocketIndex >= static_cast<int32>(Skeleton->GetSockets().size()))
+	{
+		BufferedSocketIndex = -2;
+		SocketNameBuffer[0] = '\0';
+		SocketBoneNameBuffer[0] = '\0';
+		return;
+	}
+
+	if (BufferedSocketIndex == SelectedSocketIndex)
+	{
+		return;
+	}
+
+	const FSkeletalMeshSocket& Socket = Skeleton->GetSockets()[SelectedSocketIndex];
+	CopyStringToBuffer(Socket.Name.ToString(), SocketNameBuffer, sizeof(SocketNameBuffer));
+	CopyStringToBuffer(Socket.BoneName.ToString(), SocketBoneNameBuffer, sizeof(SocketBoneNameBuffer));
+	BufferedSocketIndex = SelectedSocketIndex;
+}
+
 void FMeshEditorWidget::RenderSkeletonLayout()
 {
 	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
+	USkeleton* Skeleton = GetEditingSkeleton(SkeletalMesh);
 
 	// Left: bone hierarchy
 	ImGui::BeginChild("BoneHierarchy", ImVec2(HierarchyWidth, 0), true);
 	ImGui::Text("Bone Hierarchy");
 	ImGui::Separator();
-	if (SkeletalMesh)
+	if (Skeleton)
 	{
-		const FSkeletalMesh* Asset = SkeletalMesh->GetSkeletalMeshAsset();
-		if (Asset)
+		const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+		for (int32 i = 0; i < RefSkeleton.GetNumBones(); ++i)
 		{
-			for (int32 i = 0; i < static_cast<int32>(Asset->Bones.size()); ++i)
+			if (RefSkeleton.Bones[i].ParentIndex == -1)
 			{
-				if (Asset->Bones[i].ParentIndex == -1)
-				{
-					RenderBoneTree(Asset, i);
-				}
+				RenderBoneTree(Skeleton, RefSkeleton, i);
 			}
 		}
 	}
@@ -632,10 +847,78 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 	ImGui::Text("Bone Details");
 	ImGui::Separator();
 
-	if (SkeletalMesh && SelectedBoneIndex != -1)
+	if (Skeleton && SelectedSocketIndex >= 0 && SelectedSocketIndex < static_cast<int32>(Skeleton->GetMutableSockets().size()))
 	{
-		FSkeletalMesh* Asset = SkeletalMesh->GetSkeletalMeshAsset();
-		FBone& Bone = Asset->Bones[SelectedBoneIndex];
+		RefreshSelectedSocketEditBuffers(Skeleton);
+		TArray<FSkeletalMeshSocket>& Sockets = Skeleton->GetMutableSockets();
+		FSkeletalMeshSocket& Socket = Sockets[SelectedSocketIndex];
+		bool bSocketChanged = false;
+
+		ImGui::Text("Socket Details");
+		ImGui::Text("Index: %d", SelectedSocketIndex);
+		ImGui::Dummy(ImVec2(0, 10));
+
+		if (ImGui::InputText("Name", SocketNameBuffer, sizeof(SocketNameBuffer)))
+		{
+			FName NewName(SocketNameBuffer);
+			if (IsSocketNameValidForSave(Skeleton, NewName, SelectedSocketIndex))
+			{
+				Socket.Name = NewName;
+				bSkeletonDirty = true;
+				bSocketChanged = true;
+			}
+		}
+
+		if (ImGui::InputText("BoneName", SocketBoneNameBuffer, sizeof(SocketBoneNameBuffer)))
+		{
+			FName NewBoneName(SocketBoneNameBuffer);
+			if (Skeleton->FindBoneIndex(NewBoneName.ToString()) >= 0)
+			{
+				Socket.BoneName = NewBoneName;
+				bSkeletonDirty = true;
+				bSocketChanged = true;
+			}
+		}
+
+		if (ImGui::DragFloat3("Location", &Socket.RelativeLocation.X, 0.1f))
+		{
+			bSkeletonDirty = true;
+			bSocketChanged = true;
+		}
+
+		FVector Rotation = Socket.RelativeRotation.ToVector();
+		if (ImGui::DragFloat3("Rotation", &Rotation.X, 0.1f))
+		{
+			Socket.RelativeRotation = FRotator(Rotation);
+			bSkeletonDirty = true;
+			bSocketChanged = true;
+		}
+
+		if (ImGui::DragFloat3("Scale", &Socket.RelativeScale.X, 0.1f, 0.01f))
+		{
+			Socket.RelativeScale.X = std::max(Socket.RelativeScale.X, 0.01f);
+			Socket.RelativeScale.Y = std::max(Socket.RelativeScale.Y, 0.01f);
+			Socket.RelativeScale.Z = std::max(Socket.RelativeScale.Z, 0.01f);
+			bSkeletonDirty = true;
+			bSocketChanged = true;
+		}
+
+		if (bSocketChanged)
+		{
+			ViewportClient.SetSelectedSocket(Cast<USkeletalMesh>(EditedObject), Skeleton, SelectedSocketIndex);
+		}
+	}
+	else if (Skeleton && SelectedBoneIndex != -1)
+	{
+		FReferenceSkeleton& RefSkeleton = Skeleton->GetMutableReferenceSkeleton();
+		if (SelectedBoneIndex < 0 || SelectedBoneIndex >= RefSkeleton.GetNumBones())
+		{
+			ImGui::TextDisabled("Select a bone to edit.");
+			ImGui::EndChild();
+			return;
+		}
+
+		FReferenceBone& Bone = RefSkeleton.Bones[SelectedBoneIndex];
 
 		ImGui::Text("Name: %s", Bone.Name.c_str());
 		ImGui::Text("Index: %d", SelectedBoneIndex);
@@ -644,7 +927,7 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 		USkeletalMeshComponent* PreviewMeshComponent = ViewportClient.GetPreviewMeshComponent();
 		FTransform LocalTransform = PreviewMeshComponent
 			? PreviewMeshComponent->GetBoneEditBaseLocalTransformByIndex(SelectedBoneIndex)
-			: FTransform(Bone.GetReferenceLocalPose());
+			: FTransform(Bone.LocalBindPose);
 
 		FVector Location = LocalTransform.Location;
 		if (ImGui::DragFloat3("Location", &Location.X, 0.1f))
@@ -654,9 +937,11 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 				PreviewMeshComponent->SetBoneEditBaseLocalTransformByIndex(SelectedBoneIndex, LocalTransform);
 			else
 			{
-				Bone.ReferenceLocalPose = LocalTransform.ToMatrix();
-				Bone.SyncLegacyPoseDataFromSeparated();
+				Bone.LocalBindPose = LocalTransform.ToMatrix();
 			}
+			Bone.LocalBindPose = LocalTransform.ToMatrix();
+			Skeleton->RebuildReferenceSkeletonDerivedData();
+			bSkeletonDirty = true;
 		}
 
 		FVector Rotation = LocalTransform.GetRotator().ToVector();
@@ -667,9 +952,11 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 				PreviewMeshComponent->SetBoneEditBaseLocalTransformByIndex(SelectedBoneIndex, LocalTransform);
 			else
 			{
-				Bone.ReferenceLocalPose = LocalTransform.ToMatrix();
-				Bone.SyncLegacyPoseDataFromSeparated();
+				Bone.LocalBindPose = LocalTransform.ToMatrix();
 			}
+			Bone.LocalBindPose = LocalTransform.ToMatrix();
+			Skeleton->RebuildReferenceSkeletonDerivedData();
+			bSkeletonDirty = true;
 		}
 
 		FVector Scale = LocalTransform.Scale;
@@ -680,9 +967,11 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 				PreviewMeshComponent->SetBoneEditBaseLocalTransformByIndex(SelectedBoneIndex, LocalTransform);
 			else
 			{
-				Bone.ReferenceLocalPose = LocalTransform.ToMatrix();
-				Bone.SyncLegacyPoseDataFromSeparated();
+				Bone.LocalBindPose = LocalTransform.ToMatrix();
 			}
+			Bone.LocalBindPose = LocalTransform.ToMatrix();
+			Skeleton->RebuildReferenceSkeletonDerivedData();
+			bSkeletonDirty = true;
 		}
 	}
 	else
@@ -906,7 +1195,10 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 	{
 		USkeletalMeshComponent* Comp = ViewportClient.GetPreviewMeshComponent();
 		UAnimInstance* AnimInst = Comp ? Comp->GetAnimInstance() : nullptr;
-		FAnimMontagePropertyPanel::Render(AnimTabState.CurrentMontage, Comp, AnimInst);
+		if (FAnimMontagePropertyPanel::Render(AnimTabState.CurrentMontage, Comp, AnimInst))
+		{
+			MarkCurrentAnimationDirty();
+		}
 	}
 	else if (AnimTabState.CurrentSequence)
 	{
@@ -922,7 +1214,10 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 
 		if (bShowNotifyDetails)
 		{
-			FAnimationTimelinePanel::RenderNotifyDetails(Seq, AnimTabState.SelectedNotifyIndex);
+			if (FAnimationTimelinePanel::RenderNotifyDetails(Seq, AnimTabState.SelectedNotifyIndex))
+			{
+				MarkCurrentAnimationDirty();
+			}
 		}
 		else if (bShowMorphDetails)
 		{
@@ -933,6 +1228,7 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 				AnimTabState.SelectedMorphKeyIndex
 			))
 			{
+				MarkCurrentAnimationDirty();
 				RefreshAnimationPreviewPose();
 			}
 		}
@@ -953,7 +1249,11 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 
 			// AnimSequence property 패널 — root motion 등 편집 가능한 항목.
 			ImGui::Dummy(ImVec2(0, 12));
-			FAnimSequencePropertyPanel::Render(Seq);
+			if (FAnimSequencePropertyPanel::Render(Seq))
+			{
+				MarkCurrentAnimationDirty();
+				RefreshAnimationPreviewPose();
+			}
 
 			USkeletalMeshComponent* PreviewMeshComponent = ViewportClient.GetPreviewMeshComponent();
 			USkeletalMesh* PreviewMesh = PreviewMeshComponent ? PreviewMeshComponent->GetSkeletalMesh() : SkeletalMesh;
@@ -1014,7 +1314,7 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 							}
 						}
 						AnimTabState.bMorphPreviewOverrideEnabled = bAnyOverride;
-						FAnimationManager::Get().SaveAnimationPreservingMetadata(Seq);
+						MarkCurrentAnimationDirty();
 						RefreshAnimationPreviewPose();
 					}
 					ImGui::PopID();
@@ -1292,11 +1592,18 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 		Comp->SetPlaying(!bPlaying);
 	}
 
-	FAnimationTimelinePanel::Render(NodeInst, Comp, AnimTabState.CurrentSequence, TimelineHeight,
+	if (FAnimationTimelinePanel::Render(NodeInst, Comp, AnimTabState.CurrentSequence, TimelineHeight,
 		AnimTabState.SelectedNotifyIndex,
 		AnimTabState.SelectedMorphCurveIndex,
 		AnimTabState.SelectedMorphKeyIndex
-	);
+	))
+	{
+		if (AnimTabState.CurrentSequence)
+		{
+			AnimTabState.DirtySequences.insert(AnimTabState.CurrentSequence);
+		}
+		RefreshAnimationPreviewPose();
+	}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1345,28 +1652,42 @@ void FMeshEditorWidget::RenderMeshStatsOverlay(ImDrawList* DrawList, const ImVec
 // Bone tree (Skeleton tab)
 // ─────────────────────────────────────────────────────────────────────────────
 
-void FMeshEditorWidget::RenderBoneTree(const FSkeletalMesh* Asset, int32 Index)
+void FMeshEditorWidget::RenderBoneTree(USkeleton* Skeleton, const FReferenceSkeleton& RefSkeleton, int32 Index)
 {
-	const FBone& Bone = Asset->Bones[Index];
+	const FReferenceBone& Bone = RefSkeleton.Bones[Index];
 
 	ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_DefaultOpen;
 
-	if (Index == SelectedBoneIndex)
+	if (Index == SelectedBoneIndex && SelectedSocketIndex < 0)
 	{
 		Flags |= ImGuiTreeNodeFlags_Selected;
 	}
 
 	bool bHasChildren = false;
-	for (int32 i = Index + 1; i < static_cast<int32>(Asset->Bones.size()); ++i)
+	for (int32 i = Index + 1; i < RefSkeleton.GetNumBones(); ++i)
 	{
-		if (Asset->Bones[i].ParentIndex == Index)
+		if (RefSkeleton.Bones[i].ParentIndex == Index)
 		{
 			bHasChildren = true;
 			break;
 		}
 	}
 
-	if (!bHasChildren)
+	bool bHasSockets = false;
+	if (Skeleton)
+	{
+		const FName BoneName(Bone.Name);
+		for (const FSkeletalMeshSocket& Socket : Skeleton->GetSockets())
+		{
+			if (Socket.BoneName == BoneName)
+			{
+				bHasSockets = true;
+				break;
+			}
+		}
+	}
+
+	if (!bHasChildren && !bHasSockets)
 	{
 		Flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 	}
@@ -1376,18 +1697,85 @@ void FMeshEditorWidget::RenderBoneTree(const FSkeletalMesh* Asset, int32 Index)
 	if (ImGui::IsItemClicked())
 	{
 		SelectedBoneIndex = Index;
+		SelectedSocketIndex = -1;
 		ViewportClient.SetSelectedBone(Cast<USkeletalMesh>(EditedObject), Index);
 	}
 
-	if (bOpen && bHasChildren)
+	if (ImGui::BeginPopupContextItem())
 	{
-		for (int32 i = Index + 1; i < static_cast<int32>(Asset->Bones.size()); ++i)
+		if (ImGui::MenuItem("Add Socket") && Skeleton)
 		{
-			if (Asset->Bones[i].ParentIndex == Index)
+			FSkeletalMeshSocket Socket;
+			Socket.Name = FName(GenerateUniqueSocketName(Skeleton, "Socket"));
+			Socket.BoneName = FName(Bone.Name);
+			Skeleton->GetMutableSockets().push_back(Socket);
+			SelectedBoneIndex = -1;
+			SelectedSocketIndex = static_cast<int32>(Skeleton->GetSockets().size()) - 1;
+			BufferedSocketIndex = -2;
+			ViewportClient.SetSelectedSocket(Cast<USkeletalMesh>(EditedObject), Skeleton, SelectedSocketIndex);
+			bSkeletonDirty = true;
+		}
+		ImGui::EndPopup();
+	}
+
+	if (bOpen && (bHasChildren || bHasSockets))
+	{
+		for (int32 SocketIndex = 0; Skeleton && SocketIndex < static_cast<int32>(Skeleton->GetSockets().size()); ++SocketIndex)
+		{
+			if (Skeleton->GetSockets()[SocketIndex].BoneName == FName(Bone.Name))
 			{
-				RenderBoneTree(Asset, i);
+				RenderSocketTreeNode(Skeleton, SocketIndex);
+			}
+		}
+
+		for (int32 i = Index + 1; i < RefSkeleton.GetNumBones(); ++i)
+		{
+			if (RefSkeleton.Bones[i].ParentIndex == Index)
+			{
+				RenderBoneTree(Skeleton, RefSkeleton, i);
 			}
 		}
 		ImGui::TreePop();
+	}
+}
+
+void FMeshEditorWidget::RenderSocketTreeNode(USkeleton* Skeleton, int32 SocketIndex)
+{
+	if (!Skeleton || SocketIndex < 0 || SocketIndex >= static_cast<int32>(Skeleton->GetSockets().size()))
+	{
+		return;
+	}
+
+	const FSkeletalMeshSocket& Socket = Skeleton->GetSockets()[SocketIndex];
+	ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
+	if (SocketIndex == SelectedSocketIndex)
+	{
+		Flags |= ImGuiTreeNodeFlags_Selected;
+	}
+
+	const FString Label = Socket.Name.ToString() + "##Socket" + std::to_string(SocketIndex);
+	ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(170, 170, 255, 255));
+	ImGui::TreeNodeEx(Label.c_str(), Flags);
+	ImGui::PopStyleColor();
+	if (ImGui::IsItemClicked())
+	{
+		SelectedBoneIndex = -1;
+		SelectedSocketIndex = SocketIndex;
+		BufferedSocketIndex = -2;
+		ViewportClient.SetSelectedSocket(Cast<USkeletalMesh>(EditedObject), Skeleton, SocketIndex);
+	}
+
+	if (ImGui::BeginPopupContextItem())
+	{
+		if (ImGui::MenuItem("Delete Socket"))
+		{
+			TArray<FSkeletalMeshSocket>& Sockets = Skeleton->GetMutableSockets();
+			Sockets.erase(Sockets.begin() + SocketIndex);
+			SelectedSocketIndex = -1;
+			BufferedSocketIndex = -2;
+			ViewportClient.SetSelectedBone(Cast<USkeletalMesh>(EditedObject), -1);
+			bSkeletonDirty = true;
+		}
+		ImGui::EndPopup();
 	}
 }

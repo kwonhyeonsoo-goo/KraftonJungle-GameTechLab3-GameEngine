@@ -11,11 +11,10 @@ class USkeletalMeshComponent;
 //   Sections (Name, StartTime, LinkTime, NextSectionName) — 추가/삭제
 //   Preview: Play (특정 section 부터), JumpToSection, Stop, 상태 표시
 //
-// 모든 편집은 즉시 .uasset 에 재 저장.
 // Preview 호출은 owning AnimInstance 를 통해 PlayMontage / Montage_JumpToSection / StopMontage 사용.
 namespace FAnimMontagePropertyPanel
 {
-	void Render(UAnimMontage* Montage,
+	bool Render(UAnimMontage* Montage,
 	            USkeletalMeshComponent* PreviewComp = nullptr,
 	            UAnimInstance* PreviewAnimInstance = nullptr);
 }

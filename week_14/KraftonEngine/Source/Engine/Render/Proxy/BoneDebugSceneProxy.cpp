@@ -1,5 +1,6 @@
 #include "BoneDebugSceneProxy.h"
 
+#include "Animation/Skeleton/Skeleton.h"
 #include "Component/Debug/BoneDebugComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
@@ -85,6 +86,7 @@ FBoneDebugSceneProxy::FBoneDebugSceneProxy(UBoneDebugComponent* InComponent)
 
 	BoneColor = FVector4(0.49f, 0.91f, 0.48f, 1.0f);
 	ParentBoneColor = FVector4(0.93f, 0.69f, 0.38f, 1.0f);
+	SocketColor = FVector4(170.0f / 255.0f, 170.0f / 255.0f, 1.0f, 1.0f);
 	RebuildLines();
 }
 
@@ -102,6 +104,7 @@ void FBoneDebugSceneProxy::RebuildLines()
 {
 	CachedLines.clear();
 	CachedParentBoneLines.clear();
+	CachedSocketLines.clear();
 
 	UBoneDebugComponent* Comp = static_cast<UBoneDebugComponent*>(GetOwner());
 	if (!Comp) return;
@@ -112,6 +115,7 @@ void FBoneDebugSceneProxy::RebuildLines()
 	USkeletalMesh* Mesh = MeshComp->GetSkeletalMesh();
 	FSkeletalMesh* Asset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
 	if (!Asset) return;
+	USkeleton* Skeleton = Mesh ? Mesh->GetSkeleton() : nullptr;
 
 	const int32 BoneCount = static_cast<int32>(Asset->Bones.size());
 	if (BoneCount <= 0) return;
@@ -122,6 +126,32 @@ void FBoneDebugSceneProxy::RebuildLines()
 
 	const float JointRadius = ModelSize * 0.01f;
 	const float PyramidWidthScale = 0.03f;
+
+	TArray<FMatrix> BoneGlobals;
+	if (Skeleton && !Skeleton->GetSockets().empty())
+	{
+		MeshComp->GetCurrentBoneGlobalMatrices(BoneGlobals);
+	}
+
+	auto AddSocketLines = [&](int32 SocketIndex)
+	{
+		if (!Skeleton || SocketIndex < 0 || SocketIndex >= static_cast<int32>(Skeleton->GetSockets().size()))
+		{
+			return;
+		}
+
+		const FSkeletalMeshSocket& Socket = Skeleton->GetSockets()[SocketIndex];
+		int32 SocketBoneIndex = -1;
+		if (!Skeleton->ResolveSocketBoneIndex(Socket, SocketBoneIndex) ||
+			SocketBoneIndex < 0 ||
+			SocketBoneIndex >= static_cast<int32>(BoneGlobals.size()))
+		{
+			return;
+		}
+
+		const FMatrix SocketWorldMatrix = Socket.GetRelativeTransform() * BoneGlobals[SocketBoneIndex] * MeshComp->GetWorldMatrix();
+		BuildLowSphereLines(CachedSocketLines, SocketWorldMatrix.GetLocation(), JointRadius);
+	};
 
 	if (Comp->GetDrawMode() == EBoneDebugDrawMode::AllBones)
 	{
@@ -137,6 +167,21 @@ void FBoneDebugSceneProxy::RebuildLines()
 				BuildBonePyramidLines(CachedLines, BonePos, ParentPos, PyramidWidthScale);
 			}
 		}
+
+		if (Skeleton)
+		{
+			for (int32 SocketIndex = 0; SocketIndex < static_cast<int32>(Skeleton->GetSockets().size()); ++SocketIndex)
+			{
+				AddSocketLines(SocketIndex);
+			}
+		}
+		return;
+	}
+
+	const int32 SocketIndex = Comp->GetSelectedSocketIndex();
+	if (SocketIndex >= 0)
+	{
+		AddSocketLines(SocketIndex);
 		return;
 	}
 
@@ -161,5 +206,17 @@ void FBoneDebugSceneProxy::RebuildLines()
 		const int32 ParentIndex = Asset->Bones[BoneIndex].ParentIndex;
 		const FVector ParentPos = MeshComp->GetBoneLocationByIndex(ParentIndex);
 		BuildBonePyramidLines(CachedParentBoneLines, BonePos, ParentPos, PyramidWidthScale);
+	}
+
+	if (Skeleton)
+	{
+		const FName SelectedBoneName(Asset->Bones[BoneIndex].Name);
+		for (int32 i = 0; i < static_cast<int32>(Skeleton->GetSockets().size()); ++i)
+		{
+			if (Skeleton->GetSockets()[i].BoneName == SelectedBoneName)
+			{
+				AddSocketLines(i);
+			}
+		}
 	}
 }

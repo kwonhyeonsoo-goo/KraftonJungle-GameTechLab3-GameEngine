@@ -6,7 +6,6 @@
 #include "Animation/Sequence/AnimDataModel.h"
 #include "Animation/Notify/AnimNotify.h"
 #include "Animation/Notify/AnimNotifyState.h"
-#include "Animation/AnimationManager.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
@@ -605,7 +604,7 @@ namespace
 	}
 }
 
-void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
+bool FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 	USkeletalMeshComponent*                                   Comp,
 	UAnimSequence*                                            Seq,
 	float                                                     PanelHeight,
@@ -614,13 +613,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 	int32&                                                    InOutSelectedMorphKeyIndex
 	)
 {
-	// 변경 누적 플래그 — drag/resize 등 연속 이벤트는 매 프레임 commit 하지 않고
-	// 마우스 release 시점에 일괄 save (디스크 thrash 방지). 인스턴트 이벤트는 즉시 save.
-	// 프레임 간 보존 위해 static — 마우스 누르고 있는 동안 dirty 유지, release 에 일괄 flush.
-	static bool sPendingSave = false;
-	auto SaveSeqNow = [&]() {
-		if (Seq) FAnimationManager::Get().SaveAnimationPreservingMetadata(Seq);
-	};
+	bool bChanged = false;
 
 	// 선택 인덱스 stale clamp — 시퀀스 전환 등으로 out-of-range 면 -1.
 	if (Seq)
@@ -655,7 +648,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 		            ColLabel, Msg);
 		ImGui::EndChild();
 		ImGui::EndChild();
-		return;
+		return false;
 	}
 
 	static bool bNotifiesExpanded    = true;
@@ -744,7 +737,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 						MakeNotifyFromClass(Seq, Cls, Name, sPendingNotifyTime, 0.0f, false));
 					Seq->RefreshRuntimeNotifies();
 					InOutSelectedNotifyIndex = static_cast<int32>(Seq->GetMutableModelNotifies().size()) - 1;
-					SaveSeqNow();
+					bChanged = true;
 				}
 			}
 			ImGui::EndMenu();
@@ -769,7 +762,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 						MakeNotifyFromClass(Seq, Cls, Name, sPendingNotifyTime, DefaultDur, true));
 					Seq->RefreshRuntimeNotifies();
 					InOutSelectedNotifyIndex = static_cast<int32>(Seq->GetMutableModelNotifies().size()) - 1;
-					SaveSeqNow();
+					bChanged = true;
 				}
 			}
 			ImGui::EndMenu();
@@ -928,7 +921,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 				const float MaxStart = bHasDur ? std::max(PlayLength - N.Duration, 0.0f)
 				                               : PlayLength;
 				N.TriggerTime    = std::clamp(MouseTime() - sGrabOffsetTime, 0.0f, MaxStart);
-				sPendingSave    = true;   // 마우스 release 시 일괄 save.
+				bChanged = true;
 			}
 			if (bHovered || bActive)
 			{
@@ -966,7 +959,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 					const float NewEnd = std::clamp(MouseTime(),
 					                                N.TriggerTime + 0.01f, PlayLength);
 					N.Duration     = NewEnd - N.TriggerTime;
-					sPendingSave   = true;
+					bChanged = true;
 				}
 			}
 
@@ -1008,7 +1001,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 				{
 					N.NotifyName = FName(FString(sRenameBuf));
 					Seq->RefreshRuntimeNotifies();
-					SaveSeqNow();
+					bChanged = true;
 					ImGui::CloseCurrentPopup();
 				}
 				ImGui::EndPopup();
@@ -1086,7 +1079,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 			{
 				--InOutSelectedNotifyIndex;
 			}
-			SaveSeqNow();
+			bChanged = true;
 		}
 		// 추가/삭제/드래그(시간 변경)를 dispatch 캐시에 반영 → 프리뷰에서 실제 발사.
 		Seq->RefreshRuntimeNotifies();
@@ -1139,7 +1132,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 						InOutSelectedMorphCurveIndex = static_cast<int32>(Seq->GetMorphTargetCurves().size()) - 1;
 						InOutSelectedMorphKeyIndex   = -1;
 						InOutSelectedNotifyIndex     = -1;
-						SaveSeqNow();
+						bChanged = true;
 						break;
 					}
 				}
@@ -1190,7 +1183,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 						}
 					}
 					InOutSelectedNotifyIndex = -1;
-					SaveSeqNow();
+					bChanged = true;
 				}
 
 				DL->AddRectFilled(
@@ -1277,7 +1270,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 						{
 							Key.Value = ClampMorphCurveValue(ScreenToValue(ImGui::GetIO().MousePos.y));
 						}
-						sPendingSave = true;
+						bChanged = true;
 					}
 					if (ImGui::BeginPopupContextItem("##morphKeyCtx"))
 					{
@@ -1296,7 +1289,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 						Curve.Curve.Keys.erase(Curve.Curve.Keys.begin() + KeyIndex);
 						InOutSelectedMorphKeyIndex = -1;
 						InOutSelectedNotifyIndex = -1;
-						SaveSeqNow();
+						bChanged = true;
 						ImGui::PopID();
 						bBreakKeyLoop = true;
 						break;
@@ -1342,7 +1335,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 						if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left, -1.0f))
 						{
 							SetArriveHandleFromPoint(PrevKey, SelectedKey, XToTime(ImGui::GetIO().MousePos.x), ScreenToValue(ImGui::GetIO().MousePos.y));
-							sPendingSave = true;
+							bChanged = true;
 						}
 					}
 
@@ -1361,7 +1354,7 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 						if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left, -1.0f))
 						{
 							SetLeaveHandleFromPoint(SelectedKey, NextKey, XToTime(ImGui::GetIO().MousePos.x), ScreenToValue(ImGui::GetIO().MousePos.y));
-							sPendingSave = true;
+							bChanged = true;
 						}
 					}
 					ImGui::PopID();
@@ -1450,14 +1443,8 @@ void FAnimationTimelinePanel::Render(UAnimSingleNodeInstance* NodeInst,
 	ImGui::SetCursorScreenPos(TransportOrigin);
 	ImGui::Dummy(ImVec2(TransportW, TransportH));
 
-	// Drag/Resize 의 누적 dirty 를 마우스 release 에 일괄 save (frame 별 디스크 thrash 방지).
-	if (sPendingSave && !ImGui::IsMouseDown(ImGuiMouseButton_Left))
-	{
-		SaveSeqNow();
-		sPendingSave = false;
-	}
-
 	ImGui::EndChild();
+	return bChanged;
 }
 
 bool FAnimationTimelinePanel::RenderNotifyDetails(UAnimSequence* Seq, int32 SelectedNotifyIndex)
@@ -1545,7 +1532,6 @@ bool FAnimationTimelinePanel::RenderNotifyDetails(UAnimSequence* Seq, int32 Sele
 	if (bChanged)
 	{
 		Seq->RefreshRuntimeNotifies();
-		FAnimationManager::Get().SaveAnimationPreservingMetadata(Seq);
 	}
 	return bChanged;
 }
@@ -1566,8 +1552,6 @@ bool FAnimationTimelinePanel::RenderMorphDetails(
 
 	FMorphTargetCurve& Curve                    = Curves[InOutSelectedMorphCurveIndex];
 	bool               bChanged                 = false;
-	bool               bImmediateSave           = false;
-	static bool        sMorphDetailsPendingSave = false;
 
 	ImGui::TextUnformatted("Morph Curve Details");
 	ImGui::Separator();
@@ -1594,7 +1578,6 @@ bool FAnimationTimelinePanel::RenderMorphDetails(
 				{
 					Curve.MorphTargetName = Target.Name;
 					bChanged = true;
-					bImmediateSave = true;
 				}
 
 				if (bSelected)
@@ -1644,7 +1627,6 @@ bool FAnimationTimelinePanel::RenderMorphDetails(
 				SelectedKey->Value = ClampMorphCurveValue(SelectedKey->Value);
 			}
 			bChanged = true;
-			sMorphDetailsPendingSave = true;
 		}
 	}
 
@@ -1657,7 +1639,6 @@ bool FAnimationTimelinePanel::RenderMorphDetails(
 			SelectedKey->LeaveTangent  = 0.0f;
 			SelectedKey->TangentMode   = 1;
 			bChanged                  = true;
-			bImmediateSave            = true;
 		}
 		ImGui::SameLine();
 		if (ImGui::SmallButton("Auto Handles"))
@@ -1666,7 +1647,6 @@ bool FAnimationTimelinePanel::RenderMorphDetails(
 			SelectedKey->bArriveTangentWeighted = false;
 			SelectedKey->bLeaveTangentWeighted  = false;
 			bChanged                            = true;
-			bImmediateSave                      = true;
 		}
 		ImGui::TextDisabled("Bezier handles are edited in the timeline graph. The properties above are reflected UPROPERTY fields.");
 	}
@@ -1681,17 +1661,6 @@ bool FAnimationTimelinePanel::RenderMorphDetails(
 				return A.TimeSeconds < B.TimeSeconds;
 			}
 		);
-	}
-
-	if (bImmediateSave)
-	{
-		FAnimationManager::Get().SaveAnimationPreservingMetadata(Seq);
-		sMorphDetailsPendingSave = false;
-	}
-	else if (sMorphDetailsPendingSave && !ImGui::IsMouseDown(ImGuiMouseButton_Left) && !ImGui::IsAnyItemActive())
-	{
-		FAnimationManager::Get().SaveAnimationPreservingMetadata(Seq);
-		sMorphDetailsPendingSave = false;
 	}
 
 	return bChanged;

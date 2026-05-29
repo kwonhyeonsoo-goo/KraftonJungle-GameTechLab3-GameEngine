@@ -15,7 +15,7 @@ class USkeletalMesh;
 // 좌상단 AssetDetails 패널이 같은 인덱스를 읽어 RenderNotifyDetails 로 UPROPERTY 편집.
 namespace FAnimationTimelinePanel
 {
-	void Render(UAnimSingleNodeInstance* NodeInst,
+	bool Render(UAnimSingleNodeInstance* NodeInst,
 	            USkeletalMeshComponent*  Comp,
 	            UAnimSequence*           Seq,
 	            float                    PanelHeight,

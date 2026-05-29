@@ -391,7 +391,7 @@ static USceneComponent* DuplicateSceneSubtree(
 	DupNode->SetOwner(DupOwner);
 	if (DupParent)
 	{
-		DupNode->AttachToComponent(DupParent); // Register 전에 부모 연결
+		DupNode->AttachToComponent(DupParent, Src->GetAttachSocketName()); // Register 전에 부모 연결
 	}
 	DupOwner->RegisterComponent(DupNode); // Outer/OwnedComponents/CreateRenderState 일괄 처리
 	Visited.insert(Src);
