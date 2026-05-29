@@ -29,6 +29,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <filesystem>
 #include <random>
 #include <utility>
 
@@ -55,6 +56,73 @@ const FDebugPlaceActorOption GDebugPlaceActorOptions[] = {
 	{ "Character",     FLevelViewportLayout::EViewportPlaceActorType::Character },
 	{ "Lua Character", FLevelViewportLayout::EViewportPlaceActorType::LuaCharacter },
 };
+
+constexpr float GDocumentTabStripHeight = 34.0f;
+constexpr float GDocumentTabWidth = 180.0f;
+constexpr float GDocumentTabRightPadding = 8.0f;
+
+struct FDocumentTabVisual
+{
+	ImVec4 AccentColor;
+	const char* Tooltip = "";
+};
+
+FDocumentTabVisual GetDocumentTabVisual(EEditorDocumentTabKind Kind)
+{
+	switch (Kind)
+	{
+	case EEditorDocumentTabKind::LevelEditor:
+		return { ImVec4(0.96f, 0.67f, 0.16f, 1.0f), "Level Scene" };
+	case EEditorDocumentTabKind::StaticMeshEditor:
+		return { ImVec4(0.22f, 0.78f, 0.45f, 1.0f), "Static Mesh Editor" };
+	case EEditorDocumentTabKind::SkeletalMeshEditor:
+		return { ImVec4(0.18f, 0.70f, 0.95f, 1.0f), "Skeletal Mesh Editor" };
+	case EEditorDocumentTabKind::ParticleEditor:
+		return { ImVec4(0.72f, 0.42f, 0.95f, 1.0f), "Particle Editor" };
+	case EEditorDocumentTabKind::AnimGraphEditor:
+		return { ImVec4(0.86f, 0.58f, 0.22f, 1.0f), "Anim Graph Editor" };
+	case EEditorDocumentTabKind::Unsupported:
+	default:
+		return { ImVec4(0.58f, 0.62f, 0.70f, 1.0f), "Editor Tab" };
+	}
+}
+
+const char* GetDocumentTabKindName(EEditorDocumentTabKind Kind)
+{
+	switch (Kind)
+	{
+	case EEditorDocumentTabKind::LevelEditor: return "Level";
+	case EEditorDocumentTabKind::StaticMeshEditor: return "StaticMesh";
+	case EEditorDocumentTabKind::SkeletalMeshEditor: return "SkeletalMesh";
+	case EEditorDocumentTabKind::ParticleEditor: return "Particle";
+	case EEditorDocumentTabKind::AnimGraphEditor: return "AnimGraph";
+	case EEditorDocumentTabKind::Unsupported:
+	default:
+		return "Unsupported";
+	}
+}
+
+FString MakeDocumentTabImGuiId(const FEditorDocumentTabEntry& Tab)
+{
+	return Tab.Label + "###DocumentTab_" + GetDocumentTabKindName(Tab.Id.Kind) + "_" + Tab.Id.PayloadId;
+}
+
+FString GetFileStemForDisplay(const FString& Path)
+{
+	if (Path.empty())
+	{
+		return FString();
+	}
+
+	std::filesystem::path FilePath(Path);
+	FString Stem = FilePath.stem().string();
+	if (!Stem.empty())
+	{
+		return Stem;
+	}
+
+	return FilePath.filename().string();
+}
 
 }
 
@@ -133,10 +201,11 @@ void FEditorMainPanel::Render(float DeltaTime)
 	RenderMainMenuBar();
 
 	const float FooterHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-	RenderMainDockSpace(FooterHeight);
+	RenderDocumentTabStrip(FooterHeight);
+	RenderMainDockSpace(FooterHeight, GDocumentTabStripHeight);
 
 	// 뷰포트 렌더링은 EditorEngine이 담당 (SSplitter 레이아웃 + ImGui::Image)
-	if (EditorEngine)
+	if (EditorEngine && DocumentTabs.IsLevelEditorActive())
 	{
 		SCOPE_STAT_CAT("EditorEngine->RenderViewportUI", "5_UI");
 		EditorEngine->RenderViewportUI(DeltaTime);
@@ -148,48 +217,49 @@ void FEditorMainPanel::Render(float DeltaTime)
 	}
 
 	const FEditorSettings& Settings = FEditorSettings::Get();
+	const bool bLevelDocumentActive = DocumentTabs.IsLevelEditorActive();
 
 	if (!bHideEditorWindows && Settings.UI.bImGUISettings)
 	{
 		ImGuiSetting::ShowSetting();
 	}
 
-	if (!bHideEditorWindows && Settings.UI.bControl)
+	if (!bHideEditorWindows && bLevelDocumentActive && Settings.UI.bControl)
 	{
 		SCOPE_STAT_CAT("ControlWidget.Render", "5_UI");
 		ControlWidget.Render(DeltaTime);
 	}
 
-	if (!bHideEditorWindows && Settings.UI.bProperty)
+	if (!bHideEditorWindows && bLevelDocumentActive && Settings.UI.bProperty)
 	{
 		SCOPE_STAT_CAT("PropertyWidget.Render", "5_UI");
 		PropertyWidget.Render(DeltaTime);
 	}
 
-	if (!bHideEditorWindows && Settings.UI.bScene)
+	if (!bHideEditorWindows && bLevelDocumentActive && Settings.UI.bScene)
 	{
 		SCOPE_STAT_CAT("SceneWidget.Render", "5_UI");
 		SceneWidget.Render(DeltaTime);
 	}
 
-	if (!bHideEditorWindows && Settings.UI.bStat)
+	if (!bHideEditorWindows && bLevelDocumentActive && Settings.UI.bStat)
 	{
 		SCOPE_STAT_CAT("StatWidget.Render", "5_UI");
 		StatWidget.Render(DeltaTime);
 	}
 
-	if (!bHideEditorWindows && Settings.UI.bContentBrowser)
+	if (!bHideEditorWindows && bLevelDocumentActive && Settings.UI.bContentBrowser)
 	{
 		SCOPE_STAT_CAT("ContentBrowserWidget.Render", "5_UI");
 		ContentBrowserWidget.Render(DeltaTime);
 	}
 
-	if (!bHideEditorWindows && Settings.UI.bShadowMapDebug)
+	if (!bHideEditorWindows && bLevelDocumentActive && Settings.UI.bShadowMapDebug)
 	{
 		ShadowMapDebugWidget.Render(DeltaTime);
 	}
 
-	if (!bHideEditorWindows && Settings.UI.bAnimationDebug)
+	if (!bHideEditorWindows && bLevelDocumentActive && Settings.UI.bAnimationDebug)
 	{
 		SCOPE_STAT_CAT("AnimationDebugWidget.Render", "5_UI");
 		AnimationDebugWidget.Render(DeltaTime);
@@ -198,9 +268,14 @@ void FEditorMainPanel::Render(float DeltaTime)
 	ProjectSettingsWidget.Render();
 	WorldSettingsWidget.Render();
 
-	if (!bHideEditorWindows)
+	if (!bHideEditorWindows && bLevelDocumentActive)
 	{
 		RenderEditorDebugPanel();
+	}
+
+	if (!bHideEditorWindows && !bLevelDocumentActive)
+	{
+		RenderActiveDocument(GDocumentTabStripHeight, FooterHeight, DeltaTime);
 	}
 
 	RenderShortcutOverlay();
@@ -302,7 +377,7 @@ void FEditorMainPanel::RenderMainMenuBar()
 	ImGui::EndMainMenuBar();
 }
 
-void FEditorMainPanel::RenderMainDockSpace(float ReservedBottomHeight)
+void FEditorMainPanel::RenderMainDockSpace(float ReservedBottomHeight, float ReservedTopHeight)
 {
 	ImGuiViewport* MainViewport = ImGui::GetMainViewport();
 	if (!MainViewport)
@@ -311,9 +386,11 @@ void FEditorMainPanel::RenderMainDockSpace(float ReservedBottomHeight)
 	}
 
 	ImVec2 DockSpaceSize = MainViewport->WorkSize;
-	DockSpaceSize.y = max(1.0f, DockSpaceSize.y - ReservedBottomHeight);
+	DockSpaceSize.y = max(1.0f, DockSpaceSize.y - ReservedTopHeight - ReservedBottomHeight);
+	ImVec2 DockSpacePos = MainViewport->WorkPos;
+	DockSpacePos.y += ReservedTopHeight;
 
-	ImGui::SetNextWindowPos(MainViewport->WorkPos);
+	ImGui::SetNextWindowPos(DockSpacePos);
 	ImGui::SetNextWindowSize(DockSpaceSize);
 	ImGui::SetNextWindowViewport(MainViewport->ID);
 
@@ -336,6 +413,201 @@ void FEditorMainPanel::RenderMainDockSpace(float ReservedBottomHeight)
 
 	ImGuiID DockSpaceId = ImGui::GetID("DockSpace");
 	ImGui::DockSpace(DockSpaceId, ImVec2(0.0f, 0.0f));
+
+	ImGui::End();
+}
+
+void FEditorMainPanel::RenderDocumentTabStrip(float ReservedBottomHeight)
+{
+	ImGuiViewport* MainViewport = ImGui::GetMainViewport();
+	if (!MainViewport)
+	{
+		return;
+	}
+
+	ImVec2 TabPos = MainViewport->WorkPos;
+	ImVec2 TabSize = ImVec2(MainViewport->WorkSize.x, GDocumentTabStripHeight);
+	TabSize.y = max(1.0f, (std::min)(TabSize.y, MainViewport->WorkSize.y - ReservedBottomHeight));
+
+	ImGui::SetNextWindowPos(TabPos);
+	ImGui::SetNextWindowSize(TabSize);
+	ImGui::SetNextWindowViewport(MainViewport->ID);
+
+	ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_NoTitleBar
+		| ImGuiWindowFlags_NoCollapse
+		| ImGuiWindowFlags_NoResize
+		| ImGuiWindowFlags_NoMove
+		| ImGuiWindowFlags_NoDocking
+		| ImGuiWindowFlags_NoScrollbar
+		| ImGuiWindowFlags_NoScrollWithMouse
+		| ImGuiWindowFlags_NoSavedSettings;
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.065f, 0.070f, 0.085f, 1.0f));
+	ImGui::Begin("DocumentTabsHost", nullptr, WindowFlags);
+	ImGui::PopStyleColor();
+	ImGui::PopStyleVar(3);
+
+	TArray<FEditorDocumentTabId> PendingCloseTabs;
+	bool bHasPendingActiveTab = false;
+	FEditorDocumentTabId PendingActiveTab;
+	ImDrawList* DrawList = ImGui::GetWindowDrawList();
+	const TArray<FEditorDocumentTabEntry>& Tabs = DocumentTabs.GetTabs();
+
+	for (int32 Index = 0; Index < static_cast<int32>(Tabs.size()); ++Index)
+	{
+		const FEditorDocumentTabEntry& Tab = Tabs[Index];
+		FString Label = Tab.Label;
+		if (Tab.Id.Kind == EEditorDocumentTabKind::LevelEditor)
+		{
+			Label = (EditorEngine && EditorEngine->HasCurrentLevelFilePath())
+				? FString("Level - ") + GetFileStemForDisplay(EditorEngine->GetCurrentLevelFilePath())
+				: FString("Level - Untitled");
+		}
+		if (Tab.bDirty)
+		{
+			Label += "*";
+		}
+
+		ImGui::PushID(Index);
+		const ImVec2 TabMin = ImGui::GetCursorScreenPos();
+		const ImVec2 TabMax(TabMin.x + GDocumentTabWidth, TabMin.y + GDocumentTabStripHeight);
+		ImGui::InvisibleButton("##DocumentTab", ImVec2(GDocumentTabWidth, GDocumentTabStripHeight));
+		const bool bHovered = ImGui::IsItemHovered();
+		const bool bActive = DocumentTabs.GetActiveTab() == Tab.Id;
+		const FDocumentTabVisual Visual = GetDocumentTabVisual(Tab.Id.Kind);
+
+		const float CloseSize = 16.0f;
+		const ImVec2 CloseMin(TabMax.x - CloseSize - 7.0f, TabMin.y + (GDocumentTabStripHeight - CloseSize) * 0.5f);
+		const ImVec2 CloseMax(CloseMin.x + CloseSize, CloseMin.y + CloseSize);
+		const bool bCloseHovered = Tab.bCanClose && ImGui::IsMouseHoveringRect(CloseMin, CloseMax);
+
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Left) && !bCloseHovered)
+		{
+			bHasPendingActiveTab = true;
+			PendingActiveTab = Tab.Id;
+		}
+		if (bCloseHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+		{
+			PendingCloseTabs.push_back(Tab.Id);
+		}
+
+		const ImU32 TabBg = ImGui::GetColorU32(
+			bActive
+				? ImVec4(0.115f, 0.125f, 0.150f, 1.0f)
+				: (bHovered ? ImVec4(0.095f, 0.102f, 0.125f, 1.0f) : ImVec4(0.075f, 0.080f, 0.098f, 1.0f)));
+		const ImU32 BorderColor = ImGui::GetColorU32(ImVec4(0.035f, 0.038f, 0.046f, 1.0f));
+		DrawList->AddRectFilled(TabMin, TabMax, TabBg, 0.0f);
+		DrawList->AddRect(TabMin, TabMax, BorderColor);
+
+		const ImVec2 IconCenter(TabMin.x + 17.0f, TabMin.y + GDocumentTabStripHeight * 0.5f);
+		DrawList->AddCircleFilled(IconCenter, 5.0f, ImGui::GetColorU32(Visual.AccentColor), 12);
+		if (Tab.Id.Kind == EEditorDocumentTabKind::LevelEditor)
+		{
+			DrawList->AddTriangleFilled(
+				ImVec2(IconCenter.x, IconCenter.y - 6.0f),
+				ImVec2(IconCenter.x - 6.0f, IconCenter.y + 5.0f),
+				ImVec2(IconCenter.x + 6.0f, IconCenter.y + 5.0f),
+				ImGui::GetColorU32(Visual.AccentColor));
+		}
+
+		const ImU32 TextColor = ImGui::GetColorU32(bActive ? ImVec4(0.88f, 0.91f, 0.96f, 1.0f) : ImVec4(0.58f, 0.62f, 0.70f, 1.0f));
+		const ImVec2 TextMin(TabMin.x + 32.0f, TabMin.y + (GDocumentTabStripHeight - ImGui::GetTextLineHeight()) * 0.5f);
+		const ImVec2 TextMax(Tab.bCanClose ? CloseMin.x - 5.0f : TabMax.x - 10.0f, TabMax.y - 5.0f);
+		if (TextMax.x > TextMin.x + 6.0f)
+		{
+			DrawList->PushClipRect(TextMin, TextMax, true);
+			DrawList->AddText(TextMin, TextColor, Label.c_str());
+			DrawList->PopClipRect();
+		}
+
+		if (Tab.bCanClose)
+		{
+			const ImU32 CloseColor = ImGui::GetColorU32(
+				bCloseHovered ? ImVec4(0.94f, 0.96f, 1.0f, 1.0f) : ImVec4(0.50f, 0.54f, 0.62f, 1.0f));
+			if (bCloseHovered)
+			{
+				DrawList->AddRectFilled(CloseMin, CloseMax, ImGui::GetColorU32(ImVec4(0.23f, 0.25f, 0.31f, 1.0f)), 3.0f);
+			}
+			DrawList->AddLine(ImVec2(CloseMin.x + 4.0f, CloseMin.y + 4.0f), ImVec2(CloseMax.x - 4.0f, CloseMax.y - 4.0f), CloseColor, 1.5f);
+			DrawList->AddLine(ImVec2(CloseMax.x - 4.0f, CloseMin.y + 4.0f), ImVec2(CloseMin.x + 4.0f, CloseMax.y - 4.0f), CloseColor, 1.5f);
+		}
+
+		if (bActive)
+		{
+			DrawList->AddLine(
+				ImVec2(TabMin.x, TabMax.y - 1.0f),
+				ImVec2(TabMax.x, TabMax.y - 1.0f),
+				ImGui::GetColorU32(Visual.AccentColor),
+				2.0f);
+		}
+
+		if (bHovered)
+		{
+			ImGui::SetTooltip("%s\n%s", Label.c_str(), Visual.Tooltip);
+		}
+
+		ImGui::PopID();
+		ImGui::SameLine(0.0f, 0.0f);
+	}
+
+	if (bHasPendingActiveTab)
+	{
+		DocumentTabs.SetActiveTab(PendingActiveTab);
+	}
+
+	for (const FEditorDocumentTabId& TabId : PendingCloseTabs)
+	{
+		AssetEditorManager.CloseEditorForTab(TabId);
+		DocumentTabs.CloseTab(TabId);
+	}
+
+	const float UsedWidth = GDocumentTabWidth * static_cast<float>(Tabs.size());
+	if (UsedWidth < TabSize.x - GDocumentTabRightPadding)
+	{
+		ImGui::SetCursorScreenPos(ImVec2(TabPos.x + UsedWidth, TabPos.y));
+		ImGui::Dummy(ImVec2(TabSize.x - UsedWidth - GDocumentTabRightPadding, GDocumentTabStripHeight));
+	}
+
+	ImGui::End();
+}
+
+void FEditorMainPanel::RenderActiveDocument(float ReservedTopHeight, float ReservedBottomHeight, float DeltaTime)
+{
+	ImGuiViewport* MainViewport = ImGui::GetMainViewport();
+	if (!MainViewport)
+	{
+		return;
+	}
+
+	ImVec2 HostPos = MainViewport->WorkPos;
+	HostPos.y += ReservedTopHeight;
+	ImVec2 HostSize = MainViewport->WorkSize;
+	HostSize.y = max(1.0f, HostSize.y - ReservedTopHeight - ReservedBottomHeight);
+
+	ImGui::SetNextWindowPos(HostPos);
+	ImGui::SetNextWindowSize(HostSize);
+	ImGui::SetNextWindowViewport(MainViewport->ID);
+
+	ImGuiWindowFlags HostFlags = ImGuiWindowFlags_NoTitleBar
+		| ImGuiWindowFlags_NoCollapse
+		| ImGuiWindowFlags_NoResize
+		| ImGuiWindowFlags_NoMove
+		| ImGuiWindowFlags_NoDocking
+		| ImGuiWindowFlags_NoSavedSettings;
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6.0f, 6.0f));
+	ImGui::Begin("ActiveDocumentHost", nullptr, HostFlags);
+	ImGui::PopStyleVar(3);
+
+	if (!AssetEditorManager.RenderActiveEditorDocument(DocumentTabs.GetActiveTab(), DeltaTime))
+	{
+		DocumentTabs.CloseTab(DocumentTabs.GetActiveTab());
+	}
 
 	ImGui::End();
 }
@@ -905,5 +1177,27 @@ void FEditorMainPanel::RestoreEditorWindowsAfterPIE()
 
 void FEditorMainPanel::OpenAssetEditorForObject(UObject* Object)
 {
-	AssetEditorManager.OpenEditorForObject(Object);
+	FAssetEditorOpenResult Result = AssetEditorManager.OpenEditorForObject(Object);
+	if (Result.bOpened && Result.bDocumentTab)
+	{
+		DocumentTabs.OpenOrFocusTab(Result.TabId, Result.Label, true);
+	}
+}
+
+void FEditorMainPanel::CollectAssetEditorPreviewViewportClients(TArray<IEditorPreviewViewportClient*>& OutClients) const
+{
+	if (!DocumentTabs.IsLevelEditorActive())
+	{
+		AssetEditorManager.CollectPreviewViewportClientsForTab(DocumentTabs.GetActiveTab(), OutClients);
+	}
+}
+
+bool FEditorMainPanel::IsMouseOverAssetEditorPreviewViewport() const
+{
+	if (DocumentTabs.IsLevelEditorActive())
+	{
+		return false;
+	}
+
+	return AssetEditorManager.IsMouseOverEditorViewportForTab(DocumentTabs.GetActiveTab());
 }

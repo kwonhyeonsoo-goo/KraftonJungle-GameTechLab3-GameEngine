@@ -24,8 +24,23 @@ void FAssetEditorManager::Render(float DeltaTime)
 {
 	for (const auto& Editor : OpenEditors)
 	{
-		Editor->Render(DeltaTime);
+		if (Editor && !Editor->SupportsDocumentTabs())
+		{
+			Editor->Render(DeltaTime);
+		}
 	}
+}
+
+bool FAssetEditorManager::RenderActiveEditorDocument(const FEditorDocumentTabId& TabId, float DeltaTime)
+{
+	FAssetEditorWidget* Editor = FindEditorForTab(TabId);
+	if (!Editor || !Editor->IsOpen())
+	{
+		return false;
+	}
+
+	Editor->RenderDocument(DeltaTime);
+	return Editor->IsOpen();
 }
 
 void FAssetEditorManager::CloseAll()
@@ -40,7 +55,7 @@ void FAssetEditorManager::CloseAll()
 	OpenEditors.clear();
 }
 
-bool FAssetEditorManager::OpenEditorForObject(UObject* Object)
+FAssetEditorOpenResult FAssetEditorManager::OpenEditorForObject(UObject* Object)
 {
 	RemoveClosedEditors();
 
@@ -49,7 +64,7 @@ bool FAssetEditorManager::OpenEditorForObject(UObject* Object)
 		if (Editor && Editor->IsEditingObject(Object))
 		{
 			Editor->RequestFocus();
-			return true;
+			return MakeOpenResult(*Editor);
 		}
 	}
 
@@ -59,7 +74,7 @@ bool FAssetEditorManager::OpenEditorForObject(UObject* Object)
 		{
 			Editor->Initialize(EditorEngine);
 			Editor->Open(Object);
-			return true;
+			return MakeOpenResult(*Editor);
 		}
 	}
 
@@ -70,11 +85,22 @@ bool FAssetEditorManager::OpenEditorForObject(UObject* Object)
 
 		Editor->Initialize(EditorEngine);
 		Editor->Open(Object);
+		FAssetEditorOpenResult Result = MakeOpenResult(*Editor);
 		OpenEditors.push_back(std::move(Editor));
-		return true;
+		return Result;
 	}
 
-	return false;
+	return FAssetEditorOpenResult {};
+}
+
+void FAssetEditorManager::CloseEditorForTab(const FEditorDocumentTabId& TabId)
+{
+    FAssetEditorWidget* Editor = FindEditorForTab(TabId);
+    if (Editor && Editor->IsOpen())
+    {
+        Editor->Close();
+    }
+    RemoveClosedEditors();
 }
 
 void FAssetEditorManager::CollectPreviewViewportClients(TArray<IEditorPreviewViewportClient*>& OutClients) const
@@ -85,10 +111,35 @@ void FAssetEditorManager::CollectPreviewViewportClients(TArray<IEditorPreviewVie
 	}
 }
 
+void FAssetEditorManager::CollectPreviewViewportClientsForTab(const FEditorDocumentTabId& TabId, TArray<IEditorPreviewViewportClient*>& OutClients) const
+{
+	const FAssetEditorWidget* Editor = FindEditorForTab(TabId);
+	if (Editor && Editor->IsOpen())
+	{
+		Editor->CollectPreviewViewports(OutClients);
+	}
+}
+
 bool FAssetEditorManager::IsMouseOverAnyEditorViewport() const
 {
 	TArray<IEditorPreviewViewportClient*> PreviewViewportClients;
 	CollectPreviewViewportClients(PreviewViewportClients);
+
+	for (IEditorPreviewViewportClient* Client : PreviewViewportClients)
+	{
+		if (Client && Client->IsMouseOverViewport())
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool FAssetEditorManager::IsMouseOverEditorViewportForTab(const FEditorDocumentTabId& TabId) const
+{
+	TArray<IEditorPreviewViewportClient*> PreviewViewportClients;
+	CollectPreviewViewportClientsForTab(TabId, PreviewViewportClients);
 
 	for (IEditorPreviewViewportClient* Client : PreviewViewportClients)
 	{
@@ -121,4 +172,30 @@ void FAssetEditorManager::RemoveClosedEditors()
 			return !Editor || !Editor->IsOpen();
 		}),
 	OpenEditors.end());
+}
+
+FAssetEditorWidget* FAssetEditorManager::FindEditorForTab(const FEditorDocumentTabId& TabId) const
+{
+	for (const auto& Editor : OpenEditors)
+	{
+		if (Editor && Editor->SupportsDocumentTabs() && Editor->GetDocumentTabId() == TabId)
+		{
+			return Editor.get();
+		}
+	}
+
+	return nullptr;
+}
+
+FAssetEditorOpenResult FAssetEditorManager::MakeOpenResult(FAssetEditorWidget& Editor) const
+{
+	FAssetEditorOpenResult Result;
+	Result.bOpened = Editor.IsOpen();
+	Result.bDocumentTab = Editor.SupportsDocumentTabs();
+	if (Result.bDocumentTab)
+	{
+		Result.TabId = Editor.GetDocumentTabId();
+		Result.Label = Editor.GetDocumentTitle();
+	}
+	return Result;
 }

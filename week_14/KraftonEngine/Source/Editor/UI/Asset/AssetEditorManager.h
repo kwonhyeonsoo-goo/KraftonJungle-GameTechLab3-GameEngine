@@ -11,6 +11,14 @@ class UObject;
 class IEditorPreviewViewportClient;
 class UEditorEngine;
 
+struct FAssetEditorOpenResult
+{
+	bool bOpened = false;
+	bool bDocumentTab = false;
+	FEditorDocumentTabId TabId;
+	FString Label;
+};
+
 class FAssetEditorManager : public FGCObject
 {
 public:
@@ -28,13 +36,17 @@ public:
 
 	void Tick(float DeltaTime);
 	void Render(float DeltaTime);
+	bool RenderActiveEditorDocument(const FEditorDocumentTabId& TabId, float DeltaTime);
 
 	void CloseAll();
-	bool OpenEditorForObject(UObject* Object);
+	FAssetEditorOpenResult OpenEditorForObject(UObject* Object);
+	void CloseEditorForTab(const FEditorDocumentTabId& TabId);
 
 	void CollectPreviewViewportClients(TArray<IEditorPreviewViewportClient*>& OutClients) const;
+	void CollectPreviewViewportClientsForTab(const FEditorDocumentTabId& TabId, TArray<IEditorPreviewViewportClient*>& OutClients) const;
 
 	bool IsMouseOverAnyEditorViewport() const;
+	bool IsMouseOverEditorViewportForTab(const FEditorDocumentTabId& TabId) const;
 
 	const char* GetReferencerName() const override { return "FAssetEditorManager"; }
 	void AddReferencedObjects(FReferenceCollector& Collector) override;
@@ -42,6 +54,8 @@ public:
 	void RemoveClosedEditors();
 
 private:
+	FAssetEditorWidget* FindEditorForTab(const FEditorDocumentTabId& TabId) const;
+	FAssetEditorOpenResult MakeOpenResult(FAssetEditorWidget& Editor) const;
 	UEditorEngine* EditorEngine = nullptr;
 	TArray<std::function<std::unique_ptr<FAssetEditorWidget>()>> EditorFactories;
 	TArray<std::unique_ptr<FAssetEditorWidget>> OpenEditors;

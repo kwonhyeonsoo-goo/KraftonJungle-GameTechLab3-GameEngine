@@ -2101,6 +2101,32 @@ void FParticleEditorWidget::Render(float DeltaTime)
 		return;
 	}
 
+	RenderDocument(DeltaTime);
+
+	ImGui::End();
+
+	if (!bWindowOpen)
+	{
+		bPendingClose = true;
+	}
+}
+
+void FParticleEditorWidget::RenderDocument(float DeltaTime)
+{
+	(void)DeltaTime;
+
+	if (bPendingClose)
+	{
+		Close();
+		bPendingClose = false;
+		return;
+	}
+
+	if (!IsOpen() || !EditedObject)
+	{
+		return;
+	}
+
 	if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
 	{
 		FSlateApplication::Get().BringViewportToFront(&ViewportClient);
@@ -2142,13 +2168,20 @@ void FParticleEditorWidget::Render(float DeltaTime)
 	ImGui::SameLine(0.0f, 0.0f);
 	RenderCurveEditor(ImVec2(RightWidth, BottomHeight));
 	ImGui::EndGroup();
+}
 
-	ImGui::End();
+FString FParticleEditorWidget::GetDocumentTitle() const
+{
+	const UParticleSystem* System = GetEditedSystem();
+	const FString SourcePath = System ? System->GetSourcePath() : FString();
+	return SourcePath.empty() ? FString("Particle") : FString("Particle - " + SourcePath);
+}
 
-	if (!bWindowOpen)
-	{
-		bPendingClose = true;
-	}
+FString FParticleEditorWidget::GetDocumentPayloadId() const
+{
+	const UParticleSystem* System = GetEditedSystem();
+	const FString SourcePath = System ? System->GetSourcePath() : FString();
+	return SourcePath.empty() ? FAssetEditorWidget::GetDocumentPayloadId() : SourcePath;
 }
 
 void FParticleEditorWidget::RenderToolbar()

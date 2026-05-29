@@ -42,6 +42,10 @@ public:
 	void Close() override;
 	void Tick(float DeltaTime) override;
 	void Render(float DeltaTime) override;
+	void RenderDocument(float DeltaTime) override;
+	FString GetDocumentTitle() const override;
+	FString GetDocumentPayloadId() const override;
+	EEditorDocumentTabKind GetDocumentTabKind() const override { return EEditorDocumentTabKind::ParticleEditor; }
 
 	void CollectPreviewViewports(TArray<IEditorPreviewViewportClient*>& OutClients) const override;
 
