@@ -424,7 +424,7 @@ void FPhysXPhysicsRuntime::RebuildBody(UPrimitiveComponent* Comp)
 
     for (UPrimitiveComponent* C : Components)
     {
-        if (IsValid(C) && C->IsQueryCollisionEnabled())
+        if (IsValid(C) && C->IsCollisionEnabled())
         {
             RegisterComponent(C);
         }
