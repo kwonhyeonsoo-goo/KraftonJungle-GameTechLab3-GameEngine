@@ -33,6 +33,8 @@ public:
 	// PSC 가 매 프레임 tick 끝에 호출 — proxy 가 ownership 인수.
 	void SetDynamicData(UParticleSystemComponent::FDynamicData* InData);
 
+	void AppendVectorFieldDebugLines(class FScene& Scene) const;
+
 	bool PrepareDrawBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context,
 	                       FDrawCommandBuffer& OutBuffer) const override;
 

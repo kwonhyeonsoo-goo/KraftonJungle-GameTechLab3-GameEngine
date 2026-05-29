@@ -9,6 +9,7 @@
 #include "Debug/DebugDrawQueue.h"
 #include "Render/Types/LODContext.h"
 #include "Render/Proxy/PrimitiveSceneProxy.h"
+#include "Render/Proxy/Particle/ParticleSystemSceneProxy.h"
 #include "Render/Scene/FScene.h"
 
 #include <Collision/Octree/Octree.h>
@@ -191,6 +192,13 @@ void FRenderCollector::FilterVisibleProxies(const FFrameContext& Frame, FScene& 
 			Proxy->HasProxyFlag(EPrimitiveProxyFlags::Particle))
 		{
 			Scene.AddDebugAABB(Proxy->GetCachedBounds().Min, Proxy->GetCachedBounds().Max, FColor::Yellow());
+		}
+
+		if (Frame.RenderOptions.ShowFlags.bDebugDraw &&
+			Frame.RenderOptions.bParticleVectorFieldDebug &&
+			Proxy->HasProxyFlag(EPrimitiveProxyFlags::Particle))
+		{
+			static_cast<FParticleSystemSceneProxy*>(Proxy)->AppendVectorFieldDebugLines(Scene);
 		}
 
 		Output.RenderableProxies.push_back(Proxy);
