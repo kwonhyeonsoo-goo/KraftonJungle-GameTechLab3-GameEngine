@@ -2,20 +2,18 @@
 
 #include "Physics/IPhysicsScene.h"
 #include "Core/Types/CoreTypes.h"
-#include <vector>
+#include "Physics/PhysXPhysicsRuntime.h"
 
 class AActor;
 
 // Forward declarations — PhysX types
 namespace physx
 {
-	class PxFoundation;
-	class PxPhysics;
-	class PxScene;
-	class PxDefaultCpuDispatcher;
-	class PxMaterial;
-	class PxRigidActor;
-	class PxShape;
+    class PxFoundation;
+    class PxPhysics;
+    class PxScene;
+    class PxDefaultCpuDispatcher;
+    class PxMaterial;
 }
 
 class FPhysXSimulationCallback;
@@ -33,66 +31,74 @@ class FPhysXSimulationCallback;
 class FPhysXPhysicsScene : public IPhysicsScene
 {
 public:
-	void Initialize(UWorld* InWorld) override;
-	void Shutdown() override;
+    void Initialize(UWorld* InWorld) override;
+    void Shutdown() override;
 
-	void RegisterComponent(UPrimitiveComponent* Comp) override;
-	void UnregisterComponent(UPrimitiveComponent* Comp) override;
-	void RebuildBody(UPrimitiveComponent* Comp) override;
+    void RegisterComponent(UPrimitiveComponent* Comp) override;
+    void UnregisterComponent(UPrimitiveComponent* Comp) override;
+    void RebuildBody(UPrimitiveComponent* Comp) override;
 
-	void Tick(float DeltaTime) override;
+    void Tick(float DeltaTime) override;
 
-	void AddForce(UPrimitiveComponent* Comp, const FVector& Force) override;
-	void AddForceAtLocation(UPrimitiveComponent* Comp, const FVector& Force, const FVector& WorldLocation) override;
-	void AddTorque(UPrimitiveComponent* Comp, const FVector& Torque) override;
+    void AddForce(UPrimitiveComponent* Comp, const FVector& Force) override;
+    void AddForceAtLocation(
+        UPrimitiveComponent* Comp,
+        const FVector&       Force,
+        const FVector&       WorldLocation
+    ) override;
+    void AddTorque(UPrimitiveComponent* Comp, const FVector& Torque) override;
 
-	FVector GetLinearVelocity(UPrimitiveComponent* Comp) const override;
-	void SetLinearVelocity(UPrimitiveComponent* Comp, const FVector& Vel) override;
-	FVector GetAngularVelocity(UPrimitiveComponent* Comp) const override;
-	void SetAngularVelocity(UPrimitiveComponent* Comp, const FVector& Vel) override;
+    FVector GetLinearVelocity(UPrimitiveComponent* Comp) const override;
+    void    SetLinearVelocity(UPrimitiveComponent* Comp, const FVector& Vel) override;
 
-	void SetMass(UPrimitiveComponent* Comp, float Mass) override;
-	float GetMass(UPrimitiveComponent* Comp) const override;
-	void SetCenterOfMass(UPrimitiveComponent* Comp, const FVector& LocalOffset) override;
-	FVector GetCenterOfMass(UPrimitiveComponent* Comp) const override;
+    FVector GetAngularVelocity(UPrimitiveComponent* Comp) const override;
+    void    SetAngularVelocity(UPrimitiveComponent* Comp, const FVector& Vel) override;
 
-	bool Raycast(const FVector& Start, const FVector& Dir, float MaxDist, FHitResult& OutHit,
-		ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
-		const AActor* IgnoreActor = nullptr) const override;
+    void  SetMass(UPrimitiveComponent* Comp, float Mass) override;
+    float GetMass(UPrimitiveComponent* Comp) const override;
 
-	bool RaycastByObjectTypes(const FVector& Start, const FVector& Dir, float MaxDist, FHitResult& OutHit,
-		uint32 ObjectTypeMask, const AActor* IgnoreActor = nullptr) const override;
+    void    SetCenterOfMass(UPrimitiveComponent* Comp, const FVector& LocalOffset) override;
+    FVector GetCenterOfMass(UPrimitiveComponent* Comp) const override;
+
+    bool Raycast(
+        const FVector&    Start,
+        const FVector&    Dir,
+        float             MaxDist,
+        FHitResult&       OutHit,
+        ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
+        const AActor*     IgnoreActor  = nullptr
+    ) const override;
+
+    bool RaycastByObjectTypes(
+        const FVector& Start,
+        const FVector& Dir,
+        float          MaxDist,
+        FHitResult&    OutHit,
+        uint32         ObjectTypeMask,
+        const AActor*  IgnoreActor = nullptr
+    ) const override;
+
+    IPhysicsRuntime* GetRuntime() override
+    {
+        return &Runtime;
+    }
+
+    const IPhysicsRuntime* GetRuntime() const override
+    {
+        return &Runtime;
+    }
 
 private:
 	UWorld* World = nullptr;
 
 	// PhysX core objects
-	physx::PxFoundation* Foundation = nullptr;
-	physx::PxPhysics* Physics = nullptr;
-	physx::PxScene* Scene = nullptr;
-	physx::PxDefaultCpuDispatcher* Dispatcher = nullptr;
-	physx::PxMaterial* DefaultMaterial = nullptr;
-	FPhysXSimulationCallback* EventCallback = nullptr;
+    physx::PxFoundation*           Foundation      = nullptr;
+    physx::PxPhysics*              Physics         = nullptr;
+    physx::PxScene*                Scene           = nullptr;
+    physx::PxDefaultCpuDispatcher* Dispatcher      = nullptr;
+    physx::PxMaterial*             DefaultMaterial = nullptr;
 
-	// Actor 단위 매핑 — 한 액터의 여러 컴포넌트가 같은 PxRigidActor에 shape로 합쳐진다.
-	struct FBodyMapping
-	{
-		AActor* OwnerActor = nullptr;            // 키
-		physx::PxRigidActor* Actor = nullptr;    // PhysX rigid (Dynamic/Static)
-		UPrimitiveComponent* RootComp = nullptr; // 트랜스폼 동기화 기준 (Actor->RootComponent)
-		TArray<UPrimitiveComponent*> Components; // 등록된 컴포넌트들 (shape 1:1 매칭)
-	};
-	std::vector<FBodyMapping> BodyMappings;
+    FPhysXSimulationCallback* EventCallback = nullptr;
 
-	// 내부 헬퍼
-	FBodyMapping* FindMappingByActor(AActor* OwnerActor);
-	const FBodyMapping* FindMappingByActor(AActor* OwnerActor) const;
-	FBodyMapping* FindMappingByComponent(UPrimitiveComponent* Comp);
-	const FBodyMapping* FindMappingByComponent(UPrimitiveComponent* Comp) const;
-	void CompactInvalidMappings();
-
-	// Comp의 geometry를 Mapping의 PxRigidActor에 shape로 추가. 실패 시 nullptr.
-	physx::PxShape* AddShapeForComponent(FBodyMapping& Mapping, UPrimitiveComponent* Comp);
-	// Mapping의 actor에서 Comp에 매칭된 shape를 detach.
-	void DetachShapeForComponent(FBodyMapping& Mapping, UPrimitiveComponent* Comp);
+    FPhysXPhysicsRuntime Runtime;
 };

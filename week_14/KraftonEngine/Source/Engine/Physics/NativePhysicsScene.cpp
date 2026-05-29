@@ -540,6 +540,7 @@ bool FNativePhysicsScene::Raycast(const FVector& Start, const FVector& Dir, floa
 	// (overlap/ignore 응답인 trigger volume 등은 raycast 결과에서 제외)
 	return NativeRaycastImpl(RegisteredComponents, Start, Dir, MaxDist, IgnoreActor,
 		[TraceChannel](UPrimitiveComponent* Comp) {
+			if (!Comp->IsQueryCollisionEnabled()) return false;
 			return Comp->GetCollisionResponseToChannel(TraceChannel) == ECollisionResponse::Block;
 		}, OutHit);
 }

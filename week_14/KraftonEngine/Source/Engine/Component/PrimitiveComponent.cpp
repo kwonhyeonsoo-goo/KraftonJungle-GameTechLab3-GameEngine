@@ -53,9 +53,10 @@ void UPrimitiveComponent::BeginPlay()
 	USceneComponent::BeginPlay();
 
 	// 직렬화나 InitDefaultComponents에서 CollisionEnabled가 이미 설정된 경우 등록.
+	// QueryOnly뿐 아니라 PhysicsOnly도 실제 물리 body가 필요하므로 NoCollision만 제외한다.
 	// 이 시점에 SimulatePhysics/ObjectType/Response/Mass/COM 등 모든 셋업이 끝나있어
 	// PhysX/Native가 정확한 값으로 body를 생성한다.
-	if (IsQueryCollisionEnabled())
+	if (IsCollisionEnabled())
 	{
 		if (UWorld* World = GetWorld())
 		{
@@ -257,7 +258,7 @@ void UPrimitiveComponent::PostEditProperty(const char* PropertyName)
 		{
 			if (UWorld* World = Owner->GetWorld())
 			{
-				if (IsQueryCollisionEnabled())
+				if (IsCollisionEnabled())
 				{
 					World->GetPhysicsScene()->RegisterComponent(this);
 				}
@@ -436,9 +437,9 @@ void UPrimitiveComponent::EnsureWorldAABBUpdated() const
 
 void UPrimitiveComponent::SetCollisionEnabled(ECollisionEnabled InEnabled)
 {
-	bool bWasQuery = IsQueryCollisionEnabled();
+	bool bWasRegistered = IsCollisionEnabled();
 	CollisionEnabled = InEnabled;
-	bool bIsQuery = IsQueryCollisionEnabled();
+	bool bShouldRegister = IsCollisionEnabled();
 
 	// 컴포넌트 BeginPlay 전이면 멤버만 변경. BeginPlay에서 한 번 등록되며 그 시점엔
 	// SimulatePhysics 등 다른 셋업이 모두 완료된 상태.
@@ -448,16 +449,16 @@ void UPrimitiveComponent::SetCollisionEnabled(ECollisionEnabled InEnabled)
 	UWorld* World = Owner->GetWorld();
 	if (!World) return;
 
-	if (bWasQuery != bIsQuery)
+	if (bWasRegistered != bShouldRegister)
 	{
-		if (bIsQuery)
+		if (bShouldRegister)
 			World->GetPhysicsScene()->RegisterComponent(this);
 		else
 			World->GetPhysicsScene()->UnregisterComponent(this);
 	}
-	else if (bWasQuery && bIsQuery)
+	else if (bWasRegistered && bShouldRegister)
 	{
-		// 이미 등록된 상태에서 enabled 종류 변경 (예: QueryOnly ↔ QueryAndPhysics) — 재구성
+		// 이미 등록된 상태에서 enabled 종류 변경 (예: QueryOnly ↔ PhysicsOnly ↔ QueryAndPhysics) — 재구성
 		NotifyPhysicsBodyDirty();
 	}
 }

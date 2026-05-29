@@ -8,6 +8,7 @@
 class UWorld;
 class AActor;
 class UPrimitiveComponent;
+class IPhysicsRuntime;
 struct FHitResult;
 
 // 물리 백엔드 선택
@@ -80,4 +81,14 @@ public:
 	// Trigger flag shape 는 백엔드 별 정책에 따라 자동 제외 (PhysX 는 query 단계, Native 는 ObjectType 마스크에서 빠짐).
 	virtual bool RaycastByObjectTypes(const FVector& Start, const FVector& Dir, float MaxDist, FHitResult& OutHit,
 		uint32 ObjectTypeMask, const AActor* IgnoreActor = nullptr) const = 0;
+
+    virtual IPhysicsRuntime* GetRuntime()
+    {
+        return nullptr;
+    }
+
+    virtual const IPhysicsRuntime* GetRuntime() const
+    {
+        return nullptr;
+    }
 };
