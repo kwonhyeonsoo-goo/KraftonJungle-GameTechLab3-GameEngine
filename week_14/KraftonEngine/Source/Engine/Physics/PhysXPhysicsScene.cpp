@@ -557,6 +557,24 @@ FVector FPhysXPhysicsScene::GetCenterOfMass(UPrimitiveComponent* Comp) const
     return Body.IsValid() ? Runtime.GetCenterOfMass(Body) : FVector::ZeroVector;
 }
 
+void FPhysXPhysicsScene::SetLinearLock(UPrimitiveComponent* Comp, bool bX, bool bY, bool bZ)
+{
+    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
+    if (Body.IsValid())
+    {
+        Runtime.SetLinearLock(Body, bX, bY, bZ);
+    }
+}
+
+void FPhysXPhysicsScene::SetAngularLock(UPrimitiveComponent* Comp, bool bX, bool bY, bool bZ)
+{
+    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
+    if (Body.IsValid())
+    {
+        Runtime.SetAngularLock(Body, bX, bY, bZ);
+    }
+}
+
 bool FPhysXPhysicsScene::Raycast(
     const FVector& Start,
     const FVector& Dir,

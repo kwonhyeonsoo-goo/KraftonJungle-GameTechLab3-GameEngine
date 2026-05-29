@@ -14,6 +14,7 @@
 #include "Object/Object.h"
 
 #include <algorithm>
+#include <chrono>
 #include <PxPhysicsAPI.h>
 
 using namespace physx;
@@ -23,6 +24,15 @@ namespace
     bool IsHandleIndexValid(uint32 Index, size_t Size)
     {
         return Index != UINT32_MAX && static_cast<size_t>(Index) < Size;
+    }
+
+    FTransform ComposePhysicsTransforms(const FTransform& ParentWorld, const FTransform& Local)
+    {
+        FTransform Result = Local;
+        Result.Location =
+            ParentWorld.Location + ParentWorld.Rotation.RotateVector(Local.Location);
+        Result.Rotation = ParentWorld.Rotation * Local.Rotation;
+        return Result;
     }
 
     FTransform GetComponentWorldTransform(UPrimitiveComponent* Comp)
@@ -231,8 +241,22 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
 
     int32 StepCount = 0;
 
+    // 프레임 누적 타이밍 (substep 합산). UpdateStats() 가 Stats 를 전부 초기화하므로,
+    // 측정값은 local 에 모아 두었다가 UpdateStats() 호출 이후에 Stats 로 복사한다.
+    using FClock = std::chrono::high_resolution_clock;
+    const auto DurationMs = [](FClock::time_point A, FClock::time_point B)
+    {
+        return std::chrono::duration<float, std::milli>(B - A).count();
+    };
+    float PrePhysicsMs = 0.0f;
+    float SimulateMs = 0.0f;
+    float FetchResultsMs = 0.0f;
+    float PostPhysicsMs = 0.0f;
+
     while (Accumulator >= FixedDt && StepCount < MaxSubsteps)
     {
+        const auto T0 = FClock::now();
+
         ApplyPendingCommands();
 
         for (auto& BodyPtr : Bodies)
@@ -249,8 +273,11 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
             }
         }
 
+        const auto T1 = FClock::now();
         Scene->simulate(FixedDt);
+        const auto T2 = FClock::now();
         Scene->fetchResults(true);
+        const auto T3 = FClock::now();
 
         for (auto& BodyPtr : Bodies)
         {
@@ -271,6 +298,13 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
             }
         }
 
+        const auto T4 = FClock::now();
+
+        PrePhysicsMs += DurationMs(T0, T1);
+        SimulateMs += DurationMs(T1, T2);
+        FetchResultsMs += DurationMs(T2, T3);
+        PostPhysicsMs += DurationMs(T3, T4);
+
         Accumulator -= FixedDt;
         ++StepCount;
     }
@@ -282,6 +316,12 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
 
     Stats.NumSubsteps = StepCount;
     UpdateStats();
+
+    // UpdateStats() 가 Stats 를 초기화한 뒤이므로 여기서 타이밍을 채운다.
+    Stats.PrePhysicsMs = PrePhysicsMs;
+    Stats.SimulateMs = SimulateMs;
+    Stats.FetchResultsMs = FetchResultsMs;
+    Stats.PostPhysicsMs = PostPhysicsMs;
 }
 
 void FPhysXPhysicsRuntime::RegisterComponent(UPrimitiveComponent* Comp)
@@ -845,6 +885,44 @@ FVector FPhysXPhysicsRuntime::GetCenterOfMass(FPhysicsBodyHandle BodyHandle) con
     return ToFVector(Dynamic->getCMassLocalPose().p);
 }
 
+void FPhysXPhysicsRuntime::SetLinearLock(FPhysicsBodyHandle BodyHandle, bool bX, bool bY, bool bZ)
+{
+    FBodyInstance* Body = ResolveBody(BodyHandle);
+    if (!Body || !Body->Actor)
+    {
+        return;
+    }
+
+    PxRigidDynamic* Dynamic = Body->Actor->is<PxRigidDynamic>();
+    if (!Dynamic)
+    {
+        return;
+    }
+
+    Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_LINEAR_X, bX);
+    Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_LINEAR_Y, bY);
+    Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_LINEAR_Z, bZ);
+}
+
+void FPhysXPhysicsRuntime::SetAngularLock(FPhysicsBodyHandle BodyHandle, bool bX, bool bY, bool bZ)
+{
+    FBodyInstance* Body = ResolveBody(BodyHandle);
+    if (!Body || !Body->Actor)
+    {
+        return;
+    }
+
+    PxRigidDynamic* Dynamic = Body->Actor->is<PxRigidDynamic>();
+    if (!Dynamic)
+    {
+        return;
+    }
+
+    Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_X, bX);
+    Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_Y, bY);
+    Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_Z, bZ);
+}
+
 void FPhysXPhysicsRuntime::GatherDebugBodies(TArray<FPhysicsDebugBody>& OutBodies) const
 {
     OutBodies.clear();
@@ -890,13 +968,11 @@ void FPhysXPhysicsRuntime::GatherDebugBodies(TArray<FPhysicsDebugBody>& OutBodie
             DebugShape.CapsuleRadius = ShapeInstance->Desc.CapsuleRadius;
             DebugShape.CapsuleHalfHeight = ShapeInstance->Desc.CapsuleHalfHeight;
 
-            const FTransform ShapeLocal = ShapeInstance->Desc.LocalTransform;
-            DebugShape.WorldTransform = ShapeLocal;
-            DebugShape.WorldTransform.Location =
-                DebugBody.BodyWorldTransform.Location +
-                DebugBody.BodyWorldTransform.Rotation.RotateVector(ShapeLocal.Location);
-            DebugShape.WorldTransform.Rotation =
-                DebugBody.BodyWorldTransform.Rotation * ShapeLocal.Rotation;
+            // shape local pose 를 body 월드 transform 으로 합성 (BodyWorld * ShapeLocal).
+            DebugShape.WorldTransform = ComposePhysicsTransforms(
+                DebugBody.BodyWorldTransform,
+                ShapeInstance->Desc.LocalTransform
+            );
 
             DebugBody.Shapes.push_back(DebugShape);
         }
@@ -934,19 +1010,9 @@ void FPhysXPhysicsRuntime::GatherDebugConstraints(TArray<FPhysicsDebugConstraint
         const FTransform ParentWorld = ToFTransform(Parent->Actor->getGlobalPose());
         const FTransform ChildWorld = ToFTransform(Child->Actor->getGlobalPose());
 
-        Debug.ParentFrameWorld = Constraint.ParentLocalFrame;
-        Debug.ParentFrameWorld.Location =
-            ParentWorld.Location +
-            ParentWorld.Rotation.RotateVector(Constraint.ParentLocalFrame.Location);
-        Debug.ParentFrameWorld.Rotation =
-            ParentWorld.Rotation * Constraint.ParentLocalFrame.Rotation;
-
-        Debug.ChildFrameWorld = Constraint.ChildLocalFrame;
-        Debug.ChildFrameWorld.Location =
-            ChildWorld.Location +
-            ChildWorld.Rotation.RotateVector(Constraint.ChildLocalFrame.Location);
-        Debug.ChildFrameWorld.Rotation =
-            ChildWorld.Rotation * Constraint.ChildLocalFrame.Rotation;
+        // joint frame 의 월드 변환도 동일 규칙 (BodyWorld * LocalFrame) 으로 합성한다.
+        Debug.ParentFrameWorld = ComposePhysicsTransforms(ParentWorld, Constraint.ParentLocalFrame);
+        Debug.ChildFrameWorld = ComposePhysicsTransforms(ChildWorld, Constraint.ChildLocalFrame);
 
         Debug.TwistLimitMinDegrees = Constraint.Limits.TwistLimitMinDegrees;
         Debug.TwistLimitMaxDegrees = Constraint.Limits.TwistLimitMaxDegrees;
@@ -1170,6 +1236,15 @@ FBodyCreationDesc FPhysXPhysicsRuntime::BuildBodyDescFromComponent(UPrimitiveCom
     Desc.CenterOfMassLocalOffset = Comp->GetCenterOfMass();
     Desc.bGenerateHitEvents = true;
     Desc.bGenerateOverlapEvents = Comp->GetGenerateOverlapEvents();
+
+    // DOF lock 은 RootComponent 정책 (Mass/COM 과 동일). RebuildBody 후에도 유지되도록
+    // 컴포넌트에 저장된 lock 상태를 desc 로 전달한다.
+    Desc.bLockLinearX = Comp->IsLinearLockX();
+    Desc.bLockLinearY = Comp->IsLinearLockY();
+    Desc.bLockLinearZ = Comp->IsLinearLockZ();
+    Desc.bLockAngularX = Comp->IsAngularLockX();
+    Desc.bLockAngularY = Comp->IsAngularLockY();
+    Desc.bLockAngularZ = Comp->IsAngularLockZ();
 
     return Desc;
 }

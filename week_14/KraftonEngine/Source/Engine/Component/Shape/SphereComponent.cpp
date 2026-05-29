@@ -15,6 +15,7 @@ void USphereComponent::SetSphereRadius(float InRadius)
 	LocalExtents = FVector(SphereRadius, SphereRadius, SphereRadius);
 	MarkWorldBoundsDirty();
 	MarkRenderTransformDirty();
+	NotifyPhysicsBodyDirty();
 }
 
 float USphereComponent::GetScaledSphereRadius() const

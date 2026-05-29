@@ -16,6 +16,7 @@ void UCapsuleComponent::SetCapsuleSize(float InRadius, float InHalfHeight)
 	LocalExtents = FVector(CapsuleRadius, CapsuleRadius, CapsuleHalfHeight);
 	MarkWorldBoundsDirty();
 	MarkRenderTransformDirty();
+	NotifyPhysicsBodyDirty();
 }
 
 float UCapsuleComponent::GetScaledCapsuleRadius() const

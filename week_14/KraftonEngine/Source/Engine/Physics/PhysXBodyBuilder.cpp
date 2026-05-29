@@ -152,6 +152,13 @@ void FPhysXBodyBuilder::ApplyBodyProperties(PxRigidActor* Actor, const FBodyCrea
         Dynamic->setLinearDamping(Desc.LinearDamping);
         Dynamic->setAngularDamping(Desc.AngularDamping);
         Dynamic->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, Desc.bEnableCCD);
+
+        Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_LINEAR_X, Desc.bLockLinearX);
+        Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_LINEAR_Y, Desc.bLockLinearY);
+        Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_LINEAR_Z, Desc.bLockLinearZ);
+        Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_X, Desc.bLockAngularX);
+        Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_Y, Desc.bLockAngularY);
+        Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_Z, Desc.bLockAngularZ);
     }
 }
 

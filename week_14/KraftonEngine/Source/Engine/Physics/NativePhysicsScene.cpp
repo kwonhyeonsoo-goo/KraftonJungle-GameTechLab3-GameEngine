@@ -465,6 +465,16 @@ FVector FNativePhysicsScene::GetCenterOfMass(UPrimitiveComponent* Comp) const
 	return It->second.CenterOfMassLocal;
 }
 
+void FNativePhysicsScene::SetLinearLock(UPrimitiveComponent*, bool, bool, bool)
+{
+	// Native 백엔드 미지원 — no-op.
+}
+
+void FNativePhysicsScene::SetAngularLock(UPrimitiveComponent*, bool, bool, bool)
+{
+	// Native 백엔드 미지원 — no-op.
+}
+
 // ============================================================
 // Raycast — brute-force AABB ray test
 // ============================================================

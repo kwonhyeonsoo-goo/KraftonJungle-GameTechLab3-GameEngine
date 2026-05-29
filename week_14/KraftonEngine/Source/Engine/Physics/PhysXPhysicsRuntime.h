@@ -99,6 +99,9 @@ public:
     void    SetCenterOfMass(FPhysicsBodyHandle Body, const FVector& LocalOffset) override;
     FVector GetCenterOfMass(FPhysicsBodyHandle Body) const override;
 
+    void SetLinearLock(FPhysicsBodyHandle Body, bool bX, bool bY, bool bZ) override;
+    void SetAngularLock(FPhysicsBodyHandle Body, bool bX, bool bY, bool bZ) override;
+
     void GatherDebugBodies(TArray<FPhysicsDebugBody>& OutBodies) const override;
     void GatherDebugConstraints(TArray<FPhysicsDebugConstraint>& OutConstraints) const override;
 

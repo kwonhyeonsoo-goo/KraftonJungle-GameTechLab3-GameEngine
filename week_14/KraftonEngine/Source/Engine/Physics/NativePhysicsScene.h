@@ -39,6 +39,9 @@ public:
 	void SetCenterOfMass(UPrimitiveComponent* Comp, const FVector& LocalOffset) override;
 	FVector GetCenterOfMass(UPrimitiveComponent* Comp) const override;
 
+	void SetLinearLock(UPrimitiveComponent* Comp, bool bX, bool bY, bool bZ) override;
+	void SetAngularLock(UPrimitiveComponent* Comp, bool bX, bool bY, bool bZ) override;
+
 	bool Raycast(const FVector& Start, const FVector& Dir, float MaxDist, FHitResult& OutHit,
 		ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
 		const AActor* IgnoreActor = nullptr) const override;

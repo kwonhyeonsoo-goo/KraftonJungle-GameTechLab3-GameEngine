@@ -97,6 +97,13 @@ struct FBodyCreationDesc
     float LinearDamping  = 0.0f;
     float AngularDamping = 0.0f;
 
+    bool bLockLinearX = false;
+    bool bLockLinearY = false;
+    bool bLockLinearZ = false;
+    bool bLockAngularX = false;
+    bool bLockAngularY = false;
+    bool bLockAngularZ = false;
+
     bool bEnableCCD             = false;
     bool bGenerateHitEvents     = false;
     bool bGenerateOverlapEvents = false;

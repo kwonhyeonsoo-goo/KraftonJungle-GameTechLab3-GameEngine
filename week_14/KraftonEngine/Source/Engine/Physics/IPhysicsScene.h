@@ -63,6 +63,9 @@ public:
 	virtual void SetCenterOfMass(UPrimitiveComponent* Comp, const FVector& LocalOffset) = 0;
 	virtual FVector GetCenterOfMass(UPrimitiveComponent* Comp) const = 0;
 
+	virtual void SetLinearLock(UPrimitiveComponent* Comp, bool bX, bool bY, bool bZ) = 0;
+	virtual void SetAngularLock(UPrimitiveComponent* Comp, bool bX, bool bY, bool bZ) = 0;
+
 	// --- Raycast ---
 	// TraceChannel: shape의 응답이 이 채널에 대해 Block일 때만 hit으로 인정 (UE 패턴).
 	//   예: WorldStatic 채널로 trace → 응답이 WorldStatic Block인 shape만 hit.

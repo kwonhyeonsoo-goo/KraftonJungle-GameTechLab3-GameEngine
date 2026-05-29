@@ -594,9 +594,39 @@ float UPrimitiveComponent::GetMass() const
 	return Mass;
 }
 
+void UPrimitiveComponent::SetLinearLock(bool bX, bool bY, bool bZ)
+{
+	bLockLinearX = bX;
+	bLockLinearY = bY;
+	bLockLinearZ = bZ;
+
+	if (Owner)
+		if (UWorld* W = Owner->GetWorld())
+			if (IPhysicsScene* PS = W->GetPhysicsScene())
+				PS->SetLinearLock(this, bX, bY, bZ);
+}
+
+void UPrimitiveComponent::SetAngularLock(bool bX, bool bY, bool bZ)
+{
+	bLockAngularX = bX;
+	bLockAngularY = bY;
+	bLockAngularZ = bZ;
+
+	if (Owner)
+		if (UWorld* W = Owner->GetWorld())
+			if (IPhysicsScene* PS = W->GetPhysicsScene())
+				PS->SetAngularLock(this, bX, bY, bZ);
+}
+
 void UPrimitiveComponent::SetGenerateOverlapEvents(bool bInGenerateOverlapEvents)
 {
+	if (bGenerateOverlapEvents == bInGenerateOverlapEvents)
+	{
+		return;
+	}
+
 	bGenerateOverlapEvents = bInGenerateOverlapEvents;
+	NotifyPhysicsBodyDirty();
 }
 
 void UPrimitiveComponent::NotifyComponentBeginOverlap(

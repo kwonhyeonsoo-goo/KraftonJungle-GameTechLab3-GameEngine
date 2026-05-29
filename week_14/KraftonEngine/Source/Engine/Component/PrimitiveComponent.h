@@ -204,6 +204,24 @@ public:
 	UFUNCTION(Pure, Category="Physics")
 	FVector GetCenterOfMass() const;
 
+	// --- Degree-of-Freedom Lock ---
+	UFUNCTION(Callable, Category="Physics")
+	void SetLinearLock(bool bX, bool bY, bool bZ);
+	UFUNCTION(Callable, Category="Physics")
+	void SetAngularLock(bool bX, bool bY, bool bZ);
+	UFUNCTION(Pure, Category="Physics")
+	bool IsLinearLockX() const { return bLockLinearX; }
+	UFUNCTION(Pure, Category="Physics")
+	bool IsLinearLockY() const { return bLockLinearY; }
+	UFUNCTION(Pure, Category="Physics")
+	bool IsLinearLockZ() const { return bLockLinearZ; }
+	UFUNCTION(Pure, Category="Physics")
+	bool IsAngularLockX() const { return bLockAngularX; }
+	UFUNCTION(Pure, Category="Physics")
+	bool IsAngularLockY() const { return bLockAngularY; }
+	UFUNCTION(Pure, Category="Physics")
+	bool IsAngularLockZ() const { return bLockAngularZ; }
+
 	UFUNCTION(Callable, Exec, Category="Collision")
 	void SetGenerateOverlapEvents(bool bInGenerateOverlapEvents);
 	UFUNCTION(Pure, Category="Collision")
@@ -271,6 +289,15 @@ protected:
 	bool bKinematic = false;
 	UPROPERTY(Edit, Save, Category="Collision", DisplayName="Generate Overlap Events")
 	bool bGenerateOverlapEvents = false;
+
+	// Degree-of-Freedom lock 상태 — SetLinearLock/SetAngularLock 으로 설정. body 재생성 시
+	// BuildBodyDescFromComponent 가 읽어 PhysX 에 다시 적용한다.
+	bool bLockLinearX = false;
+	bool bLockLinearY = false;
+	bool bLockLinearZ = false;
+	bool bLockAngularX = false;
+	bool bLockAngularY = false;
+	bool bLockAngularZ = false;
 
 	// 물리 파라미터 — RootComponent의 값만 백엔드에 적용 (compound shape 정책).
 	UPROPERTY(Edit, Save, Category="Physics", DisplayName="Mass (kg)")
