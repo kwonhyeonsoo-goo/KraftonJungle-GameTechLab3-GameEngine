@@ -1,15 +1,16 @@
 #include "AnimSequencePropertyPanel.h"
 
 #include "Animation/Sequence/AnimSequence.h"
-#include "Animation/AnimationManager.h"
 #include "Animation/Sequence/BoneAnimationTrack.h"
 
 #include <imgui.h>
 
 namespace
 {
-	void RenderRootMotionSection(UAnimSequence* Seq)
+	bool RenderRootMotionSection(UAnimSequence* Seq)
 	{
+		bool bChanged = false;
+
 		ImGui::TextUnformatted("Root Motion");
 		ImGui::Separator();
 
@@ -19,7 +20,7 @@ namespace
 		{
 			Seq->SetForceRootLock(bLock);
 			if (bLock) Seq->SetEnableRootMotion(false);   // mutex
-			FAnimationManager::Get().SaveAnimationPreservingMetadata(Seq);
+			bChanged = true;
 		}
 		if (ImGui::IsItemHovered())
 		{
@@ -31,7 +32,7 @@ namespace
 		if (ImGui::Checkbox("Enable Root Motion", &bRootMotion))
 		{
 			Seq->SetEnableRootMotion(bRootMotion);   // bForceRootLock 자동 해제 (setter 안)
-			FAnimationManager::Get().SaveAnimationPreservingMetadata(Seq);
+			bChanged = true;
 		}
 		if (ImGui::IsItemHovered())
 		{
@@ -53,7 +54,7 @@ namespace
 				if (ImGui::Selectable("(none)", Current.empty()))
 				{
 					Seq->SetRootMotionBoneName(FString());
-					FAnimationManager::Get().SaveAnimationPreservingMetadata(Seq);
+					bChanged = true;
 				}
 				for (const FBoneAnimationTrack& Track : Seq->GetBoneTracks())
 				{
@@ -62,24 +63,26 @@ namespace
 					if (ImGui::Selectable(Track.BoneName.c_str(), bSelected))
 					{
 						Seq->SetRootMotionBoneName(Track.BoneName);
-						FAnimationManager::Get().SaveAnimationPreservingMetadata(Seq);
+						bChanged = true;
 					}
 					if (bSelected) ImGui::SetItemDefaultFocus();
 				}
 				ImGui::EndCombo();
 			}
 		}
+
+		return bChanged;
 	}
 }
 
-void FAnimSequencePropertyPanel::Render(UAnimSequence* Seq)
+bool FAnimSequencePropertyPanel::Render(UAnimSequence* Seq)
 {
 	if (!Seq)
 	{
 		ImGui::TextDisabled("No animation selected.");
-		return;
+		return false;
 	}
 
-	RenderRootMotionSection(Seq);
+	return RenderRootMotionSection(Seq);
 	// 향후 추가 section 은 여기에 ImGui::Dummy + 호출 추가.
 }

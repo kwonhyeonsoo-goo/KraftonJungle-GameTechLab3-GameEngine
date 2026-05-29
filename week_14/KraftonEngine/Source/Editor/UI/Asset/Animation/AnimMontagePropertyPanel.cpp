@@ -4,8 +4,8 @@
 #include "Animation/Montage/AnimMontageInstance.h"
 #include "Animation/Sequence/AnimSequence.h"
 #include "Animation/AnimInstance.h"
-#include "Animation/AnimationManager.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Animation/AnimationManager.h"
 
 #include <imgui.h>
 #include <cstdio>
@@ -13,8 +13,10 @@
 
 namespace
 {
-	void RenderSourceSection(UAnimMontage* Montage)
+	bool RenderSourceSection(UAnimMontage* Montage)
 	{
+		bool bChanged = false;
+
 		ImGui::TextUnformatted("Source");
 		ImGui::Separator();
 
@@ -26,7 +28,7 @@ namespace
 			if (ImGui::Selectable("(none)", CurSrc == nullptr))
 			{
 				Montage->SetSourceSequence(nullptr);
-				FAnimationManager::Get().SaveMontagePreservingMetadata(Montage);
+				bChanged = true;
 			}
 			const TArray<FAssetListItem>& Anims = FAnimationManager::Get().GetAvailableAnimationFiles();
 			for (const FAssetListItem& Item : Anims)
@@ -38,7 +40,7 @@ namespace
 					if (Loaded)
 					{
 						Montage->SetSourceSequence(Loaded);
-						FAnimationManager::Get().SaveMontagePreservingMetadata(Montage);
+						bChanged = true;
 					}
 				}
 				if (bSelected) ImGui::SetItemDefaultFocus();
@@ -50,10 +52,14 @@ namespace
 		{
 			ImGui::Text("Length: %.3f s", CurSrc->GetPlayLength());
 		}
+
+		return bChanged;
 	}
 
-	void RenderBlendSection(UAnimMontage* Montage)
+	bool RenderBlendSection(UAnimMontage* Montage)
 	{
+		bool bChanged = false;
+
 		ImGui::Dummy(ImVec2(0, 6));
 		ImGui::TextUnformatted("Blend");
 		ImGui::Separator();
@@ -65,17 +71,19 @@ namespace
 		if (ImGui::DragFloat("Blend In##montage", &BlendIn, 0.01f, 0.0f, 5.0f, "%.2f s"))
 		{
 			Montage->SetBlendInTime(BlendIn);
-			FAnimationManager::Get().SaveMontagePreservingMetadata(Montage);
+			bChanged = true;
 		}
 		ImGui::SetNextItemWidth(100.0f);
 		if (ImGui::DragFloat("Blend Out##montage", &BlendOut, 0.01f, 0.0f, 5.0f, "%.2f s"))
 		{
 			Montage->SetBlendOutTime(BlendOut);
-			FAnimationManager::Get().SaveMontagePreservingMetadata(Montage);
+			bChanged = true;
 		}
+
+		return bChanged;
 	}
 
-	void RenderSectionsTable(UAnimMontage* Montage)
+	bool RenderSectionsTable(UAnimMontage* Montage)
 	{
 		ImGui::Dummy(ImVec2(0, 6));
 		ImGui::TextUnformatted("Sections");
@@ -180,11 +188,10 @@ namespace
 				bChanged = true;
 			}
 
-			if (bChanged)
-			{
-				FAnimationManager::Get().SaveMontagePreservingMetadata(Montage);
-			}
+			return bChanged;
 		}
+
+		return false;
 	}
 
 	void RenderPreviewSection(UAnimMontage* Montage, USkeletalMeshComponent* PreviewComp, UAnimInstance* PreviewInst)
@@ -269,15 +276,17 @@ namespace
 	}
 }
 
-void FAnimMontagePropertyPanel::Render(UAnimMontage* Montage,
+bool FAnimMontagePropertyPanel::Render(UAnimMontage* Montage,
                                        USkeletalMeshComponent* PreviewComp,
                                        UAnimInstance* PreviewInst)
 {
 	if (!Montage)
 	{
 		ImGui::TextDisabled("No montage selected.");
-		return;
+		return false;
 	}
+
+	bool bChanged = false;
 
 	ImGui::TextUnformatted("Montage");
 	ImGui::Separator();
@@ -291,8 +300,9 @@ void FAnimMontagePropertyPanel::Render(UAnimMontage* Montage,
 
 	ImGui::Dummy(ImVec2(0, 8));
 
-	RenderSourceSection(Montage);
-	RenderBlendSection(Montage);
-	RenderSectionsTable(Montage);
+	if (RenderSourceSection(Montage)) bChanged = true;
+	if (RenderBlendSection(Montage)) bChanged = true;
+	if (RenderSectionsTable(Montage)) bChanged = true;
 	RenderPreviewSection(Montage, PreviewComp, PreviewInst);
+	return bChanged;
 }

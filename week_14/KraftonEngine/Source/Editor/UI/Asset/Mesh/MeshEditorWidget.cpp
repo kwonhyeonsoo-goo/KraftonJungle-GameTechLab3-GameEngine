@@ -458,6 +458,16 @@ void FMeshEditorWidget::Render(float DeltaTime)
 	if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
 	{
 		FSlateApplication::Get().BringViewportToFront(&ViewportClient);
+
+		const ImGuiIO& IO = ImGui::GetIO();
+		if (ActiveTab == EMeshEditorTab::Animation &&
+			IsCurrentAnimationDirty() &&
+			IO.KeyCtrl &&
+			!IO.KeyAlt &&
+			ImGui::IsKeyPressed(ImGuiKey_S, false))
+		{
+			SaveCurrentAnimationAsset();
+		}
 	}
 
 	RenderTabBar();
@@ -501,18 +511,25 @@ void FMeshEditorWidget::RenderTabBar()
 	                        IM_COL32(38, 38, 38, 255));
 
 	const bool bCanSaveSkeleton = ActiveTab == EMeshEditorTab::Skeleton && bSkeletonDirty;
-	if (!bCanSaveSkeleton)
+	const bool bCanSaveAnimation = ActiveTab == EMeshEditorTab::Animation && IsCurrentAnimationDirty();
+	const bool bCanSave = bCanSaveSkeleton || bCanSaveAnimation;
+	const bool bShowDirtySave = bSkeletonDirty || IsCurrentAnimationDirty();
+	if (!bCanSave)
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.45f);
 	}
-	if (ImGui::Button(bSkeletonDirty ? "Save*" : "Save", ImVec2(68.0f, BarHeight)))
+	if (ImGui::Button(bShowDirtySave ? "Save*" : "Save", ImVec2(68.0f, BarHeight)))
 	{
 		if (bCanSaveSkeleton)
 		{
 			SaveCurrentSkeleton();
 		}
+		else if (bCanSaveAnimation)
+		{
+			SaveCurrentAnimationAsset();
+		}
 	}
-	if (!bCanSaveSkeleton)
+	if (!bCanSave)
 	{
 		ImGui::PopStyleVar();
 	}
@@ -696,6 +713,56 @@ void FMeshEditorWidget::SaveCurrentSkeleton()
 			PreviewMeshComponent->ApplyBoneEditBasePose();
 		}
 		bSkeletonDirty = false;
+	}
+}
+
+void FMeshEditorWidget::SaveCurrentAnimationAsset()
+{
+	if (AnimTabState.bMontageSelected)
+	{
+		UAnimMontage* Montage = AnimTabState.CurrentMontage;
+		if (Montage && FAnimationManager::Get().SaveMontagePreservingMetadata(Montage))
+		{
+			AnimTabState.DirtyMontages.erase(Montage);
+			FAnimationManager::Get().RefreshAvailableMontages();
+			MarkAnimationListDirty();
+		}
+		return;
+	}
+
+	UAnimSequence* Sequence = AnimTabState.CurrentSequence;
+	if (Sequence && FAnimationManager::Get().SaveAnimationPreservingMetadata(Sequence))
+	{
+		AnimTabState.DirtySequences.erase(Sequence);
+		FAnimationManager::Get().RefreshAvailableAnimations();
+		MarkAnimationListDirty();
+	}
+}
+
+bool FMeshEditorWidget::IsCurrentAnimationDirty() const
+{
+	if (AnimTabState.bMontageSelected)
+	{
+		return AnimTabState.CurrentMontage && AnimTabState.DirtyMontages.count(AnimTabState.CurrentMontage) > 0;
+	}
+
+	return AnimTabState.CurrentSequence && AnimTabState.DirtySequences.count(AnimTabState.CurrentSequence) > 0;
+}
+
+void FMeshEditorWidget::MarkCurrentAnimationDirty()
+{
+	if (AnimTabState.bMontageSelected)
+	{
+		if (AnimTabState.CurrentMontage)
+		{
+			AnimTabState.DirtyMontages.insert(AnimTabState.CurrentMontage);
+		}
+		return;
+	}
+
+	if (AnimTabState.CurrentSequence)
+	{
+		AnimTabState.DirtySequences.insert(AnimTabState.CurrentSequence);
 	}
 }
 
@@ -1128,7 +1195,10 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 	{
 		USkeletalMeshComponent* Comp = ViewportClient.GetPreviewMeshComponent();
 		UAnimInstance* AnimInst = Comp ? Comp->GetAnimInstance() : nullptr;
-		FAnimMontagePropertyPanel::Render(AnimTabState.CurrentMontage, Comp, AnimInst);
+		if (FAnimMontagePropertyPanel::Render(AnimTabState.CurrentMontage, Comp, AnimInst))
+		{
+			MarkCurrentAnimationDirty();
+		}
 	}
 	else if (AnimTabState.CurrentSequence)
 	{
@@ -1144,7 +1214,10 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 
 		if (bShowNotifyDetails)
 		{
-			FAnimationTimelinePanel::RenderNotifyDetails(Seq, AnimTabState.SelectedNotifyIndex);
+			if (FAnimationTimelinePanel::RenderNotifyDetails(Seq, AnimTabState.SelectedNotifyIndex))
+			{
+				MarkCurrentAnimationDirty();
+			}
 		}
 		else if (bShowMorphDetails)
 		{
@@ -1155,6 +1228,7 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 				AnimTabState.SelectedMorphKeyIndex
 			))
 			{
+				MarkCurrentAnimationDirty();
 				RefreshAnimationPreviewPose();
 			}
 		}
@@ -1175,7 +1249,11 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 
 			// AnimSequence property 패널 — root motion 등 편집 가능한 항목.
 			ImGui::Dummy(ImVec2(0, 12));
-			FAnimSequencePropertyPanel::Render(Seq);
+			if (FAnimSequencePropertyPanel::Render(Seq))
+			{
+				MarkCurrentAnimationDirty();
+				RefreshAnimationPreviewPose();
+			}
 
 			USkeletalMeshComponent* PreviewMeshComponent = ViewportClient.GetPreviewMeshComponent();
 			USkeletalMesh* PreviewMesh = PreviewMeshComponent ? PreviewMeshComponent->GetSkeletalMesh() : SkeletalMesh;
@@ -1236,7 +1314,7 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 							}
 						}
 						AnimTabState.bMorphPreviewOverrideEnabled = bAnyOverride;
-						FAnimationManager::Get().SaveAnimationPreservingMetadata(Seq);
+						MarkCurrentAnimationDirty();
 						RefreshAnimationPreviewPose();
 					}
 					ImGui::PopID();
@@ -1514,11 +1592,18 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 		Comp->SetPlaying(!bPlaying);
 	}
 
-	FAnimationTimelinePanel::Render(NodeInst, Comp, AnimTabState.CurrentSequence, TimelineHeight,
+	if (FAnimationTimelinePanel::Render(NodeInst, Comp, AnimTabState.CurrentSequence, TimelineHeight,
 		AnimTabState.SelectedNotifyIndex,
 		AnimTabState.SelectedMorphCurveIndex,
 		AnimTabState.SelectedMorphKeyIndex
-	);
+	))
+	{
+		if (AnimTabState.CurrentSequence)
+		{
+			AnimTabState.DirtySequences.insert(AnimTabState.CurrentSequence);
+		}
+		RefreshAnimationPreviewPose();
+	}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

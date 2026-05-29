@@ -38,6 +38,8 @@ struct FAnimationTabState
 	TArray<FAssetListItem> CachedMontageFiles;
 	FSkeletonBinding       CachedAnimationListBinding;
 	bool                   bAnimationListDirty = true;
+	TSet<UAnimSequence*>   DirtySequences;
+	TSet<UAnimMontage*>    DirtyMontages;
 
 	float         AnimListWidth                = 200.0f;
 	float         AnimDetailsWidth             = 280.0f;
@@ -85,6 +87,7 @@ private:
 	void RenderSocketTreeNode(USkeleton* Skeleton, int32 SocketIndex);
 	void RenderMeshStatsOverlay(ImDrawList* DrawList, const ImVec2& ViewportPos) const;
 	void SaveCurrentSkeleton();
+	void SaveCurrentAnimationAsset();
 	void RefreshSelectedSocketEditBuffers(USkeleton* Skeleton);
 
 	// Animation tab helpers
@@ -94,6 +97,8 @@ private:
 	void ApplyMorphPreviewOverrides(TArray<float>& InOutMorphWeights) const;
 	void RefreshAnimationPreviewPose();
 	void MarkAnimationListDirty();
+	bool IsCurrentAnimationDirty() const;
+	void MarkCurrentAnimationDirty();
 	const TArray<FAssetListItem>& GetCachedAnimationFilesForCurrentSkeleton();
 	const TArray<FAssetListItem>& GetCachedMontageFilesForCurrentSkeleton();
 
