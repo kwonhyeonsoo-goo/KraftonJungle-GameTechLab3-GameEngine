@@ -545,6 +545,24 @@ bool FAnimGraphEditorWidget::CanEdit(UObject* Object) const
 	return Object && Object->IsA<UAnimGraphAsset>();
 }
 
+bool FAnimGraphEditorWidget::IsEditingObject(UObject* Object) const
+{
+	if (FAssetEditorWidget::IsEditingObject(Object))
+	{
+		return true;
+	}
+
+	const UAnimGraphAsset* CurrentAsset = Cast<UAnimGraphAsset>(EditedObject);
+	const UAnimGraphAsset* RequestedAsset = Cast<UAnimGraphAsset>(Object);
+	if (!IsOpen() || !CurrentAsset || !RequestedAsset)
+	{
+		return false;
+	}
+
+	const FString& CurrentPath = CurrentAsset->GetSourcePath();
+	return !CurrentPath.empty() && CurrentPath == RequestedAsset->GetSourcePath();
+}
+
 void FAnimGraphEditorWidget::Open(UObject* Object)
 {
 	if (!CanEdit(Object))
@@ -602,7 +620,7 @@ void FAnimGraphEditorWidget::Render(float DeltaTime)
 	}
 
 	bool bOpenFlag = true;
-	if (!ImGui::Begin(WindowTitle, &bOpenFlag))
+	if (!bRenderingDocument && !ImGui::Begin(WindowTitle, &bOpenFlag))
 	{
 		ImGui::End();
 		if (!bOpenFlag) Close();
@@ -897,7 +915,31 @@ void FAnimGraphEditorWidget::Render(float DeltaTime)
 		ImGui::EndChild();
 	}
 
-	ImGui::End();
+	if (!bRenderingDocument)
+	{
+		ImGui::End();
+	}
 
 	if (!bOpenFlag) Close();
+}
+
+void FAnimGraphEditorWidget::RenderDocument(float DeltaTime)
+{
+	bRenderingDocument = true;
+	Render(DeltaTime);
+	bRenderingDocument = false;
+}
+
+FString FAnimGraphEditorWidget::GetDocumentTitle() const
+{
+	const UAnimGraphAsset* Asset = Cast<UAnimGraphAsset>(EditedObject);
+	const FString SourcePath = Asset ? Asset->GetSourcePath() : FString();
+	return SourcePath.empty() ? FString("Anim Graph") : FString("Anim Graph - " + SourcePath);
+}
+
+FString FAnimGraphEditorWidget::GetDocumentPayloadId() const
+{
+	const UAnimGraphAsset* Asset = Cast<UAnimGraphAsset>(EditedObject);
+	const FString SourcePath = Asset ? Asset->GetSourcePath() : FString();
+	return SourcePath.empty() ? FAssetEditorWidget::GetDocumentPayloadId() : SourcePath;
 }

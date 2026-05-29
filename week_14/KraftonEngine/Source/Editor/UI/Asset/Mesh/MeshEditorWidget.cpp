@@ -455,6 +455,31 @@ void FMeshEditorWidget::Render(float DeltaTime)
 		return;
 	}
 
+	RenderDocument(DeltaTime);
+
+	ImGui::End();
+
+	if (!bWindowOpen)
+	{
+		bPendingClose = true;
+	}
+}
+
+void FMeshEditorWidget::RenderDocument(float DeltaTime)
+{
+	(void)DeltaTime;
+
+	if (bPendingClose)
+	{
+		Close();
+		bPendingClose = false;
+		return;
+	}
+	if (!IsOpen() || !EditedObject)
+	{
+		return;
+	}
+
 	if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
 	{
 		FSlateApplication::Get().BringViewportToFront(&ViewportClient);
@@ -487,13 +512,20 @@ void FMeshEditorWidget::Render(float DeltaTime)
 		RenderAnimationLayout(AvailableHeight);
 		break;
 	}
+}
 
-	ImGui::End();
+FString FMeshEditorWidget::GetDocumentTitle() const
+{
+	const USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
+	const FString AssetPath = SkeletalMesh ? SkeletalMesh->GetAssetPathFileName() : FString();
+	return AssetPath.empty() ? FString("Skeletal Mesh") : FString("Skeletal Mesh - " + AssetPath);
+}
 
-	if (!bWindowOpen)
-	{
-		bPendingClose = true;
-	}
+FString FMeshEditorWidget::GetDocumentPayloadId() const
+{
+	const USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
+	const FString AssetPath = SkeletalMesh ? SkeletalMesh->GetAssetPathFileName() : FString();
+	return AssetPath.empty() ? FAssetEditorWidget::GetDocumentPayloadId() : AssetPath;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

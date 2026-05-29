@@ -9,6 +9,14 @@
 class UObject;
 class IEditorPreviewViewportClient;
 
+struct FAssetEditorOpenResult
+{
+	bool bOpened = false;
+	bool bDocumentTab = false;
+	FEditorDocumentTabId TabId;
+	FString Label;
+};
+
 class FAssetEditorManager
 {
 public:
@@ -25,15 +33,23 @@ public:
 
 	void Tick(float DeltaTime);
 	void Render(float DeltaTime);
+	bool RenderActiveEditorDocument(const FEditorDocumentTabId& TabId, float DeltaTime);
 
 	void CloseAll();
-	bool OpenEditorForObject(UObject* Object);
+	FAssetEditorOpenResult OpenEditorForObject(UObject* Object);
+	void CloseEditorForTab(const FEditorDocumentTabId& TabId);
 
 	void CollectPreviewViewportClients(TArray<IEditorPreviewViewportClient*>& OutClients) const;
+	void CollectPreviewViewportClientsForTab(const FEditorDocumentTabId& TabId, TArray<IEditorPreviewViewportClient*>& OutClients) const;
 
 	bool IsMouseOverAnyEditorViewport() const;
+	bool IsMouseOverEditorViewportForTab(const FEditorDocumentTabId& TabId) const;
 
 	void RemoveClosedEditors();
+
+private:
+	FAssetEditorWidget* FindEditorForTab(const FEditorDocumentTabId& TabId) const;
+	FAssetEditorOpenResult MakeOpenResult(FAssetEditorWidget& Editor) const;
 
 private:
 	TArray<std::function<std::unique_ptr<FAssetEditorWidget>()>> EditorFactories;

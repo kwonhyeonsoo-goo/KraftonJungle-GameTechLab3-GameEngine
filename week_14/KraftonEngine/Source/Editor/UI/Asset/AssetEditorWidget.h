@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "UI/EditorWidget.h"
+#include "Editor/UI/EditorDocumentTabManager.h"
 
 class UObject;
 class IEditorPreviewViewportClient;
@@ -19,6 +20,12 @@ public:
 
 	virtual bool AllowsMultipleInstances() const { return false; }
 	virtual bool IsEditingObject(UObject* Object) const { return IsOpen() && EditedObject == Object; }
+	virtual bool SupportsDocumentTabs() const { return GetDocumentTabKind() != EEditorDocumentTabKind::Unsupported; }
+	virtual void RenderDocument(float DeltaTime);
+	virtual FString GetDocumentTitle() const;
+	virtual FString GetDocumentPayloadId() const;
+	virtual EEditorDocumentTabKind GetDocumentTabKind() const { return EEditorDocumentTabKind::Unsupported; }
+	FEditorDocumentTabId GetDocumentTabId() const;
 
 	UObject* GetEditedObject() const { return EditedObject; }
 	bool IsOpen() const { return bOpen; }

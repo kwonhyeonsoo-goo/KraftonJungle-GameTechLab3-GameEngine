@@ -64,6 +64,10 @@ public:
 	bool AllowsMultipleInstances() const override { return true; }
 
 	void Render(float DeltaTime) override;
+	void RenderDocument(float DeltaTime) override;
+	FString GetDocumentTitle() const override;
+	FString GetDocumentPayloadId() const override;
+	EEditorDocumentTabKind GetDocumentTabKind() const override { return EEditorDocumentTabKind::SkeletalMeshEditor; }
 
 	bool IsMouseOverViewport() const { return IsOpen() && ViewportClient.IsMouseOverViewport(); }
 

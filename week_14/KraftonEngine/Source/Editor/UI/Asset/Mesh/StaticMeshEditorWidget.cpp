@@ -149,7 +149,6 @@ void FStaticMeshEditorWidget::Render(float DeltaTime)
 		return;
 	}
 
-	static float DetailsWidth = 300.0f;
 	UStaticMesh* StaticMesh = Cast<UStaticMesh>(EditedObject);
 
 	bool bWindowOpen = true;
@@ -186,6 +185,33 @@ void FStaticMeshEditorWidget::Render(float DeltaTime)
 		}
 		return;
 	}
+
+	if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+	{
+		FSlateApplication::Get().BringViewportToFront(&ViewportClient);
+	}
+
+	RenderDocument(DeltaTime);
+
+	ImGui::End();
+
+	if (!bWindowOpen)
+	{
+		Close();
+	}
+}
+
+void FStaticMeshEditorWidget::RenderDocument(float DeltaTime)
+{
+	(void)DeltaTime;
+
+	if (!IsOpen() || !EditedObject)
+	{
+		return;
+	}
+
+	static float DetailsWidth = 300.0f;
+	UStaticMesh* StaticMesh = Cast<UStaticMesh>(EditedObject);
 
 	if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
 	{
@@ -243,13 +269,20 @@ void FStaticMeshEditorWidget::Render(float DeltaTime)
 	ImGui::Separator();
 	RenderDetailsPanel(StaticMesh ? StaticMesh->GetStaticMeshAsset() : nullptr);
 	ImGui::EndChild();
+}
 
-	ImGui::End();
+FString FStaticMeshEditorWidget::GetDocumentTitle() const
+{
+	const UStaticMesh* StaticMesh = Cast<UStaticMesh>(EditedObject);
+	const FString AssetPath = StaticMesh ? StaticMesh->GetAssetPathFileName() : FString();
+	return AssetPath.empty() ? FString("Static Mesh") : FString("Static Mesh - " + AssetPath);
+}
 
-	if (!bWindowOpen)
-	{
-		Close();
-	}
+FString FStaticMeshEditorWidget::GetDocumentPayloadId() const
+{
+	const UStaticMesh* StaticMesh = Cast<UStaticMesh>(EditedObject);
+	const FString AssetPath = StaticMesh ? StaticMesh->GetAssetPathFileName() : FString();
+	return AssetPath.empty() ? FAssetEditorWidget::GetDocumentPayloadId() : AssetPath;
 }
 
 void FStaticMeshEditorWidget::RenderMeshStatsOverlay(ImDrawList* DrawList, const ImVec2& ViewportPos) const

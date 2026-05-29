@@ -12,6 +12,7 @@
 #include "Editor/UI/Panel/EditorWorldSettingsWidget.h"
 #include "Editor/UI/ContentBrowser/ContentBrowser.h"
 #include "Editor/UI/Asset/AssetEditorManager.h"
+#include "Editor/UI/EditorDocumentTabManager.h"
 #include "Math/Vector.h"
 
 class AActor;
@@ -41,12 +42,15 @@ public:
 	float GetContentBrowserIconSize() const { return ContentBrowserWidget.GetIconSize(); }
 
 	void OpenAssetEditorForObject(UObject* Object);
-	void CollectAssetEditorPreviewViewportClients(TArray<IEditorPreviewViewportClient*>& OutClients) const { AssetEditorManager.CollectPreviewViewportClients(OutClients); }
-	bool IsMouseOverAssetEditorPreviewViewport() const { return AssetEditorManager.IsMouseOverAnyEditorViewport(); }
+	void CollectAssetEditorPreviewViewportClients(TArray<IEditorPreviewViewportClient*>& OutClients) const;
+	bool IsMouseOverAssetEditorPreviewViewport() const;
+	bool IsLevelDocumentActive() const { return DocumentTabs.IsLevelEditorActive(); }
 
 private:
 	void RenderMainMenuBar();
-	void RenderMainDockSpace(float ReservedBottomHeight);
+	void RenderMainDockSpace(float ReservedBottomHeight, float ReservedTopHeight);
+	void RenderDocumentTabStrip(float ReservedBottomHeight);
+	void RenderActiveDocument(float ReservedTopHeight, float ReservedBottomHeight, float DeltaTime);
 	void RenderShortcutOverlay();
 	void RenderEditorDebugPanel();
 	void RenderConsoleDrawer(float DeltaTime);
@@ -68,6 +72,7 @@ private:
 	EditorProjectSettingsWidget ProjectSettingsWidget;
 	EditorWorldSettingsWidget WorldSettingsWidget;
 	FAssetEditorManager AssetEditorManager;
+	FEditorDocumentTabManager DocumentTabs;
 
 	bool bShowWidgetList = false;
 	bool bShowShortcutOverlay = false;

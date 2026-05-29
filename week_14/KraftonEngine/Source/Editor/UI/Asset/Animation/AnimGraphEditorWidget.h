@@ -19,6 +19,12 @@ public:
 	void Open(UObject* Object)    override;
 	void Close()                  override;
 	void Render(float DeltaTime)  override;
+	void RenderDocument(float DeltaTime) override;
+	bool AllowsMultipleInstances() const override { return true; }
+	bool IsEditingObject(UObject* Object) const override;
+	FString GetDocumentTitle() const override;
+	FString GetDocumentPayloadId() const override;
+	EEditorDocumentTabKind GetDocumentTabKind() const override { return EEditorDocumentTabKind::AnimGraphEditor; }
 
 private:
 	void EnsureContext();
@@ -32,4 +38,5 @@ private:
 
 	// 배경 우클릭 시 캡쳐한 캔버스 좌표 — 같은 프레임의 BeginPopup 안에서 신규 노드 spawn 위치로 사용.
 	ImVec2 PendingNewNodePosition = ImVec2(0, 0);
+	bool bRenderingDocument = false;
 };
