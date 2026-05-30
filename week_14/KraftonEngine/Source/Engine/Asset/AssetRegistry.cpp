@@ -7,6 +7,8 @@
 #include "Animation/Montage/AnimMontage.h"
 #include "Animation/Skeleton/Skeleton.h"
 #include "Animation/Skeleton/SkeletonManager.h"
+#include "Physics/PhysicsAsset.h"
+#include "Physics/PhysicsAssetManager.h"
 #include "Platform/Paths.h"
 #include "Core/Logging/Log.h"
 
@@ -38,6 +40,10 @@ namespace FAssetRegistry
         if (std::strcmp(AssetTypeName, "USkeleton") == 0)
         {
             return FSkeletonManager::Get().GetAvailableSkeletonFiles();
+        }
+        if (std::strcmp(AssetTypeName, "UPhysicsAsset") == 0 || std::strcmp(AssetTypeName, "PhysicsAsset") == 0)
+        {
+            return FPhysicsAssetManager::Get().GetAvailablePhysicsAssetFiles();
         }
 		if (std::strcmp(AssetTypeName, "UAnimSequence") == 0)
 		{
@@ -202,6 +208,11 @@ namespace FAssetRegistry
         }
 
         return Result;
+    }
+
+    TArray<FAssetListItem> ListPhysicsAssetsForSkeleton(const FSkeletonBinding& Skeleton, bool bAllowSameStructure)
+    {
+        return FPhysicsAssetManager::Get().FindPhysicsAssetsForSkeleton(Skeleton, bAllowSameStructure);
     }
 
     USkeleton* FindSkeletonByGuid(const FString& SkeletonAssetGuid)

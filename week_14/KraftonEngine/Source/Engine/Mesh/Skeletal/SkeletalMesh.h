@@ -5,7 +5,10 @@
 #include "Animation/Skeleton/SkeletonTypes.h"
 #include "Object/Ptr/WeakObjectPtr.h"
 
+#include <memory>
+
 class USkeleton;
+class UPhysicsAsset;
 
 
 #include "Source/Engine/Mesh/Skeletal/SkeletalMesh.generated.h"
@@ -16,7 +19,7 @@ class USkeletalMesh : public UObject
 public:
 	GENERATED_BODY()
 	USkeletalMesh() = default;
-	~USkeletalMesh() override = default;
+    ~USkeletalMesh() override;
 
     void Serialize(FArchive& Ar) override;
 
@@ -31,6 +34,7 @@ public:
     }
 
     void                             SetSkeletalMeshAsset(FSkeletalMesh* InMesh);
+    void                             SetSkeletalMeshAsset(std::unique_ptr<FSkeletalMesh> InMesh);
     FSkeletalMesh*                   GetSkeletalMeshAsset() const;
     void                             SetSkeletalMaterials(TArray<FSkeletalMaterial>&& InMaterials);
     const TArray<FSkeletalMaterial>& GetSkeletalMaterials() const;
@@ -43,17 +47,32 @@ public:
     void SetSkeletonBinding(const FSkeletonBinding& InBinding);
     const FSkeletonBinding& GetSkeletonBinding() const { return SkeletonBinding; }
 
+    // The mesh owns the default PhysicsAsset choice; components may override it later.
+    void SetPhysicsAsset(UPhysicsAsset* InPhysicsAsset);
+    UPhysicsAsset* GetPhysicsAsset() const;
+    void SetPhysicsAssetPath(const FString& InPath);
+    const FString& GetPhysicsAssetPath() const { return PhysicsAssetPath; }
+    bool ResolvePhysicsAsset();
+    void ClearPhysicsAsset();
+
 private:
-    void CacheSectionMaterialIndices();
-    void SyncSkeletonBindingToAsset();
-    void SyncSkeletonBindingFromAsset();
+    uint32 CalculateTrackedMemorySize() const;
+    void   ReleaseTrackedMemory();
+    void   CacheSectionMaterialIndices();
+    void   SyncSkeletonBindingToAsset();
+    void   SyncSkeletonBindingFromAsset();
+    bool   CanUsePhysicsAsset(UPhysicsAsset* InPhysicsAsset, FSkeletonCompatibilityReport* OutReport = nullptr) const;
 
 private:
     FString AssetPathFileName = "None";
 
-    FSkeletalMesh*            SkeletalMeshAsset = nullptr;
-    TArray<FSkeletalMaterial> SkeletalMaterials;
+    std::unique_ptr<FSkeletalMesh> SkeletalMeshAsset;
+    TArray<FSkeletalMaterial>      SkeletalMaterials;
+    bool                           bMemoryTracked    = false;
+    uint32                         TrackedMemorySize = 0;
 
     FSkeletonBinding SkeletonBinding;
     TWeakObjectPtr<USkeleton> Skeleton;
+    FString PhysicsAssetPath = "None";
+    mutable TWeakObjectPtr<UPhysicsAsset> PhysicsAsset;
 };

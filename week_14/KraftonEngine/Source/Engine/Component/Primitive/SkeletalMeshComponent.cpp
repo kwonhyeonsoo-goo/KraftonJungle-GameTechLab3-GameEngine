@@ -7,6 +7,8 @@
 #include "Animation/Sequence/AnimSequenceBase.h"
 #include "Animation/Instance/AnimSingleNodeInstance.h"
 #include "Animation/PoseContext.h"
+#include "Animation/Skeleton/Skeleton.h"
+#include "Animation/Skeleton/SkeletonManager.h"
 #include "Asset/AssetRegistry.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
@@ -17,14 +19,60 @@
 #include "Object/Object.h"
 #include "Object/Reflection/ObjectFactory.h"
 #include "Object/Reflection/UClass.h"
+#include "Physics/PhysicsAsset.h"
+#include "Physics/PhysicsAssetManager.h"
+#include "Physics/PhysicsAssetInstance.h"
 #include "Render/Proxy/SkeletalMeshSceneProxy.h"
 #include "Serialization/Archive.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
+
+namespace
+{
+    FMatrix GetAffineInverseForPoseSync(const FMatrix& Matrix)
+    {
+        const double A = Matrix.M[0][0];
+        const double B = Matrix.M[0][1];
+        const double C = Matrix.M[0][2];
+        const double D = Matrix.M[1][0];
+        const double E = Matrix.M[1][1];
+        const double F = Matrix.M[1][2];
+        const double G = Matrix.M[2][0];
+        const double H = Matrix.M[2][1];
+        const double I = Matrix.M[2][2];
+
+        const double Det = A * (E * I - F * H) - B * (D * I - F * G) + C * (D * H - E * G);
+        if (std::fabs(Det) < 1.0e-12)
+        {
+            return Matrix.GetInverse();
+        }
+
+        const double InvDet = 1.0 / Det;
+
+        FMatrix Result = FMatrix::Identity;
+        Result.M[0][0] = static_cast<float>((E * I - F * H) * InvDet);
+        Result.M[0][1] = static_cast<float>((C * H - B * I) * InvDet);
+        Result.M[0][2] = static_cast<float>((B * F - C * E) * InvDet);
+        Result.M[1][0] = static_cast<float>((F * G - D * I) * InvDet);
+        Result.M[1][1] = static_cast<float>((A * I - C * G) * InvDet);
+        Result.M[1][2] = static_cast<float>((C * D - A * F) * InvDet);
+        Result.M[2][0] = static_cast<float>((D * H - E * G) * InvDet);
+        Result.M[2][1] = static_cast<float>((B * G - A * H) * InvDet);
+        Result.M[2][2] = static_cast<float>((A * E - B * D) * InvDet);
+
+        const FVector Translation = Matrix.GetLocation();
+        Result.M[3][0] = -(Translation.X * Result.M[0][0] + Translation.Y * Result.M[1][0] + Translation.Z * Result.M[2][0]);
+        Result.M[3][1] = -(Translation.X * Result.M[0][1] + Translation.Y * Result.M[1][1] + Translation.Z * Result.M[2][1]);
+        Result.M[3][2] = -(Translation.X * Result.M[0][2] + Translation.Y * Result.M[1][2] + Translation.Z * Result.M[2][2]);
+        return Result;
+    }
+}
 
 USkeletalMeshComponent::~USkeletalMeshComponent()
 {
+    DestroyPhysicsAssetInstance();
     ClearAnimInstance();
 }
 
@@ -36,9 +84,312 @@ FPrimitiveSceneProxy* USkeletalMeshComponent::CreateSceneProxy()
 void USkeletalMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 {
     Super::SetSkeletalMesh(InMesh);
+    if (InMesh)
+    {
+        ResolvePhysicsAssetOverride();
+    }
+    else
+    {
+        PhysicsAssetOverride.Reset();
+    }
+
+    OnPhysicsAssetChanged();
     // Mesh 가 바뀌면 이전 AnimInstance 가 가리키던 본 인덱스/카운트가 무의미해진다.
     // 새 SkeletalMesh 기준으로 AnimInstance 를 재인스턴스화한다.
     InitializeAnimation();
+}
+
+void USkeletalMeshComponent::SetPhysicsAssetOverride(UPhysicsAsset* InPhysicsAsset)
+{
+    if (!InPhysicsAsset)
+    {
+        ClearPhysicsAssetOverride();
+        return;
+    }
+
+    FSkeletonCompatibilityReport Report;
+    if (!CanUsePhysicsAsset(InPhysicsAsset, &Report))
+    {
+        UE_LOG("SetPhysicsAssetOverride rejected: skeleton mismatch. Component=%s PhysicsAsset=%s Reason=%s",
+            GetName().c_str(),
+            InPhysicsAsset->GetName().c_str(),
+            Report.Reason.c_str());
+        ClearPhysicsAssetOverride();
+        return;
+    }
+
+    PhysicsAssetOverride = InPhysicsAsset;
+    PhysicsAssetOverridePath = InPhysicsAsset->GetAssetPathFileName().empty()
+        ? FString("None")
+        : InPhysicsAsset->GetAssetPathFileName();
+    OnPhysicsAssetChanged();
+}
+
+void USkeletalMeshComponent::SetPhysicsAssetOverridePath(const FString& InPath)
+{
+    PhysicsAssetOverridePath.SetPath(InPath.empty() ? FString("None") : InPath);
+    PhysicsAssetOverride.Reset();
+
+    if (!PhysicsAssetOverridePath.IsNull())
+    {
+        ResolvePhysicsAssetOverride();
+    }
+    else
+    {
+        OnPhysicsAssetChanged();
+    }
+}
+
+UPhysicsAsset* USkeletalMeshComponent::GetPhysicsAssetOverride() const
+{
+    if (PhysicsAssetOverride.Get())
+    {
+        FSkeletonCompatibilityReport Report;
+        if (CanUsePhysicsAsset(PhysicsAssetOverride.Get(), &Report))
+        {
+            return PhysicsAssetOverride.Get();
+        }
+
+        UE_LOG("GetPhysicsAssetOverride cleared incompatible cached PhysicsAsset. Component=%s PhysicsAsset=%s Reason=%s",
+            GetName().c_str(),
+            PhysicsAssetOverride->GetName().c_str(),
+            Report.Reason.c_str());
+        const_cast<USkeletalMeshComponent*>(this)->ClearPhysicsAssetOverride();
+        return nullptr;
+    }
+
+    if (PhysicsAssetOverridePath.IsNull())
+    {
+        return nullptr;
+    }
+
+    USkeletalMeshComponent* MutableThis = const_cast<USkeletalMeshComponent*>(this);
+    return MutableThis->ResolvePhysicsAssetOverride() ? PhysicsAssetOverride.Get() : nullptr;
+}
+
+UPhysicsAsset* USkeletalMeshComponent::GetEffectivePhysicsAsset() const
+{
+    if (UPhysicsAsset* OverridePhysicsAsset = GetPhysicsAssetOverride())
+    {
+        return OverridePhysicsAsset;
+    }
+
+    USkeletalMesh* Mesh = GetSkeletalMesh();
+    if (!Mesh)
+    {
+        return nullptr;
+    }
+
+    if (UPhysicsAsset* MeshPhysicsAsset = Mesh->GetPhysicsAsset())
+    {
+        return MeshPhysicsAsset;
+    }
+
+    // Components resolve the final fallback order so later ragdoll code can ask only once.
+    USkeleton* Skeleton = Mesh->GetSkeleton();
+    return Skeleton ? Skeleton->GetDefaultPhysicsAsset() : nullptr;
+}
+
+bool USkeletalMeshComponent::ResolvePhysicsAssetOverride()
+{
+    if (PhysicsAssetOverride.Get())
+    {
+        FSkeletonCompatibilityReport Report;
+        if (CanUsePhysicsAsset(PhysicsAssetOverride.Get(), &Report))
+        {
+            return true;
+        }
+
+        UE_LOG("ResolvePhysicsAssetOverride cleared incompatible cached PhysicsAsset. Component=%s PhysicsAsset=%s Reason=%s",
+            GetName().c_str(),
+            PhysicsAssetOverride->GetName().c_str(),
+            Report.Reason.c_str());
+        ClearPhysicsAssetOverride();
+        return false;
+    }
+
+    if (PhysicsAssetOverridePath.IsNull())
+    {
+        PhysicsAssetOverride.Reset();
+        return false;
+    }
+
+    USkeletalMesh* Mesh = GetSkeletalMesh();
+    if (!Mesh)
+    {
+        PhysicsAssetOverride.Reset();
+        return false;
+    }
+
+    UPhysicsAsset* LoadedPhysicsAsset = FPhysicsAssetManager::Get().LoadPhysicsAsset(PhysicsAssetOverridePath.ToString());
+    if (!LoadedPhysicsAsset)
+    {
+        PhysicsAssetOverride.Reset();
+        return false;
+    }
+
+    FSkeletonCompatibilityReport Report;
+    if (!CanUsePhysicsAsset(LoadedPhysicsAsset, &Report))
+    {
+        UE_LOG("ResolvePhysicsAssetOverride rejected loaded PhysicsAsset: skeleton mismatch. Component=%s PhysicsAsset=%s Reason=%s",
+            GetName().c_str(),
+            LoadedPhysicsAsset->GetName().c_str(),
+            Report.Reason.c_str());
+        ClearPhysicsAssetOverride();
+        return false;
+    }
+
+    PhysicsAssetOverride = LoadedPhysicsAsset;
+    return true;
+}
+
+void USkeletalMeshComponent::ClearPhysicsAssetOverride()
+{
+    PhysicsAssetOverride.Reset();
+    PhysicsAssetOverridePath.Reset();
+    OnPhysicsAssetChanged();
+}
+
+void USkeletalMeshComponent::ResetRagdollRuntimeState()
+{
+    bUsePhysicsAssetPose = false;
+    if (PhysicsAssetInstance)
+    {
+        PhysicsAssetInstance->ResetRuntimeState();
+    }
+}
+
+void USkeletalMeshComponent::OnPhysicsAssetChanged()
+{
+    DestroyPhysicsAssetInstance();
+    ResetRagdollRuntimeState();
+}
+
+FPhysicsAssetInstance* USkeletalMeshComponent::GetPhysicsAssetInstance() const
+{
+    return PhysicsAssetInstance.get();
+}
+
+FPhysicsAssetInstance* USkeletalMeshComponent::GetOrCreatePhysicsAssetInstance()
+{
+    UPhysicsAsset* EffectivePhysicsAsset = GetEffectivePhysicsAsset();
+    if (!EffectivePhysicsAsset)
+    {
+        DestroyPhysicsAssetInstance();
+        return nullptr;
+    }
+
+    if (PhysicsAssetInstance &&
+        PhysicsAssetInstance->GetAsset() == EffectivePhysicsAsset &&
+        PhysicsAssetInstance->IsInitialized())
+    {
+        return PhysicsAssetInstance.get();
+    }
+
+    DestroyPhysicsAssetInstance();
+
+    auto NewInstance = std::make_unique<FPhysicsAssetInstance>();
+    if (!NewInstance->Initialize(this, EffectivePhysicsAsset))
+    {
+        return nullptr;
+    }
+
+    PhysicsAssetInstance = std::move(NewInstance);
+    return PhysicsAssetInstance.get();
+}
+
+void USkeletalMeshComponent::DestroyPhysicsAssetInstance()
+{
+    bUsePhysicsAssetPose = false;
+    if (!PhysicsAssetInstance)
+    {
+        return;
+    }
+
+    PhysicsAssetInstance->Shutdown();
+    PhysicsAssetInstance.reset();
+}
+
+bool USkeletalMeshComponent::CreatePhysicsAssetInstanceBodies()
+{
+    FPhysicsAssetInstance* Instance = GetOrCreatePhysicsAssetInstance();
+    const bool bCreated = Instance ? Instance->CreateBodiesAndConstraints() : false;
+    if (bCreated)
+    {
+        SetUsePhysicsAssetPose(true);
+    }
+    else
+    {
+        SetUsePhysicsAssetPose(false);
+    }
+    return bCreated;
+}
+
+void USkeletalMeshComponent::DestroyPhysicsAssetInstanceBodies()
+{
+    SetUsePhysicsAssetPose(false);
+    if (PhysicsAssetInstance)
+    {
+        PhysicsAssetInstance->DestroyBodiesAndConstraints();
+    }
+}
+
+void USkeletalMeshComponent::SetUsePhysicsAssetPose(bool bEnable)
+{
+    bUsePhysicsAssetPose = bEnable;
+}
+
+bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
+{
+    if (!bUsePhysicsAssetPose)
+    {
+        return false;
+    }
+
+    FPhysicsAssetInstance* Instance = GetPhysicsAssetInstance();
+    if (!Instance || !Instance->HasLivePhysicsObjects())
+    {
+        return false;
+    }
+
+    USkeletalMesh* Mesh = GetSkeletalMesh();
+    FSkeletalMesh* MeshAsset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+    if (!MeshAsset || MeshAsset->Bones.empty())
+    {
+        return false;
+    }
+
+    TArray<FTransform> BoneWorldTransforms;
+    if (!Instance->PullPhysicsPose(BoneWorldTransforms) ||
+        BoneWorldTransforms.size() < MeshAsset->Bones.size())
+    {
+        return false;
+    }
+
+    TArray<FMatrix> ComponentSpaceGlobalMatrices;
+    ComponentSpaceGlobalMatrices.resize(MeshAsset->Bones.size());
+
+    const FMatrix& ComponentWorldInverse = GetWorldInverseMatrix();
+    for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+    {
+        ComponentSpaceGlobalMatrices[BoneIndex] =
+            BoneWorldTransforms[BoneIndex].ToMatrix() * ComponentWorldInverse;
+    }
+
+    TArray<FTransform> LocalPose;
+    LocalPose.resize(MeshAsset->Bones.size());
+    for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+    {
+        const int32 ParentIndex = MeshAsset->Bones[BoneIndex].ParentIndex;
+        const FMatrix LocalMatrix = (ParentIndex >= 0)
+            ? ComponentSpaceGlobalMatrices[BoneIndex] * GetAffineInverseForPoseSync(ComponentSpaceGlobalMatrices[ParentIndex])
+            : ComponentSpaceGlobalMatrices[BoneIndex];
+        LocalPose[BoneIndex] = FTransform(LocalMatrix);
+    }
+
+    // Full ragdoll is the final pose owner in this first sync pass; blending comes later.
+    SetBoneLocalTransforms(LocalPose);
+    return true;
 }
 
 void USkeletalMeshComponent::PlayAnimation(UAnimSequenceBase* NewAnimToPlay, bool bLooping)
@@ -232,6 +583,40 @@ void USkeletalMeshComponent::LoadAnimationFromPath()
     }
 }
 
+bool USkeletalMeshComponent::CanUsePhysicsAsset(UPhysicsAsset* InPhysicsAsset, FSkeletonCompatibilityReport* OutReport) const
+{
+    if (!InPhysicsAsset)
+    {
+        if (OutReport)
+        {
+            OutReport->Result = ESkeletonCompatibilityResult::Incompatible;
+            OutReport->Reason = "null physics asset";
+        }
+        return false;
+    }
+
+    const USkeletalMesh* Mesh = GetSkeletalMesh();
+    if (!Mesh)
+    {
+        if (OutReport)
+        {
+            OutReport->Result = ESkeletonCompatibilityResult::Incompatible;
+            OutReport->Reason = "skeletal mesh is missing";
+        }
+        return false;
+    }
+
+    const FSkeletonCompatibilityReport Report =
+        FSkeletonManager::CheckCompatibility(Mesh->GetSkeletonBinding(), InPhysicsAsset->GetSkeletonBinding());
+
+    if (OutReport)
+    {
+        *OutReport = Report;
+    }
+
+    return Report.Result == ESkeletonCompatibilityResult::ExactSkeleton;
+}
+
 void USkeletalMeshComponent::InitializeAnimation()
 {
     if (!GetSkeletalMesh())
@@ -331,6 +716,12 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,
         return;
     }
 
+    if (bUsePhysicsAssetPose && ApplyPhysicsAssetPose())
+    {
+        UMeshComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
+        return;
+    }
+
     if (EvaluateAnimInstance(DeltaTime))
     {
         UMeshComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -415,6 +806,20 @@ void USkeletalMeshComponent::PostEditProperty(const char* PropertyName)
     {
         SetPlaying(AnimationData.bPlaying);
     }
+    else if (std::strcmp(PropertyName, "PhysicsAssetOverridePath") == 0 ||
+             std::strcmp(PropertyName, "Physics Asset Override") == 0)
+    {
+        if (!PhysicsAssetOverridePath.IsNull())
+        {
+            ResolvePhysicsAssetOverride();
+        }
+        else
+        {
+            PhysicsAssetOverride.Reset();
+        }
+
+        OnPhysicsAssetChanged();
+    }
 
     // AnimInstance 자체 properties 는 자식이 자체 PostEdit 처리. 컴포넌트는 dispatch 만.
     // 컴포넌트가 인식한 이름과 겹치지 않는 한 무해 (자식이 모르는 이름은 no-op).
@@ -435,6 +840,8 @@ void USkeletalMeshComponent::Serialize(FArchive& Ar)
     if (Ar.IsLoading())
     {
         AnimationData.AnimToPlayPath.SetPath(AnimToPlayPath);
+        PhysicsAssetOverride.Reset();
+        ResetRagdollRuntimeState();
     }
     Ar << AnimationData.PlayRate;
     Ar << AnimationData.bLooping;
@@ -499,6 +906,7 @@ bool USkeletalMeshComponent::EvaluateAnimInstance(float DeltaTime)
 
 void USkeletalMeshComponent::BeginDestroy()
 {
+    DestroyPhysicsAssetInstance();
     ClearAnimInstance();
     Super::BeginDestroy();
 }

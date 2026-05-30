@@ -67,6 +67,7 @@ public:
 	void NotifyViewTransformChanged() {}
 
 	void Tick(float DeltaTime);
+	void FocusOnPrimarySelection();
 
 	// 활성 상태 — 활성 뷰포트만 입력 처리
 	void SetActive(bool bInActive) { bIsActive = bInActive; }

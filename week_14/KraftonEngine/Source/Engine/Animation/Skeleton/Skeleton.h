@@ -2,8 +2,11 @@
 
 #include "Object/Object.h"
 #include "Animation/Skeleton/SkeletonTypes.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/Animation/Skeleton/Skeleton.generated.h"
+
+class UPhysicsAsset;
 
 UCLASS()
 class USkeleton : public UObject
@@ -88,11 +91,21 @@ public:
 
     int32 FindBoneIndex(const FString& BoneName) const;
 
+    // Skeleton-level fallback keeps shared ragdoll defaults close to the binding source.
+    void SetDefaultPhysicsAsset(UPhysicsAsset* InPhysicsAsset);
+    UPhysicsAsset* GetDefaultPhysicsAsset() const;
+    void SetDefaultPhysicsAssetPath(const FString& InPath);
+    const FString& GetDefaultPhysicsAssetPath() const { return DefaultPhysicsAssetPath; }
+    bool ResolveDefaultPhysicsAsset();
+    void ClearDefaultPhysicsAsset();
+
 private:
     FString            AssetPathFileName = "None";
     FString            SkeletonAssetGuid;
     FString            CompatibilitySignature;
+    FString            DefaultPhysicsAssetPath = "None";
     FReferenceSkeleton ReferenceSkeleton;
     TArray<FSkeletalMeshSocket> Sockets;
     TMap<FString, int32> BoneNameToIndex;
+    mutable TWeakObjectPtr<UPhysicsAsset> DefaultPhysicsAsset;
 };

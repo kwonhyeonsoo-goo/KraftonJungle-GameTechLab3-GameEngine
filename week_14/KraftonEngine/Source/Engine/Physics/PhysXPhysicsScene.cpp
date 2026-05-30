@@ -59,6 +59,7 @@ static PxDefaultAllocator GPhysXAllocator;
 // ============================================================
 static PxFoundation* GSharedFoundation = nullptr;
 static PxPhysics* GSharedPhysics = nullptr;
+static bool GSharedExtensionsInitialized = false;
 static int32 GSharedRefCount = 0;
 
 static void AcquireSharedPhysX(PxFoundation*& OutFoundation, PxPhysics*& OutPhysics)
@@ -69,12 +70,31 @@ static void AcquireSharedPhysX(PxFoundation*& OutFoundation, PxPhysics*& OutPhys
         if (GSharedFoundation)
         {
             GSharedPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *GSharedFoundation, PxTolerancesScale());
+            if (GSharedPhysics)
+            {
+                GSharedExtensionsInitialized = PxInitExtensions(*GSharedPhysics, nullptr);
+                if (!GSharedExtensionsInitialized)
+                {
+                    UE_LOG("[PhysX] Failed to initialize PhysX extensions");
+                    GSharedPhysics->release();
+                    GSharedPhysics = nullptr;
+                    GSharedFoundation->release();
+                    GSharedFoundation = nullptr;
+                }
+            }
         }
+    }
+
+    if (!GSharedFoundation || !GSharedPhysics)
+    {
+        OutFoundation = nullptr;
+        OutPhysics    = nullptr;
+        return;
     }
 
     ++GSharedRefCount;
     OutFoundation = GSharedFoundation;
-    OutPhysics = GSharedPhysics;
+    OutPhysics    = GSharedPhysics;
 }
 
 static void ReleaseSharedPhysX()
@@ -87,6 +107,11 @@ static void ReleaseSharedPhysX()
     --GSharedRefCount;
     if (GSharedRefCount == 0)
     {
+        if (GSharedExtensionsInitialized)
+        {
+            PxCloseExtensions();
+            GSharedExtensionsInitialized = false;
+        }
         if (GSharedPhysics)
         {
             GSharedPhysics->release();
@@ -842,6 +867,15 @@ void FPhysXPhysicsScene::AddTorque(UPrimitiveComponent* Comp, const FVector& Tor
     if (Body.IsValid())
     {
         Runtime.AddTorque(Body, Torque);
+    }
+}
+
+void FPhysXPhysicsScene::AddImpulse(UPrimitiveComponent* Comp, const FVector& Impulse)
+{
+    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
+    if (Body.IsValid())
+    {
+        Runtime.AddImpulse(Body, Impulse);
     }
 }
 

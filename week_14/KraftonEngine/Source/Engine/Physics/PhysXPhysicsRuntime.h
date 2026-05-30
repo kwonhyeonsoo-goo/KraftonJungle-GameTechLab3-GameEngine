@@ -67,6 +67,21 @@ public:
         const FConstraintCreationDesc& Desc
     ) override;
 
+    FPhysicsConstraintHandle CreateFixedJoint(
+        FPhysicsBodyHandle Parent,
+        const FTransform&  ParentLocalFrame,
+        FPhysicsBodyHandle Child,
+        const FTransform&  ChildLocalFrame
+    ) override;
+
+    FPhysicsConstraintHandle CreateSphericalJoint(
+        FPhysicsBodyHandle          Parent,
+        const FTransform&           ParentLocalFrame,
+        FPhysicsBodyHandle          Child,
+        const FTransform&           ChildLocalFrame,
+        const FConstraintLimitDesc& AngularLimits
+    ) override;
+
     void DestroyConstraint(FPhysicsConstraintHandle Constraint) override;
 
     FTransform GetBodyTransform(FPhysicsBodyHandle Body) const override;

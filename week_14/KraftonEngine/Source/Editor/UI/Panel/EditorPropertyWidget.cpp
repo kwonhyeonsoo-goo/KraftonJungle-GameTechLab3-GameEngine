@@ -650,7 +650,7 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 
 	ImGui::SetNextWindowSize(ImVec2(350.0f, 500.0f), ImGuiCond_Once);
 
-	ImGui::Begin("Property Window");
+	ImGui::Begin("Details");
 
 	FSelectionManager& Selection = EditorEngine->GetSelectionManager();
     if (SelectedComponent && !IsValid(SelectedComponent))
@@ -688,6 +688,22 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 
 	const TArray<AActor*>& SelectedActors = Selection.GetSelectedActors();
 	const int32 SelectionCount = static_cast<int32>(SelectedActors.size());
+
+	//rename 단축키 (F2)
+	if (!ImGui::GetIO().WantTextInput && InputSystem::Get().GetKeyDown(VK_F2))
+	{
+		if (SelectionCount == 1)
+		{
+			if (!bActorSelected && SelectedComponent)
+			{
+				BeginRenameComponent(SelectedComponent.Get());
+			}
+			else
+			{
+				BeginRenameActor(PrimaryActor);
+			}
+		}
+	}
 
 	// ========== 고정 영역: Actor Info (clickable) ==========
 	if (SelectionCount > 1)
@@ -786,6 +802,8 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 		}
 	}
 	ImGui::EndChild();
+
+	RenderRenamePopup();
 
 	ImGui::End();
 }
@@ -992,7 +1010,7 @@ void FEditorPropertyWidget::RenderComponentTree(AActor* Actor)
 
 	ImGui::SameLine();
 
-	if (ImGui::Button("Add"))
+	if (ImGui::Button("Add Component"))
 	{
 		ImGui::OpenPopup("##AddComponentPopup");
 	}
@@ -2668,4 +2686,195 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyValue>& Props, 
 
 	ImGui::PopID();
 	return bChanged;
+}
+
+void FEditorPropertyWidget::BeginRenameActor(AActor* TargetActor)
+{
+	if (!TargetActor)
+	{
+		return;
+	}
+
+	RenameTarget = ERenameTarget::Actor;
+	RenameTargetActor = TargetActor;
+	RenameTargetComponent = nullptr;
+	bShowDuplicateWarning = false;
+
+	const FString CurrentName = TargetActor->GetFName().ToString();
+	strncpy_s(RenameBuffer, sizeof(RenameBuffer), CurrentName.c_str(), _TRUNCATE);
+
+	bRenamePopupRequested = true;
+	bFocusRenameInputNextFrame = true;
+}
+
+void FEditorPropertyWidget::BeginRenameComponent(UActorComponent* TargetComponent)
+{
+	if (!TargetComponent)
+	{
+		return;
+	}
+
+	RenameTarget = ERenameTarget::Component;
+	RenameTargetComponent = TargetComponent;
+	RenameTargetActor = nullptr;
+	bShowDuplicateWarning = false;
+
+	const FString CurrentName = TargetComponent->GetFName().ToString();
+	strncpy_s(RenameBuffer, sizeof(RenameBuffer), CurrentName.c_str(), _TRUNCATE);
+
+	bRenamePopupRequested = true;
+	bFocusRenameInputNextFrame = true;
+}
+
+void FEditorPropertyWidget::RenderRenamePopup()
+{
+	if (bRenamePopupRequested)
+	{
+		ImGui::OpenPopup("Rename");
+		bRenamePopupRequested = false;
+	}
+
+	if (ImGui::BeginPopupModal("Rename", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		const bool bIsActor = RenameTarget == ERenameTarget::Actor;
+		const bool bIsComponent = RenameTarget == ERenameTarget::Component;
+
+		if ((bIsActor && !IsValid(RenameTargetActor.Get())) || (bIsComponent && !IsValid(RenameTargetComponent.Get())) || RenameTarget == ERenameTarget::None)
+		{
+			RenameTarget = ERenameTarget::None;
+			RenameBuffer[0] = '\0';
+			bShowDuplicateWarning = false;
+			ImGui::CloseCurrentPopup();
+			ImGui::EndPopup();
+			return;
+		}
+
+		ImGui::TextUnformatted(bIsComponent ? "Component Name" : "Actor Name");
+
+		ImGui::SetNextItemWidth(320.0f);
+		
+		if (bFocusRenameInputNextFrame)
+		{
+			ImGui::SetKeyboardFocusHere();
+			bFocusRenameInputNextFrame = false;
+		}
+		
+		const bool bSubmit = ImGui::InputText("##RenameInput", RenameBuffer, sizeof(RenameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
+
+		if (bShowDuplicateWarning)
+		{
+			ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "이미 사용 중인 이름입니다.");
+		}
+
+		bool bApply = bSubmit || ImGui::Button("OK");
+		ImGui::SameLine();
+		const bool bCancel = ImGui::Button("Cancel");
+
+		if (bApply)
+		{
+			const FString NewName(RenameBuffer);
+			bool bRenamed = false;
+			if (bIsActor)
+			{
+				bRenamed = TryRenameActor(RenameTargetActor.Get(), NewName);
+			}
+			else if (bIsComponent)
+			{
+				bRenamed = TryRenameComponent(RenameTargetComponent.Get(), NewName);
+			}
+
+			if (bRenamed)
+			{
+				RenameTarget = ERenameTarget::None;
+				RenameTargetActor = nullptr;
+				RenameTargetComponent = nullptr;
+				RenameBuffer[0] = '\0';
+				bShowDuplicateWarning = false;
+				ImGui::CloseCurrentPopup();
+			}
+		}
+		else if (bCancel)
+		{
+			RenameTarget = ERenameTarget::None;
+			RenameTargetActor = nullptr;
+			RenameTargetComponent = nullptr;
+			RenameBuffer[0] = '\0';
+			bShowDuplicateWarning = false;
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::EndPopup();
+	}
+}
+
+bool FEditorPropertyWidget::TryRenameActor(AActor* TargetActor, const FString& NewName)
+{
+	if (!IsValid(TargetActor))
+	{
+		return false;
+	}
+
+	const FString CurrentName = TargetActor->GetFName().ToString();
+	if (NewName == CurrentName)
+	{
+		return true;
+	}
+
+	bShowDuplicateWarning = false;
+
+	UWorld* World = EditorEngine ? EditorEngine->GetWorld() : nullptr;
+	if (World)
+	{
+		for (AActor* Actor : World->GetActors())
+		{
+			if (!Actor || Actor == TargetActor)
+			{
+				continue;
+			}
+			if (Actor->GetFName().ToString() == NewName)
+			{
+				bShowDuplicateWarning = true;
+				return false;
+			}
+		}
+	}
+
+	TargetActor->SetFName(FName(NewName));
+	return true;
+}
+
+bool FEditorPropertyWidget::TryRenameComponent(UActorComponent* TargetComponent, const FString& NewName)
+{
+	if (!IsValid(TargetComponent))
+	{
+		return false;
+	}
+
+	const FString CurrentName = TargetComponent->GetFName().ToString();
+	if (NewName == CurrentName)
+	{
+		return true;
+	}
+
+	bShowDuplicateWarning = false;
+
+	AActor* Owner = TargetComponent->GetOwner();
+	if (Owner)
+	{
+		for (UActorComponent* Component : Owner->GetComponents())
+		{
+			if (!Component || Component == TargetComponent)
+			{
+				continue;
+			}
+			if (Component->GetFName().ToString() == NewName)
+			{
+				bShowDuplicateWarning = true;
+				return false;
+			}
+		}
+	}
+
+	TargetComponent->SetFName(FName(NewName));
+	return true;
 }

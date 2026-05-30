@@ -1,4 +1,8 @@
 #include "Animation/Skeleton/Skeleton.h"
+#include "Animation/Skeleton/SkeletonManager.h"
+#include "Core/Logging/Log.h"
+#include "Physics/PhysicsAsset.h"
+#include "Physics/PhysicsAssetManager.h"
 
 void USkeleton::Serialize(FArchive& Ar)
 {
@@ -16,6 +20,8 @@ void USkeleton::SerializeLegacyPayload(FArchive& Ar)
 
     if (Ar.IsLoading())
     {
+        DefaultPhysicsAssetPath = "None";
+        DefaultPhysicsAsset.Reset();
         Sockets.clear();
         RebuildReferenceSkeletonDerivedData();
         RebuildBoneNameCache();
@@ -29,6 +35,7 @@ void USkeleton::SerializeCurrentPayload(FArchive& Ar)
     Ar << AssetPathFileName;
     Ar << SkeletonAssetGuid;
     Ar << CompatibilitySignature;
+    Ar << DefaultPhysicsAssetPath;
     Ar << ReferenceSkeleton;
 	
     uint32 SocketCount = static_cast<uint32>(Sockets.size());
@@ -44,6 +51,7 @@ void USkeleton::SerializeCurrentPayload(FArchive& Ar)
 
     if (Ar.IsLoading())
     {
+        DefaultPhysicsAsset.Reset();
         RebuildReferenceSkeletonDerivedData();
         RebuildBoneNameCache();
     }
@@ -116,4 +124,118 @@ void USkeleton::RebuildReferenceSkeletonDerivedData()
             : Bone.LocalBindPose;
         Bone.InverseBindPose = Bone.GlobalBindPose.GetInverse();
     }
+}
+
+void USkeleton::SetDefaultPhysicsAsset(UPhysicsAsset* InPhysicsAsset)
+{
+    if (!InPhysicsAsset)
+    {
+        ClearDefaultPhysicsAsset();
+        return;
+    }
+
+    const FSkeletonCompatibilityReport Report =
+        FSkeletonManager::CheckCompatibility(GetSkeletonBinding(), InPhysicsAsset->GetSkeletonBinding());
+    if (Report.Result != ESkeletonCompatibilityResult::ExactSkeleton)
+    {
+        UE_LOG("SetDefaultPhysicsAsset rejected: skeleton mismatch. Skeleton=%s PhysicsAsset=%s Reason=%s",
+            GetName().c_str(),
+            InPhysicsAsset->GetName().c_str(),
+            Report.Reason.c_str());
+        ClearDefaultPhysicsAsset();
+        return;
+    }
+
+    DefaultPhysicsAsset = InPhysicsAsset;
+    DefaultPhysicsAssetPath = InPhysicsAsset->GetAssetPathFileName().empty()
+        ? FString("None")
+        : InPhysicsAsset->GetAssetPathFileName();
+}
+
+UPhysicsAsset* USkeleton::GetDefaultPhysicsAsset() const
+{
+    if (DefaultPhysicsAsset.Get())
+    {
+        const FSkeletonCompatibilityReport Report =
+            FSkeletonManager::CheckCompatibility(GetSkeletonBinding(), DefaultPhysicsAsset->GetSkeletonBinding());
+        if (Report.Result == ESkeletonCompatibilityResult::ExactSkeleton)
+        {
+            return DefaultPhysicsAsset.Get();
+        }
+
+        UE_LOG("GetDefaultPhysicsAsset cleared incompatible cached PhysicsAsset. Skeleton=%s PhysicsAsset=%s Reason=%s",
+            GetName().c_str(),
+            DefaultPhysicsAsset->GetName().c_str(),
+            Report.Reason.c_str());
+        const_cast<USkeleton*>(this)->ClearDefaultPhysicsAsset();
+        return nullptr;
+    }
+
+    if (DefaultPhysicsAssetPath.empty() || DefaultPhysicsAssetPath == "None")
+    {
+        return nullptr;
+    }
+
+    USkeleton* MutableThis = const_cast<USkeleton*>(this);
+    return MutableThis->ResolveDefaultPhysicsAsset() ? DefaultPhysicsAsset.Get() : nullptr;
+}
+
+void USkeleton::SetDefaultPhysicsAssetPath(const FString& InPath)
+{
+    DefaultPhysicsAssetPath = InPath.empty() ? FString("None") : InPath;
+    DefaultPhysicsAsset.Reset();
+}
+
+bool USkeleton::ResolveDefaultPhysicsAsset()
+{
+    if (DefaultPhysicsAsset.Get())
+    {
+        const FSkeletonCompatibilityReport Report =
+            FSkeletonManager::CheckCompatibility(GetSkeletonBinding(), DefaultPhysicsAsset->GetSkeletonBinding());
+        if (Report.Result == ESkeletonCompatibilityResult::ExactSkeleton)
+        {
+            return true;
+        }
+
+        UE_LOG("ResolveDefaultPhysicsAsset cleared incompatible cached PhysicsAsset. Skeleton=%s PhysicsAsset=%s Reason=%s",
+            GetName().c_str(),
+            DefaultPhysicsAsset->GetName().c_str(),
+            Report.Reason.c_str());
+        ClearDefaultPhysicsAsset();
+        return false;
+    }
+
+    if (DefaultPhysicsAssetPath.empty() || DefaultPhysicsAssetPath == "None")
+    {
+        DefaultPhysicsAsset.Reset();
+        return false;
+    }
+
+    UPhysicsAsset* LoadedPhysicsAsset = FPhysicsAssetManager::Get().LoadPhysicsAsset(DefaultPhysicsAssetPath);
+    if (!LoadedPhysicsAsset)
+    {
+        DefaultPhysicsAsset.Reset();
+        return false;
+    }
+
+    const FSkeletonCompatibilityReport Report =
+        FSkeletonManager::CheckCompatibility(GetSkeletonBinding(), LoadedPhysicsAsset->GetSkeletonBinding());
+    if (Report.Result != ESkeletonCompatibilityResult::ExactSkeleton)
+    {
+        UE_LOG("ResolveDefaultPhysicsAsset rejected loaded PhysicsAsset: skeleton mismatch. Skeleton=%s PhysicsAsset=%s Reason=%s",
+            GetName().c_str(),
+            LoadedPhysicsAsset->GetName().c_str(),
+            Report.Reason.c_str());
+        ClearDefaultPhysicsAsset();
+        return false;
+    }
+
+    DefaultPhysicsAsset = LoadedPhysicsAsset;
+    return true;
+}
+
+void USkeleton::ClearDefaultPhysicsAsset()
+{
+    DefaultPhysicsAsset.Reset();
+    DefaultPhysicsAssetPath = "None";
 }

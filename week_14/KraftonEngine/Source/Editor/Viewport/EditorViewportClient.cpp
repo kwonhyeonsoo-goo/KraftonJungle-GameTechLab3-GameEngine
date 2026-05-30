@@ -327,37 +327,7 @@ void FEditorViewportClient::TickEditorShortcuts()
 
 	if (SelectionManager && InputSystem::Get().GetKeyDown('F'))
 	{
-		AActor* Selected = SelectionManager->GetPrimarySelection();
-		if (Selected)
-		{
-			// D.2: ViewTransform 위에서 모든 계산. 임시 LookAt → 백업 복원 패턴은 동일.
-			FVector TargetLoc = Selected->GetActorLocation();
-			FVector CameraForward = ViewTransform.ViewRotation.GetForwardVector();
-
-			// 1. 현재 상태 백업
-			FVector OriginalLoc = ViewTransform.ViewLocation;
-			FRotator OriginalRot = ViewTransform.ViewRotation;
-
-			// 2. 목표 좌표 계산 (5m 거리)
-			float FocusDistance = 5.0f;
-			FVector NewCameraLoc = TargetLoc - CameraForward * FocusDistance;
-
-			// 3. 임시로 이동하여 정확한 목표 회전값 추출
-			ViewTransform.ViewLocation = NewCameraLoc;
-			ViewTransform.LookAt(TargetLoc);
-			FRotator TargetRot = ViewTransform.ViewRotation;
-
-			// 4. ViewTransform 복구 및 애니메이션 설정 (Focus animation 이 ViewTransform 에 보간 적용)
-			ViewTransform.ViewLocation = OriginalLoc;
-			ViewTransform.ViewRotation = OriginalRot;
-
-			bIsFocusAnimating = true;
-			FocusAnimTimer = 0.0f;
-			FocusStartLoc = OriginalLoc;
-			FocusStartRot = OriginalRot;
-			FocusEndLoc = NewCameraLoc;
-			FocusEndRot = TargetRot;
-		}
+		FocusOnPrimarySelection();
 	}
 
 	if (SelectionManager && InputSystem::Get().GetKey(VK_CONTROL) && InputSystem::Get().GetKeyDown('D'))
@@ -393,6 +363,48 @@ void FEditorViewportClient::TickEditorShortcuts()
 			}
 		}
 	}
+}
+
+void FEditorViewportClient::FocusOnPrimarySelection()
+{
+	if (!SelectionManager)
+	{
+		return;
+	}
+
+	AActor* Selected = SelectionManager->GetPrimarySelection();
+	if (!Selected)
+	{
+		return;
+	}
+
+	// D.2: ViewTransform 위에서 모든 계산. 임시 LookAt → 백업 복원 패턴은 동일.
+	FVector TargetLoc = Selected->GetActorLocation();
+	FVector CameraForward = ViewTransform.ViewRotation.GetForwardVector();
+
+	// 1. 현재 상태 백업
+	FVector OriginalLoc = ViewTransform.ViewLocation;
+	FRotator OriginalRot = ViewTransform.ViewRotation;
+
+	// 2. 목표 좌표 계산 (5m 거리)
+	float FocusDistance = 5.0f;
+	FVector NewCameraLoc = TargetLoc - CameraForward * FocusDistance;
+
+	// 3. 임시로 이동하여 정확한 목표 회전값 추출
+	ViewTransform.ViewLocation = NewCameraLoc;
+	ViewTransform.LookAt(TargetLoc);
+	FRotator TargetRot = ViewTransform.ViewRotation;
+
+	// 4. ViewTransform 복구 및 애니메이션 설정 (Focus animation 이 ViewTransform 에 보간 적용)
+	ViewTransform.ViewLocation = OriginalLoc;
+	ViewTransform.ViewRotation = OriginalRot;
+
+	bIsFocusAnimating = true;
+	FocusAnimTimer = 0.0f;
+	FocusStartLoc = OriginalLoc;
+	FocusStartRot = OriginalRot;
+	FocusEndLoc = NewCameraLoc;
+	FocusEndRot = TargetRot;
 }
 
 void FEditorViewportClient::SetLightViewOverride(ULightComponentBase* Light)

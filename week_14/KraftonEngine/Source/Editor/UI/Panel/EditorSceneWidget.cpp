@@ -1,6 +1,8 @@
-#include "Editor/UI/Panel/EditorSceneWidget.h"
+﻿#include "Editor/UI/Panel/EditorSceneWidget.h"
 
 #include "Editor/EditorEngine.h"
+#include "Editor/Viewport/Level/LevelEditorViewportClient.h"
+#include "Engine/Input/InputSystem.h"
 
 #include "ImGui/imgui.h"
 #include "Profiling/Stats/Stats.h"
@@ -20,12 +22,43 @@ void FEditorSceneWidget::Render(float DeltaTime)
 	(void)DeltaTime;
 	ImGui::SetNextWindowSize(ImVec2(400.0f, 350.0f), ImGuiCond_Once);
 
-	ImGui::Begin("Scene Manager");
+	ImGui::Begin("Outliner");
 
 	// 씬 파일 작업은 상단 메뉴로 옮기고, Scene Manager는 액터 목록만 유지한다.
 	RenderActorOutliner();
+	HandleSceneManagerShortcuts();
 
 	ImGui::End();
+}
+
+void FEditorSceneWidget::HandleSceneManagerShortcuts()
+{
+	if (ImGui::GetIO().WantTextInput)
+	{
+		return;
+	}
+
+	if (!ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+	{
+		return;
+	}
+
+	FSelectionManager& Selection = EditorEngine->GetSelectionManager();
+	InputSystem& Input = InputSystem::Get();
+
+	if (Input.GetKeyDown(VK_DELETE))
+	{
+		Selection.DeleteSelectedActors();
+		return;
+	}
+
+	if (Input.GetKeyDown('F'))
+	{
+		if (FLevelEditorViewportClient* ActiveViewport = EditorEngine->GetActiveViewport())
+		{
+			ActiveViewport->FocusOnPrimarySelection();
+		}
+	}
 }
 
 void FEditorSceneWidget::RenderActorOutliner()

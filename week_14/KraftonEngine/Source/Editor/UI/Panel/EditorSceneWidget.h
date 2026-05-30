@@ -11,6 +11,7 @@ public:
 
 private:
 	void RenderActorOutliner();
+	void HandleSceneManagerShortcuts();
 
 	TArray<int32> ValidActorIndices;
 };

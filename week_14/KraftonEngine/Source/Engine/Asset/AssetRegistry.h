@@ -6,6 +6,7 @@
 class USkeleton;
 class USkeletalMesh;
 class UAnimSequence;
+class UPhysicsAsset;
 
 // Asset picker dropdown 에 표시되는 항목. {표시명, 자산 경로} 묶음.
 struct FAssetListItem
@@ -26,6 +27,7 @@ namespace FAssetRegistry
     TArray<FAssetListItem> ListAnimationsForSkeleton(const FSkeletonBinding& Skeleton, bool bAllowSameStructure = false);
     TArray<FAssetListItem> ListMontagesForSkeleton(const FSkeletonBinding& Skeleton, bool bAllowSameStructure = false);
     TArray<FAssetListItem> ListMeshesForSkeleton(const FSkeletonBinding& Skeleton, bool bAllowSameStructure = false);
+    TArray<FAssetListItem> ListPhysicsAssetsForSkeleton(const FSkeletonBinding& Skeleton, bool bAllowSameStructure = false);
 
     USkeleton* FindSkeletonByGuid(const FString& SkeletonAssetGuid);
 

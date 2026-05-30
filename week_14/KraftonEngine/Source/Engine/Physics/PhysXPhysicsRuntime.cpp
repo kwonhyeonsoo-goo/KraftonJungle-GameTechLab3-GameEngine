@@ -909,6 +909,47 @@ FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateConstraint(
     return CreateConstraint_Internal(Parent, Child, Desc);
 }
 
+FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateFixedJoint(
+    FPhysicsBodyHandle Parent,
+    const FTransform&  ParentLocalFrame,
+    FPhysicsBodyHandle Child,
+    const FTransform&  ChildLocalFrame
+)
+{
+    FConstraintCreationDesc Desc;
+    Desc.ParentLocalFrame = ParentLocalFrame;
+    Desc.ChildLocalFrame  = ChildLocalFrame;
+
+    Desc.Limits.LinearX = EConstraintMotion::Locked;
+    Desc.Limits.LinearY = EConstraintMotion::Locked;
+    Desc.Limits.LinearZ = EConstraintMotion::Locked;
+    Desc.Limits.Twist   = EConstraintMotion::Locked;
+    Desc.Limits.Swing1  = EConstraintMotion::Locked;
+    Desc.Limits.Swing2  = EConstraintMotion::Locked;
+
+    return CreateConstraint(Parent, Child, Desc);
+}
+
+FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateSphericalJoint(
+    FPhysicsBodyHandle          Parent,
+    const FTransform&           ParentLocalFrame,
+    FPhysicsBodyHandle          Child,
+    const FTransform&           ChildLocalFrame,
+    const FConstraintLimitDesc& AngularLimits
+)
+{
+    FConstraintCreationDesc Desc;
+    Desc.ParentLocalFrame = ParentLocalFrame;
+    Desc.ChildLocalFrame  = ChildLocalFrame;
+    Desc.Limits           = AngularLimits;
+
+    Desc.Limits.LinearX = EConstraintMotion::Locked;
+    Desc.Limits.LinearY = EConstraintMotion::Locked;
+    Desc.Limits.LinearZ = EConstraintMotion::Locked;
+
+    return CreateConstraint(Parent, Child, Desc);
+}
+
 void FPhysXPhysicsRuntime::DestroyConstraint(FPhysicsConstraintHandle Constraint)
 {
     FPhysicsCommand Cmd;
@@ -1330,7 +1371,7 @@ void FPhysXPhysicsRuntime::BuildDebugBodies_Internal(TArray<FPhysicsDebugBody>& 
             DebugShape.CapsuleHalfHeight = ShapeInstance->Desc.CapsuleHalfHeight;
 
             // PhysX shape에 실제 적용된 local pose를 body 월드 transform으로 합성한다.
-            // Capsule 축 보정 등 backend local pose 보정까지 포함되어 debug draw와 실제 충돌이 일치한다.
+            // Capsule 축 보정 등 PhysX local pose 보정까지 포함되어 debug draw와 실제 충돌이 일치한다.
             DebugShape.WorldTransform = ComposePhysicsTransforms(
                 DebugBody.BodyWorldTransform,
                 ShapeInstance->PhysXLocalTransform

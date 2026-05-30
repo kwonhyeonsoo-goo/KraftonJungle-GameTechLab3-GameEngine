@@ -55,9 +55,11 @@ private:
 	void RenderActiveDocument(float ReservedTopHeight, float ReservedBottomHeight, float DeltaTime);
 	void RenderShortcutOverlay();
 	void RenderEditorDebugPanel();
+	void RenderContentBrowserDrawer(float DeltaTime);
 	void RenderConsoleDrawer(float DeltaTime);
 	void RenderFooterOverlay(float DeltaTime);
 	void HandleGlobalShortcuts();
+	void ToggleContentBrowserDrawer();
 	void ToggleConsoleDrawer(bool bFocusInput);
 	void ProcessPendingDebugActions();
 
@@ -85,8 +87,10 @@ private:
 	bool bBringConsoleDrawerToFrontNextFrame = false;
 	bool bFocusConsoleInputNextFrame = false;
 	bool bFocusConsoleButtonNextFrame = false;
+	bool bBringContentBrowserDrawerToFrontNextFrame = false;
 	int32 ConsoleBacktickCycleState = 0;
 	float ConsoleDrawerAnim = 0.0f;
+	float ContentBrowserDrawerAnim = 0.0f;
 	int32 DebugPlaceActorTypeIndex = 0;
 	int32 DebugGridRows = 10;
 	int32 DebugGridCols = 10;

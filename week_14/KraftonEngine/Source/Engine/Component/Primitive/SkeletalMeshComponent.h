@@ -2,7 +2,12 @@
 
 #include "Component/Primitive/SkinnedMeshComponent.h"
 #include "Animation/AnimationMode.h"
+#include "Animation/Skeleton/SkeletonTypes.h"
 #include "Object/Ptr/SubclassOf.h"
+#include "Object/Ptr/SoftObjectPtr.h"
+#include "Object/Ptr/WeakObjectPtr.h"
+#include "Physics/PhysicsAssetInstance.h"
+#include <memory>
 
 #include "Source/Engine/Component/Primitive/SkeletalMeshComponent.generated.h"
 
@@ -10,6 +15,7 @@ class UAnimInstance;
 class UAnimSingleNodeInstance;
 class UAnimSequenceBase;
 class UClass;
+class UPhysicsAsset;
 
 // SkeletalMesh 전용 render proxy만 제공하는 얇은 wrapper.
 // Skinning/bone/material/bounds 상태는 모두 USkinnedMeshComponent가 소유한다.
@@ -27,6 +33,31 @@ public:
     // Mesh 가 바뀌면 AnimInstance 도 새 SkeletalMesh 기준으로 재구성해야 하므로 override.
     UFUNCTION(Callable, Category="Mesh")
     void SetSkeletalMesh(USkeletalMesh* InMesh) override;
+
+    UFUNCTION(Callable, Category="Physics")
+    void SetPhysicsAssetOverride(UPhysicsAsset* InPhysicsAsset);
+    UFUNCTION(Callable, Exec, Category="Physics")
+    void SetPhysicsAssetOverridePath(const FString& InPath);
+    UFUNCTION(Pure, Category="Physics")
+    UPhysicsAsset* GetPhysicsAssetOverride() const;
+    UFUNCTION(Pure, Category="Physics")
+    UPhysicsAsset* GetEffectivePhysicsAsset() const;
+    bool ResolvePhysicsAssetOverride();
+    void ClearPhysicsAssetOverride();
+    void ResetRagdollRuntimeState();
+    void OnPhysicsAssetChanged();
+    FPhysicsAssetInstance* GetPhysicsAssetInstance() const;
+    FPhysicsAssetInstance* GetOrCreatePhysicsAssetInstance();
+    void DestroyPhysicsAssetInstance();
+    UFUNCTION(Callable, Category="Physics")
+    bool CreatePhysicsAssetInstanceBodies();
+    UFUNCTION(Callable, Category="Physics")
+    void DestroyPhysicsAssetInstanceBodies();
+    UFUNCTION(Callable, Category="Physics")
+    void SetUsePhysicsAssetPose(bool bEnable);
+    UFUNCTION(Pure, Category="Physics")
+    bool IsUsingPhysicsAssetPose() const { return bUsePhysicsAssetPose; }
+    bool ApplyPhysicsAssetPose();
 
     // SingleNode 재생 편의 API.
     UFUNCTION(Callable, Category="Animation")
@@ -98,6 +129,7 @@ protected:
 
 private:
     void LoadAnimationFromPath();
+    bool CanUsePhysicsAsset(UPhysicsAsset* InPhysicsAsset, FSkeletonCompatibilityReport* OutReport = nullptr) const;
 
 protected:
     // Animation 런타임 상태.
@@ -109,4 +141,11 @@ protected:
     TSubclassOf<UAnimInstance> AnimInstanceClass;
     UPROPERTY(Save, Instanced, Category="Animation", DisplayName="Anim Instance", Type=ObjectRef, AllowedClass=UAnimInstance)
     UAnimInstance*             AnimInstance  = nullptr;
+
+    // Components own per-instance overrides and future ragdoll runtime state; the asset stays pure data.
+    UPROPERTY(Edit, Save, Category="Physics", DisplayName="Physics Asset Override", AssetType="PhysicsAsset")
+    FSoftObjectPtr PhysicsAssetOverridePath = "None";
+    mutable TWeakObjectPtr<UPhysicsAsset> PhysicsAssetOverride;
+    std::unique_ptr<FPhysicsAssetInstance> PhysicsAssetInstance;
+    bool bUsePhysicsAssetPose = false;
 };
