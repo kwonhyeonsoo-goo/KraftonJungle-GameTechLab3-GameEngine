@@ -1,4 +1,4 @@
-#include "Editor/UI/Panel/EditorPropertyWidget.h"
+﻿#include "Editor/UI/Panel/EditorPropertyWidget.h"
 #include "Editor/EditorEngine.h"
 
 #include "ImGui/imgui.h"
@@ -668,6 +668,8 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 		SelectedComponent = nullptr;
 		LastSelectedActor = nullptr;
 		bActorSelected = true;
+		PendingDetailsScrollY = -1.0f;
+		bRestoreDetailsScrollY = false;
 		ImGui::Text("No object selected.");
 		ImGui::End();
 		return;
@@ -680,6 +682,8 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 		LastSelectedActor = PrimaryActor;
 		bActorSelected = true;
 		bShowDuplicateWarning = false;
+		PendingDetailsScrollY = -1.0f;
+		bRestoreDetailsScrollY = false;
 	}
 
 	const TArray<AActor*>& SelectedActors = Selection.GetSelectedActors();
@@ -701,6 +705,8 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 		{
 			bActorSelected = true;
 			SelectedComponent = nullptr;
+			PendingDetailsScrollY = -1.0f;
+			bRestoreDetailsScrollY = false;
 		}
 		ImGui::SameLine();
 		char RemoveLabel[64];
@@ -721,6 +727,8 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 			EditorEngine->InvalidateOcclusionResults();
 			SelectedComponent = nullptr;
 			LastSelectedActor = nullptr;
+			PendingDetailsScrollY = -1.0f;
+			bRestoreDetailsScrollY = false;
 			ImGui::End();
 			return;
 		}
@@ -735,6 +743,8 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 		{
 			bActorSelected = true;
 			SelectedComponent = nullptr;
+			PendingDetailsScrollY = -1.0f;
+			bRestoreDetailsScrollY = false;
 		}
 		//ImGui::SameLine();
 
@@ -763,7 +773,17 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 
 	ImGui::BeginChild("##Details", ImVec2(0, ScrollHeight), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 	{
+		const bool bShouldRestoreDetailsScroll = bRestoreDetailsScrollY;
+		const float RestoreDetailsScrollY = PendingDetailsScrollY;
+		bRestoreDetailsScrollY = false;
+		PendingDetailsScrollY = -1.0f;
+
 		RenderDetails(PrimaryActor, SelectedActors);
+
+		if (bShouldRestoreDetailsScroll && RestoreDetailsScrollY >= 0.0f)
+		{
+			ImGui::SetScrollY(RestoreDetailsScrollY);
+		}
 	}
 	ImGui::EndChild();
 
@@ -1069,6 +1089,8 @@ void FEditorPropertyWidget::RenderComponentTree(AActor* Actor)
 			{
 				SelectedComponent = Comp;
 				bActorSelected = false;
+				PendingDetailsScrollY = -1.0f;
+				bRestoreDetailsScrollY = false;
 			}
 		}
 	}
@@ -1143,6 +1165,8 @@ void FEditorPropertyWidget::RenderSceneComponentNode(USceneComponent* Comp)
 	{
 		SelectedComponent = Comp;
 		bActorSelected = false;
+		PendingDetailsScrollY = -1.0f;
+		bRestoreDetailsScrollY = false;
 		EditorEngine->GetSelectionManager().SelectComponent(Comp);
 	}
 
@@ -1207,6 +1231,8 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 			{
 				Actor->RemoveComponent(SelectedComponent);
 				SelectedComponent = nullptr;
+				PendingDetailsScrollY = -1.0f;
+				bRestoreDetailsScrollY = false;
 				return;
 			}
 		}
@@ -1254,7 +1280,6 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 			continue;
 
 		// 카테고리 헤더 (빈 문자열이면 헤더 없이 렌더)
-		bool bInTreeNode = false;
 		if (!Cat.empty())
 		{
 			ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.22f, 0.22f, 0.22f, 1.0f));
@@ -1270,6 +1295,7 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 			if (!bOpen) continue;
 		}
 
+		ImGui::PushID(Cat.c_str());
 		if (ImGui::BeginTable("##PropertyTable", 2,
 			ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_PadOuterX | ImGuiTableFlags_RowBg))
 		{
@@ -1312,6 +1338,8 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 					// AnimInstance 의 prop 들의 ContainerPtr 가 destroyed 인스턴스를 가리키게 된다.
 					// 사용자는 frame 당 1 prop 변경이 일반적이라 UX 영향 거의 없음.
 					bPropsInvalidated = true;
+					PendingDetailsScrollY = ImGui::GetScrollY();
+					bRestoreDetailsScrollY = true;
 					ImGui::PopID();
 					break;
 				}
@@ -1321,6 +1349,7 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 			ImGui::EndTable();
 			ImGui::PopStyleColor(2);
 		}
+		ImGui::PopID();
 	}
 
 	// 실제 변경이 있었을 때만 Transform dirty 마킹
@@ -1413,6 +1442,8 @@ void FEditorPropertyWidget::AddComponentToActor(AActor* Actor, UClass* Component
 
 	SelectedComponent = Comp;
 	bActorSelected = false;
+	PendingDetailsScrollY = -1.0f;
+	bRestoreDetailsScrollY = false;
 }
 
 bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)

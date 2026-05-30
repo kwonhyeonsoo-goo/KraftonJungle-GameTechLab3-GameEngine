@@ -43,6 +43,9 @@ private:
 	bool bActorSelected = true; // true: Actor details, false: Component details
 	bool bShowEditorOnlyComponents = false;
 
+	float PendingDetailsScrollY = -1.0f;
+	bool bRestoreDetailsScrollY = false;
+
 	char RenameBuffer[256] = {};
 	bool bShowDuplicateWarning = false;
 	FString PendingStaticMeshImportPath;
