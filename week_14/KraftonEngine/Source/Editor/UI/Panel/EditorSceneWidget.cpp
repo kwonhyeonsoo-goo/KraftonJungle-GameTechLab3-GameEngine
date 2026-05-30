@@ -1,4 +1,4 @@
-#include "Editor/UI/Panel/EditorSceneWidget.h"
+﻿#include "Editor/UI/Panel/EditorSceneWidget.h"
 
 #include "Editor/EditorEngine.h"
 #include "Editor/Viewport/Level/LevelEditorViewportClient.h"
@@ -22,7 +22,7 @@ void FEditorSceneWidget::Render(float DeltaTime)
 	(void)DeltaTime;
 	ImGui::SetNextWindowSize(ImVec2(400.0f, 350.0f), ImGuiCond_Once);
 
-	ImGui::Begin("Scene Manager");
+	ImGui::Begin("Outliner");
 
 	// 씬 파일 작업은 상단 메뉴로 옮기고, Scene Manager는 액터 목록만 유지한다.
 	RenderActorOutliner();

@@ -650,7 +650,7 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 
 	ImGui::SetNextWindowSize(ImVec2(350.0f, 500.0f), ImGuiCond_Once);
 
-	ImGui::Begin("Property Window");
+	ImGui::Begin("Details");
 
 	FSelectionManager& Selection = EditorEngine->GetSelectionManager();
     if (SelectedComponent && !IsValid(SelectedComponent))

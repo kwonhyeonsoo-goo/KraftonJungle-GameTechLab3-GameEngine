@@ -1,4 +1,4 @@
-#include "Editor/UI/Panel/EditorControlWidget.h"
+﻿#include "Editor/UI/Panel/EditorControlWidget.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/Viewport/Level/LevelEditorViewportClient.h"
 #include "Editor/Viewport/ViewportCameraTransform.h"
@@ -16,7 +16,7 @@ void FEditorControlWidget::Render(float DeltaTime)
 	ImGui::SetNextWindowCollapsed(false, ImGuiCond_Once);
 	ImGui::SetNextWindowSize(ImVec2(500.0f, 480.0f), ImGuiCond_Once);
 
-	if (!ImGui::Begin("Control Panel"))
+	if (!ImGui::Begin("Camera Panel"))
 	{
 		ImGui::End();
 		return;
