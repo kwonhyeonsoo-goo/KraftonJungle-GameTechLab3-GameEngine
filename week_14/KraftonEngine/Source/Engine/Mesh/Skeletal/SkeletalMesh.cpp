@@ -1,4 +1,4 @@
-#include "SkeletalMesh.h"
+﻿#include "SkeletalMesh.h"
 #include "Object/Reflection/ObjectFactory.h"
 #include "Serialization/Archive.h"
 #include "Animation/Skeleton/Skeleton.h"
@@ -6,6 +6,12 @@
 #include "Core/Logging/Log.h"
 #include "Physics/PhysicsAsset.h"
 #include "Physics/PhysicsAssetManager.h"
+#include "Engine/Profiling/Stats/MemoryStats.h"
+
+USkeletalMesh::~USkeletalMesh()
+{
+    ReleaseTrackedMemory();
+}
 
 void USkeletalMesh::Serialize(FArchive& Ar)
 {
@@ -14,37 +20,45 @@ void USkeletalMesh::Serialize(FArchive& Ar)
 
 void USkeletalMesh::SerializeLegacyPayload(FArchive& Ar)
 {
-	if (Ar.IsLoading() && !SkeletalMeshAsset)
-	{
-		SkeletalMeshAsset = new FSkeletalMesh();
-	}
+    if (Ar.IsLoading())
+    {
+        ReleaseTrackedMemory();
+        if (!SkeletalMeshAsset)
+        {
+            SkeletalMeshAsset = std::make_unique<FSkeletalMesh>();
+        }
+    }
+    else if (!SkeletalMeshAsset)
+    {
+        SkeletalMeshAsset = std::make_unique<FSkeletalMesh>();
+    }
 
     if (Ar.IsSaving())
     {
         SyncSkeletonBindingToAsset();
     }
 
-	Ar << SkeletalMeshAsset->PathFileName;
-	Ar << SkeletalMeshAsset->SkeletonPath;
+    Ar << SkeletalMeshAsset->PathFileName;
+    Ar << SkeletalMeshAsset->SkeletonPath;
     Ar << SkeletalMeshAsset->SkeletonAssetGuid;
     Ar << SkeletalMeshAsset->SkeletonCompatibilitySignature;
-	Ar << SkeletalMeshAsset->Vertices;
-	Ar << SkeletalMeshAsset->Indices;
-	Ar << SkeletalMeshAsset->Sections;
-	Ar << SkeletalMeshAsset->MeshRanges;
-	Ar << SkeletalMeshAsset->Bones;
-	Ar << SkeletalMaterials;
-	Ar << SkeletalMeshAsset->MorphTargets;
+    Ar << SkeletalMeshAsset->Vertices;
+    Ar << SkeletalMeshAsset->Indices;
+    Ar << SkeletalMeshAsset->Sections;
+    Ar << SkeletalMeshAsset->MeshRanges;
+    Ar << SkeletalMeshAsset->Bones;
+    Ar << SkeletalMaterials;
+    Ar << SkeletalMeshAsset->MorphTargets;
 
-	if (Ar.IsLoading())
-	{
-		SkeletalMeshAsset->NormalizeBonePoseData();
+    if (Ar.IsLoading())
+    {
+        SkeletalMeshAsset->NormalizeBonePoseData();
         SyncSkeletonBindingFromAsset();
         PhysicsAssetPath = "None";
         PhysicsAsset.Reset();
-		CacheSectionMaterialIndices();
-		SkeletalMeshAsset->bBoundsValid = false;
-	}
+        CacheSectionMaterialIndices();
+        SkeletalMeshAsset->bBoundsValid = false;
+    }
 }
 
 void USkeletalMesh::SerializeCurrentPayload(FArchive& Ar)
@@ -64,11 +78,32 @@ void USkeletalMesh::SerializeCurrentPayload(FArchive& Ar)
 
 void USkeletalMesh::SetSkeletalMeshAsset(FSkeletalMesh* InMesh)
 {
-	SkeletalMeshAsset = InMesh;
-	if (SkeletalMeshAsset)
-	{
-		SkeletalMeshAsset->NormalizeBonePoseData();
-	}
+    if (SkeletalMeshAsset.get() == InMesh)
+    {
+        CacheSectionMaterialIndices();
+        return;
+    }
+
+    SetSkeletalMeshAsset(std::unique_ptr<FSkeletalMesh>(InMesh));
+}
+
+void USkeletalMesh::SetSkeletalMeshAsset(std::unique_ptr<FSkeletalMesh> InMesh)
+{
+    if (SkeletalMeshAsset.get() == InMesh.get())
+    {
+        InMesh.release();
+        CacheSectionMaterialIndices();
+        return;
+    }
+
+    ReleaseTrackedMemory();
+    SkeletalMeshAsset = std::move(InMesh);
+
+    if (SkeletalMeshAsset)
+    {
+        SkeletalMeshAsset->NormalizeBonePoseData();
+        SkeletalMeshAsset->bBoundsValid = false;
+    }
     SyncSkeletonBindingFromAsset();
     if (PhysicsAsset.Get())
     {
@@ -82,74 +117,76 @@ void USkeletalMesh::SetSkeletalMeshAsset(FSkeletalMesh* InMesh)
             ClearPhysicsAsset();
         }
     }
-	CacheSectionMaterialIndices();
+    CacheSectionMaterialIndices();
 }
 
 FSkeletalMesh* USkeletalMesh::GetSkeletalMeshAsset() const
 {
-	return SkeletalMeshAsset;
+    return SkeletalMeshAsset.get();
 }
 
 void USkeletalMesh::SetSkeletalMaterials(TArray<FSkeletalMaterial>&& InMaterials)
 {
-	SkeletalMaterials = InMaterials;
-	CacheSectionMaterialIndices();
+    SkeletalMaterials = std::move(InMaterials);
+    CacheSectionMaterialIndices();
 }
 
 const TArray<FSkeletalMaterial>& USkeletalMesh::GetSkeletalMaterials() const
 {
-	return SkeletalMaterials;
+    return SkeletalMaterials;
 }
 
 void USkeletalMesh::InitResources(ID3D11Device* InDevice)
 {
-	if (!InDevice || !SkeletalMeshAsset) return;
+    if (!InDevice || !SkeletalMeshAsset) return;
 
-	const uint32 CPUSize =
-		static_cast<uint32>(SkeletalMeshAsset->Vertices.size() * sizeof(FVertexPNCTBW)) +
-		static_cast<uint32>(SkeletalMeshAsset->Indices.size() * sizeof(uint32));
-	MemoryStats::AddSkeletalMeshCPUMemory(CPUSize);
+    if (!bMemoryTracked)
+    {
+        TrackedMemorySize = CalculateTrackedMemorySize();
+        MemoryStats::AddSkeletalMeshCPUMemory(TrackedMemorySize);
+        bMemoryTracked = true;
+    }
 
-	TMeshData<FVertexPNCTBW> RenderMeshData;
-	RenderMeshData.Vertices.reserve(SkeletalMeshAsset->Vertices.size());
+    TMeshData<FVertexPNCTBW> RenderMeshData;
+    RenderMeshData.Vertices.reserve(SkeletalMeshAsset->Vertices.size());
 
-	for (const FVertexPNCTBW& RawVert : SkeletalMeshAsset->Vertices)
-	{
-		FVertexPNCTBW RenderVert;
-		RenderVert.Position = RawVert.Position;
-		RenderVert.Normal = RawVert.Normal;
-		RenderVert.Color = RawVert.Color;
-		RenderVert.UV = RawVert.UV;
-		RenderVert.Tangent = RawVert.Tangent;
-		std::copy(std::begin(RawVert.BoneIndices), std::end(RawVert.BoneIndices), std::begin(RenderVert.BoneIndices));
-		std::copy(std::begin(RawVert.BoneWeights), std::end(RawVert.BoneWeights), std::begin(RenderVert.BoneWeights));
-		RenderMeshData.Vertices.push_back(RenderVert);
-	}
-	RenderMeshData.Indices = SkeletalMeshAsset->Indices;
+    for (const FVertexPNCTBW& RawVert : SkeletalMeshAsset->Vertices)
+    {
+        FVertexPNCTBW RenderVert;
+        RenderVert.Position = RawVert.Position;
+        RenderVert.Normal   = RawVert.Normal;
+        RenderVert.Color    = RawVert.Color;
+        RenderVert.UV       = RawVert.UV;
+        RenderVert.Tangent  = RawVert.Tangent;
+        std::copy(std::begin(RawVert.BoneIndices), std::end(RawVert.BoneIndices), std::begin(RenderVert.BoneIndices));
+        std::copy(std::begin(RawVert.BoneWeights), std::end(RawVert.BoneWeights), std::begin(RenderVert.BoneWeights));
+        RenderMeshData.Vertices.push_back(RenderVert);
+    }
+    RenderMeshData.Indices = SkeletalMeshAsset->Indices;
 
-	SkeletalMeshAsset->RenderBuffer = std::make_unique<FMeshBuffer>();
-	SkeletalMeshAsset->RenderBuffer->Create(InDevice, RenderMeshData);
+    SkeletalMeshAsset->RenderBuffer = std::make_unique<FMeshBuffer>();
+    SkeletalMeshAsset->RenderBuffer->Create(InDevice, RenderMeshData);
 }
 
 void USkeletalMesh::SetSkeleton(USkeleton* InSkeleton)
 {
-	Skeleton = InSkeleton;
+    Skeleton = InSkeleton;
 
-	USkeleton* ValidSkeleton = Skeleton.Get();
-	if (ValidSkeleton)
-	{
+    USkeleton* ValidSkeleton = Skeleton.Get();
+    if (ValidSkeleton)
+    {
         SetSkeletonBinding(ValidSkeleton->GetSkeletonBinding());
-	}
-	else
-	{
+    }
+    else
+    {
         FSkeletonBinding EmptyBinding;
         SetSkeletonBinding(EmptyBinding);
-	}
+    }
 }
 
 USkeleton* USkeletalMesh::GetSkeleton() const
 {
-	return Skeleton.Get();
+    return Skeleton.Get();
 }
 
 void USkeletalMesh::SetSkeletonBinding(const FSkeletonBinding& InBinding)
@@ -194,10 +231,10 @@ void USkeletalMesh::SetPhysicsAsset(UPhysicsAsset* InPhysicsAsset)
         return;
     }
 
-    PhysicsAsset = InPhysicsAsset;
+    PhysicsAsset     = InPhysicsAsset;
     PhysicsAssetPath = InPhysicsAsset->GetAssetPathFileName().empty()
-        ? FString("None")
-        : InPhysicsAsset->GetAssetPathFileName();
+            ? FString("None")
+            : InPhysicsAsset->GetAssetPathFileName();
 }
 
 UPhysicsAsset* USkeletalMesh::GetPhysicsAsset() const
@@ -290,6 +327,51 @@ void USkeletalMesh::ClearPhysicsAsset()
     PhysicsAssetPath = "None";
 }
 
+uint32 USkeletalMesh::CalculateTrackedMemorySize() const
+{
+    if (!SkeletalMeshAsset)
+    {
+        return 0;
+    }
+
+    return
+            static_cast<uint32>(SkeletalMeshAsset->Vertices.size() * sizeof(FVertexPNCTBW)) +
+            static_cast<uint32>(SkeletalMeshAsset->Indices.size() * sizeof(uint32));
+}
+
+void USkeletalMesh::ReleaseTrackedMemory()
+{
+    if (!bMemoryTracked)
+    {
+        return;
+    }
+
+    MemoryStats::SubSkeletalMeshCPUMemory(TrackedMemorySize);
+    bMemoryTracked = false;
+    TrackedMemorySize = 0;
+}
+
+void USkeletalMesh::CacheSectionMaterialIndices()
+{
+    if (!SkeletalMeshAsset)
+    {
+        return;
+    }
+
+    for (FSkeletalMeshSection& Section : SkeletalMeshAsset->Sections)
+    {
+        Section.MaterialIndex = -1;
+        for (int32 i = 0; i < static_cast<int32>(SkeletalMaterials.size()); ++i)
+        {
+            if (SkeletalMaterials[i].MaterialSlotName == Section.MaterialSlotName)
+            {
+                Section.MaterialIndex = i;
+                break;
+            }
+        }
+    }
+}
+
 void USkeletalMesh::SyncSkeletonBindingToAsset()
 {
     if (!SkeletalMeshAsset)
@@ -297,8 +379,8 @@ void USkeletalMesh::SyncSkeletonBindingToAsset()
         return;
     }
 
-    SkeletalMeshAsset->SkeletonPath = SkeletonBinding.SkeletonPath.empty() ? FString("None") : SkeletonBinding.SkeletonPath;
-    SkeletalMeshAsset->SkeletonAssetGuid = SkeletonBinding.SkeletonAssetGuid;
+    SkeletalMeshAsset->SkeletonPath                   = SkeletonBinding.SkeletonPath.empty() ? FString("None") : SkeletonBinding.SkeletonPath;
+    SkeletalMeshAsset->SkeletonAssetGuid              = SkeletonBinding.SkeletonAssetGuid;
     SkeletalMeshAsset->SkeletonCompatibilitySignature = SkeletonBinding.CompatibilitySignature;
 }
 
@@ -309,8 +391,8 @@ void USkeletalMesh::SyncSkeletonBindingFromAsset()
         return;
     }
 
-    SkeletonBinding.SkeletonPath = SkeletalMeshAsset->SkeletonPath.empty() ? FString("None") : SkeletalMeshAsset->SkeletonPath;
-    SkeletonBinding.SkeletonAssetGuid = SkeletalMeshAsset->SkeletonAssetGuid;
+    SkeletonBinding.SkeletonPath           = SkeletalMeshAsset->SkeletonPath.empty() ? FString("None") : SkeletalMeshAsset->SkeletonPath;
+    SkeletonBinding.SkeletonAssetGuid      = SkeletalMeshAsset->SkeletonAssetGuid;
     SkeletonBinding.CompatibilitySignature = SkeletalMeshAsset->SkeletonCompatibilitySignature;
 }
 
@@ -327,7 +409,7 @@ bool USkeletalMesh::CanUsePhysicsAsset(UPhysicsAsset* InPhysicsAsset, FSkeletonC
     }
 
     const FSkeletonCompatibilityReport Report =
-        FSkeletonManager::CheckCompatibility(GetSkeletonBinding(), InPhysicsAsset->GetSkeletonBinding());
+            FSkeletonManager::CheckCompatibility(GetSkeletonBinding(), InPhysicsAsset->GetSkeletonBinding());
 
     if (OutReport)
     {
@@ -335,25 +417,4 @@ bool USkeletalMesh::CanUsePhysicsAsset(UPhysicsAsset* InPhysicsAsset, FSkeletonC
     }
 
     return Report.Result == ESkeletonCompatibilityResult::ExactSkeleton;
-}
-
-void USkeletalMesh::CacheSectionMaterialIndices()
-{
-	if (!SkeletalMeshAsset)
-	{
-		return;
-	}
-
-	for (FSkeletalMeshSection& Section : SkeletalMeshAsset->Sections)
-	{
-		Section.MaterialIndex = -1;
-		for (int32 i = 0; i < static_cast<int32>(SkeletalMaterials.size()); ++i)
-		{
-			if (SkeletalMaterials[i].MaterialSlotName == Section.MaterialSlotName)
-			{
-				Section.MaterialIndex = i;
-				break;
-			}
-		}
-	}
 }
