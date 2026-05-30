@@ -43,7 +43,7 @@ namespace
 		}
 		return IsValid(Owner) ? Owner->GetActorLocation() + WorldOffset : WorldOffset;
 	}
-	void PurgeInvalidParticleEntries(TMap<USkeletalMeshComponent*, UParticleSystemComponent*>& SpawnedByMesh)
+	void PurgeInvalidParticleEntries(TMap<TWeakObjectPtr<USkeletalMeshComponent>, TWeakObjectPtr<UParticleSystemComponent>>& SpawnedByMesh)
 	{
 		for (auto It = SpawnedByMesh.begin(); It != SpawnedByMesh.end(); )
 		{

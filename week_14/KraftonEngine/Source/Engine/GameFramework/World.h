@@ -53,7 +53,9 @@ public:
 	template<typename T>
 	T* SpawnActor();
 	// UClass 기반 spawn — 런타임에 클래스가 결정되는 경우(GameMode/GameState 등) 사용.
+	UFUNCTION(Callable, Category="World|Actor")
 	AActor* SpawnActorByClass(UClass* Class);
+	UFUNCTION(Callable, Category="World|Actor")
 	void DestroyActor(AActor* Actor);
 	void AddActor(AActor* Actor);
 	void MarkWorldPrimitivePickingBVHDirty();
@@ -164,7 +166,9 @@ public:
 	// BeginPlay 이전에 호출. WorldType이 Editor면 무시된다.
 	void SetGameModeClass(UClass* InClass) { GameModeClass = InClass; }
 	AGameModeBase* GetGameMode() const { return GameMode.Get(); }
+	UFUNCTION(Pure, Category="World|Game")
 	AGameStateBase* GetGameState() const;
+	UFUNCTION(Pure, Category="World|Game")
 	APlayerController* GetFirstPlayerController() const;
 };
 

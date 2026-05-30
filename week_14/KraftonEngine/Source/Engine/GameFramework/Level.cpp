@@ -78,8 +78,12 @@ void ULevel::Clear()
 	RouteLevelDestroyed();
 }
 
-void ULevel::Tick(float DeltaTime) {
-	for (AActor* Actor : Actors)
+void ULevel::Tick(float DeltaTime)
+{
+	FScopedGarbageCollectionBlocker GCBlocker;
+
+	const TArray<AActor*> ActorSnapshot = Actors;
+	for (AActor* Actor : ActorSnapshot)
 	{
 		if (IsValid(Actor))
 		{
@@ -90,10 +94,10 @@ void ULevel::Tick(float DeltaTime) {
 
 void ULevel::BeginPlay()
 {
-	const size_t InitialCount = Actors.size();
-	for (size_t i = 0; i < InitialCount; ++i)
+	FScopedGarbageCollectionBlocker GCBlocker;
+	const TArray<AActor*> ActorSnapshot = Actors;
+	for (AActor* Actor : ActorSnapshot)
 	{
-		AActor* Actor = Actors[i];
 		if (IsValid(Actor) && !Actor->HasActorBegunPlay())
 		{
 			Actor->BeginPlay();
@@ -103,7 +107,9 @@ void ULevel::BeginPlay()
 
 void ULevel::EndPlay()
 {
-	for (AActor* Actor : Actors)
+	FScopedGarbageCollectionBlocker GCBlocker;
+	const TArray<AActor*> ActorSnapshot = Actors;
+	for (AActor* Actor : ActorSnapshot)
 	{
 		if (IsValid(Actor))
 		{

@@ -4,6 +4,7 @@
 #include "Render/Proxy/PrimitiveSceneProxy.h"
 #include "Render/Scene/SceneEnvironment.h"
 #include "Debug/DebugDrawQueue.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 class AActor;
 class UPrimitiveComponent;
@@ -98,7 +99,7 @@ private:
 	TArray<FPrimitiveSceneProxy*> SelectedProxies;
 
 	// 선택된 Actor (프록시 선택/해제 시 자동 관리)
-	TSet<AActor*> SelectedActors;
+	TSet<TWeakObjectPtr<AActor>> SelectedActors;
 
 	// bNeverCull 프록시 (Gizmo 등) — Frustum 쿼리와 무관하게 항상 수집
 	TArray<FPrimitiveSceneProxy*> NeverCullProxies;

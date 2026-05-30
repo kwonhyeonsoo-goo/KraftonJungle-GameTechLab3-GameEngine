@@ -1,4 +1,4 @@
-﻿#include "AnimNotifyState_AttackHitWindow.h"
+#include "AnimNotifyState_AttackHitWindow.h"
 
 #include "Component/Input/ActionComponent.h"
 #include "Component/PrimitiveComponent.h"
@@ -128,9 +128,9 @@ namespace
 		Action->Knockback(Dir, Distance, Duration);
 	}
 	void PurgeInvalidAttackHitEntries(
-		TMap<USkeletalMeshComponent*, TSet<AActor*>>& HitActorsByMesh,
-		TMap<USkeletalMeshComponent*, TSet<AActor*>>& MissLoggedActorsByMesh,
-		TSet<USkeletalMeshComponent*>& NoTargetLoggedMeshes)
+		TMap<TWeakObjectPtr<USkeletalMeshComponent>, TSet<TWeakObjectPtr<AActor>>>& HitActorsByMesh,
+		TMap<TWeakObjectPtr<USkeletalMeshComponent>, TSet<TWeakObjectPtr<AActor>>>& MissLoggedActorsByMesh,
+		TSet<TWeakObjectPtr<USkeletalMeshComponent>>& NoTargetLoggedMeshes)
 	{
 		for (auto It = HitActorsByMesh.begin(); It != HitActorsByMesh.end(); )
 		{
@@ -197,8 +197,8 @@ void UAnimNotifyState_AttackHitWindow::NotifyTick(USkeletalMeshComponent* MeshCo
 		return;
 	}
 
-	TSet<AActor*>& HitActors = HitActorsByMesh[MeshComp];
-	TSet<AActor*>& MissLoggedActors = MissLoggedActorsByMesh[MeshComp];
+	TSet<TWeakObjectPtr<AActor>>& HitActors = HitActorsByMesh[MeshComp];
+	TSet<TWeakObjectPtr<AActor>>& MissLoggedActors = MissLoggedActorsByMesh[MeshComp];
 	const FVector Center = GetHitCenter(MeshComp, Owner, BoneName, LocalOffset);
 	if (bDrawDebugHitWindow)
 	{

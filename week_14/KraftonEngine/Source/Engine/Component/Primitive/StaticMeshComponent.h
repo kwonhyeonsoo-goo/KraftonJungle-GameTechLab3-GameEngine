@@ -56,6 +56,8 @@ public:
 	int32 GetMaterialSlotCount() const { return static_cast<int32>(MaterialSlots.size()); }
 	const TArray<UMaterial*>& GetOverrideMaterials() const { return OverrideMaterials; }
 
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
+
 	void PostDuplicate() override;
 
 	// Property Editor 지원

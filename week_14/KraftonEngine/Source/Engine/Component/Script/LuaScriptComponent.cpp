@@ -223,18 +223,18 @@ void ULuaScriptComponent::BindOwnerCollisionEvents()
 		if ((LuaOnOverlap || LuaOnEndOverlap) && PrimitiveComponent->GetGenerateOverlapEvents())
 		{
 			BoundOverlapComponents.push_back(PrimitiveComponent);
-            BeginOverlapHandles.push_back(PrimitiveComponent->OnComponentBeginOverlap.AddUObject(this, &ULuaScriptComponent::HandleBeginOverlap));
-            EndOverlapHandles.push_back(PrimitiveComponent->OnComponentEndOverlap.AddUObject(this, &ULuaScriptComponent::HandleEndOverlap));
+			BeginOverlapHandles.push_back(PrimitiveComponent->OnComponentBeginOverlap.AddWeakUObject(this, &ULuaScriptComponent::HandleBeginOverlap));
+			EndOverlapHandles.push_back(PrimitiveComponent->OnComponentEndOverlap.AddWeakUObject(this, &ULuaScriptComponent::HandleEndOverlap));
 		}
 
 		if (LuaOnHit || LuaOnEndHit)
 		{
 			BoundHitComponents.push_back(PrimitiveComponent);
 			HitHandles.push_back(LuaOnHit
-                ? PrimitiveComponent->OnComponentHit.AddUObject(this, &ULuaScriptComponent::HandleHit)
+				? PrimitiveComponent->OnComponentHit.AddWeakUObject(this, &ULuaScriptComponent::HandleHit)
 				: FDelegateHandle());
 			EndHitHandles.push_back(LuaOnEndHit
-                ? PrimitiveComponent->OnComponentEndHit.AddUObject(this, &ULuaScriptComponent::HandleEndHit)
+				? PrimitiveComponent->OnComponentEndHit.AddWeakUObject(this, &ULuaScriptComponent::HandleEndHit)
 				: FDelegateHandle());
 		}
 	}

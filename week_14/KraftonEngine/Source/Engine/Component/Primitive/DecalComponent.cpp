@@ -12,6 +12,7 @@
 #include "Engine/Runtime/Engine.h"
 #include "Texture/Texture2D.h"
 #include "Materials/Material.h"
+#include "Object/GarbageCollection.h"
 #include <algorithm>
 
 void UDecalComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
@@ -75,6 +76,26 @@ FVector4 UDecalComponent::GetColor() const
 	FVector4 OutColor = Color;
 	OutColor.A *= Clamp(FadeOpacity, 0, 1);
 	return OutColor;
+}
+
+void UDecalComponent::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UPrimitiveComponent::AddReferencedObjects(Collector);
+	Collector.AddReferencedObject(Material, "UDecalComponent::Material");
+}
+
+TArray<UStaticMeshComponent*> UDecalComponent::GetReceivers() const
+{
+	TArray<UStaticMeshComponent*> ValidReceivers;
+	ValidReceivers.reserve(Receivers.size());
+	for (const TWeakObjectPtr<UStaticMeshComponent>& Receiver : Receivers)
+	{
+		if (UStaticMeshComponent* Component = Receiver.Get())
+		{
+			ValidReceivers.push_back(Component);
+		}
+	}
+	return ValidReceivers;
 }
 
 void UDecalComponent::SetMaterial(UMaterial* InMaterial)

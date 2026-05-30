@@ -32,7 +32,9 @@ public:
 	// --- Match flow ---
 	// StartMatch는 모든 액터의 BeginPlay가 끝난 뒤 World가 호출한다.
 	// 페이즈 초기화·플레이어 Possess 등 "게임 시작" 시점 작업을 여기에 둔다.
+	UFUNCTION(Callable, Category="GameMode|Match")
 	virtual void StartMatch();
+	UFUNCTION(Callable, Category="GameMode|Match")
 	virtual void EndMatch();
 
 	// --- TriggerVolume 콜백 ---
@@ -42,9 +44,13 @@ public:
 	virtual void OnPossessedPawnExitedTrigger(ATriggerVolumeBase* Trigger, APawn* Pawn) {}
 
 	// --- Accessors ---
+	UFUNCTION(Pure, Category="GameMode")
 	AGameStateBase* GetGameState() const { return GameState; }
+	UFUNCTION(Pure, Category="GameMode")
 	UClass* GetGameStateClass() const { return GameStateClass; }
+	UFUNCTION(Pure, Category="GameMode")
 	APlayerController* GetPlayerController() const { return PlayerController; }
+	UFUNCTION(Pure, Category="GameMode")
 	UClass* GetPlayerControllerClass() const { return PlayerControllerClass; }
 
 	// ProjectSettings.Game.GameModeClassName을 룩업·검증해서 적합하면 반환,

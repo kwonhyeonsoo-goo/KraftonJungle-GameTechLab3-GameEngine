@@ -2653,7 +2653,7 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 		"IsValid", [](AActor* Actor)
 	{
 		// Lua가 보유한 actor 핸들이 cpp 측에서 destroy됐는지 확인. nil/destroyed면 false.
-		return Actor != nullptr && IsAliveObject(Actor);
+		return IsValid(Actor);
 	},
 
 		"HasTag", [](AActor& Actor, const FString& Tag)

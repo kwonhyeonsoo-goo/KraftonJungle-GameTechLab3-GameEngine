@@ -32,6 +32,7 @@ public:
 
 	// PSC 가 매 프레임 tick 끝에 호출 — proxy 가 ownership 인수.
 	void SetDynamicData(UParticleSystemComponent::FDynamicData* InData);
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	void AppendVectorFieldDebugLines(class FScene& Scene) const;
 

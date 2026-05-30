@@ -2,6 +2,7 @@
 #include "Serialization/Archive.h"
 #include "Render/Shader/Shader.h"
 #include "Texture/Texture2D.h"
+#include "Object/GarbageCollection.h"
 #include "Engine/Runtime/Engine.h"
 #include "Render/Pipeline/Renderer.h"
 #include "Render/Types/MaterialTextureSlot.h"
@@ -88,6 +89,15 @@ UMaterial::~UMaterial()
 		Pair.second = nullptr;
 	}
 	TextureParameters.clear();
+}
+
+void UMaterial::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UObject::AddReferencedObjects(Collector);
+	for (auto& Pair : TextureParameters)
+	{
+		Collector.AddReferencedObject(Pair.second, "UMaterial::TextureParameters");
+	}
 }
 
 void UMaterial::Create(const FString& InPathFileName, FMaterialTemplate* InTemplate,

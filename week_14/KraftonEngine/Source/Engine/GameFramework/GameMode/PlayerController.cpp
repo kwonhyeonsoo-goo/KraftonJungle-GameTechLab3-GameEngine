@@ -55,7 +55,7 @@ void APlayerController::SetViewTargetWithBlend(
 
 void APlayerController::Possess(APawn* Pawn)
 {
-	if (!Pawn || PossessedPawn == Pawn) return;
+	if (!Pawn || PossessedPawn.Get() == Pawn) return;
 
 	if (PossessedPawn)
 	{

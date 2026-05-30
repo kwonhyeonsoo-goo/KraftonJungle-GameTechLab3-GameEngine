@@ -487,13 +487,21 @@ void AActor::BeginPlay()
 	if (bActorHasBegunPlay) return;
 	bActorHasBegunPlay = true;
 
-	// UE 순서: 컴포넌트 BeginPlay 먼저, 그다음 Actor 본인 (오버라이드 측 Super 호출 시).
-	for (UActorComponent* Comp : OwnedComponents)
+	FScopedGarbageCollectionBlocker GCBlocker;
+
+	const TArray<TObjectPtr<UActorComponent>> ComponentSnapshot = OwnedComponents;
+	for (const TObjectPtr<UActorComponent>& CompRef : ComponentSnapshot)
 	{
-        if (IsValid(Comp))
-        {
-            Comp->BeginPlay();
-        }
+		if (!IsValid(this))
+		{
+			return;
+		}
+
+		UActorComponent* Comp = CompRef.GetValid();
+		if (IsValid(Comp))
+		{
+			Comp->BeginPlay();
+		}
 	}
 }
 
@@ -513,9 +521,13 @@ void AActor::EndPlay()
 	bActorHasBegunPlay = false;
 	PrimaryActorTick.UnRegisterTickFunction();
 
-	for (UActorComponent* Comp : OwnedComponents)
+	FScopedGarbageCollectionBlocker GCBlocker;
+
+	const TArray<TObjectPtr<UActorComponent>> ComponentSnapshot = OwnedComponents;
+	for (const TObjectPtr<UActorComponent>& CompRef : ComponentSnapshot)
 	{
-        if (IsValid(Comp))
+		UActorComponent* Comp = CompRef.GetValid();
+		if (IsValid(Comp))
 		{
 			Comp->PrimaryComponentTick.UnRegisterTickFunction();
 			Comp->EndPlay();

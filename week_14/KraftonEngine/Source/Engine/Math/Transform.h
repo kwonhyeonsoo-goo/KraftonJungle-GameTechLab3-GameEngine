@@ -1,12 +1,24 @@
-﻿#pragma once
+#pragma once
 #include "Engine/Math/Matrix.h"
 #include "Engine/Math/Rotator.h"
 #include "Engine/Math/Quat.h"
+#include "Object/Reflection/ObjectMacros.h"
+#include "Object/Reflection/UStruct.h"
 
+#include "Source/Engine/Math/Transform.generated.h"
+
+USTRUCT()
 struct FTransform
 {
+	GENERATED_BODY()
+
+	UPROPERTY(Save)
 	FVector Location;
+
+	UPROPERTY(Save, Struct=FQuat)
 	FQuat Rotation;
+
+	UPROPERTY(Save)
 	FVector Scale;
 
 	FTransform() : Location(0.0f, 0.0f, 0.0f), Rotation(FQuat::Identity), Scale(1.0f, 1.0f, 1.0f){}

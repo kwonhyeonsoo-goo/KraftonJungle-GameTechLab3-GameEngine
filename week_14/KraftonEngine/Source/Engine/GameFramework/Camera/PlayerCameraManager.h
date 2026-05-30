@@ -33,7 +33,9 @@ public:
 	bool ToggleActiveCameraForActor(const FString& ActorName, float BlendTime = 0.0f);
 	bool ToggleActiveCameraForActor(const AActor* Actor, float BlendTime = 0.0f);
 
+	UFUNCTION(Pure, Category="Camera")
 	UCameraComponent* GetActiveCamera() const;
+	UFUNCTION(Callable, Category="Camera")
 	void SetActiveCamera(UCameraComponent* NewCamera);
 
 	// ActiveCamera 단위 blend — 같은 액터의 다른 카메라 컴포넌트 사이 부드럽게 전환.
@@ -41,36 +43,45 @@ public:
 	//  카메라 컴포넌트를 두는 구조라 컴포넌트 단위 blend 가 필요.)
 	// BlendTime <= 0 이면 즉시 swap, > 0 이면 ActiveCamera 는 그대로 두고 PendingActiveCamera
 	// 로 보관해 GetCameraView/UpdateCamera 가 보간.
+	UFUNCTION(Callable, Category="Camera")
 	void SetActiveCameraWithBlend(
 		UCameraComponent* NewCamera,
 		float BlendTime,
 		EViewTargetBlendFunction BlendFunction = EViewTargetBlendFunction::VTBlend_Linear);
 
+	UFUNCTION(Pure, Category="Camera")
 	UCameraComponent* GetPossessedCamera() const;
+	UFUNCTION(Callable, Category="Camera")
 	void Possess(UCameraComponent* NewCamera);
 
 	// ─── View Target ──────────────────────────────────────────────
 	// PlayerController::SetViewTargetWithBlend 가 위임. 현재 view target → New 로 전환.
 	// UE: APlayerCameraManager::SetViewTarget
+	UFUNCTION(Callable, Category="Camera")
 	virtual void SetViewTarget(AActor* NewViewTarget, FViewTargetTransitionParams TransitionParams = FViewTargetTransitionParams());
 
+	UFUNCTION(Pure, Category="Camera")
 	AActor* GetViewTarget() const;
+	UFUNCTION(Pure, Category="Camera")
 	AActor* GetPendingViewTarget() const;
 
 	// ─── Camera Shake ─────────────────────────────────────────────
 	// UE: APlayerCameraManager::StartCameraShake
+	UFUNCTION(Callable, Category="Camera|Shake")
 	virtual UCameraShakeBase* StartCameraShake(
 		UClass* ShakeClass,
 		float Scale = 1.0f,
 		ECameraShakePlaySpace PlaySpace = ECameraShakePlaySpace::CameraLocal,
 		FRotator UserPlaySpaceRot = FRotator());
 
+	UFUNCTION(Callable, Category="Camera|Shake")
 	virtual UCameraShakeBase* StartCameraShakeAsset(
 		UCameraShakeAsset* ShakeAsset,
 		float Scale = 1.0f,
 		ECameraShakePlaySpace PlaySpace = ECameraShakePlaySpace::CameraLocal,
 		FRotator UserPlaySpaceRot = FRotator());
 
+	UFUNCTION(Callable, Category="Camera|Shake")
 	virtual UCameraShakeBase* StartCameraShakeAsset(
 		const FString& ShakeAssetPath,
 		float Scale = 1.0f,
@@ -88,14 +99,18 @@ public:
 	}
 
 	// UE: StopCameraShake
+	UFUNCTION(Callable, Category="Camera|Shake")
 	virtual void StopCameraShake(UCameraShakeBase* ShakeInstance, bool bImmediately = true);
+	UFUNCTION(Callable, Category="Camera|Shake")
 	virtual void StopAllCameraShakes(bool bImmediately = true);
+	UFUNCTION(Callable, Category="Camera|Shake")
 	virtual void StopAllInstancesOfCameraShake(UClass* ShakeClass, bool bImmediately = true);
 
 	// ─── Camera Modifier ─────────────────────────────────────────
 	// UE: APlayerCameraManager::AddNewCameraModifier — 우선순위 정렬 삽입.
 	// shake/aim assist/hit reaction 등 카메라 효과 단위 추상화. 추가 후엔 UpdateCamera
 	// 마다 ApplyCameraModifiers 가 priority 순서로 ModifyCamera 호출.
+	UFUNCTION(Callable, Category="Camera|Modifier")
 	UCameraModifier* AddNewCameraModifier(UClass* ModifierClass);
 
 	template<typename T>
@@ -104,11 +119,14 @@ public:
 		return static_cast<T*>(AddNewCameraModifier(T::StaticClass()));
 	}
 
+	UFUNCTION(Callable, Category="Camera|Modifier")
 	void RemoveCameraModifier(UCameraModifier* Modifier);
+	UFUNCTION(Pure, Category="Camera|Modifier")
 	UCameraModifier* FindCameraModifier(UClass* ModifierClass) const;
 
 	// ─── Camera Fade ──────────────────────────────────────────────
 	// UE: APlayerCameraManager::StartCameraFade
+	UFUNCTION(Callable, Category="Camera|Fade")
 	virtual void StartCameraFade(
 		float FromAlpha,
 		float ToAlpha,
@@ -117,25 +135,37 @@ public:
 		bool bShouldFadeAudio = false,
 		bool bHoldWhenFinished = false);
 
+	UFUNCTION(Callable, Category="Camera|Fade")
 	virtual void StopCameraFade();
 
 	// UE: SetManualCameraFade — 외부에서 매 프레임 수동으로 알파를 갱신할 때.
+	UFUNCTION(Callable, Category="Camera|Fade")
 	virtual void SetManualCameraFade(float InFadeAmount, FLinearColor Color, bool bInFadeAudio);
 
 	// 현재 fade 알파 (0..1) — RenderPass(B) 가 PostProcess 에 전달.
+	UFUNCTION(Pure, Category="Camera|Fade")
 	float GetFadeAmount() const { return FadeAmount; }
+	UFUNCTION(Pure, Category="Camera|Fade")
 	FLinearColor GetFadeColor() const { return FadeColor; }
+	UFUNCTION(Pure, Category="Camera|Fade")
 	bool IsFadeEnabled() const { return bEnableFading; }
 
 	// ─── Camera Vignette ──────────────────────────────────────────────
+	UFUNCTION(Callable, Category="Camera|Vignette")
 	virtual void SetCameraVignette(float Intensity, float Radius, float Softness, FLinearColor Color);
+	UFUNCTION(Callable, Category="Camera|Vignette")
 	virtual void ClearCameraVignette();
 
 	// 현재 vignette 상태 — RenderPass(B) 가 PostProcess 에 전달.
+	UFUNCTION(Pure, Category="Camera|Vignette")
 	bool IsVignetteEnabled() const { return bEnableVignette; }
+	UFUNCTION(Pure, Category="Camera|Vignette")
 	float GetVignetteIntensity() const { return VignetteIntensity; }
+	UFUNCTION(Pure, Category="Camera|Vignette")
 	float GetVignetteRadius() const { return VignetteRadius; }
+	UFUNCTION(Pure, Category="Camera|Vignette")
 	float GetVignetteSoftness() const { return VignetteSoftness; }
+	UFUNCTION(Pure, Category="Camera|Vignette")
 	FLinearColor GetVignetteColor() const { return VignetteColor; }
 
 	// ─── Camera Blend ──────────────────────────────────────────────

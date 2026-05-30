@@ -12,7 +12,7 @@
 
 USceneComponent* FSelectionManager::GetSelectedComponent() const
 {
-    return IsValid(SelectedComponent) ? SelectedComponent : nullptr;
+    return SelectedComponent.Get();
 }
 
 bool FSelectionManager::IsSelected(AActor* Actor) const
@@ -25,17 +25,17 @@ bool FSelectionManager::IsSelected(AActor* Actor) const
     return std::find_if(
         SelectedActors.begin(),
         SelectedActors.end(),
-        [Actor](AActor* SelectedActor)
+        [Actor](const TWeakObjectPtr<AActor>& SelectedActor)
         {
-            return IsValid(SelectedActor) && SelectedActor == Actor;
+            return SelectedActor.Get() == Actor;
         }) != SelectedActors.end();
 }
 
 AActor* FSelectionManager::GetPrimarySelection() const
 {
-    for (AActor* Actor : SelectedActors)
+    for (const TWeakObjectPtr<AActor>& ActorRef : SelectedActors)
     {
-        if (IsValid(Actor))
+        if (AActor* Actor = ActorRef.Get())
         {
             return Actor;
         }
@@ -54,9 +54,9 @@ TArray<AActor*> FSelectionManager::GetSelectedActors() const
     TArray<AActor*> ValidActors;
     ValidActors.reserve(SelectedActors.size());
 
-    for (AActor* Actor : SelectedActors)
+    for (const TWeakObjectPtr<AActor>& ActorRef : SelectedActors)
     {
-        if (IsValid(Actor))
+        if (AActor* Actor = ActorRef.Get())
         {
             ValidActors.push_back(Actor);
         }
@@ -80,7 +80,7 @@ void FSelectionManager::Init()
 void FSelectionManager::Shutdown()
 {
     ClearSelection();
-    World = nullptr;
+    World.Reset();
 
     if (Gizmo)
     {
@@ -106,15 +106,18 @@ void FSelectionManager::Select(AActor* Actor)
         return;
     }
 
-    if (SelectedActors.size() == 1 && SelectedActors.front() == Actor && SelectedComponent == RootComponent)
+    if (SelectedActors.size() == 1 && SelectedActors.front().Get() == Actor && SelectedComponent.Get() == RootComponent)
     {
         return;
     }
 
     // 기존 선택 해제
-    for (AActor* Prev : SelectedActors)
+    for (const TWeakObjectPtr<AActor>& PrevRef : SelectedActors)
     {
-        SetActorProxiesSelected(Prev, false);
+        if (AActor* Prev = PrevRef.Get())
+        {
+            SetActorProxiesSelected(Prev, false);
+        }
     }
 
     SelectedActors.clear();
@@ -146,8 +149,9 @@ void FSelectionManager::SelectRange(AActor* ClickedActor, const TArray<AActor*>&
     // Find nearest already-selected actor's index in ActorList
     int32 AnchorIdx = ClickedIdx;
     int32 MinDist   = INT_MAX;
-    for (AActor* Sel : SelectedActors)
+    for (const TWeakObjectPtr<AActor>& SelRef : SelectedActors)
     {
+        AActor* Sel = SelRef.Get();
         if (!IsValid(Sel))
         {
             continue;
@@ -173,10 +177,10 @@ void FSelectionManager::SelectRange(AActor* ClickedActor, const TArray<AActor*>&
     int32 Hi = std::max(AnchorIdx, ClickedIdx);
 
     // 기존 선택 해제
-    for (AActor* Prev : SelectedActors) SetActorProxiesSelected(Prev, false);
+    for (const TWeakObjectPtr<AActor>& PrevRef : SelectedActors) { if (AActor* Prev = PrevRef.Get()) SetActorProxiesSelected(Prev, false); }
 
     SelectedActors.clear();
-    SelectedComponent = nullptr;
+    SelectedComponent.Reset();
 
     for (int32 i = Lo; i <= Hi; ++i)
     {
@@ -198,15 +202,18 @@ void FSelectionManager::ToggleSelect(AActor* Actor)
 
     if (!IsValid(Actor)) return;
 
-    auto It = std::find(SelectedActors.begin(), SelectedActors.end(), Actor);
+    auto It = std::find_if(SelectedActors.begin(), SelectedActors.end(), [Actor](const TWeakObjectPtr<AActor>& Ref) { return Ref.Get() == Actor; });
     if (It != SelectedActors.end())
     {
         SetActorProxiesSelected(Actor, false);
         SelectedActors.erase(It);
-        if (SelectedComponent && IsAliveObject(SelectedComponent) && SelectedComponent->GetOwner() == Actor)
+        if (USceneComponent* AliveComponent = SelectedComponent.GetAlive())
         {
-            SelectedComponent = nullptr;
-            PruneInvalidSelection();
+            if (AliveComponent->GetOwner() == Actor)
+            {
+                SelectedComponent.Reset();
+                PruneInvalidSelection();
+            }
         }
     }
     else
@@ -226,15 +233,18 @@ void FSelectionManager::Deselect(AActor* Actor)
 {
     PruneInvalidSelection();
 
-    auto It = std::find(SelectedActors.begin(), SelectedActors.end(), Actor);
+    auto It = std::find_if(SelectedActors.begin(), SelectedActors.end(), [Actor](const TWeakObjectPtr<AActor>& Ref) { return Ref.Get() == Actor; });
     if (It != SelectedActors.end())
     {
         SetActorProxiesSelected(Actor, false);
         SelectedActors.erase(It);
-        if (SelectedComponent && IsAliveObject(SelectedComponent) && SelectedComponent->GetOwner() == Actor)
+        if (USceneComponent* AliveComponent = SelectedComponent.GetAlive())
         {
-            SelectedComponent = nullptr;
-            PruneInvalidSelection();
+            if (AliveComponent->GetOwner() == Actor)
+            {
+                SelectedComponent.Reset();
+                PruneInvalidSelection();
+            }
         }
     }
     SyncGizmo();
@@ -244,18 +254,21 @@ void FSelectionManager::ClearSelection()
 {
     PruneInvalidSelection();
 
-    if (SelectedActors.empty() && SelectedComponent == nullptr)
+    if (SelectedActors.empty() && SelectedComponent.Get() == nullptr)
     {
         return;
     }
 
-    for (AActor* Actor : SelectedActors)
+    for (const TWeakObjectPtr<AActor>& ActorRef : SelectedActors)
     {
-        SetActorProxiesSelected(Actor, false);
+        if (AActor* Actor = ActorRef.Get())
+        {
+            SetActorProxiesSelected(Actor, false);
+        }
     }
 
     SelectedActors.clear();
-    SelectedComponent = nullptr;
+    SelectedComponent.Reset();
     SyncGizmo();
 }
 
@@ -263,12 +276,12 @@ int32 FSelectionManager::DeleteSelectedActors()
 {
     PruneInvalidSelection();
 
-    if (!IsValid(World) || SelectedActors.empty())
+    if (!IsValid(World.Get()) || SelectedActors.empty())
     {
         return 0;
     }
 
-    TArray<AActor*> ActorsToDelete = SelectedActors;
+    TArray<AActor*> ActorsToDelete = GetSelectedActors();
     const int32     DeletedCount   = static_cast<int32>(ActorsToDelete.size());
 
     // 파괴 전에 선택/기즈모 참조를 먼저 끊어 dangling target을 방지한다.
@@ -298,7 +311,7 @@ void FSelectionManager::Tick()
         return;
     }
 
-    USceneComponent* Primary = SelectedComponent;
+    USceneComponent* Primary = SelectedComponent.Get();
     if (!IsValid(Primary))
     {
         return;
@@ -346,7 +359,7 @@ void FSelectionManager::SelectComponent(USceneComponent* Component)
         return;
     }
 
-    if (SelectedComponent == Target)
+    if (SelectedComponent.Get() == Target)
     {
         return;
     }
@@ -385,15 +398,15 @@ void FSelectionManager::SetWorld(UWorld* InWorld)
     PruneInvalidSelection();
 
     // 기존 Scene에서 Gizmo 프록시 해제
-    if (Gizmo && IsValid(World))
+    if (Gizmo && IsValid(World.Get()))
         Gizmo->DestroyRenderState();
 
     World = IsValid(InWorld) ? InWorld : nullptr;
 
     // 새 Scene에 Gizmo 프록시 등록
-    if (IsValid(Gizmo) && IsValid(World))
+    if (IsValid(Gizmo) && IsValid(World.Get()))
     {
-        Gizmo->SetScene(&World->GetScene());
+        Gizmo->SetScene(&World.Get()->GetScene());
         Gizmo->CreateRenderState();
     }
 
@@ -416,39 +429,40 @@ void FSelectionManager::PruneInvalidSelection()
         std::remove_if(
             SelectedActors.begin(),
             SelectedActors.end(),
-            [](AActor* Actor)
+            [](const TWeakObjectPtr<AActor>& ActorRef)
             {
-                return !IsValid(Actor);
+                return ActorRef.Get() == nullptr;
             }
         ),
         SelectedActors.end()
     );
     bSelectionChanged = bSelectionChanged || OldActorCount != SelectedActors.size();
 
-    if (SelectedComponent)
+    if (SelectedComponent.GetAlive())
     {
-        AActor* Owner = IsAliveObject(SelectedComponent) ? SelectedComponent->GetOwner() : nullptr;
-        if (!IsValid(SelectedComponent) || !IsValid(Owner))
+        AActor* Owner = SelectedComponent.GetAlive()->GetOwner();
+        if (!IsValid(SelectedComponent.Get()) || !IsValid(Owner))
         {
-            SelectedComponent = nullptr;
+            SelectedComponent.Reset();
             bSelectionChanged = true;
         }
     }
 
-    if (SelectedComponent)
+    if (SelectedComponent.Get())
     {
-        AActor* Owner = SelectedComponent->GetOwner();
+        AActor* Owner = SelectedComponent.Get()->GetOwner();
         if (!IsValid(Owner) || !IsSelected(Owner))
         {
-            SelectedComponent = nullptr;
+            SelectedComponent.Reset();
             bSelectionChanged = true;
         }
     }
 
-    if (!SelectedComponent && !SelectedActors.empty())
+    if (!SelectedComponent.Get() && !SelectedActors.empty())
     {
-        for (AActor* Actor : SelectedActors)
+        for (const TWeakObjectPtr<AActor>& ActorRef : SelectedActors)
         {
+            AActor* Actor = ActorRef.Get();
             if (!IsValid(Actor))
             {
                 continue;
@@ -465,7 +479,21 @@ void FSelectionManager::PruneInvalidSelection()
 
     if (bSelectionChanged && IsValid(Gizmo))
     {
-        Gizmo->SetSelectedActors(SelectedActors.empty() ? nullptr : &SelectedActors);
+        RefreshSelectedActorCache();
+        Gizmo->SetSelectedActors(SelectedActorCache.empty() ? nullptr : &SelectedActorCache);
+    }
+}
+
+void FSelectionManager::RefreshSelectedActorCache()
+{
+    SelectedActorCache.clear();
+    SelectedActorCache.reserve(SelectedActors.size());
+    for (const TWeakObjectPtr<AActor>& ActorRef : SelectedActors)
+    {
+        if (AActor* Actor = ActorRef.Get())
+        {
+            SelectedActorCache.push_back(Actor);
+        }
     }
 }
 
@@ -481,10 +509,11 @@ void FSelectionManager::SyncGizmo()
         return;
     }
 
-    USceneComponent* Primary = SelectedComponent;
+    USceneComponent* Primary = SelectedComponent.Get();
     if (IsValid(Primary))
     {
-        Gizmo->SetSelectedActors(SelectedActors.empty() ? nullptr : &SelectedActors);
+        RefreshSelectedActorCache();
+        Gizmo->SetSelectedActors(SelectedActorCache.empty() ? nullptr : &SelectedActorCache);
         Gizmo->SetTarget(Primary);
     }
     else
@@ -496,7 +525,7 @@ void FSelectionManager::SyncGizmo()
 
 void FSelectionManager::SetActorProxiesSelected(AActor* Actor, bool bSelected)
 {
-    if (!IsValid(Actor) || !IsValid(World)) return;
+    if (!IsValid(Actor) || !IsValid(World.Get())) return;
 
     FScene& Scene = World->GetScene();
     for (UPrimitiveComponent* Prim : Actor->GetPrimitiveComponents())

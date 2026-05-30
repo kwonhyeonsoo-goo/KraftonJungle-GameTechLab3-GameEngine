@@ -13,10 +13,18 @@
 #include "Render/Proxy/StaticMeshSceneProxy.h"
 #include "Render/Proxy/PrimitiveSceneProxy.h"
 #include "Serialization/Archive.h"
+#include "Object/GarbageCollection.h"
 
 FPrimitiveSceneProxy* UStaticMeshComponent::CreateSceneProxy()
 {
 	return new FStaticMeshSceneProxy(this);
+}
+
+void UStaticMeshComponent::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UMeshComponent::AddReferencedObjects(Collector);
+	Collector.AddReferencedObject(StaticMesh, "UStaticMeshComponent::StaticMesh");
+	Collector.AddReferencedObjects(OverrideMaterials, "UStaticMeshComponent::OverrideMaterials");
 }
 
 void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InMesh)

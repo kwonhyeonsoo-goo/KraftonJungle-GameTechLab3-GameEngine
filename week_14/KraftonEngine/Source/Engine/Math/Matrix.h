@@ -1,7 +1,11 @@
-﻿#pragma once
+#pragma once
 #include <cmath>
 #include <cstring>
 #include "Vector.h"
+#include "Object/Reflection/ObjectMacros.h"
+#include "Object/Reflection/UStruct.h"
+
+#include "Source/Engine/Math/Matrix.generated.h"
 
 #if defined(_MSC_VER)
 	#include <intrin.h>     // MSVC
@@ -9,7 +13,11 @@
 	#include <immintrin.h>  // GCC / Clang
 #endif
 
-struct FMatrix {
+USTRUCT()
+struct FMatrix
+{
+	GENERATED_BODY()
+
 	static const FMatrix Identity;
 
 	union
