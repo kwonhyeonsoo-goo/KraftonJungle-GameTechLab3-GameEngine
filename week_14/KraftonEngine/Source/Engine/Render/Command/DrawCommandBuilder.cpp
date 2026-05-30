@@ -38,6 +38,7 @@ void FDrawCommandBuilder::Create(ID3D11Device* InDevice, ID3D11DeviceContext* In
 	FogCB.Create(InDevice, sizeof(FFogConstants), "FogCB");
 	OutlineCB.Create(InDevice, sizeof(FOutlinePostProcessConstants), "OutlineCB");
 	SceneDepthCB.Create(InDevice, sizeof(FSceneDepthPConstants), "SceneDepthCB");
+	DoFCB.Create(InDevice, sizeof(FDoFConstants), "DoFCB");
 	FXAACB.Create(InDevice, sizeof(FFXAAConstants), "FXAACB");
 	GammaCorrectionCB.Create(InDevice, sizeof(FGammaCorrectionConstants), "GammaCorrectionCB");
 
@@ -67,6 +68,7 @@ void FDrawCommandBuilder::Release()
 	FogCB.Release();
 	OutlineCB.Release();
 	SceneDepthCB.Release();
+	DoFCB.Release();
 	FXAACB.Release();
 	GammaCorrectionCB.Release();
 	
@@ -683,6 +685,35 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 			FDrawCommand& Cmd = DrawCommandList.AddCommand();
 			Cmd.InitFullscreenTriangle(FogShader, ERenderPass::Fog, FogRS);
 			Cmd.Bindings.PerShaderCB[0] = &FogCB;
+			Cmd.BuildSortKey(0);
+		}
+	}
+
+	if (Frame.RenderOptions.ShowFlags.bDoF)
+	{
+		FDoFConstants DoFData = {};
+		DoFData.FocusDistance = Frame.RenderOptions.DoFFocusDistance;
+		DoFData.FocusRange = Frame.RenderOptions.DoFFocusRange;
+		DoFData.MaxBlurRadius = Frame.RenderOptions.DoFMaxBlurRadius;
+		DoFCB.Update(Ctx, &DoFData, sizeof(FDoFConstants));
+
+		FShader* DoFSetupShader = FShaderManager::Get().GetOrCreate(EShaderPath::DoFSetup);
+		if (DoFSetupShader)
+		{
+			FDrawCommand& Cmd = DrawCommandList.AddCommand();
+			Cmd.InitFullscreenTriangle(DoFSetupShader, ERenderPass::DoFSetup,
+				PassRenderStateTable->ToDrawCommandState(ERenderPass::DoFSetup, ViewMode));
+			Cmd.Bindings.PerShaderCB[0] = &DoFCB;
+			Cmd.BuildSortKey(0);
+		}
+
+		FShader* DoFShader = FShaderManager::Get().GetOrCreate(EShaderPath::DoFComposite);
+		if (DoFShader)
+		{
+			FDrawCommand& Cmd = DrawCommandList.AddCommand();
+			Cmd.InitFullscreenTriangle(DoFShader, ERenderPass::DoF,
+				PassRenderStateTable->ToDrawCommandState(ERenderPass::DoF, ViewMode));
+			Cmd.Bindings.PerShaderCB[0] = &DoFCB;
 			Cmd.BuildSortKey(0);
 		}
 	}

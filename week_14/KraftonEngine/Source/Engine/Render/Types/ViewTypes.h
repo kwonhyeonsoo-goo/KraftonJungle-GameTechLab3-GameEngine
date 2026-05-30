@@ -57,6 +57,7 @@ struct FShowFlags
 	bool bDebugDraw = true;
 	bool bOctree = false;
 	bool bFog = true;
+	bool bDoF = false;
 	bool bFXAA = false;
 	bool bGammaCorrection = true;
 	bool bViewLightCulling = false;
@@ -103,6 +104,11 @@ struct FViewportRenderOptions
 
 	// Gamma Correction 전용 설정
 	float Gamma = 2.4f;
+
+	// Depth of Field 전용 설정
+	float DoFFocusDistance = 500.0f;
+	float DoFFocusRange = 200.0f;
+	float DoFMaxBlurRadius = 4.0f;
 
 	// Light Culling 뷰모드 전용 설정
 	ELightCullingMode LightCullingMode = ELightCullingMode::Cluster;

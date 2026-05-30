@@ -73,6 +73,7 @@ namespace ESystemTexSlot
 	constexpr uint32 ShadowMapPointLightTextureArray = 23;  // t23: Point Light
 	constexpr uint32 SpotShadowDatas    = 24;  // t24: StructuredBuffer<FSpotShadowDataGPU>
 	constexpr uint32 PointShadowDatas   = 25;  // t25: StructuredBuffer<FPointShadowDataGPU>
+	constexpr uint32 CoC                = 26;  // t26: Depth of Field circle of confusion (R16_FLOAT)
 
 	// 하위 호환용 별칭
 	constexpr uint32 ShadowMap = ShadowMapCSM;
@@ -264,6 +265,14 @@ struct FGammaCorrectionConstants
 {
 	float Gamma;
 	float _pad[3];
+};
+
+struct FDoFConstants
+{
+	float FocusDistance;
+	float FocusRange;
+	float MaxBlurRadius;
+	float _pad;
 };
 
 

@@ -53,6 +53,10 @@ public:
 	ID3D11RenderTargetView* GetCullingHeatmapRTV() const { return CullingHeatmapRTV; }
 	ID3D11ShaderResourceView* GetCullingHeatmapSRV() const { return CullingHeatmapSRV; }
 
+	// Depth of Field CoC RT
+	ID3D11RenderTargetView* GetCoCRTV() const { return CoCRTV; }
+	ID3D11ShaderResourceView* GetCoCSRV() const { return CoCSRV; }
+
 	const D3D11_VIEWPORT& GetViewportRect() const { return ViewportRect; }
 
 private:
@@ -91,6 +95,11 @@ private:
 	ID3D11Texture2D* CullingHeatmapTexture = nullptr;
 	ID3D11RenderTargetView* CullingHeatmapRTV = nullptr;
 	ID3D11ShaderResourceView* CullingHeatmapSRV = nullptr;
+
+	// DoF CoC RT — DoFSetup에서 R16_FLOAT로 기록, DoF composite에서 읽기
+	ID3D11Texture2D* CoCTexture = nullptr;
+	ID3D11RenderTargetView* CoCRTV = nullptr;
+	ID3D11ShaderResourceView* CoCSRV = nullptr;
 
 	D3D11_VIEWPORT ViewportRect = {};
 

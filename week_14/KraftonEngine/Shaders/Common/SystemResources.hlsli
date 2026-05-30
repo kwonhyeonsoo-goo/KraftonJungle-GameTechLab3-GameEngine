@@ -12,5 +12,6 @@ Texture2D<float4> GBufferNormalTexture : register(t18);  // GBuffer World Normal
 Texture2D<uint2>  StencilTexture       : register(t19);  // CopyResource된 Stencil (X24_G8_UINT)
 Texture2D<float4> CullingHeatmapTexture : register(t20); // Tile Culling Heatmap (R8G8B8A8_UNORM)
 Texture2D<float>  SpotLightAtlasTexture : register(t22); // Spotlight atlas (D32_FLOAT)
+Texture2D<float>  CoCTexture            : register(t26); // Depth of Field circle of confusion (R16_FLOAT)
 
 #endif // SYSTEM_RESOURCES_HLSL
