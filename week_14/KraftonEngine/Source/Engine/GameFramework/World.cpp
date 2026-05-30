@@ -9,6 +9,7 @@
 #include "Physics/PhysicsWorldSnapshot.h"
 #include "GameFramework/GameMode/GameModeBase.h"
 #include "GameFramework/GameMode/GameStateBase.h"
+#include <memory>
 #include "GameFramework/GameMode/PlayerController.h"
 #include "GameFramework/Camera/PlayerCameraManager.h"
 #include "Object/Reflection/UClass.h"
@@ -451,13 +452,13 @@ void UWorld::ApplyPhysicsSnapshot_GameThread()
 		return;
 	}
 
-	FPhysicsWorldSnapshot Snapshot;
-	if (!Runtime->AcquireLatestSnapshot(Snapshot))
+    std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot = Runtime->AcquireLatestSnapshotRef();
+    if (!Snapshot)
 	{
 		return;
 	}
 
-	for (const FPhysicsBodySnapshot& Body : Snapshot.Bodies)
+    for (const FPhysicsBodySnapshot& Body : Snapshot->Bodies)
 	{
 		if (!Body.ShouldApplyToComponent())
 		{

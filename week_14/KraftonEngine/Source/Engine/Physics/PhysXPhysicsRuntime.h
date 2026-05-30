@@ -123,7 +123,7 @@ public:
     void SetAngularLock(FPhysicsBodyHandle Body, bool bX, bool bY, bool bZ) override;
 
     // Game Thread 는 이 스냅샷을 acquire 해서 Component/Ragdoll/Vehicle visual 을 적용한다.
-    bool AcquireLatestSnapshot(FPhysicsWorldSnapshot& OutSnapshot) const override;
+    std::shared_ptr<const FPhysicsWorldSnapshot> AcquireLatestSnapshotRef() const override;
 
     // 외부 소비자(C/D)는 이 세 함수로만 디버그 데이터를 얻는다 — 전부 step 직후 publish 된
     // 스냅샷의 복사본을 lock 아래에서 반환한다 (live PhysX 직접 접근 없음).
@@ -251,10 +251,10 @@ private:
     // 단조 증가 physics step 카운터 — body CreatedStep/DestroyedStep, snapshot StepIndex 용.
     uint64 StepIndex = 0;
 
-    // Gameplay/Render 적용용 world snapshot — step 직후 publish, Game Thread 는 복사본만 읽는다.
-    mutable std::mutex    WorldSnapshotMutex;
-    FPhysicsWorldSnapshot WorldSnapshot;
-    bool                  bHasWorldSnapshot = false;
+    // Gameplay/Render 적용용 world snapshot — step 직후 immutable snapshot 을 publish 한다.
+    // Game Thread hot path 는 shared_ptr 만 acquire 하므로 배열 전체 복사를 피한다.
+    mutable std::mutex WorldSnapshotMutex;
+    std::shared_ptr<const FPhysicsWorldSnapshot> PublishedWorldSnapshot;
 
     // Debug/Stat 스냅샷 — step 직후 publish, 외부는 lock 아래에서 복사본만 읽는다.
     bool                  bDebugSnapshotEnabled = true;

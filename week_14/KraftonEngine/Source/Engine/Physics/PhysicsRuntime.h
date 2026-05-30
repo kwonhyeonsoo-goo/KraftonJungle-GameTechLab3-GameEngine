@@ -3,6 +3,8 @@
 #include "Physics/PhysicsTypes.h"
 #include "Physics/PhysicsWorldSnapshot.h"
 
+#include <memory>
+
 struct FPhysicsDebugBody;
 struct FPhysicsDebugConstraint;
 struct FPhysicsStats;
@@ -75,7 +77,7 @@ public:
     virtual void SetLinearLock(FPhysicsBodyHandle Body, bool bX, bool bY, bool bZ) = 0;
     virtual void SetAngularLock(FPhysicsBodyHandle Body, bool bX, bool bY, bool bZ) = 0;
 
-    virtual bool AcquireLatestSnapshot(FPhysicsWorldSnapshot& OutSnapshot) const = 0;
+    virtual std::shared_ptr<const FPhysicsWorldSnapshot> AcquireLatestSnapshotRef() const = 0;
 
     virtual void GatherDebugBodies(TArray<FPhysicsDebugBody>& OutBodies) const = 0;
     virtual void GatherDebugConstraints(TArray<FPhysicsDebugConstraint>& OutConstraints) const = 0;

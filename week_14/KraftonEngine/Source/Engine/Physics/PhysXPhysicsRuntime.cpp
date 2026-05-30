@@ -265,8 +265,7 @@ void FPhysXPhysicsRuntime::Shutdown()
     Accumulator = 0.0f;
     {
         std::lock_guard<std::mutex> Lock(WorldSnapshotMutex);
-        WorldSnapshot = FPhysicsWorldSnapshot();
-        bHasWorldSnapshot = false;
+        PublishedWorldSnapshot.reset();
     }
     {
         std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
@@ -426,13 +425,6 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
         BuildWorldSnapshot_Internal();
     }
     Stats.BuildSnapshotMs = DurationMs(SnapStart, FClock::now());
-    {
-        std::lock_guard<std::mutex> Lock(WorldSnapshotMutex);
-        if (bHasWorldSnapshot)
-        {
-            WorldSnapshot.Stats = Stats;
-        }
-    }
     {
         std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
         DebugSnapshot.Stats = Stats;
@@ -992,16 +984,10 @@ FTransform FPhysXPhysicsRuntime::GetBodyTransform(FPhysicsBodyHandle BodyHandle)
     return Body->CurrentTransform;
 }
 
-bool FPhysXPhysicsRuntime::AcquireLatestSnapshot(FPhysicsWorldSnapshot& OutSnapshot) const
+std::shared_ptr<const FPhysicsWorldSnapshot> FPhysXPhysicsRuntime::AcquireLatestSnapshotRef() const
 {
     std::lock_guard<std::mutex> Lock(WorldSnapshotMutex);
-    if (!bHasWorldSnapshot)
-    {
-        return false;
-    }
-
-    OutSnapshot = WorldSnapshot;
-    return true;
+    return PublishedWorldSnapshot;
 }
 
 void FPhysXPhysicsRuntime::SetBodyTransform(
@@ -1503,35 +1489,34 @@ void FPhysXPhysicsRuntime::BuildDebugConstraints_Internal(TArray<FPhysicsDebugCo
 
 void FPhysXPhysicsRuntime::BuildWorldSnapshot_Internal()
 {
-    FPhysicsWorldSnapshot NewWorldSnapshot;
-    NewWorldSnapshot.StepIndex = StepIndex;
-    NewWorldSnapshot.FixedDt = FixedDt;
-    NewWorldSnapshot.InterpolationAlpha = Stats.InterpolationAlpha;
-    NewWorldSnapshot.Stats = Stats;
+    auto NewWorldSnapshot                = std::make_shared<FPhysicsWorldSnapshot>();
+    NewWorldSnapshot->StepIndex          = StepIndex;
+    NewWorldSnapshot->FixedDt            = FixedDt;
+    NewWorldSnapshot->InterpolationAlpha = Stats.InterpolationAlpha;
+    NewWorldSnapshot->Stats              = Stats;
 
-    BuildBodySnapshots_Internal(NewWorldSnapshot.Bodies);
+    BuildBodySnapshots_Internal(NewWorldSnapshot->Bodies);
     if (bDebugSnapshotEnabled)
     {
-        BuildDebugBodies_Internal(NewWorldSnapshot.DebugBodies);
-        BuildDebugConstraints_Internal(NewWorldSnapshot.DebugConstraints);
+        BuildDebugBodies_Internal(NewWorldSnapshot->DebugBodies);
+        BuildDebugConstraints_Internal(NewWorldSnapshot->DebugConstraints);
     }
     else
     {
-        NewWorldSnapshot.DebugBodies.clear();
-        NewWorldSnapshot.DebugConstraints.clear();
+        NewWorldSnapshot->DebugBodies.clear();
+        NewWorldSnapshot->DebugConstraints.clear();
     }
 
     FPhysicsDebugSnapshot NewDebugSnapshot;
-    NewDebugSnapshot.Bodies = NewWorldSnapshot.DebugBodies;
-    NewDebugSnapshot.Constraints = NewWorldSnapshot.DebugConstraints;
-    NewDebugSnapshot.Stats = NewWorldSnapshot.Stats;
-    NewDebugSnapshot.InterpolationAlpha = NewWorldSnapshot.InterpolationAlpha;
-    NewDebugSnapshot.StepIndex = NewWorldSnapshot.StepIndex;
+    NewDebugSnapshot.Bodies             = NewWorldSnapshot->DebugBodies;
+    NewDebugSnapshot.Constraints        = NewWorldSnapshot->DebugConstraints;
+    NewDebugSnapshot.Stats              = NewWorldSnapshot->Stats;
+    NewDebugSnapshot.InterpolationAlpha = NewWorldSnapshot->InterpolationAlpha;
+    NewDebugSnapshot.StepIndex          = NewWorldSnapshot->StepIndex;
 
     {
         std::lock_guard<std::mutex> Lock(WorldSnapshotMutex);
-        WorldSnapshot = NewWorldSnapshot;
-        bHasWorldSnapshot = true;
+        PublishedWorldSnapshot = std::move(NewWorldSnapshot);
     }
 
     {
