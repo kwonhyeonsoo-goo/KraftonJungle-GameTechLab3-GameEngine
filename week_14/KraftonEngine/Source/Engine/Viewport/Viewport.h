@@ -62,6 +62,8 @@ public:
 	ID3D11ShaderResourceView* GetDoFForegroundSRV() const { return DoFForegroundSRV; }
 	ID3D11RenderTargetView* GetDoFBokehRTV() const { return DoFBokehRTV; }
 	ID3D11ShaderResourceView* GetDoFBokehSRV() const { return DoFBokehSRV; }
+	uint32 GetDoFBokehWidth() const { return DoFBokehWidth; }
+	uint32 GetDoFBokehHeight() const { return DoFBokehHeight; }
 
 	const D3D11_VIEWPORT& GetViewportRect() const { return ViewportRect; }
 
@@ -117,6 +119,8 @@ private:
 	ID3D11Texture2D* DoFBokehTexture = nullptr;
 	ID3D11RenderTargetView* DoFBokehRTV = nullptr;
 	ID3D11ShaderResourceView* DoFBokehSRV = nullptr;
+	uint32 DoFBokehWidth = 0;
+	uint32 DoFBokehHeight = 0;
 
 	D3D11_VIEWPORT ViewportRect = {};
 

@@ -19,15 +19,23 @@ bool FDoFBokehScatterPass::BeginPass(const FPassContext& Ctx)
 {
 	const FFrameContext& Frame = Ctx.Frame;
 	if (!Frame.RenderOptions.ShowFlags.bDoF || !Frame.DoFBokehRTV ||
-		!Frame.SceneColorCopyTexture || !Frame.ViewportRenderTexture ||
+		Frame.DoFBokehWidth <= 0.0f || Frame.DoFBokehHeight <= 0.0f ||
 		!Frame.SceneColorCopySRV || !Frame.CoCSRV)
 	{
 		return false;
 	}
 
 	ID3D11DeviceContext* DC = Ctx.Device.GetDeviceContext();
-	DC->CopyResource(Frame.SceneColorCopyTexture, Frame.ViewportRenderTexture);
 	DC->OMSetRenderTargets(1, &Frame.DoFBokehRTV, nullptr);
+
+	D3D11_VIEWPORT BokehViewport = {};
+	BokehViewport.TopLeftX = 0.0f;
+	BokehViewport.TopLeftY = 0.0f;
+	BokehViewport.Width = Frame.DoFBokehWidth;
+	BokehViewport.Height = Frame.DoFBokehHeight;
+	BokehViewport.MinDepth = 0.0f;
+	BokehViewport.MaxDepth = 1.0f;
+	DC->RSSetViewports(1, &BokehViewport);
 
 	ID3D11ShaderResourceView* SceneColorSRV = Frame.SceneColorCopySRV;
 	ID3D11ShaderResourceView* CoCSRV = Frame.CoCSRV;
@@ -45,5 +53,15 @@ void FDoFBokehScatterPass::EndPass(const FPassContext& Ctx)
 	DC->PSSetShaderResources(ESystemTexSlot::SceneColor, 1, &NullSRV);
 	DC->PSSetShaderResources(ESystemTexSlot::CoC, 1, &NullSRV);
 	DC->OMSetRenderTargets(1, &Ctx.Cache.RTV, Ctx.Cache.DSV);
+
+	D3D11_VIEWPORT FullViewport = {};
+	FullViewport.TopLeftX = 0.0f;
+	FullViewport.TopLeftY = 0.0f;
+	FullViewport.Width = Ctx.Frame.ViewportWidth;
+	FullViewport.Height = Ctx.Frame.ViewportHeight;
+	FullViewport.MinDepth = 0.0f;
+	FullViewport.MaxDepth = 1.0f;
+	DC->RSSetViewports(1, &FullViewport);
+
 	Ctx.Cache.bForceAll = true;
 }

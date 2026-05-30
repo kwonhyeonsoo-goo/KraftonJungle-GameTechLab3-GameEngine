@@ -57,4 +57,6 @@ void FFrameContext::SetViewportInfo(const FViewport* VP)
 	DoFForegroundSRV        = VP->GetDoFForegroundSRV();
 	DoFBokehRTV             = VP->GetDoFBokehRTV();
 	DoFBokehSRV             = VP->GetDoFBokehSRV();
+	DoFBokehWidth           = static_cast<float>(VP->GetDoFBokehWidth());
+	DoFBokehHeight          = static_cast<float>(VP->GetDoFBokehHeight());
 }

@@ -73,6 +73,8 @@ struct FFrameContext
 	ID3D11ShaderResourceView* DoFForegroundSRV      = nullptr;
 	ID3D11RenderTargetView*   DoFBokehRTV           = nullptr;
 	ID3D11ShaderResourceView* DoFBokehSRV           = nullptr;
+	float DoFBokehWidth = 0.0f;
+	float DoFBokehHeight = 0.0f;
 
 	// Cursor position relative to viewport (for debug visualization)
 	uint32 CursorViewportX = UINT32_MAX;
@@ -146,5 +148,7 @@ struct FFrameContext
 		DoFForegroundSRV        = nullptr;
 		DoFBokehRTV             = nullptr;
 		DoFBokehSRV             = nullptr;
+		DoFBokehWidth           = 0.0f;
+		DoFBokehHeight          = 0.0f;
 	}
 };

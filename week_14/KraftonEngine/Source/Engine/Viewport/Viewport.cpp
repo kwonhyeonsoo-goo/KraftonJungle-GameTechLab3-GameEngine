@@ -2,6 +2,11 @@
 
 #include "Render/Resource/Buffer.h"
 
+namespace
+{
+	constexpr uint32 DoFBokehDownsampleFactor = 2;
+}
+
 FViewport::~FViewport()
 {
 	ReleaseResources();
@@ -313,6 +318,10 @@ bool FViewport::CreateResources()
 	DoFForegroundSRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportDoFForegroundSRV")), "ViewportDoFForegroundSRV");
 
 	D3D11_TEXTURE2D_DESC DoFBokehDesc = DoFLayerDesc;
+	DoFBokehWidth = (Width + DoFBokehDownsampleFactor - 1) / DoFBokehDownsampleFactor;
+	DoFBokehHeight = (Height + DoFBokehDownsampleFactor - 1) / DoFBokehDownsampleFactor;
+	DoFBokehDesc.Width = DoFBokehWidth;
+	DoFBokehDesc.Height = DoFBokehHeight;
 	DoFBokehDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	hr = Device->CreateTexture2D(&DoFBokehDesc, nullptr, &DoFBokehTexture);
 	if (FAILED(hr)) return false;
@@ -342,6 +351,8 @@ void FViewport::ReleaseResources()
 	if (DoFBokehSRV) { DoFBokehSRV->Release(); DoFBokehSRV = nullptr; }
 	if (DoFBokehRTV) { DoFBokehRTV->Release(); DoFBokehRTV = nullptr; }
 	if (DoFBokehTexture) { DoFBokehTexture->Release(); DoFBokehTexture = nullptr; }
+	DoFBokehWidth = 0;
+	DoFBokehHeight = 0;
 	if (DoFForegroundSRV) { DoFForegroundSRV->Release(); DoFForegroundSRV = nullptr; }
 	if (DoFForegroundRTV) { DoFForegroundRTV->Release(); DoFForegroundRTV = nullptr; }
 	if (DoFForegroundTexture) { DoFForegroundTexture->Release(); DoFForegroundTexture = nullptr; }

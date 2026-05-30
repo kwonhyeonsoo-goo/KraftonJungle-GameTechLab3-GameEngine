@@ -32,7 +32,6 @@ bool FDoFPass::BeginPass(const FPassContext& Ctx)
 
 	ID3D11DeviceContext* DC = Ctx.Device.GetDeviceContext();
 
-	DC->CopyResource(Frame.SceneColorCopyTexture, Frame.ViewportRenderTexture);
 	DC->OMSetRenderTargets(1, &Ctx.Cache.RTV, Ctx.Cache.DSV);
 
 	ID3D11ShaderResourceView* SceneColorSRV = Frame.SceneColorCopySRV;
