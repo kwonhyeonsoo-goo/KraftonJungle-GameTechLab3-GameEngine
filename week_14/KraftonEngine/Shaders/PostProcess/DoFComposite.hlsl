@@ -4,14 +4,7 @@
 #include "Common/Functions.hlsli"
 #include "Common/SystemResources.hlsli"
 #include "Common/SystemSamplers.hlsli"
-
-cbuffer DoFBuffer : register(b2)
-{
-    float FocusDistance;
-    float FocusRange;
-    float MaxBlurRadius;
-    float _Pad;
-};
+#include "Common/DoFCommon.hlsli"
 
 PS_Input_UV VS(uint vertexID : SV_VertexID)
 {
@@ -26,7 +19,7 @@ float4 PS(PS_Input_UV input) : SV_TARGET
 
     float backgroundAmount = saturate(coc);
     float foregroundAmount = saturate(-coc);
-    float focusProtect = 1.0f - saturate(abs(coc) * 2.0f);
+    float focusProtect = 1.0f - saturate(abs(coc) * DoFFocusProtectScale);
 
     float4 background = DoFBackgroundTexture.SampleLevel(LinearClampSampler, uv, 0);
     float4 foreground = DoFForegroundTexture.SampleLevel(LinearClampSampler, uv, 0);
@@ -36,6 +29,8 @@ float4 PS(PS_Input_UV input) : SV_TARGET
 
     float foregroundAlpha = saturate(max(foreground.a, foregroundAmount));
     color.rgb = lerp(color.rgb, foreground.rgb, foregroundAlpha);
+    color.rgb += DoFBokehTexture.SampleLevel(LinearClampSampler, uv, 0).rgb;
+
     color.a = sharp.a;
     return color;
 }

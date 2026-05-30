@@ -47,6 +47,7 @@ void FShaderManager::Initialize(ID3D11Device* InDevice)
 	GetOrCreate(EShaderPath::DoFSetup, StartupError);
 	GetOrCreate(EShaderPath::DoFBackgroundBlur, StartupError);
 	GetOrCreate(EShaderPath::DoFForegroundBlur, StartupError);
+	GetOrCreate(EShaderPath::DoFBokehScatter, StartupError);
 	GetOrCreate(EShaderPath::DoFComposite, StartupError);
 	GetOrCreate(EShaderPath::DoFCoCDebug, StartupError);
 	GetOrCreate(EShaderPath::GammaCorrection, StartupError);

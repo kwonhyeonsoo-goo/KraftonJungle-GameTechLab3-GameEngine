@@ -110,6 +110,9 @@ struct FViewportRenderOptions
 	float DoFFocusDistance = 500.0f;
 	float DoFFocusRange = 200.0f;
 	float DoFMaxBlurRadius = 4.0f;
+	float DoFBokehRadiusThreshold = 2.5f;
+	float DoFBokehLumaThreshold = 0.45f;
+	float DoFBokehIntensity = 0.65f;
 
 	// Light Culling 뷰모드 전용 설정
 	ELightCullingMode LightCullingMode = ELightCullingMode::Cluster;

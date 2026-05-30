@@ -93,6 +93,11 @@ void FViewport::BeginRender(ID3D11DeviceContext* Ctx, const float ClearColor[4])
 		const float DoFClear[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		Ctx->ClearRenderTargetView(DoFForegroundRTV, DoFClear);
 	}
+	if (DoFBokehRTV)
+	{
+		const float DoFClear[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		Ctx->ClearRenderTargetView(DoFBokehRTV, DoFClear);
+	}
 	Ctx->ClearDepthStencilView(DSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 0.0f, 0);
 	Ctx->OMSetRenderTargets(1, &RTV, DSV);
 	Ctx->RSSetViewports(1, &VPRect);
@@ -307,6 +312,20 @@ bool FViewport::CreateResources()
 	if (FAILED(hr)) return false;
 	DoFForegroundSRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportDoFForegroundSRV")), "ViewportDoFForegroundSRV");
 
+	D3D11_TEXTURE2D_DESC DoFBokehDesc = DoFLayerDesc;
+	DoFBokehDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	hr = Device->CreateTexture2D(&DoFBokehDesc, nullptr, &DoFBokehTexture);
+	if (FAILED(hr)) return false;
+	DoFBokehTexture->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportDoFBokehTexture")), "ViewportDoFBokehTexture");
+
+	hr = Device->CreateRenderTargetView(DoFBokehTexture, nullptr, &DoFBokehRTV);
+	if (FAILED(hr)) return false;
+	DoFBokehRTV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportDoFBokehRTV")), "ViewportDoFBokehRTV");
+
+	hr = Device->CreateShaderResourceView(DoFBokehTexture, nullptr, &DoFBokehSRV);
+	if (FAILED(hr)) return false;
+	DoFBokehSRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportDoFBokehSRV")), "ViewportDoFBokehSRV");
+
 	// ── 뷰포트 렉트 ──
 	ViewportRect.TopLeftX = 0.0f;
 	ViewportRect.TopLeftY = 0.0f;
@@ -320,6 +339,9 @@ bool FViewport::CreateResources()
 
 void FViewport::ReleaseResources()
 {
+	if (DoFBokehSRV) { DoFBokehSRV->Release(); DoFBokehSRV = nullptr; }
+	if (DoFBokehRTV) { DoFBokehRTV->Release(); DoFBokehRTV = nullptr; }
+	if (DoFBokehTexture) { DoFBokehTexture->Release(); DoFBokehTexture = nullptr; }
 	if (DoFForegroundSRV) { DoFForegroundSRV->Release(); DoFForegroundSRV = nullptr; }
 	if (DoFForegroundRTV) { DoFForegroundRTV->Release(); DoFForegroundRTV = nullptr; }
 	if (DoFForegroundTexture) { DoFForegroundTexture->Release(); DoFForegroundTexture = nullptr; }

@@ -54,6 +54,9 @@ namespace Key
 	constexpr const char* DoFFocusDistance = "DoFFocusDistance";
 	constexpr const char* DoFFocusRange = "DoFFocusRange";
 	constexpr const char* DoFMaxBlurRadius = "DoFMaxBlurRadius";
+	constexpr const char* DoFBokehRadiusThreshold = "DoFBokehRadiusThreshold";
+	constexpr const char* DoFBokehLumaThreshold = "DoFBokehLumaThreshold";
+	constexpr const char* DoFBokehIntensity = "DoFBokehIntensity";
 	constexpr const char* LightCullingMode = "LightCullingMode";
 	constexpr const char* HeatMapMax = "HeatMapMax";
 	constexpr const char* Enable25DCulling = "Enable25DCulling";
@@ -189,6 +192,9 @@ json::JSON SaveRenderOptions(const FViewportRenderOptions& Opts)
 	Obj[Key::DoFFocusDistance] = Opts.DoFFocusDistance;
 	Obj[Key::DoFFocusRange] = Opts.DoFFocusRange;
 	Obj[Key::DoFMaxBlurRadius] = Opts.DoFMaxBlurRadius;
+	Obj[Key::DoFBokehRadiusThreshold] = Opts.DoFBokehRadiusThreshold;
+	Obj[Key::DoFBokehLumaThreshold] = Opts.DoFBokehLumaThreshold;
+	Obj[Key::DoFBokehIntensity] = Opts.DoFBokehIntensity;
 	Obj[Key::LightCullingMode] = static_cast<int32>(Opts.LightCullingMode);
 	Obj[Key::HeatMapMax] = Opts.HeatMapMax;
 	Obj[Key::Enable25DCulling] = Opts.Enable25DCulling;
@@ -267,6 +273,12 @@ void LoadRenderOptions(json::JSON Obj, FViewportRenderOptions& Opts)
 		Opts.DoFFocusRange = static_cast<float>(Obj[Key::DoFFocusRange].ToFloat());
 	if (Obj.hasKey(Key::DoFMaxBlurRadius))
 		Opts.DoFMaxBlurRadius = static_cast<float>(Obj[Key::DoFMaxBlurRadius].ToFloat());
+	if (Obj.hasKey(Key::DoFBokehRadiusThreshold))
+		Opts.DoFBokehRadiusThreshold = static_cast<float>(Obj[Key::DoFBokehRadiusThreshold].ToFloat());
+	if (Obj.hasKey(Key::DoFBokehLumaThreshold))
+		Opts.DoFBokehLumaThreshold = static_cast<float>(Obj[Key::DoFBokehLumaThreshold].ToFloat());
+	if (Obj.hasKey(Key::DoFBokehIntensity))
+		Opts.DoFBokehIntensity = static_cast<float>(Obj[Key::DoFBokehIntensity].ToFloat());
 	if (Obj.hasKey(Key::LightCullingMode))
 		Opts.LightCullingMode = static_cast<ELightCullingMode>(Obj[Key::LightCullingMode].ToInt());
 	if (Obj.hasKey(Key::HeatMapMax))

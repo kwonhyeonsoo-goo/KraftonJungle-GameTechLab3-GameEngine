@@ -52,6 +52,7 @@ enum class ERenderPass : uint32
 	Translucent,	// 통합 Translucent 패스 (Font, SubUV, Billboard, Particle) — Blend는 per-DrawCommand가 결정
 	DoFBackgroundBlur, // SceneColor + positive CoC background layer
 	DoFForegroundBlur, // SceneColor + negative CoC foreground layer
+	DoFBokehScatter, // Bright large-CoC highlight bokeh layer
 	DoF,			// SceneColor + CoC composite
 	SelectionMask,	// 선택 스텐실 마스크
 	EditorLines,	// 디버그 라인 + 그리드 (LINELIST)
@@ -80,6 +81,7 @@ inline const char* GetRenderPassName(ERenderPass Pass)
 		"RenderPass::Translucent",
 		"RenderPass::DoFBackgroundBlur",
 		"RenderPass::DoFForegroundBlur",
+		"RenderPass::DoFBokehScatter",
 		"RenderPass::DoF",
 		"RenderPass::SelectionMask",
 		"RenderPass::EditorLines",
@@ -111,6 +113,7 @@ namespace RenderStateStrings
 		{ "Translucent",   (int)ERenderPass::Translucent },
 		{ "DoFBackgroundBlur", (int)ERenderPass::DoFBackgroundBlur },
 		{ "DoFForegroundBlur", (int)ERenderPass::DoFForegroundBlur },
+		{ "DoFBokehScatter", (int)ERenderPass::DoFBokehScatter },
 		{ "DoF",           (int)ERenderPass::DoF },
 		{ "SelectionMask", (int)ERenderPass::SelectionMask },
 		{ "EditorLines",   (int)ERenderPass::EditorLines },

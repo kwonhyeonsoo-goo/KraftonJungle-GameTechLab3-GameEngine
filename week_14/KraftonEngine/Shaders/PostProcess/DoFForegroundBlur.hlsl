@@ -4,14 +4,7 @@
 #include "Common/Functions.hlsli"
 #include "Common/SystemResources.hlsli"
 #include "Common/SystemSamplers.hlsli"
-
-cbuffer DoFBuffer : register(b2)
-{
-    float FocusDistance;
-    float FocusRange;
-    float MaxBlurRadius;
-    float _Pad;
-};
+#include "Common/DoFCommon.hlsli"
 
 PS_Input_UV VS(uint vertexID : SV_VertexID)
 {
@@ -23,10 +16,12 @@ float4 AccumulateForeground(float2 uv, float2 offset, float kernelWeight, inout 
     float2 sampleUV = saturate(uv + offset);
     float sampleCoC = CoCTexture.SampleLevel(LinearClampSampler, sampleUV, 0);
     float fgMask = saturate(-sampleCoC);
-    float weight = fgMask * kernelWeight;
+    float4 sampleColor = SceneColorTexture.SampleLevel(LinearClampSampler, sampleUV, 0);
+    float bokehCandidate = DoFBokehCandidateMask(sampleCoC, sampleColor.rgb);
+    float weight = fgMask * kernelWeight * (1.0f - bokehCandidate);
     maxMask = max(maxMask, fgMask);
     totalWeight += weight;
-    return SceneColorTexture.SampleLevel(LinearClampSampler, sampleUV, 0) * weight;
+    return sampleColor * weight;
 }
 
 float4 PS(PS_Input_UV input) : SV_TARGET
@@ -36,25 +31,56 @@ float4 PS(PS_Input_UV input) : SV_TARGET
     float centerCoC = CoCTexture.SampleLevel(LinearClampSampler, uv, 0);
     float centerFgCoC = saturate(-centerCoC);
 
-    uint width, height;
-    SceneColorTexture.GetDimensions(width, height);
-    float2 texel = 1.0f / max(float2(width, height), float2(1.0f, 1.0f));
-    float radius = max(centerFgCoC, 0.20f) * MaxBlurRadius;
+    float2 texel = DoFGetSceneTexel();
+    float radius = max(centerFgCoC, DoFForegroundMinCoCForRadius) * MaxBlurRadius;
 
-    float totalWeight = centerFgCoC * 0.25f;
+    float centerBokehCandidate = DoFBokehCandidateMask(centerCoC, sharp.rgb);
+    float totalWeight = centerFgCoC * DoFForegroundCenterWeight * (1.0f - centerBokehCandidate);
     float maxMask = centerFgCoC;
     float4 blur = sharp * totalWeight;
 
-    blur += AccumulateForeground(uv, texel * float2( radius,  0.0f), 1.0f, totalWeight, maxMask);
-    blur += AccumulateForeground(uv, texel * float2(-radius,  0.0f), 1.0f, totalWeight, maxMask);
-    blur += AccumulateForeground(uv, texel * float2( 0.0f,  radius), 1.0f, totalWeight, maxMask);
-    blur += AccumulateForeground(uv, texel * float2( 0.0f, -radius), 1.0f, totalWeight, maxMask);
-    blur += AccumulateForeground(uv, texel * float2( radius,  radius), 0.75f, totalWeight, maxMask);
-    blur += AccumulateForeground(uv, texel * float2(-radius,  radius), 0.75f, totalWeight, maxMask);
-    blur += AccumulateForeground(uv, texel * float2( radius, -radius), 0.75f, totalWeight, maxMask);
-    blur += AccumulateForeground(uv, texel * float2(-radius, -radius), 0.75f, totalWeight, maxMask);
+    [unroll]
+    for (int i = 0; i < DoFRing0Count; ++i)
+    {
+        blur += AccumulateForeground(uv, texel * DoFRing0[i] * radius,
+            DoFRingSampleWeight(DoFRing0Radius), totalWeight, maxMask);
+    }
 
-    float4 color = totalWeight > 1.0e-4f ? blur / max(totalWeight, 1.0e-4f) : sharp;
+    if (radius > 2.0f)
+    {
+        [unroll]
+        for (int i = 0; i < DoFRing1Count; ++i)
+        {
+            blur += AccumulateForeground(uv, texel * DoFRing1[i] * radius,
+                DoFRingSampleWeight(DoFRing1Radius), totalWeight, maxMask);
+        }
+    }
+
+    if (radius > 5.0f)
+    {
+        [unroll]
+        for (int i = 0; i < DoFRing2Count; ++i)
+        {
+            blur += AccumulateForeground(uv, texel * DoFRing2[i] * radius,
+                DoFRingSampleWeight(DoFRing2Radius), totalWeight, maxMask);
+        }
+    }
+
+    if (radius > 8.0f)
+    {
+        [unroll]
+        for (int i = 0; i < DoFRing3Count; ++i)
+        {
+            blur += AccumulateForeground(uv, texel * DoFRing3[i] * radius,
+                DoFRingSampleWeight(DoFRing3Radius), totalWeight, maxMask);
+        }
+    }
+
+    float4 color = totalWeight > DoFMinAccumulatedWeight ? blur / max(totalWeight, DoFMinAccumulatedWeight) : sharp;
+    if (totalWeight <= DoFMinAccumulatedWeight)
+    {
+        color.rgb = DoFRemoveBokehEnergyForFallback(centerCoC, color.rgb);
+    }
     color.a = saturate(max(maxMask, centerFgCoC));
     return color;
 }

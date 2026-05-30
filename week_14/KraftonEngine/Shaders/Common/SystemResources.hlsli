@@ -15,5 +15,6 @@ Texture2D<float>  SpotLightAtlasTexture : register(t22); // Spotlight atlas (D32
 Texture2D<float>  CoCTexture            : register(t26); // Depth of Field circle of confusion (R16_FLOAT)
 Texture2D<float4> DoFBackgroundTexture  : register(t27); // Depth of Field background blur
 Texture2D<float4> DoFForegroundTexture  : register(t28); // Depth of Field foreground blur + mask
+Texture2D<float4> DoFBokehTexture       : register(t29); // Depth of Field highlight bokeh scatter
 
 #endif // SYSTEM_RESOURCES_HLSL

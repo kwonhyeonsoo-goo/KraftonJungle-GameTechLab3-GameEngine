@@ -700,6 +700,9 @@ void FViewportToolbar::RenderShowFlags(const FToolbarRenderState& State)
 		ImGui::SliderFloat("DoF Focus", &RenderOptions.DoFFocusDistance, 1.0f, 5000.0f, "%.1f");
 		ImGui::SliderFloat("DoF Range", &RenderOptions.DoFFocusRange, 1.0f, 2000.0f, "%.1f");
 		ImGui::SliderFloat("DoF Blur", &RenderOptions.DoFMaxBlurRadius, 0.0f, 12.0f, "%.1f");
+		ImGui::SliderFloat("DoF Bokeh Radius", &RenderOptions.DoFBokehRadiusThreshold, 0.0f, 12.0f, "%.1f");
+		ImGui::SliderFloat("DoF Bokeh Luma", &RenderOptions.DoFBokehLumaThreshold, 0.0f, 2.0f, "%.2f");
+		ImGui::SliderFloat("DoF Bokeh Intensity", &RenderOptions.DoFBokehIntensity, 0.0f, 4.0f, "%.2f");
 		ImGui::Checkbox("FXAA", &RenderOptions.ShowFlags.bFXAA);
 		ImGui::Checkbox("Gamma Correction", &RenderOptions.ShowFlags.bGammaCorrection);
 		ImGui::Checkbox("View Light Culling", &RenderOptions.ShowFlags.bViewLightCulling);

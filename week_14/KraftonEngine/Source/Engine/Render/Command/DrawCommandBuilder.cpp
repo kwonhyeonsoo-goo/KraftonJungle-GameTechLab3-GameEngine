@@ -696,6 +696,9 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 		DoFData.FocusDistance = Frame.RenderOptions.DoFFocusDistance;
 		DoFData.FocusRange = Frame.RenderOptions.DoFFocusRange;
 		DoFData.MaxBlurRadius = Frame.RenderOptions.DoFMaxBlurRadius;
+		DoFData.BokehRadiusThreshold = Frame.RenderOptions.DoFBokehRadiusThreshold;
+		DoFData.BokehLumaThreshold = Frame.RenderOptions.DoFBokehLumaThreshold;
+		DoFData.BokehIntensity = Frame.RenderOptions.DoFBokehIntensity;
 		DoFCB.Update(Ctx, &DoFData, sizeof(FDoFConstants));
 
 		FShader* DoFSetupShader = FShaderManager::Get().GetOrCreate(EShaderPath::DoFSetup);
@@ -738,6 +741,16 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 				FDrawCommand& Cmd = DrawCommandList.AddCommand();
 				Cmd.InitFullscreenTriangle(DoFForegroundShader, ERenderPass::DoFForegroundBlur,
 					PassRenderStateTable->ToDrawCommandState(ERenderPass::DoFForegroundBlur, ViewMode));
+				Cmd.Bindings.PerShaderCB[0] = &DoFCB;
+				Cmd.BuildSortKey(0);
+			}
+
+			FShader* DoFBokehShader = FShaderManager::Get().GetOrCreate(EShaderPath::DoFBokehScatter);
+			if (DoFBokehShader)
+			{
+				FDrawCommand& Cmd = DrawCommandList.AddCommand();
+				Cmd.InitFullscreenTriangle(DoFBokehShader, ERenderPass::DoFBokehScatter,
+					PassRenderStateTable->ToDrawCommandState(ERenderPass::DoFBokehScatter, ViewMode));
 				Cmd.Bindings.PerShaderCB[0] = &DoFCB;
 				Cmd.BuildSortKey(0);
 			}

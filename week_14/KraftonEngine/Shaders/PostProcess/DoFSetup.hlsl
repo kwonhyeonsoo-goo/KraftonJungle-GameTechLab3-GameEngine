@@ -3,14 +3,7 @@
 
 #include "Common/Functions.hlsli"
 #include "Common/SystemResources.hlsli"
-
-cbuffer DoFBuffer : register(b2)
-{
-    float FocusDistance;
-    float FocusRange;
-    float MaxBlurRadius;
-    float _Pad;
-};
+#include "Common/DoFCommon.hlsli"
 
 PS_Input_UV VS(uint vertexID : SV_VertexID)
 {
@@ -24,7 +17,7 @@ float PS(PS_Input_UV input) : SV_TARGET
 
     if (depth <= 0.0f)
     {
-        return 1.0f;
+        return DoFMaxSignedCoC;
     }
 
     float2 ndc = float2(input.uv.x * 2.0f - 1.0f, 1.0f - input.uv.y * 2.0f);
@@ -33,6 +26,6 @@ float PS(PS_Input_UV input) : SV_TARGET
     float3 worldPos = worldH.xyz / max(worldH.w, 1.0e-6f);
 
     float viewDistance = length(worldPos - CameraWorldPos);
-    float safeRange = max(FocusRange, 1.0f);
-    return clamp((viewDistance - FocusDistance) / safeRange, -1.0f, 1.0f);
+    float safeRange = max(FocusRange, DoFMinFocusRange);
+    return clamp((viewDistance - FocusDistance) / safeRange, -DoFMaxSignedCoC, DoFMaxSignedCoC);
 }
