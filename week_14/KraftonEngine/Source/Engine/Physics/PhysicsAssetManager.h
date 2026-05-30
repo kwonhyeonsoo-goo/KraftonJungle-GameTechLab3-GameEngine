@@ -13,9 +13,12 @@ class FPhysicsAssetManager : public FGCObject
 public:
     static FPhysicsAssetManager& Get();
 
+    static bool IsPhysicsAssetPackage(const FString& PackagePath);
+
     UPhysicsAsset* LoadPhysicsAsset(const FString& PackagePath);
 
     bool SavePhysicsAsset(UPhysicsAsset* PhysicsAsset, const FString& PackagePath, const FString& SourcePath = FString());
+    bool SavePhysicsAssetPreservingMetadata(UPhysicsAsset* PhysicsAsset);
 
     const TArray<FAssetListItem>& GetAvailablePhysicsAssetFiles();
     void                          ScanPhysicsAssets();

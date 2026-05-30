@@ -57,7 +57,6 @@ namespace
     {
         return FPaths::ToUtf8(Path.stem().generic_wstring());
     }
-
 }
 
 FPhysicsAssetManager& FPhysicsAssetManager::Get()
@@ -87,6 +86,12 @@ FString FPhysicsAssetManager::BuildDefaultPhysicsAssetPackagePath(const FString&
     return FPaths::ToUtf8(AssetPath.generic_wstring());
 }
 
+bool FPhysicsAssetManager::IsPhysicsAssetPackage(const FString& PackagePath)
+{
+    FAssetImportMetadata Metadata;
+    return FAssetPackage::ReadMetadata(PackagePath, EAssetPackageType::PhysicsAsset, Metadata);
+}
+
 void FPhysicsAssetManager::ScanPhysicsAssets()
 {
     AvailablePhysicsAssetFiles.clear();
@@ -112,8 +117,7 @@ void FPhysicsAssetManager::ScanPhysicsAssets()
 
         const FString RelPath = FPaths::MakeProjectRelative(FPaths::ToUtf8(Entry.path().generic_wstring()));
 
-        EAssetPackageType Type = EAssetPackageType::Unknown;
-        if (!FAssetPackage::GetPackageType(RelPath, Type) || Type != EAssetPackageType::PhysicsAsset)
+        if (!IsPhysicsAssetPackage(RelPath))
         {
             continue;
         }
@@ -244,6 +248,28 @@ bool FPhysicsAssetManager::SavePhysicsAsset(UPhysicsAsset* PhysicsAsset, const F
     }
 
     return true;
+}
+
+bool FPhysicsAssetManager::SavePhysicsAssetPreservingMetadata(UPhysicsAsset* PhysicsAsset)
+{
+    if (!PhysicsAsset)
+    {
+        return false;
+    }
+
+    const FString& AssetPath = PhysicsAsset->GetAssetPathFileName();
+    if (AssetPath.empty() || AssetPath == "None")
+    {
+        UE_LOG("PhysicsAsset save failed: asset path is unknown.");
+        return false;
+    }
+
+    // Preserve the previous source reference so editor-side asset edits do not
+    // accidentally clear import provenance metadata.
+    FAssetImportMetadata ExistingMetadata;
+    FAssetPackage::ReadMetadata(AssetPath, EAssetPackageType::PhysicsAsset, ExistingMetadata);
+
+    return SavePhysicsAsset(PhysicsAsset, AssetPath, ExistingMetadata.SourcePath);
 }
 
 TArray<FAssetListItem> FPhysicsAssetManager::FindPhysicsAssetsForSkeleton(const FSkeletonBinding& Skeleton, bool bAllowSameStructure)

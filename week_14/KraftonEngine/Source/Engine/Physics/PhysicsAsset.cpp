@@ -27,8 +27,57 @@ int32 UPhysicsAsset::FindBodySetupIndexByBoneName(const FName& BoneName) const
     return -1;
 }
 
+bool UPhysicsAsset::HasBodySetupForBone(const FName& BoneName) const
+{
+    return FindBodySetupIndexByBoneName(BoneName) >= 0;
+}
+
 const FPhysicsAssetBodySetup* UPhysicsAsset::FindBodySetupByBoneName(const FName& BoneName) const
 {
     const int32 Index = FindBodySetupIndexByBoneName(BoneName);
     return Index >= 0 ? &BodySetups[Index] : nullptr;
+}
+
+bool UPhysicsAsset::HasConstraintBetweenBones(const FName& ParentBoneName, const FName& ChildBoneName) const
+{
+    return FindConstraintSetup(ParentBoneName, ChildBoneName) != nullptr;
+}
+
+const FPhysicsAssetConstraintSetup* UPhysicsAsset::FindConstraintSetup(const FName& ParentBoneName, const FName& ChildBoneName) const
+{
+    if (!ParentBoneName.IsValid() || ParentBoneName == FName::None ||
+        !ChildBoneName.IsValid() || ChildBoneName == FName::None)
+    {
+        return nullptr;
+    }
+
+    for (const FPhysicsAssetConstraintSetup& ConstraintSetup : ConstraintSetups)
+    {
+        if (ConstraintSetup.ParentBoneName == ParentBoneName && ConstraintSetup.ChildBoneName == ChildBoneName)
+        {
+            return &ConstraintSetup;
+        }
+    }
+
+    return nullptr;
+}
+
+TArray<const FPhysicsAssetConstraintSetup*> UPhysicsAsset::FindConstraintSetupsForBone(const FName& BoneName) const
+{
+    TArray<const FPhysicsAssetConstraintSetup*> Result;
+
+    if (!BoneName.IsValid() || BoneName == FName::None)
+    {
+        return Result;
+    }
+
+    for (const FPhysicsAssetConstraintSetup& ConstraintSetup : ConstraintSetups)
+    {
+        if (ConstraintSetup.ParentBoneName == BoneName || ConstraintSetup.ChildBoneName == BoneName)
+        {
+            Result.push_back(&ConstraintSetup);
+        }
+    }
+
+    return Result;
 }

@@ -57,8 +57,14 @@ public:
         return ConstraintSetups;
     }
 
+    // Asset-side lookup helpers keep future skeletal/ragdoll code from
+    // re-implementing the same bone/constraint queries at each call site.
     int32 FindBodySetupIndexByBoneName(const FName& BoneName) const;
+    bool HasBodySetupForBone(const FName& BoneName) const;
     const FPhysicsAssetBodySetup* FindBodySetupByBoneName(const FName& BoneName) const;
+    bool HasConstraintBetweenBones(const FName& ParentBoneName, const FName& ChildBoneName) const;
+    const FPhysicsAssetConstraintSetup* FindConstraintSetup(const FName& ParentBoneName, const FName& ChildBoneName) const;
+    TArray<const FPhysicsAssetConstraintSetup*> FindConstraintSetupsForBone(const FName& BoneName) const;
 
 private:
     FString AssetPathFileName = "None";
