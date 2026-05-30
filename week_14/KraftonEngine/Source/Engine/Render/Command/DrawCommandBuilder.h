@@ -95,6 +95,7 @@ private:
 	FConstantBuffer FogCB;
 	FConstantBuffer OutlineCB;
 	FConstantBuffer SceneDepthCB;
+	FConstantBuffer DoFCB;
 	FConstantBuffer FXAACB;
 	FConstantBuffer GammaCorrectionCB;
 	FConstantBuffer CameraFadeCB;

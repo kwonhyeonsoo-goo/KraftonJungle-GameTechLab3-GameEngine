@@ -12,6 +12,7 @@ enum class EViewMode : int32
 	SceneDepth,
 	WorldNormal,
 	LightCulling,
+	DoFCoC,
 	Count
 };
 
@@ -57,6 +58,7 @@ struct FShowFlags
 	bool bDebugDraw = true;
 	bool bOctree = false;
 	bool bFog = true;
+	bool bDoF = false;
 	bool bFXAA = false;
 	bool bGammaCorrection = true;
 	bool bViewLightCulling = false;
@@ -103,6 +105,14 @@ struct FViewportRenderOptions
 
 	// Gamma Correction 전용 설정
 	float Gamma = 2.4f;
+
+	// Depth of Field 전용 설정
+	float DoFFocusDistance = 500.0f;
+	float DoFFocusRange = 200.0f;
+	float DoFMaxBlurRadius = 4.0f;
+	float DoFBokehRadiusThreshold = 2.5f;
+	float DoFBokehLumaThreshold = 0.45f;
+	float DoFBokehIntensity = 0.65f;
 
 	// Light Culling 뷰모드 전용 설정
 	ELightCullingMode LightCullingMode = ELightCullingMode::Cluster;

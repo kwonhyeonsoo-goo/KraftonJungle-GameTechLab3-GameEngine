@@ -1003,6 +1003,10 @@ void FSystemResources::UnbindSystemTextures(FD3DDevice& Device)
 
 	// t21~t25: Shadow (CSM/SpotAtlas/PointCube/SpotData/PointData)
 	Ctx->PSSetShaderResources(ESystemTexSlot::ShadowMapCSM, 5, nullSRVs);
+
+	// t26~t29: DoF CoC/background/foreground/bokeh
+	ID3D11ShaderResourceView* nullDoFSRVs[4] = {};
+	Ctx->PSSetShaderResources(ESystemTexSlot::CoC, 4, nullDoFSRVs);
 }
 
 // ============================================================

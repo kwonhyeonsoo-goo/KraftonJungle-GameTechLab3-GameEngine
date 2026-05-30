@@ -38,6 +38,7 @@ void FDrawCommandBuilder::Create(ID3D11Device* InDevice, ID3D11DeviceContext* In
 	FogCB.Create(InDevice, sizeof(FFogConstants), "FogCB");
 	OutlineCB.Create(InDevice, sizeof(FOutlinePostProcessConstants), "OutlineCB");
 	SceneDepthCB.Create(InDevice, sizeof(FSceneDepthPConstants), "SceneDepthCB");
+	DoFCB.Create(InDevice, sizeof(FDoFConstants), "DoFCB");
 	FXAACB.Create(InDevice, sizeof(FFXAAConstants), "FXAACB");
 	GammaCorrectionCB.Create(InDevice, sizeof(FGammaCorrectionConstants), "GammaCorrectionCB");
 
@@ -67,6 +68,7 @@ void FDrawCommandBuilder::Release()
 	FogCB.Release();
 	OutlineCB.Release();
 	SceneDepthCB.Release();
+	DoFCB.Release();
 	FXAACB.Release();
 	GammaCorrectionCB.Release();
 	
@@ -693,6 +695,84 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 			Cmd.InitFullscreenTriangle(FogShader, ERenderPass::Fog, FogRS);
 			Cmd.Bindings.PerShaderCB[0] = &FogCB;
 			Cmd.BuildSortKey(0);
+		}
+	}
+
+	const bool bDoFCoCDebug = Frame.RenderOptions.ViewMode == EViewMode::DoFCoC;
+	if (Frame.RenderOptions.ShowFlags.bDoF || bDoFCoCDebug)
+	{
+		FDoFConstants DoFData = {};
+		DoFData.FocusDistance = Frame.RenderOptions.DoFFocusDistance;
+		DoFData.FocusRange = Frame.RenderOptions.DoFFocusRange;
+		DoFData.MaxBlurRadius = Frame.RenderOptions.DoFMaxBlurRadius;
+		DoFData.BokehRadiusThreshold = Frame.RenderOptions.DoFBokehRadiusThreshold;
+		DoFData.BokehLumaThreshold = Frame.RenderOptions.DoFBokehLumaThreshold;
+		DoFData.BokehIntensity = Frame.RenderOptions.DoFBokehIntensity;
+		DoFCB.Update(Ctx, &DoFData, sizeof(FDoFConstants));
+
+		FShader* DoFSetupShader = FShaderManager::Get().GetOrCreate(EShaderPath::DoFSetup);
+		if (DoFSetupShader)
+		{
+			FDrawCommand& Cmd = DrawCommandList.AddCommand();
+			Cmd.InitFullscreenTriangle(DoFSetupShader, ERenderPass::DoFSetup,
+				PassRenderStateTable->ToDrawCommandState(ERenderPass::DoFSetup, ViewMode));
+			Cmd.Bindings.PerShaderCB[0] = &DoFCB;
+			Cmd.BuildSortKey(0);
+		}
+
+		if (bDoFCoCDebug)
+		{
+			FShader* DoFDebugShader = FShaderManager::Get().GetOrCreate(EShaderPath::DoFCoCDebug);
+			if (DoFDebugShader)
+			{
+				FDrawCommand& Cmd = DrawCommandList.AddCommand();
+				Cmd.InitFullscreenTriangle(DoFDebugShader, ERenderPass::DoF,
+					PassRenderStateTable->ToDrawCommandState(ERenderPass::DoF, ViewMode));
+				Cmd.Bindings.PerShaderCB[0] = &DoFCB;
+				Cmd.BuildSortKey(0);
+			}
+		}
+		else
+		{
+			FShader* DoFBackgroundShader = FShaderManager::Get().GetOrCreate(EShaderPath::DoFBackgroundBlur);
+			if (DoFBackgroundShader)
+			{
+				FDrawCommand& Cmd = DrawCommandList.AddCommand();
+				Cmd.InitFullscreenTriangle(DoFBackgroundShader, ERenderPass::DoFBackgroundBlur,
+					PassRenderStateTable->ToDrawCommandState(ERenderPass::DoFBackgroundBlur, ViewMode));
+				Cmd.Bindings.PerShaderCB[0] = &DoFCB;
+				Cmd.BuildSortKey(0);
+			}
+
+			FShader* DoFForegroundShader = FShaderManager::Get().GetOrCreate(EShaderPath::DoFForegroundBlur);
+			if (DoFForegroundShader)
+			{
+				FDrawCommand& Cmd = DrawCommandList.AddCommand();
+				Cmd.InitFullscreenTriangle(DoFForegroundShader, ERenderPass::DoFForegroundBlur,
+					PassRenderStateTable->ToDrawCommandState(ERenderPass::DoFForegroundBlur, ViewMode));
+				Cmd.Bindings.PerShaderCB[0] = &DoFCB;
+				Cmd.BuildSortKey(0);
+			}
+
+			FShader* DoFBokehShader = FShaderManager::Get().GetOrCreate(EShaderPath::DoFBokehScatter);
+			if (DoFBokehShader)
+			{
+				FDrawCommand& Cmd = DrawCommandList.AddCommand();
+				Cmd.InitFullscreenTriangle(DoFBokehShader, ERenderPass::DoFBokehScatter,
+					PassRenderStateTable->ToDrawCommandState(ERenderPass::DoFBokehScatter, ViewMode));
+				Cmd.Bindings.PerShaderCB[0] = &DoFCB;
+				Cmd.BuildSortKey(0);
+			}
+
+			FShader* DoFShader = FShaderManager::Get().GetOrCreate(EShaderPath::DoFComposite);
+			if (DoFShader)
+			{
+				FDrawCommand& Cmd = DrawCommandList.AddCommand();
+				Cmd.InitFullscreenTriangle(DoFShader, ERenderPass::DoF,
+					PassRenderStateTable->ToDrawCommandState(ERenderPass::DoF, ViewMode));
+				Cmd.Bindings.PerShaderCB[0] = &DoFCB;
+				Cmd.BuildSortKey(0);
+			}
 		}
 	}
 
