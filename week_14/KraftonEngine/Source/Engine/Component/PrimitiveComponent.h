@@ -183,6 +183,8 @@ public:
 	void AddForceAtLocation(const FVector& Force, const FVector& Location);
 	UFUNCTION(Callable, Category="Physics")
 	void AddTorque(const FVector& Torque);
+    UFUNCTION(Callable, Category="Physics")
+    void AddImpulse(const FVector& Impulse);
 	UFUNCTION(Pure, Category="Physics")
 	FVector GetLinearVelocity() const;
 	UFUNCTION(Callable, Category="Physics")

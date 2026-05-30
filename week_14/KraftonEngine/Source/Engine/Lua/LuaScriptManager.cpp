@@ -2508,6 +2508,11 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         {
             if (IsValid(Component)) Component->AddTorque(Torque);
         },
+        "AddImpulse",
+        [](UPrimitiveComponent* Component, const FVector& Impulse)
+        {
+            if (IsValid(Component)) Component->AddImpulse(Impulse);
+        },
         "GetLinearVelocity",
         [](UPrimitiveComponent* Component) -> FVector
         {
