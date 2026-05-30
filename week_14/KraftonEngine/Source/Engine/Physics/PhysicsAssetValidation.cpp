@@ -125,6 +125,8 @@ bool FPhysicsAssetValidation::ValidateAll(
     const TArray<FPhysicsAssetBodySetup>& BodySetups = PhysicsAsset->GetBodySetups();
     const TArray<FPhysicsAssetConstraintSetup>& ConstraintSetups = PhysicsAsset->GetConstraintSetups();
 
+    // Placeholder authoring states are reported as warnings so tools can keep editing,
+    // while runtime-breaking states remain errors.
     for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
     {
         const FPhysicsAssetBodySetup& BodySetup = BodySetups[BodyIndex];

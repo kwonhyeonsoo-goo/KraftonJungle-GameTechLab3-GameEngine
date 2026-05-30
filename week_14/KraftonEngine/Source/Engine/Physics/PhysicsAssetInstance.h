@@ -14,13 +14,19 @@ class FPhysicsAssetInstance
 {
 public:
     bool Initialize(USkeletalMeshComponent* InOwner, UPhysicsAsset* InAsset);
+    // Runtime objects are created from the currently selected asset on demand so the
+    // component can decide policy while this instance owns low-level physics handles.
     bool CreateBodiesAndConstraints();
     void DestroyBodiesAndConstraints();
     void Shutdown();
+    // Reset only drops live runtime objects; cached binding metadata stays so the
+    // same asset can be re-created without rebuilding ownership state.
     void ResetRuntimeState();
     bool HasLivePhysicsObjects() const;
     int32 GetLiveBodyCount() const;
     int32 GetLiveConstraintCount() const;
+    // Pulls simulated body state back into bone world transforms for pose sync. The
+    // component consumes the result, but the instance remains the source of truth.
     bool PullPhysicsPose(TArray<FTransform>& OutBoneWorldTransforms) const;
 
     UPhysicsAsset* GetAsset() const;
@@ -39,6 +45,8 @@ public:
 private:
     TWeakObjectPtr<USkeletalMeshComponent> OwnerComponent;
     TWeakObjectPtr<UPhysicsAsset> SourceAsset;
+    // Bodies are stored in PhysicsAsset body-setup order so asset-side lookups and
+    // runtime handles can stay aligned without duplicating another mapping layer.
     TArray<FPhysicsBodyHandle> BodiesByBone;
     TArray<FPhysicsConstraintHandle> Constraints;
     TMap<FString, int32> BoneNameToIndex;

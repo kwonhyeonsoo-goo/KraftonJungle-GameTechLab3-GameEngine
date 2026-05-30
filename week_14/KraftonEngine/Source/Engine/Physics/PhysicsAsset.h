@@ -12,8 +12,11 @@ class UPhysicsAsset : public UObject
 public:
     enum class EEditorSetupState : uint8
     {
+        // Ready for runtime creation as-is.
         RuntimeReady,
+        // Allowed during authoring, but still missing required data such as target bones.
         Placeholder,
+        // Structurally inconsistent and should not be treated as runtime-ready.
         Invalid
     };
 
@@ -54,7 +57,8 @@ public:
         return BodySetups;
     }
 
-    // Tool code keeps selection state outside the asset and uses these helpers to mutate data safely.
+    // Tool code keeps selection state outside the asset and uses these helpers to mutate
+    // asset data safely without reaching into raw arrays directly.
     int32 AddBodySetup(const FPhysicsAssetBodySetup& InBodySetup);
     bool RemoveBodySetupByIndex(int32 BodyIndex);
     bool RemoveBodySetupByBoneName(const FName& BoneName);
@@ -77,8 +81,8 @@ public:
     bool UpdateConstraintSetup(int32 ConstraintIndex, const FPhysicsAssetConstraintSetup& InConstraintSetup);
     void ClearConstraintSetups();
 
-    // Asset-side lookup helpers keep future skeletal/ragdoll code from
-    // re-implementing the same bone/constraint queries at each call site.
+    // Asset-side lookup helpers keep tools and runtime code from re-implementing the
+    // same bone/constraint queries at each call site.
     int32 FindBodySetupIndexByBoneName(const FName& BoneName) const;
     bool HasBodySetupForBone(const FName& BoneName) const;
     const FPhysicsAssetBodySetup* FindBodySetupByBoneName(const FName& BoneName) const;

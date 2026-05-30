@@ -12,6 +12,8 @@ class USkeletalMeshComponent;
 class FPhysicsAssetPreviewUtils
 {
 public:
+    // Tools can query this before attempting preview math instead of guessing whether
+    // the preview component already has a usable skeletal pose.
     static bool HasPreviewPose(const USkeletalMeshComponent* PreviewComponent);
     static bool IsBodySetupIndexValid(const UPhysicsAsset* PhysicsAsset, int32 BodyIndex);
     static bool IsConstraintSetupIndexValid(const UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex);

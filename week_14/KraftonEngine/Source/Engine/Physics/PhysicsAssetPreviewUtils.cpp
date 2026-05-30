@@ -12,6 +12,8 @@ namespace
         return BoneName.IsValid() && BoneName != FName::None;
     }
 
+    // Preview uses the same authored transform convention as runtime creation, but it
+    // stays completely detached from live physics state so editor tools can call it freely.
     FTransform ComposePreviewTransforms(const FTransform& ParentWorld, const FTransform& Local)
     {
         FTransform Result = Local;
@@ -113,6 +115,8 @@ bool FPhysicsAssetPreviewUtils::ComputePreviewBodyWorldTransform(
     int32 BodyIndex,
     FTransform& OutWorldTransform)
 {
+    // Preview helpers fail fast on missing data so editor callers get deterministic
+    // "no transform available" behavior instead of partially computed gizmo state.
     if (!PreviewComponent || !PhysicsAsset || !HasPreviewPose(PreviewComponent))
     {
         return false;

@@ -31,6 +31,8 @@
 
 namespace
 {
+    // Physics pose reconstruction needs an affine inverse that preserves authored bone
+    // scale/orientation well enough for local-pose rebuilding from simulated world space.
     FMatrix GetAffineInverseForPoseSync(const FMatrix& Matrix)
     {
         const double A = Matrix.M[0][0];
@@ -252,6 +254,8 @@ void USkeletalMeshComponent::ClearPhysicsAssetOverride()
 
 void USkeletalMeshComponent::ResetRagdollRuntimeState()
 {
+    // Resetting runtime state always drops physics-pose ownership first so the component
+    // never keeps driving bones from bodies that are about to disappear.
     bUsePhysicsAssetPose = false;
     if (PhysicsAssetInstance)
     {
@@ -287,6 +291,8 @@ FPhysicsAssetInstance* USkeletalMeshComponent::GetOrCreatePhysicsAssetInstance()
         return PhysicsAssetInstance.get();
     }
 
+    // Asset switches rebuild the whole runtime shell instead of trying to migrate handles
+    // across different PhysicsAsset bindings.
     DestroyPhysicsAssetInstance();
 
     auto NewInstance = std::make_unique<FPhysicsAssetInstance>();
@@ -313,6 +319,8 @@ void USkeletalMeshComponent::DestroyPhysicsAssetInstance()
 
 bool USkeletalMeshComponent::EnableRagdollPhysics()
 {
+    // The component stays responsible for high-level ragdoll policy while the instance
+    // owns the low-level runtime handles and pose source data.
     FPhysicsAssetInstance* Instance = GetOrCreatePhysicsAssetInstance();
     if (!Instance)
     {
@@ -371,6 +379,8 @@ void USkeletalMeshComponent::DestroyPhysicsAssetInstanceBodies()
 
 void USkeletalMeshComponent::SetUsePhysicsAssetPose(bool bEnable)
 {
+    // Pose sync is only considered active when live runtime objects exist. This keeps
+    // stale flags from pretending ragdoll is still driving the skeletal pose.
     bUsePhysicsAssetPose =
         bEnable &&
         PhysicsAssetInstance &&
@@ -410,6 +420,9 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
     TArray<FMatrix> ComponentSpaceGlobalMatrices;
     ComponentSpaceGlobalMatrices.resize(MeshAsset->Bones.size());
 
+    // PullPhysicsPose gives bone world transforms. They are converted back into
+    // component-space and then local-space so the normal skinned-mesh pose path can
+    // consume the result without learning about rigid bodies directly.
     const FMatrix& ComponentWorldInverse = GetWorldInverseMatrix();
     for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
     {
@@ -428,7 +441,8 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
         LocalPose[BoneIndex] = FTransform(LocalMatrix);
     }
 
-    // Full ragdoll is the final pose owner in this first sync pass; blending comes later.
+    // Full ragdoll is the final pose owner in this first sync pass; body-less bones keep
+    // their previous pose because PullPhysicsPose seeds from the current animation result.
     SetBoneLocalTransforms(LocalPose);
     return true;
 }
@@ -759,6 +773,7 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
     if (bUsePhysicsAssetPose && ApplyPhysicsAssetPose())
     {
+        // While ragdoll is active, physics becomes the final pose source for this frame.
         UMeshComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
         return;
     }
