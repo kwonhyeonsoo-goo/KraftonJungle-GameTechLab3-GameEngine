@@ -729,9 +729,9 @@ namespace
             TexturesBySlot.emplace(Slot, Decl);
 
             FMaterialCompiledTexture Compiled;
-            Compiled.Path                                        = Node.TexturePath;
-            Compiled.Slot                                        = Slot;
-            Result.Textures[FString(ToString(Slot)) + "Texture"] = Compiled;
+            Compiled.Path = Node.TexturePath;
+            Compiled.Slot = Slot;
+            Result.Textures[HlslName] = Compiled;
 
             return HlslName;
         }
@@ -828,6 +828,7 @@ namespace
         if (!FromPin || !FromNode) return ConvertExpr(DefaultExpr, DefaultType, TargetType, &Result.Errors);
 
         FEmittedNode Source = Context.Emit(*FromNode);
+        ApplyOutputPinSwizzle(FromPin->DisplayName.ToString(), Source.Expr, Source.Type);
         return ConvertExpr(Source.Expr, Source.Type, TargetType, &Result.Errors);
     }
 
@@ -912,8 +913,9 @@ namespace
             // ForwardLighting.hlsli 가 ForwardLightData + ShadowSampling 을 포함
             SS << "#include \"Common/ForwardLighting.hlsli\"\n";
         }
-        // Surface 도메인: Unlit 이 아니면 UberLit 과 동일한 라이팅 헤더를 끌어와 같은 라이팅·그림자 경로를 사용.
+        // Surface/Decal 도메인: Receive Lighting이 켜져 있고 Unlit이 아닐 때만 UberLit 계열 라이팅 헤더를 포함한다.
         const bool bSurfaceLit = (Domain == EMaterialGraphTarget::Surface || Domain == EMaterialGraphTarget::Decal)
+            && bReceiveLighting
             && (ShadingModel != EMaterialShadingModel::Unlit);
         if (bSurfaceLit)
         {
@@ -1086,9 +1088,10 @@ float4 PS(PS_Input_MaterialMeshParticle input) : SV_TARGET
         return SS.str();
     }
 
-    FString BuildSurfaceMain(EMaterialShadingModel ShadingModel)
+    FString BuildSurfaceMain(ERenderPass RenderPass, EBlendMode BlendMode, EMaterialShadingModel ShadingModel, bool bReceiveLighting, float OpacityMaskClipValue)
     {
-        const bool bUnlit = (ShadingModel == EMaterialShadingModel::Unlit);
+        const bool bUnlit = !bReceiveLighting || (ShadingModel == EMaterialShadingModel::Unlit);
+        const bool bTranslucentSurfacePass = (RenderPass == ERenderPass::Translucent);
 
         std::stringstream SS;
         SS << R"(
@@ -1113,6 +1116,10 @@ MaterialSurfaceVSOutput VS(VS_Input_PNCTT input)
     return output;
 }
 
+)";
+        if (!bTranslucentSurfacePass)
+        {
+            SS << R"(
 struct MaterialSurfacePSOutput
 {
     float4 Color : SV_TARGET0;
@@ -1122,6 +1129,17 @@ struct MaterialSurfacePSOutput
 
 MaterialSurfacePSOutput PS(MaterialSurfaceVSOutput input)
 {
+)";
+        }
+        else
+        {
+            SS << R"(
+float4 PS(MaterialSurfaceVSOutput input) : SV_TARGET
+{
+)";
+        }
+
+        SS << R"(
     FMaterialPixelInput MaterialInput;
     MaterialInput.UV0           = input.texcoord;
     MaterialInput.UV1           = float2(0, 0);
@@ -1133,8 +1151,6 @@ MaterialSurfacePSOutput PS(MaterialSurfaceVSOutput input)
     MaterialInput.DynamicParam  = float4(0, 0, 0, 0);
 
     FMaterialResult Result = EvaluateMaterial(MaterialInput);
-    MaterialSurfacePSOutput Output;
-
     float3 N = normalize(input.normal);
 )";
 
@@ -1169,13 +1185,30 @@ MaterialSurfacePSOutput PS(MaterialSurfaceVSOutput input)
 )";
         }
 
-        SS << R"(
-    Output.Color = float4(finalRgb, Result.Opacity);
+        if (bTranslucentSurfacePass)
+        {
+            SS << R"(
+    return float4(finalRgb, saturate(Result.Opacity));
+}
+)";
+        }
+        else
+        {
+            SS << "    float OutOpacity = saturate(Result.Opacity);\n";
+            if (BlendMode == EBlendMode::Masked)
+            {
+                // Masked material은 Opaque pass를 사용하되 pixel shader에서 opacity mask clipping을 수행한다.
+                SS << "    clip(OutOpacity - " << OpacityMaskClipValue << "f);\n";
+            }
+            SS << R"(
+    MaterialSurfacePSOutput Output;
+    Output.Color = float4(finalRgb, OutOpacity);
     Output.Normal = float4(N, 1.0f);
     Output.Culling = float4(0, 0, 0, 0);
     return Output;
 }
 )";
+        }
         return SS.str();
     }
 
@@ -1246,7 +1279,7 @@ bool FMaterialHlslGenerator::Generate(const FMaterialGraph& Graph, const FMateri
     case EMaterialGraphTarget::Surface:
     case EMaterialGraphTarget::Decal:
     default:
-        SS << BuildSurfaceMain(Options.ShadingModel);
+        SS << BuildSurfaceMain(Options.RenderPass, Options.BlendMode, Options.ShadingModel, Options.bReceiveLighting, Options.OpacityMaskClipValue);
         break;
     }
 

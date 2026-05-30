@@ -189,7 +189,13 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 	}
 
 	// --- Shader ---
-	if (Cmd.Shader && (bForce || Cmd.Shader != Cache.Shader))
+	if (!Cmd.Shader || !Cmd.Shader->IsValid())
+	{
+		Cache.Shader = nullptr;
+		return;
+	}
+
+	if (bForce || Cmd.Shader != Cache.Shader)
 	{
 		Cmd.Shader->Bind(Ctx);
 		Cache.Shader = Cmd.Shader;

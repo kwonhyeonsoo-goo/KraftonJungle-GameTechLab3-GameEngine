@@ -23,34 +23,44 @@ struct FShaderKey
     FString              VSEntryPoint      = "VS";
     FString              PSEntryPoint      = "PS";
     EShaderVertexFactory VertexFactory     = EShaderVertexFactory::Auto;
+    // Generated material shaders keep a stable file path to avoid garbage .hlsl growth.
+    // SourceHash/CompileRevision distinguish different in-memory shader revisions for the same path.
+    uint64               SourceHash        = 0;
+    uint32               CompileRevision   = 0;
     uint64               PathHash          = 0;
     uint64               DefinesHash       = 0;
     uint64               EntryHash         = 0;
     uint64               VertexFactoryHash = 0;
 
-    FShaderKey(const FString& InPath, EShaderVertexFactory InVertexFactory = EShaderVertexFactory::Auto)
+    FShaderKey(const FString& InPath, EShaderVertexFactory InVertexFactory = EShaderVertexFactory::Auto, uint64 InSourceHash = 0, uint32 InCompileRevision = 0)
 		: Path(InPath)
         , VertexFactory(InVertexFactory)
+        , SourceHash(InSourceHash)
+        , CompileRevision(InCompileRevision)
 		, PathHash(std::hash<FString>{}(InPath))
 		, DefinesHash(0)
 		, EntryHash(HashEntryPoints(VSEntryPoint, PSEntryPoint))
         , VertexFactoryHash(HashVertexFactory(InVertexFactory))
 	{}
 
-    FShaderKey(const FString& InPath, const D3D_SHADER_MACRO* InDefines, EShaderVertexFactory InVertexFactory = EShaderVertexFactory::Auto)
+    FShaderKey(const FString& InPath, const D3D_SHADER_MACRO* InDefines, EShaderVertexFactory InVertexFactory = EShaderVertexFactory::Auto, uint64 InSourceHash = 0, uint32 InCompileRevision = 0)
 		: Path(InPath)
         , VertexFactory(InVertexFactory)
+        , SourceHash(InSourceHash)
+        , CompileRevision(InCompileRevision)
 		, PathHash(std::hash<FString>{}(InPath))
 		, DefinesHash(HashDefines(InDefines))
 		, EntryHash(HashEntryPoints(VSEntryPoint, PSEntryPoint))
         , VertexFactoryHash(HashVertexFactory(InVertexFactory))
 	{}
 
-    FShaderKey(const FString& InPath, const D3D_SHADER_MACRO* InDefines, const FString& InVSEntryPoint, const FString& InPSEntryPoint = "PS", EShaderVertexFactory InVertexFactory = EShaderVertexFactory::Auto)
+    FShaderKey(const FString& InPath, const D3D_SHADER_MACRO* InDefines, const FString& InVSEntryPoint, const FString& InPSEntryPoint = "PS", EShaderVertexFactory InVertexFactory = EShaderVertexFactory::Auto, uint64 InSourceHash = 0, uint32 InCompileRevision = 0)
 		: Path(InPath)
 		, VSEntryPoint(InVSEntryPoint)
 		, PSEntryPoint(InPSEntryPoint)
         , VertexFactory(InVertexFactory)
+        , SourceHash(InSourceHash)
+        , CompileRevision(InCompileRevision)
 		, PathHash(std::hash<FString>{}(InPath))
 		, DefinesHash(HashDefines(InDefines))
 		, EntryHash(HashEntryPoints(VSEntryPoint, PSEntryPoint))
@@ -62,7 +72,9 @@ struct FShaderKey
 		return PathHash == Other.PathHash
 			&& DefinesHash == Other.DefinesHash
             && EntryHash == Other.EntryHash
-            && VertexFactoryHash == Other.VertexFactoryHash;
+            && VertexFactoryHash == Other.VertexFactoryHash
+            && SourceHash == Other.SourceHash
+            && CompileRevision == Other.CompileRevision;
 	}
 
 private:
@@ -105,7 +117,9 @@ namespace std
 			return static_cast<size_t>(K.PathHash
 				^ (K.DefinesHash * 0x9e3779b97f4a7c15ULL)
                 ^ (K.EntryHash * 0xbf58476d1ce4e5b9ULL)
-                ^ (K.VertexFactoryHash * 0x94d049bb133111ebULL));
+                ^ (K.VertexFactoryHash * 0x94d049bb133111ebULL)
+                ^ (K.SourceHash * 0xd6e8feb86659fd93ULL)
+                ^ (static_cast<uint64>(K.CompileRevision) * 0xa5a5a5a5a5a5a5a5ULL));
 		}
 	};
 }

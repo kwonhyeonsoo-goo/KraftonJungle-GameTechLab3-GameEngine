@@ -83,10 +83,10 @@ struct FMaterialSettings
 {
     EMaterialDomain       Domain       = EMaterialDomain::Surface;
     EBlendMode            BlendMode    = EBlendMode::Opaque;
-    EMaterialShadingModel ShadingModel = EMaterialShadingModel::DefaultLit;
+    EMaterialShadingModel ShadingModel = EMaterialShadingModel::Unlit;
 
     bool bTwoSided        = false;
-    bool bReceiveLighting = true;
+    bool bReceiveLighting = false;
     bool bCastShadow      = true;
 
     float OpacityMaskClipValue = 0.333f;

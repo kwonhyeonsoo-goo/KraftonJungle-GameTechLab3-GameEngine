@@ -24,7 +24,7 @@ class FMaterialManager : public TSingleton<FMaterialManager>, public FGCObject
 {
 	friend class TSingleton<FMaterialManager>;
 
-    TMap<FString, FMaterialTemplate*> TemplateCache;    // 셰이더 경로 → Template (공유)
+    TMap<FString, FMaterialTemplate*> TemplateCache;    // ShaderPath + compile revision → Template (공유)
 	TMap<FString, UMaterial*> MaterialCache;	//MatFilePath
 	TArray<FMaterialAssetListItem> AvailableMaterialFiles;
 	TArray<FString> AvailableShaderPaths;
@@ -76,7 +76,7 @@ public:
 	const TArray<FString>& GetAvailableTexturePaths() const { return AvailableTexturePaths; }
 
 	// 머티리얼의 셰이더(=레이아웃 소스 & custom 대상) 교체 — 템플릿/CB 재구성. 실패 시 false.
-	bool SetMaterialShader(UMaterial* Material, const FString& ShaderPath);
+	bool SetMaterialShader(UMaterial* Material, const FString& ShaderPath, uint64 SourceHash = 0, uint32 CompileRevision = 0);
 
 	void Release();
 	const char* GetReferencerName() const override { return "FMaterialManager"; }
@@ -86,8 +86,8 @@ private:
 	void PurgeInvalidMaterialCacheEntries();
 	bool bReleased = false;
 
-	// 셰이더로 Template 생성 또는 캐시에서 반환
-	FMaterialTemplate* GetOrCreateTemplate(const FString& ShaderPath);
+	// 셰이더로 Template 생성 또는 캐시에서 반환. Stable generated shader paths use SourceHash/Revision in cache keys.
+	FMaterialTemplate* GetOrCreateTemplate(const FString& ShaderPath, uint64 SourceHash = 0, uint32 CompileRevision = 0);
 
 	// 바이너리(.uasset) 직렬화 — exemplar = ParticleSystemManager. (SaveMaterial 은 public: 에디터 Save)
 	UMaterial* LoadMaterialBinary(const FString& UassetPath);

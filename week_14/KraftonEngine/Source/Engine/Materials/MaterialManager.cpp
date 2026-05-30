@@ -1,8 +1,9 @@
-﻿#include "MaterialManager.h"
+#include "MaterialManager.h"
 #include "Object/GarbageCollection.h"
 #include "Object/Object.h"
 #include <filesystem>
 #include <fstream>
+#include <cstdio>
 #include "Materials/Material.h"
 #include "Materials/MaterialInstance.h"
 #include "Materials/MaterialDomain.h"  // Phase 1: Domain/BlendMode 도출 (dormant)
@@ -274,12 +275,12 @@ UMaterial* FMaterialManager::CreateMaterialAsset(const FString& UassetPath)
 // 머티리얼의 셰이더(레이아웃 소스 & custom 대상)를 교체한다. 템플릿/CB 를 재구성하므로
 // 레이아웃이 달라지면 파라미터 값은 초기화되고 텍스처 슬롯은 유지(RebuildCachedSRVs).
 // 컴파일 실패(부적합 셰이더)거나 인스턴스면 변경을 거부한다.
-bool FMaterialManager::SetMaterialShader(UMaterial* Material, const FString& ShaderPath)
+bool FMaterialManager::SetMaterialShader(UMaterial* Material, const FString& ShaderPath, uint64 SourceHash, uint32 CompileRevision)
 {
 	if (!Material || Material->IsMaterialInstance())
 		return false;
 
-	FMaterialTemplate* Template = GetOrCreateTemplate(ShaderPath);
+	FMaterialTemplate* Template = GetOrCreateTemplate(ShaderPath, SourceHash, CompileRevision);
 	if (!Template)
 		return false; // FindOrCreate 실패(엔트리포인트 없음/컴파일 오류 등) → 변경 거부
 
@@ -321,18 +322,29 @@ TMap<FString, std::unique_ptr<FMaterialConstantBuffer>> FMaterialManager::Create
 	return InjectedBuffers;
 }
 
-FMaterialTemplate* FMaterialManager::GetOrCreateTemplate(const FString& ShaderPath)
+FMaterialTemplate* FMaterialManager::GetOrCreateTemplate(const FString& ShaderPath, uint64 SourceHash, uint32 CompileRevision)
 {
-	// 1. 템플릿이 캐시에 있는지 확인 (셰이더 경로를 키값으로 사용)
-	auto It = TemplateCache.find(ShaderPath);
+    const FString CacheKey = (SourceHash == 0 && CompileRevision == 0)
+            ? ShaderPath
+            : ShaderPath + "#" + std::to_string(SourceHash) + "#" + std::to_string(CompileRevision);
+
+	// 1. 템플릿이 캐시에 있는지 확인 (셰이더 경로 + revision 을 키값으로 사용)
+	auto It = TemplateCache.find(CacheKey);
 	if (It != TemplateCache.end())
 	{
-		return It->second;
+		FMaterialTemplate* CachedTemplate = It->second;
+		if (CachedTemplate && CachedTemplate->GetShader() && CachedTemplate->GetShader()->IsValid())
+		{
+			return CachedTemplate;
+		}
+
+		delete CachedTemplate;
+		TemplateCache.erase(It);
 	}
 
 	// 2. 템플릿이 기존에 없다면 새로 제작
 	//    캐시에 있으면 반환, 없으면 컴파일 후 캐싱
-	FShader* Shader = FShaderManager::Get().FindOrCreate(ShaderPath);
+	FShader* Shader = FShaderManager::Get().FindOrCreate(FShaderKey(ShaderPath, EShaderVertexFactory::Auto, SourceHash, CompileRevision));
 	if (!Shader)
 	{
 		return nullptr;
@@ -340,7 +352,7 @@ FMaterialTemplate* FMaterialManager::GetOrCreateTemplate(const FString& ShaderPa
 
 	FMaterialTemplate* NewTemplate = new FMaterialTemplate();
 	NewTemplate->Create(Shader);
-	TemplateCache.emplace(ShaderPath, NewTemplate);
+	TemplateCache.emplace(CacheKey, NewTemplate);
 	return NewTemplate;
 }
 
@@ -358,6 +370,8 @@ UMaterial* FMaterialManager::CreateGraphMaterialAsset(const FString& UassetPath)
     Material->GetGraphDocument().LastSavedGraphHash = ComputeMaterialGraphStructuralHash(Material->GetGraphDocument().Graph);
     Material->GetMaterialSettings().Domain          = Material->GetDomain();
     Material->GetMaterialSettings().BlendMode       = Material->GetBlendMode();
+    Material->GetMaterialSettings().ShadingModel    = EMaterialShadingModel::Unlit;
+    Material->GetMaterialSettings().bReceiveLighting = false;
     SaveMaterial(Material, UassetPath);
     return Material;
 }
@@ -408,11 +422,28 @@ UMaterial* FMaterialManager::CreatePreviewMaterialClone(UMaterial* SourceMateria
     return PreviewMaterial;
 }
 
-static FString BuildGeneratedMaterialShaderPath(const FString& MaterialPath, const FString& /*Hash*/, bool bPreview, EMaterialGraphTarget Target)
+static FString BuildMaterialGraphCompileHash(const FMaterialGraph& Graph, const FMaterialSettings& Settings, EMaterialGraphTarget Target)
 {
-    // Fixed path per (material, domain). No content hash in the filename → each material owns
-    // exactly one preview .hlsl and one runtime .hlsl that get overwritten on recompile, preventing
-    // the orphaned-shader pile-up we had when every compile produced a new hash-suffixed file.
+    FString Hash = ComputeMaterialGraphStructuralHash(Graph);
+    Hash += "#target=" + FString(ToString(Target));
+    Hash += "#domain=" + std::to_string(static_cast<int>(Settings.Domain));
+    Hash += "#blend=" + std::to_string(static_cast<int>(Settings.BlendMode));
+    Hash += "#shading=" + std::to_string(static_cast<int>(Settings.ShadingModel));
+    Hash += Settings.bTwoSided ? "#twosided=1" : "#twosided=0";
+    Hash += Settings.bReceiveLighting ? "#lighting=1" : "#lighting=0";
+    Hash += Settings.bCastShadow ? "#shadow=1" : "#shadow=0";
+    Hash += "#mask=" + std::to_string(Settings.OpacityMaskClipValue);
+    return Hash;
+}
+
+static uint64 MaterialGraphHashToKey(const FString& Hash)
+{
+    if (Hash.empty()) return 0;
+    return std::hash<FString>{}(Hash + "#" + MaterialGraphGeneratorVersion);
+}
+
+static FString BuildGeneratedMaterialShaderPath(const FString& MaterialPath, bool bPreview, EMaterialGraphTarget Target)
+{
     std::filesystem::path SourcePath(FPaths::ToWide(MaterialPath));
     FString               Stem = SourcePath.stem().string();
     if (Stem.empty())
@@ -451,14 +482,48 @@ static bool WriteGeneratedMaterialShaderFile(const FString& ProjectRelativePath,
     const std::filesystem::path AbsolutePath = std::filesystem::path(FPaths::RootDir()) / FPaths::ToWide(ProjectRelativePath);
     std::filesystem::create_directories(AbsolutePath.parent_path());
 
-    std::ofstream File(AbsolutePath);
-    if (!File.is_open())
+    const std::filesystem::path TempPath = AbsolutePath.wstring() + L".tmp";
     {
-        if (OutError) *OutError = "Failed to write generated material shader: " + ProjectRelativePath;
+        std::ofstream File(TempPath, std::ios::binary | std::ios::trunc);
+        if (!File.is_open())
+        {
+            if (OutError) *OutError = "Failed to write generated material shader: " + ProjectRelativePath;
+            return false;
+        }
+        File << Hlsl;
+        if (!File.good())
+        {
+            if (OutError) *OutError = "Failed while writing generated material shader: " + ProjectRelativePath;
+            return false;
+        }
+    }
+
+    std::error_code Ec;
+    std::filesystem::rename(TempPath, AbsolutePath, Ec);
+    if (Ec)
+    {
+        std::filesystem::remove(AbsolutePath, Ec);
+        Ec.clear();
+        std::filesystem::rename(TempPath, AbsolutePath, Ec);
+    }
+    if (Ec)
+    {
+        if (OutError) *OutError = "Failed to replace generated material shader: " + ProjectRelativePath;
         return false;
     }
-    File << Hlsl;
     return true;
+}
+
+static void SyncPreviewMaterialRuntimeSettings(UMaterial* PreviewMaterial, const UMaterial* SourceMaterial)
+{
+    if (!PreviewMaterial || !SourceMaterial)
+    {
+        return;
+    }
+
+    PreviewMaterial->SetDomainBlend(SourceMaterial->GetDomain(), SourceMaterial->GetBlendMode());
+    PreviewMaterial->SetTwoSided(SourceMaterial->IsTwoSided());
+    PreviewMaterial->GetMaterialSettings() = SourceMaterial->GetMaterialSettings();
 }
 
 static void ApplyGraphCompileParametersToMaterial(UMaterial* Material, const FMaterialCompileResult& Result, ID3D11Device* Device)
@@ -515,17 +580,19 @@ static bool CompileGraphToShader(UMaterial* Material, const FMaterialGraph& Work
     }
 
     if (bPreview) EnsurePreviewShaderDirCleared();
-    const FString           Hash = ComputeMaterialGraphStructuralHash(WorkingGraph);
+    const FString           Hash = BuildMaterialGraphCompileHash(WorkingGraph, Material->GetMaterialSettings(), Material->GetGraphDocument().Target);
     FMaterialCompileOptions Options;
     Options.MaterialPath      = Material->GetAssetPathFileName();
     Options.MaterialGuid      = Material->GetAssetPathFileName();
     Options.Domain            = Material->GetGraphDocument().Target;
     Options.RenderPass        = Material->GetRenderPass();
     Options.BlendState        = Material->GetBlendState();
+    Options.BlendMode         = Material->GetBlendMode();
     Options.DepthStencilState = Material->GetDepthStencilState();
     Options.RasterizerState   = Material->GetRasterizerState();
-    Options.bReceiveLighting  = Material->GetMaterialSettings().bReceiveLighting;
-    Options.ShadingModel      = Material->GetMaterialSettings().ShadingModel;
+    Options.bReceiveLighting     = Material->GetMaterialSettings().bReceiveLighting;
+    Options.ShadingModel         = Material->GetMaterialSettings().ShadingModel;
+    Options.OpacityMaskClipValue = Material->GetMaterialSettings().OpacityMaskClipValue;
 
     if (!FMaterialGraphCompiler::Compile(WorkingGraph, Options, OutResult))
     {
@@ -536,13 +603,15 @@ static bool CompileGraphToShader(UMaterial* Material, const FMaterialGraph& Work
         return false;
     }
 
-    OutResult.GeneratedShaderPath = BuildGeneratedMaterialShaderPath(Material->GetAssetPathFileName(), Hash, bPreview, Options.Domain);
+    OutResult.SourceHashString    = Hash;
+    OutResult.SourceHash          = MaterialGraphHashToKey(Hash);
+    OutResult.CompileRevision     = 0;
+    OutResult.GeneratedShaderPath = BuildGeneratedMaterialShaderPath(Material->GetAssetPathFileName(), bPreview, Options.Domain);
     if (!WriteGeneratedMaterialShaderFile(OutResult.GeneratedShaderPath, OutResult.GeneratedHlsl, OutError))
     {
         return false;
     }
 
-    FShaderManager::Get().InvalidatePath(OutResult.GeneratedShaderPath);
     return true;
 }
 
@@ -575,12 +644,15 @@ bool FMaterialManager::CompileMaterialGraphPreview(UMaterial* SourceMaterial, co
         return false;
     }
 
-    if (!SetMaterialShader(InOutPreviewMaterial, Result.GeneratedShaderPath))
+    SyncPreviewMaterialRuntimeSettings(InOutPreviewMaterial, SourceMaterial);
+
+    if (!SetMaterialShader(InOutPreviewMaterial, Result.GeneratedShaderPath, Result.SourceHash, Result.CompileRevision))
     {
         if (OutError) *OutError = "Generated preview shader failed to bind to material.";
         return false;
     }
 
+    SyncPreviewMaterialRuntimeSettings(InOutPreviewMaterial, SourceMaterial);
     InOutPreviewMaterial->SetSourceKind(EMaterialSourceKind::Graph);
     ApplyGraphCompileParametersToMaterial(InOutPreviewMaterial, Result, Device);
     return true;
@@ -602,7 +674,7 @@ bool FMaterialManager::CompileMaterialGraphRuntime(UMaterial* Material, const FM
         return false;
     }
 
-    if (!SetMaterialShader(Material, Result.GeneratedShaderPath))
+    if (!SetMaterialShader(Material, Result.GeneratedShaderPath, Result.SourceHash, Result.CompileRevision))
     {
         if (OutError) *OutError = "Generated runtime shader failed to bind to material.";
         Material->GetLastCompileRecord().bSucceeded   = false;
@@ -613,7 +685,7 @@ bool FMaterialManager::CompileMaterialGraphRuntime(UMaterial* Material, const FM
     Material->SetSourceKind(EMaterialSourceKind::Graph);
     Material->GetGraphDocument().bEnabled               = true;
     Material->GetGraphDocument().Graph                  = WorkingGraph;
-    Material->GetGraphDocument().LastCompiledGraphHash  = ComputeMaterialGraphStructuralHash(WorkingGraph);
+    Material->GetGraphDocument().LastCompiledGraphHash  = Result.SourceHashString;
     Material->GetGraphDocument().LastCompiledShaderPath = Result.GeneratedShaderPath;
     Material->GetGraphDocument().LastCompileError.clear();
     Material->GetLastCompileRecord().SourceHash          = Material->GetGraphDocument().LastCompiledGraphHash;

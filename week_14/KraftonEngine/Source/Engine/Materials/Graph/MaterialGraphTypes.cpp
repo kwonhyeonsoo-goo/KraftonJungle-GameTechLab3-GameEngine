@@ -42,6 +42,11 @@ FMaterialGraphLink* FMaterialGraph::AddLink(uint32 FromPinId, uint32 ToPinId)
 
 FMaterialGraphNode* FMaterialGraph::AddNodeOfType(EMaterialGraphNodeType Type, float X, float Y, EMaterialGraphTarget Domain)
 {
+    if (Type == EMaterialGraphNodeType::Output && HasOutputNode())
+    {
+        return nullptr;
+    }
+
     switch (Type)
     {
     case EMaterialGraphNodeType::Output:
@@ -345,6 +350,8 @@ bool FMaterialGraph::RemoveNode(uint32 NodeId)
     for (const FMaterialGraphNode& Node : Nodes)
     {
         if (Node.NodeId != NodeId) continue;
+        if (Node.Type == EMaterialGraphNodeType::Output) return false;
+
         for (const FMaterialGraphPin& Pin : Node.Pins) PinIds.push_back(Pin.PinId);
         break;
     }

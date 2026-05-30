@@ -6,6 +6,8 @@
 #include "Materials/Graph/MaterialGraphTypes.h"
 #include "Object/FName.h"
 
+struct FMaterialParameterDefinition;
+
 namespace ax::NodeEditor
 {
     struct EditorContext;
@@ -74,6 +76,10 @@ private:
     void RenderAddNodePopup(UMaterial* Material);
     void RenderAddNodeMenuBody(UMaterial* Material);
     void RenderPinSpawnMenuBody(UMaterial* Material);
+
+    void MarkMaterialSourceEdited(bool bAutoPreview = false);
+    void SyncParameterDefinitionToWorkingGraph(const FString& OldName, const FMaterialParameterDefinition& Definition);
+    void SyncParameterDefinitionsToWorkingGraph(UMaterial* Material);
 
     void SaveGraph(UMaterial* Material);
     void CompilePreview(UMaterial* Material);

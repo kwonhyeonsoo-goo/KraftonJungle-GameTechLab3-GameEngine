@@ -4,6 +4,14 @@
 #include "Core/Logging/Notification.h"
 #include <algorithm>
 
+namespace
+{
+    bool IsGeneratedShaderPath(const FString& Path)
+    {
+        return Path.rfind("Shaders/Generated/", 0) == 0;
+    }
+}
+
 // ============================================================
 // CopyDefines — D3D_SHADER_MACRO 배열을 소유 가능한 형태로 복사
 // ============================================================
@@ -131,6 +139,11 @@ FShader* FShaderManager::GetOrCreate(const FShaderKey& Key, EShaderErrorMode Err
 		// 매크로가 있는 셰이더는 Initialize에서 사전 컴파일되어야 함.
 		return nullptr;
 	}
+	if (!CacheEntry.Shader->IsValid())
+	{
+		UE_LOG("[Shader] Failed to create shader: %s", Key.Path.c_str());
+		return nullptr;
+	}
 
 	auto* RawPtr = CacheEntry.Shader.get();
 	ShaderCache.emplace(Key, std::move(CacheEntry));
@@ -155,6 +168,12 @@ FShader* FShaderManager::PreCompile(const FShaderKey& Key, const D3D_SHADER_MACR
 	std::wstring WidePath = FPaths::ToWide(Key.Path);
 	CacheEntry.Shader->Create(CachedDevice, WidePath.c_str(), Key.VSEntryPoint.c_str(), Key.PSEntryPoint.c_str(), Defines, &CacheEntry.Includes, ErrorMode);
 	CacheEntry.StoredDefines = CopyDefines(Defines);
+
+	if (!CacheEntry.Shader->IsValid())
+	{
+		UE_LOG("[Shader] Failed to precompile shader: %s", Key.Path.c_str());
+		return nullptr;
+	}
 
 	auto* RawPtr = CacheEntry.Shader.get();
 	ShaderCache.emplace(Key, std::move(CacheEntry));
@@ -278,6 +297,11 @@ void FShaderManager::OnShadersChanged(const TSet<FString>& ChangedFiles)
 
 	for (const FString& File : ChangedFiles)
 	{
+        if (IsGeneratedShaderPath(File))
+        {
+            continue;
+        }
+
 		// 1. VS+PS 직접 매칭
 		for (auto& [Key, Entry] : ShaderCache)
 		{

@@ -1,4 +1,4 @@
-﻿#include "ShadowMapPass.h"
+#include "ShadowMapPass.h"
 #include "RenderPassRegistry.h"
 
 #include "Render/Device/D3DDevice.h"
@@ -14,6 +14,7 @@
 #include "Render/Shader/ShaderManager.h"
 #include "Render/Resource/Buffer.h"
 #include "Render/Types/LightFrustumUtils.h"
+#include "Materials/Material.h"
 #include "Profiling/Stats/ShadowStats.h"
 #include "Core/ProjectSettings.h"
 #include "Collision/Octree/SpatialPartition.h"
@@ -733,16 +734,30 @@ void FShadowMapPass::DrawShadowCasters(ID3D11DeviceContext* DC, FScene& Scene, F
 			BoundSkinMatrixSRV = SkinMatrixSRV;
 		}
 
-		// Two-sided shadow: front-cull ↔ no-cull 전환
-		bool bTwoSided = Proxy->CastsShadowAsTwoSided();
-		if (bTwoSided != bCurrentTwoSided)
-		{
-			bCurrentTwoSided = bTwoSided;
-			Resources.RasterizerStateManager.Set(DC,
-				bTwoSided ? ERasterizerState::SolidNoCull : ERasterizerState::SolidFrontCull);
-		}
+			bool bAnySectionCastsShadow = false;
+			bool bAnyMaterialTwoSided   = false;
+			for (const FMeshSectionDraw& Section : Proxy->GetSectionDraws())
+			{
+				if (Section.IndexCount == 0) continue;
+				if (Section.Material && !Section.Material->GetMaterialSettings().bCastShadow) continue;
+				bAnySectionCastsShadow = true;
+				if (Section.Material && Section.Material->IsTwoSided())
+				{
+					bAnyMaterialTwoSided = true;
+				}
+			}
+			if (!bAnySectionCastsShadow) continue;
 
-		++LastDrawCasterCount;
+			// Two-sided shadow: front-cull ↔ no-cull 전환
+			bool bTwoSided = Proxy->CastsShadowAsTwoSided() || bAnyMaterialTwoSided;
+			if (bTwoSided != bCurrentTwoSided)
+			{
+				bCurrentTwoSided = bTwoSided;
+				Resources.RasterizerStateManager.Set(DC,
+					bTwoSided ? ERasterizerState::SolidNoCull : ERasterizerState::SolidFrontCull);
+			}
+
+			++LastDrawCasterCount;
 		ShadowPerObjectCB.Update(DC, &Proxy->GetPerObjectConstants(), sizeof(FPerObjectConstants));
 		ID3D11Buffer* b1 = ShadowPerObjectCB.GetBuffer();
 		DC->VSSetConstantBuffers(ECBSlot::PerObject, 1, &b1);
@@ -754,12 +769,13 @@ void FShadowMapPass::DrawShadowCasters(ID3D11DeviceContext* DC, FScene& Scene, F
 
 		DC->IASetIndexBuffer(ProxyBuffer.IB, DXGI_FORMAT_R32_UINT, 0);
 
-		for (const FMeshSectionDraw& Section : Proxy->GetSectionDraws())
-		{
-			if (Section.IndexCount == 0) continue;
-			DC->DrawIndexed(Section.IndexCount, Section.FirstIndex, 0);
-			SHADOW_STATS_ADD_DRAW_CALL();
-		}
+			for (const FMeshSectionDraw& Section : Proxy->GetSectionDraws())
+			{
+				if (Section.IndexCount == 0) continue;
+				if (Section.Material && !Section.Material->GetMaterialSettings().bCastShadow) continue;
+				DC->DrawIndexed(Section.IndexCount, Section.FirstIndex, 0);
+				SHADOW_STATS_ADD_DRAW_CALL();
+			}
 	}
 	// Front-cull로 복원
 	if (bCurrentTwoSided)

@@ -98,12 +98,16 @@ inline FMaterialRenderState ResolveMaterialRenderState(EMaterialDomain Domain, E
 	default:                         S.DepthStencil = EDepthStencilState::Default;       break;
 	}
 
-	// 4. Rasterizer — 결과 Pass 기준 (StringToRasterizerState 규칙과 일치)
+	// 4. Rasterizer — 결과 Pass 기준.
+	//    Blended surface는 UE-style preview/authoring 기준으로 기본 NoCull이다.
+	//    Opaque/Masked surface만 기본 BackCull을 유지하고, Two Sided는 별도 raster override로 강제 NoCull한다.
 	switch (S.Pass)
 	{
+	case ERenderPass::Translucent:
 	case ERenderPass::Decal:
 	case ERenderPass::AdditiveDecal:
-	case ERenderPass::PostProcess:   S.Rasterizer = ERasterizerState::SolidNoCull;   break;
+	case ERenderPass::PostProcess:
+	case ERenderPass::UI:             S.Rasterizer = ERasterizerState::SolidNoCull;   break;
 	default:                         S.Rasterizer = ERasterizerState::SolidBackCull; break;
 	}
 

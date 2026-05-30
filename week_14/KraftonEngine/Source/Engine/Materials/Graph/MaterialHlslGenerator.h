@@ -10,18 +10,25 @@ struct FMaterialCompileOptions
     EMaterialGraphTarget  Domain            = EMaterialGraphTarget::Surface;
     ERenderPass           RenderPass        = ERenderPass::Opaque;
     EBlendState           BlendState        = EBlendState::Opaque;
+    EBlendMode            BlendMode         = EBlendMode::Opaque;
     EDepthStencilState    DepthStencilState = EDepthStencilState::Default;
     ERasterizerState      RasterizerState   = ERasterizerState::SolidBackCull;
-    bool                  bReceiveLighting  = false; // ParticleMesh 전용 — Ambient + Directional 조명 적용
-    // Surface 도메인 라이팅 모델 — Unlit 이면 BaseColor + Emissive 만 출력 (현재 동작). 그 외엔
-    // UberLit 의 ForwardLighting.hlsli 를 통해 directional/point/spot + shadow 가 적용된다.
+    bool                  bReceiveLighting  = false; // Surface/ParticleMesh lighting enable. Off면 ShadingModel과 무관하게 Unlit path.
+    // Surface 도메인 라이팅 모델 — ReceiveLighting이 켜져 있고 Unlit이 아닐 때만
+    // ForwardLighting.hlsli를 통해 directional/point/spot + shadow가 적용된다.
     EMaterialShadingModel ShadingModel      = EMaterialShadingModel::DefaultLit;
+    float                 OpacityMaskClipValue = 0.333f;
 };
 
 struct FMaterialCompileResult
 {
     FString GeneratedShaderPath;
     FString GeneratedHlsl;
+
+    // Stable generated shader files are keyed in memory by source hash/revision, not by filename.
+    FString SourceHashString;
+    uint64  SourceHash = 0;
+    uint32  CompileRevision = 0;
 
     TMap<FString, FMaterialCompiledParameter> Parameters;
     TMap<FString, FMaterialCompiledTexture>   Textures;

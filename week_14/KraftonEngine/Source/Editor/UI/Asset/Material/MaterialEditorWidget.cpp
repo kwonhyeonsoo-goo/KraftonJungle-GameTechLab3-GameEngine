@@ -1,5 +1,8 @@
 #include "Editor/UI/Asset/Material/MaterialEditorWidget.h"
 
+#include "Editor/UI/Util/EditorTextureManager.h"
+#include "Editor/UI/Util/EditorFileUtils.h"
+
 #include "Materials/Material.h"
 #include "Materials/MaterialManager.h"
 #include "Object/Object.h"
@@ -34,6 +37,9 @@ namespace ed = ax::NodeEditor;
 
 namespace
 {
+    constexpr uint32 MaterialEditorSnapshotMagic   = 0x4D455331; // MES1
+    constexpr uint32 MaterialEditorSnapshotVersion = 1;
+
     inline ed::NodeId ToNodeId(uint32 Id)
     {
         return static_cast<ed::NodeId>(Id);
@@ -80,6 +86,110 @@ namespace
             if (Desired && Previous != Desired) ed::SetCurrentEditor(Previous);
         }
     };
+
+    FString JsonEscape(const FString& In)
+    {
+        FString Out;
+        Out.reserve(In.size() + 8);
+        for (char C : In)
+        {
+            switch (C)
+            {
+            case '\\': Out += "\\\\"; break;
+            case '"':  Out += "\\\""; break;
+            case '\n': Out += "\\n"; break;
+            case '\r': Out += "\\r"; break;
+            case '\t': Out += "\\t"; break;
+            default:   Out.push_back(C); break;
+            }
+        }
+        return Out;
+    }
+
+    FString BytesToHex(const TArray<uint8>& Bytes)
+    {
+        static constexpr char Hex[] = "0123456789ABCDEF";
+        FString Out;
+        Out.resize(Bytes.size() * 2);
+        for (size_t i = 0; i < Bytes.size(); ++i)
+        {
+            Out[i * 2 + 0] = Hex[(Bytes[i] >> 4) & 0xF];
+            Out[i * 2 + 1] = Hex[Bytes[i] & 0xF];
+        }
+        return Out;
+    }
+
+    int HexValue(char C)
+    {
+        if (C >= '0' && C <= '9') return C - '0';
+        if (C >= 'a' && C <= 'f') return 10 + (C - 'a');
+        if (C >= 'A' && C <= 'F') return 10 + (C - 'A');
+        return -1;
+    }
+
+    bool HexToBytes(const FString& HexText, TArray<uint8>& OutBytes)
+    {
+        if ((HexText.size() % 2) != 0) return false;
+        OutBytes.clear();
+        OutBytes.reserve(HexText.size() / 2);
+        for (size_t i = 0; i < HexText.size(); i += 2)
+        {
+            const int Hi = HexValue(HexText[i]);
+            const int Lo = HexValue(HexText[i + 1]);
+            if (Hi < 0 || Lo < 0) return false;
+            OutBytes.push_back(static_cast<uint8>((Hi << 4) | Lo));
+        }
+        return true;
+    }
+
+    bool ExtractJsonStringField(const FString& Text, const char* FieldName, FString& OutValue)
+    {
+        const FString Key = FString("\"") + FieldName + "\"";
+        size_t Pos = Text.find(Key);
+        if (Pos == FString::npos) return false;
+        Pos = Text.find(':', Pos + Key.size());
+        if (Pos == FString::npos) return false;
+        Pos = Text.find('"', Pos + 1);
+        if (Pos == FString::npos) return false;
+        ++Pos;
+
+        OutValue.clear();
+        bool bEscape = false;
+        for (; Pos < Text.size(); ++Pos)
+        {
+            const char C = Text[Pos];
+            if (bEscape)
+            {
+                switch (C)
+                {
+                case 'n': OutValue.push_back('\n'); break;
+                case 'r': OutValue.push_back('\r'); break;
+                case 't': OutValue.push_back('\t'); break;
+                default:  OutValue.push_back(C); break;
+                }
+                bEscape = false;
+                continue;
+            }
+            if (C == '\\')
+            {
+                bEscape = true;
+                continue;
+            }
+            if (C == '"') return true;
+            OutValue.push_back(C);
+        }
+        return false;
+    }
+
+    ImVec2 ToolbarButtonSize()
+    {
+        return ImVec2(92.0f, 0.0f);
+    }
+
+    bool ToolbarButton(const char* Label)
+    {
+        return ImGui::Button(Label, ToolbarButtonSize());
+    }
 
     ImVec4 PinTypeColor(EMaterialGraphPinType Type)
     {
@@ -228,6 +338,36 @@ namespace
         return false;
     }
 
+    const FMaterialGraphNode* FindConnectedTextureObjectNode(const FMaterialGraph& Graph, const FMaterialGraphNode& SampleNode)
+    {
+        if (SampleNode.Type != EMaterialGraphNodeType::TextureSample) return nullptr;
+
+        const FMaterialGraphPin* TextureInput = nullptr;
+        for (const FMaterialGraphPin& Pin : SampleNode.Pins)
+        {
+            if (Pin.Kind == EMaterialGraphPinKind::Input && Pin.DisplayName.ToString() == "Texture")
+            {
+                TextureInput = &Pin;
+                break;
+            }
+        }
+        if (!TextureInput) return nullptr;
+
+        for (const FMaterialGraphLink& Link : Graph.Links)
+        {
+            if (Link.ToPinId != TextureInput->PinId) continue;
+            const FMaterialGraphPin* FromPin = Graph.FindPin(Link.FromPinId);
+            if (!FromPin) return nullptr;
+            const FMaterialGraphNode* FromNode = Graph.FindNode(FromPin->OwningNodeId);
+            if (FromNode && FromNode->Type == EMaterialGraphNodeType::TextureObject)
+            {
+                return FromNode;
+            }
+            return nullptr;
+        }
+        return nullptr;
+    }
+
     // UE 스타일 핀 아이콘: 연결되면 채워진 원, 비연결이면 테두리만. "●" 글리프 대신 draw-list 사용.
     void DrawPinIcon(const ImVec4& Color, bool bConnected)
     {
@@ -313,6 +453,85 @@ namespace
             return true;
         }
         return false;
+    }
+
+    FString SelectTextureFileWithDialog(const FString& CurrentPath)
+    {
+        std::wstring InitialDir = FPaths::AssetDir();
+        if (!CurrentPath.empty())
+        {
+            std::filesystem::path Existing = std::filesystem::path(FPaths::RootDir()) / FPaths::ToWide(CurrentPath);
+            if (std::filesystem::exists(Existing.parent_path()))
+            {
+                InitialDir = Existing.parent_path().wstring();
+            }
+        }
+
+        FEditorFileDialogOptions Options;
+        Options.Title = L"Select Texture";
+        Options.Filter = L"Texture Files (*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.dds)\0*.png;*.jpg;*.jpeg;*.bmp;*.tga;*.dds\0All Files (*.*)\0*.*\0";
+        Options.InitialDirectory = InitialDir.c_str();
+        Options.bFileMustExist = true;
+        Options.bPathMustExist = true;
+        Options.bReturnRelativeToProjectRoot = true;
+
+        FString Selected = FEditorFileUtils::OpenFileDialog(Options);
+        if (!Selected.empty())
+        {
+            std::replace(Selected.begin(), Selected.end(), '\\', '/');
+            Selected = FPaths::MakeProjectRelative(Selected);
+        }
+        return Selected;
+    }
+
+    struct FMaterialNodeBounds
+    {
+        ImVec2 Min = ImVec2(0.0f, 0.0f);
+        ImVec2 Max = ImVec2(0.0f, 0.0f);
+        bool   bValid = false;
+    };
+
+    ImVec2 EstimateMaterialNodeSize(const FMaterialGraphNode& Node)
+    {
+        if (Node.Type == EMaterialGraphNodeType::Comment)
+        {
+            return ImVec2(max(120.0f, Node.Value.X), max(60.0f, Node.Value.Y));
+        }
+        if (Node.Type == EMaterialGraphNodeType::TextureObject || Node.Type == EMaterialGraphNodeType::TextureSample)
+        {
+            return ImVec2(210.0f, 175.0f);
+        }
+        if (Node.Type == EMaterialGraphNodeType::Output)
+        {
+            return ImVec2(220.0f, 240.0f);
+        }
+        return ImVec2(180.0f, 96.0f);
+    }
+
+    FMaterialNodeBounds ComputeLiveMaterialNodeBounds(const FMaterialGraphNode& Node, bool bUseEditorNodeSize)
+    {
+        FMaterialNodeBounds Bounds;
+        ImVec2 Pos(Node.PosX, Node.PosY);
+        ImVec2 Size = EstimateMaterialNodeSize(Node);
+        if (bUseEditorNodeSize)
+        {
+            Pos = ed::GetNodePosition(ToNodeId(Node.NodeId));
+            const ImVec2 EditorSize = ed::GetNodeSize(ToNodeId(Node.NodeId));
+            if (EditorSize.x > 1.0f && EditorSize.y > 1.0f)
+            {
+                Size = EditorSize;
+            }
+        }
+        Bounds.Min = Pos;
+        Bounds.Max = ImVec2(Pos.x + Size.x, Pos.y + Size.y);
+        Bounds.bValid = true;
+        return Bounds;
+    }
+
+    bool IsOutputNode(const FMaterialGraph& Graph, uint32 NodeId)
+    {
+        const FMaterialGraphNode* Node = Graph.FindNode(NodeId);
+        return Node && Node->Type == EMaterialGraphNodeType::Output;
     }
 }
 
@@ -612,14 +831,14 @@ void FMaterialEditorWidget::RenderToolbar(UMaterial* Material)
     // Two primary actions: Compile updates the live preview; Save persists source + runtime.
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.46f, 0.36f, 0.16f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.62f, 0.48f, 0.20f, 1.0f));
-    if (ImGui::Button("Compile")) CompilePreview(Material);
+    if (ToolbarButton("Compile")) CompilePreview(Material);
     ImGui::PopStyleColor(2);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Compile the graph and refresh the preview. Does not save.");
 
     ImGui::SameLine();
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.50f, 0.28f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.28f, 0.64f, 0.34f, 1.0f));
-    if (ImGui::Button(IsDirty() ? "Save *" : "Save")) SaveAll(Material);
+    if (ToolbarButton(IsDirty() ? "Save *" : "Save")) SaveAll(Material);
     ImGui::PopStyleColor(2);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Save graph source, compile, and bind the runtime shader to this material.");
 
@@ -628,15 +847,15 @@ void FMaterialEditorWidget::RenderToolbar(UMaterial* Material)
     ImGui::SameLine();
 
     ImGui::BeginDisabled(UndoStack.size() <= 1);
-    if (ImGui::Button("Undo")) UndoGraphEdit();
+    if (ToolbarButton("Undo")) UndoGraphEdit();
     ImGui::EndDisabled();
     ImGui::SameLine();
     ImGui::BeginDisabled(RedoStack.empty());
-    if (ImGui::Button("Redo")) RedoGraphEdit();
+    if (ToolbarButton("Redo")) RedoGraphEdit();
     ImGui::EndDisabled();
 
     ImGui::SameLine();
-    if (ImGui::Button("Add Node"))
+    if (ToolbarButton("Add Node"))
     {
         // ed 외부에서 호출되는 경로 — screen 좌표 (마우스 위치) 를 캡쳐해서 AddNodeMenuItem 의 표준
         // 변환 경로를 그대로 사용한다.
@@ -647,12 +866,20 @@ void FMaterialEditorWidget::RenderToolbar(UMaterial* Material)
     }
 
     ImGui::SameLine();
-    if (ImGui::SmallButton("Export JSON"))
+    if (ToolbarButton("Export"))
     {
         const FString OutPath = FString(FPaths::ToUtf8(FPaths::RootDir())) + "/Saved/MaterialGraph_Debug.json";
         ExportGraphToJsonFile(Material, OutPath);
     }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Debug-only: dump the current graph to a JSON file. Default Save uses the .uasset embed.");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Export the current working graph to Saved/MaterialGraph_Debug.json. Default Save still embeds graph data in the .uasset.");
+
+    ImGui::SameLine();
+    if (ToolbarButton("Import"))
+    {
+        const FString InPath = FString(FPaths::ToUtf8(FPaths::RootDir())) + "/Saved/MaterialGraph_Debug.json";
+        ImportGraphFromJsonFile(Material, InPath);
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Import Saved/MaterialGraph_Debug.json exported by this editor. Existing working graph is replaced only after a valid snapshot is found.");
 
     ImGui::SameLine();
     bool bAutoPreview = Material->GetGraphDocument().bAutoPreview;
@@ -825,7 +1052,9 @@ void FMaterialEditorWidget::RenderSettingsPanel(UMaterial* Material)
             if (ImGui::Selectable(Choice.Label, Domain == Choice.Domain))
             {
                 Material->SetDomainBlend(Choice.Domain, Material->GetBlendMode());
-                MarkDirty();
+                Material->GetMaterialSettings().Domain = Choice.Domain;
+                Material->GetMaterialSettings().BlendMode = Material->GetBlendMode();
+                MarkMaterialSourceEdited();
             }
         }
         ImGui::EndCombo();
@@ -840,7 +1069,9 @@ void FMaterialEditorWidget::RenderSettingsPanel(UMaterial* Material)
             if (ImGui::Selectable(BlendModeLabel(Mode), Blend == Mode))
             {
                 Material->SetDomainBlend(Material->GetDomain(), Mode);
-                MarkDirty();
+                Material->GetMaterialSettings().Domain = Material->GetDomain();
+                Material->GetMaterialSettings().BlendMode = Mode;
+                MarkMaterialSourceEdited();
             }
         }
         ImGui::EndCombo();
@@ -854,7 +1085,7 @@ void FMaterialEditorWidget::RenderSettingsPanel(UMaterial* Material)
             if (ImGui::Selectable(ShadingModelLabel(Model), Settings.ShadingModel == Model))
             {
                 Settings.ShadingModel = Model;
-                MarkDirty();
+                MarkMaterialSourceEdited();
             }
         }
         ImGui::EndCombo();
@@ -865,16 +1096,116 @@ void FMaterialEditorWidget::RenderSettingsPanel(UMaterial* Material)
     if (ImGui::Checkbox("Two Sided", &bTwoSided))
     {
         Material->SetTwoSided(bTwoSided);
-        MarkDirty();
+        Settings.bTwoSided = bTwoSided;
+        MarkMaterialSourceEdited();
     }
-    if (ImGui::Checkbox("Receive Lighting", &Settings.bReceiveLighting)) MarkDirty();
-    if (ImGui::Checkbox("Cast Shadow", &Settings.bCastShadow)) MarkDirty();
+    if (ImGui::Checkbox("Receive Lighting", &Settings.bReceiveLighting)) MarkMaterialSourceEdited();
+    if (ImGui::Checkbox("Cast Shadow", &Settings.bCastShadow)) MarkMaterialSourceEdited();
 
     if (Blend == EBlendMode::Masked)
     {
         ImGui::TextUnformatted("Mask Clip");
         ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::SliderFloat("##MaskClip", &Settings.OpacityMaskClipValue, 0.0f, 1.0f, "%.3f")) MarkDirty();
+        if (ImGui::SliderFloat("##MaskClip", &Settings.OpacityMaskClipValue, 0.0f, 1.0f, "%.3f")) MarkMaterialSourceEdited();
+    }
+
+    ImGui::Spacing();
+    ImGui::SeparatorText("Resolved Runtime State");
+    ImGui::TextDisabled("Pass       : %s", RenderStateStrings::ToString(RenderStateStrings::RenderPassMap, Material->GetRenderPass()));
+    ImGui::TextDisabled("Blend      : %s", RenderStateStrings::ToString(RenderStateStrings::BlendStateMap, Material->GetBlendState()));
+    ImGui::TextDisabled("Depth      : %s", RenderStateStrings::ToString(RenderStateStrings::DepthStencilStateMap, Material->GetDepthStencilState()));
+    ImGui::TextDisabled("Rasterizer : %s", RenderStateStrings::ToString(RenderStateStrings::RasterizerStateMap, Material->GetRasterizerState()));
+    ImGui::TextDisabled("HLSL target: %s", ToString(Doc.Target));
+}
+
+
+void FMaterialEditorWidget::MarkMaterialSourceEdited(bool bAutoPreview)
+{
+    if (!bRestoringSnapshot)
+    {
+        UndoStack.push_back(MakeGraphSnapshot());
+        if (UndoStack.size() > 128) UndoStack.erase(UndoStack.begin());
+        RedoStack.clear();
+    }
+
+    MarkDirty();
+
+    if (UMaterial* Material = GetMaterial())
+    {
+        Material->GetGraphDocument().bPreviewDirty = true;
+        LastCompileError.clear();
+        LastCompileStatus = "Material source changed. Compile preview or save all to apply.";
+        bLastCompileOk = false;
+
+        if (bAutoPreview && Material->GetGraphDocument().bAutoPreview)
+        {
+            CompilePreview(Material);
+        }
+    }
+}
+
+void FMaterialEditorWidget::SyncParameterDefinitionToWorkingGraph(const FString& OldName, const FMaterialParameterDefinition& Definition)
+{
+    const FString& NewName = Definition.Name;
+    for (FMaterialGraphNode& Node : WorkingGraph.Nodes)
+    {
+        const bool bParameterNode =
+            Node.Type == EMaterialGraphNodeType::ScalarParameter ||
+            Node.Type == EMaterialGraphNodeType::VectorParameter ||
+            Node.Type == EMaterialGraphNodeType::ColorParameter ||
+            Node.Type == EMaterialGraphNodeType::TextureObject;
+        if (!bParameterNode)
+        {
+            continue;
+        }
+
+        if ((!OldName.empty() && Node.ParameterName == OldName) || Node.ParameterName == NewName)
+        {
+            Node.ParameterName = NewName;
+            switch (Definition.Type)
+            {
+            case EMaterialValueType::Float:
+                if (Node.Type == EMaterialGraphNodeType::ScalarParameter)
+                {
+                    Node.Value = Definition.DefaultValue;
+                }
+                break;
+            case EMaterialValueType::Color:
+                if (Node.Type == EMaterialGraphNodeType::ColorParameter)
+                {
+                    Node.Value = Definition.DefaultValue;
+                }
+                break;
+            case EMaterialValueType::Float3:
+            case EMaterialValueType::Float4:
+                if (Node.Type == EMaterialGraphNodeType::VectorParameter)
+                {
+                    Node.Value = Definition.DefaultValue;
+                }
+                break;
+            case EMaterialValueType::Texture2D:
+                if (Node.Type == EMaterialGraphNodeType::TextureObject)
+                {
+                    Node.TexturePath = Definition.DefaultTexturePath;
+                }
+                break;
+            default:
+                break;
+            }
+        }
+    }
+}
+
+void FMaterialEditorWidget::SyncParameterDefinitionsToWorkingGraph(UMaterial* Material)
+{
+    if (!Material)
+    {
+        return;
+    }
+
+    for (const FMaterialParameterDefinition& Definition : Material->GetParameterDefinitions())
+    {
+        SyncParameterDefinitionToWorkingGraph(Definition.Name, Definition);
     }
 }
 
@@ -937,27 +1268,45 @@ void FMaterialEditorWidget::RenderParametersPanel(UMaterial* Material)
             ImGui::SetNextItemWidth(-FLT_MIN);
             if (ImGui::InputText("##Name", NameBuf, sizeof(NameBuf)))
             {
+                const FString OldName = Def.Name;
                 Def.Name = NameBuf;
-                MarkDirty();
+                SyncParameterDefinitionToWorkingGraph(OldName, Def);
+                MarkMaterialSourceEdited();
             }
 
             ImGui::TextUnformatted("Default");
             ImGui::SetNextItemWidth(-FLT_MIN);
             if (Def.Type == EMaterialValueType::Float)
             {
-                if (ImGui::DragFloat("##Default", &Def.DefaultValue.X, 0.01f)) MarkDirty();
+                if (ImGui::DragFloat("##Default", &Def.DefaultValue.X, 0.01f))
+                {
+                    SyncParameterDefinitionToWorkingGraph(Def.Name, Def);
+                    MarkMaterialSourceEdited();
+                }
             }
             else if (Def.Type == EMaterialValueType::Color)
             {
-                if (ImGui::ColorEdit4("##Default", &Def.DefaultValue.X, ImGuiColorEditFlags_NoInputs)) MarkDirty();
+                if (ImGui::ColorEdit4("##Default", &Def.DefaultValue.X, ImGuiColorEditFlags_NoInputs))
+                {
+                    SyncParameterDefinitionToWorkingGraph(Def.Name, Def);
+                    MarkMaterialSourceEdited();
+                }
             }
             else if (Def.Type == EMaterialValueType::Texture2D)
             {
-                if (InputFString("##Default", Def.DefaultTexturePath, 512)) MarkDirty();
+                if (InputFString("##Default", Def.DefaultTexturePath, 512))
+                {
+                    SyncParameterDefinitionToWorkingGraph(Def.Name, Def);
+                    MarkMaterialSourceEdited();
+                }
             }
             else
             {
-                if (ImGui::DragFloat4("##Default", &Def.DefaultValue.X, 0.01f)) MarkDirty();
+                if (ImGui::DragFloat4("##Default", &Def.DefaultValue.X, 0.01f))
+                {
+                    SyncParameterDefinitionToWorkingGraph(Def.Name, Def);
+                    MarkMaterialSourceEdited();
+                }
             }
 
             char GroupBuf[96];
@@ -967,9 +1316,9 @@ void FMaterialEditorWidget::RenderParametersPanel(UMaterial* Material)
             if (ImGui::InputText("##Group", GroupBuf, sizeof(GroupBuf)))
             {
                 Def.Group = GroupBuf;
-                MarkDirty();
+                MarkMaterialSourceEdited();
             }
-            if (ImGui::Checkbox("Expose to Instance", &Def.bExposeToInstance)) MarkDirty();
+            if (ImGui::Checkbox("Expose to Instance", &Def.bExposeToInstance)) MarkMaterialSourceEdited();
 
             if (ImGui::SmallButton("Remove")) RemoveIndex = i;
             ImGui::TreePop();
@@ -979,7 +1328,7 @@ void FMaterialEditorWidget::RenderParametersPanel(UMaterial* Material)
     if (RemoveIndex >= 0)
     {
         Defs.erase(Defs.begin() + RemoveIndex);
-        MarkDirty();
+        MarkMaterialSourceEdited();
     }
 
     ImGui::Spacing();
@@ -1077,6 +1426,7 @@ void FMaterialEditorWidget::RenderPalettePanel(UMaterial* Material)
                     ed::SetNodePosition(ToNodeId(Node->NodeId), Spawn);
                 }
                 PendingNewNodePosition = Spawn;
+                SelectOnlyNodes(TArray<uint32>{ Node->NodeId });
                 CommitGraphEdit();
             }
         }
@@ -1201,9 +1551,15 @@ void FMaterialEditorWidget::RenderGraphCanvas(UMaterial* Material)
         bool       bDeletedNode = false;
         while (ed::QueryDeletedNode(&DeletedNode))
         {
+            const uint32 NodeId = NodeIdToU32(DeletedNode);
+            if (IsOutputNode(WorkingGraph, NodeId))
+            {
+                // Do not accept deletion of the root output node. The node-editor will keep it.
+                continue;
+            }
             if (ed::AcceptDeletedItem())
             {
-                bDeletedNode |= WorkingGraph.RemoveNode(NodeIdToU32(DeletedNode));
+                bDeletedNode |= WorkingGraph.RemoveNode(NodeId);
             }
         }
         if (bDeletedNode) CommitGraphEdit();
@@ -1235,9 +1591,17 @@ void FMaterialEditorWidget::RenderGraphCanvas(UMaterial* Material)
     if (ImGui::BeginPopup("MaterialNodeMenu"))
     {
         if (ImGui::MenuItem("Duplicate")) bQueuedDuplicateSelected = true;
-        if (ImGui::MenuItem("Comment Selection")) bQueuedGroupSelected = true;
+        if (ImGui::MenuItem("Group Selection as Comment")) bQueuedGroupSelected = true;
         ImGui::Separator();
-        if (ImGui::MenuItem("Delete"))
+        const bool bContextIsOutput = ContextNodeId && IsOutputNode(WorkingGraph, NodeIdToU32(ContextNodeId));
+        if (bContextIsOutput)
+        {
+            ImGui::BeginDisabled();
+            ImGui::MenuItem("Delete");
+            ImGui::EndDisabled();
+            ImGui::TextDisabled("Material Output cannot be deleted.");
+        }
+        else if (ImGui::MenuItem("Delete"))
         {
             if (ContextNodeId && WorkingGraph.RemoveNode(NodeIdToU32(ContextNodeId))) CommitGraphEdit();
         }
@@ -1269,14 +1633,37 @@ void FMaterialEditorWidget::RenderGraphCanvas(UMaterial* Material)
     }
     ed::Resume();
 
+    TArray<uint32> MovedNodeIds;
     for (FMaterialGraphNode& Node : WorkingGraph.Nodes)
     {
         const ImVec2 Pos = ed::GetNodePosition(ToNodeId(Node.NodeId));
-        if (Node.PosX != Pos.x || Node.PosY != Pos.y)
+        if (std::fabs(Node.PosX - Pos.x) > 0.01f || std::fabs(Node.PosY - Pos.y) > 0.01f)
         {
             Node.PosX = Pos.x;
             Node.PosY = Pos.y;
+            MovedNodeIds.push_back(Node.NodeId);
             MarkDirty();
+        }
+    }
+    if (!MovedNodeIds.empty() && ImGui::IsMouseDown(ImGuiMouseButton_Left))
+    {
+        ed::NodeId ExistingSelected[512];
+        const int ExistingCount = ed::GetSelectedNodes(ExistingSelected, 512);
+        std::unordered_set<uint32> ExistingIds;
+        for (int i = 0; i < ExistingCount; ++i) ExistingIds.insert(NodeIdToU32(ExistingSelected[i]));
+
+        bool bMovedNodeAlreadySelected = false;
+        for (uint32 NodeId : MovedNodeIds)
+        {
+            if (ExistingIds.count(NodeId))
+            {
+                bMovedNodeAlreadySelected = true;
+                break;
+            }
+        }
+        if (!bMovedNodeAlreadySelected)
+        {
+            SelectOnlyNodes(MovedNodeIds);
         }
     }
 
@@ -1371,25 +1758,25 @@ void FMaterialEditorWidget::RenderNodeValueEditor(FMaterialGraphNode& Node, bool
         if (Node.Type == EMaterialGraphNodeType::ColorParameter)
         {
             if (bCompact) DrawColorSwatch(Node.Value);
-            else if (ImGui::ColorEdit4("##v", &Node.Value.X, ImGuiColorEditFlags_NoInputs)) MarkDirty();
+            else if (ImGui::ColorEdit4("##v", &Node.Value.X, ImGuiColorEditFlags_NoInputs)) MarkMaterialSourceEdited();
         }
         else if (Node.Type == EMaterialGraphNodeType::ScalarParameter)
         {
             ImGui::SetNextItemWidth(Width);
-            if (ImGui::DragFloat("##v", &Node.Value.X, 0.01f)) MarkDirty();
+            if (ImGui::DragFloat("##v", &Node.Value.X, 0.01f)) MarkMaterialSourceEdited();
         }
         else if (!bCompact) // VectorParameter, full editor in inspector only
         {
-            if (ImGui::DragFloat4("##v", &Node.Value.X, 0.01f)) MarkDirty();
+            if (ImGui::DragFloat4("##v", &Node.Value.X, 0.01f)) MarkMaterialSourceEdited();
         }
         break;
     case EMaterialGraphNodeType::ConstantFloat:
         ImGui::SetNextItemWidth(Width);
-        if (ImGui::DragFloat("##v", &Node.Value.X, 0.01f)) MarkDirty();
+        if (ImGui::DragFloat("##v", &Node.Value.X, 0.01f)) MarkMaterialSourceEdited();
         break;
     case EMaterialGraphNodeType::ConstantFloat2:
         ImGui::SetNextItemWidth(Width);
-        if (ImGui::DragFloat2("##v", &Node.Value.X, 0.01f)) MarkDirty();
+        if (ImGui::DragFloat2("##v", &Node.Value.X, 0.01f)) MarkMaterialSourceEdited();
         break;
     case EMaterialGraphNodeType::ConstantFloat3:
         if (bCompact)
@@ -1398,27 +1785,27 @@ void FMaterialEditorWidget::RenderNodeValueEditor(FMaterialGraphNode& Node, bool
         }
         else
         {
-            if (ImGui::ColorEdit3("##v", &Node.Value.X, ImGuiColorEditFlags_NoInputs)) MarkDirty();
+            if (ImGui::ColorEdit3("##v", &Node.Value.X, ImGuiColorEditFlags_NoInputs)) MarkMaterialSourceEdited();
             ImGui::SameLine();
             ImGui::SetNextItemWidth(-FLT_MIN);
-            if (ImGui::DragFloat3("##vd", &Node.Value.X, 0.01f)) MarkDirty();
+            if (ImGui::DragFloat3("##vd", &Node.Value.X, 0.01f)) MarkMaterialSourceEdited();
         }
         break;
     case EMaterialGraphNodeType::ConstantFloat4:
         ImGui::SetNextItemWidth(Width);
-        if (ImGui::DragFloat4("##v", &Node.Value.X, 0.01f)) MarkDirty();
+        if (ImGui::DragFloat4("##v", &Node.Value.X, 0.01f)) MarkMaterialSourceEdited();
         break;
     case EMaterialGraphNodeType::ConstantBiasScale:
         ImGui::SetNextItemWidth(Width);
-        if (ImGui::DragFloat2("Bias/Scale", &Node.Value.X, 0.01f)) MarkDirty();
+        if (ImGui::DragFloat2("Bias/Scale", &Node.Value.X, 0.01f)) MarkMaterialSourceEdited();
         break;
     case EMaterialGraphNodeType::TexCoord:
         ImGui::SetNextItemWidth(Width);
-        if (ImGui::DragFloat("UV Ch", &Node.Value.X, 1.0f, 0.0f, 3.0f, "%.0f")) MarkDirty();
+        if (ImGui::DragFloat("UV Ch", &Node.Value.X, 1.0f, 0.0f, 3.0f, "%.0f")) MarkMaterialSourceEdited();
         break;
     case EMaterialGraphNodeType::ParticleSubUV:
         ImGui::SetNextItemWidth(Width);
-        if (ImGui::DragFloat2("Cols/Rows", &Node.Value.X, 1.0f, 1.0f, 64.0f, "%.0f")) MarkDirty();
+        if (ImGui::DragFloat2("Cols/Rows", &Node.Value.X, 1.0f, 1.0f, 64.0f, "%.0f")) MarkMaterialSourceEdited();
         break;
     case EMaterialGraphNodeType::ComponentMask:
     {
@@ -1428,32 +1815,79 @@ void FMaterialEditorWidget::RenderNodeValueEditor(FMaterialGraphNode& Node, bool
         if (ImGui::InputText("Mask", MaskBuf, sizeof(MaskBuf)))
         {
             Node.Mask = MaskBuf;
-            MarkDirty();
+            MarkMaterialSourceEdited();
         }
         break;
     }
     case EMaterialGraphNodeType::TextureObject:
     {
-        // 노드 본문에서 직접 텍스처 경로를 편집 + 슬롯 색을 작은 스와치로 표시한다.
-        // ColorEdit 같은 popup 위젯은 캔버스 변환 때문에 엉뚱한 위치에 뜨므로 InputText 만 쓴다.
-        ImGui::SetNextItemWidth(Width);
-        if (InputFString("##tex", Node.TexturePath, 512)) MarkDirty();
+        const ImVec2 ThumbSize(72.0f, 72.0f);
+        const ImVec2 ThumbMin = ImGui::GetCursorScreenPos();
+        const ImVec2 ThumbMax(ThumbMin.x + ThumbSize.x, ThumbMin.y + ThumbSize.y);
+        ImDrawList* DrawList = ImGui::GetWindowDrawList();
+        DrawList->AddRectFilled(ThumbMin, ThumbMax, IM_COL32(28, 28, 34, 255), 6.0f);
+        DrawList->AddRect(ThumbMin, ThumbMax, IM_COL32(126, 88, 190, 220), 6.0f, 0, 1.5f);
+
+        if (!Node.TexturePath.empty())
+        {
+            if (ID3D11ShaderResourceView* Thumb = FEditorTextureManager::Get().GetOrLoadThumbnail(Node.TexturePath))
+            {
+                ImGui::Image((ImTextureID)Thumb, ThumbSize);
+            }
+            else
+            {
+                ImGui::Dummy(ThumbSize);
+                const ImVec2 TextSize = ImGui::CalcTextSize("Texture");
+                DrawList->AddText(ImVec2(ThumbMin.x + (ThumbSize.x - TextSize.x) * 0.5f, ThumbMin.y + 28.0f), IM_COL32(180, 160, 220, 255), "Texture");
+            }
+        }
+        else
+        {
+            ImGui::Dummy(ThumbSize);
+            const ImVec2 TextSize = ImGui::CalcTextSize("Click");
+            DrawList->AddText(ImVec2(ThumbMin.x + (ThumbSize.x - TextSize.x) * 0.5f, ThumbMin.y + 20.0f), IM_COL32(150, 150, 160, 255), "Click");
+            const ImVec2 TextSize2 = ImGui::CalcTextSize("Texture");
+            DrawList->AddText(ImVec2(ThumbMin.x + (ThumbSize.x - TextSize2.x) * 0.5f, ThumbMin.y + 38.0f), IM_COL32(150, 150, 160, 255), "Texture");
+        }
+
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+            ImGui::SetTooltip("Click thumbnail to choose a texture");
+        }
+        if (ImGui::IsItemClicked())
+        {
+            FString Selected = SelectTextureFileWithDialog(Node.TexturePath);
+            if (!Selected.empty())
+            {
+                Node.TexturePath = Selected;
+                MarkMaterialSourceEdited();
+            }
+        }
+
         std::filesystem::path P(Node.TexturePath);
-        const FString         Base = Node.TexturePath.empty() ? FString("(no texture)") : P.filename().string();
-        ImGui::TextDisabled("%s", Base.c_str());
-        ImGui::SameLine();
-        ImGui::TextDisabled("(%s)", MaterialTextureSlot::ToString(static_cast<int32>(Node.TextureSlot)).c_str());
+        const FString Base = Node.TexturePath.empty() ? FString("(no texture)") : P.filename().string();
+        ImGui::TextWrapped("%s", Base.c_str());
+        ImGui::TextDisabled("Slot: %s", MaterialTextureSlot::ToString(static_cast<int32>(Node.TextureSlot)).c_str());
         break;
     }
     case EMaterialGraphNodeType::TextureSample:
     {
-        // TextureSample 도 동일 — 본문에 입력 텍스처 경로를 표시한다.
-        // Texture 입력 핀이 비어있을 때만 본문 경로가 fallback 으로 적용된다.
-        ImGui::SetNextItemWidth(Width);
-        if (InputFString("##tex", Node.TexturePath, 512)) MarkDirty();
-        std::filesystem::path P(Node.TexturePath);
-        const FString         Base = Node.TexturePath.empty() ? FString("(no texture)") : P.filename().string();
-        ImGui::TextDisabled("%s", Base.c_str());
+        const FMaterialGraphNode* TextureNode = FindConnectedTextureObjectNode(WorkingGraph, Node);
+        if (TextureNode && !TextureNode->TexturePath.empty())
+        {
+            std::filesystem::path P(TextureNode->TexturePath);
+            ImGui::TextDisabled("Samples: %s", P.filename().string().c_str());
+        }
+        else if (TextureNode)
+        {
+            ImGui::TextDisabled("Samples connected texture");
+        }
+        else
+        {
+            ImGui::TextDisabled("Connect Texture input");
+        }
+        ImGui::TextDisabled("Uses Texture + UV pins");
         break;
     }
     default:
@@ -1494,8 +1928,6 @@ void FMaterialEditorWidget::RenderDetailsPanel(UMaterial* Material)
         FScopedNodeEditorCurrent Scope(NodeEditorContext);
         ed::NavigateToContent(0.25f);
     }
-    ImGui::SameLine();
-    if (ImGui::Button("Comment Selected")) GroupSelectedNodesAsComment();
 }
 
 void FMaterialEditorWidget::RenderNodeInspector(UMaterial* Material, FMaterialGraphNode& Node)
@@ -1517,20 +1949,25 @@ void FMaterialEditorWidget::RenderNodeInspector(UMaterial* Material, FMaterialGr
         if (ImGui::InputText("Parameter Name", NameBuf, sizeof(NameBuf)))
         {
             Node.ParameterName = NameBuf;
-            MarkDirty();
+            MarkMaterialSourceEdited();
         }
         ImGui::Spacing();
         ImGui::TextDisabled("Default Value");
         RenderNodeValueEditor(Node, false);
     }
-    else if (Node.Type == EMaterialGraphNodeType::TextureObject ||
-        Node.Type == EMaterialGraphNodeType::TextureSample)
+    else if (Node.Type == EMaterialGraphNodeType::TextureObject)
     {
-        if (Node.Type == EMaterialGraphNodeType::TextureObject)
+        ImGui::TextUnformatted("Texture Object");
+        ImGui::TextDisabled("Click the thumbnail in the graph node to choose the texture.");
+        if (!Node.TexturePath.empty())
         {
-            ImGui::SetNextItemWidth(-1);
-            if (InputFString("Texture Path", Node.TexturePath, 512)) MarkDirty();
+            ImGui::TextWrapped("%s", Node.TexturePath.c_str());
         }
+        else
+        {
+            ImGui::TextDisabled("No texture selected.");
+        }
+
         int32 Slot = static_cast<int32>(Node.TextureSlot);
         ImGui::SetNextItemWidth(-1);
         if (ImGui::BeginCombo("Slot", MaterialTextureSlot::ToString(Slot).c_str()))
@@ -1540,17 +1977,40 @@ void FMaterialEditorWidget::RenderNodeInspector(UMaterial* Material, FMaterialGr
                 if (ImGui::Selectable(MaterialTextureSlot::ToString(s).c_str(), Slot == s))
                 {
                     Node.TextureSlot = static_cast<EMaterialTextureSlot>(s);
-                    MarkDirty();
+                    MarkMaterialSourceEdited();
                 }
             }
             ImGui::EndCombo();
         }
     }
+    else if (Node.Type == EMaterialGraphNodeType::TextureSample)
+    {
+        ImGui::TextUnformatted("Texture Sample");
+        ImGui::TextWrapped("Samples the Texture input with the UV input and outputs RGBA/RGB/channels. This node does not own a texture asset.");
+        if (const FMaterialGraphNode* TextureNode = FindConnectedTextureObjectNode(WorkingGraph, Node))
+        {
+            ImGui::Spacing();
+            ImGui::TextDisabled("Connected Texture Object");
+            if (!TextureNode->TexturePath.empty())
+            {
+                ImGui::TextWrapped("%s", TextureNode->TexturePath.c_str());
+            }
+            else
+            {
+                ImGui::TextDisabled("Connected texture object has no texture selected.");
+            }
+        }
+        else
+        {
+            ImGui::Spacing();
+            ImGui::TextDisabled("No Texture input connected.");
+        }
+    }
     else if (Node.Type == EMaterialGraphNodeType::Comment)
     {
         ImGui::SetNextItemWidth(-1);
-        if (InputFString("Comment", Node.ParameterName)) MarkDirty();
-        if (ImGui::DragFloat2("Size", &Node.Value.X, 1.0f, 60.0f, 4000.0f, "%.0f")) MarkDirty();
+        if (InputFString("Comment", Node.ParameterName)) MarkMaterialSourceEdited();
+        if (ImGui::DragFloat2("Size", &Node.Value.X, 1.0f, 60.0f, 4000.0f, "%.0f")) MarkMaterialSourceEdited();
     }
     else
     {
@@ -1573,7 +2033,11 @@ void FMaterialEditorWidget::RenderNodeInspector(UMaterial* Material, FMaterialGr
     }
 
     ImGui::Spacing();
-    if (ImGui::Button("Delete Node"))
+    if (Node.Type == EMaterialGraphNodeType::Output)
+    {
+        ImGui::TextDisabled("Material Output is required and cannot be deleted.");
+    }
+    else if (ImGui::Button("Delete Node"))
     {
         if (WorkingGraph.RemoveNode(Node.NodeId))
         {
@@ -1766,7 +2230,6 @@ void FMaterialEditorWidget::RenderPinSpawnMenuBody(UMaterial* Material)
         EMaterialGraphNodeType::Saturate, EMaterialGraphNodeType::Clamp, EMaterialGraphNodeType::Power,
         EMaterialGraphNodeType::TextureSample, EMaterialGraphNodeType::ComponentMask, EMaterialGraphNodeType::Append,
         EMaterialGraphNodeType::Normalize, EMaterialGraphNodeType::Dot, EMaterialGraphNodeType::Reroute,
-        EMaterialGraphNodeType::Output,
     };
     bool bAny = false;
     for (EMaterialGraphNodeType Type : Candidates)
@@ -1779,6 +2242,7 @@ void FMaterialEditorWidget::RenderPinSpawnMenuBody(UMaterial* Material)
 void FMaterialEditorWidget::SaveGraph(UMaterial* Material)
 {
     if (!Material) return;
+    SyncParameterDefinitionsToWorkingGraph(Material);
     Material->EnableGraphMaterial();
     Material->GetGraphDocument().Graph = WorkingGraph;
     Material->MarkGraphSaved();
@@ -1796,6 +2260,7 @@ void FMaterialEditorWidget::SaveGraph(UMaterial* Material)
 
 void FMaterialEditorWidget::CompilePreview(UMaterial* Material)
 {
+    SyncParameterDefinitionsToWorkingGraph(Material);
     LastCompileError.clear();
     if (FMaterialManager::Get().CompileMaterialGraphPreview(Material, WorkingGraph, PreviewMaterial, &LastCompileError))
     {
@@ -1810,6 +2275,7 @@ void FMaterialEditorWidget::CompilePreview(UMaterial* Material)
 
 void FMaterialEditorWidget::ApplyCompile(UMaterial* Material, bool bPersistCompiledState)
 {
+    SyncParameterDefinitionsToWorkingGraph(Material);
     LastCompileError.clear();
     if (FMaterialManager::Get().CompileMaterialGraphRuntime(Material, WorkingGraph, bPersistCompiledState, &LastCompileError))
     {
@@ -1835,24 +2301,43 @@ void FMaterialEditorWidget::SaveAll(UMaterial* Material)
 void FMaterialEditorWidget::ExportGraphToJsonFile(UMaterial* Material, const FString& AbsolutePath)
 {
     if (!Material) return;
+    SyncParameterDefinitionsToWorkingGraph(Material);
     const FMaterialGraph&         G   = WorkingGraph;
     const FMaterialGraphDocument& Doc = Material->GetGraphDocument();
+    const FString                 SnapshotHex = BytesToHex(MakeGraphSnapshot());
 
     std::stringstream JS;
     JS << "{\n";
+    JS << "  \"format\": \"KraftonMaterialGraph\",\n";
+    JS << "  \"version\": 2,\n";
     JS << "  \"target\": \"" << ToString(Doc.Target) << "\",\n";
-    JS << "  \"editorSettings\": " << (Doc.EditorSettings.empty() ? "null" : "\"<embedded>\"") << ",\n";
+    JS << "  \"snapshotHex\": \"" << SnapshotHex << "\",\n";
     JS << "  \"nodes\": [\n";
     for (size_t i = 0; i < G.Nodes.size(); ++i)
     {
         const FMaterialGraphNode& N = G.Nodes[i];
-        JS << "    { \"id\": " << N.NodeId
-           << ", \"type\": \"" << ToString(N.Type) << "\""
-           << ", \"pos\": [" << N.PosX << ", " << N.PosY << "]"
-           << ", \"param\": \"" << N.ParameterName << "\""
-           << ", \"texture\": \"" << N.TexturePath << "\""
-           << ", \"value\": [" << N.Value.X << ", " << N.Value.Y << ", " << N.Value.Z << ", " << N.Value.W << "]"
-           << " }" << (i + 1 < G.Nodes.size() ? "," : "") << "\n";
+        JS << "    {\n";
+        JS << "      \"id\": " << N.NodeId << ",\n";
+        JS << "      \"type\": \"" << ToString(N.Type) << "\",\n";
+        JS << "      \"displayName\": \"" << JsonEscape(N.DisplayName.ToString()) << "\",\n";
+        JS << "      \"pos\": [" << N.PosX << ", " << N.PosY << "],\n";
+        JS << "      \"parameter\": \"" << JsonEscape(N.ParameterName) << "\",\n";
+        JS << "      \"texture\": \"" << JsonEscape(N.TexturePath) << "\",\n";
+        JS << "      \"textureSlot\": \"" << ToString(N.TextureSlot) << "\",\n";
+        JS << "      \"mask\": \"" << JsonEscape(N.Mask) << "\",\n";
+        JS << "      \"value\": [" << N.Value.X << ", " << N.Value.Y << ", " << N.Value.Z << ", " << N.Value.W << "],\n";
+        JS << "      \"pins\": [";
+        for (size_t p = 0; p < N.Pins.size(); ++p)
+        {
+            const FMaterialGraphPin& Pin = N.Pins[p];
+            JS << "{ \"id\": " << Pin.PinId
+               << ", \"kind\": \"" << (Pin.Kind == EMaterialGraphPinKind::Input ? "Input" : "Output") << "\""
+               << ", \"type\": \"" << ToString(Pin.Type) << "\""
+               << ", \"name\": \"" << JsonEscape(Pin.DisplayName.ToString()) << "\" }";
+            if (p + 1 < N.Pins.size()) JS << ", ";
+        }
+        JS << "]\n";
+        JS << "    }" << (i + 1 < G.Nodes.size() ? "," : "") << "\n";
     }
     JS << "  ],\n";
     JS << "  \"links\": [\n";
@@ -1865,30 +2350,75 @@ void FMaterialEditorWidget::ExportGraphToJsonFile(UMaterial* Material, const FSt
     JS << "  ]\n";
     JS << "}\n";
 
-    std::ofstream File(std::filesystem::path(FPaths::ToWide(AbsolutePath)));
+    const std::filesystem::path Path(FPaths::ToWide(AbsolutePath));
+    std::error_code Ec;
+    std::filesystem::create_directories(Path.parent_path(), Ec);
+
+    std::ofstream File(Path, std::ios::binary | std::ios::trunc);
     if (File.is_open())
     {
         File << JS.str();
+        LastCompileError.clear();
         LastCompileStatus = "Exported graph JSON to " + AbsolutePath;
+        bLastCompileOk = true;
     }
     else
     {
+        LastCompileStatus.clear();
         LastCompileError = "Failed to write JSON: " + AbsolutePath;
+        bLastCompileOk = false;
     }
 }
 
 bool FMaterialEditorWidget::ImportGraphFromJsonFile(UMaterial* Material, const FString& AbsolutePath)
 {
-    // Minimal import — 우리 내부 JSON 포맷(ExportGraphToJsonFile)만 지원. ax::NodeEditor 의 view JSON
-    // 은 별도 path. 실패 시 작업 그래프 보존.
     if (!Material) return false;
-    std::ifstream File(std::filesystem::path(FPaths::ToWide(AbsolutePath)));
+    std::ifstream File(std::filesystem::path(FPaths::ToWide(AbsolutePath)), std::ios::binary);
     if (!File.is_open())
     {
+        LastCompileStatus.clear();
         LastCompileError = "Failed to open JSON: " + AbsolutePath;
+        bLastCompileOk = false;
         return false;
     }
-    LastCompileStatus = "Import is debug-only: please paste structural fields into the .uasset by hand.";
+
+    std::stringstream Buffer;
+    Buffer << File.rdbuf();
+    const FString Text = Buffer.str();
+
+    FString SnapshotHex;
+    if (!ExtractJsonStringField(Text, "snapshotHex", SnapshotHex))
+    {
+        LastCompileStatus.clear();
+        LastCompileError = "JSON import failed: snapshotHex is missing. Re-export with the current material editor.";
+        bLastCompileOk = false;
+        return false;
+    }
+
+    TArray<uint8> Snapshot;
+    if (!HexToBytes(SnapshotHex, Snapshot) || Snapshot.empty())
+    {
+        LastCompileStatus.clear();
+        LastCompileError = "JSON import failed: invalid snapshotHex.";
+        bLastCompileOk = false;
+        return false;
+    }
+
+    CommitGraphEdit();
+    if (!RestoreGraphSnapshot(Snapshot))
+    {
+        LastCompileStatus.clear();
+        LastCompileError = "JSON import failed: graph snapshot could not be restored.";
+        bLastCompileOk = false;
+        return false;
+    }
+
+    Material->GetGraphDocument().Graph = WorkingGraph;
+    Material->GetGraphDocument().bPreviewDirty = true;
+    CommitGraphEdit();
+    LastCompileError.clear();
+    LastCompileStatus = "Imported graph JSON from " + AbsolutePath;
+    bLastCompileOk = true;
     return true;
 }
 
@@ -1940,6 +2470,25 @@ TArray<uint8> FMaterialEditorWidget::MakeGraphSnapshot() const
 {
     FMaterialGraph Copy = WorkingGraph;
     FMemoryArchive Saver(true);
+
+    uint32 Magic   = MaterialEditorSnapshotMagic;
+    uint32 Version = MaterialEditorSnapshotVersion;
+    Saver << Magic;
+    Saver << Version;
+
+    EMaterialGraphTarget Target = EMaterialGraphTarget::Surface;
+    FMaterialSettings Settings;
+    TArray<FMaterialParameterDefinition> Definitions;
+    if (UMaterial* Material = GetMaterial())
+    {
+        Target      = Material->GetGraphDocument().Target;
+        Settings    = Material->GetMaterialSettings();
+        Definitions = Material->GetParameterDefinitions();
+    }
+
+    Saver << Target;
+    Saver << Settings;
+    Saver << Definitions;
     Saver << Copy;
     return Saver.GetBuffer();
 }
@@ -1948,8 +2497,49 @@ bool FMaterialEditorWidget::RestoreGraphSnapshot(const TArray<uint8>& Snapshot)
 {
     if (Snapshot.empty()) return false;
     bRestoringSnapshot = true;
+
+    const bool bFullSourceSnapshot = Snapshot.size() >= sizeof(uint32)
+        && *reinterpret_cast<const uint32*>(Snapshot.data()) == MaterialEditorSnapshotMagic;
+
     FMemoryArchive Loader(Snapshot, false);
-    Loader << WorkingGraph;
+    if (bFullSourceSnapshot)
+    {
+        uint32 Magic = 0;
+        uint32 Version = 0;
+        Loader << Magic;
+        Loader << Version;
+
+        EMaterialGraphTarget Target = EMaterialGraphTarget::Surface;
+        FMaterialSettings Settings;
+        TArray<FMaterialParameterDefinition> Definitions;
+        FMaterialGraph Graph;
+
+        Loader << Target;
+        Loader << Settings;
+        Loader << Definitions;
+        Loader << Graph;
+
+        WorkingGraph = Graph;
+        if (UMaterial* Material = GetMaterial())
+        {
+            Material->GetGraphDocument().Target = Target;
+            Material->GetParameterDefinitions() = Definitions;
+            Material->SetDomainBlend(Settings.Domain, Settings.BlendMode);
+            Material->SetTwoSided(Settings.bTwoSided);
+            Material->GetMaterialSettings() = Settings;
+            Material->GetGraphDocument().bPreviewDirty = true;
+        }
+    }
+    else
+    {
+        // Backward compatibility for JSON/debug snapshots exported before source-state snapshots existed.
+        Loader << WorkingGraph;
+        if (UMaterial* Material = GetMaterial())
+        {
+            Material->GetGraphDocument().bPreviewDirty = true;
+        }
+    }
+
     bRestoringSnapshot = false;
     bPositionsPushed   = false;
     MarkDirty();
@@ -1972,7 +2562,7 @@ bool FMaterialEditorWidget::GatherSelectedNodes(TArray<FMaterialGraphNode>& OutN
 
     for (const FMaterialGraphNode& Node : WorkingGraph.Nodes)
     {
-        if (SelectedIds.count(Node.NodeId))
+        if (SelectedIds.count(Node.NodeId) && Node.Type != EMaterialGraphNodeType::Output)
         {
             FMaterialGraphNode Copy = Node;
             const ImVec2       Pos  = ed::GetNodePosition(ToNodeId(Node.NodeId));
@@ -2004,6 +2594,7 @@ bool FMaterialEditorWidget::CloneNodeFragment(const TArray<FMaterialGraphNode>& 
 
     for (const FMaterialGraphNode& SrcNode : SourceNodes)
     {
+        if (SrcNode.Type == EMaterialGraphNodeType::Output) continue;
         FMaterialGraphNode* NewNode = WorkingGraph.AddNodeOfType(SrcNode.Type, SrcNode.PosX + Delta.x, SrcNode.PosY + Delta.y, GetMaterial()->GetGraphDocument().Target);
         if (!NewNode) continue;
         NewNode->DisplayName   = SrcNode.DisplayName;
@@ -2086,29 +2677,78 @@ void FMaterialEditorWidget::DeleteSelectedNodes()
     bool bChanged = false;
     for (int i = 0; i < Count; ++i)
     {
-        bChanged |= WorkingGraph.RemoveNode(NodeIdToU32(Selected[i]));
+        const uint32 NodeId = NodeIdToU32(Selected[i]);
+        if (IsOutputNode(WorkingGraph, NodeId)) continue;
+        bChanged |= WorkingGraph.RemoveNode(NodeId);
     }
     if (bChanged) CommitGraphEdit();
 }
 
 void FMaterialEditorWidget::GroupSelectedNodesAsComment()
 {
-    TArray<FMaterialGraphNode> Nodes;
-    TArray<FMaterialGraphLink> Links;
-    if (!GatherSelectedNodes(Nodes, Links)) return;
-    ImVec2              Min     = ComputeNodeFragmentMin(Nodes);
-    FMaterialGraphNode* Comment = WorkingGraph.AddNodeOfType(EMaterialGraphNodeType::Comment, Min.x - 40.0f, Min.y - 60.0f, GetMaterial()->GetGraphDocument().Target);
-    if (Comment)
+    if (!NodeEditorContext || !GetMaterial()) return;
+    FScopedNodeEditorCurrent Scope(NodeEditorContext);
+
+    ed::NodeId Selected[512];
+    const int Count = ed::GetSelectedNodes(Selected, 512);
+    if (Count <= 0) return;
+
+    float MinX = FLT_MAX;
+    float MinY = FLT_MAX;
+    float MaxX = -FLT_MAX;
+    float MaxY = -FLT_MAX;
+    bool  bAny = false;
+
+    for (int i = 0; i < Count; ++i)
     {
-        Comment->ParameterName = "Comment";
-        CommitGraphEdit();
+        const uint32 NodeIdU = NodeIdToU32(Selected[i]);
+        const FMaterialGraphNode* SrcNode = WorkingGraph.FindNode(NodeIdU);
+        if (!SrcNode) continue;
+        const FMaterialNodeBounds Bounds = ComputeLiveMaterialNodeBounds(*SrcNode, true);
+        if (!Bounds.bValid) continue;
+
+        bAny = true;
+        MinX = min(MinX, Bounds.Min.x);
+        MinY = min(MinY, Bounds.Min.y);
+        MaxX = max(MaxX, Bounds.Max.x);
+        MaxY = max(MaxY, Bounds.Max.y);
     }
+    if (!bAny) return;
+
+    const float  Pad    = 28.0f;
+    const float  Header = 30.0f;
+    const ImVec2 GroupPos(MinX - Pad, MinY - Pad - Header);
+    const ImVec2 GroupSize((MaxX - MinX) + Pad * 2.0f, (MaxY - MinY) + Pad * 2.0f + Header);
+
+    FMaterialGraphNode* Comment = WorkingGraph.AddNodeOfType(
+        EMaterialGraphNodeType::Comment,
+        GroupPos.x,
+        GroupPos.y,
+        GetMaterial()->GetGraphDocument().Target);
+    if (!Comment) return;
+
+    Comment->ParameterName = "Comment";
+    Comment->Value = FVector4(GroupSize.x, GroupSize.y, 0.0f, 0.0f);
+    ed::SetNodePosition(ToNodeId(Comment->NodeId), GroupPos);
+
+    ed::ClearSelection();
+    ed::SelectNode(ToNodeId(Comment->NodeId), false);
+    SelectedNodeId = Comment->NodeId;
+
+    CommitGraphEdit();
 }
 
 bool FMaterialEditorWidget::AddNodeMenuItem(UMaterial* Material, EMaterialGraphNodeType Type, const char* Label)
 {
     const char* Display = Label ? Label : NodeLabel(Type);
     if (!StringContainsInsensitive(Display, AddNodeSearchBuf)) return false;
+    if (Type == EMaterialGraphNodeType::Output && WorkingGraph.HasOutputNode())
+    {
+        ImGui::BeginDisabled();
+        ImGui::MenuItem(Display);
+        ImGui::EndDisabled();
+        return false;
+    }
     if (!ImGui::MenuItem(Display)) return false;
 
     // 표준 패턴 (imgui-node-editor blueprints-example):
@@ -2126,6 +2766,7 @@ bool FMaterialEditorWidget::AddNodeMenuItem(UMaterial* Material, EMaterialGraphN
     Node->PosY = CanvasPos.y;
     ed::SetNodePosition(ToNodeId(Node->NodeId), CanvasPos);
 
+    SelectOnlyNodes(TArray<uint32>{ Node->NodeId });
     CommitGraphEdit();
     // popup 닫기 후 다음 우클릭이 같은 screen pos 를 재사용하지 않도록 reset.
     PendingNewNodeScreenPos = ImVec2(0, 0);
@@ -2136,6 +2777,7 @@ bool FMaterialEditorWidget::AddContextNodeMenuItem(UMaterial* Material, EMateria
 {
     const char* Display = NodeLabel(Type);
     if (!StringContainsInsensitive(Display, PinSpawnSearchBuf)) return false;
+    if (Type == EMaterialGraphNodeType::Output && WorkingGraph.HasOutputNode()) return false;
     if (!NodeTypeCanConnectToPendingPin(Type)) return false;
     if (!ImGui::MenuItem(Display)) return false;
 
@@ -2165,6 +2807,7 @@ bool FMaterialEditorWidget::AddContextNodeMenuItem(UMaterial* Material, EMateria
                 }
             }
         }
+        SelectOnlyNodes(TArray<uint32>{ Node->NodeId });
         CommitGraphEdit();
         PendingNewNodeScreenPos = ImVec2(0, 0);
         return true;
@@ -2201,6 +2844,15 @@ void FMaterialEditorWidget::QueueNodeEditorShortcuts()
 {
     ImGuiIO& IO = ImGui::GetIO();
     if (!IO.KeyCtrl) return;
+
+    if (IO.WantTextInput) return;
+
+    if (ImGui::IsKeyPressed(ImGuiKey_Z))
+    {
+        if (IO.KeyShift) RedoGraphEdit();
+        else UndoGraphEdit();
+    }
+    if (ImGui::IsKeyPressed(ImGuiKey_Y)) RedoGraphEdit();
     if (ImGui::IsKeyPressed(ImGuiKey_C)) bQueuedCopySelected = true;
     if (ImGui::IsKeyPressed(ImGuiKey_V)) bQueuedPasteNodes = true;
     if (ImGui::IsKeyPressed(ImGuiKey_D)) bQueuedDuplicateSelected = true;

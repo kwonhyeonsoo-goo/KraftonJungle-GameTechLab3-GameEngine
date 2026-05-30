@@ -216,6 +216,18 @@ void FShader::Release()
 
 void FShader::Bind(ID3D11DeviceContext* InDeviceContext) const
 {
+	if (!InDeviceContext)
+	{
+		UE_LOG("[Shader] Bind failed: null device context.");
+		return;
+	}
+
+	if (!IsValid())
+	{
+		UE_LOG("[Shader] Bind skipped: invalid shader object.");
+		return;
+	}
+
 	InDeviceContext->IASetInputLayout(InputLayout);
 	InDeviceContext->VSSetShader(VertexShader, nullptr, 0);
 	InDeviceContext->PSSetShader(PixelShader, nullptr, 0);

@@ -7,6 +7,7 @@
 #include "Render/Pipeline/Renderer.h"
 #include "Render/Types/MaterialTextureSlot.h"
 #include "Asset/AssetPackage.h"
+#include <cstring>
 
 // ─── FMaterialTemplate ───
 
@@ -271,7 +272,19 @@ void UMaterial::RebuildCachedSRVs()
 			if (B.BindPoint >= (uint32)EMaterialTextureSlot::Max) continue;
 			UTexture2D* Tex = nullptr;
 			if (GetTextureParameter(B.Name, Tex) && Tex && Tex->GetSRV())
+			{
 				CachedSRVs[B.BindPoint] = Tex->GetSRV();
+				continue;
+			}
+			constexpr const char* GraphTexturePrefix = "Tex_";
+			if (B.Name.rfind(GraphTexturePrefix, 0) == 0)
+			{
+				FString SlotAlias = B.Name.substr(strlen(GraphTexturePrefix)) + "Texture";
+				if (GetTextureParameter(SlotAlias, Tex) && Tex && Tex->GetSRV())
+				{
+					CachedSRVs[B.BindPoint] = Tex->GetSRV();
+				}
+			}
 		}
 	}
 	else
