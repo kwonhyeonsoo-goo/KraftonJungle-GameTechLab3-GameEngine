@@ -78,6 +78,9 @@ private:
 
 	TMap<FString, FConsoleCommand> Commands;
 	TArray<FCompletionCandidate> CompletionCandidates;
+	int32 CompletionSelectionIndex = -1;
+	bool bCompletionNavigationActive = false;
+	FString CompletionNavigationValue;
 
 	void RegisterCommand(const FString& Name, CommandFn Fn, const FString& Category, const FString& Usage, const FString& Description);
 	void RegisterDefaultCommands();
@@ -89,6 +92,7 @@ private:
 	void RenderCompletionCandidates();
 	void UpdateCompletionCandidates();
 	TArray<FCompletionCandidate> GetCompletionCandidates(const FString& Input) const;
+	void ApplyCompletionCandidate(ImGuiInputTextCallbackData* Data, int32 CandidateIndex);
 	bool PrintCompactHelp(const FString& CategoryFilter = "");
 	bool TryFindCommand(const TArray<FString>& Tokens, FString& OutCommandName, const FConsoleCommand*& OutCommand, int32& OutConsumedTokens) const;
 	void ExecCommand(const char* CommandLine);

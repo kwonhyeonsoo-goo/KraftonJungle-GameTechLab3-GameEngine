@@ -391,13 +391,23 @@ void FEditorConsoleWidget::RenderCompletionCandidates()
 	const ImU32 SuffixColor = IM_COL32(210, 225, 245, 255);
 	float Y = PanelMin.y + PanelPaddingY;
 
-	for (const FCompletionCandidate& Candidate : CompletionCandidates)
+	for (int32 CandidateIndex = 0; CandidateIndex < static_cast<int32>(CompletionCandidates.size()); ++CandidateIndex)
 	{
+		const FCompletionCandidate& Candidate = CompletionCandidates[CandidateIndex];
 		const FString LowerDisplayText = ToLower(Candidate.DisplayText);
 		const size_t PrefixLength = (Prefix.size() <= LowerDisplayText.size() && StartsWith(LowerDisplayText, Prefix)) ? Prefix.size() : 0;
 		const FString PrefixText = Candidate.DisplayText.substr(0, PrefixLength);
 		const FString SuffixText = Candidate.DisplayText.substr(PrefixLength);
 		const ImVec2 TextPos(PanelMin.x + PanelPaddingX, Y);
+
+		if (CandidateIndex == CompletionSelectionIndex)
+		{
+			DrawList->AddRectFilled(
+				ImVec2(PanelMin.x + 2.0f, Y - 1.0f),
+				ImVec2(PanelMax.x - 2.0f, Y + LineHeight - 1.0f),
+				IM_COL32(54, 92, 145, 170),
+				3.0f);
+		}
 
 		DrawList->AddText(TextPos, PrefixColor, PrefixText.c_str());
 		const float PrefixWidth = ImGui::CalcTextSize(PrefixText.c_str()).x;
@@ -429,11 +439,17 @@ void FEditorConsoleWidget::RenderInputLine(const char* Label, float Width, bool 
 		ExecCommand(InputBuf);
 		strcpy_s(InputBuf, "");
 		CompletionCandidates.clear();
+		CompletionSelectionIndex = -1;
+		bCompletionNavigationActive = false;
+		CompletionNavigationValue.clear();
 		bReclaimFocus = true;
 	}
 	else
 	{
-		UpdateCompletionCandidates();
+		if (!(bCompletionNavigationActive && CompletionNavigationValue == InputBuf && !CompletionCandidates.empty()))
+		{
+			UpdateCompletionCandidates();
+		}
 		RenderCompletionCandidates();
 	}
 
@@ -462,6 +478,16 @@ void FEditorConsoleWidget::RegisterCommand(const FString& Name, CommandFn Fn, co
 void FEditorConsoleWidget::UpdateCompletionCandidates()
 {
 	CompletionCandidates = GetCompletionCandidates(InputBuf);
+	if (!bCompletionNavigationActive || CompletionNavigationValue != InputBuf)
+	{
+		CompletionSelectionIndex = -1;
+		bCompletionNavigationActive = false;
+		CompletionNavigationValue.clear();
+	}
+	if (CompletionSelectionIndex >= static_cast<int32>(CompletionCandidates.size()))
+	{
+		CompletionSelectionIndex = CompletionCandidates.empty() ? -1 : 0;
+	}
 }
 
 TArray<FEditorConsoleWidget::FCompletionCandidate> FEditorConsoleWidget::GetCompletionCandidates(const FString& Input) const
@@ -1385,6 +1411,26 @@ void FEditorConsoleWidget::HandleSkinningMode(const TArray<FString>& Args)
 	AddLog("Skinning mode set to %s.\n", NewMode == ESkinningMode::GPU ? "GPU" : "CPU");
 }
 
+void FEditorConsoleWidget::ApplyCompletionCandidate(ImGuiInputTextCallbackData* Data, int32 CandidateIndex)
+{
+	if (CandidateIndex < 0 || CandidateIndex >= static_cast<int32>(CompletionCandidates.size()))
+	{
+		return;
+	}
+
+	const FCompletionCandidate& Candidate = CompletionCandidates[CandidateIndex];
+	const FString CompletionText = HasPlaceholderArgument(Candidate.DisplayText)
+		? Candidate.CommandName
+		: Candidate.DisplayText;
+
+	Data->DeleteChars(0, Data->BufTextLen);
+	Data->InsertChars(0, CompletionText.c_str());
+
+	CompletionSelectionIndex = CandidateIndex;
+	bCompletionNavigationActive = true;
+	CompletionNavigationValue = Data->Buf;
+}
+
 // History & Tab-Completion Callback____________________________________________________________
 int32 FEditorConsoleWidget::TextEditCallback(ImGuiInputTextCallbackData* Data)
 {
@@ -1398,6 +1444,32 @@ int32 FEditorConsoleWidget::TextEditCallback(ImGuiInputTextCallbackData* Data)
 	}
 
 	if (Data->EventFlag == ImGuiInputTextFlags_CallbackHistory) {
+		if (!Console->CompletionCandidates.empty() || !Console->GetCompletionCandidates(Data->Buf).empty())
+		{
+			if (Console->CompletionCandidates.empty())
+			{
+				Console->CompletionCandidates = Console->GetCompletionCandidates(Data->Buf);
+			}
+
+			if (Data->EventKey == ImGuiKey_DownArrow)
+			{
+				Console->CompletionSelectionIndex = Console->CompletionSelectionIndex < 0
+					? 0
+					: (Console->CompletionSelectionIndex + 1) % static_cast<int32>(Console->CompletionCandidates.size());
+				Console->ApplyCompletionCandidate(Data, Console->CompletionSelectionIndex);
+				return 0;
+			}
+
+			if (Data->EventKey == ImGuiKey_UpArrow)
+			{
+				Console->CompletionSelectionIndex = Console->CompletionSelectionIndex < 0
+					? static_cast<int32>(Console->CompletionCandidates.size()) - 1
+					: (Console->CompletionSelectionIndex + static_cast<int32>(Console->CompletionCandidates.size()) - 1) % static_cast<int32>(Console->CompletionCandidates.size());
+				Console->ApplyCompletionCandidate(Data, Console->CompletionSelectionIndex);
+				return 0;
+			}
+		}
+
 		const int32 PrevPos = Console->HistoryPos;
 		if (Data->EventKey == ImGuiKey_UpArrow) {
 			if (Console->HistoryPos == -1)
