@@ -195,6 +195,17 @@ private:
 };
 
 
+class PhysicsAssetElement final : public ContentBrowserElement
+{
+public:
+	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
+	const char* GetDragItemType() override { return "PhysicsAssetContentItem"; }
+
+protected:
+	const char* GetTypeLabel() const override { return "Physics Asset"; }
+	uint32 GetAccentColor() const override { return IM_COL32(214, 92, 78, 255); }
+};
+
 class LuaBlueprintElement final : public ContentBrowserElement
 {
 public:
