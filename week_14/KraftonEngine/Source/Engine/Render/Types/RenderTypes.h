@@ -48,7 +48,12 @@ enum class ERenderPass : uint32
 	Decal,			// 데칼 (DepthReadOnly)
 	AdditiveDecal,	// Additive 빌보드 등
 	Fog,			// HeightFog 풀스크린 — Translucent 前(불투명/하늘만 fog, translucent는 fog 위에 그려져 안 덮임)
+	DoFSetup,		// Depth -> CoC setup — Translucent CoC 보정 전 불투명 CoC 생성
 	Translucent,	// 통합 Translucent 패스 (Font, SubUV, Billboard, Particle) — Blend는 per-DrawCommand가 결정
+	DoFBackgroundBlur, // SceneColor + positive CoC background layer
+	DoFForegroundBlur, // SceneColor + negative CoC foreground layer
+	DoFBokehScatter, // Bright large-CoC highlight bokeh layer
+	DoF,			// SceneColor + CoC composite
 	SelectionMask,	// 선택 스텐실 마스크
 	EditorLines,	// 디버그 라인 + 그리드 (LINELIST)
 	PostProcess,	// 아웃라인 풀스크린, Fog, SceneDepth
@@ -72,7 +77,12 @@ inline const char* GetRenderPassName(ERenderPass Pass)
 		"RenderPass::Decal",
 		"RenderPass::AdditiveDecal",
 		"RenderPass::Fog",
+		"RenderPass::DoFSetup",
 		"RenderPass::Translucent",
+		"RenderPass::DoFBackgroundBlur",
+		"RenderPass::DoFForegroundBlur",
+		"RenderPass::DoFBokehScatter",
+		"RenderPass::DoF",
 		"RenderPass::SelectionMask",
 		"RenderPass::EditorLines",
 		"RenderPass::PostProcess",
@@ -99,7 +109,12 @@ namespace RenderStateStrings
 		{ "Decal",         (int)ERenderPass::Decal },
 		{ "AdditiveDecal", (int)ERenderPass::AdditiveDecal },
 		{ "Fog",           (int)ERenderPass::Fog },
+		{ "DoFSetup",      (int)ERenderPass::DoFSetup },
 		{ "Translucent",   (int)ERenderPass::Translucent },
+		{ "DoFBackgroundBlur", (int)ERenderPass::DoFBackgroundBlur },
+		{ "DoFForegroundBlur", (int)ERenderPass::DoFForegroundBlur },
+		{ "DoFBokehScatter", (int)ERenderPass::DoFBokehScatter },
+		{ "DoF",           (int)ERenderPass::DoF },
 		{ "SelectionMask", (int)ERenderPass::SelectionMask },
 		{ "EditorLines",   (int)ERenderPass::EditorLines },
 		{ "PostProcess",   (int)ERenderPass::PostProcess },

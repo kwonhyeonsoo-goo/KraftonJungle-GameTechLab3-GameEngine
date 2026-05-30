@@ -64,6 +64,18 @@ struct FFrameContext
 	ID3D11RenderTargetView*   CullingHeatmapRTV     = nullptr;
 	ID3D11ShaderResourceView* CullingHeatmapSRV     = nullptr;
 
+	// DoF CoC RT
+	ID3D11RenderTargetView*   CoCRTV                = nullptr;
+	ID3D11ShaderResourceView* CoCSRV                = nullptr;
+	ID3D11RenderTargetView*   DoFBackgroundRTV      = nullptr;
+	ID3D11ShaderResourceView* DoFBackgroundSRV      = nullptr;
+	ID3D11RenderTargetView*   DoFForegroundRTV      = nullptr;
+	ID3D11ShaderResourceView* DoFForegroundSRV      = nullptr;
+	ID3D11RenderTargetView*   DoFBokehRTV           = nullptr;
+	ID3D11ShaderResourceView* DoFBokehSRV           = nullptr;
+	float DoFBokehWidth = 0.0f;
+	float DoFBokehHeight = 0.0f;
+
 	// Cursor position relative to viewport (for debug visualization)
 	uint32 CursorViewportX = UINT32_MAX;
 	uint32 CursorViewportY = UINT32_MAX;
@@ -128,5 +140,15 @@ struct FFrameContext
 		NormalSRV               = nullptr;
 		CullingHeatmapRTV       = nullptr;
 		CullingHeatmapSRV       = nullptr;
+		CoCRTV                  = nullptr;
+		CoCSRV                  = nullptr;
+		DoFBackgroundRTV        = nullptr;
+		DoFBackgroundSRV        = nullptr;
+		DoFForegroundRTV        = nullptr;
+		DoFForegroundSRV        = nullptr;
+		DoFBokehRTV             = nullptr;
+		DoFBokehSRV             = nullptr;
+		DoFBokehWidth           = 0.0f;
+		DoFBokehHeight          = 0.0f;
 	}
 };

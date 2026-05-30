@@ -656,6 +656,7 @@ void FViewportToolbar::RenderViewMode(const FToolbarRenderState& State)
 		ImGui::RadioButton("Scene Depth", &CurrentMode, static_cast<int32>(EViewMode::SceneDepth));
 		ImGui::RadioButton("World Normal", &CurrentMode, static_cast<int32>(EViewMode::WorldNormal));
 		ImGui::RadioButton("Light Culling", &CurrentMode, static_cast<int32>(EViewMode::LightCulling));
+		ImGui::RadioButton("DoF CoC", &CurrentMode, static_cast<int32>(EViewMode::DoFCoC));
 
 		RenderOptions.ViewMode = static_cast<EViewMode>(CurrentMode);
 
@@ -695,6 +696,13 @@ void FViewportToolbar::RenderShowFlags(const FToolbarRenderState& State)
 		ImGui::Checkbox("Debug Draw", &RenderOptions.ShowFlags.bDebugDraw);
 		ImGui::Checkbox("Octree", &RenderOptions.ShowFlags.bOctree);
 		ImGui::Checkbox("Fog", &RenderOptions.ShowFlags.bFog);
+		ImGui::Checkbox("DoF", &RenderOptions.ShowFlags.bDoF);
+		ImGui::SliderFloat("DoF Focus", &RenderOptions.DoFFocusDistance, 1.0f, 5000.0f, "%.1f");
+		ImGui::SliderFloat("DoF Range", &RenderOptions.DoFFocusRange, 1.0f, 2000.0f, "%.1f");
+		ImGui::SliderFloat("DoF Blur", &RenderOptions.DoFMaxBlurRadius, 0.0f, 12.0f, "%.1f");
+		ImGui::SliderFloat("DoF Bokeh Radius", &RenderOptions.DoFBokehRadiusThreshold, 0.0f, 12.0f, "%.1f");
+		ImGui::SliderFloat("DoF Bokeh Luma", &RenderOptions.DoFBokehLumaThreshold, 0.0f, 2.0f, "%.2f");
+		ImGui::SliderFloat("DoF Bokeh Intensity", &RenderOptions.DoFBokehIntensity, 0.0f, 4.0f, "%.2f");
 		ImGui::Checkbox("FXAA", &RenderOptions.ShowFlags.bFXAA);
 		ImGui::Checkbox("Gamma Correction", &RenderOptions.ShowFlags.bGammaCorrection);
 		ImGui::Checkbox("View Light Culling", &RenderOptions.ShowFlags.bViewLightCulling);
