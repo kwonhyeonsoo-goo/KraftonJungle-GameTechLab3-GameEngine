@@ -674,7 +674,7 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 	}
 
 	// Actor 선택이 바뀌면 초기화
-    if (LastSelectedActor != PrimaryActor)
+    if (LastSelectedActor.Get() != PrimaryActor)
 	{
 		SelectedComponent = nullptr;
 		LastSelectedActor = PrimaryActor;
@@ -1058,7 +1058,7 @@ void FEditorPropertyWidget::RenderComponentTree(AActor* Actor)
 
 			ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
-			if (!bActorSelected && SelectedComponent == Comp)
+			if (!bActorSelected && SelectedComponent.Get() == Comp)
 			{
 				Flags |= ImGuiTreeNodeFlags_Selected;
 			}
@@ -1128,7 +1128,7 @@ void FEditorPropertyWidget::RenderSceneComponentNode(USceneComponent* Comp)
 	ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen;
 	if (!bHasVisibleChildren)
 		Flags |= ImGuiTreeNodeFlags_Leaf;
-	if (!bActorSelected && SelectedComponent == Comp)
+	if (!bActorSelected && SelectedComponent.Get() == Comp)
 		Flags |= ImGuiTreeNodeFlags_Selected;
 
 	bool bIsRoot = (Comp->GetParent() == nullptr);
@@ -1199,11 +1199,11 @@ void FEditorPropertyWidget::RenderSceneComponentNode(USceneComponent* Comp)
 
 void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArray<AActor*>& SelectedActors)
 {
-	if (SelectedComponent != Actor->GetRootComponent())
+	if (SelectedComponent.Get() != Actor->GetRootComponent())
 	{
 		if (ImGui::Button("Remove"))
 		{
-			if (SelectedComponent != nullptr)
+			if (SelectedComponent.Get() != nullptr)
 			{
 				Actor->RemoveComponent(SelectedComponent);
 				SelectedComponent = nullptr;

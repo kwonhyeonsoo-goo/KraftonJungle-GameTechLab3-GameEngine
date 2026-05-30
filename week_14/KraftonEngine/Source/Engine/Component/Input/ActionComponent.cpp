@@ -379,7 +379,7 @@ void UActionComponent::RegisterTimeDilationComponent()
 		bHasCapturedGlobalBaseTimeDilation = true;
 	}
 
-	if (std::find(TimeDilationComponents.begin(), TimeDilationComponents.end(), this) == TimeDilationComponents.end())
+	if (std::find_if(TimeDilationComponents.begin(), TimeDilationComponents.end(), [this](const TWeakObjectPtr<UActionComponent>& Ref) { return Ref.Get() == this; }) == TimeDilationComponents.end())
 	{
 		TimeDilationComponents.push_back(this);
 	}
@@ -389,7 +389,7 @@ void UActionComponent::RegisterTimeDilationComponent()
 
 void UActionComponent::UnregisterTimeDilationComponent()
 {
-	auto It = std::find(TimeDilationComponents.begin(), TimeDilationComponents.end(), this);
+	auto It = std::find_if(TimeDilationComponents.begin(), TimeDilationComponents.end(), [this](const TWeakObjectPtr<UActionComponent>& Ref) { return Ref.Get() == this; });
 	if (It != TimeDilationComponents.end())
 	{
 		TimeDilationComponents.erase(It);

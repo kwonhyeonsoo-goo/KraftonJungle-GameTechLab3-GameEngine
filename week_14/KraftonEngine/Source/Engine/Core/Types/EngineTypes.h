@@ -2,6 +2,10 @@
 
 #include "Core/Types/CoreTypes.h"
 #include "Math/Vector.h"
+#include "Object/Reflection/ObjectMacros.h"
+#include "Object/Reflection/UStruct.h"
+
+#include "Source/Engine/Core/Types/EngineTypes.generated.h"
 
 // ============================================================
 // FColor — RGBA 색상 (0~255 정수 기반, 셰이더 전달 시 Normalized)
@@ -33,9 +37,22 @@ struct FColor
 // ============================================================
 // FLinearColor — RGBA 색상 (0.0~1.0 float 기반, 셰이더 전달 표준)
 // ============================================================
+USTRUCT()
 struct FLinearColor
 {
-	float R, G, B, A;
+	GENERATED_BODY()
+
+	UPROPERTY(Save)
+	float R;
+
+	UPROPERTY(Save)
+	float G;
+
+	UPROPERTY(Save)
+	float B;
+
+	UPROPERTY(Save)
+	float A;
 
 	FLinearColor() : R(0.0f), G(0.0f), B(0.0f), A(1.0f) {}
 	FLinearColor(float InR, float InG, float InB, float InA = 1.0f)

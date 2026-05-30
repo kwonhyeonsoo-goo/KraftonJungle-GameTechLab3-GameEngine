@@ -6,6 +6,7 @@
 #include "Materials/Material.h"
 #include "Materials/MaterialInstance.h"
 #include "Materials/MaterialManager.h"
+#include "Mesh/Static/StaticMesh.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleEmitter.h"
 #include "Particle/ParticleEmitterInstance.h"

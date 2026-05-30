@@ -32,12 +32,12 @@ public:
 	void UnPossess();
 
 	UFUNCTION(Pure, Category="PlayerController")
-	APawn* GetPossessedPawn() const { return PossessedPawn; }
+	APawn* GetPossessedPawn() const { return PossessedPawn.Get(); }
 
 	// ─── Camera Manager ──────────────────────────────────────────
 	// UE: APlayerController::PlayerCameraManager 멤버. 현재는 World 가 owner 이고 PC 는 reference 만 보유.
 	// E.2 청크 3 에서 World 의 CameraManager 멤버가 제거되면 PC 가 직접 SpawnActor 로 owner.
-	APlayerCameraManager* GetPlayerCameraManager() const { return PlayerCameraManager; }
+	APlayerCameraManager* GetPlayerCameraManager() const { return PlayerCameraManager.Get(); }
 
 	// ─── View Target ─────────────────────────────────────────────
 	// 새 view target 으로 전환 (블렌드 가능). UCameraComponent 가 붙어있는 액터 권장.

@@ -2,13 +2,30 @@
 #include <cmath>
 #include "Vector.h"
 #include "MathUtils.h"
+#include "Object/Reflection/ObjectMacros.h"
+#include "Object/Reflection/UStruct.h"
+
+#include "Source/Engine/Math/Quat.generated.h"
 
 struct FRotator;
 struct FMatrix;
 
+USTRUCT()
 struct FQuat
 {
-	float X, Y, Z, W;
+	GENERATED_BODY()
+
+	UPROPERTY(Save)
+	float X;
+
+	UPROPERTY(Save)
+	float Y;
+
+	UPROPERTY(Save)
+	float Z;
+
+	UPROPERTY(Save)
+	float W;
 
 	FQuat() : X(0.0f), Y(0.0f), Z(0.0f), W(1.0f) {}
 	FQuat(float InX, float InY, float InZ, float InW) : X(InX), Y(InY), Z(InZ), W(InW) {}

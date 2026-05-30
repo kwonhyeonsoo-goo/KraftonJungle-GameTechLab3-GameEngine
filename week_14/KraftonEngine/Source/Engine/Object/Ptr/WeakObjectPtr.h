@@ -77,6 +77,8 @@ public:
 	operator T*() const { return Get(); }
 	T* operator->() const { return Get(); }
 
+	bool Equals(const T* Other) const { return Get() == Other; }
+
 	bool operator==(const TWeakObjectPtr& Other) const
 	{
 		return Object == Other.Object && SerialNumber == Other.SerialNumber;

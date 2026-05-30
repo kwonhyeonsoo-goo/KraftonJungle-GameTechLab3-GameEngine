@@ -12,7 +12,7 @@
 
 USceneComponent* FSelectionManager::GetSelectedComponent() const
 {
-    return IsValid(SelectedComponent) ? SelectedComponent : nullptr;
+    return SelectedComponent.Get();
 }
 
 bool FSelectionManager::IsSelected(AActor* Actor) const
@@ -25,17 +25,17 @@ bool FSelectionManager::IsSelected(AActor* Actor) const
     return std::find_if(
         SelectedActors.begin(),
         SelectedActors.end(),
-        [Actor](AActor* SelectedActor)
+        [Actor](const TWeakObjectPtr<AActor>& SelectedActor)
         {
-            return IsValid(SelectedActor) && SelectedActor == Actor;
+            return SelectedActor.Get() == Actor;
         }) != SelectedActors.end();
 }
 
 AActor* FSelectionManager::GetPrimarySelection() const
 {
-    for (AActor* Actor : SelectedActors)
+    for (const TWeakObjectPtr<AActor>& ActorRef : SelectedActors)
     {
-        if (IsValid(Actor))
+        if (AActor* Actor = ActorRef.Get())
         {
             return Actor;
         }
@@ -54,9 +54,9 @@ TArray<AActor*> FSelectionManager::GetSelectedActors() const
     TArray<AActor*> ValidActors;
     ValidActors.reserve(SelectedActors.size());
 
-    for (AActor* Actor : SelectedActors)
+    for (const TWeakObjectPtr<AActor>& ActorRef : SelectedActors)
     {
-        if (IsValid(Actor))
+        if (AActor* Actor = ActorRef.Get())
         {
             ValidActors.push_back(Actor);
         }
@@ -106,15 +106,18 @@ void FSelectionManager::Select(AActor* Actor)
         return;
     }
 
-    if (SelectedActors.size() == 1 && SelectedActors.front() == Actor && SelectedComponent.Get() == RootComponent)
+    if (SelectedActors.size() == 1 && SelectedActors.front().Get() == Actor && SelectedComponent.Get() == RootComponent)
     {
         return;
     }
 
     // 기존 선택 해제
-    for (AActor* Prev : SelectedActors)
+    for (const TWeakObjectPtr<AActor>& PrevRef : SelectedActors)
     {
-        SetActorProxiesSelected(Prev, false);
+        if (AActor* Prev = PrevRef.Get())
+        {
+            SetActorProxiesSelected(Prev, false);
+        }
     }
 
     SelectedActors.clear();
@@ -146,8 +149,9 @@ void FSelectionManager::SelectRange(AActor* ClickedActor, const TArray<AActor*>&
     // Find nearest already-selected actor's index in ActorList
     int32 AnchorIdx = ClickedIdx;
     int32 MinDist   = INT_MAX;
-    for (AActor* Sel : SelectedActors)
+    for (const TWeakObjectPtr<AActor>& SelRef : SelectedActors)
     {
+        AActor* Sel = SelRef.Get();
         if (!IsValid(Sel))
         {
             continue;
@@ -173,7 +177,7 @@ void FSelectionManager::SelectRange(AActor* ClickedActor, const TArray<AActor*>&
     int32 Hi = std::max(AnchorIdx, ClickedIdx);
 
     // 기존 선택 해제
-    for (AActor* Prev : SelectedActors) SetActorProxiesSelected(Prev, false);
+    for (const TWeakObjectPtr<AActor>& PrevRef : SelectedActors) { if (AActor* Prev = PrevRef.Get()) SetActorProxiesSelected(Prev, false); }
 
     SelectedActors.clear();
     SelectedComponent.Reset();
@@ -198,15 +202,18 @@ void FSelectionManager::ToggleSelect(AActor* Actor)
 
     if (!IsValid(Actor)) return;
 
-    auto It = std::find(SelectedActors.begin(), SelectedActors.end(), Actor);
+    auto It = std::find_if(SelectedActors.begin(), SelectedActors.end(), [Actor](const TWeakObjectPtr<AActor>& Ref) { return Ref.Get() == Actor; });
     if (It != SelectedActors.end())
     {
         SetActorProxiesSelected(Actor, false);
         SelectedActors.erase(It);
-        if (SelectedComponent.GetAlive() && SelectedComponent->GetOwner() == Actor)
+        if (USceneComponent* AliveComponent = SelectedComponent.GetAlive())
         {
-            SelectedComponent.Reset();
-            PruneInvalidSelection();
+            if (AliveComponent->GetOwner() == Actor)
+            {
+                SelectedComponent.Reset();
+                PruneInvalidSelection();
+            }
         }
     }
     else
@@ -226,15 +233,18 @@ void FSelectionManager::Deselect(AActor* Actor)
 {
     PruneInvalidSelection();
 
-    auto It = std::find(SelectedActors.begin(), SelectedActors.end(), Actor);
+    auto It = std::find_if(SelectedActors.begin(), SelectedActors.end(), [Actor](const TWeakObjectPtr<AActor>& Ref) { return Ref.Get() == Actor; });
     if (It != SelectedActors.end())
     {
         SetActorProxiesSelected(Actor, false);
         SelectedActors.erase(It);
-        if (SelectedComponent.GetAlive() && SelectedComponent->GetOwner() == Actor)
+        if (USceneComponent* AliveComponent = SelectedComponent.GetAlive())
         {
-            SelectedComponent.Reset();
-            PruneInvalidSelection();
+            if (AliveComponent->GetOwner() == Actor)
+            {
+                SelectedComponent.Reset();
+                PruneInvalidSelection();
+            }
         }
     }
     SyncGizmo();
@@ -244,14 +254,17 @@ void FSelectionManager::ClearSelection()
 {
     PruneInvalidSelection();
 
-    if (SelectedActors.empty() && SelectedComponent == nullptr)
+    if (SelectedActors.empty() && SelectedComponent.Get() == nullptr)
     {
         return;
     }
 
-    for (AActor* Actor : SelectedActors)
+    for (const TWeakObjectPtr<AActor>& ActorRef : SelectedActors)
     {
-        SetActorProxiesSelected(Actor, false);
+        if (AActor* Actor = ActorRef.Get())
+        {
+            SetActorProxiesSelected(Actor, false);
+        }
     }
 
     SelectedActors.clear();
@@ -393,7 +406,7 @@ void FSelectionManager::SetWorld(UWorld* InWorld)
     // 새 Scene에 Gizmo 프록시 등록
     if (IsValid(Gizmo) && IsValid(World.Get()))
     {
-        Gizmo->SetScene(&World->GetScene());
+        Gizmo->SetScene(&World.Get()->GetScene());
         Gizmo->CreateRenderState();
     }
 
@@ -416,9 +429,9 @@ void FSelectionManager::PruneInvalidSelection()
         std::remove_if(
             SelectedActors.begin(),
             SelectedActors.end(),
-            [](AActor* Actor)
+            [](const TWeakObjectPtr<AActor>& ActorRef)
             {
-                return !IsValid(Actor);
+                return ActorRef.Get() == nullptr;
             }
         ),
         SelectedActors.end()
@@ -428,7 +441,7 @@ void FSelectionManager::PruneInvalidSelection()
     if (SelectedComponent.GetAlive())
     {
         AActor* Owner = SelectedComponent.GetAlive()->GetOwner();
-        if (!IsValid(SelectedComponent) || !IsValid(Owner))
+        if (!IsValid(SelectedComponent.Get()) || !IsValid(Owner))
         {
             SelectedComponent.Reset();
             bSelectionChanged = true;
@@ -437,7 +450,7 @@ void FSelectionManager::PruneInvalidSelection()
 
     if (SelectedComponent.Get())
     {
-        AActor* Owner = SelectedComponent->GetOwner();
+        AActor* Owner = SelectedComponent.Get()->GetOwner();
         if (!IsValid(Owner) || !IsSelected(Owner))
         {
             SelectedComponent.Reset();
@@ -447,8 +460,9 @@ void FSelectionManager::PruneInvalidSelection()
 
     if (!SelectedComponent.Get() && !SelectedActors.empty())
     {
-        for (AActor* Actor : SelectedActors)
+        for (const TWeakObjectPtr<AActor>& ActorRef : SelectedActors)
         {
+            AActor* Actor = ActorRef.Get();
             if (!IsValid(Actor))
             {
                 continue;

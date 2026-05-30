@@ -1311,11 +1311,14 @@ def parse_ufunctions(
                 return_storage_type: str | None = None
                 if return_type != "void":
                     if return_type.endswith("&"):
-                        warnings.append(
-                            f"error: {class_name}.{function_name}: reflected return references are not supported; return by value or pointer"
-                        )
-                        cursor = declaration_end
-                        continue
+                        canonical_return_type = canonicalize_cpp_type(return_type)
+                        is_const_return_ref = canonical_return_type.endswith("&") and bool(re.search(r"(^|\W)const(\W|$)", canonical_return_type))
+                        if not is_const_return_ref:
+                            warnings.append(
+                                f"error: {class_name}.{function_name}: reflected non-const return references are not supported; return by value, pointer, or const reference"
+                            )
+                            cursor = declaration_end
+                            continue
                     return_storage_type = strip_reference_for_storage(return_type)
                     return_property, error = make_reflected_property_for_type(
                         owner_for_params,

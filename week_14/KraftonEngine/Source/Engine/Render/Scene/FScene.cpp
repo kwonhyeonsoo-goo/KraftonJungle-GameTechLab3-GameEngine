@@ -194,7 +194,7 @@ void FScene::RemovePrimitive(FPrimitiveSceneProxy* Proxy)
 				}
 			}
 			if (!bActorStillSelected)
-				SelectedActors.erase(Actor);
+				SelectedActors.erase(TWeakObjectPtr<AActor>(Actor));
 		}
 	}
 
@@ -307,7 +307,7 @@ void FScene::SetProxySelected(FPrimitiveSceneProxy* Proxy, bool bSelected)
 			SelectedProxies.push_back(Proxy);
 		}
 		if (IsValid(Actor))
-			SelectedActors.insert(Actor);
+			SelectedActors.insert(TWeakObjectPtr<AActor>(Actor));
 	}
 	else
 	{
@@ -327,7 +327,7 @@ void FScene::SetProxySelected(FPrimitiveSceneProxy* Proxy, bool bSelected)
 				}
 			}
 			if (!bActorStillSelected)
-				SelectedActors.erase(Actor);
+				SelectedActors.erase(TWeakObjectPtr<AActor>(Actor));
 		}
 	}
 }
@@ -359,9 +359,9 @@ TArray<AActor*> FScene::GetSelectedActors() const
 {
 	TArray<AActor*> Result;
 	Result.reserve(SelectedActors.size());
-	for (AActor* Actor : SelectedActors)
+	for (const TWeakObjectPtr<AActor>& ActorRef : SelectedActors)
 	{
-		if (IsValid(Actor))
+		if (AActor* Actor = ActorRef.Get())
 		{
 			Result.push_back(Actor);
 		}
