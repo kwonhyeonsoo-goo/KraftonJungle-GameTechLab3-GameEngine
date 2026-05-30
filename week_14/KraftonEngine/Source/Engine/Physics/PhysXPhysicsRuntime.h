@@ -8,6 +8,7 @@
 #include "Physics/PhysicsRuntime.h"
 #include "Physics/PhysicsShapeInstance.h"
 #include "Physics/PhysicsStats.h"
+#include "Physics/PhysicsWorldSnapshot.h"
 
 #include <memory>
 #include <mutex>
@@ -84,6 +85,8 @@ public:
 
     void DestroyConstraint(FPhysicsConstraintHandle Constraint) override;
 
+    void CaptureEngineTransforms_GameThread() override;
+
     FTransform GetBodyTransform(FPhysicsBodyHandle Body) const override;
 
     void SetBodyTransform(
@@ -118,6 +121,9 @@ public:
 
     void SetLinearLock(FPhysicsBodyHandle Body, bool bX, bool bY, bool bZ) override;
     void SetAngularLock(FPhysicsBodyHandle Body, bool bX, bool bY, bool bZ) override;
+
+    // Game Thread 는 이 스냅샷을 acquire 해서 Component/Ragdoll/Vehicle visual 을 적용한다.
+    bool AcquireLatestSnapshot(FPhysicsWorldSnapshot& OutSnapshot) const override;
 
     // 외부 소비자(C/D)는 이 세 함수로만 디버그 데이터를 얻는다 — 전부 step 직후 publish 된
     // 스냅샷의 복사본을 lock 아래에서 반환한다 (live PhysX 직접 접근 없음).
@@ -181,7 +187,7 @@ private:
     void DetachShapeForComponent(UPrimitiveComponent* Comp);
 
     void SyncEngineToPhysics(FBodyInstance& Body);
-    void SyncPhysicsToEngine(FBodyInstance& Body);
+    void CachePhysicsResult(FBodyInstance& Body);
 
     // Public mutator 들은 command 만 큐에 넣는다. 실제 PhysX 변경은 physics step 의
     // ApplyPendingCommands 가 아래 ApplyXxx_Internal 들을 호출할 때만 일어난다.
@@ -203,8 +209,10 @@ private:
     void  UpdateStats();
 
     // 스냅샷 빌더 — step 내부(read 시점)에서만 live PhysX 를 읽어 스냅샷을 구성한다.
+    void BuildBodySnapshots_Internal(TArray<FPhysicsBodySnapshot>& OutBodies) const;
     void BuildDebugBodies_Internal(TArray<FPhysicsDebugBody>& OutBodies) const;
     void BuildDebugConstraints_Internal(TArray<FPhysicsDebugConstraint>& OutConstraints) const;
+    void BuildWorldSnapshot_Internal();
     void BuildDebugSnapshot_Internal();
 
     FActorCompoundBody*       FindCompoundByActor(AActor* Actor);
@@ -242,6 +250,11 @@ private:
 
     // 단조 증가 physics step 카운터 — body CreatedStep/DestroyedStep, snapshot StepIndex 용.
     uint64 StepIndex = 0;
+
+    // Gameplay/Render 적용용 world snapshot — step 직후 publish, Game Thread 는 복사본만 읽는다.
+    mutable std::mutex    WorldSnapshotMutex;
+    FPhysicsWorldSnapshot WorldSnapshot;
+    bool                  bHasWorldSnapshot = false;
 
     // Debug/Stat 스냅샷 — step 직후 publish, 외부는 lock 아래에서 복사본만 읽는다.
     bool                  bDebugSnapshotEnabled = true;

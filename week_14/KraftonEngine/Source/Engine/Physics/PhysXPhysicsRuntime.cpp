@@ -263,6 +263,15 @@ void FPhysXPhysicsRuntime::Shutdown()
     CommandQueue.Clear();
     Stats = FPhysicsStats();
     Accumulator = 0.0f;
+    {
+        std::lock_guard<std::mutex> Lock(WorldSnapshotMutex);
+        WorldSnapshot = FPhysicsWorldSnapshot();
+        bHasWorldSnapshot = false;
+    }
+    {
+        std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
+        DebugSnapshot = FPhysicsDebugSnapshot();
+    }
 
     if (bSceneLockedForShutdown)
     {
@@ -364,22 +373,7 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
                     continue;
                 }
 
-                FBodyInstance& Body = *BodyPtr;
-                if (Body.ShouldPullTransformToEngine())
-                {
-                    SyncPhysicsToEngine(Body);
-                }
-                else
-                {
-                    Body.PreviousTransform = Body.CurrentTransform;
-                    Body.CurrentTransform  = ToFTransform(Body.Actor->getGlobalPose());
-                    if (PxRigidDynamic* Dynamic = Body.Actor->is<PxRigidDynamic>())
-                    {
-                        Body.LinearVelocity  = ToFVector(Dynamic->getLinearVelocity());
-                        Body.AngularVelocity = ToFVector(Dynamic->getAngularVelocity());
-                        Body.bIsSleeping     = Dynamic->isSleeping();
-                    }
-                }
+                CachePhysicsResult(*BodyPtr);
             }
         }
 
@@ -426,19 +420,22 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
     Stats.NumPendingCommands    = PendingCommandsAtDrain;
     Stats.NumAppliedCommands    = AppliedCommands;
 
-    // step 직후 한 곳에서만 live PhysX 를 읽어 Debug/Stat 스냅샷을 publish 한다.
-    if (bDebugSnapshotEnabled)
+    const auto SnapStart = FClock::now();
     {
-        const auto SnapStart = FClock::now();
+        PxSceneReadLock ReadLock(*Scene);
+        BuildWorldSnapshot_Internal();
+    }
+    Stats.BuildSnapshotMs = DurationMs(SnapStart, FClock::now());
+    {
+        std::lock_guard<std::mutex> Lock(WorldSnapshotMutex);
+        if (bHasWorldSnapshot)
         {
-            PxSceneReadLock ReadLock(*Scene);
-            BuildDebugSnapshot_Internal();
+            WorldSnapshot.Stats = Stats;
         }
-        Stats.BuildSnapshotMs = DurationMs(SnapStart, FClock::now());
-        {
-            std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
-            DebugSnapshot.Stats = Stats;
-        }
+    }
+    {
+        std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
+        DebugSnapshot.Stats = Stats;
     }
 }
 
@@ -958,6 +955,32 @@ void FPhysXPhysicsRuntime::DestroyConstraint(FPhysicsConstraintHandle Constraint
     EnqueueCommand(Cmd);
 }
 
+void FPhysXPhysicsRuntime::CaptureEngineTransforms_GameThread()
+{
+    for (auto& BodyPtr : Bodies)
+    {
+        if (!BodyPtr || !BodyPtr->IsAlive())
+        {
+            continue;
+        }
+
+        FBodyInstance& Body = *BodyPtr;
+        if (!Body.ShouldPushTransformToPhysics() && !Body.IsKinematicTargetDriven())
+        {
+            continue;
+        }
+
+        UPrimitiveComponent* Component = Body.OwnerComponent.Get();
+        if (!IsValid(Component))
+        {
+            continue;
+        }
+
+        Body.PreviousTransform = Body.CurrentTransform;
+        Body.CurrentTransform = GetComponentWorldTransform(Component);
+    }
+}
+
 FTransform FPhysXPhysicsRuntime::GetBodyTransform(FPhysicsBodyHandle BodyHandle) const
 {
     const FBodyInstance* Body = ResolveBody(BodyHandle);
@@ -967,6 +990,18 @@ FTransform FPhysXPhysicsRuntime::GetBodyTransform(FPhysicsBodyHandle BodyHandle)
     }
 
     return Body->CurrentTransform;
+}
+
+bool FPhysXPhysicsRuntime::AcquireLatestSnapshot(FPhysicsWorldSnapshot& OutSnapshot) const
+{
+    std::lock_guard<std::mutex> Lock(WorldSnapshotMutex);
+    if (!bHasWorldSnapshot)
+    {
+        return false;
+    }
+
+    OutSnapshot = WorldSnapshot;
+    return true;
 }
 
 void FPhysXPhysicsRuntime::SetBodyTransform(
@@ -1321,6 +1356,46 @@ void FPhysXPhysicsRuntime::ApplySetAngularLock_Internal(FPhysicsBodyHandle BodyH
     Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_Z, bZ);
 }
 
+void FPhysXPhysicsRuntime::BuildBodySnapshots_Internal(TArray<FPhysicsBodySnapshot>& OutBodies) const
+{
+    OutBodies.clear();
+
+    for (const auto& BodyPtr : Bodies)
+    {
+        if (!BodyPtr || !BodyPtr->IsAlive() || !BodyPtr->Actor)
+        {
+            continue;
+        }
+
+        const FBodyInstance& Body = *BodyPtr;
+
+        FPhysicsBodySnapshot Snapshot;
+        Snapshot.Body = Body.Handle;
+
+        AActor* OwnerActor = Body.OwnerActor.Get();
+        UPrimitiveComponent* OwnerComponent = Body.OwnerComponent.Get();
+        Snapshot.OwnerActorId = OwnerActor ? OwnerActor->GetUUID() : 0;
+        Snapshot.OwnerComponentId = OwnerComponent ? OwnerComponent->GetUUID() : 0;
+
+        Snapshot.BoneName = Body.BoneName;
+        Snapshot.Domain = Body.Domain;
+        Snapshot.SyncMode = Body.SyncMode;
+        Snapshot.BodyType = Body.BodyType;
+
+        Snapshot.PreviousTransform = Body.PreviousTransform;
+        Snapshot.CurrentTransform = Body.CurrentTransform;
+        Snapshot.LinearVelocity = Body.LinearVelocity;
+        Snapshot.AngularVelocity = Body.AngularVelocity;
+        Snapshot.bIsSleeping = Body.bIsSleeping;
+
+        Snapshot.bIsStatic = Body.BodyType == EPhysicsBodyType::Static;
+        Snapshot.bIsDynamic = Body.BodyType == EPhysicsBodyType::Dynamic;
+        Snapshot.bIsKinematic = Body.BodyType == EPhysicsBodyType::Kinematic;
+
+        OutBodies.push_back(Snapshot);
+    }
+}
+
 void FPhysXPhysicsRuntime::BuildDebugBodies_Internal(TArray<FPhysicsDebugBody>& OutBodies) const
 {
     OutBodies.clear();
@@ -1426,17 +1501,48 @@ void FPhysXPhysicsRuntime::BuildDebugConstraints_Internal(TArray<FPhysicsDebugCo
     }
 }
 
+void FPhysXPhysicsRuntime::BuildWorldSnapshot_Internal()
+{
+    FPhysicsWorldSnapshot NewWorldSnapshot;
+    NewWorldSnapshot.StepIndex = StepIndex;
+    NewWorldSnapshot.FixedDt = FixedDt;
+    NewWorldSnapshot.InterpolationAlpha = Stats.InterpolationAlpha;
+    NewWorldSnapshot.Stats = Stats;
+
+    BuildBodySnapshots_Internal(NewWorldSnapshot.Bodies);
+    if (bDebugSnapshotEnabled)
+    {
+        BuildDebugBodies_Internal(NewWorldSnapshot.DebugBodies);
+        BuildDebugConstraints_Internal(NewWorldSnapshot.DebugConstraints);
+    }
+    else
+    {
+        NewWorldSnapshot.DebugBodies.clear();
+        NewWorldSnapshot.DebugConstraints.clear();
+    }
+
+    FPhysicsDebugSnapshot NewDebugSnapshot;
+    NewDebugSnapshot.Bodies = NewWorldSnapshot.DebugBodies;
+    NewDebugSnapshot.Constraints = NewWorldSnapshot.DebugConstraints;
+    NewDebugSnapshot.Stats = NewWorldSnapshot.Stats;
+    NewDebugSnapshot.InterpolationAlpha = NewWorldSnapshot.InterpolationAlpha;
+    NewDebugSnapshot.StepIndex = NewWorldSnapshot.StepIndex;
+
+    {
+        std::lock_guard<std::mutex> Lock(WorldSnapshotMutex);
+        WorldSnapshot = NewWorldSnapshot;
+        bHasWorldSnapshot = true;
+    }
+
+    {
+        std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
+        DebugSnapshot = std::move(NewDebugSnapshot);
+    }
+}
+
 void FPhysXPhysicsRuntime::BuildDebugSnapshot_Internal()
 {
-    FPhysicsDebugSnapshot NewSnapshot;
-    BuildDebugBodies_Internal(NewSnapshot.Bodies);
-    BuildDebugConstraints_Internal(NewSnapshot.Constraints);
-    NewSnapshot.Stats              = Stats;
-    NewSnapshot.InterpolationAlpha = Stats.InterpolationAlpha;
-    NewSnapshot.StepIndex          = StepIndex;
-
-    std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
-    DebugSnapshot = std::move(NewSnapshot);
+    BuildWorldSnapshot_Internal();
 }
 
 void FPhysXPhysicsRuntime::GatherDebugBodies(TArray<FPhysicsDebugBody>& OutBodies) const
@@ -1850,12 +1956,12 @@ void FPhysXPhysicsRuntime::DetachShapeForComponent(UPrimitiveComponent* Comp)
 
 void FPhysXPhysicsRuntime::SyncEngineToPhysics(FBodyInstance& Body)
 {
-    if (!Body.Actor || !IsValid(Body.OwnerComponent.Get()))
+    if (!Body.Actor)
     {
         return;
     }
 
-    const FTransform  Target   = GetComponentWorldTransform(Body.OwnerComponent.Get());
+    const FTransform  Target   = Body.CurrentTransform;
     const PxTransform PxTarget = ToPxTransform(Target);
 
     if (PxRigidDynamic* Dynamic = Body.Actor->is<PxRigidDynamic>())
@@ -1878,28 +1984,28 @@ void FPhysXPhysicsRuntime::SyncEngineToPhysics(FBodyInstance& Body)
     Body.CurrentTransform = Target;
 }
 
-void FPhysXPhysicsRuntime::SyncPhysicsToEngine(FBodyInstance& Body)
+void FPhysXPhysicsRuntime::CachePhysicsResult(FBodyInstance& Body)
 {
-    if (!Body.Actor || !IsValid(Body.OwnerComponent.Get()))
+    if (!Body.Actor)
     {
         return;
     }
 
-    PxRigidDynamic* Dynamic = Body.Actor->is<PxRigidDynamic>();
-    if (!Dynamic || (Dynamic->getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC))
-    {
-        return;
-    }
-
-    const PxTransform Pose = Dynamic->getGlobalPose();
     Body.PreviousTransform = Body.CurrentTransform;
-    Body.CurrentTransform  = ToFTransform(Pose);
-    Body.LinearVelocity    = ToFVector(Dynamic->getLinearVelocity());
-    Body.AngularVelocity   = ToFVector(Dynamic->getAngularVelocity());
-    Body.bIsSleeping       = Dynamic->isSleeping();
+    Body.CurrentTransform  = ToFTransform(Body.Actor->getGlobalPose());
 
-    Body.OwnerComponent.Get()->SetWorldLocation(Body.CurrentTransform.Location);
-    Body.OwnerComponent.Get()->SetRelativeRotation(Body.CurrentTransform.Rotation);
+    if (PxRigidDynamic* Dynamic = Body.Actor->is<PxRigidDynamic>())
+    {
+        Body.LinearVelocity  = ToFVector(Dynamic->getLinearVelocity());
+        Body.AngularVelocity = ToFVector(Dynamic->getAngularVelocity());
+        Body.bIsSleeping     = Dynamic->isSleeping();
+    }
+    else
+    {
+        Body.LinearVelocity  = FVector::ZeroVector;
+        Body.AngularVelocity = FVector::ZeroVector;
+        Body.bIsSleeping     = false;
+    }
 }
 
 void FPhysXPhysicsRuntime::EnqueueCommand(const FPhysicsCommand& Command)

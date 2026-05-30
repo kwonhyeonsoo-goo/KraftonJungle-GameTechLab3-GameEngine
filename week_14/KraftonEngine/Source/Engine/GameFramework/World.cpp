@@ -5,6 +5,8 @@
 #include "Engine/Component/Camera/CameraComponent.h"
 #include "Render/Types/LODContext.h"
 #include "Physics/PhysXPhysicsScene.h"
+#include "Physics/PhysicsRuntime.h"
+#include "Physics/PhysicsWorldSnapshot.h"
 #include "GameFramework/GameMode/GameModeBase.h"
 #include "GameFramework/GameMode/GameStateBase.h"
 #include "GameFramework/GameMode/PlayerController.h"
@@ -418,7 +420,12 @@ void UWorld::Tick(float DeltaTime, ELevelTick TickType)
 	if (bHasBegunPlay && PhysicsScene)
 	{
 		SCOPE_STAT_CAT("PhysicsScene", "1_WorldTick");
+		if (IPhysicsRuntime* Runtime = PhysicsScene->GetRuntime())
+		{
+			Runtime->CaptureEngineTransforms_GameThread();
+		}
 		PhysicsScene->Tick(DeltaTime);
+        ApplyPhysicsSnapshot_GameThread();
         PhysicsScene->DispatchPendingEvents();
 	}
 
@@ -429,6 +436,44 @@ void UWorld::Tick(float DeltaTime, ELevelTick TickType)
 	// 카메라는 물리/액터 Tick 이후 갱신 — 차량 1인칭처럼 physics body 에 붙은 카메라가
 	// 같은 프레임의 최신 transform 으로 POV cache 를 채운다.
 	TickPlayerCamera();
+}
+
+void UWorld::ApplyPhysicsSnapshot_GameThread()
+{
+	if (!PhysicsScene)
+	{
+		return;
+	}
+
+	IPhysicsRuntime* Runtime = PhysicsScene->GetRuntime();
+	if (!Runtime)
+	{
+		return;
+	}
+
+	FPhysicsWorldSnapshot Snapshot;
+	if (!Runtime->AcquireLatestSnapshot(Snapshot))
+	{
+		return;
+	}
+
+	for (const FPhysicsBodySnapshot& Body : Snapshot.Bodies)
+	{
+		if (!Body.ShouldApplyToComponent())
+		{
+			continue;
+		}
+
+		UObject* Object = UObjectManager::Get().FindByUUID(Body.OwnerComponentId);
+		UPrimitiveComponent* Component = Cast<UPrimitiveComponent>(Object);
+		if (!IsValid(Component))
+		{
+			continue;
+		}
+
+		Component->SetWorldLocation(Body.CurrentTransform.Location);
+		Component->SetWorldRotation(Body.CurrentTransform.Rotation);
+	}
 }
 
 void UWorld::TickPlayerCamera() const

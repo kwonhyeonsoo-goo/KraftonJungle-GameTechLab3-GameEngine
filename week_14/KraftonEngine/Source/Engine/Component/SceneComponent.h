@@ -82,6 +82,9 @@ public:
 	const FMatrix& GetWorldInverseMatrix() const;
 	UFUNCTION(Callable, Category="Scene|Transform")
 	void SetWorldLocation(FVector NewWorldLocation);
+	UFUNCTION(Callable, Category="Scene|Transform")
+	void SetWorldRotation(const FRotator& NewWorldRotation);
+	void SetWorldRotation(const FQuat& NewWorldRotation);
 	UFUNCTION(Pure, Category="Scene|Transform")
 	FVector GetWorldLocation() const;
 	UFUNCTION(Pure, Category="Scene|Transform")

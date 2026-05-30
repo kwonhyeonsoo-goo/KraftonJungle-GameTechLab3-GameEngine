@@ -569,6 +569,26 @@ void USceneComponent::SetWorldLocation(FVector NewWorldLocation)
 	}
 }
 
+void USceneComponent::SetWorldRotation(const FRotator& NewWorldRotation)
+{
+	SetWorldRotation(NewWorldRotation.ToQuaternion());
+}
+
+void USceneComponent::SetWorldRotation(const FQuat& NewWorldRotation)
+{
+	const FQuat WorldQuat = NewWorldRotation.GetNormalized();
+
+	if (USceneComponent* Parent = ParentComponent.Get())
+	{
+		const FQuat ParentWorldQuat = Parent->GetWorldMatrix().ToQuat().GetNormalized();
+		SetRelativeRotation((WorldQuat * ParentWorldQuat.Inverse()).GetNormalized());
+	}
+	else
+	{
+		SetRelativeRotation(WorldQuat);
+	}
+}
+
 FVector USceneComponent::GetWorldLocation() const
 {
 	const FMatrix& WorldMatrix = GetWorldMatrix();
