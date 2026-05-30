@@ -1,5 +1,23 @@
 #include "Physics/PhysicsAsset.h"
 
+#include <algorithm>
+
+namespace
+{
+    bool HasMeaningfulBoneName(const FName& BoneName)
+    {
+        return BoneName.IsValid() && BoneName != FName::None;
+    }
+
+    bool IsSameConstraintPair(
+        const FPhysicsAssetConstraintSetup& Setup,
+        const FName& ParentBoneName,
+        const FName& ChildBoneName)
+    {
+        return Setup.ParentBoneName == ParentBoneName && Setup.ChildBoneName == ChildBoneName;
+    }
+}
+
 void UPhysicsAsset::Serialize(FArchive& Ar)
 {
     UObject::Serialize(Ar);
@@ -9,9 +27,134 @@ void UPhysicsAsset::Serialize(FArchive& Ar)
     Ar << ConstraintSetups;
 }
 
+int32 UPhysicsAsset::AddBodySetup(const FPhysicsAssetBodySetup& InBodySetup)
+{
+    if (HasMeaningfulBoneName(InBodySetup.BoneName) && HasBodySetupForBone(InBodySetup.BoneName))
+    {
+        return -1;
+    }
+
+    BodySetups.push_back(InBodySetup);
+    return static_cast<int32>(BodySetups.size()) - 1;
+}
+
+bool UPhysicsAsset::RemoveBodySetupByIndex(int32 BodyIndex)
+{
+    if (BodyIndex < 0 || BodyIndex >= static_cast<int32>(BodySetups.size()))
+    {
+        return false;
+    }
+
+    const FName RemovedBoneName = BodySetups[BodyIndex].BoneName;
+    BodySetups.erase(BodySetups.begin() + BodyIndex);
+
+    if (HasMeaningfulBoneName(RemovedBoneName))
+    {
+        ConstraintSetups.erase(
+            std::remove_if(
+                ConstraintSetups.begin(),
+                ConstraintSetups.end(),
+                [&](const FPhysicsAssetConstraintSetup& ConstraintSetup)
+                {
+                    return ConstraintSetup.ParentBoneName == RemovedBoneName ||
+                           ConstraintSetup.ChildBoneName == RemovedBoneName;
+                }),
+            ConstraintSetups.end());
+    }
+
+    return true;
+}
+
+bool UPhysicsAsset::RemoveBodySetupByBoneName(const FName& BoneName)
+{
+    return RemoveBodySetupByIndex(FindBodySetupIndexByBoneName(BoneName));
+}
+
+bool UPhysicsAsset::UpdateBodySetup(int32 BodyIndex, const FPhysicsAssetBodySetup& InBodySetup)
+{
+    if (BodyIndex < 0 || BodyIndex >= static_cast<int32>(BodySetups.size()))
+    {
+        return false;
+    }
+
+    if (HasMeaningfulBoneName(InBodySetup.BoneName))
+    {
+        const int32 ExistingBodyIndex = FindBodySetupIndexByBoneName(InBodySetup.BoneName);
+        if (ExistingBodyIndex >= 0 && ExistingBodyIndex != BodyIndex)
+        {
+            return false;
+        }
+    }
+
+    BodySetups[BodyIndex] = InBodySetup;
+    return true;
+}
+
+void UPhysicsAsset::ClearBodySetups()
+{
+    BodySetups.clear();
+    ConstraintSetups.clear();
+}
+
+int32 UPhysicsAsset::AddConstraintSetup(const FPhysicsAssetConstraintSetup& InConstraintSetup)
+{
+    if (HasMeaningfulBoneName(InConstraintSetup.ParentBoneName) &&
+        HasMeaningfulBoneName(InConstraintSetup.ChildBoneName) &&
+        FindConstraintSetupIndex(InConstraintSetup.ParentBoneName, InConstraintSetup.ChildBoneName) >= 0)
+    {
+        return -1;
+    }
+
+    ConstraintSetups.push_back(InConstraintSetup);
+    return static_cast<int32>(ConstraintSetups.size()) - 1;
+}
+
+bool UPhysicsAsset::RemoveConstraintSetupByIndex(int32 ConstraintIndex)
+{
+    if (ConstraintIndex < 0 || ConstraintIndex >= static_cast<int32>(ConstraintSetups.size()))
+    {
+        return false;
+    }
+
+    ConstraintSetups.erase(ConstraintSetups.begin() + ConstraintIndex);
+    return true;
+}
+
+bool UPhysicsAsset::RemoveConstraintSetup(const FName& ParentBoneName, const FName& ChildBoneName)
+{
+    return RemoveConstraintSetupByIndex(FindConstraintSetupIndex(ParentBoneName, ChildBoneName));
+}
+
+bool UPhysicsAsset::UpdateConstraintSetup(int32 ConstraintIndex, const FPhysicsAssetConstraintSetup& InConstraintSetup)
+{
+    if (ConstraintIndex < 0 || ConstraintIndex >= static_cast<int32>(ConstraintSetups.size()))
+    {
+        return false;
+    }
+
+    if (HasMeaningfulBoneName(InConstraintSetup.ParentBoneName) &&
+        HasMeaningfulBoneName(InConstraintSetup.ChildBoneName))
+    {
+        const int32 ExistingConstraintIndex =
+            FindConstraintSetupIndex(InConstraintSetup.ParentBoneName, InConstraintSetup.ChildBoneName);
+        if (ExistingConstraintIndex >= 0 && ExistingConstraintIndex != ConstraintIndex)
+        {
+            return false;
+        }
+    }
+
+    ConstraintSetups[ConstraintIndex] = InConstraintSetup;
+    return true;
+}
+
+void UPhysicsAsset::ClearConstraintSetups()
+{
+    ConstraintSetups.clear();
+}
+
 int32 UPhysicsAsset::FindBodySetupIndexByBoneName(const FName& BoneName) const
 {
-    if (!BoneName.IsValid() || BoneName == FName::None)
+    if (!HasMeaningfulBoneName(BoneName))
     {
         return -1;
     }
@@ -38,35 +181,56 @@ const FPhysicsAssetBodySetup* UPhysicsAsset::FindBodySetupByBoneName(const FName
     return Index >= 0 ? &BodySetups[Index] : nullptr;
 }
 
-bool UPhysicsAsset::HasConstraintBetweenBones(const FName& ParentBoneName, const FName& ChildBoneName) const
+FPhysicsAssetBodySetup* UPhysicsAsset::FindMutableBodySetupByBoneName(const FName& BoneName)
 {
-    return FindConstraintSetup(ParentBoneName, ChildBoneName) != nullptr;
+    const int32 Index = FindBodySetupIndexByBoneName(BoneName);
+    return Index >= 0 ? &BodySetups[Index] : nullptr;
 }
 
-const FPhysicsAssetConstraintSetup* UPhysicsAsset::FindConstraintSetup(const FName& ParentBoneName, const FName& ChildBoneName) const
+int32 UPhysicsAsset::FindConstraintSetupIndex(const FName& ParentBoneName, const FName& ChildBoneName) const
 {
-    if (!ParentBoneName.IsValid() || ParentBoneName == FName::None ||
-        !ChildBoneName.IsValid() || ChildBoneName == FName::None)
+    if (!HasMeaningfulBoneName(ParentBoneName) || !HasMeaningfulBoneName(ChildBoneName))
     {
-        return nullptr;
+        return -1;
     }
 
-    for (const FPhysicsAssetConstraintSetup& ConstraintSetup : ConstraintSetups)
+    for (int32 Index = 0; Index < static_cast<int32>(ConstraintSetups.size()); ++Index)
     {
-        if (ConstraintSetup.ParentBoneName == ParentBoneName && ConstraintSetup.ChildBoneName == ChildBoneName)
+        if (IsSameConstraintPair(ConstraintSetups[Index], ParentBoneName, ChildBoneName))
         {
-            return &ConstraintSetup;
+            return Index;
         }
     }
 
-    return nullptr;
+    return -1;
+}
+
+bool UPhysicsAsset::HasConstraintBetweenBones(const FName& ParentBoneName, const FName& ChildBoneName) const
+{
+    return FindConstraintSetupIndex(ParentBoneName, ChildBoneName) >= 0;
+}
+
+const FPhysicsAssetConstraintSetup* UPhysicsAsset::FindConstraintSetup(
+    const FName& ParentBoneName,
+    const FName& ChildBoneName) const
+{
+    const int32 Index = FindConstraintSetupIndex(ParentBoneName, ChildBoneName);
+    return Index >= 0 ? &ConstraintSetups[Index] : nullptr;
+}
+
+FPhysicsAssetConstraintSetup* UPhysicsAsset::FindMutableConstraintSetup(
+    const FName& ParentBoneName,
+    const FName& ChildBoneName)
+{
+    const int32 Index = FindConstraintSetupIndex(ParentBoneName, ChildBoneName);
+    return Index >= 0 ? &ConstraintSetups[Index] : nullptr;
 }
 
 TArray<const FPhysicsAssetConstraintSetup*> UPhysicsAsset::FindConstraintSetupsForBone(const FName& BoneName) const
 {
     TArray<const FPhysicsAssetConstraintSetup*> Result;
 
-    if (!BoneName.IsValid() || BoneName == FName::None)
+    if (!HasMeaningfulBoneName(BoneName))
     {
         return Result;
     }

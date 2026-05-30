@@ -1535,6 +1535,12 @@
     <ClCompile Include="Source\Engine\Physics\PhysicsAssetManager.cpp">
       <Filter>Source\Engine\Physics</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\PhysicsAssetPreviewUtils.cpp">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\PhysicsAssetValidation.cpp">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Physics\PhysXBodyBuilder.cpp">
       <Filter>Source\Engine\Physics</Filter>
     </ClCompile>
@@ -2876,7 +2882,13 @@
     <ClInclude Include="Source\Engine\Physics\PhysicsAssetManager.h">
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysicsAssetPreviewUtils.h">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Physics\PhysicsAssetTypes.h">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysicsAssetValidation.h">
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Physics\PhysXBodyBuilder.h">

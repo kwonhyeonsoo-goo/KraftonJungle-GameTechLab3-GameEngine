@@ -3,6 +3,7 @@
 #include "Animation/Skeleton/SkeletonManager.h"
 #include "Asset/AssetPackage.h"
 #include "Core/Logging/Log.h"
+#include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Object/Object.h"
 #include "Physics/PhysicsAsset.h"
 #include "Platform/Paths.h"
@@ -184,6 +185,42 @@ UPhysicsAsset* FPhysicsAssetManager::LoadPhysicsAsset(const FString& PackagePath
         NormalizedPath.c_str(),
         static_cast<int32>(PhysicsAsset->GetBodySetups().size()),
         static_cast<int32>(PhysicsAsset->GetConstraintSetups().size()));
+    return PhysicsAsset;
+}
+
+UPhysicsAsset* FPhysicsAssetManager::CreatePhysicsAssetForSkeleton(const USkeletalMesh* SkeletalMesh, const FString& PackagePath)
+{
+    if (!SkeletalMesh)
+    {
+        return nullptr;
+    }
+
+    UPhysicsAsset* PhysicsAsset = UObjectManager::Get().CreateObject<UPhysicsAsset>();
+    if (!PhysicsAsset)
+    {
+        return nullptr;
+    }
+
+    FString ResolvedPackagePath = PackagePath;
+    if (ResolvedPackagePath.empty() || ResolvedPackagePath == "None")
+    {
+        const FSkeletonBinding& SkeletonBinding = SkeletalMesh->GetSkeletonBinding();
+        if (SkeletonBinding.HasSkeletonPath())
+        {
+            ResolvedPackagePath = BuildDefaultPhysicsAssetPackagePath(SkeletonBinding.SkeletonPath);
+        }
+        else if (!SkeletalMesh->GetAssetPathFileName().empty() && SkeletalMesh->GetAssetPathFileName() != "None")
+        {
+            ResolvedPackagePath = BuildDefaultPhysicsAssetPackagePath(SkeletalMesh->GetAssetPathFileName());
+        }
+        else
+        {
+            ResolvedPackagePath = "Content/NewPhysicsAsset.uasset";
+        }
+    }
+
+    PhysicsAsset->SetAssetPathFileName(FPaths::MakeProjectRelative(ResolvedPackagePath));
+    PhysicsAsset->SetSkeletonBinding(SkeletalMesh->GetSkeletonBinding());
     return PhysicsAsset;
 }
 

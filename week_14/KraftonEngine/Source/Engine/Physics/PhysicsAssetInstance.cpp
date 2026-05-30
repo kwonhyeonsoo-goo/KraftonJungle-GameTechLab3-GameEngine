@@ -591,7 +591,7 @@ FTransform FPhysicsAssetInstance::GetBodyWorldTransformByBoneName(const FName& B
         return FTransform();
     }
 
-    const IPhysicsRuntime* Runtime = GetPhysicsRuntime(GetOwnerComponent());
+    const IPhysicsRuntime* Runtime = GetPhysicsRuntime(static_cast<const USkeletalMeshComponent*>(GetOwnerComponent()));
     return Runtime ? Runtime->GetBodyTransform(BodyHandle) : FTransform();
 }
 

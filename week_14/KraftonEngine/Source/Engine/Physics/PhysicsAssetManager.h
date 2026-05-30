@@ -7,6 +7,7 @@
 #include "Core/Types/CoreTypes.h"
 
 class UPhysicsAsset;
+class USkeletalMesh;
 
 class FPhysicsAssetManager : public FGCObject
 {
@@ -16,6 +17,7 @@ public:
     static bool IsPhysicsAssetPackage(const FString& PackagePath);
 
     UPhysicsAsset* LoadPhysicsAsset(const FString& PackagePath);
+    UPhysicsAsset* CreatePhysicsAssetForSkeleton(const USkeletalMesh* SkeletalMesh, const FString& PackagePath = FString());
 
     bool SavePhysicsAsset(UPhysicsAsset* PhysicsAsset, const FString& PackagePath, const FString& SourcePath = FString());
     bool SavePhysicsAssetPreservingMetadata(UPhysicsAsset* PhysicsAsset);

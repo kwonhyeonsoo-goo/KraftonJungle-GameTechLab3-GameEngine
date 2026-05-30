@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Core/Types/CoreTypes.h"
+#include "Math/Transform.h"
+#include "Object/FName.h"
 #include "Object/Ptr/WeakObjectPtr.h"
 #include "Physics/PhysicsBodyHandle.h"
 

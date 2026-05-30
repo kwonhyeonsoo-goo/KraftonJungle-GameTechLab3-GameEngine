@@ -2,9 +2,11 @@
 
 #include "Component/Primitive/SkinnedMeshComponent.h"
 #include "Animation/AnimationMode.h"
+#include "Animation/Skeleton/SkeletonTypes.h"
 #include "Object/Ptr/SubclassOf.h"
 #include "Object/Ptr/SoftObjectPtr.h"
 #include "Object/Ptr/WeakObjectPtr.h"
+#include "Physics/PhysicsAssetInstance.h"
 #include <memory>
 
 #include "Source/Engine/Component/Primitive/SkeletalMeshComponent.generated.h"
@@ -14,7 +16,6 @@ class UAnimSingleNodeInstance;
 class UAnimSequenceBase;
 class UClass;
 class UPhysicsAsset;
-class FPhysicsAssetInstance;
 
 // SkeletalMesh 전용 render proxy만 제공하는 얇은 wrapper.
 // Skinning/bone/material/bounds 상태는 모두 USkinnedMeshComponent가 소유한다.

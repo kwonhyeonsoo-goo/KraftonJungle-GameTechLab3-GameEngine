@@ -47,6 +47,13 @@ public:
         return BodySetups;
     }
 
+    // Tool code keeps selection state outside the asset and uses these helpers to mutate data safely.
+    int32 AddBodySetup(const FPhysicsAssetBodySetup& InBodySetup);
+    bool RemoveBodySetupByIndex(int32 BodyIndex);
+    bool RemoveBodySetupByBoneName(const FName& BoneName);
+    bool UpdateBodySetup(int32 BodyIndex, const FPhysicsAssetBodySetup& InBodySetup);
+    void ClearBodySetups();
+
     const TArray<FPhysicsAssetConstraintSetup>& GetConstraintSetups() const
     {
         return ConstraintSetups;
@@ -57,13 +64,22 @@ public:
         return ConstraintSetups;
     }
 
+    int32 AddConstraintSetup(const FPhysicsAssetConstraintSetup& InConstraintSetup);
+    bool RemoveConstraintSetupByIndex(int32 ConstraintIndex);
+    bool RemoveConstraintSetup(const FName& ParentBoneName, const FName& ChildBoneName);
+    bool UpdateConstraintSetup(int32 ConstraintIndex, const FPhysicsAssetConstraintSetup& InConstraintSetup);
+    void ClearConstraintSetups();
+
     // Asset-side lookup helpers keep future skeletal/ragdoll code from
     // re-implementing the same bone/constraint queries at each call site.
     int32 FindBodySetupIndexByBoneName(const FName& BoneName) const;
     bool HasBodySetupForBone(const FName& BoneName) const;
     const FPhysicsAssetBodySetup* FindBodySetupByBoneName(const FName& BoneName) const;
+    FPhysicsAssetBodySetup* FindMutableBodySetupByBoneName(const FName& BoneName);
+    int32 FindConstraintSetupIndex(const FName& ParentBoneName, const FName& ChildBoneName) const;
     bool HasConstraintBetweenBones(const FName& ParentBoneName, const FName& ChildBoneName) const;
     const FPhysicsAssetConstraintSetup* FindConstraintSetup(const FName& ParentBoneName, const FName& ChildBoneName) const;
+    FPhysicsAssetConstraintSetup* FindMutableConstraintSetup(const FName& ParentBoneName, const FName& ChildBoneName);
     TArray<const FPhysicsAssetConstraintSetup*> FindConstraintSetupsForBone(const FName& BoneName) const;
 
 private:
