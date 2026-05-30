@@ -1,9 +1,192 @@
 #include "Physics/PhysicsAssetInstance.h"
 
 #include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Core/Logging/Log.h"
+#include "GameFramework/AActor.h"
+#include "GameFramework/World.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
+#include "Physics/IPhysicsScene.h"
 #include "Physics/PhysicsAsset.h"
+#include "Physics/PhysicsRuntime.h"
+
+namespace
+{
+    FTransform ComposePhysicsTransforms(const FTransform& ParentWorld, const FTransform& Local)
+    {
+        FTransform Result = Local;
+        Result.Location = ParentWorld.Location + ParentWorld.Rotation.RotateVector(Local.Location);
+        Result.Rotation = ParentWorld.Rotation * Local.Rotation;
+        Result.Scale = FVector::OneVector;
+        return Result;
+    }
+
+    FTransform GetComponentWorldTransform(const USkeletalMeshComponent* Component)
+    {
+        FTransform Result;
+        if (!Component)
+        {
+            return Result;
+        }
+
+        Result.Location = Component->GetWorldLocation();
+        Result.Rotation = Component->GetWorldMatrix().ToQuat();
+        Result.Scale = FVector::OneVector;
+        return Result;
+    }
+
+    IPhysicsRuntime* GetPhysicsRuntime(USkeletalMeshComponent* Component)
+    {
+        if (!Component)
+        {
+            return nullptr;
+        }
+
+        UWorld* World = Component->GetWorld();
+        if (!World)
+        {
+            return nullptr;
+        }
+
+        IPhysicsScene* PhysicsScene = World->GetPhysicsScene();
+        return PhysicsScene ? PhysicsScene->GetRuntime() : nullptr;
+    }
+
+    void FillShapeFilterDataFromComponent(FPhysicsFilterData& OutFilterData, const USkeletalMeshComponent* Component)
+    {
+        if (!Component)
+        {
+            return;
+        }
+
+        OutFilterData.ObjectType = static_cast<uint32>(Component->GetCollisionObjectType());
+        OutFilterData.BlockMask = 0;
+        OutFilterData.OverlapMask = 0;
+        // Keep ragdoll self-collision decisions at the PhysicsAsset constraint layer.
+        OutFilterData.IgnoreGroup = 0;
+        OutFilterData.CollisionEnabled = Component->GetCollisionEnabled();
+        OutFilterData.bIsTrigger = false;
+        OutFilterData.bGenerateHitEvents = true;
+        OutFilterData.bGenerateOverlapEvents = Component->GetGenerateOverlapEvents();
+
+        for (int32 ChannelIndex = 0; ChannelIndex < static_cast<int32>(ECollisionChannel::ActiveCount); ++ChannelIndex)
+        {
+            const ECollisionResponse Response =
+                Component->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(ChannelIndex));
+
+            if (Response == ECollisionResponse::Block)
+            {
+                OutFilterData.BlockMask |= (1u << ChannelIndex);
+            }
+            else if (Response == ECollisionResponse::Overlap)
+            {
+                OutFilterData.OverlapMask |= (1u << ChannelIndex);
+            }
+        }
+    }
+
+    void BuildShapeDescs(
+        const FPhysicsAssetBodySetup& BodySetup,
+        const USkeletalMeshComponent* OwnerComponent,
+        TArray<FPhysicsShapeDesc>& OutShapes
+    )
+    {
+        OutShapes.clear();
+
+        for (const FPhysicsAssetShapeSetup& ShapeSetup : BodySetup.Shapes)
+        {
+            FPhysicsShapeDesc ShapeDesc;
+            ShapeDesc.LocalTransform = ShapeSetup.LocalTransform;
+            ShapeDesc.CollisionEnabled = OwnerComponent
+                ? OwnerComponent->GetCollisionEnabled()
+                : ECollisionEnabled::QueryAndPhysics;
+            ShapeDesc.bIsTrigger = false;
+            FillShapeFilterDataFromComponent(ShapeDesc.FilterData, OwnerComponent);
+
+            switch (ShapeSetup.Type)
+            {
+            case EPhysicsAssetShapeType::Box:
+                ShapeDesc.Type = EPhysicsShapeType::Box;
+                ShapeDesc.BoxHalfExtent = ShapeSetup.BoxHalfExtent;
+                break;
+            case EPhysicsAssetShapeType::Sphere:
+                ShapeDesc.Type = EPhysicsShapeType::Sphere;
+                ShapeDesc.SphereRadius = ShapeSetup.SphereRadius;
+                break;
+            case EPhysicsAssetShapeType::Capsule:
+                ShapeDesc.Type = EPhysicsShapeType::Capsule;
+                ShapeDesc.CapsuleRadius = ShapeSetup.CapsuleRadius;
+                ShapeDesc.CapsuleHalfHeight = ShapeSetup.CapsuleHalfHeight;
+                break;
+            default:
+                continue;
+            }
+
+            OutShapes.push_back(ShapeDesc);
+        }
+    }
+
+    bool BuildBodyCreationDesc(
+        USkeletalMeshComponent* OwnerComponent,
+        const FPhysicsAssetBodySetup& BodySetup,
+        const FTransform& BoneWorldTransform,
+        FBodyCreationDesc& OutDesc
+    )
+    {
+        if (!OwnerComponent)
+        {
+            return false;
+        }
+
+        OutDesc = FBodyCreationDesc{};
+        OutDesc.OwnerActor = OwnerComponent->GetOwner();
+        OutDesc.OwnerComponent = OwnerComponent;
+        OutDesc.Domain = EPhysicsBodyDomain::Ragdoll;
+        OutDesc.BoneName = BodySetup.BoneName;
+        OutDesc.BodyType = EPhysicsBodyType::Dynamic;
+        // Step 4 stops at runtime object creation, so ragdoll bodies stay manual until pose sync exists.
+        OutDesc.SyncMode = EPhysicsSyncMode::Manual;
+        OutDesc.WorldTransform = ComposePhysicsTransforms(BoneWorldTransform, BodySetup.BodyLocalFrame);
+
+        BuildShapeDescs(BodySetup, OwnerComponent, OutDesc.Shapes);
+        if (OutDesc.Shapes.empty())
+        {
+            return false;
+        }
+
+        OutDesc.Mass = BodySetup.Mass;
+        OutDesc.CenterOfMassLocalOffset = BodySetup.CenterOfMassLocalOffset;
+        OutDesc.LinearDamping = BodySetup.LinearDamping;
+        OutDesc.AngularDamping = BodySetup.AngularDamping;
+        OutDesc.MaxAngularVelocity = BodySetup.MaxAngularVelocity;
+        OutDesc.PositionSolverIterationCount = BodySetup.PositionSolverIterationCount;
+        OutDesc.VelocitySolverIterationCount = BodySetup.VelocitySolverIterationCount;
+        OutDesc.bEnableGravity = BodySetup.bEnableGravity;
+        OutDesc.bEnableCCD = BodySetup.bEnableCCD;
+        OutDesc.bGenerateHitEvents = true;
+        OutDesc.bGenerateOverlapEvents = OwnerComponent->GetGenerateOverlapEvents();
+        OutDesc.bLockLinearX = BodySetup.bLockLinearX;
+        OutDesc.bLockLinearY = BodySetup.bLockLinearY;
+        OutDesc.bLockLinearZ = BodySetup.bLockLinearZ;
+        OutDesc.bLockAngularX = BodySetup.bLockAngularX;
+        OutDesc.bLockAngularY = BodySetup.bLockAngularY;
+        OutDesc.bLockAngularZ = BodySetup.bLockAngularZ;
+        return true;
+    }
+
+    bool BuildConstraintCreationDesc(
+        const FPhysicsAssetConstraintSetup& ConstraintSetup,
+        FConstraintCreationDesc& OutDesc
+    )
+    {
+        OutDesc = FConstraintCreationDesc{};
+        OutDesc.ParentLocalFrame = ConstraintSetup.ParentLocalFrame;
+        OutDesc.ChildLocalFrame = ConstraintSetup.ChildLocalFrame;
+        OutDesc.Limits = ConstraintSetup.Limits;
+        OutDesc.bDisableCollisionBetweenBodies = ConstraintSetup.bDisableCollisionBetweenBodies;
+        return true;
+    }
+}
 
 bool FPhysicsAssetInstance::Initialize(USkeletalMeshComponent* InOwner, UPhysicsAsset* InAsset)
 {
@@ -49,13 +232,199 @@ bool FPhysicsAssetInstance::Initialize(USkeletalMeshComponent* InOwner, UPhysics
         }
     }
 
+    ResetRuntimeState();
     bInitialized = true;
     return true;
 }
 
+bool FPhysicsAssetInstance::CreateBodiesAndConstraints()
+{
+    if (!bInitialized)
+    {
+        return false;
+    }
+
+    if (HasLivePhysicsObjects())
+    {
+        return true;
+    }
+
+    USkeletalMeshComponent* Owner = GetOwnerComponent();
+    UPhysicsAsset* Asset = GetAsset();
+    IPhysicsRuntime* Runtime = GetPhysicsRuntime(Owner);
+    if (!Owner || !Asset || !Runtime)
+    {
+        return false;
+    }
+
+    USkeletalMesh* Mesh = Owner->GetSkeletalMesh();
+    FSkeletalMesh* MeshAsset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+    if (!MeshAsset)
+    {
+        return false;
+    }
+
+    TArray<FTransform> BoneComponentSpaceTransforms;
+    Owner->GetCurrentBoneGlobalTransforms(BoneComponentSpaceTransforms);
+    if (BoneComponentSpaceTransforms.size() < MeshAsset->Bones.size())
+    {
+        UE_LOG("CreateBodiesAndConstraints failed: skeletal pose is incomplete. Component=%s",
+            Owner->GetName().c_str());
+        return false;
+    }
+
+    const FTransform ComponentWorldTransform = GetComponentWorldTransform(Owner);
+    const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
+    const TArray<FPhysicsAssetConstraintSetup>& ConstraintSetups = Asset->GetConstraintSetups();
+
+    if (BodiesByBone.size() != BodySetups.size())
+    {
+        BodiesByBone.resize(BodySetups.size());
+    }
+    if (Constraints.size() != ConstraintSetups.size())
+    {
+        Constraints.resize(ConstraintSetups.size());
+    }
+    ResetRuntimeState();
+
+    int32 CreatedBodyCount = 0;
+    int32 CreatedConstraintCount = 0;
+
+    for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
+    {
+        const FPhysicsAssetBodySetup& BodySetup = BodySetups[BodyIndex];
+        const int32 BoneIndex = FindBoneIndexForBody(BodySetup.BoneName);
+        if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(BoneComponentSpaceTransforms.size()))
+        {
+            UE_LOG("Skipped PhysicsAsset body: bone not found. Component=%s Bone=%s",
+                Owner->GetName().c_str(),
+                BodySetup.BoneName.ToString().c_str());
+            continue;
+        }
+
+        const FTransform BoneWorldTransform =
+            ComposePhysicsTransforms(ComponentWorldTransform, BoneComponentSpaceTransforms[BoneIndex]);
+
+        FBodyCreationDesc BodyDesc;
+        if (!BuildBodyCreationDesc(Owner, BodySetup, BoneWorldTransform, BodyDesc))
+        {
+            UE_LOG("Skipped PhysicsAsset body: invalid body setup. Component=%s Bone=%s",
+                Owner->GetName().c_str(),
+                BodySetup.BoneName.ToString().c_str());
+            continue;
+        }
+
+        FPhysicsBodyHandle BodyHandle = Runtime->CreateRigidBody(BodyDesc);
+        if (!BodyHandle.IsValid())
+        {
+            UE_LOG("Failed to create PhysicsAsset body. Component=%s Bone=%s",
+                Owner->GetName().c_str(),
+                BodySetup.BoneName.ToString().c_str());
+            continue;
+        }
+
+        BodiesByBone[BodyIndex] = BodyHandle;
+        ++CreatedBodyCount;
+    }
+
+    for (int32 ConstraintIndex = 0; ConstraintIndex < static_cast<int32>(ConstraintSetups.size()); ++ConstraintIndex)
+    {
+        const FPhysicsAssetConstraintSetup& ConstraintSetup = ConstraintSetups[ConstraintIndex];
+        const FPhysicsBodyHandle ParentHandle = GetBodyHandleByBoneName(ConstraintSetup.ParentBoneName);
+        const FPhysicsBodyHandle ChildHandle = GetBodyHandleByBoneName(ConstraintSetup.ChildBoneName);
+
+        if (!ParentHandle.IsValid() || !ChildHandle.IsValid())
+        {
+            UE_LOG("Skipped PhysicsAsset constraint: missing body handle. Component=%s Parent=%s Child=%s",
+                Owner->GetName().c_str(),
+                ConstraintSetup.ParentBoneName.ToString().c_str(),
+                ConstraintSetup.ChildBoneName.ToString().c_str());
+            continue;
+        }
+
+        FConstraintCreationDesc ConstraintDesc;
+        if (!BuildConstraintCreationDesc(ConstraintSetup, ConstraintDesc))
+        {
+            UE_LOG("Skipped PhysicsAsset constraint: invalid constraint setup. Component=%s Parent=%s Child=%s",
+                Owner->GetName().c_str(),
+                ConstraintSetup.ParentBoneName.ToString().c_str(),
+                ConstraintSetup.ChildBoneName.ToString().c_str());
+            continue;
+        }
+
+        FPhysicsConstraintHandle ConstraintHandle =
+            Runtime->CreateConstraint(ParentHandle, ChildHandle, ConstraintDesc);
+        if (!ConstraintHandle.IsValid())
+        {
+            UE_LOG("Failed to create PhysicsAsset constraint. Component=%s Parent=%s Child=%s",
+                Owner->GetName().c_str(),
+                ConstraintSetup.ParentBoneName.ToString().c_str(),
+                ConstraintSetup.ChildBoneName.ToString().c_str());
+            continue;
+        }
+
+        Constraints[ConstraintIndex] = ConstraintHandle;
+        ++CreatedConstraintCount;
+    }
+
+    UE_LOG("Created PhysicsAsset runtime objects. Component=%s Bodies=%d Constraints=%d",
+        Owner->GetName().c_str(),
+        CreatedBodyCount,
+        CreatedConstraintCount);
+
+    return CreatedBodyCount > 0;
+}
+
+void FPhysicsAssetInstance::DestroyBodiesAndConstraints()
+{
+    IPhysicsRuntime* Runtime = GetPhysicsRuntime(GetOwnerComponent());
+    int32 DestroyedConstraintCount = 0;
+    int32 DestroyedBodyCount = 0;
+
+    // Constraints go first so joints never reference a body that has already been released.
+    for (FPhysicsConstraintHandle& ConstraintHandle : Constraints)
+    {
+        if (!ConstraintHandle.IsValid())
+        {
+            continue;
+        }
+
+        if (Runtime)
+        {
+            Runtime->DestroyConstraint(ConstraintHandle);
+        }
+        ConstraintHandle = FPhysicsConstraintHandle{};
+        ++DestroyedConstraintCount;
+    }
+
+    for (FPhysicsBodyHandle& BodyHandle : BodiesByBone)
+    {
+        if (!BodyHandle.IsValid())
+        {
+            continue;
+        }
+
+        if (Runtime)
+        {
+            Runtime->DestroyRigidBody(BodyHandle);
+        }
+        BodyHandle = FPhysicsBodyHandle{};
+        ++DestroyedBodyCount;
+    }
+
+    if (DestroyedBodyCount > 0 || DestroyedConstraintCount > 0)
+    {
+        const USkeletalMeshComponent* Owner = GetOwnerComponent();
+        UE_LOG("Destroyed PhysicsAsset runtime objects. Component=%s Bodies=%d Constraints=%d",
+            Owner ? Owner->GetName().c_str() : "None",
+            DestroyedBodyCount,
+            DestroyedConstraintCount);
+    }
+}
+
 void FPhysicsAssetInstance::Shutdown()
 {
-    ResetRuntimeState();
+    DestroyBodiesAndConstraints();
     BodiesByBone.clear();
     Constraints.clear();
     OwnerComponent.Reset();
@@ -67,15 +436,28 @@ void FPhysicsAssetInstance::Shutdown()
 
 void FPhysicsAssetInstance::ResetRuntimeState()
 {
-    for (FPhysicsBodyHandle& BodyHandle : BodiesByBone)
+    DestroyBodiesAndConstraints();
+}
+
+bool FPhysicsAssetInstance::HasLivePhysicsObjects() const
+{
+    for (const FPhysicsConstraintHandle& ConstraintHandle : Constraints)
     {
-        BodyHandle = FPhysicsBodyHandle{};
+        if (ConstraintHandle.IsValid())
+        {
+            return true;
+        }
     }
 
-    for (FPhysicsConstraintHandle& ConstraintHandle : Constraints)
+    for (const FPhysicsBodyHandle& BodyHandle : BodiesByBone)
     {
-        ConstraintHandle = FPhysicsConstraintHandle{};
+        if (BodyHandle.IsValid())
+        {
+            return true;
+        }
     }
+
+    return false;
 }
 
 UPhysicsAsset* FPhysicsAssetInstance::GetAsset() const
@@ -86,6 +468,23 @@ UPhysicsAsset* FPhysicsAssetInstance::GetAsset() const
 USkeletalMeshComponent* FPhysicsAssetInstance::GetOwnerComponent() const
 {
     return OwnerComponent.Get();
+}
+
+FPhysicsBodyHandle FPhysicsAssetInstance::GetBodyHandleByBoneName(const FName& BoneName) const
+{
+    const int32 BodyIndex = FindBodySetupIndexByBoneName(BoneName);
+    if (BodyIndex < 0 || BodyIndex >= static_cast<int32>(BodiesByBone.size()))
+    {
+        return FPhysicsBodyHandle{};
+    }
+
+    return BodiesByBone[BodyIndex];
+}
+
+int32 FPhysicsAssetInstance::FindBodySetupIndexByBoneName(const FName& BoneName) const
+{
+    UPhysicsAsset* Asset = GetAsset();
+    return Asset ? Asset->FindBodySetupIndexByBoneName(BoneName) : -1;
 }
 
 int32 FPhysicsAssetInstance::FindBoneIndexForBody(const FName& BoneName) const

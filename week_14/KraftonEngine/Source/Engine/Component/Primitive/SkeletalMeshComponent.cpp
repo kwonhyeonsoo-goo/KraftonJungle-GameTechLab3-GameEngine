@@ -266,6 +266,20 @@ void USkeletalMeshComponent::DestroyPhysicsAssetInstance()
     PhysicsAssetInstance.reset();
 }
 
+bool USkeletalMeshComponent::CreatePhysicsAssetInstanceBodies()
+{
+    FPhysicsAssetInstance* Instance = GetOrCreatePhysicsAssetInstance();
+    return Instance ? Instance->CreateBodiesAndConstraints() : false;
+}
+
+void USkeletalMeshComponent::DestroyPhysicsAssetInstanceBodies()
+{
+    if (PhysicsAssetInstance)
+    {
+        PhysicsAssetInstance->DestroyBodiesAndConstraints();
+    }
+}
+
 void USkeletalMeshComponent::PlayAnimation(UAnimSequenceBase* NewAnimToPlay, bool bLooping)
 {
     SetAnimationMode(EAnimationMode::AnimationSingleNode);

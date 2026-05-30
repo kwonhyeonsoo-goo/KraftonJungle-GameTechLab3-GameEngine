@@ -12,14 +12,19 @@ class FPhysicsAssetInstance
 {
 public:
     bool Initialize(USkeletalMeshComponent* InOwner, UPhysicsAsset* InAsset);
+    bool CreateBodiesAndConstraints();
+    void DestroyBodiesAndConstraints();
     void Shutdown();
     void ResetRuntimeState();
+    bool HasLivePhysicsObjects() const;
 
     UPhysicsAsset* GetAsset() const;
     USkeletalMeshComponent* GetOwnerComponent() const;
 
     const TArray<FPhysicsBodyHandle>& GetBodies() const { return BodiesByBone; }
     const TArray<FPhysicsConstraintHandle>& GetConstraints() const { return Constraints; }
+    FPhysicsBodyHandle GetBodyHandleByBoneName(const FName& BoneName) const;
+    int32 FindBodySetupIndexByBoneName(const FName& BoneName) const;
     int32 FindBoneIndexForBody(const FName& BoneName) const;
     bool IsInitialized() const { return bInitialized; }
     int32 GetRagdollRootBoneIndex() const { return RagdollRootBoneIndex; }

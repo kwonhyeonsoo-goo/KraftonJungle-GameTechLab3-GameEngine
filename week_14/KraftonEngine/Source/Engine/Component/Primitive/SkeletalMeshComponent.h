@@ -48,6 +48,10 @@ public:
     FPhysicsAssetInstance* GetPhysicsAssetInstance() const;
     FPhysicsAssetInstance* GetOrCreatePhysicsAssetInstance();
     void DestroyPhysicsAssetInstance();
+    UFUNCTION(Callable, Category="Physics")
+    bool CreatePhysicsAssetInstanceBodies();
+    UFUNCTION(Callable, Category="Physics")
+    void DestroyPhysicsAssetInstanceBodies();
 
     // SingleNode 재생 편의 API.
     UFUNCTION(Callable, Category="Animation")
