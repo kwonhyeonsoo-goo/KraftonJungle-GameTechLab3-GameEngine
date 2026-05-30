@@ -497,7 +497,7 @@ bool FMeshManager::ReimportStaticMesh(const FString& BinaryPath, ID3D11Device* D
 	UStaticMesh* StaticMesh = UObjectManager::Get().CreateObject<UStaticMesh>();
 	NewMeshAsset->PathFileName = Metadata.SourcePath;
 	StaticMesh->SetStaticMaterials(std::move(ParsedMaterials));
-	StaticMesh->SetStaticMeshAsset(NewMeshAsset.release());
+    StaticMesh->SetStaticMeshAsset(std::move(NewMeshAsset));
 
 	if (!SaveStaticMeshBinary(StaticMesh, PackagePath, Metadata.SourcePath)) return false;
 
@@ -670,7 +670,7 @@ UStaticMesh* FMeshManager::LoadStaticMesh(const FString& PathFileName, const FIm
 	UStaticMesh* StaticMesh = UObjectManager::Get().CreateObject<UStaticMesh>();
 	NewMeshAsset->PathFileName = NormalizeProjectPath(PathFileName);
 	StaticMesh->SetStaticMaterials(std::move(ParsedMaterials));
-	StaticMesh->SetStaticMeshAsset(NewMeshAsset.release());
+    StaticMesh->SetStaticMeshAsset(std::move(NewMeshAsset));
 
 	// import가 끝난 StaticMesh는 .statbin으로 저장한다.
 	// 다음 로드부터는 무거운 원본 파싱을 건너뛸 수 있다.
@@ -751,7 +751,7 @@ UStaticMesh* FMeshManager::LoadStaticMesh(const FString& PathFileName, ID3D11Dev
 	UStaticMesh* StaticMesh = UObjectManager::Get().CreateObject<UStaticMesh>();
 	NewMeshAsset->PathFileName = NormalizeProjectPath(PathFileName);
 	StaticMesh->SetStaticMaterials(std::move(ParsedMaterials));
-	StaticMesh->SetStaticMeshAsset(NewMeshAsset.release());
+    StaticMesh->SetStaticMeshAsset(std::move(NewMeshAsset));
 
 	// .statbin이 없을 때만 원본 파일을 import한다.
 	// import가 성공하면 바로 캐시 파일을 만들어 둔다.
@@ -1037,7 +1037,7 @@ bool FMeshManager::ImportSkeletalMeshAsNew(const FString& SourceFbxPath, ID3D11D
 
 	USkeletalMesh* SkeletalMesh = UObjectManager::Get().CreateObject<USkeletalMesh>();
 	SkeletalMesh->SetSkeletalMaterials(std::move(ImportResult.Materials));
-	SkeletalMesh->SetSkeletalMeshAsset(NewMesh.release());
+    SkeletalMesh->SetSkeletalMeshAsset(std::move(NewMesh));
 	SkeletalMesh->SetSkeleton(Skeleton);
 
 	if (!SaveSkeletalMeshBinary(SkeletalMesh, PackagePath, SourceFbxPath))
@@ -1147,7 +1147,7 @@ bool FMeshManager::ImportSkeletalMesh(const FSkeletalMeshImportRequest& Request,
 	SkeletalMeshCache.erase(PackagePath);
 	USkeletalMesh* SkeletalMesh = UObjectManager::Get().CreateObject<USkeletalMesh>();
 	SkeletalMesh->SetSkeletalMaterials(std::move(ImportResult.Materials));
-	SkeletalMesh->SetSkeletalMeshAsset(new FSkeletalMesh(std::move(ImportResult.Mesh)));
+    SkeletalMesh->SetSkeletalMeshAsset(std::make_unique<FSkeletalMesh>(std::move(ImportResult.Mesh)));
 	SkeletalMesh->SetSkeleton(TargetSkeleton);
 
 	if (!SaveSkeletalMeshBinary(SkeletalMesh, PackagePath, Request.SourceFbxPath))
@@ -1298,7 +1298,7 @@ bool FMeshManager::ImportFbxScene(
 			SkeletalMeshCache.erase(PackagePath);
 			USkeletalMesh* SkeletalMesh = UObjectManager::Get().CreateObject<USkeletalMesh>();
 			SkeletalMesh->SetSkeletalMaterials(std::move(ImportResult.Materials));
-			SkeletalMesh->SetSkeletalMeshAsset(new FSkeletalMesh(std::move(ImportResult.Mesh)));
+            SkeletalMesh->SetSkeletalMeshAsset(std::make_unique<FSkeletalMesh>(std::move(ImportResult.Mesh)));
 			SkeletalMesh->SetSkeleton(EffectiveSkeleton);
 
 			if (!SaveSkeletalMeshBinary(SkeletalMesh, PackagePath, Request.SourceFbxPath))

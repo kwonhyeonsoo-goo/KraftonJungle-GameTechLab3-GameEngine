@@ -33,9 +33,10 @@ public:
 	void SetAssetPathFileName(const FString& InPathFileName) { AssetPathFileName = InPathFileName; }
 	const FString& GetAssetPathFileName() const { return AssetPathFileName; }
 
-	void SetStaticMeshAsset(FStaticMesh* InMesh);
-	FStaticMesh* GetStaticMeshAsset() const;
-	void SetStaticMaterials(TArray<FStaticMaterial>&& InMaterials);
+	void                           SetStaticMeshAsset(FStaticMesh* InMesh);
+    void                           SetStaticMeshAsset(std::unique_ptr<FStaticMesh> InMesh);
+	FStaticMesh*                   GetStaticMeshAsset() const;
+	void                           SetStaticMaterials(TArray<FStaticMaterial>&& InMaterials);
 	const TArray<FStaticMaterial>& GetStaticMaterials() const;
 
 	void InitResources(ID3D11Device* InDevice);
@@ -50,13 +51,20 @@ public:
 	const TArray<FStaticMeshSection>& GetLODSections(uint32 LODLevel) const;
 
 private:
+    uint32 CalculateTrackedMemorySize() const;
+    void   ReleaseTrackedMemory();
+    void   CacheSectionMaterialIndices();
+
+private:
 	FString AssetPathFileName = "None";
 
-	FStaticMesh* StaticMeshAsset = nullptr;
-	TArray<FStaticMaterial> StaticMaterials; // 슬롯 이름과 머티리얼 인터페이스를 묶어서 저장하는 배열
-	mutable FMeshTriangleBVH MeshTrianglePickingBVH; // 빠른 picking을 위해 메시 내부에 트리 형태로 만들어지는 자료구조
+    std::unique_ptr<FStaticMesh> StaticMeshAsset;
+	TArray<FStaticMaterial>      StaticMaterials;        // 슬롯 이름과 머티리얼 인터페이스를 묶어서 저장하는 배열
+	mutable FMeshTriangleBVH     MeshTrianglePickingBVH; // 빠른 picking을 위해 메시 내부에 트리 형태로 만들어지는 자료구조
 
 	// LOD1 (70%), LOD2 (50%), LOD3 (25%) — LOD0 is the original StaticMeshAsset
 	FLODMeshData AdditionalLODs[3];
-	bool bHasLOD = false;
+	bool         bHasLOD           = false;
+    bool         bMemoryTracked    = false;
+    uint32       TrackedMemorySize = 0;
 };

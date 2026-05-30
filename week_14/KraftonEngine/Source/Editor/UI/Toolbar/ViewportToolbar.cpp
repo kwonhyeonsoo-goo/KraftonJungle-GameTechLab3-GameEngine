@@ -8,77 +8,169 @@
 
 #include <imgui.h>
 
+#include <array>
+
 #pragma region Toolbar Icon Helper
-static FString GetToolbarIconPath(EToolbarIcon Icon)
+namespace
 {
-	const wchar_t* FileName = L"";
-	switch (Icon)
-	{
-	case EToolbarIcon::Menu: FileName = L"Menu.png"; break;
-	case EToolbarIcon::Setting: FileName = L"Setting.png"; break;
-	case EToolbarIcon::AddActor: FileName = L"Add_Actor.png"; break;
-	case EToolbarIcon::Translate: FileName = L"Translate.png"; break;
-	case EToolbarIcon::Rotate: FileName = L"Rotate.png"; break;
-	case EToolbarIcon::Scale: FileName = L"Scale.png"; break;
-	case EToolbarIcon::WorldSpace: FileName = L"WorldSpace.png"; break;
-	case EToolbarIcon::LocalSpace: FileName = L"LocalSpace.png"; break;
-	case EToolbarIcon::TranslateSnap: FileName = L"Translate_Snap.png"; break;
-	case EToolbarIcon::RotateSnap: FileName = L"Rotate_Snap.png"; break;
-	case EToolbarIcon::ScaleSnap: FileName = L"Scale_Snap.png"; break;
-	case EToolbarIcon::ShowFlag: FileName = L"Show_Flag.png"; break;
-	case EToolbarIcon::Camera: FileName = L"Camera.png"; break;
-	default: break;
-	}
+    constexpr int32 ToolbarIconCount = static_cast<int32>(EToolbarIcon::Count);
 
-	return FPaths::ToUtf8(FPaths::Combine(FPaths::AssetDir(), L"Editor/ToolIcons/", FileName));
-}
+    struct FToolbarIconCacheEntry
+    {
+        ID3D11ShaderResourceView* SRV            = nullptr;
+        ImVec2                    RawSize        = ImVec2(0.0f, 0.0f);
+        bool                      bLoadAttempted = false;
+        bool                      bSizeCached    = false;
+    };
 
-static ImVec2 GetToolbarIconRenderSize(EToolbarIcon Icon, float FallbackSize, float MaxIconSize)
-{
-	ID3D11ShaderResourceView* IconSRV = FEditorTextureManager::Get().GetOrLoadIcon(GetToolbarIconPath(Icon));
-	if (!IconSRV)
-	{
-		return ImVec2(FallbackSize, FallbackSize);
-	}
+    int32 GetToolbarIconIndex(EToolbarIcon Icon)
+    {
+        const int32 Index = static_cast<int32>(Icon);
+        return (Index >= 0 && Index < ToolbarIconCount) ? Index : -1;
+    }
 
-	ID3D11Resource* Resource = nullptr;
-	IconSRV->GetResource(&Resource);
-	if (!Resource)
-	{
-		return ImVec2(FallbackSize, FallbackSize);
-	}
+    const wchar_t* GetToolbarIconFileName(EToolbarIcon Icon)
+    {
+        switch (Icon)
+        {
+        case EToolbarIcon::Menu:
+            return L"Menu.png";
+        case EToolbarIcon::Setting:
+            return L"Setting.png";
+        case EToolbarIcon::AddActor:
+            return L"Add_Actor.png";
+        case EToolbarIcon::Translate:
+            return L"Translate.png";
+        case EToolbarIcon::Rotate:
+            return L"Rotate.png";
+        case EToolbarIcon::Scale:
+            return L"Scale.png";
+        case EToolbarIcon::WorldSpace:
+            return L"WorldSpace.png";
+        case EToolbarIcon::LocalSpace:
+            return L"LocalSpace.png";
+        case EToolbarIcon::TranslateSnap:
+            return L"Translate_Snap.png";
+        case EToolbarIcon::RotateSnap:
+            return L"Rotate_Snap.png";
+        case EToolbarIcon::ScaleSnap:
+            return L"Scale_Snap.png";
+        case EToolbarIcon::ShowFlag:
+            return L"Show_Flag.png";
+        case EToolbarIcon::Camera:
+            return L"Camera.png";
+        default:
+            return L"";
+        }
+    }
 
-	ImVec2 IconSize(FallbackSize, FallbackSize);
-	D3D11_RESOURCE_DIMENSION Dimension = D3D11_RESOURCE_DIMENSION_UNKNOWN;
-	Resource->GetType(&Dimension);
-	if (Dimension == D3D11_RESOURCE_DIMENSION_TEXTURE2D)
-	{
-		ID3D11Texture2D* Texture2D = static_cast<ID3D11Texture2D*>(Resource);
-		D3D11_TEXTURE2D_DESC Desc = {};
-		Texture2D->GetDesc(&Desc);
-		IconSize = ImVec2(static_cast<float>(Desc.Width), static_cast<float>(Desc.Height));
-	}
-	Resource->Release();
+    FString BuildToolbarIconPath(EToolbarIcon Icon)
+    {
+        const wchar_t* FileName = GetToolbarIconFileName(Icon);
+        if (!FileName || FileName[0] == L'\0')
+        {
+            return {};
+        }
 
-	if (IconSize.x > MaxIconSize || IconSize.y > MaxIconSize)
-	{
-		const float Scale = (IconSize.x > IconSize.y) ? (MaxIconSize / IconSize.x) : (MaxIconSize / IconSize.y);
-		IconSize.x *= Scale;
-		IconSize.y *= Scale;
-	}
+        return FPaths::ToUtf8(FPaths::Combine(FPaths::AssetDir(), L"Editor/ToolIcons/", FileName));
+    }
 
-	return IconSize;
+    ImVec2 ClampToolbarIconSize(ImVec2 IconSize, float MaxIconSize)
+    {
+        if (IconSize.x > MaxIconSize || IconSize.y > MaxIconSize)
+        {
+            const float Scale = (IconSize.x > IconSize.y) ? (MaxIconSize / IconSize.x) : (MaxIconSize / IconSize.y);
+            IconSize.x        *= Scale;
+            IconSize.y        *= Scale;
+        }
+
+        return IconSize;
+    }
+
+    ImVec2 ReadToolbarIconTextureSize(ID3D11ShaderResourceView* IconSRV, float FallbackSize)
+    {
+        if (!IconSRV)
+        {
+            return ImVec2(FallbackSize, FallbackSize);
+        }
+
+        ID3D11Resource* Resource = nullptr;
+        IconSRV->GetResource(&Resource);
+        if (!Resource)
+        {
+            return ImVec2(FallbackSize, FallbackSize);
+        }
+
+        ImVec2                   IconSize(FallbackSize, FallbackSize);
+        D3D11_RESOURCE_DIMENSION Dimension = D3D11_RESOURCE_DIMENSION_UNKNOWN;
+        Resource->GetType(&Dimension);
+        if (Dimension == D3D11_RESOURCE_DIMENSION_TEXTURE2D)
+        {
+            ID3D11Texture2D*     Texture2D = static_cast<ID3D11Texture2D*>(Resource);
+            D3D11_TEXTURE2D_DESC Desc      = {};
+            Texture2D->GetDesc(&Desc);
+            IconSize = ImVec2(static_cast<float>(Desc.Width), static_cast<float>(Desc.Height));
+        }
+        Resource->Release();
+
+        return IconSize;
+    }
+
+    FToolbarIconCacheEntry* GetToolbarIconCacheEntry(EToolbarIcon Icon)
+    {
+        static std::array<FToolbarIconCacheEntry, ToolbarIconCount> CachedIcons;
+
+        const int32 Index = GetToolbarIconIndex(Icon);
+        return Index >= 0 ? &CachedIcons[Index] : nullptr;
+    }
+
+    ID3D11ShaderResourceView* GetToolbarIconSRV(EToolbarIcon Icon)
+    {
+        FToolbarIconCacheEntry* Entry = GetToolbarIconCacheEntry(Icon);
+        if (!Entry)
+        {
+            return nullptr;
+        }
+
+        if (!Entry->bLoadAttempted)
+        {
+            const FString IconPath = BuildToolbarIconPath(Icon);
+            Entry->SRV             = IconPath.empty()
+                    ? nullptr
+                    : FEditorTextureManager::Get().GetOrLoadIcon(IconPath);
+            Entry->bLoadAttempted = true;
+        }
+
+        return Entry->SRV;
+    }
+
+    ImVec2 GetToolbarIconRenderSize(EToolbarIcon Icon, ID3D11ShaderResourceView* IconSRV, float FallbackSize, float MaxIconSize)
+    {
+        FToolbarIconCacheEntry* Entry = GetToolbarIconCacheEntry(Icon);
+        if (!Entry)
+        {
+            return ImVec2(FallbackSize, FallbackSize);
+        }
+
+        if (!Entry->bSizeCached)
+        {
+            Entry->RawSize     = ReadToolbarIconTextureSize(IconSRV, FallbackSize);
+            Entry->bSizeCached = true;
+        }
+
+        return ClampToolbarIconSize(Entry->RawSize, MaxIconSize);
+    }
 }
 
 static bool DrawToolbarIconButton(const char* Id, EToolbarIcon Icon, const char* FallbackLabel, float FallbackSize, float MaxIconSize)
 {
-	ID3D11ShaderResourceView* IconSRV = FEditorTextureManager::Get().GetOrLoadIcon(GetToolbarIconPath(Icon));
+    ID3D11ShaderResourceView* IconSRV = GetToolbarIconSRV(Icon);
 	if (!IconSRV)
 	{
 		return ImGui::Button(FallbackLabel);
 	}
 
-	const ImVec2 IconSize = GetToolbarIconRenderSize(Icon, FallbackSize, MaxIconSize);
+    const ImVec2 IconSize = GetToolbarIconRenderSize(Icon, IconSRV, FallbackSize, MaxIconSize);
 	return ImGui::ImageButton(Id, reinterpret_cast<ImTextureID>(IconSRV), IconSize);
 }
 #pragma endregion

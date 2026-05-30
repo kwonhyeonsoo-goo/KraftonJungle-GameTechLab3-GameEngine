@@ -18,6 +18,8 @@
 class FConsoleLogOutputDevice : public ILogOutputDevice
 {
 public:
+    ~FConsoleLogOutputDevice() override;
+
 	void Write(const char* Msg) override;
 
 	void Clear();

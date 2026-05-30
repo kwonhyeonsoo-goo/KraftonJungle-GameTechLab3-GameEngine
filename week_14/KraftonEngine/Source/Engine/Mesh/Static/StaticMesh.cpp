@@ -9,22 +9,67 @@
 
 UStaticMesh::~UStaticMesh()
 {
-	if (StaticMeshAsset)
-	{
-		const uint32 CPUSize =
-			static_cast<uint32>(StaticMeshAsset->Vertices.size() * sizeof(FNormalVertex)) +
-			static_cast<uint32>(StaticMeshAsset->Indices.size() * sizeof(uint32));
+    ReleaseTrackedMemory();
+}
 
-		MemoryStats::SubStaticMeshCPUMemory(CPUSize);
+uint32 UStaticMesh::CalculateTrackedMemorySize() const
+{
+    if (!StaticMeshAsset)
+    {
+        return 0;
+    }
+
+    return
+            static_cast<uint32>(StaticMeshAsset->Vertices.size() * sizeof(FNormalVertex)) +
+            static_cast<uint32>(StaticMeshAsset->Indices.size() * sizeof(uint32));
+}
+
+void UStaticMesh::ReleaseTrackedMemory()
+{
+    if (!bMemoryTracked)
+    {
+        return;
+    }
+
+    MemoryStats::SubStaticMeshCPUMemory(TrackedMemorySize);
+    bMemoryTracked    = false;
+    TrackedMemorySize = 0;
+}
+
+void UStaticMesh::CacheSectionMaterialIndices()
+{
+    if (!StaticMeshAsset)
+    {
+        return;
+    }
+
+    for (FStaticMeshSection& Section : StaticMeshAsset->Sections)
+    {
+        Section.MaterialIndex = -1;
+        for (int32 i = 0; i < static_cast<int32>(StaticMaterials.size()); ++i)
+        {
+            if (StaticMaterials[i].MaterialSlotName == Section.MaterialSlotName)
+            {
+                Section.MaterialIndex = i;
+                break;
+            }
+        }
 	}
 }
 
 void UStaticMesh::Serialize(FArchive& Ar)
 {
-	// 에셋이 비어있으면 로드용으로 생성
-	if (Ar.IsLoading() && !StaticMeshAsset)
-	{
-		StaticMeshAsset = new FStaticMesh();
+    if (Ar.IsLoading())
+    {
+        ReleaseTrackedMemory();
+        if (!StaticMeshAsset)
+        {
+            StaticMeshAsset = std::make_unique<FStaticMesh>();
+        }
+    }
+    else if (!StaticMeshAsset)
+    {
+        StaticMeshAsset = std::make_unique<FStaticMesh>();
 	}
 
 	// 1. 지오메트리 데이터 직렬화
@@ -36,18 +81,9 @@ void UStaticMesh::Serialize(FArchive& Ar)
 	// 3. 로딩 시 Section → MaterialIndex 매핑 캐싱 (매 프레임 문자열 비교 방지)
 	if (Ar.IsLoading())
 	{
-		for (FStaticMeshSection& Section : StaticMeshAsset->Sections)
-		{
-			Section.MaterialIndex = -1;
-			for (int32 i = 0; i < (int32)StaticMaterials.size(); ++i)
-			{
-				if (StaticMaterials[i].MaterialSlotName == Section.MaterialSlotName)
-				{
-					Section.MaterialIndex = i;
-					break;
-				}
-			}
-		}
+        CacheSectionMaterialIndices();
+        StaticMeshAsset->bBoundsValid = false;
+        MeshTrianglePickingBVH        = FMeshTriangleBVH();
 	}
 }
 
@@ -55,11 +91,13 @@ void UStaticMesh::InitResources(ID3D11Device* InDevice)
 {
 	if (!InDevice || !StaticMeshAsset) return;
 
-	// CPU 메모리 추적
-	const uint32 CPUSize =
-		static_cast<uint32>(StaticMeshAsset->Vertices.size() * sizeof(FNormalVertex)) +
-		static_cast<uint32>(StaticMeshAsset->Indices.size() * sizeof(uint32));
-	MemoryStats::AddStaticMeshCPUMemory(CPUSize);
+    // CPU 메모리 추적은 실제 리소스 초기화가 발생한 메시만 1회 등록합니다.
+    if (!bMemoryTracked)
+    {
+        TrackedMemorySize = CalculateTrackedMemorySize();
+        MemoryStats::AddStaticMeshCPUMemory(TrackedMemorySize);
+        bMemoryTracked = true;
+    }
 
 	// CPU → GPU 정점 버퍼 변환
 	TMeshData<FVertexPNCTT> RenderMeshData;
@@ -114,37 +152,51 @@ void UStaticMesh::InitResources(ID3D11Device* InDevice)
 
 void UStaticMesh::SetStaticMeshAsset(FStaticMesh* InMesh)
 {
-	StaticMeshAsset = InMesh;
-	// 현재는 static mesh asset이 로드 후 고정된다고 보고, 메시 변경 dirty 갱신은 비활성화합니다.
-	// MarkMeshTrianglePickingBVHDirty();
+    if (StaticMeshAsset.get() == InMesh)
+    {
+        CacheSectionMaterialIndices();
+        return;
+    }
 
-	// Section → MaterialIndex 캐싱 갱신
+    SetStaticMeshAsset(std::unique_ptr<FStaticMesh>(InMesh));
+}
+
+void UStaticMesh::SetStaticMeshAsset(std::unique_ptr<FStaticMesh> InMesh)
+{
+    if (StaticMeshAsset.get() == InMesh.get())
+    {
+        InMesh.release();
+        CacheSectionMaterialIndices();
+        return;
+    }
+
+    ReleaseTrackedMemory();
+    StaticMeshAsset = std::move(InMesh);
+
+    for (FLODMeshData& LOD : AdditionalLODs)
+    {
+        LOD.Sections.clear();
+        LOD.RenderBuffer.reset();
+    }
+    bHasLOD                = false;
+    MeshTrianglePickingBVH = FMeshTriangleBVH();
+
+    CacheSectionMaterialIndices();
 	if (StaticMeshAsset)
 	{
-		for (FStaticMeshSection& Section : StaticMeshAsset->Sections)
-		{
-			Section.MaterialIndex = -1;
-			for (int32 i = 0; i < (int32)StaticMaterials.size(); ++i)
-			{
-				if (StaticMaterials[i].MaterialSlotName == Section.MaterialSlotName)
-				{
-					Section.MaterialIndex = i;
-					break;
-				}
-			}
-		}
 		EnsureMeshTrianglePickingBVHBuilt();
 	}
 }
 
 FStaticMesh* UStaticMesh::GetStaticMeshAsset() const
 {
-	return StaticMeshAsset;
+    return StaticMeshAsset.get();
 }
 
 void UStaticMesh::SetStaticMaterials(TArray<FStaticMaterial>&& InMaterials)
 {
-	StaticMaterials = InMaterials;
+    StaticMaterials = std::move(InMaterials);
+    CacheSectionMaterialIndices();
 }
 
 const TArray<FStaticMaterial>& UStaticMesh::GetStaticMaterials() const

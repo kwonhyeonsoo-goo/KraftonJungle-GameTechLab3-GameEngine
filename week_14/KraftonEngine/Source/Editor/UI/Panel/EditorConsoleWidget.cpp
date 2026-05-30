@@ -1,4 +1,4 @@
-﻿#include "Editor/UI/Panel/EditorConsoleWidget.h"
+#include "Editor/UI/Panel/EditorConsoleWidget.h"
 #include "Object/GarbageCollection.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/Viewport/Level/LevelEditorViewportClient.h"
@@ -162,16 +162,34 @@ namespace
 // FConsoleLogOutputDevice
 // ============================================================
 
+FConsoleLogOutputDevice::~FConsoleLogOutputDevice()
+{
+    Clear();
+}
+
 void FConsoleLogOutputDevice::Write(const char* Msg)
 {
-	Messages.push_back(_strdup(Msg));
+    const char* SafeMsg       = Msg ? Msg : "";
+    char*       CopiedMessage = _strdup(SafeMsg);
+    if (!CopiedMessage)
+    {
+        return;
+    }
+
+    Messages.push_back(CopiedMessage);
 	if (AutoScroll) ScrollToBottom = true;
 }
 
 void FConsoleLogOutputDevice::Clear()
 {
-	for (int32 i = 0; i < Messages.Size; i++) free(Messages[i]);
+    for (int32 i = 0; i < Messages.Size; i++)
+    {
+        free(Messages[i]);
+        Messages[i] = nullptr;
+    }
+
 	Messages.clear();
+    ScrollToBottom = false;
 }
 
 // ============================================================
@@ -283,6 +301,15 @@ void FEditorConsoleWidget::RegisterRenderCommands()
 void FEditorConsoleWidget::Shutdown()
 {
 	FLogManager::Get().RemoveOutputDevice(&ConsoleDevice);
+    ConsoleDevice.Clear();
+    ClearHistory();
+    HistoryPos = -1;
+
+    Commands.clear();
+    CompletionCandidates.clear();
+    CompletionSelectionIndex    = -1;
+    bCompletionNavigationActive = false;
+    CompletionNavigationValue.clear();
 }
 
 void FEditorConsoleWidget::Clear()
@@ -630,11 +657,14 @@ bool FEditorConsoleWidget::PrintCompactHelp(const FString& CategoryFilter)
 
 void FEditorConsoleWidget::ExecCommand(const char* CommandLine)
 {
-	AddLog("# %s\n", CommandLine);
-	History.push_back(_strdup(CommandLine));
+    AddLog("# %s\n", CommandLine ? CommandLine : "");
+    if (char* HistoryEntry = _strdup(CommandLine ? CommandLine : ""))
+    {
+        History.push_back(HistoryEntry);
+    }
 	HistoryPos = -1;
 
-	TArray<FString> Tokens = Tokenize(CommandLine);
+    TArray<FString> Tokens = Tokenize(CommandLine ? CommandLine : "");
 	if (Tokens.empty()) return;
 
 	FString CommandName;
