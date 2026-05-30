@@ -94,9 +94,7 @@ INCLUDE_PATHS = [
     "ThirdParty\\sol2\\include",
     "ThirdParty\\fmod\\include",
     "ThirdParty\\fbx\\include",
-    # PhysX(NuGet) — vcpkg.targets 가 조건부 Import 라 첫 clone 직후 IntelliSense 파싱 시점엔
-    # Exists()=false 로 include 경로가 안 잡힘. 직접 박아 restore 타이밍과 무관하게 잡히게 함.
-    "packages\\NVIDIA.PhysX.4.1.2\\installed\\x64-windows\\include",
+    "ThirdParty\\PhysX\\include",
     ".",
 ]
 
@@ -113,19 +111,12 @@ FMOD_RELEASE_LIB = "fmod_vc.lib"
 FMOD_DEBUG_DLL = "fmodL.dll"
 FMOD_RELEASE_DLL = "fmod.dll"
 
-# PhysX (NuGet, 4.1.2) — NuGet 의 NVIDIA.PhysX.targets 는 include / props 만 정리해
-# 주고 *.lib 자동 link 는 하지 않는다 (확인: 명시 link 빼면 LNK2019 PxCreateFoundation
-# 등으로 link 실패). 예전에 "vcpkg 끌어와서 빌드되던 것" 은 사용자 PC 의
-# `vcpkg integrate install` 이 user-wide property sheet 로 vcpkg 의 PhysX lib 를
-# 자동으로 끼워 넣어주던 부수효과였고, vcpkg 가 없는 PC 에서는 빌드가 깨졌다.
-# 본 스크립트는 vcxproj 의 <VcpkgEnabled>false</VcpkgEnabled> 로 vcpkg 통합을 끄고
-# (Globals 에 박힘 — generate_vcxproj 참고), NuGet 패키지 경로의 lib 를 명시적으로
-# AdditionalLibraryDirectories / AdditionalDependencies 에 넣어 모든 PC 에서 동일하게
-# NuGet 의 PhysX 만 사용하게 한다. DLL 은 PostBuildEvent 에서 OutDir 로 복사.
-PHYSX_DEBUG_LIB_DIR   = "packages\\NVIDIA.PhysX.4.1.2\\installed\\x64-windows\\debug\\lib"
-PHYSX_RELEASE_LIB_DIR = "packages\\NVIDIA.PhysX.4.1.2\\installed\\x64-windows\\lib"
-PHYSX_DEBUG_BIN       = "packages\\NVIDIA.PhysX.4.1.2\\installed\\x64-windows\\debug\\bin"
-PHYSX_RELEASE_BIN     = "packages\\NVIDIA.PhysX.4.1.2\\installed\\x64-windows\\bin"
+# PhysX is checked into ThirdParty so builds do not depend on package restore,
+# user-wide vcpkg integration, or per-machine package caches.
+PHYSX_DEBUG_LIB_DIR   = "ThirdParty\\PhysX\\debug"
+PHYSX_RELEASE_LIB_DIR = "ThirdParty\\PhysX\\release"
+PHYSX_DEBUG_BIN       = "ThirdParty\\PhysX\\debug"
+PHYSX_RELEASE_BIN     = "ThirdParty\\PhysX\\release"
 PHYSX_LIBS = [
     "PhysX_64.lib",
     "PhysXFoundation_64.lib",
@@ -174,7 +165,6 @@ ADDITIONAL_DEPENDENCIES = [
 # NuGet packages (id, version) — restored via packages.config
 NUGET_PACKAGES = [
     ("directxtk_desktop_win10", "2025.10.28.2"),
-    ("NVIDIA.PhysX", "4.1.2"),
 ]
 
 NS = "http://schemas.microsoft.com/developer/msbuild/2003"
@@ -314,9 +304,7 @@ def generate_vcxproj(files: dict[str, list[str]]):
     ET.SubElement(pg, "ProjectGuid").text = PROJECT_GUID
     ET.SubElement(pg, "RootNamespace").text = ROOT_NAMESPACE
     ET.SubElement(pg, "WindowsTargetPlatformVersion").text = "10.0"
-    # vcpkg user-wide integration 비활성화. 로컬 PC 에 `vcpkg integrate install` 이
-    # 적용돼 있어도 본 프로젝트는 NuGet 의 PhysX (packages/NVIDIA.PhysX.4.1.2) 만 쓰도록
-    # 강제. (vcpkg 의 PhysX 가 끼어들면 lib 버전/심볼 불일치로 link 실패가 발생했음.)
+    # vcpkg user-wide integration 비활성화. PhysX 는 ThirdParty 에 체크인된 사본만 사용한다.
     ET.SubElement(pg, "VcpkgEnabled").text = "false"
 
     ET.SubElement(proj, "Import", Project="$(VCTargetsPath)\\Microsoft.Cpp.Default.props")
