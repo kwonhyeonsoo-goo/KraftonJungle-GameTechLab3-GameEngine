@@ -57,6 +57,7 @@ namespace
     {
         return FPaths::ToUtf8(Path.stem().generic_wstring());
     }
+
 }
 
 FPhysicsAssetManager& FPhysicsAssetManager::Get()
@@ -271,7 +272,6 @@ TArray<FAssetListItem> FPhysicsAssetManager::FindPhysicsAssetsForSkeleton(const 
 
     return Result;
 }
-
 void FPhysicsAssetManager::AddReferencedObjects(FReferenceCollector& Collector)
 {
     for (auto& Pair : PhysicsAssetCaches)
