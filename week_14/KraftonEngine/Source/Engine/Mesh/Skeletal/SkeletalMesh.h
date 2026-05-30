@@ -6,6 +6,7 @@
 #include "Object/Ptr/WeakObjectPtr.h"
 
 class USkeleton;
+class UPhysicsAsset;
 
 
 #include "Source/Engine/Mesh/Skeletal/SkeletalMesh.generated.h"
@@ -43,10 +44,19 @@ public:
     void SetSkeletonBinding(const FSkeletonBinding& InBinding);
     const FSkeletonBinding& GetSkeletonBinding() const { return SkeletonBinding; }
 
+    // The mesh owns the default PhysicsAsset choice; components may override it later.
+    void SetPhysicsAsset(UPhysicsAsset* InPhysicsAsset);
+    UPhysicsAsset* GetPhysicsAsset() const;
+    void SetPhysicsAssetPath(const FString& InPath);
+    const FString& GetPhysicsAssetPath() const { return PhysicsAssetPath; }
+    bool ResolvePhysicsAsset();
+    void ClearPhysicsAsset();
+
 private:
     void CacheSectionMaterialIndices();
     void SyncSkeletonBindingToAsset();
     void SyncSkeletonBindingFromAsset();
+    bool CanUsePhysicsAsset(UPhysicsAsset* InPhysicsAsset, FSkeletonCompatibilityReport* OutReport = nullptr) const;
 
 private:
     FString AssetPathFileName = "None";
@@ -56,4 +66,6 @@ private:
 
     FSkeletonBinding SkeletonBinding;
     TWeakObjectPtr<USkeleton> Skeleton;
+    FString PhysicsAssetPath = "None";
+    mutable TWeakObjectPtr<UPhysicsAsset> PhysicsAsset;
 };

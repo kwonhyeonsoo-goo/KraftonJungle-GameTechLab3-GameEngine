@@ -7,6 +7,7 @@
 #include "Animation/Sequence/AnimSequenceBase.h"
 #include "Animation/Instance/AnimSingleNodeInstance.h"
 #include "Animation/PoseContext.h"
+#include "Animation/Skeleton/SkeletonManager.h"
 #include "Asset/AssetRegistry.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
@@ -17,6 +18,8 @@
 #include "Object/Object.h"
 #include "Object/Reflection/ObjectFactory.h"
 #include "Object/Reflection/UClass.h"
+#include "Physics/PhysicsAsset.h"
+#include "Physics/PhysicsAssetManager.h"
 #include "Render/Proxy/SkeletalMeshSceneProxy.h"
 #include "Serialization/Archive.h"
 
@@ -36,9 +39,171 @@ FPrimitiveSceneProxy* USkeletalMeshComponent::CreateSceneProxy()
 void USkeletalMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 {
     Super::SetSkeletalMesh(InMesh);
+    if (InMesh)
+    {
+        ResolvePhysicsAssetOverride();
+    }
+    else
+    {
+        PhysicsAssetOverride.Reset();
+    }
+
+    OnPhysicsAssetChanged();
     // Mesh 가 바뀌면 이전 AnimInstance 가 가리키던 본 인덱스/카운트가 무의미해진다.
     // 새 SkeletalMesh 기준으로 AnimInstance 를 재인스턴스화한다.
     InitializeAnimation();
+}
+
+void USkeletalMeshComponent::SetPhysicsAssetOverride(UPhysicsAsset* InPhysicsAsset)
+{
+    if (!InPhysicsAsset)
+    {
+        ClearPhysicsAssetOverride();
+        return;
+    }
+
+    FSkeletonCompatibilityReport Report;
+    if (!CanUsePhysicsAsset(InPhysicsAsset, &Report))
+    {
+        UE_LOG("SetPhysicsAssetOverride rejected: skeleton mismatch. Component=%s PhysicsAsset=%s Reason=%s",
+            GetName().c_str(),
+            InPhysicsAsset->GetName().c_str(),
+            Report.Reason.c_str());
+        ClearPhysicsAssetOverride();
+        return;
+    }
+
+    PhysicsAssetOverride = InPhysicsAsset;
+    PhysicsAssetOverridePath = InPhysicsAsset->GetAssetPathFileName().empty()
+        ? FString("None")
+        : InPhysicsAsset->GetAssetPathFileName();
+    OnPhysicsAssetChanged();
+}
+
+void USkeletalMeshComponent::SetPhysicsAssetOverridePath(const FString& InPath)
+{
+    PhysicsAssetOverridePath.SetPath(InPath.empty() ? FString("None") : InPath);
+    PhysicsAssetOverride.Reset();
+
+    if (!PhysicsAssetOverridePath.IsNull())
+    {
+        ResolvePhysicsAssetOverride();
+    }
+    else
+    {
+        OnPhysicsAssetChanged();
+    }
+}
+
+UPhysicsAsset* USkeletalMeshComponent::GetPhysicsAssetOverride() const
+{
+    if (PhysicsAssetOverride.Get())
+    {
+        FSkeletonCompatibilityReport Report;
+        if (CanUsePhysicsAsset(PhysicsAssetOverride.Get(), &Report))
+        {
+            return PhysicsAssetOverride.Get();
+        }
+
+        UE_LOG("GetPhysicsAssetOverride cleared incompatible cached PhysicsAsset. Component=%s PhysicsAsset=%s Reason=%s",
+            GetName().c_str(),
+            PhysicsAssetOverride->GetName().c_str(),
+            Report.Reason.c_str());
+        const_cast<USkeletalMeshComponent*>(this)->ClearPhysicsAssetOverride();
+        return nullptr;
+    }
+
+    if (PhysicsAssetOverridePath.IsNull())
+    {
+        return nullptr;
+    }
+
+    USkeletalMeshComponent* MutableThis = const_cast<USkeletalMeshComponent*>(this);
+    return MutableThis->ResolvePhysicsAssetOverride() ? PhysicsAssetOverride.Get() : nullptr;
+}
+
+UPhysicsAsset* USkeletalMeshComponent::GetEffectivePhysicsAsset() const
+{
+    if (UPhysicsAsset* OverridePhysicsAsset = GetPhysicsAssetOverride())
+    {
+        return OverridePhysicsAsset;
+    }
+
+    USkeletalMesh* Mesh = GetSkeletalMesh();
+    return Mesh ? Mesh->GetPhysicsAsset() : nullptr;
+}
+
+bool USkeletalMeshComponent::ResolvePhysicsAssetOverride()
+{
+    if (PhysicsAssetOverride.Get())
+    {
+        FSkeletonCompatibilityReport Report;
+        if (CanUsePhysicsAsset(PhysicsAssetOverride.Get(), &Report))
+        {
+            return true;
+        }
+
+        UE_LOG("ResolvePhysicsAssetOverride cleared incompatible cached PhysicsAsset. Component=%s PhysicsAsset=%s Reason=%s",
+            GetName().c_str(),
+            PhysicsAssetOverride->GetName().c_str(),
+            Report.Reason.c_str());
+        ClearPhysicsAssetOverride();
+        return false;
+    }
+
+    if (PhysicsAssetOverridePath.IsNull())
+    {
+        PhysicsAssetOverride.Reset();
+        return false;
+    }
+
+    USkeletalMesh* Mesh = GetSkeletalMesh();
+    if (!Mesh)
+    {
+        PhysicsAssetOverride.Reset();
+        return false;
+    }
+
+    UPhysicsAsset* LoadedPhysicsAsset = FPhysicsAssetManager::Get().LoadPhysicsAsset(PhysicsAssetOverridePath.ToString());
+    if (!LoadedPhysicsAsset)
+    {
+        PhysicsAssetOverride.Reset();
+        return false;
+    }
+
+    FSkeletonCompatibilityReport Report;
+    if (!CanUsePhysicsAsset(LoadedPhysicsAsset, &Report))
+    {
+        UE_LOG("ResolvePhysicsAssetOverride rejected loaded PhysicsAsset: skeleton mismatch. Component=%s PhysicsAsset=%s Reason=%s",
+            GetName().c_str(),
+            LoadedPhysicsAsset->GetName().c_str(),
+            Report.Reason.c_str());
+        ClearPhysicsAssetOverride();
+        return false;
+    }
+
+    PhysicsAssetOverride = LoadedPhysicsAsset;
+    return true;
+}
+
+void USkeletalMeshComponent::ClearPhysicsAssetOverride()
+{
+    PhysicsAssetOverride.Reset();
+    PhysicsAssetOverridePath.Reset();
+    OnPhysicsAssetChanged();
+}
+
+void USkeletalMeshComponent::ResetRagdollRuntimeState()
+{
+    bSimulatingRagdoll = false;
+    RagdollRootBoneIndex = -1;
+    RagdollBodiesByBone.clear();
+    RagdollConstraints.clear();
+}
+
+void USkeletalMeshComponent::OnPhysicsAssetChanged()
+{
+    ResetRagdollRuntimeState();
 }
 
 void USkeletalMeshComponent::PlayAnimation(UAnimSequenceBase* NewAnimToPlay, bool bLooping)
@@ -232,6 +397,40 @@ void USkeletalMeshComponent::LoadAnimationFromPath()
     }
 }
 
+bool USkeletalMeshComponent::CanUsePhysicsAsset(UPhysicsAsset* InPhysicsAsset, FSkeletonCompatibilityReport* OutReport) const
+{
+    if (!InPhysicsAsset)
+    {
+        if (OutReport)
+        {
+            OutReport->Result = ESkeletonCompatibilityResult::Incompatible;
+            OutReport->Reason = "null physics asset";
+        }
+        return false;
+    }
+
+    const USkeletalMesh* Mesh = GetSkeletalMesh();
+    if (!Mesh)
+    {
+        if (OutReport)
+        {
+            OutReport->Result = ESkeletonCompatibilityResult::Incompatible;
+            OutReport->Reason = "skeletal mesh is missing";
+        }
+        return false;
+    }
+
+    const FSkeletonCompatibilityReport Report =
+        FSkeletonManager::CheckCompatibility(Mesh->GetSkeletonBinding(), InPhysicsAsset->GetSkeletonBinding());
+
+    if (OutReport)
+    {
+        *OutReport = Report;
+    }
+
+    return Report.Result == ESkeletonCompatibilityResult::ExactSkeleton;
+}
+
 void USkeletalMeshComponent::InitializeAnimation()
 {
     if (!GetSkeletalMesh())
@@ -415,6 +614,20 @@ void USkeletalMeshComponent::PostEditProperty(const char* PropertyName)
     {
         SetPlaying(AnimationData.bPlaying);
     }
+    else if (std::strcmp(PropertyName, "PhysicsAssetOverridePath") == 0 ||
+             std::strcmp(PropertyName, "Physics Asset Override") == 0)
+    {
+        if (!PhysicsAssetOverridePath.IsNull())
+        {
+            ResolvePhysicsAssetOverride();
+        }
+        else
+        {
+            PhysicsAssetOverride.Reset();
+        }
+
+        OnPhysicsAssetChanged();
+    }
 
     // AnimInstance 자체 properties 는 자식이 자체 PostEdit 처리. 컴포넌트는 dispatch 만.
     // 컴포넌트가 인식한 이름과 겹치지 않는 한 무해 (자식이 모르는 이름은 no-op).
@@ -435,6 +648,8 @@ void USkeletalMeshComponent::Serialize(FArchive& Ar)
     if (Ar.IsLoading())
     {
         AnimationData.AnimToPlayPath.SetPath(AnimToPlayPath);
+        PhysicsAssetOverride.Reset();
+        ResetRagdollRuntimeState();
     }
     Ar << AnimationData.PlayRate;
     Ar << AnimationData.bLooping;
