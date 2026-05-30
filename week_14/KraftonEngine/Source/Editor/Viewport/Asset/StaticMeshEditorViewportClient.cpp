@@ -44,6 +44,19 @@ void FStaticMeshEditorViewportClient::Release()
 	bIsRenderable = false;
 }
 
+void FStaticMeshEditorViewportClient::OrbitCameraAroundTarget(const FVector& Target)
+{
+	// 카메라-타겟 거리는 사용자가 휠로 바꾼 값(또는 ResetCameraToPreviewBounds 초기값)을 유지한다.
+	// 매 프레임 ViewLocation 을 (Target - Forward * Distance) 로 재계산하여 메시가 항상 화면 중앙에 오게 한다.
+	const FVector Forward = ViewTransform.ViewRotation.GetForwardVector();
+	const float Distance = (Target - ViewTransform.ViewLocation).Length();
+	const float SafeDistance = (Distance > 0.01f) ? Distance : 5.0f;
+	ViewTransform.ViewLocation = Target - Forward * SafeDistance;
+	ViewTransform.LookAt(Target);
+	TargetLocation = ViewTransform.ViewLocation;
+	LastAppliedCameraLocation = ViewTransform.ViewLocation;
+}
+
 void FStaticMeshEditorViewportClient::ResetCameraToPreviewBounds()
 {
 	FBoundingBox Bounds = PreviewMeshComponent

@@ -220,6 +220,10 @@ struct FMaterialGraphDocument
     EMaterialGraphTarget Target   = EMaterialGraphTarget::Surface;
     FMaterialGraph       Graph;
 
+    // ax::NodeEditor 의 view state (zoom/pan/selection) — 원래 디스크의 JSON 파일에 저장되던 것을
+    // 머티리얼 .uasset 안으로 가져온 것. 빈 문자열이면 NavigateToContent 가 첫 프레임에 fit 한다.
+    FString EditorSettings;
+
     FString LastSavedGraphHash;
     FString LastCompiledGraphHash;
     FString LastCompiledShaderPath;
@@ -233,6 +237,7 @@ struct FMaterialGraphDocument
         Ar << Document.bEnabled;
         Ar << Document.Target;
         Ar << Document.Graph;
+        Ar << Document.EditorSettings;
         Ar << Document.LastSavedGraphHash;
         Ar << Document.LastCompiledGraphHash;
         Ar << Document.LastCompiledShaderPath;

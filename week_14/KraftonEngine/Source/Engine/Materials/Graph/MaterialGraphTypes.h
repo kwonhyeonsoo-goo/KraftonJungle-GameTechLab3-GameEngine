@@ -85,6 +85,14 @@ enum class EMaterialGraphNodeType : uint8
     ParticleSubUV,    // atlas Rows/Cols 파라미터, UV(Float2) 출력
     DynamicParameter, // Param1/2/3/4 + RGBA 출력
 
+    // Conversion — float scalars ↔ vectors. UE 의 Make/Break 컨벤션과 동일.
+    MakeFloat2,       // X, Y → float2
+    MakeFloat3,       // X, Y, Z → float3
+    MakeFloat4,       // X, Y, Z, W → float4
+    BreakFloat2,      // float2 → X, Y
+    BreakFloat3,      // float3 → X, Y, Z
+    BreakFloat4,      // float4 → X, Y, Z, W
+
     // 에디터 편의 노드 — Blueprint editor 와 같은 workflow 를 위한 노드.
     Reroute,
     Comment,

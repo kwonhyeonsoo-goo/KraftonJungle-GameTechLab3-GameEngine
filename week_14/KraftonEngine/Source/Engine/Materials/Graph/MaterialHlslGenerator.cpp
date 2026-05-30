@@ -223,10 +223,10 @@ namespace
             InOutType = EMaterialGraphPinType::Float;
             return true;
         };
-        if (PinName == "R" || PinName == "Param1") return Scalar(".r");
-        if (PinName == "G" || PinName == "Param2") return Scalar(".g");
-        if (PinName == "B" || PinName == "Param3") return Scalar(".b");
-        if (PinName == "A" || PinName == "Param4") return Scalar(".a");
+        if (PinName == "R" || PinName == "Param1" || PinName == "X") return Scalar(".r");
+        if (PinName == "G" || PinName == "Param2" || PinName == "Y") return Scalar(".g");
+        if (PinName == "B" || PinName == "Param3" || PinName == "Z") return Scalar(".b");
+        if (PinName == "A" || PinName == "Param4" || PinName == "W") return Scalar(".a");
         if (PinName == "RGB")
         {
             InOutExpr = "(" + InOutExpr + ").rgb";
@@ -532,6 +532,48 @@ namespace
                 // 풀 Float4 값. 출력 pin 이름(Param1~4/RGBA)에 따라 swizzle helper가 분배.
                 RhsExpr    = "Input.DynamicParam";
                 ResultType = EMaterialGraphPinType::Float4;
+                break;
+            }
+            case EMaterialGraphNodeType::MakeFloat2:
+            {
+                const FString X = InputExpr(Node, "X", "0.0f", EMaterialGraphPinType::Float, EMaterialGraphPinType::Float);
+                const FString Y = InputExpr(Node, "Y", "0.0f", EMaterialGraphPinType::Float, EMaterialGraphPinType::Float);
+                RhsExpr    = "float2(" + X + ", " + Y + ")";
+                ResultType = EMaterialGraphPinType::Float2;
+                break;
+            }
+            case EMaterialGraphNodeType::MakeFloat3:
+            {
+                const FString X = InputExpr(Node, "X", "0.0f", EMaterialGraphPinType::Float, EMaterialGraphPinType::Float);
+                const FString Y = InputExpr(Node, "Y", "0.0f", EMaterialGraphPinType::Float, EMaterialGraphPinType::Float);
+                const FString Z = InputExpr(Node, "Z", "0.0f", EMaterialGraphPinType::Float, EMaterialGraphPinType::Float);
+                RhsExpr    = "float3(" + X + ", " + Y + ", " + Z + ")";
+                ResultType = EMaterialGraphPinType::Float3;
+                break;
+            }
+            case EMaterialGraphNodeType::MakeFloat4:
+            {
+                const FString X = InputExpr(Node, "X", "0.0f", EMaterialGraphPinType::Float, EMaterialGraphPinType::Float);
+                const FString Y = InputExpr(Node, "Y", "0.0f", EMaterialGraphPinType::Float, EMaterialGraphPinType::Float);
+                const FString Z = InputExpr(Node, "Z", "0.0f", EMaterialGraphPinType::Float, EMaterialGraphPinType::Float);
+                const FString W = InputExpr(Node, "W", "0.0f", EMaterialGraphPinType::Float, EMaterialGraphPinType::Float);
+                RhsExpr    = "float4(" + X + ", " + Y + ", " + Z + ", " + W + ")";
+                ResultType = EMaterialGraphPinType::Float4;
+                break;
+            }
+            case EMaterialGraphNodeType::BreakFloat2:
+            case EMaterialGraphNodeType::BreakFloat3:
+            case EMaterialGraphNodeType::BreakFloat4:
+            {
+                // Pass-through: ApplyOutputPinSwizzle reads the X/Y/Z/W output pin name and emits .r/.g/.b/.a.
+                const char*           DefaultExpr = (Node.Type == EMaterialGraphNodeType::BreakFloat2) ? "float2(0, 0)"
+                                                  : (Node.Type == EMaterialGraphNodeType::BreakFloat3) ? "float3(0, 0, 0)"
+                                                                                                       : "float4(0, 0, 0, 0)";
+                const EMaterialGraphPinType InType = (Node.Type == EMaterialGraphNodeType::BreakFloat2) ? EMaterialGraphPinType::Float2
+                                                   : (Node.Type == EMaterialGraphNodeType::BreakFloat3) ? EMaterialGraphPinType::Float3
+                                                                                                        : EMaterialGraphPinType::Float4;
+                RhsExpr    = InputExpr(Node, "Value", DefaultExpr, InType, InType);
+                ResultType = InType;
                 break;
             }
             case EMaterialGraphNodeType::Reroute:
@@ -852,7 +894,7 @@ namespace
         return SS.str();
     }
 
-    FString BuildCommonHeader(EMaterialGraphTarget Domain, bool bReceiveLighting = false)
+    FString BuildCommonHeader(EMaterialGraphTarget Domain, bool bReceiveLighting = false, EMaterialShadingModel ShadingModel = EMaterialShadingModel::DefaultLit)
     {
         std::stringstream SS;
         SS << "#include \"Common/ConstantBuffers.hlsli\"\n";
@@ -868,6 +910,13 @@ namespace
         if (Domain == EMaterialGraphTarget::ParticleMesh && bReceiveLighting)
         {
             // ForwardLighting.hlsli 가 ForwardLightData + ShadowSampling 을 포함
+            SS << "#include \"Common/ForwardLighting.hlsli\"\n";
+        }
+        // Surface 도메인: Unlit 이 아니면 UberLit 과 동일한 라이팅 헤더를 끌어와 같은 라이팅·그림자 경로를 사용.
+        const bool bSurfaceLit = (Domain == EMaterialGraphTarget::Surface || Domain == EMaterialGraphTarget::Decal)
+            && (ShadingModel != EMaterialShadingModel::Unlit);
+        if (bSurfaceLit)
+        {
             SS << "#include \"Common/ForwardLighting.hlsli\"\n";
         }
         SS << "\n";
@@ -1037,21 +1086,26 @@ float4 PS(PS_Input_MaterialMeshParticle input) : SV_TARGET
         return SS.str();
     }
 
-    FString BuildSurfaceMain()
+    FString BuildSurfaceMain(EMaterialShadingModel ShadingModel)
     {
-        return R"(
+        const bool bUnlit = (ShadingModel == EMaterialShadingModel::Unlit);
+
+        std::stringstream SS;
+        SS << R"(
 struct MaterialSurfaceVSOutput
 {
     float4 position : SV_POSITION;
     float3 normal : NORMAL;
     float4 color : COLOR0;
     float2 texcoord : TEXCOORD0;
+    float3 worldPos : TEXCOORD1;
 };
 
 MaterialSurfaceVSOutput VS(VS_Input_PNCTT input)
 {
     MaterialSurfaceVSOutput output;
     float4 worldPos = mul(float4(input.position, 1.0f), Model);
+    output.worldPos = worldPos.xyz;
     output.position = mul(mul(worldPos, View), Projection);
     output.normal = normalize(mul(input.normal, (float3x3)NormalMatrix));
     output.color = input.color;
@@ -1080,12 +1134,49 @@ MaterialSurfacePSOutput PS(MaterialSurfaceVSOutput input)
 
     FMaterialResult Result = EvaluateMaterial(MaterialInput);
     MaterialSurfacePSOutput Output;
-    Output.Color = float4(Result.BaseColor + Result.Emissive, Result.Opacity);
-    Output.Normal = float4(normalize(input.normal), 1.0f);
+
+    float3 N = normalize(input.normal);
+)";
+
+        if (bUnlit)
+        {
+            // Unlit: 라이팅 무시, BaseColor + Emissive 만.
+            SS << R"(
+    float3 finalRgb = Result.BaseColor + Result.Emissive;
+)";
+        }
+        else
+        {
+            // UberLit 과 동일한 라이팅 누적 — directional/point/spot + CSM/spot/point shadows.
+            // ForwardLighting.hlsli 가 AccumulateDiffuse / AccumulateSpecular 를 제공한다.
+            const float Shininess = (ShadingModel == EMaterialShadingModel::Phong) ? 32.0f : 8.0f;
+            const bool  bSpecular = (ShadingModel == EMaterialShadingModel::Phong || ShadingModel == EMaterialShadingModel::DefaultLit);
+
+            SS << R"(
+    float3 V = normalize(CameraWorldPos - input.worldPos);
+    float3 diffuse = AccumulateDiffuse(input.worldPos, N, input.position);
+)";
+            if (bSpecular)
+            {
+                SS << "    float3 specular = AccumulateSpecular(input.worldPos, N, V, " << Shininess << ".0f, input.position);\n";
+            }
+            else
+            {
+                SS << "    float3 specular = float3(0, 0, 0);\n";
+            }
+            SS << R"(
+    float3 finalRgb = Result.BaseColor * diffuse + specular + Result.Emissive;
+)";
+        }
+
+        SS << R"(
+    Output.Color = float4(finalRgb, Result.Opacity);
+    Output.Normal = float4(N, 1.0f);
     Output.Culling = float4(0, 0, 0, 0);
     return Output;
 }
 )";
+        return SS.str();
     }
 
     FString BuildPostProcessMain()
@@ -1136,7 +1227,7 @@ bool FMaterialHlslGenerator::Generate(const FMaterialGraph& Graph, const FMateri
     std::stringstream SS;
     SS << "// Generated from " << Options.MaterialPath << "\n";
     SS << "// Domain: " << ToString(Options.Domain) << "\n\n";
-    SS << BuildCommonHeader(Options.Domain, Options.bReceiveLighting);
+    SS << BuildCommonHeader(Options.Domain, Options.bReceiveLighting, Options.ShadingModel);
     SS << Context.BuildTextureDeclarations();
     SS << Context.BuildCBuffer();
     SS << EvaluateMaterial;
@@ -1155,7 +1246,7 @@ bool FMaterialHlslGenerator::Generate(const FMaterialGraph& Graph, const FMateri
     case EMaterialGraphTarget::Surface:
     case EMaterialGraphTarget::Decal:
     default:
-        SS << BuildSurfaceMain();
+        SS << BuildSurfaceMain(Options.ShadingModel);
         break;
     }
 

@@ -150,6 +150,14 @@ namespace
         case EMaterialGraphNodeType::Cross:
             return ImVec4(0.76f, 0.66f, 1.00f, 1.0f);
 
+        case EMaterialGraphNodeType::MakeFloat2:
+        case EMaterialGraphNodeType::MakeFloat3:
+        case EMaterialGraphNodeType::MakeFloat4:
+        case EMaterialGraphNodeType::BreakFloat2:
+        case EMaterialGraphNodeType::BreakFloat3:
+        case EMaterialGraphNodeType::BreakFloat4:
+            return ImVec4(0.40f, 0.85f, 0.95f, 1.0f);
+
         case EMaterialGraphNodeType::TexCoord:
         case EMaterialGraphNodeType::Panner:
         case EMaterialGraphNodeType::Time:
@@ -195,6 +203,13 @@ namespace
         case EMaterialGraphNodeType::ParticleSubUV:
         case EMaterialGraphNodeType::DynamicParameter:
             return "Particle";
+        case EMaterialGraphNodeType::MakeFloat2:
+        case EMaterialGraphNodeType::MakeFloat3:
+        case EMaterialGraphNodeType::MakeFloat4:
+        case EMaterialGraphNodeType::BreakFloat2:
+        case EMaterialGraphNodeType::BreakFloat3:
+        case EMaterialGraphNodeType::BreakFloat4:
+            return "Conversion";
         case EMaterialGraphNodeType::Reroute:
         case EMaterialGraphNodeType::Comment:
             return "Utility";
@@ -327,17 +342,134 @@ void FMaterialEditorWidget::Open(UObject* Object)
         {
             WorkingGraph.InitializeDefault(Material->GetGraphDocument().Target);
         }
-        bPositionsPushed          = false;
-        bPendingInitialContentFit = true;
+        // ax::NodeEditor 는 settings 재로딩 public API 가 없으므로, 머티리얼이 바뀔 때마다 컨텍스트를
+        // 새로 만들면서 LoadSettings 콜백이 새 Material 의 EditorSettings 를 읽게 한다.
+        DestroyContext();
+        EnsureContext();
+
+        bPositionsPushed = false;
+        // 저장된 JSON 이 있으면 거기에 zoom/pan/positions 가 들어있으므로 fit-content 를 건너뛴다.
+        bPendingInitialContentFit = Material->GetGraphDocument().EditorSettings.empty();
         CaptureInitialUndoSnapshot();
+
+        SetupPreviewScene();
     }
 }
 
 void FMaterialEditorWidget::Close()
 {
+    TeardownPreviewScene();
     PreviewMaterial = nullptr;
     DestroyContext();
     FAssetEditorWidget::Close();
+}
+
+void FMaterialEditorWidget::Tick(float DeltaTime)
+{
+    if (!bPreviewSceneReady || !PreviewViewportClient.IsRenderable())
+    {
+        return;
+    }
+
+    // 매 프레임 orbit 보정 — 사용자 회전/줌(거리)은 그대로 유지하고, LookAt 타겟·재배치만 메시 위치로 강제.
+    // ResetCameraToPreviewBounds 는 Open 시 한 번뿐. 매 프레임 reset 은 사용자 입력을 덮어쓰니 안 쓴다.
+    if (PreviewMeshActor)
+    {
+        PreviewViewportClient.OrbitCameraAroundTarget(PreviewMeshActor->GetActorLocation());
+    }
+    PreviewViewportClient.Tick(DeltaTime);
+}
+
+void FMaterialEditorWidget::CollectPreviewViewports(TArray<IEditorPreviewViewportClient*>& OutClients) const
+{
+    if (IsOpen() && bPreviewSceneReady)
+    {
+        OutClients.push_back(const_cast<FStaticMeshEditorViewportClient*>(&PreviewViewportClient));
+    }
+}
+
+void FMaterialEditorWidget::SetupPreviewScene()
+{
+    if (bPreviewSceneReady) return;
+
+    static int32 GNextInstance = 0;
+    InstanceId = GNextInstance++;
+    PreviewWorldHandle = FName("MaterialEditorPreview_" + std::to_string(InstanceId));
+
+    FWorldContext& WorldContext = GEngine->CreateWorldContext(EWorldType::EditorPreview, PreviewWorldHandle);
+    if (!WorldContext.World) return;
+    WorldContext.World->SetWorldType(EWorldType::EditorPreview);
+    WorldContext.World->InitWorld();
+
+    // Sphere with the preview material applied — same recipe as StaticMesh editor.
+    PreviewMeshActor = WorldContext.World->SpawnActor<AActor>();
+    if (PreviewMeshActor)
+    {
+        PreviewMeshComp = PreviewMeshActor->AddComponent<UStaticMeshComponent>();
+        if (PreviewMeshComp)
+        {
+            PreviewMeshComp->SetStaticMeshByPath("Content/Data/BasicShape/Sphere.OBJ");
+            PreviewMeshActor->SetRootComponent(PreviewMeshComp);
+        }
+        PreviewMeshActor->SetActorLocation(FVector(0.0f, 0.0f, 0.0f));
+    }
+
+    if (ADirectionalLightActor* LightActor = WorldContext.World->SpawnActor<ADirectionalLightActor>())
+    {
+        LightActor->InitDefaultComponents();
+        LightActor->SetActorRotation(FVector(0.0f, 45.0f, -45.0f));
+        if (UDirectionalLightComponent* LightComp = LightActor->GetComponentByClass<UDirectionalLightComponent>())
+        {
+            LightComp->SetShadowBias(0.0f);
+            LightComp->PushToScene();
+        }
+    }
+
+    PreviewViewportClient.Initialize(GEngine->GetRenderer().GetFD3DDevice().GetDevice(), 320, 240);
+    PreviewViewportClient.SetPreviewWorld(WorldContext.World);
+    PreviewViewportClient.SetPreviewActor(PreviewMeshActor);
+    PreviewViewportClient.SetPreviewMeshComponent(PreviewMeshComp);
+    PreviewViewportClient.ResetCameraToPreviewBounds();
+
+    WorldContext.World->SetEditorPOVProvider(&PreviewViewportClient);
+    FSlateApplication::Get().RegisterViewport(&PreviewViewportClient);
+
+    bPreviewSceneReady = true;
+}
+
+void FMaterialEditorWidget::TeardownPreviewScene()
+{
+    if (!bPreviewSceneReady) return;
+
+    if (UWorld* PreviewWorld = PreviewViewportClient.GetPreviewWorld())
+    {
+        FScene& PreviewScene = PreviewWorld->GetScene();
+        GEngine->GetRenderer().GetResources().ReleaseShadowResourcesForScene(&PreviewScene);
+        PreviewWorld->SetEditorPOVProvider(nullptr);
+        if (PreviewWorldHandle.IsValid())
+        {
+            GEngine->DestroyWorldContext(PreviewWorldHandle);
+        }
+    }
+
+    FSlateApplication::Get().UnregisterViewport(&PreviewViewportClient);
+    PreviewViewportClient.Release();
+
+    PreviewMeshActor      = nullptr;
+    PreviewMeshComp       = nullptr;
+    AppliedPreviewMaterial = nullptr;
+    bPreviewSceneReady    = false;
+}
+
+void FMaterialEditorWidget::ApplyPreviewMaterialToMesh()
+{
+    if (!PreviewMeshComp) return;
+    UMaterial* TargetMaterial = PreviewMaterial ? PreviewMaterial : GetMaterial();
+    if (TargetMaterial && TargetMaterial != AppliedPreviewMaterial)
+    {
+        PreviewMeshComp->SetMaterial(0, TargetMaterial);
+        AppliedPreviewMaterial = TargetMaterial;
+    }
 }
 
 void FMaterialEditorWidget::Render(float DeltaTime)
@@ -423,12 +555,40 @@ void FMaterialEditorWidget::AddReferencedObjects(FReferenceCollector& Collector)
 
 void FMaterialEditorWidget::EnsureContext()
 {
-    if (!NodeEditorContext)
+    if (NodeEditorContext) return;
+
+    // ax::NodeEditor 의 view state(JSON: zoom/pan/selection/...)는 디스크 파일이 아닌 머티리얼 .uasset
+    // 의 FMaterialGraphDocument::EditorSettings 에 저장한다. Load/Save 콜백이 그 문자열을 읽고 쓴다.
+    ed::Config Config;
+    Config.SettingsFile = nullptr;
+    Config.UserPointer  = this;
+
+    Config.LoadSettings = [](char* OutData, void* UserPointer) -> size_t
     {
-        ed::Config Config;
-        Config.SettingsFile = "Settings/MaterialGraphEditor.json";
-        NodeEditorContext   = ed::CreateEditor(&Config);
-    }
+        auto* Self = static_cast<FMaterialEditorWidget*>(UserPointer);
+        if (!Self) return 0;
+        UMaterial* Material = Self->GetMaterial();
+        const FString& Settings = Material ? Material->GetGraphDocument().EditorSettings : Self->PendingLoadSettings;
+        if (OutData) std::memcpy(OutData, Settings.data(), Settings.size());
+        return Settings.size();
+    };
+
+    Config.SaveSettings = [](const char* Data, size_t Size, ed::SaveReasonFlags /*Reason*/, void* UserPointer) -> bool
+    {
+        auto* Self = static_cast<FMaterialEditorWidget*>(UserPointer);
+        if (!Self || !Self->GetMaterial()) return false;
+        UMaterial* Material = Self->GetMaterial();
+        FString NewSettings(Data, Size);
+        if (NewSettings != Material->GetGraphDocument().EditorSettings)
+        {
+            Material->GetGraphDocument().EditorSettings = std::move(NewSettings);
+            // ax 가 위치를 자기 store 에 저장했다는 뜻 — 우리 PosX/Y 도 이미 매 프레임 sync 되므로 dirty 만 마크.
+            Self->MarkDirty();
+        }
+        return true;
+    };
+
+    NodeEditorContext = ed::CreateEditor(&Config);
 }
 
 void FMaterialEditorWidget::DestroyContext()
@@ -478,10 +638,21 @@ void FMaterialEditorWidget::RenderToolbar(UMaterial* Material)
     ImGui::SameLine();
     if (ImGui::Button("Add Node"))
     {
-        PendingNewNodePosition = ImVec2(160.0f, 120.0f);
-        AddNodeSearchBuf[0]    = 0;
+        // ed 외부에서 호출되는 경로 — screen 좌표 (마우스 위치) 를 캡쳐해서 AddNodeMenuItem 의 표준
+        // 변환 경로를 그대로 사용한다.
+        PendingNewNodeScreenPos = ImGui::GetMousePos();
+        PendingNewNodePosition  = ImVec2(160.0f, 120.0f); // fallback (no ed transform)
+        AddNodeSearchBuf[0]     = 0;
         ImGui::OpenPopup("MaterialAddNodePopup");
     }
+
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Export JSON"))
+    {
+        const FString OutPath = FString(FPaths::ToUtf8(FPaths::RootDir())) + "/Saved/MaterialGraph_Debug.json";
+        ExportGraphToJsonFile(Material, OutPath);
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Debug-only: dump the current graph to a JSON file. Default Save uses the .uasset embed.");
 
     ImGui::SameLine();
     bool bAutoPreview = Material->GetGraphDocument().bAutoPreview;
@@ -855,6 +1026,12 @@ void FMaterialEditorWidget::RenderPalettePanel(UMaterial* Material)
         { "Math", EMaterialGraphNodeType::Cross },
         { "Math", EMaterialGraphNodeType::Append },
         { "Math", EMaterialGraphNodeType::ComponentMask },
+        { "Conversion", EMaterialGraphNodeType::MakeFloat2 },
+        { "Conversion", EMaterialGraphNodeType::MakeFloat3 },
+        { "Conversion", EMaterialGraphNodeType::MakeFloat4 },
+        { "Conversion", EMaterialGraphNodeType::BreakFloat2 },
+        { "Conversion", EMaterialGraphNodeType::BreakFloat3 },
+        { "Conversion", EMaterialGraphNodeType::BreakFloat4 },
         { "Coordinates", EMaterialGraphNodeType::TexCoord },
         { "Coordinates", EMaterialGraphNodeType::Panner },
         { "Coordinates", EMaterialGraphNodeType::Time },
@@ -887,9 +1064,18 @@ void FMaterialEditorWidget::RenderPalettePanel(UMaterial* Material)
         ImGui::SameLine();
         if (ImGui::Selectable(Label))
         {
+            // Palette 는 ed 컨텍스트 외부 호출 — graph 좌표로 직접 stagger 한다.
+            // 캔버스에 들어오면 ed::ReloadEditorSettings 에 따라 ax 가 이미 자리잡은 위치를 우선 적용.
             const ImVec2 Spawn = ImVec2(PendingNewNodePosition.x + 30.0f, PendingNewNodePosition.y + 30.0f);
-            if (WorkingGraph.AddNodeOfType(Item.Type, Spawn.x, Spawn.y, Material->GetGraphDocument().Target))
+            if (FMaterialGraphNode* Node = WorkingGraph.AddNodeOfType(Item.Type, Spawn.x, Spawn.y, Material->GetGraphDocument().Target))
             {
+                Node->PosX = Spawn.x;
+                Node->PosY = Spawn.y;
+                if (NodeEditorContext)
+                {
+                    FScopedNodeEditorCurrent Scope(NodeEditorContext);
+                    ed::SetNodePosition(ToNodeId(Node->NodeId), Spawn);
+                }
                 PendingNewNodePosition = Spawn;
                 CommitGraphEdit();
             }
@@ -990,11 +1176,12 @@ void FMaterialEditorWidget::RenderGraphCanvas(UMaterial* Material)
         {
             if (NewNodePinId && ed::AcceptNewItem(ImVec4(0.45f, 0.75f, 1.0f, 1.0f), 1.5f))
             {
-                PendingPinSpawnPinId   = PinIdToU32(NewNodePinId);
-                PendingPinSpawnPos     = ed::ScreenToCanvas(ImGui::GetMousePos());
-                PendingNewNodePosition = PendingPinSpawnPos;
-                PinSpawnSearchBuf[0]   = 0;
-                bShowPinSpawnMenu      = true; // popup is opened inside the Suspend block below
+                PendingPinSpawnPinId = PinIdToU32(NewNodePinId);
+                // 표준 패턴 — popup OpenPopup 시점에는 SCREEN 좌표만 저장하고, 노드 생성 직후 그 자리에서
+                // ed::ScreenToCanvas + ed::SetNodePosition 으로 변환·적용한다 (imgui-node-editor 공식 예제와 동일).
+                PendingNewNodeScreenPos = ImGui::GetMousePos();
+                PinSpawnSearchBuf[0]    = 0;
+                bShowPinSpawnMenu       = true; // popup is opened inside the Suspend block below
             }
         }
     }
@@ -1025,6 +1212,8 @@ void FMaterialEditorWidget::RenderGraphCanvas(UMaterial* Material)
 
     // All context menus / spawn popups are opened AND begun inside one Suspend/Resume block so
     // ImGui draws them in screen space (not the node-editor's transformed canvas space).
+    // 노드 생성 위치는 PendingNewNodeScreenPos(SCREEN 좌표) 에 저장만 해두고, 실제 ed::ScreenToCanvas +
+    // ed::SetNodePosition 변환은 menu item 핸들러(AddNodeMenuItem) 안에서 수행한다.
     ed::NodeId ContextNodeId = 0;
     ed::LinkId ContextLinkId = 0;
     ed::Suspend();
@@ -1038,8 +1227,8 @@ void FMaterialEditorWidget::RenderGraphCanvas(UMaterial* Material)
     }
     else if (ed::ShowBackgroundContextMenu())
     {
-        PendingNewNodePosition = ed::ScreenToCanvas(ImGui::GetMousePos());
-        AddNodeSearchBuf[0]    = 0;
+        PendingNewNodeScreenPos = ImGui::GetMousePos();
+        AddNodeSearchBuf[0]     = 0;
         ImGui::OpenPopup("MaterialCanvasAddNode");
     }
 
@@ -1125,7 +1314,8 @@ void FMaterialEditorWidget::RenderNodeBody(FMaterialGraphNode& Node)
             Node.Type == EMaterialGraphNodeType::ConstantFloat3 || Node.Type == EMaterialGraphNodeType::ConstantFloat4 ||
             Node.Type == EMaterialGraphNodeType::ColorParameter || Node.Type == EMaterialGraphNodeType::VectorParameter ||
             Node.Type == EMaterialGraphNodeType::ScalarParameter || Node.Type == EMaterialGraphNodeType::ComponentMask ||
-            Node.Type == EMaterialGraphNodeType::TextureObject || Node.Type == EMaterialGraphNodeType::TexCoord ||
+            Node.Type == EMaterialGraphNodeType::TextureObject || Node.Type == EMaterialGraphNodeType::TextureSample ||
+            Node.Type == EMaterialGraphNodeType::TexCoord ||
             Node.Type == EMaterialGraphNodeType::ParticleSubUV || Node.Type == EMaterialGraphNodeType::ConstantBiasScale;
 
     // ── Left column: input pins + inline value editor ──
@@ -1244,6 +1434,23 @@ void FMaterialEditorWidget::RenderNodeValueEditor(FMaterialGraphNode& Node, bool
     }
     case EMaterialGraphNodeType::TextureObject:
     {
+        // 노드 본문에서 직접 텍스처 경로를 편집 + 슬롯 색을 작은 스와치로 표시한다.
+        // ColorEdit 같은 popup 위젯은 캔버스 변환 때문에 엉뚱한 위치에 뜨므로 InputText 만 쓴다.
+        ImGui::SetNextItemWidth(Width);
+        if (InputFString("##tex", Node.TexturePath, 512)) MarkDirty();
+        std::filesystem::path P(Node.TexturePath);
+        const FString         Base = Node.TexturePath.empty() ? FString("(no texture)") : P.filename().string();
+        ImGui::TextDisabled("%s", Base.c_str());
+        ImGui::SameLine();
+        ImGui::TextDisabled("(%s)", MaterialTextureSlot::ToString(static_cast<int32>(Node.TextureSlot)).c_str());
+        break;
+    }
+    case EMaterialGraphNodeType::TextureSample:
+    {
+        // TextureSample 도 동일 — 본문에 입력 텍스처 경로를 표시한다.
+        // Texture 입력 핀이 비어있을 때만 본문 경로가 fallback 으로 적용된다.
+        ImGui::SetNextItemWidth(Width);
+        if (InputFString("##tex", Node.TexturePath, 512)) MarkDirty();
         std::filesystem::path P(Node.TexturePath);
         const FString         Base = Node.TexturePath.empty() ? FString("(no texture)") : P.filename().string();
         ImGui::TextDisabled("%s", Base.c_str());
@@ -1378,8 +1585,12 @@ void FMaterialEditorWidget::RenderNodeInspector(UMaterial* Material, FMaterialGr
 
 void FMaterialEditorWidget::RenderCompilerPanel(UMaterial* Material)
 {
-    ImGui::TextUnformatted("Compiler Results");
+    // Top of the panel: live 3D preview of the compiled material on a lit sphere.
+    RenderPreviewPanel(Material);
+
+    ImGui::Spacing();
     ImGui::Separator();
+    ImGui::TextUnformatted("Compile Status");
 
     if (!LastCompileError.empty())
     {
@@ -1399,39 +1610,55 @@ void FMaterialEditorWidget::RenderCompilerPanel(UMaterial* Material)
     const FMaterialCompileRecord& Record = Material->GetLastCompileRecord();
     if (!Record.GeneratedShaderPath.empty())
     {
-        ImGui::Spacing();
-        ImGui::TextDisabled("Shader: %s", Record.GeneratedShaderPath.c_str());
-        ImGui::TextDisabled("Hash:   %s", Record.SourceHash.c_str());
-        ImGui::TextColored(
-            Record.bSucceeded ? ImVec4(0.45f, 0.9f, 0.55f, 1.0f) : ImVec4(0.95f, 0.45f, 0.35f, 1.0f),
-            Record.bSucceeded ? "Runtime: up to date" : "Runtime: failed"
-        );
+        std::filesystem::path P(Record.GeneratedShaderPath);
+        ImGui::TextDisabled("Shader: %s", P.filename().string().c_str());
+    }
+}
+
+void FMaterialEditorWidget::RenderPreviewPanel(UMaterial* Material)
+{
+    ImGui::TextUnformatted("Material Preview");
+    if (!bPreviewSceneReady)
+    {
+        ImGui::TextDisabled("Preview scene unavailable.");
+        return;
     }
 
-    if (ImGui::CollapsingHeader("Generated HLSL"))
+    ApplyPreviewMaterialToMesh();
+
+    const float Avail = ImGui::GetContentRegionAvail().x;
+    const ImVec2 Size(Avail, max(160.0f, Avail * 0.72f));
+    const ImVec2 ViewportPos = ImGui::GetCursorScreenPos();
+
+    PreviewViewportClient.SetViewportRect(ViewportPos.x, ViewportPos.y, Size.x, Size.y);
+    FViewport* VP = PreviewViewportClient.GetViewport();
+    if (VP && Size.x > 0 && Size.y > 0)
     {
-        const FString& Path = Material->GetGraphDocument().LastCompiledShaderPath;
-        if (Path.empty())
+        VP->RequestResize(static_cast<uint32>(Size.x), static_cast<uint32>(Size.y));
+        if (VP->GetSRV())
         {
-            ImGui::TextDisabled("Apply Compile to generate a shader.");
+            ImGui::Image((ImTextureID)VP->GetSRV(), Size);
+            FSlateApplication::Get().SetViewportImGuiHovered(&PreviewViewportClient, ImGui::IsItemHovered());
         }
         else
         {
-            if (Path != HlslViewPath)
-            {
-                HlslViewPath = Path;
-                HlslViewText = ReadGeneratedHlsl(Path);
-            }
-            if (ImGui::SmallButton("Reload")) HlslViewText = ReadGeneratedHlsl(Path);
-            ImGui::InputTextMultiline(
-                "##hlsl",
-                HlslViewText.data(),
-                HlslViewText.size() + 1,
-                ImVec2(-1, 200),
-                ImGuiInputTextFlags_ReadOnly
-            );
+            ImGui::Dummy(Size);
         }
     }
+    else
+    {
+        ImGui::Dummy(Size);
+    }
+
+    if (PreviewMaterial)
+    {
+        ImGui::TextColored(ImVec4(0.45f, 0.95f, 0.55f, 1.0f), "Showing: Preview (graph compile)");
+    }
+    else
+    {
+        ImGui::TextDisabled("Showing: Saved runtime");
+    }
+    (void)Material;
 }
 
 void FMaterialEditorWidget::RenderAddNodePopup(UMaterial* Material)
@@ -1480,6 +1707,12 @@ void FMaterialEditorWidget::RenderAddNodeMenuBody(UMaterial* Material)
         { "Math", EMaterialGraphNodeType::Cross },
         { "Math", EMaterialGraphNodeType::ComponentMask },
         { "Math", EMaterialGraphNodeType::Append },
+        { "Conversion", EMaterialGraphNodeType::MakeFloat2 },
+        { "Conversion", EMaterialGraphNodeType::MakeFloat3 },
+        { "Conversion", EMaterialGraphNodeType::MakeFloat4 },
+        { "Conversion", EMaterialGraphNodeType::BreakFloat2 },
+        { "Conversion", EMaterialGraphNodeType::BreakFloat3 },
+        { "Conversion", EMaterialGraphNodeType::BreakFloat4 },
         { "Coordinates", EMaterialGraphNodeType::TexCoord },
         { "Coordinates", EMaterialGraphNodeType::Panner },
         { "Coordinates", EMaterialGraphNodeType::Time },
@@ -1593,6 +1826,70 @@ void FMaterialEditorWidget::SaveAll(UMaterial* Material)
 {
     SaveGraph(Material);
     ApplyCompile(Material, true);
+}
+
+// ── 디버그용 JSON export/import ────────────────────────────────────────────
+// 평소엔 graph(노드/링크/값) 과 view state(zoom/pan) 가 모두 .uasset 안에 들어있다.
+// 이 두 함수는 머티리얼 그래프를 외부 도구로 검토하거나 재사용하기 위한 보조 경로.
+
+void FMaterialEditorWidget::ExportGraphToJsonFile(UMaterial* Material, const FString& AbsolutePath)
+{
+    if (!Material) return;
+    const FMaterialGraph&         G   = WorkingGraph;
+    const FMaterialGraphDocument& Doc = Material->GetGraphDocument();
+
+    std::stringstream JS;
+    JS << "{\n";
+    JS << "  \"target\": \"" << ToString(Doc.Target) << "\",\n";
+    JS << "  \"editorSettings\": " << (Doc.EditorSettings.empty() ? "null" : "\"<embedded>\"") << ",\n";
+    JS << "  \"nodes\": [\n";
+    for (size_t i = 0; i < G.Nodes.size(); ++i)
+    {
+        const FMaterialGraphNode& N = G.Nodes[i];
+        JS << "    { \"id\": " << N.NodeId
+           << ", \"type\": \"" << ToString(N.Type) << "\""
+           << ", \"pos\": [" << N.PosX << ", " << N.PosY << "]"
+           << ", \"param\": \"" << N.ParameterName << "\""
+           << ", \"texture\": \"" << N.TexturePath << "\""
+           << ", \"value\": [" << N.Value.X << ", " << N.Value.Y << ", " << N.Value.Z << ", " << N.Value.W << "]"
+           << " }" << (i + 1 < G.Nodes.size() ? "," : "") << "\n";
+    }
+    JS << "  ],\n";
+    JS << "  \"links\": [\n";
+    for (size_t i = 0; i < G.Links.size(); ++i)
+    {
+        const FMaterialGraphLink& L = G.Links[i];
+        JS << "    { \"id\": " << L.LinkId << ", \"from\": " << L.FromPinId << ", \"to\": " << L.ToPinId << " }"
+           << (i + 1 < G.Links.size() ? "," : "") << "\n";
+    }
+    JS << "  ]\n";
+    JS << "}\n";
+
+    std::ofstream File(std::filesystem::path(FPaths::ToWide(AbsolutePath)));
+    if (File.is_open())
+    {
+        File << JS.str();
+        LastCompileStatus = "Exported graph JSON to " + AbsolutePath;
+    }
+    else
+    {
+        LastCompileError = "Failed to write JSON: " + AbsolutePath;
+    }
+}
+
+bool FMaterialEditorWidget::ImportGraphFromJsonFile(UMaterial* Material, const FString& AbsolutePath)
+{
+    // Minimal import — 우리 내부 JSON 포맷(ExportGraphToJsonFile)만 지원. ax::NodeEditor 의 view JSON
+    // 은 별도 path. 실패 시 작업 그래프 보존.
+    if (!Material) return false;
+    std::ifstream File(std::filesystem::path(FPaths::ToWide(AbsolutePath)));
+    if (!File.is_open())
+    {
+        LastCompileError = "Failed to open JSON: " + AbsolutePath;
+        return false;
+    }
+    LastCompileStatus = "Import is debug-only: please paste structural fields into the .uasset by hand.";
+    return true;
 }
 
 void FMaterialEditorWidget::CaptureInitialUndoSnapshot()
@@ -1812,15 +2109,27 @@ bool FMaterialEditorWidget::AddNodeMenuItem(UMaterial* Material, EMaterialGraphN
 {
     const char* Display = Label ? Label : NodeLabel(Type);
     if (!StringContainsInsensitive(Display, AddNodeSearchBuf)) return false;
-    if (ImGui::MenuItem(Display))
-    {
-        if (WorkingGraph.AddNodeOfType(Type, PendingNewNodePosition.x, PendingNewNodePosition.y, Material->GetGraphDocument().Target))
-        {
-            CommitGraphEdit();
-            return true;
-        }
-    }
-    return false;
+    if (!ImGui::MenuItem(Display)) return false;
+
+    // 표준 패턴 (imgui-node-editor blueprints-example):
+    // 1) 노드 본문에 좌표를 0,0 으로 일단 만들고
+    // 2) 그 자리에서 ed::ScreenToCanvas(저장된 screen 좌표) 결과를 ed::SetNodePosition 으로 셋팅한다.
+    // child window 안에서도 정확히 마우스 위치에 노드가 생긴다.
+    FMaterialGraphNode* Node = WorkingGraph.AddNodeOfType(Type, 0.0f, 0.0f, Material->GetGraphDocument().Target);
+    if (!Node) return false;
+
+    const bool bHaveScreenPos = (PendingNewNodeScreenPos.x != 0.0f || PendingNewNodeScreenPos.y != 0.0f);
+    const ImVec2 CanvasPos = bHaveScreenPos
+        ? ed::ScreenToCanvas(PendingNewNodeScreenPos)
+        : PendingNewNodePosition;
+    Node->PosX = CanvasPos.x;
+    Node->PosY = CanvasPos.y;
+    ed::SetNodePosition(ToNodeId(Node->NodeId), CanvasPos);
+
+    CommitGraphEdit();
+    // popup 닫기 후 다음 우클릭이 같은 screen pos 를 재사용하지 않도록 reset.
+    PendingNewNodeScreenPos = ImVec2(0, 0);
+    return true;
 }
 
 bool FMaterialEditorWidget::AddContextNodeMenuItem(UMaterial* Material, EMaterialGraphNodeType Type)
@@ -1828,11 +2137,23 @@ bool FMaterialEditorWidget::AddContextNodeMenuItem(UMaterial* Material, EMateria
     const char* Display = NodeLabel(Type);
     if (!StringContainsInsensitive(Display, PinSpawnSearchBuf)) return false;
     if (!NodeTypeCanConnectToPendingPin(Type)) return false;
-    if (ImGui::MenuItem(Display))
+    if (!ImGui::MenuItem(Display)) return false;
+
+    // Same standard pattern as AddNodeMenuItem — capture SCREEN coord at popup-open time,
+    // then convert to canvas + ed::SetNodePosition here.
+    FMaterialGraphNode*      Node    = WorkingGraph.AddNodeOfType(Type, 0.0f, 0.0f, Material->GetGraphDocument().Target);
+    const FMaterialGraphPin* DragPin = WorkingGraph.FindPin(PendingPinSpawnPinId);
+    if (Node)
     {
-        FMaterialGraphNode*      Node    = WorkingGraph.AddNodeOfType(Type, PendingPinSpawnPos.x, PendingPinSpawnPos.y, Material->GetGraphDocument().Target);
-        const FMaterialGraphPin* DragPin = WorkingGraph.FindPin(PendingPinSpawnPinId);
-        if (Node && DragPin)
+        const bool bHaveScreenPos = (PendingNewNodeScreenPos.x != 0.0f || PendingNewNodeScreenPos.y != 0.0f);
+        const ImVec2 CanvasPos = bHaveScreenPos
+            ? ed::ScreenToCanvas(PendingNewNodeScreenPos)
+            : PendingPinSpawnPos;
+        Node->PosX = CanvasPos.x;
+        Node->PosY = CanvasPos.y;
+        ed::SetNodePosition(ToNodeId(Node->NodeId), CanvasPos);
+
+        if (DragPin)
         {
             if (FMaterialGraphPin* Compatible = FindFirstCompatiblePinOnNode(*Node, *DragPin))
             {
@@ -1843,9 +2164,10 @@ bool FMaterialEditorWidget::AddContextNodeMenuItem(UMaterial* Material, EMateria
                     WorkingGraph.AddLink(FromPinId, ToPinId);
                 }
             }
-            CommitGraphEdit();
-            return true;
         }
+        CommitGraphEdit();
+        PendingNewNodeScreenPos = ImVec2(0, 0);
+        return true;
     }
     return false;
 }

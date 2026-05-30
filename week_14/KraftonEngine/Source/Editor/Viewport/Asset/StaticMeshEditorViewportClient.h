@@ -24,6 +24,8 @@ public:
 
 	void ResetCameraToPreviewBounds();
 
+	void OrbitCameraAroundTarget(const FVector& Target);
+
 	void SetPreviewWorld(UWorld* InWorld) { PreviewWorld = InWorld; }
 	void SetPreviewActor(AActor* InActor) { PreviewActor = InActor; }
 	void SetPreviewMeshComponent(UStaticMeshComponent* InComp) { PreviewMeshComponent = InComp; }

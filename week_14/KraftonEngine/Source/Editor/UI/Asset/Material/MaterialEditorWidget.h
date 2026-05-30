@@ -80,6 +80,10 @@ private:
     void ApplyCompile(UMaterial* Material, bool bPersistCompiledState);
     void SaveAll(UMaterial* Material);
 
+    // 디버깅용 import/export — 평소엔 .uasset 안에 graph + view state 가 모두 들어있다.
+    void ExportGraphToJsonFile(UMaterial* Material, const FString& AbsolutePath);
+    bool ImportGraphFromJsonFile(UMaterial* Material, const FString& AbsolutePath);
+
     void          CaptureInitialUndoSnapshot();
     void          CommitGraphEdit();
     void          UndoGraphEdit();
@@ -119,15 +123,22 @@ private:
     bool    bLastCompileOk = false;
     FString HlslViewPath;
     FString HlslViewText;
+    // ed::Config::LoadSettings 가 GetMaterial() 이 nullptr 인 동안(ed::CreateEditor 직후 첫 호출 등)
+    // 사용할 보조 버퍼. 정상 경로에서는 GetMaterial()->GetGraphDocument().EditorSettings 가 진실.
+    FString PendingLoadSettings;
     char    AddNodeSearchBuf[96]  = {};
     char    PinSpawnSearchBuf[96] = {};
     char    PaletteSearchBuf[96]  = {};
 
-    bool   bShowAddNodeMenu       = false;
-    bool   bShowPinSpawnMenu      = false;
-    uint32 PendingPinSpawnPinId   = 0;
-    ImVec2 PendingNewNodePosition = ImVec2(0, 0);
-    ImVec2 PendingPinSpawnPos     = ImVec2(0, 0);
+    bool   bShowAddNodeMenu        = false;
+    bool   bShowPinSpawnMenu       = false;
+    uint32 PendingPinSpawnPinId    = 0;
+    // 모든 미정 노드 spawn 위치는 SCREEN 좌표로 저장. 노드 생성 직후 ed::ScreenToCanvas + ed::SetNodePosition
+    // 으로 변환해 적용한다 (imgui-node-editor 표준 패턴 — child window 변환 누락으로 인한 좌표 오류 방지).
+    ImVec2 PendingNewNodeScreenPos = ImVec2(0, 0);
+    // Palette / toolbar 등 ed 컨텍스트 외부에서 사용할 때를 위한 그래프-좌표 fallback (보조 경로).
+    ImVec2 PendingNewNodePosition  = ImVec2(0, 0);
+    ImVec2 PendingPinSpawnPos      = ImVec2(0, 0);
 
     TArray<TArray<uint8>>      UndoStack;
     TArray<TArray<uint8>>      RedoStack;

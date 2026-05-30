@@ -279,6 +279,60 @@ FMaterialGraphNode* FMaterialGraph::AddNodeOfType(EMaterialGraphNodeType Type, f
         AddPin(*N, EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float4, FName("RGBA"));
         return N;
     }
+    case EMaterialGraphNodeType::MakeFloat2:
+    {
+        FMaterialGraphNode* N = AddNode(Type, FName("Make Float2"), X, Y);
+        AddPin(*N, EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, FName("X"));
+        AddPin(*N, EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, FName("Y"));
+        AddPin(*N, EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float2, FName("Result"));
+        return N;
+    }
+    case EMaterialGraphNodeType::MakeFloat3:
+    {
+        FMaterialGraphNode* N = AddNode(Type, FName("Make Float3"), X, Y);
+        AddPin(*N, EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, FName("X"));
+        AddPin(*N, EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, FName("Y"));
+        AddPin(*N, EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, FName("Z"));
+        AddPin(*N, EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float3, FName("Result"));
+        return N;
+    }
+    case EMaterialGraphNodeType::MakeFloat4:
+    {
+        FMaterialGraphNode* N = AddNode(Type, FName("Make Float4"), X, Y);
+        AddPin(*N, EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, FName("X"));
+        AddPin(*N, EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, FName("Y"));
+        AddPin(*N, EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, FName("Z"));
+        AddPin(*N, EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, FName("W"));
+        AddPin(*N, EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float4, FName("Result"));
+        return N;
+    }
+    case EMaterialGraphNodeType::BreakFloat2:
+    {
+        FMaterialGraphNode* N = AddNode(Type, FName("Break Float2"), X, Y);
+        AddPin(*N, EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float2, FName("Value"));
+        AddPin(*N, EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, FName("X"));
+        AddPin(*N, EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, FName("Y"));
+        return N;
+    }
+    case EMaterialGraphNodeType::BreakFloat3:
+    {
+        FMaterialGraphNode* N = AddNode(Type, FName("Break Float3"), X, Y);
+        AddPin(*N, EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float3, FName("Value"));
+        AddPin(*N, EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, FName("X"));
+        AddPin(*N, EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, FName("Y"));
+        AddPin(*N, EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, FName("Z"));
+        return N;
+    }
+    case EMaterialGraphNodeType::BreakFloat4:
+    {
+        FMaterialGraphNode* N = AddNode(Type, FName("Break Float4"), X, Y);
+        AddPin(*N, EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float4, FName("Value"));
+        AddPin(*N, EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, FName("X"));
+        AddPin(*N, EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, FName("Y"));
+        AddPin(*N, EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, FName("Z"));
+        AddPin(*N, EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, FName("W"));
+        return N;
+    }
     }
     return nullptr;
 }
@@ -790,6 +844,18 @@ const char* ToString(EMaterialGraphNodeType Type)
         return "ParticleSubUV";
     case EMaterialGraphNodeType::DynamicParameter:
         return "DynamicParameter";
+    case EMaterialGraphNodeType::MakeFloat2:
+        return "MakeFloat2";
+    case EMaterialGraphNodeType::MakeFloat3:
+        return "MakeFloat3";
+    case EMaterialGraphNodeType::MakeFloat4:
+        return "MakeFloat4";
+    case EMaterialGraphNodeType::BreakFloat2:
+        return "BreakFloat2";
+    case EMaterialGraphNodeType::BreakFloat3:
+        return "BreakFloat3";
+    case EMaterialGraphNodeType::BreakFloat4:
+        return "BreakFloat4";
     case EMaterialGraphNodeType::Reroute:
         return "Reroute";
     case EMaterialGraphNodeType::Comment:

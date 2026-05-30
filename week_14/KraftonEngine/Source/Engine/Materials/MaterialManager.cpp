@@ -408,8 +408,11 @@ UMaterial* FMaterialManager::CreatePreviewMaterialClone(UMaterial* SourceMateria
     return PreviewMaterial;
 }
 
-static FString BuildGeneratedMaterialShaderPath(const FString& MaterialPath, const FString& Hash, bool bPreview, EMaterialGraphTarget Target)
+static FString BuildGeneratedMaterialShaderPath(const FString& MaterialPath, const FString& /*Hash*/, bool bPreview, EMaterialGraphTarget Target)
 {
+    // Fixed path per (material, domain). No content hash in the filename → each material owns
+    // exactly one preview .hlsl and one runtime .hlsl that get overwritten on recompile, preventing
+    // the orphaned-shader pile-up we had when every compile produced a new hash-suffixed file.
     std::filesystem::path SourcePath(FPaths::ToWide(MaterialPath));
     FString               Stem = SourcePath.stem().string();
     if (Stem.empty())
@@ -419,7 +422,28 @@ static FString BuildGeneratedMaterialShaderPath(const FString& MaterialPath, con
 
     const FString TargetName = ToString(Target);
     return FString(bPreview ? "Shaders/Generated/Preview/Materials/" : "Shaders/Generated/Materials/")
-            + Stem + "_" + TargetName + "_" + Hash + ".hlsl";
+            + Stem + "_" + TargetName + ".hlsl";
+}
+
+// Editor session boot helper — clears the preview directory once so old preview .hlsl files
+// from previous runs (different materials, renamed assets) don't accumulate on disk.
+static void EnsurePreviewShaderDirCleared()
+{
+    static bool bCleared = false;
+    if (bCleared) return;
+    bCleared = true;
+
+    const std::filesystem::path Dir = std::filesystem::path(FPaths::RootDir()) / L"Shaders" / L"Generated" / L"Preview" / L"Materials";
+    std::error_code Ec;
+    if (!std::filesystem::exists(Dir, Ec)) return;
+    for (const auto& Entry : std::filesystem::directory_iterator(Dir, Ec))
+    {
+        if (!Entry.is_regular_file()) continue;
+        if (Entry.path().extension() == L".hlsl")
+        {
+            std::filesystem::remove(Entry.path(), Ec);
+        }
+    }
 }
 
 static bool WriteGeneratedMaterialShaderFile(const FString& ProjectRelativePath, const FString& Hlsl, FString* OutError)
@@ -490,6 +514,7 @@ static bool CompileGraphToShader(UMaterial* Material, const FMaterialGraph& Work
         return false;
     }
 
+    if (bPreview) EnsurePreviewShaderDirCleared();
     const FString           Hash = ComputeMaterialGraphStructuralHash(WorkingGraph);
     FMaterialCompileOptions Options;
     Options.MaterialPath      = Material->GetAssetPathFileName();
@@ -500,6 +525,7 @@ static bool CompileGraphToShader(UMaterial* Material, const FMaterialGraph& Work
     Options.DepthStencilState = Material->GetDepthStencilState();
     Options.RasterizerState   = Material->GetRasterizerState();
     Options.bReceiveLighting  = Material->GetMaterialSettings().bReceiveLighting;
+    Options.ShadingModel      = Material->GetMaterialSettings().ShadingModel;
 
     if (!FMaterialGraphCompiler::Compile(WorkingGraph, Options, OutResult))
     {

@@ -418,7 +418,16 @@ void UMaterial::SerializeMaterialSourcePayload(FArchive& Ar)
 {
     Ar << SourceKind;
     Ar << MaterialSettings;
-    Ar << GraphDocument;
+    Ar << GraphDocument.bEnabled;
+    Ar << GraphDocument.Target;
+    Ar << GraphDocument.Graph;
+    Ar << GraphDocument.EditorSettings;
+    Ar << GraphDocument.LastSavedGraphHash;
+    Ar << GraphDocument.LastCompiledGraphHash;
+    Ar << GraphDocument.LastCompiledShaderPath;
+    Ar << GraphDocument.LastCompileError;
+    Ar << GraphDocument.bAutoPreview;
+    Ar << GraphDocument.bPreviewDirty;
     Ar << ParameterDefinitions;
     Ar << RuntimeParameterStore;
     Ar << LastCompileRecord;
