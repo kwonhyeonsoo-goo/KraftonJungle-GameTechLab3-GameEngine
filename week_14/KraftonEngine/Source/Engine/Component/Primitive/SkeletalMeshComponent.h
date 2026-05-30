@@ -5,7 +5,6 @@
 #include "Object/Ptr/SubclassOf.h"
 #include "Object/Ptr/SoftObjectPtr.h"
 #include "Object/Ptr/WeakObjectPtr.h"
-#include "Physics/PhysicsBodyHandle.h"
 #include <memory>
 
 #include "Source/Engine/Component/Primitive/SkeletalMeshComponent.generated.h"
@@ -137,9 +136,5 @@ protected:
     UPROPERTY(Edit, Save, Category="Physics", DisplayName="Physics Asset Override", AssetType="PhysicsAsset")
     FSoftObjectPtr PhysicsAssetOverridePath = "None";
     mutable TWeakObjectPtr<UPhysicsAsset> PhysicsAssetOverride;
-    bool bSimulatingRagdoll = false;
-    int32 RagdollRootBoneIndex = -1;
-    TArray<FPhysicsBodyHandle> RagdollBodiesByBone;
-    TArray<FPhysicsConstraintHandle> RagdollConstraints;
     std::unique_ptr<FPhysicsAssetInstance> PhysicsAssetInstance;
 };

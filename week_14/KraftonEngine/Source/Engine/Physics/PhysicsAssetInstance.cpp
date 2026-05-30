@@ -56,6 +56,8 @@ bool FPhysicsAssetInstance::Initialize(USkeletalMeshComponent* InOwner, UPhysics
 void FPhysicsAssetInstance::Shutdown()
 {
     ResetRuntimeState();
+    BodiesByBone.clear();
+    Constraints.clear();
     OwnerComponent.Reset();
     SourceAsset.Reset();
     BoneNameToIndex.clear();
@@ -65,8 +67,15 @@ void FPhysicsAssetInstance::Shutdown()
 
 void FPhysicsAssetInstance::ResetRuntimeState()
 {
-    BodiesByBone.clear();
-    Constraints.clear();
+    for (FPhysicsBodyHandle& BodyHandle : BodiesByBone)
+    {
+        BodyHandle = FPhysicsBodyHandle{};
+    }
+
+    for (FPhysicsConstraintHandle& ConstraintHandle : Constraints)
+    {
+        ConstraintHandle = FPhysicsConstraintHandle{};
+    }
 }
 
 UPhysicsAsset* FPhysicsAssetInstance::GetAsset() const

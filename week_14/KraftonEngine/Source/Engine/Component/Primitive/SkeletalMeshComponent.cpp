@@ -7,6 +7,7 @@
 #include "Animation/Sequence/AnimSequenceBase.h"
 #include "Animation/Instance/AnimSingleNodeInstance.h"
 #include "Animation/PoseContext.h"
+#include "Animation/Skeleton/Skeleton.h"
 #include "Animation/Skeleton/SkeletonManager.h"
 #include "Asset/AssetRegistry.h"
 #include "Core/Logging/Log.h"
@@ -132,7 +133,19 @@ UPhysicsAsset* USkeletalMeshComponent::GetEffectivePhysicsAsset() const
     }
 
     USkeletalMesh* Mesh = GetSkeletalMesh();
-    return Mesh ? Mesh->GetPhysicsAsset() : nullptr;
+    if (!Mesh)
+    {
+        return nullptr;
+    }
+
+    if (UPhysicsAsset* MeshPhysicsAsset = Mesh->GetPhysicsAsset())
+    {
+        return MeshPhysicsAsset;
+    }
+
+    // Components resolve the final fallback order so later ragdoll code can ask only once.
+    USkeleton* Skeleton = Mesh->GetSkeleton();
+    return Skeleton ? Skeleton->GetDefaultPhysicsAsset() : nullptr;
 }
 
 bool USkeletalMeshComponent::ResolvePhysicsAssetOverride()
@@ -197,10 +210,6 @@ void USkeletalMeshComponent::ClearPhysicsAssetOverride()
 
 void USkeletalMeshComponent::ResetRagdollRuntimeState()
 {
-    bSimulatingRagdoll = false;
-    RagdollRootBoneIndex = -1;
-    RagdollBodiesByBone.clear();
-    RagdollConstraints.clear();
     if (PhysicsAssetInstance)
     {
         PhysicsAssetInstance->ResetRuntimeState();
@@ -227,7 +236,9 @@ FPhysicsAssetInstance* USkeletalMeshComponent::GetOrCreatePhysicsAssetInstance()
         return nullptr;
     }
 
-    if (PhysicsAssetInstance && PhysicsAssetInstance->GetAsset() == EffectivePhysicsAsset)
+    if (PhysicsAssetInstance &&
+        PhysicsAssetInstance->GetAsset() == EffectivePhysicsAsset &&
+        PhysicsAssetInstance->IsInitialized())
     {
         return PhysicsAssetInstance.get();
     }
