@@ -27,6 +27,7 @@
 #include "Materials/MaterialManager.h"
 #include "Editor/UI/Dialog/FbxImportOptionsDialog.h"
 #include "Editor/UI/Asset/Mesh/MeshEditorWidget.h"
+#include "Editor/Subsystem/AssetFactory.h"
 #include "Physics/PhysicsAsset.h"
 #include "Physics/PhysicsAssetManager.h"
 
@@ -732,6 +733,28 @@ void MeshElement::RenderContextMenu(ContentBrowserContext& Context)
 
 	if (Extension == ".uasset" && FMeshManager::IsSkeletalMeshPackage(PackagePath))
 	{
+		if (ImGui::MenuItem("Create Physics Asset"))
+		{
+			if (Context.EditorEngine)
+			{
+				ID3D11Device* Device = Context.EditorEngine->GetRenderer().GetFD3DDevice().GetDevice();
+				if (USkeletalMesh* MeshAsset = FMeshManager::LoadSkeletalMesh(FilePath, Device))
+				{
+					const FString DirectoryPath = FPaths::ToUtf8(ContentItem.Path.parent_path().wstring());
+					const FString AssetName = FPaths::ToUtf8(ContentItem.Path.stem().wstring()) + "_PhysicsAsset";
+					FString CreatedPath;
+					if (FAssetFactory::CreatePhysicsAssetForSkeletalMesh(DirectoryPath, AssetName, MeshAsset, CreatedPath))
+					{
+						Context.bPendingContentRefresh = true;
+						if (UPhysicsAsset* PhysicsAsset = FPhysicsAssetManager::Get().LoadPhysicsAsset(CreatedPath))
+						{
+							Context.EditorEngine->OpenAssetEditorForObject(PhysicsAsset);
+						}
+					}
+				}
+			}
+		}
+
 		if (ImGui::MenuItem("Reimport"))
 		{
 			USkeletalMesh* Reimported = nullptr;
