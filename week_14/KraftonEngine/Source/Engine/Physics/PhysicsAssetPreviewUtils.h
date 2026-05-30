@@ -12,6 +12,9 @@ class USkeletalMeshComponent;
 class FPhysicsAssetPreviewUtils
 {
 public:
+    static bool HasPreviewPose(const USkeletalMeshComponent* PreviewComponent);
+    static bool IsBodySetupIndexValid(const UPhysicsAsset* PhysicsAsset, int32 BodyIndex);
+    static bool IsConstraintSetupIndexValid(const UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex);
     static bool ResolveBodyBoneIndex(const USkeletalMesh* SkeletalMesh, const FPhysicsAssetBodySetup& BodySetup, int32& OutBoneIndex);
     static bool ResolveConstraintBoneIndices(
         const USkeletalMesh* SkeletalMesh,

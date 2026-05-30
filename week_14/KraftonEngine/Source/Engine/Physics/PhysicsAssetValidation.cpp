@@ -15,6 +15,7 @@ namespace
     void AppendIssue(
         TArray<FPhysicsAssetValidationIssue>& OutIssues,
         const FString& Message,
+        FPhysicsAssetValidationIssue::ESeverity Severity = FPhysicsAssetValidationIssue::ESeverity::Error,
         int32 BodyIndex = -1,
         int32 ConstraintIndex = -1)
     {
@@ -22,6 +23,7 @@ namespace
         Issue.Message = Message;
         Issue.BodyIndex = BodyIndex;
         Issue.ConstraintIndex = ConstraintIndex;
+        Issue.Severity = Severity;
         OutIssues.push_back(Issue);
     }
 }
@@ -101,13 +103,13 @@ bool FPhysicsAssetValidation::ValidateAll(
 
     if (!SkeletalMesh)
     {
-        AppendIssue(OutIssues, "target skeletal mesh is null");
+        AppendIssue(OutIssues, "Target skeletal mesh is missing.");
         return false;
     }
 
     if (!PhysicsAsset)
     {
-        AppendIssue(OutIssues, "physics asset is null");
+        AppendIssue(OutIssues, "PhysicsAsset is missing.");
         return false;
     }
 
@@ -117,7 +119,7 @@ bool FPhysicsAssetValidation::ValidateAll(
     {
         AppendIssue(
             OutIssues,
-            FString("physics asset skeleton mismatch: ") + CompatibilityReport.Reason);
+            FString("Skeleton binding mismatch: ") + CompatibilityReport.Reason);
     }
 
     const TArray<FPhysicsAssetBodySetup>& BodySetups = PhysicsAsset->GetBodySetups();
@@ -126,18 +128,25 @@ bool FPhysicsAssetValidation::ValidateAll(
     for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
     {
         const FPhysicsAssetBodySetup& BodySetup = BodySetups[BodyIndex];
-        if (!HasMeaningfulBoneName(BodySetup.BoneName))
+        const UPhysicsAsset::EEditorSetupState BodySetupState =
+            PhysicsAsset->GetBodySetupEditorState(BodyIndex);
+        if (BodySetupState == UPhysicsAsset::EEditorSetupState::Placeholder)
         {
-            AppendIssue(OutIssues, "body setup has no target bone", BodyIndex);
+            AppendIssue(
+                OutIssues,
+                "Body setup is still a placeholder and has no target bone assigned.",
+                FPhysicsAssetValidationIssue::ESeverity::Warning,
+                BodyIndex);
         }
-        else
+
+        if (HasMeaningfulBoneName(BodySetup.BoneName))
         {
             int32 BoneIndex = -1;
             if (!FPhysicsAssetPreviewUtils::ResolveBodyBoneIndex(SkeletalMesh, BodySetup, BoneIndex))
             {
                 AppendIssue(
                     OutIssues,
-                    FString("body setup references a missing bone: ") + BodySetup.BoneName.ToString(),
+                    FString("Body setup references a missing bone: ") + BodySetup.BoneName.ToString(),
                     BodyIndex);
             }
 
@@ -146,35 +155,47 @@ bool FPhysicsAssetValidation::ValidateAll(
             {
                 AppendIssue(
                     OutIssues,
-                    FString("duplicate body setup for bone: ") + BodySetup.BoneName.ToString(),
+                    FString("Duplicate body setup for bone: ") + BodySetup.BoneName.ToString(),
                     BodyIndex);
             }
         }
 
         if (BodySetup.Shapes.empty())
         {
-            AppendIssue(OutIssues, "body setup has no shapes", BodyIndex);
+            AppendIssue(OutIssues, "Body setup has no shapes.", BodyIndex);
         }
     }
 
     for (int32 ConstraintIndex = 0; ConstraintIndex < static_cast<int32>(ConstraintSetups.size()); ++ConstraintIndex)
     {
         const FPhysicsAssetConstraintSetup& ConstraintSetup = ConstraintSetups[ConstraintIndex];
+        const UPhysicsAsset::EEditorSetupState ConstraintSetupState =
+            PhysicsAsset->GetConstraintSetupEditorState(ConstraintIndex);
 
-        if (!HasMeaningfulBoneName(ConstraintSetup.ParentBoneName))
+        if (ConstraintSetupState == UPhysicsAsset::EEditorSetupState::Placeholder)
         {
-            AppendIssue(OutIssues, "constraint setup has no parent bone", -1, ConstraintIndex);
+            AppendIssue(
+                OutIssues,
+                "Constraint setup is still a placeholder and is missing one or more bones.",
+                FPhysicsAssetValidationIssue::ESeverity::Warning,
+                -1,
+                ConstraintIndex);
         }
 
         if (!HasMeaningfulBoneName(ConstraintSetup.ChildBoneName))
         {
-            AppendIssue(OutIssues, "constraint setup has no child bone", -1, ConstraintIndex);
+            AppendIssue(OutIssues, "Constraint setup has no child bone.", -1, ConstraintIndex);
+        }
+
+        if (!HasMeaningfulBoneName(ConstraintSetup.ParentBoneName))
+        {
+            AppendIssue(OutIssues, "Constraint setup has no parent bone.", -1, ConstraintIndex);
         }
 
         if (HasMeaningfulBoneName(ConstraintSetup.ParentBoneName) &&
             ConstraintSetup.ParentBoneName == ConstraintSetup.ChildBoneName)
         {
-            AppendIssue(OutIssues, "constraint setup uses the same parent and child bone", -1, ConstraintIndex);
+            AppendIssue(OutIssues, "Constraint setup uses the same parent and child bone.", -1, ConstraintIndex);
         }
 
         int32 ParentBoneIndex = -1;
@@ -189,7 +210,7 @@ bool FPhysicsAssetValidation::ValidateAll(
             {
                 AppendIssue(
                     OutIssues,
-                    FString("constraint parent bone is missing: ") + ConstraintSetup.ParentBoneName.ToString(),
+                    FString("Constraint parent bone is missing from the skeletal mesh: ") + ConstraintSetup.ParentBoneName.ToString(),
                     -1,
                     ConstraintIndex);
             }
@@ -198,7 +219,7 @@ bool FPhysicsAssetValidation::ValidateAll(
             {
                 AppendIssue(
                     OutIssues,
-                    FString("constraint child bone is missing: ") + ConstraintSetup.ChildBoneName.ToString(),
+                    FString("Constraint child bone is missing from the skeletal mesh: ") + ConstraintSetup.ChildBoneName.ToString(),
                     -1,
                     ConstraintIndex);
             }
@@ -210,7 +231,7 @@ bool FPhysicsAssetValidation::ValidateAll(
         {
             AppendIssue(
                 OutIssues,
-                FString("duplicate constraint setup for pair: ") +
+                FString("Duplicate constraint setup for pair: ") +
                     ConstraintSetup.ParentBoneName.ToString() + " -> " +
                     ConstraintSetup.ChildBoneName.ToString(),
                 -1,
@@ -222,7 +243,7 @@ bool FPhysicsAssetValidation::ValidateAll(
         {
             AppendIssue(
                 OutIssues,
-                FString("constraint parent body is missing: ") + ConstraintSetup.ParentBoneName.ToString(),
+                FString("Constraint parent body is missing: ") + ConstraintSetup.ParentBoneName.ToString(),
                 -1,
                 ConstraintIndex);
         }
@@ -232,7 +253,7 @@ bool FPhysicsAssetValidation::ValidateAll(
         {
             AppendIssue(
                 OutIssues,
-                FString("constraint child body is missing: ") + ConstraintSetup.ChildBoneName.ToString(),
+                FString("Constraint child body is missing: ") + ConstraintSetup.ChildBoneName.ToString(),
                 -1,
                 ConstraintIndex);
         }

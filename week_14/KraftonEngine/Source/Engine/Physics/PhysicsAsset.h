@@ -10,6 +10,13 @@ UCLASS()
 class UPhysicsAsset : public UObject
 {
 public:
+    enum class EEditorSetupState : uint8
+    {
+        RuntimeReady,
+        Placeholder,
+        Invalid
+    };
+
     GENERATED_BODY()
     UPhysicsAsset()           = default;
     ~UPhysicsAsset() override = default;
@@ -76,11 +83,13 @@ public:
     bool HasBodySetupForBone(const FName& BoneName) const;
     const FPhysicsAssetBodySetup* FindBodySetupByBoneName(const FName& BoneName) const;
     FPhysicsAssetBodySetup* FindMutableBodySetupByBoneName(const FName& BoneName);
+    EEditorSetupState GetBodySetupEditorState(int32 BodyIndex) const;
     int32 FindConstraintSetupIndex(const FName& ParentBoneName, const FName& ChildBoneName) const;
     bool HasConstraintBetweenBones(const FName& ParentBoneName, const FName& ChildBoneName) const;
     const FPhysicsAssetConstraintSetup* FindConstraintSetup(const FName& ParentBoneName, const FName& ChildBoneName) const;
     FPhysicsAssetConstraintSetup* FindMutableConstraintSetup(const FName& ParentBoneName, const FName& ChildBoneName);
     TArray<const FPhysicsAssetConstraintSetup*> FindConstraintSetupsForBone(const FName& BoneName) const;
+    EEditorSetupState GetConstraintSetupEditorState(int32 ConstraintIndex) const;
 
 private:
     FString AssetPathFileName = "None";

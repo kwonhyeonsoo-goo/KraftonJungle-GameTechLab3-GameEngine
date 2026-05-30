@@ -7,9 +7,16 @@ class USkeletalMesh;
 
 struct FPhysicsAssetValidationIssue
 {
+    enum class ESeverity : uint8
+    {
+        Warning,
+        Error
+    };
+
     FString Message;
     int32 BodyIndex = -1;
     int32 ConstraintIndex = -1;
+    ESeverity Severity = ESeverity::Error;
 };
 
 class FPhysicsAssetValidation
