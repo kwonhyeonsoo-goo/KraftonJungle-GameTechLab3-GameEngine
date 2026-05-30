@@ -6,6 +6,7 @@
 #include "Object/Ptr/SoftObjectPtr.h"
 #include "Object/Ptr/WeakObjectPtr.h"
 #include "Physics/PhysicsBodyHandle.h"
+#include <memory>
 
 #include "Source/Engine/Component/Primitive/SkeletalMeshComponent.generated.h"
 
@@ -14,6 +15,7 @@ class UAnimSingleNodeInstance;
 class UAnimSequenceBase;
 class UClass;
 class UPhysicsAsset;
+class FPhysicsAssetInstance;
 
 // SkeletalMesh 전용 render proxy만 제공하는 얇은 wrapper.
 // Skinning/bone/material/bounds 상태는 모두 USkinnedMeshComponent가 소유한다.
@@ -44,6 +46,9 @@ public:
     void ClearPhysicsAssetOverride();
     void ResetRagdollRuntimeState();
     void OnPhysicsAssetChanged();
+    FPhysicsAssetInstance* GetPhysicsAssetInstance() const;
+    FPhysicsAssetInstance* GetOrCreatePhysicsAssetInstance();
+    void DestroyPhysicsAssetInstance();
 
     // SingleNode 재생 편의 API.
     UFUNCTION(Callable, Category="Animation")
@@ -136,4 +141,5 @@ protected:
     int32 RagdollRootBoneIndex = -1;
     TArray<FPhysicsBodyHandle> RagdollBodiesByBone;
     TArray<FPhysicsConstraintHandle> RagdollConstraints;
+    std::unique_ptr<FPhysicsAssetInstance> PhysicsAssetInstance;
 };

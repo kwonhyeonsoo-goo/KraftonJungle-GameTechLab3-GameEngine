@@ -20,6 +20,7 @@
 #include "Object/Reflection/UClass.h"
 #include "Physics/PhysicsAsset.h"
 #include "Physics/PhysicsAssetManager.h"
+#include "Physics/PhysicsAssetInstance.h"
 #include "Render/Proxy/SkeletalMeshSceneProxy.h"
 #include "Serialization/Archive.h"
 
@@ -28,6 +29,7 @@
 
 USkeletalMeshComponent::~USkeletalMeshComponent()
 {
+    DestroyPhysicsAssetInstance();
     ClearAnimInstance();
 }
 
@@ -199,11 +201,58 @@ void USkeletalMeshComponent::ResetRagdollRuntimeState()
     RagdollRootBoneIndex = -1;
     RagdollBodiesByBone.clear();
     RagdollConstraints.clear();
+    if (PhysicsAssetInstance)
+    {
+        PhysicsAssetInstance->ResetRuntimeState();
+    }
 }
 
 void USkeletalMeshComponent::OnPhysicsAssetChanged()
 {
+    DestroyPhysicsAssetInstance();
     ResetRagdollRuntimeState();
+}
+
+FPhysicsAssetInstance* USkeletalMeshComponent::GetPhysicsAssetInstance() const
+{
+    return PhysicsAssetInstance.get();
+}
+
+FPhysicsAssetInstance* USkeletalMeshComponent::GetOrCreatePhysicsAssetInstance()
+{
+    UPhysicsAsset* EffectivePhysicsAsset = GetEffectivePhysicsAsset();
+    if (!EffectivePhysicsAsset)
+    {
+        DestroyPhysicsAssetInstance();
+        return nullptr;
+    }
+
+    if (PhysicsAssetInstance && PhysicsAssetInstance->GetAsset() == EffectivePhysicsAsset)
+    {
+        return PhysicsAssetInstance.get();
+    }
+
+    DestroyPhysicsAssetInstance();
+
+    auto NewInstance = std::make_unique<FPhysicsAssetInstance>();
+    if (!NewInstance->Initialize(this, EffectivePhysicsAsset))
+    {
+        return nullptr;
+    }
+
+    PhysicsAssetInstance = std::move(NewInstance);
+    return PhysicsAssetInstance.get();
+}
+
+void USkeletalMeshComponent::DestroyPhysicsAssetInstance()
+{
+    if (!PhysicsAssetInstance)
+    {
+        return;
+    }
+
+    PhysicsAssetInstance->Shutdown();
+    PhysicsAssetInstance.reset();
 }
 
 void USkeletalMeshComponent::PlayAnimation(UAnimSequenceBase* NewAnimToPlay, bool bLooping)
@@ -714,6 +763,7 @@ bool USkeletalMeshComponent::EvaluateAnimInstance(float DeltaTime)
 
 void USkeletalMeshComponent::BeginDestroy()
 {
+    DestroyPhysicsAssetInstance();
     ClearAnimInstance();
     Super::BeginDestroy();
 }
