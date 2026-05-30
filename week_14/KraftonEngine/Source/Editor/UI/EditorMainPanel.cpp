@@ -1068,7 +1068,7 @@ void FEditorMainPanel::ProcessPendingDebugActions()
 	EditorEngine->GetSelectionManager().ClearSelection();
 	for (AActor* Actor : DebugLastSpawnedActors)
 	{
-		if (!Actor || !IsAliveObject(Actor) || Actor->GetWorld() != World)
+		if (!IsValid(Actor) || Actor->GetWorld() != World)
 		{
 			continue;
 		}

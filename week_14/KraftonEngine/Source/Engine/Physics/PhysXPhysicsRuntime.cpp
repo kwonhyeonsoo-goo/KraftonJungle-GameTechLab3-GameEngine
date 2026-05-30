@@ -1990,7 +1990,7 @@ void FPhysXPhysicsRuntime::UpdateStats()
 
 FActorCompoundBody* FPhysXPhysicsRuntime::FindCompoundByActor(AActor* Actor)
 {
-    if (!IsAliveObject(Actor))
+    if (!IsValid(Actor))
     {
         return nullptr;
     }
@@ -2001,7 +2001,7 @@ FActorCompoundBody* FPhysXPhysicsRuntime::FindCompoundByActor(AActor* Actor)
 
 const FActorCompoundBody* FPhysXPhysicsRuntime::FindCompoundByActor(AActor* Actor) const
 {
-    if (!IsAliveObject(Actor))
+    if (!IsValid(Actor))
     {
         return nullptr;
     }

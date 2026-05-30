@@ -1,9 +1,16 @@
 #include "Materials/MaterialInstance.h"
+#include "Object/GarbageCollection.h"
 
 #include "Engine/Runtime/Engine.h"
 #include "Render/Pipeline/Renderer.h"
 #include "Render/Shader/Shader.h"
 #include "Texture/Texture2D.h"
+
+void UMaterialInstance::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UMaterial::AddReferencedObjects(Collector);
+	Collector.AddReferencedObject(Parent, "UMaterialInstance::Parent");
+}
 
 void UMaterialInstance::InitializeFromParent(UMaterial* InParent, const FString& InPathFileName)
 {

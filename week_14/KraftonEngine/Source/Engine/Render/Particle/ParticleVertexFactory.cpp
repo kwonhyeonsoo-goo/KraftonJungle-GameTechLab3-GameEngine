@@ -1,9 +1,10 @@
-﻿#include "ParticleVertexFactory.h"
+#include "ParticleVertexFactory.h"
 
 #include "Render/Resource/Buffer.h"
 #include "Render/Shader/ShaderManager.h"
 #include "Render/Types/VertexTypes.h"
 #include "Mesh/Static/StaticMesh.h"
+#include "Object/GarbageCollection.h"
 #include "Mesh/MeshManager.h"
 #include "Materials/Material.h"
 #include "Profiling/Stats/ParticleStats.h"
@@ -500,6 +501,11 @@ void FParticleMeshVertexFactory::ReleaseResources()
 {
 	Shader = nullptr;
 	CachedCubeFallback = nullptr;
+}
+
+void FParticleMeshVertexFactory::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	Collector.AddReferencedObject(CachedCubeFallback, "FParticleMeshVertexFactory::CachedCubeFallback");
 }
 
 bool FParticleMeshVertexFactory::BuildDraw(ID3D11Device* Device, ID3D11DeviceContext* Context,

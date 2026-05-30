@@ -26,9 +26,12 @@ public:
 	void BeginPlay() override;
 
 	// Pawn을 점유한다. 이미 다른 Pawn을 점유 중이면 먼저 해제.
+	UFUNCTION(Callable, Category="PlayerController")
 	void Possess(APawn* Pawn);
+	UFUNCTION(Callable, Category="PlayerController")
 	void UnPossess();
 
+	UFUNCTION(Pure, Category="PlayerController")
 	APawn* GetPossessedPawn() const { return PossessedPawn; }
 
 	// ─── Camera Manager ──────────────────────────────────────────
@@ -39,6 +42,7 @@ public:
 	// ─── View Target ─────────────────────────────────────────────
 	// 새 view target 으로 전환 (블렌드 가능). UCameraComponent 가 붙어있는 액터 권장.
 	// UE: APlayerController::SetViewTargetWithBlend
+	UFUNCTION(Callable, Category="Camera")
 	virtual void SetViewTargetWithBlend(
 		AActor* NewViewTarget,
 		float BlendTime = 0.0f,

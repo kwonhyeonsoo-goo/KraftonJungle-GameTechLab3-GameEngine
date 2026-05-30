@@ -3,6 +3,7 @@
 #include "Core/Types/ResourceTypes.h"
 #include "Collision/Math/ConvexVolume.h"
 #include "Object/Ptr/SoftObjectPtr.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 class UStaticMeshComponent;
 
@@ -38,12 +39,13 @@ public:
 	// --- Material ---
 	void SetMaterial(class UMaterial* InMaterial);
 	class UMaterial* GetMaterial() const { return Material; }
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	const FConvexVolume GetDecalVolume() { return ConvexVolume; }
 	void UpdateDecalVolumeFromTransform();
 	void OnTransformDirty() override;
 
-	const TArray<UStaticMeshComponent*>& GetReceivers() const { return Receivers; }
+	TArray<UStaticMeshComponent*> GetReceivers() const;
 
 	class UBillboardComponent* EnsureEditorBillboard();
 
@@ -56,7 +58,7 @@ private:
 
 private:
 	FConvexVolume ConvexVolume;
-	TArray<UStaticMeshComponent*> Receivers;
+	TArray<TWeakObjectPtr<UStaticMeshComponent>> Receivers;
 	UPROPERTY(Edit, Save, Category="Rendering", DisplayName="Material", AssetType="Material")
 	FSoftObjectPtr MaterialSlot;
 	UMaterial* Material = nullptr;

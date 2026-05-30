@@ -1,5 +1,6 @@
 #include "SkinnedMeshComponent.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
+#include "Object/GarbageCollection.h"
 #include "Animation/Skeleton/Skeleton.h"
 #include "Serialization/Archive.h"
 #include "Runtime/Engine.h"
@@ -103,6 +104,13 @@ namespace
 		Result.M[3][2] = -(Translation.X * Result.M[0][2] + Translation.Y * Result.M[1][2] + Translation.Z * Result.M[2][2]);
 		return Result;
 	}
+}
+
+void USkinnedMeshComponent::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	UMeshComponent::AddReferencedObjects(Collector);
+	Collector.AddReferencedObject(SkeletalMesh, "USkinnedMeshComponent::SkeletalMesh");
+	Collector.AddReferencedObjects(OverrideMaterials, "USkinnedMeshComponent::OverrideMaterials");
 }
 
 // SkeletalMesh 교체는 표시 여부, material slot, CPU skinning, bounds dirty가 모두 엮여 있다.

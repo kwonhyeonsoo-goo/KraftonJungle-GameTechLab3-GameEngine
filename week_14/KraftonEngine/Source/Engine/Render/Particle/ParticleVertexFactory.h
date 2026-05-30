@@ -8,6 +8,7 @@
 struct ID3D11Device;
 struct ID3D11DeviceContext;
 class FShader;
+class FReferenceCollector;
 class FDynamicVertexBuffer;
 class FDynamicIndexBuffer;
 
@@ -28,6 +29,7 @@ public:
 	// InputLayout은 FShader가 VS reflection으로 내부 관리 — factory는 별도 보유 안 함.
 	virtual void InitResources(ID3D11Device* Device) = 0;
 	virtual void ReleaseResources() = 0;
+	virtual void AddReferencedObjects(FReferenceCollector& Collector) {}
 
 	virtual FShader* GetShader() const = 0;
 
@@ -125,6 +127,7 @@ public:
 
 	void InitResources(ID3D11Device* Device) override;
 	void ReleaseResources() override;
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 protected:
 	FShader*     Shader             = nullptr;

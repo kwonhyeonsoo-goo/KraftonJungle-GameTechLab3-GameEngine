@@ -2,6 +2,7 @@
 
 #include "Core/Types/CoreTypes.h"
 #include "Object/GarbageCollection.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include <algorithm>
 
@@ -45,10 +46,12 @@ private:
 	void PruneInvalidSelection();
 	void SyncGizmo();
 	void SetActorProxiesSelected(AActor* Actor, bool bSelected);
+	void RefreshSelectedActorCache();
 
-	TArray<AActor*> SelectedActors;
-	USceneComponent* SelectedComponent = nullptr;
+	TArray<TWeakObjectPtr<AActor>> SelectedActors;
+	TArray<AActor*> SelectedActorCache;
+	TWeakObjectPtr<USceneComponent> SelectedComponent;
 	UGizmoComponent* Gizmo = nullptr;
-	UWorld* World = nullptr;
+	TWeakObjectPtr<UWorld> World;
 	bool bGizmoEnabled = true;
 };

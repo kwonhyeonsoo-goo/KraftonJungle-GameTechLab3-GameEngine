@@ -80,7 +80,7 @@ void FSelectionManager::Init()
 void FSelectionManager::Shutdown()
 {
     ClearSelection();
-    World = nullptr;
+    World.Reset();
 
     if (Gizmo)
     {
@@ -106,7 +106,7 @@ void FSelectionManager::Select(AActor* Actor)
         return;
     }
 
-    if (SelectedActors.size() == 1 && SelectedActors.front() == Actor && SelectedComponent == RootComponent)
+    if (SelectedActors.size() == 1 && SelectedActors.front() == Actor && SelectedComponent.Get() == RootComponent)
     {
         return;
     }
@@ -176,7 +176,7 @@ void FSelectionManager::SelectRange(AActor* ClickedActor, const TArray<AActor*>&
     for (AActor* Prev : SelectedActors) SetActorProxiesSelected(Prev, false);
 
     SelectedActors.clear();
-    SelectedComponent = nullptr;
+    SelectedComponent.Reset();
 
     for (int32 i = Lo; i <= Hi; ++i)
     {
@@ -203,9 +203,9 @@ void FSelectionManager::ToggleSelect(AActor* Actor)
     {
         SetActorProxiesSelected(Actor, false);
         SelectedActors.erase(It);
-        if (SelectedComponent && IsAliveObject(SelectedComponent) && SelectedComponent->GetOwner() == Actor)
+        if (SelectedComponent.GetAlive() && SelectedComponent->GetOwner() == Actor)
         {
-            SelectedComponent = nullptr;
+            SelectedComponent.Reset();
             PruneInvalidSelection();
         }
     }
@@ -231,9 +231,9 @@ void FSelectionManager::Deselect(AActor* Actor)
     {
         SetActorProxiesSelected(Actor, false);
         SelectedActors.erase(It);
-        if (SelectedComponent && IsAliveObject(SelectedComponent) && SelectedComponent->GetOwner() == Actor)
+        if (SelectedComponent.GetAlive() && SelectedComponent->GetOwner() == Actor)
         {
-            SelectedComponent = nullptr;
+            SelectedComponent.Reset();
             PruneInvalidSelection();
         }
     }
@@ -255,7 +255,7 @@ void FSelectionManager::ClearSelection()
     }
 
     SelectedActors.clear();
-    SelectedComponent = nullptr;
+    SelectedComponent.Reset();
     SyncGizmo();
 }
 
@@ -263,12 +263,12 @@ int32 FSelectionManager::DeleteSelectedActors()
 {
     PruneInvalidSelection();
 
-    if (!IsValid(World) || SelectedActors.empty())
+    if (!IsValid(World.Get()) || SelectedActors.empty())
     {
         return 0;
     }
 
-    TArray<AActor*> ActorsToDelete = SelectedActors;
+    TArray<AActor*> ActorsToDelete = GetSelectedActors();
     const int32     DeletedCount   = static_cast<int32>(ActorsToDelete.size());
 
     // 파괴 전에 선택/기즈모 참조를 먼저 끊어 dangling target을 방지한다.
@@ -298,7 +298,7 @@ void FSelectionManager::Tick()
         return;
     }
 
-    USceneComponent* Primary = SelectedComponent;
+    USceneComponent* Primary = SelectedComponent.Get();
     if (!IsValid(Primary))
     {
         return;
@@ -346,7 +346,7 @@ void FSelectionManager::SelectComponent(USceneComponent* Component)
         return;
     }
 
-    if (SelectedComponent == Target)
+    if (SelectedComponent.Get() == Target)
     {
         return;
     }
@@ -385,13 +385,13 @@ void FSelectionManager::SetWorld(UWorld* InWorld)
     PruneInvalidSelection();
 
     // 기존 Scene에서 Gizmo 프록시 해제
-    if (Gizmo && IsValid(World))
+    if (Gizmo && IsValid(World.Get()))
         Gizmo->DestroyRenderState();
 
     World = IsValid(InWorld) ? InWorld : nullptr;
 
     // 새 Scene에 Gizmo 프록시 등록
-    if (IsValid(Gizmo) && IsValid(World))
+    if (IsValid(Gizmo) && IsValid(World.Get()))
     {
         Gizmo->SetScene(&World->GetScene());
         Gizmo->CreateRenderState();
@@ -425,27 +425,27 @@ void FSelectionManager::PruneInvalidSelection()
     );
     bSelectionChanged = bSelectionChanged || OldActorCount != SelectedActors.size();
 
-    if (SelectedComponent)
+    if (SelectedComponent.GetAlive())
     {
-        AActor* Owner = IsAliveObject(SelectedComponent) ? SelectedComponent->GetOwner() : nullptr;
+        AActor* Owner = SelectedComponent.GetAlive()->GetOwner();
         if (!IsValid(SelectedComponent) || !IsValid(Owner))
         {
-            SelectedComponent = nullptr;
+            SelectedComponent.Reset();
             bSelectionChanged = true;
         }
     }
 
-    if (SelectedComponent)
+    if (SelectedComponent.Get())
     {
         AActor* Owner = SelectedComponent->GetOwner();
         if (!IsValid(Owner) || !IsSelected(Owner))
         {
-            SelectedComponent = nullptr;
+            SelectedComponent.Reset();
             bSelectionChanged = true;
         }
     }
 
-    if (!SelectedComponent && !SelectedActors.empty())
+    if (!SelectedComponent.Get() && !SelectedActors.empty())
     {
         for (AActor* Actor : SelectedActors)
         {
@@ -465,7 +465,21 @@ void FSelectionManager::PruneInvalidSelection()
 
     if (bSelectionChanged && IsValid(Gizmo))
     {
-        Gizmo->SetSelectedActors(SelectedActors.empty() ? nullptr : &SelectedActors);
+        RefreshSelectedActorCache();
+        Gizmo->SetSelectedActors(SelectedActorCache.empty() ? nullptr : &SelectedActorCache);
+    }
+}
+
+void FSelectionManager::RefreshSelectedActorCache()
+{
+    SelectedActorCache.clear();
+    SelectedActorCache.reserve(SelectedActors.size());
+    for (const TWeakObjectPtr<AActor>& ActorRef : SelectedActors)
+    {
+        if (AActor* Actor = ActorRef.Get())
+        {
+            SelectedActorCache.push_back(Actor);
+        }
     }
 }
 
@@ -481,10 +495,11 @@ void FSelectionManager::SyncGizmo()
         return;
     }
 
-    USceneComponent* Primary = SelectedComponent;
+    USceneComponent* Primary = SelectedComponent.Get();
     if (IsValid(Primary))
     {
-        Gizmo->SetSelectedActors(SelectedActors.empty() ? nullptr : &SelectedActors);
+        RefreshSelectedActorCache();
+        Gizmo->SetSelectedActors(SelectedActorCache.empty() ? nullptr : &SelectedActorCache);
         Gizmo->SetTarget(Primary);
     }
     else
@@ -496,7 +511,7 @@ void FSelectionManager::SyncGizmo()
 
 void FSelectionManager::SetActorProxiesSelected(AActor* Actor, bool bSelected)
 {
-    if (!IsValid(Actor) || !IsValid(World)) return;
+    if (!IsValid(Actor) || !IsValid(World.Get())) return;
 
     FScene& Scene = World->GetScene();
     for (UPrimitiveComponent* Prim : Actor->GetPrimitiveComponents())

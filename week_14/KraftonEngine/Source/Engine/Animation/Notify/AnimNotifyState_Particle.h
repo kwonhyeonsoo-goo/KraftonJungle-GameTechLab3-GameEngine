@@ -2,6 +2,7 @@
 
 #include "AnimNotifyState.h"
 #include "Math/Vector.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/Animation/Notify/AnimNotifyState_Particle.generated.h"
 
@@ -41,5 +42,5 @@ public:
 private:
 	// 활성 인스턴스 추적 — 한 NotifyState 가 여러 mesh 에 동시 active 가능 (AttackHitWindow 와 동일 패턴).
 	// 재사용: 같은 mesh 의 반복 발동 시 새 actor 를 스폰하지 않고 기존 PSC 를 재활성화.
-	TMap<USkeletalMeshComponent*, UParticleSystemComponent*> SpawnedByMesh;
+	TMap<TWeakObjectPtr<USkeletalMeshComponent>, TWeakObjectPtr<UParticleSystemComponent>> SpawnedByMesh;
 };

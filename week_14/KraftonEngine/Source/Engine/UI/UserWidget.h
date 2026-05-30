@@ -62,18 +62,27 @@ public:
 	void BeginDestroy() override;
 
 	void Initialize(APlayerController* InOwningPlayer, const FString& InDocumentPath);
+	UFUNCTION(Callable, Category="UI")
 	void AddToViewport(int32 InZOrder = 0);
+	UFUNCTION(Callable, Category="UI")
 	void RemoveFromParent();
 	void BindClick(const FString& ElementId, sol::protected_function Callback);
 	void RegisterEventListeners();
 	void ClearEventListeners();
+	UFUNCTION(Callable, Category="UI")
 	void SetText(const FString& ElementId, const FString& Text);
+	UFUNCTION(Callable, Category="UI")
 	bool SetProperty(const FString& ElementId, const FString& PropertyName, const FString& Value);
 
+	UFUNCTION(Pure, Category="UI")
 	APlayerController* GetOwningPlayer() const { return OwningPlayer; }
+	UFUNCTION(Pure, Category="UI")
 	const FString& GetDocumentPath() const { return DocumentPath; }
+	UFUNCTION(Pure, Category="UI")
 	int32 GetZOrder() const { return ZOrder; }
+	UFUNCTION(Pure, Category="UI")
 	bool IsInViewport() const { return bInViewport; }
+	UFUNCTION(Pure, Category="UI")
 	bool IsDocumentLoaded() const { return bDocumentLoaded; }
 	Rml::ElementDocument* GetDocument() const { return Document; }
 
@@ -81,7 +90,9 @@ public:
 	// UUIManager 가 viewport 에 올라온 widget 중 하나라도 이 값이 true 면 GameViewportClient
 	// 에 알려 시스템 커서를 보이고 raw mouse / clip 을 해제하도록 한다. HUD 처럼 비대화형
 	// 오버레이는 false 유지.
+	UFUNCTION(Callable, Category="UI")
 	void SetWantsMouse(bool bInWantsMouse) { bWantsMouse = bInWantsMouse; }
+	UFUNCTION(Pure, Category="UI")
 	bool WantsMouse() const { return bWantsMouse; }
 
 	void MarkDocumentLoaded(Rml::ElementDocument* InDocument) { Document = InDocument; bDocumentLoaded = Document != nullptr; }

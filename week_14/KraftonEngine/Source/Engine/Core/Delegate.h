@@ -211,33 +211,41 @@ public:
 	}
 
 	template<typename T>
+	FDelegateHandle AddWeakUObject(T* Obj, void(T::*MemFn)(ParamTypes...))
+	{
+		TWeakObjectPtr<T> WeakObj(Obj);
+		return AddLambda([WeakObj, MemFn](ParamTypes... Params) mutable
+		{
+			if (T* StrongObj = WeakObj.Get())
+			{
+				(StrongObj->*MemFn)(Params...);
+			}
+		});
+	}
+
+	template<typename T>
+	FDelegateHandle AddWeakUObject(T* Obj, void(T::*MemFn)(ParamTypes...) const)
+	{
+		TWeakObjectPtr<T> WeakObj(Obj);
+		return AddLambda([WeakObj, MemFn](ParamTypes... Params) mutable
+		{
+			if (T* StrongObj = WeakObj.Get())
+			{
+				(StrongObj->*MemFn)(Params...);
+			}
+		});
+	}
+
+	template<typename T>
 	FDelegateHandle AddUObject(T* Obj, void(T::*MemFn)(ParamTypes...))
 	{
-        TWeakObjectPtr<T> WeakObj(Obj);
-        return AddLambda(
-            [WeakObj, MemFn](ParamTypes... Params) mutable
-            {
-                if (T* LiveObj = WeakObj.Get())
-                {
-                    (LiveObj->*MemFn)(Params...);
-                }
-            }
-        );
+		return AddWeakUObject(Obj, MemFn);
 	}
 
 	template<typename T>
 	FDelegateHandle AddUObject(T* Obj, void(T::*MemFn)(ParamTypes...) const)
 	{
-        TWeakObjectPtr<T> WeakObj(Obj);
-        return AddLambda(
-            [WeakObj, MemFn](ParamTypes... Params) mutable
-            {
-                if (T* LiveObj = WeakObj.Get())
-                {
-                    (LiveObj->*MemFn)(Params...);
-                }
-            }
-        );
+		return AddWeakUObject(Obj, MemFn);
 	}
 
 	// --- Remove ---

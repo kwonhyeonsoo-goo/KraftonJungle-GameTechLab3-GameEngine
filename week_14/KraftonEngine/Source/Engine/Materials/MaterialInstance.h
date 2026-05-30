@@ -30,6 +30,8 @@ public:
 
 	UMaterial* GetParent() const { return Parent; }
 
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
+
 	bool IsMaterialInstance() const override { return true; }
 
 protected:

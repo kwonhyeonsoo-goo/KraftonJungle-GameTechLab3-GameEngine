@@ -1,4 +1,5 @@
-﻿#include "ParticleSystemSceneProxy.h"
+#include "ParticleSystemSceneProxy.h"
+#include "Object/GarbageCollection.h"
 
 #include "Component/Particle/ParticleSystemComponent.h"
 #include "GameFramework/AActor.h"
@@ -206,6 +207,41 @@ FParticleSystemSceneProxy::~FParticleSystemSceneProxy()
 	EmitterVBs.clear(); // unique_ptr 소멸 → 각 FDynamicVertexBuffer::Release() 호출
 	EmitterIBs.clear(); // unique_ptr 소멸 → 각 FDynamicIndexBuffer::Release() 호출
 	// ParticleMaterial은 UObjectManager가 소유 — 여기서 해제 X
+}
+
+void FParticleSystemSceneProxy::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	FPrimitiveSceneProxy::AddReferencedObjects(Collector);
+	Collector.AddReferencedObject(SpriteMaterial, "FParticleSystemSceneProxy::SpriteMaterial");
+	Collector.AddReferencedObject(MeshMaterial, "FParticleSystemSceneProxy::MeshMaterial");
+	Collector.AddReferencedObject(BeamTrailMaterial, "FParticleSystemSceneProxy::BeamTrailMaterial");
+	Collector.AddReferencedObjects(EmitterMaterials, "FParticleSystemSceneProxy::EmitterMaterials");
+
+	for (FParticleVertexFactory* Factory : Factories)
+	{
+		if (Factory)
+		{
+			Factory->AddReferencedObjects(Collector);
+		}
+	}
+
+	if (DynamicData)
+	{
+		for (FDynamicEmitterDataBase* EmitterData : DynamicData->Emitters)
+		{
+			if (!EmitterData)
+			{
+				continue;
+			}
+			const FDynamicEmitterReplayDataBase& Replay = EmitterData->GetReplayDataBase();
+			Collector.AddReferencedObject(Replay.Material, "FParticleSystemSceneProxy::DynamicData.Material");
+			if (Replay.EmitterType == EDynamicEmitterType::Mesh)
+			{
+				const FDynamicMeshEmitterReplayData& MeshReplay = static_cast<const FDynamicMeshEmitterReplayData&>(Replay);
+				Collector.AddReferencedObject(MeshReplay.Mesh, "FParticleSystemSceneProxy::DynamicData.Mesh");
+			}
+		}
+	}
 }
 
 FParticleVertexFactory* FParticleSystemSceneProxy::GetOrCreateFactory(EDynamicEmitterType Type, ID3D11Device* Device) const

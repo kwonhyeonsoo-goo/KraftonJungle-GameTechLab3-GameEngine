@@ -1,4 +1,4 @@
-#include "SceneSaveManager.h"
+﻿#include "SceneSaveManager.h"
 
 #include <iostream>
 #include <fstream>
@@ -314,6 +314,11 @@ void FSceneSaveManager::CollectActorObjectIds(AActor* Actor, FSceneSaveContext& 
 	for (UActorComponent* Comp : Actor->GetComponents())
 	{
 		if (!IsSceneSerializableObject(Comp))
+		{
+			continue;
+		}
+
+		if (Comp->IsA<USceneComponent>())
 		{
 			continue;
 		}

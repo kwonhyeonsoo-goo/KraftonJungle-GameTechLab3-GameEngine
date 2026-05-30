@@ -1,9 +1,10 @@
-﻿#pragma once
+#pragma once
 
 #include "AnimNotifyState.h"
 #include "Core/Types/CollisionTypes.h"
 #include "Core/Types/CoreTypes.h"
 #include "Math/Vector.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/Animation/Notify/AnimNotifyState_AttackHitWindow.generated.h"
 
@@ -96,7 +97,7 @@ public:
 	void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Anim) override;
 
 private:
-	TMap<USkeletalMeshComponent*, TSet<AActor*>> HitActorsByMesh;
-	TMap<USkeletalMeshComponent*, TSet<AActor*>> MissLoggedActorsByMesh;
-	TSet<USkeletalMeshComponent*> NoTargetLoggedMeshes;
+	TMap<TWeakObjectPtr<USkeletalMeshComponent>, TSet<TWeakObjectPtr<AActor>>> HitActorsByMesh;
+	TMap<TWeakObjectPtr<USkeletalMeshComponent>, TSet<TWeakObjectPtr<AActor>>> MissLoggedActorsByMesh;
+	TSet<TWeakObjectPtr<USkeletalMeshComponent>> NoTargetLoggedMeshes;
 };

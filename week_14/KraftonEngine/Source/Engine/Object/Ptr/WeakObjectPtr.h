@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
+#include <functional>
 
 #include "Object/Object.h"
 
@@ -74,8 +76,57 @@ public:
 	explicit operator bool() const { return IsValid(); }
 	operator T*() const { return Get(); }
 	T* operator->() const { return Get(); }
+
+	bool operator==(const TWeakObjectPtr& Other) const
+	{
+		return Object == Other.Object && SerialNumber == Other.SerialNumber;
+	}
+
+	bool operator!=(const TWeakObjectPtr& Other) const
+	{
+		return !(*this == Other);
+	}
+
+	bool operator==(const T* Other) const
+	{
+		return Get() == Other;
+	}
+
+	bool operator!=(const T* Other) const
+	{
+		return !(*this == Other);
+	}
+
+	uintptr_t GetWeakAddressKey() const { return reinterpret_cast<uintptr_t>(Object); }
+	uint32 GetWeakSerialNumber() const { return SerialNumber; }
 private:
 	T* TypedObject = nullptr;
 	UObject* Object = nullptr;
 	uint32 SerialNumber = 0;
 };
+
+template<typename T>
+inline bool operator==(const T* Object, const TWeakObjectPtr<T>& WeakObject)
+{
+	return WeakObject == Object;
+}
+
+template<typename T>
+inline bool operator!=(const T* Object, const TWeakObjectPtr<T>& WeakObject)
+{
+	return !(WeakObject == Object);
+}
+
+namespace std
+{
+	template<typename T>
+	struct hash<TWeakObjectPtr<T>>
+	{
+		size_t operator()(const TWeakObjectPtr<T>& Ptr) const noexcept
+		{
+			const size_t AddressHash = std::hash<uintptr_t>{}(Ptr.GetWeakAddressKey());
+			const size_t SerialHash = std::hash<uint32>{}(Ptr.GetWeakSerialNumber());
+			return AddressHash ^ (SerialHash + 0x9e3779b97f4a7c15ull + (AddressHash << 6) + (AddressHash >> 2));
+		}
+	};
+}

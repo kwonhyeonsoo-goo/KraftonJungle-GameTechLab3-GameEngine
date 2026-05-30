@@ -15,6 +15,7 @@
 class UTexture2D;
 class FArchive;
 class FShader;
+class FReferenceCollector;
 class UMaterialInstance;
 
 // 파라미터 이름 → 상수 버퍼 내 위치 매핑
@@ -134,7 +135,9 @@ public:
 	virtual bool SetVector3Parameter(const FString& ParamName, const FVector& Value);
 	UFUNCTION(Callable, Category="Material|Parameters")
 	virtual bool SetVector4Parameter(const FString& ParamName, const FVector4& Value);
+	UFUNCTION(Callable, Category="Material|Parameters")
 	virtual bool SetTextureParameter(const FString& ParamName, UTexture2D* Texture);
+	UFUNCTION(Callable, Category="Material|Parameters")
 	virtual bool SetMatrixParameter(const FString& ParamName, const FMatrix& Value);
 
 	UFUNCTION(Pure, Category="Material|Parameters")
@@ -143,12 +146,18 @@ public:
 	FVector GetVector3ParameterValue(const FString& ParamName) const { FVector Value(0, 0, 0); GetVector3Parameter(ParamName, Value); return Value; }
 	UFUNCTION(Pure, Category="Material|Parameters")
 	FVector4 GetVector4ParameterValue(const FString& ParamName) const { FVector4 Value{}; GetVector4Parameter(ParamName, Value); return Value; }
+	UFUNCTION(Pure, Category="Material|Parameters")
+	UTexture2D* GetTextureParameterValue(const FString& ParamName) const { UTexture2D* Value = nullptr; GetTextureParameter(ParamName, Value); return Value; }
+	UFUNCTION(Pure, Category="Material|Parameters")
+	FMatrix GetMatrixParameterValue(const FString& ParamName) const { FMatrix Value; GetMatrixParameter(ParamName, Value); return Value; }
 
 	virtual bool GetScalarParameter(const FString& ParamName, float& OutValue) const;
 	virtual bool GetVector3Parameter(const FString& ParamName, FVector& OutValue) const;
 	virtual bool GetVector4Parameter(const FString& ParamName, FVector4& OutValue) const;
 	virtual bool GetTextureParameter(const FString& ParamName, UTexture2D*& OutTexture) const;
 	virtual bool GetMatrixParameter(const FString& ParamName, FMatrix& Value) const;
+
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	TMap<FString, UTexture2D*>* GetTexture() { return &TextureParameters; }
 
