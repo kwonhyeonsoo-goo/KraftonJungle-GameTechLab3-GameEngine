@@ -1,4 +1,4 @@
-#include "Editor/UI/EditorMainPanel.h"
+﻿#include "Editor/UI/EditorMainPanel.h"
 
 #include "Editor/EditorEngine.h"
 #include "Editor/Settings/EditorSettings.h"
@@ -639,10 +639,17 @@ void FEditorMainPanel::RenderShortcutOverlay()
 	ImGui::TextUnformatted("Ctrl+S : Save Scene");
 	ImGui::TextUnformatted("Ctrl+Shift+S : Save Scene As");
 	ImGui::Separator();
+	ImGui::TextUnformatted("Editor");
+	ImGui::Separator();
 	ImGui::TextUnformatted("` : Focus console input / open console drawer");
 	ImGui::TextUnformatted("F : Focus on selection");
 	ImGui::TextUnformatted("Ctrl + LMB : Multi Picking (Toggle)");
 	ImGui::TextUnformatted("Ctrl + Alt + LMB Drag : Area Selection");
+	ImGui::TextUnformatted("F2: Actor or Component Rename");
+	ImGui::Separator();
+	ImGui::TextUnformatted("EsterEgg");
+	ImGui::Separator();
+	ImGui::TextUnformatted("Why does no one care about my shortcuts?");
 
 	ImGui::End();
 }
@@ -833,7 +840,7 @@ void FEditorMainPanel::RenderEditorDebugPanel()
 
 void FEditorMainPanel::RenderContentBrowserDrawer(float DeltaTime)
 {
-	constexpr float DrawerMaxHeight = 420.0f;
+	constexpr float DrawerMaxHeight = 320.0f;
 	constexpr float AnimSpeed = 16.0f;
 	constexpr float ConsoleDrawerMaxHeight = 320.0f;
 

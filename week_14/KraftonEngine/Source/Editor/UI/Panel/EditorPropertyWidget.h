@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Editor/UI/EditorWidget.h"
 #include "Object/Object.h"
@@ -17,7 +17,21 @@ public:
 	bool IsShowingEditorOnlyComponents() const { return bShowEditorOnlyComponents; }
 
 private:
+	enum class ERenameTarget : uint8
+	{
+		None,
+		Actor,
+		Component
+	};
+
+	//Rename
+	void BeginRenameActor(AActor* TargetActor);
+	void BeginRenameComponent(UActorComponent* TargetComponent);
+	void RenderRenamePopup();
+	bool TryRenameActor(AActor* TargetActor, const FString& NewName);
+	bool TryRenameComponent(UActorComponent* TargetComponent, const FString& NewName);
 	void RenameActor(AActor* PrimaryActor);
+
 	void RenderComponentTree(AActor* Actor);
 	void RenderSceneComponentNode(class USceneComponent* Comp);
 	void RenderDetails(AActor* PrimaryActor, const TArray<AActor*>& SelectedActors);
@@ -45,6 +59,13 @@ private:
 
 	float PendingDetailsScrollY = -1.0f;
 	bool bRestoreDetailsScrollY = false;
+
+	//Rename
+	TWeakObjectPtr<AActor> RenameTargetActor = nullptr;
+	TWeakObjectPtr<UActorComponent> RenameTargetComponent = nullptr;
+	ERenameTarget RenameTarget = ERenameTarget::None;
+	bool bRenamePopupRequested = false;
+	bool bFocusRenameInputNextFrame = false;
 
 	char RenameBuffer[256] = {};
 	bool bShowDuplicateWarning = false;
