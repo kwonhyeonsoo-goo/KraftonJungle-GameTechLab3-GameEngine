@@ -26,7 +26,49 @@
 #include "Serialization/Archive.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
+
+namespace
+{
+    FMatrix GetAffineInverseForPoseSync(const FMatrix& Matrix)
+    {
+        const double A = Matrix.M[0][0];
+        const double B = Matrix.M[0][1];
+        const double C = Matrix.M[0][2];
+        const double D = Matrix.M[1][0];
+        const double E = Matrix.M[1][1];
+        const double F = Matrix.M[1][2];
+        const double G = Matrix.M[2][0];
+        const double H = Matrix.M[2][1];
+        const double I = Matrix.M[2][2];
+
+        const double Det = A * (E * I - F * H) - B * (D * I - F * G) + C * (D * H - E * G);
+        if (std::fabs(Det) < 1.0e-12)
+        {
+            return Matrix.GetInverse();
+        }
+
+        const double InvDet = 1.0 / Det;
+
+        FMatrix Result = FMatrix::Identity;
+        Result.M[0][0] = static_cast<float>((E * I - F * H) * InvDet);
+        Result.M[0][1] = static_cast<float>((C * H - B * I) * InvDet);
+        Result.M[0][2] = static_cast<float>((B * F - C * E) * InvDet);
+        Result.M[1][0] = static_cast<float>((F * G - D * I) * InvDet);
+        Result.M[1][1] = static_cast<float>((A * I - C * G) * InvDet);
+        Result.M[1][2] = static_cast<float>((C * D - A * F) * InvDet);
+        Result.M[2][0] = static_cast<float>((D * H - E * G) * InvDet);
+        Result.M[2][1] = static_cast<float>((B * G - A * H) * InvDet);
+        Result.M[2][2] = static_cast<float>((A * E - B * D) * InvDet);
+
+        const FVector Translation = Matrix.GetLocation();
+        Result.M[3][0] = -(Translation.X * Result.M[0][0] + Translation.Y * Result.M[1][0] + Translation.Z * Result.M[2][0]);
+        Result.M[3][1] = -(Translation.X * Result.M[0][1] + Translation.Y * Result.M[1][1] + Translation.Z * Result.M[2][1]);
+        Result.M[3][2] = -(Translation.X * Result.M[0][2] + Translation.Y * Result.M[1][2] + Translation.Z * Result.M[2][2]);
+        return Result;
+    }
+}
 
 USkeletalMeshComponent::~USkeletalMeshComponent()
 {
@@ -210,6 +252,7 @@ void USkeletalMeshComponent::ClearPhysicsAssetOverride()
 
 void USkeletalMeshComponent::ResetRagdollRuntimeState()
 {
+    bUsePhysicsAssetPose = false;
     if (PhysicsAssetInstance)
     {
         PhysicsAssetInstance->ResetRuntimeState();
@@ -257,6 +300,7 @@ FPhysicsAssetInstance* USkeletalMeshComponent::GetOrCreatePhysicsAssetInstance()
 
 void USkeletalMeshComponent::DestroyPhysicsAssetInstance()
 {
+    bUsePhysicsAssetPose = false;
     if (!PhysicsAssetInstance)
     {
         return;
@@ -269,15 +313,83 @@ void USkeletalMeshComponent::DestroyPhysicsAssetInstance()
 bool USkeletalMeshComponent::CreatePhysicsAssetInstanceBodies()
 {
     FPhysicsAssetInstance* Instance = GetOrCreatePhysicsAssetInstance();
-    return Instance ? Instance->CreateBodiesAndConstraints() : false;
+    const bool bCreated = Instance ? Instance->CreateBodiesAndConstraints() : false;
+    if (bCreated)
+    {
+        SetUsePhysicsAssetPose(true);
+    }
+    else
+    {
+        SetUsePhysicsAssetPose(false);
+    }
+    return bCreated;
 }
 
 void USkeletalMeshComponent::DestroyPhysicsAssetInstanceBodies()
 {
+    SetUsePhysicsAssetPose(false);
     if (PhysicsAssetInstance)
     {
         PhysicsAssetInstance->DestroyBodiesAndConstraints();
     }
+}
+
+void USkeletalMeshComponent::SetUsePhysicsAssetPose(bool bEnable)
+{
+    bUsePhysicsAssetPose = bEnable;
+}
+
+bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
+{
+    if (!bUsePhysicsAssetPose)
+    {
+        return false;
+    }
+
+    FPhysicsAssetInstance* Instance = GetPhysicsAssetInstance();
+    if (!Instance || !Instance->HasLivePhysicsObjects())
+    {
+        return false;
+    }
+
+    USkeletalMesh* Mesh = GetSkeletalMesh();
+    FSkeletalMesh* MeshAsset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+    if (!MeshAsset || MeshAsset->Bones.empty())
+    {
+        return false;
+    }
+
+    TArray<FTransform> BoneWorldTransforms;
+    if (!Instance->PullPhysicsPose(BoneWorldTransforms) ||
+        BoneWorldTransforms.size() < MeshAsset->Bones.size())
+    {
+        return false;
+    }
+
+    TArray<FMatrix> ComponentSpaceGlobalMatrices;
+    ComponentSpaceGlobalMatrices.resize(MeshAsset->Bones.size());
+
+    const FMatrix& ComponentWorldInverse = GetWorldInverseMatrix();
+    for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+    {
+        ComponentSpaceGlobalMatrices[BoneIndex] =
+            BoneWorldTransforms[BoneIndex].ToMatrix() * ComponentWorldInverse;
+    }
+
+    TArray<FTransform> LocalPose;
+    LocalPose.resize(MeshAsset->Bones.size());
+    for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+    {
+        const int32 ParentIndex = MeshAsset->Bones[BoneIndex].ParentIndex;
+        const FMatrix LocalMatrix = (ParentIndex >= 0)
+            ? ComponentSpaceGlobalMatrices[BoneIndex] * GetAffineInverseForPoseSync(ComponentSpaceGlobalMatrices[ParentIndex])
+            : ComponentSpaceGlobalMatrices[BoneIndex];
+        LocalPose[BoneIndex] = FTransform(LocalMatrix);
+    }
+
+    // Full ragdoll is the final pose owner in this first sync pass; blending comes later.
+    SetBoneLocalTransforms(LocalPose);
+    return true;
 }
 
 void USkeletalMeshComponent::PlayAnimation(UAnimSequenceBase* NewAnimToPlay, bool bLooping)
@@ -601,6 +713,12 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
     if (!IsValid(this) || IsPendingKill())
     {
+        return;
+    }
+
+    if (bUsePhysicsAssetPose && ApplyPhysicsAssetPose())
+    {
+        UMeshComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
         return;
     }
 

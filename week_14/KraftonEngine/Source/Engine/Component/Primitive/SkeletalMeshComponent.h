@@ -52,6 +52,11 @@ public:
     bool CreatePhysicsAssetInstanceBodies();
     UFUNCTION(Callable, Category="Physics")
     void DestroyPhysicsAssetInstanceBodies();
+    UFUNCTION(Callable, Category="Physics")
+    void SetUsePhysicsAssetPose(bool bEnable);
+    UFUNCTION(Pure, Category="Physics")
+    bool IsUsingPhysicsAssetPose() const { return bUsePhysicsAssetPose; }
+    bool ApplyPhysicsAssetPose();
 
     // SingleNode 재생 편의 API.
     UFUNCTION(Callable, Category="Animation")
@@ -141,4 +146,5 @@ protected:
     FSoftObjectPtr PhysicsAssetOverridePath = "None";
     mutable TWeakObjectPtr<UPhysicsAsset> PhysicsAssetOverride;
     std::unique_ptr<FPhysicsAssetInstance> PhysicsAssetInstance;
+    bool bUsePhysicsAssetPose = false;
 };

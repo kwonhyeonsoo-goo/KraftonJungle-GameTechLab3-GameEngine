@@ -52,6 +52,23 @@ namespace
         return PhysicsScene ? PhysicsScene->GetRuntime() : nullptr;
     }
 
+    const IPhysicsRuntime* GetPhysicsRuntime(const USkeletalMeshComponent* Component)
+    {
+        if (!Component)
+        {
+            return nullptr;
+        }
+
+        UWorld* World = Component->GetWorld();
+        if (!World)
+        {
+            return nullptr;
+        }
+
+        const IPhysicsScene* PhysicsScene = World->GetPhysicsScene();
+        return PhysicsScene ? PhysicsScene->GetRuntime() : nullptr;
+    }
+
     void FillShapeFilterDataFromComponent(FPhysicsFilterData& OutFilterData, const USkeletalMeshComponent* Component)
     {
         if (!Component)
@@ -184,6 +201,20 @@ namespace
         OutDesc.ChildLocalFrame = ConstraintSetup.ChildLocalFrame;
         OutDesc.Limits = ConstraintSetup.Limits;
         OutDesc.bDisableCollisionBetweenBodies = ConstraintSetup.bDisableCollisionBetweenBodies;
+        return true;
+    }
+
+    bool ComputeBoneWorldTransformFromBody(
+        const FPhysicsAssetBodySetup& BodySetup,
+        const FTransform& BodyWorld,
+        FTransform& OutBoneWorld
+    )
+    {
+        const FQuat InverseBodyLocalRotation = BodySetup.BodyLocalFrame.Rotation.Inverse().GetNormalized();
+        OutBoneWorld = BodyWorld;
+        OutBoneWorld.Rotation = (BodyWorld.Rotation * InverseBodyLocalRotation).GetNormalized();
+        OutBoneWorld.Location =
+            BodyWorld.Location - OutBoneWorld.Rotation.RotateVector(BodySetup.BodyLocalFrame.Location);
         return true;
     }
 }
@@ -460,6 +491,77 @@ bool FPhysicsAssetInstance::HasLivePhysicsObjects() const
     return false;
 }
 
+bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTransforms) const
+{
+    const USkeletalMeshComponent* Owner = GetOwnerComponent();
+    const UPhysicsAsset* Asset = GetAsset();
+    const IPhysicsRuntime* Runtime = GetPhysicsRuntime(Owner);
+    if (!Owner || !Asset || !Runtime)
+    {
+        return false;
+    }
+
+    const USkeletalMesh* Mesh = Owner->GetSkeletalMesh();
+    const FSkeletalMesh* MeshAsset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+    if (!MeshAsset)
+    {
+        return false;
+    }
+
+    TArray<FTransform> CurrentBoneComponentSpaceTransforms;
+    Owner->GetCurrentBoneGlobalTransforms(CurrentBoneComponentSpaceTransforms);
+    if (CurrentBoneComponentSpaceTransforms.size() < MeshAsset->Bones.size())
+    {
+        return false;
+    }
+
+    const FTransform ComponentWorldTransform = GetComponentWorldTransform(Owner);
+    OutBoneWorldTransforms.resize(MeshAsset->Bones.size());
+    for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+    {
+        OutBoneWorldTransforms[BoneIndex] =
+            ComposePhysicsTransforms(ComponentWorldTransform, CurrentBoneComponentSpaceTransforms[BoneIndex]);
+    }
+
+    const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
+    int32 AppliedBodyCount = 0;
+
+    for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
+    {
+        if (BodyIndex >= static_cast<int32>(BodiesByBone.size()))
+        {
+            continue;
+        }
+
+        const FPhysicsBodyHandle BodyHandle = BodiesByBone[BodyIndex];
+        if (!BodyHandle.IsValid())
+        {
+            continue;
+        }
+
+        const FPhysicsAssetBodySetup& BodySetup = BodySetups[BodyIndex];
+        const int32 BoneIndex = FindBoneIndexForBody(BodySetup.BoneName);
+        if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(OutBoneWorldTransforms.size()))
+        {
+            continue;
+        }
+
+        const FTransform BodyWorld = Runtime->GetBodyTransform(BodyHandle);
+        FTransform BoneWorld = OutBoneWorldTransforms[BoneIndex];
+        if (!ComputeBoneWorldTransformFromBody(BodySetup, BodyWorld, BoneWorld))
+        {
+            continue;
+        }
+
+        // Physics bodies do not carry meaningful bone scale, so preserve the existing scale.
+        BoneWorld.Scale = OutBoneWorldTransforms[BoneIndex].Scale;
+        OutBoneWorldTransforms[BoneIndex] = BoneWorld;
+        ++AppliedBodyCount;
+    }
+
+    return AppliedBodyCount > 0;
+}
+
 UPhysicsAsset* FPhysicsAssetInstance::GetAsset() const
 {
     return SourceAsset.Get();
@@ -479,6 +581,23 @@ FPhysicsBodyHandle FPhysicsAssetInstance::GetBodyHandleByBoneName(const FName& B
     }
 
     return BodiesByBone[BodyIndex];
+}
+
+FTransform FPhysicsAssetInstance::GetBodyWorldTransformByBoneName(const FName& BoneName) const
+{
+    const FPhysicsBodyHandle BodyHandle = GetBodyHandleByBoneName(BoneName);
+    if (!BodyHandle.IsValid())
+    {
+        return FTransform();
+    }
+
+    const IPhysicsRuntime* Runtime = GetPhysicsRuntime(GetOwnerComponent());
+    return Runtime ? Runtime->GetBodyTransform(BodyHandle) : FTransform();
+}
+
+bool FPhysicsAssetInstance::HasValidBodyForBone(const FName& BoneName) const
+{
+    return GetBodyHandleByBoneName(BoneName).IsValid();
 }
 
 int32 FPhysicsAssetInstance::FindBodySetupIndexByBoneName(const FName& BoneName) const
