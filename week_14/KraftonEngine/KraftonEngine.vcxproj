@@ -676,7 +676,6 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Particle\VectorField\VectorFieldAsset.cpp" />
     <ClCompile Include="Source\Engine\Particle\VectorField\VectorFieldFgaImporter.cpp" />
     <ClCompile Include="Source\Engine\Particle\VectorField\VectorFieldManager.cpp" />
-    <ClCompile Include="Source\Engine\Physics\NativePhysicsScene.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysXBodyBuilder.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysXConstraintBuilder.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysXConversion.cpp" />
@@ -1122,7 +1121,6 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Particle\VectorField\VectorFieldFgaImporter.h" />
     <ClInclude Include="Source\Engine\Particle\VectorField\VectorFieldManager.h" />
     <ClInclude Include="Source\Engine\Physics\IPhysicsScene.h" />
-    <ClInclude Include="Source\Engine\Physics\NativePhysicsScene.h" />
     <ClInclude Include="Source\Engine\Physics\PhysXBodyBuilder.h" />
     <ClInclude Include="Source\Engine\Physics\PhysXConstraintBuilder.h" />
     <ClInclude Include="Source\Engine\Physics\PhysXConversion.h" />

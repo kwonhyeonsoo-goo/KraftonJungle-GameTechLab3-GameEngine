@@ -16,7 +16,6 @@ namespace PSKey
 	constexpr const char* MaxPointAtlasPages = "MaxPointAtlasPages";
 
 	constexpr const char* PhysicsSection             = "Physics";
-	constexpr const char* Backend                    = "Backend";
     constexpr const char* FixedTimeStep              = "FixedTimeStep";
     constexpr const char* MaxFrameDeltaTime          = "MaxFrameDeltaTime";
     constexpr const char* MaxSubsteps                = "MaxSubsteps";
@@ -50,7 +49,6 @@ void FProjectSettings::SaveToFile(const FString& Path) const
 	Root[PSKey::Shadow] = ShadowObj;
 
 	JSON PhysObj                               = Object();
-	PhysObj[PSKey::Backend]                    = static_cast<int>(Physics.Backend);
     PhysObj[PSKey::FixedTimeStep]              = Physics.FixedTimeStep;
     PhysObj[PSKey::MaxFrameDeltaTime]          = Physics.MaxFrameDeltaTime;
     PhysObj[PSKey::MaxSubsteps]                = Physics.MaxSubsteps;
@@ -94,14 +92,6 @@ void FProjectSettings::LoadFromFile(const FString& Path)
 	if (Root.hasKey(PSKey::PhysicsSection))
 	{
 		JSON P = Root[PSKey::PhysicsSection];
-		if (P.hasKey(PSKey::Backend))
-		{
-			int v = P[PSKey::Backend].ToInt();
-			if (v == 1)
-				Physics.Backend = EPhysicsBackend::PhysX;
-			else
-				Physics.Backend = EPhysicsBackend::Native;
-		}
         if (P.hasKey(PSKey::FixedTimeStep))
         {
             float v               = static_cast<float>(P[PSKey::FixedTimeStep].ToFloat());

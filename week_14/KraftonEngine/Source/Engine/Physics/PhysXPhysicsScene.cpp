@@ -57,10 +57,10 @@ static PxDefaultAllocator GPhysXAllocator;
 // ============================================================
 // PhysX Foundation/Physics singleton
 // ============================================================
-static PxFoundation* GSharedFoundation            = nullptr;
-static PxPhysics*    GSharedPhysics               = nullptr;
-static bool          GSharedExtensionsInitialized = false;
-static int32         GSharedRefCount              = 0;
+static PxFoundation* GSharedFoundation = nullptr;
+static PxPhysics* GSharedPhysics = nullptr;
+static bool GSharedExtensionsInitialized = false;
+static int32 GSharedRefCount = 0;
 
 static void AcquireSharedPhysX(PxFoundation*& OutFoundation, PxPhysics*& OutPhysics)
 {

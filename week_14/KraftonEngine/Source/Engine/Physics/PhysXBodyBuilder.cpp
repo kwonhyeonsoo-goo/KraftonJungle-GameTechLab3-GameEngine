@@ -107,7 +107,7 @@ PxShape* FPhysXBodyBuilder::CreateShape(PxPhysics* Physics, PxMaterial* DefaultM
         Geometry = PxCapsuleGeometry(Desc.CapsuleRadius, PhysXHalfHeight);
 
         ShapeAxisRotation = PxQuat(-PxHalfPi, PxVec3(0.0f, 1.0f, 0.0f));
-        bHasGeometry      = true;
+        bHasGeometry = true;
     }
 
     if (!bHasGeometry)

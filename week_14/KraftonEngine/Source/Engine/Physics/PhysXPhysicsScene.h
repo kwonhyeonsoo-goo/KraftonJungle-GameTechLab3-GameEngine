@@ -21,7 +21,7 @@ class FPhysXSimulationCallback;
 // ============================================================
 // FPhysXPhysicsScene — PhysX 4.1 기반 물리 시스템
 //
-// IPhysicsScene 인터페이스를 통해 Native와 교체 가능.
+// IPhysicsScene 인터페이스를 구현하는 PhysX scene 어댑터.
 //
 // 등록 단위는 Actor — 한 액터의 여러 PrimitiveComponent는 하나의
 // PxRigidActor에 compound shape로 합쳐진다. 각 shape의 LocalPose는
