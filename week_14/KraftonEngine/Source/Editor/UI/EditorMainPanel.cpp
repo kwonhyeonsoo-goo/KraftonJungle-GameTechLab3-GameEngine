@@ -340,10 +340,10 @@ void FEditorMainPanel::RenderMainMenuBar()
 	}
 	if (ImGui::BeginPopup("##WidgetListPopup"))
 	{
-		ImGui::Checkbox("Control", &Settings.UI.bControl);
-		ImGui::Checkbox("Property", &Settings.UI.bProperty);
-		ImGui::Checkbox("Scene", &Settings.UI.bScene);
-		ImGui::Checkbox("Stat", &Settings.UI.bStat);
+		ImGui::Checkbox("Camera", &Settings.UI.bControl);
+		ImGui::Checkbox("Detial", &Settings.UI.bProperty);
+		ImGui::Checkbox("Outliner", &Settings.UI.bScene);
+		ImGui::Checkbox("Stat Profiler", &Settings.UI.bStat);
 		if (ImGui::Checkbox("Content Browser (Ctrl+Space)", &Settings.UI.bContentBrowser) && Settings.UI.bContentBrowser)
 		{
 			bConsoleDrawerVisible = false;
