@@ -81,9 +81,9 @@ namespace RenderStateStrings
 		{ "WireFrame",      (int)ERasterizerState::WireFrame },
 	};
 
-	static_assert(ARRAYSIZE(BlendStateMap)        == (int)EBlendState::MAX,        "BlendStateMap must match EBlendState entries");
-	static_assert(ARRAYSIZE(DepthStencilStateMap) == (int)EDepthStencilState::MAX, "DepthStencilStateMap must match EDepthStencilState entries");
-	static_assert(ARRAYSIZE(RasterizerStateMap)   == (int)ERasterizerState::MAX,   "RasterizerStateMap must match ERasterizerState entries");
+    static_assert(std::size(BlendStateMap) == static_cast<int>(EBlendState::MAX), "BlendStateMap must match EBlendState entries");
+    static_assert(std::size(DepthStencilStateMap) == static_cast<int>(EDepthStencilState::MAX), "DepthStencilStateMap must match EDepthStencilState entries");
+    static_assert(std::size(RasterizerStateMap) == static_cast<int>(ERasterizerState::MAX), "RasterizerStateMap must match ERasterizerState entries");
 
 	// String → Enum
 	template<typename EnumT, size_t N>

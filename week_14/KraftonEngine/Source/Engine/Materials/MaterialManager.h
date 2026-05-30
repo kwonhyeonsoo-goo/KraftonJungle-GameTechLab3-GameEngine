@@ -10,6 +10,7 @@
 
 class FMaterialTemplate;
 class UMaterial;
+struct FMaterialGraph;
 struct FMaterialConstantBuffer;
 struct FVector4;
 
@@ -51,6 +52,17 @@ public:
 
 	// 바이너리(.uasset) 저장 — 인스펙터 Save 버튼 / 팩토리에서 호출.
 	bool SaveMaterial(UMaterial* Material, const FString& UassetPath);
+
+    bool SaveMaterialSourceOnly(UMaterial* Material, const FString& UassetPath)
+    {
+        return SaveMaterial(Material, UassetPath);
+    }
+
+    // Graph material authoring entry points. Save/compile/apply are intentionally separate.
+    UMaterial* CreateGraphMaterialAsset(const FString& UassetPath);
+    UMaterial* CreatePreviewMaterialClone(UMaterial* SourceMaterial);
+    bool       CompileMaterialGraphPreview(UMaterial* SourceMaterial, const FMaterialGraph& WorkingGraph, UMaterial*& InOutPreviewMaterial, FString* OutError = nullptr);
+    bool       CompileMaterialGraphRuntime(UMaterial* Material, const FMaterialGraph& WorkingGraph, bool bPersistCompiledState, FString* OutError = nullptr);
 
 	void ScanMaterialAssets();
 	const TArray<FMaterialAssetListItem>& GetAvailableMaterialFiles() const { return AvailableMaterialFiles; }

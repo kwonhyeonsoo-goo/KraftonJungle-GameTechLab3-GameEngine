@@ -41,6 +41,12 @@ void UMaterialInstance::InitializeFromParent(UMaterial* InParent, const FString&
 		Parent->BlendMode,
 		std::move(Cloned));
 
+    // Source/runtime metadata 는 Parent graph 의 compiled shader layout 을 참조하되, graph 자체를 직접 편집하지 않는다.
+    SourceKind            = Parent->SourceKind;
+    MaterialSettings      = Parent->MaterialSettings;
+    RuntimeParameterStore = Parent->RuntimeParameterStore;
+    LastCompileRecord     = Parent->LastCompileRecord;
+
 	// Parent 의 저수준 override 도 복제 (스프라이트 raster, transient 등).
 	if (Parent->bHasPassOverride)   SetPassOverride(Parent->PassOverride);
 	if (Parent->bHasBlendOverride)  SetBlendOverride(Parent->BlendOverride);

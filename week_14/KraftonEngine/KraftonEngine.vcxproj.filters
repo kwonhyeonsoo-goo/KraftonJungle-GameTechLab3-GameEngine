@@ -70,6 +70,9 @@
     <Filter Include="Source\Editor\UI\Asset\LuaBlueprint">
       <UniqueIdentifier>{903d88fe-2f81-8e0e-87f8-e3f4e8c4c1cc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\UI\Asset\Material">
+      <UniqueIdentifier>{994177d8-b52e-61fd-e3e8-c510233e7128}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Editor\UI\Asset\Mesh">
       <UniqueIdentifier>{5084842c-4071-bc7f-36a2-4a3bf67026e8}</UniqueIdentifier>
     </Filter>
@@ -237,6 +240,9 @@
     </Filter>
     <Filter Include="Source\Engine\Materials">
       <UniqueIdentifier>{0d06ac75-3073-6c4d-1a46-4fbda12823ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Materials\Graph">
+      <UniqueIdentifier>{98085b6f-23e3-1b56-ba7c-eb77b3e9c7fc}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Math">
       <UniqueIdentifier>{46de3e62-85b2-9f3b-da45-712c96b11891}</UniqueIdentifier>
@@ -773,6 +779,9 @@
     <ClCompile Include="Source\Editor\UI\Asset\LuaBlueprint\LuaBlueprintEditorWidget.cpp">
       <Filter>Source\Editor\UI\Asset\LuaBlueprint</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\Asset\Material\MaterialEditorWidget.cpp">
+      <Filter>Source\Editor\UI\Asset\Material</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\Asset\Mesh\MeshEditorWidget.cpp">
       <Filter>Source\Editor\UI\Asset\Mesh</Filter>
     </ClCompile>
@@ -1307,8 +1316,20 @@
     <ClCompile Include="Source\Engine\Materials\MaterialInstance.cpp">
       <Filter>Source\Engine\Materials</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Materials\MaterialInstanceDynamic.cpp">
+      <Filter>Source\Engine\Materials</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Materials\MaterialManager.cpp">
       <Filter>Source\Engine\Materials</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Materials\Graph\MaterialGraphCompiler.cpp">
+      <Filter>Source\Engine\Materials\Graph</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Materials\Graph\MaterialGraphTypes.cpp">
+      <Filter>Source\Engine\Materials\Graph</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Materials\Graph\MaterialHlslGenerator.cpp">
+      <Filter>Source\Engine\Materials\Graph</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Math\FloatCurve.cpp">
       <Filter>Source\Engine\Math</Filter>
@@ -1464,6 +1485,9 @@
       <Filter>Source\Engine\Particle\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\Modules\ParticleModuleColorOverLife.cpp">
+      <Filter>Source\Engine\Particle\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\Modules\ParticleModuleDynamicParameter.cpp">
       <Filter>Source\Engine\Particle\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\Modules\ParticleModuleEventGenerator.cpp">
@@ -1954,6 +1978,9 @@
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\Asset\LuaBlueprint\LuaBlueprintEditorWidget.h">
       <Filter>Source\Editor\UI\Asset\LuaBlueprint</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\Asset\Material\MaterialEditorWidget.h">
+      <Filter>Source\Editor\UI\Asset\Material</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\Asset\Mesh\MeshEditorWidget.h">
       <Filter>Source\Editor\UI\Asset\Mesh</Filter>
@@ -2579,8 +2606,23 @@
     <ClInclude Include="Source\Engine\Materials\MaterialInstance.h">
       <Filter>Source\Engine\Materials</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Materials\MaterialInstanceDynamic.h">
+      <Filter>Source\Engine\Materials</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Materials\MaterialManager.h">
       <Filter>Source\Engine\Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Materials\MaterialSourceTypes.h">
+      <Filter>Source\Engine\Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Materials\Graph\MaterialGraphCompiler.h">
+      <Filter>Source\Engine\Materials\Graph</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Materials\Graph\MaterialGraphTypes.h">
+      <Filter>Source\Engine\Materials\Graph</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Materials\Graph\MaterialHlslGenerator.h">
+      <Filter>Source\Engine\Materials\Graph</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Math\FloatCurve.h">
       <Filter>Source\Engine\Math</Filter>
@@ -2790,6 +2832,9 @@
       <Filter>Source\Engine\Particle\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\Modules\ParticleModuleColorOverLife.h">
+      <Filter>Source\Engine\Particle\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\Modules\ParticleModuleDynamicParameter.h">
       <Filter>Source\Engine\Particle\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\Modules\ParticleModuleEventGenerator.h">

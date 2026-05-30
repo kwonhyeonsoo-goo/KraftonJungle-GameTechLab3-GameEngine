@@ -6,6 +6,7 @@
 #include "Engine/Runtime/Engine.h"
 #include "Render/Pipeline/Renderer.h"
 #include "Render/Types/MaterialTextureSlot.h"
+#include "Asset/AssetPackage.h"
 
 // ─── FMaterialTemplate ───
 
@@ -110,6 +111,8 @@ void UMaterial::Create(const FString& InPathFileName, FMaterialTemplate* InTempl
 	Domain = InDomain;
 	BlendMode = InBlendMode;
 	RecomputeRenderState();  // 저수준 렌더상태 도출
+    MaterialSettings.Domain    = InDomain;
+    MaterialSettings.BlendMode = InBlendMode;
 
 	ConstantBufferMap = std::move(InBuffers);
 }
@@ -117,7 +120,8 @@ void UMaterial::Create(const FString& InPathFileName, FMaterialTemplate* InTempl
 bool UMaterial::SetParameter(const FString& Name, const void* Data, uint32 Size)
 {
 	FMaterialParameterInfo Info;
-	if (!Template->GetParameterInfo(Name, Info)) {
+    if (!Template || !Template->GetParameterInfo(Name, Info))
+    {
 		return false;
 	}
 	auto It = ConstantBufferMap.find(Info.BufferName);
@@ -130,24 +134,28 @@ bool UMaterial::SetParameter(const FString& Name, const void* Data, uint32 Size)
 
 bool UMaterial::SetScalarParameter(const FString& ParamName, float Value)
 {
+    RuntimeParameterStore.SetValue(ParamName, EMaterialValueType::Float, FVector4(Value, 0.0f, 0.0f, 0.0f));
 	return SetParameter(ParamName, &Value, sizeof(float));
 }
 
 bool UMaterial::SetVector3Parameter(const FString& ParamName, const FVector& Value)
 {
 	float Data[3] = { Value.X, Value.Y, Value.Z };
+    RuntimeParameterStore.SetValue(ParamName, EMaterialValueType::Float3, FVector4(Value.X, Value.Y, Value.Z, 0.0f));
 	return SetParameter(ParamName, Data, sizeof(Data));
 }
 
 bool UMaterial::SetVector4Parameter(const FString& ParamName, const FVector4& Value)
 {
 	float Data[4] = { Value.X, Value.Y, Value.Z, Value.W };
+    RuntimeParameterStore.SetValue(ParamName, EMaterialValueType::Float4, Value);
 	return SetParameter(ParamName, Data, sizeof(Data));
 }
 
 bool UMaterial::SetTextureParameter(const FString& ParamName, UTexture2D* Texture)
 {
 	TextureParameters[ParamName] = Texture;
+    RuntimeParameterStore.SetValue(ParamName, EMaterialValueType::Texture2D, FVector4(0.0f, 0.0f, 0.0f, 0.0f), Texture ? Texture->GetSourcePath() : FString());
 
 	// 리플렉션 텍스처 바인딩(이름→register)으로 CachedSRV 즉시 갱신 — RebuildCachedSRVs 와 동일 규칙.
 	for (const FShaderTextureBinding& B : GetTextureBindings())
@@ -170,7 +178,7 @@ bool UMaterial::SetMatrixParameter(const FString& ParamName, const FMatrix& Valu
 bool UMaterial::GetScalarParameter(const FString& ParamName, float& OutValue) const
 {
 	FMaterialParameterInfo Info;
-	if (!Template->GetParameterInfo(ParamName, Info)) return false;
+    if (!Template || !Template->GetParameterInfo(ParamName, Info)) return false;
 
 	auto It = ConstantBufferMap.find(Info.BufferName);
 	if (It == ConstantBufferMap.end()) return false;
@@ -183,7 +191,7 @@ bool UMaterial::GetScalarParameter(const FString& ParamName, float& OutValue) co
 bool UMaterial::GetVector3Parameter(const FString& ParamName, FVector& OutValue) const
 {
 	FMaterialParameterInfo Info;
-	if (!Template->GetParameterInfo(ParamName, Info)) return false;
+    if (!Template || !Template->GetParameterInfo(ParamName, Info)) return false;
 
 	auto It = ConstantBufferMap.find(Info.BufferName);
 	if (It == ConstantBufferMap.end()) return false;
@@ -196,7 +204,7 @@ bool UMaterial::GetVector3Parameter(const FString& ParamName, FVector& OutValue)
 bool UMaterial::GetVector4Parameter(const FString& ParamName, FVector4& OutValue) const
 {
 	FMaterialParameterInfo Info;
-	if (!Template->GetParameterInfo(ParamName, Info)) return false;
+    if (!Template || !Template->GetParameterInfo(ParamName, Info)) return false;
 
 	auto It = ConstantBufferMap.find(Info.BufferName);
 	if (It == ConstantBufferMap.end()) return false;
@@ -218,7 +226,7 @@ bool UMaterial::GetTextureParameter(const FString& ParamName, UTexture2D*& OutTe
 bool UMaterial::GetMatrixParameter(const FString& ParamName, FMatrix& Value) const
 {
 	FMaterialParameterInfo Info;
-	if (!Template->GetParameterInfo(ParamName, Info)) return false;
+    if (!Template || !Template->GetParameterInfo(ParamName, Info)) return false;
 
 	auto It = ConstantBufferMap.find(Info.BufferName);
 	if (It == ConstantBufferMap.end()) return false;
@@ -280,6 +288,11 @@ void UMaterial::RebuildCachedSRVs()
 }
 
 void UMaterial::Serialize(FArchive& Ar)
+{
+    Serialize(Ar, FAssetPackageHeader::CurrentVersion);
+}
+
+void UMaterial::Serialize(FArchive& Ar, uint32 PackageVersion)
 {
 	// [Phase 4] 고수준 의도 + custom-shader 플래그 + 저수준 override.
 	// PathFileName/ShaderPath 는 Manager 가 헤더 영역에서 처리한다
@@ -394,6 +407,32 @@ void UMaterial::Serialize(FArchive& Ar)
 
 		RebuildCachedSRVs();
 	}
+
+    if (PackageVersion >= static_cast<uint32>(EAssetPackageSerializationVersion::MaterialGraphSourcePayload))
+    {
+        SerializeMaterialSourcePayload(Ar);
+    }
+}
+
+void UMaterial::SerializeMaterialSourcePayload(FArchive& Ar)
+{
+    Ar << SourceKind;
+    Ar << MaterialSettings;
+    Ar << GraphDocument;
+    Ar << ParameterDefinitions;
+    Ar << RuntimeParameterStore;
+    Ar << LastCompileRecord;
+
+    if (Ar.IsLoading())
+    {
+        Domain    = MaterialSettings.Domain;
+        BlendMode = MaterialSettings.BlendMode;
+        RecomputeRenderState();
+        if (GraphDocument.bEnabled)
+        {
+            SourceKind = EMaterialSourceKind::Graph;
+        }
+    }
 }
 
 UMaterial* UMaterial::CreateTransient(ERenderPass InPass, EBlendState InBlend,

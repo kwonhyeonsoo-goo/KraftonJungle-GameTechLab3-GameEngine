@@ -26,6 +26,7 @@
 #include "Editor/UI/Asset/Mesh/StaticMeshEditorWidget.h"
 #include "Editor/UI/Asset/Animation/AnimGraphEditorWidget.h"
 #include "Editor/UI/Asset/LuaBlueprint/LuaBlueprintEditorWidget.h"
+#include "Editor/UI/Asset/Material/MaterialEditorWidget.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -83,6 +84,8 @@ FDocumentTabVisual GetDocumentTabVisual(EEditorDocumentTabKind Kind)
 		return { ImVec4(0.86f, 0.58f, 0.22f, 1.0f), "Anim Graph Editor" };
 	case EEditorDocumentTabKind::LuaBlueprintEditor:
 		return { ImVec4(0.36f, 0.52f, 0.94f, 1.0f), "Lua Blueprint Editor" };
+    case EEditorDocumentTabKind::MaterialEditor:
+        return { ImVec4(0.92f, 0.44f, 0.24f, 1.0f), "Material Graph Editor" };
 	case EEditorDocumentTabKind::Unsupported:
 	default:
 		return { ImVec4(0.58f, 0.62f, 0.70f, 1.0f), "Editor Tab" };
@@ -99,6 +102,8 @@ const char* GetDocumentTabKindName(EEditorDocumentTabKind Kind)
 	case EEditorDocumentTabKind::ParticleEditor: return "Particle";
 	case EEditorDocumentTabKind::AnimGraphEditor: return "AnimGraph";
 	case EEditorDocumentTabKind::LuaBlueprintEditor: return "LuaBlueprint";
+    case EEditorDocumentTabKind::MaterialEditor:
+        return "Material";
 	case EEditorDocumentTabKind::Unsupported:
 	default:
 		return "Unsupported";
@@ -174,6 +179,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 	AssetEditorManager.RegisterEditor<FAnimGraphEditorWidget>();
 	AssetEditorManager.RegisterEditor<FParticleEditorWidget>();
 	AssetEditorManager.RegisterEditor<FLuaBlueprintEditorWidget>();
+    AssetEditorManager.RegisterEditor<FMaterialEditorWidget>();
 }
 
 void FEditorMainPanel::Release()

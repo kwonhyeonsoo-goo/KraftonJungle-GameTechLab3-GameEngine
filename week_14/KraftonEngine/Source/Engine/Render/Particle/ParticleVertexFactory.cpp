@@ -435,11 +435,12 @@ bool FParticleSpriteVertexFactory::BuildDraw(ID3D11Device* Device, ID3D11DeviceC
 		const FBaseParticle& P = *reinterpret_cast<const FBaseParticle*>(RawBase + i * Stride);
 
 		FParticleSpriteInstanceVertex& V = Instances[sortI];
-		V.Center   = GetWorldPos(i);
-		V.Velocity = bLocal ? L2W.TransformVector(P.Velocity) : P.Velocity;
-		V.Size     = FVector2{ P.Size.X * SizeScale.X, P.Size.Y * SizeScale.Y };
-		V.Rotation = P.Rotation;
-		V.Color    = P.Color;
+        V.Center                         = GetWorldPos(i);
+        V.Velocity                       = bLocal ? L2W.TransformVector(P.Velocity) : P.Velocity;
+        V.Size                           = FVector2 { P.Size.X * SizeScale.X, P.Size.Y * SizeScale.Y };
+        V.Rotation                       = P.Rotation;
+        V.Color                          = P.Color;
+        V.DynamicParam                   = P.DynamicParameter;
 
 		// SubUV: SubImageIndex -1 is unset. Frame 0 is a valid module-selected frame.
 		int32 RawIdx = P.SubImageIndex;
@@ -606,11 +607,12 @@ bool FParticleMeshVertexFactory::BuildDraw(ID3D11Device* Device, ID3D11DeviceCon
 		}
 
 		FParticleMeshInstanceVertex& V = Instances[sortI];
-		V.Transform0 = FVector4{ M.M[0][0], M.M[0][1], M.M[0][2], M.M[0][3] };
-		V.Transform1 = FVector4{ M.M[1][0], M.M[1][1], M.M[1][2], M.M[1][3] };
-		V.Transform2 = FVector4{ M.M[2][0], M.M[2][1], M.M[2][2], M.M[2][3] };
-		V.Transform3 = FVector4{ M.M[3][0], M.M[3][1], M.M[3][2], M.M[3][3] };
-		V.Color = P.Color;
+        V.Transform0                   = FVector4 { M.M[0][0], M.M[0][1], M.M[0][2], M.M[0][3] };
+        V.Transform1                   = FVector4 { M.M[1][0], M.M[1][1], M.M[1][2], M.M[1][3] };
+        V.Transform2                   = FVector4 { M.M[2][0], M.M[2][1], M.M[2][2], M.M[2][3] };
+        V.Transform3                   = FVector4 { M.M[3][0], M.M[3][1], M.M[3][2], M.M[3][3] };
+        V.Color                        = P.Color;
+        V.DynamicParam                 = P.DynamicParameter;
 
 		int32 SubIdx = P.SubImageIndex;
 		if (SubIdx < 0 && FrameCount > 1)

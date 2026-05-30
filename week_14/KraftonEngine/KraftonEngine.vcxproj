@@ -426,6 +426,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Editor\UI\Asset\CameraShake\CameraShakeEditorWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\Asset\Curve\FloatCurveEditorWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\Asset\LuaBlueprint\LuaBlueprintEditorWidget.cpp" />
+      <ClCompile Include="Source\Editor\UI\Asset\Material\MaterialEditorWidget.cpp"/>
     <ClCompile Include="Source\Editor\UI\Asset\Mesh\MeshEditorWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\Asset\Mesh\StaticMeshEditorWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\Asset\Particle\ParticleEditorWidget.cpp" />
@@ -604,7 +605,11 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\LuaBlueprint\LuaBlueprintManager.cpp" />
     <ClCompile Include="Source\Engine\Materials\Material.cpp" />
     <ClCompile Include="Source\Engine\Materials\MaterialInstance.cpp" />
+      <ClCompile Include="Source\Engine\Materials\MaterialInstanceDynamic.cpp"/>
     <ClCompile Include="Source\Engine\Materials\MaterialManager.cpp" />
+      <ClCompile Include="Source\Engine\Materials\Graph\MaterialGraphCompiler.cpp"/>
+      <ClCompile Include="Source\Engine\Materials\Graph\MaterialGraphTypes.cpp"/>
+      <ClCompile Include="Source\Engine\Materials\Graph\MaterialHlslGenerator.cpp"/>
     <ClCompile Include="Source\Engine\Math\FloatCurve.cpp" />
     <ClCompile Include="Source\Engine\Math\Matrix.cpp" />
     <ClCompile Include="Source\Engine\Math\Quat.cpp" />
@@ -657,6 +662,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Particle\Modules\ParticleModuleCollision.cpp" />
     <ClCompile Include="Source\Engine\Particle\Modules\ParticleModuleColor.cpp" />
     <ClCompile Include="Source\Engine\Particle\Modules\ParticleModuleColorOverLife.cpp" />
+      <ClCompile Include="Source\Engine\Particle\Modules\ParticleModuleDynamicParameter.cpp"/>
     <ClCompile Include="Source\Engine\Particle\Modules\ParticleModuleEventGenerator.cpp" />
     <ClCompile Include="Source\Engine\Particle\Modules\ParticleModuleEventReceiverKillAll.cpp" />
     <ClCompile Include="Source\Engine\Particle\Modules\ParticleModuleEventReceiverSpawn.cpp" />
@@ -822,6 +828,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Editor\UI\Asset\CameraShake\CameraShakeEditorWidget.h" />
     <ClInclude Include="Source\Editor\UI\Asset\Curve\FloatCurveEditorWidget.h" />
     <ClInclude Include="Source\Editor\UI\Asset\LuaBlueprint\LuaBlueprintEditorWidget.h" />
+      <ClInclude Include="Source\Editor\UI\Asset\Material\MaterialEditorWidget.h"/>
     <ClInclude Include="Source\Editor\UI\Asset\Mesh\MeshEditorWidget.h" />
     <ClInclude Include="Source\Editor\UI\Asset\Mesh\StaticMeshEditorWidget.h" />
     <ClInclude Include="Source\Editor\UI\Asset\Particle\ParticleEditorWidget.h" />
@@ -1030,7 +1037,12 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Materials\Material.h" />
     <ClInclude Include="Source\Engine\Materials\MaterialDomain.h" />
     <ClInclude Include="Source\Engine\Materials\MaterialInstance.h" />
+      <ClInclude Include="Source\Engine\Materials\MaterialInstanceDynamic.h"/>
     <ClInclude Include="Source\Engine\Materials\MaterialManager.h" />
+      <ClInclude Include="Source\Engine\Materials\MaterialSourceTypes.h"/>
+      <ClInclude Include="Source\Engine\Materials\Graph\MaterialGraphCompiler.h"/>
+      <ClInclude Include="Source\Engine\Materials\Graph\MaterialGraphTypes.h"/>
+      <ClInclude Include="Source\Engine\Materials\Graph\MaterialHlslGenerator.h"/>
     <ClInclude Include="Source\Engine\Math\FloatCurve.h" />
     <ClInclude Include="Source\Engine\Math\MathUtils.h" />
     <ClInclude Include="Source\Engine\Math\Matrix.h" />
@@ -1101,6 +1113,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Particle\Modules\ParticleModuleCollision.h" />
     <ClInclude Include="Source\Engine\Particle\Modules\ParticleModuleColor.h" />
     <ClInclude Include="Source\Engine\Particle\Modules\ParticleModuleColorOverLife.h" />
+      <ClInclude Include="Source\Engine\Particle\Modules\ParticleModuleDynamicParameter.h"/>
     <ClInclude Include="Source\Engine\Particle\Modules\ParticleModuleEventGenerator.h" />
     <ClInclude Include="Source\Engine\Particle\Modules\ParticleModuleEventReceiverBase.h" />
     <ClInclude Include="Source\Engine\Particle\Modules\ParticleModuleEventReceiverKillAll.h" />

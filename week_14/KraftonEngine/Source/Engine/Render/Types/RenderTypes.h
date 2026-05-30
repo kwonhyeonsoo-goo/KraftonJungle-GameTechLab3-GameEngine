@@ -84,7 +84,7 @@ inline const char* GetRenderPassName(ERenderPass Pass)
 		"RenderPass::UI",
 		"RenderPass::GammaCorrection",
 	};
-	static_assert(ARRAYSIZE(Names) == (uint32)ERenderPass::MAX, "Names must match ERenderPass entries");
+    static_assert(std::size(Names) == static_cast<uint32>(ERenderPass::MAX), "Names must match ERenderPass entries");
 	return Names[(uint32)Pass];
 }
 
@@ -112,5 +112,5 @@ namespace RenderStateStrings
 		{ "GammaCorrection",(int)ERenderPass::GammaCorrection },
 	};
 
-	static_assert(ARRAYSIZE(RenderPassMap) == (int)ERenderPass::MAX, "RenderPassMap must match ERenderPass entries");
+    static_assert(std::size(RenderPassMap) == static_cast<int>(ERenderPass::MAX), "RenderPassMap must match ERenderPass entries");
 }

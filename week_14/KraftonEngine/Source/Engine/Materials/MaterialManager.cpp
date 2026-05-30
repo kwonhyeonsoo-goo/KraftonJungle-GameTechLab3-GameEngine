@@ -1,4 +1,4 @@
-#include "MaterialManager.h"
+﻿#include "MaterialManager.h"
 #include "Object/GarbageCollection.h"
 #include "Object/Object.h"
 #include <filesystem>
@@ -6,6 +6,7 @@
 #include "Materials/Material.h"
 #include "Materials/MaterialInstance.h"
 #include "Materials/MaterialDomain.h"  // Phase 1: Domain/BlendMode 도출 (dormant)
+#include "Materials/Graph/MaterialGraphCompiler.h"
 #include "Platform/Paths.h"
 #include "Render/Shader/ShaderManager.h"
 #include "Render/Resource/Buffer.h"
@@ -16,6 +17,8 @@
 
 namespace
 {
+    constexpr const char* MaterialGraphGeneratorVersion = "MaterialGraph";
+
 	// ".mat" → ".uasset" 정규화(이미 .uasset 이면 그대로). 캐시 키 + 바이너리 타겟.
 	// 메시 임베드/하드코딩 legacy ".mat" 참조가 자동으로 ".uasset" 을 가리키게 한다.
 	FString NormalizeMatToUasset(const FString& Path)
@@ -159,7 +162,8 @@ bool FMaterialManager::SaveMaterial(UMaterial* Material, const FString& UassetPa
 	if (!Ar.IsValid()) return false;
 
 	FAssetImportMetadata Metadata;
-	if (!FAssetPackage::WritePackagePrelude(Ar, EAssetPackageType::Material, Metadata))
+    FAssetPackageHeader  WrittenHeader;
+    if (!FAssetPackage::WritePackagePrelude(Ar, EAssetPackageType::Material, Metadata, &WrittenHeader))
 	{
 		return false;
 	}
@@ -182,7 +186,7 @@ bool FMaterialManager::SaveMaterial(UMaterial* Material, const FString& UassetPa
 		Ar << ShaderPath;
 	}
 
-	Material->Serialize(Ar);  // Domain/BlendMode/custom-flag/override + params(CPUData) + textures
+    Material->Serialize(Ar, WrittenHeader.Version); // legacy runtime payload + optional graph/source payload
 	return Ar.IsValid();
 }
 
@@ -209,8 +213,8 @@ UMaterial* FMaterialManager::LoadMaterialBinary(const FString& UassetPath)
 		if (!ParentMat) return nullptr;
 
 		UMaterialInstance* MI = UObjectManager::Get().CreateObject<UMaterialInstance>();
-		MI->InitializeFromParent(ParentMat, UassetPath);    // Template/CB 를 Parent 에서 복제. id=로드 경로(rename 안전)
-		MI->Serialize(Ar);                                   // 복제된 CB 에 override/CPUData/텍스처 기록
+        MI->InitializeFromParent(ParentMat, UassetPath); // Template/CB 를 Parent 에서 복제. id=로드 경로(rename 안전)
+        MI->Serialize(Ar, Header.Version);               // 복제된 CB 에 override/CPUData/텍스처 기록
 		if (!Ar.IsValid()) { UObjectManager::Get().DestroyObject(MI); return nullptr; }
 		return MI;
 	}
@@ -224,7 +228,7 @@ UMaterial* FMaterialManager::LoadMaterialBinary(const FString& UassetPath)
 	UMaterial* Material = UObjectManager::Get().CreateObject<UMaterial>();
 	Material->Create(UassetPath, Template, EMaterialDomain::Surface, EBlendMode::Opaque, std::move(Buffers)); // id=로드 경로(rename 안전)
 	Material->SetShaderPathForSerialize(ShaderPath);
-	Material->Serialize(Ar);  // Domain/BlendMode 등을 덮어쓰고 CPUData 를 빈 CB 에 기록
+    Material->Serialize(Ar, Header.Version); // Domain/BlendMode 등을 덮어쓰고 CPUData/source payload 를 기록
 	if (!Ar.IsValid()) { UObjectManager::Get().DestroyObject(Material); return nullptr; }
 
 	if (Material->WasCustomShaderRequested())
@@ -340,59 +344,300 @@ FMaterialTemplate* FMaterialManager::GetOrCreateTemplate(const FString& ShaderPa
 	return NewTemplate;
 }
 
-FMaterialManager::~FMaterialManager()
+UMaterial* FMaterialManager::CreateGraphMaterialAsset(const FString& UassetPath)
 {
-	Release();
+    UMaterial* Material = CreateMaterialAsset(UassetPath);
+    if (!Material)
+    {
+        return nullptr;
+    }
+
+    Material->EnableGraphMaterial();
+    Material->GetGraphDocument().Target = EMaterialGraphTarget::Surface;
+    Material->GetGraphDocument().Graph.InitializeDefault(EMaterialGraphTarget::Surface);
+    Material->GetGraphDocument().LastSavedGraphHash = ComputeMaterialGraphStructuralHash(Material->GetGraphDocument().Graph);
+    Material->GetMaterialSettings().Domain          = Material->GetDomain();
+    Material->GetMaterialSettings().BlendMode       = Material->GetBlendMode();
+    SaveMaterial(Material, UassetPath);
+    return Material;
 }
 
-void FMaterialManager::PurgeInvalidMaterialCacheEntries()
+UMaterial* FMaterialManager::CreatePreviewMaterialClone(UMaterial* SourceMaterial)
 {
-	for (auto It = MaterialCache.begin(); It != MaterialCache.end(); )
-	{
-		UMaterial* Material = It->second;
-		if (!IsValid(Material))
-		{
-			It = MaterialCache.erase(It);
-			continue;
-		}
-		++It;
-	}
+    if (!SourceMaterial)
+    {
+        return nullptr;
+    }
+
+    FMaterialTemplate* SourceTemplate = GetOrCreateTemplate(SourceMaterial->GetShaderPathForSerialize());
+    if (!SourceTemplate)
+    {
+        return nullptr;
+    }
+
+    UMaterial* PreviewMaterial = UObjectManager::Get().CreateObject<UMaterial>();
+    auto       Buffers         = CreateConstantBuffers(SourceTemplate);
+    PreviewMaterial->Create("__material_graph_preview__", SourceTemplate, SourceMaterial->GetDomain(), SourceMaterial->GetBlendMode(), std::move(Buffers));
+    PreviewMaterial->SetShaderPathForSerialize(SourceMaterial->GetShaderPathForSerialize());
+    PreviewMaterial->SetSourceKind(SourceMaterial->GetSourceKind());
+    PreviewMaterial->GetMaterialSettings() = SourceMaterial->GetMaterialSettings();
+
+    for (const auto& Pair : *SourceMaterial->GetTexture())
+    {
+        PreviewMaterial->SetTextureParameter(Pair.first, Pair.second);
+    }
+
+    for (const FMaterialParameterValue& Value : SourceMaterial->GetRuntimeParameterStore().Values)
+    {
+        switch (Value.Type)
+        {
+        case EMaterialValueType::Float:
+            PreviewMaterial->SetScalarParameter(Value.FallbackName, Value.Value.X);
+            break;
+        case EMaterialValueType::Float3:
+        case EMaterialValueType::Color:
+            PreviewMaterial->SetVector3Parameter(Value.FallbackName, FVector(Value.Value.X, Value.Value.Y, Value.Value.Z));
+            break;
+        case EMaterialValueType::Float4:
+        default:
+            PreviewMaterial->SetVector4Parameter(Value.FallbackName, Value.Value);
+            break;
+        }
+    }
+    PreviewMaterial->RebuildCachedSRVs();
+    return PreviewMaterial;
+}
+
+static FString BuildGeneratedMaterialShaderPath(const FString& MaterialPath, const FString& Hash, bool bPreview, EMaterialGraphTarget Target)
+{
+    std::filesystem::path SourcePath(FPaths::ToWide(MaterialPath));
+    FString               Stem = SourcePath.stem().string();
+    if (Stem.empty())
+    {
+        Stem = "Material";
+    }
+
+    const FString TargetName = ToString(Target);
+    return FString(bPreview ? "Shaders/Generated/Preview/Materials/" : "Shaders/Generated/Materials/")
+            + Stem + "_" + TargetName + "_" + Hash + ".hlsl";
+}
+
+static bool WriteGeneratedMaterialShaderFile(const FString& ProjectRelativePath, const FString& Hlsl, FString* OutError)
+{
+    const std::filesystem::path AbsolutePath = std::filesystem::path(FPaths::RootDir()) / FPaths::ToWide(ProjectRelativePath);
+    std::filesystem::create_directories(AbsolutePath.parent_path());
+
+    std::ofstream File(AbsolutePath);
+    if (!File.is_open())
+    {
+        if (OutError) *OutError = "Failed to write generated material shader: " + ProjectRelativePath;
+        return false;
+    }
+    File << Hlsl;
+    return true;
+}
+
+static void ApplyGraphCompileParametersToMaterial(UMaterial* Material, const FMaterialCompileResult& Result, ID3D11Device* Device)
+{
+    if (!Material)
+    {
+        return;
+    }
+
+    for (const auto& Pair : Result.Parameters)
+    {
+        const FString&                    Name  = Pair.first;
+        const FMaterialCompiledParameter& Param = Pair.second;
+        switch (Param.Type)
+        {
+        case EMaterialGraphPinType::Float:
+            Material->SetScalarParameter(Name, Param.Value.X);
+            break;
+        case EMaterialGraphPinType::Float2:
+        case EMaterialGraphPinType::Float3:
+        case EMaterialGraphPinType::Color:
+            Material->SetVector3Parameter(Name, FVector(Param.Value.X, Param.Value.Y, Param.Value.Z));
+            break;
+        case EMaterialGraphPinType::Float4:
+        default:
+            Material->SetVector4Parameter(Name, Param.Value);
+            break;
+        }
+    }
+
+    for (const auto& Pair : Result.Textures)
+    {
+        const FString&                  Name = Pair.first;
+        const FMaterialCompiledTexture& Tex  = Pair.second;
+        if (Tex.Path.empty())
+        {
+            continue;
+        }
+        const bool bSRGB = MaterialTextureSlot::IsSRGBTextureSlot(ToString(Tex.Slot));
+        if (UTexture2D* Texture = UTexture2D::LoadFromFile(Tex.Path, Device, bSRGB ? ETextureColorSpace::SRGB : ETextureColorSpace::Linear))
+        {
+            Material->SetTextureParameter(Name, Texture);
+        }
+    }
+    Material->RebuildCachedSRVs();
+}
+
+static bool CompileGraphToShader(UMaterial* Material, const FMaterialGraph& WorkingGraph, bool bPreview, FMaterialCompileResult& OutResult, FString* OutError)
+{
+    if (!Material)
+    {
+        if (OutError) *OutError = "Invalid material.";
+        return false;
+    }
+
+    const FString           Hash = ComputeMaterialGraphStructuralHash(WorkingGraph);
+    FMaterialCompileOptions Options;
+    Options.MaterialPath      = Material->GetAssetPathFileName();
+    Options.MaterialGuid      = Material->GetAssetPathFileName();
+    Options.Domain            = Material->GetGraphDocument().Target;
+    Options.RenderPass        = Material->GetRenderPass();
+    Options.BlendState        = Material->GetBlendState();
+    Options.DepthStencilState = Material->GetDepthStencilState();
+    Options.RasterizerState   = Material->GetRasterizerState();
+    Options.bReceiveLighting  = Material->GetMaterialSettings().bReceiveLighting;
+
+    if (!FMaterialGraphCompiler::Compile(WorkingGraph, Options, OutResult))
+    {
+        if (OutError)
+        {
+            *OutError = OutResult.Errors.empty() ? FString("Material graph compile failed.") : OutResult.Errors.front();
+        }
+        return false;
+    }
+
+    OutResult.GeneratedShaderPath = BuildGeneratedMaterialShaderPath(Material->GetAssetPathFileName(), Hash, bPreview, Options.Domain);
+    if (!WriteGeneratedMaterialShaderFile(OutResult.GeneratedShaderPath, OutResult.GeneratedHlsl, OutError))
+    {
+        return false;
+    }
+
+    FShaderManager::Get().InvalidatePath(OutResult.GeneratedShaderPath);
+    return true;
+}
+
+FMaterialManager::~FMaterialManager()
+{
+    Release();
+}
+
+bool FMaterialManager::CompileMaterialGraphPreview(UMaterial* SourceMaterial, const FMaterialGraph& WorkingGraph, UMaterial*& InOutPreviewMaterial, FString* OutError)
+{
+    if (!SourceMaterial)
+    {
+        if (OutError) *OutError = "Invalid material.";
+        return false;
+    }
+
+    if (!InOutPreviewMaterial)
+    {
+        InOutPreviewMaterial = CreatePreviewMaterialClone(SourceMaterial);
+    }
+    if (!InOutPreviewMaterial)
+    {
+        if (OutError) *OutError = "Failed to create preview material.";
+        return false;
+    }
+
+    FMaterialCompileResult Result;
+    if (!CompileGraphToShader(SourceMaterial, WorkingGraph, true, Result, OutError))
+    {
+        return false;
+    }
+
+    if (!SetMaterialShader(InOutPreviewMaterial, Result.GeneratedShaderPath))
+    {
+        if (OutError) *OutError = "Generated preview shader failed to bind to material.";
+        return false;
+    }
+
+    InOutPreviewMaterial->SetSourceKind(EMaterialSourceKind::Graph);
+    ApplyGraphCompileParametersToMaterial(InOutPreviewMaterial, Result, Device);
+    return true;
+}
+
+bool FMaterialManager::CompileMaterialGraphRuntime(UMaterial* Material, const FMaterialGraph& WorkingGraph, bool bPersistCompiledState, FString* OutError)
+{
+    if (!Material || Material->IsMaterialInstance())
+    {
+        if (OutError) *OutError = "Graph runtime compile requires a non-instance material.";
+        return false;
+    }
+
+    FMaterialCompileResult Result;
+    if (!CompileGraphToShader(Material, WorkingGraph, false, Result, OutError))
+    {
+        Material->GetLastCompileRecord().bSucceeded   = false;
+        Material->GetLastCompileRecord().ErrorSummary = OutError ? *OutError : FString("Material graph compile failed.");
+        return false;
+    }
+
+    if (!SetMaterialShader(Material, Result.GeneratedShaderPath))
+    {
+        if (OutError) *OutError = "Generated runtime shader failed to bind to material.";
+        Material->GetLastCompileRecord().bSucceeded   = false;
+        Material->GetLastCompileRecord().ErrorSummary = OutError ? *OutError : FString("Generated runtime shader failed to bind to material.");
+        return false;
+    }
+
+    Material->SetSourceKind(EMaterialSourceKind::Graph);
+    Material->GetGraphDocument().bEnabled               = true;
+    Material->GetGraphDocument().Graph                  = WorkingGraph;
+    Material->GetGraphDocument().LastCompiledGraphHash  = ComputeMaterialGraphStructuralHash(WorkingGraph);
+    Material->GetGraphDocument().LastCompiledShaderPath = Result.GeneratedShaderPath;
+    Material->GetGraphDocument().LastCompileError.clear();
+    Material->GetLastCompileRecord().SourceHash          = Material->GetGraphDocument().LastCompiledGraphHash;
+    Material->GetLastCompileRecord().CompilerVersion     = MaterialGraphGeneratorVersion;
+    Material->GetLastCompileRecord().GeneratedShaderPath = Result.GeneratedShaderPath;
+    Material->GetLastCompileRecord().ErrorSummary.clear();
+    Material->GetLastCompileRecord().bSucceeded = true;
+
+    ApplyGraphCompileParametersToMaterial(Material, Result, Device);
+
+    if (bPersistCompiledState)
+    {
+        SaveMaterial(Material, Material->GetAssetPathFileName());
+    }
+    return true;
 }
 
 void FMaterialManager::Release()
 {
-	if (bReleased)
-	{
-		return;
-	}
-	bReleased = true;
+    if (bReleased)
+    {
+        return;
+    }
+    bReleased = true;
 
-	// MaterialCache 는 UObject raw pointer 캐시다. GC 종료/씬 전환 중 캐시된
-	// 머티리얼이 이미 PendingKill/Garbage 또는 완전 삭제된 상태일 수 있으므로
-	// 절대 바로 Mat->ReleaseGPUBuffers() 로 역참조하지 않는다.
-	for (auto& Pair : MaterialCache)
-	{
-		UMaterial* Mat = Pair.second;
-		if (IsAliveObject(Mat))
-		{
-			Mat->ReleaseGPUBuffers();
-		}
-	}
-	MaterialCache.clear();
+    // MaterialCache 는 UObject raw pointer 캐시다. GC 종료/씬 전환 중 캐시된
+    // 머티리얼이 이미 PendingKill/Garbage 또는 완전 삭제된 상태일 수 있으므로
+    // 절대 바로 Mat->ReleaseGPUBuffers() 로 역참조하지 않는다.
+    for (auto& Pair : MaterialCache)
+    {
+        UMaterial* Mat = Pair.second;
+        if (IsAliveObject(Mat))
+        {
+            Mat->ReleaseGPUBuffers();
+        }
+    }
+    MaterialCache.clear();
 
-	// TemplateCache 는 UMaterial::Template 이 non-owning 으로 가리킨다.
-	// 살아 있는 UMaterial GPU buffer 해제를 먼저 끝낸 뒤 template 을 해제해야 한다.
-	for (auto& Pair : TemplateCache)
-	{
-		delete Pair.second;
-		Pair.second = nullptr;
-	}
-	TemplateCache.clear();
+    // TemplateCache 는 UMaterial::Template 이 non-owning 으로 가리킨다.
+    // 살아 있는 UMaterial GPU buffer 해제를 먼저 끝낸 뒤 template 을 해제해야 한다.
+    for (auto& Pair : TemplateCache)
+    {
+        delete Pair.second;
+        Pair.second = nullptr;
+    }
+    TemplateCache.clear();
 
-	// 외부에서 주입받은 리소스이므로 포인터만 초기화합니다.
-	Device = nullptr;
+    // 외부에서 주입받은 리소스이므로 포인터만 초기화합니다.
+    Device = nullptr;
 }
-
 
 void FMaterialManager::AddReferencedObjects(FReferenceCollector& Collector)
 {
@@ -402,5 +647,19 @@ void FMaterialManager::AddReferencedObjects(FReferenceCollector& Collector)
         {
             Collector.AddReferencedObject(Pair.second, "FMaterialManager.MaterialCache");
         }
+    }
+}
+
+void FMaterialManager::PurgeInvalidMaterialCacheEntries()
+{
+    for (auto It = MaterialCache.begin(); It != MaterialCache.end();)
+    {
+        UMaterial* Material = It->second;
+        if (!IsValid(Material))
+        {
+            It = MaterialCache.erase(It);
+            continue;
+        }
+        ++It;
     }
 }

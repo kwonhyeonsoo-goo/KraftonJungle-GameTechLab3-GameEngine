@@ -1,4 +1,4 @@
-#include "DrawCommandBuilder.h"
+﻿#include "DrawCommandBuilder.h"
 
 #include "Resource/ResourceManager.h"
 #include "Render/Types/RenderTypes.h"
@@ -137,11 +137,20 @@ FShader* FDrawCommandBuilder::SelectEffectiveShader(FShader* ProxyShader, EViewM
 // ============================================================
 FShader* FDrawCommandBuilder::ResolveSectionShader(UMaterial* Mat, EVertexFactoryType VFType, EViewMode ViewMode, bool bGPUSkinning, bool bWeightBoneHeatMap, bool bForwardFog)
 {
-	// 1. custom override 강제 (CreateTransient: Gizmo/Decal/Text/SubUV, 비표준 셰이더 .mat)
+    // 1. Graph material first-class path. Runtime-compiled graph materials carry their
+    //    generated shader as the material template/custom shader, and must beat the
+    //    generic particle/default shader fallback.
+    if (Mat && Mat->GetSourceKind() == EMaterialSourceKind::Graph)
+    {
+        if (Mat->HasCustomShader()) return Mat->GetCustomShader();
+        if (FShader* GraphShader = Mat->GetShader()) return GraphShader;
+    }
+
+    // 2. custom override 강제 (CreateTransient: Gizmo/Decal/Text/SubUV, 비표준 셰이더 .mat)
 	if (Mat && Mat->HasCustomShader())
 		return Mat->GetCustomShader();
 
-	// 2. 파티클 정점 팩토리 → 전용 셰이더 (FParticleVertexFactory 가 만들던 것과 동일 키)
+    // 3. 파티클 정점 팩토리 → 전용 셰이더 (FParticleVertexFactory 가 만들던 것과 동일 키)
 	switch (VFType)
 	{
 	case EVertexFactoryType::ParticleSprite: return FShaderManager::Get().GetOrCreate(EShaderPath::ParticleSprite);
@@ -151,7 +160,7 @@ FShader* FDrawCommandBuilder::ResolveSectionShader(UMaterial* Mat, EVertexFactor
 	default: break;
 	}
 
-	// 3. Surface 메시 → UberLit 퍼뮤테이션. 셰이더 정점 팩토리는 bGPUSkinning 으로 결정
+    // 4. Surface 메시 → UberLit 퍼뮤테이션. 셰이더 정점 팩토리는 bGPUSkinning 으로 결정
 	//    (CPU 스키닝은 static-layout VS) — 기존 SelectEffectiveShader 와 동일.
 	const EUberLitDefines::EVertexFactory UVF = bGPUSkinning
 		? EUberLitDefines::EVertexFactory::SkeletalMesh

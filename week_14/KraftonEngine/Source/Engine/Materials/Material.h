@@ -6,6 +6,7 @@
 #include "Render/Types/RenderTypes.h"
 #include "Render/Types/RenderStateTypes.h"
 #include "Materials/MaterialDomain.h"
+#include "Materials/MaterialSourceTypes.h"
 #include "Render/Resource/Buffer.h"
 #include "Render/Types/MaterialTextureSlot.h"
 #include "Render/Types/RenderConstants.h"
@@ -81,12 +82,21 @@ class UMaterial : public UObject
 {
 	// UMaterialInstance가 Parent의 Template/CBMap을 깊은 복사할 때 직접 접근.
 	friend class UMaterialInstance;
+    friend class UMaterialInstanceDynamic;
 
 protected:
 	FString PathFileName;// 어떤 Material인지 판별하는 고유 이름
 	uint32 MaterialInstanceID; // 고유 ID
 	FMaterialTemplate* Template; // 공유
 	FString ShaderPathForSerialize; // 파라미터 레이아웃 소스 셰이더 경로 (바이너리 직렬화/Template 재구성용)
+
+    // 언리얼식 authoring source. Legacy runtime payload 와 분리하여 graph/source 데이터만 안전하게 저장한다.
+    EMaterialSourceKind                  SourceKind = EMaterialSourceKind::EngineDefault;
+    FMaterialSettings                    MaterialSettings;
+    FMaterialGraphDocument               GraphDocument;
+    TArray<FMaterialParameterDefinition> ParameterDefinitions;
+    FMaterialRuntimeParameterStore       RuntimeParameterStore;
+    FMaterialCompileRecord               LastCompileRecord;
 
 	// 고수준 의도 (단일 소스) — 저수준 렌더상태는 ResolveMaterialRenderState 로 도출.
 	EMaterialDomain Domain    = EMaterialDomain::Surface;
@@ -179,6 +189,99 @@ public:
 	// MaterialInstance 판별 (에디터: 인스턴스는 셰이더를 부모에서 상속하므로 셰이더/custom 변경 비활성).
 	virtual bool IsMaterialInstance() const { return false; }
 
+    virtual bool IsDynamicMaterialInstance() const
+    {
+        return false;
+    }
+
+    // Source/graph material authoring API — 저장 원본과 컴파일 결과를 분리하기 위한 진입점.
+    EMaterialSourceKind GetSourceKind() const
+    {
+        return SourceKind;
+    }
+
+    void SetSourceKind(EMaterialSourceKind InSourceKind)
+    {
+        SourceKind = InSourceKind;
+    }
+
+    bool IsGraphMaterial() const
+    {
+        return SourceKind == EMaterialSourceKind::Graph && GraphDocument.bEnabled;
+    }
+
+    void EnableGraphMaterial()
+    {
+        SourceKind             = EMaterialSourceKind::Graph;
+        GraphDocument.bEnabled = true;
+        if (!GraphDocument.Graph.HasOutputNode())
+        {
+            GraphDocument.Graph.InitializeDefault(GraphDocument.Target);
+        }
+    }
+
+    void DisableGraphMaterial()
+    {
+        GraphDocument.bEnabled = false;
+        if (SourceKind == EMaterialSourceKind::Graph) SourceKind = EMaterialSourceKind::EngineDefault;
+    }
+
+    FMaterialSettings& GetMaterialSettings()
+    {
+        return MaterialSettings;
+    }
+
+    const FMaterialSettings& GetMaterialSettings() const
+    {
+        return MaterialSettings;
+    }
+
+    FMaterialGraphDocument& GetGraphDocument()
+    {
+        return GraphDocument;
+    }
+
+    const FMaterialGraphDocument& GetGraphDocument() const
+    {
+        return GraphDocument;
+    }
+
+    TArray<FMaterialParameterDefinition>& GetParameterDefinitions()
+    {
+        return ParameterDefinitions;
+    }
+
+    const TArray<FMaterialParameterDefinition>& GetParameterDefinitions() const
+    {
+        return ParameterDefinitions;
+    }
+
+    FMaterialRuntimeParameterStore& GetRuntimeParameterStore()
+    {
+        return RuntimeParameterStore;
+    }
+
+    const FMaterialRuntimeParameterStore& GetRuntimeParameterStore() const
+    {
+        return RuntimeParameterStore;
+    }
+
+    FMaterialCompileRecord& GetLastCompileRecord()
+    {
+        return LastCompileRecord;
+    }
+
+    const FMaterialCompileRecord& GetLastCompileRecord() const
+    {
+        return LastCompileRecord;
+    }
+
+    void MarkGraphSaved()
+    {
+        GraphDocument.LastSavedGraphHash = ComputeMaterialGraphStructuralHash(GraphDocument.Graph);
+    }
+
+
 	// 바이너리 직렬화용 셰이더 경로(레이아웃 소스) — Manager 가 Create 후 주입.
 	void           SetShaderPathForSerialize(const FString& InPath) { ShaderPathForSerialize = InPath; }
 	const FString& GetShaderPathForSerialize() const { return ShaderPathForSerialize; }
@@ -190,7 +293,15 @@ public:
 	// 고수준 의도 접근/설정
 	EMaterialDomain GetDomain() const { return Domain; }
 	EBlendMode GetBlendMode() const { return BlendMode; }
-	void SetDomainBlend(EMaterialDomain InDomain, EBlendMode InBlend) { Domain = InDomain; BlendMode = InBlend; RecomputeRenderState(); }
+
+    void SetDomainBlend(EMaterialDomain InDomain, EBlendMode InBlend)
+    {
+        Domain                     = InDomain;
+        BlendMode                  = InBlend;
+        MaterialSettings.Domain    = InDomain;
+        MaterialSettings.BlendMode = InBlend;
+        RecomputeRenderState();
+    }
 
 	// 양면 렌더(Two Sided) — Raster override(NoCull) 슬롯 재사용(별도 직렬화 필드 불필요).
 	// off면 override 해제 → 도출 Rasterizer(Surface=BackCull, Decal=NoCull 등)로 복귀.
@@ -224,8 +335,15 @@ public:
 	const FString& GetTexturePathFileName(const FString& TextureName)const;
 
 	const FString& GetAssetPathFileName() const { return PathFileName; }
-	void SetAssetPathFileName(const FString& InPath) { PathFileName = InPath; }
-	void Serialize(FArchive& Ar);//>>>>>Manager가 위임
+
+    void SetAssetPathFileName(const FString& InPath)
+    {
+        PathFileName = InPath;
+    }
+
+    void Serialize(FArchive& Ar) override;               // legacy wrapper
+    void Serialize(FArchive& Ar, uint32 PackageVersion); //>>>>>Manager가 위임
+    void SerializeMaterialSourcePayload(FArchive& Ar);
 
 	virtual FConstantBuffer* GetGPUBufferBySlot(uint32 InSlot) const
 	{

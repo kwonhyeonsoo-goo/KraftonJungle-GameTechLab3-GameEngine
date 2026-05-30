@@ -185,6 +185,32 @@ FShader* FShaderManager::FindOrCreate(const FString& Path)
 	return GetOrCreate(Path);
 }
 
+FShader* FShaderManager::FindOrCreate(const FShaderKey& Key)
+{
+    return GetOrCreate(Key);
+}
+
+void FShaderManager::InvalidatePath(const FString& Path)
+{
+    for (auto It = ShaderCache.begin(); It != ShaderCache.end();)
+    {
+        if (It->first.Path == Path)
+        {
+            if (It->second.Shader)
+            {
+                It->second.Shader->Release();
+            }
+            It = ShaderCache.erase(It);
+        }
+        else
+        {
+            ++It;
+        }
+    }
+
+    RebuildIncludeDependents();
+}
+
 // ============================================================
 // GetOrCreateCS — CS 캐시 히트 시 반환, 미스 시 컴파일
 // ============================================================

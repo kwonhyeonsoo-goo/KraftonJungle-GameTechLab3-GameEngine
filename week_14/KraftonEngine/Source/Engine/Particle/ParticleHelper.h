@@ -59,26 +59,27 @@ namespace ParticleUtils
 // -----------------------------------------------------------------------------
 struct FBaseParticle
 {
-	FVector  Location          = { 0, 0, 0 };
-	FVector  OldLocation       = { 0, 0, 0 };
-	FVector  Velocity          = { 0, 0, 0 };
-	FVector  BaseVelocity      = { 0, 0, 0 };
-	FVector4 Color             = { 1, 1, 1, 1 };
-	FVector4 BaseColor         = { 1, 1, 1, 1 };
-	FVector  Size              = { 1, 1, 1 };
-	FVector  BaseSize          = { 1, 1, 1 };
-	float    Rotation          = 0.0f;
-	float    BaseRotation      = 0.0f;
-	float    RotationRate      = 0.0f;
-	float    BaseRotationRate  = 0.0f;
-	float    RelativeTime      = 0.0f; // 0..1, 1 도달 시 kill
+    FVector  Location           = { 0, 0, 0 };
+    FVector  OldLocation        = { 0, 0, 0 };
+    FVector  Velocity           = { 0, 0, 0 };
+    FVector  BaseVelocity       = { 0, 0, 0 };
+    FVector4 Color              = { 1, 1, 1, 1 };
+    FVector4 BaseColor          = { 1, 1, 1, 1 };
+    FVector4 DynamicParameter   = { 0, 0, 0, 0 };
+    FVector  Size               = { 1, 1, 1 };
+    FVector  BaseSize           = { 1, 1, 1 };
+    float    Rotation           = 0.0f;
+    float    BaseRotation       = 0.0f;
+    float    RotationRate       = 0.0f;
+    float    BaseRotationRate   = 0.0f;
+    float    RelativeTime       = 0.0f; // 0..1, 1 도달 시 kill
 	float    OneOverMaxLifetime = 1.0f;
-	uint32   Flags             = 0;
-	int32    SubImageIndex     = -1;   // SubUV 프레임 인덱스 (-1 = 렌더 fallback)
-	uint8    SimulationLODIndex = 0;   // Spawn 시점 LOD contract. live particle update continuity 용.
-	uint8    Reserved0         = 0;
-	uint8    Reserved1         = 0;
-	uint8    Reserved2         = 0;
+    uint32   Flags              = 0;
+    int32    SubImageIndex      = -1; // SubUV 프레임 인덱스 (-1 = 렌더 fallback)
+    uint8    SimulationLODIndex = 0;  // Spawn 시점 LOD contract. live particle update continuity 용.
+    uint8    Reserved0          = 0;
+    uint8    Reserved1          = 0;
+    uint8    Reserved2          = 0;
 };
 
 // 입자 상태 플래그
@@ -130,6 +131,7 @@ struct FParticleSpriteInstanceVertex
 	FVector4 Color;         // INSTANCE_COLOR
 	int32    SubImageIndex; // INSTANCE_SUBIMAGE
 	int32    Alignment;     // INSTANCE_ALIGNMENT — EParticleSpriteReplayAlignment
+    FVector4 DynamicParam;  // INSTANCE_DYNAMICPARAM — graph DynamicParameter node.
 };
 
 struct FParticleMeshInstanceVertex
@@ -142,6 +144,7 @@ struct FParticleMeshInstanceVertex
 	FVector4 Transform3;
 	FVector4 Color;
 	int32    SubImageIndex;
+    FVector4 DynamicParam;
 };
 
 struct FParticleBeamTrailVertex

@@ -46,6 +46,7 @@
 #include "Particle/Modules/ParticleModuleCollision.h"
 #include "Particle/Modules/ParticleModuleColor.h"
 #include "Particle/Modules/ParticleModuleColorOverLife.h"
+#include "Particle/Modules/ParticleModuleDynamicParameter.h"
 #include "Particle/Modules/ParticleModuleEventGenerator.h"
 #include "Particle/Modules/ParticleModuleEventReceiverKillAll.h"
 #include "Particle/Modules/ParticleModuleEventReceiverSpawn.h"
@@ -3871,6 +3872,14 @@ void FParticleEditorWidget::RenderAddModulePopup()
 		AddRegular("Const Acceleration", UParticleModule::EModuleCategory::Acceleration, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleAcceleration>(LOD, Emitter); });
 		AddRegular("Initial Color", UParticleModule::EModuleCategory::Color, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleColor>(LOD, Emitter); });
 		AddRegular("Color Over Life", UParticleModule::EModuleCategory::Color, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleColorOverLife>(LOD, Emitter); });
+        AddRegular(
+            "Dynamic Parameter",
+            UParticleModule::EModuleCategory::Color,
+            [&]() -> UParticleModule*
+            {
+                return CreateParticleModule<UParticleModuleDynamicParameter>(LOD, Emitter);
+            }
+        );
 		AddRegular("Initial Size", UParticleModule::EModuleCategory::Size, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleSize>(LOD, Emitter); });
 		AddRegular("Size By Life", UParticleModule::EModuleCategory::Size, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleSizeByLife>(LOD, Emitter); });
 		AddRegular("Collision", UParticleModule::EModuleCategory::Collision, [&]() -> UParticleModule* { return CreateParticleModule<UParticleModuleCollision>(LOD, Emitter); });
