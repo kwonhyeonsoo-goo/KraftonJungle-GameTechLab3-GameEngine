@@ -23,10 +23,11 @@ enum class EAssetPackageType : uint32
 
 enum class EAssetPackageSerializationVersion : uint32
 {
-    LegacyBinaryLayout         = 1,
-    HeaderVersionedFormat      = 2,
-    SkeletonSocketPayload      = 3,
-    MaterialGraphSourcePayload = 4,
+	LegacyBinaryLayout = 1,
+	HeaderVersionedFormat = 2,
+	SkeletonSocketPayload = 3,
+	SkeletalMeshPhysicsAssetPayload = 4,
+    MaterialGraphSourcePayload = 5,
 };
 
 enum class EAssetPackageFormatBranch : uint8

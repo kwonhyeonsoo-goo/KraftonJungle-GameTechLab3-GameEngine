@@ -12,6 +12,8 @@ namespace
         return BoneName.IsValid() && BoneName != FName::None;
     }
 
+    // Preview uses the same authored transform convention as runtime creation, but it
+    // stays completely detached from live physics state so editor tools can call it freely.
     FTransform ComposePreviewTransforms(const FTransform& ParentWorld, const FTransform& Local)
     {
         FTransform Result = Local;
@@ -61,6 +63,32 @@ namespace
     }
 }
 
+bool FPhysicsAssetPreviewUtils::HasPreviewPose(const USkeletalMeshComponent* PreviewComponent)
+{
+    if (!PreviewComponent || !PreviewComponent->GetSkeletalMesh())
+    {
+        return false;
+    }
+
+    TArray<FTransform> BoneComponentSpaceTransforms;
+    PreviewComponent->GetCurrentBoneGlobalTransforms(BoneComponentSpaceTransforms);
+    return !BoneComponentSpaceTransforms.empty();
+}
+
+bool FPhysicsAssetPreviewUtils::IsBodySetupIndexValid(const UPhysicsAsset* PhysicsAsset, int32 BodyIndex)
+{
+    return PhysicsAsset &&
+        BodyIndex >= 0 &&
+        BodyIndex < static_cast<int32>(PhysicsAsset->GetBodySetups().size());
+}
+
+bool FPhysicsAssetPreviewUtils::IsConstraintSetupIndexValid(const UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex)
+{
+    return PhysicsAsset &&
+        ConstraintIndex >= 0 &&
+        ConstraintIndex < static_cast<int32>(PhysicsAsset->GetConstraintSetups().size());
+}
+
 bool FPhysicsAssetPreviewUtils::ResolveBodyBoneIndex(
     const USkeletalMesh* SkeletalMesh,
     const FPhysicsAssetBodySetup& BodySetup,
@@ -87,13 +115,15 @@ bool FPhysicsAssetPreviewUtils::ComputePreviewBodyWorldTransform(
     int32 BodyIndex,
     FTransform& OutWorldTransform)
 {
-    if (!PreviewComponent || !PhysicsAsset)
+    // Preview helpers fail fast on missing data so editor callers get deterministic
+    // "no transform available" behavior instead of partially computed gizmo state.
+    if (!PreviewComponent || !PhysicsAsset || !HasPreviewPose(PreviewComponent))
     {
         return false;
     }
 
     const TArray<FPhysicsAssetBodySetup>& BodySetups = PhysicsAsset->GetBodySetups();
-    if (BodyIndex < 0 || BodyIndex >= static_cast<int32>(BodySetups.size()))
+    if (!IsBodySetupIndexValid(PhysicsAsset, BodyIndex))
     {
         return false;
     }
@@ -144,13 +174,13 @@ bool FPhysicsAssetPreviewUtils::ComputePreviewConstraintWorldFrames(
     FTransform& OutParentFrameWorld,
     FTransform& OutChildFrameWorld)
 {
-    if (!PreviewComponent || !PhysicsAsset)
+    if (!PreviewComponent || !PhysicsAsset || !HasPreviewPose(PreviewComponent))
     {
         return false;
     }
 
     const TArray<FPhysicsAssetConstraintSetup>& ConstraintSetups = PhysicsAsset->GetConstraintSetups();
-    if (ConstraintIndex < 0 || ConstraintIndex >= static_cast<int32>(ConstraintSetups.size()))
+    if (!IsConstraintSetupIndexValid(PhysicsAsset, ConstraintIndex))
     {
         return false;
     }
@@ -172,6 +202,8 @@ bool FPhysicsAssetPreviewUtils::ComputePreviewConstraintWorldFrames(
         return false;
     }
 
+    // Constraint preview frames are derived from preview body world transforms so editor
+    // gizmos match the same local-frame convention used by runtime constraint creation.
     OutParentFrameWorld = ComposePreviewTransforms(ParentBodyWorld, ConstraintSetup.ParentLocalFrame);
     OutChildFrameWorld = ComposePreviewTransforms(ChildBodyWorld, ConstraintSetup.ChildLocalFrame);
     return true;

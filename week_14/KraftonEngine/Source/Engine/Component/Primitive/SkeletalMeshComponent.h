@@ -40,6 +40,8 @@ public:
     void SetPhysicsAssetOverridePath(const FString& InPath);
     UFUNCTION(Pure, Category="Physics")
     UPhysicsAsset* GetPhysicsAssetOverride() const;
+    // This is the single selection entry point for ragdoll work:
+    // component override -> mesh default -> skeleton default.
     UFUNCTION(Pure, Category="Physics")
     UPhysicsAsset* GetEffectivePhysicsAsset() const;
     bool ResolvePhysicsAssetOverride();
@@ -49,6 +51,20 @@ public:
     FPhysicsAssetInstance* GetPhysicsAssetInstance() const;
     FPhysicsAssetInstance* GetOrCreatePhysicsAssetInstance();
     void DestroyPhysicsAssetInstance();
+    // Higher-level ragdoll controls hide instance/body lifecycle details from gameplay
+    // code and keep this component as the policy owner.
+    UFUNCTION(Callable, Category="Physics")
+    bool EnableRagdollPhysics();
+    UFUNCTION(Callable, Category="Physics")
+    void DisableRagdollPhysics();
+    UFUNCTION(Pure, Category="Physics")
+    bool IsRagdollActive() const;
+    UFUNCTION(Pure, Category="Physics")
+    int32 GetLiveRagdollBodyCount() const;
+    UFUNCTION(Pure, Category="Physics")
+    int32 GetLiveRagdollConstraintCount() const;
+    UFUNCTION(Pure, Category="Physics")
+    UPhysicsAsset* GetActivePhysicsAsset() const;
     UFUNCTION(Callable, Category="Physics")
     bool CreatePhysicsAssetInstanceBodies();
     UFUNCTION(Callable, Category="Physics")
@@ -57,6 +73,8 @@ public:
     void SetUsePhysicsAssetPose(bool bEnable);
     UFUNCTION(Pure, Category="Physics")
     bool IsUsingPhysicsAssetPose() const { return bUsePhysicsAssetPose; }
+    // First-pass ragdoll sync uses full pose override. Blending and partial-body policies
+    // intentionally live in later gameplay-facing passes.
     bool ApplyPhysicsAssetPose();
 
     // SingleNode 재생 편의 API.
@@ -142,7 +160,8 @@ protected:
     UPROPERTY(Save, Instanced, Category="Animation", DisplayName="Anim Instance", Type=ObjectRef, AllowedClass=UAnimInstance)
     UAnimInstance*             AnimInstance  = nullptr;
 
-    // Components own per-instance overrides and future ragdoll runtime state; the asset stays pure data.
+    // Components own per-instance overrides and runtime-instance lifecycle only; low-level
+    // rigid body/constraint handles stay inside FPhysicsAssetInstance.
     UPROPERTY(Edit, Save, Category="Physics", DisplayName="Physics Asset Override", AssetType="PhysicsAsset")
     FSoftObjectPtr PhysicsAssetOverridePath = "None";
     mutable TWeakObjectPtr<UPhysicsAsset> PhysicsAssetOverride;

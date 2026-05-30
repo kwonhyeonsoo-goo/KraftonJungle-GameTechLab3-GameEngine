@@ -15,6 +15,11 @@ USkeletalMesh::~USkeletalMesh()
 
 void USkeletalMesh::Serialize(FArchive& Ar)
 {
+    SerializeCurrentPayload(Ar);
+}
+
+void USkeletalMesh::SerializeLegacyPayload(FArchive& Ar)
+{
     if (Ar.IsLoading())
     {
         ReleaseTrackedMemory();
@@ -44,15 +49,30 @@ void USkeletalMesh::Serialize(FArchive& Ar)
     Ar << SkeletalMeshAsset->Bones;
     Ar << SkeletalMaterials;
     Ar << SkeletalMeshAsset->MorphTargets;
-    Ar << PhysicsAssetPath;
 
     if (Ar.IsLoading())
     {
         SkeletalMeshAsset->NormalizeBonePoseData();
         SyncSkeletonBindingFromAsset();
+        PhysicsAssetPath = "None";
         PhysicsAsset.Reset();
         CacheSectionMaterialIndices();
         SkeletalMeshAsset->bBoundsValid = false;
+    }
+}
+
+void USkeletalMesh::SerializeCurrentPayload(FArchive& Ar)
+{
+    SerializeLegacyPayload(Ar);
+    Ar << PhysicsAssetPath;
+
+    if (Ar.IsLoading())
+    {
+        if (PhysicsAssetPath.empty())
+        {
+            PhysicsAssetPath = "None";
+        }
+        PhysicsAsset.Reset();
     }
 }
 

@@ -1,4 +1,4 @@
-#include "Physics/PhysicsAsset.h"
+﻿#include "Physics/PhysicsAsset.h"
 
 #include <algorithm>
 
@@ -29,6 +29,7 @@ void UPhysicsAsset::Serialize(FArchive& Ar)
 
 int32 UPhysicsAsset::AddBodySetup(const FPhysicsAssetBodySetup& InBodySetup)
 {
+    // Placeholder bodies with no assigned bone are allowed during authoring.
     if (HasMeaningfulBoneName(InBodySetup.BoneName) && HasBodySetupForBone(InBodySetup.BoneName))
     {
         return -1;
@@ -50,6 +51,8 @@ bool UPhysicsAsset::RemoveBodySetupByIndex(int32 BodyIndex)
 
     if (HasMeaningfulBoneName(RemovedBoneName))
     {
+        // Removing a body also removes dangling constraints that named the same bone so
+        // tool code does not have to clean them up in a second pass.
         ConstraintSetups.erase(
             std::remove_if(
                 ConstraintSetups.begin(),
@@ -98,6 +101,7 @@ void UPhysicsAsset::ClearBodySetups()
 
 int32 UPhysicsAsset::AddConstraintSetup(const FPhysicsAssetConstraintSetup& InConstraintSetup)
 {
+    // Placeholder constraints are allowed until both ends are assigned to real bones.
     if (HasMeaningfulBoneName(InConstraintSetup.ParentBoneName) &&
         HasMeaningfulBoneName(InConstraintSetup.ChildBoneName) &&
         FindConstraintSetupIndex(InConstraintSetup.ParentBoneName, InConstraintSetup.ChildBoneName) >= 0)
@@ -187,6 +191,33 @@ FPhysicsAssetBodySetup* UPhysicsAsset::FindMutableBodySetupByBoneName(const FNam
     return Index >= 0 ? &BodySetups[Index] : nullptr;
 }
 
+UPhysicsAsset::EEditorSetupState UPhysicsAsset::GetBodySetupEditorState(int32 BodyIndex) const
+{
+    if (BodyIndex < 0 || BodyIndex >= static_cast<int32>(BodySetups.size()))
+    {
+        return EEditorSetupState::Invalid;
+    }
+
+    const FPhysicsAssetBodySetup& BodySetup = BodySetups[BodyIndex];
+    if (!HasMeaningfulBoneName(BodySetup.BoneName))
+    {
+        return EEditorSetupState::Placeholder;
+    }
+
+    if (BodySetup.Shapes.empty())
+    {
+        return EEditorSetupState::Invalid;
+    }
+
+    const int32 ExistingIndex = FindBodySetupIndexByBoneName(BodySetup.BoneName);
+    if (ExistingIndex >= 0 && ExistingIndex != BodyIndex)
+    {
+        return EEditorSetupState::Invalid;
+    }
+
+    return EEditorSetupState::RuntimeReady;
+}
+
 int32 UPhysicsAsset::FindConstraintSetupIndex(const FName& ParentBoneName, const FName& ChildBoneName) const
 {
     if (!HasMeaningfulBoneName(ParentBoneName) || !HasMeaningfulBoneName(ChildBoneName))
@@ -244,4 +275,33 @@ TArray<const FPhysicsAssetConstraintSetup*> UPhysicsAsset::FindConstraintSetupsF
     }
 
     return Result;
+}
+
+UPhysicsAsset::EEditorSetupState UPhysicsAsset::GetConstraintSetupEditorState(int32 ConstraintIndex) const
+{
+    if (ConstraintIndex < 0 || ConstraintIndex >= static_cast<int32>(ConstraintSetups.size()))
+    {
+        return EEditorSetupState::Invalid;
+    }
+
+    const FPhysicsAssetConstraintSetup& ConstraintSetup = ConstraintSetups[ConstraintIndex];
+    if (!HasMeaningfulBoneName(ConstraintSetup.ParentBoneName) ||
+        !HasMeaningfulBoneName(ConstraintSetup.ChildBoneName))
+    {
+        return EEditorSetupState::Placeholder;
+    }
+
+    if (ConstraintSetup.ParentBoneName == ConstraintSetup.ChildBoneName)
+    {
+        return EEditorSetupState::Invalid;
+    }
+
+    const int32 ExistingIndex =
+        FindConstraintSetupIndex(ConstraintSetup.ParentBoneName, ConstraintSetup.ChildBoneName);
+    if (ExistingIndex >= 0 && ExistingIndex != ConstraintIndex)
+    {
+        return EEditorSetupState::Invalid;
+    }
+
+    return EEditorSetupState::RuntimeReady;
 }

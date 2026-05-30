@@ -22,6 +22,8 @@ public:
     ~USkeletalMesh() override;
 
     void Serialize(FArchive& Ar) override;
+    void SerializeLegacyPayload(FArchive& Ar);
+    void SerializeCurrentPayload(FArchive& Ar);
 
     const FString& GetAssetPathFileName() const
     {

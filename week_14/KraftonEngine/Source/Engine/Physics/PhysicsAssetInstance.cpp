@@ -12,6 +12,9 @@
 
 namespace
 {
+    // PhysicsAsset body/constraint local frames are authored relative to bones.
+    // Runtime creation and pose sync both use the same composition rule so the two
+    // directions stay mathematically symmetric.
     FTransform ComposePhysicsTransforms(const FTransform& ParentWorld, const FTransform& Local)
     {
         FTransform Result = Local;
@@ -161,7 +164,8 @@ namespace
         OutDesc.Domain = EPhysicsBodyDomain::Ragdoll;
         OutDesc.BoneName = BodySetup.BoneName;
         OutDesc.BodyType = EPhysicsBodyType::Dynamic;
-        // Step 4 stops at runtime object creation, so ragdoll bodies stay manual until pose sync exists.
+        // Ragdoll bodies stay manual because skeletal pose sync is driven explicitly by
+        // the component rather than by generic component/world transform mirroring.
         OutDesc.SyncMode = EPhysicsSyncMode::Manual;
         OutDesc.WorldTransform = ComposePhysicsTransforms(BoneWorldTransform, BodySetup.BodyLocalFrame);
 
@@ -210,6 +214,8 @@ namespace
         FTransform& OutBoneWorld
     )
     {
+        // BodyLocalFrame is the authored offset from a bone to its rigid body. Pose sync
+        // reverses that offset so the simulated body can become the final bone transform.
         const FQuat InverseBodyLocalRotation = BodySetup.BodyLocalFrame.Rotation.Inverse().GetNormalized();
         OutBoneWorld = BodyWorld;
         OutBoneWorld.Rotation = (BodyWorld.Rotation * InverseBodyLocalRotation).GetNormalized();
@@ -242,6 +248,8 @@ bool FPhysicsAssetInstance::Initialize(USkeletalMeshComponent* InOwner, UPhysics
     BodiesByBone.resize(BodySetups.size());
     Constraints.resize(InAsset->GetConstraintSetups().size());
 
+    // Bone name resolution is cached up front so runtime creation and pose sync do not
+    // need to repeatedly scan the skeletal mesh bone list.
     for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
     {
         const FName& BoneName = BodySetups[BodyIndex].BoneName;
@@ -321,6 +329,8 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints()
     int32 CreatedBodyCount = 0;
     int32 CreatedConstraintCount = 0;
 
+    // Bodies must exist before constraints because joints are expressed in terms of
+    // two already-created rigid bodies.
     for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
     {
         const FPhysicsAssetBodySetup& BodySetup = BodySetups[BodyIndex];
@@ -455,6 +465,8 @@ void FPhysicsAssetInstance::DestroyBodiesAndConstraints()
 
 void FPhysicsAssetInstance::Shutdown()
 {
+    // Shutdown is the strongest cleanup path: drop live runtime objects first, then
+    // release cached ownership/binding state so the instance becomes fully inert.
     DestroyBodiesAndConstraints();
     BodiesByBone.clear();
     Constraints.clear();
@@ -467,28 +479,42 @@ void FPhysicsAssetInstance::Shutdown()
 
 void FPhysicsAssetInstance::ResetRuntimeState()
 {
+    // Reset keeps the instance attached to the same asset/component pairing while
+    // discarding live runtime objects that may no longer match the current state.
     DestroyBodiesAndConstraints();
 }
 
 bool FPhysicsAssetInstance::HasLivePhysicsObjects() const
 {
-    for (const FPhysicsConstraintHandle& ConstraintHandle : Constraints)
-    {
-        if (ConstraintHandle.IsValid())
-        {
-            return true;
-        }
-    }
+    return GetLiveBodyCount() > 0 || GetLiveConstraintCount() > 0;
+}
 
+int32 FPhysicsAssetInstance::GetLiveBodyCount() const
+{
+    int32 LiveBodyCount = 0;
     for (const FPhysicsBodyHandle& BodyHandle : BodiesByBone)
     {
         if (BodyHandle.IsValid())
         {
-            return true;
+            ++LiveBodyCount;
         }
     }
 
-    return false;
+    return LiveBodyCount;
+}
+
+int32 FPhysicsAssetInstance::GetLiveConstraintCount() const
+{
+    int32 LiveConstraintCount = 0;
+    for (const FPhysicsConstraintHandle& ConstraintHandle : Constraints)
+    {
+        if (ConstraintHandle.IsValid())
+        {
+            ++LiveConstraintCount;
+        }
+    }
+
+    return LiveConstraintCount;
 }
 
 bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTransforms) const
@@ -496,7 +522,7 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
     const USkeletalMeshComponent* Owner = GetOwnerComponent();
     const UPhysicsAsset* Asset = GetAsset();
     const IPhysicsRuntime* Runtime = GetPhysicsRuntime(Owner);
-    if (!Owner || !Asset || !Runtime)
+    if (!Owner || !Asset || !Runtime || GetLiveBodyCount() <= 0)
     {
         return false;
     }
@@ -517,6 +543,8 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
 
     const FTransform ComponentWorldTransform = GetComponentWorldTransform(Owner);
     OutBoneWorldTransforms.resize(MeshAsset->Bones.size());
+    // Start from the current animated pose so bones without bodies remain stable instead
+    // of collapsing when a PhysicsAsset only covers part of the skeleton.
     for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
     {
         OutBoneWorldTransforms[BoneIndex] =

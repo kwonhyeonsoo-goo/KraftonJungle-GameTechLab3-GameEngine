@@ -27,6 +27,13 @@
 #include "Editor/UI/Asset/Animation/AnimGraphEditorWidget.h"
 #include "Editor/UI/Asset/LuaBlueprint/LuaBlueprintEditorWidget.h"
 #include "Editor/UI/Asset/Material/MaterialEditorWidget.h"
+#include "Editor/UI/Asset/Physics/PhysicsAssetEditorWidget.h"
+
+// This project keeps a fixed Visual Studio source list, so newly added .cpp files
+// from patches are not always compiled automatically. Pull the implementation into
+// this already-compiled translation unit to avoid unresolved externals until the
+// project file is regenerated/updated.
+#include "Editor/UI/Asset/Physics/PhysicsAssetEditorWidget.cpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -84,6 +91,8 @@ FDocumentTabVisual GetDocumentTabVisual(EEditorDocumentTabKind Kind)
 		return { ImVec4(0.86f, 0.58f, 0.22f, 1.0f), "Anim Graph Editor" };
 	case EEditorDocumentTabKind::LuaBlueprintEditor:
 		return { ImVec4(0.36f, 0.52f, 0.94f, 1.0f), "Lua Blueprint Editor" };
+	case EEditorDocumentTabKind::PhysicsAssetEditor:
+		return { ImVec4(0.84f, 0.38f, 0.30f, 1.0f), "Physics Asset Editor" };
     case EEditorDocumentTabKind::MaterialEditor:
         return { ImVec4(0.92f, 0.44f, 0.24f, 1.0f), "Material Graph Editor" };
 	case EEditorDocumentTabKind::Unsupported:
@@ -102,6 +111,7 @@ const char* GetDocumentTabKindName(EEditorDocumentTabKind Kind)
 	case EEditorDocumentTabKind::ParticleEditor: return "Particle";
 	case EEditorDocumentTabKind::AnimGraphEditor: return "AnimGraph";
 	case EEditorDocumentTabKind::LuaBlueprintEditor: return "LuaBlueprint";
+	case EEditorDocumentTabKind::PhysicsAssetEditor: return "PhysicsAsset";
     case EEditorDocumentTabKind::MaterialEditor:
         return "Material";
 	case EEditorDocumentTabKind::Unsupported:
@@ -179,6 +189,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 	AssetEditorManager.RegisterEditor<FAnimGraphEditorWidget>();
 	AssetEditorManager.RegisterEditor<FParticleEditorWidget>();
 	AssetEditorManager.RegisterEditor<FLuaBlueprintEditorWidget>();
+	AssetEditorManager.RegisterEditor<FPhysicsAssetEditorWidget>();
     AssetEditorManager.RegisterEditor<FMaterialEditorWidget>();
 }
 

@@ -25,6 +25,8 @@
 #include <filesystem>
 
 #include "Particle/ParticleSystemManager.h"
+#include "Physics/PhysicsAsset.h"
+#include "Physics/PhysicsAssetManager.h"
 
 namespace
 {
@@ -497,6 +499,9 @@ void FEditorContentBrowserWidget::RefreshContent()
 				case EAssetPackageType::LuaBlueprint:
 					Element = std::make_shared<LuaBlueprintElement>();
 					break;
+				case EAssetPackageType::PhysicsAsset:
+					Element = std::make_shared<PhysicsAssetElement>();
+					break;
 				case EAssetPackageType::Material:
 					Element = std::make_shared<MaterialElement>();
 					break;
@@ -707,6 +712,21 @@ void FEditorContentBrowserWidget::DrawContents()
 						Refresh();
 					}
 				}
+			if (ImGui::MenuItem("Physics Asset"))
+			{
+				FString CreatedPath;
+				if (FAssetFactory::CreatePhysicsAsset(FPaths::ToUtf8(BrowserContext.CurrentPath), "NewPhysicsAsset", CreatedPath))
+				{
+					Refresh();
+					if (BrowserContext.EditorEngine)
+					{
+						if (UPhysicsAsset* Asset = FPhysicsAssetManager::Get().LoadPhysicsAsset(CreatedPath))
+						{
+							BrowserContext.EditorEngine->OpenAssetEditorForObject(Asset);
+						}
+					}
+				}
+			}
 			ImGui::EndMenu();
 		}
 

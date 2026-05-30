@@ -10,6 +10,16 @@ UCLASS()
 class UPhysicsAsset : public UObject
 {
 public:
+    enum class EEditorSetupState : uint8
+    {
+        // Ready for runtime creation as-is.
+        RuntimeReady,
+        // Allowed during authoring, but still missing required data such as target bones.
+        Placeholder,
+        // Structurally inconsistent and should not be treated as runtime-ready.
+        Invalid
+    };
+
     GENERATED_BODY()
     UPhysicsAsset()           = default;
     ~UPhysicsAsset() override = default;
@@ -47,7 +57,8 @@ public:
         return BodySetups;
     }
 
-    // Tool code keeps selection state outside the asset and uses these helpers to mutate data safely.
+    // Tool code keeps selection state outside the asset and uses these helpers to mutate
+    // asset data safely without reaching into raw arrays directly.
     int32 AddBodySetup(const FPhysicsAssetBodySetup& InBodySetup);
     bool RemoveBodySetupByIndex(int32 BodyIndex);
     bool RemoveBodySetupByBoneName(const FName& BoneName);
@@ -70,17 +81,19 @@ public:
     bool UpdateConstraintSetup(int32 ConstraintIndex, const FPhysicsAssetConstraintSetup& InConstraintSetup);
     void ClearConstraintSetups();
 
-    // Asset-side lookup helpers keep future skeletal/ragdoll code from
-    // re-implementing the same bone/constraint queries at each call site.
+    // Asset-side lookup helpers keep tools and runtime code from re-implementing the
+    // same bone/constraint queries at each call site.
     int32 FindBodySetupIndexByBoneName(const FName& BoneName) const;
     bool HasBodySetupForBone(const FName& BoneName) const;
     const FPhysicsAssetBodySetup* FindBodySetupByBoneName(const FName& BoneName) const;
     FPhysicsAssetBodySetup* FindMutableBodySetupByBoneName(const FName& BoneName);
+    EEditorSetupState GetBodySetupEditorState(int32 BodyIndex) const;
     int32 FindConstraintSetupIndex(const FName& ParentBoneName, const FName& ChildBoneName) const;
     bool HasConstraintBetweenBones(const FName& ParentBoneName, const FName& ChildBoneName) const;
     const FPhysicsAssetConstraintSetup* FindConstraintSetup(const FName& ParentBoneName, const FName& ChildBoneName) const;
     FPhysicsAssetConstraintSetup* FindMutableConstraintSetup(const FName& ParentBoneName, const FName& ChildBoneName);
     TArray<const FPhysicsAssetConstraintSetup*> FindConstraintSetupsForBone(const FName& BoneName) const;
+    EEditorSetupState GetConstraintSetupEditorState(int32 ConstraintIndex) const;
 
 private:
     FString AssetPathFileName = "None";
