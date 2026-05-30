@@ -430,6 +430,16 @@ void FNativePhysicsScene::AddTorque(UPrimitiveComponent* Comp, const FVector& To
 	It->second.AccumulatedTorque = It->second.AccumulatedTorque + Torque;
 }
 
+void FNativePhysicsScene::AddImpulse(UPrimitiveComponent* Comp, const FVector& Impulse)
+{
+    if (!IsValid(Comp)) return;
+    auto It = BodyStates.find(GetNativeObjectKey(Comp));
+    if (It == BodyStates.end()) return;
+
+    const float InvMass = (It->second.Mass > 0.0f) ? (1.0f / It->second.Mass) : 0.0f;
+    It->second.Velocity = It->second.Velocity + Impulse * InvMass;
+}
+
 // ============================================================
 // Velocity
 // ============================================================

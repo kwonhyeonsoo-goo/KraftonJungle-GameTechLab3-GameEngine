@@ -909,6 +909,47 @@ FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateConstraint(
     return CreateConstraint_Internal(Parent, Child, Desc);
 }
 
+FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateFixedJoint(
+    FPhysicsBodyHandle Parent,
+    const FTransform&  ParentLocalFrame,
+    FPhysicsBodyHandle Child,
+    const FTransform&  ChildLocalFrame
+)
+{
+    FConstraintCreationDesc Desc;
+    Desc.ParentLocalFrame = ParentLocalFrame;
+    Desc.ChildLocalFrame  = ChildLocalFrame;
+
+    Desc.Limits.LinearX = EConstraintMotion::Locked;
+    Desc.Limits.LinearY = EConstraintMotion::Locked;
+    Desc.Limits.LinearZ = EConstraintMotion::Locked;
+    Desc.Limits.Twist   = EConstraintMotion::Locked;
+    Desc.Limits.Swing1  = EConstraintMotion::Locked;
+    Desc.Limits.Swing2  = EConstraintMotion::Locked;
+
+    return CreateConstraint(Parent, Child, Desc);
+}
+
+FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateSphericalJoint(
+    FPhysicsBodyHandle          Parent,
+    const FTransform&           ParentLocalFrame,
+    FPhysicsBodyHandle          Child,
+    const FTransform&           ChildLocalFrame,
+    const FConstraintLimitDesc& AngularLimits
+)
+{
+    FConstraintCreationDesc Desc;
+    Desc.ParentLocalFrame = ParentLocalFrame;
+    Desc.ChildLocalFrame  = ChildLocalFrame;
+    Desc.Limits           = AngularLimits;
+
+    Desc.Limits.LinearX = EConstraintMotion::Locked;
+    Desc.Limits.LinearY = EConstraintMotion::Locked;
+    Desc.Limits.LinearZ = EConstraintMotion::Locked;
+
+    return CreateConstraint(Parent, Child, Desc);
+}
+
 void FPhysXPhysicsRuntime::DestroyConstraint(FPhysicsConstraintHandle Constraint)
 {
     FPhysicsCommand Cmd;

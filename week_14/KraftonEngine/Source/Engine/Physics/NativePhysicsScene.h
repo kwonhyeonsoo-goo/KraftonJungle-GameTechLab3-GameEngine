@@ -65,6 +65,7 @@ public:
 	void AddForce(UPrimitiveComponent* Comp, const FVector& Force) override;
 	void AddForceAtLocation(UPrimitiveComponent* Comp, const FVector& Force, const FVector& WorldLocation) override;
 	void AddTorque(UPrimitiveComponent* Comp, const FVector& Torque) override;
+    void AddImpulse(UPrimitiveComponent* Comp, const FVector& Impulse) override;
 
 	FVector GetLinearVelocity(UPrimitiveComponent* Comp) const override;
 	void SetLinearVelocity(UPrimitiveComponent* Comp, const FVector& Vel) override;
