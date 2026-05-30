@@ -12,6 +12,7 @@ enum class EAssetPackageType : uint32
 	CameraShake,
 	Material,
 	Skeleton,
+	PhysicsAsset,
 	AnimSequence,
 	AnimMontage,
 	AnimGraph,
