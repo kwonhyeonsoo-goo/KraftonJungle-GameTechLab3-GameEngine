@@ -14,5 +14,10 @@ struct FShapeInstance
 
     UPrimitiveComponent* SourceComponent = nullptr;
     FPhysicsShapeDesc    Desc;
+
+    // debug draw는 이 값을 써야 실제 충돌 형상과 일치한다.
+    FTransform EngineLocalTransform;
+    FTransform PhysXLocalTransform;
+
     physx::PxShape*      Shape = nullptr;
 };

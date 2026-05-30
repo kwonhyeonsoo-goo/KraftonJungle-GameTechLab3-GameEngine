@@ -1,6 +1,7 @@
 #include "Physics/PhysXPhysicsScene.h"
 
 #include "Component/PrimitiveComponent.h"
+#include "Core/ProjectSettings.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
@@ -9,7 +10,10 @@
 #include "Physics/PhysicsShapeInstance.h"
 #include "Physics/PhysXConversion.h"
 
+#include <algorithm>
+#include <mutex>
 #include <PxPhysicsAPI.h>
+#include <thread>
 #include <vector>
 
 using namespace physx;
@@ -179,8 +183,8 @@ public:
 
             if (bEnd)
             {
-                PendingHits.push_back({ CompA, CompB, FVector::ZeroVector, FHitResult(), false });
-                PendingHits.push_back({ CompB, CompA, FVector::ZeroVector, FHitResult(), false });
+                EnqueueHit({ CompA, CompB, FVector::ZeroVector, FHitResult(), false });
+                EnqueueHit({ CompB, CompA, FVector::ZeroVector, FHitResult(), false });
                 continue;
             }
 
@@ -211,7 +215,7 @@ public:
             A.Hit.ImpactNormal = ContactNormal;
             A.Hit.WorldNormal = ContactNormal;
             A.Hit.PenetrationDepth = -Penetration;
-            PendingHits.push_back(A);
+            EnqueueHit(A);
 
             FQueuedHit B;
             B.Self = CompB;
@@ -224,7 +228,7 @@ public:
             B.Hit.ImpactNormal = ContactNormal * -1.0f;
             B.Hit.WorldNormal = ContactNormal * -1.0f;
             B.Hit.PenetrationDepth = -Penetration;
-            PendingHits.push_back(B);
+            EnqueueHit(B);
         }
     }
 
@@ -255,57 +259,67 @@ public:
 
             if (TriggerComp->GetGenerateOverlapEvents())
             {
-                PendingTriggers.push_back({ TriggerComp, OtherComp, bBegin });
+                EnqueueTrigger({ TriggerComp, OtherComp, bBegin });
             }
             if (OtherComp->GetGenerateOverlapEvents())
             {
-                PendingTriggers.push_back({ OtherComp, TriggerComp, bBegin });
+                EnqueueTrigger({ OtherComp, TriggerComp, bBegin });
             }
         }
     }
 
-    void DispatchPendingEvents()
+    void DispatchPendingEvents(bool bDispatchHitEvents, bool bDispatchTriggerEvents)
     {
-        std::vector<FQueuedHit> HitsToDispatch;
-        HitsToDispatch.swap(PendingHits);
-
+        // 큐에서 빼는 동안만 lock 을 잡고, 실제 게임 콜백(NotifyComponentHit 등)은 lock 밖에서
+        // 실행한다 — 콜백이 다시 물리 API 를 호출해도 deadlock 되지 않게.
+        std::vector<FQueuedHit>     HitsToDispatch;
         std::vector<FQueuedTrigger> TriggersToDispatch;
-        TriggersToDispatch.swap(PendingTriggers);
-
-        for (FQueuedHit& E : HitsToDispatch)
         {
-            if (!IsValid(E.Self) || !IsValid(E.Other))
-            {
-                continue;
-            }
+            std::lock_guard<std::mutex> Lock(EventMutex);
+            HitsToDispatch.swap(PendingHits);
+            TriggersToDispatch.swap(PendingTriggers);
+        }
 
-            AActor* OtherActor = E.Other->GetOwner();
-            if (E.bBegin)
+        if (bDispatchHitEvents)
+        {
+            for (FQueuedHit& E : HitsToDispatch)
             {
-                E.Self->NotifyComponentHit(E.Self, OtherActor, E.Other, E.NormalImpulse, E.Hit);
-            }
-            else
-            {
-                E.Self->NotifyComponentEndHit(E.Self, OtherActor, E.Other);
+                if (!IsValid(E.Self) || !IsValid(E.Other))
+                {
+                    continue;
+                }
+
+                AActor* OtherActor = E.Other->GetOwner();
+                if (E.bBegin)
+                {
+                    E.Self->NotifyComponentHit(E.Self, OtherActor, E.Other, E.NormalImpulse, E.Hit);
+                }
+                else
+                {
+                    E.Self->NotifyComponentEndHit(E.Self, OtherActor, E.Other);
+                }
             }
         }
 
-        for (FQueuedTrigger& E : TriggersToDispatch)
+        if (bDispatchTriggerEvents)
         {
-            if (!IsValid(E.Self) || !IsValid(E.Other))
+            for (FQueuedTrigger& E : TriggersToDispatch)
             {
-                continue;
-            }
+                if (!IsValid(E.Self) || !IsValid(E.Other))
+                {
+                    continue;
+                }
 
-            AActor* OtherActor = E.Other->GetOwner();
-            if (E.bBegin)
-            {
-                FHitResult DummyHit;
-                E.Self->NotifyComponentBeginOverlap(E.Self, OtherActor, E.Other, 0, false, DummyHit);
-            }
-            else
-            {
-                E.Self->NotifyComponentEndOverlap(E.Self, OtherActor, E.Other, 0);
+                AActor* OtherActor = E.Other->GetOwner();
+                if (E.bBegin)
+                {
+                    FHitResult DummyHit;
+                    E.Self->NotifyComponentBeginOverlap(E.Self, OtherActor, E.Other, 0, false, DummyHit);
+                }
+                else
+                {
+                    E.Self->NotifyComponentEndOverlap(E.Self, OtherActor, E.Other, 0);
+                }
             }
         }
     }
@@ -316,7 +330,21 @@ public:
     void onAdvance(const PxRigidBody* const*, const PxTransform*, const PxU32) override {}
 
 private:
-    std::vector<FQueuedHit> PendingHits;
+    // PhysX 콜백은 큐 접근을 보호한다.
+    void EnqueueHit(const FQueuedHit& Hit)
+    {
+        std::lock_guard<std::mutex> Lock(EventMutex);
+        PendingHits.push_back(Hit);
+    }
+
+    void EnqueueTrigger(const FQueuedTrigger& Trigger)
+    {
+        std::lock_guard<std::mutex> Lock(EventMutex);
+        PendingTriggers.push_back(Trigger);
+    }
+
+    std::mutex                  EventMutex;
+    std::vector<FQueuedHit>     PendingHits;
     std::vector<FQueuedTrigger> PendingTriggers;
 };
 
@@ -379,7 +407,15 @@ void FPhysXPhysicsScene::Initialize(UWorld* InWorld)
         return;
     }
 
-    Dispatcher = PxDefaultCpuDispatcherCreate(2);
+    const auto& PhysicsSettings   = FProjectSettings::Get().Physics;
+    int32       WorkerThreadCount = PhysicsSettings.WorkerThreadCount;
+    if (WorkerThreadCount <= 0)
+    {
+        const unsigned int HardwareThreads = std::thread::hardware_concurrency();
+        WorkerThreadCount                  = static_cast<int32>((std::max)(1u, HardwareThreads > 1 ? HardwareThreads - 1 : 1u));
+    }
+
+    Dispatcher    = PxDefaultCpuDispatcherCreate(WorkerThreadCount);
     EventCallback = new FPhysXSimulationCallback();
 
     PxSceneDesc SceneDesc(Physics->getTolerancesScale());
@@ -389,6 +425,23 @@ void FPhysXPhysicsScene::Initialize(UWorld* InWorld)
     SceneDesc.simulationEventCallback = EventCallback;
     SceneDesc.staticKineFilteringMode = PxPairFilteringMode::eKEEP;
     SceneDesc.kineKineFilteringMode = PxPairFilteringMode::eKEEP;
+
+    if (PhysicsSettings.bEnableCCD)
+    {
+        SceneDesc.flags |= PxSceneFlag::eENABLE_CCD;
+    }
+    if (PhysicsSettings.bEnablePCM)
+    {
+        SceneDesc.flags |= PxSceneFlag::eENABLE_PCM;
+    }
+    if (PhysicsSettings.bEnableActiveActors)
+    {
+        SceneDesc.flags |= PxSceneFlag::eENABLE_ACTIVE_ACTORS;
+    }
+    if (PhysicsSettings.bRequireSceneReadWriteLock)
+    {
+        SceneDesc.flags |= PxSceneFlag::eREQUIRE_RW_LOCK;
+    }
 
     Scene = Physics->createScene(SceneDesc);
     if (!Scene)
@@ -459,10 +512,17 @@ void FPhysXPhysicsScene::RebuildBody(UPrimitiveComponent* Comp)
 void FPhysXPhysicsScene::Tick(float DeltaTime)
 {
     Runtime.Tick(DeltaTime);
+}
 
+void FPhysXPhysicsScene::DispatchPendingEvents()
+{
     if (EventCallback)
     {
-        EventCallback->DispatchPendingEvents();
+        const auto& PhysicsSettings = FProjectSettings::Get().Physics;
+        EventCallback->DispatchPendingEvents(
+            PhysicsSettings.bDispatchCollisionEvents,
+            PhysicsSettings.bDispatchTriggerEvents
+        );
     }
 }
 
@@ -645,6 +705,8 @@ bool FPhysXPhysicsScene::Raycast(
     FilterData.flags = PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER;
     FChannelRaycastFilter FilterCallback(IgnoreActor, TraceChannel);
 
+    PxSceneReadLock ReadLock(*Scene);
+
     const bool bStatus = Scene->raycast(
         ToPxVec3(Start),
         ToPxVec3(RayDir),
@@ -765,6 +827,8 @@ bool FPhysXPhysicsScene::RaycastByObjectTypes(
     PxQueryFilterData FilterData;
     FilterData.flags = PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER;
     FObjectTypeRaycastFilter FilterCallback(IgnoreActor, ObjectTypeMask);
+
+    PxSceneReadLock ReadLock(*Scene);
 
     const bool bStatus = Scene->raycast(
         ToPxVec3(Start),

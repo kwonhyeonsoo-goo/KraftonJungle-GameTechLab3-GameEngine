@@ -416,13 +416,20 @@ void UWorld::Tick(float DeltaTime, ELevelTick TickType)
 		GameTimeSeconds += DeltaTime;
 	}
 
+    TickManager.GatherTickFunctions(this, TickType);
+    TickManager.TickGroup(TG_PrePhysics, DeltaTime, TickType);
+    TickManager.TickGroup(TG_DuringPhysics, DeltaTime, TickType);
+
 	if (bHasBegunPlay && PhysicsScene)
 	{
 		SCOPE_STAT_CAT("PhysicsScene", "1_WorldTick");
 		PhysicsScene->Tick(DeltaTime);
+        PhysicsScene->DispatchPendingEvents();
 	}
 
-	TickManager.Tick(this, DeltaTime, TickType);
+    TickManager.TickGroup(TG_PostPhysics, DeltaTime, TickType);
+    TickManager.TickGroup(TG_PostUpdateWork, DeltaTime, TickType);
+    TickManager.ClearGatheredTickFunctions();
 
 	// 카메라는 물리/액터 Tick 이후 갱신 — 차량 1인칭처럼 physics body 에 붙은 카메라가
 	// 같은 프레임의 최신 transform 으로 POV cache 를 채운다.

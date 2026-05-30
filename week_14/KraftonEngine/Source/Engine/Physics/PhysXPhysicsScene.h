@@ -39,6 +39,7 @@ public:
     void RebuildBody(UPrimitiveComponent* Comp) override;
 
     void Tick(float DeltaTime) override;
+    void DispatchPendingEvents() override;
 
     void AddForce(UPrimitiveComponent* Comp, const FVector& Force) override;
     void AddForceAtLocation(

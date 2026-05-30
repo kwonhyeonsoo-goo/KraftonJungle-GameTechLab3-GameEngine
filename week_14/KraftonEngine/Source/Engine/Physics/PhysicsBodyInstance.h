@@ -31,6 +31,27 @@ struct FBodyInstance
     bool bGenerateHitEvents     = false;
     bool bGenerateOverlapEvents = false;
 
+    // Lifecycle / 도메인
+    EPhysicsRuntimeObjectState State        = EPhysicsRuntimeObjectState::Free;
+    EPhysicsBodyDomain         Domain       = EPhysicsBodyDomain::ActorComponent;
+    bool                       bPendingKill = false;
+
+    // Runtime mutable 속성 단일 소스 (mass/COM/damping/lock/solver/gravity).
+    FBodyRuntimeProperties Properties;
+
+    // simulate 결과 캐시 — snapshot/보간/디버그가 PhysX 직접 접근 없이 읽는다.
+    FVector LinearVelocity  = FVector::ZeroVector;
+    FVector AngularVelocity = FVector::ZeroVector;
+    bool    bIsSleeping     = false;
+
+    uint64 CreatedStep   = 0;
+    uint64 DestroyedStep = 0;
+
+    bool IsAlive() const
+    {
+        return State == EPhysicsRuntimeObjectState::Alive;
+    }
+
     bool IsManualSync() const
     {
         return SyncMode == EPhysicsSyncMode::Manual;

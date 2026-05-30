@@ -1,6 +1,7 @@
 #include "Core/ProjectSettings.h"
 #include "SimpleJSON/json.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <filesystem>
 
@@ -14,8 +15,19 @@ namespace PSKey
 	constexpr const char* MaxSpotAtlasPages = "MaxSpotAtlasPages";
 	constexpr const char* MaxPointAtlasPages = "MaxPointAtlasPages";
 
-	constexpr const char* PhysicsSection = "Physics";
-	constexpr const char* Backend = "Backend";
+	constexpr const char* PhysicsSection             = "Physics";
+	constexpr const char* Backend                    = "Backend";
+    constexpr const char* FixedTimeStep              = "FixedTimeStep";
+    constexpr const char* MaxFrameDeltaTime          = "MaxFrameDeltaTime";
+    constexpr const char* MaxSubsteps                = "MaxSubsteps";
+    constexpr const char* WorkerThreadCount          = "WorkerThreadCount";
+    constexpr const char* bEnableCCD                 = "bEnableCCD";
+    constexpr const char* bEnablePCM                 = "bEnablePCM";
+    constexpr const char* bEnableActiveActors        = "bEnableActiveActors";
+    constexpr const char* bRequireSceneReadWriteLock = "bRequireSceneReadWriteLock";
+    constexpr const char* bDispatchCollisionEvents   = "bDispatchCollisionEvents";
+    constexpr const char* bDispatchTriggerEvents     = "bDispatchTriggerEvents";
+    constexpr const char* bBuildDebugSnapshot        = "bBuildDebugSnapshot";
 
 	constexpr const char* GameSection = "Game";
 	constexpr const char* StartLevelName = "StartLevelName";
@@ -37,9 +49,20 @@ void FProjectSettings::SaveToFile(const FString& Path) const
 	ShadowObj[PSKey::MaxPointAtlasPages] = static_cast<int>(Shadow.MaxPointAtlasPages);
 	Root[PSKey::Shadow] = ShadowObj;
 
-	JSON PhysObj = Object();
-	PhysObj[PSKey::Backend] = static_cast<int>(Physics.Backend);
-	Root[PSKey::PhysicsSection] = PhysObj;
+	JSON PhysObj                               = Object();
+	PhysObj[PSKey::Backend]                    = static_cast<int>(Physics.Backend);
+    PhysObj[PSKey::FixedTimeStep]              = Physics.FixedTimeStep;
+    PhysObj[PSKey::MaxFrameDeltaTime]          = Physics.MaxFrameDeltaTime;
+    PhysObj[PSKey::MaxSubsteps]                = Physics.MaxSubsteps;
+    PhysObj[PSKey::WorkerThreadCount]          = Physics.WorkerThreadCount;
+    PhysObj[PSKey::bEnableCCD]                 = Physics.bEnableCCD;
+    PhysObj[PSKey::bEnablePCM]                 = Physics.bEnablePCM;
+    PhysObj[PSKey::bEnableActiveActors]        = Physics.bEnableActiveActors;
+    PhysObj[PSKey::bRequireSceneReadWriteLock] = Physics.bRequireSceneReadWriteLock;
+    PhysObj[PSKey::bDispatchCollisionEvents]   = Physics.bDispatchCollisionEvents;
+    PhysObj[PSKey::bDispatchTriggerEvents]     = Physics.bDispatchTriggerEvents;
+    PhysObj[PSKey::bBuildDebugSnapshot]        = Physics.bBuildDebugSnapshot;
+	Root[PSKey::PhysicsSection]                = PhysObj;
 
 	JSON GameObj = Object();
 	GameObj[PSKey::StartLevelName] = Game.StartLevelName;
@@ -79,6 +102,33 @@ void FProjectSettings::LoadFromFile(const FString& Path)
 			else
 				Physics.Backend = EPhysicsBackend::Native;
 		}
+        if (P.hasKey(PSKey::FixedTimeStep))
+        {
+            float v               = static_cast<float>(P[PSKey::FixedTimeStep].ToFloat());
+            Physics.FixedTimeStep = (std::max)(1.0f / 240.0f, (std::min)(v, 1.0f / 15.0f));
+        }
+        if (P.hasKey(PSKey::MaxFrameDeltaTime))
+        {
+            float v                   = static_cast<float>(P[PSKey::MaxFrameDeltaTime].ToFloat());
+            Physics.MaxFrameDeltaTime = (std::max)(Physics.FixedTimeStep, (std::min)(v, 1.0f));
+        }
+        if (P.hasKey(PSKey::MaxSubsteps))
+        {
+            int v               = P[PSKey::MaxSubsteps].ToInt();
+            Physics.MaxSubsteps = (std::max)(1, (std::min)(v, 32));
+        }
+        if (P.hasKey(PSKey::WorkerThreadCount))
+        {
+            int v                     = P[PSKey::WorkerThreadCount].ToInt();
+            Physics.WorkerThreadCount = (std::max)(0, (std::min)(v, 32));
+        }
+        if (P.hasKey(PSKey::bEnableCCD)) Physics.bEnableCCD = P[PSKey::bEnableCCD].ToBool();
+        if (P.hasKey(PSKey::bEnablePCM)) Physics.bEnablePCM = P[PSKey::bEnablePCM].ToBool();
+        if (P.hasKey(PSKey::bEnableActiveActors)) Physics.bEnableActiveActors = P[PSKey::bEnableActiveActors].ToBool();
+        if (P.hasKey(PSKey::bRequireSceneReadWriteLock)) Physics.bRequireSceneReadWriteLock = P[PSKey::bRequireSceneReadWriteLock].ToBool();
+        if (P.hasKey(PSKey::bDispatchCollisionEvents)) Physics.bDispatchCollisionEvents = P[PSKey::bDispatchCollisionEvents].ToBool();
+        if (P.hasKey(PSKey::bDispatchTriggerEvents)) Physics.bDispatchTriggerEvents = P[PSKey::bDispatchTriggerEvents].ToBool();
+        if (P.hasKey(PSKey::bBuildDebugSnapshot)) Physics.bBuildDebugSnapshot = P[PSKey::bBuildDebugSnapshot].ToBool();
 	}
 
 	if (Root.hasKey(PSKey::GameSection))

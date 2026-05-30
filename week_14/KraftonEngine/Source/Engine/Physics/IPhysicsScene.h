@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/Types/CoreTypes.h"
 #include "Math/Vector.h"
@@ -43,6 +43,10 @@ public:
 
 	// --- 시뮬레이션 ---
 	virtual void Tick(float DeltaTime) = 0;
+
+    // Physics callback에서 수집한 이벤트를 안전한 PostPhysics 경계에서 발화한다.
+    virtual void DispatchPendingEvents()
+    {}
 
 	// --- 힘/토크 ---
 	virtual void AddForce(UPrimitiveComponent* Comp, const FVector& Force) = 0;

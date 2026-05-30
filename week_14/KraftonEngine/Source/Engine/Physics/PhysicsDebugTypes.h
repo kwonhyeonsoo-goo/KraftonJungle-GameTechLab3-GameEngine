@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "Physics/PhysicsStats.h"
 #include "Physics/PhysicsTypes.h"
 
 struct FPhysicsDebugShape
@@ -50,4 +51,17 @@ struct FPhysicsDebugConstraint
     float TwistLimitMaxDegrees = 0.0f;
     float Swing1LimitDegrees   = 0.0f;
     float Swing2LimitDegrees   = 0.0f;
+};
+
+// Physics step 직후 runtime 내부에서 만들어 publish 하는 불변 스냅샷. Debug Render(C),
+// Stat UI(D) 등 외부 소비자는 live PhysX 를 직접 읽지 않고 이 스냅샷만 읽는다 (lock 으로 보호).
+struct FPhysicsDebugSnapshot
+{
+    TArray<FPhysicsDebugBody>       Bodies;
+    TArray<FPhysicsDebugConstraint> Constraints;
+
+    FPhysicsStats Stats;
+
+    float  InterpolationAlpha = 0.0f;
+    uint64 StepIndex          = 0;
 };

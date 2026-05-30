@@ -151,7 +151,13 @@ void FPhysXBodyBuilder::ApplyBodyProperties(PxRigidActor* Actor, const FBodyCrea
     {
         Dynamic->setLinearDamping(Desc.LinearDamping);
         Dynamic->setAngularDamping(Desc.AngularDamping);
+        Dynamic->setMaxAngularVelocity(Desc.MaxAngularVelocity);
+        Dynamic->setSolverIterationCounts(
+            static_cast<PxU32>((std::max)(1, Desc.PositionSolverIterationCount)),
+            static_cast<PxU32>((std::max)(1, Desc.VelocitySolverIterationCount))
+        );
         Dynamic->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, Desc.bEnableCCD);
+        Dynamic->setActorFlag(PxActorFlag::eDISABLE_GRAVITY, !Desc.bEnableGravity);
 
         Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_LINEAR_X, Desc.bLockLinearX);
         Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_LINEAR_Y, Desc.bLockLinearY);

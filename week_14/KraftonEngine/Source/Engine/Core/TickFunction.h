@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/Types/CoreTypes.h"
 
@@ -112,11 +112,14 @@ public:
 class FTickManager
 {
 public:
+    void GatherTickFunctions(UWorld* World, ELevelTick TickType);
+    void TickGroup(ETickingGroup Group, float DeltaTime, ELevelTick TickType);
+    void ClearGatheredTickFunctions();
+
 	void Tick(UWorld* World, float DeltaTime, ELevelTick TickType);
 	void Reset();
 
 private:
-	void GatherTickFunctions(UWorld* World, ELevelTick TickType);
 	void QueueTickFunction(FTickFunction& TickFunction);
 
 	TArray<FTickFunction*> TickFunctions;

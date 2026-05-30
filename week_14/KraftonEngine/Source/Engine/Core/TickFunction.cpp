@@ -47,27 +47,38 @@ void FTickManager::Tick(UWorld* World, float DeltaTime, ELevelTick TickType)
 
 	for (int GroupIndex = 0; GroupIndex < TG_MAX; ++GroupIndex)
 	{
-		const ETickingGroup CurrentGroup = static_cast<ETickingGroup>(GroupIndex);
-		for (FTickFunction* TickFunction : TickFunctions)
-		{
-			if (!TickFunction || TickFunction->GetTickGroup() != CurrentGroup)
-			{
-				continue;
-			}
+        TickGroup(static_cast<ETickingGroup>(GroupIndex), DeltaTime, TickType);
+    }
 
-			if (!TickFunction->CanTick(TickType))
-			{
-				continue;
-			}
+    ClearGatheredTickFunctions();
+}
 
-			if (!TickFunction->ConsumeInterval(DeltaTime))
-			{
-				continue;
-			}
+void FTickManager::TickGroup(ETickingGroup Group, float DeltaTime, ELevelTick TickType)
+{
+    for (FTickFunction* TickFunction : TickFunctions)
+    {
+        if (!TickFunction || TickFunction->GetTickGroup() != Group)
+        {
+            continue;
+        }
 
-			TickFunction->ExecuteTick(DeltaTime, TickType);
-		}
-	}
+        if (!TickFunction->CanTick(TickType))
+        {
+            continue;
+        }
+
+        if (!TickFunction->ConsumeInterval(DeltaTime))
+        {
+            continue;
+        }
+
+        TickFunction->ExecuteTick(DeltaTime, TickType);
+    }
+}
+
+void FTickManager::ClearGatheredTickFunctions()
+{
+    TickFunctions.clear();
 }
 
 void FTickManager::Reset()

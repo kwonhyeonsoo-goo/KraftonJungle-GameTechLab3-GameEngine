@@ -29,6 +29,23 @@ class FProjectSettings : public TSingleton<FProjectSettings>
 	struct FPhysicsOption
 	{
 		EPhysicsBackend Backend = EPhysicsBackend::Native;
+
+        // Fixed-step simulation. 렌더 FrameDt를 그대로 PhysX에 넣지 않고 이 값으로만 진행한다.
+        float FixedTimeStep     = 1.0f / 60.0f;
+        float MaxFrameDeltaTime = 0.1f;
+        int32 MaxSubsteps       = 4;
+
+        // PhysX scene/worker 설정. 0 이하면 backend가 안전한 기본값을 고른다.
+        int32 WorkerThreadCount          = 2;
+        bool  bEnableCCD                 = true;
+        bool  bEnablePCM                 = true;
+        bool  bEnableActiveActors        = true;
+        bool  bRequireSceneReadWriteLock = true;
+
+        // Debug/이벤트 publish 제어.
+        bool bDispatchCollisionEvents = true;
+        bool bDispatchTriggerEvents   = true;
+        bool bBuildDebugSnapshot      = true;
 	};
 
 	// --- Game ---

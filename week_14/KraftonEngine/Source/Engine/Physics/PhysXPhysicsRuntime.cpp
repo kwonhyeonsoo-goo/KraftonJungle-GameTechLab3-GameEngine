@@ -4,6 +4,7 @@
 #include "Physics/PhysXConversion.h"
 
 #include "Component/PrimitiveComponent.h"
+#include "Core/ProjectSettings.h"
 #include "Component/Shape/BoxComponent.h"
 #include "Component/Shape/CapsuleComponent.h"
 #include "Component/Shape/SphereComponent.h"
@@ -171,12 +172,26 @@ void FPhysXPhysicsRuntime::Initialize(
     Physics = InPhysics;
     Scene = InScene;
     DefaultMaterial = InDefaultMaterial;
+
+    const auto& PhysicsSettings = FProjectSettings::Get().Physics;
+    FixedDt                     = (std::max)(1.0f / 240.0f, PhysicsSettings.FixedTimeStep);
+    MaxFrameDt                  = (std::max)(FixedDt, PhysicsSettings.MaxFrameDeltaTime);
+    MaxSubsteps                 = (std::max)(1, PhysicsSettings.MaxSubsteps);
+    bDebugSnapshotEnabled       = PhysicsSettings.bBuildDebugSnapshot;
+
     Accumulator = 0.0f;
-    Stats = FPhysicsStats();
+    StepIndex   = 0;
+    Stats       = FPhysicsStats();
 }
 
 void FPhysXPhysicsRuntime::Shutdown()
 {
+    const bool bSceneLockedForShutdown = Scene != nullptr;
+    if (bSceneLockedForShutdown)
+    {
+        Scene->lockWrite();
+    }
+
     for (auto& ConstraintPtr : Constraints)
     {
         if (ConstraintPtr && ConstraintPtr->Joint)
@@ -217,6 +232,11 @@ void FPhysXPhysicsRuntime::Shutdown()
     Stats = FPhysicsStats();
     Accumulator = 0.0f;
 
+    if (bSceneLockedForShutdown)
+    {
+        Scene->unlockWrite();
+    }
+
     World = nullptr;
     Physics = nullptr;
     Scene = nullptr;
@@ -228,7 +248,15 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
     if (!Scene || DeltaTime <= 0.0f)
     {
         Stats.NumSubsteps = 0;
-        UpdateStats();
+        if (Scene)
+        {
+            PxSceneReadLock ReadLock(*Scene);
+            UpdateStats();
+        }
+        else
+        {
+            UpdateStats();
+        }
         return;
     }
 
@@ -248,28 +276,39 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
     {
         return std::chrono::duration<float, std::milli>(B - A).count();
     };
-    float PrePhysicsMs = 0.0f;
-    float SimulateMs = 0.0f;
-    float FetchResultsMs = 0.0f;
-    float PostPhysicsMs = 0.0f;
+    float PrePhysicsMs           = 0.0f;
+    float ApplyCommandsMs        = 0.0f;
+    float SyncEngineToPhysicsMs  = 0.0f;
+    float SimulateMs             = 0.0f;
+    float FetchResultsMs         = 0.0f;
+    float SyncPhysicsToEngineMs  = 0.0f;
+    float PostPhysicsMs          = 0.0f;
+    int32 AppliedCommands        = 0;
+    int32 PendingCommandsAtDrain = 0;
 
     while (Accumulator >= FixedDt && StepCount < MaxSubsteps)
     {
         const auto T0 = FClock::now();
 
-        ApplyPendingCommands();
-
-        for (auto& BodyPtr : Bodies)
+        auto TApplyEnd = T0;
         {
-            if (!BodyPtr || !BodyPtr->Actor)
-            {
-                continue;
-            }
+            PxSceneWriteLock WriteLock(*Scene);
+            PendingCommandsAtDrain += CommandQueue.Num();
+            AppliedCommands        += ApplyPendingCommands();
+            TApplyEnd              = FClock::now();
 
-            FBodyInstance& Body = *BodyPtr;
-            if (Body.ShouldPushTransformToPhysics() || Body.IsKinematicTargetDriven())
+            for (auto& BodyPtr : Bodies)
             {
-                SyncEngineToPhysics(Body);
+                if (!BodyPtr || !BodyPtr->Actor)
+                {
+                    continue;
+                }
+
+                FBodyInstance& Body = *BodyPtr;
+                if (Body.ShouldPushTransformToPhysics() || Body.IsKinematicTargetDriven())
+                {
+                    SyncEngineToPhysics(Body);
+                }
             }
         }
 
@@ -279,49 +318,91 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
         Scene->fetchResults(true);
         const auto T3 = FClock::now();
 
-        for (auto& BodyPtr : Bodies)
         {
-            if (!BodyPtr || !BodyPtr->Actor)
+            PxSceneReadLock ReadLock(*Scene);
+            for (auto& BodyPtr : Bodies)
             {
-                continue;
-            }
+                if (!BodyPtr || !BodyPtr->Actor)
+                {
+                    continue;
+                }
 
-            FBodyInstance& Body = *BodyPtr;
-            if (Body.ShouldPullTransformToEngine())
-            {
-                SyncPhysicsToEngine(Body);
-            }
-            else
-            {
-                Body.PreviousTransform = Body.CurrentTransform;
-                Body.CurrentTransform = GetBodyTransform(Body.Handle);
+                FBodyInstance& Body = *BodyPtr;
+                if (Body.ShouldPullTransformToEngine())
+                {
+                    SyncPhysicsToEngine(Body);
+                }
+                else
+                {
+                    Body.PreviousTransform = Body.CurrentTransform;
+                    Body.CurrentTransform  = ToFTransform(Body.Actor->getGlobalPose());
+                    if (PxRigidDynamic* Dynamic = Body.Actor->is<PxRigidDynamic>())
+                    {
+                        Body.LinearVelocity  = ToFVector(Dynamic->getLinearVelocity());
+                        Body.AngularVelocity = ToFVector(Dynamic->getAngularVelocity());
+                        Body.bIsSleeping     = Dynamic->isSleeping();
+                    }
+                }
             }
         }
 
         const auto T4 = FClock::now();
 
-        PrePhysicsMs += DurationMs(T0, T1);
-        SimulateMs += DurationMs(T1, T2);
-        FetchResultsMs += DurationMs(T2, T3);
-        PostPhysicsMs += DurationMs(T3, T4);
+        ApplyCommandsMs       += DurationMs(T0, TApplyEnd);
+        SyncEngineToPhysicsMs += DurationMs(TApplyEnd, T1);
+        PrePhysicsMs          += DurationMs(T0, T1);
+        SimulateMs            += DurationMs(T1, T2);
+        FetchResultsMs        += DurationMs(T2, T3);
+        SyncPhysicsToEngineMs += DurationMs(T3, T4);
+        PostPhysicsMs         += DurationMs(T3, T4);
 
         Accumulator -= FixedDt;
         ++StepCount;
+        ++StepIndex;
     }
 
+    int32 DroppedSubsteps = 0;
     if (StepCount == MaxSubsteps)
     {
-        Accumulator = 0.0f;
+        // 남은 누적 시간을 버린다 (spiral-of-death 방지). 버린 step 수를 기록.
+        DroppedSubsteps = (FixedDt > 0.0f) ? static_cast<int32>(Accumulator / FixedDt) : 0;
+        Accumulator     = 0.0f;
     }
 
     Stats.NumSubsteps = StepCount;
-    UpdateStats();
+    {
+        PxSceneReadLock ReadLock(*Scene);
+        UpdateStats();
+    }
 
-    // UpdateStats() 가 Stats 를 초기화한 뒤이므로 여기서 타이밍을 채운다.
-    Stats.PrePhysicsMs = PrePhysicsMs;
-    Stats.SimulateMs = SimulateMs;
-    Stats.FetchResultsMs = FetchResultsMs;
-    Stats.PostPhysicsMs = PostPhysicsMs;
+    // UpdateStats() 가 Stats 를 초기화한 뒤이므로 여기서 타이밍/누적 상태를 채운다.
+    Stats.PrePhysicsMs          = PrePhysicsMs;
+    Stats.ApplyCommandsMs       = ApplyCommandsMs;
+    Stats.SyncEngineToPhysicsMs = SyncEngineToPhysicsMs;
+    Stats.SimulateMs            = SimulateMs;
+    Stats.FetchResultsMs        = FetchResultsMs;
+    Stats.SyncPhysicsToEngineMs = SyncPhysicsToEngineMs;
+    Stats.PostPhysicsMs         = PostPhysicsMs;
+    Stats.NumDroppedSubsteps    = DroppedSubsteps;
+    Stats.AccumulatorSeconds    = Accumulator;
+    Stats.InterpolationAlpha    = (FixedDt > 0.0f) ? (Accumulator / FixedDt) : 0.0f;
+    Stats.NumPendingCommands    = PendingCommandsAtDrain;
+    Stats.NumAppliedCommands    = AppliedCommands;
+
+    // step 직후 한 곳에서만 live PhysX 를 읽어 Debug/Stat 스냅샷을 publish 한다.
+    if (bDebugSnapshotEnabled)
+    {
+        const auto SnapStart = FClock::now();
+        {
+            PxSceneReadLock ReadLock(*Scene);
+            BuildDebugSnapshot_Internal();
+        }
+        Stats.BuildSnapshotMs = DurationMs(SnapStart, FClock::now());
+        {
+            std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
+            DebugSnapshot.Stats = Stats;
+        }
+    }
 }
 
 void FPhysXPhysicsRuntime::RegisterComponent(UPrimitiveComponent* Comp)
@@ -330,6 +411,8 @@ void FPhysXPhysicsRuntime::RegisterComponent(UPrimitiveComponent* Comp)
     {
         return;
     }
+
+    PxSceneWriteLock WriteLock(*Scene);
 
     if (ComponentToShape.find(Comp) != ComponentToShape.end())
     {
@@ -355,7 +438,7 @@ void FPhysXPhysicsRuntime::RegisterComponent(UPrimitiveComponent* Comp)
         FBodyCreationDesc BodyDesc = BuildBodyDescFromComponent(RootPrim);
         BodyDesc.Shapes.clear();
 
-        FPhysicsBodyHandle BodyHandle = CreateRigidBody(BodyDesc);
+        FPhysicsBodyHandle BodyHandle = CreateRigidBody_Internal(BodyDesc);
         if (!BodyHandle.IsValid())
         {
             return;
@@ -405,6 +488,13 @@ void FPhysXPhysicsRuntime::UnregisterComponent(UPrimitiveComponent* Comp)
     const FPhysicsBodyHandle BodyHandle = BodyIt->second;
     AActor* OwnerActor = Comp->GetOwner();
 
+    if (!Scene)
+    {
+        return;
+    }
+
+    PxSceneWriteLock WriteLock(*Scene);
+
     DetachShapeForComponent(Comp);
     ComponentToBody.erase(Comp);
 
@@ -421,7 +511,7 @@ void FPhysXPhysicsRuntime::UnregisterComponent(UPrimitiveComponent* Comp)
 
     if (Compound->Components.empty())
     {
-        DestroyRigidBody(BodyHandle);
+        DestroyRigidBody_Internal(BodyHandle);
         ActorCompounds.erase(OwnerActor);
         return;
     }
@@ -483,7 +573,7 @@ FPhysicsShapeHandle FPhysXPhysicsRuntime::FindShapeByComponent(UPrimitiveCompone
     return It != ComponentToShape.end() ? It->second : FPhysicsShapeHandle{};
 }
 
-FPhysicsBodyHandle FPhysXPhysicsRuntime::CreateRigidBody(const FBodyCreationDesc& Desc)
+FPhysicsBodyHandle FPhysXPhysicsRuntime::CreateRigidBody_Internal(const FBodyCreationDesc& Desc)
 {
     if (!Physics || !Scene)
     {
@@ -515,6 +605,28 @@ FPhysicsBodyHandle FPhysXPhysicsRuntime::CreateRigidBody(const FBodyCreationDesc
     Body->bGenerateHitEvents = Desc.bGenerateHitEvents;
     Body->bGenerateOverlapEvents = Desc.bGenerateOverlapEvents;
 
+    Body->State       = EPhysicsRuntimeObjectState::Alive;
+    Body->Domain      = Desc.Domain;
+    Body->CreatedStep = StepIndex;
+
+    // mutable 속성 단일 소스 초기화 — 이후 SetMass/SetLock 등이 여기서 갱신되고,
+    // RebuildBody 후에도 desc 를 통해 동일 값으로 재생성된다.
+    Body->Properties.Mass                         = Desc.Mass;
+    Body->Properties.CenterOfMassLocalOffset      = Desc.CenterOfMassLocalOffset;
+    Body->Properties.LinearDamping                = Desc.LinearDamping;
+    Body->Properties.AngularDamping               = Desc.AngularDamping;
+    Body->Properties.MaxAngularVelocity           = Desc.MaxAngularVelocity;
+    Body->Properties.PositionSolverIterationCount = Desc.PositionSolverIterationCount;
+    Body->Properties.VelocitySolverIterationCount = Desc.VelocitySolverIterationCount;
+    Body->Properties.bEnableCCD                   = Desc.bEnableCCD;
+    Body->Properties.bEnableGravity               = Desc.bEnableGravity;
+    Body->Properties.bLockLinearX                 = Desc.bLockLinearX;
+    Body->Properties.bLockLinearY                 = Desc.bLockLinearY;
+    Body->Properties.bLockLinearZ                 = Desc.bLockLinearZ;
+    Body->Properties.bLockAngularX                = Desc.bLockAngularX;
+    Body->Properties.bLockAngularY                = Desc.bLockAngularY;
+    Body->Properties.bLockAngularZ                = Desc.bLockAngularZ;
+
     Actor->userData = Body;
 
     for (const FPhysicsShapeDesc& ShapeDesc : Desc.Shapes)
@@ -533,7 +645,7 @@ FPhysicsBodyHandle FPhysXPhysicsRuntime::CreateRigidBody(const FBodyCreationDesc
     return BodyHandle;
 }
 
-void FPhysXPhysicsRuntime::DestroyRigidBody(FPhysicsBodyHandle BodyHandle)
+void FPhysXPhysicsRuntime::DestroyRigidBody_Internal(FPhysicsBodyHandle BodyHandle)
 {
     FBodyInstance* Body = ResolveBody(BodyHandle);
     if (!Body)
@@ -541,10 +653,13 @@ void FPhysXPhysicsRuntime::DestroyRigidBody(FPhysicsBodyHandle BodyHandle)
         return;
     }
 
+    // 이 시점부터 어떤 콜백/쿼리도 이 body 를 살아있다고 보면 안 된다.
+    Body->State = EPhysicsRuntimeObjectState::PendingDestroy;
+
     TArray<FPhysicsConstraintHandle> ConstraintsToDestroy = Body->Constraints;
     for (FPhysicsConstraintHandle Constraint : ConstraintsToDestroy)
     {
-        DestroyConstraint(Constraint);
+        DestroyConstraint_Internal(Constraint);
     }
 
     TArray<FPhysicsShapeHandle> ShapesToDestroy = Body->Shapes;
@@ -567,6 +682,10 @@ void FPhysXPhysicsRuntime::DestroyRigidBody(FPhysicsBodyHandle BodyHandle)
 
     if (Body->Actor)
     {
+        // release 전에 userData 를 끊어 지연된 callback/query 가 stale FBodyInstance 를
+        // 역참조하지 못하게 한다.
+        Body->Actor->userData = nullptr;
+
         if (Scene && Body->bRegisteredInScene)
         {
             Scene->removeActor(*Body->Actor);
@@ -576,10 +695,13 @@ void FPhysXPhysicsRuntime::DestroyRigidBody(FPhysicsBodyHandle BodyHandle)
         Body->Actor = nullptr;
     }
 
+    Body->DestroyedStep = StepIndex;
+    Body->State         = EPhysicsRuntimeObjectState::Destroyed;
+
     FreeBody(BodyHandle);
 }
 
-FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateConstraint(
+FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateConstraint_Internal(
     FPhysicsBodyHandle Parent,
     FPhysicsBodyHandle Child,
     const FConstraintCreationDesc& Desc
@@ -627,7 +749,7 @@ FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateConstraint(
     return Handle;
 }
 
-void FPhysXPhysicsRuntime::DestroyConstraint(FPhysicsConstraintHandle Handle)
+void FPhysXPhysicsRuntime::DestroyConstraint_Internal(FPhysicsConstraintHandle Handle)
 {
     FConstraintInstance* Constraint = ResolveConstraint(Handle);
     if (!Constraint)
@@ -660,6 +782,54 @@ void FPhysXPhysicsRuntime::DestroyConstraint(FPhysicsConstraintHandle Handle)
     FreeConstraint(Handle);
 }
 
+FPhysicsBodyHandle FPhysXPhysicsRuntime::CreateRigidBody(const FBodyCreationDesc& Desc)
+{
+    if (!Scene)
+    {
+        return {};
+    }
+
+    PxSceneWriteLock WriteLock(*Scene);
+    return CreateRigidBody_Internal(Desc);
+}
+
+void FPhysXPhysicsRuntime::DestroyRigidBody(FPhysicsBodyHandle BodyHandle)
+{
+    if (!Scene)
+    {
+        return;
+    }
+
+    PxSceneWriteLock WriteLock(*Scene);
+    DestroyRigidBody_Internal(BodyHandle);
+}
+
+FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateConstraint(
+    FPhysicsBodyHandle             Parent,
+    FPhysicsBodyHandle             Child,
+    const FConstraintCreationDesc& Desc
+)
+{
+    if (!Scene)
+    {
+        return {};
+    }
+
+    PxSceneWriteLock WriteLock(*Scene);
+    return CreateConstraint_Internal(Parent, Child, Desc);
+}
+
+void FPhysXPhysicsRuntime::DestroyConstraint(FPhysicsConstraintHandle Constraint)
+{
+    if (!Scene)
+    {
+        return;
+    }
+
+    PxSceneWriteLock WriteLock(*Scene);
+    DestroyConstraint_Internal(Constraint);
+}
+
 FTransform FPhysXPhysicsRuntime::GetBodyTransform(FPhysicsBodyHandle BodyHandle) const
 {
     const FBodyInstance* Body = ResolveBody(BodyHandle);
@@ -668,16 +838,30 @@ FTransform FPhysXPhysicsRuntime::GetBodyTransform(FPhysicsBodyHandle BodyHandle)
         return FTransform();
     }
 
-    return ToFTransform(Body->Actor->getGlobalPose());
+    return Body->CurrentTransform;
 }
 
 void FPhysXPhysicsRuntime::SetBodyTransform(
+    FPhysicsBodyHandle   BodyHandle,
+    const FTransform&    Transform,
+    EPhysicsTeleportMode TeleportMode
+)
+{
+    FPhysicsCommand Cmd;
+    Cmd.Type           = EPhysicsCommandType::SetTransform;
+    Cmd.Body           = BodyHandle;
+    Cmd.TransformValue = Transform;
+    Cmd.TeleportMode   = TeleportMode;
+    EnqueueCommand(Cmd);
+}
+
+void FPhysXPhysicsRuntime::ApplySetBodyTransform_Internal(
     FPhysicsBodyHandle BodyHandle,
-    const FTransform& Transform,
+    const FTransform&  Transform,
     EPhysicsTeleportMode
 )
 {
-    FBodyInstance* Body = ResolveBody(BodyHandle);
+    FBodyInstance* Body = ResolveAliveBody(BodyHandle);
     if (!Body || !Body->Actor)
     {
         return;
@@ -694,7 +878,21 @@ void FPhysXPhysicsRuntime::SetBodyVelocity(
     const FVector& AngularVelocity
 )
 {
-    FBodyInstance* Body = ResolveBody(BodyHandle);
+    FPhysicsCommand Cmd;
+    Cmd.Type         = EPhysicsCommandType::SetVelocity;
+    Cmd.Body         = BodyHandle;
+    Cmd.VectorValue  = LinearVelocity;
+    Cmd.VectorValue2 = AngularVelocity;
+    EnqueueCommand(Cmd);
+}
+
+void FPhysXPhysicsRuntime::ApplySetBodyVelocity_Internal(
+    FPhysicsBodyHandle BodyHandle,
+    const FVector&     LinearVelocity,
+    const FVector&     AngularVelocity
+)
+{
+    FBodyInstance* Body = ResolveAliveBody(BodyHandle);
     if (!Body || !Body->Actor)
     {
         return;
@@ -708,6 +906,8 @@ void FPhysXPhysicsRuntime::SetBodyVelocity(
 
     Dynamic->setLinearVelocity(ToPxVec3(LinearVelocity));
     Dynamic->setAngularVelocity(ToPxVec3(AngularVelocity));
+    Body->LinearVelocity  = LinearVelocity;
+    Body->AngularVelocity = AngularVelocity;
 }
 
 FVector FPhysXPhysicsRuntime::GetBodyLinearVelocity(FPhysicsBodyHandle BodyHandle) const
@@ -718,13 +918,7 @@ FVector FPhysXPhysicsRuntime::GetBodyLinearVelocity(FPhysicsBodyHandle BodyHandl
         return FVector::ZeroVector;
     }
 
-    PxRigidDynamic* Dynamic = Body->Actor->is<PxRigidDynamic>();
-    if (!Dynamic)
-    {
-        return FVector::ZeroVector;
-    }
-
-    return ToFVector(Dynamic->getLinearVelocity());
+    return Body->LinearVelocity;
 }
 
 FVector FPhysXPhysicsRuntime::GetBodyAngularVelocity(FPhysicsBodyHandle BodyHandle) const
@@ -735,18 +929,21 @@ FVector FPhysXPhysicsRuntime::GetBodyAngularVelocity(FPhysicsBodyHandle BodyHand
         return FVector::ZeroVector;
     }
 
-    PxRigidDynamic* Dynamic = Body->Actor->is<PxRigidDynamic>();
-    if (!Dynamic)
-    {
-        return FVector::ZeroVector;
-    }
-
-    return ToFVector(Dynamic->getAngularVelocity());
+    return Body->AngularVelocity;
 }
 
 void FPhysXPhysicsRuntime::AddForce(FPhysicsBodyHandle BodyHandle, const FVector& Force)
 {
-    FBodyInstance* Body = ResolveBody(BodyHandle);
+    FPhysicsCommand Cmd;
+    Cmd.Type        = EPhysicsCommandType::AddForce;
+    Cmd.Body        = BodyHandle;
+    Cmd.VectorValue = Force;
+    EnqueueCommand(Cmd);
+}
+
+void FPhysXPhysicsRuntime::ApplyAddForce_Internal(FPhysicsBodyHandle BodyHandle, const FVector& Force)
+{
+    FBodyInstance* Body = ResolveAliveBody(BodyHandle);
     if (!Body || !Body->Actor)
     {
         return;
@@ -767,7 +964,21 @@ void FPhysXPhysicsRuntime::AddForceAtLocation(
     const FVector& WorldLocation
 )
 {
-    FBodyInstance* Body = ResolveBody(BodyHandle);
+    FPhysicsCommand Cmd;
+    Cmd.Type         = EPhysicsCommandType::AddForceAtLocation;
+    Cmd.Body         = BodyHandle;
+    Cmd.VectorValue  = Force;
+    Cmd.VectorValue2 = WorldLocation;
+    EnqueueCommand(Cmd);
+}
+
+void FPhysXPhysicsRuntime::ApplyAddForceAtLocation_Internal(
+    FPhysicsBodyHandle BodyHandle,
+    const FVector&     Force,
+    const FVector&     WorldLocation
+)
+{
+    FBodyInstance* Body = ResolveAliveBody(BodyHandle);
     if (!Body || !Body->Actor)
     {
         return;
@@ -788,7 +999,16 @@ void FPhysXPhysicsRuntime::AddForceAtLocation(
 
 void FPhysXPhysicsRuntime::AddTorque(FPhysicsBodyHandle BodyHandle, const FVector& Torque)
 {
-    FBodyInstance* Body = ResolveBody(BodyHandle);
+    FPhysicsCommand Cmd;
+    Cmd.Type        = EPhysicsCommandType::AddTorque;
+    Cmd.Body        = BodyHandle;
+    Cmd.VectorValue = Torque;
+    EnqueueCommand(Cmd);
+}
+
+void FPhysXPhysicsRuntime::ApplyAddTorque_Internal(FPhysicsBodyHandle BodyHandle, const FVector& Torque)
+{
+    FBodyInstance* Body = ResolveAliveBody(BodyHandle);
     if (!Body || !Body->Actor)
     {
         return;
@@ -805,7 +1025,16 @@ void FPhysXPhysicsRuntime::AddTorque(FPhysicsBodyHandle BodyHandle, const FVecto
 
 void FPhysXPhysicsRuntime::AddImpulse(FPhysicsBodyHandle BodyHandle, const FVector& Impulse)
 {
-    FBodyInstance* Body = ResolveBody(BodyHandle);
+    FPhysicsCommand Cmd;
+    Cmd.Type        = EPhysicsCommandType::AddImpulse;
+    Cmd.Body        = BodyHandle;
+    Cmd.VectorValue = Impulse;
+    EnqueueCommand(Cmd);
+}
+
+void FPhysXPhysicsRuntime::ApplyAddImpulse_Internal(FPhysicsBodyHandle BodyHandle, const FVector& Impulse)
+{
+    FBodyInstance* Body = ResolveAliveBody(BodyHandle);
     if (!Body || !Body->Actor)
     {
         return;
@@ -822,15 +1051,27 @@ void FPhysXPhysicsRuntime::AddImpulse(FPhysicsBodyHandle BodyHandle, const FVect
 
 void FPhysXPhysicsRuntime::SetMass(FPhysicsBodyHandle BodyHandle, float Mass)
 {
-    FBodyInstance* Body = ResolveBody(BodyHandle);
+    FPhysicsCommand Cmd;
+    Cmd.Type       = EPhysicsCommandType::SetMass;
+    Cmd.Body       = BodyHandle;
+    Cmd.FloatValue = Mass;
+    EnqueueCommand(Cmd);
+}
+
+void FPhysXPhysicsRuntime::ApplySetMass_Internal(FPhysicsBodyHandle BodyHandle, float Mass)
+{
+    FBodyInstance* Body = ResolveAliveBody(BodyHandle);
     if (!Body || !Body->Actor)
     {
         return;
     }
 
+    // 단일 소스(Properties)에 반영하고, 저장된 COM 을 함께 적용해 서로 덮어쓰지 않게 한다.
+    Body->Properties.Mass = (Mass > 0.0f) ? Mass : Body->Properties.Mass;
+
     FBodyCreationDesc Desc;
-    Desc.Mass = Mass;
-    Desc.CenterOfMassLocalOffset = GetCenterOfMass(BodyHandle);
+    Desc.Mass                    = Body->Properties.Mass;
+    Desc.CenterOfMassLocalOffset = Body->Properties.CenterOfMassLocalOffset;
     FPhysXBodyBuilder::UpdateMassAndInertia(Body->Actor, Desc);
 }
 
@@ -842,22 +1083,27 @@ float FPhysXPhysicsRuntime::GetMass(FPhysicsBodyHandle BodyHandle) const
         return 1.0f;
     }
 
-    PxRigidDynamic* Dynamic = Body->Actor->is<PxRigidDynamic>();
-    if (!Dynamic)
-    {
-        return 1.0f;
-    }
-
-    return Dynamic->getMass();
+    return Body->Properties.Mass;
 }
 
 void FPhysXPhysicsRuntime::SetCenterOfMass(FPhysicsBodyHandle BodyHandle, const FVector& LocalOffset)
 {
-    FBodyInstance* Body = ResolveBody(BodyHandle);
+    FPhysicsCommand Cmd;
+    Cmd.Type        = EPhysicsCommandType::SetCenterOfMass;
+    Cmd.Body        = BodyHandle;
+    Cmd.VectorValue = LocalOffset;
+    EnqueueCommand(Cmd);
+}
+
+void FPhysXPhysicsRuntime::ApplySetCenterOfMass_Internal(FPhysicsBodyHandle BodyHandle, const FVector& LocalOffset)
+{
+    FBodyInstance* Body = ResolveAliveBody(BodyHandle);
     if (!Body || !Body->Actor)
     {
         return;
     }
+
+    Body->Properties.CenterOfMassLocalOffset = LocalOffset;
 
     PxRigidDynamic* Dynamic = Body->Actor->is<PxRigidDynamic>();
     if (!Dynamic)
@@ -876,22 +1122,31 @@ FVector FPhysXPhysicsRuntime::GetCenterOfMass(FPhysicsBodyHandle BodyHandle) con
         return FVector::ZeroVector;
     }
 
-    PxRigidDynamic* Dynamic = Body->Actor->is<PxRigidDynamic>();
-    if (!Dynamic)
-    {
-        return FVector::ZeroVector;
-    }
-
-    return ToFVector(Dynamic->getCMassLocalPose().p);
+    return Body->Properties.CenterOfMassLocalOffset;
 }
 
 void FPhysXPhysicsRuntime::SetLinearLock(FPhysicsBodyHandle BodyHandle, bool bX, bool bY, bool bZ)
 {
-    FBodyInstance* Body = ResolveBody(BodyHandle);
+    FPhysicsCommand Cmd;
+    Cmd.Type  = EPhysicsCommandType::SetLinearLock;
+    Cmd.Body  = BodyHandle;
+    Cmd.BoolX = bX;
+    Cmd.BoolY = bY;
+    Cmd.BoolZ = bZ;
+    EnqueueCommand(Cmd);
+}
+
+void FPhysXPhysicsRuntime::ApplySetLinearLock_Internal(FPhysicsBodyHandle BodyHandle, bool bX, bool bY, bool bZ)
+{
+    FBodyInstance* Body = ResolveAliveBody(BodyHandle);
     if (!Body || !Body->Actor)
     {
         return;
     }
+
+    Body->Properties.bLockLinearX = bX;
+    Body->Properties.bLockLinearY = bY;
+    Body->Properties.bLockLinearZ = bZ;
 
     PxRigidDynamic* Dynamic = Body->Actor->is<PxRigidDynamic>();
     if (!Dynamic)
@@ -906,11 +1161,26 @@ void FPhysXPhysicsRuntime::SetLinearLock(FPhysicsBodyHandle BodyHandle, bool bX,
 
 void FPhysXPhysicsRuntime::SetAngularLock(FPhysicsBodyHandle BodyHandle, bool bX, bool bY, bool bZ)
 {
-    FBodyInstance* Body = ResolveBody(BodyHandle);
+    FPhysicsCommand Cmd;
+    Cmd.Type  = EPhysicsCommandType::SetAngularLock;
+    Cmd.Body  = BodyHandle;
+    Cmd.BoolX = bX;
+    Cmd.BoolY = bY;
+    Cmd.BoolZ = bZ;
+    EnqueueCommand(Cmd);
+}
+
+void FPhysXPhysicsRuntime::ApplySetAngularLock_Internal(FPhysicsBodyHandle BodyHandle, bool bX, bool bY, bool bZ)
+{
+    FBodyInstance* Body = ResolveAliveBody(BodyHandle);
     if (!Body || !Body->Actor)
     {
         return;
     }
+
+    Body->Properties.bLockAngularX = bX;
+    Body->Properties.bLockAngularY = bY;
+    Body->Properties.bLockAngularZ = bZ;
 
     PxRigidDynamic* Dynamic = Body->Actor->is<PxRigidDynamic>();
     if (!Dynamic)
@@ -923,7 +1193,7 @@ void FPhysXPhysicsRuntime::SetAngularLock(FPhysicsBodyHandle BodyHandle, bool bX
     Dynamic->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_Z, bZ);
 }
 
-void FPhysXPhysicsRuntime::GatherDebugBodies(TArray<FPhysicsDebugBody>& OutBodies) const
+void FPhysXPhysicsRuntime::BuildDebugBodies_Internal(TArray<FPhysicsDebugBody>& OutBodies) const
 {
     OutBodies.clear();
 
@@ -968,10 +1238,11 @@ void FPhysXPhysicsRuntime::GatherDebugBodies(TArray<FPhysicsDebugBody>& OutBodie
             DebugShape.CapsuleRadius = ShapeInstance->Desc.CapsuleRadius;
             DebugShape.CapsuleHalfHeight = ShapeInstance->Desc.CapsuleHalfHeight;
 
-            // shape local pose 를 body 월드 transform 으로 합성 (BodyWorld * ShapeLocal).
+            // PhysX shape에 실제 적용된 local pose를 body 월드 transform으로 합성한다.
+            // Capsule 축 보정 등 backend local pose 보정까지 포함되어 debug draw와 실제 충돌이 일치한다.
             DebugShape.WorldTransform = ComposePhysicsTransforms(
                 DebugBody.BodyWorldTransform,
-                ShapeInstance->Desc.LocalTransform
+                ShapeInstance->PhysXLocalTransform
             );
 
             DebugBody.Shapes.push_back(DebugShape);
@@ -981,7 +1252,7 @@ void FPhysXPhysicsRuntime::GatherDebugBodies(TArray<FPhysicsDebugBody>& OutBodie
     }
 }
 
-void FPhysXPhysicsRuntime::GatherDebugConstraints(TArray<FPhysicsDebugConstraint>& OutConstraints) const
+void FPhysXPhysicsRuntime::BuildDebugConstraints_Internal(TArray<FPhysicsDebugConstraint>& OutConstraints) const
 {
     OutConstraints.clear();
 
@@ -1021,6 +1292,37 @@ void FPhysXPhysicsRuntime::GatherDebugConstraints(TArray<FPhysicsDebugConstraint
 
         OutConstraints.push_back(Debug);
     }
+}
+
+void FPhysXPhysicsRuntime::BuildDebugSnapshot_Internal()
+{
+    FPhysicsDebugSnapshot NewSnapshot;
+    BuildDebugBodies_Internal(NewSnapshot.Bodies);
+    BuildDebugConstraints_Internal(NewSnapshot.Constraints);
+    NewSnapshot.Stats              = Stats;
+    NewSnapshot.InterpolationAlpha = Stats.InterpolationAlpha;
+    NewSnapshot.StepIndex          = StepIndex;
+
+    std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
+    DebugSnapshot = std::move(NewSnapshot);
+}
+
+void FPhysXPhysicsRuntime::GatherDebugBodies(TArray<FPhysicsDebugBody>& OutBodies) const
+{
+    std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
+    OutBodies = DebugSnapshot.Bodies;
+}
+
+void FPhysXPhysicsRuntime::GatherDebugConstraints(TArray<FPhysicsDebugConstraint>& OutConstraints) const
+{
+    std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
+    OutConstraints = DebugSnapshot.Constraints;
+}
+
+void FPhysXPhysicsRuntime::GetDebugSnapshot(FPhysicsDebugSnapshot& OutSnapshot) const
+{
+    std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
+    OutSnapshot = DebugSnapshot;
 }
 
 FPhysicsBodyHandle FPhysXPhysicsRuntime::AllocateBody()
@@ -1121,6 +1423,18 @@ const FBodyInstance* FPhysXPhysicsRuntime::ResolveBody(FPhysicsBodyHandle Handle
     }
 
     return Bodies[Handle.Index].get();
+}
+
+FBodyInstance* FPhysXPhysicsRuntime::ResolveAliveBody(FPhysicsBodyHandle Handle)
+{
+    FBodyInstance* Body = ResolveBody(Handle);
+    return (Body && Body->State == EPhysicsRuntimeObjectState::Alive) ? Body : nullptr;
+}
+
+const FBodyInstance* FPhysXPhysicsRuntime::ResolveAliveBody(FPhysicsBodyHandle Handle) const
+{
+    const FBodyInstance* Body = ResolveBody(Handle);
+    return (Body && Body->State == EPhysicsRuntimeObjectState::Alive) ? Body : nullptr;
 }
 
 FShapeInstance* FPhysXPhysicsRuntime::ResolveShape(FPhysicsShapeHandle Handle)
@@ -1341,10 +1655,12 @@ FPhysicsShapeHandle FPhysXPhysicsRuntime::AddShapeToBody(
         return {};
     }
 
-    ShapeInstance->OwnerBody = BodyHandle;
-    ShapeInstance->SourceComponent = SourceComponent;
-    ShapeInstance->Desc = Desc;
-    ShapeInstance->Shape = Shape;
+    ShapeInstance->OwnerBody            = BodyHandle;
+    ShapeInstance->SourceComponent      = SourceComponent;
+    ShapeInstance->Desc                 = Desc;
+    ShapeInstance->EngineLocalTransform = Desc.LocalTransform;
+    ShapeInstance->PhysXLocalTransform  = ToFTransform(Shape->getLocalPose());
+    ShapeInstance->Shape                = Shape;
 
     Shape->userData = ShapeInstance;
     Body->Shapes.push_back(ShapeHandle);
@@ -1368,6 +1684,10 @@ void FPhysXPhysicsRuntime::DetachShape(FPhysicsShapeHandle ShapeHandle)
     FBodyInstance* Body = ResolveBody(ShapeInstance->OwnerBody);
     if (Body && Body->Actor && ShapeInstance->Shape)
     {
+        // detach 하면 actor 의 마지막 ref 가 빠지면서 PxShape 가 즉시 release 될 수 있으므로,
+        // 그 전에 userData 를 끊어 지연된 callback/query 의 stale 역참조를 막는다.
+        ShapeInstance->Shape->userData = nullptr;
+
         Body->Actor->detachShape(*ShapeInstance->Shape);
         Body->Shapes.erase(
             std::remove(Body->Shapes.begin(), Body->Shapes.end(), ShapeHandle),
@@ -1439,59 +1759,79 @@ void FPhysXPhysicsRuntime::SyncPhysicsToEngine(FBodyInstance& Body)
 
     const PxTransform Pose = Dynamic->getGlobalPose();
     Body.PreviousTransform = Body.CurrentTransform;
-    Body.CurrentTransform = ToFTransform(Pose);
+    Body.CurrentTransform  = ToFTransform(Pose);
+    Body.LinearVelocity    = ToFVector(Dynamic->getLinearVelocity());
+    Body.AngularVelocity   = ToFVector(Dynamic->getAngularVelocity());
+    Body.bIsSleeping       = Dynamic->isSleeping();
 
     Body.OwnerComponent->SetWorldLocation(Body.CurrentTransform.Location);
     Body.OwnerComponent->SetRelativeRotation(Body.CurrentTransform.Rotation);
 }
 
-void FPhysXPhysicsRuntime::ApplyPendingCommands()
+void FPhysXPhysicsRuntime::EnqueueCommand(const FPhysicsCommand& Command)
+{
+    CommandQueue.Enqueue(Command);
+}
+
+int32 FPhysXPhysicsRuntime::ApplyPendingCommands()
 {
     TArray<FPhysicsCommand> Commands;
     CommandQueue.Drain(Commands);
 
+    // Drain 은 enqueue(=Sequence) 순서를 보존하므로 같은 frame 내 명령 순서가 보장된다.
     for (const FPhysicsCommand& Command : Commands)
     {
         switch (Command.Type)
         {
         case EPhysicsCommandType::DestroyBody:
-            DestroyRigidBody(Command.Body);
+            DestroyRigidBody_Internal(Command.Body);
             break;
         case EPhysicsCommandType::DestroyConstraint:
-            DestroyConstraint(Command.Constraint);
+            DestroyConstraint_Internal(Command.Constraint);
             break;
         case EPhysicsCommandType::SetTransform:
         case EPhysicsCommandType::SetKinematicTarget:
-            SetBodyTransform(Command.Body, Command.TransformValue, Command.TeleportMode);
+            ApplySetBodyTransform_Internal(Command.Body, Command.TransformValue, Command.TeleportMode);
             break;
         case EPhysicsCommandType::AddForce:
-            AddForce(Command.Body, Command.VectorValue);
+            ApplyAddForce_Internal(Command.Body, Command.VectorValue);
             break;
         case EPhysicsCommandType::AddForceAtLocation:
-            AddForceAtLocation(Command.Body, Command.VectorValue, Command.VectorValue2);
+            ApplyAddForceAtLocation_Internal(Command.Body, Command.VectorValue, Command.VectorValue2);
             break;
         case EPhysicsCommandType::AddTorque:
-            AddTorque(Command.Body, Command.VectorValue);
+            ApplyAddTorque_Internal(Command.Body, Command.VectorValue);
             break;
         case EPhysicsCommandType::AddImpulse:
-            AddImpulse(Command.Body, Command.VectorValue);
+            ApplyAddImpulse_Internal(Command.Body, Command.VectorValue);
+            break;
+        case EPhysicsCommandType::SetVelocity:
+            ApplySetBodyVelocity_Internal(Command.Body, Command.VectorValue, Command.VectorValue2);
             break;
         case EPhysicsCommandType::SetLinearVelocity:
-            SetBodyVelocity(Command.Body, Command.VectorValue, GetBodyAngularVelocity(Command.Body));
+            ApplySetBodyVelocity_Internal(Command.Body, Command.VectorValue, GetBodyAngularVelocity(Command.Body));
             break;
         case EPhysicsCommandType::SetAngularVelocity:
-            SetBodyVelocity(Command.Body, GetBodyLinearVelocity(Command.Body), Command.VectorValue);
+            ApplySetBodyVelocity_Internal(Command.Body, GetBodyLinearVelocity(Command.Body), Command.VectorValue);
             break;
         case EPhysicsCommandType::SetMass:
-            SetMass(Command.Body, Command.FloatValue);
+            ApplySetMass_Internal(Command.Body, Command.FloatValue);
             break;
         case EPhysicsCommandType::SetCenterOfMass:
-            SetCenterOfMass(Command.Body, Command.VectorValue);
+            ApplySetCenterOfMass_Internal(Command.Body, Command.VectorValue);
+            break;
+        case EPhysicsCommandType::SetLinearLock:
+            ApplySetLinearLock_Internal(Command.Body, Command.BoolX, Command.BoolY, Command.BoolZ);
+            break;
+        case EPhysicsCommandType::SetAngularLock:
+            ApplySetAngularLock_Internal(Command.Body, Command.BoolX, Command.BoolY, Command.BoolZ);
             break;
         default:
             break;
         }
     }
+
+    return static_cast<int32>(Commands.size());
 }
 
 void FPhysXPhysicsRuntime::UpdateStats()
