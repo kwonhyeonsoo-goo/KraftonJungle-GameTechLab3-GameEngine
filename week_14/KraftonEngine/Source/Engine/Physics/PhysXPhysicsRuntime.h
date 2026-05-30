@@ -1,5 +1,6 @@
-﻿#pragma once
+#pragma once
 
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "Physics/PhysicsBodyInstance.h"
 #include "Physics/PhysicsCommandQueue.h"
 #include "Physics/PhysicsConstraintInstance.h"
@@ -25,12 +26,12 @@ namespace physx
 
 struct FActorCompoundBody
 {
-    AActor*              OwnerActor    = nullptr;
-    UPrimitiveComponent* RootComponent = nullptr;
+    TWeakObjectPtr<AActor>              OwnerActor;
+    TWeakObjectPtr<UPrimitiveComponent> RootComponent;
 
     FPhysicsBodyHandle Body;
 
-    TArray<UPrimitiveComponent*> Components;
+    TArray<TWeakObjectPtr<UPrimitiveComponent>> Components;
 };
 
 class FPhysXPhysicsRuntime : public IPhysicsRuntime
@@ -206,9 +207,10 @@ private:
     TArray<std::unique_ptr<FConstraintInstance>> Constraints;
     TArray<uint32>                               ConstraintGenerations;
 
-    TMap<AActor*, FActorCompoundBody>               ActorCompounds;
-    TMap<UPrimitiveComponent*, FPhysicsBodyHandle>  ComponentToBody;
-    TMap<UPrimitiveComponent*, FPhysicsShapeHandle> ComponentToShape;
+    // UObject raw pointer를 map key로 보관하지 않는다. UUID key + weak value로 GC 이후 stale address 재사용을 차단한다.
+    TMap<uint32, FActorCompoundBody>  ActorCompounds;
+    TMap<uint32, FPhysicsBodyHandle>  ComponentToBody;
+    TMap<uint32, FPhysicsShapeHandle> ComponentToShape;
 
     FPhysicsCommandQueue CommandQueue;
 

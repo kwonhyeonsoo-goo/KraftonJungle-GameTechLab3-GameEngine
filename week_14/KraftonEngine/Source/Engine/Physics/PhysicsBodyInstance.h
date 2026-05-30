@@ -1,5 +1,6 @@
-﻿#pragma once
+#pragma once
 
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "Physics/PhysicsTypes.h"
 
 namespace physx
@@ -11,8 +12,9 @@ struct FBodyInstance
 {
     FPhysicsBodyHandle Handle;
 
-    AActor*              OwnerActor     = nullptr;
-    UPrimitiveComponent* OwnerComponent = nullptr;
+    // Physics runtime은 UObject를 소유하지 않는다. GC/Destroy 후 dangling 방지를 위해 weak 참조만 보관한다.
+    TWeakObjectPtr<AActor>              OwnerActor;
+    TWeakObjectPtr<UPrimitiveComponent> OwnerComponent;
 
     FName BoneName = FName::None;
 

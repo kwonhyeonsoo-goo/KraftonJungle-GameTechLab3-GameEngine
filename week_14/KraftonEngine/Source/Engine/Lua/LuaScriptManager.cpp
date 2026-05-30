@@ -2478,18 +2478,72 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 	Lua.new_usertype<UPrimitiveComponent>("PrimitiveComponent",
 		sol::base_classes,
 		sol::bases<USceneComponent, UActorComponent, UObject>(),
-		"SetSimulatePhysics", &UPrimitiveComponent::SetSimulatePhysics,
-		"GetSimulatePhysics", &UPrimitiveComponent::GetSimulatePhysics,
-		"AddForce", &UPrimitiveComponent::AddForce,
-		"AddForceAtLocation", &UPrimitiveComponent::AddForceAtLocation,
-		"AddTorque", &UPrimitiveComponent::AddTorque,
-		"GetLinearVelocity", &UPrimitiveComponent::GetLinearVelocity,
-		"SetLinearVelocity", &UPrimitiveComponent::SetLinearVelocity,
-		"GetAngularVelocity", &UPrimitiveComponent::GetAngularVelocity,
-		"SetAngularVelocity", &UPrimitiveComponent::SetAngularVelocity,
-		"GetMass", &UPrimitiveComponent::GetMass,
-		"SetMass", &UPrimitiveComponent::SetMass,
-		"GetGenerateOverlapEvents", &UPrimitiveComponent::GetGenerateOverlapEvents);
+        "IsValid",
+        [](UPrimitiveComponent* Component)
+        {
+            return IsValid(Component);
+        },
+        "SetSimulatePhysics",
+        [](UPrimitiveComponent* Component, bool bSimulate)
+        {
+            if (IsValid(Component)) Component->SetSimulatePhysics(bSimulate);
+        },
+        "GetSimulatePhysics",
+        [](UPrimitiveComponent* Component) -> bool
+        {
+            return IsValid(Component) ? Component->GetSimulatePhysics() : false;
+        },
+        "AddForce",
+        [](UPrimitiveComponent* Component, const FVector& Force)
+        {
+            if (IsValid(Component)) Component->AddForce(Force);
+        },
+        "AddForceAtLocation",
+        [](UPrimitiveComponent* Component, const FVector& Force, const FVector& Location)
+        {
+            if (IsValid(Component)) Component->AddForceAtLocation(Force, Location);
+        },
+        "AddTorque",
+        [](UPrimitiveComponent* Component, const FVector& Torque)
+        {
+            if (IsValid(Component)) Component->AddTorque(Torque);
+        },
+        "GetLinearVelocity",
+        [](UPrimitiveComponent* Component) -> FVector
+        {
+            return IsValid(Component) ? Component->GetLinearVelocity() : FVector::ZeroVector;
+        },
+        "SetLinearVelocity",
+        [](UPrimitiveComponent* Component, const FVector& Vel)
+        {
+            if (IsValid(Component)) Component->SetLinearVelocity(Vel);
+        },
+        "GetAngularVelocity",
+        [](UPrimitiveComponent* Component) -> FVector
+        {
+            return IsValid(Component) ? Component->GetAngularVelocity() : FVector::ZeroVector;
+        },
+        "SetAngularVelocity",
+        [](UPrimitiveComponent* Component, const FVector& Vel)
+        {
+            if (IsValid(Component)) Component->SetAngularVelocity(Vel);
+        },
+        "GetMass",
+        [](UPrimitiveComponent* Component) -> float
+        {
+            return IsValid(Component) ? Component->GetMass() : 0.0f;
+        },
+        "SetMass",
+        [](UPrimitiveComponent* Component, float Mass)
+        {
+            if (IsValid(Component)) Component->SetMass(Mass);
+        },
+        "GetGenerateOverlapEvents",
+        [](UPrimitiveComponent* Component) -> bool
+        {
+            return IsValid(Component) ? Component->GetGenerateOverlapEvents() : false;
+        }
+    );
 
 	// 메시 에셋 경로로 컴포넌트 식별 가능하게 노출. 자동 생성된 FName ("UStaticMeshComponent_41")
 	// 은 월드 초기화 순서에 따라 카운터가 달라져 빌드별로 매칭이 깨질 수 있다. 메시 경로는
@@ -2501,8 +2555,30 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 		"GetMeshPath", [](UStaticMeshComponent& C) { return C.GetStaticMeshPath(); });
 
 	Lua.new_usertype<FHitResult>("HitResult",
-		"HitComponent", &FHitResult::HitComponent,
-		"HitActor", &FHitResult::HitActor,
+        "HitComponent",
+        sol::property(
+            [](const FHitResult& Hit) -> UPrimitiveComponent*
+            {
+                return IsValid(Hit.HitComponent) ? Hit.HitComponent : nullptr;
+            }
+        ),
+        "HitActor",
+        sol::property(
+            [](const FHitResult& Hit) -> AActor*
+            {
+                return IsValid(Hit.HitActor) ? Hit.HitActor : nullptr;
+            }
+        ),
+        "GetHitComponent",
+        [](const FHitResult& Hit) -> UPrimitiveComponent*
+        {
+            return IsValid(Hit.HitComponent) ? Hit.HitComponent : nullptr;
+        },
+        "GetHitActor",
+        [](const FHitResult& Hit) -> AActor*
+        {
+            return IsValid(Hit.HitActor) ? Hit.HitActor : nullptr;
+        },
 		"Distance", &FHitResult::Distance,
 		"PenetrationDepth", &FHitResult::PenetrationDepth,
 		"WorldHitLocation", &FHitResult::WorldHitLocation,

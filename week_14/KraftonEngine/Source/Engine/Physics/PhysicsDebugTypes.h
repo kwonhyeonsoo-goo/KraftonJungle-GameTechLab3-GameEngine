@@ -1,5 +1,6 @@
-﻿#pragma once
+#pragma once
 
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "Physics/PhysicsStats.h"
 #include "Physics/PhysicsTypes.h"
 
@@ -30,9 +31,13 @@ struct FPhysicsDebugBody
     bool bIsKinematic = false;
     bool bIsSleeping  = false;
 
-    AActor*              OwnerActor     = nullptr;
-    UPrimitiveComponent* OwnerComponent = nullptr;
-    FName                BoneName       = FName::None;
+    uint32 OwnerActorId     = 0;
+    uint32 OwnerComponentId = 0;
+
+    // 외부 Debug/Stat 소비자가 보관해도 GC를 막지 않는 weak 참조. 실제 접근 전 Get()/IsValid 필수.
+    TWeakObjectPtr<AActor>              OwnerActor;
+    TWeakObjectPtr<UPrimitiveComponent> OwnerComponent;
+    FName                               BoneName = FName::None;
 
     TArray<FPhysicsDebugShape> Shapes;
 };

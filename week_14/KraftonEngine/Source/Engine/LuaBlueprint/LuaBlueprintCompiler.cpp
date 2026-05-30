@@ -496,6 +496,7 @@ namespace
             Out <<
             "local function __bp_safe_norm(v) if v == nil or v:Length() <= 0.000001 then return Vector(0,0,0) end return v:Normalized() end\n";
             Out << "local function __bp_bool(v) return v == true end\n";
+            Out << "local function __bp_is_valid_object(v) if v == nil then return false end if type(v) == 'userdata' and v.IsValid ~= nil then return v:IsValid() end return true end\n";
             Out << "local function __bp_to_bool(v) if type(v) == 'boolean' then return v end if type(v) == 'number' then return v ~= 0 end if type(v) == 'string' then return v ~= '' and v ~= 'false' and v ~= '0' end if type(v) == 'table' then return next(v) ~= nil end return v ~= nil end\n";
             Out << "local function __bp_to_float(v) if type(v) == 'number' then return v end if type(v) == 'boolean' then return v and 1 or 0 end if type(v) == 'string' then return tonumber(v) or 0 end return 0 end\n";
             Out << "local function __bp_to_int(v) return math.floor(__bp_to_float(v)) end\n";
@@ -592,31 +593,31 @@ namespace
                 EmitSpawnActor(Out, Node, Indent, ExecStack);
                 break;
             case ELuaBlueprintNodeType::DestroyActor:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "if {Target} then ({Target}):Destroy() end");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Target}) then ({Target}):Destroy() end");
                 break;
             case ELuaBlueprintNodeType::SetActorLocation:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "if {Target} then ({Target}).Location = {Value} end");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Target}) then ({Target}).Location = {Value} end");
                 break;
             case ELuaBlueprintNodeType::SetActorRotation:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "if {Target} then ({Target}).Rotation = {Value} end");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Target}) then ({Target}).Rotation = {Value} end");
                 break;
             case ELuaBlueprintNodeType::SetActorScale:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "if {Target} then ({Target}).Scale = {Value} end");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Target}) then ({Target}).Scale = {Value} end");
                 break;
             case ELuaBlueprintNodeType::AddActorWorldOffset:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "if {Target} then ({Target}):AddWorldOffset({Value}) end");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Target}) then ({Target}):AddWorldOffset({Value}) end");
                 break;
             case ELuaBlueprintNodeType::ActorAddTag:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "if {Target} then ({Target}):AddTag({Tag}) end");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Target}) then ({Target}):AddTag({Tag}) end");
                 break;
             case ELuaBlueprintNodeType::ActorRemoveTag:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "if {Target} then ({Target}):RemoveTag({Tag}) end");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Target}) then ({Target}):RemoveTag({Tag}) end");
                 break;
             case ELuaBlueprintNodeType::ActivateComponent:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "if {Component} then ({Component}):Activate() end");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Component}) then ({Component}):Activate() end");
                 break;
             case ELuaBlueprintNodeType::DeactivateComponent:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "if {Component} then ({Component}):Deactivate() end");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Component}) then ({Component}):Deactivate() end");
                 break;
             case ELuaBlueprintNodeType::AddForce:
                 EmitSimpleCall(
@@ -624,7 +625,7 @@ namespace
                     Node,
                     Indent,
                     ExecStack,
-                    "if {Component} then ({Component}):AddForce({Vector}) end"
+                    "if __bp_is_valid_object({Component}) then ({Component}):AddForce({Vector}) end"
                 );
                 break;
             case ELuaBlueprintNodeType::AddTorque:
@@ -633,7 +634,7 @@ namespace
                     Node,
                     Indent,
                     ExecStack,
-                    "if {Component} then ({Component}):AddTorque({Vector}) end"
+                    "if __bp_is_valid_object({Component}) then ({Component}):AddTorque({Vector}) end"
                 );
                 break;
             case ELuaBlueprintNodeType::SetLinearVelocity:
@@ -642,7 +643,7 @@ namespace
                     Node,
                     Indent,
                     ExecStack,
-                    "if {Component} then ({Component}):SetLinearVelocity({Velocity}) end"
+                    "if __bp_is_valid_object({Component}) then ({Component}):SetLinearVelocity({Velocity}) end"
                 );
                 break;
             case ELuaBlueprintNodeType::SetSimulatePhysics:
@@ -651,7 +652,7 @@ namespace
                     Node,
                     Indent,
                     ExecStack,
-                    "if {Component} then ({Component}):SetSimulatePhysics({Simulate}) end"
+                    "if __bp_is_valid_object({Component}) then ({Component}):SetSimulatePhysics({Simulate}) end"
                 );
                 break;
 

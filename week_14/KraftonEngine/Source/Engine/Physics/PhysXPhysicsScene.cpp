@@ -6,6 +6,7 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Object/Object.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "Physics/PhysicsBodyInstance.h"
 #include "Physics/PhysicsShapeInstance.h"
 #include "Physics/PhysXConversion.h"
@@ -117,7 +118,11 @@ namespace
     UPrimitiveComponent* GetComponentFromShape(const PxShape* Shape)
     {
         FShapeInstance* ShapeInstance = GetShapeInstance(Shape);
-        return ShapeInstance ? ShapeInstance->SourceComponent : nullptr;
+        if (!ShapeInstance || ShapeInstance->State != EPhysicsRuntimeObjectState::Alive)
+        {
+            return nullptr;
+        }
+        return ShapeInstance->SourceComponent.Get();
     }
 
     AActor* GetOwnerActorFromShape(const PxShape* Shape)
@@ -129,7 +134,7 @@ namespace
     AActor* GetOwnerActorFromActor(const PxRigidActor* Actor)
     {
         FBodyInstance* Body = GetBodyInstance(Actor);
-        return Body ? Body->OwnerActor : nullptr;
+        return Body ? Body->OwnerActor.Get() : nullptr;
     }
 }
 
@@ -141,18 +146,20 @@ class FPhysXSimulationCallback : public PxSimulationEventCallback
 public:
     struct FQueuedHit
     {
-        UPrimitiveComponent* Self = nullptr;
-        UPrimitiveComponent* Other = nullptr;
-        FVector NormalImpulse{0, 0, 0};
-        FHitResult Hit;
-        bool bBegin = true;
+        TWeakObjectPtr<UPrimitiveComponent> Self;
+        TWeakObjectPtr<UPrimitiveComponent> Other;
+        FVector                             NormalImpulse{0, 0, 0};
+        FVector                             WorldLocation { 0, 0, 0 };
+        FVector                             WorldNormal { 0, 0, 1 };
+        float                               PenetrationDepth = 0.0f;
+        bool                                bBegin           = true;
     };
 
     struct FQueuedTrigger
     {
-        UPrimitiveComponent* Self = nullptr;
-        UPrimitiveComponent* Other = nullptr;
-        bool bBegin = true;
+        TWeakObjectPtr<UPrimitiveComponent> Self;
+        TWeakObjectPtr<UPrimitiveComponent> Other;
+        bool                                bBegin = true;
     };
 
     void onContact(const PxContactPairHeader& PairHeader,
@@ -181,10 +188,21 @@ public:
                 continue;
             }
 
+            const bool bOverlapPair =
+                    UPrimitiveComponent::GetMinResponse(CompA, CompB) == ECollisionResponse::Overlap;
+
             if (bEnd)
             {
-                EnqueueHit({ CompA, CompB, FVector::ZeroVector, FHitResult(), false });
-                EnqueueHit({ CompB, CompA, FVector::ZeroVector, FHitResult(), false });
+                if (bOverlapPair)
+                {
+                    if (CompA->GetGenerateOverlapEvents()) EnqueueTrigger({ CompA, CompB, false });
+                    if (CompB->GetGenerateOverlapEvents()) EnqueueTrigger({ CompB, CompA, false });
+                }
+                else
+                {
+                    EnqueueHit({ CompA, CompB, FVector::ZeroVector, FVector::ZeroVector, FVector::ZeroVector, 0.0f, false });
+                    EnqueueHit({ CompB, CompA, FVector::ZeroVector, FVector::ZeroVector, FVector::ZeroVector, 0.0f, false });
+                }
                 continue;
             }
 
@@ -204,30 +222,29 @@ public:
 
             const FVector NormalImpulse = ContactNormal * Penetration;
 
+            if (bOverlapPair)
+            {
+                if (CompA->GetGenerateOverlapEvents()) EnqueueTrigger({ CompA, CompB, true });
+                if (CompB->GetGenerateOverlapEvents()) EnqueueTrigger({ CompB, CompA, true });
+                continue;
+            }
+
             FQueuedHit A;
-            A.Self = CompA;
-            A.Other = CompB;
-            A.NormalImpulse = NormalImpulse;
-            A.Hit.bHit = true;
-            A.Hit.HitComponent = CompB;
-            A.Hit.HitActor = CompB->GetOwner();
-            A.Hit.WorldHitLocation = ContactPos;
-            A.Hit.ImpactNormal = ContactNormal;
-            A.Hit.WorldNormal = ContactNormal;
-            A.Hit.PenetrationDepth = -Penetration;
+            A.Self             = CompA;
+            A.Other            = CompB;
+            A.NormalImpulse    = NormalImpulse;
+            A.WorldLocation    = ContactPos;
+            A.WorldNormal      = ContactNormal;
+            A.PenetrationDepth = -Penetration;
             EnqueueHit(A);
 
             FQueuedHit B;
-            B.Self = CompB;
-            B.Other = CompA;
-            B.NormalImpulse = NormalImpulse * -1.0f;
-            B.Hit.bHit = true;
-            B.Hit.HitComponent = CompA;
-            B.Hit.HitActor = CompA->GetOwner();
-            B.Hit.WorldHitLocation = ContactPos;
-            B.Hit.ImpactNormal = ContactNormal * -1.0f;
-            B.Hit.WorldNormal = ContactNormal * -1.0f;
-            B.Hit.PenetrationDepth = -Penetration;
+            B.Self             = CompB;
+            B.Other            = CompA;
+            B.NormalImpulse    = NormalImpulse * -1.0f;
+            B.WorldLocation    = ContactPos;
+            B.WorldNormal      = ContactNormal * -1.0f;
+            B.PenetrationDepth = -Penetration;
             EnqueueHit(B);
         }
     }
@@ -284,19 +301,29 @@ public:
         {
             for (FQueuedHit& E : HitsToDispatch)
             {
-                if (!IsValid(E.Self) || !IsValid(E.Other))
+                UPrimitiveComponent* Self  = E.Self.Get();
+                UPrimitiveComponent* Other = E.Other.Get();
+                if (!IsValid(Self) || !IsValid(Other))
                 {
                     continue;
                 }
 
-                AActor* OtherActor = E.Other->GetOwner();
+                AActor* OtherActor = Other->GetOwner();
                 if (E.bBegin)
                 {
-                    E.Self->NotifyComponentHit(E.Self, OtherActor, E.Other, E.NormalImpulse, E.Hit);
+                    FHitResult Hit;
+                    Hit.bHit             = true;
+                    Hit.HitComponent     = Other;
+                    Hit.HitActor         = OtherActor;
+                    Hit.WorldHitLocation = E.WorldLocation;
+                    Hit.ImpactNormal     = E.WorldNormal;
+                    Hit.WorldNormal      = E.WorldNormal;
+                    Hit.PenetrationDepth = E.PenetrationDepth;
+                    Self->NotifyComponentHit(Self, OtherActor, Other, E.NormalImpulse, Hit);
                 }
                 else
                 {
-                    E.Self->NotifyComponentEndHit(E.Self, OtherActor, E.Other);
+                    Self->NotifyComponentEndHit(Self, OtherActor, Other);
                 }
             }
         }
@@ -305,20 +332,24 @@ public:
         {
             for (FQueuedTrigger& E : TriggersToDispatch)
             {
-                if (!IsValid(E.Self) || !IsValid(E.Other))
+                UPrimitiveComponent* Self  = E.Self.Get();
+                UPrimitiveComponent* Other = E.Other.Get();
+                if (!IsValid(Self) || !IsValid(Other))
                 {
                     continue;
                 }
 
-                AActor* OtherActor = E.Other->GetOwner();
+                AActor* OtherActor = Other->GetOwner();
                 if (E.bBegin)
                 {
                     FHitResult DummyHit;
-                    E.Self->NotifyComponentBeginOverlap(E.Self, OtherActor, E.Other, 0, false, DummyHit);
+                    DummyHit.HitComponent = Other;
+                    DummyHit.HitActor     = OtherActor;
+                    Self->NotifyComponentBeginOverlap(Self, OtherActor, Other, 0, false, DummyHit);
                 }
                 else
                 {
-                    E.Self->NotifyComponentEndOverlap(E.Self, OtherActor, E.Other, 0);
+                    Self->NotifyComponentEndOverlap(Self, OtherActor, Other, 0);
                 }
             }
         }

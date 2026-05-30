@@ -122,9 +122,16 @@ void FPhysXBodyBuilder::ApplyShapeProperties(PxShape* Shape, const FPhysicsShape
         return;
     }
 
-    Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE,
+    const bool bQueryEnabled =
         Desc.CollisionEnabled == ECollisionEnabled::QueryOnly ||
-        Desc.CollisionEnabled == ECollisionEnabled::QueryAndPhysics);
+        Desc.CollisionEnabled == ECollisionEnabled::QueryAndPhysics;
+
+    const bool bOverlapOnlyNeedsSimulation =
+            Desc.CollisionEnabled == ECollisionEnabled::QueryOnly &&
+            Desc.FilterData.OverlapMask != 0 &&
+            !Desc.bIsTrigger;
+
+    Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, bQueryEnabled);
 
     if (Desc.bIsTrigger)
     {
@@ -136,7 +143,9 @@ void FPhysXBodyBuilder::ApplyShapeProperties(PxShape* Shape, const FPhysicsShape
         Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, false);
         Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE,
             Desc.CollisionEnabled == ECollisionEnabled::PhysicsOnly ||
-            Desc.CollisionEnabled == ECollisionEnabled::QueryAndPhysics);
+            Desc.CollisionEnabled == ECollisionEnabled::QueryAndPhysics ||
+            bOverlapOnlyNeedsSimulation
+        );
     }
 }
 

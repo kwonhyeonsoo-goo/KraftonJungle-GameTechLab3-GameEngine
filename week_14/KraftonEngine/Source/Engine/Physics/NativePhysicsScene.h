@@ -3,6 +3,7 @@
 #include "Physics/IPhysicsScene.h"
 #include "Core/Types/CollisionTypes.h"
 #include "Math/Vector.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 #include <unordered_set>
 #include <unordered_map>
 #include <vector>
@@ -54,8 +55,8 @@ private:
 	void ErasePairsWithInvalidComponents(std::unordered_set<FOverlapPair>& Pairs);
 	void ErasePairsWithComponent(std::unordered_set<FOverlapPair>& Pairs, UPrimitiveComponent* Comp);
 
-	UWorld* World = nullptr;
-	std::vector<UPrimitiveComponent*> RegisteredComponents;
+	UWorld*                                          World = nullptr;
+    std::vector<TWeakObjectPtr<UPrimitiveComponent>> RegisteredComponents;
 
 	// 물리 시뮬레이션 상태
 	struct FBodyState
@@ -67,7 +68,8 @@ private:
 		float Mass = 1.0f;
 		FVector CenterOfMassLocal = { 0, 0, 0 }; // 컴포넌트 local 좌표계 offset
 	};
-	std::unordered_map<UPrimitiveComponent*, FBodyState> BodyStates;
+
+    std::unordered_map<uint32, FBodyState> BodyStates;
 
 	static constexpr float GravityZ = -9.81f;
 

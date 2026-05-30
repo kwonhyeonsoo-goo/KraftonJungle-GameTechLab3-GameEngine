@@ -4,8 +4,17 @@
 #include "GameFramework/World.h"
 #include "GameFramework/AActor.h"
 #include "Object/Object.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 #include <algorithm>
+
+namespace
+{
+    uint32 GetNativeObjectKey(const UObject* Object)
+    {
+        return IsAliveObject(Object) ? Object->GetUUID() : 0;
+    }
+}
 
 void FNativePhysicsScene::Initialize(UWorld* InWorld)
 {
@@ -59,15 +68,23 @@ void FNativePhysicsScene::CompactInvalidComponents()
 		std::remove_if(
 			RegisteredComponents.begin(),
 			RegisteredComponents.end(),
-			[](UPrimitiveComponent* Comp)
+            [](const TWeakObjectPtr<UPrimitiveComponent>& Comp)
 			{
-				return !IsValid(Comp);
+                return !Comp.IsValid();
 			}),
 		RegisteredComponents.end());
 
+    std::unordered_set<uint32> LiveComponentKeys;
+    for (const TWeakObjectPtr<UPrimitiveComponent>& WeakComp : RegisteredComponents)
+    {
+        if (UPrimitiveComponent* Comp = WeakComp.Get())
+        {
+            LiveComponentKeys.insert(GetNativeObjectKey(Comp));
+        }
+    }
 	for (auto It = BodyStates.begin(); It != BodyStates.end();)
 	{
-		if (!IsValid(It->first))
+        if (LiveComponentKeys.find(It->first) == LiveComponentKeys.end())
 		{
 			It = BodyStates.erase(It);
 		}
@@ -88,13 +105,13 @@ void FNativePhysicsScene::RegisterComponent(UPrimitiveComponent* Comp)
 	CompactInvalidComponents();
 	if (!IsValid(Comp)) return;
 
-	for (UPrimitiveComponent* Existing : RegisteredComponents)
+    for (const TWeakObjectPtr<UPrimitiveComponent>& Existing : RegisteredComponents)
 	{
-		if (Existing == Comp) return;
+        if (Existing.Get() == Comp) return;
 	}
 	RegisteredComponents.push_back(Comp);
-	FBodyState& State = BodyStates[Comp];
-	State.Mass = Comp->GetMass() > 0.0f ? Comp->GetMass() : 1.0f;
+    FBodyState& State       = BodyStates[GetNativeObjectKey(Comp)];
+	State.Mass              = Comp->GetMass() > 0.0f ? Comp->GetMass() : 1.0f;
 	State.CenterOfMassLocal = Comp->GetCenterOfMass();
 }
 
@@ -103,7 +120,7 @@ void FNativePhysicsScene::RebuildBody(UPrimitiveComponent* Comp)
 	CompactInvalidComponents();
 	if (!IsValid(Comp)) return;
 
-	auto It = BodyStates.find(Comp);
+    auto It = BodyStates.find(GetNativeObjectKey(Comp));
 	if (It == BodyStates.end()) return; // 등록 안 됨 — skip
 	// Native는 SimulatePhysics/ObjectType/Response를 매 Tick에서 컴포넌트로부터 직접 읽으므로
 	// BodyState의 Mass/COM만 갱신.
@@ -116,10 +133,17 @@ void FNativePhysicsScene::UnregisterComponent(UPrimitiveComponent* Comp)
 	CompactInvalidComponents();
 	if (!IsAliveObject(Comp)) return;
 
-	auto It = std::find(RegisteredComponents.begin(), RegisteredComponents.end(), Comp);
+    auto It = std::find_if(
+        RegisteredComponents.begin(),
+        RegisteredComponents.end(),
+        [Comp](const TWeakObjectPtr<UPrimitiveComponent>& WeakComp)
+        {
+            return WeakComp.GetEvenIfPendingKill() == Comp;
+        }
+    );
 	if (It == RegisteredComponents.end()) return;
 	RegisteredComponents.erase(It);
-	BodyStates.erase(Comp);
+    BodyStates.erase(GetNativeObjectKey(Comp));
 
 	// PreviousOverlaps에서 이 컴포넌트를 포함하는 쌍 제거 + EndOverlap 발화
 	auto PairIt = PreviousOverlaps.begin();
@@ -154,12 +178,13 @@ void FNativePhysicsScene::Tick(float DeltaTime)
 	CompactInvalidComponents();
 
 	// ── 힘 적분 + 중력: bSimulatePhysics인 컴포넌트에 적용 ──
-	for (UPrimitiveComponent* Comp : RegisteredComponents)
+    for (const TWeakObjectPtr<UPrimitiveComponent>& WeakComp : RegisteredComponents)
 	{
+        UPrimitiveComponent* Comp = WeakComp.Get();
 		if (!IsValid(Comp)) continue;
 		if (!Comp->GetSimulatePhysics()) continue;
 
-		FBodyState& State = BodyStates[Comp];
+        FBodyState& State = BodyStates[GetNativeObjectKey(Comp)];
 
 		// 외부 힘/토크 적분
 		float InvMass = (State.Mass > 0.0f) ? (1.0f / State.Mass) : 0.0f;
@@ -187,9 +212,9 @@ void FNativePhysicsScene::Tick(float DeltaTime)
 	{
 		for (int32 j = i + 1; j < Count; ++j)
 		{
-			UPrimitiveComponent* A = RegisteredComponents[i];
-			UPrimitiveComponent* B = RegisteredComponents[j];
-				if (!IsValid(A) || !IsValid(B)) continue;
+            UPrimitiveComponent* A = RegisteredComponents[i].Get();
+            UPrimitiveComponent* B = RegisteredComponents[j].Get();
+            if (!IsValid(A) || !IsValid(B)) continue;
 
 			if (A->GetOwner() == B->GetOwner()) continue;
 
@@ -273,16 +298,16 @@ void FNativePhysicsScene::Tick(float DeltaTime)
 				constexpr float Restitution = 0.2f;
 				if (bASimulates)
 				{
-					FBodyState& StateA = BodyStates[A];
-					float VdotN = StateA.Velocity.X * Normal.X + StateA.Velocity.Y * Normal.Y + StateA.Velocity.Z * Normal.Z;
+                    FBodyState& StateA = BodyStates[GetNativeObjectKey(A)];
+					float       VdotN  = StateA.Velocity.X * Normal.X + StateA.Velocity.Y * Normal.Y + StateA.Velocity.Z * Normal.Z;
 					if (VdotN < 0.0f)
 						StateA.Velocity = StateA.Velocity - Normal * (VdotN * (1.0f + Restitution));
 				}
 				if (bBSimulates)
 				{
-					FBodyState& StateB = BodyStates[B];
-					FVector NegNormal = Normal * -1.0f;
-					float VdotN = StateB.Velocity.X * NegNormal.X + StateB.Velocity.Y * NegNormal.Y + StateB.Velocity.Z * NegNormal.Z;
+                    FBodyState& StateB    = BodyStates[GetNativeObjectKey(B)];
+					FVector     NegNormal = Normal * -1.0f;
+					float       VdotN     = StateB.Velocity.X * NegNormal.X + StateB.Velocity.Y * NegNormal.Y + StateB.Velocity.Z * NegNormal.Z;
 					if (VdotN < 0.0f)
 						StateB.Velocity = StateB.Velocity - NegNormal * (VdotN * (1.0f + Restitution));
 				}
@@ -361,7 +386,7 @@ void FNativePhysicsScene::Tick(float DeltaTime)
 void FNativePhysicsScene::AddForce(UPrimitiveComponent* Comp, const FVector& Force)
 {
 	if (!IsValid(Comp)) return;
-	auto It = BodyStates.find(Comp);
+    auto It = BodyStates.find(GetNativeObjectKey(Comp));
 	if (It == BodyStates.end()) return;
 	It->second.AccumulatedForce = It->second.AccumulatedForce + Force;
 }
@@ -369,7 +394,7 @@ void FNativePhysicsScene::AddForce(UPrimitiveComponent* Comp, const FVector& For
 void FNativePhysicsScene::AddForceAtLocation(UPrimitiveComponent* Comp, const FVector& Force, const FVector& WorldLocation)
 {
 	if (!IsValid(Comp)) return;
-	auto It = BodyStates.find(Comp);
+    auto It = BodyStates.find(GetNativeObjectKey(Comp));
 	if (It == BodyStates.end()) return;
 
 	It->second.AccumulatedForce = It->second.AccumulatedForce + Force;
@@ -388,7 +413,7 @@ void FNativePhysicsScene::AddForceAtLocation(UPrimitiveComponent* Comp, const FV
 void FNativePhysicsScene::AddTorque(UPrimitiveComponent* Comp, const FVector& Torque)
 {
 	if (!IsValid(Comp)) return;
-	auto It = BodyStates.find(Comp);
+    auto It = BodyStates.find(GetNativeObjectKey(Comp));
 	if (It == BodyStates.end()) return;
 	It->second.AccumulatedTorque = It->second.AccumulatedTorque + Torque;
 }
@@ -400,7 +425,7 @@ void FNativePhysicsScene::AddTorque(UPrimitiveComponent* Comp, const FVector& To
 FVector FNativePhysicsScene::GetLinearVelocity(UPrimitiveComponent* Comp) const
 {
 	if (!IsValid(Comp)) return { 0, 0, 0 };
-	auto It = BodyStates.find(Comp);
+    auto It = BodyStates.find(GetNativeObjectKey(Comp));
 	if (It == BodyStates.end()) return { 0, 0, 0 };
 	return It->second.Velocity;
 }
@@ -408,7 +433,7 @@ FVector FNativePhysicsScene::GetLinearVelocity(UPrimitiveComponent* Comp) const
 void FNativePhysicsScene::SetLinearVelocity(UPrimitiveComponent* Comp, const FVector& Vel)
 {
 	if (!IsValid(Comp)) return;
-	auto It = BodyStates.find(Comp);
+    auto It = BodyStates.find(GetNativeObjectKey(Comp));
 	if (It == BodyStates.end()) return;
 	It->second.Velocity = Vel;
 }
@@ -416,7 +441,7 @@ void FNativePhysicsScene::SetLinearVelocity(UPrimitiveComponent* Comp, const FVe
 FVector FNativePhysicsScene::GetAngularVelocity(UPrimitiveComponent* Comp) const
 {
 	if (!IsValid(Comp)) return { 0, 0, 0 };
-	auto It = BodyStates.find(Comp);
+    auto It = BodyStates.find(GetNativeObjectKey(Comp));
 	if (It == BodyStates.end()) return { 0, 0, 0 };
 	return It->second.AngularVelocity;
 }
@@ -424,7 +449,7 @@ FVector FNativePhysicsScene::GetAngularVelocity(UPrimitiveComponent* Comp) const
 void FNativePhysicsScene::SetAngularVelocity(UPrimitiveComponent* Comp, const FVector& Vel)
 {
 	if (!IsValid(Comp)) return;
-	auto It = BodyStates.find(Comp);
+    auto It = BodyStates.find(GetNativeObjectKey(Comp));
 	if (It == BodyStates.end()) return;
 	It->second.AngularVelocity = Vel;
 }
@@ -436,7 +461,7 @@ void FNativePhysicsScene::SetAngularVelocity(UPrimitiveComponent* Comp, const FV
 void FNativePhysicsScene::SetMass(UPrimitiveComponent* Comp, float Mass)
 {
 	if (!IsValid(Comp)) return;
-	auto It = BodyStates.find(Comp);
+    auto It = BodyStates.find(GetNativeObjectKey(Comp));
 	if (It == BodyStates.end()) return;
 	It->second.Mass = (Mass > 0.0f) ? Mass : 1.0f;
 }
@@ -444,7 +469,7 @@ void FNativePhysicsScene::SetMass(UPrimitiveComponent* Comp, float Mass)
 float FNativePhysicsScene::GetMass(UPrimitiveComponent* Comp) const
 {
 	if (!IsValid(Comp)) return 1.0f;
-	auto It = BodyStates.find(Comp);
+    auto It = BodyStates.find(GetNativeObjectKey(Comp));
 	if (It == BodyStates.end()) return 1.0f;
 	return It->second.Mass;
 }
@@ -452,7 +477,7 @@ float FNativePhysicsScene::GetMass(UPrimitiveComponent* Comp) const
 void FNativePhysicsScene::SetCenterOfMass(UPrimitiveComponent* Comp, const FVector& LocalOffset)
 {
 	if (!IsValid(Comp)) return;
-	auto It = BodyStates.find(Comp);
+    auto It = BodyStates.find(GetNativeObjectKey(Comp));
 	if (It == BodyStates.end()) return;
 	It->second.CenterOfMassLocal = LocalOffset;
 }
@@ -460,7 +485,7 @@ void FNativePhysicsScene::SetCenterOfMass(UPrimitiveComponent* Comp, const FVect
 FVector FNativePhysicsScene::GetCenterOfMass(UPrimitiveComponent* Comp) const
 {
 	if (!IsValid(Comp)) return { 0, 0, 0 };
-	auto It = BodyStates.find(Comp);
+    auto It = BodyStates.find(GetNativeObjectKey(Comp));
 	if (It == BodyStates.end()) return { 0, 0, 0 };
 	return It->second.CenterOfMassLocal;
 }
@@ -485,11 +510,11 @@ namespace
 	// 호출자가 주입. Raycast / RaycastByObjectTypes 가 같은 기하 코드를 공유한다.
 	template<typename FPredicate>
 	bool NativeRaycastImpl(
-		const std::vector<UPrimitiveComponent*>& RegisteredComponents,
-		const FVector& Start, const FVector& Dir, float MaxDist,
-		const AActor* IgnoreActor,
-		FPredicate AcceptComponent,
-		FHitResult& OutHit)
+        const std::vector<TWeakObjectPtr<UPrimitiveComponent>>& RegisteredComponents,
+		const FVector&                                          Start, const FVector& Dir, float MaxDist,
+		const AActor*                                           IgnoreActor,
+		FPredicate                                              AcceptComponent,
+		FHitResult&                                             OutHit)
 	{
 		FVector InvDir;
 		InvDir.X = (Dir.X != 0.0f) ? (1.0f / Dir.X) : 1e30f;
@@ -499,8 +524,9 @@ namespace
 		float ClosestDist = MaxDist;
 		bool bFound = false;
 
-		for (UPrimitiveComponent* Comp : RegisteredComponents)
+        for (const TWeakObjectPtr<UPrimitiveComponent>& WeakComp : RegisteredComponents)
 		{
+            UPrimitiveComponent* Comp = WeakComp.Get();
 			if (!IsValid(Comp)) continue;
 			if (IgnoreActor && Comp->GetOwner() == IgnoreActor) continue;
 			if (!AcceptComponent(Comp)) continue;
