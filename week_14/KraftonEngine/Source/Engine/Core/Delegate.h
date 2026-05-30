@@ -3,6 +3,7 @@
 #include <functional>
 #include <utility>
 #include "Core/Types/CoreTypes.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 
 // ============================================================
 // FDelegateHandle — 핸들 기반 델리게이트 식별/제거용
@@ -212,13 +213,31 @@ public:
 	template<typename T>
 	FDelegateHandle AddUObject(T* Obj, void(T::*MemFn)(ParamTypes...))
 	{
-		return AddRaw(Obj, MemFn);
+        TWeakObjectPtr<T> WeakObj(Obj);
+        return AddLambda(
+            [WeakObj, MemFn](ParamTypes... Params) mutable
+            {
+                if (T* LiveObj = WeakObj.Get())
+                {
+                    (LiveObj->*MemFn)(Params...);
+                }
+            }
+        );
 	}
 
 	template<typename T>
 	FDelegateHandle AddUObject(T* Obj, void(T::*MemFn)(ParamTypes...) const)
 	{
-		return AddRaw(Obj, MemFn);
+        TWeakObjectPtr<T> WeakObj(Obj);
+        return AddLambda(
+            [WeakObj, MemFn](ParamTypes... Params) mutable
+            {
+                if (T* LiveObj = WeakObj.Get())
+                {
+                    (LiveObj->*MemFn)(Params...);
+                }
+            }
+        );
 	}
 
 	// --- Remove ---

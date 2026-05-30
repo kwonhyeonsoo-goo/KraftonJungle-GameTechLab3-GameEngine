@@ -411,12 +411,12 @@ void ULuaBlueprintComponent::BindOwnerCollisionEvents()
             BoundOverlapComponents.push_back(PrimitiveComponent);
             BeginOverlapHandles.push_back(
                 LuaOnOverlap
-                ? PrimitiveComponent->OnComponentBeginOverlap.AddRaw(this, &ULuaBlueprintComponent::HandleBeginOverlap)
+                ? PrimitiveComponent->OnComponentBeginOverlap.AddUObject(this, &ULuaBlueprintComponent::HandleBeginOverlap)
                 : FDelegateHandle()
             );
             EndOverlapHandles.push_back(
                 LuaOnEndOverlap
-                ? PrimitiveComponent->OnComponentEndOverlap.AddRaw(this, &ULuaBlueprintComponent::HandleEndOverlap)
+                ? PrimitiveComponent->OnComponentEndOverlap.AddUObject(this, &ULuaBlueprintComponent::HandleEndOverlap)
                 : FDelegateHandle()
             );
         }
@@ -425,11 +425,11 @@ void ULuaBlueprintComponent::BindOwnerCollisionEvents()
         {
             BoundHitComponents.push_back(PrimitiveComponent);
             HitHandles.push_back(
-                LuaOnHit ? PrimitiveComponent->OnComponentHit.AddRaw(this, &ULuaBlueprintComponent::HandleHit)
+                LuaOnHit ? PrimitiveComponent->OnComponentHit.AddUObject(this, &ULuaBlueprintComponent::HandleHit)
                 : FDelegateHandle()
             );
             EndHitHandles.push_back(
-                LuaOnEndHit ? PrimitiveComponent->OnComponentEndHit.AddRaw(this, &ULuaBlueprintComponent::HandleEndHit)
+                LuaOnEndHit ? PrimitiveComponent->OnComponentEndHit.AddUObject(this, &ULuaBlueprintComponent::HandleEndHit)
                 : FDelegateHandle()
             );
         }

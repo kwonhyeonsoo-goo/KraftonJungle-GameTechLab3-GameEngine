@@ -15,6 +15,7 @@
 #include <mutex>
 #include <PxPhysicsAPI.h>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 using namespace physx;
@@ -162,6 +163,50 @@ public:
         bool                                bBegin = true;
     };
 
+    struct FPairKey
+    {
+        uint32 A = 0;
+        uint32 B = 0;
+
+        FPairKey() = default;
+
+        FPairKey(UPrimitiveComponent* InA, UPrimitiveComponent* InB)
+        {
+            A = IsAliveObject(InA) ? InA->GetUUID() : 0;
+            B = IsAliveObject(InB) ? InB->GetUUID() : 0;
+            if (A > B)
+            {
+                std::swap(A, B);
+            }
+        }
+
+        bool IsValid() const
+        {
+            return A != 0 && B != 0 && A != B;
+        }
+
+        bool operator==(const FPairKey& Other) const
+        {
+            return A == Other.A && B == Other.B;
+        }
+    };
+
+    struct FPairRecord
+    {
+        TWeakObjectPtr<UPrimitiveComponent> A;
+        TWeakObjectPtr<UPrimitiveComponent> B;
+    };
+
+    struct FPairKeyHash
+    {
+        size_t operator()(const FPairKey& Key) const
+        {
+            size_t H = std::hash<uint32>()(Key.A);
+            H        ^= std::hash<uint32>()(Key.B) + 0x9e3779b9 + (H << 6) + (H >> 2);
+            return H;
+        }
+    };
+
     void onContact(const PxContactPairHeader& PairHeader,
         const PxContactPair* Pairs, PxU32 Count) override
     {
@@ -188,20 +233,21 @@ public:
                 continue;
             }
 
-            const bool bOverlapPair =
-                    UPrimitiveComponent::GetMinResponse(CompA, CompB) == ECollisionResponse::Overlap;
-
-            if (bEnd)
+            const ECollisionResponse MinResponse = UPrimitiveComponent::GetMinResponse(CompA, CompB);
+            if (MinResponse == ECollisionResponse::Ignore)
             {
-                if (bOverlapPair)
+                continue;
+            }
+
+            if (MinResponse == ECollisionResponse::Overlap)
+            {
+                if (bBegin)
                 {
-                    if (CompA->GetGenerateOverlapEvents()) EnqueueTrigger({ CompA, CompB, false });
-                    if (CompB->GetGenerateOverlapEvents()) EnqueueTrigger({ CompB, CompA, false });
+                    QueueOverlapPair(CompA, CompB, true);
                 }
-                else
+                if (bEnd)
                 {
-                    EnqueueHit({ CompA, CompB, FVector::ZeroVector, FVector::ZeroVector, FVector::ZeroVector, 0.0f, false });
-                    EnqueueHit({ CompB, CompA, FVector::ZeroVector, FVector::ZeroVector, FVector::ZeroVector, 0.0f, false });
+                    QueueOverlapPair(CompA, CompB, false);
                 }
                 continue;
             }
@@ -220,32 +266,18 @@ public:
                 Penetration = ContactPoints[0].separation;
             }
 
-            const FVector NormalImpulse = ContactNormal * Penetration;
+            // PhysX contact separation is not an impulse. Until contact impulse extraction is
+            // wired, expose zero impulse rather than a misleading penetration-derived value.
+            const FVector NormalImpulse = FVector::ZeroVector;
 
-            if (bOverlapPair)
+            if (bBegin)
             {
-                if (CompA->GetGenerateOverlapEvents()) EnqueueTrigger({ CompA, CompB, true });
-                if (CompB->GetGenerateOverlapEvents()) EnqueueTrigger({ CompB, CompA, true });
-                continue;
+                QueueHitPair(CompA, CompB, true, ContactPos, ContactNormal, NormalImpulse, -Penetration);
             }
-
-            FQueuedHit A;
-            A.Self             = CompA;
-            A.Other            = CompB;
-            A.NormalImpulse    = NormalImpulse;
-            A.WorldLocation    = ContactPos;
-            A.WorldNormal      = ContactNormal;
-            A.PenetrationDepth = -Penetration;
-            EnqueueHit(A);
-
-            FQueuedHit B;
-            B.Self             = CompB;
-            B.Other            = CompA;
-            B.NormalImpulse    = NormalImpulse * -1.0f;
-            B.WorldLocation    = ContactPos;
-            B.WorldNormal      = ContactNormal * -1.0f;
-            B.PenetrationDepth = -Penetration;
-            EnqueueHit(B);
+            if (bEnd)
+            {
+                QueueHitPair(CompA, CompB, false, FVector::ZeroVector, FVector::ZeroVector, FVector::ZeroVector, 0.0f);
+            }
         }
     }
 
@@ -257,6 +289,7 @@ public:
 
             if (TP.flags & (PxTriggerPairFlag::eREMOVED_SHAPE_TRIGGER | PxTriggerPairFlag::eREMOVED_SHAPE_OTHER))
             {
+                // The component unregister path emits synthetic end events from ActiveOverlapPairs.
                 continue;
             }
 
@@ -267,28 +300,39 @@ public:
                 continue;
             }
 
-            const bool bBegin = TP.status == PxPairFlag::eNOTIFY_TOUCH_FOUND;
-            const bool bEnd = TP.status == PxPairFlag::eNOTIFY_TOUCH_LOST;
-            if (!bBegin && !bEnd)
+            const ECollisionResponse MinResponse = UPrimitiveComponent::GetMinResponse(TriggerComp, OtherComp);
+            if (MinResponse == ECollisionResponse::Ignore)
             {
                 continue;
             }
 
-            if (TriggerComp->GetGenerateOverlapEvents())
+            const bool bBegin = TP.status == PxPairFlag::eNOTIFY_TOUCH_FOUND;
+            const bool bEnd = TP.status == PxPairFlag::eNOTIFY_TOUCH_LOST;
+            if (bBegin)
             {
-                EnqueueTrigger({ TriggerComp, OtherComp, bBegin });
+                QueueOverlapPair(TriggerComp, OtherComp, true);
             }
-            if (OtherComp->GetGenerateOverlapEvents())
+            if (bEnd)
             {
-                EnqueueTrigger({ OtherComp, TriggerComp, bBegin });
+                QueueOverlapPair(TriggerComp, OtherComp, false);
             }
         }
     }
 
+    void NotifyComponentUnregistered(UPrimitiveComponent* Component)
+    {
+        if (!Component)
+        {
+            return;
+        }
+
+        std::lock_guard<std::mutex> Lock(EventMutex);
+        QueueSyntheticEndEventsForComponent_NoLock(Component, ActiveOverlapPairs, PendingTriggers, true);
+        QueueSyntheticEndEventsForComponent_NoLock(Component, ActiveHitPairs, PendingHits, false);
+    }
+
     void DispatchPendingEvents(bool bDispatchHitEvents, bool bDispatchTriggerEvents)
     {
-        // 큐에서 빼는 동안만 lock 을 잡고, 실제 게임 콜백(NotifyComponentHit 등)은 lock 밖에서
-        // 실행한다 — 콜백이 다시 물리 API 를 호출해도 deadlock 되지 않게.
         std::vector<FQueuedHit>     HitsToDispatch;
         std::vector<FQueuedTrigger> TriggersToDispatch;
         {
@@ -361,27 +405,214 @@ public:
     void onAdvance(const PxRigidBody* const*, const PxTransform*, const PxU32) override {}
 
 private:
-    // PhysX 콜백은 큐 접근을 보호한다.
-    void EnqueueHit(const FQueuedHit& Hit)
+    void QueueOverlapPair(UPrimitiveComponent* A, UPrimitiveComponent* B, bool bBegin)
     {
+        if (!IsValid(A) || !IsValid(B))
+        {
+            return;
+        }
+
         std::lock_guard<std::mutex> Lock(EventMutex);
-        PendingHits.push_back(Hit);
+        FPairKey                    Key(A, B);
+        if (!Key.IsValid())
+        {
+            return;
+        }
+
+        if (bBegin)
+        {
+            if (ActiveOverlapPairs.find(Key) != ActiveOverlapPairs.end())
+            {
+                return;
+            }
+            ActiveOverlapPairs[Key] = FPairRecord { A, B };
+        }
+        else
+        {
+            auto It = ActiveOverlapPairs.find(Key);
+            if (It == ActiveOverlapPairs.end())
+            {
+                return;
+            }
+            ActiveOverlapPairs.erase(It);
+        }
+
+        if (A->GetGenerateOverlapEvents()) PendingTriggers.push_back({ A, B, bBegin });
+        if (B->GetGenerateOverlapEvents()) PendingTriggers.push_back({ B, A, bBegin });
     }
 
-    void EnqueueTrigger(const FQueuedTrigger& Trigger)
+    void QueueHitPair(
+        UPrimitiveComponent* A,
+        UPrimitiveComponent* B,
+        bool                 bBegin,
+        const FVector&       WorldLocation,
+        const FVector&       WorldNormal,
+        const FVector&       NormalImpulse,
+        float                PenetrationDepth
+    )
     {
+        if (!IsValid(A) || !IsValid(B))
+        {
+            return;
+        }
+
         std::lock_guard<std::mutex> Lock(EventMutex);
-        PendingTriggers.push_back(Trigger);
+        FPairKey                    Key(A, B);
+        if (!Key.IsValid())
+        {
+            return;
+        }
+
+        if (bBegin)
+        {
+            if (ActiveHitPairs.find(Key) != ActiveHitPairs.end())
+            {
+                return;
+            }
+            ActiveHitPairs[Key] = FPairRecord { A, B };
+        }
+        else
+        {
+            auto It = ActiveHitPairs.find(Key);
+            if (It == ActiveHitPairs.end())
+            {
+                return;
+            }
+            ActiveHitPairs.erase(It);
+        }
+
+        PendingHits.push_back({ A, B, NormalImpulse, WorldLocation, WorldNormal, PenetrationDepth, bBegin });
+        PendingHits.push_back({ B, A, NormalImpulse * -1.0f, WorldLocation, WorldNormal * -1.0f, PenetrationDepth, bBegin });
     }
 
-    std::mutex                  EventMutex;
-    std::vector<FQueuedHit>     PendingHits;
-    std::vector<FQueuedTrigger> PendingTriggers;
+    void QueueSyntheticEndEventsForComponent_NoLock(
+        UPrimitiveComponent*                                     Component,
+        std::unordered_map<FPairKey, FPairRecord, FPairKeyHash>& ActivePairs,
+        std::vector<FQueuedTrigger>&                             OutTriggers,
+        bool
+    )
+    {
+        for (auto It = ActivePairs.begin(); It != ActivePairs.end();)
+        {
+            UPrimitiveComponent* A = It->second.A.GetEvenIfPendingKill();
+            UPrimitiveComponent* B = It->second.B.GetEvenIfPendingKill();
+            if (A == Component || B == Component || !A || !B)
+            {
+                UPrimitiveComponent* Other = (A == Component) ? B : A;
+                if (IsValid(Component) && IsValid(Other) && Component->GetGenerateOverlapEvents())
+                {
+                    OutTriggers.push_back({ Component, Other, false });
+                }
+                if (IsValid(Other) && IsValid(Component) && Other->GetGenerateOverlapEvents())
+                {
+                    OutTriggers.push_back({ Other, Component, false });
+                }
+                It = ActivePairs.erase(It);
+            }
+            else
+            {
+                ++It;
+            }
+        }
+    }
+
+    void QueueSyntheticEndEventsForComponent_NoLock(
+        UPrimitiveComponent*                                     Component,
+        std::unordered_map<FPairKey, FPairRecord, FPairKeyHash>& ActivePairs,
+        std::vector<FQueuedHit>&                                 OutHits,
+        bool
+    )
+    {
+        for (auto It = ActivePairs.begin(); It != ActivePairs.end();)
+        {
+            UPrimitiveComponent* A = It->second.A.GetEvenIfPendingKill();
+            UPrimitiveComponent* B = It->second.B.GetEvenIfPendingKill();
+            if (A == Component || B == Component || !A || !B)
+            {
+                UPrimitiveComponent* Other = (A == Component) ? B : A;
+                if (IsValid(Component) && IsValid(Other))
+                {
+                    OutHits.push_back({ Component, Other, FVector::ZeroVector, FVector::ZeroVector, FVector::ZeroVector, 0.0f, false });
+                }
+                if (IsValid(Other) && IsValid(Component))
+                {
+                    OutHits.push_back({ Other, Component, FVector::ZeroVector, FVector::ZeroVector, FVector::ZeroVector, 0.0f, false });
+                }
+                It = ActivePairs.erase(It);
+            }
+            else
+            {
+                ++It;
+            }
+        }
+    }
+
+    std::mutex                                              EventMutex;
+    std::vector<FQueuedHit>                                 PendingHits;
+    std::vector<FQueuedTrigger>                             PendingTriggers;
+    std::unordered_map<FPairKey, FPairRecord, FPairKeyHash> ActiveOverlapPairs;
+    std::unordered_map<FPairKey, FPairRecord, FPairKeyHash> ActiveHitPairs;
 };
 
 // ============================================================
 // Collision Filtering
 // ============================================================
+namespace
+{
+    ECollisionResponse GetPackedResponseTo(const PxFilterData& From, PxU32 ToChannel)
+    {
+        const PxU32 ChannelBit = 1u << ToChannel;
+        if ((From.word1 & ChannelBit) != 0)
+        {
+            return ECollisionResponse::Block;
+        }
+        if ((From.word2 & ChannelBit) != 0)
+        {
+            return ECollisionResponse::Overlap;
+        }
+        return ECollisionResponse::Ignore;
+    }
+
+    ECollisionResponse GetPackedMinResponse(const PxFilterData& A, const PxFilterData& B)
+    {
+        const PxU32              ChannelA = GetPhysicsFilterObjectType(A.word0);
+        const PxU32              ChannelB = GetPhysicsFilterObjectType(B.word0);
+        const ECollisionResponse AToB     = GetPackedResponseTo(A, ChannelB);
+        const ECollisionResponse BToA     = GetPackedResponseTo(B, ChannelA);
+        return (AToB < BToA) ? AToB : BToA;
+    }
+
+    bool IsPackedQueryOnly(const PxFilterData& Data)
+    {
+        return HasPhysicsFilterFlag(Data.word0, PhysicsFilter_QueryOnly);
+    }
+
+    bool IsPackedPhysicsEnabled(const PxFilterData& Data)
+    {
+        return HasPhysicsFilterFlag(Data.word0, PhysicsFilter_PhysicsOnly) ||
+                HasPhysicsFilterFlag(Data.word0, PhysicsFilter_QueryAndPhysics);
+    }
+
+    bool IsPackedQueryEnabled(const PxFilterData& Data)
+    {
+        return HasPhysicsFilterFlag(Data.word0, PhysicsFilter_QueryOnly) ||
+                HasPhysicsFilterFlag(Data.word0, PhysicsFilter_QueryAndPhysics);
+    }
+
+    bool WantsHitNotify(const PxFilterData& A, const PxFilterData& B)
+    {
+        return HasPhysicsFilterFlag(A.word0, PhysicsFilter_GenerateHitEvents) ||
+                HasPhysicsFilterFlag(B.word0, PhysicsFilter_GenerateHitEvents);
+    }
+
+    bool WantsOverlapNotify(const PxFilterData& A, const PxFilterData& B)
+    {
+        return (IsPackedQueryEnabled(A) || IsPackedQueryEnabled(B)) &&
+        (HasPhysicsFilterFlag(A.word0, PhysicsFilter_GenerateOverlapEvents) ||
+            HasPhysicsFilterFlag(B.word0, PhysicsFilter_GenerateOverlapEvents));
+    }
+}
+
 static PxFilterFlags KraftonFilterShader(
     PxFilterObjectAttributes attributes0, PxFilterData filterData0,
     PxFilterObjectAttributes attributes1, PxFilterData filterData1,
@@ -392,32 +623,50 @@ static PxFilterFlags KraftonFilterShader(
         return PxFilterFlag::eKILL;
     }
 
+    const ECollisionResponse MinResponse = GetPackedMinResponse(filterData0, filterData1);
+    if (MinResponse == ECollisionResponse::Ignore)
+    {
+        return PxFilterFlag::eKILL;
+    }
+
     if (PxFilterObjectIsTrigger(attributes0) || PxFilterObjectIsTrigger(attributes1))
     {
+        if (!WantsOverlapNotify(filterData0, filterData1))
+        {
+            return PxFilterFlag::eKILL;
+        }
+
         pairFlags = PxPairFlag::eTRIGGER_DEFAULT;
         return PxFilterFlag::eDEFAULT;
     }
 
-    const PxU32 channelA = filterData0.word0;
-    const PxU32 channelB = filterData1.word0;
-
-    const bool bABlocksB = (filterData0.word1 & (1u << channelB)) != 0;
-    const bool bBBlocksA = (filterData1.word1 & (1u << channelA)) != 0;
-
-    if (bABlocksB && bBBlocksA)
+    if (MinResponse == ECollisionResponse::Block)
     {
-        pairFlags = PxPairFlag::eCONTACT_DEFAULT
-            | PxPairFlag::eNOTIFY_TOUCH_FOUND
-            | PxPairFlag::eNOTIFY_TOUCH_LOST
-            | PxPairFlag::eNOTIFY_CONTACT_POINTS;
+        const bool bBothCanPhysicallySolve =
+                IsPackedPhysicsEnabled(filterData0) && IsPackedPhysicsEnabled(filterData1) &&
+                !IsPackedQueryOnly(filterData0) && !IsPackedQueryOnly(filterData1);
+
+        pairFlags = bBothCanPhysicallySolve
+                ? PxPairFlag::eCONTACT_DEFAULT
+                : PxPairFlag::eDETECT_DISCRETE_CONTACT;
+
+        if (WantsHitNotify(filterData0, filterData1))
+        {
+            pairFlags |= PxPairFlag::eNOTIFY_TOUCH_FOUND
+                    | PxPairFlag::eNOTIFY_TOUCH_LOST
+                    | PxPairFlag::eNOTIFY_CONTACT_POINTS;
+        }
+
         return PxFilterFlag::eDEFAULT;
     }
 
-    const bool bAOverlapsB = (filterData0.word2 & (1u << channelB)) != 0;
-    const bool bBOverlapsA = (filterData1.word2 & (1u << channelA)) != 0;
-
-    if (bAOverlapsB || bBOverlapsA)
+    if (MinResponse == ECollisionResponse::Overlap)
     {
+        if (!WantsOverlapNotify(filterData0, filterData1))
+        {
+            return PxFilterFlag::eKILL;
+        }
+
         pairFlags = PxPairFlag::eDETECT_DISCRETE_CONTACT
             | PxPairFlag::eNOTIFY_TOUCH_FOUND
             | PxPairFlag::eNOTIFY_TOUCH_LOST;
@@ -532,11 +781,19 @@ void FPhysXPhysicsScene::RegisterComponent(UPrimitiveComponent* Comp)
 
 void FPhysXPhysicsScene::UnregisterComponent(UPrimitiveComponent* Comp)
 {
+    if (EventCallback)
+    {
+        EventCallback->NotifyComponentUnregistered(Comp);
+    }
     Runtime.UnregisterComponent(Comp);
 }
 
 void FPhysXPhysicsScene::RebuildBody(UPrimitiveComponent* Comp)
 {
+    if (EventCallback)
+    {
+        EventCallback->NotifyComponentUnregistered(Comp);
+    }
     Runtime.RebuildBody(Comp);
 }
 
@@ -715,6 +972,11 @@ bool FPhysXPhysicsScene::Raycast(
 
             if (Shape)
             {
+                if (Shape->getFlags().isSet(PxShapeFlag::eTRIGGER_SHAPE))
+                {
+                    return PxQueryHitType::eNONE;
+                }
+
                 const PxFilterData ShapeData = Shape->getQueryFilterData();
                 if ((ShapeData.word1 & TraceBit) == 0)
                 {
@@ -837,8 +1099,13 @@ bool FPhysXPhysicsScene::RaycastByObjectTypes(
 
             if (Shape)
             {
-                const PxFilterData ShapeData = Shape->getQueryFilterData();
-                const PxU32 ShapeObjectBit = 1u << ShapeData.word0;
+                if (Shape->getFlags().isSet(PxShapeFlag::eTRIGGER_SHAPE))
+                {
+                    return PxQueryHitType::eNONE;
+                }
+
+                const PxFilterData ShapeData      = Shape->getQueryFilterData();
+                const PxU32        ShapeObjectBit = 1u << GetPhysicsFilterObjectType(ShapeData.word0);
                 if ((ShapeObjectBit & ObjectTypeMask) == 0)
                 {
                     return PxQueryHitType::eNONE;

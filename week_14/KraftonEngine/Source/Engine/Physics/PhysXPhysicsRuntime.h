@@ -146,6 +146,10 @@ private:
     void FreeShape(FPhysicsShapeHandle Handle);
     void FreeConstraint(FPhysicsConstraintHandle Handle);
 
+    void RegisterComponent_Internal(UPrimitiveComponent* Comp);
+    void UnregisterComponent_Internal(UPrimitiveComponent* Comp);
+    void RebuildBody_Internal(UPrimitiveComponent* Comp);
+
     FBodyCreationDesc BuildBodyDescFromComponent(UPrimitiveComponent* Comp) const;
     FPhysicsShapeDesc BuildShapeDescFromComponent(
         UPrimitiveComponent* Comp,

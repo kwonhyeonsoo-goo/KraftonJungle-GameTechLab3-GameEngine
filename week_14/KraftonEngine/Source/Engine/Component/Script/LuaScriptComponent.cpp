@@ -223,18 +223,18 @@ void ULuaScriptComponent::BindOwnerCollisionEvents()
 		if ((LuaOnOverlap || LuaOnEndOverlap) && PrimitiveComponent->GetGenerateOverlapEvents())
 		{
 			BoundOverlapComponents.push_back(PrimitiveComponent);
-			BeginOverlapHandles.push_back(PrimitiveComponent->OnComponentBeginOverlap.AddRaw(this, &ULuaScriptComponent::HandleBeginOverlap));
-			EndOverlapHandles.push_back(PrimitiveComponent->OnComponentEndOverlap.AddRaw(this, &ULuaScriptComponent::HandleEndOverlap));
+            BeginOverlapHandles.push_back(PrimitiveComponent->OnComponentBeginOverlap.AddUObject(this, &ULuaScriptComponent::HandleBeginOverlap));
+            EndOverlapHandles.push_back(PrimitiveComponent->OnComponentEndOverlap.AddUObject(this, &ULuaScriptComponent::HandleEndOverlap));
 		}
 
 		if (LuaOnHit || LuaOnEndHit)
 		{
 			BoundHitComponents.push_back(PrimitiveComponent);
 			HitHandles.push_back(LuaOnHit
-				? PrimitiveComponent->OnComponentHit.AddRaw(this, &ULuaScriptComponent::HandleHit)
+                ? PrimitiveComponent->OnComponentHit.AddUObject(this, &ULuaScriptComponent::HandleHit)
 				: FDelegateHandle());
 			EndHitHandles.push_back(LuaOnEndHit
-				? PrimitiveComponent->OnComponentEndHit.AddRaw(this, &ULuaScriptComponent::HandleEndHit)
+                ? PrimitiveComponent->OnComponentEndHit.AddUObject(this, &ULuaScriptComponent::HandleEndHit)
 				: FDelegateHandle());
 		}
 	}

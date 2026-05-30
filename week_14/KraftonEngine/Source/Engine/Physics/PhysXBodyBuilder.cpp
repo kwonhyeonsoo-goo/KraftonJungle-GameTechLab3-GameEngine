@@ -11,7 +11,35 @@ namespace
     PxFilterData ToPxFilterData(const FPhysicsFilterData& In)
     {
         PxFilterData Out;
-        Out.word0 = In.ObjectType;
+        uint32       PackedObjectAndFlags = In.ObjectType & PhysicsFilter_ObjectTypeMask;
+
+        if (In.CollisionEnabled == ECollisionEnabled::QueryOnly)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_QueryOnly;
+        }
+        else if (In.CollisionEnabled == ECollisionEnabled::PhysicsOnly)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_PhysicsOnly;
+        }
+        else if (In.CollisionEnabled == ECollisionEnabled::QueryAndPhysics)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_QueryAndPhysics;
+        }
+
+        if (In.bIsTrigger)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_IsTrigger;
+        }
+        if (In.bGenerateHitEvents)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_GenerateHitEvents;
+        }
+        if (In.bGenerateOverlapEvents)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_GenerateOverlapEvents;
+        }
+
+        Out.word0 = PackedObjectAndFlags;
         Out.word1 = In.BlockMask;
         Out.word2 = In.OverlapMask;
         Out.word3 = In.IgnoreGroup;
@@ -126,10 +154,11 @@ void FPhysXBodyBuilder::ApplyShapeProperties(PxShape* Shape, const FPhysicsShape
         Desc.CollisionEnabled == ECollisionEnabled::QueryOnly ||
         Desc.CollisionEnabled == ECollisionEnabled::QueryAndPhysics;
 
-    const bool bOverlapOnlyNeedsSimulation =
+    const bool bQueryOnlyNeedsSimulationForEvents =
             Desc.CollisionEnabled == ECollisionEnabled::QueryOnly &&
-            Desc.FilterData.OverlapMask != 0 &&
-            !Desc.bIsTrigger;
+            !Desc.bIsTrigger &&
+            ((Desc.FilterData.BlockMask != 0 && Desc.FilterData.bGenerateHitEvents) ||
+                (Desc.FilterData.OverlapMask != 0 && Desc.FilterData.bGenerateOverlapEvents));
 
     Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, bQueryEnabled);
 
@@ -144,7 +173,7 @@ void FPhysXBodyBuilder::ApplyShapeProperties(PxShape* Shape, const FPhysicsShape
         Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE,
             Desc.CollisionEnabled == ECollisionEnabled::PhysicsOnly ||
             Desc.CollisionEnabled == ECollisionEnabled::QueryAndPhysics ||
-            bOverlapOnlyNeedsSimulation
+            bQueryOnlyNeedsSimulationForEvents
         );
     }
 }

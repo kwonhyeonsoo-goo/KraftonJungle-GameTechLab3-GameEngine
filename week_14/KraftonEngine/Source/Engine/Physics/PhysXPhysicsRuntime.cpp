@@ -98,9 +98,68 @@ namespace
         );
     }
 
+    bool HasAnyBlockResponse(UPrimitiveComponent* Comp)
+    {
+        if (!Comp)
+        {
+            return false;
+        }
+
+        for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
+        {
+            if (Comp->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(Ch))
+                == ECollisionResponse::Block)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool HasAnyOverlapResponse(UPrimitiveComponent* Comp)
+    {
+        if (!Comp)
+        {
+            return false;
+        }
+
+        for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
+        {
+            if (Comp->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(Ch))
+                == ECollisionResponse::Overlap)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool ShouldBeTriggerShape(UPrimitiveComponent* Comp, bool bOwnerBodyIsDynamic)
+    {
+        if (!Comp || Comp->GetCollisionEnabled() == ECollisionEnabled::NoCollision)
+        {
+            return false;
+        }
+
+        const bool bHasAnyBlock     = HasAnyBlockResponse(Comp);
+        bool       bShouldBeTrigger =
+                (Comp->GetCollisionObjectType() == ECollisionChannel::Trigger && !bHasAnyBlock) ||
+                (Comp->GetCollisionEnabled() == ECollisionEnabled::QueryOnly &&
+                    !bHasAnyBlock &&
+                    HasAnyOverlapResponse(Comp));
+
+        if (bShouldBeTrigger && bOwnerBodyIsDynamic)
+        {
+            bShouldBeTrigger = false;
+        }
+
+        return bShouldBeTrigger;
+    }
+
     void FillFilterDataFromComponent(
-        FPhysicsFilterData& Out,
-        UPrimitiveComponent* Comp
+        FPhysicsFilterData&  Out,
+        UPrimitiveComponent* Comp,
+        bool                 bIsTriggerShape
     )
     {
         if (!Comp)
@@ -108,10 +167,14 @@ namespace
             return;
         }
 
-        Out.ObjectType = static_cast<uint32>(Comp->GetCollisionObjectType());
-        Out.BlockMask = 0;
-        Out.OverlapMask = 0;
-        Out.IgnoreGroup = Comp->GetOwner() ? Comp->GetOwner()->GetUUID() : 0;
+        Out.ObjectType             = static_cast<uint32>(Comp->GetCollisionObjectType());
+        Out.BlockMask              = 0;
+        Out.OverlapMask            = 0;
+        Out.IgnoreGroup            = Comp->GetOwner() ? Comp->GetOwner()->GetUUID() : 0;
+        Out.CollisionEnabled       = Comp->GetCollisionEnabled();
+        Out.bIsTrigger             = bIsTriggerShape;
+        Out.bGenerateHitEvents     = true;
+        Out.bGenerateOverlapEvents = Comp->GetGenerateOverlapEvents();
 
         for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
         {
@@ -127,42 +190,6 @@ namespace
                 Out.OverlapMask |= (1u << Ch);
             }
         }
-    }
-
-    bool ShouldBeTriggerShape(UPrimitiveComponent* Comp, bool bOwnerBodyIsDynamic)
-    {
-        if (!Comp)
-        {
-            return false;
-        }
-
-        bool bShouldBeTrigger = Comp->GetGenerateOverlapEvents();
-
-        if (!bShouldBeTrigger)
-        {
-            bool bHasAnyBlockResponse = false;
-            for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
-            {
-                if (Comp->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(Ch))
-                    == ECollisionResponse::Block)
-                {
-                    bHasAnyBlockResponse = true;
-                    break;
-                }
-            }
-
-            bShouldBeTrigger = !bHasAnyBlockResponse;
-        }
-
-        // PhysX는 trigger-trigger pair에 onTrigger를 발화하지 않습니다. 움직이는 kinematic/dynamic
-        // 캐릭터 capsule은 static trigger volume에 감지되어야 하므로 dynamic actor의 shape는
-        // simulation shape로 유지합니다.
-        if (bShouldBeTrigger && bOwnerBodyIsDynamic)
-        {
-            bShouldBeTrigger = false;
-        }
-
-        return bShouldBeTrigger;
     }
 }
 
@@ -410,14 +437,53 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
     }
 }
 
+
 void FPhysXPhysicsRuntime::RegisterComponent(UPrimitiveComponent* Comp)
+{
+    if (!IsAliveObject(Comp) || !Scene)
+    {
+        return;
+    }
+
+    // Registration allocates the body/shape handle immediately so same-frame
+    // gameplay calls such as AddForce can resolve the component. Destructive
+    // mutation paths (unregister/rebuild/destroy) remain command-boundary based.
+    PxSceneWriteLock WriteLock(*Scene);
+    RegisterComponent_Internal(Comp);
+}
+
+void FPhysXPhysicsRuntime::UnregisterComponent(UPrimitiveComponent* Comp)
+{
+    if (!Comp)
+    {
+        return;
+    }
+
+    FPhysicsCommand Cmd;
+    Cmd.Type      = EPhysicsCommandType::UnregisterComponent;
+    Cmd.Component = Comp;
+    EnqueueCommand(Cmd);
+}
+
+void FPhysXPhysicsRuntime::RebuildBody(UPrimitiveComponent* Comp)
+{
+    if (!IsAliveObject(Comp))
+    {
+        return;
+    }
+
+    FPhysicsCommand Cmd;
+    Cmd.Type      = EPhysicsCommandType::RebuildComponentBody;
+    Cmd.Component = Comp;
+    EnqueueCommand(Cmd);
+}
+
+void FPhysXPhysicsRuntime::RegisterComponent_Internal(UPrimitiveComponent* Comp)
 {
     if (!IsValid(Comp) || !Physics || !Scene || !DefaultMaterial)
     {
         return;
     }
-
-    PxSceneWriteLock WriteLock(*Scene);
 
     if (ComponentToShape.find(GetObjectKey(Comp)) != ComponentToShape.end())
     {
@@ -477,7 +543,7 @@ void FPhysXPhysicsRuntime::RegisterComponent(UPrimitiveComponent* Comp)
     }
 }
 
-void FPhysXPhysicsRuntime::UnregisterComponent(UPrimitiveComponent* Comp)
+void FPhysXPhysicsRuntime::UnregisterComponent_Internal(UPrimitiveComponent* Comp)
 {
     if (!Comp)
     {
@@ -497,8 +563,6 @@ void FPhysXPhysicsRuntime::UnregisterComponent(UPrimitiveComponent* Comp)
     {
         return;
     }
-
-    PxSceneWriteLock WriteLock(*Scene);
 
     DetachShapeForComponent(Comp);
     ComponentToBody.erase(GetObjectKey(Comp));
@@ -540,7 +604,7 @@ void FPhysXPhysicsRuntime::UnregisterComponent(UPrimitiveComponent* Comp)
     }
 }
 
-void FPhysXPhysicsRuntime::RebuildBody(UPrimitiveComponent* Comp)
+void FPhysXPhysicsRuntime::RebuildBody_Internal(UPrimitiveComponent* Comp)
 {
     if (!IsValid(Comp))
     {
@@ -572,7 +636,7 @@ void FPhysXPhysicsRuntime::RebuildBody(UPrimitiveComponent* Comp)
     {
         if (IsValid(C))
         {
-            UnregisterComponent(C);
+            UnregisterComponent_Internal(C);
         }
     }
 
@@ -580,7 +644,7 @@ void FPhysXPhysicsRuntime::RebuildBody(UPrimitiveComponent* Comp)
     {
         if (IsValid(C) && C->IsCollisionEnabled())
         {
-            RegisterComponent(C);
+            RegisterComponent_Internal(C);
         }
     }
 }
@@ -819,13 +883,10 @@ FPhysicsBodyHandle FPhysXPhysicsRuntime::CreateRigidBody(const FBodyCreationDesc
 
 void FPhysXPhysicsRuntime::DestroyRigidBody(FPhysicsBodyHandle BodyHandle)
 {
-    if (!Scene)
-    {
-        return;
-    }
-
-    PxSceneWriteLock WriteLock(*Scene);
-    DestroyRigidBody_Internal(BodyHandle);
+    FPhysicsCommand Cmd;
+    Cmd.Type = EPhysicsCommandType::DestroyBody;
+    Cmd.Body = BodyHandle;
+    EnqueueCommand(Cmd);
 }
 
 FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateConstraint(
@@ -845,13 +906,10 @@ FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateConstraint(
 
 void FPhysXPhysicsRuntime::DestroyConstraint(FPhysicsConstraintHandle Constraint)
 {
-    if (!Scene)
-    {
-        return;
-    }
-
-    PxSceneWriteLock WriteLock(*Scene);
-    DestroyConstraint_Internal(Constraint);
+    FPhysicsCommand Cmd;
+    Cmd.Type       = EPhysicsCommandType::DestroyConstraint;
+    Cmd.Constraint = Constraint;
+    EnqueueCommand(Cmd);
 }
 
 FTransform FPhysXPhysicsRuntime::GetBodyTransform(FPhysicsBodyHandle BodyHandle) const
@@ -1605,13 +1663,13 @@ FPhysicsShapeDesc FPhysXPhysicsRuntime::BuildShapeDescFromComponent(
 
     Desc.LocalTransform = MakeShapeLocalTransform(Comp, RootComponent);
     Desc.CollisionEnabled = Comp->GetCollisionEnabled();
-    FillFilterDataFromComponent(Desc.FilterData, Comp);
 
     const bool bOwnerBodyIsDynamic =
         RootComponent &&
         (RootComponent->GetSimulatePhysics() || RootComponent->IsKinematic());
 
     Desc.bIsTrigger = ShouldBeTriggerShape(Comp, bOwnerBodyIsDynamic);
+    FillFilterDataFromComponent(Desc.FilterData, Comp, Desc.bIsTrigger);
 
     if (auto* Box = Cast<UBoxComponent>(Comp))
     {
@@ -1813,6 +1871,15 @@ int32 FPhysXPhysicsRuntime::ApplyPendingCommands()
     {
         switch (Command.Type)
         {
+        case EPhysicsCommandType::RegisterComponent:
+            RegisterComponent_Internal(Command.Component.GetEvenIfPendingKill());
+            break;
+        case EPhysicsCommandType::UnregisterComponent:
+            UnregisterComponent_Internal(Command.Component.GetEvenIfPendingKill());
+            break;
+        case EPhysicsCommandType::RebuildComponentBody:
+            RebuildBody_Internal(Command.Component.Get());
+            break;
         case EPhysicsCommandType::DestroyBody:
             DestroyRigidBody_Internal(Command.Body);
             break;

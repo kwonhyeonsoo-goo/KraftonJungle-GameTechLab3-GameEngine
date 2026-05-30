@@ -16,122 +16,53 @@ namespace
     }
 }
 
+FNativePhysicsPair::FNativePhysicsPair(UPrimitiveComponent* InA, UPrimitiveComponent* InB) : A(InA)
+                                                                                           , B(InB)
+{
+    AId = IsAliveObject(InA) ? InA->GetUUID() : 0;
+    BId = IsAliveObject(InB) ? InB->GetUUID() : 0;
+    if (AId > BId)
+    {
+        std::swap(AId, BId);
+        std::swap(A, B);
+    }
+}
+
 void FNativePhysicsScene::Initialize(UWorld* InWorld)
 {
-	World = InWorld;
+    World = InWorld;
 }
 
 void FNativePhysicsScene::Shutdown()
 {
-	RegisteredComponents.clear();
-	BodyStates.clear();
-	PreviousOverlaps.clear();
-	CurrentOverlaps.clear();
-	PreviousBlockPairs.clear();
-	CurrentBlockPairs.clear();
-	World = nullptr;
-}
-
-void FNativePhysicsScene::ErasePairsWithInvalidComponents(std::unordered_set<FOverlapPair>& Pairs)
-{
-	for (auto It = Pairs.begin(); It != Pairs.end();)
-	{
-		if (!IsValid(It->A) || !IsValid(It->B))
-		{
-			It = Pairs.erase(It);
-		}
-		else
-		{
-			++It;
-		}
-	}
-}
-
-void FNativePhysicsScene::ErasePairsWithComponent(std::unordered_set<FOverlapPair>& Pairs, UPrimitiveComponent* Comp)
-{
-	for (auto It = Pairs.begin(); It != Pairs.end();)
-	{
-		if (It->A == Comp || It->B == Comp)
-		{
-			It = Pairs.erase(It);
-		}
-		else
-		{
-			++It;
-		}
-	}
-}
-
-void FNativePhysicsScene::CompactInvalidComponents()
-{
-	RegisteredComponents.erase(
-		std::remove_if(
-			RegisteredComponents.begin(),
-			RegisteredComponents.end(),
-            [](const TWeakObjectPtr<UPrimitiveComponent>& Comp)
-			{
-                return !Comp.IsValid();
-			}),
-		RegisteredComponents.end());
-
-    std::unordered_set<uint32> LiveComponentKeys;
-    for (const TWeakObjectPtr<UPrimitiveComponent>& WeakComp : RegisteredComponents)
-    {
-        if (UPrimitiveComponent* Comp = WeakComp.Get())
-        {
-            LiveComponentKeys.insert(GetNativeObjectKey(Comp));
-        }
-    }
-	for (auto It = BodyStates.begin(); It != BodyStates.end();)
-	{
-        if (LiveComponentKeys.find(It->first) == LiveComponentKeys.end())
-		{
-			It = BodyStates.erase(It);
-		}
-		else
-		{
-			++It;
-		}
-	}
-
-	ErasePairsWithInvalidComponents(PreviousOverlaps);
-	ErasePairsWithInvalidComponents(CurrentOverlaps);
-	ErasePairsWithInvalidComponents(PreviousBlockPairs);
-	ErasePairsWithInvalidComponents(CurrentBlockPairs);
+    RegisteredComponents.clear();
+    BodyStates.clear();
+    PreviousOverlaps.clear();
+    CurrentOverlaps.clear();
+    PreviousBlockPairs.clear();
+    CurrentBlockPairs.clear();
+    World = nullptr;
 }
 
 void FNativePhysicsScene::RegisterComponent(UPrimitiveComponent* Comp)
 {
-	CompactInvalidComponents();
-	if (!IsValid(Comp)) return;
+    CompactInvalidComponents();
+    if (!IsValid(Comp)) return;
 
     for (const TWeakObjectPtr<UPrimitiveComponent>& Existing : RegisteredComponents)
-	{
+    {
         if (Existing.Get() == Comp) return;
-	}
-	RegisteredComponents.push_back(Comp);
+    }
+    RegisteredComponents.push_back(Comp);
     FBodyState& State       = BodyStates[GetNativeObjectKey(Comp)];
-	State.Mass              = Comp->GetMass() > 0.0f ? Comp->GetMass() : 1.0f;
-	State.CenterOfMassLocal = Comp->GetCenterOfMass();
-}
-
-void FNativePhysicsScene::RebuildBody(UPrimitiveComponent* Comp)
-{
-	CompactInvalidComponents();
-	if (!IsValid(Comp)) return;
-
-    auto It = BodyStates.find(GetNativeObjectKey(Comp));
-	if (It == BodyStates.end()) return; // 등록 안 됨 — skip
-	// Native는 SimulatePhysics/ObjectType/Response를 매 Tick에서 컴포넌트로부터 직접 읽으므로
-	// BodyState의 Mass/COM만 갱신.
-	It->second.Mass = (Comp->GetMass() > 0.0f) ? Comp->GetMass() : 1.0f;
-	It->second.CenterOfMassLocal = Comp->GetCenterOfMass();
+    State.Mass              = Comp->GetMass() > 0.0f ? Comp->GetMass() : 1.0f;
+    State.CenterOfMassLocal = Comp->GetCenterOfMass();
 }
 
 void FNativePhysicsScene::UnregisterComponent(UPrimitiveComponent* Comp)
 {
-	CompactInvalidComponents();
-	if (!IsAliveObject(Comp)) return;
+    CompactInvalidComponents();
+    if (!IsAliveObject(Comp)) return;
 
     auto It = std::find_if(
         RegisteredComponents.begin(),
@@ -141,242 +72,323 @@ void FNativePhysicsScene::UnregisterComponent(UPrimitiveComponent* Comp)
             return WeakComp.GetEvenIfPendingKill() == Comp;
         }
     );
-	if (It == RegisteredComponents.end()) return;
-	RegisteredComponents.erase(It);
+    if (It == RegisteredComponents.end()) return;
+    RegisteredComponents.erase(It);
     BodyStates.erase(GetNativeObjectKey(Comp));
 
-	// PreviousOverlaps에서 이 컴포넌트를 포함하는 쌍 제거 + EndOverlap 발화
-	auto PairIt = PreviousOverlaps.begin();
-	while (PairIt != PreviousOverlaps.end())
-	{
-			if (PairIt->A == Comp || PairIt->B == Comp)
-		{
-			UPrimitiveComponent* Other = (PairIt->A == Comp) ? PairIt->B : PairIt->A;
+    // PreviousOverlaps에서 이 컴포넌트를 포함하는 쌍 제거 + EndOverlap 발화
+    auto PairIt = PreviousOverlaps.begin();
+    while (PairIt != PreviousOverlaps.end())
+    {
+        if (PairIt->A.GetEvenIfPendingKill() == Comp || PairIt->B.GetEvenIfPendingKill() == Comp)
+        {
+            UPrimitiveComponent* Other = (PairIt->A.GetEvenIfPendingKill() == Comp) ? PairIt->B.GetEvenIfPendingKill() : PairIt->A.GetEvenIfPendingKill();
 
-				if (IsValid(Other) && IsValid(Comp) && Other->GetGenerateOverlapEvents())
-			{
-				AActor* CompOwner = Comp->GetOwner();
-				Other->NotifyComponentEndOverlap(Other, CompOwner, Comp, 0);
-			}
+            if (IsValid(Other) && IsValid(Comp) && Other->GetGenerateOverlapEvents())
+            {
+                AActor* CompOwner = Comp->GetOwner();
+                Other->NotifyComponentEndOverlap(Other, CompOwner, Comp, 0);
+            }
 
-			PairIt = PreviousOverlaps.erase(PairIt);
-		}
-		else
-		{
-			++PairIt;
-		}
-	}
+            PairIt = PreviousOverlaps.erase(PairIt);
+        }
+        else
+        {
+            ++PairIt;
+        }
+    }
 
-	ErasePairsWithComponent(CurrentOverlaps, Comp);
-	ErasePairsWithComponent(PreviousBlockPairs, Comp);
-	ErasePairsWithComponent(CurrentBlockPairs, Comp);
+    ErasePairsWithComponent(CurrentOverlaps, Comp);
+    ErasePairsWithComponent(PreviousBlockPairs, Comp);
+    ErasePairsWithComponent(CurrentBlockPairs, Comp);
+}
+
+void FNativePhysicsScene::RebuildBody(UPrimitiveComponent* Comp)
+{
+    CompactInvalidComponents();
+    if (!IsValid(Comp)) return;
+
+    auto It = BodyStates.find(GetNativeObjectKey(Comp));
+    if (It == BodyStates.end()) return; // 등록 안 됨 — skip
+    // Native는 SimulatePhysics/ObjectType/Response를 매 Tick에서 컴포넌트로부터 직접 읽으므로
+    // BodyState의 Mass/COM만 갱신.
+    It->second.Mass              = (Comp->GetMass() > 0.0f) ? Comp->GetMass() : 1.0f;
+    It->second.CenterOfMassLocal = Comp->GetCenterOfMass();
 }
 
 void FNativePhysicsScene::Tick(float DeltaTime)
 {
-	if (!World) return;
-	CompactInvalidComponents();
+    if (!World) return;
+    CompactInvalidComponents();
 
-	// ── 힘 적분 + 중력: bSimulatePhysics인 컴포넌트에 적용 ──
+    // ── 힘 적분 + 중력: bSimulatePhysics인 컴포넌트에 적용 ──
     for (const TWeakObjectPtr<UPrimitiveComponent>& WeakComp : RegisteredComponents)
-	{
+    {
         UPrimitiveComponent* Comp = WeakComp.Get();
-		if (!IsValid(Comp)) continue;
-		if (!Comp->GetSimulatePhysics()) continue;
+        if (!IsValid(Comp)) continue;
+        if (!Comp->GetSimulatePhysics()) continue;
 
         FBodyState& State = BodyStates[GetNativeObjectKey(Comp)];
 
-		// 외부 힘/토크 적분
-		float InvMass = (State.Mass > 0.0f) ? (1.0f / State.Mass) : 0.0f;
-		State.Velocity = State.Velocity + State.AccumulatedForce * InvMass * DeltaTime;
-		State.AngularVelocity = State.AngularVelocity + State.AccumulatedTorque * InvMass * DeltaTime;
+        // 외부 힘/토크 적분
+        float InvMass         = (State.Mass > 0.0f) ? (1.0f / State.Mass) : 0.0f;
+        State.Velocity        = State.Velocity + State.AccumulatedForce * InvMass * DeltaTime;
+        State.AngularVelocity = State.AngularVelocity + State.AccumulatedTorque * InvMass * DeltaTime;
 
-		// 중력
-		State.Velocity.Z += GravityZ * DeltaTime;
+        // 중력
+        State.Velocity.Z += GravityZ * DeltaTime;
 
-		FVector Pos = Comp->GetWorldLocation();
-		Pos = Pos + State.Velocity * DeltaTime;
-		Comp->SetWorldLocation(Pos);
+        FVector Pos = Comp->GetWorldLocation();
+        Pos         = Pos + State.Velocity * DeltaTime;
+        Comp->SetWorldLocation(Pos);
 
-		// 프레임 끝 누적값 초기화
-		State.AccumulatedForce = { 0, 0, 0 };
-		State.AccumulatedTorque = { 0, 0, 0 };
-	}
+        // 프레임 끝 누적값 초기화
+        State.AccumulatedForce  = { 0, 0, 0 };
+        State.AccumulatedTorque = { 0, 0, 0 };
+    }
 
-	CurrentOverlaps.clear();
-	CurrentBlockPairs.clear();
+    CurrentOverlaps.clear();
+    CurrentBlockPairs.clear();
 
-	// Brute-force O(N²)
-	const int32 Count = static_cast<int32>(RegisteredComponents.size());
-	for (int32 i = 0; i < Count; ++i)
-	{
-		for (int32 j = i + 1; j < Count; ++j)
-		{
+    // Brute-force O(N²)
+    const int32 Count = static_cast<int32>(RegisteredComponents.size());
+    for (int32 i = 0; i < Count; ++i)
+    {
+        for (int32 j = i + 1; j < Count; ++j)
+        {
             UPrimitiveComponent* A = RegisteredComponents[i].Get();
             UPrimitiveComponent* B = RegisteredComponents[j].Get();
             if (!IsValid(A) || !IsValid(B)) continue;
 
-			if (A->GetOwner() == B->GetOwner()) continue;
+            if (A->GetOwner() == B->GetOwner()) continue;
 
-			ECollisionResponse Resp = UPrimitiveComponent::GetMinResponse(A, B);
-			if (Resp == ECollisionResponse::Ignore) continue;
+            ECollisionResponse Resp = UPrimitiveComponent::GetMinResponse(A, B);
+            if (Resp == ECollisionResponse::Ignore) continue;
 
-			// Broad-phase: AABB
-			FBoundingBox BoundsA = A->GetWorldBoundingBox();
-			FBoundingBox BoundsB = B->GetWorldBoundingBox();
-			if (!FCollisionMath::AABBvsAABB(BoundsA.Min, BoundsA.Max, BoundsB.Min, BoundsB.Max))
-				continue;
+            // Broad-phase: AABB
+            FBoundingBox BoundsA = A->GetWorldBoundingBox();
+            FBoundingBox BoundsB = B->GetWorldBoundingBox();
+            if (!FCollisionMath::AABBvsAABB(BoundsA.Min, BoundsA.Max, BoundsB.Min, BoundsB.Max))
+                continue;
 
-			// Narrow-phase
-			FHitResult Hit;
-			if (!FCollisionMath::TestComponentPair(A, B, Hit))
-				continue;
+            // Narrow-phase
+            FHitResult Hit;
+            if (!FCollisionMath::TestComponentPair(A, B, Hit))
+                continue;
 
-			if (Resp == ECollisionResponse::Block)
-			{
-				CurrentBlockPairs.insert(FOverlapPair{ A, B });
+            if (Resp == ECollisionResponse::Block)
+            {
+                CurrentBlockPairs.insert(FNativePhysicsPair(A, B));
 
-				// Hit 이벤트는 첫 접촉 시에만 발화 (PhysX eNOTIFY_TOUCH_FOUND 방식)
-				if (PreviousBlockPairs.find(FOverlapPair{ A, B }) == PreviousBlockPairs.end())
-				{
-					FVector NormalImpulse = Hit.ImpactNormal * Hit.PenetrationDepth;
+                // Hit 이벤트는 첫 접촉 시에만 발화 (PhysX eNOTIFY_TOUCH_FOUND 방식)
+                if (PreviousBlockPairs.find(FNativePhysicsPair(A, B)) == PreviousBlockPairs.end())
+                {
+                    FVector NormalImpulse = FVector::ZeroVector;
 
-					FHitResult HitA = Hit;
-					HitA.HitComponent = B;
-					HitA.HitActor = B->GetOwner();
-					A->NotifyComponentHit(A, B->GetOwner(), B, NormalImpulse, HitA);
+                    FHitResult HitA   = Hit;
+                    HitA.HitComponent = B;
+                    HitA.HitActor     = B->GetOwner();
+                    A->NotifyComponentHit(A, B->GetOwner(), B, NormalImpulse, HitA);
 
-					FHitResult HitB = Hit;
-					HitB.HitComponent = A;
-					HitB.HitActor = A->GetOwner();
-					HitB.ImpactNormal = Hit.ImpactNormal * -1.0f;
-					HitB.WorldNormal = Hit.WorldNormal * -1.0f;
-					B->NotifyComponentHit(B, A->GetOwner(), A, NormalImpulse * -1.0f, HitB);
-				}
+                    FHitResult HitB   = Hit;
+                    HitB.HitComponent = A;
+                    HitB.HitActor     = A->GetOwner();
+                    HitB.ImpactNormal = Hit.ImpactNormal * -1.0f;
+                    HitB.WorldNormal  = Hit.WorldNormal * -1.0f;
+                    B->NotifyComponentHit(B, A->GetOwner(), A, NormalImpulse * -1.0f, HitB);
+                }
 
-				// ── Block 위치 보정 + 속도 보정 ──
-				// TestComponentPair 내부에서 A/B가 swap될 수 있음.
-				// Hit.ImpactNormal은 내부 A→B 방향. Hit.HitComponent가 내부 B.
-				// 따라서 Hit.HitComponent == (우리의)B 면 Normal은 A→B — A를 밀 방향은 반대.
-				//         Hit.HitComponent == (우리의)A 면 swap됐으므로 Normal은 B→A — A를 밀 방향은 그대로.
-				bool bASimulates = A->GetSimulatePhysics();
-				bool bBSimulates = B->GetSimulatePhysics();
-				FVector PushA; // A를 밀어내는 방향 (B에서 멀어지는 방향)
-				if (Hit.HitComponent == B)
-					PushA = Hit.ImpactNormal * -1.0f;
-				else
-					PushA = Hit.ImpactNormal;
-				FVector Normal = PushA;
-				float Depth = Hit.PenetrationDepth;
+                // ── Block 위치 보정 + 속도 보정 ──
+                // TestComponentPair 내부에서 A/B가 swap될 수 있음.
+                // Hit.ImpactNormal은 내부 A→B 방향. Hit.HitComponent가 내부 B.
+                // 따라서 Hit.HitComponent == (우리의)B 면 Normal은 A→B — A를 밀 방향은 반대.
+                //         Hit.HitComponent == (우리의)A 면 swap됐으므로 Normal은 B→A — A를 밀 방향은 그대로.
+                bool    bASimulates = A->GetSimulatePhysics();
+                bool    bBSimulates = B->GetSimulatePhysics();
+                FVector PushA; // A를 밀어내는 방향 (B에서 멀어지는 방향)
+                if (Hit.HitComponent == B)
+                    PushA = Hit.ImpactNormal * -1.0f;
+                else
+                    PushA = Hit.ImpactNormal;
+                FVector Normal = PushA;
+                float   Depth  = Hit.PenetrationDepth;
 
-				// Baumgarte stabilization + slop
-				constexpr float Slop = 0.01f;
-				constexpr float BaumgarteBeta = 0.2f;
-				float CorrectionDepth = (std::max)(0.0f, Depth - Slop);
+                // Baumgarte stabilization + slop
+                constexpr float Slop            = 0.01f;
+                constexpr float BaumgarteBeta   = 0.2f;
+                float           CorrectionDepth = (std::max)(0.0f, Depth - Slop);
 
-				if (CorrectionDepth > 0.0f)
-				{
-					float BiasVelocity = (BaumgarteBeta / DeltaTime) * CorrectionDepth;
+                if (CorrectionDepth > 0.0f)
+                {
+                    float BiasVelocity = (BaumgarteBeta / DeltaTime) * CorrectionDepth;
 
-					if (bASimulates && bBSimulates)
-					{
-						FVector Correction = Normal * (BiasVelocity * DeltaTime * 0.5f);
-						A->SetWorldLocation(A->GetWorldLocation() + Correction);
-						B->SetWorldLocation(B->GetWorldLocation() - Correction);
-					}
-					else if (bASimulates)
-					{
-						A->SetWorldLocation(A->GetWorldLocation() + Normal * (BiasVelocity * DeltaTime));
-					}
-					else if (bBSimulates)
-					{
-						B->SetWorldLocation(B->GetWorldLocation() - Normal * (BiasVelocity * DeltaTime));
-					}
-				}
+                    if (bASimulates && bBSimulates)
+                    {
+                        FVector Correction = Normal * (BiasVelocity * DeltaTime * 0.5f);
+                        A->SetWorldLocation(A->GetWorldLocation() + Correction);
+                        B->SetWorldLocation(B->GetWorldLocation() - Correction);
+                    }
+                    else if (bASimulates)
+                    {
+                        A->SetWorldLocation(A->GetWorldLocation() + Normal * (BiasVelocity * DeltaTime));
+                    }
+                    else if (bBSimulates)
+                    {
+                        B->SetWorldLocation(B->GetWorldLocation() - Normal * (BiasVelocity * DeltaTime));
+                    }
+                }
 
-				// 속도 반사: (1 + e) 로 반발계수 적용 (e=0 완전비탄성, e=1 완전탄성)
-				constexpr float Restitution = 0.2f;
-				if (bASimulates)
-				{
+                // 속도 반사: (1 + e) 로 반발계수 적용 (e=0 완전비탄성, e=1 완전탄성)
+                constexpr float Restitution = 0.2f;
+                if (bASimulates)
+                {
                     FBodyState& StateA = BodyStates[GetNativeObjectKey(A)];
-					float       VdotN  = StateA.Velocity.X * Normal.X + StateA.Velocity.Y * Normal.Y + StateA.Velocity.Z * Normal.Z;
-					if (VdotN < 0.0f)
-						StateA.Velocity = StateA.Velocity - Normal * (VdotN * (1.0f + Restitution));
-				}
-				if (bBSimulates)
-				{
+                    float       VdotN  = StateA.Velocity.X * Normal.X + StateA.Velocity.Y * Normal.Y + StateA.Velocity.Z * Normal.Z;
+                    if (VdotN < 0.0f)
+                        StateA.Velocity = StateA.Velocity - Normal * (VdotN * (1.0f + Restitution));
+                }
+                if (bBSimulates)
+                {
                     FBodyState& StateB    = BodyStates[GetNativeObjectKey(B)];
-					FVector     NegNormal = Normal * -1.0f;
-					float       VdotN     = StateB.Velocity.X * NegNormal.X + StateB.Velocity.Y * NegNormal.Y + StateB.Velocity.Z * NegNormal.Z;
-					if (VdotN < 0.0f)
-						StateB.Velocity = StateB.Velocity - NegNormal * (VdotN * (1.0f + Restitution));
-				}
-			}
-			else if (Resp == ECollisionResponse::Overlap)
-			{
-				if (A->GetGenerateOverlapEvents() || B->GetGenerateOverlapEvents())
-				{
-					CurrentOverlaps.insert(FOverlapPair{ A, B });
-				}
-			}
-		}
-	}
+                    FVector     NegNormal = Normal * -1.0f;
+                    float       VdotN     = StateB.Velocity.X * NegNormal.X + StateB.Velocity.Y * NegNormal.Y + StateB.Velocity.Z * NegNormal.Z;
+                    if (VdotN < 0.0f)
+                        StateB.Velocity = StateB.Velocity - NegNormal * (VdotN * (1.0f + Restitution));
+                }
+            }
+            else if (Resp == ECollisionResponse::Overlap)
+            {
+                if (A->GetGenerateOverlapEvents() || B->GetGenerateOverlapEvents())
+                {
+                    CurrentOverlaps.insert(FNativePhysicsPair(A, B));
+                }
+            }
+        }
+    }
 
-	// Begin Overlap
-	for (const FOverlapPair& Pair : CurrentOverlaps)
-	{
-		if (PreviousOverlaps.find(Pair) == PreviousOverlaps.end())
-		{
-			if (!IsValid(Pair.A) || !IsValid(Pair.B))
-			{
-				continue;
-			}
+    // Begin Overlap
+    for (const FNativePhysicsPair& Pair : CurrentOverlaps)
+    {
+        if (PreviousOverlaps.find(Pair) == PreviousOverlaps.end())
+        {
+            if (!IsValid(Pair.A.Get()) || !IsValid(Pair.B.Get()))
+            {
+                continue;
+            }
 
-			FHitResult DummyHit;
+            FHitResult DummyHit;
 
-			if (Pair.A->GetGenerateOverlapEvents())
-				Pair.A->NotifyComponentBeginOverlap(Pair.A, Pair.B->GetOwner(), Pair.B, 0, false, DummyHit);
+            if (Pair.A.Get()->GetGenerateOverlapEvents())
+                Pair.A.Get()->NotifyComponentBeginOverlap(Pair.A.Get(), Pair.B.Get()->GetOwner(), Pair.B.Get(), 0, false, DummyHit);
 
-			if (Pair.B->GetGenerateOverlapEvents())
-				Pair.B->NotifyComponentBeginOverlap(Pair.B, Pair.A->GetOwner(), Pair.A, 0, false, DummyHit);
-		}
-	}
+            if (Pair.B.Get()->GetGenerateOverlapEvents())
+                Pair.B.Get()->NotifyComponentBeginOverlap(Pair.B.Get(), Pair.A.Get()->GetOwner(), Pair.A.Get(), 0, false, DummyHit);
+        }
+    }
 
-	// End Overlap
-	for (const FOverlapPair& Pair : PreviousOverlaps)
-	{
-		if (CurrentOverlaps.find(Pair) == CurrentOverlaps.end())
-		{
-			if (!IsValid(Pair.A) || !IsValid(Pair.B))
-			{
-				continue;
-			}
+    // End Overlap
+    for (const FNativePhysicsPair& Pair : PreviousOverlaps)
+    {
+        if (CurrentOverlaps.find(Pair) == CurrentOverlaps.end())
+        {
+            if (!IsValid(Pair.A.Get()) || !IsValid(Pair.B.Get()))
+            {
+                continue;
+            }
 
-			if (Pair.A->GetGenerateOverlapEvents())
-				Pair.A->NotifyComponentEndOverlap(Pair.A, Pair.B->GetOwner(), Pair.B, 0);
+            if (Pair.A.Get()->GetGenerateOverlapEvents())
+                Pair.A.Get()->NotifyComponentEndOverlap(Pair.A.Get(), Pair.B.Get()->GetOwner(), Pair.B.Get(), 0);
 
-			if (Pair.B->GetGenerateOverlapEvents())
-				Pair.B->NotifyComponentEndOverlap(Pair.B, Pair.A->GetOwner(), Pair.A, 0);
-		}
-	}
+            if (Pair.B.Get()->GetGenerateOverlapEvents())
+                Pair.B.Get()->NotifyComponentEndOverlap(Pair.B.Get(), Pair.A.Get()->GetOwner(), Pair.A.Get(), 0);
+        }
+    }
 
-	// End Hit
-	for (const FOverlapPair& Pair : PreviousBlockPairs)
-	{
-		if (CurrentBlockPairs.find(Pair) == CurrentBlockPairs.end())
-		{
-			if (!IsValid(Pair.A) || !IsValid(Pair.B))
-			{
-				continue;
-			}
+    // End Hit
+    for (const FNativePhysicsPair& Pair : PreviousBlockPairs)
+    {
+        if (CurrentBlockPairs.find(Pair) == CurrentBlockPairs.end())
+        {
+            if (!IsValid(Pair.A.Get()) || !IsValid(Pair.B.Get()))
+            {
+                continue;
+            }
 
-			Pair.A->NotifyComponentEndHit(Pair.A, Pair.B->GetOwner(), Pair.B);
-			Pair.B->NotifyComponentEndHit(Pair.B, Pair.A->GetOwner(), Pair.A);
-		}
-	}
+            Pair.A.Get()->NotifyComponentEndHit(Pair.A.Get(), Pair.B.Get()->GetOwner(), Pair.B.Get());
+            Pair.B.Get()->NotifyComponentEndHit(Pair.B.Get(), Pair.A.Get()->GetOwner(), Pair.A.Get());
+        }
+    }
 
-	PreviousOverlaps = CurrentOverlaps;
-	PreviousBlockPairs = CurrentBlockPairs;
+    PreviousOverlaps   = CurrentOverlaps;
+    PreviousBlockPairs = CurrentBlockPairs;
+}
+
+void FNativePhysicsScene::CompactInvalidComponents()
+{
+    RegisteredComponents.erase(
+        std::remove_if(
+            RegisteredComponents.begin(),
+            RegisteredComponents.end(),
+            [](const TWeakObjectPtr<UPrimitiveComponent>& Comp)
+            {
+                return !Comp.IsValid();
+            }),
+        RegisteredComponents.end());
+
+    std::unordered_set<uint32> LiveComponentKeys;
+    for (const TWeakObjectPtr<UPrimitiveComponent>& WeakComp : RegisteredComponents)
+    {
+        if (UPrimitiveComponent* Comp = WeakComp.Get())
+        {
+            LiveComponentKeys.insert(GetNativeObjectKey(Comp));
+        }
+    }
+    for (auto It = BodyStates.begin(); It != BodyStates.end();)
+    {
+        if (LiveComponentKeys.find(It->first) == LiveComponentKeys.end())
+        {
+            It = BodyStates.erase(It);
+        }
+        else
+        {
+            ++It;
+        }
+    }
+
+    ErasePairsWithInvalidComponents(PreviousOverlaps);
+    ErasePairsWithInvalidComponents(CurrentOverlaps);
+    ErasePairsWithInvalidComponents(PreviousBlockPairs);
+    ErasePairsWithInvalidComponents(CurrentBlockPairs);
+}
+
+void FNativePhysicsScene::ErasePairsWithInvalidComponents(std::unordered_set<FNativePhysicsPair>& Pairs)
+{
+    for (auto It = Pairs.begin(); It != Pairs.end();)
+    {
+        if (!IsValid(It->A.GetEvenIfPendingKill()) || !IsValid(It->B.GetEvenIfPendingKill()))
+        {
+            It = Pairs.erase(It);
+        }
+        else
+        {
+            ++It;
+        }
+    }
+}
+
+void FNativePhysicsScene::ErasePairsWithComponent(std::unordered_set<FNativePhysicsPair>& Pairs, UPrimitiveComponent* Comp)
+{
+    for (auto It = Pairs.begin(); It != Pairs.end();)
+    {
+        if (It->A.GetEvenIfPendingKill() == Comp || It->B.GetEvenIfPendingKill() == Comp)
+        {
+            It = Pairs.erase(It);
+        }
+        else
+        {
+            ++It;
+        }
+    }
 }
 
 // ============================================================

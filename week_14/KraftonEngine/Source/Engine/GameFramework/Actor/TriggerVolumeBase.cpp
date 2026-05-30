@@ -58,8 +58,8 @@ void ATriggerVolumeBase::BeginPlay()
 
 	if (TriggerBox)
 	{
-		TriggerBox->OnComponentBeginOverlap.AddRaw(this, &ATriggerVolumeBase::HandleBeginOverlap);
-		TriggerBox->OnComponentEndOverlap.AddRaw(this, &ATriggerVolumeBase::HandleEndOverlap);
+        TriggerBox->OnComponentBeginOverlap.AddUObject(this, &ATriggerVolumeBase::HandleBeginOverlap);
+        TriggerBox->OnComponentEndOverlap.AddUObject(this, &ATriggerVolumeBase::HandleEndOverlap);
 	}
 }
 

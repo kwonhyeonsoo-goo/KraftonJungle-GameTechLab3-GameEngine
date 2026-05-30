@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Core/Types/CollisionTypes.h"
 #include "Core/Types/CoreTypes.h"
@@ -68,6 +68,24 @@ enum class EConstraintMotion : uint8
     Locked
 };
 
+constexpr uint32 PhysicsFilter_ObjectTypeMask        = 0x000000FFu;
+constexpr uint32 PhysicsFilter_QueryOnly             = 1u << 8;
+constexpr uint32 PhysicsFilter_PhysicsOnly           = 1u << 9;
+constexpr uint32 PhysicsFilter_QueryAndPhysics       = 1u << 10;
+constexpr uint32 PhysicsFilter_IsTrigger             = 1u << 11;
+constexpr uint32 PhysicsFilter_GenerateHitEvents     = 1u << 12;
+constexpr uint32 PhysicsFilter_GenerateOverlapEvents = 1u << 13;
+
+inline uint32 GetPhysicsFilterObjectType(uint32 PackedWord0)
+{
+    return PackedWord0 & PhysicsFilter_ObjectTypeMask;
+}
+
+inline bool HasPhysicsFilterFlag(uint32 PackedWord0, uint32 Flag)
+{
+    return (PackedWord0 & Flag) != 0;
+}
+
 struct FPhysicsFilterData
 {
     uint32 ObjectType  = 0;
@@ -75,6 +93,11 @@ struct FPhysicsFilterData
     uint32 OverlapMask = 0;
 
     uint32 IgnoreGroup = 0;
+
+    ECollisionEnabled CollisionEnabled       = ECollisionEnabled::NoCollision;
+    bool              bIsTrigger             = false;
+    bool              bGenerateHitEvents     = false;
+    bool              bGenerateOverlapEvents = false;
 };
 
 struct FPhysicsShapeDesc

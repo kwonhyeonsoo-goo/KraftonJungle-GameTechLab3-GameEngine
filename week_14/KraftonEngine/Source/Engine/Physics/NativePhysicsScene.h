@@ -4,9 +4,45 @@
 #include "Core/Types/CollisionTypes.h"
 #include "Math/Vector.h"
 #include "Object/Ptr/WeakObjectPtr.h"
+#include "Object/Object.h"
 #include <unordered_set>
 #include <unordered_map>
 #include <vector>
+
+struct FNativePhysicsPair
+{
+    uint32                              AId = 0;
+    uint32                              BId = 0;
+    TWeakObjectPtr<UPrimitiveComponent> A;
+    TWeakObjectPtr<UPrimitiveComponent> B;
+
+    FNativePhysicsPair() = default;
+    FNativePhysicsPair(UPrimitiveComponent* InA, UPrimitiveComponent* InB);
+
+    bool IsValid() const
+    {
+        return AId != 0 && BId != 0 && AId != BId;
+    }
+
+    bool operator==(const FNativePhysicsPair& Other) const
+    {
+        return AId == Other.AId && BId == Other.BId;
+    }
+};
+
+namespace std
+{
+    template <>
+    struct hash<FNativePhysicsPair>
+    {
+        size_t operator()(const FNativePhysicsPair& Pair) const
+        {
+            size_t H = hash<uint32>()(Pair.AId);
+            H        ^= hash<uint32>()(Pair.BId) + 0x9e3779b9 + (H << 6) + (H >> 2);
+            return H;
+        }
+    };
+}
 
 // ============================================================
 // FNativePhysicsScene — 기존 hand-written 충돌 시스템 래핑
@@ -52,8 +88,8 @@ public:
 
 private:
 	void CompactInvalidComponents();
-	void ErasePairsWithInvalidComponents(std::unordered_set<FOverlapPair>& Pairs);
-	void ErasePairsWithComponent(std::unordered_set<FOverlapPair>& Pairs, UPrimitiveComponent* Comp);
+    void ErasePairsWithInvalidComponents(std::unordered_set<FNativePhysicsPair>& Pairs);
+    void ErasePairsWithComponent(std::unordered_set<FNativePhysicsPair>& Pairs, UPrimitiveComponent* Comp);
 
 	UWorld*                                          World = nullptr;
     std::vector<TWeakObjectPtr<UPrimitiveComponent>> RegisteredComponents;
@@ -74,10 +110,10 @@ private:
 	static constexpr float GravityZ = -9.81f;
 
 	// 이전/현재 프레임 오버랩 쌍 — Begin/End 이벤트 diff용
-	std::unordered_set<FOverlapPair> PreviousOverlaps;
-	std::unordered_set<FOverlapPair> CurrentOverlaps;
+    std::unordered_set<FNativePhysicsPair> PreviousOverlaps;
+    std::unordered_set<FNativePhysicsPair> CurrentOverlaps;
 
 	// Block 쌍 추적 — Hit 이벤트는 첫 접촉 시에만 발화
-	std::unordered_set<FOverlapPair> PreviousBlockPairs;
-	std::unordered_set<FOverlapPair> CurrentBlockPairs;
+    std::unordered_set<FNativePhysicsPair> PreviousBlockPairs;
+    std::unordered_set<FNativePhysicsPair> CurrentBlockPairs;
 };
