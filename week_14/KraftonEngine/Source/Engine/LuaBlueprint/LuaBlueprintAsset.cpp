@@ -303,6 +303,8 @@ namespace
             return "Add Force";
         case ELuaBlueprintNodeType::AddTorque:
             return "Add Torque";
+        case ELuaBlueprintNodeType::AddImpulse:
+            return "Add Impulse";
         case ELuaBlueprintNodeType::GetLinearVelocity:
             return "Get Linear Velocity";
         case ELuaBlueprintNodeType::SetLinearVelocity:
@@ -830,6 +832,7 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
         break;
     case ELuaBlueprintNodeType::AddForce:
     case ELuaBlueprintNodeType::AddTorque:
+    case ELuaBlueprintNodeType::AddImpulse:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Component"));
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Vector, FName("Vector"));

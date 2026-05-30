@@ -3,6 +3,7 @@
 #include "ContentItem.h"
 #include <d3d11.h>
 #include <memory>
+#include "ImGui/imgui.h"
 #include "ContentBrowserContext.h"
 #include "ContentBrowserElement.h"
 
@@ -17,6 +18,7 @@ class FEditorContentBrowserWidget final : public FEditorWidget
 public:
 	void Initialize(UEditorEngine* InEditor, ID3D11Device* InDevice);
 	void Render(float DeltaTime) override;
+	void RenderWithFlags(float DeltaTime, ImGuiWindowFlags WindowFlags);
 	void Refresh();
 	void SaveToSettings() const;
 	void SetIconSize(float Size);

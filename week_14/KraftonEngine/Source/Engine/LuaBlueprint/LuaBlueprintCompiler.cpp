@@ -637,6 +637,15 @@ namespace
                     "if __bp_is_valid_object({Component}) then ({Component}):AddTorque({Vector}) end"
                 );
                 break;
+            case ELuaBlueprintNodeType::AddImpulse:
+                EmitSimpleCall(
+                    Out,
+                    Node,
+                    Indent,
+                    ExecStack,
+                    "if __bp_is_valid_object({Component}) then ({Component}):AddImpulse({Vector}) end"
+                );
+                break;
             case ELuaBlueprintNodeType::SetLinearVelocity:
                 EmitSimpleCall(
                     Out,

@@ -131,6 +131,7 @@ enum class ELuaBlueprintNodeType : uint8
     SetLinearVelocity,
     GetMass,
     SetSimulatePhysics,
+    AddImpulse,
     // ── Math util ──
     Lerp,
     Clamp,

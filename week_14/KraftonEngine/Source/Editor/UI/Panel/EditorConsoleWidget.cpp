@@ -1,4 +1,4 @@
-#include "Editor/UI/Panel/EditorConsoleWidget.h"
+﻿#include "Editor/UI/Panel/EditorConsoleWidget.h"
 #include "Object/GarbageCollection.h"
 #include "Editor/EditorEngine.h"
 #include "Editor/Viewport/Level/LevelEditorViewportClient.h"
@@ -781,14 +781,14 @@ void FEditorConsoleWidget::HandleContentBrowserIconSize(const TArray<FString>& A
 	if (Args.empty())
 	{
 		AddLog("cb icon size: %.0f\n", EditorEngine->GetContentBrowserIconSize());
-		AddLog("Usage: cb icon size <20-100>\n");
+		AddLog("Usage: cb icon size <10-150>\n");
 		return;
 	}
 
 	const float Size = static_cast<float>(std::atof(Args[0].c_str()));
-	if (Size < 20.0f || Size > 100.0f)
+	if (Size < 10.0f || Size > 150.0f)
 	{
-		AddLog("[ERROR] Icon size must be 20~100.\n");
+		AddLog("[ERROR] Icon size must be 10~150.\n");
 		return;
 	}
 

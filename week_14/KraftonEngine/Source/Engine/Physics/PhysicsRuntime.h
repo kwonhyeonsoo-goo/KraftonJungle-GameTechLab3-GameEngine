@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Physics/PhysicsTypes.h"
 
@@ -18,6 +18,21 @@ public:
         FPhysicsBodyHandle             Parent,
         FPhysicsBodyHandle             Child,
         const FConstraintCreationDesc& Desc
+    ) = 0;
+
+    virtual FPhysicsConstraintHandle CreateFixedJoint(
+        FPhysicsBodyHandle  Parent,
+        const FTransform&   ParentLocalFrame,
+        FPhysicsBodyHandle  Child,
+        const FTransform&   ChildLocalFrame
+    ) = 0;
+
+    virtual FPhysicsConstraintHandle CreateSphericalJoint(
+        FPhysicsBodyHandle             Parent,
+        const FTransform&              ParentLocalFrame,
+        FPhysicsBodyHandle             Child,
+        const FTransform&              ChildLocalFrame,
+        const FConstraintLimitDesc&    AngularLimits
     ) = 0;
 
     virtual void DestroyConstraint(FPhysicsConstraintHandle Constraint) = 0;

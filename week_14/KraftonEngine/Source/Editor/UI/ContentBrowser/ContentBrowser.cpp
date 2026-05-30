@@ -131,7 +131,12 @@ void FEditorContentBrowserWidget::Initialize(UEditorEngine* InEditor, ID3D11Devi
 
 void FEditorContentBrowserWidget::Render(float DeltaTime)
 {
-	if (!ImGui::Begin("ContentBrowser"))
+	RenderWithFlags(DeltaTime, ImGuiWindowFlags_NoDocking);
+}
+
+void FEditorContentBrowserWidget::RenderWithFlags(float DeltaTime, ImGuiWindowFlags WindowFlags)
+{
+	if (!ImGui::Begin("ContentBrowser", nullptr, WindowFlags))
 	{
 		ImGui::End();
 		return;

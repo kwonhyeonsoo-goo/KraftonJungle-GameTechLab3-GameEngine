@@ -106,9 +106,7 @@ PxShape* FPhysXBodyBuilder::CreateShape(PxPhysics* Physics, PxMaterial* DefaultM
         const float PhysXHalfHeight = std::max(0.0f, Desc.CapsuleHalfHeight - Desc.CapsuleRadius);
         Geometry = PxCapsuleGeometry(Desc.CapsuleRadius, PhysXHalfHeight);
 
-        // PxCapsuleGeometry의 기본 축은 X축입니다. 기존 엔진의 Z-up 캡슐 표현과 맞추기 위해
-        // 기존 PhysXPhysicsScene.cpp에서 쓰던 보정 회전을 동일하게 유지합니다.
-        ShapeAxisRotation = PxQuat(PxHalfPi, PxVec3(0.0f, 0.0f, 1.0f));
+        ShapeAxisRotation = PxQuat(-PxHalfPi, PxVec3(0.0f, 1.0f, 0.0f));
         bHasGeometry = true;
     }
 
