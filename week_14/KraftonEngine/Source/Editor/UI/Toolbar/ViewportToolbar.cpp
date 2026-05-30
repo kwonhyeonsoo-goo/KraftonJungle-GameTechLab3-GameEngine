@@ -656,6 +656,7 @@ void FViewportToolbar::RenderViewMode(const FToolbarRenderState& State)
 		ImGui::RadioButton("Scene Depth", &CurrentMode, static_cast<int32>(EViewMode::SceneDepth));
 		ImGui::RadioButton("World Normal", &CurrentMode, static_cast<int32>(EViewMode::WorldNormal));
 		ImGui::RadioButton("Light Culling", &CurrentMode, static_cast<int32>(EViewMode::LightCulling));
+		ImGui::RadioButton("DoF CoC", &CurrentMode, static_cast<int32>(EViewMode::DoFCoC));
 
 		RenderOptions.ViewMode = static_cast<EViewMode>(CurrentMode);
 

@@ -83,6 +83,16 @@ void FViewport::BeginRender(ID3D11DeviceContext* Ctx, const float ClearColor[4])
 		const float CoCClear[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		Ctx->ClearRenderTargetView(CoCRTV, CoCClear);
 	}
+	if (DoFBackgroundRTV)
+	{
+		const float DoFClear[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		Ctx->ClearRenderTargetView(DoFBackgroundRTV, DoFClear);
+	}
+	if (DoFForegroundRTV)
+	{
+		const float DoFClear[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		Ctx->ClearRenderTargetView(DoFForegroundRTV, DoFClear);
+	}
 	Ctx->ClearDepthStencilView(DSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 0.0f, 0);
 	Ctx->OMSetRenderTargets(1, &RTV, DSV);
 	Ctx->RSSetViewports(1, &VPRect);
@@ -262,6 +272,41 @@ bool FViewport::CreateResources()
 	if (FAILED(hr)) return false;
 	CoCSRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportCoCSRV")), "ViewportCoCSRV");
 
+	// ── DoF intermediate RTs ──
+	D3D11_TEXTURE2D_DESC DoFLayerDesc = {};
+	DoFLayerDesc.Width = Width;
+	DoFLayerDesc.Height = Height;
+	DoFLayerDesc.MipLevels = 1;
+	DoFLayerDesc.ArraySize = 1;
+	DoFLayerDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	DoFLayerDesc.SampleDesc.Count = 1;
+	DoFLayerDesc.Usage = D3D11_USAGE_DEFAULT;
+	DoFLayerDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+	hr = Device->CreateTexture2D(&DoFLayerDesc, nullptr, &DoFBackgroundTexture);
+	if (FAILED(hr)) return false;
+	DoFBackgroundTexture->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportDoFBackgroundTexture")), "ViewportDoFBackgroundTexture");
+
+	hr = Device->CreateRenderTargetView(DoFBackgroundTexture, nullptr, &DoFBackgroundRTV);
+	if (FAILED(hr)) return false;
+	DoFBackgroundRTV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportDoFBackgroundRTV")), "ViewportDoFBackgroundRTV");
+
+	hr = Device->CreateShaderResourceView(DoFBackgroundTexture, nullptr, &DoFBackgroundSRV);
+	if (FAILED(hr)) return false;
+	DoFBackgroundSRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportDoFBackgroundSRV")), "ViewportDoFBackgroundSRV");
+
+	hr = Device->CreateTexture2D(&DoFLayerDesc, nullptr, &DoFForegroundTexture);
+	if (FAILED(hr)) return false;
+	DoFForegroundTexture->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportDoFForegroundTexture")), "ViewportDoFForegroundTexture");
+
+	hr = Device->CreateRenderTargetView(DoFForegroundTexture, nullptr, &DoFForegroundRTV);
+	if (FAILED(hr)) return false;
+	DoFForegroundRTV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportDoFForegroundRTV")), "ViewportDoFForegroundRTV");
+
+	hr = Device->CreateShaderResourceView(DoFForegroundTexture, nullptr, &DoFForegroundSRV);
+	if (FAILED(hr)) return false;
+	DoFForegroundSRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportDoFForegroundSRV")), "ViewportDoFForegroundSRV");
+
 	// ── 뷰포트 렉트 ──
 	ViewportRect.TopLeftX = 0.0f;
 	ViewportRect.TopLeftY = 0.0f;
@@ -275,6 +320,12 @@ bool FViewport::CreateResources()
 
 void FViewport::ReleaseResources()
 {
+	if (DoFForegroundSRV) { DoFForegroundSRV->Release(); DoFForegroundSRV = nullptr; }
+	if (DoFForegroundRTV) { DoFForegroundRTV->Release(); DoFForegroundRTV = nullptr; }
+	if (DoFForegroundTexture) { DoFForegroundTexture->Release(); DoFForegroundTexture = nullptr; }
+	if (DoFBackgroundSRV) { DoFBackgroundSRV->Release(); DoFBackgroundSRV = nullptr; }
+	if (DoFBackgroundRTV) { DoFBackgroundRTV->Release(); DoFBackgroundRTV = nullptr; }
+	if (DoFBackgroundTexture) { DoFBackgroundTexture->Release(); DoFBackgroundTexture = nullptr; }
 	if (CoCSRV) { CoCSRV->Release(); CoCSRV = nullptr; }
 	if (CoCRTV) { CoCRTV->Release(); CoCRTV = nullptr; }
 	if (CoCTexture) { CoCTexture->Release(); CoCTexture = nullptr; }

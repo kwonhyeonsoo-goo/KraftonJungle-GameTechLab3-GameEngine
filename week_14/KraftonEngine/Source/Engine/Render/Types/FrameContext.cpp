@@ -51,4 +51,8 @@ void FFrameContext::SetViewportInfo(const FViewport* VP)
 	CullingHeatmapSRV       = VP->GetCullingHeatmapSRV();
 	CoCRTV                  = VP->GetCoCRTV();
 	CoCSRV                  = VP->GetCoCSRV();
+	DoFBackgroundRTV        = VP->GetDoFBackgroundRTV();
+	DoFBackgroundSRV        = VP->GetDoFBackgroundSRV();
+	DoFForegroundRTV        = VP->GetDoFForegroundRTV();
+	DoFForegroundSRV        = VP->GetDoFForegroundSRV();
 }

@@ -12,6 +12,7 @@ enum class EViewMode : int32
 	SceneDepth,
 	WorldNormal,
 	LightCulling,
+	DoFCoC,
 	Count
 };
 

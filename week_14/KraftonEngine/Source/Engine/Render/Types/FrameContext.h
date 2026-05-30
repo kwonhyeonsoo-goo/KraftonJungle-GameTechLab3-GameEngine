@@ -67,6 +67,10 @@ struct FFrameContext
 	// DoF CoC RT
 	ID3D11RenderTargetView*   CoCRTV                = nullptr;
 	ID3D11ShaderResourceView* CoCSRV                = nullptr;
+	ID3D11RenderTargetView*   DoFBackgroundRTV      = nullptr;
+	ID3D11ShaderResourceView* DoFBackgroundSRV      = nullptr;
+	ID3D11RenderTargetView*   DoFForegroundRTV      = nullptr;
+	ID3D11ShaderResourceView* DoFForegroundSRV      = nullptr;
 
 	// Cursor position relative to viewport (for debug visualization)
 	uint32 CursorViewportX = UINT32_MAX;
@@ -134,5 +138,9 @@ struct FFrameContext
 		CullingHeatmapSRV       = nullptr;
 		CoCRTV                  = nullptr;
 		CoCSRV                  = nullptr;
+		DoFBackgroundRTV        = nullptr;
+		DoFBackgroundSRV        = nullptr;
+		DoFForegroundRTV        = nullptr;
+		DoFForegroundSRV        = nullptr;
 	}
 };

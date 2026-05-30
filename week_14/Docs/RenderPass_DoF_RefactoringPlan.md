@@ -2,21 +2,21 @@
 
 ## Context
 
-DoF 품질 개선과 translucent CoC 지원을 진행하면서 렌더 패스 구조 변경 요구가 늘어나고 있다. 이 문서는 DoF 알고리즘 자체가 아니라 render pass ordering, pass enum, pass resource hazard, editor overlay 정책을 별도로 추적한다.
+DoF 품질 개선 과정에서 렌더 패스 구조 변경 요구가 늘어나고 있다. 이 문서는 DoF 알고리즘 자체가 아니라 render pass ordering, pass enum, pass resource hazard, editor overlay 정책을 별도로 추적한다.
 
-DoF 알고리즘과 CoC 정책은 `Docs/DoF_Translucent_CoC_ImplementationPlan.md`에서 관리한다.
+Opaque DoF 알고리즘과 CoC 정책은 `Docs/DoF_Opaque_ImplementationPlan.md`에서 관리한다.
 
 ## Goals
 
 - DoF 관련 pass가 명확한 순서로 실행되도록 render pass 구조를 정리한다.
 - SceneColor, depth, CoC, intermediate blur RT의 SRV/RTV hazard 규칙을 패스 단위로 명시한다.
 - Editor overlay, gizmo, UI가 DoF 전후 어디에 위치해야 하는지 정책을 확정한다.
-- 향후 translucent CoC pass를 추가해도 기존 opaque DoF와 디버그 패스가 얽히지 않게 한다.
+- Phase 4 이후 작업을 opaque DoF 문서에서 분리해 후속 render-pass/refactoring 작업으로 관리한다.
 
 ## No Goals
 
 - 이 문서에서 DoF blur kernel 품질을 결정하지 않는다.
-- 이 문서에서 translucent material flag, CoC encoding, bokeh 품질을 결정하지 않는다.
+- 이 문서에서 opaque CoC encoding, bokeh 품질을 결정하지 않는다.
 - 전체 renderer architecture를 교체하지 않는다.
 
 ## Target Pass Layout
@@ -113,3 +113,24 @@ GammaCorrection
 
 - `ReleaseBuild.bat < NUL`
 - `git diff --check`
+
+## Phase R5: Deferred Translucent Rendering Work
+
+### Scope
+
+기존 DoF 계획서의 Phase 4 이후 작업은 모두 이 문서의 후속 refactoring 범위로 이양한다. Opaque DoF 안정화 문서에서는 translucent를 지원하지 않는다.
+
+### Deferred Tasks
+
+1. `UberTranslucent` split 여부를 render pass/material routing 관점에서 재검토한다.
+2. Surface translucent mesh가 `UberLit`에서 분리된 전용 shader path를 타야 하는지 결정한다.
+3. Translucent pass가 CoC RTV를 함께 바인딩할지, 별도 translucent CoC pass를 둘지 결정한다.
+4. `BlendStateManager`의 independent blend 지원 여부를 검토한다.
+5. Surface translucent material flag 정책을 별도 material/rendering 계획에서 정의한다.
+6. Particle translucent CoC 지원은 surface translucent 정책이 닫힌 뒤 별도 단계로 분리한다.
+7. Opaque DoF debug path와 translucent 후속 path가 같은 CoC 리소스를 SRV/RTV로 동시에 잡지 않도록 ping-pong 정책을 설계한다.
+
+### Validation
+
+- 이 Phase는 후속 작업 정의만 담당한다.
+- 실제 구현 착수 전 별도 상세 계획을 작성한다.

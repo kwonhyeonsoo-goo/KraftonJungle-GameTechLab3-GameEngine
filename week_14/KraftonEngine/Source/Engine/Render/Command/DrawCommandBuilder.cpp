@@ -689,7 +689,8 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 		}
 	}
 
-	if (Frame.RenderOptions.ShowFlags.bDoF)
+	const bool bDoFCoCDebug = Frame.RenderOptions.ViewMode == EViewMode::DoFCoC;
+	if (Frame.RenderOptions.ShowFlags.bDoF || bDoFCoCDebug)
 	{
 		FDoFConstants DoFData = {};
 		DoFData.FocusDistance = Frame.RenderOptions.DoFFocusDistance;
@@ -707,14 +708,49 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 			Cmd.BuildSortKey(0);
 		}
 
-		FShader* DoFShader = FShaderManager::Get().GetOrCreate(EShaderPath::DoFComposite);
-		if (DoFShader)
+		if (bDoFCoCDebug)
 		{
-			FDrawCommand& Cmd = DrawCommandList.AddCommand();
-			Cmd.InitFullscreenTriangle(DoFShader, ERenderPass::DoF,
-				PassRenderStateTable->ToDrawCommandState(ERenderPass::DoF, ViewMode));
-			Cmd.Bindings.PerShaderCB[0] = &DoFCB;
-			Cmd.BuildSortKey(0);
+			FShader* DoFDebugShader = FShaderManager::Get().GetOrCreate(EShaderPath::DoFCoCDebug);
+			if (DoFDebugShader)
+			{
+				FDrawCommand& Cmd = DrawCommandList.AddCommand();
+				Cmd.InitFullscreenTriangle(DoFDebugShader, ERenderPass::DoF,
+					PassRenderStateTable->ToDrawCommandState(ERenderPass::DoF, ViewMode));
+				Cmd.Bindings.PerShaderCB[0] = &DoFCB;
+				Cmd.BuildSortKey(0);
+			}
+		}
+		else
+		{
+			FShader* DoFBackgroundShader = FShaderManager::Get().GetOrCreate(EShaderPath::DoFBackgroundBlur);
+			if (DoFBackgroundShader)
+			{
+				FDrawCommand& Cmd = DrawCommandList.AddCommand();
+				Cmd.InitFullscreenTriangle(DoFBackgroundShader, ERenderPass::DoFBackgroundBlur,
+					PassRenderStateTable->ToDrawCommandState(ERenderPass::DoFBackgroundBlur, ViewMode));
+				Cmd.Bindings.PerShaderCB[0] = &DoFCB;
+				Cmd.BuildSortKey(0);
+			}
+
+			FShader* DoFForegroundShader = FShaderManager::Get().GetOrCreate(EShaderPath::DoFForegroundBlur);
+			if (DoFForegroundShader)
+			{
+				FDrawCommand& Cmd = DrawCommandList.AddCommand();
+				Cmd.InitFullscreenTriangle(DoFForegroundShader, ERenderPass::DoFForegroundBlur,
+					PassRenderStateTable->ToDrawCommandState(ERenderPass::DoFForegroundBlur, ViewMode));
+				Cmd.Bindings.PerShaderCB[0] = &DoFCB;
+				Cmd.BuildSortKey(0);
+			}
+
+			FShader* DoFShader = FShaderManager::Get().GetOrCreate(EShaderPath::DoFComposite);
+			if (DoFShader)
+			{
+				FDrawCommand& Cmd = DrawCommandList.AddCommand();
+				Cmd.InitFullscreenTriangle(DoFShader, ERenderPass::DoF,
+					PassRenderStateTable->ToDrawCommandState(ERenderPass::DoF, ViewMode));
+				Cmd.Bindings.PerShaderCB[0] = &DoFCB;
+				Cmd.BuildSortKey(0);
+			}
 		}
 	}
 

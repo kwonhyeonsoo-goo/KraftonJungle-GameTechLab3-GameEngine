@@ -56,6 +56,10 @@ public:
 	// Depth of Field CoC RT
 	ID3D11RenderTargetView* GetCoCRTV() const { return CoCRTV; }
 	ID3D11ShaderResourceView* GetCoCSRV() const { return CoCSRV; }
+	ID3D11RenderTargetView* GetDoFBackgroundRTV() const { return DoFBackgroundRTV; }
+	ID3D11ShaderResourceView* GetDoFBackgroundSRV() const { return DoFBackgroundSRV; }
+	ID3D11RenderTargetView* GetDoFForegroundRTV() const { return DoFForegroundRTV; }
+	ID3D11ShaderResourceView* GetDoFForegroundSRV() const { return DoFForegroundSRV; }
 
 	const D3D11_VIEWPORT& GetViewportRect() const { return ViewportRect; }
 
@@ -100,6 +104,14 @@ private:
 	ID3D11Texture2D* CoCTexture = nullptr;
 	ID3D11RenderTargetView* CoCRTV = nullptr;
 	ID3D11ShaderResourceView* CoCSRV = nullptr;
+
+	// DoF layer RTs — background color and foreground color+alpha mask
+	ID3D11Texture2D* DoFBackgroundTexture = nullptr;
+	ID3D11RenderTargetView* DoFBackgroundRTV = nullptr;
+	ID3D11ShaderResourceView* DoFBackgroundSRV = nullptr;
+	ID3D11Texture2D* DoFForegroundTexture = nullptr;
+	ID3D11RenderTargetView* DoFForegroundRTV = nullptr;
+	ID3D11ShaderResourceView* DoFForegroundSRV = nullptr;
 
 	D3D11_VIEWPORT ViewportRect = {};
 

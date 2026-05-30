@@ -1,5 +1,5 @@
 // DoFSetup.hlsl
-// Depth -> normalized circle of confusion.
+// Depth -> signed circle of confusion.
 
 #include "Common/Functions.hlsli"
 #include "Common/SystemResources.hlsli"
@@ -34,5 +34,5 @@ float PS(PS_Input_UV input) : SV_TARGET
 
     float viewDistance = length(worldPos - CameraWorldPos);
     float safeRange = max(FocusRange, 1.0f);
-    return saturate(abs(viewDistance - FocusDistance) / safeRange);
+    return clamp((viewDistance - FocusDistance) / safeRange, -1.0f, 1.0f);
 }
