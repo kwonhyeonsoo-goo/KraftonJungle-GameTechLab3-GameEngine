@@ -50,6 +50,18 @@ public:
     FPhysicsAssetInstance* GetOrCreatePhysicsAssetInstance();
     void DestroyPhysicsAssetInstance();
     UFUNCTION(Callable, Category="Physics")
+    bool EnableRagdollPhysics();
+    UFUNCTION(Callable, Category="Physics")
+    void DisableRagdollPhysics();
+    UFUNCTION(Pure, Category="Physics")
+    bool IsRagdollActive() const;
+    UFUNCTION(Pure, Category="Physics")
+    int32 GetLiveRagdollBodyCount() const;
+    UFUNCTION(Pure, Category="Physics")
+    int32 GetLiveRagdollConstraintCount() const;
+    UFUNCTION(Pure, Category="Physics")
+    UPhysicsAsset* GetActivePhysicsAsset() const;
+    UFUNCTION(Callable, Category="Physics")
     bool CreatePhysicsAssetInstanceBodies();
     UFUNCTION(Callable, Category="Physics")
     void DestroyPhysicsAssetInstanceBodies();

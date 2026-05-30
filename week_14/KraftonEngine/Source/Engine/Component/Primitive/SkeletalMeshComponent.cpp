@@ -261,8 +261,9 @@ void USkeletalMeshComponent::ResetRagdollRuntimeState()
 
 void USkeletalMeshComponent::OnPhysicsAssetChanged()
 {
+    // Asset changes invalidate the current runtime shell entirely; rebuilding is cheaper than
+    // trying to salvage stale body/constraint state across different bindings.
     DestroyPhysicsAssetInstance();
-    ResetRagdollRuntimeState();
 }
 
 FPhysicsAssetInstance* USkeletalMeshComponent::GetPhysicsAssetInstance() const
@@ -310,22 +311,26 @@ void USkeletalMeshComponent::DestroyPhysicsAssetInstance()
     PhysicsAssetInstance.reset();
 }
 
-bool USkeletalMeshComponent::CreatePhysicsAssetInstanceBodies()
+bool USkeletalMeshComponent::EnableRagdollPhysics()
 {
     FPhysicsAssetInstance* Instance = GetOrCreatePhysicsAssetInstance();
-    const bool bCreated = Instance ? Instance->CreateBodiesAndConstraints() : false;
-    if (bCreated)
-    {
-        SetUsePhysicsAssetPose(true);
-    }
-    else
+    if (!Instance)
     {
         SetUsePhysicsAssetPose(false);
+        return false;
     }
-    return bCreated;
+
+    if (!Instance->CreateBodiesAndConstraints())
+    {
+        SetUsePhysicsAssetPose(false);
+        return false;
+    }
+
+    SetUsePhysicsAssetPose(true);
+    return IsRagdollActive();
 }
 
-void USkeletalMeshComponent::DestroyPhysicsAssetInstanceBodies()
+void USkeletalMeshComponent::DisableRagdollPhysics()
 {
     SetUsePhysicsAssetPose(false);
     if (PhysicsAssetInstance)
@@ -334,9 +339,42 @@ void USkeletalMeshComponent::DestroyPhysicsAssetInstanceBodies()
     }
 }
 
+bool USkeletalMeshComponent::IsRagdollActive() const
+{
+    return bUsePhysicsAssetPose && PhysicsAssetInstance && PhysicsAssetInstance->HasLivePhysicsObjects();
+}
+
+int32 USkeletalMeshComponent::GetLiveRagdollBodyCount() const
+{
+    return PhysicsAssetInstance ? PhysicsAssetInstance->GetLiveBodyCount() : 0;
+}
+
+int32 USkeletalMeshComponent::GetLiveRagdollConstraintCount() const
+{
+    return PhysicsAssetInstance ? PhysicsAssetInstance->GetLiveConstraintCount() : 0;
+}
+
+UPhysicsAsset* USkeletalMeshComponent::GetActivePhysicsAsset() const
+{
+    return IsRagdollActive() && PhysicsAssetInstance ? PhysicsAssetInstance->GetAsset() : nullptr;
+}
+
+bool USkeletalMeshComponent::CreatePhysicsAssetInstanceBodies()
+{
+    return EnableRagdollPhysics();
+}
+
+void USkeletalMeshComponent::DestroyPhysicsAssetInstanceBodies()
+{
+    DisableRagdollPhysics();
+}
+
 void USkeletalMeshComponent::SetUsePhysicsAssetPose(bool bEnable)
 {
-    bUsePhysicsAssetPose = bEnable;
+    bUsePhysicsAssetPose =
+        bEnable &&
+        PhysicsAssetInstance &&
+        PhysicsAssetInstance->HasLivePhysicsObjects();
 }
 
 bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
@@ -349,6 +387,7 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
     FPhysicsAssetInstance* Instance = GetPhysicsAssetInstance();
     if (!Instance || !Instance->HasLivePhysicsObjects())
     {
+        SetUsePhysicsAssetPose(false);
         return false;
     }
 
@@ -356,6 +395,7 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
     FSkeletalMesh* MeshAsset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
     if (!MeshAsset || MeshAsset->Bones.empty())
     {
+        SetUsePhysicsAssetPose(false);
         return false;
     }
 
@@ -363,6 +403,7 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
     if (!Instance->PullPhysicsPose(BoneWorldTransforms) ||
         BoneWorldTransforms.size() < MeshAsset->Bones.size())
     {
+        SetUsePhysicsAssetPose(false);
         return false;
     }
 

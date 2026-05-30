@@ -472,23 +472,35 @@ void FPhysicsAssetInstance::ResetRuntimeState()
 
 bool FPhysicsAssetInstance::HasLivePhysicsObjects() const
 {
-    for (const FPhysicsConstraintHandle& ConstraintHandle : Constraints)
-    {
-        if (ConstraintHandle.IsValid())
-        {
-            return true;
-        }
-    }
+    return GetLiveBodyCount() > 0 || GetLiveConstraintCount() > 0;
+}
 
+int32 FPhysicsAssetInstance::GetLiveBodyCount() const
+{
+    int32 LiveBodyCount = 0;
     for (const FPhysicsBodyHandle& BodyHandle : BodiesByBone)
     {
         if (BodyHandle.IsValid())
         {
-            return true;
+            ++LiveBodyCount;
         }
     }
 
-    return false;
+    return LiveBodyCount;
+}
+
+int32 FPhysicsAssetInstance::GetLiveConstraintCount() const
+{
+    int32 LiveConstraintCount = 0;
+    for (const FPhysicsConstraintHandle& ConstraintHandle : Constraints)
+    {
+        if (ConstraintHandle.IsValid())
+        {
+            ++LiveConstraintCount;
+        }
+    }
+
+    return LiveConstraintCount;
 }
 
 bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTransforms) const
@@ -496,7 +508,7 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
     const USkeletalMeshComponent* Owner = GetOwnerComponent();
     const UPhysicsAsset* Asset = GetAsset();
     const IPhysicsRuntime* Runtime = GetPhysicsRuntime(Owner);
-    if (!Owner || !Asset || !Runtime)
+    if (!Owner || !Asset || !Runtime || GetLiveBodyCount() <= 0)
     {
         return false;
     }

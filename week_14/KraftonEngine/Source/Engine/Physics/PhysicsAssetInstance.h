@@ -19,6 +19,8 @@ public:
     void Shutdown();
     void ResetRuntimeState();
     bool HasLivePhysicsObjects() const;
+    int32 GetLiveBodyCount() const;
+    int32 GetLiveConstraintCount() const;
     bool PullPhysicsPose(TArray<FTransform>& OutBoneWorldTransforms) const;
 
     UPhysicsAsset* GetAsset() const;
