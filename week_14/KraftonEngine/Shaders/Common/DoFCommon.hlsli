@@ -31,6 +31,7 @@ static const float DoFFocusProtectScale = 2.0f;
 static const float DoFNearerSampleRejectWeight = 0.15f;
 static const float DoFNearerSampleRejectBias = 1.0f;
 static const float DoFMinAccumulatedWeight = 1.0e-4f;
+static const float DoFForegroundGatherFeather = 1.0f;
 
 static const int DoFMaxBokehSearchRadius = 64;
 static const float DoFBokehMinFeather = 1.0f;
