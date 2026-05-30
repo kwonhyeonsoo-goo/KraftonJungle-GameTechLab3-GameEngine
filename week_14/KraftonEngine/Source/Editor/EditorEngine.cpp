@@ -47,7 +47,7 @@ FString GetFileStem(const FString& InPath)
 	return FPaths::ToUtf8(Path.stem().wstring());
 }
 
-std::wstring GetNativeSceneDirectory()
+std::wstring GetSceneDialogDirectory()
 {
 	std::filesystem::path SceneDir(FSceneSaveManager::GetSceneDirectory());
 	std::filesystem::create_directories(SceneDir);
@@ -696,7 +696,7 @@ bool UEditorEngine::SaveScene()
 
 bool UEditorEngine::SaveSceneAsWithDialog()
 {
-	const std::wstring InitialDir = GetNativeSceneDirectory();
+	const std::wstring InitialDir = GetSceneDialogDirectory();
 	const std::wstring DefaultFile = HasCurrentLevelFilePath()
 		? std::filesystem::path(FPaths::ToWide(CurrentLevelFilePath)).filename().wstring()
 		: std::wstring(L"Untitled.Scene");
@@ -752,7 +752,7 @@ bool UEditorEngine::LoadSceneFromPath(const FString& InScenePath)
 
 bool UEditorEngine::LoadSceneWithDialog()
 {
-	const std::wstring InitialDir = GetNativeSceneDirectory();
+	const std::wstring InitialDir = GetSceneDialogDirectory();
 	const FString SelectedPath = FEditorFileUtils::OpenFileDialog({
 		.Filter = L"Scene Files (*.Scene)\0*.Scene\0All Files (*.*)\0*.*\0",
 		.Title = L"Load Scene",

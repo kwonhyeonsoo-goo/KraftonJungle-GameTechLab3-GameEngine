@@ -1371,7 +1371,7 @@ void FPhysXPhysicsRuntime::BuildDebugBodies_Internal(TArray<FPhysicsDebugBody>& 
             DebugShape.CapsuleHalfHeight = ShapeInstance->Desc.CapsuleHalfHeight;
 
             // PhysX shape에 실제 적용된 local pose를 body 월드 transform으로 합성한다.
-            // Capsule 축 보정 등 backend local pose 보정까지 포함되어 debug draw와 실제 충돌이 일치한다.
+            // Capsule 축 보정 등 PhysX local pose 보정까지 포함되어 debug draw와 실제 충돌이 일치한다.
             DebugShape.WorldTransform = ComposePhysicsTransforms(
                 DebugBody.BodyWorldTransform,
                 ShapeInstance->PhysXLocalTransform

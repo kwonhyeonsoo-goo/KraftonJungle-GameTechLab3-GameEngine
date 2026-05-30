@@ -55,7 +55,7 @@ void UPrimitiveComponent::BeginPlay()
 	// 직렬화나 InitDefaultComponents에서 CollisionEnabled가 이미 설정된 경우 등록.
 	// QueryOnly뿐 아니라 PhysicsOnly도 실제 물리 body가 필요하므로 NoCollision만 제외한다.
 	// 이 시점에 SimulatePhysics/ObjectType/Response/Mass/COM 등 모든 셋업이 끝나있어
-	// PhysX/Native가 정확한 값으로 body를 생성한다.
+	// PhysX가 정확한 값으로 body를 생성한다.
 	if (IsCollisionEnabled())
 	{
 		if (UWorld* World = GetWorld())
@@ -531,13 +531,10 @@ void UPrimitiveComponent::AddTorque(const FVector& Torque)
 
 void UPrimitiveComponent::AddImpulse(const FVector& Impulse)
 {
-    if (Owner)
-    {
-        if (UWorld* W = Owner->GetWorld())
-        {
-            if (IPhysicsScene* PS = W->GetPhysicsScene()) PS->AddImpulse(this, Impulse);
-        }
-    }
+	if (Owner)
+		if (UWorld* W = Owner->GetWorld())
+			if (IPhysicsScene* PS = W->GetPhysicsScene())
+				PS->AddImpulse(this, Impulse);
 }
 
 FVector UPrimitiveComponent::GetLinearVelocity() const
