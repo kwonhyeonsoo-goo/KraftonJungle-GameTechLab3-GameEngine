@@ -497,6 +497,9 @@ void FEditorContentBrowserWidget::RefreshContent()
 				case EAssetPackageType::LuaBlueprint:
 					Element = std::make_shared<LuaBlueprintElement>();
 					break;
+				case EAssetPackageType::PhysicsAsset:
+					Element = std::make_shared<PhysicsAssetElement>();
+					break;
 				case EAssetPackageType::Material:
 					Element = std::make_shared<MaterialElement>();
 					break;

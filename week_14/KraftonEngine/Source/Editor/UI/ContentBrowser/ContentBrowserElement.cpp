@@ -27,6 +27,8 @@
 #include "Materials/MaterialManager.h"
 #include "Editor/UI/Dialog/FbxImportOptionsDialog.h"
 #include "Editor/UI/Asset/Mesh/MeshEditorWidget.h"
+#include "Physics/PhysicsAsset.h"
+#include "Physics/PhysicsAssetManager.h"
 
 #include <algorithm>
 #include <chrono>
@@ -681,6 +683,20 @@ void LuaBlueprintElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 	if (ULuaBlueprintAsset* BlueprintAsset = FLuaBlueprintManager::Get().Load(FilePath))
 	{
 		Context.EditorEngine->OpenAssetEditorForObject(BlueprintAsset);
+	}
+}
+
+void PhysicsAssetElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
+{
+	if (!Context.EditorEngine)
+	{
+		return;
+	}
+
+	const FString PackagePath = FPaths::ToUtf8(ContentItem.Path.lexically_relative(FPaths::RootDir()).generic_wstring());
+	if (UPhysicsAsset* PhysicsAsset = FPhysicsAssetManager::Get().LoadPhysicsAsset(PackagePath))
+	{
+		Context.EditorEngine->OpenAssetEditorForObject(PhysicsAsset);
 	}
 }
 
