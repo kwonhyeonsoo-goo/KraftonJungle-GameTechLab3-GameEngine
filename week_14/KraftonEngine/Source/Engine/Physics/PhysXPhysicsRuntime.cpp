@@ -345,10 +345,15 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
         }
 
         const auto T1 = FClock::now();
-        Scene->simulate(FixedDt);
-        const auto T2 = FClock::now();
-        Scene->fetchResults(true);
-        const auto T3 = FClock::now();
+        auto       T2 = T1;
+        auto       T3 = T1;
+        {
+            PxSceneWriteLock WriteLock(*Scene);
+            Scene->simulate(FixedDt);
+            T2 = FClock::now();
+            Scene->fetchResults(true);
+            T3 = FClock::now();
+        }
 
         {
             PxSceneReadLock ReadLock(*Scene);
