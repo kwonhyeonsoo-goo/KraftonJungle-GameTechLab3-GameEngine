@@ -238,42 +238,6 @@ bool FAssetFactory::CreateVectorField(const FString& DirectoryPath, const FStrin
 	return true;
 }
 
-bool FAssetFactory::CreatePhysicsAsset(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath)
-{
-	const std::filesystem::path Directory(FPaths::ToWide(DirectoryPath));
-	if (!std::filesystem::exists(Directory) || !std::filesystem::is_directory(Directory))
-	{
-		return false;
-	}
-
-	const std::filesystem::path AssetPath = BuildUniqueAssetPath(
-		Directory,
-		AssetName.empty() ? FString("NewPhysicsAsset") : AssetName,
-		L".uasset"
-	);
-	const FString CreatedPath = FPaths::ToUtf8(AssetPath.wstring());
-
-	UPhysicsAsset* NewAsset = UObjectManager::Get().CreateObject<UPhysicsAsset>();
-	if (!NewAsset)
-	{
-		return false;
-	}
-
-	NewAsset->SetAssetPathFileName(FPaths::MakeProjectRelative(CreatedPath));
-
-	const bool bSaved = FPhysicsAssetManager::Get().SavePhysicsAsset(NewAsset, CreatedPath);
-	UObjectManager::Get().DestroyObject(NewAsset);
-
-	if (!bSaved)
-	{
-		return false;
-	}
-
-	FPhysicsAssetManager::Get().ScanPhysicsAssets();
-	OutCreatedPath = CreatedPath;
-	return true;
-}
-
 bool FAssetFactory::CreatePhysicsAssetForSkeletalMesh(
 	const FString& DirectoryPath,
 	const FString& AssetName,

@@ -189,7 +189,6 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 	AssetEditorManager.RegisterEditor<FAnimGraphEditorWidget>();
 	AssetEditorManager.RegisterEditor<FParticleEditorWidget>();
 	AssetEditorManager.RegisterEditor<FLuaBlueprintEditorWidget>();
-	AssetEditorManager.RegisterEditor<FPhysicsAssetEditorWidget>();
     AssetEditorManager.RegisterEditor<FMaterialEditorWidget>();
 }
 
