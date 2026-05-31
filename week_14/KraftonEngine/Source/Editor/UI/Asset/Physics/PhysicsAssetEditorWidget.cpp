@@ -947,13 +947,6 @@ void FPhysicsAssetEditorWidget::RenderPhysicsBoneContextMenu(
 
     if (ConstraintIndex >= 0)
     {
-        if (ImGui::MenuItem("Select Parent Constraint"))
-        {
-            SelectedConstraintIndex = ConstraintIndex;
-            SelectedBodyIndex = -1;
-            SelectedShapeIndex = -1;
-            SelectedTreeBoneIndex = BoneIndex;
-        }
         if (ImGui::MenuItem("Remove Parent Constraint"))
         {
             PhysicsAsset->RemoveConstraintSetupByIndex(ConstraintIndex);
@@ -1037,13 +1030,6 @@ void FPhysicsAssetEditorWidget::RenderSelectedBoneActionPanel(
     }
     if (!bCanCreateConstraint) ImGui::EndDisabled();
 
-    if (ConstraintIndex >= 0)
-    {
-        if (ImGui::Button("Select Parent Constraint", ImVec2(-1.0f, 0.0f)))
-        {
-            SelectConstraintSetup(PhysicsAsset, ConstraintIndex, SelectedTreeBoneIndex);
-        }
-    }
 }
 
 void FPhysicsAssetEditorWidget::RenderUnboundPhysicsSetups(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton)
@@ -1577,16 +1563,7 @@ void FPhysicsAssetEditorWidget::RenderSelectedBoneDetails(UPhysicsAsset* Physics
     if (ParentBodyBoneIndex >= 0)
     {
         ImGui::TextDisabled("Nearest Parent Body: %s", ParentBodyBoneName.ToString().c_str());
-        if (ConstraintIndex >= 0)
-        {
-            if (ImGui::Button("Select Parent Constraint", ImVec2(190.0f, 0.0f)))
-            {
-                SelectedConstraintIndex = ConstraintIndex;
-                SelectedBodyIndex = -1;
-                SelectedShapeIndex = -1;
-            }
-        }
-        else
+        if (ConstraintIndex < 0)
         {
             const bool bCanCreateConstraint = BodyIndex >= 0;
             if (!bCanCreateConstraint) ImGui::BeginDisabled();
