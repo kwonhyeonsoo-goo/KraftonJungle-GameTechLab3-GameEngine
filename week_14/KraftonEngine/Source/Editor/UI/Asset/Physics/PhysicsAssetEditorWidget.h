@@ -4,6 +4,8 @@
 #include "Physics/PhysicsAssetValidation.h"
 #include "Object/FName.h"
 
+namespace ax { namespace NodeEditor { struct EditorContext; } }
+
 class UPhysicsAsset;
 class USkeletalMesh;
 struct FReferenceSkeleton;
@@ -15,12 +17,14 @@ class FPhysicsAssetEditorWidget : public FAssetEditorWidget
 {
 public:
     FPhysicsAssetEditorWidget() = default;
+    ~FPhysicsAssetEditorWidget() override;
 
     bool CanEdit(UObject* Object) const override;
     bool IsEditingObject(UObject* Object) const override;
     bool AllowsMultipleInstances() const override { return true; }
 
     void Open(UObject* Object) override;
+    void Close() override;
     void Render(float DeltaTime) override;
     void RenderDocument(float DeltaTime) override;
 
@@ -51,6 +55,7 @@ private:
     void RenderShapeDetails(FPhysicsAssetShapeSetup& ShapeSetup);
     void RenderConstraintDetails(UPhysicsAsset* PhysicsAsset, FPhysicsAssetConstraintSetup& ConstraintSetup);
     void RenderValidationPanel();
+    void RenderConstraintGraphPanel(UPhysicsAsset* PhysicsAsset);
 
     void AddDefaultBody(UPhysicsAsset* PhysicsAsset);
     void AddDefaultBodyForBone(UPhysicsAsset* PhysicsAsset, const FName& BoneName);
@@ -59,6 +64,8 @@ private:
     void AddDefaultConstraintForBones(UPhysicsAsset* PhysicsAsset, const FName& ParentBoneName, const FName& ChildBoneName);
     void RunValidation(UPhysicsAsset* PhysicsAsset);
     void MarkPhysicsAssetDirty();
+    void InitializeConstraintGraphEditor();
+    void DestroyConstraintGraphEditor();
     void ClampSelection(UPhysicsAsset* PhysicsAsset);
 
 private:
@@ -67,7 +74,10 @@ private:
     int32 SelectedConstraintIndex = -1;
     int32 SelectedTreeBoneIndex = -1;
     USkeletalMesh* PreviewSkeletalMesh = nullptr;
+    ax::NodeEditor::EditorContext* ConstraintGraphContext = nullptr;
     bool bPendingClose = false;
+    bool bConstraintGraphLayoutDirty = true;
+    uint64 ConstraintGraphTopologyHash = 0;
 
     TArray<FPhysicsAssetValidationIssue> ValidationIssues;
     FString ValidationMeshPath;

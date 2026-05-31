@@ -11,8 +11,12 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <functional>
 
 #include <imgui.h>
+#include "imgui_node_editor.h"
+
+namespace ed = ax::NodeEditor;
 
 namespace
 {
@@ -275,6 +279,130 @@ namespace
         Label += RefSkeleton.Bones[BoneIndex].Name;
         return Label;
     }
+
+
+    constexpr uint32 PhysicsBodyNodeBase = 100000;
+    constexpr uint32 PhysicsConstraintNodeBase = 200000;
+    constexpr uint32 PhysicsBodyInputPinBase = 300000;
+    constexpr uint32 PhysicsBodyOutputPinBase = 400000;
+    constexpr uint32 PhysicsConstraintInputPinBase = 500000;
+    constexpr uint32 PhysicsConstraintOutputPinBase = 600000;
+    constexpr uint32 PhysicsParentLinkBase = 700000;
+    constexpr uint32 PhysicsChildLinkBase = 800000;
+
+    inline ed::NodeId ToPhysicsNodeId(uint32 Id) { return static_cast<ed::NodeId>(Id); }
+    inline ed::PinId ToPhysicsPinId(uint32 Id) { return static_cast<ed::PinId>(Id); }
+    inline ed::LinkId ToPhysicsLinkId(uint32 Id) { return static_cast<ed::LinkId>(Id); }
+    inline uint32 PhysicsNodeIdToU32(ed::NodeId Id) { return static_cast<uint32>(Id.Get()); }
+    inline uint32 PhysicsPinIdToU32(ed::PinId Id) { return static_cast<uint32>(Id.Get()); }
+    inline uint32 PhysicsLinkIdToU32(ed::LinkId Id) { return static_cast<uint32>(Id.Get()); }
+
+    uint32 MakeBodyNodeId(int32 BodyIndex) { return PhysicsBodyNodeBase + static_cast<uint32>(BodyIndex); }
+    uint32 MakeConstraintNodeId(int32 ConstraintIndex) { return PhysicsConstraintNodeBase + static_cast<uint32>(ConstraintIndex); }
+    uint32 MakeBodyInputPinId(int32 BodyIndex) { return PhysicsBodyInputPinBase + static_cast<uint32>(BodyIndex); }
+    uint32 MakeBodyOutputPinId(int32 BodyIndex) { return PhysicsBodyOutputPinBase + static_cast<uint32>(BodyIndex); }
+    uint32 MakeConstraintInputPinId(int32 ConstraintIndex) { return PhysicsConstraintInputPinBase + static_cast<uint32>(ConstraintIndex); }
+    uint32 MakeConstraintOutputPinId(int32 ConstraintIndex) { return PhysicsConstraintOutputPinBase + static_cast<uint32>(ConstraintIndex); }
+    uint32 MakeParentLinkId(int32 ConstraintIndex) { return PhysicsParentLinkBase + static_cast<uint32>(ConstraintIndex); }
+    uint32 MakeChildLinkId(int32 ConstraintIndex) { return PhysicsChildLinkBase + static_cast<uint32>(ConstraintIndex); }
+
+    bool DecodeBodyInputPin(uint32 PinId, int32& OutBodyIndex)
+    {
+        if (PinId < PhysicsBodyInputPinBase || PinId >= PhysicsBodyOutputPinBase)
+        {
+            return false;
+        }
+        OutBodyIndex = static_cast<int32>(PinId - PhysicsBodyInputPinBase);
+        return true;
+    }
+
+    bool DecodeBodyOutputPin(uint32 PinId, int32& OutBodyIndex)
+    {
+        if (PinId < PhysicsBodyOutputPinBase || PinId >= PhysicsConstraintInputPinBase)
+        {
+            return false;
+        }
+        OutBodyIndex = static_cast<int32>(PinId - PhysicsBodyOutputPinBase);
+        return true;
+    }
+
+    bool DecodeBodyNode(uint32 NodeId, int32& OutBodyIndex)
+    {
+        if (NodeId < PhysicsBodyNodeBase || NodeId >= PhysicsConstraintNodeBase)
+        {
+            return false;
+        }
+        OutBodyIndex = static_cast<int32>(NodeId - PhysicsBodyNodeBase);
+        return true;
+    }
+
+    bool DecodeConstraintNode(uint32 NodeId, int32& OutConstraintIndex)
+    {
+        if (NodeId < PhysicsConstraintNodeBase || NodeId >= PhysicsBodyInputPinBase)
+        {
+            return false;
+        }
+        OutConstraintIndex = static_cast<int32>(NodeId - PhysicsConstraintNodeBase);
+        return true;
+    }
+
+    bool DecodeConstraintLink(uint32 LinkId, int32& OutConstraintIndex)
+    {
+        if (LinkId >= PhysicsParentLinkBase && LinkId < PhysicsChildLinkBase)
+        {
+            OutConstraintIndex = static_cast<int32>(LinkId - PhysicsParentLinkBase);
+            return true;
+        }
+        if (LinkId >= PhysicsChildLinkBase)
+        {
+            OutConstraintIndex = static_cast<int32>(LinkId - PhysicsChildLinkBase);
+            return true;
+        }
+        return false;
+    }
+
+    void HashCombine(uint64& Seed, uint64 Value)
+    {
+        Seed ^= Value + 0x9e3779b97f4a7c15ull + (Seed << 6) + (Seed >> 2);
+    }
+
+    void HashName(uint64& Seed, const FName& Name)
+    {
+        const FString Text = Name.ToString();
+        for (char Ch : Text)
+        {
+            HashCombine(Seed, static_cast<uint64>(static_cast<unsigned char>(Ch)));
+        }
+    }
+
+    bool IsValidBodyIndex(const UPhysicsAsset* PhysicsAsset, int32 BodyIndex)
+    {
+        return PhysicsAsset && BodyIndex >= 0 && BodyIndex < static_cast<int32>(PhysicsAsset->GetBodySetups().size());
+    }
+
+    bool IsValidConstraintIndex(const UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex)
+    {
+        return PhysicsAsset && ConstraintIndex >= 0 && ConstraintIndex < static_cast<int32>(PhysicsAsset->GetConstraintSetups().size());
+    }
+}
+
+FPhysicsAssetEditorWidget::~FPhysicsAssetEditorWidget()
+{
+    DestroyConstraintGraphEditor();
+}
+
+void FPhysicsAssetEditorWidget::Close()
+{
+    DestroyConstraintGraphEditor();
+    PreviewSkeletalMesh = nullptr;
+    SelectedBodyIndex = -1;
+    SelectedShapeIndex = -1;
+    SelectedConstraintIndex = -1;
+    SelectedTreeBoneIndex = -1;
+    bPendingClose = false;
+    bConstraintGraphLayoutDirty = true;
+    ConstraintGraphTopologyHash = 0;
+    FAssetEditorWidget::Close();
 }
 
 bool FPhysicsAssetEditorWidget::CanEdit(UObject* Object) const
@@ -300,6 +428,8 @@ void FPhysicsAssetEditorWidget::Open(UObject* Object)
     EditedObject = Object;
     bOpen = true;
     bPendingClose = false;
+    bConstraintGraphLayoutDirty = true;
+    ConstraintGraphTopologyHash = 0;
     SelectedBodyIndex = -1;
     SelectedShapeIndex = -1;
     SelectedConstraintIndex = -1;
@@ -426,9 +556,19 @@ void FPhysicsAssetEditorWidget::RenderDocument(float DeltaTime)
     ImGui::SameLine();
 
     ImGui::BeginChild("##PhysicsAssetRight", ImVec2(RightWidth, 0.0f), true);
+    const float RightAvailableHeight = ImGui::GetContentRegionAvail().y;
+    const float MaxGraphHeight = (std::max)(120.0f, RightAvailableHeight - 180.0f);
+    const float GraphHeight = (std::min)((std::max)(180.0f, RightAvailableHeight * 0.40f), MaxGraphHeight);
+    const float DetailsHeight = (std::max)(120.0f, RightAvailableHeight - GraphHeight - ImGui::GetStyle().ItemSpacing.y);
+
+    ImGui::BeginChild("##PhysicsAssetDetailsAndValidation", ImVec2(0.0f, DetailsHeight), false);
     RenderDetailsPanel(PhysicsAsset);
     ImGui::Separator();
     RenderValidationPanel();
+    ImGui::EndChild();
+
+    ImGui::Separator();
+    RenderConstraintGraphPanel(PhysicsAsset);
     ImGui::EndChild();
 }
 
@@ -838,6 +978,318 @@ void FPhysicsAssetEditorWidget::RenderConstraintList(UPhysicsAsset* PhysicsAsset
     if (!bCanRemove) ImGui::EndDisabled();
 }
 
+
+void FPhysicsAssetEditorWidget::InitializeConstraintGraphEditor()
+{
+    if (ConstraintGraphContext)
+    {
+        return;
+    }
+
+    ed::Config Config;
+    ConstraintGraphContext = ed::CreateEditor(&Config);
+    bConstraintGraphLayoutDirty = true;
+    ConstraintGraphTopologyHash = 0;
+}
+
+void FPhysicsAssetEditorWidget::DestroyConstraintGraphEditor()
+{
+    if (ConstraintGraphContext)
+    {
+        ed::DestroyEditor(ConstraintGraphContext);
+        ConstraintGraphContext = nullptr;
+    }
+}
+
+void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* PhysicsAsset)
+{
+    ImGui::TextUnformatted("Constraint Graph");
+    ImGui::SameLine();
+    ImGui::TextDisabled("Drag Body output pin to another Body input pin. Delete removes selected nodes/links.");
+
+    if (!PhysicsAsset)
+    {
+        ImGui::TextDisabled("No PhysicsAsset selected.");
+        return;
+    }
+
+    const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
+    const TArray<FPhysicsAssetConstraintSetup>& Constraints = PhysicsAsset->GetConstraintSetups();
+    if (Bodies.empty())
+    {
+        ImGui::BeginChild("##PhysicsConstraintGraphEmpty", ImVec2(0.0f, 0.0f), true);
+        ImGui::TextDisabled("No bodies. Add bodies from the Skeleton Physics Tree first.");
+        ImGui::EndChild();
+        return;
+    }
+
+    InitializeConstraintGraphEditor();
+    if (!ConstraintGraphContext)
+    {
+        ImGui::TextDisabled("Constraint graph editor is unavailable.");
+        return;
+    }
+
+    uint64 TopologyHash = 0;
+    HashCombine(TopologyHash, static_cast<uint64>(Bodies.size()));
+    HashCombine(TopologyHash, static_cast<uint64>(Constraints.size()));
+    for (const FPhysicsAssetBodySetup& Body : Bodies)
+    {
+        HashName(TopologyHash, Body.BoneName);
+        HashCombine(TopologyHash, static_cast<uint64>(Body.Shapes.size()));
+    }
+    for (const FPhysicsAssetConstraintSetup& Constraint : Constraints)
+    {
+        HashName(TopologyHash, Constraint.ParentBoneName);
+        HashName(TopologyHash, Constraint.ChildBoneName);
+    }
+
+    if (TopologyHash != ConstraintGraphTopologyHash)
+    {
+        ConstraintGraphTopologyHash = TopologyHash;
+        bConstraintGraphLayoutDirty = true;
+    }
+
+    ImGui::BeginChild("##PhysicsConstraintGraphHost", ImVec2(0.0f, 0.0f), true);
+    ed::SetCurrentEditor(ConstraintGraphContext);
+    ed::Begin("PhysicsConstraintGraph");
+
+    if (bConstraintGraphLayoutDirty)
+    {
+        for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
+        {
+            const float X = (BodyIndex % 2 == 0) ? 20.0f : 520.0f;
+            const float Y = 30.0f + static_cast<float>(BodyIndex / 2) * 115.0f;
+            ed::SetNodePosition(ToPhysicsNodeId(MakeBodyNodeId(BodyIndex)), ImVec2(X, Y));
+        }
+
+        for (int32 ConstraintIndex = 0; ConstraintIndex < static_cast<int32>(Constraints.size()); ++ConstraintIndex)
+        {
+            ed::SetNodePosition(
+                ToPhysicsNodeId(MakeConstraintNodeId(ConstraintIndex)),
+                ImVec2(275.0f, 45.0f + static_cast<float>(ConstraintIndex) * 115.0f));
+        }
+        bConstraintGraphLayoutDirty = false;
+    }
+
+    for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
+    {
+        const FPhysicsAssetBodySetup& Body = Bodies[BodyIndex];
+        const bool bSelected = SelectedBodyIndex == BodyIndex && SelectedConstraintIndex < 0;
+        const FString BoneLabel = Body.BoneName == FName::None ? FString("<None>") : Body.BoneName.ToString();
+        const int32 ShapeCount = static_cast<int32>(Body.Shapes.size());
+
+        ed::BeginNode(ToPhysicsNodeId(MakeBodyNodeId(BodyIndex)));
+        ed::BeginPin(ToPhysicsPinId(MakeBodyInputPinId(BodyIndex)), ed::PinKind::Input);
+        ImGui::TextColored(ImVec4(0.55f, 0.90f, 0.80f, 1.0f), "o");
+        ed::EndPin();
+        ImGui::SameLine();
+        ImGui::BeginGroup();
+        ImGui::TextColored(
+            bSelected ? ImVec4(1.0f, 0.86f, 0.18f, 1.0f) : ImVec4(0.64f, 0.88f, 0.62f, 1.0f),
+            "Body");
+        if (ImGui::IsItemClicked())
+        {
+            SelectedBodyIndex = BodyIndex;
+            SelectedShapeIndex = Body.Shapes.empty() ? -1 : 0;
+            SelectedConstraintIndex = -1;
+            SelectedTreeBoneIndex = -1;
+        }
+        ImGui::TextUnformatted(BoneLabel.c_str());
+        if (ImGui::IsItemClicked())
+        {
+            SelectedBodyIndex = BodyIndex;
+            SelectedShapeIndex = Body.Shapes.empty() ? -1 : 0;
+            SelectedConstraintIndex = -1;
+            SelectedTreeBoneIndex = -1;
+        }
+        ImGui::TextDisabled("%d %s", ShapeCount, ShapeCount == 1 ? "shape" : "shapes");
+        ImGui::EndGroup();
+        ImGui::SameLine();
+        ed::BeginPin(ToPhysicsPinId(MakeBodyOutputPinId(BodyIndex)), ed::PinKind::Output);
+        ImGui::TextColored(ImVec4(0.55f, 0.90f, 0.80f, 1.0f), "o");
+        ed::EndPin();
+        ed::EndNode();
+    }
+
+    for (int32 ConstraintIndex = 0; ConstraintIndex < static_cast<int32>(Constraints.size()); ++ConstraintIndex)
+    {
+        const FPhysicsAssetConstraintSetup& Constraint = Constraints[ConstraintIndex];
+        const bool bSelected = SelectedConstraintIndex == ConstraintIndex;
+        const FString ParentLabel = Constraint.ParentBoneName == FName::None ? FString("<None>") : Constraint.ParentBoneName.ToString();
+        const FString ChildLabel = Constraint.ChildBoneName == FName::None ? FString("<None>") : Constraint.ChildBoneName.ToString();
+
+        ed::BeginNode(ToPhysicsNodeId(MakeConstraintNodeId(ConstraintIndex)));
+        ed::BeginPin(ToPhysicsPinId(MakeConstraintInputPinId(ConstraintIndex)), ed::PinKind::Input);
+        ImGui::TextColored(ImVec4(0.90f, 0.86f, 0.55f, 1.0f), "o");
+        ed::EndPin();
+        ImGui::SameLine();
+        ImGui::BeginGroup();
+        ImGui::TextColored(
+            bSelected ? ImVec4(1.0f, 0.70f, 0.42f, 1.0f) : ImVec4(0.90f, 0.86f, 0.55f, 1.0f),
+            "Constraint");
+        if (ImGui::IsItemClicked())
+        {
+            SelectedConstraintIndex = ConstraintIndex;
+            SelectedBodyIndex = -1;
+            SelectedShapeIndex = -1;
+            SelectedTreeBoneIndex = -1;
+        }
+        ImGui::TextDisabled("%s -> %s", ParentLabel.c_str(), ChildLabel.c_str());
+        if (ImGui::IsItemClicked())
+        {
+            SelectedConstraintIndex = ConstraintIndex;
+            SelectedBodyIndex = -1;
+            SelectedShapeIndex = -1;
+            SelectedTreeBoneIndex = -1;
+        }
+        ImGui::EndGroup();
+        ImGui::SameLine();
+        ed::BeginPin(ToPhysicsPinId(MakeConstraintOutputPinId(ConstraintIndex)), ed::PinKind::Output);
+        ImGui::TextColored(ImVec4(0.90f, 0.86f, 0.55f, 1.0f), "o");
+        ed::EndPin();
+        ed::EndNode();
+    }
+
+    for (int32 ConstraintIndex = 0; ConstraintIndex < static_cast<int32>(Constraints.size()); ++ConstraintIndex)
+    {
+        const FPhysicsAssetConstraintSetup& Constraint = Constraints[ConstraintIndex];
+        const int32 ParentBodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(Constraint.ParentBoneName);
+        const int32 ChildBodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(Constraint.ChildBoneName);
+        if (ParentBodyIndex >= 0)
+        {
+            ed::Link(
+                ToPhysicsLinkId(MakeParentLinkId(ConstraintIndex)),
+                ToPhysicsPinId(MakeBodyOutputPinId(ParentBodyIndex)),
+                ToPhysicsPinId(MakeConstraintInputPinId(ConstraintIndex)),
+                ImColor(130, 210, 190));
+        }
+        if (ChildBodyIndex >= 0)
+        {
+            ed::Link(
+                ToPhysicsLinkId(MakeChildLinkId(ConstraintIndex)),
+                ToPhysicsPinId(MakeConstraintOutputPinId(ConstraintIndex)),
+                ToPhysicsPinId(MakeBodyInputPinId(ChildBodyIndex)),
+                ImColor(225, 215, 145));
+        }
+    }
+
+    if (ed::BeginCreate())
+    {
+        ed::PinId StartPinId = 0;
+        ed::PinId EndPinId = 0;
+        if (ed::QueryNewLink(&StartPinId, &EndPinId) && StartPinId && EndPinId)
+        {
+            int32 ParentBodyIndex = -1;
+            int32 ChildBodyIndex = -1;
+            const uint32 StartPin = PhysicsPinIdToU32(StartPinId);
+            const uint32 EndPin = PhysicsPinIdToU32(EndPinId);
+            const bool bForward = DecodeBodyOutputPin(StartPin, ParentBodyIndex) && DecodeBodyInputPin(EndPin, ChildBodyIndex);
+            const bool bReverse = DecodeBodyOutputPin(EndPin, ParentBodyIndex) && DecodeBodyInputPin(StartPin, ChildBodyIndex);
+
+            const bool bCanCreate =
+                (bForward || bReverse) &&
+                ParentBodyIndex != ChildBodyIndex &&
+                IsValidBodyIndex(PhysicsAsset, ParentBodyIndex) &&
+                IsValidBodyIndex(PhysicsAsset, ChildBodyIndex) &&
+                HasBoneName(Bodies[ParentBodyIndex].BoneName) &&
+                HasBoneName(Bodies[ChildBodyIndex].BoneName) &&
+                !PhysicsAsset->HasConstraintBetweenBones(Bodies[ParentBodyIndex].BoneName, Bodies[ChildBodyIndex].BoneName);
+
+            if (bCanCreate)
+            {
+                if (ed::AcceptNewItem(ImVec4(0.55f, 0.90f, 0.80f, 1.0f), 2.0f))
+                {
+                    AddDefaultConstraintForBones(PhysicsAsset, Bodies[ParentBodyIndex].BoneName, Bodies[ChildBodyIndex].BoneName);
+                    bConstraintGraphLayoutDirty = true;
+                }
+            }
+            else
+            {
+                ed::RejectNewItem(ImVec4(1.0f, 0.25f, 0.25f, 1.0f), 2.0f);
+            }
+        }
+    }
+    ed::EndCreate();
+
+    TArray<int32> ConstraintsToDelete;
+    TArray<int32> BodiesToDelete;
+    if (ed::BeginDelete())
+    {
+        ed::LinkId DeletedLinkId = 0;
+        while (ed::QueryDeletedLink(&DeletedLinkId))
+        {
+            int32 ConstraintIndex = -1;
+            if (DecodeConstraintLink(PhysicsLinkIdToU32(DeletedLinkId), ConstraintIndex) &&
+                IsValidConstraintIndex(PhysicsAsset, ConstraintIndex))
+            {
+                if (ed::AcceptDeletedItem())
+                {
+                    ConstraintsToDelete.push_back(ConstraintIndex);
+                }
+            }
+        }
+
+        ed::NodeId DeletedNodeId = 0;
+        while (ed::QueryDeletedNode(&DeletedNodeId))
+        {
+            int32 BodyIndex = -1;
+            int32 ConstraintIndex = -1;
+            const uint32 DeletedNode = PhysicsNodeIdToU32(DeletedNodeId);
+            if (DecodeBodyNode(DeletedNode, BodyIndex) && IsValidBodyIndex(PhysicsAsset, BodyIndex))
+            {
+                if (ed::AcceptDeletedItem())
+                {
+                    BodiesToDelete.push_back(BodyIndex);
+                }
+            }
+            else if (DecodeConstraintNode(DeletedNode, ConstraintIndex) && IsValidConstraintIndex(PhysicsAsset, ConstraintIndex))
+            {
+                if (ed::AcceptDeletedItem())
+                {
+                    ConstraintsToDelete.push_back(ConstraintIndex);
+                }
+            }
+        }
+    }
+    ed::EndDelete();
+
+    if (!ConstraintsToDelete.empty())
+    {
+        std::sort(ConstraintsToDelete.begin(), ConstraintsToDelete.end(), std::greater<int32>());
+        ConstraintsToDelete.erase(std::unique(ConstraintsToDelete.begin(), ConstraintsToDelete.end()), ConstraintsToDelete.end());
+        for (int32 ConstraintIndex : ConstraintsToDelete)
+        {
+            if (PhysicsAsset->RemoveConstraintSetupByIndex(ConstraintIndex))
+            {
+                SelectedConstraintIndex = -1;
+                MarkPhysicsAssetDirty();
+            }
+        }
+        bConstraintGraphLayoutDirty = true;
+    }
+
+    if (!BodiesToDelete.empty())
+    {
+        std::sort(BodiesToDelete.begin(), BodiesToDelete.end(), std::greater<int32>());
+        BodiesToDelete.erase(std::unique(BodiesToDelete.begin(), BodiesToDelete.end()), BodiesToDelete.end());
+        for (int32 BodyIndex : BodiesToDelete)
+        {
+            if (PhysicsAsset->RemoveBodySetupByIndex(BodyIndex))
+            {
+                SelectedBodyIndex = -1;
+                SelectedShapeIndex = -1;
+                SelectedConstraintIndex = -1;
+                MarkPhysicsAssetDirty();
+            }
+        }
+        bConstraintGraphLayoutDirty = true;
+    }
+
+    ed::End();
+    ImGui::EndChild();
+}
+
 void FPhysicsAssetEditorWidget::RenderDetailsPanel(UPhysicsAsset* PhysicsAsset)
 {
     if (SelectedBodyIndex >= 0 && SelectedBodyIndex < static_cast<int32>(PhysicsAsset->GetMutableBodySetups().size()))
@@ -1234,6 +1686,8 @@ void FPhysicsAssetEditorWidget::RunValidation(UPhysicsAsset* PhysicsAsset)
 void FPhysicsAssetEditorWidget::MarkPhysicsAssetDirty()
 {
     MarkDirty();
+    bConstraintGraphLayoutDirty = true;
+    ConstraintGraphTopologyHash = 0;
     bValidationRan = false;
     ValidationIssues.clear();
     ValidationMeshPath.clear();
