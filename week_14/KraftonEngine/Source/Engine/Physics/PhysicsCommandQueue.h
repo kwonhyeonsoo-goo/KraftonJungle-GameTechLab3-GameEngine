@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Object/Ptr/WeakObjectPtr.h"
 #include "Physics/PhysicsTypes.h"
 
 #include <cstdint>
@@ -8,8 +7,7 @@
 
 enum class EPhysicsCommandType : uint8
 {
-    // Component lifetime / rebuild boundary
-    RegisterComponent,
+    CreateBody,
     UnregisterComponent,
     RebuildComponentBody,
 
@@ -58,10 +56,13 @@ struct FPhysicsCommand
 
     EPhysicsCommandType Type = EPhysicsCommandType::DestroyBody;
 
+    FPhysicsObjectKey Object;
+
     FPhysicsBodyHandle       Body;
+    FPhysicsShapeHandle      Shape;
     FPhysicsConstraintHandle Constraint;
 
-    TWeakObjectPtr<UPrimitiveComponent> Component;
+    FPhysicsBodyCreatePayload CreateBody;
 
     FTransform TransformValue;
     FVector    VectorValue  = FVector::ZeroVector;

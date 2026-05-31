@@ -36,6 +36,14 @@ public:
 	// --- 시뮬레이션 ---
 	virtual void Tick(float DeltaTime) = 0;
 
+    virtual void SubmitPhysicsFrame(uint64 FrameIndex, float DeltaTime)
+    {
+        Tick(DeltaTime);
+    }
+
+    virtual void WaitPhysicsFrame(uint64 /*FrameIndex*/)
+    {}
+
     // Physics callback에서 수집한 이벤트를 안전한 PostPhysics 경계에서 발화한다.
     virtual void DispatchPendingEvents()
     {}
@@ -81,6 +89,11 @@ public:
 	// Trigger flag shape는 PhysX query 단계에서 자동 제외된다.
 	virtual bool RaycastByObjectTypes(const FVector& Start, const FVector& Dir, float MaxDist, FHitResult& OutHit,
 		uint32 ObjectTypeMask, const AActor* IgnoreActor = nullptr) const = 0;
+
+    virtual uint32 GetComponentGeneration_GameThread(uint32 /*ComponentId*/) const
+    {
+        return 0;
+    }
 
     virtual IPhysicsRuntime* GetRuntime()
     {

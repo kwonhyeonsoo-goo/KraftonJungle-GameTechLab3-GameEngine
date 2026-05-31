@@ -124,22 +124,23 @@ private:
 
 	// CameraManager 는 PC 가 owner. Editor 모드에서는 active viewport 가 IPOVProvider 로
 	// 자기 POV 를 노출하면 World 가 pull. 직접 POV cache 는 보유하지 않는다.
-	IPOVProvider* EditorPOVProvider = nullptr;
-	EWorldType WorldType = EWorldType::Editor;
-	bool bHasBegunPlay = false;
-	bool bPaused = false;
-	float GameTimeSeconds = 0.0f;
-	bool bWorldDestroyRouted = false;
-	FWorldSettings WorldSettings;
-	bool bHasLastFullLODUpdateCameraPos = false;
+    IPOVProvider*                     EditorPOVProvider   = nullptr;
+    EWorldType                        WorldType           = EWorldType::Editor;
+    bool                              bHasBegunPlay       = false;
+    bool                              bPaused             = false;
+    float                             GameTimeSeconds     = 0.0f;
+    bool                              bWorldDestroyRouted = false;
+    FWorldSettings                    WorldSettings;
+    bool                              bHasLastFullLODUpdateCameraPos = false;
 	mutable FWorldPrimitivePickingBVH WorldPrimitivePickingBVH;
-	int32 DeferredPickingBVHUpdateDepth = 0;
-	bool bDeferredPickingBVHDirty = false;
-	uint32 VisibleProxyBuildFrame = 0;
-	FVector LastFullLODUpdateCameraForward = FVector(1, 0, 0);
-	FVector LastFullLODUpdateCameraPos = FVector(0, 0, 0);
-	FScene Scene;
-	FTickManager TickManager;
+    int32                             DeferredPickingBVHUpdateDepth  = 0;
+    bool                              bDeferredPickingBVHDirty       = false;
+    uint32                            VisibleProxyBuildFrame         = 0;
+    FVector                           LastFullLODUpdateCameraForward = FVector(1, 0, 0);
+    FVector                           LastFullLODUpdateCameraPos     = FVector(0, 0, 0);
+    FScene                            Scene;
+    FTickManager                      TickManager;
+    uint64                            PhysicsFrameIndex = 0;
 
 	FSpatialPartition Partition;
 	std::unique_ptr<IPhysicsScene> PhysicsScene;

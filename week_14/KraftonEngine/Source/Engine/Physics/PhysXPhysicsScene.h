@@ -3,6 +3,15 @@
 #include "Physics/IPhysicsScene.h"
 #include "Core/Types/CoreTypes.h"
 #include "Physics/PhysXPhysicsRuntime.h"
+#include "Physics/PhysicsComponentBinding.h"
+#include "Physics/PhysicsEventSnapshot.h"
+#include "Physics/PhysicsQueryTypes.h"
+
+#include <atomic>
+#include <condition_variable>
+#include <cstdint>
+#include <mutex>
+#include <thread>
 
 class AActor;
 
@@ -39,6 +48,8 @@ public:
     void RebuildBody(UPrimitiveComponent* Comp) override;
 
     void Tick(float DeltaTime) override;
+    void SubmitPhysicsFrame(uint64 FrameIndex, float DeltaTime) override;
+    void WaitPhysicsFrame(uint64 FrameIndex) override;
     void DispatchPendingEvents() override;
 
     void AddForce(UPrimitiveComponent* Comp, const FVector& Force) override;
@@ -93,7 +104,27 @@ public:
         return &Runtime;
     }
 
+    uint32 GetComponentGeneration_GameThread(uint32 ComponentId) const override;
+
 private:
+    FPhysicsComponentBinding&       TouchBinding_GameThread(UPrimitiveComponent* Comp);
+    const FPhysicsComponentBinding* FindBinding_GameThread(uint32 ComponentId) const;
+    FPhysicsComponentBinding*       FindBinding_GameThread(uint32 ComponentId);
+
+    FPhysicsBodyCreatePayload BuildRegisterPayload_GameThread(UPrimitiveComponent* Comp, FPhysicsComponentBinding& Binding);
+    FBodyCreationDesc         BuildBodyDescFromComponent_GameThread(UPrimitiveComponent* Comp, uint32 Generation) const;
+    FPhysicsShapeDesc         BuildShapeDescFromComponent_GameThread(UPrimitiveComponent* Comp, UPrimitiveComponent* RootComponent) const;
+    void                      EnqueueEngineTransformSync_GameThread();
+    bool                      ResolveRaycastResult_GameThread(const FPhysicsRaycastResult& PhysicsResult, FHitResult& OutHit) const;
+
+    void StartPhysicsThread();
+    void StopPhysicsThreadAndJoin();
+    void PhysicsThreadMain();
+    void RunPhysicsFrame_PhysicsThread(float DeltaTime);
+
+    TMap<uint32, FPhysicsComponentBinding> GameThreadBindings;
+    TMap<uint32, FPhysicsBodyHandle>       GameThreadActorBodies;
+
 	UWorld* World = nullptr;
 
 	// PhysX core objects
@@ -106,4 +137,16 @@ private:
     FPhysXSimulationCallback* EventCallback = nullptr;
 
     FPhysXPhysicsRuntime Runtime;
+
+    std::thread             PhysicsThread;
+    mutable std::mutex      PhysicsThreadMutex;
+    std::condition_variable PhysicsThreadCv;
+    std::condition_variable PhysicsThreadDoneCv;
+    bool                    bPhysicsThreadStarted       = false;
+    bool                    bPhysicsThreadStopRequested = false;
+    bool                    bPhysicsFramePending        = false;
+    bool                    bPhysicsFrameInProgress     = false;
+    uint64                  PendingPhysicsFrameIndex    = 0;
+    uint64                  CompletedPhysicsFrameIndex  = 0;
+    float                   PendingPhysicsDeltaTime     = 0.0f;
 };

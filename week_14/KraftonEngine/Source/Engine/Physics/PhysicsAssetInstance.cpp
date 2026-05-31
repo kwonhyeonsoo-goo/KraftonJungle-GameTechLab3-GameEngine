@@ -158,12 +158,13 @@ namespace
             return false;
         }
 
-        OutDesc = FBodyCreationDesc{};
-        OutDesc.OwnerActor = OwnerComponent->GetOwner();
-        OutDesc.OwnerComponent = OwnerComponent;
-        OutDesc.Domain = EPhysicsBodyDomain::Ragdoll;
-        OutDesc.BoneName = BodySetup.BoneName;
-        OutDesc.BodyType = EPhysicsBodyType::Dynamic;
+        OutDesc                          = FBodyCreationDesc {};
+        OutDesc.OwnerActorId             = OwnerComponent->GetOwner() ? OwnerComponent->GetOwner()->GetUUID() : 0;
+        OutDesc.OwnerComponentId         = OwnerComponent->GetUUID();
+        OutDesc.OwnerComponentGeneration = 1;
+        OutDesc.Domain                   = EPhysicsBodyDomain::Ragdoll;
+        OutDesc.BoneName                 = BodySetup.BoneName;
+        OutDesc.BodyType                 = EPhysicsBodyType::Dynamic;
         // Ragdoll bodies stay manual because skeletal pose sync is driven explicitly by
         // the component rather than by generic component/world transform mirroring.
         OutDesc.SyncMode = EPhysicsSyncMode::Manual;
@@ -527,6 +528,13 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
         return false;
     }
 
+    std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot = Runtime->AcquireLatestSnapshotRef();
+    if (!Snapshot)
+    {
+        return false;
+    }
+    const uint32 SkeletalMeshComponentId = Owner->GetUUID();
+
     const USkeletalMesh* Mesh = Owner->GetSkeletalMesh();
     const FSkeletalMesh* MeshAsset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
     if (!MeshAsset)
@@ -574,8 +582,14 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
             continue;
         }
 
-        const FTransform BodyWorld = Runtime->GetBodyTransform(BodyHandle);
-        FTransform BoneWorld = OutBoneWorldTransforms[BoneIndex];
+        const FPhysicsBodySnapshot* BodySnapshot =
+                Snapshot->FindRagdollBone(SkeletalMeshComponentId, BodySetup.BoneName);
+        if (!BodySnapshot)
+        {
+            continue;
+        }
+        const FTransform BodyWorld = BodySnapshot->CurrentTransform;
+        FTransform       BoneWorld = OutBoneWorldTransforms[BoneIndex];
         if (!ComputeBoneWorldTransformFromBody(BodySetup, BodyWorld, BoneWorld))
         {
             continue;
@@ -613,14 +627,18 @@ FPhysicsBodyHandle FPhysicsAssetInstance::GetBodyHandleByBoneName(const FName& B
 
 FTransform FPhysicsAssetInstance::GetBodyWorldTransformByBoneName(const FName& BoneName) const
 {
-    const FPhysicsBodyHandle BodyHandle = GetBodyHandleByBoneName(BoneName);
-    if (!BodyHandle.IsValid())
+    const USkeletalMeshComponent* Owner   = GetOwnerComponent();
+    const IPhysicsRuntime*        Runtime = GetPhysicsRuntime(static_cast<const USkeletalMeshComponent*>(Owner));
+    if (!Owner || !Runtime)
     {
         return FTransform();
     }
 
-    const IPhysicsRuntime* Runtime = GetPhysicsRuntime(static_cast<const USkeletalMeshComponent*>(GetOwnerComponent()));
-    return Runtime ? Runtime->GetBodyTransform(BodyHandle) : FTransform();
+    std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot     = Runtime->AcquireLatestSnapshotRef();
+    const FPhysicsBodySnapshot*                  BodySnapshot = Snapshot
+            ? Snapshot->FindRagdollBone(Owner->GetUUID(), BoneName)
+            : nullptr;
+    return BodySnapshot ? BodySnapshot->CurrentTransform : FTransform();
 }
 
 bool FPhysicsAssetInstance::HasValidBodyForBone(const FName& BoneName) const

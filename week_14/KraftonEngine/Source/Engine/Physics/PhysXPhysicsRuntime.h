@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Object/Ptr/WeakObjectPtr.h"
 #include "Physics/PhysicsBodyInstance.h"
 #include "Physics/PhysicsCommandQueue.h"
 #include "Physics/PhysicsConstraintInstance.h"
@@ -27,12 +26,13 @@ namespace physx
 
 struct FActorCompoundBody
 {
-    TWeakObjectPtr<AActor>              OwnerActor;
-    TWeakObjectPtr<UPrimitiveComponent> RootComponent;
+    uint32 OwnerActorId    = 0;
+    uint32 RootComponentId = 0;
+    uint32 RootGeneration  = 0;
 
     FPhysicsBodyHandle Body;
 
-    TArray<TWeakObjectPtr<UPrimitiveComponent>> Components;
+    TArray<uint32> Components;
 };
 
 class FPhysXPhysicsRuntime : public IPhysicsRuntime
@@ -52,12 +52,14 @@ public:
 
     void Tick(float DeltaTime);
 
-    void RegisterComponent(UPrimitiveComponent* Comp);
-    void UnregisterComponent(UPrimitiveComponent* Comp);
-    void RebuildBody(UPrimitiveComponent* Comp);
+    FPhysicsBodyHandle  ReserveBodyHandle_GameThread();
+    FPhysicsShapeHandle ReserveShapeHandle_GameThread();
+    void                RegisterComponent(const FPhysicsBodyCreatePayload& Payload);
+    void                UnregisterComponent(const FPhysicsObjectKey& Object);
+    void                RebuildBody(const TArray<FPhysicsBodyCreatePayload>& Payloads);
 
-    FPhysicsBodyHandle  FindBodyByComponent(UPrimitiveComponent* Comp) const;
-    FPhysicsShapeHandle FindShapeByComponent(UPrimitiveComponent* Comp) const;
+    FPhysicsBodyHandle  FindBodyByComponentId(uint32 ComponentId) const;
+    FPhysicsShapeHandle FindShapeByComponentId(uint32 ComponentId) const;
 
     FPhysicsBodyHandle CreateRigidBody(const FBodyCreationDesc& Desc) override;
     void               DestroyRigidBody(FPhysicsBodyHandle Body) override;
@@ -131,10 +133,7 @@ public:
     void GatherDebugConstraints(TArray<FPhysicsDebugConstraint>& OutConstraints) const override;
     void GetDebugSnapshot(FPhysicsDebugSnapshot& OutSnapshot) const;
 
-    const FPhysicsStats& GetStats() const override
-    {
-        return Stats;
-    }
+    FPhysicsStats GetStats() const override;
 
 private:
     FPhysicsBodyHandle       AllocateBody();
@@ -167,24 +166,21 @@ private:
     void FreeShape(FPhysicsShapeHandle Handle);
     void FreeConstraint(FPhysicsConstraintHandle Handle);
 
-    void RegisterComponent_Internal(UPrimitiveComponent* Comp);
-    void UnregisterComponent_Internal(UPrimitiveComponent* Comp);
-    void RebuildBody_Internal(UPrimitiveComponent* Comp);
-
-    FBodyCreationDesc BuildBodyDescFromComponent(UPrimitiveComponent* Comp) const;
-    FPhysicsShapeDesc BuildShapeDescFromComponent(
-        UPrimitiveComponent* Comp,
-        UPrimitiveComponent* RootComponent
-    ) const;
+    void RegisterComponent_Internal(const FPhysicsBodyCreatePayload& Payload);
+    void UnregisterComponent_Internal(const FPhysicsObjectKey& Object);
+    void RebuildBody_Internal(const TArray<FPhysicsBodyCreatePayload>& Payloads);
 
     FPhysicsShapeHandle AddShapeToBody(
         FPhysicsBodyHandle       BodyHandle,
-        UPrimitiveComponent*     SourceComponent,
-        const FPhysicsShapeDesc& Desc
+        uint32                   SourceComponentId,
+        uint32                   SourceActorId,
+        uint32                   SourceGeneration,
+        const FPhysicsShapeDesc& Desc,
+        FPhysicsShapeHandle      ReservedShape = FPhysicsShapeHandle {}
     );
 
     void DetachShape(FPhysicsShapeHandle ShapeHandle);
-    void DetachShapeForComponent(UPrimitiveComponent* Comp);
+    void DetachShapeForComponentId(uint32 ComponentId);
 
     void SyncEngineToPhysics(FBodyInstance& Body);
     void CachePhysicsResult(FBodyInstance& Body);
@@ -215,11 +211,13 @@ private:
     void BuildWorldSnapshot_Internal();
     void BuildDebugSnapshot_Internal();
 
-    FActorCompoundBody*       FindCompoundByActor(AActor* Actor);
-    const FActorCompoundBody* FindCompoundByActor(AActor* Actor) const;
+    FActorCompoundBody*       FindCompoundByActorId(uint32 ActorId);
+    const FActorCompoundBody* FindCompoundByActorId(uint32 ActorId) const;
 
 private:
     UWorld* World = nullptr;
+
+    mutable std::mutex RuntimeStateMutex;
 
     physx::PxPhysics*  Physics         = nullptr;
     physx::PxScene*    Scene           = nullptr;
@@ -234,7 +232,7 @@ private:
     TArray<std::unique_ptr<FConstraintInstance>> Constraints;
     TArray<uint32>                               ConstraintGenerations;
 
-    // UObject raw pointer를 map key로 보관하지 않는다. UUID key + weak value로 GC 이후 stale address 재사용을 차단한다.
+    // UObject raw pointer를 보관하지 않는다. Game Thread에서 복사한 UUID/handle만 runtime map의 key/value로 사용한다.
     TMap<uint32, FActorCompoundBody>  ActorCompounds;
     TMap<uint32, FPhysicsBodyHandle>  ComponentToBody;
     TMap<uint32, FPhysicsShapeHandle> ComponentToShape;

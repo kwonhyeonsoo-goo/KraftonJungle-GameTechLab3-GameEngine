@@ -3,16 +3,9 @@
 #include "Physics/PhysXConstraintBuilder.h"
 #include "Physics/PhysXConversion.h"
 
-#include "Component/PrimitiveComponent.h"
 #include "Core/ProjectSettings.h"
-#include "Component/Shape/BoxComponent.h"
-#include "Component/Shape/CapsuleComponent.h"
-#include "Component/Shape/SphereComponent.h"
 #include "Core/Logging/Log.h"
-#include "Core/Types/EngineTypes.h"
-#include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
-#include "Object/Object.h"
 
 #include <algorithm>
 #include <chrono>
@@ -27,169 +20,12 @@ namespace
         return Index != UINT32_MAX && static_cast<size_t>(Index) < Size;
     }
 
-    uint32 GetObjectKey(const UObject* Object)
-    {
-        return IsAliveObject(Object) ? Object->GetUUID() : 0;
-    }
-
     FTransform ComposePhysicsTransforms(const FTransform& ParentWorld, const FTransform& Local)
     {
         FTransform Result = Local;
-        Result.Location =
-            ParentWorld.Location + ParentWorld.Rotation.RotateVector(Local.Location);
-        Result.Rotation = ParentWorld.Rotation * Local.Rotation;
+        Result.Location   = ParentWorld.Location + ParentWorld.Rotation.RotateVector(Local.Location);
+        Result.Rotation   = ParentWorld.Rotation * Local.Rotation;
         return Result;
-    }
-
-    FTransform GetComponentWorldTransform(UPrimitiveComponent* Comp)
-    {
-        FTransform Result;
-        if (!Comp)
-        {
-            return Result;
-        }
-
-        Result.Location = Comp->GetWorldLocation();
-        Result.Rotation = Comp->GetWorldMatrix().ToQuat();
-        Result.Scale = FVector::OneVector;
-        return Result;
-    }
-
-    FTransform MakeRelativeTransformFromWorld(
-        const FVector& ChildWorldLocation,
-        const FQuat& ChildWorldRotation,
-        UPrimitiveComponent* Root
-    )
-    {
-        FTransform Result;
-
-        if (!Root)
-        {
-            Result.Location = ChildWorldLocation;
-            Result.Rotation = ChildWorldRotation;
-            Result.Scale = FVector::OneVector;
-            return Result;
-        }
-
-        const FVector RootPos = Root->GetWorldLocation();
-        const FQuat RootRot = Root->GetWorldMatrix().ToQuat();
-        const FQuat InvRootRot = RootRot.Inverse();
-
-        Result.Location = InvRootRot.RotateVector(ChildWorldLocation - RootPos);
-        Result.Rotation = InvRootRot * ChildWorldRotation;
-        Result.Scale = FVector::OneVector;
-        return Result;
-    }
-
-    FTransform MakeShapeLocalTransform(
-        UPrimitiveComponent* Comp,
-        UPrimitiveComponent* Root
-    )
-    {
-        if (!Comp || !Root || Comp == Root)
-        {
-            return FTransform();
-        }
-
-        return MakeRelativeTransformFromWorld(
-            Comp->GetWorldLocation(),
-            Comp->GetWorldMatrix().ToQuat(),
-            Root
-        );
-    }
-
-    bool HasAnyBlockResponse(UPrimitiveComponent* Comp)
-    {
-        if (!Comp)
-        {
-            return false;
-        }
-
-        for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
-        {
-            if (Comp->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(Ch))
-                == ECollisionResponse::Block)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    bool HasAnyOverlapResponse(UPrimitiveComponent* Comp)
-    {
-        if (!Comp)
-        {
-            return false;
-        }
-
-        for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
-        {
-            if (Comp->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(Ch))
-                == ECollisionResponse::Overlap)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    bool ShouldBeTriggerShape(UPrimitiveComponent* Comp, bool bOwnerBodyIsDynamic)
-    {
-        if (!Comp || Comp->GetCollisionEnabled() == ECollisionEnabled::NoCollision)
-        {
-            return false;
-        }
-
-        const bool bHasAnyBlock     = HasAnyBlockResponse(Comp);
-        bool       bShouldBeTrigger =
-                (Comp->GetCollisionObjectType() == ECollisionChannel::Trigger && !bHasAnyBlock) ||
-                (Comp->GetCollisionEnabled() == ECollisionEnabled::QueryOnly &&
-                    !bHasAnyBlock &&
-                    HasAnyOverlapResponse(Comp));
-
-        if (bShouldBeTrigger && bOwnerBodyIsDynamic)
-        {
-            bShouldBeTrigger = false;
-        }
-
-        return bShouldBeTrigger;
-    }
-
-    void FillFilterDataFromComponent(
-        FPhysicsFilterData&  Out,
-        UPrimitiveComponent* Comp,
-        bool                 bIsTriggerShape
-    )
-    {
-        if (!Comp)
-        {
-            return;
-        }
-
-        Out.ObjectType             = static_cast<uint32>(Comp->GetCollisionObjectType());
-        Out.BlockMask              = 0;
-        Out.OverlapMask            = 0;
-        Out.IgnoreGroup            = Comp->GetOwner() ? Comp->GetOwner()->GetUUID() : 0;
-        Out.CollisionEnabled       = Comp->GetCollisionEnabled();
-        Out.bIsTrigger             = bIsTriggerShape;
-        Out.bGenerateHitEvents     = true;
-        Out.bGenerateOverlapEvents = Comp->GetGenerateOverlapEvents();
-
-        for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
-        {
-            const ECollisionResponse R =
-                Comp->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(Ch));
-
-            if (R == ECollisionResponse::Block)
-            {
-                Out.BlockMask |= (1u << Ch);
-            }
-            else if (R == ECollisionResponse::Overlap)
-            {
-                Out.OverlapMask |= (1u << Ch);
-            }
-        }
     }
 }
 
@@ -218,7 +54,8 @@ void FPhysXPhysicsRuntime::Initialize(
 
 void FPhysXPhysicsRuntime::Shutdown()
 {
-    const bool bSceneLockedForShutdown = Scene != nullptr;
+    std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
+    const bool                  bSceneLockedForShutdown = Scene != nullptr;
     if (bSceneLockedForShutdown)
     {
         Scene->lockWrite();
@@ -285,6 +122,7 @@ void FPhysXPhysicsRuntime::Shutdown()
 
 void FPhysXPhysicsRuntime::Tick(float DeltaTime)
 {
+    std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
     if (!Scene || DeltaTime <= 0.0f)
     {
         Stats.NumSubsteps = 0;
@@ -431,76 +269,78 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
     }
 }
 
-
-void FPhysXPhysicsRuntime::RegisterComponent(UPrimitiveComponent* Comp)
+FPhysicsBodyHandle FPhysXPhysicsRuntime::ReserveBodyHandle_GameThread()
 {
-    if (!IsAliveObject(Comp) || !Scene)
-    {
-        return;
-    }
-
-    // Registration allocates the body/shape handle immediately so same-frame
-    // gameplay calls such as AddForce can resolve the component. Destructive
-    // mutation paths (unregister/rebuild/destroy) remain command-boundary based.
-    PxSceneWriteLock WriteLock(*Scene);
-    RegisterComponent_Internal(Comp);
+    std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
+    return AllocateBody();
 }
 
-void FPhysXPhysicsRuntime::UnregisterComponent(UPrimitiveComponent* Comp)
+FPhysicsShapeHandle FPhysXPhysicsRuntime::ReserveShapeHandle_GameThread()
 {
-    if (!Comp)
+    std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
+    return AllocateShape();
+}
+
+void FPhysXPhysicsRuntime::RegisterComponent(const FPhysicsBodyCreatePayload& Payload)
+{
+    if (!Scene || !Payload.ShapeOwner.ComponentId)
     {
         return;
     }
 
     FPhysicsCommand Cmd;
-    Cmd.Type      = EPhysicsCommandType::UnregisterComponent;
-    Cmd.Component = Comp;
+    Cmd.Type       = EPhysicsCommandType::CreateBody;
+    Cmd.Object     = Payload.ShapeOwner;
+    Cmd.Body       = Payload.ReservedBody;
+    Cmd.Shape      = Payload.ReservedShape;
+    Cmd.CreateBody = Payload;
     EnqueueCommand(Cmd);
 }
 
-void FPhysXPhysicsRuntime::RebuildBody(UPrimitiveComponent* Comp)
+void FPhysXPhysicsRuntime::UnregisterComponent(const FPhysicsObjectKey& Object)
 {
-    if (!IsAliveObject(Comp))
+    if (!Object.ComponentId)
     {
         return;
     }
 
     FPhysicsCommand Cmd;
-    Cmd.Type      = EPhysicsCommandType::RebuildComponentBody;
-    Cmd.Component = Comp;
+    Cmd.Type   = EPhysicsCommandType::UnregisterComponent;
+    Cmd.Object = Object;
     EnqueueCommand(Cmd);
 }
 
-void FPhysXPhysicsRuntime::RegisterComponent_Internal(UPrimitiveComponent* Comp)
+void FPhysXPhysicsRuntime::RebuildBody(const TArray<FPhysicsBodyCreatePayload>& Payloads)
 {
-    if (!IsValid(Comp) || !Physics || !Scene || !DefaultMaterial)
+    FPhysicsCommand Cmd;
+    Cmd.Type = EPhysicsCommandType::RebuildComponentBody;
+    EnqueueCommand(Cmd);
+
+    for (const FPhysicsBodyCreatePayload& Payload : Payloads)
+    {
+        FPhysicsObjectKey Object = Payload.ShapeOwner;
+        UnregisterComponent(Object);
+        RegisterComponent(Payload);
+    }
+}
+
+void FPhysXPhysicsRuntime::RegisterComponent_Internal(const FPhysicsBodyCreatePayload& Payload)
+{
+    if (!Physics || !Scene || !DefaultMaterial || Payload.ShapeOwner.ComponentId == 0)
     {
         return;
     }
 
-    if (ComponentToShape.find(GetObjectKey(Comp)) != ComponentToShape.end())
+    if (ComponentToShape.find(Payload.ShapeOwner.ComponentId) != ComponentToShape.end())
     {
         return;
     }
 
-    AActor* OwnerActor = Comp->GetOwner();
-    if (!IsValid(OwnerActor))
-    {
-        return;
-    }
-
-    FActorCompoundBody* Compound = FindCompoundByActor(OwnerActor);
+    FActorCompoundBody* Compound = FindCompoundByActorId(Payload.BodyOwner.ActorId);
 
     if (!Compound)
     {
-        UPrimitiveComponent* RootPrim = Cast<UPrimitiveComponent>(OwnerActor->GetRootComponent());
-        if (!RootPrim)
-        {
-            RootPrim = Comp;
-        }
-
-        FBodyCreationDesc BodyDesc = BuildBodyDescFromComponent(RootPrim);
+        FBodyCreationDesc BodyDesc = ToBodyCreationDesc(Payload);
         BodyDesc.Shapes.clear();
 
         FPhysicsBodyHandle BodyHandle = CreateRigidBody_Internal(BodyDesc);
@@ -510,148 +350,109 @@ void FPhysXPhysicsRuntime::RegisterComponent_Internal(UPrimitiveComponent* Comp)
         }
 
         FActorCompoundBody NewCompound;
-        NewCompound.OwnerActor = OwnerActor;
-        NewCompound.RootComponent = RootPrim;
-        NewCompound.Body = BodyHandle;
+        NewCompound.OwnerActorId    = Payload.BodyOwner.ActorId;
+        NewCompound.RootComponentId = Payload.BodyOwner.ComponentId;
+        NewCompound.RootGeneration  = Payload.BodyOwner.ComponentGeneration;
+        NewCompound.Body            = BodyHandle;
 
-        ActorCompounds[GetObjectKey(OwnerActor)] = NewCompound;
-        Compound                                 = &ActorCompounds[GetObjectKey(OwnerActor)];
+        ActorCompounds[Payload.BodyOwner.ActorId] = NewCompound;
+        Compound                                  = &ActorCompounds[Payload.BodyOwner.ActorId];
     }
 
-    FPhysicsShapeDesc   ShapeDesc   = BuildShapeDescFromComponent(Comp, Compound->RootComponent.Get());
-    FPhysicsShapeHandle ShapeHandle = AddShapeToBody(Compound->Body, Comp, ShapeDesc);
+    const FPhysicsShapeDesc* ShapeDesc = Payload.Shapes.empty() ? nullptr : &Payload.Shapes[0];
+    if (!ShapeDesc)
+    {
+        return;
+    }
+
+    FPhysicsShapeHandle ShapeHandle = AddShapeToBody(
+        Compound->Body,
+        Payload.ShapeOwner.ComponentId,
+        Payload.ShapeOwner.ActorId,
+        Payload.ShapeOwner.ComponentGeneration,
+        *ShapeDesc,
+        Payload.ReservedShape
+    );
     if (!ShapeHandle.IsValid())
     {
         return;
     }
 
-    Compound->Components.push_back(Comp);
-    ComponentToBody[GetObjectKey(Comp)]  = Compound->Body;
-    ComponentToShape[GetObjectKey(Comp)] = ShapeHandle;
-
-    FBodyInstance* Body = ResolveBody(Compound->Body);
-    if (Body && Body->Actor)
+    if (std::find(Compound->Components.begin(), Compound->Components.end(), Payload.ShapeOwner.ComponentId)
+        == Compound->Components.end())
     {
-        FBodyCreationDesc MassDesc = BuildBodyDescFromComponent(Compound->RootComponent.Get());
-        FPhysXBodyBuilder::UpdateMassAndInertia(Body->Actor, MassDesc);
+        Compound->Components.push_back(Payload.ShapeOwner.ComponentId);
+    }
+
+    ComponentToBody[Payload.ShapeOwner.ComponentId]  = Compound->Body;
+    ComponentToShape[Payload.ShapeOwner.ComponentId] = ShapeHandle;
+
+    if (FBodyInstance* Body = ResolveBody(Compound->Body))
+    {
+        if (Body->Actor)
+        {
+            FBodyCreationDesc MassDesc = ToBodyCreationDesc(Payload);
+            FPhysXBodyBuilder::UpdateMassAndInertia(Body->Actor, MassDesc);
+        }
     }
 }
 
-void FPhysXPhysicsRuntime::UnregisterComponent_Internal(UPrimitiveComponent* Comp)
+void FPhysXPhysicsRuntime::UnregisterComponent_Internal(const FPhysicsObjectKey& Object)
 {
-    if (!Comp)
+    if (!Object.ComponentId)
     {
         return;
     }
 
-    auto BodyIt = ComponentToBody.find(GetObjectKey(Comp));
+    auto BodyIt = ComponentToBody.find(Object.ComponentId);
     if (BodyIt == ComponentToBody.end())
     {
         return;
     }
 
     const FPhysicsBodyHandle BodyHandle = BodyIt->second;
-    AActor* OwnerActor = Comp->GetOwner();
+    DetachShapeForComponentId(Object.ComponentId);
+    ComponentToBody.erase(Object.ComponentId);
 
-    if (!Scene)
-    {
-        return;
-    }
-
-    DetachShapeForComponent(Comp);
-    ComponentToBody.erase(GetObjectKey(Comp));
-
-    FActorCompoundBody* Compound = FindCompoundByActor(OwnerActor);
+    FActorCompoundBody* Compound = FindCompoundByActorId(Object.ActorId);
     if (!Compound)
     {
-        // Owner가 이미 PendingKill/Garbage인 cleanup 경로에서는 actor compound map을
-        // 찾지 못할 수 있다. 이 경우 component가 가리키던 body 전체를 안전하게 제거한다.
         DestroyRigidBody_Internal(BodyHandle);
         return;
     }
 
     Compound->Components.erase(
-        std::remove_if(
-            Compound->Components.begin(),
-            Compound->Components.end(),
-            [Comp](const TWeakObjectPtr<UPrimitiveComponent>& WeakComponent)
-            {
-                UPrimitiveComponent* C = WeakComponent.GetEvenIfPendingKill();
-                return C == nullptr || C == Comp;
-            }
-        ),
+        std::remove(Compound->Components.begin(), Compound->Components.end(), Object.ComponentId),
         Compound->Components.end()
     );
 
     if (Compound->Components.empty())
     {
         DestroyRigidBody_Internal(BodyHandle);
-        ActorCompounds.erase(GetObjectKey(OwnerActor));
-        return;
-    }
-
-    FBodyInstance* Body = ResolveBody(Compound->Body);
-    if (Body && Body->Actor)
-    {
-        FBodyCreationDesc MassDesc = BuildBodyDescFromComponent(Compound->RootComponent.Get());
-        FPhysXBodyBuilder::UpdateMassAndInertia(Body->Actor, MassDesc);
+        ActorCompounds.erase(Object.ActorId);
     }
 }
 
-void FPhysXPhysicsRuntime::RebuildBody_Internal(UPrimitiveComponent* Comp)
+void FPhysXPhysicsRuntime::RebuildBody_Internal(const TArray<FPhysicsBodyCreatePayload>& Payloads)
 {
-    if (!IsValid(Comp))
+    for (const FPhysicsBodyCreatePayload& Payload : Payloads)
     {
-        return;
-    }
-
-    AActor* OwnerActor = Comp->GetOwner();
-    if (!IsValid(OwnerActor))
-    {
-        return;
-    }
-
-    FActorCompoundBody* Compound = FindCompoundByActor(OwnerActor);
-    if (!Compound)
-    {
-        return;
-    }
-
-    TArray<UPrimitiveComponent*> Components;
-    for (const TWeakObjectPtr<UPrimitiveComponent>& WeakComponent : Compound->Components)
-    {
-        if (UPrimitiveComponent* C = WeakComponent.Get())
-        {
-            Components.push_back(C);
-        }
-    }
-
-    for (UPrimitiveComponent* C : Components)
-    {
-        if (IsValid(C))
-        {
-            UnregisterComponent_Internal(C);
-        }
-    }
-
-    for (UPrimitiveComponent* C : Components)
-    {
-        if (IsValid(C) && C->IsCollisionEnabled())
-        {
-            RegisterComponent_Internal(C);
-        }
+        UnregisterComponent_Internal(Payload.ShapeOwner);
+        RegisterComponent_Internal(Payload);
     }
 }
 
-FPhysicsBodyHandle FPhysXPhysicsRuntime::FindBodyByComponent(UPrimitiveComponent* Comp) const
+FPhysicsBodyHandle FPhysXPhysicsRuntime::FindBodyByComponentId(uint32 ComponentId) const
 {
-    auto It = ComponentToBody.find(GetObjectKey(Comp));
+    std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
+    auto                        It = ComponentToBody.find(ComponentId);
     return It != ComponentToBody.end() ? It->second : FPhysicsBodyHandle{};
 }
 
-FPhysicsShapeHandle FPhysXPhysicsRuntime::FindShapeByComponent(UPrimitiveComponent* Comp) const
+FPhysicsShapeHandle FPhysXPhysicsRuntime::FindShapeByComponentId(uint32 ComponentId) const
 {
-    auto It = ComponentToShape.find(GetObjectKey(Comp));
+    std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
+    auto                        It = ComponentToShape.find(ComponentId);
     return It != ComponentToShape.end() ? It->second : FPhysicsShapeHandle{};
 }
 
@@ -662,8 +463,13 @@ FPhysicsBodyHandle FPhysXPhysicsRuntime::CreateRigidBody_Internal(const FBodyCre
         return {};
     }
 
-    FPhysicsBodyHandle BodyHandle = AllocateBody();
-    FBodyInstance* Body = ResolveBody(BodyHandle);
+    FPhysicsBodyHandle BodyHandle = Desc.ReservedBody.IsValid() ? Desc.ReservedBody : AllocateBody();
+    FBodyInstance*     Body       = ResolveBody(BodyHandle);
+    if (!Body && !Desc.ReservedBody.IsValid())
+    {
+        BodyHandle = AllocateBody();
+        Body       = ResolveBody(BodyHandle);
+    }
     if (!Body)
     {
         return {};
@@ -676,16 +482,17 @@ FPhysicsBodyHandle FPhysXPhysicsRuntime::CreateRigidBody_Internal(const FBodyCre
         return {};
     }
 
-    Body->OwnerActor = Desc.OwnerActor;
-    Body->OwnerComponent = Desc.OwnerComponent;
-    Body->BoneName = Desc.BoneName;
-    Body->Actor = Actor;
-    Body->BodyType = Desc.BodyType;
-    Body->SyncMode = Desc.SyncMode;
-    Body->PreviousTransform = Desc.WorldTransform;
-    Body->CurrentTransform = Desc.WorldTransform;
-    Body->bGenerateHitEvents = Desc.bGenerateHitEvents;
-    Body->bGenerateOverlapEvents = Desc.bGenerateOverlapEvents;
+    Body->OwnerActorId             = Desc.OwnerActorId;
+    Body->OwnerComponentId         = Desc.OwnerComponentId;
+    Body->OwnerComponentGeneration = Desc.OwnerComponentGeneration;
+    Body->BoneName                 = Desc.BoneName;
+    Body->Actor                    = Actor;
+    Body->BodyType                 = Desc.BodyType;
+    Body->SyncMode                 = Desc.SyncMode;
+    Body->PreviousTransform        = Desc.WorldTransform;
+    Body->CurrentTransform         = Desc.WorldTransform;
+    Body->bGenerateHitEvents       = Desc.bGenerateHitEvents;
+    Body->bGenerateOverlapEvents   = Desc.bGenerateOverlapEvents;
 
     Body->State       = EPhysicsRuntimeObjectState::Alive;
     Body->Domain      = Desc.Domain;
@@ -713,7 +520,7 @@ FPhysicsBodyHandle FPhysXPhysicsRuntime::CreateRigidBody_Internal(const FBodyCre
 
     for (const FPhysicsShapeDesc& ShapeDesc : Desc.Shapes)
     {
-        AddShapeToBody(BodyHandle, Desc.OwnerComponent, ShapeDesc);
+        AddShapeToBody(BodyHandle, Desc.OwnerComponentId, Desc.OwnerActorId, Desc.OwnerComponentGeneration, ShapeDesc, Desc.ReservedShape);
     }
 
     if (Actor->is<PxRigidDynamic>())
@@ -866,6 +673,7 @@ void FPhysXPhysicsRuntime::DestroyConstraint_Internal(FPhysicsConstraintHandle H
 
 FPhysicsBodyHandle FPhysXPhysicsRuntime::CreateRigidBody(const FBodyCreationDesc& Desc)
 {
+    std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
     if (!Scene)
     {
         return {};
@@ -889,6 +697,7 @@ FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateConstraint(
     const FConstraintCreationDesc& Desc
 )
 {
+    std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
     if (!Scene)
     {
         return {};
@@ -949,39 +758,18 @@ void FPhysXPhysicsRuntime::DestroyConstraint(FPhysicsConstraintHandle Constraint
 
 void FPhysXPhysicsRuntime::CaptureEngineTransforms_GameThread()
 {
-    for (auto& BodyPtr : Bodies)
-    {
-        if (!BodyPtr || !BodyPtr->IsAlive())
-        {
-            continue;
-        }
-
-        FBodyInstance& Body = *BodyPtr;
-        if (!Body.ShouldPushTransformToPhysics() && !Body.IsKinematicTargetDriven())
-        {
-            continue;
-        }
-
-        UPrimitiveComponent* Component = Body.OwnerComponent.Get();
-        if (!IsValid(Component))
-        {
-            continue;
-        }
-
-        Body.PreviousTransform = Body.CurrentTransform;
-        Body.CurrentTransform = GetComponentWorldTransform(Component);
-    }
 }
 
 FTransform FPhysXPhysicsRuntime::GetBodyTransform(FPhysicsBodyHandle BodyHandle) const
 {
-    const FBodyInstance* Body = ResolveBody(BodyHandle);
-    if (!Body || !Body->Actor)
+    const std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot = AcquireLatestSnapshotRef();
+    if (!Snapshot)
     {
         return FTransform();
     }
 
-    return Body->CurrentTransform;
+    const FPhysicsBodySnapshot* Body = Snapshot->FindByBody(BodyHandle);
+    return Body ? Body->CurrentTransform : FTransform();
 }
 
 std::shared_ptr<const FPhysicsWorldSnapshot> FPhysXPhysicsRuntime::AcquireLatestSnapshotRef() const
@@ -1061,24 +849,26 @@ void FPhysXPhysicsRuntime::ApplySetBodyVelocity_Internal(
 
 FVector FPhysXPhysicsRuntime::GetBodyLinearVelocity(FPhysicsBodyHandle BodyHandle) const
 {
-    const FBodyInstance* Body = ResolveBody(BodyHandle);
-    if (!Body || !Body->Actor)
+    const std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot = AcquireLatestSnapshotRef();
+    if (!Snapshot)
     {
         return FVector::ZeroVector;
     }
 
-    return Body->LinearVelocity;
+    const FPhysicsBodySnapshot* Body = Snapshot->FindByBody(BodyHandle);
+    return Body ? Body->LinearVelocity : FVector::ZeroVector;
 }
 
 FVector FPhysXPhysicsRuntime::GetBodyAngularVelocity(FPhysicsBodyHandle BodyHandle) const
 {
-    const FBodyInstance* Body = ResolveBody(BodyHandle);
-    if (!Body || !Body->Actor)
+    const std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot = AcquireLatestSnapshotRef();
+    if (!Snapshot)
     {
         return FVector::ZeroVector;
     }
 
-    return Body->AngularVelocity;
+    const FPhysicsBodySnapshot* Body = Snapshot->FindByBody(BodyHandle);
+    return Body ? Body->AngularVelocity : FVector::ZeroVector;
 }
 
 void FPhysXPhysicsRuntime::AddForce(FPhysicsBodyHandle BodyHandle, const FVector& Force)
@@ -1226,13 +1016,14 @@ void FPhysXPhysicsRuntime::ApplySetMass_Internal(FPhysicsBodyHandle BodyHandle, 
 
 float FPhysXPhysicsRuntime::GetMass(FPhysicsBodyHandle BodyHandle) const
 {
-    const FBodyInstance* Body = ResolveBody(BodyHandle);
-    if (!Body || !Body->Actor)
+    const std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot = AcquireLatestSnapshotRef();
+    if (!Snapshot)
     {
         return 1.0f;
     }
 
-    return Body->Properties.Mass;
+    const FPhysicsBodySnapshot* Body = Snapshot->FindByBody(BodyHandle);
+    return Body ? Body->Mass : 1.0f;
 }
 
 void FPhysXPhysicsRuntime::SetCenterOfMass(FPhysicsBodyHandle BodyHandle, const FVector& LocalOffset)
@@ -1265,13 +1056,14 @@ void FPhysXPhysicsRuntime::ApplySetCenterOfMass_Internal(FPhysicsBodyHandle Body
 
 FVector FPhysXPhysicsRuntime::GetCenterOfMass(FPhysicsBodyHandle BodyHandle) const
 {
-    const FBodyInstance* Body = ResolveBody(BodyHandle);
-    if (!Body || !Body->Actor)
+    const std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot = AcquireLatestSnapshotRef();
+    if (!Snapshot)
     {
         return FVector::ZeroVector;
     }
 
-    return Body->Properties.CenterOfMassLocalOffset;
+    const FPhysicsBodySnapshot* Body = Snapshot->FindByBody(BodyHandle);
+    return Body ? Body->CenterOfMass : FVector::ZeroVector;
 }
 
 void FPhysXPhysicsRuntime::SetLinearLock(FPhysicsBodyHandle BodyHandle, bool bX, bool bY, bool bZ)
@@ -1358,10 +1150,9 @@ void FPhysXPhysicsRuntime::BuildBodySnapshots_Internal(TArray<FPhysicsBodySnapsh
         FPhysicsBodySnapshot Snapshot;
         Snapshot.Body = Body.Handle;
 
-        AActor* OwnerActor = Body.OwnerActor.Get();
-        UPrimitiveComponent* OwnerComponent = Body.OwnerComponent.Get();
-        Snapshot.OwnerActorId = OwnerActor ? OwnerActor->GetUUID() : 0;
-        Snapshot.OwnerComponentId = OwnerComponent ? OwnerComponent->GetUUID() : 0;
+        Snapshot.OwnerActorId             = Body.OwnerActorId;
+        Snapshot.OwnerComponentId         = Body.OwnerComponentId;
+        Snapshot.OwnerComponentGeneration = Body.OwnerComponentGeneration;
 
         Snapshot.BoneName = Body.BoneName;
         Snapshot.Domain = Body.Domain;
@@ -1369,10 +1160,12 @@ void FPhysXPhysicsRuntime::BuildBodySnapshots_Internal(TArray<FPhysicsBodySnapsh
         Snapshot.BodyType = Body.BodyType;
 
         Snapshot.PreviousTransform = Body.PreviousTransform;
-        Snapshot.CurrentTransform = Body.CurrentTransform;
-        Snapshot.LinearVelocity = Body.LinearVelocity;
-        Snapshot.AngularVelocity = Body.AngularVelocity;
-        Snapshot.bIsSleeping = Body.bIsSleeping;
+        Snapshot.CurrentTransform  = Body.CurrentTransform;
+        Snapshot.LinearVelocity    = Body.LinearVelocity;
+        Snapshot.AngularVelocity   = Body.AngularVelocity;
+        Snapshot.Mass              = Body.Properties.Mass;
+        Snapshot.CenterOfMass      = Body.Properties.CenterOfMassLocalOffset;
+        Snapshot.bIsSleeping       = Body.bIsSleeping;
 
         Snapshot.bIsStatic = Body.BodyType == EPhysicsBodyType::Static;
         Snapshot.bIsDynamic = Body.BodyType == EPhysicsBodyType::Dynamic;
@@ -1396,15 +1189,11 @@ void FPhysXPhysicsRuntime::BuildDebugBodies_Internal(TArray<FPhysicsDebugBody>& 
         const FBodyInstance& Body = *BodyPtr;
 
         FPhysicsDebugBody DebugBody;
-        DebugBody.Body                      = Body.Handle;
-        DebugBody.BodyWorldTransform        = ToFTransform(Body.Actor->getGlobalPose());
-        AActor*              OwnerActor     = Body.OwnerActor.Get();
-        UPrimitiveComponent* OwnerComponent = Body.OwnerComponent.Get();
-        DebugBody.OwnerActor                = Body.OwnerActor;
-        DebugBody.OwnerComponent            = Body.OwnerComponent;
-        DebugBody.OwnerActorId              = OwnerActor ? OwnerActor->GetUUID() : 0;
-        DebugBody.OwnerComponentId          = OwnerComponent ? OwnerComponent->GetUUID() : 0;
-        DebugBody.BoneName                  = Body.BoneName;
+        DebugBody.Body               = Body.Handle;
+        DebugBody.BodyWorldTransform = ToFTransform(Body.Actor->getGlobalPose());
+        DebugBody.OwnerActorId       = Body.OwnerActorId;
+        DebugBody.OwnerComponentId   = Body.OwnerComponentId;
+        DebugBody.BoneName           = Body.BoneName;
 
         DebugBody.bIsStatic = Body.BodyType == EPhysicsBodyType::Static;
         DebugBody.bIsDynamic = Body.BodyType == EPhysicsBodyType::Dynamic;
@@ -1489,13 +1278,43 @@ void FPhysXPhysicsRuntime::BuildDebugConstraints_Internal(TArray<FPhysicsDebugCo
 
 void FPhysXPhysicsRuntime::BuildWorldSnapshot_Internal()
 {
+    using FClock             = std::chrono::high_resolution_clock;
+    const auto SnapshotStart = FClock::now();
+    const auto DurationMs    = [](FClock::time_point A, FClock::time_point B)
+    {
+        return std::chrono::duration<float, std::milli>(B - A).count();
+    };
+
     auto NewWorldSnapshot                = std::make_shared<FPhysicsWorldSnapshot>();
     NewWorldSnapshot->StepIndex          = StepIndex;
     NewWorldSnapshot->FixedDt            = FixedDt;
     NewWorldSnapshot->InterpolationAlpha = Stats.InterpolationAlpha;
-    NewWorldSnapshot->Stats              = Stats;
 
     BuildBodySnapshots_Internal(NewWorldSnapshot->Bodies);
+
+    {
+        const TArray<FPhysicsBodySnapshot>& Bodies = NewWorldSnapshot->Bodies;
+        for (int32 Index = 0; Index < static_cast<int32>(Bodies.size()); ++Index)
+        {
+            const FPhysicsBodySnapshot& Body                            = Bodies[Index];
+            NewWorldSnapshot->BodyToIndex[MakeBodyHandleKey(Body.Body)] = Index;
+
+            if (Body.OwnerComponentId == 0)
+            {
+                continue;
+            }
+            if (Body.Domain == EPhysicsBodyDomain::Ragdoll)
+            {
+                NewWorldSnapshot->ComponentBoneToBodyIndex[
+                    MakeComponentBoneKey(Body.OwnerComponentId, Body.BoneName)] = Index;
+            }
+            else
+            {
+                NewWorldSnapshot->ComponentToBodyIndex[Body.OwnerComponentId] = Index;
+            }
+        }
+    }
+
     if (bDebugSnapshotEnabled)
     {
         BuildDebugBodies_Internal(NewWorldSnapshot->DebugBodies);
@@ -1506,6 +1325,11 @@ void FPhysXPhysicsRuntime::BuildWorldSnapshot_Internal()
         NewWorldSnapshot->DebugBodies.clear();
         NewWorldSnapshot->DebugConstraints.clear();
     }
+
+    FPhysicsStats SnapshotStats   = Stats;
+    SnapshotStats.BuildSnapshotMs = DurationMs(SnapshotStart, FClock::now());
+    NewWorldSnapshot->Stats       = SnapshotStats;
+    Stats.BuildSnapshotMs         = SnapshotStats.BuildSnapshotMs;
 
     FPhysicsDebugSnapshot NewDebugSnapshot;
     NewDebugSnapshot.Bodies             = NewWorldSnapshot->DebugBodies;
@@ -1546,6 +1370,12 @@ void FPhysXPhysicsRuntime::GetDebugSnapshot(FPhysicsDebugSnapshot& OutSnapshot) 
 {
     std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
     OutSnapshot = DebugSnapshot;
+}
+
+FPhysicsStats FPhysXPhysicsRuntime::GetStats() const
+{
+    std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
+    return DebugSnapshot.Stats;
 }
 
 FPhysicsBodyHandle FPhysXPhysicsRuntime::AllocateBody()
@@ -1737,122 +1567,13 @@ void FPhysXPhysicsRuntime::FreeConstraint(FPhysicsConstraintHandle Handle)
     ++ConstraintGenerations[Handle.Index];
 }
 
-FBodyCreationDesc FPhysXPhysicsRuntime::BuildBodyDescFromComponent(UPrimitiveComponent* Comp) const
-{
-    FBodyCreationDesc Desc;
-
-    if (!Comp)
-    {
-        return Desc;
-    }
-
-    Desc.OwnerActor = Comp->GetOwner();
-    Desc.OwnerComponent = Comp;
-    Desc.WorldTransform = GetComponentWorldTransform(Comp);
-
-    const bool bSimulate = Comp->GetSimulatePhysics();
-    const bool bKinematic = !bSimulate && Comp->IsKinematic();
-
-    if (bSimulate)
-    {
-        Desc.BodyType = EPhysicsBodyType::Dynamic;
-        Desc.SyncMode = EPhysicsSyncMode::PhysicsToEngine;
-    }
-    else if (bKinematic)
-    {
-        Desc.BodyType = EPhysicsBodyType::Kinematic;
-        Desc.SyncMode = EPhysicsSyncMode::KinematicTarget;
-    }
-    else
-    {
-        Desc.BodyType = EPhysicsBodyType::Static;
-        Desc.SyncMode = EPhysicsSyncMode::EngineToPhysics;
-    }
-
-    Desc.Mass = Comp->GetMass();
-    Desc.CenterOfMassLocalOffset = Comp->GetCenterOfMass();
-    Desc.bGenerateHitEvents = true;
-    Desc.bGenerateOverlapEvents = Comp->GetGenerateOverlapEvents();
-
-    // DOF lock 은 RootComponent 정책 (Mass/COM 과 동일). RebuildBody 후에도 유지되도록
-    // 컴포넌트에 저장된 lock 상태를 desc 로 전달한다.
-    Desc.bLockLinearX = Comp->IsLinearLockX();
-    Desc.bLockLinearY = Comp->IsLinearLockY();
-    Desc.bLockLinearZ = Comp->IsLinearLockZ();
-    Desc.bLockAngularX = Comp->IsAngularLockX();
-    Desc.bLockAngularY = Comp->IsAngularLockY();
-    Desc.bLockAngularZ = Comp->IsAngularLockZ();
-
-    return Desc;
-}
-
-FPhysicsShapeDesc FPhysXPhysicsRuntime::BuildShapeDescFromComponent(
-    UPrimitiveComponent* Comp,
-    UPrimitiveComponent* RootComponent
-) const
-{
-    FPhysicsShapeDesc Desc;
-
-    if (!Comp)
-    {
-        return Desc;
-    }
-
-    Desc.LocalTransform = MakeShapeLocalTransform(Comp, RootComponent);
-    Desc.CollisionEnabled = Comp->GetCollisionEnabled();
-
-    const bool bOwnerBodyIsDynamic =
-        RootComponent &&
-        (RootComponent->GetSimulatePhysics() || RootComponent->IsKinematic());
-
-    Desc.bIsTrigger = ShouldBeTriggerShape(Comp, bOwnerBodyIsDynamic);
-    FillFilterDataFromComponent(Desc.FilterData, Comp, Desc.bIsTrigger);
-
-    if (auto* Box = Cast<UBoxComponent>(Comp))
-    {
-        Desc.Type = EPhysicsShapeType::Box;
-        Desc.BoxHalfExtent = Box->GetScaledBoxExtent();
-    }
-    else if (auto* Sphere = Cast<USphereComponent>(Comp))
-    {
-        Desc.Type = EPhysicsShapeType::Sphere;
-        Desc.SphereRadius = Sphere->GetScaledSphereRadius();
-    }
-    else if (auto* Capsule = Cast<UCapsuleComponent>(Comp))
-    {
-        Desc.Type = EPhysicsShapeType::Capsule;
-        Desc.CapsuleRadius = Capsule->GetScaledCapsuleRadius();
-        Desc.CapsuleHalfHeight = Capsule->GetScaledCapsuleHalfHeight();
-    }
-    else
-    {
-        // StaticMesh/SkeletalMesh 등 별도 BodySetup이 아직 없는 PrimitiveComponent는
-        // 현재 엔진이 이미 제공하는 world AABB를 이용해 box proxy로 등록합니다.
-        const FBoundingBox Bounds = Comp->GetWorldBoundingBox();
-        const FVector WorldCenter = Bounds.GetCenter();
-        FVector WorldExtent = Bounds.GetExtent();
-
-        if (WorldExtent.X <= 0.0f || WorldExtent.Y <= 0.0f || WorldExtent.Z <= 0.0f)
-        {
-            WorldExtent = FVector(0.5f, 0.5f, 0.5f);
-        }
-
-        Desc.Type = EPhysicsShapeType::Box;
-        Desc.BoxHalfExtent = WorldExtent;
-        Desc.LocalTransform = MakeRelativeTransformFromWorld(
-            WorldCenter,
-            Comp->GetWorldMatrix().ToQuat(),
-            RootComponent
-        );
-    }
-
-    return Desc;
-}
-
 FPhysicsShapeHandle FPhysXPhysicsRuntime::AddShapeToBody(
-    FPhysicsBodyHandle BodyHandle,
-    UPrimitiveComponent* SourceComponent,
-    const FPhysicsShapeDesc& Desc
+    FPhysicsBodyHandle       BodyHandle,
+    uint32                   SourceComponentId,
+    uint32                   SourceActorId,
+    uint32                   SourceGeneration,
+    const FPhysicsShapeDesc& Desc,
+    FPhysicsShapeHandle      ReservedShape
 )
 {
     FBodyInstance* Body = ResolveBody(BodyHandle);
@@ -1869,8 +1590,13 @@ FPhysicsShapeHandle FPhysXPhysicsRuntime::AddShapeToBody(
 
     Body->Actor->attachShape(*Shape);
 
-    FPhysicsShapeHandle ShapeHandle = AllocateShape();
-    FShapeInstance* ShapeInstance = ResolveShape(ShapeHandle);
+    FPhysicsShapeHandle ShapeHandle   = ReservedShape.IsValid() ? ReservedShape : AllocateShape();
+    FShapeInstance*     ShapeInstance = ResolveShape(ShapeHandle);
+    if (!ShapeInstance && !ReservedShape.IsValid())
+    {
+        ShapeHandle   = AllocateShape();
+        ShapeInstance = ResolveShape(ShapeHandle);
+    }
     if (!ShapeInstance)
     {
         Body->Actor->detachShape(*Shape);
@@ -1878,13 +1604,15 @@ FPhysicsShapeHandle FPhysXPhysicsRuntime::AddShapeToBody(
         return {};
     }
 
-    ShapeInstance->OwnerBody            = BodyHandle;
-    ShapeInstance->SourceComponent      = SourceComponent;
-    ShapeInstance->Desc                 = Desc;
-    ShapeInstance->EngineLocalTransform = Desc.LocalTransform;
-    ShapeInstance->PhysXLocalTransform  = ToFTransform(Shape->getLocalPose());
-    ShapeInstance->Shape                = Shape;
-    ShapeInstance->State                = EPhysicsRuntimeObjectState::Alive;
+    ShapeInstance->OwnerBody                 = BodyHandle;
+    ShapeInstance->SourceComponentId         = SourceComponentId;
+    ShapeInstance->SourceActorId             = SourceActorId;
+    ShapeInstance->SourceComponentGeneration = SourceGeneration;
+    ShapeInstance->Desc                      = Desc;
+    ShapeInstance->EngineLocalTransform      = Desc.LocalTransform;
+    ShapeInstance->PhysXLocalTransform       = ToFTransform(Shape->getLocalPose());
+    ShapeInstance->Shape                     = Shape;
+    ShapeInstance->State                     = EPhysicsRuntimeObjectState::Alive;
 
     Shape->userData = ShapeInstance;
     Body->Shapes.push_back(ShapeHandle);
@@ -1919,18 +1647,18 @@ void FPhysXPhysicsRuntime::DetachShape(FPhysicsShapeHandle ShapeHandle)
         );
     }
 
-    if (UPrimitiveComponent* SourceComponent = ShapeInstance->SourceComponent.GetEvenIfPendingKill())
+    if (ShapeInstance->SourceComponentId != 0)
     {
-        ComponentToShape.erase(GetObjectKey(SourceComponent));
+        ComponentToShape.erase(ShapeInstance->SourceComponentId);
     }
     ShapeInstance->State = EPhysicsRuntimeObjectState::Destroyed;
 
     FreeShape(ShapeHandle);
 }
 
-void FPhysXPhysicsRuntime::DetachShapeForComponent(UPrimitiveComponent* Comp)
+void FPhysXPhysicsRuntime::DetachShapeForComponentId(uint32 ComponentId)
 {
-    auto It = ComponentToShape.find(GetObjectKey(Comp));
+    auto It = ComponentToShape.find(ComponentId);
     if (It == ComponentToShape.end())
     {
         return;
@@ -2008,14 +1736,14 @@ int32 FPhysXPhysicsRuntime::ApplyPendingCommands()
     {
         switch (Command.Type)
         {
-        case EPhysicsCommandType::RegisterComponent:
-            RegisterComponent_Internal(Command.Component.GetEvenIfPendingKill());
+        case EPhysicsCommandType::CreateBody:
+            RegisterComponent_Internal(Command.CreateBody);
             break;
         case EPhysicsCommandType::UnregisterComponent:
-            UnregisterComponent_Internal(Command.Component.GetEvenIfPendingKill());
+            UnregisterComponent_Internal(Command.Object);
             break;
         case EPhysicsCommandType::RebuildComponentBody:
-            RebuildBody_Internal(Command.Component.Get());
+            // Rebuild is expanded into ordered unregister/create commands by the Game Thread façade.
             break;
         case EPhysicsCommandType::DestroyBody:
             DestroyRigidBody_Internal(Command.Body);
@@ -2043,11 +1771,19 @@ int32 FPhysXPhysicsRuntime::ApplyPendingCommands()
             ApplySetBodyVelocity_Internal(Command.Body, Command.VectorValue, Command.VectorValue2);
             break;
         case EPhysicsCommandType::SetLinearVelocity:
-            ApplySetBodyVelocity_Internal(Command.Body, Command.VectorValue, GetBodyAngularVelocity(Command.Body));
+        {
+            const FBodyInstance* Body           = ResolveAliveBody(Command.Body);
+            const FVector        CurrentAngular = Body ? Body->AngularVelocity : FVector::ZeroVector;
+            ApplySetBodyVelocity_Internal(Command.Body, Command.VectorValue, CurrentAngular);
             break;
+        }
         case EPhysicsCommandType::SetAngularVelocity:
-            ApplySetBodyVelocity_Internal(Command.Body, GetBodyLinearVelocity(Command.Body), Command.VectorValue);
+        {
+            const FBodyInstance* Body          = ResolveAliveBody(Command.Body);
+            const FVector        CurrentLinear = Body ? Body->LinearVelocity : FVector::ZeroVector;
+            ApplySetBodyVelocity_Internal(Command.Body, CurrentLinear, Command.VectorValue);
             break;
+        }
         case EPhysicsCommandType::SetMass:
             ApplySetMass_Internal(Command.Body, Command.FloatValue);
             break;
@@ -2120,24 +1856,24 @@ void FPhysXPhysicsRuntime::UpdateStats()
     }
 }
 
-FActorCompoundBody* FPhysXPhysicsRuntime::FindCompoundByActor(AActor* Actor)
+FActorCompoundBody* FPhysXPhysicsRuntime::FindCompoundByActorId(uint32 ActorId)
 {
-    if (!IsValid(Actor))
+    if (ActorId == 0)
     {
         return nullptr;
     }
 
-    auto It = ActorCompounds.find(GetObjectKey(Actor));
+    auto It = ActorCompounds.find(ActorId);
     return It != ActorCompounds.end() ? &It->second : nullptr;
 }
 
-const FActorCompoundBody* FPhysXPhysicsRuntime::FindCompoundByActor(AActor* Actor) const
+const FActorCompoundBody* FPhysXPhysicsRuntime::FindCompoundByActorId(uint32 ActorId) const
 {
-    if (!IsValid(Actor))
+    if (ActorId == 0)
     {
         return nullptr;
     }
 
-    auto It = ActorCompounds.find(GetObjectKey(Actor));
+    auto It = ActorCompounds.find(ActorId);
     return It != ActorCompounds.end() ? &It->second : nullptr;
 }

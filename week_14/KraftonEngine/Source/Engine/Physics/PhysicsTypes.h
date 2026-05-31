@@ -7,9 +7,6 @@
 #include "Object/FName.h"
 #include "Physics/PhysicsBodyHandle.h"
 
-class AActor;
-class UPrimitiveComponent;
-
 enum class EPhysicsBodyType : uint8
 {
     Static,
@@ -67,6 +64,26 @@ enum class EConstraintMotion : uint8
     Limited,
     Locked
 };
+
+// Thread boundary 의 기본 식별 단위. UObject pointer 대신 모든 command/event/query 가 이 key 를
+// 사용한다. ComponentGeneration 은 destroy/recreate 후 도착한 stale command/event 를 폐기하는 데 쓴다.
+struct FPhysicsObjectKey
+{
+    uint32 ActorId             = 0;
+    uint32 ComponentId         = 0; // = UObject UUID
+    uint32 ComponentGeneration = 0;
+
+    FName              BoneName = FName::None;
+    EPhysicsBodyDomain Domain   = EPhysicsBodyDomain::ActorComponent;
+};
+
+// Ragdoll bone lookup index 용 합성 key. ComponentId(상위 32bit) + BoneName 해시(하위 32bit).
+// 같은 component 내 서로 다른 bone 이 32bit 에서 충돌할 확률은 무시 가능.
+inline uint64 MakeComponentBoneKey(uint32 ComponentId, const FName& BoneName)
+{
+    const uint64 NameHash = static_cast<uint32>(FName::Hash {}(BoneName));
+    return (static_cast<uint64>(ComponentId) << 32) | NameHash;
+}
 
 constexpr uint32 PhysicsFilter_ObjectTypeMask        = 0x000000FFu;
 constexpr uint32 PhysicsFilter_QueryOnly             = 1u << 8;
@@ -148,8 +165,12 @@ struct FBodyRuntimeProperties
 
 struct FBodyCreationDesc
 {
-    AActor*              OwnerActor     = nullptr;
-    UPrimitiveComponent* OwnerComponent = nullptr;
+    FPhysicsBodyHandle  ReservedBody;
+    FPhysicsShapeHandle ReservedShape;
+
+    uint32 OwnerActorId             = 0;
+    uint32 OwnerComponentId         = 0;
+    uint32 OwnerComponentGeneration = 0;
 
     EPhysicsBodyDomain Domain = EPhysicsBodyDomain::ActorComponent;
 
@@ -186,6 +207,78 @@ struct FBodyCreationDesc
     bool bGenerateHitEvents     = false;
     bool bGenerateOverlapEvents = false;
 };
+
+struct FPhysicsBodyCreatePayload
+{
+    FPhysicsBodyHandle  ReservedBody;
+    FPhysicsShapeHandle ReservedShape;
+
+    FPhysicsObjectKey BodyOwner;
+    FPhysicsObjectKey ShapeOwner;
+
+    EPhysicsBodyType BodyType = EPhysicsBodyType::Static;
+    EPhysicsSyncMode SyncMode = EPhysicsSyncMode::EngineToPhysics;
+
+    FTransform WorldTransform;
+
+    TArray<FPhysicsShapeDesc> Shapes;
+
+    float   Mass                    = 1.0f;
+    FVector CenterOfMassLocalOffset = FVector::ZeroVector;
+
+    float LinearDamping  = 0.0f;
+    float AngularDamping = 0.0f;
+
+    float MaxAngularVelocity           = 100.0f;
+    int32 PositionSolverIterationCount = 8;
+    int32 VelocitySolverIterationCount = 2;
+
+    bool bLockLinearX  = false;
+    bool bLockLinearY  = false;
+    bool bLockLinearZ  = false;
+    bool bLockAngularX = false;
+    bool bLockAngularY = false;
+    bool bLockAngularZ = false;
+
+    bool bEnableGravity         = true;
+    bool bEnableCCD             = false;
+    bool bGenerateHitEvents     = false;
+    bool bGenerateOverlapEvents = false;
+};
+
+inline FBodyCreationDesc ToBodyCreationDesc(const FPhysicsBodyCreatePayload& Payload)
+{
+    FBodyCreationDesc Desc;
+    Desc.ReservedBody                 = Payload.ReservedBody;
+    Desc.ReservedShape                = Payload.ReservedShape;
+    Desc.OwnerActorId                 = Payload.BodyOwner.ActorId;
+    Desc.OwnerComponentId             = Payload.BodyOwner.ComponentId;
+    Desc.OwnerComponentGeneration     = Payload.BodyOwner.ComponentGeneration;
+    Desc.Domain                       = Payload.BodyOwner.Domain;
+    Desc.BoneName                     = Payload.BodyOwner.BoneName;
+    Desc.BodyType                     = Payload.BodyType;
+    Desc.SyncMode                     = Payload.SyncMode;
+    Desc.WorldTransform               = Payload.WorldTransform;
+    Desc.Shapes                       = Payload.Shapes;
+    Desc.Mass                         = Payload.Mass;
+    Desc.CenterOfMassLocalOffset      = Payload.CenterOfMassLocalOffset;
+    Desc.LinearDamping                = Payload.LinearDamping;
+    Desc.AngularDamping               = Payload.AngularDamping;
+    Desc.MaxAngularVelocity           = Payload.MaxAngularVelocity;
+    Desc.PositionSolverIterationCount = Payload.PositionSolverIterationCount;
+    Desc.VelocitySolverIterationCount = Payload.VelocitySolverIterationCount;
+    Desc.bLockLinearX                 = Payload.bLockLinearX;
+    Desc.bLockLinearY                 = Payload.bLockLinearY;
+    Desc.bLockLinearZ                 = Payload.bLockLinearZ;
+    Desc.bLockAngularX                = Payload.bLockAngularX;
+    Desc.bLockAngularY                = Payload.bLockAngularY;
+    Desc.bLockAngularZ                = Payload.bLockAngularZ;
+    Desc.bEnableGravity               = Payload.bEnableGravity;
+    Desc.bEnableCCD                   = Payload.bEnableCCD;
+    Desc.bGenerateHitEvents           = Payload.bGenerateHitEvents;
+    Desc.bGenerateOverlapEvents       = Payload.bGenerateOverlapEvents;
+    return Desc;
+}
 
 struct FConstraintLimitDesc
 {

@@ -1,6 +1,9 @@
 #include "Physics/PhysXPhysicsScene.h"
 
 #include "Component/PrimitiveComponent.h"
+#include "Component/Shape/BoxComponent.h"
+#include "Component/Shape/CapsuleComponent.h"
+#include "Component/Shape/SphereComponent.h"
 #include "Core/ProjectSettings.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
@@ -12,10 +15,13 @@
 #include "Physics/PhysXConversion.h"
 
 #include <algorithm>
+#include <functional>
+#include <memory>
 #include <mutex>
 #include <PxPhysicsAPI.h>
 #include <thread>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 using namespace physx;
@@ -141,26 +147,182 @@ namespace
             : nullptr;
     }
 
-    UPrimitiveComponent* GetComponentFromShape(const PxShape* Shape)
+    uint32 GetComponentIdFromShape(const PxShape* Shape)
     {
         FShapeInstance* ShapeInstance = GetShapeInstance(Shape);
-        if (!ShapeInstance || ShapeInstance->State != EPhysicsRuntimeObjectState::Alive)
-        {
-            return nullptr;
-        }
-        return ShapeInstance->SourceComponent.Get();
+        return (ShapeInstance && ShapeInstance->State == EPhysicsRuntimeObjectState::Alive)
+                ? ShapeInstance->SourceComponentId
+                : 0;
     }
 
-    AActor* GetOwnerActorFromShape(const PxShape* Shape)
+    uint32 GetComponentGenerationFromShape(const PxShape* Shape)
     {
-        UPrimitiveComponent* Comp = GetComponentFromShape(Shape);
-        return IsValid(Comp) ? Comp->GetOwner() : nullptr;
+        FShapeInstance* ShapeInstance = GetShapeInstance(Shape);
+        return (ShapeInstance && ShapeInstance->State == EPhysicsRuntimeObjectState::Alive)
+                ? ShapeInstance->SourceComponentGeneration
+                : 0;
     }
 
-    AActor* GetOwnerActorFromActor(const PxRigidActor* Actor)
+    uint32 GetActorIdFromShape(const PxShape* Shape)
+    {
+        FShapeInstance* ShapeInstance = GetShapeInstance(Shape);
+        return (ShapeInstance && ShapeInstance->State == EPhysicsRuntimeObjectState::Alive)
+                ? ShapeInstance->SourceActorId
+                : 0;
+    }
+
+    uint32 GetActorIdFromActor(const PxRigidActor* Actor)
     {
         FBodyInstance* Body = GetBodyInstance(Actor);
-        return Body ? Body->OwnerActor.Get() : nullptr;
+        return Body ? Body->OwnerActorId : 0;
+    }
+
+    ECollisionResponse GetPackedMinResponse(const PxFilterData& A, const PxFilterData& B);
+
+    FTransform GetComponentWorldTransform_GameThread(UPrimitiveComponent* Comp)
+    {
+        FTransform Result;
+        if (!Comp)
+        {
+            return Result;
+        }
+
+        Result.Location = Comp->GetWorldLocation();
+        Result.Rotation = Comp->GetWorldMatrix().ToQuat();
+        Result.Scale    = FVector::OneVector;
+        return Result;
+    }
+
+    FTransform MakeRelativeTransformFromWorld_GameThread(
+        const FVector&       ChildWorldLocation,
+        const FQuat&         ChildWorldRotation,
+        UPrimitiveComponent* Root
+    )
+    {
+        FTransform Result;
+
+        if (!Root)
+        {
+            Result.Location = ChildWorldLocation;
+            Result.Rotation = ChildWorldRotation;
+            Result.Scale    = FVector::OneVector;
+            return Result;
+        }
+
+        const FVector RootPos    = Root->GetWorldLocation();
+        const FQuat   RootRot    = Root->GetWorldMatrix().ToQuat();
+        const FQuat   InvRootRot = RootRot.Inverse();
+
+        Result.Location = InvRootRot.RotateVector(ChildWorldLocation - RootPos);
+        Result.Rotation = InvRootRot * ChildWorldRotation;
+        Result.Scale    = FVector::OneVector;
+        return Result;
+    }
+
+    FTransform MakeShapeLocalTransform_GameThread(UPrimitiveComponent* Comp, UPrimitiveComponent* Root)
+    {
+        if (!Comp || !Root || Comp == Root)
+        {
+            return FTransform();
+        }
+
+        return MakeRelativeTransformFromWorld_GameThread(
+            Comp->GetWorldLocation(),
+            Comp->GetWorldMatrix().ToQuat(),
+            Root
+        );
+    }
+
+    bool HasAnyBlockResponse_GameThread(UPrimitiveComponent* Comp)
+    {
+        if (!Comp)
+        {
+            return false;
+        }
+
+        for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
+        {
+            if (Comp->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(Ch)) == ECollisionResponse::Block)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool HasAnyOverlapResponse_GameThread(UPrimitiveComponent* Comp)
+    {
+        if (!Comp)
+        {
+            return false;
+        }
+
+        for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
+        {
+            if (Comp->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(Ch)) == ECollisionResponse::Overlap)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool ShouldBeTriggerShape_GameThread(UPrimitiveComponent* Comp, bool bOwnerBodyIsDynamic)
+    {
+        if (!Comp || Comp->GetCollisionEnabled() == ECollisionEnabled::NoCollision)
+        {
+            return false;
+        }
+
+        const bool bHasAnyBlock     = HasAnyBlockResponse_GameThread(Comp);
+        bool       bShouldBeTrigger =
+                (Comp->GetCollisionObjectType() == ECollisionChannel::Trigger && !bHasAnyBlock) ||
+                (Comp->GetCollisionEnabled() == ECollisionEnabled::QueryOnly &&
+                    !bHasAnyBlock &&
+                    HasAnyOverlapResponse_GameThread(Comp));
+
+        if (bShouldBeTrigger && bOwnerBodyIsDynamic)
+        {
+            bShouldBeTrigger = false;
+        }
+
+        return bShouldBeTrigger;
+    }
+
+    void FillFilterDataFromComponent_GameThread(
+        FPhysicsFilterData&  Out,
+        UPrimitiveComponent* Comp,
+        bool                 bIsTriggerShape
+    )
+    {
+        if (!Comp)
+        {
+            return;
+        }
+
+        Out.ObjectType             = static_cast<uint32>(Comp->GetCollisionObjectType());
+        Out.BlockMask              = 0;
+        Out.OverlapMask            = 0;
+        Out.IgnoreGroup            = Comp->GetOwner() ? Comp->GetOwner()->GetUUID() : 0;
+        Out.CollisionEnabled       = Comp->GetCollisionEnabled();
+        Out.bIsTrigger             = bIsTriggerShape;
+        Out.bGenerateHitEvents     = true;
+        Out.bGenerateOverlapEvents = Comp->GetGenerateOverlapEvents();
+
+        for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
+        {
+            const ECollisionResponse R =
+                    Comp->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(Ch));
+
+            if (R == ECollisionResponse::Block)
+            {
+                Out.BlockMask |= (1u << Ch);
+            }
+            else if (R == ECollisionResponse::Overlap)
+            {
+                Out.OverlapMask |= (1u << Ch);
+            }
+        }
     }
 }
 
@@ -170,22 +332,39 @@ namespace
 class FPhysXSimulationCallback : public PxSimulationEventCallback
 {
 public:
+    struct FShapeEventInfo
+    {
+        uint32 ComponentId   = 0;
+        uint32 ActorId       = 0;
+        uint32 Generation    = 0;
+        bool   bWantsOverlap = false;
+        bool   bValid        = false;
+    };
+
     struct FQueuedHit
     {
-        TWeakObjectPtr<UPrimitiveComponent> Self;
-        TWeakObjectPtr<UPrimitiveComponent> Other;
-        FVector                             NormalImpulse{0, 0, 0};
-        FVector                             WorldLocation { 0, 0, 0 };
-        FVector                             WorldNormal { 0, 0, 1 };
-        float                               PenetrationDepth = 0.0f;
-        bool                                bBegin           = true;
+        uint32  SelfComponentId  = 0;
+        uint32  SelfActorId      = 0;
+        uint32  SelfGeneration   = 0;
+        uint32  OtherComponentId = 0;
+        uint32  OtherActorId     = 0;
+        uint32  OtherGeneration  = 0;
+        FVector NormalImpulse { 0, 0, 0 };
+        FVector WorldLocation { 0, 0, 0 };
+        FVector WorldNormal { 0, 0, 1 };
+        float   PenetrationDepth = 0.0f;
+        bool    bBegin           = true;
     };
 
     struct FQueuedTrigger
     {
-        TWeakObjectPtr<UPrimitiveComponent> Self;
-        TWeakObjectPtr<UPrimitiveComponent> Other;
-        bool                                bBegin = true;
+        uint32 SelfComponentId  = 0;
+        uint32 SelfActorId      = 0;
+        uint32 SelfGeneration   = 0;
+        uint32 OtherComponentId = 0;
+        uint32 OtherActorId     = 0;
+        uint32 OtherGeneration  = 0;
+        bool   bBegin           = true;
     };
 
     struct FPairKey
@@ -195,10 +374,10 @@ public:
 
         FPairKey() = default;
 
-        FPairKey(UPrimitiveComponent* InA, UPrimitiveComponent* InB)
+        FPairKey(uint32 InA, uint32 InB)
         {
-            A = IsAliveObject(InA) ? InA->GetUUID() : 0;
-            B = IsAliveObject(InB) ? InB->GetUUID() : 0;
+            A = InA;
+            B = InB;
             if (A > B)
             {
                 std::swap(A, B);
@@ -218,8 +397,8 @@ public:
 
     struct FPairRecord
     {
-        TWeakObjectPtr<UPrimitiveComponent> A;
-        TWeakObjectPtr<UPrimitiveComponent> B;
+        FShapeEventInfo A;
+        FShapeEventInfo B;
     };
 
     struct FPairKeyHash
@@ -231,6 +410,26 @@ public:
             return H;
         }
     };
+
+    static FShapeEventInfo GetShapeEventInfo(const PxShape* Shape)
+    {
+        FShapeEventInfo Info;
+        FShapeInstance* ShapeInstance = GetShapeInstance(Shape);
+        if (!ShapeInstance || ShapeInstance->State != EPhysicsRuntimeObjectState::Alive)
+        {
+            return Info;
+        }
+        Info.ComponentId = ShapeInstance->SourceComponentId;
+        Info.ActorId     = ShapeInstance->SourceActorId;
+        Info.Generation  = ShapeInstance->SourceComponentGeneration;
+        Info.bValid      = (Info.ComponentId != 0);
+        if (Shape)
+        {
+            const PxFilterData FilterData = Shape->getSimulationFilterData();
+            Info.bWantsOverlap            = HasPhysicsFilterFlag(FilterData.word0, PhysicsFilter_GenerateOverlapEvents);
+        }
+        return Info;
+    }
 
     void onContact(const PxContactPairHeader& PairHeader,
         const PxContactPair* Pairs, PxU32 Count) override
@@ -251,14 +450,17 @@ public:
                 continue;
             }
 
-            UPrimitiveComponent* CompA = GetComponentFromShape(CP.shapes[0]);
-            UPrimitiveComponent* CompB = GetComponentFromShape(CP.shapes[1]);
-            if (!IsValid(CompA) || !IsValid(CompB))
+            const FShapeEventInfo InfoA = GetShapeEventInfo(CP.shapes[0]);
+            const FShapeEventInfo InfoB = GetShapeEventInfo(CP.shapes[1]);
+            if (!InfoA.bValid || !InfoB.bValid)
             {
                 continue;
             }
 
-            const ECollisionResponse MinResponse = UPrimitiveComponent::GetMinResponse(CompA, CompB);
+            const ECollisionResponse MinResponse = GetPackedMinResponse(
+                CP.shapes[0]->getSimulationFilterData(),
+                CP.shapes[1]->getSimulationFilterData()
+            );
             if (MinResponse == ECollisionResponse::Ignore)
             {
                 continue;
@@ -268,11 +470,11 @@ public:
             {
                 if (bBegin)
                 {
-                    QueueOverlapPair(CompA, CompB, true);
+                    QueueOverlapPair(InfoA, InfoB, true);
                 }
                 if (bEnd)
                 {
-                    QueueOverlapPair(CompA, CompB, false);
+                    QueueOverlapPair(InfoA, InfoB, false);
                 }
                 continue;
             }
@@ -297,11 +499,11 @@ public:
 
             if (bBegin)
             {
-                QueueHitPair(CompA, CompB, true, ContactPos, ContactNormal, NormalImpulse, -Penetration);
+                QueueHitPair(InfoA, InfoB, true, ContactPos, ContactNormal, NormalImpulse, -Penetration);
             }
             if (bEnd)
             {
-                QueueHitPair(CompA, CompB, false, FVector::ZeroVector, FVector::ZeroVector, FVector::ZeroVector, 0.0f);
+                QueueHitPair(InfoA, InfoB, false, FVector::ZeroVector, FVector::ZeroVector, FVector::ZeroVector, 0.0f);
             }
         }
     }
@@ -318,14 +520,17 @@ public:
                 continue;
             }
 
-            UPrimitiveComponent* TriggerComp = GetComponentFromShape(TP.triggerShape);
-            UPrimitiveComponent* OtherComp = GetComponentFromShape(TP.otherShape);
-            if (!IsValid(TriggerComp) || !IsValid(OtherComp))
+            const FShapeEventInfo TriggerInfo = GetShapeEventInfo(TP.triggerShape);
+            const FShapeEventInfo OtherInfo   = GetShapeEventInfo(TP.otherShape);
+            if (!TriggerInfo.bValid || !OtherInfo.bValid)
             {
                 continue;
             }
 
-            const ECollisionResponse MinResponse = UPrimitiveComponent::GetMinResponse(TriggerComp, OtherComp);
+            const ECollisionResponse MinResponse = GetPackedMinResponse(
+                TP.triggerShape->getSimulationFilterData(),
+                TP.otherShape->getSimulationFilterData()
+            );
             if (MinResponse == ECollisionResponse::Ignore)
             {
                 continue;
@@ -335,11 +540,11 @@ public:
             const bool bEnd = TP.status == PxPairFlag::eNOTIFY_TOUCH_LOST;
             if (bBegin)
             {
-                QueueOverlapPair(TriggerComp, OtherComp, true);
+                QueueOverlapPair(TriggerInfo, OtherInfo, true);
             }
             if (bEnd)
             {
-                QueueOverlapPair(TriggerComp, OtherComp, false);
+                QueueOverlapPair(TriggerInfo, OtherInfo, false);
             }
         }
     }
@@ -351,12 +556,17 @@ public:
             return;
         }
 
+        const uint32                ComponentId = Component->GetUUID();
         std::lock_guard<std::mutex> Lock(EventMutex);
-        QueueSyntheticEndEventsForComponent_NoLock(Component, ActiveOverlapPairs, PendingTriggers, true);
-        QueueSyntheticEndEventsForComponent_NoLock(Component, ActiveHitPairs, PendingHits, false);
+        QueueSyntheticEndEventsForComponent_NoLock(ComponentId, ActiveOverlapPairs, PendingTriggers, true);
+        QueueSyntheticEndEventsForComponent_NoLock(ComponentId, ActiveHitPairs, PendingHits, false);
     }
 
-    void DispatchPendingEvents(bool bDispatchHitEvents, bool bDispatchTriggerEvents)
+    void DispatchPendingEvents(
+        bool                                       bDispatchHitEvents,
+        bool                                       bDispatchTriggerEvents,
+        const std::function<bool(uint32, uint32)>& IsCurrentGeneration
+    )
     {
         std::vector<FQueuedHit>     HitsToDispatch;
         std::vector<FQueuedTrigger> TriggersToDispatch;
@@ -370,8 +580,15 @@ public:
         {
             for (FQueuedHit& E : HitsToDispatch)
             {
-                UPrimitiveComponent* Self  = E.Self.Get();
-                UPrimitiveComponent* Other = E.Other.Get();
+                if (E.bBegin && IsCurrentGeneration &&
+                    (!IsCurrentGeneration(E.SelfComponentId, E.SelfGeneration) ||
+                        !IsCurrentGeneration(E.OtherComponentId, E.OtherGeneration)))
+                {
+                    continue;
+                }
+
+                UPrimitiveComponent* Self  = Cast<UPrimitiveComponent>(UObjectManager::Get().FindByUUID(E.SelfComponentId));
+                UPrimitiveComponent* Other = Cast<UPrimitiveComponent>(UObjectManager::Get().FindByUUID(E.OtherComponentId));
                 if (!IsValid(Self) || !IsValid(Other))
                 {
                     continue;
@@ -401,8 +618,15 @@ public:
         {
             for (FQueuedTrigger& E : TriggersToDispatch)
             {
-                UPrimitiveComponent* Self  = E.Self.Get();
-                UPrimitiveComponent* Other = E.Other.Get();
+                if (E.bBegin && IsCurrentGeneration &&
+                    (!IsCurrentGeneration(E.SelfComponentId, E.SelfGeneration) ||
+                        !IsCurrentGeneration(E.OtherComponentId, E.OtherGeneration)))
+                {
+                    continue;
+                }
+
+                UPrimitiveComponent* Self  = Cast<UPrimitiveComponent>(UObjectManager::Get().FindByUUID(E.SelfComponentId));
+                UPrimitiveComponent* Other = Cast<UPrimitiveComponent>(UObjectManager::Get().FindByUUID(E.OtherComponentId));
                 if (!IsValid(Self) || !IsValid(Other))
                 {
                     continue;
@@ -430,15 +654,15 @@ public:
     void onAdvance(const PxRigidBody* const*, const PxTransform*, const PxU32) override {}
 
 private:
-    void QueueOverlapPair(UPrimitiveComponent* A, UPrimitiveComponent* B, bool bBegin)
+    void QueueOverlapPair(const FShapeEventInfo& A, const FShapeEventInfo& B, bool bBegin)
     {
-        if (!IsValid(A) || !IsValid(B))
+        if (!A.bValid || !B.bValid)
         {
             return;
         }
 
         std::lock_guard<std::mutex> Lock(EventMutex);
-        FPairKey                    Key(A, B);
+        FPairKey                    Key(A.ComponentId, B.ComponentId);
         if (!Key.IsValid())
         {
             return;
@@ -462,27 +686,33 @@ private:
             ActiveOverlapPairs.erase(It);
         }
 
-        if (A->GetGenerateOverlapEvents()) PendingTriggers.push_back({ A, B, bBegin });
-        if (B->GetGenerateOverlapEvents()) PendingTriggers.push_back({ B, A, bBegin });
+        if (A.bWantsOverlap)
+        {
+            PendingTriggers.push_back({ A.ComponentId, A.ActorId, A.Generation, B.ComponentId, B.ActorId, B.Generation, bBegin });
+        }
+        if (B.bWantsOverlap)
+        {
+            PendingTriggers.push_back({ B.ComponentId, B.ActorId, B.Generation, A.ComponentId, A.ActorId, A.Generation, bBegin });
+        }
     }
 
     void QueueHitPair(
-        UPrimitiveComponent* A,
-        UPrimitiveComponent* B,
-        bool                 bBegin,
-        const FVector&       WorldLocation,
-        const FVector&       WorldNormal,
-        const FVector&       NormalImpulse,
-        float                PenetrationDepth
+        const FShapeEventInfo& A,
+        const FShapeEventInfo& B,
+        bool                   bBegin,
+        const FVector&         WorldLocation,
+        const FVector&         WorldNormal,
+        const FVector&         NormalImpulse,
+        float                  PenetrationDepth
     )
     {
-        if (!IsValid(A) || !IsValid(B))
+        if (!A.bValid || !B.bValid)
         {
             return;
         }
 
         std::lock_guard<std::mutex> Lock(EventMutex);
-        FPairKey                    Key(A, B);
+        FPairKey                    Key(A.ComponentId, B.ComponentId);
         if (!Key.IsValid())
         {
             return;
@@ -506,12 +736,20 @@ private:
             ActiveHitPairs.erase(It);
         }
 
-        PendingHits.push_back({ A, B, NormalImpulse, WorldLocation, WorldNormal, PenetrationDepth, bBegin });
-        PendingHits.push_back({ B, A, NormalImpulse * -1.0f, WorldLocation, WorldNormal * -1.0f, PenetrationDepth, bBegin });
+        PendingHits.push_back(
+            { A.ComponentId, A.ActorId, A.Generation, B.ComponentId, B.ActorId, B.Generation,
+              NormalImpulse, WorldLocation, WorldNormal, PenetrationDepth, bBegin
+            }
+        );
+        PendingHits.push_back(
+            { B.ComponentId, B.ActorId, B.Generation, A.ComponentId, A.ActorId, A.Generation,
+              NormalImpulse * -1.0f, WorldLocation, WorldNormal * -1.0f, PenetrationDepth, bBegin
+            }
+        );
     }
 
     void QueueSyntheticEndEventsForComponent_NoLock(
-        UPrimitiveComponent*                                     Component,
+        uint32                                                   ComponentId,
         std::unordered_map<FPairKey, FPairRecord, FPairKeyHash>& ActivePairs,
         std::vector<FQueuedTrigger>&                             OutTriggers,
         bool
@@ -519,18 +757,19 @@ private:
     {
         for (auto It = ActivePairs.begin(); It != ActivePairs.end();)
         {
-            UPrimitiveComponent* A = It->second.A.GetEvenIfPendingKill();
-            UPrimitiveComponent* B = It->second.B.GetEvenIfPendingKill();
-            if (A == Component || B == Component || !A || !B)
+            const FShapeEventInfo& A = It->second.A;
+            const FShapeEventInfo& B = It->second.B;
+            if (A.ComponentId == ComponentId || B.ComponentId == ComponentId)
             {
-                UPrimitiveComponent* Other = (A == Component) ? B : A;
-                if (IsValid(Component) && IsValid(Other) && Component->GetGenerateOverlapEvents())
+                const FShapeEventInfo& Self  = (A.ComponentId == ComponentId) ? A : B;
+                const FShapeEventInfo& Other = (A.ComponentId == ComponentId) ? B : A;
+                if (Self.bWantsOverlap)
                 {
-                    OutTriggers.push_back({ Component, Other, false });
+                    OutTriggers.push_back({ Self.ComponentId, Self.ActorId, Self.Generation, Other.ComponentId, Other.ActorId, Other.Generation, false });
                 }
-                if (IsValid(Other) && IsValid(Component) && Other->GetGenerateOverlapEvents())
+                if (Other.bWantsOverlap)
                 {
-                    OutTriggers.push_back({ Other, Component, false });
+                    OutTriggers.push_back({ Other.ComponentId, Other.ActorId, Other.Generation, Self.ComponentId, Self.ActorId, Self.Generation, false });
                 }
                 It = ActivePairs.erase(It);
             }
@@ -542,7 +781,7 @@ private:
     }
 
     void QueueSyntheticEndEventsForComponent_NoLock(
-        UPrimitiveComponent*                                     Component,
+        uint32                                                   ComponentId,
         std::unordered_map<FPairKey, FPairRecord, FPairKeyHash>& ActivePairs,
         std::vector<FQueuedHit>&                                 OutHits,
         bool
@@ -550,19 +789,22 @@ private:
     {
         for (auto It = ActivePairs.begin(); It != ActivePairs.end();)
         {
-            UPrimitiveComponent* A = It->second.A.GetEvenIfPendingKill();
-            UPrimitiveComponent* B = It->second.B.GetEvenIfPendingKill();
-            if (A == Component || B == Component || !A || !B)
+            const FShapeEventInfo& A = It->second.A;
+            const FShapeEventInfo& B = It->second.B;
+            if (A.ComponentId == ComponentId || B.ComponentId == ComponentId)
             {
-                UPrimitiveComponent* Other = (A == Component) ? B : A;
-                if (IsValid(Component) && IsValid(Other))
-                {
-                    OutHits.push_back({ Component, Other, FVector::ZeroVector, FVector::ZeroVector, FVector::ZeroVector, 0.0f, false });
-                }
-                if (IsValid(Other) && IsValid(Component))
-                {
-                    OutHits.push_back({ Other, Component, FVector::ZeroVector, FVector::ZeroVector, FVector::ZeroVector, 0.0f, false });
-                }
+                const FShapeEventInfo& Self  = (A.ComponentId == ComponentId) ? A : B;
+                const FShapeEventInfo& Other = (A.ComponentId == ComponentId) ? B : A;
+                OutHits.push_back(
+                    { Self.ComponentId, Self.ActorId, Self.Generation, Other.ComponentId, Other.ActorId, Other.Generation,
+                      FVector::ZeroVector, FVector::ZeroVector, FVector::ZeroVector, 0.0f, false
+                    }
+                );
+                OutHits.push_back(
+                    { Other.ComponentId, Other.ActorId, Other.Generation, Self.ComponentId, Self.ActorId, Self.Generation,
+                      FVector::ZeroVector, FVector::ZeroVector, FVector::ZeroVector, 0.0f, false
+                    }
+                );
                 It = ActivePairs.erase(It);
             }
             else
@@ -763,13 +1005,18 @@ void FPhysXPhysicsScene::Initialize(UWorld* InWorld)
     }
 
     Runtime.Initialize(World, Physics, Scene, DefaultMaterial);
+    StartPhysicsThread();
 
     UE_LOG("[PhysX] Initialized successfully (Scene=%p)", Scene);
 }
 
 void FPhysXPhysicsScene::Shutdown()
 {
+    StopPhysicsThreadAndJoin();
     Runtime.Shutdown();
+
+    GameThreadBindings.clear();
+    GameThreadActorBodies.clear();
 
     if (DefaultMaterial)
     {
@@ -801,30 +1048,552 @@ void FPhysXPhysicsScene::Shutdown()
 
 void FPhysXPhysicsScene::RegisterComponent(UPrimitiveComponent* Comp)
 {
-    Runtime.RegisterComponent(Comp);
+    if (!IsAliveObject(Comp))
+    {
+        return;
+    }
+
+    FPhysicsComponentBinding& Binding = TouchBinding_GameThread(Comp);
+    Binding.bPendingDestroy           = false;
+    Binding.bPendingCreate            = true;
+
+    FPhysicsBodyCreatePayload Payload = BuildRegisterPayload_GameThread(Comp, Binding);
+    if (!Payload.ShapeOwner.ComponentId || !Payload.ReservedBody.IsValid() || !Payload.ReservedShape.IsValid())
+    {
+        return;
+    }
+
+    Binding.Body     = Payload.ReservedBody;
+    Binding.Shape    = Payload.ReservedShape;
+    Binding.SyncMode = Payload.SyncMode;
+
+    Runtime.RegisterComponent(Payload);
 }
 
 void FPhysXPhysicsScene::UnregisterComponent(UPrimitiveComponent* Comp)
 {
+    if (!Comp)
+    {
+        return;
+    }
+
     if (EventCallback)
     {
         EventCallback->NotifyComponentUnregistered(Comp);
     }
-    Runtime.UnregisterComponent(Comp);
+
+    const uint32 ComponentId = Comp->GetUUID();
+    auto         It          = GameThreadBindings.find(ComponentId);
+    if (It == GameThreadBindings.end())
+    {
+        return;
+    }
+
+    FPhysicsComponentBinding& Binding = It->second;
+    ++Binding.Generation;
+    Binding.bPendingDestroy = true;
+    Binding.bPendingCreate  = false;
+
+    FPhysicsObjectKey Object;
+    Object.ActorId             = Binding.ActorId;
+    Object.ComponentId         = Binding.ComponentId;
+    Object.ComponentGeneration = Binding.Generation;
+    Object.Domain              = EPhysicsBodyDomain::ActorComponent;
+
+    Runtime.UnregisterComponent(Object);
+
+    bool bActorStillHasLiveBinding = false;
+    for (const auto& Pair : GameThreadBindings)
+    {
+        const FPhysicsComponentBinding& Other = Pair.second;
+        if (Other.ActorId == Binding.ActorId && !Other.bPendingDestroy)
+        {
+            bActorStillHasLiveBinding = true;
+            break;
+        }
+    }
+    if (!bActorStillHasLiveBinding)
+    {
+        GameThreadActorBodies.erase(Binding.ActorId);
+    }
 }
 
 void FPhysXPhysicsScene::RebuildBody(UPrimitiveComponent* Comp)
 {
-    if (EventCallback)
+    if (!IsAliveObject(Comp))
     {
-        EventCallback->NotifyComponentUnregistered(Comp);
+        return;
     }
-    Runtime.RebuildBody(Comp);
+
+    AActor*      OwnerActor = Comp->GetOwner();
+    const uint32 ActorId    = OwnerActor ? OwnerActor->GetUUID() : 0;
+
+    TArray<UPrimitiveComponent*> ComponentsToRebuild;
+    if (ActorId != 0)
+    {
+        for (const auto& Pair : GameThreadBindings)
+        {
+            const FPhysicsComponentBinding& Binding = Pair.second;
+            if (Binding.ActorId != ActorId || Binding.bPendingDestroy)
+            {
+                continue;
+            }
+
+            UPrimitiveComponent* BoundComponent = Cast<UPrimitiveComponent>(UObjectManager::Get().FindByUUID(Binding.ComponentId));
+            if (IsValid(BoundComponent) && BoundComponent->IsCollisionEnabled())
+            {
+                ComponentsToRebuild.push_back(BoundComponent);
+            }
+        }
+    }
+
+    if (ComponentsToRebuild.empty())
+    {
+        ComponentsToRebuild.push_back(Comp);
+    }
+
+    for (UPrimitiveComponent* RebuildComp : ComponentsToRebuild)
+    {
+        if (EventCallback)
+        {
+            EventCallback->NotifyComponentUnregistered(RebuildComp);
+        }
+
+        FPhysicsComponentBinding& Binding = TouchBinding_GameThread(RebuildComp);
+        ++Binding.Generation;
+        Binding.bPendingDestroy = true;
+        Binding.bPendingCreate  = false;
+
+        FPhysicsObjectKey Object;
+        Object.ActorId             = Binding.ActorId;
+        Object.ComponentId         = Binding.ComponentId;
+        Object.ComponentGeneration = Binding.Generation;
+        Object.Domain              = EPhysicsBodyDomain::ActorComponent;
+        Runtime.UnregisterComponent(Object);
+    }
+
+    if (ActorId != 0)
+    {
+        GameThreadActorBodies.erase(ActorId);
+    }
+
+    for (UPrimitiveComponent* RebuildComp : ComponentsToRebuild)
+    {
+        if (IsValid(RebuildComp) && RebuildComp->IsCollisionEnabled())
+        {
+            RegisterComponent(RebuildComp);
+        }
+    }
+}
+
+FPhysicsComponentBinding& FPhysXPhysicsScene::TouchBinding_GameThread(UPrimitiveComponent* Comp)
+{
+    const uint32              ComponentId = Comp->GetUUID();
+    FPhysicsComponentBinding& Binding     = GameThreadBindings[ComponentId];
+    Binding.ComponentId                   = ComponentId;
+    Binding.ActorId                       = Comp->GetOwner() ? Comp->GetOwner()->GetUUID() : 0;
+    if (Binding.Generation == 0)
+    {
+        Binding.Generation = 1;
+    }
+    return Binding;
+}
+
+const FPhysicsComponentBinding* FPhysXPhysicsScene::FindBinding_GameThread(uint32 ComponentId) const
+{
+    const auto It = GameThreadBindings.find(ComponentId);
+    return It != GameThreadBindings.end() ? &It->second : nullptr;
+}
+
+FPhysicsComponentBinding* FPhysXPhysicsScene::FindBinding_GameThread(uint32 ComponentId)
+{
+    auto It = GameThreadBindings.find(ComponentId);
+    return It != GameThreadBindings.end() ? &It->second : nullptr;
+}
+
+uint32 FPhysXPhysicsScene::GetComponentGeneration_GameThread(uint32 ComponentId) const
+{
+    const FPhysicsComponentBinding* Binding = FindBinding_GameThread(ComponentId);
+    return Binding ? Binding->Generation : 0;
+}
+
+FBodyCreationDesc FPhysXPhysicsScene::BuildBodyDescFromComponent_GameThread(UPrimitiveComponent* Comp, uint32 Generation) const
+{
+    FBodyCreationDesc Desc;
+    if (!Comp)
+    {
+        return Desc;
+    }
+
+    Desc.OwnerActorId             = Comp->GetOwner() ? Comp->GetOwner()->GetUUID() : 0;
+    Desc.OwnerComponentId         = Comp->GetUUID();
+    Desc.OwnerComponentGeneration = Generation;
+    Desc.WorldTransform           = GetComponentWorldTransform_GameThread(Comp);
+
+    const bool bSimulate  = Comp->GetSimulatePhysics();
+    const bool bKinematic = !bSimulate && Comp->IsKinematic();
+
+    if (bSimulate)
+    {
+        Desc.BodyType = EPhysicsBodyType::Dynamic;
+        Desc.SyncMode = EPhysicsSyncMode::PhysicsToEngine;
+    }
+    else if (bKinematic)
+    {
+        Desc.BodyType = EPhysicsBodyType::Kinematic;
+        Desc.SyncMode = EPhysicsSyncMode::KinematicTarget;
+    }
+    else
+    {
+        Desc.BodyType = EPhysicsBodyType::Static;
+        Desc.SyncMode = EPhysicsSyncMode::EngineToPhysics;
+    }
+
+    Desc.Mass                    = Comp->GetMass();
+    Desc.CenterOfMassLocalOffset = Comp->GetCenterOfMass();
+    Desc.bGenerateHitEvents      = true;
+    Desc.bGenerateOverlapEvents  = Comp->GetGenerateOverlapEvents();
+
+    Desc.bLockLinearX  = Comp->IsLinearLockX();
+    Desc.bLockLinearY  = Comp->IsLinearLockY();
+    Desc.bLockLinearZ  = Comp->IsLinearLockZ();
+    Desc.bLockAngularX = Comp->IsAngularLockX();
+    Desc.bLockAngularY = Comp->IsAngularLockY();
+    Desc.bLockAngularZ = Comp->IsAngularLockZ();
+
+    return Desc;
+}
+
+FPhysicsShapeDesc FPhysXPhysicsScene::BuildShapeDescFromComponent_GameThread(
+    UPrimitiveComponent* Comp,
+    UPrimitiveComponent* RootComponent
+) const
+{
+    FPhysicsShapeDesc Desc;
+    if (!Comp)
+    {
+        return Desc;
+    }
+
+    Desc.LocalTransform   = MakeShapeLocalTransform_GameThread(Comp, RootComponent);
+    Desc.CollisionEnabled = Comp->GetCollisionEnabled();
+
+    const bool bOwnerBodyIsDynamic =
+            RootComponent && (RootComponent->GetSimulatePhysics() || RootComponent->IsKinematic());
+
+    Desc.bIsTrigger = ShouldBeTriggerShape_GameThread(Comp, bOwnerBodyIsDynamic);
+    FillFilterDataFromComponent_GameThread(Desc.FilterData, Comp, Desc.bIsTrigger);
+
+    if (auto* Box = Cast<UBoxComponent>(Comp))
+    {
+        Desc.Type          = EPhysicsShapeType::Box;
+        Desc.BoxHalfExtent = Box->GetScaledBoxExtent();
+    }
+    else if (auto* Sphere = Cast<USphereComponent>(Comp))
+    {
+        Desc.Type         = EPhysicsShapeType::Sphere;
+        Desc.SphereRadius = Sphere->GetScaledSphereRadius();
+    }
+    else if (auto* Capsule = Cast<UCapsuleComponent>(Comp))
+    {
+        Desc.Type              = EPhysicsShapeType::Capsule;
+        Desc.CapsuleRadius     = Capsule->GetScaledCapsuleRadius();
+        Desc.CapsuleHalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+    }
+    else
+    {
+        const FBoundingBox Bounds      = Comp->GetWorldBoundingBox();
+        const FVector      WorldCenter = Bounds.GetCenter();
+        FVector            WorldExtent = Bounds.GetExtent();
+
+        if (WorldExtent.X <= 0.0f || WorldExtent.Y <= 0.0f || WorldExtent.Z <= 0.0f)
+        {
+            WorldExtent = FVector(0.5f, 0.5f, 0.5f);
+        }
+
+        Desc.Type           = EPhysicsShapeType::Box;
+        Desc.BoxHalfExtent  = WorldExtent;
+        Desc.LocalTransform = MakeRelativeTransformFromWorld_GameThread(
+            WorldCenter,
+            Comp->GetWorldMatrix().ToQuat(),
+            RootComponent
+        );
+    }
+
+    return Desc;
+}
+
+FPhysicsBodyCreatePayload FPhysXPhysicsScene::BuildRegisterPayload_GameThread(
+    UPrimitiveComponent*      Comp,
+    FPhysicsComponentBinding& Binding
+)
+{
+    FPhysicsBodyCreatePayload Payload;
+    if (!IsValid(Comp))
+    {
+        return Payload;
+    }
+
+    AActor* OwnerActor = Comp->GetOwner();
+    if (!IsValid(OwnerActor))
+    {
+        return Payload;
+    }
+
+    UPrimitiveComponent* RootPrim = Cast<UPrimitiveComponent>(OwnerActor->GetRootComponent());
+    if (!RootPrim)
+    {
+        RootPrim = Comp;
+    }
+
+    FPhysicsComponentBinding& RootBinding = TouchBinding_GameThread(RootPrim);
+    const uint32              ActorId     = OwnerActor->GetUUID();
+
+    FPhysicsBodyHandle BodyHandle;
+    auto               ActorBodyIt = GameThreadActorBodies.find(ActorId);
+    if (ActorBodyIt != GameThreadActorBodies.end() && ActorBodyIt->second.IsValid())
+    {
+        BodyHandle = ActorBodyIt->second;
+    }
+    else
+    {
+        BodyHandle                     = Runtime.ReserveBodyHandle_GameThread();
+        GameThreadActorBodies[ActorId] = BodyHandle;
+    }
+
+    const FPhysicsShapeHandle ShapeHandle = Runtime.ReserveShapeHandle_GameThread();
+
+    FBodyCreationDesc BodyDesc  = BuildBodyDescFromComponent_GameThread(RootPrim, RootBinding.Generation);
+    FPhysicsShapeDesc ShapeDesc = BuildShapeDescFromComponent_GameThread(Comp, RootPrim);
+
+    Payload.ReservedBody  = BodyHandle;
+    Payload.ReservedShape = ShapeHandle;
+
+    Payload.BodyOwner.ActorId             = ActorId;
+    Payload.BodyOwner.ComponentId         = RootPrim->GetUUID();
+    Payload.BodyOwner.ComponentGeneration = RootBinding.Generation;
+    Payload.BodyOwner.Domain              = EPhysicsBodyDomain::ActorComponent;
+
+    Payload.ShapeOwner.ActorId             = ActorId;
+    Payload.ShapeOwner.ComponentId         = Binding.ComponentId;
+    Payload.ShapeOwner.ComponentGeneration = Binding.Generation;
+    Payload.ShapeOwner.Domain              = EPhysicsBodyDomain::ActorComponent;
+
+    Payload.BodyType                     = BodyDesc.BodyType;
+    Payload.SyncMode                     = BodyDesc.SyncMode;
+    Payload.WorldTransform               = BodyDesc.WorldTransform;
+    Payload.Mass                         = BodyDesc.Mass;
+    Payload.CenterOfMassLocalOffset      = BodyDesc.CenterOfMassLocalOffset;
+    Payload.LinearDamping                = BodyDesc.LinearDamping;
+    Payload.AngularDamping               = BodyDesc.AngularDamping;
+    Payload.MaxAngularVelocity           = BodyDesc.MaxAngularVelocity;
+    Payload.PositionSolverIterationCount = BodyDesc.PositionSolverIterationCount;
+    Payload.VelocitySolverIterationCount = BodyDesc.VelocitySolverIterationCount;
+    Payload.bLockLinearX                 = BodyDesc.bLockLinearX;
+    Payload.bLockLinearY                 = BodyDesc.bLockLinearY;
+    Payload.bLockLinearZ                 = BodyDesc.bLockLinearZ;
+    Payload.bLockAngularX                = BodyDesc.bLockAngularX;
+    Payload.bLockAngularY                = BodyDesc.bLockAngularY;
+    Payload.bLockAngularZ                = BodyDesc.bLockAngularZ;
+    Payload.bEnableGravity               = BodyDesc.bEnableGravity;
+    Payload.bEnableCCD                   = BodyDesc.bEnableCCD;
+    Payload.bGenerateHitEvents           = BodyDesc.bGenerateHitEvents;
+    Payload.bGenerateOverlapEvents       = BodyDesc.bGenerateOverlapEvents;
+    Payload.Shapes.push_back(ShapeDesc);
+
+    RootBinding.Body     = BodyHandle;
+    RootBinding.SyncMode = Payload.SyncMode;
+    Binding.Body         = BodyHandle;
+    Binding.Shape        = ShapeHandle;
+    Binding.SyncMode     = Payload.SyncMode;
+
+    return Payload;
 }
 
 void FPhysXPhysicsScene::Tick(float DeltaTime)
 {
+    uint64 FrameIndex = 0;
+    {
+        std::lock_guard<std::mutex> Lock(PhysicsThreadMutex);
+        FrameIndex = CompletedPhysicsFrameIndex + 1;
+    }
+    SubmitPhysicsFrame(FrameIndex, DeltaTime);
+    WaitPhysicsFrame(FrameIndex);
+}
+
+void FPhysXPhysicsScene::SubmitPhysicsFrame(uint64 FrameIndex, float DeltaTime)
+{
+    EnqueueEngineTransformSync_GameThread();
+
+    std::unique_lock<std::mutex> Lock(PhysicsThreadMutex);
+    if (!bPhysicsThreadStarted)
+    {
+        Lock.unlock();
+        RunPhysicsFrame_PhysicsThread(DeltaTime);
+        Lock.lock();
+        CompletedPhysicsFrameIndex = (std::max)(CompletedPhysicsFrameIndex, FrameIndex);
+        PhysicsThreadDoneCv.notify_all();
+        return;
+    }
+
+    PhysicsThreadDoneCv.wait(
+        Lock,
+        [this]()
+        {
+            return !bPhysicsFramePending && !bPhysicsFrameInProgress;
+        }
+    );
+
+    PendingPhysicsFrameIndex = FrameIndex;
+    PendingPhysicsDeltaTime  = DeltaTime;
+    bPhysicsFramePending     = true;
+    PhysicsThreadCv.notify_one();
+}
+
+void FPhysXPhysicsScene::WaitPhysicsFrame(uint64 FrameIndex)
+{
+    std::unique_lock<std::mutex> Lock(PhysicsThreadMutex);
+    PhysicsThreadDoneCv.wait(
+        Lock,
+        [this, FrameIndex]()
+        {
+            return CompletedPhysicsFrameIndex >= FrameIndex &&
+                    !bPhysicsFramePending &&
+                    !bPhysicsFrameInProgress;
+        }
+    );
+}
+
+void FPhysXPhysicsScene::RunPhysicsFrame_PhysicsThread(float DeltaTime)
+{
     Runtime.Tick(DeltaTime);
+}
+
+void FPhysXPhysicsScene::PhysicsThreadMain()
+{
+    for (;;)
+    {
+        uint64 FrameIndex = 0;
+        float  DeltaTime  = 0.0f;
+
+        {
+            std::unique_lock<std::mutex> Lock(PhysicsThreadMutex);
+            PhysicsThreadCv.wait(
+                Lock,
+                [this]()
+                {
+                    return bPhysicsThreadStopRequested || bPhysicsFramePending;
+                }
+            );
+
+            if (bPhysicsThreadStopRequested && !bPhysicsFramePending)
+            {
+                break;
+            }
+
+            FrameIndex              = PendingPhysicsFrameIndex;
+            DeltaTime               = PendingPhysicsDeltaTime;
+            bPhysicsFramePending    = false;
+            bPhysicsFrameInProgress = true;
+        }
+
+        RunPhysicsFrame_PhysicsThread(DeltaTime);
+
+        {
+            std::lock_guard<std::mutex> Lock(PhysicsThreadMutex);
+            CompletedPhysicsFrameIndex = (std::max)(CompletedPhysicsFrameIndex, FrameIndex);
+            bPhysicsFrameInProgress    = false;
+        }
+        PhysicsThreadDoneCv.notify_all();
+    }
+
+    {
+        std::lock_guard<std::mutex> Lock(PhysicsThreadMutex);
+        bPhysicsThreadStarted   = false;
+        bPhysicsFramePending    = false;
+        bPhysicsFrameInProgress = false;
+    }
+    PhysicsThreadDoneCv.notify_all();
+}
+
+void FPhysXPhysicsScene::StartPhysicsThread()
+{
+    std::lock_guard<std::mutex> Lock(PhysicsThreadMutex);
+    if (bPhysicsThreadStarted)
+    {
+        return;
+    }
+
+    bPhysicsThreadStopRequested = false;
+    bPhysicsFramePending        = false;
+    bPhysicsFrameInProgress     = false;
+    CompletedPhysicsFrameIndex  = 0;
+    PendingPhysicsFrameIndex    = 0;
+    PendingPhysicsDeltaTime     = 0.0f;
+    bPhysicsThreadStarted       = true;
+    PhysicsThread               = std::thread(&FPhysXPhysicsScene::PhysicsThreadMain, this);
+}
+
+void FPhysXPhysicsScene::StopPhysicsThreadAndJoin()
+{
+    {
+        std::unique_lock<std::mutex> Lock(PhysicsThreadMutex);
+        if (!bPhysicsThreadStarted && !PhysicsThread.joinable())
+        {
+            return;
+        }
+
+        PhysicsThreadDoneCv.wait(
+            Lock,
+            [this]()
+            {
+                return !bPhysicsFramePending && !bPhysicsFrameInProgress;
+            }
+        );
+
+        bPhysicsThreadStopRequested = true;
+        PhysicsThreadCv.notify_one();
+    }
+
+    if (PhysicsThread.joinable())
+    {
+        PhysicsThread.join();
+    }
+
+    std::lock_guard<std::mutex> Lock(PhysicsThreadMutex);
+    bPhysicsThreadStarted       = false;
+    bPhysicsThreadStopRequested = false;
+}
+
+void FPhysXPhysicsScene::EnqueueEngineTransformSync_GameThread()
+{
+    for (const auto& Pair : GameThreadBindings)
+    {
+        const FPhysicsComponentBinding& Binding = Pair.second;
+        if (Binding.bPendingDestroy || !Binding.Body.IsValid())
+        {
+            continue;
+        }
+        if (Binding.SyncMode != EPhysicsSyncMode::EngineToPhysics &&
+            Binding.SyncMode != EPhysicsSyncMode::KinematicTarget)
+        {
+            continue;
+        }
+
+        UPrimitiveComponent* Component = Cast<UPrimitiveComponent>(
+            UObjectManager::Get().FindByUUID(Binding.ComponentId)
+        );
+        if (!IsValid(Component))
+        {
+            continue;
+        }
+
+        Runtime.SetBodyTransform(
+            Binding.Body,
+            GetComponentWorldTransform_GameThread(Component),
+            EPhysicsTeleportMode::None
+        );
+    }
 }
 
 void FPhysXPhysicsScene::DispatchPendingEvents()
@@ -834,17 +1603,22 @@ void FPhysXPhysicsScene::DispatchPendingEvents()
         const auto& PhysicsSettings = FProjectSettings::Get().Physics;
         EventCallback->DispatchPendingEvents(
             PhysicsSettings.bDispatchCollisionEvents,
-            PhysicsSettings.bDispatchTriggerEvents
+            PhysicsSettings.bDispatchTriggerEvents,
+            [this](uint32 ComponentId, uint32 Generation)
+            {
+                const FPhysicsComponentBinding* Binding = FindBinding_GameThread(ComponentId);
+                return Binding && Binding->Generation == Generation && !Binding->bPendingDestroy;
+            }
         );
     }
 }
 
 void FPhysXPhysicsScene::AddForce(UPrimitiveComponent* Comp, const FVector& Force)
 {
-    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
-    if (Body.IsValid())
+    const FPhysicsComponentBinding* Binding = Comp ? FindBinding_GameThread(Comp->GetUUID()) : nullptr;
+    if (Binding && Binding->Body.IsValid() && !Binding->bPendingDestroy)
     {
-        Runtime.AddForce(Body, Force);
+        Runtime.AddForce(Binding->Body, Force);
     }
 }
 
@@ -854,107 +1628,168 @@ void FPhysXPhysicsScene::AddForceAtLocation(
     const FVector& WorldLocation
 )
 {
-    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
-    if (Body.IsValid())
+    const FPhysicsComponentBinding* Binding = Comp ? FindBinding_GameThread(Comp->GetUUID()) : nullptr;
+    if (Binding && Binding->Body.IsValid() && !Binding->bPendingDestroy)
     {
-        Runtime.AddForceAtLocation(Body, Force, WorldLocation);
+        Runtime.AddForceAtLocation(Binding->Body, Force, WorldLocation);
     }
 }
 
 void FPhysXPhysicsScene::AddTorque(UPrimitiveComponent* Comp, const FVector& Torque)
 {
-    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
-    if (Body.IsValid())
+    const FPhysicsComponentBinding* Binding = Comp ? FindBinding_GameThread(Comp->GetUUID()) : nullptr;
+    if (Binding && Binding->Body.IsValid() && !Binding->bPendingDestroy)
     {
-        Runtime.AddTorque(Body, Torque);
+        Runtime.AddTorque(Binding->Body, Torque);
     }
 }
 
 void FPhysXPhysicsScene::AddImpulse(UPrimitiveComponent* Comp, const FVector& Impulse)
 {
-    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
-    if (Body.IsValid())
+    const FPhysicsComponentBinding* Binding = Comp ? FindBinding_GameThread(Comp->GetUUID()) : nullptr;
+    if (Binding && Binding->Body.IsValid() && !Binding->bPendingDestroy)
     {
-        Runtime.AddImpulse(Body, Impulse);
+        Runtime.AddImpulse(Binding->Body, Impulse);
     }
 }
 
 FVector FPhysXPhysicsScene::GetLinearVelocity(UPrimitiveComponent* Comp) const
 {
-    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
-    return Body.IsValid() ? Runtime.GetBodyLinearVelocity(Body) : FVector::ZeroVector;
+    if (!Comp)
+    {
+        return FVector::ZeroVector;
+    }
+    std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot = Runtime.AcquireLatestSnapshotRef();
+    const FPhysicsBodySnapshot*                  Body     = Snapshot ? Snapshot->FindByComponent(Comp->GetUUID()) : nullptr;
+    return Body ? Body->LinearVelocity : FVector::ZeroVector;
 }
 
 void FPhysXPhysicsScene::SetLinearVelocity(UPrimitiveComponent* Comp, const FVector& Vel)
 {
-    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
-    if (Body.IsValid())
+    const FPhysicsComponentBinding* Binding = Comp ? FindBinding_GameThread(Comp->GetUUID()) : nullptr;
+    if (!Binding || !Binding->Body.IsValid() || Binding->bPendingDestroy)
     {
-        Runtime.SetBodyVelocity(Body, Vel, Runtime.GetBodyAngularVelocity(Body));
+        return;
     }
+
+    const FVector CurrentAngular = GetAngularVelocity(Comp);
+    Runtime.SetBodyVelocity(Binding->Body, Vel, CurrentAngular);
 }
 
 FVector FPhysXPhysicsScene::GetAngularVelocity(UPrimitiveComponent* Comp) const
 {
-    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
-    return Body.IsValid() ? Runtime.GetBodyAngularVelocity(Body) : FVector::ZeroVector;
+    if (!Comp)
+    {
+        return FVector::ZeroVector;
+    }
+    std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot = Runtime.AcquireLatestSnapshotRef();
+    const FPhysicsBodySnapshot*                  Body     = Snapshot ? Snapshot->FindByComponent(Comp->GetUUID()) : nullptr;
+    return Body ? Body->AngularVelocity : FVector::ZeroVector;
 }
 
 void FPhysXPhysicsScene::SetAngularVelocity(UPrimitiveComponent* Comp, const FVector& Vel)
 {
-    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
-    if (Body.IsValid())
+    const FPhysicsComponentBinding* Binding = Comp ? FindBinding_GameThread(Comp->GetUUID()) : nullptr;
+    if (!Binding || !Binding->Body.IsValid() || Binding->bPendingDestroy)
     {
-        Runtime.SetBodyVelocity(Body, Runtime.GetBodyLinearVelocity(Body), Vel);
+        return;
     }
+
+    const FVector CurrentLinear = GetLinearVelocity(Comp);
+    Runtime.SetBodyVelocity(Binding->Body, CurrentLinear, Vel);
 }
 
 void FPhysXPhysicsScene::SetMass(UPrimitiveComponent* Comp, float Mass)
 {
-    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
-    if (Body.IsValid())
+    const FPhysicsComponentBinding* Binding = Comp ? FindBinding_GameThread(Comp->GetUUID()) : nullptr;
+    if (Binding && Binding->Body.IsValid() && !Binding->bPendingDestroy)
     {
-        Runtime.SetMass(Body, Mass);
+        Runtime.SetMass(Binding->Body, Mass);
     }
 }
 
 float FPhysXPhysicsScene::GetMass(UPrimitiveComponent* Comp) const
 {
-    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
-    return Body.IsValid() ? Runtime.GetMass(Body) : 1.0f;
+    if (!Comp)
+    {
+        return 1.0f;
+    }
+    std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot = Runtime.AcquireLatestSnapshotRef();
+    const FPhysicsBodySnapshot*                  Body     = Snapshot ? Snapshot->FindByComponent(Comp->GetUUID()) : nullptr;
+    return Body ? Body->Mass : 1.0f;
 }
 
 void FPhysXPhysicsScene::SetCenterOfMass(UPrimitiveComponent* Comp, const FVector& LocalOffset)
 {
-    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
-    if (Body.IsValid())
+    const FPhysicsComponentBinding* Binding = Comp ? FindBinding_GameThread(Comp->GetUUID()) : nullptr;
+    if (Binding && Binding->Body.IsValid() && !Binding->bPendingDestroy)
     {
-        Runtime.SetCenterOfMass(Body, LocalOffset);
+        Runtime.SetCenterOfMass(Binding->Body, LocalOffset);
     }
 }
 
 FVector FPhysXPhysicsScene::GetCenterOfMass(UPrimitiveComponent* Comp) const
 {
-    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
-    return Body.IsValid() ? Runtime.GetCenterOfMass(Body) : FVector::ZeroVector;
+    if (!Comp)
+    {
+        return FVector::ZeroVector;
+    }
+    std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot = Runtime.AcquireLatestSnapshotRef();
+    const FPhysicsBodySnapshot*                  Body     = Snapshot ? Snapshot->FindByComponent(Comp->GetUUID()) : nullptr;
+    return Body ? Body->CenterOfMass : FVector::ZeroVector;
 }
 
 void FPhysXPhysicsScene::SetLinearLock(UPrimitiveComponent* Comp, bool bX, bool bY, bool bZ)
 {
-    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
-    if (Body.IsValid())
+    const FPhysicsComponentBinding* Binding = Comp ? FindBinding_GameThread(Comp->GetUUID()) : nullptr;
+    if (Binding && Binding->Body.IsValid() && !Binding->bPendingDestroy)
     {
-        Runtime.SetLinearLock(Body, bX, bY, bZ);
+        Runtime.SetLinearLock(Binding->Body, bX, bY, bZ);
     }
 }
 
 void FPhysXPhysicsScene::SetAngularLock(UPrimitiveComponent* Comp, bool bX, bool bY, bool bZ)
 {
-    const FPhysicsBodyHandle Body = Runtime.FindBodyByComponent(Comp);
-    if (Body.IsValid())
+    const FPhysicsComponentBinding* Binding = Comp ? FindBinding_GameThread(Comp->GetUUID()) : nullptr;
+    if (Binding && Binding->Body.IsValid() && !Binding->bPendingDestroy)
     {
-        Runtime.SetAngularLock(Body, bX, bY, bZ);
+        Runtime.SetAngularLock(Binding->Body, bX, bY, bZ);
     }
+}
+
+bool FPhysXPhysicsScene::ResolveRaycastResult_GameThread(
+    const FPhysicsRaycastResult& PhysicsResult,
+    FHitResult&                  OutHit
+) const
+{
+    OutHit = FHitResult();
+    if (!PhysicsResult.bBlockingHit || PhysicsResult.HitComponentId == 0)
+    {
+        return false;
+    }
+
+    const FPhysicsComponentBinding* Binding = FindBinding_GameThread(PhysicsResult.HitComponentId);
+    if (!Binding || Binding->Generation != PhysicsResult.HitGeneration || Binding->bPendingDestroy)
+    {
+        return false;
+    }
+
+    UPrimitiveComponent* HitComp = Cast<UPrimitiveComponent>(
+        UObjectManager::Get().FindByUUID(PhysicsResult.HitComponentId)
+    );
+    if (!IsValid(HitComp))
+    {
+        return false;
+    }
+
+    OutHit.bHit             = true;
+    OutHit.Distance         = PhysicsResult.Distance;
+    OutHit.WorldHitLocation = PhysicsResult.Location;
+    OutHit.ImpactNormal     = PhysicsResult.ImpactNormal;
+    OutHit.WorldNormal      = PhysicsResult.Normal;
+    OutHit.HitComponent     = HitComp;
+    OutHit.HitActor         = HitComp->GetOwner();
+    return true;
 }
 
 bool FPhysXPhysicsScene::Raycast(
@@ -981,12 +1816,11 @@ bool FPhysXPhysicsScene::Raycast(
 
     struct FChannelRaycastFilter : PxQueryFilterCallback
     {
-        const AActor* IgnoreActor = nullptr;
-        PxU32 TraceBit = 0;
+        uint32 IgnoreActorId = 0;
+        PxU32  TraceBit      = 0;
 
-        FChannelRaycastFilter(const AActor* InIgnoreActor, ECollisionChannel InChannel)
-            : IgnoreActor(InIgnoreActor)
-            , TraceBit(1u << static_cast<PxU32>(InChannel))
+        FChannelRaycastFilter(uint32 InIgnoreActorId, ECollisionChannel InChannel) : IgnoreActorId(InIgnoreActorId)
+                                                                                   , TraceBit(1u << static_cast<PxU32>(InChannel))
         {
         }
 
@@ -997,9 +1831,9 @@ bool FPhysXPhysicsScene::Raycast(
             PxHitFlags&
         ) override
         {
-            AActor* ShapeOwner = GetOwnerActorFromShape(Shape);
-            AActor* ActorOwner = GetOwnerActorFromActor(Actor);
-            if (IgnoreActor && (ShapeOwner == IgnoreActor || ActorOwner == IgnoreActor))
+            const uint32 ShapeActorId = GetActorIdFromShape(Shape);
+            const uint32 BodyActorId  = GetActorIdFromActor(Actor);
+            if (IgnoreActorId != 0 && (ShapeActorId == IgnoreActorId || BodyActorId == IgnoreActorId))
             {
                 return PxQueryHitType::eNONE;
             }
@@ -1027,13 +1861,14 @@ bool FPhysXPhysicsScene::Raycast(
         }
     };
 
+    const uint32          IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
+    FChannelRaycastFilter FilterCallback(IgnoreActorId, TraceChannel);
+
     PxRaycastBuffer Hit;
     PxQueryFilterData FilterData;
     FilterData.flags = PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER;
-    FChannelRaycastFilter FilterCallback(IgnoreActor, TraceChannel);
 
     PxSceneReadLock ReadLock(*Scene);
-
     const bool bStatus = Scene->raycast(
         ToPxVec3(Start),
         ToPxVec3(RayDir),
@@ -1049,39 +1884,27 @@ bool FPhysXPhysicsScene::Raycast(
         return false;
     }
 
-    const PxRaycastHit& Block = Hit.block;
-    OutHit.bHit = true;
-    OutHit.Distance = Block.distance;
-    OutHit.WorldHitLocation = ToFVector(Block.position);
-    OutHit.ImpactNormal = ToFVector(Block.normal);
-    OutHit.WorldNormal = OutHit.ImpactNormal;
+    const PxRaycastHit&   Block = Hit.block;
+    FPhysicsRaycastResult PhysicsResult;
+    PhysicsResult.bBlockingHit = true;
+    PhysicsResult.Distance     = Block.distance;
+    PhysicsResult.Location     = ToFVector(Block.position);
+    PhysicsResult.ImpactPoint  = PhysicsResult.Location;
+    PhysicsResult.ImpactNormal = ToFVector(Block.normal);
+    PhysicsResult.Normal       = PhysicsResult.ImpactNormal;
 
     if (Block.shape)
     {
-        UPrimitiveComponent* HitComp = GetComponentFromShape(Block.shape);
-        if (IsValid(HitComp))
-        {
-            OutHit.HitComponent = HitComp;
-            OutHit.HitActor = HitComp->GetOwner();
-        }
+        PhysicsResult.HitComponentId = GetComponentIdFromShape(Block.shape);
+        PhysicsResult.HitActorId     = GetActorIdFromShape(Block.shape);
+        PhysicsResult.HitGeneration  = GetComponentGenerationFromShape(Block.shape);
     }
-
-    if (!OutHit.HitActor && Block.actor)
+    if (PhysicsResult.HitActorId == 0 && Block.actor)
     {
-        AActor* HitActor = GetOwnerActorFromActor(Block.actor);
-        if (IsValid(HitActor))
-        {
-            OutHit.HitActor = HitActor;
-        }
+        PhysicsResult.HitActorId = GetActorIdFromActor(Block.actor);
     }
 
-    if (!OutHit.HitComponent && !OutHit.HitActor)
-    {
-        OutHit.bHit = false;
-        return false;
-    }
-
-    return true;
+    return ResolveRaycastResult_GameThread(PhysicsResult, OutHit);
 }
 
 bool FPhysXPhysicsScene::RaycastByObjectTypes(
@@ -1108,12 +1931,11 @@ bool FPhysXPhysicsScene::RaycastByObjectTypes(
 
     struct FObjectTypeRaycastFilter : PxQueryFilterCallback
     {
-        const AActor* IgnoreActor = nullptr;
-        PxU32 ObjectTypeMask = 0;
+        uint32 IgnoreActorId  = 0;
+        PxU32  ObjectTypeMask = 0;
 
-        FObjectTypeRaycastFilter(const AActor* InIgnoreActor, PxU32 InMask)
-            : IgnoreActor(InIgnoreActor)
-            , ObjectTypeMask(InMask)
+        FObjectTypeRaycastFilter(uint32 InIgnoreActorId, PxU32 InMask) : IgnoreActorId(InIgnoreActorId)
+                                                                       , ObjectTypeMask(InMask)
         {
         }
 
@@ -1124,9 +1946,9 @@ bool FPhysXPhysicsScene::RaycastByObjectTypes(
             PxHitFlags&
         ) override
         {
-            AActor* ShapeOwner = GetOwnerActorFromShape(Shape);
-            AActor* ActorOwner = GetOwnerActorFromActor(Actor);
-            if (IgnoreActor && (ShapeOwner == IgnoreActor || ActorOwner == IgnoreActor))
+            const uint32 ShapeActorId = GetActorIdFromShape(Shape);
+            const uint32 BodyActorId  = GetActorIdFromActor(Actor);
+            if (IgnoreActorId != 0 && (ShapeActorId == IgnoreActorId || BodyActorId == IgnoreActorId))
             {
                 return PxQueryHitType::eNONE;
             }
@@ -1155,13 +1977,14 @@ bool FPhysXPhysicsScene::RaycastByObjectTypes(
         }
     };
 
+    const uint32             IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
+    FObjectTypeRaycastFilter FilterCallback(IgnoreActorId, ObjectTypeMask);
+
     PxRaycastBuffer Hit;
     PxQueryFilterData FilterData;
     FilterData.flags = PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER;
-    FObjectTypeRaycastFilter FilterCallback(IgnoreActor, ObjectTypeMask);
 
     PxSceneReadLock ReadLock(*Scene);
-
     const bool bStatus = Scene->raycast(
         ToPxVec3(Start),
         ToPxVec3(RayDir),
@@ -1177,37 +2000,25 @@ bool FPhysXPhysicsScene::RaycastByObjectTypes(
         return false;
     }
 
-    const PxRaycastHit& Block = Hit.block;
-    OutHit.bHit = true;
-    OutHit.Distance = Block.distance;
-    OutHit.WorldHitLocation = ToFVector(Block.position);
-    OutHit.ImpactNormal = ToFVector(Block.normal);
-    OutHit.WorldNormal = OutHit.ImpactNormal;
+    const PxRaycastHit&   Block = Hit.block;
+    FPhysicsRaycastResult PhysicsResult;
+    PhysicsResult.bBlockingHit = true;
+    PhysicsResult.Distance     = Block.distance;
+    PhysicsResult.Location     = ToFVector(Block.position);
+    PhysicsResult.ImpactPoint  = PhysicsResult.Location;
+    PhysicsResult.ImpactNormal = ToFVector(Block.normal);
+    PhysicsResult.Normal       = PhysicsResult.ImpactNormal;
 
     if (Block.shape)
     {
-        UPrimitiveComponent* HitComp = GetComponentFromShape(Block.shape);
-        if (IsValid(HitComp))
-        {
-            OutHit.HitComponent = HitComp;
-            OutHit.HitActor = HitComp->GetOwner();
-        }
+        PhysicsResult.HitComponentId = GetComponentIdFromShape(Block.shape);
+        PhysicsResult.HitActorId     = GetActorIdFromShape(Block.shape);
+        PhysicsResult.HitGeneration  = GetComponentGenerationFromShape(Block.shape);
     }
-
-    if (!OutHit.HitActor && Block.actor)
+    if (PhysicsResult.HitActorId == 0 && Block.actor)
     {
-        AActor* HitActor = GetOwnerActorFromActor(Block.actor);
-        if (IsValid(HitActor))
-        {
-            OutHit.HitActor = HitActor;
-        }
+        PhysicsResult.HitActorId = GetActorIdFromActor(Block.actor);
     }
 
-    if (!OutHit.HitComponent && !OutHit.HitActor)
-    {
-        OutHit.bHit = false;
-        return false;
-    }
-
-    return true;
+    return ResolveRaycastResult_GameThread(PhysicsResult, OutHit);
 }

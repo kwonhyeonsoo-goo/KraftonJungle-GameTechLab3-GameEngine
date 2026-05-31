@@ -4,6 +4,7 @@
 #include "Component/Primitive/StaticMeshComponent.h"
 #include "Engine/Component/Camera/CameraComponent.h"
 #include "Render/Types/LODContext.h"
+#include "Core/ProjectSettings.h"
 #include "Physics/PhysXPhysicsScene.h"
 #include "Physics/PhysicsRuntime.h"
 #include "Physics/PhysicsWorldSnapshot.h"
@@ -415,17 +416,32 @@ void UWorld::Tick(float DeltaTime, ELevelTick TickType)
 	}
 
     TickManager.GatherTickFunctions(this, TickType);
+
+    const bool bAsyncPhysics = FProjectSettings::Get().Physics.bAsyncPhysics;
+
+    if (bAsyncPhysics && bHasBegunPlay && PhysicsScene)
+    {
+        SCOPE_STAT_CAT("PhysicsScene", "ApplyPrevSnapshot");
+        ApplyPhysicsSnapshot_GameThread();
+        PhysicsScene->DispatchPendingEvents();
+    }
+
     TickManager.TickGroup(TG_PrePhysics, DeltaTime, TickType);
+
+    uint64 SubmittedPhysicsFrame = 0;
+    if (bHasBegunPlay && PhysicsScene)
+    {
+        SCOPE_STAT_CAT("PhysicsScene", "Submit");
+        SubmittedPhysicsFrame = ++PhysicsFrameIndex;
+        PhysicsScene->SubmitPhysicsFrame(SubmittedPhysicsFrame, DeltaTime);
+    }
+
     TickManager.TickGroup(TG_DuringPhysics, DeltaTime, TickType);
 
-	if (bHasBegunPlay && PhysicsScene)
-	{
-		SCOPE_STAT_CAT("PhysicsScene", "1_WorldTick");
-		if (IPhysicsRuntime* Runtime = PhysicsScene->GetRuntime())
-		{
-			Runtime->CaptureEngineTransforms_GameThread();
-		}
-		PhysicsScene->Tick(DeltaTime);
+    if (!bAsyncPhysics && SubmittedPhysicsFrame != 0 && PhysicsScene)
+    {
+        SCOPE_STAT_CAT("PhysicsScene", "WaitApplyDispatch");
+        PhysicsScene->WaitPhysicsFrame(SubmittedPhysicsFrame);
         ApplyPhysicsSnapshot_GameThread();
         PhysicsScene->DispatchPendingEvents();
 	}
@@ -464,6 +480,12 @@ void UWorld::ApplyPhysicsSnapshot_GameThread()
 		{
 			continue;
 		}
+
+        const uint32 CurrentGeneration = PhysicsScene->GetComponentGeneration_GameThread(Body.OwnerComponentId);
+        if (CurrentGeneration == 0 || CurrentGeneration != Body.OwnerComponentGeneration)
+        {
+            continue;
+        }
 
 		UObject* Object = UObjectManager::Get().FindByUUID(Body.OwnerComponentId);
 		UPrimitiveComponent* Component = Cast<UPrimitiveComponent>(Object);

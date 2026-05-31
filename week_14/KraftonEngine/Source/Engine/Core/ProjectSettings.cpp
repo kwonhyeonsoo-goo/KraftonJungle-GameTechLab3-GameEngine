@@ -24,6 +24,7 @@ namespace PSKey
     constexpr const char* bEnablePCM                 = "bEnablePCM";
     constexpr const char* bEnableActiveActors        = "bEnableActiveActors";
     constexpr const char* bRequireSceneReadWriteLock = "bRequireSceneReadWriteLock";
+    constexpr const char* bAsyncPhysics              = "bAsyncPhysics";
     constexpr const char* bDispatchCollisionEvents   = "bDispatchCollisionEvents";
     constexpr const char* bDispatchTriggerEvents     = "bDispatchTriggerEvents";
     constexpr const char* bBuildDebugSnapshot        = "bBuildDebugSnapshot";
@@ -57,6 +58,7 @@ void FProjectSettings::SaveToFile(const FString& Path) const
     PhysObj[PSKey::bEnablePCM]                 = Physics.bEnablePCM;
     PhysObj[PSKey::bEnableActiveActors]        = Physics.bEnableActiveActors;
     PhysObj[PSKey::bRequireSceneReadWriteLock] = Physics.bRequireSceneReadWriteLock;
+    PhysObj[PSKey::bAsyncPhysics]              = Physics.bAsyncPhysics;
     PhysObj[PSKey::bDispatchCollisionEvents]   = Physics.bDispatchCollisionEvents;
     PhysObj[PSKey::bDispatchTriggerEvents]     = Physics.bDispatchTriggerEvents;
     PhysObj[PSKey::bBuildDebugSnapshot]        = Physics.bBuildDebugSnapshot;
@@ -116,6 +118,7 @@ void FProjectSettings::LoadFromFile(const FString& Path)
         if (P.hasKey(PSKey::bEnablePCM)) Physics.bEnablePCM = P[PSKey::bEnablePCM].ToBool();
         if (P.hasKey(PSKey::bEnableActiveActors)) Physics.bEnableActiveActors = P[PSKey::bEnableActiveActors].ToBool();
         if (P.hasKey(PSKey::bRequireSceneReadWriteLock)) Physics.bRequireSceneReadWriteLock = P[PSKey::bRequireSceneReadWriteLock].ToBool();
+        if (P.hasKey(PSKey::bAsyncPhysics)) Physics.bAsyncPhysics = P[PSKey::bAsyncPhysics].ToBool();
         if (P.hasKey(PSKey::bDispatchCollisionEvents)) Physics.bDispatchCollisionEvents = P[PSKey::bDispatchCollisionEvents].ToBool();
         if (P.hasKey(PSKey::bDispatchTriggerEvents)) Physics.bDispatchTriggerEvents = P[PSKey::bDispatchTriggerEvents].ToBool();
         if (P.hasKey(PSKey::bBuildDebugSnapshot)) Physics.bBuildDebugSnapshot = P[PSKey::bBuildDebugSnapshot].ToBool();

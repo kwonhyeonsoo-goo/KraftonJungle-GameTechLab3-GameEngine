@@ -82,5 +82,5 @@ public:
     virtual void GatherDebugBodies(TArray<FPhysicsDebugBody>& OutBodies) const = 0;
     virtual void GatherDebugConstraints(TArray<FPhysicsDebugConstraint>& OutConstraints) const = 0;
 
-    virtual const FPhysicsStats& GetStats() const = 0;
+    virtual FPhysicsStats GetStats() const = 0;
 };

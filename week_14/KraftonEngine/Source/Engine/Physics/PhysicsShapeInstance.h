@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Object/Ptr/WeakObjectPtr.h"
 #include "Physics/PhysicsTypes.h"
 
 namespace physx
@@ -13,8 +12,10 @@ struct FShapeInstance
     FPhysicsShapeHandle Handle;
     FPhysicsBodyHandle  OwnerBody;
 
-    // source component를 소유하지 않는다. callback/query 지연 처리에서 stale pointer를 막는다.
-    TWeakObjectPtr<UPrimitiveComponent> SourceComponent;
+    uint32 SourceActorId             = 0;
+    uint32 SourceComponentId         = 0;
+    uint32 SourceComponentGeneration = 0;
+
     FPhysicsShapeDesc                   Desc;
 
     // debug draw는 이 값을 써야 실제 충돌 형상과 일치한다.

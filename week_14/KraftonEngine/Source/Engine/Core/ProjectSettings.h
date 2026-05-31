@@ -39,6 +39,7 @@ class FProjectSettings : public TSingleton<FProjectSettings>
         bool  bEnablePCM                 = true;
         bool  bEnableActiveActors        = true;
         bool  bRequireSceneReadWriteLock = true;
+        bool  bAsyncPhysics              = false;
 
         // Debug/이벤트 publish 제어.
         bool bDispatchCollisionEvents = true;
