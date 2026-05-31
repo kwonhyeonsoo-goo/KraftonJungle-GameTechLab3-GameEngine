@@ -1,6 +1,7 @@
 #include "PhysicsAssetEditorWidget.h"
 
 #include "Asset/AssetRegistry.h"
+#include "Animation/Skeleton/Skeleton.h"
 #include "Editor/EditorEngine.h"
 #include "Mesh/MeshManager.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
@@ -191,6 +192,89 @@ namespace
     {
         return BoneName.IsValid() && BoneName != FName::None;
     }
+
+    bool IsBoneInReferenceSkeleton(const FReferenceSkeleton& RefSkeleton, const FName& BoneName)
+    {
+        return HasBoneName(BoneName) && RefSkeleton.FindBoneIndex(BoneName.ToString()) >= 0;
+    }
+
+    bool HasChildBone(const FReferenceSkeleton& RefSkeleton, int32 BoneIndex)
+    {
+        for (int32 Index = BoneIndex + 1; Index < RefSkeleton.GetNumBones(); ++Index)
+        {
+            if (RefSkeleton.Bones[Index].ParentIndex == BoneIndex)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    int32 FindNearestParentBodyBoneIndex(
+        UPhysicsAsset* PhysicsAsset,
+        const FReferenceSkeleton& RefSkeleton,
+        int32 BoneIndex)
+    {
+        if (!PhysicsAsset || BoneIndex < 0 || BoneIndex >= RefSkeleton.GetNumBones())
+        {
+            return -1;
+        }
+
+        int32 ParentIndex = RefSkeleton.Bones[BoneIndex].ParentIndex;
+        while (ParentIndex >= 0 && ParentIndex < RefSkeleton.GetNumBones())
+        {
+            if (PhysicsAsset->HasBodySetupForBone(FName(RefSkeleton.Bones[ParentIndex].Name)))
+            {
+                return ParentIndex;
+            }
+            ParentIndex = RefSkeleton.Bones[ParentIndex].ParentIndex;
+        }
+        return -1;
+    }
+
+    int32 FindConstraintToNearestParentBodyIndex(
+        UPhysicsAsset* PhysicsAsset,
+        const FReferenceSkeleton& RefSkeleton,
+        int32 BoneIndex)
+    {
+        if (!PhysicsAsset || BoneIndex < 0 || BoneIndex >= RefSkeleton.GetNumBones())
+        {
+            return -1;
+        }
+
+        const int32 ParentBodyIndex = FindNearestParentBodyBoneIndex(PhysicsAsset, RefSkeleton, BoneIndex);
+        if (ParentBodyIndex < 0)
+        {
+            return -1;
+        }
+
+        return PhysicsAsset->FindConstraintSetupIndex(
+            FName(RefSkeleton.Bones[ParentBodyIndex].Name),
+            FName(RefSkeleton.Bones[BoneIndex].Name));
+    }
+
+    FString MakeBoneTreeLabel(
+        UPhysicsAsset* PhysicsAsset,
+        const FReferenceSkeleton& RefSkeleton,
+        int32 BoneIndex)
+    {
+        const FName BoneName(RefSkeleton.Bones[BoneIndex].Name);
+        const bool bHasBody = PhysicsAsset && PhysicsAsset->HasBodySetupForBone(BoneName);
+        const int32 ParentBodyIndex = FindNearestParentBodyBoneIndex(PhysicsAsset, RefSkeleton, BoneIndex);
+        const int32 ConstraintIndex = FindConstraintToNearestParentBodyIndex(PhysicsAsset, RefSkeleton, BoneIndex);
+
+        FString Label = bHasBody ? "[Body] " : "[No Body] ";
+        if (ParentBodyIndex < 0)
+        {
+            Label += "[Root] ";
+        }
+        else
+        {
+            Label += ConstraintIndex >= 0 ? "[Joint] " : "[No Joint] ";
+        }
+        Label += RefSkeleton.Bones[BoneIndex].Name;
+        return Label;
+    }
 }
 
 bool FPhysicsAssetEditorWidget::CanEdit(UObject* Object) const
@@ -219,6 +303,8 @@ void FPhysicsAssetEditorWidget::Open(UObject* Object)
     SelectedBodyIndex = -1;
     SelectedShapeIndex = -1;
     SelectedConstraintIndex = -1;
+    SelectedTreeBoneIndex = -1;
+    PreviewSkeletalMesh = nullptr;
     ValidationIssues.clear();
     ValidationMeshPath.clear();
     bValidationRan = false;
@@ -255,6 +341,13 @@ void FPhysicsAssetEditorWidget::OpenEmbedded(UPhysicsAsset* PhysicsAsset)
 
 void FPhysicsAssetEditorWidget::RenderEmbedded(UPhysicsAsset* PhysicsAsset, float DeltaTime)
 {
+    RenderEmbedded(PhysicsAsset, nullptr, DeltaTime);
+}
+
+void FPhysicsAssetEditorWidget::RenderEmbedded(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime)
+{
+    PreviewSkeletalMesh = PreviewMesh;
+
     if (!PhysicsAsset)
     {
         Close();
@@ -265,6 +358,7 @@ void FPhysicsAssetEditorWidget::RenderEmbedded(UPhysicsAsset* PhysicsAsset, floa
     if (!IsEditingObject(PhysicsAsset))
     {
         OpenEmbedded(PhysicsAsset);
+        PreviewSkeletalMesh = PreviewMesh;
     }
 
     RenderDocument(DeltaTime);
@@ -315,9 +409,18 @@ void FPhysicsAssetEditorWidget::RenderDocument(float DeltaTime)
     ImGui::BeginChild("##PhysicsAssetLeft", ImVec2(LeftWidth, 0.0f), true);
     RenderAssetSummary(PhysicsAsset);
     ImGui::Separator();
-    RenderBodyList(PhysicsAsset);
-    ImGui::Separator();
-    RenderConstraintList(PhysicsAsset);
+    if (PreviewSkeletalMesh && PreviewSkeletalMesh->GetSkeleton())
+    {
+        RenderSkeletonPhysicsTree(PhysicsAsset, PreviewSkeletalMesh);
+    }
+    else
+    {
+        ImGui::TextDisabled("No preview Skeleton. Falling back to raw setup lists.");
+        ImGui::Separator();
+        RenderBodyList(PhysicsAsset);
+        ImGui::Separator();
+        RenderConstraintList(PhysicsAsset);
+    }
     ImGui::EndChild();
 
     ImGui::SameLine();
@@ -376,6 +479,300 @@ void FPhysicsAssetEditorWidget::RenderAssetSummary(UPhysicsAsset* PhysicsAsset)
     ImGui::TextDisabled("Bodies: %d  Constraints: %d", static_cast<int32>(PhysicsAsset->GetBodySetups().size()), static_cast<int32>(PhysicsAsset->GetConstraintSetups().size()));
 }
 
+void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh)
+{
+    USkeleton* Skeleton = PreviewMesh ? PreviewMesh->GetSkeleton() : nullptr;
+    if (!Skeleton)
+    {
+        RenderBodyList(PhysicsAsset);
+        ImGui::Separator();
+        RenderConstraintList(PhysicsAsset);
+        return;
+    }
+
+    const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+    ImGui::TextUnformatted("Skeleton Physics Tree");
+    ImGui::TextDisabled("Right-click a bone to add/remove Body or create a parent Joint.");
+
+    ImGui::BeginChild("##PhysicsAssetSkeletonTree", ImVec2(0.0f, 360.0f), true);
+    if (RefSkeleton.GetNumBones() <= 0)
+    {
+        ImGui::TextDisabled("Skeleton has no bones.");
+    }
+    else
+    {
+        for (int32 Index = 0; Index < RefSkeleton.GetNumBones(); ++Index)
+        {
+            if (RefSkeleton.Bones[Index].ParentIndex == -1)
+            {
+                RenderPhysicsBoneTree(PhysicsAsset, RefSkeleton, Index);
+            }
+        }
+    }
+    ImGui::EndChild();
+
+    RenderUnboundPhysicsSetups(PhysicsAsset, RefSkeleton);
+}
+
+void FPhysicsAssetEditorWidget::RenderPhysicsBoneTree(
+    UPhysicsAsset* PhysicsAsset,
+    const FReferenceSkeleton& RefSkeleton,
+    int32 BoneIndex)
+{
+    if (!PhysicsAsset || BoneIndex < 0 || BoneIndex >= RefSkeleton.GetNumBones())
+    {
+        return;
+    }
+
+    const FReferenceBone& Bone = RefSkeleton.Bones[BoneIndex];
+    const FName BoneName(Bone.Name);
+    const int32 BodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(BoneName);
+    const int32 ConstraintIndex = FindConstraintToNearestParentBodyIndex(PhysicsAsset, RefSkeleton, BoneIndex);
+    const bool bHasChildren = HasChildBone(RefSkeleton, BoneIndex);
+    const bool bSelected =
+        SelectedTreeBoneIndex == BoneIndex ||
+        (BodyIndex >= 0 && SelectedBodyIndex == BodyIndex && SelectedConstraintIndex < 0) ||
+        (ConstraintIndex >= 0 && SelectedConstraintIndex == ConstraintIndex);
+
+    ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
+    if (!bHasChildren)
+    {
+        Flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+    }
+    if (bSelected)
+    {
+        Flags |= ImGuiTreeNodeFlags_Selected;
+    }
+
+    const FString Label = MakeBoneTreeLabel(PhysicsAsset, RefSkeleton, BoneIndex);
+    ImGui::PushID(BoneIndex);
+    const bool bOpen = ImGui::TreeNodeEx("##PhysicsBone", Flags, "%s", Label.c_str());
+
+    if (ImGui::IsItemClicked())
+    {
+        SelectedTreeBoneIndex = BoneIndex;
+        if (BodyIndex >= 0)
+        {
+            SelectedBodyIndex = BodyIndex;
+            SelectedShapeIndex = PhysicsAsset->GetBodySetups()[BodyIndex].Shapes.empty() ? -1 : 0;
+            SelectedConstraintIndex = -1;
+        }
+        else
+        {
+            SelectedBodyIndex = -1;
+            SelectedShapeIndex = -1;
+            SelectedConstraintIndex = -1;
+        }
+    }
+
+    RenderPhysicsBoneContextMenu(PhysicsAsset, RefSkeleton, BoneIndex);
+
+    if (bOpen && !bHasChildren)
+    {
+        ImGui::PopID();
+        return;
+    }
+
+    if (bOpen)
+    {
+        if (ConstraintIndex >= 0)
+        {
+            const FPhysicsAssetConstraintSetup& Constraint = PhysicsAsset->GetConstraintSetups()[ConstraintIndex];
+            const FString ConstraintText = "Joint: " + Constraint.ParentBoneName.ToString() + " -> " + Constraint.ChildBoneName.ToString();
+            if (ImGui::Selectable(ConstraintText.c_str(), SelectedConstraintIndex == ConstraintIndex))
+            {
+                SelectedConstraintIndex = ConstraintIndex;
+                SelectedBodyIndex = -1;
+                SelectedShapeIndex = -1;
+                SelectedTreeBoneIndex = BoneIndex;
+            }
+        }
+
+        for (int32 ChildIndex = BoneIndex + 1; ChildIndex < RefSkeleton.GetNumBones(); ++ChildIndex)
+        {
+            if (RefSkeleton.Bones[ChildIndex].ParentIndex == BoneIndex)
+            {
+                RenderPhysicsBoneTree(PhysicsAsset, RefSkeleton, ChildIndex);
+            }
+        }
+        ImGui::TreePop();
+    }
+    ImGui::PopID();
+}
+
+void FPhysicsAssetEditorWidget::RenderPhysicsBoneContextMenu(
+    UPhysicsAsset* PhysicsAsset,
+    const FReferenceSkeleton& RefSkeleton,
+    int32 BoneIndex)
+{
+    if (!PhysicsAsset || BoneIndex < 0 || BoneIndex >= RefSkeleton.GetNumBones())
+    {
+        return;
+    }
+
+    if (!ImGui::BeginPopupContextItem("##PhysicsBoneContext"))
+    {
+        return;
+    }
+
+    const FReferenceBone& Bone = RefSkeleton.Bones[BoneIndex];
+    const FName BoneName(Bone.Name);
+    const int32 BodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(BoneName);
+    const int32 ParentBodyBoneIndex = FindNearestParentBodyBoneIndex(PhysicsAsset, RefSkeleton, BoneIndex);
+    const FName ParentBodyBoneName = ParentBodyBoneIndex >= 0 ? FName(RefSkeleton.Bones[ParentBodyBoneIndex].Name) : FName::None;
+    const int32 ConstraintIndex = ParentBodyBoneIndex >= 0
+        ? PhysicsAsset->FindConstraintSetupIndex(ParentBodyBoneName, BoneName)
+        : -1;
+
+    ImGui::TextDisabled("Bone: %s", Bone.Name.c_str());
+    ImGui::Separator();
+
+    if (BodyIndex >= 0)
+    {
+        if (ImGui::MenuItem("Select Body"))
+        {
+            SelectedTreeBoneIndex = BoneIndex;
+            SelectedBodyIndex = BodyIndex;
+            SelectedShapeIndex = PhysicsAsset->GetBodySetups()[BodyIndex].Shapes.empty() ? -1 : 0;
+            SelectedConstraintIndex = -1;
+        }
+
+        if (ImGui::MenuItem("Remove Body"))
+        {
+            PhysicsAsset->RemoveBodySetupByIndex(BodyIndex);
+            SelectedTreeBoneIndex = BoneIndex;
+            SelectedBodyIndex = -1;
+            SelectedShapeIndex = -1;
+            SelectedConstraintIndex = -1;
+            MarkPhysicsAssetDirty();
+        }
+    }
+    else
+    {
+        if (ImGui::MenuItem("Add Body to Bone"))
+        {
+            AddDefaultBodyForBone(PhysicsAsset, BoneName);
+            SelectedTreeBoneIndex = BoneIndex;
+        }
+    }
+
+    ImGui::Separator();
+    const bool bCanCreateConstraint = BodyIndex >= 0 && ParentBodyBoneIndex >= 0 && ConstraintIndex < 0;
+    if (!bCanCreateConstraint) ImGui::BeginDisabled();
+    if (ImGui::MenuItem("Create Constraint to Parent Body"))
+    {
+        AddDefaultConstraintForBones(PhysicsAsset, ParentBodyBoneName, BoneName);
+        SelectedTreeBoneIndex = BoneIndex;
+    }
+    if (!bCanCreateConstraint) ImGui::EndDisabled();
+
+    if (ConstraintIndex >= 0)
+    {
+        if (ImGui::MenuItem("Select Parent Constraint"))
+        {
+            SelectedConstraintIndex = ConstraintIndex;
+            SelectedBodyIndex = -1;
+            SelectedShapeIndex = -1;
+            SelectedTreeBoneIndex = BoneIndex;
+        }
+        if (ImGui::MenuItem("Remove Parent Constraint"))
+        {
+            PhysicsAsset->RemoveConstraintSetupByIndex(ConstraintIndex);
+            SelectedConstraintIndex = -1;
+            SelectedBodyIndex = BodyIndex;
+            SelectedShapeIndex = BodyIndex >= 0 && !PhysicsAsset->GetBodySetups()[BodyIndex].Shapes.empty() ? 0 : -1;
+            SelectedTreeBoneIndex = BoneIndex;
+            MarkPhysicsAssetDirty();
+        }
+    }
+    else if (ParentBodyBoneIndex >= 0)
+    {
+        ImGui::TextDisabled("Parent Body: %s", ParentBodyBoneName.ToString().c_str());
+    }
+    else
+    {
+        ImGui::TextDisabled("No parent body found.");
+    }
+
+    ImGui::EndPopup();
+}
+
+void FPhysicsAssetEditorWidget::RenderUnboundPhysicsSetups(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton)
+{
+    if (!PhysicsAsset)
+    {
+        return;
+    }
+
+    bool bHasUnbound = false;
+    for (const FPhysicsAssetBodySetup& Body : PhysicsAsset->GetBodySetups())
+    {
+        if (!IsBoneInReferenceSkeleton(RefSkeleton, Body.BoneName))
+        {
+            bHasUnbound = true;
+            break;
+        }
+    }
+    if (!bHasUnbound)
+    {
+        for (const FPhysicsAssetConstraintSetup& Constraint : PhysicsAsset->GetConstraintSetups())
+        {
+            if (!IsBoneInReferenceSkeleton(RefSkeleton, Constraint.ParentBoneName) ||
+                !IsBoneInReferenceSkeleton(RefSkeleton, Constraint.ChildBoneName))
+            {
+                bHasUnbound = true;
+                break;
+            }
+        }
+    }
+
+    if (!bHasUnbound)
+    {
+        return;
+    }
+
+    ImGui::Separator();
+    if (!ImGui::TreeNodeEx("Unbound / Invalid Setups", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        return;
+    }
+
+    const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
+    for (int32 Index = 0; Index < static_cast<int32>(Bodies.size()); ++Index)
+    {
+        if (!IsBoneInReferenceSkeleton(RefSkeleton, Bodies[Index].BoneName))
+        {
+            const FString Label = BodyLabel(Bodies[Index], Index, PhysicsAsset->GetBodySetupEditorState(Index));
+            if (ImGui::Selectable(Label.c_str(), SelectedBodyIndex == Index && SelectedConstraintIndex < 0))
+            {
+                SelectedBodyIndex = Index;
+                SelectedShapeIndex = Bodies[Index].Shapes.empty() ? -1 : 0;
+                SelectedConstraintIndex = -1;
+                SelectedTreeBoneIndex = -1;
+            }
+        }
+    }
+
+    const TArray<FPhysicsAssetConstraintSetup>& Constraints = PhysicsAsset->GetConstraintSetups();
+    for (int32 Index = 0; Index < static_cast<int32>(Constraints.size()); ++Index)
+    {
+        if (!IsBoneInReferenceSkeleton(RefSkeleton, Constraints[Index].ParentBoneName) ||
+            !IsBoneInReferenceSkeleton(RefSkeleton, Constraints[Index].ChildBoneName))
+        {
+            const FString Label = ConstraintLabel(Constraints[Index], Index, PhysicsAsset->GetConstraintSetupEditorState(Index));
+            if (ImGui::Selectable(Label.c_str(), SelectedConstraintIndex == Index))
+            {
+                SelectedConstraintIndex = Index;
+                SelectedBodyIndex = -1;
+                SelectedShapeIndex = -1;
+                SelectedTreeBoneIndex = -1;
+            }
+        }
+    }
+
+    ImGui::TreePop();
+}
+
 void FPhysicsAssetEditorWidget::RenderBodyList(UPhysicsAsset* PhysicsAsset)
 {
     ImGui::TextUnformatted("Bodies");
@@ -389,6 +786,7 @@ void FPhysicsAssetEditorWidget::RenderBodyList(UPhysicsAsset* PhysicsAsset)
             SelectedBodyIndex = i;
             SelectedShapeIndex = Bodies[i].Shapes.empty() ? -1 : 0;
             SelectedConstraintIndex = -1;
+            SelectedTreeBoneIndex = -1;
         }
     }
     if (Bodies.empty()) ImGui::TextDisabled("No bodies. Click Add Body to start authoring.");
@@ -421,6 +819,7 @@ void FPhysicsAssetEditorWidget::RenderConstraintList(UPhysicsAsset* PhysicsAsset
             SelectedConstraintIndex = i;
             SelectedBodyIndex = -1;
             SelectedShapeIndex = -1;
+            SelectedTreeBoneIndex = -1;
         }
     }
     if (Constraints.empty()) ImGui::TextDisabled("No constraints. Click Add Constraint to start authoring.");
@@ -455,7 +854,96 @@ void FPhysicsAssetEditorWidget::RenderDetailsPanel(UPhysicsAsset* PhysicsAsset)
         return;
     }
 
-    ImGui::TextDisabled("Select a body or constraint to edit details.");
+    if (SelectedTreeBoneIndex >= 0 && PreviewSkeletalMesh)
+    {
+        RenderSelectedBoneDetails(PhysicsAsset, PreviewSkeletalMesh);
+        return;
+    }
+
+    ImGui::TextDisabled("Select a bone, body, or constraint to edit details.");
+}
+
+void FPhysicsAssetEditorWidget::RenderSelectedBoneDetails(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh)
+{
+    USkeleton* Skeleton = PreviewMesh ? PreviewMesh->GetSkeleton() : nullptr;
+    if (!PhysicsAsset || !Skeleton)
+    {
+        ImGui::TextDisabled("Select a bone, body, or constraint to edit details.");
+        return;
+    }
+
+    const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+    if (SelectedTreeBoneIndex < 0 || SelectedTreeBoneIndex >= RefSkeleton.GetNumBones())
+    {
+        ImGui::TextDisabled("Selected bone is invalid.");
+        return;
+    }
+
+    const FReferenceBone& Bone = RefSkeleton.Bones[SelectedTreeBoneIndex];
+    const FName BoneName(Bone.Name);
+    const int32 BodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(BoneName);
+    const int32 ParentBodyBoneIndex = FindNearestParentBodyBoneIndex(PhysicsAsset, RefSkeleton, SelectedTreeBoneIndex);
+    const FName ParentBodyBoneName = ParentBodyBoneIndex >= 0 ? FName(RefSkeleton.Bones[ParentBodyBoneIndex].Name) : FName::None;
+    const int32 ConstraintIndex = ParentBodyBoneIndex >= 0
+        ? PhysicsAsset->FindConstraintSetupIndex(ParentBodyBoneName, BoneName)
+        : -1;
+
+    ImGui::TextUnformatted("Bone Details");
+    ImGui::Text("Name: %s", Bone.Name.c_str());
+    ImGui::Text("Index: %d", SelectedTreeBoneIndex);
+    ImGui::Text("Parent Index: %d", Bone.ParentIndex);
+    ImGui::Separator();
+
+    if (BodyIndex >= 0)
+    {
+        ImGui::TextDisabled("This bone already has a Physics Body.");
+        if (ImGui::Button("Select Body", ImVec2(140.0f, 0.0f)))
+        {
+            SelectedBodyIndex = BodyIndex;
+            SelectedShapeIndex = PhysicsAsset->GetBodySetups()[BodyIndex].Shapes.empty() ? -1 : 0;
+            SelectedConstraintIndex = -1;
+        }
+    }
+    else
+    {
+        if (ImGui::Button("Add Body to Bone", ImVec2(180.0f, 0.0f)))
+        {
+            AddDefaultBodyForBone(PhysicsAsset, BoneName);
+        }
+    }
+
+    ImGui::Spacing();
+    if (ParentBodyBoneIndex >= 0)
+    {
+        ImGui::TextDisabled("Nearest Parent Body: %s", ParentBodyBoneName.ToString().c_str());
+        if (ConstraintIndex >= 0)
+        {
+            if (ImGui::Button("Select Parent Constraint", ImVec2(190.0f, 0.0f)))
+            {
+                SelectedConstraintIndex = ConstraintIndex;
+                SelectedBodyIndex = -1;
+                SelectedShapeIndex = -1;
+            }
+        }
+        else
+        {
+            const bool bCanCreateConstraint = BodyIndex >= 0;
+            if (!bCanCreateConstraint) ImGui::BeginDisabled();
+            if (ImGui::Button("Create Constraint to Parent Body", ImVec2(240.0f, 0.0f)))
+            {
+                AddDefaultConstraintForBones(PhysicsAsset, ParentBodyBoneName, BoneName);
+            }
+            if (!bCanCreateConstraint) ImGui::EndDisabled();
+            if (!bCanCreateConstraint)
+            {
+                ImGui::TextDisabled("Add a Body to this bone first.");
+            }
+        }
+    }
+    else
+    {
+        ImGui::TextDisabled("No parent body found. This bone can act as a root body.");
+    }
 }
 
 void FPhysicsAssetEditorWidget::RenderBodyDetails(UPhysicsAsset* PhysicsAsset, FPhysicsAssetBodySetup& Body)
@@ -636,8 +1124,15 @@ void FPhysicsAssetEditorWidget::RenderValidationPanel()
 
 void FPhysicsAssetEditorWidget::AddDefaultBody(UPhysicsAsset* PhysicsAsset)
 {
+    AddDefaultBodyForBone(PhysicsAsset, FName::None);
+}
+
+void FPhysicsAssetEditorWidget::AddDefaultBodyForBone(UPhysicsAsset* PhysicsAsset, const FName& BoneName)
+{
     if (!PhysicsAsset) return;
     FPhysicsAssetBodySetup Body;
+    Body.BoneName = BoneName;
+
     FPhysicsAssetShapeSetup Shape;
     Shape.Type = EPhysicsAssetShapeType::Capsule;
     Shape.CapsuleRadius = 12.0f;
@@ -666,13 +1161,26 @@ void FPhysicsAssetEditorWidget::AddDefaultShape(FPhysicsAssetBodySetup& Body)
 void FPhysicsAssetEditorWidget::AddDefaultConstraint(UPhysicsAsset* PhysicsAsset)
 {
     if (!PhysicsAsset) return;
-    FPhysicsAssetConstraintSetup Constraint;
+    FName ParentBoneName = FName::None;
+    FName ChildBoneName = FName::None;
     const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
     if (Bodies.size() >= 2)
     {
-        if (HasBoneName(Bodies[0].BoneName)) Constraint.ParentBoneName = Bodies[0].BoneName;
-        if (HasBoneName(Bodies[1].BoneName)) Constraint.ChildBoneName = Bodies[1].BoneName;
+        if (HasBoneName(Bodies[0].BoneName)) ParentBoneName = Bodies[0].BoneName;
+        if (HasBoneName(Bodies[1].BoneName)) ChildBoneName = Bodies[1].BoneName;
     }
+    AddDefaultConstraintForBones(PhysicsAsset, ParentBoneName, ChildBoneName);
+}
+
+void FPhysicsAssetEditorWidget::AddDefaultConstraintForBones(
+    UPhysicsAsset* PhysicsAsset,
+    const FName& ParentBoneName,
+    const FName& ChildBoneName)
+{
+    if (!PhysicsAsset) return;
+    FPhysicsAssetConstraintSetup Constraint;
+    Constraint.ParentBoneName = ParentBoneName;
+    Constraint.ChildBoneName = ChildBoneName;
 
     const int32 NewIndex = PhysicsAsset->AddConstraintSetup(Constraint);
     if (NewIndex >= 0)
@@ -738,7 +1246,18 @@ void FPhysicsAssetEditorWidget::ClampSelection(UPhysicsAsset* PhysicsAsset)
         SelectedBodyIndex = -1;
         SelectedShapeIndex = -1;
         SelectedConstraintIndex = -1;
+        SelectedTreeBoneIndex = -1;
         return;
+    }
+
+    if (PreviewSkeletalMesh && PreviewSkeletalMesh->GetSkeleton())
+    {
+        const int32 BoneCount = PreviewSkeletalMesh->GetSkeleton()->GetReferenceSkeleton().GetNumBones();
+        if (SelectedTreeBoneIndex >= BoneCount) SelectedTreeBoneIndex = -1;
+    }
+    else
+    {
+        SelectedTreeBoneIndex = -1;
     }
 
     const int32 BodyCount = static_cast<int32>(PhysicsAsset->GetBodySetups().size());

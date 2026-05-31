@@ -1316,7 +1316,7 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 	{
 		ImGui::TextDisabled("Assigned: %s", PhysicsAsset->GetAssetPathFileName().c_str());
 		ImGui::Separator();
-		PhysicsAssetEditor.RenderEmbedded(PhysicsAsset, 0.0f);
+		PhysicsAssetEditor.RenderEmbedded(PhysicsAsset, SkeletalMesh, 0.0f);
 	}
 	else
 	{
