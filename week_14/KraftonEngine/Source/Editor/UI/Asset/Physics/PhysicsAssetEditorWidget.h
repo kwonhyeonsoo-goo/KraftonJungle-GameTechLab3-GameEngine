@@ -31,6 +31,8 @@ public:
     void OpenEmbedded(UPhysicsAsset* PhysicsAsset);
     void RenderEmbedded(UPhysicsAsset* PhysicsAsset, float DeltaTime);
     void RenderEmbedded(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime);
+    void RenderEmbeddedTreeAndGraph(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime);
+    void RenderEmbeddedDetails(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime);
     bool SaveEditedPhysicsAsset();
     bool HasUnsavedChanges() const { return IsDirty(); }
 
@@ -40,6 +42,9 @@ public:
 
 private:
     UPhysicsAsset* GetEditedPhysicsAsset() const;
+    bool PrepareEmbeddedRender(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh);
+    void RenderTreeAndGraphPanel(UPhysicsAsset* PhysicsAsset);
+    void RenderDetailsAndValidationPanel(UPhysicsAsset* PhysicsAsset);
 
     void RenderToolbar(UPhysicsAsset* PhysicsAsset);
     void RenderAssetSummary(UPhysicsAsset* PhysicsAsset);

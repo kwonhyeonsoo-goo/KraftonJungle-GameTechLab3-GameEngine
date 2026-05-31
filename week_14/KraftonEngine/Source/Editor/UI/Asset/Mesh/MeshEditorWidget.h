@@ -129,7 +129,8 @@ private:
 	TArray<FAssetListItem> CachedPhysicsAssetFiles;
 	bool bPhysicsAssetListDirty = true;
 	int32 SelectedPhysicsAssetIndex = -1;
-	float PhysicsPanelWidth = 520.0f;
+	float PhysicsPanelWidth = 420.0f;
+	float PhysicsDetailsWidth = 360.0f;
 
 	// Skeleton tab state
 	int32 SelectedBoneIndex = -1;

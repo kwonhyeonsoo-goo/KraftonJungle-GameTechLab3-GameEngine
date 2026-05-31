@@ -1311,12 +1311,32 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
 	UPhysicsAsset* PhysicsAsset = GetCurrentPhysicsAsset();
 
-	ImGui::BeginChild("PhysicsAssetPanel", ImVec2(PhysicsPanelWidth, 0), true);
+	const float Spacing = ImGui::GetStyle().ItemSpacing.x;
+	const float SplitterWidth = 4.0f;
+	const float TotalWidth = ImGui::GetContentRegionAvail().x;
+	constexpr float MinLeftWidth = 320.0f;
+	constexpr float MinViewportWidth = 260.0f;
+	constexpr float MinDetailsWidth = 300.0f;
+	const float WidthForPanels = std::max(0.0f, TotalWidth - SplitterWidth * 2.0f - Spacing * 2.0f);
+
+	PhysicsPanelWidth = std::max(MinLeftWidth, std::min(PhysicsPanelWidth, WidthForPanels - MinViewportWidth - MinDetailsWidth));
+	PhysicsDetailsWidth = std::max(MinDetailsWidth, std::min(PhysicsDetailsWidth, WidthForPanels - PhysicsPanelWidth - MinViewportWidth));
+	float ViewportWidth = WidthForPanels - PhysicsPanelWidth - PhysicsDetailsWidth;
+	if (ViewportWidth < MinViewportWidth)
+	{
+		const float Deficit = MinViewportWidth - ViewportWidth;
+		const float DetailsShrink = std::min(Deficit, std::max(0.0f, PhysicsDetailsWidth - MinDetailsWidth));
+		PhysicsDetailsWidth -= DetailsShrink;
+		ViewportWidth = WidthForPanels - PhysicsPanelWidth - PhysicsDetailsWidth;
+	}
+	ViewportWidth = std::max(MinViewportWidth, ViewportWidth);
+
+	ImGui::BeginChild("PhysicsAssetTreeAndGraphPanel", ImVec2(PhysicsPanelWidth, 0), true);
 	if (PhysicsAsset)
 	{
 		ImGui::TextDisabled("Assigned: %s", PhysicsAsset->GetAssetPathFileName().c_str());
 		ImGui::Separator();
-		PhysicsAssetEditor.RenderEmbedded(PhysicsAsset, SkeletalMesh, 0.0f);
+		PhysicsAssetEditor.RenderEmbeddedTreeAndGraph(PhysicsAsset, SkeletalMesh, 0.0f);
 	}
 	else
 	{
@@ -1329,11 +1349,11 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
-	ImGui::Button("##physicsSplitter", ImVec2(4.0f, -1.0f));
+	ImGui::Button("##physicsTreeViewportSplitter", ImVec2(SplitterWidth, -1.0f));
 	if (ImGui::IsItemActive())
 	{
 		PhysicsPanelWidth += ImGui::GetIO().MouseDelta.x;
-		PhysicsPanelWidth = std::max(320.0f, std::min(PhysicsPanelWidth, ImGui::GetWindowWidth() - 260.0f));
+		PhysicsPanelWidth = std::max(MinLeftWidth, std::min(PhysicsPanelWidth, WidthForPanels - MinViewportWidth - PhysicsDetailsWidth));
 	}
 	if (ImGui::IsItemHovered() || ImGui::IsItemActive())
 	{
@@ -1343,12 +1363,42 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 
 	ImGui::SameLine();
 
-	ImGui::BeginGroup();
+	ImGui::BeginChild("PhysicsViewportPanel", ImVec2(ViewportWidth, 0.0f), false);
 	{
 		const ImVec2 Size = ImGui::GetContentRegionAvail();
 		RenderViewportPanel(Size);
 	}
-	ImGui::EndGroup();
+	ImGui::EndChild();
+
+	ImGui::SameLine();
+
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+	ImGui::Button("##physicsViewportDetailsSplitter", ImVec2(SplitterWidth, -1.0f));
+	if (ImGui::IsItemActive())
+	{
+		PhysicsDetailsWidth -= ImGui::GetIO().MouseDelta.x;
+		PhysicsDetailsWidth = std::max(MinDetailsWidth, std::min(PhysicsDetailsWidth, WidthForPanels - PhysicsPanelWidth - MinViewportWidth));
+	}
+	if (ImGui::IsItemHovered() || ImGui::IsItemActive())
+	{
+		ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+	}
+	ImGui::PopStyleColor(3);
+
+	ImGui::SameLine();
+
+	ImGui::BeginChild("PhysicsAssetDetailsPanel", ImVec2(PhysicsDetailsWidth, 0.0f), true);
+	if (PhysicsAsset)
+	{
+		PhysicsAssetEditor.RenderEmbeddedDetails(PhysicsAsset, SkeletalMesh, 0.0f);
+	}
+	else
+	{
+		ImGui::TextDisabled("No Physics Asset selected.");
+	}
+	ImGui::EndChild();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

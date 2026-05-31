@@ -494,6 +494,32 @@ void FPhysicsAssetEditorWidget::RenderEmbedded(UPhysicsAsset* PhysicsAsset, USke
     RenderDocument(DeltaTime);
 }
 
+void FPhysicsAssetEditorWidget::RenderEmbeddedTreeAndGraph(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime)
+{
+    (void)DeltaTime;
+    if (!PrepareEmbeddedRender(PhysicsAsset, PreviewMesh))
+    {
+        return;
+    }
+
+    ClampSelection(PhysicsAsset);
+    RenderToolbar(PhysicsAsset);
+    ImGui::Separator();
+    RenderTreeAndGraphPanel(PhysicsAsset);
+}
+
+void FPhysicsAssetEditorWidget::RenderEmbeddedDetails(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime)
+{
+    (void)DeltaTime;
+    if (!PrepareEmbeddedRender(PhysicsAsset, PreviewMesh))
+    {
+        return;
+    }
+
+    ClampSelection(PhysicsAsset);
+    RenderDetailsAndValidationPanel(PhysicsAsset);
+}
+
 bool FPhysicsAssetEditorWidget::SaveEditedPhysicsAsset()
 {
     UPhysicsAsset* PhysicsAsset = GetEditedPhysicsAsset();
@@ -537,38 +563,13 @@ void FPhysicsAssetEditorWidget::RenderDocument(float DeltaTime)
     const float RightWidth = (std::max)(DetailsPanelMinWidth, TotalWidth - LeftWidth - ImGui::GetStyle().ItemSpacing.x);
 
     ImGui::BeginChild("##PhysicsAssetLeft", ImVec2(LeftWidth, 0.0f), true);
-    RenderAssetSummary(PhysicsAsset);
-    ImGui::Separator();
-    if (PreviewSkeletalMesh && PreviewSkeletalMesh->GetSkeleton())
-    {
-        RenderSkeletonPhysicsTree(PhysicsAsset, PreviewSkeletalMesh);
-    }
-    else
-    {
-        ImGui::TextDisabled("No preview Skeleton. Falling back to raw setup lists.");
-        ImGui::Separator();
-        RenderBodyList(PhysicsAsset);
-        ImGui::Separator();
-        RenderConstraintList(PhysicsAsset);
-    }
+    RenderTreeAndGraphPanel(PhysicsAsset);
     ImGui::EndChild();
 
     ImGui::SameLine();
 
     ImGui::BeginChild("##PhysicsAssetRight", ImVec2(RightWidth, 0.0f), true);
-    const float RightAvailableHeight = ImGui::GetContentRegionAvail().y;
-    const float MaxGraphHeight = (std::max)(120.0f, RightAvailableHeight - 180.0f);
-    const float GraphHeight = (std::min)((std::max)(180.0f, RightAvailableHeight * 0.40f), MaxGraphHeight);
-    const float DetailsHeight = (std::max)(120.0f, RightAvailableHeight - GraphHeight - ImGui::GetStyle().ItemSpacing.y);
-
-    ImGui::BeginChild("##PhysicsAssetDetailsAndValidation", ImVec2(0.0f, DetailsHeight), false);
-    RenderDetailsPanel(PhysicsAsset);
-    ImGui::Separator();
-    RenderValidationPanel();
-    ImGui::EndChild();
-
-    ImGui::Separator();
-    RenderConstraintGraphPanel(PhysicsAsset);
+    RenderDetailsAndValidationPanel(PhysicsAsset);
     ImGui::EndChild();
 }
 
@@ -589,6 +590,61 @@ FString FPhysicsAssetEditorWidget::GetDocumentPayloadId() const
 UPhysicsAsset* FPhysicsAssetEditorWidget::GetEditedPhysicsAsset() const
 {
     return Cast<UPhysicsAsset>(EditedObject);
+}
+
+bool FPhysicsAssetEditorWidget::PrepareEmbeddedRender(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh)
+{
+    PreviewSkeletalMesh = PreviewMesh;
+
+    if (!PhysicsAsset)
+    {
+        Close();
+        ImGui::TextDisabled("No PhysicsAsset selected.");
+        return false;
+    }
+
+    if (!IsEditingObject(PhysicsAsset))
+    {
+        OpenEmbedded(PhysicsAsset);
+        PreviewSkeletalMesh = PreviewMesh;
+    }
+
+    return true;
+}
+
+void FPhysicsAssetEditorWidget::RenderTreeAndGraphPanel(UPhysicsAsset* PhysicsAsset)
+{
+    RenderAssetSummary(PhysicsAsset);
+    ImGui::Separator();
+
+    const float AvailableHeight = ImGui::GetContentRegionAvail().y;
+    const float GraphHeight = (std::max)(180.0f, AvailableHeight * 0.38f);
+    const float TreeHeight = (std::max)(180.0f, AvailableHeight - GraphHeight - ImGui::GetStyle().ItemSpacing.y - 4.0f);
+
+    ImGui::BeginChild("##PhysicsAssetTreeArea", ImVec2(0.0f, TreeHeight), false);
+    if (PreviewSkeletalMesh && PreviewSkeletalMesh->GetSkeleton())
+    {
+        RenderSkeletonPhysicsTree(PhysicsAsset, PreviewSkeletalMesh);
+    }
+    else
+    {
+        ImGui::TextDisabled("No preview Skeleton. Falling back to raw setup lists.");
+        ImGui::Separator();
+        RenderBodyList(PhysicsAsset);
+        ImGui::Separator();
+        RenderConstraintList(PhysicsAsset);
+    }
+    ImGui::EndChild();
+
+    ImGui::Separator();
+    RenderConstraintGraphPanel(PhysicsAsset);
+}
+
+void FPhysicsAssetEditorWidget::RenderDetailsAndValidationPanel(UPhysicsAsset* PhysicsAsset)
+{
+    RenderDetailsPanel(PhysicsAsset);
+    ImGui::Separator();
+    RenderValidationPanel();
 }
 
 void FPhysicsAssetEditorWidget::RenderToolbar(UPhysicsAsset* PhysicsAsset)
