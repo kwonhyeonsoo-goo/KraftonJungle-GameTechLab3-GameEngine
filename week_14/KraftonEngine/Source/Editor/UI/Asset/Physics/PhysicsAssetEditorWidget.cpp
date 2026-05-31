@@ -248,6 +248,45 @@ void FPhysicsAssetEditorWidget::Render(float DeltaTime)
     if (!bWindowOpen) bPendingClose = true;
 }
 
+void FPhysicsAssetEditorWidget::OpenEmbedded(UPhysicsAsset* PhysicsAsset)
+{
+    Open(PhysicsAsset);
+}
+
+void FPhysicsAssetEditorWidget::RenderEmbedded(UPhysicsAsset* PhysicsAsset, float DeltaTime)
+{
+    if (!PhysicsAsset)
+    {
+        Close();
+        ImGui::TextDisabled("No PhysicsAsset selected.");
+        return;
+    }
+
+    if (!IsEditingObject(PhysicsAsset))
+    {
+        OpenEmbedded(PhysicsAsset);
+    }
+
+    RenderDocument(DeltaTime);
+}
+
+bool FPhysicsAssetEditorWidget::SaveEditedPhysicsAsset()
+{
+    UPhysicsAsset* PhysicsAsset = GetEditedPhysicsAsset();
+    if (!PhysicsAsset)
+    {
+        return false;
+    }
+
+    if (FPhysicsAssetManager::Get().SavePhysicsAssetPreservingMetadata(PhysicsAsset))
+    {
+        ClearDirty();
+        bValidationRan = false;
+        return true;
+    }
+    return false;
+}
+
 void FPhysicsAssetEditorWidget::RenderDocument(float DeltaTime)
 {
     (void)DeltaTime;
@@ -315,11 +354,7 @@ void FPhysicsAssetEditorWidget::RenderToolbar(UPhysicsAsset* PhysicsAsset)
     if (!bCanSave) ImGui::BeginDisabled();
     if (ImGui::Button(IsDirty() ? "Save*" : "Save", ImVec2(72.0f, 0.0f)))
     {
-        if (FPhysicsAssetManager::Get().SavePhysicsAssetPreservingMetadata(PhysicsAsset))
-        {
-            ClearDirty();
-            bValidationRan = false;
-        }
+        SaveEditedPhysicsAsset();
     }
     if (!bCanSave) ImGui::EndDisabled();
 

@@ -20,6 +20,12 @@ public:
     void Open(UObject* Object) override;
     void Render(float DeltaTime) override;
     void RenderDocument(float DeltaTime) override;
+
+    void OpenEmbedded(UPhysicsAsset* PhysicsAsset);
+    void RenderEmbedded(UPhysicsAsset* PhysicsAsset, float DeltaTime);
+    bool SaveEditedPhysicsAsset();
+    bool HasUnsavedChanges() const { return IsDirty(); }
+
     FString GetDocumentTitle() const override;
     FString GetDocumentPayloadId() const override;
     EEditorDocumentTabKind GetDocumentTabKind() const override { return EEditorDocumentTabKind::PhysicsAssetEditor; }

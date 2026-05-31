@@ -697,6 +697,7 @@ void PhysicsAssetElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 	const FString PackagePath = FPaths::ToUtf8(ContentItem.Path.lexically_relative(FPaths::RootDir()).generic_wstring());
 	if (UPhysicsAsset* PhysicsAsset = FPhysicsAssetManager::Get().LoadPhysicsAsset(PackagePath))
 	{
+		// PhysicsAsset opens through the integrated Skeletal Mesh editor Physics tab.
 		Context.EditorEngine->OpenAssetEditorForObject(PhysicsAsset);
 	}
 }
@@ -738,7 +739,7 @@ void MeshElement::RenderContextMenu(ContentBrowserContext& Context)
 			if (Context.EditorEngine)
 			{
 				ID3D11Device* Device = Context.EditorEngine->GetRenderer().GetFD3DDevice().GetDevice();
-				if (USkeletalMesh* MeshAsset = FMeshManager::LoadSkeletalMesh(FilePath, Device))
+				if (USkeletalMesh* MeshAsset = FMeshManager::LoadSkeletalMesh(PackagePath, Device))
 				{
 					const FString DirectoryPath = FPaths::ToUtf8(ContentItem.Path.parent_path().wstring());
 					const FString AssetName = FPaths::ToUtf8(ContentItem.Path.stem().wstring()) + "_PhysicsAsset";
@@ -748,6 +749,8 @@ void MeshElement::RenderContextMenu(ContentBrowserContext& Context)
 						Context.bPendingContentRefresh = true;
 						if (UPhysicsAsset* PhysicsAsset = FPhysicsAssetManager::Get().LoadPhysicsAsset(CreatedPath))
 						{
+							MeshAsset->SetPhysicsAsset(PhysicsAsset);
+							FMeshManager::SaveSkeletalMeshPreservingMetadata(MeshAsset);
 							Context.EditorEngine->OpenAssetEditorForObject(PhysicsAsset);
 						}
 					}

@@ -3,6 +3,7 @@
 #include "Editor/Viewport/Asset/MeshEditorViewportClient.h"
 #include "Editor/UI/Dialog/FbxImportOptionsDialog.h"
 #include "Asset/AssetRegistry.h"
+#include "Editor/UI/Asset/Physics/PhysicsAssetEditorWidget.h"
 
 struct FSkeletalMesh;
 struct FReferenceSkeleton;
@@ -12,8 +13,9 @@ class USkeleton;
 class UAnimSequence;
 class UAnimMontage;
 class UAnimSingleNodeInstance;
+class UPhysicsAsset;
 
-enum class EMeshEditorTab : uint8 { Skeleton, Mesh, Animation };
+enum class EMeshEditorTab : uint8 { Skeleton, Mesh, Animation, Physics };
 
 struct FAnimationTabState
 {
@@ -60,6 +62,7 @@ public:
 	void Tick(float DeltaTime) override;
 
 	void CollectPreviewViewports(TArray<IEditorPreviewViewportClient*>& OutClients) const override;
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	bool AllowsMultipleInstances() const override { return true; }
 
@@ -84,6 +87,7 @@ private:
 	void RenderSkeletonLayout();
 	void RenderMeshLayout();
 	void RenderAnimationLayout(float TotalHeight);
+	void RenderPhysicsLayout(float TotalHeight);
 
 	// Shared helpers
 	void RenderViewportPanel(ImVec2 Size);
@@ -92,6 +96,7 @@ private:
 	void RenderMeshStatsOverlay(ImDrawList* DrawList, const ImVec2& ViewportPos) const;
 	void SaveCurrentSkeleton();
 	void SaveCurrentAnimationAsset();
+	bool SaveCurrentMeshAsset();
 	void RefreshSelectedSocketEditBuffers(USkeleton* Skeleton);
 
 	// Animation tab helpers
@@ -106,12 +111,25 @@ private:
 	const TArray<FAssetListItem>& GetCachedAnimationFilesForCurrentSkeleton();
 	const TArray<FAssetListItem>& GetCachedMontageFilesForCurrentSkeleton();
 
+	// Physics tab helpers
+	UPhysicsAsset* GetCurrentPhysicsAsset();
+	UPhysicsAsset* CreateAndAssignPhysicsAssetForCurrentMesh();
+	bool AssignPhysicsAssetToCurrentMesh(UPhysicsAsset* PhysicsAsset);
+	void RefreshPhysicsAssetList();
+	void RenderMissingPhysicsAssetPanel(USkeletalMesh* SkeletalMesh);
+	bool IsCurrentPhysicsAssetDirty() const;
+
 private:
 	FMeshEditorViewportClient ViewportClient;
 
 	// Tab state
 	EMeshEditorTab     ActiveTab = EMeshEditorTab::Skeleton;
 	FAnimationTabState AnimTabState;
+	FPhysicsAssetEditorWidget PhysicsAssetEditor;
+	TArray<FAssetListItem> CachedPhysicsAssetFiles;
+	bool bPhysicsAssetListDirty = true;
+	int32 SelectedPhysicsAssetIndex = -1;
+	float PhysicsPanelWidth = 520.0f;
 
 	// Skeleton tab state
 	int32 SelectedBoneIndex = -1;
