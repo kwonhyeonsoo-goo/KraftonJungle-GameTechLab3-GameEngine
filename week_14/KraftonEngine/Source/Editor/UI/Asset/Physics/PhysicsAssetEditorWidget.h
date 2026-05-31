@@ -51,6 +51,7 @@ private:
     void RenderSkeletonPhysicsTree(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh);
     void RenderPhysicsBoneTree(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton, int32 BoneIndex);
     void RenderPhysicsBoneContextMenu(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton, int32 BoneIndex);
+    void RenderSelectedBoneActionPanel(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton);
     void RenderUnboundPhysicsSetups(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton);
     void RenderBodyList(UPhysicsAsset* PhysicsAsset);
     void RenderConstraintList(UPhysicsAsset* PhysicsAsset);
@@ -62,11 +63,17 @@ private:
     void RenderValidationPanel();
     void RenderConstraintGraphPanel(UPhysicsAsset* PhysicsAsset);
 
+    void SelectBoneInPhysicsTree(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton, int32 BoneIndex);
+    void SelectBodySetup(UPhysicsAsset* PhysicsAsset, int32 BodyIndex, int32 TreeBoneIndex);
+    void SelectConstraintSetup(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex, int32 TreeBoneIndex);
+    int32 FindPreviewBoneIndexByName(const FName& BoneName) const;
+
     void AddDefaultBody(UPhysicsAsset* PhysicsAsset);
     void AddDefaultBodyForBone(UPhysicsAsset* PhysicsAsset, const FName& BoneName);
     void AddDefaultShape(FPhysicsAssetBodySetup& BodySetup);
     void AddDefaultConstraint(UPhysicsAsset* PhysicsAsset);
     void AddDefaultConstraintForBones(UPhysicsAsset* PhysicsAsset, const FName& ParentBoneName, const FName& ChildBoneName);
+    void AddConstraintToSelectedParentBody(UPhysicsAsset* PhysicsAsset);
     void RunValidation(UPhysicsAsset* PhysicsAsset);
     void MarkPhysicsAssetDirty();
     void InitializeConstraintGraphEditor();
