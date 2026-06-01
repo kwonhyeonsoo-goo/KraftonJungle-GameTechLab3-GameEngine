@@ -1,4 +1,4 @@
-#include "MeshEditorWidget.h"
+﻿#include "MeshEditorWidget.h"
 
 #ifdef GetCurrentTime
 #undef GetCurrentTime
@@ -6,6 +6,7 @@
 
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
+#include "Mesh/MeshManager.h"
 #include "Runtime/Engine.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Component/Light/DirectionalLightComponent.h"
@@ -26,12 +27,17 @@
 #include "Animation/Skeleton/SkeletonManager.h"
 #include "Asset/AssetPackage.h"
 #include "Asset/AssetRegistry.h"
+#include "Editor/Subsystem/AssetFactory.h"
+#include "Physics/PhysicsAsset.h"
+#include "Physics/PhysicsAssetManager.h"
 #include "UI/Asset/Animation/AnimationTransportBar.h"
 #include "UI/Asset/Animation/AnimationTimelinePanel.h"
 #include "UI/Asset/Animation/AnimSequencePropertyPanel.h"
 #include "UI/Asset/Animation/AnimMontagePropertyPanel.h"
 #include "UI/Util/EditorFileUtils.h"
 #include "Editor/UI/Util/EditorTextureManager.h"
+#include "Editor/EditorEngine.h"
+
 #include "Platform/Paths.h"
 #include "Object/Object.h"
 
@@ -39,6 +45,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
 
 // Paths.h가 끌어오는 Windows.h는 GetCurrentTime을 GetTickCount로 치환한다.
 #ifdef GetCurrentTime
@@ -121,6 +128,78 @@ namespace
 			Mesh->SetSkeleton(Skeleton);
 		}
 		return Skeleton;
+	}
+
+	USkeletalMesh* FindPreviewMeshForPhysicsAsset(UPhysicsAsset* PhysicsAsset, ID3D11Device* Device)
+	{
+		if (!PhysicsAsset || !Device)
+		{
+			return nullptr;
+		}
+
+		const FString PhysicsAssetPath = PhysicsAsset->GetAssetPathFileName();
+		if (!PhysicsAssetPath.empty() && PhysicsAssetPath != "None")
+		{
+			FAssetImportMetadata Metadata;
+			if (FAssetPackage::ReadMetadata(PhysicsAssetPath, EAssetPackageType::PhysicsAsset, Metadata) &&
+				!Metadata.SourcePath.empty() &&
+				FMeshManager::IsSkeletalMeshPackage(Metadata.SourcePath))
+			{
+				if (USkeletalMesh* Mesh = FMeshManager::LoadSkeletalMesh(Metadata.SourcePath, Device))
+				{
+					return Mesh;
+				}
+			}
+		}
+
+		const TArray<FAssetListItem> Meshes = FAssetRegistry::ListMeshesForSkeleton(PhysicsAsset->GetSkeletonBinding(), true);
+		for (const FAssetListItem& Item : Meshes)
+		{
+			if (USkeletalMesh* Mesh = FMeshManager::LoadSkeletalMesh(Item.FullPath, Device))
+			{
+				return Mesh;
+			}
+		}
+
+		return nullptr;
+	}
+
+	FString MakePhysicsAssetNameForMesh(const USkeletalMesh* SkeletalMesh)
+	{
+		if (!SkeletalMesh)
+		{
+			return "NewPhysicsAsset";
+		}
+
+		const FString MeshPath = SkeletalMesh->GetAssetPathFileName();
+		if (MeshPath.empty() || MeshPath == "None")
+		{
+			return "NewPhysicsAsset";
+		}
+
+		std::filesystem::path Path(FPaths::ToWide(MeshPath));
+		return FPaths::ToUtf8(Path.stem().wstring()) + "_PhysicsAsset";
+	}
+
+	FString MakePhysicsAssetDirectoryForMesh(const USkeletalMesh* SkeletalMesh)
+	{
+		if (!SkeletalMesh)
+		{
+			return FPaths::ToUtf8((std::filesystem::path(FPaths::RootDir()) / L"Content").wstring());
+		}
+
+		const FString MeshPath = SkeletalMesh->GetAssetPathFileName();
+		if (MeshPath.empty() || MeshPath == "None")
+		{
+			return FPaths::ToUtf8((std::filesystem::path(FPaths::RootDir()) / L"Content").wstring());
+		}
+
+		std::filesystem::path Path(FPaths::ToWide(MeshPath));
+		if (!Path.is_absolute())
+		{
+			Path = std::filesystem::path(FPaths::RootDir()) / Path;
+		}
+		return FPaths::ToUtf8(Path.parent_path().wstring());
 	}
 
 	void CopyStringToBuffer(const FString& Source, char* Buffer, size_t BufferSize)
@@ -252,7 +331,7 @@ FMeshEditorWidget::FMeshEditorWidget()
 
 bool FMeshEditorWidget::CanEdit(UObject* Object) const
 {
-	return Object && Object->IsA<USkeletalMesh>();
+	return Object && (Object->IsA<USkeletalMesh>() || Object->IsA<UPhysicsAsset>());
 }
 
 bool FMeshEditorWidget::IsEditingObject(UObject* Object) const
@@ -263,21 +342,52 @@ bool FMeshEditorWidget::IsEditingObject(UObject* Object) const
 	}
 
 	const USkeletalMesh* CurrentMesh = Cast<USkeletalMesh>(EditedObject);
-	const USkeletalMesh* RequestedMesh = Cast<USkeletalMesh>(Object);
-	if (!IsOpen() || !CurrentMesh || !RequestedMesh)
+	if (!IsOpen() || !CurrentMesh)
 	{
 		return false;
 	}
 
-	const FString& CurrentPath = CurrentMesh->GetAssetPathFileName();
-	return !CurrentPath.empty()
-		&& CurrentPath != "None"
-		&& CurrentPath == RequestedMesh->GetAssetPathFileName();
+	if (const USkeletalMesh* RequestedMesh = Cast<USkeletalMesh>(Object))
+	{
+		const FString& CurrentPath = CurrentMesh->GetAssetPathFileName();
+		return !CurrentPath.empty()
+			&& CurrentPath != "None"
+			&& CurrentPath == RequestedMesh->GetAssetPathFileName();
+	}
+
+	if (const UPhysicsAsset* RequestedPhysicsAsset = Cast<UPhysicsAsset>(Object))
+	{
+		const FString& RequestedPath = RequestedPhysicsAsset->GetAssetPathFileName();
+		const FString& CurrentPhysicsPath = CurrentMesh->GetPhysicsAssetPath();
+		return !RequestedPath.empty()
+			&& RequestedPath != "None"
+			&& RequestedPath == CurrentPhysicsPath;
+	}
+
+	return false;
 }
 
 void FMeshEditorWidget::Open(UObject* Object)
 {
-	FAssetEditorWidget::Open(Object);
+	USkeletalMesh* MeshToOpen = Cast<USkeletalMesh>(Object);
+	UPhysicsAsset* RequestedPhysicsAsset = Cast<UPhysicsAsset>(Object);
+
+	if (!MeshToOpen && RequestedPhysicsAsset)
+	{
+		ID3D11Device* Device = EditorEngine ? EditorEngine->GetRenderer().GetFD3DDevice().GetDevice() : nullptr;
+		MeshToOpen = FindPreviewMeshForPhysicsAsset(RequestedPhysicsAsset, Device);
+		if (!MeshToOpen)
+		{
+			return;
+		}
+	}
+
+	if (!MeshToOpen)
+	{
+		return;
+	}
+
+	FAssetEditorWidget::Open(MeshToOpen);
 
 	FWorldContext& WorldContext = GEngine->CreateWorldContext(EWorldType::EditorPreview, PreviewWorldHandle);
 	WorldContext.World->SetWorldType(EWorldType::EditorPreview);
@@ -324,7 +434,7 @@ void FMeshEditorWidget::Open(UObject* Object)
 	// 디스크의 기존 AnimSequence .uasset 들을 목록에 채워 둔다(런타임 Load/Save 만으론 안 잡힘).
 	FAnimationManager::Get().RefreshAvailableAnimations();
 
-	ActiveTab         = EMeshEditorTab::Skeleton;
+	ActiveTab         = RequestedPhysicsAsset ? EMeshEditorTab::Physics : EMeshEditorTab::Skeleton;
 	AnimTabState      = FAnimationTabState {};
 	SelectedBoneIndex = -1;
 	SelectedSocketIndex = -1;
@@ -332,10 +442,23 @@ void FMeshEditorWidget::Open(UObject* Object)
 	BufferedSocketIndex = -2;
 	SocketNameBuffer[0] = '\0';
 	SocketBoneNameBuffer[0] = '\0';
+	bPhysicsAssetListDirty = true;
+	SelectedPhysicsAssetIndex = -1;
+
+	if (RequestedPhysicsAsset)
+	{
+		AssignPhysicsAssetToCurrentMesh(RequestedPhysicsAsset);
+		PhysicsAssetEditor.OpenEmbedded(RequestedPhysicsAsset);
+	}
+	else
+	{
+		PhysicsAssetEditor.Close();
+	}
 }
 
 void FMeshEditorWidget::Close()
 {
+	PhysicsAssetEditor.Close();
 	FAssetEditorWidget::Close();
 
 	if (UWorld* PreviewWorld = ViewportClient.GetPreviewWorld())
@@ -397,6 +520,12 @@ void FMeshEditorWidget::CollectPreviewViewports(TArray<IEditorPreviewViewportCli
 	{
 		OutClients.push_back(const_cast<FMeshEditorViewportClient*>(&ViewportClient));
 	}
+}
+
+void FMeshEditorWidget::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	FAssetEditorWidget::AddReferencedObjects(Collector);
+	PhysicsAssetEditor.AddReferencedObjects(Collector);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -485,13 +614,16 @@ void FMeshEditorWidget::RenderDocument(float DeltaTime)
 		FSlateApplication::Get().BringViewportToFront(&ViewportClient);
 
 		const ImGuiIO& IO = ImGui::GetIO();
-		if (ActiveTab == EMeshEditorTab::Animation &&
-			IsCurrentAnimationDirty() &&
-			IO.KeyCtrl &&
-			!IO.KeyAlt &&
-			ImGui::IsKeyPressed(ImGuiKey_S, false))
+		if (IO.KeyCtrl && !IO.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_S, false))
 		{
-			SaveCurrentAnimationAsset();
+			if (ActiveTab == EMeshEditorTab::Animation && IsCurrentAnimationDirty())
+			{
+				SaveCurrentAnimationAsset();
+			}
+			else if (ActiveTab == EMeshEditorTab::Physics && IsCurrentPhysicsAssetDirty())
+			{
+				PhysicsAssetEditor.SaveEditedPhysicsAsset();
+			}
 		}
 	}
 
@@ -510,6 +642,9 @@ void FMeshEditorWidget::RenderDocument(float DeltaTime)
 		break;
 	case EMeshEditorTab::Animation:
 		RenderAnimationLayout(AvailableHeight);
+		break;
+	case EMeshEditorTab::Physics:
+		RenderPhysicsLayout(AvailableHeight);
 		break;
 	}
 }
@@ -544,8 +679,9 @@ void FMeshEditorWidget::RenderTabBar()
 
 	const bool bCanSaveSkeleton = ActiveTab == EMeshEditorTab::Skeleton && bSkeletonDirty;
 	const bool bCanSaveAnimation = ActiveTab == EMeshEditorTab::Animation && IsCurrentAnimationDirty();
-	const bool bCanSave = bCanSaveSkeleton || bCanSaveAnimation;
-	const bool bShowDirtySave = bSkeletonDirty || IsCurrentAnimationDirty();
+	const bool bCanSavePhysics = ActiveTab == EMeshEditorTab::Physics && IsCurrentPhysicsAssetDirty();
+	const bool bCanSave = bCanSaveSkeleton || bCanSaveAnimation || bCanSavePhysics;
+	const bool bShowDirtySave = bSkeletonDirty || IsCurrentAnimationDirty() || IsCurrentPhysicsAssetDirty();
 	if (!bCanSave)
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.45f);
@@ -559,6 +695,10 @@ void FMeshEditorWidget::RenderTabBar()
 		else if (bCanSaveAnimation)
 		{
 			SaveCurrentAnimationAsset();
+		}
+		else if (bCanSavePhysics)
+		{
+			PhysicsAssetEditor.SaveEditedPhysicsAsset();
 		}
 	}
 	if (!bCanSave)
@@ -623,6 +763,7 @@ void FMeshEditorWidget::RenderTabBar()
 	TabButton("Skeleton", L"Skeleton.png", EMeshEditorTab::Skeleton);
 	TabButton("Mesh", L"SkeletalMesh.png", EMeshEditorTab::Mesh);
 	TabButton("Animation", L"Animation.png", EMeshEditorTab::Animation);
+	TabButton("Physics", L"PhysicsAsset.png", EMeshEditorTab::Physics);
 
 	ImGui::NewLine();
 }
@@ -769,6 +910,13 @@ void FMeshEditorWidget::SaveCurrentAnimationAsset()
 		FAnimationManager::Get().RefreshAvailableAnimations();
 		MarkAnimationListDirty();
 	}
+}
+
+
+bool FMeshEditorWidget::SaveCurrentMeshAsset()
+{
+	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
+	return SkeletalMesh && FMeshManager::SaveSkeletalMeshPreservingMetadata(SkeletalMesh);
 }
 
 bool FMeshEditorWidget::IsCurrentAnimationDirty() const
@@ -1011,6 +1159,245 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 		ImGui::TextDisabled("Select a bone to edit.");
 	}
 
+	ImGui::EndChild();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Physics tab
+// ─────────────────────────────────────────────────────────────────────────────
+
+UPhysicsAsset* FMeshEditorWidget::GetCurrentPhysicsAsset()
+{
+	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
+	return SkeletalMesh ? SkeletalMesh->GetPhysicsAsset() : nullptr;
+}
+
+bool FMeshEditorWidget::AssignPhysicsAssetToCurrentMesh(UPhysicsAsset* PhysicsAsset)
+{
+	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
+	if (!SkeletalMesh || !PhysicsAsset)
+	{
+		return false;
+	}
+
+	SkeletalMesh->SetPhysicsAsset(PhysicsAsset);
+	if (SkeletalMesh->GetPhysicsAsset() != PhysicsAsset)
+	{
+		return false;
+	}
+
+	PhysicsAssetEditor.OpenEmbedded(PhysicsAsset);
+	bPhysicsAssetListDirty = true;
+	return SaveCurrentMeshAsset();
+}
+
+UPhysicsAsset* FMeshEditorWidget::CreateAndAssignPhysicsAssetForCurrentMesh()
+{
+	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
+	if (!SkeletalMesh)
+	{
+		return nullptr;
+	}
+
+	FString CreatedPath;
+	if (!FAssetFactory::CreatePhysicsAssetForSkeletalMesh(
+			MakePhysicsAssetDirectoryForMesh(SkeletalMesh),
+			MakePhysicsAssetNameForMesh(SkeletalMesh),
+			SkeletalMesh,
+			CreatedPath))
+	{
+		return nullptr;
+	}
+
+	UPhysicsAsset* PhysicsAsset = FPhysicsAssetManager::Get().LoadPhysicsAsset(CreatedPath);
+	if (!PhysicsAsset)
+	{
+		return nullptr;
+	}
+
+	AssignPhysicsAssetToCurrentMesh(PhysicsAsset);
+	FPhysicsAssetManager::Get().ScanPhysicsAssets();
+	bPhysicsAssetListDirty = true;
+	return PhysicsAsset;
+}
+
+void FMeshEditorWidget::RefreshPhysicsAssetList()
+{
+	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
+	CachedPhysicsAssetFiles.clear();
+	SelectedPhysicsAssetIndex = -1;
+	if (!SkeletalMesh)
+	{
+		bPhysicsAssetListDirty = false;
+		return;
+	}
+
+	CachedPhysicsAssetFiles = FAssetRegistry::ListPhysicsAssetsForSkeleton(SkeletalMesh->GetSkeletonBinding(), true);
+	bPhysicsAssetListDirty = false;
+}
+
+bool FMeshEditorWidget::IsCurrentPhysicsAssetDirty() const
+{
+	return PhysicsAssetEditor.HasUnsavedChanges();
+}
+
+void FMeshEditorWidget::RenderMissingPhysicsAssetPanel(USkeletalMesh* SkeletalMesh)
+{
+	ImGui::TextUnformatted("Physics Asset");
+	ImGui::Separator();
+	ImGui::TextDisabled("No Physics Asset is assigned to this Skeletal Mesh.");
+	ImGui::Spacing();
+
+	if (!SkeletalMesh)
+	{
+		ImGui::TextDisabled("Open a Skeletal Mesh first.");
+		return;
+	}
+
+	if (ImGui::Button("Create Physics Asset", ImVec2(180.0f, 0.0f)))
+	{
+		CreateAndAssignPhysicsAssetForCurrentMesh();
+	}
+
+	ImGui::Spacing();
+	ImGui::Separator();
+	ImGui::TextUnformatted("Assign Existing Physics Asset");
+	if (bPhysicsAssetListDirty)
+	{
+		RefreshPhysicsAssetList();
+	}
+
+	if (CachedPhysicsAssetFiles.empty())
+	{
+		ImGui::TextDisabled("No compatible Physics Asset found.");
+		return;
+	}
+
+	const char* Preview = (SelectedPhysicsAssetIndex >= 0 && SelectedPhysicsAssetIndex < static_cast<int32>(CachedPhysicsAssetFiles.size()))
+		? CachedPhysicsAssetFiles[SelectedPhysicsAssetIndex].DisplayName.c_str()
+		: "Select Physics Asset";
+	if (ImGui::BeginCombo("Physics Asset", Preview))
+	{
+		for (int32 Index = 0; Index < static_cast<int32>(CachedPhysicsAssetFiles.size()); ++Index)
+		{
+			const bool bSelected = SelectedPhysicsAssetIndex == Index;
+			if (ImGui::Selectable(CachedPhysicsAssetFiles[Index].DisplayName.c_str(), bSelected))
+			{
+				SelectedPhysicsAssetIndex = Index;
+			}
+			if (bSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
+
+	const bool bCanAssign = SelectedPhysicsAssetIndex >= 0 && SelectedPhysicsAssetIndex < static_cast<int32>(CachedPhysicsAssetFiles.size());
+	if (!bCanAssign) ImGui::BeginDisabled();
+	if (ImGui::Button("Assign Selected", ImVec2(180.0f, 0.0f)))
+	{
+		if (UPhysicsAsset* PhysicsAsset = FPhysicsAssetManager::Get().LoadPhysicsAsset(CachedPhysicsAssetFiles[SelectedPhysicsAssetIndex].FullPath))
+		{
+			AssignPhysicsAssetToCurrentMesh(PhysicsAsset);
+		}
+	}
+	if (!bCanAssign) ImGui::EndDisabled();
+}
+
+void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
+{
+	(void)TotalHeight;
+	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
+	UPhysicsAsset* PhysicsAsset = GetCurrentPhysicsAsset();
+
+	const float Spacing = ImGui::GetStyle().ItemSpacing.x;
+	const float SplitterWidth = 4.0f;
+	const float TotalWidth = ImGui::GetContentRegionAvail().x;
+	constexpr float MinLeftWidth = 320.0f;
+	constexpr float MinViewportWidth = 260.0f;
+	constexpr float MinDetailsWidth = 300.0f;
+	const float WidthForPanels = std::max(0.0f, TotalWidth - SplitterWidth * 2.0f - Spacing * 2.0f);
+
+	PhysicsPanelWidth = std::max(MinLeftWidth, std::min(PhysicsPanelWidth, WidthForPanels - MinViewportWidth - MinDetailsWidth));
+	PhysicsDetailsWidth = std::max(MinDetailsWidth, std::min(PhysicsDetailsWidth, WidthForPanels - PhysicsPanelWidth - MinViewportWidth));
+	float ViewportWidth = WidthForPanels - PhysicsPanelWidth - PhysicsDetailsWidth;
+	if (ViewportWidth < MinViewportWidth)
+	{
+		const float Deficit = MinViewportWidth - ViewportWidth;
+		const float DetailsShrink = std::min(Deficit, std::max(0.0f, PhysicsDetailsWidth - MinDetailsWidth));
+		PhysicsDetailsWidth -= DetailsShrink;
+		ViewportWidth = WidthForPanels - PhysicsPanelWidth - PhysicsDetailsWidth;
+	}
+	ViewportWidth = std::max(MinViewportWidth, ViewportWidth);
+
+	ImGui::BeginChild("PhysicsAssetTreeAndGraphPanel", ImVec2(PhysicsPanelWidth, 0), true);
+	if (PhysicsAsset)
+	{
+		ImGui::TextDisabled("Assigned: %s", PhysicsAsset->GetAssetPathFileName().c_str());
+		ImGui::Separator();
+		PhysicsAssetEditor.RenderEmbeddedTreeAndGraph(PhysicsAsset, SkeletalMesh, 0.0f);
+	}
+	else
+	{
+		RenderMissingPhysicsAssetPanel(SkeletalMesh);
+	}
+	ImGui::EndChild();
+
+	ImGui::SameLine();
+
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+	ImGui::Button("##physicsTreeViewportSplitter", ImVec2(SplitterWidth, -1.0f));
+	if (ImGui::IsItemActive())
+	{
+		PhysicsPanelWidth += ImGui::GetIO().MouseDelta.x;
+		PhysicsPanelWidth = std::max(MinLeftWidth, std::min(PhysicsPanelWidth, WidthForPanels - MinViewportWidth - PhysicsDetailsWidth));
+	}
+	if (ImGui::IsItemHovered() || ImGui::IsItemActive())
+	{
+		ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+	}
+	ImGui::PopStyleColor(3);
+
+	ImGui::SameLine();
+
+	ImGui::BeginChild("PhysicsViewportPanel", ImVec2(ViewportWidth, 0.0f), false);
+	{
+		const ImVec2 Size = ImGui::GetContentRegionAvail();
+		RenderViewportPanel(Size);
+	}
+	ImGui::EndChild();
+
+	ImGui::SameLine();
+
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+	ImGui::Button("##physicsViewportDetailsSplitter", ImVec2(SplitterWidth, -1.0f));
+	if (ImGui::IsItemActive())
+	{
+		PhysicsDetailsWidth -= ImGui::GetIO().MouseDelta.x;
+		PhysicsDetailsWidth = std::max(MinDetailsWidth, std::min(PhysicsDetailsWidth, WidthForPanels - PhysicsPanelWidth - MinViewportWidth));
+	}
+	if (ImGui::IsItemHovered() || ImGui::IsItemActive())
+	{
+		ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+	}
+	ImGui::PopStyleColor(3);
+
+	ImGui::SameLine();
+
+	ImGui::BeginChild("PhysicsAssetDetailsPanel", ImVec2(PhysicsDetailsWidth, 0.0f), true);
+	if (PhysicsAsset)
+	{
+		PhysicsAssetEditor.RenderEmbeddedDetails(PhysicsAsset, SkeletalMesh, 0.0f);
+	}
+	else
+	{
+		ImGui::TextDisabled("No Physics Asset selected.");
+	}
 	ImGui::EndChild();
 }
 

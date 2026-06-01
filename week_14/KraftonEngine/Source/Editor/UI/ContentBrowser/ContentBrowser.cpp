@@ -712,21 +712,6 @@ void FEditorContentBrowserWidget::DrawContents()
 						Refresh();
 					}
 				}
-			if (ImGui::MenuItem("Physics Asset"))
-			{
-				FString CreatedPath;
-				if (FAssetFactory::CreatePhysicsAsset(FPaths::ToUtf8(BrowserContext.CurrentPath), "NewPhysicsAsset", CreatedPath))
-				{
-					Refresh();
-					if (BrowserContext.EditorEngine)
-					{
-						if (UPhysicsAsset* Asset = FPhysicsAssetManager::Get().LoadPhysicsAsset(CreatedPath))
-						{
-							BrowserContext.EditorEngine->OpenAssetEditorForObject(Asset);
-						}
-					}
-				}
-			}
 			ImGui::EndMenu();
 		}
 
