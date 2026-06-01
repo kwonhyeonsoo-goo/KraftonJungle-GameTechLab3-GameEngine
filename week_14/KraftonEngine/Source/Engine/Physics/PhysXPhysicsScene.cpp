@@ -1076,6 +1076,10 @@ void FPhysXPhysicsScene::RegisterComponent(UPrimitiveComponent* Comp)
     FPhysicsBodyCreatePayload Payload = BuildRegisterPayload_GameThread(Comp, Binding);
     if (!Payload.ShapeOwner.ComponentId || !Payload.ReservedBody.IsValid() || !Payload.ReservedShape.IsValid())
     {
+        Binding.bPendingCreate  = false;
+        Binding.bPendingDestroy = true;
+        Binding.Body            = FPhysicsBodyHandle {};
+        Binding.Shape           = FPhysicsShapeHandle {};
         return;
     }
 
@@ -1443,11 +1447,14 @@ void FPhysXPhysicsScene::SubmitPhysicsFrame(uint64 FrameIndex, float DeltaTime)
 {
     EnqueueEngineTransformSync_GameThread();
 
+    TArray<FPhysicsCommand> FrameCommands;
+    Runtime.DrainPendingCommands_GameThread(FrameCommands);
+
     std::unique_lock<std::mutex> Lock(PhysicsThreadMutex);
     if (!bPhysicsThreadStarted)
     {
         Lock.unlock();
-        RunPhysicsFrame_PhysicsThread(DeltaTime);
+        RunPhysicsFrame_PhysicsThread(DeltaTime, FrameCommands);
         Lock.lock();
         CompletedPhysicsFrameIndex = (std::max)(CompletedPhysicsFrameIndex, FrameIndex);
         PhysicsThreadDoneCv.notify_all();
@@ -1459,23 +1466,21 @@ void FPhysXPhysicsScene::SubmitPhysicsFrame(uint64 FrameIndex, float DeltaTime)
     {
         if (bPhysicsFramePending || bPhysicsFrameInProgress)
         {
-            PendingPhysicsDeltaTime += DeltaTime;
+            PendingPhysicsDeltaTime  += DeltaTime;
+            PendingPhysicsFrameIndex = FrameIndex;
+            PendingPhysicsFrameCommands.insert(PendingPhysicsFrameCommands.end(), FrameCommands.begin(), FrameCommands.end());
             if (!bPhysicsFramePending)
             {
-                PendingPhysicsFrameIndex = FrameIndex;
-                bPhysicsFramePending     = true;
+                bPhysicsFramePending = true;
                 PhysicsThreadCv.notify_one();
-            }
-            else
-            {
-                PendingPhysicsFrameIndex = FrameIndex;
             }
             return;
         }
 
-        PendingPhysicsFrameIndex = FrameIndex;
-        PendingPhysicsDeltaTime  = DeltaTime;
-        bPhysicsFramePending     = true;
+        PendingPhysicsFrameIndex    = FrameIndex;
+        PendingPhysicsDeltaTime     = DeltaTime;
+        PendingPhysicsFrameCommands = std::move(FrameCommands);
+        bPhysicsFramePending        = true;
         PhysicsThreadCv.notify_one();
         return;
     }
@@ -1488,9 +1493,10 @@ void FPhysXPhysicsScene::SubmitPhysicsFrame(uint64 FrameIndex, float DeltaTime)
         }
     );
 
-    PendingPhysicsFrameIndex = FrameIndex;
-    PendingPhysicsDeltaTime  = DeltaTime;
-    bPhysicsFramePending     = true;
+    PendingPhysicsFrameIndex    = FrameIndex;
+    PendingPhysicsDeltaTime     = DeltaTime;
+    PendingPhysicsFrameCommands = std::move(FrameCommands);
+    bPhysicsFramePending        = true;
     PhysicsThreadCv.notify_one();
 }
 
@@ -1508,17 +1514,18 @@ void FPhysXPhysicsScene::WaitPhysicsFrame(uint64 FrameIndex)
     );
 }
 
-void FPhysXPhysicsScene::RunPhysicsFrame_PhysicsThread(float DeltaTime)
+void FPhysXPhysicsScene::RunPhysicsFrame_PhysicsThread(float DeltaTime, const TArray<FPhysicsCommand>& FrameCommands)
 {
-    Runtime.Tick(DeltaTime);
+    Runtime.Tick(DeltaTime, FrameCommands);
 }
 
 void FPhysXPhysicsScene::PhysicsThreadMain()
 {
     for (;;)
     {
-        uint64 FrameIndex = 0;
-        float  DeltaTime  = 0.0f;
+        uint64                  FrameIndex = 0;
+        float                   DeltaTime  = 0.0f;
+        TArray<FPhysicsCommand> FrameCommands;
 
         {
             std::unique_lock<std::mutex> Lock(PhysicsThreadMutex);
@@ -1535,7 +1542,7 @@ void FPhysXPhysicsScene::PhysicsThreadMain()
                 break;
             }
 
-            if (!bPhysicsFramePending && bPhysicsQueryPending)
+            if (bPhysicsQueryPending)
             {
                 const bool              bObjectTypes       = bPendingQueryObjectTypes;
                 const FVector           QueryStart         = PendingQueryStart;
@@ -1563,14 +1570,16 @@ void FPhysXPhysicsScene::PhysicsThreadMain()
                 continue;
             }
 
-            FrameIndex              = PendingPhysicsFrameIndex;
-            DeltaTime               = PendingPhysicsDeltaTime;
+            FrameIndex    = PendingPhysicsFrameIndex;
+            DeltaTime     = PendingPhysicsDeltaTime;
+            FrameCommands = std::move(PendingPhysicsFrameCommands);
+            PendingPhysicsFrameCommands.clear();
             PendingPhysicsDeltaTime = 0.0f;
             bPhysicsFramePending    = false;
             bPhysicsFrameInProgress = true;
         }
 
-        RunPhysicsFrame_PhysicsThread(DeltaTime);
+        RunPhysicsFrame_PhysicsThread(DeltaTime, FrameCommands);
 
         {
             std::lock_guard<std::mutex> Lock(PhysicsThreadMutex);
@@ -1585,6 +1594,7 @@ void FPhysXPhysicsScene::PhysicsThreadMain()
         bPhysicsThreadStarted   = false;
         bPhysicsFramePending    = false;
         bPhysicsFrameInProgress = false;
+        PendingPhysicsFrameCommands.clear();
         bPhysicsQueryPending    = false;
         bPhysicsQueryInProgress = false;
         bPhysicsQueryCompleted  = true;
@@ -1609,6 +1619,7 @@ void FPhysXPhysicsScene::StartPhysicsThread()
     CompletedPhysicsFrameIndex  = 0;
     PendingPhysicsFrameIndex    = 0;
     PendingPhysicsDeltaTime     = 0.0f;
+    PendingPhysicsFrameCommands.clear();
     bPhysicsThreadStarted       = true;
     PhysicsThread               = std::thread(&FPhysXPhysicsScene::PhysicsThreadMain, this);
 }
@@ -1622,6 +1633,19 @@ void FPhysXPhysicsScene::StopPhysicsThreadAndJoin()
             return;
         }
 
+        bPhysicsThreadStopRequested = true;
+
+        if (bPhysicsQueryPending && !bPhysicsQueryInProgress)
+        {
+            bPhysicsQueryPending   = false;
+            bPhysicsQueryCompleted = true;
+            bPendingQueryHit       = false;
+            PendingQueryResult     = FPhysicsRaycastResult();
+        }
+
+        PhysicsThreadCv.notify_one();
+        PhysicsThreadDoneCv.notify_all();
+
         PhysicsThreadDoneCv.wait(
             Lock,
             [this]()
@@ -1629,9 +1653,6 @@ void FPhysXPhysicsScene::StopPhysicsThreadAndJoin()
                 return !bPhysicsFramePending && !bPhysicsFrameInProgress && !bPhysicsQueryPending && !bPhysicsQueryInProgress;
             }
         );
-
-        bPhysicsThreadStopRequested = true;
-        PhysicsThreadCv.notify_one();
     }
 
     if (PhysicsThread.joinable())
@@ -1642,6 +1663,7 @@ void FPhysXPhysicsScene::StopPhysicsThreadAndJoin()
     std::lock_guard<std::mutex> Lock(PhysicsThreadMutex);
     bPhysicsThreadStarted       = false;
     bPhysicsThreadStopRequested = false;
+    PendingPhysicsFrameCommands.clear();
 }
 
 void FPhysXPhysicsScene::EnqueueEngineTransformSync_GameThread()
@@ -1675,8 +1697,40 @@ void FPhysXPhysicsScene::EnqueueEngineTransformSync_GameThread()
     }
 }
 
+void FPhysXPhysicsScene::ConsumeCreationResults_GameThread()
+{
+    TArray<FPhysicsCreationResult> Results;
+    Runtime.ConsumeCreationResults_GameThread(Results);
+
+    for (const FPhysicsCreationResult& Result : Results)
+    {
+        if (Result.Type != EPhysicsCreationResultType::Body || Result.Owner.Domain != EPhysicsBodyDomain::ActorComponent || Result.Owner.ComponentId == 0)
+        {
+            continue;
+        }
+
+        FPhysicsComponentBinding* Binding = FindBinding_GameThread(Result.Owner.ComponentId);
+        if (!Binding || Binding->Generation != Result.Owner.ComponentGeneration)
+        {
+            continue;
+        }
+
+        Binding->bPendingCreate        = false;
+        Binding->bAliveOnPhysicsThread = Result.bSuccess;
+
+        if (!Result.bSuccess)
+        {
+            Binding->bPendingDestroy = true;
+            Binding->Body            = FPhysicsBodyHandle {};
+            Binding->Shape           = FPhysicsShapeHandle {};
+        }
+    }
+}
+
 void FPhysXPhysicsScene::DispatchPendingEvents()
 {
+    ConsumeCreationResults_GameThread();
+
     if (EventCallback)
     {
         const auto& PhysicsSettings = FProjectSettings::Get().Physics;
@@ -1734,12 +1788,12 @@ void FPhysXPhysicsScene::AddImpulse(UPrimitiveComponent* Comp, const FVector& Im
 
 FVector FPhysXPhysicsScene::GetLinearVelocity(UPrimitiveComponent* Comp) const
 {
-    if (!Comp)
-    {
+    const FPhysicsComponentBinding* Binding = Comp ? FindBinding_GameThread(Comp->GetUUID()) : nullptr;
+    if (!Binding || !Binding->Body.IsValid())
         return FVector::ZeroVector;
-    }
+
     std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot = Runtime.AcquireLatestSnapshotRef();
-    const FPhysicsBodySnapshot*                  Body     = Snapshot ? Snapshot->FindByComponent(Comp->GetUUID()) : nullptr;
+    const FPhysicsBodySnapshot*                  Body     = Snapshot ? Snapshot->FindByBody(Binding->Body) : nullptr;
     return Body ? Body->LinearVelocity : FVector::ZeroVector;
 }
 
@@ -1757,12 +1811,12 @@ void FPhysXPhysicsScene::SetLinearVelocity(UPrimitiveComponent* Comp, const FVec
 
 FVector FPhysXPhysicsScene::GetAngularVelocity(UPrimitiveComponent* Comp) const
 {
-    if (!Comp)
-    {
+    const FPhysicsComponentBinding* Binding = Comp ? FindBinding_GameThread(Comp->GetUUID()) : nullptr;
+    if (!Binding || !Binding->Body.IsValid())
         return FVector::ZeroVector;
-    }
+
     std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot = Runtime.AcquireLatestSnapshotRef();
-    const FPhysicsBodySnapshot*                  Body     = Snapshot ? Snapshot->FindByComponent(Comp->GetUUID()) : nullptr;
+    const FPhysicsBodySnapshot*                  Body     = Snapshot ? Snapshot->FindByBody(Binding->Body) : nullptr;
     return Body ? Body->AngularVelocity : FVector::ZeroVector;
 }
 
@@ -1789,12 +1843,12 @@ void FPhysXPhysicsScene::SetMass(UPrimitiveComponent* Comp, float Mass)
 
 float FPhysXPhysicsScene::GetMass(UPrimitiveComponent* Comp) const
 {
-    if (!Comp)
-    {
+    const FPhysicsComponentBinding* Binding = Comp ? FindBinding_GameThread(Comp->GetUUID()) : nullptr;
+    if (!Binding || !Binding->Body.IsValid())
         return 1.0f;
-    }
+
     std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot = Runtime.AcquireLatestSnapshotRef();
-    const FPhysicsBodySnapshot*                  Body     = Snapshot ? Snapshot->FindByComponent(Comp->GetUUID()) : nullptr;
+    const FPhysicsBodySnapshot*                  Body     = Snapshot ? Snapshot->FindByBody(Binding->Body) : nullptr;
     return Body ? Body->Mass : 1.0f;
 }
 
@@ -1809,12 +1863,12 @@ void FPhysXPhysicsScene::SetCenterOfMass(UPrimitiveComponent* Comp, const FVecto
 
 FVector FPhysXPhysicsScene::GetCenterOfMass(UPrimitiveComponent* Comp) const
 {
-    if (!Comp)
-    {
+    const FPhysicsComponentBinding* Binding = Comp ? FindBinding_GameThread(Comp->GetUUID()) : nullptr;
+    if (!Binding || !Binding->Body.IsValid())
         return FVector::ZeroVector;
-    }
+
     std::shared_ptr<const FPhysicsWorldSnapshot> Snapshot = Runtime.AcquireLatestSnapshotRef();
-    const FPhysicsBodySnapshot*                  Body     = Snapshot ? Snapshot->FindByComponent(Comp->GetUUID()) : nullptr;
+    const FPhysicsBodySnapshot*                  Body     = Snapshot ? Snapshot->FindByBody(Binding->Body) : nullptr;
     return Body ? Body->CenterOfMass : FVector::ZeroVector;
 }
 
@@ -1900,9 +1954,14 @@ bool FPhysXPhysicsScene::SubmitRaycastQuery_GameThread(
         Lock,
         [this]()
         {
-            return !bPhysicsQueryPending && !bPhysicsQueryInProgress;
+            return bPhysicsThreadStopRequested || (!bPhysicsQueryPending && !bPhysicsQueryInProgress);
         }
     );
+
+    if (bPhysicsThreadStopRequested)
+    {
+        return false;
+    }
 
     if (!bPhysicsThreadStarted)
     {
@@ -1929,9 +1988,16 @@ bool FPhysXPhysicsScene::SubmitRaycastQuery_GameThread(
         Lock,
         [this]()
         {
-            return bPhysicsQueryCompleted;
+            return bPhysicsQueryCompleted || bPhysicsThreadStopRequested;
         }
     );
+
+    if (bPhysicsThreadStopRequested && !bPhysicsQueryCompleted)
+    {
+        bPhysicsQueryPending   = false;
+        bPhysicsQueryCompleted = false;
+        return false;
+    }
 
     OutResult              = PendingQueryResult;
     const bool bHit        = bPendingQueryHit;

@@ -208,6 +208,24 @@ struct FBodyCreationDesc
     bool bGenerateOverlapEvents = false;
 };
 
+enum class EPhysicsCreationResultType : uint8
+{
+    Body,
+    Constraint,
+};
+
+struct FPhysicsCreationResult
+{
+    EPhysicsCreationResultType Type = EPhysicsCreationResultType::Body;
+    FPhysicsObjectKey          Owner;
+
+    FPhysicsBodyHandle       Body;
+    FPhysicsShapeHandle      Shape;
+    FPhysicsConstraintHandle Constraint;
+
+    bool bSuccess = false;
+};
+
 struct FPhysicsBodyCreatePayload
 {
     FPhysicsBodyHandle  ReservedBody;

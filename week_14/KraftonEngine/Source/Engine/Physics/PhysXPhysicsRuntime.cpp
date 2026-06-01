@@ -122,19 +122,49 @@ void FPhysXPhysicsRuntime::Shutdown()
 
 void FPhysXPhysicsRuntime::Tick(float DeltaTime)
 {
+    TArray<FPhysicsCommand> FrameCommands;
+    DrainPendingCommands_GameThread(FrameCommands);
+    Tick(DeltaTime, FrameCommands);
+}
+
+void FPhysXPhysicsRuntime::Tick(float DeltaTime, const TArray<FPhysicsCommand>& FrameCommands)
+{
     std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
-    if (!Scene || DeltaTime <= 0.0f)
+    if (!Scene)
     {
         Stats.NumSubsteps = 0;
-        if (Scene)
+        UpdateStats();
+        return;
+    }
+
+    if (DeltaTime <= 0.0f)
+    {
+        int32 AppliedCommands = 0;
+        {
+            PxSceneWriteLock WriteLock(*Scene);
+            AppliedCommands = ApplyCommands(FrameCommands);
+            for (auto& BodyPtr : Bodies)
+            {
+                if (!BodyPtr || !BodyPtr->Actor)
+                {
+                    continue;
+                }
+                FBodyInstance& Body = *BodyPtr;
+                if (Body.ShouldPushTransformToPhysics() || Body.IsKinematicTargetDriven())
+                {
+                    SyncEngineToPhysics(Body);
+                }
+            }
+        }
+
+        Stats.NumSubsteps = 0;
         {
             PxSceneReadLock ReadLock(*Scene);
             UpdateStats();
+            BuildWorldSnapshot_Internal();
         }
-        else
-        {
-            UpdateStats();
-        }
+        Stats.NumPendingCommands = static_cast<int32>(FrameCommands.size());
+        Stats.NumAppliedCommands = AppliedCommands;
         return;
     }
 
@@ -154,42 +184,46 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
     {
         return std::chrono::duration<float, std::milli>(B - A).count();
     };
-    float PrePhysicsMs           = 0.0f;
-    float ApplyCommandsMs        = 0.0f;
-    float SyncEngineToPhysicsMs  = 0.0f;
-    float SimulateMs             = 0.0f;
-    float FetchResultsMs         = 0.0f;
-    float SyncPhysicsToEngineMs  = 0.0f;
-    float PostPhysicsMs          = 0.0f;
-    int32 AppliedCommands        = 0;
-    int32 PendingCommandsAtDrain = 0;
+    float      PrePhysicsMs           = 0.0f;
+    float      ApplyCommandsMs        = 0.0f;
+    float      SyncEngineToPhysicsMs  = 0.0f;
+    float      SimulateMs             = 0.0f;
+    float      FetchResultsMs         = 0.0f;
+    float      SyncPhysicsToEngineMs  = 0.0f;
+    float      PostPhysicsMs          = 0.0f;
+    int32      AppliedCommands        = 0;
+    int32      PendingCommandsAtDrain = 0;
+    const auto PreApplyStart          = FClock::now();
+    auto       PreApplyEnd            = PreApplyStart;
+    auto       PreSyncEnd             = PreApplyStart;
+    {
+        PxSceneWriteLock WriteLock(*Scene);
+        PendingCommandsAtDrain += static_cast<int32>(FrameCommands.size());
+        AppliedCommands        += ApplyCommands(FrameCommands);
+        PreApplyEnd            = FClock::now();
+
+        for (auto& BodyPtr : Bodies)
+        {
+            if (!BodyPtr || !BodyPtr->Actor)
+            {
+                continue;
+            }
+
+            FBodyInstance& Body = *BodyPtr;
+            if (Body.ShouldPushTransformToPhysics() || Body.IsKinematicTargetDriven())
+            {
+                SyncEngineToPhysics(Body);
+            }
+        }
+        PreSyncEnd = FClock::now();
+    }
+
+    ApplyCommandsMs       += DurationMs(PreApplyStart, PreApplyEnd);
+    SyncEngineToPhysicsMs += DurationMs(PreApplyEnd, PreSyncEnd);
+    PrePhysicsMs          += DurationMs(PreApplyStart, PreSyncEnd);
 
     while (Accumulator >= FixedDt && StepCount < MaxSubsteps)
     {
-        const auto T0 = FClock::now();
-
-        auto TApplyEnd = T0;
-        {
-            PxSceneWriteLock WriteLock(*Scene);
-            PendingCommandsAtDrain += CommandQueue.Num();
-            AppliedCommands        += ApplyPendingCommands();
-            TApplyEnd              = FClock::now();
-
-            for (auto& BodyPtr : Bodies)
-            {
-                if (!BodyPtr || !BodyPtr->Actor)
-                {
-                    continue;
-                }
-
-                FBodyInstance& Body = *BodyPtr;
-                if (Body.ShouldPushTransformToPhysics() || Body.IsKinematicTargetDriven())
-                {
-                    SyncEngineToPhysics(Body);
-                }
-            }
-        }
-
         const auto T1 = FClock::now();
         auto       T2 = T1;
         auto       T3 = T1;
@@ -216,9 +250,6 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
 
         const auto T4 = FClock::now();
 
-        ApplyCommandsMs       += DurationMs(T0, TApplyEnd);
-        SyncEngineToPhysicsMs += DurationMs(TApplyEnd, T1);
-        PrePhysicsMs          += DurationMs(T0, T1);
         SimulateMs            += DurationMs(T1, T2);
         FetchResultsMs        += DurationMs(T2, T3);
         SyncPhysicsToEngineMs += DurationMs(T3, T4);
@@ -279,6 +310,24 @@ FPhysicsShapeHandle FPhysXPhysicsRuntime::ReserveShapeHandle_GameThread()
 {
     std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
     return AllocateShape();
+}
+
+void FPhysXPhysicsRuntime::DrainPendingCommands_GameThread(TArray<FPhysicsCommand>& OutCommands)
+{
+    CommandQueue.Drain(OutCommands);
+}
+
+void FPhysXPhysicsRuntime::ConsumeCreationResults_GameThread(TArray<FPhysicsCreationResult>& OutResults)
+{
+    std::lock_guard<std::mutex> Lock(CreationResultMutex);
+    OutResults.insert(OutResults.end(), PendingCreationResults.begin(), PendingCreationResults.end());
+    PendingCreationResults.clear();
+}
+
+void FPhysXPhysicsRuntime::QueueCreationResult(const FPhysicsCreationResult& Result)
+{
+    std::lock_guard<std::mutex> Lock(CreationResultMutex);
+    PendingCreationResults.push_back(Result);
 }
 
 void FPhysXPhysicsRuntime::RegisterComponent(const FPhysicsBodyCreatePayload& Payload)
@@ -357,6 +406,17 @@ void FPhysXPhysicsRuntime::RegisterComponent_Internal(const FPhysicsBodyCreatePa
 
         ActorCompounds[Payload.BodyOwner.ActorId] = NewCompound;
         Compound                                  = &ActorCompounds[Payload.BodyOwner.ActorId];
+    }
+    else if (Payload.BodyOwner.ComponentId == Compound->RootComponentId)
+    {
+        Compound->RootGeneration = Payload.BodyOwner.ComponentGeneration;
+
+        if (FBodyInstance* Body = ResolveBody(Compound->Body))
+        {
+            Body->OwnerComponentGeneration = Payload.BodyOwner.ComponentGeneration;
+            Body->SyncMode                 = Payload.SyncMode;
+            Body->BodyType                 = Payload.BodyType;
+        }
     }
 
     const FPhysicsShapeDesc* ShapeDesc = Payload.Shapes.empty() ? nullptr : &Payload.Shapes[0];
@@ -845,10 +905,6 @@ void FPhysXPhysicsRuntime::DestroyConstraint(FPhysicsConstraintHandle Constraint
     Cmd.Type       = EPhysicsCommandType::DestroyConstraint;
     Cmd.Constraint = Constraint;
     EnqueueCommand(Cmd);
-}
-
-void FPhysXPhysicsRuntime::CaptureEngineTransforms_GameThread()
-{
 }
 
 FTransform FPhysXPhysicsRuntime::GetBodyTransform(FPhysicsBodyHandle BodyHandle) const
@@ -1821,26 +1877,54 @@ int32 FPhysXPhysicsRuntime::ApplyPendingCommands()
 {
     TArray<FPhysicsCommand> Commands;
     CommandQueue.Drain(Commands);
+    return ApplyCommands(Commands);
+}
 
-    // Drain 은 enqueue(=Sequence) 순서를 보존하므로 같은 frame 내 명령 순서가 보장된다.
+int32 FPhysXPhysicsRuntime::ApplyCommands(const TArray<FPhysicsCommand>& Commands)
+{
+    // Commands are sealed by the Game Thread at SubmitPhysicsFrame().
+    // Do not touch CommandQueue here; otherwise async physics can consume commands for a later game frame.
     for (const FPhysicsCommand& Command : Commands)
     {
         switch (Command.Type)
         {
         case EPhysicsCommandType::CreateBody:
+        {
+            bool bSuccess = false;
             if (Command.CreateBody.BodyOwner.Domain == EPhysicsBodyDomain::ActorComponent &&
                 Command.CreateBody.ShapeOwner.Domain == EPhysicsBodyDomain::ActorComponent)
             {
                 RegisterComponent_Internal(Command.CreateBody);
+                const FShapeInstance* Shape = ResolveShape(Command.Shape);
+                bSuccess                    = Shape && Shape->SourceComponentId == Command.CreateBody.ShapeOwner.ComponentId &&
+                        Shape->SourceComponentGeneration == Command.CreateBody.ShapeOwner.ComponentGeneration;
             }
             else
             {
-                CreateRigidBody_Internal(ToBodyCreationDesc(Command.CreateBody));
+                const FPhysicsBodyHandle CreatedBody = CreateRigidBody_Internal(ToBodyCreationDesc(Command.CreateBody));
+                bSuccess                             = CreatedBody.IsValid();
             }
+
+            FPhysicsCreationResult Result;
+            Result.Type     = EPhysicsCreationResultType::Body;
+            Result.Owner    = Command.CreateBody.ShapeOwner.ComponentId ? Command.CreateBody.ShapeOwner : Command.CreateBody.BodyOwner;
+            Result.Body     = Command.Body;
+            Result.Shape    = Command.Shape;
+            Result.bSuccess = bSuccess;
+            QueueCreationResult(Result);
             break;
+        }
         case EPhysicsCommandType::CreateConstraint:
-            CreateConstraint_Internal(Command.Body, Command.ChildBody, Command.ConstraintDesc, Command.Constraint);
+        {
+            const FPhysicsConstraintHandle CreatedConstraint = CreateConstraint_Internal(Command.Body, Command.ChildBody, Command.ConstraintDesc, Command.Constraint);
+            FPhysicsCreationResult         Result;
+            Result.Type       = EPhysicsCreationResultType::Constraint;
+            Result.Body       = Command.Body;
+            Result.Constraint = Command.Constraint;
+            Result.bSuccess   = CreatedConstraint.IsValid();
+            QueueCreationResult(Result);
             break;
+        }
         case EPhysicsCommandType::UnregisterComponent:
             UnregisterComponent_Internal(Command.Object);
             break;

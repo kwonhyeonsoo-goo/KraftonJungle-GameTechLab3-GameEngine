@@ -40,7 +40,6 @@ public:
 
     virtual void DestroyConstraint(FPhysicsConstraintHandle Constraint) = 0;
 
-    virtual void CaptureEngineTransforms_GameThread() = 0;
 
     virtual FTransform GetBodyTransform(FPhysicsBodyHandle Body) const = 0;
 

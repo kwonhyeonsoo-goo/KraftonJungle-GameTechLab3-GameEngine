@@ -51,6 +51,9 @@ public:
     void Shutdown();
 
     void Tick(float DeltaTime);
+    void Tick(float DeltaTime, const TArray<FPhysicsCommand>& FrameCommands);
+    void DrainPendingCommands_GameThread(TArray<FPhysicsCommand>& OutCommands);
+    void ConsumeCreationResults_GameThread(TArray<FPhysicsCreationResult>& OutResults);
 
     FPhysicsBodyHandle  ReserveBodyHandle_GameThread();
     FPhysicsShapeHandle ReserveShapeHandle_GameThread();
@@ -86,8 +89,6 @@ public:
     ) override;
 
     void DestroyConstraint(FPhysicsConstraintHandle Constraint) override;
-
-    void CaptureEngineTransforms_GameThread() override;
 
     FTransform GetBodyTransform(FPhysicsBodyHandle Body) const override;
 
@@ -203,6 +204,8 @@ private:
 
     // 적용한 command 수를 반환 (Stat 용).
     int32 ApplyPendingCommands();
+    int32 ApplyCommands(const TArray<FPhysicsCommand>& Commands);
+    void  QueueCreationResult(const FPhysicsCreationResult& Result);
     void  UpdateStats();
 
     // 스냅샷 빌더 — step 내부(read 시점)에서만 live PhysX 를 읽어 스냅샷을 구성한다.
@@ -239,6 +242,9 @@ private:
     TMap<uint32, FPhysicsShapeHandle> ComponentToShape;
 
     FPhysicsCommandQueue CommandQueue;
+
+    mutable std::mutex             CreationResultMutex;
+    TArray<FPhysicsCreationResult> PendingCreationResults;
 
     FPhysicsStats Stats;
 

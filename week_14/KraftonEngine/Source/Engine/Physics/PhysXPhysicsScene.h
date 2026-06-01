@@ -123,7 +123,8 @@ private:
     void StartPhysicsThread();
     void StopPhysicsThreadAndJoin();
     void PhysicsThreadMain();
-    void RunPhysicsFrame_PhysicsThread(float DeltaTime);
+    void RunPhysicsFrame_PhysicsThread(float DeltaTime, const TArray<FPhysicsCommand>& FrameCommands);
+    void ConsumeCreationResults_GameThread();
 
     TMap<uint32, FPhysicsComponentBinding> GameThreadBindings;
     TMap<uint32, FPhysicsBodyHandle>       GameThreadActorBodies;
@@ -152,6 +153,7 @@ private:
     uint64                          PendingPhysicsFrameIndex    = 0;
     uint64                          CompletedPhysicsFrameIndex  = 0;
     float                           PendingPhysicsDeltaTime     = 0.0f;
+    TArray<FPhysicsCommand>         PendingPhysicsFrameCommands;
 
     mutable bool                  bPhysicsQueryPending     = false;
     mutable bool                  bPhysicsQueryInProgress  = false;
