@@ -1,15 +1,22 @@
-#include "PhysicsAssetEditorWidget.h"
+﻿#include "PhysicsAssetEditorWidget.h"
 
 #include "Asset/AssetRegistry.h"
 #include "Animation/Skeleton/Skeleton.h"
+#include "Component/Debug/PhysicsAssetPreviewComponent.h"
+#include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Debug/DrawDebugHelpers.h"
 #include "Editor/EditorEngine.h"
+#include "GameFramework/World.h"
+#include "Math/MathUtils.h"
 #include "Mesh/MeshManager.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Object/Object.h"
 #include "Physics/PhysicsAsset.h"
 #include "Physics/PhysicsAssetManager.h"
+#include "Physics/PhysicsAssetPreviewUtils.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <functional>
 
@@ -22,6 +29,148 @@ namespace
 {
     constexpr float LeftPanelWidth = 310.0f;
     constexpr float DetailsPanelMinWidth = 360.0f;
+    constexpr int32 DebugCircleSegments = 24;
+    constexpr int32 DebugHalfCircleSegments = 12;
+    constexpr float PhysicsEditorTreeIndentSpacing = 10.0f;
+    constexpr float PhysicsPreviewShapeScale = 0.1f;
+
+    FTransform ComposePreviewDebugTransforms(const FTransform& ParentWorld, const FTransform& Local)
+    {
+        FTransform Result = Local;
+        Result.Location = ParentWorld.Location + ParentWorld.Rotation.RotateVector(Local.Location);
+        Result.Rotation = (ParentWorld.Rotation * Local.Rotation).GetNormalized();
+        Result.Scale = FVector::OneVector;
+        return Result;
+    }
+
+    void DrawDebugCircle(
+        UWorld* World,
+        const FVector& Center,
+        const FVector& AxisA,
+        const FVector& AxisB,
+        float Radius,
+        const FColor& Color)
+    {
+        if (!World || Radius <= 0.0f)
+        {
+            return;
+        }
+
+        const float Step = 2.0f * FMath::Pi / static_cast<float>(DebugCircleSegments);
+        FVector Prev = Center + AxisA * Radius;
+        for (int32 i = 1; i <= DebugCircleSegments; ++i)
+        {
+            const float Angle = Step * static_cast<float>(i);
+            const FVector Next = Center + (AxisA * cosf(Angle) + AxisB * sinf(Angle)) * Radius;
+            DrawDebugLine(World, Prev, Next, Color, 0.0f);
+            Prev = Next;
+        }
+    }
+
+    void DrawDebugHalfCircle(
+        UWorld* World,
+        const FVector& Center,
+        const FVector& AxisA,
+        const FVector& AxisB,
+        float Radius,
+        int32 Segments,
+        float StartAngle,
+        const FColor& Color)
+    {
+        if (!World || Radius <= 0.0f || Segments < 3)
+        {
+            return;
+        }
+
+        const float Step = FMath::Pi / static_cast<float>(Segments);
+        FVector Prev = Center + (AxisA * cosf(StartAngle) + AxisB * sinf(StartAngle)) * Radius;
+        for (int32 i = 1; i <= Segments; ++i)
+        {
+            const float Angle = StartAngle + Step * static_cast<float>(i);
+            const FVector Next = Center + (AxisA * cosf(Angle) + AxisB * sinf(Angle)) * Radius;
+            DrawDebugLine(World, Prev, Next, Color, 0.0f);
+            Prev = Next;
+        }
+    }
+
+    void DrawDebugOrientedBox(
+        UWorld* World,
+        const FVector& Center,
+        const FVector& HalfExtent,
+        const FQuat& Rotation,
+        const FColor& Color)
+    {
+        if (!World)
+        {
+            return;
+        }
+
+        const FVector ClampedHalfExtent(
+            (std::max)(HalfExtent.X, 0.001f),
+            (std::max)(HalfExtent.Y, 0.001f),
+            (std::max)(HalfExtent.Z, 0.001f));
+
+        FVector Corners[8];
+        for (int32 i = 0; i < 8; ++i)
+        {
+            const FVector LocalCorner(
+                (i & 1) ? ClampedHalfExtent.X : -ClampedHalfExtent.X,
+                (i & 2) ? ClampedHalfExtent.Y : -ClampedHalfExtent.Y,
+                (i & 4) ? ClampedHalfExtent.Z : -ClampedHalfExtent.Z);
+            Corners[i] = Center + Rotation.RotateVector(LocalCorner);
+        }
+
+        DrawDebugBox(
+            World,
+            Corners[0],
+            Corners[1],
+            Corners[3],
+            Corners[2],
+            Corners[4],
+            Corners[5],
+            Corners[7],
+            Corners[6],
+            Color,
+            0.0f);
+    }
+
+    void DrawDebugCapsuleZAxis(
+        UWorld* World,
+        const FVector& Center,
+        float Radius,
+        float HalfHeight,
+        const FQuat& Rotation,
+        const FColor& Color)
+    {
+        if (!World)
+        {
+            return;
+        }
+
+        Radius = (std::max)(Radius, 0.001f);
+        HalfHeight = (std::max)(HalfHeight, Radius);
+        const float CylinderHalf = (std::max)(0.0f, HalfHeight - Radius);
+
+        const FVector AxisX = Rotation.RotateVector(FVector(1.0f, 0.0f, 0.0f));
+        const FVector AxisY = Rotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
+        const FVector AxisZ = Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f));
+
+        const FVector TopCenter = Center + AxisZ * CylinderHalf;
+        const FVector BottomCenter = Center - AxisZ * CylinderHalf;
+
+        DrawDebugCircle(World, TopCenter, AxisX, AxisY, Radius, Color);
+        DrawDebugCircle(World, BottomCenter, AxisX, AxisY, Radius, Color);
+
+        DrawDebugLine(World, TopCenter + AxisX * Radius, BottomCenter + AxisX * Radius, Color, 0.0f);
+        DrawDebugLine(World, TopCenter - AxisX * Radius, BottomCenter - AxisX * Radius, Color, 0.0f);
+        DrawDebugLine(World, TopCenter + AxisY * Radius, BottomCenter + AxisY * Radius, Color, 0.0f);
+        DrawDebugLine(World, TopCenter - AxisY * Radius, BottomCenter - AxisY * Radius, Color, 0.0f);
+
+        DrawDebugHalfCircle(World, TopCenter, AxisX, AxisZ, Radius, DebugHalfCircleSegments, 0.0f, Color);
+        DrawDebugHalfCircle(World, TopCenter, AxisY, AxisZ, Radius, DebugHalfCircleSegments, 0.0f, Color);
+        DrawDebugHalfCircle(World, BottomCenter, AxisX, AxisZ, Radius, DebugHalfCircleSegments, FMath::Pi, Color);
+        DrawDebugHalfCircle(World, BottomCenter, AxisY, AxisZ, Radius, DebugHalfCircleSegments, FMath::Pi, Color);
+    }
 
     const char* ShapeTypeText(EPhysicsAssetShapeType Type)
     {
@@ -175,11 +324,19 @@ namespace
         return bChanged;
     }
 
-    FString BodyLabel(const FPhysicsAssetBodySetup& Body, int32 Index, UPhysicsAsset::EEditorSetupState State)
+    FString BodyLabel(const FPhysicsAssetBodySetup& Body, int32 Index)
     {
         const FString Bone = Body.BoneName == FName::None ? FString("<None>") : Body.BoneName.ToString();
+        const int32 ShapeCount = static_cast<int32>(Body.Shapes.size());
         char Buffer[256] = {};
-        std::snprintf(Buffer, sizeof(Buffer), "Body %d  %s  [%s]", Index, Bone.c_str(), StateText(State));
+        std::snprintf(
+            Buffer,
+            sizeof(Buffer),
+            "Body %d  %s  (%d %s)",
+            Index,
+            Bone.c_str(),
+            ShapeCount,
+            ShapeCount == 1 ? "shape" : "shapes");
         return Buffer;
     }
 
@@ -262,53 +419,9 @@ namespace
         const FReferenceSkeleton& RefSkeleton,
         int32 BoneIndex)
     {
-        const FName BoneName(RefSkeleton.Bones[BoneIndex].Name);
-        const bool bHasBody = PhysicsAsset && PhysicsAsset->HasBodySetupForBone(BoneName);
-        const int32 ParentBodyIndex = FindNearestParentBodyBoneIndex(PhysicsAsset, RefSkeleton, BoneIndex);
-        const int32 ConstraintIndex = FindConstraintToNearestParentBodyIndex(PhysicsAsset, RefSkeleton, BoneIndex);
-
-        FString Label = "Bone  ";
-        Label += RefSkeleton.Bones[BoneIndex].Name;
-        Label += bHasBody ? "    [Body]" : "    [No Body]";
-        if (ParentBodyIndex < 0)
-        {
-            Label += " [Root]";
-        }
-        else
-        {
-            Label += ConstraintIndex >= 0 ? " [Joint]" : " [No Joint]";
-        }
-        return Label;
+        (void)PhysicsAsset;
+        return RefSkeleton.Bones[BoneIndex].Name;
     }
-
-    FString MakeBodyTreeChildLabel(const FPhysicsAssetBodySetup& Body, int32 BodyIndex)
-    {
-        const int32 ShapeCount = static_cast<int32>(Body.Shapes.size());
-        char Buffer[256] = {};
-        std::snprintf(
-            Buffer,
-            sizeof(Buffer),
-            "Body %d  %s  (%d %s)",
-            BodyIndex,
-            Body.BoneName.ToString().c_str(),
-            ShapeCount,
-            ShapeCount == 1 ? "shape" : "shapes");
-        return Buffer;
-    }
-
-    FString MakeConstraintTreeChildLabel(const FPhysicsAssetConstraintSetup& Constraint, int32 ConstraintIndex)
-    {
-        char Buffer[384] = {};
-        std::snprintf(
-            Buffer,
-            sizeof(Buffer),
-            "Constraint %d  %s -> %s",
-            ConstraintIndex,
-            Constraint.ParentBoneName.ToString().c_str(),
-            Constraint.ChildBoneName.ToString().c_str());
-        return Buffer;
-    }
-
 
     constexpr uint32 PhysicsBodyNodeBase = 100000;
     constexpr uint32 PhysicsConstraintNodeBase = 200000;
@@ -654,10 +767,14 @@ bool FPhysicsAssetEditorWidget::PrepareEmbeddedRender(UPhysicsAsset* PhysicsAsse
 void FPhysicsAssetEditorWidget::RenderTreeAndGraphPanel(UPhysicsAsset* PhysicsAsset)
 {
     const float AvailableHeight = ImGui::GetContentRegionAvail().y;
-    const float GraphHeight = (std::max)(220.0f, AvailableHeight * 0.48f);
+    const float GraphHeight = (std::max)(200.0f, AvailableHeight * 0.42f);
     const float TreeHeight = (std::max)(140.0f, AvailableHeight - GraphHeight - ImGui::GetStyle().ItemSpacing.y - 4.0f);
 
-    ImGui::BeginChild("##PhysicsAssetTreeArea", ImVec2(0.0f, TreeHeight), false);
+    ImGui::BeginChild(
+        "##PhysicsAssetTreeArea",
+        ImVec2(0.0f, TreeHeight),
+        false,
+        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     if (PreviewSkeletalMesh && PreviewSkeletalMesh->GetSkeleton())
     {
         RenderSkeletonPhysicsTree(PhysicsAsset, PreviewSkeletalMesh);
@@ -727,9 +844,17 @@ void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* Physics
         static_cast<int32>(PhysicsAsset->GetBodySetups().size()),
         static_cast<int32>(PhysicsAsset->GetConstraintSetups().size()));
 
-    constexpr float ActionPanelHeight = 108.0f;
-    const float TreeHeight = (std::max)(110.0f, ImGui::GetContentRegionAvail().y - ActionPanelHeight - ImGui::GetStyle().ItemSpacing.y);
+    const float ActionPanelHeight = ImGui::GetFrameHeightWithSpacing();
+    constexpr float BodyListHeight = 150.0f;
+    const float TreeHeight = (std::max)(
+        110.0f,
+        ImGui::GetContentRegionAvail().y
+            - ActionPanelHeight
+            - BodyListHeight
+            - ImGui::GetTextLineHeightWithSpacing()
+            - ImGui::GetStyle().ItemSpacing.y * 3.0f);
     ImGui::BeginChild("##PhysicsAssetSkeletonTree", ImVec2(0.0f, TreeHeight), true);
+    ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, PhysicsEditorTreeIndentSpacing);
     if (RefSkeleton.GetNumBones() <= 0)
     {
         ImGui::TextDisabled("Skeleton has no bones.");
@@ -744,11 +869,13 @@ void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* Physics
             }
         }
     }
+    ImGui::PopStyleVar();
     ImGui::EndChild();
 
-    ImGui::BeginChild("##PhysicsAssetSelectedBoneActions", ImVec2(0.0f, ActionPanelHeight), true);
     RenderSelectedBoneActionPanel(PhysicsAsset, RefSkeleton);
-    ImGui::EndChild();
+
+    ImGui::Separator();
+    RenderBodyList(PhysicsAsset);
 
     RenderUnboundPhysicsSetups(PhysicsAsset, RefSkeleton);
 }
@@ -766,17 +893,16 @@ void FPhysicsAssetEditorWidget::RenderPhysicsBoneTree(
     const FReferenceBone& Bone = RefSkeleton.Bones[BoneIndex];
     const FName BoneName(Bone.Name);
     const int32 BodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(BoneName);
-    const int32 ParentBodyBoneIndex = FindNearestParentBodyBoneIndex(PhysicsAsset, RefSkeleton, BoneIndex);
     const int32 ConstraintIndex = FindConstraintToNearestParentBodyIndex(PhysicsAsset, RefSkeleton, BoneIndex);
     const bool bHasSkeletonChildren = HasChildBone(RefSkeleton, BoneIndex);
-    const bool bHasPhysicsChildren = BodyIndex >= 0 || ConstraintIndex >= 0;
+    const bool bHasBody = BodyIndex >= 0;
     const bool bSelected =
         SelectedTreeBoneIndex == BoneIndex ||
         (BodyIndex >= 0 && SelectedBodyIndex == BodyIndex && SelectedConstraintIndex < 0) ||
         (ConstraintIndex >= 0 && SelectedConstraintIndex == ConstraintIndex);
 
     ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
-    if (!bHasSkeletonChildren && !bHasPhysicsChildren)
+    if (!bHasSkeletonChildren)
     {
         Flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
     }
@@ -787,7 +913,28 @@ void FPhysicsAssetEditorWidget::RenderPhysicsBoneTree(
 
     const FString Label = MakeBoneTreeLabel(PhysicsAsset, RefSkeleton, BoneIndex);
     ImGui::PushID(BoneIndex);
+    ImGui::SetNextItemOpen(true, ImGuiCond_Once);
     const bool bOpen = ImGui::TreeNodeEx("##PhysicsBone", Flags, "%s", Label.c_str());
+
+    if (bHasBody)
+    {
+        const ImVec2 ItemMin = ImGui::GetItemRectMin();
+        const ImVec2 ItemMax = ImGui::GetItemRectMax();
+        constexpr float Radius = 3.5f;
+        const ImVec2 Center(
+            ItemMax.x - Radius - 6.0f,
+            (ItemMin.y + ItemMax.y) * 0.5f);
+
+        ImGui::GetWindowDrawList()->AddCircleFilled(
+            Center,
+            Radius,
+            IM_COL32(80, 210, 190, 255));
+
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Body");
+        }
+    }
 
     if (ImGui::IsItemClicked())
     {
@@ -796,7 +943,7 @@ void FPhysicsAssetEditorWidget::RenderPhysicsBoneTree(
 
     RenderPhysicsBoneContextMenu(PhysicsAsset, RefSkeleton, BoneIndex);
 
-    if (bOpen && !bHasSkeletonChildren && !bHasPhysicsChildren)
+    if (bOpen && !bHasSkeletonChildren)
     {
         ImGui::PopID();
         return;
@@ -804,81 +951,6 @@ void FPhysicsAssetEditorWidget::RenderPhysicsBoneTree(
 
     if (bOpen)
     {
-        if (BodyIndex >= 0 && BodyIndex < static_cast<int32>(PhysicsAsset->GetBodySetups().size()))
-        {
-            const FPhysicsAssetBodySetup& Body = PhysicsAsset->GetBodySetups()[BodyIndex];
-            const FString BodyText = MakeBodyTreeChildLabel(Body, BodyIndex);
-            ImGui::PushID("BodyChild");
-            if (ImGui::Selectable(BodyText.c_str(), SelectedBodyIndex == BodyIndex && SelectedConstraintIndex < 0))
-            {
-                SelectBodySetup(PhysicsAsset, BodyIndex, BoneIndex);
-            }
-            if (ImGui::BeginPopupContextItem("##BodyChildContext"))
-            {
-                if (ImGui::MenuItem("Select Body"))
-                {
-                    SelectBodySetup(PhysicsAsset, BodyIndex, BoneIndex);
-                }
-                const bool bCanCreateConstraint = ParentBodyBoneIndex >= 0 && ConstraintIndex < 0;
-                if (!bCanCreateConstraint) ImGui::BeginDisabled();
-                if (ImGui::MenuItem("Create Constraint to Parent Body"))
-                {
-                    const FName ParentBoneName(RefSkeleton.Bones[ParentBodyBoneIndex].Name);
-                    AddDefaultConstraintForBones(PhysicsAsset, ParentBoneName, BoneName);
-                    SelectedTreeBoneIndex = BoneIndex;
-                }
-                if (!bCanCreateConstraint) ImGui::EndDisabled();
-                if (ImGui::MenuItem("Remove Body"))
-                {
-                    PhysicsAsset->RemoveBodySetupByIndex(BodyIndex);
-                    SelectedTreeBoneIndex = BoneIndex;
-                    SelectedBodyIndex = -1;
-                    SelectedShapeIndex = -1;
-                    SelectedConstraintIndex = -1;
-                    MarkPhysicsAssetDirty();
-                }
-                ImGui::EndPopup();
-            }
-            ImGui::PopID();
-        }
-        else
-        {
-            ImGui::TextDisabled("Body: not created");
-        }
-
-        if (ConstraintIndex >= 0 && ConstraintIndex < static_cast<int32>(PhysicsAsset->GetConstraintSetups().size()))
-        {
-            const FPhysicsAssetConstraintSetup& Constraint = PhysicsAsset->GetConstraintSetups()[ConstraintIndex];
-            const FString ConstraintText = MakeConstraintTreeChildLabel(Constraint, ConstraintIndex);
-            ImGui::PushID("ConstraintChild");
-            if (ImGui::Selectable(ConstraintText.c_str(), SelectedConstraintIndex == ConstraintIndex))
-            {
-                SelectConstraintSetup(PhysicsAsset, ConstraintIndex, BoneIndex);
-            }
-            if (ImGui::BeginPopupContextItem("##ConstraintChildContext"))
-            {
-                if (ImGui::MenuItem("Select Constraint"))
-                {
-                    SelectConstraintSetup(PhysicsAsset, ConstraintIndex, BoneIndex);
-                }
-                if (ImGui::MenuItem("Remove Constraint"))
-                {
-                    PhysicsAsset->RemoveConstraintSetupByIndex(ConstraintIndex);
-                    SelectedConstraintIndex = -1;
-                    SelectedBodyIndex = BodyIndex;
-                    SelectedShapeIndex = BodyIndex >= 0 && !PhysicsAsset->GetBodySetups()[BodyIndex].Shapes.empty() ? 0 : -1;
-                    SelectedTreeBoneIndex = BoneIndex;
-                    MarkPhysicsAssetDirty();
-                }
-                ImGui::EndPopup();
-            }
-            ImGui::PopID();
-        }
-        else if (BodyIndex >= 0 && ParentBodyBoneIndex >= 0)
-        {
-            ImGui::TextDisabled("Constraint: not created to parent body");
-        }
-
         for (int32 ChildIndex = BoneIndex + 1; ChildIndex < RefSkeleton.GetNumBones(); ++ChildIndex)
         {
             if (RefSkeleton.Bones[ChildIndex].ParentIndex == BoneIndex)
@@ -1011,24 +1083,19 @@ void FPhysicsAssetEditorWidget::RenderSelectedBoneActionPanel(
             : -1;
     }
 
-    ImGui::TextDisabled("Bone: %s", BoneLabel.c_str());
-    ImGui::TextDisabled(
-        "Body: %s | Parent: %s | Joint: %s",
-        BodyIndex >= 0 ? "Created" : "None",
-        ParentBodyBoneIndex >= 0 ? ParentBodyBoneName.ToString().c_str() : "None",
-        ConstraintIndex >= 0 ? "Created" : "None");
-
     const bool bCanAddBody = bHasSelectedBone && BodyIndex < 0;
     if (!bCanAddBody) ImGui::BeginDisabled();
-    if (ImGui::Button("+ Body", ImVec2(-1.0f, 0.0f)))
+    const float ButtonWidth = (std::max)(80.0f, (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f);
+    if (ImGui::Button("+ Body", ImVec2(ButtonWidth, 0.0f)))
     {
         AddDefaultBodyForBone(PhysicsAsset, BoneName);
     }
     if (!bCanAddBody) ImGui::EndDisabled();
 
+    ImGui::SameLine();
     const bool bCanCreateConstraint = bHasSelectedBone && BodyIndex >= 0 && ParentBodyBoneIndex >= 0 && ConstraintIndex < 0;
     if (!bCanCreateConstraint) ImGui::BeginDisabled();
-    if (ImGui::Button("+ Constraint To Parent", ImVec2(-1.0f, 0.0f)))
+    if (ImGui::Button("+ Constraint To Parent", ImVec2(ButtonWidth, 0.0f)))
     {
         AddDefaultConstraintForBones(PhysicsAsset, ParentBodyBoneName, BoneName);
     }
@@ -1080,7 +1147,7 @@ void FPhysicsAssetEditorWidget::RenderUnboundPhysicsSetups(UPhysicsAsset* Physic
     {
         if (!IsBoneInReferenceSkeleton(RefSkeleton, Bodies[Index].BoneName))
         {
-            const FString Label = BodyLabel(Bodies[Index], Index, PhysicsAsset->GetBodySetupEditorState(Index));
+            const FString Label = BodyLabel(Bodies[Index], Index);
             if (ImGui::Selectable(Label.c_str(), SelectedBodyIndex == Index && SelectedConstraintIndex < 0))
             {
                 SelectedBodyIndex = Index;
@@ -1114,11 +1181,12 @@ void FPhysicsAssetEditorWidget::RenderUnboundPhysicsSetups(UPhysicsAsset* Physic
 void FPhysicsAssetEditorWidget::RenderBodyList(UPhysicsAsset* PhysicsAsset)
 {
     ImGui::TextUnformatted("Bodies");
-    ImGui::BeginChild("##PhysicsAssetBodyList", ImVec2(0.0f, 185.0f), true);
+    ImGui::Separator();
+    ImGui::BeginChild("PhysicsAssetBodyTree", ImVec2(0.0f, 150.0f), true);
     const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
     for (int32 i = 0; i < static_cast<int32>(Bodies.size()); ++i)
     {
-        const FString Label = BodyLabel(Bodies[i], i, PhysicsAsset->GetBodySetupEditorState(i));
+        const FString Label = BodyLabel(Bodies[i], i);
         if (ImGui::Selectable(Label.c_str(), SelectedBodyIndex == i && SelectedConstraintIndex < 0))
         {
             SelectedBodyIndex = i;
@@ -1130,18 +1198,18 @@ void FPhysicsAssetEditorWidget::RenderBodyList(UPhysicsAsset* PhysicsAsset)
     if (Bodies.empty()) ImGui::TextDisabled("No bodies. Click Add Body to start authoring.");
     ImGui::EndChild();
 
-    if (ImGui::Button("Add Body##BodyList")) AddDefaultBody(PhysicsAsset);
-    ImGui::SameLine();
-    const bool bCanRemove = SelectedBodyIndex >= 0 && SelectedBodyIndex < static_cast<int32>(Bodies.size());
-    if (!bCanRemove) ImGui::BeginDisabled();
-    if (ImGui::Button("Remove Body"))
-    {
-        PhysicsAsset->RemoveBodySetupByIndex(SelectedBodyIndex);
-        SelectedBodyIndex = -1;
-        SelectedShapeIndex = -1;
-        MarkPhysicsAssetDirty();
-    }
-    if (!bCanRemove) ImGui::EndDisabled();
+    //if (ImGui::Button("Add Body##BodyList")) AddDefaultBody(PhysicsAsset);
+    //ImGui::SameLine();
+    //const bool bCanRemove = SelectedBodyIndex >= 0 && SelectedBodyIndex < static_cast<int32>(Bodies.size());
+    //if (!bCanRemove) ImGui::BeginDisabled();
+    //if (ImGui::Button("Remove Body"))
+    //{
+    //    PhysicsAsset->RemoveBodySetupByIndex(SelectedBodyIndex);
+    //    SelectedBodyIndex = -1;
+    //    SelectedShapeIndex = -1;
+    //    MarkPhysicsAssetDirty();
+    //}
+    //if (!bCanRemove) ImGui::EndDisabled();
 }
 
 void FPhysicsAssetEditorWidget::RenderConstraintList(UPhysicsAsset* PhysicsAsset)
@@ -1896,8 +1964,10 @@ void FPhysicsAssetEditorWidget::AddDefaultBodyForBone(UPhysicsAsset* PhysicsAsse
 
     FPhysicsAssetShapeSetup Shape;
     Shape.Type = EPhysicsAssetShapeType::Capsule;
-    Shape.CapsuleRadius = 12.0f;
-    Shape.CapsuleHalfHeight = 32.0f;
+    Shape.BoxHalfExtent = FVector(0.8f, 0.8f, 0.8f);
+    Shape.SphereRadius = 0.8f;
+    Shape.CapsuleRadius = 0.4f;
+    Shape.CapsuleHalfHeight = 1.2f;
     Body.Shapes.push_back(Shape);
 
     const int32 NewIndex = PhysicsAsset->AddBodySetup(Body);
@@ -1912,7 +1982,10 @@ void FPhysicsAssetEditorWidget::AddDefaultShape(FPhysicsAssetBodySetup& Body)
 {
     FPhysicsAssetShapeSetup Shape;
     Shape.Type = EPhysicsAssetShapeType::Box;
-    Shape.BoxHalfExtent = FVector(25.0f, 25.0f, 25.0f);
+    Shape.BoxHalfExtent = FVector(0.8f, 0.8f, 0.8f);
+    Shape.SphereRadius = 0.8f;
+    Shape.CapsuleRadius = 0.4f;
+    Shape.CapsuleHalfHeight = 1.2f;
     Body.Shapes.push_back(Shape);
     SelectedShapeIndex = static_cast<int32>(Body.Shapes.size()) - 1;
 }
@@ -2009,6 +2082,228 @@ void FPhysicsAssetEditorWidget::RunValidation(UPhysicsAsset* PhysicsAsset)
     }
 
     FPhysicsAssetValidation::ValidateAll(ValidationMesh, PhysicsAsset, ValidationIssues);
+}
+
+void FPhysicsAssetEditorWidget::RenderPreviewDebug(
+    UPhysicsAsset* PhysicsAsset,
+    USkeletalMesh* PreviewMesh,
+    UWorld* PreviewWorld,
+    USkeletalMeshComponent* PreviewComponent)
+{
+    PreviewSkeletalMesh = PreviewMesh;
+
+    if (!PhysicsAsset || !PreviewWorld || !PreviewComponent)
+    {
+        return;
+    }
+
+    ClampSelection(PhysicsAsset);
+
+    if (bShowPreviewBodies)
+    {
+        RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+    }
+
+    if (bShowPreviewConstraints)
+    {
+        RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+    }
+}
+
+void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
+    UPhysicsAsset* PhysicsAsset,
+    USkeletalMesh* PreviewMesh,
+    UWorld* PreviewWorld,
+    USkeletalMeshComponent* PreviewComponent,
+    UPhysicsAssetPreviewComponent* SolidPreviewComponent,
+    ID3D11Device* Device)
+{
+    PreviewSkeletalMesh = PreviewMesh;
+
+    if (!PhysicsAsset || !PreviewWorld || !PreviewComponent)
+    {
+        if (SolidPreviewComponent)
+        {
+            SolidPreviewComponent->ClearPreview(Device);
+        }
+        return;
+    }
+
+    ClampSelection(PhysicsAsset);
+
+    if (SolidPreviewComponent)
+    {
+        SolidPreviewComponent->UpdatePreview(
+            PhysicsAsset,
+            PreviewComponent,
+            SelectedBodyIndex,
+            SelectedShapeIndex,
+            SelectedConstraintIndex,
+            bShowPreviewBodies,
+            Device);
+    }
+
+    if (bShowPreviewBodies)
+    {
+        RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+    }
+
+    if (bShowPreviewConstraints)
+    {
+        RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+    }
+}
+
+void FPhysicsAssetEditorWidget::RenderViewportDebugOptions()
+{
+    ImGui::Separator();
+    ImGui::TextUnformatted("Physics Preview");
+    ImGui::Checkbox("Physics Bodies", &bShowPreviewBodies);
+    ImGui::Checkbox("Physics Constraints", &bShowPreviewConstraints);
+}
+
+void FPhysicsAssetEditorWidget::RenderBodyDebug(
+    UPhysicsAsset* PhysicsAsset,
+    USkeletalMeshComponent* PreviewComponent,
+    UWorld* PreviewWorld)
+{
+    if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
+    {
+        return;
+    }
+
+    const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
+    for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
+    {
+        DrawBodySetupDebug(PhysicsAsset, PreviewComponent, PreviewWorld, BodyIndex, Bodies[BodyIndex]);
+    }
+}
+
+void FPhysicsAssetEditorWidget::RenderConstraintDebug(
+    UPhysicsAsset* PhysicsAsset,
+    USkeletalMeshComponent* PreviewComponent,
+    UWorld* PreviewWorld)
+{
+    if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
+    {
+        return;
+    }
+
+    const TArray<FPhysicsAssetConstraintSetup>& Constraints = PhysicsAsset->GetConstraintSetups();
+    for (int32 ConstraintIndex = 0; ConstraintIndex < static_cast<int32>(Constraints.size()); ++ConstraintIndex)
+    {
+        DrawConstraintSetupDebug(
+            PhysicsAsset,
+            PreviewComponent,
+            PreviewWorld,
+            ConstraintIndex,
+            Constraints[ConstraintIndex]);
+    }
+}
+
+void FPhysicsAssetEditorWidget::DrawBodySetupDebug(
+    UPhysicsAsset* PhysicsAsset,
+    USkeletalMeshComponent* PreviewComponent,
+    UWorld* PreviewWorld,
+    int32 BodyIndex,
+    const FPhysicsAssetBodySetup& BodySetup)
+{
+    if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
+    {
+        return;
+    }
+
+    FTransform BodyWorld;
+    if (!FPhysicsAssetPreviewUtils::ComputePreviewBodyWorldTransform(
+            PreviewComponent,
+            PhysicsAsset,
+            BodyIndex,
+            BodyWorld))
+    {
+        return;
+    }
+
+    const bool bSelectedBody = SelectedBodyIndex == BodyIndex && SelectedConstraintIndex < 0;
+    for (int32 ShapeIndex = 0; ShapeIndex < static_cast<int32>(BodySetup.Shapes.size()); ++ShapeIndex)
+    {
+        const FPhysicsAssetShapeSetup& Shape = BodySetup.Shapes[ShapeIndex];
+        const FTransform ShapeWorld = ComposePreviewDebugTransforms(BodyWorld, Shape.LocalTransform);
+        const bool bSelectedShape = bSelectedBody && SelectedShapeIndex == ShapeIndex;
+        const FColor Color = bSelectedShape
+            ? FColor(255, 245, 120, 190)
+            : (bSelectedBody ? FColor(255, 180, 60, 170) : FColor(90, 210, 255, 115));
+
+        switch (Shape.Type)
+        {
+        case EPhysicsAssetShapeType::Box:
+        {
+            FVector HalfExtent = Shape.BoxHalfExtent * PhysicsPreviewShapeScale;
+            HalfExtent.X = (std::max)(HalfExtent.X, 0.001f);
+            HalfExtent.Y = (std::max)(HalfExtent.Y, 0.001f);
+            HalfExtent.Z = (std::max)(HalfExtent.Z, 0.001f);
+            DrawDebugOrientedBox(
+                PreviewWorld,
+                ShapeWorld.Location,
+                HalfExtent,
+                ShapeWorld.Rotation.GetNormalized(),
+                Color);
+            break;
+        }
+        case EPhysicsAssetShapeType::Sphere:
+        {
+            const float Radius = (std::max)(Shape.SphereRadius * PhysicsPreviewShapeScale, 0.001f);
+            DrawDebugSphere(PreviewWorld, ShapeWorld.Location, Radius, 24, Color, 0.0f);
+            break;
+        }
+        case EPhysicsAssetShapeType::Capsule:
+        {
+            const float Radius = (std::max)(Shape.CapsuleRadius * PhysicsPreviewShapeScale, 0.001f);
+            const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight * PhysicsPreviewShapeScale, Radius);
+            DrawDebugCapsuleZAxis(
+                PreviewWorld,
+                ShapeWorld.Location,
+                Radius,
+                HalfHeight,
+                ShapeWorld.Rotation.GetNormalized(),
+                Color);
+            break;
+        }
+        default:
+            break;
+        }
+    }
+}
+
+void FPhysicsAssetEditorWidget::DrawConstraintSetupDebug(
+    UPhysicsAsset* PhysicsAsset,
+    USkeletalMeshComponent* PreviewComponent,
+    UWorld* PreviewWorld,
+    int32 ConstraintIndex,
+    const FPhysicsAssetConstraintSetup& ConstraintSetup)
+{
+    (void)ConstraintSetup;
+    if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
+    {
+        return;
+    }
+
+    FTransform ParentFrameWorld;
+    FTransform ChildFrameWorld;
+    if (!FPhysicsAssetPreviewUtils::ComputePreviewConstraintWorldFrames(
+            PreviewComponent,
+            PhysicsAsset,
+            ConstraintIndex,
+            ParentFrameWorld,
+            ChildFrameWorld))
+    {
+        return;
+    }
+
+    const bool bSelected = SelectedConstraintIndex == ConstraintIndex;
+    const FColor Color = bSelected ? FColor(255, 120, 80, 180) : FColor(200, 150, 255, 115);
+    DrawDebugLine(PreviewWorld, ParentFrameWorld.Location, ChildFrameWorld.Location, Color, 0.0f);
+    DrawDebugPoint(PreviewWorld, ParentFrameWorld.Location, bSelected ? 0.08f : 0.05f, Color, 0.0f);
+    DrawDebugPoint(PreviewWorld, ChildFrameWorld.Location, bSelected ? 0.08f : 0.05f, Color, 0.0f);
 }
 
 void FPhysicsAssetEditorWidget::MarkPhysicsAssetDirty()

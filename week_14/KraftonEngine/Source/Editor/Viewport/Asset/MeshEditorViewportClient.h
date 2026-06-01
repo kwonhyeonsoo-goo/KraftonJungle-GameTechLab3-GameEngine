@@ -13,6 +13,7 @@
 #include "Object/GarbageCollection.h"
 
 class UGizmoComponent;
+class UPhysicsAssetPreviewComponent;
 class FWindowsWindow;
 class UWorld;
 class AActor;
@@ -30,6 +31,7 @@ public:
 
 	void CreatePreviewGizmo();
 	void CreateBoneDebugComponent();
+	void CreatePhysicsAssetPreviewComponent();
 	void ResetCameraToPreviousBounds();
 
 	void SetPreviewWorld(UWorld* InWorld) { PreviewWorld = InWorld; }
@@ -47,6 +49,8 @@ public:
 
 	UGizmoComponent* GetGizmo() const { return Gizmo; }
 	USkeletalMeshComponent* GetPreviewMeshComponent() const { return PreviewMeshComponent; }
+	UPhysicsAssetPreviewComponent* GetPhysicsAssetPreviewComponent() const { return PhysicsAssetPreviewComponent; }
+	ID3D11Device* GetRenderDevice() const { return RenderDevice; }
 
 	FViewportRenderOptions& GetRenderOptions() override { return RenderOptions; }
 	const FViewportRenderOptions& GetRenderOptions() const override { return RenderOptions; }
@@ -93,6 +97,8 @@ private:
 	UGizmoComponent* Gizmo = nullptr;
 	USkeletalMeshComponent* PreviewMeshComponent = nullptr;
 	UBoneDebugComponent* BoneDebugComponent = nullptr;
+	UPhysicsAssetPreviewComponent* PhysicsAssetPreviewComponent = nullptr;
+	ID3D11Device* RenderDevice = nullptr;
 
 	UWorld* PreviewWorld = nullptr;
 	AActor* PreviewActor = nullptr;
