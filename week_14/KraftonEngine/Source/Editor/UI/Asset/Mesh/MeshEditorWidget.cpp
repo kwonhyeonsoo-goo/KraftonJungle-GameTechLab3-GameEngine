@@ -1331,6 +1331,12 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 	}
 	ViewportWidth = std::max(MinViewportWidth, ViewportWidth);
 
+	if (PhysicsAsset)
+	{
+		PhysicsAssetEditor.RenderEmbeddedToolbar(PhysicsAsset, SkeletalMesh, 0.0f);
+		ImGui::Separator();
+	}
+
 	ImGui::BeginChild("PhysicsAssetTreeAndGraphPanel", ImVec2(PhysicsPanelWidth, 0), true);
 	if (PhysicsAsset)
 	{
@@ -1363,12 +1369,6 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 
 	ImGui::BeginChild("PhysicsViewportPanel", ImVec2(ViewportWidth, 0.0f), false);
 	{
-		if (PhysicsAsset)
-		{
-			PhysicsAssetEditor.RenderEmbeddedToolbar(PhysicsAsset, SkeletalMesh, 0.0f);
-			ImGui::Separator();
-		}
-
 		const ImVec2 Size = ImGui::GetContentRegionAvail();
 		RenderViewportPanel(Size);
 	}

@@ -654,8 +654,8 @@ bool FPhysicsAssetEditorWidget::PrepareEmbeddedRender(UPhysicsAsset* PhysicsAsse
 void FPhysicsAssetEditorWidget::RenderTreeAndGraphPanel(UPhysicsAsset* PhysicsAsset)
 {
     const float AvailableHeight = ImGui::GetContentRegionAvail().y;
-    const float GraphHeight = (std::max)(200.0f, AvailableHeight * 0.44f);
-    const float TreeHeight = (std::max)(160.0f, AvailableHeight - GraphHeight - ImGui::GetStyle().ItemSpacing.y - 4.0f);
+    const float GraphHeight = (std::max)(220.0f, AvailableHeight * 0.48f);
+    const float TreeHeight = (std::max)(140.0f, AvailableHeight - GraphHeight - ImGui::GetStyle().ItemSpacing.y - 4.0f);
 
     ImGui::BeginChild("##PhysicsAssetTreeArea", ImVec2(0.0f, TreeHeight), false);
     if (PreviewSkeletalMesh && PreviewSkeletalMesh->GetSkeleton())
@@ -727,8 +727,8 @@ void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* Physics
         static_cast<int32>(PhysicsAsset->GetBodySetups().size()),
         static_cast<int32>(PhysicsAsset->GetConstraintSetups().size()));
 
-    constexpr float ActionPanelHeight = 92.0f;
-    const float TreeHeight = (std::max)(160.0f, ImGui::GetContentRegionAvail().y - ActionPanelHeight - ImGui::GetStyle().ItemSpacing.y);
+    constexpr float ActionPanelHeight = 108.0f;
+    const float TreeHeight = (std::max)(110.0f, ImGui::GetContentRegionAvail().y - ActionPanelHeight - ImGui::GetStyle().ItemSpacing.y);
     ImGui::BeginChild("##PhysicsAssetSkeletonTree", ImVec2(0.0f, TreeHeight), true);
     if (RefSkeleton.GetNumBones() <= 0)
     {
@@ -1011,7 +1011,6 @@ void FPhysicsAssetEditorWidget::RenderSelectedBoneActionPanel(
             : -1;
     }
 
-    ImGui::TextUnformatted("Actions");
     ImGui::TextDisabled("Bone: %s", BoneLabel.c_str());
     ImGui::TextDisabled(
         "Body: %s | Parent: %s | Joint: %s",
@@ -1203,8 +1202,6 @@ void FPhysicsAssetEditorWidget::DestroyConstraintGraphEditor()
 void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* PhysicsAsset)
 {
     ImGui::TextUnformatted("Constraint Graph");
-    ImGui::SameLine();
-    ImGui::TextDisabled("Drag Body output pin to another Body input pin. Delete removes selected nodes/links.");
 
     if (!PhysicsAsset)
     {
