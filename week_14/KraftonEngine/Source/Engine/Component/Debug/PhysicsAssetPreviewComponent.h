@@ -24,8 +24,12 @@ public:
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
 	FMeshBuffer* GetMeshBuffer() const override;
 	FMeshDataView GetMeshDataView() const override;
+	bool LineTraceComponent(const FRay& Ray, FHitResult& OutHitResult) override;
 	void UpdateWorldAABB() const override;
 	bool SupportsOutline() const override { return false; }
+
+	static int32 EncodeSelectionFaceIndex(int32 BodyIndex, int32 ShapeIndex);
+	static bool DecodeSelectionFaceIndex(int32 FaceIndex, int32& OutBodyIndex, int32& OutShapeIndex);
 
 	void UpdatePreview(
 		UPhysicsAsset* InPhysicsAsset,

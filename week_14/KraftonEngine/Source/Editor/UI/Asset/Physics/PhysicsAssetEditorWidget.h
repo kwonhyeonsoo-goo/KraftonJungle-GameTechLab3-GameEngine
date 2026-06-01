@@ -3,6 +3,7 @@
 #include "Editor/UI/Asset/AssetEditorWidget.h"
 #include "Physics/PhysicsAssetValidation.h"
 #include "Object/FName.h"
+#include "Gizmo/PhysicsAssetGizmoTarget.h"
 
 namespace ax { namespace NodeEditor { struct EditorContext; } }
 
@@ -53,6 +54,12 @@ public:
     void RenderViewportDebugOptions();
     bool SaveEditedPhysicsAsset();
     bool HasUnsavedChanges() const { return IsDirty(); }
+    int32 GetSelectedBodyIndex() const { return SelectedBodyIndex; }
+    int32 GetSelectedShapeIndex() const { return SelectedShapeIndex; }
+    int32 GetSelectedConstraintIndex() const { return SelectedConstraintIndex; }
+    EPhysicsAssetConstraintFrameTarget GetSelectedConstraintGizmoFrame() const { return SelectedConstraintGizmoFrame; }
+    void SelectPhysicsShapeFromViewport(UPhysicsAsset* PhysicsAsset, int32 BodyIndex, int32 ShapeIndex);
+    void NotifyViewportGizmoModified();
 
     FString GetDocumentTitle() const override;
     FString GetDocumentPayloadId() const override;
@@ -123,6 +130,7 @@ private:
     bool bConstraintGraphLayoutDirty = true;
     bool bShowPreviewBodies = true;
     bool bShowPreviewConstraints = true;
+    EPhysicsAssetConstraintFrameTarget SelectedConstraintGizmoFrame = EPhysicsAssetConstraintFrameTarget::Child;
     uint64 ConstraintGraphTopologyHash = 0;
 
     TArray<FPhysicsAssetValidationIssue> ValidationIssues;

@@ -7,6 +7,7 @@
 #include "Render/Proxy/PhysicsAssetPreviewSceneProxy.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 
 namespace
@@ -17,6 +18,7 @@ namespace
 	constexpr int32 CapsuleSlices = 24;
 	constexpr int32 CapsuleHemisphereStacks = 6;
 	constexpr float PhysicsPreviewShapeScale = 0.1f;
+	constexpr int32 PhysicsPreviewHitFaceBodyStride = 10000;
 
 	FTransform ComposePreviewDebugTransforms(const FTransform& ParentWorld, const FTransform& Local)
 	{
@@ -49,6 +51,163 @@ namespace
 		HalfExtent.Z = (std::max)(HalfExtent.Z, MinShapeSize);
 		return HalfExtent;
 	}
+
+	bool IntersectRayLocalBox(const FRay& LocalRay, const FVector& HalfExtent, float& OutT)
+	{
+		float TMin = -FLT_MAX;
+		float TMax = FLT_MAX;
+		const float* Origin = &LocalRay.Origin.X;
+		const float* Direction = &LocalRay.Direction.X;
+		const float MinBounds[3] = { -HalfExtent.X, -HalfExtent.Y, -HalfExtent.Z };
+		const float MaxBounds[3] = {  HalfExtent.X,  HalfExtent.Y,  HalfExtent.Z };
+
+		for (int32 Axis = 0; Axis < 3; ++Axis)
+		{
+			if (std::abs(Direction[Axis]) < 1e-6f)
+			{
+				if (Origin[Axis] < MinBounds[Axis] || Origin[Axis] > MaxBounds[Axis])
+				{
+					return false;
+				}
+				continue;
+			}
+
+			float T1 = (MinBounds[Axis] - Origin[Axis]) / Direction[Axis];
+			float T2 = (MaxBounds[Axis] - Origin[Axis]) / Direction[Axis];
+			if (T1 > T2)
+			{
+				std::swap(T1, T2);
+			}
+
+			TMin = (std::max)(TMin, T1);
+			TMax = (std::min)(TMax, T2);
+			if (TMin > TMax)
+			{
+				return false;
+			}
+		}
+
+		const float T = TMin >= 0.0f ? TMin : TMax;
+		if (T < 0.0f)
+		{
+			return false;
+		}
+
+		OutT = T;
+		return true;
+	}
+
+	bool IntersectRayLocalSphere(const FRay& LocalRay, const FVector& Center, float Radius, float& OutT)
+	{
+		const FVector O = LocalRay.Origin - Center;
+		const FVector D = LocalRay.Direction;
+		const float B = O.Dot(D);
+		const float C = O.Dot(O) - Radius * Radius;
+		const float Discriminant = B * B - C;
+		if (Discriminant < 0.0f)
+		{
+			return false;
+		}
+
+		const float SqrtDisc = sqrtf(Discriminant);
+		float T = -B - SqrtDisc;
+		if (T < 0.0f)
+		{
+			T = -B + SqrtDisc;
+		}
+		if (T < 0.0f)
+		{
+			return false;
+		}
+
+		OutT = T;
+		return true;
+	}
+
+	bool IntersectRayLocalCylinderZ(const FRay& LocalRay, float Radius, float CylinderHalfHeight, float& OutT)
+	{
+		if (CylinderHalfHeight <= 0.0f)
+		{
+			return false;
+		}
+
+		const float A = LocalRay.Direction.X * LocalRay.Direction.X + LocalRay.Direction.Y * LocalRay.Direction.Y;
+		if (A < 1e-6f)
+		{
+			return false;
+		}
+
+		const float B = LocalRay.Origin.X * LocalRay.Direction.X + LocalRay.Origin.Y * LocalRay.Direction.Y;
+		const float C = LocalRay.Origin.X * LocalRay.Origin.X + LocalRay.Origin.Y * LocalRay.Origin.Y - Radius * Radius;
+		const float Discriminant = B * B - A * C;
+		if (Discriminant < 0.0f)
+		{
+			return false;
+		}
+
+		const float SqrtDisc = sqrtf(Discriminant);
+		const float Candidates[2] = { (-B - SqrtDisc) / A, (-B + SqrtDisc) / A };
+		float BestT = FLT_MAX;
+		for (float T : Candidates)
+		{
+			if (T < 0.0f)
+			{
+				continue;
+			}
+
+			const float Z = LocalRay.Origin.Z + LocalRay.Direction.Z * T;
+			if (Z >= -CylinderHalfHeight && Z <= CylinderHalfHeight)
+			{
+				BestT = (std::min)(BestT, T);
+			}
+		}
+
+		if (BestT == FLT_MAX)
+		{
+			return false;
+		}
+
+		OutT = BestT;
+		return true;
+	}
+
+	bool IntersectRayLocalCapsuleZ(const FRay& LocalRay, float Radius, float HalfHeight, float& OutT)
+	{
+		const float CylinderHalf = (std::max)(0.0f, HalfHeight - Radius);
+		float BestT = FLT_MAX;
+		float T = 0.0f;
+
+		if (IntersectRayLocalCylinderZ(LocalRay, Radius, CylinderHalf, T))
+		{
+			BestT = (std::min)(BestT, T);
+		}
+		if (IntersectRayLocalSphere(LocalRay, FVector(0.0f, 0.0f, CylinderHalf), Radius, T))
+		{
+			BestT = (std::min)(BestT, T);
+		}
+		if (IntersectRayLocalSphere(LocalRay, FVector(0.0f, 0.0f, -CylinderHalf), Radius, T))
+		{
+			BestT = (std::min)(BestT, T);
+		}
+
+		if (BestT == FLT_MAX)
+		{
+			return false;
+		}
+
+		OutT = BestT;
+		return true;
+	}
+
+	FRay MakeShapeLocalRay(const FRay& WorldRay, const FTransform& ShapeWorld)
+	{
+		FRay LocalRay;
+		const FQuat InverseRotation = ShapeWorld.Rotation.GetNormalized().Inverse();
+		LocalRay.Origin = InverseRotation.RotateVector(WorldRay.Origin - ShapeWorld.Location);
+		LocalRay.Direction = InverseRotation.RotateVector(WorldRay.Direction).Normalized();
+		return LocalRay;
+	}
+
 }
 
 UPhysicsAssetPreviewComponent::UPhysicsAssetPreviewComponent()
@@ -75,6 +234,110 @@ FMeshBuffer* UPhysicsAssetPreviewComponent::GetMeshBuffer() const
 FMeshDataView UPhysicsAssetPreviewComponent::GetMeshDataView() const
 {
 	return FMeshDataView::FromMeshData(PreviewMeshData);
+}
+
+int32 UPhysicsAssetPreviewComponent::EncodeSelectionFaceIndex(int32 BodyIndex, int32 ShapeIndex)
+{
+	return BodyIndex * PhysicsPreviewHitFaceBodyStride + ShapeIndex;
+}
+
+bool UPhysicsAssetPreviewComponent::DecodeSelectionFaceIndex(int32 FaceIndex, int32& OutBodyIndex, int32& OutShapeIndex)
+{
+	OutBodyIndex = -1;
+	OutShapeIndex = -1;
+	if (FaceIndex < 0)
+	{
+		return false;
+	}
+
+	OutBodyIndex = FaceIndex / PhysicsPreviewHitFaceBodyStride;
+	OutShapeIndex = FaceIndex % PhysicsPreviewHitFaceBodyStride;
+	return OutBodyIndex >= 0 && OutShapeIndex >= 0;
+}
+
+bool UPhysicsAssetPreviewComponent::LineTraceComponent(const FRay& Ray, FHitResult& OutHitResult)
+{
+	UPhysicsAsset* Asset = PhysicsAsset.Get();
+	USkeletalMeshComponent* MeshComponent = PreviewComponent.Get();
+	if (!Asset || !MeshComponent || !bShowBodies || !IsVisible())
+	{
+		return false;
+	}
+
+	FRay WorldRay = Ray;
+	WorldRay.Direction.Normalize();
+	if (WorldRay.Direction.IsNearlyZero())
+	{
+		return false;
+	}
+
+	bool bHit = false;
+	float ClosestT = FLT_MAX;
+	int32 HitBodyIndex = -1;
+	int32 HitShapeIndex = -1;
+
+	const TArray<FPhysicsAssetBodySetup>& Bodies = Asset->GetBodySetups();
+	for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
+	{
+		FTransform BodyWorld;
+		if (!FPhysicsAssetPreviewUtils::ComputePreviewBodyWorldTransform(
+				MeshComponent,
+				Asset,
+				BodyIndex,
+				BodyWorld))
+		{
+			continue;
+		}
+
+		const FPhysicsAssetBodySetup& Body = Bodies[BodyIndex];
+		for (int32 ShapeIndex = 0; ShapeIndex < static_cast<int32>(Body.Shapes.size()); ++ShapeIndex)
+		{
+			const FPhysicsAssetShapeSetup& Shape = Body.Shapes[ShapeIndex];
+			const FTransform ShapeWorld = ComposePreviewDebugTransforms(BodyWorld, Shape.LocalTransform);
+			const FRay LocalRay = MakeShapeLocalRay(WorldRay, ShapeWorld);
+
+			float T = 0.0f;
+			bool bShapeHit = false;
+			switch (Shape.Type)
+			{
+			case EPhysicsAssetShapeType::Box:
+				bShapeHit = IntersectRayLocalBox(LocalRay, ClampHalfExtent(Shape.BoxHalfExtent * PhysicsPreviewShapeScale), T);
+				break;
+			case EPhysicsAssetShapeType::Sphere:
+				bShapeHit = IntersectRayLocalSphere(LocalRay, FVector::ZeroVector, (std::max)(Shape.SphereRadius * PhysicsPreviewShapeScale, MinShapeSize), T);
+				break;
+			case EPhysicsAssetShapeType::Capsule:
+			{
+				const float Radius = (std::max)(Shape.CapsuleRadius * PhysicsPreviewShapeScale, MinShapeSize);
+				const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight * PhysicsPreviewShapeScale, Radius);
+				bShapeHit = IntersectRayLocalCapsuleZ(LocalRay, Radius, HalfHeight, T);
+				break;
+			}
+			default:
+				break;
+			}
+
+			if (bShapeHit && T >= 0.0f && T < ClosestT)
+			{
+				bHit = true;
+				ClosestT = T;
+				HitBodyIndex = BodyIndex;
+				HitShapeIndex = ShapeIndex;
+			}
+		}
+	}
+
+	if (!bHit)
+	{
+		return false;
+	}
+
+	OutHitResult.bHit = true;
+	OutHitResult.HitComponent = this;
+	OutHitResult.Distance = ClosestT;
+	OutHitResult.WorldHitLocation = WorldRay.Origin + WorldRay.Direction * ClosestT;
+	OutHitResult.FaceIndex = EncodeSelectionFaceIndex(HitBodyIndex, HitShapeIndex);
+	return true;
 }
 
 void UPhysicsAssetPreviewComponent::UpdateWorldAABB() const
