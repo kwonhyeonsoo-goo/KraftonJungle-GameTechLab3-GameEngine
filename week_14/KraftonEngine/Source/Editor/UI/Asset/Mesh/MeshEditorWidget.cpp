@@ -1331,12 +1331,6 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 	}
 	ViewportWidth = std::max(MinViewportWidth, ViewportWidth);
 
-	if (PhysicsAsset)
-	{
-		PhysicsAssetEditor.RenderEmbeddedToolbar(PhysicsAsset, SkeletalMesh, 0.0f);
-		ImGui::Separator();
-	}
-
 	ImGui::BeginChild("PhysicsAssetTreeAndGraphPanel", ImVec2(PhysicsPanelWidth, 0), true);
 	if (PhysicsAsset)
 	{
