@@ -694,6 +694,30 @@ void FPhysicsAssetEditorWidget::NotifyViewportGizmoModified()
     MarkPhysicsAssetDirty();
 }
 
+void FPhysicsAssetEditorWidget::SelectPhysicsShapeFromViewport(UPhysicsAsset* PhysicsAsset, int32 BodyIndex, int32 ShapeIndex)
+{
+    if (!PhysicsAsset || !IsValidBodyIndex(PhysicsAsset, BodyIndex))
+    {
+        return;
+    }
+
+    if (!IsEditingObject(PhysicsAsset))
+    {
+        OpenEmbedded(PhysicsAsset);
+    }
+
+    const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
+    const FPhysicsAssetBodySetup& Body = Bodies[BodyIndex];
+
+    SelectedBodyIndex = BodyIndex;
+    SelectedShapeIndex =
+        ShapeIndex >= 0 && ShapeIndex < static_cast<int32>(Body.Shapes.size())
+            ? ShapeIndex
+            : -1;
+    SelectedConstraintIndex = -1;
+    SelectedTreeBoneIndex = FindPreviewBoneIndexByName(Body.BoneName);
+}
+
 void FPhysicsAssetEditorWidget::RenderDocument(float DeltaTime)
 {
     (void)DeltaTime;

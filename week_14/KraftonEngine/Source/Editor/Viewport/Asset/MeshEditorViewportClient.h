@@ -75,6 +75,7 @@ public:
 	const FBone* GetSelectedBone() const;
 	bool ConsumeSocketGizmoModified();
 	bool ConsumePhysicsAssetGizmoModified();
+	bool ConsumePhysicsAssetViewportPick(int32& OutBodyIndex, int32& OutShapeIndex);
 	void RefreshBoneDebug();
 
 	EBoneDebugDrawMode GetBoneDebugDrawMode() const;
@@ -100,6 +101,7 @@ private:
 	void SyncGizmo();
 
 	void HandleDragStart(const FRay& Ray);
+	bool TryPickPhysicsAssetPreviewShape(const FRay& Ray);
 
 private:
 	USkeletalMesh* SelectedMesh = nullptr;
@@ -130,6 +132,10 @@ private:
 	int32 ActivePhysicsGizmoShapeIndex = -1;
 	int32 ActivePhysicsGizmoConstraintIndex = -1;
 	EPhysicsAssetConstraintFrameTarget ActivePhysicsGizmoConstraintFrame = EPhysicsAssetConstraintFrameTarget::Child;
+
+	bool bHasPendingPhysicsAssetViewportPick = false;
+	int32 PendingPhysicsAssetPickBodyIndex = -1;
+	int32 PendingPhysicsAssetPickShapeIndex = -1;
 
 	bool bIsRenderable = false;
 

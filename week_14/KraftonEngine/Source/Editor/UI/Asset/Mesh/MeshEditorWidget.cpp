@@ -495,6 +495,17 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 			PhysicsAssetEditor.NotifyViewportGizmoModified();
 		}
 
+		int32 PickedPhysicsBodyIndex = -1;
+		int32 PickedPhysicsShapeIndex = -1;
+		if (ActiveTab == EMeshEditorTab::Physics &&
+			ViewportClient.ConsumePhysicsAssetViewportPick(PickedPhysicsBodyIndex, PickedPhysicsShapeIndex))
+		{
+			PhysicsAssetEditor.SelectPhysicsShapeFromViewport(
+				GetCurrentPhysicsAsset(),
+				PickedPhysicsBodyIndex,
+				PickedPhysicsShapeIndex);
+		}
+
 	}
 
 	if (ActiveTab == EMeshEditorTab::Animation)

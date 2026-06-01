@@ -580,13 +580,34 @@ void UGizmoComponent::DragEnd()
 
 void UGizmoComponent::SetNextMode()
 {
-	EGizmoMode NextMode = static_cast<EGizmoMode>((static_cast<int>(CurMode) + 1) % EGizmoMode::End);
-	UpdateGizmoMode(NextMode);
+	int32 CurrentMode = static_cast<int32>(CurMode);
+	if (CurrentMode < static_cast<int32>(EGizmoMode::Translate) ||
+		CurrentMode > static_cast<int32>(EGizmoMode::Scale))
+	{
+		CurrentMode = static_cast<int32>(EGizmoMode::Translate);
+	}
+	else
+	{
+		CurrentMode = (CurrentMode + 1) % (static_cast<int32>(EGizmoMode::Scale) + 1);
+	}
+
+	UpdateGizmoMode(static_cast<EGizmoMode>(CurrentMode));
 }
 
 void UGizmoComponent::UpdateGizmoMode(EGizmoMode NewMode)
 {
+	if (NewMode < EGizmoMode::Translate || NewMode > EGizmoMode::Scale)
+	{
+		NewMode = EGizmoMode::Translate;
+	}
+
+	if (CurMode == NewMode)
+	{
+		return;
+	}
+
 	CurMode = NewMode;
+	SelectedAxis = -1;
 	UpdateGizmoTransform();
 }
 
@@ -633,8 +654,11 @@ void UGizmoComponent::UpdateGizmoTransform()
 
 	if (MeshData != DesiredMeshData && DesiredMeshData)
 	{
+		// FGizmoSceneProxy pulls the GPU mesh buffer from GetMeshBuffer() every frame.
+		// Recreating the render state here makes the asset-editor gizmo flicker/disappear
+		// while cycling Translate/Rotate/Scale with Space. Updating the CPU mesh pointer is enough
+		// for hit testing, and the proxy will pick up the matching buffer without unregistering.
 		MeshData = DesiredMeshData;
-		MarkRenderStateDirty();
 	}
 }
 

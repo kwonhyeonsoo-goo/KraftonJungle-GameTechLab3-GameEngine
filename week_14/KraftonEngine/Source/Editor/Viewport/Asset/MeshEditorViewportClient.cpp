@@ -343,6 +343,9 @@ void FMeshEditorViewportClient::ClearPhysicsAssetGizmoTarget()
 	ActivePhysicsGizmoShapeIndex = -1;
 	ActivePhysicsGizmoConstraintIndex = -1;
 	ActivePhysicsGizmoConstraintFrame = EPhysicsAssetConstraintFrameTarget::Child;
+	bHasPendingPhysicsAssetViewportPick = false;
+	PendingPhysicsAssetPickBodyIndex = -1;
+	PendingPhysicsAssetPickShapeIndex = -1;
 	if (Gizmo)
 	{
 		Gizmo->Deactivate();
@@ -370,6 +373,23 @@ bool FMeshEditorViewportClient::ConsumePhysicsAssetGizmoModified()
 		RefreshBoneDebug();
 	}
 	return bModified;
+}
+
+bool FMeshEditorViewportClient::ConsumePhysicsAssetViewportPick(int32& OutBodyIndex, int32& OutShapeIndex)
+{
+	OutBodyIndex = -1;
+	OutShapeIndex = -1;
+	if (!bHasPendingPhysicsAssetViewportPick)
+	{
+		return false;
+	}
+
+	OutBodyIndex = PendingPhysicsAssetPickBodyIndex;
+	OutShapeIndex = PendingPhysicsAssetPickShapeIndex;
+	bHasPendingPhysicsAssetViewportPick = false;
+	PendingPhysicsAssetPickBodyIndex = -1;
+	PendingPhysicsAssetPickShapeIndex = -1;
+	return true;
 }
 
 void FMeshEditorViewportClient::RefreshBoneDebug()
@@ -507,9 +527,10 @@ void FMeshEditorViewportClient::TickInput(float DeltaTime)
 	Rotation *= DeltaTime;
 	ViewTransform.Rotate(Rotation.Y + MouseRotation.Y, Rotation.Z + MouseRotation.Z);
 
-	if (Input.GetKeyUp(VK_SPACE))
+	if (Input.GetKeyUp(VK_SPACE) && Gizmo && Gizmo->HasTarget())
 	{
 		Gizmo->SetNextMode();
+		ApplyTransformSettingsToGizmo();
 	}
 }
 
@@ -679,8 +700,40 @@ void FMeshEditorViewportClient::ApplyTransformSettingsToGizmo()
 void FMeshEditorViewportClient::HandleDragStart(const FRay& Ray)
 {
 	FHitResult Hit;
-	if (FRayUtils::RaycastComponent(Gizmo, Ray, Hit))
+	if (Gizmo && FRayUtils::RaycastComponent(Gizmo, Ray, Hit))
 	{
 		Gizmo->SetPressedOnHandle(true);
+		return;
 	}
+
+	if (TryPickPhysicsAssetPreviewShape(Ray) && Gizmo)
+	{
+		Gizmo->SetPressedOnHandle(false);
+	}
+}
+
+bool FMeshEditorViewportClient::TryPickPhysicsAssetPreviewShape(const FRay& Ray)
+{
+	if (!PhysicsAssetPreviewComponent || !PhysicsAssetPreviewComponent->IsVisible())
+	{
+		return false;
+	}
+
+	FHitResult Hit;
+	if (!FRayUtils::RaycastComponent(PhysicsAssetPreviewComponent, Ray, Hit))
+	{
+		return false;
+	}
+
+	int32 BodyIndex = -1;
+	int32 ShapeIndex = -1;
+	if (!UPhysicsAssetPreviewComponent::DecodeSelectionFaceIndex(Hit.FaceIndex, BodyIndex, ShapeIndex))
+	{
+		return false;
+	}
+
+	bHasPendingPhysicsAssetViewportPick = true;
+	PendingPhysicsAssetPickBodyIndex = BodyIndex;
+	PendingPhysicsAssetPickShapeIndex = ShapeIndex;
+	return true;
 }
