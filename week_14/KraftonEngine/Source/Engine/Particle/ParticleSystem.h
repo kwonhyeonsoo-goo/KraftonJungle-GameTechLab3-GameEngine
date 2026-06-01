@@ -1,10 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include "Object/Object.h"
 #include "Math/Vector.h"
-#include "Particle/ParticleEmitter.h"
 
 #include "Source/Engine/Particle/ParticleSystem.generated.h"
+
+class UParticleEmitter;
 
 // =============================================================================
 // UParticleSystem

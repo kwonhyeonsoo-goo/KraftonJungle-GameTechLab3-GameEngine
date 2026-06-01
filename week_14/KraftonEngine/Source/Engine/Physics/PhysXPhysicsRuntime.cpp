@@ -42,15 +42,16 @@ namespace
         return Result;
     }
 
-    physx::PxQueryHitType::Enum VehicleRaycastPreFilter(
-        physx::PxFilterData QueryFilterData,
-        physx::PxFilterData ShapeFilterData,
-        const void*,
-        physx::PxU32,
-        physx::PxHitFlags&)
+    physx::PxQueryHitType::Enum VehicleRaycastPreFilter(physx::PxFilterData QueryFilterData, physx::PxFilterData ObjectFilterData, const void*, physx::PxU32, physx::PxHitFlags&)
     {
-        const uint32 ShapeObjectBit = 1u << GetPhysicsFilterObjectType(ShapeFilterData.word0);
-        if ((QueryFilterData.word0 & ShapeObjectBit) == 0)
+        const uint32 ShapeObjectBit = 1u << GetPhysicsFilterObjectType(ObjectFilterData.word0);
+
+        if ((ShapeObjectBit & QueryFilterData.word0) == 0)
+        {
+            return physx::PxQueryHitType::eNONE;
+        }
+
+        if ((ObjectFilterData.word0 & PhysicsFilter_QueryAndPhysics) == 0)
         {
             return physx::PxQueryHitType::eNONE;
         }
@@ -120,12 +121,12 @@ namespace
             WheelCenterCMOffsets[i]       = WheelCenterActorOffsets[i] - ChassisCMOffset;
             SuspensionTravelDirections[i] = physx::PxVec3(0.0f, 0.0f, -1.0f);
 
-            SuspensionForceAppCMOffsets[i] = physx::PxVec3(WheelCenterActorOffsets[i].x, WheelCenterActorOffsets[i].y, -0.3f);
+            SuspensionForceAppCMOffsets[i] = physx::PxVec3(WheelCenterCMOffsets[i].x, WheelCenterCMOffsets[i].y, -0.3f);
             TireForceAppCMOffsets[i]       = SuspensionForceAppCMOffsets[i];
         }
 
         physx::PxF32 SprungMasses[VehicleWheelCount];
-        physx::PxVehicleComputeSprungMasses(VehicleWheelCount, WheelCenterCMOffsets, ChassisCMOffset, Desc.ChassisMass, 2, SprungMasses);
+        physx::PxVehicleComputeSprungMasses(VehicleWheelCount, WheelCenterActorOffsets, ChassisCMOffset, Desc.ChassisMass, 2, SprungMasses);
 
         for (uint32 i = 0; i < VehicleWheelCount; ++i)
         {
@@ -2823,19 +2824,17 @@ void FPhysXPhysicsRuntime::PreSimulateVehicles(float InFixedDt)
         Instance->RawInput.setAnalogSteer(Instance->Input.Steer);
         Instance->RawInput.setAnalogHandbrake(Instance->Input.Handbrake);
 
-        physx::PxVehicleDrive4WSmoothAnalogRawInputsAndSetAnalogInputs(GVehiclePadSmoothingData, SteerTable, Instance->RawInput, InFixedDt, false, *Instance->Vehicle);
+        const bool bVehicleInAir = !Instance->bPendingFirstRaycast && physx::PxVehicleIsInAir(Instance->VehicleQueryResult);
+
+        physx::PxVehicleDrive4WSmoothAnalogRawInputsAndSetAnalogInputs(GVehiclePadSmoothingData, SteerTable, Instance->RawInput, InFixedDt, bVehicleInAir, *Instance->Vehicle);
 
         physx::PxVehicleWheels* VehicleWheels[1] = { Instance->Vehicle };
         physx::PxVehicleSuspensionRaycasts(Instance->BatchQuery, 1, VehicleWheels, VehicleWheelCount, Instance->RaycastResults.data());
 
         Instance->bPendingFirstRaycast = false;
 
-        physx::PxVehicleWheelQueryResult QueryResults[1];
-        QueryResults[0].nbWheelQueryResults = VehicleWheelCount;
-        QueryResults[0].wheelQueryResults   = Instance->WheelQueryResults.data();
-
         const physx::PxVec3 Gravity = Scene ? Scene->getGravity() : physx::PxVec3(0.0f, 0.0f, -9.81f);
 
-        physx::PxVehicleUpdates(InFixedDt, Gravity, *Instance->FrictionPairs, 1, VehicleWheels, QueryResults);
+        physx::PxVehicleUpdates(InFixedDt, Gravity, *Instance->FrictionPairs, 1, VehicleWheels, &Instance->VehicleQueryResult);
     }
 }
