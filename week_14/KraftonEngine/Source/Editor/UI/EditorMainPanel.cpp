@@ -29,12 +29,6 @@
 #include "Editor/UI/Asset/Material/MaterialEditorWidget.h"
 #include "Editor/UI/Asset/Physics/PhysicsAssetEditorWidget.h"
 
-// This project keeps a fixed Visual Studio source list, so newly added .cpp files
-// from patches are not always compiled automatically. Pull the implementation into
-// this already-compiled translation unit to avoid unresolved externals until the
-// project file is regenerated/updated.
-#include "Editor/UI/Asset/Physics/PhysicsAssetEditorWidget.cpp"
-
 #include <algorithm>
 #include <cstdio>
 #include <filesystem>

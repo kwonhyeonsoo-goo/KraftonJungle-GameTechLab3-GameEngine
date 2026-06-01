@@ -95,6 +95,9 @@ INCLUDE_PATHS = [
     "ThirdParty\\fmod\\include",
     "ThirdParty\\fbx\\include",
     "ThirdParty\\PhysX\\include",
+    "ThirdParty\\PxShared\\include",
+    "ThirdParty\\NvCloth\\include",
+    "ThirdParty\\NvCloth\\extensions\\include",
     ".",
 ]
 
@@ -134,10 +137,19 @@ PHYSX_LIBS = [
     "PhysXVehicle_static_64.lib",
 ]
 
+# NvCloth — CPU backend integration uses the checked-in x64 import libraries.
+# Debug has a distinct binary name; release-like configurations share release.
+NVCLOTH_LIB_DIR = "ThirdParty\\NvCloth"
+NVCLOTH_BIN_DIR = "ThirdParty\\NvCloth"
+NVCLOTH_DEBUG_LIB = "NvClothDEBUG_x64.lib"
+NVCLOTH_RELEASE_LIB = "NvCloth_x64.lib"
+NVCLOTH_DEBUG_DLL = "NvClothDEBUG_x64.dll"
+NVCLOTH_RELEASE_DLL = "NvCloth_x64.dll"
+
 # Reflection — UCLASS/UPROPERTY 매크로 → *.generated.h/.cpp 자동 생성.
 # 빌드 시작 직전(PreBuildEvent)과 ClCompile 직전(GenerateReflectionHeaders target)
 # 두 위치에 모두 박는다 — VS IDE / msbuild 호출 경로 모두 커버.
-LOCAL_PYTHON_PATH = "..\\Scripts\python\\python.exe"
+LOCAL_PYTHON_PATH = "..\\Scripts\\python\\python.exe"
 GENERATE_HEADERS_TOOL = "..\\Scripts\\GenerateHeaders.py"
 
 # Lua (LuaJIT, 5.1 ABI) — lua51.dll 은 .gitignore 의 **/[Bb]in/* 에 걸려 있어
@@ -337,6 +349,8 @@ def generate_vcxproj(files: dict[str, list[str]]):
 
     user_macros = ET.SubElement(proj, "PropertyGroup", Label="UserMacros")
     ET.SubElement(user_macros, "PhysXLibs").text = ";".join(PHYSX_LIBS)
+    ET.SubElement(user_macros, "NvClothDebugLib").text = NVCLOTH_DEBUG_LIB
+    ET.SubElement(user_macros, "NvClothReleaseLib").text = NVCLOTH_RELEASE_LIB
 
     # OutDir, IntDir, IncludePath, LibraryPath, WorkingDirectory for all configurations
     include_path_value = ";".join(INCLUDE_PATHS) + ";$(IncludePath)"
@@ -413,6 +427,7 @@ def generate_vcxproj(files: dict[str, list[str]]):
             additional_lib_dirs.append(
                 f"$(ProjectDir){PHYSX_DEBUG_LIB_DIR if cfg == 'Debug' else PHYSX_RELEASE_LIB_DIR}"
             )
+            additional_lib_dirs.append(f"$(ProjectDir){NVCLOTH_LIB_DIR}")
         if additional_lib_dirs:
             ET.SubElement(link, "AdditionalLibraryDirectories").text = (
                 ";".join(additional_lib_dirs) + ";%(AdditionalLibraryDirectories)"
@@ -423,6 +438,7 @@ def generate_vcxproj(files: dict[str, list[str]]):
             # fmod: Debug면 logging 버전(fmodL_vc.lib), 그 외 release 버전(fmod_vc.lib)
             all_deps.append(FMOD_DEBUG_LIB if cfg == "Debug" else FMOD_RELEASE_LIB)
             all_deps.append(FBX_LIB)
+            all_deps.append("$(NvClothDebugLib)" if cfg == "Debug" else "$(NvClothReleaseLib)")
         if all_deps:
             additional_dependencies = ";".join(all_deps)
             if is_x64:
@@ -435,12 +451,14 @@ def generate_vcxproj(files: dict[str, list[str]]):
             rmlui_dir = RMLUI_DEBUG_DIR if cfg == "Debug" else RMLUI_RELEASE_DIR
             fmod_dll = FMOD_DEBUG_DLL if cfg == "Debug" else FMOD_RELEASE_DLL
             physx_bin = PHYSX_DEBUG_BIN if cfg == "Debug" else PHYSX_RELEASE_BIN
+            nvcloth_dll = NVCLOTH_DEBUG_DLL if cfg == "Debug" else NVCLOTH_RELEASE_DLL
             fbx_lib_dir = FBX_DEBUG_LIB_DIR if cfg == "Debug" else FBX_RELEASE_LIB_DIR
             post_build = ET.SubElement(idg, "PostBuildEvent")
             ET.SubElement(post_build, "Command").text = (
                 f'xcopy /Y "$(ProjectDir){rmlui_dir}\\*.dll" "$(OutDir)"\n'
                 f'xcopy /Y "$(ProjectDir){FMOD_LIB_DIR}\\{fmod_dll}" "$(OutDir)"\n'
                 f'xcopy /Y "$(ProjectDir){physx_bin}\\*.dll" "$(OutDir)"\n'
+                f'xcopy /Y "$(ProjectDir){NVCLOTH_BIN_DIR}\\{nvcloth_dll}" "$(OutDir)"\n'
                 f'xcopy /Y "$(ProjectDir){LUA_BIN_DIR}\\{LUA_DLL}" "$(OutDir)"\n'
                 f'xcopy /Y "$(ProjectDir){fbx_lib_dir}\\{FBX_DLL}" "$(OutDir)"'
             )

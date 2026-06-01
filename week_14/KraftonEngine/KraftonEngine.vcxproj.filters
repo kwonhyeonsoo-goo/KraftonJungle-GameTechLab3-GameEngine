@@ -79,6 +79,9 @@
     <Filter Include="Source\Editor\UI\Asset\Particle">
       <UniqueIdentifier>{ebf11781-61db-1727-e031-70fd890518c6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Editor\UI\Asset\Physics">
+      <UniqueIdentifier>{a9510143-b9c8-a4a8-aa42-31438e50f6bb}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Editor\UI\ContentBrowser">
       <UniqueIdentifier>{09a2ea7f-e891-b580-bef0-471bcd9b5d4b}</UniqueIdentifier>
     </Filter>
@@ -382,6 +385,33 @@
     <Filter Include="ThirdParty\ImGui">
       <UniqueIdentifier>{5fdcaaee-156a-a40d-82bd-8b77a5a402df}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ThirdParty\NvCloth">
+      <UniqueIdentifier>{ea768f62-fea7-cd01-ccb4-22ff5394179d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\NvCloth\extensions">
+      <UniqueIdentifier>{417872df-488c-e4a1-6e42-4e573c3b21c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\NvCloth\extensions\include">
+      <UniqueIdentifier>{a084a052-cf1e-676a-c481-6515d27baf9e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\NvCloth\extensions\include\NvClothExt">
+      <UniqueIdentifier>{f6054fb2-73c0-e5dd-690e-6f97959f316b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\NvCloth\include">
+      <UniqueIdentifier>{c060c8e9-bdc2-4ec8-5634-9a7c1b055b7a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\NvCloth\include\NvCloth">
+      <UniqueIdentifier>{4cd6acae-72b2-3ccc-1de0-9ac79b0a6bd0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\NvCloth\include\NvCloth\ps">
+      <UniqueIdentifier>{be2f4c21-239e-9602-74ac-bee3baca3f7d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\NvCloth\include\NvCloth\ps\unix">
+      <UniqueIdentifier>{842b8b7d-75eb-a7b5-9f5e-b3938297a1a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\NvCloth\include\NvCloth\ps\windows">
+      <UniqueIdentifier>{0653b2ec-5aea-df4b-00b4-fe8e7e400e84}</UniqueIdentifier>
+    </Filter>
     <Filter Include="ThirdParty\PhysX">
       <UniqueIdentifier>{3b5c6c2c-585f-fc6b-bab4-7cd38d7a05c2}</UniqueIdentifier>
     </Filter>
@@ -441,6 +471,21 @@
     </Filter>
     <Filter Include="ThirdParty\PhysX\include\vehicle">
       <UniqueIdentifier>{35606074-e337-1bae-0228-b21c9066d457}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\PxShared">
+      <UniqueIdentifier>{e2a6e32f-6447-d758-ae09-84d69fd885d9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\PxShared\include">
+      <UniqueIdentifier>{bbee1b36-a096-49f0-d39b-7cee8a9df8cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\PxShared\include\foundation">
+      <UniqueIdentifier>{7b8d5f58-ddcc-675c-198f-b2a3ddf6da7b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\PxShared\include\foundation\unix">
+      <UniqueIdentifier>{f7bb285c-9574-dd7a-c030-4e0ee056b01c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty\PxShared\include\foundation\windows">
+      <UniqueIdentifier>{54f070bf-4c43-19e2-c352-3086b5f0186b}</UniqueIdentifier>
     </Filter>
     <Filter Include="ThirdParty\RmlUi">
       <UniqueIdentifier>{6066d5f1-456c-59ef-100e-ddaf00f74497}</UniqueIdentifier>
@@ -672,16 +717,7 @@
     <FxCompile Include="Shaders\PostProcess\CameraVignette.hlsl">
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\PostProcess\FXAA.hlsl">
-      <Filter>Shaders\PostProcess</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\PostProcess\DoFSetup.hlsl">
-      <Filter>Shaders\PostProcess</Filter>
-    </FxCompile>
     <FxCompile Include="Shaders\PostProcess\DoFBackgroundBlur.hlsl">
-      <Filter>Shaders\PostProcess</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\PostProcess\DoFForegroundBlur.hlsl">
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\PostProcess\DoFBokehScatter.hlsl">
@@ -691,6 +727,15 @@
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\PostProcess\DoFComposite.hlsl">
+      <Filter>Shaders\PostProcess</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PostProcess\DoFForegroundBlur.hlsl">
+      <Filter>Shaders\PostProcess</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PostProcess\DoFSetup.hlsl">
+      <Filter>Shaders\PostProcess</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PostProcess\FXAA.hlsl">
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\PostProcess\GammaCorrection.hlsl">
@@ -811,6 +856,9 @@
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\Asset\Particle\ParticleEditorWidget.cpp">
       <Filter>Source\Editor\UI\Asset\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\Asset\Physics\PhysicsAssetEditorWidget.cpp">
+      <Filter>Source\Editor\UI\Asset\Physics</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\ContentBrowser\ContentBrowser.cpp">
       <Filter>Source\Editor\UI\ContentBrowser</Filter>
@@ -1574,21 +1622,6 @@
     <ClCompile Include="Source\Engine\Particle\VectorField\VectorFieldManager.cpp">
       <Filter>Source\Engine\Particle\VectorField</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Physics\PhysicsAsset.cpp">
-      <Filter>Source\Engine\Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Physics\PhysicsAssetInstance.cpp">
-      <Filter>Source\Engine\Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Physics\PhysicsAssetManager.cpp">
-      <Filter>Source\Engine\Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Physics\PhysicsAssetPreviewUtils.cpp">
-      <Filter>Source\Engine\Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Physics\PhysicsAssetValidation.cpp">
-      <Filter>Source\Engine\Physics</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Physics\PhysXBodyBuilder.cpp">
       <Filter>Source\Engine\Physics</Filter>
     </ClCompile>
@@ -1602,6 +1635,24 @@
       <Filter>Source\Engine\Physics</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Physics\PhysXPhysicsScene.cpp">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\PhysicsAsset.cpp">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\PhysicsAssetAutoBodyGenerator.cpp">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\PhysicsAssetInstance.cpp">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\PhysicsAssetManager.cpp">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\PhysicsAssetPreviewUtils.cpp">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\PhysicsAssetValidation.cpp">
       <Filter>Source\Engine\Physics</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Platform\CrashDump.cpp">
@@ -1721,25 +1772,25 @@
     <ClCompile Include="Source\Engine\Render\RenderPass\DecalPass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Render\RenderPass\EditorIconPass.cpp">
-      <Filter>Source\Engine\Render\RenderPass</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Render\RenderPass\EditorLinesPass.cpp">
-      <Filter>Source\Engine\Render\RenderPass</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Render\RenderPass\DoFBackgroundBlurPass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Render\RenderPass\DoFForegroundBlurPass.cpp">
+    <ClCompile Include="Source\Engine\Render\RenderPass\DoFBokehScatterPass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Render\RenderPass\DoFBokehScatterPass.cpp">
+    <ClCompile Include="Source\Engine\Render\RenderPass\DoFForegroundBlurPass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\RenderPass\DoFPass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\RenderPass\DoFSetupPass.cpp">
+      <Filter>Source\Engine\Render\RenderPass</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\RenderPass\EditorIconPass.cpp">
+      <Filter>Source\Engine\Render\RenderPass</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\RenderPass\EditorLinesPass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\RenderPass\FXAAPass.cpp">
@@ -1946,6 +1997,9 @@
     <ClCompile Include="ThirdParty\imgui-node-editor\imgui_node_editor_api.cpp">
       <Filter>ThirdParty\imgui-node-editor</Filter>
     </ClCompile>
+    <ClCompile Include="ThirdParty\NvCloth\include\NvCloth\ps\PsAllocator.cpp">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps</Filter>
+    </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Intermediate\Generated\Reflection.generated.cpp">
       <Filter>Intermediate\Generated</Filter>
@@ -2047,6 +2101,9 @@
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\Asset\Particle\ParticleEditorWidget.h">
       <Filter>Source\Editor\UI\Asset\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\Asset\Physics\PhysicsAssetEditorWidget.h">
+      <Filter>Source\Editor\UI\Asset\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\ContentBrowser\ContentBrowser.h">
       <Filter>Source\Editor\UI\ContentBrowser</Filter>
@@ -2963,7 +3020,25 @@
     <ClInclude Include="Source\Engine\Physics\IPhysicsScene.h">
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysXBodyBuilder.h">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysXConstraintBuilder.h">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysXConversion.h">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysXPhysicsRuntime.h">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysXPhysicsScene.h">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Physics\PhysicsAsset.h">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysicsAssetAutoBodyGenerator.h">
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Physics\PhysicsAssetInstance.h">
@@ -2981,21 +3056,6 @@
     <ClInclude Include="Source\Engine\Physics\PhysicsAssetValidation.h">
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Physics\PhysXBodyBuilder.h">
-      <Filter>Source\Engine\Physics</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Physics\PhysXConstraintBuilder.h">
-      <Filter>Source\Engine\Physics</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Physics\PhysXConversion.h">
-      <Filter>Source\Engine\Physics</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Physics\PhysXPhysicsRuntime.h">
-      <Filter>Source\Engine\Physics</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Physics\PhysXPhysicsScene.h">
-      <Filter>Source\Engine\Physics</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Physics\PhysicsBodyHandle.h">
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
@@ -3005,10 +3065,19 @@
     <ClInclude Include="Source\Engine\Physics\PhysicsCommandQueue.h">
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysicsComponentBinding.h">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Physics\PhysicsConstraintInstance.h">
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Physics\PhysicsDebugTypes.h">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysicsEventSnapshot.h">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysicsQueryTypes.h">
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Physics\PhysicsRuntime.h">
@@ -3021,6 +3090,9 @@
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Physics\PhysicsTypes.h">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysicsWorldSnapshot.h">
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Platform\BuildInfo.h">
@@ -3161,25 +3233,25 @@
     <ClInclude Include="Source\Engine\Render\RenderPass\DecalPass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Render\RenderPass\EditorIconPass.h">
-      <Filter>Source\Engine\Render\RenderPass</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Render\RenderPass\EditorLinesPass.h">
-      <Filter>Source\Engine\Render\RenderPass</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Render\RenderPass\DoFBackgroundBlurPass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Render\RenderPass\DoFForegroundBlurPass.h">
+    <ClInclude Include="Source\Engine\Render\RenderPass\DoFBokehScatterPass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Render\RenderPass\DoFBokehScatterPass.h">
+    <ClInclude Include="Source\Engine\Render\RenderPass\DoFForegroundBlurPass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\RenderPass\DoFPass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\RenderPass\DoFSetupPass.h">
+      <Filter>Source\Engine\Render\RenderPass</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\RenderPass\EditorIconPass.h">
+      <Filter>Source\Engine\Render\RenderPass</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\RenderPass\EditorLinesPass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\RenderPass\FXAAPass.h">
@@ -4349,6 +4421,90 @@
     <ClInclude Include="ThirdParty\lua\include\lualib.h">
       <Filter>ThirdParty\lua\include</Filter>
     </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\extensions\include\NvClothExt\ClothFabricCooker.h">
+      <Filter>ThirdParty\NvCloth\extensions\include\NvClothExt</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\extensions\include\NvClothExt\ClothMeshDesc.h">
+      <Filter>ThirdParty\NvCloth\extensions\include\NvClothExt</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\extensions\include\NvClothExt\ClothMeshQuadifier.h">
+      <Filter>ThirdParty\NvCloth\extensions\include\NvClothExt</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\extensions\include\NvClothExt\ClothTetherCooker.h">
+      <Filter>ThirdParty\NvCloth\extensions\include\NvClothExt</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\Allocator.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\Callbacks.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\Cloth.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\DxContextManagerCallback.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\Fabric.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\Factory.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\PhaseConfig.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\Range.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\Solver.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\ps\Ps.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\ps\PsAlignedMalloc.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\ps\PsAllocator.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\ps\PsArray.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\ps\PsAtomic.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\ps\PsBasicTemplates.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\ps\PsBitUtils.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\ps\PsHash.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\ps\PsHashInternals.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\ps\PsHashMap.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\ps\PsIntrinsics.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\ps\PsMathUtils.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\ps\PsUserAllocated.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\ps\unix\PsUnixIntrinsics.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps\unix</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\NvCloth\include\NvCloth\ps\windows\PsWindowsIntrinsics.h">
+      <Filter>ThirdParty\NvCloth\include\NvCloth\ps\windows</Filter>
+    </ClInclude>
     <ClInclude Include="ThirdParty\PhysX\include\PxActor.h">
       <Filter>ThirdParty\PhysX\include</Filter>
     </ClInclude>
@@ -4912,6 +5068,87 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\PhysX\include\vehicle\PxVehicleWheels.h">
       <Filter>ThirdParty\PhysX\include\vehicle</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\Px.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxAllocatorCallback.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxBitAndData.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxBounds3.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxErrorCallback.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxErrors.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxFlags.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxIO.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxIntrinsics.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxMat33.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxMat44.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxMath.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxMemory.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxPlane.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxPreprocessor.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxProfiler.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxQuat.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxSharedAssert.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxSimpleTypes.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxStrideIterator.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxTransform.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxUnionCast.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxVec2.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxVec3.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\PxVec4.h">
+      <Filter>ThirdParty\PxShared\include\foundation</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\unix\PxUnixIntrinsics.h">
+      <Filter>ThirdParty\PxShared\include\foundation\unix</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdParty\PxShared\include\foundation\windows\PxWindowsIntrinsics.h">
+      <Filter>ThirdParty\PxShared\include\foundation\windows</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\RmlUi\Include\RmlUi\Core.h">
       <Filter>ThirdParty\RmlUi\Include\RmlUi</Filter>

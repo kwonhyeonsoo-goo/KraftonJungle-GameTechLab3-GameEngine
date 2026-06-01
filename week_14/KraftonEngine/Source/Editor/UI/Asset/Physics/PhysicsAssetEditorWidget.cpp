@@ -12,10 +12,12 @@
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Object/Object.h"
 #include "Physics/PhysicsAsset.h"
+#include "Physics/PhysicsAssetAutoBodyGenerator.h"
 #include "Physics/PhysicsAssetManager.h"
 #include "Physics/PhysicsAssetPreviewUtils.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <cstdio>
 #include <functional>
@@ -32,7 +34,6 @@ namespace
     constexpr int32 DebugCircleSegments = 24;
     constexpr int32 DebugHalfCircleSegments = 12;
     constexpr float PhysicsEditorTreeIndentSpacing = 10.0f;
-    constexpr float PhysicsPreviewShapeScale = 0.1f;
 
     FTransform ComposePreviewDebugTransforms(const FTransform& ParentWorld, const FTransform& Local)
     {
@@ -526,6 +527,8 @@ namespace
     {
         return PhysicsAsset && ConstraintIndex >= 0 && ConstraintIndex < static_cast<int32>(PhysicsAsset->GetConstraintSetups().size());
     }
+
+
 }
 
 FPhysicsAssetEditorWidget::~FPhysicsAssetEditorWidget()
@@ -825,24 +828,106 @@ void FPhysicsAssetEditorWidget::RenderTreeAndGraphPanel(UPhysicsAsset* PhysicsAs
 void FPhysicsAssetEditorWidget::RenderDetailsAndValidationPanel(UPhysicsAsset* PhysicsAsset)
 {
     RenderDetailsPanel(PhysicsAsset);
-    ImGui::Separator();
-    RenderValidationPanel();
+
+    // Validation is currently unused in the Physics Editor UI.
+    // Keep the implementation available, but do not expose the panel while the toolbar action is hidden.
+    // ImGui::Separator();
+    // RenderValidationPanel();
 }
 
 void FPhysicsAssetEditorWidget::RenderToolbar(UPhysicsAsset* PhysicsAsset)
 {
-    const bool bCanSave = PhysicsAsset && !PhysicsAsset->GetAssetPathFileName().empty() && PhysicsAsset->GetAssetPathFileName() != "None";
-    if (!bCanSave) ImGui::BeginDisabled();
-    if (ImGui::Button(IsDirty() ? "Save*" : "Save", ImVec2(72.0f, 0.0f)))
+    // Physics assets are saved through the owning Mesh Editor, so the duplicated Save button is hidden here.
+    // Validation is also currently unused; keep the code path available for future re-enable.
+    // const bool bCanSave = PhysicsAsset && !PhysicsAsset->GetAssetPathFileName().empty() && PhysicsAsset->GetAssetPathFileName() != "None";
+    // if (!bCanSave) ImGui::BeginDisabled();
+    // if (ImGui::Button(IsDirty() ? "Save*" : "Save", ImVec2(72.0f, 0.0f)))
+    // {
+    //     SaveEditedPhysicsAsset();
+    // }
+    // if (!bCanSave) ImGui::EndDisabled();
+
+    // ImGui::SameLine();
+    // if (ImGui::Button("Validate", ImVec2(86.0f, 0.0f)))
+    // {
+    //     RunValidation(PhysicsAsset);
+    // }
+
+    RenderRegenerateBodiesControls(PhysicsAsset);
+}
+
+void FPhysicsAssetEditorWidget::RenderRegenerateBodiesControls(UPhysicsAsset* PhysicsAsset)
+{
+    const bool bCanRegenerate = PhysicsAsset &&
+        PreviewSkeletalMesh &&
+        PreviewSkeletalMesh->GetSkeleton() &&
+        PreviewSkeletalMesh->GetSkeletalMeshAsset();
+
+    if (!bCanRegenerate) ImGui::BeginDisabled();
+    if (ImGui::Button("Regenerate Bodies", ImVec2(150.0f, 0.0f)))
     {
-        SaveEditedPhysicsAsset();
+        RegenerateBodies(PhysicsAsset, PreviewSkeletalMesh);
     }
-    if (!bCanSave) ImGui::EndDisabled();
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Rebuild PhysicsAsset bodies from the preview skeletal mesh bind pose.");
+    }
+    if (!bCanRegenerate) ImGui::EndDisabled();
 
     ImGui::SameLine();
-    if (ImGui::Button("Validate", ImVec2(86.0f, 0.0f)))
+    if (ImGui::Checkbox("Use PCA Analysis", &bRegenerateUsePCAAnalysis))
     {
-        RunValidation(PhysicsAsset);
+        if (bRegenerateUsePCAAnalysis)
+        {
+            bRegenerateUseBoneAxis = false;
+        }
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Fit each capsule to dominant skinned vertices with principal component analysis. Falls back to bone axis when too few vertices are available.");
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Checkbox("Use Bone Axis", &bRegenerateUseBoneAxis))
+    {
+        if (bRegenerateUseBoneAxis)
+        {
+            bRegenerateUsePCAAnalysis = false;
+        }
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Use the bone-to-child direction as the generated capsule axis. This is the common simple bone-axis fitting mode.");
+    }
+
+    if (!bRegenerateUsePCAAnalysis && !bRegenerateUseBoneAxis)
+    {
+        bRegenerateUseBoneAxis = true;
+    }
+
+    ImGui::SameLine();
+    ImGui::Checkbox("Constraints", &bRegenerateCreateConstraints);
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Create parent-child constraints between the generated bodies.");
+    }
+
+    ImGui::SameLine();
+    ImGui::Checkbox("Replace", &bRegenerateReplaceExisting);
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Clear existing bodies and constraints before regeneration. Disable this to fill only missing bodies.");
+    }
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(52.0f);
+    if (ImGui::InputFloat("Min Weight", &RegenerateMinInfluenceWeight, 0.0f, 0.0f, "%.2f"))
+    {
+        RegenerateMinInfluenceWeight = (std::min)((std::max)(RegenerateMinInfluenceWeight, 0.0f), 1.0f);
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Minimum dominant skin weight required for a vertex to be used by the selected bone.");
     }
 }
 
@@ -2022,6 +2107,46 @@ void FPhysicsAssetEditorWidget::AddConstraintToSelectedParentBody(UPhysicsAsset*
     SelectedTreeBoneIndex = BoneIndex;
 }
 
+bool FPhysicsAssetEditorWidget::RegenerateBodies(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh)
+{
+    FPhysicsAssetAutoBodyGeneratorOptions Options;
+    Options.Method = (bRegenerateUsePCAAnalysis && !bRegenerateUseBoneAxis)
+        ? EPhysicsAssetAutoBodyMethod::PCAAnalysis
+        : EPhysicsAssetAutoBodyMethod::BoneAxis;
+    Options.bCreateConstraints = bRegenerateCreateConstraints;
+    Options.bReplaceExisting = bRegenerateReplaceExisting;
+    Options.MinInfluenceWeight = RegenerateMinInfluenceWeight;
+    Options.MinWeightedVertices = (std::max)(RegenerateMinWeightedVertices, 1);
+
+    FPhysicsAssetAutoBodyGeneratorResult Result;
+    if (!FPhysicsAssetAutoBodyGenerator::Regenerate(PhysicsAsset, PreviewMesh, Options, &Result))
+    {
+        return false;
+    }
+
+    if (Options.bReplaceExisting)
+    {
+        SelectedBodyIndex = -1;
+        SelectedShapeIndex = -1;
+        SelectedConstraintIndex = -1;
+    }
+
+    if (Result.FirstGeneratedBodyIndex >= 0)
+    {
+        SelectBodySetup(
+            PhysicsAsset,
+            Result.FirstGeneratedBodyIndex,
+            FindPreviewBoneIndexByName(Result.FirstGeneratedBoneName));
+    }
+    else
+    {
+        ClampSelection(PhysicsAsset);
+    }
+
+    MarkPhysicsAssetDirty();
+    return true;
+}
+
 void FPhysicsAssetEditorWidget::AddDefaultBody(UPhysicsAsset* PhysicsAsset)
 {
     AddDefaultBodyForBone(PhysicsAsset, FName::None);
@@ -2319,7 +2444,7 @@ void FPhysicsAssetEditorWidget::DrawBodySetupDebug(
         {
         case EPhysicsAssetShapeType::Box:
         {
-            FVector HalfExtent = Shape.BoxHalfExtent * PhysicsPreviewShapeScale;
+            FVector HalfExtent = Shape.BoxHalfExtent;
             HalfExtent.X = (std::max)(HalfExtent.X, 0.001f);
             HalfExtent.Y = (std::max)(HalfExtent.Y, 0.001f);
             HalfExtent.Z = (std::max)(HalfExtent.Z, 0.001f);
@@ -2333,14 +2458,14 @@ void FPhysicsAssetEditorWidget::DrawBodySetupDebug(
         }
         case EPhysicsAssetShapeType::Sphere:
         {
-            const float Radius = (std::max)(Shape.SphereRadius * PhysicsPreviewShapeScale, 0.001f);
+            const float Radius = (std::max)(Shape.SphereRadius, 0.001f);
             DrawDebugSphere(PreviewWorld, ShapeWorld.Location, Radius, 24, Color, 0.0f);
             break;
         }
         case EPhysicsAssetShapeType::Capsule:
         {
-            const float Radius = (std::max)(Shape.CapsuleRadius * PhysicsPreviewShapeScale, 0.001f);
-            const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight * PhysicsPreviewShapeScale, Radius);
+            const float Radius = (std::max)(Shape.CapsuleRadius, 0.001f);
+            const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight, Radius);
             DrawDebugCapsuleZAxis(
                 PreviewWorld,
                 ShapeWorld.Location,

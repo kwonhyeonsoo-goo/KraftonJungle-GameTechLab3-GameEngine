@@ -170,8 +170,18 @@ UPhysicsAsset* FPhysicsAssetManager::LoadPhysicsAsset(const FString& PackagePath
     }
 
     UPhysicsAsset* PhysicsAsset = UObjectManager::Get().CreateObject<UPhysicsAsset>();
-    PhysicsAsset->Serialize(Reader);
+    PhysicsAsset->SerializePackagePayload(Reader, Header.Version);
     PhysicsAsset->SetAssetPathFileName(NormalizedPath);
+
+    const bool bLegacyRawConstraintNames =
+        Header.Version < static_cast<uint32>(EAssetPackageSerializationVersion::PhysicsAssetStringConstraintNames);
+    if (bLegacyRawConstraintNames && PhysicsAsset->RepairInvalidLegacyConstraintNamesFromSkeleton())
+    {
+        UE_LOG("PhysicsAsset repaired legacy constraint names. Path=%s Bodies=%d Constraints=%d",
+            NormalizedPath.c_str(),
+            static_cast<int32>(PhysicsAsset->GetBodySetups().size()),
+            static_cast<int32>(PhysicsAsset->GetConstraintSetups().size()));
+    }
 
     if (!Reader.IsValid())
     {
@@ -248,7 +258,7 @@ bool FPhysicsAssetManager::SavePhysicsAsset(UPhysicsAsset* PhysicsAsset, const F
         return false;
     }
 
-    PhysicsAsset->Serialize(Writer);
+    PhysicsAsset->SerializePackagePayload(Writer, FAssetPackageHeader::CurrentVersion);
 
     if (!Writer.IsValid())
     {

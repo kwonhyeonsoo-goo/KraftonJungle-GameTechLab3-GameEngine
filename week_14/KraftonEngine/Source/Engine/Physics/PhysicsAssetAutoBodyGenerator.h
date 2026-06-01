@@ -1,0 +1,43 @@
+#pragma once
+
+#include "Core/Types/CoreTypes.h"
+#include "Object/FName.h"
+
+class UPhysicsAsset;
+class USkeletalMesh;
+
+enum class EPhysicsAssetAutoBodyMethod : uint8
+{
+    BoneAxis,
+    PCAAnalysis
+};
+
+struct FPhysicsAssetAutoBodyGeneratorOptions
+{
+    EPhysicsAssetAutoBodyMethod Method = EPhysicsAssetAutoBodyMethod::PCAAnalysis;
+    bool bCreateConstraints = true;
+    bool bReplaceExisting = true;
+    float MinInfluenceWeight = 0.35f;
+    int32 MinWeightedVertices = 4;
+};
+
+struct FPhysicsAssetAutoBodyGeneratorResult
+{
+    int32 GeneratedBodyCount = 0;
+    int32 GeneratedConstraintCount = 0;
+    int32 FirstGeneratedBodyIndex = -1;
+    FName FirstGeneratedBoneName = FName::None;
+    bool bAssetChanged = false;
+};
+
+class FPhysicsAssetAutoBodyGenerator
+{
+public:
+    // Rebuilds capsule body setups from the skeletal mesh reference pose.
+    // The editor owns UI state and selection; this generator only mutates asset data.
+    static bool Regenerate(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMesh* SkeletalMesh,
+        const FPhysicsAssetAutoBodyGeneratorOptions& Options,
+        FPhysicsAssetAutoBodyGeneratorResult* OutResult = nullptr);
+};
