@@ -31,6 +31,7 @@ namespace
     constexpr float DetailsPanelMinWidth = 360.0f;
     constexpr int32 DebugCircleSegments = 24;
     constexpr int32 DebugHalfCircleSegments = 12;
+    constexpr float PhysicsEditorTreeIndentSpacing = 10.0f;
     constexpr float PhysicsPreviewShapeScale = 0.1f;
 
     FTransform ComposePreviewDebugTransforms(const FTransform& ParentWorld, const FTransform& Local)
@@ -323,11 +324,19 @@ namespace
         return bChanged;
     }
 
-    FString BodyLabel(const FPhysicsAssetBodySetup& Body, int32 Index, UPhysicsAsset::EEditorSetupState State)
+    FString BodyLabel(const FPhysicsAssetBodySetup& Body, int32 Index)
     {
         const FString Bone = Body.BoneName == FName::None ? FString("<None>") : Body.BoneName.ToString();
+        const int32 ShapeCount = static_cast<int32>(Body.Shapes.size());
         char Buffer[256] = {};
-        std::snprintf(Buffer, sizeof(Buffer), "Body %d  %s  [%s]", Index, Bone.c_str(), StateText(State));
+        std::snprintf(
+            Buffer,
+            sizeof(Buffer),
+            "Body %d  %s  (%d %s)",
+            Index,
+            Bone.c_str(),
+            ShapeCount,
+            ShapeCount == 1 ? "shape" : "shapes");
         return Buffer;
     }
 
@@ -758,10 +767,14 @@ bool FPhysicsAssetEditorWidget::PrepareEmbeddedRender(UPhysicsAsset* PhysicsAsse
 void FPhysicsAssetEditorWidget::RenderTreeAndGraphPanel(UPhysicsAsset* PhysicsAsset)
 {
     const float AvailableHeight = ImGui::GetContentRegionAvail().y;
-    const float GraphHeight = (std::max)(220.0f, AvailableHeight * 0.48f);
+    const float GraphHeight = (std::max)(200.0f, AvailableHeight * 0.42f);
     const float TreeHeight = (std::max)(140.0f, AvailableHeight - GraphHeight - ImGui::GetStyle().ItemSpacing.y - 4.0f);
 
-    ImGui::BeginChild("##PhysicsAssetTreeArea", ImVec2(0.0f, TreeHeight), false);
+    ImGui::BeginChild(
+        "##PhysicsAssetTreeArea",
+        ImVec2(0.0f, TreeHeight),
+        false,
+        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     if (PreviewSkeletalMesh && PreviewSkeletalMesh->GetSkeleton())
     {
         RenderSkeletonPhysicsTree(PhysicsAsset, PreviewSkeletalMesh);
@@ -831,7 +844,7 @@ void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* Physics
         static_cast<int32>(PhysicsAsset->GetBodySetups().size()),
         static_cast<int32>(PhysicsAsset->GetConstraintSetups().size()));
 
-    constexpr float ActionPanelHeight = 108.0f;
+    const float ActionPanelHeight = ImGui::GetFrameHeightWithSpacing();
     constexpr float BodyListHeight = 150.0f;
     const float TreeHeight = (std::max)(
         110.0f,
@@ -841,6 +854,7 @@ void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* Physics
             - ImGui::GetTextLineHeightWithSpacing()
             - ImGui::GetStyle().ItemSpacing.y * 3.0f);
     ImGui::BeginChild("##PhysicsAssetSkeletonTree", ImVec2(0.0f, TreeHeight), true);
+    ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, PhysicsEditorTreeIndentSpacing);
     if (RefSkeleton.GetNumBones() <= 0)
     {
         ImGui::TextDisabled("Skeleton has no bones.");
@@ -855,11 +869,10 @@ void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* Physics
             }
         }
     }
+    ImGui::PopStyleVar();
     ImGui::EndChild();
 
-    ImGui::BeginChild("##PhysicsAssetSelectedBoneActions", ImVec2(0.0f, ActionPanelHeight), true);
     RenderSelectedBoneActionPanel(PhysicsAsset, RefSkeleton);
-    ImGui::EndChild();
 
     ImGui::Separator();
     RenderBodyList(PhysicsAsset);
@@ -1070,24 +1083,19 @@ void FPhysicsAssetEditorWidget::RenderSelectedBoneActionPanel(
             : -1;
     }
 
-    ImGui::TextDisabled("Bone: %s", BoneLabel.c_str());
-    ImGui::TextDisabled(
-        "Body: %s | Parent: %s | Joint: %s",
-        BodyIndex >= 0 ? "Created" : "None",
-        ParentBodyBoneIndex >= 0 ? ParentBodyBoneName.ToString().c_str() : "None",
-        ConstraintIndex >= 0 ? "Created" : "None");
-
     const bool bCanAddBody = bHasSelectedBone && BodyIndex < 0;
     if (!bCanAddBody) ImGui::BeginDisabled();
-    if (ImGui::Button("+ Body", ImVec2(-1.0f, 0.0f)))
+    const float ButtonWidth = (std::max)(80.0f, (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f);
+    if (ImGui::Button("+ Body", ImVec2(ButtonWidth, 0.0f)))
     {
         AddDefaultBodyForBone(PhysicsAsset, BoneName);
     }
     if (!bCanAddBody) ImGui::EndDisabled();
 
+    ImGui::SameLine();
     const bool bCanCreateConstraint = bHasSelectedBone && BodyIndex >= 0 && ParentBodyBoneIndex >= 0 && ConstraintIndex < 0;
     if (!bCanCreateConstraint) ImGui::BeginDisabled();
-    if (ImGui::Button("+ Constraint To Parent", ImVec2(-1.0f, 0.0f)))
+    if (ImGui::Button("+ Constraint To Parent", ImVec2(ButtonWidth, 0.0f)))
     {
         AddDefaultConstraintForBones(PhysicsAsset, ParentBodyBoneName, BoneName);
     }
@@ -1139,7 +1147,7 @@ void FPhysicsAssetEditorWidget::RenderUnboundPhysicsSetups(UPhysicsAsset* Physic
     {
         if (!IsBoneInReferenceSkeleton(RefSkeleton, Bodies[Index].BoneName))
         {
-            const FString Label = BodyLabel(Bodies[Index], Index, PhysicsAsset->GetBodySetupEditorState(Index));
+            const FString Label = BodyLabel(Bodies[Index], Index);
             if (ImGui::Selectable(Label.c_str(), SelectedBodyIndex == Index && SelectedConstraintIndex < 0))
             {
                 SelectedBodyIndex = Index;
@@ -1178,7 +1186,7 @@ void FPhysicsAssetEditorWidget::RenderBodyList(UPhysicsAsset* PhysicsAsset)
     const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
     for (int32 i = 0; i < static_cast<int32>(Bodies.size()); ++i)
     {
-        const FString Label = BodyLabel(Bodies[i], i, PhysicsAsset->GetBodySetupEditorState(i));
+        const FString Label = BodyLabel(Bodies[i], i);
         if (ImGui::Selectable(Label.c_str(), SelectedBodyIndex == i && SelectedConstraintIndex < 0))
         {
             SelectedBodyIndex = i;

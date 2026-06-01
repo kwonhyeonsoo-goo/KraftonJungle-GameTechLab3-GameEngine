@@ -55,6 +55,8 @@
 
 namespace
 {
+	constexpr float MeshEditorTreeIndentSpacing = 10.0f;
+
 	ID3D11ShaderResourceView* LoadTabIcon(const wchar_t* FileName)
 	{
 		const FString Path = FPaths::ToUtf8(
@@ -1003,6 +1005,7 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 	ImGui::BeginChild("BoneHierarchy", ImVec2(HierarchyWidth, 0), true);
 	ImGui::Text("Bone Hierarchy");
 	ImGui::Separator();
+	ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, MeshEditorTreeIndentSpacing);
 	if (Skeleton)
 	{
 		const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
@@ -1014,6 +1017,7 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 			}
 		}
 	}
+	ImGui::PopStyleVar();
 	ImGui::EndChild();
 
 	ImGui::SameLine();
