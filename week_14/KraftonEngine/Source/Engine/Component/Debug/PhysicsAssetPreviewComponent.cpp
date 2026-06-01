@@ -17,7 +17,6 @@ namespace
 	constexpr int32 SphereStacks = 12;
 	constexpr int32 CapsuleSlices = 24;
 	constexpr int32 CapsuleHemisphereStacks = 6;
-	constexpr float PhysicsPreviewShapeScale = 0.1f;
 	constexpr int32 PhysicsPreviewHitFaceBodyStride = 10000;
 
 	FTransform ComposePreviewDebugTransforms(const FTransform& ParentWorld, const FTransform& Local)
@@ -301,15 +300,15 @@ bool UPhysicsAssetPreviewComponent::LineTraceComponent(const FRay& Ray, FHitResu
 			switch (Shape.Type)
 			{
 			case EPhysicsAssetShapeType::Box:
-				bShapeHit = IntersectRayLocalBox(LocalRay, ClampHalfExtent(Shape.BoxHalfExtent * PhysicsPreviewShapeScale), T);
+				bShapeHit = IntersectRayLocalBox(LocalRay, ClampHalfExtent(Shape.BoxHalfExtent), T);
 				break;
 			case EPhysicsAssetShapeType::Sphere:
-				bShapeHit = IntersectRayLocalSphere(LocalRay, FVector::ZeroVector, (std::max)(Shape.SphereRadius * PhysicsPreviewShapeScale, MinShapeSize), T);
+				bShapeHit = IntersectRayLocalSphere(LocalRay, FVector::ZeroVector, (std::max)(Shape.SphereRadius, MinShapeSize), T);
 				break;
 			case EPhysicsAssetShapeType::Capsule:
 			{
-				const float Radius = (std::max)(Shape.CapsuleRadius * PhysicsPreviewShapeScale, MinShapeSize);
-				const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight * PhysicsPreviewShapeScale, Radius);
+				const float Radius = (std::max)(Shape.CapsuleRadius, MinShapeSize);
+				const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight, Radius);
 				bShapeHit = IntersectRayLocalCapsuleZ(LocalRay, Radius, HalfHeight, T);
 				break;
 			}
@@ -434,15 +433,15 @@ void UPhysicsAssetPreviewComponent::RebuildPreviewMesh()
 			switch (Shape.Type)
 			{
 			case EPhysicsAssetShapeType::Box:
-				AppendBox(ShapeWorld, ClampHalfExtent(Shape.BoxHalfExtent * PhysicsPreviewShapeScale), Color);
+				AppendBox(ShapeWorld, ClampHalfExtent(Shape.BoxHalfExtent), Color);
 				break;
 			case EPhysicsAssetShapeType::Sphere:
-				AppendSphere(ShapeWorld, (std::max)(Shape.SphereRadius * PhysicsPreviewShapeScale, MinShapeSize), Color);
+				AppendSphere(ShapeWorld, (std::max)(Shape.SphereRadius, MinShapeSize), Color);
 				break;
 			case EPhysicsAssetShapeType::Capsule:
 			{
-				const float Radius = (std::max)(Shape.CapsuleRadius * PhysicsPreviewShapeScale, MinShapeSize);
-				const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight * PhysicsPreviewShapeScale, Radius);
+				const float Radius = (std::max)(Shape.CapsuleRadius, MinShapeSize);
+				const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight, Radius);
 				AppendCapsuleZAxis(ShapeWorld, Radius, HalfHeight, Color);
 				break;
 			}

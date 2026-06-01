@@ -72,6 +72,7 @@ private:
     void RenderDetailsAndValidationPanel(UPhysicsAsset* PhysicsAsset);
 
     void RenderToolbar(UPhysicsAsset* PhysicsAsset);
+    void RenderRegenerateBodiesControls(UPhysicsAsset* PhysicsAsset);
     void RenderAssetSummary(UPhysicsAsset* PhysicsAsset);
     void RenderSkeletonPhysicsTree(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh);
     void RenderPhysicsBoneTree(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton, int32 BoneIndex);
@@ -108,6 +109,7 @@ private:
     int32 FindPreviewBoneIndexByName(const FName& BoneName) const;
 
     void AddDefaultBody(UPhysicsAsset* PhysicsAsset);
+    bool RegenerateBodies(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh);
     void AddDefaultBodyForBone(UPhysicsAsset* PhysicsAsset, const FName& BoneName);
     void AddDefaultShape(FPhysicsAssetBodySetup& BodySetup);
     void AddDefaultConstraint(UPhysicsAsset* PhysicsAsset);
@@ -130,6 +132,12 @@ private:
     bool bConstraintGraphLayoutDirty = true;
     bool bShowPreviewBodies = true;
     bool bShowPreviewConstraints = true;
+    bool bRegenerateUsePCAAnalysis = true;
+    bool bRegenerateUseBoneAxis = false;
+    bool bRegenerateCreateConstraints = true;
+    bool bRegenerateReplaceExisting = true;
+    float RegenerateMinInfluenceWeight = 0.35f;
+    int32 RegenerateMinWeightedVertices = 4;
     EPhysicsAssetConstraintFrameTarget SelectedConstraintGizmoFrame = EPhysicsAssetConstraintFrameTarget::Child;
     uint64 ConstraintGraphTopologyHash = 0;
 

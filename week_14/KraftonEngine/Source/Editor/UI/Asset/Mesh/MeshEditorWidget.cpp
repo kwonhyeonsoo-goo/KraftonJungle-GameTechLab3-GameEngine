@@ -1359,6 +1359,15 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
 	UPhysicsAsset* PhysicsAsset = GetCurrentPhysicsAsset();
 
+	if (PhysicsAsset)
+	{
+		PhysicsAssetEditor.RenderEmbeddedToolbar(PhysicsAsset, SkeletalMesh, 0.0f);
+	}
+	else
+	{
+		ImGui::TextDisabled("No Physics Asset selected.");
+	}
+
 	const float Spacing = ImGui::GetStyle().ItemSpacing.x;
 	const float SplitterWidth = 4.0f;
 	const float TotalWidth = ImGui::GetContentRegionAvail().x;

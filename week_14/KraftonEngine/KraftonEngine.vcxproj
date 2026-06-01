@@ -698,6 +698,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Physics\PhysXPhysicsRuntime.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysXPhysicsScene.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysicsAsset.cpp" />
+    <ClCompile Include="Source\Engine\Physics\PhysicsAssetAutoBodyGenerator.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysicsAssetInstance.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysicsAssetManager.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysicsAssetPreviewUtils.cpp" />
@@ -1165,6 +1166,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Physics\PhysXPhysicsRuntime.h" />
     <ClInclude Include="Source\Engine\Physics\PhysXPhysicsScene.h" />
     <ClInclude Include="Source\Engine\Physics\PhysicsAsset.h" />
+    <ClInclude Include="Source\Engine\Physics\PhysicsAssetAutoBodyGenerator.h" />
     <ClInclude Include="Source\Engine\Physics\PhysicsAssetInstance.h" />
     <ClInclude Include="Source\Engine\Physics\PhysicsAssetManager.h" />
     <ClInclude Include="Source\Engine\Physics\PhysicsAssetPreviewUtils.h" />
