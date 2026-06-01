@@ -127,6 +127,7 @@ private:
     int32 SelectedConstraintIndex = -1;
     int32 SelectedTreeBoneIndex = -1;
     USkeletalMesh* PreviewSkeletalMesh = nullptr;
+    USkeletalMeshComponent* PreviewSkeletalMeshComponent = nullptr;
     ax::NodeEditor::EditorContext* ConstraintGraphContext = nullptr;
     bool bPendingClose = false;
     bool bConstraintGraphLayoutDirty = true;

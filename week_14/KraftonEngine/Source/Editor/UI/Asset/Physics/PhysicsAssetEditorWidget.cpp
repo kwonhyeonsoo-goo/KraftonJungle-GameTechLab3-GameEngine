@@ -540,6 +540,7 @@ void FPhysicsAssetEditorWidget::Close()
 {
     DestroyConstraintGraphEditor();
     PreviewSkeletalMesh = nullptr;
+    PreviewSkeletalMeshComponent = nullptr;
     SelectedBodyIndex = -1;
     SelectedShapeIndex = -1;
     SelectedConstraintIndex = -1;
@@ -580,6 +581,7 @@ void FPhysicsAssetEditorWidget::Open(UObject* Object)
     SelectedConstraintIndex = -1;
     SelectedTreeBoneIndex = -1;
     PreviewSkeletalMesh = nullptr;
+    PreviewSkeletalMeshComponent = nullptr;
     ValidationIssues.clear();
     ValidationMeshPath.clear();
     bValidationRan = false;
@@ -2163,8 +2165,19 @@ bool FPhysicsAssetEditorWidget::RegenerateBodies(UPhysicsAsset* PhysicsAsset, US
     Options.MinInfluenceWeight = RegenerateMinInfluenceWeight;
     Options.MinWeightedVertices = (std::max)(RegenerateMinWeightedVertices, 1);
 
+    TArray<FMatrix> CurrentBoneGlobalMatrices;
+    const TArray<FMatrix>* OverrideBoneGlobalMatrices = nullptr;
+    if (PreviewSkeletalMeshComponent && PreviewSkeletalMeshComponent->GetSkeletalMesh() == PreviewMesh)
+    {
+        PreviewSkeletalMeshComponent->GetCurrentBoneGlobalMatrices(CurrentBoneGlobalMatrices);
+        if (!CurrentBoneGlobalMatrices.empty())
+        {
+            OverrideBoneGlobalMatrices = &CurrentBoneGlobalMatrices;
+        }
+    }
+
     FPhysicsAssetAutoBodyGeneratorResult Result;
-    if (!FPhysicsAssetAutoBodyGenerator::Regenerate(PhysicsAsset, PreviewMesh, Options, &Result))
+    if (!FPhysicsAssetAutoBodyGenerator::Regenerate(PhysicsAsset, PreviewMesh, Options, &Result, OverrideBoneGlobalMatrices))
     {
         return false;
     }
@@ -2343,6 +2356,7 @@ void FPhysicsAssetEditorWidget::RenderPreviewDebug(
     USkeletalMeshComponent* PreviewComponent)
 {
     PreviewSkeletalMesh = PreviewMesh;
+    PreviewSkeletalMeshComponent = PreviewComponent;
 
     if (!PhysicsAsset || !PreviewWorld || !PreviewComponent)
     {
@@ -2371,6 +2385,7 @@ void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
     ID3D11Device* Device)
 {
     PreviewSkeletalMesh = PreviewMesh;
+    PreviewSkeletalMeshComponent = PreviewComponent;
 
     if (!PhysicsAsset || !PreviewWorld || !PreviewComponent)
     {

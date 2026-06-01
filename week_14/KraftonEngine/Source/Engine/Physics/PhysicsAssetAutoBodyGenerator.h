@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Core/Types/CoreTypes.h"
+#include "Math/Matrix.h"
 #include "Object/FName.h"
 
 class UPhysicsAsset;
@@ -44,5 +45,6 @@ public:
         UPhysicsAsset* PhysicsAsset,
         USkeletalMesh* SkeletalMesh,
         const FPhysicsAssetAutoBodyGeneratorOptions& Options,
-        FPhysicsAssetAutoBodyGeneratorResult* OutResult = nullptr);
+        FPhysicsAssetAutoBodyGeneratorResult* OutResult = nullptr,
+        const TArray<FMatrix>* OverrideBoneGlobalMatrices = nullptr);
 };
