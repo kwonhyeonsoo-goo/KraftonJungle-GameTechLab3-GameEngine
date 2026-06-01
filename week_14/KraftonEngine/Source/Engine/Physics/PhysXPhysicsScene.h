@@ -116,6 +116,9 @@ private:
     FPhysicsShapeDesc         BuildShapeDescFromComponent_GameThread(UPrimitiveComponent* Comp, UPrimitiveComponent* RootComponent) const;
     void                      EnqueueEngineTransformSync_GameThread();
     bool                      ResolveRaycastResult_GameThread(const FPhysicsRaycastResult& PhysicsResult, FHitResult& OutHit) const;
+    bool                      ExecuteRaycast_PhysicsThread(const FVector& Start, const FVector& Dir, float MaxDist, ECollisionChannel TraceChannel, uint32 IgnoreActorId, FPhysicsRaycastResult& OutResult) const;
+    bool                      ExecuteRaycastByObjectTypes_PhysicsThread(const FVector& Start, const FVector& Dir, float MaxDist, uint32 ObjectTypeMask, uint32 IgnoreActorId, FPhysicsRaycastResult& OutResult) const;
+    bool                      SubmitRaycastQuery_GameThread(bool bObjectTypes, const FVector& Start, const FVector& Dir, float MaxDist, ECollisionChannel TraceChannel, uint32 ObjectTypeMask, uint32 IgnoreActorId, FPhysicsRaycastResult& OutResult) const;
 
     void StartPhysicsThread();
     void StopPhysicsThreadAndJoin();
@@ -138,15 +141,28 @@ private:
 
     FPhysXPhysicsRuntime Runtime;
 
-    std::thread             PhysicsThread;
-    mutable std::mutex      PhysicsThreadMutex;
-    std::condition_variable PhysicsThreadCv;
-    std::condition_variable PhysicsThreadDoneCv;
-    bool                    bPhysicsThreadStarted       = false;
-    bool                    bPhysicsThreadStopRequested = false;
-    bool                    bPhysicsFramePending        = false;
-    bool                    bPhysicsFrameInProgress     = false;
-    uint64                  PendingPhysicsFrameIndex    = 0;
-    uint64                  CompletedPhysicsFrameIndex  = 0;
-    float                   PendingPhysicsDeltaTime     = 0.0f;
+    std::thread                     PhysicsThread;
+    mutable std::mutex              PhysicsThreadMutex;
+    mutable std::condition_variable PhysicsThreadCv;
+    mutable std::condition_variable PhysicsThreadDoneCv;
+    bool                            bPhysicsThreadStarted       = false;
+    bool                            bPhysicsThreadStopRequested = false;
+    bool                            bPhysicsFramePending        = false;
+    bool                            bPhysicsFrameInProgress     = false;
+    uint64                          PendingPhysicsFrameIndex    = 0;
+    uint64                          CompletedPhysicsFrameIndex  = 0;
+    float                           PendingPhysicsDeltaTime     = 0.0f;
+
+    mutable bool                  bPhysicsQueryPending     = false;
+    mutable bool                  bPhysicsQueryInProgress  = false;
+    mutable bool                  bPhysicsQueryCompleted   = false;
+    mutable bool                  bPendingQueryObjectTypes = false;
+    mutable FVector               PendingQueryStart;
+    mutable FVector               PendingQueryDir;
+    mutable float                 PendingQueryMaxDist        = 0.0f;
+    mutable ECollisionChannel     PendingQueryTraceChannel   = ECollisionChannel::WorldStatic;
+    mutable uint32                PendingQueryObjectTypeMask = 0;
+    mutable uint32                PendingQueryIgnoreActorId  = 0;
+    mutable bool                  bPendingQueryHit           = false;
+    mutable FPhysicsRaycastResult PendingQueryResult;
 };

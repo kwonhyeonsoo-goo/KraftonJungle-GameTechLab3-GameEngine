@@ -144,7 +144,8 @@ private:
     FPhysicsConstraintHandle CreateConstraint_Internal(
         FPhysicsBodyHandle             Parent,
         FPhysicsBodyHandle             Child,
-        const FConstraintCreationDesc& Desc
+        const FConstraintCreationDesc& Desc,
+        FPhysicsConstraintHandle       ReservedConstraint = FPhysicsConstraintHandle {}
     );
     void DestroyConstraint_Internal(FPhysicsConstraintHandle Constraint);
 

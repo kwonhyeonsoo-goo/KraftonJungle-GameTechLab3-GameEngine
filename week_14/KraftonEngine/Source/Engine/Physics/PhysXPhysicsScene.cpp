@@ -951,6 +951,7 @@ void FPhysXPhysicsScene::Initialize(UWorld* InWorld)
     if (!Foundation || !Physics)
     {
         UE_LOG("[PhysX] Failed to create Foundation or Physics");
+        Shutdown();
         return;
     }
 
@@ -962,8 +963,21 @@ void FPhysXPhysicsScene::Initialize(UWorld* InWorld)
         WorkerThreadCount                  = static_cast<int32>((std::max)(1u, HardwareThreads > 1 ? HardwareThreads - 1 : 1u));
     }
 
-    Dispatcher    = PxDefaultCpuDispatcherCreate(WorkerThreadCount);
+    Dispatcher = PxDefaultCpuDispatcherCreate(WorkerThreadCount);
+    if (!Dispatcher)
+    {
+        UE_LOG("[PhysX] Failed to create CPU dispatcher");
+        Shutdown();
+        return;
+    }
+
     EventCallback = new FPhysXSimulationCallback();
+    if (!EventCallback)
+    {
+        UE_LOG("[PhysX] Failed to create simulation callback");
+        Shutdown();
+        return;
+    }
 
     PxSceneDesc SceneDesc(Physics->getTolerancesScale());
     SceneDesc.gravity = PxVec3(0.0f, 0.0f, -9.81f);
@@ -994,6 +1008,7 @@ void FPhysXPhysicsScene::Initialize(UWorld* InWorld)
     if (!Scene)
     {
         UE_LOG("[PhysX] Failed to create Scene");
+        Shutdown();
         return;
     }
 
@@ -1001,6 +1016,7 @@ void FPhysXPhysicsScene::Initialize(UWorld* InWorld)
     if (!DefaultMaterial)
     {
         UE_LOG("[PhysX] Failed to create DefaultMaterial");
+        Shutdown();
         return;
     }
 
@@ -1090,9 +1106,6 @@ void FPhysXPhysicsScene::UnregisterComponent(UPrimitiveComponent* Comp)
     }
 
     FPhysicsComponentBinding& Binding = It->second;
-    ++Binding.Generation;
-    Binding.bPendingDestroy = true;
-    Binding.bPendingCreate  = false;
 
     FPhysicsObjectKey Object;
     Object.ActorId             = Binding.ActorId;
@@ -1101,6 +1114,10 @@ void FPhysXPhysicsScene::UnregisterComponent(UPrimitiveComponent* Comp)
     Object.Domain              = EPhysicsBodyDomain::ActorComponent;
 
     Runtime.UnregisterComponent(Object);
+
+    ++Binding.Generation;
+    Binding.bPendingDestroy = true;
+    Binding.bPendingCreate  = false;
 
     bool bActorStillHasLiveBinding = false;
     for (const auto& Pair : GameThreadBindings)
@@ -1160,9 +1177,6 @@ void FPhysXPhysicsScene::RebuildBody(UPrimitiveComponent* Comp)
         }
 
         FPhysicsComponentBinding& Binding = TouchBinding_GameThread(RebuildComp);
-        ++Binding.Generation;
-        Binding.bPendingDestroy = true;
-        Binding.bPendingCreate  = false;
 
         FPhysicsObjectKey Object;
         Object.ActorId             = Binding.ActorId;
@@ -1170,6 +1184,10 @@ void FPhysXPhysicsScene::RebuildBody(UPrimitiveComponent* Comp)
         Object.ComponentGeneration = Binding.Generation;
         Object.Domain              = EPhysicsBodyDomain::ActorComponent;
         Runtime.UnregisterComponent(Object);
+
+        ++Binding.Generation;
+        Binding.bPendingDestroy = true;
+        Binding.bPendingCreate  = false;
     }
 
     if (ActorId != 0)
@@ -1436,11 +1454,37 @@ void FPhysXPhysicsScene::SubmitPhysicsFrame(uint64 FrameIndex, float DeltaTime)
         return;
     }
 
+    const bool bAsync = FProjectSettings::Get().Physics.bAsyncPhysics;
+    if (bAsync)
+    {
+        if (bPhysicsFramePending || bPhysicsFrameInProgress)
+        {
+            PendingPhysicsDeltaTime += DeltaTime;
+            if (!bPhysicsFramePending)
+            {
+                PendingPhysicsFrameIndex = FrameIndex;
+                bPhysicsFramePending     = true;
+                PhysicsThreadCv.notify_one();
+            }
+            else
+            {
+                PendingPhysicsFrameIndex = FrameIndex;
+            }
+            return;
+        }
+
+        PendingPhysicsFrameIndex = FrameIndex;
+        PendingPhysicsDeltaTime  = DeltaTime;
+        bPhysicsFramePending     = true;
+        PhysicsThreadCv.notify_one();
+        return;
+    }
+
     PhysicsThreadDoneCv.wait(
         Lock,
         [this]()
         {
-            return !bPhysicsFramePending && !bPhysicsFrameInProgress;
+            return !bPhysicsFramePending && !bPhysicsFrameInProgress && !bPhysicsQueryPending && !bPhysicsQueryInProgress;
         }
     );
 
@@ -1482,17 +1526,46 @@ void FPhysXPhysicsScene::PhysicsThreadMain()
                 Lock,
                 [this]()
                 {
-                    return bPhysicsThreadStopRequested || bPhysicsFramePending;
+                    return bPhysicsThreadStopRequested || bPhysicsFramePending || bPhysicsQueryPending;
                 }
             );
 
-            if (bPhysicsThreadStopRequested && !bPhysicsFramePending)
+            if (bPhysicsThreadStopRequested && !bPhysicsFramePending && !bPhysicsQueryPending)
             {
                 break;
             }
 
+            if (!bPhysicsFramePending && bPhysicsQueryPending)
+            {
+                const bool              bObjectTypes       = bPendingQueryObjectTypes;
+                const FVector           QueryStart         = PendingQueryStart;
+                const FVector           QueryDir           = PendingQueryDir;
+                const float             QueryMaxDist       = PendingQueryMaxDist;
+                const ECollisionChannel QueryChannel       = PendingQueryTraceChannel;
+                const uint32            QueryObjectMask    = PendingQueryObjectTypeMask;
+                const uint32            QueryIgnoreActorId = PendingQueryIgnoreActorId;
+
+                bPhysicsQueryPending    = false;
+                bPhysicsQueryInProgress = true;
+                Lock.unlock();
+
+                FPhysicsRaycastResult QueryResult;
+                const bool            bHit = bObjectTypes
+                        ? ExecuteRaycastByObjectTypes_PhysicsThread(QueryStart, QueryDir, QueryMaxDist, QueryObjectMask, QueryIgnoreActorId, QueryResult)
+                        : ExecuteRaycast_PhysicsThread(QueryStart, QueryDir, QueryMaxDist, QueryChannel, QueryIgnoreActorId, QueryResult);
+
+                Lock.lock();
+                PendingQueryResult      = QueryResult;
+                bPendingQueryHit        = bHit;
+                bPhysicsQueryInProgress = false;
+                bPhysicsQueryCompleted  = true;
+                PhysicsThreadDoneCv.notify_all();
+                continue;
+            }
+
             FrameIndex              = PendingPhysicsFrameIndex;
             DeltaTime               = PendingPhysicsDeltaTime;
+            PendingPhysicsDeltaTime = 0.0f;
             bPhysicsFramePending    = false;
             bPhysicsFrameInProgress = true;
         }
@@ -1512,6 +1585,9 @@ void FPhysXPhysicsScene::PhysicsThreadMain()
         bPhysicsThreadStarted   = false;
         bPhysicsFramePending    = false;
         bPhysicsFrameInProgress = false;
+        bPhysicsQueryPending    = false;
+        bPhysicsQueryInProgress = false;
+        bPhysicsQueryCompleted  = true;
     }
     PhysicsThreadDoneCv.notify_all();
 }
@@ -1527,6 +1603,9 @@ void FPhysXPhysicsScene::StartPhysicsThread()
     bPhysicsThreadStopRequested = false;
     bPhysicsFramePending        = false;
     bPhysicsFrameInProgress     = false;
+    bPhysicsQueryPending        = false;
+    bPhysicsQueryInProgress     = false;
+    bPhysicsQueryCompleted      = false;
     CompletedPhysicsFrameIndex  = 0;
     PendingPhysicsFrameIndex    = 0;
     PendingPhysicsDeltaTime     = 0.0f;
@@ -1547,7 +1626,7 @@ void FPhysXPhysicsScene::StopPhysicsThreadAndJoin()
             Lock,
             [this]()
             {
-                return !bPhysicsFramePending && !bPhysicsFrameInProgress;
+                return !bPhysicsFramePending && !bPhysicsFrameInProgress && !bPhysicsQueryPending && !bPhysicsQueryInProgress;
             }
         );
 
@@ -1792,16 +1871,84 @@ bool FPhysXPhysicsScene::ResolveRaycastResult_GameThread(
     return true;
 }
 
-bool FPhysXPhysicsScene::Raycast(
-    const FVector& Start,
-    const FVector& Dir,
-    float MaxDist,
-    FHitResult& OutHit,
-    ECollisionChannel TraceChannel,
-    const AActor* IgnoreActor
+bool FPhysXPhysicsScene::SubmitRaycastQuery_GameThread(
+    bool                   bObjectTypes,
+    const FVector&         Start,
+    const FVector&         Dir,
+    float                  MaxDist,
+    ECollisionChannel      TraceChannel,
+    uint32                 ObjectTypeMask,
+    uint32                 IgnoreActorId,
+    FPhysicsRaycastResult& OutResult
 ) const
 {
-    OutHit = FHitResult();
+    OutResult = FPhysicsRaycastResult();
+    if (!Scene || MaxDist <= 0.0f)
+    {
+        return false;
+    }
+
+    FVector RayDir = Dir;
+    if (RayDir.IsNearlyZero())
+    {
+        return false;
+    }
+    RayDir.Normalize();
+
+    std::unique_lock<std::mutex> Lock(PhysicsThreadMutex);
+    PhysicsThreadDoneCv.wait(
+        Lock,
+        [this]()
+        {
+            return !bPhysicsQueryPending && !bPhysicsQueryInProgress;
+        }
+    );
+
+    if (!bPhysicsThreadStarted)
+    {
+        Lock.unlock();
+        return bObjectTypes
+                ? ExecuteRaycastByObjectTypes_PhysicsThread(Start, RayDir, MaxDist, ObjectTypeMask, IgnoreActorId, OutResult)
+                : ExecuteRaycast_PhysicsThread(Start, RayDir, MaxDist, TraceChannel, IgnoreActorId, OutResult);
+    }
+
+    PendingQueryStart          = Start;
+    PendingQueryDir            = RayDir;
+    PendingQueryMaxDist        = MaxDist;
+    PendingQueryTraceChannel   = TraceChannel;
+    PendingQueryObjectTypeMask = ObjectTypeMask;
+    PendingQueryIgnoreActorId  = IgnoreActorId;
+    bPendingQueryObjectTypes   = bObjectTypes;
+    bPendingQueryHit           = false;
+    PendingQueryResult         = FPhysicsRaycastResult();
+    bPhysicsQueryCompleted     = false;
+    bPhysicsQueryPending       = true;
+    PhysicsThreadCv.notify_one();
+
+    PhysicsThreadDoneCv.wait(
+        Lock,
+        [this]()
+        {
+            return bPhysicsQueryCompleted;
+        }
+    );
+
+    OutResult              = PendingQueryResult;
+    const bool bHit        = bPendingQueryHit;
+    bPhysicsQueryCompleted = false;
+    return bHit;
+}
+
+bool FPhysXPhysicsScene::ExecuteRaycast_PhysicsThread(
+    const FVector&         Start,
+    const FVector&         Dir,
+    float                  MaxDist,
+    ECollisionChannel      TraceChannel,
+    uint32                 IgnoreActorId,
+    FPhysicsRaycastResult& OutResult
+) const
+{
+    OutResult = FPhysicsRaycastResult();
     if (!Scene || MaxDist <= 0.0f)
     {
         return false;
@@ -1861,7 +2008,6 @@ bool FPhysXPhysicsScene::Raycast(
         }
     };
 
-    const uint32          IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
     FChannelRaycastFilter FilterCallback(IgnoreActorId, TraceChannel);
 
     PxRaycastBuffer Hit;
@@ -1884,39 +2030,38 @@ bool FPhysXPhysicsScene::Raycast(
         return false;
     }
 
-    const PxRaycastHit&   Block = Hit.block;
-    FPhysicsRaycastResult PhysicsResult;
-    PhysicsResult.bBlockingHit = true;
-    PhysicsResult.Distance     = Block.distance;
-    PhysicsResult.Location     = ToFVector(Block.position);
-    PhysicsResult.ImpactPoint  = PhysicsResult.Location;
-    PhysicsResult.ImpactNormal = ToFVector(Block.normal);
-    PhysicsResult.Normal       = PhysicsResult.ImpactNormal;
+    const PxRaycastHit& Block = Hit.block;
+    OutResult.bBlockingHit    = true;
+    OutResult.Distance        = Block.distance;
+    OutResult.Location        = ToFVector(Block.position);
+    OutResult.ImpactPoint     = OutResult.Location;
+    OutResult.ImpactNormal    = ToFVector(Block.normal);
+    OutResult.Normal          = OutResult.ImpactNormal;
 
     if (Block.shape)
     {
-        PhysicsResult.HitComponentId = GetComponentIdFromShape(Block.shape);
-        PhysicsResult.HitActorId     = GetActorIdFromShape(Block.shape);
-        PhysicsResult.HitGeneration  = GetComponentGenerationFromShape(Block.shape);
+        OutResult.HitComponentId = GetComponentIdFromShape(Block.shape);
+        OutResult.HitActorId     = GetActorIdFromShape(Block.shape);
+        OutResult.HitGeneration  = GetComponentGenerationFromShape(Block.shape);
     }
-    if (PhysicsResult.HitActorId == 0 && Block.actor)
+    if (OutResult.HitActorId == 0 && Block.actor)
     {
-        PhysicsResult.HitActorId = GetActorIdFromActor(Block.actor);
+        OutResult.HitActorId = GetActorIdFromActor(Block.actor);
     }
 
-    return ResolveRaycastResult_GameThread(PhysicsResult, OutHit);
+    return OutResult.bBlockingHit;
 }
 
-bool FPhysXPhysicsScene::RaycastByObjectTypes(
-    const FVector& Start,
-    const FVector& Dir,
-    float MaxDist,
-    FHitResult& OutHit,
-    uint32 ObjectTypeMask,
-    const AActor* IgnoreActor
+bool FPhysXPhysicsScene::ExecuteRaycastByObjectTypes_PhysicsThread(
+    const FVector&         Start,
+    const FVector&         Dir,
+    float                  MaxDist,
+    uint32                 ObjectTypeMask,
+    uint32                 IgnoreActorId,
+    FPhysicsRaycastResult& OutResult
 ) const
 {
-    OutHit = FHitResult();
+    OutResult = FPhysicsRaycastResult();
     if (!Scene || ObjectTypeMask == 0 || MaxDist <= 0.0f)
     {
         return false;
@@ -1977,7 +2122,6 @@ bool FPhysXPhysicsScene::RaycastByObjectTypes(
         }
     };
 
-    const uint32             IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
     FObjectTypeRaycastFilter FilterCallback(IgnoreActorId, ObjectTypeMask);
 
     PxRaycastBuffer Hit;
@@ -2000,24 +2144,65 @@ bool FPhysXPhysicsScene::RaycastByObjectTypes(
         return false;
     }
 
-    const PxRaycastHit&   Block = Hit.block;
-    FPhysicsRaycastResult PhysicsResult;
-    PhysicsResult.bBlockingHit = true;
-    PhysicsResult.Distance     = Block.distance;
-    PhysicsResult.Location     = ToFVector(Block.position);
-    PhysicsResult.ImpactPoint  = PhysicsResult.Location;
-    PhysicsResult.ImpactNormal = ToFVector(Block.normal);
-    PhysicsResult.Normal       = PhysicsResult.ImpactNormal;
+    const PxRaycastHit& Block = Hit.block;
+    OutResult.bBlockingHit    = true;
+    OutResult.Distance        = Block.distance;
+    OutResult.Location        = ToFVector(Block.position);
+    OutResult.ImpactPoint     = OutResult.Location;
+    OutResult.ImpactNormal    = ToFVector(Block.normal);
+    OutResult.Normal          = OutResult.ImpactNormal;
 
     if (Block.shape)
     {
-        PhysicsResult.HitComponentId = GetComponentIdFromShape(Block.shape);
-        PhysicsResult.HitActorId     = GetActorIdFromShape(Block.shape);
-        PhysicsResult.HitGeneration  = GetComponentGenerationFromShape(Block.shape);
+        OutResult.HitComponentId = GetComponentIdFromShape(Block.shape);
+        OutResult.HitActorId     = GetActorIdFromShape(Block.shape);
+        OutResult.HitGeneration  = GetComponentGenerationFromShape(Block.shape);
     }
-    if (PhysicsResult.HitActorId == 0 && Block.actor)
+    if (OutResult.HitActorId == 0 && Block.actor)
     {
-        PhysicsResult.HitActorId = GetActorIdFromActor(Block.actor);
+        OutResult.HitActorId = GetActorIdFromActor(Block.actor);
+    }
+
+    return OutResult.bBlockingHit;
+}
+
+bool FPhysXPhysicsScene::Raycast(
+    const FVector&    Start,
+    const FVector&    Dir,
+    float             MaxDist,
+    FHitResult&       OutHit,
+    ECollisionChannel TraceChannel,
+    const AActor*     IgnoreActor
+) const
+{
+    OutHit                     = FHitResult();
+    const uint32 IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
+
+    FPhysicsRaycastResult PhysicsResult;
+    if (!SubmitRaycastQuery_GameThread(false, Start, Dir, MaxDist, TraceChannel, 0, IgnoreActorId, PhysicsResult))
+    {
+        return false;
+    }
+
+    return ResolveRaycastResult_GameThread(PhysicsResult, OutHit);
+}
+
+bool FPhysXPhysicsScene::RaycastByObjectTypes(
+    const FVector& Start,
+    const FVector& Dir,
+    float          MaxDist,
+    FHitResult&    OutHit,
+    uint32         ObjectTypeMask,
+    const AActor*  IgnoreActor
+) const
+{
+    OutHit                     = FHitResult();
+    const uint32 IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
+
+    FPhysicsRaycastResult PhysicsResult;
+    if (!SubmitRaycastQuery_GameThread(true, Start, Dir, MaxDist, ECollisionChannel::WorldStatic, ObjectTypeMask, IgnoreActorId, PhysicsResult))
+    {
+        return false;
     }
 
     return ResolveRaycastResult_GameThread(PhysicsResult, OutHit);

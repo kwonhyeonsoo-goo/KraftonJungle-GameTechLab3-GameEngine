@@ -8,6 +8,7 @@
 enum class EPhysicsCommandType : uint8
 {
     CreateBody,
+    CreateConstraint,
     UnregisterComponent,
     RebuildComponentBody,
 
@@ -59,10 +60,12 @@ struct FPhysicsCommand
     FPhysicsObjectKey Object;
 
     FPhysicsBodyHandle       Body;
+    FPhysicsBodyHandle       ChildBody;
     FPhysicsShapeHandle      Shape;
     FPhysicsConstraintHandle Constraint;
 
     FPhysicsBodyCreatePayload CreateBody;
+    FConstraintCreationDesc   ConstraintDesc;
 
     FTransform TransformValue;
     FVector    VectorValue  = FVector::ZeroVector;

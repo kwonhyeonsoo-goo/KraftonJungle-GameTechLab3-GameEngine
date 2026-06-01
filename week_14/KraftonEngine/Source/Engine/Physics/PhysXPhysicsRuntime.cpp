@@ -410,8 +410,22 @@ void FPhysXPhysicsRuntime::UnregisterComponent_Internal(const FPhysicsObjectKey&
         return;
     }
 
+    auto ShapeIt = ComponentToShape.find(Object.ComponentId);
+    if (ShapeIt == ComponentToShape.end())
+    {
+        return;
+    }
+
+    FShapeInstance* Shape = ResolveShape(ShapeIt->second);
+    if (!Shape ||
+        Shape->SourceComponentId != Object.ComponentId ||
+        Shape->SourceComponentGeneration != Object.ComponentGeneration)
+    {
+        return;
+    }
+
     const FPhysicsBodyHandle BodyHandle = BodyIt->second;
-    DetachShapeForComponentId(Object.ComponentId);
+    DetachShape(ShapeIt->second);
     ComponentToBody.erase(Object.ComponentId);
 
     FActorCompoundBody* Compound = FindCompoundByActorId(Object.ActorId);
@@ -591,9 +605,10 @@ void FPhysXPhysicsRuntime::DestroyRigidBody_Internal(FPhysicsBodyHandle BodyHand
 }
 
 FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateConstraint_Internal(
-    FPhysicsBodyHandle Parent,
-    FPhysicsBodyHandle Child,
-    const FConstraintCreationDesc& Desc
+    FPhysicsBodyHandle             Parent,
+    FPhysicsBodyHandle             Child,
+    const FConstraintCreationDesc& Desc,
+    FPhysicsConstraintHandle       ReservedConstraint
 )
 {
     FBodyInstance* ParentBody = ResolveBody(Parent);
@@ -601,6 +616,10 @@ FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateConstraint_Internal(
 
     if (!ParentBody || !ChildBody || !ParentBody->Actor || !ChildBody->Actor)
     {
+        if (ReservedConstraint.IsValid())
+        {
+            FreeConstraint(ReservedConstraint);
+        }
         return {};
     }
 
@@ -613,14 +632,22 @@ FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateConstraint_Internal(
 
     if (!Joint)
     {
+        if (ReservedConstraint.IsValid())
+        {
+            FreeConstraint(ReservedConstraint);
+        }
         return {};
     }
 
-    FPhysicsConstraintHandle Handle = AllocateConstraint();
-    FConstraintInstance* Constraint = ResolveConstraint(Handle);
+    FPhysicsConstraintHandle Handle     = ReservedConstraint.IsValid() ? ReservedConstraint : AllocateConstraint();
+    FConstraintInstance*     Constraint = ResolveConstraint(Handle);
     if (!Constraint)
     {
         Joint->release();
+        if (ReservedConstraint.IsValid())
+        {
+            FreeConstraint(ReservedConstraint);
+        }
         return {};
     }
 
@@ -673,14 +700,62 @@ void FPhysXPhysicsRuntime::DestroyConstraint_Internal(FPhysicsConstraintHandle H
 
 FPhysicsBodyHandle FPhysXPhysicsRuntime::CreateRigidBody(const FBodyCreationDesc& Desc)
 {
-    std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
     if (!Scene)
     {
         return {};
     }
 
-    PxSceneWriteLock WriteLock(*Scene);
-    return CreateRigidBody_Internal(Desc);
+    FBodyCreationDesc LocalDesc = Desc;
+    if (!LocalDesc.ReservedBody.IsValid())
+    {
+        std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
+        LocalDesc.ReservedBody = AllocateBody();
+    }
+
+    if (!LocalDesc.ReservedBody.IsValid())
+    {
+        return {};
+    }
+
+    FPhysicsBodyCreatePayload Payload;
+    Payload.ReservedBody                  = LocalDesc.ReservedBody;
+    Payload.ReservedShape                 = LocalDesc.ReservedShape;
+    Payload.BodyOwner.ActorId             = LocalDesc.OwnerActorId;
+    Payload.BodyOwner.ComponentId         = LocalDesc.OwnerComponentId;
+    Payload.BodyOwner.ComponentGeneration = LocalDesc.OwnerComponentGeneration;
+    Payload.BodyOwner.BoneName            = LocalDesc.BoneName;
+    Payload.BodyOwner.Domain              = LocalDesc.Domain;
+    Payload.ShapeOwner                    = Payload.BodyOwner;
+    Payload.BodyType                      = LocalDesc.BodyType;
+    Payload.SyncMode                      = LocalDesc.SyncMode;
+    Payload.WorldTransform                = LocalDesc.WorldTransform;
+    Payload.Shapes                        = LocalDesc.Shapes;
+    Payload.Mass                          = LocalDesc.Mass;
+    Payload.CenterOfMassLocalOffset       = LocalDesc.CenterOfMassLocalOffset;
+    Payload.LinearDamping                 = LocalDesc.LinearDamping;
+    Payload.AngularDamping                = LocalDesc.AngularDamping;
+    Payload.MaxAngularVelocity            = LocalDesc.MaxAngularVelocity;
+    Payload.PositionSolverIterationCount  = LocalDesc.PositionSolverIterationCount;
+    Payload.VelocitySolverIterationCount  = LocalDesc.VelocitySolverIterationCount;
+    Payload.bLockLinearX                  = LocalDesc.bLockLinearX;
+    Payload.bLockLinearY                  = LocalDesc.bLockLinearY;
+    Payload.bLockLinearZ                  = LocalDesc.bLockLinearZ;
+    Payload.bLockAngularX                 = LocalDesc.bLockAngularX;
+    Payload.bLockAngularY                 = LocalDesc.bLockAngularY;
+    Payload.bLockAngularZ                 = LocalDesc.bLockAngularZ;
+    Payload.bEnableGravity                = LocalDesc.bEnableGravity;
+    Payload.bEnableCCD                    = LocalDesc.bEnableCCD;
+    Payload.bGenerateHitEvents            = LocalDesc.bGenerateHitEvents;
+    Payload.bGenerateOverlapEvents        = LocalDesc.bGenerateOverlapEvents;
+
+    FPhysicsCommand Cmd;
+    Cmd.Type       = EPhysicsCommandType::CreateBody;
+    Cmd.Object     = Payload.BodyOwner;
+    Cmd.Body       = Payload.ReservedBody;
+    Cmd.Shape      = Payload.ReservedShape;
+    Cmd.CreateBody = Payload;
+    EnqueueCommand(Cmd);
+    return LocalDesc.ReservedBody;
 }
 
 void FPhysXPhysicsRuntime::DestroyRigidBody(FPhysicsBodyHandle BodyHandle)
@@ -697,14 +772,30 @@ FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateConstraint(
     const FConstraintCreationDesc& Desc
 )
 {
-    std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
-    if (!Scene)
+    if (!Scene || !Parent.IsValid() || !Child.IsValid())
     {
         return {};
     }
 
-    PxSceneWriteLock WriteLock(*Scene);
-    return CreateConstraint_Internal(Parent, Child, Desc);
+    FPhysicsConstraintHandle ReservedConstraint;
+    {
+        std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
+        ReservedConstraint = AllocateConstraint();
+    }
+
+    if (!ReservedConstraint.IsValid())
+    {
+        return {};
+    }
+
+    FPhysicsCommand Cmd;
+    Cmd.Type           = EPhysicsCommandType::CreateConstraint;
+    Cmd.Body           = Parent;
+    Cmd.ChildBody      = Child;
+    Cmd.Constraint     = ReservedConstraint;
+    Cmd.ConstraintDesc = Desc;
+    EnqueueCommand(Cmd);
+    return ReservedConstraint;
 }
 
 FPhysicsConstraintHandle FPhysXPhysicsRuntime::CreateFixedJoint(
@@ -1737,7 +1828,18 @@ int32 FPhysXPhysicsRuntime::ApplyPendingCommands()
         switch (Command.Type)
         {
         case EPhysicsCommandType::CreateBody:
-            RegisterComponent_Internal(Command.CreateBody);
+            if (Command.CreateBody.BodyOwner.Domain == EPhysicsBodyDomain::ActorComponent &&
+                Command.CreateBody.ShapeOwner.Domain == EPhysicsBodyDomain::ActorComponent)
+            {
+                RegisterComponent_Internal(Command.CreateBody);
+            }
+            else
+            {
+                CreateRigidBody_Internal(ToBodyCreationDesc(Command.CreateBody));
+            }
+            break;
+        case EPhysicsCommandType::CreateConstraint:
+            CreateConstraint_Internal(Command.Body, Command.ChildBody, Command.ConstraintDesc, Command.Constraint);
             break;
         case EPhysicsCommandType::UnregisterComponent:
             UnregisterComponent_Internal(Command.Object);

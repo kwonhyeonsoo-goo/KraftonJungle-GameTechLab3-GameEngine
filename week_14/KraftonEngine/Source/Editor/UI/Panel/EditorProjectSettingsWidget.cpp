@@ -90,27 +90,18 @@ void EditorProjectSettingsWidget::Render()
 
     if (ImGui::CollapsingHeader("Physics", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        ImGui::Checkbox("Async Physicsframe latency)", &PS.Physics.bAsyncPhysics);
+        ImGui::Checkbox("Async Physics", &PS.Physics.bAsyncPhysics);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("ON: 1-frame latency, full overlap with render.\nOFF: wait for physics before render.");
 
         float fixedHz = 1.0f / PS.Physics.FixedTimeStep;
         if (ImGui::SliderFloat("Fixed Step Hz", &fixedHz, 15.0f, 240.0f, "%.0f"))
-        {
             PS.Physics.FixedTimeStep = 1.0f / fixedHz;
-        }
 
         ImGui::SliderInt("Max Substeps", &PS.Physics.MaxSubsteps, 1, 32);
         ImGui::SliderInt("Worker Threads", &PS.Physics.WorkerThreadCount, 0, 32);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("0 = auto (hardware_concurrency - 1)");
 
-        ImGui::Checkbox("CCD", &PS.Physics.bEnableCCD);
-        ImGui::SameLine();
-        ImGui::Checkbox("Collision Events", &PS.Physics.bDispatchCollisionEvents);
-        ImGui::SameLine();
-        ImGui::Checkbox("Trigger Events", &PS.Physics.bDispatchTriggerEvents);
-
-        ImGui::Checkbox("Debug Snapshot", &PS.Physics.bBuildDebugSnapshot);
-
-        ImGui::TextDisabled("Changes take effect on next scene load.");
+        ImGui::TextDisabled("Hz/Substeps/Threads require scene reload.");
     }
 
 	if (ImGui::CollapsingHeader("Shadow", ImGuiTreeNodeFlags_DefaultOpen))
