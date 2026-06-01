@@ -523,7 +523,7 @@ void FPhysicsAssetEditorWidget::RenderEmbedded(UPhysicsAsset* PhysicsAsset, USke
     RenderDocument(DeltaTime);
 }
 
-void FPhysicsAssetEditorWidget::RenderEmbeddedTreeAndGraph(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime)
+void FPhysicsAssetEditorWidget::RenderEmbeddedToolbar(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime)
 {
     (void)DeltaTime;
     if (!PrepareEmbeddedRender(PhysicsAsset, PreviewMesh))
@@ -533,7 +533,17 @@ void FPhysicsAssetEditorWidget::RenderEmbeddedTreeAndGraph(UPhysicsAsset* Physic
 
     ClampSelection(PhysicsAsset);
     RenderToolbar(PhysicsAsset);
-    ImGui::Separator();
+}
+
+void FPhysicsAssetEditorWidget::RenderEmbeddedTreeAndGraph(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime)
+{
+    (void)DeltaTime;
+    if (!PrepareEmbeddedRender(PhysicsAsset, PreviewMesh))
+    {
+        return;
+    }
+
+    ClampSelection(PhysicsAsset);
     RenderTreeAndGraphPanel(PhysicsAsset);
 }
 
@@ -643,12 +653,9 @@ bool FPhysicsAssetEditorWidget::PrepareEmbeddedRender(UPhysicsAsset* PhysicsAsse
 
 void FPhysicsAssetEditorWidget::RenderTreeAndGraphPanel(UPhysicsAsset* PhysicsAsset)
 {
-    RenderAssetSummary(PhysicsAsset);
-    ImGui::Separator();
-
     const float AvailableHeight = ImGui::GetContentRegionAvail().y;
-    const float GraphHeight = (std::max)(180.0f, AvailableHeight * 0.38f);
-    const float TreeHeight = (std::max)(180.0f, AvailableHeight - GraphHeight - ImGui::GetStyle().ItemSpacing.y - 4.0f);
+    const float GraphHeight = (std::max)(200.0f, AvailableHeight * 0.44f);
+    const float TreeHeight = (std::max)(160.0f, AvailableHeight - GraphHeight - ImGui::GetStyle().ItemSpacing.y - 4.0f);
 
     ImGui::BeginChild("##PhysicsAssetTreeArea", ImVec2(0.0f, TreeHeight), false);
     if (PreviewSkeletalMesh && PreviewSkeletalMesh->GetSkeleton())
@@ -687,11 +694,10 @@ void FPhysicsAssetEditorWidget::RenderToolbar(UPhysicsAsset* PhysicsAsset)
     if (!bCanSave) ImGui::EndDisabled();
 
     ImGui::SameLine();
-    if (ImGui::Button("Validate", ImVec2(86.0f, 0.0f))) RunValidation(PhysicsAsset);
-    ImGui::SameLine();
-    ImGui::TextDisabled("Create Body/Constraint from the Skeleton Physics Tree or Constraint Graph.");
-    ImGui::SameLine();
-    ImGui::TextDisabled("%s", bCanSave ? PhysicsAsset->GetAssetPathFileName().c_str() : "Unsaved PhysicsAsset");
+    if (ImGui::Button("Validate", ImVec2(86.0f, 0.0f)))
+    {
+        RunValidation(PhysicsAsset);
+    }
 }
 
 void FPhysicsAssetEditorWidget::RenderAssetSummary(UPhysicsAsset* PhysicsAsset)
@@ -715,7 +721,11 @@ void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* Physics
 
     const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
     ImGui::TextUnformatted("Skeleton Physics Tree");
-    ImGui::TextDisabled("Select or right-click a bone. Bodies and parent joints are shown under each bone.");
+    ImGui::TextDisabled(
+        "Bones: %d  Bodies: %d  Constraints: %d",
+        RefSkeleton.GetNumBones(),
+        static_cast<int32>(PhysicsAsset->GetBodySetups().size()),
+        static_cast<int32>(PhysicsAsset->GetConstraintSetups().size()));
 
     constexpr float ActionPanelHeight = 92.0f;
     const float TreeHeight = (std::max)(160.0f, ImGui::GetContentRegionAvail().y - ActionPanelHeight - ImGui::GetStyle().ItemSpacing.y);
