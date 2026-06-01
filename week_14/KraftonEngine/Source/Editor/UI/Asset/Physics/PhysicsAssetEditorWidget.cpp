@@ -866,7 +866,9 @@ void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* Physics
     }
 
     const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+	ImGui::SetWindowFontScale(1.5f);
     ImGui::TextUnformatted("Skeleton Physics Tree");
+	ImGui::SetWindowFontScale(1.0f);
     ImGui::TextDisabled(
         "Bones: %d  Bodies: %d  Constraints: %d",
         RefSkeleton.GetNumBones(),
@@ -1209,7 +1211,9 @@ void FPhysicsAssetEditorWidget::RenderUnboundPhysicsSetups(UPhysicsAsset* Physic
 
 void FPhysicsAssetEditorWidget::RenderBodyList(UPhysicsAsset* PhysicsAsset)
 {
+	ImGui::SetWindowFontScale(1.5f);
     ImGui::TextUnformatted("Bodies");
+	ImGui::SetWindowFontScale(1.0f);
     ImGui::Separator();
     ImGui::BeginChild("PhysicsAssetBodyTree", ImVec2(0.0f, 150.0f), true);
     const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
@@ -1298,7 +1302,9 @@ void FPhysicsAssetEditorWidget::DestroyConstraintGraphEditor()
 
 void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* PhysicsAsset)
 {
+	ImGui::SetWindowFontScale(1.5f);
     ImGui::TextUnformatted("Constraint Graph");
+	ImGui::SetWindowFontScale(1.0f);
 
     if (!PhysicsAsset)
     {
@@ -1587,15 +1593,20 @@ void FPhysicsAssetEditorWidget::RenderDetailsPanel(UPhysicsAsset* PhysicsAsset)
 {
     if (SelectedBodyIndex >= 0 && SelectedBodyIndex < static_cast<int32>(PhysicsAsset->GetMutableBodySetups().size()))
     {
+		ImGui::SetWindowFontScale(1.5f);
         ImGui::TextUnformatted("Body Details");
+		ImGui::SetWindowFontScale(1.0f);
+		ImGui::Separator();
         RenderBodyDetails(PhysicsAsset, PhysicsAsset->GetMutableBodySetups()[SelectedBodyIndex]);
         return;
     }
 
     if (SelectedConstraintIndex >= 0 && SelectedConstraintIndex < static_cast<int32>(PhysicsAsset->GetMutableConstraintSetups().size()))
     {
-        ImGui::TextUnformatted("Constraint Details");
-        RenderConstraintDetails(PhysicsAsset, PhysicsAsset->GetMutableConstraintSetups()[SelectedConstraintIndex]);
+		ImGui::SetWindowFontScale(1.5f);
+		ImGui::TextUnformatted("Constraint Details");
+		ImGui::SetWindowFontScale(1.0f);
+		RenderConstraintDetails(PhysicsAsset, PhysicsAsset->GetMutableConstraintSetups()[SelectedConstraintIndex]);
         return;
     }
 
@@ -1724,41 +1735,59 @@ void FPhysicsAssetEditorWidget::RenderBodyDetails(UPhysicsAsset* PhysicsAsset, F
     bChanged |= ImGui::Checkbox("Enable CCD", &Body.bEnableCCD);
     bChanged |= ImGui::Checkbox("Enable Gravity", &Body.bEnableGravity);
 
-    if (ImGui::TreeNodeEx("Locks", ImGuiTreeNodeFlags_DefaultOpen))
-    {
-        bChanged |= ImGui::Checkbox("Lock Linear X", &Body.bLockLinearX); ImGui::SameLine();
-        bChanged |= ImGui::Checkbox("Lock Linear Y", &Body.bLockLinearY); ImGui::SameLine();
-        bChanged |= ImGui::Checkbox("Lock Linear Z", &Body.bLockLinearZ);
-        bChanged |= ImGui::Checkbox("Lock Angular X", &Body.bLockAngularX); ImGui::SameLine();
-        bChanged |= ImGui::Checkbox("Lock Angular Y", &Body.bLockAngularY); ImGui::SameLine();
-        bChanged |= ImGui::Checkbox("Lock Angular Z", &Body.bLockAngularZ);
-        ImGui::TreePop();
-    }
+	if (ImGui::TreeNodeEx("Locks", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		if (ImGui::BeginTable("##BodyLocks", 3, ImGuiTableFlags_SizingStretchSame))
+		{
+			ImGui::TableNextRow();
+			ImGui::TableSetColumnIndex(0);
+			bChanged |= ImGui::Checkbox("Lock Linear X", &Body.bLockLinearX);
+			ImGui::TableSetColumnIndex(1);
+			bChanged |= ImGui::Checkbox("Lock Linear Y", &Body.bLockLinearY);
+			ImGui::TableSetColumnIndex(2);
+			bChanged |= ImGui::Checkbox("Lock Linear Z", &Body.bLockLinearZ);
+
+			ImGui::TableNextRow();
+			ImGui::TableSetColumnIndex(0);
+			bChanged |= ImGui::Checkbox("Lock Angular X", &Body.bLockAngularX);
+			ImGui::TableSetColumnIndex(1);
+			bChanged |= ImGui::Checkbox("Lock Angular Y", &Body.bLockAngularY);
+			ImGui::TableSetColumnIndex(2);
+			bChanged |= ImGui::Checkbox("Lock Angular Z", &Body.bLockAngularZ);
+
+			ImGui::EndTable();
+		}
+		ImGui::TreePop();
+	}
 
     ImGui::Separator();
+	ImGui::SetWindowFontScale(1.5f);
     ImGui::TextUnformatted("Shapes");
-    for (int32 i = 0; i < static_cast<int32>(Body.Shapes.size()); ++i)
+	ImGui::SetWindowFontScale(1.0f);
+    ImGui::Separator();
+    
+	if (ImGui::Button("Add Shape"))
+	{
+		AddDefaultShape(Body);
+		bChanged = true;
+	}
+	ImGui::SameLine();
+	const bool bCanRemoveShape = SelectedShapeIndex >= 0 && SelectedShapeIndex < static_cast<int32>(Body.Shapes.size());
+	if (!bCanRemoveShape) ImGui::BeginDisabled();
+	if (ImGui::Button("Remove Shape"))
+	{
+		Body.Shapes.erase(Body.Shapes.begin() + SelectedShapeIndex);
+		SelectedShapeIndex = Body.Shapes.empty() ? -1 : (std::min)(SelectedShapeIndex, static_cast<int32>(Body.Shapes.size()) - 1);
+		bChanged = true;
+	}
+	if (!bCanRemoveShape) ImGui::EndDisabled();
+
+	for (int32 i = 0; i < static_cast<int32>(Body.Shapes.size()); ++i)
     {
         char Label[96] = {};
         std::snprintf(Label, sizeof(Label), "%d: %s", i, ShapeTypeText(Body.Shapes[i].Type));
         if (ImGui::Selectable(Label, SelectedShapeIndex == i)) SelectedShapeIndex = i;
     }
-
-    if (ImGui::Button("Add Shape"))
-    {
-        AddDefaultShape(Body);
-        bChanged = true;
-    }
-    ImGui::SameLine();
-    const bool bCanRemoveShape = SelectedShapeIndex >= 0 && SelectedShapeIndex < static_cast<int32>(Body.Shapes.size());
-    if (!bCanRemoveShape) ImGui::BeginDisabled();
-    if (ImGui::Button("Remove Shape"))
-    {
-        Body.Shapes.erase(Body.Shapes.begin() + SelectedShapeIndex);
-        SelectedShapeIndex = Body.Shapes.empty() ? -1 : (std::min)(SelectedShapeIndex, static_cast<int32>(Body.Shapes.size()) - 1);
-        bChanged = true;
-    }
-    if (!bCanRemoveShape) ImGui::EndDisabled();
 
     if (SelectedShapeIndex >= 0 && SelectedShapeIndex < static_cast<int32>(Body.Shapes.size()))
     {
