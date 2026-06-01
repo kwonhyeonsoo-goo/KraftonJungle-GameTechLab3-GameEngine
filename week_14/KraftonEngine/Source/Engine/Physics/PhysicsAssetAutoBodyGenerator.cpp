@@ -1,4 +1,4 @@
-#include "Physics/PhysicsAssetAutoBodyGenerator.h"
+﻿#include "Physics/PhysicsAssetAutoBodyGenerator.h"
 
 #include "Animation/Skeleton/Skeleton.h"
 #include "Animation/Skeleton/SkeletonTypes.h"
@@ -478,7 +478,7 @@ namespace
         OutBodyComponentTransform = ComposeComponentTransforms(BoneComponentTransform, BodySetup.BodyLocalFrame);
         return true;
     }
-}
+} //namespace 실화?
 
 bool FPhysicsAssetAutoBodyGenerator::Regenerate(
     UPhysicsAsset* PhysicsAsset,

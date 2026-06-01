@@ -858,6 +858,8 @@ void FPhysicsAssetEditorWidget::RenderToolbar(UPhysicsAsset* PhysicsAsset)
 
 void FPhysicsAssetEditorWidget::RenderRegenerateBodiesControls(UPhysicsAsset* PhysicsAsset)
 {
+    constexpr const char* RegenerateBodiesPopupName = "Regenerate Bodies Options";
+
     const bool bCanRegenerate = PhysicsAsset &&
         PreviewSkeletalMesh &&
         PreviewSkeletalMesh->GetSkeleton() &&
@@ -866,7 +868,7 @@ void FPhysicsAssetEditorWidget::RenderRegenerateBodiesControls(UPhysicsAsset* Ph
     if (!bCanRegenerate) ImGui::BeginDisabled();
     if (ImGui::Button("Regenerate Bodies", ImVec2(150.0f, 0.0f)))
     {
-        RegenerateBodies(PhysicsAsset, PreviewSkeletalMesh);
+        ImGui::OpenPopup(RegenerateBodiesPopupName);
     }
     if (ImGui::IsItemHovered())
     {
@@ -874,60 +876,89 @@ void FPhysicsAssetEditorWidget::RenderRegenerateBodiesControls(UPhysicsAsset* Ph
     }
     if (!bCanRegenerate) ImGui::EndDisabled();
 
-    ImGui::SameLine();
-    if (ImGui::Checkbox("Use PCA Analysis", &bRegenerateUsePCAAnalysis))
+    ImGui::SetNextWindowSize(ImVec2(360.0f, 0.0f), ImGuiCond_Appearing);
+    if (ImGui::BeginPopupModal(RegenerateBodiesPopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        if (bRegenerateUsePCAAnalysis)
+        ImGui::TextUnformatted("Regenerate physics bodies from the preview skeletal mesh.");
+        ImGui::Separator();
+
+        if (ImGui::Checkbox("Use PCA Analysis", &bRegenerateUsePCAAnalysis))
         {
-            bRegenerateUseBoneAxis = false;
+            if (bRegenerateUsePCAAnalysis)
+            {
+                bRegenerateUseBoneAxis = false;
+            }
         }
-    }
-    if (ImGui::IsItemHovered())
-    {
-        ImGui::SetTooltip("Fit each capsule to dominant skinned vertices with principal component analysis. Falls back to bone axis when too few vertices are available.");
-    }
-
-    ImGui::SameLine();
-    if (ImGui::Checkbox("Use Bone Axis", &bRegenerateUseBoneAxis))
-    {
-        if (bRegenerateUseBoneAxis)
+        if (ImGui::IsItemHovered())
         {
-            bRegenerateUsePCAAnalysis = false;
+            ImGui::SetTooltip("Fit each capsule to dominant skinned vertices with principal component analysis. Falls back to bone axis when too few vertices are available.");
         }
-    }
-    if (ImGui::IsItemHovered())
-    {
-        ImGui::SetTooltip("Use the bone-to-child direction as the generated capsule axis. This is the common simple bone-axis fitting mode.");
-    }
 
-    if (!bRegenerateUsePCAAnalysis && !bRegenerateUseBoneAxis)
-    {
-        bRegenerateUseBoneAxis = true;
-    }
+        if (ImGui::Checkbox("Use Bone Axis", &bRegenerateUseBoneAxis))
+        {
+            if (bRegenerateUseBoneAxis)
+            {
+                bRegenerateUsePCAAnalysis = false;
+            }
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Use the bone-to-child direction as the generated capsule axis. This is the common simple bone-axis fitting mode.");
+        }
 
-    ImGui::SameLine();
-    ImGui::Checkbox("Constraints", &bRegenerateCreateConstraints);
-    if (ImGui::IsItemHovered())
-    {
-        ImGui::SetTooltip("Create parent-child constraints between the generated bodies.");
-    }
+        if (!bRegenerateUsePCAAnalysis && !bRegenerateUseBoneAxis)
+        {
+            bRegenerateUseBoneAxis = true;
+        }
 
-    ImGui::SameLine();
-    ImGui::Checkbox("Replace", &bRegenerateReplaceExisting);
-    if (ImGui::IsItemHovered())
-    {
-        ImGui::SetTooltip("Clear existing bodies and constraints before regeneration. Disable this to fill only missing bodies.");
-    }
+        ImGui::Checkbox("Constraints", &bRegenerateCreateConstraints);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Create parent-child constraints between the generated bodies.");
+        }
 
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(52.0f);
-    if (ImGui::InputFloat("Min Weight", &RegenerateMinInfluenceWeight, 0.0f, 0.0f, "%.2f"))
-    {
-        RegenerateMinInfluenceWeight = (std::min)((std::max)(RegenerateMinInfluenceWeight, 0.0f), 1.0f);
-    }
-    if (ImGui::IsItemHovered())
-    {
-        ImGui::SetTooltip("Minimum dominant skin weight required for a vertex to be used by the selected bone.");
+        ImGui::Checkbox("Replace", &bRegenerateReplaceExisting);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Clear existing bodies and constraints before regeneration. Disable this to fill only missing bodies.");
+        }
+
+        ImGui::SetNextItemWidth(120.0f);
+        if (ImGui::InputFloat("Min Weight", &RegenerateMinInfluenceWeight, 0.0f, 0.0f, "%.2f"))
+        {
+            RegenerateMinInfluenceWeight = (std::min)((std::max)(RegenerateMinInfluenceWeight, 0.0f), 1.0f);
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Minimum dominant skin weight required for a vertex to be used by the selected bone.");
+        }
+
+        ImGui::SetNextItemWidth(120.0f);
+        if (ImGui::InputInt("Min Vertices", &RegenerateMinWeightedVertices))
+        {
+            RegenerateMinWeightedVertices = (std::max)(RegenerateMinWeightedVertices, 1);
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Minimum weighted vertices required before generating a body for a bone.");
+        }
+
+        ImGui::Separator();
+        if (!bCanRegenerate) ImGui::BeginDisabled();
+        if (ImGui::Button("Regenerate", ImVec2(110.0f, 0.0f)))
+        {
+            RegenerateBodies(PhysicsAsset, PreviewSkeletalMesh);
+            ImGui::CloseCurrentPopup();
+        }
+        if (!bCanRegenerate) ImGui::EndDisabled();
+
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(90.0f, 0.0f)))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
     }
 }
 
