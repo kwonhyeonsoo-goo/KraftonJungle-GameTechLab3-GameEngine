@@ -1334,8 +1334,6 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 	ImGui::BeginChild("PhysicsAssetTreeAndGraphPanel", ImVec2(PhysicsPanelWidth, 0), true);
 	if (PhysicsAsset)
 	{
-		ImGui::TextDisabled("Assigned: %s", PhysicsAsset->GetAssetPathFileName().c_str());
-		ImGui::Separator();
 		PhysicsAssetEditor.RenderEmbeddedTreeAndGraph(PhysicsAsset, SkeletalMesh, 0.0f);
 	}
 	else

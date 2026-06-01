@@ -31,6 +31,7 @@ public:
     void OpenEmbedded(UPhysicsAsset* PhysicsAsset);
     void RenderEmbedded(UPhysicsAsset* PhysicsAsset, float DeltaTime);
     void RenderEmbedded(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime);
+    void RenderEmbeddedToolbar(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime);
     void RenderEmbeddedTreeAndGraph(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime);
     void RenderEmbeddedDetails(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime);
     bool SaveEditedPhysicsAsset();
