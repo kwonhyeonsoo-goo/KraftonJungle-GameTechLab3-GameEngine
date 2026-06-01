@@ -8,12 +8,12 @@
 #include "Physics/PhysicsShapeInstance.h"
 #include "Physics/PhysicsStats.h"
 #include "Physics/PhysicsWorldSnapshot.h"
-#include "Physics/PhysXVehicleInstance.h"
 
 #include <memory>
 #include <mutex>
 
 class UWorld;
+class FPhysXVehicleRuntime;
 
 namespace physx
 {
@@ -39,8 +39,8 @@ struct FActorCompoundBody
 class FPhysXPhysicsRuntime : public IPhysicsRuntime
 {
 public:
-    FPhysXPhysicsRuntime()           = default;
-    ~FPhysXPhysicsRuntime() override = default;
+    FPhysXPhysicsRuntime();
+    ~FPhysXPhysicsRuntime() override;
 
     void Initialize(
         UWorld*            InWorld,
@@ -135,12 +135,12 @@ public:
     void GatherDebugConstraints(TArray<FPhysicsDebugConstraint>& OutConstraints) const override;
     void GetDebugSnapshot(FPhysicsDebugSnapshot& OutSnapshot) const;
 
-    FPhysXVehicleHandle ReservePhysXVehicleHandle_GameThread();
+    FVehicleHandle ReserveVehicleHandle_GameThread();
 
-    void CreatePhysXVehicle(const FPhysXVehicleDesc& Desc);
-    void DestroyPhysXVehicle(FPhysXVehicleHandle Vehicle);
-    void SetPhysXVehicleInput(FPhysXVehicleHandle Vehicle, const FPhysXVehicleInputState& Input);
-    void ResetPhysXVehicle(FPhysXVehicleHandle Vehicle, const FTransform& WorldTransform);
+    void CreateVehicle(const FVehicleDesc& Desc);
+    void DestroyVehicle(FVehicleHandle Vehicle);
+    void SetVehicleInput(FVehicleHandle Vehicle, const FVehicleInputState& Input);
+    void ResetVehicle(FVehicleHandle Vehicle, const FTransform& WorldTransform);
 
     FPhysicsStats GetStats() const override;
 
@@ -226,21 +226,6 @@ private:
     FActorCompoundBody*       FindCompoundByActorId(uint32 ActorId);
     const FActorCompoundBody* FindCompoundByActorId(uint32 ActorId) const;
 
-    FPhysXVehicleHandle          AllocateVehicle();
-    FPhysXVehicleInstance*       ResolveVehicle(FPhysXVehicleHandle Handle);
-    const FPhysXVehicleInstance* ResolveVehicle(FPhysXVehicleHandle Handle) const;
-    FPhysXVehicleInstance*       ResolveAliveVehicle(FPhysXVehicleHandle Handle);
-    const FPhysXVehicleInstance* ResolveAliveVehicle(FPhysXVehicleHandle Handle) const;
-    void                         FreeVehicle(FPhysXVehicleHandle Handle);
-
-    FPhysXVehicleHandle CreatePhysXVehicle_Internal(const FPhysXVehicleDesc& Desc);
-    void                DestroyPhysXVehicle_Internal(FPhysXVehicleHandle Vehicle);
-    void                ApplySetPhysXVehicleInput_Internal(FPhysXVehicleHandle Vehicle, const FPhysXVehicleInputState& Input);
-    void                ResetPhysXVehicle_Internal(FPhysXVehicleHandle Vehicle, const FTransform& WorldTransform);
-
-    void PreSimulateVehicles(float InFixedDt);
-    void BuildVehicleSnapshots_Internal(TArray<FPhysXVehicleSnapshot>& OutVehicles) const;
-
 private:
     UWorld* World = nullptr;
 
@@ -289,7 +274,5 @@ private:
     mutable std::mutex    DebugSnapshotMutex;
     FPhysicsDebugSnapshot DebugSnapshot;
 
-    TArray<std::unique_ptr<FPhysXVehicleInstance>> Vehicles;
-    TArray<uint32>                                 VehicleGenerations;
-    TMap<uint32, FPhysXVehicleHandle>              ComponentToVehicle;
+    std::unique_ptr<FPhysXVehicleRuntime> VehicleRuntime;
 };

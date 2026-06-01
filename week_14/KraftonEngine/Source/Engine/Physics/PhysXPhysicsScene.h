@@ -106,10 +106,10 @@ public:
 
     uint32 GetComponentGeneration_GameThread(uint32 ComponentId) const override;
 
-    FPhysXVehicleHandle CreateVehicle(const FPhysXVehicleDesc& Desc) override;
-    void                DestroyVehicle(FPhysXVehicleHandle Vehicle) override;
-    void                SetVehicleInput(FPhysXVehicleHandle Vehicle, const FPhysXVehicleInputState& Input) override;
-    void                ResetVehicle(FPhysXVehicleHandle Vehicle, const FTransform& WorldTransform) override;
+    FVehicleHandle CreateVehicle(const FVehicleDesc& Desc) override;
+    void                DestroyVehicle(FVehicleHandle Vehicle) override;
+    void                SetVehicleInput(FVehicleHandle Vehicle, const FVehicleInputState& Input) override;
+    void                ResetVehicle(FVehicleHandle Vehicle, const FTransform& WorldTransform) override;
 
 private:
     FPhysicsComponentBinding&       TouchBinding_GameThread(UPrimitiveComponent* Comp);

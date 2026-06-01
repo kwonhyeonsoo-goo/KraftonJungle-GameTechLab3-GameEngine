@@ -609,6 +609,58 @@ void USkinnedMeshComponent::SetBoneScaleByIndex(int32 BoneIndex, const FVector& 
 	MarkWorldBoundsDirty();
 }
 
+
+int32 USkinnedMeshComponent::FindBoneIndex(const FName& BoneName) const
+{
+	FSkeletalMesh* Asset = SkeletalMesh ? SkeletalMesh->GetSkeletalMeshAsset() : nullptr;
+	if (!Asset || !BoneName.IsValid())
+	{
+		return -1;
+	}
+
+	const FString WantedName = BoneName.ToString();
+	for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(Asset->Bones.size()); ++BoneIndex)
+	{
+		if (Asset->Bones[BoneIndex].Name == WantedName)
+		{
+			return BoneIndex;
+		}
+	}
+
+	return -1;
+}
+
+bool USkinnedMeshComponent::SetBoneWorldTransformByName(const FName& BoneName, const FTransform& WorldTransform)
+{
+	FSkeletalMesh* Asset = SkeletalMesh ? SkeletalMesh->GetSkeletalMeshAsset() : nullptr;
+	if (!Asset)
+	{
+		return false;
+	}
+
+	const int32 BoneIndex = FindBoneIndex(BoneName);
+	if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(Asset->Bones.size()))
+	{
+		return false;
+	}
+
+	TArray<FTransform> ComponentSpaceGlobals;
+	BuildBoneEditGlobalTransforms(ComponentSpaceGlobals);
+	if (BoneIndex >= static_cast<int32>(ComponentSpaceGlobals.size()))
+	{
+		return false;
+	}
+
+	const FMatrix ComponentSpaceTarget = WorldTransform.ToMatrix() * GetWorldMatrix().GetInverse();
+	const int32 ParentIndex = Asset->Bones[BoneIndex].ParentIndex;
+	const FMatrix LocalMatrix = (ParentIndex >= 0 && ParentIndex < static_cast<int32>(ComponentSpaceGlobals.size()))
+		? ComponentSpaceTarget * ComponentSpaceGlobals[ParentIndex].ToMatrix().GetInverse()
+		: ComponentSpaceTarget;
+
+	SetBoneLocalTransformByIndex(BoneIndex, FTransform(LocalMatrix));
+	return true;
+}
+
 void USkinnedMeshComponent::SetBoneLocalTransformByIndex(int32 BoneIndex, const FTransform& NewLocalTransform)
 {
 	FSkeletalMesh* Asset = SkeletalMesh ? SkeletalMesh->GetSkeletalMeshAsset() : nullptr;

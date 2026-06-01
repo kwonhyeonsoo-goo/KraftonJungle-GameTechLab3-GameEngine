@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Physics/PhysXVehicleTypes.h"
+#include "Physics/Vehicle/VehicleTypes.h"
 
 #include <PxPhysicsAPI.h>
 #include <vehicle/PxVehicleDrive4W.h>
@@ -11,13 +11,13 @@
 
 struct FPhysXVehicleInstance
 {
-    FPhysXVehicleHandle Handle;
+    FVehicleHandle Handle;
 
     uint32 OwnerActorId             = 0;
     uint32 OwnerComponentId         = 0;
     uint32 OwnerComponentGeneration = 0;
 
-    FPhysXVehicleDesc Desc;
+    FVehicleDesc Desc;
 
     physx::PxRigidDynamic*   ChassisActor = nullptr;
     physx::PxVehicleDrive4W* Vehicle      = nullptr;
@@ -34,7 +34,7 @@ struct FPhysXVehicleInstance
     physx::PxVehicleDrivableSurfaceToTireFrictionPairs* FrictionPairs = nullptr;
 
     physx::PxVehicleDrive4WRawInputData RawInput;
-    FPhysXVehicleInputState             Input;
+    FVehicleInputState             Input;
 
     FTransform PreviousChassisTransform;
     FTransform CurrentChassisTransform;

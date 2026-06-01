@@ -57,6 +57,7 @@ const FDebugPlaceActorOption GDebugPlaceActorOptions[] = {
 	{ "Spot Light", FLevelViewportLayout::EViewportPlaceActorType::SpotLight },
 	{ "Character",     FLevelViewportLayout::EViewportPlaceActorType::Character },
 	{ "Lua Character", FLevelViewportLayout::EViewportPlaceActorType::LuaCharacter },
+	{ "Wheeled Vehicle", FLevelViewportLayout::EViewportPlaceActorType::WheeledVehicle },
 };
 
 constexpr float GDocumentTabStripHeight = 34.0f;

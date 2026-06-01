@@ -1,14 +1,18 @@
-﻿#pragma once
+#pragma once
 
 #include "Core/Types/CollisionTypes.h"
 #include "Core/Types/CoreTypes.h"
 #include "Math/Transform.h"
 #include "Math/Vector.h"
+#include "Object/FName.h"
 #include "Physics/PhysicsTypes.h"
 
 #include <cfloat>
 
-struct FPhysXVehicleHandle
+// Backend-neutral vehicle handle. Gameplay, components, World snapshots and IPhysicsScene
+// must use this type instead of PhysX-specific names. The PhysX backend may still use
+// the same handle internally, but that detail is hidden below the physics adapter layer.
+struct FVehicleHandle
 {
     uint32 Index      = UINT32_MAX;
     uint32 Generation = 0;
@@ -18,41 +22,34 @@ struct FPhysXVehicleHandle
         return Index != UINT32_MAX && Generation != 0;
     }
 
-    bool operator==(const FPhysXVehicleHandle& Other) const
+    bool operator==(const FVehicleHandle& Other) const
     {
         return Index == Other.Index && Generation == Other.Generation;
     }
 
-    bool operator!=(const FPhysXVehicleHandle& Other) const
+    bool operator!=(const FVehicleHandle& Other) const
     {
         return !(*this == Other);
     }
 };
 
-inline uint64 MakePhysXVehicleHandleKey(FPhysXVehicleHandle Vehicle)
+inline uint64 MakeVehicleHandleKey(FVehicleHandle Vehicle)
 {
     return (static_cast<uint64>(Vehicle.Index) << 32) | static_cast<uint64>(Vehicle.Generation);
 }
 
-struct FPhysXVehicleInputState
+struct FVehicleInputState
 {
     float Throttle  = 0.0f;
     float Brake     = 0.0f;
-    float Steer     = 0.0f;
+    float Steering  = 0.0f;
     float Handbrake = 0.0f;
 };
 
-enum class EPhysXVehicleWheelIndex : uint8
+struct FVehicleWheelDesc
 {
-    FrontLeft  = 0,
-    FrontRight = 1,
-    RearLeft   = 2,
-    RearRight  = 3,
-    Count      = 4
-};
-
-struct FPhysXVehicleWheelDesc
-{
+    FName   WheelName     = FName::None;
+    FName   BoneName      = FName::None;
     FVector LocalPosition = FVector::ZeroVector;
 
     float Radius = 0.35f;
@@ -72,18 +69,18 @@ struct FPhysXVehicleWheelDesc
     uint32 TireType = 0;
 };
 
-struct FPhysXVehicleDesc
+struct FVehicleDesc
 {
     FPhysicsObjectKey Owner;
 
-    FPhysXVehicleHandle ReservedVehicle;
-    FTransform          WorldTransform;
+    FVehicleHandle ReservedVehicle;
+    FTransform     WorldTransform;
 
     FVector ChassisHalfExtents = FVector(1.25f, 0.6f, 0.35f);
     float   ChassisMass        = 1200.0f;
     FVector ChassisCMOffset    = FVector(0.0f, 0.0f, -0.25f);
 
-    FPhysXVehicleWheelDesc Wheels[4];
+    TArray<FVehicleWheelDesc> Wheels;
 
     float EnginePeakTorque = 500.0f;
     float EngineMaxOmega   = 600.0f;
@@ -94,26 +91,11 @@ struct FPhysXVehicleDesc
     uint32 DrivableSurfaceMask = ObjectTypeBit(ECollisionChannel::WorldStatic) |
                                  ObjectTypeBit(ECollisionChannel::WorldDynamic);
 
-    static FPhysXVehicleDesc MakeDefault4W()
-    {
-        FPhysXVehicleDesc Desc;
-
-        Desc.Wheels[static_cast<int32>(EPhysXVehicleWheelIndex::FrontLeft)].LocalPosition  = FVector(1.1f, -0.75f, -0.35f);
-        Desc.Wheels[static_cast<int32>(EPhysXVehicleWheelIndex::FrontRight)].LocalPosition = FVector(1.1f, 0.75f, -0.35f);
-        Desc.Wheels[static_cast<int32>(EPhysXVehicleWheelIndex::RearLeft)].LocalPosition   = FVector(-1.1f, -0.75f, -0.35f);
-        Desc.Wheels[static_cast<int32>(EPhysXVehicleWheelIndex::RearRight)].LocalPosition  = FVector(-1.1f, 0.75f, -0.35f);
-
-        Desc.Wheels[static_cast<int32>(EPhysXVehicleWheelIndex::FrontLeft)].MaxSteerRadians    = 0.6f;
-        Desc.Wheels[static_cast<int32>(EPhysXVehicleWheelIndex::FrontRight)].MaxSteerRadians   = 0.6f;
-        Desc.Wheels[static_cast<int32>(EPhysXVehicleWheelIndex::RearLeft)].MaxHandbrakeTorque  = 4000.0f;
-        Desc.Wheels[static_cast<int32>(EPhysXVehicleWheelIndex::RearRight)].MaxHandbrakeTorque = 4000.0f;
-
-        return Desc;
-    }
 };
 
-struct FPhysXVehicleWheelSnapshot
+struct FVehicleWheelSnapshot
 {
+    FName      WheelName = FName::None;
     FTransform WorldTransform;
 
     float SteerAngle       = 0.0f;
@@ -126,9 +108,9 @@ struct FPhysXVehicleWheelSnapshot
     FVector ContactNormal = FVector::UpVector;
 };
 
-struct FPhysXVehicleSnapshot
+struct FVehicleSnapshot
 {
-    FPhysXVehicleHandle Vehicle;
+    FVehicleHandle Vehicle;
 
     uint32 OwnerActorId             = 0;
     uint32 OwnerComponentId         = 0;
@@ -139,5 +121,5 @@ struct FPhysXVehicleSnapshot
     FVector LinearVelocity  = FVector::ZeroVector;
     FVector AngularVelocity = FVector::ZeroVector;
 
-    FPhysXVehicleWheelSnapshot Wheels[4];
+    TArray<FVehicleWheelSnapshot> Wheels;
 };

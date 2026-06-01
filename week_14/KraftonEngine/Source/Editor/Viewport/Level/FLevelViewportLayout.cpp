@@ -19,6 +19,7 @@
 #include "GameFramework/Actor/SkeletalMeshActor.h"
 #include "GameFramework/Pawn/Character.h"
 #include "GameFramework/Pawn/LuaCharacter.h"
+#include "GameFramework/Pawn/WheeledVehiclePawn.h"
 #include "GameFramework/World.h"
 #include "Render/Pipeline/Renderer.h"
 #include "Viewport/Viewport.h"
@@ -1737,6 +1738,7 @@ void FLevelViewportLayout::RenderViewportPlaceActorPopup()
 		PlaceActorMenuItem("Skeletal Mesh Actor", EViewportPlaceActorType::SkeletalMesh);
 		PlaceActorMenuItem("Character",           EViewportPlaceActorType::Character);
 		PlaceActorMenuItem("Lua Character", EViewportPlaceActorType::LuaCharacter);
+		PlaceActorMenuItem("Wheeled Vehicle", EViewportPlaceActorType::WheeledVehicle);
 		PlaceActorMenuItem("Particle System",       EViewportPlaceActorType::ParticleSystem);
 
 		// Game 모듈이 등록한 액터들 (예: ACarPawn). 등록 순서대로 표시.
@@ -2030,6 +2032,16 @@ AActor* FLevelViewportLayout::SpawnActorFromViewportMenu(EViewportPlaceActorType
 			// Mesh 는 default. ULuaScriptComponent 의 ScriptFile 은 사용자가
 			// PropertyWidget 에서 콤보로 지정 (Content/Script/*.lua).
 			Actor->InitDefaultComponents("Content/Data/Samba Dancing (10).fbx", FString());
+			SpawnedActor = Actor;
+		}
+		break;
+	}
+	case EViewportPlaceActorType::WheeledVehicle:
+	{
+		AWheeledVehiclePawn* Actor = World->SpawnActor<AWheeledVehiclePawn>();
+		if (Actor)
+		{
+			Actor->InitDefaultComponents("Content/Data/Samba Dancing (10).fbx");
 			SpawnedActor = Actor;
 		}
 		break;

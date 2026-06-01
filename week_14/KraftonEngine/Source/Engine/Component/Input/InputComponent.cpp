@@ -2,6 +2,7 @@
 
 #include "Core/Logging/Log.h"
 #include "Input/InputSystem.h"
+#include "Input/InputKeyCodes.h"
 #include "Object/Reflection/ObjectFactory.h"
 
 #include <algorithm>
@@ -16,6 +17,16 @@ UInputComponent::UInputComponent()
 void UInputComponent::AddAxisMapping(const FString& Name, int VKey, float Scale)
 {
 	AddAxisMappingForOwner(nullptr, Name, VKey, Scale);
+}
+
+void UInputComponent::AddAxisMapping(const FString& Name, const FString& KeyName, float Scale)
+{
+	AddAxisMappingForOwner(nullptr, Name, KeyName, Scale);
+}
+
+void UInputComponent::AddAxisMappingForOwner(const void* OwnerKey, const FString& Name, const FString& KeyName, float Scale)
+{
+	AddAxisMappingForOwner(OwnerKey, Name, ResolveInputKeyCode(KeyName), Scale);
 }
 
 void UInputComponent::AddAxisMappingForOwner(const void* OwnerKey, const FString& Name, int VKey, float Scale)
@@ -52,6 +63,16 @@ void UInputComponent::AddMouseAxisMappingForOwner(const void* OwnerKey, const FS
 void UInputComponent::AddActionMapping(const FString& Name, int VKey)
 {
 	AddActionMappingForOwner(nullptr, Name, VKey);
+}
+
+void UInputComponent::AddActionMapping(const FString& Name, const FString& KeyName)
+{
+	AddActionMappingForOwner(nullptr, Name, KeyName);
+}
+
+void UInputComponent::AddActionMappingForOwner(const void* OwnerKey, const FString& Name, const FString& KeyName)
+{
+	AddActionMappingForOwner(OwnerKey, Name, ResolveInputKeyCode(KeyName));
 }
 
 void UInputComponent::AddActionMappingForOwner(const void* OwnerKey, const FString& Name, int VKey)

@@ -9,7 +9,12 @@
 #include "Component/Input/InputComponent.h"
 #include "Animation/Instance/LuaAnimInstance.h"
 #include "Component/Movement/FloatingPawnMovementComponent.h"
+#include "Component/Movement/WheeledVehicleMovementComponent.h"
+#include "Component/Vehicle/VehicleWheelPoseComponent.h"
+#include "GameFramework/Pawn/WheeledVehiclePawn.h"
 #include "Component/Camera/CameraComponent.h"
+#include "Component/Camera/SpringArmComponent.h"
+#include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SceneComponent.h"
 #include "Component/Primitive/StaticMeshComponent.h"
@@ -2420,6 +2425,24 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 		"SetMoveInput", &UFloatingPawnMovementComponent::SetMoveInput,
 		"SetLookInput", &UFloatingPawnMovementComponent::SetLookInput);
 
+	Lua.new_usertype<UWheeledVehicleMovementComponent>("WheeledVehicleMovementComponent",
+		sol::base_classes,
+		sol::bases<UMovementComponent, UActorComponent, UObject>(),
+		"SetThrottleInput", &UWheeledVehicleMovementComponent::SetThrottleInput,
+		"SetBrakeInput", &UWheeledVehicleMovementComponent::SetBrakeInput,
+		"SetSteeringInput", &UWheeledVehicleMovementComponent::SetSteeringInput,
+		"SetHandbrakeInput", &UWheeledVehicleMovementComponent::SetHandbrakeInput,
+		"ResetVehicle", &UWheeledVehicleMovementComponent::ResetVehicle,
+		"GetForwardSpeed", &UWheeledVehicleMovementComponent::GetForwardSpeed,
+		"IsVehicleCreated", &UWheeledVehicleMovementComponent::IsVehicleCreated);
+
+
+	Lua.new_usertype<UVehicleWheelPoseComponent>("VehicleWheelPoseComponent",
+		sol::base_classes,
+		sol::bases<UActorComponent, UObject>(),
+		"SetVehicleMovement", &UVehicleWheelPoseComponent::SetVehicleMovement,
+		"GetVehicleMovement", &UVehicleWheelPoseComponent::GetVehicleMovement);
+
 	Lua.new_usertype<USceneComponent>("SceneComponent",
 		sol::base_classes,
 		sol::bases<UActorComponent, UObject>(),
@@ -2686,6 +2709,15 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 		return Actor.GetComponentByClass<UFloatingPawnMovementComponent>();
 	},
 
+		"GetVehicleMovement", [](AActor& Actor) -> UWheeledVehicleMovementComponent*
+	{
+		if (UWheeledVehicleMovementComponent* Movement = Actor.GetComponentByClass<UWheeledVehicleMovementComponent>())
+		{
+			return Movement;
+		}
+		return nullptr;
+	},
+
 		"GetCamera", [](AActor& Actor)
 	{
 		return Actor.GetComponentByClass<UCameraComponent>();
@@ -2765,6 +2797,15 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 		"SetAutoPossessPlayer", &APawn::SetAutoPossessPlayer,
 		"GetAutoPossessPlayer", &APawn::GetAutoPossessPlayer,
 		"GetInputComponent", &APawn::GetInputComponent);
+
+	Lua.new_usertype<AWheeledVehiclePawn>("WheeledVehiclePawn",
+		sol::base_classes,
+		sol::bases<APawn, AActor, UObject>(),
+		"GetMesh", &AWheeledVehiclePawn::GetMesh,
+		"GetVehicleMovement", &AWheeledVehiclePawn::GetVehicleMovement,
+		"GetWheelPoseComponent", &AWheeledVehiclePawn::GetWheelPoseComponent,
+		"GetSpringArm", &AWheeledVehiclePawn::GetSpringArm,
+		"GetCamera", &AWheeledVehiclePawn::GetCamera);
 
 	// UInputComponent — Pawn::GetInputComponent 로 얻어 lua 에서 직접 매핑/binding 추가 가능.
 	// 예 (BeginPlay 안):

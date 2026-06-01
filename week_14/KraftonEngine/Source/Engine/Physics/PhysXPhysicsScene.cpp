@@ -1262,36 +1262,36 @@ uint32 FPhysXPhysicsScene::GetComponentGeneration_GameThread(uint32 ComponentId)
     return Binding ? Binding->Generation : 0;
 }
 
-FPhysXVehicleHandle FPhysXPhysicsScene::CreateVehicle(const FPhysXVehicleDesc& Desc)
+FVehicleHandle FPhysXPhysicsScene::CreateVehicle(const FVehicleDesc& Desc)
 {
-    FPhysXVehicleDesc LocalDesc = Desc;
-    LocalDesc.ReservedVehicle   = Runtime.ReservePhysXVehicleHandle_GameThread();
+    FVehicleDesc LocalDesc = Desc;
+    LocalDesc.ReservedVehicle   = Runtime.ReserveVehicleHandle_GameThread();
 
-    Runtime.CreatePhysXVehicle(LocalDesc);
+    Runtime.CreateVehicle(LocalDesc);
     return LocalDesc.ReservedVehicle;
 }
 
-void FPhysXPhysicsScene::DestroyVehicle(FPhysXVehicleHandle Vehicle)
+void FPhysXPhysicsScene::DestroyVehicle(FVehicleHandle Vehicle)
 {
     if (Vehicle.IsValid())
     {
-        Runtime.DestroyPhysXVehicle(Vehicle);
+        Runtime.DestroyVehicle(Vehicle);
     }
 }
 
-void FPhysXPhysicsScene::SetVehicleInput(FPhysXVehicleHandle Vehicle, const FPhysXVehicleInputState& Input)
+void FPhysXPhysicsScene::SetVehicleInput(FVehicleHandle Vehicle, const FVehicleInputState& Input)
 {
     if (Vehicle.IsValid())
     {
-        Runtime.SetPhysXVehicleInput(Vehicle, Input);
+        Runtime.SetVehicleInput(Vehicle, Input);
     }
 }
 
-void FPhysXPhysicsScene::ResetVehicle(FPhysXVehicleHandle Vehicle, const FTransform& WorldTransform)
+void FPhysXPhysicsScene::ResetVehicle(FVehicleHandle Vehicle, const FTransform& WorldTransform)
 {
     if (Vehicle.IsValid())
     {
-        Runtime.ResetPhysXVehicle(Vehicle, WorldTransform);
+        Runtime.ResetVehicle(Vehicle, WorldTransform);
     }
 }
 

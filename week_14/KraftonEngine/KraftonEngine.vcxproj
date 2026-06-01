@@ -537,7 +537,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Component\Movement\PendulumMovementComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Movement\ProjectileMovementComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Movement\RotatingMovementComponent.cpp" />
-    <ClCompile Include="Source\Engine\Component\Movement\VehicleMovementComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Movement\WheeledVehicleMovementComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Particle\ParticleSystemComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Primitive\BillboardComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Primitive\CylindricalBillboardComponent.cpp" />
@@ -553,6 +553,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Component\Shape\BoxComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Shape\CapsuleComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Shape\SphereComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Vehicle\VehicleWheelPoseComponent.cpp" />
     <ClCompile Include="Source\Engine\Core\ProjectSettings.cpp" />
     <ClCompile Include="Source\Engine\Core\TickFunction.cpp" />
     <ClCompile Include="Source\Engine\Core\Logging\Log.cpp" />
@@ -606,6 +607,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\GameFramework\Pawn\Character.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Pawn\LuaCharacter.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\Pawn\Pawn.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\Pawn\WheeledVehiclePawn.cpp" />
     <ClCompile Include="Source\Engine\Gizmo\BoneTransformGizmoTarget.cpp" />
     <ClCompile Include="Source\Engine\Gizmo\ComponentGizmoTarget.cpp" />
     <ClCompile Include="Source\Engine\Gizmo\PhysicsAssetGizmoTarget.cpp" />
@@ -699,6 +701,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Physics\PhysXConversion.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysXPhysicsRuntime.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysXPhysicsScene.cpp" />
+    <ClCompile Include="Source\Engine\Physics\PhysXVehicleRuntime.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysicsAsset.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysicsAssetAutoBodyGenerator.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysicsAssetInstance.cpp" />
@@ -972,7 +975,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Component\Movement\PendulumMovementComponent.h" />
     <ClInclude Include="Source\Engine\Component\Movement\ProjectileMovementComponent.h" />
     <ClInclude Include="Source\Engine\Component\Movement\RotatingMovementComponent.h" />
-    <ClInclude Include="Source\Engine\Component\Movement\VehicleMovementComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Movement\WheeledVehicleMovementComponent.h" />
     <ClInclude Include="Source\Engine\Component\Particle\ParticleSystemComponent.h" />
     <ClInclude Include="Source\Engine\Component\Primitive\BillboardComponent.h" />
     <ClInclude Include="Source\Engine\Component\Primitive\CylindricalBillboardComponent.h" />
@@ -988,6 +991,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Component\Shape\BoxComponent.h" />
     <ClInclude Include="Source\Engine\Component\Shape\CapsuleComponent.h" />
     <ClInclude Include="Source\Engine\Component\Shape\SphereComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Vehicle\VehicleWheelPoseComponent.h" />
     <ClInclude Include="Source\Engine\Core\Common.h" />
     <ClInclude Include="Source\Engine\Core\Delegate.h" />
     <ClInclude Include="Source\Engine\Core\ProjectSettings.h" />
@@ -1052,6 +1056,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\GameFramework\Pawn\Character.h" />
     <ClInclude Include="Source\Engine\GameFramework\Pawn\LuaCharacter.h" />
     <ClInclude Include="Source\Engine\GameFramework\Pawn\Pawn.h" />
+    <ClInclude Include="Source\Engine\GameFramework\Pawn\WheeledVehiclePawn.h" />
     <ClInclude Include="Source\Engine\Gizmo\BoneTransformGizmoTarget.h" />
     <ClInclude Include="Source\Engine\Gizmo\ComponentGizmoTarget.h" />
     <ClInclude Include="Source\Engine\Gizmo\GizmoTransformTarget.h" />
@@ -1170,7 +1175,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Physics\PhysXPhysicsRuntime.h" />
     <ClInclude Include="Source\Engine\Physics\PhysXPhysicsScene.h" />
     <ClInclude Include="Source\Engine\Physics\PhysXVehicleInstance.h" />
-    <ClInclude Include="Source\Engine\Physics\PhysXVehicleTypes.h" />
+    <ClInclude Include="Source\Engine\Physics\PhysXVehicleRuntime.h" />
     <ClInclude Include="Source\Engine\Physics\PhysicsAsset.h" />
     <ClInclude Include="Source\Engine\Physics\PhysicsAssetAutoBodyGenerator.h" />
     <ClInclude Include="Source\Engine\Physics\PhysicsAssetInstance.h" />
@@ -1191,6 +1196,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Physics\PhysicsStats.h" />
     <ClInclude Include="Source\Engine\Physics\PhysicsTypes.h" />
     <ClInclude Include="Source\Engine\Physics\PhysicsWorldSnapshot.h" />
+    <ClInclude Include="Source\Engine\Physics\Vehicle\VehicleTypes.h" />
     <ClInclude Include="Source\Engine\Platform\BuildInfo.h" />
     <ClInclude Include="Source\Engine\Platform\ConsoleHelper.h" />
     <ClInclude Include="Source\Engine\Platform\CrashDump.h" />

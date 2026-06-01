@@ -41,13 +41,17 @@ public:
 
 	// 매핑 — 코드 또는 ProjectSettings(.ini) 가 호출. 같은 이름에 여러 source 가능.
 	void AddAxisMapping(const FString& Name, int VKey, float Scale = 1.0f);
+	void AddAxisMapping(const FString& Name, const FString& KeyName, float Scale = 1.0f);
 	void AddMouseAxisMapping(const FString& Name, EInputAxisSourceType Axis, float Scale = 1.0f);
 	void AddActionMapping(const FString& Name, int VKey);
+	void AddActionMapping(const FString& Name, const FString& KeyName);
 
 	// Runtime-owned mapping/binding. LuaBlueprintComponent 는 reload/endplay 시 자기 항목만 제거한다.
 	void AddAxisMappingForOwner(const void* OwnerKey, const FString& Name, int VKey, float Scale = 1.0f);
+	void AddAxisMappingForOwner(const void* OwnerKey, const FString& Name, const FString& KeyName, float Scale = 1.0f);
 	void AddMouseAxisMappingForOwner(const void* OwnerKey, const FString& Name, EInputAxisSourceType Axis, float Scale = 1.0f);
 	void AddActionMappingForOwner(const void* OwnerKey, const FString& Name, int VKey);
+	void AddActionMappingForOwner(const void* OwnerKey, const FString& Name, const FString& KeyName);
 
 	// Binding — Pawn 자식이 SetupInputComponent 안에서 호출.
 	void BindAxis(const FString& Name, TFunction<void(float)> Callback);
