@@ -1722,8 +1722,11 @@ FInputSystemSnapshot FLuaScriptManager::GetLuaInputSnapshot()
 	{
 		if (UGameViewportClient* GameViewportClient = GEngine->GetGameViewportClient())
 		{
-			FInputSystemSnapshot Snapshot = GameViewportClient->GetGameInputSnapshot();
-			return Snapshot;
+            if (GameViewportClient->HasGameInputSnapshot())
+            {
+                return GameViewportClient->GetGameInputSnapshot();
+            }
+            return FInputSystemSnapshot {};
 		}
 	}
 
@@ -2752,6 +2755,23 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 		sol::base_classes,
 		sol::bases<UActorComponent, UObject>(),
 		"AddAxisMapping",   &UInputComponent::AddAxisMapping,
+        "AddMouseAxisMapping",
+        sol::overload(
+            [](UInputComponent& Self, const FString& Name, const FString& AxisName, float Scale)
+            {
+                EInputAxisSourceType Axis = EInputAxisSourceType::MouseX;
+                if (AxisName == "MouseY") Axis = EInputAxisSourceType::MouseY;
+                else if (AxisName == "MouseWheel") Axis = EInputAxisSourceType::MouseWheel;
+                Self.AddMouseAxisMapping(Name, Axis, Scale);
+            },
+            [](UInputComponent& Self, const FString& Name, const FString& AxisName)
+            {
+                EInputAxisSourceType Axis = EInputAxisSourceType::MouseX;
+                if (AxisName == "MouseY") Axis = EInputAxisSourceType::MouseY;
+                else if (AxisName == "MouseWheel") Axis = EInputAxisSourceType::MouseWheel;
+                Self.AddMouseAxisMapping(Name, Axis, 1.0f);
+            }
+        ),
 		"AddActionMapping", &UInputComponent::AddActionMapping,
 		"BindAxis", [](UInputComponent& Self, const FString& Name, sol::protected_function Cb)
 		{

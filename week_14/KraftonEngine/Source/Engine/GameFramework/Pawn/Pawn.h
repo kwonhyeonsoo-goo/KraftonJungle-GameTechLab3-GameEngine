@@ -7,6 +7,7 @@
 #include "Source/Engine/GameFramework/Pawn/Pawn.generated.h"
 class APlayerController;
 class UInputComponent;
+struct FInputSystemSnapshot;
 
 // ============================================================
 // APawn — PlayerController가 Possess할 수 있는 액터의 베이스
@@ -37,6 +38,9 @@ public:
 	// Input 활성화 — BeginPlay 가 UInputComponent 부착 후 호출. 자식이 override.
 	// 기본은 no-op — 자식이 mapping/binding 설정.
 	virtual void SetupInputComponent() {}
+
+    // PlayerController 가 Possessed Pawn 에 대해서만 호출한다.
+    virtual void ProcessPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime);
 
 	void BeginPlay() override;
 

@@ -7,6 +7,7 @@
 #include "Source/Engine/GameFramework/GameMode/PlayerController.generated.h"
 class APawn;
 class APlayerCameraManager;
+struct FInputSystemSnapshot;
 
 // ============================================================
 // APlayerController — 플레이어의 의도(Possess/입력)를 Pawn에 전달
@@ -33,6 +34,8 @@ public:
 
 	UFUNCTION(Pure, Category="PlayerController")
 	APawn* GetPossessedPawn() const { return PossessedPawn.Get(); }
+
+    void ProcessPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime);
 
 	// ─── Camera Manager ──────────────────────────────────────────
 	// UE: APlayerController::PlayerCameraManager 멤버. 현재는 World 가 owner 이고 PC 는 reference 만 보유.

@@ -639,16 +639,29 @@ void UUIManager::CompactInvalidWidgets()
 	RemoveInvalid(PendingRemoveWidgets);
 }
 
+FUIInputCaptureState UUIManager::GetViewportInputCaptureState() const
+{
+    FUIInputCaptureState State;
+    for (const UUserWidget* Widget : ViewportWidgets)
+    {
+        if (!IsValid(Widget))
+        {
+            continue;
+        }
+
+        State.bWantsMouse          = State.bWantsMouse || Widget->WantsMouse();
+        State.bWantsKeyboard       = State.bWantsKeyboard || Widget->WantsKeyboard();
+        State.bWantsTextInput      = State.bWantsTextInput || Widget->WantsTextInput();
+        State.bBlocksGameInput     = State.bBlocksGameInput || Widget->BlocksGameInput();
+        State.bBlocksGameKeyboard  = State.bBlocksGameKeyboard || Widget->BlocksGameKeyboard();
+        State.bBlocksGameMouseLook = State.bBlocksGameMouseLook || Widget->BlocksGameMouseLook();
+    }
+    return State;
+}
+
 bool UUIManager::AnyViewportWidgetWantsMouse() const
 {
-	for (const UUserWidget* Widget : ViewportWidgets)
-	{
-		if (IsValid(Widget) && Widget->WantsMouse())
-		{
-			return true;
-		}
-	}
-	return false;
+    return GetViewportInputCaptureState().bWantsMouse;
 }
 
 void UUIManager::AddToViewport(UUserWidget* Widget, int32 /*ZOrder*/)
@@ -855,6 +868,27 @@ void UUIManager::ProcessInput(const FFrameContext& Frame)
 	{
 		RmlContext->ProcessMouseButtonUp(0, KeyModifierState);
 	}
+    if (Input.GetKeyDown(VK_RBUTTON))
+    {
+        RmlContext->ProcessMouseButtonDown(1, KeyModifierState);
+    }
+    if (Input.GetKeyUp(VK_RBUTTON))
+    {
+        RmlContext->ProcessMouseButtonUp(1, KeyModifierState);
+    }
+    if (Input.GetKeyDown(VK_MBUTTON))
+    {
+        RmlContext->ProcessMouseButtonDown(2, KeyModifierState);
+    }
+    if (Input.GetKeyUp(VK_MBUTTON))
+    {
+        RmlContext->ProcessMouseButtonUp(2, KeyModifierState);
+    }
+    const float WheelDelta = Input.GetScrollNotches();
+    if (WheelDelta != 0.0f)
+    {
+        RmlContext->ProcessMouseWheel(WheelDelta, KeyModifierState);
+    }
 	bDispatchingRmlEvents = false;
 }
 

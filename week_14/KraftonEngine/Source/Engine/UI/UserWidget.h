@@ -95,18 +95,73 @@ public:
 	UFUNCTION(Pure, Category="UI")
 	bool WantsMouse() const { return bWantsMouse; }
 
+    UFUNCTION(Callable, Category="UI") void SetWantsKeyboard(bool bInWantsKeyboard)
+    {
+        bWantsKeyboard = bInWantsKeyboard;
+    }
+
+    UFUNCTION(Pure, Category="UI") bool WantsKeyboard() const
+    {
+        return bWantsKeyboard;
+    }
+
+    UFUNCTION(Callable, Category="UI") void SetWantsTextInput(bool bInWantsTextInput)
+    {
+        bWantsTextInput = bInWantsTextInput;
+    }
+
+    UFUNCTION(Pure, Category="UI") bool WantsTextInput() const
+    {
+        return bWantsTextInput;
+    }
+
+    UFUNCTION(Callable, Category="UI") void SetBlocksGameInput(bool bInBlocksGameInput)
+    {
+        bBlocksGameInput = bInBlocksGameInput;
+    }
+
+    UFUNCTION(Pure, Category="UI") bool BlocksGameInput() const
+    {
+        return bBlocksGameInput;
+    }
+
+    UFUNCTION(Callable, Category="UI") void SetBlocksGameKeyboard(bool bInBlocksGameKeyboard)
+    {
+        bBlocksGameKeyboard = bInBlocksGameKeyboard;
+    }
+
+    UFUNCTION(Pure, Category="UI") bool BlocksGameKeyboard() const
+    {
+        return bBlocksGameKeyboard;
+    }
+
+    UFUNCTION(Callable, Category="UI") void SetBlocksGameMouseLook(bool bInBlocksGameMouseLook)
+    {
+        bBlocksGameMouseLook = bInBlocksGameMouseLook;
+    }
+
+    UFUNCTION(Pure, Category="UI") bool BlocksGameMouseLook() const
+    {
+        return bBlocksGameMouseLook;
+    }
+
 	void MarkDocumentLoaded(Rml::ElementDocument* InDocument) { Document = InDocument; bDocumentLoaded = Document != nullptr; }
 	void MarkRemovedFromViewport() { bInViewport = false; }
 	void ClearDocument() { Document = nullptr; bDocumentLoaded = false; }
 
 private:
-	TWeakObjectPtr<APlayerController> OwningPlayer;
-	Rml::ElementDocument* Document = nullptr;
-	FString DocumentPath;
+	TWeakObjectPtr<APlayerController>                   OwningPlayer;
+	Rml::ElementDocument*                               Document = nullptr;
+	FString                                             DocumentPath;
 	TArray<std::pair<FString, sol::protected_function>> PendingClickBindings;
-	TArray<FWidgetClickEventListener*> ClickListeners;
-	int32 ZOrder = 0;
-	bool bInViewport = false;
-	bool bDocumentLoaded = false;
-	bool bWantsMouse = false;
+	TArray<FWidgetClickEventListener*>                  ClickListeners;
+	int32                                               ZOrder               = 0;
+	bool                                                bInViewport          = false;
+	bool                                                bDocumentLoaded      = false;
+	bool                                                bWantsMouse          = false;
+    bool                                                bWantsKeyboard       = false;
+    bool                                                bWantsTextInput      = false;
+    bool                                                bBlocksGameInput     = false;
+    bool                                                bBlocksGameKeyboard  = false;
+    bool                                                bBlocksGameMouseLook = false;
 };

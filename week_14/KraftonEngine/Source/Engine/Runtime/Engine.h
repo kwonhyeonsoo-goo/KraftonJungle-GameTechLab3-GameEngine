@@ -13,6 +13,7 @@ class FWindowsWindow;
 class FTimer;
 class UCameraComponent;
 class UGameViewportClient;
+struct FInputSystemSnapshot;
 
 UCLASS()
 class UEngine : public UObject
@@ -66,10 +67,13 @@ public:
 	UGameViewportClient* GetGameViewportClient() const { return GameViewportClient; }
 
 protected:
-	void Render(float DeltaTime);
-	void SetRenderPipeline(std::unique_ptr<IRenderPipeline> InPipeline);
+    void             TickFrameStart(float DeltaTime);
+    void             TickFrameBody(float DeltaTime);
+    void             ProcessActiveWorldPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime);
+	void             Render(float DeltaTime);
+	void             SetRenderPipeline(std::unique_ptr<IRenderPipeline> InPipeline);
 	IRenderPipeline* GetRenderPipeline() const { return RenderPipeline.get(); }
-	void WorldTick(float DeltaTime);
+	void             WorldTick(float DeltaTime);
 
 protected:
 	FWindowsWindow* Window = nullptr;

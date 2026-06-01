@@ -3,81 +3,123 @@
 #include "Core/Logging/Log.h"
 #include "Input/InputSystem.h"
 #include "Object/Reflection/ObjectFactory.h"
+
+UInputComponent::UInputComponent()
+{
+    bTickEnable                       = false;
+    PrimaryComponentTick.bCanEverTick = false;
+    PrimaryComponentTick.SetTickEnabled(false);
+}
+
 void UInputComponent::AddAxisMapping(const FString& Name, int VKey, float Scale)
 {
-	FAxisMapping M;
-	M.Name  = Name;
-	M.VKey  = VKey;
-	M.Scale = Scale;
-	AxisMappings.push_back(std::move(M));
+    FAxisMapping M;
+    M.Name       = Name;
+    M.SourceType = EInputAxisSourceType::Key;
+    M.VKey       = VKey;
+    M.Scale      = Scale;
+    AxisMappings.push_back(std::move(M));
+}
+
+void UInputComponent::AddMouseAxisMapping(const FString& Name, EInputAxisSourceType Axis, float Scale)
+{
+    if (Axis == EInputAxisSourceType::Key)
+    {
+        return;
+    }
+
+    FAxisMapping M;
+    M.Name       = Name;
+    M.SourceType = Axis;
+    M.Scale      = Scale;
+    AxisMappings.push_back(std::move(M));
 }
 
 void UInputComponent::AddActionMapping(const FString& Name, int VKey)
 {
-	FActionMapping M;
-	M.Name = Name;
-	M.VKey = VKey;
-	ActionMappings.push_back(std::move(M));
+    FActionMapping M;
+    M.Name = Name;
+    M.VKey = VKey;
+    ActionMappings.push_back(std::move(M));
 }
 
 void UInputComponent::BindAxis(const FString& Name, TFunction<void(float)> Callback)
 {
-	FAxisBinding B;
-	B.Name     = Name;
-	B.Callback = std::move(Callback);
-	AxisBindings.push_back(std::move(B));
+    FAxisBinding B;
+    B.Name     = Name;
+    B.Callback = std::move(Callback);
+    AxisBindings.push_back(std::move(B));
 }
 
 void UInputComponent::BindAction(const FString& Name, EInputEvent Event, TFunction<void()> Callback)
 {
-	FActionBinding B;
-	B.Name     = Name;
-	B.Event    = Event;
-	B.Callback = std::move(Callback);
-	ActionBindings.push_back(std::move(B));
+    FActionBinding B;
+    B.Name     = Name;
+    B.Event    = Event;
+    B.Callback = std::move(Callback);
+    ActionBindings.push_back(std::move(B));
 }
 
 void UInputComponent::ClearBindings()
 {
-	AxisBindings.clear();
-	ActionBindings.clear();
+    AxisMappings.clear();
+    ActionMappings.clear();
+    AxisBindings.clear();
+    ActionBindings.clear();
+}
+
+void UInputComponent::ProcessInput(const FInputSystemSnapshot& Snapshot, float /*DeltaTime*/)
+{
+    // Axis: 매핑 평가 → name 별 합산 → 매칭 binding 호출.
+    // UE 와 동일 — 매 frame 호출 (value=0 도 호출됨, 자식이 0 분기 처리).
+    for (const FAxisBinding& B : AxisBindings)
+    {
+        float Value = 0.0f;
+        for (const FAxisMapping& M : AxisMappings)
+        {
+            if (M.Name == B.Name)
+            {
+                Value += EvaluateAxisMapping(M, Snapshot);
+            }
+        }
+        if (B.Callback) B.Callback(Value);
+    }
+
+    // Action: edge 감지 (Pressed = KeyDown, Released = KeyUp).
+    for (const FActionBinding& B : ActionBindings)
+    {
+        for (const FActionMapping& M : ActionMappings)
+        {
+            if (M.Name != B.Name) continue;
+            const bool bFired = (B.Event == EInputEvent::Pressed) ? Snapshot.WasPressed(M.VKey) : Snapshot.WasReleased(M.VKey);
+            if (bFired && B.Callback)
+            {
+                B.Callback();
+                break; // 같은 action 의 여러 매핑이 같은 frame 발화해도 1회만.
+            }
+        }
+    }
 }
 
 void UInputComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    // 입력 처리는 PlayerController → Possessed Pawn → ProcessInput 경로에서만 수행한다.
+}
 
-	const InputSystem& In = InputSystem::Get();
-
-	// Axis: 매핑 평가 → name 별 합산 → 매칭 binding 호출.
-	// UE 와 동일 — 매 frame 호출 (value=0 도 호출됨, 자식이 0 분기 처리).
-	for (const FAxisBinding& B : AxisBindings)
-	{
-		float Value = 0.0f;
-		for (const FAxisMapping& M : AxisMappings)
-		{
-			if (M.Name == B.Name && In.GetKey(M.VKey))
-			{
-				Value += M.Scale;
-			}
-		}
-		if (B.Callback) B.Callback(Value);
-	}
-
-	// Action: edge 감지 (Pressed = KeyDown, Released = KeyUp).
-	for (const FActionBinding& B : ActionBindings)
-	{
-		for (const FActionMapping& M : ActionMappings)
-		{
-			if (M.Name != B.Name) continue;
-			const bool bFired = (B.Event == EInputEvent::Pressed)
-				? In.GetKeyDown(M.VKey)
-				: In.GetKeyUp(M.VKey);
-			if (bFired && B.Callback)
-			{
-				B.Callback();
-				break;  // 같은 action 의 여러 매핑이 같은 frame 발화해도 1회만.
-			}
-		}
-	}
+float UInputComponent::EvaluateAxisMapping(const FAxisMapping& Mapping, const FInputSystemSnapshot& Snapshot) const
+{
+    switch (Mapping.SourceType)
+    {
+    case EInputAxisSourceType::Key:
+        return Snapshot.IsDown(Mapping.VKey) ? Mapping.Scale : 0.0f;
+    case EInputAxisSourceType::MouseX:
+        return static_cast<float>(Snapshot.MouseDeltaX) * Mapping.Scale;
+    case EInputAxisSourceType::MouseY:
+        return static_cast<float>(Snapshot.MouseDeltaY) * Mapping.Scale;
+    case EInputAxisSourceType::MouseWheel:
+        return static_cast<float>(Snapshot.ScrollDelta) * Mapping.Scale;
+    default:
+        return 0.0f;
+    }
 }

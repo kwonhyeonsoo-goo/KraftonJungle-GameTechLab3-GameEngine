@@ -22,7 +22,19 @@ void APawn::BeginPlay()
 			InputComponent = AddComponent<UInputComponent>();
 		}
 	}
+    if (InputComponent)
+    {
+        InputComponent->ClearBindings();
+    }
 	SetupInputComponent();
+}
+
+void APawn::ProcessPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime)
+{
+    if (InputComponent)
+    {
+        InputComponent->ProcessInput(Snapshot, DeltaTime);
+    }
 }
 
 void APawn::PossessedBy(APlayerController* PC)

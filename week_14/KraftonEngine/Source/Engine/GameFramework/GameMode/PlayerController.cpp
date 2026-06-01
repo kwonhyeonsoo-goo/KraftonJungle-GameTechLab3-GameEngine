@@ -74,3 +74,14 @@ void APlayerController::UnPossess()
 	PossessedPawn = nullptr;
 	OldPawn->UnPossessed();
 }
+
+void APlayerController::ProcessPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime)
+{
+    APawn* Pawn = GetPossessedPawn();
+    if (!Pawn)
+    {
+        return;
+    }
+
+    Pawn->ProcessPlayerInput(Snapshot, DeltaTime);
+}

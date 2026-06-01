@@ -65,22 +65,27 @@ void UGameEngine::Shutdown()
 
 void UGameEngine::Tick(float DeltaTime)
 {
-	UEngine::Tick(DeltaTime);
+    TickFrameStart(DeltaTime);
 
-	InputSystem& Input = InputSystem::Get();
-	const FInputSystemSnapshot InputSnapshot = Input.MakeSnapshot();
+    const FInputSystemSnapshot RawInputSnapshot = InputSystem::Get().MakeSnapshot();
 
 	if (GameViewportClient)
 	{
-		GameViewportClient->ProcessInput(InputSnapshot, DeltaTime);
+        GameViewportClient->ProcessInput(RawInputSnapshot, DeltaTime);
+        if (GameViewportClient->HasGameInputSnapshot())
+        {
+            ProcessActiveWorldPlayerInput(GameViewportClient->GetGameInputSnapshot(), DeltaTime);
+        }
 	}
 
 	// ESC 는 World pause 와 무관하게 동작해야 함 (메뉴 토글 자체가 pause 토글이라
-	// component-tick 에 두면 닫는 키 입력을 못 잡는다). 등록된 Lua 콜백을 직접 호출.
-	if (InputSnapshot.WasPressed(VK_ESCAPE))
+    // gameplay input 라우팅에 두면 UIOnly/paused 상태에서 닫는 키 입력을 못 잡는다).
+    if (RawInputSnapshot.WasPressed(VK_ESCAPE))
 	{
 		FLuaScriptManager::FireOnEscapePressed();
 	}
+
+    TickFrameBody(DeltaTime);
 
 	// World->Tick / Render 가 모두 끝난 이후에 transition 처리 — Lua callback 안에서
 	// 요청이 들어와도 Tick/Render 흐름이 valid 한 액터/컴포넌트로 진행한 뒤 안전하게 destroy.
