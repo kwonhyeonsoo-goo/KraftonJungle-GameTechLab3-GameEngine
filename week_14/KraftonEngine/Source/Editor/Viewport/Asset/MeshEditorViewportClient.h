@@ -7,12 +7,15 @@
 #include "Editor/Slate/SWindow.h"
 #include "Core/Types/RayTypes.h"
 #include "Gizmo/BoneTransformGizmoTarget.h"
+#include "Gizmo/PhysicsAssetGizmoTarget.h"
 #include "Component/Debug/BoneDebugComponent.h"
 
 #include <d3d11.h>
 #include "Object/GarbageCollection.h"
 
 class UGizmoComponent;
+class UPhysicsAssetPreviewComponent;
+class UPhysicsAsset;
 class FWindowsWindow;
 class UWorld;
 class AActor;
@@ -30,6 +33,7 @@ public:
 
 	void CreatePreviewGizmo();
 	void CreateBoneDebugComponent();
+	void CreatePhysicsAssetPreviewComponent();
 	void ResetCameraToPreviousBounds();
 
 	void SetPreviewWorld(UWorld* InWorld) { PreviewWorld = InWorld; }
@@ -47,6 +51,8 @@ public:
 
 	UGizmoComponent* GetGizmo() const { return Gizmo; }
 	USkeletalMeshComponent* GetPreviewMeshComponent() const { return PreviewMeshComponent; }
+	UPhysicsAssetPreviewComponent* GetPhysicsAssetPreviewComponent() const { return PhysicsAssetPreviewComponent; }
+	ID3D11Device* GetRenderDevice() const { return RenderDevice; }
 
 	FViewportRenderOptions& GetRenderOptions() override { return RenderOptions; }
 	const FViewportRenderOptions& GetRenderOptions() const override { return RenderOptions; }
@@ -59,16 +65,34 @@ public:
 
 	void SetSelectedBone(USkeletalMesh* Mesh, int32 BoneIndex);
 	void SetSelectedSocket(USkeletalMesh* Mesh, USkeleton* Skeleton, int32 SocketIndex);
+	void SetSelectedPhysicsAssetElement(
+		UPhysicsAsset* PhysicsAsset,
+		int32 BodyIndex,
+		int32 ShapeIndex,
+		int32 ConstraintIndex,
+		EPhysicsAssetConstraintFrameTarget ConstraintFrameTarget);
+	void ClearPhysicsAssetGizmoTarget();
 	const FBone* GetSelectedBone() const;
 	bool ConsumeSocketGizmoModified();
+	bool ConsumePhysicsAssetGizmoModified();
+	bool ConsumePhysicsAssetViewportPick(int32& OutBodyIndex, int32& OutShapeIndex);
 	void RefreshBoneDebug();
 
 	EBoneDebugDrawMode GetBoneDebugDrawMode() const;
 	void SetBoneDebugDrawMode(EBoneDebugDrawMode InDrawMode);
 
 	void ApplyTransformSettingsToGizmo();
+	void ToggleCoordSystem();
 
 private:
+	enum class EPhysicsGizmoSelectionKind : uint8
+	{
+		None,
+		Body,
+		Shape,
+		ConstraintFrame
+	};
+
 	void TickShortcuts();
 	void TickInput(float DeltaTime);
 	void TickInteraction(float DeltaTime);
@@ -78,6 +102,7 @@ private:
 	void SyncGizmo();
 
 	void HandleDragStart(const FRay& Ray);
+	bool TryPickPhysicsAssetPreviewShape(const FRay& Ray);
 
 private:
 	USkeletalMesh* SelectedMesh = nullptr;
@@ -90,12 +115,28 @@ private:
 
 	FBoneTransformGizmoTarget BoneTarget;
 	FSocketTransformGizmoTarget SocketTarget;
+	FPhysicsAssetBodyGizmoTarget PhysicsBodyTarget;
+	FPhysicsAssetShapeGizmoTarget PhysicsShapeTarget;
+	FPhysicsAssetConstraintFrameGizmoTarget PhysicsConstraintFrameTarget;
 	UGizmoComponent* Gizmo = nullptr;
 	USkeletalMeshComponent* PreviewMeshComponent = nullptr;
 	UBoneDebugComponent* BoneDebugComponent = nullptr;
+	UPhysicsAssetPreviewComponent* PhysicsAssetPreviewComponent = nullptr;
+	ID3D11Device* RenderDevice = nullptr;
 
 	UWorld* PreviewWorld = nullptr;
 	AActor* PreviewActor = nullptr;
+
+	EPhysicsGizmoSelectionKind ActivePhysicsGizmoKind = EPhysicsGizmoSelectionKind::None;
+	UPhysicsAsset* ActivePhysicsGizmoAsset = nullptr;
+	int32 ActivePhysicsGizmoBodyIndex = -1;
+	int32 ActivePhysicsGizmoShapeIndex = -1;
+	int32 ActivePhysicsGizmoConstraintIndex = -1;
+	EPhysicsAssetConstraintFrameTarget ActivePhysicsGizmoConstraintFrame = EPhysicsAssetConstraintFrameTarget::Child;
+
+	bool bHasPendingPhysicsAssetViewportPick = false;
+	int32 PendingPhysicsAssetPickBodyIndex = -1;
+	int32 PendingPhysicsAssetPickShapeIndex = -1;
 
 	bool bIsRenderable = false;
 

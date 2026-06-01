@@ -8,6 +8,7 @@
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
 #include "Mesh/MeshManager.h"
 #include "Runtime/Engine.h"
+#include "Component/Debug/PhysicsAssetPreviewComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Component/Light/DirectionalLightComponent.h"
 #include "Viewport/Viewport.h"
@@ -54,6 +55,8 @@
 
 namespace
 {
+	constexpr float MeshEditorTreeIndentSpacing = 10.0f;
+
 	ID3D11ShaderResourceView* LoadTabIcon(const wchar_t* FileName)
 	{
 		const FString Path = FPaths::ToUtf8(
@@ -423,6 +426,7 @@ void FMeshEditorWidget::Open(UObject* Object)
 
 	ViewportClient.CreatePreviewGizmo();
 	ViewportClient.CreateBoneDebugComponent();
+	ViewportClient.CreatePhysicsAssetPreviewComponent();
 	ViewportClient.ResetCameraToPreviousBounds();
 
 	WorldContext.World->SetEditorPOVProvider(&ViewportClient);
@@ -486,6 +490,22 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 		{
 			bSkeletonDirty = true;
 		}
+		if (ActiveTab == EMeshEditorTab::Physics && ViewportClient.ConsumePhysicsAssetGizmoModified())
+		{
+			PhysicsAssetEditor.NotifyViewportGizmoModified();
+		}
+
+		int32 PickedPhysicsBodyIndex = -1;
+		int32 PickedPhysicsShapeIndex = -1;
+		if (ActiveTab == EMeshEditorTab::Physics &&
+			ViewportClient.ConsumePhysicsAssetViewportPick(PickedPhysicsBodyIndex, PickedPhysicsShapeIndex))
+		{
+			PhysicsAssetEditor.SelectPhysicsShapeFromViewport(
+				GetCurrentPhysicsAsset(),
+				PickedPhysicsBodyIndex,
+				PickedPhysicsShapeIndex);
+		}
+
 	}
 
 	if (ActiveTab == EMeshEditorTab::Animation)
@@ -518,6 +538,23 @@ void FMeshEditorWidget::CollectPreviewViewports(TArray<IEditorPreviewViewportCli
 {
 	if (IsOpen())
 	{
+		if (ActiveTab == EMeshEditorTab::Physics)
+		{
+			FMeshEditorWidget* MutableThis = const_cast<FMeshEditorWidget*>(this);
+			UPhysicsAsset* PhysicsAsset = MutableThis->GetCurrentPhysicsAsset();
+			USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
+			MutableThis->PhysicsAssetEditor.RenderPhysicsPreview(
+				PhysicsAsset,
+				SkeletalMesh,
+				ViewportClient.GetPreviewWorld(),
+				ViewportClient.GetPreviewMeshComponent(),
+				ViewportClient.GetPhysicsAssetPreviewComponent(),
+				ViewportClient.GetRenderDevice());
+		}
+		else if (ViewportClient.GetPhysicsAssetPreviewComponent())
+		{
+			ViewportClient.GetPhysicsAssetPreviewComponent()->ClearPreview(ViewportClient.GetRenderDevice());
+		}
 		OutClients.push_back(const_cast<FMeshEditorViewportClient*>(&ViewportClient));
 	}
 }
@@ -616,14 +653,7 @@ void FMeshEditorWidget::RenderDocument(float DeltaTime)
 		const ImGuiIO& IO = ImGui::GetIO();
 		if (IO.KeyCtrl && !IO.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_S, false))
 		{
-			if (ActiveTab == EMeshEditorTab::Animation && IsCurrentAnimationDirty())
-			{
-				SaveCurrentAnimationAsset();
-			}
-			else if (ActiveTab == EMeshEditorTab::Physics && IsCurrentPhysicsAssetDirty())
-			{
-				PhysicsAssetEditor.SaveEditedPhysicsAsset();
-			}
+			SaveAllDirtyAssets();
 		}
 	}
 
@@ -677,29 +707,18 @@ void FMeshEditorWidget::RenderTabBar()
 	DrawList->AddRectFilled(BarPos, ImVec2(BarPos.x + BarWidth, BarPos.y + BarHeight),
 	                        IM_COL32(38, 38, 38, 255));
 
-	const bool bCanSaveSkeleton = ActiveTab == EMeshEditorTab::Skeleton && bSkeletonDirty;
-	const bool bCanSaveAnimation = ActiveTab == EMeshEditorTab::Animation && IsCurrentAnimationDirty();
-	const bool bCanSavePhysics = ActiveTab == EMeshEditorTab::Physics && IsCurrentPhysicsAssetDirty();
+	const bool bCanSaveSkeleton = bSkeletonDirty;
+	const bool bCanSaveAnimation = IsCurrentAnimationDirty();
+	const bool bCanSavePhysics = IsCurrentPhysicsAssetDirty();
 	const bool bCanSave = bCanSaveSkeleton || bCanSaveAnimation || bCanSavePhysics;
-	const bool bShowDirtySave = bSkeletonDirty || IsCurrentAnimationDirty() || IsCurrentPhysicsAssetDirty();
+	const bool bShowDirtySave = bCanSave;
 	if (!bCanSave)
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.45f);
 	}
 	if (ImGui::Button(bShowDirtySave ? "Save*" : "Save", ImVec2(68.0f, BarHeight)))
 	{
-		if (bCanSaveSkeleton)
-		{
-			SaveCurrentSkeleton();
-		}
-		else if (bCanSaveAnimation)
-		{
-			SaveCurrentAnimationAsset();
-		}
-		else if (bCanSavePhysics)
-		{
-			PhysicsAssetEditor.SaveEditedPhysicsAsset();
-		}
+		SaveAllDirtyAssets();
 	}
 	if (!bCanSave)
 	{
@@ -724,6 +743,10 @@ void FMeshEditorWidget::RenderTabBar()
 		{
 			const EMeshEditorTab PreviousTab = ActiveTab;
 			ActiveTab = Tab;
+			if (PreviousTab == EMeshEditorTab::Physics && ActiveTab != EMeshEditorTab::Physics)
+			{
+				ViewportClient.ClearPhysicsAssetGizmoTarget();
+			}
 			if (PreviousTab != ActiveTab && ActiveTab == EMeshEditorTab::Skeleton)
 			{
 				if (USkeletalMeshComponent* Comp = ViewportClient.GetPreviewMeshComponent())
@@ -849,6 +872,11 @@ void FMeshEditorWidget::RenderViewportPanel(ImVec2 Size)
 					true);
 			}
 		}
+
+		if (ActiveTab == EMeshEditorTab::Physics)
+		{
+			PhysicsAssetEditor.RenderViewportDebugOptions();
+		}
 	};
 
 	FViewportToolbar::Render(Context);
@@ -919,6 +947,44 @@ bool FMeshEditorWidget::SaveCurrentMeshAsset()
 	return SkeletalMesh && FMeshManager::SaveSkeletalMeshPreservingMetadata(SkeletalMesh);
 }
 
+bool FMeshEditorWidget::SaveCurrentPhysicsAsset()
+{
+	if (!IsCurrentPhysicsAssetDirty())
+	{
+		return false;
+	}
+
+	if (!PhysicsAssetEditor.SaveEditedPhysicsAsset())
+	{
+		return false;
+	}
+
+	// A PhysicsAsset edit is only useful after restart if the owning SkeletalMesh
+	// still persists the assignment path as well. Create/Assign already saves the
+	// mesh, but saving it again here makes Ctrl+S / Save robust when the dirty
+	// PhysicsAsset came from an embedded editor or a direct PhysicsAsset open.
+	SaveCurrentMeshAsset();
+	return true;
+}
+
+void FMeshEditorWidget::SaveAllDirtyAssets()
+{
+	if (bSkeletonDirty)
+	{
+		SaveCurrentSkeleton();
+	}
+
+	if (IsCurrentAnimationDirty())
+	{
+		SaveCurrentAnimationAsset();
+	}
+
+	if (IsCurrentPhysicsAssetDirty())
+	{
+		SaveCurrentPhysicsAsset();
+	}
+}
+
 bool FMeshEditorWidget::IsCurrentAnimationDirty() const
 {
 	if (AnimTabState.bMontageSelected)
@@ -978,6 +1044,7 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 	ImGui::BeginChild("BoneHierarchy", ImVec2(HierarchyWidth, 0), true);
 	ImGui::Text("Bone Hierarchy");
 	ImGui::Separator();
+	ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, MeshEditorTreeIndentSpacing);
 	if (Skeleton)
 	{
 		const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
@@ -989,6 +1056,7 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 			}
 		}
 	}
+	ImGui::PopStyleVar();
 	ImGui::EndChild();
 
 	ImGui::SameLine();
@@ -1311,6 +1379,15 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
 	UPhysicsAsset* PhysicsAsset = GetCurrentPhysicsAsset();
 
+	if (PhysicsAsset)
+	{
+		PhysicsAssetEditor.RenderEmbeddedToolbar(PhysicsAsset, SkeletalMesh, 0.0f);
+	}
+	else
+	{
+		ImGui::TextDisabled("No Physics Asset selected.");
+	}
+
 	const float Spacing = ImGui::GetStyle().ItemSpacing.x;
 	const float SplitterWidth = 4.0f;
 	const float TotalWidth = ImGui::GetContentRegionAvail().x;
@@ -1397,6 +1474,20 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 		ImGui::TextDisabled("No Physics Asset selected.");
 	}
 	ImGui::EndChild();
+
+	if (PhysicsAsset)
+	{
+		ViewportClient.SetSelectedPhysicsAssetElement(
+			PhysicsAsset,
+			PhysicsAssetEditor.GetSelectedBodyIndex(),
+			PhysicsAssetEditor.GetSelectedShapeIndex(),
+			PhysicsAssetEditor.GetSelectedConstraintIndex(),
+			PhysicsAssetEditor.GetSelectedConstraintGizmoFrame());
+	}
+	else
+	{
+		ViewportClient.ClearPhysicsAssetGizmoTarget();
+	}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

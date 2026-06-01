@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Animation/Skeleton/SkeletonTypes.h"
 #include "Math/Transform.h"
@@ -20,12 +20,12 @@ struct FPhysicsAssetShapeSetup
 
     FTransform LocalTransform;
 
-    FVector BoxHalfExtent = FVector(50.0f, 50.0f, 50.0f);
+    FVector BoxHalfExtent = FVector(0.8f, 0.8f, 0.8f);
 
-    float SphereRadius = 50.0f;
+    float SphereRadius = 0.8f;
 
-    float CapsuleRadius     = 50.0f;
-    float CapsuleHalfHeight = 100.0f;
+    float CapsuleRadius     = 0.4f;
+    float CapsuleHalfHeight = 1.2f;
 
     friend FArchive& operator<<(FArchive& Ar, FPhysicsAssetShapeSetup& Setup)
     {

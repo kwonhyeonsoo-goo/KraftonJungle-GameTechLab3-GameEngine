@@ -160,6 +160,31 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 	ImGuiStyle& Style = ImGui::GetStyle();
 	ImVec4* Colors = Style.Colors;
 	
+	const ImVec4 UnifiedBlack = ImVec4(0.024f, 0.024f, 0.028f, 1.0f);
+	const ImVec4 UnifiedBlackHovered = ImVec4(0.075f, 0.075f, 0.085f, 1.0f);
+	const ImVec4 UnifiedBlackActive = ImVec4(0.105f, 0.105f, 0.118f, 1.0f);
+
+	Colors[ImGuiCol_WindowBg] = UnifiedBlack;
+	Colors[ImGuiCol_ChildBg] = UnifiedBlack;
+	Colors[ImGuiCol_PopupBg] = UnifiedBlack;
+	Colors[ImGuiCol_TitleBg] = UnifiedBlack;
+	Colors[ImGuiCol_TitleBgActive] = UnifiedBlack;
+	Colors[ImGuiCol_TitleBgCollapsed] = UnifiedBlack;
+	Colors[ImGuiCol_MenuBarBg] = UnifiedBlack;
+	Colors[ImGuiCol_Tab] = UnifiedBlack;
+	Colors[ImGuiCol_TabSelected] = UnifiedBlackActive;
+	Colors[ImGuiCol_TabHovered] = UnifiedBlackHovered;
+	Colors[ImGuiCol_TabDimmed] = UnifiedBlack;
+	Colors[ImGuiCol_TabDimmedSelected] = UnifiedBlackActive;
+	Colors[ImGuiCol_TabSelectedOverline] = ImVec4(0.28f, 0.28f, 0.30f, 1.0f);
+	Colors[ImGuiCol_TabDimmedSelectedOverline] = ImVec4(0.18f, 0.18f, 0.20f, 1.0f);
+	Colors[ImGuiCol_DockingEmptyBg] = UnifiedBlack;
+	Colors[ImGuiCol_Header] = UnifiedBlack;
+	Colors[ImGuiCol_HeaderHovered] = UnifiedBlackHovered;
+	Colors[ImGuiCol_HeaderActive] = UnifiedBlackActive;
+	Colors[ImGuiCol_Button] = UnifiedBlackActive;
+	Colors[ImGuiCol_ButtonHovered] = ImVec4(0.16f, 0.16f, 0.18f, 1.0f);
+	Colors[ImGuiCol_ButtonActive] = ImVec4(0.20f, 0.20f, 0.22f, 1.0f);
 	Colors[ImGuiCol_FrameBg] = ImVec4(0.14f, 0.14f, 0.14f, 1.0f);
 	Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.20f, 0.20f, 0.20f, 1.0f);
 	Colors[ImGuiCol_FrameBgActive] = ImVec4(0.24f, 0.24f, 0.24f, 1.0f);

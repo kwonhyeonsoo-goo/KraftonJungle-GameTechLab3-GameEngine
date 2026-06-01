@@ -3,11 +3,16 @@
 #include "Editor/UI/Asset/AssetEditorWidget.h"
 #include "Physics/PhysicsAssetValidation.h"
 #include "Object/FName.h"
+#include "Gizmo/PhysicsAssetGizmoTarget.h"
 
 namespace ax { namespace NodeEditor { struct EditorContext; } }
 
 class UPhysicsAsset;
+class UPhysicsAssetPreviewComponent;
 class USkeletalMesh;
+class USkeletalMeshComponent;
+class UWorld;
+struct ID3D11Device;
 struct FReferenceSkeleton;
 struct FPhysicsAssetBodySetup;
 struct FPhysicsAssetConstraintSetup;
@@ -34,8 +39,27 @@ public:
     void RenderEmbeddedToolbar(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime);
     void RenderEmbeddedTreeAndGraph(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime);
     void RenderEmbeddedDetails(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime);
+    void RenderPreviewDebug(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMesh* PreviewMesh,
+        UWorld* PreviewWorld,
+        USkeletalMeshComponent* PreviewComponent);
+    void RenderPhysicsPreview(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMesh* PreviewMesh,
+        UWorld* PreviewWorld,
+        USkeletalMeshComponent* PreviewComponent,
+        UPhysicsAssetPreviewComponent* SolidPreviewComponent,
+        ID3D11Device* Device);
+    void RenderViewportDebugOptions();
     bool SaveEditedPhysicsAsset();
     bool HasUnsavedChanges() const { return IsDirty(); }
+    int32 GetSelectedBodyIndex() const { return SelectedBodyIndex; }
+    int32 GetSelectedShapeIndex() const { return SelectedShapeIndex; }
+    int32 GetSelectedConstraintIndex() const { return SelectedConstraintIndex; }
+    EPhysicsAssetConstraintFrameTarget GetSelectedConstraintGizmoFrame() const { return SelectedConstraintGizmoFrame; }
+    void SelectPhysicsShapeFromViewport(UPhysicsAsset* PhysicsAsset, int32 BodyIndex, int32 ShapeIndex);
+    void NotifyViewportGizmoModified();
 
     FString GetDocumentTitle() const override;
     FString GetDocumentPayloadId() const override;
@@ -48,6 +72,7 @@ private:
     void RenderDetailsAndValidationPanel(UPhysicsAsset* PhysicsAsset);
 
     void RenderToolbar(UPhysicsAsset* PhysicsAsset);
+    void RenderRegenerateBodiesControls(UPhysicsAsset* PhysicsAsset);
     void RenderAssetSummary(UPhysicsAsset* PhysicsAsset);
     void RenderSkeletonPhysicsTree(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh);
     void RenderPhysicsBoneTree(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton, int32 BoneIndex);
@@ -63,6 +88,20 @@ private:
     void RenderConstraintDetails(UPhysicsAsset* PhysicsAsset, FPhysicsAssetConstraintSetup& ConstraintSetup);
     void RenderValidationPanel();
     void RenderConstraintGraphPanel(UPhysicsAsset* PhysicsAsset);
+    void RenderBodyDebug(UPhysicsAsset* PhysicsAsset, USkeletalMeshComponent* PreviewComponent, UWorld* PreviewWorld);
+    void RenderConstraintDebug(UPhysicsAsset* PhysicsAsset, USkeletalMeshComponent* PreviewComponent, UWorld* PreviewWorld);
+    void DrawBodySetupDebug(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMeshComponent* PreviewComponent,
+        UWorld* PreviewWorld,
+        int32 BodyIndex,
+        const FPhysicsAssetBodySetup& BodySetup);
+    void DrawConstraintSetupDebug(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMeshComponent* PreviewComponent,
+        UWorld* PreviewWorld,
+        int32 ConstraintIndex,
+        const FPhysicsAssetConstraintSetup& ConstraintSetup);
 
     void SelectBoneInPhysicsTree(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton, int32 BoneIndex);
     void SelectBodySetup(UPhysicsAsset* PhysicsAsset, int32 BodyIndex, int32 TreeBoneIndex);
@@ -70,6 +109,7 @@ private:
     int32 FindPreviewBoneIndexByName(const FName& BoneName) const;
 
     void AddDefaultBody(UPhysicsAsset* PhysicsAsset);
+    bool RegenerateBodies(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh);
     void AddDefaultBodyForBone(UPhysicsAsset* PhysicsAsset, const FName& BoneName);
     void AddDefaultShape(FPhysicsAssetBodySetup& BodySetup);
     void AddDefaultConstraint(UPhysicsAsset* PhysicsAsset);
@@ -90,6 +130,15 @@ private:
     ax::NodeEditor::EditorContext* ConstraintGraphContext = nullptr;
     bool bPendingClose = false;
     bool bConstraintGraphLayoutDirty = true;
+    bool bShowPreviewBodies = true;
+    bool bShowPreviewConstraints = true;
+    bool bRegenerateUsePCAAnalysis = true;
+    bool bRegenerateUseBoneAxis = false;
+    bool bRegenerateCreateConstraints = true;
+    bool bRegenerateReplaceExisting = true;
+    float RegenerateMinInfluenceWeight = 0.35f;
+    int32 RegenerateMinWeightedVertices = 4;
+    EPhysicsAssetConstraintFrameTarget SelectedConstraintGizmoFrame = EPhysicsAssetConstraintFrameTarget::Child;
     uint64 ConstraintGraphTopologyHash = 0;
 
     TArray<FPhysicsAssetValidationIssue> ValidationIssues;
