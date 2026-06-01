@@ -148,6 +148,9 @@
     <Filter Include="Source\Engine\CameraShake">
       <UniqueIdentifier>{6402e8a9-52cd-5e58-13d2-0638ee5aff09}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Cloth">
+      <UniqueIdentifier>{43fcc25f-e35b-da79-8e36-7dcc2a63c76c}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Collision">
       <UniqueIdentifier>{0a1ac0a6-fa86-45a3-c38e-91b60c7ce3cf}</UniqueIdentifier>
     </Filter>
@@ -1054,6 +1057,12 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\CameraShake\CameraShakeManager.cpp">
       <Filter>Source\Engine\CameraShake</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Cloth\NvClothBackend.cpp">
+      <Filter>Source\Engine\Cloth</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Cloth\SkeletalClothRuntime.cpp">
+      <Filter>Source\Engine\Cloth</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Collision\BVH\MeshTriangleBVH.cpp">
       <Filter>Source\Engine\Collision\BVH</Filter>
@@ -2344,6 +2353,15 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\CameraShake\CameraShakeManager.h">
       <Filter>Source\Engine\CameraShake</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Cloth\ClothBackend.h">
+      <Filter>Source\Engine\Cloth</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Cloth\NvClothBackend.h">
+      <Filter>Source\Engine\Cloth</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Cloth\SkeletalClothRuntime.h">
+      <Filter>Source\Engine\Cloth</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Collision\BVH\MeshTriangleBVH.h">
       <Filter>Source\Engine\Collision\BVH</Filter>

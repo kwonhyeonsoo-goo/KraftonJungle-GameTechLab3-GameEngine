@@ -2,6 +2,7 @@
 
 #include "Component/Primitive/SkinnedMeshComponent.h"
 #include "Animation/AnimationMode.h"
+#include "Cloth/SkeletalClothRuntime.h"
 #include "Animation/Skeleton/SkeletonTypes.h"
 #include "Object/Ptr/SubclassOf.h"
 #include "Object/Ptr/SoftObjectPtr.h"
@@ -29,6 +30,7 @@ public:
 
     // Render access 섹션: SceneProxy
     FPrimitiveSceneProxy* CreateSceneProxy() override;
+    void TickClothSimulationForEditorPreview(float DeltaTime);
 
     // Mesh 가 바뀌면 AnimInstance 도 새 SkeletalMesh 기준으로 재구성해야 하므로 override.
     UFUNCTION(Callable, Category="Mesh")
@@ -144,6 +146,7 @@ protected:
     void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
     bool EvaluateAnimInstance(float DeltaTime);
+    void TickClothSimulation(float DeltaTime);
 
 private:
     void LoadAnimationFromPath();
@@ -166,5 +169,6 @@ protected:
     FSoftObjectPtr PhysicsAssetOverridePath = "None";
     mutable TWeakObjectPtr<UPhysicsAsset> PhysicsAssetOverride;
     std::unique_ptr<FPhysicsAssetInstance> PhysicsAssetInstance;
+    std::unique_ptr<FSkeletalClothRuntime> ClothRuntime;
     bool bUsePhysicsAssetPose = false;
 };

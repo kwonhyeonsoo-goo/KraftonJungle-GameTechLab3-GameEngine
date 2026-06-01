@@ -1,5 +1,6 @@
 ﻿#include "SkeletalMesh.h"
 #include "Object/Reflection/ObjectFactory.h"
+#include "Asset/AssetPackage.h"
 #include "Serialization/Archive.h"
 #include "Animation/Skeleton/Skeleton.h"
 #include "Animation/Skeleton/SkeletonManager.h"
@@ -8,6 +9,315 @@
 #include "Physics/PhysicsAssetManager.h"
 #include "Engine/Profiling/Stats/MemoryStats.h"
 
+#include <utility>
+
+namespace
+{
+    void SetClothError(FString* OutError, const FString& Message)
+    {
+        if (OutError)
+        {
+            *OutError = Message;
+        }
+    }
+
+    bool IsTriangleDegenerate(uint32 A, uint32 B, uint32 C)
+    {
+        return A == B || B == C || A == C;
+    }
+}
+
+FSkeletalClothLODData* FSkeletalMesh::FindClothLOD(uint32 LODIndex)
+{
+    for (FSkeletalClothLODData& LODData : ClothPayload.LODs)
+    {
+        if (LODData.LODIndex == LODIndex)
+        {
+            return &LODData;
+        }
+    }
+    return nullptr;
+}
+
+const FSkeletalClothLODData* FSkeletalMesh::FindClothLOD(uint32 LODIndex) const
+{
+    for (const FSkeletalClothLODData& LODData : ClothPayload.LODs)
+    {
+        if (LODData.LODIndex == LODIndex)
+        {
+            return &LODData;
+        }
+    }
+    return nullptr;
+}
+
+FSkeletalClothLODData& FSkeletalMesh::FindOrAddClothLOD(uint32 LODIndex)
+{
+    if (FSkeletalClothLODData* Existing = FindClothLOD(LODIndex))
+    {
+        return *Existing;
+    }
+
+    FSkeletalClothLODData NewLOD;
+    NewLOD.LODIndex = LODIndex;
+    ClothPayload.LODs.push_back(std::move(NewLOD));
+    return ClothPayload.LODs.back();
+}
+
+FSkeletalClothData* FSkeletalMesh::FindClothData(uint32 LODIndex, const FString& Name)
+{
+    FSkeletalClothLODData* LODData = FindClothLOD(LODIndex);
+    if (!LODData)
+    {
+        return nullptr;
+    }
+
+    for (FSkeletalClothData& Cloth : LODData->Cloths)
+    {
+        if (Cloth.Name == Name)
+        {
+            return &Cloth;
+        }
+    }
+    return nullptr;
+}
+
+const FSkeletalClothData* FSkeletalMesh::FindClothData(uint32 LODIndex, const FString& Name) const
+{
+    const FSkeletalClothLODData* LODData = FindClothLOD(LODIndex);
+    if (!LODData)
+    {
+        return nullptr;
+    }
+
+    for (const FSkeletalClothData& Cloth : LODData->Cloths)
+    {
+        if (Cloth.Name == Name)
+        {
+            return &Cloth;
+        }
+    }
+    return nullptr;
+}
+
+FSkeletalClothData* FSkeletalMesh::AddOrReplaceClothData(FSkeletalClothData&& ClothData)
+{
+    FSkeletalClothLODData& LODData = FindOrAddClothLOD(ClothData.Binding.LODIndex);
+    for (FSkeletalClothData& Existing : LODData.Cloths)
+    {
+        if (Existing.Name == ClothData.Name)
+        {
+            Existing = std::move(ClothData);
+            return &Existing;
+        }
+    }
+
+    LODData.Cloths.push_back(std::move(ClothData));
+    return &LODData.Cloths.back();
+}
+
+bool FSkeletalMesh::RemoveClothDataForSection(uint32 LODIndex, int32 SectionIndex)
+{
+    FSkeletalClothLODData* LODData = FindClothLOD(LODIndex);
+    if (!LODData)
+    {
+        return false;
+    }
+
+    bool bRemoved = false;
+    for (auto It = LODData->Cloths.begin(); It != LODData->Cloths.end();)
+    {
+        if (It->Binding.LODIndex == LODIndex && It->Binding.SectionIndex == SectionIndex)
+        {
+            It = LODData->Cloths.erase(It);
+            bRemoved = true;
+        }
+        else
+        {
+            ++It;
+        }
+    }
+
+    if (bRemoved && LODData->Cloths.empty())
+    {
+        for (auto It = ClothPayload.LODs.begin(); It != ClothPayload.LODs.end(); ++It)
+        {
+            if (It->LODIndex == LODIndex)
+            {
+                ClothPayload.LODs.erase(It);
+                break;
+            }
+        }
+    }
+
+    return bRemoved;
+}
+
+bool FSkeletalMesh::BuildClothDataFromSection(
+    uint32 LODIndex,
+    int32 SectionIndex,
+    const FString& Name,
+    FSkeletalClothData& OutCloth,
+    FString* OutError
+) const
+{
+    if (SectionIndex < 0 || SectionIndex >= static_cast<int32>(Sections.size()))
+    {
+        SetClothError(OutError, "invalid cloth section index");
+        return false;
+    }
+
+    const FSkeletalMeshSection& Section = Sections[SectionIndex];
+    if (Section.IndexCount == 0 || Section.IndexCount % 3 != 0)
+    {
+        SetClothError(OutError, "cloth section index count must be a non-zero triangle list");
+        return false;
+    }
+    if (Section.FirstIndex > Indices.size() || Section.IndexCount > Indices.size() - Section.FirstIndex)
+    {
+        SetClothError(OutError, "cloth section index range is outside the skeletal mesh index buffer");
+        return false;
+    }
+
+    FSkeletalClothData NewCloth;
+    NewCloth.Name = Name.empty() ? Section.MaterialSlotName : Name;
+    NewCloth.Binding.LODIndex = LODIndex;
+    NewCloth.Binding.SectionIndex = SectionIndex;
+    NewCloth.Binding.MaterialSlotName = Section.MaterialSlotName;
+    NewCloth.Binding.FirstIndex = Section.FirstIndex;
+    NewCloth.Binding.IndexCount = Section.IndexCount;
+    NewCloth.Binding.SourceVertexCount = static_cast<uint32>(Vertices.size());
+    NewCloth.Binding.SourceIndexCount = static_cast<uint32>(Indices.size());
+
+    TMap<uint32, uint32> RenderToParticle;
+    NewCloth.ClothLocalIndices.reserve(Section.IndexCount);
+
+    const uint32 LastIndex = Section.FirstIndex + Section.IndexCount;
+    for (uint32 IndexOffset = Section.FirstIndex; IndexOffset < LastIndex; IndexOffset += 3)
+    {
+        const uint32 Triangle[3] =
+        {
+            Indices[IndexOffset + 0],
+            Indices[IndexOffset + 1],
+            Indices[IndexOffset + 2],
+        };
+
+        if (IsTriangleDegenerate(Triangle[0], Triangle[1], Triangle[2]))
+        {
+            SetClothError(OutError, "cloth section contains a degenerate triangle");
+            return false;
+        }
+
+        for (uint32 Corner = 0; Corner < 3; ++Corner)
+        {
+            const uint32 RenderVertexIndex = Triangle[Corner];
+            if (RenderVertexIndex >= Vertices.size())
+            {
+                SetClothError(OutError, "cloth section references a vertex outside the skeletal mesh vertex buffer");
+                return false;
+            }
+
+            auto It = RenderToParticle.find(RenderVertexIndex);
+            if (It == RenderToParticle.end())
+            {
+                const uint32 ParticleIndex = static_cast<uint32>(NewCloth.RenderVertexIndices.size());
+                RenderToParticle[RenderVertexIndex] = ParticleIndex;
+                NewCloth.RenderVertexIndices.push_back(RenderVertexIndex);
+                NewCloth.ParticleToRenderVertex.push_back(RenderVertexIndex);
+                NewCloth.ClothLocalIndices.push_back(ParticleIndex);
+            }
+            else
+            {
+                NewCloth.ClothLocalIndices.push_back(It->second);
+            }
+        }
+    }
+
+    NewCloth.Paint.MaxDistanceValues.assign(NewCloth.ParticleToRenderVertex.size(), 0.0f);
+    OutCloth = std::move(NewCloth);
+    return true;
+}
+
+bool FSkeletalMesh::ValidateClothData(const FSkeletalClothData& ClothData, FString* OutError) const
+{
+    const int32 SectionIndex = FindSectionForClothBinding(ClothData.Binding);
+    if (SectionIndex < 0)
+    {
+        SetClothError(OutError, "cloth binding no longer matches a skeletal mesh section");
+        return false;
+    }
+
+    if (ClothData.Binding.SourceVertexCount != static_cast<uint32>(Vertices.size()) ||
+        ClothData.Binding.SourceIndexCount != static_cast<uint32>(Indices.size()))
+    {
+        SetClothError(OutError, "cloth binding source vertex/index signature is stale");
+        return false;
+    }
+
+    if (ClothData.RenderVertexIndices.size() != ClothData.ParticleToRenderVertex.size())
+    {
+        SetClothError(OutError, "cloth render vertex and particle mapping sizes differ");
+        return false;
+    }
+    if (ClothData.Paint.MaxDistanceValues.size() != ClothData.ParticleToRenderVertex.size())
+    {
+        SetClothError(OutError, "cloth paint value count does not match particle count");
+        return false;
+    }
+    if (ClothData.ClothLocalIndices.empty() || ClothData.ClothLocalIndices.size() % 3 != 0)
+    {
+        SetClothError(OutError, "cloth local index buffer is not a triangle list");
+        return false;
+    }
+
+    for (uint32 RenderVertexIndex : ClothData.ParticleToRenderVertex)
+    {
+        if (RenderVertexIndex >= Vertices.size())
+        {
+            SetClothError(OutError, "cloth particle maps to a vertex outside the skeletal mesh vertex buffer");
+            return false;
+        }
+    }
+
+    for (uint32 LocalIndex : ClothData.ClothLocalIndices)
+    {
+        if (LocalIndex >= ClothData.ParticleToRenderVertex.size())
+        {
+            SetClothError(OutError, "cloth local triangle index is outside the particle range");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+int32 FSkeletalMesh::FindSectionForClothBinding(const FSkeletalClothSectionBinding& Binding) const
+{
+    if (Binding.SectionIndex >= 0 && Binding.SectionIndex < static_cast<int32>(Sections.size()))
+    {
+        const FSkeletalMeshSection& Section = Sections[Binding.SectionIndex];
+        if (Section.FirstIndex == Binding.FirstIndex &&
+            Section.IndexCount == Binding.IndexCount &&
+            (Binding.MaterialSlotName.empty() || Section.MaterialSlotName == Binding.MaterialSlotName))
+        {
+            return Binding.SectionIndex;
+        }
+    }
+
+    for (int32 SectionIndex = 0; SectionIndex < static_cast<int32>(Sections.size()); ++SectionIndex)
+    {
+        const FSkeletalMeshSection& Section = Sections[SectionIndex];
+        if (Section.FirstIndex == Binding.FirstIndex &&
+            Section.IndexCount == Binding.IndexCount &&
+            (Binding.MaterialSlotName.empty() || Section.MaterialSlotName == Binding.MaterialSlotName))
+        {
+            return SectionIndex;
+        }
+    }
+
+    return -1;
+}
+
 USkeletalMesh::~USkeletalMesh()
 {
     ReleaseTrackedMemory();
@@ -15,7 +325,7 @@ USkeletalMesh::~USkeletalMesh()
 
 void USkeletalMesh::Serialize(FArchive& Ar)
 {
-    SerializeCurrentPayload(Ar);
+    SerializeCurrentPayload(Ar, FAssetPackageHeader::CurrentVersion);
 }
 
 void USkeletalMesh::SerializeLegacyPayload(FArchive& Ar)
@@ -52,6 +362,7 @@ void USkeletalMesh::SerializeLegacyPayload(FArchive& Ar)
 
     if (Ar.IsLoading())
     {
+        SkeletalMeshAsset->ClothPayload = FSkeletalMeshClothPayload();
         SkeletalMeshAsset->NormalizeBonePoseData();
         SyncSkeletonBindingFromAsset();
         PhysicsAssetPath = "None";
@@ -61,10 +372,19 @@ void USkeletalMesh::SerializeLegacyPayload(FArchive& Ar)
     }
 }
 
-void USkeletalMesh::SerializeCurrentPayload(FArchive& Ar)
+void USkeletalMesh::SerializeCurrentPayload(FArchive& Ar, uint32 PackageVersion)
 {
     SerializeLegacyPayload(Ar);
     Ar << PhysicsAssetPath;
+
+    if (PackageVersion >= static_cast<uint32>(EAssetPackageSerializationVersion::SkeletalMeshClothPayload))
+    {
+        SerializeClothPayload(Ar);
+    }
+    else if (Ar.IsLoading() && SkeletalMeshAsset)
+    {
+        SkeletalMeshAsset->ClothPayload = FSkeletalMeshClothPayload();
+    }
 
     if (Ar.IsLoading())
     {
@@ -74,6 +394,23 @@ void USkeletalMesh::SerializeCurrentPayload(FArchive& Ar)
         }
         PhysicsAsset.Reset();
     }
+}
+
+void USkeletalMesh::SerializeClothPayload(FArchive& Ar)
+{
+    if (!SkeletalMeshAsset)
+    {
+        if (Ar.IsLoading())
+        {
+            SkeletalMeshAsset = std::make_unique<FSkeletalMesh>();
+        }
+        else
+        {
+            return;
+        }
+    }
+
+    Ar << SkeletalMeshAsset->ClothPayload;
 }
 
 void USkeletalMesh::SetSkeletalMeshAsset(FSkeletalMesh* InMesh)

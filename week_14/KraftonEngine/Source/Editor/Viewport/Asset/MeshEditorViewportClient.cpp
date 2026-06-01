@@ -19,6 +19,7 @@
 #include "Slate/SlateApplication.h"
 
 #include <imgui.h>
+#include <algorithm>
 
 void FMeshEditorViewportClient::Initialize(ID3D11Device* Device, uint32 Width, uint32 Height)
 {
@@ -130,6 +131,29 @@ bool FMeshEditorViewportClient::IsMouseOverViewport() const
 	ImVec2 MousePos = ImGui::GetMousePos();
 	return MousePos.x >= ViewportScreenRect.X && MousePos.x <= (ViewportScreenRect.X + ViewportScreenRect.Width) &&
 		MousePos.y >= ViewportScreenRect.Y && MousePos.y <= (ViewportScreenRect.Y + ViewportScreenRect.Height);
+}
+
+bool FMeshEditorViewportClient::GetMouseRay(FRay& OutRay) const
+{
+	if (!IsMouseOverViewport())
+	{
+		return false;
+	}
+
+	const float VPWidth = std::max(1.0f, ViewportScreenRect.Width);
+	const float VPHeight = std::max(1.0f, ViewportScreenRect.Height);
+	ImVec2 MousePos = ImGui::GetIO().MousePos;
+	const float LocalMouseX = MousePos.x - ViewportScreenRect.X;
+	const float LocalMouseY = MousePos.y - ViewportScreenRect.Y;
+
+	FMinimalViewInfo POV;
+	if (!GetCameraView(POV))
+	{
+		return false;
+	}
+
+	OutRay = POV.DeprojectScreenToWorld(LocalMouseX, LocalMouseY, VPWidth, VPHeight);
+	return true;
 }
 
 bool FMeshEditorViewportClient::IsGizmoHolding() const

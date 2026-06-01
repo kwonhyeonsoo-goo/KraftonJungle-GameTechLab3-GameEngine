@@ -86,8 +86,12 @@ private:
 	// Per-tab layouts
 	void RenderSkeletonLayout();
 	void RenderMeshLayout();
+	void RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, FSkeletalMesh* Asset);
+	void RenderTemporaryClothPaintValueOverlay(ImDrawList* DrawList, const ImVec2& ViewportPos, const ImVec2& ViewportSize) const;
+	void RenderClothBrushRadiusOverlay(ImDrawList* DrawList, const ImVec2& ViewportPos, const ImVec2& ViewportSize) const;
 	void RenderAnimationLayout(float TotalHeight);
 	void RenderPhysicsLayout(float TotalHeight);
+	void TickClothPaintBrush();
 
 	// Shared helpers
 	void RenderViewportPanel(ImVec2 Size);
@@ -99,6 +103,7 @@ private:
 	bool SaveCurrentMeshAsset();
 	bool SaveCurrentPhysicsAsset();
 	void SaveAllDirtyAssets();
+	void MarkCurrentMeshDirty();
 	void RefreshSelectedSocketEditBuffers(USkeleton* Skeleton);
 
 	// Animation tab helpers
@@ -137,6 +142,15 @@ private:
 	// Skeleton tab state
 	int32 SelectedBoneIndex = -1;
 	int32 SelectedSocketIndex = -1;
+	int32 SelectedClothLODIndex = 0;
+	int32 SelectedClothIndex = -1;
+	int32 SelectedClothSectionIndex = 0;
+	float ClothBrushValue = 50.0f;
+	float ClothBrushRadius = 25.0f;
+	float ClothBrushSmoothStrength = 0.5f;
+	bool bClothPaintBrushEnabled = false;
+	bool bShowClothPaintValues = true;
+	bool bMeshDirty = false;
 	bool bSkeletonDirty = false;
 	int32 BufferedSocketIndex = -2;
 	char SocketNameBuffer[128] = {};
