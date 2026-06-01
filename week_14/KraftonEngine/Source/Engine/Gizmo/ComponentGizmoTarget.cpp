@@ -1,5 +1,6 @@
 ﻿#include "ComponentGizmoTarget.h"
 #include "Component/SceneComponent.h"
+#include <cmath>
 
 FComponentGizmoTarget::FComponentGizmoTarget()
 	: Component(nullptr)
@@ -33,7 +34,7 @@ FRotator FComponentGizmoTarget::GetWorldRotation() const
 
 FQuat FComponentGizmoTarget::GetWorldQuat() const
 {
-	return Component ? Component->GetRelativeQuat() : FQuat::Identity;
+	return Component ? Component->GetWorldRotation().ToQuaternion() : FQuat::Identity;
 }
 
 FVector FComponentGizmoTarget::GetWorldScale() const
@@ -53,7 +54,7 @@ void FComponentGizmoTarget::SetWorldRotation(const FRotator& NewRotation)
 {
 	if (Component)
 	{
-		Component->SetRelativeRotation(NewRotation);
+		Component->SetWorldRotation(NewRotation);
 	}
 }
 
@@ -61,16 +62,27 @@ void FComponentGizmoTarget::SetWorldRotation(const FQuat& NewQuat)
 {
 	if (Component)
 	{
-		Component->SetRelativeRotation(NewQuat);
+		Component->SetWorldRotation(NewQuat);
 	}
 }
 
 void FComponentGizmoTarget::SetWorldScale(const FVector& NewScale)
 {
-	if (Component)
+	if (!Component)
 	{
-		Component->SetRelativeScale(NewScale);
+		return;
 	}
+
+	FVector RelativeScale = NewScale;
+	if (USceneComponent* Parent = Component->GetParent())
+	{
+		const FVector ParentScale = Parent->GetWorldScale();
+		RelativeScale.X = std::abs(ParentScale.X) > 1.0e-6f ? NewScale.X / ParentScale.X : NewScale.X;
+		RelativeScale.Y = std::abs(ParentScale.Y) > 1.0e-6f ? NewScale.Y / ParentScale.Y : NewScale.Y;
+		RelativeScale.Z = std::abs(ParentScale.Z) > 1.0e-6f ? NewScale.Z / ParentScale.Z : NewScale.Z;
+	}
+
+	Component->SetRelativeScale(RelativeScale);
 }
 
 void FComponentGizmoTarget::AddWorldOffset(const FVector& Delta)
@@ -83,20 +95,19 @@ void FComponentGizmoTarget::AddWorldOffset(const FVector& Delta)
 
 void FComponentGizmoTarget::AddWorldRotation(const FQuat& Delta, bool bWorldSpace)
 {
-	if (Component)
+	if (!Component)
 	{
-		if (!bWorldSpace)
-		{
-			FQuat CurrentRotation = Component->GetRelativeQuat();
-			FQuat NewRotation = CurrentRotation * Delta;
-			Component->SetRelativeRotation(NewRotation);
-		}
-		else
-		{
-			FQuat CurrentRotation = Component->GetRelativeQuat();
-			FQuat NewRotation = Delta * CurrentRotation;
-			Component->SetRelativeRotation(NewRotation);
-		}
+		return;
+	}
+
+	if (bWorldSpace)
+	{
+		const FQuat CurrentWorldRotation = Component->GetWorldRotation().ToQuaternion();
+		Component->SetWorldRotation((Delta * CurrentWorldRotation).GetNormalized());
+	}
+	else
+	{
+		Component->AddLocalRotation(Delta.GetNormalized());
 	}
 }
 
@@ -104,10 +115,10 @@ void FComponentGizmoTarget::AddScaleDelta(const FVector& Delta)
 {
 	if (Component)
 	{
-		FVector NewScale = Component->GetRelativeScale() + Delta;
+		FVector NewScale = GetWorldScale() + Delta;
 		if (NewScale.X < 0.001f) NewScale.X = 0.001f;
 		if (NewScale.Y < 0.001f) NewScale.Y = 0.001f;
 		if (NewScale.Z < 0.001f) NewScale.Z = 0.001f;
-		Component->SetRelativeScale(NewScale);
+		SetWorldScale(NewScale);
 	}
 }

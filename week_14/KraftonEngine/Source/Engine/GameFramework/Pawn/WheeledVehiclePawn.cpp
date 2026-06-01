@@ -43,9 +43,8 @@ void AWheeledVehiclePawn::InitDefaultComponents(const FString& SkeletalMeshFileN
     Camera->AttachToComponent(SpringArm);
 }
 
-void AWheeledVehiclePawn::PostDuplicate()
+void AWheeledVehiclePawn::RebindVehicleComponents()
 {
-    Super::PostDuplicate();
     Mesh = GetComponentByClass<USkeletalMeshComponent>();
     VehicleMovement = GetComponentByClass<UWheeledVehicleMovementComponent>();
     WheelPose = GetComponentByClass<UVehicleWheelPoseComponent>();
@@ -61,6 +60,24 @@ void AWheeledVehiclePawn::PostDuplicate()
         WheelPose->SetVehicleMovement(VehicleMovement);
         WheelPose->SetSkeletalMeshComponent(Mesh);
     }
+}
+
+void AWheeledVehiclePawn::BeginPlay()
+{
+    RebindVehicleComponents();
+    Super::BeginPlay();
+}
+
+void AWheeledVehiclePawn::PostDuplicate()
+{
+    Super::PostDuplicate();
+    RebindVehicleComponents();
+}
+
+void AWheeledVehiclePawn::OnPostLoad(FArchive& Ar)
+{
+    Super::OnPostLoad(Ar);
+    RebindVehicleComponents();
 }
 
 void AWheeledVehiclePawn::SetupInputComponent()

@@ -17,11 +17,13 @@ public:
 	FGizmoSceneProxy(UGizmoComponent* InComponent, bool bInner = false);
 	~FGizmoSceneProxy() override;
 
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 	void UpdateMesh() override;
 	void UpdatePerViewport(const FFrameContext& Frame) override;
 
 private:
 	UGizmoComponent* GetGizmoComponent() const;
+	bool EnsureGizmoMaterial();
 	void RebuildGizmoSectionDraws();
 
 	UMaterial* GizmoMaterial = nullptr;

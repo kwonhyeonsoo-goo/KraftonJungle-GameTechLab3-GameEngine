@@ -25,7 +25,13 @@ public:
     ~AWheeledVehiclePawn() override = default;
 
     virtual void InitDefaultComponents(const FString& SkeletalMeshFileName);
+    void BeginPlay() override;
     void PostDuplicate() override;
+
+protected:
+    void OnPostLoad(FArchive& Ar) override;
+
+public:
 
     UFUNCTION(Pure, Category="Vehicle|Components")
     USkeletalMeshComponent* GetMesh() const { return Mesh; }
@@ -40,6 +46,7 @@ public:
 
 protected:
     void SetupInputComponent() override;
+    void RebindVehicleComponents();
 
 protected:
     TWeakObjectPtr<USkeletalMeshComponent> Mesh = nullptr;
