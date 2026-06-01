@@ -1583,6 +1583,9 @@
     <ClCompile Include="Source\Engine\Physics\PhysicsAssetManager.cpp">
       <Filter>Source\Engine\Physics</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\PhysicsAssetAutoBodyGenerator.cpp">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Physics\PhysicsAssetPreviewUtils.cpp">
       <Filter>Source\Engine\Physics</Filter>
     </ClCompile>
@@ -2970,6 +2973,9 @@
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Physics\PhysicsAssetManager.h">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysicsAssetAutoBodyGenerator.h">
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Physics\PhysicsAssetPreviewUtils.h">
