@@ -8,6 +8,7 @@
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
 #include "Mesh/MeshManager.h"
 #include "Runtime/Engine.h"
+#include "Component/Debug/PhysicsAssetPreviewComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Component/Light/DirectionalLightComponent.h"
 #include "Viewport/Viewport.h"
@@ -54,6 +55,8 @@
 
 namespace
 {
+	constexpr float MeshEditorTreeIndentSpacing = 10.0f;
+
 	ID3D11ShaderResourceView* LoadTabIcon(const wchar_t* FileName)
 	{
 		const FString Path = FPaths::ToUtf8(
@@ -423,6 +426,7 @@ void FMeshEditorWidget::Open(UObject* Object)
 
 	ViewportClient.CreatePreviewGizmo();
 	ViewportClient.CreateBoneDebugComponent();
+	ViewportClient.CreatePhysicsAssetPreviewComponent();
 	ViewportClient.ResetCameraToPreviousBounds();
 
 	WorldContext.World->SetEditorPOVProvider(&ViewportClient);
@@ -486,6 +490,22 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 		{
 			bSkeletonDirty = true;
 		}
+		if (ActiveTab == EMeshEditorTab::Physics && ViewportClient.ConsumePhysicsAssetGizmoModified())
+		{
+			PhysicsAssetEditor.NotifyViewportGizmoModified();
+		}
+
+		int32 PickedPhysicsBodyIndex = -1;
+		int32 PickedPhysicsShapeIndex = -1;
+		if (ActiveTab == EMeshEditorTab::Physics &&
+			ViewportClient.ConsumePhysicsAssetViewportPick(PickedPhysicsBodyIndex, PickedPhysicsShapeIndex))
+		{
+			PhysicsAssetEditor.SelectPhysicsShapeFromViewport(
+				GetCurrentPhysicsAsset(),
+				PickedPhysicsBodyIndex,
+				PickedPhysicsShapeIndex);
+		}
+
 	}
 
 	if (ActiveTab == EMeshEditorTab::Animation)
@@ -518,6 +538,23 @@ void FMeshEditorWidget::CollectPreviewViewports(TArray<IEditorPreviewViewportCli
 {
 	if (IsOpen())
 	{
+		if (ActiveTab == EMeshEditorTab::Physics)
+		{
+			FMeshEditorWidget* MutableThis = const_cast<FMeshEditorWidget*>(this);
+			UPhysicsAsset* PhysicsAsset = MutableThis->GetCurrentPhysicsAsset();
+			USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
+			MutableThis->PhysicsAssetEditor.RenderPhysicsPreview(
+				PhysicsAsset,
+				SkeletalMesh,
+				ViewportClient.GetPreviewWorld(),
+				ViewportClient.GetPreviewMeshComponent(),
+				ViewportClient.GetPhysicsAssetPreviewComponent(),
+				ViewportClient.GetRenderDevice());
+		}
+		else if (ViewportClient.GetPhysicsAssetPreviewComponent())
+		{
+			ViewportClient.GetPhysicsAssetPreviewComponent()->ClearPreview(ViewportClient.GetRenderDevice());
+		}
 		OutClients.push_back(const_cast<FMeshEditorViewportClient*>(&ViewportClient));
 	}
 }
@@ -724,6 +761,10 @@ void FMeshEditorWidget::RenderTabBar()
 		{
 			const EMeshEditorTab PreviousTab = ActiveTab;
 			ActiveTab = Tab;
+			if (PreviousTab == EMeshEditorTab::Physics && ActiveTab != EMeshEditorTab::Physics)
+			{
+				ViewportClient.ClearPhysicsAssetGizmoTarget();
+			}
 			if (PreviousTab != ActiveTab && ActiveTab == EMeshEditorTab::Skeleton)
 			{
 				if (USkeletalMeshComponent* Comp = ViewportClient.GetPreviewMeshComponent())
@@ -848,6 +889,11 @@ void FMeshEditorWidget::RenderViewportPanel(ImVec2 Size)
 					EShaderErrorMode::Notification,
 					true);
 			}
+		}
+
+		if (ActiveTab == EMeshEditorTab::Physics)
+		{
+			PhysicsAssetEditor.RenderViewportDebugOptions();
 		}
 	};
 
@@ -978,6 +1024,7 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 	ImGui::BeginChild("BoneHierarchy", ImVec2(HierarchyWidth, 0), true);
 	ImGui::Text("Bone Hierarchy");
 	ImGui::Separator();
+	ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, MeshEditorTreeIndentSpacing);
 	if (Skeleton)
 	{
 		const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
@@ -989,6 +1036,7 @@ void FMeshEditorWidget::RenderSkeletonLayout()
 			}
 		}
 	}
+	ImGui::PopStyleVar();
 	ImGui::EndChild();
 
 	ImGui::SameLine();
@@ -1397,6 +1445,20 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 		ImGui::TextDisabled("No Physics Asset selected.");
 	}
 	ImGui::EndChild();
+
+	if (PhysicsAsset)
+	{
+		ViewportClient.SetSelectedPhysicsAssetElement(
+			PhysicsAsset,
+			PhysicsAssetEditor.GetSelectedBodyIndex(),
+			PhysicsAssetEditor.GetSelectedShapeIndex(),
+			PhysicsAssetEditor.GetSelectedConstraintIndex(),
+			PhysicsAssetEditor.GetSelectedConstraintGizmoFrame());
+	}
+	else
+	{
+		ViewportClient.ClearPhysicsAssetGizmoTarget();
+	}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -513,6 +513,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Component\Camera\SpringArmComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Debug\BoneDebugComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Debug\GizmoComponent.cpp" />
+    <ClCompile Include="Source\Engine\Component\Debug\PhysicsAssetPreviewComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Debug\TemporaryBoneAnimatorComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Input\ActionComponent.cpp" />
     <ClCompile Include="Source\Engine\Component\Input\InputComponent.cpp" />
@@ -598,6 +599,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\GameFramework\Pawn\Pawn.cpp" />
     <ClCompile Include="Source\Engine\Gizmo\BoneTransformGizmoTarget.cpp" />
     <ClCompile Include="Source\Engine\Gizmo\ComponentGizmoTarget.cpp" />
+    <ClCompile Include="Source\Engine\Gizmo\PhysicsAssetGizmoTarget.cpp" />
     <ClCompile Include="Source\Engine\Input\InputSystem.cpp" />
     <ClCompile Include="Source\Engine\Lua\LuaScriptManager.cpp" />
     <ClCompile Include="Source\Engine\LuaBlueprint\LuaBlueprintAsset.cpp" />
@@ -721,6 +723,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Render\Proxy\CylindricalBillboardSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Proxy\DecalSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Proxy\GizmoSceneProxy.cpp" />
+    <ClCompile Include="Source\Engine\Render\Proxy\PhysicsAssetPreviewSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Proxy\PrimitiveSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Proxy\ShapeSceneProxy.cpp" />
     <ClCompile Include="Source\Engine\Render\Proxy\SkeletalMeshSceneProxy.cpp" />
@@ -940,6 +943,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Component\Camera\SpringArmComponent.h" />
     <ClInclude Include="Source\Engine\Component\Debug\BoneDebugComponent.h" />
     <ClInclude Include="Source\Engine\Component\Debug\GizmoComponent.h" />
+    <ClInclude Include="Source\Engine\Component\Debug\PhysicsAssetPreviewComponent.h" />
     <ClInclude Include="Source\Engine\Component\Debug\TemporaryBoneAnimatorComponent.h" />
     <ClInclude Include="Source\Engine\Component\Input\ActionComponent.h" />
     <ClInclude Include="Source\Engine\Component\Input\InputComponent.h" />
@@ -1037,6 +1041,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Gizmo\BoneTransformGizmoTarget.h" />
     <ClInclude Include="Source\Engine\Gizmo\ComponentGizmoTarget.h" />
     <ClInclude Include="Source\Engine\Gizmo\GizmoTransformTarget.h" />
+    <ClInclude Include="Source\Engine\Gizmo\PhysicsAssetGizmoTarget.h" />
     <ClInclude Include="Source\Engine\Input\InputSystem.h" />
     <ClInclude Include="Source\Engine\Lua\LuaScriptManager.h" />
     <ClInclude Include="Source\Engine\LuaBlueprint\LuaBlueprintAsset.h" />
@@ -1200,6 +1205,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Render\Proxy\DecalSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Proxy\DirtyFlag.h" />
     <ClInclude Include="Source\Engine\Render\Proxy\GizmoSceneProxy.h" />
+    <ClInclude Include="Source\Engine\Render\Proxy\PhysicsAssetPreviewSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Proxy\PrimitiveSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Proxy\ShapeSceneProxy.h" />
     <ClInclude Include="Source\Engine\Render\Proxy\SkeletalMeshSceneProxy.h" />
