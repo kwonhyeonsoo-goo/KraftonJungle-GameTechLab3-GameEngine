@@ -101,7 +101,7 @@
       "Name" : "AStaticMeshActor_6",
       "NonSceneComponents" : [{
           "ClassName" : "UVehicleMovementComponent",
-          "ObjectId" : 8,
+          "ObjectId" : 12,
           "Properties" : {
             "ChassisCenterOfMassOffset" : [0.000000, 0.000000, -0.250000],
             "ChassisHalfExtents" : [1.250000, 0.600000, 0.350000],
@@ -133,7 +133,7 @@
           }
         }, {
           "ClassName" : "ULuaBlueprintComponent",
-          "ObjectId" : 9,
+          "ObjectId" : 13,
           "Properties" : {
             "BlueprintPath" : "Content/Blueprint/NewLuaBlueprint.uasset",
             "bAutoActivate" : true,
@@ -156,7 +156,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "UStaticMeshComponent",
-            "ObjectId" : 13,
+            "ObjectId" : 8,
             "Properties" : {
               "AttachSocketName" : "Name_None",
               "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -190,7 +190,7 @@
           }, {
             "Children" : [],
             "ClassName" : "UStaticMeshComponent",
-            "ObjectId" : 14,
+            "ObjectId" : 9,
             "Properties" : {
               "AttachSocketName" : "Name_None",
               "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -224,7 +224,7 @@
           }, {
             "Children" : [],
             "ClassName" : "UStaticMeshComponent",
-            "ObjectId" : 15,
+            "ObjectId" : 10,
             "Properties" : {
               "AttachSocketName" : "Name_None",
               "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -258,7 +258,7 @@
           }, {
             "Children" : [],
             "ClassName" : "UStaticMeshComponent",
-            "ObjectId" : 16,
+            "ObjectId" : 11,
             "Properties" : {
               "AttachSocketName" : "Name_None",
               "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -327,7 +327,7 @@
       "ClassName" : "ADirectionalLightActor",
       "Name" : "ADirectionalLightActor_1",
       "NonSceneComponents" : [],
-      "ObjectId" : 10,
+      "ObjectId" : 14,
       "Properties" : {
         "PendingActorLocation" : [0.582243, 3.704575, 6.000533],
         "PendingActorRotation" : [45.000004, -45.000004, 0.000000],
@@ -340,7 +340,42 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "UBillboardComponent",
-            "ObjectId" : 12,
+            "ObjectId" : 16,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "Mass" : 1.000000,
+              "MaterialSlot" : "Content/Material/Editor/DirectionalLight.uasset",
+              "ObjectType" : 0,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "bAutoActivate" : true,
+              "bCastShadow" : true,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsBillboard" : true,
+              "bIsVisible" : true,
+              "bKinematic" : false,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "ObjectId" : 17,
             "Properties" : {
               "AttachSocketName" : "Name_None",
               "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -374,7 +409,7 @@
             "bHiddenInComponentTree" : true
           }],
         "ClassName" : "UDirectionalLightComponent",
-        "ObjectId" : 11,
+        "ObjectId" : 15,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [45.000004, -45.000004, 0.000000],
@@ -396,6 +431,156 @@
           "bVisible" : true
         }
       }
+    }, {
+      "ClassName" : "ACharacter",
+      "Name" : "ACharacter_1",
+      "NonSceneComponents" : [{
+          "ClassName" : "UCharacterMovementComponent",
+          "ObjectId" : 21,
+          "Properties" : {
+            "BrakingFriction" : 8.000000,
+            "FloorProbeDistance" : 0.100000,
+            "Gravity" : 9.800000,
+            "JumpZVelocity" : 6.000000,
+            "MaxAcceleration" : 20.000000,
+            "MaxWalkSpeed" : 6.000000,
+            "RotationYawRate" : 540.000000,
+            "bAutoActivate" : true,
+            "bAutoRegisterUpdatedComponent" : false,
+            "bEditorOnly" : false,
+            "bHiddenInComponentTree" : false,
+            "bIsActive" : true,
+            "bOrientRotationToMovement" : true,
+            "bTickEnable" : true
+          }
+        }, {
+          "ClassName" : "UVehicleMovementComponent",
+          "ObjectId" : 22,
+          "Properties" : {
+            "ChassisCenterOfMassOffset" : [0.000000, 0.000000, -0.250000],
+            "ChassisHalfExtents" : [1.250000, 0.600000, 0.350000],
+            "ChassisMass" : 1200.000000,
+            "ClutchStrength" : 10.000000,
+            "EngineMaxOmega" : 600.000000,
+            "EnginePeakTorque" : 500.000000,
+            "FrontAxleOffsetX" : 1.100000,
+            "MaxBrakeTorque" : 1500.000000,
+            "MaxHandbrakeTorque" : 4000.000000,
+            "MaxSteerAngleDegrees" : 35.000000,
+            "RearAxleOffsetX" : 1.100000,
+            "SuspensionMaxCompression" : 0.300000,
+            "SuspensionMaxDroop" : 0.100000,
+            "SuspensionSpringDamperRate" : 4500.000000,
+            "SuspensionSpringStrength" : 35000.000000,
+            "TireFriction" : 1.500000,
+            "WheelCenterHeight" : -0.350000,
+            "WheelHalfTrackWidth" : 0.750000,
+            "WheelMass" : 20.000000,
+            "WheelRadius" : 0.350000,
+            "WheelWidth" : 0.250000,
+            "bAutoActivate" : true,
+            "bAutoRegisterUpdatedComponent" : true,
+            "bEditorOnly" : false,
+            "bHiddenInComponentTree" : false,
+            "bIsActive" : true,
+            "bTickEnable" : true
+          }
+        }, {
+          "ClassName" : "ULuaBlueprintComponent",
+          "ObjectId" : 23,
+          "Properties" : {
+            "BlueprintPath" : "Content/Blueprint/NewLuaBlueprint.uasset",
+            "bAutoActivate" : true,
+            "bEditorOnly" : false,
+            "bHiddenInComponentTree" : false,
+            "bIsActive" : true,
+            "bTickEnable" : true
+          }
+        }],
+      "ObjectId" : 18,
+      "Properties" : {
+        "PendingActorLocation" : [-0.357143, -2.243352, 6.614288],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "",
+        "bAutoPossessPlayer" : true,
+        "bNeedsTick" : true,
+        "bUseControllerRotationPitch" : true,
+        "bUseControllerRotationRoll" : false,
+        "bUseControllerRotationYaw" : false
+      },
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UStaticMeshComponent",
+            "ObjectId" : 20,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "Mass" : 1.000000,
+              "MaterialSlots" : [],
+              "ObjectType" : 0,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "StaticMeshPath" : "",
+              "bAutoActivate" : true,
+              "bCastShadow" : true,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : false,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bIsVisible" : true,
+              "bKinematic" : false,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "UCapsuleComponent",
+        "ObjectId" : 19,
+        "Properties" : {
+          "AttachSocketName" : "Name_None",
+          "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+          "CapsuleHalfHeight" : 3.000000,
+          "CapsuleRadius" : 1.800000,
+          "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+          "CollisionEnabled" : 0,
+          "Mass" : 1.000000,
+          "ObjectType" : 0,
+          "RelativeTransform.Location" : [-0.357143, -2.243352, 6.614288],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "ResponseContainer" : {
+            "Responses[0]" : 2,
+            "Responses[1]" : 2,
+            "Responses[2]" : 2,
+            "Responses[3]" : 2,
+            "Responses[4]" : 2
+          },
+          "ShapeColor" : [0.000000, 1.000000, 0.000000, 1.000000],
+          "bAutoActivate" : true,
+          "bCastShadow" : false,
+          "bCastShadowAsTwoSided" : false,
+          "bDrawOnlyIfSelected" : false,
+          "bEditorOnly" : false,
+          "bGenerateOverlapEvents" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bKinematic" : true,
+          "bSimulatePhysics" : false,
+          "bTickEnable" : true
+        }
+      }
     }],
   "ClassName" : "UWorld",
   "ContextHandle" : "NewScene",
@@ -405,9 +590,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [10.000000, 0.000000, 5.000000],
+    "Location" : [12.546144, -6.143964, 7.740116],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 26.715050, 179.850006]
+    "Rotation" : [0.000000, 21.465065, 171.600037]
   },
   "Version" : 2,
   "WorldSettings" : {

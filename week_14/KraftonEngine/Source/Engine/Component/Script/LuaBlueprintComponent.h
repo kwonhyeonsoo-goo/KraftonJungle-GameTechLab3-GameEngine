@@ -12,6 +12,7 @@ class ULuaBlueprintAsset;
 class UObject;
 class AActor;
 class UPrimitiveComponent;
+class UInputComponent;
 struct FHitResult;
 
 UCLASS()
@@ -58,6 +59,9 @@ private:
     void                ClearLuaRuntime();
     void                BindOwnerCollisionEvents();
     void                ClearCollisionBindings();
+    void                BindInputEvents();
+    void                ClearInputBindings();
+    const void*         GetInputBindingOwnerKey() const { return this; }
     FString             GetRuntimeName() const;
     void                InitializeRuntimeObjectVariables();
     void                InitRuntimeObjectVariable(const FString& Name, bool bStrong);
@@ -155,6 +159,8 @@ private:
     TArray<FLuaBlueprintRuntimeObjectVariable> RuntimeObjectVariables;
 
     TArray<TWeakObjectPtr<UPrimitiveComponent>> BoundOverlapComponents;
+    TWeakObjectPtr<UInputComponent>             BoundInputComponent;
+
     TArray<TWeakObjectPtr<UPrimitiveComponent>> BoundHitComponents;
     TArray<FDelegateHandle>                     BeginOverlapHandles;
     TArray<FDelegateHandle>                     EndOverlapHandles;

@@ -30,7 +30,7 @@ LRESULT CALLBACK FWindowsApplication::StaticWndProc(HWND hWnd, unsigned int Msg,
 
 LRESULT FWindowsApplication::WndProc(HWND hWnd, unsigned int Msg, WPARAM wParam, LPARAM lParam)
 {
-    const bool bImGuiHandled = ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam) != 0;
+	const bool bImGuiHandled = ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam) != 0;
 
 	switch (Msg)
 	{
@@ -39,7 +39,7 @@ LRESULT FWindowsApplication::WndProc(HWND hWnd, unsigned int Msg, WPARAM wParam,
 		return 0;
 	case WM_MOUSEWHEEL:
 		InputSystem::Get().AddScrollDelta(GET_WHEEL_DELTA_WPARAM(wParam));
-        return bImGuiHandled ? true : 0;
+		return bImGuiHandled ? true : 0;
 	case WM_INPUT:
 	{
 		UINT DataSize = 0;
@@ -61,7 +61,7 @@ LRESULT FWindowsApplication::WndProc(HWND hWnd, unsigned int Msg, WPARAM wParam,
 				static_cast<int>(Raw->data.mouse.lLastX),
 				static_cast<int>(Raw->data.mouse.lLastY));
 		}
-        return bImGuiHandled ? true : 0;
+		return bImGuiHandled ? true : 0;
 	}
 	case WM_SIZE:
 		if (wParam != SIZE_MINIMIZED)
@@ -91,10 +91,10 @@ LRESULT FWindowsApplication::WndProc(HWND hWnd, unsigned int Msg, WPARAM wParam,
 		break;
 	}
 
-    if (bImGuiHandled)
-    {
-        return true;
-    }
+	if (bImGuiHandled)
+	{
+		return true;
+	}
 
 	return DefWindowProc(hWnd, Msg, wParam, lParam);
 }

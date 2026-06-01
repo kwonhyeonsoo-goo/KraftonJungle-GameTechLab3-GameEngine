@@ -44,7 +44,7 @@ public:
 	UFUNCTION(Callable, Category="Vehicle")
 	void ResetVehicle();
 
-	// World 의 물리 스냅샷 적용 경로에서 호출 — chassis + 휠 visual transform 갱신.
+	// Physics snapshot receiver 경로에서 호출 — chassis + 휠 visual transform 갱신.
 	void ApplyVehicleSnapshot(const FPhysXVehicleSnapshot& Snapshot);
 
 	bool                IsVehicleCreated() const { return VehicleHandle.IsValid(); }
@@ -52,6 +52,8 @@ public:
 
 private:
 	FPhysXVehicleDesc BuildVehicleDesc() const;
+	void RegisterPhysicsSnapshotReceiver();
+	void UnregisterPhysicsSnapshotReceiver();
 
 	// 휠 visual 슬롯이 비어 있으면, 섀시의 자식 SceneComponent 중 각 휠의 기대 local 위치에
 	// 가장 가까운 것을 자동으로 바인딩한다. (휠 ref 는 Transient 라 씬에 저장되지 않으므로
@@ -126,4 +128,5 @@ private:
 	// --- 런타임 상태 (직렬화 안 함) ---
 	FPhysXVehicleHandle     VehicleHandle;
 	FPhysXVehicleInputState CurrentInput;
+	uint64                  PhysicsSnapshotReceiverHandle = 0;
 };

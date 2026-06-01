@@ -162,12 +162,12 @@ void UEditorEngine::Tick(float DeltaTime)
 	}
 
 	ApplyTransformSettingsToGizmo();
-    TickFrameStart(DeltaTime);
+	TickFrameStart(DeltaTime);
 	MainPanel.Update();
 	InputSystem::Get().RefreshSnapshot();
 
 	FSlateApplication::Get().UpdateInputOwner();
-    ProcessPIEInput(DeltaTime);
+	ProcessPIEInput(DeltaTime);
 
 	for (FEditorViewportClient* VC : ViewportLayout.GetAllViewportClients())
 	{
@@ -176,7 +176,7 @@ void UEditorEngine::Tick(float DeltaTime)
 
 	MainPanel.TickAssetEditors(DeltaTime);
 
-    FAudioManager::Get().Tick();
+	FAudioManager::Get().Tick();
 	WorldTick(DeltaTime);
 	FGarbageCollector::Get().TryCollectGarbage();
 	Render(DeltaTime);
@@ -200,44 +200,44 @@ void UEditorEngine::RenderUI(float DeltaTime)
 
 void UEditorEngine::ProcessPIEInput(float DeltaTime)
 {
-    if (!IsPlayingInEditor())
-    {
-        return;
-    }
+	if (!IsPlayingInEditor())
+	{
+		return;
+	}
 
-    const FInputSystemSnapshot RawInputSnapshot = InputSystem::Get().MakeSnapshot();
-    if (RawInputSnapshot.WasPressed(VK_ESCAPE))
-    {
-        RequestEndPlayMap();
-        return;
-    }
+	const FInputSystemSnapshot RawInputSnapshot = InputSystem::Get().MakeSnapshot();
+	if (RawInputSnapshot.WasPressed(VK_ESCAPE))
+	{
+		RequestEndPlayMap();
+		return;
+	}
 
-    if (RawInputSnapshot.WasPressed(VK_F8))
-    {
-        TogglePIEControlMode();
-    }
+	if (RawInputSnapshot.WasPressed(VK_F8))
+	{
+		TogglePIEControlMode();
+	}
 
-    UGameViewportClient* PIEViewportClient = GetGameViewportClient();
-    if (!PIEViewportClient)
-    {
-        return;
-    }
+	UGameViewportClient* PIEViewportClient = GetGameViewportClient();
+	if (!PIEViewportClient)
+	{
+		return;
+	}
 
-    if (Window)
-    {
-        PIEViewportClient->SetOwnerWindow(Window->GetHWND());
-    }
-    if (FLevelEditorViewportClient* ActiveVC = ViewportLayout.GetActiveViewport())
-    {
-        PIEViewportClient->SetViewport(ActiveVC->GetViewport());
-        PIEViewportClient->SetCursorClipRect(ActiveVC->GetViewportScreenRect());
-    }
+	if (Window)
+	{
+		PIEViewportClient->SetOwnerWindow(Window->GetHWND());
+	}
+	if (FLevelEditorViewportClient* ActiveVC = ViewportLayout.GetActiveViewport())
+	{
+		PIEViewportClient->SetViewport(ActiveVC->GetViewport());
+		PIEViewportClient->SetCursorClipRect(ActiveVC->GetViewportScreenRect());
+	}
 
-    PIEViewportClient->ProcessInput(RawInputSnapshot, DeltaTime);
-    if (PIEViewportClient->HasGameInputSnapshot())
-    {
-        ProcessActiveWorldPlayerInput(PIEViewportClient->GetGameInputSnapshot(), DeltaTime);
-    }
+	PIEViewportClient->ProcessInput(RawInputSnapshot, DeltaTime);
+	if (PIEViewportClient->HasGameInputSnapshot())
+	{
+		ProcessActiveWorldPlayerInput(PIEViewportClient->GetGameInputSnapshot(), DeltaTime);
+	}
 }
 
 void UEditorEngine::ToggleCoordSystem()

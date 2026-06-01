@@ -1,11 +1,14 @@
 #include "LuaBlueprintComponent.h"
 
 #include "Component/PrimitiveComponent.h"
+#include "Component/Input/InputComponent.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/Pawn/Pawn.h"
 #include "Lua/LuaScriptManager.h"
 #include "LuaBlueprint/LuaBlueprintAsset.h"
 #include "LuaBlueprint/LuaBlueprintManager.h"
+#include "Input/InputKeyCodes.h"
 #include "Object/GarbageCollection.h"
 
 #include <cstring>
@@ -33,11 +36,13 @@ void ULuaBlueprintComponent::SetBlueprintPath(const FString& InPath)
 
 bool ULuaBlueprintComponent::ReloadBlueprint()
 {
+    ClearInputBindings();
     ClearCollisionBindings();
     const bool bInitialized = InitializeLua();
     if (bInitialized)
     {
         BindOwnerCollisionEvents();
+        BindInputEvents();
     }
     return bInitialized;
 }
@@ -100,6 +105,7 @@ void ULuaBlueprintComponent::EndPlay()
     bEndPlayRouted = true;
 
     UActorComponent::EndPlay();
+    ClearInputBindings();
     ClearCollisionBindings();
     if (LuaCallDepth > 0)
     {
@@ -113,6 +119,7 @@ void ULuaBlueprintComponent::EndPlay()
 
 void ULuaBlueprintComponent::RouteComponentDestroyed()
 {
+    ClearInputBindings();
     ClearCollisionBindings();
     UActorComponent::RouteComponentDestroyed();
 }
@@ -360,6 +367,7 @@ void ULuaBlueprintComponent::ReleaseLuaRuntimeForShutdown()
 
 void ULuaBlueprintComponent::ClearLuaRuntime()
 {
+    ClearInputBindings();
     ++LuaRuntimeGeneration;
     LuaBeginPlay    = sol::nil;
     LuaTick         = sol::nil;
@@ -380,6 +388,180 @@ void ULuaBlueprintComponent::ClearLuaRuntime()
     bHasCalledLuaEndPlay = false;
     bPendingLuaEndPlay   = false;
     bPendingLuaCleanup   = false;
+}
+
+namespace
+{
+    template<typename T>
+    T LuaBlueprintTableGetOr(const sol::table& Table, const char* Key, const T& DefaultValue)
+    {
+        if (!Key)
+        {
+            return DefaultValue;
+        }
+
+        sol::object Value = Table[Key];
+        if (!Value.valid() || Value.get_type() == sol::type::nil)
+        {
+            return DefaultValue;
+        }
+
+        return Value.is<T>() ? Value.as<T>() : DefaultValue;
+    }
+
+    EInputAxisSourceType LuaBlueprintAxisSourceFromString(const FString& Source)
+    {
+        if (Source == "MouseX") return EInputAxisSourceType::MouseX;
+        if (Source == "MouseY") return EInputAxisSourceType::MouseY;
+        if (Source == "MouseWheel") return EInputAxisSourceType::MouseWheel;
+        return EInputAxisSourceType::Key;
+    }
+
+    int32 LuaBlueprintResolveBindingKey(const sol::table& Binding)
+    {
+        const FString KeyName = LuaBlueprintTableGetOr<FString>(Binding, "KeyName", "");
+        const int32 Resolved = ResolveInputKeyCode(KeyName);
+        if (Resolved != 0 || !KeyName.empty())
+        {
+            return Resolved;
+        }
+
+        // Backward compatibility for older generated blueprints that emitted numeric Key.
+        return LuaBlueprintTableGetOr<int>(Binding, "Key", 0);
+    }
+}
+
+void ULuaBlueprintComponent::BindInputEvents()
+{
+    ClearInputBindings();
+
+    if (!Env.valid())
+    {
+        return;
+    }
+
+    AActor* OwnerActor = GetOwner();
+    APawn* OwnerPawn = Cast<APawn>(OwnerActor);
+    if (!OwnerPawn)
+    {
+        return;
+    }
+
+    UInputComponent* InputComponent = OwnerPawn->GetInputComponent();
+    if (!InputComponent)
+    {
+        return;
+    }
+
+    sol::object BindingsObject = Env["__input_bindings"];
+    if (!BindingsObject.valid() || BindingsObject.get_type() != sol::type::table)
+    {
+        return;
+    }
+
+    sol::table Bindings = BindingsObject.as<sol::table>();
+    const void* OwnerKey = GetInputBindingOwnerKey();
+    const uint32 Generation = LuaRuntimeGeneration;
+    TWeakObjectPtr<ULuaBlueprintComponent> WeakThis(this);
+
+    for (auto&& Entry : Bindings)
+    {
+        sol::object Value = Entry.second;
+        if (!Value.valid() || Value.get_type() != sol::type::table)
+        {
+            continue;
+        }
+
+        sol::table Binding = Value.as<sol::table>();
+        const FString Kind = LuaBlueprintTableGetOr<FString>(Binding, "Kind", "");
+        const FString Name = LuaBlueprintTableGetOr<FString>(Binding, "Name", "");
+        const FString FunctionName = LuaBlueprintTableGetOr<FString>(Binding, "Function", "");
+        if (Name.empty() || FunctionName.empty())
+        {
+            continue;
+        }
+
+        sol::object FunctionObject = Env[FunctionName.c_str()];
+        if (!FunctionObject.valid() || FunctionObject.get_type() != sol::type::function)
+        {
+            continue;
+        }
+
+        sol::protected_function Callback = FunctionObject;
+        if (Kind == "Action")
+        {
+            const int Key = LuaBlueprintResolveBindingKey(Binding);
+            if (Key != 0)
+            {
+                InputComponent->AddActionMappingForOwner(OwnerKey, Name, Key);
+            }
+
+            const FString EventText = LuaBlueprintTableGetOr<FString>(Binding, "Event", "Pressed");
+            const EInputEvent Event = (EventText == "Released") ? EInputEvent::Released : EInputEvent::Pressed;
+            InputComponent->BindActionForOwner(OwnerKey, Name, Event, [WeakThis, Generation, Callback]() mutable
+            {
+                ULuaBlueprintComponent* Owner = WeakThis.Get();
+                if (!Owner || !Owner->IsLuaRuntimeGenerationValid(Generation))
+                {
+                    return;
+                }
+
+                FLuaCallScope Scope(Owner);
+                sol::protected_function_result Result = Callback();
+                if (!Result.valid())
+                {
+                    sol::error Err = Result;
+                    UE_LOG("LuaBlueprint input action error in %s: %s", Owner->GetRuntimeName().c_str(), Err.what());
+                }
+            });
+        }
+        else if (Kind == "Axis")
+        {
+            const FString Source = LuaBlueprintTableGetOr<FString>(Binding, "Source", "Key");
+            const int Key = LuaBlueprintResolveBindingKey(Binding);
+            const float Scale = LuaBlueprintTableGetOr<float>(Binding, "Scale", 1.0f);
+            const EInputAxisSourceType AxisSource = LuaBlueprintAxisSourceFromString(Source);
+            if (AxisSource == EInputAxisSourceType::Key)
+            {
+                if (Key != 0)
+                {
+                    InputComponent->AddAxisMappingForOwner(OwnerKey, Name, Key, Scale);
+                }
+            }
+            else
+            {
+                InputComponent->AddMouseAxisMappingForOwner(OwnerKey, Name, AxisSource, Scale);
+            }
+
+            InputComponent->BindAxisForOwner(OwnerKey, Name, [WeakThis, Generation, Callback](float AxisValue) mutable
+            {
+                ULuaBlueprintComponent* Owner = WeakThis.Get();
+                if (!Owner || !Owner->IsLuaRuntimeGenerationValid(Generation))
+                {
+                    return;
+                }
+
+                FLuaCallScope Scope(Owner);
+                sol::protected_function_result Result = Callback(AxisValue);
+                if (!Result.valid())
+                {
+                    sol::error Err = Result;
+                    UE_LOG("LuaBlueprint input axis error in %s: %s", Owner->GetRuntimeName().c_str(), Err.what());
+                }
+            });
+        }
+    }
+
+    BoundInputComponent = InputComponent;
+}
+
+void ULuaBlueprintComponent::ClearInputBindings()
+{
+    if (UInputComponent* InputComponent = BoundInputComponent.Get())
+    {
+        InputComponent->RemoveBindingsForOwner(GetInputBindingOwnerKey());
+    }
+    BoundInputComponent.Reset();
 }
 
 void ULuaBlueprintComponent::BindOwnerCollisionEvents()

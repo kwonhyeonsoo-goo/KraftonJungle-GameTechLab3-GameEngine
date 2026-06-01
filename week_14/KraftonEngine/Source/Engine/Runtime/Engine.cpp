@@ -172,25 +172,25 @@ void UEngine::TickFrameBody(float DeltaTime)
 
 void UEngine::ProcessActiveWorldPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime)
 {
-    UWorld* World = GetWorld();
-    if (!World || World->IsPaused())
-    {
-        return;
-    }
+	UWorld* World = GetWorld();
+	if (!World || World->IsPaused())
+	{
+		return;
+	}
 
-    APlayerController* PlayerController = World->GetFirstPlayerController();
-    if (!PlayerController)
-    {
-        return;
-    }
+	APlayerController* PlayerController = World->GetFirstPlayerController();
+	if (!PlayerController)
+	{
+		return;
+	}
 
-    PlayerController->ProcessPlayerInput(Snapshot, DeltaTime);
+	PlayerController->ProcessPlayerInput(Snapshot, DeltaTime);
 }
 
 void UEngine::Tick(float DeltaTime)
 {
-    TickFrameStart(DeltaTime);
-    TickFrameBody(DeltaTime);
+	TickFrameStart(DeltaTime);
+	TickFrameBody(DeltaTime);
 }
 
 void UEngine::Render(float DeltaTime)

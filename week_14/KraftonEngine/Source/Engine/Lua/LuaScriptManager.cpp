@@ -17,6 +17,7 @@
 #include "Runtime/Engine.h"
 #include "Viewport/GameViewportClient.h"
 #include "Input/InputSystem.h"
+#include "Input/InputKeyCodes.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/Pawn/Pawn.h"
 #include "GameFramework/GameMode/PlayerController.h"
@@ -1722,11 +1723,11 @@ FInputSystemSnapshot FLuaScriptManager::GetLuaInputSnapshot()
 	{
 		if (UGameViewportClient* GameViewportClient = GEngine->GetGameViewportClient())
 		{
-            if (GameViewportClient->HasGameInputSnapshot())
-            {
-                return GameViewportClient->GetGameInputSnapshot();
-            }
-            return FInputSystemSnapshot {};
+			if (GameViewportClient->HasGameInputSnapshot())
+			{
+				return GameViewportClient->GetGameInputSnapshot();
+			}
+			return FInputSystemSnapshot{};
 		}
 	}
 
@@ -1773,16 +1774,28 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
 
 	sol::table Input = Lua.create_named_table("Input");
 	Input.set_function("GetKeyDown", sol::overload(
+		[](const FString& KeyName)
+	{
+		return GetLuaInputSnapshot().WasPressed(ResolveInputKeyCode(KeyName));
+	},
 		[](int VK)
 	{
 		return GetLuaInputSnapshot().WasPressed(VK);
 	}));
 	Input.set_function("GetKey", sol::overload(
+		[](const FString& KeyName)
+	{
+		return GetLuaInputSnapshot().IsDown(ResolveInputKeyCode(KeyName));
+	},
 		[](int VK)
 	{
 		return GetLuaInputSnapshot().IsDown(VK);
 	}));
 	Input.set_function("GetKeyUp", sol::overload(
+		[](const FString& KeyName)
+	{
+		return GetLuaInputSnapshot().WasReleased(ResolveInputKeyCode(KeyName));
+	},
 		[](int VK)
 	{
 		return GetLuaInputSnapshot().WasReleased(VK);
@@ -1857,21 +1870,12 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
 	});
 
 	sol::table Key = Lua.create_named_table("Key");
-	Key["W"] = static_cast<int32>('W');
-	Key["A"] = static_cast<int32>('A');
-	Key["S"] = static_cast<int32>('S');
-	Key["D"] = static_cast<int32>('D');
-	Key["R"] = static_cast<int32>('R');
-	Key["Space"] = VK_SPACE;
-	Key["Escape"] = VK_ESCAPE;
-	Key["F1"] = VK_F1;
-	Key["F2"] = VK_F2;
-	Key["F3"] = VK_F3;
-	Key["F4"] = VK_F4;
-	Key["F5"] = VK_F5;
-	Key["F6"] = VK_F6;
-	Key["F7"] = VK_F7;
-	Key["F8"] = VK_F8;
+	for (const FString& KeyName : GetKnownInputKeyNames())
+	{
+		Key[KeyName.c_str()] = ResolveInputKeyCode(KeyName);
+	}
+	Key.set_function("Resolve", [](const FString& KeyName) { return ResolveInputKeyCode(KeyName); });
+	Key.set_function("Name", [](int32 KeyCode) { return GetInputKeyName(KeyCode); });
 
 	sol::table CameraManager = Lua.create_named_table("CameraManager");
 	CameraManager.set_function("ToggleActorCamera", [](const FString& ActorName, sol::optional<float> BlendTime)
@@ -2738,9 +2742,25 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 		return Actor.GetFName().ToString();
 	}));
 
+	Lua.new_usertype<APlayerController>("PlayerController",
+		sol::base_classes,
+		sol::bases<AActor, UObject>(),
+		"Possess", &APlayerController::Possess,
+		"UnPossess", &APlayerController::UnPossess,
+		"GetPossessedPawn", &APlayerController::GetPossessedPawn,
+		"GetPlayerCameraManager", &APlayerController::GetPlayerCameraManager,
+		"SetViewTargetWithBlend", [](APlayerController& Self, AActor* Target, sol::optional<float> BlendTime)
+		{
+			if (IsValid(Target))
+			{
+				Self.SetViewTargetWithBlend(Target, BlendTime.value_or(0.0f));
+			}
+		});
+
 	Lua.new_usertype<APawn>("Pawn",
 		sol::base_classes,
 		sol::bases<AActor, UObject>(),
+		"GetController", &APawn::GetController,
 		"IsPossessed", &APawn::IsPossessed,
 		"SetAutoPossessPlayer", &APawn::SetAutoPossessPlayer,
 		"GetAutoPossessPlayer", &APawn::GetAutoPossessPlayer,
@@ -2749,30 +2769,52 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 	// UInputComponent — Pawn::GetInputComponent 로 얻어 lua 에서 직접 매핑/binding 추가 가능.
 	// 예 (BeginPlay 안):
 	//   local input = obj:AsPawn():GetInputComponent()
-	//   input:AddActionMapping("Jump", 0x20)   -- VK_SPACE = 0x20
+	//   input:AddActionMapping("Jump", "Space")
 	//   input:BindAction("Jump", "Pressed", function() print("jump!") end)
 	Lua.new_usertype<UInputComponent>("InputComponent",
 		sol::base_classes,
 		sol::bases<UActorComponent, UObject>(),
-		"AddAxisMapping",   &UInputComponent::AddAxisMapping,
-        "AddMouseAxisMapping",
-        sol::overload(
-            [](UInputComponent& Self, const FString& Name, const FString& AxisName, float Scale)
-            {
-                EInputAxisSourceType Axis = EInputAxisSourceType::MouseX;
-                if (AxisName == "MouseY") Axis = EInputAxisSourceType::MouseY;
-                else if (AxisName == "MouseWheel") Axis = EInputAxisSourceType::MouseWheel;
-                Self.AddMouseAxisMapping(Name, Axis, Scale);
-            },
-            [](UInputComponent& Self, const FString& Name, const FString& AxisName)
-            {
-                EInputAxisSourceType Axis = EInputAxisSourceType::MouseX;
-                if (AxisName == "MouseY") Axis = EInputAxisSourceType::MouseY;
-                else if (AxisName == "MouseWheel") Axis = EInputAxisSourceType::MouseWheel;
-                Self.AddMouseAxisMapping(Name, Axis, 1.0f);
-            }
-        ),
-		"AddActionMapping", &UInputComponent::AddActionMapping,
+		"AddAxisMapping", sol::overload(
+			[](UInputComponent& Self, const FString& Name, const FString& KeyName, float Scale)
+			{
+				Self.AddAxisMapping(Name, ResolveInputKeyCode(KeyName), Scale);
+			},
+			[](UInputComponent& Self, const FString& Name, const FString& KeyName)
+			{
+				Self.AddAxisMapping(Name, ResolveInputKeyCode(KeyName), 1.0f);
+			},
+			[](UInputComponent& Self, const FString& Name, int32 KeyCode, float Scale)
+			{
+				Self.AddAxisMapping(Name, KeyCode, Scale);
+			},
+			[](UInputComponent& Self, const FString& Name, int32 KeyCode)
+			{
+				Self.AddAxisMapping(Name, KeyCode, 1.0f);
+			}),
+		"AddMouseAxisMapping", sol::overload(
+			[](UInputComponent& Self, const FString& Name, const FString& AxisName, float Scale)
+			{
+				EInputAxisSourceType Axis = EInputAxisSourceType::MouseX;
+				if (AxisName == "MouseY") Axis = EInputAxisSourceType::MouseY;
+				else if (AxisName == "MouseWheel") Axis = EInputAxisSourceType::MouseWheel;
+				Self.AddMouseAxisMapping(Name, Axis, Scale);
+			},
+			[](UInputComponent& Self, const FString& Name, const FString& AxisName)
+			{
+				EInputAxisSourceType Axis = EInputAxisSourceType::MouseX;
+				if (AxisName == "MouseY") Axis = EInputAxisSourceType::MouseY;
+				else if (AxisName == "MouseWheel") Axis = EInputAxisSourceType::MouseWheel;
+				Self.AddMouseAxisMapping(Name, Axis, 1.0f);
+			}),
+		"AddActionMapping", sol::overload(
+			[](UInputComponent& Self, const FString& Name, const FString& KeyName)
+			{
+				Self.AddActionMapping(Name, ResolveInputKeyCode(KeyName));
+			},
+			[](UInputComponent& Self, const FString& Name, int32 KeyCode)
+			{
+				Self.AddActionMapping(Name, KeyCode);
+			}),
 		"BindAxis", [](UInputComponent& Self, const FString& Name, sol::protected_function Cb)
 		{
 			Self.BindAxis(Name, [Cb](float V)
@@ -2796,6 +2838,10 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 
 	// --- World binding — 런타임 액터 spawn 용 (Engine 일반 기능) ---
 	sol::table World = Lua.create_named_table("World");
+	World.set_function("GetFirstPlayerController", []() -> APlayerController*
+	{
+		return (GEngine && GEngine->GetWorld()) ? GEngine->GetWorld()->GetFirstPlayerController() : nullptr;
+	});
 	World.set_function("SpawnActor", [](const FString& ClassName) -> AActor*
 	{
 		if (!GEngine) return nullptr;

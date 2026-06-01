@@ -29,7 +29,7 @@ public:
 	void SetViewport(FViewport* InViewport) { Viewport = InViewport; }
 	FViewport* GetViewport() const { return Viewport; }
 
-    void Tick(const FInputSystemSnapshot& Snapshot, float DeltaTime);
+	void Tick(const FInputSystemSnapshot& Snapshot, float DeltaTime);
 
 	// 뷰포트 영역 설정 (ImGui 패널에서 호출)
 	void SetViewportRect(float X, float Y, float Width, float Height);
@@ -38,7 +38,7 @@ public:
 	void RenderViewportImage();
 
 private:
-    void TickInput(const FInputSystemSnapshot& Snapshot, float DeltaTime);
+	void TickInput(const FInputSystemSnapshot& Snapshot, float DeltaTime);
 
 private:
 	FViewport* Viewport = nullptr;

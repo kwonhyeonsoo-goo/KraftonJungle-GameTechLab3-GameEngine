@@ -51,13 +51,13 @@ public:
 
 struct FUIInputCaptureState
 {
-    bool bWantsMouse     = false;
-    bool bWantsKeyboard  = false;
-    bool bWantsTextInput = false;
+	bool bWantsMouse = false;
+	bool bWantsKeyboard = false;
+	bool bWantsTextInput = false;
 
-    bool bBlocksGameInput     = false;
-    bool bBlocksGameKeyboard  = false;
-    bool bBlocksGameMouseLook = false;
+	bool bBlocksGameInput = false;
+	bool bBlocksGameKeyboard = false;
+	bool bBlocksGameMouseLook = false;
 };
 
 class FRmlRenderInterfaceD3D11 final : public Rml::RenderInterface
@@ -115,9 +115,9 @@ public:
 	const char* GetReferencerName() const override { return "UUIManager"; }
 	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
-    // viewport 에 올라온 widget들의 입력 요구/게임 입력 차단 정책을 합산한다.
-    FUIInputCaptureState GetViewportInputCaptureState() const;
-    bool                 AnyViewportWidgetWantsMouse() const;
+		// viewport 에 올라온 widget들의 입력 요구/게임 입력 차단 정책을 합산한다.
+		FUIInputCaptureState GetViewportInputCaptureState() const;
+		bool AnyViewportWidgetWantsMouse() const;
 
 private:
 	UUIManager() = default;

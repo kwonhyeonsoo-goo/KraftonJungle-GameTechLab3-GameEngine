@@ -1325,6 +1325,9 @@
     <ClCompile Include="Source\Engine\Gizmo\ComponentGizmoTarget.cpp">
       <Filter>Source\Engine\Gizmo</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Input\InputKeyCodes.cpp">
+      <Filter>Source\Engine\Input</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Input\InputSystem.cpp">
       <Filter>Source\Engine\Input</Filter>
     </ClCompile>
@@ -2641,6 +2644,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Gizmo\GizmoTransformTarget.h">
       <Filter>Source\Engine\Gizmo</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Input\InputKeyCodes.h">
+      <Filter>Source\Engine\Input</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Input\InputSystem.h">
       <Filter>Source\Engine\Input</Filter>

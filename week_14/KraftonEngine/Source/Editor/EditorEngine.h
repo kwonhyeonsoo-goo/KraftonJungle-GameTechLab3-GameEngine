@@ -137,7 +137,7 @@ private:
 	bool EnterPIEPossessedMode();
 	bool EnterPIEEjectedMode();
 	void SyncGameViewportPIEControlState(bool bPossessedMode);
-    void ProcessPIEInput(float DeltaTime);
+	void ProcessPIEInput(float DeltaTime);
 	void LoadStartLevel();
 	bool FindSceneViewportPOV(struct FMinimalViewInfo& OutPOV) const;
 	void RestoreViewportCamera(const FPerspectiveCameraData& CamData);

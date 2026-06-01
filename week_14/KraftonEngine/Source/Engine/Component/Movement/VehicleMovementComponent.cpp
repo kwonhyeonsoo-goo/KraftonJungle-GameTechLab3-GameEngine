@@ -4,10 +4,12 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Physics/IPhysicsScene.h"
+#include "Physics/PhysicsWorldSnapshot.h"
 
 #include <algorithm>
 #include <cmath>
 #include <Object/GarbageCollection.h>
+#include "Object/Ptr/WeakObjectPtr.h"
 
 namespace
 {
@@ -30,6 +32,7 @@ void UVehicleMovementComponent::BeginPlay()
 
 	if (VehicleHandle.IsValid())
 	{
+		RegisterPhysicsSnapshotReceiver();
 		return;
 	}
 
@@ -40,10 +43,13 @@ void UVehicleMovementComponent::BeginPlay()
 	}
 
 	VehicleHandle = PhysicsScene->CreateVehicle(BuildVehicleDesc());
+	RegisterPhysicsSnapshotReceiver();
 }
 
 void UVehicleMovementComponent::EndPlay()
 {
+	UnregisterPhysicsSnapshotReceiver();
+
 	if (VehicleHandle.IsValid())
 	{
 		if (IPhysicsScene* PhysicsScene = GetPhysicsScene(this))
@@ -117,6 +123,64 @@ void UVehicleMovementComponent::ResetVehicle()
 
 	const FTransform ChassisWorld(Chassis->GetWorldLocation(), Chassis->GetWorldRotation(), FVector(1.0f, 1.0f, 1.0f));
 	PhysicsScene->ResetVehicle(VehicleHandle, ChassisWorld);
+}
+
+void UVehicleMovementComponent::RegisterPhysicsSnapshotReceiver()
+{
+	if (PhysicsSnapshotReceiverHandle != 0 || !VehicleHandle.IsValid())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	TWeakObjectPtr<UVehicleMovementComponent> WeakThis(this);
+	PhysicsSnapshotReceiverHandle = World->RegisterPhysicsSnapshotReceiver(
+		[WeakThis](const FPhysicsWorldSnapshot& Snapshot)
+		{
+			UVehicleMovementComponent* Component = WeakThis.Get();
+			if (!IsValid(Component) || !Component->VehicleHandle.IsValid())
+			{
+				return;
+			}
+
+			const uint32 ComponentId = Component->GetUUID();
+			const FPhysXVehicleHandle VehicleHandle = Component->VehicleHandle;
+			for (const FPhysXVehicleSnapshot& Vehicle : Snapshot.Vehicles)
+			{
+				if (Vehicle.OwnerComponentId != ComponentId)
+				{
+					continue;
+				}
+
+				// destroy/recreate 후 도착한 stale snapshot 차단 — 핸들이 일치할 때만 적용.
+				if (Vehicle.Vehicle != VehicleHandle)
+				{
+					continue;
+				}
+
+				Component->ApplyVehicleSnapshot(Vehicle);
+				return;
+			}
+		});
+}
+
+void UVehicleMovementComponent::UnregisterPhysicsSnapshotReceiver()
+{
+	if (PhysicsSnapshotReceiverHandle == 0)
+	{
+		return;
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		World->UnregisterPhysicsSnapshotReceiver(PhysicsSnapshotReceiverHandle);
+	}
+	PhysicsSnapshotReceiverHandle = 0;
 }
 
 void UVehicleMovementComponent::ApplyVehicleSnapshot(const FPhysXVehicleSnapshot& Snapshot)

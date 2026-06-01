@@ -1,4 +1,5 @@
 #include "LuaBlueprint/LuaBlueprintAsset.h"
+#include "Input/InputKeyCodes.h"
 
 #include "LuaBlueprint/LuaBlueprintCompiler.h"
 #include "Object/GarbageCollection.h"
@@ -10,7 +11,7 @@ namespace
 {
     constexpr uint32 LuaBlueprintAssetMagic         = 0x4C425031; // LBP1
     constexpr uint32 LuaBlueprintAssetFormatVersion = 3;
-    constexpr uint32 LuaBlueprintCompilerVersion    = 3;
+    constexpr uint32 LuaBlueprintCompilerVersion    = 4;
 }
 
 FArchive& operator<<(FArchive& Ar, TArray<FLuaBlueprintPin>& Array);
@@ -145,6 +146,10 @@ namespace
             return "Event Hit";
         case ELuaBlueprintNodeType::EventEndHit:
             return "Event EndHit";
+        case ELuaBlueprintNodeType::EventInputAction:
+            return "Event InputAction";
+        case ELuaBlueprintNodeType::EventInputAxis:
+            return "Event InputAxis";
         case ELuaBlueprintNodeType::Sequence:
             return "Sequence";
         case ELuaBlueprintNodeType::Branch:
@@ -285,6 +290,20 @@ namespace
             return "Get Actor Name";
         case ELuaBlueprintNodeType::GetOwnerActor:
             return "Get Owner Actor";
+        case ELuaBlueprintNodeType::GetPlayerController:
+            return "Get Player Controller";
+        case ELuaBlueprintNodeType::GetController:
+            return "Get Controller";
+        case ELuaBlueprintNodeType::GetControlledPawn:
+            return "Get Controlled Pawn";
+        case ELuaBlueprintNodeType::Possess:
+            return "Possess";
+        case ELuaBlueprintNodeType::UnPossess:
+            return "UnPossess";
+        case ELuaBlueprintNodeType::IsPawnPossessed:
+            return "Is Pawn Possessed";
+        case ELuaBlueprintNodeType::GetInputComponent:
+            return "Get Input Component";
         case ELuaBlueprintNodeType::IsValid:
             return "Is Valid";
         case ELuaBlueprintNodeType::Cast:
@@ -432,6 +451,23 @@ namespace
 
 FLuaBlueprintLink* ULuaBlueprintAsset::AddLink(uint32 FromPinId, uint32 ToPinId)
 {
+    // 데이터 입력 핀은 fan-in 1개 — 새 연결이 기존 연결을 덮어쓴다(UE Blueprint 동작).
+    // Exec 입력은 여러 곳에서 같은 노드를 실행할 수 있으므로 fan-in 다중 허용(덮어쓰지 않음).
+    if (const FLuaBlueprintPin* ToPin = FindPin(ToPinId))
+    {
+        if (ToPin->Kind == ELuaBlueprintPinKind::Input && ToPin->Type != ELuaBlueprintPinType::Exec)
+        {
+            Links.erase(
+                std::remove_if(
+                    Links.begin(),
+                    Links.end(),
+                    [ToPinId](const FLuaBlueprintLink& Existing) { return Existing.ToPinId == ToPinId; }
+                ),
+                Links.end()
+            );
+        }
+    }
+
     FLuaBlueprintLink Link;
     Link.LinkId    = AllocateId();
     Link.FromPinId = FromPinId;
@@ -563,6 +599,20 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("OtherActor"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("HitComponent"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("OtherComp"));
+        break;
+    case ELuaBlueprintNodeType::EventInputAction:
+        N->NameValue = FName("Jump");
+        N->StringValue = "Pressed";
+        N->IntValue = ResolveInputKeyCode("Space"); // 0이면 기존 ActionMapping 이름에만 bind.
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::EventInputAxis:
+        N->NameValue = FName("MoveForward");
+        N->StringValue = "Key"; // Key, MouseX, MouseY, MouseWheel.
+        N->IntValue = 0;         // 0이면 기존 AxisMapping 이름에만 bind.
+        N->FloatValue = 1.0f;
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Float, FName("Value"));
         break;
     case ELuaBlueprintNodeType::Sequence:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
@@ -798,6 +848,38 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
     case ELuaBlueprintNodeType::GetOwnerActor:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Component"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("Owner"));
+        break;
+
+    // ── Game framework ──
+    case ELuaBlueprintNodeType::GetPlayerController:
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("Controller"));
+        break;
+    case ELuaBlueprintNodeType::GetController:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Pawn"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("Controller"));
+        break;
+    case ELuaBlueprintNodeType::GetControlledPawn:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Controller"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("Pawn"));
+        break;
+    case ELuaBlueprintNodeType::Possess:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Controller"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Pawn"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::UnPossess:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Controller"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::IsPawnPossessed:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Pawn"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Possessed"));
+        break;
+    case ELuaBlueprintNodeType::GetInputComponent:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Pawn"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("InputComponent"));
         break;
 
     // ── Object utility ──
@@ -1213,13 +1295,19 @@ bool ULuaBlueprintAsset::CanLinkPins(uint32 PinAId, uint32 PinBId, uint32* OutFr
         }
     }
 
-    // Input fan-in 은 1개만 허용. Exec output 은 fan-out 도 1개만 허용 (분기는 Sequence 노드로).
-    // 데이터 output 은 여러 input 에 fan-out 가능.
+    // 연결 규칙 (UE Blueprint 기준):
+    //   - 데이터 입력: fan-in 1개. 단, 이미 연결돼 있어도 거부하지 않고 "덮어쓰기"를 허용한다
+    //     (AddLink 가 기존 링크를 제거하고 새로 연결). 그래서 여기서 막지 않는다.
+    //   - Exec 입력: fan-in 다중 허용 (여러 곳에서 같은 노드 실행).
+    //   - 데이터 출력: fan-out 다중 허용.
+    //   - Exec 출력: fan-out 1개만 (분기는 Sequence 노드로).
+    const bool bExecLink = (From->Type == ELuaBlueprintPinType::Exec);
     for (const FLuaBlueprintLink& Link : Links)
     {
+        // 완전히 동일한 링크(같은 출력 → 같은 입력)는 중복.
         if (Link.FromPinId == From->PinId && Link.ToPinId == To->PinId) return false;
-        if (Link.ToPinId == To->PinId) return false;
-        if (From->Type == ELuaBlueprintPinType::Exec && Link.FromPinId == From->PinId) return false;
+        // Exec 출력은 fan-out 1개만.
+        if (bExecLink && Link.FromPinId == From->PinId) return false;
     }
 
     if (OutFromPinId) *OutFromPinId = From->PinId;

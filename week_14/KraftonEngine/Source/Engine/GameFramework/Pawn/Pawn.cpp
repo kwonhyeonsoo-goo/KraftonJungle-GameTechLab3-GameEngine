@@ -10,10 +10,9 @@
 
 void APawn::BeginPlay()
 {
-	Super::BeginPlay();
-
-	// Input 자동 부착 + 자식 setup. PostDuplicate 후에도 BeginPlay 가 다시 호출되므로
-	// 중복 add 방지 위해 GetComponentByClass 로 기존 인스턴스 우선 회수.
+	// InputComponent는 다른 컴포넌트의 BeginPlay보다 먼저 준비한다.
+	// LuaBlueprintComponent의 Event InputAction/InputAxis 자동 바인딩은 자기 BeginPlay에서
+	// Pawn::GetInputComponent()를 사용하므로, Super::BeginPlay() 전에 생성/Setup되어 있어야 한다.
 	if (!InputComponent)
 	{
 		InputComponent = GetComponentByClass<UInputComponent>();
@@ -22,19 +21,21 @@ void APawn::BeginPlay()
 			InputComponent = AddComponent<UInputComponent>();
 		}
 	}
-    if (InputComponent)
-    {
-        InputComponent->ClearBindings();
-    }
+	if (InputComponent)
+	{
+		InputComponent->ClearBindings();
+	}
 	SetupInputComponent();
+
+	Super::BeginPlay();
 }
 
 void APawn::ProcessPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime)
 {
-    if (InputComponent)
-    {
-        InputComponent->ProcessInput(Snapshot, DeltaTime);
-    }
+	if (InputComponent)
+	{
+		InputComponent->ProcessInput(Snapshot, DeltaTime);
+	}
 }
 
 void APawn::PossessedBy(APlayerController* PC)

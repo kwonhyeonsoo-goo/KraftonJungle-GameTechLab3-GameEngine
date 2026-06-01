@@ -35,7 +35,7 @@ public:
 	UFUNCTION(Pure, Category="PlayerController")
 	APawn* GetPossessedPawn() const { return PossessedPawn.Get(); }
 
-    void ProcessPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime);
+	void ProcessPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime);
 
 	// ─── Camera Manager ──────────────────────────────────────────
 	// UE: APlayerController::PlayerCameraManager 멤버. 현재는 World 가 owner 이고 PC 는 reference 만 보유.

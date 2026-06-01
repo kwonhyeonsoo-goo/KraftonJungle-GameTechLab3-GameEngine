@@ -39,8 +39,8 @@ public:
 	// 기본은 no-op — 자식이 mapping/binding 설정.
 	virtual void SetupInputComponent() {}
 
-    // PlayerController 가 Possessed Pawn 에 대해서만 호출한다.
-    virtual void ProcessPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime);
+	// PlayerController 가 Possessed Pawn 에 대해서만 호출한다.
+	virtual void ProcessPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime);
 
 	void BeginPlay() override;
 

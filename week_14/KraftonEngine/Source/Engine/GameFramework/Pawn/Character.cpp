@@ -67,83 +67,67 @@ void ACharacter::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 
-    if (!InputComponent) return;
+	if (!InputComponent) return;
 
-    if (bAutoInputWASD)
-    {
-        // Capsule (RootComponent) 기준 — yaw 회전이 곧 캐릭터 facing. mouse look 이 yaw 만
-        // 변경 → forward/right vector 가 자동 회전 → WASD 가 "카메라 보는 방향" 으로 이동.
-        InputComponent->AddAxisMapping("MoveForward", 'W', 1.0f);
-        InputComponent->AddAxisMapping("MoveForward", 'S', -1.0f);
-        InputComponent->AddAxisMapping("MoveRight", 'D', 1.0f);
-        InputComponent->AddAxisMapping("MoveRight", 'A', -1.0f);
+	if (bAutoInputWASD)
+	{
+		// Capsule (RootComponent) 기준 — yaw 회전이 곧 캐릭터 facing. mouse look 이 yaw 만
+		// 변경 → forward/right vector 가 자동 회전 → WASD 가 "카메라 보는 방향" 으로 이동.
+		InputComponent->AddAxisMapping("MoveForward", 'W',  1.0f);
+		InputComponent->AddAxisMapping("MoveForward", 'S', -1.0f);
+		InputComponent->AddAxisMapping("MoveRight",   'D',  1.0f);
+		InputComponent->AddAxisMapping("MoveRight",   'A', -1.0f);
 
-        // WASD 의 forward/right 는 ControlRotation.Yaw 기준 — capsule rotation 과 무관.
-        // "카메라가 보는 방향" (yaw 만, pitch 무시) 으로 이동.
-        InputComponent->BindAxis(
-            "MoveForward",
-            [this](float Value)
-            {
-                if (Value == 0.0f) return;
-                const FRotator YawOnly(0.0f, GetControlRotation().Yaw, 0.0f);
-                AddMovementInput(YawOnly.GetForwardVector(), Value);
-            }
-        );
-        InputComponent->BindAxis(
-            "MoveRight",
-            [this](float Value)
-            {
-                if (Value == 0.0f) return;
-                const FRotator YawOnly(0.0f, GetControlRotation().Yaw, 0.0f);
-                AddMovementInput(YawOnly.GetRightVector(), Value);
-            }
-        );
+		// WASD 의 forward/right 는 ControlRotation.Yaw 기준 — capsule rotation 과 무관.
+		// "카메라가 보는 방향" (yaw 만, pitch 무시) 으로 이동.
+		InputComponent->BindAxis("MoveForward", [this](float Value)
+		{
+			if (Value == 0.0f) return;
+			const FRotator YawOnly(0.0f, GetControlRotation().Yaw, 0.0f);
+			AddMovementInput(YawOnly.GetForwardVector(), Value);
+		});
+		InputComponent->BindAxis("MoveRight", [this](float Value)
+		{
+			if (Value == 0.0f) return;
+			const FRotator YawOnly(0.0f, GetControlRotation().Yaw, 0.0f);
+			AddMovementInput(YawOnly.GetRightVector(), Value);
+		});
 
-        // Space = Jump (VK_SPACE = 0x20). Walking 중에만 effective (CharacterMovement::Jump 가 guard).
-        InputComponent->AddActionMapping("Jump", 0x20);
-        InputComponent->BindAction(
-            "Jump",
-            EInputEvent::Pressed,
-            [this]()
-            {
-                Jump();
-            }
-        );
-    }
+		// Space = Jump. Walking 중에만 effective (CharacterMovement::Jump 가 guard).
+		InputComponent->AddActionMapping("Jump", 0x20);
+		InputComponent->BindAction("Jump", EInputEvent::Pressed, [this]()
+		{
+			Jump();
+		});
+	}
 
 	if (bAutoInputMouseLook)
 	{
-        InputComponent->AddMouseAxisMapping("Turn", EInputAxisSourceType::MouseX, MouseSensitivity);
-        InputComponent->AddMouseAxisMapping("LookUp", EInputAxisSourceType::MouseY, MouseSensitivity);
+		InputComponent->AddMouseAxisMapping("Turn", EInputAxisSourceType::MouseX, MouseSensitivity);
+		InputComponent->AddMouseAxisMapping("LookUp", EInputAxisSourceType::MouseY, MouseSensitivity);
 
-        InputComponent->BindAxis(
-            "Turn",
-            [this](float Value)
+		InputComponent->BindAxis("Turn", [this](float Value)
 		{
-            if (Value == 0.0f) return;
-            FRotator Rot = GetControlRotation();
-            Rot.Yaw      += Value;
-            SetControlRotation(Rot);
-        }
-        );
-
-        InputComponent->BindAxis(
-            "LookUp",
-            [this](float Value)
-            {
-                if (Value == 0.0f) return;
-			FRotator Rot  = GetControlRotation();
-                Rot.Pitch += Value;
-                Rot.Pitch = std::clamp(Rot.Pitch, MinCameraPitch, MaxCameraPitch);
+			if (Value == 0.0f) return;
+			FRotator Rot = GetControlRotation();
+			Rot.Yaw += Value;
 			SetControlRotation(Rot);
-            }
-        );
-    }
+		});
+
+		InputComponent->BindAxis("LookUp", [this](float Value)
+		{
+			if (Value == 0.0f) return;
+			FRotator Rot = GetControlRotation();
+			Rot.Pitch += Value;
+			Rot.Pitch = std::clamp(Rot.Pitch, MinCameraPitch, MaxCameraPitch);
+			SetControlRotation(Rot);
+		});
+	}
 }
 
 void ACharacter::Tick(float DeltaTime)
 {
-    Super::Tick(DeltaTime);
+	Super::Tick(DeltaTime);
 
 	// 같은 frame 안 ControlRotation 변경을 capsule (RootComponent) 에 즉시 반영 — 1 frame 지연 없음.
 	// 옵션 충돌 가드:

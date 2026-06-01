@@ -36,7 +36,10 @@ private:
 	ULuaBlueprintAsset* GetBlueprint() const;
 	void RenderToolbar(ULuaBlueprintAsset* Blueprint);
 	void RenderCompileErrorPanel(ULuaBlueprintAsset* Blueprint);
+	void RenderLeftPanel(ULuaBlueprintAsset* Blueprint);
 	void RenderVariables(ULuaBlueprintAsset* Blueprint);
+	void RenderPalettePanel(ULuaBlueprintAsset* Blueprint);
+	void SpawnPaletteNode(ULuaBlueprintAsset* Blueprint, ELuaBlueprintNodeType Type);
 	void RenderGraph(ULuaBlueprintAsset* Blueprint);
 	void RenderNodeBody(ULuaBlueprintAsset* Blueprint, FLuaBlueprintNode& Node);
 	void RenderNodeInspector(ULuaBlueprintAsset* Blueprint, FLuaBlueprintNode& Node);
@@ -85,6 +88,10 @@ private:
 	ImVec2 PendingNewNodePosition = ImVec2(0, 0);
 
 	char AddNodeSearchBuf[64] = {};
+	char PaletteSearchBuf[64] = {};
+
+	// 툴바 "Add Node" 버튼이 띄우는 검색형 노드 메뉴 팝업 트리거.
+	bool bOpenToolbarAddNodeMenu = false;
 
 	// Variable → canvas drop 처리:
 	//   frame N : drop 수신, 페이로드 + 스크린 좌표 캡쳐.

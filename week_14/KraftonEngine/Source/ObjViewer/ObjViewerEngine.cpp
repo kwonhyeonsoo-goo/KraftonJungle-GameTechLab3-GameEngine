@@ -62,14 +62,14 @@ void UObjViewerEngine::Shutdown()
 
 void UObjViewerEngine::Tick(float DeltaTime)
 {
-    TickFrameStart(DeltaTime);
+	TickFrameStart(DeltaTime);
 	Panel.Update();
-    InputSystem::Get().RefreshSnapshot();
+	InputSystem::Get().RefreshSnapshot();
 
-    const FInputSystemSnapshot InputSnapshot = InputSystem::Get().MakeSnapshot();
-    ViewportClient.Tick(InputSnapshot, DeltaTime);
+	const FInputSystemSnapshot InputSnapshot = InputSystem::Get().MakeSnapshot();
+	ViewportClient.Tick(InputSnapshot, DeltaTime);
 
-    TickFrameBody(DeltaTime);
+	TickFrameBody(DeltaTime);
 }
 
 void UObjViewerEngine::RenderUI(float DeltaTime)

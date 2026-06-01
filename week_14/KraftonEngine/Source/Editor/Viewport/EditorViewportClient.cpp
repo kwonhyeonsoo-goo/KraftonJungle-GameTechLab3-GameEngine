@@ -192,10 +192,10 @@ void FEditorViewportClient::Tick(float DeltaTime)
 
 	if (UEditorEngine* EditorEngine = Cast<UEditorEngine>(GEngine))
 	{
-        if (EditorEngine->IsPIEPossessedMode())
-        {
-            // possess 모드일 땐 게임이 입력을 가져가니 에디터 카메라 조작은 skip.
-            return;
+		if (EditorEngine->IsPIEPossessedMode())
+		{
+			// possess 모드일 땐 게임이 입력을 가져가니 에디터 카메라 조작은 skip.
+			return;
 		}
 	}
 

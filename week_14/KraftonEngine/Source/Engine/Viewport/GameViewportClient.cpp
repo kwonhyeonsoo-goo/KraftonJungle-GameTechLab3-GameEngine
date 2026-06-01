@@ -11,7 +11,7 @@
 void UGameViewportClient::BeginGameSession(FViewport* InViewport)
 {
 	Viewport = InViewport;
-    ClearGameInputSnapshot();
+	ClearGameInputSnapshot();
 	ResetInputState();
 }
 
@@ -30,103 +30,104 @@ void UGameViewportClient::EndGameSession()
 
 namespace
 {
-    bool IsMouseVirtualKey(int VK)
-    {
-        return VK == VK_LBUTTON || VK == VK_RBUTTON || VK == VK_MBUTTON || VK == VK_XBUTTON1 || VK == VK_XBUTTON2;
-    }
+	bool IsMouseVirtualKey(int VK)
+	{
+		return VK == VK_LBUTTON || VK == VK_RBUTTON || VK == VK_MBUTTON ||
+			VK == VK_XBUTTON1 || VK == VK_XBUTTON2;
+	}
 
-    void ClearMouseInput(FInputSystemSnapshot& Snapshot)
-    {
-        const int MouseKeys[] = { VK_LBUTTON, VK_RBUTTON, VK_MBUTTON, VK_XBUTTON1, VK_XBUTTON2 };
-        for (int VK : MouseKeys)
-        {
-            Snapshot.KeyDown[VK]     = false;
-            Snapshot.KeyPressed[VK]  = false;
-            Snapshot.KeyReleased[VK] = false;
-        }
+	void ClearMouseInput(FInputSystemSnapshot& Snapshot)
+	{
+		const int MouseKeys[] = { VK_LBUTTON, VK_RBUTTON, VK_MBUTTON, VK_XBUTTON1, VK_XBUTTON2 };
+		for (int VK : MouseKeys)
+		{
+			Snapshot.KeyDown[VK] = false;
+			Snapshot.KeyPressed[VK] = false;
+			Snapshot.KeyReleased[VK] = false;
+		}
 
-        Snapshot.MouseDeltaX          = 0;
-        Snapshot.MouseDeltaY          = 0;
-        Snapshot.ScrollDelta          = 0;
-        Snapshot.bLeftMouseDown       = false;
-        Snapshot.bLeftMousePressed    = false;
-        Snapshot.bLeftMouseReleased   = false;
-        Snapshot.bRightMouseDown      = false;
-        Snapshot.bRightMousePressed   = false;
-        Snapshot.bRightMouseReleased  = false;
-        Snapshot.bMiddleMouseDown     = false;
-        Snapshot.bMiddleMousePressed  = false;
-        Snapshot.bMiddleMouseReleased = false;
-        Snapshot.bXButton1Down        = false;
-        Snapshot.bXButton1Pressed     = false;
-        Snapshot.bXButton1Released    = false;
-        Snapshot.bXButton2Down        = false;
-        Snapshot.bXButton2Pressed     = false;
-        Snapshot.bXButton2Released    = false;
-        Snapshot.bLeftDragStarted     = false;
-        Snapshot.bLeftDragging        = false;
-        Snapshot.bLeftDragEnded       = false;
-        Snapshot.LeftDragVector       = { 0, 0 };
-        Snapshot.bRightDragStarted    = false;
-        Snapshot.bRightDragging       = false;
-        Snapshot.bRightDragEnded      = false;
-        Snapshot.RightDragVector      = { 0, 0 };
-    }
+		Snapshot.MouseDeltaX = 0;
+		Snapshot.MouseDeltaY = 0;
+		Snapshot.ScrollDelta = 0;
+		Snapshot.bLeftMouseDown = false;
+		Snapshot.bLeftMousePressed = false;
+		Snapshot.bLeftMouseReleased = false;
+		Snapshot.bRightMouseDown = false;
+		Snapshot.bRightMousePressed = false;
+		Snapshot.bRightMouseReleased = false;
+		Snapshot.bMiddleMouseDown = false;
+		Snapshot.bMiddleMousePressed = false;
+		Snapshot.bMiddleMouseReleased = false;
+		Snapshot.bXButton1Down = false;
+		Snapshot.bXButton1Pressed = false;
+		Snapshot.bXButton1Released = false;
+		Snapshot.bXButton2Down = false;
+		Snapshot.bXButton2Pressed = false;
+		Snapshot.bXButton2Released = false;
+		Snapshot.bLeftDragStarted = false;
+		Snapshot.bLeftDragging = false;
+		Snapshot.bLeftDragEnded = false;
+		Snapshot.LeftDragVector = { 0, 0 };
+		Snapshot.bRightDragStarted = false;
+		Snapshot.bRightDragging = false;
+		Snapshot.bRightDragEnded = false;
+		Snapshot.RightDragVector = { 0, 0 };
+	}
 
-    void ClearKeyboardInput(FInputSystemSnapshot& Snapshot)
-    {
-        for (int VK = 0; VK < 256; ++VK)
-        {
-            if (IsMouseVirtualKey(VK))
-            {
-                continue;
-            }
-            Snapshot.KeyDown[VK]     = false;
-            Snapshot.KeyPressed[VK]  = false;
-            Snapshot.KeyReleased[VK] = false;
-        }
-    }
+	void ClearKeyboardInput(FInputSystemSnapshot& Snapshot)
+	{
+		for (int VK = 0; VK < 256; ++VK)
+		{
+			if (IsMouseVirtualKey(VK))
+			{
+				continue;
+			}
+			Snapshot.KeyDown[VK] = false;
+			Snapshot.KeyPressed[VK] = false;
+			Snapshot.KeyReleased[VK] = false;
+		}
+	}
 }
 
 void UGameViewportClient::ProcessInput(const FInputSystemSnapshot& Snapshot, float /*DeltaTime*/)
 {
-    ClearGameInputSnapshot();
+	ClearGameInputSnapshot();
 
 	if (!Snapshot.bWindowFocused)
 	{
-        ReleaseGameCapture();
+		ReleaseGameCapture();
 		ResetInputState();
 		return;
 	}
 
 	if (!bInputPossessed)
 	{
-        ReleaseGameCapture();
+		ReleaseGameCapture();
 		return;
 	}
 
-    const FUIInputCaptureState UIState = UUIManager::Get().GetViewportInputCaptureState();
-    ApplyGameCapturePolicy(UIState);
+	const FUIInputCaptureState UIState = UUIManager::Get().GetViewportInputCaptureState();
+	ApplyGameCapturePolicy(UIState);
 
-    if (InputMode == EGameInputMode::UIOnly || UIState.bBlocksGameInput)
+	if (InputMode == EGameInputMode::UIOnly || UIState.bBlocksGameInput)
 	{
 		return;
 	}
 
-    FInputSystemSnapshot GameSnapshot       = Snapshot;
-    const bool           bBlockGameMouse    = UIState.bWantsMouse || UIState.bBlocksGameMouseLook;
-    const bool           bBlockGameKeyboard = UIState.bWantsTextInput || UIState.bBlocksGameKeyboard;
+	FInputSystemSnapshot GameSnapshot = Snapshot;
+	const bool bBlockGameMouse = UIState.bWantsMouse || UIState.bBlocksGameMouseLook;
+	const bool bBlockGameKeyboard = UIState.bWantsTextInput || UIState.bBlocksGameKeyboard;
 
-    if (bBlockGameMouse)
-    {
-        ClearMouseInput(GameSnapshot);
-    }
-    if (bBlockGameKeyboard)
-    {
-        ClearKeyboardInput(GameSnapshot);
-    }
+	if (bBlockGameMouse)
+	{
+		ClearMouseInput(GameSnapshot);
+	}
+	if (bBlockGameKeyboard)
+	{
+		ClearKeyboardInput(GameSnapshot);
+	}
 
-    SetGameInputSnapshot(GameSnapshot);
+	SetGameInputSnapshot(GameSnapshot);
 }
 
 void UGameViewportClient::SetInputPossessed(bool bPossessed)
@@ -147,23 +148,23 @@ void UGameViewportClient::SetInputPossessed(bool bPossessed)
 	if (!bPossessed)
 	{
 		ClearGameInputSnapshot();
-        ReleaseGameCapture();
-    }
+		ReleaseGameCapture();
+	}
 }
 
 void UGameViewportClient::SetInputMode(EGameInputMode InMode)
 {
-    if (InputMode == InMode)
-    {
-        return;
-    }
+	if (InputMode == InMode)
+	{
+		return;
+	}
 
-    InputMode = InMode;
-    ClearGameInputSnapshot();
-    ResetInputState();
-    if (InputMode == EGameInputMode::UIOnly)
-    {
-        ReleaseGameCapture();
+	InputMode = InMode;
+	ClearGameInputSnapshot();
+	ResetInputState();
+	if (InputMode == EGameInputMode::UIOnly)
+	{
+		ReleaseGameCapture();
 	}
 }
 
@@ -200,16 +201,19 @@ void UGameViewportClient::ResetInputState()
 
 void UGameViewportClient::ReleaseGameCapture()
 {
-    InputSystem::Get().SetUseRawMouse(false);
-    SetCursorCaptured(false);
+	InputSystem::Get().SetUseRawMouse(false);
+	SetCursorCaptured(false);
 }
 
 void UGameViewportClient::ApplyGameCapturePolicy(const FUIInputCaptureState& UIState)
 {
-    const bool bShouldCaptureMouse = InputMode != EGameInputMode::UIOnly && !UIState.bWantsMouse && !UIState.bBlocksGameInput && !UIState.bBlocksGameMouseLook;
+	const bool bShouldCaptureMouse = InputMode != EGameInputMode::UIOnly &&
+		!UIState.bWantsMouse &&
+		!UIState.bBlocksGameInput &&
+		!UIState.bBlocksGameMouseLook;
 
-    InputSystem::Get().SetUseRawMouse(bShouldCaptureMouse);
-    SetCursorCaptured(bShouldCaptureMouse);
+	InputSystem::Get().SetUseRawMouse(bShouldCaptureMouse);
+	SetCursorCaptured(bShouldCaptureMouse);
 }
 
 void UGameViewportClient::SetCursorCaptured(bool bCaptured)
