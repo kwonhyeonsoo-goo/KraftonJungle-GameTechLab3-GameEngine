@@ -1164,6 +1164,8 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\Physics\PhysicsShapeInstance.h" />
     <ClInclude Include="Source\Engine\Physics\PhysicsStats.h" />
     <ClInclude Include="Source\Engine\Physics\PhysicsTypes.h" />
+      <ClInclude Include="Source\Engine\Physics\PhysXVehicleInstance.h"/>
+      <ClInclude Include="Source\Engine\Physics\PhysXVehicleTypes.h"/>
     <ClInclude Include="Source\Engine\Platform\BuildInfo.h" />
     <ClInclude Include="Source\Engine\Platform\ConsoleHelper.h" />
     <ClInclude Include="Source\Engine\Platform\CrashDump.h" />

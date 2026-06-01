@@ -3,6 +3,7 @@
 #include "Physics/PhysicsDebugTypes.h"
 #include "Physics/PhysicsStats.h"
 #include "Physics/PhysicsTypes.h"
+#include "Physics/PhysXVehicleTypes.h"
 
 
 inline uint64 MakeBodyHandleKey(FPhysicsBodyHandle Body)
@@ -75,6 +76,10 @@ struct FPhysicsWorldSnapshot
     TArray<FPhysicsDebugBody>       DebugBodies;
     TArray<FPhysicsDebugConstraint> DebugConstraints;
 
+    TArray<FPhysXVehicleSnapshot> Vehicles;
+    TMap<uint64, int32> VehicleToIndex;
+    TMap<uint32, int32> ComponentToVehicleIndex;
+
     FPhysicsStats Stats;
 
     const FPhysicsBodySnapshot* FindByBody(FPhysicsBodyHandle BodyHandle) const
@@ -93,5 +98,17 @@ struct FPhysicsWorldSnapshot
     {
         const auto It = ComponentBoneToBodyIndex.find(MakeComponentBoneKey(ComponentId, BoneName));
         return It != ComponentBoneToBodyIndex.end() ? &Bodies[It->second] : nullptr;
+    }
+
+    const FPhysXVehicleSnapshot* FindVehicleByHandle(FPhysXVehicleHandle VehicleHandle) const
+    {
+        const auto It = VehicleToIndex.find(MakePhysXVehicleHandleKey(VehicleHandle));
+        return It != VehicleToIndex.end() ? &Vehicles[It->second] : nullptr;
+    }
+
+    const FPhysXVehicleSnapshot* FindVehicleByComponent(uint32 ComponentId) const
+    {
+        const auto It = ComponentToVehicleIndex.find(ComponentId);
+        return It != ComponentToVehicleIndex.end() ? &Vehicles[It->second] : nullptr;
     }
 };
