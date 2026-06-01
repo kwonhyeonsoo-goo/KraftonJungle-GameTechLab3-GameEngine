@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/Types/CoreTypes.h"
 #include "Object/FName.h"
@@ -6,6 +6,8 @@
 class UPhysicsAsset;
 class USkeletalMesh;
 
+//자동 body 생성 관련 유틸을 모아둔 파일입니다. 해당 기능은
+//physics editor 상단의 Regenerate Bodies 버튼과 연결되어 있습니다.
 enum class EPhysicsAssetAutoBodyMethod : uint8
 {
     BoneAxis,
@@ -17,14 +19,17 @@ struct FPhysicsAssetAutoBodyGeneratorOptions
     EPhysicsAssetAutoBodyMethod Method = EPhysicsAssetAutoBodyMethod::PCAAnalysis;
     bool bCreateConstraints = true;
     bool bReplaceExisting = true;
-    float MinInfluenceWeight = 0.35f;
-    int32 MinWeightedVertices = 4;
+    bool bSkipHelperBones = true;
+    bool bAllowBoneAxisFallback = false;
+    float MinInfluenceWeight = 0.15f;
+    int32 MinWeightedVertices = 16;
 };
 
 struct FPhysicsAssetAutoBodyGeneratorResult
 {
     int32 GeneratedBodyCount = 0;
     int32 GeneratedConstraintCount = 0;
+    int32 SkippedBoneCount = 0;
     int32 FirstGeneratedBodyIndex = -1;
     FName FirstGeneratedBoneName = FName::None;
     bool bAssetChanged = false;

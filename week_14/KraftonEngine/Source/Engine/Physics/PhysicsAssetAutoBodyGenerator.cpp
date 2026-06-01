@@ -1,4 +1,4 @@
-#include "Physics/PhysicsAssetAutoBodyGenerator.h"
+﻿#include "Physics/PhysicsAssetAutoBodyGenerator.h"
 
 #include "Animation/Skeleton/Skeleton.h"
 #include "Animation/Skeleton/SkeletonTypes.h"
@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <cctype>
 
 namespace
 {
@@ -30,6 +31,53 @@ namespace
     bool HasBoneName(const FName& BoneName)
     {
         return BoneName.IsValid() && BoneName != FName::None;
+    }
+
+    FString ToLowerBoneName(FString BoneName)
+    {
+        std::transform(
+            BoneName.begin(),
+            BoneName.end(),
+            BoneName.begin(),
+            [](unsigned char Character)
+            {
+                return static_cast<char>(std::tolower(Character));
+            });
+        return BoneName;
+    }
+
+    bool ContainsToken(const FString& Value, const char* Token)
+    {
+        return Value.find(Token) != FString::npos;
+    }
+
+    bool IsLikelyHelperBoneName(const FString& BoneName)
+    {
+        if (BoneName.empty())
+        {
+            return true;
+        }
+
+        const FString LowerName = ToLowerBoneName(BoneName);
+        return
+            LowerName == "root" ||
+            LowerName == "end" ||
+            ContainsToken(LowerName, "ik_") ||
+            ContainsToken(LowerName, "_ik") ||
+            ContainsToken(LowerName, "ik-") ||
+            ContainsToken(LowerName, "-ik") ||
+            ContainsToken(LowerName, "socket") ||
+            ContainsToken(LowerName, "weapon") ||
+            ContainsToken(LowerName, "attach") ||
+            ContainsToken(LowerName, "ctrl") ||
+            ContainsToken(LowerName, "control") ||
+            ContainsToken(LowerName, "helper") ||
+            ContainsToken(LowerName, "virtual") ||
+            ContainsToken(LowerName, "twist") ||
+            ContainsToken(LowerName, "roll") ||
+            ContainsToken(LowerName, "nub") ||
+            ContainsToken(LowerName, "dummy") ||
+            ContainsToken(LowerName, "marker");
     }
 
     FVector GetMatrixTranslation(const FMatrix& Matrix)
@@ -169,7 +217,7 @@ namespace
         return true;
     }
 
-    void CollectDominantBoneVertices(
+    void CollectInfluencedBoneVertices(
         const FSkeletalMesh* MeshAsset,
         int32 MeshBoneIndex,
         float MinInfluenceWeight,
@@ -181,24 +229,18 @@ namespace
             return;
         }
 
+        const float ClampedMinWeight = (std::min)((std::max)(MinInfluenceWeight, 0.0f), 1.0f);
         for (const FVertexPNCTBW& Vertex : MeshAsset->Vertices)
         {
-            int32 BestBoneIndex = -1;
-            float BestWeight = 0.0f;
             for (int32 InfluenceIndex = 0; InfluenceIndex < 4; ++InfluenceIndex)
             {
                 const int32 CandidateBoneIndex = Vertex.BoneIndices[InfluenceIndex];
                 const float CandidateWeight = Vertex.BoneWeights[InfluenceIndex];
-                if (CandidateWeight > BestWeight)
+                if (CandidateBoneIndex == MeshBoneIndex && CandidateWeight >= ClampedMinWeight)
                 {
-                    BestWeight = CandidateWeight;
-                    BestBoneIndex = CandidateBoneIndex;
+                    OutPoints.push_back(Vertex.Position);
+                    break;
                 }
-            }
-
-            if (BestBoneIndex == MeshBoneIndex && BestWeight >= MinInfluenceWeight)
-            {
-                OutPoints.push_back(Vertex.Position);
             }
         }
     }
@@ -441,20 +483,26 @@ namespace
         int32 MeshBoneIndex,
         const TArray<FVector>& Points,
         EPhysicsAssetAutoBodyMethod Method,
-        int32 MinWeightedVertices,
+        bool bAllowBoneAxisFallback,
         FAutoBodyFitResult& OutFit)
     {
         FVector SegmentStart;
         FVector SegmentEnd;
         GetBoneAxisSegment(MeshAsset, MeshBoneIndex, SegmentStart, SegmentEnd);
         const FVector BoneAxis = SegmentEnd - SegmentStart;
-        if (Method == EPhysicsAssetAutoBodyMethod::PCAAnalysis && static_cast<int32>(Points.size()) >= MinWeightedVertices)
+        if (Method == EPhysicsAssetAutoBodyMethod::PCAAnalysis)
         {
             if (BuildPCAAutoBodyFit(Points, BoneAxis, OutFit))
             {
                 return true;
             }
+
+            if (!bAllowBoneAxisFallback)
+            {
+                return false;
+            }
         }
+
         return BuildBoneAxisAutoBodyFit(MeshAsset, MeshBoneIndex, Points, OutFit);
     }
 
@@ -478,7 +526,7 @@ namespace
         OutBodyComponentTransform = ComposeComponentTransforms(BoneComponentTransform, BodySetup.BodyLocalFrame);
         return true;
     }
-}
+} //namespace 실화?
 
 bool FPhysicsAssetAutoBodyGenerator::Regenerate(
     UPhysicsAsset* PhysicsAsset,
@@ -532,14 +580,28 @@ bool FPhysicsAssetAutoBodyGenerator::Regenerate(
             continue;
         }
 
+        if (Options.bSkipHelperBones && IsLikelyHelperBoneName(RefBone.Name))
+        {
+            ++Result.SkippedBoneCount;
+            continue;
+        }
+
         const int32 MeshBoneIndex = FindMeshBoneIndexByName(MeshAsset, RefBone.Name);
         if (MeshBoneIndex < 0 || MeshBoneIndex >= static_cast<int32>(MeshAsset->Bones.size()))
         {
+            ++Result.SkippedBoneCount;
             continue;
         }
 
         TArray<FVector> Points;
-        CollectDominantBoneVertices(MeshAsset, MeshBoneIndex, Options.MinInfluenceWeight, Points);
+        CollectInfluencedBoneVertices(MeshAsset, MeshBoneIndex, Options.MinInfluenceWeight, Points);
+
+        const int32 MinWeightedVertices = (std::max)(Options.MinWeightedVertices, 1);
+        if (static_cast<int32>(Points.size()) < MinWeightedVertices && !Options.bAllowBoneAxisFallback)
+        {
+            ++Result.SkippedBoneCount;
+            continue;
+        }
 
         FAutoBodyFitResult Fit;
         if (!BuildAutoBodyFit(
@@ -547,9 +609,10 @@ bool FPhysicsAssetAutoBodyGenerator::Regenerate(
                 MeshBoneIndex,
                 Points,
                 Options.Method,
-                (std::max)(Options.MinWeightedVertices, 1),
+                Options.bAllowBoneAxisFallback,
                 Fit))
         {
+            ++Result.SkippedBoneCount;
             continue;
         }
 
