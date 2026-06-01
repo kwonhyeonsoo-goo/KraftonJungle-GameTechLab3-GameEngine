@@ -428,8 +428,17 @@ void FMeshEditorViewportClient::SetBoneDebugDrawMode(EBoneDebugDrawMode InDrawMo
 void FMeshEditorViewportClient::TickShortcuts()
 {
 	if (!FSlateApplication::Get().DoesClientOwnKeyboardInput(this)) return;
+	if (ImGui::GetIO().WantTextInput) return;
 
-	if (InputSystem::Get().GetKeyDown('F'))
+	InputSystem& Input = InputSystem::Get();
+
+	if (!Input.GetKey(VK_CONTROL) && Input.GetKeyDown('X'))
+	{
+		ToggleCoordSystem();
+		return;
+	}
+
+	if (Input.GetKeyDown('F'))
 	{
 		FVector TargetLoc = FVector::ZeroVector;
 		bool bHasFocusTarget = false;
@@ -695,6 +704,15 @@ void FMeshEditorViewportClient::ApplyTransformSettingsToGizmo()
 		Settings.bEnableRotationSnap, Settings.RotationSnapSize,
 		Settings.bEnableScaleSnap, Settings.ScaleSnapSize
 	);
+}
+
+void FMeshEditorViewportClient::ToggleCoordSystem()
+{
+	FGizmoToolSettings& Settings = FEditorSettings::Get().MeshEditorViewportSettings.Gizmo;
+	Settings.CoordSystem = (Settings.CoordSystem == EEditorCoordSystem::World)
+		? EEditorCoordSystem::Local
+		: EEditorCoordSystem::World;
+	ApplyTransformSettingsToGizmo();
 }
 
 void FMeshEditorViewportClient::HandleDragStart(const FRay& Ray)

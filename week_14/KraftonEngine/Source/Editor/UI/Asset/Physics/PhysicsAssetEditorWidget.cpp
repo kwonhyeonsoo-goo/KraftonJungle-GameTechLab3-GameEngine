@@ -1686,32 +1686,32 @@ void FPhysicsAssetEditorWidget::RenderBodyDetails(UPhysicsAsset* PhysicsAsset, F
 {
     bool bChanged = false;
     ImGui::Text("Bone Name: %s", Body.BoneName == FName::None ? "<None>" : Body.BoneName.ToString().c_str());
-    ImGui::TextDisabled("Bodies should be bound from the Skeleton Physics Tree, not typed manually.");
-    if (PreviewSkeletalMesh && PreviewSkeletalMesh->GetSkeleton() &&
-        SelectedTreeBoneIndex >= 0 &&
-        SelectedTreeBoneIndex < PreviewSkeletalMesh->GetSkeleton()->GetReferenceSkeleton().GetNumBones())
-    {
-        const FReferenceSkeleton& RefSkeleton = PreviewSkeletalMesh->GetSkeleton()->GetReferenceSkeleton();
-        const FName SelectedBoneName(RefSkeleton.Bones[SelectedTreeBoneIndex].Name);
-        const bool bCanBindToSelectedBone =
-            SelectedBoneName != Body.BoneName &&
-            !PhysicsAsset->HasBodySetupForBone(SelectedBoneName);
-        if (!bCanBindToSelectedBone) ImGui::BeginDisabled();
-        if (ImGui::Button("Bind Body to Selected Bone", ImVec2(-1.0f, 0.0f)))
-        {
-            Body.BoneName = SelectedBoneName;
-            bChanged = true;
-        }
-        if (!bCanBindToSelectedBone) ImGui::EndDisabled();
-    }
-    if (SelectedShapeIndex >= 0 && SelectedShapeIndex < static_cast<int32>(Body.Shapes.size()))
-    {
-        ImGui::TextDisabled("Viewport gizmo targets the selected shape. Clear/remove the selected shape to edit the Body Local Frame with the gizmo.");
-    }
-    else
-    {
-        ImGui::TextDisabled("Viewport gizmo targets the Body Local Frame.");
-    }
+    //ImGui::TextDisabled("Bodies should be bound from the Skeleton Physics Tree, not typed manually.");
+    //if (PreviewSkeletalMesh && PreviewSkeletalMesh->GetSkeleton() &&
+    //    SelectedTreeBoneIndex >= 0 &&
+    //    SelectedTreeBoneIndex < PreviewSkeletalMesh->GetSkeleton()->GetReferenceSkeleton().GetNumBones())
+    //{
+    //    const FReferenceSkeleton& RefSkeleton = PreviewSkeletalMesh->GetSkeleton()->GetReferenceSkeleton();
+    //    const FName SelectedBoneName(RefSkeleton.Bones[SelectedTreeBoneIndex].Name);
+    //    const bool bCanBindToSelectedBone =
+    //        SelectedBoneName != Body.BoneName &&
+    //        !PhysicsAsset->HasBodySetupForBone(SelectedBoneName);
+    //    if (!bCanBindToSelectedBone) ImGui::BeginDisabled();
+    //    if (ImGui::Button("Bind Body to Selected Bone", ImVec2(-1.0f, 0.0f)))
+    //    {
+    //        Body.BoneName = SelectedBoneName;
+    //        bChanged = true;
+    //    }
+    //    if (!bCanBindToSelectedBone) ImGui::EndDisabled();
+    //}
+    //if (SelectedShapeIndex >= 0 && SelectedShapeIndex < static_cast<int32>(Body.Shapes.size()))
+    //{
+    //    ImGui::TextDisabled("Viewport gizmo targets the selected shape. Clear/remove the selected shape to edit the Body Local Frame with the gizmo.");
+    //}
+    //else
+    //{
+    //    ImGui::TextDisabled("Viewport gizmo targets the Body Local Frame.");
+    //}
 
     bChanged |= EditTransform("Body Local Frame", Body.BodyLocalFrame);
     bChanged |= DragMinFloat("Mass", Body.Mass, 0.05f, 0.001f);

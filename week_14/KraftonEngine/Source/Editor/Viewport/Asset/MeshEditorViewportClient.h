@@ -82,6 +82,7 @@ public:
 	void SetBoneDebugDrawMode(EBoneDebugDrawMode InDrawMode);
 
 	void ApplyTransformSettingsToGizmo();
+	void ToggleCoordSystem();
 
 private:
 	enum class EPhysicsGizmoSelectionKind : uint8
