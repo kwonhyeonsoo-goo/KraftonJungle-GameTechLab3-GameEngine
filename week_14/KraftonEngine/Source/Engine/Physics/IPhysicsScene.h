@@ -2,8 +2,10 @@
 
 #include "Core/Types/CoreTypes.h"
 #include "Math/Vector.h"
+#include "Math/Transform.h"
 #include "Core/Types/RayTypes.h"
 #include "Core/Types/CollisionTypes.h"
+#include "Physics/PhysXVehicleTypes.h"
 
 class UWorld;
 class AActor;
@@ -94,6 +96,20 @@ public:
     {
         return 0;
     }
+
+    virtual FPhysXVehicleHandle CreateVehicle(const FPhysXVehicleDesc& /*Desc*/)
+    {
+        return {};
+    }
+
+    virtual void DestroyVehicle(FPhysXVehicleHandle /*Vehicle*/)
+    {}
+
+    virtual void SetVehicleInput(FPhysXVehicleHandle /*Vehicle*/, const FPhysXVehicleInputState& /*Input*/)
+    {}
+
+    virtual void ResetVehicle(FPhysXVehicleHandle /*Vehicle*/, const FTransform& /*WorldTransform*/)
+    {}
 
     virtual IPhysicsRuntime* GetRuntime()
     {

@@ -2,6 +2,7 @@
 #include "Object/Reflection/ObjectFactory.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/Primitive/StaticMeshComponent.h"
+#include "Component/Movement/VehicleMovementComponent.h"
 #include "Engine/Component/Camera/CameraComponent.h"
 #include "Render/Types/LODContext.h"
 #include "Core/ProjectSettings.h"
@@ -496,6 +497,29 @@ void UWorld::ApplyPhysicsSnapshot_GameThread()
 
 		Component->SetWorldLocation(Body.CurrentTransform.Location);
 		Component->SetWorldRotation(Body.CurrentTransform.Rotation);
+	}
+
+	for (const FPhysXVehicleSnapshot& Vehicle : Snapshot->Vehicles)
+	{
+		if (Vehicle.OwnerComponentId == 0)
+		{
+			continue;
+		}
+
+		UObject*                    Object    = UObjectManager::Get().FindByUUID(Vehicle.OwnerComponentId);
+		UVehicleMovementComponent*  Component = Cast<UVehicleMovementComponent>(Object);
+		if (!IsValid(Component))
+		{
+			continue;
+		}
+
+		// destroy/recreate 후 도착한 stale 스냅샷 차단 — 핸들이 일치할 때만 적용.
+		if (Component->GetVehicleHandle() != Vehicle.Vehicle)
+		{
+			continue;
+		}
+
+		Component->ApplyVehicleSnapshot(Vehicle);
 	}
 }
 

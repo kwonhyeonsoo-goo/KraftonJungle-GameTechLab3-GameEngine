@@ -91,6 +91,9 @@ struct FPhysXVehicleDesc
 
     float TireFriction = 1.5f;
 
+    uint32 DrivableSurfaceMask = ObjectTypeBit(ECollisionChannel::WorldStatic) |
+                                 ObjectTypeBit(ECollisionChannel::WorldDynamic);
+
     static FPhysXVehicleDesc MakeDefault4W()
     {
         FPhysXVehicleDesc Desc;

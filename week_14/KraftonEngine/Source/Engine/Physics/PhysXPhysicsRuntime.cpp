@@ -142,9 +142,12 @@ namespace
             SuspensionData[i].mCamberAtMaxCompression = -0.01f;
             SuspensionData[i].mCamberAtMaxDroop       = 0.01f;
         }
+        const uint32 DrivableMask = Desc.DrivableSurfaceMask != 0
+                                        ? Desc.DrivableSurfaceMask
+                                        : ObjectTypeBit(ECollisionChannel::WorldStatic);
 
         physx::PxFilterData QueryFilterData;
-        QueryFilterData.word0 = ObjectTypeBit(ECollisionChannel::WorldStatic);
+        QueryFilterData.word0 = DrivableMask;
         QueryFilterData.word1 = 0;
         QueryFilterData.word2 = 0;
         QueryFilterData.word3 = 0;

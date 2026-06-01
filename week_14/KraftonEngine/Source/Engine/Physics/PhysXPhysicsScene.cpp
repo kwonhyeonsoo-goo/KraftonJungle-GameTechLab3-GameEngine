@@ -1262,6 +1262,39 @@ uint32 FPhysXPhysicsScene::GetComponentGeneration_GameThread(uint32 ComponentId)
     return Binding ? Binding->Generation : 0;
 }
 
+FPhysXVehicleHandle FPhysXPhysicsScene::CreateVehicle(const FPhysXVehicleDesc& Desc)
+{
+    FPhysXVehicleDesc LocalDesc = Desc;
+    LocalDesc.ReservedVehicle   = Runtime.ReservePhysXVehicleHandle_GameThread();
+
+    Runtime.CreatePhysXVehicle(LocalDesc);
+    return LocalDesc.ReservedVehicle;
+}
+
+void FPhysXPhysicsScene::DestroyVehicle(FPhysXVehicleHandle Vehicle)
+{
+    if (Vehicle.IsValid())
+    {
+        Runtime.DestroyPhysXVehicle(Vehicle);
+    }
+}
+
+void FPhysXPhysicsScene::SetVehicleInput(FPhysXVehicleHandle Vehicle, const FPhysXVehicleInputState& Input)
+{
+    if (Vehicle.IsValid())
+    {
+        Runtime.SetPhysXVehicleInput(Vehicle, Input);
+    }
+}
+
+void FPhysXPhysicsScene::ResetVehicle(FPhysXVehicleHandle Vehicle, const FTransform& WorldTransform)
+{
+    if (Vehicle.IsValid())
+    {
+        Runtime.ResetPhysXVehicle(Vehicle, WorldTransform);
+    }
+}
+
 FBodyCreationDesc FPhysXPhysicsScene::BuildBodyDescFromComponent_GameThread(UPrimitiveComponent* Comp, uint32 Generation) const
 {
     FBodyCreationDesc Desc;
