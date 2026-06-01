@@ -13,6 +13,7 @@
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Component/Debug/BoneDebugComponent.h"
 #include "Component/Debug/PhysicsAssetPreviewComponent.h"
+#include "Physics/PhysicsAsset.h"
 #include "Collision/Ray/RayUtils.h"
 #include "Settings/EditorSettings.h"
 #include "Slate/SlateApplication.h"
@@ -38,6 +39,7 @@ void FMeshEditorViewportClient::AddReferencedObjects(FReferenceCollector& Collec
 	Collector.AddReferencedObject(PhysicsAssetPreviewComponent);
 	Collector.AddReferencedObject(PreviewWorld);
 	Collector.AddReferencedObject(PreviewActor);
+	Collector.AddReferencedObject(ActivePhysicsGizmoAsset);
 }
 
 void FMeshEditorViewportClient::Release()
@@ -51,6 +53,7 @@ void FMeshEditorViewportClient::Release()
 
 	PreviewWorld = nullptr;
 	PreviewActor = nullptr;
+	ClearPhysicsAssetGizmoTarget();
 
 	UObjectManager::Get().DestroyObject(Gizmo);
 	Gizmo = nullptr;
@@ -195,6 +198,8 @@ void FMeshEditorViewportClient::SetSelectedBone(USkeletalMesh* Mesh, int32 BoneI
 	SelectedMesh = Mesh;
 	SelectedBoneIndex = BoneIndex;
 	SelectedSocketIndex = -1;
+	ActivePhysicsGizmoKind = EPhysicsGizmoSelectionKind::None;
+	ActivePhysicsGizmoAsset = nullptr;
 	RenderOptions.WeightBoneHeatMapBoneIndex = BoneIndex;
 
 	if (Gizmo && PreviewMeshComponent && BoneIndex >= 0)
@@ -220,6 +225,8 @@ void FMeshEditorViewportClient::SetSelectedSocket(USkeletalMesh* Mesh, USkeleton
 	SelectedMesh = Mesh;
 	SelectedBoneIndex = -1;
 	SelectedSocketIndex = SocketIndex;
+	ActivePhysicsGizmoKind = EPhysicsGizmoSelectionKind::None;
+	ActivePhysicsGizmoAsset = nullptr;
 	RenderOptions.WeightBoneHeatMapBoneIndex = -1;
 
 	if (Gizmo && PreviewMeshComponent && Skeleton && SocketIndex >= 0)
@@ -240,9 +247,124 @@ void FMeshEditorViewportClient::SetSelectedSocket(USkeletalMesh* Mesh, USkeleton
 	}
 }
 
+void FMeshEditorViewportClient::SetSelectedPhysicsAssetElement(
+	UPhysicsAsset* PhysicsAsset,
+	int32 BodyIndex,
+	int32 ShapeIndex,
+	int32 ConstraintIndex,
+	EPhysicsAssetConstraintFrameTarget ConstraintFrameTarget)
+{
+	SelectedMesh = PreviewMeshComponent ? PreviewMeshComponent->GetSkeletalMesh() : nullptr;
+	SelectedBoneIndex = -1;
+	SelectedSocketIndex = -1;
+	RenderOptions.WeightBoneHeatMapBoneIndex = -1;
+
+	if (!Gizmo || !PreviewMeshComponent || !PhysicsAsset)
+	{
+		ClearPhysicsAssetGizmoTarget();
+		return;
+	}
+
+	EPhysicsGizmoSelectionKind NewKind = EPhysicsGizmoSelectionKind::None;
+	if (ConstraintIndex >= 0)
+	{
+		NewKind = EPhysicsGizmoSelectionKind::ConstraintFrame;
+	}
+	else if (BodyIndex >= 0 && ShapeIndex >= 0)
+	{
+		NewKind = EPhysicsGizmoSelectionKind::Shape;
+	}
+	else if (BodyIndex >= 0)
+	{
+		NewKind = EPhysicsGizmoSelectionKind::Body;
+	}
+
+	if (NewKind == EPhysicsGizmoSelectionKind::None)
+	{
+		ClearPhysicsAssetGizmoTarget();
+		return;
+	}
+
+	const bool bSameTarget =
+		ActivePhysicsGizmoKind == NewKind &&
+		ActivePhysicsGizmoAsset == PhysicsAsset &&
+		ActivePhysicsGizmoBodyIndex == BodyIndex &&
+		ActivePhysicsGizmoShapeIndex == ShapeIndex &&
+		ActivePhysicsGizmoConstraintIndex == ConstraintIndex &&
+		ActivePhysicsGizmoConstraintFrame == ConstraintFrameTarget;
+
+	ActivePhysicsGizmoKind = NewKind;
+	ActivePhysicsGizmoAsset = PhysicsAsset;
+	ActivePhysicsGizmoBodyIndex = BodyIndex;
+	ActivePhysicsGizmoShapeIndex = ShapeIndex;
+	ActivePhysicsGizmoConstraintIndex = ConstraintIndex;
+	ActivePhysicsGizmoConstraintFrame = ConstraintFrameTarget;
+
+	IGizmoTransformTarget* Target = nullptr;
+	switch (NewKind)
+	{
+	case EPhysicsGizmoSelectionKind::Body:
+		PhysicsBodyTarget.SetTarget(PreviewMeshComponent, PhysicsAsset, BodyIndex);
+		Target = &PhysicsBodyTarget;
+		break;
+	case EPhysicsGizmoSelectionKind::Shape:
+		PhysicsShapeTarget.SetTarget(PreviewMeshComponent, PhysicsAsset, BodyIndex, ShapeIndex);
+		Target = &PhysicsShapeTarget;
+		break;
+	case EPhysicsGizmoSelectionKind::ConstraintFrame:
+		PhysicsConstraintFrameTarget.SetTarget(PreviewMeshComponent, PhysicsAsset, ConstraintIndex, ConstraintFrameTarget);
+		Target = &PhysicsConstraintFrameTarget;
+		break;
+	default:
+		break;
+	}
+
+	if (!Target || !Target->IsValid())
+	{
+		ClearPhysicsAssetGizmoTarget();
+		return;
+	}
+
+	if (!bSameTarget || Gizmo->GetTarget() != Target)
+	{
+		Gizmo->SetTarget(Target);
+	}
+	else if (!Gizmo->IsHolding())
+	{
+		Gizmo->UpdateGizmoTransform();
+	}
+}
+
+void FMeshEditorViewportClient::ClearPhysicsAssetGizmoTarget()
+{
+	ActivePhysicsGizmoKind = EPhysicsGizmoSelectionKind::None;
+	ActivePhysicsGizmoAsset = nullptr;
+	ActivePhysicsGizmoBodyIndex = -1;
+	ActivePhysicsGizmoShapeIndex = -1;
+	ActivePhysicsGizmoConstraintIndex = -1;
+	ActivePhysicsGizmoConstraintFrame = EPhysicsAssetConstraintFrameTarget::Child;
+	if (Gizmo)
+	{
+		Gizmo->Deactivate();
+	}
+}
+
 bool FMeshEditorViewportClient::ConsumeSocketGizmoModified()
 {
 	const bool bModified = SocketTarget.ConsumeModified();
+	if (bModified)
+	{
+		RefreshBoneDebug();
+	}
+	return bModified;
+}
+
+bool FMeshEditorViewportClient::ConsumePhysicsAssetGizmoModified()
+{
+	const bool bModified =
+		PhysicsBodyTarget.ConsumeModified() ||
+		PhysicsShapeTarget.ConsumeModified() ||
+		PhysicsConstraintFrameTarget.ConsumeModified();
 	if (bModified)
 	{
 		RefreshBoneDebug();
@@ -528,6 +650,10 @@ void FMeshEditorViewportClient::SyncGizmo()
 	}
 	else if (SocketTarget.IsValid())
 	{
+	}
+	else if (ActivePhysicsGizmoKind != EPhysicsGizmoSelectionKind::None && Gizmo->GetTarget() && Gizmo->GetTarget()->IsValid())
+	{
+		Gizmo->UpdateGizmoTransform();
 	}
 	else
 	{

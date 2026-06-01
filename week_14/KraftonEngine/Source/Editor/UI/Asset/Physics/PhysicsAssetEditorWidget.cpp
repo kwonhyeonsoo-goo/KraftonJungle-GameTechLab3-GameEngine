@@ -689,6 +689,11 @@ bool FPhysicsAssetEditorWidget::SaveEditedPhysicsAsset()
     return false;
 }
 
+void FPhysicsAssetEditorWidget::NotifyViewportGizmoModified()
+{
+    MarkPhysicsAssetDirty();
+}
+
 void FPhysicsAssetEditorWidget::RenderDocument(float DeltaTime)
 {
     (void)DeltaTime;
@@ -1675,6 +1680,15 @@ void FPhysicsAssetEditorWidget::RenderBodyDetails(UPhysicsAsset* PhysicsAsset, F
         }
         if (!bCanBindToSelectedBone) ImGui::EndDisabled();
     }
+    if (SelectedShapeIndex >= 0 && SelectedShapeIndex < static_cast<int32>(Body.Shapes.size()))
+    {
+        ImGui::TextDisabled("Viewport gizmo targets the selected shape. Clear/remove the selected shape to edit the Body Local Frame with the gizmo.");
+    }
+    else
+    {
+        ImGui::TextDisabled("Viewport gizmo targets the Body Local Frame.");
+    }
+
     bChanged |= EditTransform("Body Local Frame", Body.BodyLocalFrame);
     bChanged |= DragMinFloat("Mass", Body.Mass, 0.05f, 0.001f);
     bChanged |= DragVec3("Center Of Mass Offset", Body.CenterOfMassLocalOffset, 0.1f);
@@ -1767,6 +1781,20 @@ void FPhysicsAssetEditorWidget::RenderConstraintDetails(UPhysicsAsset* PhysicsAs
     ImGui::Text("Parent Bone: %s", Constraint.ParentBoneName == FName::None ? "<None>" : Constraint.ParentBoneName.ToString().c_str());
     ImGui::Text("Child Bone: %s", Constraint.ChildBoneName == FName::None ? "<None>" : Constraint.ChildBoneName.ToString().c_str());
     ImGui::TextDisabled("Constraint endpoints are created from the bone tree or graph pins.");
+    ImGui::Separator();
+
+    ImGui::TextUnformatted("Viewport Gizmo Target");
+    int GizmoFrame = (SelectedConstraintGizmoFrame == EPhysicsAssetConstraintFrameTarget::Parent) ? 0 : 1;
+    if (ImGui::RadioButton("Parent Frame", &GizmoFrame, 0))
+    {
+        SelectedConstraintGizmoFrame = EPhysicsAssetConstraintFrameTarget::Parent;
+    }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Child Frame", &GizmoFrame, 1))
+    {
+        SelectedConstraintGizmoFrame = EPhysicsAssetConstraintFrameTarget::Child;
+    }
+
     ImGui::Separator();
     bChanged |= EditTransform("Parent Local Frame", Constraint.ParentLocalFrame);
     bChanged |= EditTransform("Child Local Frame", Constraint.ChildLocalFrame);
@@ -1888,6 +1916,7 @@ void FPhysicsAssetEditorWidget::SelectConstraintSetup(UPhysicsAsset* PhysicsAsse
     SelectedConstraintIndex = ConstraintIndex;
     SelectedBodyIndex = -1;
     SelectedShapeIndex = -1;
+    SelectedConstraintGizmoFrame = EPhysicsAssetConstraintFrameTarget::Child;
     if (TreeBoneIndex >= 0)
     {
         SelectedTreeBoneIndex = TreeBoneIndex;

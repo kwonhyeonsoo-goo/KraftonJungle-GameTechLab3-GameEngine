@@ -490,6 +490,10 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 		{
 			bSkeletonDirty = true;
 		}
+		if (ActiveTab == EMeshEditorTab::Physics && ViewportClient.ConsumePhysicsAssetGizmoModified())
+		{
+			PhysicsAssetEditor.NotifyViewportGizmoModified();
+		}
 
 	}
 
@@ -746,6 +750,10 @@ void FMeshEditorWidget::RenderTabBar()
 		{
 			const EMeshEditorTab PreviousTab = ActiveTab;
 			ActiveTab = Tab;
+			if (PreviousTab == EMeshEditorTab::Physics && ActiveTab != EMeshEditorTab::Physics)
+			{
+				ViewportClient.ClearPhysicsAssetGizmoTarget();
+			}
 			if (PreviousTab != ActiveTab && ActiveTab == EMeshEditorTab::Skeleton)
 			{
 				if (USkeletalMeshComponent* Comp = ViewportClient.GetPreviewMeshComponent())
@@ -1426,6 +1434,20 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 		ImGui::TextDisabled("No Physics Asset selected.");
 	}
 	ImGui::EndChild();
+
+	if (PhysicsAsset)
+	{
+		ViewportClient.SetSelectedPhysicsAssetElement(
+			PhysicsAsset,
+			PhysicsAssetEditor.GetSelectedBodyIndex(),
+			PhysicsAssetEditor.GetSelectedShapeIndex(),
+			PhysicsAssetEditor.GetSelectedConstraintIndex(),
+			PhysicsAssetEditor.GetSelectedConstraintGizmoFrame());
+	}
+	else
+	{
+		ViewportClient.ClearPhysicsAssetGizmoTarget();
+	}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -7,6 +7,7 @@
 #include "Editor/Slate/SWindow.h"
 #include "Core/Types/RayTypes.h"
 #include "Gizmo/BoneTransformGizmoTarget.h"
+#include "Gizmo/PhysicsAssetGizmoTarget.h"
 #include "Component/Debug/BoneDebugComponent.h"
 
 #include <d3d11.h>
@@ -14,6 +15,7 @@
 
 class UGizmoComponent;
 class UPhysicsAssetPreviewComponent;
+class UPhysicsAsset;
 class FWindowsWindow;
 class UWorld;
 class AActor;
@@ -63,8 +65,16 @@ public:
 
 	void SetSelectedBone(USkeletalMesh* Mesh, int32 BoneIndex);
 	void SetSelectedSocket(USkeletalMesh* Mesh, USkeleton* Skeleton, int32 SocketIndex);
+	void SetSelectedPhysicsAssetElement(
+		UPhysicsAsset* PhysicsAsset,
+		int32 BodyIndex,
+		int32 ShapeIndex,
+		int32 ConstraintIndex,
+		EPhysicsAssetConstraintFrameTarget ConstraintFrameTarget);
+	void ClearPhysicsAssetGizmoTarget();
 	const FBone* GetSelectedBone() const;
 	bool ConsumeSocketGizmoModified();
+	bool ConsumePhysicsAssetGizmoModified();
 	void RefreshBoneDebug();
 
 	EBoneDebugDrawMode GetBoneDebugDrawMode() const;
@@ -73,6 +83,14 @@ public:
 	void ApplyTransformSettingsToGizmo();
 
 private:
+	enum class EPhysicsGizmoSelectionKind : uint8
+	{
+		None,
+		Body,
+		Shape,
+		ConstraintFrame
+	};
+
 	void TickShortcuts();
 	void TickInput(float DeltaTime);
 	void TickInteraction(float DeltaTime);
@@ -94,6 +112,9 @@ private:
 
 	FBoneTransformGizmoTarget BoneTarget;
 	FSocketTransformGizmoTarget SocketTarget;
+	FPhysicsAssetBodyGizmoTarget PhysicsBodyTarget;
+	FPhysicsAssetShapeGizmoTarget PhysicsShapeTarget;
+	FPhysicsAssetConstraintFrameGizmoTarget PhysicsConstraintFrameTarget;
 	UGizmoComponent* Gizmo = nullptr;
 	USkeletalMeshComponent* PreviewMeshComponent = nullptr;
 	UBoneDebugComponent* BoneDebugComponent = nullptr;
@@ -102,6 +123,13 @@ private:
 
 	UWorld* PreviewWorld = nullptr;
 	AActor* PreviewActor = nullptr;
+
+	EPhysicsGizmoSelectionKind ActivePhysicsGizmoKind = EPhysicsGizmoSelectionKind::None;
+	UPhysicsAsset* ActivePhysicsGizmoAsset = nullptr;
+	int32 ActivePhysicsGizmoBodyIndex = -1;
+	int32 ActivePhysicsGizmoShapeIndex = -1;
+	int32 ActivePhysicsGizmoConstraintIndex = -1;
+	EPhysicsAssetConstraintFrameTarget ActivePhysicsGizmoConstraintFrame = EPhysicsAssetConstraintFrameTarget::Child;
 
 	bool bIsRenderable = false;
 
