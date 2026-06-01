@@ -653,14 +653,7 @@ void FMeshEditorWidget::RenderDocument(float DeltaTime)
 		const ImGuiIO& IO = ImGui::GetIO();
 		if (IO.KeyCtrl && !IO.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_S, false))
 		{
-			if (ActiveTab == EMeshEditorTab::Animation && IsCurrentAnimationDirty())
-			{
-				SaveCurrentAnimationAsset();
-			}
-			else if (ActiveTab == EMeshEditorTab::Physics && IsCurrentPhysicsAssetDirty())
-			{
-				PhysicsAssetEditor.SaveEditedPhysicsAsset();
-			}
+			SaveAllDirtyAssets();
 		}
 	}
 
@@ -714,29 +707,18 @@ void FMeshEditorWidget::RenderTabBar()
 	DrawList->AddRectFilled(BarPos, ImVec2(BarPos.x + BarWidth, BarPos.y + BarHeight),
 	                        IM_COL32(38, 38, 38, 255));
 
-	const bool bCanSaveSkeleton = ActiveTab == EMeshEditorTab::Skeleton && bSkeletonDirty;
-	const bool bCanSaveAnimation = ActiveTab == EMeshEditorTab::Animation && IsCurrentAnimationDirty();
-	const bool bCanSavePhysics = ActiveTab == EMeshEditorTab::Physics && IsCurrentPhysicsAssetDirty();
+	const bool bCanSaveSkeleton = bSkeletonDirty;
+	const bool bCanSaveAnimation = IsCurrentAnimationDirty();
+	const bool bCanSavePhysics = IsCurrentPhysicsAssetDirty();
 	const bool bCanSave = bCanSaveSkeleton || bCanSaveAnimation || bCanSavePhysics;
-	const bool bShowDirtySave = bSkeletonDirty || IsCurrentAnimationDirty() || IsCurrentPhysicsAssetDirty();
+	const bool bShowDirtySave = bCanSave;
 	if (!bCanSave)
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.45f);
 	}
 	if (ImGui::Button(bShowDirtySave ? "Save*" : "Save", ImVec2(68.0f, BarHeight)))
 	{
-		if (bCanSaveSkeleton)
-		{
-			SaveCurrentSkeleton();
-		}
-		else if (bCanSaveAnimation)
-		{
-			SaveCurrentAnimationAsset();
-		}
-		else if (bCanSavePhysics)
-		{
-			PhysicsAssetEditor.SaveEditedPhysicsAsset();
-		}
+		SaveAllDirtyAssets();
 	}
 	if (!bCanSave)
 	{
@@ -963,6 +945,44 @@ bool FMeshEditorWidget::SaveCurrentMeshAsset()
 {
 	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
 	return SkeletalMesh && FMeshManager::SaveSkeletalMeshPreservingMetadata(SkeletalMesh);
+}
+
+bool FMeshEditorWidget::SaveCurrentPhysicsAsset()
+{
+	if (!IsCurrentPhysicsAssetDirty())
+	{
+		return false;
+	}
+
+	if (!PhysicsAssetEditor.SaveEditedPhysicsAsset())
+	{
+		return false;
+	}
+
+	// A PhysicsAsset edit is only useful after restart if the owning SkeletalMesh
+	// still persists the assignment path as well. Create/Assign already saves the
+	// mesh, but saving it again here makes Ctrl+S / Save robust when the dirty
+	// PhysicsAsset came from an embedded editor or a direct PhysicsAsset open.
+	SaveCurrentMeshAsset();
+	return true;
+}
+
+void FMeshEditorWidget::SaveAllDirtyAssets()
+{
+	if (bSkeletonDirty)
+	{
+		SaveCurrentSkeleton();
+	}
+
+	if (IsCurrentAnimationDirty())
+	{
+		SaveCurrentAnimationAsset();
+	}
+
+	if (IsCurrentPhysicsAssetDirty())
+	{
+		SaveCurrentPhysicsAsset();
+	}
 }
 
 bool FMeshEditorWidget::IsCurrentAnimationDirty() const

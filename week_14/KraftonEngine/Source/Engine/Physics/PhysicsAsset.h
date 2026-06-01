@@ -25,6 +25,8 @@ public:
     ~UPhysicsAsset() override = default;
 
     void Serialize(FArchive& Ar) override;
+    void SerializePackagePayload(FArchive& Ar, uint32 PackageVersion);
+    bool RepairInvalidLegacyConstraintNamesFromSkeleton();
     bool ShouldReflectProperties() const override { return false; }
 
     const FString& GetAssetPathFileName() const
@@ -94,6 +96,10 @@ public:
     FPhysicsAssetConstraintSetup* FindMutableConstraintSetup(const FName& ParentBoneName, const FName& ChildBoneName);
     TArray<const FPhysicsAssetConstraintSetup*> FindConstraintSetupsForBone(const FName& BoneName) const;
     EEditorSetupState GetConstraintSetupEditorState(int32 ConstraintIndex) const;
+
+private:
+    void SerializePayload(FArchive& Ar, bool bUseStringConstraintNames);
+    void SerializeConstraintSetups(FArchive& Ar, bool bUseStringConstraintNames);
 
 private:
     FString AssetPathFileName = "None";

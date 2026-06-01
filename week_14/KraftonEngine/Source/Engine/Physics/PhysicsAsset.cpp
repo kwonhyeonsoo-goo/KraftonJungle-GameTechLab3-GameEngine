@@ -1,5 +1,9 @@
 ﻿#include "Physics/PhysicsAsset.h"
 
+#include "Animation/Skeleton/Skeleton.h"
+#include "Animation/Skeleton/SkeletonManager.h"
+#include "Asset/AssetPackage.h"
+
 #include <algorithm>
 
 namespace
@@ -16,15 +20,173 @@ namespace
     {
         return Setup.ParentBoneName == ParentBoneName && Setup.ChildBoneName == ChildBoneName;
     }
+
+    bool IsConstraintStructurallyValid(
+        const UPhysicsAsset* PhysicsAsset,
+        const FReferenceSkeleton& RefSkeleton,
+        const FPhysicsAssetConstraintSetup& Setup)
+    {
+        return PhysicsAsset &&
+            HasMeaningfulBoneName(Setup.ParentBoneName) &&
+            HasMeaningfulBoneName(Setup.ChildBoneName) &&
+            Setup.ParentBoneName != Setup.ChildBoneName &&
+            PhysicsAsset->HasBodySetupForBone(Setup.ParentBoneName) &&
+            PhysicsAsset->HasBodySetupForBone(Setup.ChildBoneName) &&
+            RefSkeleton.FindBoneIndex(Setup.ParentBoneName.ToString()) >= 0 &&
+            RefSkeleton.FindBoneIndex(Setup.ChildBoneName.ToString()) >= 0;
+    }
+
+    int32 FindNearestParentBodyBoneIndex(
+        const UPhysicsAsset* PhysicsAsset,
+        const FReferenceSkeleton& RefSkeleton,
+        int32 BoneIndex)
+    {
+        if (!PhysicsAsset || BoneIndex < 0 || BoneIndex >= RefSkeleton.GetNumBones())
+        {
+            return -1;
+        }
+
+        int32 ParentIndex = RefSkeleton.Bones[BoneIndex].ParentIndex;
+        while (ParentIndex >= 0 && ParentIndex < RefSkeleton.GetNumBones())
+        {
+            if (PhysicsAsset->HasBodySetupForBone(FName(RefSkeleton.Bones[ParentIndex].Name)))
+            {
+                return ParentIndex;
+            }
+            ParentIndex = RefSkeleton.Bones[ParentIndex].ParentIndex;
+        }
+        return -1;
+    }
 }
 
 void UPhysicsAsset::Serialize(FArchive& Ar)
+{
+    SerializePayload(Ar, true);
+}
+
+void UPhysicsAsset::SerializePackagePayload(FArchive& Ar, uint32 PackageVersion)
+{
+    const bool bUseStringConstraintNames =
+        Ar.IsSaving() ||
+        PackageVersion >= static_cast<uint32>(EAssetPackageSerializationVersion::PhysicsAssetStringConstraintNames);
+
+    SerializePayload(Ar, bUseStringConstraintNames);
+}
+
+void UPhysicsAsset::SerializePayload(FArchive& Ar, bool bUseStringConstraintNames)
 {
     UObject::Serialize(Ar);
 
     Ar << SkeletonBinding;
     Ar << BodySetups;
-    Ar << ConstraintSetups;
+    SerializeConstraintSetups(Ar, bUseStringConstraintNames);
+}
+
+void UPhysicsAsset::SerializeConstraintSetups(FArchive& Ar, bool bUseStringConstraintNames)
+{
+    uint32 ConstraintCount = static_cast<uint32>(ConstraintSetups.size());
+    Ar << ConstraintCount;
+
+    if (Ar.IsLoading())
+    {
+        ConstraintSetups.resize(ConstraintCount);
+    }
+
+    if (ConstraintCount == 0)
+    {
+        return;
+    }
+
+    if (!bUseStringConstraintNames)
+    {
+        // Version <= 5 accidentally used the generic TArray fast path here.
+        // That raw-copied FName pool indices, so the names only looked valid in
+        // the same process that saved them. Keep this read path only to avoid
+        // desyncing old packages; repaired/new saves use string FName payloads.
+        Ar.Serialize(ConstraintSetups.data(), ConstraintCount * sizeof(FPhysicsAssetConstraintSetup));
+        return;
+    }
+
+    for (FPhysicsAssetConstraintSetup& ConstraintSetup : ConstraintSetups)
+    {
+        Ar << ConstraintSetup;
+    }
+}
+
+bool UPhysicsAsset::RepairInvalidLegacyConstraintNamesFromSkeleton()
+{
+    if (ConstraintSetups.empty() || BodySetups.size() <= 1 || !SkeletonBinding.HasSkeletonPath())
+    {
+        return false;
+    }
+
+    USkeleton* Skeleton = FSkeletonManager::Get().LoadSkeleton(SkeletonBinding.SkeletonPath);
+    if (!Skeleton)
+    {
+        return false;
+    }
+
+    const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+    if (RefSkeleton.GetNumBones() <= 0)
+    {
+        return false;
+    }
+
+    const size_t OldConstraintCount = ConstraintSetups.size();
+    ConstraintSetups.erase(
+        std::remove_if(
+            ConstraintSetups.begin(),
+            ConstraintSetups.end(),
+            [&](const FPhysicsAssetConstraintSetup& ConstraintSetup)
+            {
+                return !IsConstraintStructurallyValid(this, RefSkeleton, ConstraintSetup);
+            }),
+        ConstraintSetups.end());
+
+    bool bChanged = ConstraintSetups.size() != OldConstraintCount;
+
+    // Old raw-FName constraints cannot be decoded reliably after restart. When at
+    // least one legacy constraint was invalid, rebuild the conventional parent
+    // links from the body-bearing bones so the graph and tree stop losing edges.
+    if (!bChanged)
+    {
+        return false;
+    }
+
+    for (const FPhysicsAssetBodySetup& BodySetup : BodySetups)
+    {
+        if (!HasMeaningfulBoneName(BodySetup.BoneName))
+        {
+            continue;
+        }
+
+        const int32 ChildBoneIndex = RefSkeleton.FindBoneIndex(BodySetup.BoneName.ToString());
+        if (ChildBoneIndex < 0)
+        {
+            continue;
+        }
+
+        const int32 ParentBodyBoneIndex = FindNearestParentBodyBoneIndex(this, RefSkeleton, ChildBoneIndex);
+        if (ParentBodyBoneIndex < 0)
+        {
+            continue;
+        }
+
+        const FName ParentBoneName(RefSkeleton.Bones[ParentBodyBoneIndex].Name);
+        const FName ChildBoneName(RefSkeleton.Bones[ChildBoneIndex].Name);
+        if (HasConstraintBetweenBones(ParentBoneName, ChildBoneName))
+        {
+            continue;
+        }
+
+        FPhysicsAssetConstraintSetup ConstraintSetup;
+        ConstraintSetup.ParentBoneName = ParentBoneName;
+        ConstraintSetup.ChildBoneName = ChildBoneName;
+        ConstraintSetups.push_back(ConstraintSetup);
+        bChanged = true;
+    }
+
+    return bChanged;
 }
 
 int32 UPhysicsAsset::AddBodySetup(const FPhysicsAssetBodySetup& InBodySetup)

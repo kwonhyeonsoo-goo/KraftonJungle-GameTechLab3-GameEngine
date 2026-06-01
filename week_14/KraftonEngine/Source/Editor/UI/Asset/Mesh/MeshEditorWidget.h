@@ -97,6 +97,8 @@ private:
 	void SaveCurrentSkeleton();
 	void SaveCurrentAnimationAsset();
 	bool SaveCurrentMeshAsset();
+	bool SaveCurrentPhysicsAsset();
+	void SaveAllDirtyAssets();
 	void RefreshSelectedSocketEditBuffers(USkeleton* Skeleton);
 
 	// Animation tab helpers
