@@ -136,8 +136,10 @@ private:
     bool bRegenerateUseBoneAxis = false;
     bool bRegenerateCreateConstraints = true;
     bool bRegenerateReplaceExisting = true;
-    float RegenerateMinInfluenceWeight = 0.35f;
-    int32 RegenerateMinWeightedVertices = 4;
+    bool bRegenerateSkipHelperBones = true;
+    bool bRegenerateAllowBoneAxisFallback = false;
+    float RegenerateMinInfluenceWeight = 0.15f;
+    int32 RegenerateMinWeightedVertices = 16;
     EPhysicsAssetConstraintFrameTarget SelectedConstraintGizmoFrame = EPhysicsAssetConstraintFrameTarget::Child;
     uint64 ConstraintGraphTopologyHash = 0;
 
