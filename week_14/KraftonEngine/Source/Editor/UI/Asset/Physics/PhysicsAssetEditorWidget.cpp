@@ -31,6 +31,7 @@ namespace
     constexpr float DetailsPanelMinWidth = 360.0f;
     constexpr int32 DebugCircleSegments = 24;
     constexpr int32 DebugHalfCircleSegments = 12;
+    constexpr float PhysicsPreviewShapeScale = 0.1f;
 
     FTransform ComposePreviewDebugTransforms(const FTransform& ParentWorld, const FTransform& Local)
     {
@@ -2043,10 +2044,10 @@ void FPhysicsAssetEditorWidget::AddDefaultBodyForBone(UPhysicsAsset* PhysicsAsse
 
     FPhysicsAssetShapeSetup Shape;
     Shape.Type = EPhysicsAssetShapeType::Capsule;
-    Shape.BoxHalfExtent = FVector(8.0f, 8.0f, 8.0f);
-    Shape.SphereRadius = 8.0f;
-    Shape.CapsuleRadius = 4.0f;
-    Shape.CapsuleHalfHeight = 12.0f;
+    Shape.BoxHalfExtent = FVector(0.8f, 0.8f, 0.8f);
+    Shape.SphereRadius = 0.8f;
+    Shape.CapsuleRadius = 0.4f;
+    Shape.CapsuleHalfHeight = 1.2f;
     Body.Shapes.push_back(Shape);
 
     const int32 NewIndex = PhysicsAsset->AddBodySetup(Body);
@@ -2061,10 +2062,10 @@ void FPhysicsAssetEditorWidget::AddDefaultShape(FPhysicsAssetBodySetup& Body)
 {
     FPhysicsAssetShapeSetup Shape;
     Shape.Type = EPhysicsAssetShapeType::Box;
-    Shape.BoxHalfExtent = FVector(8.0f, 8.0f, 8.0f);
-    Shape.SphereRadius = 8.0f;
-    Shape.CapsuleRadius = 4.0f;
-    Shape.CapsuleHalfHeight = 12.0f;
+    Shape.BoxHalfExtent = FVector(0.8f, 0.8f, 0.8f);
+    Shape.SphereRadius = 0.8f;
+    Shape.CapsuleRadius = 0.4f;
+    Shape.CapsuleHalfHeight = 1.2f;
     Body.Shapes.push_back(Shape);
     SelectedShapeIndex = static_cast<int32>(Body.Shapes.size()) - 1;
 }
@@ -2316,7 +2317,7 @@ void FPhysicsAssetEditorWidget::DrawBodySetupDebug(
         {
         case EPhysicsAssetShapeType::Box:
         {
-            FVector HalfExtent = Shape.BoxHalfExtent;
+            FVector HalfExtent = Shape.BoxHalfExtent * PhysicsPreviewShapeScale;
             HalfExtent.X = (std::max)(HalfExtent.X, 0.001f);
             HalfExtent.Y = (std::max)(HalfExtent.Y, 0.001f);
             HalfExtent.Z = (std::max)(HalfExtent.Z, 0.001f);
@@ -2330,14 +2331,14 @@ void FPhysicsAssetEditorWidget::DrawBodySetupDebug(
         }
         case EPhysicsAssetShapeType::Sphere:
         {
-            const float Radius = (std::max)(Shape.SphereRadius, 0.001f);
+            const float Radius = (std::max)(Shape.SphereRadius * PhysicsPreviewShapeScale, 0.001f);
             DrawDebugSphere(PreviewWorld, ShapeWorld.Location, Radius, 24, Color, 0.0f);
             break;
         }
         case EPhysicsAssetShapeType::Capsule:
         {
-            const float Radius = (std::max)(Shape.CapsuleRadius, 0.001f);
-            const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight, Radius);
+            const float Radius = (std::max)(Shape.CapsuleRadius * PhysicsPreviewShapeScale, 0.001f);
+            const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight * PhysicsPreviewShapeScale, Radius);
             DrawDebugCapsuleZAxis(
                 PreviewWorld,
                 ShapeWorld.Location,
