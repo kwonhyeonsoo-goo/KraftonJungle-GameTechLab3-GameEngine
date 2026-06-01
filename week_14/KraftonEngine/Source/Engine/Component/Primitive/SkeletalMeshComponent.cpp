@@ -10,6 +10,7 @@
 #include "Animation/Skeleton/Skeleton.h"
 #include "Animation/Skeleton/SkeletonManager.h"
 #include "Asset/AssetRegistry.h"
+#include "Cloth/SkeletalClothRuntime.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
 #include "Math/Quat.h"
@@ -23,6 +24,7 @@
 #include "Physics/PhysicsAssetManager.h"
 #include "Physics/PhysicsAssetInstance.h"
 #include "Render/Proxy/SkeletalMeshSceneProxy.h"
+#include "Render/Types/ViewTypes.h"
 #include "Serialization/Archive.h"
 
 #include <algorithm>
@@ -83,8 +85,28 @@ FPrimitiveSceneProxy* USkeletalMeshComponent::CreateSceneProxy()
     return new FSkeletalMeshSceneProxy(this);
 }
 
+void USkeletalMeshComponent::TickClothSimulationForEditorPreview(float DeltaTime)
+{
+    if (SkinningModeRuntime::Get() != ESkinningMode::CPU)
+    {
+        if (ClothRuntime)
+        {
+            ClothRuntime->Reset();
+        }
+        return;
+    }
+
+    UpdateCPUSkinning();
+    TickClothSimulation(DeltaTime);
+}
+
 void USkeletalMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 {
+    if (ClothRuntime)
+    {
+        ClothRuntime->Reset();
+    }
+
     Super::SetSkeletalMesh(InMesh);
     if (InMesh)
     {
@@ -775,16 +797,58 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,
     {
         // While ragdoll is active, physics becomes the final pose source for this frame.
         UMeshComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
+        TickClothSimulation(DeltaTime);
         return;
     }
 
     if (EvaluateAnimInstance(DeltaTime))
     {
         UMeshComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
+        TickClothSimulation(DeltaTime);
         return;
     }
 
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    TickClothSimulation(DeltaTime);
+}
+
+void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
+{
+    USkeletalMesh* Mesh = GetSkeletalMesh();
+    FSkeletalMesh* Asset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+    if (!Asset || Asset->ClothPayload.LODs.empty())
+    {
+        if (ClothRuntime)
+        {
+            ClothRuntime->Reset();
+        }
+        return;
+    }
+
+    if (SkinningModeRuntime::Get() != ESkinningMode::CPU)
+    {
+        if (ClothRuntime)
+        {
+            ClothRuntime->Reset();
+        }
+        return;
+    }
+
+    if (!ClothRuntime)
+    {
+        ClothRuntime = std::make_unique<FSkeletalClothRuntime>();
+    }
+
+    TArray<FVertexPNCTT>& MutableSkinnedVertices = GetMutableSkinnedVerticesForCloth();
+    if (MutableSkinnedVertices.empty())
+    {
+        return;
+    }
+
+    if (ClothRuntime->Tick(*Asset, DeltaTime, MutableSkinnedVertices))
+    {
+        MarkSkinnedVerticesModifiedByCloth();
+    }
 }
 
 // ──────────────────────────────────────────────

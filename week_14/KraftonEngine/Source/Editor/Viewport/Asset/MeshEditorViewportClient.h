@@ -43,6 +43,7 @@ public:
 
 	bool IsRenderable() const override { return bIsRenderable; }
 	bool IsMouseOverViewport() const override;
+	bool GetMouseRay(FRay& OutRay) const;
 
 	bool IsGizmoHolding() const;
 
