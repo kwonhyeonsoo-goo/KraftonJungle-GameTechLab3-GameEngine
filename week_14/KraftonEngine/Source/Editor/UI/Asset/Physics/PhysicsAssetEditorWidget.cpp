@@ -16,6 +16,7 @@
 #include "Physics/PhysicsAssetPreviewUtils.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <cstdio>
 #include <functional>
@@ -32,7 +33,6 @@ namespace
     constexpr int32 DebugCircleSegments = 24;
     constexpr int32 DebugHalfCircleSegments = 12;
     constexpr float PhysicsEditorTreeIndentSpacing = 10.0f;
-    constexpr float PhysicsPreviewShapeScale = 0.1f;
 
     FTransform ComposePreviewDebugTransforms(const FTransform& ParentWorld, const FTransform& Local)
     {
@@ -526,6 +526,465 @@ namespace
     {
         return PhysicsAsset && ConstraintIndex >= 0 && ConstraintIndex < static_cast<int32>(PhysicsAsset->GetConstraintSetups().size());
     }
+
+
+    struct FAutoBodyFitResult
+    {
+        FTransform BodyComponentTransform;
+        float CapsuleRadius = 0.4f;
+        float CapsuleHalfHeight = 1.2f;
+    };
+
+    constexpr float AutoBodyMinExtent = 0.05f;
+    constexpr float AutoBodyRadiusPadding = 1.10f;
+    constexpr float AutoBodyFallbackRadiusRatio = 0.18f;
+
+    FVector GetMatrixTranslation(const FMatrix& Matrix)
+    {
+        return Matrix.GetLocation();
+    }
+
+    FTransform MakeTransformNoScale(const FMatrix& Matrix)
+    {
+        FTransform Transform;
+        Transform.Location = Matrix.GetLocation();
+        Transform.Rotation = Matrix.ToQuat().GetNormalized();
+        Transform.Scale = FVector::OneVector;
+        return Transform;
+    }
+
+    FTransform ComposeComponentTransforms(const FTransform& Parent, const FTransform& Local)
+    {
+        FTransform Result = Local;
+        Result.Location = Parent.Location + Parent.Rotation.RotateVector(Local.Location);
+        Result.Rotation = (Parent.Rotation * Local.Rotation).GetNormalized();
+        Result.Scale = FVector::OneVector;
+        return Result;
+    }
+
+    FTransform MakeLocalTransformFromComponent(const FTransform& Parent, const FTransform& Component)
+    {
+        const FQuat ParentInv = Parent.Rotation.GetNormalized().Inverse();
+        FTransform Local;
+        Local.Location = ParentInv.RotateVector(Component.Location - Parent.Location);
+        Local.Rotation = (ParentInv * Component.Rotation.GetNormalized()).GetNormalized();
+        Local.Scale = FVector::OneVector;
+        return Local;
+    }
+
+    FVector SafeNormal(const FVector& Value, const FVector& Fallback)
+    {
+        if (Value.IsNearlyZero(1.0e-6f))
+        {
+            return Fallback;
+        }
+        FVector Result = Value;
+        Result.Normalize();
+        return Result;
+    }
+
+    float GetVectorComponent(const FVector& Value, int32 Index)
+    {
+        if (Index == 0) return Value.X;
+        if (Index == 1) return Value.Y;
+        return Value.Z;
+    }
+
+    void BuildBasisFromZAxis(const FVector& InAxisZ, FVector& OutAxisX, FVector& OutAxisY, FVector& OutAxisZ)
+    {
+        OutAxisZ = SafeNormal(InAxisZ, FVector::ZAxisVector);
+        const FVector UpCandidate = std::fabs(OutAxisZ.Z) < 0.90f ? FVector::ZAxisVector : FVector::YAxisVector;
+        OutAxisX = SafeNormal(UpCandidate.Cross(OutAxisZ), FVector::XAxisVector);
+        OutAxisY = SafeNormal(OutAxisZ.Cross(OutAxisX), FVector::YAxisVector);
+    }
+
+    FQuat MakeQuatFromLocalAxes(const FVector& AxisX, const FVector& AxisY, const FVector& AxisZ)
+    {
+        FMatrix Matrix = FMatrix::Identity;
+        Matrix.SetAxes(AxisX, AxisY, AxisZ);
+        return Matrix.ToQuat().GetNormalized();
+    }
+
+    int32 FindMeshBoneIndexByName(const FSkeletalMesh* MeshAsset, const FString& BoneName)
+    {
+        if (!MeshAsset || BoneName.empty())
+        {
+            return -1;
+        }
+
+        for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+        {
+            if (MeshAsset->Bones[BoneIndex].Name == BoneName)
+            {
+                return BoneIndex;
+            }
+        }
+        return -1;
+    }
+
+    int32 FindFirstChildMeshBoneIndex(const FSkeletalMesh* MeshAsset, int32 MeshBoneIndex)
+    {
+        if (!MeshAsset || MeshBoneIndex < 0 || MeshBoneIndex >= static_cast<int32>(MeshAsset->Bones.size()))
+        {
+            return -1;
+        }
+
+        for (int32 BoneIndex = MeshBoneIndex + 1; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+        {
+            if (MeshAsset->Bones[BoneIndex].ParentIndex == MeshBoneIndex)
+            {
+                return BoneIndex;
+            }
+        }
+        return -1;
+    }
+
+    bool GetBoneAxisSegment(const FSkeletalMesh* MeshAsset, int32 MeshBoneIndex, FVector& OutStart, FVector& OutEnd)
+    {
+        if (!MeshAsset || MeshBoneIndex < 0 || MeshBoneIndex >= static_cast<int32>(MeshAsset->Bones.size()))
+        {
+            return false;
+        }
+
+        OutStart = GetMatrixTranslation(MeshAsset->Bones[MeshBoneIndex].GetReferenceGlobalPose());
+        const int32 ChildIndex = FindFirstChildMeshBoneIndex(MeshAsset, MeshBoneIndex);
+        if (ChildIndex >= 0)
+        {
+            OutEnd = GetMatrixTranslation(MeshAsset->Bones[ChildIndex].GetReferenceGlobalPose());
+            if (!FVector(OutEnd - OutStart).IsNearlyZero(1.0e-6f))
+            {
+                return true;
+            }
+        }
+
+        const int32 ParentIndex = MeshAsset->Bones[MeshBoneIndex].ParentIndex;
+        if (ParentIndex >= 0 && ParentIndex < static_cast<int32>(MeshAsset->Bones.size()))
+        {
+            const FVector ParentLocation = GetMatrixTranslation(MeshAsset->Bones[ParentIndex].GetReferenceGlobalPose());
+            FVector Direction = OutStart - ParentLocation;
+            if (!Direction.IsNearlyZero(1.0e-6f))
+            {
+                Direction.Normalize();
+                const float Length = (std::max)(FVector::Distance(OutStart, ParentLocation) * 0.35f, AutoBodyMinExtent * 2.0f);
+                OutEnd = OutStart + Direction * Length;
+                OutStart -= Direction * Length;
+                return true;
+            }
+        }
+
+        OutEnd = OutStart + FVector::ZAxisVector * (AutoBodyMinExtent * 4.0f);
+        return true;
+    }
+
+    void CollectDominantBoneVertices(
+        const FSkeletalMesh* MeshAsset,
+        int32 MeshBoneIndex,
+        float MinInfluenceWeight,
+        TArray<FVector>& OutPoints)
+    {
+        OutPoints.clear();
+        if (!MeshAsset || MeshBoneIndex < 0)
+        {
+            return;
+        }
+
+        for (const FVertexPNCTBW& Vertex : MeshAsset->Vertices)
+        {
+            int32 BestBoneIndex = -1;
+            float BestWeight = 0.0f;
+            for (int32 InfluenceIndex = 0; InfluenceIndex < 4; ++InfluenceIndex)
+            {
+                const int32 CandidateBoneIndex = Vertex.BoneIndices[InfluenceIndex];
+                const float CandidateWeight = Vertex.BoneWeights[InfluenceIndex];
+                if (CandidateWeight > BestWeight)
+                {
+                    BestWeight = CandidateWeight;
+                    BestBoneIndex = CandidateBoneIndex;
+                }
+            }
+
+            if (BestBoneIndex == MeshBoneIndex && BestWeight >= MinInfluenceWeight)
+            {
+                OutPoints.push_back(Vertex.Position);
+            }
+        }
+    }
+
+    bool FitCapsuleToPointsOnBasis(
+        const TArray<FVector>& Points,
+        const FVector& Origin,
+        const FVector& AxisX,
+        const FVector& AxisY,
+        const FVector& AxisZ,
+        FAutoBodyFitResult& OutFit)
+    {
+        if (Points.empty())
+        {
+            return false;
+        }
+
+        FVector Min(FLT_MAX, FLT_MAX, FLT_MAX);
+        FVector Max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+        for (const FVector& Point : Points)
+        {
+            const FVector Delta = Point - Origin;
+            const FVector Projected(Delta.Dot(AxisX), Delta.Dot(AxisY), Delta.Dot(AxisZ));
+            Min.X = (std::min)(Min.X, Projected.X);
+            Min.Y = (std::min)(Min.Y, Projected.Y);
+            Min.Z = (std::min)(Min.Z, Projected.Z);
+            Max.X = (std::max)(Max.X, Projected.X);
+            Max.Y = (std::max)(Max.Y, Projected.Y);
+            Max.Z = (std::max)(Max.Z, Projected.Z);
+        }
+
+        const FVector CenterLocal((Min.X + Max.X) * 0.5f, (Min.Y + Max.Y) * 0.5f, (Min.Z + Max.Z) * 0.5f);
+        const FVector Center = Origin + AxisX * CenterLocal.X + AxisY * CenterLocal.Y + AxisZ * CenterLocal.Z;
+        const float HalfLength = (std::max)((Max.Z - Min.Z) * 0.5f, AutoBodyMinExtent);
+        const float RadiusX = (Max.X - Min.X) * 0.5f;
+        const float RadiusY = (Max.Y - Min.Y) * 0.5f;
+        const float Radius = (std::max)((std::max)(RadiusX, RadiusY) * AutoBodyRadiusPadding, AutoBodyMinExtent);
+
+        OutFit.BodyComponentTransform.Location = Center;
+        OutFit.BodyComponentTransform.Rotation = MakeQuatFromLocalAxes(AxisX, AxisY, AxisZ);
+        OutFit.BodyComponentTransform.Scale = FVector::OneVector;
+        OutFit.CapsuleRadius = Radius;
+        OutFit.CapsuleHalfHeight = (std::max)(HalfLength, Radius);
+        return true;
+    }
+
+    void ComputeSymmetricEigen3x3(const double InMatrix[3][3], double OutValues[3], FVector OutVectors[3])
+    {
+        double A[3][3] = {};
+        double V[3][3] = {};
+        for (int32 Row = 0; Row < 3; ++Row)
+        {
+            for (int32 Col = 0; Col < 3; ++Col)
+            {
+                A[Row][Col] = InMatrix[Row][Col];
+                V[Row][Col] = Row == Col ? 1.0 : 0.0;
+            }
+        }
+
+        for (int32 Iteration = 0; Iteration < 32; ++Iteration)
+        {
+            int32 P = 0;
+            int32 Q = 1;
+            double MaxOffDiagonal = std::fabs(A[0][1]);
+            if (std::fabs(A[0][2]) > MaxOffDiagonal)
+            {
+                P = 0;
+                Q = 2;
+                MaxOffDiagonal = std::fabs(A[0][2]);
+            }
+            if (std::fabs(A[1][2]) > MaxOffDiagonal)
+            {
+                P = 1;
+                Q = 2;
+                MaxOffDiagonal = std::fabs(A[1][2]);
+            }
+            if (MaxOffDiagonal < 1.0e-10)
+            {
+                break;
+            }
+
+            const double App = A[P][P];
+            const double Aqq = A[Q][Q];
+            const double Apq = A[P][Q];
+            const double Theta = (Aqq - App) / (2.0 * Apq);
+            const double Sign = Theta >= 0.0 ? 1.0 : -1.0;
+            const double T = Sign / (std::fabs(Theta) + std::sqrt(Theta * Theta + 1.0));
+            const double C = 1.0 / std::sqrt(T * T + 1.0);
+            const double S = T * C;
+
+            for (int32 K = 0; K < 3; ++K)
+            {
+                if (K == P || K == Q)
+                {
+                    continue;
+                }
+                const double Akp = A[K][P];
+                const double Akq = A[K][Q];
+                A[K][P] = A[P][K] = C * Akp - S * Akq;
+                A[K][Q] = A[Q][K] = S * Akp + C * Akq;
+            }
+
+            A[P][P] = C * C * App - 2.0 * S * C * Apq + S * S * Aqq;
+            A[Q][Q] = S * S * App + 2.0 * S * C * Apq + C * C * Aqq;
+            A[P][Q] = A[Q][P] = 0.0;
+
+            for (int32 K = 0; K < 3; ++K)
+            {
+                const double Vkp = V[K][P];
+                const double Vkq = V[K][Q];
+                V[K][P] = C * Vkp - S * Vkq;
+                V[K][Q] = S * Vkp + C * Vkq;
+            }
+        }
+
+        int32 Order[3] = { 0, 1, 2 };
+        std::sort(
+            Order,
+            Order + 3,
+            [&](int32 AIndex, int32 BIndex)
+            {
+                return A[AIndex][AIndex] > A[BIndex][BIndex];
+            });
+
+        for (int32 Rank = 0; Rank < 3; ++Rank)
+        {
+            const int32 SourceIndex = Order[Rank];
+            OutValues[Rank] = A[SourceIndex][SourceIndex];
+            OutVectors[Rank] = FVector(
+                static_cast<float>(V[0][SourceIndex]),
+                static_cast<float>(V[1][SourceIndex]),
+                static_cast<float>(V[2][SourceIndex]));
+            OutVectors[Rank] = SafeNormal(OutVectors[Rank], Rank == 0 ? FVector::ZAxisVector : FVector::XAxisVector);
+        }
+    }
+
+    bool BuildPCAAutoBodyFit(
+        const TArray<FVector>& Points,
+        const FVector& BoneAxis,
+        FAutoBodyFitResult& OutFit)
+    {
+        if (Points.size() < 4)
+        {
+            return false;
+        }
+
+        FVector Mean = FVector::ZeroVector;
+        for (const FVector& Point : Points)
+        {
+            Mean += Point;
+        }
+        Mean /= static_cast<float>(Points.size());
+
+        double Covariance[3][3] = {};
+        for (const FVector& Point : Points)
+        {
+            const FVector Delta = Point - Mean;
+            for (int32 Row = 0; Row < 3; ++Row)
+            {
+                for (int32 Col = 0; Col < 3; ++Col)
+                {
+                    Covariance[Row][Col] +=
+                        static_cast<double>(GetVectorComponent(Delta, Row)) *
+                        static_cast<double>(GetVectorComponent(Delta, Col));
+                }
+            }
+        }
+        for (int32 Row = 0; Row < 3; ++Row)
+        {
+            for (int32 Col = 0; Col < 3; ++Col)
+            {
+                Covariance[Row][Col] /= static_cast<double>(Points.size());
+            }
+        }
+
+        double EigenValues[3] = {};
+        FVector EigenVectors[3];
+        ComputeSymmetricEigen3x3(Covariance, EigenValues, EigenVectors);
+        if (EigenValues[0] <= 1.0e-8)
+        {
+            return false;
+        }
+
+        FVector AxisZ = SafeNormal(EigenVectors[0], FVector::ZAxisVector);
+        const FVector StableBoneAxis = SafeNormal(BoneAxis, AxisZ);
+        if (AxisZ.Dot(StableBoneAxis) < 0.0f)
+        {
+            AxisZ *= -1.0f;
+        }
+
+        FVector AxisX = EigenVectors[1] - AxisZ * EigenVectors[1].Dot(AxisZ);
+        if (AxisX.IsNearlyZero(1.0e-5f))
+        {
+            FVector AxisY;
+            BuildBasisFromZAxis(AxisZ, AxisX, AxisY, AxisZ);
+            return FitCapsuleToPointsOnBasis(Points, Mean, AxisX, AxisY, AxisZ, OutFit);
+        }
+        AxisX.Normalize();
+        FVector AxisY = SafeNormal(AxisZ.Cross(AxisX), FVector::YAxisVector);
+        AxisX = SafeNormal(AxisY.Cross(AxisZ), AxisX);
+
+        return FitCapsuleToPointsOnBasis(Points, Mean, AxisX, AxisY, AxisZ, OutFit);
+    }
+
+    bool BuildBoneAxisAutoBodyFit(
+        const FSkeletalMesh* MeshAsset,
+        int32 MeshBoneIndex,
+        const TArray<FVector>& Points,
+        FAutoBodyFitResult& OutFit)
+    {
+        FVector SegmentStart;
+        FVector SegmentEnd;
+        if (!GetBoneAxisSegment(MeshAsset, MeshBoneIndex, SegmentStart, SegmentEnd))
+        {
+            return false;
+        }
+
+        FVector AxisX;
+        FVector AxisY;
+        FVector AxisZ;
+        BuildBasisFromZAxis(SegmentEnd - SegmentStart, AxisX, AxisY, AxisZ);
+
+        if (FitCapsuleToPointsOnBasis(Points, SegmentStart, AxisX, AxisY, AxisZ, OutFit))
+        {
+            return true;
+        }
+
+        const float SegmentLength = (std::max)(FVector::Distance(SegmentStart, SegmentEnd), AutoBodyMinExtent * 2.0f);
+        const float Radius = (std::max)(SegmentLength * AutoBodyFallbackRadiusRatio, AutoBodyMinExtent);
+        OutFit.BodyComponentTransform.Location = (SegmentStart + SegmentEnd) * 0.5f;
+        OutFit.BodyComponentTransform.Rotation = MakeQuatFromLocalAxes(AxisX, AxisY, AxisZ);
+        OutFit.BodyComponentTransform.Scale = FVector::OneVector;
+        OutFit.CapsuleRadius = Radius;
+        OutFit.CapsuleHalfHeight = (std::max)(SegmentLength * 0.5f, Radius);
+        return true;
+    }
+
+    bool BuildAutoBodyFit(
+        const FSkeletalMesh* MeshAsset,
+        int32 MeshBoneIndex,
+        const TArray<FVector>& Points,
+        bool bUsePCAAnalysis,
+        int32 MinWeightedVertices,
+        FAutoBodyFitResult& OutFit)
+    {
+        FVector SegmentStart;
+        FVector SegmentEnd;
+        GetBoneAxisSegment(MeshAsset, MeshBoneIndex, SegmentStart, SegmentEnd);
+        const FVector BoneAxis = SegmentEnd - SegmentStart;
+        if (bUsePCAAnalysis && static_cast<int32>(Points.size()) >= MinWeightedVertices)
+        {
+            if (BuildPCAAutoBodyFit(Points, BoneAxis, OutFit))
+            {
+                return true;
+            }
+        }
+        return BuildBoneAxisAutoBodyFit(MeshAsset, MeshBoneIndex, Points, OutFit);
+    }
+
+    bool ComputeBodyComponentTransformFromSetup(
+        const FSkeletalMesh* MeshAsset,
+        const FPhysicsAssetBodySetup& BodySetup,
+        FTransform& OutBodyComponentTransform)
+    {
+        if (!MeshAsset || !HasBoneName(BodySetup.BoneName))
+        {
+            return false;
+        }
+
+        const int32 MeshBoneIndex = FindMeshBoneIndexByName(MeshAsset, BodySetup.BoneName.ToString());
+        if (MeshBoneIndex < 0 || MeshBoneIndex >= static_cast<int32>(MeshAsset->Bones.size()))
+        {
+            return false;
+        }
+
+        const FTransform BoneComponentTransform = MakeTransformNoScale(MeshAsset->Bones[MeshBoneIndex].GetReferenceGlobalPose());
+        OutBodyComponentTransform = ComposeComponentTransforms(BoneComponentTransform, BodySetup.BodyLocalFrame);
+        return true;
+    }
 }
 
 FPhysicsAssetEditorWidget::~FPhysicsAssetEditorWidget()
@@ -825,24 +1284,106 @@ void FPhysicsAssetEditorWidget::RenderTreeAndGraphPanel(UPhysicsAsset* PhysicsAs
 void FPhysicsAssetEditorWidget::RenderDetailsAndValidationPanel(UPhysicsAsset* PhysicsAsset)
 {
     RenderDetailsPanel(PhysicsAsset);
-    ImGui::Separator();
-    RenderValidationPanel();
+
+    // Validation is currently unused in the Physics Editor UI.
+    // Keep the implementation available, but do not expose the panel while the toolbar action is hidden.
+    // ImGui::Separator();
+    // RenderValidationPanel();
 }
 
 void FPhysicsAssetEditorWidget::RenderToolbar(UPhysicsAsset* PhysicsAsset)
 {
-    const bool bCanSave = PhysicsAsset && !PhysicsAsset->GetAssetPathFileName().empty() && PhysicsAsset->GetAssetPathFileName() != "None";
-    if (!bCanSave) ImGui::BeginDisabled();
-    if (ImGui::Button(IsDirty() ? "Save*" : "Save", ImVec2(72.0f, 0.0f)))
+    // Physics assets are saved through the owning Mesh Editor, so the duplicated Save button is hidden here.
+    // Validation is also currently unused; keep the code path available for future re-enable.
+    // const bool bCanSave = PhysicsAsset && !PhysicsAsset->GetAssetPathFileName().empty() && PhysicsAsset->GetAssetPathFileName() != "None";
+    // if (!bCanSave) ImGui::BeginDisabled();
+    // if (ImGui::Button(IsDirty() ? "Save*" : "Save", ImVec2(72.0f, 0.0f)))
+    // {
+    //     SaveEditedPhysicsAsset();
+    // }
+    // if (!bCanSave) ImGui::EndDisabled();
+
+    // ImGui::SameLine();
+    // if (ImGui::Button("Validate", ImVec2(86.0f, 0.0f)))
+    // {
+    //     RunValidation(PhysicsAsset);
+    // }
+
+    RenderRegenerateBodiesControls(PhysicsAsset);
+}
+
+void FPhysicsAssetEditorWidget::RenderRegenerateBodiesControls(UPhysicsAsset* PhysicsAsset)
+{
+    const bool bCanRegenerate = PhysicsAsset &&
+        PreviewSkeletalMesh &&
+        PreviewSkeletalMesh->GetSkeleton() &&
+        PreviewSkeletalMesh->GetSkeletalMeshAsset();
+
+    if (!bCanRegenerate) ImGui::BeginDisabled();
+    if (ImGui::Button("Regenerate Bodies", ImVec2(150.0f, 0.0f)))
     {
-        SaveEditedPhysicsAsset();
+        RegenerateBodies(PhysicsAsset, PreviewSkeletalMesh);
     }
-    if (!bCanSave) ImGui::EndDisabled();
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Rebuild PhysicsAsset bodies from the preview skeletal mesh bind pose.");
+    }
+    if (!bCanRegenerate) ImGui::EndDisabled();
 
     ImGui::SameLine();
-    if (ImGui::Button("Validate", ImVec2(86.0f, 0.0f)))
+    if (ImGui::Checkbox("Use PCA Analysis", &bRegenerateUsePCAAnalysis))
     {
-        RunValidation(PhysicsAsset);
+        if (bRegenerateUsePCAAnalysis)
+        {
+            bRegenerateUseBoneAxis = false;
+        }
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Fit each capsule to dominant skinned vertices with principal component analysis. Falls back to bone axis when too few vertices are available.");
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Checkbox("Use Bone Axis", &bRegenerateUseBoneAxis))
+    {
+        if (bRegenerateUseBoneAxis)
+        {
+            bRegenerateUsePCAAnalysis = false;
+        }
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Use the bone-to-child direction as the generated capsule axis. This is the common simple bone-axis fitting mode.");
+    }
+
+    if (!bRegenerateUsePCAAnalysis && !bRegenerateUseBoneAxis)
+    {
+        bRegenerateUseBoneAxis = true;
+    }
+
+    ImGui::SameLine();
+    ImGui::Checkbox("Constraints", &bRegenerateCreateConstraints);
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Create parent-child constraints between the generated bodies.");
+    }
+
+    ImGui::SameLine();
+    ImGui::Checkbox("Replace", &bRegenerateReplaceExisting);
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Clear existing bodies and constraints before regeneration. Disable this to fill only missing bodies.");
+    }
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(52.0f);
+    if (ImGui::InputFloat("Min Weight", &RegenerateMinInfluenceWeight, 0.0f, 0.0f, "%.2f"))
+    {
+        RegenerateMinInfluenceWeight = (std::min)((std::max)(RegenerateMinInfluenceWeight, 0.0f), 1.0f);
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Minimum dominant skin weight required for a vertex to be used by the selected bone.");
     }
 }
 
@@ -2022,6 +2563,165 @@ void FPhysicsAssetEditorWidget::AddConstraintToSelectedParentBody(UPhysicsAsset*
     SelectedTreeBoneIndex = BoneIndex;
 }
 
+bool FPhysicsAssetEditorWidget::RegenerateBodies(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh)
+{
+    if (!PhysicsAsset || !PreviewMesh || !PreviewMesh->GetSkeleton())
+    {
+        return false;
+    }
+
+    FSkeletalMesh* MeshAsset = PreviewMesh->GetSkeletalMeshAsset();
+    if (!MeshAsset)
+    {
+        return false;
+    }
+
+    const FReferenceSkeleton& RefSkeleton = PreviewMesh->GetSkeleton()->GetReferenceSkeleton();
+    if (RefSkeleton.GetNumBones() <= 0)
+    {
+        return false;
+    }
+
+    if (bRegenerateReplaceExisting)
+    {
+        PhysicsAsset->ClearBodySetups();
+        SelectedBodyIndex = -1;
+        SelectedShapeIndex = -1;
+        SelectedConstraintIndex = -1;
+    }
+
+    int32 FirstGeneratedBodyIndex = -1;
+    int32 FirstGeneratedTreeBoneIndex = -1;
+    int32 GeneratedBodyCount = 0;
+
+    for (int32 BoneIndex = 0; BoneIndex < RefSkeleton.GetNumBones(); ++BoneIndex)
+    {
+        const FReferenceBone& RefBone = RefSkeleton.Bones[BoneIndex];
+        const FName BoneName(RefBone.Name);
+        if (PhysicsAsset->HasBodySetupForBone(BoneName))
+        {
+            continue;
+        }
+
+        const int32 MeshBoneIndex = FindMeshBoneIndexByName(MeshAsset, RefBone.Name);
+        if (MeshBoneIndex < 0 || MeshBoneIndex >= static_cast<int32>(MeshAsset->Bones.size()))
+        {
+            continue;
+        }
+
+        TArray<FVector> Points;
+        CollectDominantBoneVertices(MeshAsset, MeshBoneIndex, RegenerateMinInfluenceWeight, Points);
+
+        FAutoBodyFitResult Fit;
+        const bool bUsePCA = bRegenerateUsePCAAnalysis && !bRegenerateUseBoneAxis;
+        if (!BuildAutoBodyFit(
+                MeshAsset,
+                MeshBoneIndex,
+                Points,
+                bUsePCA,
+                (std::max)(RegenerateMinWeightedVertices, 1),
+                Fit))
+        {
+            continue;
+        }
+
+        const FTransform BoneComponentTransform = MakeTransformNoScale(MeshAsset->Bones[MeshBoneIndex].GetReferenceGlobalPose());
+
+        FPhysicsAssetBodySetup Body;
+        Body.BoneName = BoneName;
+        Body.BodyLocalFrame = MakeLocalTransformFromComponent(BoneComponentTransform, Fit.BodyComponentTransform);
+
+        FPhysicsAssetShapeSetup Shape;
+        Shape.Type = EPhysicsAssetShapeType::Capsule;
+        Shape.LocalTransform = FTransform();
+        Shape.CapsuleRadius = (std::max)(Fit.CapsuleRadius, AutoBodyMinExtent);
+        Shape.CapsuleHalfHeight = (std::max)(Fit.CapsuleHalfHeight, Shape.CapsuleRadius);
+        Shape.SphereRadius = Shape.CapsuleRadius;
+        Shape.BoxHalfExtent = FVector(Shape.CapsuleRadius, Shape.CapsuleRadius, Shape.CapsuleHalfHeight);
+        Body.Shapes.push_back(Shape);
+
+        const int32 NewBodyIndex = PhysicsAsset->AddBodySetup(Body);
+        if (NewBodyIndex >= 0)
+        {
+            if (FirstGeneratedBodyIndex < 0)
+            {
+                FirstGeneratedBodyIndex = NewBodyIndex;
+                FirstGeneratedTreeBoneIndex = BoneIndex;
+            }
+            ++GeneratedBodyCount;
+        }
+    }
+
+    int32 GeneratedConstraintCount = 0;
+    if (bRegenerateCreateConstraints)
+    {
+        for (int32 BoneIndex = 0; BoneIndex < RefSkeleton.GetNumBones(); ++BoneIndex)
+        {
+            const FName ChildBoneName(RefSkeleton.Bones[BoneIndex].Name);
+            const int32 ChildBodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(ChildBoneName);
+            if (ChildBodyIndex < 0)
+            {
+                continue;
+            }
+
+            int32 ParentBoneIndex = RefSkeleton.Bones[BoneIndex].ParentIndex;
+            while (ParentBoneIndex >= 0 && ParentBoneIndex < RefSkeleton.GetNumBones())
+            {
+                const FName ParentBoneName(RefSkeleton.Bones[ParentBoneIndex].Name);
+                const int32 ParentBodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(ParentBoneName);
+                if (ParentBodyIndex >= 0)
+                {
+                    if (!PhysicsAsset->HasConstraintBetweenBones(ParentBoneName, ChildBoneName))
+                    {
+                        FPhysicsAssetConstraintSetup Constraint;
+                        Constraint.ParentBoneName = ParentBoneName;
+                        Constraint.ChildBoneName = ChildBoneName;
+
+                        const int32 ChildMeshBoneIndex = FindMeshBoneIndexByName(MeshAsset, RefSkeleton.Bones[BoneIndex].Name);
+                        FTransform ParentBodyComponentTransform;
+                        FTransform ChildBodyComponentTransform;
+                        if (ChildMeshBoneIndex >= 0 &&
+                            ComputeBodyComponentTransformFromSetup(MeshAsset, PhysicsAsset->GetBodySetups()[ParentBodyIndex], ParentBodyComponentTransform) &&
+                            ComputeBodyComponentTransformFromSetup(MeshAsset, PhysicsAsset->GetBodySetups()[ChildBodyIndex], ChildBodyComponentTransform))
+                        {
+                            FTransform JointComponentTransform;
+                            JointComponentTransform.Location = MeshAsset->Bones[ChildMeshBoneIndex].GetReferenceGlobalPose().GetLocation();
+                            JointComponentTransform.Rotation = ChildBodyComponentTransform.Rotation;
+                            JointComponentTransform.Scale = FVector::OneVector;
+                            Constraint.ParentLocalFrame = MakeLocalTransformFromComponent(ParentBodyComponentTransform, JointComponentTransform);
+                            Constraint.ChildLocalFrame = MakeLocalTransformFromComponent(ChildBodyComponentTransform, JointComponentTransform);
+                        }
+
+                        if (PhysicsAsset->AddConstraintSetup(Constraint) >= 0)
+                        {
+                            ++GeneratedConstraintCount;
+                        }
+                    }
+                    break;
+                }
+                ParentBoneIndex = RefSkeleton.Bones[ParentBoneIndex].ParentIndex;
+            }
+        }
+    }
+
+    if (GeneratedBodyCount <= 0 && GeneratedConstraintCount <= 0 && !bRegenerateReplaceExisting)
+    {
+        return false;
+    }
+
+    if (FirstGeneratedBodyIndex >= 0)
+    {
+        SelectBodySetup(PhysicsAsset, FirstGeneratedBodyIndex, FirstGeneratedTreeBoneIndex);
+    }
+    else
+    {
+        ClampSelection(PhysicsAsset);
+    }
+
+    MarkPhysicsAssetDirty();
+    return true;
+}
+
 void FPhysicsAssetEditorWidget::AddDefaultBody(UPhysicsAsset* PhysicsAsset)
 {
     AddDefaultBodyForBone(PhysicsAsset, FName::None);
@@ -2319,7 +3019,7 @@ void FPhysicsAssetEditorWidget::DrawBodySetupDebug(
         {
         case EPhysicsAssetShapeType::Box:
         {
-            FVector HalfExtent = Shape.BoxHalfExtent * PhysicsPreviewShapeScale;
+            FVector HalfExtent = Shape.BoxHalfExtent;
             HalfExtent.X = (std::max)(HalfExtent.X, 0.001f);
             HalfExtent.Y = (std::max)(HalfExtent.Y, 0.001f);
             HalfExtent.Z = (std::max)(HalfExtent.Z, 0.001f);
@@ -2333,14 +3033,14 @@ void FPhysicsAssetEditorWidget::DrawBodySetupDebug(
         }
         case EPhysicsAssetShapeType::Sphere:
         {
-            const float Radius = (std::max)(Shape.SphereRadius * PhysicsPreviewShapeScale, 0.001f);
+            const float Radius = (std::max)(Shape.SphereRadius, 0.001f);
             DrawDebugSphere(PreviewWorld, ShapeWorld.Location, Radius, 24, Color, 0.0f);
             break;
         }
         case EPhysicsAssetShapeType::Capsule:
         {
-            const float Radius = (std::max)(Shape.CapsuleRadius * PhysicsPreviewShapeScale, 0.001f);
-            const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight * PhysicsPreviewShapeScale, Radius);
+            const float Radius = (std::max)(Shape.CapsuleRadius, 0.001f);
+            const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight, Radius);
             DrawDebugCapsuleZAxis(
                 PreviewWorld,
                 ShapeWorld.Location,
