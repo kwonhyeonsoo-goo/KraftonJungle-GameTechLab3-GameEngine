@@ -31,6 +31,52 @@
 
 namespace
 {
+    float Clamp01(float Value)
+    {
+        return std::clamp(Value, 0.0f, 1.0f);
+    }
+
+    float AdvanceTowardTarget(float CurrentValue, float TargetValue, float DeltaTime, float Duration)
+    {
+        if (std::fabs(TargetValue - CurrentValue) <= 1.0e-6f)
+        {
+            return TargetValue;
+        }
+
+        if (Duration <= 1.0e-6f)
+        {
+            return TargetValue;
+        }
+
+        const float Step = DeltaTime / Duration;
+        if (CurrentValue < TargetValue)
+        {
+            return std::min(CurrentValue + Step, TargetValue);
+        }
+
+        return std::max(CurrentValue - Step, TargetValue);
+    }
+
+    FTransform BlendTransforms(const FTransform& AnimationPose, const FTransform& PhysicsPose, float BlendAlpha)
+    {
+        const float ClampedAlpha = Clamp01(BlendAlpha);
+        if (ClampedAlpha <= 0.0f)
+        {
+            return AnimationPose;
+        }
+
+        if (ClampedAlpha >= 1.0f)
+        {
+            return PhysicsPose;
+        }
+
+        FTransform Result;
+        Result.Location = FVector::Lerp(AnimationPose.Location, PhysicsPose.Location, ClampedAlpha);
+        Result.Rotation = FQuat::Slerp(AnimationPose.Rotation, PhysicsPose.Rotation, ClampedAlpha);
+        Result.Scale = FVector::Lerp(AnimationPose.Scale, PhysicsPose.Scale, ClampedAlpha);
+        return Result;
+    }
+
     // Physics pose reconstruction needs an affine inverse that preserves authored bone
     // scale/orientation well enough for local-pose rebuilding from simulated world space.
     FMatrix GetAffineInverseForPoseSync(const FMatrix& Matrix)
@@ -257,6 +303,7 @@ void USkeletalMeshComponent::ResetRagdollRuntimeState()
     // Resetting runtime state always drops physics-pose ownership first so the component
     // never keeps driving bones from bodies that are about to disappear.
     bUsePhysicsAssetPose = false;
+    ResetPhysicsPoseBlendState();
     if (PhysicsAssetInstance)
     {
         PhysicsAssetInstance->ResetRuntimeState();
@@ -308,6 +355,7 @@ FPhysicsAssetInstance* USkeletalMeshComponent::GetOrCreatePhysicsAssetInstance()
 void USkeletalMeshComponent::DestroyPhysicsAssetInstance()
 {
     bUsePhysicsAssetPose = false;
+    ResetPhysicsPoseBlendState();
     if (!PhysicsAssetInstance)
     {
         return;
@@ -325,15 +373,19 @@ bool USkeletalMeshComponent::EnableRagdollPhysics()
     if (!Instance)
     {
         SetUsePhysicsAssetPose(false);
+        ResetPhysicsPoseBlendState();
         return false;
     }
 
     if (!Instance->CreateBodiesAndConstraints())
     {
         SetUsePhysicsAssetPose(false);
+        ResetPhysicsPoseBlendState();
         return false;
     }
 
+    bPendingRagdollRecovery = false;
+    TargetPhysicsPoseBlendWeight = 1.0f;
     SetUsePhysicsAssetPose(true);
     return IsRagdollActive();
 }
@@ -341,10 +393,26 @@ bool USkeletalMeshComponent::EnableRagdollPhysics()
 void USkeletalMeshComponent::DisableRagdollPhysics()
 {
     SetUsePhysicsAssetPose(false);
+    ResetPhysicsPoseBlendState();
+    bPendingRagdollRecovery = false;
     if (PhysicsAssetInstance)
     {
         PhysicsAssetInstance->DestroyBodiesAndConstraints();
     }
+}
+
+bool USkeletalMeshComponent::BeginRagdollRecovery()
+{
+    if (!PhysicsAssetInstance || !PhysicsAssetInstance->HasLivePhysicsObjects())
+    {
+        DisableRagdollPhysics();
+        return false;
+    }
+
+    SetUsePhysicsAssetPose(true);
+    bPendingRagdollRecovery = true;
+    TargetPhysicsPoseBlendWeight = 0.0f;
+    return true;
 }
 
 bool USkeletalMeshComponent::IsRagdollActive() const
@@ -389,7 +457,7 @@ void USkeletalMeshComponent::SetUsePhysicsAssetPose(bool bEnable)
 
 bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
 {
-    if (!bUsePhysicsAssetPose)
+    if (!bUsePhysicsAssetPose || PhysicsPoseBlendWeight <= 0.0f)
     {
         return false;
     }
@@ -432,19 +500,65 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
 
     TArray<FTransform> LocalPose;
     LocalPose.resize(MeshAsset->Bones.size());
+    TArray<FTransform> AnimationLocalPose;
+    AnimationLocalPose.resize(MeshAsset->Bones.size());
     for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
     {
+        AnimationLocalPose[BoneIndex] = GetBoneLocalTransformByIndex(BoneIndex);
         const int32 ParentIndex = MeshAsset->Bones[BoneIndex].ParentIndex;
         const FMatrix LocalMatrix = (ParentIndex >= 0)
             ? ComponentSpaceGlobalMatrices[BoneIndex] * GetAffineInverseForPoseSync(ComponentSpaceGlobalMatrices[ParentIndex])
             : ComponentSpaceGlobalMatrices[BoneIndex];
-        LocalPose[BoneIndex] = FTransform(LocalMatrix);
+        const FTransform PhysicsLocalPose(LocalMatrix);
+        LocalPose[BoneIndex] =
+            BlendTransforms(AnimationLocalPose[BoneIndex], PhysicsLocalPose, PhysicsPoseBlendWeight);
     }
 
-    // Full ragdoll is the final pose owner in this first sync pass; body-less bones keep
-    // their previous pose because PullPhysicsPose seeds from the current animation result.
+    // Bones without bodies stay close to animation because PullPhysicsPose seeds from the
+    // current animation result before physics-driven bones overwrite their world transforms.
     SetBoneLocalTransforms(LocalPose);
     return true;
+}
+
+void USkeletalMeshComponent::ResetPhysicsPoseBlendState()
+{
+    PhysicsPoseBlendWeight = 0.0f;
+    TargetPhysicsPoseBlendWeight = 0.0f;
+}
+
+void USkeletalMeshComponent::UpdatePhysicsPoseBlend(float DeltaTime)
+{
+    if (!PhysicsAssetInstance || !PhysicsAssetInstance->HasLivePhysicsObjects())
+    {
+        if (bPendingRagdollRecovery)
+        {
+            bPendingRagdollRecovery = false;
+        }
+        if (!bUsePhysicsAssetPose)
+        {
+            ResetPhysicsPoseBlendState();
+        }
+        return;
+    }
+
+    const float BlendDuration = (TargetPhysicsPoseBlendWeight > PhysicsPoseBlendWeight)
+        ? RagdollBlendInTime
+        : RagdollRecoveryBlendOutTime;
+    PhysicsPoseBlendWeight = Clamp01(
+        AdvanceTowardTarget(PhysicsPoseBlendWeight, TargetPhysicsPoseBlendWeight, DeltaTime, BlendDuration));
+
+    if (bPendingRagdollRecovery &&
+        PhysicsPoseBlendWeight <= 1.0e-4f &&
+        TargetPhysicsPoseBlendWeight <= 1.0e-4f)
+    {
+        bPendingRagdollRecovery = false;
+        SetUsePhysicsAssetPose(false);
+        if (PhysicsAssetInstance)
+        {
+            PhysicsAssetInstance->DestroyBodiesAndConstraints();
+        }
+        ResetPhysicsPoseBlendState();
+    }
 }
 
 void USkeletalMeshComponent::PlayAnimation(UAnimSequenceBase* NewAnimToPlay, bool bLooping)
@@ -771,14 +885,18 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,
         return;
     }
 
+    const bool bEvaluatedAnimation = EvaluateAnimInstance(DeltaTime);
+    UpdatePhysicsPoseBlend(DeltaTime);
+
     if (bUsePhysicsAssetPose && ApplyPhysicsAssetPose())
     {
-        // While ragdoll is active, physics becomes the final pose source for this frame.
+        // Physics is applied after animation evaluation so entry/recovery blending has a
+        // stable animation pose to blend against each frame.
         UMeshComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
         return;
     }
 
-    if (EvaluateAnimInstance(DeltaTime))
+    if (bEvaluatedAnimation)
     {
         UMeshComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
         return;

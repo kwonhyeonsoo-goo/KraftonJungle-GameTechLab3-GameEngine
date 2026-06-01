@@ -57,14 +57,20 @@ public:
     bool EnableRagdollPhysics();
     UFUNCTION(Callable, Category="Physics")
     void DisableRagdollPhysics();
+    UFUNCTION(Callable, Category="Physics")
+    bool BeginRagdollRecovery();
     UFUNCTION(Pure, Category="Physics")
     bool IsRagdollActive() const;
+    UFUNCTION(Pure, Category="Physics")
+    bool IsRecoveringFromRagdoll() const { return bPendingRagdollRecovery; }
     UFUNCTION(Pure, Category="Physics")
     int32 GetLiveRagdollBodyCount() const;
     UFUNCTION(Pure, Category="Physics")
     int32 GetLiveRagdollConstraintCount() const;
     UFUNCTION(Pure, Category="Physics")
     UPhysicsAsset* GetActivePhysicsAsset() const;
+    UFUNCTION(Pure, Category="Physics")
+    float GetPhysicsAssetBlendWeight() const { return PhysicsPoseBlendWeight; }
     UFUNCTION(Callable, Category="Physics")
     bool CreatePhysicsAssetInstanceBodies();
     UFUNCTION(Callable, Category="Physics")
@@ -73,8 +79,8 @@ public:
     void SetUsePhysicsAssetPose(bool bEnable);
     UFUNCTION(Pure, Category="Physics")
     bool IsUsingPhysicsAssetPose() const { return bUsePhysicsAssetPose; }
-    // First-pass ragdoll sync uses full pose override. Blending and partial-body policies
-    // intentionally live in later gameplay-facing passes.
+    // Physics pose now blends against the current animation pose so ragdoll entry/exit can
+    // transition smoothly without changing runtime ownership boundaries.
     bool ApplyPhysicsAssetPose();
 
     // SingleNode 재생 편의 API.
@@ -146,6 +152,8 @@ protected:
     bool EvaluateAnimInstance(float DeltaTime);
 
 private:
+    void ResetPhysicsPoseBlendState();
+    void UpdatePhysicsPoseBlend(float DeltaTime);
     void LoadAnimationFromPath();
     bool CanUsePhysicsAsset(UPhysicsAsset* InPhysicsAsset, FSkeletonCompatibilityReport* OutReport = nullptr) const;
 
@@ -164,7 +172,14 @@ protected:
     // rigid body/constraint handles stay inside FPhysicsAssetInstance.
     UPROPERTY(Edit, Save, Category="Physics", DisplayName="Physics Asset Override", AssetType="PhysicsAsset")
     FSoftObjectPtr PhysicsAssetOverridePath = "None";
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Ragdoll Blend In Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float RagdollBlendInTime = 0.15f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Ragdoll Recovery Blend Out Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float RagdollRecoveryBlendOutTime = 0.3f;
     mutable TWeakObjectPtr<UPhysicsAsset> PhysicsAssetOverride;
     std::unique_ptr<FPhysicsAssetInstance> PhysicsAssetInstance;
     bool bUsePhysicsAssetPose = false;
+    float PhysicsPoseBlendWeight = 0.0f;
+    float TargetPhysicsPoseBlendWeight = 0.0f;
+    bool bPendingRagdollRecovery = false;
 };
