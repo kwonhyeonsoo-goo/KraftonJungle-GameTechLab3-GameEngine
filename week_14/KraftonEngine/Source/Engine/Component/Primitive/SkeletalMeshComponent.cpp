@@ -26,6 +26,7 @@
 #include "Serialization/Archive.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstring>
 
@@ -115,6 +116,67 @@ namespace
         Result.M[3][1] = -(Translation.X * Result.M[0][1] + Translation.Y * Result.M[1][1] + Translation.Z * Result.M[2][1]);
         Result.M[3][2] = -(Translation.X * Result.M[0][2] + Translation.Y * Result.M[1][2] + Translation.Z * Result.M[2][2]);
         return Result;
+    }
+
+    FString ToLowerCopy(const FString& Value)
+    {
+        FString Result = Value;
+        std::transform(
+            Result.begin(),
+            Result.end(),
+            Result.begin(),
+            [](unsigned char Character)
+            {
+                return static_cast<char>(std::tolower(Character));
+            });
+        return Result;
+    }
+
+    int32 FindBoneIndexByPriority(const FSkeletalMesh* MeshAsset, std::initializer_list<const char*> CandidateTokens)
+    {
+        if (!MeshAsset)
+        {
+            return -1;
+        }
+
+        for (const char* CandidateToken : CandidateTokens)
+        {
+            const FString Token = ToLowerCopy(CandidateToken ? FString(CandidateToken) : FString());
+            for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+            {
+                if (ToLowerCopy(MeshAsset->Bones[BoneIndex].Name) == Token)
+                {
+                    return BoneIndex;
+                }
+            }
+        }
+
+        for (const char* CandidateToken : CandidateTokens)
+        {
+            const FString Token = ToLowerCopy(CandidateToken ? FString(CandidateToken) : FString());
+            for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+            {
+                if (ToLowerCopy(MeshAsset->Bones[BoneIndex].Name).find(Token) != FString::npos)
+                {
+                    return BoneIndex;
+                }
+            }
+        }
+
+        return -1;
+    }
+
+    const char* LexToString(ERagdollStandUpType StandUpType)
+    {
+        switch (StandUpType)
+        {
+        case ERagdollStandUpType::FaceUp:
+            return "FaceUp";
+        case ERagdollStandUpType::FaceDown:
+            return "FaceDown";
+        default:
+            return "Unknown";
+        }
     }
 }
 
@@ -304,6 +366,7 @@ void USkeletalMeshComponent::ResetRagdollRuntimeState()
     // never keeps driving bones from bodies that are about to disappear.
     bUsePhysicsAssetPose = false;
     ResetPhysicsPoseBlendState();
+    ResetRagdollRecoveryState();
     if (PhysicsAssetInstance)
     {
         PhysicsAssetInstance->ResetRuntimeState();
@@ -356,6 +419,7 @@ void USkeletalMeshComponent::DestroyPhysicsAssetInstance()
 {
     bUsePhysicsAssetPose = false;
     ResetPhysicsPoseBlendState();
+    ResetRagdollRecoveryState();
     if (!PhysicsAssetInstance)
     {
         return;
@@ -374,6 +438,7 @@ bool USkeletalMeshComponent::EnableRagdollPhysics()
     {
         SetUsePhysicsAssetPose(false);
         ResetPhysicsPoseBlendState();
+        ResetRagdollRecoveryState();
         return false;
     }
 
@@ -381,10 +446,11 @@ bool USkeletalMeshComponent::EnableRagdollPhysics()
     {
         SetUsePhysicsAssetPose(false);
         ResetPhysicsPoseBlendState();
+        ResetRagdollRecoveryState();
         return false;
     }
 
-    bPendingRagdollRecovery = false;
+    ResetRagdollRecoveryState();
     TargetPhysicsPoseBlendWeight = 1.0f;
     SetUsePhysicsAssetPose(true);
     return IsRagdollActive();
@@ -394,7 +460,7 @@ void USkeletalMeshComponent::DisableRagdollPhysics()
 {
     SetUsePhysicsAssetPose(false);
     ResetPhysicsPoseBlendState();
-    bPendingRagdollRecovery = false;
+    ResetRagdollRecoveryState();
     if (PhysicsAssetInstance)
     {
         PhysicsAssetInstance->DestroyBodiesAndConstraints();
@@ -403,14 +469,36 @@ void USkeletalMeshComponent::DisableRagdollPhysics()
 
 bool USkeletalMeshComponent::BeginRagdollRecovery()
 {
+    if (RecoveryPhase != ERagdollRecoveryPhase::None)
+    {
+        return false;
+    }
+
     if (!PhysicsAssetInstance || !PhysicsAssetInstance->HasLivePhysicsObjects())
     {
         DisableRagdollPhysics();
         return false;
     }
 
+    if (!CaptureRagdollRecoverySnapshot())
+    {
+        UE_LOG("Ragdoll recovery fallback: could not capture ragdoll orientation. Component=%s", GetName().c_str());
+        SelectedStandUpType = ERagdollStandUpType::Unknown;
+        SelectedStandUpAnimation = nullptr;
+    }
+    else
+    {
+        SelectedStandUpType = EvaluateRagdollRecoveryOrientation();
+        SelectedStandUpAnimation = SelectStandUpAnimation();
+    }
+
+    UE_LOG("Ragdoll recovery started. Component=%s StandUpType=%s StandUpAnimation=%s",
+        GetName().c_str(),
+        LexToString(SelectedStandUpType),
+        SelectedStandUpAnimation ? SelectedStandUpAnimation->GetName().c_str() : "None");
+
     SetUsePhysicsAssetPose(true);
-    bPendingRagdollRecovery = true;
+    RecoveryPhase = ERagdollRecoveryPhase::BlendOutFromPhysics;
     TargetPhysicsPoseBlendWeight = 0.0f;
     return true;
 }
@@ -526,14 +614,212 @@ void USkeletalMeshComponent::ResetPhysicsPoseBlendState()
     TargetPhysicsPoseBlendWeight = 0.0f;
 }
 
+void USkeletalMeshComponent::ResetRagdollRecoveryState()
+{
+    RecoveryPhase = ERagdollRecoveryPhase::None;
+    SelectedStandUpType = ERagdollStandUpType::Unknown;
+    RecoveryPelvisWorldTransform = FTransform();
+    RecoveryChestWorldTransform = FTransform();
+    SelectedStandUpAnimation = nullptr;
+    bHasSavedPostRecoveryAnimationState = false;
+    SavedPostRecoveryAnimationMode = EAnimationMode::None;
+    SavedPostRecoveryAnimationData = FSingleAnimationPlayData();
+    SavedPostRecoveryAnimInstanceClass = nullptr;
+}
+
+bool USkeletalMeshComponent::CaptureRagdollRecoverySnapshot()
+{
+    FPhysicsAssetInstance* Instance = GetPhysicsAssetInstance();
+    USkeletalMesh* Mesh = GetSkeletalMesh();
+    FSkeletalMesh* MeshAsset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+    if (!Instance || !MeshAsset || MeshAsset->Bones.empty())
+    {
+        return false;
+    }
+
+    TArray<FTransform> BoneWorldTransforms;
+    if (!Instance->PullPhysicsPose(BoneWorldTransforms) ||
+        BoneWorldTransforms.size() < MeshAsset->Bones.size())
+    {
+        return false;
+    }
+
+    const int32 PelvisBoneIndex = FindBoneIndexByPriority(MeshAsset, { "pelvis", "hips", "hip", "root" });
+    const int32 ChestBoneIndex = FindBoneIndexByPriority(MeshAsset, { "spine_03", "spine_02", "spine_01", "spine", "chest", "upperchest", "torso" });
+
+    RecoveryPelvisWorldTransform =
+        (PelvisBoneIndex >= 0 && PelvisBoneIndex < static_cast<int32>(BoneWorldTransforms.size()))
+            ? BoneWorldTransforms[PelvisBoneIndex]
+            : BoneWorldTransforms[0];
+
+    RecoveryChestWorldTransform =
+        (ChestBoneIndex >= 0 && ChestBoneIndex < static_cast<int32>(BoneWorldTransforms.size()))
+            ? BoneWorldTransforms[ChestBoneIndex]
+            : RecoveryPelvisWorldTransform;
+
+    return true;
+}
+
+ERagdollStandUpType USkeletalMeshComponent::EvaluateRagdollRecoveryOrientation() const
+{
+    // The first pass intentionally keeps orientation classification coarse. Chest-up vs
+    // world-up is enough to choose front/back get-up variants without overfitting authoring.
+    const FVector ChestUp = RecoveryChestWorldTransform.Rotation.GetUpVector().Normalized();
+    if (ChestUp.Dot(FVector::UpVector) >= 0.0f)
+    {
+        return ERagdollStandUpType::FaceUp;
+    }
+
+    return ERagdollStandUpType::FaceDown;
+}
+
+bool USkeletalMeshComponent::CanUseStandUpAnimation(UAnimSequenceBase* InAsset) const
+{
+    if (!InAsset)
+    {
+        return false;
+    }
+
+    if (UAnimSequence* Sequence = Cast<UAnimSequence>(InAsset))
+    {
+        return CanUseAnimation(Sequence);
+    }
+
+    return CanUseAnimation(InAsset);
+}
+
+UAnimSequenceBase* USkeletalMeshComponent::SelectStandUpAnimation()
+{
+    if (SelectedStandUpType == ERagdollStandUpType::Unknown)
+    {
+        return nullptr;
+    }
+
+    const FSoftObjectPtr& PreferredPath =
+        (SelectedStandUpType == ERagdollStandUpType::FaceUp)
+            ? BackStandUpAnimationPath
+            : FrontStandUpAnimationPath;
+
+    if (PreferredPath.IsNull())
+    {
+        UE_LOG("Ragdoll recovery fallback: stand-up animation path is missing. Component=%s StandUpType=%s",
+            GetName().c_str(),
+            LexToString(SelectedStandUpType));
+        return nullptr;
+    }
+
+    UAnimSequence* LoadedAnimation = FAnimationManager::Get().LoadAnimation(PreferredPath.ToString());
+    if (!LoadedAnimation || !CanUseStandUpAnimation(LoadedAnimation))
+    {
+        UE_LOG("Ragdoll recovery fallback: stand-up animation could not be used. Component=%s StandUpType=%s Path=%s",
+            GetName().c_str(),
+            LexToString(SelectedStandUpType),
+            PreferredPath.ToString().c_str());
+        return nullptr;
+    }
+
+    return LoadedAnimation;
+}
+
+bool USkeletalMeshComponent::StartStandUpAnimation()
+{
+    if (!SelectedStandUpAnimation)
+    {
+        return false;
+    }
+
+    // Recovery uses a conservative single-node override so stand-up playback can be injected
+    // without taking ownership of the broader gameplay animation state machine.
+    if (!bHasSavedPostRecoveryAnimationState)
+    {
+        SavedPostRecoveryAnimationMode = AnimationMode;
+        SavedPostRecoveryAnimationData = AnimationData;
+        SavedPostRecoveryAnimInstanceClass = AnimInstanceClass;
+        bHasSavedPostRecoveryAnimationState = true;
+    }
+
+    PlayAnimation(SelectedStandUpAnimation, false);
+    RecoveryPhase = ERagdollRecoveryPhase::PlayingStandUp;
+    return true;
+}
+
+bool USkeletalMeshComponent::IsStandUpAnimationFinished() const
+{
+    if (RecoveryPhase != ERagdollRecoveryPhase::PlayingStandUp)
+    {
+        return false;
+    }
+
+    const UAnimSingleNodeInstance* SingleNode = IsValid(AnimInstance) ? Cast<UAnimSingleNodeInstance>(AnimInstance) : nullptr;
+    if (!SingleNode)
+    {
+        return true;
+    }
+
+    return !SingleNode->IsPlaying();
+}
+
+void USkeletalMeshComponent::RestorePostRecoveryAnimationState()
+{
+    if (!bHasSavedPostRecoveryAnimationState)
+    {
+        return;
+    }
+
+    AnimationData = SavedPostRecoveryAnimationData;
+    AnimInstanceClass = SavedPostRecoveryAnimInstanceClass;
+    AnimationMode = SavedPostRecoveryAnimationMode;
+    InitializeAnimation();
+}
+
+void USkeletalMeshComponent::FinishRagdollRecovery()
+{
+    SetUsePhysicsAssetPose(false);
+    ResetPhysicsPoseBlendState();
+    if (PhysicsAssetInstance)
+    {
+        PhysicsAssetInstance->DestroyBodiesAndConstraints();
+    }
+
+    RestorePostRecoveryAnimationState();
+    UE_LOG("Ragdoll recovery completed. Component=%s", GetName().c_str());
+
+    RecoveryPhase = ERagdollRecoveryPhase::Completed;
+    SelectedStandUpType = ERagdollStandUpType::Unknown;
+    RecoveryPelvisWorldTransform = FTransform();
+    RecoveryChestWorldTransform = FTransform();
+    SelectedStandUpAnimation = nullptr;
+    bHasSavedPostRecoveryAnimationState = false;
+    SavedPostRecoveryAnimationMode = EAnimationMode::None;
+    SavedPostRecoveryAnimationData = FSingleAnimationPlayData();
+    SavedPostRecoveryAnimInstanceClass = nullptr;
+}
+
 void USkeletalMeshComponent::UpdatePhysicsPoseBlend(float DeltaTime)
 {
+    if (RecoveryPhase == ERagdollRecoveryPhase::Completed)
+    {
+        RecoveryPhase = ERagdollRecoveryPhase::None;
+        return;
+    }
+
+    if (RecoveryPhase == ERagdollRecoveryPhase::PlayingStandUp)
+    {
+        if (IsStandUpAnimationFinished())
+        {
+            FinishRagdollRecovery();
+        }
+        return;
+    }
+
     if (!PhysicsAssetInstance || !PhysicsAssetInstance->HasLivePhysicsObjects())
     {
-        if (bPendingRagdollRecovery)
+        if (RecoveryPhase == ERagdollRecoveryPhase::BlendOutFromPhysics)
         {
-            bPendingRagdollRecovery = false;
+            FinishRagdollRecovery();
+            return;
         }
+
         if (!bUsePhysicsAssetPose)
         {
             ResetPhysicsPoseBlendState();
@@ -547,17 +833,21 @@ void USkeletalMeshComponent::UpdatePhysicsPoseBlend(float DeltaTime)
     PhysicsPoseBlendWeight = Clamp01(
         AdvanceTowardTarget(PhysicsPoseBlendWeight, TargetPhysicsPoseBlendWeight, DeltaTime, BlendDuration));
 
-    if (bPendingRagdollRecovery &&
+    if (RecoveryPhase == ERagdollRecoveryPhase::BlendOutFromPhysics &&
         PhysicsPoseBlendWeight <= 1.0e-4f &&
         TargetPhysicsPoseBlendWeight <= 1.0e-4f)
     {
-        bPendingRagdollRecovery = false;
         SetUsePhysicsAssetPose(false);
         if (PhysicsAssetInstance)
         {
             PhysicsAssetInstance->DestroyBodiesAndConstraints();
         }
         ResetPhysicsPoseBlendState();
+
+        if (!StartStandUpAnimation())
+        {
+            FinishRagdollRecovery();
+        }
     }
 }
 

@@ -17,6 +17,23 @@ class UAnimSequenceBase;
 class UClass;
 class UPhysicsAsset;
 
+UENUM()
+enum class ERagdollRecoveryPhase : uint8
+{
+    None,
+    BlendOutFromPhysics,
+    PlayingStandUp,
+    Completed,
+};
+
+UENUM()
+enum class ERagdollStandUpType : uint8
+{
+    Unknown,
+    FaceUp,
+    FaceDown,
+};
+
 // SkeletalMesh 전용 render proxy만 제공하는 얇은 wrapper.
 // Skinning/bone/material/bounds 상태는 모두 USkinnedMeshComponent가 소유한다.
 UCLASS()
@@ -62,7 +79,7 @@ public:
     UFUNCTION(Pure, Category="Physics")
     bool IsRagdollActive() const;
     UFUNCTION(Pure, Category="Physics")
-    bool IsRecoveringFromRagdoll() const { return bPendingRagdollRecovery; }
+    bool IsRecoveringFromRagdoll() const { return RecoveryPhase != ERagdollRecoveryPhase::None; }
     UFUNCTION(Pure, Category="Physics")
     int32 GetLiveRagdollBodyCount() const;
     UFUNCTION(Pure, Category="Physics")
@@ -154,6 +171,15 @@ protected:
 private:
     void ResetPhysicsPoseBlendState();
     void UpdatePhysicsPoseBlend(float DeltaTime);
+    void ResetRagdollRecoveryState();
+    bool CaptureRagdollRecoverySnapshot();
+    ERagdollStandUpType EvaluateRagdollRecoveryOrientation() const;
+    bool CanUseStandUpAnimation(UAnimSequenceBase* InAsset) const;
+    UAnimSequenceBase* SelectStandUpAnimation();
+    bool StartStandUpAnimation();
+    bool IsStandUpAnimationFinished() const;
+    void RestorePostRecoveryAnimationState();
+    void FinishRagdollRecovery();
     void LoadAnimationFromPath();
     bool CanUsePhysicsAsset(UPhysicsAsset* InPhysicsAsset, FSkeletonCompatibilityReport* OutReport = nullptr) const;
 
@@ -176,10 +202,25 @@ protected:
     float RagdollBlendInTime = 0.15f;
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Ragdoll Recovery Blend Out Time", Min=0.0f, Max=0.0f, Speed=0.01f)
     float RagdollRecoveryBlendOutTime = 0.3f;
+    // FaceDown means prone/front get-up. FaceUp means supine/back get-up.
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Front Stand Up Animation", AssetType="UAnimSequence")
+    FSoftObjectPtr FrontStandUpAnimationPath = "None";
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Back Stand Up Animation", AssetType="UAnimSequence")
+    FSoftObjectPtr BackStandUpAnimationPath = "None";
     mutable TWeakObjectPtr<UPhysicsAsset> PhysicsAssetOverride;
     std::unique_ptr<FPhysicsAssetInstance> PhysicsAssetInstance;
     bool bUsePhysicsAssetPose = false;
     float PhysicsPoseBlendWeight = 0.0f;
     float TargetPhysicsPoseBlendWeight = 0.0f;
-    bool bPendingRagdollRecovery = false;
+    // Recovery keeps blend-out and stand-up playback as separate phases so physics teardown
+    // does not race against animation takeover.
+    ERagdollRecoveryPhase RecoveryPhase = ERagdollRecoveryPhase::None;
+    ERagdollStandUpType SelectedStandUpType = ERagdollStandUpType::Unknown;
+    FTransform RecoveryPelvisWorldTransform;
+    FTransform RecoveryChestWorldTransform;
+    UAnimSequenceBase* SelectedStandUpAnimation = nullptr;
+    bool bHasSavedPostRecoveryAnimationState = false;
+    EAnimationMode SavedPostRecoveryAnimationMode = EAnimationMode::None;
+    FSingleAnimationPlayData SavedPostRecoveryAnimationData;
+    TSubclassOf<UAnimInstance> SavedPostRecoveryAnimInstanceClass;
 };
