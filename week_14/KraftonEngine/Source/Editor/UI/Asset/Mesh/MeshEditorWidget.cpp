@@ -8,6 +8,7 @@
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
 #include "Mesh/MeshManager.h"
 #include "Runtime/Engine.h"
+#include "Component/Debug/PhysicsAssetPreviewComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Component/Light/DirectionalLightComponent.h"
 #include "Viewport/Viewport.h"
@@ -423,6 +424,7 @@ void FMeshEditorWidget::Open(UObject* Object)
 
 	ViewportClient.CreatePreviewGizmo();
 	ViewportClient.CreateBoneDebugComponent();
+	ViewportClient.CreatePhysicsAssetPreviewComponent();
 	ViewportClient.ResetCameraToPreviousBounds();
 
 	WorldContext.World->SetEditorPOVProvider(&ViewportClient);
@@ -486,6 +488,7 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 		{
 			bSkeletonDirty = true;
 		}
+
 	}
 
 	if (ActiveTab == EMeshEditorTab::Animation)
@@ -518,6 +521,23 @@ void FMeshEditorWidget::CollectPreviewViewports(TArray<IEditorPreviewViewportCli
 {
 	if (IsOpen())
 	{
+		if (ActiveTab == EMeshEditorTab::Physics)
+		{
+			FMeshEditorWidget* MutableThis = const_cast<FMeshEditorWidget*>(this);
+			UPhysicsAsset* PhysicsAsset = MutableThis->GetCurrentPhysicsAsset();
+			USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
+			MutableThis->PhysicsAssetEditor.RenderPhysicsPreview(
+				PhysicsAsset,
+				SkeletalMesh,
+				ViewportClient.GetPreviewWorld(),
+				ViewportClient.GetPreviewMeshComponent(),
+				ViewportClient.GetPhysicsAssetPreviewComponent(),
+				ViewportClient.GetRenderDevice());
+		}
+		else if (ViewportClient.GetPhysicsAssetPreviewComponent())
+		{
+			ViewportClient.GetPhysicsAssetPreviewComponent()->ClearPreview(ViewportClient.GetRenderDevice());
+		}
 		OutClients.push_back(const_cast<FMeshEditorViewportClient*>(&ViewportClient));
 	}
 }
@@ -848,6 +868,11 @@ void FMeshEditorWidget::RenderViewportPanel(ImVec2 Size)
 					EShaderErrorMode::Notification,
 					true);
 			}
+		}
+
+		if (ActiveTab == EMeshEditorTab::Physics)
+		{
+			PhysicsAssetEditor.RenderViewportDebugOptions();
 		}
 	};
 

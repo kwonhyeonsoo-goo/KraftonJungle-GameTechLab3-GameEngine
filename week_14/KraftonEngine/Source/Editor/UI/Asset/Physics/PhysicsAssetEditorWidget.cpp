@@ -2,14 +2,21 @@
 
 #include "Asset/AssetRegistry.h"
 #include "Animation/Skeleton/Skeleton.h"
+#include "Component/Debug/PhysicsAssetPreviewComponent.h"
+#include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Debug/DrawDebugHelpers.h"
 #include "Editor/EditorEngine.h"
+#include "GameFramework/World.h"
+#include "Math/MathUtils.h"
 #include "Mesh/MeshManager.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Object/Object.h"
 #include "Physics/PhysicsAsset.h"
 #include "Physics/PhysicsAssetManager.h"
+#include "Physics/PhysicsAssetPreviewUtils.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <functional>
 
@@ -22,6 +29,146 @@ namespace
 {
     constexpr float LeftPanelWidth = 310.0f;
     constexpr float DetailsPanelMinWidth = 360.0f;
+    constexpr int32 DebugCircleSegments = 24;
+    constexpr int32 DebugHalfCircleSegments = 12;
+
+    FTransform ComposePreviewDebugTransforms(const FTransform& ParentWorld, const FTransform& Local)
+    {
+        FTransform Result = Local;
+        Result.Location = ParentWorld.Location + ParentWorld.Rotation.RotateVector(Local.Location);
+        Result.Rotation = (ParentWorld.Rotation * Local.Rotation).GetNormalized();
+        Result.Scale = FVector::OneVector;
+        return Result;
+    }
+
+    void DrawDebugCircle(
+        UWorld* World,
+        const FVector& Center,
+        const FVector& AxisA,
+        const FVector& AxisB,
+        float Radius,
+        const FColor& Color)
+    {
+        if (!World || Radius <= 0.0f)
+        {
+            return;
+        }
+
+        const float Step = 2.0f * FMath::Pi / static_cast<float>(DebugCircleSegments);
+        FVector Prev = Center + AxisA * Radius;
+        for (int32 i = 1; i <= DebugCircleSegments; ++i)
+        {
+            const float Angle = Step * static_cast<float>(i);
+            const FVector Next = Center + (AxisA * cosf(Angle) + AxisB * sinf(Angle)) * Radius;
+            DrawDebugLine(World, Prev, Next, Color, 0.0f);
+            Prev = Next;
+        }
+    }
+
+    void DrawDebugHalfCircle(
+        UWorld* World,
+        const FVector& Center,
+        const FVector& AxisA,
+        const FVector& AxisB,
+        float Radius,
+        int32 Segments,
+        float StartAngle,
+        const FColor& Color)
+    {
+        if (!World || Radius <= 0.0f || Segments < 3)
+        {
+            return;
+        }
+
+        const float Step = FMath::Pi / static_cast<float>(Segments);
+        FVector Prev = Center + (AxisA * cosf(StartAngle) + AxisB * sinf(StartAngle)) * Radius;
+        for (int32 i = 1; i <= Segments; ++i)
+        {
+            const float Angle = StartAngle + Step * static_cast<float>(i);
+            const FVector Next = Center + (AxisA * cosf(Angle) + AxisB * sinf(Angle)) * Radius;
+            DrawDebugLine(World, Prev, Next, Color, 0.0f);
+            Prev = Next;
+        }
+    }
+
+    void DrawDebugOrientedBox(
+        UWorld* World,
+        const FVector& Center,
+        const FVector& HalfExtent,
+        const FQuat& Rotation,
+        const FColor& Color)
+    {
+        if (!World)
+        {
+            return;
+        }
+
+        const FVector ClampedHalfExtent(
+            (std::max)(HalfExtent.X, 0.001f),
+            (std::max)(HalfExtent.Y, 0.001f),
+            (std::max)(HalfExtent.Z, 0.001f));
+
+        FVector Corners[8];
+        for (int32 i = 0; i < 8; ++i)
+        {
+            const FVector LocalCorner(
+                (i & 1) ? ClampedHalfExtent.X : -ClampedHalfExtent.X,
+                (i & 2) ? ClampedHalfExtent.Y : -ClampedHalfExtent.Y,
+                (i & 4) ? ClampedHalfExtent.Z : -ClampedHalfExtent.Z);
+            Corners[i] = Center + Rotation.RotateVector(LocalCorner);
+        }
+
+        DrawDebugBox(
+            World,
+            Corners[0],
+            Corners[1],
+            Corners[3],
+            Corners[2],
+            Corners[4],
+            Corners[5],
+            Corners[7],
+            Corners[6],
+            Color,
+            0.0f);
+    }
+
+    void DrawDebugCapsuleZAxis(
+        UWorld* World,
+        const FVector& Center,
+        float Radius,
+        float HalfHeight,
+        const FQuat& Rotation,
+        const FColor& Color)
+    {
+        if (!World)
+        {
+            return;
+        }
+
+        Radius = (std::max)(Radius, 0.001f);
+        HalfHeight = (std::max)(HalfHeight, Radius);
+        const float CylinderHalf = (std::max)(0.0f, HalfHeight - Radius);
+
+        const FVector AxisX = Rotation.RotateVector(FVector(1.0f, 0.0f, 0.0f));
+        const FVector AxisY = Rotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
+        const FVector AxisZ = Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f));
+
+        const FVector TopCenter = Center + AxisZ * CylinderHalf;
+        const FVector BottomCenter = Center - AxisZ * CylinderHalf;
+
+        DrawDebugCircle(World, TopCenter, AxisX, AxisY, Radius, Color);
+        DrawDebugCircle(World, BottomCenter, AxisX, AxisY, Radius, Color);
+
+        DrawDebugLine(World, TopCenter + AxisX * Radius, BottomCenter + AxisX * Radius, Color, 0.0f);
+        DrawDebugLine(World, TopCenter - AxisX * Radius, BottomCenter - AxisX * Radius, Color, 0.0f);
+        DrawDebugLine(World, TopCenter + AxisY * Radius, BottomCenter + AxisY * Radius, Color, 0.0f);
+        DrawDebugLine(World, TopCenter - AxisY * Radius, BottomCenter - AxisY * Radius, Color, 0.0f);
+
+        DrawDebugHalfCircle(World, TopCenter, AxisX, AxisZ, Radius, DebugHalfCircleSegments, 0.0f, Color);
+        DrawDebugHalfCircle(World, TopCenter, AxisY, AxisZ, Radius, DebugHalfCircleSegments, 0.0f, Color);
+        DrawDebugHalfCircle(World, BottomCenter, AxisX, AxisZ, Radius, DebugHalfCircleSegments, FMath::Pi, Color);
+        DrawDebugHalfCircle(World, BottomCenter, AxisY, AxisZ, Radius, DebugHalfCircleSegments, FMath::Pi, Color);
+    }
 
     const char* ShapeTypeText(EPhysicsAssetShapeType Type)
     {
@@ -1896,8 +2043,10 @@ void FPhysicsAssetEditorWidget::AddDefaultBodyForBone(UPhysicsAsset* PhysicsAsse
 
     FPhysicsAssetShapeSetup Shape;
     Shape.Type = EPhysicsAssetShapeType::Capsule;
-    Shape.CapsuleRadius = 12.0f;
-    Shape.CapsuleHalfHeight = 32.0f;
+    Shape.BoxHalfExtent = FVector(8.0f, 8.0f, 8.0f);
+    Shape.SphereRadius = 8.0f;
+    Shape.CapsuleRadius = 4.0f;
+    Shape.CapsuleHalfHeight = 12.0f;
     Body.Shapes.push_back(Shape);
 
     const int32 NewIndex = PhysicsAsset->AddBodySetup(Body);
@@ -1912,7 +2061,10 @@ void FPhysicsAssetEditorWidget::AddDefaultShape(FPhysicsAssetBodySetup& Body)
 {
     FPhysicsAssetShapeSetup Shape;
     Shape.Type = EPhysicsAssetShapeType::Box;
-    Shape.BoxHalfExtent = FVector(25.0f, 25.0f, 25.0f);
+    Shape.BoxHalfExtent = FVector(8.0f, 8.0f, 8.0f);
+    Shape.SphereRadius = 8.0f;
+    Shape.CapsuleRadius = 4.0f;
+    Shape.CapsuleHalfHeight = 12.0f;
     Body.Shapes.push_back(Shape);
     SelectedShapeIndex = static_cast<int32>(Body.Shapes.size()) - 1;
 }
@@ -2009,6 +2161,228 @@ void FPhysicsAssetEditorWidget::RunValidation(UPhysicsAsset* PhysicsAsset)
     }
 
     FPhysicsAssetValidation::ValidateAll(ValidationMesh, PhysicsAsset, ValidationIssues);
+}
+
+void FPhysicsAssetEditorWidget::RenderPreviewDebug(
+    UPhysicsAsset* PhysicsAsset,
+    USkeletalMesh* PreviewMesh,
+    UWorld* PreviewWorld,
+    USkeletalMeshComponent* PreviewComponent)
+{
+    PreviewSkeletalMesh = PreviewMesh;
+
+    if (!PhysicsAsset || !PreviewWorld || !PreviewComponent)
+    {
+        return;
+    }
+
+    ClampSelection(PhysicsAsset);
+
+    if (bShowPreviewBodies)
+    {
+        RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+    }
+
+    if (bShowPreviewConstraints)
+    {
+        RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+    }
+}
+
+void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
+    UPhysicsAsset* PhysicsAsset,
+    USkeletalMesh* PreviewMesh,
+    UWorld* PreviewWorld,
+    USkeletalMeshComponent* PreviewComponent,
+    UPhysicsAssetPreviewComponent* SolidPreviewComponent,
+    ID3D11Device* Device)
+{
+    PreviewSkeletalMesh = PreviewMesh;
+
+    if (!PhysicsAsset || !PreviewWorld || !PreviewComponent)
+    {
+        if (SolidPreviewComponent)
+        {
+            SolidPreviewComponent->ClearPreview(Device);
+        }
+        return;
+    }
+
+    ClampSelection(PhysicsAsset);
+
+    if (SolidPreviewComponent)
+    {
+        SolidPreviewComponent->UpdatePreview(
+            PhysicsAsset,
+            PreviewComponent,
+            SelectedBodyIndex,
+            SelectedShapeIndex,
+            SelectedConstraintIndex,
+            bShowPreviewBodies,
+            Device);
+    }
+
+    if (bShowPreviewBodies)
+    {
+        RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+    }
+
+    if (bShowPreviewConstraints)
+    {
+        RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+    }
+}
+
+void FPhysicsAssetEditorWidget::RenderViewportDebugOptions()
+{
+    ImGui::Separator();
+    ImGui::TextUnformatted("Physics Preview");
+    ImGui::Checkbox("Physics Bodies", &bShowPreviewBodies);
+    ImGui::Checkbox("Physics Constraints", &bShowPreviewConstraints);
+}
+
+void FPhysicsAssetEditorWidget::RenderBodyDebug(
+    UPhysicsAsset* PhysicsAsset,
+    USkeletalMeshComponent* PreviewComponent,
+    UWorld* PreviewWorld)
+{
+    if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
+    {
+        return;
+    }
+
+    const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
+    for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
+    {
+        DrawBodySetupDebug(PhysicsAsset, PreviewComponent, PreviewWorld, BodyIndex, Bodies[BodyIndex]);
+    }
+}
+
+void FPhysicsAssetEditorWidget::RenderConstraintDebug(
+    UPhysicsAsset* PhysicsAsset,
+    USkeletalMeshComponent* PreviewComponent,
+    UWorld* PreviewWorld)
+{
+    if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
+    {
+        return;
+    }
+
+    const TArray<FPhysicsAssetConstraintSetup>& Constraints = PhysicsAsset->GetConstraintSetups();
+    for (int32 ConstraintIndex = 0; ConstraintIndex < static_cast<int32>(Constraints.size()); ++ConstraintIndex)
+    {
+        DrawConstraintSetupDebug(
+            PhysicsAsset,
+            PreviewComponent,
+            PreviewWorld,
+            ConstraintIndex,
+            Constraints[ConstraintIndex]);
+    }
+}
+
+void FPhysicsAssetEditorWidget::DrawBodySetupDebug(
+    UPhysicsAsset* PhysicsAsset,
+    USkeletalMeshComponent* PreviewComponent,
+    UWorld* PreviewWorld,
+    int32 BodyIndex,
+    const FPhysicsAssetBodySetup& BodySetup)
+{
+    if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
+    {
+        return;
+    }
+
+    FTransform BodyWorld;
+    if (!FPhysicsAssetPreviewUtils::ComputePreviewBodyWorldTransform(
+            PreviewComponent,
+            PhysicsAsset,
+            BodyIndex,
+            BodyWorld))
+    {
+        return;
+    }
+
+    const bool bSelectedBody = SelectedBodyIndex == BodyIndex && SelectedConstraintIndex < 0;
+    for (int32 ShapeIndex = 0; ShapeIndex < static_cast<int32>(BodySetup.Shapes.size()); ++ShapeIndex)
+    {
+        const FPhysicsAssetShapeSetup& Shape = BodySetup.Shapes[ShapeIndex];
+        const FTransform ShapeWorld = ComposePreviewDebugTransforms(BodyWorld, Shape.LocalTransform);
+        const bool bSelectedShape = bSelectedBody && SelectedShapeIndex == ShapeIndex;
+        const FColor Color = bSelectedShape
+            ? FColor(255, 245, 120, 190)
+            : (bSelectedBody ? FColor(255, 180, 60, 170) : FColor(90, 210, 255, 115));
+
+        switch (Shape.Type)
+        {
+        case EPhysicsAssetShapeType::Box:
+        {
+            FVector HalfExtent = Shape.BoxHalfExtent;
+            HalfExtent.X = (std::max)(HalfExtent.X, 0.001f);
+            HalfExtent.Y = (std::max)(HalfExtent.Y, 0.001f);
+            HalfExtent.Z = (std::max)(HalfExtent.Z, 0.001f);
+            DrawDebugOrientedBox(
+                PreviewWorld,
+                ShapeWorld.Location,
+                HalfExtent,
+                ShapeWorld.Rotation.GetNormalized(),
+                Color);
+            break;
+        }
+        case EPhysicsAssetShapeType::Sphere:
+        {
+            const float Radius = (std::max)(Shape.SphereRadius, 0.001f);
+            DrawDebugSphere(PreviewWorld, ShapeWorld.Location, Radius, 24, Color, 0.0f);
+            break;
+        }
+        case EPhysicsAssetShapeType::Capsule:
+        {
+            const float Radius = (std::max)(Shape.CapsuleRadius, 0.001f);
+            const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight, Radius);
+            DrawDebugCapsuleZAxis(
+                PreviewWorld,
+                ShapeWorld.Location,
+                Radius,
+                HalfHeight,
+                ShapeWorld.Rotation.GetNormalized(),
+                Color);
+            break;
+        }
+        default:
+            break;
+        }
+    }
+}
+
+void FPhysicsAssetEditorWidget::DrawConstraintSetupDebug(
+    UPhysicsAsset* PhysicsAsset,
+    USkeletalMeshComponent* PreviewComponent,
+    UWorld* PreviewWorld,
+    int32 ConstraintIndex,
+    const FPhysicsAssetConstraintSetup& ConstraintSetup)
+{
+    (void)ConstraintSetup;
+    if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
+    {
+        return;
+    }
+
+    FTransform ParentFrameWorld;
+    FTransform ChildFrameWorld;
+    if (!FPhysicsAssetPreviewUtils::ComputePreviewConstraintWorldFrames(
+            PreviewComponent,
+            PhysicsAsset,
+            ConstraintIndex,
+            ParentFrameWorld,
+            ChildFrameWorld))
+    {
+        return;
+    }
+
+    const bool bSelected = SelectedConstraintIndex == ConstraintIndex;
+    const FColor Color = bSelected ? FColor(255, 120, 80, 180) : FColor(200, 150, 255, 115);
+    DrawDebugLine(PreviewWorld, ParentFrameWorld.Location, ChildFrameWorld.Location, Color, 0.0f);
+    DrawDebugPoint(PreviewWorld, ParentFrameWorld.Location, bSelected ? 0.08f : 0.05f, Color, 0.0f);
+    DrawDebugPoint(PreviewWorld, ChildFrameWorld.Location, bSelected ? 0.08f : 0.05f, Color, 0.0f);
 }
 
 void FPhysicsAssetEditorWidget::MarkPhysicsAssetDirty()

@@ -1061,6 +1061,9 @@
     <ClCompile Include="Source\Engine\Component\Debug\GizmoComponent.cpp">
       <Filter>Source\Engine\Component\Debug</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Debug\PhysicsAssetPreviewComponent.cpp">
+      <Filter>Source\Engine\Component\Debug</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\Debug\TemporaryBoneAnimatorComponent.cpp">
       <Filter>Source\Engine\Component\Debug</Filter>
     </ClCompile>
@@ -1683,6 +1686,9 @@
       <Filter>Source\Engine\Render\Proxy</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Proxy\GizmoSceneProxy.cpp">
+      <Filter>Source\Engine\Render\Proxy</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Proxy\PhysicsAssetPreviewSceneProxy.cpp">
       <Filter>Source\Engine\Render\Proxy</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Proxy\PrimitiveSceneProxy.cpp">
@@ -2334,6 +2340,9 @@
       <Filter>Source\Engine\Component\Debug</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Debug\GizmoComponent.h">
+      <Filter>Source\Engine\Component\Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Debug\PhysicsAssetPreviewComponent.h">
       <Filter>Source\Engine\Component\Debug</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Debug\TemporaryBoneAnimatorComponent.h">
@@ -3114,6 +3123,9 @@
       <Filter>Source\Engine\Render\Proxy</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Proxy\GizmoSceneProxy.h">
+      <Filter>Source\Engine\Render\Proxy</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Proxy\PhysicsAssetPreviewSceneProxy.h">
       <Filter>Source\Engine\Render\Proxy</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Proxy\PrimitiveSceneProxy.h">

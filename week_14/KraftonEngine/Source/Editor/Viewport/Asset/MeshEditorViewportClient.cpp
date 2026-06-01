@@ -12,6 +12,7 @@
 #include "Component/Debug/GizmoComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Component/Debug/BoneDebugComponent.h"
+#include "Component/Debug/PhysicsAssetPreviewComponent.h"
 #include "Collision/Ray/RayUtils.h"
 #include "Settings/EditorSettings.h"
 #include "Slate/SlateApplication.h"
@@ -20,6 +21,7 @@
 
 void FMeshEditorViewportClient::Initialize(ID3D11Device* Device, uint32 Width, uint32 Height)
 {
+	RenderDevice = Device;
 	Viewport = new FViewport();
 	Viewport->Initialize(Device, Width, Height);
 	Viewport->SetClient(this);
@@ -33,6 +35,7 @@ void FMeshEditorViewportClient::AddReferencedObjects(FReferenceCollector& Collec
 	Collector.AddReferencedObject(Gizmo);
 	Collector.AddReferencedObject(PreviewMeshComponent);
 	Collector.AddReferencedObject(BoneDebugComponent);
+	Collector.AddReferencedObject(PhysicsAssetPreviewComponent);
 	Collector.AddReferencedObject(PreviewWorld);
 	Collector.AddReferencedObject(PreviewActor);
 }
@@ -52,6 +55,8 @@ void FMeshEditorViewportClient::Release()
 	UObjectManager::Get().DestroyObject(Gizmo);
 	Gizmo = nullptr;
 	BoneDebugComponent = nullptr;
+	PhysicsAssetPreviewComponent = nullptr;
+	RenderDevice = nullptr;
 
 	bIsRenderable = false;
 
@@ -73,6 +78,13 @@ void FMeshEditorViewportClient::CreateBoneDebugComponent()
 	BoneDebugComponent->SetSelectedBoneIndex(SelectedBoneIndex);
 	BoneDebugComponent->SetSelectedSocketIndex(SelectedSocketIndex);
 	BoneDebugComponent->CreateRenderState();
+}
+
+void FMeshEditorViewportClient::CreatePhysicsAssetPreviewComponent()
+{
+	PhysicsAssetPreviewComponent = PreviewActor->AddComponent<UPhysicsAssetPreviewComponent>();
+	PhysicsAssetPreviewComponent->CreateRenderState();
+	PhysicsAssetPreviewComponent->SetVisibility(false);
 }
 
 void FMeshEditorViewportClient::ResetCameraToPreviousBounds()

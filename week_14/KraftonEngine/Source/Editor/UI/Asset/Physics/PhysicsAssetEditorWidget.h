@@ -7,7 +7,11 @@
 namespace ax { namespace NodeEditor { struct EditorContext; } }
 
 class UPhysicsAsset;
+class UPhysicsAssetPreviewComponent;
 class USkeletalMesh;
+class USkeletalMeshComponent;
+class UWorld;
+struct ID3D11Device;
 struct FReferenceSkeleton;
 struct FPhysicsAssetBodySetup;
 struct FPhysicsAssetConstraintSetup;
@@ -34,6 +38,19 @@ public:
     void RenderEmbeddedToolbar(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime);
     void RenderEmbeddedTreeAndGraph(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime);
     void RenderEmbeddedDetails(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh, float DeltaTime);
+    void RenderPreviewDebug(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMesh* PreviewMesh,
+        UWorld* PreviewWorld,
+        USkeletalMeshComponent* PreviewComponent);
+    void RenderPhysicsPreview(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMesh* PreviewMesh,
+        UWorld* PreviewWorld,
+        USkeletalMeshComponent* PreviewComponent,
+        UPhysicsAssetPreviewComponent* SolidPreviewComponent,
+        ID3D11Device* Device);
+    void RenderViewportDebugOptions();
     bool SaveEditedPhysicsAsset();
     bool HasUnsavedChanges() const { return IsDirty(); }
 
@@ -63,6 +80,20 @@ private:
     void RenderConstraintDetails(UPhysicsAsset* PhysicsAsset, FPhysicsAssetConstraintSetup& ConstraintSetup);
     void RenderValidationPanel();
     void RenderConstraintGraphPanel(UPhysicsAsset* PhysicsAsset);
+    void RenderBodyDebug(UPhysicsAsset* PhysicsAsset, USkeletalMeshComponent* PreviewComponent, UWorld* PreviewWorld);
+    void RenderConstraintDebug(UPhysicsAsset* PhysicsAsset, USkeletalMeshComponent* PreviewComponent, UWorld* PreviewWorld);
+    void DrawBodySetupDebug(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMeshComponent* PreviewComponent,
+        UWorld* PreviewWorld,
+        int32 BodyIndex,
+        const FPhysicsAssetBodySetup& BodySetup);
+    void DrawConstraintSetupDebug(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMeshComponent* PreviewComponent,
+        UWorld* PreviewWorld,
+        int32 ConstraintIndex,
+        const FPhysicsAssetConstraintSetup& ConstraintSetup);
 
     void SelectBoneInPhysicsTree(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton, int32 BoneIndex);
     void SelectBodySetup(UPhysicsAsset* PhysicsAsset, int32 BodyIndex, int32 TreeBoneIndex);
@@ -90,6 +121,8 @@ private:
     ax::NodeEditor::EditorContext* ConstraintGraphContext = nullptr;
     bool bPendingClose = false;
     bool bConstraintGraphLayoutDirty = true;
+    bool bShowPreviewBodies = true;
+    bool bShowPreviewConstraints = true;
     uint64 ConstraintGraphTopologyHash = 0;
 
     TArray<FPhysicsAssetValidationIssue> ValidationIssues;
