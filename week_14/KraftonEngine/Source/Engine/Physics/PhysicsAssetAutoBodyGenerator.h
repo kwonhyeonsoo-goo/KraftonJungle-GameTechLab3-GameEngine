@@ -19,14 +19,17 @@ struct FPhysicsAssetAutoBodyGeneratorOptions
     EPhysicsAssetAutoBodyMethod Method = EPhysicsAssetAutoBodyMethod::PCAAnalysis;
     bool bCreateConstraints = true;
     bool bReplaceExisting = true;
-    float MinInfluenceWeight = 0.35f;
-    int32 MinWeightedVertices = 4;
+    bool bSkipHelperBones = true;
+    bool bAllowBoneAxisFallback = false;
+    float MinInfluenceWeight = 0.15f;
+    int32 MinWeightedVertices = 16;
 };
 
 struct FPhysicsAssetAutoBodyGeneratorResult
 {
     int32 GeneratedBodyCount = 0;
     int32 GeneratedConstraintCount = 0;
+    int32 SkippedBoneCount = 0;
     int32 FirstGeneratedBodyIndex = -1;
     FName FirstGeneratedBoneName = FName::None;
     bool bAssetChanged = false;

@@ -891,7 +891,7 @@ void FPhysicsAssetEditorWidget::RenderRegenerateBodiesControls(UPhysicsAsset* Ph
         }
         if (ImGui::IsItemHovered())
         {
-            ImGui::SetTooltip("Fit each capsule to dominant skinned vertices with principal component analysis. Falls back to bone axis when too few vertices are available.");
+            ImGui::SetTooltip("Fit each capsule to weighted skinned vertices with principal component analysis. Bone-axis fallback is optional.");
         }
 
         if (ImGui::Checkbox("Use Bone Axis", &bRegenerateUseBoneAxis))
@@ -923,6 +923,18 @@ void FPhysicsAssetEditorWidget::RenderRegenerateBodiesControls(UPhysicsAsset* Ph
             ImGui::SetTooltip("Clear existing bodies and constraints before regeneration. Disable this to fill only missing bodies.");
         }
 
+        ImGui::Checkbox("Skip Helper Bones", &bRegenerateSkipHelperBones);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Skip root, IK, socket, twist, control, dummy, and similar helper bones when regenerating bodies.");
+        }
+
+        ImGui::Checkbox("Allow Bone-Axis Fallback", &bRegenerateAllowBoneAxisFallback);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("When a bone has too few weighted vertices or PCA fails, generate a rough body from the bone axis instead of skipping it.");
+        }
+
         ImGui::SetNextItemWidth(120.0f);
         if (ImGui::InputFloat("Min Weight", &RegenerateMinInfluenceWeight, 0.0f, 0.0f, "%.2f"))
         {
@@ -930,7 +942,7 @@ void FPhysicsAssetEditorWidget::RenderRegenerateBodiesControls(UPhysicsAsset* Ph
         }
         if (ImGui::IsItemHovered())
         {
-            ImGui::SetTooltip("Minimum dominant skin weight required for a vertex to be used by the selected bone.");
+            ImGui::SetTooltip("Minimum skin weight required for a vertex to be used by the selected bone. The vertex no longer needs to be dominated by that bone.");
         }
 
         ImGui::SetNextItemWidth(120.0f);
@@ -2146,6 +2158,8 @@ bool FPhysicsAssetEditorWidget::RegenerateBodies(UPhysicsAsset* PhysicsAsset, US
         : EPhysicsAssetAutoBodyMethod::BoneAxis;
     Options.bCreateConstraints = bRegenerateCreateConstraints;
     Options.bReplaceExisting = bRegenerateReplaceExisting;
+    Options.bSkipHelperBones = bRegenerateSkipHelperBones;
+    Options.bAllowBoneAxisFallback = bRegenerateAllowBoneAxisFallback;
     Options.MinInfluenceWeight = RegenerateMinInfluenceWeight;
     Options.MinWeightedVertices = (std::max)(RegenerateMinWeightedVertices, 1);
 
