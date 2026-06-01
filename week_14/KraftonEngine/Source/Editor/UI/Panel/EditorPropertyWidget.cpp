@@ -1746,6 +1746,7 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 		return bChanged;
 	}
 
+    if (AssetType != "StaticMesh" && AssetType != "UStaticMesh")
     {
         FString SelectedAssetPath;
         if (TryRenderRegisteredAssetPicker(AssetType, CurrentPath, "##RegisteredAsset", SelectedAssetPath))
@@ -1771,7 +1772,10 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
         {
             return true;
         }
-        if (!AssetType.empty() && AssetType != "LuaAnimScript")
+        if (!AssetType.empty()
+            && AssetType != "LuaAnimScript"
+            && AssetType != "StaticMesh"
+            && AssetType != "UStaticMesh")
         {
             return false;
         }
@@ -1840,6 +1844,7 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 		if (bSelectedNone)
 			ImGui::SetItemDefaultFocus();
 
+		FMeshManager::ScanMeshAssets();
 		const TArray<FAssetListItem>& MeshFiles = FMeshManager::GetAvailableStaticMeshFiles();
 		for (const FAssetListItem& Item : MeshFiles)
 		{
@@ -1866,7 +1871,7 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 			if (IsFbxFilePath(MeshPath))
 			{
 				PendingStaticMeshImportPath = MeshPath;
-				PendingStaticMeshImportTarget = Val;
+				PendingStaticMeshImportTarget = Val; // Legacy raw FString target; soft object paths are applied through SetPath below.
 				PendingStaticFbxSkinnedMeshPolicy =
 					FImportOptions::Default().StaticFbxSkinnedMeshPolicy == EStaticFbxSkinnedMeshPolicy::ImportBindPoseAsStatic ? 1 : 0;
 				ImGui::OpenPopup("Static FBX Import Options");
@@ -1899,9 +1904,9 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 
 			ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
 			UStaticMesh* Loaded = FMeshManager::LoadStaticMesh(PendingStaticMeshImportPath, Options, Device);
-			if (Loaded && PendingStaticMeshImportTarget)
+			if (Loaded)
 			{
-				*PendingStaticMeshImportTarget = FMeshManager::GetStaticMeshBinaryFilePath(PendingStaticMeshImportPath);
+				SetPath(FMeshManager::GetStaticMeshBinaryFilePath(PendingStaticMeshImportPath));
 				bChanged = true;
 			}
 
