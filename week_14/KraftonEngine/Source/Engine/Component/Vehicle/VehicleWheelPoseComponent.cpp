@@ -8,6 +8,8 @@
 #include "GameFramework/AActor.h"
 #include "Physics/Vehicle/VehicleTypes.h"
 
+#include <cfloat>
+#include <cmath>
 
 namespace
 {
@@ -41,14 +43,144 @@ namespace
         return true;
     }
 
+    FVector SafeNormalized(const FVector& Axis, const FVector& Fallback)
+    {
+        const float Length = Axis.Length();
+        if (Length <= 1.e-6f)
+        {
+            return Fallback;
+        }
+
+        return Axis / Length;
+    }
+
+    FVector MakeStableAxisSign(FVector Axis)
+    {
+        const float AbsX = std::fabs(Axis.X);
+        const float AbsY = std::fabs(Axis.Y);
+        const float AbsZ = std::fabs(Axis.Z);
+
+        if (AbsX >= AbsY && AbsX >= AbsZ)
+        {
+            if (Axis.X < 0.0f)
+            {
+                Axis *= -1.0f;
+            }
+        }
+        else if (AbsY >= AbsX && AbsY >= AbsZ)
+        {
+            if (Axis.Y < 0.0f)
+            {
+                Axis *= -1.0f;
+            }
+        }
+        else if (Axis.Z < 0.0f)
+        {
+            Axis *= -1.0f;
+        }
+
+        return Axis;
+    }
+
+    FVector TransformChassisAxisToComponent(
+        USkeletalMeshComponent* Mesh,
+        const FVehicleSnapshot& VehicleSnapshot,
+        const FVector& ChassisAxis,
+        const FVector& FallbackComponentAxis
+        )
+    {
+        if (!Mesh)
+        {
+            return FallbackComponentAxis;
+        }
+
+        const FMatrix MeshWorldInverse = Mesh->GetWorldMatrix().GetInverse();
+        const FMatrix ChassisWorldMatrix = VehicleSnapshot.ChassisWorldTransform.ToMatrix();
+        const FVector WorldAxis = ChassisWorldMatrix.TransformVector(ChassisAxis);
+        return SafeNormalized(MeshWorldInverse.TransformVector(WorldAxis), FallbackComponentAxis);
+    }
+
+    FVector InferWheelSpinAxisInChassisSpace(
+        const FVehicleSnapshot& VehicleSnapshot,
+        int32 WheelIndex
+        )
+    {
+        if (WheelIndex < 0 || WheelIndex >= static_cast<int32>(VehicleSnapshot.Wheels.size()))
+        {
+            return FVector::YAxisVector;
+        }
+
+        const FVehicleWheelSnapshot& Wheel = VehicleSnapshot.Wheels[WheelIndex];
+
+        int32 PairIndex = -1;
+        if (VehicleSnapshot.Wheels.size() == 2)
+        {
+            PairIndex = WheelIndex == 0 ? 1 : 0;
+        }
+        else if (VehicleSnapshot.Wheels.size() >= 4)
+        {
+            if (WheelIndex == 0)
+            {
+                PairIndex = 1;
+            }
+            else if (WheelIndex == 1)
+            {
+                PairIndex = 0;
+            }
+            else if (WheelIndex == 2)
+            {
+                PairIndex = 3;
+            }
+            else if (WheelIndex == 3)
+            {
+                PairIndex = 2;
+            }
+        }
+
+        if (PairIndex < 0 || PairIndex >= static_cast<int32>(VehicleSnapshot.Wheels.size()))
+        {
+            float BestDistanceSq = FLT_MAX;
+            for (int32 OtherIndex = 0; OtherIndex < static_cast<int32>(VehicleSnapshot.Wheels.size()); ++OtherIndex)
+            {
+                if (OtherIndex == WheelIndex)
+                {
+                    continue;
+                }
+
+                const FVector Delta = VehicleSnapshot.Wheels[OtherIndex].RestLocalPosition - Wheel.RestLocalPosition;
+                const float DistanceSq = Delta.Dot(Delta);
+                if (DistanceSq > 1.e-6f && DistanceSq < BestDistanceSq)
+                {
+                    BestDistanceSq = DistanceSq;
+                    PairIndex = OtherIndex;
+                }
+            }
+        }
+
+        if (PairIndex < 0 || PairIndex >= static_cast<int32>(VehicleSnapshot.Wheels.size()))
+        {
+            return FVector::YAxisVector;
+        }
+
+        FVector Axis = VehicleSnapshot.Wheels[PairIndex].RestLocalPosition - Wheel.RestLocalPosition;
+        Axis = MakeStableAxisSign(Axis);
+        return SafeNormalized(Axis, FVector::YAxisVector);
+    }
+
     FTransform MakeWheelVisualComponentTransform(
         const FTransform& BaseComponentTransform,
-        const FVector& ComponentLocation,
+        const FVector& ComponentLocationDelta,
+        const FVector& SpinAxisComponent,
+        const FVector& SteerAxisComponent,
         const FVehicleWheelSnapshot& WheelSnapshot
         )
     {
-        const FQuat SteerRotation = FQuat::FromAxisAngle(FVector(0.0f, 0.0f, 1.0f), WheelSnapshot.SteerAngle);
-        const FQuat SpinRotation  = FQuat::FromAxisAngle(FVector(0.0f, 1.0f, 0.0f), WheelSnapshot.RotationAngle);
+        const FQuat InverseBaseRotation = BaseComponentTransform.Rotation.Inverse();
+        const FVector SteerAxisLocal = SafeNormalized(InverseBaseRotation.RotateVector(SteerAxisComponent), FVector::ZAxisVector);
+        const FVector SpinAxisLocal  = SafeNormalized(InverseBaseRotation.RotateVector(SpinAxisComponent), FVector::YAxisVector);
+
+        const FQuat SteerRotation = FQuat::FromAxisAngle(SteerAxisLocal, WheelSnapshot.SteerAngle);
+        const FQuat SpinRotation  = FQuat::FromAxisAngle(SpinAxisLocal, WheelSnapshot.RotationAngle);
 
         FQuat DeltaRotation = SteerRotation * SpinRotation;
         DeltaRotation.Normalize();
@@ -56,12 +188,13 @@ namespace
         FQuat TargetRotation = BaseComponentTransform.Rotation * DeltaRotation;
         TargetRotation.Normalize();
 
-        return FTransform(ComponentLocation, TargetRotation, BaseComponentTransform.Scale);
+        return FTransform(BaseComponentTransform.Location + ComponentLocationDelta, TargetRotation, BaseComponentTransform.Scale);
     }
 
     bool ApplyWheelBonePoseFromSnapshot(
         USkeletalMeshComponent* Mesh,
         const FVehicleWheelSetup& Setup,
+        const FVehicleSnapshot& VehicleSnapshot,
         const FVehicleWheelSnapshot& WheelSnapshot
         )
     {
@@ -89,11 +222,34 @@ namespace
             return false;
         }
 
-        const FMatrix ComponentWorldInverse = Mesh->GetWorldMatrix().GetInverse();
-        const FVector ComponentLocation = ComponentWorldInverse.TransformPositionWithW(WheelSnapshot.WorldTransform.Location);
+        const FMatrix MeshWorldInverse = Mesh->GetWorldMatrix().GetInverse();
+        const FMatrix ChassisWorldMatrix = VehicleSnapshot.ChassisWorldTransform.ToMatrix();
+        const FVector RestWheelWorldPosition = ChassisWorldMatrix.TransformPositionWithW(WheelSnapshot.RestLocalPosition);
+        const FVector WheelWorldDelta = WheelSnapshot.WorldTransform.Location - RestWheelWorldPosition;
+        const FVector ComponentLocationDelta = MeshWorldInverse.TransformVector(WheelWorldDelta);
+
+        int32 WheelIndex = -1;
+        for (int32 CandidateIndex = 0; CandidateIndex < static_cast<int32>(VehicleSnapshot.Wheels.size()); ++CandidateIndex)
+        {
+            if (VehicleSnapshot.Wheels[CandidateIndex].WheelName == WheelSnapshot.WheelName)
+            {
+                WheelIndex = CandidateIndex;
+                break;
+            }
+        }
+
+        const FVector SpinAxisChassis = InferWheelSpinAxisInChassisSpace(VehicleSnapshot, WheelIndex);
+        const FVector SpinAxisComponent = TransformChassisAxisToComponent(Mesh, VehicleSnapshot, SpinAxisChassis, FVector::YAxisVector);
+        const FVector SteerAxisComponent = TransformChassisAxisToComponent(Mesh, VehicleSnapshot, FVector::ZAxisVector, FVector::ZAxisVector);
 
         const FTransform BaseComponentTransform(BaseGlobals[BoneIndex]);
-        const FTransform TargetComponentTransform = MakeWheelVisualComponentTransform(BaseComponentTransform, ComponentLocation, WheelSnapshot);
+        const FTransform TargetComponentTransform = MakeWheelVisualComponentTransform(
+            BaseComponentTransform,
+            ComponentLocationDelta,
+            SpinAxisComponent,
+            SteerAxisComponent,
+            WheelSnapshot
+        );
 
         const int32 ParentIndex = Asset->Bones[BoneIndex].ParentIndex;
         const FMatrix TargetComponentMatrix = TargetComponentTransform.ToMatrix();
@@ -159,7 +315,7 @@ void UVehicleWheelPoseComponent::TickComponent(float DeltaTime, ELevelTick TickT
 
         if (Setup->BoneName.IsValid() && IsValid(Mesh.Get()))
         {
-            if (ApplyWheelBonePoseFromSnapshot(Mesh.Get(), *Setup, WheelSnapshot))
+            if (ApplyWheelBonePoseFromSnapshot(Mesh.Get(), *Setup, *Snapshot, WheelSnapshot))
             {
                 continue;
             }

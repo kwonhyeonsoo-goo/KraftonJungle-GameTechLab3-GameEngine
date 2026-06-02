@@ -141,6 +141,54 @@ namespace
             !Candidate.LocalPosition.IsNearlyZero(0.01f);
     }
 
+    bool TryComputeBoneInfluenceSurfaceCenter(const FSkeletalMesh* Asset, int32 BoneIndex, FVector& OutMeshLocalCenter)
+    {
+        if (!Asset || BoneIndex < 0 || Asset->Vertices.empty())
+        {
+            return false;
+        }
+
+        constexpr float MinimumInfluenceWeight = 0.25f;
+
+        bool bHasAnyVertex = false;
+        FVector LocalMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+        FVector LocalMax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
+
+        for (const FVertexPNCTBW& Vertex : Asset->Vertices)
+        {
+            float BoneInfluence = 0.0f;
+            for (int32 InfluenceIndex = 0; InfluenceIndex < 4; ++InfluenceIndex)
+            {
+                if (Vertex.BoneIndices[InfluenceIndex] == BoneIndex)
+                {
+                    BoneInfluence = std::max(BoneInfluence, Vertex.BoneWeights[InfluenceIndex]);
+                }
+            }
+
+            if (BoneInfluence < MinimumInfluenceWeight)
+            {
+                continue;
+            }
+
+            const FVector& Position = Vertex.Position;
+            LocalMin.X = std::min(LocalMin.X, Position.X);
+            LocalMin.Y = std::min(LocalMin.Y, Position.Y);
+            LocalMin.Z = std::min(LocalMin.Z, Position.Z);
+            LocalMax.X = std::max(LocalMax.X, Position.X);
+            LocalMax.Y = std::max(LocalMax.Y, Position.Y);
+            LocalMax.Z = std::max(LocalMax.Z, Position.Z);
+            bHasAnyVertex = true;
+        }
+
+        if (!bHasAnyVertex)
+        {
+            return false;
+        }
+
+        OutMeshLocalCenter = (LocalMin + LocalMax) * 0.5f;
+        return true;
+    }
+
     bool HasCompactToken(const FString& LowerName, const char* Token)
     {
         if (LowerName == Token)
@@ -772,8 +820,7 @@ void UWheeledVehicleMovementComponent::ResetVehicle()
         return;
     }
 
-    const FTransform ChassisWorld(Chassis->GetWorldLocation(), Chassis->GetWorldRotation(), FVector(1.0f, 1.0f, 1.0f));
-    PhysicsScene->ResetVehicle(VehicleHandle, ChassisWorld);
+    PhysicsScene->ResetVehicle(VehicleHandle, BuildVehicleDesc().WorldTransform);
 }
 
 const FVehicleWheelSetup* UWheeledVehicleMovementComponent::FindWheelSetup(const FName& WheelName) const
@@ -859,15 +906,25 @@ bool UWheeledVehicleMovementComponent::TryResolveBoneLocalPosition(const FName& 
         return false;
     }
 
-    const FVector BoneWorldPosition = Mesh->GetBoneLocationByIndex(BoneIndex);
+    FVector SourceWorldPosition = FVector::ZeroVector;
+    FSkeletalMesh* MeshAsset = Mesh->GetSkeletalMesh()->GetSkeletalMeshAsset();
+    FVector SurfaceMeshLocalCenter;
+    if (TryComputeBoneInfluenceSurfaceCenter(MeshAsset, BoneIndex, SurfaceMeshLocalCenter))
+    {
+        SourceWorldPosition = Mesh->GetWorldMatrix().TransformPositionWithW(SurfaceMeshLocalCenter);
+    }
+    else
+    {
+        SourceWorldPosition = Mesh->GetBoneLocationByIndex(BoneIndex);
+    }
 
     if (const USceneComponent* Chassis = GetUpdatedComponent())
     {
-        OutLocalPosition = Chassis->GetWorldMatrix().GetInverse().TransformPositionWithW(BoneWorldPosition);
+        OutLocalPosition = Chassis->GetWorldMatrix().GetInverse().TransformPositionWithW(SourceWorldPosition);
         return true;
     }
 
-    OutLocalPosition = Mesh->GetWorldMatrix().GetInverse().TransformPositionWithW(BoneWorldPosition);
+    OutLocalPosition = Mesh->GetWorldMatrix().GetInverse().TransformPositionWithW(SourceWorldPosition);
     return true;
 }
 
@@ -1082,7 +1139,92 @@ bool UWheeledVehicleMovementComponent::ValidateWheelSetups(TArray<FString>& OutM
         OutMessages.push_back("Wheel positions do not form clean symmetric left/right axle pairs. Check Bone Name assignments or use Manual Local Position overrides.");
     }
 
+    if (!ResolvedWheelPositions.empty())
+    {
+        const FVector CollisionOffset = ResolveChassisCollisionOffset(ResolvedWheelPositions);
+        float LowestTireBottom = std::numeric_limits<float>::max();
+        for (int32 WheelIndex = 0; WheelIndex < static_cast<int32>(ResolvedWheelPositions.size()); ++WheelIndex)
+        {
+            float Radius = 0.35f;
+            if (WheelIndex >= 0 && WheelIndex < static_cast<int32>(WheelSetups.size()))
+            {
+                Radius = std::max(WheelSetups[WheelIndex].WheelData.Radius, 0.01f);
+            }
+            LowestTireBottom = std::min(LowestTireBottom, ResolvedWheelPositions[WheelIndex].Z - Radius);
+        }
+
+        const float ChassisBottom = CollisionOffset.Z - std::max(ChassisHalfExtents.Z, 0.01f);
+        if (ChassisBottom < LowestTireBottom - 0.01f)
+        {
+            OutMessages.push_back("Chassis collision box is below the tire bottom. Enable Auto Fit Collision Offset From Wheels or raise Chassis Collision Offset Z, otherwise the chassis can hit the ground before the wheels settle.");
+        }
+    }
+
     return OutMessages.empty();
+}
+
+FVector UWheeledVehicleMovementComponent::ComputeAutoChassisCollisionOffset(const TArray<FVector>& ResolvedWheelPositions) const
+{
+    if (ResolvedWheelPositions.empty())
+    {
+        return ChassisCollisionOffset;
+    }
+
+    FVector LocalMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+    FVector LocalMax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
+
+    float LowestTireBottom = std::numeric_limits<float>::max();
+    for (int32 WheelIndex = 0; WheelIndex < static_cast<int32>(ResolvedWheelPositions.size()); ++WheelIndex)
+    {
+        const FVector& Position = ResolvedWheelPositions[WheelIndex];
+        LocalMin.X = std::min(LocalMin.X, Position.X);
+        LocalMin.Y = std::min(LocalMin.Y, Position.Y);
+        LocalMin.Z = std::min(LocalMin.Z, Position.Z);
+        LocalMax.X = std::max(LocalMax.X, Position.X);
+        LocalMax.Y = std::max(LocalMax.Y, Position.Y);
+        LocalMax.Z = std::max(LocalMax.Z, Position.Z);
+
+        float Radius = 0.35f;
+        if (WheelIndex >= 0 && WheelIndex < static_cast<int32>(WheelSetups.size()))
+        {
+            Radius = std::max(WheelSetups[WheelIndex].WheelData.Radius, 0.01f);
+        }
+        LowestTireBottom = std::min(LowestTireBottom, Position.Z - Radius);
+    }
+
+    FVector Offset = ChassisCollisionOffset;
+    Offset.X = (LocalMin.X + LocalMax.X) * 0.5f;
+    Offset.Y = (LocalMin.Y + LocalMax.Y) * 0.5f;
+    Offset.Z = LowestTireBottom + std::max(ChassisGroundClearance, 0.0f) + std::max(ChassisHalfExtents.Z, 0.01f);
+    return Offset;
+}
+
+FVector UWheeledVehicleMovementComponent::ResolveChassisCollisionOffset(const TArray<FVector>& ResolvedWheelPositions) const
+{
+    if (bAutoFitChassisCollisionOffset)
+    {
+        return ComputeAutoChassisCollisionOffset(ResolvedWheelPositions);
+    }
+
+    return ChassisCollisionOffset;
+}
+
+FQuat UWheeledVehicleMovementComponent::ResolveVisualToSimulationRotation(const TArray<FVector>& ResolvedWheelPositions) const
+{
+    if (!bAutoAlignSimulationForwardFromWheelLayout || ResolvedWheelPositions.size() < 4)
+    {
+        return FQuat::Identity;
+    }
+
+    const float FrontX = (ResolvedWheelPositions[0].X + ResolvedWheelPositions[1].X) * 0.5f;
+    const float RearX = (ResolvedWheelPositions[2].X + ResolvedWheelPositions[3].X) * 0.5f;
+
+    if (FrontX < RearX)
+    {
+        return FQuat::FromAxisAngle(FVector::ZAxisVector, 3.14159265358979323846f);
+    }
+
+    return FQuat::Identity;
 }
 
 FVehicleDesc UWheeledVehicleMovementComponent::BuildVehicleDesc() const
@@ -1097,14 +1239,14 @@ FVehicleDesc UWheeledVehicleMovementComponent::BuildVehicleDesc() const
     Desc.Owner.ComponentGeneration = 1;
     Desc.Owner.Domain              = EPhysicsBodyDomain::Vehicle;
 
+    FTransform VisualWorldTransform;
     if (Chassis)
     {
-        Desc.WorldTransform = FTransform(Chassis->GetWorldLocation(), Chassis->GetWorldRotation(), FVector(1.0f, 1.0f, 1.0f));
+        VisualWorldTransform = FTransform(Chassis->GetWorldLocation(), Chassis->GetWorldRotation(), FVector(1.0f, 1.0f, 1.0f));
     }
 
     Desc.ChassisHalfExtents = ChassisHalfExtents;
     Desc.ChassisMass        = std::max(ChassisMass, 1.0f);
-    Desc.ChassisCMOffset    = ChassisCenterOfMassOffset;
 
     Desc.EnginePeakTorque = EnginePeakTorque;
     Desc.EngineMaxOmega   = EngineMaxOmega;
@@ -1124,13 +1266,22 @@ FVehicleDesc UWheeledVehicleMovementComponent::BuildVehicleDesc() const
         ResolvedPositions.push_back(ResolveWheelLocalPosition(Setup));
     }
 
+    Desc.VisualToSimulationRotation = ResolveVisualToSimulationRotation(ResolvedPositions);
+    FQuat SimulationWorldRotation = VisualWorldTransform.Rotation * Desc.VisualToSimulationRotation.Inverse();
+    SimulationWorldRotation.Normalize();
+    Desc.WorldTransform = FTransform(VisualWorldTransform.Location, SimulationWorldRotation, FVector(1.0f, 1.0f, 1.0f));
+
+    const FVector VisualChassisShapeOffset = ResolveChassisCollisionOffset(ResolvedPositions);
+    Desc.ChassisShapeLocalOffset = Desc.VisualToSimulationRotation.RotateVector(VisualChassisShapeOffset);
+    Desc.ChassisCMOffset = Desc.VisualToSimulationRotation.RotateVector(VisualChassisShapeOffset + ChassisCenterOfMassOffset);
+
     float TireFrictionSum = 0.0f;
     int32 TireFrictionCount = 0;
 
     for (int32 WheelIndex = 0; WheelIndex < static_cast<int32>(WheelSetups.size()); ++WheelIndex)
     {
         const FVehicleWheelSetup& Setup = WheelSetups[WheelIndex];
-        const FVector& LocalPosition = ResolvedPositions[WheelIndex];
+        const FVector LocalPosition = Desc.VisualToSimulationRotation.RotateVector(ResolvedPositions[WheelIndex]);
 
         FVehicleWheelDesc Wheel;
         ApplyWheelDescFromSetup(Setup, LocalPosition, Wheel);

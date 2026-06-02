@@ -224,6 +224,9 @@ namespace
             return nullptr;
         }
 
+        physx::PxTransform ChassisShapeLocalPose(ToPxVec3(Desc.ChassisShapeLocalOffset), physx::PxQuat(physx::PxIdentity));
+        ChassisShape->setLocalPose(ChassisShapeLocalPose);
+
         physx::PxFilterData FilterData;
         FilterData.word0 = static_cast<uint32>(ECollisionChannel::Pawn) | PhysicsFilter_QueryAndPhysics;
         FilterData.word1 = 0xFFFFFFFFu;
@@ -380,7 +383,11 @@ void FPhysXVehicleRuntime::BuildSnapshots(TArray<FVehicleSnapshot>& OutVehicles)
         Snapshot.OwnerComponentGeneration = Instance->OwnerComponentGeneration;
 
         const physx::PxTransform ChassisPose = Instance->ChassisActor->getGlobalPose();
-        Snapshot.ChassisWorldTransform = ToFTransform(ChassisPose);
+        const FTransform SimulationChassisWorldTransform = ToFTransform(ChassisPose);
+
+        FQuat VisualChassisWorldRotation = SimulationChassisWorldTransform.Rotation * Instance->Desc.VisualToSimulationRotation;
+        VisualChassisWorldRotation.Normalize();
+        Snapshot.ChassisWorldTransform = FTransform(SimulationChassisWorldTransform.Location, VisualChassisWorldRotation, FVector::OneVector);
         Snapshot.LinearVelocity = ToFVector(Instance->ChassisActor->getLinearVelocity());
         Snapshot.AngularVelocity = ToFVector(Instance->ChassisActor->getAngularVelocity());
 
@@ -410,18 +417,30 @@ void FPhysXVehicleRuntime::BuildSnapshots(TArray<FVehicleSnapshot>& OutVehicles)
                 ContactNormal = ToFVector(WheelQuery.tireContactNormal);
                 LocalWheelPose = WheelQuery.localPose;
             }
+            physx::PxVec3 LocalWheelPosition = LocalWheelCenter;
+            if (WheelIndex < Instance->WheelQueryResults.size())
+            {
+                LocalWheelPosition = LocalWheelPose.p;
+            }
             else
             {
-                const physx::PxVec3 LocalWheelPosition = LocalWheelCenter + LocalSuspensionDirection * SuspensionJounce;
-                const physx::PxQuat SteerRotation(SteerAngle, physx::PxVec3(0.0f, 0.0f, 1.0f));
-                const physx::PxQuat SpinRotation(RotationAngle, physx::PxVec3(0.0f, 1.0f, 0.0f));
-                LocalWheelPose = physx::PxTransform(LocalWheelPosition, SteerRotation * SpinRotation);
+                LocalWheelPosition = LocalWheelCenter + LocalSuspensionDirection * SuspensionJounce;
             }
 
-            const physx::PxTransform WorldWheelPose = ChassisPose.transform(LocalWheelPose);
+            const physx::PxQuat SteerRotation(SteerAngle, physx::PxVec3(0.0f, 0.0f, 1.0f));
+            const physx::PxQuat SpinRotation(RotationAngle, physx::PxVec3(0.0f, 1.0f, 0.0f));
+            LocalWheelPose = physx::PxTransform(LocalWheelPosition, SteerRotation * SpinRotation);
+
+            const FVector VisualRestLocalPosition = Instance->Desc.VisualToSimulationRotation.Inverse().RotateVector(WheelDesc.LocalPosition);
+            const FVector VisualCurrentLocalPosition = Instance->Desc.VisualToSimulationRotation.Inverse().RotateVector(ToFVector(LocalWheelPosition));
+            const FVector VisualWheelWorldPosition = Snapshot.ChassisWorldTransform.Location + Snapshot.ChassisWorldTransform.Rotation.RotateVector(VisualCurrentLocalPosition);
+
+            const FQuat VisualWheelWorldRotation = Snapshot.ChassisWorldTransform.Rotation;
 
             Snapshot.Wheels[WheelIndex].WheelName = WheelDesc.WheelName;
-            Snapshot.Wheels[WheelIndex].WorldTransform = ToFTransform(WorldWheelPose);
+            Snapshot.Wheels[WheelIndex].WorldTransform = FTransform(VisualWheelWorldPosition, VisualWheelWorldRotation, FVector::OneVector);
+            Snapshot.Wheels[WheelIndex].RestLocalPosition = VisualRestLocalPosition;
+            Snapshot.Wheels[WheelIndex].CurrentLocalPosition = VisualCurrentLocalPosition;
             Snapshot.Wheels[WheelIndex].SteerAngle = SteerAngle;
             Snapshot.Wheels[WheelIndex].RotationAngle = RotationAngle;
             Snapshot.Wheels[WheelIndex].SuspensionJounce = SuspensionJounce;

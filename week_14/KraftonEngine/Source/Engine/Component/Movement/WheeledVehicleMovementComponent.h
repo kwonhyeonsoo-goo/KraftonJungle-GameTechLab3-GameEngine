@@ -138,6 +138,9 @@ public:
     bool ValidateWheelSetups(TArray<FString>& OutMessages) const;
 
 protected:
+    FVector ComputeAutoChassisCollisionOffset(const TArray<FVector>& ResolvedWheelPositions) const;
+    FVector ResolveChassisCollisionOffset(const TArray<FVector>& ResolvedWheelPositions) const;
+    FQuat ResolveVisualToSimulationRotation(const TArray<FVector>& ResolvedWheelPositions) const;
     FVehicleDesc BuildVehicleDesc() const;
     void EnsureDefaultWheelSetups();
     void RegisterPhysicsSnapshotReceiver();
@@ -154,8 +157,17 @@ protected:
     FVector ChassisHalfExtents = FVector(1.25f, 0.6f, 0.35f);
     UPROPERTY(Edit, Save, Category="Vehicle|Chassis", DisplayName="Chassis Mass", Speed=1.0f)
     float ChassisMass = 1200.0f;
+    UPROPERTY(Edit, Save, Category="Vehicle|Chassis", DisplayName="Auto Fit Collision Offset From Wheels")
+    bool bAutoFitChassisCollisionOffset = true;
+    UPROPERTY(Edit, Save, Category="Vehicle|Chassis", DisplayName="Chassis Collision Offset", Type=Vec3, Speed=0.01f)
+    FVector ChassisCollisionOffset = FVector::ZeroVector;
+    UPROPERTY(Edit, Save, Category="Vehicle|Chassis", DisplayName="Chassis Ground Clearance", Speed=0.01f)
+    float ChassisGroundClearance = 0.08f;
     UPROPERTY(Edit, Save, Category="Vehicle|Chassis", DisplayName="Center Of Mass Offset", Type=Vec3, Speed=0.01f)
     FVector ChassisCenterOfMassOffset = FVector(0.0f, 0.0f, -0.25f);
+
+    UPROPERTY(Edit, Save, Category="Vehicle|Chassis", DisplayName="Auto Align Simulation Forward From Wheel Layout")
+    bool bAutoAlignSimulationForwardFromWheelLayout = true;
 
     UPROPERTY(Edit, Save, Category="Vehicle|Engine", DisplayName="Engine Peak Torque", Speed=1.0f)
     float EnginePeakTorque = 500.0f;

@@ -76,9 +76,14 @@ struct FVehicleDesc
     FVehicleHandle ReservedVehicle;
     FTransform     WorldTransform;
 
-    FVector ChassisHalfExtents = FVector(1.25f, 0.6f, 0.35f);
-    float   ChassisMass        = 1200.0f;
-    FVector ChassisCMOffset    = FVector(0.0f, 0.0f, -0.25f);
+    FQuat VisualToSimulationRotation = FQuat::Identity;
+
+    FVector ChassisHalfExtents      = FVector(1.25f, 0.6f, 0.35f);
+    float   ChassisMass             = 1200.0f;
+
+    FVector ChassisShapeLocalOffset = FVector::ZeroVector;
+
+    FVector ChassisCMOffset         = FVector(0.0f, 0.0f, -0.25f);
 
     TArray<FVehicleWheelDesc> Wheels;
 
@@ -100,6 +105,9 @@ struct FVehicleWheelSnapshot
 {
     FName      WheelName = FName::None;
     FTransform WorldTransform;
+
+    FVector RestLocalPosition    = FVector::ZeroVector;
+    FVector CurrentLocalPosition = FVector::ZeroVector;
 
     float SteerAngle       = 0.0f;
     float RotationAngle    = 0.0f;
