@@ -180,18 +180,38 @@ namespace
         return -1;
     }
 
-    bool GetBoneAxisSegment(const FSkeletalMesh* MeshAsset, int32 MeshBoneIndex, FVector& OutStart, FVector& OutEnd)
+    const FMatrix& GetGenerationBoneGlobalPose(
+        const FSkeletalMesh* MeshAsset,
+        const TArray<FMatrix>* OverrideBoneGlobalMatrices,
+        int32 MeshBoneIndex)
+    {
+        if (OverrideBoneGlobalMatrices &&
+            MeshBoneIndex >= 0 &&
+            MeshBoneIndex < static_cast<int32>(OverrideBoneGlobalMatrices->size()))
+        {
+            return (*OverrideBoneGlobalMatrices)[MeshBoneIndex];
+        }
+
+        return MeshAsset->Bones[MeshBoneIndex].GetReferenceGlobalPose();
+    }
+
+    bool GetBoneAxisSegment(
+        const FSkeletalMesh* MeshAsset,
+        const TArray<FMatrix>* OverrideBoneGlobalMatrices,
+        int32 MeshBoneIndex,
+        FVector& OutStart,
+        FVector& OutEnd)
     {
         if (!MeshAsset || MeshBoneIndex < 0 || MeshBoneIndex >= static_cast<int32>(MeshAsset->Bones.size()))
         {
             return false;
         }
 
-        OutStart = GetMatrixTranslation(MeshAsset->Bones[MeshBoneIndex].GetReferenceGlobalPose());
+        OutStart = GetMatrixTranslation(GetGenerationBoneGlobalPose(MeshAsset, OverrideBoneGlobalMatrices, MeshBoneIndex));
         const int32 ChildIndex = FindFirstChildMeshBoneIndex(MeshAsset, MeshBoneIndex);
         if (ChildIndex >= 0)
         {
-            OutEnd = GetMatrixTranslation(MeshAsset->Bones[ChildIndex].GetReferenceGlobalPose());
+            OutEnd = GetMatrixTranslation(GetGenerationBoneGlobalPose(MeshAsset, OverrideBoneGlobalMatrices, ChildIndex));
             if (!FVector(OutEnd - OutStart).IsNearlyZero(1.0e-6f))
             {
                 return true;
@@ -201,7 +221,7 @@ namespace
         const int32 ParentIndex = MeshAsset->Bones[MeshBoneIndex].ParentIndex;
         if (ParentIndex >= 0 && ParentIndex < static_cast<int32>(MeshAsset->Bones.size()))
         {
-            const FVector ParentLocation = GetMatrixTranslation(MeshAsset->Bones[ParentIndex].GetReferenceGlobalPose());
+            const FVector ParentLocation = GetMatrixTranslation(GetGenerationBoneGlobalPose(MeshAsset, OverrideBoneGlobalMatrices, ParentIndex));
             FVector Direction = OutStart - ParentLocation;
             if (!Direction.IsNearlyZero(1.0e-6f))
             {
@@ -217,8 +237,49 @@ namespace
         return true;
     }
 
+    FVector TransformVertexToGenerationPose(
+        const FSkeletalMesh* MeshAsset,
+        const TArray<FMatrix>* OverrideBoneGlobalMatrices,
+        const FVertexPNCTBW& Vertex)
+    {
+        if (!MeshAsset)
+        {
+            return Vertex.Position;
+        }
+
+        FVector PosedPosition = FVector::ZeroVector;
+        float AccumulatedWeight = 0.0f;
+
+        // Use the same bind-to-pose skinning convention as the renderer.
+        // This keeps auto body fitting in the visible pose space instead of raw FBX
+        // mesh/bind space, which can be 90 degrees off for some imported assets.
+        for (int32 InfluenceIndex = 0; InfluenceIndex < 4; ++InfluenceIndex)
+        {
+            const int32 BoneIndex = Vertex.BoneIndices[InfluenceIndex];
+            const float Weight = Vertex.BoneWeights[InfluenceIndex];
+            if (Weight <= 0.0f || BoneIndex < 0 || BoneIndex >= static_cast<int32>(MeshAsset->Bones.size()))
+            {
+                continue;
+            }
+
+            const FMatrix PoseSkinMatrix =
+                MeshAsset->Bones[BoneIndex].GetInverseBindPose() *
+                GetGenerationBoneGlobalPose(MeshAsset, OverrideBoneGlobalMatrices, BoneIndex);
+            PosedPosition += PoseSkinMatrix.TransformPositionWithW(Vertex.Position) * Weight;
+            AccumulatedWeight += Weight;
+        }
+
+        if (AccumulatedWeight <= 1.0e-6f)
+        {
+            return Vertex.Position;
+        }
+
+        return PosedPosition;
+    }
+
     void CollectInfluencedBoneVertices(
         const FSkeletalMesh* MeshAsset,
+        const TArray<FMatrix>* OverrideBoneGlobalMatrices,
         int32 MeshBoneIndex,
         float MinInfluenceWeight,
         TArray<FVector>& OutPoints)
@@ -238,7 +299,7 @@ namespace
                 const float CandidateWeight = Vertex.BoneWeights[InfluenceIndex];
                 if (CandidateBoneIndex == MeshBoneIndex && CandidateWeight >= ClampedMinWeight)
                 {
-                    OutPoints.push_back(Vertex.Position);
+                    OutPoints.push_back(TransformVertexToGenerationPose(MeshAsset, OverrideBoneGlobalMatrices, Vertex));
                     break;
                 }
             }
@@ -447,13 +508,14 @@ namespace
 
     bool BuildBoneAxisAutoBodyFit(
         const FSkeletalMesh* MeshAsset,
+        const TArray<FMatrix>* OverrideBoneGlobalMatrices,
         int32 MeshBoneIndex,
         const TArray<FVector>& Points,
         FAutoBodyFitResult& OutFit)
     {
         FVector SegmentStart;
         FVector SegmentEnd;
-        if (!GetBoneAxisSegment(MeshAsset, MeshBoneIndex, SegmentStart, SegmentEnd))
+        if (!GetBoneAxisSegment(MeshAsset, OverrideBoneGlobalMatrices, MeshBoneIndex, SegmentStart, SegmentEnd))
         {
             return false;
         }
@@ -480,6 +542,7 @@ namespace
 
     bool BuildAutoBodyFit(
         const FSkeletalMesh* MeshAsset,
+        const TArray<FMatrix>* OverrideBoneGlobalMatrices,
         int32 MeshBoneIndex,
         const TArray<FVector>& Points,
         EPhysicsAssetAutoBodyMethod Method,
@@ -488,7 +551,7 @@ namespace
     {
         FVector SegmentStart;
         FVector SegmentEnd;
-        GetBoneAxisSegment(MeshAsset, MeshBoneIndex, SegmentStart, SegmentEnd);
+        GetBoneAxisSegment(MeshAsset, OverrideBoneGlobalMatrices, MeshBoneIndex, SegmentStart, SegmentEnd);
         const FVector BoneAxis = SegmentEnd - SegmentStart;
         if (Method == EPhysicsAssetAutoBodyMethod::PCAAnalysis)
         {
@@ -503,11 +566,12 @@ namespace
             }
         }
 
-        return BuildBoneAxisAutoBodyFit(MeshAsset, MeshBoneIndex, Points, OutFit);
+        return BuildBoneAxisAutoBodyFit(MeshAsset, OverrideBoneGlobalMatrices, MeshBoneIndex, Points, OutFit);
     }
 
     bool ComputeBodyComponentTransformFromSetup(
         const FSkeletalMesh* MeshAsset,
+        const TArray<FMatrix>* OverrideBoneGlobalMatrices,
         const FPhysicsAssetBodySetup& BodySetup,
         FTransform& OutBodyComponentTransform)
     {
@@ -522,7 +586,7 @@ namespace
             return false;
         }
 
-        const FTransform BoneComponentTransform = MakeTransformNoScale(MeshAsset->Bones[MeshBoneIndex].GetReferenceGlobalPose());
+        const FTransform BoneComponentTransform = MakeTransformNoScale(GetGenerationBoneGlobalPose(MeshAsset, OverrideBoneGlobalMatrices, MeshBoneIndex));
         OutBodyComponentTransform = ComposeComponentTransforms(BoneComponentTransform, BodySetup.BodyLocalFrame);
         return true;
     }
@@ -532,7 +596,8 @@ bool FPhysicsAssetAutoBodyGenerator::Regenerate(
     UPhysicsAsset* PhysicsAsset,
     USkeletalMesh* SkeletalMesh,
     const FPhysicsAssetAutoBodyGeneratorOptions& Options,
-    FPhysicsAssetAutoBodyGeneratorResult* OutResult)
+    FPhysicsAssetAutoBodyGeneratorResult* OutResult,
+    const TArray<FMatrix>* OverrideBoneGlobalMatrices)
 {
     FPhysicsAssetAutoBodyGeneratorResult Result;
 
@@ -594,7 +659,7 @@ bool FPhysicsAssetAutoBodyGenerator::Regenerate(
         }
 
         TArray<FVector> Points;
-        CollectInfluencedBoneVertices(MeshAsset, MeshBoneIndex, Options.MinInfluenceWeight, Points);
+        CollectInfluencedBoneVertices(MeshAsset, OverrideBoneGlobalMatrices, MeshBoneIndex, Options.MinInfluenceWeight, Points);
 
         const int32 MinWeightedVertices = (std::max)(Options.MinWeightedVertices, 1);
         if (static_cast<int32>(Points.size()) < MinWeightedVertices && !Options.bAllowBoneAxisFallback)
@@ -606,6 +671,7 @@ bool FPhysicsAssetAutoBodyGenerator::Regenerate(
         FAutoBodyFitResult Fit;
         if (!BuildAutoBodyFit(
                 MeshAsset,
+                OverrideBoneGlobalMatrices,
                 MeshBoneIndex,
                 Points,
                 Options.Method,
@@ -616,7 +682,7 @@ bool FPhysicsAssetAutoBodyGenerator::Regenerate(
             continue;
         }
 
-        const FTransform BoneComponentTransform = MakeTransformNoScale(MeshAsset->Bones[MeshBoneIndex].GetReferenceGlobalPose());
+        const FTransform BoneComponentTransform = MakeTransformNoScale(GetGenerationBoneGlobalPose(MeshAsset, OverrideBoneGlobalMatrices, MeshBoneIndex));
 
         FPhysicsAssetBodySetup Body;
         Body.BoneName = BoneName;
@@ -672,11 +738,11 @@ bool FPhysicsAssetAutoBodyGenerator::Regenerate(
                         FTransform ParentBodyComponentTransform;
                         FTransform ChildBodyComponentTransform;
                         if (ChildMeshBoneIndex >= 0 &&
-                            ComputeBodyComponentTransformFromSetup(MeshAsset, PhysicsAsset->GetBodySetups()[ParentBodyIndex], ParentBodyComponentTransform) &&
-                            ComputeBodyComponentTransformFromSetup(MeshAsset, PhysicsAsset->GetBodySetups()[ChildBodyIndex], ChildBodyComponentTransform))
+                            ComputeBodyComponentTransformFromSetup(MeshAsset, OverrideBoneGlobalMatrices, PhysicsAsset->GetBodySetups()[ParentBodyIndex], ParentBodyComponentTransform) &&
+                            ComputeBodyComponentTransformFromSetup(MeshAsset, OverrideBoneGlobalMatrices, PhysicsAsset->GetBodySetups()[ChildBodyIndex], ChildBodyComponentTransform))
                         {
                             FTransform JointComponentTransform;
-                            JointComponentTransform.Location = MeshAsset->Bones[ChildMeshBoneIndex].GetReferenceGlobalPose().GetLocation();
+                            JointComponentTransform.Location = GetGenerationBoneGlobalPose(MeshAsset, OverrideBoneGlobalMatrices, ChildMeshBoneIndex).GetLocation();
                             JointComponentTransform.Rotation = ChildBodyComponentTransform.Rotation;
                             JointComponentTransform.Scale = FVector::OneVector;
                             Constraint.ParentLocalFrame = MakeLocalTransformFromComponent(ParentBodyComponentTransform, JointComponentTransform);

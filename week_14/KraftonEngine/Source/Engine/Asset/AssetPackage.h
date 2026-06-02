@@ -29,6 +29,7 @@ enum class EAssetPackageSerializationVersion : uint32
 	SkeletalMeshPhysicsAssetPayload = 4,
     MaterialGraphSourcePayload = 5,
     PhysicsAssetStringConstraintNames = 6,
+    SkeletalMeshClothPayload = 7,
 };
 
 enum class EAssetPackageFormatBranch : uint8
@@ -42,7 +43,7 @@ struct FAssetPackageHeader
 {
     static constexpr uint32 MagicValue     = 0x54455341; // ASET
     static constexpr uint32 LegacyVersion  = static_cast<uint32>(EAssetPackageSerializationVersion::LegacyBinaryLayout);
-    static constexpr uint32 CurrentVersion = static_cast<uint32>(EAssetPackageSerializationVersion::PhysicsAssetStringConstraintNames);
+    static constexpr uint32 CurrentVersion = static_cast<uint32>(EAssetPackageSerializationVersion::SkeletalMeshClothPayload);
 
 	uint32 Magic = MagicValue;
 	uint32 Version = CurrentVersion;

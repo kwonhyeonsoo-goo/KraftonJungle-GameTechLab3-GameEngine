@@ -10,6 +10,7 @@
 #include "Animation/Skeleton/Skeleton.h"
 #include "Animation/Skeleton/SkeletonManager.h"
 #include "Asset/AssetRegistry.h"
+#include "Cloth/SkeletalClothRuntime.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
 #include "Math/Quat.h"
@@ -23,6 +24,7 @@
 #include "Physics/PhysicsAssetManager.h"
 #include "Physics/PhysicsAssetInstance.h"
 #include "Render/Proxy/SkeletalMeshSceneProxy.h"
+#include "Render/Types/ViewTypes.h"
 #include "Serialization/Archive.h"
 
 #include <algorithm>
@@ -77,6 +79,8 @@ namespace
         Result.Scale = FVector::Lerp(AnimationPose.Scale, PhysicsPose.Scale, ClampedAlpha);
         return Result;
     }
+
+    constexpr float PoseSyncDecomposeTolerance = 1.0e-6f;
 
     // Physics pose reconstruction needs an affine inverse that preserves authored bone
     // scale/orientation well enough for local-pose rebuilding from simulated world space.
@@ -178,6 +182,55 @@ namespace
             return "Unknown";
         }
     }
+
+    FTransform DecomposePoseMatrixPreservingScale(const FMatrix& Matrix, const FVector& PreservedScale)
+    {
+        FTransform Result;
+        Result.Location = Matrix.GetLocation();
+        Result.Scale = PreservedScale;
+
+        FMatrix RotationMatrix = Matrix;
+        RotationMatrix.M[3][0] = 0.0f;
+        RotationMatrix.M[3][1] = 0.0f;
+        RotationMatrix.M[3][2] = 0.0f;
+        RotationMatrix.M[3][3] = 1.0f;
+
+        const FVector ExtractedScale = RotationMatrix.GetScale();
+        if (std::fabs(ExtractedScale.X) > PoseSyncDecomposeTolerance)
+        {
+            RotationMatrix.M[0][0] /= ExtractedScale.X;
+            RotationMatrix.M[0][1] /= ExtractedScale.X;
+            RotationMatrix.M[0][2] /= ExtractedScale.X;
+        }
+        if (std::fabs(ExtractedScale.Y) > PoseSyncDecomposeTolerance)
+        {
+            RotationMatrix.M[1][0] /= ExtractedScale.Y;
+            RotationMatrix.M[1][1] /= ExtractedScale.Y;
+            RotationMatrix.M[1][2] /= ExtractedScale.Y;
+        }
+        if (std::fabs(ExtractedScale.Z) > PoseSyncDecomposeTolerance)
+        {
+            RotationMatrix.M[2][0] /= ExtractedScale.Z;
+            RotationMatrix.M[2][1] /= ExtractedScale.Z;
+            RotationMatrix.M[2][2] /= ExtractedScale.Z;
+        }
+
+        Result.Rotation = RotationMatrix.ToQuat().GetNormalized();
+        return Result;
+    }
+
+    FVector GetReferenceLocalScale(const FSkeletalMesh* MeshAsset, int32 BoneIndex)
+    {
+        if (!MeshAsset || BoneIndex < 0 || BoneIndex >= static_cast<int32>(MeshAsset->Bones.size()))
+        {
+            return FVector::OneVector;
+        }
+
+        // Physics bodies author position/rotation only. Scale must come from the
+        // skeletal pose data, otherwise decomposing simulated world matrices can bake
+        // arbitrary scale into BoneEditLocalMatrices and make some meshes shrink.
+        return FTransform(MeshAsset->Bones[BoneIndex].GetReferenceLocalPose()).Scale;
+    }
 }
 
 USkeletalMeshComponent::~USkeletalMeshComponent()
@@ -191,8 +244,28 @@ FPrimitiveSceneProxy* USkeletalMeshComponent::CreateSceneProxy()
     return new FSkeletalMeshSceneProxy(this);
 }
 
+void USkeletalMeshComponent::TickClothSimulationForEditorPreview(float DeltaTime)
+{
+    if (SkinningModeRuntime::Get() != ESkinningMode::CPU)
+    {
+        if (ClothRuntime)
+        {
+            ClothRuntime->Reset();
+        }
+        return;
+    }
+
+    UpdateCPUSkinning();
+    TickClothSimulation(DeltaTime);
+}
+
 void USkeletalMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 {
+    if (ClothRuntime)
+    {
+        ClothRuntime->Reset();
+    }
+
     Super::SetSkeletalMesh(InMesh);
     if (InMesh)
     {
@@ -597,14 +670,30 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
         const FMatrix LocalMatrix = (ParentIndex >= 0)
             ? ComponentSpaceGlobalMatrices[BoneIndex] * GetAffineInverseForPoseSync(ComponentSpaceGlobalMatrices[ParentIndex])
             : ComponentSpaceGlobalMatrices[BoneIndex];
-        const FTransform PhysicsLocalPose(LocalMatrix);
-        LocalPose[BoneIndex] =
-            BlendTransforms(AnimationLocalPose[BoneIndex], PhysicsLocalPose, PhysicsPoseBlendWeight);
+        const FTransform PhysicsLocalPose = DecomposePoseMatrixPreservingScale(
+            LocalMatrix,
+            GetReferenceLocalScale(MeshAsset, BoneIndex));
+        LocalPose[BoneIndex] = BlendTransforms(
+            AnimationLocalPose[BoneIndex],
+            PhysicsLocalPose,
+            PhysicsPoseBlendWeight);
     }
 
-    // Bones without bodies stay close to animation because PullPhysicsPose seeds from the
-    // current animation result before physics-driven bones overwrite their world transforms.
-    SetBoneLocalTransforms(LocalPose);
+    // PullPhysicsPose starts from the current animation result, so bones without bodies
+    // naturally stay close to animation. The final blended pose is written through the
+    // bone-edit path to preserve authored local scale during physics/local-pose sync.
+    EnsureBoneEditPose();
+    const int32 BoneCount = std::min(
+        static_cast<int32>(MeshAsset->Bones.size()),
+        static_cast<int32>(LocalPose.size()));
+    for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
+    {
+        BoneEditLocalMatrices[BoneIndex] = LocalPose[BoneIndex].ToMatrix();
+    }
+
+    bUseBoneEditPose = true;
+    RefreshSkinningAfterPoseChanged();
+    MarkWorldBoundsDirty();
     return true;
 }
 
@@ -1183,16 +1272,58 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,
         // Physics is applied after animation evaluation so entry/recovery blending has a
         // stable animation pose to blend against each frame.
         UMeshComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
+        TickClothSimulation(DeltaTime);
         return;
     }
 
     if (bEvaluatedAnimation)
     {
         UMeshComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
+        TickClothSimulation(DeltaTime);
         return;
     }
 
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    TickClothSimulation(DeltaTime);
+}
+
+void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
+{
+    USkeletalMesh* Mesh = GetSkeletalMesh();
+    FSkeletalMesh* Asset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+    if (!Asset || Asset->ClothPayload.LODs.empty())
+    {
+        if (ClothRuntime)
+        {
+            ClothRuntime->Reset();
+        }
+        return;
+    }
+
+    if (SkinningModeRuntime::Get() != ESkinningMode::CPU)
+    {
+        if (ClothRuntime)
+        {
+            ClothRuntime->Reset();
+        }
+        return;
+    }
+
+    if (!ClothRuntime)
+    {
+        ClothRuntime = std::make_unique<FSkeletalClothRuntime>();
+    }
+
+    TArray<FVertexPNCTT>& MutableSkinnedVertices = GetMutableSkinnedVerticesForCloth();
+    if (MutableSkinnedVertices.empty())
+    {
+        return;
+    }
+
+    if (ClothRuntime->Tick(*Asset, DeltaTime, MutableSkinnedVertices))
+    {
+        MarkSkinnedVerticesModifiedByCloth();
+    }
 }
 
 // ──────────────────────────────────────────────

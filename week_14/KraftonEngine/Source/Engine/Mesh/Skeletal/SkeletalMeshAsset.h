@@ -165,6 +165,114 @@ struct FMorphTarget
 	}
 };
 
+struct FSkeletalClothSectionBinding
+{
+	uint32 LODIndex = 0;
+	int32 SectionIndex = -1;
+	FString MaterialSlotName;
+	uint32 FirstIndex = 0;
+	uint32 IndexCount = 0;
+	uint32 SourceVertexCount = 0;
+	uint32 SourceIndexCount = 0;
+
+	friend FArchive& operator<<(FArchive& Ar, FSkeletalClothSectionBinding& Binding)
+	{
+		Ar << Binding.LODIndex;
+		Ar << Binding.SectionIndex;
+		Ar << Binding.MaterialSlotName;
+		Ar << Binding.FirstIndex;
+		Ar << Binding.IndexCount;
+		Ar << Binding.SourceVertexCount;
+		Ar << Binding.SourceIndexCount;
+		return Ar;
+	}
+};
+
+struct FSkeletalClothPaintData
+{
+	TArray<float> MaxDistanceValues;
+	float ViewMin = 0.0f;
+	float ViewMax = 100.0f;
+
+	friend FArchive& operator<<(FArchive& Ar, FSkeletalClothPaintData& Paint)
+	{
+		Ar << Paint.MaxDistanceValues;
+		Ar << Paint.ViewMin;
+		Ar << Paint.ViewMax;
+		return Ar;
+	}
+};
+
+struct FSkeletalClothConfig
+{
+	float GravityScale = 1.0f;
+	float SolverFrequency = 120.0f;
+	float Stiffness = 1.0f;
+	float Damping = 0.04f;
+
+	friend FArchive& operator<<(FArchive& Ar, FSkeletalClothConfig& Config)
+	{
+		Ar << Config.GravityScale;
+		Ar << Config.SolverFrequency;
+		Ar << Config.Stiffness;
+		Ar << Config.Damping;
+		return Ar;
+	}
+};
+
+struct FSkeletalClothData
+{
+	FString Name;
+	bool bEnabled = true;
+	FSkeletalClothSectionBinding Binding;
+	TArray<uint32> RenderVertexIndices;
+	TArray<uint32> ParticleToRenderVertex;
+	TArray<uint32> ClothLocalIndices;
+	FSkeletalClothPaintData Paint;
+	FSkeletalClothConfig Config;
+	TArray<uint8> CookedFabricData;
+
+	friend FArchive& operator<<(FArchive& Ar, FSkeletalClothData& Cloth)
+	{
+		Ar << Cloth.Name;
+		Ar << Cloth.bEnabled;
+		Ar << Cloth.Binding;
+		Ar << Cloth.RenderVertexIndices;
+		Ar << Cloth.ParticleToRenderVertex;
+		Ar << Cloth.ClothLocalIndices;
+		Ar << Cloth.Paint;
+		Ar << Cloth.Config;
+		Ar << Cloth.CookedFabricData;
+		return Ar;
+	}
+};
+
+struct FSkeletalClothLODData
+{
+	uint32 LODIndex = 0;
+	TArray<FSkeletalClothData> Cloths;
+
+	friend FArchive& operator<<(FArchive& Ar, FSkeletalClothLODData& LODData)
+	{
+		Ar << LODData.LODIndex;
+		Ar << LODData.Cloths;
+		return Ar;
+	}
+};
+
+struct FSkeletalMeshClothPayload
+{
+	uint32 Version = 1;
+	TArray<FSkeletalClothLODData> LODs;
+
+	friend FArchive& operator<<(FArchive& Ar, FSkeletalMeshClothPayload& Payload)
+	{
+		Ar << Payload.Version;
+		Ar << Payload.LODs;
+		return Ar;
+	}
+};
+
 struct FSkeletalMesh
 {
 	FString PathFileName;
@@ -180,12 +288,25 @@ struct FSkeletalMesh
 
 	TArray<FBone>        Bones;
 	TArray<FMorphTarget> MorphTargets;
+	FSkeletalMeshClothPayload ClothPayload;
 
 	std::unique_ptr<FMeshBuffer> RenderBuffer;
 
 	FVector BoundsCenter = FVector(0, 0, 0);
 	FVector BoundsExtent = FVector(0, 0, 0);
 	bool    bBoundsValid = false;
+
+	FSkeletalClothLODData* FindClothLOD(uint32 LODIndex);
+	const FSkeletalClothLODData* FindClothLOD(uint32 LODIndex) const;
+	FSkeletalClothLODData& FindOrAddClothLOD(uint32 LODIndex);
+	FSkeletalClothData* FindClothData(uint32 LODIndex, const FString& Name);
+	const FSkeletalClothData* FindClothData(uint32 LODIndex, const FString& Name) const;
+	FSkeletalClothData* AddOrReplaceClothData(FSkeletalClothData&& ClothData);
+	bool RemoveClothDataForSection(uint32 LODIndex, int32 SectionIndex);
+
+	bool BuildClothDataFromSection(uint32 LODIndex, int32 SectionIndex, const FString& Name, FSkeletalClothData& OutCloth, FString* OutError = nullptr) const;
+	bool ValidateClothData(const FSkeletalClothData& ClothData, FString* OutError = nullptr) const;
+	int32 FindSectionForClothBinding(const FSkeletalClothSectionBinding& Binding) const;
 
 	int32 FindMorphTargetIndex(const FString& TargetName) const
 	{

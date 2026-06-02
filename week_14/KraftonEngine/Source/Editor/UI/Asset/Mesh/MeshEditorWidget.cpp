@@ -10,8 +10,11 @@
 #include "Runtime/Engine.h"
 #include "Component/Debug/PhysicsAssetPreviewComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Component/PrimitiveComponent.h"
 #include "Component/Light/DirectionalLightComponent.h"
+#include "Collision/Ray/RayUtils.h"
 #include "Viewport/Viewport.h"
+#include "GameFramework/World.h"
 #include "GameFramework/Light/DirectionalLightActor.h"
 #include "GameFramework/Actor/StaticMeshActor.h"
 #include "Settings/EditorSettings.h"
@@ -31,6 +34,7 @@
 #include "Editor/Subsystem/AssetFactory.h"
 #include "Physics/PhysicsAsset.h"
 #include "Physics/PhysicsAssetManager.h"
+#include "Physics/IPhysicsScene.h"
 #include "UI/Asset/Animation/AnimationTransportBar.h"
 #include "UI/Asset/Animation/AnimationTimelinePanel.h"
 #include "UI/Asset/Animation/AnimSequencePropertyPanel.h"
@@ -38,6 +42,8 @@
 #include "UI/Util/EditorFileUtils.h"
 #include "Editor/UI/Util/EditorTextureManager.h"
 #include "Editor/EditorEngine.h"
+#include "Render/Types/MinimalViewInfo.h"
+#include "Render/Types/ViewTypes.h"
 
 #include "Platform/Paths.h"
 #include "Object/Object.h"
@@ -47,6 +53,7 @@
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
+#include <utility>
 
 // Paths.h가 끌어오는 Windows.h는 GetCurrentTime을 GetTickCount로 치환한다.
 #ifdef GetCurrentTime
@@ -56,6 +63,78 @@
 namespace
 {
 	constexpr float MeshEditorTreeIndentSpacing = 10.0f;
+
+	bool ProjectWorldToViewport(
+		const FVector& WorldPosition,
+		const FMinimalViewInfo& POV,
+		const ImVec2& ViewportPos,
+		const ImVec2& ViewportSize,
+		ImVec2& OutScreenPosition)
+	{
+		if (ViewportSize.x <= 1.0f || ViewportSize.y <= 1.0f)
+		{
+			return false;
+		}
+
+		FMatrix ViewProj = POV.CalculateViewProjectionMatrix();
+		const float ClipX = WorldPosition.X * ViewProj.M[0][0] + WorldPosition.Y * ViewProj.M[1][0] + WorldPosition.Z * ViewProj.M[2][0] + ViewProj.M[3][0];
+		const float ClipY = WorldPosition.X * ViewProj.M[0][1] + WorldPosition.Y * ViewProj.M[1][1] + WorldPosition.Z * ViewProj.M[2][1] + ViewProj.M[3][1];
+		const float ClipW = WorldPosition.X * ViewProj.M[0][3] + WorldPosition.Y * ViewProj.M[1][3] + WorldPosition.Z * ViewProj.M[2][3] + ViewProj.M[3][3];
+		if (std::abs(ClipW) <= 1.0e-4f)
+		{
+			return false;
+		}
+
+		const float NdcX = ClipX / ClipW;
+		const float NdcY = ClipY / ClipW;
+		if (NdcX < -1.05f || NdcX > 1.05f || NdcY < -1.05f || NdcY > 1.05f)
+		{
+			return false;
+		}
+
+		OutScreenPosition.x = ViewportPos.x + (NdcX * 0.5f + 0.5f) * ViewportSize.x;
+		OutScreenPosition.y = ViewportPos.y + (0.5f - NdcY * 0.5f) * ViewportSize.y;
+		return true;
+	}
+
+	float ProjectWorldRadiusToPixels(
+		const FVector& WorldPosition,
+		float WorldRadius,
+		const FMinimalViewInfo& POV,
+		const ImVec2& ViewportPos,
+		const ImVec2& ViewportSize)
+	{
+		if (WorldRadius <= 0.0f)
+		{
+			return 0.0f;
+		}
+
+		ImVec2 Center;
+		if (!ProjectWorldToViewport(WorldPosition, POV, ViewportPos, ViewportSize, Center))
+		{
+			return 0.0f;
+		}
+
+		const FVector Axes[3] =
+		{
+			FVector(WorldRadius, 0.0f, 0.0f),
+			FVector(0.0f, WorldRadius, 0.0f),
+			FVector(0.0f, 0.0f, WorldRadius),
+		};
+
+		float PixelRadius = 0.0f;
+		for (const FVector& Axis : Axes)
+		{
+			ImVec2 Projected;
+			if (ProjectWorldToViewport(WorldPosition + Axis, POV, ViewportPos, ViewportSize, Projected))
+			{
+				const float DX = Projected.x - Center.x;
+				const float DY = Projected.y - Center.y;
+				PixelRadius = std::max(PixelRadius, std::sqrt(DX * DX + DY * DY));
+			}
+		}
+		return PixelRadius;
+	}
 
 	ID3D11ShaderResourceView* LoadTabIcon(const wchar_t* FileName)
 	{
@@ -131,6 +210,35 @@ namespace
 			Mesh->SetSkeleton(Skeleton);
 		}
 		return Skeleton;
+	}
+
+	void RegisterPreviewFloorPhysics(UWorld* PreviewWorld, AStaticMeshActor* FloorActor)
+	{
+		if (!PreviewWorld || !FloorActor)
+		{
+			return;
+		}
+
+		UPrimitiveComponent* FloorComponent = Cast<UPrimitiveComponent>(FloorActor->GetRootComponent());
+		if (!FloorComponent)
+		{
+			return;
+		}
+
+		// EditorPreview worlds do not run the normal BeginPlay registration path. The
+		// visual floor must therefore be registered explicitly as a static physics body
+		// so Physics Asset simulation has something to collide against.
+		FloorComponent->SetSimulatePhysics(false);
+		FloorComponent->SetKinematic(false);
+		FloorComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		FloorComponent->SetCollisionObjectType(ECollisionChannel::WorldStatic);
+		FloorComponent->SetCollisionResponseToAllChannels(ECollisionResponse::Block);
+		FloorComponent->SetGenerateOverlapEvents(false);
+
+		if (IPhysicsScene* PhysicsScene = PreviewWorld->GetPhysicsScene())
+		{
+			PhysicsScene->RegisterComponent(FloorComponent);
+		}
 	}
 
 	USkeletalMesh* FindPreviewMeshForPhysicsAsset(UPhysicsAsset* PhysicsAsset, ID3D11Device* Device)
@@ -416,6 +524,7 @@ void FMeshEditorWidget::Open(UObject* Object)
 	FloorActor->InitDefaultComponents("Content/Data/BasicShape/Cube.OBJ");
 	FloorActor->SetActorLocation(FVector(0.0f, 0.0f, -0.05f));
 	FloorActor->SetActorScale(FVector(10.0f, 10.0f, 0.02f));
+	RegisterPreviewFloorPhysics(WorldContext.World, FloorActor);
 
 	ImVec2 ViewportSize = ImGui::GetContentRegionAvail();
 
@@ -442,6 +551,14 @@ void FMeshEditorWidget::Open(UObject* Object)
 	AnimTabState      = FAnimationTabState {};
 	SelectedBoneIndex = -1;
 	SelectedSocketIndex = -1;
+	SelectedClothLODIndex = 0;
+	SelectedClothIndex = -1;
+	SelectedClothSectionIndex = 0;
+	ClothBrushValue = 50.0f;
+	ClothBrushRadius = 25.0f;
+	ClothBrushSmoothStrength = 0.5f;
+	bClothPaintBrushEnabled = false;
+	bMeshDirty = false;
 	bSkeletonDirty = false;
 	BufferedSocketIndex = -2;
 	SocketNameBuffer[0] = '\0';
@@ -462,6 +579,10 @@ void FMeshEditorWidget::Open(UObject* Object)
 
 void FMeshEditorWidget::Close()
 {
+	PhysicsAssetEditor.StopEditorSimulation(
+		ViewportClient.GetPreviewWorld(),
+		ViewportClient.GetPreviewMeshComponent(),
+		true);
 	PhysicsAssetEditor.Close();
 	FAssetEditorWidget::Close();
 
@@ -506,6 +627,25 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 				PickedPhysicsShapeIndex);
 		}
 
+		if (ActiveTab == EMeshEditorTab::Physics)
+		{
+			PhysicsAssetEditor.TickEditorSimulation(
+				GetCurrentPhysicsAsset(),
+				Cast<USkeletalMesh>(EditedObject),
+				ViewportClient.GetPreviewWorld(),
+				ViewportClient.GetPreviewMeshComponent(),
+				DeltaTime);
+		}
+
+		if (ActiveTab == EMeshEditorTab::Mesh)
+		{
+			TickClothPaintBrush();
+			if (USkeletalMeshComponent* Comp = ViewportClient.GetPreviewMeshComponent())
+			{
+				Comp->TickClothSimulationForEditorPreview(DeltaTime);
+			}
+		}
+
 	}
 
 	if (ActiveTab == EMeshEditorTab::Animation)
@@ -531,6 +671,7 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 		ApplyMorphPreviewOverrides(Out.MorphWeights);
 
 		Comp->SetAnimationPose(Out.Pose, Out.MorphWeights);
+		Comp->TickClothSimulationForEditorPreview(DeltaTime);
 	}
 }
 
@@ -708,9 +849,10 @@ void FMeshEditorWidget::RenderTabBar()
 	                        IM_COL32(38, 38, 38, 255));
 
 	const bool bCanSaveSkeleton = bSkeletonDirty;
+	const bool bCanSaveMesh = bMeshDirty;
 	const bool bCanSaveAnimation = IsCurrentAnimationDirty();
 	const bool bCanSavePhysics = IsCurrentPhysicsAssetDirty();
-	const bool bCanSave = bCanSaveSkeleton || bCanSaveAnimation || bCanSavePhysics;
+	const bool bCanSave = bCanSaveSkeleton || bCanSaveMesh || bCanSaveAnimation || bCanSavePhysics;
 	const bool bShowDirtySave = bCanSave;
 	if (!bCanSave)
 	{
@@ -745,6 +887,10 @@ void FMeshEditorWidget::RenderTabBar()
 			ActiveTab = Tab;
 			if (PreviousTab == EMeshEditorTab::Physics && ActiveTab != EMeshEditorTab::Physics)
 			{
+				PhysicsAssetEditor.StopEditorSimulation(
+					ViewportClient.GetPreviewWorld(),
+					ViewportClient.GetPreviewMeshComponent(),
+					true);
 				ViewportClient.ClearPhysicsAssetGizmoTarget();
 			}
 			if (PreviousTab != ActiveTab && ActiveTab == EMeshEditorTab::Skeleton)
@@ -823,6 +969,8 @@ void FMeshEditorWidget::RenderViewportPanel(ImVec2 Size)
 
 	constexpr float ToolbarHeight = 28.0f;
 	ImDrawList*     DrawList      = ImGui::GetWindowDrawList();
+	RenderTemporaryClothPaintValueOverlay(DrawList, ViewportPos, Size);
+	RenderClothBrushRadiusOverlay(DrawList, ViewportPos, Size);
 	DrawList->AddRectFilled(ViewportPos, ImVec2(ViewportPos.x + Size.x, ViewportPos.y + ToolbarHeight), IM_COL32(40, 40, 40, 255));
 
 	FViewportToolbarContext Context;
@@ -944,7 +1092,12 @@ void FMeshEditorWidget::SaveCurrentAnimationAsset()
 bool FMeshEditorWidget::SaveCurrentMeshAsset()
 {
 	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
-	return SkeletalMesh && FMeshManager::SaveSkeletalMeshPreservingMetadata(SkeletalMesh);
+	if (SkeletalMesh && FMeshManager::SaveSkeletalMeshPreservingMetadata(SkeletalMesh))
+	{
+		bMeshDirty = false;
+		return true;
+	}
+	return false;
 }
 
 bool FMeshEditorWidget::SaveCurrentPhysicsAsset()
@@ -974,6 +1127,11 @@ void FMeshEditorWidget::SaveAllDirtyAssets()
 		SaveCurrentSkeleton();
 	}
 
+	if (bMeshDirty)
+	{
+		SaveCurrentMeshAsset();
+	}
+
 	if (IsCurrentAnimationDirty())
 	{
 		SaveCurrentAnimationAsset();
@@ -982,6 +1140,18 @@ void FMeshEditorWidget::SaveAllDirtyAssets()
 	if (IsCurrentPhysicsAssetDirty())
 	{
 		SaveCurrentPhysicsAsset();
+	}
+}
+
+void FMeshEditorWidget::MarkCurrentMeshDirty()
+{
+	bMeshDirty = true;
+	if (USkeletalMeshComponent* PreviewMeshComponent = ViewportClient.GetPreviewMeshComponent())
+	{
+		if (USkeletalMesh* Mesh = Cast<USkeletalMesh>(EditedObject))
+		{
+			PreviewMeshComponent->SetSkeletalMesh(Mesh);
+		}
 	}
 }
 
@@ -1248,6 +1418,11 @@ bool FMeshEditorWidget::AssignPhysicsAssetToCurrentMesh(UPhysicsAsset* PhysicsAs
 		return false;
 	}
 
+	PhysicsAssetEditor.StopEditorSimulation(
+		ViewportClient.GetPreviewWorld(),
+		ViewportClient.GetPreviewMeshComponent(),
+		true);
+
 	SkeletalMesh->SetPhysicsAsset(PhysicsAsset);
 	if (SkeletalMesh->GetPhysicsAsset() != PhysicsAsset)
 	{
@@ -1379,6 +1554,10 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
 	UPhysicsAsset* PhysicsAsset = GetCurrentPhysicsAsset();
 
+	PhysicsAssetEditor.SetEditorPreviewContext(
+		ViewportClient.GetPreviewWorld(),
+		ViewportClient.GetPreviewMeshComponent());
+
 	if (PhysicsAsset)
 	{
 		PhysicsAssetEditor.RenderEmbeddedToolbar(PhysicsAsset, SkeletalMesh, 0.0f);
@@ -1505,13 +1684,16 @@ void FMeshEditorWidget::RenderMeshLayout()
 	ImGui::Separator();
 	if (SkeletalMesh)
 	{
-		const FSkeletalMesh* Asset = SkeletalMesh->GetSkeletalMeshAsset();
+			FSkeletalMesh* Asset = SkeletalMesh->GetSkeletalMeshAsset();
 		if (Asset)
 		{
 			ImGui::Text("Vertices:  %s", FormatMeshStatCount(Asset->Vertices.size()).c_str());
 			ImGui::Text("Triangles: %s", FormatMeshStatCount(Asset->Indices.size() / 3).c_str());
 			ImGui::Text("Bones:     %zu", Asset->Bones.size());
 			ImGui::Text("Morphs:    %zu", Asset->MorphTargets.size());
+			ImGui::Dummy(ImVec2(0, 8));
+			ImGui::Separator();
+			RenderClothAuthoringPanel(SkeletalMesh, Asset);
 			USkeletalMeshComponent* PreviewMeshComponent = ViewportClient.GetPreviewMeshComponent();
 			if (!Asset->MorphTargets.empty() && PreviewMeshComponent)
 			{
@@ -1558,6 +1740,564 @@ void FMeshEditorWidget::RenderMeshLayout()
 		RenderViewportPanel(Size);
 	}
 	ImGui::EndGroup();
+}
+
+void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, FSkeletalMesh* Asset)
+{
+	if (!SkeletalMesh || !Asset)
+	{
+		return;
+	}
+
+	ImGui::TextUnformatted("Cloth");
+
+	int32 LODIndex = SelectedClothLODIndex;
+	if (ImGui::InputInt("LOD", &LODIndex))
+	{
+		SelectedClothLODIndex = std::max(0, LODIndex);
+		SelectedClothIndex = -1;
+	}
+
+	if (!Asset->Sections.empty())
+	{
+		SelectedClothSectionIndex = std::clamp(
+			SelectedClothSectionIndex,
+			0,
+			static_cast<int32>(Asset->Sections.size()) - 1
+		);
+		const FSkeletalMeshSection& CurrentSection = Asset->Sections[SelectedClothSectionIndex];
+		const FString SectionLabel = CurrentSection.MaterialSlotName.empty()
+			? ("Section " + std::to_string(SelectedClothSectionIndex))
+			: (std::to_string(SelectedClothSectionIndex) + ": " + CurrentSection.MaterialSlotName);
+
+		if (ImGui::BeginCombo("Section", SectionLabel.c_str()))
+		{
+			for (int32 SectionIndex = 0; SectionIndex < static_cast<int32>(Asset->Sections.size()); ++SectionIndex)
+			{
+				const FSkeletalMeshSection& Section = Asset->Sections[SectionIndex];
+				const FString ItemLabel = Section.MaterialSlotName.empty()
+					? ("Section " + std::to_string(SectionIndex))
+					: (std::to_string(SectionIndex) + ": " + Section.MaterialSlotName);
+				if (ImGui::Selectable(ItemLabel.c_str(), SelectedClothSectionIndex == SectionIndex))
+				{
+					SelectedClothSectionIndex = SectionIndex;
+				}
+			}
+			ImGui::EndCombo();
+		}
+
+		if (ImGui::Button("Create From Section", ImVec2(-1.0f, 0.0f)))
+		{
+			FSkeletalClothData NewCloth;
+			FString Error;
+			const FString ClothName = CurrentSection.MaterialSlotName.empty()
+				? ("Cloth_Section_" + std::to_string(SelectedClothSectionIndex))
+				: CurrentSection.MaterialSlotName;
+			if (Asset->BuildClothDataFromSection(
+					static_cast<uint32>(SelectedClothLODIndex),
+					SelectedClothSectionIndex,
+					ClothName,
+					NewCloth,
+					&Error))
+			{
+				NewCloth.bEnabled = true;
+				Asset->AddOrReplaceClothData(std::move(NewCloth));
+				FSkeletalClothLODData* LODData = Asset->FindClothLOD(static_cast<uint32>(SelectedClothLODIndex));
+				SelectedClothIndex = LODData ? static_cast<int32>(LODData->Cloths.size()) - 1 : -1;
+				MarkCurrentMeshDirty();
+			}
+			else
+			{
+				UE_LOG("Create cloth data failed: %s", Error.c_str());
+			}
+		}
+
+		bool bHasClothForSelectedSection = false;
+		if (const FSkeletalClothLODData* ExistingLODData = Asset->FindClothLOD(static_cast<uint32>(SelectedClothLODIndex)))
+		{
+			for (const FSkeletalClothData& Cloth : ExistingLODData->Cloths)
+			{
+				if (Cloth.Binding.LODIndex == static_cast<uint32>(SelectedClothLODIndex) &&
+					Cloth.Binding.SectionIndex == SelectedClothSectionIndex)
+				{
+					bHasClothForSelectedSection = true;
+					break;
+				}
+			}
+		}
+
+		if (!bHasClothForSelectedSection)
+		{
+			ImGui::BeginDisabled();
+		}
+		if (ImGui::Button("Delete Section Cloth", ImVec2(-1.0f, 0.0f)))
+		{
+			if (Asset->RemoveClothDataForSection(static_cast<uint32>(SelectedClothLODIndex), SelectedClothSectionIndex))
+			{
+				SelectedClothIndex = -1;
+				MarkCurrentMeshDirty();
+			}
+		}
+		if (!bHasClothForSelectedSection)
+		{
+			ImGui::EndDisabled();
+		}
+	}
+
+	FSkeletalClothLODData* LODData = Asset->FindClothLOD(static_cast<uint32>(SelectedClothLODIndex));
+	if (!LODData || LODData->Cloths.empty())
+	{
+		ImGui::TextDisabled("No cloth data on this LOD.");
+		return;
+	}
+
+	SelectedClothIndex = std::clamp(SelectedClothIndex, 0, static_cast<int32>(LODData->Cloths.size()) - 1);
+	FSkeletalClothData* SelectedCloth = &LODData->Cloths[SelectedClothIndex];
+
+	if (ImGui::BeginCombo("Cloth", SelectedCloth->Name.empty() ? "Unnamed" : SelectedCloth->Name.c_str()))
+	{
+		for (int32 ClothIndex = 0; ClothIndex < static_cast<int32>(LODData->Cloths.size()); ++ClothIndex)
+		{
+			const FSkeletalClothData& Cloth = LODData->Cloths[ClothIndex];
+			const char* Label = Cloth.Name.empty() ? "Unnamed" : Cloth.Name.c_str();
+			if (ImGui::Selectable(Label, SelectedClothIndex == ClothIndex))
+			{
+				SelectedClothIndex = ClothIndex;
+			}
+		}
+		ImGui::EndCombo();
+		SelectedCloth = &LODData->Cloths[SelectedClothIndex];
+	}
+
+	if (ImGui::Checkbox("Enabled", &SelectedCloth->bEnabled))
+	{
+		MarkCurrentMeshDirty();
+	}
+
+	const bool bCpuSkinning = SkinningModeRuntime::Get() == ESkinningMode::CPU;
+	ImGui::Text("Skinning: %s", bCpuSkinning ? "CPU" : "GPU");
+	if (!bCpuSkinning)
+	{
+		ImGui::TextDisabled("Cloth preview runs in CPU skinning mode.");
+		if (ImGui::Button("Use CPU Skinning", ImVec2(-1.0f, 0.0f)))
+		{
+			SkinningModeRuntime::Set(ESkinningMode::CPU);
+			if (USkeletalMeshComponent* Comp = ViewportClient.GetPreviewMeshComponent())
+			{
+				Comp->TickClothSimulationForEditorPreview(0.0f);
+			}
+		}
+	}
+
+	bool bChanged = false;
+	bChanged |= ImGui::DragFloat("Gravity", &SelectedCloth->Config.GravityScale, 0.01f, -10.0f, 10.0f, "%.2f");
+	bChanged |= ImGui::DragFloat("Solver Hz", &SelectedCloth->Config.SolverFrequency, 1.0f, 1.0f, 1000.0f, "%.0f");
+	bChanged |= ImGui::SliderFloat("Stiffness", &SelectedCloth->Config.Stiffness, 0.0f, 1.0f, "%.2f");
+	bChanged |= ImGui::SliderFloat("Damping", &SelectedCloth->Config.Damping, 0.0f, 1.0f, "%.2f");
+	bChanged |= ImGui::DragFloat("View Min", &SelectedCloth->Paint.ViewMin, 1.0f, 0.0f, 100000.0f, "%.1f");
+	bChanged |= ImGui::DragFloat("View Max", &SelectedCloth->Paint.ViewMax, 1.0f, 0.0f, 100000.0f, "%.1f");
+	if (SelectedCloth->Paint.ViewMax <= SelectedCloth->Paint.ViewMin)
+	{
+		SelectedCloth->Paint.ViewMax = SelectedCloth->Paint.ViewMin + 1.0f;
+	}
+	if (bChanged)
+	{
+		MarkCurrentMeshDirty();
+	}
+
+	ImGui::Checkbox("Paint Brush", &bClothPaintBrushEnabled);
+	ImGui::Checkbox("Show Paint Values", &bShowClothPaintValues);
+	ImGui::DragFloat("Brush Value", &ClothBrushValue, 0.01f, 0.0f, 1000.0f, "%.2f");
+	ImGui::DragFloat("Brush Radius", &ClothBrushRadius, 0.01f, 0.0f, 500.0f, "%.2f");
+	if (ImGui::Button("Fill MaxDistance", ImVec2(-1.0f, 0.0f)))
+	{
+		for (float& Value : SelectedCloth->Paint.MaxDistanceValues)
+		{
+			Value = ClothBrushValue;
+		}
+		MarkCurrentMeshDirty();
+	}
+	if (ImGui::Button("Test Pin Top / Free Rest", ImVec2(-1.0f, 0.0f)) &&
+		!SelectedCloth->Paint.MaxDistanceValues.empty())
+	{
+		float MinZ = 0.0f;
+		float MaxZ = 0.0f;
+		bool bHasBounds = false;
+		for (uint32 RenderVertexIndex : SelectedCloth->ParticleToRenderVertex)
+		{
+			if (RenderVertexIndex >= Asset->Vertices.size())
+			{
+				continue;
+			}
+
+			const float Z = Asset->Vertices[RenderVertexIndex].Position.Z;
+			MinZ = bHasBounds ? std::min(MinZ, Z) : Z;
+			MaxZ = bHasBounds ? std::max(MaxZ, Z) : Z;
+			bHasBounds = true;
+		}
+
+		if (bHasBounds)
+		{
+			const float FreeValue = ClothBrushValue > 0.0f ? ClothBrushValue : 50.0f;
+			const float PinThreshold = MinZ + (MaxZ - MinZ) * 0.8f;
+			for (uint32 ParticleIndex = 0; ParticleIndex < SelectedCloth->ParticleToRenderVertex.size(); ++ParticleIndex)
+			{
+				if (ParticleIndex >= SelectedCloth->Paint.MaxDistanceValues.size())
+				{
+					break;
+				}
+
+				const uint32 RenderVertexIndex = SelectedCloth->ParticleToRenderVertex[ParticleIndex];
+				if (RenderVertexIndex >= Asset->Vertices.size())
+				{
+					continue;
+				}
+
+				SelectedCloth->Paint.MaxDistanceValues[ParticleIndex] =
+					Asset->Vertices[RenderVertexIndex].Position.Z >= PinThreshold ? 0.0f : FreeValue;
+			}
+			MarkCurrentMeshDirty();
+		}
+	}
+
+	ImGui::SliderFloat("Smooth", &ClothBrushSmoothStrength, 0.0f, 1.0f, "%.2f");
+	if (ImGui::Button("Smooth Paint", ImVec2(-1.0f, 0.0f)) &&
+		!SelectedCloth->Paint.MaxDistanceValues.empty())
+	{
+		TArray<float> Smoothed = SelectedCloth->Paint.MaxDistanceValues;
+		for (uint32 Index = 0; Index + 2 < SelectedCloth->ClothLocalIndices.size(); Index += 3)
+		{
+			const uint32 I0 = SelectedCloth->ClothLocalIndices[Index + 0];
+			const uint32 I1 = SelectedCloth->ClothLocalIndices[Index + 1];
+			const uint32 I2 = SelectedCloth->ClothLocalIndices[Index + 2];
+			if (I0 >= Smoothed.size() || I1 >= Smoothed.size() || I2 >= Smoothed.size())
+			{
+				continue;
+			}
+
+			const float Average =
+				(SelectedCloth->Paint.MaxDistanceValues[I0] +
+				 SelectedCloth->Paint.MaxDistanceValues[I1] +
+				 SelectedCloth->Paint.MaxDistanceValues[I2]) / 3.0f;
+			Smoothed[I0] = Smoothed[I0] * (1.0f - ClothBrushSmoothStrength) + Average * ClothBrushSmoothStrength;
+			Smoothed[I1] = Smoothed[I1] * (1.0f - ClothBrushSmoothStrength) + Average * ClothBrushSmoothStrength;
+			Smoothed[I2] = Smoothed[I2] * (1.0f - ClothBrushSmoothStrength) + Average * ClothBrushSmoothStrength;
+		}
+		SelectedCloth->Paint.MaxDistanceValues = std::move(Smoothed);
+		MarkCurrentMeshDirty();
+	}
+
+	if (!SelectedCloth->Paint.MaxDistanceValues.empty())
+	{
+		float MinValue = SelectedCloth->Paint.MaxDistanceValues[0];
+		float MaxValue = SelectedCloth->Paint.MaxDistanceValues[0];
+		for (float Value : SelectedCloth->Paint.MaxDistanceValues)
+		{
+			MinValue = std::min(MinValue, Value);
+			MaxValue = std::max(MaxValue, Value);
+		}
+		ImGui::Text("Particles: %zu", SelectedCloth->Paint.MaxDistanceValues.size());
+		ImGui::Text("Range: %.1f - %.1f", MinValue, MaxValue);
+
+		const ImVec2 StripPos = ImGui::GetCursorScreenPos();
+		const float StripWidth = ImGui::GetContentRegionAvail().x;
+		const float StripHeight = 14.0f;
+		ImDrawList* DrawList = ImGui::GetWindowDrawList();
+		const uint32 SegmentCount = static_cast<uint32>(std::min<size_t>(SelectedCloth->Paint.MaxDistanceValues.size(), 96));
+		const float Denom = std::max(1.0f, SelectedCloth->Paint.ViewMax - SelectedCloth->Paint.ViewMin);
+		for (uint32 Segment = 0; Segment < SegmentCount; ++Segment)
+		{
+			const size_t SourceIndex = static_cast<size_t>(
+				(static_cast<double>(Segment) / std::max(1u, SegmentCount - 1)) *
+				(static_cast<double>(SelectedCloth->Paint.MaxDistanceValues.size() - 1))
+			);
+			const float T = std::clamp(
+				(SelectedCloth->Paint.MaxDistanceValues[SourceIndex] - SelectedCloth->Paint.ViewMin) / Denom,
+				0.0f,
+				1.0f
+			);
+			const int Red = static_cast<int>(255.0f * T);
+			const int Green = static_cast<int>(255.0f * (1.0f - std::fabs(T - 0.5f) * 2.0f));
+			const int Blue = static_cast<int>(255.0f * (1.0f - T));
+			const float X0 = StripPos.x + StripWidth * (static_cast<float>(Segment) / SegmentCount);
+			const float X1 = StripPos.x + StripWidth * (static_cast<float>(Segment + 1) / SegmentCount);
+			DrawList->AddRectFilled(ImVec2(X0, StripPos.y), ImVec2(X1, StripPos.y + StripHeight), IM_COL32(Red, Green, Blue, 255));
+		}
+		ImGui::Dummy(ImVec2(StripWidth, StripHeight + 4.0f));
+	}
+}
+
+// Temporary ImGui overlay. Remove this whole function/call once cloth paint has
+// a renderer-owned material/debug pass that can depth-test and cull correctly.
+void FMeshEditorWidget::RenderTemporaryClothPaintValueOverlay(
+	ImDrawList* DrawList,
+	const ImVec2& ViewportPos,
+	const ImVec2& ViewportSize) const
+{
+	if (!DrawList || ActiveTab != EMeshEditorTab::Mesh || !bShowClothPaintValues)
+	{
+		return;
+	}
+
+	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
+	FSkeletalMesh* Asset = SkeletalMesh ? SkeletalMesh->GetSkeletalMeshAsset() : nullptr;
+	if (!Asset)
+	{
+		return;
+	}
+
+	FSkeletalClothLODData* LODData = Asset->FindClothLOD(static_cast<uint32>(SelectedClothLODIndex));
+	if (!LODData || SelectedClothIndex < 0 || SelectedClothIndex >= static_cast<int32>(LODData->Cloths.size()))
+	{
+		return;
+	}
+
+	const FSkeletalClothData& Cloth = LODData->Cloths[SelectedClothIndex];
+	if (Cloth.Paint.MaxDistanceValues.empty() || Cloth.ParticleToRenderVertex.empty())
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* PreviewMeshComponent = ViewportClient.GetPreviewMeshComponent();
+	if (!PreviewMeshComponent)
+	{
+		return;
+	}
+
+	const TArray<FVertexPNCTT>& SkinnedVertices = PreviewMeshComponent->GetSkinnedVertices();
+	if (SkinnedVertices.empty())
+	{
+		return;
+	}
+
+	FMinimalViewInfo POV;
+	if (!ViewportClient.GetCameraView(POV))
+	{
+		return;
+	}
+
+	const FMatrix& WorldMatrix = PreviewMeshComponent->GetWorldMatrix();
+	const float Denom = std::max(1.0f, Cloth.Paint.ViewMax - Cloth.Paint.ViewMin);
+	const float MarkerRadius = 4.0f;
+
+	for (uint32 ParticleIndex = 0; ParticleIndex < Cloth.ParticleToRenderVertex.size(); ++ParticleIndex)
+	{
+		if (ParticleIndex >= Cloth.Paint.MaxDistanceValues.size())
+		{
+			break;
+		}
+
+		const uint32 RenderVertexIndex = Cloth.ParticleToRenderVertex[ParticleIndex];
+		if (RenderVertexIndex >= SkinnedVertices.size())
+		{
+			continue;
+		}
+
+		const float T = std::clamp(
+			(Cloth.Paint.MaxDistanceValues[ParticleIndex] - Cloth.Paint.ViewMin) / Denom,
+			0.0f,
+			1.0f
+		);
+		const uint32 Red = static_cast<uint32>(255.0f * T);
+		const uint32 Green = static_cast<uint32>(255.0f * (1.0f - std::fabs(T - 0.5f) * 2.0f));
+		const uint32 Blue = static_cast<uint32>(255.0f * (1.0f - T));
+		const ImU32 Color = IM_COL32(Red, Green, Blue, 235);
+		const FVector WorldPos = WorldMatrix.TransformPositionWithW(SkinnedVertices[RenderVertexIndex].Position);
+
+		ImVec2 ScreenPos;
+		if (!ProjectWorldToViewport(WorldPos, POV, ViewportPos, ViewportSize, ScreenPos))
+		{
+			continue;
+		}
+
+		DrawList->AddCircleFilled(ScreenPos, MarkerRadius, Color, 10);
+		DrawList->AddCircle(ScreenPos, MarkerRadius + 1.0f, IM_COL32(15, 15, 15, 220), 10, 1.0f);
+		if (Cloth.Paint.MaxDistanceValues[ParticleIndex] <= 0.0f)
+		{
+			DrawList->AddCircle(ScreenPos, MarkerRadius + 2.0f, IM_COL32(255, 255, 255, 245), 10, 1.5f);
+		}
+	}
+}
+
+void FMeshEditorWidget::RenderClothBrushRadiusOverlay(
+	ImDrawList* DrawList,
+	const ImVec2& ViewportPos,
+	const ImVec2& ViewportSize) const
+{
+	if (!DrawList ||
+		ActiveTab != EMeshEditorTab::Mesh ||
+		!bClothPaintBrushEnabled ||
+		!ViewportClient.IsMouseOverViewport())
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* PreviewMeshComponent = ViewportClient.GetPreviewMeshComponent();
+	USkeletalMesh* SkeletalMesh = PreviewMeshComponent ? PreviewMeshComponent->GetSkeletalMesh() : nullptr;
+	FSkeletalMesh* Asset = SkeletalMesh ? SkeletalMesh->GetSkeletalMeshAsset() : nullptr;
+	if (!PreviewMeshComponent || !Asset)
+	{
+		return;
+	}
+
+	const FSkeletalClothLODData* LODData = Asset->FindClothLOD(static_cast<uint32>(SelectedClothLODIndex));
+	if (!LODData || SelectedClothIndex < 0 || SelectedClothIndex >= static_cast<int32>(LODData->Cloths.size()))
+	{
+		return;
+	}
+
+	const FSkeletalClothData& Cloth = LODData->Cloths[SelectedClothIndex];
+	if (Cloth.Paint.MaxDistanceValues.empty() || Cloth.ParticleToRenderVertex.empty())
+	{
+		return;
+	}
+
+	FRay Ray;
+	if (!ViewportClient.GetMouseRay(Ray))
+	{
+		return;
+	}
+
+	FHitResult Hit;
+	if (!FRayUtils::RaycastComponent(PreviewMeshComponent, Ray, Hit) || Hit.FaceIndex < 0)
+	{
+		return;
+	}
+
+	const uint32 HitIndexOffset = static_cast<uint32>(Hit.FaceIndex);
+	if (HitIndexOffset < Cloth.Binding.FirstIndex ||
+		HitIndexOffset >= Cloth.Binding.FirstIndex + Cloth.Binding.IndexCount)
+	{
+		return;
+	}
+
+	FMinimalViewInfo POV;
+	if (!ViewportClient.GetCameraView(POV))
+	{
+		return;
+	}
+
+	const FVector HitWorld = Ray.Origin + Ray.Direction * Hit.Distance;
+	ImVec2 HitScreen;
+	if (!ProjectWorldToViewport(HitWorld, POV, ViewportPos, ViewportSize, HitScreen))
+	{
+		return;
+	}
+
+	const float PixelRadius = ProjectWorldRadiusToPixels(
+		HitWorld,
+		std::max(0.0f, ClothBrushRadius),
+		POV,
+		ViewportPos,
+		ViewportSize);
+
+	const ImU32 RingColor = IM_COL32(255, 230, 90, 230);
+	const ImU32 FillColor = IM_COL32(255, 230, 90, 28);
+	const float DrawRadius = std::max(5.0f, PixelRadius);
+	DrawList->AddCircleFilled(HitScreen, DrawRadius, FillColor, 48);
+	DrawList->AddCircle(HitScreen, DrawRadius, RingColor, 48, 2.0f);
+	DrawList->AddLine(
+		ImVec2(HitScreen.x - 5.0f, HitScreen.y),
+		ImVec2(HitScreen.x + 5.0f, HitScreen.y),
+		RingColor,
+		1.5f);
+	DrawList->AddLine(
+		ImVec2(HitScreen.x, HitScreen.y - 5.0f),
+		ImVec2(HitScreen.x, HitScreen.y + 5.0f),
+		RingColor,
+		1.5f);
+}
+
+void FMeshEditorWidget::TickClothPaintBrush()
+{
+	if (!bClothPaintBrushEnabled || !ImGui::GetIO().MouseDown[0] || !ViewportClient.IsMouseOverViewport())
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* PreviewMeshComponent = ViewportClient.GetPreviewMeshComponent();
+	USkeletalMesh* SkeletalMesh = PreviewMeshComponent ? PreviewMeshComponent->GetSkeletalMesh() : nullptr;
+	FSkeletalMesh* Asset = SkeletalMesh ? SkeletalMesh->GetSkeletalMeshAsset() : nullptr;
+	if (!PreviewMeshComponent || !Asset)
+	{
+		return;
+	}
+
+	FSkeletalClothLODData* LODData = Asset->FindClothLOD(static_cast<uint32>(SelectedClothLODIndex));
+	if (!LODData || SelectedClothIndex < 0 || SelectedClothIndex >= static_cast<int32>(LODData->Cloths.size()))
+	{
+		return;
+	}
+
+	FSkeletalClothData& Cloth = LODData->Cloths[SelectedClothIndex];
+	if (Cloth.Paint.MaxDistanceValues.empty() || Cloth.ParticleToRenderVertex.empty())
+	{
+		return;
+	}
+
+	FRay Ray;
+	if (!ViewportClient.GetMouseRay(Ray))
+	{
+		return;
+	}
+
+	FHitResult Hit;
+	if (!FRayUtils::RaycastComponent(PreviewMeshComponent, Ray, Hit) || Hit.FaceIndex < 0)
+	{
+		return;
+	}
+
+	const uint32 HitIndexOffset = static_cast<uint32>(Hit.FaceIndex);
+	if (HitIndexOffset < Cloth.Binding.FirstIndex ||
+		HitIndexOffset >= Cloth.Binding.FirstIndex + Cloth.Binding.IndexCount)
+	{
+		return;
+	}
+
+	bool bChanged = false;
+	const float Radius = std::max(0.0f, ClothBrushRadius);
+	if (Radius <= 0.0f)
+	{
+		for (uint32 Corner = 0; Corner < 3; ++Corner)
+		{
+			const uint32 RenderVertexIndex = Asset->Indices[HitIndexOffset + Corner];
+			for (uint32 ParticleIndex = 0; ParticleIndex < Cloth.ParticleToRenderVertex.size(); ++ParticleIndex)
+			{
+				if (Cloth.ParticleToRenderVertex[ParticleIndex] == RenderVertexIndex &&
+					ParticleIndex < Cloth.Paint.MaxDistanceValues.size())
+				{
+					Cloth.Paint.MaxDistanceValues[ParticleIndex] = ClothBrushValue;
+					bChanged = true;
+				}
+			}
+		}
+	}
+	else
+	{
+		const FVector HitWorld = Ray.Origin + Ray.Direction * Hit.Distance;
+		const TArray<FVertexPNCTT>& SkinnedVertices = PreviewMeshComponent->GetSkinnedVertices();
+		const FMatrix& WorldMatrix = PreviewMeshComponent->GetWorldMatrix();
+		for (uint32 ParticleIndex = 0; ParticleIndex < Cloth.ParticleToRenderVertex.size(); ++ParticleIndex)
+		{
+			const uint32 RenderVertexIndex = Cloth.ParticleToRenderVertex[ParticleIndex];
+			if (RenderVertexIndex >= SkinnedVertices.size() || ParticleIndex >= Cloth.Paint.MaxDistanceValues.size())
+			{
+				continue;
+			}
+
+			const FVector ParticleWorld = WorldMatrix.TransformPositionWithW(SkinnedVertices[RenderVertexIndex].Position);
+			if (FVector::Distance(ParticleWorld, HitWorld) <= Radius)
+			{
+				Cloth.Paint.MaxDistanceValues[ParticleIndex] = ClothBrushValue;
+				bChanged = true;
+			}
+		}
+	}
+
+	if (bChanged)
+	{
+		bMeshDirty = true;
+	}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

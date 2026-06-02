@@ -23,7 +23,8 @@ public:
 
     void Serialize(FArchive& Ar) override;
     void SerializeLegacyPayload(FArchive& Ar);
-    void SerializeCurrentPayload(FArchive& Ar);
+    void SerializeCurrentPayload(FArchive& Ar, uint32 PackageVersion);
+    void SerializeClothPayload(FArchive& Ar);
 
     const FString& GetAssetPathFileName() const
     {
