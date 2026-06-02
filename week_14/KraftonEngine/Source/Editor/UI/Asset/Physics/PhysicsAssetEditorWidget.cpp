@@ -37,6 +37,7 @@ namespace
     constexpr int32 DebugCircleSegments = 24;
     constexpr int32 DebugHalfCircleSegments = 12;
     constexpr float PhysicsEditorTreeIndentSpacing = 10.0f;
+	constexpr float ShapeSizeDragSpeed = 0.001f;
 
     FTransform ComposePreviewDebugTransforms(const FTransform& ParentWorld, const FTransform& Local)
     {
@@ -2500,17 +2501,17 @@ void FPhysicsAssetEditorWidget::RenderShapeDetails(FPhysicsAssetShapeSetup& Shap
     switch (Shape.Type)
     {
     case EPhysicsAssetShapeType::Box:
-        bChanged |= DragVec3("Box Half Extent", Shape.BoxHalfExtent, 0.1f);
+        bChanged |= DragVec3("Box Half Extent", Shape.BoxHalfExtent, ShapeSizeDragSpeed);
         Shape.BoxHalfExtent.X = (std::max)(Shape.BoxHalfExtent.X, 0.001f);
         Shape.BoxHalfExtent.Y = (std::max)(Shape.BoxHalfExtent.Y, 0.001f);
         Shape.BoxHalfExtent.Z = (std::max)(Shape.BoxHalfExtent.Z, 0.001f);
         break;
     case EPhysicsAssetShapeType::Sphere:
-        bChanged |= DragMinFloat("Sphere Radius", Shape.SphereRadius, 0.1f, 0.001f);
+        bChanged |= DragMinFloat("Sphere Radius", Shape.SphereRadius, ShapeSizeDragSpeed, 0.001f);
         break;
     case EPhysicsAssetShapeType::Capsule:
-        bChanged |= DragMinFloat("Capsule Radius", Shape.CapsuleRadius, 0.1f, 0.001f);
-        bChanged |= DragMinFloat("Capsule Half Height", Shape.CapsuleHalfHeight, 0.1f, 0.001f);
+        bChanged |= DragMinFloat("Capsule Radius", Shape.CapsuleRadius, ShapeSizeDragSpeed, 0.001f);
+        bChanged |= DragMinFloat("Capsule Half Height", Shape.CapsuleHalfHeight, ShapeSizeDragSpeed, 0.001f);
         break;
     default:
         break;
