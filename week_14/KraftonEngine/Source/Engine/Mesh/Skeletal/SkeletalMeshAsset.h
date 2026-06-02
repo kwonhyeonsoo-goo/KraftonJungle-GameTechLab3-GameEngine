@@ -203,6 +203,8 @@ struct FSkeletalClothPaintData
 	}
 };
 
+inline constexpr uint32 SkeletalMeshClothPayloadCurrentVersion = 3;
+
 struct FSkeletalClothConfig
 {
 	float GravityScale = 1.0f;
@@ -213,6 +215,8 @@ struct FSkeletalClothConfig
 	float DragCoefficient = 0.1f;
 	float LiftCoefficient = 0.0f;
 	float FluidDensity = 1.0f;
+	float InertiaLinearScale = 1.0f;
+	float InertiaAngularScale = 1.0f;
 
 	void Serialize(FArchive& Ar, uint32 PayloadVersion)
 	{
@@ -234,11 +238,21 @@ struct FSkeletalClothConfig
 			LiftCoefficient = 0.0f;
 			FluidDensity = 1.0f;
 		}
+		if (PayloadVersion >= 3)
+		{
+			Ar << InertiaLinearScale;
+			Ar << InertiaAngularScale;
+		}
+		else if (Ar.IsLoading())
+		{
+			InertiaLinearScale = 1.0f;
+			InertiaAngularScale = 1.0f;
+		}
 	}
 
 	friend FArchive& operator<<(FArchive& Ar, FSkeletalClothConfig& Config)
 	{
-		Config.Serialize(Ar, 2);
+		Config.Serialize(Ar, SkeletalMeshClothPayloadCurrentVersion);
 		return Ar;
 	}
 };
@@ -270,7 +284,7 @@ struct FSkeletalClothData
 
 	friend FArchive& operator<<(FArchive& Ar, FSkeletalClothData& Cloth)
 	{
-		Cloth.Serialize(Ar, 2);
+		Cloth.Serialize(Ar, SkeletalMeshClothPayloadCurrentVersion);
 		return Ar;
 	}
 };
@@ -298,14 +312,14 @@ struct FSkeletalClothLODData
 
 	friend FArchive& operator<<(FArchive& Ar, FSkeletalClothLODData& LODData)
 	{
-		LODData.Serialize(Ar, 2);
+		LODData.Serialize(Ar, SkeletalMeshClothPayloadCurrentVersion);
 		return Ar;
 	}
 };
 
 struct FSkeletalMeshClothPayload
 {
-	static constexpr uint32 CurrentVersion = 2;
+	static constexpr uint32 CurrentVersion = SkeletalMeshClothPayloadCurrentVersion;
 
 	uint32 Version = CurrentVersion;
 	TArray<FSkeletalClothLODData> LODs;

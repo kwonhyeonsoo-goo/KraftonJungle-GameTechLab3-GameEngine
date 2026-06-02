@@ -16,6 +16,13 @@ struct FClothWorldForceContext
     bool bUsePreviewWindOverride = false;
 };
 
+struct FClothDebugRuntimeConfig
+{
+    float TeleportDistanceThreshold = 300.0f;
+    float TeleportRotationThresholdDegrees = 45.0f;
+    bool bResetOnScaleChange = true;
+};
+
 class FSkeletalClothRuntime
 {
 public:
@@ -33,6 +40,9 @@ public:
         const FMatrix& ComponentWorldMatrix,
         const FClothWorldForceContext& ForceContext);
     bool IsActive() const;
+
+    static FClothDebugRuntimeConfig& GetMutableDebugRuntimeConfig();
+    static const FClothDebugRuntimeConfig& GetDebugRuntimeConfig();
 
 private:
     struct FImpl;

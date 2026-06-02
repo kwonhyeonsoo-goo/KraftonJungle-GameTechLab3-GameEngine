@@ -7,6 +7,7 @@
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
 #include "Mesh/MeshManager.h"
+#include "Cloth/SkeletalClothRuntime.h"
 #include "Runtime/Engine.h"
 #include "Component/Debug/PhysicsAssetPreviewComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
@@ -64,6 +65,55 @@
 namespace
 {
 	constexpr float MeshEditorTreeIndentSpacing = 10.0f;
+
+	ImVec4 BrightenColor(const ImVec4& Color, float Amount)
+	{
+		return ImVec4(
+			std::min(Color.x + Amount, 1.0f),
+			std::min(Color.y + Amount, 1.0f),
+			std::min(Color.z + Amount, 1.0f),
+			Color.w
+		);
+	}
+
+	template <typename DrawBodyFunc>
+	bool DrawClothFoldoutBox(
+		const char* Id,
+		const char* Label,
+		const ImVec4& BackgroundColor,
+		const ImVec4& HeaderColor,
+		DrawBodyFunc&& DrawBody)
+	{
+		ImGui::PushID(Id);
+		ImGui::PushStyleColor(ImGuiCol_ChildBg, BackgroundColor);
+		ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(HeaderColor.x, HeaderColor.y, HeaderColor.z, 0.7f));
+		ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 4.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 8.0f));
+		ImGui::BeginChild(
+			"##ClothFoldoutBox",
+			ImVec2(0.0f, 0.0f),
+			ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize,
+			ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse
+		);
+
+		ImGui::PushStyleColor(ImGuiCol_Header, HeaderColor);
+		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, BrightenColor(HeaderColor, 0.06f));
+		ImGui::PushStyleColor(ImGuiCol_HeaderActive, BrightenColor(HeaderColor, 0.1f));
+		const bool bOpen = ImGui::CollapsingHeader(Label, ImGuiTreeNodeFlags_DefaultOpen);
+		ImGui::PopStyleColor(3);
+
+		if (bOpen)
+		{
+			DrawBody();
+		}
+
+		ImGui::EndChild();
+		ImGui::PopStyleVar(2);
+		ImGui::PopStyleColor(2);
+		ImGui::PopID();
+		ImGui::Spacing();
+		return bOpen;
+	}
 
 	bool ProjectWorldToViewport(
 		const FVector& WorldPosition,
@@ -1917,175 +1967,224 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 	}
 
 	ImGui::Separator();
-	ImGui::TextUnformatted("Preview Forces");
-	if (UWorld* PreviewWorld = ViewportClient.GetPreviewWorld())
-	{
-		FVector PreviewGravity = PreviewWorld->GetWorldSettings().Gravity;
-		if (ImGui::DragFloat3("Preview Gravity", PreviewGravity.Data, 0.01f, -100.0f, 100.0f, "%.2f"))
+	DrawClothFoldoutBox(
+		"PreviewForces",
+		"Preview Forces (Runtime Only)",
+		ImVec4(0.07f, 0.11f, 0.13f, 1.0f),
+		ImVec4(0.16f, 0.32f, 0.40f, 1.0f),
+		[&]()
 		{
-			PreviewWorld->GetWorldSettings().Gravity = PreviewGravity;
+			if (UWorld* PreviewWorld = ViewportClient.GetPreviewWorld())
+			{
+				FVector PreviewGravity = PreviewWorld->GetWorldSettings().Gravity;
+				if (ImGui::DragFloat3("Preview Gravity", PreviewGravity.Data, 0.01f, -100.0f, 100.0f, "%.2f"))
+				{
+					PreviewWorld->GetWorldSettings().Gravity = PreviewGravity;
+				}
+			}
+			ImGui::Checkbox("Preview Wind", &bClothPreviewWindEnabled);
+			ImGui::DragFloat3("Wind Direction", ClothPreviewWindDirection.Data, 0.01f, -1.0f, 1.0f, "%.2f");
+			ImGui::DragFloat("Wind Speed", &ClothPreviewWindSpeed, 0.01f, 0.0f, 200.0f, "%.2f");
+			if (ImGui::Button("Reset Cloth Simulation", ImVec2(-1.0f, 0.0f)))
+			{
+				if (USkeletalMeshComponent* Comp = ViewportClient.GetPreviewMeshComponent())
+				{
+					Comp->ResetClothSimulation();
+				}
+			}
 		}
-	}
-	ImGui::Checkbox("Preview Wind", &bClothPreviewWindEnabled);
-	ImGui::DragFloat3("Wind Direction", ClothPreviewWindDirection.Data, 0.01f, -1.0f, 1.0f, "%.2f");
-	ImGui::DragFloat("Wind Speed", &ClothPreviewWindSpeed, 0.01f, 0.0f, 200.0f, "%.2f");
-	if (ImGui::Button("Reset Cloth Simulation", ImVec2(-1.0f, 0.0f)))
-	{
-		if (USkeletalMeshComponent* Comp = ViewportClient.GetPreviewMeshComponent())
+	);
+
+	FClothDebugRuntimeConfig& ClothDebugConfig = FSkeletalClothRuntime::GetMutableDebugRuntimeConfig();
+	DrawClothFoldoutBox(
+		"RuntimeStability",
+		"Runtime Stability (Runtime Only)",
+		ImVec4(0.11f, 0.09f, 0.13f, 1.0f),
+		ImVec4(0.30f, 0.23f, 0.39f, 1.0f),
+		[&]()
 		{
-			Comp->ResetClothSimulation();
+			ImGui::DragFloat("Teleport Distance", &ClothDebugConfig.TeleportDistanceThreshold, 1.0f, 0.0f, 100000.0f, "%.1f");
+			ImGui::DragFloat("Teleport Rotation", &ClothDebugConfig.TeleportRotationThresholdDegrees, 1.0f, 0.0f, 180.0f, "%.1f");
+			ImGui::Checkbox("Reset On Scale Change", &ClothDebugConfig.bResetOnScaleChange);
 		}
-	}
+	);
 
 	bool bChanged = false;
-	bChanged |= ImGui::DragFloat("Gravity Scale", &SelectedCloth->Config.GravityScale, 0.01f, -10.0f, 10.0f, "%.2f");
-	bChanged |= ImGui::DragFloat("Solver Hz", &SelectedCloth->Config.SolverFrequency, 1.0f, 1.0f, 1000.0f, "%.0f");
-	bChanged |= ImGui::SliderFloat("Stiffness", &SelectedCloth->Config.Stiffness, 0.0f, 1.0f, "%.2f");
-	bChanged |= ImGui::SliderFloat("Damping", &SelectedCloth->Config.Damping, 0.0f, 1.0f, "%.2f");
-	ImGui::Separator();
-	ImGui::TextUnformatted("Wind Response");
-	bChanged |= ImGui::DragFloat("Wind Scale", &SelectedCloth->Config.WindScale, 0.01f, 0.0f, 10.0f, "%.2f");
-	bChanged |= ImGui::SliderFloat("Drag Coefficient", &SelectedCloth->Config.DragCoefficient, 0.0f, 1.0f, "%.2f");
-	bChanged |= ImGui::SliderFloat("Lift Coefficient", &SelectedCloth->Config.LiftCoefficient, 0.0f, 1.0f, "%.2f");
-	bChanged |= ImGui::DragFloat("Fluid Density", &SelectedCloth->Config.FluidDensity, 0.01f, 0.000001f, 10.0f, "%.4f");
-	bChanged |= ImGui::DragFloat("View Min", &SelectedCloth->Paint.ViewMin, 1.0f, 0.0f, 100000.0f, "%.1f");
-	bChanged |= ImGui::DragFloat("View Max", &SelectedCloth->Paint.ViewMax, 1.0f, 0.0f, 100000.0f, "%.1f");
-	if (SelectedCloth->Paint.ViewMax <= SelectedCloth->Paint.ViewMin)
-	{
-		SelectedCloth->Paint.ViewMax = SelectedCloth->Paint.ViewMin + 1.0f;
-	}
+	DrawClothFoldoutBox(
+		"SavedClothSettings",
+		"Saved Cloth Settings",
+		ImVec4(0.09f, 0.12f, 0.09f, 1.0f),
+		ImVec4(0.25f, 0.36f, 0.24f, 1.0f),
+		[&]()
+		{
+			bChanged |= ImGui::DragFloat("Gravity Scale", &SelectedCloth->Config.GravityScale, 0.01f, -10.0f, 10.0f, "%.2f");
+			bChanged |= ImGui::DragFloat("Solver Hz", &SelectedCloth->Config.SolverFrequency, 1.0f, 1.0f, 1000.0f, "%.0f");
+			bChanged |= ImGui::SliderFloat("Stiffness", &SelectedCloth->Config.Stiffness, 0.0f, 1.0f, "%.2f");
+			bChanged |= ImGui::SliderFloat("Damping", &SelectedCloth->Config.Damping, 0.0f, 1.0f, "%.2f");
+			ImGui::Separator();
+			ImGui::TextUnformatted("Wind Response");
+			bChanged |= ImGui::DragFloat("Wind Scale", &SelectedCloth->Config.WindScale, 0.01f, 0.0f, 10.0f, "%.2f");
+			bChanged |= ImGui::SliderFloat("Drag Coefficient", &SelectedCloth->Config.DragCoefficient, 0.0f, 1.0f, "%.2f");
+			bChanged |= ImGui::SliderFloat("Lift Coefficient", &SelectedCloth->Config.LiftCoefficient, 0.0f, 1.0f, "%.2f");
+			bChanged |= ImGui::DragFloat("Fluid Density", &SelectedCloth->Config.FluidDensity, 0.01f, 0.000001f, 10.0f, "%.4f");
+			ImGui::Separator();
+			ImGui::TextUnformatted("Inertia");
+			bChanged |= ImGui::SliderFloat("Linear Inertia", &SelectedCloth->Config.InertiaLinearScale, 0.0f, 1.0f, "%.2f");
+			bChanged |= ImGui::SliderFloat("Angular Inertia", &SelectedCloth->Config.InertiaAngularScale, 0.0f, 1.0f, "%.2f");
+		}
+	);
+
+	DrawClothFoldoutBox(
+		"Paint",
+		"Paint",
+		ImVec4(0.13f, 0.10f, 0.08f, 1.0f),
+		ImVec4(0.40f, 0.30f, 0.18f, 1.0f),
+		[&]()
+		{
+			bChanged |= ImGui::DragFloat("View Min", &SelectedCloth->Paint.ViewMin, 1.0f, 0.0f, 100000.0f, "%.1f");
+			bChanged |= ImGui::DragFloat("View Max", &SelectedCloth->Paint.ViewMax, 1.0f, 0.0f, 100000.0f, "%.1f");
+			if (SelectedCloth->Paint.ViewMax <= SelectedCloth->Paint.ViewMin)
+			{
+				SelectedCloth->Paint.ViewMax = SelectedCloth->Paint.ViewMin + 1.0f;
+			}
+
+			ImGui::Checkbox("Paint Brush", &bClothPaintBrushEnabled);
+			ImGui::Checkbox("Show Paint Values", &bShowClothPaintValues);
+			if (bShowClothPaintValues)
+			{
+				ImGui::SliderFloat("Paint Overlay Alpha", &ViewportClient.GetRenderOptions().ClothMaxDistanceOverlayAlpha, 0.0f, 1.0f, "%.2f");
+			}
+			ImGui::DragFloat("Brush Value", &ClothBrushValue, 0.01f, 0.0f, 1000.0f, "%.2f");
+			ImGui::DragFloat("Brush Radius", &ClothBrushRadius, 0.01f, 0.0f, 500.0f, "%.2f");
+
+			if (ImGui::Button("Fill MaxDistance", ImVec2(-1.0f, 0.0f)))
+			{
+				for (float& Value : SelectedCloth->Paint.MaxDistanceValues)
+				{
+					Value = ClothBrushValue;
+				}
+				MarkCurrentMeshDirty();
+			}
+			if (ImGui::Button("Test Pin Top / Free Rest", ImVec2(-1.0f, 0.0f)) &&
+				!SelectedCloth->Paint.MaxDistanceValues.empty())
+			{
+				float MinZ = 0.0f;
+				float MaxZ = 0.0f;
+				bool bHasBounds = false;
+				for (uint32 RenderVertexIndex : SelectedCloth->ParticleToRenderVertex)
+				{
+					if (RenderVertexIndex >= Asset->Vertices.size())
+					{
+						continue;
+					}
+
+					const float Z = Asset->Vertices[RenderVertexIndex].Position.Z;
+					MinZ = bHasBounds ? std::min(MinZ, Z) : Z;
+					MaxZ = bHasBounds ? std::max(MaxZ, Z) : Z;
+					bHasBounds = true;
+				}
+
+				if (bHasBounds)
+				{
+					const float FreeValue = ClothBrushValue > 0.0f ? ClothBrushValue : 50.0f;
+					const float PinThreshold = MinZ + (MaxZ - MinZ) * 0.8f;
+					for (uint32 ParticleIndex = 0; ParticleIndex < SelectedCloth->ParticleToRenderVertex.size(); ++ParticleIndex)
+					{
+						if (ParticleIndex >= SelectedCloth->Paint.MaxDistanceValues.size())
+						{
+							break;
+						}
+
+						const uint32 RenderVertexIndex = SelectedCloth->ParticleToRenderVertex[ParticleIndex];
+						if (RenderVertexIndex >= Asset->Vertices.size())
+						{
+							continue;
+						}
+
+						SelectedCloth->Paint.MaxDistanceValues[ParticleIndex] =
+							Asset->Vertices[RenderVertexIndex].Position.Z >= PinThreshold ? 0.0f : FreeValue;
+					}
+					MarkCurrentMeshDirty();
+				}
+			}
+
+			ImGui::SliderFloat("Smooth", &ClothBrushSmoothStrength, 0.0f, 1.0f, "%.2f");
+			if (ImGui::Button("Smooth Paint", ImVec2(-1.0f, 0.0f)) &&
+				!SelectedCloth->Paint.MaxDistanceValues.empty())
+			{
+				TArray<float> Smoothed = SelectedCloth->Paint.MaxDistanceValues;
+				for (uint32 Index = 0; Index + 2 < SelectedCloth->ClothLocalIndices.size(); Index += 3)
+				{
+					const uint32 I0 = SelectedCloth->ClothLocalIndices[Index + 0];
+					const uint32 I1 = SelectedCloth->ClothLocalIndices[Index + 1];
+					const uint32 I2 = SelectedCloth->ClothLocalIndices[Index + 2];
+					if (I0 >= Smoothed.size() || I1 >= Smoothed.size() || I2 >= Smoothed.size())
+					{
+						continue;
+					}
+
+					const float Average =
+						(SelectedCloth->Paint.MaxDistanceValues[I0] +
+						 SelectedCloth->Paint.MaxDistanceValues[I1] +
+						 SelectedCloth->Paint.MaxDistanceValues[I2]) / 3.0f;
+					Smoothed[I0] = Smoothed[I0] * (1.0f - ClothBrushSmoothStrength) + Average * ClothBrushSmoothStrength;
+					Smoothed[I1] = Smoothed[I1] * (1.0f - ClothBrushSmoothStrength) + Average * ClothBrushSmoothStrength;
+					Smoothed[I2] = Smoothed[I2] * (1.0f - ClothBrushSmoothStrength) + Average * ClothBrushSmoothStrength;
+				}
+				SelectedCloth->Paint.MaxDistanceValues = std::move(Smoothed);
+				MarkCurrentMeshDirty();
+			}
+
+			if (!SelectedCloth->Paint.MaxDistanceValues.empty())
+			{
+				float MinValue = SelectedCloth->Paint.MaxDistanceValues[0];
+				float MaxValue = SelectedCloth->Paint.MaxDistanceValues[0];
+				for (float Value : SelectedCloth->Paint.MaxDistanceValues)
+				{
+					MinValue = std::min(MinValue, Value);
+					MaxValue = std::max(MaxValue, Value);
+				}
+				ImGui::Text("Particles: %zu", SelectedCloth->Paint.MaxDistanceValues.size());
+				ImGui::Text("Range: %.1f - %.1f", MinValue, MaxValue);
+
+				const ImVec2 StripPos = ImGui::GetCursorScreenPos();
+				const float StripWidth = ImGui::GetContentRegionAvail().x;
+				const float StripHeight = 14.0f;
+				ImDrawList* DrawList = ImGui::GetWindowDrawList();
+				const uint32 SegmentCount = static_cast<uint32>(std::min<size_t>(SelectedCloth->Paint.MaxDistanceValues.size(), 96));
+				const float Denom = std::max(1.0f, SelectedCloth->Paint.ViewMax - SelectedCloth->Paint.ViewMin);
+				for (uint32 Segment = 0; Segment < SegmentCount; ++Segment)
+				{
+					const size_t SourceIndex = static_cast<size_t>(
+						(static_cast<double>(Segment) / std::max(1u, SegmentCount - 1)) *
+						(static_cast<double>(SelectedCloth->Paint.MaxDistanceValues.size() - 1))
+					);
+					const float T = std::clamp(
+						(SelectedCloth->Paint.MaxDistanceValues[SourceIndex] - SelectedCloth->Paint.ViewMin) / Denom,
+						0.0f,
+						1.0f
+					);
+					const int Red = static_cast<int>(255.0f * T);
+					const int Green = static_cast<int>(255.0f * (1.0f - std::fabs(T - 0.5f) * 2.0f));
+					const int Blue = static_cast<int>(255.0f * (1.0f - T));
+					const float X0 = StripPos.x + StripWidth * (static_cast<float>(Segment) / SegmentCount);
+					const float X1 = StripPos.x + StripWidth * (static_cast<float>(Segment + 1) / SegmentCount);
+					DrawList->AddRectFilled(ImVec2(X0, StripPos.y), ImVec2(X1, StripPos.y + StripHeight), IM_COL32(Red, Green, Blue, 255));
+				}
+				ImGui::Dummy(ImVec2(StripWidth, StripHeight + 4.0f));
+			}
+		}
+	);
+
 	if (bChanged)
 	{
 		SelectedCloth->Config.WindScale = std::max(0.0f, SelectedCloth->Config.WindScale);
 		SelectedCloth->Config.DragCoefficient = std::clamp(SelectedCloth->Config.DragCoefficient, 0.0f, 1.0f);
 		SelectedCloth->Config.LiftCoefficient = std::clamp(SelectedCloth->Config.LiftCoefficient, 0.0f, 1.0f);
 		SelectedCloth->Config.FluidDensity = std::max(0.000001f, SelectedCloth->Config.FluidDensity);
+		SelectedCloth->Config.InertiaLinearScale = std::clamp(SelectedCloth->Config.InertiaLinearScale, 0.0f, 1.0f);
+		SelectedCloth->Config.InertiaAngularScale = std::clamp(SelectedCloth->Config.InertiaAngularScale, 0.0f, 1.0f);
 		MarkCurrentMeshDirty();
-	}
-
-	ImGui::Checkbox("Paint Brush", &bClothPaintBrushEnabled);
-	ImGui::Checkbox("Show Paint Values", &bShowClothPaintValues);
-	if (bShowClothPaintValues)
-	{
-		ImGui::SliderFloat("Paint Overlay Alpha", &ViewportClient.GetRenderOptions().ClothMaxDistanceOverlayAlpha, 0.0f, 1.0f, "%.2f");
-	}
-	ImGui::DragFloat("Brush Value", &ClothBrushValue, 0.01f, 0.0f, 1000.0f, "%.2f");
-	ImGui::DragFloat("Brush Radius", &ClothBrushRadius, 0.01f, 0.0f, 500.0f, "%.2f");
-	if (ImGui::Button("Fill MaxDistance", ImVec2(-1.0f, 0.0f)))
-	{
-		for (float& Value : SelectedCloth->Paint.MaxDistanceValues)
-		{
-			Value = ClothBrushValue;
-		}
-		MarkCurrentMeshDirty();
-	}
-	if (ImGui::Button("Test Pin Top / Free Rest", ImVec2(-1.0f, 0.0f)) &&
-		!SelectedCloth->Paint.MaxDistanceValues.empty())
-	{
-		float MinZ = 0.0f;
-		float MaxZ = 0.0f;
-		bool bHasBounds = false;
-		for (uint32 RenderVertexIndex : SelectedCloth->ParticleToRenderVertex)
-		{
-			if (RenderVertexIndex >= Asset->Vertices.size())
-			{
-				continue;
-			}
-
-			const float Z = Asset->Vertices[RenderVertexIndex].Position.Z;
-			MinZ = bHasBounds ? std::min(MinZ, Z) : Z;
-			MaxZ = bHasBounds ? std::max(MaxZ, Z) : Z;
-			bHasBounds = true;
-		}
-
-		if (bHasBounds)
-		{
-			const float FreeValue = ClothBrushValue > 0.0f ? ClothBrushValue : 50.0f;
-			const float PinThreshold = MinZ + (MaxZ - MinZ) * 0.8f;
-			for (uint32 ParticleIndex = 0; ParticleIndex < SelectedCloth->ParticleToRenderVertex.size(); ++ParticleIndex)
-			{
-				if (ParticleIndex >= SelectedCloth->Paint.MaxDistanceValues.size())
-				{
-					break;
-				}
-
-				const uint32 RenderVertexIndex = SelectedCloth->ParticleToRenderVertex[ParticleIndex];
-				if (RenderVertexIndex >= Asset->Vertices.size())
-				{
-					continue;
-				}
-
-				SelectedCloth->Paint.MaxDistanceValues[ParticleIndex] =
-					Asset->Vertices[RenderVertexIndex].Position.Z >= PinThreshold ? 0.0f : FreeValue;
-			}
-			MarkCurrentMeshDirty();
-		}
-	}
-
-	ImGui::SliderFloat("Smooth", &ClothBrushSmoothStrength, 0.0f, 1.0f, "%.2f");
-	if (ImGui::Button("Smooth Paint", ImVec2(-1.0f, 0.0f)) &&
-		!SelectedCloth->Paint.MaxDistanceValues.empty())
-	{
-		TArray<float> Smoothed = SelectedCloth->Paint.MaxDistanceValues;
-		for (uint32 Index = 0; Index + 2 < SelectedCloth->ClothLocalIndices.size(); Index += 3)
-		{
-			const uint32 I0 = SelectedCloth->ClothLocalIndices[Index + 0];
-			const uint32 I1 = SelectedCloth->ClothLocalIndices[Index + 1];
-			const uint32 I2 = SelectedCloth->ClothLocalIndices[Index + 2];
-			if (I0 >= Smoothed.size() || I1 >= Smoothed.size() || I2 >= Smoothed.size())
-			{
-				continue;
-			}
-
-			const float Average =
-				(SelectedCloth->Paint.MaxDistanceValues[I0] +
-				 SelectedCloth->Paint.MaxDistanceValues[I1] +
-				 SelectedCloth->Paint.MaxDistanceValues[I2]) / 3.0f;
-			Smoothed[I0] = Smoothed[I0] * (1.0f - ClothBrushSmoothStrength) + Average * ClothBrushSmoothStrength;
-			Smoothed[I1] = Smoothed[I1] * (1.0f - ClothBrushSmoothStrength) + Average * ClothBrushSmoothStrength;
-			Smoothed[I2] = Smoothed[I2] * (1.0f - ClothBrushSmoothStrength) + Average * ClothBrushSmoothStrength;
-		}
-		SelectedCloth->Paint.MaxDistanceValues = std::move(Smoothed);
-		MarkCurrentMeshDirty();
-	}
-
-	if (!SelectedCloth->Paint.MaxDistanceValues.empty())
-	{
-		float MinValue = SelectedCloth->Paint.MaxDistanceValues[0];
-		float MaxValue = SelectedCloth->Paint.MaxDistanceValues[0];
-		for (float Value : SelectedCloth->Paint.MaxDistanceValues)
-		{
-			MinValue = std::min(MinValue, Value);
-			MaxValue = std::max(MaxValue, Value);
-		}
-		ImGui::Text("Particles: %zu", SelectedCloth->Paint.MaxDistanceValues.size());
-		ImGui::Text("Range: %.1f - %.1f", MinValue, MaxValue);
-
-		const ImVec2 StripPos = ImGui::GetCursorScreenPos();
-		const float StripWidth = ImGui::GetContentRegionAvail().x;
-		const float StripHeight = 14.0f;
-		ImDrawList* DrawList = ImGui::GetWindowDrawList();
-		const uint32 SegmentCount = static_cast<uint32>(std::min<size_t>(SelectedCloth->Paint.MaxDistanceValues.size(), 96));
-		const float Denom = std::max(1.0f, SelectedCloth->Paint.ViewMax - SelectedCloth->Paint.ViewMin);
-		for (uint32 Segment = 0; Segment < SegmentCount; ++Segment)
-		{
-			const size_t SourceIndex = static_cast<size_t>(
-				(static_cast<double>(Segment) / std::max(1u, SegmentCount - 1)) *
-				(static_cast<double>(SelectedCloth->Paint.MaxDistanceValues.size() - 1))
-			);
-			const float T = std::clamp(
-				(SelectedCloth->Paint.MaxDistanceValues[SourceIndex] - SelectedCloth->Paint.ViewMin) / Denom,
-				0.0f,
-				1.0f
-			);
-			const int Red = static_cast<int>(255.0f * T);
-			const int Green = static_cast<int>(255.0f * (1.0f - std::fabs(T - 0.5f) * 2.0f));
-			const int Blue = static_cast<int>(255.0f * (1.0f - T));
-			const float X0 = StripPos.x + StripWidth * (static_cast<float>(Segment) / SegmentCount);
-			const float X1 = StripPos.x + StripWidth * (static_cast<float>(Segment + 1) / SegmentCount);
-			DrawList->AddRectFilled(ImVec2(X0, StripPos.y), ImVec2(X1, StripPos.y + StripHeight), IM_COL32(Red, Green, Blue, 255));
-		}
-		ImGui::Dummy(ImVec2(StripWidth, StripHeight + 4.0f));
 	}
 }
 
