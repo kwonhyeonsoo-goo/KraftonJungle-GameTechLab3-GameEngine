@@ -692,7 +692,8 @@ void FMeshEditorWidget::CollectPreviewViewports(TArray<IEditorPreviewViewportCli
 				ViewportClient.GetPreviewWorld(),
 				ViewportClient.GetPreviewMeshComponent(),
 				ViewportClient.GetPhysicsAssetPreviewComponent(),
-				ViewportClient.GetRenderDevice());
+				ViewportClient.GetRenderDevice(),
+				&ViewportClient.GetRenderOptions().ShowFlags);
 		}
 		else if (ViewportClient.GetPhysicsAssetPreviewComponent())
 		{
@@ -984,6 +985,7 @@ void FMeshEditorWidget::RenderViewportPanel(ImVec2 Size)
 	Context.ToolbarWidth          = Size.x;
 	Context.bReservePlayStopSpace = false;
 	Context.bShowAddActor         = false;
+	Context.bShowPhysicsAssetShowFlags = (ActiveTab == EMeshEditorTab::Physics);
 	Context.OnCoordSystemToggled  = [&]()
 	{
 		FGizmoToolSettings& Settings = FEditorSettings::Get().MeshEditorViewportSettings.Gizmo;
@@ -1020,7 +1022,7 @@ void FMeshEditorWidget::RenderViewportPanel(ImVec2 Size)
 
 		if (ActiveTab == EMeshEditorTab::Physics)
 		{
-			PhysicsAssetEditor.RenderViewportDebugOptions();
+			PhysicsAssetEditor.RenderViewportDebugOptions(&ViewportClient.GetRenderOptions().ShowFlags);
 		}
 	};
 

@@ -17,6 +17,7 @@ struct FReferenceSkeleton;
 struct FPhysicsAssetBodySetup;
 struct FPhysicsAssetConstraintSetup;
 struct FPhysicsAssetShapeSetup;
+struct FShowFlags;
 
 class FPhysicsAssetEditorWidget : public FAssetEditorWidget
 {
@@ -43,15 +44,17 @@ public:
         UPhysicsAsset* PhysicsAsset,
         USkeletalMesh* PreviewMesh,
         UWorld* PreviewWorld,
-        USkeletalMeshComponent* PreviewComponent);
+        USkeletalMeshComponent* PreviewComponent,
+        const FShowFlags* PreviewShowFlags = nullptr);
     void RenderPhysicsPreview(
         UPhysicsAsset* PhysicsAsset,
         USkeletalMesh* PreviewMesh,
         UWorld* PreviewWorld,
         USkeletalMeshComponent* PreviewComponent,
         UPhysicsAssetPreviewComponent* SolidPreviewComponent,
-        ID3D11Device* Device);
-    void RenderViewportDebugOptions();
+        ID3D11Device* Device,
+        const FShowFlags* PreviewShowFlags = nullptr);
+    void RenderViewportDebugOptions(FShowFlags* PreviewShowFlags = nullptr);
     void SetEditorPreviewContext(UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent);
     void TickEditorSimulation(
         UPhysicsAsset* PhysicsAsset,

@@ -17,6 +17,7 @@
 #include "Physics/PhysicsAssetInstance.h"
 #include "Physics/PhysicsAssetManager.h"
 #include "Physics/PhysicsAssetPreviewUtils.h"
+#include "Render/Types/ViewTypes.h"
 
 #include <algorithm>
 #include <cfloat>
@@ -2917,7 +2918,8 @@ void FPhysicsAssetEditorWidget::RenderPreviewDebug(
     UPhysicsAsset* PhysicsAsset,
     USkeletalMesh* PreviewMesh,
     UWorld* PreviewWorld,
-    USkeletalMeshComponent* PreviewComponent)
+    USkeletalMeshComponent* PreviewComponent,
+    const FShowFlags* PreviewShowFlags)
 {
     PreviewSkeletalMesh = PreviewMesh;
     PreviewSkeletalMeshComponent = PreviewComponent;
@@ -2930,12 +2932,15 @@ void FPhysicsAssetEditorWidget::RenderPreviewDebug(
 
     ClampSelection(PhysicsAsset);
 
-    if (bShowPreviewBodies)
+    const bool bShowBodies = bShowPreviewBodies && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetShapes);
+    const bool bShowConstraints = bShowPreviewConstraints && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetConstraints);
+
+    if (bShowBodies)
     {
         RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
     }
 
-    if (bShowPreviewConstraints)
+    if (bShowConstraints)
     {
         RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
     }
@@ -2947,7 +2952,8 @@ void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
     UWorld* PreviewWorld,
     USkeletalMeshComponent* PreviewComponent,
     UPhysicsAssetPreviewComponent* SolidPreviewComponent,
-    ID3D11Device* Device)
+    ID3D11Device* Device,
+    const FShowFlags* PreviewShowFlags)
 {
     PreviewSkeletalMesh = PreviewMesh;
     PreviewSkeletalMeshComponent = PreviewComponent;
@@ -2964,6 +2970,9 @@ void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
 
     ClampSelection(PhysicsAsset);
 
+    const bool bShowBodies = bShowPreviewBodies && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetShapes);
+    const bool bShowConstraints = bShowPreviewConstraints && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetConstraints);
+
     if (SolidPreviewComponent)
     {
         SolidPreviewComponent->UpdatePreview(
@@ -2972,36 +2981,40 @@ void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
             SelectedBodyIndex,
             SelectedShapeIndex,
             SelectedConstraintIndex,
-            bShowPreviewBodies,
-            bShowPreviewConstraints && bShowConstraintLimitAngles && bShowConstraintLimitSurfaces,
+            bShowBodies,
+            bShowConstraints && bShowConstraintLimitAngles && bShowConstraintLimitSurfaces,
             bShowOnlySelectedConstraintLimitAngles,
             Device);
     }
 
-    if (bShowPreviewBodies)
+    if (bShowBodies)
     {
         RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
     }
 
-    if (bShowPreviewConstraints)
+    if (bShowConstraints)
     {
         RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
     }
 }
 
-void FPhysicsAssetEditorWidget::RenderViewportDebugOptions()
+void FPhysicsAssetEditorWidget::RenderViewportDebugOptions(FShowFlags* PreviewShowFlags)
 {
     ImGui::Separator();
     ImGui::TextUnformatted("Physics Preview");
-    ImGui::Checkbox("Physics Bodies", &bShowPreviewBodies);
-    ImGui::Checkbox("Physics Constraints", &bShowPreviewConstraints);
-    if (!bShowPreviewConstraints) ImGui::BeginDisabled();
+
+    bool* bShowBodies = PreviewShowFlags ? &PreviewShowFlags->bPhysicsAssetShapes : &bShowPreviewBodies;
+    bool* bShowConstraints = PreviewShowFlags ? &PreviewShowFlags->bPhysicsAssetConstraints : &bShowPreviewConstraints;
+
+    ImGui::Checkbox("Physics Asset Shapes", bShowBodies);
+    ImGui::Checkbox("Physics Asset Constraints", bShowConstraints);
+    if (!*bShowConstraints) ImGui::BeginDisabled();
     ImGui::Checkbox("Constraint Limits", &bShowConstraintLimitAngles);
     if (!bShowConstraintLimitAngles) ImGui::BeginDisabled();
     ImGui::Checkbox("Constraint Limit Fill", &bShowConstraintLimitSurfaces);
     ImGui::Checkbox("Selected Constraint Limits Only", &bShowOnlySelectedConstraintLimitAngles);
     if (!bShowConstraintLimitAngles) ImGui::EndDisabled();
-    if (!bShowPreviewConstraints) ImGui::EndDisabled();
+    if (!*bShowConstraints) ImGui::EndDisabled();
     ImGui::TextDisabled(bEditorSimulationActive
         ? (bEditorSimulationPaused ? "Simulation: paused" : "Simulation: running")
         : "Simulation: stopped");
