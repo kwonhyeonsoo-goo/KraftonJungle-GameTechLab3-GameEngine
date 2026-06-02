@@ -59,7 +59,7 @@ private:
     void                ClearLuaRuntime();
     void                BindOwnerCollisionEvents();
     void                ClearCollisionBindings();
-    void                BindInputEvents();
+    bool                BindInputEvents();
     void                ClearInputBindings();
     const void*         GetInputBindingOwnerKey() const { return this; }
     FString             GetRuntimeName() const;
@@ -160,6 +160,8 @@ private:
 
     TArray<TWeakObjectPtr<UPrimitiveComponent>> BoundOverlapComponents;
     TWeakObjectPtr<UInputComponent>             BoundInputComponent;
+    bool                                      bInputBindingPending = false;
+    bool                                      bInputBindingPendingLogEmitted = false;
 
     TArray<TWeakObjectPtr<UPrimitiveComponent>> BoundHitComponents;
     TArray<FDelegateHandle>                     BeginOverlapHandles;

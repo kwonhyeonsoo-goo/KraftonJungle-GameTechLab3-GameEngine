@@ -5,6 +5,9 @@
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/Pawn/Pawn.h"
+#include "GameFramework/GameMode/PlayerController.h"
+#include "GameFramework/World.h"
+#include "Runtime/Engine.h"
 #include "Lua/LuaScriptManager.h"
 #include "LuaBlueprint/LuaBlueprintAsset.h"
 #include "LuaBlueprint/LuaBlueprintManager.h"
@@ -12,6 +15,7 @@
 #include "Object/GarbageCollection.h"
 
 #include <cstring>
+#include <cmath>
 
 ULuaBlueprintComponent::ULuaBlueprintComponent()  = default;
 ULuaBlueprintComponent::~ULuaBlueprintComponent() = default;
@@ -42,7 +46,7 @@ bool ULuaBlueprintComponent::ReloadBlueprint()
     if (bInitialized)
     {
         BindOwnerCollisionEvents();
-        BindInputEvents();
+        bInputBindingPending = !BindInputEvents();
     }
     return bInitialized;
 }
@@ -177,6 +181,11 @@ void ULuaBlueprintComponent::TickComponent(
         {
             ReloadBlueprint();
         }
+    }
+
+    if (bInputBindingPending && Env.valid())
+    {
+        BindInputEvents();
     }
 
     if (bWantsTick && LuaTick)
@@ -388,6 +397,8 @@ void ULuaBlueprintComponent::ClearLuaRuntime()
     bHasCalledLuaEndPlay = false;
     bPendingLuaEndPlay   = false;
     bPendingLuaCleanup   = false;
+    bInputBindingPending = false;
+    bInputBindingPendingLogEmitted = false;
 }
 
 namespace
@@ -431,38 +442,97 @@ namespace
     }
 }
 
-void ULuaBlueprintComponent::BindInputEvents()
+bool ULuaBlueprintComponent::BindInputEvents()
 {
     ClearInputBindings();
 
     if (!Env.valid())
     {
-        return;
-    }
-
-    AActor* OwnerActor = GetOwner();
-    APawn* OwnerPawn = Cast<APawn>(OwnerActor);
-    if (!OwnerPawn)
-    {
-        return;
-    }
-
-    UInputComponent* InputComponent = OwnerPawn->GetInputComponent();
-    if (!InputComponent)
-    {
-        return;
+        bInputBindingPending = false;
+        return true;
     }
 
     sol::object BindingsObject = Env["__input_bindings"];
     if (!BindingsObject.valid() || BindingsObject.get_type() != sol::type::table)
     {
-        return;
+        bInputBindingPending = false;
+        return true;
     }
 
     sol::table Bindings = BindingsObject.as<sol::table>();
+    bool bHasBindings = false;
+    for (auto&& Entry : Bindings)
+    {
+        sol::object Value = Entry.second;
+        if (Value.valid() && Value.get_type() == sol::type::table)
+        {
+            bHasBindings = true;
+            break;
+        }
+    }
+
+    if (!bHasBindings)
+    {
+        bInputBindingPending = false;
+        return true;
+    }
+
+    AActor* OwnerActor = GetOwner();
+    APawn* OwnerPawn = Cast<APawn>(OwnerActor);
+    UInputComponent* InputComponent = nullptr;
+
+    // Prefer the owner pawn's input component even if it is not possessed yet.
+    // Possession only controls when ProcessPlayerInput starts running; it should not
+    // prevent bindings from being registered ahead of time.
+    if (OwnerPawn)
+    {
+        InputComponent = OwnerPawn->GetInputComponent();
+    }
+
+    // Actor-owned LuaBlueprints can still route input through the currently possessed pawn.
+    // This is a fallback, not an Actor->Pawn type conversion inside the graph.
+    if (!InputComponent && GEngine && GEngine->GetWorld())
+    {
+        if (APlayerController* PlayerController = GEngine->GetWorld()->GetFirstPlayerController())
+        {
+            if (APawn* PossessedPawn = PlayerController->GetPossessedPawn())
+            {
+                InputComponent = PossessedPawn->GetInputComponent();
+            }
+        }
+    }
+
+    if (!InputComponent)
+    {
+        bInputBindingPending = true;
+        if (!bInputBindingPendingLogEmitted)
+        {
+            if (OwnerPawn)
+            {
+                UE_LOG(
+                    "LuaBlueprint input bindings pending in %s: InputComponent is not available yet. OwnerPawn=%s Possessed=%d",
+                    GetRuntimeName().c_str(),
+                    OwnerPawn->GetName().c_str(),
+                    OwnerPawn->IsPossessed() ? 1 : 0
+                );
+            }
+            else
+            {
+                UE_LOG(
+                    "LuaBlueprint input bindings pending in %s: owner is not APawn and no possessed pawn InputComponent is available. Owner=%s",
+                    GetRuntimeName().c_str(),
+                    OwnerActor ? OwnerActor->GetName().c_str() : "(null)"
+                );
+            }
+            bInputBindingPendingLogEmitted = true;
+        }
+        return false;
+    }
+
     const void* OwnerKey = GetInputBindingOwnerKey();
     const uint32 Generation = LuaRuntimeGeneration;
     TWeakObjectPtr<ULuaBlueprintComponent> WeakThis(this);
+    int32 BoundCount = 0;
 
     for (auto&& Entry : Bindings)
     {
@@ -484,6 +554,11 @@ void ULuaBlueprintComponent::BindInputEvents()
         sol::object FunctionObject = Env[FunctionName.c_str()];
         if (!FunctionObject.valid() || FunctionObject.get_type() != sol::type::function)
         {
+            UE_LOG(
+                "LuaBlueprint input binding skipped in %s: generated function '%s' is missing",
+                GetRuntimeName().c_str(),
+                FunctionName.c_str()
+            );
             continue;
         }
 
@@ -514,6 +589,7 @@ void ULuaBlueprintComponent::BindInputEvents()
                     UE_LOG("LuaBlueprint input action error in %s: %s", Owner->GetRuntimeName().c_str(), Err.what());
                 }
             });
+            ++BoundCount;
         }
         else if (Kind == "Axis")
         {
@@ -535,6 +611,16 @@ void ULuaBlueprintComponent::BindInputEvents()
 
             InputComponent->BindAxisForOwner(OwnerKey, Name, [WeakThis, Generation, Callback](float AxisValue) mutable
             {
+                // LuaBlueprint axis event nodes are authored like event callbacks, not low-level polling hooks.
+                // UInputComponent evaluates axis bindings every frame, including value=0. Calling the generated
+                // Lua function at zero makes graphs that ignore the Value pin run forever while no key is held.
+                // Skipping near-zero values keeps key/mouse axis events event-like; continuous zero-state logic
+                // should use Tick or explicit Input.IsDown polling instead.
+                if (std::fabs(AxisValue) <= 0.000001f)
+                {
+                    return;
+                }
+
                 ULuaBlueprintComponent* Owner = WeakThis.Get();
                 if (!Owner || !Owner->IsLuaRuntimeGenerationValid(Generation))
                 {
@@ -549,10 +635,20 @@ void ULuaBlueprintComponent::BindInputEvents()
                     UE_LOG("LuaBlueprint input axis error in %s: %s", Owner->GetRuntimeName().c_str(), Err.what());
                 }
             });
+            ++BoundCount;
         }
     }
 
     BoundInputComponent = InputComponent;
+    bInputBindingPending = false;
+    bInputBindingPendingLogEmitted = false;
+    UE_LOG(
+        "LuaBlueprint input bindings ready in %s: %d binding(s) on %s",
+        GetRuntimeName().c_str(),
+        BoundCount,
+        InputComponent->GetName().c_str()
+    );
+    return true;
 }
 
 void ULuaBlueprintComponent::ClearInputBindings()
