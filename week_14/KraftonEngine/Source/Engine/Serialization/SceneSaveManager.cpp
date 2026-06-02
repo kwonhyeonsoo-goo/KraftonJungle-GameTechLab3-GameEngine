@@ -86,6 +86,7 @@ namespace SceneKeys
 	static constexpr const char* ContextHandle = "ContextHandle";
 	static constexpr const char* WorldSettings = "WorldSettings";
 	static constexpr const char* GameMode = "GameMode";  // legacy / WorldSettings 내부 키
+	static constexpr const char* Gravity = "Gravity";
 	static constexpr const char* Actors = "Actors";
 	static constexpr const char* RootComponent = "RootComponent";
 	static constexpr const char* NonSceneComponents = "NonSceneComponents";
@@ -360,6 +361,7 @@ json::JSON FSceneSaveManager::SerializeWorld(UWorld* World, const FWorldContext&
 		const FWorldSettings& WS = World->GetWorldSettings();
 		JSON WSObj = json::Object();
 		WSObj[SceneKeys::GameMode] = WS.GameModeClassName;
+		WriteVec3(WSObj, SceneKeys::Gravity, WS.Gravity);
 		w[SceneKeys::WorldSettings] = WSObj;
 	}
 
@@ -556,6 +558,11 @@ void FSceneSaveManager::LoadSceneFromJSON(const string& filepath, FWorldContext&
 		if (WSObj.hasKey(SceneKeys::GameMode))
 		{
 			WorldSettings.GameModeClassName = WSObj[SceneKeys::GameMode].ToString();
+		}
+		if (WSObj.hasKey(SceneKeys::Gravity) &&
+			WSObj[SceneKeys::Gravity].JSONType() == JSON::Class::Array)
+		{
+			WorldSettings.Gravity = ReadVec3(WSObj[SceneKeys::Gravity]);
 		}
 	}
 	else if (root.hasKey(SceneKeys::GameMode))

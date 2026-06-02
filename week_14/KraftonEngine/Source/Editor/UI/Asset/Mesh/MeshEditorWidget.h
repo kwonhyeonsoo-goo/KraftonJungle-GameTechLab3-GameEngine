@@ -92,6 +92,8 @@ private:
 	void RenderPhysicsLayout(float TotalHeight);
 	void TickClothPaintBrush();
 	void UpdateClothMaxDistanceOverlayOptions();
+	void ApplyClothPreviewForcesToComponent();
+	FVector GetClothPreviewWindVelocity() const;
 
 	// Shared helpers
 	void RenderViewportPanel(ImVec2 Size);
@@ -148,6 +150,9 @@ private:
 	float ClothBrushValue = 50.0f;
 	float ClothBrushRadius = 25.0f;
 	float ClothBrushSmoothStrength = 0.5f;
+	FVector ClothPreviewWindDirection = FVector::XAxisVector;
+	float ClothPreviewWindSpeed = 0.0f;
+	bool bClothPreviewWindEnabled = false;
 	bool bClothPaintBrushEnabled = false;
 	bool bShowClothPaintValues = true;
 	bool bMeshDirty = false;
@@ -155,6 +160,7 @@ private:
 	int32 BufferedSocketIndex = -2;
 	char SocketNameBuffer[128] = {};
 	char SocketBoneNameBuffer[128] = {};
+	float MeshInfoWidth    = 340.0f;
 	float HierarchyWidth    = 250.0f;
 	float DetailsWidth      = 300.0f;
 
