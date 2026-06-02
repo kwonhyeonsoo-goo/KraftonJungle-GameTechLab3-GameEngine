@@ -159,7 +159,19 @@ namespace
             NameEquals(PropertyName, "EnginePeakTorque") ||
             NameEquals(PropertyName, "EngineMaxOmega") ||
             NameEquals(PropertyName, "ClutchStrength") ||
-            NameEquals(PropertyName, "TireFriction");
+            NameEquals(PropertyName, "bEnableReverseGear") ||
+            NameEquals(PropertyName, "Enable Reverse Gear") ||
+            NameEquals(PropertyName, "ReverseGearSwitchSpeed") ||
+            NameEquals(PropertyName, "Reverse Gear Switch Speed") ||
+            NameEquals(PropertyName, "TireFriction") ||
+            NameEquals(PropertyName, "bWheelsTraceWorldStatic") ||
+            NameEquals(PropertyName, "Wheels Trace World Static") ||
+            NameEquals(PropertyName, "bWheelsTraceWorldDynamic") ||
+            NameEquals(PropertyName, "Wheels Trace World Dynamic") ||
+            NameEquals(PropertyName, "bWheelsTracePawn") ||
+            NameEquals(PropertyName, "Wheels Trace Pawn/Skeletal") ||
+            NameEquals(PropertyName, "bWheelsTraceProjectile") ||
+            NameEquals(PropertyName, "Wheels Trace Projectile");
     }
 
     FString ToLowerName(FString Value)
@@ -1058,7 +1070,7 @@ void UWheeledVehicleMovementComponent::AddReferencedObjects(FReferenceCollector&
 
 void UWheeledVehicleMovementComponent::SetThrottleInput(float InThrottle)
 {
-    CurrentInput.Throttle = std::clamp(InThrottle, 0.0f, 1.0f);
+    CurrentInput.Throttle = std::clamp(InThrottle, -1.0f, 1.0f);
 }
 
 void UWheeledVehicleMovementComponent::SetBrakeInput(float InBrake)
@@ -1198,6 +1210,10 @@ USceneComponent* UWheeledVehicleMovementComponent::ResolveVehicleChassisComponen
         return ExplicitChassis;
     }
 
+    // This is the visual/collision body selector, not necessarily the component that is
+    // driven by the vehicle simulation. For static-mesh-only vehicles the body is often a
+    // scaled child under an empty skeletal root; using that child as the simulation frame
+    // folds the child scale into wheel coordinates and leaves the root behind.
     if (USceneComponent* AutoStaticChassis = FindAutoStaticChassisComponent())
     {
         return AutoStaticChassis;
@@ -1228,6 +1244,10 @@ USceneComponent* UWheeledVehicleMovementComponent::ResolveVehicleSimulationCompo
     AActor* Owner = GetOwner();
     USceneComponent* Root = Owner ? Owner->GetRootComponent() : nullptr;
 
+    // Movement must drive the actor/root frame. The chassis visual may be a scaled child,
+    // and driving that child directly makes the root stay behind while wheel coordinates
+    // are measured through the child's non-uniform scale. Even if UpdatedComponent was
+    // accidentally set to a child body, prefer the owner root as the simulation frame.
     if (Root)
     {
         return Root;
@@ -1256,6 +1276,9 @@ void UWheeledVehicleMovementComponent::EnsureDefaultWheelSetups()
         return;
     }
 
+    // Prefer the actual component layout over fabricating bone-based defaults. This keeps
+    // static-mesh-only vehicle actors usable when PIE starts before the user has saved
+    // generated WheelSetups into the scene.
     if (AutoGenerateWheelSetupsFromSkeleton())
     {
         return;
@@ -1605,6 +1628,8 @@ bool UWheeledVehicleMovementComponent::AutoGenerateWheelSetupsFromStaticMeshComp
             continue;
         }
 
+        // The chassis body is commonly a StaticMeshComponent too. Exclude the resolved body
+        // so unnamed wheels can be detected by layout instead of being polluted by the body cube.
         if (StaticMeshComponent == Chassis)
         {
             continue;
@@ -1637,6 +1662,8 @@ bool UWheeledVehicleMovementComponent::AutoGenerateWheelSetupsFromStaticMeshComp
         return false;
     }
 
+    // Prefer explicit wheel/tire names when available, but fall back to pure geometry.
+    // This is required for imported/demo scenes where every component is Name_None.
     TArray<int32> CandidateIndices = NamedCandidateIndices.size() >= 2
         ? NamedCandidateIndices
         : BuildStrictWheelCandidateIndexPool(Candidates);
@@ -1852,6 +1879,30 @@ FQuat UWheeledVehicleMovementComponent::ResolveVisualToSimulationRotation(const 
     return FQuat::Identity;
 }
 
+uint32 UWheeledVehicleMovementComponent::BuildDrivableSurfaceMask() const
+{
+    uint32 Mask = 0;
+
+    if (bWheelsTraceWorldStatic)
+    {
+        Mask |= ObjectTypeBit(ECollisionChannel::WorldStatic);
+    }
+    if (bWheelsTraceWorldDynamic)
+    {
+        Mask |= ObjectTypeBit(ECollisionChannel::WorldDynamic);
+    }
+    if (bWheelsTracePawn)
+    {
+        Mask |= ObjectTypeBit(ECollisionChannel::Pawn);
+    }
+    if (bWheelsTraceProjectile)
+    {
+        Mask |= ObjectTypeBit(ECollisionChannel::Projectile);
+    }
+
+    return Mask != 0 ? Mask : ObjectTypeBit(ECollisionChannel::WorldStatic);
+}
+
 FVehicleDesc UWheeledVehicleMovementComponent::BuildVehicleDesc() const
 {
     FVehicleDesc Desc;
@@ -1876,7 +1927,10 @@ FVehicleDesc UWheeledVehicleMovementComponent::BuildVehicleDesc() const
     Desc.EnginePeakTorque = EnginePeakTorque;
     Desc.EngineMaxOmega   = EngineMaxOmega;
     Desc.ClutchStrength   = ClutchStrength;
+    Desc.bEnableReverseGear = bEnableReverseGear;
+    Desc.ReverseGearSwitchSpeed = std::max(ReverseGearSwitchSpeed, 0.0f);
     Desc.TireFriction     = std::max(TireFriction, 0.01f);
+    Desc.DrivableSurfaceMask = BuildDrivableSurfaceMask();
     Desc.bFrontWheelDrive = false;
     Desc.bRearWheelDrive  = false;
 

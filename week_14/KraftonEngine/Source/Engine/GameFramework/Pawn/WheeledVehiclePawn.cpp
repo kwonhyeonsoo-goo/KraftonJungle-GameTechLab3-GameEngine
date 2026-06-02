@@ -102,16 +102,8 @@ void AWheeledVehiclePawn::SetupInputComponent()
             return;
         }
 
-        if (Value >= 0.0f)
-        {
-            VehicleMovement->SetThrottleInput(Value);
-            VehicleMovement->SetBrakeInput(0.0f);
-        }
-        else
-        {
-            VehicleMovement->SetThrottleInput(0.0f);
-            VehicleMovement->SetBrakeInput(-Value);
-        }
+        VehicleMovement->SetThrottleInput(Value);
+        VehicleMovement->SetBrakeInput(0.0f);
     });
 
     InputComponent->BindAxis("VehicleSteering", [this](float Value)

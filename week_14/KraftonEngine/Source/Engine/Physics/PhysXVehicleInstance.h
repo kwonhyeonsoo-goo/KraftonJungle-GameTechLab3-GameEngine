@@ -35,6 +35,7 @@ struct FPhysXVehicleInstance
 
     physx::PxVehicleDrive4WRawInputData RawInput;
     FVehicleInputState             Input;
+    bool                           bReverseGearActive = false;
 
     FTransform PreviousChassisTransform;
     FTransform CurrentChassisTransform;

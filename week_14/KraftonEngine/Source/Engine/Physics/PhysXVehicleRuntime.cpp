@@ -42,7 +42,14 @@ namespace
             return physx::PxQueryHitType::eNONE;
         }
 
-        if ((ObjectFilterData.word0 & PhysicsFilter_QueryAndPhysics) == 0)
+        if ((ObjectFilterData.word0 & PhysicsFilter_IsTrigger) != 0)
+        {
+            return physx::PxQueryHitType::eNONE;
+        }
+
+        const bool bQueryEnabled =
+            (ObjectFilterData.word0 & (PhysicsFilter_QueryOnly | PhysicsFilter_QueryAndPhysics)) != 0;
+        if (!bQueryEnabled)
         {
             return physx::PxQueryHitType::eNONE;
         }
@@ -619,6 +626,7 @@ FVehicleHandle FPhysXVehicleRuntime::CreateVehicle(const FVehicleDesc& Desc)
     Instance->Vehicle->setToRestState();
     Instance->Vehicle->mDriveDynData.forceGearChange(physx::PxVehicleGearsData::eFIRST);
     Instance->Vehicle->mDriveDynData.setUseAutoGears(true);
+    Instance->bReverseGearActive = false;
 
     Instance->BatchQuery    = CreateVehicleBatchQuery(Scene, *Instance);
     Instance->FrictionPairs = CreateVehicleFrictionPairs(DefaultMaterial, Desc.TireFriction);
@@ -709,7 +717,7 @@ void FPhysXVehicleRuntime::SetVehicleInput(FVehicleHandle Vehicle, const FVehicl
         return;
     }
 
-    Instance->Input.Throttle  = std::clamp(Input.Throttle, 0.0f, 1.0f);
+    Instance->Input.Throttle  = std::clamp(Input.Throttle, -1.0f, 1.0f);
     Instance->Input.Brake     = std::clamp(Input.Brake, 0.0f, 1.0f);
     Instance->Input.Steering  = std::clamp(Input.Steering, -1.0f, 1.0f);
     Instance->Input.Handbrake = std::clamp(Input.Handbrake, 0.0f, 1.0f);
@@ -728,7 +736,9 @@ void FPhysXVehicleRuntime::ResetVehicle(FVehicleHandle Vehicle, const FTransform
     Instance->ChassisActor->setAngularVelocity(physx::PxVec3(0.0f));
 
     Instance->Vehicle->setToRestState();
+    Instance->Vehicle->mDriveDynData.setUseAutoGears(true);
     Instance->Vehicle->mDriveDynData.forceGearChange(physx::PxVehicleGearsData::eFIRST);
+    Instance->bReverseGearActive = false;
 
     Instance->PreviousChassisTransform = WorldTransform;
     Instance->CurrentChassisTransform  = WorldTransform;
@@ -752,8 +762,69 @@ void FPhysXVehicleRuntime::PreSimulate(float InFixedDt)
             continue;
         }
 
-        Instance->RawInput.setAnalogAccel(Instance->Input.Throttle);
-        Instance->RawInput.setAnalogBrake(Instance->Input.Brake);
+        const float SignedThrottle = std::clamp(Instance->Input.Throttle, -1.0f, 1.0f);
+        const float ThrottleAbs    = std::abs(SignedThrottle);
+        const float DeadZone       = 0.01f;
+        const float SwitchSpeed    = std::max(0.0f, Instance->Desc.ReverseGearSwitchSpeed);
+        const bool  bReverseEnabled = Instance->Desc.bEnableReverseGear;
+
+        const physx::PxTransform ChassisPose = Instance->ChassisActor->getGlobalPose();
+        const physx::PxVec3 ForwardAxis = ChassisPose.q.rotate(physx::PxVec3(1.0f, 0.0f, 0.0f));
+        const float ForwardSpeed = Instance->ChassisActor->getLinearVelocity().dot(ForwardAxis);
+
+        float AnalogAccel = 0.0f;
+        float AnalogBrake = std::clamp(Instance->Input.Brake, 0.0f, 1.0f);
+
+        auto SetReverseGearActive = [Instance](bool bReverse)
+        {
+            if (Instance->bReverseGearActive == bReverse)
+            {
+                return;
+            }
+
+            Instance->Vehicle->mDriveDynData.setUseAutoGears(!bReverse);
+            Instance->Vehicle->mDriveDynData.forceGearChange(
+                bReverse ? physx::PxVehicleGearsData::eREVERSE : physx::PxVehicleGearsData::eFIRST);
+            Instance->bReverseGearActive = bReverse;
+        };
+
+        if (SignedThrottle < -DeadZone)
+        {
+            if (!bReverseEnabled)
+            {
+                SetReverseGearActive(false);
+                AnalogBrake = std::max(AnalogBrake, ThrottleAbs);
+            }
+            else if (ForwardSpeed > SwitchSpeed)
+            {
+                SetReverseGearActive(false);
+                AnalogBrake = std::max(AnalogBrake, ThrottleAbs);
+            }
+            else
+            {
+                SetReverseGearActive(true);
+                AnalogAccel = ThrottleAbs;
+            }
+        }
+        else if (SignedThrottle > DeadZone)
+        {
+            if (ForwardSpeed < -SwitchSpeed)
+            {
+                AnalogBrake = std::max(AnalogBrake, ThrottleAbs);
+            }
+            else
+            {
+                SetReverseGearActive(false);
+                AnalogAccel = SignedThrottle;
+            }
+        }
+        else if (!bReverseEnabled && Instance->bReverseGearActive)
+        {
+            SetReverseGearActive(false);
+        }
+
+        Instance->RawInput.setAnalogAccel(AnalogAccel);
+        Instance->RawInput.setAnalogBrake(AnalogBrake);
         Instance->RawInput.setAnalogSteer(Instance->Input.Steering);
         Instance->RawInput.setAnalogHandbrake(Instance->Input.Handbrake);
 

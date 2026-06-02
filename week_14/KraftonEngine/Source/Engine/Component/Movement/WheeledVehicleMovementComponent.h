@@ -158,6 +158,7 @@ protected:
     FVector ComputeAutoChassisCollisionOffset(const TArray<FVector>& ResolvedWheelPositions) const;
     FVector ResolveChassisCollisionOffset(const TArray<FVector>& ResolvedWheelPositions) const;
     FQuat ResolveVisualToSimulationRotation(const TArray<FVector>& ResolvedWheelPositions) const;
+    uint32 BuildDrivableSurfaceMask() const;
     FVehicleDesc BuildVehicleDesc() const;
     void EnsureDefaultWheelSetups();
     void RegisterPhysicsSnapshotReceiver();
@@ -205,8 +206,23 @@ protected:
     UPROPERTY(Edit, Save, Category="Vehicle|Engine", DisplayName="Clutch Strength", Speed=0.1f)
     float ClutchStrength = 10.0f;
 
+    UPROPERTY(Edit, Save, Category="Vehicle|Transmission", DisplayName="Enable Reverse Gear")
+    bool bEnableReverseGear = true;
+    UPROPERTY(Edit, Save, Category="Vehicle|Transmission", DisplayName="Reverse Gear Switch Speed", Speed=0.05f)
+    float ReverseGearSwitchSpeed = 0.5f;
+
     UPROPERTY(Edit, Save, Category="Vehicle|Tire", DisplayName="Fallback Tire Friction", Speed=0.05f)
     float TireFriction = 1.5f;
+
+    UPROPERTY(Edit, Save, Category="Vehicle|Collision", DisplayName="Wheels Trace World Static")
+    bool bWheelsTraceWorldStatic = true;
+    UPROPERTY(Edit, Save, Category="Vehicle|Collision", DisplayName="Wheels Trace World Dynamic")
+    bool bWheelsTraceWorldDynamic = true;
+    UPROPERTY(Edit, Save, Category="Vehicle|Collision", DisplayName="Wheels Trace Pawn/Skeletal")
+    bool bWheelsTracePawn = true;
+    UPROPERTY(Edit, Save, Category="Vehicle|Collision", DisplayName="Wheels Trace Projectile")
+    bool bWheelsTraceProjectile = false;
+
 
     UPROPERTY(Edit, Save, Category="Vehicle|Wheel", DisplayName="Wheel Setups", Type=Array, Struct=FVehicleWheelSetup)
     TArray<FVehicleWheelSetup> WheelSetups;
