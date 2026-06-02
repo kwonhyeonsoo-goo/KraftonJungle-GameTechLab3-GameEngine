@@ -19,6 +19,7 @@
 #include <memory>
 #include <mutex>
 #include <PxPhysicsAPI.h>
+#include <vehicle/PxVehicleSDK.h>
 #include <thread>
 #include <unordered_map>
 #include <utility>
@@ -63,10 +64,11 @@ static PxDefaultAllocator GPhysXAllocator;
 // ============================================================
 // PhysX Foundation/Physics singleton
 // ============================================================
-static PxFoundation* GSharedFoundation = nullptr;
-static PxPhysics* GSharedPhysics = nullptr;
-static bool GSharedExtensionsInitialized = false;
-static int32 GSharedRefCount = 0;
+static PxFoundation* GSharedFoundation            = nullptr;
+static PxPhysics*    GSharedPhysics               = nullptr;
+static bool          GSharedExtensionsInitialized = false;
+static int32         GSharedRefCount              = 0;
+static bool          GSharedVehicleSDKInitialized = false;
 
 static void AcquireSharedPhysX(PxFoundation*& OutFoundation, PxPhysics*& OutPhysics)
 {
@@ -86,6 +88,22 @@ static void AcquireSharedPhysX(PxFoundation*& OutFoundation, PxPhysics*& OutPhys
                     GSharedPhysics = nullptr;
                     GSharedFoundation->release();
                     GSharedFoundation = nullptr;
+                }
+                else if (!PxInitVehicleSDK(*GSharedPhysics))
+                {
+                    UE_LOG("[PhysX] Failed to initialize PhysX Vehicle SDK");
+                    PxCloseExtensions();
+                    GSharedExtensionsInitialized = false;
+                    GSharedPhysics->release();
+                    GSharedPhysics = nullptr;
+                    GSharedFoundation->release();
+                    GSharedFoundation = nullptr;
+                }
+                else
+                {
+                    PxVehicleSetBasisVectors(PxVec3(0.0f, 0.0f, 1.0f), PxVec3(1.0f, 0.0f, 0.0f));
+                    PxVehicleSetUpdateMode(PxVehicleUpdateMode::eVELOCITY_CHANGE);
+                    GSharedVehicleSDKInitialized = true;
                 }
             }
         }
@@ -113,6 +131,11 @@ static void ReleaseSharedPhysX()
     --GSharedRefCount;
     if (GSharedRefCount == 0)
     {
+        if (GSharedVehicleSDKInitialized)
+        {
+            PxCloseVehicleSDK();
+            GSharedVehicleSDKInitialized = false;
+        }
         if (GSharedExtensionsInitialized)
         {
             PxCloseExtensions();
@@ -1237,6 +1260,39 @@ uint32 FPhysXPhysicsScene::GetComponentGeneration_GameThread(uint32 ComponentId)
 {
     const FPhysicsComponentBinding* Binding = FindBinding_GameThread(ComponentId);
     return Binding ? Binding->Generation : 0;
+}
+
+FVehicleHandle FPhysXPhysicsScene::CreateVehicle(const FVehicleDesc& Desc)
+{
+    FVehicleDesc LocalDesc = Desc;
+    LocalDesc.ReservedVehicle   = Runtime.ReserveVehicleHandle_GameThread();
+
+    Runtime.CreateVehicle(LocalDesc);
+    return LocalDesc.ReservedVehicle;
+}
+
+void FPhysXPhysicsScene::DestroyVehicle(FVehicleHandle Vehicle)
+{
+    if (Vehicle.IsValid())
+    {
+        Runtime.DestroyVehicle(Vehicle);
+    }
+}
+
+void FPhysXPhysicsScene::SetVehicleInput(FVehicleHandle Vehicle, const FVehicleInputState& Input)
+{
+    if (Vehicle.IsValid())
+    {
+        Runtime.SetVehicleInput(Vehicle, Input);
+    }
+}
+
+void FPhysXPhysicsScene::ResetVehicle(FVehicleHandle Vehicle, const FTransform& WorldTransform)
+{
+    if (Vehicle.IsValid())
+    {
+        Runtime.ResetVehicle(Vehicle, WorldTransform);
+    }
 }
 
 FBodyCreationDesc FPhysXPhysicsScene::BuildBodyDescFromComponent_GameThread(UPrimitiveComponent* Comp, uint32 Generation) const

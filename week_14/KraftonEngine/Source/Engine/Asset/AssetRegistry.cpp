@@ -29,12 +29,14 @@ namespace FAssetRegistry
 
 		try
 		{
-		if (std::strcmp(AssetTypeName, "UStaticMesh") == 0)
+		if (std::strcmp(AssetTypeName, "UStaticMesh") == 0 || std::strcmp(AssetTypeName, "StaticMesh") == 0)
 		{
+			FMeshManager::ScanMeshAssets();
 			return FMeshManager::GetAvailableStaticMeshFiles();
 		}
-		if (std::strcmp(AssetTypeName, "USkeletalMesh") == 0)
+		if (std::strcmp(AssetTypeName, "USkeletalMesh") == 0 || std::strcmp(AssetTypeName, "SkeletalMesh") == 0)
 		{
+			FMeshManager::ScanMeshAssets();
 			return FMeshManager::GetAvailableSkeletalMeshFiles();
 		}
         if (std::strcmp(AssetTypeName, "USkeleton") == 0)

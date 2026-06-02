@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Intermediate">
@@ -196,6 +196,9 @@
     <Filter Include="Source\Engine\Component\Shape">
       <UniqueIdentifier>{fb6d80ca-96e4-ce1e-ac4b-8daf51627459}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Component\Vehicle">
+      <UniqueIdentifier>{8c1bcd61-6938-e150-b767-79872804546a}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Core">
       <UniqueIdentifier>{aaeb2f3f-eff4-9d0e-a471-82c1372b9aed}</UniqueIdentifier>
     </Filter>
@@ -294,6 +297,9 @@
     </Filter>
     <Filter Include="Source\Engine\Physics">
       <UniqueIdentifier>{c1985821-1144-9a46-639a-f7de31f4a1fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Physics\Vehicle">
+      <UniqueIdentifier>{92afbb1a-fe08-a460-851e-dbd22a2602cd}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Platform">
       <UniqueIdentifier>{813e0a37-91de-2afc-805f-1a0f801727b9}</UniqueIdentifier>
@@ -645,6 +651,12 @@
     <FxCompile Include="Shaders\Common\Functions.hlsli">
       <Filter>Shaders\Common</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Common\LightCullingDebug.hlsli">
+      <Filter>Shaders\Common</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Common\NormalMapping.hlsli">
+      <Filter>Shaders\Common</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\Common\ShadowSampling.hlsli">
       <Filter>Shaders\Common</Filter>
     </FxCompile>
@@ -666,6 +678,9 @@
     <FxCompile Include="Shaders\Editor\Gizmo.hlsl">
       <Filter>Shaders\Editor</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Editor\ViewModeMesh.hlsl">
+      <Filter>Shaders\Editor</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\Geometry\Decal.hlsl">
       <Filter>Shaders\Geometry</Filter>
     </FxCompile>
@@ -673,6 +688,9 @@
       <Filter>Shaders\Geometry</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Geometry\UberLit.hlsl">
+      <Filter>Shaders\Geometry</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Geometry\UberTransparent.hlsl">
       <Filter>Shaders\Geometry</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Lighting\ClusterConstructCS.hlsl">
@@ -729,6 +747,9 @@
     <FxCompile Include="Shaders\PostProcess\DoFCoCDebug.hlsl">
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\PostProcess\DebugViewModeResolve.hlsl">
+      <Filter>Shaders\PostProcess</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\PostProcess\DoFComposite.hlsl">
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
@@ -747,9 +768,6 @@
     <FxCompile Include="Shaders\PostProcess\HeightFog.hlsl">
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\PostProcess\LightCulling.hlsl">
-      <Filter>Shaders\PostProcess</Filter>
-    </FxCompile>
     <FxCompile Include="Shaders\PostProcess\NormalView.hlsl">
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
@@ -757,9 +775,6 @@
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\PostProcess\SceneDepth.hlsl">
-      <Filter>Shaders\PostProcess</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\PostProcess\SceneNormal.hlsl">
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\PostProcess\ShadowMapVis.hlsl">
@@ -1169,6 +1184,9 @@
     <ClCompile Include="Source\Engine\Component\Movement\RotatingMovementComponent.cpp">
       <Filter>Source\Engine\Component\Movement</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Movement\WheeledVehicleMovementComponent.cpp">
+      <Filter>Source\Engine\Component\Movement</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\Particle\ParticleSystemComponent.cpp">
       <Filter>Source\Engine\Component\Particle</Filter>
     </ClCompile>
@@ -1213,6 +1231,9 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Shape\SphereComponent.cpp">
       <Filter>Source\Engine\Component\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Vehicle\VehicleWheelPoseComponent.cpp">
+      <Filter>Source\Engine\Component\Vehicle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Core\ProjectSettings.cpp">
       <Filter>Source\Engine\Core</Filter>
@@ -1373,6 +1394,9 @@
     <ClCompile Include="Source\Engine\GameFramework\Pawn\Pawn.cpp">
       <Filter>Source\Engine\GameFramework\Pawn</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\Pawn\WheeledVehiclePawn.cpp">
+      <Filter>Source\Engine\GameFramework\Pawn</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Gizmo\BoneTransformGizmoTarget.cpp">
       <Filter>Source\Engine\Gizmo</Filter>
     </ClCompile>
@@ -1381,6 +1405,9 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Gizmo\PhysicsAssetGizmoTarget.cpp">
       <Filter>Source\Engine\Gizmo</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Input\InputKeyCodes.cpp">
+      <Filter>Source\Engine\Input</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Input\InputSystem.cpp">
       <Filter>Source\Engine\Input</Filter>
@@ -1649,6 +1676,9 @@
     <ClCompile Include="Source\Engine\Physics\PhysXPhysicsScene.cpp">
       <Filter>Source\Engine\Physics</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\PhysXVehicleRuntime.cpp">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Physics\PhysicsAsset.cpp">
       <Filter>Source\Engine\Physics</Filter>
     </ClCompile>
@@ -1823,6 +1853,9 @@
     <ClCompile Include="Source\Engine\Render\RenderPass\LightCullingPass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\RenderPass\DebugViewModeResolvePass.cpp">
+      <Filter>Source\Engine\Render\RenderPass</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\RenderPass\OpaquePass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
@@ -1853,10 +1886,13 @@
     <ClCompile Include="Source\Engine\Render\RenderPass\ShadowMapPass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Render\RenderPass\TranslucentPass.cpp">
+    <ClCompile Include="Source\Engine\Render\RenderPass\TransparentPass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\RenderPass\UIPass.cpp">
+      <Filter>Source\Engine\Render\RenderPass</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\RenderPass\ViewModeMeshPass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\RenderState\BlendStateManager.cpp">
@@ -2474,6 +2510,9 @@
     <ClInclude Include="Source\Engine\Component\Movement\RotatingMovementComponent.h">
       <Filter>Source\Engine\Component\Movement</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Movement\WheeledVehicleMovementComponent.h">
+      <Filter>Source\Engine\Component\Movement</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Component\Particle\ParticleSystemComponent.h">
       <Filter>Source\Engine\Component\Particle</Filter>
     </ClInclude>
@@ -2518,6 +2557,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Shape\SphereComponent.h">
       <Filter>Source\Engine\Component\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Vehicle\VehicleWheelPoseComponent.h">
+      <Filter>Source\Engine\Component\Vehicle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Core\Common.h">
       <Filter>Source\Engine\Core</Filter>
@@ -2711,6 +2753,9 @@
     <ClInclude Include="Source\Engine\GameFramework\Pawn\Pawn.h">
       <Filter>Source\Engine\GameFramework\Pawn</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\Pawn\WheeledVehiclePawn.h">
+      <Filter>Source\Engine\GameFramework\Pawn</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Gizmo\BoneTransformGizmoTarget.h">
       <Filter>Source\Engine\Gizmo</Filter>
     </ClInclude>
@@ -2722,6 +2767,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Gizmo\PhysicsAssetGizmoTarget.h">
       <Filter>Source\Engine\Gizmo</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Input\InputKeyCodes.h">
+      <Filter>Source\Engine\Input</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Input\InputSystem.h">
       <Filter>Source\Engine\Input</Filter>
@@ -3059,6 +3107,12 @@
     <ClInclude Include="Source\Engine\Physics\PhysXPhysicsScene.h">
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysXVehicleInstance.h">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysXVehicleRuntime.h">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Physics\PhysicsAsset.h">
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
@@ -3118,6 +3172,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Physics\PhysicsWorldSnapshot.h">
       <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\Vehicle\VehicleTypes.h">
+      <Filter>Source\Engine\Physics\Vehicle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Platform\BuildInfo.h">
       <Filter>Source\Engine\Platform</Filter>
@@ -3296,6 +3353,9 @@
     <ClInclude Include="Source\Engine\Render\RenderPass\LightCullingPass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\RenderPass\DebugViewModeResolvePass.h">
+      <Filter>Source\Engine\Render\RenderPass</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\RenderPass\OpaquePass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
@@ -3326,10 +3386,13 @@
     <ClInclude Include="Source\Engine\Render\RenderPass\ShadowMapPass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Render\RenderPass\TranslucentPass.h">
+    <ClInclude Include="Source\Engine\Render\RenderPass\TransparentPass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\RenderPass\UIPass.h">
+      <Filter>Source\Engine\Render\RenderPass</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\RenderPass\ViewModeMeshPass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\RenderState\BlendStateManager.h">
@@ -3423,6 +3486,9 @@
       <Filter>Source\Engine\Render\Types</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Types\VertexTypes.h">
+      <Filter>Source\Engine\Render\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Types\ViewModeUtils.h">
       <Filter>Source\Engine\Render\Types</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Types\ViewTypes.h">

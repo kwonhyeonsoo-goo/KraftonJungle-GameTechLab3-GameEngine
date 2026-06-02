@@ -1,4 +1,4 @@
-﻿#include "Editor/UI/Panel/EditorPropertyWidget.h"
+#include "Editor/UI/Panel/EditorPropertyWidget.h"
 #include "Editor/EditorEngine.h"
 
 #include "ImGui/imgui.h"
@@ -6,6 +6,7 @@
 #include "Component/Primitive/BillboardComponent.h"
 #include "Component/MeshComponent.h"
 #include "Component/Movement/MovementComponent.h"
+#include "Component/Movement/WheeledVehicleMovementComponent.h"
 #include "Component/Debug/GizmoComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SceneComponent.h"
@@ -14,6 +15,7 @@
 #include "Component/Primitive/DecalComponent.h"
 #include "Component/Primitive/HeightFogComponent.h"
 #include "Component/Primitive/SkinnedMeshComponent.h"
+#include "Component/Primitive/StaticMeshComponent.h"
 #include "GameFramework/AActor.h"
 #include "Asset/AssetRegistry.h"
 #include "Animation/Skeleton/Skeleton.h"
@@ -49,6 +51,7 @@
 #include <array>
 #include <chrono>
 #include <cfloat>
+#include <cctype>
 #include <cstring>
 #include <filesystem>
 #include <cstdio>
@@ -105,7 +108,32 @@ namespace
 	{
 		const TMap<FString, FString>& Metadata = Prop.GetMetadata();
 		auto It = Metadata.find(Key);
-		return It != Metadata.end() ? &It->second : nullptr;
+		if (It != Metadata.end())
+		{
+			return &It->second;
+		}
+
+		FString LowerKey = Key;
+		std::transform(LowerKey.begin(), LowerKey.end(), LowerKey.begin(), [](unsigned char Ch)
+		{
+			return static_cast<char>(std::tolower(Ch));
+		});
+
+		for (const auto& MetadataPair : Metadata)
+		{
+			FString CandidateKey = MetadataPair.first;
+			std::transform(CandidateKey.begin(), CandidateKey.end(), CandidateKey.begin(), [](unsigned char Ch)
+			{
+				return static_cast<char>(std::tolower(Ch));
+			});
+
+			if (CandidateKey == LowerKey)
+			{
+				return &MetadataPair.second;
+			}
+		}
+
+		return nullptr;
 	}
 
 	bool IsTruthyMetadataValue(const FString& Value)
@@ -162,6 +190,79 @@ namespace
 		return ArrayPath + "[" + std::to_string(ArrayIndex) + "]";
 	}
 
+
+	bool IsNoneLikeObjectName(const FString& Name)
+	{
+		return Name.empty() || Name == "None" || Name == "Name_None";
+	}
+
+	FString FormatCompactVector(const FVector& Value)
+	{
+		char Buffer[96];
+		snprintf(Buffer, sizeof(Buffer), "%.2f, %.2f, %.2f", Value.X, Value.Y, Value.Z);
+		return Buffer;
+	}
+
+	int32 GetOwnerComponentIndex(const UActorComponent* Component)
+	{
+		if (!Component || !Component->GetOwner())
+		{
+			return -1;
+		}
+
+		const TArray<UActorComponent*> Components = Component->GetOwner()->GetComponents();
+		for (int32 Index = 0; Index < static_cast<int32>(Components.size()); ++Index)
+		{
+			if (Components[Index] == Component)
+			{
+				return Index;
+			}
+		}
+		return -1;
+	}
+
+	FString GetSceneComponentChoiceLabel(const USceneComponent* Component)
+	{
+		if (!Component)
+		{
+			return "None";
+		}
+
+		FString Label;
+		const FString ObjectName = Component->GetFName().ToString();
+		if (!IsNoneLikeObjectName(ObjectName))
+		{
+			Label = ObjectName;
+		}
+		else
+		{
+			const int32 Index = GetOwnerComponentIndex(Component);
+			Label = Index >= 0
+				? FString("Component[") + std::to_string(Index) + "]"
+				: FString("Component");
+		}
+
+		if (Component->GetClass())
+		{
+			Label += " (" + static_cast<FString>(Component->GetClass()->GetName()) + ")";
+		}
+
+		if (const UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component))
+		{
+			if (const UStaticMesh* Mesh = StaticMeshComponent->GetStaticMesh())
+			{
+				const FString AssetPath = Mesh->GetAssetPathFileName();
+				if (!AssetPath.empty() && AssetPath != "None")
+				{
+					Label += " - " + AssetPath;
+				}
+			}
+		}
+
+		Label += " @ [" + FormatCompactVector(Component->GetWorldLocation()) + "]";
+		return Label;
+	}
+
 	AActor* GetPropertyOwnerActor(const FPropertyValue& Prop)
 	{
 		if (AActor* Actor = Cast<AActor>(Prop.Object))
@@ -205,6 +306,148 @@ namespace
 		return Choices;
 	}
 
+	USkinnedMeshComponent* FindBonePickerSkinnedMeshComponent(const FPropertyValue& Prop)
+	{
+		if (USkinnedMeshComponent* DirectMesh = Cast<USkinnedMeshComponent>(Prop.Object))
+		{
+			if (DirectMesh->GetSkeletalMesh())
+			{
+				return DirectMesh;
+			}
+		}
+
+		AActor* OwnerActor = GetPropertyOwnerActor(Prop);
+		if (!OwnerActor)
+		{
+			return nullptr;
+		}
+
+		USkinnedMeshComponent* FirstSkinnedMesh = nullptr;
+		for (UActorComponent* Component : OwnerActor->GetComponents())
+		{
+			USkinnedMeshComponent* Candidate = Cast<USkinnedMeshComponent>(Component);
+			if (!Candidate || !Candidate->GetSkeletalMesh())
+			{
+				continue;
+			}
+
+			if (!FirstSkinnedMesh)
+			{
+				FirstSkinnedMesh = Candidate;
+			}
+
+			if (Candidate == OwnerActor->GetRootComponent())
+			{
+				return Candidate;
+			}
+		}
+
+		return FirstSkinnedMesh;
+	}
+
+	void CollectBonePickerNames(USkinnedMeshComponent* SkinnedMesh, TArray<FString>& OutBoneNames)
+	{
+		OutBoneNames.clear();
+		if (!SkinnedMesh)
+		{
+			return;
+		}
+
+		USkeletalMesh* Mesh = SkinnedMesh->GetSkeletalMesh();
+		if (!Mesh)
+		{
+			return;
+		}
+
+		if (USkeleton* Skeleton = Mesh->GetSkeleton())
+		{
+			const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+			for (const FReferenceBone& Bone : RefSkeleton.Bones)
+			{
+				if (!Bone.Name.empty())
+				{
+					OutBoneNames.push_back(Bone.Name);
+				}
+			}
+		}
+
+		if (!OutBoneNames.empty())
+		{
+			return;
+		}
+
+		if (const FSkeletalMesh* Asset = Mesh->GetSkeletalMeshAsset())
+		{
+			for (const FBone& Bone : Asset->Bones)
+			{
+				if (!Bone.Name.empty())
+				{
+					OutBoneNames.push_back(Bone.Name);
+				}
+			}
+		}
+	}
+
+
+	FString ToLowerPropertyText(FString Value)
+	{
+		std::transform(Value.begin(), Value.end(), Value.begin(), [](unsigned char Ch)
+		{
+			return static_cast<char>(std::tolower(Ch));
+		});
+		return Value;
+	}
+
+	bool BonePickerNameContains(const FString& LowerName, const char* Needle)
+	{
+		return LowerName.find(Needle) != FString::npos;
+	}
+
+	bool IsRecommendedWheelBoneName(const FString& BoneName)
+	{
+		const FString LowerName = ToLowerPropertyText(BoneName);
+		return BonePickerNameContains(LowerName, "wheel") ||
+			BonePickerNameContains(LowerName, "tire") ||
+			BonePickerNameContains(LowerName, "tyre");
+	}
+
+	bool PassesBonePickerFilter(const FString& BoneName, const FString& Filter)
+	{
+		if (Filter.empty())
+		{
+			return true;
+		}
+
+		return ToLowerPropertyText(BoneName).find(ToLowerPropertyText(Filter)) != FString::npos;
+	}
+
+	void SplitBonePickerNames(
+		const TArray<FString>& BoneNames,
+		const FString& Filter,
+		TArray<FString>& OutRecommended,
+		TArray<FString>& OutOthers)
+	{
+		OutRecommended.clear();
+		OutOthers.clear();
+
+		for (const FString& BoneName : BoneNames)
+		{
+			if (!PassesBonePickerFilter(BoneName, Filter))
+			{
+				continue;
+			}
+
+			if (IsRecommendedWheelBoneName(BoneName))
+			{
+				OutRecommended.push_back(BoneName);
+			}
+			else
+			{
+				OutOthers.push_back(BoneName);
+			}
+		}
+	}
+
 	FString GetObjectReferenceChoiceLabel(const UObject* Object)
 	{
 		if (!Object)
@@ -217,8 +460,30 @@ namespace
 			return Distribution->GetDistributionDisplayName();
 		}
 
+		if (const USceneComponent* SceneComponent = Cast<USceneComponent>(Object))
+		{
+			return GetSceneComponentChoiceLabel(SceneComponent);
+		}
+
+		if (const UActorComponent* ActorComponent = Cast<UActorComponent>(Object))
+		{
+			FString Label = ActorComponent->GetFName().ToString();
+			if (IsNoneLikeObjectName(Label))
+			{
+				const int32 Index = GetOwnerComponentIndex(ActorComponent);
+				Label = Index >= 0
+					? FString("Component[") + std::to_string(Index) + "]"
+					: FString("Component");
+			}
+			if (ActorComponent->GetClass())
+			{
+				Label += " (" + static_cast<FString>(ActorComponent->GetClass()->GetName()) + ")";
+			}
+			return Label;
+		}
+
 		FString Label = Object->GetFName().ToString();
-		if (Label.empty())
+		if (IsNoneLikeObjectName(Label))
 		{
 			Label = Object->GetClass()->GetName();
 		}
@@ -1746,6 +2011,7 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 		return bChanged;
 	}
 
+    if (AssetType != "StaticMesh" && AssetType != "UStaticMesh")
     {
         FString SelectedAssetPath;
         if (TryRenderRegisteredAssetPicker(AssetType, CurrentPath, "##RegisteredAsset", SelectedAssetPath))
@@ -1771,7 +2037,10 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
         {
             return true;
         }
-        if (!AssetType.empty() && AssetType != "LuaAnimScript")
+        if (!AssetType.empty()
+            && AssetType != "LuaAnimScript"
+            && AssetType != "StaticMesh"
+            && AssetType != "UStaticMesh")
         {
             return false;
         }
@@ -1840,6 +2109,7 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 		if (bSelectedNone)
 			ImGui::SetItemDefaultFocus();
 
+		FMeshManager::ScanMeshAssets();
 		const TArray<FAssetListItem>& MeshFiles = FMeshManager::GetAvailableStaticMeshFiles();
 		for (const FAssetListItem& Item : MeshFiles)
 		{
@@ -1866,7 +2136,7 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 			if (IsFbxFilePath(MeshPath))
 			{
 				PendingStaticMeshImportPath = MeshPath;
-				PendingStaticMeshImportTarget = Val;
+				PendingStaticMeshImportTarget = Val; // Legacy raw FString target; soft object paths are applied through SetPath below.
 				PendingStaticFbxSkinnedMeshPolicy =
 					FImportOptions::Default().StaticFbxSkinnedMeshPolicy == EStaticFbxSkinnedMeshPolicy::ImportBindPoseAsStatic ? 1 : 0;
 				ImGui::OpenPopup("Static FBX Import Options");
@@ -1899,9 +2169,9 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 
 			ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
 			UStaticMesh* Loaded = FMeshManager::LoadStaticMesh(PendingStaticMeshImportPath, Options, Device);
-			if (Loaded && PendingStaticMeshImportTarget)
+			if (Loaded)
 			{
-				*PendingStaticMeshImportTarget = FMeshManager::GetStaticMeshBinaryFilePath(PendingStaticMeshImportPath);
+				SetPath(FMeshManager::GetStaticMeshBinaryFilePath(PendingStaticMeshImportPath));
 				bChanged = true;
 			}
 
@@ -1976,21 +2246,52 @@ bool FEditorPropertyWidget::RenderStructPropertyWidget(FPropertyValue& Prop, boo
 
 		ImGui::Indent(8.0f);
 
+		FVehicleWheelSetup* WheelSetup = nullptr;
+		if (Cast<UWheeledVehicleMovementComponent>(Prop.Object) &&
+			PropertyPath.find("WheelSetups[") != FString::npos &&
+			PropertyPath.find('.') == FString::npos)
+		{
+			WheelSetup = static_cast<FVehicleWheelSetup*>(Prop.GetValuePtr());
+		}
+
 		for (int32 ci = 0; ci < (int32)ChildProps.size(); ++ci)
 		{
 			ImGui::PushID(ci);
 
 			FPropertyValue& ChildProp = ChildProps[ci];
+			const bool bManualPositionCachedFromAutoSource = WheelSetup &&
+				std::strcmp(ChildProp.GetName(), "ManualLocalPosition") == 0 &&
+				WheelSetup->PositionSource != EWheelPositionSource::Manual;
+
 			ImGui::AlignTextToFramePadding();
-			ImGui::TextUnformatted(GetPropertyDisplayName(ChildProp));
+			if (bManualPositionCachedFromAutoSource)
+			{
+				ImGui::TextDisabled("%s", GetPropertyDisplayName(ChildProp));
+			}
+			else
+			{
+				ImGui::TextUnformatted(GetPropertyDisplayName(ChildProp));
+			}
 			ImGui::SameLine(120.0f);
 			ImGui::SetNextItemWidth(-1);
 
 			const FString ChildPath = MakePropertyPath(PropertyPath, ChildProp.GetName());
 			int32 ChildIdx = ci;
+			if (bManualPositionCachedFromAutoSource)
+			{
+				ImGui::BeginDisabled();
+			}
 			if (RenderPropertyWidget(ChildProps, ChildIdx, bDispatchChange, ChildPath))
 			{
 				bChanged = true;
+			}
+			if (bManualPositionCachedFromAutoSource)
+			{
+				ImGui::EndDisabled();
+				if (ImGui::IsItemHovered())
+				{
+					ImGui::SetTooltip("This value is cached from the selected position source. Set Position Source to Manual, or edit Additional Offset for source-based adjustment.");
+				}
 			}
 			ImGui::PopID();
 		}
@@ -1999,6 +2300,86 @@ bool FEditorPropertyWidget::RenderStructPropertyWidget(FPropertyValue& Prop, boo
 		ImGui::TreePop();
 	}
 
+	return bChanged;
+}
+
+bool FEditorPropertyWidget::RenderVehicleWheelSetupTools(FPropertyValue& Prop, bool bDispatchChange, const FString& PropertyPath)
+{
+	UWheeledVehicleMovementComponent* VehicleMovement = Cast<UWheeledVehicleMovementComponent>(Prop.Object);
+	if (!VehicleMovement || FString(Prop.GetName()) != "WheelSetups")
+	{
+		return false;
+	}
+
+	bool bChanged = false;
+	bool bDrawSelectedWheelDebug = VehicleMovement->IsDebugSelectedWheelEnabled();
+	if (ImGui::Checkbox("Draw Selected Wheel Debug", &bDrawSelectedWheelDebug))
+	{
+		VehicleMovement->SetDebugSelectedWheelEnabled(bDrawSelectedWheelDebug);
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button("Clear Wheel Debug"))
+	{
+		VehicleMovement->SetDebugSelectedWheelEnabled(false);
+		VehicleMovement->SetDebugSelectedWheelIndex(-1);
+	}
+
+	const int32 DebugWheelIndex = VehicleMovement->GetDebugSelectedWheelIndex();
+	if (VehicleMovement->IsDebugSelectedWheelEnabled() && DebugWheelIndex >= 0)
+	{
+		ImGui::TextDisabled("Debugging wheel index: %d", DebugWheelIndex);
+		VehicleMovement->DrawSelectedWheelDebug();
+	}
+	else
+	{
+		ImGui::TextDisabled("No wheel selected for debug.");
+	}
+
+	if (ImGui::Button("Auto Generate Wheels"))
+	{
+		bChanged = VehicleMovement->AutoGenerateWheelSetupsFromSkeleton();
+		if (bChanged && bDispatchChange)
+		{
+			DispatchPostEditChange(Prop, EPropertyChangeType::ValueSet, -1, PropertyPath);
+		}
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button("Auto Generate From Static Meshes"))
+	{
+		bChanged = VehicleMovement->AutoGenerateWheelSetupsFromStaticMeshComponents();
+		if (bChanged && bDispatchChange)
+		{
+			DispatchPostEditChange(Prop, EPropertyChangeType::ValueSet, -1, PropertyPath);
+		}
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button("Refresh Positions From Sources"))
+	{
+		bChanged = VehicleMovement->RefreshWheelLocalPositionsFromBones() > 0 || bChanged;
+		if (bChanged && bDispatchChange)
+		{
+			DispatchPostEditChange(Prop, EPropertyChangeType::ValueSet, -1, PropertyPath);
+		}
+	}
+
+	TArray<FString> ValidationMessages;
+	if (VehicleMovement->ValidateWheelSetups(ValidationMessages))
+	{
+		ImGui::TextColored(ImVec4(0.45f, 0.85f, 0.45f, 1.0f), "Wheel setup validation passed.");
+	}
+	else
+	{
+		ImGui::TextColored(ImVec4(1.0f, 0.72f, 0.25f, 1.0f), "Wheel setup warnings:");
+		for (const FString& Message : ValidationMessages)
+		{
+			ImGui::BulletText("%s", Message.c_str());
+		}
+	}
+
+	ImGui::Spacing();
 	return bChanged;
 }
 
@@ -2021,6 +2402,14 @@ bool FEditorPropertyWidget::RenderArrayPropertyWidget(FPropertyValue& Prop, bool
 	bool bChanged = false;
 	size_t Num = Ops->GetNum(ArrayPtr);
 	const bool bEditFixedSize = HasTruthyPropertyMetadata(Prop, "editfixedsize") || HasTruthyPropertyMetadata(Prop, "fixedsize");
+	UWheeledVehicleMovementComponent* VehicleWheelSetupOwner = Cast<UWheeledVehicleMovementComponent>(Prop.Object);
+	const bool bVehicleWheelSetupArray = VehicleWheelSetupOwner && FString(Prop.GetName()) == "WheelSetups";
+
+	if (RenderVehicleWheelSetupTools(Prop, bDispatchChange, PropertyPath))
+	{
+		bChanged = true;
+		Num = Ops->GetNum(ArrayPtr);
+	}
 
 	if (!bEditFixedSize && Ops->InsertDefault && ImGui::Button("+"))
 	{
@@ -2062,6 +2451,19 @@ bool FEditorPropertyWidget::RenderArrayPropertyWidget(FPropertyValue& Prop, bool
 		{
 			ImGui::SameLine();
 		}
+
+		if (bVehicleWheelSetupArray)
+		{
+			const bool bDebugSelected = VehicleWheelSetupOwner->IsDebugSelectedWheelEnabled() &&
+				VehicleWheelSetupOwner->GetDebugSelectedWheelIndex() == ElemIdx;
+			if (ImGui::SmallButton(bDebugSelected ? "Debugging" : "Debug"))
+			{
+				VehicleWheelSetupOwner->SetDebugSelectedWheelIndex(ElemIdx);
+				VehicleWheelSetupOwner->SetDebugSelectedWheelEnabled(true);
+			}
+			ImGui::SameLine();
+		}
+
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted(ElementName.c_str());
 		ImGui::SameLine(120.0f);
@@ -2075,10 +2477,11 @@ bool FEditorPropertyWidget::RenderArrayPropertyWidget(FPropertyValue& Prop, bool
 		TArray<FPropertyValue> ElementProps;
 		ElementProps.push_back(ElementValue);
 		int32 ElementPropIndex = 0;
-		if (RenderPropertyWidget(ElementProps, ElementPropIndex, false, ElementPath))
+		const bool bElementIsStruct = InnerProperty->AsStructProperty() != nullptr;
+		if (RenderPropertyWidget(ElementProps, ElementPropIndex, bElementIsStruct ? bDispatchChange : false, ElementPath))
 		{
 			bChanged = true;
-			if (bDispatchChange)
+			if (bDispatchChange && !bElementIsStruct)
 			{
 				DispatchPostEditChange(Prop, EPropertyChangeType::ValueSet, ElemIdx, ElementPath, ElementName.c_str(), ElementName.c_str());
 			}
@@ -2188,6 +2591,271 @@ bool FEditorPropertyWidget::RenderAttachSocketNameProperty(FPropertyValue& Prop)
 			ParentName.c_str(),
 			ParentClass.c_str(),
 			SkeletonPath.c_str(),
+			CurrentName.c_str());
+	}
+
+	if (bShowInvalid)
+	{
+		ImGui::PopStyleColor(3);
+	}
+
+	return bChanged;
+}
+
+
+bool FEditorPropertyWidget::RenderComponentNameProperty(FPropertyValue& Prop)
+{
+	FName* Value = static_cast<FName*>(Prop.GetValuePtr());
+	if (!Value)
+	{
+		return false;
+	}
+
+	AActor* OwnerActor = GetPropertyOwnerActor(Prop);
+	const FString CurrentName = Value->ToString();
+	const bool bHasCurrentName = Value->IsValid() && *Value != FName::None && !CurrentName.empty();
+
+	TArray<USceneComponent*> SceneComponents;
+	if (OwnerActor)
+	{
+		for (UActorComponent* Component : OwnerActor->GetComponents())
+		{
+			USceneComponent* SceneComponent = Cast<USceneComponent>(Component);
+			if (IsValid(SceneComponent))
+			{
+				SceneComponents.push_back(SceneComponent);
+			}
+		}
+	}
+
+	std::sort(SceneComponents.begin(), SceneComponents.end(), [](const USceneComponent* A, const USceneComponent* B)
+	{
+		const bool bAStatic = Cast<UStaticMeshComponent>(A) != nullptr;
+		const bool bBStatic = Cast<UStaticMeshComponent>(B) != nullptr;
+		if (bAStatic != bBStatic)
+		{
+			return bAStatic;
+		}
+		const FString AName = A ? A->GetName() : FString();
+		const FString BName = B ? B->GetName() : FString();
+		return AName < BName;
+	});
+
+	bool bCurrentComponentFound = !bHasCurrentName;
+	for (USceneComponent* SceneComponent : SceneComponents)
+	{
+		if (SceneComponent && (SceneComponent->GetName() == CurrentName || SceneComponent->GetFName() == *Value))
+		{
+			bCurrentComponentFound = true;
+			break;
+		}
+	}
+
+	const bool bShowInvalid = bHasCurrentName && !bCurrentComponentFound;
+	FString Preview = bHasCurrentName ? CurrentName : FString("None");
+	if (bShowInvalid)
+	{
+		Preview += " (not found)";
+	}
+
+	if (bShowInvalid)
+	{
+		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.36f, 0.06f, 0.06f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.48f, 0.08f, 0.08f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.78f, 0.78f, 1.0f));
+	}
+
+	bool bChanged = false;
+	if (ImGui::BeginCombo("##ComponentName", Preview.c_str()))
+	{
+		const bool bSelectedNone = !bHasCurrentName;
+		if (ImGui::Selectable("None", bSelectedNone))
+		{
+			*Value = FName::None;
+			bChanged = true;
+		}
+		if (bSelectedNone)
+		{
+			ImGui::SetItemDefaultFocus();
+		}
+
+		if (SceneComponents.empty())
+		{
+			ImGui::BeginDisabled();
+			ImGui::Selectable("No scene components", false);
+			ImGui::EndDisabled();
+		}
+		else
+		{
+			for (USceneComponent* SceneComponent : SceneComponents)
+			{
+				if (!SceneComponent)
+				{
+					continue;
+				}
+
+				FString Label = GetSceneComponentChoiceLabel(SceneComponent);
+
+				const bool bSelected = bHasCurrentName && (SceneComponent->GetName() == CurrentName || SceneComponent->GetFName() == *Value);
+				if (ImGui::Selectable(Label.c_str(), bSelected))
+				{
+					*Value = SceneComponent->GetFName();
+					bChanged = true;
+				}
+				if (bSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+		}
+
+		if (bShowInvalid)
+		{
+			ImGui::Separator();
+			ImGui::BeginDisabled();
+			ImGui::Selectable(CurrentName.c_str(), true);
+			ImGui::EndDisabled();
+		}
+
+		ImGui::EndCombo();
+	}
+
+	if (bShowInvalid && ImGui::IsItemHovered())
+	{
+		ImGui::SetTooltip("Component not found on the owning actor: %s", CurrentName.c_str());
+	}
+
+	if (bShowInvalid)
+	{
+		ImGui::PopStyleColor(3);
+	}
+
+	return bChanged;
+}
+
+bool FEditorPropertyWidget::RenderBoneNameProperty(FPropertyValue& Prop)
+{
+	FName* Value = static_cast<FName*>(Prop.GetValuePtr());
+	if (!Value)
+	{
+		return false;
+	}
+
+	const FString CurrentName = Value->ToString();
+	const bool bHasCurrentName = Value->IsValid() && *Value != FName::None && !CurrentName.empty();
+
+	USkinnedMeshComponent* SkinnedMesh = FindBonePickerSkinnedMeshComponent(Prop);
+	TArray<FString> BoneNames;
+	CollectBonePickerNames(SkinnedMesh, BoneNames);
+
+	const bool bCurrentBoneFound = !bHasCurrentName || std::find(BoneNames.begin(), BoneNames.end(), CurrentName) != BoneNames.end();
+	const bool bShowInvalid = bHasCurrentName && !bCurrentBoneFound;
+
+	FString Preview = bHasCurrentName ? CurrentName : FString("None");
+	if (bShowInvalid)
+	{
+		Preview += " (not found)";
+	}
+
+	if (bShowInvalid)
+	{
+		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.36f, 0.06f, 0.06f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.48f, 0.08f, 0.08f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.78f, 0.78f, 1.0f));
+	}
+
+	bool bChanged = false;
+	if (ImGui::BeginCombo("##BoneName", Preview.c_str()))
+	{
+		static char BoneFilter[128] = {};
+		ImGui::SetNextItemWidth(-1);
+		ImGui::InputTextWithHint("##BoneFilter", "Search bone...", BoneFilter, sizeof(BoneFilter));
+
+		const FString Filter(BoneFilter);
+		TArray<FString> RecommendedBoneNames;
+		TArray<FString> OtherBoneNames;
+		SplitBonePickerNames(BoneNames, Filter, RecommendedBoneNames, OtherBoneNames);
+
+		const bool bSelectedNone = !bHasCurrentName;
+		if (ImGui::Selectable("None", bSelectedNone))
+		{
+			*Value = FName::None;
+			bChanged = true;
+		}
+		if (bSelectedNone)
+		{
+			ImGui::SetItemDefaultFocus();
+		}
+
+		if (BoneNames.empty())
+		{
+			ImGui::BeginDisabled();
+			ImGui::Selectable("No skeletal mesh bones", false);
+			ImGui::EndDisabled();
+		}
+		else if (RecommendedBoneNames.empty() && OtherBoneNames.empty())
+		{
+			ImGui::BeginDisabled();
+			ImGui::Selectable("No matching bones", false);
+			ImGui::EndDisabled();
+		}
+
+		auto RenderBoneChoice = [&](const FString& BoneName)
+		{
+			const bool bSelected = bHasCurrentName && BoneName == CurrentName;
+			if (ImGui::Selectable(BoneName.c_str(), bSelected))
+			{
+				*Value = FName(BoneName);
+				bChanged = true;
+			}
+			if (bSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		};
+
+		if (!RecommendedBoneNames.empty())
+		{
+			ImGui::SeparatorText("Recommended wheel bones");
+			for (const FString& BoneName : RecommendedBoneNames)
+			{
+				RenderBoneChoice(BoneName);
+			}
+		}
+
+		if (!OtherBoneNames.empty())
+		{
+			if (!RecommendedBoneNames.empty())
+			{
+				ImGui::SeparatorText("All bones");
+			}
+			for (const FString& BoneName : OtherBoneNames)
+			{
+				RenderBoneChoice(BoneName);
+			}
+		}
+
+		if (bShowInvalid)
+		{
+			ImGui::Separator();
+			ImGui::BeginDisabled();
+			ImGui::Selectable(CurrentName.c_str(), true);
+			ImGui::EndDisabled();
+		}
+
+		ImGui::EndCombo();
+	}
+
+	if (bShowInvalid && ImGui::IsItemHovered())
+	{
+		const FString MeshName = SkinnedMesh ? SkinnedMesh->GetName() : FString("None");
+		const FString MeshPath = (SkinnedMesh && SkinnedMesh->GetSkeletalMesh())
+			? SkinnedMesh->GetSkeletalMesh()->GetAssetPathFileName()
+			: FString("None");
+		ImGui::SetTooltip(
+			"Bone not found.\nSkeletal Mesh Component: %s\nSkeletal Mesh: %s\nBone: %s",
+			MeshName.c_str(),
+			MeshPath.c_str(),
 			CurrentName.c_str());
 	}
 
@@ -2610,6 +3278,18 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyValue>& Props, 
 		if (Prop.GetName() == "AttachSocketName" || FString(Prop.GetDisplayName()) == "Attach Socket")
 		{
 			bChanged = RenderAttachSocketNameProperty(Prop);
+			break;
+		}
+
+		if (FindPropertyMetadata(Prop, "componentpicker"))
+		{
+			bChanged = RenderComponentNameProperty(Prop);
+			break;
+		}
+
+		if (FindPropertyMetadata(Prop, "bonepicker"))
+		{
+			bChanged = RenderBoneNameProperty(Prop);
 			break;
 		}
 

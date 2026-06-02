@@ -843,8 +843,8 @@ void FSystemResources::UpdateForwardFogBuffer(FD3DDevice& Device, const FScene& 
 	ID3D11DeviceContext* Ctx = Device.GetDeviceContext();
 	const FSceneEnvironment& Env = Scene.GetEnvironment();
 
-	// UberLit translucent self-fog용 전역 fog 파라미터 (b7). Fog 패스 조건과 동일하게 채운다
-	// (ShowFlags.bFog && HasFog 아니면 density=0 → FORWARD_FOG 변형이 fogFactor 0 → 무효과).
+	// Transparent self-fog용 전역 fog 파라미터 (b7). Fog 패스 조건과 동일하게 채운다.
+	// ShowFlags.bFog && HasFog 아니면 density=0으로 바인딩되어 fogFactor 0으로 무효화된다.
 	FFogConstants fwdFog = {};
 	if (Frame.RenderOptions.ShowFlags.bFog && Env.HasFog())
 	{
@@ -996,13 +996,14 @@ void FSystemResources::ResetRenderStateCache()
 void FSystemResources::UnbindSystemTextures(FD3DDevice& Device)
 {
 	ID3D11DeviceContext* Ctx = Device.GetDeviceContext();
-	ID3D11ShaderResourceView* nullSRVs[5] = {};
+	ID3D11ShaderResourceView* nullSystemSRVs[4] = {};
 
-	// t16~t20: Scene Depth/Color/Normal/Stencil/Heatmap
-	Ctx->PSSetShaderResources(ESystemTexSlot::SceneDepth, 5, nullSRVs);
+	// t16~t19: Scene Depth/Color, unused t18, Stencil
+	Ctx->PSSetShaderResources(ESystemTexSlot::SceneDepth, 4, nullSystemSRVs);
 
 	// t21~t25: Shadow (CSM/SpotAtlas/PointCube/SpotData/PointData)
-	Ctx->PSSetShaderResources(ESystemTexSlot::ShadowMapCSM, 5, nullSRVs);
+	ID3D11ShaderResourceView* nullShadowSRVs[5] = {};
+	Ctx->PSSetShaderResources(ESystemTexSlot::ShadowMapCSM, 5, nullShadowSRVs);
 
 	// t26~t29: DoF CoC/background/foreground/bokeh
 	ID3D11ShaderResourceView* nullDoFSRVs[4] = {};

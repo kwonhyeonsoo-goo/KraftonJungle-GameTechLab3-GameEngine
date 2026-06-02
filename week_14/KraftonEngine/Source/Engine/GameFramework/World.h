@@ -26,6 +26,7 @@ class AGameModeBase;
 class AGameStateBase;
 class APlayerController;
 class UClass;
+struct FPhysicsWorldSnapshot;
 
 UCLASS()
 class UWorld : public UObject {
@@ -172,6 +173,15 @@ public:
 	AGameStateBase* GetGameState() const;
 	UFUNCTION(Pure, Category="World|Game")
 	APlayerController* GetFirstPlayerController() const;
+
+	// Physics snapshot receivers let specialized components consume their own snapshot domains
+	// without UWorld depending on those concrete component classes. Returns a handle for unregister.
+	uint64 RegisterPhysicsSnapshotReceiver(TFunction<void(const FPhysicsWorldSnapshot&)> Receiver);
+	void UnregisterPhysicsSnapshotReceiver(uint64 Handle);
+
+private:
+	TMap<uint64, TFunction<void(const FPhysicsWorldSnapshot&)>> PhysicsSnapshotReceivers;
+	uint64 NextPhysicsSnapshotReceiverHandle = 1;
 };
 
 template<typename T>

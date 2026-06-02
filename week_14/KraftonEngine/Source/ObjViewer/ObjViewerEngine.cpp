@@ -8,6 +8,7 @@
 #include "Component/Primitive/StaticMeshComponent.h"
 #include "GameFramework/AActor.h"
 #include "Viewport/Viewport.h"
+#include "Input/InputSystem.h"
 
 void UObjViewerEngine::Init(FWindowsWindow* InWindow)
 {
@@ -61,9 +62,14 @@ void UObjViewerEngine::Shutdown()
 
 void UObjViewerEngine::Tick(float DeltaTime)
 {
-	ViewportClient.Tick(DeltaTime);
+	TickFrameStart(DeltaTime);
 	Panel.Update();
-	UEngine::Tick(DeltaTime);
+	InputSystem::Get().RefreshSnapshot();
+
+	const FInputSystemSnapshot InputSnapshot = InputSystem::Get().MakeSnapshot();
+	ViewportClient.Tick(InputSnapshot, DeltaTime);
+
+	TickFrameBody(DeltaTime);
 }
 
 void UObjViewerEngine::RenderUI(float DeltaTime)

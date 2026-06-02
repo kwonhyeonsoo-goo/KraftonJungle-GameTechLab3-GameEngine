@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Editor/UI/EditorWidget.h"
 #include "Object/Object.h"
@@ -40,9 +40,12 @@ private:
 	bool RenderPropertyWidget(TArray<struct FPropertyValue>& Props, int32& Index, bool bDispatchChange = true, const FString& PropertyPath = {});
 	bool RenderSoftObjectPropertyWidget(struct FPropertyValue& Prop);
 	bool RenderAttachSocketNameProperty(struct FPropertyValue& Prop);
+	bool RenderBoneNameProperty(struct FPropertyValue& Prop);
+	bool RenderComponentNameProperty(struct FPropertyValue& Prop);
 	bool RenderEnumPropertyWidget(struct FPropertyValue& Prop);
 	bool RenderStructPropertyWidget(struct FPropertyValue& Prop, bool bDispatchChange, const FString& PropertyPath);
 	bool RenderArrayPropertyWidget(struct FPropertyValue& Prop, bool bDispatchChange, const FString& PropertyPath);
+	bool RenderVehicleWheelSetupTools(struct FPropertyValue& Prop, bool bDispatchChange, const FString& PropertyPath);
 
 	void PropagatePropertyChange(const FString& PropName, const TArray<AActor*>& SelectedActors);
 

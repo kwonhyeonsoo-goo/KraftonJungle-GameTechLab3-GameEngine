@@ -28,6 +28,7 @@
 #include "Engine/Platform/Paths.h"
 #include "Lua/LuaScriptManager.h"
 #include "Object/GarbageCollection.h"
+#include "Audio/AudioManager.h"
 #include <filesystem>
 
 #include "Mesh/Skeletal/SkeletalMesh.h"
@@ -161,13 +162,12 @@ void UEditorEngine::Tick(float DeltaTime)
 	}
 
 	ApplyTransformSettingsToGizmo();
-	FDirectoryWatcher::Get().ProcessChanges();
-	FNotificationManager::Get().Tick(DeltaTime);
-	InputSystem::Get().Tick();
+	TickFrameStart(DeltaTime);
 	MainPanel.Update();
 	InputSystem::Get().RefreshSnapshot();
 
 	FSlateApplication::Get().UpdateInputOwner();
+	ProcessPIEInput(DeltaTime);
 
 	for (FEditorViewportClient* VC : ViewportLayout.GetAllViewportClients())
 	{
@@ -176,6 +176,7 @@ void UEditorEngine::Tick(float DeltaTime)
 
 	MainPanel.TickAssetEditors(DeltaTime);
 
+	FAudioManager::Get().Tick();
 	WorldTick(DeltaTime);
 	FGarbageCollector::Get().TryCollectGarbage();
 	Render(DeltaTime);
@@ -195,6 +196,48 @@ bool UEditorEngine::GetActiveViewportPOV(FMinimalViewInfo& OutPOV) const
 void UEditorEngine::RenderUI(float DeltaTime)
 {
 	MainPanel.Render(DeltaTime);
+}
+
+void UEditorEngine::ProcessPIEInput(float DeltaTime)
+{
+	if (!IsPlayingInEditor())
+	{
+		return;
+	}
+
+	const FInputSystemSnapshot RawInputSnapshot = InputSystem::Get().MakeSnapshot();
+	if (RawInputSnapshot.WasPressed(VK_ESCAPE))
+	{
+		RequestEndPlayMap();
+		return;
+	}
+
+	if (RawInputSnapshot.WasPressed(VK_F8))
+	{
+		TogglePIEControlMode();
+	}
+
+	UGameViewportClient* PIEViewportClient = GetGameViewportClient();
+	if (!PIEViewportClient)
+	{
+		return;
+	}
+
+	if (Window)
+	{
+		PIEViewportClient->SetOwnerWindow(Window->GetHWND());
+	}
+	if (FLevelEditorViewportClient* ActiveVC = ViewportLayout.GetActiveViewport())
+	{
+		PIEViewportClient->SetViewport(ActiveVC->GetViewport());
+		PIEViewportClient->SetCursorClipRect(ActiveVC->GetViewportScreenRect());
+	}
+
+	PIEViewportClient->ProcessInput(RawInputSnapshot, DeltaTime);
+	if (PIEViewportClient->HasGameInputSnapshot())
+	{
+		ProcessActiveWorldPlayerInput(PIEViewportClient->GetGameInputSnapshot(), DeltaTime);
+	}
 }
 
 void UEditorEngine::ToggleCoordSystem()

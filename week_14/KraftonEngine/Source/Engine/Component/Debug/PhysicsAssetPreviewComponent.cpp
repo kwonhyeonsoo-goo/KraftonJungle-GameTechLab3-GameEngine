@@ -17,6 +17,8 @@ namespace
 	constexpr int32 SphereStacks = 12;
 	constexpr int32 CapsuleSlices = 24;
 	constexpr int32 CapsuleHemisphereStacks = 6;
+	constexpr int32 ConstraintLimitCircleSegments = 32;
+	constexpr int32 ConstraintLimitArcSegments = 24;
 	constexpr int32 PhysicsPreviewHitFaceBodyStride = 10000;
 
 	FTransform ComposePreviewDebugTransforms(const FTransform& ParentWorld, const FTransform& Local)
@@ -41,6 +43,57 @@ namespace
 		}
 
 		return FVector4(0.35f, 0.82f, 1.0f, 0.22f);
+	}
+
+	FVector4 ConstraintLimitColorFromHex(uint8 R, uint8 G, uint8 B, float Alpha)
+	{
+		return FVector4(
+			static_cast<float>(R) / 255.0f,
+			static_cast<float>(G) / 255.0f,
+			static_cast<float>(B) / 255.0f,
+			Alpha);
+	}
+
+	FVector4 PhysicsPreviewSwingLimitColor(bool bSelectedConstraint)
+	{
+		return ConstraintLimitColorFromHex(0xc5, 0x00, 0x00, bSelectedConstraint ? 0.58f : 0.42f);
+	}
+
+	FVector4 PhysicsPreviewTwistLimitColor(bool bSelectedConstraint)
+	{
+		return ConstraintLimitColorFromHex(0x00, 0x80, 0x20, bSelectedConstraint ? 0.58f : 0.42f);
+	}
+
+	float ClampLimitDegreesForPreview(float Degrees)
+	{
+		return FMath::Clamp(Degrees, 0.0f, 85.0f);
+	}
+
+	float MotionLimitDegreesForPreview(EConstraintMotion Motion, float LimitedDegrees)
+	{
+		switch (Motion)
+		{
+		case EConstraintMotion::Free:
+			return 85.0f;
+		case EConstraintMotion::Limited:
+			return ClampLimitDegreesForPreview(LimitedDegrees);
+		case EConstraintMotion::Locked:
+		default:
+			return 0.0f;
+		}
+	}
+
+	int32 ConstraintArcSegments(float AngleRangeRadians)
+	{
+		const float Normalized = (std::max)(std::fabs(AngleRangeRadians) / (2.0f * FMath::Pi), 0.08f);
+		const int32 SegmentCount = static_cast<int32>(ceilf(static_cast<float>(ConstraintLimitArcSegments) * Normalized));
+		return (std::min)((std::max)(SegmentCount, 4), ConstraintLimitArcSegments);
+	}
+
+	float ComputeConstraintLimitSurfaceRadius(const FTransform& ParentFrameWorld, const FTransform& ChildFrameWorld)
+	{
+		const float FrameDistance = FVector::Distance(ParentFrameWorld.Location, ChildFrameWorld.Location);
+		return FMath::Clamp(FrameDistance * 0.45f + 0.25f, 0.25f, 2.5f);
 	}
 
 	FVector ClampHalfExtent(FVector HalfExtent)
@@ -360,6 +413,8 @@ void UPhysicsAssetPreviewComponent::UpdatePreview(
 	int32 InSelectedShapeIndex,
 	int32 InSelectedConstraintIndex,
 	bool bInShowBodies,
+	bool bInShowConstraintLimitSurfaces,
+	bool bInShowOnlySelectedConstraintLimitSurfaces,
 	ID3D11Device* Device)
 {
 	PhysicsAsset = InPhysicsAsset;
@@ -368,8 +423,10 @@ void UPhysicsAssetPreviewComponent::UpdatePreview(
 	SelectedShapeIndex = InSelectedShapeIndex;
 	SelectedConstraintIndex = InSelectedConstraintIndex;
 	bShowBodies = bInShowBodies;
+	bShowConstraintLimitSurfaces = bInShowConstraintLimitSurfaces;
+	bShowOnlySelectedConstraintLimitSurfaces = bInShowOnlySelectedConstraintLimitSurfaces;
 
-	if (!bShowBodies || !PhysicsAsset.Get() || !PreviewComponent.Get() || !Device)
+	if ((!bShowBodies && !bShowConstraintLimitSurfaces) || !PhysicsAsset.Get() || !PreviewComponent.Get() || !Device)
 	{
 		ClearPreview(Device);
 		return;
@@ -403,11 +460,13 @@ void UPhysicsAssetPreviewComponent::RebuildPreviewMesh()
 
 	UPhysicsAsset* Asset = PhysicsAsset.Get();
 	USkeletalMeshComponent* MeshComponent = PreviewComponent.Get();
-	if (!Asset || !MeshComponent || !bShowBodies)
+	if (!Asset || !MeshComponent)
 	{
 		return;
 	}
 
+	if (bShowBodies)
+	{
 	const TArray<FPhysicsAssetBodySetup>& Bodies = Asset->GetBodySetups();
 	for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
 	{
@@ -450,6 +509,20 @@ void UPhysicsAssetPreviewComponent::RebuildPreviewMesh()
 			}
 		}
 	}
+	}
+
+	if (bShowConstraintLimitSurfaces)
+	{
+		const TArray<FPhysicsAssetConstraintSetup>& Constraints = Asset->GetConstraintSetups();
+		for (int32 ConstraintIndex = 0; ConstraintIndex < static_cast<int32>(Constraints.size()); ++ConstraintIndex)
+		{
+			if (bShowOnlySelectedConstraintLimitSurfaces && SelectedConstraintIndex != ConstraintIndex)
+			{
+				continue;
+			}
+			AppendConstraintLimitSurfaces(ConstraintIndex);
+		}
+	}
 }
 
 void UPhysicsAssetPreviewComponent::UploadPreviewMesh(ID3D11Device* Device)
@@ -470,6 +543,146 @@ uint32 UPhysicsAssetPreviewComponent::AddVertexWorld(const FVector& WorldPositio
 	PreviewMeshData.Vertices.push_back({ LocalPosition, Color, 0 });
 	ExpandBoundsWorld(WorldPosition);
 	return static_cast<uint32>(PreviewMeshData.Vertices.size() - 1);
+}
+
+void UPhysicsAssetPreviewComponent::AppendConstraintLimitSurfaces(int32 ConstraintIndex)
+{
+	UPhysicsAsset* Asset = PhysicsAsset.Get();
+	USkeletalMeshComponent* MeshComponent = PreviewComponent.Get();
+	if (!Asset || !MeshComponent)
+	{
+		return;
+	}
+
+	const TArray<FPhysicsAssetConstraintSetup>& Constraints = Asset->GetConstraintSetups();
+	if (ConstraintIndex < 0 || ConstraintIndex >= static_cast<int32>(Constraints.size()))
+	{
+		return;
+	}
+
+	FTransform ParentFrameWorld;
+	FTransform ChildFrameWorld;
+	if (!FPhysicsAssetPreviewUtils::ComputePreviewConstraintWorldFrames(
+			MeshComponent,
+			Asset,
+			ConstraintIndex,
+			ParentFrameWorld,
+			ChildFrameWorld))
+	{
+		return;
+	}
+
+	const bool bSelectedConstraint = SelectedConstraintIndex == ConstraintIndex;
+	const float Radius = ComputeConstraintLimitSurfaceRadius(ParentFrameWorld, ChildFrameWorld);
+	const FConstraintLimitDesc& Limits = Constraints[ConstraintIndex].Limits;
+	AppendSwingLimitSurface(ParentFrameWorld, Limits, Radius, PhysicsPreviewSwingLimitColor(bSelectedConstraint));
+	AppendTwistLimitSurface(ParentFrameWorld, Limits, Radius, PhysicsPreviewTwistLimitColor(bSelectedConstraint));
+}
+
+void UPhysicsAssetPreviewComponent::AppendSwingLimitSurface(
+	const FTransform& ParentFrameWorld,
+	const FConstraintLimitDesc& Limits,
+	float Radius,
+	const FVector4& Color)
+{
+	if (Radius <= 0.0f)
+	{
+		return;
+	}
+
+	const float Swing1Degrees = MotionLimitDegreesForPreview(Limits.Swing1, Limits.Swing1LimitDegrees);
+	const float Swing2Degrees = MotionLimitDegreesForPreview(Limits.Swing2, Limits.Swing2LimitDegrees);
+	if (Swing1Degrees <= 0.001f && Swing2Degrees <= 0.001f)
+	{
+		return;
+	}
+
+	const float Swing1Radians = Swing1Degrees * FMath::DegToRad;
+	const float Swing2Radians = Swing2Degrees * FMath::DegToRad;
+
+	const FQuat Rotation = ParentFrameWorld.Rotation.GetNormalized();
+	const FVector Center = ParentFrameWorld.Location;
+	const FVector AxisX = Rotation.RotateVector(FVector(1.0f, 0.0f, 0.0f));
+	const FVector AxisY = Rotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
+	const FVector AxisZ = Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f));
+
+	const FVector DiskCenter = Center + AxisX * Radius;
+	const float DiskRadiusY = (std::max)(Radius * sinf(Swing1Radians), Radius * 0.025f);
+	const float DiskRadiusZ = (std::max)(Radius * sinf(Swing2Radians), Radius * 0.025f);
+
+	TArray<uint32> RimIndices;
+	RimIndices.reserve(ConstraintLimitCircleSegments + 1);
+	for (int32 Segment = 0; Segment <= ConstraintLimitCircleSegments; ++Segment)
+	{
+		const float Angle = 2.0f * FMath::Pi * static_cast<float>(Segment) / static_cast<float>(ConstraintLimitCircleSegments);
+		const FVector Point = DiskCenter + AxisY * (cosf(Angle) * DiskRadiusY) + AxisZ * (sinf(Angle) * DiskRadiusZ);
+		RimIndices.push_back(AddVertexWorld(Point, Color));
+	}
+
+	const uint32 CenterIndex = AddVertexWorld(DiskCenter, Color);
+	for (int32 Segment = 0; Segment < ConstraintLimitCircleSegments; ++Segment)
+	{
+		PreviewMeshData.Indices.push_back(CenterIndex);
+		PreviewMeshData.Indices.push_back(RimIndices[Segment]);
+		PreviewMeshData.Indices.push_back(RimIndices[Segment + 1]);
+	}
+}
+
+void UPhysicsAssetPreviewComponent::AppendTwistLimitSurface(
+	const FTransform& ParentFrameWorld,
+	const FConstraintLimitDesc& Limits,
+	float Radius,
+	const FVector4& Color)
+{
+	if (Radius <= 0.0f || Limits.Twist == EConstraintMotion::Locked)
+	{
+		return;
+	}
+
+	float StartAngle = 0.0f;
+	float EndAngle = 2.0f * FMath::Pi;
+	if (Limits.Twist == EConstraintMotion::Limited)
+	{
+		StartAngle = Limits.TwistLimitMinDegrees * FMath::DegToRad;
+		EndAngle = Limits.TwistLimitMaxDegrees * FMath::DegToRad;
+		if (StartAngle > EndAngle)
+		{
+			std::swap(StartAngle, EndAngle);
+		}
+	}
+
+	const float AngleRange = EndAngle - StartAngle;
+	if (AngleRange <= 0.001f)
+	{
+		return;
+	}
+
+	const int32 Segments = Limits.Twist == EConstraintMotion::Free
+		? ConstraintLimitCircleSegments
+		: ConstraintArcSegments(AngleRange);
+	const FQuat Rotation = ParentFrameWorld.Rotation.GetNormalized();
+	const FVector AxisX = Rotation.RotateVector(FVector(1.0f, 0.0f, 0.0f));
+	const FVector AxisY = Rotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
+	const FVector AxisZ = Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f));
+	const FVector Center = ParentFrameWorld.Location + AxisX * (Radius * 0.12f);
+	const float RingRadius = Radius * 0.32f;
+
+	const uint32 CenterIndex = AddVertexWorld(Center, Color);
+	uint32 PrevIndex = 0;
+	for (int32 Segment = 0; Segment <= Segments; ++Segment)
+	{
+		const float Alpha = static_cast<float>(Segment) / static_cast<float>(Segments);
+		const float Angle = StartAngle + AngleRange * Alpha;
+		const FVector Point = Center + (AxisY * cosf(Angle) + AxisZ * sinf(Angle)) * RingRadius;
+		const uint32 PointIndex = AddVertexWorld(Point, Color);
+		if (Segment > 0)
+		{
+			PreviewMeshData.Indices.push_back(CenterIndex);
+			PreviewMeshData.Indices.push_back(PrevIndex);
+			PreviewMeshData.Indices.push_back(PointIndex);
+		}
+		PrevIndex = PointIndex;
+	}
 }
 
 void UPhysicsAssetPreviewComponent::ExpandBoundsWorld(const FVector& WorldPosition)

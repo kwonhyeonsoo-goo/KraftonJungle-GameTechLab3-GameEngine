@@ -13,6 +13,7 @@
 #include <mutex>
 
 class UWorld;
+class FPhysXVehicleRuntime;
 
 namespace physx
 {
@@ -38,8 +39,8 @@ struct FActorCompoundBody
 class FPhysXPhysicsRuntime : public IPhysicsRuntime
 {
 public:
-    FPhysXPhysicsRuntime()           = default;
-    ~FPhysXPhysicsRuntime() override = default;
+    FPhysXPhysicsRuntime();
+    ~FPhysXPhysicsRuntime() override;
 
     void Initialize(
         UWorld*            InWorld,
@@ -133,6 +134,13 @@ public:
     void GatherDebugBodies(TArray<FPhysicsDebugBody>& OutBodies) const override;
     void GatherDebugConstraints(TArray<FPhysicsDebugConstraint>& OutConstraints) const override;
     void GetDebugSnapshot(FPhysicsDebugSnapshot& OutSnapshot) const;
+
+    FVehicleHandle ReserveVehicleHandle_GameThread();
+
+    void CreateVehicle(const FVehicleDesc& Desc);
+    void DestroyVehicle(FVehicleHandle Vehicle);
+    void SetVehicleInput(FVehicleHandle Vehicle, const FVehicleInputState& Input);
+    void ResetVehicle(FVehicleHandle Vehicle, const FTransform& WorldTransform);
 
     FPhysicsStats GetStats() const override;
 
@@ -265,4 +273,6 @@ private:
     bool                  bDebugSnapshotEnabled = true;
     mutable std::mutex    DebugSnapshotMutex;
     FPhysicsDebugSnapshot DebugSnapshot;
+
+    std::unique_ptr<FPhysXVehicleRuntime> VehicleRuntime;
 };

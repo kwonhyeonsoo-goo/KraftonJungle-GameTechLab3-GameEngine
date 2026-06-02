@@ -3,6 +3,7 @@
 #include "LuaBlueprint/LuaBlueprintAsset.h"
 #include "LuaBlueprint/LuaBlueprintManager.h"
 #include "Object/Object.h"
+#include "Input/InputKeyCodes.h"
 
 #include "imgui.h"
 #include "imgui_internal.h" 
@@ -62,6 +63,92 @@ namespace
         std::snprintf(Buffer, BufferSize, "%s", Value.c_str());
     }
 
+    // ── Material editor 와 동일한 스타일의 툴바 버튼 헬퍼 ──
+    ImVec2 ToolbarButtonSize()
+    {
+        return ImVec2(86.0f, 0.0f);
+    }
+
+    bool ToolbarButton(const char* Label)
+    {
+        return ImGui::Button(Label, ToolbarButtonSize());
+    }
+
+    // 강조 색이 들어간 주요 액션 버튼(Compile/Save 등). Disabled 일 땐 회색 처리.
+    bool ToolbarAccentButton(const char* Label, const ImVec4& Base, const ImVec4& Hover, bool bEnabled = true)
+    {
+        ImGui::BeginDisabled(!bEnabled);
+        ImGui::PushStyleColor(ImGuiCol_Button, Base);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, Hover);
+        const bool bClicked = ImGui::Button(Label, ToolbarButtonSize());
+        ImGui::PopStyleColor(2);
+        ImGui::EndDisabled();
+        return bClicked;
+    }
+
+    // 핀이 어떤 링크에든 연결돼 있는지. 입력 핀은 단일 링크, 출력 핀은 다중 fan-out 가능.
+    bool IsPinConnected(const ULuaBlueprintAsset* Blueprint, const FLuaBlueprintPin& Pin)
+    {
+        if (!Blueprint) return false;
+        if (Pin.Kind == ELuaBlueprintPinKind::Input)
+        {
+            return Blueprint->FindLinkToInput(Pin.PinId) != nullptr;
+        }
+        for (const FLuaBlueprintLink& Link : Blueprint->GetLinks())
+        {
+            if (Link.FromPinId == Pin.PinId) return true;
+        }
+        return false;
+    }
+
+    // UE Blueprint 스타일 핀 아이콘. Exec 은 삼각형, 데이터는 원. 연결되면 채우고, 아니면 외곽선만.
+    // ed::BeginPin/EndPin 사이에서 호출 — 예약된 사각 영역이 곧 핀의 hit-rect 가 된다.
+    void DrawPinIcon(bool bConnected, bool bExec, const ImVec4& Color)
+    {
+        const float  Size = ImGui::GetTextLineHeight();
+        const ImVec2 P    = ImGui::GetCursorScreenPos();
+        ImGui::Dummy(ImVec2(Size, Size));
+
+        ImDrawList*  DL  = ImGui::GetWindowDrawList();
+        const ImU32  Col = ImGui::ColorConvertFloat4ToU32(Color);
+        const ImVec2 C(P.x + Size * 0.5f, P.y + Size * 0.5f);
+        const float  R   = Size * 0.34f;
+
+        if (bExec)
+        {
+            const ImVec2 A(C.x - R * 0.75f, C.y - R);
+            const ImVec2 B(C.x - R * 0.75f, C.y + R);
+            const ImVec2 D(C.x + R, C.y);
+            if (bConnected) DL->AddTriangleFilled(A, B, D, Col);
+            else            DL->AddTriangle(A, B, D, Col, 1.6f);
+        }
+        else
+        {
+            if (bConnected) DL->AddCircleFilled(C, R, Col, 16);
+            else            DL->AddCircle(C, R, Col, 16, 1.6f);
+        }
+    }
+
+    // Pin-drag 추천 메뉴 전용 타입 매칭. 실제 링크가 허용하는 광범위한 암시적 변환
+    // (무엇이든 -> String/Bool, scalar -> Vector 등)을 추천에서 제외해 정확도를 높인다.
+    // 추천은 정확 타입 / 숫자 자동 변환(Int<->Float) / wildcard(Any) / Exec 만 매칭한다.
+    // (그래도 사용자가 핀 위로 직접 드롭하면 넓은 변환 규칙은 그대로 동작한다.)
+    bool ArePinTypesRecommendable(ELuaBlueprintPinType OutputType, ELuaBlueprintPinType InputType)
+    {
+        if (OutputType == ELuaBlueprintPinType::Exec || InputType == ELuaBlueprintPinType::Exec)
+        {
+            return OutputType == ELuaBlueprintPinType::Exec && InputType == ELuaBlueprintPinType::Exec;
+        }
+        if (OutputType == InputType) return true;
+        if (OutputType == ELuaBlueprintPinType::Any || InputType == ELuaBlueprintPinType::Any) return true;
+        if ((OutputType == ELuaBlueprintPinType::Int   && InputType == ELuaBlueprintPinType::Float) ||
+            (OutputType == ELuaBlueprintPinType::Float && InputType == ELuaBlueprintPinType::Int))
+        {
+            return true;
+        }
+        return false;
+    }
+
     const char* NodeTypeLabel(ELuaBlueprintNodeType Type)
     {
         switch (Type)
@@ -80,6 +167,10 @@ namespace
             return "Event Hit";
         case ELuaBlueprintNodeType::EventEndHit:
             return "Event EndHit";
+        case ELuaBlueprintNodeType::EventInputAction:
+            return "Event InputAction";
+        case ELuaBlueprintNodeType::EventInputAxis:
+            return "Event InputAxis";
         case ELuaBlueprintNodeType::Sequence:
             return "Sequence";
         case ELuaBlueprintNodeType::Branch:
@@ -220,6 +311,20 @@ namespace
             return "Get Actor Name";
         case ELuaBlueprintNodeType::GetOwnerActor:
             return "Get Owner Actor";
+        case ELuaBlueprintNodeType::GetPlayerController:
+            return "Get Player Controller";
+        case ELuaBlueprintNodeType::GetController:
+            return "Get Controller";
+        case ELuaBlueprintNodeType::GetControlledPawn:
+            return "Get Controlled Pawn";
+        case ELuaBlueprintNodeType::Possess:
+            return "Possess";
+        case ELuaBlueprintNodeType::UnPossess:
+            return "UnPossess";
+        case ELuaBlueprintNodeType::IsPawnPossessed:
+            return "Is Pawn Possessed";
+        case ELuaBlueprintNodeType::GetInputComponent:
+            return "Get Input Component";
         case ELuaBlueprintNodeType::IsValid:
             return "Is Valid";
         case ELuaBlueprintNodeType::Cast:
@@ -392,6 +497,13 @@ namespace
         case ELuaBlueprintNodeType::ActorRemoveTag:       return "Removes a tag from an actor.";
         case ELuaBlueprintNodeType::GetActorName:         return "Returns the actor name.";
         case ELuaBlueprintNodeType::GetOwnerActor:        return "Returns the owner actor when available.";
+        case ELuaBlueprintNodeType::GetPlayerController:  return "Returns the primary local PlayerController.";
+        case ELuaBlueprintNodeType::GetController:        return "Returns the Controller currently possessing a Pawn.";
+        case ELuaBlueprintNodeType::GetControlledPawn:    return "Returns the Pawn currently possessed by a Controller.";
+        case ELuaBlueprintNodeType::Possess:              return "Makes a PlayerController possess the target Pawn.";
+        case ELuaBlueprintNodeType::UnPossess:            return "Detaches the Controller from its current Pawn.";
+        case ELuaBlueprintNodeType::IsPawnPossessed:      return "Checks whether a Pawn has a Controller.";
+        case ELuaBlueprintNodeType::GetInputComponent:    return "Returns a Pawn's InputComponent.";
         case ELuaBlueprintNodeType::IsValid:              return "Checks whether an object reference is valid.";
         case ELuaBlueprintNodeType::Cast:                 return "Casts an object reference to the configured class.";
         case ELuaBlueprintNodeType::GetRootComponent:     return "Gets an actor root component.";
@@ -435,6 +547,8 @@ namespace
         case ELuaBlueprintNodeType::BindEvent:            return "Binds a reflected event to a Custom Event callback.";
         case ELuaBlueprintNodeType::UnbindEvent:          return "Removes a reflected event binding.";
         case ELuaBlueprintNodeType::HasEventBinding:      return "Checks whether a reflected event binding exists.";
+        case ELuaBlueprintNodeType::EventInputAction:     return "Executes when the owning possessed Pawn receives the configured action input.";
+        case ELuaBlueprintNodeType::EventInputAxis:       return "Executes every player-input frame with the configured axis value.";
         }
         return "Lua Blueprint node.";
     }
@@ -457,52 +571,20 @@ namespace
         return true;
     }
 
-    void RenderNodeHelpTooltip(ELuaBlueprintNodeType Type, const ImRect& OwnerScreenRect, ImGuiID OwnerViewportId)
+    void RenderNodeHelpTooltip(ELuaBlueprintNodeType Type, const ImRect& /*OwnerScreenRect*/, ImGuiID /*OwnerViewportId*/)
     {
-        const ImGuiStyle& Style = ImGui::GetStyle();
-        constexpr float Margin = 8.0f;
-
-        // Keep sizing relative to the Blueprint owner rect, not the application's main viewport.
-        // This prevents the tooltip from snapping to the global top-left when the Blueprint
-        // editor is floating, docked away from (0,0), or rendered on a secondary viewport.
-        const float OwnerWidth = std::max(1.0f, OwnerScreenRect.Max.x - OwnerScreenRect.Min.x);
-        const float PreferredWindowWidth = ImGui::GetFontSize() * 34.0f + Style.WindowPadding.x * 2.0f;
-        const float AvailableWindowWidth = std::max(96.0f, OwnerWidth - Margin * 2.0f);
-        const float TooltipWindowWidth = std::min(PreferredWindowWidth, AvailableWindowWidth);
-        const float TextWrapWidth = std::max(64.0f, TooltipWindowWidth - Style.WindowPadding.x * 2.0f);
-
-        ImVec2 Pos(OwnerScreenRect.Max.x - Margin, OwnerScreenRect.Min.y + Margin);
-        Pos.x = std::max(OwnerScreenRect.Min.x + Margin, Pos.x);
-        Pos.y = std::max(OwnerScreenRect.Min.y + Margin, Pos.y);
-
-        if (OwnerViewportId != 0)
-        {
-            ImGui::SetNextWindowViewport(OwnerViewportId);
-        }
-        ImGui::SetNextWindowPos(Pos, ImGuiCond_Always, ImVec2(1.0f, 0.0f));
-        ImGui::SetNextWindowBgAlpha(0.96f);
-        ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, 0.0f), ImVec2(TooltipWindowWidth, FLT_MAX));
-
-        constexpr ImGuiWindowFlags TooltipFlags =
-            ImGuiWindowFlags_AlwaysAutoResize |
-            ImGuiWindowFlags_NoTitleBar |
-            ImGuiWindowFlags_NoResize |
-            ImGuiWindowFlags_NoScrollbar |
-            ImGuiWindowFlags_NoMove |
-            ImGuiWindowFlags_NoSavedSettings |
-            ImGuiWindowFlags_NoFocusOnAppearing |
-            ImGuiWindowFlags_NoNav |
-            ImGuiWindowFlags_NoInputs;
-
-        if (ImGui::Begin("##LuaBPNodeHelpTooltip", nullptr, TooltipFlags))
-        {
-            ImGui::TextUnformatted(NodeTypeLabel(Type));
-            ImGui::Separator();
-            ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + TextWrapWidth);
-            ImGui::TextUnformatted(NodeTypeHelpText(Type));
-            ImGui::PopTextWrapPos();
-        }
-        ImGui::End();
+        // 표준 툴팁 레이어(foreground)를 사용한다. 이전의 수동 ImGui::Begin 창은
+        // NoFocusOnAppearing 으로 한 번 다른 창에 포커스가 넘어가면 z-order 가 뒤로 밀려
+        // 블루프린트 패널 뒤에 가려졌다(=호버해도 도움말이 안 보이는 버그). 툴팁 레이어는
+        // 포커스/창 순서와 무관하게 항상 최상단에 그려진다. ed::End() 이후 호출되므로
+        // 노드 캔버스 변환의 영향도 받지 않아 위치가 정확하다.
+        ImGui::BeginTooltip();
+        ImGui::TextUnformatted(NodeTypeLabel(Type));
+        ImGui::Separator();
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 28.0f);
+        ImGui::TextUnformatted(NodeTypeHelpText(Type));
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
     }
 
     const char* PinTypeLabel(ELuaBlueprintPinType Type)
@@ -552,6 +634,8 @@ namespace
         {
         case ELuaBlueprintNodeType::EventBeginPlay:
         case ELuaBlueprintNodeType::EventTick:
+        case ELuaBlueprintNodeType::EventInputAction:
+        case ELuaBlueprintNodeType::EventInputAxis:
         case ELuaBlueprintNodeType::EventEndPlay:
         case ELuaBlueprintNodeType::EventOverlap:
         case ELuaBlueprintNodeType::EventEndOverlap:
@@ -999,6 +1083,7 @@ namespace
         case ELuaBlueprintNodeType::Ceil:
         case ELuaBlueprintNodeType::Distance:
         case ELuaBlueprintNodeType::GetGameTime:
+        case ELuaBlueprintNodeType::EventInputAxis:
         case ELuaBlueprintNodeType::Reroute:
         case ELuaBlueprintNodeType::ToBool:
         case ELuaBlueprintNodeType::ToInt:
@@ -1119,7 +1204,7 @@ void FLuaBlueprintEditorWidget::Render(float /*DeltaTime*/)
     {
         ImGui::SetNextWindowSize(ImVec2(1440.0f, 900.0f), ImGuiCond_Once);
     }
-    if (!bRenderingDocument && !ImGui::Begin(WindowTitleBuf, &bWindowOpen, ImGuiWindowFlags_MenuBar))
+    if (!bRenderingDocument && !ImGui::Begin(WindowTitleBuf, &bWindowOpen))
     {
         ImGui::End();
         if (!bWindowOpen) Close();
@@ -1166,7 +1251,7 @@ void FLuaBlueprintEditorWidget::Render(float /*DeltaTime*/)
 
     const float BottomHeight = 180.0f;
     ImGui::BeginChild("##LuaBlueprintMainArea", ImVec2(0, -BottomHeight), ImGuiChildFlags_None);
-    RenderVariables(Blueprint);
+    RenderLeftPanel(Blueprint);
     ImGui::SameLine();
     RenderGraph(Blueprint);
     ImGui::EndChild();
@@ -1196,7 +1281,7 @@ void FLuaBlueprintEditorWidget::Render(float /*DeltaTime*/)
 
 void FLuaBlueprintEditorWidget::RenderDocument(float DeltaTime)
 {
-    if (ImGui::BeginChild("##LuaBlueprintDocument", ImVec2(0, 0), ImGuiChildFlags_None, ImGuiWindowFlags_MenuBar))
+    if (ImGui::BeginChild("##LuaBlueprintDocument", ImVec2(0, 0), ImGuiChildFlags_None))
     {
         bRenderingDocument = true;
         Render(DeltaTime);
@@ -1261,12 +1346,20 @@ namespace
 
 void FLuaBlueprintEditorWidget::RenderToolbar(ULuaBlueprintAsset* Blueprint)
 {
-    if (!ImGui::BeginMenuBar()) return;
+    // Material editor 와 동일한 색상 버튼 툴바. 메뉴바 대신 본문 상단에 직접 그린다.
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 5.0f));
 
     const bool bDirtyNow = !bSuppressInitialGeometryDirty && (IsDirty() || Blueprint->IsCompileDirty());
-    // dirty 면 Save 버튼 강조 — Material editor 패턴.
-    if (bDirtyNow) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.85f, 0.35f, 1.0f));
-    if (ImGui::MenuItem(bDirtyNow ? "Save*" : "Save"))
+
+    // Compile: 그래프를 Lua 로 컴파일(저장 X). Save: 컴파일 후 .uasset 영구 저장.
+    if (ToolbarAccentButton("Compile", ImVec4(0.46f, 0.36f, 0.16f, 1.0f), ImVec4(0.62f, 0.48f, 0.20f, 1.0f)))
+    {
+        Blueprint->Compile();
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Compile the graph to Lua. Does not save the asset.");
+
+    ImGui::SameLine();
+    if (ToolbarAccentButton(bDirtyNow ? "Save *" : "Save", ImVec4(0.22f, 0.50f, 0.28f, 1.0f), ImVec4(0.28f, 0.64f, 0.34f, 1.0f)))
     {
         // Compile errors must not block graph persistence; runtime will keep using last-good Lua.
         Blueprint->Compile();
@@ -1275,46 +1368,97 @@ void FLuaBlueprintEditorWidget::RenderToolbar(ULuaBlueprintAsset* Blueprint)
             ClearDirty();
         }
     }
-    if (bDirtyNow) ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Compile and save the blueprint graph to its .uasset.");
 
-    if (ImGui::MenuItem("Compile"))
-    {
-        Blueprint->Compile();
-    }
+    ImGui::SameLine();
+    ImGui::TextDisabled("|");
+    ImGui::SameLine();
 
-    ImGui::Separator();
-    if (ImGui::MenuItem("Undo", "Ctrl+Z", false, UndoStack.size() > 1))
+    if (ToolbarAccentButton("Undo", ImGui::GetStyleColorVec4(ImGuiCol_Button), ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered), UndoStack.size() > 1))
     {
         UndoBlueprintEdit(Blueprint);
     }
-    if (ImGui::MenuItem("Redo", "Ctrl+Y", false, !RedoStack.empty()))
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Undo (Ctrl+Z)");
+
+    ImGui::SameLine();
+    if (ToolbarAccentButton("Redo", ImGui::GetStyleColorVec4(ImGuiCol_Button), ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered), !RedoStack.empty()))
     {
         RedoBlueprintEdit(Blueprint);
     }
-    if (ImGui::MenuItem("Copy", "Ctrl+C"))
-    {
-        bQueuedCopySelected = true;
-    }
-    if (ImGui::MenuItem("Paste", "Ctrl+V", false, !ClipboardNodes.empty()))
-    {
-        bQueuedPasteNodes = true;
-    }
-    if (ImGui::MenuItem("Duplicate", "Ctrl+D"))
-    {
-        bQueuedDuplicateSelected = true;
-    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Redo (Ctrl+Y)");
 
-    ImGui::Separator();
-    if (ImGui::MenuItem("Reset Default"))
+    ImGui::SameLine();
+    if (ToolbarButton("Add Node"))
+    {
+        // ed 컨텍스트 밖에서 호출되므로 graph 좌표로 직접 stagger (Palette 와 동일 규칙).
+        PendingNewNodePosition = ImVec2(PendingNewNodePosition.x + 30.0f, PendingNewNodePosition.y + 30.0f);
+        AddNodeSearchBuf[0]     = 0;
+        bOpenToolbarAddNodeMenu = true;
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Browse and add a node. You can also right-click the canvas.");
+
+    ImGui::SameLine();
+    if (ToolbarButton("Reset"))
     {
         Blueprint->InitializeDefault();
         bPositionsPushed = false;
         CommitBlueprintEdit(Blueprint);
     }
-    ImGui::Separator();
-    ImGui::TextDisabled("Right-click canvas for menu. Drag pins to link. Drag a variable to canvas for Get/Set.");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Reset the graph to its default event nodes.");
 
-    ImGui::EndMenuBar();
+    // ── 우측 정렬 상태 배지: 컴파일 에러/경고 요약 ──
+    {
+        int NumErrors   = 0;
+        int NumWarnings = 0;
+        for (const FLuaBlueprintDiagnostic& D : Blueprint->GetDiagnostics())
+        {
+            if (D.Severity == ELuaBlueprintDiagnosticSeverity::Error)   ++NumErrors;
+            if (D.Severity == ELuaBlueprintDiagnosticSeverity::Warning) ++NumWarnings;
+        }
+
+        char         StatusBuf[64];
+        ImVec4       StatusCol;
+        if (NumErrors > 0)
+        {
+            std::snprintf(StatusBuf, sizeof(StatusBuf), "%d error%s", NumErrors, NumErrors == 1 ? "" : "s");
+            StatusCol = ImVec4(0.95f, 0.40f, 0.32f, 1.0f);
+        }
+        else if (NumWarnings > 0)
+        {
+            std::snprintf(StatusBuf, sizeof(StatusBuf), "%d warning%s", NumWarnings, NumWarnings == 1 ? "" : "s");
+            StatusCol = ImVec4(0.95f, 0.80f, 0.35f, 1.0f);
+        }
+        else if (bDirtyNow)
+        {
+            std::snprintf(StatusBuf, sizeof(StatusBuf), "Unsaved changes");
+            StatusCol = ImVec4(0.70f, 0.70f, 0.70f, 1.0f);
+        }
+        else
+        {
+            std::snprintf(StatusBuf, sizeof(StatusBuf), "Compiled");
+            StatusCol = ImVec4(0.45f, 0.90f, 0.55f, 1.0f);
+        }
+
+        const float TextW = ImGui::CalcTextSize(StatusBuf).x;
+        ImGui::SameLine(std::max(ImGui::GetCursorPosX(), ImGui::GetWindowWidth() - TextW - 24.0f));
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextColored(StatusCol, "%s", StatusBuf);
+    }
+
+    ImGui::PopStyleVar();
+    ImGui::Separator();
+
+    // 툴바 Add Node 버튼 → 캔버스 우클릭과 동일한 검색형 노드 메뉴를 팝업으로 노출.
+    if (bOpenToolbarAddNodeMenu)
+    {
+        ImGui::OpenPopup("LuaBlueprintToolbarAddNode");
+        bOpenToolbarAddNodeMenu = false;
+    }
+    if (ImGui::BeginPopup("LuaBlueprintToolbarAddNode"))
+    {
+        RenderAddNodeMenu(Blueprint);
+        ImGui::EndPopup();
+    }
 }
 
 void FLuaBlueprintEditorWidget::RenderCompileErrorPanel(ULuaBlueprintAsset* Blueprint)
@@ -1353,14 +1497,29 @@ void FLuaBlueprintEditorWidget::RenderCompileErrorPanel(ULuaBlueprintAsset* Blue
     ImGui::PopStyleColor();
 }
 
+void FLuaBlueprintEditorWidget::RenderLeftPanel(ULuaBlueprintAsset* Blueprint)
+{
+    // Material editor 의 좌측 패널과 동일한 구성: 하나의 bordered 컬럼 안에 색상 헤더로 구분된 섹션.
+    const float Width = 280.0f;
+    ImGui::BeginChild("##LuaBlueprintLeftPanel", ImVec2(Width, 0), ImGuiChildFlags_Borders);
+
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.24f, 0.26f, 0.32f, 1.0f));
+    if (ImGui::CollapsingHeader("Variables", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        RenderVariables(Blueprint);
+    }
+    if (ImGui::CollapsingHeader("Palette", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        RenderPalettePanel(Blueprint);
+    }
+    ImGui::PopStyleColor();
+
+    ImGui::EndChild();
+}
+
 void FLuaBlueprintEditorWidget::RenderVariables(ULuaBlueprintAsset* Blueprint)
 {
-    const float Width = 260.0f;
-    ImGui::BeginChild("##LuaBlueprintVariables", ImVec2(Width, 0), ImGuiChildFlags_Borders);
-
-    ImGui::TextUnformatted("Variables");
-    ImGui::SameLine();
-    if (ImGui::SmallButton("+"))
+    if (ImGui::SmallButton("+ New Variable"))
     {
         ImGui::OpenPopup("LuaBlueprintAddVariableMenu");
     }
@@ -1377,9 +1536,12 @@ void FLuaBlueprintEditorWidget::RenderVariables(ULuaBlueprintAsset* Blueprint)
         ImGui::EndPopup();
     }
 
-    ImGui::Separator();
-
     TArray<FLuaBlueprintVariable>& Variables = Blueprint->GetMutableVariables();
+    if (Variables.empty())
+    {
+        ImGui::TextDisabled("No variables. Click \"+ New Variable\".");
+    }
+
     for (int32 Index = 0; Index < static_cast<int32>(Variables.size()); ++Index)
     {
         FLuaBlueprintVariable& Variable = Variables[Index];
@@ -1409,8 +1571,165 @@ void FLuaBlueprintEditorWidget::RenderVariables(ULuaBlueprintAsset* Blueprint)
         }
         ImGui::PopID();
     }
+}
 
-    ImGui::EndChild();
+void FLuaBlueprintEditorWidget::SpawnPaletteNode(ULuaBlueprintAsset* Blueprint, ELuaBlueprintNodeType Type)
+{
+    // Palette/toolbar 는 ed 컨텍스트 밖에서 호출되므로 graph 좌표로 직접 stagger 한다 (Material Palette 와 동일).
+    const ImVec2 Spawn(PendingNewNodePosition.x + 30.0f, PendingNewNodePosition.y + 30.0f);
+    FLuaBlueprintNode* NewNode = Blueprint->AddNodeOfType(Type, Spawn.x, Spawn.y);
+    if (!NewNode) return;
+
+    NewNode->PosX = Spawn.x;
+    NewNode->PosY = Spawn.y;
+    if (NodeEditorContext)
+    {
+        FScopedNodeEditorCurrent Scope(NodeEditorContext);
+        ed::SetNodePosition(ToNodeId(NewNode->NodeId), Spawn);
+    }
+    PendingNewNodePosition = Spawn;
+    SelectOnlyNodes(TArray<uint32>{ NewNode->NodeId });
+    CommitBlueprintEdit(Blueprint);
+}
+
+void FLuaBlueprintEditorWidget::RenderPalettePanel(ULuaBlueprintAsset* Blueprint)
+{
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputTextWithHint("##palettesearch", "Search nodes...", PaletteSearchBuf, sizeof(PaletteSearchBuf));
+
+    struct FPaletteItem
+    {
+        const char*           Category;
+        ELuaBlueprintNodeType Type;
+    };
+    // 우클릭 Add Node 메뉴와 동일한 카탈로그를 평평하게 펼친 형태. 카테고리별로 색상 불릿 + 클릭 추가.
+    static const FPaletteItem Items[] = {
+        { "Events", ELuaBlueprintNodeType::EventBeginPlay },
+        { "Events", ELuaBlueprintNodeType::EventTick },
+        { "Events", ELuaBlueprintNodeType::EventEndPlay },
+        { "Events", ELuaBlueprintNodeType::EventOverlap },
+        { "Events", ELuaBlueprintNodeType::EventEndOverlap },
+        { "Events", ELuaBlueprintNodeType::EventHit },
+        { "Events", ELuaBlueprintNodeType::EventInputAction },
+        { "Events", ELuaBlueprintNodeType::EventInputAxis },
+        { "Flow", ELuaBlueprintNodeType::Sequence },
+        { "Flow", ELuaBlueprintNodeType::Branch },
+        { "Flow", ELuaBlueprintNodeType::ForLoop },
+        { "Flow", ELuaBlueprintNodeType::WhileLoop },
+        { "Flow", ELuaBlueprintNodeType::ForEachActorByClass },
+        { "Flow", ELuaBlueprintNodeType::ForEachActorByTag },
+        { "Flow", ELuaBlueprintNodeType::ForEachArray },
+        { "Flow", ELuaBlueprintNodeType::Delay },
+        { "Actor", ELuaBlueprintNodeType::SpawnActor },
+        { "Actor", ELuaBlueprintNodeType::DestroyActor },
+        { "Actor", ELuaBlueprintNodeType::FindActorByName },
+        { "Actor", ELuaBlueprintNodeType::FindActorByClass },
+        { "Actor", ELuaBlueprintNodeType::FindActorByTag },
+        { "Actor", ELuaBlueprintNodeType::GetActorLocation },
+        { "Actor", ELuaBlueprintNodeType::SetActorLocation },
+        { "Actor", ELuaBlueprintNodeType::GetActorRotation },
+        { "Actor", ELuaBlueprintNodeType::SetActorRotation },
+        { "Actor", ELuaBlueprintNodeType::GetActorForward },
+        { "Actor", ELuaBlueprintNodeType::AddActorWorldOffset },
+        { "Game Framework", ELuaBlueprintNodeType::GetPlayerController },
+        { "Game Framework", ELuaBlueprintNodeType::GetControlledPawn },
+        { "Game Framework", ELuaBlueprintNodeType::Possess },
+        { "Game Framework", ELuaBlueprintNodeType::GetInputComponent },
+        { "Component", ELuaBlueprintNodeType::GetRootComponent },
+        { "Component", ELuaBlueprintNodeType::GetComponentByName },
+        { "Component", ELuaBlueprintNodeType::AddForce },
+        { "Component", ELuaBlueprintNodeType::AddTorque },
+        { "Component", ELuaBlueprintNodeType::GetLinearVelocity },
+        { "Component", ELuaBlueprintNodeType::SetLinearVelocity },
+        { "Component", ELuaBlueprintNodeType::SetSimulatePhysics },
+        { "Variables", ELuaBlueprintNodeType::GetVariable },
+        { "Variables", ELuaBlueprintNodeType::SetVariable },
+        { "Variables", ELuaBlueprintNodeType::GetProperty },
+        { "Variables", ELuaBlueprintNodeType::SetProperty },
+        { "Variables", ELuaBlueprintNodeType::Self },
+        { "Functions", ELuaBlueprintNodeType::CallFunction },
+        { "Functions", ELuaBlueprintNodeType::CustomEvent },
+        { "Functions", ELuaBlueprintNodeType::CallCustomEvent },
+        { "Delegates", ELuaBlueprintNodeType::BindEvent },
+        { "Delegates", ELuaBlueprintNodeType::UnbindEvent },
+        { "Utility", ELuaBlueprintNodeType::Lerp },
+        { "Utility", ELuaBlueprintNodeType::Clamp },
+        { "Utility", ELuaBlueprintNodeType::Min },
+        { "Utility", ELuaBlueprintNodeType::Max },
+        { "Utility", ELuaBlueprintNodeType::RandomFloat },
+        { "Utility", ELuaBlueprintNodeType::Sin },
+        { "Utility", ELuaBlueprintNodeType::Cos },
+        { "Utility", ELuaBlueprintNodeType::Sqrt },
+        { "Utility", ELuaBlueprintNodeType::Distance },
+        { "Utility", ELuaBlueprintNodeType::GetGameTime },
+        { "Math (Float)", ELuaBlueprintNodeType::AddFloat },
+        { "Math (Float)", ELuaBlueprintNodeType::SubtractFloat },
+        { "Math (Float)", ELuaBlueprintNodeType::MultiplyFloat },
+        { "Math (Float)", ELuaBlueprintNodeType::DivideFloat },
+        { "Math (Int)", ELuaBlueprintNodeType::AddInt },
+        { "Math (Int)", ELuaBlueprintNodeType::SubtractInt },
+        { "Math (Int)", ELuaBlueprintNodeType::MultiplyInt },
+        { "Math (Int)", ELuaBlueprintNodeType::DivideInt },
+        { "Compare", ELuaBlueprintNodeType::EqualFloat },
+        { "Compare", ELuaBlueprintNodeType::LessFloat },
+        { "Compare", ELuaBlueprintNodeType::GreaterFloat },
+        { "Compare", ELuaBlueprintNodeType::EqualInt },
+        { "Logic", ELuaBlueprintNodeType::And },
+        { "Logic", ELuaBlueprintNodeType::Or },
+        { "Logic", ELuaBlueprintNodeType::Not },
+        { "Vector", ELuaBlueprintNodeType::MakeVector },
+        { "Vector", ELuaBlueprintNodeType::BreakVector },
+        { "Vector", ELuaBlueprintNodeType::AddVector },
+        { "Vector", ELuaBlueprintNodeType::ScaleVector },
+        { "Vector", ELuaBlueprintNodeType::DotVector },
+        { "Vector", ELuaBlueprintNodeType::CrossVector },
+        { "Vector", ELuaBlueprintNodeType::NormalizeVector },
+        { "String", ELuaBlueprintNodeType::AppendString },
+        { "Conversions", ELuaBlueprintNodeType::ToInt },
+        { "Conversions", ELuaBlueprintNodeType::ToFloat },
+        { "Conversions", ELuaBlueprintNodeType::ToString },
+        { "Conversions", ELuaBlueprintNodeType::ToVector },
+        { "Literals", ELuaBlueprintNodeType::LiteralBool },
+        { "Literals", ELuaBlueprintNodeType::LiteralInt },
+        { "Literals", ELuaBlueprintNodeType::LiteralFloat },
+        { "Literals", ELuaBlueprintNodeType::LiteralString },
+        { "Literals", ELuaBlueprintNodeType::LiteralVector },
+        { "Graph Utility", ELuaBlueprintNodeType::Reroute },
+        { "Graph Utility", ELuaBlueprintNodeType::Comment },
+        { "Debug", ELuaBlueprintNodeType::PrintString },
+    };
+
+    const char* CurrentCategory = nullptr;
+    const bool  bSearching      = PaletteSearchBuf[0] != 0;
+    for (const FPaletteItem& Item : Items)
+    {
+        const char* Label = NodeTypeLabel(Item.Type);
+        if (bSearching && !ContainsCaseInsensitive(Label, PaletteSearchBuf)) continue;
+
+        // 검색 중이 아닐 때만 카테고리 머리글을 노출(검색 모드는 평평한 리스트).
+        if (!bSearching && (!CurrentCategory || std::strcmp(CurrentCategory, Item.Category) != 0))
+        {
+            CurrentCategory = Item.Category;
+            ImGui::Spacing();
+            ImGui::TextDisabled("%s", Item.Category);
+            ImGui::Separator();
+        }
+
+        // 이벤트 노드는 그래프에 하나만 존재 가능 — 이미 있으면 비활성.
+        const bool bDisabled = IsEventNode(Item.Type) && HasNodeOfType(Blueprint, Item.Type);
+        ImGui::BeginDisabled(bDisabled);
+
+        ImGui::PushStyleColor(ImGuiCol_Text, NodeHeaderColor(Item.Type));
+        ImGui::Bullet();
+        ImGui::PopStyleColor();
+        ImGui::SameLine();
+        if (ImGui::Selectable(Label))
+        {
+            SpawnPaletteNode(Blueprint, Item.Type);
+        }
+
+        ImGui::EndDisabled();
+    }
 }
 
 void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
@@ -1488,7 +1807,14 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
                     Node.VectorValue.X = ActualSize.x;
                     Node.VectorValue.Y = ActualSize.y;
                     Blueprint->BumpEditorVersion();
-                    bAnyNodeGeometryChangedThisFrame = true;
+                    // 생성 직후 ed 가 코멘트 박스 크기를 1~2 프레임에 걸쳐 확정하는 "자동 정착"은
+                    // 사용자가 직접 리사이즈한 게 아니므로 별도 undo 스냅샷을 만들면 안 된다.
+                    // (안 그러면 그룹 생성 직후 정착 커밋이 끼어들어 Undo 한 번이 헛돈다 → 그룹 실행취소 버그)
+                    // 실제 리사이즈 드래그(마우스 다운) 중일 때만 geometry 변경으로 커밋한다.
+                    if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+                    {
+                        bAnyNodeGeometryChangedThisFrame = true;
+                    }
                 }
             }
 
@@ -1508,18 +1834,27 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
 
         for (FLuaBlueprintPin& Pin : Node.Pins)
         {
+            const ImVec4 PinCol     = PinTypeColor(Pin.Type);
+            const bool   bExecPin   = Pin.Type == ELuaBlueprintPinType::Exec;
+            const bool   bConnected = IsPinConnected(Blueprint, Pin);
+
             ed::BeginPin(
                 ToPinId(Pin.PinId),
                 Pin.Kind == ELuaBlueprintPinKind::Input ? ed::PinKind::Input : ed::PinKind::Output
             );
-            const ImVec4 PinCol = PinTypeColor(Pin.Type);
             if (Pin.Kind == ELuaBlueprintPinKind::Input)
             {
-                ImGui::TextColored(PinCol, "-> %s", Pin.DisplayName.ToString().c_str());
+                // UE 스타일: 입력 핀은 [아이콘][라벨]
+                DrawPinIcon(bConnected, bExecPin, PinCol);
+                ImGui::SameLine(0.0f, 6.0f);
+                ImGui::TextColored(PinCol, "%s", Pin.DisplayName.ToString().c_str());
             }
             else
             {
-                ImGui::TextColored(PinCol, "%s ->", Pin.DisplayName.ToString().c_str());
+                // 출력 핀은 [라벨][아이콘]
+                ImGui::TextColored(PinCol, "%s", Pin.DisplayName.ToString().c_str());
+                ImGui::SameLine(0.0f, 6.0f);
+                DrawPinIcon(bConnected, bExecPin, PinCol);
             }
             ed::EndPin();
 
@@ -1937,6 +2272,19 @@ void FLuaBlueprintEditorWidget::RenderNodeBody(ULuaBlueprintAsset* Blueprint, FL
     case ELuaBlueprintNodeType::CallCustomEvent:
         ImGui::TextDisabled(Node.NameValue == FName::None ? "(no event)" : Node.NameValue.ToString().c_str());
         break;
+    case ELuaBlueprintNodeType::EventInputAction:
+        ImGui::TextDisabled("%s / %s / %s",
+            Node.NameValue == FName::None ? "(no action)" : Node.NameValue.ToString().c_str(),
+            Node.StringValue.empty() ? "Pressed" : Node.StringValue.c_str(),
+            GetInputKeyName(Node.IntValue).c_str());
+        break;
+    case ELuaBlueprintNodeType::EventInputAxis:
+        ImGui::TextDisabled("%s / %s / %s / x%.3f",
+            Node.NameValue == FName::None ? "(no axis)" : Node.NameValue.ToString().c_str(),
+            Node.StringValue.empty() ? "Key" : Node.StringValue.c_str(),
+            GetInputKeyName(Node.IntValue).c_str(),
+            Node.FloatValue);
+        break;
     case ELuaBlueprintNodeType::Comment:
         ImGui::TextWrapped("%s", Node.StringValue.empty() ? "Comment" : Node.StringValue.c_str());
         break;
@@ -2102,6 +2450,147 @@ void FLuaBlueprintEditorWidget::RenderNodeInspector(ULuaBlueprintAsset* Blueprin
             }
             ImGui::TextDisabled("(목록의 Custom Event 이름이나 직접 입력)");
         }
+        break;
+    }
+    case ELuaBlueprintNodeType::EventInputAction:
+    {
+        char NameBuf[128];
+        CopyToBuffer(NameBuf, sizeof(NameBuf), Node.NameValue.ToString());
+        if (ImGui::InputText("Action Name", NameBuf, sizeof(NameBuf), ImGuiInputTextFlags_EnterReturnsTrue))
+        {
+            Node.NameValue = NameBuf[0] ? FName(NameBuf) : FName::None;
+            Blueprint->BumpVersion();
+            CommitBlueprintEdit(Blueprint);
+        }
+
+        const char* CurrentEvent = Node.StringValue == "Released" ? "Released" : "Pressed";
+        if (ImGui::BeginCombo("Event", CurrentEvent))
+        {
+            const char* EventNames[] = { "Pressed", "Released" };
+            for (const char* EventName : EventNames)
+            {
+                const bool bSelected = std::strcmp(CurrentEvent, EventName) == 0;
+                if (ImGui::Selectable(EventName, bSelected))
+                {
+                    Node.StringValue = EventName;
+                    Blueprint->BumpVersion();
+                    CommitBlueprintEdit(Blueprint);
+                }
+                if (bSelected) ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+
+        const FString CurrentKey = GetInputKeyName(Node.IntValue);
+        if (ImGui::BeginCombo("Key", CurrentKey.c_str()))
+        {
+            const bool bNoneSelected = Node.IntValue == 0;
+            if (ImGui::Selectable("None / existing mapping only", bNoneSelected))
+            {
+                Node.IntValue = 0;
+                Blueprint->BumpVersion();
+                CommitBlueprintEdit(Blueprint);
+            }
+            if (bNoneSelected) ImGui::SetItemDefaultFocus();
+
+            for (const FString& KeyName : GetKnownInputKeyNames())
+            {
+                const int32 KeyCode = ResolveInputKeyCode(KeyName);
+                const bool bSelected = KeyCode == Node.IntValue;
+                if (ImGui::Selectable(KeyName.c_str(), bSelected))
+                {
+                    Node.IntValue = KeyCode;
+                    Blueprint->BumpVersion();
+                    CommitBlueprintEdit(Blueprint);
+                }
+                if (bSelected) ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        char KeyBuf[96];
+        CopyToBuffer(KeyBuf, sizeof(KeyBuf), CurrentKey);
+        if (ImGui::InputTextWithHint("Key Name", "Space, W, LeftMouseButton...", KeyBuf, sizeof(KeyBuf), ImGuiInputTextFlags_EnterReturnsTrue))
+        {
+            Node.IntValue = ResolveInputKeyCode(KeyBuf);
+            Blueprint->BumpVersion();
+            CommitBlueprintEdit(Blueprint);
+        }
+        ImGui::TextDisabled("None이면 같은 이름의 기존 ActionMapping에만 바인딩합니다.");
+        break;
+    }
+    case ELuaBlueprintNodeType::EventInputAxis:
+    {
+        char NameBuf[128];
+        CopyToBuffer(NameBuf, sizeof(NameBuf), Node.NameValue.ToString());
+        if (ImGui::InputText("Axis Name", NameBuf, sizeof(NameBuf), ImGuiInputTextFlags_EnterReturnsTrue))
+        {
+            Node.NameValue = NameBuf[0] ? FName(NameBuf) : FName::None;
+            Blueprint->BumpVersion();
+            CommitBlueprintEdit(Blueprint);
+        }
+
+        const char* Sources[] = { "Key", "MouseX", "MouseY", "MouseWheel" };
+        FString CurrentSource = Node.StringValue.empty() ? "Key" : Node.StringValue;
+        if (ImGui::BeginCombo("Source", CurrentSource.c_str()))
+        {
+            for (const char* SourceName : Sources)
+            {
+                const bool bSelected = CurrentSource == SourceName;
+                if (ImGui::Selectable(SourceName, bSelected))
+                {
+                    Node.StringValue = SourceName;
+                    Blueprint->BumpVersion();
+                    CommitBlueprintEdit(Blueprint);
+                }
+                if (bSelected) ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+
+        if (CurrentSource == "Key")
+        {
+            const FString CurrentKey = GetInputKeyName(Node.IntValue);
+            if (ImGui::BeginCombo("Key", CurrentKey.c_str()))
+            {
+                const bool bNoneSelected = Node.IntValue == 0;
+                if (ImGui::Selectable("None / existing mapping only", bNoneSelected))
+                {
+                    Node.IntValue = 0;
+                    Blueprint->BumpVersion();
+                    CommitBlueprintEdit(Blueprint);
+                }
+                if (bNoneSelected) ImGui::SetItemDefaultFocus();
+
+                for (const FString& KeyName : GetKnownInputKeyNames())
+                {
+                    const int32 KeyCode = ResolveInputKeyCode(KeyName);
+                    const bool bSelected = KeyCode == Node.IntValue;
+                    if (ImGui::Selectable(KeyName.c_str(), bSelected))
+                    {
+                        Node.IntValue = KeyCode;
+                        Blueprint->BumpVersion();
+                        CommitBlueprintEdit(Blueprint);
+                    }
+                    if (bSelected) ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            char KeyBuf[96];
+            CopyToBuffer(KeyBuf, sizeof(KeyBuf), CurrentKey);
+            if (ImGui::InputTextWithHint("Key Name", "W, S, Space, LeftMouseButton...", KeyBuf, sizeof(KeyBuf), ImGuiInputTextFlags_EnterReturnsTrue))
+            {
+                Node.IntValue = ResolveInputKeyCode(KeyBuf);
+                Blueprint->BumpVersion();
+                CommitBlueprintEdit(Blueprint);
+            }
+            ImGui::TextDisabled("None이면 같은 이름의 기존 AxisMapping에만 바인딩합니다.");
+        }
+        if (ImGui::DragFloat("Scale", &Node.FloatValue, 0.01f, -100.0f, 100.0f, "%.3f"))
+        {
+            Blueprint->BumpVersion();
+            CommitBlueprintEdit(Blueprint);
+        }
+        ImGui::TextDisabled("Mouse source는 Key 값을 사용하지 않습니다.");
         break;
     }
     case ELuaBlueprintNodeType::Comment:
@@ -2541,7 +3030,7 @@ void FLuaBlueprintEditorWidget::RenderAddNodeMenu(ULuaBlueprintAsset* Blueprint)
     if (bHasQuery)
     {
         // 검색 모드: 카테고리 안 펼치고 한 줄로.
-        for (int32 i = 0; i <= static_cast<int32>(ELuaBlueprintNodeType::HasEventBinding); ++i)
+        for (int32 i = 0; i <= static_cast<int32>(ELuaBlueprintNodeType::GetInputComponent); ++i)
         {
             AddItem(static_cast<ELuaBlueprintNodeType>(i));
         }
@@ -2557,6 +3046,8 @@ void FLuaBlueprintEditorWidget::RenderAddNodeMenu(ULuaBlueprintAsset* Blueprint)
             AddItem(ELuaBlueprintNodeType::EventEndOverlap);
             AddItem(ELuaBlueprintNodeType::EventHit);
             AddItem(ELuaBlueprintNodeType::EventEndHit);
+            AddItem(ELuaBlueprintNodeType::EventInputAction);
+            AddItem(ELuaBlueprintNodeType::EventInputAxis);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Flow"))
@@ -2595,6 +3086,17 @@ void FLuaBlueprintEditorWidget::RenderAddNodeMenu(ULuaBlueprintAsset* Blueprint)
             AddItem(ELuaBlueprintNodeType::ActorAddTag);
             AddItem(ELuaBlueprintNodeType::ActorRemoveTag);
             AddItem(ELuaBlueprintNodeType::GetActorName);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Game Framework"))
+        {
+            AddItem(ELuaBlueprintNodeType::GetPlayerController);
+            AddItem(ELuaBlueprintNodeType::GetController);
+            AddItem(ELuaBlueprintNodeType::GetControlledPawn);
+            AddItem(ELuaBlueprintNodeType::Possess);
+            AddItem(ELuaBlueprintNodeType::UnPossess);
+            AddItem(ELuaBlueprintNodeType::IsPawnPossessed);
+            AddItem(ELuaBlueprintNodeType::GetInputComponent);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Object"))
@@ -2768,7 +3270,7 @@ void FLuaBlueprintEditorWidget::RenderPinSpawnMenu(ULuaBlueprintAsset* Blueprint
     ImGui::Separator();
 
     int32 NumShown = 0;
-    for (int32 i = 0; i <= static_cast<int32>(ELuaBlueprintNodeType::HasEventBinding); ++i)
+    for (int32 i = 0; i <= static_cast<int32>(ELuaBlueprintNodeType::GetInputComponent); ++i)
     {
         const ELuaBlueprintNodeType Type = static_cast<ELuaBlueprintNodeType>(i);
         if (!ContainsCaseInsensitive(NodeTypeLabel(Type), PinSpawnSearchBuf)) continue;
@@ -2844,30 +3346,21 @@ bool FLuaBlueprintEditorWidget::NodeTypeCanConnectToPendingPin(ELuaBlueprintNode
     FLuaBlueprintNode* Probe = Scratch.AddNodeOfType(Type, 0.0f, 0.0f);
     if (!Probe) return false;
 
+    // 양방향 모두 동일한 "추천 정밀 매칭"을 적용한다(정확/숫자/wildcard/Exec).
+    // 이전 코드는 출력 드래그엔 광범위 변환을, 입력 드래그엔 정확 타입만 적용해 비대칭/부정확했다.
     for (const FLuaBlueprintPin& Candidate : Probe->Pins)
     {
         if (Candidate.Kind == DragPin->Kind) continue;
 
-        // Output pin → blank: show nodes whose input can accept that output, including
-        // implicit conversion.
+        // Output 드래그 → 그 출력을 받을 수 있는 입력을 가진 노드.
         if (DragPin->Kind == ELuaBlueprintPinKind::Output && Candidate.Kind == ELuaBlueprintPinKind::Input)
         {
-            if (ULuaBlueprintAsset::ArePinTypesCompatibleForLink(DragPin->Type, Candidate.Type))
-            {
-                return true;
-            }
-            continue;
+            if (ArePinTypesRecommendable(DragPin->Type, Candidate.Type)) return true;
         }
-
-        // Input pin → blank: the produced output should be the same visible type as the
-        // dragged input. Any is allowed only for nodes that resolve their pin type on link
-        // such as Reroute/GetVariable before a variable is chosen.
-        if (DragPin->Kind == ELuaBlueprintPinKind::Input && Candidate.Kind == ELuaBlueprintPinKind::Output)
+        // Input 드래그 → 그 입력에 줄 출력을 가진 노드.
+        else if (DragPin->Kind == ELuaBlueprintPinKind::Input && Candidate.Kind == ELuaBlueprintPinKind::Output)
         {
-            if (DragPin->Type == ELuaBlueprintPinType::Any || Candidate.Type == ELuaBlueprintPinType::Any || Candidate.Type == DragPin->Type)
-            {
-                return true;
-            }
+            if (ArePinTypesRecommendable(Candidate.Type, DragPin->Type)) return true;
         }
     }
     return false;
@@ -2880,17 +3373,27 @@ FLuaBlueprintPin* FLuaBlueprintEditorWidget::FindFirstCompatiblePinOnNode(
     ) const
 {
     if (!Blueprint) return nullptr;
+
+    // 1순위: 실제 링크 가능 + "추천 정밀 매칭"(정확/숫자/wildcard/Exec) 핀.
+    //   → Float 출력을 String 입력 같은 엉뚱한 핀이 아니라 Float/Int 입력에 정확히 연결한다.
+    // 2순위(fallback): 정밀 매칭은 아니지만 링크 자체는 가능한 첫 핀.
+    FLuaBlueprintPin* Fallback = nullptr;
     for (FLuaBlueprintPin& Candidate : Node.Pins)
     {
         if (Candidate.Kind == DragPin.Kind) continue;
         uint32 FromPinId = 0;
-        uint32 ToPinId = 0;
-        if (Blueprint->CanLinkPins(DragPin.PinId, Candidate.PinId, &FromPinId, &ToPinId))
+        uint32 ToPinId   = 0;
+        if (!Blueprint->CanLinkPins(DragPin.PinId, Candidate.PinId, &FromPinId, &ToPinId)) continue;
+
+        const ELuaBlueprintPinType OutType = (DragPin.Kind == ELuaBlueprintPinKind::Output) ? DragPin.Type : Candidate.Type;
+        const ELuaBlueprintPinType InType  = (DragPin.Kind == ELuaBlueprintPinKind::Output) ? Candidate.Type : DragPin.Type;
+        if (ArePinTypesRecommendable(OutType, InType))
         {
             return &Candidate;
         }
+        if (!Fallback) Fallback = &Candidate;
     }
-    return nullptr;
+    return Fallback;
 }
 
 void FLuaBlueprintEditorWidget::HandleVariableDropOnCanvas()

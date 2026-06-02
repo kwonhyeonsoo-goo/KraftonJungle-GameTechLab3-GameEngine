@@ -49,6 +49,17 @@ public:
 	size_t Tell(Rml::FileHandle FileHandle) override;
 };
 
+struct FUIInputCaptureState
+{
+	bool bWantsMouse = false;
+	bool bWantsKeyboard = false;
+	bool bWantsTextInput = false;
+
+	bool bBlocksGameInput = false;
+	bool bBlocksGameKeyboard = false;
+	bool bBlocksGameMouseLook = false;
+};
+
 class FRmlRenderInterfaceD3D11 final : public Rml::RenderInterface
 {
 public:
@@ -104,9 +115,9 @@ public:
 	const char* GetReferencerName() const override { return "UUIManager"; }
 	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
-	// viewport 에 올라온 widget 중 하나라도 WantsMouse() == true 면 시스템 커서를 보이고
-	// raw mouse / clip 을 풀어야 한다 — GameViewportClient::ProcessInput 이 폴링해서 사용.
-	bool AnyViewportWidgetWantsMouse() const;
+		// viewport 에 올라온 widget들의 입력 요구/게임 입력 차단 정책을 합산한다.
+		FUIInputCaptureState GetViewportInputCaptureState() const;
+		bool AnyViewportWidgetWantsMouse() const;
 
 private:
 	UUIManager() = default;

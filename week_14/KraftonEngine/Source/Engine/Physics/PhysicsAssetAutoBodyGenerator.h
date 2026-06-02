@@ -19,6 +19,7 @@ struct FPhysicsAssetAutoBodyGeneratorOptions
 {
     EPhysicsAssetAutoBodyMethod Method = EPhysicsAssetAutoBodyMethod::PCAAnalysis;
     bool bCreateConstraints = true;
+    bool bDisableCollisionBetweenConstrainedBodies = true;
     bool bReplaceExisting = true;
     bool bSkipHelperBones = true;
     bool bAllowBoneAxisFallback = false;

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Engine/Particle/Distributions/Distribution.h"
 #include "Math/Vector.h"
 #include "Source/Engine/Particle/Distributions/DistributionVector.generated.h"

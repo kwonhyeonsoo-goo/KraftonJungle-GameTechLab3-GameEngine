@@ -69,7 +69,7 @@ public:
 	// 게임에선 보통 false 로 끄고 자식이 자기 매핑/binding 추가. 데모 편의용 기본 true.
 	bool bAutoInputWASD = true;
 
-	// 자동 mouse look — Tick 안에서 mouse delta X/Y * MouseSensitivity 로 APawn::ControlRotation 누적.
+	// 자동 mouse look — InputComponent 의 MouseX / MouseY axis 를 통해 APawn::ControlRotation 누적.
 	// capsule 자체 회전은 안 함 — SpringArm 의 bUsePawnControlRotation 가 ControlRotation 사용해
 	// 카메라만 회전. WASD 도 ControlRotation.Yaw 기준 forward/right 로 이동.
 	bool  bAutoInputMouseLook = true;
@@ -81,7 +81,7 @@ protected:
 	// InputComponent 가 부착된 후 호출 — WASD axis mapping + AddMovementInput binding 등록.
 	void SetupInputComponent() override;
 
-	// 자동 mouse look + 향후 다른 per-frame 입력 처리.
+	// ControlRotation → RootComponent 동기화 등 per-frame 처리.
 	void Tick(float DeltaTime) override;
 	void SavePreRagdollCharacterState();
 	void SetCharacterDrivenCollisionEnabled(bool bEnabled);

@@ -6,6 +6,269 @@
 #include <cstring>
 #include <utility>
 
+namespace
+{
+    struct FOutputPinSchema
+    {
+        const char* Name;
+        EMaterialGraphPinType Type;
+    };
+
+    struct FPinSchema
+    {
+        EMaterialGraphPinKind Kind;
+        EMaterialGraphPinType Type;
+        const char* Name;
+    };
+
+    TArray<FOutputPinSchema> GetOutputPinSchema(EMaterialGraphTarget Domain)
+    {
+        switch (Domain)
+        {
+        case EMaterialGraphTarget::ParticleSprite:
+        case EMaterialGraphTarget::ParticleMesh:
+            return {
+                { "Color", EMaterialGraphPinType::Float3 },
+                { "Emissive", EMaterialGraphPinType::Float3 },
+                { "Opacity", EMaterialGraphPinType::Float },
+                { "UVOffset", EMaterialGraphPinType::Float2 },
+            };
+        case EMaterialGraphTarget::Decal:
+        case EMaterialGraphTarget::Surface:
+        default:
+            return {
+                { "BaseColor", EMaterialGraphPinType::Float3 },
+                { "Normal", EMaterialGraphPinType::Float3 },
+                { "Roughness", EMaterialGraphPinType::Float },
+                { "Metallic", EMaterialGraphPinType::Float },
+                { "Emissive", EMaterialGraphPinType::Float3 },
+                { "Opacity", EMaterialGraphPinType::Float },
+                { "OpacityMask", EMaterialGraphPinType::Float },
+            };
+        case EMaterialGraphTarget::PostProcess:
+            return {
+                { "Color", EMaterialGraphPinType::Float3 },
+                { "Opacity", EMaterialGraphPinType::Float },
+            };
+        }
+    }
+
+    const char* GetDefaultNodeDisplayName(EMaterialGraphNodeType Type)
+    {
+        switch (Type)
+        {
+        case EMaterialGraphNodeType::Output: return "Material Output";
+        case EMaterialGraphNodeType::TextureObject: return "Texture Object";
+        case EMaterialGraphNodeType::TextureSample: return "Texture Sample";
+        case EMaterialGraphNodeType::ScalarParameter: return "Scalar Parameter";
+        case EMaterialGraphNodeType::VectorParameter: return "Vector Parameter";
+        case EMaterialGraphNodeType::ColorParameter: return "Color Parameter";
+        case EMaterialGraphNodeType::TexCoord: return "TexCoord";
+        case EMaterialGraphNodeType::VertexColor: return "Vertex Color";
+        case EMaterialGraphNodeType::ParticleColor: return "Particle Color";
+        case EMaterialGraphNodeType::ComponentMask: return "Component Mask";
+        case EMaterialGraphNodeType::ParticleSubUV: return "Particle SubUV";
+        case EMaterialGraphNodeType::DynamicParameter: return "Dynamic Parameter";
+        case EMaterialGraphNodeType::MakeFloat2: return "Make Float2";
+        case EMaterialGraphNodeType::MakeFloat3: return "Make Float3";
+        case EMaterialGraphNodeType::MakeFloat4: return "Make Float4";
+        case EMaterialGraphNodeType::BreakFloat2: return "Break Float2";
+        case EMaterialGraphNodeType::BreakFloat3: return "Break Float3";
+        case EMaterialGraphNodeType::BreakFloat4: return "Break Float4";
+        default: return ToString(Type);
+        }
+    }
+
+    TArray<FPinSchema> GetPinSchema(const FMaterialGraphNode& Node, EMaterialGraphTarget Domain)
+    {
+        switch (Node.Type)
+        {
+        case EMaterialGraphNodeType::Output:
+        {
+            TArray<FPinSchema> Pins;
+            for (const FOutputPinSchema& Pin : GetOutputPinSchema(Domain))
+            {
+                Pins.push_back({ EMaterialGraphPinKind::Input, Pin.Type, Pin.Name });
+            }
+            return Pins;
+        }
+        case EMaterialGraphNodeType::TextureObject:
+            return { { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Texture2D, "Texture" } };
+        case EMaterialGraphNodeType::TextureSample:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Texture2D, "Texture" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float2, "UV" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float3, "RGB" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "R" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "G" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "B" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "A" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float4, "RGBA" },
+            };
+        case EMaterialGraphNodeType::ScalarParameter:
+        case EMaterialGraphNodeType::ConstantFloat:
+            return { { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "Value" } };
+        case EMaterialGraphNodeType::VectorParameter:
+        case EMaterialGraphNodeType::ConstantFloat4:
+            return { { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float4, "Value" } };
+        case EMaterialGraphNodeType::ColorParameter:
+            return { { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Color, "Color" } };
+        case EMaterialGraphNodeType::ConstantFloat2:
+            return { { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float2, "Value" } };
+        case EMaterialGraphNodeType::ConstantFloat3:
+            return { { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float3, "Value" } };
+        case EMaterialGraphNodeType::Add:
+        case EMaterialGraphNodeType::Subtract:
+        case EMaterialGraphNodeType::Multiply:
+        case EMaterialGraphNodeType::Divide:
+        case EMaterialGraphNodeType::Power:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float4, "A" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float4, "B" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float4, "Result" },
+            };
+        case EMaterialGraphNodeType::OneMinus:
+        case EMaterialGraphNodeType::Saturate:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float4, "Value" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float4, "Result" },
+            };
+        case EMaterialGraphNodeType::Clamp:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float4, "Value" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float4, "Min" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float4, "Max" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float4, "Result" },
+            };
+        case EMaterialGraphNodeType::Lerp:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float4, "A" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float4, "B" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, "Alpha" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float4, "Result" },
+            };
+        case EMaterialGraphNodeType::TexCoord:
+        case EMaterialGraphNodeType::ParticleSubUV:
+            return { { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float2, "UV" } };
+        case EMaterialGraphNodeType::Panner:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float2, "UV" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, "Time" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float2, "UV" },
+            };
+        case EMaterialGraphNodeType::Time:
+            return { { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "Time" } };
+        case EMaterialGraphNodeType::VertexColor:
+        case EMaterialGraphNodeType::ParticleColor:
+            return {
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float3, "RGB" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "R" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "G" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "B" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "A" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float4, "RGBA" },
+            };
+        case EMaterialGraphNodeType::Append:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, "A" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, "B" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float2, "Result" },
+            };
+        case EMaterialGraphNodeType::ComponentMask:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float4, "Value" },
+                { EMaterialGraphPinKind::Output, Node.Mask.size() == 1 ? EMaterialGraphPinType::Float : EMaterialGraphPinType::Float3, "Result" },
+            };
+        case EMaterialGraphNodeType::ConstantBiasScale:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, "Value" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "Result" },
+            };
+        case EMaterialGraphNodeType::Distance:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float3, "A" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float3, "B" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "Result" },
+            };
+        case EMaterialGraphNodeType::Normalize:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float3, "Value" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float3, "Result" },
+            };
+        case EMaterialGraphNodeType::Dot:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float3, "A" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float3, "B" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "Result" },
+            };
+        case EMaterialGraphNodeType::Cross:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float3, "A" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float3, "B" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float3, "Result" },
+            };
+        case EMaterialGraphNodeType::DynamicParameter:
+            return {
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "Param1" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "Param2" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "Param3" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "Param4" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float4, "RGBA" },
+            };
+        case EMaterialGraphNodeType::MakeFloat2:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, "X" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, "Y" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float2, "Result" },
+            };
+        case EMaterialGraphNodeType::MakeFloat3:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, "X" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, "Y" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, "Z" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float3, "Result" },
+            };
+        case EMaterialGraphNodeType::MakeFloat4:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, "X" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, "Y" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, "Z" },
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float, "W" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float4, "Result" },
+            };
+        case EMaterialGraphNodeType::BreakFloat2:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float2, "Value" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "X" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "Y" },
+            };
+        case EMaterialGraphNodeType::BreakFloat3:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float3, "Value" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "X" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "Y" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "Z" },
+            };
+        case EMaterialGraphNodeType::BreakFloat4:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float4, "Value" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "X" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "Y" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "Z" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float, "W" },
+            };
+        case EMaterialGraphNodeType::Reroute:
+            return {
+                { EMaterialGraphPinKind::Input, EMaterialGraphPinType::Float4, "In" },
+                { EMaterialGraphPinKind::Output, EMaterialGraphPinType::Float4, "Out" },
+            };
+        case EMaterialGraphNodeType::Comment:
+        default:
+            return {};
+        }
+    }
+}
+
 FMaterialGraphNode* FMaterialGraph::AddNode(EMaterialGraphNodeType Type, const FName& DisplayName, float X, float Y)
 {
     FMaterialGraphNode Node;
@@ -624,42 +887,165 @@ void FMaterialGraph::RebuildOutputPinsForDomain(EMaterialGraphTarget Domain)
     );
     Output->Pins.clear();
 
-    auto AddOutPin = [this, Output](const char* Name, EMaterialGraphPinType Type)
+    for (const FOutputPinSchema& Pin : GetOutputPinSchema(Domain))
     {
-        AddPin(*Output, EMaterialGraphPinKind::Input, Type, FName(Name));
-    };
-
-    switch (Domain)
-    {
-    case EMaterialGraphTarget::ParticleSprite:
-    case EMaterialGraphTarget::ParticleMesh:
-        AddOutPin("Color", EMaterialGraphPinType::Float3);
-        AddOutPin("Emissive", EMaterialGraphPinType::Float3);
-        AddOutPin("Opacity", EMaterialGraphPinType::Float);
-        AddOutPin("UVOffset", EMaterialGraphPinType::Float2);
-        break;
-    case EMaterialGraphTarget::Decal:
-        AddOutPin("BaseColor", EMaterialGraphPinType::Float3);
-        AddOutPin("Normal", EMaterialGraphPinType::Float3);
-        AddOutPin("Roughness", EMaterialGraphPinType::Float);
-        AddOutPin("Metallic", EMaterialGraphPinType::Float);
-        AddOutPin("Opacity", EMaterialGraphPinType::Float);
-        break;
-    case EMaterialGraphTarget::PostProcess:
-        AddOutPin("Color", EMaterialGraphPinType::Float3);
-        AddOutPin("Opacity", EMaterialGraphPinType::Float);
-        break;
-    case EMaterialGraphTarget::Surface:
-    default:
-        AddOutPin("BaseColor", EMaterialGraphPinType::Float3);
-        AddOutPin("Normal", EMaterialGraphPinType::Float3);
-        AddOutPin("Roughness", EMaterialGraphPinType::Float);
-        AddOutPin("Metallic", EMaterialGraphPinType::Float);
-        AddOutPin("Emissive", EMaterialGraphPinType::Float3);
-        AddOutPin("Opacity", EMaterialGraphPinType::Float);
-        AddOutPin("OpacityMask", EMaterialGraphPinType::Float);
-        break;
+        AddPin(*Output, EMaterialGraphPinKind::Input, Pin.Type, FName(Pin.Name));
     }
+}
+
+bool FMaterialGraph::RepairOutputPinsForDomain(EMaterialGraphTarget Domain)
+{
+    FMaterialGraphNode* Output = FindFirstNodeOfType(EMaterialGraphNodeType::Output);
+    if (!Output)
+    {
+        return false;
+    }
+
+    bool bChanged = false;
+    const TArray<FOutputPinSchema> Schema = GetOutputPinSchema(Domain);
+
+    for (uint32 i = 0; i < static_cast<uint32>(Schema.size()); ++i)
+    {
+        if (i >= static_cast<uint32>(Output->Pins.size()))
+        {
+            AddPin(*Output, EMaterialGraphPinKind::Input, Schema[i].Type, FName(Schema[i].Name));
+            bChanged = true;
+            continue;
+        }
+
+        FMaterialGraphPin& Pin = Output->Pins[i];
+        if (Pin.Kind != EMaterialGraphPinKind::Input)
+        {
+            Pin.Kind = EMaterialGraphPinKind::Input;
+            bChanged = true;
+        }
+        if (Pin.Type != Schema[i].Type)
+        {
+            Pin.Type = Schema[i].Type;
+            bChanged = true;
+        }
+        if (Pin.DisplayName.ToString() != Schema[i].Name)
+        {
+            Pin.DisplayName = FName(Schema[i].Name);
+            bChanged = true;
+        }
+        if (Pin.OwningNodeId != Output->NodeId)
+        {
+            Pin.OwningNodeId = Output->NodeId;
+            bChanged = true;
+        }
+    }
+
+    if (Output->Pins.size() > Schema.size())
+    {
+        TArray<uint32> RemovedPinIds;
+        for (uint32 i = static_cast<uint32>(Schema.size()); i < static_cast<uint32>(Output->Pins.size()); ++i)
+        {
+            RemovedPinIds.push_back(Output->Pins[i].PinId);
+        }
+
+        Links.erase(
+            std::remove_if(
+                Links.begin(),
+                Links.end(),
+                [&RemovedPinIds](const FMaterialGraphLink& L)
+                {
+                    for (uint32 PinId : RemovedPinIds)
+                    {
+                        if (L.FromPinId == PinId || L.ToPinId == PinId) return true;
+                    }
+                    return false;
+                }
+            ),
+            Links.end()
+        );
+        Output->Pins.resize(Schema.size());
+        bChanged = true;
+    }
+
+    return bChanged;
+}
+
+bool FMaterialGraph::RepairPinsForDomain(EMaterialGraphTarget Domain)
+{
+    bool bChanged = RepairOutputPinsForDomain(Domain);
+
+    for (FMaterialGraphNode& Node : Nodes)
+    {
+        const FString ExpectedNodeName = GetDefaultNodeDisplayName(Node.Type);
+        if (!ExpectedNodeName.empty() && Node.DisplayName.ToString() != ExpectedNodeName)
+        {
+            Node.DisplayName = FName(ExpectedNodeName);
+            bChanged = true;
+        }
+
+        if (Node.Type == EMaterialGraphNodeType::Output)
+        {
+            continue;
+        }
+
+        const TArray<FPinSchema> Schema = GetPinSchema(Node, Domain);
+        for (uint32 i = 0; i < static_cast<uint32>(Schema.size()); ++i)
+        {
+            if (i >= static_cast<uint32>(Node.Pins.size()))
+            {
+                AddPin(Node, Schema[i].Kind, Schema[i].Type, FName(Schema[i].Name));
+                bChanged = true;
+                continue;
+            }
+
+            FMaterialGraphPin& Pin = Node.Pins[i];
+            if (Pin.Kind != Schema[i].Kind)
+            {
+                Pin.Kind = Schema[i].Kind;
+                bChanged = true;
+            }
+            if (Pin.Type != Schema[i].Type)
+            {
+                Pin.Type = Schema[i].Type;
+                bChanged = true;
+            }
+            if (Pin.DisplayName.ToString() != Schema[i].Name)
+            {
+                Pin.DisplayName = FName(Schema[i].Name);
+                bChanged = true;
+            }
+            if (Pin.OwningNodeId != Node.NodeId)
+            {
+                Pin.OwningNodeId = Node.NodeId;
+                bChanged = true;
+            }
+        }
+
+        if (Node.Pins.size() > Schema.size())
+        {
+            TArray<uint32> RemovedPinIds;
+            for (uint32 i = static_cast<uint32>(Schema.size()); i < static_cast<uint32>(Node.Pins.size()); ++i)
+            {
+                RemovedPinIds.push_back(Node.Pins[i].PinId);
+            }
+
+            Links.erase(
+                std::remove_if(
+                    Links.begin(),
+                    Links.end(),
+                    [&RemovedPinIds](const FMaterialGraphLink& L)
+                    {
+                        for (uint32 PinId : RemovedPinIds)
+                        {
+                            if (L.FromPinId == PinId || L.ToPinId == PinId) return true;
+                        }
+                        return false;
+                    }
+                ),
+                Links.end()
+            );
+            Node.Pins.resize(Schema.size());
+            bChanged = true;
+        }
+    }
+
+    return bChanged;
 }
 
 void FMaterialGraph::ApplyTexturedParticlePreset(EMaterialGraphTarget Domain)

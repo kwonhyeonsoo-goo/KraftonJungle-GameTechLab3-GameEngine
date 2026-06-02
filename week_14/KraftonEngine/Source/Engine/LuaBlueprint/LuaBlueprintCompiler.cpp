@@ -1,6 +1,7 @@
 #include "LuaBlueprint/LuaBlueprintCompiler.h"
 
 #include "LuaBlueprint/LuaBlueprintAsset.h"
+#include "Input/InputKeyCodes.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -125,6 +126,7 @@ namespace
             Out << "__vars = __vars or {}\n";
             EmitRuntimeHelpers(Out);
             EmitEventMetadata(Out);
+            EmitInputBindingMetadata(Out);
             EmitVariableInitializers(Out);
             Out << "\n";
 
@@ -155,6 +157,7 @@ namespace
                 "OnEndHit",
                 "OtherActor, HitComponent, OtherComp"
             );
+            EmitInputEventFunctions(Out);
             EmitCustomEventFunctions(Out);
 
             return Out.str();
@@ -237,6 +240,86 @@ namespace
                 EmitNextExecFromPin(Out, Then->PinId, 1, ExecStack);
             }
             Out << "end\n\n";
+        }
+
+        FString InputFunctionName(const FLuaBlueprintNode& Node) const
+        {
+            return FString("__bp_input_") + std::to_string(Node.NodeId);
+        }
+
+        FString InputActionEventName(const FLuaBlueprintNode& Node) const
+        {
+            return Node.StringValue == "Released" ? "Released" : "Pressed";
+        }
+
+        FString InputAxisSourceName(const FLuaBlueprintNode& Node) const
+        {
+            if (Node.StringValue == "MouseX" || Node.StringValue == "MouseY" || Node.StringValue == "MouseWheel")
+            {
+                return Node.StringValue;
+            }
+            return "Key";
+        }
+
+        bool HasRunnableInputEvent(const FLuaBlueprintNode& Node) const
+        {
+            return (Node.Type == ELuaBlueprintNodeType::EventInputAction || Node.Type == ELuaBlueprintNodeType::EventInputAxis)
+                && HasConnectedExecOutput(Node);
+        }
+
+        void EmitInputBindingMetadata(std::ostringstream& Out)
+        {
+            Out << "__input_bindings = {\n";
+            for (const FLuaBlueprintNode& Node : Asset.GetNodes())
+            {
+                if (!HasRunnableInputEvent(Node))
+                {
+                    continue;
+                }
+
+                const FString Name = LuaName(Node.NameValue);
+                if (Name.empty())
+                {
+                    continue;
+                }
+
+                if (Node.Type == ELuaBlueprintNodeType::EventInputAction)
+                {
+                    Out << "  { Kind = \"Action\", Name = " << LuaQuoted(Name)
+                        << ", KeyName = " << LuaQuoted(GetInputKeyName(Node.IntValue))
+                        << ", Event = " << LuaQuoted(InputActionEventName(Node))
+                        << ", Function = " << LuaQuoted(InputFunctionName(Node)) << " },\n";
+                }
+                else if (Node.Type == ELuaBlueprintNodeType::EventInputAxis)
+                {
+                    Out << "  { Kind = \"Axis\", Name = " << LuaQuoted(Name)
+                        << ", Source = " << LuaQuoted(InputAxisSourceName(Node))
+                        << ", KeyName = " << LuaQuoted(GetInputKeyName(Node.IntValue))
+                        << ", Scale = " << FormatFloat(Node.FloatValue == 0.0f ? 1.0f : Node.FloatValue)
+                        << ", Function = " << LuaQuoted(InputFunctionName(Node)) << " },\n";
+                }
+            }
+            Out << "}\n";
+        }
+
+        void EmitInputEventFunctions(std::ostringstream& Out)
+        {
+            for (const FLuaBlueprintNode& Node : Asset.GetNodes())
+            {
+                if (!HasRunnableInputEvent(Node))
+                {
+                    continue;
+                }
+
+                const char* Args = Node.Type == ELuaBlueprintNodeType::EventInputAxis ? "Value" : "";
+                Out << "function " << InputFunctionName(Node) << "(" << Args << ")\n";
+                std::unordered_set<uint32> ExecStack;
+                if (const FLuaBlueprintPin* Then = FindFirstExecOutput(Node))
+                {
+                    EmitNextExecFromPin(Out, Then->PinId, 1, ExecStack);
+                }
+                Out << "end\n\n";
+            }
         }
 
         void EmitCustomEventFunctions(std::ostringstream& Out)
@@ -431,6 +514,25 @@ namespace
                     );
                 }
 
+                if (Node.Type == ELuaBlueprintNodeType::EventInputAction || Node.Type == ELuaBlueprintNodeType::EventInputAxis)
+                {
+                    const FString InputName = LuaName(Node.NameValue);
+                    if (InputName.empty())
+                    {
+                        AddDiagnostic(Result, ELuaBlueprintDiagnosticSeverity::Error, Node.NodeId, "Input event has no Action/Axis name");
+                    }
+                    if (Node.Type == ELuaBlueprintNodeType::EventInputAction &&
+                        Node.StringValue != "Pressed" && Node.StringValue != "Released")
+                    {
+                        AddDiagnostic(Result, ELuaBlueprintDiagnosticSeverity::Warning, Node.NodeId, "InputAction event must be Pressed or Released; Pressed will be used");
+                    }
+                    if (Node.Type == ELuaBlueprintNodeType::EventInputAxis &&
+                        Node.StringValue != "Key" && Node.StringValue != "MouseX" && Node.StringValue != "MouseY" && Node.StringValue != "MouseWheel")
+                    {
+                        AddDiagnostic(Result, ELuaBlueprintDiagnosticSeverity::Warning, Node.NodeId, "InputAxis source must be Key, MouseX, MouseY, or MouseWheel; Key will be used");
+                    }
+                }
+
                 if (Node.Type == ELuaBlueprintNodeType::CallCustomEvent)
                 {
                     const FString EventName = LuaName(Node.NameValue);
@@ -612,6 +714,12 @@ namespace
                 break;
             case ELuaBlueprintNodeType::ActorRemoveTag:
                 EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Target}) then ({Target}):RemoveTag({Tag}) end");
+                break;
+            case ELuaBlueprintNodeType::Possess:
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Controller}) and __bp_is_valid_object({Pawn}) then ({Controller}):Possess({Pawn}) end");
+                break;
+            case ELuaBlueprintNodeType::UnPossess:
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Controller}) then ({Controller}):UnPossess() end");
                 break;
             case ELuaBlueprintNodeType::ActivateComponent:
                 EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Component}) then ({Component}):Activate() end");
@@ -1286,6 +1394,8 @@ namespace
             {
             case ELuaBlueprintNodeType::EventTick:
                 return OutputPin.DisplayName.ToString() == "DeltaTime" ? FString("DeltaTime") : FString("nil");
+            case ELuaBlueprintNodeType::EventInputAxis:
+                return OutputPin.DisplayName.ToString() == "Value" ? FString("Value") : FString("nil");
             case ELuaBlueprintNodeType::EventOverlap:
             case ELuaBlueprintNodeType::EventEndOverlap:
             case ELuaBlueprintNodeType::EventHit:
@@ -1579,6 +1689,18 @@ namespace
                     "Component",
                     "nil"
                 ) + "):GetOwner() or nil)";
+
+            // ── Game framework ──
+            case ELuaBlueprintNodeType::GetPlayerController:
+                return "World.GetFirstPlayerController()";
+            case ELuaBlueprintNodeType::GetController:
+                return FString("(") + GetInputExpression(Node, "Pawn", "obj") + " and (" + GetInputExpression(Node, "Pawn", "obj") + "):GetController() or nil)";
+            case ELuaBlueprintNodeType::GetControlledPawn:
+                return FString("(") + GetInputExpression(Node, "Controller", "World.GetFirstPlayerController()") + " and (" + GetInputExpression(Node, "Controller", "World.GetFirstPlayerController()") + "):GetPossessedPawn() or nil)";
+            case ELuaBlueprintNodeType::IsPawnPossessed:
+                return FString("(") + GetInputExpression(Node, "Pawn", "obj") + " and (" + GetInputExpression(Node, "Pawn", "obj") + "):IsPossessed() or false)";
+            case ELuaBlueprintNodeType::GetInputComponent:
+                return FString("(") + GetInputExpression(Node, "Pawn", "obj") + " and (" + GetInputExpression(Node, "Pawn", "obj") + "):GetInputComponent() or nil)";
 
             // ── Object utility ──
             case ELuaBlueprintNodeType::IsValid:

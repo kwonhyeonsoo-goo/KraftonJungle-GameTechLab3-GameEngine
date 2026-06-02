@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Object/Object.h"
+#include "Core/Types/CoreTypes.h"
 #include "Slate/SWindow.h"
 #include "Viewport/ViewportClient.h"
 #include "Input/InputSystem.h"
@@ -13,6 +14,14 @@
 
 class FViewport;
 class UCameraComponent;
+struct FUIInputCaptureState;
+
+enum class EGameInputMode : uint8
+{
+	GameOnly,
+	GameAndUI,
+	UIOnly,
+};
 
 // UE의 UGameViewportClient 대응 — UObject + FViewportClient 다중상속.
 // 게임 런타임 뷰포트를 담당 (Standalone / Editor PIE 양쪽 동일 인터페이스).
@@ -39,6 +48,9 @@ public:
 	void SetInputPossessed(bool bPossessed);
 	bool IsPossessed() const { return bInputPossessed; }
 
+	void SetInputMode(EGameInputMode InMode);
+	EGameInputMode GetInputMode() const { return InputMode; }
+
 	// 게임 세션 진입/종료 — viewport attach + 입력 상태 리셋. PIE start/stop 또는
 	// standalone 게임 시작/종료에서 호출.
 	void BeginGameSession(FViewport* InViewport);
@@ -50,11 +62,14 @@ public:
 	// 비활성/비포커스 시 snapshot 클리어 + raw mouse 해제 + 커서 풀어줌.
 	void ProcessInput(const FInputSystemSnapshot& Snapshot, float DeltaTime);
 
+	bool HasGameInputSnapshot() const { return bHasGameInputSnapshot; }
 	const FInputSystemSnapshot& GetGameInputSnapshot() const { return GameInputSnapshot; }
 
 private:
 	void SetCursorCaptured(bool bCaptured);
 	void ApplyCursorClip();
+	void ReleaseGameCapture();
+	void ApplyGameCapturePolicy(const FUIInputCaptureState& UIState);
 
 	void SetGameInputSnapshot(const FInputSystemSnapshot& Snapshot);
 	void ClearGameInputSnapshot();
@@ -65,6 +80,7 @@ private:
 	bool bHasCursorClipRect = false;
 	bool bInputPossessed = false;
 	bool bCursorCaptured = false;
+	EGameInputMode InputMode = EGameInputMode::GameOnly;
 
 	FInputSystemSnapshot GameInputSnapshot{};
 	bool bHasGameInputSnapshot = false;

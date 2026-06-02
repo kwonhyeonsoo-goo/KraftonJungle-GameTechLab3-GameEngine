@@ -1,4 +1,4 @@
-﻿#include "EditorMaterialInspector.h"
+#include "EditorMaterialInspector.h"
 #include "Materials/MaterialManager.h"
 #include "Resource/ResourceManager.h"
 #include "Editor/UI/ContentBrowser/ContentItem.h"
@@ -70,7 +70,7 @@ namespace
 	const FBlendOption GBlendOptions[] = {
 		{ "Opaque",      EBlendMode::Opaque },
 		{ "Masked",      EBlendMode::Masked },
-		{ "Translucent", EBlendMode::Translucent },
+		{ "Transparent", EBlendMode::Transparent },
 		{ "Additive",    EBlendMode::Additive },
 		{ "Modulate",    EBlendMode::Modulate },
 	};

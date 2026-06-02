@@ -17,6 +17,7 @@
 #include "Physics/PhysicsAssetInstance.h"
 #include "Physics/PhysicsAssetManager.h"
 #include "Physics/PhysicsAssetPreviewUtils.h"
+#include "Render/Types/ViewTypes.h"
 
 #include <algorithm>
 #include <cfloat>
@@ -44,6 +45,16 @@ namespace
         Result.Rotation = (ParentWorld.Rotation * Local.Rotation).GetNormalized();
         Result.Scale = FVector::OneVector;
         return Result;
+    }
+
+    FColor ConstraintLimitSwingRed(uint32 Alpha)
+    {
+        return FColor(0xc5, 0x00, 0x00, Alpha);
+    }
+
+    FColor ConstraintLimitTwistGreen(uint32 Alpha)
+    {
+        return FColor(0x00, 0x80, 0x20, Alpha);
     }
 
     void DrawDebugCircle(
@@ -94,6 +105,197 @@ namespace
             DrawDebugLine(World, Prev, Next, Color, 0.0f);
             Prev = Next;
         }
+    }
+
+    void DrawDebugArc(
+        UWorld* World,
+        const FVector& Center,
+        const FVector& AxisA,
+        const FVector& AxisB,
+        float Radius,
+        float StartAngle,
+        float EndAngle,
+        int32 Segments,
+        const FColor& Color)
+    {
+        if (!World || Radius <= 0.0f || Segments < 2)
+        {
+            return;
+        }
+
+        const float AngleRange = EndAngle - StartAngle;
+        FVector Prev = Center + (AxisA * cosf(StartAngle) + AxisB * sinf(StartAngle)) * Radius;
+        for (int32 i = 1; i <= Segments; ++i)
+        {
+            const float Alpha = static_cast<float>(i) / static_cast<float>(Segments);
+            const float Angle = StartAngle + AngleRange * Alpha;
+            const FVector Next = Center + (AxisA * cosf(Angle) + AxisB * sinf(Angle)) * Radius;
+            DrawDebugLine(World, Prev, Next, Color, 0.0f);
+            Prev = Next;
+        }
+    }
+
+    void DrawDebugFrameAxes(
+        UWorld* World,
+        const FTransform& FrameWorld,
+        float Length,
+        uint32 Alpha)
+    {
+        if (!World || Length <= 0.0f)
+        {
+            return;
+        }
+
+        const FQuat Rotation = FrameWorld.Rotation.GetNormalized();
+        const FVector Origin = FrameWorld.Location;
+        DrawDebugLine(World, Origin, Origin + Rotation.RotateVector(FVector(1.0f, 0.0f, 0.0f)) * Length, FColor(255, 80, 80, Alpha), 0.0f);
+        DrawDebugLine(World, Origin, Origin + Rotation.RotateVector(FVector(0.0f, 1.0f, 0.0f)) * Length, FColor(80, 255, 80, Alpha), 0.0f);
+        DrawDebugLine(World, Origin, Origin + Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f)) * Length, FColor(80, 130, 255, Alpha), 0.0f);
+    }
+
+    float ClampLimitDegreesForDebug(float Degrees)
+    {
+        return FMath::Clamp(Degrees, 0.0f, 85.0f);
+    }
+
+    float MotionLimitDegreesForDebug(EConstraintMotion Motion, float LimitedDegrees)
+    {
+        switch (Motion)
+        {
+        case EConstraintMotion::Free:
+            return 85.0f;
+        case EConstraintMotion::Limited:
+            return ClampLimitDegreesForDebug(LimitedDegrees);
+        case EConstraintMotion::Locked:
+        default:
+            return 0.0f;
+        }
+    }
+
+    int32 AngularArcSegments(float AngleRangeRadians)
+    {
+        const float Normalized = (std::max)(std::fabs(AngleRangeRadians) / (2.0f * FMath::Pi), 0.08f);
+        return (std::max)(4, static_cast<int32>(ceilf(32.0f * Normalized)));
+    }
+
+    float ComputeConstraintLimitDrawRadius(const FTransform& ParentFrameWorld, const FTransform& ChildFrameWorld)
+    {
+        const float FrameDistance = FVector::Distance(ParentFrameWorld.Location, ChildFrameWorld.Location);
+        return FMath::Clamp(FrameDistance * 0.45f + 0.25f, 0.25f, 2.5f);
+    }
+
+    void DrawConstraintSwingLimitDebug(
+        UWorld* World,
+        const FTransform& ParentFrameWorld,
+        const FConstraintLimitDesc& Limits,
+        float Radius,
+        const FColor& Color)
+    {
+        if (!World || Radius <= 0.0f)
+        {
+            return;
+        }
+
+        const FQuat Rotation = ParentFrameWorld.Rotation.GetNormalized();
+        const FVector Center = ParentFrameWorld.Location;
+        const FVector AxisX = Rotation.RotateVector(FVector(1.0f, 0.0f, 0.0f));
+        const FVector AxisY = Rotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
+        const FVector AxisZ = Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f));
+
+        const float Swing1Degrees = MotionLimitDegreesForDebug(Limits.Swing1, Limits.Swing1LimitDegrees);
+        const float Swing2Degrees = MotionLimitDegreesForDebug(Limits.Swing2, Limits.Swing2LimitDegrees);
+        const float Swing1Radians = Swing1Degrees * FMath::DegToRad;
+        const float Swing2Radians = Swing2Degrees * FMath::DegToRad;
+
+        const FVector DiskCenter = Center + AxisX * Radius;
+        const float DiskRadiusY = (std::max)(Radius * sinf(Swing1Radians), Radius * 0.025f);
+        const float DiskRadiusZ = (std::max)(Radius * sinf(Swing2Radians), Radius * 0.025f);
+
+        if (Limits.Swing1 == EConstraintMotion::Locked && Limits.Swing2 == EConstraintMotion::Locked)
+        {
+            const float CrossSize = Radius * 0.12f;
+            DrawDebugLine(World, DiskCenter + AxisY * CrossSize, DiskCenter - AxisY * CrossSize, Color, 0.0f);
+            DrawDebugLine(World, DiskCenter + AxisZ * CrossSize, DiskCenter - AxisZ * CrossSize, Color, 0.0f);
+            return;
+        }
+
+        FVector Prev = DiskCenter + AxisY * DiskRadiusY;
+        for (int32 i = 1; i <= DebugCircleSegments; ++i)
+        {
+            const float Angle = 2.0f * FMath::Pi * static_cast<float>(i) / static_cast<float>(DebugCircleSegments);
+            const FVector Next = DiskCenter + AxisY * (cosf(Angle) * DiskRadiusY) + AxisZ * (sinf(Angle) * DiskRadiusZ);
+            DrawDebugLine(World, Prev, Next, Color, 0.0f);
+            Prev = Next;
+        }
+
+        DrawDebugLine(World, DiskCenter, DiskCenter + AxisY * DiskRadiusY, ConstraintLimitSwingRed(Color.A), 0.0f);
+        DrawDebugLine(World, DiskCenter, DiskCenter + AxisZ * DiskRadiusZ, ConstraintLimitTwistGreen(Color.A), 0.0f);
+    }
+
+    void DrawConstraintTwistLimitDebug(
+        UWorld* World,
+        const FTransform& ParentFrameWorld,
+        const FTransform& ChildFrameWorld,
+        const FConstraintLimitDesc& Limits,
+        float Radius,
+        const FColor& Color)
+    {
+        if (!World || Radius <= 0.0f)
+        {
+            return;
+        }
+
+        const FQuat ParentRotation = ParentFrameWorld.Rotation.GetNormalized();
+        const FQuat ChildRotation = ChildFrameWorld.Rotation.GetNormalized();
+        const FVector Center = ParentFrameWorld.Location + ParentRotation.RotateVector(FVector(1.0f, 0.0f, 0.0f)) * (Radius * 0.12f);
+        const FVector AxisY = ParentRotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
+        const FVector AxisZ = ParentRotation.RotateVector(FVector(0.0f, 0.0f, 1.0f));
+        const FVector ChildY = ChildRotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
+        const float RingRadius = Radius * 0.32f;
+
+        if (Limits.Twist == EConstraintMotion::Free)
+        {
+            DrawDebugCircle(World, Center, AxisY, AxisZ, RingRadius, ConstraintLimitTwistGreen(Color.A));
+        }
+        else if (Limits.Twist == EConstraintMotion::Locked)
+        {
+            DrawDebugLine(World, Center - AxisY * RingRadius, Center + AxisY * RingRadius, ConstraintLimitTwistGreen(Color.A), 0.0f);
+            DrawDebugLine(World, Center - AxisZ * RingRadius, Center + AxisZ * RingRadius, ConstraintLimitTwistGreen(Color.A), 0.0f);
+        }
+        else
+        {
+            float MinAngle = Limits.TwistLimitMinDegrees * FMath::DegToRad;
+            float MaxAngle = Limits.TwistLimitMaxDegrees * FMath::DegToRad;
+            if (MinAngle > MaxAngle)
+            {
+                std::swap(MinAngle, MaxAngle);
+            }
+            DrawDebugArc(World, Center, AxisY, AxisZ, RingRadius, MinAngle, MaxAngle, AngularArcSegments(MaxAngle - MinAngle), ConstraintLimitTwistGreen(Color.A));
+            DrawDebugLine(World, Center, Center + (AxisY * cosf(MinAngle) + AxisZ * sinf(MinAngle)) * RingRadius, ConstraintLimitTwistGreen(Color.A), 0.0f);
+            DrawDebugLine(World, Center, Center + (AxisY * cosf(MaxAngle) + AxisZ * sinf(MaxAngle)) * RingRadius, ConstraintLimitTwistGreen(Color.A), 0.0f);
+        }
+
+        DrawDebugLine(World, Center, Center + ChildY * RingRadius, ConstraintLimitSwingRed(Color.A), 0.0f);
+    }
+
+    void DrawConstraintAngularLimitDebug(
+        UWorld* World,
+        const FTransform& ParentFrameWorld,
+        const FTransform& ChildFrameWorld,
+        const FConstraintLimitDesc& Limits,
+        bool bSelected)
+    {
+        if (!World)
+        {
+            return;
+        }
+
+        const uint32 Alpha = bSelected ? 230u : 145u;
+        const float Radius = ComputeConstraintLimitDrawRadius(ParentFrameWorld, ChildFrameWorld);
+        DrawDebugFrameAxes(World, ParentFrameWorld, Radius * 0.32f, Alpha);
+        DrawDebugFrameAxes(World, ChildFrameWorld, Radius * 0.22f, Alpha);
+        DrawConstraintSwingLimitDebug(World, ParentFrameWorld, Limits, Radius, ConstraintLimitSwingRed(Alpha));
+        DrawConstraintTwistLimitDebug(World, ParentFrameWorld, ChildFrameWorld, Limits, Radius, ConstraintLimitTwistGreen(Alpha));
     }
 
     void DrawDebugOrientedBox(
@@ -520,6 +722,197 @@ namespace
         }
     }
 
+    constexpr float ConstraintGraphBodyStartX = 20.0f;
+    constexpr float ConstraintGraphBodyStartY = 30.0f;
+    constexpr float ConstraintGraphBodyColumnWidth = 460.0f;
+    constexpr float ConstraintGraphRowHeight = 125.0f;
+    constexpr float ConstraintGraphConstraintFallbackX = 275.0f;
+    constexpr float ConstraintGraphConstraintOffsetX = 220.0f;
+    constexpr float ConstraintGraphConstraintOffsetY = 15.0f;
+
+    bool ContainsBodyIndex(const TArray<int32>& Indices, int32 BodyIndex)
+    {
+        return std::find(Indices.begin(), Indices.end(), BodyIndex) != Indices.end();
+    }
+
+    void ArrangeConstraintGraphNodes(UPhysicsAsset* PhysicsAsset)
+    {
+        if (!PhysicsAsset)
+        {
+            return;
+        }
+
+        const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
+        const TArray<FPhysicsAssetConstraintSetup>& Constraints = PhysicsAsset->GetConstraintSetups();
+        const int32 BodyCount = static_cast<int32>(Bodies.size());
+        const int32 ConstraintCount = static_cast<int32>(Constraints.size());
+        if (BodyCount <= 0)
+        {
+            return;
+        }
+
+        TArray<TArray<int32>> ChildrenByBody;
+        TArray<int32> IncomingCounts;
+        TArray<int32> Depths;
+        TArray<int32> RootBodies;
+        TArray<int32> VisitStates;
+        TArray<float> BodyRows;
+        ChildrenByBody.resize(BodyCount);
+        IncomingCounts.assign(BodyCount, 0);
+        Depths.assign(BodyCount, 0);
+        VisitStates.assign(BodyCount, 0);
+        BodyRows.assign(BodyCount, -1.0f);
+        RootBodies.reserve(BodyCount);
+
+        for (const FPhysicsAssetConstraintSetup& Constraint : Constraints)
+        {
+            const int32 ParentBodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(Constraint.ParentBoneName);
+            const int32 ChildBodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(Constraint.ChildBoneName);
+            if (ParentBodyIndex < 0 || ChildBodyIndex < 0 || ParentBodyIndex == ChildBodyIndex)
+            {
+                continue;
+            }
+
+            TArray<int32>& Children = ChildrenByBody[ParentBodyIndex];
+            if (!ContainsBodyIndex(Children, ChildBodyIndex))
+            {
+                Children.push_back(ChildBodyIndex);
+                ++IncomingCounts[ChildBodyIndex];
+            }
+        }
+
+        for (int32 BodyIndex = 0; BodyIndex < BodyCount; ++BodyIndex)
+        {
+            if (IncomingCounts[BodyIndex] == 0)
+            {
+                RootBodies.push_back(BodyIndex);
+            }
+        }
+
+        if (RootBodies.empty())
+        {
+            for (int32 BodyIndex = 0; BodyIndex < BodyCount; ++BodyIndex)
+            {
+                RootBodies.push_back(BodyIndex);
+            }
+        }
+
+        int32 NextLeafRow = 0;
+        std::function<float(int32, int32)> ArrangeBodyTree = [&](int32 BodyIndex, int32 Depth) -> float
+        {
+            if (BodyIndex < 0 || BodyIndex >= BodyCount)
+            {
+                return static_cast<float>(NextLeafRow);
+            }
+
+            Depths[BodyIndex] = (std::max)(Depths[BodyIndex], Depth);
+
+            if (VisitStates[BodyIndex] == 2)
+            {
+                return BodyRows[BodyIndex];
+            }
+
+            if (VisitStates[BodyIndex] == 1)
+            {
+                if (BodyRows[BodyIndex] < 0.0f)
+                {
+                    BodyRows[BodyIndex] = static_cast<float>(NextLeafRow++);
+                }
+                return BodyRows[BodyIndex];
+            }
+
+            VisitStates[BodyIndex] = 1;
+
+            float ChildRowSum = 0.0f;
+            int32 ChildRowCount = 0;
+            for (int32 ChildBodyIndex : ChildrenByBody[BodyIndex])
+            {
+                if (ChildBodyIndex < 0 || ChildBodyIndex >= BodyCount || ChildBodyIndex == BodyIndex)
+                {
+                    continue;
+                }
+
+                if (VisitStates[ChildBodyIndex] == 1)
+                {
+                    continue;
+                }
+
+                const float ChildRow = ArrangeBodyTree(ChildBodyIndex, Depth + 1);
+                ChildRowSum += ChildRow;
+                ++ChildRowCount;
+            }
+
+            const float Row = (ChildRowCount > 0)
+                ? ChildRowSum / static_cast<float>(ChildRowCount)
+                : static_cast<float>(NextLeafRow++);
+            BodyRows[BodyIndex] = Row;
+            VisitStates[BodyIndex] = 2;
+            return Row;
+        };
+
+        for (int32 RootBodyIndex : RootBodies)
+        {
+            ArrangeBodyTree(RootBodyIndex, 0);
+        }
+
+        for (int32 BodyIndex = 0; BodyIndex < BodyCount; ++BodyIndex)
+        {
+            if (VisitStates[BodyIndex] != 2)
+            {
+                ArrangeBodyTree(BodyIndex, Depths[BodyIndex]);
+            }
+        }
+
+        TArray<ImVec2> BodyPositions;
+        BodyPositions.resize(BodyCount);
+        for (int32 BodyIndex = 0; BodyIndex < BodyCount; ++BodyIndex)
+        {
+            const float Row = (BodyRows[BodyIndex] >= 0.0f) ? BodyRows[BodyIndex] : static_cast<float>(BodyIndex);
+            const float X = ConstraintGraphBodyStartX + static_cast<float>(Depths[BodyIndex]) * ConstraintGraphBodyColumnWidth;
+            const float Y = ConstraintGraphBodyStartY + Row * ConstraintGraphRowHeight;
+            BodyPositions[BodyIndex] = ImVec2(X, Y);
+            ed::SetNodePosition(ToPhysicsNodeId(MakeBodyNodeId(BodyIndex)), BodyPositions[BodyIndex]);
+        }
+
+        for (int32 ConstraintIndex = 0; ConstraintIndex < ConstraintCount; ++ConstraintIndex)
+        {
+            const FPhysicsAssetConstraintSetup& Constraint = Constraints[ConstraintIndex];
+            const int32 ParentBodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(Constraint.ParentBoneName);
+            const int32 ChildBodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(Constraint.ChildBoneName);
+
+            ImVec2 Position(
+                ConstraintGraphConstraintFallbackX,
+                ConstraintGraphBodyStartY + static_cast<float>(ConstraintIndex) * ConstraintGraphRowHeight + ConstraintGraphConstraintOffsetY);
+
+            if (ParentBodyIndex >= 0 && ParentBodyIndex < BodyCount && ChildBodyIndex >= 0 && ChildBodyIndex < BodyCount)
+            {
+                const ImVec2 ParentPosition = BodyPositions[ParentBodyIndex];
+                const ImVec2 ChildPosition = BodyPositions[ChildBodyIndex];
+                Position.x = (ParentPosition.x + ChildPosition.x) * 0.5f;
+                Position.y = (ParentPosition.y + ChildPosition.y) * 0.5f + ConstraintGraphConstraintOffsetY;
+
+                if (std::fabs(ParentPosition.x - ChildPosition.x) < 1.0f)
+                {
+                    Position.x += ConstraintGraphConstraintOffsetX;
+                }
+            }
+            else if (ParentBodyIndex >= 0 && ParentBodyIndex < BodyCount)
+            {
+                const ImVec2 ParentPosition = BodyPositions[ParentBodyIndex];
+                Position.x = ParentPosition.x + ConstraintGraphConstraintOffsetX;
+                Position.y = ParentPosition.y + ConstraintGraphConstraintOffsetY;
+            }
+            else if (ChildBodyIndex >= 0 && ChildBodyIndex < BodyCount)
+            {
+                const ImVec2 ChildPosition = BodyPositions[ChildBodyIndex];
+                Position.x = ChildPosition.x - ConstraintGraphConstraintOffsetX;
+                Position.y = ChildPosition.y + ConstraintGraphConstraintOffsetY;
+            }
+
+            ed::SetNodePosition(ToPhysicsNodeId(MakeConstraintNodeId(ConstraintIndex)), Position);
+        }
+    }
+
     bool IsValidBodyIndex(const UPhysicsAsset* PhysicsAsset, int32 BodyIndex)
     {
         return PhysicsAsset && BodyIndex >= 0 && BodyIndex < static_cast<int32>(PhysicsAsset->GetBodySetups().size());
@@ -827,8 +1220,13 @@ bool FPhysicsAssetEditorWidget::PrepareEmbeddedRender(UPhysicsAsset* PhysicsAsse
 void FPhysicsAssetEditorWidget::RenderTreeAndGraphPanel(UPhysicsAsset* PhysicsAsset)
 {
     const float AvailableHeight = ImGui::GetContentRegionAvail().y;
-    const float GraphHeight = (std::max)(200.0f, AvailableHeight * 0.42f);
-    const float TreeHeight = (std::max)(140.0f, AvailableHeight - GraphHeight - ImGui::GetStyle().ItemSpacing.y - 4.0f);
+    const float SeparatorHeight = ImGui::GetStyle().ItemSpacing.y + 4.0f;
+    constexpr float DesiredTreePanelRatio = 0.45f;
+    constexpr float MinTreePanelHeight = 160.0f;
+    constexpr float MinGraphPanelHeight = 260.0f;
+    const float DesiredTreeHeight = (std::max)(MinTreePanelHeight, AvailableHeight * DesiredTreePanelRatio);
+    const float MaxTreeHeight = (std::max)(MinTreePanelHeight, AvailableHeight - MinGraphPanelHeight - SeparatorHeight);
+    const float TreeHeight = (std::min)(DesiredTreeHeight, MaxTreeHeight);
 
     ImGui::BeginChild(
         "##PhysicsAssetTreeArea",
@@ -1017,6 +1415,14 @@ void FPhysicsAssetEditorWidget::RenderRegenerateBodiesControls(UPhysicsAsset* Ph
             ImGui::SetTooltip("Create parent-child constraints between the generated bodies.");
         }
 
+        if (!bRegenerateCreateConstraints) ImGui::BeginDisabled();
+        ImGui::Checkbox("Disable Adjacent Pair Collision", &bRegenerateDisableConstrainedBodyCollision);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Disable collision between each generated adjacent parent-child constraint pair.");
+        }
+        if (!bRegenerateCreateConstraints) ImGui::EndDisabled();
+
         ImGui::Checkbox("Replace", &bRegenerateReplaceExisting);
         if (ImGui::IsItemHovered())
         {
@@ -1095,23 +1501,64 @@ void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* Physics
 
     const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
 	ImGui::SetWindowFontScale(1.5f);
-    ImGui::TextUnformatted("Skeleton Physics Tree");
+    ImGui::TextUnformatted("Skeleton Physics");
 	ImGui::SetWindowFontScale(1.0f);
+
+    const float ToggleButtonWidth = (std::max)(
+        70.0f,
+        (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f);
+
+    const bool bTreeTabActive = !bPhysicsTreePanelShowsBodies;
+    if (bTreeTabActive)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    }
+    if (ImGui::Button("Tree", ImVec2(ToggleButtonWidth, 0.0f)))
+    {
+        bPhysicsTreePanelShowsBodies = false;
+    }
+    if (bTreeTabActive)
+    {
+        ImGui::PopStyleColor();
+    }
+
+    ImGui::SameLine();
+
+    const bool bBodiesTabActive = bPhysicsTreePanelShowsBodies;
+    if (bBodiesTabActive)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    }
+    if (ImGui::Button("Bodies", ImVec2(ToggleButtonWidth, 0.0f)))
+    {
+        bPhysicsTreePanelShowsBodies = true;
+    }
+    if (bBodiesTabActive)
+    {
+        ImGui::PopStyleColor();
+    }
+
     ImGui::TextDisabled(
         "Bones: %d  Bodies: %d  Constraints: %d",
         RefSkeleton.GetNumBones(),
         static_cast<int32>(PhysicsAsset->GetBodySetups().size()),
         static_cast<int32>(PhysicsAsset->GetConstraintSetups().size()));
+    ImGui::Separator();
+
+    if (bPhysicsTreePanelShowsBodies)
+    {
+        ImGui::BeginChild("##PhysicsAssetBodiesTab", ImVec2(0.0f, 0.0f), true);
+        RenderBodyListContent(PhysicsAsset);
+        ImGui::EndChild();
+        return;
+    }
 
     const float ActionPanelHeight = ImGui::GetFrameHeightWithSpacing();
-    constexpr float BodyListHeight = 150.0f;
     const float TreeHeight = (std::max)(
-        110.0f,
+        80.0f,
         ImGui::GetContentRegionAvail().y
             - ActionPanelHeight
-            - BodyListHeight
-            - ImGui::GetTextLineHeightWithSpacing()
-            - ImGui::GetStyle().ItemSpacing.y * 3.0f);
+            - ImGui::GetStyle().ItemSpacing.y);
     ImGui::BeginChild("##PhysicsAssetSkeletonTree", ImVec2(0.0f, TreeHeight), true);
     ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, PhysicsEditorTreeIndentSpacing);
     if (RefSkeleton.GetNumBones() <= 0)
@@ -1132,9 +1579,6 @@ void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* Physics
     ImGui::EndChild();
 
     RenderSelectedBoneActionPanel(PhysicsAsset, RefSkeleton);
-
-    ImGui::Separator();
-    RenderBodyList(PhysicsAsset);
 
     RenderUnboundPhysicsSetups(PhysicsAsset, RefSkeleton);
 }
@@ -1437,13 +1881,13 @@ void FPhysicsAssetEditorWidget::RenderUnboundPhysicsSetups(UPhysicsAsset* Physic
     ImGui::TreePop();
 }
 
-void FPhysicsAssetEditorWidget::RenderBodyList(UPhysicsAsset* PhysicsAsset)
+void FPhysicsAssetEditorWidget::RenderBodyListContent(UPhysicsAsset* PhysicsAsset)
 {
-	ImGui::SetWindowFontScale(1.5f);
-    ImGui::TextUnformatted("Bodies");
-	ImGui::SetWindowFontScale(1.0f);
-    ImGui::Separator();
-    ImGui::BeginChild("PhysicsAssetBodyTree", ImVec2(0.0f, 150.0f), true);
+    if (!PhysicsAsset)
+    {
+        return;
+    }
+
     const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
     for (int32 i = 0; i < static_cast<int32>(Bodies.size()); ++i)
     {
@@ -1457,6 +1901,16 @@ void FPhysicsAssetEditorWidget::RenderBodyList(UPhysicsAsset* PhysicsAsset)
         }
     }
     if (Bodies.empty()) ImGui::TextDisabled("No bodies. Click Add Body to start authoring.");
+}
+
+void FPhysicsAssetEditorWidget::RenderBodyList(UPhysicsAsset* PhysicsAsset)
+{
+    ImGui::SetWindowFontScale(1.5f);
+    ImGui::TextUnformatted("Bodies");
+    ImGui::SetWindowFontScale(1.0f);
+    ImGui::Separator();
+    ImGui::BeginChild("PhysicsAssetBodyTree", ImVec2(0.0f, 150.0f), true);
+    RenderBodyListContent(PhysicsAsset);
     ImGui::EndChild();
 
     //if (ImGui::Button("Add Body##BodyList")) AddDefaultBody(PhysicsAsset);
@@ -1533,8 +1987,23 @@ void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* Physic
 	ImGui::SetWindowFontScale(1.5f);
     ImGui::TextUnformatted("Constraint Graph");
 	ImGui::SetWindowFontScale(1.0f);
+	ImGui::SameLine();
 
-    if (!PhysicsAsset)
+    bool bRequestResetView = false;
+    bool bRequestRearrange = false;
+	if (ImGui::Button("Reset View"))
+	{
+        bRequestResetView = true;
+	}
+    ImGui::SameLine();
+	if (ImGui::Button("Rearrange##ConstraintGraph"))
+	{
+        bConstraintGraphLayoutDirty = true;
+        bRequestRearrange = true;
+	}
+    
+	
+	if (!PhysicsAsset)
     {
         ImGui::TextDisabled("No PhysicsAsset selected.");
         return;
@@ -1583,19 +2052,7 @@ void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* Physic
 
     if (bConstraintGraphLayoutDirty)
     {
-        for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
-        {
-            const float X = (BodyIndex % 2 == 0) ? 20.0f : 520.0f;
-            const float Y = 30.0f + static_cast<float>(BodyIndex / 2) * 115.0f;
-            ed::SetNodePosition(ToPhysicsNodeId(MakeBodyNodeId(BodyIndex)), ImVec2(X, Y));
-        }
-
-        for (int32 ConstraintIndex = 0; ConstraintIndex < static_cast<int32>(Constraints.size()); ++ConstraintIndex)
-        {
-            ed::SetNodePosition(
-                ToPhysicsNodeId(MakeConstraintNodeId(ConstraintIndex)),
-                ImVec2(275.0f, 45.0f + static_cast<float>(ConstraintIndex) * 115.0f));
-        }
+        ArrangeConstraintGraphNodes(PhysicsAsset);
         bConstraintGraphLayoutDirty = false;
     }
 
@@ -1811,6 +2268,11 @@ void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* Physic
             }
         }
         bConstraintGraphLayoutDirty = true;
+    }
+
+    if (bRequestResetView || bRequestRearrange)
+    {
+        ed::NavigateToContent(0.25f);
     }
 
     ed::End();
@@ -2096,6 +2558,7 @@ void FPhysicsAssetEditorWidget::RenderConstraintDetails(UPhysicsAsset* PhysicsAs
         bChanged |= ImGui::DragFloat("Twist Max", &Constraint.Limits.TwistLimitMaxDegrees, 0.1f);
         bChanged |= DragMinFloat("Swing 1 Limit", Constraint.Limits.Swing1LimitDegrees, 0.1f, 0.0f);
         bChanged |= DragMinFloat("Swing 2 Limit", Constraint.Limits.Swing2LimitDegrees, 0.1f, 0.0f);
+        ImGui::TextDisabled("Viewport limit debug: Twist rotates around frame X. Swing 1/2 are drawn on the frame Y/Z planes.");
         ImGui::TreePop();
     }
 
@@ -2257,6 +2720,7 @@ bool FPhysicsAssetEditorWidget::RegenerateBodies(UPhysicsAsset* PhysicsAsset, US
         ? EPhysicsAssetAutoBodyMethod::PCAAnalysis
         : EPhysicsAssetAutoBodyMethod::BoneAxis;
     Options.bCreateConstraints = bRegenerateCreateConstraints;
+    Options.bDisableCollisionBetweenConstrainedBodies = bRegenerateDisableConstrainedBodyCollision;
     Options.bReplaceExisting = bRegenerateReplaceExisting;
     Options.bSkipHelperBones = bRegenerateSkipHelperBones;
     Options.bAllowBoneAxisFallback = bRegenerateAllowBoneAxisFallback;
@@ -2299,7 +2763,10 @@ bool FPhysicsAssetEditorWidget::RegenerateBodies(UPhysicsAsset* PhysicsAsset, US
         ClampSelection(PhysicsAsset);
     }
 
-    MarkPhysicsAssetDirty();
+    if (Result.bAssetChanged)
+    {
+        MarkPhysicsAssetDirty();
+    }
     return true;
 }
 
@@ -2451,7 +2918,8 @@ void FPhysicsAssetEditorWidget::RenderPreviewDebug(
     UPhysicsAsset* PhysicsAsset,
     USkeletalMesh* PreviewMesh,
     UWorld* PreviewWorld,
-    USkeletalMeshComponent* PreviewComponent)
+    USkeletalMeshComponent* PreviewComponent,
+    const FShowFlags* PreviewShowFlags)
 {
     PreviewSkeletalMesh = PreviewMesh;
     PreviewSkeletalMeshComponent = PreviewComponent;
@@ -2464,12 +2932,15 @@ void FPhysicsAssetEditorWidget::RenderPreviewDebug(
 
     ClampSelection(PhysicsAsset);
 
-    if (bShowPreviewBodies)
+    const bool bShowBodies = bShowPreviewBodies && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetShapes);
+    const bool bShowConstraints = bShowPreviewConstraints && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetConstraints);
+
+    if (bShowBodies)
     {
         RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
     }
 
-    if (bShowPreviewConstraints)
+    if (bShowConstraints)
     {
         RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
     }
@@ -2481,7 +2952,8 @@ void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
     UWorld* PreviewWorld,
     USkeletalMeshComponent* PreviewComponent,
     UPhysicsAssetPreviewComponent* SolidPreviewComponent,
-    ID3D11Device* Device)
+    ID3D11Device* Device,
+    const FShowFlags* PreviewShowFlags)
 {
     PreviewSkeletalMesh = PreviewMesh;
     PreviewSkeletalMeshComponent = PreviewComponent;
@@ -2498,6 +2970,9 @@ void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
 
     ClampSelection(PhysicsAsset);
 
+    const bool bShowBodies = bShowPreviewBodies && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetShapes);
+    const bool bShowConstraints = bShowPreviewConstraints && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetConstraints);
+
     if (SolidPreviewComponent)
     {
         SolidPreviewComponent->UpdatePreview(
@@ -2506,27 +2981,40 @@ void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
             SelectedBodyIndex,
             SelectedShapeIndex,
             SelectedConstraintIndex,
-            bShowPreviewBodies,
+            bShowBodies,
+            bShowConstraints && bShowConstraintLimitAngles && bShowConstraintLimitSurfaces,
+            bShowOnlySelectedConstraintLimitAngles,
             Device);
     }
 
-    if (bShowPreviewBodies)
+    if (bShowBodies)
     {
         RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
     }
 
-    if (bShowPreviewConstraints)
+    if (bShowConstraints)
     {
         RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
     }
 }
 
-void FPhysicsAssetEditorWidget::RenderViewportDebugOptions()
+void FPhysicsAssetEditorWidget::RenderViewportDebugOptions(FShowFlags* PreviewShowFlags)
 {
     ImGui::Separator();
     ImGui::TextUnformatted("Physics Preview");
-    ImGui::Checkbox("Physics Bodies", &bShowPreviewBodies);
-    ImGui::Checkbox("Physics Constraints", &bShowPreviewConstraints);
+
+    bool* bShowBodies = PreviewShowFlags ? &PreviewShowFlags->bPhysicsAssetShapes : &bShowPreviewBodies;
+    bool* bShowConstraints = PreviewShowFlags ? &PreviewShowFlags->bPhysicsAssetConstraints : &bShowPreviewConstraints;
+
+    ImGui::Checkbox("Physics Asset Shapes", bShowBodies);
+    ImGui::Checkbox("Physics Asset Constraints", bShowConstraints);
+    if (!*bShowConstraints) ImGui::BeginDisabled();
+    ImGui::Checkbox("Constraint Limits", &bShowConstraintLimitAngles);
+    if (!bShowConstraintLimitAngles) ImGui::BeginDisabled();
+    ImGui::Checkbox("Constraint Limit Fill", &bShowConstraintLimitSurfaces);
+    ImGui::Checkbox("Selected Constraint Limits Only", &bShowOnlySelectedConstraintLimitAngles);
+    if (!bShowConstraintLimitAngles) ImGui::EndDisabled();
+    if (!*bShowConstraints) ImGui::EndDisabled();
     ImGui::TextDisabled(bEditorSimulationActive
         ? (bEditorSimulationPaused ? "Simulation: paused" : "Simulation: running")
         : "Simulation: stopped");
@@ -2790,7 +3278,6 @@ void FPhysicsAssetEditorWidget::DrawConstraintSetupDebug(
     int32 ConstraintIndex,
     const FPhysicsAssetConstraintSetup& ConstraintSetup)
 {
-    (void)ConstraintSetup;
     if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
     {
         return;
@@ -2809,10 +3296,20 @@ void FPhysicsAssetEditorWidget::DrawConstraintSetupDebug(
     }
 
     const bool bSelected = SelectedConstraintIndex == ConstraintIndex;
-    const FColor Color = bSelected ? FColor(255, 120, 80, 180) : FColor(200, 150, 255, 115);
+    const FColor Color = bSelected ? ConstraintLimitTwistGreen(220u) : ConstraintLimitSwingRed(145u);
     DrawDebugLine(PreviewWorld, ParentFrameWorld.Location, ChildFrameWorld.Location, Color, 0.0f);
     DrawDebugPoint(PreviewWorld, ParentFrameWorld.Location, bSelected ? 0.08f : 0.05f, Color, 0.0f);
     DrawDebugPoint(PreviewWorld, ChildFrameWorld.Location, bSelected ? 0.08f : 0.05f, Color, 0.0f);
+
+    if (bShowConstraintLimitAngles && (!bShowOnlySelectedConstraintLimitAngles || bSelected))
+    {
+        DrawConstraintAngularLimitDebug(
+            PreviewWorld,
+            ParentFrameWorld,
+            ChildFrameWorld,
+            ConstraintSetup.Limits,
+            bSelected);
+    }
 }
 
 void FPhysicsAssetEditorWidget::MarkPhysicsAssetDirty()

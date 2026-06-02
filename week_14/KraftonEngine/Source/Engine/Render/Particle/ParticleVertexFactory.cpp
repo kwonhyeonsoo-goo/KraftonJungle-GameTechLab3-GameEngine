@@ -891,7 +891,7 @@ bool FParticleRibbonVertexFactory::BuildDraw(ID3D11Device* Device, ID3D11DeviceC
 	// Current Ribbon consumption contract:
 	// - one replay snapshot == one emitter-level ribbon trail for this frame
 	// - the active-particle snapshot is interpreted as a single ordered chain
-	// - generic particle translucent SortMode does not define ribbon topology
+	// - generic particle Transparent SortMode does not define ribbon topology
 	//   ordering or split the trail into multiple chains; trail continuity does
 	const FParticleDataView View = Replay.GetParticleView();
 	const uint32 N = View.ActiveParticleCount;
@@ -903,7 +903,7 @@ bool FParticleRibbonVertexFactory::BuildDraw(ID3D11Device* Device, ID3D11DeviceC
 	const FMatrix& L2W = Replay.LocalToWorld;
 	const FVector SizeScale = L2W.GetScale();
 
-	// Ribbon은 일반 translucent particle처럼 "그리기용 depth sort"를 우선하지 않고,
+	// Ribbon은 일반 Transparent particle처럼 "그리기용 depth sort"를 우선하지 않고,
 	// trail topology를 복원하기 위한 order를 우선한다. 따라서 shared replay SortMode가
 	// 존재하더라도, current Ribbon RT는 그것을 chain topology나 multi-trail grouping
 	// 규칙으로 해석하지 않는다. 현재 구현은 emitter의 active particle snapshot 전체를

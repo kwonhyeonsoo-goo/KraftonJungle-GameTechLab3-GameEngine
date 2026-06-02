@@ -2,14 +2,17 @@
 #include "Physics/PhysXBodyBuilder.h"
 #include "Physics/PhysXConstraintBuilder.h"
 #include "Physics/PhysXConversion.h"
-
+#include "Physics/PhysXVehicleRuntime.h"
 #include "Core/ProjectSettings.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/World.h"
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <PxPhysicsAPI.h>
+
+#include "fbxsdk/scene/shading/fbxsurfacematerial.h"
 
 using namespace physx;
 
@@ -29,6 +32,14 @@ namespace
     }
 }
 
+
+FPhysXPhysicsRuntime::FPhysXPhysicsRuntime()
+    : VehicleRuntime(std::make_unique<FPhysXVehicleRuntime>())
+{
+}
+
+FPhysXPhysicsRuntime::~FPhysXPhysicsRuntime() = default;
+
 void FPhysXPhysicsRuntime::Initialize(
     UWorld* InWorld,
     PxPhysics* InPhysics,
@@ -47,6 +58,12 @@ void FPhysXPhysicsRuntime::Initialize(
     MaxSubsteps                 = (std::max)(1, PhysicsSettings.MaxSubsteps);
     bDebugSnapshotEnabled       = PhysicsSettings.bBuildDebugSnapshot;
 
+    if (!VehicleRuntime)
+    {
+        VehicleRuntime = std::make_unique<FPhysXVehicleRuntime>();
+    }
+    VehicleRuntime->Initialize(Physics, Scene, DefaultMaterial);
+
     Accumulator = 0.0f;
     StepIndex   = 0;
     Stats       = FPhysicsStats();
@@ -59,6 +76,11 @@ void FPhysXPhysicsRuntime::Shutdown()
     if (bSceneLockedForShutdown)
     {
         Scene->lockWrite();
+    }
+
+    if (VehicleRuntime)
+    {
+        VehicleRuntime->Shutdown();
     }
 
     for (auto& ConstraintPtr : Constraints)
@@ -190,6 +212,7 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime, const TArray<FPhysicsCommand>& 
     float      SimulateMs             = 0.0f;
     float      FetchResultsMs         = 0.0f;
     float      SyncPhysicsToEngineMs  = 0.0f;
+    float      VehicleUpdateMs        = 0.0f;
     float      PostPhysicsMs          = 0.0f;
     int32      AppliedCommands        = 0;
     int32      PendingCommandsAtDrain = 0;
@@ -227,8 +250,14 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime, const TArray<FPhysicsCommand>& 
         const auto T1 = FClock::now();
         auto       T2 = T1;
         auto       T3 = T1;
+        auto       VehicleUpdateEnd = T1;
         {
             PxSceneWriteLock WriteLock(*Scene);
+            if (VehicleRuntime)
+            {
+                VehicleRuntime->PreSimulate(FixedDt);
+            }
+            VehicleUpdateEnd = FClock::now();
             Scene->simulate(FixedDt);
             T2 = FClock::now();
             Scene->fetchResults(true);
@@ -250,7 +279,8 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime, const TArray<FPhysicsCommand>& 
 
         const auto T4 = FClock::now();
 
-        SimulateMs            += DurationMs(T1, T2);
+        VehicleUpdateMs       += DurationMs(T1, VehicleUpdateEnd);
+        SimulateMs            += DurationMs(VehicleUpdateEnd, T2);
         FetchResultsMs        += DurationMs(T2, T3);
         SyncPhysicsToEngineMs += DurationMs(T3, T4);
         PostPhysicsMs         += DurationMs(T3, T4);
@@ -281,6 +311,7 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime, const TArray<FPhysicsCommand>& 
     Stats.SimulateMs            = SimulateMs;
     Stats.FetchResultsMs        = FetchResultsMs;
     Stats.SyncPhysicsToEngineMs = SyncPhysicsToEngineMs;
+    Stats.VehicleUpdateMs       = VehicleUpdateMs;
     Stats.PostPhysicsMs         = PostPhysicsMs;
     Stats.NumDroppedSubsteps    = DroppedSubsteps;
     Stats.AccumulatorSeconds    = Accumulator;
@@ -1438,6 +1469,14 @@ void FPhysXPhysicsRuntime::BuildWorldSnapshot_Internal()
     NewWorldSnapshot->InterpolationAlpha = Stats.InterpolationAlpha;
 
     BuildBodySnapshots_Internal(NewWorldSnapshot->Bodies);
+    if (VehicleRuntime)
+    {
+        VehicleRuntime->BuildSnapshots(NewWorldSnapshot->Vehicles);
+    }
+    else
+    {
+        NewWorldSnapshot->Vehicles.clear();
+    }
 
     {
         const TArray<FPhysicsBodySnapshot>& Bodies = NewWorldSnapshot->Bodies;
@@ -1458,6 +1497,20 @@ void FPhysXPhysicsRuntime::BuildWorldSnapshot_Internal()
             else
             {
                 NewWorldSnapshot->ComponentToBodyIndex[Body.OwnerComponentId] = Index;
+            }
+        }
+    }
+
+    {
+        const TArray<FVehicleSnapshot>& VehicleSnapshots = NewWorldSnapshot->Vehicles;
+        for (int32 Index = 0; Index < static_cast<int32>(VehicleSnapshots.size()); ++Index)
+        {
+            const FVehicleSnapshot& Vehicle = VehicleSnapshots[Index];
+            NewWorldSnapshot->VehicleToIndex[MakeVehicleHandleKey(Vehicle.Vehicle)] = Index;
+
+            if (Vehicle.OwnerComponentId != 0)
+            {
+                NewWorldSnapshot->ComponentToVehicleIndex[Vehicle.OwnerComponentId] = Index;
             }
         }
     }
@@ -1517,6 +1570,53 @@ void FPhysXPhysicsRuntime::GetDebugSnapshot(FPhysicsDebugSnapshot& OutSnapshot) 
 {
     std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
     OutSnapshot = DebugSnapshot;
+}
+
+FVehicleHandle FPhysXPhysicsRuntime::ReserveVehicleHandle_GameThread()
+{
+    std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
+    if (!VehicleRuntime)
+    {
+        VehicleRuntime = std::make_unique<FPhysXVehicleRuntime>();
+        VehicleRuntime->Initialize(Physics, Scene, DefaultMaterial);
+    }
+    return VehicleRuntime->ReserveHandle();
+}
+
+void FPhysXPhysicsRuntime::CreateVehicle(const FVehicleDesc& Desc)
+{
+    FPhysicsCommand Cmd;
+    Cmd.Type        = EPhysicsCommandType::CreateVehicle;
+    Cmd.Object      = Desc.Owner;
+    Cmd.Vehicle     = Desc.ReservedVehicle;
+    Cmd.VehicleDesc = Desc;
+    EnqueueCommand(Cmd);
+}
+
+void FPhysXPhysicsRuntime::DestroyVehicle(FVehicleHandle Vehicle)
+{
+    FPhysicsCommand Cmd;
+    Cmd.Type    = EPhysicsCommandType::DestroyVehicle;
+    Cmd.Vehicle = Vehicle;
+    EnqueueCommand(Cmd);
+}
+
+void FPhysXPhysicsRuntime::SetVehicleInput(FVehicleHandle Vehicle, const FVehicleInputState& Input)
+{
+    FPhysicsCommand Cmd;
+    Cmd.Type         = EPhysicsCommandType::SetVehicleInput;
+    Cmd.Vehicle      = Vehicle;
+    Cmd.VehicleInput = Input;
+    EnqueueCommand(Cmd);
+}
+
+void FPhysXPhysicsRuntime::ResetVehicle(FVehicleHandle Vehicle, const FTransform& WorldTransform)
+{
+    FPhysicsCommand Cmd;
+    Cmd.Type           = EPhysicsCommandType::ResetVehicle;
+    Cmd.Vehicle        = Vehicle;
+    Cmd.TransformValue = WorldTransform;
+    EnqueueCommand(Cmd);
 }
 
 FPhysicsStats FPhysXPhysicsRuntime::GetStats() const
@@ -1982,6 +2082,18 @@ int32 FPhysXPhysicsRuntime::ApplyCommands(const TArray<FPhysicsCommand>& Command
         case EPhysicsCommandType::SetAngularLock:
             ApplySetAngularLock_Internal(Command.Body, Command.BoolX, Command.BoolY, Command.BoolZ);
             break;
+        case EPhysicsCommandType::CreateVehicle:
+            if (VehicleRuntime) { VehicleRuntime->CreateVehicle(Command.VehicleDesc); }
+            break;
+        case EPhysicsCommandType::DestroyVehicle:
+            if (VehicleRuntime) { VehicleRuntime->DestroyVehicle(Command.Vehicle); }
+            break;
+        case EPhysicsCommandType::SetVehicleInput:
+            if (VehicleRuntime) { VehicleRuntime->SetVehicleInput(Command.Vehicle, Command.VehicleInput); }
+            break;
+        case EPhysicsCommandType::ResetVehicle:
+            if (VehicleRuntime) { VehicleRuntime->ResetVehicle(Command.Vehicle, Command.TransformValue); }
+            break;
         default:
             break;
         }
@@ -2040,6 +2152,12 @@ void FPhysXPhysicsRuntime::UpdateStats()
             ++Stats.NumConstraints;
         }
     }
+
+    if (VehicleRuntime)
+    {
+        VehicleRuntime->GatherStats(Stats);
+    }
+
 }
 
 FActorCompoundBody* FPhysXPhysicsRuntime::FindCompoundByActorId(uint32 ActorId)
@@ -2063,3 +2181,4 @@ const FActorCompoundBody* FPhysXPhysicsRuntime::FindCompoundByActorId(uint32 Act
     auto It = ActorCompounds.find(ActorId);
     return It != ActorCompounds.end() ? &It->second : nullptr;
 }
+

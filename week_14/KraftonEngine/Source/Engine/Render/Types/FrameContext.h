@@ -56,14 +56,6 @@ struct FFrameContext
 	ID3D11ShaderResourceView* DepthCopySRV         = nullptr;
 	ID3D11ShaderResourceView* StencilCopySRV       = nullptr;
 
-	// GBuffer Normal RT — Opaque MRT[1] 출력, PostProcess에서 SRV로 읽기
-	ID3D11RenderTargetView*   NormalRTV             = nullptr;
-	ID3D11ShaderResourceView* NormalSRV             = nullptr;
-
-	// Culling Heatmap RT — Opaque MRT[2] 출력
-	ID3D11RenderTargetView*   CullingHeatmapRTV     = nullptr;
-	ID3D11ShaderResourceView* CullingHeatmapSRV     = nullptr;
-
 	// DoF CoC RT
 	ID3D11RenderTargetView*   CoCRTV                = nullptr;
 	ID3D11ShaderResourceView* CoCSRV                = nullptr;
@@ -136,10 +128,6 @@ struct FFrameContext
 		DepthCopyTexture        = nullptr;
 		DepthCopySRV            = nullptr;
 		StencilCopySRV          = nullptr;
-		NormalRTV               = nullptr;
-		NormalSRV               = nullptr;
-		CullingHeatmapRTV       = nullptr;
-		CullingHeatmapSRV       = nullptr;
 		CoCRTV                  = nullptr;
 		CoCSRV                  = nullptr;
 		DoFBackgroundRTV        = nullptr;

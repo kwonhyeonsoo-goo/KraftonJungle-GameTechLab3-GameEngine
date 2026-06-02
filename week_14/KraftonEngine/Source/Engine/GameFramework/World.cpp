@@ -19,6 +19,7 @@
 #include "Runtime/Engine.h"
 #include "Object/GarbageCollection.h"
 #include <algorithm>
+#include <utility>
 
 UWorld::~UWorld()
 {
@@ -70,6 +71,7 @@ void UWorld::RouteWorldDestroyed()
 
 	bWorldDestroyRouted = true;
 	EndPlay();
+	PhysicsSnapshotReceivers.clear();
 	ShutdownPhysicsScene();
 	Partition.Reset(FBoundingBox());
 	MarkWorldPrimitivePickingBVHDirty();
@@ -171,6 +173,27 @@ AGameStateBase* UWorld::GetGameState() const
 APlayerController* UWorld::GetFirstPlayerController() const
 {
 	return GetGameMode() ? GetGameMode()->GetPlayerController() : nullptr;
+}
+
+uint64 UWorld::RegisterPhysicsSnapshotReceiver(TFunction<void(const FPhysicsWorldSnapshot&)> Receiver)
+{
+	if (!Receiver)
+	{
+		return 0;
+	}
+
+	const uint64 Handle = NextPhysicsSnapshotReceiverHandle++;
+	PhysicsSnapshotReceivers[Handle] = std::move(Receiver);
+	return Handle;
+}
+
+void UWorld::UnregisterPhysicsSnapshotReceiver(uint64 Handle)
+{
+	if (Handle == 0)
+	{
+		return;
+	}
+	PhysicsSnapshotReceivers.erase(Handle);
 }
 
 // PC 의 PlayerCameraManager 우선, fallback 으로 IPOVProvider pull.
@@ -497,6 +520,27 @@ void UWorld::ApplyPhysicsSnapshot_GameThread()
 		Component->SetWorldLocation(Body.CurrentTransform.Location);
 		Component->SetWorldRotation(Body.CurrentTransform.Rotation);
 	}
+
+	// Specialized snapshot domains are dispatched through registered receivers. UWorld applies
+	// generic rigid body component transforms itself, but it must not know concrete vehicle,
+	// cloth, ragdoll, or future custom physics component classes. Snapshot receivers are copied
+	// before invocation so receiver-side unregister during teardown cannot invalidate iteration.
+	TArray<TFunction<void(const FPhysicsWorldSnapshot&)>> Receivers;
+	Receivers.reserve(PhysicsSnapshotReceivers.size());
+	for (const auto& Pair : PhysicsSnapshotReceivers)
+	{
+		if (Pair.second)
+		{
+			Receivers.push_back(Pair.second);
+		}
+	}
+	for (const TFunction<void(const FPhysicsWorldSnapshot&)>& Receiver : Receivers)
+	{
+		if (Receiver)
+		{
+			Receiver(*Snapshot);
+		}
+	}
 }
 
 void UWorld::TickPlayerCamera() const
@@ -532,6 +576,7 @@ void UWorld::EndPlay()
 
 	// Stop external systems while actors/components are still addressable. Object
 	// memory ownership remains with GC; this function only tears down gameplay state.
+	PhysicsSnapshotReceivers.clear();
 	ShutdownPhysicsScene();
 	Partition.Reset(FBoundingBox());
 	MarkWorldPrimitivePickingBVHDirty();

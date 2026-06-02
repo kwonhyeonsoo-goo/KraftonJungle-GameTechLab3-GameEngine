@@ -73,6 +73,8 @@ public:
 	FVector GetBoneScaleByIndex(int32 BoneIndex) const;
 	FTransform GetBoneLocalTransformByIndex(int32 BoneIndex) const;
 	FTransform GetBoneEditBaseLocalTransformByIndex(int32 BoneIndex) const;
+	int32 FindBoneIndex(const FName& BoneName) const;
+	bool SetBoneWorldTransformByName(const FName& BoneName, const FTransform& WorldTransform);
 
 	void SetBoneLocationByIndex(int32 BoneIndex, const FVector& NewLocation);
 	void SetBoneRotationByIndex(int32 BoneIndex, const FRotator& NewRotation);

@@ -87,11 +87,11 @@ private:
 	void RenderSkeletonLayout();
 	void RenderMeshLayout();
 	void RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, FSkeletalMesh* Asset);
-	void RenderTemporaryClothPaintValueOverlay(ImDrawList* DrawList, const ImVec2& ViewportPos, const ImVec2& ViewportSize) const;
 	void RenderClothBrushRadiusOverlay(ImDrawList* DrawList, const ImVec2& ViewportPos, const ImVec2& ViewportSize) const;
 	void RenderAnimationLayout(float TotalHeight);
 	void RenderPhysicsLayout(float TotalHeight);
 	void TickClothPaintBrush();
+	void UpdateClothMaxDistanceOverlayOptions();
 
 	// Shared helpers
 	void RenderViewportPanel(ImVec2 Size);

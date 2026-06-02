@@ -167,7 +167,17 @@ enum class ELuaBlueprintNodeType : uint8
     // ── Delegates (Reflection event binding) ──
     BindEvent,
     UnbindEvent,
-    HasEventBinding
+    HasEventBinding,
+    EventInputAction,
+    EventInputAxis,
+    // ── Game framework ──
+    GetPlayerController,
+    GetController,
+    GetControlledPawn,
+    Possess,
+    UnPossess,
+    IsPawnPossessed,
+    GetInputComponent
 };
 
 enum class ELuaBlueprintDiagnosticSeverity : uint8

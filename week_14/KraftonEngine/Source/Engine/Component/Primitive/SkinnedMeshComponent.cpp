@@ -59,6 +59,39 @@ namespace
 		return std::fabs(Denominator) > MatrixDecomposeTolerance ? Numerator / Denominator : Numerator;
 	}
 
+	bool BuildSkinnedMeshBoundsPickingHit(USkinnedMeshComponent* Component, const FRay& Ray, FHitResult& OutHitResult)
+	{
+		if (!Component)
+		{
+			return false;
+		}
+
+		const FBoundingBox Bounds = Component->GetWorldBoundingBox();
+		if (!Bounds.IsValid())
+		{
+			return false;
+		}
+
+		float TMin = 0.0f;
+		float TMax = 0.0f;
+		if (!FRayUtils::IntersectRayAABB(Ray, Bounds.Min, Bounds.Max, TMin, TMax))
+		{
+			return false;
+		}
+
+		const float HitT = TMin >= 0.0f ? TMin : 0.0f;
+		const FVector HitLocation = Ray.Origin + Ray.Direction * HitT;
+
+		OutHitResult = FHitResult();
+		OutHitResult.bHit = true;
+		OutHitResult.HitComponent = Component;
+		OutHitResult.HitActor = Component->GetOwner();
+		OutHitResult.Distance = FVector::Distance(Ray.Origin, HitLocation);
+		OutHitResult.WorldHitLocation = HitLocation;
+		OutHitResult.FaceIndex = -1;
+		return true;
+	}
+
 	FVector SafeScaleDivide(const FVector& Numerator, const FVector& Denominator)
 	{
 		return FVector(
@@ -103,6 +136,39 @@ namespace
 		Result.M[3][1] = -(Translation.X * Result.M[0][1] + Translation.Y * Result.M[1][1] + Translation.Z * Result.M[2][1]);
 		Result.M[3][2] = -(Translation.X * Result.M[0][2] + Translation.Y * Result.M[1][2] + Translation.Z * Result.M[2][2]);
 		return Result;
+	}
+
+	template <typename TVertex>
+	bool BuildWorldBoundsFromVertexPositions(
+		const TArray<TVertex>& Vertices,
+		const FMatrix& WorldMatrix,
+		FVector& OutWorldMin,
+		FVector& OutWorldMax)
+	{
+		if (Vertices.empty())
+		{
+			return false;
+		}
+
+		OutWorldMin = WorldMatrix.TransformPositionWithW(Vertices[0].Position);
+		OutWorldMax = OutWorldMin;
+
+		for (const TVertex& Vertex : Vertices)
+		{
+			const FVector WorldPos = WorldMatrix.TransformPositionWithW(Vertex.Position);
+
+			OutWorldMin.X = std::min(OutWorldMin.X, WorldPos.X);
+			OutWorldMin.Y = std::min(OutWorldMin.Y, WorldPos.Y);
+			OutWorldMin.Z = std::min(OutWorldMin.Z, WorldPos.Z);
+
+			OutWorldMax.X = std::max(OutWorldMax.X, WorldPos.X);
+			OutWorldMax.Y = std::max(OutWorldMax.Y, WorldPos.Y);
+			OutWorldMax.Z = std::max(OutWorldMax.Z, WorldPos.Z);
+		}
+
+		return OutWorldMin.X <= OutWorldMax.X &&
+			OutWorldMin.Y <= OutWorldMax.Y &&
+			OutWorldMin.Z <= OutWorldMax.Z;
 	}
 }
 
@@ -262,8 +328,8 @@ void USkinnedMeshComponent::ClearSkeletalMesh()
 // Bounds 섹션: SkeletalMesh culling은 asset local bounds가 아니라 실제 CPU-skinned vertices를 기준으로 한다.
 void USkinnedMeshComponent::UpdateWorldAABB() const
 {
-	// 아직 skinning 결과가 없으면 primitive 기본 bounds로 fallback해 빈 mesh/로드 실패 경로를 안전하게 둔다.
-	if (SkinnedVertices.empty())
+	FSkeletalMesh* Asset = SkeletalMesh ? SkeletalMesh->GetSkeletalMeshAsset() : nullptr;
+	if (!Asset || Asset->Vertices.empty())
 	{
 		UPrimitiveComponent::UpdateWorldAABB();
 		return;
@@ -271,28 +337,32 @@ void USkinnedMeshComponent::UpdateWorldAABB() const
 
 	const FMatrix& WorldMatrix = CachedWorldMatrix;
 
-	// 이미 component local로 skinning된 vertex를 world matrix로 변환해 octree/query bounds를 만든다.
-	FVector WorldMin = WorldMatrix.TransformPositionWithW(SkinnedVertices[0].Position);
-	FVector WorldMax = WorldMin;
+	FVector WorldMin;
+	FVector WorldMax;
+	bool bBuiltBounds = false;
 
-	for (const FVertexPNCTT& Vertex : SkinnedVertices)
+	// Picking BVH는 world AABB를 먼저 통과해야 narrow phase에 들어온다.
+	// GPU skinning 모드, import 직후, 또는 구형/특이 FBX처럼 runtime skinned cache가
+	// 아직 준비되지 않은 경우에도 skeletal asset의 bind-pose vertex로 bounds를 만들어야
+	// skeletal mesh actor 자체가 picking 후보에서 누락되지 않는다.
+	if (!SkinnedVertices.empty() && SkinnedVertices.size() == Asset->Vertices.size())
 	{
-		const FVector WorldPos = WorldMatrix.TransformPositionWithW(Vertex.Position);
-
-		WorldMin.X = std::min(WorldMin.X, WorldPos.X);
-		WorldMin.Y = std::min(WorldMin.Y, WorldPos.Y);
-		WorldMin.Z = std::min(WorldMin.Z, WorldPos.Z);
-
-		WorldMax.X = std::max(WorldMax.X, WorldPos.X);
-		WorldMax.Y = std::max(WorldMax.Y, WorldPos.Y);
-		WorldMax.Z = std::max(WorldMax.Z, WorldPos.Z);
+		bBuiltBounds = BuildWorldBoundsFromVertexPositions(SkinnedVertices, WorldMatrix, WorldMin, WorldMax);
 	}
 
-	FVector Center = (WorldMin + WorldMax) * 0.5f;
-	FVector Extent = (WorldMax - WorldMin) * 0.5f;
+	if (!bBuiltBounds)
+	{
+		bBuiltBounds = BuildWorldBoundsFromVertexPositions(Asset->Vertices, WorldMatrix, WorldMin, WorldMax);
+	}
 
-	WorldAABBMinLocation = Center - Extent;
-	WorldAABBMaxLocation = Center + Extent;
+	if (!bBuiltBounds)
+	{
+		UPrimitiveComponent::UpdateWorldAABB();
+		return;
+	}
+
+	WorldAABBMinLocation = WorldMin;
+	WorldAABBMaxLocation = WorldMax;
 	bWorldAABBDirty = false;
 	bHasValidWorldAABB = true;
 }
@@ -607,6 +677,58 @@ void USkinnedMeshComponent::SetBoneScaleByIndex(int32 BoneIndex, const FVector& 
 	bUseBoneEditPose = true;
 	RefreshSkinningAfterPoseChanged();
 	MarkWorldBoundsDirty();
+}
+
+
+int32 USkinnedMeshComponent::FindBoneIndex(const FName& BoneName) const
+{
+	FSkeletalMesh* Asset = SkeletalMesh ? SkeletalMesh->GetSkeletalMeshAsset() : nullptr;
+	if (!Asset || !BoneName.IsValid())
+	{
+		return -1;
+	}
+
+	const FString WantedName = BoneName.ToString();
+	for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(Asset->Bones.size()); ++BoneIndex)
+	{
+		if (Asset->Bones[BoneIndex].Name == WantedName)
+		{
+			return BoneIndex;
+		}
+	}
+
+	return -1;
+}
+
+bool USkinnedMeshComponent::SetBoneWorldTransformByName(const FName& BoneName, const FTransform& WorldTransform)
+{
+	FSkeletalMesh* Asset = SkeletalMesh ? SkeletalMesh->GetSkeletalMeshAsset() : nullptr;
+	if (!Asset)
+	{
+		return false;
+	}
+
+	const int32 BoneIndex = FindBoneIndex(BoneName);
+	if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(Asset->Bones.size()))
+	{
+		return false;
+	}
+
+	TArray<FTransform> ComponentSpaceGlobals;
+	BuildBoneEditGlobalTransforms(ComponentSpaceGlobals);
+	if (BoneIndex >= static_cast<int32>(ComponentSpaceGlobals.size()))
+	{
+		return false;
+	}
+
+	const FMatrix ComponentSpaceTarget = WorldTransform.ToMatrix() * GetWorldMatrix().GetInverse();
+	const int32 ParentIndex = Asset->Bones[BoneIndex].ParentIndex;
+	const FMatrix LocalMatrix = (ParentIndex >= 0 && ParentIndex < static_cast<int32>(ComponentSpaceGlobals.size()))
+		? ComponentSpaceTarget * ComponentSpaceGlobals[ParentIndex].ToMatrix().GetInverse()
+		: ComponentSpaceTarget;
+
+	SetBoneLocalTransformByIndex(BoneIndex, FTransform(LocalMatrix));
+	return true;
 }
 
 void USkinnedMeshComponent::SetBoneLocalTransformByIndex(int32 BoneIndex, const FTransform& NewLocalTransform)
@@ -1369,36 +1491,56 @@ bool USkinnedMeshComponent::LineTraceComponent(const FRay& Ray, FHitResult& OutH
 	}
 
 	FSkeletalMesh* Asset = SkeletalMesh->GetSkeletalMeshAsset();
-	if (!Asset || Asset->Indices.empty() || SkinnedVertices.empty())
+	if (!Asset || Asset->Indices.empty() || Asset->Vertices.empty())
 	{
-		return false;
-	}
-
-	if (SkinnedVertices.size() != Asset->Vertices.size())
-	{
-		return false;
+		return BuildSkinnedMeshBoundsPickingHit(this, Ray, OutHitResult);
 	}
 
 	const FMatrix& WorldMatrix = GetWorldMatrix();
 	const FMatrix& WorldInverse = GetWorldInverseMatrix();
 
-	// SkinnedVertices 기반으로 Picking
-	const bool bHit = FRayUtils::RaycastTriangles(
-		Ray,
-		WorldMatrix,
-		WorldInverse,
-		SkinnedVertices.data(),
-		sizeof(FVertexPNCTT),
-		Asset->Indices.data(),
-		static_cast<uint32>(Asset->Indices.size()),
-		OutHitResult);
-
-	if (bHit)
+	bool bHit = false;
+	if (!SkinnedVertices.empty() && SkinnedVertices.size() == Asset->Vertices.size())
 	{
-		OutHitResult.HitComponent = this;
+		// 정상 경로: 현재 pose가 반영된 CPU skinned vertex로 picking한다.
+		bHit = FRayUtils::RaycastTriangles(
+			Ray,
+			WorldMatrix,
+			WorldInverse,
+			SkinnedVertices.data(),
+			sizeof(FVertexPNCTT),
+			Asset->Indices.data(),
+			static_cast<uint32>(Asset->Indices.size()),
+			OutHitResult);
 	}
 
-	return bHit;
+	if (!bHit)
+	{
+		// Import 직후/GPU skinning/cache mismatch 경로: skinned cache가 비어 있다고
+		// skeletal mesh picking 자체가 죽으면 안 된다. bind-pose vertex로 fallback한다.
+		bHit = FRayUtils::RaycastTriangles(
+			Ray,
+			WorldMatrix,
+			WorldInverse,
+			Asset->Vertices.data(),
+			sizeof(FVertexPNCTBW),
+			Asset->Indices.data(),
+			static_cast<uint32>(Asset->Indices.size()),
+			OutHitResult);
+	}
+
+	if (!bHit)
+	{
+		// 일부 FBX는 skeleton/bounds는 정상인데 triangle picking용 index/pose 데이터가
+		// import transform이나 skin cache와 맞지 않아 narrow phase가 실패한다.
+		// 에디터 선택은 최소한 bounds 기반으로라도 가능해야 하므로 skeletal mesh에 한해
+		// 마지막 fallback을 둔다. FaceIndex=-1이면 bounds hit라는 의미다.
+		return BuildSkinnedMeshBoundsPickingHit(this, Ray, OutHitResult);
+	}
+
+	OutHitResult.HitComponent = this;
+	OutHitResult.HitActor = GetOwner();
+	return true;
 }
 
 void USkinnedMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)

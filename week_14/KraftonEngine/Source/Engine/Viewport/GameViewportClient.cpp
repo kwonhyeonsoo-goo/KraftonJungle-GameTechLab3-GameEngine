@@ -11,6 +11,7 @@
 void UGameViewportClient::BeginGameSession(FViewport* InViewport)
 {
 	Viewport = InViewport;
+	ClearGameInputSnapshot();
 	ResetInputState();
 }
 
@@ -27,43 +28,106 @@ void UGameViewportClient::EndGameSession()
 	Viewport = nullptr;
 }
 
+namespace
+{
+	bool IsMouseVirtualKey(int VK)
+	{
+		return VK == VK_LBUTTON || VK == VK_RBUTTON || VK == VK_MBUTTON ||
+			VK == VK_XBUTTON1 || VK == VK_XBUTTON2;
+	}
+
+	void ClearMouseInput(FInputSystemSnapshot& Snapshot)
+	{
+		const int MouseKeys[] = { VK_LBUTTON, VK_RBUTTON, VK_MBUTTON, VK_XBUTTON1, VK_XBUTTON2 };
+		for (int VK : MouseKeys)
+		{
+			Snapshot.KeyDown[VK] = false;
+			Snapshot.KeyPressed[VK] = false;
+			Snapshot.KeyReleased[VK] = false;
+		}
+
+		Snapshot.MouseDeltaX = 0;
+		Snapshot.MouseDeltaY = 0;
+		Snapshot.ScrollDelta = 0;
+		Snapshot.bLeftMouseDown = false;
+		Snapshot.bLeftMousePressed = false;
+		Snapshot.bLeftMouseReleased = false;
+		Snapshot.bRightMouseDown = false;
+		Snapshot.bRightMousePressed = false;
+		Snapshot.bRightMouseReleased = false;
+		Snapshot.bMiddleMouseDown = false;
+		Snapshot.bMiddleMousePressed = false;
+		Snapshot.bMiddleMouseReleased = false;
+		Snapshot.bXButton1Down = false;
+		Snapshot.bXButton1Pressed = false;
+		Snapshot.bXButton1Released = false;
+		Snapshot.bXButton2Down = false;
+		Snapshot.bXButton2Pressed = false;
+		Snapshot.bXButton2Released = false;
+		Snapshot.bLeftDragStarted = false;
+		Snapshot.bLeftDragging = false;
+		Snapshot.bLeftDragEnded = false;
+		Snapshot.LeftDragVector = { 0, 0 };
+		Snapshot.bRightDragStarted = false;
+		Snapshot.bRightDragging = false;
+		Snapshot.bRightDragEnded = false;
+		Snapshot.RightDragVector = { 0, 0 };
+	}
+
+	void ClearKeyboardInput(FInputSystemSnapshot& Snapshot)
+	{
+		for (int VK = 0; VK < 256; ++VK)
+		{
+			if (IsMouseVirtualKey(VK))
+			{
+				continue;
+			}
+			Snapshot.KeyDown[VK] = false;
+			Snapshot.KeyPressed[VK] = false;
+			Snapshot.KeyReleased[VK] = false;
+		}
+	}
+}
+
 void UGameViewportClient::ProcessInput(const FInputSystemSnapshot& Snapshot, float /*DeltaTime*/)
 {
-	// snapshot 저장은 호출이 들어온 매 프레임 항상 — possess off 인 동안에도 마지막 폴링값을
-	// 보관해 둔다 (구 standalone ProcessInput 동작). possess 토글 시점의 "snapshot clear"
-	// 는 SetInputPossessed 가 책임 (ProcessInput 호출이 끊겨도 즉시 비워짐).
-	SetGameInputSnapshot(Snapshot);
+	ClearGameInputSnapshot();
 
-	// 비포커스 — raw mouse / 커서 캡처 해제하고 입력 누적 리셋.
 	if (!Snapshot.bWindowFocused)
 	{
-		InputSystem::Get().SetUseRawMouse(false);
-		SetCursorCaptured(false);
+		ReleaseGameCapture();
 		ResetInputState();
 		return;
 	}
 
-	// possess off — 게임 입력 라우팅이 꺼진 상태. 커서는 풀어준다 (메뉴 진입 직후 등).
 	if (!bInputPossessed)
 	{
-		InputSystem::Get().SetUseRawMouse(false);
-		SetCursorCaptured(false);
+		ReleaseGameCapture();
 		return;
 	}
 
-	// possess on 이라도 UI widget 이 마우스를 요구하면 시스템 커서 보이고 raw mouse 해제.
-	// 게임 입력 라우팅 (Lua 폴링) 은 그대로 — 일시정지/모달 케이스에서 게임 입력까지 끊고
-	// 싶으면 SetInputPossessed(false) 를 별도 호출.
-	if (UUIManager::Get().AnyViewportWidgetWantsMouse())
+	const FUIInputCaptureState UIState = UUIManager::Get().GetViewportInputCaptureState();
+	ApplyGameCapturePolicy(UIState);
+
+	if (InputMode == EGameInputMode::UIOnly || UIState.bBlocksGameInput)
 	{
-		InputSystem::Get().SetUseRawMouse(false);
-		SetCursorCaptured(false);
 		return;
 	}
 
-	// possess on + 포커스 + UI 가 마우스 안 씀 — raw mouse on, 커서 캡처/클립.
-	InputSystem::Get().SetUseRawMouse(true);
-	SetCursorCaptured(true);
+	FInputSystemSnapshot GameSnapshot = Snapshot;
+	const bool bBlockGameMouse = UIState.bWantsMouse || UIState.bBlocksGameMouseLook;
+	const bool bBlockGameKeyboard = UIState.bWantsTextInput || UIState.bBlocksGameKeyboard;
+
+	if (bBlockGameMouse)
+	{
+		ClearMouseInput(GameSnapshot);
+	}
+	if (bBlockGameKeyboard)
+	{
+		ClearKeyboardInput(GameSnapshot);
+	}
+
+	SetGameInputSnapshot(GameSnapshot);
 }
 
 void UGameViewportClient::SetInputPossessed(bool bPossessed)
@@ -84,6 +148,23 @@ void UGameViewportClient::SetInputPossessed(bool bPossessed)
 	if (!bPossessed)
 	{
 		ClearGameInputSnapshot();
+		ReleaseGameCapture();
+	}
+}
+
+void UGameViewportClient::SetInputMode(EGameInputMode InMode)
+{
+	if (InputMode == InMode)
+	{
+		return;
+	}
+
+	InputMode = InMode;
+	ClearGameInputSnapshot();
+	ResetInputState();
+	if (InputMode == EGameInputMode::UIOnly)
+	{
+		ReleaseGameCapture();
 	}
 }
 
@@ -116,6 +197,23 @@ void UGameViewportClient::ResetInputState()
 {
 	InputSystem::Get().ResetMouseDelta();
 	InputSystem::Get().ResetWheelDelta();
+}
+
+void UGameViewportClient::ReleaseGameCapture()
+{
+	InputSystem::Get().SetUseRawMouse(false);
+	SetCursorCaptured(false);
+}
+
+void UGameViewportClient::ApplyGameCapturePolicy(const FUIInputCaptureState& UIState)
+{
+	const bool bShouldCaptureMouse = InputMode != EGameInputMode::UIOnly &&
+		!UIState.bWantsMouse &&
+		!UIState.bBlocksGameInput &&
+		!UIState.bBlocksGameMouseLook;
+
+	InputSystem::Get().SetUseRawMouse(bShouldCaptureMouse);
+	SetCursorCaptured(bShouldCaptureMouse);
 }
 
 void UGameViewportClient::SetCursorCaptured(bool bCaptured)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Physics/PhysicsTypes.h"
+#include "Physics/Vehicle/VehicleTypes.h"
 
 #include <cstdint>
 #include <mutex>
@@ -48,6 +49,11 @@ enum class EPhysicsCommandType : uint8
     // Sleep
     WakeBody,
     PutBodyToSleep,
+
+    CreateVehicle,
+    DestroyVehicle,
+    SetVehicleInput,
+    ResetVehicle,
 };
 
 struct FPhysicsCommand
@@ -78,6 +84,10 @@ struct FPhysicsCommand
     bool BoolZ = false;
 
     EPhysicsTeleportMode TeleportMode = EPhysicsTeleportMode::None;
+
+    FVehicleHandle     Vehicle;
+    FVehicleDesc       VehicleDesc;
+    FVehicleInputState VehicleInput;
 };
 
 // Thread-safe command queue.

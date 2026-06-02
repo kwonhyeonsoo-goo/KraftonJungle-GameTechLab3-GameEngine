@@ -37,8 +37,12 @@ void FSkeletalMeshSceneProxy::UpdateMesh()
 
 	CachedDynamicVertexCount = 0;
 	UploadedSkinnedRevision = 0;
+	UploadedBoneHeatMapRevision = 0;
+	UploadedBoneHeatMapBoneIndex = -1;
 	UploadedSkinMatrixRevision = 0;
 	bDynamicBufferNeedsCreate = true;
+	bBoneHeatMapBufferNeedsCreate = true;
+	bClothMaxDistanceBufferNeedsCreate = true;
 	ReleaseSkinMatrixBuffer();
 
 	USkeletalMeshComponent* SMC = GetSkeletalMeshComponent();
@@ -102,6 +106,135 @@ bool FSkeletalMeshSceneProxy::PrepareGpuSkinningDrawBuffer(ID3D11Device* Device,
 	OutBuffer.VBStride = Asset->RenderBuffer->GetVertexBuffer().GetStride();
 	OutBuffer.IB = Asset->RenderBuffer->GetIndexBuffer().GetBuffer();
 	return OutBuffer.VB != nullptr && OutBuffer.IB != nullptr;
+}
+
+bool FSkeletalMeshSceneProxy::PrepareCpuBoneHeatMapDrawBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context, int32 SelectedBoneIndex, FDrawCommandBuffer& OutBuffer) const
+{
+	USkeletalMeshComponent* SMC = GetSkeletalMeshComponent();
+	if (!SMC) return false;
+
+	USkeletalMesh* Mesh = SMC->GetSkeletalMesh();
+	FSkeletalMesh* Asset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+	if (!Asset || !Asset->RenderBuffer || !Asset->RenderBuffer->IsValid()) return false;
+
+	const TArray<FVertexPNCTT>& SkinnedVertices = SMC->GetSkinnedVertices();
+	const uint32 VertexCount = static_cast<uint32>(SkinnedVertices.size());
+	if (VertexCount == 0 || Asset->Vertices.size() != SkinnedVertices.size()) return false;
+
+	if (bBoneHeatMapBufferNeedsCreate || !BoneHeatMapVertexBuffer.GetBuffer())
+	{
+		BoneHeatMapVertexBuffer.Create(Device, CachedDynamicVertexCount ? CachedDynamicVertexCount : VertexCount, sizeof(FVertexPNCTT));
+		bBoneHeatMapBufferNeedsCreate = false;
+	}
+
+	BoneHeatMapVertexBuffer.EnsureCapacity(Device, VertexCount);
+
+	const uint64 CurrentRevision = SMC->GetSkinnedRevision();
+	if (UploadedBoneHeatMapRevision != CurrentRevision || UploadedBoneHeatMapBoneIndex != SelectedBoneIndex)
+	{
+		BoneHeatMapVertices = SkinnedVertices;
+
+		for (uint32 i = 0; i < VertexCount; ++i)
+		{
+			float SelectedWeight = 0.0f;
+			const FVertexPNCTBW& SourceVertex = Asset->Vertices[i];
+			for (int32 InfluenceIndex = 0; InfluenceIndex < 4; ++InfluenceIndex)
+			{
+				if (SourceVertex.BoneIndices[InfluenceIndex] == SelectedBoneIndex)
+				{
+					SelectedWeight += SourceVertex.BoneWeights[InfluenceIndex];
+				}
+			}
+			BoneHeatMapVertices[i].Color.W = SelectedWeight;
+		}
+
+		if (!BoneHeatMapVertexBuffer.Update(Context, BoneHeatMapVertices.data(), VertexCount))
+		{
+			return false;
+		}
+
+		UploadedBoneHeatMapRevision = CurrentRevision;
+		UploadedBoneHeatMapBoneIndex = SelectedBoneIndex;
+	}
+
+	OutBuffer = {};
+	OutBuffer.VB = BoneHeatMapVertexBuffer.GetBuffer();
+	OutBuffer.VBStride = BoneHeatMapVertexBuffer.GetStride();
+	OutBuffer.IB = Asset->RenderBuffer->GetIndexBuffer().GetBuffer();
+	return OutBuffer.VB != nullptr && OutBuffer.IB != nullptr;
+}
+
+bool FSkeletalMeshSceneProxy::PrepareCpuClothMaxDistanceOverlayDrawBuffer(
+	ID3D11Device* Device,
+	ID3D11DeviceContext* Context,
+	int32 LODIndex,
+	int32 ClothIndex,
+	FDrawCommandBuffer& OutBuffer,
+	uint32& OutFirstIndex,
+	uint32& OutIndexCount) const
+{
+	OutFirstIndex = 0;
+	OutIndexCount = 0;
+
+	USkeletalMeshComponent* SMC = GetSkeletalMeshComponent();
+	if (!SMC || LODIndex < 0 || ClothIndex < 0) return false;
+
+	USkeletalMesh* Mesh = SMC->GetSkeletalMesh();
+	FSkeletalMesh* Asset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+	if (!Asset || !Asset->RenderBuffer || !Asset->RenderBuffer->IsValid()) return false;
+
+	const FSkeletalClothLODData* LODData = Asset->FindClothLOD(static_cast<uint32>(LODIndex));
+	if (!LODData || ClothIndex >= static_cast<int32>(LODData->Cloths.size())) return false;
+
+	const FSkeletalClothData& Cloth = LODData->Cloths[ClothIndex];
+	if (Cloth.Paint.MaxDistanceValues.empty() || Cloth.ParticleToRenderVertex.empty()) return false;
+
+	const TArray<FVertexPNCTT>& SkinnedVertices = SMC->GetSkinnedVertices();
+	const uint32 VertexCount = static_cast<uint32>(SkinnedVertices.size());
+	if (VertexCount == 0 || Asset->Vertices.size() != SkinnedVertices.size()) return false;
+
+	if (bClothMaxDistanceBufferNeedsCreate || !ClothMaxDistanceVertexBuffer.GetBuffer())
+	{
+		ClothMaxDistanceVertexBuffer.Create(Device, CachedDynamicVertexCount ? CachedDynamicVertexCount : VertexCount, sizeof(FVertexPNCTT));
+		bClothMaxDistanceBufferNeedsCreate = false;
+	}
+
+	ClothMaxDistanceVertexBuffer.EnsureCapacity(Device, VertexCount);
+	ClothMaxDistanceVertices = SkinnedVertices;
+	for (FVertexPNCTT& Vertex : ClothMaxDistanceVertices)
+	{
+		Vertex.Color.W = 0.0f;
+	}
+
+	const float Denom = std::max(1.0f, Cloth.Paint.ViewMax - Cloth.Paint.ViewMin);
+	const uint32 PaintCount = static_cast<uint32>(std::min(Cloth.ParticleToRenderVertex.size(), Cloth.Paint.MaxDistanceValues.size()));
+	for (uint32 ParticleIndex = 0; ParticleIndex < PaintCount; ++ParticleIndex)
+	{
+		const uint32 RenderVertexIndex = Cloth.ParticleToRenderVertex[ParticleIndex];
+		if (RenderVertexIndex >= VertexCount)
+		{
+			continue;
+		}
+
+		const float T = std::clamp(
+			(Cloth.Paint.MaxDistanceValues[ParticleIndex] - Cloth.Paint.ViewMin) / Denom,
+			0.0f,
+			1.0f);
+		ClothMaxDistanceVertices[RenderVertexIndex].Color.W = T;
+	}
+
+	if (!ClothMaxDistanceVertexBuffer.Update(Context, ClothMaxDistanceVertices.data(), VertexCount))
+	{
+		return false;
+	}
+
+	OutFirstIndex = Cloth.Binding.FirstIndex;
+	OutIndexCount = Cloth.Binding.IndexCount;
+	OutBuffer = {};
+	OutBuffer.VB = ClothMaxDistanceVertexBuffer.GetBuffer();
+	OutBuffer.VBStride = ClothMaxDistanceVertexBuffer.GetStride();
+	OutBuffer.IB = Asset->RenderBuffer->GetIndexBuffer().GetBuffer();
+	return OutBuffer.VB != nullptr && OutBuffer.IB != nullptr && OutIndexCount > 0;
 }
 
 ID3D11ShaderResourceView* FSkeletalMeshSceneProxy::GetSkinMatrixSRV(ID3D11Device* Device, ID3D11DeviceContext* Context) const

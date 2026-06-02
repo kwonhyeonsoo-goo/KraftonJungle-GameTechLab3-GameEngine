@@ -16,6 +16,7 @@
 #include "Texture/Texture2D.h"
 #include "GameFramework/World.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/GameMode/PlayerController.h"
 #include "Viewport/GameViewportClient.h"
 #include "Core/TickFunction.h"
 #include "Lua/LuaScriptManager.h"
@@ -155,14 +156,41 @@ void UEngine::BeginPlay()
 	}
 }
 
-void UEngine::Tick(float DeltaTime)
+void UEngine::TickFrameStart(float DeltaTime)
 {
 	FDirectoryWatcher::Get().ProcessChanges();
 	FNotificationManager::Get().Tick(DeltaTime);
 	InputSystem::Get().Tick();
+}
+
+void UEngine::TickFrameBody(float DeltaTime)
+{
 	FAudioManager::Get().Tick();
 	WorldTick(DeltaTime);
 	Render(DeltaTime);
+}
+
+void UEngine::ProcessActiveWorldPlayerInput(const FInputSystemSnapshot& Snapshot, float DeltaTime)
+{
+	UWorld* World = GetWorld();
+	if (!World || World->IsPaused())
+	{
+		return;
+	}
+
+	APlayerController* PlayerController = World->GetFirstPlayerController();
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	PlayerController->ProcessPlayerInput(Snapshot, DeltaTime);
+}
+
+void UEngine::Tick(float DeltaTime)
+{
+	TickFrameStart(DeltaTime);
+	TickFrameBody(DeltaTime);
 }
 
 void UEngine::Render(float DeltaTime)

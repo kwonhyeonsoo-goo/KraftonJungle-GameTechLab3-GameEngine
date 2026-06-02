@@ -44,4 +44,11 @@ struct FPhysicsStats
     float BuildSnapshotMs       = 0.0f;
     float PostPhysicsMs         = 0.0f;
     float DispatchEventMs       = 0.0f;
+
+    int32 NumVehicles          = 0;
+    int32 NumVehicleWheels     = 0;
+    int32 NumVehicleWheelInAir = 0;
+
+    float VehicleRaycastMs = 0.0f;
+    float VehicleUpdateMs  = 0.0f;
 };

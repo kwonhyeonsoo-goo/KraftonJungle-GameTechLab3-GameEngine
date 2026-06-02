@@ -85,7 +85,7 @@ struct PS_Input_Full
     float2 texcoord : TEXTCOORD;
 };
 
-// SV_POSITION + UV (PostProcess: HeightFog, Outline, SceneDepth)
+// SV_POSITION + UV fullscreen passes (Fog, Outline, DebugViewModeResolve, FXAA)
 struct PS_Input_UV
 {
     float4 position : SV_POSITION;

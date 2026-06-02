@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Render/Resource/Buffer.h"
 #include "Render/Types/RenderConstants.h"
 #include "Render/Types/ForwardLightData.h"
@@ -268,7 +268,7 @@ struct FSystemResources
 	// --- Frame CB (b0) ---
 	FConstantBuffer FrameBuffer;				// b0 — ECBSlot::Frame
 
-	// --- Forward Fog CB (b7) — UberLit translucent self-fog 용 전역 fog 파라미터 ---
+	// --- Forward Fog CB (b7) — UberTransparent self-fog 용 전역 fog 파라미터 ---
 	FConstantBuffer ForwardFogBuffer;			// b7 — ECBSlot::ForwardFog
 
 	// --- Lighting ---
@@ -304,7 +304,7 @@ struct FSystemResources
 	// 프레임 공용 CB 업데이트 + 바인딩 (b0)
 	void UpdateFrameBuffer(FD3DDevice& Device, const FFrameContext& Frame);
 
-	// Forward Fog CB 업데이트 + 바인딩 (b7) — UberLit translucent self-fog 용
+	// Forward Fog CB 업데이트 + 바인딩 (b7) — UberTransparent self-fog 용
 	void UpdateForwardFogBuffer(FD3DDevice& Device, const FScene& Scene, const FFrameContext& Frame);
 
 	// 라이팅 CB + StructuredBuffer 업데이트 + 바인딩 (b4, t8)
