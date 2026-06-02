@@ -90,6 +90,7 @@ private:
     void RenderSelectedBoneActionPanel(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton);
     void RenderUnboundPhysicsSetups(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton);
     void RenderBodyList(UPhysicsAsset* PhysicsAsset);
+    void RenderBodyListContent(UPhysicsAsset* PhysicsAsset);
     void RenderConstraintList(UPhysicsAsset* PhysicsAsset);
     void RenderDetailsPanel(UPhysicsAsset* PhysicsAsset);
     void RenderSelectedBoneDetails(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh);
@@ -145,6 +146,7 @@ private:
     ax::NodeEditor::EditorContext* ConstraintGraphContext = nullptr;
     bool bPendingClose = false;
     bool bConstraintGraphLayoutDirty = true;
+    bool bPhysicsTreePanelShowsBodies = false;
     bool bShowPreviewBodies = true;
     bool bShowPreviewConstraints = true;
     bool bShowConstraintLimitAngles = true;

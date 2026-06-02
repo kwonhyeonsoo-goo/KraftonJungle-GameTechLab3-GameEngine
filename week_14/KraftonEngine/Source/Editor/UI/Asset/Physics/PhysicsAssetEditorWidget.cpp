@@ -1219,8 +1219,13 @@ bool FPhysicsAssetEditorWidget::PrepareEmbeddedRender(UPhysicsAsset* PhysicsAsse
 void FPhysicsAssetEditorWidget::RenderTreeAndGraphPanel(UPhysicsAsset* PhysicsAsset)
 {
     const float AvailableHeight = ImGui::GetContentRegionAvail().y;
-    const float GraphHeight = (std::max)(200.0f, AvailableHeight * 0.42f);
-    const float TreeHeight = (std::max)(140.0f, AvailableHeight - GraphHeight - ImGui::GetStyle().ItemSpacing.y - 4.0f);
+    const float SeparatorHeight = ImGui::GetStyle().ItemSpacing.y + 4.0f;
+    constexpr float DesiredTreePanelRatio = 0.45f;
+    constexpr float MinTreePanelHeight = 160.0f;
+    constexpr float MinGraphPanelHeight = 260.0f;
+    const float DesiredTreeHeight = (std::max)(MinTreePanelHeight, AvailableHeight * DesiredTreePanelRatio);
+    const float MaxTreeHeight = (std::max)(MinTreePanelHeight, AvailableHeight - MinGraphPanelHeight - SeparatorHeight);
+    const float TreeHeight = (std::min)(DesiredTreeHeight, MaxTreeHeight);
 
     ImGui::BeginChild(
         "##PhysicsAssetTreeArea",
@@ -1495,23 +1500,64 @@ void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* Physics
 
     const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
 	ImGui::SetWindowFontScale(1.5f);
-    ImGui::TextUnformatted("Skeleton Physics Tree");
+    ImGui::TextUnformatted("Skeleton Physics");
 	ImGui::SetWindowFontScale(1.0f);
+
+    const float ToggleButtonWidth = (std::max)(
+        70.0f,
+        (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f);
+
+    const bool bTreeTabActive = !bPhysicsTreePanelShowsBodies;
+    if (bTreeTabActive)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    }
+    if (ImGui::Button("Tree", ImVec2(ToggleButtonWidth, 0.0f)))
+    {
+        bPhysicsTreePanelShowsBodies = false;
+    }
+    if (bTreeTabActive)
+    {
+        ImGui::PopStyleColor();
+    }
+
+    ImGui::SameLine();
+
+    const bool bBodiesTabActive = bPhysicsTreePanelShowsBodies;
+    if (bBodiesTabActive)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    }
+    if (ImGui::Button("Bodies", ImVec2(ToggleButtonWidth, 0.0f)))
+    {
+        bPhysicsTreePanelShowsBodies = true;
+    }
+    if (bBodiesTabActive)
+    {
+        ImGui::PopStyleColor();
+    }
+
     ImGui::TextDisabled(
         "Bones: %d  Bodies: %d  Constraints: %d",
         RefSkeleton.GetNumBones(),
         static_cast<int32>(PhysicsAsset->GetBodySetups().size()),
         static_cast<int32>(PhysicsAsset->GetConstraintSetups().size()));
+    ImGui::Separator();
+
+    if (bPhysicsTreePanelShowsBodies)
+    {
+        ImGui::BeginChild("##PhysicsAssetBodiesTab", ImVec2(0.0f, 0.0f), true);
+        RenderBodyListContent(PhysicsAsset);
+        ImGui::EndChild();
+        return;
+    }
 
     const float ActionPanelHeight = ImGui::GetFrameHeightWithSpacing();
-    constexpr float BodyListHeight = 150.0f;
     const float TreeHeight = (std::max)(
-        110.0f,
+        80.0f,
         ImGui::GetContentRegionAvail().y
             - ActionPanelHeight
-            - BodyListHeight
-            - ImGui::GetTextLineHeightWithSpacing()
-            - ImGui::GetStyle().ItemSpacing.y * 3.0f);
+            - ImGui::GetStyle().ItemSpacing.y);
     ImGui::BeginChild("##PhysicsAssetSkeletonTree", ImVec2(0.0f, TreeHeight), true);
     ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, PhysicsEditorTreeIndentSpacing);
     if (RefSkeleton.GetNumBones() <= 0)
@@ -1532,9 +1578,6 @@ void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* Physics
     ImGui::EndChild();
 
     RenderSelectedBoneActionPanel(PhysicsAsset, RefSkeleton);
-
-    ImGui::Separator();
-    RenderBodyList(PhysicsAsset);
 
     RenderUnboundPhysicsSetups(PhysicsAsset, RefSkeleton);
 }
@@ -1837,13 +1880,13 @@ void FPhysicsAssetEditorWidget::RenderUnboundPhysicsSetups(UPhysicsAsset* Physic
     ImGui::TreePop();
 }
 
-void FPhysicsAssetEditorWidget::RenderBodyList(UPhysicsAsset* PhysicsAsset)
+void FPhysicsAssetEditorWidget::RenderBodyListContent(UPhysicsAsset* PhysicsAsset)
 {
-	ImGui::SetWindowFontScale(1.5f);
-    ImGui::TextUnformatted("Bodies");
-	ImGui::SetWindowFontScale(1.0f);
-    ImGui::Separator();
-    ImGui::BeginChild("PhysicsAssetBodyTree", ImVec2(0.0f, 150.0f), true);
+    if (!PhysicsAsset)
+    {
+        return;
+    }
+
     const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
     for (int32 i = 0; i < static_cast<int32>(Bodies.size()); ++i)
     {
@@ -1857,6 +1900,16 @@ void FPhysicsAssetEditorWidget::RenderBodyList(UPhysicsAsset* PhysicsAsset)
         }
     }
     if (Bodies.empty()) ImGui::TextDisabled("No bodies. Click Add Body to start authoring.");
+}
+
+void FPhysicsAssetEditorWidget::RenderBodyList(UPhysicsAsset* PhysicsAsset)
+{
+    ImGui::SetWindowFontScale(1.5f);
+    ImGui::TextUnformatted("Bodies");
+    ImGui::SetWindowFontScale(1.0f);
+    ImGui::Separator();
+    ImGui::BeginChild("PhysicsAssetBodyTree", ImVec2(0.0f, 150.0f), true);
+    RenderBodyListContent(PhysicsAsset);
     ImGui::EndChild();
 
     //if (ImGui::Button("Add Body##BodyList")) AddDefaultBody(PhysicsAsset);
