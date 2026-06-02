@@ -17,6 +17,7 @@ struct FReferenceSkeleton;
 struct FPhysicsAssetBodySetup;
 struct FPhysicsAssetConstraintSetup;
 struct FPhysicsAssetShapeSetup;
+struct FShowFlags;
 
 class FPhysicsAssetEditorWidget : public FAssetEditorWidget
 {
@@ -43,15 +44,17 @@ public:
         UPhysicsAsset* PhysicsAsset,
         USkeletalMesh* PreviewMesh,
         UWorld* PreviewWorld,
-        USkeletalMeshComponent* PreviewComponent);
+        USkeletalMeshComponent* PreviewComponent,
+        const FShowFlags* PreviewShowFlags = nullptr);
     void RenderPhysicsPreview(
         UPhysicsAsset* PhysicsAsset,
         USkeletalMesh* PreviewMesh,
         UWorld* PreviewWorld,
         USkeletalMeshComponent* PreviewComponent,
         UPhysicsAssetPreviewComponent* SolidPreviewComponent,
-        ID3D11Device* Device);
-    void RenderViewportDebugOptions();
+        ID3D11Device* Device,
+        const FShowFlags* PreviewShowFlags = nullptr);
+    void RenderViewportDebugOptions(FShowFlags* PreviewShowFlags = nullptr);
     void SetEditorPreviewContext(UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent);
     void TickEditorSimulation(
         UPhysicsAsset* PhysicsAsset,
@@ -90,6 +93,7 @@ private:
     void RenderSelectedBoneActionPanel(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton);
     void RenderUnboundPhysicsSetups(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton);
     void RenderBodyList(UPhysicsAsset* PhysicsAsset);
+    void RenderBodyListContent(UPhysicsAsset* PhysicsAsset);
     void RenderConstraintList(UPhysicsAsset* PhysicsAsset);
     void RenderDetailsPanel(UPhysicsAsset* PhysicsAsset);
     void RenderSelectedBoneDetails(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh);
@@ -145,6 +149,7 @@ private:
     ax::NodeEditor::EditorContext* ConstraintGraphContext = nullptr;
     bool bPendingClose = false;
     bool bConstraintGraphLayoutDirty = true;
+    bool bPhysicsTreePanelShowsBodies = false;
     bool bShowPreviewBodies = true;
     bool bShowPreviewConstraints = true;
     bool bShowConstraintLimitAngles = true;

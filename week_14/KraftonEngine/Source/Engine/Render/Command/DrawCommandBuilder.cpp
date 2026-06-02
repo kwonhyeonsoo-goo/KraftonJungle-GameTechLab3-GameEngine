@@ -899,7 +899,10 @@ void FDrawCommandBuilder::BuildEditorLineCommands(EViewMode ViewMode)
 	FShader* EditorShader = FShaderManager::Get().GetOrCreate(EShaderPath::Editor);
 	const FDrawCommandRenderState EditorLinesRS = PassRenderStateTable->ToDrawCommandState(ERenderPass::EditorLines, ViewMode);
 
-	EmitLineCommand(EditorLines, EditorShader, EditorLinesRS);
+	FDrawCommandRenderState EditorLinesNoDepthRS = EditorLinesRS;
+	EditorLinesNoDepthRS.DepthStencil = EDepthStencilState::NoDepth;
+
+	EmitLineCommand(EditorLines, EditorShader, EditorLinesNoDepthRS);
 	EmitLineCommand(GridLines, EditorShader, EditorLinesRS);
 
 	FDrawCommandRenderState BoneLinesRS = EditorLinesRS;
