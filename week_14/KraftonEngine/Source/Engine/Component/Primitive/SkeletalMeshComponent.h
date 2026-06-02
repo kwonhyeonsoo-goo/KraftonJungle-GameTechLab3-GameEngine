@@ -173,6 +173,10 @@ protected:
     void TickClothSimulation(float DeltaTime);
 
 private:
+    bool ShouldAdvanceAnimationDuringTick() const;
+    bool ShouldBlockExternalAnimationControl() const;
+    bool CaptureRagdollPoseBaseline();
+    void ClearRagdollPoseBaseline();
     void ResetPhysicsPoseBlendState();
     void UpdatePhysicsPoseBlend(float DeltaTime);
     void ResetRagdollRecoveryState();
@@ -221,8 +225,11 @@ protected:
     std::unique_ptr<FPhysicsAssetInstance> PhysicsAssetInstance;
     std::unique_ptr<FSkeletalClothRuntime> ClothRuntime;
     bool bUsePhysicsAssetPose = false;
+    bool bAllowInternalRagdollAnimationControl = false;
     float PhysicsPoseBlendWeight = 0.0f;
     float TargetPhysicsPoseBlendWeight = 0.0f;
+    TArray<FTransform> RagdollBaselineComponentSpacePose;
+    TArray<FTransform> RagdollBaselineLocalPose;
     bool bHasReceivedValidPhysicsPose = false;
     float FirstValidPhysicsPoseBlendAlpha = 0.0f;
     float RecoveryCompletionHoldRemaining = 0.0f;

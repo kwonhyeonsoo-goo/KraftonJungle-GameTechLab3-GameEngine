@@ -515,6 +515,38 @@ void USkeletalMeshComponent::DestroyPhysicsAssetInstance()
     PhysicsAssetInstance.reset();
 }
 
+bool USkeletalMeshComponent::CaptureRagdollPoseBaseline()
+{
+    USkeletalMesh* Mesh = GetSkeletalMesh();
+    FSkeletalMesh* MeshAsset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+    if (!MeshAsset || MeshAsset->Bones.empty())
+    {
+        ClearRagdollPoseBaseline();
+        return false;
+    }
+
+    GetCurrentBoneGlobalTransforms(RagdollBaselineComponentSpacePose);
+    if (RagdollBaselineComponentSpacePose.size() < MeshAsset->Bones.size())
+    {
+        ClearRagdollPoseBaseline();
+        return false;
+    }
+
+    RagdollBaselineLocalPose.resize(MeshAsset->Bones.size());
+    for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+    {
+        RagdollBaselineLocalPose[BoneIndex] = GetBoneLocalTransformByIndex(BoneIndex);
+    }
+
+    return true;
+}
+
+void USkeletalMeshComponent::ClearRagdollPoseBaseline()
+{
+    RagdollBaselineComponentSpacePose.clear();
+    RagdollBaselineLocalPose.clear();
+}
+
 bool USkeletalMeshComponent::EnableRagdollPhysics()
 {
     // The component stays responsible for high-level ragdoll policy while the instance
@@ -527,6 +559,8 @@ bool USkeletalMeshComponent::EnableRagdollPhysics()
         ResetRagdollRecoveryState();
         return false;
     }
+
+    CaptureRagdollPoseBaseline();
 
     FPhysicsAssetSimulationOptions SimulationOptions;
     SimulationOptions.bUseIndependentRagdollCollision = true;
@@ -658,8 +692,16 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
         return false;
     }
 
+    const bool bUseFrozenBaselinePose =
+        !ShouldAdvanceAnimationDuringTick() &&
+        RagdollBaselineComponentSpacePose.size() >= MeshAsset->Bones.size() &&
+        RagdollBaselineLocalPose.size() >= MeshAsset->Bones.size();
+
     TArray<FTransform> BoneWorldTransforms;
-    if (!Instance->PullPhysicsPose(BoneWorldTransforms) ||
+    if (!Instance->PullPhysicsPose(
+            BoneWorldTransforms,
+            bUseFrozenBaselinePose ? &RagdollBaselineComponentSpacePose : nullptr,
+            bUseFrozenBaselinePose ? &RagdollBaselineLocalPose : nullptr) ||
         BoneWorldTransforms.size() < MeshAsset->Bones.size())
     {
         // Ragdoll bodies are created through the physics command queue, so the first
@@ -700,7 +742,10 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
 
     for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
     {
-        AnimationLocalPose[BoneIndex] = GetBoneLocalTransformByIndex(BoneIndex);
+        AnimationLocalPose[BoneIndex] =
+            bUseFrozenBaselinePose
+                ? RagdollBaselineLocalPose[BoneIndex]
+                : GetBoneLocalTransformByIndex(BoneIndex);
         const int32 ParentIndex = MeshAsset->Bones[BoneIndex].ParentIndex;
         const FMatrix LocalMatrix = (ParentIndex >= 0)
             ? ComponentSpaceGlobalMatrices[BoneIndex] * GetAffineInverseForPoseSync(ComponentSpaceGlobalMatrices[ParentIndex])
@@ -736,8 +781,32 @@ void USkeletalMeshComponent::ResetPhysicsPoseBlendState()
 {
     PhysicsPoseBlendWeight = 0.0f;
     TargetPhysicsPoseBlendWeight = 0.0f;
+    ClearRagdollPoseBaseline();
     bHasReceivedValidPhysicsPose = false;
     FirstValidPhysicsPoseBlendAlpha = 0.0f;
+}
+
+bool USkeletalMeshComponent::ShouldAdvanceAnimationDuringTick() const
+{
+    if (!bUsePhysicsAssetPose)
+    {
+        return true;
+    }
+
+    // Fully ragdolled bodies should not keep advancing gameplay animation state behind
+    // the scenes. We still evaluate animation while blending in/out or during recovery
+    // handoff so transition poses remain well-defined.
+    if (RecoveryPhase != ERagdollRecoveryPhase::None)
+    {
+        return true;
+    }
+
+    return PhysicsPoseBlendWeight < 0.999f || TargetPhysicsPoseBlendWeight < 0.999f;
+}
+
+bool USkeletalMeshComponent::ShouldBlockExternalAnimationControl() const
+{
+    return !bAllowInternalRagdollAnimationControl && (bUsePhysicsAssetPose || RecoveryPhase != ERagdollRecoveryPhase::None);
 }
 
 void USkeletalMeshComponent::ResetRagdollRecoveryState()
@@ -876,7 +945,9 @@ bool USkeletalMeshComponent::StartStandUpAnimation()
         bHasSavedPostRecoveryAnimationState = true;
     }
 
+    bAllowInternalRagdollAnimationControl = true;
     PlayAnimation(SelectedStandUpAnimation, false);
+    bAllowInternalRagdollAnimationControl = false;
     RecoveryPhase = ERagdollRecoveryPhase::PlayingStandUp;
     return true;
 }
@@ -1014,6 +1085,11 @@ void USkeletalMeshComponent::UpdatePhysicsPoseBlend(float DeltaTime)
 
 void USkeletalMeshComponent::PlayAnimation(UAnimSequenceBase* NewAnimToPlay, bool bLooping)
 {
+    if (ShouldBlockExternalAnimationControl())
+    {
+        return;
+    }
+
     SetAnimationMode(EAnimationMode::AnimationSingleNode);
     SetAnimation(NewAnimToPlay);
     SetLooping(bLooping);
@@ -1022,6 +1098,11 @@ void USkeletalMeshComponent::PlayAnimation(UAnimSequenceBase* NewAnimToPlay, boo
 
 void USkeletalMeshComponent::StopAnimation()
 {
+    if (ShouldBlockExternalAnimationControl())
+    {
+        return;
+    }
+
     SetAnimation(nullptr);
     SetPlaying(false);
 
@@ -1036,6 +1117,11 @@ void USkeletalMeshComponent::StopAnimation()
 // ──────────────────────────────────────────────
 void USkeletalMeshComponent::SetAnimationMode(EAnimationMode InMode)
 {
+    if (ShouldBlockExternalAnimationControl())
+    {
+        return;
+    }
+
     if (AnimationMode == InMode) return;
     AnimationMode = InMode;
     InitializeAnimation();
@@ -1073,6 +1159,11 @@ bool USkeletalMeshComponent::CanUseAnimation(UAnimSequenceBase* InAsset) const
 
 void USkeletalMeshComponent::SetAnimation(UAnimSequenceBase* InAsset)
 {
+    if (ShouldBlockExternalAnimationControl())
+    {
+        return;
+    }
+
     if (!CanUseAnimation(InAsset))
     {
         return;
@@ -1097,6 +1188,11 @@ void USkeletalMeshComponent::SetAnimation(UAnimSequenceBase* InAsset)
 
 bool USkeletalMeshComponent::SetAnimationByPath(const FString& AnimationPath)
 {
+    if (ShouldBlockExternalAnimationControl())
+    {
+        return false;
+    }
+
     if (AnimationPath.empty() || AnimationPath == "None")
     {
         SetAnimation(nullptr);
@@ -1115,6 +1211,11 @@ bool USkeletalMeshComponent::SetAnimationByPath(const FString& AnimationPath)
 
 bool USkeletalMeshComponent::PlayAnimationByPath(const FString& AnimationPath, bool bLooping)
 {
+    if (ShouldBlockExternalAnimationControl())
+    {
+        return false;
+    }
+
     if (!SetAnimationByPath(AnimationPath))
     {
         return false;
@@ -1128,6 +1229,11 @@ bool USkeletalMeshComponent::PlayAnimationByPath(const FString& AnimationPath, b
 
 void USkeletalMeshComponent::SetPlayRate(float InRate)
 {
+    if (ShouldBlockExternalAnimationControl())
+    {
+        return;
+    }
+
     AnimationData.PlayRate = InRate;
     if (UAnimSingleNodeInstance* SingleNode = (IsValid(AnimInstance) ? Cast<UAnimSingleNodeInstance>(AnimInstance) : nullptr))
     {
@@ -1137,6 +1243,11 @@ void USkeletalMeshComponent::SetPlayRate(float InRate)
 
 void USkeletalMeshComponent::SetLooping(bool bInLoop)
 {
+    if (ShouldBlockExternalAnimationControl())
+    {
+        return;
+    }
+
     AnimationData.bLooping = bInLoop;
     if (UAnimSingleNodeInstance* SingleNode = (IsValid(AnimInstance) ? Cast<UAnimSingleNodeInstance>(AnimInstance) : nullptr))
     {
@@ -1146,6 +1257,11 @@ void USkeletalMeshComponent::SetLooping(bool bInLoop)
 
 void USkeletalMeshComponent::SetPlaying(bool bInPlay)
 {
+    if (ShouldBlockExternalAnimationControl())
+    {
+        return;
+    }
+
     AnimationData.bPlaying = bInPlay;
     if (UAnimSingleNodeInstance* SingleNode = (IsValid(AnimInstance) ? Cast<UAnimSingleNodeInstance>(AnimInstance) : nullptr))
     {
@@ -1155,6 +1271,11 @@ void USkeletalMeshComponent::SetPlaying(bool bInPlay)
 
 void USkeletalMeshComponent::SetAnimInstanceClass(UClass* InClass)
 {
+    if (ShouldBlockExternalAnimationControl())
+    {
+        return;
+    }
+
     if (AnimInstanceClass.Get() == InClass) return;
     AnimInstanceClass = InClass;   // TSubclassOf 가 IsA 가드로 검증 (잘못된 클래스 → nullptr).
     if (AnimationMode == EAnimationMode::AnimationCustom)
@@ -1165,6 +1286,11 @@ void USkeletalMeshComponent::SetAnimInstanceClass(UClass* InClass)
 
 void USkeletalMeshComponent::SetAnimInstance(UAnimInstance* InInstance)
 {
+    if (ShouldBlockExternalAnimationControl())
+    {
+        return;
+    }
+
     if (InInstance && !IsValid(InInstance)) return;
     if (AnimInstance == InInstance) return;
     ClearAnimInstance();
@@ -1336,7 +1462,10 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,
         return;
     }
 
-    const bool bEvaluatedAnimation = EvaluateAnimInstance(DeltaTime);
+    const bool bEvaluatedAnimation =
+        ShouldAdvanceAnimationDuringTick()
+            ? EvaluateAnimInstance(DeltaTime)
+            : false;
     UpdatePhysicsPoseBlend(DeltaTime);
 
     if (bUsePhysicsAssetPose && ApplyPhysicsAssetPose())

@@ -645,7 +645,10 @@ int32 FPhysicsAssetInstance::GetLiveConstraintCount() const
     return LiveConstraintCount;
 }
 
-bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTransforms) const
+bool FPhysicsAssetInstance::PullPhysicsPose(
+    TArray<FTransform>& OutBoneWorldTransforms,
+    const TArray<FTransform>* ReferenceBoneComponentSpaceTransforms,
+    const TArray<FTransform>* ReferenceBoneLocalTransforms) const
 {
     const USkeletalMeshComponent* Owner = GetOwnerComponent();
     const UPhysicsAsset* Asset = GetAsset();
@@ -670,17 +673,37 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
     }
 
     TArray<FTransform> CurrentBoneComponentSpaceTransforms;
-    Owner->GetCurrentBoneGlobalTransforms(CurrentBoneComponentSpaceTransforms);
+    const bool bUseReferenceComponentSpacePose =
+        ReferenceBoneComponentSpaceTransforms &&
+        ReferenceBoneComponentSpaceTransforms->size() >= MeshAsset->Bones.size();
+    if (bUseReferenceComponentSpacePose)
+    {
+        CurrentBoneComponentSpaceTransforms = *ReferenceBoneComponentSpaceTransforms;
+    }
+    else
+    {
+        Owner->GetCurrentBoneGlobalTransforms(CurrentBoneComponentSpaceTransforms);
+    }
     if (CurrentBoneComponentSpaceTransforms.size() < MeshAsset->Bones.size())
     {
         return false;
     }
 
     TArray<FTransform> CurrentBoneLocalTransforms;
-    CurrentBoneLocalTransforms.resize(MeshAsset->Bones.size());
-    for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+    const bool bUseReferenceLocalPose =
+        ReferenceBoneLocalTransforms &&
+        ReferenceBoneLocalTransforms->size() >= MeshAsset->Bones.size();
+    if (bUseReferenceLocalPose)
     {
-        CurrentBoneLocalTransforms[BoneIndex] = Owner->GetBoneLocalTransformByIndex(BoneIndex);
+        CurrentBoneLocalTransforms = *ReferenceBoneLocalTransforms;
+    }
+    else
+    {
+        CurrentBoneLocalTransforms.resize(MeshAsset->Bones.size());
+        for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+        {
+            CurrentBoneLocalTransforms[BoneIndex] = Owner->GetBoneLocalTransformByIndex(BoneIndex);
+        }
     }
 
     const FTransform ComponentWorldTransform = GetComponentWorldTransform(Owner);

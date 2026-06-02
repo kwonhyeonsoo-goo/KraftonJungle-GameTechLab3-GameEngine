@@ -40,7 +40,10 @@ public:
     int32 GetLiveConstraintCount() const;
     // Pulls simulated body state back into bone world transforms for pose sync. The
     // component consumes the result, but the instance remains the source of truth.
-    bool PullPhysicsPose(TArray<FTransform>& OutBoneWorldTransforms) const;
+    bool PullPhysicsPose(
+        TArray<FTransform>& OutBoneWorldTransforms,
+        const TArray<FTransform>* ReferenceBoneComponentSpaceTransforms = nullptr,
+        const TArray<FTransform>* ReferenceBoneLocalTransforms = nullptr) const;
 
     UPhysicsAsset* GetAsset() const;
     USkeletalMeshComponent* GetOwnerComponent() const;
