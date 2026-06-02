@@ -1,4 +1,4 @@
-#include "Physics/PhysicsAssetInstance.h"
+﻿#include "Physics/PhysicsAssetInstance.h"
 
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Core/Logging/Log.h"
@@ -20,6 +20,15 @@ namespace
         FTransform Result = Local;
         Result.Location = ParentWorld.Location + ParentWorld.Rotation.RotateVector(Local.Location);
         Result.Rotation = ParentWorld.Rotation * Local.Rotation;
+        Result.Scale = FVector::OneVector;
+        return Result;
+    }
+
+    FTransform ComputeParentWorldTransformFromChild(const FTransform& ChildWorld, const FTransform& ChildLocalToParent)
+    {
+        FTransform Result;
+        Result.Rotation = ChildWorld.Rotation * ChildLocalToParent.Rotation.Inverse();
+        Result.Location = ChildWorld.Location - Result.Rotation.RotateVector(ChildLocalToParent.Location);
         Result.Scale = FVector::OneVector;
         return Result;
     }
@@ -767,13 +776,28 @@ bool FPhysicsAssetInstance::PullPhysicsPose(
         return false;
     }
 
-    FVector RootTranslationDelta = FVector::ZeroVector;
-    if (RagdollRootBoneIndex >= 0 && RagdollRootBoneIndex < static_cast<int32>(OutBoneWorldTransforms.size()))
+    if (RagdollRootBoneIndex >= 0 &&
+        RagdollRootBoneIndex < static_cast<int32>(OutBoneWorldTransforms.size()) &&
+        AppliedBodyBoneMask[RagdollRootBoneIndex] != 0)
     {
-        if (AppliedBodyBoneMask[RagdollRootBoneIndex] != 0)
+        int32 ChildBoneIndex = RagdollRootBoneIndex;
+        int32 ParentBoneIndex = MeshAsset->Bones[ChildBoneIndex].ParentIndex;
+        while (ParentBoneIndex >= 0 &&
+               ParentBoneIndex < static_cast<int32>(OutBoneWorldTransforms.size()) &&
+               AppliedBodyBoneMask[ParentBoneIndex] == 0)
         {
-            const FTransform CurrentAnimatedRootWorld = ComposePhysicsTransforms(ComponentWorldTransform, CurrentBoneComponentSpaceTransforms[RagdollRootBoneIndex]);
-            RootTranslationDelta = OutBoneWorldTransforms[RagdollRootBoneIndex].Location - CurrentAnimatedRootWorld.Location;
+            FTransform ParentWorld = ComputeParentWorldTransformFromChild(
+                OutBoneWorldTransforms[ChildBoneIndex],
+                CurrentBoneLocalTransforms[ChildBoneIndex]);
+
+            // Reconstruct uncovered ancestors from the simulated ragdoll-root body so the
+            // skeleton root follows ragdoll movement without applying a coarse world-space
+            // translation delta that can make the whole mesh float above the floor.
+            ParentWorld.Scale = OutBoneWorldTransforms[ParentBoneIndex].Scale;
+            OutBoneWorldTransforms[ParentBoneIndex] = ParentWorld;
+
+            ChildBoneIndex = ParentBoneIndex;
+            ParentBoneIndex = MeshAsset->Bones[ChildBoneIndex].ParentIndex;
         }
     }
 
@@ -791,7 +815,6 @@ bool FPhysicsAssetInstance::PullPhysicsPose(
         const int32 ParentIndex = MeshAsset->Bones[BoneIndex].ParentIndex;
         if (ParentIndex < 0 || ParentIndex >= static_cast<int32>(OutBoneWorldTransforms.size()))
         {
-            OutBoneWorldTransforms[BoneIndex].Location += RootTranslationDelta;
             continue;
         }
 
