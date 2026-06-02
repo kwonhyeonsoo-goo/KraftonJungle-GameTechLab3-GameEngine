@@ -147,6 +147,9 @@ private:
     bool bConstraintGraphLayoutDirty = true;
     bool bShowPreviewBodies = true;
     bool bShowPreviewConstraints = true;
+    bool bShowConstraintLimitAngles = true;
+    bool bShowConstraintLimitSurfaces = true;
+    bool bShowOnlySelectedConstraintLimitAngles = false;
     bool bEditorSimulationActive = false;
     bool bEditorSimulationPaused = false;
     bool bEditorSimulationNoGravity = false;

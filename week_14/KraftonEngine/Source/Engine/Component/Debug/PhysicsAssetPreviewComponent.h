@@ -38,6 +38,8 @@ public:
 		int32 InSelectedShapeIndex,
 		int32 InSelectedConstraintIndex,
 		bool bInShowBodies,
+		bool bInShowConstraintLimitSurfaces,
+		bool bInShowOnlySelectedConstraintLimitSurfaces,
 		ID3D11Device* Device);
 
 	void ClearPreview(ID3D11Device* Device = nullptr);
@@ -49,6 +51,9 @@ private:
 	void AppendBox(const FTransform& ShapeWorld, const FVector& HalfExtent, const FVector4& Color);
 	void AppendSphere(const FTransform& ShapeWorld, float Radius, const FVector4& Color);
 	void AppendCapsuleZAxis(const FTransform& ShapeWorld, float Radius, float HalfHeight, const FVector4& Color);
+	void AppendConstraintLimitSurfaces(int32 ConstraintIndex);
+	void AppendSwingLimitSurface(const FTransform& ParentFrameWorld, const struct FConstraintLimitDesc& Limits, float Radius, const FVector4& Color);
+	void AppendTwistLimitSurface(const FTransform& ParentFrameWorld, const struct FConstraintLimitDesc& Limits, float Radius, const FVector4& Color);
 
 	uint32 AddVertexWorld(const FVector& WorldPosition, const FVector4& Color);
 	void ExpandBoundsWorld(const FVector& WorldPosition);
@@ -61,6 +66,8 @@ private:
 	int32 SelectedShapeIndex = -1;
 	int32 SelectedConstraintIndex = -1;
 	bool bShowBodies = true;
+	bool bShowConstraintLimitSurfaces = true;
+	bool bShowOnlySelectedConstraintLimitSurfaces = false;
 
 	TMeshData<FVertex> PreviewMeshData;
 	FMeshBuffer PreviewMeshBuffer;
