@@ -30,6 +30,9 @@ namespace
 	}
 }
 
+static EMaterialGraphTarget ResolveMaterialGraphCompileTarget(const UMaterial* Material);
+static FString BuildGeneratedMaterialShaderPath(const FString& MaterialPath, bool bPreview, EMaterialGraphTarget Target);
+
 void FMaterialManager::ScanMaterialAssets()
 {
 	AvailableMaterialFiles.clear();
@@ -234,6 +237,19 @@ UMaterial* FMaterialManager::LoadMaterialBinary(const FString& UassetPath)
 
 	if (Material->WasCustomShaderRequested())
 		Material->SetCustomShader(Template->GetShader());
+
+    if (Material->IsGraphMaterial())
+    {
+        const EMaterialGraphTarget CompileTarget = ResolveMaterialGraphCompileTarget(Material);
+        Material->GetGraphDocument().Graph.RepairPinsForDomain(CompileTarget);
+        const FString ExpectedShaderPath = BuildGeneratedMaterialShaderPath(Material->GetAssetPathFileName(), false, CompileTarget);
+        if (Material->GetShaderPathForSerialize() != ExpectedShaderPath ||
+            Material->GetGraphDocument().LastCompiledShaderPath != ExpectedShaderPath)
+        {
+            FString CompileError;
+            CompileMaterialGraphRuntime(Material, Material->GetGraphDocument().Graph, false, &CompileError);
+        }
+    }
 
 	return Material;
 }
@@ -456,6 +472,26 @@ static FString BuildGeneratedMaterialShaderPath(const FString& MaterialPath, boo
             + Stem + "_" + TargetName + ".hlsl";
 }
 
+static EMaterialGraphTarget ResolveMaterialGraphCompileTarget(const UMaterial* Material)
+{
+    if (!Material)
+    {
+        return EMaterialGraphTarget::Surface;
+    }
+
+    switch (Material->GetMaterialSettings().Domain)
+    {
+    case EMaterialDomain::Decal:
+        return EMaterialGraphTarget::Decal;
+    case EMaterialDomain::PostProcess:
+        return EMaterialGraphTarget::PostProcess;
+    case EMaterialDomain::UI:
+    case EMaterialDomain::Surface:
+    default:
+        return Material->GetGraphDocument().Target;
+    }
+}
+
 // Editor session boot helper — clears the preview directory once so old preview .hlsl files
 // from previous runs (different materials, renamed assets) don't accumulate on disk.
 static void EnsurePreviewShaderDirCleared()
@@ -580,11 +616,14 @@ static bool CompileGraphToShader(UMaterial* Material, const FMaterialGraph& Work
     }
 
     if (bPreview) EnsurePreviewShaderDirCleared();
-    const FString           Hash = BuildMaterialGraphCompileHash(WorkingGraph, Material->GetMaterialSettings(), Material->GetGraphDocument().Target);
+    const EMaterialGraphTarget CompileTarget = ResolveMaterialGraphCompileTarget(Material);
+    FMaterialGraph GraphForCompile = WorkingGraph;
+    GraphForCompile.RepairPinsForDomain(CompileTarget);
+    const FString           Hash = BuildMaterialGraphCompileHash(GraphForCompile, Material->GetMaterialSettings(), CompileTarget);
     FMaterialCompileOptions Options;
     Options.MaterialPath      = Material->GetAssetPathFileName();
     Options.MaterialGuid      = Material->GetAssetPathFileName();
-    Options.Domain            = Material->GetGraphDocument().Target;
+    Options.Domain            = CompileTarget;
     Options.RenderPass        = Material->GetRenderPass();
     Options.BlendState        = Material->GetBlendState();
     Options.BlendMode         = Material->GetBlendMode();
@@ -594,7 +633,7 @@ static bool CompileGraphToShader(UMaterial* Material, const FMaterialGraph& Work
     Options.ShadingModel         = Material->GetMaterialSettings().ShadingModel;
     Options.OpacityMaskClipValue = Material->GetMaterialSettings().OpacityMaskClipValue;
 
-    if (!FMaterialGraphCompiler::Compile(WorkingGraph, Options, OutResult))
+    if (!FMaterialGraphCompiler::Compile(GraphForCompile, Options, OutResult))
     {
         if (OutError)
         {
@@ -666,8 +705,11 @@ bool FMaterialManager::CompileMaterialGraphRuntime(UMaterial* Material, const FM
         return false;
     }
 
+    FMaterialGraph GraphForPersist = WorkingGraph;
+    GraphForPersist.RepairPinsForDomain(ResolveMaterialGraphCompileTarget(Material));
+
     FMaterialCompileResult Result;
-    if (!CompileGraphToShader(Material, WorkingGraph, false, Result, OutError))
+    if (!CompileGraphToShader(Material, GraphForPersist, false, Result, OutError))
     {
         Material->GetLastCompileRecord().bSucceeded   = false;
         Material->GetLastCompileRecord().ErrorSummary = OutError ? *OutError : FString("Material graph compile failed.");
@@ -684,7 +726,7 @@ bool FMaterialManager::CompileMaterialGraphRuntime(UMaterial* Material, const FM
 
     Material->SetSourceKind(EMaterialSourceKind::Graph);
     Material->GetGraphDocument().bEnabled               = true;
-    Material->GetGraphDocument().Graph                  = WorkingGraph;
+    Material->GetGraphDocument().Graph                  = GraphForPersist;
     Material->GetGraphDocument().LastCompiledGraphHash  = Result.SourceHashString;
     Material->GetGraphDocument().LastCompiledShaderPath = Result.GeneratedShaderPath;
     Material->GetGraphDocument().LastCompileError.clear();

@@ -25,6 +25,21 @@
 
 REGISTER_RENDER_PASS(FShadowMapPass)
 
+static ERenderPass GetShadowSectionRenderPass(const FMeshSectionDraw& Section)
+{
+	if (Section.PassOverride != ERenderPass::MAX) return Section.PassOverride;
+	if (Section.Material) return Section.Material->GetRenderPass();
+	return ERenderPass::Opaque;
+}
+
+static bool ShouldDrawShadowSection(const FMeshSectionDraw& Section)
+{
+	if (Section.IndexCount == 0) return false;
+	if (GetShadowSectionRenderPass(Section) != ERenderPass::Opaque) return false;
+	if (Section.Material && !Section.Material->GetMaterialSettings().bCastShadow) return false;
+	return true;
+}
+
 // ============================================================
 // 생성 / 소멸
 // ============================================================
@@ -738,8 +753,7 @@ void FShadowMapPass::DrawShadowCasters(ID3D11DeviceContext* DC, FScene& Scene, F
 			bool bAnyMaterialTwoSided   = false;
 			for (const FMeshSectionDraw& Section : Proxy->GetSectionDraws())
 			{
-				if (Section.IndexCount == 0) continue;
-				if (Section.Material && !Section.Material->GetMaterialSettings().bCastShadow) continue;
+				if (!ShouldDrawShadowSection(Section)) continue;
 				bAnySectionCastsShadow = true;
 				if (Section.Material && Section.Material->IsTwoSided())
 				{
@@ -771,8 +785,7 @@ void FShadowMapPass::DrawShadowCasters(ID3D11DeviceContext* DC, FScene& Scene, F
 
 			for (const FMeshSectionDraw& Section : Proxy->GetSectionDraws())
 			{
-				if (Section.IndexCount == 0) continue;
-				if (Section.Material && !Section.Material->GetMaterialSettings().bCastShadow) continue;
+				if (!ShouldDrawShadowSection(Section)) continue;
 				DC->DrawIndexed(Section.IndexCount, Section.FirstIndex, 0);
 				SHADOW_STATS_ADD_DRAW_CALL();
 			}

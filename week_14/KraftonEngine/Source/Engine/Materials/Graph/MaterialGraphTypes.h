@@ -172,6 +172,8 @@ struct FMaterialGraph
 
     void InitializeDefault(EMaterialGraphTarget Domain);
     void RebuildOutputPinsForDomain(EMaterialGraphTarget Domain);
+    bool RepairOutputPinsForDomain(EMaterialGraphTarget Domain);
+    bool RepairPinsForDomain(EMaterialGraphTarget Domain);
 
     // 텍스처 기반 파티클 프리셋 — 한 번에 TextureObject/Sample/Multiply/Mask/Output 세팅.
     // 호출 시 기존 노드/링크 모두 클리어.

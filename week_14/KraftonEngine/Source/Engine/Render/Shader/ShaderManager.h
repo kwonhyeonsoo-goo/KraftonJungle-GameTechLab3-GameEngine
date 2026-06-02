@@ -128,15 +128,16 @@ namespace EShaderPath
 {
 	inline constexpr const char* Primitive = "Shaders/Geometry/Primitive.hlsl";
 	inline constexpr const char* UberLit = "Shaders/Geometry/UberLit.hlsl";
+	inline constexpr const char* UberTransparent = "Shaders/Geometry/UberTransparent.hlsl";
 	inline constexpr const char* Decal = "Shaders/Geometry/Decal.hlsl";
 
 	inline constexpr const char* Editor = "Shaders/Editor/Editor.hlsl";
 	inline constexpr const char* Gizmo = "Shaders/Editor/Gizmo.hlsl";
+	inline constexpr const char* ViewModeMesh = "Shaders/Editor/ViewModeMesh.hlsl";
 
 	inline constexpr const char* FXAA = "Shaders/PostProcess/FXAA.hlsl";
 	inline constexpr const char* Outline = "Shaders/PostProcess/Outline.hlsl";
 	inline constexpr const char* SceneDepth = "Shaders/PostProcess/SceneDepth.hlsl";
-	inline constexpr const char* SceneNormal = "Shaders/PostProcess/SceneNormal.hlsl";
 	inline constexpr const char* HeightFog = "Shaders/PostProcess/HeightFog.hlsl";
 	inline constexpr const char* DoFSetup = "Shaders/PostProcess/DoFSetup.hlsl";
 	inline constexpr const char* DoFBackgroundBlur = "Shaders/PostProcess/DoFBackgroundBlur.hlsl";
@@ -144,7 +145,7 @@ namespace EShaderPath
 	inline constexpr const char* DoFBokehScatter = "Shaders/PostProcess/DoFBokehScatter.hlsl";
 	inline constexpr const char* DoFComposite = "Shaders/PostProcess/DoFComposite.hlsl";
 	inline constexpr const char* DoFCoCDebug = "Shaders/PostProcess/DoFCoCDebug.hlsl";
-	inline constexpr const char* LightCulling = "Shaders/PostProcess/LightCulling.hlsl";
+	inline constexpr const char* DebugViewModeResolve = "Shaders/PostProcess/DebugViewModeResolve.hlsl";
 	inline constexpr const char* GammaCorrection = "Shaders/PostProcess/GammaCorrection.hlsl";
 
 	inline constexpr const char* Font = "Shaders/UI/Font.hlsl";
@@ -224,48 +225,10 @@ namespace EUberLitDefines
 	inline const D3D_SHADER_MACRO Gouraud[] = { {"LIGHTING_MODEL_GOURAUD", "1"}, {nullptr, nullptr} };
 	inline const D3D_SHADER_MACRO Lambert[] = { {"LIGHTING_MODEL_LAMBERT", "1"}, {nullptr, nullptr} };
 	inline const D3D_SHADER_MACRO Phong[] = { {"LIGHTING_MODEL_PHONG", "1"}, {nullptr, nullptr} };
-	inline const D3D_SHADER_MACRO DefaultWeightBoneHeatMap[] = { {"LIGHTING_MODEL_PHONG", "1"}, {"WEIGHT_BONE_HEATMAP", "1"}, {nullptr, nullptr} };
-	inline const D3D_SHADER_MACRO UnlitWeightBoneHeatMap[] = { {"LIGHTING_MODEL_UNLIT", "1"}, {"WEIGHT_BONE_HEATMAP", "1"}, {nullptr, nullptr} };
-	inline const D3D_SHADER_MACRO GouraudWeightBoneHeatMap[] = { {"LIGHTING_MODEL_GOURAUD", "1"}, {"WEIGHT_BONE_HEATMAP", "1"}, {nullptr, nullptr} };
-	inline const D3D_SHADER_MACRO LambertWeightBoneHeatMap[] = { {"LIGHTING_MODEL_LAMBERT", "1"}, {"WEIGHT_BONE_HEATMAP", "1"}, {nullptr, nullptr} };
-	inline const D3D_SHADER_MACRO PhongWeightBoneHeatMap[] = { {"LIGHTING_MODEL_PHONG", "1"}, {"WEIGHT_BONE_HEATMAP", "1"}, {nullptr, nullptr} };
 
-	// FORWARD_FOG — translucent self-fog 변형 (LightingModel 과만 조합; heatmap 은 불투명 디버그라 조합 없음).
-	inline const D3D_SHADER_MACRO DefaultFog[] = { {"LIGHTING_MODEL_PHONG", "1"}, {"FORWARD_FOG", "1"}, {nullptr, nullptr} };
-	inline const D3D_SHADER_MACRO UnlitFog[]   = { {"LIGHTING_MODEL_UNLIT", "1"}, {"FORWARD_FOG", "1"}, {nullptr, nullptr} };
-	inline const D3D_SHADER_MACRO GouraudFog[] = { {"LIGHTING_MODEL_GOURAUD", "1"}, {"FORWARD_FOG", "1"}, {nullptr, nullptr} };
-	inline const D3D_SHADER_MACRO LambertFog[] = { {"LIGHTING_MODEL_LAMBERT", "1"}, {"FORWARD_FOG", "1"}, {nullptr, nullptr} };
-	inline const D3D_SHADER_MACRO PhongFog[]   = { {"LIGHTING_MODEL_PHONG", "1"}, {"FORWARD_FOG", "1"}, {nullptr, nullptr} };
-
-	inline const D3D_SHADER_MACRO* GetDefines(ELightingModel LightingModel, EVertexFactory VertexFactory, bool bWeightBoneHeatMap = false, bool bForwardFog = false)
+	inline const D3D_SHADER_MACRO* GetDefines(ELightingModel LightingModel, EVertexFactory VertexFactory)
 	{
 		(void)VertexFactory;
-		if (bWeightBoneHeatMap)
-		{
-			switch (LightingModel)
-			{
-			case ELightingModel::Unlit:   return UnlitWeightBoneHeatMap;
-			case ELightingModel::Gouraud: return GouraudWeightBoneHeatMap;
-			case ELightingModel::Lambert: return LambertWeightBoneHeatMap;
-			case ELightingModel::Phong:   return PhongWeightBoneHeatMap;
-			case ELightingModel::Default:
-			default:                      return DefaultWeightBoneHeatMap;
-			}
-		}
-
-		if (bForwardFog)
-		{
-			switch (LightingModel)
-			{
-			case ELightingModel::Unlit:   return UnlitFog;
-			case ELightingModel::Gouraud: return GouraudFog;
-			case ELightingModel::Lambert: return LambertFog;
-			case ELightingModel::Phong:   return PhongFog;
-			case ELightingModel::Default:
-			default:                      return DefaultFog;
-			}
-		}
-
 		switch (LightingModel)
 		{
 		case ELightingModel::Unlit:   return Unlit;
@@ -277,12 +240,12 @@ namespace EUberLitDefines
 		}
 	}
 
-	inline FShaderKey MakePermutationKey(ELightingModel LightingModel, EVertexFactory VertexFactory, bool bWeightBoneHeatMap = false, bool bForwardFog = false)
+	inline FShaderKey MakePermutationKey(ELightingModel LightingModel, EVertexFactory VertexFactory)
 	{
 		const char* VSEntryPoint = VertexFactory == EVertexFactory::SkeletalMesh
 			? EntryPoint::SkeletalMeshVS
 			: EntryPoint::StaticMeshVS;
-		return FShaderKey(EShaderPath::UberLit, GetDefines(LightingModel, VertexFactory, bWeightBoneHeatMap, bForwardFog), VSEntryPoint, EntryPoint::PS);
+		return FShaderKey(EShaderPath::UberLit, GetDefines(LightingModel, VertexFactory), VSEntryPoint, EntryPoint::PS);
 	}
 }
 
@@ -339,7 +302,7 @@ public:
 	FShader* GetOrCreate(const FString& Path, EShaderErrorMode ErrorMode = EShaderErrorMode::Notification) { return GetOrCreate(FShaderKey(Path), ErrorMode); }
 	FShader* GetOrCreateShadowDepthPermutation(EShadowDepthDefines::EVertexFactory VF, EShaderErrorMode ErrorMode = EShaderErrorMode::Notification);
 	FShader* GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel LightingModel, EUberLitDefines::EVertexFactory VertexFactory,
-		EShaderErrorMode ErrorMode = EShaderErrorMode::Notification, bool bWeightBoneHeatMap = false, bool bForwardFog = false);
+		EShaderErrorMode ErrorMode = EShaderErrorMode::Notification);
 	FShader* FindOrCreate(const FString& Path);
     FShader* FindOrCreate(const FShaderKey& Key);
     void     InvalidatePath(const FString& Path);

@@ -1011,14 +1011,10 @@ void FMeshEditorWidget::RenderViewportPanel(ImVec2 Size)
 		{
 			RenderOptions.bWeightBoneHeatMap = bWeightBoneHeatMap;
 			RenderOptions.WeightBoneHeatMapBoneIndex = SelectedBoneIndex;
-			if (bWeightBoneHeatMap)
-			{
-				FShaderManager::Get().GetOrCreateUberLitPermutation(
-					GetLightingModelForViewMode(RenderOptions.ViewMode),
-					EUberLitDefines::EVertexFactory::SkeletalMesh,
-					EShaderErrorMode::Notification,
-					true);
-			}
+		}
+		if (RenderOptions.bWeightBoneHeatMap)
+		{
+			ImGui::SliderFloat("HeatMap Alpha", &RenderOptions.WeightBoneHeatMapOverlayAlpha, 0.0f, 1.0f, "%.2f");
 		}
 
 		if (ActiveTab == EMeshEditorTab::Physics)

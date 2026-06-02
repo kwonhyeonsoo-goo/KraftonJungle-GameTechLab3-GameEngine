@@ -14,24 +14,7 @@
 #include "Common/VertexLayouts.hlsli"
 #include "Common/SystemSamplers.hlsli"
 #include "Common/Skinning.hlsli"
-
-#if defined(FORWARD_FOG) && FORWARD_FOG
-#include "Common/Fog.hlsli"
-// b7 (ECBSlot::ForwardFog): 전역 Fog 파라미터 — translucent self-fog 전용.
-//   fog 패스(불투명/하늘) 뒤에 그려지는 translucent가 자기 깊이로 동일 height-fog를 적용해
-//   주변 불투명과 일관되게 보이도록 한다. fog 비활성 시 density=0 으로 바인딩 → 무효과.
-cbuffer ForwardFogParams : register(b7)
-{
-    float4 FwdFogColor;
-    float  FwdFogDensity;
-    float  FwdFogHeightFalloff;
-    float  FwdFogBaseHeight;
-    float  FwdFogStartDistance;
-    float  FwdFogCutoffDistance;
-    float  FwdFogMaxOpacity;
-    float2 _fwdFogPad;
-};
-#endif
+#include "Common/NormalMapping.hlsli"
 
 #if !defined(LIGHTING_MODEL_UNLIT)
 #include "Common/ForwardLighting.hlsli"
@@ -53,7 +36,7 @@ cbuffer PerShader1 : register(b2)
 {
     float4 SectionColor;
     float HasNormalMap;
-    float Opacity;   // 머티리얼 불투명도 [0,1] — _pad.x 재사용(레이아웃 32B 유지). 기본 1, Translucent 블렌드에서만 가시 효과.
+    float Opacity;   // 머티리얼 불투명도 [0,1] — _pad.x 재사용(레이아웃 32B 유지). 기본 1, Transparent 블렌드에서만 가시 효과.
     float2 _pad;
 };
 
@@ -73,7 +56,6 @@ struct UberVS_Output
     float2 texcoord : TEXCOORD0;
     float3 worldPos : TEXCOORD1;
     float4 tangent : TANGENT;
-    float selectedBoneWeight : TEXCOORD4;
 #if defined(LIGHTING_MODEL_GOURAUD) && LIGHTING_MODEL_GOURAUD
     float3 litDiffuse  : TEXCOORD2;
     float3 litSpecular : TEXCOORD3;
@@ -95,10 +77,8 @@ UberVS_Output VS_StaticMesh(VS_Input_PNCTT input)
     output.normal = normalize(mul(input.normal, (float3x3) NormalMatrix));
     output.color = input.color * SectionColor;
     output.texcoord = input.texcoord;
-    output.selectedBoneWeight = 0.0f;
 
-    float3 T = normalize(mul(input.tangent.xyz, M));
-    T = normalize(T - output.normal * dot(output.normal, T));
+    float3 T = BuildOrthonormalTangent(output.normal, mul(input.tangent.xyz, M));
     output.tangent = float4(T, input.tangent.w);
 
 #if defined(LIGHTING_MODEL_GOURAUD) && LIGHTING_MODEL_GOURAUD
@@ -106,12 +86,8 @@ UberVS_Output VS_StaticMesh(VS_Input_PNCTT input)
 
     if (HasNormalMap > 0.5f)
     {
-        float3 B = normalize(cross(N, T) * input.tangent.w);
-        float3x3 TBN = float3x3(T, B, N);
-
-        float3 tangentNormal = NormalTexture.SampleLevel(LinearWrapSampler, input.texcoord, 0).xyz * 2.0f - 1.0f;
-
-        N = normalize(mul(tangentNormal, TBN));
+        float3 tangentNormal = SampleTangentSpaceNormalLevel(NormalTexture, LinearWrapSampler, input.texcoord, 0);
+        N = ApplyTangentSpaceNormal(N, T, input.tangent.w, tangentNormal);
     }
 
     float3 V = normalize(CameraWorldPos - output.worldPos);
@@ -138,7 +114,6 @@ UberVS_Output VS_SkeletalMesh(VS_Input_PNCTTBB input)
     float4 WeightedPosition = skinned.position;
     float3 WeightedNormal = skinned.normal;
     float3 WeightedTangent = skinned.tangent;
-    float SelectedWeight = GetBoneInfluenceWeight(input.boneIndices, input.boneWeights, SelectedBoneIndex);
     
     float3x3 M = (float3x3) Model;
     
@@ -148,10 +123,8 @@ UberVS_Output VS_SkeletalMesh(VS_Input_PNCTTBB input)
     output.normal = normalize(mul(WeightedNormal, (float3x3) NormalMatrix));
     output.color = input.color * SectionColor;
     output.texcoord = input.texcoord;
-    output.selectedBoneWeight = SelectedWeight;
 
-    float3 T = normalize(mul(WeightedTangent, M));
-    T = normalize(T - output.normal * dot(output.normal, T));
+    float3 T = BuildOrthonormalTangent(output.normal, mul(WeightedTangent, M));
     output.tangent = float4(T, input.tangent.w);
 
 #if defined(LIGHTING_MODEL_GOURAUD) && LIGHTING_MODEL_GOURAUD
@@ -159,12 +132,8 @@ UberVS_Output VS_SkeletalMesh(VS_Input_PNCTTBB input)
 
     if (HasNormalMap > 0.5f)
     {
-        float3 B = normalize(cross(N, T) * output.tangent.w);
-        float3x3 TBN = float3x3(T, B, N);
-
-        float3 tangentNormal = NormalTexture.SampleLevel(LinearWrapSampler, input.texcoord, 0).xyz * 2.0f - 1.0f;
-
-        N = normalize(mul(tangentNormal, TBN));
+        float3 tangentNormal = SampleTangentSpaceNormalLevel(NormalTexture, LinearWrapSampler, input.texcoord, 0);
+        N = ApplyTangentSpaceNormal(N, T, output.tangent.w, tangentNormal);
     }
 
     float3 V = normalize(CameraWorldPos - output.worldPos);
@@ -177,62 +146,23 @@ UberVS_Output VS_SkeletalMesh(VS_Input_PNCTTBB input)
 }
 
 // =============================================================================
-// MRT 출력 구조체
-// =============================================================================
-struct UberPS_Output
-{
-    float4 Color : SV_TARGET0; // 최종 색상 (기존 프레임 버퍼)
-    float4 Normal : SV_TARGET1; // World Normal (GBuffer Normal RT)
-    float4 Culling : SV_TARGET2; // Tile Culling Heatmap
-};
-
-// =============================================================================
 // Pixel Shader
 // =============================================================================
-UberPS_Output PS(UberVS_Output input)
+float4 PS(UberVS_Output input) : SV_TARGET
 {
-    UberPS_Output output;
-
     float4 texColor = DiffuseTexture.Sample(LinearWrapSampler, input.texcoord);
     if (texColor.a < 0.001f)
         texColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
 
     float4 baseColor = texColor * input.color;
 
-#if defined(WEIGHT_BONE_HEATMAP) && WEIGHT_BONE_HEATMAP
-float Heat = saturate(input.selectedBoneWeight);
-
-float t0 = smoothstep(0.0f, 0.05f, Heat);   // 마젠타 ->  파랑
-float t1 = smoothstep(0.05f, 0.2f, Heat);   // 파랑   ->  시안
-float t2 = smoothstep(0.2f, 0.35f, Heat);   // 시안   ->  초록
-float t3 = smoothstep(0.35f, 0.5f, Heat);   // 초록   ->  노랑
-float t4 = smoothstep(0.5f, 1.0f, Heat);    // 노랑   ->  빨강
-
-float3 HeatColor = lerp(float3(1.0f, 0.0f, 1.0f),  float3(0.0f, 0.0f, 1.0f),  t0);
-HeatColor = lerp(HeatColor, float3(0.0f, 1.0f, 1.0f),  t1);
-HeatColor = lerp(HeatColor, float3(0.0f, 0.9f, 0.15f), t2);
-HeatColor = lerp(HeatColor, float3(1.0f, 1.0f, 0.0f),  t3);
-HeatColor = lerp(HeatColor, float3(1.0f, 0.05f, 0.0f), t4);
-
-output.Color = float4(HeatColor, 1.f);
-output.Normal = float4(normalize(input.normal), 1.0f);
-output.Culling = float4(0, 0, 0, 0);
-return output;
-#endif
-
     float3 N = normalize(input.normal);
 
 #if !defined(LIGHTING_MODEL_GOURAUD)
     if (HasNormalMap >= 0.5)
     {
-        float3 T = normalize(input.tangent.xyz);
-        T = normalize(T - N * dot(N, T));
-
-        float3 B = normalize(cross(N, T) * input.tangent.w);
-        float3x3 TBN = float3x3(T, B, N);
-
-        float3 tangentNormal = NormalTexture.Sample(LinearWrapSampler, input.texcoord).xyz * 2.0f - 1.0f;
-        N = normalize(mul(tangentNormal, TBN));
+        float3 tangentNormal = SampleTangentSpaceNormal(NormalTexture, LinearWrapSampler, input.texcoord);
+        N = ApplyTangentSpaceNormal(N, input.tangent.xyz, input.tangent.w, tangentNormal);
     }
 #endif
 
@@ -241,7 +171,6 @@ return output;
 #if defined(LIGHTING_MODEL_UNLIT) && LIGHTING_MODEL_UNLIT
     // Unlit: 라이팅 없이 Albedo만 출력
     float3 finalColor = ApplyWireframe(baseColor.rgb);
-    output.Culling = float4(0, 0, 0, 0);
 
 #else
     float3 diffuse = float3(0, 0, 0);
@@ -261,24 +190,11 @@ return output;
 
 #endif
 
-    output.Culling = ComputeCullingHeatmap(input.position, input.worldPos);
     // Diffuse에만 albedo를 곱하고, Specular는 빛 색상 그대로 더한다
     // (비금속 표면: specular 반사 = 빛의 색, 물체 색이 아님)
     float3 finalColor = baseColor.rgb * diffuse + specular + g_DefaultEmissive.rgb;
     finalColor = ApplyWireframe(finalColor);
 #endif
 
-#if defined(FORWARD_FOG) && FORWARD_FOG
-    // translucent self-fog — fog 패스가 불투명/하늘에 적용한 것과 동일 수식(자기 worldPos 기준).
-    float fwdFog = ComputeHeightFogFactor(
-        input.worldPos, CameraWorldPos,
-        FwdFogDensity, FwdFogHeightFalloff, FwdFogBaseHeight,
-        FwdFogStartDistance, FwdFogCutoffDistance, FwdFogMaxOpacity);
-    finalColor = lerp(finalColor, FwdFogColor.rgb, fwdFog);
-#endif
-
-    output.Color = float4(finalColor, baseColor.a * Opacity); // Opacity는 alpha에만 (Translucent 블렌드에서 효과)
-    output.Normal = float4(N, 1.0f); // alpha=1: 유효한 노말 마킹
-    
-    return output;
+    return float4(finalColor, baseColor.a * Opacity); // Opacity는 alpha에만 (Transparent 블렌드에서 효과)
 }

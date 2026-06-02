@@ -17,6 +17,7 @@ public:
 	FGizmoSceneProxy(UGizmoComponent* InComponent, bool bInner = false);
 	~FGizmoSceneProxy() override;
 
+	void AddReferencedObjects(FReferenceCollector& Collector) override;
 	void UpdateMesh() override;
 	void UpdatePerViewport(const FFrameContext& Frame) override;
 

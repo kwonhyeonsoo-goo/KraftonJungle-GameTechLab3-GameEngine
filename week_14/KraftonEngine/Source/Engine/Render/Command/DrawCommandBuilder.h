@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Render/Command/DrawCommandList.h"
 #include "Render/Types/FrameContext.h"
@@ -43,6 +43,7 @@ private:
 	// BuildCommands 서브 메서드
 	void BuildProxyCommands(const FFrameContext& Frame, FScene& Scene, const FCollectOutput& Output);
 	void BuildDecalCommands(FScene& Scene, FPrimitiveSceneProxy* Proxy, const FFrameContext& Frame, const FCollectOutput& Output);
+	void BuildGizmoCommands(FScene& Scene, const FPrimitiveSceneProxy* Proxy);
 	void BuildMeshCommands(FScene& Scene, const FPrimitiveSceneProxy* Proxy);
 	void BuildSelectionCommands(FPrimitiveSceneProxy* Proxy, bool bShowBoundingVolume, FScene& Scene);
 
@@ -60,10 +61,9 @@ private:
 	// 공통 헬퍼
 	void EmitLineCommand(FLineGeometry& Lines, FShader* Shader, const FDrawCommandRenderState& RS);
 	void ApplyMaterialRenderState(FDrawCommandRenderState& OutState, const UMaterial* Mat, const FDrawCommandRenderState& BaseState);
-	FShader* SelectEffectiveShader(FShader* ProxyShader, EViewMode ViewMode, bool bUseSkeletalVertexFactory, bool bWeightBoneHeatMap, bool bForwardFog = false);
+	FShader* SelectEffectiveShader(FShader* ProxyShader, EViewMode ViewMode, bool bUseSkeletalVertexFactory);
 	// shader-agnostic 도출: custom override 우선, 아니면 (Domain × VertexFactory × Pass × ViewMode).
-	// bForwardFog: Translucent 패스 섹션이면 UberLit FORWARD_FOG 변형 선택(self-fog).
-	FShader* ResolveSectionShader(class UMaterial* Mat, EVertexFactoryType VFType, EViewMode ViewMode, bool bGPUSkinning, bool bWeightBoneHeatMap, bool bForwardFog = false);
+	FShader* ResolveSectionShader(class UMaterial* Mat, EVertexFactoryType VFType, ERenderPass SecPass, EViewMode ViewMode, bool bGPUSkinning);
 
 	FConstantBuffer* GetPerObjectCBForProxy(FScene* Scene, const FPrimitiveSceneProxy& Proxy);
 	void EnsurePerObjectCBPoolCapacity(FScene* Scene, uint32 RequiredCount);
@@ -76,8 +76,9 @@ private:
 	EViewMode CollectViewMode = EViewMode::Lit_Phong;
 	bool bCollectWeightBoneHeatMap = false;
 	int32 CollectWeightBoneHeatMapBoneIndex = -1;
+	float CollectWeightBoneHeatMapOverlayAlpha = 0.8f;
 
-	// Translucent depth-first 정렬용 — BeginCollect에서 캐싱.
+	// Transparent depth-first 정렬용 — BeginCollect에서 캐싱.
 	FVector CollectCameraPosition = { 0, 0, 0 };
 
 	bool bHasSelectionMaskCommands = false;
@@ -91,7 +92,7 @@ private:
 	// PerObject CB 풀
 	TMap<FScene*, TArray<FConstantBuffer>> PerSceneObjectCBPool;
 
-	// PostProcess CBs (Fog, Outline, SceneDepth, FXAA)
+	// Fullscreen/postprocess CBs (Fog, Outline, DebugViewModeResolve, DoF, FXAA)
 	FConstantBuffer FogCB;
 	FConstantBuffer OutlineCB;
 	FConstantBuffer SceneDepthCB;

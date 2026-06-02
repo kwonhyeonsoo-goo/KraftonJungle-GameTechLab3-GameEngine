@@ -5,6 +5,7 @@
 #include "Render/Shader/ShaderManager.h"
 
 #include "Materials/Material.h"
+#include "Materials/MaterialDomain.h"
 #include "Texture/Texture2D.h"
 #include "Object/Reflection/ObjectFactory.h"
 #include "Object/GarbageCollection.h"
@@ -83,17 +84,34 @@ void FDecalSceneProxy::UpdateMaterial()
 
 	DecalMaterial = DecalComp->GetMaterial();
 
+	FShader* Shader = (DecalMaterial && DecalMaterial->GetShader())
+		? DecalMaterial->GetShader()
+		: FShaderManager::Get().GetOrCreate(EShaderPath::Decal);
+
+	// UDecalComponent is the routing authority. Source graph materials can carry stale
+	// Surface render state when their graph target/domain was edited independently, but
+	// decal projection still must execute in the Decal/AdditiveDecal passes.
+	const EBlendMode DecalBlend = DecalMaterial ? DecalMaterial->GetBlendMode() : EBlendMode::Transparent;
+	const FMaterialRenderState DecalState = ResolveMaterialRenderState(EMaterialDomain::Decal, DecalBlend);
+	ERenderPass Pass = DecalState.Pass;
+	EBlendState Blend = DecalState.Blend;
+	EDepthStencilState Depth = DecalState.DepthStencil;
+	ERasterizerState Raster = DecalState.Rasterizer;
+
+	if (DecalProxyMaterial &&
+		(DecalProxyMaterial->GetShader() != Shader ||
+		 DecalProxyMaterial->GetRenderPass() != Pass ||
+		 DecalProxyMaterial->GetBlendState() != Blend ||
+		 DecalProxyMaterial->GetDepthStencilState() != Depth ||
+		 DecalProxyMaterial->GetRasterizerState() != Raster))
+	{
+		UObjectManager::Get().DestroyObject(DecalProxyMaterial);
+		DecalProxyMaterial = nullptr;
+	}
+
 	// 프록시 전용 transient Material 래퍼 생성 (공유 DecalMaterial에 직접 CB를 쓸 수 없음)
 	if (!DecalProxyMaterial)
 	{
-		FShader* Shader = (DecalMaterial && DecalMaterial->GetShader())
-			? DecalMaterial->GetShader()
-			: FShaderManager::Get().GetOrCreate(EShaderPath::Decal);
-		ERenderPass Pass = DecalMaterial ? DecalMaterial->GetRenderPass() : ERenderPass::Decal;
-		EBlendState Blend = DecalMaterial ? DecalMaterial->GetBlendState() : EBlendState::Opaque;
-		EDepthStencilState Depth = DecalMaterial ? DecalMaterial->GetDepthStencilState() : EDepthStencilState::Default;
-		ERasterizerState Raster = DecalMaterial ? DecalMaterial->GetRasterizerState() : ERasterizerState::SolidBackCull;
-
 		DecalProxyMaterial = UMaterial::CreateTransient(Pass, Blend, Depth, Raster, Shader);
 	}
 

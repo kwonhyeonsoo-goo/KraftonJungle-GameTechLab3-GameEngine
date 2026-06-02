@@ -8,6 +8,7 @@
 #include "Object/Object.h"
 #include "Platform/Paths.h"
 #include "Serialization/MemoryArchive.h"
+#include "Texture/Texture2D.h"
 
 #include "Component/Light/DirectionalLightComponent.h"
 #include "Component/Primitive/StaticMeshComponent.h"
@@ -34,6 +35,153 @@
 #include <unordered_set>
 
 namespace ed = ax::NodeEditor;
+
+namespace
+{
+    constexpr const char* DefaultSurfaceShaderPath = "Shaders/Geometry/UberLit.hlsl";
+
+    EMaterialGraphTarget ResolveEditorGraphTarget(const UMaterial* Material)
+    {
+        if (!Material)
+        {
+            return EMaterialGraphTarget::Surface;
+        }
+
+        switch (Material->GetDomain())
+        {
+        case EMaterialDomain::Decal:
+            return EMaterialGraphTarget::Decal;
+        case EMaterialDomain::PostProcess:
+            return EMaterialGraphTarget::PostProcess;
+        case EMaterialDomain::UI:
+        case EMaterialDomain::Surface:
+        default:
+            return Material->GetGraphDocument().Target;
+        }
+    }
+
+    uint32 FindPinId(const FMaterialGraphNode* Node, EMaterialGraphPinKind Kind, const char* Name)
+    {
+        if (!Node) return 0;
+
+        for (const FMaterialGraphPin& Pin : Node->Pins)
+        {
+            if (Pin.Kind == Kind && Pin.DisplayName.ToString() == Name)
+            {
+                return Pin.PinId;
+            }
+        }
+        return 0;
+    }
+
+    uint32 FindOutputInputPinId(const FMaterialGraph& Graph, const char* Name)
+    {
+        return FindPinId(Graph.FindFirstNodeOfType(EMaterialGraphNodeType::Output), EMaterialGraphPinKind::Input, Name);
+    }
+
+    uint32 AddConstantNode(FMaterialGraph& Graph, EMaterialGraphNodeType Type, const FVector4& Value, float X, float Y, EMaterialGraphTarget Target)
+    {
+        FMaterialGraphNode* Node = Graph.AddNodeOfType(Type, X, Y, Target);
+        if (!Node) return 0;
+
+        Node->Value = Value;
+        return FindPinId(Node, EMaterialGraphPinKind::Output, "Value");
+    }
+
+    uint32 AddTextureSampleNode(FMaterialGraph& Graph, const FString& TexturePath, EMaterialTextureSlot Slot, const char* ParameterName, float Y, EMaterialGraphTarget Target)
+    {
+        FMaterialGraphNode* TextureObject = Graph.AddNodeOfType(EMaterialGraphNodeType::TextureObject, -720.0f, Y, Target);
+        const uint32 TextureOut = FindPinId(TextureObject, EMaterialGraphPinKind::Output, "Texture");
+        if (TextureObject)
+        {
+            TextureObject->ParameterName = ParameterName;
+            TextureObject->TextureSlot   = Slot;
+            TextureObject->TexturePath   = TexturePath;
+        }
+
+        FMaterialGraphNode* Sample = Graph.AddNodeOfType(EMaterialGraphNodeType::TextureSample, -480.0f, Y, Target);
+        const uint32 SampleTextureIn = FindPinId(Sample, EMaterialGraphPinKind::Input, "Texture");
+        const uint32 SampleRgbOut    = FindPinId(Sample, EMaterialGraphPinKind::Output, "RGB");
+        if (TextureOut && SampleTextureIn)
+        {
+            Graph.AddLink(TextureOut, SampleTextureIn);
+        }
+        return SampleRgbOut;
+    }
+
+    bool BuildGraphFromRuntimeSurfaceMaterial(UMaterial* Material, EMaterialGraphTarget Target)
+    {
+        if (!Material || Material->IsGraphMaterial())
+        {
+            return false;
+        }
+        if (Material->GetDomain() != EMaterialDomain::Surface ||
+            Material->GetShaderPathForSerialize() != DefaultSurfaceShaderPath)
+        {
+            return false;
+        }
+
+        FMaterialGraph Graph;
+
+        FVector4 SectionColor(1.0f, 1.0f, 1.0f, 1.0f);
+        Material->GetVector4Parameter("SectionColor", SectionColor);
+
+        float Opacity = 1.0f;
+        Material->GetScalarParameter("Opacity", Opacity);
+
+        UTexture2D* DiffuseTexture = nullptr;
+        UTexture2D* NormalTexture  = nullptr;
+        Material->GetTextureParameter("DiffuseTexture", DiffuseTexture);
+        Material->GetTextureParameter("NormalTexture", NormalTexture);
+
+        uint32 BaseColorOut = 0;
+        if (DiffuseTexture && !DiffuseTexture->GetSourcePath().empty())
+        {
+            const uint32 DiffuseOut = AddTextureSampleNode(Graph, DiffuseTexture->GetSourcePath(), EMaterialTextureSlot::Diffuse, "DiffuseTexture", -160.0f, Target);
+            const uint32 ColorOut = AddConstantNode(Graph, EMaterialGraphNodeType::ConstantFloat3,
+                FVector4(SectionColor.X, SectionColor.Y, SectionColor.Z, 0.0f), -480.0f, 160.0f, Target);
+
+            FMaterialGraphNode* Multiply = Graph.AddNodeOfType(EMaterialGraphNodeType::Multiply, -200.0f, -80.0f, Target);
+            const uint32 MulAIn = FindPinId(Multiply, EMaterialGraphPinKind::Input, "A");
+            const uint32 MulBIn = FindPinId(Multiply, EMaterialGraphPinKind::Input, "B");
+            BaseColorOut = FindPinId(Multiply, EMaterialGraphPinKind::Output, "Result");
+            if (DiffuseOut && MulAIn) Graph.AddLink(DiffuseOut, MulAIn);
+            if (ColorOut && MulBIn) Graph.AddLink(ColorOut, MulBIn);
+        }
+        else
+        {
+            BaseColorOut = AddConstantNode(Graph, EMaterialGraphNodeType::ConstantFloat3,
+                FVector4(SectionColor.X, SectionColor.Y, SectionColor.Z, 0.0f), -480.0f, -160.0f, Target);
+        }
+
+        uint32 NormalOut = 0;
+        if (NormalTexture && !NormalTexture->GetSourcePath().empty())
+        {
+            NormalOut = AddTextureSampleNode(Graph, NormalTexture->GetSourcePath(), EMaterialTextureSlot::Normal, "NormalTexture", 20.0f, Target);
+        }
+
+        const uint32 OpacityOut = AddConstantNode(Graph, EMaterialGraphNodeType::ConstantFloat,
+            FVector4(Opacity, 0.0f, 0.0f, 0.0f), -240.0f, 220.0f, Target);
+
+        Graph.AddNodeOfType(EMaterialGraphNodeType::Output, 80.0f, 40.0f, Target);
+
+        const uint32 BaseColorIn = FindOutputInputPinId(Graph, "BaseColor");
+        const uint32 NormalIn    = FindOutputInputPinId(Graph, "Normal");
+        const uint32 OpacityIn   = FindOutputInputPinId(Graph, "Opacity");
+
+        if (BaseColorOut && BaseColorIn) Graph.AddLink(BaseColorOut, BaseColorIn);
+        if (NormalOut && NormalIn) Graph.AddLink(NormalOut, NormalIn);
+        if (OpacityOut && OpacityIn) Graph.AddLink(OpacityOut, OpacityIn);
+
+        Graph.RepairPinsForDomain(Target);
+
+        Material->EnableGraphMaterial();
+        Material->GetGraphDocument().Target = Target;
+        Material->GetGraphDocument().Graph  = Graph;
+        Material->MarkGraphSaved();
+        return true;
+    }
+}
 
 namespace
 {
@@ -554,13 +702,24 @@ void FMaterialEditorWidget::Open(UObject* Object)
     {
         if (!Material->GetGraphDocument().bEnabled)
         {
-            Material->EnableGraphMaterial();
+            const EMaterialGraphTarget GraphTarget = ResolveEditorGraphTarget(Material);
+            if (!BuildGraphFromRuntimeSurfaceMaterial(Material, GraphTarget))
+            {
+                Material->EnableGraphMaterial();
+            }
+        }
+        FMaterialGraphDocument& Doc = Material->GetGraphDocument();
+        const EMaterialGraphTarget GraphTarget = ResolveEditorGraphTarget(Material);
+        if (Doc.Target != GraphTarget)
+        {
+            Doc.Target = GraphTarget;
         }
         WorkingGraph = Material->GetGraphDocument().Graph;
         if (!WorkingGraph.HasOutputNode())
         {
-            WorkingGraph.InitializeDefault(Material->GetGraphDocument().Target);
+            WorkingGraph.InitializeDefault(GraphTarget);
         }
+        WorkingGraph.RepairPinsForDomain(GraphTarget);
         // ax::NodeEditor 는 settings 재로딩 public API 가 없으므로, 머티리얼이 바뀔 때마다 컨텍스트를
         // 새로 만들면서 LoadSettings 콜백이 새 Material 의 EditorSettings 를 읽게 한다.
         DestroyContext();
@@ -940,8 +1099,8 @@ namespace
             return "Opaque";
         case EBlendMode::Masked:
             return "Masked";
-        case EBlendMode::Translucent:
-            return "Translucent";
+        case EBlendMode::Transparent:
+            return "Transparent";
         case EBlendMode::Additive:
             return "Additive";
         case EBlendMode::Modulate:
@@ -1054,6 +1213,22 @@ void FMaterialEditorWidget::RenderSettingsPanel(UMaterial* Material)
                 Material->SetDomainBlend(Choice.Domain, Material->GetBlendMode());
                 Material->GetMaterialSettings().Domain = Choice.Domain;
                 Material->GetMaterialSettings().BlendMode = Material->GetBlendMode();
+                if (Choice.Domain == EMaterialDomain::Decal && Doc.Target != EMaterialGraphTarget::Decal)
+                {
+                    Doc.Target = EMaterialGraphTarget::Decal;
+                    WorkingGraph.RebuildOutputPinsForDomain(Doc.Target);
+                }
+                else if (Choice.Domain == EMaterialDomain::PostProcess && Doc.Target != EMaterialGraphTarget::PostProcess)
+                {
+                    Doc.Target = EMaterialGraphTarget::PostProcess;
+                    WorkingGraph.RebuildOutputPinsForDomain(Doc.Target);
+                }
+                else if (Choice.Domain == EMaterialDomain::Surface &&
+                    (Doc.Target == EMaterialGraphTarget::Decal || Doc.Target == EMaterialGraphTarget::PostProcess))
+                {
+                    Doc.Target = EMaterialGraphTarget::Surface;
+                    WorkingGraph.RebuildOutputPinsForDomain(Doc.Target);
+                }
                 MarkMaterialSourceEdited();
             }
         }
@@ -1063,7 +1238,7 @@ void FMaterialEditorWidget::RenderSettingsPanel(UMaterial* Material)
     EBlendMode Blend = Material->GetBlendMode();
     if (LabeledCombo("Blend Mode", BlendModeLabel(Blend)))
     {
-        const EBlendMode Modes[] = { EBlendMode::Opaque, EBlendMode::Masked, EBlendMode::Translucent, EBlendMode::Additive, EBlendMode::Modulate };
+        const EBlendMode Modes[] = { EBlendMode::Opaque, EBlendMode::Masked, EBlendMode::Transparent, EBlendMode::Additive, EBlendMode::Modulate };
         for (EBlendMode Mode : Modes)
         {
             if (ImGui::Selectable(BlendModeLabel(Mode), Blend == Mode))
@@ -2243,7 +2418,10 @@ void FMaterialEditorWidget::SaveGraph(UMaterial* Material)
 {
     if (!Material) return;
     SyncParameterDefinitionsToWorkingGraph(Material);
+    const EMaterialGraphTarget GraphTarget = ResolveEditorGraphTarget(Material);
+    WorkingGraph.RepairPinsForDomain(GraphTarget);
     Material->EnableGraphMaterial();
+    Material->GetGraphDocument().Target = GraphTarget;
     Material->GetGraphDocument().Graph = WorkingGraph;
     Material->MarkGraphSaved();
     if (FMaterialManager::Get().SaveMaterialSourceOnly(Material, Material->GetAssetPathFileName()))
@@ -2261,6 +2439,7 @@ void FMaterialEditorWidget::SaveGraph(UMaterial* Material)
 void FMaterialEditorWidget::CompilePreview(UMaterial* Material)
 {
     SyncParameterDefinitionsToWorkingGraph(Material);
+    WorkingGraph.RepairPinsForDomain(ResolveEditorGraphTarget(Material));
     LastCompileError.clear();
     if (FMaterialManager::Get().CompileMaterialGraphPreview(Material, WorkingGraph, PreviewMaterial, &LastCompileError))
     {
@@ -2276,6 +2455,9 @@ void FMaterialEditorWidget::CompilePreview(UMaterial* Material)
 void FMaterialEditorWidget::ApplyCompile(UMaterial* Material, bool bPersistCompiledState)
 {
     SyncParameterDefinitionsToWorkingGraph(Material);
+    const EMaterialGraphTarget GraphTarget = ResolveEditorGraphTarget(Material);
+    WorkingGraph.RepairPinsForDomain(GraphTarget);
+    Material->GetGraphDocument().Target = GraphTarget;
     LastCompileError.clear();
     if (FMaterialManager::Get().CompileMaterialGraphRuntime(Material, WorkingGraph, bPersistCompiledState, &LastCompileError))
     {

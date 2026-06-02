@@ -4,6 +4,7 @@
 #include "Render/Types/FrameContext.h"
 #include "Materials/Material.h"
 #include "Object/Reflection/ObjectFactory.h"
+#include "Object/GarbageCollection.h"
 
 // ============================================================
 // FGizmoSceneProxy
@@ -38,6 +39,12 @@ FGizmoSceneProxy::~FGizmoSceneProxy()
 UGizmoComponent* FGizmoSceneProxy::GetGizmoComponent() const
 {
 	return static_cast<UGizmoComponent*>(GetOwner());
+}
+
+void FGizmoSceneProxy::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	FPrimitiveSceneProxy::AddReferencedObjects(Collector);
+	Collector.AddReferencedObject(GizmoMaterial, "FGizmoSceneProxy::GizmoMaterial");
 }
 
 // ============================================================

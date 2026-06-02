@@ -125,4 +125,5 @@ struct FViewportRenderOptions
 	// Mesh editor bone weight visualization
 	bool bWeightBoneHeatMap = false;
 	int32 WeightBoneHeatMapBoneIndex = -1;
+	float WeightBoneHeatMapOverlayAlpha = 0.8f;
 };

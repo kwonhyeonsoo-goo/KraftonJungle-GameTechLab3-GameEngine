@@ -51,7 +51,7 @@ public:
 		ID3D11Buffer* StaticIB       = nullptr;
 		uint32        InstanceCount  = 0;
 
-		// translucent 섹션 depth 정렬용 대표 월드 위치 (입자 평균 / Beam 중점). SceneProxy가 Section에 복사.
+		// Transparent 섹션 depth 정렬용 대표 월드 위치 (입자 평균 / Beam 중점). SceneProxy가 Section에 복사.
 		FVector       SortWorldPos = { 0, 0, 0 };
 	};
 	// bRequiresSort: caller(SceneProxy)가 Material.BlendState 등으로 결정.

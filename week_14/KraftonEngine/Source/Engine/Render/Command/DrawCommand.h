@@ -94,13 +94,13 @@ struct FDrawCommand
 	}
 
 	// Cmd의 Pass/Shader/Buffer.VB/Bindings.SRVs[Diffuse]로부터 SortKey 자동 생성.
-	// Pass == Translucent면 depth-first 정렬 키 (back-to-front), 그 외엔 상태 그룹핑 키.
-	// CameraDistSquared는 Translucent 경로에서만 사용 — 다른 패스에선 0 전달해도 무방.
+	// Pass == Transparent면 depth-first 정렬 키 (back-to-front), 그 외엔 상태 그룹핑 키.
+	// CameraDistSquared는 Transparent 경로에서만 사용 — 다른 패스에선 0 전달해도 무방.
 	void BuildSortKey(uint16 UserBits = 0, float CameraDistSquared = 0.0f)
 	{
-		if (Pass == ERenderPass::Translucent)
+		if (Pass == ERenderPass::Transparent)
 		{
-			SortKey = ComputeTranslucentSortKey(Pass, Shader, CameraDistSquared, UserBits);
+			SortKey = ComputeTransparentSortKey(Pass, Shader, CameraDistSquared, UserBits);
 		}
 		else
 		{
@@ -132,10 +132,10 @@ struct FDrawCommand
 		return Key;
 	}
 
-	// Translucent 전용: Pass(5) | DepthBucket(28) | ShaderHash(16) | UserBits(15)
+	// Transparent 전용: Pass(5) | DepthBucket(28) | ShaderHash(16) | UserBits(15)
 	// DepthBucket = MAX_28BIT - quantize(CameraDistSquared) — 멀수록 작은 키 → 먼저 그림 (back-to-front).
 	// 같은 깊이 버킷 내에선 Shader로 묶어 상태 전환 최소화.
-	static uint64 ComputeTranslucentSortKey(ERenderPass InPass, const FShader* InShader,
+	static uint64 ComputeTransparentSortKey(ERenderPass InPass, const FShader* InShader,
 		float CameraDistSquared, uint16 UserBits = 0)
 	{
 		auto PtrHash16 = [](const void* Ptr) -> uint16

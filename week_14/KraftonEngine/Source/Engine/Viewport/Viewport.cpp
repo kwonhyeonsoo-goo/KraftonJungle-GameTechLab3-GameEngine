@@ -73,16 +73,6 @@ void FViewport::BeginRender(ID3D11DeviceContext* Ctx, const float ClearColor[4])
 	D3D11_VIEWPORT VPRect = GetViewportRect();
 
 	Ctx->ClearRenderTargetView(RTV, Color);
-	if (NormalRTV)
-	{
-		const float NormalClear[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-		Ctx->ClearRenderTargetView(NormalRTV, NormalClear);
-	}
-	if (CullingHeatmapRTV)
-	{
-		const float HeatmapClear[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-		Ctx->ClearRenderTargetView(CullingHeatmapRTV, HeatmapClear);
-	}
 	if (CoCRTV)
 	{
 		const float CoCClear[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -213,52 +203,6 @@ bool FViewport::CreateResources()
 	if (FAILED(hr)) return false;
 	SceneColorCopySRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportSceneColorCopySRV")), "ViewportSceneColorCopySRV");
 
-	// ── GBuffer Normal RT (R16G16B16A16_FLOAT — 음수 지원) ──
-	D3D11_TEXTURE2D_DESC NormalDesc = {};
-	NormalDesc.Width = Width;
-	NormalDesc.Height = Height;
-	NormalDesc.MipLevels = 1;
-	NormalDesc.ArraySize = 1;
-	NormalDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-	NormalDesc.SampleDesc.Count = 1;
-	NormalDesc.Usage = D3D11_USAGE_DEFAULT;
-	NormalDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-
-	hr = Device->CreateTexture2D(&NormalDesc, nullptr, &NormalTexture);
-	if (FAILED(hr)) return false;
-	NormalTexture->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportNormalTexture")), "ViewportNormalTexture");
-
-	hr = Device->CreateRenderTargetView(NormalTexture, nullptr, &NormalRTV);
-	if (FAILED(hr)) return false;
-	NormalRTV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportNormalRTV")), "ViewportNormalRTV");
-
-	hr = Device->CreateShaderResourceView(NormalTexture, nullptr, &NormalSRV);
-	if (FAILED(hr)) return false;
-	NormalSRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportNormalSRV")), "ViewportNormalSRV");
-
-	// ── Culling Heatmap RT (R8G8B8A8_UNORM — 히트맵 색상) ──
-	D3D11_TEXTURE2D_DESC HeatmapDesc = {};
-	HeatmapDesc.Width = Width;
-	HeatmapDesc.Height = Height;
-	HeatmapDesc.MipLevels = 1;
-	HeatmapDesc.ArraySize = 1;
-	HeatmapDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	HeatmapDesc.SampleDesc.Count = 1;
-	HeatmapDesc.Usage = D3D11_USAGE_DEFAULT;
-	HeatmapDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-
-	hr = Device->CreateTexture2D(&HeatmapDesc, nullptr, &CullingHeatmapTexture);
-	if (FAILED(hr)) return false;
-	CullingHeatmapTexture->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportCullingHeatmapTexture")), "ViewportCullingHeatmapTexture");
-
-	hr = Device->CreateRenderTargetView(CullingHeatmapTexture, nullptr, &CullingHeatmapRTV);
-	if (FAILED(hr)) return false;
-	CullingHeatmapRTV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportCullingHeatmapRTV")), "ViewportCullingHeatmapRTV");
-
-	hr = Device->CreateShaderResourceView(CullingHeatmapTexture, nullptr, &CullingHeatmapSRV);
-	if (FAILED(hr)) return false;
-	CullingHeatmapSRV->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen("ViewportCullingHeatmapSRV")), "ViewportCullingHeatmapSRV");
-
 	// ── DoF CoC RT (R16_FLOAT) ──
 	D3D11_TEXTURE2D_DESC CoCDesc = {};
 	CoCDesc.Width = Width;
@@ -362,12 +306,6 @@ void FViewport::ReleaseResources()
 	if (CoCSRV) { CoCSRV->Release(); CoCSRV = nullptr; }
 	if (CoCRTV) { CoCRTV->Release(); CoCRTV = nullptr; }
 	if (CoCTexture) { CoCTexture->Release(); CoCTexture = nullptr; }
-	if (CullingHeatmapSRV) { CullingHeatmapSRV->Release(); CullingHeatmapSRV = nullptr; }
-	if (CullingHeatmapRTV) { CullingHeatmapRTV->Release(); CullingHeatmapRTV = nullptr; }
-	if (CullingHeatmapTexture) { CullingHeatmapTexture->Release(); CullingHeatmapTexture = nullptr; }
-	if (NormalSRV) { NormalSRV->Release(); NormalSRV = nullptr; }
-	if (NormalRTV) { NormalRTV->Release(); NormalRTV = nullptr; }
-	if (NormalTexture) { NormalTexture->Release(); NormalTexture = nullptr; }
 	if (StencilCopySRV) { StencilCopySRV->Release(); StencilCopySRV = nullptr; }
 	if (DepthCopySRV) { DepthCopySRV->Release(); DepthCopySRV = nullptr; }
 	if (DepthCopyTexture) { DepthCopyTexture->Release(); DepthCopyTexture = nullptr; }

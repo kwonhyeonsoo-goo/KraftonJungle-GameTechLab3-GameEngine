@@ -22,7 +22,7 @@ FPhysicsAssetPreviewSceneProxy::FPhysicsAssetPreviewSceneProxy(UPhysicsAssetPrev
 	bCastShadowAsTwoSided = false;
 
 	PreviewMaterial = UMaterial::CreateTransient(
-		ERenderPass::Translucent,
+		ERenderPass::Transparent,
 		EBlendState::AlphaBlend,
 		EDepthStencilState::DepthReadOnly,
 		ERasterizerState::SolidNoCull,
