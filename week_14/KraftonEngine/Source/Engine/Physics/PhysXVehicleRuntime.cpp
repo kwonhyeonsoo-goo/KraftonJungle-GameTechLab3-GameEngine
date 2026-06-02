@@ -7,6 +7,7 @@
 
 #include <PxPhysicsAPI.h>
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <vehicle/PxVehicleDrive4W.h>
 #include <vehicle/PxVehicleSDK.h>
@@ -752,10 +753,18 @@ void FPhysXVehicleRuntime::ResetVehicle(FVehicleHandle Vehicle, const FTransform
 
 void FPhysXVehicleRuntime::PreSimulate(float InFixedDt)
 {
+    LastRaycastMs = 0.0f;
+
     if (Vehicles.empty())
     {
         return;
     }
+
+    using FClock = std::chrono::high_resolution_clock;
+    const auto DurationMs = [](FClock::time_point A, FClock::time_point B)
+    {
+        return std::chrono::duration<float, std::milli>(B - A).count();
+    };
 
     physx::PxFixedSizeLookupTable<8> SteerTable = CreateSteerVsForwardSpeedTable();
 
@@ -837,7 +846,9 @@ void FPhysXVehicleRuntime::PreSimulate(float InFixedDt)
         physx::PxVehicleDrive4WSmoothAnalogRawInputsAndSetAnalogInputs(GVehiclePadSmoothingData, SteerTable, Instance->RawInput, InFixedDt, bVehicleInAir, *Instance->Vehicle);
 
         physx::PxVehicleWheels* VehicleWheels[1] = { Instance->Vehicle };
+        const auto RaycastStart = FClock::now();
         physx::PxVehicleSuspensionRaycasts(Instance->BatchQuery, 1, VehicleWheels, VehicleWheelCount, Instance->RaycastResults.data());
+        LastRaycastMs += DurationMs(RaycastStart, FClock::now());
 
         Instance->bPendingFirstRaycast = false;
 
