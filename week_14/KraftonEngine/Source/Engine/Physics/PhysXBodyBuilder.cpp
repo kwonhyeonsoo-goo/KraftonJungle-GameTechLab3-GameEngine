@@ -136,9 +136,15 @@ void FPhysXBodyBuilder::ApplyShapeProperties(PxShape* Shape, const FPhysicsShape
         return;
     }
 
-    const PxFilterData FilterData = ToPxFilterData(Desc.FilterData);
-    Shape->setSimulationFilterData(FilterData);
-    Shape->setQueryFilterData(FilterData);
+    const PxFilterData SimulationFilterData = ToPxFilterData(Desc.FilterData);
+    PxFilterData       QueryFilterData      = SimulationFilterData;
+    if (Desc.QueryIgnoreGroup != 0)
+    {
+        QueryFilterData.word3 = Desc.QueryIgnoreGroup;
+    }
+
+    Shape->setSimulationFilterData(SimulationFilterData);
+    Shape->setQueryFilterData(QueryFilterData);
 
     if (Desc.CollisionEnabled == ECollisionEnabled::NoCollision)
     {

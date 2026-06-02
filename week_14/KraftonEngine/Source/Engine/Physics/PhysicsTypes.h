@@ -134,6 +134,8 @@ struct FPhysicsShapeDesc
 
     FPhysicsFilterData FilterData;
 
+    uint32 QueryIgnoreGroup = 0;
+
     bool bIsTrigger = false;
 };
 

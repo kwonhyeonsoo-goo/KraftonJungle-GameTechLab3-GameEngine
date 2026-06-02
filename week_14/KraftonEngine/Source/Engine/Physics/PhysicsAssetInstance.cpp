@@ -122,6 +122,9 @@ namespace
                 : ECollisionEnabled::QueryAndPhysics;
             ShapeDesc.bIsTrigger = false;
             FillShapeFilterDataFromComponent(ShapeDesc.FilterData, OwnerComponent);
+            ShapeDesc.QueryIgnoreGroup = (OwnerComponent && OwnerComponent->GetOwner())
+                ? OwnerComponent->GetOwner()->GetUUID()
+                : 0;
 
             switch (ShapeSetup.Type)
             {

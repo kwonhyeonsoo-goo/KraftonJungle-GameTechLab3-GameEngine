@@ -35,6 +35,11 @@ namespace
 
     physx::PxQueryHitType::Enum VehicleRaycastPreFilter(physx::PxFilterData QueryFilterData, physx::PxFilterData ObjectFilterData, const void*, physx::PxU32, physx::PxHitFlags&)
     {
+        if (QueryFilterData.word3 != 0 && QueryFilterData.word3 == ObjectFilterData.word3)
+        {
+            return physx::PxQueryHitType::eNONE;
+        }
+
         const uint32 ShapeObjectBit = 1u << GetPhysicsFilterObjectType(ObjectFilterData.word0);
 
         if ((ShapeObjectBit & QueryFilterData.word0) == 0)
@@ -148,7 +153,7 @@ namespace
         QueryFilterData.word0 = DrivableMask;
         QueryFilterData.word1 = 0;
         QueryFilterData.word2 = 0;
-        QueryFilterData.word3 = 0;
+        QueryFilterData.word3 = Desc.Owner.ActorId;
 
         for (uint32 i = 0; i < VehicleWheelCount; ++i)
         {
