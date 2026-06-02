@@ -44,6 +44,15 @@ enum class ERagdollMode : uint8
     Partial,
 };
 
+UENUM()
+enum class EPartialRagdollPreset : uint8
+{
+    UpperBody,
+    LeftArm,
+    RightArm,
+    HeadNeck,
+};
+
 enum class EPartialRagdollPhase : uint8
 {
     None,
@@ -60,6 +69,19 @@ struct FPartialRagdollSelection
     bool IsValid() const
     {
         return RootBoneName != FName::None;
+    }
+};
+
+struct FPartialRagdollRequest
+{
+    EPartialRagdollPreset Preset = EPartialRagdollPreset::UpperBody;
+    float HoldTimeOverride = -1.0f;
+    bool bAllowRefreshIfSamePreset = true;
+    bool bAllowWhileMoving = true;
+
+    bool HasHoldTimeOverride() const
+    {
+        return HoldTimeOverride >= 0.0f;
     }
 };
 
@@ -102,9 +124,13 @@ public:
     // code and keep this component as the policy owner.
     UFUNCTION(Callable, Category="Physics")
     bool EnableRagdollPhysics();
+    // Gameplay should prefer TriggerPartialRagdoll() so preset resolution and request
+    // policy remain centralized, while these low-level entry points stay available for
+    // tests or specialized callers.
     bool EnablePartialRagdoll(const FPartialRagdollSelection& Selection);
     UFUNCTION(Callable, Category="Physics")
     bool EnablePartialRagdoll(const FName& RootBoneName);
+    bool TriggerPartialRagdoll(const FPartialRagdollRequest& Request);
     UFUNCTION(Callable, Category="Physics")
     void DisableRagdollPhysics();
     UFUNCTION(Callable, Category="Physics")
@@ -212,6 +238,7 @@ private:
     bool CaptureRagdollPoseBaseline();
     void ClearRagdollPoseBaseline();
     bool BuildPartialRagdollBoneMasks(const FPartialRagdollSelection& Selection);
+    bool BuildPartialRagdollSelectionFromPreset(EPartialRagdollPreset Preset, FPartialRagdollSelection& OutSelection) const;
     void ClearPartialRagdollState();
     bool IsSamePartialRagdollSelection(const FPartialRagdollSelection& Selection) const;
     void BeginPartialRagdollBlendOut();
@@ -280,6 +307,7 @@ protected:
     TArray<uint8> PartialPhysicsApplyBoneMask;
     EPartialRagdollPhase PartialRagdollPhase = EPartialRagdollPhase::None;
     bool bPendingPartialRagdollBlendOut = false;
+    float PendingPartialRagdollHoldTimeOverride = -1.0f;
     float PartialRagdollHoldRemaining = 0.0f;
     float PhysicsPoseBlendWeight = 0.0f;
     float TargetPhysicsPoseBlendWeight = 0.0f;

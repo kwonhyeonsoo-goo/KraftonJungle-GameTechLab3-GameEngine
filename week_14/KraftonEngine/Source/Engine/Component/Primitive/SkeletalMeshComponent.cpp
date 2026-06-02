@@ -11,6 +11,7 @@
 #include "Animation/Skeleton/SkeletonManager.h"
 #include "Asset/AssetRegistry.h"
 #include "Cloth/SkeletalClothRuntime.h"
+#include "Component/Primitive/PrimitiveComponent.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
 #include "Math/Quat.h"
@@ -231,6 +232,23 @@ namespace
             return "FaceUp";
         case ERagdollStandUpType::FaceDown:
             return "FaceDown";
+        default:
+            return "Unknown";
+        }
+    }
+
+    const char* LexToString(EPartialRagdollPreset Preset)
+    {
+        switch (Preset)
+        {
+        case EPartialRagdollPreset::UpperBody:
+            return "UpperBody";
+        case EPartialRagdollPreset::LeftArm:
+            return "LeftArm";
+        case EPartialRagdollPreset::RightArm:
+            return "RightArm";
+        case EPartialRagdollPreset::HeadNeck:
+            return "HeadNeck";
         default:
             return "Unknown";
         }
@@ -640,6 +658,46 @@ bool USkeletalMeshComponent::BuildPartialRagdollBoneMasks(const FPartialRagdollS
     return true;
 }
 
+bool USkeletalMeshComponent::BuildPartialRagdollSelectionFromPreset(EPartialRagdollPreset Preset, FPartialRagdollSelection& OutSelection) const
+{
+    OutSelection = FPartialRagdollSelection();
+
+    USkeletalMesh* Mesh = GetSkeletalMesh();
+    FSkeletalMesh* MeshAsset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+    if (!MeshAsset || MeshAsset->Bones.empty())
+    {
+        return false;
+    }
+
+    int32 RootBoneIndex = -1;
+    switch (Preset)
+    {
+    case EPartialRagdollPreset::UpperBody:
+        RootBoneIndex = FindBoneIndexByPriority(MeshAsset, { "spine_01", "spine1", "spine" });
+        break;
+    case EPartialRagdollPreset::LeftArm:
+        RootBoneIndex = FindBoneIndexByPriority(MeshAsset, { "clavicle_l", "upperarm_l", "shoulder_l", "arm_l" });
+        break;
+    case EPartialRagdollPreset::RightArm:
+        RootBoneIndex = FindBoneIndexByPriority(MeshAsset, { "clavicle_r", "upperarm_r", "shoulder_r", "arm_r" });
+        break;
+    case EPartialRagdollPreset::HeadNeck:
+        RootBoneIndex = FindBoneIndexByPriority(MeshAsset, { "neck_01", "neck1", "neck", "head" });
+        break;
+    default:
+        break;
+    }
+
+    if (RootBoneIndex < 0 || RootBoneIndex >= static_cast<int32>(MeshAsset->Bones.size()))
+    {
+        return false;
+    }
+
+    OutSelection.RootBoneName = FName(MeshAsset->Bones[RootBoneIndex].Name);
+    OutSelection.bIncludeDescendants = true;
+    return OutSelection.IsValid();
+}
+
 void USkeletalMeshComponent::ClearPartialRagdollState()
 {
     ActivePartialRagdollSelection = FPartialRagdollSelection();
@@ -649,6 +707,7 @@ void USkeletalMeshComponent::ClearPartialRagdollState()
     PartialPhysicsApplyBoneMask.clear();
     PartialRagdollPhase = EPartialRagdollPhase::None;
     bPendingPartialRagdollBlendOut = false;
+    PendingPartialRagdollHoldTimeOverride = -1.0f;
     PartialRagdollHoldRemaining = 0.0f;
     if (ActiveRagdollMode == ERagdollMode::Partial)
     {
@@ -733,6 +792,12 @@ bool USkeletalMeshComponent::EnablePartialRagdoll(const FPartialRagdollSelection
         return false;
     }
 
+    const float RequestedHoldDuration =
+        PendingPartialRagdollHoldTimeOverride >= 0.0f
+            ? PendingPartialRagdollHoldTimeOverride
+            : PartialRagdollHoldTime;
+    PendingPartialRagdollHoldTimeOverride = -1.0f;
+
     if (ActiveRagdollMode == ERagdollMode::Partial)
     {
         if (!PhysicsAssetInstance || !PhysicsAssetInstance->HasLivePhysicsObjects())
@@ -746,7 +811,7 @@ bool USkeletalMeshComponent::EnablePartialRagdoll(const FPartialRagdollSelection
         }
 
         bPendingPartialRagdollBlendOut = false;
-        PartialRagdollHoldRemaining = PartialRagdollHoldTime;
+        PartialRagdollHoldRemaining = RequestedHoldDuration;
         TargetPhysicsPoseBlendWeight = 1.0f;
         PartialRagdollPhase =
             (PhysicsPoseBlendWeight >= 0.999f)
@@ -798,7 +863,7 @@ bool USkeletalMeshComponent::EnablePartialRagdoll(const FPartialRagdollSelection
     FirstValidPhysicsPoseBlendAlpha = 0.0f;
     PartialRagdollPhase = EPartialRagdollPhase::BlendingIn;
     bPendingPartialRagdollBlendOut = false;
-    PartialRagdollHoldRemaining = PartialRagdollHoldTime;
+    PartialRagdollHoldRemaining = RequestedHoldDuration;
     TargetPhysicsPoseBlendWeight = 1.0f;
     SetUsePhysicsAssetPose(true);
     UE_LOG("Partial ragdoll started. Component=%s RootBone=%s Bodies=%d Constraints=%d",
@@ -815,6 +880,90 @@ bool USkeletalMeshComponent::EnablePartialRagdoll(const FName& RootBoneName)
     Selection.RootBoneName = RootBoneName;
     Selection.bIncludeDescendants = true;
     return EnablePartialRagdoll(Selection);
+}
+
+bool USkeletalMeshComponent::TriggerPartialRagdoll(const FPartialRagdollRequest& Request)
+{
+    FPartialRagdollSelection Selection;
+    if (!BuildPartialRagdollSelectionFromPreset(Request.Preset, Selection))
+    {
+        UE_LOG("Partial ragdoll request rejected. Component=%s Preset=%s Reason=NoMatchingBone",
+            GetName().c_str(),
+            LexToString(Request.Preset));
+        return false;
+    }
+
+    if (ActiveRagdollMode == ERagdollMode::FullBody)
+    {
+        UE_LOG("Partial ragdoll request rejected. Component=%s Preset=%s RootBone=%s Reason=FullBodyRagdollActive",
+            GetName().c_str(),
+            LexToString(Request.Preset),
+            Selection.RootBoneName.ToString().c_str());
+        return false;
+    }
+
+    if (RecoveryPhase != ERagdollRecoveryPhase::None)
+    {
+        UE_LOG("Partial ragdoll request rejected. Component=%s Preset=%s RootBone=%s Reason=RecoveryActive",
+            GetName().c_str(),
+            LexToString(Request.Preset),
+            Selection.RootBoneName.ToString().c_str());
+        return false;
+    }
+
+    if (!Request.bAllowWhileMoving)
+    {
+        if (AActor* OwnerActor = GetOwner())
+        {
+            if (UPrimitiveComponent* RootPrimitive = Cast<UPrimitiveComponent>(OwnerActor->GetRootComponent()))
+            {
+                if (RootPrimitive->GetLinearVelocity().LengthSquared() > 1.0f)
+                {
+                    UE_LOG("Partial ragdoll request rejected. Component=%s Preset=%s RootBone=%s Reason=OwnerIsMoving",
+                        GetName().c_str(),
+                        LexToString(Request.Preset),
+                        Selection.RootBoneName.ToString().c_str());
+                    return false;
+                }
+            }
+        }
+    }
+
+    if (ActiveRagdollMode == ERagdollMode::Partial)
+    {
+        if (!IsSamePartialRagdollSelection(Selection))
+        {
+            UE_LOG("Partial ragdoll request rejected. Component=%s Preset=%s RootBone=%s Reason=DifferentPartialAlreadyActive ActiveRootBone=%s",
+                GetName().c_str(),
+                LexToString(Request.Preset),
+                Selection.RootBoneName.ToString().c_str(),
+                ActivePartialRagdollSelection.RootBoneName.ToString().c_str());
+            return false;
+        }
+
+        if (!Request.bAllowRefreshIfSamePreset)
+        {
+            UE_LOG("Partial ragdoll request rejected. Component=%s Preset=%s RootBone=%s Reason=RefreshDisabled",
+                GetName().c_str(),
+                LexToString(Request.Preset),
+                Selection.RootBoneName.ToString().c_str());
+            return false;
+        }
+    }
+
+    PendingPartialRagdollHoldTimeOverride =
+        Request.HasHoldTimeOverride()
+            ? Request.HoldTimeOverride
+            : PartialRagdollHoldTime;
+
+    const bool bTriggered = EnablePartialRagdoll(Selection);
+    UE_LOG("Partial ragdoll request %s. Component=%s Preset=%s RootBone=%s Hold=%.3f",
+        bTriggered ? "accepted" : "failed",
+        GetName().c_str(),
+        LexToString(Request.Preset),
+        Selection.RootBoneName.ToString().c_str(),
+        Request.HasHoldTimeOverride() ? Request.HoldTimeOverride : PartialRagdollHoldTime);
+    return bTriggered;
 }
 
 void USkeletalMeshComponent::DisableRagdollPhysics()
