@@ -19,6 +19,7 @@
 #include <cstring>
 #include <limits>
 #include "Object/Ptr/WeakObjectPtr.h"
+#include "Object/GarbageCollection.h"
 
 namespace
 {
@@ -39,7 +40,7 @@ namespace
         FString Name;
         FString LowerName;
         FVector LocalPosition = FVector::ZeroVector;
-        FName VisualComponentName = FName::None;
+        USceneComponent* VisualComponent = nullptr;
         int32 ParentBoneIndex = -1;
         bool bHasChildBone = false;
     };
@@ -50,24 +51,104 @@ namespace
         return World ? World->GetPhysicsScene() : nullptr;
     }
 
+    FQuat GetWorldRotationQuat(const USceneComponent* Component)
+    {
+        return Component ? Component->GetWorldRotation().ToQuaternion().GetNormalized() : FQuat::Identity;
+    }
+
+    FVector TransformPositionNoScale(const USceneComponent* Frame, const FVector& LocalPosition)
+    {
+        if (!Frame)
+        {
+            return LocalPosition;
+        }
+
+        return Frame->GetWorldLocation() + GetWorldRotationQuat(Frame).RotateVector(LocalPosition);
+    }
+
+    FVector InverseTransformPositionNoScale(const USceneComponent* Frame, const FVector& WorldPosition)
+    {
+        if (!Frame)
+        {
+            return WorldPosition;
+        }
+
+        return GetWorldRotationQuat(Frame).Inverse().RotateVector(WorldPosition - Frame->GetWorldLocation());
+    }
+
+    bool IsEmptySkeletalMeshComponent(const USceneComponent* Component)
+    {
+        const USkinnedMeshComponent* SkinnedMesh = Cast<USkinnedMeshComponent>(Component);
+        return SkinnedMesh && !SkinnedMesh->GetSkeletalMesh();
+    }
+
     bool NameEquals(const char* Value, const char* Expected)
     {
         return Value && Expected && std::strcmp(Value, Expected) == 0;
     }
 
-    bool IsVehicleDescPropertyChange(const FPropertyChangedEvent& Event)
+    bool IsWheelSetupsPropertyChange(const FPropertyChangedEvent& Event)
     {
         const FString Path = Event.PropertyPath;
         const char* PropertyName = Event.PropertyName ? Event.PropertyName : "";
-
-        if (Path.find("WheelSetups") != FString::npos ||
+        return Path.find("WheelSetups") != FString::npos ||
             NameEquals(PropertyName, "WheelSetups") ||
-            NameEquals(PropertyName, "Wheel Setups"))
+            NameEquals(PropertyName, "Wheel Setups");
+    }
+
+    bool PathContainsProperty(const FString& Path, const char* PropertyName)
+    {
+        return PropertyName && PropertyName[0] != '\0' &&
+            (Path.find(FString(".") + PropertyName) != FString::npos ||
+                Path.find(FString("]") + PropertyName) != FString::npos);
+    }
+
+    bool IsWheelSetupAutoPositionPropertyChange(const FPropertyChangedEvent& Event)
+    {
+        if (!IsWheelSetupsPropertyChange(Event))
+        {
+            return false;
+        }
+
+        const FString Path = Event.PropertyPath;
+        const char* PropertyName = Event.PropertyName ? Event.PropertyName : "";
+
+        if (Event.ChangeType == EPropertyChangeType::ArrayAdd ||
+            Event.ChangeType == EPropertyChangeType::ArrayRemove ||
+            Event.ChangeType == EPropertyChangeType::Duplicate ||
+            Event.ChangeType == EPropertyChangeType::Load)
+        {
+            return true;
+        }
+
+        if (NameEquals(PropertyName, "WheelSetups") || NameEquals(PropertyName, "Wheel Setups"))
+        {
+            return Path.find('.') == FString::npos;
+        }
+
+        return
+            NameEquals(PropertyName, "PositionSource") ||
+            NameEquals(PropertyName, "BoneName") ||
+            NameEquals(PropertyName, "VisualComponent") ||
+            NameEquals(PropertyName, "bUseBoneInfluenceSurfaceCenter") ||
+            PathContainsProperty(Path, "PositionSource") ||
+            PathContainsProperty(Path, "BoneName") ||
+            PathContainsProperty(Path, "VisualComponent") ||
+            PathContainsProperty(Path, "bUseBoneInfluenceSurfaceCenter");
+    }
+
+    bool IsVehicleDescPropertyChange(const FPropertyChangedEvent& Event)
+    {
+        const char* PropertyName = Event.PropertyName ? Event.PropertyName : "";
+
+        if (IsWheelSetupsPropertyChange(Event))
         {
             return true;
         }
 
         return
+            NameEquals(PropertyName, "ChassisComponent") ||
+            NameEquals(PropertyName, "Chassis Component") ||
             NameEquals(PropertyName, "ChassisHalfExtents") ||
             NameEquals(PropertyName, "ChassisMass") ||
             NameEquals(PropertyName, "bAutoFitChassisCollisionOffset") ||
@@ -357,7 +438,6 @@ namespace
         FVehicleWheelSetup Setup;
         Setup.WheelName = FName(SlotWheelName(Slot));
         Setup.BoneName = FName(SlotDefaultBoneName(Slot));
-        Setup.VisualComponentName = Setup.WheelName;
         Setup.PositionSource = EWheelPositionSource::FromBone;
         Setup.ManualLocalPosition = SlotDefaultManualPosition(Slot);
         Setup.AdditionalOffset = FVector::ZeroVector;
@@ -670,7 +750,7 @@ namespace
         FVehicleWheelSetup Setup;
         Setup.WheelName = FName(MakeDetectedWheelName(PairIndex, PairCount, bLeft));
         Setup.BoneName = Candidate.BoneName;
-        Setup.VisualComponentName = Candidate.VisualComponentName.IsValid() ? Candidate.VisualComponentName : Setup.WheelName;
+        Setup.VisualComponent = Candidate.VisualComponent;
         Setup.PositionSource = Candidate.BoneName.IsValid()
             ? EWheelPositionSource::FromBone
             : EWheelPositionSource::FromVisualComponent;
@@ -747,7 +827,7 @@ void UWheeledVehicleMovementComponent::BeginPlay()
     }
 
     IPhysicsScene* PhysicsScene = GetPhysicsScene(this);
-    if (!PhysicsScene || !GetUpdatedComponent())
+    if (!PhysicsScene || !ResolveVehicleSimulationComponent())
     {
         return;
     }
@@ -796,16 +876,24 @@ void UWheeledVehicleMovementComponent::PostEditChangeProperty(const FPropertyCha
 {
     UMovementComponent::PostEditChangeProperty(Event);
 
-    const FString Path = Event.PropertyPath;
-    const char* PropertyName = Event.PropertyName ? Event.PropertyName : "";
-    const bool bWheelChanged = Path.find("WheelSetups") != FString::npos ||
-        std::strcmp(PropertyName, "WheelSetups") == 0 ||
-        std::strcmp(PropertyName, "Wheel Setups") == 0;
+    const char* ChangedPropertyName = Event.PropertyName ? Event.PropertyName : "";
+    const bool bWheelChanged = IsWheelSetupsPropertyChange(Event);
+    const bool bAutoWheelPositionChanged = IsWheelSetupAutoPositionPropertyChange(Event);
+    const bool bChassisComponentChanged = NameEquals(ChangedPropertyName, "ChassisComponent") ||
+        NameEquals(ChangedPropertyName, "Chassis Component");
     const bool bVehicleDescChanged = IsVehicleDescPropertyChange(Event);
 
     if (bWheelChanged)
     {
         ClampWheelSetups();
+        if (bAutoWheelPositionChanged)
+        {
+            RefreshWheelLocalPositionsFromBones();
+        }
+    }
+
+    if (bChassisComponentChanged)
+    {
         RefreshWheelLocalPositionsFromBones();
     }
 
@@ -823,7 +911,7 @@ void UWheeledVehicleMovementComponent::RecreateVehicleSimulation()
     }
 
     IPhysicsScene* PhysicsScene = GetPhysicsScene(this);
-    if (!PhysicsScene || !GetUpdatedComponent())
+    if (!PhysicsScene || !ResolveVehicleSimulationComponent())
     {
         return;
     }
@@ -870,7 +958,7 @@ void UWheeledVehicleMovementComponent::DrawSelectedWheelDebug() const
 void UWheeledVehicleMovementComponent::DrawWheelDebug(int32 WheelIndex) const
 {
     UWorld* World = GetWorld();
-    const USceneComponent* Chassis = GetUpdatedComponent();
+    const USceneComponent* Chassis = ResolveVehicleSimulationComponent();
     if (!World || !Chassis || WheelIndex < 0 || WheelIndex >= static_cast<int32>(WheelSetups.size()))
     {
         return;
@@ -903,7 +991,7 @@ void UWheeledVehicleMovementComponent::DrawWheelDebug(int32 WheelIndex) const
     else
     {
         const FVector LocalPosition = ResolveWheelLocalPosition(Setup);
-        CenterWorld = Chassis->GetWorldMatrix().TransformPositionWithW(LocalPosition);
+        CenterWorld = TransformPositionNoScale(Chassis, LocalPosition);
         RestCenterWorld = CenterWorld;
     }
 
@@ -913,7 +1001,7 @@ void UWheeledVehicleMovementComponent::DrawWheelDebug(int32 WheelIndex) const
     FVector VisualComponentLocalCenter;
     if (TryResolveVisualComponentLocalPosition(Setup, VisualComponentLocalCenter))
     {
-        const FVector VisualComponentWorldCenter = Chassis->GetWorldMatrix().TransformPositionWithW(VisualComponentLocalCenter);
+        const FVector VisualComponentWorldCenter = TransformPositionNoScale(Chassis, VisualComponentLocalCenter);
         DrawDebugPoint(World, VisualComponentWorldCenter, 0.08f, FColor(255, 0, 255));
         DrawDebugLine(World, VisualComponentWorldCenter, CenterWorld, FColor(255, 0, 255));
     }
@@ -923,7 +1011,7 @@ void UWheeledVehicleMovementComponent::DrawWheelDebug(int32 WheelIndex) const
         FVector BonePivotLocalCenter;
         if (TryResolveBoneLocalPosition(Setup.BoneName, false, BonePivotLocalCenter))
         {
-            const FVector BonePivotWorldCenter = Chassis->GetWorldMatrix().TransformPositionWithW(BonePivotLocalCenter);
+            const FVector BonePivotWorldCenter = TransformPositionNoScale(Chassis, BonePivotLocalCenter);
             DrawDebugPoint(World, BonePivotWorldCenter, 0.07f, FColor(255, 150, 0));
             DrawDebugLine(World, BonePivotWorldCenter, CenterWorld, FColor(255, 150, 0));
         }
@@ -957,6 +1045,17 @@ void UWheeledVehicleMovementComponent::PostDuplicate()
     RefreshWheelLocalPositionsFromBones();
 }
 
+void UWheeledVehicleMovementComponent::AddReferencedObjects(FReferenceCollector& Collector)
+{
+    UMovementComponent::AddReferencedObjects(Collector);
+
+    Collector.AddReferencedObject(ChassisComponent, "UWheeledVehicleMovementComponent.ChassisComponent");
+    for (FVehicleWheelSetup& Setup : WheelSetups)
+    {
+        Collector.AddReferencedObject(Setup.VisualComponent, "UWheeledVehicleMovementComponent.WheelVisualComponent");
+    }
+}
+
 void UWheeledVehicleMovementComponent::SetThrottleInput(float InThrottle)
 {
     CurrentInput.Throttle = std::clamp(InThrottle, 0.0f, 1.0f);
@@ -984,9 +1083,9 @@ float UWheeledVehicleMovementComponent::GetForwardSpeed() const
         return LastSnapshot.LinearVelocity.Dot(LastSnapshot.ChassisWorldTransform.Rotation.GetForwardVector());
     }
 
-    if (const USceneComponent* Chassis = GetUpdatedComponent())
+    if (const USceneComponent* SimulationComponent = ResolveVehicleSimulationComponent())
     {
-        return Chassis->GetForwardVector().Dot(FVector::ZeroVector);
+        return SimulationComponent->GetForwardVector().Dot(FVector::ZeroVector);
     }
 
     return 0.0f;
@@ -1000,7 +1099,7 @@ void UWheeledVehicleMovementComponent::ResetVehicle()
     }
 
     IPhysicsScene*   PhysicsScene = GetPhysicsScene(this);
-    USceneComponent* Chassis      = GetUpdatedComponent();
+    USceneComponent* Chassis      = ResolveVehicleSimulationComponent();
     if (!PhysicsScene || !Chassis)
     {
         return;
@@ -1021,9 +1120,143 @@ const FVehicleWheelSetup* UWheeledVehicleMovementComponent::FindWheelSetup(const
     return nullptr;
 }
 
+USceneComponent* UWheeledVehicleMovementComponent::ResolveOwnedSceneComponent(USceneComponent* Component) const
+{
+    if (!IsValid(Component))
+    {
+        return nullptr;
+    }
+
+    AActor* Owner = GetOwner();
+    if (!Owner || Component->GetOwner() != Owner)
+    {
+        return nullptr;
+    }
+
+    for (UActorComponent* OwnedComponent : Owner->GetComponents())
+    {
+        if (OwnedComponent == Component)
+        {
+            return Component;
+        }
+    }
+
+    return nullptr;
+}
+
+USceneComponent* UWheeledVehicleMovementComponent::FindAutoStaticChassisComponent() const
+{
+    AActor* Owner = GetOwner();
+    if (!Owner)
+    {
+        return nullptr;
+    }
+
+    UStaticMeshComponent* BestComponent = nullptr;
+    float BestVolume = -1.0f;
+    for (UActorComponent* Component : Owner->GetComponents())
+    {
+        UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component);
+        if (!StaticMeshComponent || !StaticMeshComponent->GetStaticMesh())
+        {
+            continue;
+        }
+
+        const FString LowerName = ToLowerName(StaticMeshComponent->GetName());
+        if (IsPrimaryWheelBoneName(LowerName) || IsLikelyWheelBoneName(LowerName))
+        {
+            continue;
+        }
+
+        float Volume = 0.0f;
+        const FBoundingBox Bounds = StaticMeshComponent->GetWorldBoundingBox();
+        if (Bounds.IsValid())
+        {
+            const FVector Extents = Bounds.GetExtent();
+            Volume = std::max(Extents.X, 0.0f) * std::max(Extents.Y, 0.0f) * std::max(Extents.Z, 0.0f);
+        }
+
+        if (Volume > BestVolume)
+        {
+            BestVolume = Volume;
+            BestComponent = StaticMeshComponent;
+        }
+    }
+
+    return BestComponent;
+}
+
+USceneComponent* UWheeledVehicleMovementComponent::ResolveExplicitChassisComponent() const
+{
+    return ResolveOwnedSceneComponent(ChassisComponent.GetRaw());
+}
+
+USceneComponent* UWheeledVehicleMovementComponent::ResolveVehicleChassisComponent() const
+{
+    if (USceneComponent* ExplicitChassis = ResolveExplicitChassisComponent())
+    {
+        return ExplicitChassis;
+    }
+
+    if (USceneComponent* AutoStaticChassis = FindAutoStaticChassisComponent())
+    {
+        return AutoStaticChassis;
+    }
+
+    USceneComponent* UpdatedComponent = UMovementComponent::GetUpdatedComponent();
+    if (UpdatedComponent)
+    {
+        if (USkinnedMeshComponent* UpdatedSkinnedMesh = Cast<USkinnedMeshComponent>(UpdatedComponent))
+        {
+            return UpdatedSkinnedMesh->GetSkeletalMesh() ? UpdatedComponent : nullptr;
+        }
+
+        const FString UpdatedNameLower = ToLowerName(UpdatedComponent->GetName());
+        if (Cast<UStaticMeshComponent>(UpdatedComponent) &&
+            !IsPrimaryWheelBoneName(UpdatedNameLower) &&
+            !IsLikelyWheelBoneName(UpdatedNameLower))
+        {
+            return UpdatedComponent;
+        }
+    }
+
+    return UpdatedComponent;
+}
+
+USceneComponent* UWheeledVehicleMovementComponent::ResolveVehicleSimulationComponent() const
+{
+    AActor* Owner = GetOwner();
+    USceneComponent* Root = Owner ? Owner->GetRootComponent() : nullptr;
+
+    if (Root)
+    {
+        return Root;
+    }
+
+    if (USceneComponent* Updated = UMovementComponent::GetUpdatedComponent())
+    {
+        if (ResolveOwnedSceneComponent(Updated))
+        {
+            return Updated;
+        }
+    }
+
+    if (USceneComponent* ExplicitChassis = ResolveExplicitChassisComponent())
+    {
+        return ExplicitChassis;
+    }
+
+    return FindAutoStaticChassisComponent();
+}
+
 void UWheeledVehicleMovementComponent::EnsureDefaultWheelSetups()
 {
     if (!WheelSetups.empty())
+    {
+        return;
+    }
+
+    if (AutoGenerateWheelSetupsFromSkeleton())
     {
         return;
     }
@@ -1036,7 +1269,7 @@ void UWheeledVehicleMovementComponent::EnsureDefaultWheelSetups()
 
 USkinnedMeshComponent* UWheeledVehicleMovementComponent::FindWheelSetupSkinnedMeshComponent() const
 {
-    if (USkinnedMeshComponent* UpdatedMesh = Cast<USkinnedMeshComponent>(GetUpdatedComponent()))
+    if (USkinnedMeshComponent* UpdatedMesh = Cast<USkinnedMeshComponent>(ResolveVehicleChassisComponent()))
     {
         if (UpdatedMesh->GetSkeletalMesh())
         {
@@ -1073,6 +1306,11 @@ USkinnedMeshComponent* UWheeledVehicleMovementComponent::FindWheelSetupSkinnedMe
     return FirstSkinnedMesh;
 }
 
+USceneComponent* UWheeledVehicleMovementComponent::ResolveWheelVisualComponent(const FVehicleWheelSetup& Setup) const
+{
+    return FindWheelVisualSceneComponent(Setup);
+}
+
 USceneComponent* UWheeledVehicleMovementComponent::FindWheelVisualSceneComponent(const FVehicleWheelSetup& Setup) const
 {
     AActor* Owner = GetOwner();
@@ -1081,74 +1319,7 @@ USceneComponent* UWheeledVehicleMovementComponent::FindWheelVisualSceneComponent
         return nullptr;
     }
 
-    auto FindExactComponentByName = [Owner](const FName& WantedName) -> USceneComponent*
-    {
-        if (!WantedName.IsValid() || WantedName == FName::None)
-        {
-            return nullptr;
-        }
-
-        const FString Wanted = WantedName.ToString();
-        for (UActorComponent* Component : Owner->GetComponents())
-        {
-            USceneComponent* SceneComponent = Cast<USceneComponent>(Component);
-            if (!IsValid(SceneComponent))
-            {
-                continue;
-            }
-
-            if (SceneComponent->GetName() == Wanted)
-            {
-                return SceneComponent;
-            }
-        }
-        return nullptr;
-    };
-
-    if (USceneComponent* ExactVisual = FindExactComponentByName(Setup.VisualComponentName))
-    {
-        return ExactVisual;
-    }
-
-    // Static-mesh fallback: when there is no skeletal mesh, designers often keep each wheel as
-    // an individual StaticMeshComponent. Let WheelName/BoneName find such a component without
-    // requiring a duplicated VisualComponentName assignment.
-    const FString WheelNameLower = ToLowerName(Setup.WheelName.ToString());
-    const FString BoneNameLower = ToLowerName(Setup.BoneName.ToString());
-
-    USceneComponent* BestCandidate = nullptr;
-    int32 BestScore = -1;
-    for (UActorComponent* Component : Owner->GetComponents())
-    {
-        UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component);
-        if (!StaticMeshComponent || !StaticMeshComponent->GetStaticMesh())
-        {
-            continue;
-        }
-
-        const FString ComponentLower = ToLowerName(StaticMeshComponent->GetName());
-        if (IsLikelyWheelHelperBoneName(ComponentLower))
-        {
-            continue;
-        }
-
-        int32 Score = 0;
-        if (!WheelNameLower.empty() && ComponentLower.find(WheelNameLower) != FString::npos) Score += 8;
-        if (!BoneNameLower.empty() && ComponentLower.find(BoneNameLower) != FString::npos) Score += 6;
-        if (IsPrimaryWheelBoneName(ComponentLower)) Score += 3;
-        if (NameSuggestsFront(WheelNameLower) && NameSuggestsFront(ComponentLower)) Score += 2;
-        if (NameSuggestsRear(WheelNameLower) && NameSuggestsRear(ComponentLower)) Score += 2;
-        if (NameSuggestsLeft(WheelNameLower) && NameSuggestsLeft(ComponentLower)) Score += 2;
-        if (NameSuggestsRight(WheelNameLower) && NameSuggestsRight(ComponentLower)) Score += 2;
-
-        if (Score > BestScore)
-        {
-            BestScore = Score;
-            BestCandidate = StaticMeshComponent;
-        }
-    }
-
-    return BestScore > 0 ? BestCandidate : nullptr;
+    return ResolveOwnedSceneComponent(Setup.VisualComponent.GetRaw());
 }
 
 bool UWheeledVehicleMovementComponent::TryResolveVisualComponentLocalPosition(const FVehicleWheelSetup& Setup, FVector& OutLocalPosition) const
@@ -1169,9 +1340,9 @@ bool UWheeledVehicleMovementComponent::TryResolveVisualComponentLocalPosition(co
         }
     }
 
-    if (const USceneComponent* Chassis = GetUpdatedComponent())
+    if (const USceneComponent* SimulationComponent = ResolveVehicleSimulationComponent())
     {
-        OutLocalPosition = Chassis->GetWorldMatrix().GetInverse().TransformPositionWithW(SourceWorldPosition);
+        OutLocalPosition = InverseTransformPositionNoScale(SimulationComponent, SourceWorldPosition);
         return true;
     }
 
@@ -1208,9 +1379,9 @@ bool UWheeledVehicleMovementComponent::TryResolveBoneLocalPosition(const FName& 
         }
     }
 
-    if (const USceneComponent* Chassis = GetUpdatedComponent())
+    if (const USceneComponent* SimulationComponent = ResolveVehicleSimulationComponent())
     {
-        OutLocalPosition = Chassis->GetWorldMatrix().GetInverse().TransformPositionWithW(SourceWorldPosition);
+        OutLocalPosition = InverseTransformPositionNoScale(SimulationComponent, SourceWorldPosition);
         return true;
     }
 
@@ -1340,7 +1511,7 @@ bool UWheeledVehicleMovementComponent::AutoGenerateWheelSetupsFromSkeleton()
 
     if (Candidates.empty())
     {
-        return false;
+        return AutoGenerateWheelSetupsFromStaticMeshComponents();
     }
 
     for (FWheelBoneCandidate& Candidate : Candidates)
@@ -1359,10 +1530,15 @@ bool UWheeledVehicleMovementComponent::AutoGenerateWheelSetupsFromSkeleton()
     }
 
     const TArray<int32> CandidatePool = BuildStrictWheelCandidateIndexPool(Candidates);
+    if (CandidatePool.size() < 2)
+    {
+        return AutoGenerateWheelSetupsFromStaticMeshComponents();
+    }
+
     const TArray<FWheelAxlePairCandidate> AxlePairs = FindSymmetricWheelAxlePairs(Candidates, CandidatePool);
     if (AxlePairs.empty())
     {
-        return false;
+        return AutoGenerateWheelSetupsFromStaticMeshComponents();
     }
 
     TArray<FVehicleWheelSetup> GeneratedSetups;
@@ -1385,7 +1561,12 @@ bool UWheeledVehicleMovementComponent::AutoGenerateWheelSetupsFromSkeleton()
 
     if (GeneratedSetups.empty())
     {
-        return false;
+        return AutoGenerateWheelSetupsFromStaticMeshComponents();
+    }
+
+    if (!ResolveOwnedSceneComponent(ChassisComponent.GetRaw()) && Mesh)
+    {
+        ChassisComponent = Mesh;
     }
 
     WheelSetups = std::move(GeneratedSetups);
@@ -1397,13 +1578,25 @@ bool UWheeledVehicleMovementComponent::AutoGenerateWheelSetupsFromSkeleton()
 bool UWheeledVehicleMovementComponent::AutoGenerateWheelSetupsFromStaticMeshComponents()
 {
     AActor* Owner = GetOwner();
-    const USceneComponent* Chassis = GetUpdatedComponent();
-    if (!Owner || !Chassis)
+    if (!Owner)
     {
         return false;
     }
 
+    const USceneComponent* SimulationComponent = ResolveVehicleSimulationComponent();
+    if (!SimulationComponent)
+    {
+        return false;
+    }
+
+    const USceneComponent* Chassis = ResolveExplicitChassisComponent();
+    if (!Chassis)
+    {
+        Chassis = FindAutoStaticChassisComponent();
+    }
+
     TArray<FWheelBoneCandidate> Candidates;
+    TArray<int32> NamedCandidateIndices;
     for (UActorComponent* Component : Owner->GetComponents())
     {
         UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component);
@@ -1412,9 +1605,7 @@ bool UWheeledVehicleMovementComponent::AutoGenerateWheelSetupsFromStaticMeshComp
             continue;
         }
 
-        const FString ComponentName = StaticMeshComponent->GetName();
-        const FString LowerName = ToLowerName(ComponentName);
-        if (!IsPrimaryWheelBoneName(LowerName))
+        if (StaticMeshComponent == Chassis)
         {
             continue;
         }
@@ -1428,19 +1619,27 @@ bool UWheeledVehicleMovementComponent::AutoGenerateWheelSetupsFromStaticMeshComp
 
         FWheelBoneCandidate Candidate;
         Candidate.BoneName = FName::None;
-        Candidate.VisualComponentName = FName(ComponentName);
-        Candidate.Name = ComponentName;
-        Candidate.LowerName = LowerName;
-        Candidate.LocalPosition = Chassis->GetWorldMatrix().GetInverse().TransformPositionWithW(WorldCenter);
+        Candidate.VisualComponent = StaticMeshComponent;
+        Candidate.Name = StaticMeshComponent->GetName();
+        Candidate.LowerName = ToLowerName(Candidate.Name);
+        Candidate.LocalPosition = InverseTransformPositionNoScale(SimulationComponent, WorldCenter);
+
+        const int32 CandidateIndex = static_cast<int32>(Candidates.size());
+        if (IsPrimaryWheelBoneName(Candidate.LowerName))
+        {
+            NamedCandidateIndices.push_back(CandidateIndex);
+        }
         Candidates.push_back(Candidate);
     }
 
-    if (Candidates.empty())
+    if (Candidates.size() < 2)
     {
         return false;
     }
 
-    TArray<int32> CandidateIndices = BuildStrictWheelCandidateIndexPool(Candidates);
+    TArray<int32> CandidateIndices = NamedCandidateIndices.size() >= 2
+        ? NamedCandidateIndices
+        : BuildStrictWheelCandidateIndexPool(Candidates);
     if (CandidateIndices.size() < 2)
     {
         return false;
@@ -1458,6 +1657,13 @@ bool UWheeledVehicleMovementComponent::AutoGenerateWheelSetupsFromStaticMeshComp
     for (int32 PairIndex = 0; PairIndex < PairCount; ++PairIndex)
     {
         const FWheelAxlePairCandidate& Pair = Pairs[PairIndex];
+        if (Pair.LeftCandidateIndex < 0 || Pair.RightCandidateIndex < 0 ||
+            Pair.LeftCandidateIndex >= static_cast<int32>(Candidates.size()) ||
+            Pair.RightCandidateIndex >= static_cast<int32>(Candidates.size()))
+        {
+            continue;
+        }
+
         GeneratedSetups.push_back(MakeDetectedWheelSetup(Candidates[Pair.LeftCandidateIndex], PairIndex, PairCount, true));
         GeneratedSetups.push_back(MakeDetectedWheelSetup(Candidates[Pair.RightCandidateIndex], PairIndex, PairCount, false));
     }
@@ -1465,6 +1671,11 @@ bool UWheeledVehicleMovementComponent::AutoGenerateWheelSetupsFromStaticMeshComp
     if (GeneratedSetups.empty())
     {
         return false;
+    }
+
+    if (!ResolveOwnedSceneComponent(ChassisComponent.GetRaw()) && Chassis)
+    {
+        ChassisComponent = const_cast<USceneComponent*>(Chassis);
     }
 
     WheelSetups = std::move(GeneratedSetups);
@@ -1507,7 +1718,7 @@ bool UWheeledVehicleMovementComponent::ValidateWheelSetups(TArray<FString>& OutM
             {
                 if (!TryResolveVisualComponentLocalPosition(Setup, LocalPosition))
                 {
-                    OutMessages.push_back(Prefix + "Bone Name cannot be resolved from the current skeletal mesh and no static visual component fallback was found: " + Setup.BoneName.ToString());
+                    OutMessages.push_back(Prefix + "Bone Name cannot be resolved from the current skeletal mesh and no Visual Component reference was assigned. Set Position Source to FromVisualComponent and choose Visual Component, or use Manual: " + Setup.BoneName.ToString());
                 }
             }
         }
@@ -1516,7 +1727,7 @@ bool UWheeledVehicleMovementComponent::ValidateWheelSetups(TArray<FString>& OutM
             FVector LocalPosition;
             if (!TryResolveVisualComponentLocalPosition(Setup, LocalPosition))
             {
-                OutMessages.push_back(Prefix + "Visual Component Name cannot be resolved: " + Setup.VisualComponentName.ToString());
+                OutMessages.push_back(Prefix + "Visual Component reference cannot be resolved. Assign a component owned by the vehicle actor.");
             }
         }
 
@@ -1550,7 +1761,7 @@ bool UWheeledVehicleMovementComponent::ValidateWheelSetups(TArray<FString>& OutM
 
     if (!AreWheelPositionsSymmetricEnough(ResolvedWheelPositions))
     {
-        OutMessages.push_back("Wheel positions do not form clean symmetric left/right axle pairs. Check Bone Name assignments or use Manual Local Position overrides.");
+        OutMessages.push_back("Wheel positions do not form clean symmetric left/right axle pairs. Check Bone Name / Visual Component assignments, or use Manual Local Position overrides.");
     }
 
     if (!ResolvedWheelPositions.empty())
@@ -1646,7 +1857,7 @@ FVehicleDesc UWheeledVehicleMovementComponent::BuildVehicleDesc() const
     FVehicleDesc Desc;
 
     const AActor*          OwnerActor = GetOwner();
-    const USceneComponent* Chassis    = GetUpdatedComponent();
+    const USceneComponent* Chassis    = ResolveVehicleSimulationComponent();
 
     Desc.Owner.ActorId             = OwnerActor ? OwnerActor->GetUUID() : 0;
     Desc.Owner.ComponentId         = GetUUID();
@@ -1797,9 +2008,9 @@ void UWheeledVehicleMovementComponent::ApplyVehicleSnapshot(const FVehicleSnapsh
     LastSnapshot = Snapshot;
     bHasLastSnapshot = true;
 
-    if (USceneComponent* Chassis = GetUpdatedComponent())
+    if (USceneComponent* SimulationComponent = ResolveVehicleSimulationComponent())
     {
-        Chassis->SetWorldLocation(Snapshot.ChassisWorldTransform.Location);
-        Chassis->SetWorldRotation(Snapshot.ChassisWorldTransform.Rotation);
+        SimulationComponent->SetWorldLocation(Snapshot.ChassisWorldTransform.Location);
+        SimulationComponent->SetWorldRotation(Snapshot.ChassisWorldTransform.Rotation);
     }
 }

@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Component/ActorComponent.h"
-#include "Object/FName.h"
+#include "Math/Quat.h"
+#include "Math/Vector.h"
 #include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/Component/Vehicle/VehicleWheelPoseComponent.generated.h"
@@ -9,14 +10,15 @@
 class UWheeledVehicleMovementComponent;
 class USceneComponent;
 class USkeletalMeshComponent;
+struct FVehicleSnapshot;
 
 /**
  * Applies vehicle wheel visual poses after physics snapshots have been consumed.
  *
  * This component intentionally owns the visual side of wheels. Vehicle movement no longer
- * guesses child components or writes wheel transforms directly. First-pass support drives
- * skeletal bones via FVehicleWheelSetup::BoneName. If no matching bone exists, it can
- * fall back to an explicitly named SceneComponent via VisualComponentName.
+ * guesses child components or writes wheel transforms directly. Skeletal wheels are driven
+ * through FVehicleWheelSetup::BoneName, and static/scene-component wheels are driven only
+ * through stable FVehicleWheelSetup::VisualComponent object references.
  */
 UCLASS()
 class UVehicleWheelPoseComponent : public UActorComponent
@@ -41,9 +43,22 @@ public:
     USkeletalMeshComponent* GetSkeletalMeshComponent() const { return Mesh.Get(); }
 
 private:
-    USceneComponent* FindVisualSceneComponentByName(const FName& ComponentName) const;
+    struct FSceneWheelVisualPoseCache
+    {
+        TWeakObjectPtr<USceneComponent> VisualComponent;
+        FVector CenterOffsetLocal = FVector::ZeroVector;
+        FVector RestCenterLocal = FVector::ZeroVector;
+        FQuat RestRotationLocal = FQuat::Identity;
+    };
+
+    FSceneWheelVisualPoseCache* FindOrCreateSceneWheelPoseCache(
+        USceneComponent* VisualComponent,
+        const FVehicleSnapshot& VehicleSnapshot
+    );
+    void PurgeInvalidSceneWheelPoseCaches();
 
 private:
     TWeakObjectPtr<UWheeledVehicleMovementComponent> VehicleMovement;
     TWeakObjectPtr<USkeletalMeshComponent> Mesh;
+    TArray<FSceneWheelVisualPoseCache> SceneWheelPoseCaches;
 };

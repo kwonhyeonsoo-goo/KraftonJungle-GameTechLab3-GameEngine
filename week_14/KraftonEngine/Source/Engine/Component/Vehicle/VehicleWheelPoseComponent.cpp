@@ -211,23 +211,77 @@ namespace
         return VisualComponent->GetWorldLocation();
     }
 
-    void ApplySceneComponentWheelPose(USceneComponent* VisualComponent, const FVehicleWheelSnapshot& WheelSnapshot)
+    FVector TransformWorldPositionToChassisLocalNoScale(
+        const FVehicleSnapshot& VehicleSnapshot,
+        const FVector& WorldPosition
+        )
+    {
+        return VehicleSnapshot.ChassisWorldTransform.Rotation.Inverse().RotateVector(
+            WorldPosition - VehicleSnapshot.ChassisWorldTransform.Location
+        );
+    }
+
+    FQuat ComposeChassisLocalRotationToWorld(
+        const FVehicleSnapshot& VehicleSnapshot,
+        const FQuat& ChassisLocalRotation
+        )
+    {
+        FQuat WorldRotation = ChassisLocalRotation * VehicleSnapshot.ChassisWorldTransform.Rotation;
+        WorldRotation.Normalize();
+        return WorldRotation;
+    }
+
+    void ApplySceneComponentWheelPose(
+        USceneComponent* VisualComponent,
+        const FVehicleSnapshot& VehicleSnapshot,
+        const FVehicleWheelSnapshot& WheelSnapshot,
+        const FVector& CachedCenterOffsetLocal,
+        const FVector& CachedRestCenterLocal,
+        const FQuat& CachedRestRotationLocal
+        )
     {
         if (!VisualComponent)
         {
             return;
         }
 
-        // Static-mesh wheels often have a pivot that is not exactly at the tire center.
-        // Preserve the current local center offset so the mesh center, not the component
-        // origin, follows the PhysX wheel collision center.
-        const FVector CurrentCenterWorld = GetVisualComponentCenterWorld(VisualComponent);
-        const FVector LocalCenterOffset = VisualComponent->GetWorldMatrix().GetInverse().TransformPositionWithW(CurrentCenterWorld);
+        int32 WheelIndex = -1;
+        for (int32 CandidateIndex = 0; CandidateIndex < static_cast<int32>(VehicleSnapshot.Wheels.size()); ++CandidateIndex)
+        {
+            if (VehicleSnapshot.Wheels[CandidateIndex].WheelName == WheelSnapshot.WheelName)
+            {
+                WheelIndex = CandidateIndex;
+                break;
+            }
+        }
+
+        const FVector SpinAxisChassis = InferWheelSpinAxisInChassisSpace(VehicleSnapshot, WheelIndex);
+        const FVector SteerAxisChassis = FVector::ZAxisVector;
+
+        const FTransform RestLocalTransform(
+            CachedRestCenterLocal,
+            CachedRestRotationLocal,
+            FVector::OneVector
+        );
+
+        const FVector ComponentLocationDelta = WheelSnapshot.CurrentLocalPosition - CachedRestCenterLocal;
+        const FTransform TargetLocalTransform = MakeWheelVisualComponentTransform(
+            RestLocalTransform,
+            ComponentLocationDelta,
+            SpinAxisChassis,
+            SteerAxisChassis,
+            WheelSnapshot
+        );
+
+        const FQuat TargetWorldRotation = ComposeChassisLocalRotationToWorld(
+            VehicleSnapshot,
+            TargetLocalTransform.Rotation
+        );
         const FVector TargetOriginWorld = WheelSnapshot.WorldTransform.Location -
-            WheelSnapshot.WorldTransform.Rotation.RotateVector(LocalCenterOffset);
+            TargetWorldRotation.RotateVector(CachedCenterOffsetLocal);
 
         VisualComponent->SetWorldLocation(TargetOriginWorld);
-        VisualComponent->SetWorldRotation(WheelSnapshot.WorldTransform.Rotation);
+        VisualComponent->SetWorldRotation(TargetWorldRotation);
     }
 
     bool ApplyWheelBonePoseFromSnapshot(
@@ -301,6 +355,55 @@ namespace
     }
 }
 
+UVehicleWheelPoseComponent::FSceneWheelVisualPoseCache* UVehicleWheelPoseComponent::FindOrCreateSceneWheelPoseCache(
+    USceneComponent* VisualComponent,
+    const FVehicleSnapshot& VehicleSnapshot
+    )
+{
+    if (!VisualComponent)
+    {
+        return nullptr;
+    }
+
+    PurgeInvalidSceneWheelPoseCaches();
+
+    for (FSceneWheelVisualPoseCache& ExistingCache : SceneWheelPoseCaches)
+    {
+        if (ExistingCache.VisualComponent.Get() == VisualComponent)
+        {
+            return &ExistingCache;
+        }
+    }
+
+    FSceneWheelVisualPoseCache NewCache;
+    NewCache.VisualComponent.Reset(VisualComponent);
+
+    const FVector CurrentCenterWorld = GetVisualComponentCenterWorld(VisualComponent);
+    NewCache.CenterOffsetLocal = VisualComponent->GetWorldMatrix().GetInverse().TransformPositionWithW(CurrentCenterWorld);
+    NewCache.RestCenterLocal = TransformWorldPositionToChassisLocalNoScale(VehicleSnapshot, CurrentCenterWorld);
+
+    const FQuat CurrentWorldRotation = VisualComponent->GetWorldMatrix().ToQuat().GetNormalized();
+    NewCache.RestRotationLocal = (CurrentWorldRotation * VehicleSnapshot.ChassisWorldTransform.Rotation.Inverse()).GetNormalized();
+
+    SceneWheelPoseCaches.push_back(NewCache);
+    return &SceneWheelPoseCaches.back();
+}
+
+void UVehicleWheelPoseComponent::PurgeInvalidSceneWheelPoseCaches()
+{
+    for (auto It = SceneWheelPoseCaches.begin(); It != SceneWheelPoseCaches.end(); )
+    {
+        if (!IsValid(It->VisualComponent.Get()))
+        {
+            It = SceneWheelPoseCaches.erase(It);
+        }
+        else
+        {
+            ++It;
+        }
+    }
+}
+
 UVehicleWheelPoseComponent::UVehicleWheelPoseComponent()
 {
     PrimaryComponentTick.SetTickGroup(TG_PostUpdateWork);
@@ -360,11 +463,18 @@ void UVehicleWheelPoseComponent::TickComponent(float DeltaTime, ELevelTick TickT
             }
         }
 
-        if (Setup->VisualComponentName.IsValid())
+        if (USceneComponent* VisualComponent = Movement->ResolveWheelVisualComponent(*Setup))
         {
-            if (USceneComponent* VisualComponent = FindVisualSceneComponentByName(Setup->VisualComponentName))
+            if (FSceneWheelVisualPoseCache* PoseCache = FindOrCreateSceneWheelPoseCache(VisualComponent, *Snapshot))
             {
-                ApplySceneComponentWheelPose(VisualComponent, WheelSnapshot);
+                ApplySceneComponentWheelPose(
+                    VisualComponent,
+                    *Snapshot,
+                    WheelSnapshot,
+                    PoseCache->CenterOffsetLocal,
+                    PoseCache->RestCenterLocal,
+                    PoseCache->RestRotationLocal
+                );
             }
         }
     }
@@ -378,35 +488,4 @@ void UVehicleWheelPoseComponent::SetVehicleMovement(UWheeledVehicleMovementCompo
 void UVehicleWheelPoseComponent::SetSkeletalMeshComponent(USkeletalMeshComponent* InMesh)
 {
     Mesh = InMesh;
-}
-
-USceneComponent* UVehicleWheelPoseComponent::FindVisualSceneComponentByName(const FName& ComponentName) const
-{
-    if (!ComponentName.IsValid())
-    {
-        return nullptr;
-    }
-
-    AActor* Owner = GetOwner();
-    if (!Owner)
-    {
-        return nullptr;
-    }
-
-    const FString WantedName = ComponentName.ToString();
-    for (UActorComponent* Component : Owner->GetComponents())
-    {
-        USceneComponent* SceneComponent = Cast<USceneComponent>(Component);
-        if (!IsValid(SceneComponent))
-        {
-            continue;
-        }
-
-        if (SceneComponent->GetName() == WantedName)
-        {
-            return SceneComponent;
-        }
-    }
-
-    return nullptr;
 }

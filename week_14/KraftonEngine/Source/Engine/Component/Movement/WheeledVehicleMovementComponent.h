@@ -70,8 +70,9 @@ struct FVehicleWheelSetup
     UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Bone Name", BonePicker=true)
     FName BoneName = FName::None;
 
-    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Visual Component Name")
-    FName VisualComponentName = FName::None;
+    // Stable component reference used by editor save/load and PIE duplication.
+    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Visual Component", Type=ObjectRef, AllowedClass=USceneComponent)
+    TObjectPtr<USceneComponent> VisualComponent = nullptr;
 
     UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Position Source", Enum=EWheelPositionSource)
     EWheelPositionSource PositionSource = EWheelPositionSource::FromBone;
@@ -112,6 +113,7 @@ public:
     void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
     void PostEditChangeProperty(const FPropertyChangedEvent& Event) override;
     void PostDuplicate() override;
+    void AddReferencedObjects(FReferenceCollector& Collector) override;
 
     UFUNCTION(Callable, Category="Vehicle|Input")
     void SetThrottleInput(float InThrottle);
@@ -130,6 +132,8 @@ public:
     UFUNCTION(Callable, Category="Vehicle|Wheel Setup")
     bool AutoGenerateWheelSetupsFromSkeleton();
     UFUNCTION(Callable, Category="Vehicle|Wheel Setup")
+    bool AutoGenerateWheelSetupsFromStaticMeshComponents();
+    UFUNCTION(Callable, Category="Vehicle|Wheel Setup")
     int32 RefreshWheelLocalPositionsFromBones();
 
     bool IsVehicleCreated() const { return VehicleHandle.IsValid(); }
@@ -145,6 +149,7 @@ public:
     const FVehicleSnapshot* GetLastVehicleSnapshot() const { return bHasLastSnapshot ? &LastSnapshot : nullptr; }
     const TArray<FVehicleWheelSetup>& GetWheelSetups() const { return WheelSetups; }
     const FVehicleWheelSetup* FindWheelSetup(const FName& WheelName) const;
+    USceneComponent* ResolveWheelVisualComponent(const FVehicleWheelSetup& Setup) const;
 
     FVector ResolveWheelLocalPosition(const FVehicleWheelSetup& Setup) const;
     bool ValidateWheelSetups(TArray<FString>& OutMessages) const;
@@ -160,15 +165,23 @@ protected:
     void RecreateVehicleSimulation();
     void ConsumeVehicleSnapshot(const FPhysicsWorldSnapshot& Snapshot);
     void ApplyVehicleSnapshot(const FVehicleSnapshot& Snapshot);
+    USceneComponent* ResolveOwnedSceneComponent(USceneComponent* Component) const;
+    USceneComponent* FindAutoStaticChassisComponent() const;
+    USceneComponent* ResolveExplicitChassisComponent() const;
+    USceneComponent* ResolveVehicleChassisComponent() const;
+    USceneComponent* ResolveVehicleSimulationComponent() const;
     USkinnedMeshComponent* FindWheelSetupSkinnedMeshComponent() const;
     USceneComponent* FindWheelVisualSceneComponent(const FVehicleWheelSetup& Setup) const;
     bool TryResolveVisualComponentLocalPosition(const FVehicleWheelSetup& Setup, FVector& OutLocalPosition) const;
     bool TryResolveBoneLocalPosition(const FName& BoneName, bool bUseInfluenceSurfaceCenter, FVector& OutLocalPosition) const;
-    bool AutoGenerateWheelSetupsFromStaticMeshComponents();
     void ClampWheelData(FVehicleWheelData& WheelData) const;
     void ClampWheelSetups();
 
 protected:
+    // Stable component reference used by editor save/load and PIE duplication.
+    UPROPERTY(Edit, Save, Category="Vehicle|Chassis", DisplayName="Chassis Component", Type=ObjectRef, AllowedClass=USceneComponent)
+    TObjectPtr<USceneComponent> ChassisComponent = nullptr;
+
     UPROPERTY(Edit, Save, Category="Vehicle|Chassis", DisplayName="Chassis Half Extents", Type=Vec3, Speed=0.05f)
     FVector ChassisHalfExtents = FVector(1.25f, 0.6f, 0.35f);
     UPROPERTY(Edit, Save, Category="Vehicle|Chassis", DisplayName="Chassis Mass", Speed=1.0f)
