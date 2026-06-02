@@ -26,6 +26,7 @@ namespace
     constexpr float ClothFixedStep = 1.0f / 60.0f;
     constexpr float ClothMaxFrameDelta = 1.0f / 15.0f;
     constexpr int32 ClothMaxSubsteps = 4;
+    constexpr float ClothScaleTolerance = 1.0e-4f;
 
     float Clamp01(float Value)
     {
@@ -45,6 +46,42 @@ namespace
     FVector ToFVector(const physx::PxVec4& Value)
     {
         return FVector(Value.x, Value.y, Value.z);
+    }
+
+    bool IsFinite(float Value)
+    {
+        return std::isfinite(Value);
+    }
+
+    bool IsFiniteVector(const FVector& Value)
+    {
+        return IsFinite(Value.X) && IsFinite(Value.Y) && IsFinite(Value.Z);
+    }
+
+    bool IsNearlyEqual(float A, float B, float Tolerance = ClothScaleTolerance)
+    {
+        return std::fabs(A - B) <= Tolerance;
+    }
+
+    bool IsUniformScale(const FVector& Scale)
+    {
+        return IsNearlyEqual(Scale.X, Scale.Y) && IsNearlyEqual(Scale.Y, Scale.Z);
+    }
+
+    bool IsValidClothScale(const FVector& Scale)
+    {
+        return IsFiniteVector(Scale) &&
+            Scale.X > ClothScaleTolerance &&
+            Scale.Y > ClothScaleTolerance &&
+            Scale.Z > ClothScaleTolerance &&
+            IsUniformScale(Scale);
+    }
+
+    bool HasScaleChanged(const FVector& A, const FVector& B)
+    {
+        return !IsNearlyEqual(A.X, B.X) ||
+            !IsNearlyEqual(A.Y, B.Y) ||
+            !IsNearlyEqual(A.Z, B.Z);
     }
 
     bool HasPositivePaintRadius(const FSkeletalClothData& ClothData)
@@ -112,6 +149,10 @@ struct FSkeletalClothRuntime::FImpl
     TArray<FSectionRuntime> Sections;
     const FSkeletalMesh* BuiltAsset = nullptr;
     float AccumulatedSimulationTime = 0.0f;
+    FMatrix PreviousComponentWorldMatrix = FMatrix::Identity;
+    FMatrix CurrentComponentWorldMatrix = FMatrix::Identity;
+    FVector LastComponentScale = FVector::OneVector;
+    bool bHasComponentTransformHistory = false;
     bool bLoggedGpuSkip = false;
 
     ~FImpl()
@@ -137,7 +178,67 @@ struct FSkeletalClothRuntime::FImpl
         Backend.Shutdown();
         BuiltAsset = nullptr;
         AccumulatedSimulationTime = 0.0f;
+        PreviousComponentWorldMatrix = FMatrix::Identity;
+        CurrentComponentWorldMatrix = FMatrix::Identity;
+        LastComponentScale = FVector::OneVector;
+        bHasComponentTransformHistory = false;
         bLoggedGpuSkip = false;
+    }
+
+    bool PrepareComponentTransformHistory(const FMatrix& ComponentWorldMatrix)
+    {
+        const FVector ComponentScale = ComponentWorldMatrix.GetScale();
+        if (!IsValidClothScale(ComponentScale))
+        {
+            Reset();
+            return false;
+        }
+
+        if (!bHasComponentTransformHistory)
+        {
+            PreviousComponentWorldMatrix = ComponentWorldMatrix;
+            CurrentComponentWorldMatrix = ComponentWorldMatrix;
+            LastComponentScale = ComponentScale;
+            bHasComponentTransformHistory = true;
+            AccumulatedSimulationTime = 0.0f;
+            return true;
+        }
+
+        if (HasScaleChanged(ComponentScale, LastComponentScale))
+        {
+            Reset();
+            PreviousComponentWorldMatrix = ComponentWorldMatrix;
+            CurrentComponentWorldMatrix = ComponentWorldMatrix;
+            LastComponentScale = ComponentScale;
+            bHasComponentTransformHistory = true;
+            AccumulatedSimulationTime = 0.0f;
+            return true;
+        }
+
+        PreviousComponentWorldMatrix = CurrentComponentWorldMatrix;
+        CurrentComponentWorldMatrix = ComponentWorldMatrix;
+        LastComponentScale = ComponentScale;
+        return true;
+    }
+
+    FVector TransformWorldVectorToComponentLocal(const FVector& WorldVector) const
+    {
+        return CurrentComponentWorldMatrix.GetInverse().TransformVector(WorldVector);
+    }
+
+    void UpdateWorldForces(const FClothWorldForceContext& ForceContext)
+    {
+        for (FSectionRuntime& Section : Sections)
+        {
+            if (!Section.Cloth || !Section.SourceData)
+            {
+                continue;
+            }
+
+            const FSkeletalClothData& ClothData = *Section.SourceData;
+            const FVector LocalGravity = TransformWorldVectorToComponentLocal(ForceContext.WorldGravity);
+            Section.Cloth->setGravity(ToPxVec3(LocalGravity * ClothData.Config.GravityScale));
+        }
     }
 
     bool HasEnabledCloth(const FSkeletalMesh& Asset) const
@@ -343,7 +444,7 @@ struct FSkeletalClothRuntime::FImpl
                 Runtime.Cloth->setGravity(physx::PxVec3(
                     0.0f,
                     0.0f,
-                    -980.0f * ClothData.Config.GravityScale
+                    -9.81f * ClothData.Config.GravityScale
                 ));
                 Runtime.Cloth->setDamping(physx::PxVec3(
                     Clamp01(ClothData.Config.Damping),
@@ -523,8 +624,18 @@ struct FSkeletalClothRuntime::FImpl
         }
     }
 
-    bool Tick(const FSkeletalMesh& Asset, float DeltaTime, TArray<FVertexPNCTT>& InOutSkinnedVertices)
+    bool Tick(
+        const FSkeletalMesh& Asset,
+        float DeltaTime,
+        TArray<FVertexPNCTT>& InOutSkinnedVertices,
+        const FMatrix& ComponentWorldMatrix,
+        const FClothWorldForceContext& ForceContext)
     {
+        if (!PrepareComponentTransformHistory(ComponentWorldMatrix))
+        {
+            return false;
+        }
+
         if (!MatchesBuiltPayload(Asset) && !Build(Asset, InOutSkinnedVertices))
         {
             return false;
@@ -550,6 +661,7 @@ struct FSkeletalClothRuntime::FImpl
 
         if (bHasSimulatedParticles)
         {
+            UpdateWorldForces(ForceContext);
             AccumulatedSimulationTime += std::min(DeltaTime, ClothMaxFrameDelta);
             int32 SubstepCount = 0;
             while (AccumulatedSimulationTime >= ClothFixedStep && SubstepCount < ClothMaxSubsteps)
@@ -598,9 +710,14 @@ void FSkeletalClothRuntime::Reset()
     Impl->Reset();
 }
 
-bool FSkeletalClothRuntime::Tick(const FSkeletalMesh& Asset, float DeltaTime, TArray<FVertexPNCTT>& InOutSkinnedVertices)
+bool FSkeletalClothRuntime::Tick(
+    const FSkeletalMesh& Asset,
+    float DeltaTime,
+    TArray<FVertexPNCTT>& InOutSkinnedVertices,
+    const FMatrix& ComponentWorldMatrix,
+    const FClothWorldForceContext& ForceContext)
 {
-    return Impl->Tick(Asset, DeltaTime, InOutSkinnedVertices);
+    return Impl->Tick(Asset, DeltaTime, InOutSkinnedVertices, ComponentWorldMatrix, ForceContext);
 }
 
 bool FSkeletalClothRuntime::IsActive() const

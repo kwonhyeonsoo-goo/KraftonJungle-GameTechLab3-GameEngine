@@ -2072,7 +2072,8 @@ void FMeshEditorWidget::RenderClothBrushRadiusOverlay(
 	if (!DrawList ||
 		ActiveTab != EMeshEditorTab::Mesh ||
 		!bClothPaintBrushEnabled ||
-		!ViewportClient.IsMouseOverViewport())
+		!ViewportClient.IsMouseOverViewport() ||
+		!FSlateApplication::Get().DoesClientOwnMouseInput(const_cast<FMeshEditorViewportClient*>(&ViewportClient)))
 	{
 		return;
 	}
@@ -2155,7 +2156,11 @@ void FMeshEditorWidget::RenderClothBrushRadiusOverlay(
 
 void FMeshEditorWidget::TickClothPaintBrush()
 {
-	if (!bClothPaintBrushEnabled || !ImGui::GetIO().MouseDown[0] || !ViewportClient.IsMouseOverViewport())
+	if (ActiveTab != EMeshEditorTab::Mesh ||
+		!bClothPaintBrushEnabled ||
+		!ImGui::GetIO().MouseDown[0] ||
+		!ViewportClient.IsMouseOverViewport() ||
+		!FSlateApplication::Get().DoesClientOwnMouseInput(&ViewportClient))
 	{
 		return;
 	}

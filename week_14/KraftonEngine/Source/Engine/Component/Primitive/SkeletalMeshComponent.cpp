@@ -13,6 +13,8 @@
 #include "Cloth/SkeletalClothRuntime.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/World.h"
+#include "GameFramework/WorldSettings.h"
 #include "Math/Quat.h"
 #include "Math/Vector.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
@@ -912,7 +914,13 @@ void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
         return;
     }
 
-    if (ClothRuntime->Tick(*Asset, DeltaTime, MutableSkinnedVertices))
+    FClothWorldForceContext ForceContext;
+    if (UWorld* World = GetWorld())
+    {
+        ForceContext.WorldGravity = World->GetWorldSettings().Gravity;
+    }
+
+    if (ClothRuntime->Tick(*Asset, DeltaTime, MutableSkinnedVertices, GetWorldMatrix(), ForceContext))
     {
         MarkSkinnedVerticesModifiedByCloth();
     }
