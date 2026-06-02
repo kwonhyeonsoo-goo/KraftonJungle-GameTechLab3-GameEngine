@@ -17,6 +17,7 @@ struct FFbxMorphVertexSource
 struct FFbxImportContext
 {
 	FString SourcePath;
+	FString EmbeddedTextureScratchDirectory;
 
 	TArray<FbxNode*> AllNodes;
 	TArray<FbxNode*> MeshNodes;

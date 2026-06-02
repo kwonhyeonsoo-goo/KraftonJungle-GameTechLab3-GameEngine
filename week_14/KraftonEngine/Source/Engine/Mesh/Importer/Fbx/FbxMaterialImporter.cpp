@@ -2,6 +2,7 @@
 #include "Materials/MaterialManager.h"
 #include "Materials/Material.h"
 #include "Platform/Paths.h"
+#include "Core/Logging/Log.h"
 
 #include <algorithm>
 #include <cctype>
@@ -15,6 +16,13 @@
 namespace
 {
 	namespace fs = std::filesystem;
+
+	struct FTextureResolveContext
+	{
+		FString FbxSourcePath;
+		FString EmbeddedTextureScratchDirectory;
+		FString MaterialName;
+	};
 
 	FString NormalizeTexturePathSeparators(FString Path)
 	{
@@ -30,6 +38,21 @@ namespace
 			Result = fs::path(FPaths::RootDir()) / Result;
 		}
 		return Result;
+	}
+
+	fs::path ToLexicallyNormalAbsolutePath(const fs::path& Path)
+	{
+		if (Path.empty())
+		{
+			return Path;
+		}
+
+		fs::path Result = Path;
+		if (!Result.is_absolute())
+		{
+			Result = fs::path(FPaths::RootDir()) / Result;
+		}
+		return Result.lexically_normal();
 	}
 
 	std::wstring ToLower(std::wstring Value)
@@ -54,6 +77,21 @@ namespace
 	{
 		const std::wstring Ext = ToLower(Path.extension().wstring());
 		return Ext == L".png" || Ext == L".jpg" || Ext == L".jpeg" || Ext == L".tga" || Ext == L".bmp" || Ext == L".dds";
+	}
+
+	bool HasUnsupportedTextureExtension(const fs::path& Path)
+	{
+		return !Path.extension().empty() && !IsSupportedTextureExtension(Path);
+	}
+
+	void LogUnsupportedTexture(const FTextureResolveContext& Context, const fs::path& TexturePath)
+	{
+		UE_LOG(
+			"FBX texture unsupported: Material='%s' Texture='%s' Extension='%s'",
+			Context.MaterialName.c_str(),
+			FPaths::ToUtf8(TexturePath.generic_wstring()).c_str(),
+			FPaths::ToUtf8(TexturePath.extension().wstring()).c_str()
+		);
 	}
 
 	const TArray<std::wstring>& GetTextureExtensionFallbacks()
@@ -145,13 +183,17 @@ namespace
 		Paths.push_back(Path);
 	}
 
-	TArray<fs::path> BuildTextureSearchDirectories(const FString& FbxSourcePath)
+	TArray<fs::path> BuildTextureSearchDirectories(const FTextureResolveContext& ResolveContext)
 	{
 		TArray<fs::path> Directories;
-		const fs::path FbxPath = ToFilesystemPath(FbxSourcePath);
+		const fs::path FbxPath = ToFilesystemPath(ResolveContext.FbxSourcePath);
 		const fs::path FbxDir = FbxPath.parent_path();
 		const fs::path ParentDir = FbxDir.parent_path();
 
+		if (!ResolveContext.EmbeddedTextureScratchDirectory.empty())
+		{
+			AddUniquePath(Directories, ToFilesystemPath(ResolveContext.EmbeddedTextureScratchDirectory));
+		}
 		AddUniquePath(Directories, FbxDir);
 		AddUniquePath(Directories, FbxDir / L"textures");
 		AddUniquePath(Directories, FbxDir / L"Textures");
@@ -161,7 +203,7 @@ namespace
 		return Directories;
 	}
 
-	TArray<fs::path> BuildTextureCandidates(const FString& RawTexturePath, const FString& FbxSourcePath)
+	TArray<fs::path> BuildTextureCandidates(const FString& RawTexturePath, const FTextureResolveContext& ResolveContext)
 	{
 		TArray<fs::path> Candidates;
 		const FString NormalizedRaw = NormalizeTexturePathSeparators(RawTexturePath);
@@ -172,9 +214,12 @@ namespace
 		}
 
 		const fs::path FileName = RawPath.filename();
-		const fs::path FbxPath = ToFilesystemPath(FbxSourcePath);
+		const fs::path FbxPath = ToFilesystemPath(ResolveContext.FbxSourcePath);
 		const fs::path FbxDir = FbxPath.parent_path();
 		const fs::path ParentDir = FbxDir.parent_path();
+		const fs::path EmbeddedDir = ResolveContext.EmbeddedTextureScratchDirectory.empty()
+			? fs::path()
+			: ToFilesystemPath(ResolveContext.EmbeddedTextureScratchDirectory);
 
 		AddUniquePath(Candidates, RawPath);
 		AddUniquePath(Candidates, FbxDir / RawPath);
@@ -185,17 +230,76 @@ namespace
 		AddUniquePath(Candidates, ParentDir / FileName);
 		AddUniquePath(Candidates, ParentDir / L"textures" / FileName);
 		AddUniquePath(Candidates, ParentDir / L"Textures" / FileName);
+		AddUniquePath(Candidates, EmbeddedDir / FileName);
 		return Candidates;
 	}
 
-	FString CopyResolvedTextureToProject(const fs::path& FoundPath, const FString& FbxSourcePath)
+	TArray<fs::path> FindEmbeddedTextureMatches(const FString& RawTexturePath, const FTextureResolveContext& ResolveContext)
+	{
+		TArray<fs::path> Matches;
+		if (ResolveContext.EmbeddedTextureScratchDirectory.empty())
+		{
+			return Matches;
+		}
+
+		const fs::path EmbeddedDir = ToFilesystemPath(ResolveContext.EmbeddedTextureScratchDirectory);
+		std::error_code Ec;
+		if (EmbeddedDir.empty() || !fs::exists(EmbeddedDir, Ec) || !fs::is_directory(EmbeddedDir, Ec))
+		{
+			return Matches;
+		}
+
+		const fs::path RawPath(FPaths::ToWide(NormalizeTexturePathSeparators(RawTexturePath)));
+		const std::wstring WantedFileName = ToLower(RawPath.filename().wstring());
+		const std::wstring WantedStem = ToLower(RawPath.stem().wstring());
+		if (WantedFileName.empty() && WantedStem.empty())
+		{
+			return Matches;
+		}
+
+		for (const fs::directory_entry& Entry : fs::recursive_directory_iterator(EmbeddedDir, Ec))
+		{
+			if (Ec || !Entry.is_regular_file())
+			{
+				continue;
+			}
+
+			const fs::path EntryPath = Entry.path();
+			if (!IsSupportedTextureExtension(EntryPath))
+			{
+				continue;
+			}
+
+			const std::wstring EntryFileName = ToLower(EntryPath.filename().wstring());
+			const std::wstring EntryStem = ToLower(EntryPath.stem().wstring());
+			if ((!WantedFileName.empty() && EntryFileName == WantedFileName) ||
+				(!WantedStem.empty() && EntryStem == WantedStem))
+			{
+				Matches.push_back(EntryPath);
+			}
+		}
+
+		std::sort(Matches.begin(), Matches.end(), [](const fs::path& A, const fs::path& B)
+		{
+			return ToLower(A.generic_wstring()) < ToLower(B.generic_wstring());
+		});
+		return Matches;
+	}
+
+	FString CopyResolvedTextureToProject(const fs::path& FoundPath, const FTextureResolveContext& ResolveContext)
 	{
 		if (FoundPath.empty())
 		{
 			return FString();
 		}
 
-		const fs::path FbxPath = ToFilesystemPath(FbxSourcePath);
+		if (!IsSupportedTextureExtension(FoundPath))
+		{
+			LogUnsupportedTexture(ResolveContext, FoundPath);
+			return FString();
+		}
+
+		const fs::path FbxPath = ToFilesystemPath(ResolveContext.FbxSourcePath);
 		const std::wstring SubFolder = FbxPath.stem().wstring();
 		const fs::path DestRelDir = fs::path(L"Content") / L"Texture" / L"Auto" / SubFolder;
 		const fs::path DestAbsDir = fs::path(FPaths::RootDir()) / DestRelDir;
@@ -204,6 +308,12 @@ namespace
 		fs::create_directories(DestAbsDir, Ec);
 
 		const fs::path DestAbsPath = DestAbsDir / FoundPath.filename();
+		if (ToLexicallyNormalAbsolutePath(FoundPath) == ToLexicallyNormalAbsolutePath(DestAbsPath))
+		{
+			const fs::path DestRelPath = DestRelDir / FoundPath.filename();
+			return FPaths::ToUtf8(DestRelPath.generic_wstring());
+		}
+
 		fs::copy_file(FoundPath, DestAbsPath, fs::copy_options::overwrite_existing, Ec);
 		if (Ec)
 		{
@@ -214,7 +324,7 @@ namespace
 		return FPaths::ToUtf8(DestRelPath.generic_wstring());
 	}
 
-	FString ImportTextureToProject(const FString& RawTexturePath, const FString& FbxSourcePath)
+	FString ImportTextureToProject(const FString& RawTexturePath, const FTextureResolveContext& ResolveContext)
 	{
 		if (RawTexturePath.empty())
 		{
@@ -222,12 +332,35 @@ namespace
 		}
 
 		fs::path FoundPath;
-		for (const fs::path& Candidate : BuildTextureCandidates(RawTexturePath, FbxSourcePath))
+		for (const fs::path& Candidate : BuildTextureCandidates(RawTexturePath, ResolveContext))
 		{
 			if (TryResolveTextureCandidate(Candidate, FoundPath))
 			{
-				return CopyResolvedTextureToProject(FoundPath, FbxSourcePath);
+				return CopyResolvedTextureToProject(FoundPath, ResolveContext);
 			}
+		}
+
+		TArray<fs::path> EmbeddedMatches = FindEmbeddedTextureMatches(RawTexturePath, ResolveContext);
+		if (!EmbeddedMatches.empty())
+		{
+			if (EmbeddedMatches.size() > 1)
+			{
+				UE_LOG(
+					"FBX embedded texture duplicate match: Material='%s' Texture='%s' Count=%d Using='%s'",
+					ResolveContext.MaterialName.c_str(),
+					RawTexturePath.c_str(),
+					static_cast<int32>(EmbeddedMatches.size()),
+					FPaths::ToUtf8(EmbeddedMatches.front().generic_wstring()).c_str()
+				);
+			}
+			return CopyResolvedTextureToProject(EmbeddedMatches.front(), ResolveContext);
+		}
+
+		const fs::path RawPath(FPaths::ToWide(NormalizeTexturePathSeparators(RawTexturePath)));
+		if (HasUnsupportedTextureExtension(RawPath))
+		{
+			LogUnsupportedTexture(ResolveContext, RawPath);
+			return FString();
 		}
 
 		// 실제 파일을 못 찾으면 기존 동작 유지 (경로만 정리)
@@ -326,11 +459,11 @@ namespace
 		return Score;
 	}
 
-	FString FindBestTextureByRole(const FString& FbxSourcePath, const FString& MaterialName, bool bNormalMap)
+	FString FindBestTextureByRole(const FTextureResolveContext& ResolveContext, bool bNormalMap)
 	{
 		fs::path BestPath;
 		int32 BestScore = bNormalMap ? 30 : 30;
-		for (const fs::path& Directory : BuildTextureSearchDirectories(FbxSourcePath))
+		for (const fs::path& Directory : BuildTextureSearchDirectories(ResolveContext))
 		{
 			std::error_code Ec;
 			if (Directory.empty() || !fs::exists(Directory, Ec) || !fs::is_directory(Directory, Ec))
@@ -345,7 +478,7 @@ namespace
 					continue;
 				}
 
-				const int32 Score = ScoreTextureForRole(Entry.path(), MaterialName, bNormalMap);
+				const int32 Score = ScoreTextureForRole(Entry.path(), ResolveContext.MaterialName, bNormalMap);
 				if (Score > BestScore)
 				{
 					BestScore = Score;
@@ -354,10 +487,10 @@ namespace
 			}
 		}
 
-		return BestPath.empty() ? FString() : CopyResolvedTextureToProject(BestPath, FbxSourcePath);
+		return BestPath.empty() ? FString() : CopyResolvedTextureToProject(BestPath, ResolveContext);
 	}
 
-	FString ReadFirstTextureFromProperty(const FbxProperty& Property, const FString& FbxSourcePath)
+	FString ReadFirstTextureFromProperty(const FbxProperty& Property, const FTextureResolveContext& ResolveContext)
 	{
 		if (!Property.IsValid())
 		{
@@ -370,11 +503,30 @@ namespace
 			FbxFileTexture* Texture = Property.GetSrcObject<FbxFileTexture>(TextureIndex);
 			if (Texture)
 			{
-				FString Imported = ImportTextureToProject(Texture->GetFileName(), FbxSourcePath);
+				const char* FileName = Texture->GetFileName();
+				FString Imported = ImportTextureToProject(FileName ? FileName : "", ResolveContext);
+				if (Imported.empty())
+				{
+					const char* RelativeFileName = Texture->GetRelativeFileName();
+					if (RelativeFileName && RelativeFileName[0] != '\0' && (!FileName || std::strcmp(RelativeFileName, FileName) != 0))
+					{
+						Imported = ImportTextureToProject(RelativeFileName, ResolveContext);
+					}
+				}
+
 				if (!Imported.empty())
 				{
 					return Imported;
 				}
+			}
+			else if (FbxTexture* AnyTexture = Property.GetSrcObject<FbxTexture>(TextureIndex))
+			{
+				UE_LOG(
+					"FBX texture unsupported: Material='%s' TextureObject='%s' Type='%s'",
+					ResolveContext.MaterialName.c_str(),
+					AnyTexture->GetName(),
+					AnyTexture->GetClassId().GetName()
+				);
 			}
 		}
 
@@ -405,12 +557,17 @@ void FFbxMaterialImporter::CollectMaterials(FbxScene* Scene, FFbxImportContext& 
 		MaterialInfo.Name = Material->GetName();
 		MaterialInfo.DiffuseColor = FVector(1.0f, 1.0f, 1.0f);
 
+		FTextureResolveContext ResolveContext;
+		ResolveContext.FbxSourcePath = Context.SourcePath;
+		ResolveContext.EmbeddedTextureScratchDirectory = Context.EmbeddedTextureScratchDirectory;
+		ResolveContext.MaterialName = MaterialInfo.Name;
+
 		FbxProperty DiffuseProp = Material->FindProperty(FbxSurfaceMaterial::sDiffuse);
 		if (DiffuseProp.IsValid())
 		{
 			FbxDouble3 Color = DiffuseProp.Get<FbxDouble3>();
 			MaterialInfo.DiffuseColor = FVector(static_cast<float>(Color[0]), static_cast<float>(Color[1]), static_cast<float>(Color[2]));
-			const FString DiffuseTexturePath = ReadFirstTextureFromProperty(DiffuseProp, Context.SourcePath);
+			const FString DiffuseTexturePath = ReadFirstTextureFromProperty(DiffuseProp, ResolveContext);
 			if (!DiffuseTexturePath.empty())
 			{
 				if (IsLikelyNormalTexturePath(DiffuseTexturePath))
@@ -425,7 +582,7 @@ void FFbxMaterialImporter::CollectMaterials(FbxScene* Scene, FFbxImportContext& 
 		}
 
 		FbxProperty NormalProp = Material->FindProperty(FbxSurfaceMaterial::sNormalMap);
-		const FString NormalTexturePath = ReadFirstTextureFromProperty(NormalProp, Context.SourcePath);
+		const FString NormalTexturePath = ReadFirstTextureFromProperty(NormalProp, ResolveContext);
 		if (!NormalTexturePath.empty())
 		{
 			if (IsLikelyColorTexturePath(NormalTexturePath) && MaterialInfo.DiffuseTexturePath.empty())
@@ -441,7 +598,7 @@ void FFbxMaterialImporter::CollectMaterials(FbxScene* Scene, FFbxImportContext& 
 		if (MaterialInfo.NormalTexturePath.empty())
 		{
 			FbxProperty BumpProp = Material->FindProperty(FbxSurfaceMaterial::sBump);
-			const FString BumpTexturePath = ReadFirstTextureFromProperty(BumpProp, Context.SourcePath);
+			const FString BumpTexturePath = ReadFirstTextureFromProperty(BumpProp, ResolveContext);
 			if (!BumpTexturePath.empty())
 			{
 				if (IsLikelyColorTexturePath(BumpTexturePath) && MaterialInfo.DiffuseTexturePath.empty())
@@ -457,11 +614,11 @@ void FFbxMaterialImporter::CollectMaterials(FbxScene* Scene, FFbxImportContext& 
 
 		if (MaterialInfo.DiffuseTexturePath.empty())
 		{
-			MaterialInfo.DiffuseTexturePath = FindBestTextureByRole(Context.SourcePath, MaterialInfo.Name, false);
+			MaterialInfo.DiffuseTexturePath = FindBestTextureByRole(ResolveContext, false);
 		}
 		if (MaterialInfo.NormalTexturePath.empty())
 		{
-			MaterialInfo.NormalTexturePath = FindBestTextureByRole(Context.SourcePath, MaterialInfo.Name, true);
+			MaterialInfo.NormalTexturePath = FindBestTextureByRole(ResolveContext, true);
 		}
 
 		const int32 GlobalIndex = static_cast<int32>(Context.Materials.size());

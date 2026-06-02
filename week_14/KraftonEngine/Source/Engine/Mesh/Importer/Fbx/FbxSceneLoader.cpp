@@ -5,10 +5,14 @@
 #include <chrono>
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <limits>
+#include <system_error>
 
 namespace
 {
+	namespace fs = std::filesystem;
+
 	using FFbxClock = std::chrono::steady_clock;
 
 	static double GetElapsedSeconds(const FFbxClock::time_point& Start)
@@ -99,6 +103,95 @@ namespace
 		IoSettings->SetBoolProp(IMP_FBX_GOBO, Options.bImportGobos);
 		IoSettings->SetBoolProp(IMP_FBX_ANIMATION, Options.bImportAnimations);
 		IoSettings->SetBoolProp(IMP_FBX_GLOBAL_SETTINGS, Options.bImportGlobalSettings);
+		IoSettings->SetBoolProp(IMP_FBX_EXTRACT_EMBEDDED_DATA, false);
+		IoSettings->SetStringProp(IMP_EXTRACT_FOLDER, FbxString(""));
+	}
+
+	static fs::path ToProjectAbsolutePath(const FString& Path)
+	{
+		fs::path Result(FPaths::ToWide(Path));
+		if (!Result.empty() && !Result.is_absolute())
+		{
+			Result = fs::path(FPaths::RootDir()) / Result;
+		}
+		return Result.lexically_normal();
+	}
+
+	static bool IsPathStrictlyInsideDirectory(const fs::path& Path, const fs::path& Directory)
+	{
+		const fs::path NormalPath = Path.lexically_normal();
+		const fs::path NormalDirectory = Directory.lexically_normal();
+		if (NormalPath == NormalDirectory)
+		{
+			return false;
+		}
+
+		const fs::path Relative = NormalPath.lexically_relative(NormalDirectory);
+		return !Relative.empty() && !Relative.is_absolute() && Relative.native().rfind(L"..", 0) != 0;
+	}
+
+	static bool PrepareEmbeddedTextureExtractionFolder(const FFbxSceneLoadOptions& Options, FString& OutAbsoluteFolder)
+	{
+		OutAbsoluteFolder.clear();
+
+		if (!Options.bExtractEmbeddedTextures || !Options.bImportTextures || Options.EmbeddedTextureScratchDirectory.empty())
+		{
+			return false;
+		}
+
+		const fs::path Folder = ToProjectAbsolutePath(Options.EmbeddedTextureScratchDirectory);
+		if (Folder.empty())
+		{
+			return false;
+		}
+
+		const fs::path ScratchRoot = ToProjectAbsolutePath("Intermediate/FbxEmbeddedTextures");
+		if (!IsPathStrictlyInsideDirectory(Folder, ScratchRoot))
+		{
+			UE_LOG(
+				"FBX embedded texture extraction disabled: scratch folder must be inside '%s' but was '%s'",
+				FPaths::ToUtf8(ScratchRoot.generic_wstring()).c_str(),
+				FPaths::ToUtf8(Folder.generic_wstring()).c_str()
+			);
+			return false;
+		}
+
+		std::error_code Ec;
+		fs::remove_all(Folder, Ec);
+		if (Ec)
+		{
+			UE_LOG(
+				"FBX embedded texture extraction disabled: failed to clean scratch folder '%s' (%s)",
+				FPaths::ToUtf8(Folder.generic_wstring()).c_str(),
+				Ec.message().c_str()
+			);
+			return false;
+		}
+
+		fs::create_directories(Folder, Ec);
+		if (Ec)
+		{
+			UE_LOG(
+				"FBX embedded texture extraction disabled: failed to create scratch folder '%s' (%s)",
+				FPaths::ToUtf8(Folder.generic_wstring()).c_str(),
+				Ec.message().c_str()
+			);
+			return false;
+		}
+
+		OutAbsoluteFolder = FPaths::ToUtf8(Folder.generic_wstring());
+		return true;
+	}
+
+	static void ApplyEmbeddedTextureExtractionOptions(FbxIOSettings* IoSettings, const FString& AbsoluteFolder)
+	{
+		if (!IoSettings || AbsoluteFolder.empty())
+		{
+			return;
+		}
+
+		IoSettings->SetBoolProp(IMP_FBX_EXTRACT_EMBEDDED_DATA, true);
+		IoSettings->SetStringProp(IMP_EXTRACT_FOLDER, FbxString(AbsoluteFolder.c_str()));
 	}
 
 	static void ApplyFbxAnimationStackSelection(FbxImporter* Importer, const FFbxSceneLoadOptions& Options)
@@ -255,6 +348,13 @@ bool FFbxSceneLoader::Load(
 	FbxIOSettings* IoSettings = SdkContext.IoSettings;
 	ApplyFbxImportOptions(IoSettings, Options);
 
+	FString EmbeddedTextureExtractionFolder;
+	const bool bUseEmbeddedTextureExtraction = PrepareEmbeddedTextureExtractionFolder(Options, EmbeddedTextureExtractionFolder);
+	if (bUseEmbeddedTextureExtraction)
+	{
+		ApplyEmbeddedTextureExtractionOptions(IoSettings, EmbeddedTextureExtractionFolder);
+	}
+
 	FbxScene* Scene = FbxScene::Create(SdkManager, "FBX Scene");
 	FbxImporter* Importer = FbxImporter::Create(SdkManager, "");
 	if (!Scene || !Importer)
@@ -266,6 +366,11 @@ bool FFbxSceneLoader::Load(
 	}
 
 	const FString FullPath = FPaths::ToUtf8(FPaths::Combine(FPaths::RootDir(), FPaths::ToWide(SourcePath)));
+	if (bUseEmbeddedTextureExtraction)
+	{
+		Importer->SetEmbeddingExtractionFolder(EmbeddedTextureExtractionFolder.c_str());
+	}
+
 	if (!Importer->Initialize(FullPath.c_str(), -1, SdkManager->GetIOSettings()))
 	{
 		Importer->Destroy();
