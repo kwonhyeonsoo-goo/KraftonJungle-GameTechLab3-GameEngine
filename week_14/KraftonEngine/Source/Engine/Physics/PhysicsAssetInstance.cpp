@@ -729,6 +729,16 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
         return false;
     }
 
+    FVector RootTranslationDelta = FVector::ZeroVector;
+    if (RagdollRootBoneIndex >= 0 && RagdollRootBoneIndex < static_cast<int32>(OutBoneWorldTransforms.size()))
+    {
+        if (AppliedBodyBoneMask[RagdollRootBoneIndex] != 0)
+        {
+            const FTransform CurrentAnimatedRootWorld = ComposePhysicsTransforms(ComponentWorldTransform, CurrentBoneComponentSpaceTransforms[RagdollRootBoneIndex]);
+            RootTranslationDelta = OutBoneWorldTransforms[RagdollRootBoneIndex].Location - CurrentAnimatedRootWorld.Location;
+        }
+    }
+
     // Only bones that have PhysicsAsset bodies are sampled directly from PhysX.
     // Descendant bones without bodies must keep their authored/current local offset
     // under the updated parent; otherwise they remain pinned in their pre-simulation
@@ -743,6 +753,7 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
         const int32 ParentIndex = MeshAsset->Bones[BoneIndex].ParentIndex;
         if (ParentIndex < 0 || ParentIndex >= static_cast<int32>(OutBoneWorldTransforms.size()))
         {
+            OutBoneWorldTransforms[BoneIndex].Location += RootTranslationDelta;
             continue;
         }
 

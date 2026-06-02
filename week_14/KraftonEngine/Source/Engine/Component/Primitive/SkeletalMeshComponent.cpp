@@ -13,6 +13,8 @@
 #include "Cloth/SkeletalClothRuntime.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/World.h"
+#include "GameFramework/WorldSettings.h"
 #include "Math/Quat.h"
 #include "Math/Vector.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
@@ -149,6 +151,20 @@ void USkeletalMeshComponent::TickClothSimulationForEditorPreview(float DeltaTime
 
     UpdateCPUSkinning();
     TickClothSimulation(DeltaTime);
+}
+
+void USkeletalMeshComponent::ResetClothSimulation()
+{
+    if (ClothRuntime)
+    {
+        ClothRuntime->Reset();
+    }
+}
+
+void USkeletalMeshComponent::SetClothPreviewWindOverride(bool bEnable, const FVector& WorldWindVelocity)
+{
+    bClothPreviewWindOverride = bEnable;
+    ClothPreviewWorldWindVelocity = bEnable ? WorldWindVelocity : FVector::ZeroVector;
 }
 
 void USkeletalMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
@@ -912,7 +928,24 @@ void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
         return;
     }
 
-    if (ClothRuntime->Tick(*Asset, DeltaTime, MutableSkinnedVertices))
+    FClothWorldForceContext ForceContext;
+    if (UWorld* World = GetWorld())
+    {
+        ForceContext.WorldGravity = World->GetWorldSettings().Gravity;
+        const FVector& RuntimeWindVelocity = World->GetClothWorldWindVelocity();
+        if (!RuntimeWindVelocity.IsNearlyZero())
+        {
+            ForceContext.WorldWindVelocity = RuntimeWindVelocity;
+            ForceContext.bHasWorldWindVelocity = true;
+        }
+    }
+    if (bClothPreviewWindOverride)
+    {
+        ForceContext.WorldWindVelocity = ClothPreviewWorldWindVelocity;
+        ForceContext.bHasWorldWindVelocity = !ClothPreviewWorldWindVelocity.IsNearlyZero();
+    }
+
+    if (ClothRuntime->Tick(*Asset, DeltaTime, MutableSkinnedVertices, GetWorldMatrix(), ForceContext))
     {
         MarkSkinnedVerticesModifiedByCloth();
     }

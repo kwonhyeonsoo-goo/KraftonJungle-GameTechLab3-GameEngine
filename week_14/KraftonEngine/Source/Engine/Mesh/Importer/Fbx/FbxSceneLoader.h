@@ -32,6 +32,9 @@ struct FFbxSceneLoadOptions
 
 	bool bAutoDetectMeterAuthoredCentimeterScene = true;
 
+	bool bExtractEmbeddedTextures = false;
+	FString EmbeddedTextureScratchDirectory;
+
 	// Empty means keep the FBX SDK default, which imports every animation stack.
 	TSet<int32> SelectedAnimationStackIndices;
 };

@@ -23,7 +23,7 @@ struct ViewModeMeshVS_Output
     float2 texcoord : TEXCOORD0;
     float4 tangent : TANGENT;
     float3 worldPos : TEXCOORD1;
-    float selectedBoneWeight : TEXCOORD2;
+    float overlayScalar : TEXCOORD2;
 };
 
 PS_Input_UV VS(uint vertexID : SV_VertexID)
@@ -40,7 +40,7 @@ ViewModeMeshVS_Output VS_StaticMesh(VS_Input_PNCTT input)
     output.normal = normalize(mul(input.normal, (float3x3)NormalMatrix));
     output.texcoord = input.texcoord;
     output.worldPos = worldPos.xyz;
-    output.selectedBoneWeight = input.color.w;
+    output.overlayScalar = input.color.w;
 
     float3x3 M = (float3x3)Model;
     float3 T = BuildOrthonormalTangent(output.normal, mul(input.tangent.xyz, M));
@@ -65,7 +65,7 @@ ViewModeMeshVS_Output VS_SkeletalMesh(VS_Input_PNCTTBB input)
     output.normal = normalize(mul(skinned.normal, (float3x3)NormalMatrix));
     output.texcoord = input.texcoord;
     output.worldPos = worldPos.xyz;
-    output.selectedBoneWeight = GetBoneInfluenceWeight(input.boneIndices, input.boneWeights, SelectedBoneIndex);
+    output.overlayScalar = GetBoneInfluenceWeight(input.boneIndices, input.boneWeights, SelectedBoneIndex);
 
     float3x3 M = (float3x3)Model;
     float3 T = BuildOrthonormalTangent(output.normal, mul(skinned.tangent, M));
@@ -81,9 +81,14 @@ float4 PS(ViewModeMeshVS_Output input) : SV_TARGET
         return ComputeCullingHeatmap(input.position, input.worldPos);
     }
 
-    if (SelectedBoneIndex >= 0)
+    if (MeshScalarOverlayMode != 0)
     {
-        float heat = saturate(input.selectedBoneWeight);
+        if (MeshScalarOverlayMode == 3)
+        {
+            return float4(0.0f, 0.0f, 0.0f, saturate(MeshScalarOverlayAlpha));
+        }
+
+        float heat = saturate(input.overlayScalar);
 
         float t0 = smoothstep(0.0f, 0.05f, heat);
         float t1 = smoothstep(0.05f, 0.2f, heat);
@@ -97,7 +102,7 @@ float4 PS(ViewModeMeshVS_Output input) : SV_TARGET
         heatColor = lerp(heatColor, float3(1.0f, 1.0f, 0.0f), t3);
         heatColor = lerp(heatColor, float3(1.0f, 0.05f, 0.0f), t4);
 
-        return float4(heatColor, saturate(BoneHeatMapOverlayAlpha));
+        return float4(heatColor, saturate(MeshScalarOverlayAlpha));
     }
 
     float3 N = normalize(input.normal);

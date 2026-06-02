@@ -24,7 +24,7 @@ FPhysicsAssetPreviewSceneProxy::FPhysicsAssetPreviewSceneProxy(UPhysicsAssetPrev
 	PreviewMaterial = UMaterial::CreateTransient(
 		ERenderPass::Transparent,
 		EBlendState::AlphaBlend,
-		EDepthStencilState::DepthReadOnly,
+		EDepthStencilState::NoDepth,
 		ERasterizerState::SolidNoCull,
 		FShaderManager::Get().GetOrCreate(EShaderPath::Primitive));
 
