@@ -5,6 +5,7 @@
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
 #include "Component/SceneComponent.h"
+#include "Component/PrimitiveComponent.h"
 #include "GameFramework/AActor.h"
 #include "Physics/Vehicle/VehicleTypes.h"
 
@@ -191,6 +192,44 @@ namespace
         return FTransform(BaseComponentTransform.Location + ComponentLocationDelta, TargetRotation, BaseComponentTransform.Scale);
     }
 
+    FVector GetVisualComponentCenterWorld(USceneComponent* VisualComponent)
+    {
+        if (!VisualComponent)
+        {
+            return FVector::ZeroVector;
+        }
+
+        if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(VisualComponent))
+        {
+            const FBoundingBox Bounds = Primitive->GetWorldBoundingBox();
+            if (Bounds.IsValid())
+            {
+                return Bounds.GetCenter();
+            }
+        }
+
+        return VisualComponent->GetWorldLocation();
+    }
+
+    void ApplySceneComponentWheelPose(USceneComponent* VisualComponent, const FVehicleWheelSnapshot& WheelSnapshot)
+    {
+        if (!VisualComponent)
+        {
+            return;
+        }
+
+        // Static-mesh wheels often have a pivot that is not exactly at the tire center.
+        // Preserve the current local center offset so the mesh center, not the component
+        // origin, follows the PhysX wheel collision center.
+        const FVector CurrentCenterWorld = GetVisualComponentCenterWorld(VisualComponent);
+        const FVector LocalCenterOffset = VisualComponent->GetWorldMatrix().GetInverse().TransformPositionWithW(CurrentCenterWorld);
+        const FVector TargetOriginWorld = WheelSnapshot.WorldTransform.Location -
+            WheelSnapshot.WorldTransform.Rotation.RotateVector(LocalCenterOffset);
+
+        VisualComponent->SetWorldLocation(TargetOriginWorld);
+        VisualComponent->SetWorldRotation(WheelSnapshot.WorldTransform.Rotation);
+    }
+
     bool ApplyWheelBonePoseFromSnapshot(
         USkeletalMeshComponent* Mesh,
         const FVehicleWheelSetup& Setup,
@@ -325,8 +364,7 @@ void UVehicleWheelPoseComponent::TickComponent(float DeltaTime, ELevelTick TickT
         {
             if (USceneComponent* VisualComponent = FindVisualSceneComponentByName(Setup->VisualComponentName))
             {
-                VisualComponent->SetWorldLocation(WheelSnapshot.WorldTransform.Location);
-                VisualComponent->SetWorldRotation(WheelSnapshot.WorldTransform.Rotation);
+                ApplySceneComponentWheelPose(VisualComponent, WheelSnapshot);
             }
         }
     }

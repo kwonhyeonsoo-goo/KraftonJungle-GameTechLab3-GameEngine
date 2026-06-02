@@ -9,12 +9,14 @@
 
 struct FPhysicsWorldSnapshot;
 class USkinnedMeshComponent;
+class USceneComponent;
 
 UENUM()
 enum class EWheelPositionSource : uint8
 {
     FromBone = 0,
-    Manual
+    Manual = 1,
+    FromVisualComponent = 2
 };
 
 USTRUCT()
@@ -80,6 +82,9 @@ struct FVehicleWheelSetup
     UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Additional Offset", Type=Vec3, Speed=0.01f)
     FVector AdditionalOffset = FVector::ZeroVector;
 
+    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Use Bone Influence Surface Center")
+    bool bUseBoneInfluenceSurfaceCenter = false;
+
     UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Wheel Data", Type=Struct, Struct=FVehicleWheelData)
     FVehicleWheelData WheelData;
 
@@ -130,6 +135,13 @@ public:
     bool IsVehicleCreated() const { return VehicleHandle.IsValid(); }
     FVehicleHandle GetVehicleHandle() const { return VehicleHandle; }
 
+    void SetDebugSelectedWheelIndex(int32 WheelIndex);
+    int32 GetDebugSelectedWheelIndex() const { return DebugSelectedWheelIndex; }
+    void SetDebugSelectedWheelEnabled(bool bEnabled) { bDebugDrawSelectedWheel = bEnabled; }
+    bool IsDebugSelectedWheelEnabled() const { return bDebugDrawSelectedWheel; }
+    void DrawSelectedWheelDebug() const;
+    void DrawWheelDebug(int32 WheelIndex) const;
+
     const FVehicleSnapshot* GetLastVehicleSnapshot() const { return bHasLastSnapshot ? &LastSnapshot : nullptr; }
     const TArray<FVehicleWheelSetup>& GetWheelSetups() const { return WheelSetups; }
     const FVehicleWheelSetup* FindWheelSetup(const FName& WheelName) const;
@@ -145,10 +157,14 @@ protected:
     void EnsureDefaultWheelSetups();
     void RegisterPhysicsSnapshotReceiver();
     void UnregisterPhysicsSnapshotReceiver();
+    void RecreateVehicleSimulation();
     void ConsumeVehicleSnapshot(const FPhysicsWorldSnapshot& Snapshot);
     void ApplyVehicleSnapshot(const FVehicleSnapshot& Snapshot);
     USkinnedMeshComponent* FindWheelSetupSkinnedMeshComponent() const;
-    bool TryResolveBoneLocalPosition(const FName& BoneName, FVector& OutLocalPosition) const;
+    USceneComponent* FindWheelVisualSceneComponent(const FVehicleWheelSetup& Setup) const;
+    bool TryResolveVisualComponentLocalPosition(const FVehicleWheelSetup& Setup, FVector& OutLocalPosition) const;
+    bool TryResolveBoneLocalPosition(const FName& BoneName, bool bUseInfluenceSurfaceCenter, FVector& OutLocalPosition) const;
+    bool AutoGenerateWheelSetupsFromStaticMeshComponents();
     void ClampWheelData(FVehicleWheelData& WheelData) const;
     void ClampWheelSetups();
 
@@ -186,5 +202,8 @@ protected:
     FVehicleInputState CurrentInput;
     FVehicleSnapshot   LastSnapshot;
     bool               bHasLastSnapshot = false;
+    bool               bVehicleSimulationStarted = false;
+    bool               bDebugDrawSelectedWheel = false;
+    int32              DebugSelectedWheelIndex = -1;
     uint64             PhysicsSnapshotReceiverHandle = 0;
 };

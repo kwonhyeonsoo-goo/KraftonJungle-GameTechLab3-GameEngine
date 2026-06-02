@@ -2160,6 +2160,30 @@ bool FEditorPropertyWidget::RenderVehicleWheelSetupTools(FPropertyValue& Prop, b
 	}
 
 	bool bChanged = false;
+	bool bDrawSelectedWheelDebug = VehicleMovement->IsDebugSelectedWheelEnabled();
+	if (ImGui::Checkbox("Draw Selected Wheel Debug", &bDrawSelectedWheelDebug))
+	{
+		VehicleMovement->SetDebugSelectedWheelEnabled(bDrawSelectedWheelDebug);
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button("Clear Wheel Debug"))
+	{
+		VehicleMovement->SetDebugSelectedWheelEnabled(false);
+		VehicleMovement->SetDebugSelectedWheelIndex(-1);
+	}
+
+	const int32 DebugWheelIndex = VehicleMovement->GetDebugSelectedWheelIndex();
+	if (VehicleMovement->IsDebugSelectedWheelEnabled() && DebugWheelIndex >= 0)
+	{
+		ImGui::TextDisabled("Debugging wheel index: %d", DebugWheelIndex);
+		VehicleMovement->DrawSelectedWheelDebug();
+	}
+	else
+	{
+		ImGui::TextDisabled("No wheel selected for debug.");
+	}
+
 	if (ImGui::Button("Auto Generate From Skeleton"))
 	{
 		bChanged = VehicleMovement->AutoGenerateWheelSetupsFromSkeleton();
@@ -2216,6 +2240,8 @@ bool FEditorPropertyWidget::RenderArrayPropertyWidget(FPropertyValue& Prop, bool
 	bool bChanged = false;
 	size_t Num = Ops->GetNum(ArrayPtr);
 	const bool bEditFixedSize = HasTruthyPropertyMetadata(Prop, "editfixedsize") || HasTruthyPropertyMetadata(Prop, "fixedsize");
+	UWheeledVehicleMovementComponent* VehicleWheelSetupOwner = Cast<UWheeledVehicleMovementComponent>(Prop.Object);
+	const bool bVehicleWheelSetupArray = VehicleWheelSetupOwner && FString(Prop.GetName()) == "WheelSetups";
 
 	if (RenderVehicleWheelSetupTools(Prop, bDispatchChange, PropertyPath))
 	{
@@ -2263,6 +2289,19 @@ bool FEditorPropertyWidget::RenderArrayPropertyWidget(FPropertyValue& Prop, bool
 		{
 			ImGui::SameLine();
 		}
+
+		if (bVehicleWheelSetupArray)
+		{
+			const bool bDebugSelected = VehicleWheelSetupOwner->IsDebugSelectedWheelEnabled() &&
+				VehicleWheelSetupOwner->GetDebugSelectedWheelIndex() == ElemIdx;
+			if (ImGui::SmallButton(bDebugSelected ? "Debugging" : "Debug"))
+			{
+				VehicleWheelSetupOwner->SetDebugSelectedWheelIndex(ElemIdx);
+				VehicleWheelSetupOwner->SetDebugSelectedWheelEnabled(true);
+			}
+			ImGui::SameLine();
+		}
+
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted(ElementName.c_str());
 		ImGui::SameLine(120.0f);
