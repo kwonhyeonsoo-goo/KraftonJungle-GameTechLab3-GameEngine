@@ -46,12 +46,20 @@ public:
 	void SetOrthoWidth(float InWidth) { CameraState.OrthoWidth = InWidth; }
 	UFUNCTION(Callable, Exec, Category="Camera")
 	void SetOrthographic(bool bOrtho) { CameraState.bIsOrthogonal = bOrtho; }
+	UFUNCTION(Callable, Exec, Category="Camera")
+	void SetAspectRatio(float InAspectRatio) { CameraState.AspectRatio = InAspectRatio > 0.0f ? InAspectRatio : CameraState.AspectRatio; }
+	UFUNCTION(Callable, Exec, Category="Camera")
+	void SetNearPlane(float InNearZ) { CameraState.NearZ = InNearZ > 0.0f ? InNearZ : CameraState.NearZ; }
+	UFUNCTION(Callable, Exec, Category="Camera")
+	void SetFarPlane(float InFarZ) { CameraState.FarZ = InFarZ > CameraState.NearZ ? InFarZ : CameraState.FarZ; }
 
 	UFUNCTION(Callable, Exec, Category="Camera")
 	void OnResize(int32 Width, int32 Height);
 
 	UFUNCTION(Pure, Category="Camera")
 	float GetFOV() const { return CameraState.FOV; }
+	UFUNCTION(Pure, Category="Camera")
+	float GetAspectRatio() const { return CameraState.AspectRatio; }
 	UFUNCTION(Pure, Category="Camera")
 	float GetNearPlane() const { return CameraState.NearZ; }
 	UFUNCTION(Pure, Category="Camera")
