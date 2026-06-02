@@ -126,4 +126,10 @@ struct FViewportRenderOptions
 	bool bWeightBoneHeatMap = false;
 	int32 WeightBoneHeatMapBoneIndex = -1;
 	float WeightBoneHeatMapOverlayAlpha = 0.8f;
+
+	// Mesh editor cloth paint visualization
+	bool bClothMaxDistanceOverlay = false;
+	int32 ClothOverlayLODIndex = -1;
+	int32 ClothOverlayIndex = -1;
+	float ClothMaxDistanceOverlayAlpha = 0.8f;
 };

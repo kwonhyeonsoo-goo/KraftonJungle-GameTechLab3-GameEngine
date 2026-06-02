@@ -604,6 +604,8 @@ void FMeshEditorWidget::Close()
 
 void FMeshEditorWidget::Tick(float DeltaTime)
 {
+	UpdateClothMaxDistanceOverlayOptions();
+
 	if (ViewportClient.IsRenderable())
 	{
 		ViewportClient.Tick(DeltaTime);
@@ -969,7 +971,6 @@ void FMeshEditorWidget::RenderViewportPanel(ImVec2 Size)
 
 	constexpr float ToolbarHeight = 28.0f;
 	ImDrawList*     DrawList      = ImGui::GetWindowDrawList();
-	RenderTemporaryClothPaintValueOverlay(DrawList, ViewportPos, Size);
 	RenderClothBrushRadiusOverlay(DrawList, ViewportPos, Size);
 	DrawList->AddRectFilled(ViewportPos, ImVec2(ViewportPos.x + Size.x, ViewportPos.y + ToolbarHeight), IM_COL32(40, 40, 40, 255));
 
@@ -1903,6 +1904,10 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 
 	ImGui::Checkbox("Paint Brush", &bClothPaintBrushEnabled);
 	ImGui::Checkbox("Show Paint Values", &bShowClothPaintValues);
+	if (bShowClothPaintValues)
+	{
+		ImGui::SliderFloat("Paint Overlay Alpha", &ViewportClient.GetRenderOptions().ClothMaxDistanceOverlayAlpha, 0.0f, 1.0f, "%.2f");
+	}
 	ImGui::DragFloat("Brush Value", &ClothBrushValue, 0.01f, 0.0f, 1000.0f, "%.2f");
 	ImGui::DragFloat("Brush Radius", &ClothBrushRadius, 0.01f, 0.0f, 500.0f, "%.2f");
 	if (ImGui::Button("Fill MaxDistance", ImVec2(-1.0f, 0.0f)))
@@ -2023,14 +2028,14 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 	}
 }
 
-// Temporary ImGui overlay. Remove this whole function/call once cloth paint has
-// a renderer-owned material/debug pass that can depth-test and cull correctly.
-void FMeshEditorWidget::RenderTemporaryClothPaintValueOverlay(
-	ImDrawList* DrawList,
-	const ImVec2& ViewportPos,
-	const ImVec2& ViewportSize) const
+void FMeshEditorWidget::UpdateClothMaxDistanceOverlayOptions()
 {
-	if (!DrawList || ActiveTab != EMeshEditorTab::Mesh || !bShowClothPaintValues)
+	FViewportRenderOptions& RenderOptions = ViewportClient.GetRenderOptions();
+	RenderOptions.bClothMaxDistanceOverlay = false;
+	RenderOptions.ClothOverlayLODIndex = -1;
+	RenderOptions.ClothOverlayIndex = -1;
+
+	if (ActiveTab != EMeshEditorTab::Mesh || !bShowClothPaintValues || SelectedClothLODIndex < 0)
 	{
 		return;
 	}
@@ -2042,7 +2047,7 @@ void FMeshEditorWidget::RenderTemporaryClothPaintValueOverlay(
 		return;
 	}
 
-	FSkeletalClothLODData* LODData = Asset->FindClothLOD(static_cast<uint32>(SelectedClothLODIndex));
+	const FSkeletalClothLODData* LODData = Asset->FindClothLOD(static_cast<uint32>(SelectedClothLODIndex));
 	if (!LODData || SelectedClothIndex < 0 || SelectedClothIndex >= static_cast<int32>(LODData->Cloths.size()))
 	{
 		return;
@@ -2054,65 +2059,9 @@ void FMeshEditorWidget::RenderTemporaryClothPaintValueOverlay(
 		return;
 	}
 
-	USkeletalMeshComponent* PreviewMeshComponent = ViewportClient.GetPreviewMeshComponent();
-	if (!PreviewMeshComponent)
-	{
-		return;
-	}
-
-	const TArray<FVertexPNCTT>& SkinnedVertices = PreviewMeshComponent->GetSkinnedVertices();
-	if (SkinnedVertices.empty())
-	{
-		return;
-	}
-
-	FMinimalViewInfo POV;
-	if (!ViewportClient.GetCameraView(POV))
-	{
-		return;
-	}
-
-	const FMatrix& WorldMatrix = PreviewMeshComponent->GetWorldMatrix();
-	const float Denom = std::max(1.0f, Cloth.Paint.ViewMax - Cloth.Paint.ViewMin);
-	const float MarkerRadius = 4.0f;
-
-	for (uint32 ParticleIndex = 0; ParticleIndex < Cloth.ParticleToRenderVertex.size(); ++ParticleIndex)
-	{
-		if (ParticleIndex >= Cloth.Paint.MaxDistanceValues.size())
-		{
-			break;
-		}
-
-		const uint32 RenderVertexIndex = Cloth.ParticleToRenderVertex[ParticleIndex];
-		if (RenderVertexIndex >= SkinnedVertices.size())
-		{
-			continue;
-		}
-
-		const float T = std::clamp(
-			(Cloth.Paint.MaxDistanceValues[ParticleIndex] - Cloth.Paint.ViewMin) / Denom,
-			0.0f,
-			1.0f
-		);
-		const uint32 Red = static_cast<uint32>(255.0f * T);
-		const uint32 Green = static_cast<uint32>(255.0f * (1.0f - std::fabs(T - 0.5f) * 2.0f));
-		const uint32 Blue = static_cast<uint32>(255.0f * (1.0f - T));
-		const ImU32 Color = IM_COL32(Red, Green, Blue, 235);
-		const FVector WorldPos = WorldMatrix.TransformPositionWithW(SkinnedVertices[RenderVertexIndex].Position);
-
-		ImVec2 ScreenPos;
-		if (!ProjectWorldToViewport(WorldPos, POV, ViewportPos, ViewportSize, ScreenPos))
-		{
-			continue;
-		}
-
-		DrawList->AddCircleFilled(ScreenPos, MarkerRadius, Color, 10);
-		DrawList->AddCircle(ScreenPos, MarkerRadius + 1.0f, IM_COL32(15, 15, 15, 220), 10, 1.0f);
-		if (Cloth.Paint.MaxDistanceValues[ParticleIndex] <= 0.0f)
-		{
-			DrawList->AddCircle(ScreenPos, MarkerRadius + 2.0f, IM_COL32(255, 255, 255, 245), 10, 1.5f);
-		}
-	}
+	RenderOptions.bClothMaxDistanceOverlay = true;
+	RenderOptions.ClothOverlayLODIndex = SelectedClothLODIndex;
+	RenderOptions.ClothOverlayIndex = SelectedClothIndex;
 }
 
 void FMeshEditorWidget::RenderClothBrushRadiusOverlay(

@@ -46,7 +46,8 @@ void FDrawCommandBuilder::Create(ID3D11Device* InDevice, ID3D11DeviceContext* In
 	CameraFadeCB.Create(InDevice, sizeof(FCameraFadeConstants), "CameraFadeCB");
 	CameraVignetteCB.Create(InDevice, sizeof(FCameraVignetteConstants), "CameraVignetteCB");
 	CameraLetterboxCB.Create(InDevice, sizeof(FCameraLetterboxConstants), "CameraLetterboxCB");
-	BoneHeatMapCB.Create(InDevice, sizeof(FBoneHeatMapConstants), "BoneHeatMapCB");
+	MeshScalarOverlayCB.Create(InDevice, sizeof(FMeshScalarOverlayConstants), "MeshScalarOverlayCB");
+	MeshScalarOverlayWireCB.Create(InDevice, sizeof(FMeshScalarOverlayConstants), "MeshScalarOverlayWireCB");
 }
 
 void FDrawCommandBuilder::Release()
@@ -76,7 +77,8 @@ void FDrawCommandBuilder::Release()
 	CameraFadeCB.Release();
 	CameraVignetteCB.Release();
 	CameraLetterboxCB.Release();
-	BoneHeatMapCB.Release();
+	MeshScalarOverlayCB.Release();
+	MeshScalarOverlayWireCB.Release();
 }
 
 // ============================================================
@@ -89,6 +91,10 @@ void FDrawCommandBuilder::BeginCollect(const FFrameContext& Frame)
 	bCollectWeightBoneHeatMap = Frame.RenderOptions.bWeightBoneHeatMap;
 	CollectWeightBoneHeatMapBoneIndex = Frame.RenderOptions.WeightBoneHeatMapBoneIndex;
 	CollectWeightBoneHeatMapOverlayAlpha = Frame.RenderOptions.WeightBoneHeatMapOverlayAlpha;
+	bCollectClothMaxDistanceOverlay = Frame.RenderOptions.bClothMaxDistanceOverlay;
+	CollectClothOverlayLODIndex = Frame.RenderOptions.ClothOverlayLODIndex;
+	CollectClothOverlayIndex = Frame.RenderOptions.ClothOverlayIndex;
+	CollectClothMaxDistanceOverlayAlpha = Frame.RenderOptions.ClothMaxDistanceOverlayAlpha;
 	CollectCameraPosition = Frame.CameraPosition;
 
 	bHasSelectionMaskCommands = false;
@@ -288,19 +294,42 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 	ID3D11DeviceContext* Ctx = CachedContext;
 
 	const bool bSkeletal = Proxy.HasProxyFlag(EPrimitiveProxyFlags::SkeletalMesh);
+	const bool bGPUSkinning = bSkeletal && SkinningModeRuntime::Get() == ESkinningMode::GPU;
 	const bool bBoneHeatMapOverlay =
 		(Pass == ERenderPass::ViewModeMesh) &&
 		!ViewModeUtils::IsPureMeshDebugViewMode(CollectViewMode) &&
 		bSkeletal &&
 		bCollectWeightBoneHeatMap &&
 		CollectWeightBoneHeatMapBoneIndex >= 0;
-	const bool bGPUSkinning = bSkeletal && SkinningModeRuntime::Get() == ESkinningMode::GPU;
+	const bool bClothMaxDistanceOverlay =
+		(Pass == ERenderPass::ViewModeMesh) &&
+		!ViewModeUtils::IsPureMeshDebugViewMode(CollectViewMode) &&
+		bSkeletal &&
+		!bGPUSkinning &&
+		bCollectClothMaxDistanceOverlay &&
+		CollectClothOverlayLODIndex >= 0 &&
+		CollectClothOverlayIndex >= 0;
+	const bool bMeshScalarOverlay = bClothMaxDistanceOverlay || bBoneHeatMapOverlay;
 	const FSkeletalMeshSceneProxy* SkeletalProxy = bSkeletal
 		? static_cast<const FSkeletalMeshSceneProxy*>(&Proxy)
 		: nullptr;
 
 	FDrawCommandBuffer ProxyBuffer;
-	if (bBoneHeatMapOverlay && !bGPUSkinning)
+	uint32 ClothOverlayFirstIndex = 0;
+	uint32 ClothOverlayIndexCount = 0;
+	if (bClothMaxDistanceOverlay)
+	{
+		if (!SkeletalProxy ||
+			!SkeletalProxy->PrepareCpuClothMaxDistanceOverlayDrawBuffer(
+				CachedDevice,
+				Ctx,
+				CollectClothOverlayLODIndex,
+				CollectClothOverlayIndex,
+				ProxyBuffer,
+				ClothOverlayFirstIndex,
+				ClothOverlayIndexCount)) return;
+	}
+	else if (bBoneHeatMapOverlay && !bGPUSkinning)
 	{
 		if (!SkeletalProxy || !SkeletalProxy->PrepareCpuBoneHeatMapDrawBuffer(CachedDevice, Ctx, CollectWeightBoneHeatMapBoneIndex, ProxyBuffer)) return;
 	}
@@ -337,15 +366,29 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 
 	const bool bDepthOnly = (Pass == ERenderPass::PreDepth);
 	const bool bViewModeMeshReplace = (Pass == ERenderPass::ViewModeMesh) && ViewModeUtils::IsPureMeshDebugViewMode(CollectViewMode);
-	const bool bViewModeMeshOverlay = (Pass == ERenderPass::ViewModeMesh) && bBoneHeatMapOverlay;
+	const bool bViewModeMeshOverlay = (Pass == ERenderPass::ViewModeMesh) && bMeshScalarOverlay;
 	const bool bUsesViewModeMeshShader = bViewModeMeshReplace || bViewModeMeshOverlay;
 
 	if (bUsesViewModeMeshShader)
 	{
-		FBoneHeatMapConstants BoneHeatMapConstants = {};
-		BoneHeatMapConstants.SelectedBoneIndex = bBoneHeatMapOverlay ? CollectWeightBoneHeatMapBoneIndex : -1;
-		BoneHeatMapConstants.OverlayAlpha = bBoneHeatMapOverlay ? CollectWeightBoneHeatMapOverlayAlpha : 0.0f;
-		BoneHeatMapCB.Update(Ctx, &BoneHeatMapConstants, sizeof(FBoneHeatMapConstants));
+		FMeshScalarOverlayConstants MeshScalarOverlayConstants = {};
+		if (bClothMaxDistanceOverlay)
+		{
+			MeshScalarOverlayConstants.Mode = static_cast<int32>(EMeshScalarOverlayMode::ClothMaxDistance);
+			MeshScalarOverlayConstants.OverlayAlpha = CollectClothMaxDistanceOverlayAlpha;
+
+			FMeshScalarOverlayConstants WireOverlayConstants = {};
+			WireOverlayConstants.Mode = static_cast<int32>(EMeshScalarOverlayMode::ClothMaxDistanceWire);
+			WireOverlayConstants.OverlayAlpha = 1.0f;
+			MeshScalarOverlayWireCB.Update(Ctx, &WireOverlayConstants, sizeof(FMeshScalarOverlayConstants));
+		}
+		else if (bBoneHeatMapOverlay)
+		{
+			MeshScalarOverlayConstants.Mode = static_cast<int32>(EMeshScalarOverlayMode::BoneWeight);
+			MeshScalarOverlayConstants.SelectedBoneIndex = CollectWeightBoneHeatMapBoneIndex;
+			MeshScalarOverlayConstants.OverlayAlpha = CollectWeightBoneHeatMapOverlayAlpha;
+		}
+		MeshScalarOverlayCB.Update(Ctx, &MeshScalarOverlayConstants, sizeof(FMeshScalarOverlayConstants));
 	}
 
 	// 섹션당 1개 커맨드 (per-section 셰이더)
@@ -358,7 +401,18 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 		const ERenderPass SecPass = SectionRenderPass(Section);
 		if (bDepthOnly) { if (SecPass != ERenderPass::Opaque) continue; }
 		else if (bViewModeMeshReplace) { if (SecPass != ERenderPass::Opaque) continue; }
-		else if (bViewModeMeshOverlay) { if (SecPass != ERenderPass::Opaque) continue; }
+		else if (bViewModeMeshOverlay)
+		{
+			if (bClothMaxDistanceOverlay)
+			{
+				if (Section.FirstIndex != ClothOverlayFirstIndex ||
+					Section.IndexCount != ClothOverlayIndexCount) continue;
+			}
+			else if (SecPass != ERenderPass::Opaque)
+			{
+				continue;
+			}
+		}
 		else if (Pass != ERenderPass::SelectionMask && SecPass != Pass) continue;
 
 		// Section의 BufferOverride 있으면 사용, 없으면 proxy 공유 ProxyBuffer.
@@ -387,8 +441,14 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 				EffectiveShader = SelectEffectiveShader(Proxy.GetShader(), CollectViewMode, bGPUSkinning);
 			}
 
+		const bool bClothOverlayOnTransparentSection =
+			bClothMaxDistanceOverlay && SecPass == ERenderPass::Transparent;
+		const ERenderPass EffectiveCommandPass = bClothOverlayOnTransparentSection
+			? ERenderPass::Transparent
+			: Pass;
+
 		FDrawCommand& Cmd = DrawCommandList.AddCommand();
-		Cmd.Pass = Pass;
+		Cmd.Pass = EffectiveCommandPass;
 		Cmd.Shader = EffectiveShader;
 		Cmd.RenderState = BaseRenderState;
 		Cmd.Buffer = EffBuffer;
@@ -400,7 +460,7 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 		Cmd.Bindings.SkinMatrixSRV = bGPUSkinning && SkeletalProxy
 			? SkeletalProxy->GetSkinMatrixSRV(CachedDevice, Ctx)
 			: nullptr;
-		Cmd.Bindings.BoneHeatMapCB = bUsesViewModeMeshShader ? &BoneHeatMapCB : nullptr;
+		Cmd.Bindings.MeshScalarOverlayCB = bUsesViewModeMeshShader ? &MeshScalarOverlayCB : nullptr;
 
 		if (bViewModeMeshOverlay)
 		{
@@ -435,7 +495,17 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 			const FVector ToCamSec = CollectCameraPosition - Section.SortWorldPos;
 			SectionDistSq = ToCamSec.Dot(ToCamSec);
 		}
-		Cmd.BuildSortKey(0, SectionDistSq);
+		const float OverlaySortDistSq = bClothOverlayOnTransparentSection ? 0.0f : SectionDistSq;
+		Cmd.BuildSortKey(0, OverlaySortDistSq);
+
+		if (bClothMaxDistanceOverlay)
+		{
+			FDrawCommand& WireCmd = DrawCommandList.AddCommand();
+			WireCmd = Cmd;
+			WireCmd.Bindings.MeshScalarOverlayCB = &MeshScalarOverlayWireCB;
+			WireCmd.RenderState.Rasterizer = ERasterizerState::WireFrame;
+			WireCmd.BuildSortKey(1, OverlaySortDistSq);
+		}
 	}
 }
 
@@ -682,6 +752,17 @@ void FDrawCommandBuilder::BuildMeshCommands(FScene& Scene, const FPrimitiveScene
 	}
 	if (ProxyPass == ERenderPass::Opaque) bAnyOpaque = true;
 
+	const bool bNeedsClothMaxDistanceOverlay =
+		bCollectClothMaxDistanceOverlay &&
+		CollectClothOverlayLODIndex >= 0 &&
+		CollectClothOverlayIndex >= 0 &&
+		SkinningModeRuntime::Get() == ESkinningMode::CPU &&
+		Proxy->HasProxyFlag(EPrimitiveProxyFlags::SkeletalMesh);
+	const bool bNeedsBoneHeatMapOverlay =
+		bCollectWeightBoneHeatMap &&
+		CollectWeightBoneHeatMapBoneIndex >= 0 &&
+		Proxy->HasProxyFlag(EPrimitiveProxyFlags::SkeletalMesh);
+
 	// Opaque 섹션이 있으면 PreDepth 선행 (BuildCommandForProxy 가 Opaque 섹션만 필터).
 	if (bAnyOpaque)
 		BuildCommandForProxy(Scene, *Proxy, ERenderPass::PreDepth);
@@ -703,11 +784,8 @@ void FDrawCommandBuilder::BuildMeshCommands(FScene& Scene, const FPrimitiveScene
 		if (bPassSeen[p])
 			BuildCommandForProxy(Scene, *Proxy, static_cast<ERenderPass>(p));
 
-	if (bAnyOpaque &&
-		!ViewModeUtils::IsPureDebugViewMode(CollectViewMode) &&
-		bCollectWeightBoneHeatMap &&
-		CollectWeightBoneHeatMapBoneIndex >= 0 &&
-		Proxy->HasProxyFlag(EPrimitiveProxyFlags::SkeletalMesh))
+	if (!ViewModeUtils::IsPureDebugViewMode(CollectViewMode) &&
+		(bNeedsBoneHeatMapOverlay || bNeedsClothMaxDistanceOverlay))
 	{
 		BuildCommandForProxy(Scene, *Proxy, ERenderPass::ViewModeMesh);
 	}

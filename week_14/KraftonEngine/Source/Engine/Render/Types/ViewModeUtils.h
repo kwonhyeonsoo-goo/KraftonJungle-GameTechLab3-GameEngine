@@ -43,4 +43,11 @@ namespace ViewModeUtils
 	{
 		return Options.bWeightBoneHeatMap && Options.WeightBoneHeatMapBoneIndex >= 0;
 	}
+
+	inline bool IsClothMaxDistanceOverlayEnabled(const FViewportRenderOptions& Options)
+	{
+		return Options.bClothMaxDistanceOverlay &&
+			Options.ClothOverlayLODIndex >= 0 &&
+			Options.ClothOverlayIndex >= 0;
+	}
 }

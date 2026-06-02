@@ -77,6 +77,10 @@ private:
 	bool bCollectWeightBoneHeatMap = false;
 	int32 CollectWeightBoneHeatMapBoneIndex = -1;
 	float CollectWeightBoneHeatMapOverlayAlpha = 0.8f;
+	bool bCollectClothMaxDistanceOverlay = false;
+	int32 CollectClothOverlayLODIndex = -1;
+	int32 CollectClothOverlayIndex = -1;
+	float CollectClothMaxDistanceOverlayAlpha = 0.8f;
 
 	// Transparent depth-first 정렬용 — BeginCollect에서 캐싱.
 	FVector CollectCameraPosition = { 0, 0, 0 };
@@ -102,7 +106,8 @@ private:
 	FConstantBuffer CameraFadeCB;
 	FConstantBuffer CameraVignetteCB;
 	FConstantBuffer CameraLetterboxCB;
-	FConstantBuffer BoneHeatMapCB;
+	FConstantBuffer MeshScalarOverlayCB;
+	FConstantBuffer MeshScalarOverlayWireCB;
 
 	// D3D 디바이스 캐시 (Create 시 설정, 변하지 않음)
 	ID3D11Device*        CachedDevice  = nullptr;
