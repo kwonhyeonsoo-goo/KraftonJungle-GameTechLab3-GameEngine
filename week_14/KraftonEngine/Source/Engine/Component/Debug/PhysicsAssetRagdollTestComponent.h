@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Component/ActorComponent.h"
+#include "Math/Vector.h"
 #include "Object/Ptr/WeakObjectPtr.h"
 
 #include "Source/Engine/Component/Debug/PhysicsAssetRagdollTestComponent.generated.h"
@@ -31,6 +32,7 @@ private:
     void ProcessDebugInput();
     void ProcessPeriodicActiveLogging(float DeltaTime);
     void MonitorStateTransitions();
+    void TriggerFixedHitReaction(const char* EventLabel, const FName& HitBoneName, const FVector& HitDirection, float Strength);
 
     void LogControls() const;
     void LogResolvedTarget(bool bForceLogFailure = false);
@@ -54,6 +56,15 @@ private:
 
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll Test", DisplayName="Dump State Key")
     int32 DumpStateKey = 0;
+
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Test", DisplayName="Upper Body Hit Reaction Key")
+    int32 UpperBodyHitReactionKey = 0;
+
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Test", DisplayName="Left Arm Hit Reaction Key")
+    int32 LeftArmHitReactionKey = 0;
+
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Test", DisplayName="Right Arm Hit Reaction Key")
+    int32 RightArmHitReactionKey = 0;
 
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll Test", DisplayName="Log While Ragdoll Active")
     bool bLogWhileRagdollActive = false;

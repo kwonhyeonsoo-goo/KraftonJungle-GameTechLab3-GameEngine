@@ -164,6 +164,20 @@ public:
     bool IsRagdollActive() const;
     UFUNCTION(Pure, Category="Physics")
     bool IsPartialRagdollActive() const;
+    ERagdollMode GetRagdollMode() const { return ActiveRagdollMode; }
+    EPartialRagdollPhase GetPartialRagdollPhase() const { return PartialRagdollPhase; }
+    float GetPartialRagdollHoldRemaining() const { return PartialRagdollHoldRemaining; }
+    bool IsPartialRagdollBlendOutPending() const { return bPendingPartialRagdollBlendOut; }
+    FName GetActivePartialRagdollRootBoneName() const { return ActivePartialRagdollSelection.RootBoneName; }
+    EPartialRagdollPreset GetLastPartialHitReactionPreset() const { return LastPartialHitReactionPreset; }
+    FName GetLastPartialHitReactionHitBoneName() const { return LastPartialHitReactionHitBoneName; }
+    FName GetLastPartialHitReactionRootBoneName() const { return LastPartialHitReactionRootBoneName; }
+    FName GetLastPartialHitReactionTargetBoneName() const { return LastPartialHitReactionTargetBoneName; }
+    float GetLastPartialHitReactionStrength() const { return LastPartialHitReactionStrength; }
+    float GetLastPartialHitReactionHoldTime() const { return LastPartialHitReactionHoldTime; }
+    float GetLastPartialHitReactionImpulseMagnitude() const { return LastPartialHitReactionImpulseMagnitude; }
+    const FVector& GetLastPartialHitReactionDirection() const { return LastPartialHitReactionDirection; }
+    bool WasLastPartialHitReactionEscalationCandidate() const { return bLastPartialHitReactionEscalationCandidate; }
     UFUNCTION(Pure, Category="Physics")
     bool IsRecoveringFromRagdoll() const { return RecoveryPhase != ERagdollRecoveryPhase::None; }
     UFUNCTION(Pure, Category="Physics")
@@ -333,6 +347,15 @@ protected:
     bool bPendingPartialRagdollBlendOut = false;
     float PendingPartialRagdollHoldTimeOverride = -1.0f;
     float PartialRagdollHoldRemaining = 0.0f;
+    EPartialRagdollPreset LastPartialHitReactionPreset = EPartialRagdollPreset::UpperBody;
+    FName LastPartialHitReactionHitBoneName = FName::None;
+    FName LastPartialHitReactionRootBoneName = FName::None;
+    FName LastPartialHitReactionTargetBoneName = FName::None;
+    float LastPartialHitReactionStrength = 0.0f;
+    float LastPartialHitReactionHoldTime = 0.0f;
+    float LastPartialHitReactionImpulseMagnitude = 0.0f;
+    FVector LastPartialHitReactionDirection = FVector::ZeroVector;
+    bool bLastPartialHitReactionEscalationCandidate = false;
     float PhysicsPoseBlendWeight = 0.0f;
     float TargetPhysicsPoseBlendWeight = 0.0f;
     TArray<FTransform> RagdollBaselineComponentSpacePose;

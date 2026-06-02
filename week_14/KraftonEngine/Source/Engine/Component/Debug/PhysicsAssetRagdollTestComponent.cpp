@@ -13,12 +13,60 @@ namespace
 {
     constexpr int32 DefaultEnableRagdollKey = VK_F6;
     constexpr int32 DefaultDisableRagdollKey = VK_F7;
+    constexpr int32 DefaultRightArmHitReactionKey = VK_F8;
     constexpr int32 DefaultRecoveryKey = VK_F9;
     constexpr int32 DefaultDumpStateKey = VK_F10;
+    constexpr int32 DefaultUpperBodyHitReactionKey = VK_F11;
+    constexpr int32 DefaultLeftArmHitReactionKey = VK_F12;
 
     const char* GetAssetNameSafe(UPhysicsAsset* PhysicsAsset)
     {
         return PhysicsAsset ? PhysicsAsset->GetName().c_str() : "None";
+    }
+
+    const char* LexToString(ERagdollMode Mode)
+    {
+        switch (Mode)
+        {
+        case ERagdollMode::FullBody:
+            return "FullBody";
+        case ERagdollMode::Partial:
+            return "Partial";
+        default:
+            return "None";
+        }
+    }
+
+    const char* LexToString(EPartialRagdollPhase Phase)
+    {
+        switch (Phase)
+        {
+        case EPartialRagdollPhase::BlendingIn:
+            return "BlendingIn";
+        case EPartialRagdollPhase::Active:
+            return "Active";
+        case EPartialRagdollPhase::BlendingOut:
+            return "BlendingOut";
+        default:
+            return "None";
+        }
+    }
+
+    const char* LexToString(EPartialRagdollPreset Preset)
+    {
+        switch (Preset)
+        {
+        case EPartialRagdollPreset::UpperBody:
+            return "UpperBody";
+        case EPartialRagdollPreset::LeftArm:
+            return "LeftArm";
+        case EPartialRagdollPreset::RightArm:
+            return "RightArm";
+        case EPartialRagdollPreset::HeadNeck:
+            return "HeadNeck";
+        default:
+            return "Unknown";
+        }
     }
 }
 
@@ -26,8 +74,11 @@ UPhysicsAssetRagdollTestComponent::UPhysicsAssetRagdollTestComponent()
 {
     EnableRagdollKey = DefaultEnableRagdollKey;
     DisableRagdollKey = DefaultDisableRagdollKey;
+    RightArmHitReactionKey = DefaultRightArmHitReactionKey;
     BeginRecoveryKey = DefaultRecoveryKey;
     DumpStateKey = DefaultDumpStateKey;
+    UpperBodyHitReactionKey = DefaultUpperBodyHitReactionKey;
+    LeftArmHitReactionKey = DefaultLeftArmHitReactionKey;
 }
 
 void UPhysicsAssetRagdollTestComponent::BeginPlay()
@@ -186,6 +237,21 @@ void UPhysicsAssetRagdollTestComponent::ProcessDebugInput()
         LogCurrentState(bStarted ? "RecoveryStarted" : "RecoveryIgnored");
         ActiveLogTimer = 0.0f;
     }
+
+    if (Input.GetKeyDown(UpperBodyHitReactionKey))
+    {
+        TriggerFixedHitReaction("UpperBodyHitReaction", FName("spine_02"), FVector(-1.0f, 0.0f, 0.15f), 0.65f);
+    }
+
+    if (Input.GetKeyDown(LeftArmHitReactionKey))
+    {
+        TriggerFixedHitReaction("LeftArmHitReaction", FName("upperarm_l"), FVector(-0.5f, 0.85f, 0.1f), 0.58f);
+    }
+
+    if (Input.GetKeyDown(RightArmHitReactionKey))
+    {
+        TriggerFixedHitReaction("RightArmHitReaction", FName("upperarm_r"), FVector(-0.5f, -0.85f, 0.1f), 0.58f);
+    }
 }
 
 void UPhysicsAssetRagdollTestComponent::ProcessPeriodicActiveLogging(float DeltaTime)
@@ -236,9 +302,43 @@ void UPhysicsAssetRagdollTestComponent::MonitorStateTransitions()
     bWasRecovering = bIsRecovering;
 }
 
+void UPhysicsAssetRagdollTestComponent::TriggerFixedHitReaction(
+    const char* EventLabel,
+    const FName& HitBoneName,
+    const FVector& HitDirection,
+    float Strength)
+{
+    USkeletalMeshComponent* MeshComponent = TargetMeshComponent.Get();
+    if (!MeshComponent)
+    {
+        LogCurrentState(EventLabel ? EventLabel : "HitReactionMissingMesh");
+        return;
+    }
+
+    FPartialRagdollHitReactionRequest Request;
+    Request.HitBoneName = HitBoneName;
+    Request.HitWorldLocation = MeshComponent->GetWorldLocation();
+    Request.HitWorldDirection = HitDirection;
+    Request.Strength = Strength;
+    Request.bAllowEscalationToFullBody = true;
+
+    UE_LOG("[RagdollTest] HitReactionRequested Actor=%s MeshComponent=%s HitBone=%s Strength=%.2f Direction=(%.2f,%.2f,%.2f)",
+        GetOwnerNameSafe(),
+        GetComponentNameSafe(),
+        HitBoneName.ToString().c_str(),
+        Strength,
+        HitDirection.X,
+        HitDirection.Y,
+        HitDirection.Z);
+
+    const bool bTriggered = MeshComponent->TriggerPartialRagdollHitReaction(Request);
+    LogCurrentState(bTriggered ? EventLabel : "HitReactionRejected");
+    ActiveLogTimer = 0.0f;
+}
+
 void UPhysicsAssetRagdollTestComponent::LogControls() const
 {
-    UE_LOG("[RagdollTest] Controls: F6=Enable Ragdoll, F7=Disable Ragdoll, F9=Begin Recovery, F10=Dump State. Actor=%s RequestedMesh=%s",
+    UE_LOG("[RagdollTest] Controls: F6=Enable Ragdoll, F7=Disable Ragdoll, F8=RightArm HitReaction, F9=Begin Recovery, F10=Dump State, F11=UpperBody HitReaction, F12=LeftArm HitReaction. Actor=%s RequestedMesh=%s",
         GetOwnerNameSafe(),
         TargetMeshComponentName.empty() ? "<First SkeletalMeshComponent>" : TargetMeshComponentName.c_str());
 }
@@ -266,19 +366,37 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
     USkeletalMeshComponent* MeshComponent = TargetMeshComponent.Get();
     UPhysicsAsset* EffectivePhysicsAsset = MeshComponent ? MeshComponent->GetEffectivePhysicsAsset() : nullptr;
     UPhysicsAsset* ActivePhysicsAsset = MeshComponent ? MeshComponent->GetActivePhysicsAsset() : nullptr;
+    const FVector LastHitDirection =
+        MeshComponent ? MeshComponent->GetLastPartialHitReactionDirection() : FVector::ZeroVector;
 
-    UE_LOG("[RagdollTest] %s Actor=%s MeshComponent=%s EffectivePhysicsAsset=%s ActivePhysicsAsset=%s Active=%s PhysicsPose=%s Recovering=%s LiveBodies=%d LiveConstraints=%d BlendWeight=%.2f",
+    UE_LOG("[RagdollTest] %s Actor=%s MeshComponent=%s EffectivePhysicsAsset=%s ActivePhysicsAsset=%s Mode=%s Active=%s PhysicsPose=%s Recovering=%s PartialRoot=%s PartialPhase=%s Hold=%.2f PendingBlendOut=%s LiveBodies=%d LiveConstraints=%d BlendWeight=%.2f LastPreset=%s LastHitBone=%s LastRoot=%s LastTarget=%s LastStrength=%.2f LastHold=%.2f LastImpulse=%.2f LastDirection=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
         EventLabel ? EventLabel : "State",
         GetOwnerNameSafe(),
         GetComponentNameSafe(),
         GetAssetNameSafe(EffectivePhysicsAsset),
         GetAssetNameSafe(ActivePhysicsAsset),
+        MeshComponent ? LexToString(MeshComponent->GetRagdollMode()) : "None",
         (MeshComponent && MeshComponent->IsRagdollActive()) ? "true" : "false",
         (MeshComponent && MeshComponent->IsUsingPhysicsAssetPose()) ? "true" : "false",
         (MeshComponent && MeshComponent->IsRecoveringFromRagdoll()) ? "true" : "false",
+        MeshComponent ? MeshComponent->GetActivePartialRagdollRootBoneName().ToString().c_str() : "None",
+        MeshComponent ? LexToString(MeshComponent->GetPartialRagdollPhase()) : "None",
+        MeshComponent ? MeshComponent->GetPartialRagdollHoldRemaining() : 0.0f,
+        (MeshComponent && MeshComponent->IsPartialRagdollBlendOutPending()) ? "true" : "false",
         MeshComponent ? MeshComponent->GetLiveRagdollBodyCount() : 0,
         MeshComponent ? MeshComponent->GetLiveRagdollConstraintCount() : 0,
-        MeshComponent ? MeshComponent->GetPhysicsAssetBlendWeight() : 0.0f);
+        MeshComponent ? MeshComponent->GetPhysicsAssetBlendWeight() : 0.0f,
+        MeshComponent ? LexToString(MeshComponent->GetLastPartialHitReactionPreset()) : "Unknown",
+        MeshComponent ? MeshComponent->GetLastPartialHitReactionHitBoneName().ToString().c_str() : "None",
+        MeshComponent ? MeshComponent->GetLastPartialHitReactionRootBoneName().ToString().c_str() : "None",
+        MeshComponent ? MeshComponent->GetLastPartialHitReactionTargetBoneName().ToString().c_str() : "None",
+        MeshComponent ? MeshComponent->GetLastPartialHitReactionStrength() : 0.0f,
+        MeshComponent ? MeshComponent->GetLastPartialHitReactionHoldTime() : 0.0f,
+        MeshComponent ? MeshComponent->GetLastPartialHitReactionImpulseMagnitude() : 0.0f,
+        LastHitDirection.X,
+        LastHitDirection.Y,
+        LastHitDirection.Z,
+        (MeshComponent && MeshComponent->WasLastPartialHitReactionEscalationCandidate()) ? "true" : "false");
 }
 
 const char* UPhysicsAssetRagdollTestComponent::GetComponentNameSafe() const

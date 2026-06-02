@@ -273,6 +273,34 @@ namespace
         }
     }
 
+    const char* LexToString(EPartialRagdollPhase Phase)
+    {
+        switch (Phase)
+        {
+        case EPartialRagdollPhase::BlendingIn:
+            return "BlendingIn";
+        case EPartialRagdollPhase::Active:
+            return "Active";
+        case EPartialRagdollPhase::BlendingOut:
+            return "BlendingOut";
+        default:
+            return "None";
+        }
+    }
+
+    const char* LexToString(ERagdollMode Mode)
+    {
+        switch (Mode)
+        {
+        case ERagdollMode::FullBody:
+            return "FullBody";
+        case ERagdollMode::Partial:
+            return "Partial";
+        default:
+            return "None";
+        }
+    }
+
     FTransform DecomposePoseMatrixPreservingScale(const FMatrix& Matrix, const FVector& PreservedScale)
     {
         FTransform Result;
@@ -1006,18 +1034,38 @@ bool USkeletalMeshComponent::TriggerPartialRagdoll(const FPartialRagdollRequest&
         }
     }
 
+    const bool bWasPartialActive = ActiveRagdollMode == ERagdollMode::Partial;
+    const bool bWasBlendingOut =
+        bWasPartialActive &&
+        (PartialRagdollPhase == EPartialRagdollPhase::BlendingOut || bPendingPartialRagdollBlendOut);
     PendingPartialRagdollHoldTimeOverride =
         Request.HasHoldTimeOverride()
             ? Request.HoldTimeOverride
             : PartialRagdollHoldTime;
 
     const bool bTriggered = EnablePartialRagdoll(Selection);
-    UE_LOG("Partial ragdoll request %s. Component=%s Preset=%s RootBone=%s Hold=%.3f",
-        bTriggered ? "accepted" : "failed",
+    const char* ResultLabel = "failed";
+    if (bTriggered)
+    {
+        if (bWasPartialActive)
+        {
+            ResultLabel = bWasBlendingOut ? "reactivated" : "refreshed";
+        }
+        else
+        {
+            ResultLabel = "accepted";
+        }
+    }
+
+    UE_LOG("Partial ragdoll request %s. Component=%s Preset=%s RootBone=%s Hold=%.3f Mode=%s Phase=%s PendingBlendOut=%s",
+        ResultLabel,
         GetName().c_str(),
         LexToString(Request.Preset),
         Selection.RootBoneName.ToString().c_str(),
-        Request.HasHoldTimeOverride() ? Request.HoldTimeOverride : PartialRagdollHoldTime);
+        Request.HasHoldTimeOverride() ? Request.HoldTimeOverride : PartialRagdollHoldTime,
+        LexToString(ActiveRagdollMode),
+        LexToString(PartialRagdollPhase),
+        bPendingPartialRagdollBlendOut ? "true" : "false");
     return bTriggered;
 }
 
@@ -1043,6 +1091,16 @@ bool USkeletalMeshComponent::TriggerPartialRagdollHitReaction(const FPartialRagd
     const bool bEscalationCandidate =
         Request.bAllowEscalationToFullBody && NormalizedStrength >= 0.85f;
 
+    LastPartialHitReactionHitBoneName = Request.HitBoneName;
+    LastPartialHitReactionPreset = ResolvedPreset;
+    LastPartialHitReactionRootBoneName = FName::None;
+    LastPartialHitReactionTargetBoneName = FName::None;
+    LastPartialHitReactionStrength = NormalizedStrength;
+    LastPartialHitReactionHoldTime = ResolvedHoldTime;
+    LastPartialHitReactionImpulseMagnitude = ResolvedImpulseMagnitude;
+    LastPartialHitReactionDirection = FVector::ZeroVector;
+    bLastPartialHitReactionEscalationCandidate = bEscalationCandidate;
+
     FPartialRagdollRequest PartialRequest;
     PartialRequest.Preset = ResolvedPreset;
     PartialRequest.HoldTimeOverride = ResolvedHoldTime;
@@ -1057,22 +1115,48 @@ bool USkeletalMeshComponent::TriggerPartialRagdollHitReaction(const FPartialRagd
             LexToString(ResolvedPreset));
         return false;
     }
+    LastPartialHitReactionRootBoneName = Selection.RootBoneName;
+
+    const bool bWasPartialActive = ActiveRagdollMode == ERagdollMode::Partial;
+    const bool bWasSameChainActive = bWasPartialActive && IsSamePartialRagdollSelection(Selection);
+    const bool bWasBlendingOut =
+        bWasSameChainActive &&
+        (PartialRagdollPhase == EPartialRagdollPhase::BlendingOut || bPendingPartialRagdollBlendOut);
 
     const bool bTriggered = TriggerPartialRagdoll(PartialRequest);
     if (!bTriggered)
     {
-        UE_LOG("Partial hit reaction rejected. Component=%s HitBone=%s Preset=%s RootBone=%s Reason=TriggerRejected EscalationCandidate=%s",
+        UE_LOG("Partial hit reaction rejected. Component=%s HitBone=%s Preset=%s RootBone=%s Strength=%.2f Hold=%.3f Impulse=%.2f Reason=TriggerRejected EscalationCandidate=%s",
             GetName().c_str(),
             Request.HitBoneName.ToString().c_str(),
             LexToString(ResolvedPreset),
             Selection.RootBoneName.ToString().c_str(),
+            NormalizedStrength,
+            ResolvedHoldTime,
+            ResolvedImpulseMagnitude,
             bEscalationCandidate ? "true" : "false");
         return false;
+    }
+
+    const char* ResultLabel = "accepted";
+    if (bWasSameChainActive)
+    {
+        ResultLabel = bWasBlendingOut ? "reactivated" : "refreshed";
     }
 
     FPhysicsAssetInstance* Instance = GetPhysicsAssetInstance();
     if (!Instance)
     {
+        UE_LOG("Partial hit reaction %s without impulse. Component=%s HitBone=%s Preset=%s RootBone=%s Strength=%.2f Hold=%.3f Impulse=%.2f Reason=NoPhysicsInstance EscalationCandidate=%s",
+            ResultLabel,
+            GetName().c_str(),
+            Request.HitBoneName.ToString().c_str(),
+            LexToString(ResolvedPreset),
+            Selection.RootBoneName.ToString().c_str(),
+            NormalizedStrength,
+            ResolvedHoldTime,
+            ResolvedImpulseMagnitude,
+            bEscalationCandidate ? "true" : "false");
         return true;
     }
 
@@ -1087,23 +1171,32 @@ bool USkeletalMeshComponent::TriggerPartialRagdollHitReaction(const FPartialRagd
     }
 
     const FVector Impulse = ImpulseDirection * ResolvedImpulseMagnitude;
+    LastPartialHitReactionDirection = ImpulseDirection;
     const FName TargetBodyBoneName =
         Instance->ResolveBestImpulseTargetBoneName(Request.HitBoneName, Selection.RootBoneName);
 
     if (TargetBodyBoneName == FName::None || !Instance->AddImpulseToBone(TargetBodyBoneName, Impulse))
     {
-        UE_LOG("Partial hit reaction accepted without impulse. Component=%s HitBone=%s Preset=%s RootBone=%s Reason=NoImpulseTarget Strength=%.2f Hold=%.3f EscalationCandidate=%s",
+        UE_LOG("Partial hit reaction %s without impulse. Component=%s HitBone=%s Preset=%s RootBone=%s Strength=%.2f Hold=%.3f Impulse=%.2f Direction=(%.2f,%.2f,%.2f) Reason=NoImpulseTarget EscalationCandidate=%s",
+            ResultLabel,
             GetName().c_str(),
             Request.HitBoneName.ToString().c_str(),
             LexToString(ResolvedPreset),
             Selection.RootBoneName.ToString().c_str(),
             NormalizedStrength,
             ResolvedHoldTime,
+            ResolvedImpulseMagnitude,
+            ImpulseDirection.X,
+            ImpulseDirection.Y,
+            ImpulseDirection.Z,
             bEscalationCandidate ? "true" : "false");
         return true;
     }
 
-    UE_LOG("Partial hit reaction accepted. Component=%s HitBone=%s Preset=%s RootBone=%s TargetBody=%s Strength=%.2f Hold=%.3f Impulse=%.2f Direction=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
+    LastPartialHitReactionTargetBoneName = TargetBodyBoneName;
+
+    UE_LOG("Partial hit reaction %s. Component=%s HitBone=%s Preset=%s RootBone=%s TargetBody=%s Strength=%.2f Hold=%.3f Impulse=%.2f Direction=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
+        ResultLabel,
         GetName().c_str(),
         Request.HitBoneName.ToString().c_str(),
         LexToString(ResolvedPreset),
