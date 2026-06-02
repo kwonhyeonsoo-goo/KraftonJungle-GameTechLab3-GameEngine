@@ -907,6 +907,29 @@ namespace
         {
             SS << "#define USE_FOG 1\n";
             SS << "#include \"Common/Fog.hlsli\"\n";
+            SS << R"(
+cbuffer ForwardFogParams : register(b7)
+{
+    float4 FwdFogColor;
+    float  FwdFogDensity;
+    float  FwdFogHeightFalloff;
+    float  FwdFogBaseHeight;
+    float  FwdFogStartDistance;
+    float  FwdFogCutoffDistance;
+    float  FwdFogMaxOpacity;
+    float2 _fwdFogPad;
+};
+
+float4 ApplyFogTransparent(float4 color, float3 worldPos, float3 cameraWorldPos)
+{
+    float fogFactor = ComputeHeightFogFactor(
+        worldPos, cameraWorldPos,
+        FwdFogDensity, FwdFogHeightFalloff, FwdFogBaseHeight,
+        FwdFogStartDistance, FwdFogCutoffDistance, FwdFogMaxOpacity);
+    color.rgb = lerp(color.rgb, FwdFogColor.rgb, fogFactor);
+    return color;
+}
+)";
         }
         if (Domain == EMaterialGraphTarget::ParticleMesh && bReceiveLighting)
         {
@@ -1007,7 +1030,7 @@ float4 PS(PS_Input_MaterialParticle input) : SV_TARGET
     FMaterialResult Result = EvaluateMaterial(MaterialInput);
     float4 FinalColor = float4(Result.Color + Result.Emissive, Result.Opacity);
     clip(FinalColor.a - 0.01f);
-    return ApplyFogTranslucent(FinalColor, input.worldPos, CameraWorldPos);
+    return ApplyFogTransparent(FinalColor, input.worldPos, CameraWorldPos);
 }
 )";
     }
@@ -1082,7 +1105,7 @@ float4 PS(PS_Input_MaterialMeshParticle input) : SV_TARGET
         SS << R"(
     float4 FinalColor = float4(BaseColor + Result.Emissive, Result.Opacity);
     clip(FinalColor.a - 0.01f);
-    return ApplyFogTranslucent(FinalColor, input.worldPos, CameraWorldPos);
+    return ApplyFogTransparent(FinalColor, input.worldPos, CameraWorldPos);
 }
 )";
         return SS.str();
@@ -1091,7 +1114,7 @@ float4 PS(PS_Input_MaterialMeshParticle input) : SV_TARGET
     FString BuildSurfaceMain(ERenderPass RenderPass, EBlendMode BlendMode, EMaterialShadingModel ShadingModel, bool bReceiveLighting, float OpacityMaskClipValue)
     {
         const bool bUnlit = !bReceiveLighting || (ShadingModel == EMaterialShadingModel::Unlit);
-        const bool bTranslucentSurfacePass = (RenderPass == ERenderPass::Translucent);
+        const bool bTransparentSurfacePass = (RenderPass == ERenderPass::Transparent);
 
         std::stringstream SS;
         SS << R"(
@@ -1117,17 +1140,10 @@ MaterialSurfaceVSOutput VS(VS_Input_PNCTT input)
 }
 
 )";
-        if (!bTranslucentSurfacePass)
+        if (!bTransparentSurfacePass)
         {
             SS << R"(
-struct MaterialSurfacePSOutput
-{
-    float4 Color : SV_TARGET0;
-    float4 Normal : SV_TARGET1;
-    float4 Culling : SV_TARGET2;
-};
-
-MaterialSurfacePSOutput PS(MaterialSurfaceVSOutput input)
+float4 PS(MaterialSurfaceVSOutput input) : SV_TARGET
 {
 )";
         }
@@ -1185,7 +1201,7 @@ float4 PS(MaterialSurfaceVSOutput input) : SV_TARGET
 )";
         }
 
-        if (bTranslucentSurfacePass)
+        if (bTransparentSurfacePass)
         {
             SS << R"(
     return float4(finalRgb, saturate(Result.Opacity));
@@ -1201,14 +1217,95 @@ float4 PS(MaterialSurfaceVSOutput input) : SV_TARGET
                 SS << "    clip(OutOpacity - " << OpacityMaskClipValue << "f);\n";
             }
             SS << R"(
-    MaterialSurfacePSOutput Output;
-    Output.Color = float4(finalRgb, OutOpacity);
-    Output.Normal = float4(N, 1.0f);
-    Output.Culling = float4(0, 0, 0, 0);
-    return Output;
+    return float4(finalRgb, OutOpacity);
 }
 )";
         }
+        return SS.str();
+    }
+
+    FString BuildDecalMain(EBlendMode BlendMode, EMaterialShadingModel ShadingModel, bool bReceiveLighting)
+    {
+        const bool bUnlit = !bReceiveLighting || (ShadingModel == EMaterialShadingModel::Unlit);
+        std::stringstream SS;
+        SS << R"(
+cbuffer DecalBuffer : register(b2)
+{
+    float4x4 DecalWorldToLocal;
+    float4 DecalColor;
+}
+
+PS_Input_Decal VS(VS_Input_PNCT input)
+{
+    PS_Input_Decal output;
+    float4 worldPos = mul(float4(input.position, 1.0f), Model);
+    output.position = mul(mul(worldPos, View), Projection);
+    output.worldPos = worldPos.xyz;
+    output.normal = normalize(mul(input.normal, (float3x3)NormalMatrix));
+    return output;
+}
+
+float4 PS(PS_Input_Decal input) : SV_TARGET
+{
+    float3 decalLocalPos = mul(float4(input.worldPos, 1.0f), DecalWorldToLocal).xyz;
+
+    if (abs(decalLocalPos.x) > 0.5f || abs(decalLocalPos.y) > 0.5f || abs(decalLocalPos.z) > 0.5f)
+    {
+        discard;
+    }
+
+    float2 decalUV;
+    decalUV.x = decalLocalPos.y + 0.5f;
+    decalUV.y = 0.5f - decalLocalPos.z;
+
+    FMaterialPixelInput MaterialInput;
+    MaterialInput.UV0           = decalUV;
+    MaterialInput.UV1           = float2(0, 0);
+    MaterialInput.UV2           = float2(0, 0);
+    MaterialInput.ParticleColor = float4(1, 1, 1, 1);
+    MaterialInput.VertexColor   = float4(1, 1, 1, 1);
+    MaterialInput.Time          = Time;
+    MaterialInput.SubImageIndex = 0.0f;
+    MaterialInput.DynamicParam  = float4(0, 0, 0, 0);
+
+    FMaterialResult Result = EvaluateMaterial(MaterialInput);
+    float OutOpacity = saturate(Result.Opacity);
+    clip(OutOpacity - 0.001f);
+
+    float3 N = normalize(input.normal);
+)";
+
+        if (bUnlit)
+        {
+            SS << R"(
+    float3 finalRgb = Result.BaseColor + Result.Emissive;
+)";
+        }
+        else
+        {
+            const float Shininess = (ShadingModel == EMaterialShadingModel::Phong) ? 32.0f : 8.0f;
+            const bool bSpecular = (ShadingModel == EMaterialShadingModel::Phong || ShadingModel == EMaterialShadingModel::DefaultLit);
+            SS << R"(
+    float3 V = normalize(CameraWorldPos - input.worldPos);
+    float3 diffuse = AccumulateDiffuse(input.worldPos, N, input.position);
+)";
+            if (bSpecular)
+            {
+                SS << "    float3 specular = AccumulateSpecular(input.worldPos, N, V, " << Shininess << ".0f, input.position);\n";
+            }
+            else
+            {
+                SS << "    float3 specular = float3(0, 0, 0);\n";
+            }
+            SS << R"(
+    float3 finalRgb = Result.BaseColor * diffuse + specular + Result.Emissive;
+)";
+        }
+
+        SS << R"(
+    return float4(ApplyWireframe(finalRgb) * DecalColor.rgb, OutOpacity * DecalColor.a);
+}
+)";
         return SS.str();
     }
 
@@ -1244,8 +1341,10 @@ bool FMaterialHlslGenerator::Generate(const FMaterialGraph& Graph, const FMateri
     FString Guid                  = Options.MaterialGuid.empty() ? "Material" : SanitizeIdentifier(Options.MaterialGuid);
     OutResult.GeneratedShaderPath = "Shaders/Generated/Materials/" + Guid + "_" + ToString(Options.Domain) + ".hlsl";
 
-    // ParticleSprite는 ParticleFrameCB가 b2를 점유하므로 PerMaterial은 b3로 밀어야 충돌이 없음.
-    const uint32 PerMaterialSlot = (Options.Domain == EMaterialGraphTarget::ParticleSprite)
+    // ParticleSprite는 ParticleFrameCB가 b2를, Decal은 DecalBuffer가 b2를 점유하므로
+    // graph material parameter CB는 b3로 밀어야 충돌이 없음.
+    const uint32 PerMaterialSlot =
+        (Options.Domain == EMaterialGraphTarget::ParticleSprite || Options.Domain == EMaterialGraphTarget::Decal)
             ? ECBSlot::PerShader1  // b3
             : ECBSlot::PerShader0; // b2
 
@@ -1277,7 +1376,11 @@ bool FMaterialHlslGenerator::Generate(const FMaterialGraph& Graph, const FMateri
         SS << BuildPostProcessMain();
         break;
     case EMaterialGraphTarget::Surface:
+        SS << BuildSurfaceMain(Options.RenderPass, Options.BlendMode, Options.ShadingModel, Options.bReceiveLighting, Options.OpacityMaskClipValue);
+        break;
     case EMaterialGraphTarget::Decal:
+        SS << BuildDecalMain(Options.BlendMode, Options.ShadingModel, Options.bReceiveLighting);
+        break;
     default:
         SS << BuildSurfaceMain(Options.RenderPass, Options.BlendMode, Options.ShadingModel, Options.bReceiveLighting, Options.OpacityMaskClipValue);
         break;

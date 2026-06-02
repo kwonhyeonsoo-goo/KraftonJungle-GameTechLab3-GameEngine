@@ -47,7 +47,7 @@ float4 PS(PS_Input_UV input) : SV_TARGET
     float4 worldH = mul(clipPos, InvViewProj);
     float3 worldPos = worldH.xyz / worldH.w;
 
-    // 공용 height-fog 라인적분 (Common/Fog.hlsli) — UberLit translucent forward fog 와 동일 수식
+    // 공용 height-fog 라인적분 (Common/Fog.hlsli) — UberTransparent forward fog 와 동일 수식
     float fogFactor = ComputeHeightFogFactor(
         worldPos, CameraWorldPos,
         FogDensity, FogHeightFalloff, FogBaseHeight,

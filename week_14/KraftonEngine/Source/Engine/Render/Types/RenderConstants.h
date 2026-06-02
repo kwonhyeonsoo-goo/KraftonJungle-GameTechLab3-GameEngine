@@ -28,7 +28,7 @@ namespace ECBSlot
 	constexpr uint32 Lighting = 4;   // b4: LightingBuffer (Ambient + Directional + 메타)
 	constexpr uint32 Shadow = 5;     // b5: ShadowBuffer (Shadow 행렬 + 파라미터)
 	constexpr uint32 BoneHeatMap = 6; // b6: SkeletalMesh bone weight heatmap
-	constexpr uint32 ForwardFog = 7; // b7: 전역 Fog 파라미터 (UberLit translucent forward fog 용)
+	constexpr uint32 ForwardFog = 7; // b7: 전역 Fog 파라미터 (UberTransparent self-fog 용)
 }
 
 // HLSL 라이팅 SRV 슬롯 — 프레임에 1회 바인딩 (Forward Shading)
@@ -65,9 +65,7 @@ namespace ESystemTexSlot
 {
 	constexpr uint32 SceneDepth = 16;          // t16: CopyResource된 Depth (R24_UNORM)
 	constexpr uint32 SceneColor = 17;          // t17: CopyResource된 SceneColor (R8G8B8A8_UNORM)
-	constexpr uint32 GBufferNormal = 18;       // t18: GBuffer World Normal (R16G16B16A16_FLOAT)
 	constexpr uint32 Stencil     = 19;         // t19: CopyResource된 Stencil (X24_G8_UINT)
-	constexpr uint32 CullingHeatmap = 20;      // t20: Tile Culling Heatmap (R8G8B8A8_UNORM)
 	constexpr uint32 ShadowMapCSM       = 21;  // t21: Directional CSM Texture2DArray (4 cascades)
 	constexpr uint32 ShadowMapSpotAtlas = 22;  // t22: Spot Atlas Texture2DArray (multi-page)
 	constexpr uint32 ShadowMapPointLightTextureArray = 23;  // t23: Point Light
@@ -114,7 +112,8 @@ struct FPerObjectConstants
 struct FBoneHeatMapConstants
 {
 	int32 SelectedBoneIndex = -1;
-	float Pad[3] = { 0.0f, 0.0f, 0.0f };
+	float OverlayAlpha = 0.8f;
+	float Pad[2] = { 0.0f, 0.0f };
 };
 
 // =============================================================================
@@ -365,7 +364,7 @@ struct FMeshSectionDraw
 	// 섹션 패스 override — MAX면 머티리얼 GetRenderPass() 사용(기본). 빌보드 등이 EditorIcon 등으로 강제.
 	ERenderPass PassOverride = ERenderPass::MAX;
 
-	// Translucent 섹션별 depth 정렬용. true면 SortWorldPos로 카메라 거리를 계산하고,
+	// Transparent 섹션별 depth 정렬용. true면 SortWorldPos로 카메라 거리를 계산하고,
 	// false면(기본) BuildCommandForProxy가 proxy 위치로 fallback — 비입자 proxy는 동작 변화 없음.
 	bool    bHasSortPos  = false;
 	FVector SortWorldPos = { 0, 0, 0 };

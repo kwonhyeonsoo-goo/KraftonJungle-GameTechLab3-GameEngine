@@ -45,14 +45,6 @@ public:
 	ID3D11ShaderResourceView* GetDepthCopySRV() const { return DepthCopySRV; }
 	ID3D11ShaderResourceView* GetStencilCopySRV() const { return StencilCopySRV; }
 
-	// GBuffer Normal RT
-	ID3D11RenderTargetView* GetNormalRTV() const { return NormalRTV; }
-	ID3D11ShaderResourceView* GetNormalSRV() const { return NormalSRV; }
-
-	// Culling Heatmap RT
-	ID3D11RenderTargetView* GetCullingHeatmapRTV() const { return CullingHeatmapRTV; }
-	ID3D11ShaderResourceView* GetCullingHeatmapSRV() const { return CullingHeatmapSRV; }
-
 	// Depth of Field CoC RT
 	ID3D11RenderTargetView* GetCoCRTV() const { return CoCRTV; }
 	ID3D11ShaderResourceView* GetCoCSRV() const { return CoCSRV; }
@@ -93,16 +85,6 @@ private:
 	// SceneColor 복사본 — FXAA 등 PostProcess에서 최종 화면을 읽기 위한 CopyResource 대상
 	ID3D11Texture2D* SceneColorCopyTexture = nullptr;
 	ID3D11ShaderResourceView* SceneColorCopySRV = nullptr;
-
-	// GBuffer Normal RT — Opaque 패스에서 MRT[1]로 world normal 기록
-	ID3D11Texture2D* NormalTexture = nullptr;
-	ID3D11RenderTargetView* NormalRTV = nullptr;
-	ID3D11ShaderResourceView* NormalSRV = nullptr;
-
-	// Culling Heatmap RT — Opaque 패스에서 MRT[2]로 타일 컬링 히트맵 기록
-	ID3D11Texture2D* CullingHeatmapTexture = nullptr;
-	ID3D11RenderTargetView* CullingHeatmapRTV = nullptr;
-	ID3D11ShaderResourceView* CullingHeatmapSRV = nullptr;
 
 	// DoF CoC RT — DoFSetup에서 R16_FLOAT로 기록, DoF composite에서 읽기
 	ID3D11Texture2D* CoCTexture = nullptr;

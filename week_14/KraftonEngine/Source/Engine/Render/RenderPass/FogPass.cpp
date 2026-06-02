@@ -25,7 +25,7 @@ bool FFogPass::BeginPass(const FPassContext& Ctx)
 
 	// 불투명 깊이를 복사본으로 갱신 → fog 셰이더가 t16(SceneDepth)로 읽는다.
 	// (t16 SRV 바인딩 자체는 PreDepthPass 에서 이뤄지며 프레임 내 유지됨 — PostProcess fog 와 동일 전제.)
-	// translucent 前이라 복사본은 불투명+데칼까지의 깊이를 담는다.
+	// Transparent 前이라 복사본은 불투명+데칼까지의 깊이를 담는다.
 	DC->OMSetRenderTargets(0, nullptr, nullptr);
 	DC->CopyResource(Frame.DepthCopyTexture, Frame.DepthTexture);
 	DC->OMSetRenderTargets(1, &Cache.RTV, Cache.DSV);

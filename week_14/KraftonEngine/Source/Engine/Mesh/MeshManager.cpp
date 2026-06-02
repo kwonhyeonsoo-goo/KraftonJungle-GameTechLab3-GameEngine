@@ -309,7 +309,7 @@ static bool LoadSkeletalMeshBinary(USkeletalMesh* SkeletalMesh, const FString& B
 
 		if (Header.Version >= static_cast<uint32>(EAssetPackageSerializationVersion::SkeletalMeshPhysicsAssetPayload))
 		{
-			SkeletalMesh->SerializeCurrentPayload(Reader);
+			SkeletalMesh->SerializeCurrentPayload(Reader, Header.Version);
 		}
 		else
 		{

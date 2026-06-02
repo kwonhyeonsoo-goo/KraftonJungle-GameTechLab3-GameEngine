@@ -1261,6 +1261,13 @@ void USkinnedMeshComponent::UpdateCPUSkinning()
 	++SkinnedRevision;
 }
 
+void USkinnedMeshComponent::MarkSkinnedVerticesModifiedByCloth()
+{
+	++SkinnedRevision;
+	MarkWorldBoundsDirty();
+	MarkSocketAttachedChildrenDirty();
+}
+
 void USkinnedMeshComponent::RefreshSkinningAfterPoseChanged()
 {
 	if (SkinningModeRuntime::Get() == ESkinningMode::CPU || HasActiveMorphTargets())

@@ -37,8 +37,11 @@ void FSkeletalMeshSceneProxy::UpdateMesh()
 
 	CachedDynamicVertexCount = 0;
 	UploadedSkinnedRevision = 0;
+	UploadedBoneHeatMapRevision = 0;
+	UploadedBoneHeatMapBoneIndex = -1;
 	UploadedSkinMatrixRevision = 0;
 	bDynamicBufferNeedsCreate = true;
+	bBoneHeatMapBufferNeedsCreate = true;
 	ReleaseSkinMatrixBuffer();
 
 	USkeletalMeshComponent* SMC = GetSkeletalMeshComponent();
@@ -100,6 +103,62 @@ bool FSkeletalMeshSceneProxy::PrepareGpuSkinningDrawBuffer(ID3D11Device* Device,
 	OutBuffer = {};
 	OutBuffer.VB = Asset->RenderBuffer->GetVertexBuffer().GetBuffer();
 	OutBuffer.VBStride = Asset->RenderBuffer->GetVertexBuffer().GetStride();
+	OutBuffer.IB = Asset->RenderBuffer->GetIndexBuffer().GetBuffer();
+	return OutBuffer.VB != nullptr && OutBuffer.IB != nullptr;
+}
+
+bool FSkeletalMeshSceneProxy::PrepareCpuBoneHeatMapDrawBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context, int32 SelectedBoneIndex, FDrawCommandBuffer& OutBuffer) const
+{
+	USkeletalMeshComponent* SMC = GetSkeletalMeshComponent();
+	if (!SMC) return false;
+
+	USkeletalMesh* Mesh = SMC->GetSkeletalMesh();
+	FSkeletalMesh* Asset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+	if (!Asset || !Asset->RenderBuffer || !Asset->RenderBuffer->IsValid()) return false;
+
+	const TArray<FVertexPNCTT>& SkinnedVertices = SMC->GetSkinnedVertices();
+	const uint32 VertexCount = static_cast<uint32>(SkinnedVertices.size());
+	if (VertexCount == 0 || Asset->Vertices.size() != SkinnedVertices.size()) return false;
+
+	if (bBoneHeatMapBufferNeedsCreate || !BoneHeatMapVertexBuffer.GetBuffer())
+	{
+		BoneHeatMapVertexBuffer.Create(Device, CachedDynamicVertexCount ? CachedDynamicVertexCount : VertexCount, sizeof(FVertexPNCTT));
+		bBoneHeatMapBufferNeedsCreate = false;
+	}
+
+	BoneHeatMapVertexBuffer.EnsureCapacity(Device, VertexCount);
+
+	const uint64 CurrentRevision = SMC->GetSkinnedRevision();
+	if (UploadedBoneHeatMapRevision != CurrentRevision || UploadedBoneHeatMapBoneIndex != SelectedBoneIndex)
+	{
+		BoneHeatMapVertices = SkinnedVertices;
+
+		for (uint32 i = 0; i < VertexCount; ++i)
+		{
+			float SelectedWeight = 0.0f;
+			const FVertexPNCTBW& SourceVertex = Asset->Vertices[i];
+			for (int32 InfluenceIndex = 0; InfluenceIndex < 4; ++InfluenceIndex)
+			{
+				if (SourceVertex.BoneIndices[InfluenceIndex] == SelectedBoneIndex)
+				{
+					SelectedWeight += SourceVertex.BoneWeights[InfluenceIndex];
+				}
+			}
+			BoneHeatMapVertices[i].Color.W = SelectedWeight;
+		}
+
+		if (!BoneHeatMapVertexBuffer.Update(Context, BoneHeatMapVertices.data(), VertexCount))
+		{
+			return false;
+		}
+
+		UploadedBoneHeatMapRevision = CurrentRevision;
+		UploadedBoneHeatMapBoneIndex = SelectedBoneIndex;
+	}
+
+	OutBuffer = {};
+	OutBuffer.VB = BoneHeatMapVertexBuffer.GetBuffer();
+	OutBuffer.VBStride = BoneHeatMapVertexBuffer.GetStride();
 	OutBuffer.IB = Asset->RenderBuffer->GetIndexBuffer().GetBuffer();
 	return OutBuffer.VB != nullptr && OutBuffer.IB != nullptr;
 }

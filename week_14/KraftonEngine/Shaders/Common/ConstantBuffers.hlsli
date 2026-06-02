@@ -27,7 +27,8 @@ cbuffer PerObjectBuffer : register(b1)
 cbuffer BoneHeatMapBuffer : register(b6)
 {
     int SelectedBoneIndex;
-    float3 BoneHeatMapPad;
+    float BoneHeatMapOverlayAlpha;
+    float2 BoneHeatMapPad;
 };
 
 // 시스템 샘플러 (s0~s4)

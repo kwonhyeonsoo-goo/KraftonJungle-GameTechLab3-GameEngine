@@ -115,6 +115,8 @@ protected:
 
 	void InitSkinningCache();
 	void UpdateCPUSkinning();
+	TArray<FVertexPNCTT>& GetMutableSkinnedVerticesForCloth() { return SkinnedVertices; }
+	void MarkSkinnedVerticesModifiedByCloth();
 	void RefreshSkinningAfterPoseChanged();
 	void RefreshSkinningAfterMorphChanged();
 	void MarkSocketAttachedChildrenDirty();

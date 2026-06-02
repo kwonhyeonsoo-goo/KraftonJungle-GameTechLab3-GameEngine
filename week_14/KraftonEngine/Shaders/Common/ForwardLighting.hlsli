@@ -29,15 +29,6 @@ float3 CalcDirectionalSpecular(float3 lightColor, float3 lightDir, float intensi
     return lightColor * intensity * pow(NdotH, max(shininess, 1.0f));
 }
 
-float3 GetHeatmapColor(float value)
-{
-    float3 color;
-    color.r = saturate(min(4.0 * value - 1.5, -4.0 * value + 4.5));
-    color.g = saturate(min(4.0 * value - 0.5, -4.0 * value + 3.5));
-    color.b = saturate(min(4.0 * value + 0.5, -4.0 * value + 2.5));
-    return color;
-}
-
 uint DepthToClusterSlice(float viewDepth)
 {
     float safeDepth = clamp(viewDepth, CullState.NearZ, CullState.FarZ);
@@ -65,27 +56,6 @@ uint ComputeClusterIndex(float4 screenPos, float3 worldPos)
     return sliceZ * CullState.ClusterX * CullState.ClusterY
         + tileY * CullState.ClusterX
         + tileX;
-}
-
-// Culling 모드(Tile/Cluster/None)에 따라 현재 픽셀의 라이트 수를 조회하고 heatmap 색상 반환
-float4 ComputeCullingHeatmap(float4 screenPos, float3 worldPos)
-{
-    uint LightCount = NumActivePointLights + NumActiveSpotLights;
-
-    if (LightCullingMode == LIGHT_CULLING_TILE && NumTilesX > 0 && NumTilesY > 0)
-    {
-        uint2 tileCoord = min(uint2(screenPos.xy) / TILE_SIZE, uint2(NumTilesX - 1, NumTilesY - 1));
-        uint tileIdx = tileCoord.y * NumTilesX + tileCoord.x;
-        LightCount = TileLightGrid[tileIdx].y;
-    }
-    else if (LightCullingMode == LIGHT_CULLING_CLUSTER)
-    {
-        uint clusterIdx = ComputeClusterIndex(screenPos, worldPos);
-        LightCount = g_ClusterLightGrid[clusterIdx].y;
-    }
-
-    float ratio = saturate((float)LightCount / HeatMapMax);
-    return float4(GetHeatmapColor(ratio), 1.0f);
 }
 
 float3 CalcLightDiffuse(FLightInfo light, float3 worldPos, float3 N)

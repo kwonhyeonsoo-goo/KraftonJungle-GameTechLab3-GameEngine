@@ -142,7 +142,7 @@ void AppendReplayDrawSection(
 	Section.Material = IsValid(SectionMaterial) ? SectionMaterial : nullptr;
 	Section.VertexFactory = ResolveReplaySectionVertexFactoryType(Replay.EmitterType);
 
-	// 입자 섹션은 자체 대표 위치로 translucent depth 정렬 (proxy 단위 정렬의 부정확 보완).
+	// 입자 섹션은 자체 대표 위치로 Transparent depth 정렬 (proxy 단위 정렬의 부정확 보완).
 	Section.bHasSortPos = true;
 	Section.SortWorldPos = Spec.SortWorldPos;
 
@@ -335,14 +335,14 @@ void FParticleSystemSceneProxy::UpdateMaterial()
 	//if (!SpriteMaterial)
 	//{
 	//	SpriteMaterial = UMaterial::CreateTransient(
-	//		ERenderPass::Translucent, EBlendState::AlphaBlend,
+	//		ERenderPass::Transparent, EBlendState::AlphaBlend,
 	//		EDepthStencilState::DepthReadOnly, ERasterizerState::SolidNoCull,
 	//		FShaderManager::Get().GetOrCreate(EShaderPath::ParticleSprite));
 	//}
 	//if (!MeshMaterial)
 	//{
 	//	MeshMaterial = UMaterial::CreateTransient(
-	//		ERenderPass::Translucent, EBlendState::AlphaBlend,
+	//		ERenderPass::Transparent, EBlendState::AlphaBlend,
 	//		EDepthStencilState::DepthReadOnly, ERasterizerState::SolidBackCull,
 	//		FShaderManager::Get().GetOrCreate(EShaderPath::ParticleMesh));
 	//}

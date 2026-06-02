@@ -4,7 +4,7 @@
 // =============================================================================
 // Fog.hlsli — 지수 Height Fog 라인적분 (공용)
 // =============================================================================
-// HeightFog.hlsl(풀스크린 post-process)과 UberLit(translucent forward fog)이 공유.
+// HeightFog.hlsl(풀스크린 post-process)과 UberTransparent forward fog가 공유.
 // worldPos/camPos 기반이라 깊이 복원과 무관 — UberLit 은 input.worldPos 를 그대로 넘기면 됨.
 //
 //   fogFactor [0, maxOpacity] 반환 → 호출부에서 lerp(sceneColor, FogColor, fogFactor) 또는

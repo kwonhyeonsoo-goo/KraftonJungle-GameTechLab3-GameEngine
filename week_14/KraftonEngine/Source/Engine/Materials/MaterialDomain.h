@@ -20,7 +20,7 @@
 
 enum class EMaterialDomain : uint8
 {
-	Surface,      // 일반 지오메트리 표면 (Opaque/Translucent/Additive/Modulate 는 BlendMode 가 결정)
+	Surface,      // 일반 지오메트리 표면 (Opaque/Transparent/Additive/Modulate 는 BlendMode 가 결정)
 	PostProcess,  // 풀스크린 후처리
 	UI,           // 스크린 공간 UI
 	Decal,        // 데칼
@@ -31,7 +31,7 @@ enum class EBlendMode : uint8
 {
 	Opaque,       // 불투명
 	Masked,       // 알파 클립 — 불투명 패스 + 셰이더 clip() (셰이더 측 대응 필요)
-	Translucent,  // 알파 블렌드
+	Transparent,  // 알파 블렌드
 	Additive,     // 가산 (광원 누적)
 	Modulate,     // 곱셈
 	MAX
@@ -67,17 +67,17 @@ inline FMaterialRenderState ResolveMaterialRenderState(EMaterialDomain Domain, E
 		break;
 	case EMaterialDomain::Surface:
 	default:
-		// 불투명/마스크 = Opaque 패스, 그 외 블렌드 = Translucent 패스
+		// 불투명/마스크 = Opaque 패스, 그 외 블렌드 = Transparent 패스
 		S.Pass = (Blend == EBlendMode::Opaque || Blend == EBlendMode::Masked)
 			? ERenderPass::Opaque
-			: ERenderPass::Translucent;
+			: ERenderPass::Transparent;
 		break;
 	}
 
 	// 2. Blend — BlendMode 직접 매핑 (Masked 는 불투명 블렌드 + 셰이더 clip())
 	switch (Blend)
 	{
-	case EBlendMode::Translucent: S.Blend = EBlendState::AlphaBlend; break;
+	case EBlendMode::Transparent: S.Blend = EBlendState::AlphaBlend; break;
 	case EBlendMode::Additive:    S.Blend = EBlendState::Additive;   break;
 	case EBlendMode::Modulate:    S.Blend = EBlendState::Modulate;   break;
 	case EBlendMode::Opaque:
@@ -86,12 +86,12 @@ inline FMaterialRenderState ResolveMaterialRenderState(EMaterialDomain Domain, E
 	}
 
 	// 3. DepthStencil — 결과 Pass 기준.
-	//    Translucent 는 depth-write 하지 않는 것이 일반적으로 올바르므로 DepthReadOnly 로 도출한다
+	//    Transparent 는 depth-write 하지 않는 것이 일반적으로 올바르므로 DepthReadOnly 로 도출한다
 	//    (파티클 .mat 의 명시적 DepthReadOnly 와 일치 → 별도 override 불필요. 단 기존 에디터 반투명은
 	//     Default→DepthReadOnly 로 동작이 바뀐다 — 의도된 교정).
 	switch (S.Pass)
 	{
-	case ERenderPass::Translucent:
+	case ERenderPass::Transparent:
 	case ERenderPass::Decal:
 	case ERenderPass::AdditiveDecal: S.DepthStencil = EDepthStencilState::DepthReadOnly; break;
 	case ERenderPass::PostProcess:   S.DepthStencil = EDepthStencilState::NoDepth;       break;
@@ -103,7 +103,7 @@ inline FMaterialRenderState ResolveMaterialRenderState(EMaterialDomain Domain, E
 	//    Opaque/Masked surface만 기본 BackCull을 유지하고, Two Sided는 별도 raster override로 강제 NoCull한다.
 	switch (S.Pass)
 	{
-	case ERenderPass::Translucent:
+	case ERenderPass::Transparent:
 	case ERenderPass::Decal:
 	case ERenderPass::AdditiveDecal:
 	case ERenderPass::PostProcess:
@@ -124,28 +124,28 @@ inline void DeriveDomainBlend(ERenderPass Pass, EBlendState Blend, EMaterialDoma
 	case ERenderPass::PostProcess:
 		OutDomain = EMaterialDomain::PostProcess; OutBlend = EBlendMode::Opaque; return;
 	case ERenderPass::UI:
-		OutDomain = EMaterialDomain::UI; OutBlend = EBlendMode::Translucent; return;
+		OutDomain = EMaterialDomain::UI; OutBlend = EBlendMode::Transparent; return;
 	case ERenderPass::Decal:
 		OutDomain = EMaterialDomain::Decal;
 		OutBlend  = (Blend == EBlendState::Additive)   ? EBlendMode::Additive
 		          : (Blend == EBlendState::Modulate)   ? EBlendMode::Modulate
-		          : (Blend == EBlendState::AlphaBlend) ? EBlendMode::Translucent
+		          : (Blend == EBlendState::AlphaBlend) ? EBlendMode::Transparent
 		          : EBlendMode::Opaque;
 		return;
 	case ERenderPass::AdditiveDecal:
 		OutDomain = EMaterialDomain::Decal; OutBlend = EBlendMode::Additive; return;
-	case ERenderPass::Translucent:
+	case ERenderPass::Transparent:
 		OutDomain = EMaterialDomain::Surface;
 		OutBlend  = (Blend == EBlendState::Additive) ? EBlendMode::Additive
 		          : (Blend == EBlendState::Modulate) ? EBlendMode::Modulate
-		          : EBlendMode::Translucent;
+		          : EBlendMode::Transparent;
 		return;
 	case ERenderPass::Opaque:
 	default:
 		OutDomain = EMaterialDomain::Surface;
 		OutBlend  = (Blend == EBlendState::Additive)   ? EBlendMode::Additive
 		          : (Blend == EBlendState::Modulate)   ? EBlendMode::Modulate
-		          : (Blend == EBlendState::AlphaBlend) ? EBlendMode::Translucent
+		          : (Blend == EBlendState::AlphaBlend) ? EBlendMode::Transparent
 		          : EBlendMode::Opaque;
 		return;
 	}

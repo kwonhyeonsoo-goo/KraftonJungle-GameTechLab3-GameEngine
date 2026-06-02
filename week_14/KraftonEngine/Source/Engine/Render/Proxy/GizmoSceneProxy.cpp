@@ -5,7 +5,6 @@
 #include "Materials/Material.h"
 #include "Object/Reflection/ObjectFactory.h"
 #include "Object/GarbageCollection.h"
-#include "Object/Object.h"
 
 // ============================================================
 // FGizmoSceneProxy
@@ -19,17 +18,22 @@ FGizmoSceneProxy::FGizmoSceneProxy(UGizmoComponent* InComponent, bool bInner)
 	ProxyFlags &= ~(EPrimitiveProxyFlags::SupportsOutline
 	              | EPrimitiveProxyFlags::ShowAABB);
 
-	EnsureGizmoMaterial();
+	GizmoMaterial = UMaterial::CreateTransient(
+		bInner ? ERenderPass::GizmoInner : ERenderPass::GizmoOuter,
+		bInner ? EBlendState::AlphaBlend : EBlendState::Opaque,
+		bInner ? EDepthStencilState::GizmoInside : EDepthStencilState::GizmoOutside,
+		ERasterizerState::SolidBackCull,
+		FShaderManager::Get().GetOrCreate(EShaderPath::Gizmo));
 }
 
 FGizmoSceneProxy::~FGizmoSceneProxy()
 {
 	GizmoCB.Release();
-	if (IsValid(GizmoMaterial))
+	if (GizmoMaterial)
 	{
 		UObjectManager::Get().DestroyObject(GizmoMaterial);
+		GizmoMaterial = nullptr;
 	}
-	GizmoMaterial = nullptr;
 }
 
 UGizmoComponent* FGizmoSceneProxy::GetGizmoComponent() const
@@ -40,31 +44,7 @@ UGizmoComponent* FGizmoSceneProxy::GetGizmoComponent() const
 void FGizmoSceneProxy::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	FPrimitiveSceneProxy::AddReferencedObjects(Collector);
-	Collector.AddReferencedObject(GizmoMaterial, "GizmoMaterial");
-}
-
-bool FGizmoSceneProxy::EnsureGizmoMaterial()
-{
-	if (IsValid(GizmoMaterial))
-	{
-		return true;
-	}
-
-	GizmoMaterial = nullptr;
-	FShader* GizmoShader = FShaderManager::Get().GetOrCreate(EShaderPath::Gizmo);
-	if (!GizmoShader)
-	{
-		return false;
-	}
-
-	GizmoMaterial = UMaterial::CreateTransient(
-		bIsInner ? ERenderPass::GizmoInner : ERenderPass::GizmoOuter,
-		bIsInner ? EBlendState::AlphaBlend : EBlendState::Opaque,
-		bIsInner ? EDepthStencilState::GizmoInside : EDepthStencilState::GizmoOutside,
-		ERasterizerState::SolidBackCull,
-		GizmoShader);
-
-	return IsValid(GizmoMaterial);
+	Collector.AddReferencedObject(GizmoMaterial, "FGizmoSceneProxy::GizmoMaterial");
 }
 
 // ============================================================
@@ -73,14 +53,6 @@ bool FGizmoSceneProxy::EnsureGizmoMaterial()
 void FGizmoSceneProxy::UpdateMesh()
 {
 	UGizmoComponent* Gizmo = GetGizmoComponent();
-	if (!IsValid(Gizmo))
-	{
-		MeshBuffer = nullptr;
-		SectionDraws.clear();
-		bVisible = false;
-		return;
-	}
-
 	MeshBuffer = Gizmo->GetMeshBuffer();
 	RebuildGizmoSectionDraws();
 }
@@ -92,10 +64,9 @@ void FGizmoSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 {
 	UGizmoComponent* Gizmo = GetGizmoComponent();
 
-	if (!IsValid(Gizmo) || !Frame.RenderOptions.ShowFlags.bGizmo || !Gizmo->IsVisible() || !EnsureGizmoMaterial())
+	if (!Frame.RenderOptions.ShowFlags.bGizmo || !Gizmo->IsVisible())
 	{
 		bVisible = false;
-		SectionDraws.clear();
 		return;
 	}
 	bVisible = true;
@@ -133,7 +104,7 @@ void FGizmoSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 void FGizmoSceneProxy::RebuildGizmoSectionDraws()
 {
 	SectionDraws.clear();
-	if (MeshBuffer && MeshBuffer->IsValid() && IsValid(GizmoMaterial))
+	if (MeshBuffer && GizmoMaterial)
 	{
 		uint32 IdxCount = MeshBuffer->GetIndexBuffer().GetIndexCount();
 		SectionDraws.push_back({ GizmoMaterial, 0, IdxCount });

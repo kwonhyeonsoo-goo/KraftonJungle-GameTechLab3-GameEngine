@@ -52,6 +52,15 @@ public:
         UPhysicsAssetPreviewComponent* SolidPreviewComponent,
         ID3D11Device* Device);
     void RenderViewportDebugOptions();
+    void SetEditorPreviewContext(UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent);
+    void TickEditorSimulation(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMesh* PreviewMesh,
+        UWorld* PreviewWorld,
+        USkeletalMeshComponent* PreviewComponent,
+        float DeltaTime);
+    void StopEditorSimulation(UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent, bool bResetPose);
+    bool IsEditorSimulationActive() const { return bEditorSimulationActive; }
     bool SaveEditedPhysicsAsset();
     bool HasUnsavedChanges() const { return IsDirty(); }
     int32 GetSelectedBodyIndex() const { return SelectedBodyIndex; }
@@ -72,6 +81,7 @@ private:
     void RenderDetailsAndValidationPanel(UPhysicsAsset* PhysicsAsset);
 
     void RenderToolbar(UPhysicsAsset* PhysicsAsset);
+    void RenderSimulationControls(UPhysicsAsset* PhysicsAsset);
     void RenderRegenerateBodiesControls(UPhysicsAsset* PhysicsAsset);
     void RenderAssetSummary(UPhysicsAsset* PhysicsAsset);
     void RenderSkeletonPhysicsTree(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh);
@@ -117,6 +127,9 @@ private:
     void AddConstraintToSelectedParentBody(UPhysicsAsset* PhysicsAsset);
     void RunValidation(UPhysicsAsset* PhysicsAsset);
     void MarkPhysicsAssetDirty();
+    bool StartEditorSimulation(UPhysicsAsset* PhysicsAsset, UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent);
+    void RequestEditorSimulationRestart();
+    FName GetSelectedSimulationRootBoneName(UPhysicsAsset* PhysicsAsset) const;
     void InitializeConstraintGraphEditor();
     void DestroyConstraintGraphEditor();
     void ClampSelection(UPhysicsAsset* PhysicsAsset);
@@ -127,17 +140,30 @@ private:
     int32 SelectedConstraintIndex = -1;
     int32 SelectedTreeBoneIndex = -1;
     USkeletalMesh* PreviewSkeletalMesh = nullptr;
+    USkeletalMeshComponent* PreviewSkeletalMeshComponent = nullptr;
+    UWorld* PreviewSimulationWorld = nullptr;
     ax::NodeEditor::EditorContext* ConstraintGraphContext = nullptr;
     bool bPendingClose = false;
     bool bConstraintGraphLayoutDirty = true;
     bool bShowPreviewBodies = true;
     bool bShowPreviewConstraints = true;
+    bool bShowConstraintLimitAngles = true;
+    bool bShowConstraintLimitSurfaces = true;
+    bool bShowOnlySelectedConstraintLimitAngles = false;
+    bool bEditorSimulationActive = false;
+    bool bEditorSimulationPaused = false;
+    bool bEditorSimulationNoGravity = false;
+    bool bEditorSimulationSelectedOnly = false;
+    bool bEditorSimulationRestartRequested = false;
     bool bRegenerateUsePCAAnalysis = true;
     bool bRegenerateUseBoneAxis = false;
     bool bRegenerateCreateConstraints = true;
+    bool bRegenerateDisableConstrainedBodyCollision = true;
     bool bRegenerateReplaceExisting = true;
-    float RegenerateMinInfluenceWeight = 0.35f;
-    int32 RegenerateMinWeightedVertices = 4;
+    bool bRegenerateSkipHelperBones = true;
+    bool bRegenerateAllowBoneAxisFallback = false;
+    float RegenerateMinInfluenceWeight = 0.15f;
+    int32 RegenerateMinWeightedVertices = 16;
     EPhysicsAssetConstraintFrameTarget SelectedConstraintGizmoFrame = EPhysicsAssetConstraintFrameTarget::Child;
     uint64 ConstraintGraphTopologyHash = 0;
 

@@ -2,6 +2,7 @@
 
 #include "RenderPassRegistry.h"
 #include "Render/Types/FrameContext.h"
+#include "Render/Types/ViewModeUtils.h"
 #include "UI/UIManager.h"
 
 REGISTER_RENDER_PASS(FUIPass)
@@ -15,6 +16,9 @@ FUIPass::FUIPass()
 
 bool FUIPass::BeginPass(const FPassContext& Ctx)
 {
+	if (ViewModeUtils::IsPureDebugViewMode(Ctx.Frame.RenderOptions.ViewMode))
+		return false;
+
 	return Ctx.Frame.ViewportRTV && UUIManager::Get().HasViewportWidgets();
 }
 

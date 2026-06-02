@@ -1,4 +1,4 @@
-﻿#include "DrawCommandBuilder.h"
+#include "DrawCommandBuilder.h"
 
 #include "Resource/ResourceManager.h"
 #include "Render/Types/RenderTypes.h"
@@ -12,6 +12,7 @@
 #include "Render/Proxy/SkeletalMeshSceneProxy.h"
 #include "Render/Scene/FScene.h"
 #include "Render/Types/RenderConstants.h"
+#include "Render/Types/ViewModeUtils.h"
 #include "Render/RenderPass/PassRenderStateTable.h"
 #include "Render/Pipeline/RenderCollector.h"
 #include "Materials/Material.h"
@@ -87,6 +88,7 @@ void FDrawCommandBuilder::BeginCollect(const FFrameContext& Frame)
 	CollectViewMode = Frame.RenderOptions.ViewMode;
 	bCollectWeightBoneHeatMap = Frame.RenderOptions.bWeightBoneHeatMap;
 	CollectWeightBoneHeatMapBoneIndex = Frame.RenderOptions.WeightBoneHeatMapBoneIndex;
+	CollectWeightBoneHeatMapOverlayAlpha = Frame.RenderOptions.WeightBoneHeatMapOverlayAlpha;
 	CollectCameraPosition = Frame.CameraPosition;
 
 	bHasSelectionMaskCommands = false;
@@ -102,10 +104,34 @@ void FDrawCommandBuilder::BeginCollect(const FFrameContext& Frame)
 		FontGeometry.EnsureCharInfoMap(FontRes);
 }
 
+static EUberLitDefines::ELightingModel GetLightingModelForViewMode(EViewMode ViewMode)
+{
+	switch (ViewMode)
+	{
+	case EViewMode::Unlit:       return EUberLitDefines::ELightingModel::Unlit;
+	case EViewMode::Lit_Gouraud: return EUberLitDefines::ELightingModel::Gouraud;
+	case EViewMode::Lit_Lambert: return EUberLitDefines::ELightingModel::Lambert;
+	case EViewMode::Lit_Phong:
+	case EViewMode::LightCulling:
+	default:                     return EUberLitDefines::ELightingModel::Phong;
+	}
+}
+
+static FShader* GetUberTransparentShader(EViewMode ViewMode, EUberLitDefines::EVertexFactory VertexFactory)
+{
+	const char* VSEntry = VertexFactory == EUberLitDefines::EVertexFactory::SkeletalMesh
+		? EUberLitDefines::EntryPoint::SkeletalMeshVS
+		: EUberLitDefines::EntryPoint::StaticMeshVS;
+	const EUberLitDefines::ELightingModel LightingModel = GetLightingModelForViewMode(ViewMode);
+	const D3D_SHADER_MACRO* Defines = EUberLitDefines::GetDefines(LightingModel, VertexFactory);
+	return FShaderManager::Get().GetOrCreate(
+		FShaderKey(EShaderPath::UberTransparent, Defines, VSEntry, EUberLitDefines::EntryPoint::PS));
+}
+
 // ============================================================
 // SelectEffectiveShader — ViewMode에 따른 UberLit 셰이더 변형 선택
 // ============================================================
-FShader* FDrawCommandBuilder::SelectEffectiveShader(FShader* ProxyShader, EViewMode ViewMode, bool bUseSkeletalVertexFactory, bool bWeightBoneHeatMap, bool bForwardFog)
+FShader* FDrawCommandBuilder::SelectEffectiveShader(FShader* ProxyShader, EViewMode ViewMode, bool bUseSkeletalVertexFactory)
 {
 	if (ProxyShader != FShaderManager::Get().GetOrCreate(EShaderPath::UberLit))
 		return ProxyShader;
@@ -117,28 +143,34 @@ FShader* FDrawCommandBuilder::SelectEffectiveShader(FShader* ProxyShader, EViewM
 	switch (ViewMode)
 	{
 	case EViewMode::Unlit:
-		return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Unlit, VertexFactory, EShaderErrorMode::Notification, bWeightBoneHeatMap, bForwardFog);
+		return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Unlit, VertexFactory, EShaderErrorMode::Notification);
 	case EViewMode::Lit_Gouraud:
-		return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Gouraud, VertexFactory, EShaderErrorMode::Notification, bWeightBoneHeatMap, bForwardFog);
+		return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Gouraud, VertexFactory, EShaderErrorMode::Notification);
 	case EViewMode::Lit_Lambert:
-		return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Lambert, VertexFactory, EShaderErrorMode::Notification, bWeightBoneHeatMap, bForwardFog);
+		return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Lambert, VertexFactory, EShaderErrorMode::Notification);
 	case EViewMode::Lit_Phong:
 	case EViewMode::LightCulling:
-		return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Phong, VertexFactory, EShaderErrorMode::Notification, bWeightBoneHeatMap, bForwardFog);
+		return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Phong, VertexFactory, EShaderErrorMode::Notification);
 	default:
 		return bUseSkeletalVertexFactory
-			? FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Default, VertexFactory, EShaderErrorMode::Notification, bWeightBoneHeatMap, bForwardFog)
+			? FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Default, VertexFactory, EShaderErrorMode::Notification)
 			: ProxyShader;
 	}
 }
 
 // ============================================================
 // ResolveSectionShader — shader-agnostic 셰이더 도출
-//   custom override 우선 → 파티클 VF 전용 셰이더 → Surface 메시 UberLit 퍼뮤테이션.
+//   graph/custom override 우선 → particle VF 전용 → surface scene/Transparent shader.
 //   머티리얼은 셰이더를 모르고, 엔진이 (Domain × VertexFactory × Pass × ViewMode)로 고른다.
 // ============================================================
-FShader* FDrawCommandBuilder::ResolveSectionShader(UMaterial* Mat, EVertexFactoryType VFType, EViewMode ViewMode, bool bGPUSkinning, bool bWeightBoneHeatMap, bool bForwardFog)
+FShader* FDrawCommandBuilder::ResolveSectionShader(UMaterial* Mat, EVertexFactoryType VFType, ERenderPass SecPass, EViewMode ViewMode, bool bGPUSkinning)
 {
+	const bool bDerivableSurfaceTransparent =
+		Mat &&
+		Mat->GetSourceKind() != EMaterialSourceKind::Graph &&
+		SecPass == ERenderPass::Transparent &&
+		Mat->GetShaderPathForSerialize() == EShaderPath::UberLit;
+
     // 1. Graph material first-class path. Runtime-compiled graph materials carry their
     //    generated shader as the material template/custom shader, and must beat the
     //    generic particle/default shader fallback.
@@ -149,7 +181,7 @@ FShader* FDrawCommandBuilder::ResolveSectionShader(UMaterial* Mat, EVertexFactor
     }
 
     // 2. custom override 강제 (CreateTransient: Gizmo/Decal/Text/SubUV, 비표준 셰이더 .mat)
-	if (Mat && Mat->HasCustomShader())
+	if (Mat && Mat->HasCustomShader() && !bDerivableSurfaceTransparent)
 		return Mat->GetCustomShader();
 
     // 3. 파티클 정점 팩토리 → 전용 셰이더 (FParticleVertexFactory 가 만들던 것과 동일 키)
@@ -162,22 +194,25 @@ FShader* FDrawCommandBuilder::ResolveSectionShader(UMaterial* Mat, EVertexFactor
 	default: break;
 	}
 
-    // 4. Surface 메시 → UberLit 퍼뮤테이션. 셰이더 정점 팩토리는 bGPUSkinning 으로 결정
-	//    (CPU 스키닝은 static-layout VS) — 기존 SelectEffectiveShader 와 동일.
+    // 4. Surface 메시 → pass별 scene shader. 셰이더 정점 팩토리는 bGPUSkinning 으로 결정
+	//    (CPU 스키닝은 static-layout VS).
 	const EUberLitDefines::EVertexFactory UVF = bGPUSkinning
 		? EUberLitDefines::EVertexFactory::SkeletalMesh
 		: EUberLitDefines::EVertexFactory::StaticMesh;
 
+	if (SecPass == ERenderPass::Transparent)
+		return GetUberTransparentShader(ViewMode, UVF);
+
 	switch (ViewMode)
 	{
-	case EViewMode::Unlit:        return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Unlit,   UVF, EShaderErrorMode::Notification, bWeightBoneHeatMap, bForwardFog);
-	case EViewMode::Lit_Gouraud:  return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Gouraud, UVF, EShaderErrorMode::Notification, bWeightBoneHeatMap, bForwardFog);
-	case EViewMode::Lit_Lambert:  return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Lambert, UVF, EShaderErrorMode::Notification, bWeightBoneHeatMap, bForwardFog);
+	case EViewMode::Unlit:        return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Unlit,   UVF, EShaderErrorMode::Notification);
+	case EViewMode::Lit_Gouraud:  return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Gouraud, UVF, EShaderErrorMode::Notification);
+	case EViewMode::Lit_Lambert:  return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Lambert, UVF, EShaderErrorMode::Notification);
 	case EViewMode::Lit_Phong:
-	case EViewMode::LightCulling: return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Phong,   UVF, EShaderErrorMode::Notification, bWeightBoneHeatMap, bForwardFog);
+	case EViewMode::LightCulling: return FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Phong,   UVF, EShaderErrorMode::Notification);
 	default:
 		return bGPUSkinning
-			? FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Default, UVF, EShaderErrorMode::Notification, bWeightBoneHeatMap, bForwardFog)
+			? FShaderManager::Get().GetOrCreateUberLitPermutation(EUberLitDefines::ELightingModel::Default, UVF, EShaderErrorMode::Notification)
 			: FShaderManager::Get().GetOrCreate(EShaderPath::UberLit);  // base UberLit (기존 ProxyShader 통과와 동일)
 	}
 }
@@ -206,6 +241,44 @@ static ERenderPass SectionRenderPass(const FMeshSectionDraw& Section)
 	return ERenderPass::Opaque;
 }
 
+static bool IsGizmoPass(ERenderPass Pass)
+{
+	return Pass == ERenderPass::GizmoOuter || Pass == ERenderPass::GizmoInner;
+}
+
+static bool ProxyHasGizmoPass(const FPrimitiveSceneProxy& Proxy)
+{
+	if (IsGizmoPass(Proxy.GetRenderPass()))
+		return true;
+
+	for (const FMeshSectionDraw& Section : Proxy.GetSectionDraws())
+	{
+		if (Section.IndexCount == 0) continue;
+		if (IsGizmoPass(SectionRenderPass(Section)))
+			return true;
+	}
+
+	return false;
+}
+
+static bool IsEditorHelperProxy(const FPrimitiveSceneProxy& Proxy)
+{
+	return Proxy.HasProxyFlag(EPrimitiveProxyFlags::BoneDebug) ||
+		Proxy.HasProxyFlag(EPrimitiveProxyFlags::WireShape) ||
+		Proxy.HasProxyFlag(EPrimitiveProxyFlags::FontBatched);
+}
+
+static bool ShouldSuppressPassForViewMode(EViewMode ViewMode, ERenderPass Pass)
+{
+	return ViewModeUtils::SuppressesEditorOverlays(ViewMode) && Pass == ERenderPass::EditorIcon;
+}
+
+static FShader* GetViewModeMeshShader(bool bUseSkeletalVertexFactory)
+{
+	const char* VSEntry = bUseSkeletalVertexFactory ? "VS_SkeletalMesh" : "VS_StaticMesh";
+	return FShaderManager::Get().GetOrCreate(FShaderKey(EShaderPath::ViewModeMesh, nullptr, VSEntry, "PS"));
+}
+
 // ============================================================
 // BuildCommandForProxy — Proxy → FDrawCommand 변환
 // ============================================================
@@ -215,14 +288,23 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 	ID3D11DeviceContext* Ctx = CachedContext;
 
 	const bool bSkeletal = Proxy.HasProxyFlag(EPrimitiveProxyFlags::SkeletalMesh);
-	const bool bWeightBoneHeatMap = bSkeletal && bCollectWeightBoneHeatMap && CollectWeightBoneHeatMapBoneIndex >= 0;
-	const bool bGPUSkinning = bSkeletal && (SkinningModeRuntime::Get() == ESkinningMode::GPU || bWeightBoneHeatMap);
+	const bool bBoneHeatMapOverlay =
+		(Pass == ERenderPass::ViewModeMesh) &&
+		!ViewModeUtils::IsPureMeshDebugViewMode(CollectViewMode) &&
+		bSkeletal &&
+		bCollectWeightBoneHeatMap &&
+		CollectWeightBoneHeatMapBoneIndex >= 0;
+	const bool bGPUSkinning = bSkeletal && SkinningModeRuntime::Get() == ESkinningMode::GPU;
 	const FSkeletalMeshSceneProxy* SkeletalProxy = bSkeletal
 		? static_cast<const FSkeletalMeshSceneProxy*>(&Proxy)
 		: nullptr;
 
 	FDrawCommandBuffer ProxyBuffer;
-	if (bGPUSkinning)
+	if (bBoneHeatMapOverlay && !bGPUSkinning)
+	{
+		if (!SkeletalProxy || !SkeletalProxy->PrepareCpuBoneHeatMapDrawBuffer(CachedDevice, Ctx, CollectWeightBoneHeatMapBoneIndex, ProxyBuffer)) return;
+	}
+	else if (bGPUSkinning)
 	{
 		if (!SkeletalProxy || !SkeletalProxy->PrepareGpuSkinningDrawBuffer(CachedDevice, Ctx, ProxyBuffer)) return;
 	}
@@ -236,7 +318,7 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 	// PassState → RenderState 변환 (Wireframe 오버라이드 포함)
 	const FDrawCommandRenderState BaseRenderState = PassRenderStateTable->ToDrawCommandState(Pass, CollectViewMode);
 
-	// Translucent depth-first 정렬용 거리² (Pass != Translucent면 SortKey에서 무시)
+	// Transparent depth-first 정렬용 거리² (Pass != Transparent면 SortKey에서 무시)
 	const FVector& ObjPos = Proxy.GetCachedWorldPos();
 	const FVector  ToCam  = CollectCameraPosition - ObjPos;
 	const float    DistSq = ToCam.Dot(ToCam);
@@ -249,18 +331,22 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 		Proxy.ClearPerObjectCBDirty();
 	}
 
-	if (bWeightBoneHeatMap)
-	{
-		FBoneHeatMapConstants BoneHeatMapConstants = {};
-		BoneHeatMapConstants.SelectedBoneIndex = CollectWeightBoneHeatMapBoneIndex;
-		BoneHeatMapCB.Update(Ctx, &BoneHeatMapConstants, sizeof(FBoneHeatMapConstants));
-	}
-
 	// SelectionMask 커맨드 존재 추적
 	if (Pass == ERenderPass::SelectionMask)
 		bHasSelectionMaskCommands = true;
 
 	const bool bDepthOnly = (Pass == ERenderPass::PreDepth);
+	const bool bViewModeMeshReplace = (Pass == ERenderPass::ViewModeMesh) && ViewModeUtils::IsPureMeshDebugViewMode(CollectViewMode);
+	const bool bViewModeMeshOverlay = (Pass == ERenderPass::ViewModeMesh) && bBoneHeatMapOverlay;
+	const bool bUsesViewModeMeshShader = bViewModeMeshReplace || bViewModeMeshOverlay;
+
+	if (bUsesViewModeMeshShader)
+	{
+		FBoneHeatMapConstants BoneHeatMapConstants = {};
+		BoneHeatMapConstants.SelectedBoneIndex = bBoneHeatMapOverlay ? CollectWeightBoneHeatMapBoneIndex : -1;
+		BoneHeatMapConstants.OverlayAlpha = bBoneHeatMapOverlay ? CollectWeightBoneHeatMapOverlayAlpha : 0.0f;
+		BoneHeatMapCB.Update(Ctx, &BoneHeatMapConstants, sizeof(FBoneHeatMapConstants));
+	}
 
 	// 섹션당 1개 커맨드 (per-section 셰이더)
  	for (const FMeshSectionDraw& Section : Proxy.GetSectionDraws())
@@ -271,6 +357,8 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 		// SelectionMask 같은 유틸 패스는 (선택된) 모든 섹션을 그려야 하므로 필터하지 않는다.
 		const ERenderPass SecPass = SectionRenderPass(Section);
 		if (bDepthOnly) { if (SecPass != ERenderPass::Opaque) continue; }
+		else if (bViewModeMeshReplace) { if (SecPass != ERenderPass::Opaque) continue; }
+		else if (bViewModeMeshOverlay) { if (SecPass != ERenderPass::Opaque) continue; }
 		else if (Pass != ERenderPass::SelectionMask && SecPass != Pass) continue;
 
 		// Section의 BufferOverride 있으면 사용, 없으면 proxy 공유 ProxyBuffer.
@@ -282,18 +370,21 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 			// 셰이더 도출: custom override 우선, 아니면 (Domain × VertexFactory × Pass × ViewMode).
 			UMaterial* SectionMaterial = GetValidSectionMaterial(Section);
 			FShader* EffectiveShader;
-			if (SectionMaterial)
+			if (bUsesViewModeMeshShader)
+			{
+				EffectiveShader = GetViewModeMeshShader(bGPUSkinning);
+			}
+			else if (SectionMaterial)
 			{
 				const EVertexFactoryType VFType =
 					(Section.VertexFactory != EVertexFactoryType::Auto) ? Section.VertexFactory
 					: (bSkeletal ? EVertexFactoryType::SkeletalMesh : EVertexFactoryType::StaticMesh);
-					// Translucent 패스 섹션(fog 패스 뒤에 그려짐)은 self-fog 변형 선택 → 거리 fog를 자기 깊이로 적용.
-					EffectiveShader = ResolveSectionShader(SectionMaterial, VFType, CollectViewMode, bGPUSkinning, bWeightBoneHeatMap, SecPass == ERenderPass::Translucent);
+					EffectiveShader = ResolveSectionShader(SectionMaterial, VFType, SecPass, CollectViewMode, bGPUSkinning);
 			}
 			else
 			{
 				// 머티리얼 없는 섹션(예외) — 기존 Proxy 셰이더 경로 보존.
-				EffectiveShader = SelectEffectiveShader(Proxy.GetShader(), CollectViewMode, bGPUSkinning, bWeightBoneHeatMap, SecPass == ERenderPass::Translucent);
+				EffectiveShader = SelectEffectiveShader(Proxy.GetShader(), CollectViewMode, bGPUSkinning);
 			}
 
 		FDrawCommand& Cmd = DrawCommandList.AddCommand();
@@ -309,7 +400,13 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 		Cmd.Bindings.SkinMatrixSRV = bGPUSkinning && SkeletalProxy
 			? SkeletalProxy->GetSkinMatrixSRV(CachedDevice, Ctx)
 			: nullptr;
-		Cmd.Bindings.BoneHeatMapCB = bWeightBoneHeatMap ? &BoneHeatMapCB : nullptr;
+		Cmd.Bindings.BoneHeatMapCB = bUsesViewModeMeshShader ? &BoneHeatMapCB : nullptr;
+
+		if (bViewModeMeshOverlay)
+		{
+			Cmd.RenderState.DepthStencil = EDepthStencilState::DepthReadOnly;
+			Cmd.RenderState.Blend = EBlendState::AlphaBlend;
+		}
 	
 		if (!bDepthOnly && SectionMaterial)
 		{
@@ -352,6 +449,8 @@ void FDrawCommandBuilder::BuildDecalCommandForReceiver(FScene& Scene, const FPri
 	// Decal Material은 SectionDraws[0]에 저장됨. GC/Destroy 중인 material은 즉시 제외한다.
 	UMaterial* DecalMat = DecalProxy.GetSectionDraws().empty() ? nullptr : GetValidSectionMaterial(DecalProxy.GetSectionDraws()[0]);
 	if (!DecalMat || !DecalMat->GetShader()) return;
+	const FDecalSceneProxy* DecalSceneProxy = static_cast<const FDecalSceneProxy*>(&DecalProxy);
+	UMaterial* SourceDecalMat = DecalSceneProxy ? DecalSceneProxy->GetSourceMaterial() : nullptr;
 
 	ID3D11DeviceContext* Ctx = CachedContext;
 	const ERenderPass DecalPass = DecalProxy.GetRenderPass();
@@ -366,6 +465,8 @@ void FDrawCommandBuilder::BuildDecalCommandForReceiver(FScene& Scene, const FPri
 
 	// Decal Material의 CB 업로드 (PerShaderOverride 포함)
 	DecalMat->FlushDirtyBuffers(CachedDevice, Ctx);
+	if (SourceDecalMat)
+		SourceDecalMat->FlushDirtyBuffers(CachedDevice, Ctx);
 
 	FDrawCommandBuffer ReceiverBuffer;
 	ReceiverBuffer.VB = ReceiverProxy.GetMeshBuffer()->GetVertexBuffer().GetBuffer();
@@ -389,6 +490,7 @@ void FDrawCommandBuilder::BuildDecalCommandForReceiver(FScene& Scene, const FPri
 			Cmd.Buffer.IndexCount = IndexCount;
 			Cmd.PerObjectCB = ReceiverPerObjCB;
 			Cmd.Bindings.PerShaderCB[0] = DecalMat->GetGPUBufferBySlot(ECBSlot::PerShader0);
+			Cmd.Bindings.PerShaderCB[1] = SourceDecalMat ? SourceDecalMat->GetGPUBufferBySlot(ECBSlot::PerShader1) : nullptr;
 
 			// Material의 CachedSRVs에서 텍스처 바인딩
 			const ID3D11ShaderResourceView* const* MatSRVs = DecalMat->GetCachedSRVs();
@@ -450,10 +552,17 @@ void FDrawCommandBuilder::BuildProxyCommands(const FFrameContext& Frame, FScene&
 	const bool bShowCollision = bIsEditor
 		? Frame.RenderOptions.ShowFlags.bCollision
 		: Frame.RenderOptions.ShowFlags.bShowCollisionShape;
+	const bool bPureDebugView = ViewModeUtils::IsPureDebugViewMode(Frame.RenderOptions.ViewMode);
+	const bool bSuppressEditorOverlays = ViewModeUtils::SuppressesEditorOverlays(Frame.RenderOptions.ViewMode);
 
 	for (FPrimitiveSceneProxy* Proxy : Output.RenderableProxies)
 	{
-		if (Proxy->HasProxyFlag(EPrimitiveProxyFlags::BoneDebug))
+		if ((bSuppressEditorOverlays && IsEditorHelperProxy(*Proxy)) ||
+			(bPureDebugView && Proxy->HasProxyFlag(EPrimitiveProxyFlags::Decal)))
+		{
+			// Debug visualizers keep their output plus selection/gizmo, not editor helper overlays.
+		}
+		else if (Proxy->HasProxyFlag(EPrimitiveProxyFlags::BoneDebug))
 		{
 			const FBoneDebugSceneProxy* BoneProxy = static_cast<const FBoneDebugSceneProxy*>(Proxy);
 			for (const FWireLine& Line : BoneProxy->GetCachedLines())
@@ -489,6 +598,8 @@ void FDrawCommandBuilder::BuildProxyCommands(const FFrameContext& Frame, FScene&
 		}
 		else if (Proxy->HasProxyFlag(EPrimitiveProxyFlags::Decal))
 			BuildDecalCommands(Scene, Proxy, Frame, Output);
+		else if (ProxyHasGizmoPass(*Proxy))
+			BuildGizmoCommands(Scene, Proxy);
 		else
 			BuildMeshCommands(Scene, Proxy);
 
@@ -519,6 +630,32 @@ void FDrawCommandBuilder::BuildDecalCommands(FScene& Scene, FPrimitiveSceneProxy
 }
 
 // ============================================================
+// BuildGizmoCommands — editor transform gizmo overlay
+// ============================================================
+void FDrawCommandBuilder::BuildGizmoCommands(FScene& Scene, const FPrimitiveSceneProxy* Proxy)
+{
+	bool bPassSeen[(int)ERenderPass::MAX] = {};
+
+	for (const FMeshSectionDraw& Section : Proxy->GetSectionDraws())
+	{
+		if (Section.IndexCount == 0) continue;
+		const ERenderPass Pass = SectionRenderPass(Section);
+		if ((int)Pass < (int)ERenderPass::MAX && IsGizmoPass(Pass))
+			bPassSeen[(int)Pass] = true;
+	}
+
+	const ERenderPass ProxyPass = Proxy->GetRenderPass();
+	if ((int)ProxyPass < (int)ERenderPass::MAX && IsGizmoPass(ProxyPass))
+		bPassSeen[(int)ProxyPass] = true;
+
+	for (int p = 0; p < (int)ERenderPass::MAX; ++p)
+	{
+		if (bPassSeen[p])
+			BuildCommandForProxy(Scene, *Proxy, static_cast<ERenderPass>(p));
+	}
+}
+
+// ============================================================
 // BuildMeshCommands — 일반 메시 (PreDepth + 메인 패스)
 // ============================================================
 void FDrawCommandBuilder::BuildMeshCommands(FScene& Scene, const FPrimitiveSceneProxy* Proxy)
@@ -530,6 +667,7 @@ void FDrawCommandBuilder::BuildMeshCommands(FScene& Scene, const FPrimitiveScene
 	{
 		if (Section.IndexCount == 0) continue;
 		const ERenderPass P = SectionRenderPass(Section);
+		if (ShouldSuppressPassForViewMode(CollectViewMode, P)) continue;
 		if ((int)P < (int)ERenderPass::MAX) bPassSeen[(int)P] = true;
 		if (P == ERenderPass::Opaque) bAnyOpaque = true;
 	}
@@ -538,16 +676,41 @@ void FDrawCommandBuilder::BuildMeshCommands(FScene& Scene, const FPrimitiveScene
 	// 위 사전스캔에서 안 잡힌다. 프록시 단위 GetRenderPass()로 보강 — 기존 per-proxy 라우팅을 복원해
 	// BuildCommandForProxy 안에서 PrepareDrawBuffer 가 실제 섹션을 채우게 한다(정적 멀티슬롯엔 무영향: 중복 표시).
 	const ERenderPass ProxyPass = Proxy->GetRenderPass();
-	if ((int)ProxyPass < (int)ERenderPass::MAX) bPassSeen[(int)ProxyPass] = true;
+	if ((int)ProxyPass < (int)ERenderPass::MAX && !ShouldSuppressPassForViewMode(CollectViewMode, ProxyPass))
+	{
+		bPassSeen[(int)ProxyPass] = true;
+	}
 	if (ProxyPass == ERenderPass::Opaque) bAnyOpaque = true;
 
 	// Opaque 섹션이 있으면 PreDepth 선행 (BuildCommandForProxy 가 Opaque 섹션만 필터).
 	if (bAnyOpaque)
 		BuildCommandForProxy(Scene, *Proxy, ERenderPass::PreDepth);
 
+	if (ViewModeUtils::IsPureMeshDebugViewMode(CollectViewMode))
+	{
+		const bool bDebugMesh =
+			Proxy->HasProxyFlag(EPrimitiveProxyFlags::StaticMesh) ||
+			Proxy->HasProxyFlag(EPrimitiveProxyFlags::SkeletalMesh);
+
+		if (bDebugMesh && bAnyOpaque)
+		{
+			BuildCommandForProxy(Scene, *Proxy, ERenderPass::ViewModeMesh);
+		}
+		return;
+	}
+
 	for (int p = 0; p < (int)ERenderPass::MAX; ++p)
 		if (bPassSeen[p])
 			BuildCommandForProxy(Scene, *Proxy, static_cast<ERenderPass>(p));
+
+	if (bAnyOpaque &&
+		!ViewModeUtils::IsPureDebugViewMode(CollectViewMode) &&
+		bCollectWeightBoneHeatMap &&
+		CollectWeightBoneHeatMapBoneIndex >= 0 &&
+		Proxy->HasProxyFlag(EPrimitiveProxyFlags::SkeletalMesh))
+	{
+		BuildCommandForProxy(Scene, *Proxy, ERenderPass::ViewModeMesh);
+	}
 }
 
 // ============================================================
@@ -652,6 +815,9 @@ void FDrawCommandBuilder::EmitLineCommand(FLineGeometry& Lines, FShader* Shader,
 // ============================================================
 void FDrawCommandBuilder::BuildEditorLineCommands(EViewMode ViewMode)
 {
+	if (ViewModeUtils::SuppressesEditorOverlays(ViewMode))
+		return;
+
 	FShader* EditorShader = FShaderManager::Get().GetOrCreate(EShaderPath::Editor);
 	const FDrawCommandRenderState EditorLinesRS = PassRenderStateTable->ToDrawCommandState(ERenderPass::EditorLines, ViewMode);
 
@@ -665,16 +831,17 @@ void FDrawCommandBuilder::BuildEditorLineCommands(EViewMode ViewMode)
 }
 
 // ============================================================
-// BuildPostProcessCommands — HeightFog, Outline, SceneDepth, WorldNormal, FXAA
+// BuildPostProcessCommands — fullscreen scene effects, debug resolves, and final image filters
 // ============================================================
 void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, const FScene* CollectScene)
 {
 	ID3D11DeviceContext* Ctx = CachedContext;
 	EViewMode ViewMode = Frame.RenderOptions.ViewMode;
 	const FDrawCommandRenderState PPRS = PassRenderStateTable->ToDrawCommandState(ERenderPass::PostProcess, ViewMode);
+	const bool bPureDebugView = ViewModeUtils::IsPureDebugViewMode(ViewMode);
 
-	// HeightFog — Translucent 前 전용 Fog 패스로 라우팅(불투명/하늘만 fog, translucent는 위에 그려져 안 덮임).
-	if (Frame.RenderOptions.ShowFlags.bFog && CollectScene && CollectScene->GetEnvironment().HasFog())
+	// HeightFog — Transparent 前 전용 Fog 패스로 라우팅(불투명/하늘만 fog, Transparent는 위에 그려져 안 덮임).
+	if (!bPureDebugView && Frame.RenderOptions.ShowFlags.bFog && CollectScene && CollectScene->GetEnvironment().HasFog())
 	{
 		FShader* FogShader = FShaderManager::Get().GetOrCreate(EShaderPath::HeightFog);
 		if (FogShader)
@@ -699,7 +866,7 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 	}
 
 	const bool bDoFCoCDebug = Frame.RenderOptions.ViewMode == EViewMode::DoFCoC;
-	if (Frame.RenderOptions.ShowFlags.bDoF || bDoFCoCDebug)
+	if (!bPureDebugView && (Frame.RenderOptions.ShowFlags.bDoF || bDoFCoCDebug))
 	{
 		FDoFConstants DoFData = {};
 		DoFData.FocusDistance = Frame.RenderOptions.DoFFocusDistance;
@@ -794,10 +961,10 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 		}
 	}
 
-	// SceneDepth (UserBits=2 → Outline 뒤)
+	// SceneDepth fullscreen debug resolve
 	if (CollectViewMode == EViewMode::SceneDepth)
 	{
-		FShader* DepthShader = FShaderManager::Get().GetOrCreate(EShaderPath::SceneDepth);
+		FShader* DepthShader = FShaderManager::Get().GetOrCreate(EShaderPath::DebugViewModeResolve);
 		if (DepthShader)
 		{
 			FViewportRenderOptions Opts = Frame.RenderOptions;
@@ -809,38 +976,15 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 			SceneDepthCB.Update(Ctx, &depthData, sizeof(FSceneDepthPConstants));
 
 			FDrawCommand& Cmd = DrawCommandList.AddCommand();
-			Cmd.InitFullscreenTriangle(DepthShader, ERenderPass::PostProcess, PPRS);
+			Cmd.InitFullscreenTriangle(DepthShader, ERenderPass::DebugViewModeResolve,
+				PassRenderStateTable->ToDrawCommandState(ERenderPass::DebugViewModeResolve, ViewMode));
 			Cmd.Bindings.PerShaderCB[0] = &SceneDepthCB;
-			Cmd.BuildSortKey(2);
-		}
-	}
-
-	// WorldNormal (UserBits=3 → SceneDepth 뒤)
-	if (CollectViewMode == EViewMode::WorldNormal)
-	{
-		FShader* NormalShader = FShaderManager::Get().GetOrCreate(EShaderPath::SceneNormal);
-		if (NormalShader)
-		{
-			FDrawCommand& Cmd = DrawCommandList.AddCommand();
-			Cmd.InitFullscreenTriangle(NormalShader, ERenderPass::PostProcess, PPRS);
-			Cmd.BuildSortKey(3);
-		}
-	}
-
-	// LightCulling (UserBits=4 → WorldNormal 뒤)
-	if (CollectViewMode == EViewMode::LightCulling)
-	{
-		FShader* CullingShader = FShaderManager::Get().GetOrCreate(EShaderPath::LightCulling);
-		if (CullingShader)
-		{
-			FDrawCommand& Cmd = DrawCommandList.AddCommand();
-			Cmd.InitFullscreenTriangle(CullingShader, ERenderPass::PostProcess, PPRS);
-			Cmd.BuildSortKey(4);
+			Cmd.BuildSortKey(0);
 		}
 	}
 
 	// FXAA
-	if (Frame.RenderOptions.ShowFlags.bFXAA)
+	if (!bPureDebugView && Frame.RenderOptions.ShowFlags.bFXAA)
 	{
 		FShader* FXAAShader = FShaderManager::Get().GetOrCreate(EShaderPath::FXAA);
 		if (FXAAShader)
@@ -860,7 +1004,7 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 	}
 
 	// Camera Fade
-	if (Frame.CameraFade.bEnabled && Frame.CameraFade.Amount > 0.0f)
+	if (!bPureDebugView && Frame.CameraFade.bEnabled && Frame.CameraFade.Amount > 0.0f)
 	{
 		FShader* FadeShader = FShaderManager::Get().GetOrCreate(EShaderPath::CameraFade);
 		if (FadeShader)
@@ -879,7 +1023,7 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 	}
 
 	// Camera Vignette
-	if (Frame.CameraVignette.bEnabled && Frame.CameraVignette.Intensity > 0.0f)
+	if (!bPureDebugView && Frame.CameraVignette.bEnabled && Frame.CameraVignette.Intensity > 0.0f)
 	{
 		FShader* VignetteShader = FShaderManager::Get().GetOrCreate(EShaderPath::CameraVignette);
 		if (VignetteShader)
@@ -900,7 +1044,7 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 	}
 
 	// Camera Letterbox
-	if (Frame.CameraLetterbox.bEnabled && Frame.CameraLetterbox.Amount > 0.0f)
+	if (!bPureDebugView && Frame.CameraLetterbox.bEnabled && Frame.CameraLetterbox.Amount > 0.0f)
 	{
 		FShader* LetterboxShader = FShaderManager::Get().GetOrCreate(EShaderPath::CameraLetterbox);
 		if (LetterboxShader)
@@ -919,7 +1063,7 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 		}
 	}
 
-	if (Frame.RenderOptions.ShowFlags.bGammaCorrection)
+	if (!bPureDebugView && Frame.RenderOptions.ShowFlags.bGammaCorrection)
 	{
 		FShader* GammaShader = FShaderManager::Get().GetOrCreate(EShaderPath::GammaCorrection);
 		if (GammaShader)
@@ -942,6 +1086,9 @@ void FDrawCommandBuilder::BuildPostProcessCommands(const FFrameContext& Frame, c
 // ============================================================
 void FDrawCommandBuilder::BuildFontCommands(EViewMode ViewMode)
 {
+	if (ViewModeUtils::SuppressesEditorOverlays(ViewMode))
+		return;
+
 	const FFontResource* FontRes = FResourceManager::Get().FindFont(FName("Default"));
 	if (!FontRes || !FontRes->IsLoaded()) return;
 
@@ -950,9 +1097,9 @@ void FDrawCommandBuilder::BuildFontCommands(EViewMode ViewMode)
 	if (FontGeometry.GetWorldQuadCount() > 0 && FontGeometry.UploadWorldBuffers(Ctx))
 	{
 		FDrawCommand& Cmd = DrawCommandList.AddCommand();
-		Cmd.Pass = ERenderPass::Translucent;
+		Cmd.Pass = ERenderPass::Transparent;
 		Cmd.Shader = FShaderManager::Get().GetOrCreate(EShaderPath::Font);
-		Cmd.RenderState = PassRenderStateTable->ToDrawCommandState(ERenderPass::Translucent, ViewMode);
+		Cmd.RenderState = PassRenderStateTable->ToDrawCommandState(ERenderPass::Transparent, ViewMode);
 		Cmd.Buffer = { FontGeometry.GetWorldVBBuffer(), FontGeometry.GetWorldVBStride(), FontGeometry.GetWorldIBBuffer() };
 		Cmd.Buffer.IndexCount = FontGeometry.GetWorldIndexCount();
 		Cmd.Bindings.SRVs[(int)EMaterialTextureSlot::Diffuse] = FontRes->SRV;
