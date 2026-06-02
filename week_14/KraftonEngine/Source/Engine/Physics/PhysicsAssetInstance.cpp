@@ -72,7 +72,10 @@ namespace
         return PhysicsScene ? PhysicsScene->GetRuntime() : nullptr;
     }
 
-    void FillShapeFilterDataFromComponent(FPhysicsFilterData& OutFilterData, const USkeletalMeshComponent* Component)
+    void FillShapeFilterDataFromComponent(
+        FPhysicsFilterData& OutFilterData,
+        const USkeletalMeshComponent* Component,
+        bool bForceQueryAndPhysicsCollision)
     {
         if (!Component)
         {
@@ -84,15 +87,20 @@ namespace
         OutFilterData.OverlapMask = 0;
         // Keep ragdoll self-collision decisions at the PhysicsAsset constraint layer.
         OutFilterData.IgnoreGroup = 0;
-        OutFilterData.CollisionEnabled = Component->GetCollisionEnabled();
+        OutFilterData.CollisionEnabled = bForceQueryAndPhysicsCollision
+            ? ECollisionEnabled::QueryAndPhysics
+            : Component->GetCollisionEnabled();
         OutFilterData.bIsTrigger = false;
         OutFilterData.bGenerateHitEvents = true;
-        OutFilterData.bGenerateOverlapEvents = Component->GetGenerateOverlapEvents();
+        OutFilterData.bGenerateOverlapEvents = bForceQueryAndPhysicsCollision
+            ? false
+            : Component->GetGenerateOverlapEvents();
 
         for (int32 ChannelIndex = 0; ChannelIndex < static_cast<int32>(ECollisionChannel::ActiveCount); ++ChannelIndex)
         {
-            const ECollisionResponse Response =
-                Component->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(ChannelIndex));
+            const ECollisionResponse Response = bForceQueryAndPhysicsCollision
+                ? ECollisionResponse::Block
+                : Component->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(ChannelIndex));
 
             if (Response == ECollisionResponse::Block)
             {
@@ -108,6 +116,7 @@ namespace
     void BuildShapeDescs(
         const FPhysicsAssetBodySetup& BodySetup,
         const USkeletalMeshComponent* OwnerComponent,
+        bool bForceQueryAndPhysicsCollision,
         TArray<FPhysicsShapeDesc>& OutShapes
     )
     {
@@ -117,11 +126,14 @@ namespace
         {
             FPhysicsShapeDesc ShapeDesc;
             ShapeDesc.LocalTransform = ShapeSetup.LocalTransform;
-            ShapeDesc.CollisionEnabled = OwnerComponent
-                ? OwnerComponent->GetCollisionEnabled()
-                : ECollisionEnabled::QueryAndPhysics;
+            ShapeDesc.CollisionEnabled = bForceQueryAndPhysicsCollision
+                ? ECollisionEnabled::QueryAndPhysics
+                : (OwnerComponent ? OwnerComponent->GetCollisionEnabled() : ECollisionEnabled::QueryAndPhysics);
             ShapeDesc.bIsTrigger = false;
-            FillShapeFilterDataFromComponent(ShapeDesc.FilterData, OwnerComponent);
+            FillShapeFilterDataFromComponent(
+                ShapeDesc.FilterData,
+                OwnerComponent,
+                bForceQueryAndPhysicsCollision);
 
             switch (ShapeSetup.Type)
             {
@@ -150,6 +162,7 @@ namespace
         USkeletalMeshComponent* OwnerComponent,
         const FPhysicsAssetBodySetup& BodySetup,
         const FTransform& BoneWorldTransform,
+        bool bForceQueryAndPhysicsCollision,
         FBodyCreationDesc& OutDesc
     )
     {
@@ -170,7 +183,7 @@ namespace
         OutDesc.SyncMode = EPhysicsSyncMode::Manual;
         OutDesc.WorldTransform = ComposePhysicsTransforms(BoneWorldTransform, BodySetup.BodyLocalFrame);
 
-        BuildShapeDescs(BodySetup, OwnerComponent, OutDesc.Shapes);
+        BuildShapeDescs(BodySetup, OwnerComponent, bForceQueryAndPhysicsCollision, OutDesc.Shapes);
         if (OutDesc.Shapes.empty())
         {
             return false;
@@ -409,7 +422,12 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
             ComposePhysicsTransforms(ComponentWorldTransform, BoneComponentSpaceTransforms[BoneIndex]);
 
         FBodyCreationDesc BodyDesc;
-        if (!BuildBodyCreationDesc(Owner, BodySetup, BoneWorldTransform, BodyDesc))
+        if (!BuildBodyCreationDesc(
+                Owner,
+                BodySetup,
+                BoneWorldTransform,
+                Options.bForceQueryAndPhysicsCollision,
+                BodyDesc))
         {
             UE_LOG("Skipped PhysicsAsset body: invalid body setup. Component=%s Bone=%s",
                 Owner->GetName().c_str(),

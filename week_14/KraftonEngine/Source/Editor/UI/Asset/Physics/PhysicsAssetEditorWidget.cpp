@@ -2621,6 +2621,7 @@ bool FPhysicsAssetEditorWidget::StartEditorSimulation(
     FPhysicsAssetSimulationOptions Options;
     Options.bNoGravity = bEditorSimulationNoGravity;
     Options.bSelectedOnly = bEditorSimulationSelectedOnly;
+    Options.bForceQueryAndPhysicsCollision = true;
     Options.SelectedBoneName = GetSelectedSimulationRootBoneName(PhysicsAsset);
     if (Options.bSelectedOnly && Options.SelectedBoneName == FName::None)
     {

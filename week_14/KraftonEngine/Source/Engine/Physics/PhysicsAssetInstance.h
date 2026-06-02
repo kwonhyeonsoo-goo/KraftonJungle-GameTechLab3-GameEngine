@@ -13,6 +13,7 @@ struct FPhysicsAssetSimulationOptions
 {
     bool bNoGravity = false;
     bool bSelectedOnly = false;
+    bool bForceQueryAndPhysicsCollision = false;
     FName SelectedBoneName = FName::None;
 };
 
