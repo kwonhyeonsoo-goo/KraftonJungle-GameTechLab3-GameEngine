@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Types/CoreTypes.h"
+#include "Core/Types/CollisionTypes.h"
 #include "Math/Transform.h"
 #include "Object/FName.h"
 #include "Object/Ptr/WeakObjectPtr.h"
@@ -14,6 +15,9 @@ struct FPhysicsAssetSimulationOptions
     bool bNoGravity = false;
     bool bSelectedOnly = false;
     bool bForceQueryAndPhysicsCollision = false;
+    bool bUseIndependentRagdollCollision = false;
+    ECollisionEnabled IndependentCollisionEnabled = ECollisionEnabled::QueryAndPhysics;
+    bool bIndependentGenerateOverlapEvents = false;
     FName SelectedBoneName = FName::None;
 };
 

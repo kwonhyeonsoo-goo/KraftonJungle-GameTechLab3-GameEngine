@@ -1,4 +1,4 @@
-#include "GameFramework/Pawn/Character.h"
+﻿#include "GameFramework/Pawn/Character.h"
 
 #include "Component/Shape/CapsuleComponent.h"
 #include "Component/Input/InputComponent.h"
@@ -7,9 +7,83 @@
 #include "Input/InputSystem.h"
 #include "Math/Rotator.h"
 #include "Mesh/MeshManager.h"
+#include "Mesh/Skeletal/SkeletalMesh.h"
+#include "Mesh/Skeletal/SkeletalMeshAsset.h"
+#include "Physics/PhysicsAssetInstance.h"
 #include "Runtime/Engine.h"
+#include "Core/Logging/Log.h"
 
 #include <algorithm>
+#include <cctype>
+
+namespace
+{
+	FString ToLowerCopy(const FString& Value)
+	{
+		FString Result = Value;
+		std::transform(
+			Result.begin(),
+			Result.end(),
+			Result.begin(),
+			[](unsigned char Character)
+			{
+				return static_cast<char>(std::tolower(Character));
+			});
+		return Result;
+	}
+
+	int32 FindCharacterRagdollAnchorBoneIndex(const FSkeletalMesh* MeshAsset)
+	{
+		if (!MeshAsset)
+		{
+			return -1;
+		}
+
+		const char* CandidateTokens[] = { "pelvis", "hips", "hip", "root" };
+		for (const char* CandidateToken : CandidateTokens)
+		{
+			const FString Token = ToLowerCopy(CandidateToken ? FString(CandidateToken) : FString());
+			for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+			{
+				if (ToLowerCopy(MeshAsset->Bones[BoneIndex].Name) == Token)
+				{
+					return BoneIndex;
+				}
+			}
+		}
+
+		for (const char* CandidateToken : CandidateTokens)
+		{
+			const FString Token = ToLowerCopy(CandidateToken ? FString(CandidateToken) : FString());
+			for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+			{
+				if (ToLowerCopy(MeshAsset->Bones[BoneIndex].Name).find(Token) != FString::npos)
+				{
+					return BoneIndex;
+				}
+			}
+		}
+
+		return MeshAsset->Bones.empty() ? -1 : 0;
+	}
+
+	const char* LexToString(ECharacterPhysicsOwnershipMode Mode)
+	{
+		switch (Mode)
+		{
+		case ECharacterPhysicsOwnershipMode::CharacterDriven:
+			return "CharacterDriven";
+		case ECharacterPhysicsOwnershipMode::TransitionToRagdoll:
+			return "TransitionToRagdoll";
+		case ECharacterPhysicsOwnershipMode::RagdollDriven:
+			return "RagdollDriven";
+		case ECharacterPhysicsOwnershipMode::TransitionFromRagdoll:
+			return "TransitionFromRagdoll";
+		default:
+			return "Unknown";
+		}
+	}
+}
 void ACharacter::InitDefaultComponents(const FString& SkeletalMeshFileName)
 {
 	// 1) Capsule — Root. CharacterMovement 의 UpdatedComponent 가 이걸 가리킴.
@@ -48,8 +122,110 @@ void ACharacter::PostDuplicate()
 	CharacterMovement = GetComponentByClass<UCharacterMovementComponent>();
 }
 
+bool ACharacter::EnterRagdoll()
+{
+	if (!Mesh)
+	{
+		UE_LOG("Character ragdoll entry rejected: no mesh. Actor=%s", GetName().c_str());
+		return false;
+	}
+
+	if (PhysicsOwnershipMode == ECharacterPhysicsOwnershipMode::RagdollDriven)
+	{
+		return Mesh->IsRagdollActive();
+	}
+
+	if (PhysicsOwnershipMode == ECharacterPhysicsOwnershipMode::TransitionToRagdoll)
+	{
+		return true;
+	}
+
+	if (PhysicsOwnershipMode == ECharacterPhysicsOwnershipMode::TransitionFromRagdoll)
+	{
+		UE_LOG("Character ragdoll entry rejected: restore is in progress. Actor=%s", GetName().c_str());
+		return false;
+	}
+
+	SavePreRagdollCharacterState();
+	SuspendCharacterForRagdoll();
+	CacheRagdollRestoreLocation();
+	PhysicsOwnershipMode = ECharacterPhysicsOwnershipMode::TransitionToRagdoll;
+	bPendingRagdollBodyEnable = true;
+	bAwaitingRagdollRecoveryRestore = false;
+	UE_LOG("Character ragdoll transition queued. Actor=%s Mesh=%s Ownership=%s",
+		GetName().c_str(),
+		Mesh->GetName().c_str(),
+		LexToString(PhysicsOwnershipMode));
+	return true;
+}
+
+void ACharacter::ExitRagdoll()
+{
+	if (PhysicsOwnershipMode == ECharacterPhysicsOwnershipMode::CharacterDriven)
+	{
+		return;
+	}
+
+	if (PhysicsOwnershipMode == ECharacterPhysicsOwnershipMode::TransitionToRagdoll)
+	{
+		bPendingRagdollBodyEnable = false;
+		RestoreCharacterAfterRagdoll();
+		UE_LOG("Character ragdoll transition cancelled before runtime activation. Actor=%s", GetName().c_str());
+		return;
+	}
+
+	CacheRagdollRestoreLocation();
+	PhysicsOwnershipMode = ECharacterPhysicsOwnershipMode::TransitionFromRagdoll;
+
+	if (Mesh)
+	{
+		Mesh->DisableRagdollPhysics();
+	}
+
+	bAwaitingRagdollRecoveryRestore = false;
+	RestoreCharacterAfterRagdoll();
+	UE_LOG("Character ragdoll exited. Actor=%s Ownership=%s",
+		GetName().c_str(),
+		LexToString(PhysicsOwnershipMode));
+}
+
+bool ACharacter::BeginRagdollRecovery()
+{
+	if (PhysicsOwnershipMode != ECharacterPhysicsOwnershipMode::RagdollDriven || !Mesh)
+	{
+		UE_LOG("Character ragdoll recovery ignored: ragdoll inactive. Actor=%s", GetName().c_str());
+		return false;
+	}
+
+	const bool bStarted = Mesh->BeginRagdollRecovery();
+	if (bStarted)
+	{
+		PhysicsOwnershipMode = ECharacterPhysicsOwnershipMode::TransitionFromRagdoll;
+		bAwaitingRagdollRecoveryRestore = true;
+		UE_LOG("Character ragdoll recovery started. Actor=%s Ownership=%s",
+			GetName().c_str(),
+			LexToString(PhysicsOwnershipMode));
+	}
+	else
+	{
+		UE_LOG("Character ragdoll recovery rejected. Actor=%s", GetName().c_str());
+	}
+
+	return bStarted;
+}
+
+bool ACharacter::IsInRagdoll() const
+{
+	return PhysicsOwnershipMode != ECharacterPhysicsOwnershipMode::CharacterDriven;
+}
+
 void ACharacter::AddMovementInput(const FVector& WorldDirection, float ScaleValue)
 {
+	if (IsInRagdoll())
+	{
+		return;
+	}
+
 	if (CharacterMovement)
 	{
 		CharacterMovement->AddInputVector(WorldDirection, ScaleValue);
@@ -58,10 +234,169 @@ void ACharacter::AddMovementInput(const FVector& WorldDirection, float ScaleValu
 
 void ACharacter::Jump()
 {
+	if (IsInRagdoll())
+	{
+		return;
+	}
+
 	if (CharacterMovement)
 	{
 		CharacterMovement->Jump();
 	}
+}
+
+void ACharacter::SavePreRagdollCharacterState()
+{
+	if (bSavedPreRagdollCharacterState)
+	{
+		return;
+	}
+
+	SavedCapsuleCollisionEnabled = CapsuleComponent
+		? CapsuleComponent->GetCollisionEnabled()
+		: ECollisionEnabled::NoCollision;
+	SavedMeshCollisionEnabled = Mesh
+		? Mesh->GetCollisionEnabled()
+		: ECollisionEnabled::NoCollision;
+	bSavedMovementTickEnabled = CharacterMovement
+		? CharacterMovement->PrimaryComponentTick.bTickEnabled
+		: true;
+	bSavedMovementActive = CharacterMovement
+		? CharacterMovement->IsActive()
+		: true;
+	bSavedPreRagdollCharacterState = true;
+}
+
+void ACharacter::SetCharacterDrivenCollisionEnabled(bool bEnabled)
+{
+	// Character-driven collision is treated as a single ownership set. During ragdoll
+	// we disable the normal capsule/mesh primitive collision together so only the
+	// PhysicsAsset runtime bodies remain as physical blockers.
+	if (Mesh)
+	{
+		Mesh->SetCollisionEnabled(bEnabled ? SavedMeshCollisionEnabled : ECollisionEnabled::NoCollision);
+	}
+
+	if (CapsuleComponent)
+	{
+		CapsuleComponent->SetCollisionEnabled(
+			bEnabled ? SavedCapsuleCollisionEnabled : ECollisionEnabled::NoCollision);
+	}
+}
+
+void ACharacter::SuspendCharacterForRagdoll()
+{
+	SetCharacterDrivenCollisionEnabled(false);
+	if (CharacterMovement)
+	{
+		FVector DiscardedInput;
+		CharacterMovement->ConsumeInputVector(DiscardedInput);
+		CharacterMovement->SetComponentTickEnabled(false);
+		CharacterMovement->Deactivate();
+	}
+
+	UE_LOG("Character collision and movement suspended for ragdoll. Actor=%s", GetName().c_str());
+}
+
+void ACharacter::RestoreMovementAfterRagdoll()
+{
+	if (!CharacterMovement)
+	{
+		return;
+	}
+
+	CharacterMovement->SetComponentTickEnabled(bSavedMovementTickEnabled);
+	if (bSavedMovementActive)
+	{
+		CharacterMovement->Activate();
+	}
+	else
+	{
+		CharacterMovement->Deactivate();
+	}
+}
+
+void ACharacter::FinalizePendingRagdollEntry()
+{
+	if (!bPendingRagdollBodyEnable)
+	{
+		return;
+	}
+
+	bPendingRagdollBodyEnable = false;
+	if (!Mesh)
+	{
+		RestoreCharacterAfterRagdoll();
+		UE_LOG("Character ragdoll entry failed: mesh disappeared before activation. Actor=%s", GetName().c_str());
+		return;
+	}
+
+	if (!Mesh->EnableRagdollPhysics())
+	{
+		RestoreCharacterAfterRagdoll();
+		UE_LOG("Character ragdoll entry failed: mesh ragdoll rejected. Actor=%s Mesh=%s",
+			GetName().c_str(),
+			Mesh->GetName().c_str());
+		return;
+	}
+
+	PhysicsOwnershipMode = ECharacterPhysicsOwnershipMode::RagdollDriven;
+	UE_LOG("Character ragdoll entered. Actor=%s Mesh=%s Ownership=%s",
+		GetName().c_str(),
+		Mesh->GetName().c_str(),
+		LexToString(PhysicsOwnershipMode));
+}
+
+void ACharacter::CacheRagdollRestoreLocation()
+{
+	if (!Mesh)
+	{
+		return;
+	}
+
+	FPhysicsAssetInstance* Instance = Mesh->GetPhysicsAssetInstance();
+	USkeletalMesh* SkeletalMesh = Mesh->GetSkeletalMesh();
+	FSkeletalMesh* MeshAsset = SkeletalMesh ? SkeletalMesh->GetSkeletalMeshAsset() : nullptr;
+	if (!Instance || !MeshAsset)
+	{
+		return;
+	}
+
+	TArray<FTransform> BoneWorldTransforms;
+	if (!Instance->PullPhysicsPose(BoneWorldTransforms) || BoneWorldTransforms.empty())
+	{
+		return;
+	}
+
+	const int32 AnchorBoneIndex = FindCharacterRagdollAnchorBoneIndex(MeshAsset);
+	if (AnchorBoneIndex < 0 || AnchorBoneIndex >= static_cast<int32>(BoneWorldTransforms.size()))
+	{
+		return;
+	}
+
+	CachedRagdollRestoreLocation = BoneWorldTransforms[AnchorBoneIndex].Location;
+	bHasCachedRagdollRestoreLocation = true;
+}
+
+void ACharacter::RestoreCharacterAfterRagdoll()
+{
+	if (CapsuleComponent && bHasCachedRagdollRestoreLocation)
+	{
+		CapsuleComponent->SetWorldLocation(CachedRagdollRestoreLocation);
+	}
+
+	SetCharacterDrivenCollisionEnabled(true);
+	RestoreMovementAfterRagdoll();
+
+	PhysicsOwnershipMode = ECharacterPhysicsOwnershipMode::CharacterDriven;
+	bPendingRagdollBodyEnable = false;
+	bAwaitingRagdollRecoveryRestore = false;
+	bSavedPreRagdollCharacterState = false;
+	bHasCachedRagdollRestoreLocation = false;
+	CachedRagdollRestoreLocation = FVector::ZeroVector;
+	UE_LOG("Character ragdoll ownership restored. Actor=%s Ownership=%s",
+		GetName().c_str(),
+		LexToString(PhysicsOwnershipMode));
 }
 
 void ACharacter::SetupInputComponent()
@@ -104,6 +439,24 @@ void ACharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (PhysicsOwnershipMode == ECharacterPhysicsOwnershipMode::TransitionToRagdoll)
+	{
+		FinalizePendingRagdollEntry();
+	}
+
+	if (IsInRagdoll())
+	{
+		CacheRagdollRestoreLocation();
+
+		if (bAwaitingRagdollRecoveryRestore &&
+			Mesh &&
+			!Mesh->IsRagdollActive() &&
+			!Mesh->IsRecoveringFromRagdoll())
+		{
+			RestoreCharacterAfterRagdoll();
+		}
+	}
+
 	if (bAutoInputMouseLook)
 	{
 		const InputSystem& In = InputSystem::Get();
@@ -130,6 +483,11 @@ void ACharacter::Tick(float DeltaTime)
 	// 두 경우 모두 pitch/roll 만 apply, yaw 는 movement 에 양보.
 	if (CapsuleComponent)
 	{
+		if (IsInRagdoll())
+		{
+			return;
+		}
+
 		const bool bMovementHandlesYaw = CharacterMovement &&
 			(CharacterMovement->bOrientRotationToMovement ||
 			 CharacterMovement->HasYawDrivenByRootMotion());

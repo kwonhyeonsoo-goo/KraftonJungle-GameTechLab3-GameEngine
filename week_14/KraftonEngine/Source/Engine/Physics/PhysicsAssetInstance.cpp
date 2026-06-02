@@ -75,7 +75,10 @@ namespace
     void FillShapeFilterDataFromComponent(
         FPhysicsFilterData& OutFilterData,
         const USkeletalMeshComponent* Component,
-        bool bForceQueryAndPhysicsCollision)
+        bool bForceQueryAndPhysicsCollision,
+        bool bUseIndependentRagdollCollision,
+        ECollisionEnabled IndependentCollisionEnabled,
+        bool bIndependentGenerateOverlapEvents)
     {
         if (!Component)
         {
@@ -87,20 +90,25 @@ namespace
         OutFilterData.OverlapMask = 0;
         // Keep ragdoll self-collision decisions at the PhysicsAsset constraint layer.
         OutFilterData.IgnoreGroup = 0;
-        OutFilterData.CollisionEnabled = bForceQueryAndPhysicsCollision
-            ? ECollisionEnabled::QueryAndPhysics
-            : Component->GetCollisionEnabled();
+        OutFilterData.CollisionEnabled = bUseIndependentRagdollCollision
+            ? IndependentCollisionEnabled
+            : (bForceQueryAndPhysicsCollision
+                ? ECollisionEnabled::QueryAndPhysics
+                : Component->GetCollisionEnabled());
         OutFilterData.bIsTrigger = false;
         OutFilterData.bGenerateHitEvents = true;
-        OutFilterData.bGenerateOverlapEvents = bForceQueryAndPhysicsCollision
-            ? false
-            : Component->GetGenerateOverlapEvents();
+        OutFilterData.bGenerateOverlapEvents = bUseIndependentRagdollCollision
+            ? bIndependentGenerateOverlapEvents
+            : (bForceQueryAndPhysicsCollision
+                ? false
+                : Component->GetGenerateOverlapEvents());
 
         for (int32 ChannelIndex = 0; ChannelIndex < static_cast<int32>(ECollisionChannel::ActiveCount); ++ChannelIndex)
         {
-            const ECollisionResponse Response = bForceQueryAndPhysicsCollision
-                ? ECollisionResponse::Block
-                : Component->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(ChannelIndex));
+            const ECollisionResponse Response =
+                (bForceQueryAndPhysicsCollision && !bUseIndependentRagdollCollision)
+                    ? ECollisionResponse::Block
+                    : Component->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(ChannelIndex));
 
             if (Response == ECollisionResponse::Block)
             {
@@ -116,7 +124,7 @@ namespace
     void BuildShapeDescs(
         const FPhysicsAssetBodySetup& BodySetup,
         const USkeletalMeshComponent* OwnerComponent,
-        bool bForceQueryAndPhysicsCollision,
+        const FPhysicsAssetSimulationOptions& Options,
         TArray<FPhysicsShapeDesc>& OutShapes
     )
     {
@@ -126,14 +134,19 @@ namespace
         {
             FPhysicsShapeDesc ShapeDesc;
             ShapeDesc.LocalTransform = ShapeSetup.LocalTransform;
-            ShapeDesc.CollisionEnabled = bForceQueryAndPhysicsCollision
-                ? ECollisionEnabled::QueryAndPhysics
-                : (OwnerComponent ? OwnerComponent->GetCollisionEnabled() : ECollisionEnabled::QueryAndPhysics);
+            ShapeDesc.CollisionEnabled = Options.bUseIndependentRagdollCollision
+                ? Options.IndependentCollisionEnabled
+                : (Options.bForceQueryAndPhysicsCollision
+                    ? ECollisionEnabled::QueryAndPhysics
+                    : (OwnerComponent ? OwnerComponent->GetCollisionEnabled() : ECollisionEnabled::QueryAndPhysics));
             ShapeDesc.bIsTrigger = false;
             FillShapeFilterDataFromComponent(
                 ShapeDesc.FilterData,
                 OwnerComponent,
-                bForceQueryAndPhysicsCollision);
+                Options.bForceQueryAndPhysicsCollision,
+                Options.bUseIndependentRagdollCollision,
+                Options.IndependentCollisionEnabled,
+                Options.bIndependentGenerateOverlapEvents);
 
             switch (ShapeSetup.Type)
             {
@@ -162,7 +175,7 @@ namespace
         USkeletalMeshComponent* OwnerComponent,
         const FPhysicsAssetBodySetup& BodySetup,
         const FTransform& BoneWorldTransform,
-        bool bForceQueryAndPhysicsCollision,
+        const FPhysicsAssetSimulationOptions& Options,
         FBodyCreationDesc& OutDesc
     )
     {
@@ -183,7 +196,7 @@ namespace
         OutDesc.SyncMode = EPhysicsSyncMode::Manual;
         OutDesc.WorldTransform = ComposePhysicsTransforms(BoneWorldTransform, BodySetup.BodyLocalFrame);
 
-        BuildShapeDescs(BodySetup, OwnerComponent, bForceQueryAndPhysicsCollision, OutDesc.Shapes);
+        BuildShapeDescs(BodySetup, OwnerComponent, Options, OutDesc.Shapes);
         if (OutDesc.Shapes.empty())
         {
             return false;
@@ -199,7 +212,9 @@ namespace
         OutDesc.bEnableGravity = BodySetup.bEnableGravity;
         OutDesc.bEnableCCD = BodySetup.bEnableCCD;
         OutDesc.bGenerateHitEvents = true;
-        OutDesc.bGenerateOverlapEvents = OwnerComponent->GetGenerateOverlapEvents();
+        OutDesc.bGenerateOverlapEvents = Options.bUseIndependentRagdollCollision
+            ? Options.bIndependentGenerateOverlapEvents
+            : OwnerComponent->GetGenerateOverlapEvents();
         OutDesc.bLockLinearX = BodySetup.bLockLinearX;
         OutDesc.bLockLinearY = BodySetup.bLockLinearY;
         OutDesc.bLockLinearZ = BodySetup.bLockLinearZ;
@@ -426,7 +441,7 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
                 Owner,
                 BodySetup,
                 BoneWorldTransform,
-                Options.bForceQueryAndPhysicsCollision,
+                Options,
                 BodyDesc))
         {
             UE_LOG("Skipped PhysicsAsset body: invalid body setup. Component=%s Bone=%s",

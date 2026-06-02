@@ -515,7 +515,12 @@ bool USkeletalMeshComponent::EnableRagdollPhysics()
         return false;
     }
 
-    if (!Instance->CreateBodiesAndConstraints())
+    FPhysicsAssetSimulationOptions SimulationOptions;
+    SimulationOptions.bUseIndependentRagdollCollision = true;
+    SimulationOptions.IndependentCollisionEnabled = ECollisionEnabled::QueryAndPhysics;
+    SimulationOptions.bIndependentGenerateOverlapEvents = false;
+
+    if (!Instance->CreateBodiesAndConstraints(SimulationOptions))
     {
         SetUsePhysicsAssetPose(false);
         ResetPhysicsPoseBlendState();
@@ -642,7 +647,9 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
     if (!Instance->PullPhysicsPose(BoneWorldTransforms) ||
         BoneWorldTransforms.size() < MeshAsset->Bones.size())
     {
-        SetUsePhysicsAssetPose(false);
+        // Ragdoll bodies are created through the physics command queue, so the first
+        // few ticks after entry may not have a published snapshot yet. Treat that as
+        // a transient "not ready" state instead of tearing ragdoll ownership down.
         return false;
     }
 

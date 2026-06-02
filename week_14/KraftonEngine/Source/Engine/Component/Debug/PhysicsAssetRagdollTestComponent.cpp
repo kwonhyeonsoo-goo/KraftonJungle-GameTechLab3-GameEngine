@@ -3,6 +3,7 @@
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/Pawn/Character.h"
 #include "Input/InputSystem.h"
 #include "Physics/PhysicsAsset.h"
 
@@ -138,14 +139,32 @@ void UPhysicsAssetRagdollTestComponent::ProcessDebugInput()
             GetComponentNameSafe(),
             GetAssetNameSafe(MeshComponent->GetEffectivePhysicsAsset()));
 
-        const bool bEnabled = MeshComponent->EnableRagdollPhysics();
-        LogCurrentState(bEnabled ? "EnableSucceeded" : "EnableFailed");
+        const bool bUsesCharacterWrapper = Cast<ACharacter>(GetOwner()) != nullptr;
+        const bool bEnabled = [this, MeshComponent]()
+        {
+            if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
+            {
+                return OwnerCharacter->EnterRagdoll();
+            }
+            return MeshComponent->EnableRagdollPhysics();
+        }();
+        const char* EventLabel = bEnabled
+            ? (bUsesCharacterWrapper ? "EnableQueued" : "EnableSucceeded")
+            : "EnableFailed";
+        LogCurrentState(EventLabel);
         ActiveLogTimer = 0.0f;
     }
 
     if (Input.GetKeyDown(DisableRagdollKey))
     {
-        MeshComponent->DisableRagdollPhysics();
+        if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
+        {
+            OwnerCharacter->ExitRagdoll();
+        }
+        else
+        {
+            MeshComponent->DisableRagdollPhysics();
+        }
         LogCurrentState("DisableCompleted");
         ActiveLogTimer = 0.0f;
     }
@@ -156,7 +175,14 @@ void UPhysicsAssetRagdollTestComponent::ProcessDebugInput()
             GetOwnerNameSafe(),
             GetComponentNameSafe());
 
-        const bool bStarted = MeshComponent->BeginRagdollRecovery();
+        const bool bStarted = [this, MeshComponent]()
+        {
+            if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
+            {
+                return OwnerCharacter->BeginRagdollRecovery();
+            }
+            return MeshComponent->BeginRagdollRecovery();
+        }();
         LogCurrentState(bStarted ? "RecoveryStarted" : "RecoveryIgnored");
         ActiveLogTimer = 0.0f;
     }
@@ -193,7 +219,11 @@ void UPhysicsAssetRagdollTestComponent::MonitorStateTransitions()
     const bool bIsRagdollActive = MeshComponent && MeshComponent->IsRagdollActive();
     const bool bIsRecovering = MeshComponent && MeshComponent->IsRecoveringFromRagdoll();
 
-    if (bWasRecovering && !bIsRecovering)
+    if (!bWasRagdollActive && bIsRagdollActive)
+    {
+        LogCurrentState("RagdollActive");
+    }
+    else if (bWasRecovering && !bIsRecovering)
     {
         LogCurrentState("RecoveryCompleted");
     }
