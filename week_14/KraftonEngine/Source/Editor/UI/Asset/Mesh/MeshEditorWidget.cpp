@@ -15,6 +15,7 @@
 #include "Collision/Ray/RayUtils.h"
 #include "Viewport/Viewport.h"
 #include "GameFramework/World.h"
+#include "GameFramework/WorldSettings.h"
 #include "GameFramework/Light/DirectionalLightActor.h"
 #include "GameFramework/Actor/StaticMeshActor.h"
 #include "Settings/EditorSettings.h"
@@ -557,6 +558,9 @@ void FMeshEditorWidget::Open(UObject* Object)
 	ClothBrushValue = 50.0f;
 	ClothBrushRadius = 25.0f;
 	ClothBrushSmoothStrength = 0.5f;
+	ClothPreviewWindDirection = FVector::XAxisVector;
+	ClothPreviewWindSpeed = 0.0f;
+	bClothPreviewWindEnabled = false;
 	bClothPaintBrushEnabled = false;
 	bMeshDirty = false;
 	bSkeletonDirty = false;
@@ -644,6 +648,7 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 			TickClothPaintBrush();
 			if (USkeletalMeshComponent* Comp = ViewportClient.GetPreviewMeshComponent())
 			{
+				ApplyClothPreviewForcesToComponent();
 				Comp->TickClothSimulationForEditorPreview(DeltaTime);
 			}
 		}
@@ -700,6 +705,30 @@ void FMeshEditorWidget::CollectPreviewViewports(TArray<IEditorPreviewViewportCli
 		}
 		OutClients.push_back(const_cast<FMeshEditorViewportClient*>(&ViewportClient));
 	}
+}
+
+FVector FMeshEditorWidget::GetClothPreviewWindVelocity() const
+{
+	if (!bClothPreviewWindEnabled || ClothPreviewWindSpeed <= 0.0f || ClothPreviewWindDirection.IsNearlyZero())
+	{
+		return FVector::ZeroVector;
+	}
+
+	FVector Direction = ClothPreviewWindDirection;
+	Direction.Normalize();
+	return Direction * ClothPreviewWindSpeed;
+}
+
+void FMeshEditorWidget::ApplyClothPreviewForcesToComponent()
+{
+	USkeletalMeshComponent* Comp = ViewportClient.GetPreviewMeshComponent();
+	if (!Comp)
+	{
+		return;
+	}
+
+	const FVector WindVelocity = GetClothPreviewWindVelocity();
+	Comp->SetClothPreviewWindOverride(!WindVelocity.IsNearlyZero(), WindVelocity);
 }
 
 void FMeshEditorWidget::AddReferencedObjects(FReferenceCollector& Collector)
@@ -1881,16 +1910,44 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 			SkinningModeRuntime::Set(ESkinningMode::CPU);
 			if (USkeletalMeshComponent* Comp = ViewportClient.GetPreviewMeshComponent())
 			{
+				ApplyClothPreviewForcesToComponent();
 				Comp->TickClothSimulationForEditorPreview(0.0f);
 			}
 		}
 	}
 
+	ImGui::Separator();
+	ImGui::TextUnformatted("Preview Forces");
+	if (UWorld* PreviewWorld = ViewportClient.GetPreviewWorld())
+	{
+		FVector PreviewGravity = PreviewWorld->GetWorldSettings().Gravity;
+		if (ImGui::DragFloat3("Preview Gravity", PreviewGravity.Data, 0.01f, -100.0f, 100.0f, "%.2f"))
+		{
+			PreviewWorld->GetWorldSettings().Gravity = PreviewGravity;
+		}
+	}
+	ImGui::Checkbox("Preview Wind", &bClothPreviewWindEnabled);
+	ImGui::DragFloat3("Wind Direction", ClothPreviewWindDirection.Data, 0.01f, -1.0f, 1.0f, "%.2f");
+	ImGui::DragFloat("Wind Speed", &ClothPreviewWindSpeed, 0.01f, 0.0f, 200.0f, "%.2f");
+	if (ImGui::Button("Reset Cloth Simulation", ImVec2(-1.0f, 0.0f)))
+	{
+		if (USkeletalMeshComponent* Comp = ViewportClient.GetPreviewMeshComponent())
+		{
+			Comp->ResetClothSimulation();
+		}
+	}
+
 	bool bChanged = false;
-	bChanged |= ImGui::DragFloat("Gravity", &SelectedCloth->Config.GravityScale, 0.01f, -10.0f, 10.0f, "%.2f");
+	bChanged |= ImGui::DragFloat("Gravity Scale", &SelectedCloth->Config.GravityScale, 0.01f, -10.0f, 10.0f, "%.2f");
 	bChanged |= ImGui::DragFloat("Solver Hz", &SelectedCloth->Config.SolverFrequency, 1.0f, 1.0f, 1000.0f, "%.0f");
 	bChanged |= ImGui::SliderFloat("Stiffness", &SelectedCloth->Config.Stiffness, 0.0f, 1.0f, "%.2f");
 	bChanged |= ImGui::SliderFloat("Damping", &SelectedCloth->Config.Damping, 0.0f, 1.0f, "%.2f");
+	ImGui::Separator();
+	ImGui::TextUnformatted("Wind Response");
+	bChanged |= ImGui::DragFloat("Wind Scale", &SelectedCloth->Config.WindScale, 0.01f, 0.0f, 10.0f, "%.2f");
+	bChanged |= ImGui::SliderFloat("Drag Coefficient", &SelectedCloth->Config.DragCoefficient, 0.0f, 1.0f, "%.2f");
+	bChanged |= ImGui::SliderFloat("Lift Coefficient", &SelectedCloth->Config.LiftCoefficient, 0.0f, 1.0f, "%.2f");
+	bChanged |= ImGui::DragFloat("Fluid Density", &SelectedCloth->Config.FluidDensity, 0.01f, 0.000001f, 10.0f, "%.4f");
 	bChanged |= ImGui::DragFloat("View Min", &SelectedCloth->Paint.ViewMin, 1.0f, 0.0f, 100000.0f, "%.1f");
 	bChanged |= ImGui::DragFloat("View Max", &SelectedCloth->Paint.ViewMax, 1.0f, 0.0f, 100000.0f, "%.1f");
 	if (SelectedCloth->Paint.ViewMax <= SelectedCloth->Paint.ViewMin)
@@ -1899,6 +1956,10 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 	}
 	if (bChanged)
 	{
+		SelectedCloth->Config.WindScale = std::max(0.0f, SelectedCloth->Config.WindScale);
+		SelectedCloth->Config.DragCoefficient = std::clamp(SelectedCloth->Config.DragCoefficient, 0.0f, 1.0f);
+		SelectedCloth->Config.LiftCoefficient = std::clamp(SelectedCloth->Config.LiftCoefficient, 0.0f, 1.0f);
+		SelectedCloth->Config.FluidDensity = std::max(0.000001f, SelectedCloth->Config.FluidDensity);
 		MarkCurrentMeshDirty();
 	}
 

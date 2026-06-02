@@ -153,6 +153,20 @@ void USkeletalMeshComponent::TickClothSimulationForEditorPreview(float DeltaTime
     TickClothSimulation(DeltaTime);
 }
 
+void USkeletalMeshComponent::ResetClothSimulation()
+{
+    if (ClothRuntime)
+    {
+        ClothRuntime->Reset();
+    }
+}
+
+void USkeletalMeshComponent::SetClothPreviewWindOverride(bool bEnable, const FVector& WorldWindVelocity)
+{
+    bClothPreviewWindOverride = bEnable;
+    ClothPreviewWorldWindVelocity = bEnable ? WorldWindVelocity : FVector::ZeroVector;
+}
+
 void USkeletalMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 {
     if (ClothRuntime)
@@ -918,6 +932,11 @@ void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
     if (UWorld* World = GetWorld())
     {
         ForceContext.WorldGravity = World->GetWorldSettings().Gravity;
+    }
+    if (bClothPreviewWindOverride)
+    {
+        ForceContext.WorldWindVelocity = ClothPreviewWorldWindVelocity;
+        ForceContext.bUsePreviewWindOverride = true;
     }
 
     if (ClothRuntime->Tick(*Asset, DeltaTime, MutableSkinnedVertices, GetWorldMatrix(), ForceContext))

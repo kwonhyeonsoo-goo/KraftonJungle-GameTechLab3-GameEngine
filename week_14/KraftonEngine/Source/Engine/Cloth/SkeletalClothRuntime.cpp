@@ -27,6 +27,7 @@ namespace
     constexpr float ClothMaxFrameDelta = 1.0f / 15.0f;
     constexpr int32 ClothMaxSubsteps = 4;
     constexpr float ClothScaleTolerance = 1.0e-4f;
+    constexpr float ClothMinFluidDensity = 1.0e-6f;
 
     float Clamp01(float Value)
     {
@@ -238,6 +239,29 @@ struct FSkeletalClothRuntime::FImpl
             const FSkeletalClothData& ClothData = *Section.SourceData;
             const FVector LocalGravity = TransformWorldVectorToComponentLocal(ForceContext.WorldGravity);
             Section.Cloth->setGravity(ToPxVec3(LocalGravity * ClothData.Config.GravityScale));
+
+            const bool bApplyPreviewWind = ForceContext.bUsePreviewWindOverride &&
+                !ForceContext.WorldWindVelocity.IsNearlyZero();
+            Section.Cloth->clearParticleAccelerations();
+
+            const float WindScale = std::max(0.0f, ClothData.Config.WindScale);
+            const float DragCoefficient = Clamp01(ClothData.Config.DragCoefficient);
+            const float LiftCoefficient = Clamp01(ClothData.Config.LiftCoefficient);
+            if (bApplyPreviewWind && WindScale > 0.0f && (DragCoefficient > 0.0f || LiftCoefficient > 0.0f))
+            {
+                const FVector LocalWindVelocity =
+                    TransformWorldVectorToComponentLocal(ForceContext.WorldWindVelocity) * WindScale;
+                Section.Cloth->setWindVelocity(ToPxVec3(LocalWindVelocity));
+                Section.Cloth->setDragCoefficient(DragCoefficient);
+                Section.Cloth->setLiftCoefficient(LiftCoefficient);
+                Section.Cloth->setFluidDensity(std::max(ClothMinFluidDensity, ClothData.Config.FluidDensity));
+            }
+            else
+            {
+                Section.Cloth->setWindVelocity(physx::PxVec3(0.0f, 0.0f, 0.0f));
+                Section.Cloth->setDragCoefficient(0.0f);
+                Section.Cloth->setLiftCoefficient(0.0f);
+            }
         }
     }
 
