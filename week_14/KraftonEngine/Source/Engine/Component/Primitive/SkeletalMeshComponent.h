@@ -44,6 +44,14 @@ enum class ERagdollMode : uint8
     Partial,
 };
 
+enum class EPartialRagdollPhase : uint8
+{
+    None,
+    BlendingIn,
+    Active,
+    BlendingOut,
+};
+
 struct FPartialRagdollSelection
 {
     FName RootBoneName = FName::None;
@@ -205,6 +213,8 @@ private:
     void ClearRagdollPoseBaseline();
     bool BuildPartialRagdollBoneMasks(const FPartialRagdollSelection& Selection);
     void ClearPartialRagdollState();
+    bool IsSamePartialRagdollSelection(const FPartialRagdollSelection& Selection) const;
+    void BeginPartialRagdollBlendOut();
     void ResetPhysicsPoseBlendState();
     void UpdatePhysicsPoseBlend(float DeltaTime);
     void ResetRagdollRecoveryState();
@@ -244,6 +254,14 @@ protected:
     float RagdollCompletionHoldTime = 0.05f;
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Ragdoll Fallback Hold Time", Min=0.0f, Max=0.0f, Speed=0.01f)
     float RagdollFallbackHoldTime = 0.12f;
+    UPROPERTY(Edit, Save, Category="Physics|Partial Ragdoll", DisplayName="Partial Ragdoll Blend In Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float PartialRagdollBlendInTime = 0.08f;
+    UPROPERTY(Edit, Save, Category="Physics|Partial Ragdoll", DisplayName="Partial Ragdoll Blend Out Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float PartialRagdollBlendOutTime = 0.14f;
+    UPROPERTY(Edit, Save, Category="Physics|Partial Ragdoll", DisplayName="Partial Ragdoll Hold Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float PartialRagdollHoldTime = 0.18f;
+    UPROPERTY(Edit, Save, Category="Physics|Partial Ragdoll", DisplayName="Partial First Valid Pose Blend In Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float PartialFirstValidPoseBlendInTime = 0.04f;
     // FaceDown means prone/front get-up. FaceUp means supine/back get-up.
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Front Stand Up Animation", AssetType="UAnimSequence")
     FSoftObjectPtr FrontStandUpAnimationPath = "None";
@@ -260,7 +278,9 @@ protected:
     int32 PartialBoundaryParentBoneIndex = -1;
     TArray<uint8> PartialSimulatedBoneMask;
     TArray<uint8> PartialPhysicsApplyBoneMask;
+    EPartialRagdollPhase PartialRagdollPhase = EPartialRagdollPhase::None;
     bool bPendingPartialRagdollBlendOut = false;
+    float PartialRagdollHoldRemaining = 0.0f;
     float PhysicsPoseBlendWeight = 0.0f;
     float TargetPhysicsPoseBlendWeight = 0.0f;
     TArray<FTransform> RagdollBaselineComponentSpacePose;

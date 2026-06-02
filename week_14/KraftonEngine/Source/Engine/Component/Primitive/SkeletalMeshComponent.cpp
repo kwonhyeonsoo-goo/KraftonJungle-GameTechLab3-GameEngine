@@ -647,11 +647,34 @@ void USkeletalMeshComponent::ClearPartialRagdollState()
     PartialBoundaryParentBoneIndex = -1;
     PartialSimulatedBoneMask.clear();
     PartialPhysicsApplyBoneMask.clear();
+    PartialRagdollPhase = EPartialRagdollPhase::None;
     bPendingPartialRagdollBlendOut = false;
+    PartialRagdollHoldRemaining = 0.0f;
     if (ActiveRagdollMode == ERagdollMode::Partial)
     {
         ActiveRagdollMode = ERagdollMode::None;
     }
+}
+
+bool USkeletalMeshComponent::IsSamePartialRagdollSelection(const FPartialRagdollSelection& Selection) const
+{
+    return ActivePartialRagdollSelection.RootBoneName == Selection.RootBoneName &&
+           ActivePartialRagdollSelection.bIncludeDescendants == Selection.bIncludeDescendants;
+}
+
+void USkeletalMeshComponent::BeginPartialRagdollBlendOut()
+{
+    if (ActiveRagdollMode != ERagdollMode::Partial)
+    {
+        return;
+    }
+
+    // Partial ragdoll is a localized reaction, so it exits by blending back to animation
+    // instead of entering the full-body recovery / stand-up pipeline.
+    bPendingPartialRagdollBlendOut = true;
+    PartialRagdollPhase = EPartialRagdollPhase::BlendingOut;
+    PartialRagdollHoldRemaining = 0.0f;
+    TargetPhysicsPoseBlendWeight = 0.0f;
 }
 
 bool USkeletalMeshComponent::EnableRagdollPhysics()
@@ -712,7 +735,28 @@ bool USkeletalMeshComponent::EnablePartialRagdoll(const FPartialRagdollSelection
 
     if (ActiveRagdollMode == ERagdollMode::Partial)
     {
-        return false;
+        if (!PhysicsAssetInstance || !PhysicsAssetInstance->HasLivePhysicsObjects())
+        {
+            return false;
+        }
+
+        if (!IsSamePartialRagdollSelection(Selection))
+        {
+            return false;
+        }
+
+        bPendingPartialRagdollBlendOut = false;
+        PartialRagdollHoldRemaining = PartialRagdollHoldTime;
+        TargetPhysicsPoseBlendWeight = 1.0f;
+        PartialRagdollPhase =
+            (PhysicsPoseBlendWeight >= 0.999f)
+                ? EPartialRagdollPhase::Active
+                : EPartialRagdollPhase::BlendingIn;
+        UE_LOG("Partial ragdoll refreshed. Component=%s RootBone=%s Phase=%d",
+            GetName().c_str(),
+            Selection.RootBoneName.ToString().c_str(),
+            static_cast<int32>(PartialRagdollPhase));
+        return true;
     }
 
     if (ActiveRagdollMode == ERagdollMode::FullBody)
@@ -752,7 +796,9 @@ bool USkeletalMeshComponent::EnablePartialRagdoll(const FPartialRagdollSelection
     ActiveRagdollMode = ERagdollMode::Partial;
     bHasReceivedValidPhysicsPose = false;
     FirstValidPhysicsPoseBlendAlpha = 0.0f;
+    PartialRagdollPhase = EPartialRagdollPhase::BlendingIn;
     bPendingPartialRagdollBlendOut = false;
+    PartialRagdollHoldRemaining = PartialRagdollHoldTime;
     TargetPhysicsPoseBlendWeight = 1.0f;
     SetUsePhysicsAssetPose(true);
     UE_LOG("Partial ragdoll started. Component=%s RootBone=%s Bodies=%d Constraints=%d",
@@ -791,8 +837,7 @@ void USkeletalMeshComponent::DisablePartialRagdoll()
         return;
     }
 
-    bPendingPartialRagdollBlendOut = true;
-    TargetPhysicsPoseBlendWeight = 0.0f;
+    BeginPartialRagdollBlendOut();
 }
 
 bool USkeletalMeshComponent::BeginRagdollRecovery()
@@ -965,9 +1010,13 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
     TArray<FTransform> AnimationLocalPose;
     AnimationLocalPose.resize(MeshAsset->Bones.size());
     const float ShapedBlendWeight =
-        (RecoveryPhase == ERagdollRecoveryPhase::BlendOutFromPhysics)
-            ? SmoothStep01(PhysicsPoseBlendWeight)
-            : EaseOutQuadratic01(PhysicsPoseBlendWeight);
+        (ActiveRagdollMode == ERagdollMode::Partial)
+            ? ((PartialRagdollPhase == EPartialRagdollPhase::BlendingOut || bPendingPartialRagdollBlendOut)
+                ? SmoothStep01(PhysicsPoseBlendWeight)
+                : EaseOutQuadratic01(PhysicsPoseBlendWeight))
+            : ((RecoveryPhase == ERagdollRecoveryPhase::BlendOutFromPhysics)
+                ? SmoothStep01(PhysicsPoseBlendWeight)
+                : EaseOutQuadratic01(PhysicsPoseBlendWeight));
     const float EffectiveBlendWeight = Clamp01(
         ShapedBlendWeight * SmoothStep01(FirstValidPhysicsPoseBlendAlpha));
 
@@ -1296,7 +1345,7 @@ void USkeletalMeshComponent::UpdatePhysicsPoseBlend(float DeltaTime)
                     FirstValidPhysicsPoseBlendAlpha,
                     1.0f,
                     DeltaTime,
-                    RagdollFirstValidPoseBlendInTime));
+                    PartialFirstValidPoseBlendInTime));
         }
 
         if (!PhysicsAssetInstance || !PhysicsAssetInstance->HasLivePhysicsObjects())
@@ -1307,16 +1356,39 @@ void USkeletalMeshComponent::UpdatePhysicsPoseBlend(float DeltaTime)
             return;
         }
 
+        if (!bPendingPartialRagdollBlendOut &&
+            PartialRagdollPhase == EPartialRagdollPhase::Active)
+        {
+            // Partial ragdoll should self-release after a short reaction window so gameplay
+            // callers do not need to orchestrate a stand-up-style recovery every time.
+            PartialRagdollHoldRemaining = std::max(0.0f, PartialRagdollHoldRemaining - DeltaTime);
+            if (PartialRagdollHoldRemaining <= 1.0e-4f)
+            {
+                UE_LOG("Partial ragdoll auto-release started. Component=%s RootBone=%s",
+                    GetName().c_str(),
+                    ActivePartialRagdollSelection.RootBoneName.ToString().c_str());
+                BeginPartialRagdollBlendOut();
+            }
+        }
+
         const float BlendDuration = (TargetPhysicsPoseBlendWeight > PhysicsPoseBlendWeight)
-            ? RagdollBlendInTime
-            : RagdollRecoveryBlendOutTime;
+            ? PartialRagdollBlendInTime
+            : PartialRagdollBlendOutTime;
         PhysicsPoseBlendWeight = Clamp01(
             AdvanceTowardTarget(PhysicsPoseBlendWeight, TargetPhysicsPoseBlendWeight, DeltaTime, BlendDuration));
+
+        if (!bPendingPartialRagdollBlendOut &&
+            TargetPhysicsPoseBlendWeight >= 0.999f &&
+            PhysicsPoseBlendWeight >= 0.999f)
+        {
+            PartialRagdollPhase = EPartialRagdollPhase::Active;
+        }
 
         if (bPendingPartialRagdollBlendOut &&
             PhysicsPoseBlendWeight <= 1.0e-4f &&
             TargetPhysicsPoseBlendWeight <= 1.0e-4f)
         {
+            const FName EndedRootBoneName = ActivePartialRagdollSelection.RootBoneName;
             SetUsePhysicsAssetPose(false);
             if (PhysicsAssetInstance)
             {
@@ -1325,7 +1397,7 @@ void USkeletalMeshComponent::UpdatePhysicsPoseBlend(float DeltaTime)
             ResetPhysicsPoseBlendState();
             UE_LOG("Partial ragdoll ended. Component=%s RootBone=%s",
                 GetName().c_str(),
-                ActivePartialRagdollSelection.RootBoneName.ToString().c_str());
+                EndedRootBoneName.ToString().c_str());
             ClearPartialRagdollState();
         }
 
