@@ -384,17 +384,28 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
     const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
     const TArray<FPhysicsAssetConstraintSetup>& ConstraintSetups = Asset->GetConstraintSetups();
 
+    const bool bStrictPartialSimulation = Options.bPartialSimulation;
+    const bool bRestrictSimulationScope = Options.bPartialSimulation || Options.bSelectedOnly;
+    const FName ScopeRootBoneName =
+        Options.bPartialSimulation
+            ? Options.PartialRootBoneName
+            : Options.SelectedBoneName;
+    const bool bIncludeScopeDescendants =
+        Options.bPartialSimulation
+            ? Options.bIncludePartialDescendants
+            : true;
+
     TArray<uint8> SimulatedBodyMask;
     SimulatedBodyMask.resize(BodySetups.size(), 1);
-    if (Options.bSelectedOnly)
+    if (bRestrictSimulationScope)
     {
         SimulatedBodyMask.assign(BodySetups.size(), 0);
-        const int32 SelectedBoneIndex = FindBoneIndexForBody(Options.SelectedBoneName);
+        const int32 SelectedBoneIndex = FindBoneIndexForBody(ScopeRootBoneName);
         if (SelectedBoneIndex < 0)
         {
-            UE_LOG("CreateBodiesAndConstraints failed: selected simulation has no valid selected body. Component=%s Bone=%s",
+            UE_LOG("CreateBodiesAndConstraints failed: partial/selected simulation has no valid root body. Component=%s Bone=%s",
                 Owner->GetName().c_str(),
-                Options.SelectedBoneName.ToString().c_str());
+                ScopeRootBoneName.ToString().c_str());
             return false;
         }
 
@@ -402,7 +413,10 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
         for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
         {
             const int32 BodyBoneIndex = FindBoneIndexForBody(BodySetups[BodyIndex].BoneName);
-            if (IsSameOrDescendantBone(MeshAsset, BodyBoneIndex, SelectedBoneIndex))
+            const bool bInScope = bIncludeScopeDescendants
+                ? IsSameOrDescendantBone(MeshAsset, BodyBoneIndex, SelectedBoneIndex)
+                : (BodyBoneIndex == SelectedBoneIndex);
+            if (bInScope)
             {
                 SimulatedBodyMask[BodyIndex] = 1;
                 ++SelectedDynamicBodyCount;
@@ -413,7 +427,7 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
         {
             UE_LOG("CreateBodiesAndConstraints failed: selected body chain is empty. Component=%s Bone=%s",
                 Owner->GetName().c_str(),
-                Options.SelectedBoneName.ToString().c_str());
+                ScopeRootBoneName.ToString().c_str());
             return false;
         }
     }
@@ -466,7 +480,12 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
             BodyIndex >= 0 && BodyIndex < static_cast<int32>(SimulatedBodyMask.size())
                 ? SimulatedBodyMask[BodyIndex] != 0
                 : true;
-        if (Options.bSelectedOnly && !bSimulateThisBody)
+        if (bStrictPartialSimulation && !bSimulateThisBody)
+        {
+            continue;
+        }
+
+        if (Options.bSelectedOnly && !Options.bPartialSimulation && !bSimulateThisBody)
         {
             BodyDesc.BodyType = EPhysicsBodyType::Kinematic;
             BodyDesc.bEnableGravity = false;
@@ -495,7 +514,22 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
         const FPhysicsBodyHandle ParentHandle = GetBodyHandleByBoneName(ConstraintSetup.ParentBoneName);
         const FPhysicsBodyHandle ChildHandle = GetBodyHandleByBoneName(ConstraintSetup.ChildBoneName);
 
-        if (Options.bSelectedOnly)
+        if (bStrictPartialSimulation)
+        {
+            const int32 ParentBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ParentBoneName);
+            const int32 ChildBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ChildBoneName);
+            const bool bParentSimulated =
+                ParentBodyIndex >= 0 && ParentBodyIndex < static_cast<int32>(SimulatedBodyMask.size()) &&
+                SimulatedBodyMask[ParentBodyIndex] != 0;
+            const bool bChildSimulated =
+                ChildBodyIndex >= 0 && ChildBodyIndex < static_cast<int32>(SimulatedBodyMask.size()) &&
+                SimulatedBodyMask[ChildBodyIndex] != 0;
+            if (!bParentSimulated || !bChildSimulated)
+            {
+                continue;
+            }
+        }
+        else if (Options.bSelectedOnly)
         {
             const int32 ParentBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ParentBoneName);
             const int32 ChildBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ChildBoneName);
@@ -545,10 +579,12 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
         ++CreatedConstraintCount;
     }
 
-    UE_LOG("Created PhysicsAsset runtime objects. Component=%s Bodies=%d Constraints=%d",
+    UE_LOG("Created PhysicsAsset runtime objects. Component=%s Bodies=%d Constraints=%d Partial=%s RootBone=%s",
         Owner->GetName().c_str(),
         CreatedBodyCount,
-        CreatedConstraintCount);
+        CreatedConstraintCount,
+        Options.bPartialSimulation ? "true" : "false",
+        ScopeRootBoneName.ToString().c_str());
 
     return CreatedBodyCount > 0;
 }

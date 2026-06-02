@@ -14,11 +14,14 @@ struct FPhysicsAssetSimulationOptions
 {
     bool bNoGravity = false;
     bool bSelectedOnly = false;
+    bool bPartialSimulation = false;
+    bool bIncludePartialDescendants = true;
     bool bForceQueryAndPhysicsCollision = false;
     bool bUseIndependentRagdollCollision = false;
     ECollisionEnabled IndependentCollisionEnabled = ECollisionEnabled::QueryAndPhysics;
     bool bIndependentGenerateOverlapEvents = false;
     FName SelectedBoneName = FName::None;
+    FName PartialRootBoneName = FName::None;
 };
 
 // Runtime state is separated from UPhysicsAsset so the asset stays editable/serializable data only.

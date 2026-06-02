@@ -36,6 +36,25 @@ enum class ERagdollStandUpType : uint8
     FaceDown,
 };
 
+UENUM()
+enum class ERagdollMode : uint8
+{
+    None,
+    FullBody,
+    Partial,
+};
+
+struct FPartialRagdollSelection
+{
+    FName RootBoneName = FName::None;
+    bool bIncludeDescendants = true;
+
+    bool IsValid() const
+    {
+        return RootBoneName != FName::None;
+    }
+};
+
 // SkeletalMesh 전용 render proxy만 제공하는 얇은 wrapper.
 // Skinning/bone/material/bounds 상태는 모두 USkinnedMeshComponent가 소유한다.
 UCLASS()
@@ -75,12 +94,19 @@ public:
     // code and keep this component as the policy owner.
     UFUNCTION(Callable, Category="Physics")
     bool EnableRagdollPhysics();
+    bool EnablePartialRagdoll(const FPartialRagdollSelection& Selection);
+    UFUNCTION(Callable, Category="Physics")
+    bool EnablePartialRagdoll(const FName& RootBoneName);
     UFUNCTION(Callable, Category="Physics")
     void DisableRagdollPhysics();
+    UFUNCTION(Callable, Category="Physics")
+    void DisablePartialRagdoll();
     UFUNCTION(Callable, Category="Physics")
     bool BeginRagdollRecovery();
     UFUNCTION(Pure, Category="Physics")
     bool IsRagdollActive() const;
+    UFUNCTION(Pure, Category="Physics")
+    bool IsPartialRagdollActive() const;
     UFUNCTION(Pure, Category="Physics")
     bool IsRecoveringFromRagdoll() const { return RecoveryPhase != ERagdollRecoveryPhase::None; }
     UFUNCTION(Pure, Category="Physics")
@@ -177,6 +203,8 @@ private:
     bool ShouldBlockExternalAnimationControl() const;
     bool CaptureRagdollPoseBaseline();
     void ClearRagdollPoseBaseline();
+    bool BuildPartialRagdollBoneMasks(const FPartialRagdollSelection& Selection);
+    void ClearPartialRagdollState();
     void ResetPhysicsPoseBlendState();
     void UpdatePhysicsPoseBlend(float DeltaTime);
     void ResetRagdollRecoveryState();
@@ -226,6 +254,11 @@ protected:
     std::unique_ptr<FSkeletalClothRuntime> ClothRuntime;
     bool bUsePhysicsAssetPose = false;
     bool bAllowInternalRagdollAnimationControl = false;
+    ERagdollMode ActiveRagdollMode = ERagdollMode::None;
+    FPartialRagdollSelection ActivePartialRagdollSelection;
+    TArray<uint8> PartialSimulatedBoneMask;
+    TArray<uint8> PartialPhysicsApplyBoneMask;
+    bool bPendingPartialRagdollBlendOut = false;
     float PhysicsPoseBlendWeight = 0.0f;
     float TargetPhysicsPoseBlendWeight = 0.0f;
     TArray<FTransform> RagdollBaselineComponentSpacePose;

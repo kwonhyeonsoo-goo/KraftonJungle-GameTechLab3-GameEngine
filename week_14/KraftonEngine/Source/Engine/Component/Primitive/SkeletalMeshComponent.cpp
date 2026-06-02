@@ -183,6 +183,46 @@ namespace
         return -1;
     }
 
+    int32 FindBoneIndexByExactName(const FSkeletalMesh* MeshAsset, const FName& BoneName)
+    {
+        if (!MeshAsset || BoneName == FName::None)
+        {
+            return -1;
+        }
+
+        const FString TargetName = BoneName.ToString();
+        for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+        {
+            if (MeshAsset->Bones[BoneIndex].Name == TargetName)
+            {
+                return BoneIndex;
+            }
+        }
+
+        return -1;
+    }
+
+    bool IsSameOrDescendantBone(const FSkeletalMesh* MeshAsset, int32 BoneIndex, int32 PossibleAncestorIndex)
+    {
+        if (!MeshAsset || BoneIndex < 0 || PossibleAncestorIndex < 0)
+        {
+            return false;
+        }
+
+        int32 CurrentBoneIndex = BoneIndex;
+        while (CurrentBoneIndex >= 0 && CurrentBoneIndex < static_cast<int32>(MeshAsset->Bones.size()))
+        {
+            if (CurrentBoneIndex == PossibleAncestorIndex)
+            {
+                return true;
+            }
+
+            CurrentBoneIndex = MeshAsset->Bones[CurrentBoneIndex].ParentIndex;
+        }
+
+        return false;
+    }
+
     const char* LexToString(ERagdollStandUpType StandUpType)
     {
         switch (StandUpType)
@@ -453,6 +493,8 @@ void USkeletalMeshComponent::ResetRagdollRuntimeState()
     bUsePhysicsAssetPose = false;
     ResetPhysicsPoseBlendState();
     ResetRagdollRecoveryState();
+    ActiveRagdollMode = ERagdollMode::None;
+    ClearPartialRagdollState();
     if (PhysicsAssetInstance)
     {
         PhysicsAssetInstance->ResetRuntimeState();
@@ -506,6 +548,8 @@ void USkeletalMeshComponent::DestroyPhysicsAssetInstance()
     bUsePhysicsAssetPose = false;
     ResetPhysicsPoseBlendState();
     ResetRagdollRecoveryState();
+    ActiveRagdollMode = ERagdollMode::None;
+    ClearPartialRagdollState();
     if (!PhysicsAssetInstance)
     {
         return;
@@ -547,8 +591,78 @@ void USkeletalMeshComponent::ClearRagdollPoseBaseline()
     RagdollBaselineLocalPose.clear();
 }
 
+bool USkeletalMeshComponent::BuildPartialRagdollBoneMasks(const FPartialRagdollSelection& Selection)
+{
+    ClearPartialRagdollState();
+
+    USkeletalMesh* Mesh = GetSkeletalMesh();
+    FSkeletalMesh* MeshAsset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+    if (!MeshAsset || MeshAsset->Bones.empty() || !Selection.IsValid())
+    {
+        return false;
+    }
+
+    const int32 RootBoneIndex = FindBoneIndexByExactName(MeshAsset, Selection.RootBoneName);
+    if (RootBoneIndex < 0)
+    {
+        return false;
+    }
+
+    PartialSimulatedBoneMask.resize(MeshAsset->Bones.size(), 0);
+    PartialPhysicsApplyBoneMask.resize(MeshAsset->Bones.size(), 0);
+
+    int32 SelectedBoneCount = 0;
+    for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+    {
+        const bool bSelected = Selection.bIncludeDescendants
+            ? IsSameOrDescendantBone(MeshAsset, BoneIndex, RootBoneIndex)
+            : (BoneIndex == RootBoneIndex);
+        if (!bSelected)
+        {
+            continue;
+        }
+
+        PartialSimulatedBoneMask[BoneIndex] = 1;
+        PartialPhysicsApplyBoneMask[BoneIndex] = 1;
+        ++SelectedBoneCount;
+    }
+
+    if (SelectedBoneCount <= 0)
+    {
+        ClearPartialRagdollState();
+        return false;
+    }
+
+    ActivePartialRagdollSelection = Selection;
+    return true;
+}
+
+void USkeletalMeshComponent::ClearPartialRagdollState()
+{
+    ActivePartialRagdollSelection = FPartialRagdollSelection();
+    PartialSimulatedBoneMask.clear();
+    PartialPhysicsApplyBoneMask.clear();
+    bPendingPartialRagdollBlendOut = false;
+    if (ActiveRagdollMode == ERagdollMode::Partial)
+    {
+        ActiveRagdollMode = ERagdollMode::None;
+    }
+}
+
 bool USkeletalMeshComponent::EnableRagdollPhysics()
 {
+    if (RecoveryPhase != ERagdollRecoveryPhase::None)
+    {
+        return false;
+    }
+
+    if (ActiveRagdollMode == ERagdollMode::Partial && PhysicsAssetInstance)
+    {
+        PhysicsAssetInstance->DestroyBodiesAndConstraints();
+        ResetPhysicsPoseBlendState();
+        ClearPartialRagdollState();
+    }
+
     // The component stays responsible for high-level ragdoll policy while the instance
     // owns the low-level runtime handles and pose source data.
     FPhysicsAssetInstance* Instance = GetOrCreatePhysicsAssetInstance();
@@ -576,6 +690,7 @@ bool USkeletalMeshComponent::EnableRagdollPhysics()
     }
 
     ResetRagdollRecoveryState();
+    ActiveRagdollMode = ERagdollMode::FullBody;
     bHasReceivedValidPhysicsPose = false;
     FirstValidPhysicsPoseBlendAlpha = 0.0f;
     TargetPhysicsPoseBlendWeight = 1.0f;
@@ -583,20 +698,101 @@ bool USkeletalMeshComponent::EnableRagdollPhysics()
     return IsRagdollActive();
 }
 
+bool USkeletalMeshComponent::EnablePartialRagdoll(const FPartialRagdollSelection& Selection)
+{
+    if (!Selection.IsValid() || RecoveryPhase != ERagdollRecoveryPhase::None)
+    {
+        return false;
+    }
+
+    if (ActiveRagdollMode == ERagdollMode::Partial)
+    {
+        return false;
+    }
+
+    if (ActiveRagdollMode == ERagdollMode::FullBody)
+    {
+        return false;
+    }
+
+    FPhysicsAssetInstance* Instance = GetOrCreatePhysicsAssetInstance();
+    if (!Instance)
+    {
+        return false;
+    }
+
+    if (!BuildPartialRagdollBoneMasks(Selection))
+    {
+        return false;
+    }
+
+    CaptureRagdollPoseBaseline();
+
+    FPhysicsAssetSimulationOptions SimulationOptions;
+    SimulationOptions.bUseIndependentRagdollCollision = true;
+    SimulationOptions.IndependentCollisionEnabled = ECollisionEnabled::QueryAndPhysics;
+    SimulationOptions.bIndependentGenerateOverlapEvents = false;
+    SimulationOptions.bPartialSimulation = true;
+    SimulationOptions.PartialRootBoneName = Selection.RootBoneName;
+    SimulationOptions.bIncludePartialDescendants = Selection.bIncludeDescendants;
+
+    if (!Instance->CreateBodiesAndConstraints(SimulationOptions))
+    {
+        SetUsePhysicsAssetPose(false);
+        ResetPhysicsPoseBlendState();
+        ClearPartialRagdollState();
+        return false;
+    }
+
+    ActiveRagdollMode = ERagdollMode::Partial;
+    bHasReceivedValidPhysicsPose = false;
+    FirstValidPhysicsPoseBlendAlpha = 0.0f;
+    bPendingPartialRagdollBlendOut = false;
+    TargetPhysicsPoseBlendWeight = 1.0f;
+    SetUsePhysicsAssetPose(true);
+    UE_LOG("Partial ragdoll started. Component=%s RootBone=%s Bodies=%d Constraints=%d",
+        GetName().c_str(),
+        Selection.RootBoneName.ToString().c_str(),
+        GetLiveRagdollBodyCount(),
+        GetLiveRagdollConstraintCount());
+    return IsPartialRagdollActive();
+}
+
+bool USkeletalMeshComponent::EnablePartialRagdoll(const FName& RootBoneName)
+{
+    FPartialRagdollSelection Selection;
+    Selection.RootBoneName = RootBoneName;
+    Selection.bIncludeDescendants = true;
+    return EnablePartialRagdoll(Selection);
+}
+
 void USkeletalMeshComponent::DisableRagdollPhysics()
 {
+    ActiveRagdollMode = ERagdollMode::None;
     SetUsePhysicsAssetPose(false);
     ResetPhysicsPoseBlendState();
     ResetRagdollRecoveryState();
+    ClearPartialRagdollState();
     if (PhysicsAssetInstance)
     {
         PhysicsAssetInstance->DestroyBodiesAndConstraints();
     }
 }
 
+void USkeletalMeshComponent::DisablePartialRagdoll()
+{
+    if (ActiveRagdollMode != ERagdollMode::Partial || !PhysicsAssetInstance || !PhysicsAssetInstance->HasLivePhysicsObjects())
+    {
+        return;
+    }
+
+    bPendingPartialRagdollBlendOut = true;
+    TargetPhysicsPoseBlendWeight = 0.0f;
+}
+
 bool USkeletalMeshComponent::BeginRagdollRecovery()
 {
-    if (RecoveryPhase != ERagdollRecoveryPhase::None)
+    if (RecoveryPhase != ERagdollRecoveryPhase::None || ActiveRagdollMode != ERagdollMode::FullBody)
     {
         return false;
     }
@@ -633,6 +829,14 @@ bool USkeletalMeshComponent::BeginRagdollRecovery()
 bool USkeletalMeshComponent::IsRagdollActive() const
 {
     return bUsePhysicsAssetPose && PhysicsAssetInstance && PhysicsAssetInstance->HasLivePhysicsObjects();
+}
+
+bool USkeletalMeshComponent::IsPartialRagdollActive() const
+{
+    return ActiveRagdollMode == ERagdollMode::Partial &&
+           bUsePhysicsAssetPose &&
+           PhysicsAssetInstance &&
+           PhysicsAssetInstance->HasLivePhysicsObjects();
 }
 
 int32 USkeletalMeshComponent::GetLiveRagdollBodyCount() const
@@ -692,7 +896,12 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
         return false;
     }
 
+    const bool bRestrictPhysicsToPartialMask =
+        ActiveRagdollMode == ERagdollMode::Partial &&
+        PartialPhysicsApplyBoneMask.size() >= MeshAsset->Bones.size();
+
     const bool bUseFrozenBaselinePose =
+        ActiveRagdollMode == ERagdollMode::FullBody &&
         !ShouldAdvanceAnimationDuringTick() &&
         RagdollBaselineComponentSpacePose.size() >= MeshAsset->Bones.size() &&
         RagdollBaselineLocalPose.size() >= MeshAsset->Bones.size();
@@ -746,6 +955,13 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
             bUseFrozenBaselinePose
                 ? RagdollBaselineLocalPose[BoneIndex]
                 : GetBoneLocalTransformByIndex(BoneIndex);
+
+        if (bRestrictPhysicsToPartialMask && PartialPhysicsApplyBoneMask[BoneIndex] == 0)
+        {
+            LocalPose[BoneIndex] = AnimationLocalPose[BoneIndex];
+            continue;
+        }
+
         const int32 ParentIndex = MeshAsset->Bones[BoneIndex].ParentIndex;
         const FMatrix LocalMatrix = (ParentIndex >= 0)
             ? ComponentSpaceGlobalMatrices[BoneIndex] * GetAffineInverseForPoseSync(ComponentSpaceGlobalMatrices[ParentIndex])
@@ -793,6 +1009,11 @@ bool USkeletalMeshComponent::ShouldAdvanceAnimationDuringTick() const
         return true;
     }
 
+    if (ActiveRagdollMode == ERagdollMode::Partial)
+    {
+        return true;
+    }
+
     // Fully ragdolled bodies should not keep advancing gameplay animation state behind
     // the scenes. We still evaluate animation while blending in/out or during recovery
     // handoff so transition poses remain well-defined.
@@ -806,7 +1027,9 @@ bool USkeletalMeshComponent::ShouldAdvanceAnimationDuringTick() const
 
 bool USkeletalMeshComponent::ShouldBlockExternalAnimationControl() const
 {
-    return !bAllowInternalRagdollAnimationControl && (bUsePhysicsAssetPose || RecoveryPhase != ERagdollRecoveryPhase::None);
+    return !bAllowInternalRagdollAnimationControl &&
+           (RecoveryPhase != ERagdollRecoveryPhase::None ||
+            (ActiveRagdollMode == ERagdollMode::FullBody && bUsePhysicsAssetPose));
 }
 
 void USkeletalMeshComponent::ResetRagdollRecoveryState()
@@ -983,6 +1206,7 @@ void USkeletalMeshComponent::RestorePostRecoveryAnimationState()
 
 void USkeletalMeshComponent::FinishRagdollRecovery()
 {
+    ActiveRagdollMode = ERagdollMode::None;
     SetUsePhysicsAssetPose(false);
     ResetPhysicsPoseBlendState();
     if (PhysicsAssetInstance)
@@ -1007,6 +1231,51 @@ void USkeletalMeshComponent::FinishRagdollRecovery()
 
 void USkeletalMeshComponent::UpdatePhysicsPoseBlend(float DeltaTime)
 {
+    if (ActiveRagdollMode == ERagdollMode::Partial)
+    {
+        if (bHasReceivedValidPhysicsPose && FirstValidPhysicsPoseBlendAlpha < 1.0f)
+        {
+            FirstValidPhysicsPoseBlendAlpha = Clamp01(
+                AdvanceTowardTarget(
+                    FirstValidPhysicsPoseBlendAlpha,
+                    1.0f,
+                    DeltaTime,
+                    RagdollFirstValidPoseBlendInTime));
+        }
+
+        if (!PhysicsAssetInstance || !PhysicsAssetInstance->HasLivePhysicsObjects())
+        {
+            SetUsePhysicsAssetPose(false);
+            ResetPhysicsPoseBlendState();
+            ClearPartialRagdollState();
+            return;
+        }
+
+        const float BlendDuration = (TargetPhysicsPoseBlendWeight > PhysicsPoseBlendWeight)
+            ? RagdollBlendInTime
+            : RagdollRecoveryBlendOutTime;
+        PhysicsPoseBlendWeight = Clamp01(
+            AdvanceTowardTarget(PhysicsPoseBlendWeight, TargetPhysicsPoseBlendWeight, DeltaTime, BlendDuration));
+
+        if (bPendingPartialRagdollBlendOut &&
+            PhysicsPoseBlendWeight <= 1.0e-4f &&
+            TargetPhysicsPoseBlendWeight <= 1.0e-4f)
+        {
+            SetUsePhysicsAssetPose(false);
+            if (PhysicsAssetInstance)
+            {
+                PhysicsAssetInstance->DestroyBodiesAndConstraints();
+            }
+            ResetPhysicsPoseBlendState();
+            UE_LOG("Partial ragdoll ended. Component=%s RootBone=%s",
+                GetName().c_str(),
+                ActivePartialRagdollSelection.RootBoneName.ToString().c_str());
+            ClearPartialRagdollState();
+        }
+
+        return;
+    }
+
     if (RecoveryPhase == ERagdollRecoveryPhase::Completed)
     {
         RecoveryPhase = ERagdollRecoveryPhase::None;
