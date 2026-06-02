@@ -547,6 +547,10 @@ void FMeshEditorWidget::Open(UObject* Object)
 
 void FMeshEditorWidget::Close()
 {
+	PhysicsAssetEditor.StopEditorSimulation(
+		ViewportClient.GetPreviewWorld(),
+		ViewportClient.GetPreviewMeshComponent(),
+		true);
 	PhysicsAssetEditor.Close();
 	FAssetEditorWidget::Close();
 
@@ -589,6 +593,16 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 				GetCurrentPhysicsAsset(),
 				PickedPhysicsBodyIndex,
 				PickedPhysicsShapeIndex);
+		}
+
+		if (ActiveTab == EMeshEditorTab::Physics)
+		{
+			PhysicsAssetEditor.TickEditorSimulation(
+				GetCurrentPhysicsAsset(),
+				Cast<USkeletalMesh>(EditedObject),
+				ViewportClient.GetPreviewWorld(),
+				ViewportClient.GetPreviewMeshComponent(),
+				DeltaTime);
 		}
 
 		if (ActiveTab == EMeshEditorTab::Mesh)
@@ -841,6 +855,10 @@ void FMeshEditorWidget::RenderTabBar()
 			ActiveTab = Tab;
 			if (PreviousTab == EMeshEditorTab::Physics && ActiveTab != EMeshEditorTab::Physics)
 			{
+				PhysicsAssetEditor.StopEditorSimulation(
+					ViewportClient.GetPreviewWorld(),
+					ViewportClient.GetPreviewMeshComponent(),
+					true);
 				ViewportClient.ClearPhysicsAssetGizmoTarget();
 			}
 			if (PreviousTab != ActiveTab && ActiveTab == EMeshEditorTab::Skeleton)
@@ -1368,6 +1386,11 @@ bool FMeshEditorWidget::AssignPhysicsAssetToCurrentMesh(UPhysicsAsset* PhysicsAs
 		return false;
 	}
 
+	PhysicsAssetEditor.StopEditorSimulation(
+		ViewportClient.GetPreviewWorld(),
+		ViewportClient.GetPreviewMeshComponent(),
+		true);
+
 	SkeletalMesh->SetPhysicsAsset(PhysicsAsset);
 	if (SkeletalMesh->GetPhysicsAsset() != PhysicsAsset)
 	{
@@ -1498,6 +1521,10 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 	(void)TotalHeight;
 	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
 	UPhysicsAsset* PhysicsAsset = GetCurrentPhysicsAsset();
+
+	PhysicsAssetEditor.SetEditorPreviewContext(
+		ViewportClient.GetPreviewWorld(),
+		ViewportClient.GetPreviewMeshComponent());
 
 	if (PhysicsAsset)
 	{

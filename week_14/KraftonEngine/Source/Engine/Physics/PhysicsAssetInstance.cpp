@@ -224,6 +224,28 @@ namespace
             BodyWorld.Location - OutBoneWorld.Rotation.RotateVector(BodySetup.BodyLocalFrame.Location);
         return true;
     }
+
+
+    bool IsSameOrDescendantBone(const FSkeletalMesh* MeshAsset, int32 BoneIndex, int32 PossibleAncestorIndex)
+    {
+        if (!MeshAsset || BoneIndex < 0 || PossibleAncestorIndex < 0 ||
+            BoneIndex >= static_cast<int32>(MeshAsset->Bones.size()) ||
+            PossibleAncestorIndex >= static_cast<int32>(MeshAsset->Bones.size()))
+        {
+            return false;
+        }
+
+        int32 Cursor = BoneIndex;
+        while (Cursor >= 0 && Cursor < static_cast<int32>(MeshAsset->Bones.size()))
+        {
+            if (Cursor == PossibleAncestorIndex)
+            {
+                return true;
+            }
+            Cursor = MeshAsset->Bones[Cursor].ParentIndex;
+        }
+        return false;
+    }
 }
 
 bool FPhysicsAssetInstance::Initialize(USkeletalMeshComponent* InOwner, UPhysicsAsset* InAsset)
@@ -279,6 +301,11 @@ bool FPhysicsAssetInstance::Initialize(USkeletalMeshComponent* InOwner, UPhysics
 
 bool FPhysicsAssetInstance::CreateBodiesAndConstraints()
 {
+    return CreateBodiesAndConstraints(FPhysicsAssetSimulationOptions{});
+}
+
+bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimulationOptions& Options)
+{
     if (!bInitialized)
     {
         return false;
@@ -316,6 +343,40 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints()
     const FTransform ComponentWorldTransform = GetComponentWorldTransform(Owner);
     const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
     const TArray<FPhysicsAssetConstraintSetup>& ConstraintSetups = Asset->GetConstraintSetups();
+
+    TArray<uint8> SimulatedBodyMask;
+    SimulatedBodyMask.resize(BodySetups.size(), 1);
+    if (Options.bSelectedOnly)
+    {
+        SimulatedBodyMask.assign(BodySetups.size(), 0);
+        const int32 SelectedBoneIndex = FindBoneIndexForBody(Options.SelectedBoneName);
+        if (SelectedBoneIndex < 0)
+        {
+            UE_LOG("CreateBodiesAndConstraints failed: selected simulation has no valid selected body. Component=%s Bone=%s",
+                Owner->GetName().c_str(),
+                Options.SelectedBoneName.ToString().c_str());
+            return false;
+        }
+
+        int32 SelectedDynamicBodyCount = 0;
+        for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
+        {
+            const int32 BodyBoneIndex = FindBoneIndexForBody(BodySetups[BodyIndex].BoneName);
+            if (IsSameOrDescendantBone(MeshAsset, BodyBoneIndex, SelectedBoneIndex))
+            {
+                SimulatedBodyMask[BodyIndex] = 1;
+                ++SelectedDynamicBodyCount;
+            }
+        }
+
+        if (SelectedDynamicBodyCount <= 0)
+        {
+            UE_LOG("CreateBodiesAndConstraints failed: selected body chain is empty. Component=%s Bone=%s",
+                Owner->GetName().c_str(),
+                Options.SelectedBoneName.ToString().c_str());
+            return false;
+        }
+    }
 
     if (BodiesByBone.size() != BodySetups.size())
     {
@@ -356,6 +417,20 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints()
             continue;
         }
 
+        const bool bSimulateThisBody =
+            BodyIndex >= 0 && BodyIndex < static_cast<int32>(SimulatedBodyMask.size())
+                ? SimulatedBodyMask[BodyIndex] != 0
+                : true;
+        if (Options.bSelectedOnly && !bSimulateThisBody)
+        {
+            BodyDesc.BodyType = EPhysicsBodyType::Kinematic;
+            BodyDesc.bEnableGravity = false;
+        }
+        else if (Options.bNoGravity)
+        {
+            BodyDesc.bEnableGravity = false;
+        }
+
         FPhysicsBodyHandle BodyHandle = Runtime->CreateRigidBody(BodyDesc);
         if (!BodyHandle.IsValid())
         {
@@ -374,6 +449,22 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints()
         const FPhysicsAssetConstraintSetup& ConstraintSetup = ConstraintSetups[ConstraintIndex];
         const FPhysicsBodyHandle ParentHandle = GetBodyHandleByBoneName(ConstraintSetup.ParentBoneName);
         const FPhysicsBodyHandle ChildHandle = GetBodyHandleByBoneName(ConstraintSetup.ChildBoneName);
+
+        if (Options.bSelectedOnly)
+        {
+            const int32 ParentBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ParentBoneName);
+            const int32 ChildBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ChildBoneName);
+            const bool bParentSimulated =
+                ParentBodyIndex >= 0 && ParentBodyIndex < static_cast<int32>(SimulatedBodyMask.size()) &&
+                SimulatedBodyMask[ParentBodyIndex] != 0;
+            const bool bChildSimulated =
+                ChildBodyIndex >= 0 && ChildBodyIndex < static_cast<int32>(SimulatedBodyMask.size()) &&
+                SimulatedBodyMask[ChildBodyIndex] != 0;
+            if (!bParentSimulated && !bChildSimulated)
+            {
+                continue;
+            }
+        }
 
         if (!ParentHandle.IsValid() || !ChildHandle.IsValid())
         {

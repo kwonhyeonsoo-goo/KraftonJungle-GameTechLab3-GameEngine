@@ -9,6 +9,13 @@
 class UPhysicsAsset;
 class USkeletalMeshComponent;
 
+struct FPhysicsAssetSimulationOptions
+{
+    bool bNoGravity = false;
+    bool bSelectedOnly = false;
+    FName SelectedBoneName = FName::None;
+};
+
 // Runtime state is separated from UPhysicsAsset so the asset stays editable/serializable data only.
 class FPhysicsAssetInstance
 {
@@ -17,6 +24,7 @@ public:
     // Runtime objects are created from the currently selected asset on demand so the
     // component can decide policy while this instance owns low-level physics handles.
     bool CreateBodiesAndConstraints();
+    bool CreateBodiesAndConstraints(const FPhysicsAssetSimulationOptions& Options);
     void DestroyBodiesAndConstraints();
     void Shutdown();
     // Reset only drops live runtime objects; cached binding metadata stays so the
