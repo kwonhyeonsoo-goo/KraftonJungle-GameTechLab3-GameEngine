@@ -608,6 +608,9 @@ bool USkeletalMeshComponent::BuildPartialRagdollBoneMasks(const FPartialRagdollS
         return false;
     }
 
+    PartialRootBoneIndex = RootBoneIndex;
+    PartialBoundaryParentBoneIndex = MeshAsset->Bones[RootBoneIndex].ParentIndex;
+
     PartialSimulatedBoneMask.resize(MeshAsset->Bones.size(), 0);
     PartialPhysicsApplyBoneMask.resize(MeshAsset->Bones.size(), 0);
 
@@ -640,6 +643,8 @@ bool USkeletalMeshComponent::BuildPartialRagdollBoneMasks(const FPartialRagdollS
 void USkeletalMeshComponent::ClearPartialRagdollState()
 {
     ActivePartialRagdollSelection = FPartialRagdollSelection();
+    PartialRootBoneIndex = -1;
+    PartialBoundaryParentBoneIndex = -1;
     PartialSimulatedBoneMask.clear();
     PartialPhysicsApplyBoneMask.clear();
     bPendingPartialRagdollBlendOut = false;
@@ -927,6 +932,9 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
 
     TArray<FMatrix> ComponentSpaceGlobalMatrices;
     ComponentSpaceGlobalMatrices.resize(MeshAsset->Bones.size());
+    TArray<FMatrix> AnimationComponentSpaceMatrices;
+    AnimationComponentSpaceMatrices.resize(MeshAsset->Bones.size());
+    TArray<FTransform> CurrentAnimationComponentSpaceTransforms;
 
     // PullPhysicsPose gives bone world transforms. They are converted back into
     // component-space and then local-space so the normal skinned-mesh pose path can
@@ -936,6 +944,20 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
     {
         ComponentSpaceGlobalMatrices[BoneIndex] =
             BoneWorldTransforms[BoneIndex].ToMatrix() * ComponentWorldInverse;
+        AnimationComponentSpaceMatrices[BoneIndex] = ComponentSpaceGlobalMatrices[BoneIndex];
+    }
+
+    if (bRestrictPhysicsToPartialMask)
+    {
+        GetCurrentBoneGlobalTransforms(CurrentAnimationComponentSpaceTransforms);
+        if (CurrentAnimationComponentSpaceTransforms.size() >= MeshAsset->Bones.size())
+        {
+            for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+            {
+                AnimationComponentSpaceMatrices[BoneIndex] =
+                    CurrentAnimationComponentSpaceTransforms[BoneIndex].ToMatrix();
+            }
+        }
     }
 
     TArray<FTransform> LocalPose;
@@ -963,16 +985,50 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
         }
 
         const int32 ParentIndex = MeshAsset->Bones[BoneIndex].ParentIndex;
+        // For partial ragdoll, a physics-driven root such as spine_01 should still remain
+        // visually attached to its animation-driven parent such as pelvis. When the parent
+        // is outside the partial scope, derive the local pose against the animation parent
+        // instead of the reconstructed physics chain to reduce the detached/floating look.
+        const bool bParentOutsidePartialScope =
+            bRestrictPhysicsToPartialMask &&
+            ParentIndex >= 0 &&
+            ParentIndex < static_cast<int32>(PartialPhysicsApplyBoneMask.size()) &&
+            PartialPhysicsApplyBoneMask[ParentIndex] == 0;
+        const FMatrix& ParentMatrixForLocal =
+            (bParentOutsidePartialScope &&
+             ParentIndex >= 0 &&
+             ParentIndex < static_cast<int32>(AnimationComponentSpaceMatrices.size()))
+                ? AnimationComponentSpaceMatrices[ParentIndex]
+                : (ParentIndex >= 0
+                    ? ComponentSpaceGlobalMatrices[ParentIndex]
+                    : ComponentSpaceGlobalMatrices[BoneIndex]);
         const FMatrix LocalMatrix = (ParentIndex >= 0)
-            ? ComponentSpaceGlobalMatrices[BoneIndex] * GetAffineInverseForPoseSync(ComponentSpaceGlobalMatrices[ParentIndex])
+            ? ComponentSpaceGlobalMatrices[BoneIndex] * GetAffineInverseForPoseSync(ParentMatrixForLocal)
             : ComponentSpaceGlobalMatrices[BoneIndex];
         const FTransform PhysicsLocalPose = DecomposePoseMatrixPreservingScale(
             LocalMatrix,
             GetReferenceLocalScale(MeshAsset, BoneIndex));
+
+        float BoneBlendWeight = EffectiveBlendWeight;
+        if (bRestrictPhysicsToPartialMask)
+        {
+            // Boundary bones are the most visually sensitive region in partial ragdoll.
+            // Bias the root and its immediate vicinity slightly toward animation so upper
+            // body simulation feels attached instead of sharply disconnected.
+            if (BoneIndex == PartialRootBoneIndex)
+            {
+                BoneBlendWeight *= 0.65f;
+            }
+            else if (ParentIndex == PartialRootBoneIndex || BoneIndex == PartialBoundaryParentBoneIndex)
+            {
+                BoneBlendWeight *= 0.85f;
+            }
+        }
+
         LocalPose[BoneIndex] = BlendTransforms(
             AnimationLocalPose[BoneIndex],
             PhysicsLocalPose,
-            EffectiveBlendWeight);
+            BoneBlendWeight);
     }
 
     // PullPhysicsPose starts from the current animation result, so bones without bodies

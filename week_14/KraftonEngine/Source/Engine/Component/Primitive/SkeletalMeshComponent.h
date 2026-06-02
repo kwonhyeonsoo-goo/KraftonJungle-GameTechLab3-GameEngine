@@ -256,6 +256,8 @@ protected:
     bool bAllowInternalRagdollAnimationControl = false;
     ERagdollMode ActiveRagdollMode = ERagdollMode::None;
     FPartialRagdollSelection ActivePartialRagdollSelection;
+    int32 PartialRootBoneIndex = -1;
+    int32 PartialBoundaryParentBoneIndex = -1;
     TArray<uint8> PartialSimulatedBoneMask;
     TArray<uint8> PartialPhysicsApplyBoneMask;
     bool bPendingPartialRagdollBlendOut = false;
