@@ -1017,6 +1017,14 @@ void FPhysicsAssetEditorWidget::RenderRegenerateBodiesControls(UPhysicsAsset* Ph
             ImGui::SetTooltip("Create parent-child constraints between the generated bodies.");
         }
 
+        if (!bRegenerateCreateConstraints) ImGui::BeginDisabled();
+        ImGui::Checkbox("Disable Adjacent Pair Collision", &bRegenerateDisableConstrainedBodyCollision);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Disable collision between each generated adjacent parent-child constraint pair.");
+        }
+        if (!bRegenerateCreateConstraints) ImGui::EndDisabled();
+
         ImGui::Checkbox("Replace", &bRegenerateReplaceExisting);
         if (ImGui::IsItemHovered())
         {
@@ -2257,6 +2265,7 @@ bool FPhysicsAssetEditorWidget::RegenerateBodies(UPhysicsAsset* PhysicsAsset, US
         ? EPhysicsAssetAutoBodyMethod::PCAAnalysis
         : EPhysicsAssetAutoBodyMethod::BoneAxis;
     Options.bCreateConstraints = bRegenerateCreateConstraints;
+    Options.bDisableCollisionBetweenConstrainedBodies = bRegenerateDisableConstrainedBodyCollision;
     Options.bReplaceExisting = bRegenerateReplaceExisting;
     Options.bSkipHelperBones = bRegenerateSkipHelperBones;
     Options.bAllowBoneAxisFallback = bRegenerateAllowBoneAxisFallback;
@@ -2299,7 +2308,10 @@ bool FPhysicsAssetEditorWidget::RegenerateBodies(UPhysicsAsset* PhysicsAsset, US
         ClampSelection(PhysicsAsset);
     }
 
-    MarkPhysicsAssetDirty();
+    if (Result.bAssetChanged)
+    {
+        MarkPhysicsAssetDirty();
+    }
     return true;
 }
 

@@ -155,6 +155,7 @@ private:
     bool bRegenerateUsePCAAnalysis = true;
     bool bRegenerateUseBoneAxis = false;
     bool bRegenerateCreateConstraints = true;
+    bool bRegenerateDisableConstrainedBodyCollision = true;
     bool bRegenerateReplaceExisting = true;
     bool bRegenerateSkipHelperBones = true;
     bool bRegenerateAllowBoneAxisFallback = false;
