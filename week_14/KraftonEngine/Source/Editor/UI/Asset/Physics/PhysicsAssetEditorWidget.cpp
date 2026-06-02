@@ -2046,7 +2046,7 @@ void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* Physic
         bConstraintGraphLayoutDirty = true;
     }
 
-    ImGui::BeginChild("##PhysicsConstraintGraphHost", ImVec2(0.0f, 0.0f), true);
+    ImGui::BeginChild("##PhysicsConstraintGraphHost", ImVec2(0.0f, 0.0f), false);
     ed::SetCurrentEditor(ConstraintGraphContext);
     ed::Begin("PhysicsConstraintGraph");
 
