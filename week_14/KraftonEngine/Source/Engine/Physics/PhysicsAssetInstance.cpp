@@ -658,6 +658,13 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
         return false;
     }
 
+    TArray<FTransform> CurrentBoneLocalTransforms;
+    CurrentBoneLocalTransforms.resize(MeshAsset->Bones.size());
+    for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+    {
+        CurrentBoneLocalTransforms[BoneIndex] = Owner->GetBoneLocalTransformByIndex(BoneIndex);
+    }
+
     const FTransform ComponentWorldTransform = GetComponentWorldTransform(Owner);
     OutBoneWorldTransforms.resize(MeshAsset->Bones.size());
     // Start from the current animated pose so bones without bodies remain stable instead
@@ -667,6 +674,9 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
         OutBoneWorldTransforms[BoneIndex] =
             ComposePhysicsTransforms(ComponentWorldTransform, CurrentBoneComponentSpaceTransforms[BoneIndex]);
     }
+
+    TArray<uint8> AppliedBodyBoneMask;
+    AppliedBodyBoneMask.resize(MeshAsset->Bones.size(), 0);
 
     const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
     int32 AppliedBodyCount = 0;
@@ -707,10 +717,38 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
         // Physics bodies do not carry meaningful bone scale, so preserve the existing scale.
         BoneWorld.Scale = OutBoneWorldTransforms[BoneIndex].Scale;
         OutBoneWorldTransforms[BoneIndex] = BoneWorld;
+        AppliedBodyBoneMask[BoneIndex] = 1;
         ++AppliedBodyCount;
     }
 
-    return AppliedBodyCount > 0;
+    if (AppliedBodyCount <= 0)
+    {
+        return false;
+    }
+
+    // Only bones that have PhysicsAsset bodies are sampled directly from PhysX.
+    // Descendant bones without bodies must keep their authored/current local offset
+    // under the updated parent; otherwise they remain pinned in their pre-simulation
+    // world position and vertices weighted to them look frozen outside the body shape.
+    for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+    {
+        if (AppliedBodyBoneMask[BoneIndex] != 0)
+        {
+            continue;
+        }
+
+        const int32 ParentIndex = MeshAsset->Bones[BoneIndex].ParentIndex;
+        if (ParentIndex < 0 || ParentIndex >= static_cast<int32>(OutBoneWorldTransforms.size()))
+        {
+            continue;
+        }
+
+        OutBoneWorldTransforms[BoneIndex] = ComposePhysicsTransforms(
+            OutBoneWorldTransforms[ParentIndex],
+            CurrentBoneLocalTransforms[BoneIndex]);
+    }
+
+    return true;
 }
 
 UPhysicsAsset* FPhysicsAssetInstance::GetAsset() const
