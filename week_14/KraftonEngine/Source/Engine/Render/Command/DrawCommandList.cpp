@@ -255,12 +255,12 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 		}
 	}
 
-	if (bForce || Cmd.Bindings.BoneHeatMapCB != Cache.Bindings.BoneHeatMapCB)
+	if (bForce || Cmd.Bindings.MeshScalarOverlayCB != Cache.Bindings.MeshScalarOverlayCB)
 	{
-		ID3D11Buffer* RawCB = Cmd.Bindings.BoneHeatMapCB ? Cmd.Bindings.BoneHeatMapCB->GetBuffer() : nullptr;
-		Ctx->VSSetConstantBuffers(ECBSlot::BoneHeatMap, 1, &RawCB);
-		Ctx->PSSetConstantBuffers(ECBSlot::BoneHeatMap, 1, &RawCB);
-		Cache.Bindings.BoneHeatMapCB = Cmd.Bindings.BoneHeatMapCB;
+		ID3D11Buffer* RawCB = Cmd.Bindings.MeshScalarOverlayCB ? Cmd.Bindings.MeshScalarOverlayCB->GetBuffer() : nullptr;
+		Ctx->VSSetConstantBuffers(ECBSlot::MeshScalarOverlay, 1, &RawCB);
+		Ctx->PSSetConstantBuffers(ECBSlot::MeshScalarOverlay, 1, &RawCB);
+		Cache.Bindings.MeshScalarOverlayCB = Cmd.Bindings.MeshScalarOverlayCB;
 	}
 
 	// --- SRV (t0 ~ t7) 바인딩 ---
