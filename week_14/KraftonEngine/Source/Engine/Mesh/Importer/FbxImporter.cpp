@@ -116,13 +116,16 @@ bool FFbxImporter::ImportStaticMesh(const FString& FilePath, const FImportOption
 {
 	OutResult = FFbxStaticMeshImportResult();
 
+	FFbxSceneLoadOptions LoadOptions = MakeStaticMeshLoadOptions();
 	FFbxSceneHandle SceneHandle;
-	if (!FFbxSceneLoader::Load(FilePath, MakeStaticMeshLoadOptions(), SceneHandle, OutMessage))
+	if (!FFbxSceneLoader::Load(FilePath, LoadOptions, SceneHandle, OutMessage))
 	{
 		return false;
 	}
 
-	FFbxSceneLoader::NormalizeScene(SceneHandle.Scene);
+	FFbxSceneNormalizeOptions NormalizeOptions;
+	NormalizeOptions.bAutoDetectMeterAuthoredCentimeterScene = LoadOptions.bAutoDetectMeterAuthoredCentimeterScene;
+	FFbxSceneLoader::NormalizeScene(SceneHandle.Scene, NormalizeOptions);
 	FFbxSceneLoader::Triangulate(SceneHandle.Manager, SceneHandle.Scene);
 
 	FFbxImportContext Context;
@@ -134,13 +137,16 @@ bool FFbxImporter::ImportSkeletalMesh(const FString& FilePath, FFbxSkeletalMeshI
 {
 	OutResult = FFbxSkeletalMeshImportResult();
 
+	FFbxSceneLoadOptions LoadOptions = MakeSkeletalMeshLoadOptions(true);
 	FFbxSceneHandle SceneHandle;
-	if (!FFbxSceneLoader::Load(FilePath, MakeSkeletalMeshLoadOptions(true), SceneHandle, OutMessage))
+	if (!FFbxSceneLoader::Load(FilePath, LoadOptions, SceneHandle, OutMessage))
 	{
 		return false;
 	}
 
-	FFbxSceneLoader::NormalizeScene(SceneHandle.Scene);
+	FFbxSceneNormalizeOptions NormalizeOptions;
+	NormalizeOptions.bAutoDetectMeterAuthoredCentimeterScene = LoadOptions.bAutoDetectMeterAuthoredCentimeterScene;
+	FFbxSceneLoader::NormalizeScene(SceneHandle.Scene, NormalizeOptions);
 	FFbxSceneLoader::Triangulate(SceneHandle.Manager, SceneHandle.Scene);
 
 	FFbxImportContext Context;
@@ -152,13 +158,16 @@ bool FFbxImporter::ImportSkeletalMeshOnly(const FString& FilePath, FFbxSkeletalM
 {
 	OutResult = FFbxSkeletalMeshOnlyImportResult();
 
+	FFbxSceneLoadOptions LoadOptions = MakeSkeletalMeshLoadOptions(false);
 	FFbxSceneHandle SceneHandle;
-	if (!FFbxSceneLoader::Load(FilePath, MakeSkeletalMeshLoadOptions(false), SceneHandle, OutMessage))
+	if (!FFbxSceneLoader::Load(FilePath, LoadOptions, SceneHandle, OutMessage))
 	{
 		return false;
 	}
 
-	FFbxSceneLoader::NormalizeScene(SceneHandle.Scene);
+	FFbxSceneNormalizeOptions NormalizeOptions;
+	NormalizeOptions.bAutoDetectMeterAuthoredCentimeterScene = LoadOptions.bAutoDetectMeterAuthoredCentimeterScene;
+	FFbxSceneLoader::NormalizeScene(SceneHandle.Scene, NormalizeOptions);
 	FFbxSceneLoader::Triangulate(SceneHandle.Manager, SceneHandle.Scene);
 
 	FFbxImportContext Context;
@@ -170,13 +179,16 @@ bool FFbxImporter::ImportSkeletonOnly(const FString& FilePath, FFbxSkeletonImpor
 {
 	OutResult = FFbxSkeletonImportResult();
 
+	FFbxSceneLoadOptions LoadOptions = MakeSkeletonOnlyLoadOptions();
 	FFbxSceneHandle SceneHandle;
-	if (!FFbxSceneLoader::Load(FilePath, MakeSkeletonOnlyLoadOptions(), SceneHandle, OutMessage))
+	if (!FFbxSceneLoader::Load(FilePath, LoadOptions, SceneHandle, OutMessage))
 	{
 		return false;
 	}
 
-	FFbxSceneLoader::NormalizeScene(SceneHandle.Scene);
+	FFbxSceneNormalizeOptions NormalizeOptions;
+	NormalizeOptions.bAutoDetectMeterAuthoredCentimeterScene = LoadOptions.bAutoDetectMeterAuthoredCentimeterScene;
+	FFbxSceneLoader::NormalizeScene(SceneHandle.Scene, NormalizeOptions);
 
 	FbxNode* RootNode = SceneHandle.Scene ? SceneHandle.Scene->GetRootNode() : nullptr;
 	if (!RootNode)
@@ -208,13 +220,16 @@ bool FFbxImporter::ImportAnimationOnly(
 {
 	OutResult = FFbxAnimationImportResult();
 
+	FFbxSceneLoadOptions LoadOptions = MakeAnimationOnlyLoadOptions(Options);
 	FFbxSceneHandle SceneHandle;
-	if (!FFbxSceneLoader::Load(FilePath, MakeAnimationOnlyLoadOptions(Options), SceneHandle, OutMessage))
+	if (!FFbxSceneLoader::Load(FilePath, LoadOptions, SceneHandle, OutMessage))
 	{
 		return false;
 	}
 
-	FFbxSceneLoader::NormalizeScene(SceneHandle.Scene);
+	FFbxSceneNormalizeOptions NormalizeOptions;
+	NormalizeOptions.bAutoDetectMeterAuthoredCentimeterScene = LoadOptions.bAutoDetectMeterAuthoredCentimeterScene;
+	FFbxSceneLoader::NormalizeScene(SceneHandle.Scene, NormalizeOptions);
 
 	FbxNode* RootNode = SceneHandle.Scene ? SceneHandle.Scene->GetRootNode() : nullptr;
 	if (!RootNode)
@@ -258,13 +273,16 @@ bool FFbxImporter::ImportSkeletalScene(
 		return false;
 	}
 
+	FFbxSceneLoadOptions LoadOptions = MakeSkeletalSceneLoadOptions(Options);
 	FFbxSceneHandle SceneHandle;
-	if (!FFbxSceneLoader::Load(FilePath, MakeSkeletalSceneLoadOptions(Options), SceneHandle, OutMessage))
+	if (!FFbxSceneLoader::Load(FilePath, LoadOptions, SceneHandle, OutMessage))
 	{
 		return false;
 	}
 
-	FFbxSceneLoader::NormalizeScene(SceneHandle.Scene);
+	FFbxSceneNormalizeOptions NormalizeOptions;
+	NormalizeOptions.bAutoDetectMeterAuthoredCentimeterScene = LoadOptions.bAutoDetectMeterAuthoredCentimeterScene;
+	FFbxSceneLoader::NormalizeScene(SceneHandle.Scene, NormalizeOptions);
 	if (Options.bImportSkin)
 	{
 		FFbxSceneLoader::Triangulate(SceneHandle.Manager, SceneHandle.Scene);

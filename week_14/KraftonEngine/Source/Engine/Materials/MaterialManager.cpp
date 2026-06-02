@@ -106,7 +106,7 @@ void FMaterialManager::ScanTexturePaths()
 		const std::filesystem::path& Path = Entry.path();
 		std::wstring Ext = Path.extension().wstring();
 		for (wchar_t& Ch : Ext) if (Ch >= L'A' && Ch <= L'Z') Ch += (L'a' - L'A'); // ASCII 소문자화
-		if (Ext != L".png") continue; // .png / .PNG 등 대소문자 무관
+		if (Ext != L".png" && Ext != L".jpg" && Ext != L".jpeg" && Ext != L".tga" && Ext != L".bmp" && Ext != L".dds") continue; // common image formats, 대소문자 무관
 
 		AvailableTexturePaths.push_back(
 			FPaths::ToUtf8(Path.lexically_relative(ProjectRoot).generic_wstring()));
@@ -242,6 +242,8 @@ UMaterial* FMaterialManager::LoadMaterialBinary(const FString& UassetPath)
 UMaterial* FMaterialManager::CreateImportedMaterialAsset(const FString& UassetPath, const FVector4& SectionColor,
 	const FString& DiffuseTexturePath, const FString& NormalTexturePath)
 {
+	MaterialCache.erase(UassetPath);
+
 	FMaterialTemplate* Template = GetOrCreateTemplate(DefaultShaderPath);
 	if (!Template) return nullptr;
 	auto Buffers = CreateConstantBuffers(Template);
@@ -262,7 +264,7 @@ UMaterial* FMaterialManager::CreateImportedMaterialAsset(const FString& UassetPa
 
 	Material->RebuildCachedSRVs();
 	SaveMaterial(Material, UassetPath);
-	MaterialCache.emplace(UassetPath, Material);
+	MaterialCache[UassetPath] = Material;
 	return Material;
 }
 

@@ -164,7 +164,18 @@ namespace
         physx::PxVehicleDriveSimData4W DriveData;
 
         physx::PxVehicleDifferential4WData DiffData;
-        DiffData.mType = physx::PxVehicleDifferential4WData::eDIFF_TYPE_LS_REARWD;
+        if (Desc.bFrontWheelDrive && Desc.bRearWheelDrive)
+        {
+            DiffData.mType = physx::PxVehicleDifferential4WData::eDIFF_TYPE_LS_4WD;
+        }
+        else if (Desc.bFrontWheelDrive)
+        {
+            DiffData.mType = physx::PxVehicleDifferential4WData::eDIFF_TYPE_LS_FRONTWD;
+        }
+        else
+        {
+            DiffData.mType = physx::PxVehicleDifferential4WData::eDIFF_TYPE_LS_REARWD;
+        }
         DriveData.setDiffData(DiffData);
 
         physx::PxVehicleEngineData EngineData;

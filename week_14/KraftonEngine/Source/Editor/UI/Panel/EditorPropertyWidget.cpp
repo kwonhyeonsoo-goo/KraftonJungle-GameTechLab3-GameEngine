@@ -6,6 +6,7 @@
 #include "Component/Primitive/BillboardComponent.h"
 #include "Component/MeshComponent.h"
 #include "Component/Movement/MovementComponent.h"
+#include "Component/Movement/WheeledVehicleMovementComponent.h"
 #include "Component/Debug/GizmoComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SceneComponent.h"
@@ -49,6 +50,7 @@
 #include <array>
 #include <chrono>
 #include <cfloat>
+#include <cctype>
 #include <cstring>
 #include <filesystem>
 #include <cstdio>
@@ -203,6 +205,148 @@ namespace
 		}
 
 		return Choices;
+	}
+
+	USkinnedMeshComponent* FindBonePickerSkinnedMeshComponent(const FPropertyValue& Prop)
+	{
+		if (USkinnedMeshComponent* DirectMesh = Cast<USkinnedMeshComponent>(Prop.Object))
+		{
+			if (DirectMesh->GetSkeletalMesh())
+			{
+				return DirectMesh;
+			}
+		}
+
+		AActor* OwnerActor = GetPropertyOwnerActor(Prop);
+		if (!OwnerActor)
+		{
+			return nullptr;
+		}
+
+		USkinnedMeshComponent* FirstSkinnedMesh = nullptr;
+		for (UActorComponent* Component : OwnerActor->GetComponents())
+		{
+			USkinnedMeshComponent* Candidate = Cast<USkinnedMeshComponent>(Component);
+			if (!Candidate || !Candidate->GetSkeletalMesh())
+			{
+				continue;
+			}
+
+			if (!FirstSkinnedMesh)
+			{
+				FirstSkinnedMesh = Candidate;
+			}
+
+			if (Candidate == OwnerActor->GetRootComponent())
+			{
+				return Candidate;
+			}
+		}
+
+		return FirstSkinnedMesh;
+	}
+
+	void CollectBonePickerNames(USkinnedMeshComponent* SkinnedMesh, TArray<FString>& OutBoneNames)
+	{
+		OutBoneNames.clear();
+		if (!SkinnedMesh)
+		{
+			return;
+		}
+
+		USkeletalMesh* Mesh = SkinnedMesh->GetSkeletalMesh();
+		if (!Mesh)
+		{
+			return;
+		}
+
+		if (USkeleton* Skeleton = Mesh->GetSkeleton())
+		{
+			const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+			for (const FReferenceBone& Bone : RefSkeleton.Bones)
+			{
+				if (!Bone.Name.empty())
+				{
+					OutBoneNames.push_back(Bone.Name);
+				}
+			}
+		}
+
+		if (!OutBoneNames.empty())
+		{
+			return;
+		}
+
+		if (const FSkeletalMesh* Asset = Mesh->GetSkeletalMeshAsset())
+		{
+			for (const FBone& Bone : Asset->Bones)
+			{
+				if (!Bone.Name.empty())
+				{
+					OutBoneNames.push_back(Bone.Name);
+				}
+			}
+		}
+	}
+
+
+	FString ToLowerPropertyText(FString Value)
+	{
+		std::transform(Value.begin(), Value.end(), Value.begin(), [](unsigned char Ch)
+		{
+			return static_cast<char>(std::tolower(Ch));
+		});
+		return Value;
+	}
+
+	bool BonePickerNameContains(const FString& LowerName, const char* Needle)
+	{
+		return LowerName.find(Needle) != FString::npos;
+	}
+
+	bool IsRecommendedWheelBoneName(const FString& BoneName)
+	{
+		const FString LowerName = ToLowerPropertyText(BoneName);
+		return BonePickerNameContains(LowerName, "wheel") ||
+			BonePickerNameContains(LowerName, "tire") ||
+			BonePickerNameContains(LowerName, "tyre");
+	}
+
+	bool PassesBonePickerFilter(const FString& BoneName, const FString& Filter)
+	{
+		if (Filter.empty())
+		{
+			return true;
+		}
+
+		return ToLowerPropertyText(BoneName).find(ToLowerPropertyText(Filter)) != FString::npos;
+	}
+
+	void SplitBonePickerNames(
+		const TArray<FString>& BoneNames,
+		const FString& Filter,
+		TArray<FString>& OutRecommended,
+		TArray<FString>& OutOthers)
+	{
+		OutRecommended.clear();
+		OutOthers.clear();
+
+		for (const FString& BoneName : BoneNames)
+		{
+			if (!PassesBonePickerFilter(BoneName, Filter))
+			{
+				continue;
+			}
+
+			if (IsRecommendedWheelBoneName(BoneName))
+			{
+				OutRecommended.push_back(BoneName);
+			}
+			else
+			{
+				OutOthers.push_back(BoneName);
+			}
+		}
 	}
 
 	FString GetObjectReferenceChoiceLabel(const UObject* Object)
@@ -2007,6 +2151,52 @@ bool FEditorPropertyWidget::RenderStructPropertyWidget(FPropertyValue& Prop, boo
 	return bChanged;
 }
 
+bool FEditorPropertyWidget::RenderVehicleWheelSetupTools(FPropertyValue& Prop, bool bDispatchChange, const FString& PropertyPath)
+{
+	UWheeledVehicleMovementComponent* VehicleMovement = Cast<UWheeledVehicleMovementComponent>(Prop.Object);
+	if (!VehicleMovement || FString(Prop.GetName()) != "WheelSetups")
+	{
+		return false;
+	}
+
+	bool bChanged = false;
+	if (ImGui::Button("Auto Generate From Skeleton"))
+	{
+		bChanged = VehicleMovement->AutoGenerateWheelSetupsFromSkeleton();
+		if (bChanged && bDispatchChange)
+		{
+			DispatchPostEditChange(Prop, EPropertyChangeType::ValueSet, -1, PropertyPath);
+		}
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button("Refresh Positions From Bones"))
+	{
+		bChanged = VehicleMovement->RefreshWheelLocalPositionsFromBones() > 0 || bChanged;
+		if (bChanged && bDispatchChange)
+		{
+			DispatchPostEditChange(Prop, EPropertyChangeType::ValueSet, -1, PropertyPath);
+		}
+	}
+
+	TArray<FString> ValidationMessages;
+	if (VehicleMovement->ValidateWheelSetups(ValidationMessages))
+	{
+		ImGui::TextColored(ImVec4(0.45f, 0.85f, 0.45f, 1.0f), "Wheel setup validation passed.");
+	}
+	else
+	{
+		ImGui::TextColored(ImVec4(1.0f, 0.72f, 0.25f, 1.0f), "Wheel setup warnings:");
+		for (const FString& Message : ValidationMessages)
+		{
+			ImGui::BulletText("%s", Message.c_str());
+		}
+	}
+
+	ImGui::Spacing();
+	return bChanged;
+}
+
 bool FEditorPropertyWidget::RenderArrayPropertyWidget(FPropertyValue& Prop, bool bDispatchChange, const FString& PropertyPath)
 {
 	const FArrayProperty* ArrayProperty = Prop.Property ? Prop.Property->AsArrayProperty() : nullptr;
@@ -2026,6 +2216,12 @@ bool FEditorPropertyWidget::RenderArrayPropertyWidget(FPropertyValue& Prop, bool
 	bool bChanged = false;
 	size_t Num = Ops->GetNum(ArrayPtr);
 	const bool bEditFixedSize = HasTruthyPropertyMetadata(Prop, "editfixedsize") || HasTruthyPropertyMetadata(Prop, "fixedsize");
+
+	if (RenderVehicleWheelSetupTools(Prop, bDispatchChange, PropertyPath))
+	{
+		bChanged = true;
+		Num = Ops->GetNum(ArrayPtr);
+	}
 
 	if (!bEditFixedSize && Ops->InsertDefault && ImGui::Button("+"))
 	{
@@ -2193,6 +2389,140 @@ bool FEditorPropertyWidget::RenderAttachSocketNameProperty(FPropertyValue& Prop)
 			ParentName.c_str(),
 			ParentClass.c_str(),
 			SkeletonPath.c_str(),
+			CurrentName.c_str());
+	}
+
+	if (bShowInvalid)
+	{
+		ImGui::PopStyleColor(3);
+	}
+
+	return bChanged;
+}
+
+bool FEditorPropertyWidget::RenderBoneNameProperty(FPropertyValue& Prop)
+{
+	FName* Value = static_cast<FName*>(Prop.GetValuePtr());
+	if (!Value)
+	{
+		return false;
+	}
+
+	const FString CurrentName = Value->ToString();
+	const bool bHasCurrentName = Value->IsValid() && *Value != FName::None && !CurrentName.empty();
+
+	USkinnedMeshComponent* SkinnedMesh = FindBonePickerSkinnedMeshComponent(Prop);
+	TArray<FString> BoneNames;
+	CollectBonePickerNames(SkinnedMesh, BoneNames);
+
+	const bool bCurrentBoneFound = !bHasCurrentName || std::find(BoneNames.begin(), BoneNames.end(), CurrentName) != BoneNames.end();
+	const bool bShowInvalid = bHasCurrentName && !bCurrentBoneFound;
+
+	FString Preview = bHasCurrentName ? CurrentName : FString("None");
+	if (bShowInvalid)
+	{
+		Preview += " (not found)";
+	}
+
+	if (bShowInvalid)
+	{
+		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.36f, 0.06f, 0.06f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.48f, 0.08f, 0.08f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.78f, 0.78f, 1.0f));
+	}
+
+	bool bChanged = false;
+	if (ImGui::BeginCombo("##BoneName", Preview.c_str()))
+	{
+		static char BoneFilter[128] = {};
+		ImGui::SetNextItemWidth(-1);
+		ImGui::InputTextWithHint("##BoneFilter", "Search bone...", BoneFilter, sizeof(BoneFilter));
+
+		const FString Filter(BoneFilter);
+		TArray<FString> RecommendedBoneNames;
+		TArray<FString> OtherBoneNames;
+		SplitBonePickerNames(BoneNames, Filter, RecommendedBoneNames, OtherBoneNames);
+
+		const bool bSelectedNone = !bHasCurrentName;
+		if (ImGui::Selectable("None", bSelectedNone))
+		{
+			*Value = FName::None;
+			bChanged = true;
+		}
+		if (bSelectedNone)
+		{
+			ImGui::SetItemDefaultFocus();
+		}
+
+		if (BoneNames.empty())
+		{
+			ImGui::BeginDisabled();
+			ImGui::Selectable("No skeletal mesh bones", false);
+			ImGui::EndDisabled();
+		}
+		else if (RecommendedBoneNames.empty() && OtherBoneNames.empty())
+		{
+			ImGui::BeginDisabled();
+			ImGui::Selectable("No matching bones", false);
+			ImGui::EndDisabled();
+		}
+
+		auto RenderBoneChoice = [&](const FString& BoneName)
+		{
+			const bool bSelected = bHasCurrentName && BoneName == CurrentName;
+			if (ImGui::Selectable(BoneName.c_str(), bSelected))
+			{
+				*Value = FName(BoneName);
+				bChanged = true;
+			}
+			if (bSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		};
+
+		if (!RecommendedBoneNames.empty())
+		{
+			ImGui::SeparatorText("Recommended wheel bones");
+			for (const FString& BoneName : RecommendedBoneNames)
+			{
+				RenderBoneChoice(BoneName);
+			}
+		}
+
+		if (!OtherBoneNames.empty())
+		{
+			if (!RecommendedBoneNames.empty())
+			{
+				ImGui::SeparatorText("All bones");
+			}
+			for (const FString& BoneName : OtherBoneNames)
+			{
+				RenderBoneChoice(BoneName);
+			}
+		}
+
+		if (bShowInvalid)
+		{
+			ImGui::Separator();
+			ImGui::BeginDisabled();
+			ImGui::Selectable(CurrentName.c_str(), true);
+			ImGui::EndDisabled();
+		}
+
+		ImGui::EndCombo();
+	}
+
+	if (bShowInvalid && ImGui::IsItemHovered())
+	{
+		const FString MeshName = SkinnedMesh ? SkinnedMesh->GetName() : FString("None");
+		const FString MeshPath = (SkinnedMesh && SkinnedMesh->GetSkeletalMesh())
+			? SkinnedMesh->GetSkeletalMesh()->GetAssetPathFileName()
+			: FString("None");
+		ImGui::SetTooltip(
+			"Bone not found.\nSkeletal Mesh Component: %s\nSkeletal Mesh: %s\nBone: %s",
+			MeshName.c_str(),
+			MeshPath.c_str(),
 			CurrentName.c_str());
 	}
 
@@ -2615,6 +2945,12 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyValue>& Props, 
 		if (Prop.GetName() == "AttachSocketName" || FString(Prop.GetDisplayName()) == "Attach Socket")
 		{
 			bChanged = RenderAttachSocketNameProperty(Prop);
+			break;
+		}
+
+		if (FindPropertyMetadata(Prop, "bonepicker"))
+		{
+			bChanged = RenderBoneNameProperty(Prop);
 			break;
 		}
 

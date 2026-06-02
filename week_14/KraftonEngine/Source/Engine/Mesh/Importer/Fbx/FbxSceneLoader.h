@@ -30,8 +30,15 @@ struct FFbxSceneLoadOptions
 	bool bImportAnimations     = true;
 	bool bImportGlobalSettings = true;
 
+	bool bAutoDetectMeterAuthoredCentimeterScene = true;
+
 	// Empty means keep the FBX SDK default, which imports every animation stack.
 	TSet<int32> SelectedAnimationStackIndices;
+};
+
+struct FFbxSceneNormalizeOptions
+{
+	bool bAutoDetectMeterAuthoredCentimeterScene = true;
 };
 
 class FFbxSceneLoader
@@ -45,5 +52,6 @@ public:
 		FString*                    OutMessage = nullptr
 		);
 	static void NormalizeScene(FbxScene* Scene);
+	static void NormalizeScene(FbxScene* Scene, const FFbxSceneNormalizeOptions& Options);
 	static void Triangulate(FbxManager* Manager, FbxScene* Scene);
 };

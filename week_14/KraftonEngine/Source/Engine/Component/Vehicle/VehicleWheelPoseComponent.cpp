@@ -2,9 +2,109 @@
 
 #include "Component/Movement/WheeledVehicleMovementComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Mesh/Skeletal/SkeletalMesh.h"
+#include "Mesh/Skeletal/SkeletalMeshAsset.h"
 #include "Component/SceneComponent.h"
 #include "GameFramework/AActor.h"
 #include "Physics/Vehicle/VehicleTypes.h"
+
+
+namespace
+{
+    bool BuildBaseComponentSpaceMatrices(USkeletalMeshComponent* Mesh, TArray<FMatrix>& OutGlobals)
+    {
+        OutGlobals.clear();
+        if (!Mesh)
+        {
+            return false;
+        }
+
+        USkeletalMesh* SkeletalMesh = Mesh->GetSkeletalMesh();
+        FSkeletalMesh* Asset = SkeletalMesh ? SkeletalMesh->GetSkeletalMeshAsset() : nullptr;
+        if (!Asset || Asset->Bones.empty())
+        {
+            return false;
+        }
+
+        const int32 BoneCount = static_cast<int32>(Asset->Bones.size());
+        OutGlobals.resize(BoneCount);
+
+        for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
+        {
+            const FMatrix LocalMatrix = Mesh->GetBoneEditBaseLocalTransformByIndex(BoneIndex).ToMatrix();
+            const int32 ParentIndex = Asset->Bones[BoneIndex].ParentIndex;
+            OutGlobals[BoneIndex] = ParentIndex >= 0 && ParentIndex < BoneIndex
+                ? LocalMatrix * OutGlobals[ParentIndex]
+                : LocalMatrix;
+        }
+
+        return true;
+    }
+
+    FTransform MakeWheelVisualComponentTransform(
+        const FTransform& BaseComponentTransform,
+        const FVector& ComponentLocation,
+        const FVehicleWheelSnapshot& WheelSnapshot
+        )
+    {
+        const FQuat SteerRotation = FQuat::FromAxisAngle(FVector(0.0f, 0.0f, 1.0f), WheelSnapshot.SteerAngle);
+        const FQuat SpinRotation  = FQuat::FromAxisAngle(FVector(0.0f, 1.0f, 0.0f), WheelSnapshot.RotationAngle);
+
+        FQuat DeltaRotation = SteerRotation * SpinRotation;
+        DeltaRotation.Normalize();
+
+        FQuat TargetRotation = BaseComponentTransform.Rotation * DeltaRotation;
+        TargetRotation.Normalize();
+
+        return FTransform(ComponentLocation, TargetRotation, BaseComponentTransform.Scale);
+    }
+
+    bool ApplyWheelBonePoseFromSnapshot(
+        USkeletalMeshComponent* Mesh,
+        const FVehicleWheelSetup& Setup,
+        const FVehicleWheelSnapshot& WheelSnapshot
+        )
+    {
+        if (!Mesh || !Setup.BoneName.IsValid())
+        {
+            return false;
+        }
+
+        USkeletalMesh* SkeletalMesh = Mesh->GetSkeletalMesh();
+        FSkeletalMesh* Asset = SkeletalMesh ? SkeletalMesh->GetSkeletalMeshAsset() : nullptr;
+        if (!Asset)
+        {
+            return false;
+        }
+
+        const int32 BoneIndex = Mesh->FindBoneIndex(Setup.BoneName);
+        if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(Asset->Bones.size()))
+        {
+            return false;
+        }
+
+        TArray<FMatrix> BaseGlobals;
+        if (!BuildBaseComponentSpaceMatrices(Mesh, BaseGlobals) || BoneIndex >= static_cast<int32>(BaseGlobals.size()))
+        {
+            return false;
+        }
+
+        const FMatrix ComponentWorldInverse = Mesh->GetWorldMatrix().GetInverse();
+        const FVector ComponentLocation = ComponentWorldInverse.TransformPositionWithW(WheelSnapshot.WorldTransform.Location);
+
+        const FTransform BaseComponentTransform(BaseGlobals[BoneIndex]);
+        const FTransform TargetComponentTransform = MakeWheelVisualComponentTransform(BaseComponentTransform, ComponentLocation, WheelSnapshot);
+
+        const int32 ParentIndex = Asset->Bones[BoneIndex].ParentIndex;
+        const FMatrix TargetComponentMatrix = TargetComponentTransform.ToMatrix();
+        const FMatrix LocalMatrix = ParentIndex >= 0 && ParentIndex < static_cast<int32>(BaseGlobals.size())
+            ? TargetComponentMatrix * BaseGlobals[ParentIndex].GetInverse()
+            : TargetComponentMatrix;
+
+        Mesh->SetBoneLocalTransformByIndex(BoneIndex, FTransform(LocalMatrix));
+        return true;
+    }
+}
 
 UVehicleWheelPoseComponent::UVehicleWheelPoseComponent()
 {
@@ -59,7 +159,7 @@ void UVehicleWheelPoseComponent::TickComponent(float DeltaTime, ELevelTick TickT
 
         if (Setup->BoneName.IsValid() && IsValid(Mesh.Get()))
         {
-            if (Mesh->SetBoneWorldTransformByName(Setup->BoneName, WheelSnapshot.WorldTransform))
+            if (ApplyWheelBonePoseFromSnapshot(Mesh.Get(), *Setup, WheelSnapshot))
             {
                 continue;
             }

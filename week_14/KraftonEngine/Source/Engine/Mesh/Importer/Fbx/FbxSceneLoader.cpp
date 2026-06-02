@@ -3,6 +3,9 @@
 #include "Core/Logging/Log.h"
 
 #include <chrono>
+#include <algorithm>
+#include <cmath>
+#include <limits>
 
 namespace
 {
@@ -115,6 +118,116 @@ namespace
 			}
 		}
 	}
+
+
+	struct FFbxSceneBounds
+	{
+		FbxVector4 Min = FbxVector4(
+			(std::numeric_limits<double>::max)(),
+			(std::numeric_limits<double>::max)(),
+			(std::numeric_limits<double>::max)()
+		);
+		FbxVector4 Max = FbxVector4(
+			-(std::numeric_limits<double>::max)(),
+			-(std::numeric_limits<double>::max)(),
+			-(std::numeric_limits<double>::max)()
+		);
+		bool bValid = false;
+
+		void Include(const FbxVector4& Point)
+		{
+			for (int Axis = 0; Axis < 3; ++Axis)
+			{
+				if (Point[Axis] < Min[Axis]) Min[Axis] = Point[Axis];
+				if (Point[Axis] > Max[Axis]) Max[Axis] = Point[Axis];
+			}
+			bValid = true;
+		}
+
+		double GetMaxExtent() const
+		{
+			if (!bValid)
+			{
+				return 0.0;
+			}
+
+			const double ExtX = Max[0] - Min[0];
+			const double ExtY = Max[1] - Min[1];
+			const double ExtZ = Max[2] - Min[2];
+			return (std::max)(ExtX, (std::max)(ExtY, ExtZ));
+		}
+	};
+
+	static FbxAMatrix GetNodeGeometryTransform(FbxNode* Node)
+	{
+		FbxAMatrix GeometryTransform;
+		if (!Node)
+		{
+			return GeometryTransform;
+		}
+
+		GeometryTransform.SetT(Node->GetGeometricTranslation(FbxNode::eSourcePivot));
+		GeometryTransform.SetR(Node->GetGeometricRotation(FbxNode::eSourcePivot));
+		GeometryTransform.SetS(Node->GetGeometricScaling(FbxNode::eSourcePivot));
+		return GeometryTransform;
+	}
+
+	static void AccumulateRawMeshBounds(FbxNode* Node, FFbxSceneBounds& Bounds)
+	{
+		if (!Node)
+		{
+			return;
+		}
+
+		if (FbxMesh* Mesh = Node->GetMesh())
+		{
+			const FbxAMatrix MeshToWorld = Node->EvaluateGlobalTransform() * GetNodeGeometryTransform(Node);
+			const int32 ControlPointCount = Mesh->GetControlPointsCount();
+			for (int32 ControlPointIndex = 0; ControlPointIndex < ControlPointCount; ++ControlPointIndex)
+			{
+				Bounds.Include(MeshToWorld.MultT(Mesh->GetControlPointAt(ControlPointIndex)));
+			}
+		}
+
+		for (int32 ChildIndex = 0; ChildIndex < Node->GetChildCount(); ++ChildIndex)
+		{
+			AccumulateRawMeshBounds(Node->GetChild(ChildIndex), Bounds);
+		}
+	}
+
+	static FFbxSceneBounds ComputeRawSceneBounds(FbxScene* Scene)
+	{
+		FFbxSceneBounds Bounds;
+		if (FbxNode* RootNode = Scene ? Scene->GetRootNode() : nullptr)
+		{
+			AccumulateRawMeshBounds(RootNode, Bounds);
+		}
+		return Bounds;
+	}
+
+	static bool IsCentimeterSystem(const FbxSystemUnit& SystemUnit)
+	{
+		return std::abs(SystemUnit.GetScaleFactor() - FbxSystemUnit::cm.GetScaleFactor()) <= 0.0001;
+	}
+
+	static bool ShouldSkipCentimeterToMeterConversion(FbxScene* Scene, const FFbxSceneNormalizeOptions& Options)
+	{
+		if (!Scene || !Options.bAutoDetectMeterAuthoredCentimeterScene)
+		{
+			return false;
+		}
+
+		const FbxSystemUnit SourceUnit = Scene->GetGlobalSettings().GetSystemUnit();
+		if (!IsCentimeterSystem(SourceUnit))
+		{
+			return false;
+		}
+
+		const FFbxSceneBounds RawBounds = ComputeRawSceneBounds(Scene);
+		const double MaxExtent = RawBounds.GetMaxExtent();
+
+		return RawBounds.bValid && MaxExtent >= 2.0 && MaxExtent <= 20.0;
+	}
 }
 
 bool FFbxSceneLoader::Load(const FString& SourcePath, FFbxSceneHandle& OutScene, FString* OutMessage)
@@ -179,12 +292,28 @@ bool FFbxSceneLoader::Load(
 
 void FFbxSceneLoader::NormalizeScene(FbxScene* Scene)
 {
+	NormalizeScene(Scene, FFbxSceneNormalizeOptions());
+}
+
+void FFbxSceneLoader::NormalizeScene(FbxScene* Scene, const FFbxSceneNormalizeOptions& Options)
+{
 	if (!Scene)
 	{
 		return;
 	}
 
-	FbxSystemUnit::m.ConvertScene(Scene);
+	if (ShouldSkipCentimeterToMeterConversion(Scene, Options))
+	{
+		const FFbxSceneBounds RawBounds = ComputeRawSceneBounds(Scene);
+		UE_LOG(
+			"FBX unit normalization: skipped cm->m conversion because source bounds look meter-authored. MaxExtent=%.3f",
+			RawBounds.GetMaxExtent()
+		);
+	}
+	else
+	{
+		FbxSystemUnit::m.ConvertScene(Scene);
+	}
 
 	FbxAxisSystem UnrealAxisSystem(
 		FbxAxisSystem::eZAxis,

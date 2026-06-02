@@ -8,6 +8,54 @@
 #include "Source/Engine/Component/Movement/WheeledVehicleMovementComponent.generated.h"
 
 struct FPhysicsWorldSnapshot;
+class USkinnedMeshComponent;
+
+UENUM()
+enum class EWheelPositionSource : uint8
+{
+    FromBone = 0,
+    Manual
+};
+
+USTRUCT()
+struct FVehicleWheelData
+{
+    GENERATED_BODY()
+
+    UPROPERTY(Edit, Save, Category="Wheel Data|Wheel", DisplayName="Radius", Speed=0.01f)
+    float Radius = 0.35f;
+    UPROPERTY(Edit, Save, Category="Wheel Data|Wheel", DisplayName="Width", Speed=0.01f)
+    float Width = 0.25f;
+    UPROPERTY(Edit, Save, Category="Wheel Data|Wheel", DisplayName="Mass", Speed=0.1f)
+    float Mass = 20.0f;
+    UPROPERTY(Edit, Save, Category="Wheel Data|Wheel", DisplayName="Tire Friction", Speed=0.05f)
+    float TireFriction = 1.5f;
+
+    UPROPERTY(Edit, Save, Category="Wheel Data|Suspension", DisplayName="Suspension Max Compression", Speed=0.01f)
+    float SuspensionMaxCompression = 0.30f;
+    UPROPERTY(Edit, Save, Category="Wheel Data|Suspension", DisplayName="Suspension Max Droop", Speed=0.01f)
+    float SuspensionMaxDroop = 0.10f;
+    UPROPERTY(Edit, Save, Category="Wheel Data|Suspension", DisplayName="Spring Strength", Speed=100.0f)
+    float SuspensionSpringStrength = 35000.0f;
+    UPROPERTY(Edit, Save, Category="Wheel Data|Suspension", DisplayName="Spring Damper Rate", Speed=10.0f)
+    float SuspensionSpringDamperRate = 4500.0f;
+
+    UPROPERTY(Edit, Save, Category="Wheel Data|Vehicle Input", DisplayName="Affected By Steering")
+    bool bAffectedBySteering = false;
+    UPROPERTY(Edit, Save, Category="Wheel Data|Vehicle Input", DisplayName="Affected By Engine")
+    bool bAffectedByEngine = false;
+    UPROPERTY(Edit, Save, Category="Wheel Data|Vehicle Input", DisplayName="Affected By Brake")
+    bool bAffectedByBrake = true;
+    UPROPERTY(Edit, Save, Category="Wheel Data|Vehicle Input", DisplayName="Affected By Handbrake")
+    bool bAffectedByHandbrake = false;
+
+    UPROPERTY(Edit, Save, Category="Wheel Data|Vehicle Input", DisplayName="Max Steer Angle (deg)", Speed=0.5f)
+    float MaxSteerAngleDegrees = 0.0f;
+    UPROPERTY(Edit, Save, Category="Wheel Data|Vehicle Input", DisplayName="Max Brake Torque", Speed=10.0f)
+    float MaxBrakeTorque = 1500.0f;
+    UPROPERTY(Edit, Save, Category="Wheel Data|Vehicle Input", DisplayName="Max Handbrake Torque", Speed=10.0f)
+    float MaxHandbrakeTorque = 0.0f;
+};
 
 USTRUCT()
 struct FVehicleWheelSetup
@@ -17,37 +65,24 @@ struct FVehicleWheelSetup
     UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Wheel Name")
     FName WheelName = FName::None;
 
-    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Bone Name")
+    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Bone Name", BonePicker=true)
     FName BoneName = FName::None;
 
     UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Visual Component Name")
     FName VisualComponentName = FName::None;
 
-    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Local Position", Type=Vec3, Speed=0.01f)
-    FVector LocalPosition = FVector::ZeroVector;
+    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Position Source", Enum=EWheelPositionSource)
+    EWheelPositionSource PositionSource = EWheelPositionSource::FromBone;
 
-    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Radius", Speed=0.01f)
-    float Radius = 0.35f;
-    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Width", Speed=0.01f)
-    float Width = 0.25f;
-    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Mass", Speed=0.1f)
-    float Mass = 20.0f;
+    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Manual Local Position", Type=Vec3, Speed=0.01f)
+    FVector ManualLocalPosition = FVector::ZeroVector;
 
-    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Spring Strength", Speed=100.0f)
-    float SuspensionSpringStrength = 35000.0f;
-    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Spring Damper Rate", Speed=10.0f)
-    float SuspensionSpringDamperRate = 4500.0f;
-    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Suspension Max Compression", Speed=0.01f)
-    float SuspensionMaxCompression = 0.30f;
-    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Suspension Max Droop", Speed=0.01f)
-    float SuspensionMaxDroop = 0.10f;
+    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Additional Offset", Type=Vec3, Speed=0.01f)
+    FVector AdditionalOffset = FVector::ZeroVector;
 
-    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Max Brake Torque", Speed=10.0f)
-    float MaxBrakeTorque = 1500.0f;
-    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Max Handbrake Torque", Speed=10.0f)
-    float MaxHandbrakeTorque = 0.0f;
-    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Max Steer Angle (deg)", Speed=0.5f)
-    float MaxSteerAngleDegrees = 0.0f;
+    UPROPERTY(Edit, Save, Category="Wheel", DisplayName="Wheel Data", Type=Struct, Struct=FVehicleWheelData)
+    FVehicleWheelData WheelData;
+
 };
 
 /**
@@ -70,6 +105,8 @@ public:
     void BeginPlay() override;
     void EndPlay() override;
     void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
+    void PostEditChangeProperty(const FPropertyChangedEvent& Event) override;
+    void PostDuplicate() override;
 
     UFUNCTION(Callable, Category="Vehicle|Input")
     void SetThrottleInput(float InThrottle);
@@ -85,12 +122,20 @@ public:
     UFUNCTION(Pure, Category="Vehicle")
     float GetForwardSpeed() const;
 
+    UFUNCTION(Callable, Category="Vehicle|Wheel Setup")
+    bool AutoGenerateWheelSetupsFromSkeleton();
+    UFUNCTION(Callable, Category="Vehicle|Wheel Setup")
+    int32 RefreshWheelLocalPositionsFromBones();
+
     bool IsVehicleCreated() const { return VehicleHandle.IsValid(); }
     FVehicleHandle GetVehicleHandle() const { return VehicleHandle; }
 
     const FVehicleSnapshot* GetLastVehicleSnapshot() const { return bHasLastSnapshot ? &LastSnapshot : nullptr; }
     const TArray<FVehicleWheelSetup>& GetWheelSetups() const { return WheelSetups; }
     const FVehicleWheelSetup* FindWheelSetup(const FName& WheelName) const;
+
+    FVector ResolveWheelLocalPosition(const FVehicleWheelSetup& Setup) const;
+    bool ValidateWheelSetups(TArray<FString>& OutMessages) const;
 
 protected:
     FVehicleDesc BuildVehicleDesc() const;
@@ -99,6 +144,10 @@ protected:
     void UnregisterPhysicsSnapshotReceiver();
     void ConsumeVehicleSnapshot(const FPhysicsWorldSnapshot& Snapshot);
     void ApplyVehicleSnapshot(const FVehicleSnapshot& Snapshot);
+    USkinnedMeshComponent* FindWheelSetupSkinnedMeshComponent() const;
+    bool TryResolveBoneLocalPosition(const FName& BoneName, FVector& OutLocalPosition) const;
+    void ClampWheelData(FVehicleWheelData& WheelData) const;
+    void ClampWheelSetups();
 
 protected:
     UPROPERTY(Edit, Save, Category="Vehicle|Chassis", DisplayName="Chassis Half Extents", Type=Vec3, Speed=0.05f)
@@ -115,7 +164,7 @@ protected:
     UPROPERTY(Edit, Save, Category="Vehicle|Engine", DisplayName="Clutch Strength", Speed=0.1f)
     float ClutchStrength = 10.0f;
 
-    UPROPERTY(Edit, Save, Category="Vehicle|Tire", DisplayName="Tire Friction", Speed=0.05f)
+    UPROPERTY(Edit, Save, Category="Vehicle|Tire", DisplayName="Fallback Tire Friction", Speed=0.05f)
     float TireFriction = 1.5f;
 
     UPROPERTY(Edit, Save, Category="Vehicle|Wheel", DisplayName="Wheel Setups", Type=Array, Struct=FVehicleWheelSetup)

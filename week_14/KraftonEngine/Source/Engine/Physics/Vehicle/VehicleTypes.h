@@ -86,6 +86,9 @@ struct FVehicleDesc
     float EngineMaxOmega   = 600.0f;
     float ClutchStrength   = 10.0f;
 
+    bool bFrontWheelDrive = false;
+    bool bRearWheelDrive  = true;
+
     float TireFriction = 1.5f;
 
     uint32 DrivableSurfaceMask = ObjectTypeBit(ECollisionChannel::WorldStatic) |
