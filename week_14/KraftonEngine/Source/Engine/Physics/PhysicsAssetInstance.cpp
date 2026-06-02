@@ -899,9 +899,87 @@ FTransform FPhysicsAssetInstance::GetBodyWorldTransformByBoneName(const FName& B
     return BodySnapshot ? BodySnapshot->CurrentTransform : FTransform();
 }
 
+bool FPhysicsAssetInstance::AddImpulseToBody(FPhysicsBodyHandle BodyHandle, const FVector& Impulse) const
+{
+    if (!BodyHandle.IsValid())
+    {
+        return false;
+    }
+
+    IPhysicsRuntime* Runtime = GetPhysicsRuntime(GetOwnerComponent());
+    if (!Runtime)
+    {
+        return false;
+    }
+
+    Runtime->AddImpulse(BodyHandle, Impulse);
+    return true;
+}
+
+bool FPhysicsAssetInstance::AddImpulseToBone(const FName& BoneName, const FVector& Impulse) const
+{
+    return AddImpulseToBody(GetBodyHandleByBoneName(BoneName), Impulse);
+}
+
 bool FPhysicsAssetInstance::HasValidBodyForBone(const FName& BoneName) const
 {
     return GetBodyHandleByBoneName(BoneName).IsValid();
+}
+
+FName FPhysicsAssetInstance::FindNearestSimulatedAncestorBodyBoneName(const FName& BoneName) const
+{
+    USkeletalMeshComponent* Owner = GetOwnerComponent();
+    USkeletalMesh* Mesh = Owner ? Owner->GetSkeletalMesh() : nullptr;
+    FSkeletalMesh* MeshAsset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+    if (!MeshAsset || BoneName == FName::None)
+    {
+        return FName::None;
+    }
+
+    int32 BoneIndex = -1;
+    const FString TargetBoneName = BoneName.ToString();
+    for (int32 MeshBoneIndex = 0; MeshBoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++MeshBoneIndex)
+    {
+        if (MeshAsset->Bones[MeshBoneIndex].Name == TargetBoneName)
+        {
+            BoneIndex = MeshBoneIndex;
+            break;
+        }
+    }
+
+    while (BoneIndex >= 0 && BoneIndex < static_cast<int32>(MeshAsset->Bones.size()))
+    {
+        const FName CandidateBoneName(MeshAsset->Bones[BoneIndex].Name);
+        if (HasValidBodyForBone(CandidateBoneName))
+        {
+            return CandidateBoneName;
+        }
+
+        BoneIndex = MeshAsset->Bones[BoneIndex].ParentIndex;
+    }
+
+    return FName::None;
+}
+
+FName FPhysicsAssetInstance::ResolveBestImpulseTargetBoneName(const FName& HitBoneName, const FName& FallbackRootBoneName) const
+{
+    if (HitBoneName != FName::None && HasValidBodyForBone(HitBoneName))
+    {
+        return HitBoneName;
+    }
+
+    const FName AncestorBoneName = FindNearestSimulatedAncestorBodyBoneName(HitBoneName);
+    if (AncestorBoneName != FName::None)
+    {
+        return AncestorBoneName;
+    }
+
+    if (FallbackRootBoneName != FName::None && HasValidBodyForBone(FallbackRootBoneName))
+    {
+        return FallbackRootBoneName;
+    }
+
+    return FName::None;
 }
 
 int32 FPhysicsAssetInstance::FindBodySetupIndexByBoneName(const FName& BoneName) const

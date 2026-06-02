@@ -85,6 +85,28 @@ struct FPartialRagdollRequest
     }
 };
 
+struct FPartialRagdollHitReactionRequest
+{
+    EPartialRagdollPreset PreferredPreset = EPartialRagdollPreset::UpperBody;
+    FName HitBoneName = FName::None;
+    FVector HitWorldLocation = FVector::ZeroVector;
+    FVector HitWorldDirection = FVector::ZeroVector;
+    float Strength = 0.5f;
+    float HoldTimeOverride = -1.0f;
+    bool bUsePreferredPreset = false;
+    bool bAllowEscalationToFullBody = false;
+
+    bool HasHitBone() const
+    {
+        return HitBoneName != FName::None;
+    }
+
+    bool HasHoldTimeOverride() const
+    {
+        return HoldTimeOverride >= 0.0f;
+    }
+};
+
 // SkeletalMesh 전용 render proxy만 제공하는 얇은 wrapper.
 // Skinning/bone/material/bounds 상태는 모두 USkinnedMeshComponent가 소유한다.
 UCLASS()
@@ -131,6 +153,7 @@ public:
     UFUNCTION(Callable, Category="Physics")
     bool EnablePartialRagdoll(const FName& RootBoneName);
     bool TriggerPartialRagdoll(const FPartialRagdollRequest& Request);
+    bool TriggerPartialRagdollHitReaction(const FPartialRagdollHitReactionRequest& Request);
     UFUNCTION(Callable, Category="Physics")
     void DisableRagdollPhysics();
     UFUNCTION(Callable, Category="Physics")
@@ -239,6 +262,7 @@ private:
     void ClearRagdollPoseBaseline();
     bool BuildPartialRagdollBoneMasks(const FPartialRagdollSelection& Selection);
     bool BuildPartialRagdollSelectionFromPreset(EPartialRagdollPreset Preset, FPartialRagdollSelection& OutSelection) const;
+    bool ResolvePartialRagdollPresetFromHitBone(const FName& HitBoneName, EPartialRagdollPreset& OutPreset) const;
     void ClearPartialRagdollState();
     bool IsSamePartialRagdollSelection(const FPartialRagdollSelection& Selection) const;
     void BeginPartialRagdollBlendOut();

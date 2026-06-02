@@ -55,7 +55,11 @@ public:
     const TArray<FPhysicsConstraintHandle>& GetConstraints() const { return Constraints; }
     FPhysicsBodyHandle GetBodyHandleByBoneName(const FName& BoneName) const;
     FTransform GetBodyWorldTransformByBoneName(const FName& BoneName) const;
+    bool AddImpulseToBody(FPhysicsBodyHandle BodyHandle, const FVector& Impulse) const;
+    bool AddImpulseToBone(const FName& BoneName, const FVector& Impulse) const;
     bool HasValidBodyForBone(const FName& BoneName) const;
+    FName FindNearestSimulatedAncestorBodyBoneName(const FName& BoneName) const;
+    FName ResolveBestImpulseTargetBoneName(const FName& HitBoneName, const FName& FallbackRootBoneName) const;
     int32 FindBodySetupIndexByBoneName(const FName& BoneName) const;
     int32 FindBoneIndexForBody(const FName& BoneName) const;
     bool IsInitialized() const { return bInitialized; }

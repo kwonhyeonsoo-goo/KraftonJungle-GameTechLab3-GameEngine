@@ -1,4 +1,4 @@
-#include "SkeletalMeshComponent.h"
+﻿#include "SkeletalMeshComponent.h"
 #include "Render/Proxy/SkeletalMeshSceneProxy.h"
 
 #include "Animation/AnimationManager.h"
@@ -11,7 +11,7 @@
 #include "Animation/Skeleton/SkeletonManager.h"
 #include "Asset/AssetRegistry.h"
 #include "Cloth/SkeletalClothRuntime.h"
-#include "Component/Primitive/PrimitiveComponent.h"
+#include "Component/PrimitiveComponent.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
 #include "Math/Quat.h"
@@ -148,6 +148,25 @@ namespace
                 return static_cast<char>(std::tolower(Character));
             });
         return Result;
+    }
+
+    bool ContainsAnyToken(const FString& Value, std::initializer_list<const char*> Tokens)
+    {
+        const FString LowerValue = ToLowerCopy(Value);
+        for (const char* Token : Tokens)
+        {
+            if (!Token)
+            {
+                continue;
+            }
+
+            if (LowerValue.find(ToLowerCopy(Token)) != FString::npos)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     int32 FindBoneIndexByPriority(const FSkeletalMesh* MeshAsset, std::initializer_list<const char*> CandidateTokens)
@@ -698,6 +717,41 @@ bool USkeletalMeshComponent::BuildPartialRagdollSelectionFromPreset(EPartialRagd
     return OutSelection.IsValid();
 }
 
+bool USkeletalMeshComponent::ResolvePartialRagdollPresetFromHitBone(const FName& HitBoneName, EPartialRagdollPreset& OutPreset) const
+{
+    if (HitBoneName == FName::None)
+    {
+        return false;
+    }
+
+    const FString BoneName = HitBoneName.ToString();
+    if (ContainsAnyToken(BoneName, { "head", "neck" }))
+    {
+        OutPreset = EPartialRagdollPreset::HeadNeck;
+        return true;
+    }
+
+    if (ContainsAnyToken(BoneName, { "clavicle_l", "upperarm_l", "lowerarm_l", "forearm_l", "hand_l", "_l", "left" }))
+    {
+        OutPreset = EPartialRagdollPreset::LeftArm;
+        return true;
+    }
+
+    if (ContainsAnyToken(BoneName, { "clavicle_r", "upperarm_r", "lowerarm_r", "forearm_r", "hand_r", "_r", "right" }))
+    {
+        OutPreset = EPartialRagdollPreset::RightArm;
+        return true;
+    }
+
+    if (ContainsAnyToken(BoneName, { "spine", "chest", "torso", "pelvis", "rib", "body" }))
+    {
+        OutPreset = EPartialRagdollPreset::UpperBody;
+        return true;
+    }
+
+    return false;
+}
+
 void USkeletalMeshComponent::ClearPartialRagdollState()
 {
     ActivePartialRagdollSelection = FPartialRagdollSelection();
@@ -917,7 +971,8 @@ bool USkeletalMeshComponent::TriggerPartialRagdoll(const FPartialRagdollRequest&
         {
             if (UPrimitiveComponent* RootPrimitive = Cast<UPrimitiveComponent>(OwnerActor->GetRootComponent()))
             {
-                if (RootPrimitive->GetLinearVelocity().LengthSquared() > 1.0f)
+                const FVector LinearVelocity = RootPrimitive->GetLinearVelocity();
+                if (LinearVelocity.Dot(LinearVelocity) > 1.0f)
                 {
                     UE_LOG("Partial ragdoll request rejected. Component=%s Preset=%s RootBone=%s Reason=OwnerIsMoving",
                         GetName().c_str(),
@@ -964,6 +1019,104 @@ bool USkeletalMeshComponent::TriggerPartialRagdoll(const FPartialRagdollRequest&
         Selection.RootBoneName.ToString().c_str(),
         Request.HasHoldTimeOverride() ? Request.HoldTimeOverride : PartialRagdollHoldTime);
     return bTriggered;
+}
+
+bool USkeletalMeshComponent::TriggerPartialRagdollHitReaction(const FPartialRagdollHitReactionRequest& Request)
+{
+    EPartialRagdollPreset ResolvedPreset = Request.PreferredPreset;
+    if (!Request.bUsePreferredPreset)
+    {
+        if (!ResolvePartialRagdollPresetFromHitBone(Request.HitBoneName, ResolvedPreset))
+        {
+            UE_LOG("Partial hit reaction rejected. Component=%s HitBone=%s Reason=CouldNotResolvePreset",
+                GetName().c_str(),
+                Request.HitBoneName.ToString().c_str());
+            return false;
+        }
+    }
+
+    const float NormalizedStrength = Clamp01(Request.Strength > 0.0f ? Request.Strength : 0.5f);
+    const float ResolvedHoldTime = Request.HasHoldTimeOverride()
+        ? Request.HoldTimeOverride
+        : (PartialRagdollHoldTime * (0.75f + 0.75f * NormalizedStrength));
+    const float ResolvedImpulseMagnitude = 120.0f + 240.0f * NormalizedStrength;
+    const bool bEscalationCandidate =
+        Request.bAllowEscalationToFullBody && NormalizedStrength >= 0.85f;
+
+    FPartialRagdollRequest PartialRequest;
+    PartialRequest.Preset = ResolvedPreset;
+    PartialRequest.HoldTimeOverride = ResolvedHoldTime;
+    PartialRequest.bAllowRefreshIfSamePreset = true;
+    PartialRequest.bAllowWhileMoving = true;
+
+    FPartialRagdollSelection Selection;
+    if (!BuildPartialRagdollSelectionFromPreset(ResolvedPreset, Selection))
+    {
+        UE_LOG("Partial hit reaction rejected. Component=%s Preset=%s Reason=PresetSelectionFailed",
+            GetName().c_str(),
+            LexToString(ResolvedPreset));
+        return false;
+    }
+
+    const bool bTriggered = TriggerPartialRagdoll(PartialRequest);
+    if (!bTriggered)
+    {
+        UE_LOG("Partial hit reaction rejected. Component=%s HitBone=%s Preset=%s RootBone=%s Reason=TriggerRejected EscalationCandidate=%s",
+            GetName().c_str(),
+            Request.HitBoneName.ToString().c_str(),
+            LexToString(ResolvedPreset),
+            Selection.RootBoneName.ToString().c_str(),
+            bEscalationCandidate ? "true" : "false");
+        return false;
+    }
+
+    FPhysicsAssetInstance* Instance = GetPhysicsAssetInstance();
+    if (!Instance)
+    {
+        return true;
+    }
+
+    FVector ImpulseDirection = Request.HitWorldDirection;
+    if (ImpulseDirection.Dot(ImpulseDirection) <= 1.0e-6f)
+    {
+        ImpulseDirection = FVector::ForwardVector;
+    }
+    else
+    {
+        ImpulseDirection = ImpulseDirection.Normalized();
+    }
+
+    const FVector Impulse = ImpulseDirection * ResolvedImpulseMagnitude;
+    const FName TargetBodyBoneName =
+        Instance->ResolveBestImpulseTargetBoneName(Request.HitBoneName, Selection.RootBoneName);
+
+    if (TargetBodyBoneName == FName::None || !Instance->AddImpulseToBone(TargetBodyBoneName, Impulse))
+    {
+        UE_LOG("Partial hit reaction accepted without impulse. Component=%s HitBone=%s Preset=%s RootBone=%s Reason=NoImpulseTarget Strength=%.2f Hold=%.3f EscalationCandidate=%s",
+            GetName().c_str(),
+            Request.HitBoneName.ToString().c_str(),
+            LexToString(ResolvedPreset),
+            Selection.RootBoneName.ToString().c_str(),
+            NormalizedStrength,
+            ResolvedHoldTime,
+            bEscalationCandidate ? "true" : "false");
+        return true;
+    }
+
+    UE_LOG("Partial hit reaction accepted. Component=%s HitBone=%s Preset=%s RootBone=%s TargetBody=%s Strength=%.2f Hold=%.3f Impulse=%.2f Direction=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
+        GetName().c_str(),
+        Request.HitBoneName.ToString().c_str(),
+        LexToString(ResolvedPreset),
+        Selection.RootBoneName.ToString().c_str(),
+        TargetBodyBoneName.ToString().c_str(),
+        NormalizedStrength,
+        ResolvedHoldTime,
+        ResolvedImpulseMagnitude,
+        ImpulseDirection.X,
+        ImpulseDirection.Y,
+        ImpulseDirection.Z,
+        bEscalationCandidate ? "true" : "false");
+    return true;
 }
 
 void USkeletalMeshComponent::DisableRagdollPhysics()
