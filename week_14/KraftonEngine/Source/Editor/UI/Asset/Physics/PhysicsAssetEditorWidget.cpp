@@ -721,6 +721,197 @@ namespace
         }
     }
 
+    constexpr float ConstraintGraphBodyStartX = 20.0f;
+    constexpr float ConstraintGraphBodyStartY = 30.0f;
+    constexpr float ConstraintGraphBodyColumnWidth = 460.0f;
+    constexpr float ConstraintGraphRowHeight = 125.0f;
+    constexpr float ConstraintGraphConstraintFallbackX = 275.0f;
+    constexpr float ConstraintGraphConstraintOffsetX = 220.0f;
+    constexpr float ConstraintGraphConstraintOffsetY = 15.0f;
+
+    bool ContainsBodyIndex(const TArray<int32>& Indices, int32 BodyIndex)
+    {
+        return std::find(Indices.begin(), Indices.end(), BodyIndex) != Indices.end();
+    }
+
+    void ArrangeConstraintGraphNodes(UPhysicsAsset* PhysicsAsset)
+    {
+        if (!PhysicsAsset)
+        {
+            return;
+        }
+
+        const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
+        const TArray<FPhysicsAssetConstraintSetup>& Constraints = PhysicsAsset->GetConstraintSetups();
+        const int32 BodyCount = static_cast<int32>(Bodies.size());
+        const int32 ConstraintCount = static_cast<int32>(Constraints.size());
+        if (BodyCount <= 0)
+        {
+            return;
+        }
+
+        TArray<TArray<int32>> ChildrenByBody;
+        TArray<int32> IncomingCounts;
+        TArray<int32> Depths;
+        TArray<int32> RootBodies;
+        TArray<int32> VisitStates;
+        TArray<float> BodyRows;
+        ChildrenByBody.resize(BodyCount);
+        IncomingCounts.assign(BodyCount, 0);
+        Depths.assign(BodyCount, 0);
+        VisitStates.assign(BodyCount, 0);
+        BodyRows.assign(BodyCount, -1.0f);
+        RootBodies.reserve(BodyCount);
+
+        for (const FPhysicsAssetConstraintSetup& Constraint : Constraints)
+        {
+            const int32 ParentBodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(Constraint.ParentBoneName);
+            const int32 ChildBodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(Constraint.ChildBoneName);
+            if (ParentBodyIndex < 0 || ChildBodyIndex < 0 || ParentBodyIndex == ChildBodyIndex)
+            {
+                continue;
+            }
+
+            TArray<int32>& Children = ChildrenByBody[ParentBodyIndex];
+            if (!ContainsBodyIndex(Children, ChildBodyIndex))
+            {
+                Children.push_back(ChildBodyIndex);
+                ++IncomingCounts[ChildBodyIndex];
+            }
+        }
+
+        for (int32 BodyIndex = 0; BodyIndex < BodyCount; ++BodyIndex)
+        {
+            if (IncomingCounts[BodyIndex] == 0)
+            {
+                RootBodies.push_back(BodyIndex);
+            }
+        }
+
+        if (RootBodies.empty())
+        {
+            for (int32 BodyIndex = 0; BodyIndex < BodyCount; ++BodyIndex)
+            {
+                RootBodies.push_back(BodyIndex);
+            }
+        }
+
+        int32 NextLeafRow = 0;
+        std::function<float(int32, int32)> ArrangeBodyTree = [&](int32 BodyIndex, int32 Depth) -> float
+        {
+            if (BodyIndex < 0 || BodyIndex >= BodyCount)
+            {
+                return static_cast<float>(NextLeafRow);
+            }
+
+            Depths[BodyIndex] = (std::max)(Depths[BodyIndex], Depth);
+
+            if (VisitStates[BodyIndex] == 2)
+            {
+                return BodyRows[BodyIndex];
+            }
+
+            if (VisitStates[BodyIndex] == 1)
+            {
+                if (BodyRows[BodyIndex] < 0.0f)
+                {
+                    BodyRows[BodyIndex] = static_cast<float>(NextLeafRow++);
+                }
+                return BodyRows[BodyIndex];
+            }
+
+            VisitStates[BodyIndex] = 1;
+
+            float ChildRowSum = 0.0f;
+            int32 ChildRowCount = 0;
+            for (int32 ChildBodyIndex : ChildrenByBody[BodyIndex])
+            {
+                if (ChildBodyIndex < 0 || ChildBodyIndex >= BodyCount || ChildBodyIndex == BodyIndex)
+                {
+                    continue;
+                }
+
+                if (VisitStates[ChildBodyIndex] == 1)
+                {
+                    continue;
+                }
+
+                const float ChildRow = ArrangeBodyTree(ChildBodyIndex, Depth + 1);
+                ChildRowSum += ChildRow;
+                ++ChildRowCount;
+            }
+
+            const float Row = (ChildRowCount > 0)
+                ? ChildRowSum / static_cast<float>(ChildRowCount)
+                : static_cast<float>(NextLeafRow++);
+            BodyRows[BodyIndex] = Row;
+            VisitStates[BodyIndex] = 2;
+            return Row;
+        };
+
+        for (int32 RootBodyIndex : RootBodies)
+        {
+            ArrangeBodyTree(RootBodyIndex, 0);
+        }
+
+        for (int32 BodyIndex = 0; BodyIndex < BodyCount; ++BodyIndex)
+        {
+            if (VisitStates[BodyIndex] != 2)
+            {
+                ArrangeBodyTree(BodyIndex, Depths[BodyIndex]);
+            }
+        }
+
+        TArray<ImVec2> BodyPositions;
+        BodyPositions.resize(BodyCount);
+        for (int32 BodyIndex = 0; BodyIndex < BodyCount; ++BodyIndex)
+        {
+            const float Row = (BodyRows[BodyIndex] >= 0.0f) ? BodyRows[BodyIndex] : static_cast<float>(BodyIndex);
+            const float X = ConstraintGraphBodyStartX + static_cast<float>(Depths[BodyIndex]) * ConstraintGraphBodyColumnWidth;
+            const float Y = ConstraintGraphBodyStartY + Row * ConstraintGraphRowHeight;
+            BodyPositions[BodyIndex] = ImVec2(X, Y);
+            ed::SetNodePosition(ToPhysicsNodeId(MakeBodyNodeId(BodyIndex)), BodyPositions[BodyIndex]);
+        }
+
+        for (int32 ConstraintIndex = 0; ConstraintIndex < ConstraintCount; ++ConstraintIndex)
+        {
+            const FPhysicsAssetConstraintSetup& Constraint = Constraints[ConstraintIndex];
+            const int32 ParentBodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(Constraint.ParentBoneName);
+            const int32 ChildBodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(Constraint.ChildBoneName);
+
+            ImVec2 Position(
+                ConstraintGraphConstraintFallbackX,
+                ConstraintGraphBodyStartY + static_cast<float>(ConstraintIndex) * ConstraintGraphRowHeight + ConstraintGraphConstraintOffsetY);
+
+            if (ParentBodyIndex >= 0 && ParentBodyIndex < BodyCount && ChildBodyIndex >= 0 && ChildBodyIndex < BodyCount)
+            {
+                const ImVec2 ParentPosition = BodyPositions[ParentBodyIndex];
+                const ImVec2 ChildPosition = BodyPositions[ChildBodyIndex];
+                Position.x = (ParentPosition.x + ChildPosition.x) * 0.5f;
+                Position.y = (ParentPosition.y + ChildPosition.y) * 0.5f + ConstraintGraphConstraintOffsetY;
+
+                if (std::fabs(ParentPosition.x - ChildPosition.x) < 1.0f)
+                {
+                    Position.x += ConstraintGraphConstraintOffsetX;
+                }
+            }
+            else if (ParentBodyIndex >= 0 && ParentBodyIndex < BodyCount)
+            {
+                const ImVec2 ParentPosition = BodyPositions[ParentBodyIndex];
+                Position.x = ParentPosition.x + ConstraintGraphConstraintOffsetX;
+                Position.y = ParentPosition.y + ConstraintGraphConstraintOffsetY;
+            }
+            else if (ChildBodyIndex >= 0 && ChildBodyIndex < BodyCount)
+            {
+                const ImVec2 ChildPosition = BodyPositions[ChildBodyIndex];
+                Position.x = ChildPosition.x - ConstraintGraphConstraintOffsetX;
+                Position.y = ChildPosition.y + ConstraintGraphConstraintOffsetY;
+            }
+
+            ed::SetNodePosition(ToPhysicsNodeId(MakeConstraintNodeId(ConstraintIndex)), Position);
+        }
+    }
+
     bool IsValidBodyIndex(const UPhysicsAsset* PhysicsAsset, int32 BodyIndex)
     {
         return PhysicsAsset && BodyIndex >= 0 && BodyIndex < static_cast<int32>(PhysicsAsset->GetBodySetups().size());
@@ -1742,8 +1933,23 @@ void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* Physic
 	ImGui::SetWindowFontScale(1.5f);
     ImGui::TextUnformatted("Constraint Graph");
 	ImGui::SetWindowFontScale(1.0f);
+	ImGui::SameLine();
 
-    if (!PhysicsAsset)
+    bool bRequestResetView = false;
+    bool bRequestRearrange = false;
+	if (ImGui::Button("Reset View"))
+	{
+        bRequestResetView = true;
+	}
+    ImGui::SameLine();
+	if (ImGui::Button("Rearrange##ConstraintGraph"))
+	{
+        bConstraintGraphLayoutDirty = true;
+        bRequestRearrange = true;
+	}
+    
+	
+	if (!PhysicsAsset)
     {
         ImGui::TextDisabled("No PhysicsAsset selected.");
         return;
@@ -1792,19 +1998,7 @@ void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* Physic
 
     if (bConstraintGraphLayoutDirty)
     {
-        for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
-        {
-            const float X = (BodyIndex % 2 == 0) ? 20.0f : 520.0f;
-            const float Y = 30.0f + static_cast<float>(BodyIndex / 2) * 115.0f;
-            ed::SetNodePosition(ToPhysicsNodeId(MakeBodyNodeId(BodyIndex)), ImVec2(X, Y));
-        }
-
-        for (int32 ConstraintIndex = 0; ConstraintIndex < static_cast<int32>(Constraints.size()); ++ConstraintIndex)
-        {
-            ed::SetNodePosition(
-                ToPhysicsNodeId(MakeConstraintNodeId(ConstraintIndex)),
-                ImVec2(275.0f, 45.0f + static_cast<float>(ConstraintIndex) * 115.0f));
-        }
+        ArrangeConstraintGraphNodes(PhysicsAsset);
         bConstraintGraphLayoutDirty = false;
     }
 
@@ -2020,6 +2214,11 @@ void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* Physic
             }
         }
         bConstraintGraphLayoutDirty = true;
+    }
+
+    if (bRequestResetView || bRequestRearrange)
+    {
+        ed::NavigateToContent(0.25f);
     }
 
     ed::End();
