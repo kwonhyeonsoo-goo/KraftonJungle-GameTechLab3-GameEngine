@@ -15,16 +15,28 @@ enum class EPhysicsAssetAutoBodyMethod : uint8
     PCAAnalysis
 };
 
+enum class EPhysicsAssetAutoBodyPrimitiveType : uint8
+{
+    Capsule,
+    Box,
+    Sphere
+};
+
 struct FPhysicsAssetAutoBodyGeneratorOptions
 {
     EPhysicsAssetAutoBodyMethod Method = EPhysicsAssetAutoBodyMethod::PCAAnalysis;
+    EPhysicsAssetAutoBodyPrimitiveType PrimitiveType = EPhysicsAssetAutoBodyPrimitiveType::Capsule;
     bool bCreateConstraints = true;
     bool bDisableCollisionBetweenConstrainedBodies = true;
     bool bReplaceExisting = true;
     bool bSkipHelperBones = true;
     bool bAllowBoneAxisFallback = false;
+    bool bMergeSmallBones = true;
     float MinInfluenceWeight = 0.15f;
     int32 MinWeightedVertices = 16;
+    float MinBoneSize = 0.5f;
+    float MinWeldSize = 1.0e-4f;
+    float FitPadding = 1.0f;
 };
 
 struct FPhysicsAssetAutoBodyGeneratorResult
@@ -40,7 +52,7 @@ struct FPhysicsAssetAutoBodyGeneratorResult
 class FPhysicsAssetAutoBodyGenerator
 {
 public:
-    // Rebuilds capsule body setups from the skeletal mesh reference pose.
+    // Rebuilds primitive body setups from the skeletal mesh reference pose.
     // The editor owns UI state and selection; this generator only mutates asset data.
     static bool Regenerate(
         UPhysicsAsset* PhysicsAsset,
