@@ -11,8 +11,10 @@
 #include "Mesh/MeshManager.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Object/Object.h"
+#include "Physics/IPhysicsScene.h"
 #include "Physics/PhysicsAsset.h"
 #include "Physics/PhysicsAssetAutoBodyGenerator.h"
+#include "Physics/PhysicsAssetInstance.h"
 #include "Physics/PhysicsAssetManager.h"
 #include "Physics/PhysicsAssetPreviewUtils.h"
 
@@ -539,13 +541,21 @@ FPhysicsAssetEditorWidget::~FPhysicsAssetEditorWidget()
 void FPhysicsAssetEditorWidget::Close()
 {
     DestroyConstraintGraphEditor();
+    if (PreviewSkeletalMeshComponent)
+    {
+        StopEditorSimulation(PreviewSimulationWorld, PreviewSkeletalMeshComponent, true);
+    }
     PreviewSkeletalMesh = nullptr;
     PreviewSkeletalMeshComponent = nullptr;
+    PreviewSimulationWorld = nullptr;
     SelectedBodyIndex = -1;
     SelectedShapeIndex = -1;
     SelectedConstraintIndex = -1;
     SelectedTreeBoneIndex = -1;
     bPendingClose = false;
+    bEditorSimulationActive = false;
+    bEditorSimulationPaused = false;
+    bEditorSimulationRestartRequested = false;
     bConstraintGraphLayoutDirty = true;
     ConstraintGraphTopologyHash = 0;
     FAssetEditorWidget::Close();
@@ -582,6 +592,10 @@ void FPhysicsAssetEditorWidget::Open(UObject* Object)
     SelectedTreeBoneIndex = -1;
     PreviewSkeletalMesh = nullptr;
     PreviewSkeletalMeshComponent = nullptr;
+    PreviewSimulationWorld = nullptr;
+    bEditorSimulationActive = false;
+    bEditorSimulationPaused = false;
+    bEditorSimulationRestartRequested = false;
     ValidationIssues.clear();
     ValidationMeshPath.clear();
     bValidationRan = false;
@@ -634,8 +648,12 @@ void FPhysicsAssetEditorWidget::RenderEmbedded(UPhysicsAsset* PhysicsAsset, USke
 
     if (!IsEditingObject(PhysicsAsset))
     {
+        UWorld* SavedPreviewWorld = PreviewSimulationWorld;
+        USkeletalMeshComponent* SavedPreviewComponent = PreviewSkeletalMeshComponent;
         OpenEmbedded(PhysicsAsset);
         PreviewSkeletalMesh = PreviewMesh;
+        PreviewSimulationWorld = SavedPreviewWorld;
+        PreviewSkeletalMeshComponent = SavedPreviewComponent;
     }
 
     RenderDocument(DeltaTime);
@@ -721,6 +739,10 @@ void FPhysicsAssetEditorWidget::SelectPhysicsShapeFromViewport(UPhysicsAsset* Ph
             : -1;
     SelectedConstraintIndex = -1;
     SelectedTreeBoneIndex = FindPreviewBoneIndexByName(Body.BoneName);
+    if (bEditorSimulationActive && bEditorSimulationSelectedOnly)
+    {
+        RequestEditorSimulationRestart();
+    }
 }
 
 void FPhysicsAssetEditorWidget::RenderDocument(float DeltaTime)
@@ -791,8 +813,12 @@ bool FPhysicsAssetEditorWidget::PrepareEmbeddedRender(UPhysicsAsset* PhysicsAsse
 
     if (!IsEditingObject(PhysicsAsset))
     {
+        UWorld* SavedPreviewWorld = PreviewSimulationWorld;
+        USkeletalMeshComponent* SavedPreviewComponent = PreviewSkeletalMeshComponent;
         OpenEmbedded(PhysicsAsset);
         PreviewSkeletalMesh = PreviewMesh;
+        PreviewSimulationWorld = SavedPreviewWorld;
+        PreviewSkeletalMeshComponent = SavedPreviewComponent;
     }
 
     return true;
@@ -855,7 +881,79 @@ void FPhysicsAssetEditorWidget::RenderToolbar(UPhysicsAsset* PhysicsAsset)
     //     RunValidation(PhysicsAsset);
     // }
 
+    RenderSimulationControls(PhysicsAsset);
+    ImGui::SameLine();
     RenderRegenerateBodiesControls(PhysicsAsset);
+}
+
+void FPhysicsAssetEditorWidget::RenderSimulationControls(UPhysicsAsset* PhysicsAsset)
+{
+    const bool bCanSimulate = PhysicsAsset && PreviewSkeletalMesh && PreviewSkeletalMeshComponent && PreviewSimulationWorld;
+
+    if (!bCanSimulate)
+    {
+        ImGui::BeginDisabled();
+    }
+
+    if (!bEditorSimulationActive)
+    {
+        if (ImGui::Button("Simulate", ImVec2(96.0f, 0.0f)))
+        {
+            StartEditorSimulation(PhysicsAsset, PreviewSimulationWorld, PreviewSkeletalMeshComponent);
+        }
+    }
+    else
+    {
+        if (ImGui::Button("Stop", ImVec2(72.0f, 0.0f)))
+        {
+            StopEditorSimulation(PreviewSimulationWorld, PreviewSkeletalMeshComponent, true);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button(bEditorSimulationPaused ? "Resume" : "Pause", ImVec2(78.0f, 0.0f)))
+        {
+            bEditorSimulationPaused = !bEditorSimulationPaused;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Reset", ImVec2(68.0f, 0.0f)))
+        {
+            StopEditorSimulation(PreviewSimulationWorld, PreviewSkeletalMeshComponent, true);
+            StartEditorSimulation(PhysicsAsset, PreviewSimulationWorld, PreviewSkeletalMeshComponent);
+        }
+    }
+
+    ImGui::SameLine();
+    const bool bOldNoGravity = bEditorSimulationNoGravity;
+    if (ImGui::Checkbox("No Gravity", &bEditorSimulationNoGravity) && bOldNoGravity != bEditorSimulationNoGravity)
+    {
+        RequestEditorSimulationRestart();
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Run the preview with gravity disabled. Useful for checking interpenetration and constraint limits without falling motion.");
+    }
+
+    ImGui::SameLine();
+    const bool bOldSelectedOnly = bEditorSimulationSelectedOnly;
+    if (ImGui::Checkbox("Selected Simulation", &bEditorSimulationSelectedOnly) &&
+        bOldSelectedOnly != bEditorSimulationSelectedOnly)
+    {
+        RequestEditorSimulationRestart();
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Simulate the selected body and its descendant body chain. Other bodies are kept kinematic as anchors.");
+    }
+
+    if (!bCanSimulate)
+    {
+        ImGui::EndDisabled();
+    }
+
+    if (bEditorSimulationSelectedOnly && GetSelectedSimulationRootBoneName(PhysicsAsset) == FName::None)
+    {
+        ImGui::SameLine();
+        ImGui::TextDisabled("Select a body first");
+    }
 }
 
 void FPhysicsAssetEditorWidget::RenderRegenerateBodiesControls(UPhysicsAsset* PhysicsAsset)
@@ -918,6 +1016,14 @@ void FPhysicsAssetEditorWidget::RenderRegenerateBodiesControls(UPhysicsAsset* Ph
         {
             ImGui::SetTooltip("Create parent-child constraints between the generated bodies.");
         }
+
+        if (!bRegenerateCreateConstraints) ImGui::BeginDisabled();
+        ImGui::Checkbox("Disable Adjacent Pair Collision", &bRegenerateDisableConstrainedBodyCollision);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Disable collision between each generated adjacent parent-child constraint pair.");
+        }
+        if (!bRegenerateCreateConstraints) ImGui::EndDisabled();
 
         ImGui::Checkbox("Replace", &bRegenerateReplaceExisting);
         if (ImGui::IsItemHovered())
@@ -2159,6 +2265,7 @@ bool FPhysicsAssetEditorWidget::RegenerateBodies(UPhysicsAsset* PhysicsAsset, US
         ? EPhysicsAssetAutoBodyMethod::PCAAnalysis
         : EPhysicsAssetAutoBodyMethod::BoneAxis;
     Options.bCreateConstraints = bRegenerateCreateConstraints;
+    Options.bDisableCollisionBetweenConstrainedBodies = bRegenerateDisableConstrainedBodyCollision;
     Options.bReplaceExisting = bRegenerateReplaceExisting;
     Options.bSkipHelperBones = bRegenerateSkipHelperBones;
     Options.bAllowBoneAxisFallback = bRegenerateAllowBoneAxisFallback;
@@ -2201,7 +2308,10 @@ bool FPhysicsAssetEditorWidget::RegenerateBodies(UPhysicsAsset* PhysicsAsset, US
         ClampSelection(PhysicsAsset);
     }
 
-    MarkPhysicsAssetDirty();
+    if (Result.bAssetChanged)
+    {
+        MarkPhysicsAssetDirty();
+    }
     return true;
 }
 
@@ -2357,6 +2467,7 @@ void FPhysicsAssetEditorWidget::RenderPreviewDebug(
 {
     PreviewSkeletalMesh = PreviewMesh;
     PreviewSkeletalMeshComponent = PreviewComponent;
+    PreviewSimulationWorld = PreviewWorld;
 
     if (!PhysicsAsset || !PreviewWorld || !PreviewComponent)
     {
@@ -2386,6 +2497,7 @@ void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
 {
     PreviewSkeletalMesh = PreviewMesh;
     PreviewSkeletalMeshComponent = PreviewComponent;
+    PreviewSimulationWorld = PreviewWorld;
 
     if (!PhysicsAsset || !PreviewWorld || !PreviewComponent)
     {
@@ -2427,6 +2539,148 @@ void FPhysicsAssetEditorWidget::RenderViewportDebugOptions()
     ImGui::TextUnformatted("Physics Preview");
     ImGui::Checkbox("Physics Bodies", &bShowPreviewBodies);
     ImGui::Checkbox("Physics Constraints", &bShowPreviewConstraints);
+    ImGui::TextDisabled(bEditorSimulationActive
+        ? (bEditorSimulationPaused ? "Simulation: paused" : "Simulation: running")
+        : "Simulation: stopped");
+}
+
+void FPhysicsAssetEditorWidget::SetEditorPreviewContext(UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent)
+{
+    PreviewSimulationWorld = PreviewWorld;
+    PreviewSkeletalMeshComponent = PreviewComponent;
+}
+
+void FPhysicsAssetEditorWidget::TickEditorSimulation(
+    UPhysicsAsset* PhysicsAsset,
+    USkeletalMesh* PreviewMesh,
+    UWorld* PreviewWorld,
+    USkeletalMeshComponent* PreviewComponent,
+    float DeltaTime)
+{
+    PreviewSkeletalMesh = PreviewMesh;
+    SetEditorPreviewContext(PreviewWorld, PreviewComponent);
+
+    if (!bEditorSimulationActive)
+    {
+        return;
+    }
+
+    if (!PhysicsAsset || !PreviewWorld || !PreviewComponent)
+    {
+        StopEditorSimulation(PreviewWorld, PreviewComponent, false);
+        return;
+    }
+
+    if (bEditorSimulationRestartRequested)
+    {
+        StopEditorSimulation(PreviewWorld, PreviewComponent, true);
+        StartEditorSimulation(PhysicsAsset, PreviewWorld, PreviewComponent);
+        return;
+    }
+
+    if (!bEditorSimulationPaused && DeltaTime > 0.0f)
+    {
+        if (IPhysicsScene* PhysicsScene = PreviewWorld->GetPhysicsScene())
+        {
+            PhysicsScene->Tick(DeltaTime);
+            PhysicsScene->DispatchPendingEvents();
+        }
+    }
+
+    PreviewComponent->ApplyPhysicsAssetPose();
+}
+
+void FPhysicsAssetEditorWidget::StopEditorSimulation(
+    UWorld* PreviewWorld,
+    USkeletalMeshComponent* PreviewComponent,
+    bool bResetPose)
+{
+    USkeletalMeshComponent* Component = PreviewComponent ? PreviewComponent : PreviewSkeletalMeshComponent;
+    if (Component)
+    {
+        Component->DisableRagdollPhysics();
+    }
+
+    if (PreviewWorld)
+    {
+        if (IPhysicsScene* PhysicsScene = PreviewWorld->GetPhysicsScene())
+        {
+            PhysicsScene->Tick(0.0f);
+            PhysicsScene->DispatchPendingEvents();
+        }
+    }
+
+    if (Component && bResetPose)
+    {
+        Component->ApplyBoneEditBasePose();
+    }
+
+    bEditorSimulationActive = false;
+    bEditorSimulationPaused = false;
+    bEditorSimulationRestartRequested = false;
+}
+
+bool FPhysicsAssetEditorWidget::StartEditorSimulation(
+    UPhysicsAsset* PhysicsAsset,
+    UWorld* PreviewWorld,
+    USkeletalMeshComponent* PreviewComponent)
+{
+    if (!PhysicsAsset || !PreviewWorld || !PreviewComponent)
+    {
+        return false;
+    }
+
+    FPhysicsAssetSimulationOptions Options;
+    Options.bNoGravity = bEditorSimulationNoGravity;
+    Options.bSelectedOnly = bEditorSimulationSelectedOnly;
+    Options.bForceQueryAndPhysicsCollision = true;
+    Options.SelectedBoneName = GetSelectedSimulationRootBoneName(PhysicsAsset);
+    if (Options.bSelectedOnly && Options.SelectedBoneName == FName::None)
+    {
+        return false;
+    }
+
+    StopEditorSimulation(PreviewWorld, PreviewComponent, false);
+    PreviewComponent->SetPhysicsAssetOverride(PhysicsAsset);
+
+    FPhysicsAssetInstance* Instance = PreviewComponent->GetOrCreatePhysicsAssetInstance();
+    if (!Instance || !Instance->CreateBodiesAndConstraints(Options))
+    {
+        bEditorSimulationActive = false;
+        return false;
+    }
+
+    PreviewComponent->SetUsePhysicsAssetPose(true);
+    if (IPhysicsScene* PhysicsScene = PreviewWorld->GetPhysicsScene())
+    {
+        PhysicsScene->Tick(0.0f);
+        PhysicsScene->DispatchPendingEvents();
+    }
+    PreviewComponent->ApplyPhysicsAssetPose();
+
+    bEditorSimulationActive = true;
+    bEditorSimulationPaused = false;
+    bEditorSimulationRestartRequested = false;
+    return true;
+}
+
+void FPhysicsAssetEditorWidget::RequestEditorSimulationRestart()
+{
+    if (bEditorSimulationActive)
+    {
+        bEditorSimulationRestartRequested = true;
+    }
+}
+
+FName FPhysicsAssetEditorWidget::GetSelectedSimulationRootBoneName(UPhysicsAsset* PhysicsAsset) const
+{
+    if (!PhysicsAsset || !IsValidBodyIndex(PhysicsAsset, SelectedBodyIndex))
+    {
+        return FName::None;
+    }
+
+    const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
+    return Bodies[SelectedBodyIndex].BoneName;
 }
 
 void FPhysicsAssetEditorWidget::RenderBodyDebug(
@@ -2581,6 +2835,7 @@ void FPhysicsAssetEditorWidget::MarkPhysicsAssetDirty()
     bValidationRan = false;
     ValidationIssues.clear();
     ValidationMeshPath.clear();
+    RequestEditorSimulationRestart();
 }
 
 void FPhysicsAssetEditorWidget::ClampSelection(UPhysicsAsset* PhysicsAsset)

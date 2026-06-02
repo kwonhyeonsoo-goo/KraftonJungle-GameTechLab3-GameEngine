@@ -72,7 +72,10 @@ namespace
         return PhysicsScene ? PhysicsScene->GetRuntime() : nullptr;
     }
 
-    void FillShapeFilterDataFromComponent(FPhysicsFilterData& OutFilterData, const USkeletalMeshComponent* Component)
+    void FillShapeFilterDataFromComponent(
+        FPhysicsFilterData& OutFilterData,
+        const USkeletalMeshComponent* Component,
+        bool bForceQueryAndPhysicsCollision)
     {
         if (!Component)
         {
@@ -84,15 +87,20 @@ namespace
         OutFilterData.OverlapMask = 0;
         // Keep ragdoll self-collision decisions at the PhysicsAsset constraint layer.
         OutFilterData.IgnoreGroup = 0;
-        OutFilterData.CollisionEnabled = Component->GetCollisionEnabled();
+        OutFilterData.CollisionEnabled = bForceQueryAndPhysicsCollision
+            ? ECollisionEnabled::QueryAndPhysics
+            : Component->GetCollisionEnabled();
         OutFilterData.bIsTrigger = false;
         OutFilterData.bGenerateHitEvents = true;
-        OutFilterData.bGenerateOverlapEvents = Component->GetGenerateOverlapEvents();
+        OutFilterData.bGenerateOverlapEvents = bForceQueryAndPhysicsCollision
+            ? false
+            : Component->GetGenerateOverlapEvents();
 
         for (int32 ChannelIndex = 0; ChannelIndex < static_cast<int32>(ECollisionChannel::ActiveCount); ++ChannelIndex)
         {
-            const ECollisionResponse Response =
-                Component->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(ChannelIndex));
+            const ECollisionResponse Response = bForceQueryAndPhysicsCollision
+                ? ECollisionResponse::Block
+                : Component->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(ChannelIndex));
 
             if (Response == ECollisionResponse::Block)
             {
@@ -108,6 +116,7 @@ namespace
     void BuildShapeDescs(
         const FPhysicsAssetBodySetup& BodySetup,
         const USkeletalMeshComponent* OwnerComponent,
+        bool bForceQueryAndPhysicsCollision,
         TArray<FPhysicsShapeDesc>& OutShapes
     )
     {
@@ -117,11 +126,14 @@ namespace
         {
             FPhysicsShapeDesc ShapeDesc;
             ShapeDesc.LocalTransform = ShapeSetup.LocalTransform;
-            ShapeDesc.CollisionEnabled = OwnerComponent
-                ? OwnerComponent->GetCollisionEnabled()
-                : ECollisionEnabled::QueryAndPhysics;
+            ShapeDesc.CollisionEnabled = bForceQueryAndPhysicsCollision
+                ? ECollisionEnabled::QueryAndPhysics
+                : (OwnerComponent ? OwnerComponent->GetCollisionEnabled() : ECollisionEnabled::QueryAndPhysics);
             ShapeDesc.bIsTrigger = false;
-            FillShapeFilterDataFromComponent(ShapeDesc.FilterData, OwnerComponent);
+            FillShapeFilterDataFromComponent(
+                ShapeDesc.FilterData,
+                OwnerComponent,
+                bForceQueryAndPhysicsCollision);
 
             switch (ShapeSetup.Type)
             {
@@ -150,6 +162,7 @@ namespace
         USkeletalMeshComponent* OwnerComponent,
         const FPhysicsAssetBodySetup& BodySetup,
         const FTransform& BoneWorldTransform,
+        bool bForceQueryAndPhysicsCollision,
         FBodyCreationDesc& OutDesc
     )
     {
@@ -170,7 +183,7 @@ namespace
         OutDesc.SyncMode = EPhysicsSyncMode::Manual;
         OutDesc.WorldTransform = ComposePhysicsTransforms(BoneWorldTransform, BodySetup.BodyLocalFrame);
 
-        BuildShapeDescs(BodySetup, OwnerComponent, OutDesc.Shapes);
+        BuildShapeDescs(BodySetup, OwnerComponent, bForceQueryAndPhysicsCollision, OutDesc.Shapes);
         if (OutDesc.Shapes.empty())
         {
             return false;
@@ -223,6 +236,28 @@ namespace
         OutBoneWorld.Location =
             BodyWorld.Location - OutBoneWorld.Rotation.RotateVector(BodySetup.BodyLocalFrame.Location);
         return true;
+    }
+
+
+    bool IsSameOrDescendantBone(const FSkeletalMesh* MeshAsset, int32 BoneIndex, int32 PossibleAncestorIndex)
+    {
+        if (!MeshAsset || BoneIndex < 0 || PossibleAncestorIndex < 0 ||
+            BoneIndex >= static_cast<int32>(MeshAsset->Bones.size()) ||
+            PossibleAncestorIndex >= static_cast<int32>(MeshAsset->Bones.size()))
+        {
+            return false;
+        }
+
+        int32 Cursor = BoneIndex;
+        while (Cursor >= 0 && Cursor < static_cast<int32>(MeshAsset->Bones.size()))
+        {
+            if (Cursor == PossibleAncestorIndex)
+            {
+                return true;
+            }
+            Cursor = MeshAsset->Bones[Cursor].ParentIndex;
+        }
+        return false;
     }
 }
 
@@ -279,6 +314,11 @@ bool FPhysicsAssetInstance::Initialize(USkeletalMeshComponent* InOwner, UPhysics
 
 bool FPhysicsAssetInstance::CreateBodiesAndConstraints()
 {
+    return CreateBodiesAndConstraints(FPhysicsAssetSimulationOptions{});
+}
+
+bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimulationOptions& Options)
+{
     if (!bInitialized)
     {
         return false;
@@ -317,6 +357,40 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints()
     const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
     const TArray<FPhysicsAssetConstraintSetup>& ConstraintSetups = Asset->GetConstraintSetups();
 
+    TArray<uint8> SimulatedBodyMask;
+    SimulatedBodyMask.resize(BodySetups.size(), 1);
+    if (Options.bSelectedOnly)
+    {
+        SimulatedBodyMask.assign(BodySetups.size(), 0);
+        const int32 SelectedBoneIndex = FindBoneIndexForBody(Options.SelectedBoneName);
+        if (SelectedBoneIndex < 0)
+        {
+            UE_LOG("CreateBodiesAndConstraints failed: selected simulation has no valid selected body. Component=%s Bone=%s",
+                Owner->GetName().c_str(),
+                Options.SelectedBoneName.ToString().c_str());
+            return false;
+        }
+
+        int32 SelectedDynamicBodyCount = 0;
+        for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
+        {
+            const int32 BodyBoneIndex = FindBoneIndexForBody(BodySetups[BodyIndex].BoneName);
+            if (IsSameOrDescendantBone(MeshAsset, BodyBoneIndex, SelectedBoneIndex))
+            {
+                SimulatedBodyMask[BodyIndex] = 1;
+                ++SelectedDynamicBodyCount;
+            }
+        }
+
+        if (SelectedDynamicBodyCount <= 0)
+        {
+            UE_LOG("CreateBodiesAndConstraints failed: selected body chain is empty. Component=%s Bone=%s",
+                Owner->GetName().c_str(),
+                Options.SelectedBoneName.ToString().c_str());
+            return false;
+        }
+    }
+
     if (BodiesByBone.size() != BodySetups.size())
     {
         BodiesByBone.resize(BodySetups.size());
@@ -348,12 +422,31 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints()
             ComposePhysicsTransforms(ComponentWorldTransform, BoneComponentSpaceTransforms[BoneIndex]);
 
         FBodyCreationDesc BodyDesc;
-        if (!BuildBodyCreationDesc(Owner, BodySetup, BoneWorldTransform, BodyDesc))
+        if (!BuildBodyCreationDesc(
+                Owner,
+                BodySetup,
+                BoneWorldTransform,
+                Options.bForceQueryAndPhysicsCollision,
+                BodyDesc))
         {
             UE_LOG("Skipped PhysicsAsset body: invalid body setup. Component=%s Bone=%s",
                 Owner->GetName().c_str(),
                 BodySetup.BoneName.ToString().c_str());
             continue;
+        }
+
+        const bool bSimulateThisBody =
+            BodyIndex >= 0 && BodyIndex < static_cast<int32>(SimulatedBodyMask.size())
+                ? SimulatedBodyMask[BodyIndex] != 0
+                : true;
+        if (Options.bSelectedOnly && !bSimulateThisBody)
+        {
+            BodyDesc.BodyType = EPhysicsBodyType::Kinematic;
+            BodyDesc.bEnableGravity = false;
+        }
+        else if (Options.bNoGravity)
+        {
+            BodyDesc.bEnableGravity = false;
         }
 
         FPhysicsBodyHandle BodyHandle = Runtime->CreateRigidBody(BodyDesc);
@@ -374,6 +467,22 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints()
         const FPhysicsAssetConstraintSetup& ConstraintSetup = ConstraintSetups[ConstraintIndex];
         const FPhysicsBodyHandle ParentHandle = GetBodyHandleByBoneName(ConstraintSetup.ParentBoneName);
         const FPhysicsBodyHandle ChildHandle = GetBodyHandleByBoneName(ConstraintSetup.ChildBoneName);
+
+        if (Options.bSelectedOnly)
+        {
+            const int32 ParentBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ParentBoneName);
+            const int32 ChildBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ChildBoneName);
+            const bool bParentSimulated =
+                ParentBodyIndex >= 0 && ParentBodyIndex < static_cast<int32>(SimulatedBodyMask.size()) &&
+                SimulatedBodyMask[ParentBodyIndex] != 0;
+            const bool bChildSimulated =
+                ChildBodyIndex >= 0 && ChildBodyIndex < static_cast<int32>(SimulatedBodyMask.size()) &&
+                SimulatedBodyMask[ChildBodyIndex] != 0;
+            if (!bParentSimulated && !bChildSimulated)
+            {
+                continue;
+            }
+        }
 
         if (!ParentHandle.IsValid() || !ChildHandle.IsValid())
         {
@@ -549,6 +658,13 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
         return false;
     }
 
+    TArray<FTransform> CurrentBoneLocalTransforms;
+    CurrentBoneLocalTransforms.resize(MeshAsset->Bones.size());
+    for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+    {
+        CurrentBoneLocalTransforms[BoneIndex] = Owner->GetBoneLocalTransformByIndex(BoneIndex);
+    }
+
     const FTransform ComponentWorldTransform = GetComponentWorldTransform(Owner);
     OutBoneWorldTransforms.resize(MeshAsset->Bones.size());
     // Start from the current animated pose so bones without bodies remain stable instead
@@ -558,6 +674,9 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
         OutBoneWorldTransforms[BoneIndex] =
             ComposePhysicsTransforms(ComponentWorldTransform, CurrentBoneComponentSpaceTransforms[BoneIndex]);
     }
+
+    TArray<uint8> AppliedBodyBoneMask;
+    AppliedBodyBoneMask.resize(MeshAsset->Bones.size(), 0);
 
     const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
     int32 AppliedBodyCount = 0;
@@ -598,10 +717,38 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
         // Physics bodies do not carry meaningful bone scale, so preserve the existing scale.
         BoneWorld.Scale = OutBoneWorldTransforms[BoneIndex].Scale;
         OutBoneWorldTransforms[BoneIndex] = BoneWorld;
+        AppliedBodyBoneMask[BoneIndex] = 1;
         ++AppliedBodyCount;
     }
 
-    return AppliedBodyCount > 0;
+    if (AppliedBodyCount <= 0)
+    {
+        return false;
+    }
+
+    // Only bones that have PhysicsAsset bodies are sampled directly from PhysX.
+    // Descendant bones without bodies must keep their authored/current local offset
+    // under the updated parent; otherwise they remain pinned in their pre-simulation
+    // world position and vertices weighted to them look frozen outside the body shape.
+    for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+    {
+        if (AppliedBodyBoneMask[BoneIndex] != 0)
+        {
+            continue;
+        }
+
+        const int32 ParentIndex = MeshAsset->Bones[BoneIndex].ParentIndex;
+        if (ParentIndex < 0 || ParentIndex >= static_cast<int32>(OutBoneWorldTransforms.size()))
+        {
+            continue;
+        }
+
+        OutBoneWorldTransforms[BoneIndex] = ComposePhysicsTransforms(
+            OutBoneWorldTransforms[ParentIndex],
+            CurrentBoneLocalTransforms[BoneIndex]);
+    }
+
+    return true;
 }
 
 UPhysicsAsset* FPhysicsAssetInstance::GetAsset() const

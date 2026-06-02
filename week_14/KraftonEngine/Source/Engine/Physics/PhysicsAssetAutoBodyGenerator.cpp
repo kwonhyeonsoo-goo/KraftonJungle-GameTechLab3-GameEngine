@@ -733,6 +733,7 @@ bool FPhysicsAssetAutoBodyGenerator::Regenerate(
                         FPhysicsAssetConstraintSetup Constraint;
                         Constraint.ParentBoneName = ParentBoneName;
                         Constraint.ChildBoneName = ChildBoneName;
+                        Constraint.bDisableCollisionBetweenBodies = Options.bDisableCollisionBetweenConstrainedBodies;
 
                         const int32 ChildMeshBoneIndex = FindMeshBoneIndexByName(MeshAsset, RefSkeleton.Bones[BoneIndex].Name);
                         FTransform ParentBodyComponentTransform;

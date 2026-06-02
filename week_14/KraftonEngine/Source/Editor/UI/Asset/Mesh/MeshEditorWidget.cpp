@@ -10,6 +10,7 @@
 #include "Runtime/Engine.h"
 #include "Component/Debug/PhysicsAssetPreviewComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Component/PrimitiveComponent.h"
 #include "Component/Light/DirectionalLightComponent.h"
 #include "Collision/Ray/RayUtils.h"
 #include "Viewport/Viewport.h"
@@ -33,6 +34,7 @@
 #include "Editor/Subsystem/AssetFactory.h"
 #include "Physics/PhysicsAsset.h"
 #include "Physics/PhysicsAssetManager.h"
+#include "Physics/IPhysicsScene.h"
 #include "UI/Asset/Animation/AnimationTransportBar.h"
 #include "UI/Asset/Animation/AnimationTimelinePanel.h"
 #include "UI/Asset/Animation/AnimSequencePropertyPanel.h"
@@ -208,6 +210,35 @@ namespace
 			Mesh->SetSkeleton(Skeleton);
 		}
 		return Skeleton;
+	}
+
+	void RegisterPreviewFloorPhysics(UWorld* PreviewWorld, AStaticMeshActor* FloorActor)
+	{
+		if (!PreviewWorld || !FloorActor)
+		{
+			return;
+		}
+
+		UPrimitiveComponent* FloorComponent = Cast<UPrimitiveComponent>(FloorActor->GetRootComponent());
+		if (!FloorComponent)
+		{
+			return;
+		}
+
+		// EditorPreview worlds do not run the normal BeginPlay registration path. The
+		// visual floor must therefore be registered explicitly as a static physics body
+		// so Physics Asset simulation has something to collide against.
+		FloorComponent->SetSimulatePhysics(false);
+		FloorComponent->SetKinematic(false);
+		FloorComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		FloorComponent->SetCollisionObjectType(ECollisionChannel::WorldStatic);
+		FloorComponent->SetCollisionResponseToAllChannels(ECollisionResponse::Block);
+		FloorComponent->SetGenerateOverlapEvents(false);
+
+		if (IPhysicsScene* PhysicsScene = PreviewWorld->GetPhysicsScene())
+		{
+			PhysicsScene->RegisterComponent(FloorComponent);
+		}
 	}
 
 	USkeletalMesh* FindPreviewMeshForPhysicsAsset(UPhysicsAsset* PhysicsAsset, ID3D11Device* Device)
@@ -493,6 +524,7 @@ void FMeshEditorWidget::Open(UObject* Object)
 	FloorActor->InitDefaultComponents("Content/Data/BasicShape/Cube.OBJ");
 	FloorActor->SetActorLocation(FVector(0.0f, 0.0f, -0.05f));
 	FloorActor->SetActorScale(FVector(10.0f, 10.0f, 0.02f));
+	RegisterPreviewFloorPhysics(WorldContext.World, FloorActor);
 
 	ImVec2 ViewportSize = ImGui::GetContentRegionAvail();
 
@@ -547,6 +579,10 @@ void FMeshEditorWidget::Open(UObject* Object)
 
 void FMeshEditorWidget::Close()
 {
+	PhysicsAssetEditor.StopEditorSimulation(
+		ViewportClient.GetPreviewWorld(),
+		ViewportClient.GetPreviewMeshComponent(),
+		true);
 	PhysicsAssetEditor.Close();
 	FAssetEditorWidget::Close();
 
@@ -589,6 +625,16 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 				GetCurrentPhysicsAsset(),
 				PickedPhysicsBodyIndex,
 				PickedPhysicsShapeIndex);
+		}
+
+		if (ActiveTab == EMeshEditorTab::Physics)
+		{
+			PhysicsAssetEditor.TickEditorSimulation(
+				GetCurrentPhysicsAsset(),
+				Cast<USkeletalMesh>(EditedObject),
+				ViewportClient.GetPreviewWorld(),
+				ViewportClient.GetPreviewMeshComponent(),
+				DeltaTime);
 		}
 
 		if (ActiveTab == EMeshEditorTab::Mesh)
@@ -841,6 +887,10 @@ void FMeshEditorWidget::RenderTabBar()
 			ActiveTab = Tab;
 			if (PreviousTab == EMeshEditorTab::Physics && ActiveTab != EMeshEditorTab::Physics)
 			{
+				PhysicsAssetEditor.StopEditorSimulation(
+					ViewportClient.GetPreviewWorld(),
+					ViewportClient.GetPreviewMeshComponent(),
+					true);
 				ViewportClient.ClearPhysicsAssetGizmoTarget();
 			}
 			if (PreviousTab != ActiveTab && ActiveTab == EMeshEditorTab::Skeleton)
@@ -1368,6 +1418,11 @@ bool FMeshEditorWidget::AssignPhysicsAssetToCurrentMesh(UPhysicsAsset* PhysicsAs
 		return false;
 	}
 
+	PhysicsAssetEditor.StopEditorSimulation(
+		ViewportClient.GetPreviewWorld(),
+		ViewportClient.GetPreviewMeshComponent(),
+		true);
+
 	SkeletalMesh->SetPhysicsAsset(PhysicsAsset);
 	if (SkeletalMesh->GetPhysicsAsset() != PhysicsAsset)
 	{
@@ -1498,6 +1553,10 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 	(void)TotalHeight;
 	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
 	UPhysicsAsset* PhysicsAsset = GetCurrentPhysicsAsset();
+
+	PhysicsAssetEditor.SetEditorPreviewContext(
+		ViewportClient.GetPreviewWorld(),
+		ViewportClient.GetPreviewMeshComponent());
 
 	if (PhysicsAsset)
 	{

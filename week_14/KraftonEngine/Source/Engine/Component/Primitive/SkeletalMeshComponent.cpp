@@ -33,6 +33,8 @@
 
 namespace
 {
+    constexpr float PoseSyncDecomposeTolerance = 1.0e-6f;
+
     // Physics pose reconstruction needs an affine inverse that preserves authored bone
     // scale/orientation well enough for local-pose rebuilding from simulated world space.
     FMatrix GetAffineInverseForPoseSync(const FMatrix& Matrix)
@@ -71,6 +73,55 @@ namespace
         Result.M[3][1] = -(Translation.X * Result.M[0][1] + Translation.Y * Result.M[1][1] + Translation.Z * Result.M[2][1]);
         Result.M[3][2] = -(Translation.X * Result.M[0][2] + Translation.Y * Result.M[1][2] + Translation.Z * Result.M[2][2]);
         return Result;
+    }
+
+    FTransform DecomposePoseMatrixPreservingScale(const FMatrix& Matrix, const FVector& PreservedScale)
+    {
+        FTransform Result;
+        Result.Location = Matrix.GetLocation();
+        Result.Scale = PreservedScale;
+
+        FMatrix RotationMatrix = Matrix;
+        RotationMatrix.M[3][0] = 0.0f;
+        RotationMatrix.M[3][1] = 0.0f;
+        RotationMatrix.M[3][2] = 0.0f;
+        RotationMatrix.M[3][3] = 1.0f;
+
+        const FVector ExtractedScale = RotationMatrix.GetScale();
+        if (std::fabs(ExtractedScale.X) > PoseSyncDecomposeTolerance)
+        {
+            RotationMatrix.M[0][0] /= ExtractedScale.X;
+            RotationMatrix.M[0][1] /= ExtractedScale.X;
+            RotationMatrix.M[0][2] /= ExtractedScale.X;
+        }
+        if (std::fabs(ExtractedScale.Y) > PoseSyncDecomposeTolerance)
+        {
+            RotationMatrix.M[1][0] /= ExtractedScale.Y;
+            RotationMatrix.M[1][1] /= ExtractedScale.Y;
+            RotationMatrix.M[1][2] /= ExtractedScale.Y;
+        }
+        if (std::fabs(ExtractedScale.Z) > PoseSyncDecomposeTolerance)
+        {
+            RotationMatrix.M[2][0] /= ExtractedScale.Z;
+            RotationMatrix.M[2][1] /= ExtractedScale.Z;
+            RotationMatrix.M[2][2] /= ExtractedScale.Z;
+        }
+
+        Result.Rotation = RotationMatrix.ToQuat().GetNormalized();
+        return Result;
+    }
+
+    FVector GetReferenceLocalScale(const FSkeletalMesh* MeshAsset, int32 BoneIndex)
+    {
+        if (!MeshAsset || BoneIndex < 0 || BoneIndex >= static_cast<int32>(MeshAsset->Bones.size()))
+        {
+            return FVector::OneVector;
+        }
+
+        // Physics bodies author position/rotation only. Scale must come from the
+        // skeletal pose data, otherwise decomposing simulated world matrices can bake
+        // arbitrary scale into BoneEditLocalMatrices and make some meshes shrink.
+        return FTransform(MeshAsset->Bones[BoneIndex].GetReferenceLocalPose()).Scale;
     }
 }
 
@@ -460,12 +511,28 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
         const FMatrix LocalMatrix = (ParentIndex >= 0)
             ? ComponentSpaceGlobalMatrices[BoneIndex] * GetAffineInverseForPoseSync(ComponentSpaceGlobalMatrices[ParentIndex])
             : ComponentSpaceGlobalMatrices[BoneIndex];
-        LocalPose[BoneIndex] = FTransform(LocalMatrix);
+
+        LocalPose[BoneIndex] = DecomposePoseMatrixPreservingScale(
+            LocalMatrix,
+            GetReferenceLocalScale(MeshAsset, BoneIndex));
     }
 
-    // Full ragdoll is the final pose owner in this first sync pass; body-less bones keep
-    // their previous pose because PullPhysicsPose seeds from the current animation result.
-    SetBoneLocalTransforms(LocalPose);
+    // Full ragdoll is the final pose owner. Do not route through SetBoneLocalTransforms
+    // here: that path may re-apply the bone-edit base pose as an animation delta and it
+    // also accepts decomposed scale from physics matrices. Physics sync should write the
+    // final local pose directly while preserving authored local bone scale.
+    EnsureBoneEditPose();
+    const int32 BoneCount = std::min(
+        static_cast<int32>(MeshAsset->Bones.size()),
+        static_cast<int32>(LocalPose.size()));
+    for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
+    {
+        BoneEditLocalMatrices[BoneIndex] = LocalPose[BoneIndex].ToMatrix();
+    }
+
+    bUseBoneEditPose = true;
+    RefreshSkinningAfterPoseChanged();
+    MarkWorldBoundsDirty();
     return true;
 }
 
