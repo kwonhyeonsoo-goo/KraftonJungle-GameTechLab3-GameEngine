@@ -66,6 +66,7 @@ public:
 	UFUNCTION(Pure, Category="Actor|Components")
 	USceneComponent* GetRootComponent() const { return RootComponent.GetValid(); }
 
+	UFUNCTION(Pure, Category="Actor|Components")
 	TArray<UActorComponent*> GetComponents() const;
 
 	UFUNCTION(Pure, Category="Actor|Components")
@@ -141,7 +142,9 @@ public:
 	void AddTag(const FName& Tag);
 	UFUNCTION(Callable, Category="Actor|Tags")
 	void RemoveTag(const FName& Tag);
-	const TArray<FName>& GetTags() const { return Tags; }
+	UFUNCTION(Pure, Category="Actor|Tags")
+	TArray<FName> GetTags() const { return Tags; }
+	UFUNCTION(Callable, Category="Actor|Tags")
 	void SetTags(TArray<FName> InTags);
 
 	// Tick 필요 여부 — false면 Tick 호출 자체를 건너뜀 (StaticMesh 등)

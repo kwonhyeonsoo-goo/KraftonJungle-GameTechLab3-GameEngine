@@ -18,6 +18,95 @@ class UAnimSequenceBase;
 class UClass;
 class UPhysicsAsset;
 
+UENUM()
+enum class ERagdollRecoveryPhase : uint8
+{
+    None,
+    BlendOutFromPhysics,
+    PlayingStandUp,
+    HoldingFinalPose,
+    Completed,
+};
+
+UENUM()
+enum class ERagdollStandUpType : uint8
+{
+    Unknown,
+    FaceUp,
+    FaceDown,
+};
+
+UENUM()
+enum class ERagdollMode : uint8
+{
+    None,
+    FullBody,
+    Partial,
+};
+
+UENUM()
+enum class EPartialRagdollPreset : uint8
+{
+    UpperBody,
+    LeftArm,
+    RightArm,
+    HeadNeck,
+};
+
+enum class EPartialRagdollPhase : uint8
+{
+    None,
+    BlendingIn,
+    Active,
+    BlendingOut,
+};
+
+struct FPartialRagdollSelection
+{
+    FName RootBoneName = FName::None;
+    bool bIncludeDescendants = true;
+
+    bool IsValid() const
+    {
+        return RootBoneName != FName::None;
+    }
+};
+
+struct FPartialRagdollRequest
+{
+    EPartialRagdollPreset Preset = EPartialRagdollPreset::UpperBody;
+    float HoldTimeOverride = -1.0f;
+    bool bAllowRefreshIfSamePreset = true;
+    bool bAllowWhileMoving = true;
+
+    bool HasHoldTimeOverride() const
+    {
+        return HoldTimeOverride >= 0.0f;
+    }
+};
+
+struct FPartialRagdollHitReactionRequest
+{
+    EPartialRagdollPreset PreferredPreset = EPartialRagdollPreset::UpperBody;
+    FName HitBoneName = FName::None;
+    FVector HitWorldLocation = FVector::ZeroVector;
+    FVector HitWorldDirection = FVector::ZeroVector;
+    float Strength = 0.5f;
+    float HoldTimeOverride = -1.0f;
+    bool bUsePreferredPreset = false;
+    bool bAllowEscalationToFullBody = false;
+
+    bool HasHitBone() const
+    {
+        return HitBoneName != FName::None;
+    }
+
+    bool HasHoldTimeOverride() const
+    {
+        return HoldTimeOverride >= 0.0f;
+    }
+};
+
 // SkeletalMesh 전용 render proxy만 제공하는 얇은 wrapper.
 // Skinning/bone/material/bounds 상태는 모두 USkinnedMeshComponent가 소유한다.
 UCLASS()
@@ -31,6 +120,8 @@ public:
     // Render access 섹션: SceneProxy
     FPrimitiveSceneProxy* CreateSceneProxy() override;
     void TickClothSimulationForEditorPreview(float DeltaTime);
+    void ResetClothSimulation();
+    void SetClothPreviewWindOverride(bool bEnable, const FVector& WorldWindVelocity);
 
     // Mesh 가 바뀌면 AnimInstance 도 새 SkeletalMesh 기준으로 재구성해야 하므로 override.
     UFUNCTION(Callable, Category="Mesh")
@@ -57,16 +148,48 @@ public:
     // code and keep this component as the policy owner.
     UFUNCTION(Callable, Category="Physics")
     bool EnableRagdollPhysics();
+    // Gameplay should prefer TriggerPartialRagdoll() so preset resolution and request
+    // policy remain centralized, while these low-level entry points stay available for
+    // tests or specialized callers.
+    bool EnablePartialRagdoll(const FPartialRagdollSelection& Selection);
+    UFUNCTION(Callable, Category="Physics")
+    bool EnablePartialRagdoll(const FName& RootBoneName);
+    bool TriggerPartialRagdoll(const FPartialRagdollRequest& Request);
+    bool TriggerPartialRagdollHitReaction(const FPartialRagdollHitReactionRequest& Request);
     UFUNCTION(Callable, Category="Physics")
     void DisableRagdollPhysics();
+    UFUNCTION(Callable, Category="Physics")
+    void DisablePartialRagdoll();
+    UFUNCTION(Callable, Category="Physics")
+    bool BeginRagdollRecovery();
     UFUNCTION(Pure, Category="Physics")
     bool IsRagdollActive() const;
+    UFUNCTION(Pure, Category="Physics")
+    bool IsPartialRagdollActive() const;
+    ERagdollMode GetRagdollMode() const { return ActiveRagdollMode; }
+    EPartialRagdollPhase GetPartialRagdollPhase() const { return PartialRagdollPhase; }
+    float GetPartialRagdollHoldRemaining() const { return PartialRagdollHoldRemaining; }
+    bool IsPartialRagdollBlendOutPending() const { return bPendingPartialRagdollBlendOut; }
+    FName GetActivePartialRagdollRootBoneName() const { return ActivePartialRagdollSelection.RootBoneName; }
+    EPartialRagdollPreset GetLastPartialHitReactionPreset() const { return LastPartialHitReactionPreset; }
+    FName GetLastPartialHitReactionHitBoneName() const { return LastPartialHitReactionHitBoneName; }
+    FName GetLastPartialHitReactionRootBoneName() const { return LastPartialHitReactionRootBoneName; }
+    FName GetLastPartialHitReactionTargetBoneName() const { return LastPartialHitReactionTargetBoneName; }
+    float GetLastPartialHitReactionStrength() const { return LastPartialHitReactionStrength; }
+    float GetLastPartialHitReactionHoldTime() const { return LastPartialHitReactionHoldTime; }
+    float GetLastPartialHitReactionImpulseMagnitude() const { return LastPartialHitReactionImpulseMagnitude; }
+    const FVector& GetLastPartialHitReactionDirection() const { return LastPartialHitReactionDirection; }
+    bool WasLastPartialHitReactionEscalationCandidate() const { return bLastPartialHitReactionEscalationCandidate; }
+    UFUNCTION(Pure, Category="Physics")
+    bool IsRecoveringFromRagdoll() const { return RecoveryPhase != ERagdollRecoveryPhase::None; }
     UFUNCTION(Pure, Category="Physics")
     int32 GetLiveRagdollBodyCount() const;
     UFUNCTION(Pure, Category="Physics")
     int32 GetLiveRagdollConstraintCount() const;
     UFUNCTION(Pure, Category="Physics")
     UPhysicsAsset* GetActivePhysicsAsset() const;
+    UFUNCTION(Pure, Category="Physics")
+    float GetPhysicsAssetBlendWeight() const { return PhysicsPoseBlendWeight; }
     UFUNCTION(Callable, Category="Physics")
     bool CreatePhysicsAssetInstanceBodies();
     UFUNCTION(Callable, Category="Physics")
@@ -75,8 +198,8 @@ public:
     void SetUsePhysicsAssetPose(bool bEnable);
     UFUNCTION(Pure, Category="Physics")
     bool IsUsingPhysicsAssetPose() const { return bUsePhysicsAssetPose; }
-    // First-pass ragdoll sync uses full pose override. Blending and partial-body policies
-    // intentionally live in later gameplay-facing passes.
+    // Physics pose now blends against the current animation pose so ragdoll entry/exit can
+    // transition smoothly without changing runtime ownership boundaries.
     bool ApplyPhysicsAssetPose();
 
     // SingleNode 재생 편의 API.
@@ -149,6 +272,27 @@ protected:
     void TickClothSimulation(float DeltaTime);
 
 private:
+    bool ShouldAdvanceAnimationDuringTick() const;
+    bool ShouldBlockExternalAnimationControl() const;
+    bool CaptureRagdollPoseBaseline();
+    void ClearRagdollPoseBaseline();
+    bool BuildPartialRagdollBoneMasks(const FPartialRagdollSelection& Selection);
+    bool BuildPartialRagdollSelectionFromPreset(EPartialRagdollPreset Preset, FPartialRagdollSelection& OutSelection) const;
+    bool ResolvePartialRagdollPresetFromHitBone(const FName& HitBoneName, EPartialRagdollPreset& OutPreset) const;
+    void ClearPartialRagdollState();
+    bool IsSamePartialRagdollSelection(const FPartialRagdollSelection& Selection) const;
+    void BeginPartialRagdollBlendOut();
+    void ResetPhysicsPoseBlendState();
+    void UpdatePhysicsPoseBlend(float DeltaTime);
+    void ResetRagdollRecoveryState();
+    bool CaptureRagdollRecoverySnapshot();
+    ERagdollStandUpType EvaluateRagdollRecoveryOrientation() const;
+    bool CanUseStandUpAnimation(UAnimSequenceBase* InAsset) const;
+    UAnimSequenceBase* SelectStandUpAnimation();
+    bool StartStandUpAnimation();
+    bool IsStandUpAnimationFinished() const;
+    void RestorePostRecoveryAnimationState();
+    void FinishRagdollRecovery();
     void LoadAnimationFromPath();
     bool CanUsePhysicsAsset(UPhysicsAsset* InPhysicsAsset, FSkeletonCompatibilityReport* OutReport = nullptr) const;
 
@@ -167,8 +311,71 @@ protected:
     // rigid body/constraint handles stay inside FPhysicsAssetInstance.
     UPROPERTY(Edit, Save, Category="Physics", DisplayName="Physics Asset Override", AssetType="PhysicsAsset")
     FSoftObjectPtr PhysicsAssetOverridePath = "None";
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Ragdoll Blend In Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float RagdollBlendInTime = 0.15f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Ragdoll Recovery Blend Out Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float RagdollRecoveryBlendOutTime = 0.3f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Ragdoll First Valid Pose Blend In Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float RagdollFirstValidPoseBlendInTime = 0.08f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Ragdoll Completion Hold Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float RagdollCompletionHoldTime = 0.05f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Ragdoll Fallback Hold Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float RagdollFallbackHoldTime = 0.12f;
+    UPROPERTY(Edit, Save, Category="Physics|Partial Ragdoll", DisplayName="Partial Ragdoll Blend In Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float PartialRagdollBlendInTime = 0.08f;
+    UPROPERTY(Edit, Save, Category="Physics|Partial Ragdoll", DisplayName="Partial Ragdoll Blend Out Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float PartialRagdollBlendOutTime = 0.14f;
+    UPROPERTY(Edit, Save, Category="Physics|Partial Ragdoll", DisplayName="Partial Ragdoll Hold Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float PartialRagdollHoldTime = 0.18f;
+    UPROPERTY(Edit, Save, Category="Physics|Partial Ragdoll", DisplayName="Partial First Valid Pose Blend In Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float PartialFirstValidPoseBlendInTime = 0.04f;
+    // FaceDown means prone/front get-up. FaceUp means supine/back get-up.
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Front Stand Up Animation", AssetType="UAnimSequence")
+    FSoftObjectPtr FrontStandUpAnimationPath = "None";
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Back Stand Up Animation", AssetType="UAnimSequence")
+    FSoftObjectPtr BackStandUpAnimationPath = "None";
     mutable TWeakObjectPtr<UPhysicsAsset> PhysicsAssetOverride;
     std::unique_ptr<FPhysicsAssetInstance> PhysicsAssetInstance;
     std::unique_ptr<FSkeletalClothRuntime> ClothRuntime;
+    FVector ClothPreviewWorldWindVelocity = FVector::ZeroVector;
+    bool bClothPreviewWindOverride = false;
     bool bUsePhysicsAssetPose = false;
+    bool bAllowInternalRagdollAnimationControl = false;
+    ERagdollMode ActiveRagdollMode = ERagdollMode::None;
+    FPartialRagdollSelection ActivePartialRagdollSelection;
+    int32 PartialRootBoneIndex = -1;
+    int32 PartialBoundaryParentBoneIndex = -1;
+    TArray<uint8> PartialSimulatedBoneMask;
+    TArray<uint8> PartialPhysicsApplyBoneMask;
+    EPartialRagdollPhase PartialRagdollPhase = EPartialRagdollPhase::None;
+    bool bPendingPartialRagdollBlendOut = false;
+    float PendingPartialRagdollHoldTimeOverride = -1.0f;
+    float PartialRagdollHoldRemaining = 0.0f;
+    EPartialRagdollPreset LastPartialHitReactionPreset = EPartialRagdollPreset::UpperBody;
+    FName LastPartialHitReactionHitBoneName = FName::None;
+    FName LastPartialHitReactionRootBoneName = FName::None;
+    FName LastPartialHitReactionTargetBoneName = FName::None;
+    float LastPartialHitReactionStrength = 0.0f;
+    float LastPartialHitReactionHoldTime = 0.0f;
+    float LastPartialHitReactionImpulseMagnitude = 0.0f;
+    FVector LastPartialHitReactionDirection = FVector::ZeroVector;
+    bool bLastPartialHitReactionEscalationCandidate = false;
+    float PhysicsPoseBlendWeight = 0.0f;
+    float TargetPhysicsPoseBlendWeight = 0.0f;
+    TArray<FTransform> RagdollBaselineComponentSpacePose;
+    TArray<FTransform> RagdollBaselineLocalPose;
+    bool bHasReceivedValidPhysicsPose = false;
+    float FirstValidPhysicsPoseBlendAlpha = 0.0f;
+    float RecoveryCompletionHoldRemaining = 0.0f;
+    // Recovery keeps blend-out and stand-up playback as separate phases so physics teardown
+    // does not race against animation takeover.
+    ERagdollRecoveryPhase RecoveryPhase = ERagdollRecoveryPhase::None;
+    ERagdollStandUpType SelectedStandUpType = ERagdollStandUpType::Unknown;
+    FTransform RecoveryPelvisWorldTransform;
+    FTransform RecoveryChestWorldTransform;
+    UAnimSequenceBase* SelectedStandUpAnimation = nullptr;
+    bool bHasSavedPostRecoveryAnimationState = false;
+    EAnimationMode SavedPostRecoveryAnimationMode = EAnimationMode::None;
+    FSingleAnimationPlayData SavedPostRecoveryAnimationData;
+    TSubclassOf<UAnimInstance> SavedPostRecoveryAnimInstanceClass;
 };

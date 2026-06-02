@@ -80,7 +80,7 @@ public:
 	// IgnoreActor: 자기 자신/소유 액터를 제외할 때 사용.
 	virtual bool Raycast(const FVector& Start, const FVector& Dir, float MaxDist, FHitResult& OutHit,
 		ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
-		const AActor* IgnoreActor = nullptr) const = 0;
+		const AActor* IgnoreActor = nullptr) = 0;
 
 	// ObjectType 기반 Raycast — UE의 LineTraceSingleByObjectType 대응.
 	//   ObjectTypeMask: bit i = ECollisionChannel(i)의 shape를 hit 후보로 둘지.
@@ -90,7 +90,7 @@ public:
 	//   예: 바닥 detection 은 ObjectTypeBit(WorldStatic) 만 → 다이내믹/폰을 바닥으로 잘못 잡지 않음.
 	// Trigger flag shape는 physics query 단계에서 자동 제외된다.
 	virtual bool RaycastByObjectTypes(const FVector& Start, const FVector& Dir, float MaxDist, FHitResult& OutHit,
-		uint32 ObjectTypeMask, const AActor* IgnoreActor = nullptr) const = 0;
+		uint32 ObjectTypeMask, const AActor* IgnoreActor = nullptr) = 0;
 
     virtual uint32 GetComponentGeneration_GameThread(uint32 /*ComponentId*/) const
     {

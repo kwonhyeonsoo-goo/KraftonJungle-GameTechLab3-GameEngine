@@ -203,19 +203,56 @@ struct FSkeletalClothPaintData
 	}
 };
 
+inline constexpr uint32 SkeletalMeshClothPayloadCurrentVersion = 3;
+
 struct FSkeletalClothConfig
 {
 	float GravityScale = 1.0f;
 	float SolverFrequency = 120.0f;
 	float Stiffness = 1.0f;
 	float Damping = 0.04f;
+	float WindScale = 1.0f;
+	float DragCoefficient = 0.1f;
+	float LiftCoefficient = 0.0f;
+	float FluidDensity = 1.0f;
+	float InertiaLinearScale = 1.0f;
+	float InertiaAngularScale = 1.0f;
+
+	void Serialize(FArchive& Ar, uint32 PayloadVersion)
+	{
+		Ar << GravityScale;
+		Ar << SolverFrequency;
+		Ar << Stiffness;
+		Ar << Damping;
+		if (PayloadVersion >= 2)
+		{
+			Ar << WindScale;
+			Ar << DragCoefficient;
+			Ar << LiftCoefficient;
+			Ar << FluidDensity;
+		}
+		else if (Ar.IsLoading())
+		{
+			WindScale = 1.0f;
+			DragCoefficient = 0.1f;
+			LiftCoefficient = 0.0f;
+			FluidDensity = 1.0f;
+		}
+		if (PayloadVersion >= 3)
+		{
+			Ar << InertiaLinearScale;
+			Ar << InertiaAngularScale;
+		}
+		else if (Ar.IsLoading())
+		{
+			InertiaLinearScale = 1.0f;
+			InertiaAngularScale = 1.0f;
+		}
+	}
 
 	friend FArchive& operator<<(FArchive& Ar, FSkeletalClothConfig& Config)
 	{
-		Ar << Config.GravityScale;
-		Ar << Config.SolverFrequency;
-		Ar << Config.Stiffness;
-		Ar << Config.Damping;
+		Config.Serialize(Ar, SkeletalMeshClothPayloadCurrentVersion);
 		return Ar;
 	}
 };
@@ -232,17 +269,22 @@ struct FSkeletalClothData
 	FSkeletalClothConfig Config;
 	TArray<uint8> CookedFabricData;
 
+	void Serialize(FArchive& Ar, uint32 PayloadVersion)
+	{
+		Ar << Name;
+		Ar << bEnabled;
+		Ar << Binding;
+		Ar << RenderVertexIndices;
+		Ar << ParticleToRenderVertex;
+		Ar << ClothLocalIndices;
+		Ar << Paint;
+		Config.Serialize(Ar, PayloadVersion);
+		Ar << CookedFabricData;
+	}
+
 	friend FArchive& operator<<(FArchive& Ar, FSkeletalClothData& Cloth)
 	{
-		Ar << Cloth.Name;
-		Ar << Cloth.bEnabled;
-		Ar << Cloth.Binding;
-		Ar << Cloth.RenderVertexIndices;
-		Ar << Cloth.ParticleToRenderVertex;
-		Ar << Cloth.ClothLocalIndices;
-		Ar << Cloth.Paint;
-		Ar << Cloth.Config;
-		Ar << Cloth.CookedFabricData;
+		Cloth.Serialize(Ar, SkeletalMeshClothPayloadCurrentVersion);
 		return Ar;
 	}
 };
@@ -252,23 +294,54 @@ struct FSkeletalClothLODData
 	uint32 LODIndex = 0;
 	TArray<FSkeletalClothData> Cloths;
 
+	void Serialize(FArchive& Ar, uint32 PayloadVersion)
+	{
+		Ar << LODIndex;
+
+		uint32 ClothCount = static_cast<uint32>(Cloths.size());
+		Ar << ClothCount;
+		if (Ar.IsLoading())
+		{
+			Cloths.resize(ClothCount);
+		}
+		for (FSkeletalClothData& Cloth : Cloths)
+		{
+			Cloth.Serialize(Ar, PayloadVersion);
+		}
+	}
+
 	friend FArchive& operator<<(FArchive& Ar, FSkeletalClothLODData& LODData)
 	{
-		Ar << LODData.LODIndex;
-		Ar << LODData.Cloths;
+		LODData.Serialize(Ar, SkeletalMeshClothPayloadCurrentVersion);
 		return Ar;
 	}
 };
 
 struct FSkeletalMeshClothPayload
 {
-	uint32 Version = 1;
+	static constexpr uint32 CurrentVersion = SkeletalMeshClothPayloadCurrentVersion;
+
+	uint32 Version = CurrentVersion;
 	TArray<FSkeletalClothLODData> LODs;
 
 	friend FArchive& operator<<(FArchive& Ar, FSkeletalMeshClothPayload& Payload)
 	{
+		if (Ar.IsSaving())
+		{
+			Payload.Version = CurrentVersion;
+		}
 		Ar << Payload.Version;
-		Ar << Payload.LODs;
+
+		uint32 LODCount = static_cast<uint32>(Payload.LODs.size());
+		Ar << LODCount;
+		if (Ar.IsLoading())
+		{
+			Payload.LODs.resize(LODCount);
+		}
+		for (FSkeletalClothLODData& LODData : Payload.LODs)
+		{
+			LODData.Serialize(Ar, Payload.Version);
+		}
 		return Ar;
 	}
 };

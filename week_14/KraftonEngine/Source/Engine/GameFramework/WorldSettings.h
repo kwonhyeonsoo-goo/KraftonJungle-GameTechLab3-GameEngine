@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Types/CoreTypes.h"
+#include "Math/Vector.h"
 
 // ============================================================
 // FWorldSettings — UWorld 단위 (= Scene 파일 단위) 의 게임 설정.
@@ -17,4 +18,7 @@ struct FWorldSettings
 	// 비우면 ProjectSettings.GameModeClassName 또는 코드 default 가 fallback.
 	// 채우면 LoadSceneFromPath 가 UClass::FindByName 으로 resolve.
 	FString GameModeClassName;
+
+	// World-space gravity in m/s^2. Legacy scenes without this field use earth gravity.
+	FVector Gravity = FVector(0.0f, 0.0f, -9.81f);
 };

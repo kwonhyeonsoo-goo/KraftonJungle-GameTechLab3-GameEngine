@@ -68,5 +68,11 @@ void EditorWorldSettingsWidget::Render()
 		ImGui::TextDisabled("Save scene + reload to apply.");
 	}
 
+	if (ImGui::CollapsingHeader("Physics", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		ImGui::DragFloat3("Gravity", WS.Gravity.Data, 0.01f, -100.0f, 100.0f, "%.2f");
+		ImGui::TextDisabled("m/s^2, saved with the current scene.");
+	}
+
 	ImGui::End();
 }

@@ -61,8 +61,10 @@ public:
 	inline bool IsActive() { return bIsActive; }
 
 	void SetOwner(AActor* Actor);
+	UFUNCTION(Pure, Category="Component|Owner")
 	AActor* GetOwner() const { return Owner.Get(); }
 	AActor* GetOwnerEvenIfPendingKill() const { return Owner.GetEvenIfPendingKill(); }
+	UFUNCTION(Pure, Category="Component|World")
 	UWorld* GetWorld() const;
 	UWorld* GetWorldEvenIfPendingKill() const;
 

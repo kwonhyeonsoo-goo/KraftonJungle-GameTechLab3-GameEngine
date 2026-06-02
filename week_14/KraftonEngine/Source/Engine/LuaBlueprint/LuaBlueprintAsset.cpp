@@ -1,17 +1,20 @@
 #include "LuaBlueprint/LuaBlueprintAsset.h"
 #include "Input/InputKeyCodes.h"
 
+#include "Core/Types/PropertyTypes.h"
 #include "LuaBlueprint/LuaBlueprintCompiler.h"
 #include "Object/GarbageCollection.h"
+#include "Object/Reflection/UClass.h"
 #include "Serialization/Archive.h"
 
 #include <algorithm>
+#include <cstring>
 
 namespace
 {
     constexpr uint32 LuaBlueprintAssetMagic         = 0x4C425031; // LBP1
-    constexpr uint32 LuaBlueprintAssetFormatVersion = 3;
-    constexpr uint32 LuaBlueprintCompilerVersion    = 4;
+    constexpr uint32 LuaBlueprintAssetFormatVersion = 4;
+    constexpr uint32 LuaBlueprintCompilerVersion    = 10;
 }
 
 FArchive& operator<<(FArchive& Ar, TArray<FLuaBlueprintPin>& Array);
@@ -250,6 +253,10 @@ namespace
             return "Normalize";
         case ELuaBlueprintNodeType::SpawnActor:
             return "Spawn Actor";
+        case ELuaBlueprintNodeType::SpawnPawn:
+            return "Spawn Pawn";
+        case ELuaBlueprintNodeType::SpawnPawnAndPossess:
+            return "Spawn Pawn and Possess";
         case ELuaBlueprintNodeType::DestroyActor:
             return "Destroy Actor";
         case ELuaBlueprintNodeType::FindActorByName:
@@ -304,12 +311,38 @@ namespace
             return "Is Pawn Possessed";
         case ELuaBlueprintNodeType::GetInputComponent:
             return "Get Input Component";
+        case ELuaBlueprintNodeType::VehicleSetThrottle:
+            return "Vehicle Set Throttle";
+        case ELuaBlueprintNodeType::VehicleSetBrake:
+            return "Vehicle Set Brake";
+        case ELuaBlueprintNodeType::VehicleSetSteering:
+            return "Vehicle Set Steering";
+        case ELuaBlueprintNodeType::VehicleSetHandbrake:
+            return "Vehicle Set Handbrake";
+        case ELuaBlueprintNodeType::VehicleReset:
+            return "Vehicle Reset";
+        case ELuaBlueprintNodeType::VehicleGetForwardSpeed:
+            return "Vehicle Get Forward Speed";
+        case ELuaBlueprintNodeType::ParticleSetTemplateByPath:
+            return "Particle Set Template By Path";
+        case ELuaBlueprintNodeType::ParticleActivate:
+            return "Particle Activate";
+        case ELuaBlueprintNodeType::ParticleDeactivate:
+            return "Particle Deactivate";
+        case ELuaBlueprintNodeType::ParticleReset:
+            return "Particle Reset";
+        case ELuaBlueprintNodeType::ParticleRebuild:
+            return "Particle Rebuild";
+        case ELuaBlueprintNodeType::ParticleSetLOD:
+            return "Particle Set LOD";
         case ELuaBlueprintNodeType::IsValid:
             return "Is Valid";
         case ELuaBlueprintNodeType::Cast:
             return "Cast";
         case ELuaBlueprintNodeType::GetRootComponent:
             return "Get Root Component";
+        case ELuaBlueprintNodeType::GetRootPrimitiveComponent:
+            return "Get Root Primitive Component";
         case ELuaBlueprintNodeType::GetComponentByName:
             return "Get Component by Name";
         case ELuaBlueprintNodeType::GetPrimitiveComponent:
@@ -392,8 +425,147 @@ namespace
             return "Unbind Event";
         case ELuaBlueprintNodeType::HasEventBinding:
             return "Has Event Binding";
+        case ELuaBlueprintNodeType::SetTimer:
+            return "Set Timer";
+        case ELuaBlueprintNodeType::ClearTimer:
+            return "Clear Timer";
+        case ELuaBlueprintNodeType::IsTimerActive:
+            return "Is Timer Active";
+        case ELuaBlueprintNodeType::SetTimerForNextTick:
+            return "Set Timer For Next Tick";
+        case ELuaBlueprintNodeType::LineTrace:
+            return "Line Trace";
+        case ELuaBlueprintNodeType::CreateWidget:
+            return "Create Widget";
+        case ELuaBlueprintNodeType::AddWidgetToViewport:
+            return "Add Widget To Viewport";
+        case ELuaBlueprintNodeType::RemoveWidgetFromParent:
+            return "Remove Widget From Parent";
+        case ELuaBlueprintNodeType::SetWidgetText:
+            return "Set Widget Text";
+        case ELuaBlueprintNodeType::BindWidgetClick:
+            return "Bind Widget Click";
+        case ELuaBlueprintNodeType::LoadAudio:
+            return "Load Audio";
+        case ELuaBlueprintNodeType::PlaySound:
+            return "Play Sound";
+        case ELuaBlueprintNodeType::PlayBGM:
+            return "Play BGM";
+        case ELuaBlueprintNodeType::StopBGM:
+            return "Stop BGM";
+        case ELuaBlueprintNodeType::PlayAudioLoop:
+            return "Play Audio Loop";
+        case ELuaBlueprintNodeType::StopAudioLoop:
+            return "Stop Audio Loop";
+        case ELuaBlueprintNodeType::SetAudioMasterVolume:
+            return "Set Audio Master Volume";
         }
         return "Node";
+    }
+
+    bool IsLuaBlueprintObjectLikePinType(ELuaBlueprintPinType Type)
+    {
+        switch (Type)
+        {
+        case ELuaBlueprintPinType::Object:
+        case ELuaBlueprintPinType::Actor:
+        case ELuaBlueprintPinType::Pawn:
+        case ELuaBlueprintPinType::PlayerController:
+        case ELuaBlueprintPinType::ActorComponent:
+        case ELuaBlueprintPinType::SceneComponent:
+        case ELuaBlueprintPinType::PrimitiveComponent:
+        case ELuaBlueprintPinType::Class:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    ELuaBlueprintPinType LuaBlueprintPinTypeFromProperty(const FProperty* Property)
+    {
+        if (!Property)
+        {
+            return ELuaBlueprintPinType::Any;
+        }
+
+        switch (Property->GetType())
+        {
+        case EPropertyType::Bool:
+        case EPropertyType::ByteBool:
+            return ELuaBlueprintPinType::Bool;
+        case EPropertyType::Int:
+            return ELuaBlueprintPinType::Int;
+        case EPropertyType::Float:
+            return ELuaBlueprintPinType::Float;
+        case EPropertyType::String:
+            return ELuaBlueprintPinType::String;
+        case EPropertyType::Name:
+            return ELuaBlueprintPinType::Name;
+        case EPropertyType::Vec3:
+            return ELuaBlueprintPinType::Vector;
+        case EPropertyType::Rotator:
+            return ELuaBlueprintPinType::Rotator;
+        case EPropertyType::Vec4:
+            return ELuaBlueprintPinType::Vector4;
+        case EPropertyType::Color4:
+            return ELuaBlueprintPinType::LinearColor;
+        case EPropertyType::ObjectRef:
+            return ELuaBlueprintPinType::Object;
+        case EPropertyType::ClassRef:
+            return ELuaBlueprintPinType::Class;
+        case EPropertyType::Enum:
+            return ELuaBlueprintPinType::Enum;
+        case EPropertyType::Array:
+            return ELuaBlueprintPinType::Array;
+        case EPropertyType::Struct:
+        case EPropertyType::SoftObjectRef:
+        default:
+            return ELuaBlueprintPinType::Any;
+        }
+    }
+
+    const FFunction* FindLuaBlueprintFunctionBySignature(const FString& Signature)
+    {
+        if (Signature.empty())
+        {
+            return nullptr;
+        }
+
+        for (UClass* Class : UClass::GetAllClasses())
+        {
+            if (!Class)
+            {
+                continue;
+            }
+            if (const FFunction* Function = Class->FindFunctionBySignature(Signature.c_str(), true))
+            {
+                return Function;
+            }
+        }
+
+        for (UClass* Class : UClass::GetAllClasses())
+        {
+            if (!Class)
+            {
+                continue;
+            }
+            if (const FFunction* Function = Class->FindFunctionByName(Signature.c_str(), true))
+            {
+                return Function;
+            }
+        }
+        return nullptr;
+    }
+
+    FLuaBlueprintPin MakeLuaBlueprintPin(uint32 PinId, uint32 OwningNodeId, ELuaBlueprintPinKind Kind, ELuaBlueprintPinType Type, const FName& DisplayName)
+    {
+        FLuaBlueprintPin Pin;
+        Pin.PinId        = PinId;
+        Pin.OwningNodeId = OwningNodeId;
+        Pin.Kind         = Kind;
+        Pin.Type         = Type;
+        Pin.DisplayName  = DisplayName;
+        return Pin;
     }
 }
 
@@ -415,7 +587,7 @@ FLuaBlueprintPin* ULuaBlueprintAsset::AddPin(
     ELuaBlueprintPinKind Kind,
     ELuaBlueprintPinType PinType,
     const FName&         DisplayName
-    )
+)
 {
     FLuaBlueprintPin Pin;
     Pin.PinId        = AllocateId();
@@ -427,7 +599,6 @@ FLuaBlueprintPin* ULuaBlueprintAsset::AddPin(
     BumpVersion();
     return &Node.Pins.back();
 }
-
 
 namespace
 {
@@ -442,6 +613,18 @@ namespace
         case ELuaBlueprintPinType::Vector:
         case ELuaBlueprintPinType::Object:
         case ELuaBlueprintPinType::Array:
+        case ELuaBlueprintPinType::Actor:
+        case ELuaBlueprintPinType::Pawn:
+        case ELuaBlueprintPinType::PlayerController:
+        case ELuaBlueprintPinType::ActorComponent:
+        case ELuaBlueprintPinType::SceneComponent:
+        case ELuaBlueprintPinType::PrimitiveComponent:
+        case ELuaBlueprintPinType::Rotator:
+        case ELuaBlueprintPinType::LinearColor:
+        case ELuaBlueprintPinType::Vector4:
+        case ELuaBlueprintPinType::Class:
+        case ELuaBlueprintPinType::Enum:
+        case ELuaBlueprintPinType::Name:
             return Type;
         default:
             return ELuaBlueprintPinType::Float;
@@ -451,9 +634,16 @@ namespace
 
 FLuaBlueprintLink* ULuaBlueprintAsset::AddLink(uint32 FromPinId, uint32 ToPinId)
 {
-    // 데이터 입력 핀은 fan-in 1개 — 새 연결이 기존 연결을 덮어쓴다(UE Blueprint 동작).
-    // Exec 입력은 여러 곳에서 같은 노드를 실행할 수 있으므로 fan-in 다중 허용(덮어쓰지 않음).
-    if (const FLuaBlueprintPin* ToPin = FindPin(ToPinId))
+    RefreshAllNodePinTypes();
+
+    uint32 ResolvedFromPinId = 0;
+    uint32 ResolvedToPinId   = 0;
+    if (!CanLinkPins(FromPinId, ToPinId, &ResolvedFromPinId, &ResolvedToPinId))
+    {
+        return nullptr;
+    }
+
+    if (const FLuaBlueprintPin* ToPin = FindPin(ResolvedToPinId))
     {
         if (ToPin->Kind == ELuaBlueprintPinKind::Input && ToPin->Type != ELuaBlueprintPinType::Exec)
         {
@@ -461,7 +651,10 @@ FLuaBlueprintLink* ULuaBlueprintAsset::AddLink(uint32 FromPinId, uint32 ToPinId)
                 std::remove_if(
                     Links.begin(),
                     Links.end(),
-                    [ToPinId](const FLuaBlueprintLink& Existing) { return Existing.ToPinId == ToPinId; }
+                    [ResolvedToPinId](const FLuaBlueprintLink& Existing)
+                    {
+                        return Existing.ToPinId == ResolvedToPinId;
+                    }
                 ),
                 Links.end()
             );
@@ -470,10 +663,10 @@ FLuaBlueprintLink* ULuaBlueprintAsset::AddLink(uint32 FromPinId, uint32 ToPinId)
 
     FLuaBlueprintLink Link;
     Link.LinkId    = AllocateId();
-    Link.FromPinId = FromPinId;
-    Link.ToPinId   = ToPinId;
+    Link.FromPinId = ResolvedFromPinId;
+    Link.ToPinId   = ResolvedToPinId;
     Links.push_back(std::move(Link));
-    ApplyResolvedPinTypesForLink(FromPinId, ToPinId);
+    ApplyResolvedPinTypesForLink(ResolvedFromPinId, ResolvedToPinId);
     BumpVersion();
     return &Links.back();
 }
@@ -522,31 +715,76 @@ bool ULuaBlueprintAsset::CanConvertPinTypes(ELuaBlueprintPinType FromType, ELuaB
     if (FromType == ELuaBlueprintPinType::Any || ToType == ELuaBlueprintPinType::Any) return true;
     if (FromType == ELuaBlueprintPinType::Exec || ToType == ELuaBlueprintPinType::Exec) return false;
 
-    // Numeric widening/narrowing은 Lua 쪽 helper가 안전하게 처리한다.
+    auto IsObjectLike = [](ELuaBlueprintPinType Type)
+    {
+        switch (Type)
+        {
+        case ELuaBlueprintPinType::Object:
+        case ELuaBlueprintPinType::Actor:
+        case ELuaBlueprintPinType::Pawn:
+        case ELuaBlueprintPinType::PlayerController:
+        case ELuaBlueprintPinType::ActorComponent:
+        case ELuaBlueprintPinType::SceneComponent:
+        case ELuaBlueprintPinType::PrimitiveComponent:
+        case ELuaBlueprintPinType::Class:
+            return true;
+        default:
+            return false;
+        }
+    };
+
+    auto IsDerivedObjectType = [](ELuaBlueprintPinType Derived, ELuaBlueprintPinType Base)
+    {
+        if (Derived == Base) return true;
+        if (Base == ELuaBlueprintPinType::Object)
+        {
+            return Derived == ELuaBlueprintPinType::Actor ||
+                    Derived == ELuaBlueprintPinType::Pawn ||
+                    Derived == ELuaBlueprintPinType::PlayerController ||
+                    Derived == ELuaBlueprintPinType::ActorComponent ||
+                    Derived == ELuaBlueprintPinType::SceneComponent ||
+                    Derived == ELuaBlueprintPinType::PrimitiveComponent;
+        }
+        if (Base == ELuaBlueprintPinType::Actor)
+        {
+            return Derived == ELuaBlueprintPinType::Pawn || Derived == ELuaBlueprintPinType::PlayerController;
+        }
+        if (Base == ELuaBlueprintPinType::ActorComponent)
+        {
+            return Derived == ELuaBlueprintPinType::SceneComponent || Derived == ELuaBlueprintPinType::PrimitiveComponent;
+        }
+        if (Base == ELuaBlueprintPinType::SceneComponent)
+        {
+            return Derived == ELuaBlueprintPinType::PrimitiveComponent;
+        }
+        return false;
+    };
+
+    // Strict object hierarchy: Actor and Component are not interchangeable.
+    if (IsObjectLike(FromType) || IsObjectLike(ToType))
+    {
+        return IsDerivedObjectType(FromType, ToType);
+    }
+
     if ((FromType == ELuaBlueprintPinType::Int && ToType == ELuaBlueprintPinType::Float) ||
         (FromType == ELuaBlueprintPinType::Float && ToType == ELuaBlueprintPinType::Int))
     {
         return true;
     }
-
-    // 표시/로그/Branch 편의를 위한 자동 변환. Object/Array -> Bool 은 IsValid/len 의미로 컴파일된다.
-    if (ToType == ELuaBlueprintPinType::String || ToType == ELuaBlueprintPinType::Bool)
-    {
-        return true;
-    }
-
-    // 숫자/문자열 -> 숫자, scalar -> vector splat, string -> vector parser helper 허용.
+    if (ToType == ELuaBlueprintPinType::String || ToType == ELuaBlueprintPinType::Bool) return true;
     if ((ToType == ELuaBlueprintPinType::Float || ToType == ELuaBlueprintPinType::Int) &&
-        (FromType == ELuaBlueprintPinType::String || FromType == ELuaBlueprintPinType::Bool))
-    {
+        (FromType == ELuaBlueprintPinType::String || FromType == ELuaBlueprintPinType::Bool || FromType == ELuaBlueprintPinType::Enum))
         return true;
-    }
+    if ((ToType == ELuaBlueprintPinType::Name || ToType == ELuaBlueprintPinType::Class || ToType == ELuaBlueprintPinType::Enum) &&
+        FromType == ELuaBlueprintPinType::String)
+        return true;
     if (ToType == ELuaBlueprintPinType::Vector &&
-        (FromType == ELuaBlueprintPinType::Float || FromType == ELuaBlueprintPinType::Int || FromType == ELuaBlueprintPinType::String))
-    {
+        (FromType == ELuaBlueprintPinType::Float || FromType == ELuaBlueprintPinType::Int || FromType == ELuaBlueprintPinType::String || FromType == ELuaBlueprintPinType::Rotator))
         return true;
-    }
-
+    if ((ToType == ELuaBlueprintPinType::Rotator || ToType == ELuaBlueprintPinType::Vector4 || ToType == ELuaBlueprintPinType::LinearColor) &&
+        (FromType == ELuaBlueprintPinType::Vector || FromType == ELuaBlueprintPinType::String))
+        return true;
+    if (ToType == ELuaBlueprintPinType::Any || FromType == ELuaBlueprintPinType::Any) return true;
     return false;
 }
 
@@ -603,14 +841,14 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
     case ELuaBlueprintNodeType::EventInputAction:
         N->NameValue = FName("Jump");
         N->StringValue = "Pressed";
-        N->IntValue = ResolveInputKeyCode("Space"); // 0이면 기존 ActionMapping 이름에만 bind.
+        N->IntValue    = ResolveInputKeyCode("Space"); // 0이면 기존 ActionMapping 이름에만 bind.
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
         break;
     case ELuaBlueprintNodeType::EventInputAxis:
         N->NameValue = FName("MoveForward");
         N->StringValue = "Key"; // Key, MouseX, MouseY, MouseWheel.
-        N->IntValue = 0;         // 0이면 기존 AxisMapping 이름에만 bind.
-        N->FloatValue = 1.0f;
+        N->IntValue    = 0;     // 0이면 기존 AxisMapping 이름에만 bind.
+        N->FloatValue  = 1.0f;
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Float, FName("Value"));
         break;
@@ -660,9 +898,10 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
     case ELuaBlueprintNodeType::CallFunctionSignature:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Target"));
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Any, FName("Arg0"));
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Any, FName("Arg1"));
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Any, FName("Arg2"));
+        for (int32 ArgIndex = 0; ArgIndex < 8; ++ArgIndex)
+        {
+            AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Any, FName(FString("Arg") + std::to_string(ArgIndex)));
+        }
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Any, FName("Result"));
         break;
@@ -780,30 +1019,42 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Vector, FName("Value"));
         break;
     case ELuaBlueprintNodeType::Self:
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("Actor"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Actor, FName("Actor"));
         break;
 
     // ── Actor ──
     case ELuaBlueprintNodeType::SpawnActor:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Vector, FName("Location"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Vector, FName("Rotation"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Vector, FName("Scale"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("Actor"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Actor, FName("Actor"));
+        break;
+    case ELuaBlueprintNodeType::SpawnPawn:
+    case ELuaBlueprintNodeType::SpawnPawnAndPossess:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Vector, FName("Location"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Vector, FName("Rotation"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Vector, FName("Scale"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Pawn, FName("Pawn"));
         break;
     case ELuaBlueprintNodeType::DestroyActor:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
         break;
     case ELuaBlueprintNodeType::FindActorByName:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("Name"));
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("Actor"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Actor, FName("Actor"));
         break;
     case ELuaBlueprintNodeType::FindActorByClass:
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("Actor"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Actor, FName("Actor"));
         break;
     case ELuaBlueprintNodeType::FindActorByTag:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("Tag"));
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("Actor"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Actor, FName("Actor"));
         break;
     case ELuaBlueprintNodeType::FindActorsByTag:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("Tag"));
@@ -817,7 +1068,7 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
     case ELuaBlueprintNodeType::GetActorScale:
     case ELuaBlueprintNodeType::GetActorForward:
     case ELuaBlueprintNodeType::GetActorRight:
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Vector, FName("Value"));
         break;
     case ELuaBlueprintNodeType::SetActorLocation:
@@ -825,24 +1076,24 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
     case ELuaBlueprintNodeType::SetActorScale:
     case ELuaBlueprintNodeType::AddActorWorldOffset:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Vector, FName("Value"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
         break;
     case ELuaBlueprintNodeType::ActorHasTag:
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("Tag"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Result"));
         break;
     case ELuaBlueprintNodeType::ActorAddTag:
     case ELuaBlueprintNodeType::ActorRemoveTag:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("Tag"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
         break;
     case ELuaBlueprintNodeType::GetActorName:
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::String, FName("Name"));
         break;
     case ELuaBlueprintNodeType::GetOwnerActor:
@@ -878,8 +1129,73 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Possessed"));
         break;
     case ELuaBlueprintNodeType::GetInputComponent:
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Pawn"));
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("InputComponent"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Pawn, FName("Pawn"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::ActorComponent, FName("InputComponent"));
+        break;
+
+    case ELuaBlueprintNodeType::AddForceToRoot:
+    case ELuaBlueprintNodeType::AddTorqueToRoot:
+    case ELuaBlueprintNodeType::AddImpulseToRoot:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Vector, FName("Vector"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::GetRootLinearVelocity:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Vector, FName("Velocity"));
+        break;
+    case ELuaBlueprintNodeType::SetRootLinearVelocity:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Vector, FName("Velocity"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::SetRootSimulatePhysics:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Bool, FName("Simulate"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+
+    case ELuaBlueprintNodeType::VehicleSetThrottle:
+    case ELuaBlueprintNodeType::VehicleSetBrake:
+    case ELuaBlueprintNodeType::VehicleSetSteering:
+    case ELuaBlueprintNodeType::VehicleSetHandbrake:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Float, FName("Value"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::VehicleReset:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::VehicleGetForwardSpeed:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Float, FName("Speed"));
+        break;
+
+    case ELuaBlueprintNodeType::ParticleSetTemplateByPath:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("Path"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::ParticleActivate:
+    case ELuaBlueprintNodeType::ParticleDeactivate:
+    case ELuaBlueprintNodeType::ParticleReset:
+    case ELuaBlueprintNodeType::ParticleRebuild:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::ParticleSetLOD:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Int, FName("LOD"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
         break;
 
     // ── Object utility ──
@@ -897,46 +1213,50 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
 
     // ── Component ──
     case ELuaBlueprintNodeType::GetRootComponent:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Actor"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::SceneComponent, FName("Component"));
+        break;
+    case ELuaBlueprintNodeType::GetRootPrimitiveComponent:
     case ELuaBlueprintNodeType::GetPrimitiveComponent:
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Actor"));
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("Component"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Actor"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::PrimitiveComponent, FName("Component"));
         break;
     case ELuaBlueprintNodeType::GetComponentByName:
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Actor"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("Actor"));
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("Name"));
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("Component"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::SceneComponent, FName("Component"));
         break;
     case ELuaBlueprintNodeType::ActivateComponent:
     case ELuaBlueprintNodeType::DeactivateComponent:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Component"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::ActorComponent, FName("Component"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
         break;
     case ELuaBlueprintNodeType::AddForce:
     case ELuaBlueprintNodeType::AddTorque:
     case ELuaBlueprintNodeType::AddImpulse:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Component"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::PrimitiveComponent, FName("Component"));
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Vector, FName("Vector"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
         break;
     case ELuaBlueprintNodeType::GetLinearVelocity:
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Component"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::PrimitiveComponent, FName("Component"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Vector, FName("Velocity"));
         break;
     case ELuaBlueprintNodeType::SetLinearVelocity:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Component"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::PrimitiveComponent, FName("Component"));
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Vector, FName("Velocity"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
         break;
     case ELuaBlueprintNodeType::GetMass:
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Component"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::PrimitiveComponent, FName("Component"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Float, FName("Mass"));
         break;
     case ELuaBlueprintNodeType::SetSimulatePhysics:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
-        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Component"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::PrimitiveComponent, FName("Component"));
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Bool, FName("Simulate"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
         break;
@@ -996,7 +1316,7 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
     case ELuaBlueprintNodeType::ForEachActorByTag:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Loop"));
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("Actor"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Actor, FName("Actor"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Int, FName("Index"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Completed"));
         break;
@@ -1021,19 +1341,19 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
         N->NameValue = FName("CustomEvent");
         // Function entry: Then 으로 본체 시작, Arg0..Arg3 는 caller 가 넘긴 파라미터.
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Any,  FName("Arg0"));
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Any,  FName("Arg1"));
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Any,  FName("Arg2"));
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Any,  FName("Arg3"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Any, FName("Arg0"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Any, FName("Arg1"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Any, FName("Arg2"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Any, FName("Arg3"));
         break;
     case ELuaBlueprintNodeType::CallCustomEvent:
         N->NameValue = FName("CustomEvent");
         // Caller: Arg0..Arg3 input 에 묶인 표현식을 함수 인자로 넘긴다.
-        AddPin(*N, ELuaBlueprintPinKind::Input,  ELuaBlueprintPinType::Exec, FName("In"));
-        AddPin(*N, ELuaBlueprintPinKind::Input,  ELuaBlueprintPinType::Any,  FName("Arg0"));
-        AddPin(*N, ELuaBlueprintPinKind::Input,  ELuaBlueprintPinType::Any,  FName("Arg1"));
-        AddPin(*N, ELuaBlueprintPinKind::Input,  ELuaBlueprintPinType::Any,  FName("Arg2"));
-        AddPin(*N, ELuaBlueprintPinKind::Input,  ELuaBlueprintPinType::Any,  FName("Arg3"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Any, FName("Arg0"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Any, FName("Arg1"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Any, FName("Arg2"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Any, FName("Arg3"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
         break;
     case ELuaBlueprintNodeType::Delay:
@@ -1041,6 +1361,120 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Float, FName("Seconds"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
         break;
+    case ELuaBlueprintNodeType::SetTimer:
+        N->NameValue = FName("CustomEvent");
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("TimerId"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Float, FName("Seconds"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Bool, FName("Looping"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::ClearTimer:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("TimerId"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::IsTimerActive:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("TimerId"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Active"));
+        break;
+    case ELuaBlueprintNodeType::SetTimerForNextTick:
+        N->NameValue = FName("CustomEvent");
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::LineTrace:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Vector, FName("Start"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Vector, FName("End"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Actor, FName("IgnoreActor"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Hit"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Actor, FName("Actor"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::PrimitiveComponent, FName("Component"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Vector, FName("Location"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Vector, FName("Normal"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Float, FName("Distance"));
+        break;
+    case ELuaBlueprintNodeType::CreateWidget:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("DocumentPath"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("Widget"));
+        break;
+    case ELuaBlueprintNodeType::AddWidgetToViewport:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Widget"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Int, FName("ZOrder"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::RemoveWidgetFromParent:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Widget"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::SetWidgetText:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Widget"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("ElementId"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("Text"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::BindWidgetClick:
+        N->NameValue = FName("CustomEvent");
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Widget"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("ElementId"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::LoadAudio:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("Key"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("Path"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Bool, FName("Loop"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Success"));
+        break;
+    case ELuaBlueprintNodeType::PlaySound:
+    case ELuaBlueprintNodeType::PlayBGM:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("Key"));
+        if (FLuaBlueprintPin* VolumePin = AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Float, FName("Volume")))
+        {
+            VolumePin->DefaultFloat = 1.0f;
+        }
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::StopBGM:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::PlayAudioLoop:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("Key"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("LoopName"));
+        if (FLuaBlueprintPin* VolumePin = AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Float, FName("Volume")))
+        {
+            VolumePin->DefaultFloat = 1.0f;
+        }
+        if (FLuaBlueprintPin* PitchPin = AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Float, FName("Pitch")))
+        {
+            PitchPin->DefaultFloat = 1.0f;
+        }
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::StopAudioLoop:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("LoopName"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::SetAudioMasterVolume:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        if (FLuaBlueprintPin* VolumePin = AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Float, FName("Volume")))
+        {
+            VolumePin->DefaultFloat = 1.0f;
+        }
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+
     case ELuaBlueprintNodeType::ToBool:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Any, FName("Value"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Result"));
@@ -1064,19 +1498,19 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
 
     // ── Delegates: NameValue 는 target 의 event/function 이름, StringValue 는 우리 CustomEvent 이름. ──
     case ELuaBlueprintNodeType::BindEvent:
-        AddPin(*N, ELuaBlueprintPinKind::Input,  ELuaBlueprintPinType::Exec,   FName("In"));
-        AddPin(*N, ELuaBlueprintPinKind::Input,  ELuaBlueprintPinType::Object, FName("Target"));
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec,   FName("Then"));
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool,   FName("Success"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Success"));
         break;
     case ELuaBlueprintNodeType::UnbindEvent:
-        AddPin(*N, ELuaBlueprintPinKind::Input,  ELuaBlueprintPinType::Exec,   FName("In"));
-        AddPin(*N, ELuaBlueprintPinKind::Input,  ELuaBlueprintPinType::Object, FName("Target"));
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec,   FName("Then"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
         break;
     case ELuaBlueprintNodeType::HasEventBinding:
-        AddPin(*N, ELuaBlueprintPinKind::Input,  ELuaBlueprintPinType::Object, FName("Target"));
-        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool,   FName("Bound"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, FName("Target"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Bound"));
         break;
     }
     return N;
@@ -1113,7 +1547,7 @@ void ULuaBlueprintAsset::InitializeDefault()
                 PrintInPin = Pin.PinId;
             }
             else if (Pin.Kind == ELuaBlueprintPinKind::Input && Pin.Type == ELuaBlueprintPinType::String && Pin.
-                DisplayName.ToString() == "Text")
+                                                                                                            DisplayName.ToString() == "Text")
             {
                 Pin.DefaultString = Print->StringValue;
             }
@@ -1381,8 +1815,6 @@ const FLuaBlueprintLink* ULuaBlueprintAsset::FindFirstLinkFromOutput(uint32 Outp
     return nullptr;
 }
 
-
-
 const FString& ULuaBlueprintAsset::GetRuntimeLuaSource() const
 {
     return bLastCompileSucceeded ? GeneratedLuaSource : LastGoodGeneratedLuaSource;
@@ -1414,10 +1846,119 @@ void ULuaBlueprintAsset::RefreshNodePinTypes(FLuaBlueprintNode& Node)
             if (Pin.Kind == Kind && Pin.DisplayName.ToString() == PinName)
             {
                 Pin.Type = Type;
-                return;
+                return true;
             }
         }
+        return false;
     };
+
+    auto SetPinTypeBySlot = [&Node](ELuaBlueprintPinKind Kind, int32 SlotIndex, ELuaBlueprintPinType Type)
+    {
+        int32 CurrentIndex = 0;
+        for (FLuaBlueprintPin& Pin : Node.Pins)
+        {
+            if (Pin.Kind != Kind) continue;
+            if (CurrentIndex++ == SlotIndex)
+            {
+                Pin.Type = Type;
+                return true;
+            }
+        }
+        return false;
+    };
+
+    auto SetPinTypeNamedOrSlot = [&](const char* PinName, ELuaBlueprintPinKind Kind, int32 SlotIndex, ELuaBlueprintPinType Type)
+    {
+        if (!SetPinType(PinName, Kind, Type))
+        {
+            SetPinTypeBySlot(Kind, SlotIndex, Type);
+        }
+    };
+
+    auto RebuildCallFunctionSignaturePins = [this, &Node]()
+    {
+        const FString    Signature = !Node.StringValue.empty() ? Node.StringValue : Node.NameValue.ToString();
+        const FFunction* Function  = FindLuaBlueprintFunctionBySignature(Signature);
+        if (!Function)
+        {
+            return;
+        }
+
+        auto FindExistingPin = [&Node](ELuaBlueprintPinKind Kind, const FString& Name) -> const FLuaBlueprintPin*
+        {
+            for (const FLuaBlueprintPin& Pin : Node.Pins)
+            {
+                if (Pin.Kind == Kind && Pin.DisplayName.ToString() == Name)
+                {
+                    return &Pin;
+                }
+            }
+            return nullptr;
+        };
+
+        auto AddSchemaPin = [this, &Node, &FindExistingPin](TArray<FLuaBlueprintPin>& OutPins, ELuaBlueprintPinKind Kind, ELuaBlueprintPinType Type, const FString& Name)
+        {
+            if (const FLuaBlueprintPin* Existing = FindExistingPin(Kind, Name))
+            {
+                FLuaBlueprintPin PreservedPin = *Existing;
+                PreservedPin.OwningNodeId     = Node.NodeId;
+                PreservedPin.Kind             = Kind;
+                PreservedPin.Type             = Type;
+                PreservedPin.DisplayName      = FName(Name);
+                OutPins.push_back(std::move(PreservedPin));
+                return;
+            }
+
+            OutPins.push_back(MakeLuaBlueprintPin(AllocateId(), Node.NodeId, Kind, Type, FName(Name)));
+        };
+
+        TArray<FLuaBlueprintPin> NewPins;
+        AddSchemaPin(NewPins, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, "In");
+        AddSchemaPin(NewPins, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Object, "Target");
+
+        int32 ArgIndex = 0;
+        for (const FProperty* Parameter : Function->GetParameters())
+        {
+            if (!Parameter)
+            {
+                continue;
+            }
+            const bool bOutOnly = (Parameter->Flags & PF_OutParm) != 0 && (Parameter->Flags & PF_ConstParm) == 0;
+            if (bOutOnly)
+            {
+                continue;
+            }
+            FString PinName = Parameter->Name && std::strlen(Parameter->Name) > 0 ? FString(Parameter->Name) : FString("Arg") + std::to_string(ArgIndex);
+            AddSchemaPin(NewPins, ELuaBlueprintPinKind::Input, LuaBlueprintPinTypeFromProperty(Parameter), PinName);
+            ++ArgIndex;
+        }
+
+        AddSchemaPin(NewPins, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, "Then");
+        if (const FProperty* ReturnProperty = Function->GetReturnProperty())
+        {
+            AddSchemaPin(NewPins, ELuaBlueprintPinKind::Output, LuaBlueprintPinTypeFromProperty(ReturnProperty), "Result");
+        }
+        else
+        {
+            AddSchemaPin(NewPins, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, "Result");
+        }
+        for (const FProperty* Parameter : Function->GetParameters())
+        {
+            if (!Parameter || (Parameter->Flags & PF_OutParm) == 0 || (Parameter->Flags & PF_ConstParm) != 0)
+            {
+                continue;
+            }
+            FString PinName = Parameter->Name && std::strlen(Parameter->Name) > 0 ? FString(Parameter->Name) : FString("OutParam");
+            AddSchemaPin(NewPins, ELuaBlueprintPinKind::Output, LuaBlueprintPinTypeFromProperty(Parameter), PinName);
+        }
+
+        Node.Pins = std::move(NewPins);
+    };
+
+    if (Node.Type == ELuaBlueprintNodeType::CallFunctionSignature)
+    {
+        RebuildCallFunctionSignaturePins();
+    }
 
     if (Node.Type == ELuaBlueprintNodeType::GetVariable || Node.Type == ELuaBlueprintNodeType::SetVariable)
     {
@@ -1454,6 +1995,63 @@ void ULuaBlueprintAsset::RefreshNodePinTypes(FLuaBlueprintNode& Node)
         SetPinType("In", ELuaBlueprintPinKind::Input, ResolvedType);
         SetPinType("Out", ELuaBlueprintPinKind::Output, ResolvedType);
     }
+
+    // Hard schema repair: legacy assets may keep Object on pins even after enum/schema changes.
+    // Slot repair prevents Actor outputs from remaining connectable to component inputs.
+    switch (Node.Type)
+    {
+    case ELuaBlueprintNodeType::Self:
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Output, 0, ELuaBlueprintPinType::Actor);
+        break;
+    case ELuaBlueprintNodeType::AddForce:
+    case ELuaBlueprintNodeType::AddTorque:
+    case ELuaBlueprintNodeType::AddImpulse:
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Input, 0, ELuaBlueprintPinType::Exec);
+        SetPinTypeNamedOrSlot("Component", ELuaBlueprintPinKind::Input, 1, ELuaBlueprintPinType::PrimitiveComponent);
+        SetPinTypeNamedOrSlot("Vector", ELuaBlueprintPinKind::Input, 2, ELuaBlueprintPinType::Vector);
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Output, 0, ELuaBlueprintPinType::Exec);
+        break;
+    case ELuaBlueprintNodeType::SetLinearVelocity:
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Input, 0, ELuaBlueprintPinType::Exec);
+        SetPinTypeNamedOrSlot("Component", ELuaBlueprintPinKind::Input, 1, ELuaBlueprintPinType::PrimitiveComponent);
+        SetPinTypeNamedOrSlot("Velocity", ELuaBlueprintPinKind::Input, 2, ELuaBlueprintPinType::Vector);
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Output, 0, ELuaBlueprintPinType::Exec);
+        break;
+    case ELuaBlueprintNodeType::GetLinearVelocity:
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Input, 0, ELuaBlueprintPinType::PrimitiveComponent);
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Output, 0, ELuaBlueprintPinType::Vector);
+        break;
+    case ELuaBlueprintNodeType::GetMass:
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Input, 0, ELuaBlueprintPinType::PrimitiveComponent);
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Output, 0, ELuaBlueprintPinType::Float);
+        break;
+    case ELuaBlueprintNodeType::SetSimulatePhysics:
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Input, 0, ELuaBlueprintPinType::Exec);
+        SetPinTypeNamedOrSlot("Component", ELuaBlueprintPinKind::Input, 1, ELuaBlueprintPinType::PrimitiveComponent);
+        SetPinTypeNamedOrSlot("Simulate", ELuaBlueprintPinKind::Input, 2, ELuaBlueprintPinType::Bool);
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Output, 0, ELuaBlueprintPinType::Exec);
+        break;
+    case ELuaBlueprintNodeType::GetRootComponent:
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Input, 0, ELuaBlueprintPinType::Actor);
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Output, 0, ELuaBlueprintPinType::SceneComponent);
+        break;
+    case ELuaBlueprintNodeType::GetRootPrimitiveComponent:
+    case ELuaBlueprintNodeType::GetPrimitiveComponent:
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Input, 0, ELuaBlueprintPinType::Actor);
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Output, 0, ELuaBlueprintPinType::PrimitiveComponent);
+        break;
+    case ELuaBlueprintNodeType::GetComponentByName:
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Input, 0, ELuaBlueprintPinType::Actor);
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Input, 1, ELuaBlueprintPinType::String);
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Output, 0, ELuaBlueprintPinType::SceneComponent);
+        break;
+    case ELuaBlueprintNodeType::GetOwnerActor:
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Input, 0, ELuaBlueprintPinType::ActorComponent);
+        SetPinTypeBySlot(ELuaBlueprintPinKind::Output, 0, ELuaBlueprintPinType::Actor);
+        break;
+    default:
+        break;
+    }
 }
 
 void ULuaBlueprintAsset::RefreshAllNodePinTypes()
@@ -1481,7 +2079,7 @@ void ULuaBlueprintAsset::RefreshAllNodePinTypes()
     }
 
     // 3) Propagate concrete types through Any/Reroute links until stable.
-    bool bChanged = true;
+    bool  bChanged  = true;
     int32 Iteration = 0;
     while (bChanged && Iteration++ < 64)
     {
@@ -1496,7 +2094,7 @@ void ULuaBlueprintAsset::RefreshAllNodePinTypes()
             if (From->Type == ELuaBlueprintPinType::Any && IsConcreteDataPinType(To->Type))
             {
                 From->Type = To->Type;
-                bChanged = true;
+                bChanged   = true;
             }
             if (To->Type == ELuaBlueprintPinType::Any && IsConcreteDataPinType(From->Type))
             {
@@ -1603,7 +2201,7 @@ void ULuaBlueprintAsset::SetCompileResult(
     const FString&                    InSource,
     TArray<FLuaBlueprintDiagnostic>&& InDiagnostics,
     bool                              bSuccess
-    )
+)
 {
     GeneratedLuaSource          = InSource;
     Diagnostics                 = std::move(InDiagnostics);

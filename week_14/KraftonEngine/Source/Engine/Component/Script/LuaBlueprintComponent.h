@@ -1,12 +1,12 @@
 #pragma once
 
+#include <sol/sol.hpp>
 #include "Component/ActorComponent.h"
 #include "Core/Delegate.h"
 #include "Math/Vector.h"
-#include "Object/Ptr/WeakObjectPtr.h"
 #include "Object/GarbageCollection.h"
+#include "Object/Ptr/WeakObjectPtr.h"
 #include "Source/Engine/Component/Script/LuaBlueprintComponent.generated.h"
-#include <sol/sol.hpp>
 
 class ULuaBlueprintAsset;
 class UObject;
@@ -27,8 +27,13 @@ public:
 
     UFUNCTION(Callable, Exec, Category="Lua Blueprint") bool CallFunction(const FString& FunctionName);
 
-    void                SetBlueprintPath(const FString& InPath);
-    const FString&      GetBlueprintPath() const { return BlueprintPath; }
+    UFUNCTION(Callable, Exec, Category="Lua Blueprint")
+    void SetBlueprintPath(const FString& InPath);
+    UFUNCTION(Pure, Category="Lua Blueprint")
+    const FString& GetBlueprintPath() const
+    {
+        return BlueprintPath;
+    }
 
     ULuaBlueprintAsset* GetBlueprintAsset() const
     {
@@ -59,19 +64,24 @@ private:
     void                ClearLuaRuntime();
     void                BindOwnerCollisionEvents();
     void                ClearCollisionBindings();
-    void                BindInputEvents();
+    bool                BindInputEvents();
     void                ClearInputBindings();
-    const void*         GetInputBindingOwnerKey() const { return this; }
-    FString             GetRuntimeName() const;
-    void                InitializeRuntimeObjectVariables();
-    void                InitRuntimeObjectVariable(const FString& Name, bool bStrong);
-    void                SetRuntimeObjectVariable(const FString& Name, sol::object Value);
-    UObject*            GetRuntimeObjectVariable(const FString& Name) const;
-    bool                ReadEventFlag(const char* EventName) const;
-    void                ScheduleLuaDelay(float Seconds, sol::protected_function Callback, uint32 Generation);
-    bool                IsLuaRuntimeGenerationValid(uint32 Generation) const;
-    void                InvokeLuaEndPlay();
-    void                HandleDeferredLuaCleanup();
+
+    const void* GetInputBindingOwnerKey() const
+    {
+        return this;
+    }
+
+    FString  GetRuntimeName() const;
+    void     InitializeRuntimeObjectVariables();
+    void     InitRuntimeObjectVariable(const FString& Name, bool bStrong);
+    void     SetRuntimeObjectVariable(const FString& Name, sol::object Value);
+    UObject* GetRuntimeObjectVariable(const FString& Name) const;
+    bool     ReadEventFlag(const char* EventName) const;
+    void     ScheduleLuaDelay(float Seconds, sol::protected_function Callback, uint32 Generation);
+    bool     IsLuaRuntimeGenerationValid(uint32 Generation) const;
+    void     InvokeLuaEndPlay();
+    void     HandleDeferredLuaCleanup();
 
     void HandleBeginOverlap(
         UPrimitiveComponent* OverlappedComponent,
@@ -80,20 +90,20 @@ private:
         int32                OtherBodyIndex,
         bool                 bFromSweep,
         const FHitResult&    SweepResult
-        );
+    );
     void HandleEndOverlap(
         UPrimitiveComponent* OverlappedComponent,
         AActor*              OtherActor,
         UPrimitiveComponent* OtherComp,
         int32                OtherBodyIndex
-        );
+    );
     void HandleHit(
         UPrimitiveComponent* HitComponent,
         AActor*              OtherActor,
         UPrimitiveComponent* OtherComp,
         FVector              NormalImpulse,
         const FHitResult&    HitResult
-        );
+    );
     void HandleEndHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp);
 
 private:
@@ -113,16 +123,16 @@ private:
     sol::protected_function LuaOnHit;
     sol::protected_function LuaOnEndHit;
 
-    bool bWantsBeginPlay      = false;
-    bool bWantsTick           = false;
-    bool bWantsEndPlay        = false;
-    bool bWantsOverlap        = false;
-    bool bWantsEndOverlap     = false;
-    bool bWantsHit            = false;
-    bool bWantsEndHit         = false;
-    bool bEndPlayRouted     = false;
-    bool bHasCalledLuaEndPlay = false;
-    bool bPendingLuaEndPlay   = false;
+    bool   bWantsBeginPlay      = false;
+    bool   bWantsTick           = false;
+    bool   bWantsEndPlay        = false;
+    bool   bWantsOverlap        = false;
+    bool   bWantsEndOverlap     = false;
+    bool   bWantsHit            = false;
+    bool   bWantsEndHit         = false;
+    bool   bEndPlayRouted       = false;
+    bool   bHasCalledLuaEndPlay = false;
+    bool   bPendingLuaEndPlay   = false;
     uint32 LuaRuntimeGeneration = 0;
 
     // Lua 콜백 진입 카운터. obj:Destroy() 처럼 Lua 안에서 자기 자신을 destroy 하면
@@ -134,6 +144,7 @@ private:
     struct FLuaCallScope
     {
         ULuaBlueprintComponent* Owner;
+
         explicit FLuaCallScope(ULuaBlueprintComponent* InOwner) : Owner(InOwner)
         {
             FGarbageCollector::Get().PushCollectionBlock();
@@ -160,6 +171,8 @@ private:
 
     TArray<TWeakObjectPtr<UPrimitiveComponent>> BoundOverlapComponents;
     TWeakObjectPtr<UInputComponent>             BoundInputComponent;
+    bool                                        bInputBindingPending           = false;
+    bool                                        bInputBindingPendingLogEmitted = false;
 
     TArray<TWeakObjectPtr<UPrimitiveComponent>> BoundHitComponents;
     TArray<FDelegateHandle>                     BeginOverlapHandles;

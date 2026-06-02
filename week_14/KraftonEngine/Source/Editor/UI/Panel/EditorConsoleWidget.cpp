@@ -270,6 +270,8 @@ void FEditorConsoleWidget::RegisterDiagnosticsCommands()
 		"Diagnostics", "stat skinning", "Shows the skinning CPU overlay stat.");
 	RegisterCommand("stat particles", [this](const TArray<FString>& Args) { HandleStatParticles(Args); },
 		"Diagnostics", "stat particles", "Shows the particle overlay stat (counts/memory/CPU time).");
+	RegisterCommand("stat physics", [this](const TArray<FString>& Args) { HandleStatPhysics(Args); },
+		"Diagnostics", "stat physics", "Shows the physics overlay stat (bodies/pairs/queries/timing).");
 	RegisterCommand("stat none", [this](const TArray<FString>& Args) { HandleStatNone(Args); },
 		"Diagnostics", "stat none", "Hides all overlay stats.");
 	RegisterCommand("cause crash", [this](const TArray<FString>& Args) { HandleCauseCrash(Args); },
@@ -1048,6 +1050,19 @@ void FEditorConsoleWidget::HandleStatParticles(const TArray<FString>& Args)
 	}
 	const bool bEnabled = EditorEngine->GetOverlayStatSystem().ToggleParticles();
 	AddLog("Overlay stat %s: particles\n", bEnabled ? "enabled" : "disabled");
+}
+
+
+void FEditorConsoleWidget::HandleStatPhysics(const TArray<FString>& Args)
+{
+	(void)Args;
+	if (!EditorEngine)
+	{
+		AddLog("[ERROR] EditorEngine is null.\n");
+		return;
+	}
+	const bool bEnabled = EditorEngine->GetOverlayStatSystem().TogglePhysics();
+	AddLog("Overlay stat %s: physics\n", bEnabled ? "enabled" : "disabled");
 }
 
 void FEditorConsoleWidget::HandleStatNone(const TArray<FString>& Args)

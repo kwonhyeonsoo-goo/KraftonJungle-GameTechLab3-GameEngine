@@ -93,6 +93,12 @@ public:
 	FWorldSettings& GetWorldSettings() { return WorldSettings; }
 	const FWorldSettings& GetWorldSettings() const { return WorldSettings; }
 
+	// Transient runtime hook for future global wind actors/fields. Scene save/load does
+	// not serialize this value; editor preview wind remains a component-level override.
+	void SetClothWorldWindVelocity(const FVector& InWorldWindVelocity) { ClothWorldWindVelocity = InWorldWindVelocity; }
+	const FVector& GetClothWorldWindVelocity() const { return ClothWorldWindVelocity; }
+	void ClearClothWorldWindVelocity() { ClothWorldWindVelocity = FVector::ZeroVector; }
+
 	// 일시정지 — true 동안 World::Tick 이 PhysicsScene 와 TickManager 호출을 skip 한다.
 	// Render / UI / Input poll 은 영향 받지 않으므로 인트로 / 메뉴 / 모달 띄운 상태에서
 	// 게임 시간만 멈추는 용도. 기본 false (게임 진행).
@@ -132,6 +138,7 @@ private:
     float                             GameTimeSeconds     = 0.0f;
     bool                              bWorldDestroyRouted = false;
     FWorldSettings                    WorldSettings;
+    FVector                           ClothWorldWindVelocity = FVector::ZeroVector;
     bool                              bHasLastFullLODUpdateCameraPos = false;
 	mutable FWorldPrimitivePickingBVH WorldPrimitivePickingBVH;
     int32                             DeferredPickingBVHUpdateDepth  = 0;

@@ -6,6 +6,10 @@
 #include "Engine/Profiling/Stats/ShadowStats.h"
 #include "Engine/Profiling/Stats/ParticleStats.h"
 #include "Engine/Profiling/Stats/Stats.h"
+#include "GameFramework/World.h"
+#include "Physics/IPhysicsScene.h"
+#include "Physics/PhysicsRuntime.h"
+#include "Physics/PhysicsStats.h"
 #include "Engine/Profiling/GPUProfiler.h"
 #include "Slate/SWindow.h"
 #include "ImGui/imgui.h"
@@ -443,6 +447,104 @@ void FOverlayStatSystem::BuildParticleLines(TArray<FString>& OutLines) const
 #endif
 }
 
+
+void FOverlayStatSystem::BuildPhysicsLines(const UEditorEngine& Editor, TArray<FString>& OutLines) const
+{
+	char Buffer[192] = {};
+
+	const UWorld* World = Editor.GetWorld();
+	if (!World)
+	{
+		OutLines.push_back(FString("Physics world : unavailable"));
+		return;
+	}
+
+	const IPhysicsScene* PhysicsScene = World->GetPhysicsScene();
+	if (!PhysicsScene)
+	{
+		OutLines.push_back(FString("Physics scene : unavailable"));
+		return;
+	}
+
+	const IPhysicsRuntime* Runtime = PhysicsScene->GetRuntime();
+	if (!Runtime)
+	{
+		OutLines.push_back(FString("Physics runtime : unavailable"));
+		return;
+	}
+
+	const FPhysicsStats Stats = Runtime->GetStats();
+
+	snprintf(Buffer, sizeof(Buffer), "Bodies : %d  (Static %d  Dynamic %d  Kinematic %d)",
+		Stats.NumBodies,
+		Stats.NumStaticBodies,
+		Stats.NumDynamicBodies,
+		Stats.NumKinematicBodies);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Active : %d   Sleeping : %d   Shapes : %d   Constraints : %d",
+		Stats.NumActiveBodies,
+		Stats.NumSleepingBodies,
+		Stats.NumShapes,
+		Stats.NumConstraints);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Pairs : Contact %d   Trigger %d",
+		Stats.NumContactPairs,
+		Stats.NumTriggerPairs);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Substeps : %d   Dropped : %d   Accum : %.4f s   Alpha : %.2f",
+		Stats.NumSubsteps,
+		Stats.NumDroppedSubsteps,
+		Stats.AccumulatorSeconds,
+		Stats.InterpolationAlpha);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Commands : Pending %d   Applied %d   Deferred Destroy %d",
+		Stats.NumPendingCommands,
+		Stats.NumAppliedCommands,
+		Stats.NumDeferredDestroys);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Queries : Raycast %d   Sweep %d   Overlap %d",
+		Stats.NumRaycasts,
+		Stats.NumSweepQueries,
+		Stats.NumOverlapQueries);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Timing : Pre %.3f  Sim %.3f  Fetch %.3f  Post %.3f ms",
+		Stats.PrePhysicsMs,
+		Stats.SimulateMs,
+		Stats.FetchResultsMs,
+		Stats.PostPhysicsMs);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Sync : Cmd %.3f  E->P %.3f  P->E %.3f  Snapshot %.3f ms",
+		Stats.ApplyCommandsMs,
+		Stats.SyncEngineToPhysicsMs,
+		Stats.SyncPhysicsToEngineMs,
+		Stats.BuildSnapshotMs);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Events : Dispatch %.3f ms", Stats.DispatchEventMs);
+	OutLines.push_back(FString(Buffer));
+
+	if (Stats.NumVehicles > 0 || Stats.NumVehicleWheels > 0)
+	{
+		snprintf(Buffer, sizeof(Buffer), "Vehicles : %d   Wheels : %d   In Air : %d",
+			Stats.NumVehicles,
+			Stats.NumVehicleWheels,
+			Stats.NumVehicleWheelInAir);
+		OutLines.push_back(FString(Buffer));
+
+		snprintf(Buffer, sizeof(Buffer), "Vehicle Timing : Raycast %.3f  Update %.3f ms",
+			Stats.VehicleRaycastMs,
+			Stats.VehicleUpdateMs);
+		OutLines.push_back(FString(Buffer));
+	}
+}
+
 void FOverlayStatSystem::BuildLines(const UEditorEngine& Editor, TArray<FOverlayStatLine>& OutLines) const
 {
 	OutLines.clear();
@@ -471,6 +573,10 @@ void FOverlayStatSystem::BuildLines(const UEditorEngine& Editor, TArray<FOverlay
 	if (bShowParticles)
 	{
 		EstimatedLineCount += 9;
+	}
+	if (bShowPhysics)
+	{
+		EstimatedLineCount += 11;
 	}
 	OutLines.reserve(EstimatedLineCount);
 
@@ -521,6 +627,13 @@ void FOverlayStatSystem::BuildLines(const UEditorEngine& Editor, TArray<FOverlay
 	{
 		Lines.clear();
 		BuildParticleLines(Lines);
+		AppendGroup(Lines);
+	}
+
+	if (bShowPhysics)
+	{
+		Lines.clear();
+		BuildPhysicsLines(Editor, Lines);
 		AppendGroup(Lines);
 	}
 }
@@ -635,5 +748,12 @@ void FOverlayStatSystem::RenderImGui(const UEditorEngine& Editor, const FRect& V
 		Lines.clear();
 		BuildParticleLines(Lines);
 		RenderWindow("##StatParticlesOverlay", "Stat Particles", ImVec4(0.04f, 0.08f, 0.10f, 0.62f), Lines);
+	}
+
+	if (bShowPhysics)
+	{
+		Lines.clear();
+		BuildPhysicsLines(Editor, Lines);
+		RenderWindow("##StatPhysicsOverlay", "Stat Physics", ImVec4(0.09f, 0.08f, 0.05f, 0.62f), Lines);
 	}
 }

@@ -15,6 +15,7 @@
 #include "Physics/PhysXConversion.h"
 
 #include <algorithm>
+#include <chrono>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -669,6 +670,13 @@ public:
                 }
             }
         }
+    }
+
+    void GetActivePairCounts(int32& OutContactPairs, int32& OutTriggerPairs)
+    {
+        std::lock_guard<std::mutex> Lock(EventMutex);
+        OutContactPairs = static_cast<int32>(ActiveHitPairs.size());
+        OutTriggerPairs = static_cast<int32>(ActiveOverlapPairs.size());
     }
 
     void onConstraintBreak(PxConstraintInfo*, PxU32) override {}
@@ -1789,6 +1797,9 @@ void FPhysXPhysicsScene::DispatchPendingEvents()
 
     if (EventCallback)
     {
+        using FClock = std::chrono::high_resolution_clock;
+        const auto DispatchStart = FClock::now();
+
         const auto& PhysicsSettings = FProjectSettings::Get().Physics;
         EventCallback->DispatchPendingEvents(
             PhysicsSettings.bDispatchCollisionEvents,
@@ -1799,6 +1810,13 @@ void FPhysXPhysicsScene::DispatchPendingEvents()
                 return Binding && Binding->Generation == Generation && !Binding->bPendingDestroy;
             }
         );
+
+        int32 ContactPairs = 0;
+        int32 TriggerPairs = 0;
+        EventCallback->GetActivePairCounts(ContactPairs, TriggerPairs);
+
+        const float DispatchMs = std::chrono::duration<float, std::milli>(FClock::now() - DispatchStart).count();
+        Runtime.SetEventStats(ContactPairs, TriggerPairs, DispatchMs);
     }
 }
 
@@ -1990,7 +2008,7 @@ bool FPhysXPhysicsScene::SubmitRaycastQuery_GameThread(
     uint32                 ObjectTypeMask,
     uint32                 IgnoreActorId,
     FPhysicsRaycastResult& OutResult
-) const
+)
 {
     OutResult = FPhysicsRaycastResult();
     if (!Scene || MaxDist <= 0.0f)
@@ -2004,6 +2022,8 @@ bool FPhysXPhysicsScene::SubmitRaycastQuery_GameThread(
         return false;
     }
     RayDir.Normalize();
+
+    Runtime.RecordRaycastQuery();
 
     std::unique_lock<std::mutex> Lock(PhysicsThreadMutex);
     PhysicsThreadDoneCv.wait(
@@ -2295,7 +2315,7 @@ bool FPhysXPhysicsScene::Raycast(
     FHitResult&       OutHit,
     ECollisionChannel TraceChannel,
     const AActor*     IgnoreActor
-) const
+)
 {
     OutHit                     = FHitResult();
     const uint32 IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
@@ -2316,7 +2336,7 @@ bool FPhysXPhysicsScene::RaycastByObjectTypes(
     FHitResult&    OutHit,
     uint32         ObjectTypeMask,
     const AActor*  IgnoreActor
-) const
+)
 {
     OutHit                     = FHitResult();
     const uint32 IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
