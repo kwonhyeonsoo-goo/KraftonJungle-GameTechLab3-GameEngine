@@ -24,6 +24,7 @@ enum class ERagdollRecoveryPhase : uint8
     None,
     BlendOutFromPhysics,
     PlayingStandUp,
+    HoldingFinalPose,
     Completed,
 };
 
@@ -205,6 +206,12 @@ protected:
     float RagdollBlendInTime = 0.15f;
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Ragdoll Recovery Blend Out Time", Min=0.0f, Max=0.0f, Speed=0.01f)
     float RagdollRecoveryBlendOutTime = 0.3f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Ragdoll First Valid Pose Blend In Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float RagdollFirstValidPoseBlendInTime = 0.08f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Ragdoll Completion Hold Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float RagdollCompletionHoldTime = 0.05f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Ragdoll Fallback Hold Time", Min=0.0f, Max=0.0f, Speed=0.01f)
+    float RagdollFallbackHoldTime = 0.12f;
     // FaceDown means prone/front get-up. FaceUp means supine/back get-up.
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Front Stand Up Animation", AssetType="UAnimSequence")
     FSoftObjectPtr FrontStandUpAnimationPath = "None";
@@ -216,6 +223,9 @@ protected:
     bool bUsePhysicsAssetPose = false;
     float PhysicsPoseBlendWeight = 0.0f;
     float TargetPhysicsPoseBlendWeight = 0.0f;
+    bool bHasReceivedValidPhysicsPose = false;
+    float FirstValidPhysicsPoseBlendAlpha = 0.0f;
+    float RecoveryCompletionHoldRemaining = 0.0f;
     // Recovery keeps blend-out and stand-up playback as separate phases so physics teardown
     // does not race against animation takeover.
     ERagdollRecoveryPhase RecoveryPhase = ERagdollRecoveryPhase::None;

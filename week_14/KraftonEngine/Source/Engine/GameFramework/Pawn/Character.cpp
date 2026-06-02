@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 
 namespace
 {
@@ -65,6 +66,41 @@ namespace
 		}
 
 		return MeshAsset->Bones.empty() ? -1 : 0;
+	}
+
+	int32 FindCharacterChestBoneIndex(const FSkeletalMesh* MeshAsset)
+	{
+		if (!MeshAsset)
+		{
+			return -1;
+		}
+
+		const char* CandidateTokens[] = { "spine_03", "spine_02", "spine_01", "spine", "chest", "upperchest", "torso" };
+		for (const char* CandidateToken : CandidateTokens)
+		{
+			const FString Token = ToLowerCopy(CandidateToken ? FString(CandidateToken) : FString());
+			for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+			{
+				if (ToLowerCopy(MeshAsset->Bones[BoneIndex].Name) == Token)
+				{
+					return BoneIndex;
+				}
+			}
+		}
+
+		for (const char* CandidateToken : CandidateTokens)
+		{
+			const FString Token = ToLowerCopy(CandidateToken ? FString(CandidateToken) : FString());
+			for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+			{
+				if (ToLowerCopy(MeshAsset->Bones[BoneIndex].Name).find(Token) != FString::npos)
+				{
+					return BoneIndex;
+				}
+			}
+		}
+
+		return -1;
 	}
 
 	const char* LexToString(ECharacterPhysicsOwnershipMode Mode)
@@ -376,6 +412,25 @@ void ACharacter::CacheRagdollRestoreLocation()
 
 	CachedRagdollRestoreLocation = BoneWorldTransforms[AnchorBoneIndex].Location;
 	bHasCachedRagdollRestoreLocation = true;
+
+	const int32 ChestBoneIndex = FindCharacterChestBoneIndex(MeshAsset);
+	if (ChestBoneIndex >= 0 && ChestBoneIndex < static_cast<int32>(BoneWorldTransforms.size()))
+	{
+		FVector FacingVector = BoneWorldTransforms[ChestBoneIndex].Location - CachedRagdollRestoreLocation;
+		FacingVector.Z = 0.0f;
+
+		if (FacingVector.Dot(FacingVector) <= 1.0e-4f)
+		{
+			FacingVector = BoneWorldTransforms[ChestBoneIndex].Rotation.GetForwardVector();
+			FacingVector.Z = 0.0f;
+		}
+
+		if (FacingVector.Dot(FacingVector) > 1.0e-4f)
+		{
+			CachedRagdollRestoreYawDegrees = std::atan2(FacingVector.Y, FacingVector.X) * (180.0f / 3.1415926535f);
+			bHasCachedRagdollRestoreYaw = true;
+		}
+	}
 }
 
 void ACharacter::RestoreCharacterAfterRagdoll()
@@ -383,6 +438,17 @@ void ACharacter::RestoreCharacterAfterRagdoll()
 	if (CapsuleComponent && bHasCachedRagdollRestoreLocation)
 	{
 		CapsuleComponent->SetWorldLocation(CachedRagdollRestoreLocation);
+	}
+
+	if (CapsuleComponent && bHasCachedRagdollRestoreYaw)
+	{
+		FRotator RestoreRotation = CapsuleComponent->GetWorldRotation();
+		RestoreRotation.Yaw = CachedRagdollRestoreYawDegrees;
+		CapsuleComponent->SetWorldRotation(RestoreRotation);
+
+		FRotator Control = GetControlRotation();
+		Control.Yaw = CachedRagdollRestoreYawDegrees;
+		SetControlRotation(Control);
 	}
 
 	SetCharacterDrivenCollisionEnabled(true);
@@ -394,6 +460,8 @@ void ACharacter::RestoreCharacterAfterRagdoll()
 	bSavedPreRagdollCharacterState = false;
 	bHasCachedRagdollRestoreLocation = false;
 	CachedRagdollRestoreLocation = FVector::ZeroVector;
+	bHasCachedRagdollRestoreYaw = false;
+	CachedRagdollRestoreYawDegrees = 0.0f;
 	UE_LOG("Character ragdoll ownership restored. Actor=%s Ownership=%s",
 		GetName().c_str(),
 		LexToString(PhysicsOwnershipMode));

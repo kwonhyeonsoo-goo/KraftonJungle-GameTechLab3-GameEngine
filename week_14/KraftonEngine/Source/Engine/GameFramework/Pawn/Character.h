@@ -104,4 +104,6 @@ protected:
 	bool bSavedMovementActive = true;
 	bool bHasCachedRagdollRestoreLocation = false;
 	FVector CachedRagdollRestoreLocation = FVector::ZeroVector;
+	bool bHasCachedRagdollRestoreYaw = false;
+	float CachedRagdollRestoreYawDegrees = 0.0f;
 };

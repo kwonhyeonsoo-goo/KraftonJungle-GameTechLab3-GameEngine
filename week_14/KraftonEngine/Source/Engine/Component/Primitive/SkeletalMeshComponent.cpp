@@ -60,6 +60,19 @@ namespace
         return std::max(CurrentValue - Step, TargetValue);
     }
 
+    float SmoothStep01(float Value)
+    {
+        const float ClampedValue = Clamp01(Value);
+        return ClampedValue * ClampedValue * (3.0f - 2.0f * ClampedValue);
+    }
+
+    float EaseOutQuadratic01(float Value)
+    {
+        const float ClampedValue = Clamp01(Value);
+        const float OneMinusValue = 1.0f - ClampedValue;
+        return 1.0f - OneMinusValue * OneMinusValue;
+    }
+
     FTransform BlendTransforms(const FTransform& AnimationPose, const FTransform& PhysicsPose, float BlendAlpha)
     {
         const float ClampedAlpha = Clamp01(BlendAlpha);
@@ -529,6 +542,8 @@ bool USkeletalMeshComponent::EnableRagdollPhysics()
     }
 
     ResetRagdollRecoveryState();
+    bHasReceivedValidPhysicsPose = false;
+    FirstValidPhysicsPoseBlendAlpha = 0.0f;
     TargetPhysicsPoseBlendWeight = 1.0f;
     SetUsePhysicsAssetPose(true);
     return IsRagdollActive();
@@ -653,6 +668,12 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
         return false;
     }
 
+    if (!bHasReceivedValidPhysicsPose)
+    {
+        bHasReceivedValidPhysicsPose = true;
+        FirstValidPhysicsPoseBlendAlpha = 0.0f;
+    }
+
     TArray<FMatrix> ComponentSpaceGlobalMatrices;
     ComponentSpaceGlobalMatrices.resize(MeshAsset->Bones.size());
 
@@ -670,6 +691,13 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
     LocalPose.resize(MeshAsset->Bones.size());
     TArray<FTransform> AnimationLocalPose;
     AnimationLocalPose.resize(MeshAsset->Bones.size());
+    const float ShapedBlendWeight =
+        (RecoveryPhase == ERagdollRecoveryPhase::BlendOutFromPhysics)
+            ? SmoothStep01(PhysicsPoseBlendWeight)
+            : EaseOutQuadratic01(PhysicsPoseBlendWeight);
+    const float EffectiveBlendWeight = Clamp01(
+        ShapedBlendWeight * SmoothStep01(FirstValidPhysicsPoseBlendAlpha));
+
     for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
     {
         AnimationLocalPose[BoneIndex] = GetBoneLocalTransformByIndex(BoneIndex);
@@ -683,7 +711,7 @@ bool USkeletalMeshComponent::ApplyPhysicsAssetPose()
         LocalPose[BoneIndex] = BlendTransforms(
             AnimationLocalPose[BoneIndex],
             PhysicsLocalPose,
-            PhysicsPoseBlendWeight);
+            EffectiveBlendWeight);
     }
 
     // PullPhysicsPose starts from the current animation result, so bones without bodies
@@ -708,11 +736,14 @@ void USkeletalMeshComponent::ResetPhysicsPoseBlendState()
 {
     PhysicsPoseBlendWeight = 0.0f;
     TargetPhysicsPoseBlendWeight = 0.0f;
+    bHasReceivedValidPhysicsPose = false;
+    FirstValidPhysicsPoseBlendAlpha = 0.0f;
 }
 
 void USkeletalMeshComponent::ResetRagdollRecoveryState()
 {
     RecoveryPhase = ERagdollRecoveryPhase::None;
+    RecoveryCompletionHoldRemaining = 0.0f;
     SelectedStandUpType = ERagdollStandUpType::Unknown;
     RecoveryPelvisWorldTransform = FTransform();
     RecoveryChestWorldTransform = FTransform();
@@ -758,15 +789,26 @@ bool USkeletalMeshComponent::CaptureRagdollRecoverySnapshot()
 
 ERagdollStandUpType USkeletalMeshComponent::EvaluateRagdollRecoveryOrientation() const
 {
-    // The first pass intentionally keeps orientation classification coarse. Chest-up vs
-    // world-up is enough to choose front/back get-up variants without overfitting authoring.
+    // Keep the classification conservative: chest and pelvis should broadly agree before
+    // choosing a specific stand-up direction. Ambiguous poses are better handled by
+    // fallback than by forcing the wrong get-up animation.
     const FVector ChestUp = RecoveryChestWorldTransform.Rotation.GetUpVector().Normalized();
-    if (ChestUp.Dot(FVector::UpVector) >= 0.0f)
+    const FVector PelvisUp = RecoveryPelvisWorldTransform.Rotation.GetUpVector().Normalized();
+    const float ChestDotUp = ChestUp.Dot(FVector::UpVector);
+    const float PelvisDotUp = PelvisUp.Dot(FVector::UpVector);
+    const float AverageDotUp = 0.5f * (ChestDotUp + PelvisDotUp);
+
+    if ((ChestDotUp >= 0.2f && PelvisDotUp >= 0.0f) || AverageDotUp >= 0.25f)
     {
         return ERagdollStandUpType::FaceUp;
     }
 
-    return ERagdollStandUpType::FaceDown;
+    if ((ChestDotUp <= -0.2f && PelvisDotUp <= 0.0f) || AverageDotUp <= -0.25f)
+    {
+        return ERagdollStandUpType::FaceDown;
+    }
+
+    return ERagdollStandUpType::Unknown;
 }
 
 bool USkeletalMeshComponent::CanUseStandUpAnimation(UAnimSequenceBase* InAsset) const
@@ -881,6 +923,7 @@ void USkeletalMeshComponent::FinishRagdollRecovery()
     UE_LOG("Ragdoll recovery completed. Component=%s", GetName().c_str());
 
     RecoveryPhase = ERagdollRecoveryPhase::Completed;
+    RecoveryCompletionHoldRemaining = 0.0f;
     SelectedStandUpType = ERagdollStandUpType::Unknown;
     RecoveryPelvisWorldTransform = FTransform();
     RecoveryChestWorldTransform = FTransform();
@@ -899,9 +942,30 @@ void USkeletalMeshComponent::UpdatePhysicsPoseBlend(float DeltaTime)
         return;
     }
 
+    if (bHasReceivedValidPhysicsPose && FirstValidPhysicsPoseBlendAlpha < 1.0f)
+    {
+        FirstValidPhysicsPoseBlendAlpha = Clamp01(
+            AdvanceTowardTarget(
+                FirstValidPhysicsPoseBlendAlpha,
+                1.0f,
+                DeltaTime,
+                RagdollFirstValidPoseBlendInTime));
+    }
+
     if (RecoveryPhase == ERagdollRecoveryPhase::PlayingStandUp)
     {
         if (IsStandUpAnimationFinished())
+        {
+            RecoveryPhase = ERagdollRecoveryPhase::HoldingFinalPose;
+            RecoveryCompletionHoldRemaining = RagdollCompletionHoldTime;
+        }
+        return;
+    }
+
+    if (RecoveryPhase == ERagdollRecoveryPhase::HoldingFinalPose)
+    {
+        RecoveryCompletionHoldRemaining = std::max(0.0f, RecoveryCompletionHoldRemaining - DeltaTime);
+        if (RecoveryCompletionHoldRemaining <= 1.0e-4f)
         {
             FinishRagdollRecovery();
         }
@@ -942,7 +1006,8 @@ void USkeletalMeshComponent::UpdatePhysicsPoseBlend(float DeltaTime)
 
         if (!StartStandUpAnimation())
         {
-            FinishRagdollRecovery();
+            RecoveryPhase = ERagdollRecoveryPhase::HoldingFinalPose;
+            RecoveryCompletionHoldRemaining = RagdollFallbackHoldTime;
         }
     }
 }
