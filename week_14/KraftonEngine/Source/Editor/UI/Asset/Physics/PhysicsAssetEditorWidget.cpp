@@ -46,6 +46,16 @@ namespace
         return Result;
     }
 
+    FColor ConstraintLimitSwingRed(uint32 Alpha)
+    {
+        return FColor(0xc5, 0x00, 0x00, Alpha);
+    }
+
+    FColor ConstraintLimitTwistGreen(uint32 Alpha)
+    {
+        return FColor(0x00, 0x80, 0x20, Alpha);
+    }
+
     void DrawDebugCircle(
         UWorld* World,
         const FVector& Center,
@@ -94,6 +104,197 @@ namespace
             DrawDebugLine(World, Prev, Next, Color, 0.0f);
             Prev = Next;
         }
+    }
+
+    void DrawDebugArc(
+        UWorld* World,
+        const FVector& Center,
+        const FVector& AxisA,
+        const FVector& AxisB,
+        float Radius,
+        float StartAngle,
+        float EndAngle,
+        int32 Segments,
+        const FColor& Color)
+    {
+        if (!World || Radius <= 0.0f || Segments < 2)
+        {
+            return;
+        }
+
+        const float AngleRange = EndAngle - StartAngle;
+        FVector Prev = Center + (AxisA * cosf(StartAngle) + AxisB * sinf(StartAngle)) * Radius;
+        for (int32 i = 1; i <= Segments; ++i)
+        {
+            const float Alpha = static_cast<float>(i) / static_cast<float>(Segments);
+            const float Angle = StartAngle + AngleRange * Alpha;
+            const FVector Next = Center + (AxisA * cosf(Angle) + AxisB * sinf(Angle)) * Radius;
+            DrawDebugLine(World, Prev, Next, Color, 0.0f);
+            Prev = Next;
+        }
+    }
+
+    void DrawDebugFrameAxes(
+        UWorld* World,
+        const FTransform& FrameWorld,
+        float Length,
+        uint32 Alpha)
+    {
+        if (!World || Length <= 0.0f)
+        {
+            return;
+        }
+
+        const FQuat Rotation = FrameWorld.Rotation.GetNormalized();
+        const FVector Origin = FrameWorld.Location;
+        DrawDebugLine(World, Origin, Origin + Rotation.RotateVector(FVector(1.0f, 0.0f, 0.0f)) * Length, FColor(255, 80, 80, Alpha), 0.0f);
+        DrawDebugLine(World, Origin, Origin + Rotation.RotateVector(FVector(0.0f, 1.0f, 0.0f)) * Length, FColor(80, 255, 80, Alpha), 0.0f);
+        DrawDebugLine(World, Origin, Origin + Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f)) * Length, FColor(80, 130, 255, Alpha), 0.0f);
+    }
+
+    float ClampLimitDegreesForDebug(float Degrees)
+    {
+        return FMath::Clamp(Degrees, 0.0f, 85.0f);
+    }
+
+    float MotionLimitDegreesForDebug(EConstraintMotion Motion, float LimitedDegrees)
+    {
+        switch (Motion)
+        {
+        case EConstraintMotion::Free:
+            return 85.0f;
+        case EConstraintMotion::Limited:
+            return ClampLimitDegreesForDebug(LimitedDegrees);
+        case EConstraintMotion::Locked:
+        default:
+            return 0.0f;
+        }
+    }
+
+    int32 AngularArcSegments(float AngleRangeRadians)
+    {
+        const float Normalized = (std::max)(std::fabs(AngleRangeRadians) / (2.0f * FMath::Pi), 0.08f);
+        return (std::max)(4, static_cast<int32>(ceilf(32.0f * Normalized)));
+    }
+
+    float ComputeConstraintLimitDrawRadius(const FTransform& ParentFrameWorld, const FTransform& ChildFrameWorld)
+    {
+        const float FrameDistance = FVector::Distance(ParentFrameWorld.Location, ChildFrameWorld.Location);
+        return FMath::Clamp(FrameDistance * 0.45f + 0.25f, 0.25f, 2.5f);
+    }
+
+    void DrawConstraintSwingLimitDebug(
+        UWorld* World,
+        const FTransform& ParentFrameWorld,
+        const FConstraintLimitDesc& Limits,
+        float Radius,
+        const FColor& Color)
+    {
+        if (!World || Radius <= 0.0f)
+        {
+            return;
+        }
+
+        const FQuat Rotation = ParentFrameWorld.Rotation.GetNormalized();
+        const FVector Center = ParentFrameWorld.Location;
+        const FVector AxisX = Rotation.RotateVector(FVector(1.0f, 0.0f, 0.0f));
+        const FVector AxisY = Rotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
+        const FVector AxisZ = Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f));
+
+        const float Swing1Degrees = MotionLimitDegreesForDebug(Limits.Swing1, Limits.Swing1LimitDegrees);
+        const float Swing2Degrees = MotionLimitDegreesForDebug(Limits.Swing2, Limits.Swing2LimitDegrees);
+        const float Swing1Radians = Swing1Degrees * FMath::DegToRad;
+        const float Swing2Radians = Swing2Degrees * FMath::DegToRad;
+
+        const FVector DiskCenter = Center + AxisX * Radius;
+        const float DiskRadiusY = (std::max)(Radius * sinf(Swing1Radians), Radius * 0.025f);
+        const float DiskRadiusZ = (std::max)(Radius * sinf(Swing2Radians), Radius * 0.025f);
+
+        if (Limits.Swing1 == EConstraintMotion::Locked && Limits.Swing2 == EConstraintMotion::Locked)
+        {
+            const float CrossSize = Radius * 0.12f;
+            DrawDebugLine(World, DiskCenter + AxisY * CrossSize, DiskCenter - AxisY * CrossSize, Color, 0.0f);
+            DrawDebugLine(World, DiskCenter + AxisZ * CrossSize, DiskCenter - AxisZ * CrossSize, Color, 0.0f);
+            return;
+        }
+
+        FVector Prev = DiskCenter + AxisY * DiskRadiusY;
+        for (int32 i = 1; i <= DebugCircleSegments; ++i)
+        {
+            const float Angle = 2.0f * FMath::Pi * static_cast<float>(i) / static_cast<float>(DebugCircleSegments);
+            const FVector Next = DiskCenter + AxisY * (cosf(Angle) * DiskRadiusY) + AxisZ * (sinf(Angle) * DiskRadiusZ);
+            DrawDebugLine(World, Prev, Next, Color, 0.0f);
+            Prev = Next;
+        }
+
+        DrawDebugLine(World, DiskCenter, DiskCenter + AxisY * DiskRadiusY, ConstraintLimitSwingRed(Color.A), 0.0f);
+        DrawDebugLine(World, DiskCenter, DiskCenter + AxisZ * DiskRadiusZ, ConstraintLimitTwistGreen(Color.A), 0.0f);
+    }
+
+    void DrawConstraintTwistLimitDebug(
+        UWorld* World,
+        const FTransform& ParentFrameWorld,
+        const FTransform& ChildFrameWorld,
+        const FConstraintLimitDesc& Limits,
+        float Radius,
+        const FColor& Color)
+    {
+        if (!World || Radius <= 0.0f)
+        {
+            return;
+        }
+
+        const FQuat ParentRotation = ParentFrameWorld.Rotation.GetNormalized();
+        const FQuat ChildRotation = ChildFrameWorld.Rotation.GetNormalized();
+        const FVector Center = ParentFrameWorld.Location + ParentRotation.RotateVector(FVector(1.0f, 0.0f, 0.0f)) * (Radius * 0.12f);
+        const FVector AxisY = ParentRotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
+        const FVector AxisZ = ParentRotation.RotateVector(FVector(0.0f, 0.0f, 1.0f));
+        const FVector ChildY = ChildRotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
+        const float RingRadius = Radius * 0.32f;
+
+        if (Limits.Twist == EConstraintMotion::Free)
+        {
+            DrawDebugCircle(World, Center, AxisY, AxisZ, RingRadius, ConstraintLimitTwistGreen(Color.A));
+        }
+        else if (Limits.Twist == EConstraintMotion::Locked)
+        {
+            DrawDebugLine(World, Center - AxisY * RingRadius, Center + AxisY * RingRadius, ConstraintLimitTwistGreen(Color.A), 0.0f);
+            DrawDebugLine(World, Center - AxisZ * RingRadius, Center + AxisZ * RingRadius, ConstraintLimitTwistGreen(Color.A), 0.0f);
+        }
+        else
+        {
+            float MinAngle = Limits.TwistLimitMinDegrees * FMath::DegToRad;
+            float MaxAngle = Limits.TwistLimitMaxDegrees * FMath::DegToRad;
+            if (MinAngle > MaxAngle)
+            {
+                std::swap(MinAngle, MaxAngle);
+            }
+            DrawDebugArc(World, Center, AxisY, AxisZ, RingRadius, MinAngle, MaxAngle, AngularArcSegments(MaxAngle - MinAngle), ConstraintLimitTwistGreen(Color.A));
+            DrawDebugLine(World, Center, Center + (AxisY * cosf(MinAngle) + AxisZ * sinf(MinAngle)) * RingRadius, ConstraintLimitTwistGreen(Color.A), 0.0f);
+            DrawDebugLine(World, Center, Center + (AxisY * cosf(MaxAngle) + AxisZ * sinf(MaxAngle)) * RingRadius, ConstraintLimitTwistGreen(Color.A), 0.0f);
+        }
+
+        DrawDebugLine(World, Center, Center + ChildY * RingRadius, ConstraintLimitSwingRed(Color.A), 0.0f);
+    }
+
+    void DrawConstraintAngularLimitDebug(
+        UWorld* World,
+        const FTransform& ParentFrameWorld,
+        const FTransform& ChildFrameWorld,
+        const FConstraintLimitDesc& Limits,
+        bool bSelected)
+    {
+        if (!World)
+        {
+            return;
+        }
+
+        const uint32 Alpha = bSelected ? 230u : 145u;
+        const float Radius = ComputeConstraintLimitDrawRadius(ParentFrameWorld, ChildFrameWorld);
+        DrawDebugFrameAxes(World, ParentFrameWorld, Radius * 0.32f, Alpha);
+        DrawDebugFrameAxes(World, ChildFrameWorld, Radius * 0.22f, Alpha);
+        DrawConstraintSwingLimitDebug(World, ParentFrameWorld, Limits, Radius, ConstraintLimitSwingRed(Alpha));
+        DrawConstraintTwistLimitDebug(World, ParentFrameWorld, ChildFrameWorld, Limits, Radius, ConstraintLimitTwistGreen(Alpha));
     }
 
     void DrawDebugOrientedBox(
@@ -2104,6 +2305,7 @@ void FPhysicsAssetEditorWidget::RenderConstraintDetails(UPhysicsAsset* PhysicsAs
         bChanged |= ImGui::DragFloat("Twist Max", &Constraint.Limits.TwistLimitMaxDegrees, 0.1f);
         bChanged |= DragMinFloat("Swing 1 Limit", Constraint.Limits.Swing1LimitDegrees, 0.1f, 0.0f);
         bChanged |= DragMinFloat("Swing 2 Limit", Constraint.Limits.Swing2LimitDegrees, 0.1f, 0.0f);
+        ImGui::TextDisabled("Viewport limit debug: Twist rotates around frame X. Swing 1/2 are drawn on the frame Y/Z planes.");
         ImGui::TreePop();
     }
 
@@ -2519,6 +2721,8 @@ void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
             SelectedShapeIndex,
             SelectedConstraintIndex,
             bShowPreviewBodies,
+            bShowPreviewConstraints && bShowConstraintLimitAngles && bShowConstraintLimitSurfaces,
+            bShowOnlySelectedConstraintLimitAngles,
             Device);
     }
 
@@ -2539,6 +2743,13 @@ void FPhysicsAssetEditorWidget::RenderViewportDebugOptions()
     ImGui::TextUnformatted("Physics Preview");
     ImGui::Checkbox("Physics Bodies", &bShowPreviewBodies);
     ImGui::Checkbox("Physics Constraints", &bShowPreviewConstraints);
+    if (!bShowPreviewConstraints) ImGui::BeginDisabled();
+    ImGui::Checkbox("Constraint Limits", &bShowConstraintLimitAngles);
+    if (!bShowConstraintLimitAngles) ImGui::BeginDisabled();
+    ImGui::Checkbox("Constraint Limit Fill", &bShowConstraintLimitSurfaces);
+    ImGui::Checkbox("Selected Constraint Limits Only", &bShowOnlySelectedConstraintLimitAngles);
+    if (!bShowConstraintLimitAngles) ImGui::EndDisabled();
+    if (!bShowPreviewConstraints) ImGui::EndDisabled();
     ImGui::TextDisabled(bEditorSimulationActive
         ? (bEditorSimulationPaused ? "Simulation: paused" : "Simulation: running")
         : "Simulation: stopped");
@@ -2802,7 +3013,6 @@ void FPhysicsAssetEditorWidget::DrawConstraintSetupDebug(
     int32 ConstraintIndex,
     const FPhysicsAssetConstraintSetup& ConstraintSetup)
 {
-    (void)ConstraintSetup;
     if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
     {
         return;
@@ -2821,10 +3031,20 @@ void FPhysicsAssetEditorWidget::DrawConstraintSetupDebug(
     }
 
     const bool bSelected = SelectedConstraintIndex == ConstraintIndex;
-    const FColor Color = bSelected ? FColor(255, 120, 80, 180) : FColor(200, 150, 255, 115);
+    const FColor Color = bSelected ? ConstraintLimitTwistGreen(220u) : ConstraintLimitSwingRed(145u);
     DrawDebugLine(PreviewWorld, ParentFrameWorld.Location, ChildFrameWorld.Location, Color, 0.0f);
     DrawDebugPoint(PreviewWorld, ParentFrameWorld.Location, bSelected ? 0.08f : 0.05f, Color, 0.0f);
     DrawDebugPoint(PreviewWorld, ChildFrameWorld.Location, bSelected ? 0.08f : 0.05f, Color, 0.0f);
+
+    if (bShowConstraintLimitAngles && (!bShowOnlySelectedConstraintLimitAngles || bSelected))
+    {
+        DrawConstraintAngularLimitDebug(
+            PreviewWorld,
+            ParentFrameWorld,
+            ChildFrameWorld,
+            ConstraintSetup.Limits,
+            bSelected);
+    }
 }
 
 void FPhysicsAssetEditorWidget::MarkPhysicsAssetDirty()
