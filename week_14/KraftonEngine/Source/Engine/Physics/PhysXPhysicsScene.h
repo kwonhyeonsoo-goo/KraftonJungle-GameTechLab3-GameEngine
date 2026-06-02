@@ -83,7 +83,7 @@ public:
         FHitResult&       OutHit,
         ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
         const AActor*     IgnoreActor  = nullptr
-    ) const override;
+    ) override;
 
     bool RaycastByObjectTypes(
         const FVector& Start,
@@ -92,7 +92,7 @@ public:
         FHitResult&    OutHit,
         uint32         ObjectTypeMask,
         const AActor*  IgnoreActor = nullptr
-    ) const override;
+    ) override;
 
     IPhysicsRuntime* GetRuntime() override
     {
@@ -123,7 +123,7 @@ private:
     bool                      ResolveRaycastResult_GameThread(const FPhysicsRaycastResult& PhysicsResult, FHitResult& OutHit) const;
     bool                      ExecuteRaycast_PhysicsThread(const FVector& Start, const FVector& Dir, float MaxDist, ECollisionChannel TraceChannel, uint32 IgnoreActorId, FPhysicsRaycastResult& OutResult) const;
     bool                      ExecuteRaycastByObjectTypes_PhysicsThread(const FVector& Start, const FVector& Dir, float MaxDist, uint32 ObjectTypeMask, uint32 IgnoreActorId, FPhysicsRaycastResult& OutResult) const;
-    bool                      SubmitRaycastQuery_GameThread(bool bObjectTypes, const FVector& Start, const FVector& Dir, float MaxDist, ECollisionChannel TraceChannel, uint32 ObjectTypeMask, uint32 IgnoreActorId, FPhysicsRaycastResult& OutResult) const;
+    bool                      SubmitRaycastQuery_GameThread(bool bObjectTypes, const FVector& Start, const FVector& Dir, float MaxDist, ECollisionChannel TraceChannel, uint32 ObjectTypeMask, uint32 IgnoreActorId, FPhysicsRaycastResult& OutResult);
 
     void StartPhysicsThread();
     void StopPhysicsThreadAndJoin();

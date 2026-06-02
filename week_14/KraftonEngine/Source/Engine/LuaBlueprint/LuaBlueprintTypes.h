@@ -26,7 +26,20 @@ enum class ELuaBlueprintPinType : uint8
     Vector,
     Object,
     Any,
-    Array
+    Array,
+    Actor,
+    Pawn,
+    PlayerController,
+    ActorComponent,
+    SceneComponent,
+    PrimitiveComponent,
+    Rotator,
+    LinearColor,
+    Vector4,
+    Matrix,
+    Class,
+    Enum,
+    Name
 };
 
 enum class ELuaBlueprintNodeType : uint8
@@ -96,6 +109,8 @@ enum class ELuaBlueprintNodeType : uint8
     NormalizeVector,
     // ── Actor ──
     SpawnActor,
+    SpawnPawn,
+    SpawnPawnAndPossess,
     DestroyActor,
     FindActorByName,
     FindActorByClass,
@@ -116,11 +131,18 @@ enum class ELuaBlueprintNodeType : uint8
     ActorRemoveTag,
     GetActorName,
     GetOwnerActor,
+    AddForceToRoot,
+    AddTorqueToRoot,
+    AddImpulseToRoot,
+    GetRootLinearVelocity,
+    SetRootLinearVelocity,
+    SetRootSimulatePhysics,
     // ── Object utility ──
     IsValid,
     Cast,
     // ── Component ──
     GetRootComponent,
+    GetRootPrimitiveComponent,
     GetComponentByName,
     GetPrimitiveComponent,
     ActivateComponent,
@@ -177,7 +199,43 @@ enum class ELuaBlueprintNodeType : uint8
     Possess,
     UnPossess,
     IsPawnPossessed,
-    GetInputComponent
+    GetInputComponent,
+    // ── Vehicle ──
+    VehicleSetThrottle,
+    VehicleSetBrake,
+    VehicleSetSteering,
+    VehicleSetHandbrake,
+    VehicleReset,
+    VehicleGetForwardSpeed,
+    // ── Particle ──
+    ParticleSetTemplateByPath,
+    ParticleActivate,
+    ParticleDeactivate,
+    ParticleReset,
+    ParticleRebuild,
+    ParticleSetLOD,
+    // ── Timer ──
+    SetTimer,
+    ClearTimer,
+    IsTimerActive,
+    SetTimerForNextTick,
+    // ── Trace / Collision query ──
+    LineTrace,
+    // ── UI ──
+    CreateWidget,
+    AddWidgetToViewport,
+    RemoveWidgetFromParent,
+    SetWidgetText,
+    BindWidgetClick,
+    // ── Audio ──
+    LoadAudio,
+    PlaySound,
+    PlayBGM,
+    StopBGM,
+    PlayAudioLoop,
+    StopAudioLoop,
+    SetAudioMasterVolume,
+    Count
 };
 
 enum class ELuaBlueprintDiagnosticSeverity : uint8

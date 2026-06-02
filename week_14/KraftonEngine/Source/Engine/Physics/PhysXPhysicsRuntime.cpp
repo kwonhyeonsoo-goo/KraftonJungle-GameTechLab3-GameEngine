@@ -152,6 +152,8 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime)
 void FPhysXPhysicsRuntime::Tick(float DeltaTime, const TArray<FPhysicsCommand>& FrameCommands)
 {
     std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
+    FrameDeferredDestroys = 0;
+
     if (!Scene)
     {
         Stats.NumSubsteps = 0;
@@ -212,6 +214,7 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime, const TArray<FPhysicsCommand>& 
     float      SimulateMs             = 0.0f;
     float      FetchResultsMs         = 0.0f;
     float      SyncPhysicsToEngineMs  = 0.0f;
+    float      VehicleRaycastMs       = 0.0f;
     float      VehicleUpdateMs        = 0.0f;
     float      PostPhysicsMs          = 0.0f;
     int32      AppliedCommands        = 0;
@@ -256,6 +259,7 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime, const TArray<FPhysicsCommand>& 
             if (VehicleRuntime)
             {
                 VehicleRuntime->PreSimulate(FixedDt);
+                VehicleRaycastMs += VehicleRuntime->GetLastRaycastMs();
             }
             VehicleUpdateEnd = FClock::now();
             Scene->simulate(FixedDt);
@@ -311,6 +315,7 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime, const TArray<FPhysicsCommand>& 
     Stats.SimulateMs            = SimulateMs;
     Stats.FetchResultsMs        = FetchResultsMs;
     Stats.SyncPhysicsToEngineMs = SyncPhysicsToEngineMs;
+    Stats.VehicleRaycastMs      = VehicleRaycastMs;
     Stats.VehicleUpdateMs       = VehicleUpdateMs;
     Stats.PostPhysicsMs         = PostPhysicsMs;
     Stats.NumDroppedSubsteps    = DroppedSubsteps;
@@ -691,6 +696,8 @@ void FPhysXPhysicsRuntime::DestroyRigidBody_Internal(FPhysicsBodyHandle BodyHand
 
     Body->DestroyedStep = StepIndex;
     Body->State         = EPhysicsRuntimeObjectState::Destroyed;
+
+    ++FrameDeferredDestroys;
 
     FreeBody(BodyHandle);
 }
@@ -1625,6 +1632,34 @@ FPhysicsStats FPhysXPhysicsRuntime::GetStats() const
     return DebugSnapshot.Stats;
 }
 
+void FPhysXPhysicsRuntime::RecordRaycastQuery()
+{
+    {
+        std::lock_guard<std::mutex> Lock(ExternalStatsMutex);
+        ++PendingRaycastQueries;
+    }
+    {
+        std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
+        ++DebugSnapshot.Stats.NumRaycasts;
+    }
+}
+
+void FPhysXPhysicsRuntime::SetEventStats(int32 NumContactPairs, int32 NumTriggerPairs, float DispatchEventMs)
+{
+    {
+        std::lock_guard<std::mutex> Lock(ExternalStatsMutex);
+        LastContactPairs    = NumContactPairs;
+        LastTriggerPairs    = NumTriggerPairs;
+        LastDispatchEventMs = DispatchEventMs;
+    }
+    {
+        std::lock_guard<std::mutex> Lock(DebugSnapshotMutex);
+        DebugSnapshot.Stats.NumContactPairs = NumContactPairs;
+        DebugSnapshot.Stats.NumTriggerPairs = NumTriggerPairs;
+        DebugSnapshot.Stats.DispatchEventMs = DispatchEventMs;
+    }
+}
+
 FPhysicsBodyHandle FPhysXPhysicsRuntime::AllocateBody()
 {
     for (uint32 i = 0; i < static_cast<uint32>(Bodies.size()); ++i)
@@ -2107,6 +2142,17 @@ void FPhysXPhysicsRuntime::UpdateStats()
     const int32 NumSubsteps = Stats.NumSubsteps;
     Stats = FPhysicsStats();
     Stats.NumSubsteps = NumSubsteps;
+    Stats.NumDeferredDestroys = FrameDeferredDestroys;
+
+    {
+        std::lock_guard<std::mutex> Lock(ExternalStatsMutex);
+        Stats.NumRaycasts     = PendingRaycastQueries;
+        Stats.NumContactPairs = LastContactPairs;
+        Stats.NumTriggerPairs = LastTriggerPairs;
+        Stats.DispatchEventMs = LastDispatchEventMs;
+
+        PendingRaycastQueries = 0;
+    }
 
     for (const auto& BodyPtr : Bodies)
     {

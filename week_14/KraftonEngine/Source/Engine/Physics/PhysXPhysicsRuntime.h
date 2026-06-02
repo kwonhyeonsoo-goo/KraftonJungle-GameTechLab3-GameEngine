@@ -142,6 +142,9 @@ public:
     void SetVehicleInput(FVehicleHandle Vehicle, const FVehicleInputState& Input);
     void ResetVehicle(FVehicleHandle Vehicle, const FTransform& WorldTransform);
 
+    void RecordRaycastQuery();
+    void SetEventStats(int32 NumContactPairs, int32 NumTriggerPairs, float DispatchEventMs);
+
     FPhysicsStats GetStats() const override;
 
 private:
@@ -255,6 +258,14 @@ private:
     TArray<FPhysicsCreationResult> PendingCreationResults;
 
     FPhysicsStats Stats;
+
+    mutable std::mutex ExternalStatsMutex;
+    mutable int32      PendingRaycastQueries = 0;
+    mutable int32      LastContactPairs      = 0;
+    mutable int32      LastTriggerPairs      = 0;
+    mutable float      LastDispatchEventMs   = 0.0f;
+
+    int32 FrameDeferredDestroys = 0;
 
     float Accumulator = 0.0f;
     float FixedDt     = 1.0f / 60.0f;

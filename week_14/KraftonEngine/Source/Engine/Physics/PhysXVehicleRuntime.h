@@ -32,6 +32,7 @@ public:
     void PreSimulate(float FixedDt);
     void BuildSnapshots(TArray<FVehicleSnapshot>& OutVehicles) const;
     void GatherStats(FPhysicsStats& Stats) const;
+    float GetLastRaycastMs() const { return LastRaycastMs; }
 
 private:
     FVehicleHandle AllocateVehicle();
@@ -49,4 +50,6 @@ private:
     TArray<std::unique_ptr<FPhysXVehicleInstance>> Vehicles;
     TArray<uint32> VehicleGenerations;
     TMap<uint32, FVehicleHandle> ComponentToVehicle;
+
+    float LastRaycastMs = 0.0f;
 };

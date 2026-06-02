@@ -25,6 +25,7 @@ public:
 	void SetLetterboxAmount(float Amount) { Letterbox.Amount = Amount; }
 	UFUNCTION(Callable, Exec, Category="Cinematic")
 	void SetLetterboxThickness(float Thickness) { Letterbox.Thickness = Thickness; }
+	UFUNCTION(Callable, Exec, Category="Cinematic")
 	void SetLetterboxColor(FLinearColor Color) { Letterbox.Color = Color; }
 
 	const FCineLetterboxSettings& GetLetterboxSettings() const { return Letterbox; }
