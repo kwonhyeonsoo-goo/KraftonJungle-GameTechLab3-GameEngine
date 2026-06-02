@@ -24,11 +24,12 @@ cbuffer PerObjectBuffer : register(b1)
     float4 PrimitiveColor;
 };
 
-cbuffer BoneHeatMapBuffer : register(b6)
+cbuffer MeshScalarOverlayBuffer : register(b6)
 {
+    int MeshScalarOverlayMode;
     int SelectedBoneIndex;
-    float BoneHeatMapOverlayAlpha;
-    float2 BoneHeatMapPad;
+    float MeshScalarOverlayAlpha;
+    float MeshScalarOverlayPad;
 };
 
 // 시스템 샘플러 (s0~s4)

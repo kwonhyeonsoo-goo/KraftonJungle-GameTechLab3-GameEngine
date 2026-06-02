@@ -27,7 +27,7 @@ namespace ECBSlot
 	constexpr uint32 PerShader1 = 3; // b3: 셰이더별 여분 슬롯 #1 (PerShader2 예약)
 	constexpr uint32 Lighting = 4;   // b4: LightingBuffer (Ambient + Directional + 메타)
 	constexpr uint32 Shadow = 5;     // b5: ShadowBuffer (Shadow 행렬 + 파라미터)
-	constexpr uint32 BoneHeatMap = 6; // b6: SkeletalMesh bone weight heatmap
+	constexpr uint32 MeshScalarOverlay = 6; // b6: ViewModeMesh scalar overlay
 	constexpr uint32 ForwardFog = 7; // b7: 전역 Fog 파라미터 (UberTransparent self-fog 용)
 }
 
@@ -109,11 +109,20 @@ struct FPerObjectConstants
 	}
 };
 
-struct FBoneHeatMapConstants
+enum class EMeshScalarOverlayMode : int32
 {
+	None = 0,
+	BoneWeight = 1,
+	ClothMaxDistance = 2,
+	ClothMaxDistanceWire = 3,
+};
+
+struct FMeshScalarOverlayConstants
+{
+	int32 Mode = static_cast<int32>(EMeshScalarOverlayMode::None);
 	int32 SelectedBoneIndex = -1;
 	float OverlayAlpha = 0.8f;
-	float Pad[2] = { 0.0f, 0.0f };
+	float Pad = 0.0f;
 };
 
 // =============================================================================
