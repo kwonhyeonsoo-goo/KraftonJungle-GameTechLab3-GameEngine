@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Editor/UI/Asset/AssetEditorWidget.h"
 #include "Physics/PhysicsAssetValidation.h"
@@ -163,7 +163,7 @@ private:
     bool bRegenerateSkipHelperBones = true;
     bool bRegenerateAllowBoneAxisFallback = false;
     float RegenerateMinInfluenceWeight = 0.15f;
-    int32 RegenerateMinWeightedVertices = 16;
+    int32 RegenerateMinWeightedVertices = 64;
     EPhysicsAssetConstraintFrameTarget SelectedConstraintGizmoFrame = EPhysicsAssetConstraintFrameTarget::Child;
     uint64 ConstraintGraphTopologyHash = 0;
 
