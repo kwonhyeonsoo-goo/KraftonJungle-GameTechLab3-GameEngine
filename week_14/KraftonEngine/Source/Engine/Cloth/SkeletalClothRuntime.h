@@ -13,7 +13,7 @@ struct FClothWorldForceContext
 {
     FVector WorldGravity = FVector(0.0f, 0.0f, -9.81f);
     FVector WorldWindVelocity = FVector::ZeroVector;
-    bool bUsePreviewWindOverride = false;
+    bool bHasWorldWindVelocity = false;
 };
 
 struct FClothDebugRuntimeConfig

@@ -281,14 +281,14 @@ struct FSkeletalClothRuntime::FImpl
             const FVector LocalGravity = TransformWorldVectorToComponentLocal(ForceContext.WorldGravity);
             Section.Cloth->setGravity(ToPxVec3(LocalGravity * ClothData.Config.GravityScale));
 
-            const bool bApplyPreviewWind = ForceContext.bUsePreviewWindOverride &&
+            const bool bApplyWind = ForceContext.bHasWorldWindVelocity &&
                 !ForceContext.WorldWindVelocity.IsNearlyZero();
             Section.Cloth->clearParticleAccelerations();
 
             const float WindScale = std::max(0.0f, ClothData.Config.WindScale);
             const float DragCoefficient = Clamp01(ClothData.Config.DragCoefficient);
             const float LiftCoefficient = Clamp01(ClothData.Config.LiftCoefficient);
-            if (bApplyPreviewWind && WindScale > 0.0f && (DragCoefficient > 0.0f || LiftCoefficient > 0.0f))
+            if (bApplyWind && WindScale > 0.0f && (DragCoefficient > 0.0f || LiftCoefficient > 0.0f))
             {
                 const FVector LocalWindVelocity =
                     TransformWorldVectorToComponentLocal(ForceContext.WorldWindVelocity) * WindScale;

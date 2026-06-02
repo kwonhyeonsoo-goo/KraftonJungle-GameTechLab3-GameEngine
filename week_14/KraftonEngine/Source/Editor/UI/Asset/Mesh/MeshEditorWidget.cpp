@@ -1754,13 +1754,28 @@ void FMeshEditorWidget::RenderMeshLayout()
 	USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
 
 	// Left: mesh info
-	const float StatsWidth = 220.0f;
-	ImGui::BeginChild("MeshInfo", ImVec2(StatsWidth, 0), true);
+	const float SplitterWidth = 4.0f;
+	const float Spacing = ImGui::GetStyle().ItemSpacing.x;
+	const float TotalWidth = ImGui::GetContentRegionAvail().x;
+	constexpr float MinMeshInfoWidth = 220.0f;
+	constexpr float MinViewportWidth = 240.0f;
+	const float WidthForPanels = std::max(0.0f, TotalWidth - SplitterWidth - Spacing);
+	if (WidthForPanels >= MinMeshInfoWidth + MinViewportWidth)
+	{
+		MeshInfoWidth = std::max(MinMeshInfoWidth, std::min(MeshInfoWidth, WidthForPanels - MinViewportWidth));
+	}
+	else
+	{
+		MeshInfoWidth = std::max(120.0f, std::min(MeshInfoWidth, WidthForPanels));
+	}
+	float ViewportWidth = std::max(0.0f, WidthForPanels - MeshInfoWidth);
+
+	ImGui::BeginChild("MeshInfo", ImVec2(MeshInfoWidth, 0), true);
 	ImGui::Text("Mesh Info");
 	ImGui::Separator();
 	if (SkeletalMesh)
 	{
-			FSkeletalMesh* Asset = SkeletalMesh->GetSkeletalMeshAsset();
+		FSkeletalMesh* Asset = SkeletalMesh->GetSkeletalMeshAsset();
 		if (Asset)
 		{
 			ImGui::Text("Vertices:  %s", FormatMeshStatCount(Asset->Vertices.size()).c_str());
@@ -1809,10 +1824,35 @@ void FMeshEditorWidget::RenderMeshLayout()
 
 	ImGui::SameLine();
 
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+	ImGui::Button("##meshInfoViewportSplitter", ImVec2(SplitterWidth, -1.0f));
+	if (ImGui::IsItemActive())
+	{
+		MeshInfoWidth += ImGui::GetIO().MouseDelta.x;
+		if (WidthForPanels >= MinMeshInfoWidth + MinViewportWidth)
+		{
+			MeshInfoWidth = std::max(MinMeshInfoWidth, std::min(MeshInfoWidth, WidthForPanels - MinViewportWidth));
+		}
+		else
+		{
+			MeshInfoWidth = std::max(120.0f, std::min(MeshInfoWidth, WidthForPanels));
+		}
+		ViewportWidth = std::max(0.0f, WidthForPanels - MeshInfoWidth);
+	}
+	if (ImGui::IsItemHovered() || ImGui::IsItemActive())
+	{
+		ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+	}
+	ImGui::PopStyleColor(3);
+
+	ImGui::SameLine();
+
 	// Center: viewport (full remaining width)
 	ImGui::BeginGroup();
 	{
-		ImVec2 Size = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y);
+		ImVec2 Size = ImVec2(ViewportWidth, ImGui::GetContentRegionAvail().y);
 		RenderViewportPanel(Size);
 	}
 	ImGui::EndGroup();

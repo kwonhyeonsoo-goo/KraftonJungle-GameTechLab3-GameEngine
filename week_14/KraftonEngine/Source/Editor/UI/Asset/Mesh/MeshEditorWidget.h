@@ -160,6 +160,7 @@ private:
 	int32 BufferedSocketIndex = -2;
 	char SocketNameBuffer[128] = {};
 	char SocketBoneNameBuffer[128] = {};
+	float MeshInfoWidth    = 340.0f;
 	float HierarchyWidth    = 250.0f;
 	float DetailsWidth      = 300.0f;
 

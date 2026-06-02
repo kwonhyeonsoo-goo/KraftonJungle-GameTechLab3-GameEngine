@@ -932,11 +932,17 @@ void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
     if (UWorld* World = GetWorld())
     {
         ForceContext.WorldGravity = World->GetWorldSettings().Gravity;
+        const FVector& RuntimeWindVelocity = World->GetClothWorldWindVelocity();
+        if (!RuntimeWindVelocity.IsNearlyZero())
+        {
+            ForceContext.WorldWindVelocity = RuntimeWindVelocity;
+            ForceContext.bHasWorldWindVelocity = true;
+        }
     }
     if (bClothPreviewWindOverride)
     {
         ForceContext.WorldWindVelocity = ClothPreviewWorldWindVelocity;
-        ForceContext.bUsePreviewWindOverride = true;
+        ForceContext.bHasWorldWindVelocity = !ClothPreviewWorldWindVelocity.IsNearlyZero();
     }
 
     if (ClothRuntime->Tick(*Asset, DeltaTime, MutableSkinnedVertices, GetWorldMatrix(), ForceContext))
