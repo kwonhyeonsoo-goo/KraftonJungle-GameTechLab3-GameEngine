@@ -200,7 +200,7 @@ private:
     int32 RegeneratePrimitiveTypeIndex = 0;
     float RegenerateMinInfluenceWeight = 0.15f;
     int32 RegenerateMinWeightedVertices = 64;
-    float RegenerateMinBoneSize = 0.025;
+    float RegenerateMinBoneSize = 0.025f;
     float RegenerateMinWeldSize = 1.0e-4f;
     EPhysicsAssetConstraintFrameTarget SelectedConstraintGizmoFrame = EPhysicsAssetConstraintFrameTarget::Child;
     uint64 ConstraintGraphTopologyHash = 0;
