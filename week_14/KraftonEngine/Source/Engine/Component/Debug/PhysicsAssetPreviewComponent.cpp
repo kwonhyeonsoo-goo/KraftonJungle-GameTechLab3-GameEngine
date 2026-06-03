@@ -18,9 +18,10 @@ namespace
 	constexpr int32 SphereStacks = 12;
 	constexpr int32 CapsuleSlices = 24;
 	constexpr int32 CapsuleHemisphereStacks = 6;
-	constexpr int32 ConstraintLimitCircleSegments = 32;
-	constexpr int32 ConstraintLimitArcSegments = 24;
-	constexpr int32 PhysicsPreviewHitFaceBodyStride = 10000;
+		constexpr int32 ConstraintLimitCircleSegments = 32;
+		constexpr int32 ConstraintLimitArcSegments = 24;
+		constexpr int32 PhysicsPreviewHitFaceBodyStride = 10000;
+		constexpr int32 PhysicsPreviewHitFaceConstraintBase = 100000000;
 
 	FTransform ComposePreviewDebugTransforms(const FTransform& ParentWorld, const FTransform& Local)
 	{
@@ -91,11 +92,70 @@ namespace
 		return (std::min)((std::max)(SegmentCount, 4), ConstraintLimitArcSegments);
 	}
 
-	float ComputeConstraintLimitSurfaceRadius(const FTransform& ParentFrameWorld, const FTransform& ChildFrameWorld)
-	{
-		const float FrameDistance = FVector::Distance(ParentFrameWorld.Location, ChildFrameWorld.Location);
-		return FMath::Clamp(FrameDistance * 0.45f + 0.25f, 0.25f, 2.5f);
-	}
+		float ComputeConstraintLimitSurfaceRadius(const FTransform& ParentFrameWorld, const FTransform& ChildFrameWorld)
+		{
+			const float FrameDistance = FVector::Distance(ParentFrameWorld.Location, ChildFrameWorld.Location);
+			return FMath::Clamp(FrameDistance * 0.45f + 0.25f, 0.25f, 2.5f);
+		}
+
+		float ComputeConstraintPickTolerance(float Radius)
+		{
+			return (std::max)(Radius * 0.08f, 0.03f);
+		}
+
+		float DistanceRayToSegment(const FRay& Ray, const FVector& A, const FVector& B, float& OutRayT)
+		{
+			const FVector U = Ray.Direction;
+			const FVector V = B - A;
+			const FVector W0 = Ray.Origin - A;
+			const float ACoef = U.Dot(U);
+			const float BCoef = U.Dot(V);
+			const float CCoef = V.Dot(V);
+			const float DCoef = U.Dot(W0);
+			const float ECoef = V.Dot(W0);
+			const float Denom = ACoef * CCoef - BCoef * BCoef;
+
+			float RayT = 0.0f;
+			float SegmentT = 0.0f;
+			if (Denom > 1e-6f)
+			{
+				RayT = (BCoef * ECoef - CCoef * DCoef) / Denom;
+				SegmentT = (ACoef * ECoef - BCoef * DCoef) / Denom;
+			}
+			else
+			{
+				RayT = 0.0f;
+				SegmentT = CCoef > 1e-6f ? ECoef / CCoef : 0.0f;
+			}
+
+			SegmentT = FMath::Clamp(SegmentT, 0.0f, 1.0f);
+			RayT = (std::max)(RayT, 0.0f);
+
+			const FVector ClosestRay = Ray.Origin + U * RayT;
+			const FVector ClosestSegment = A + V * SegmentT;
+			OutRayT = RayT;
+			return FVector::Distance(ClosestRay, ClosestSegment);
+		}
+
+		void TestConstraintPickSegment(
+			const FRay& Ray,
+			const FVector& A,
+			const FVector& B,
+			float Tolerance,
+			int32 ConstraintIndex,
+			bool& bOutHit,
+			float& InOutClosestT,
+			int32& OutConstraintIndex)
+		{
+			float RayT = 0.0f;
+			const float Distance = DistanceRayToSegment(Ray, A, B, RayT);
+			if (Distance <= Tolerance && RayT < InOutClosestT)
+			{
+				bOutHit = true;
+				InOutClosestT = RayT;
+				OutConstraintIndex = ConstraintIndex;
+			}
+		}
 
 	FVector ClampHalfExtent(FVector HalfExtent)
 	{
@@ -399,11 +459,16 @@ int32 UPhysicsAssetPreviewComponent::EncodeSelectionFaceIndex(int32 BodyIndex, i
 	return BodyIndex * PhysicsPreviewHitFaceBodyStride + ShapeIndex;
 }
 
+int32 UPhysicsAssetPreviewComponent::EncodeConstraintFaceIndex(int32 ConstraintIndex)
+{
+	return PhysicsPreviewHitFaceConstraintBase + ConstraintIndex;
+}
+
 bool UPhysicsAssetPreviewComponent::DecodeSelectionFaceIndex(int32 FaceIndex, int32& OutBodyIndex, int32& OutShapeIndex)
 {
 	OutBodyIndex = -1;
 	OutShapeIndex = -1;
-	if (FaceIndex < 0)
+	if (FaceIndex < 0 || FaceIndex >= PhysicsPreviewHitFaceConstraintBase)
 	{
 		return false;
 	}
@@ -413,11 +478,23 @@ bool UPhysicsAssetPreviewComponent::DecodeSelectionFaceIndex(int32 FaceIndex, in
 	return OutBodyIndex >= 0 && OutShapeIndex >= 0;
 }
 
+bool UPhysicsAssetPreviewComponent::DecodeConstraintFaceIndex(int32 FaceIndex, int32& OutConstraintIndex)
+{
+	OutConstraintIndex = -1;
+	if (FaceIndex < PhysicsPreviewHitFaceConstraintBase)
+	{
+		return false;
+	}
+
+	OutConstraintIndex = FaceIndex - PhysicsPreviewHitFaceConstraintBase;
+	return OutConstraintIndex >= 0;
+}
+
 bool UPhysicsAssetPreviewComponent::LineTraceComponent(const FRay& Ray, FHitResult& OutHitResult)
 {
 	UPhysicsAsset* Asset = PhysicsAsset.Get();
 	USkeletalMeshComponent* MeshComponent = PreviewComponent.Get();
-	if (!Asset || !MeshComponent || !bShowBodies || !IsVisible())
+	if (!Asset || !MeshComponent || !IsVisible())
 	{
 		return false;
 	}
@@ -435,67 +512,180 @@ bool UPhysicsAssetPreviewComponent::LineTraceComponent(const FRay& Ray, FHitResu
 		return false;
 	}
 
-	bool bHit = false;
-	float ClosestT = FLT_MAX;
+	bool bShapeHit = false;
+	float ClosestShapeT = FLT_MAX;
 	int32 HitBodyIndex = -1;
 	int32 HitShapeIndex = -1;
 
-	const TArray<FPhysicsAssetBodySetup>& Bodies = Asset->GetBodySetups();
-	for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
+	if (bShowBodies)
 	{
-		FTransform BodyWorld;
-		if (!PoseCache.ComputeBodyWorldTransform(BodyIndex, BodyWorld))
+		const TArray<FPhysicsAssetBodySetup>& Bodies = Asset->GetBodySetups();
+		for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
 		{
-			continue;
-		}
-
-		const FPhysicsAssetBodySetup& Body = Bodies[BodyIndex];
-		for (int32 ShapeIndex = 0; ShapeIndex < static_cast<int32>(Body.Shapes.size()); ++ShapeIndex)
-		{
-			const FPhysicsAssetShapeSetup& Shape = Body.Shapes[ShapeIndex];
-			const FTransform ShapeWorld = ComposePreviewDebugTransforms(BodyWorld, Shape.LocalTransform);
-			const FRay LocalRay = MakeShapeLocalRay(WorldRay, ShapeWorld);
-
-			float T = 0.0f;
-			bool bShapeHit = false;
-			switch (Shape.Type)
+			FTransform BodyWorld;
+			if (!PoseCache.ComputeBodyWorldTransform(BodyIndex, BodyWorld))
 			{
-			case EPhysicsAssetShapeType::Box:
-				bShapeHit = IntersectRayLocalBox(LocalRay, ClampHalfExtent(Shape.BoxHalfExtent), T);
-				break;
-			case EPhysicsAssetShapeType::Sphere:
-				bShapeHit = IntersectRayLocalSphere(LocalRay, FVector::ZeroVector, (std::max)(Shape.SphereRadius, MinShapeSize), T);
-				break;
-			case EPhysicsAssetShapeType::Capsule:
-			{
-				const float Radius = (std::max)(Shape.CapsuleRadius, MinShapeSize);
-				const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight, Radius);
-				bShapeHit = IntersectRayLocalCapsuleZ(LocalRay, Radius, HalfHeight, T);
-				break;
-			}
-			default:
-				break;
+				continue;
 			}
 
-			if (bShapeHit && T >= 0.0f && T < ClosestT)
+			const FPhysicsAssetBodySetup& Body = Bodies[BodyIndex];
+			for (int32 ShapeIndex = 0; ShapeIndex < static_cast<int32>(Body.Shapes.size()); ++ShapeIndex)
 			{
-				bHit = true;
-				ClosestT = T;
-				HitBodyIndex = BodyIndex;
-				HitShapeIndex = ShapeIndex;
+				const FPhysicsAssetShapeSetup& Shape = Body.Shapes[ShapeIndex];
+				const FTransform ShapeWorld = ComposePreviewDebugTransforms(BodyWorld, Shape.LocalTransform);
+				const FRay LocalRay = MakeShapeLocalRay(WorldRay, ShapeWorld);
+
+				float T = 0.0f;
+				bool bCurrentShapeHit = false;
+				switch (Shape.Type)
+				{
+				case EPhysicsAssetShapeType::Box:
+					bCurrentShapeHit = IntersectRayLocalBox(LocalRay, ClampHalfExtent(Shape.BoxHalfExtent), T);
+					break;
+				case EPhysicsAssetShapeType::Sphere:
+					bCurrentShapeHit = IntersectRayLocalSphere(LocalRay, FVector::ZeroVector, (std::max)(Shape.SphereRadius, MinShapeSize), T);
+					break;
+				case EPhysicsAssetShapeType::Capsule:
+				{
+					const float Radius = (std::max)(Shape.CapsuleRadius, MinShapeSize);
+					const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight, Radius);
+					bCurrentShapeHit = IntersectRayLocalCapsuleZ(LocalRay, Radius, HalfHeight, T);
+					break;
+				}
+				default:
+					break;
+				}
+
+				if (bCurrentShapeHit && T >= 0.0f && T < ClosestShapeT)
+				{
+					bShapeHit = true;
+					ClosestShapeT = T;
+					HitBodyIndex = BodyIndex;
+					HitShapeIndex = ShapeIndex;
+				}
 			}
 		}
 	}
 
-	if (!bHit)
+	bool bConstraintHit = false;
+	float ClosestConstraintT = FLT_MAX;
+	int32 HitConstraintIndex = -1;
+	if (bShowConstraints && bShowConstraintLimitAngles)
+	{
+		const TArray<FPhysicsAssetConstraintSetup>& Constraints = Asset->GetConstraintSetups();
+		for (int32 ConstraintIndex = 0; ConstraintIndex < static_cast<int32>(Constraints.size()); ++ConstraintIndex)
+		{
+			FTransform ParentFrameWorld;
+			FTransform ChildFrameWorld;
+			if (!PoseCache.ComputeConstraintWorldFrames(ConstraintIndex, ParentFrameWorld, ChildFrameWorld))
+			{
+				continue;
+			}
+
+			const FConstraintLimitDesc& Limits = Constraints[ConstraintIndex].Limits;
+			const float Radius = ComputeConstraintLimitSurfaceRadius(ParentFrameWorld, ChildFrameWorld);
+			const float Tolerance = ComputeConstraintPickTolerance(Radius);
+			const FQuat ParentRotation = ParentFrameWorld.Rotation.GetNormalized();
+			const FQuat ChildRotation = ChildFrameWorld.Rotation.GetNormalized();
+			const FVector AxisX = ParentRotation.RotateVector(FVector(1.0f, 0.0f, 0.0f));
+			const FVector AxisY = ParentRotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
+			const FVector AxisZ = ParentRotation.RotateVector(FVector(0.0f, 0.0f, 1.0f));
+
+			const FVector SwingCenter = ParentFrameWorld.Location + AxisX * Radius;
+			const float Swing1Radians = MotionLimitDegreesForPreview(Limits.Swing1, Limits.Swing1LimitDegrees) * FMath::DegToRad;
+			const float Swing2Radians = MotionLimitDegreesForPreview(Limits.Swing2, Limits.Swing2LimitDegrees) * FMath::DegToRad;
+			const float DiskRadiusY = (std::max)(Radius * sinf(Swing1Radians), Radius * 0.025f);
+			const float DiskRadiusZ = (std::max)(Radius * sinf(Swing2Radians), Radius * 0.025f);
+
+			if (Limits.Swing1 == EConstraintMotion::Locked && Limits.Swing2 == EConstraintMotion::Locked)
+			{
+				const float CrossSize = Radius * 0.12f;
+				TestConstraintPickSegment(WorldRay, SwingCenter + AxisY * CrossSize, SwingCenter - AxisY * CrossSize, Tolerance, ConstraintIndex, bConstraintHit, ClosestConstraintT, HitConstraintIndex);
+				TestConstraintPickSegment(WorldRay, SwingCenter + AxisZ * CrossSize, SwingCenter - AxisZ * CrossSize, Tolerance, ConstraintIndex, bConstraintHit, ClosestConstraintT, HitConstraintIndex);
+			}
+			else
+			{
+				FVector Prev = SwingCenter + AxisY * DiskRadiusY;
+				for (int32 Segment = 1; Segment <= ConstraintLimitCircleSegments; ++Segment)
+				{
+					const float Angle = 2.0f * FMath::Pi * static_cast<float>(Segment) / static_cast<float>(ConstraintLimitCircleSegments);
+					const FVector Next = SwingCenter + AxisY * (cosf(Angle) * DiskRadiusY) + AxisZ * (sinf(Angle) * DiskRadiusZ);
+					TestConstraintPickSegment(WorldRay, Prev, Next, Tolerance, ConstraintIndex, bConstraintHit, ClosestConstraintT, HitConstraintIndex);
+					Prev = Next;
+				}
+				TestConstraintPickSegment(WorldRay, SwingCenter, SwingCenter + AxisY * DiskRadiusY, Tolerance, ConstraintIndex, bConstraintHit, ClosestConstraintT, HitConstraintIndex);
+				TestConstraintPickSegment(WorldRay, SwingCenter, SwingCenter + AxisZ * DiskRadiusZ, Tolerance, ConstraintIndex, bConstraintHit, ClosestConstraintT, HitConstraintIndex);
+			}
+
+			const FVector TwistCenter = ParentFrameWorld.Location + AxisX * (Radius * 0.12f);
+			const float RingRadius = Radius * 0.32f;
+			if (Limits.Twist == EConstraintMotion::Locked)
+			{
+				TestConstraintPickSegment(WorldRay, TwistCenter - AxisY * RingRadius, TwistCenter + AxisY * RingRadius, Tolerance, ConstraintIndex, bConstraintHit, ClosestConstraintT, HitConstraintIndex);
+				TestConstraintPickSegment(WorldRay, TwistCenter - AxisZ * RingRadius, TwistCenter + AxisZ * RingRadius, Tolerance, ConstraintIndex, bConstraintHit, ClosestConstraintT, HitConstraintIndex);
+			}
+			else
+			{
+				float StartAngle = 0.0f;
+				float EndAngle = 2.0f * FMath::Pi;
+				if (Limits.Twist == EConstraintMotion::Limited)
+				{
+					StartAngle = Limits.TwistLimitMinDegrees * FMath::DegToRad;
+					EndAngle = Limits.TwistLimitMaxDegrees * FMath::DegToRad;
+					if (StartAngle > EndAngle)
+					{
+						std::swap(StartAngle, EndAngle);
+					}
+				}
+
+				const float AngleRange = EndAngle - StartAngle;
+				if (AngleRange > 0.001f)
+				{
+					const int32 Segments = Limits.Twist == EConstraintMotion::Free
+						? ConstraintLimitCircleSegments
+						: ConstraintArcSegments(AngleRange);
+					FVector Prev = TwistCenter + (AxisY * cosf(StartAngle) + AxisZ * sinf(StartAngle)) * RingRadius;
+					for (int32 Segment = 1; Segment <= Segments; ++Segment)
+					{
+						const float Alpha = static_cast<float>(Segment) / static_cast<float>(Segments);
+						const float Angle = StartAngle + AngleRange * Alpha;
+						const FVector Next = TwistCenter + (AxisY * cosf(Angle) + AxisZ * sinf(Angle)) * RingRadius;
+						TestConstraintPickSegment(WorldRay, Prev, Next, Tolerance, ConstraintIndex, bConstraintHit, ClosestConstraintT, HitConstraintIndex);
+						Prev = Next;
+					}
+					if (Limits.Twist == EConstraintMotion::Limited)
+					{
+						TestConstraintPickSegment(WorldRay, TwistCenter, TwistCenter + (AxisY * cosf(StartAngle) + AxisZ * sinf(StartAngle)) * RingRadius, Tolerance, ConstraintIndex, bConstraintHit, ClosestConstraintT, HitConstraintIndex);
+						TestConstraintPickSegment(WorldRay, TwistCenter, TwistCenter + (AxisY * cosf(EndAngle) + AxisZ * sinf(EndAngle)) * RingRadius, Tolerance, ConstraintIndex, bConstraintHit, ClosestConstraintT, HitConstraintIndex);
+					}
+				}
+			}
+
+			const FVector ChildY = ChildRotation.RotateVector(FVector(0.0f, 1.0f, 0.0f));
+			TestConstraintPickSegment(WorldRay, TwistCenter, TwistCenter + ChildY * RingRadius, Tolerance, ConstraintIndex, bConstraintHit, ClosestConstraintT, HitConstraintIndex);
+			TestConstraintPickSegment(WorldRay, ParentFrameWorld.Location, ChildFrameWorld.Location, Tolerance, ConstraintIndex, bConstraintHit, ClosestConstraintT, HitConstraintIndex);
+		}
+	}
+
+	if (bConstraintHit && (!bShapeHit || ClosestConstraintT < ClosestShapeT))
+	{
+		OutHitResult.bHit = true;
+		OutHitResult.HitComponent = this;
+		OutHitResult.Distance = ClosestConstraintT;
+		OutHitResult.WorldHitLocation = WorldRay.Origin + WorldRay.Direction * ClosestConstraintT;
+		OutHitResult.FaceIndex = EncodeConstraintFaceIndex(HitConstraintIndex);
+		return true;
+	}
+
+	if (!bShapeHit)
 	{
 		return false;
 	}
 
 	OutHitResult.bHit = true;
 	OutHitResult.HitComponent = this;
-	OutHitResult.Distance = ClosestT;
-	OutHitResult.WorldHitLocation = WorldRay.Origin + WorldRay.Direction * ClosestT;
+	OutHitResult.Distance = ClosestShapeT;
+	OutHitResult.WorldHitLocation = WorldRay.Origin + WorldRay.Direction * ClosestShapeT;
 	OutHitResult.FaceIndex = EncodeSelectionFaceIndex(HitBodyIndex, HitShapeIndex);
 	return true;
 }
@@ -514,27 +704,32 @@ void UPhysicsAssetPreviewComponent::UpdateWorldAABB() const
 	UPrimitiveComponent::UpdateWorldAABB();
 }
 
-void UPhysicsAssetPreviewComponent::UpdatePreview(
-	UPhysicsAsset* InPhysicsAsset,
-	USkeletalMeshComponent* InPreviewComponent,
-	int32 InSelectedBodyIndex,
-	int32 InSelectedShapeIndex,
-	int32 InSelectedConstraintIndex,
-	bool bInShowBodies,
+	void UPhysicsAssetPreviewComponent::UpdatePreview(
+		UPhysicsAsset* InPhysicsAsset,
+		USkeletalMeshComponent* InPreviewComponent,
+		int32 InSelectedBodyIndex,
+		int32 InSelectedShapeIndex,
+		int32 InSelectedConstraintIndex,
+		bool bInShowBodies,
+		bool bInShowConstraints,
+	bool bInShowConstraintLimitAngles,
 	bool bInShowConstraintLimitSurfaces,
 	bool bInShowOnlySelectedConstraintLimitSurfaces,
 	ID3D11Device* Device)
 {
-	PhysicsAsset = InPhysicsAsset;
-	PreviewComponent = InPreviewComponent;
-	SelectedBodyIndex = InSelectedBodyIndex;
-	SelectedShapeIndex = InSelectedShapeIndex;
-	SelectedConstraintIndex = InSelectedConstraintIndex;
-	bShowBodies = bInShowBodies;
+		PhysicsAsset = InPhysicsAsset;
+		PreviewComponent = InPreviewComponent;
+		SelectedBodyIndex = InSelectedBodyIndex;
+		SelectedShapeIndex = InSelectedShapeIndex;
+		SelectedConstraintIndex = InSelectedConstraintIndex;
+		bShowBodies = bInShowBodies;
+		bShowConstraints = bInShowConstraints;
+	bShowConstraintLimitAngles = bInShowConstraintLimitAngles;
 	bShowConstraintLimitSurfaces = bInShowConstraintLimitSurfaces;
 	bShowOnlySelectedConstraintLimitSurfaces = bInShowOnlySelectedConstraintLimitSurfaces;
 
-	if ((!bShowBodies && !bShowConstraintLimitSurfaces) || !PhysicsAsset.Get() || !PreviewComponent.Get() || !Device)
+	const bool bCanPickConstraintDebug = bShowConstraints && bShowConstraintLimitAngles;
+	if ((!bShowBodies && !bShowConstraintLimitSurfaces && !bCanPickConstraintDebug) || !PhysicsAsset.Get() || !PreviewComponent.Get() || !Device)
 	{
 		ClearPreview(Device);
 		InvalidatePreviewBuildCache();
@@ -551,13 +746,15 @@ void UPhysicsAssetPreviewComponent::UpdatePreview(
 			SelectedShapeIndex,
 			SelectedConstraintIndex,
 			bShowBodies,
+			bShowConstraints,
+			bShowConstraintLimitAngles,
 			bShowConstraintLimitSurfaces,
 			bShowOnlySelectedConstraintLimitSurfaces,
 			CurrentSkinnedRevision,
 			CurrentComponentWorldHash,
 			CurrentAssetHash))
 	{
-		SetVisibility(!PreviewMeshData.Vertices.empty());
+		SetVisibility(!PreviewMeshData.Vertices.empty() || bCanPickConstraintDebug);
 		return;
 	}
 
@@ -570,12 +767,14 @@ void UPhysicsAssetPreviewComponent::UpdatePreview(
 		SelectedShapeIndex,
 		SelectedConstraintIndex,
 		bShowBodies,
+		bShowConstraints,
+		bShowConstraintLimitAngles,
 		bShowConstraintLimitSurfaces,
 		bShowOnlySelectedConstraintLimitSurfaces,
 		CurrentSkinnedRevision,
 		CurrentComponentWorldHash,
 		CurrentAssetHash);
-	SetVisibility(!PreviewMeshData.Vertices.empty());
+	SetVisibility(!PreviewMeshData.Vertices.empty() || bCanPickConstraintDebug);
 }
 
 void UPhysicsAssetPreviewComponent::ClearPreview(ID3D11Device* Device)
@@ -601,6 +800,8 @@ bool UPhysicsAssetPreviewComponent::IsPreviewBuildCacheCurrent(
 	int32 InSelectedShapeIndex,
 	int32 InSelectedConstraintIndex,
 	bool bInShowBodies,
+	bool bInShowConstraints,
+	bool bInShowConstraintLimitAngles,
 	bool bInShowConstraintLimitSurfaces,
 	bool bInShowOnlySelectedConstraintLimitSurfaces,
 	uint64 InSkinnedRevision,
@@ -614,6 +815,8 @@ bool UPhysicsAssetPreviewComponent::IsPreviewBuildCacheCurrent(
 		CachedBuildSelectedShapeIndex == InSelectedShapeIndex &&
 		CachedBuildSelectedConstraintIndex == InSelectedConstraintIndex &&
 		bCachedBuildShowBodies == bInShowBodies &&
+		bCachedBuildShowConstraints == bInShowConstraints &&
+		bCachedBuildShowConstraintLimitAngles == bInShowConstraintLimitAngles &&
 		bCachedBuildShowConstraintLimitSurfaces == bInShowConstraintLimitSurfaces &&
 		bCachedBuildShowOnlySelectedConstraintLimitSurfaces == bInShowOnlySelectedConstraintLimitSurfaces &&
 		CachedBuildSkinnedRevision == InSkinnedRevision &&
@@ -628,6 +831,8 @@ void UPhysicsAssetPreviewComponent::StorePreviewBuildCache(
 	int32 InSelectedShapeIndex,
 	int32 InSelectedConstraintIndex,
 	bool bInShowBodies,
+	bool bInShowConstraints,
+	bool bInShowConstraintLimitAngles,
 	bool bInShowConstraintLimitSurfaces,
 	bool bInShowOnlySelectedConstraintLimitSurfaces,
 	uint64 InSkinnedRevision,
@@ -640,6 +845,8 @@ void UPhysicsAssetPreviewComponent::StorePreviewBuildCache(
 	CachedBuildSelectedShapeIndex = InSelectedShapeIndex;
 	CachedBuildSelectedConstraintIndex = InSelectedConstraintIndex;
 	bCachedBuildShowBodies = bInShowBodies;
+	bCachedBuildShowConstraints = bInShowConstraints;
+	bCachedBuildShowConstraintLimitAngles = bInShowConstraintLimitAngles;
 	bCachedBuildShowConstraintLimitSurfaces = bInShowConstraintLimitSurfaces;
 	bCachedBuildShowOnlySelectedConstraintLimitSurfaces = bInShowOnlySelectedConstraintLimitSurfaces;
 	CachedBuildSkinnedRevision = InSkinnedRevision;
@@ -656,6 +863,8 @@ void UPhysicsAssetPreviewComponent::InvalidatePreviewBuildCache()
 	CachedBuildSelectedShapeIndex = -1;
 	CachedBuildSelectedConstraintIndex = -1;
 	bCachedBuildShowBodies = false;
+	bCachedBuildShowConstraints = false;
+	bCachedBuildShowConstraintLimitAngles = false;
 	bCachedBuildShowConstraintLimitSurfaces = false;
 	bCachedBuildShowOnlySelectedConstraintLimitSurfaces = false;
 	CachedBuildSkinnedRevision = 0;

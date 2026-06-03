@@ -72,6 +72,7 @@ public:
     int32 GetSelectedConstraintIndex() const { return SelectedConstraintIndex; }
     EPhysicsAssetConstraintFrameTarget GetSelectedConstraintGizmoFrame() const { return SelectedConstraintGizmoFrame; }
     void SelectPhysicsShapeFromViewport(UPhysicsAsset* PhysicsAsset, int32 BodyIndex, int32 ShapeIndex);
+    void SelectPhysicsConstraintFromViewport(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex);
     void NotifyViewportGizmoModified();
 
     FString GetDocumentTitle() const override;

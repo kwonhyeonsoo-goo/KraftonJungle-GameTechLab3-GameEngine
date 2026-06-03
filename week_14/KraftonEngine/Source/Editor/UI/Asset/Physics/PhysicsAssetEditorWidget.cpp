@@ -179,11 +179,11 @@ namespace
         return (std::max)(4, static_cast<int32>(ceilf(32.0f * Normalized)));
     }
 
-    float ComputeConstraintLimitDrawRadius(const FTransform& ParentFrameWorld, const FTransform& ChildFrameWorld)
-    {
-        const float FrameDistance = FVector::Distance(ParentFrameWorld.Location, ChildFrameWorld.Location);
-        return FMath::Clamp(FrameDistance * 0.45f + 0.25f, 0.25f, 2.5f);
-    }
+	    float ComputeConstraintLimitDrawRadius(const FTransform& ParentFrameWorld, const FTransform& ChildFrameWorld)
+	    {
+	        const float FrameDistance = FVector::Distance(ParentFrameWorld.Location, ChildFrameWorld.Location);
+	        return FMath::Clamp(FrameDistance * 0.45f + 0.25f, 0.25f, 2.5f);
+	    }
 
     void DrawConstraintSwingLimitDebug(
         UWorld* World,
@@ -279,21 +279,21 @@ namespace
         DrawDebugLine(World, Center, Center + ChildY * RingRadius, ConstraintLimitSwingRed(Color.A), 0.0f);
     }
 
-    void DrawConstraintAngularLimitDebug(
-        UWorld* World,
-        const FTransform& ParentFrameWorld,
-        const FTransform& ChildFrameWorld,
-        const FConstraintLimitDesc& Limits,
-        bool bSelected)
-    {
-        if (!World)
-        {
-            return;
-        }
+	    void DrawConstraintAngularLimitDebug(
+	        UWorld* World,
+	        const FTransform& ParentFrameWorld,
+	        const FTransform& ChildFrameWorld,
+	        const FConstraintLimitDesc& Limits,
+	        bool bSelected)
+	    {
+	        if (!World)
+	        {
+	            return;
+	        }
 
-        const uint32 Alpha = bSelected ? 230u : 145u;
-        const float Radius = ComputeConstraintLimitDrawRadius(ParentFrameWorld, ChildFrameWorld);
-        DrawDebugFrameAxes(World, ParentFrameWorld, Radius * 0.32f, Alpha);
+	        const uint32 Alpha = bSelected ? 230u : 145u;
+	        const float Radius = ComputeConstraintLimitDrawRadius(ParentFrameWorld, ChildFrameWorld);
+	        DrawDebugFrameAxes(World, ParentFrameWorld, Radius * 0.32f, Alpha);
         DrawDebugFrameAxes(World, ChildFrameWorld, Radius * 0.22f, Alpha);
         DrawConstraintSwingLimitDebug(World, ParentFrameWorld, Limits, Radius, ConstraintLimitSwingRed(Alpha));
         DrawConstraintTwistLimitDebug(World, ParentFrameWorld, ChildFrameWorld, Limits, Radius, ConstraintLimitTwistGreen(Alpha));
@@ -1133,6 +1133,25 @@ void FPhysicsAssetEditorWidget::SelectPhysicsShapeFromViewport(UPhysicsAsset* Ph
             : -1;
     SelectedConstraintIndex = -1;
     SelectedTreeBoneIndex = FindPreviewBoneIndexByName(Body.BoneName);
+    if (bEditorSimulationActive && bEditorSimulationSelectedOnly)
+    {
+        RequestEditorSimulationRestart();
+    }
+}
+
+void FPhysicsAssetEditorWidget::SelectPhysicsConstraintFromViewport(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex)
+{
+    if (!PhysicsAsset || !IsValidConstraintIndex(PhysicsAsset, ConstraintIndex))
+    {
+        return;
+    }
+
+    if (!IsEditingObject(PhysicsAsset))
+    {
+        OpenEmbedded(PhysicsAsset);
+    }
+
+    SelectConstraintSetup(PhysicsAsset, ConstraintIndex, -1);
     if (bEditorSimulationActive && bEditorSimulationSelectedOnly)
     {
         RequestEditorSimulationRestart();
@@ -3039,6 +3058,8 @@ void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
             SelectedShapeIndex,
             SelectedConstraintIndex,
             bShowBodies,
+            bShowConstraints,
+            bShowConstraintLimitAngles,
             bShowConstraints && bShowConstraintLimitAngles && bShowConstraintLimitSurfaces,
             bShowOnlySelectedConstraintLimitAngles,
             Device);
