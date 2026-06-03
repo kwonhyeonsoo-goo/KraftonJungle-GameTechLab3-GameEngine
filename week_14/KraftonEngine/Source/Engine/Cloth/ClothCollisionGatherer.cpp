@@ -245,6 +245,17 @@ FClothCollisionGatherResult FClothCollisionGatherer::GatherPhysicsAsset(
                 continue;
             }
 
+            if (Candidate.Type == EClothCollisionPrimitiveType::Box &&
+                (Candidate.HalfExtent.X <= 0.0f ||
+                    Candidate.HalfExtent.Y <= 0.0f ||
+                    Candidate.HalfExtent.Z <= 0.0f))
+            {
+                Candidate.State = EClothCollisionSelectState::SkippedInvalidTransform;
+                ++Result.Stats.Rejected;
+                Result.Candidates.push_back(Candidate);
+                continue;
+            }
+
             AccumulateGatheredStat(Result.Stats, Candidate.Type);
             Result.Candidates.push_back(Candidate);
         }

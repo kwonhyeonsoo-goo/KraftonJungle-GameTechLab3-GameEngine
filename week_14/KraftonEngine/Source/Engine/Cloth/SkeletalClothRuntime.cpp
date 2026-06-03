@@ -83,6 +83,14 @@ namespace
             IsUniformScale(Scale);
     }
 
+    bool IsPositiveFiniteVector(const FVector& Value)
+    {
+        return IsFiniteVector(Value) &&
+            Value.X > 0.0f &&
+            Value.Y > 0.0f &&
+            Value.Z > 0.0f;
+    }
+
     bool HasScaleChanged(const FVector& A, const FVector& B)
     {
         return !IsNearlyEqual(A.X, B.X) ||
@@ -371,9 +379,13 @@ struct FSkeletalClothRuntime::FImpl
 
         TArray<physx::PxVec4> Spheres;
         TArray<uint32_t> CapsuleSphereIndices;
+        TArray<physx::PxVec4> Planes;
+        TArray<uint32_t> ConvexMasks;
         const FClothCollisionPrimitiveSet& Primitives = CollisionResult->SelectedPrimitives;
         Spheres.reserve(Primitives.Spheres.size() + Primitives.Capsules.size() * 2);
         CapsuleSphereIndices.reserve(Primitives.Capsules.size() * 2);
+        Planes.reserve(Primitives.Boxes.size() * 6);
+        ConvexMasks.reserve(Primitives.Boxes.size());
 
         for (const FClothCollisionSphere& Sphere : Primitives.Spheres)
         {
@@ -410,6 +422,85 @@ struct FSkeletalClothRuntime::FImpl
                 Capsule.Radius));
             CapsuleSphereIndices.push_back(FirstSphereIndex);
             CapsuleSphereIndices.push_back(FirstSphereIndex + 1);
+        }
+
+        for (const FClothCollisionBox& Box : Primitives.Boxes)
+        {
+            if (!IsFiniteVector(Box.LocalTransform.Location) || !IsPositiveFiniteVector(Box.HalfExtent))
+            {
+                continue;
+            }
+
+            const FVector Center = Box.LocalTransform.Location;
+            const FVector AxisX = Box.LocalTransform.Rotation.RotateVector(FVector(1.0f, 0.0f, 0.0f)).Normalized();
+            const FVector AxisY = Box.LocalTransform.Rotation.RotateVector(FVector(0.0f, 1.0f, 0.0f)).Normalized();
+            const FVector AxisZ = Box.LocalTransform.Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f)).Normalized();
+            if (!IsFiniteVector(AxisX) || !IsFiniteVector(AxisY) || !IsFiniteVector(AxisZ))
+            {
+                continue;
+            }
+
+            const uint32_t FirstPlaneIndex = static_cast<uint32_t>(Planes.size());
+            if (FirstPlaneIndex + 6 > 32)
+            {
+                break;
+            }
+
+            const auto AddPlane = [&Planes](const FVector& Normal, const FVector& Point)
+            {
+                const float D = -Normal.Dot(Point);
+                Planes.push_back(physx::PxVec4(Normal.X, Normal.Y, Normal.Z, D));
+            };
+
+            AddPlane(AxisX, Center + AxisX * Box.HalfExtent.X);
+            AddPlane(AxisX * -1.0f, Center - AxisX * Box.HalfExtent.X);
+            AddPlane(AxisY, Center + AxisY * Box.HalfExtent.Y);
+            AddPlane(AxisY * -1.0f, Center - AxisY * Box.HalfExtent.Y);
+            AddPlane(AxisZ, Center + AxisZ * Box.HalfExtent.Z);
+            AddPlane(AxisZ * -1.0f, Center - AxisZ * Box.HalfExtent.Z);
+
+            uint32_t Mask = 0;
+            for (uint32_t PlaneOffset = 0; PlaneOffset < 6; ++PlaneOffset)
+            {
+                Mask |= 1u << (FirstPlaneIndex + PlaneOffset);
+            }
+            ConvexMasks.push_back(Mask);
+        }
+
+        const uint32_t ExistingConvexes = Section.Cloth->getNumConvexes();
+        if (ExistingConvexes > 0)
+        {
+            Section.Cloth->setConvexes(
+                nv::cloth::Range<const uint32_t>(),
+                0,
+                ExistingConvexes);
+        }
+
+        if (!Planes.empty())
+        {
+            Section.Cloth->setPlanes(
+                nv::cloth::Range<const physx::PxVec4>(Planes.data(), Planes.data() + Planes.size()),
+                0,
+                Section.Cloth->getNumPlanes());
+        }
+        else
+        {
+            const uint32_t ExistingPlanes = Section.Cloth->getNumPlanes();
+            if (ExistingPlanes > 0)
+            {
+                Section.Cloth->setPlanes(
+                    nv::cloth::Range<const physx::PxVec4>(),
+                    0,
+                    ExistingPlanes);
+            }
+        }
+
+        if (!ConvexMasks.empty())
+        {
+            Section.Cloth->setConvexes(
+                nv::cloth::Range<const uint32_t>(ConvexMasks.data(), ConvexMasks.data() + ConvexMasks.size()),
+                0,
+                Section.Cloth->getNumConvexes());
         }
 
         if (CapsuleSphereIndices.empty())
@@ -454,6 +545,8 @@ struct FSkeletalClothRuntime::FImpl
         Section.CollisionStats = CollisionResult->Stats;
         Section.CollisionStats.UploadedSpheres = static_cast<uint32>(Spheres.size());
         Section.CollisionStats.UploadedCapsules = static_cast<uint32>(CapsuleSphereIndices.size() / 2);
+        Section.CollisionStats.UploadedPlanes = static_cast<uint32>(Planes.size());
+        Section.CollisionStats.UploadedConvexes = static_cast<uint32>(ConvexMasks.size());
     }
 
     const FClothCollisionGatherResult* FindCollisionResultForSection(

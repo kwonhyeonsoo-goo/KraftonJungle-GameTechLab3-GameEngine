@@ -7,6 +7,8 @@
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
 #include "Mesh/MeshManager.h"
+#include "Cloth/ClothCollisionGatherer.h"
+#include "Cloth/ClothCollisionTypes.h"
 #include "Cloth/SkeletalClothRuntime.h"
 #include "Runtime/Engine.h"
 #include "Component/Debug/PhysicsAssetPreviewComponent.h"
@@ -146,6 +148,66 @@ namespace
 		OutScreenPosition.x = ViewportPos.x + (NdcX * 0.5f + 0.5f) * ViewportSize.x;
 		OutScreenPosition.y = ViewportPos.y + (0.5f - NdcY * 0.5f) * ViewportSize.y;
 		return true;
+	}
+
+	const char* GetClothCollisionPrimitiveTypeLabel(EClothCollisionPrimitiveType Type)
+	{
+		switch (Type)
+		{
+		case EClothCollisionPrimitiveType::Sphere:
+			return "Sphere";
+		case EClothCollisionPrimitiveType::Capsule:
+			return "Capsule";
+		case EClothCollisionPrimitiveType::Box:
+			return "Box";
+		default:
+			return "Unknown";
+		}
+	}
+
+	void DrawClothCollisionCandidateList(
+		const char* Label,
+		const TArray<FClothCollisionCandidate>& Candidates,
+		EClothCollisionSelectState State)
+	{
+		uint32 Count = 0;
+		for (const FClothCollisionCandidate& Candidate : Candidates)
+		{
+			if (Candidate.State == State)
+			{
+				++Count;
+			}
+		}
+
+		const FString Header = FString(Label) + " (" + std::to_string(Count) + ")";
+		if (!ImGui::TreeNodeEx(Header.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			return;
+		}
+
+		if (Count == 0)
+		{
+			ImGui::TextDisabled("None");
+			ImGui::TreePop();
+			return;
+		}
+
+		for (const FClothCollisionCandidate& Candidate : Candidates)
+		{
+			if (Candidate.State != State)
+			{
+				continue;
+			}
+
+			ImGui::BulletText(
+				"%s  Body %d  Shape %d  Bone %s",
+				GetClothCollisionPrimitiveTypeLabel(Candidate.Type),
+				Candidate.SourceId.BodyIndex,
+				Candidate.SourceId.ShapeIndex,
+				Candidate.SourceId.BoneName.ToString().c_str());
+		}
+
+		ImGui::TreePop();
 	}
 
 	float ProjectWorldRadiusToPixels(
@@ -2086,6 +2148,55 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 			ImGui::Separator();
 			ImGui::TextUnformatted("Physics Asset Collision");
 			bChanged |= ImGui::Checkbox("Enable Physics Asset Collision", &SelectedCloth->Config.bEnablePhysicsAssetCollision);
+		}
+	);
+
+	DrawClothFoldoutBox(
+		"PhysicsAssetCollisionCandidates",
+		"Physics Asset Collision Candidates",
+		ImVec4(0.12f, 0.10f, 0.08f, 1.0f),
+		ImVec4(0.38f, 0.27f, 0.16f, 1.0f),
+		[&]()
+		{
+			if (!SelectedCloth->Config.bEnablePhysicsAssetCollision)
+			{
+				ImGui::TextDisabled("Physics asset collision is disabled.");
+				return;
+			}
+
+			USkeletalMeshComponent* PreviewMeshComponent = ViewportClient.GetPreviewMeshComponent();
+			UPhysicsAsset* PhysicsAsset = PreviewMeshComponent ? PreviewMeshComponent->GetEffectivePhysicsAsset() : nullptr;
+			if (!PreviewMeshComponent || !PhysicsAsset)
+			{
+				ImGui::TextDisabled("No preview component or effective physics asset.");
+				return;
+			}
+
+			FClothCollisionGatherer Gatherer;
+			const FClothCollisionGatherResult GatherResult = Gatherer.GatherPhysicsAsset(
+				*PreviewMeshComponent,
+				*SkeletalMesh,
+				PhysicsAsset,
+				SelectedCloth->Config);
+
+			ImGui::Text(
+				"Gathered S:%u C:%u B:%u  Selected S:%u C:%u B:%u  Truncated:%u",
+				GatherResult.Stats.GatheredSpheres,
+				GatherResult.Stats.GatheredCapsules,
+				GatherResult.Stats.GatheredBoxes,
+				GatherResult.Stats.SelectedSpheres,
+				GatherResult.Stats.SelectedCapsules,
+				GatherResult.Stats.SelectedBoxes,
+				GatherResult.Stats.Truncated);
+
+			DrawClothCollisionCandidateList(
+				"Selected",
+				GatherResult.Candidates,
+				EClothCollisionSelectState::Selected);
+			DrawClothCollisionCandidateList(
+				"Truncated",
+				GatherResult.Candidates,
+				EClothCollisionSelectState::TruncatedByBudget);
 		}
 	);
 
