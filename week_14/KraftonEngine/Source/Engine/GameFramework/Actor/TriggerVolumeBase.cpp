@@ -17,6 +17,31 @@ namespace
 		return Pawn ? Pawn->GetName().c_str() : "None";
 	}
 
+	const char* LexToString(EPhysicsCollisionRole Role)
+	{
+		switch (Role)
+		{
+		case EPhysicsCollisionRole::CharacterLocomotionProxy:
+			return "CharacterLocomotionProxy";
+		case EPhysicsCollisionRole::CharacterQueryProxy:
+			return "CharacterQueryProxy";
+		case EPhysicsCollisionRole::CharacterMeshPrimitive:
+			return "CharacterMeshPrimitive";
+		case EPhysicsCollisionRole::PartialReactionBody:
+			return "PartialReactionBody";
+		case EPhysicsCollisionRole::FullRagdollBody:
+			return "FullRagdollBody";
+		case EPhysicsCollisionRole::TriggerVolume:
+			return "TriggerVolume";
+		case EPhysicsCollisionRole::WorldStatic:
+			return "WorldStatic";
+		case EPhysicsCollisionRole::WorldDynamic:
+			return "WorldDynamic";
+		default:
+			return "None";
+		}
+	}
+
 	bool CanPrimitiveParticipateInTriggerOccupancy(const UPrimitiveComponent* Primitive, ECollisionChannel TriggerChannel)
 	{
 		if (!Primitive || !Primitive->IsCollisionEnabled())
@@ -38,13 +63,24 @@ namespace
 		return Primitive->GetCollisionResponseToChannel(TriggerChannel) != ECollisionResponse::Ignore;
 	}
 
-	bool CanPrimitiveOwnTriggerOccupancy(const APawn* Pawn, const UPrimitiveComponent* Primitive)
+	EPhysicsCollisionRole GetPrimitiveTriggerOccupancyRole(const APawn* Pawn, const UPrimitiveComponent* Primitive)
 	{
 		if (!Primitive)
 		{
-			return false;
+			return EPhysicsCollisionRole::None;
 		}
 
+		const ACharacter* Character = Cast<ACharacter>(const_cast<APawn*>(Pawn));
+		if (!Character)
+		{
+			return EPhysicsCollisionRole::None;
+		}
+
+		return Character->GetCollisionRoleForComponent(Primitive);
+	}
+
+	bool CanPrimitiveOwnTriggerOccupancy(const APawn* Pawn, const UPrimitiveComponent* Primitive)
+	{
 		const ACharacter* Character = Cast<ACharacter>(const_cast<APawn*>(Pawn));
 		if (!Character)
 		{
@@ -159,6 +195,11 @@ bool ATriggerVolumeBase::IsPawnStillInsideTrigger(APawn* Pawn) const
 
 		if (TriggerBounds.IsIntersected(Primitive->GetWorldBoundingBox()))
 		{
+			UE_LOG("[TriggerVolume] TriggerOccupancyRoleAccepted Trigger=%s Pawn=%s Primitive=%s Role=%s",
+				GetName().c_str(),
+				GetPawnNameSafe(Pawn),
+				Primitive->GetName().c_str(),
+				LexToString(GetPrimitiveTriggerOccupancyRole(Pawn, Primitive)));
 			return true;
 		}
 	}

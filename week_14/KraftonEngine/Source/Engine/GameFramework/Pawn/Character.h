@@ -3,6 +3,7 @@
 #include "GameFramework/Pawn/Pawn.h"
 #include "Core/Types/CollisionTypes.h"
 #include "Object/Ptr/WeakObjectPtr.h"
+#include "Physics/PhysicsTypes.h"
 
 class UCapsuleComponent;
 class USkeletalMeshComponent;
@@ -96,6 +97,10 @@ public:
 	bool IsAwaitingRagdollRecoveryRestore() const { return bAwaitingRagdollRecoveryRestore; }
 	UFUNCTION(Pure, Category="Character|Physics")
 	bool IsUsingFullRagdollQueryProxy() const;
+	EPhysicsCollisionRole GetCapsuleCollisionRole() const;
+	EPhysicsCollisionRole GetMeshCollisionRole() const;
+	EPhysicsCollisionRole GetPartialReactionBodyCollisionRole() const;
+	EPhysicsCollisionRole GetCollisionRoleForComponent(const UPrimitiveComponent* Component) const;
 	bool IsCapsuleGameplayOverlapOwner() const;
 	bool IsMeshGameplayOverlapOwner() const;
 	bool ArePartialReactionBodiesGameplayOverlapOwners() const;

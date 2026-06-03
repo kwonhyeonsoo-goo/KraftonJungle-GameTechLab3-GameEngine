@@ -125,6 +125,31 @@ namespace
         }
     }
 
+    const char* LexToString(EPhysicsCollisionRole Role)
+    {
+        switch (Role)
+        {
+        case EPhysicsCollisionRole::CharacterLocomotionProxy:
+            return "CharacterLocomotionProxy";
+        case EPhysicsCollisionRole::CharacterQueryProxy:
+            return "CharacterQueryProxy";
+        case EPhysicsCollisionRole::CharacterMeshPrimitive:
+            return "CharacterMeshPrimitive";
+        case EPhysicsCollisionRole::PartialReactionBody:
+            return "PartialReactionBody";
+        case EPhysicsCollisionRole::FullRagdollBody:
+            return "FullRagdollBody";
+        case EPhysicsCollisionRole::TriggerVolume:
+            return "TriggerVolume";
+        case EPhysicsCollisionRole::WorldStatic:
+            return "WorldStatic";
+        case EPhysicsCollisionRole::WorldDynamic:
+            return "WorldDynamic";
+        default:
+            return "None";
+        }
+    }
+
     const char* LexToString(ECollisionEnabled Mode)
     {
         switch (Mode)
@@ -443,7 +468,7 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
     const FVector LastHitDirection =
         MeshComponent ? MeshComponent->GetLastPartialHitReactionDirection() : FVector::ZeroVector;
 
-    UE_LOG("[RagdollTest] %s Actor=%s MeshComponent=%s EffectivePhysicsAsset=%s ActivePhysicsAsset=%s Mode=%s Active=%s PhysicsPose=%s Recovering=%s CharacterOwnership=%s CharacterPhysicsCollision=%s CharacterQueryCollision=%s OverlapOwnership=%s CapsuleCollision=%s MeshCollision=%s CapsuleOverlapOwner=%s MeshOverlapOwner=%s PartialBodiesOverlapOwner=%s AwaitingRestore=%s FullQueryProxyActive=%s PartialRoot=%s PartialPhase=%s Hold=%.2f PendingBlendOut=%s PartialSelfSuppression=%s LiveBodies=%d LiveConstraints=%d BlendWeight=%.2f LastPreset=%s LastHitBone=%s LastRoot=%s LastTarget=%s LastStrength=%.2f LastHold=%.2f LastImpulse=%.2f LastDirection=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
+    UE_LOG("[RagdollTest] %s Actor=%s MeshComponent=%s EffectivePhysicsAsset=%s ActivePhysicsAsset=%s Mode=%s Active=%s PhysicsPose=%s Recovering=%s CharacterOwnership=%s CharacterPhysicsCollision=%s CharacterQueryCollision=%s OverlapOwnership=%s CapsuleCollision=%s MeshCollision=%s CapsuleRole=%s MeshRole=%s PartialBodyRole=%s CapsuleOverlapOwner=%s MeshOverlapOwner=%s PartialBodiesOverlapOwner=%s AwaitingRestore=%s FullQueryProxyActive=%s PartialRoot=%s PartialPhase=%s Hold=%.2f PendingBlendOut=%s PartialSelfSuppression=%s LiveBodies=%d LiveConstraints=%d BlendWeight=%.2f LastPreset=%s LastHitBone=%s LastRoot=%s LastTarget=%s LastStrength=%.2f LastHold=%.2f LastImpulse=%.2f LastDirection=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
         EventLabel ? EventLabel : "State",
         GetOwnerNameSafe(),
         GetComponentNameSafe(),
@@ -459,6 +484,9 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
         OwnerCharacter ? LexToString(OwnerCharacter->GetGameplayOverlapOwnershipMode()) : "None",
         OwnerCharacter ? LexToString(OwnerCharacter->GetCurrentCapsuleCollisionEnabled()) : "None",
         OwnerCharacter ? LexToString(OwnerCharacter->GetCurrentMeshCollisionEnabled()) : "None",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetCapsuleCollisionRole()) : "None",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetMeshCollisionRole()) : "None",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetPartialReactionBodyCollisionRole()) : "None",
         (OwnerCharacter && OwnerCharacter->IsCapsuleGameplayOverlapOwner()) ? "true" : "false",
         (OwnerCharacter && OwnerCharacter->IsMeshGameplayOverlapOwner()) ? "true" : "false",
         (OwnerCharacter && OwnerCharacter->ArePartialReactionBodiesGameplayOverlapOwners()) ? "true" : "false",
@@ -486,7 +514,7 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
 
     if (OwnerCharacter && OwnerCharacter->IsUsingFullRagdollQueryProxy())
     {
-        UE_LOG("[RagdollTest] FullRagdollQueryProxy Actor=%s Ownership=%s PhysicsCollision=%s QueryCollision=%s OverlapOwnership=%s Capsule=%s Mesh=%s CapsuleOverlapOwner=%s AwaitingRestore=%s",
+        UE_LOG("[RagdollTest] FullRagdollQueryProxy Actor=%s Ownership=%s PhysicsCollision=%s QueryCollision=%s OverlapOwnership=%s Capsule=%s Mesh=%s CapsuleRole=%s PartialBodyRole=%s CapsuleOverlapOwner=%s AwaitingRestore=%s",
             GetOwnerNameSafe(),
             LexToString(OwnerCharacter->GetPhysicsOwnershipMode()),
             LexToString(OwnerCharacter->GetCharacterPhysicsCollisionMode()),
@@ -494,6 +522,8 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
             LexToString(OwnerCharacter->GetGameplayOverlapOwnershipMode()),
             LexToString(OwnerCharacter->GetCurrentCapsuleCollisionEnabled()),
             LexToString(OwnerCharacter->GetCurrentMeshCollisionEnabled()),
+            LexToString(OwnerCharacter->GetCapsuleCollisionRole()),
+            LexToString(OwnerCharacter->GetPartialReactionBodyCollisionRole()),
             OwnerCharacter->IsCapsuleGameplayOverlapOwner() ? "true" : "false",
             OwnerCharacter->IsAwaitingRagdollRecoveryRestore() ? "true" : "false");
     }
@@ -501,12 +531,14 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
     if (OwnerCharacter &&
         OwnerCharacter->GetCharacterPhysicsCollisionMode() == ECharacterPhysicsCollisionMode::PartialHybrid)
     {
-        UE_LOG("[RagdollTest] PartialHybridCollisionPath Actor=%s CharacterOwnership=%s OverlapOwnership=%s Capsule=%s Mesh=%s CapsuleOverlapOwner=%s PartialBodiesOverlapOwner=%s PartialMode=%s PartialPhase=%s PartialSelfSuppression=%s",
+        UE_LOG("[RagdollTest] PartialHybridCollisionPath Actor=%s CharacterOwnership=%s OverlapOwnership=%s Capsule=%s Mesh=%s CapsuleRole=%s PartialBodyRole=%s CapsuleOverlapOwner=%s PartialBodiesOverlapOwner=%s PartialMode=%s PartialPhase=%s PartialSelfSuppression=%s",
             GetOwnerNameSafe(),
             LexToString(OwnerCharacter->GetPhysicsOwnershipMode()),
             LexToString(OwnerCharacter->GetGameplayOverlapOwnershipMode()),
             LexToString(OwnerCharacter->GetCurrentCapsuleCollisionEnabled()),
             LexToString(OwnerCharacter->GetCurrentMeshCollisionEnabled()),
+            LexToString(OwnerCharacter->GetCapsuleCollisionRole()),
+            LexToString(OwnerCharacter->GetPartialReactionBodyCollisionRole()),
             OwnerCharacter->IsCapsuleGameplayOverlapOwner() ? "true" : "false",
             OwnerCharacter->ArePartialReactionBodiesGameplayOverlapOwners() ? "true" : "false",
             MeshComponent ? LexToString(MeshComponent->GetRagdollMode()) : "None",

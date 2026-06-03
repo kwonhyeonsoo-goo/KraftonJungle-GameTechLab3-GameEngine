@@ -121,12 +121,16 @@ namespace
                 : Component->GetGenerateOverlapEvents());
         OutFilterData.bIsIndependentRagdoll = bUseIndependentRagdollCollision;
         OutFilterData.bIsPartialRagdoll = bIsPartialRagdollBody;
+        OutFilterData.CollisionRole = bIsPartialRagdollBody
+            ? EPhysicsCollisionRole::PartialReactionBody
+            : (bUseIndependentRagdollCollision
+                ? EPhysicsCollisionRole::FullRagdollBody
+                : EPhysicsCollisionRole::None);
         OutFilterData.bSuppressSameActorPrimitivePairs =
             bIsPartialRagdollBody &&
             (bSuppressSameActorPrimitiveCollisionForPartial || bSuppressSameActorPrimitiveOverlapForPartial);
-        OutFilterData.GameplayOverlapOwnership = bIsPartialRagdollBody
-            ? EPhysicsGameplayOverlapOwnership::NonOwningReactionBody
-            : EPhysicsGameplayOverlapOwnership::None;
+        OutFilterData.GameplayOverlapOwnership =
+            GetDefaultGameplayOverlapOwnershipForRole(OutFilterData.CollisionRole);
 
         for (int32 ChannelIndex = 0; ChannelIndex < static_cast<int32>(ECollisionChannel::ActiveCount); ++ChannelIndex)
         {

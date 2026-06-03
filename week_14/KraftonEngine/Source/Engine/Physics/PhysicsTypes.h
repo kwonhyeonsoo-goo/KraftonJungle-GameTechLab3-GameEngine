@@ -73,6 +73,19 @@ enum class EPhysicsGameplayOverlapOwnership : uint8
     NonOwningReactionBody
 };
 
+enum class EPhysicsCollisionRole : uint8
+{
+    None,
+    CharacterLocomotionProxy,
+    CharacterQueryProxy,
+    CharacterMeshPrimitive,
+    PartialReactionBody,
+    FullRagdollBody,
+    TriggerVolume,
+    WorldStatic,
+    WorldDynamic
+};
+
 // Thread boundary 의 기본 식별 단위. UObject pointer 대신 모든 command/event/query 가 이 key 를
 // 사용한다. ComponentGeneration 은 destroy/recreate 후 도착한 stale command/event 를 폐기하는 데 쓴다.
 struct FPhysicsObjectKey
@@ -108,6 +121,8 @@ constexpr uint32 PhysicsFilter_SuppressSameActorPrimitivePairs = 1u << 18;
 constexpr uint32 PhysicsFilter_OverlapOwnerPrimary   = 1u << 19;
 constexpr uint32 PhysicsFilter_OverlapOwnerQueryProxy = 1u << 20;
 constexpr uint32 PhysicsFilter_OverlapNonOwningReaction = 1u << 21;
+constexpr uint32 PhysicsFilter_CollisionRoleShift    = 22u;
+constexpr uint32 PhysicsFilter_CollisionRoleMask     = 0xFu << PhysicsFilter_CollisionRoleShift;
 
 inline uint32 GetPhysicsFilterObjectType(uint32 PackedWord0)
 {
@@ -117,6 +132,39 @@ inline uint32 GetPhysicsFilterObjectType(uint32 PackedWord0)
 inline bool HasPhysicsFilterFlag(uint32 PackedWord0, uint32 Flag)
 {
     return (PackedWord0 & Flag) != 0;
+}
+
+inline uint32 PackPhysicsCollisionRole(EPhysicsCollisionRole Role)
+{
+    return (static_cast<uint32>(Role) << PhysicsFilter_CollisionRoleShift) & PhysicsFilter_CollisionRoleMask;
+}
+
+inline EPhysicsCollisionRole GetPackedPhysicsCollisionRole(uint32 PackedWord0)
+{
+    return static_cast<EPhysicsCollisionRole>(
+        (PackedWord0 & PhysicsFilter_CollisionRoleMask) >> PhysicsFilter_CollisionRoleShift);
+}
+
+inline EPhysicsGameplayOverlapOwnership GetDefaultGameplayOverlapOwnershipForRole(EPhysicsCollisionRole Role)
+{
+    switch (Role)
+    {
+    case EPhysicsCollisionRole::CharacterLocomotionProxy:
+        return EPhysicsGameplayOverlapOwnership::PrimaryOwner;
+    case EPhysicsCollisionRole::CharacterQueryProxy:
+        return EPhysicsGameplayOverlapOwnership::QueryProxyOwner;
+    case EPhysicsCollisionRole::PartialReactionBody:
+        return EPhysicsGameplayOverlapOwnership::NonOwningReactionBody;
+    default:
+        return EPhysicsGameplayOverlapOwnership::None;
+    }
+}
+
+inline bool IsGameplayOverlapOwnerRole(EPhysicsCollisionRole Role)
+{
+    return
+        Role == EPhysicsCollisionRole::CharacterLocomotionProxy ||
+        Role == EPhysicsCollisionRole::CharacterQueryProxy;
 }
 
 struct FPhysicsFilterData
@@ -136,6 +184,7 @@ struct FPhysicsFilterData
     bool              bIsIndependentRagdoll  = false;
     bool              bIsPartialRagdoll      = false;
     bool              bSuppressSameActorPrimitivePairs = false;
+    EPhysicsCollisionRole CollisionRole = EPhysicsCollisionRole::None;
     EPhysicsGameplayOverlapOwnership GameplayOverlapOwnership = EPhysicsGameplayOverlapOwnership::None;
 };
 
