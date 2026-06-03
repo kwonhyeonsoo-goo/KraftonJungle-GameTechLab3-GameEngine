@@ -1,4 +1,5 @@
 #include "LuaScriptManager.h"
+#include "Lua/LuaDebugManager.h"
 
 #include "Audio/AudioManager.h"
 #include "Core/Logging/Log.h"
@@ -145,7 +146,7 @@ namespace
 void FLuaScriptManager::Initialize()
 {
     Lua = std::make_unique<sol::state>();
-    Lua->open_libraries(sol::lib::base, sol::lib::package, sol::lib::math, sol::lib::string, sol::lib::table, sol::lib::coroutine);
+    Lua->open_libraries(sol::lib::base, sol::lib::package, sol::lib::math, sol::lib::string, sol::lib::table, sol::lib::coroutine, sol::lib::debug);
     (*Lua)["package"]["path"] = FPaths::ToUtf8(FPaths::Combine(FPaths::ScriptDir(), L"?.lua").c_str());
 
     // 한글 경로 호환을 위해 require 의 파일 검색을 wide-aware 로 교체.
@@ -181,17 +182,21 @@ void FLuaScriptManager::Initialize()
         return LR.get<sol::object>();
     };
 
-    RegisterBindings(*Lua);
-
     // 모든 sol::protected_function 호출의 default error handler 를 debug.traceback 으로 설정.
-    // 이로써 lua 함수 호출 실패 시 protected_function_result 의 err.what() 에 lua 콜스택
-    // (어느 파일, 어느 라인, 어느 함수) 이 포함되어 디버깅이 가능해진다. 미설정 시
-    // sol2 는 단순 에러 메시지만 던져 lua 측 stack 정보가 사라진다.
-    //sol::function Traceback = (*Lua)["debug"]["traceback"];
-    //if (Traceback.valid())
-    //{
-    //	sol::protected_function::set_default_handler(Traceback);
-    //}
+    // RegisterBindings 안에서 helper Lua 파일을 로드하기 전에 먼저 걸어야 helper load error 도 stacktrace 를 갖는다.
+    if (sol::object DebugObject = (*Lua)["debug"]; DebugObject.valid() && DebugObject.get_type() == sol::type::table)
+    {
+        sol::table  DebugTable      = DebugObject.as<sol::table>();
+        sol::object TracebackObject = DebugTable["traceback"];
+        if (TracebackObject.valid() && TracebackObject.get_type() == sol::type::function)
+        {
+            sol::protected_function::set_default_handler(TracebackObject.as<sol::function>());
+        }
+    }
+
+    FLuaDebugManager::Initialize(Lua->lua_state());
+    FLuaDebugManager::RegisterLuaBindings(*Lua);
+    RegisterBindings(*Lua);
 
     FWatchID WatchID = FDirectoryWatcher::Get().Watch(FPaths::ScriptDir(), "");
     if (WatchID != 0)
@@ -272,6 +277,7 @@ void FLuaScriptManager::Shutdown()
     OnEscapePressedCallback = sol::protected_function();
     GLuaReflectedEventOverrides.clear();
 
+    FLuaDebugManager::Shutdown();
     Lua.reset();
 }
 

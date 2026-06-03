@@ -13,8 +13,8 @@
 namespace
 {
     constexpr uint32 LuaBlueprintAssetMagic         = 0x4C425031; // LBP1
-    constexpr uint32 LuaBlueprintAssetFormatVersion = 4;
-    constexpr uint32 LuaBlueprintCompilerVersion    = 10;
+    constexpr uint32 LuaBlueprintAssetFormatVersion = 5;
+    constexpr uint32 LuaBlueprintCompilerVersion    = 14;
 }
 
 FArchive& operator<<(FArchive& Ar, TArray<FLuaBlueprintPin>& Array);
@@ -447,7 +447,7 @@ namespace
             return "Bind Widget Click";
         case ELuaBlueprintNodeType::LoadAudio:
             return "Load Audio";
-        case ELuaBlueprintNodeType::PlaySound:
+        case ELuaBlueprintNodeType::AudioPlaySound:
             return "Play Sound";
         case ELuaBlueprintNodeType::PlayBGM:
             return "Play BGM";
@@ -1433,7 +1433,7 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Success"));
         break;
-    case ELuaBlueprintNodeType::PlaySound:
+    case ELuaBlueprintNodeType::AudioPlaySound:
     case ELuaBlueprintNodeType::PlayBGM:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("Key"));
@@ -2134,6 +2134,13 @@ void ULuaBlueprintAsset::Serialize(FArchive& Ar)
         Ar << Variables;
         Ar << GeneratedLuaSource;
         Ar << LastGoodGeneratedLuaSource;
+        uint32 DebugNodeCount = static_cast<uint32>(Nodes.size());
+        Ar << DebugNodeCount;
+        for (FLuaBlueprintNode& Node : Nodes)
+        {
+            Ar << Node.NodeId;
+            Ar << Node.bBreakpointEnabled;
+        }
         return;
     }
 
@@ -2159,6 +2166,26 @@ void ULuaBlueprintAsset::Serialize(FArchive& Ar)
         else
         {
             LastGoodGeneratedLuaSource = bLastCompileSucceeded ? GeneratedLuaSource : FString();
+        }
+        if (FormatVersion >= 5)
+        {
+            uint32 DebugNodeCount = 0;
+            Ar << DebugNodeCount;
+            for (uint32 Index = 0; Index < DebugNodeCount; ++Index)
+            {
+                uint32 NodeId             = 0;
+                bool   bBreakpointEnabled = false;
+                Ar << NodeId;
+                Ar << bBreakpointEnabled;
+                for (FLuaBlueprintNode& Node : Nodes)
+                {
+                    if (Node.NodeId == NodeId)
+                    {
+                        Node.bBreakpointEnabled = bBreakpointEnabled;
+                        break;
+                    }
+                }
+            }
         }
     }
     else

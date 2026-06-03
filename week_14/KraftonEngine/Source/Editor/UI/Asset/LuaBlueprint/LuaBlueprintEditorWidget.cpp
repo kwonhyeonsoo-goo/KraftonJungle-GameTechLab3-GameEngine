@@ -1,6 +1,7 @@
 #include "Editor/UI/Asset/LuaBlueprint/LuaBlueprintEditorWidget.h"
 
 #include "Input/InputKeyCodes.h"
+#include "Lua/LuaDebugManager.h"
 #include "LuaBlueprint/LuaBlueprintAsset.h"
 #include "LuaBlueprint/LuaBlueprintManager.h"
 #include "Object/Object.h"
@@ -11,6 +12,7 @@
 
 #include "Core/Types/PropertyTypes.h"
 #include "Object/Reflection/UClass.h"
+#include "Platform/Paths.h"
 #include "Serialization/MemoryArchive.h"
 
 #include <algorithm>
@@ -56,6 +58,122 @@ namespace
         return static_cast<uint32>(Id.Get());
     }
 
+    FString NormalizeLuaBlueprintDebugPath(const FString& InPath)
+    {
+        FString Path = InPath;
+        if (!Path.empty() && Path.front() == '@')
+        {
+            Path.erase(Path.begin());
+        }
+        Path = FPaths::MakeProjectRelative(Path);
+        std::replace(Path.begin(), Path.end(), '\\', '/');
+        return Path;
+    }
+
+    bool IsLuaBlueprintExecutableDebugNode(const FLuaBlueprintNode& Node)
+    {
+        if (Node.Type == ELuaBlueprintNodeType::Comment)
+        {
+            return false;
+        }
+        for (const FLuaBlueprintPin& Pin : Node.Pins)
+        {
+            if (Pin.Type == ELuaBlueprintPinType::Exec)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    bool IsPausedOnLuaBlueprintNode(const ULuaBlueprintAsset* Blueprint, const FLuaBlueprintNode& Node)
+    {
+        if (!Blueprint || !FLuaDebugManager::IsPaused())
+        {
+            return false;
+        }
+        const FLuaDebugLocation& PausedLocation = FLuaDebugManager::GetPausedLocation();
+        return PausedLocation.bLuaBlueprint
+                && NormalizeLuaBlueprintDebugPath(PausedLocation.BlueprintPath) == NormalizeLuaBlueprintDebugPath(Blueprint->GetSourcePath())
+                && PausedLocation.NodeId == Node.NodeId;
+    }
+
+    void RenderLuaDebugValueList(const char* Title, const TArray<FLuaDebugValueEntry>& Values, int32 MaxRows = 16)
+    {
+        if (!Title)
+        {
+            Title = "Values";
+        }
+        if (!ImGui::TreeNodeEx(Title, ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            return;
+        }
+        if (Values.empty())
+        {
+            ImGui::TextDisabled("(none)");
+            ImGui::TreePop();
+            return;
+        }
+
+        const int32 Limit = (std::min)(MaxRows, static_cast<int32>(Values.size()));
+        for (int32 Index = 0; Index < Limit; ++Index)
+        {
+            const FLuaDebugValueEntry& Entry = Values[Index];
+            const FString Line = Entry.Name + " [" + Entry.TypeName + "] = " + Entry.Value;
+            ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x);
+            if (Entry.bError)
+            {
+                ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.25f, 1.0f), "%s", Line.c_str());
+            }
+            else
+            {
+                ImGui::Bullet();
+                ImGui::SameLine();
+                ImGui::TextWrapped("%s", Line.c_str());
+            }
+            ImGui::PopTextWrapPos();
+        }
+        if (static_cast<int32>(Values.size()) > Limit)
+        {
+            ImGui::TextDisabled("... %d more", static_cast<int32>(Values.size()) - Limit);
+        }
+        ImGui::TreePop();
+    }
+
+    void RenderLuaDebugInlineSnapshot(const FLuaDebugValueSnapshot& Snapshot)
+    {
+        int32 Rendered = 0;
+        auto RenderOne = [&Rendered](const FLuaDebugValueEntry& Entry)
+        {
+            if (Rendered >= 5)
+            {
+                return;
+            }
+            const FString Line = Entry.Scope + ": " + Entry.Name + " = " + Entry.Value;
+            ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + (std::max)(80.0f, ImGui::GetContentRegionAvail().x));
+            if (Entry.bError)
+            {
+                ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.25f, 1.0f), "%s", Line.c_str());
+            }
+            else
+            {
+                ImGui::Bullet();
+                ImGui::SameLine();
+                ImGui::TextWrapped("%s", Line.c_str());
+            }
+            ImGui::PopTextWrapPos();
+            ++Rendered;
+        };
+
+        for (const FLuaDebugValueEntry& Entry : Snapshot.NodeValues) RenderOne(Entry);
+        for (const FLuaDebugValueEntry& Entry : Snapshot.BlueprintVariables) RenderOne(Entry);
+        for (const FLuaDebugValueEntry& Entry : Snapshot.Watches) RenderOne(Entry);
+        for (const FLuaDebugValueEntry& Entry : Snapshot.Locals) RenderOne(Entry);
+        if (Rendered == 0)
+        {
+            ImGui::TextDisabled("No captured values");
+        }
+    }
+
     struct FScopedNodeEditorCurrent
     {
         ed::EditorContext* Previous = nullptr;
@@ -85,15 +203,114 @@ namespace
         std::snprintf(Buffer, BufferSize, "%s", Value.c_str());
     }
 
-    // ── Material editor 와 동일한 스타일의 툴바 버튼 헬퍼 ──
-    ImVec2 ToolbarButtonSize()
+    struct FDeferredTooltip
     {
-        return ImVec2(86.0f, 0.0f);
+        bool    bVisible = false;
+        FString Title;
+        FString Body;
+    };
+
+    void SetDeferredTooltip(FDeferredTooltip& Tooltip, const FString& Title, const FString& Body)
+    {
+        Tooltip.bVisible = true;
+        Tooltip.Title = Title;
+        Tooltip.Body = Body;
+    }
+
+    void RenderDeferredTooltip(const FDeferredTooltip& Tooltip)
+    {
+        if (!Tooltip.bVisible)
+        {
+            return;
+        }
+
+        ImGui::BeginTooltip();
+        if (!Tooltip.Title.empty())
+        {
+            ImGui::TextUnformatted(Tooltip.Title.c_str());
+            if (!Tooltip.Body.empty())
+            {
+                ImGui::Separator();
+            }
+        }
+        if (!Tooltip.Body.empty())
+        {
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 34.0f);
+            ImGui::TextUnformatted(Tooltip.Body.c_str());
+            ImGui::PopTextWrapPos();
+        }
+        ImGui::EndTooltip();
+    }
+
+    bool RenderBreakpointGlyphButton(bool bEnabled, bool bCanToggle, const char* Id, FDeferredTooltip& Tooltip)
+    {
+        const float LineHeight = ImGui::GetTextLineHeight();
+        const float Size       = (std::max)(LineHeight + 4.0f, 18.0f);
+        const ImVec2 Pos       = ImGui::GetCursorScreenPos();
+
+        const bool bPressed = ImGui::InvisibleButton(Id ? Id : "##BreakpointGlyph", ImVec2(Size, Size));
+        const bool bClicked = bCanToggle && bPressed;
+
+        const ImVec2 Min = Pos;
+        const ImVec2 Max(Pos.x + Size, Pos.y + Size);
+        const ImVec2 Center((Min.x + Max.x) * 0.5f, (Min.y + Max.y) * 0.5f);
+        const float  Radius = (std::max)(4.0f, Size * 0.28f);
+
+        ImDrawList* DrawList = ImGui::GetWindowDrawList();
+        const bool bHovered = bCanToggle && ImGui::IsItemHovered();
+        const ImU32 ActiveFill  = ImGui::ColorConvertFloat4ToU32(bHovered ? ImVec4(1.0f, 0.25f, 0.22f, 1.0f) : ImVec4(0.86f, 0.08f, 0.08f, 1.0f));
+        const ImU32 ActiveRing  = ImGui::ColorConvertFloat4ToU32(ImVec4(1.0f, 0.70f, 0.70f, 1.0f));
+        const ImU32 IdleRing    = ImGui::ColorConvertFloat4ToU32(bHovered ? ImVec4(0.88f, 0.88f, 0.88f, 1.0f) : ImVec4(0.58f, 0.58f, 0.58f, 1.0f));
+        const ImU32 DisabledCol = ImGui::ColorConvertFloat4ToU32(ImVec4(0.36f, 0.36f, 0.36f, 0.65f));
+
+        if (bEnabled)
+        {
+            DrawList->AddCircleFilled(Center, Radius, ActiveFill, 24);
+            DrawList->AddCircle(Center, Radius + 1.0f, ActiveRing, 24, 1.0f);
+        }
+        else
+        {
+            DrawList->AddCircle(Center, Radius, bCanToggle ? IdleRing : DisabledCol, 24, 1.4f);
+            if (!bCanToggle)
+            {
+                DrawList->AddCircleFilled(Center, Radius * 0.32f, DisabledCol, 12);
+            }
+        }
+
+        if (ImGui::IsItemHovered())
+        {
+            if (bCanToggle)
+            {
+                SetDeferredTooltip(
+                    Tooltip,
+                    bEnabled ? "Disable breakpoint" : "Enable breakpoint",
+                    "Toggle this node breakpoint. Shortcut: F9 while the node is selected."
+                );
+            }
+            else
+            {
+                SetDeferredTooltip(
+                    Tooltip,
+                    "Pure data node",
+                    "This node has no exec pin. Its value is inspected when an executable node consumes it."
+                );
+            }
+        }
+
+        return bCanToggle && bClicked;
+    }
+
+    // ── Material editor 와 동일한 스타일의 툴바 버튼 헬퍼 ──
+    ImVec2 ToolbarButtonSize(const char* Label)
+    {
+        const ImVec2 TextSize = ImGui::CalcTextSize(Label ? Label : "");
+        const float  PaddingX = ImGui::GetStyle().FramePadding.x * 2.0f + 14.0f;
+        return ImVec2((std::max)(86.0f, TextSize.x + PaddingX), 0.0f);
     }
 
     bool ToolbarButton(const char* Label)
     {
-        return ImGui::Button(Label, ToolbarButtonSize());
+        return ImGui::Button(Label, ToolbarButtonSize(Label));
     }
 
     // 강조 색이 들어간 주요 액션 버튼(Compile/Save 등). Disabled 일 땐 회색 처리.
@@ -102,7 +319,7 @@ namespace
         ImGui::BeginDisabled(!bEnabled);
         ImGui::PushStyleColor(ImGuiCol_Button, Base);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, Hover);
-        const bool bClicked = ImGui::Button(Label, ToolbarButtonSize());
+        const bool bClicked = ImGui::Button(Label, ToolbarButtonSize(Label));
         ImGui::PopStyleColor(2);
         ImGui::EndDisabled();
         return bClicked;
@@ -499,7 +716,7 @@ namespace
             return "Bind Widget Click";
         case ELuaBlueprintNodeType::LoadAudio:
             return "Load Audio";
-        case ELuaBlueprintNodeType::PlaySound:
+        case ELuaBlueprintNodeType::AudioPlaySound:
             return "Play Sound";
         case ELuaBlueprintNodeType::PlayBGM:
             return "Play BGM";
@@ -819,7 +1036,7 @@ namespace
             return "Binds a UI element click to a Custom Event.";
         case ELuaBlueprintNodeType::LoadAudio:
             return "Loads/registers an audio asset under a key.";
-        case ELuaBlueprintNodeType::PlaySound:
+        case ELuaBlueprintNodeType::AudioPlaySound:
             return "Plays a loaded one-shot sound.";
         case ELuaBlueprintNodeType::PlayBGM:
             return "Starts background music by key.";
@@ -864,13 +1081,9 @@ namespace
         // 블루프린트 패널 뒤에 가려졌다(=호버해도 도움말이 안 보이는 버그). 툴팁 레이어는
         // 포커스/창 순서와 무관하게 항상 최상단에 그려진다. ed::End() 이후 호출되므로
         // 노드 캔버스 변환의 영향도 받지 않아 위치가 정확하다.
-        ImGui::BeginTooltip();
-        ImGui::TextUnformatted(NodeTypeLabel(Type));
-        ImGui::Separator();
-        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 28.0f);
-        ImGui::TextUnformatted(NodeTypeHelpText(Type));
-        ImGui::PopTextWrapPos();
-        ImGui::EndTooltip();
+        FDeferredTooltip Tooltip;
+        SetDeferredTooltip(Tooltip, NodeTypeLabel(Type), NodeTypeHelpText(Type));
+        RenderDeferredTooltip(Tooltip);
     }
 
     const char* PinTypeLabel(ELuaBlueprintPinType Type)
@@ -1098,7 +1311,7 @@ namespace
         case ELuaBlueprintNodeType::RemoveWidgetFromParent:
         case ELuaBlueprintNodeType::SetWidgetText:
         case ELuaBlueprintNodeType::LoadAudio:
-        case ELuaBlueprintNodeType::PlaySound:
+        case ELuaBlueprintNodeType::AudioPlaySound:
         case ELuaBlueprintNodeType::PlayBGM:
         case ELuaBlueprintNodeType::StopBGM:
         case ELuaBlueprintNodeType::PlayAudioLoop:
@@ -1374,7 +1587,7 @@ namespace
     {
         if (Node.Type == ELuaBlueprintNodeType::Comment)
         {
-            return ImVec2(std::max(80.0f, Node.VectorValue.X), std::max(40.0f, Node.VectorValue.Y));
+            return ImVec2((std::max)(80.0f, Node.VectorValue.X), (std::max)(40.0f, Node.VectorValue.Y));
         }
 
         return ImVec2(180.0f, 90.0f);
@@ -1425,10 +1638,10 @@ namespace
                 }
             }
 
-            MinX          = std::min(MinX, Pos.x);
-            MinY          = std::min(MinY, Pos.y);
-            MaxX          = std::max(MaxX, Pos.x + Size.x);
-            MaxY          = std::max(MaxY, Pos.y + Size.y);
+            MinX          = (std::min)(MinX, Pos.x);
+            MinY          = (std::min)(MinY, Pos.y);
+            MaxX          = (std::max)(MaxX, Pos.x + Size.x);
+            MaxY          = (std::max)(MaxY, Pos.y + Size.y);
             Bounds.bValid = true;
         }
 
@@ -1565,7 +1778,10 @@ void FLuaBlueprintEditorWidget::Open(UObject* Object)
     bPositionsPushed              = false;
     bPendingInitialContentFit     = true;
     bPendingNodeGeometryEdit      = false;
+    bPendingNavigateToNode        = false;
+    PendingNavigateToNodeId       = 0;
     bSuppressInitialGeometryDirty = true;
+    bDebugBreakpointsSynced       = false;
 
     if (ULuaBlueprintAsset* Blueprint = GetBlueprint())
     {
@@ -1600,7 +1816,10 @@ void FLuaBlueprintEditorWidget::Close()
     ClipboardLinks.clear();
     bPendingInitialContentFit     = false;
     bPendingNodeGeometryEdit      = false;
+    bPendingNavigateToNode        = false;
+    PendingNavigateToNodeId       = 0;
     bSuppressInitialGeometryDirty = false;
+    bDebugBreakpointsSynced       = false;
     FAssetEditorWidget::Close();
 }
 
@@ -1677,6 +1896,8 @@ void FLuaBlueprintEditorWidget::Render(float /*DeltaTime*/)
         }
     }
 
+    SyncBreakpointsToDebugManager(Blueprint);
+    ProcessLuaDebugAutoFocus(Blueprint);
     RenderToolbar(Blueprint);
     RenderCompileErrorPanel(Blueprint);
 
@@ -1855,6 +2076,37 @@ void FLuaBlueprintEditorWidget::RenderToolbar(ULuaBlueprintAsset* Blueprint)
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Reset the graph to its default event nodes.");
 
+    ImGui::SameLine();
+    ImGui::TextDisabled("|");
+    ImGui::SameLine();
+    const bool bLuaDebugPaused = FLuaDebugManager::IsPaused();
+    if (ToolbarAccentButton("Continue", ImGui::GetStyleColorVec4(ImGuiCol_Button), ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered), bLuaDebugPaused))
+    {
+        FLuaDebugManager::Continue();
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Resume the paused LuaBlueprint coroutine.");
+    ImGui::SameLine();
+    if (ToolbarAccentButton("Step In", ImGui::GetStyleColorVec4(ImGuiCol_Button), ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered), bLuaDebugPaused))
+    {
+        FLuaDebugManager::StepInto();
+    }
+    ImGui::SameLine();
+    if (ToolbarAccentButton("Step Over", ImGui::GetStyleColorVec4(ImGuiCol_Button), ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered), bLuaDebugPaused))
+    {
+        FLuaDebugManager::StepOver();
+    }
+    ImGui::SameLine();
+    if (ToolbarAccentButton("Step Out", ImGui::GetStyleColorVec4(ImGuiCol_Button), ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered), bLuaDebugPaused))
+    {
+        FLuaDebugManager::StepOut();
+    }
+    ImGui::SameLine();
+    if (ToolbarButton("Pause Next Node"))
+    {
+        FLuaDebugManager::PauseNextLine();
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Pause when the next LuaBlueprint node executes.");
+
     // ── 우측 정렬 상태 배지: 컴파일 에러/경고 요약 ──
     {
         int NumErrors   = 0;
@@ -1889,7 +2141,7 @@ void FLuaBlueprintEditorWidget::RenderToolbar(ULuaBlueprintAsset* Blueprint)
         }
 
         const float TextW = ImGui::CalcTextSize(StatusBuf).x;
-        ImGui::SameLine(std::max(ImGui::GetCursorPosX(), ImGui::GetWindowWidth() - TextW - 24.0f));
+        ImGui::SameLine((std::max)(ImGui::GetCursorPosX(), ImGui::GetWindowWidth() - TextW - 24.0f));
         ImGui::AlignTextToFramePadding();
         ImGui::TextColored(StatusCol, "%s", StatusBuf);
     }
@@ -1913,33 +2165,63 @@ void FLuaBlueprintEditorWidget::RenderToolbar(ULuaBlueprintAsset* Blueprint)
 void FLuaBlueprintEditorWidget::RenderCompileErrorPanel(ULuaBlueprintAsset* Blueprint)
 {
     // Material 패턴: 상단에 빨간 에러 패널을 명시적으로 노출. Diagnostics 탭은 보조용.
-    bool bHasError   = false;
-    int  NumWarnings = 0;
+    bool  bHasError   = false;
+    int   NumWarnings = 0;
+    int   NumErrors   = 0;
+    int   VisibleRows = 0;
     for (const FLuaBlueprintDiagnostic& D : Blueprint->GetDiagnostics())
     {
-        if (D.Severity == ELuaBlueprintDiagnosticSeverity::Error) bHasError = true;
-        if (D.Severity == ELuaBlueprintDiagnosticSeverity::Warning) ++NumWarnings;
+        if (D.Severity == ELuaBlueprintDiagnosticSeverity::Error)
+        {
+            bHasError = true;
+            ++NumErrors;
+            ++VisibleRows;
+        }
+        if (D.Severity == ELuaBlueprintDiagnosticSeverity::Warning)
+        {
+            ++NumWarnings;
+            if (!bHasError) ++VisibleRows;
+        }
     }
 
     if (!bHasError && NumWarnings == 0) return;
 
     const ImVec4 Bg = bHasError ? ImVec4(0.25f, 0.10f, 0.10f, 0.6f) : ImVec4(0.25f, 0.20f, 0.10f, 0.6f);
     ImGui::PushStyleColor(ImGuiCol_ChildBg, Bg);
-    const float Height = bHasError ? 80.0f : 50.0f;
+    const float RowHeight = ImGui::GetTextLineHeightWithSpacing();
+    const float Height = (std::min)(180.0f, (std::max)(64.0f, RowHeight * static_cast<float>((std::min)(VisibleRows, 6) + 2)));
     ImGui::BeginChild("##LuaBlueprintCompileBanner", ImVec2(0, Height), ImGuiChildFlags_Borders);
 
     if (bHasError)
     {
-        ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.45f, 1.0f), "Compile errors:");
+        ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.45f, 1.0f), "Compile errors: %d", NumErrors);
         for (const FLuaBlueprintDiagnostic& D : Blueprint->GetDiagnostics())
         {
             if (D.Severity != ELuaBlueprintDiagnosticSeverity::Error) continue;
-            ImGui::BulletText("Node %u: %s", D.NodeId, D.Message.c_str());
+            ImGui::PushID(static_cast<int>(D.NodeId));
+            const FString Line = FString("Node ") + std::to_string(D.NodeId) + ": " + D.Message;
+            ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x);
+            ImGui::Bullet();
+            ImGui::SameLine();
+            ImGui::TextWrapped("%s", Line.c_str());
+            ImGui::PopTextWrapPos();
+            if (ImGui::IsItemClicked())
+            {
+                QueueNavigateToNode(D.NodeId);
+            }
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("Click to focus the node.");
+            }
+            ImGui::PopID();
         }
     }
     else
     {
-        ImGui::TextColored(ImVec4(0.95f, 0.85f, 0.35f, 1.0f), "Compile warnings: %d (Diagnostics 탭 참고)", NumWarnings);
+        ImGui::TextColored(ImVec4(0.95f, 0.85f, 0.35f, 1.0f), "Compile warnings: %d", NumWarnings);
+        ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x);
+        ImGui::TextWrapped("Open Diagnostics below for the full list. Click a diagnostic row to focus its node.");
+        ImGui::PopTextWrapPos();
     }
 
     ImGui::EndChild();
@@ -2015,7 +2297,15 @@ void FLuaBlueprintEditorWidget::RenderVariables(ULuaBlueprintAsset* Blueprint)
         const bool    bOpen       = ImGui::TreeNodeEx("##Var", ImGuiTreeNodeFlags_DefaultOpen, " ");
         ImGui::PopStyleColor();
         ImGui::SameLine();
-        ImGui::TextColored(TypeColor, "%s", HeaderLabel.c_str());
+        ImGui::PushStyleColor(ImGuiCol_Text, TypeColor);
+        ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x);
+        ImGui::TextWrapped("%s", HeaderLabel.c_str());
+        ImGui::PopTextWrapPos();
+        ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered() && ImGui::CalcTextSize(HeaderLabel.c_str()).x > ImGui::GetContentRegionAvail().x)
+        {
+            ImGui::SetTooltip("%s", HeaderLabel.c_str());
+        }
 
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
         {
@@ -2172,6 +2462,10 @@ void FLuaBlueprintEditorWidget::RenderPalettePanel(ULuaBlueprintAsset* Blueprint
         {
             SpawnPaletteNode(Blueprint, Item.Type);
         }
+        if (ImGui::IsItemHovered() && ImGui::CalcTextSize(Label).x > ImGui::GetContentRegionAvail().x)
+        {
+            ImGui::SetTooltip("%s", Label);
+        }
         ImGui::PopID();
 
         ImGui::EndDisabled();
@@ -2244,6 +2538,7 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
     bool                  bAnyNodeGeometryChangedThisFrame = false;
     bool                  bHoveredNodeHelpIcon             = false;
     ELuaBlueprintNodeType HoveredNodeHelpType              = ELuaBlueprintNodeType::Comment;
+    FDeferredTooltip      DeferredNodeTooltip;
 
     for (FLuaBlueprintNode& Node : Blueprint->GetMutableNodes())
     {
@@ -2259,7 +2554,7 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
             {
                 bHoveredNodeHelpIcon = true;
             }
-            const ImVec2 GroupSize(std::max(80.0f, Node.VectorValue.X), std::max(40.0f, Node.VectorValue.Y));
+            const ImVec2 GroupSize((std::max)(80.0f, Node.VectorValue.X), (std::max)(40.0f, Node.VectorValue.Y));
             ed::Group(GroupSize);
             ed::EndNode();
 
@@ -2287,7 +2582,65 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
             continue;
         }
 
+        const bool    bCanNodeBreakpoint = IsLuaBlueprintExecutableDebugNode(Node);
+        const FString DebugSourcePath    = NormalizeLuaBlueprintDebugPath(Blueprint->GetSourcePath());
+        const bool    bPausedHere        = IsPausedOnLuaBlueprintNode(Blueprint, Node);
+
+        bool bRecentlyExecuted = false;
+        {
+            TArray<FLuaDebugTraceEntry> Trace = FLuaDebugManager::GetRecentTrace();
+            for (auto It = Trace.rbegin(); It != Trace.rend(); ++It)
+            {
+                if (It->Event == "Node" || It->Event == "Pause")
+                {
+                    bRecentlyExecuted = It->Location.bLuaBlueprint
+                            && NormalizeLuaBlueprintDebugPath(It->Location.BlueprintPath) == DebugSourcePath
+                            && It->Location.NodeId == Node.NodeId;
+                    break;
+                }
+            }
+        }
+
+        int32 DebugStylePushes = 0;
+        if (bCanNodeBreakpoint && Node.bBreakpointEnabled)
+        {
+            ed::PushStyleColor(ed::StyleColor_NodeBorder, ImColor(220, 50, 50, 230));
+            ++DebugStylePushes;
+        }
+        if (bRecentlyExecuted && !bPausedHere)
+        {
+            ed::PushStyleColor(ed::StyleColor_NodeBorder, ImColor(80, 170, 255, 230));
+            ++DebugStylePushes;
+        }
+        if (bPausedHere)
+        {
+            ed::PushStyleColor(ed::StyleColor_NodeBg, ImColor(70, 48, 18, 230));
+            ed::PushStyleColor(ed::StyleColor_NodeBorder, ImColor(255, 190, 60, 255));
+            DebugStylePushes += 2;
+        }
         ed::BeginNode(ToNodeId(Node.NodeId));
+
+        ImGui::PushID(static_cast<int>(Node.NodeId));
+        if (RenderBreakpointGlyphButton(Node.bBreakpointEnabled, bCanNodeBreakpoint, "##NodeBreakpoint", DeferredNodeTooltip))
+        {
+            Node.bBreakpointEnabled = !Node.bBreakpointEnabled;
+            FLuaDebugManager::SetNodeBreakpoint(Blueprint->GetSourcePath(), Node.NodeId, Node.bBreakpointEnabled);
+            Blueprint->BumpEditorVersion();
+            CommitBlueprintEdit(Blueprint);
+        }
+        ImGui::PopID();
+        ImGui::SameLine(0.0f, 6.0f);
+
+        if (bPausedHere)
+        {
+            ImGui::TextColored(ImVec4(1.0f, 0.72f, 0.22f, 1.0f), "▶");
+            ImGui::SameLine(0.0f, 6.0f);
+        }
+        else if (bRecentlyExecuted)
+        {
+            ImGui::TextColored(ImVec4(0.35f, 0.70f, 1.0f, 1.0f), "•");
+            ImGui::SameLine(0.0f, 6.0f);
+        }
         ImGui::TextColored(NodeHeaderColor(Node.Type), "%s", NodeTypeLabel(Node.Type));
         if (RenderNodeHelpIcon(Node.Type, HoveredNodeHelpType))
         {
@@ -2296,6 +2649,13 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
         ImGui::Dummy(ImVec2(0.0f, 2.0f));
 
         RenderNodeBody(Blueprint, Node);
+
+        if (bPausedHere)
+        {
+            ImGui::Separator();
+            ImGui::TextColored(ImVec4(1.0f, 0.72f, 0.22f, 1.0f), "Paused values");
+            RenderLuaDebugInlineSnapshot(FLuaDebugManager::GetPausedSnapshot());
+        }
 
         for (FLuaBlueprintPin& Pin : Node.Pins)
         {
@@ -2334,6 +2694,10 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
         }
         ImGui::Dummy(ImVec2(0.0f, 2.0f));
         ed::EndNode();
+        if (DebugStylePushes > 0)
+        {
+            ed::PopStyleColor(DebugStylePushes);
+        }
     }
 
     Blueprint->RefreshAllNodePinTypes();
@@ -2351,6 +2715,16 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
             LinkColor = PinTypeColor(From->Type);
         }
         ed::Link(ToLinkId(Link.LinkId), ToPinId(Link.FromPinId), ToPinId(Link.ToPinId), LinkColor);
+    }
+
+    if (bPendingNavigateToNode && PendingNavigateToNodeId != 0 && Blueprint->FindNode(PendingNavigateToNodeId))
+    {
+        SelectOnlyNodes(TArray<uint32> { PendingNavigateToNodeId });
+        ed::NavigateToSelection(true, 0.18f);
+        SelectedNodeId = PendingNavigateToNodeId;
+        bPendingInitialContentFit = false;
+        bPendingNavigateToNode = false;
+        PendingNavigateToNodeId = 0;
     }
 
     // SetNodePosition 직후가 아니라, 실제 노드들이 이번 frame 에 제출된 뒤 fit 해야
@@ -2504,6 +2878,21 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
 
     if (ImGui::BeginPopup("LuaBlueprintNodeMenu"))
     {
+        if (FLuaBlueprintNode* ContextNode = Blueprint->FindNode(NodeIdToU32(ContextNodeId)))
+        {
+            if (IsLuaBlueprintExecutableDebugNode(*ContextNode))
+            {
+                const char* BreakpointLabel = ContextNode->bBreakpointEnabled ? "Disable Breakpoint" : "Enable Breakpoint";
+                if (ImGui::MenuItem(BreakpointLabel, "F9"))
+                {
+                    ContextNode->bBreakpointEnabled = !ContextNode->bBreakpointEnabled;
+                    FLuaDebugManager::SetNodeBreakpoint(Blueprint->GetSourcePath(), ContextNode->NodeId, ContextNode->bBreakpointEnabled);
+                    Blueprint->BumpEditorVersion();
+                    CommitBlueprintEdit(Blueprint);
+                }
+                ImGui::Separator();
+            }
+        }
         if (ImGui::MenuItem("Copy"))
         {
             bQueuedCopySelected = true;
@@ -2613,7 +3002,21 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
         const int  SelectedCount = ed::GetSelectedNodes(SelectedNodes, 1);
         if (SelectedCount > 0)
         {
-            SelectedNodeId = NodeIdToU32(SelectedNodes[0]);
+            SelectedNodeId    = NodeIdToU32(SelectedNodes[0]);
+            const ImGuiIO& IO = ImGui::GetIO();
+            if (!IO.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_F9))
+            {
+                if (FLuaBlueprintNode* Node = Blueprint->FindNode(SelectedNodeId))
+                {
+                    if (IsLuaBlueprintExecutableDebugNode(*Node))
+                    {
+                        Node->bBreakpointEnabled = !Node->bBreakpointEnabled;
+                        FLuaDebugManager::SetNodeBreakpoint(Blueprint->GetSourcePath(), Node->NodeId, Node->bBreakpointEnabled);
+                        Blueprint->BumpEditorVersion();
+                        CommitBlueprintEdit(Blueprint);
+                    }
+                }
+            }
         }
     }
 
@@ -2623,6 +3026,10 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
     if (bHoveredNodeHelpIcon)
     {
         RenderNodeHelpTooltip(HoveredNodeHelpType, TooltipOwnerRect, TooltipOwnerViewportId);
+    }
+    else
+    {
+        RenderDeferredTooltip(DeferredNodeTooltip);
     }
 
     // 캔버스 child 위의 빈 영역에서 drag-drop 수신. ed 컨텍스트는 자체 hit-test 를 하지만,
@@ -2803,6 +3210,62 @@ void FLuaBlueprintEditorWidget::RenderNodeInspector(ULuaBlueprintAsset* Blueprin
         Blueprint->BumpVersion();
         CommitBlueprintEdit(Blueprint);
     }
+
+    ImGui::Separator();
+    ImGui::TextUnformatted("Runtime Debug");
+    const bool bPausedHere = IsPausedOnLuaBlueprintNode(Blueprint, Node);
+    if (bPausedHere)
+    {
+        const FLuaDebugValueSnapshot Snapshot = FLuaDebugManager::GetPausedSnapshot();
+        ImGui::TextColored(ImVec4(1.0f, 0.72f, 0.22f, 1.0f), "Paused at line %d", Snapshot.Location.Line);
+        RenderLuaDebugValueList("Node Values", Snapshot.NodeValues, 64);
+        RenderLuaDebugValueList("Blueprint Variables", Snapshot.BlueprintVariables, 64);
+        RenderLuaDebugValueList("Watch", Snapshot.Watches, 32);
+        RenderLuaDebugValueList("Locals", Snapshot.Locals, 64);
+        RenderLuaDebugValueList("Upvalues", Snapshot.Upvalues, 32);
+    }
+    else if (FLuaDebugManager::IsPaused())
+    {
+        const FLuaDebugLocation& Loc = FLuaDebugManager::GetPausedLocation();
+        ImGui::TextDisabled("Paused at %s / Node #%u", Loc.NodeName.c_str(), Loc.NodeId);
+    }
+    else
+    {
+        ImGui::TextDisabled("Run PIE and break on this node to inspect locals, Blueprint variables, and watches.");
+    }
+
+    ImGui::PushItemWidth(-72.0f);
+    ImGui::InputTextWithHint("##WatchExpression", "watch expression, e.g. Health or __vars.Health", DebugWatchExpressionBuf, sizeof(DebugWatchExpressionBuf), ImGuiInputTextFlags_EnterReturnsTrue);
+    const bool bSubmitWatch = ImGui::IsItemDeactivatedAfterEdit() && DebugWatchExpressionBuf[0] != 0;
+    ImGui::PopItemWidth();
+    ImGui::SameLine();
+    if (ImGui::Button("Add##WatchExpression") || bSubmitWatch)
+    {
+        if (DebugWatchExpressionBuf[0] != 0)
+        {
+            FLuaDebugManager::AddWatchExpression(DebugWatchExpressionBuf);
+            DebugWatchExpressionBuf[0] = 0;
+        }
+    }
+
+    TArray<FString> WatchExpressions = FLuaDebugManager::GetWatchExpressions();
+    for (int32 WatchIndex = 0; WatchIndex < static_cast<int32>(WatchExpressions.size()); ++WatchIndex)
+    {
+        ImGui::PushID(WatchIndex);
+        ImGui::TextDisabled("Watch");
+        ImGui::SameLine();
+        ImGui::TextWrapped("%s", WatchExpressions[WatchIndex].c_str());
+        ImGui::SameLine();
+        if (ImGui::SmallButton("x"))
+        {
+            FLuaDebugManager::RemoveWatchExpression(WatchIndex);
+            ImGui::PopID();
+            break;
+        }
+        ImGui::PopID();
+    }
+
+    ImGui::Separator();
 
     switch (Node.Type)
     {
@@ -3429,15 +3892,84 @@ void FLuaBlueprintEditorWidget::RenderDiagnostics(ULuaBlueprintAsset* Blueprint)
         default:
             break;
         }
-        ImGui::TextColored(
-            Color,
-            "[%s] Node %u: %s",
-            SeverityLabel(Diagnostic.Severity),
-            Diagnostic.NodeId,
-            Diagnostic.Message.c_str()
-        );
+        const FString Line = FString("[") + SeverityLabel(Diagnostic.Severity) + "] Node " + std::to_string(Diagnostic.NodeId) + ": " + Diagnostic.Message;
+        ImGui::PushID(static_cast<int>(Diagnostic.NodeId));
+        ImGui::PushStyleColor(ImGuiCol_Text, Color);
+        ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x);
+        ImGui::Bullet();
+        ImGui::SameLine();
+        ImGui::TextWrapped("%s", Line.c_str());
+        ImGui::PopTextWrapPos();
+        ImGui::PopStyleColor();
+        if (ImGui::IsItemClicked())
+        {
+            QueueNavigateToNode(Diagnostic.NodeId);
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Click to focus the node.");
+        }
+        ImGui::PopID();
     }
 }
+
+void FLuaBlueprintEditorWidget::SyncBreakpointsToDebugManager(ULuaBlueprintAsset* Blueprint)
+{
+    if (!Blueprint || bDebugBreakpointsSynced)
+    {
+        return;
+    }
+
+    for (const FLuaBlueprintNode& Node : Blueprint->GetNodes())
+    {
+        if (Node.bBreakpointEnabled)
+        {
+            FLuaDebugManager::SetNodeBreakpoint(Blueprint->GetSourcePath(), Node.NodeId, true);
+        }
+    }
+    bDebugBreakpointsSynced = true;
+}
+
+void FLuaBlueprintEditorWidget::ProcessLuaDebugAutoFocus(ULuaBlueprintAsset* Blueprint)
+{
+    if (!Blueprint || !FLuaDebugManager::IsPaused())
+    {
+        return;
+    }
+
+    FLuaDebugEditorFocusRequest Request;
+    if (!FLuaDebugManager::PeekEditorFocusRequest(Request))
+    {
+        return;
+    }
+
+    if (Request.Serial == LastHandledLuaDebugFocusSerial)
+    {
+        return;
+    }
+
+    const FString CurrentPath = NormalizeLuaBlueprintDebugPath(Blueprint->GetSourcePath());
+    const FString RequestPath = NormalizeLuaBlueprintDebugPath(Request.Location.BlueprintPath);
+    if (CurrentPath.empty() || CurrentPath != RequestPath)
+    {
+        return;
+    }
+
+    LastHandledLuaDebugFocusSerial = Request.Serial;
+    QueueNavigateToNode(Request.Location.NodeId);
+    RequestFocus();
+}
+
+void FLuaBlueprintEditorWidget::QueueNavigateToNode(uint32 NodeId)
+{
+    if (NodeId == 0)
+    {
+        return;
+    }
+    bPendingNavigateToNode = true;
+    PendingNavigateToNodeId = NodeId;
+}
+
 
 void FLuaBlueprintEditorWidget::RenderGeneratedLua(ULuaBlueprintAsset* Blueprint)
 {
@@ -3738,7 +4270,7 @@ void FLuaBlueprintEditorWidget::RenderAddNodeMenu(ULuaBlueprintAsset* Blueprint)
         if (ImGui::BeginMenu("Audio"))
         {
             AddItem(ELuaBlueprintNodeType::LoadAudio);
-            AddItem(ELuaBlueprintNodeType::PlaySound);
+            AddItem(ELuaBlueprintNodeType::AudioPlaySound);
             AddItem(ELuaBlueprintNodeType::PlayBGM);
             AddItem(ELuaBlueprintNodeType::StopBGM);
             AddItem(ELuaBlueprintNodeType::PlayAudioLoop);
@@ -4237,7 +4769,7 @@ bool FLuaBlueprintEditorWidget::CloneNodeFragment(
         NewNode->FloatValue  = SrcNode.FloatValue;
         NewNode->VectorValue = SrcNode.VectorValue;
 
-        const size_t PinCount = std::min(NewNode->Pins.size(), SrcNode.Pins.size());
+        const size_t PinCount = (std::min)(NewNode->Pins.size(), SrcNode.Pins.size());
         for (size_t PinIndex = 0; PinIndex < PinCount; ++PinIndex)
         {
             const FLuaBlueprintPin& SrcPin = SrcNode.Pins[PinIndex];
@@ -4476,10 +5008,10 @@ void FLuaBlueprintEditorWidget::GroupSelectedNodesAsComment(ULuaBlueprintAsset* 
         if (!NodeBounds.bValid) continue;
 
         bAny = true;
-        MinX = std::min(MinX, NodeBounds.Min.x);
-        MinY = std::min(MinY, NodeBounds.Min.y);
-        MaxX = std::max(MaxX, NodeBounds.Max.x);
-        MaxY = std::max(MaxY, NodeBounds.Max.y);
+        MinX = (std::min)(MinX, NodeBounds.Min.x);
+        MinY = (std::min)(MinY, NodeBounds.Min.y);
+        MaxX = (std::max)(MaxX, NodeBounds.Max.x);
+        MaxY = (std::max)(MaxY, NodeBounds.Max.y);
     }
     if (!bAny) return;
 

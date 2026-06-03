@@ -15,6 +15,9 @@
 
 #include "Render/Pipeline/Renderer.h"
 #include "Engine/Input/InputSystem.h"
+#include "Lua/LuaDebugManager.h"
+#include "LuaBlueprint/LuaBlueprintAsset.h"
+#include "LuaBlueprint/LuaBlueprintManager.h"
 
 #include "Editor/Slate/SlateApplication.h"
 #include "Editor/UI/Util/ImGuiSetting.h"
@@ -1196,7 +1199,31 @@ void FEditorMainPanel::ToggleConsoleDrawer(bool bFocusInput)
 
 void FEditorMainPanel::ProcessPendingDebugActions()
 {
-	if (!bPendingClearLastBatch || !EditorEngine)
+	if (!EditorEngine)
+	{
+		return;
+	}
+
+	FLuaDebugEditorFocusRequest LuaDebugFocus;
+	if (FLuaDebugManager::PeekEditorFocusRequest(LuaDebugFocus)
+		&& LuaDebugFocus.Serial != LastLuaDebugEditorFocusSerial
+		&& !LuaDebugFocus.Location.BlueprintPath.empty())
+	{
+		LastLuaDebugEditorFocusSerial = LuaDebugFocus.Serial;
+		if (EditorEngine && EditorEngine->IsPIEPossessedMode())
+		{
+			EditorEngine->TogglePIEControlMode();
+		}
+		FSlateApplication::Get().ClearInputOwner();
+		InputSystem::Get().ResetTransientState();
+		if (ULuaBlueprintAsset* Blueprint = FLuaBlueprintManager::Get().Load(LuaDebugFocus.Location.BlueprintPath))
+		{
+			ShowEditorWindows();
+			OpenAssetEditorForObject(Blueprint);
+		}
+	}
+
+	if (!bPendingClearLastBatch)
 	{
 		return;
 	}

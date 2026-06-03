@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Types/CoreTypes.h"
 #include "Editor/UI/Panel/EditorConsoleWidget.h"
 #include "Editor/UI/Panel/EditorControlWidget.h"
 #include "Editor/Settings/EditorSettings.h"
@@ -107,5 +108,6 @@ private:
 	float DebugJitterZ = 0.0f;
 	TArray<AActor*> DebugLastSpawnedActors;
 	bool bPendingClearLastBatch = false;
+	uint64 LastLuaDebugEditorFocusSerial = 0;
 	FEditorSettings::FUIVisibility SavedUIVisibility{};
 };

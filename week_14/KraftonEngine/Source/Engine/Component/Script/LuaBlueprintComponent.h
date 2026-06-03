@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sol/sol.hpp>
+#include <utility>
 #include "Component/ActorComponent.h"
 #include "Core/Delegate.h"
 #include "Math/Vector.h"
@@ -27,6 +28,9 @@ public:
 
     UFUNCTION(Callable, Exec, Category="Lua Blueprint") bool CallFunction(const FString& FunctionName);
 
+    // LuaBlueprint 디버거가 중단점/스텝 정지 후 같은 coroutine 지점에서 재개할 때 호출한다.
+    bool ResumeLuaDebugExecution();
+
     UFUNCTION(Callable, Exec, Category="Lua Blueprint")
     void SetBlueprintPath(const FString& InPath);
     UFUNCTION(Pure, Category="Lua Blueprint")
@@ -39,6 +43,8 @@ public:
     {
         return GetValidBlueprintAsset();
     }
+
+    TArray<std::pair<FString, UObject*>> GetRuntimeObjectVariableSnapshot() const;
 
     void BeginPlay() override;
     void EndPlay() override;
@@ -73,6 +79,7 @@ private:
     }
 
     FString  GetRuntimeName() const;
+    FString  GetDebugBlueprintPath() const;
     void     InitializeRuntimeObjectVariables();
     void     InitRuntimeObjectVariable(const FString& Name, bool bStrong);
     void     SetRuntimeObjectVariable(const FString& Name, sol::object Value);

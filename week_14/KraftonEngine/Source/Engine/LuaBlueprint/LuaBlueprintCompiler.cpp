@@ -219,6 +219,81 @@ namespace
             }
         }
 
+        FString BuildDebugValuesExpression(const FLuaBlueprintNode& Node)
+        {
+            FString Expr = "{ Inputs = {";
+            bool bAnyInput = false;
+            for (const FLuaBlueprintPin& Pin : Node.Pins)
+            {
+                if (Pin.Kind != ELuaBlueprintPinKind::Input || Pin.Type == ELuaBlueprintPinType::Exec)
+                {
+                    continue;
+                }
+                if (bAnyInput)
+                {
+                    Expr += ", ";
+                }
+                bAnyInput = true;
+                const FString PinName = Pin.DisplayName.ToString();
+                Expr += "[" + LuaQuoted(PinName) + "] = __bp_debug_value(function() return ";
+                Expr += GetInputExpression(Node, PinName.c_str(), PinDefaultExpression(Pin, "nil"));
+                Expr += " end)";
+            }
+            Expr += "}, Outputs = {";
+
+            bool bAnyOutput = false;
+            if (Node.Type == ELuaBlueprintNodeType::EventTick ||
+                Node.Type == ELuaBlueprintNodeType::EventInputAxis ||
+                Node.Type == ELuaBlueprintNodeType::EventOverlap ||
+                Node.Type == ELuaBlueprintNodeType::EventEndOverlap ||
+                Node.Type == ELuaBlueprintNodeType::EventHit ||
+                Node.Type == ELuaBlueprintNodeType::EventEndHit ||
+                Node.Type == ELuaBlueprintNodeType::CustomEvent)
+            {
+                for (const FLuaBlueprintPin& Pin : Node.Pins)
+                {
+                    if (Pin.Kind != ELuaBlueprintPinKind::Output || Pin.Type == ELuaBlueprintPinType::Exec)
+                    {
+                        continue;
+                    }
+                    if (bAnyOutput)
+                    {
+                        Expr += ", ";
+                    }
+                    bAnyOutput = true;
+                    const FString PinName = Pin.DisplayName.ToString();
+                    Expr += "[" + LuaQuoted(PinName) + "] = __bp_debug_value(function() return ";
+                    Expr += GetOutputExpression(Node, Pin);
+                    Expr += " end)";
+                }
+            }
+            Expr += "}, Values = {";
+            bool bAnyValue = false;
+            if (Node.Type == ELuaBlueprintNodeType::SetVariable)
+            {
+                const FString VarName = LuaName(Node.NameValue);
+                if (!VarName.empty())
+                {
+                    if (bAnyValue)
+                    {
+                        Expr += ", ";
+                    }
+                    bAnyValue = true;
+                    Expr += "[" + LuaQuoted(FString("Assign ") + VarName) + "] = __bp_debug_value(function() return ";
+                    Expr += GetInputExpression(Node, "Value", "nil");
+                    Expr += " end)";
+                }
+            }
+            Expr += "} }";
+            return Expr;
+        }
+
+        void EmitDebugNode(std::ostringstream& Out, const FLuaBlueprintNode& Node, int Indent)
+        {
+            EmitIndent(Out, Indent);
+            Out << "__bp_debug_node(" << Node.NodeId << ", " << LuaQuoted(Node.DisplayName.ToString()) << ", " << BuildDebugValuesExpression(Node) << ")\n";
+        }
+
         void EmitEventFunction(
             std::ostringstream&   Out,
             ELuaBlueprintNodeType EventType,
@@ -233,11 +308,14 @@ namespace
             }
 
             Out << "function " << FunctionName << "(" << Args << ")\n";
+            Out << "  return __bp_debug_run(" << LuaQuoted(FunctionName) << ", function()\n";
+            EmitDebugNode(Out, *Event, 2);
             std::unordered_set<uint32> ExecStack;
             if (const FLuaBlueprintPin* Then = FindFirstExecOutput(*Event))
             {
-                EmitNextExecFromPin(Out, Then->PinId, 1, ExecStack);
+                EmitNextExecFromPin(Out, Then->PinId, 2, ExecStack);
             }
+            Out << "  end)\n";
             Out << "end\n\n";
         }
 
@@ -312,11 +390,14 @@ namespace
 
                 const char* Args = Node.Type == ELuaBlueprintNodeType::EventInputAxis ? "Value" : "";
                 Out << "function " << InputFunctionName(Node) << "(" << Args << ")\n";
+                Out << "  return __bp_debug_run(" << LuaQuoted(InputFunctionName(Node)) << ", function()\n";
+                EmitDebugNode(Out, Node, 2);
                 std::unordered_set<uint32> ExecStack;
                 if (const FLuaBlueprintPin* Then = FindFirstExecOutput(Node))
                 {
-                    EmitNextExecFromPin(Out, Then->PinId, 1, ExecStack);
+                    EmitNextExecFromPin(Out, Then->PinId, 2, ExecStack);
                 }
+                Out << "  end)\n";
                 Out << "end\n\n";
             }
         }
@@ -338,11 +419,14 @@ namespace
                 // CallCustomEvent 가 항상 모든 Arg slot 을 넘기므로 함수 signature 도 고정.
                 // pin 이름과 동일하게 두면 GetOutputExpression 이 그대로 reference 가능.
                 Out << "function " << CustomEventFunctionName(EventName) << "(Arg0, Arg1, Arg2, Arg3)\n";
+                Out << "  return __bp_debug_run(" << LuaQuoted(FString("CustomEvent:") + EventName) << ", function()\n";
+                EmitDebugNode(Out, Node, 2);
                 std::unordered_set<uint32> ExecStack;
                 if (const FLuaBlueprintPin* Then = FindFirstExecOutput(Node))
                 {
-                    EmitNextExecFromPin(Out, Then->PinId, 1, ExecStack);
+                    EmitNextExecFromPin(Out, Then->PinId, 2, ExecStack);
                 }
+                Out << "  end)\n";
                 Out << "end\n\n";
             }
         }
@@ -608,13 +692,21 @@ namespace
             Out << "local function __bp_to_bool(v) if type(v) == 'boolean' then return v end if type(v) == 'number' then return v ~= 0 end if type(v) == 'string' then return v ~= '' and v ~= 'false' and v ~= '0' end if type(v) == 'table' then return next(v) ~= nil end return v ~= nil end\n";
             Out << "local function __bp_to_float(v) if type(v) == 'number' then return v end if type(v) == 'boolean' then return v and 1 or 0 end if type(v) == 'string' then return tonumber(v) or 0 end return 0 end\n";
             Out << "local function __bp_to_int(v) return math.floor(__bp_to_float(v)) end\n";
-            Out << "local function __bp_to_string(v) if v == nil then return '' end return tostring(v) end\n";
+            Out << "local function __bp_to_string(v) if v == nil then return '' end if BP_ToStringValue ~= nil then local ok, s = pcall(BP_ToStringValue, v); if ok and s ~= nil then return s end end return tostring(v) end\n";
             Out << "local function __bp_to_vector(v) if v == nil then return __bp_vec(0,0,0) end if type(v) == 'number' then return __bp_vec(v,v,v) end if type(v) == 'string' then local x,y,z = string.match(v, '([%-%.%d]+)%s*,%s*([%-%.%d]+)%s*,%s*([%-%.%d]+)'); return __bp_vec(tonumber(x) or 0, tonumber(y) or 0, tonumber(z) or 0) end return v end\n";
             Out << "local function __bp_to_array(v) if type(v) == 'table' then return v end if v == nil then return {} end return { v } end\n";
-            Out << "local function __bp_to_name(v) if v == nil then return '' end return tostring(v) end\n";
-            Out << "local function __bp_to_class(v) if v == nil then return '' end return tostring(v) end\n";
-            Out << "local function __bp_to_enum(v) if type(v) == 'number' then return math.floor(v) end if v == nil then return '' end return tostring(v) end\n";
+            Out << "local function __bp_to_name(v) return __bp_to_string(v) end\n";
+            Out << "local function __bp_to_class(v) return __bp_to_string(v) end\n";
+            Out << "local function __bp_to_enum(v) if type(v) == 'number' then return math.floor(v) end return __bp_to_string(v) end\n";
             Out << "local function __bp_color4(r,g,b,a) return { X = r or 0, Y = g or 0, Z = b or 0, W = a or 1, R = r or 0, G = g or 0, B = b or 0, A = a or 1 } end\n";
+            Out << "__bp_debug_coroutines = __bp_debug_coroutines or {}\n";
+            Out << "__bp_debug_active_depth = __bp_debug_active_depth or 0\n";
+            Out << "local function __bp_debug_resume_event(event_name) local co = __bp_debug_coroutines[event_name]; if co == nil then return false end; if coroutine.status(co) == 'dead' then __bp_debug_coroutines[event_name] = nil; return false end; __bp_debug_active_depth = __bp_debug_active_depth + 1; local ok, value = coroutine.resume(co); __bp_debug_active_depth = __bp_debug_active_depth - 1; if not ok then __bp_debug_coroutines[event_name] = nil; __bp_debug_active_depth = 0; error(value) end; if coroutine.status(co) == 'dead' then __bp_debug_coroutines[event_name] = nil end; return true end\n";
+            Out << "function __bp_debug_resume_all() local any = false; local keys = {}; for event_name, co in pairs(__bp_debug_coroutines) do keys[#keys + 1] = event_name end; for _, event_name in ipairs(keys) do local co = __bp_debug_coroutines[event_name]; if co ~= nil and coroutine.status(co) ~= 'dead' then any = __bp_debug_resume_event(event_name) or any end end return any end\n";
+            Out << "local function __bp_debug_call_nested(fn) __bp_debug_active_depth = __bp_debug_active_depth + 1; local a,b,c,d,e,f = fn(); __bp_debug_active_depth = __bp_debug_active_depth - 1; return a,b,c,d,e,f end\n";
+            Out << "local function __bp_debug_run(event_name, fn) if type(fn) ~= 'function' then return nil end; if __bp_debug_active_depth > 0 then return __bp_debug_call_nested(fn) end; local existing = __bp_debug_coroutines[event_name]; if existing ~= nil and coroutine.status(existing) ~= 'dead' then return __bp_debug_resume_event(event_name) end; local co = coroutine.create(fn); __bp_debug_coroutines[event_name] = co; return __bp_debug_resume_event(event_name) end\n";
+            Out << "local function __bp_debug_value(fn) if type(fn) ~= 'function' then return { __lua_debug_nil = true } end; local ok, value = pcall(fn); if ok then if value == nil then return { __lua_debug_nil = true } end return value end; return { __lua_debug_error = tostring(value) } end\n";
+            Out << "local function __bp_debug_node(node_id, node_name, node_values) if BP_DebugNode == nil then return end; local info = (debug and debug.getinfo) and debug.getinfo(2, 'Sl') or nil; local source = info and (info.short_src or info.source) or ''; local line = info and info.currentline or 0; local should_pause = BP_DebugNode(node_id, node_name or '', source or '', line or 0, __bp_debug_active_depth or 0, __vars, node_values or {}); if should_pause then if coroutine.running() ~= nil then coroutine.yield('__LuaBlueprintDebugPause') else error('__LuaBlueprintDebugPause requested outside coroutine at node '..tostring(node_id)) end end end\n";
             Out << "__bp_timers = __bp_timers or {}\n";
             Out << "local function __bp_cancel_timer(id) if id == nil then return end __bp_timers[tostring(id)] = nil end\n";
             Out << "local function __bp_is_timer_active(id) return id ~= nil and __bp_timers[tostring(id)] ~= nil end\n";
@@ -676,6 +768,7 @@ namespace
             ExecStack.insert(Node.NodeId);
             EmitIndent(Out, Indent);
             Out << "-- NodeId: " << Node.NodeId << " " << LuaQuoted(Node.DisplayName.ToString()) << "\n";
+            EmitDebugNode(Out, Node, Indent);
             switch (Node.Type)
             {
             case ELuaBlueprintNodeType::Sequence:
@@ -692,7 +785,7 @@ namespace
                 break;
             case ELuaBlueprintNodeType::PrintString:
                 EmitIndent(Out, Indent);
-                Out << "print(tostring(" << GetInputExpression(Node, "Text", LuaQuoted(Node.StringValue)) << "))\n";
+                Out << "print(__bp_to_string(" << GetInputExpression(Node, "Text", LuaQuoted(Node.StringValue)) << "))\n";
                 EmitThen(Out, Node, Indent, ExecStack);
                 break;
             case ELuaBlueprintNodeType::SetVariable:
@@ -871,7 +964,7 @@ namespace
             case ELuaBlueprintNodeType::LoadAudio:
                 EmitLoadAudio(Out, Node, Indent, ExecStack);
                 break;
-            case ELuaBlueprintNodeType::PlaySound:
+            case ELuaBlueprintNodeType::AudioPlaySound:
                 EmitSimpleCall(Out, Node, Indent, ExecStack, "Audio.Play({Key}, {Volume})");
                 break;
             case ELuaBlueprintNodeType::PlayBGM:
@@ -1775,7 +1868,7 @@ namespace
                 return FString("(not __bp_to_bool(") + GetInputExpression(Node, "A", "false") + "))";
             case ELuaBlueprintNodeType::AppendString:
                 // tostring 으로 감싸 숫자/bool 도 안전.
-                return FString("(tostring(") + GetInputExpression(Node, "A", "\"\"") + ") .. tostring(" +
+                return FString("(__bp_to_string(") + GetInputExpression(Node, "A", "\"\"") + ") .. __bp_to_string(" +
                         GetInputExpression(Node, "B", "\"\"") + "))";
             case ELuaBlueprintNodeType::MakeVector:
                 return FString("__bp_vec(") + GetInputExpression(Node, "X", "0") + ", " + GetInputExpression(

@@ -46,6 +46,9 @@ private:
 	void RenderVariableEditor(ULuaBlueprintAsset* Blueprint, FLuaBlueprintVariable& Variable, int32 Index);
 	void RenderDiagnostics(ULuaBlueprintAsset* Blueprint);
 	void RenderGeneratedLua(ULuaBlueprintAsset* Blueprint);
+	void SyncBreakpointsToDebugManager(ULuaBlueprintAsset* Blueprint);
+	void ProcessLuaDebugAutoFocus(ULuaBlueprintAsset* Blueprint);
+	void QueueNavigateToNode(uint32 NodeId);
 
 	bool RenderInlinePinLiteral(ULuaBlueprintAsset* Blueprint, FLuaBlueprintNode& Node, FLuaBlueprintPin& Pin);
 
@@ -127,4 +130,9 @@ private:
 	bool bPendingNodeGeometryEdit = false;
 	bool bSuppressInitialGeometryDirty = false;
 	bool bRenderingDocument = false;
+	bool bDebugBreakpointsSynced = false;
+	bool bPendingNavigateToNode = false;
+	uint32 PendingNavigateToNodeId = 0;
+	uint64 LastHandledLuaDebugFocusSerial = 0;
+	char DebugWatchExpressionBuf[256] = {};
 };

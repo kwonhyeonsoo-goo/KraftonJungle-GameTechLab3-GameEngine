@@ -9,6 +9,7 @@
 #include "GameFramework/World.h"
 #include "Runtime/Engine.h"
 #include "Lua/LuaScriptManager.h"
+#include "Lua/LuaDebugManager.h"
 #include "LuaBlueprint/LuaBlueprintAsset.h"
 #include "LuaBlueprint/LuaBlueprintManager.h"
 #include "Input/InputKeyCodes.h"
@@ -74,9 +75,37 @@ bool ULuaBlueprintComponent::CallFunction(const FString& FunctionName)
         {
             sol::error Err = Result;
             UE_LOG("LuaBlueprint %s error in %s: %s", FunctionName.c_str(), GetRuntimeName().c_str(), Err.what());
+            FLuaDebugManager::OnLuaError(GetRuntimeName(), Err.what(), true);
         }
     }
     return bOk;
+}
+
+
+bool ULuaBlueprintComponent::ResumeLuaDebugExecution()
+{
+    if (!Env.valid())
+    {
+        return false;
+    }
+
+    sol::object ResumeObject = Env["__bp_debug_resume_all"];
+    if (!ResumeObject.valid() || ResumeObject.get_type() != sol::type::function)
+    {
+        return false;
+    }
+
+    sol::protected_function ResumeFunction = ResumeObject;
+    FLuaCallScope Scope(this);
+    sol::protected_function_result Result = ResumeFunction();
+    if (!Result.valid())
+    {
+        sol::error Err = Result;
+        UE_LOG("LuaBlueprint debug resume error in %s: %s", GetRuntimeName().c_str(), Err.what());
+        FLuaDebugManager::OnLuaError(GetRuntimeName(), Err.what(), true);
+        return false;
+    }
+    return true;
 }
 
 void ULuaBlueprintComponent::BeginPlay()
@@ -96,6 +125,7 @@ void ULuaBlueprintComponent::BeginPlay()
         {
             sol::error Err = Result;
             UE_LOG("LuaBlueprint BeginPlay error in %s: %s", GetRuntimeName().c_str(), Err.what());
+            FLuaDebugManager::OnLuaError(GetRuntimeName(), Err.what(), true);
         }
     }
 }
@@ -196,6 +226,7 @@ void ULuaBlueprintComponent::TickComponent(
         {
             sol::error Err = Result;
             UE_LOG("LuaBlueprint Tick error in %s: %s", GetRuntimeName().c_str(), Err.what());
+            FLuaDebugManager::OnLuaError(GetRuntimeName(), Err.what(), true);
         }
     }
 }
@@ -284,6 +315,16 @@ bool ULuaBlueprintComponent::InitializeLua()
         return false;
     }
 
+    const FString DebugBlueprintPath = GetDebugBlueprintPath();
+    FLuaDebugManager::ClearNodeBreakpoints(DebugBlueprintPath);
+    for (const FLuaBlueprintNode& Node : BlueprintAsset->GetNodes())
+    {
+        if (Node.bBreakpointEnabled)
+        {
+            FLuaDebugManager::SetNodeBreakpoint(DebugBlueprintPath, Node.NodeId, true);
+        }
+    }
+
     const FString& Source = BlueprintAsset->GetRuntimeLuaSource();
     if (Source.empty())
     {
@@ -324,6 +365,40 @@ bool ULuaBlueprintComponent::InitializeLua()
             ScheduleLuaDelay(Seconds, Callback, ThisRuntimeGeneration);
         }
     );
+    Env.set_function(
+        "BP_ToStringValue",
+        [](sol::this_state State, sol::object Value) -> FString
+        {
+            return FLuaDebugManager::CoerceLuaValueToString(State, Value);
+        }
+    );
+    Env.set_function(
+        "BP_ToDisplayValue",
+        [](sol::this_state State, sol::object Value) -> FString
+        {
+            return FLuaDebugManager::DescribeLuaValueForDisplay(State, Value);
+        }
+    );
+    Env.set_function(
+        "BP_DebugNode",
+        [this](sol::this_state State, uint32 NodeId, const FString& NodeName, const FString& SourceName, int32 Line, int32 Depth, sol::object VarsObject, sol::object NodeValuesObject) -> bool
+        {
+            lua_State* RawLuaState = State;
+            return FLuaDebugManager::OnLuaBlueprintNode(
+                RawLuaState,
+                this,
+                GetRuntimeName(),
+                GetDebugBlueprintPath(),
+                NodeId,
+                NodeName,
+                SourceName,
+                Line,
+                Depth,
+                VarsObject,
+                NodeValuesObject
+            );
+        }
+    );
 
     InitializeRuntimeObjectVariables();
 
@@ -333,6 +408,7 @@ bool ULuaBlueprintComponent::InitializeLua()
     {
         sol::error Err = Result;
         UE_LOG("Failed to load LuaBlueprint %s: %s", ChunkName.c_str(), Err.what());
+            FLuaDebugManager::OnLuaError(GetRuntimeName(), Err.what(), true);
         ClearLuaRuntime();
         return false;
     }
@@ -773,6 +849,16 @@ FString ULuaBlueprintComponent::GetRuntimeName() const
     return "TransientLuaBlueprint";
 }
 
+FString ULuaBlueprintComponent::GetDebugBlueprintPath() const
+{
+    const ULuaBlueprintAsset* Asset = GetValidBlueprintAsset();
+    if (Asset && !Asset->GetSourcePath().empty())
+    {
+        return Asset->GetSourcePath();
+    }
+    return BlueprintPath;
+}
+
 void ULuaBlueprintComponent::InitializeRuntimeObjectVariables()
 {
     RuntimeObjectVariables.clear();
@@ -882,6 +968,17 @@ UObject* ULuaBlueprintComponent::GetRuntimeObjectVariable(const FString& Name) c
     return nullptr;
 }
 
+TArray<std::pair<FString, UObject*>> ULuaBlueprintComponent::GetRuntimeObjectVariableSnapshot() const
+{
+    TArray<std::pair<FString, UObject*>> Result;
+    for (const FLuaBlueprintRuntimeObjectVariable& Variable : RuntimeObjectVariables)
+    {
+        UObject* Value = Variable.bStrong ? Variable.StrongValue : Variable.WeakValue.Get();
+        Result.emplace_back(Variable.Name, Value);
+    }
+    return Result;
+}
+
 bool ULuaBlueprintComponent::IsLuaRuntimeGenerationValid(uint32 Generation) const
 {
     return Env.valid() && LuaRuntimeGeneration == Generation && !bPendingLuaCleanup;
@@ -929,6 +1026,7 @@ void ULuaBlueprintComponent::ScheduleLuaDelay(float Seconds, sol::protected_func
             {
                 sol::error Err = CallbackResult;
                 UE_LOG("LuaBlueprint Delay callback error in %s: %s", Owner->GetRuntimeName().c_str(), Err.what());
+            FLuaDebugManager::OnLuaError(Owner->GetRuntimeName(), Err.what(), true);
             }
         }
     );
@@ -937,6 +1035,7 @@ void ULuaBlueprintComponent::ScheduleLuaDelay(float Seconds, sol::protected_func
     {
         sol::error Err = DelayResult;
         UE_LOG("LuaBlueprint Delay scheduling error in %s: %s", GetRuntimeName().c_str(), Err.what());
+            FLuaDebugManager::OnLuaError(GetRuntimeName(), Err.what(), true);
     }
 }
 
@@ -973,6 +1072,7 @@ void ULuaBlueprintComponent::InvokeLuaEndPlay()
     {
         sol::error Err = Result;
         UE_LOG("LuaBlueprint EndPlay error in %s: %s", GetRuntimeName().c_str(), Err.what());
+            FLuaDebugManager::OnLuaError(GetRuntimeName(), Err.what(), true);
     }
 }
 
@@ -1017,6 +1117,7 @@ void ULuaBlueprintComponent::HandleBeginOverlap(
         {
             sol::error Err = Result;
             UE_LOG("LuaBlueprint OnOverlap error in %s: %s", GetRuntimeName().c_str(), Err.what());
+            FLuaDebugManager::OnLuaError(GetRuntimeName(), Err.what(), true);
         }
     }
 }
@@ -1043,6 +1144,7 @@ void ULuaBlueprintComponent::HandleEndOverlap(
         {
             sol::error Err = Result;
             UE_LOG("LuaBlueprint OnEndOverlap error in %s: %s", GetRuntimeName().c_str(), Err.what());
+            FLuaDebugManager::OnLuaError(GetRuntimeName(), Err.what(), true);
         }
     }
 }
@@ -1070,6 +1172,7 @@ void ULuaBlueprintComponent::HandleHit(
         {
             sol::error Err = Result;
             UE_LOG("LuaBlueprint OnHit error in %s: %s", GetRuntimeName().c_str(), Err.what());
+            FLuaDebugManager::OnLuaError(GetRuntimeName(), Err.what(), true);
         }
     }
 }
@@ -1095,6 +1198,7 @@ void ULuaBlueprintComponent::HandleEndHit(
         {
             sol::error Err = Result;
             UE_LOG("LuaBlueprint OnEndHit error in %s: %s", GetRuntimeName().c_str(), Err.what());
+            FLuaDebugManager::OnLuaError(GetRuntimeName(), Err.what(), true);
         }
     }
 }

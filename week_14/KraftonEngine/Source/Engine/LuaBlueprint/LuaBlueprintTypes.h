@@ -229,7 +229,7 @@ enum class ELuaBlueprintNodeType : uint8
     BindWidgetClick,
     // ── Audio ──
     LoadAudio,
-    PlaySound,
+    AudioPlaySound,
     PlayBGM,
     StopBGM,
     PlayAudioLoop,
@@ -304,6 +304,9 @@ struct FLuaBlueprintNode
     int32   IntValue   = 0;
     float   FloatValue = 0.0f;
     FVector VectorValue;
+
+    // Editor/runtime debugger state. Serialized separately by ULuaBlueprintAsset so old assets remain readable.
+    bool bBreakpointEnabled = false;
 
     friend FArchive& operator<<(FArchive& Ar, FLuaBlueprintNode& Node);
 };
