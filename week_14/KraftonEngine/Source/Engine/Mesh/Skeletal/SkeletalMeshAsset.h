@@ -312,7 +312,7 @@ struct FSkeletalClothData
 	TArray<uint32> ClothLocalIndices;
 	FSkeletalClothPaintData Paint;
 	FSkeletalClothConfig Config;
-	TArray<uint8> CookedFabricData;
+	TArray<uint8> CookedFabricData;	// TODO: Use Cooked Fabric data instead calculate in every initialize
 
 	void Serialize(FArchive& Ar, uint32 PayloadVersion)
 	{
