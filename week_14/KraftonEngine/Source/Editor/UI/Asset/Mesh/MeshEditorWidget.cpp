@@ -1229,10 +1229,29 @@ void FMeshEditorWidget::SaveCurrentAnimationAsset()
 	if (AnimTabState.bMontageSelected)
 	{
 		UAnimMontage* Montage = AnimTabState.CurrentMontage;
-		if (Montage && FAnimationManager::Get().SaveMontagePreservingMetadata(Montage))
+		bool bSavedAny = false;
+		if (Montage && AnimTabState.DirtyMontages.count(Montage) > 0 &&
+			FAnimationManager::Get().SaveMontagePreservingMetadata(Montage))
 		{
 			AnimTabState.DirtyMontages.erase(Montage);
 			FAnimationManager::Get().RefreshAvailableMontages();
+			bSavedAny = true;
+		}
+
+		// Montage 편집 화면의 하단 타임라인은 Source Sequence 의 notify/curve 를 보여준다.
+		// 그곳에서 source 를 수정한 경우 Ctrl+S 가 montage 만 저장하고 source 를 놓치면
+		// 사용자 입장에선 변경이 사라진다. 현재 선택 montage 의 source dirty 도 함께 저장한다.
+		UAnimSequence* SourceSeq = Montage ? Montage->GetSourceSequence() : nullptr;
+		if (SourceSeq && AnimTabState.DirtySequences.count(SourceSeq) > 0 &&
+			FAnimationManager::Get().SaveAnimationPreservingMetadata(SourceSeq))
+		{
+			AnimTabState.DirtySequences.erase(SourceSeq);
+			FAnimationManager::Get().RefreshAvailableAnimations();
+			bSavedAny = true;
+		}
+
+		if (bSavedAny)
+		{
 			MarkAnimationListDirty();
 		}
 		return;
@@ -1318,7 +1337,13 @@ bool FMeshEditorWidget::IsCurrentAnimationDirty() const
 {
 	if (AnimTabState.bMontageSelected)
 	{
-		return AnimTabState.CurrentMontage && AnimTabState.DirtyMontages.count(AnimTabState.CurrentMontage) > 0;
+		UAnimMontage* Montage = AnimTabState.CurrentMontage;
+		if (Montage && AnimTabState.DirtyMontages.count(Montage) > 0)
+		{
+			return true;
+		}
+		UAnimSequence* SourceSeq = Montage ? Montage->GetSourceSequence() : nullptr;
+		return SourceSeq && AnimTabState.DirtySequences.count(SourceSeq) > 0;
 	}
 
 	return AnimTabState.CurrentSequence && AnimTabState.DirtySequences.count(AnimTabState.CurrentSequence) > 0;
@@ -2733,6 +2758,18 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 	const float     ContentHeight  = TotalHeight - TimelineHeight - ImGui::GetStyle().ItemSpacing.y * 3.0f;
 
 	// ─── Top: Asset Details | Viewport | Asset Browser (Persona 배치) ───
+	// Montage 편집은 section/flow 문장이 길어지므로 좌측 패널을 UE Persona 처럼 넓게 쓰고,
+	// 사용자가 직접 드래그해서 폭을 조정할 수 있게 한다.
+	const float LayoutWidth = ImGui::GetContentRegionAvail().x;
+	const float Spacing = ImGui::GetStyle().ItemSpacing.x;
+	constexpr float AnimDetailsSplitterWidth = 4.0f;
+	constexpr float MinAnimDetailsWidth = 300.0f;
+	constexpr float MinAnimViewportWidth = 260.0f;
+	constexpr float MinAnimListWidth = 160.0f;
+	AnimTabState.AnimListWidth = std::max(MinAnimListWidth, AnimTabState.AnimListWidth);
+	const float MaxDetailsWidth = std::max(MinAnimDetailsWidth,
+		LayoutWidth - AnimTabState.AnimListWidth - MinAnimViewportWidth - AnimDetailsSplitterWidth - Spacing * 3.0f);
+	AnimTabState.AnimDetailsWidth = std::max(MinAnimDetailsWidth, std::min(AnimTabState.AnimDetailsWidth, MaxDetailsWidth));
 
 	// Left: 시퀀스 / 몽타주 디테일 패널 (선택 종류에 따라 분기)
 	ImGui::BeginChild("AssetDetails", ImVec2(AnimTabState.AnimDetailsWidth, ContentHeight), true);
@@ -2874,6 +2911,23 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 		ImGui::TextDisabled("No animation selected.");
 	}
 	ImGui::EndChild();
+
+	ImGui::SameLine();
+
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+	ImGui::Button("##animDetailsViewportSplitter", ImVec2(AnimDetailsSplitterWidth, ContentHeight));
+	if (ImGui::IsItemActive())
+	{
+		AnimTabState.AnimDetailsWidth += ImGui::GetIO().MouseDelta.x;
+		AnimTabState.AnimDetailsWidth = std::max(MinAnimDetailsWidth, std::min(AnimTabState.AnimDetailsWidth, MaxDetailsWidth));
+	}
+	if (ImGui::IsItemHovered() || ImGui::IsItemActive())
+	{
+		ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+	}
+	ImGui::PopStyleColor(3);
 
 	ImGui::SameLine();
 
@@ -3121,15 +3175,24 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 	ImGui::EndChild();
 
 	// ─── Bottom: Unreal 시퀀서 패널 ───
+	// Montage 선택 시에도 "몽타주가 읽는 Source Sequence" 의 notify/curve/time ruler 를 보여준다.
+	// Montage 자체 section 편집은 좌측 Montage 패널이 담당하고, 하단은 원본 클립 이해용이다.
+	UAnimSequence* TimelineSequence = AnimTabState.CurrentSequence;
+	if (AnimTabState.bMontageSelected && AnimTabState.CurrentMontage)
+	{
+		TimelineSequence = AnimTabState.CurrentMontage->GetSourceSequence();
+	}
+
 	UAnimSingleNodeInstance* NodeInst = nullptr;
 	USkeletalMeshComponent*  Comp     = ViewportClient.GetPreviewMeshComponent();
-	if (Comp && AnimTabState.CurrentSequence)
+	if (Comp && TimelineSequence && !AnimTabState.bMontageSelected)
 	{
 		NodeInst = Comp->GetAnimNodeInstance(FName::None);
 	}
 
 	// 스페이스바: 재생/정지 토글 (메시 에디터 창 포커스 + 텍스트 입력 중 아닐 때)
-	if (Comp && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+	// Montage preview 는 좌측 Preview 섹션의 Play/Stop 으로 제어하고, SingleNode 일 때만 space toggle.
+	if (Comp && NodeInst && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
 	    !ImGui::GetIO().WantTextInput &&
 	    ImGui::IsKeyPressed(ImGuiKey_Space, false))
 	{
@@ -3137,15 +3200,15 @@ void FMeshEditorWidget::RenderAnimationLayout(float TotalHeight)
 		Comp->SetPlaying(!bPlaying);
 	}
 
-	if (FAnimationTimelinePanel::Render(NodeInst, Comp, AnimTabState.CurrentSequence, TimelineHeight,
+	if (FAnimationTimelinePanel::Render(NodeInst, Comp, TimelineSequence, TimelineHeight,
 		AnimTabState.SelectedNotifyIndex,
 		AnimTabState.SelectedMorphCurveIndex,
 		AnimTabState.SelectedMorphKeyIndex
 	))
 	{
-		if (AnimTabState.CurrentSequence)
+		if (TimelineSequence)
 		{
-			AnimTabState.DirtySequences.insert(AnimTabState.CurrentSequence);
+			AnimTabState.DirtySequences.insert(TimelineSequence);
 		}
 		RefreshAnimationPreviewPose();
 	}

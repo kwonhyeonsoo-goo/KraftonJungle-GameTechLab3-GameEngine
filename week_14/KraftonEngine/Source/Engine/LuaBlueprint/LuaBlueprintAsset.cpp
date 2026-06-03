@@ -14,7 +14,7 @@ namespace
 {
     constexpr uint32 LuaBlueprintAssetMagic         = 0x4C425031; // LBP1
     constexpr uint32 LuaBlueprintAssetFormatVersion = 5;
-    constexpr uint32 LuaBlueprintCompilerVersion    = 20;
+    constexpr uint32 LuaBlueprintCompilerVersion    = 21;
 }
 
 FArchive& operator<<(FArchive& Ar, TArray<FLuaBlueprintPin>& Array);
@@ -513,6 +513,18 @@ namespace
             return "Set Animation Playing";
         case ELuaBlueprintNodeType::GetAnimInstance:
             return "Get Anim Instance";
+        case ELuaBlueprintNodeType::SetAnimGraphVariableFloat:
+            return "Set Anim Graph Float";
+        case ELuaBlueprintNodeType::SetAnimGraphVariableBool:
+            return "Set Anim Graph Bool";
+        case ELuaBlueprintNodeType::SetAnimGraphVariableInt:
+            return "Set Anim Graph Int";
+        case ELuaBlueprintNodeType::GetAnimGraphVariableFloat:
+            return "Get Anim Graph Float";
+        case ELuaBlueprintNodeType::GetAnimGraphVariableBool:
+            return "Get Anim Graph Bool";
+        case ELuaBlueprintNodeType::GetAnimGraphVariableInt:
+            return "Get Anim Graph Int";
         case ELuaBlueprintNodeType::LoadMaterial:
             return "Load Material";
         case ELuaBlueprintNodeType::GetMaterial:
@@ -1815,6 +1827,72 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
     case ELuaBlueprintNodeType::GetAnimInstance:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::SkeletalMeshComponent, FName("Component"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::AnimInstance, FName("AnimInstance"));
+        break;
+    case ELuaBlueprintNodeType::SetAnimGraphVariableFloat:
+        N->NameValue = FName("Speed");
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::AnimInstance, FName("AnimInstance"));
+        if (FLuaBlueprintPin* VariablePin = AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Name, FName("Variable")))
+        {
+            VariablePin->DefaultString = N->NameValue.ToString();
+        }
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Float, FName("Value"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Success"));
+        break;
+    case ELuaBlueprintNodeType::SetAnimGraphVariableBool:
+        N->NameValue = FName("bIsFalling");
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::AnimInstance, FName("AnimInstance"));
+        if (FLuaBlueprintPin* VariablePin = AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Name, FName("Variable")))
+        {
+            VariablePin->DefaultString = N->NameValue.ToString();
+        }
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Bool, FName("Value"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Success"));
+        break;
+    case ELuaBlueprintNodeType::SetAnimGraphVariableInt:
+        N->NameValue = FName("State");
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::AnimInstance, FName("AnimInstance"));
+        if (FLuaBlueprintPin* VariablePin = AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Name, FName("Variable")))
+        {
+            VariablePin->DefaultString = N->NameValue.ToString();
+        }
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Int, FName("Value"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Success"));
+        break;
+    case ELuaBlueprintNodeType::GetAnimGraphVariableFloat:
+        N->NameValue = FName("Speed");
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::AnimInstance, FName("AnimInstance"));
+        if (FLuaBlueprintPin* VariablePin = AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Name, FName("Variable")))
+        {
+            VariablePin->DefaultString = N->NameValue.ToString();
+        }
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Float, FName("Value"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Found"));
+        break;
+    case ELuaBlueprintNodeType::GetAnimGraphVariableBool:
+        N->NameValue = FName("bIsFalling");
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::AnimInstance, FName("AnimInstance"));
+        if (FLuaBlueprintPin* VariablePin = AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Name, FName("Variable")))
+        {
+            VariablePin->DefaultString = N->NameValue.ToString();
+        }
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Value"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Found"));
+        break;
+    case ELuaBlueprintNodeType::GetAnimGraphVariableInt:
+        N->NameValue = FName("State");
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::AnimInstance, FName("AnimInstance"));
+        if (FLuaBlueprintPin* VariablePin = AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Name, FName("Variable")))
+        {
+            VariablePin->DefaultString = N->NameValue.ToString();
+        }
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Int, FName("Value"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Found"));
         break;
     case ELuaBlueprintNodeType::LoadMaterial:
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::String, FName("Path"));

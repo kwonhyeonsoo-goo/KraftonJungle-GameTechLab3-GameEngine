@@ -61,6 +61,10 @@ public:
     // 디폴트 섹션 1개 자동 생성 — 처음 source 가 붙을 때 호출.
     void EnsureDefaultSection();
 
+    // Source length 기준으로 section range / link 를 안전한 값으로 정규화.
+    // UI 편집, Source 교체, Load 후 resolve 경로 모두에서 호출 가능해야 한다.
+    void NormalizeSections();
+
     // ── Blend ──
     float GetBlendInTime()  const { return BlendInTime; }
     float GetBlendOutTime() const { return BlendOutTime; }

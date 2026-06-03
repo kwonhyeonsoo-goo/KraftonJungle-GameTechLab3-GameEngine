@@ -19,6 +19,10 @@
 #include "GameFramework/AActor.h"
 #include "Asset/AssetRegistry.h"
 #include "Animation/Skeleton/Skeleton.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/Graph/AnimGraphInstance.h"
+#include "Animation/Instance/CharacterAnimGraphInstance.h"
+#include "Animation/Instance/CharacterAnimInstance.h"
 #include "Core/Property/ClassProperty.h"
 #include "Core/Property/ArrayProperty.h"
 #include "Core/Property/NumericProperty.h"
@@ -57,6 +61,7 @@
 #include <cstdio>
 #include <utility>
 
+#include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Materials/MaterialManager.h"
 
 #define SEPARATOR(); ImGui::Spacing(); ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing(); ImGui::Spacing();
@@ -170,6 +175,75 @@ namespace
 			return UClass::FindByName(AllowedClass->c_str());
 		}
 		return nullptr;
+	}
+
+	bool IsSamePropertyName(const FPropertyValue& Prop, const char* Name)
+	{
+		return Name && std::strcmp(Prop.GetName(), Name) == 0;
+	}
+
+	bool IsAnimGraphInstanceClass(UClass* Class)
+	{
+		return Class && Class->IsA(UAnimGraphInstance::StaticClass());
+	}
+
+	USkeletalMeshComponent* GetSkeletalMeshComponentForAnimationProperty(const FPropertyValue& Prop)
+	{
+		if (USkeletalMeshComponent* Mesh = Cast<USkeletalMeshComponent>(Prop.Object))
+		{
+			return Mesh;
+		}
+		if (UAnimInstance* AnimInstance = Cast<UAnimInstance>(Prop.Object))
+		{
+			return AnimInstance->GetOwningComponent();
+		}
+		return nullptr;
+	}
+
+	UClass* GetEffectiveAnimInstanceClass(const USkeletalMeshComponent* Mesh)
+	{
+		if (!Mesh)
+		{
+			return nullptr;
+		}
+		if (UClass* ConfiguredClass = Mesh->GetAnimInstanceClass())
+		{
+			return ConfiguredClass;
+		}
+		if (UAnimInstance* Instance = Mesh->GetAnimInstance())
+		{
+			return Instance->GetClass();
+		}
+		return nullptr;
+	}
+
+	bool HasAssignedAnimGraphAsset(const USkeletalMeshComponent* Mesh)
+	{
+		if (!Mesh)
+		{
+			return false;
+		}
+		const UAnimGraphInstance* GraphInstance = Cast<UAnimGraphInstance>(Mesh->GetAnimInstance());
+		return GraphInstance && !GraphInstance->GraphAssetPath.IsNull();
+	}
+
+	bool IsAnimGraphAssetPickerCompatible(const FPropertyValue& Prop)
+	{
+		const UAnimGraphInstance* GraphInstance = Cast<UAnimGraphInstance>(Prop.Object);
+		if (!GraphInstance)
+		{
+			return false;
+		}
+		const USkeletalMeshComponent* Mesh = GraphInstance->GetOwningComponent();
+		if (!Mesh)
+		{
+			return true;
+		}
+		if (Mesh->GetAnimationMode() != EAnimationMode::AnimationCustom)
+		{
+			return false;
+		}
+		return IsAnimGraphInstanceClass(GetEffectiveAnimInstanceClass(Mesh));
 	}
 
 	FString MakePropertyPath(const FString& ParentPath, const char* PropertyName)
@@ -760,20 +834,28 @@ namespace
 
 		UClass* AllowedClass = GetAllowedClassMetadata(Prop);
 		UClass* CurrentClass = ClassProperty->GetClassValue(Prop.ContainerPtr);
+		const bool bAnimInstanceClassProperty = IsSamePropertyName(Prop, "AnimInstanceClass");
+		USkeletalMeshComponent* Mesh = bAnimInstanceClassProperty ? GetSkeletalMeshComponentForAnimationProperty(Prop) : nullptr;
+		const bool bGraphAssetLocked = Mesh && HasAssignedAnimGraphAsset(Mesh);
+
 		FString Preview = CurrentClass ? CurrentClass->GetName() : FString("None");
 		bool bChanged = false;
 
 		if (ImGui::BeginCombo("##Value", Preview.c_str()))
 		{
 			const bool bSelectedNone = CurrentClass == nullptr;
-			if (ImGui::Selectable("None", bSelectedNone))
+			const bool bBlockNone = bAnimInstanceClassProperty && bGraphAssetLocked;
+			if (!bBlockNone)
 			{
-				ClassProperty->SetClassValue(Prop.ContainerPtr, nullptr);
-				bChanged = true;
-			}
-			if (bSelectedNone)
-			{
-				ImGui::SetItemDefaultFocus();
+				if (ImGui::Selectable("None", bSelectedNone))
+				{
+					ClassProperty->SetClassValue(Prop.ContainerPtr, nullptr);
+					bChanged = true;
+				}
+				if (bSelectedNone)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
 			}
 
 			TArray<UClass*>& Classes = UClass::GetAllClasses();
@@ -788,8 +870,15 @@ namespace
 					continue;
 				}
 
+				const bool bCandidateGraphClass = IsAnimGraphInstanceClass(Candidate);
+				if (bAnimInstanceClassProperty && bGraphAssetLocked && !bCandidateGraphClass)
+				{
+					continue;
+				}
+
+				FString Label = Candidate->GetName();
 				const bool bSelected = Candidate == CurrentClass;
-				if (ImGui::Selectable(Candidate->GetName(), bSelected))
+				if (ImGui::Selectable(Label.c_str(), bSelected))
 				{
 					ClassProperty->SetClassValue(Prop.ContainerPtr, Candidate);
 					bChanged = true;
@@ -1940,6 +2029,11 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 		FString Preview = CurrentPath.empty() ? "None" : GetStemFromPath(CurrentPath);
 		if (CurrentPath == "None") Preview = "None";
 
+		const bool bCompatiblePicker = IsAnimGraphAssetPickerCompatible(Prop);
+		if (!bCompatiblePicker)
+		{
+			ImGui::BeginDisabled();
+		}
 		if (ImGui::BeginCombo("##AnimGraphAsset", Preview.c_str()))
 		{
 			bool bSelectedNone = (CurrentPath == "None" || CurrentPath.empty());
@@ -1966,8 +2060,16 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 				{
 					ImGui::SetItemDefaultFocus();
 				}
+				if (ImGui::IsItemHovered())
+				{
+					ImGui::SetTooltip("%s", Item.FullPath.c_str());
+				}
 			}
 			ImGui::EndCombo();
+		}
+		if (!bCompatiblePicker)
+		{
+			ImGui::EndDisabled();
 		}
 		return bChanged;
 	}

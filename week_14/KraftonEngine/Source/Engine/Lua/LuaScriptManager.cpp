@@ -12,6 +12,7 @@
 #include <sstream>
 #include <windows.h>  // PostQuitMessage
 #include "Animation/AnimInstance.h"
+#include "Animation/Graph/AnimGraphInstance.h"
 #include "Animation/Instance/LuaAnimInstance.h"
 #include "Animation/Montage/AnimMontage.h"
 #include "Animation/Sequence/AnimSequence.h"
@@ -3933,6 +3934,110 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         [](UAnimInstance& I, sol::optional<UAnimMontage*> M, sol::optional<FString> Slot)
         {
             return I.IsMontagePlaying(M.value_or(nullptr), Slot ? FName(Slot.value()) : FName::None);
+        },
+        "IsAnimGraphInstance",
+        [](UAnimInstance& I)
+        {
+            return Cast<UAnimGraphInstance>(&I) != nullptr;
+        },
+        "SetGraphVariableFloat",
+        [](UAnimInstance& I, const FString& VariableName, float Value)
+        {
+            if (UAnimGraphInstance* Graph = Cast<UAnimGraphInstance>(&I))
+            {
+                return Graph->SetGraphVariableFloat(FName(VariableName), Value);
+            }
+            return false;
+        },
+        "SetGraphVariableBool",
+        [](UAnimInstance& I, const FString& VariableName, bool bValue)
+        {
+            if (UAnimGraphInstance* Graph = Cast<UAnimGraphInstance>(&I))
+            {
+                return Graph->SetGraphVariableBool(FName(VariableName), bValue);
+            }
+            return false;
+        },
+        "SetGraphVariableInt",
+        [](UAnimInstance& I, const FString& VariableName, int32 Value)
+        {
+            if (UAnimGraphInstance* Graph = Cast<UAnimGraphInstance>(&I))
+            {
+                return Graph->SetGraphVariableInt(FName(VariableName), Value);
+            }
+            return false;
+        },
+        "HasGraphVariableFloat",
+        [](UAnimInstance& I, const FString& VariableName)
+        {
+            float Value = 0.0f;
+            if (const UAnimGraphInstance* Graph = Cast<UAnimGraphInstance>(&I))
+            {
+                return Graph->GetGraphVariableFloat(FName(VariableName), Value);
+            }
+            return false;
+        },
+        "HasGraphVariableBool",
+        [](UAnimInstance& I, const FString& VariableName)
+        {
+            bool bValue = false;
+            if (const UAnimGraphInstance* Graph = Cast<UAnimGraphInstance>(&I))
+            {
+                return Graph->GetGraphVariableBool(FName(VariableName), bValue);
+            }
+            return false;
+        },
+        "HasGraphVariableInt",
+        [](UAnimInstance& I, const FString& VariableName)
+        {
+            int32 Value = 0;
+            if (const UAnimGraphInstance* Graph = Cast<UAnimGraphInstance>(&I))
+            {
+                return Graph->GetGraphVariableInt(FName(VariableName), Value);
+            }
+            return false;
+        },
+        "GetGraphVariableFloat",
+        [](UAnimInstance& I, const FString& VariableName, sol::optional<float> DefaultValue)
+        {
+            float Value = DefaultValue.value_or(0.0f);
+            if (const UAnimGraphInstance* Graph = Cast<UAnimGraphInstance>(&I))
+            {
+                float RuntimeValue = Value;
+                if (Graph->GetGraphVariableFloat(FName(VariableName), RuntimeValue))
+                {
+                    return RuntimeValue;
+                }
+            }
+            return Value;
+        },
+        "GetGraphVariableBool",
+        [](UAnimInstance& I, const FString& VariableName, sol::optional<bool> DefaultValue)
+        {
+            bool bValue = DefaultValue.value_or(false);
+            if (const UAnimGraphInstance* Graph = Cast<UAnimGraphInstance>(&I))
+            {
+                bool bRuntimeValue = bValue;
+                if (Graph->GetGraphVariableBool(FName(VariableName), bRuntimeValue))
+                {
+                    return bRuntimeValue;
+                }
+            }
+            return bValue;
+        },
+        "GetGraphVariableInt",
+        [](UAnimInstance& I, const FString& VariableName, sol::optional<int32> DefaultValue)
+        {
+            int32 Value = DefaultValue.value_or(0);
+            if (const UAnimGraphInstance* Graph = Cast<UAnimGraphInstance>(&I))
+            {
+                int32 RuntimeValue = Value;
+                if (Graph->GetGraphVariableInt(FName(VariableName), RuntimeValue))
+                {
+                    return RuntimeValue;
+                }
+            }
+            return Value;
         }
     );
 

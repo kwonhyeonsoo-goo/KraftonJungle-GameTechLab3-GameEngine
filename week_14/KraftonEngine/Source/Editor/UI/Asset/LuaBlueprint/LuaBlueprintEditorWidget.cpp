@@ -847,6 +847,18 @@ namespace
             return "Set Animation Playing";
         case ELuaBlueprintNodeType::GetAnimInstance:
             return "Get Anim Instance";
+        case ELuaBlueprintNodeType::SetAnimGraphVariableFloat:
+            return "Set Anim Graph Float";
+        case ELuaBlueprintNodeType::SetAnimGraphVariableBool:
+            return "Set Anim Graph Bool";
+        case ELuaBlueprintNodeType::SetAnimGraphVariableInt:
+            return "Set Anim Graph Int";
+        case ELuaBlueprintNodeType::GetAnimGraphVariableFloat:
+            return "Get Anim Graph Float";
+        case ELuaBlueprintNodeType::GetAnimGraphVariableBool:
+            return "Get Anim Graph Bool";
+        case ELuaBlueprintNodeType::GetAnimGraphVariableInt:
+            return "Get Anim Graph Int";
         case ELuaBlueprintNodeType::LoadMaterial:
             return "Load Material";
         case ELuaBlueprintNodeType::GetMaterial:
@@ -1297,6 +1309,18 @@ namespace
             return "Starts or pauses skeletal animation playback.";
         case ELuaBlueprintNodeType::GetAnimInstance:
             return "Returns the animation instance from a skeletal mesh component.";
+        case ELuaBlueprintNodeType::SetAnimGraphVariableFloat:
+            return "Writes a float variable on an Anim Graph instance. Use this to drive state machine transition rules from Lua Blueprint.";
+        case ELuaBlueprintNodeType::SetAnimGraphVariableBool:
+            return "Writes a bool variable on an Anim Graph instance. Use this to drive state machine transition rules from Lua Blueprint.";
+        case ELuaBlueprintNodeType::SetAnimGraphVariableInt:
+            return "Writes an int variable on an Anim Graph instance. Use this to drive state machine transition rules from Lua Blueprint.";
+        case ELuaBlueprintNodeType::GetAnimGraphVariableFloat:
+            return "Reads a float variable from an Anim Graph instance.";
+        case ELuaBlueprintNodeType::GetAnimGraphVariableBool:
+            return "Reads a bool variable from an Anim Graph instance.";
+        case ELuaBlueprintNodeType::GetAnimGraphVariableInt:
+            return "Reads an int variable from an Anim Graph instance.";
         case ELuaBlueprintNodeType::LoadMaterial:
             return "Loads a material asset by path.";
         case ELuaBlueprintNodeType::GetMaterial:
@@ -1633,6 +1657,12 @@ namespace
         case ELuaBlueprintNodeType::SetAnimationLooping:
         case ELuaBlueprintNodeType::SetAnimationPlaying:
         case ELuaBlueprintNodeType::GetAnimInstance:
+        case ELuaBlueprintNodeType::SetAnimGraphVariableFloat:
+        case ELuaBlueprintNodeType::SetAnimGraphVariableBool:
+        case ELuaBlueprintNodeType::SetAnimGraphVariableInt:
+        case ELuaBlueprintNodeType::GetAnimGraphVariableFloat:
+        case ELuaBlueprintNodeType::GetAnimGraphVariableBool:
+        case ELuaBlueprintNodeType::GetAnimGraphVariableInt:
             return ImVec4(0.55f, 0.80f, 1.00f, 1.0f);
         case ELuaBlueprintNodeType::LoadMaterial:
         case ELuaBlueprintNodeType::GetMaterial:
@@ -3067,6 +3097,14 @@ void FLuaBlueprintEditorWidget::RenderPalettePanel(ULuaBlueprintAsset* Blueprint
         { "Variables", ELuaBlueprintNodeType::GetProperty },
         { "Variables", ELuaBlueprintNodeType::SetProperty },
         { "Variables", ELuaBlueprintNodeType::Self },
+        { "Anim Graph", ELuaBlueprintNodeType::GetSkeletalMeshComponent },
+        { "Anim Graph", ELuaBlueprintNodeType::GetAnimInstance },
+        { "Anim Graph", ELuaBlueprintNodeType::SetAnimGraphVariableFloat },
+        { "Anim Graph", ELuaBlueprintNodeType::SetAnimGraphVariableBool },
+        { "Anim Graph", ELuaBlueprintNodeType::SetAnimGraphVariableInt },
+        { "Anim Graph", ELuaBlueprintNodeType::GetAnimGraphVariableFloat },
+        { "Anim Graph", ELuaBlueprintNodeType::GetAnimGraphVariableBool },
+        { "Anim Graph", ELuaBlueprintNodeType::GetAnimGraphVariableInt },
         { "Functions", ELuaBlueprintNodeType::CallFunction },
         { "Functions", ELuaBlueprintNodeType::CustomEvent },
         { "Functions", ELuaBlueprintNodeType::CallCustomEvent },
@@ -5787,6 +5825,13 @@ void FLuaBlueprintEditorWidget::RenderAddNodeMenu(ULuaBlueprintAsset* Blueprint)
             AddItem(ELuaBlueprintNodeType::SetAnimationLooping);
             AddItem(ELuaBlueprintNodeType::SetAnimationPlaying);
             AddItem(ELuaBlueprintNodeType::GetAnimInstance);
+            ImGui::Separator();
+            AddItem(ELuaBlueprintNodeType::SetAnimGraphVariableFloat);
+            AddItem(ELuaBlueprintNodeType::SetAnimGraphVariableBool);
+            AddItem(ELuaBlueprintNodeType::SetAnimGraphVariableInt);
+            AddItem(ELuaBlueprintNodeType::GetAnimGraphVariableFloat);
+            AddItem(ELuaBlueprintNodeType::GetAnimGraphVariableBool);
+            AddItem(ELuaBlueprintNodeType::GetAnimGraphVariableInt);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Material"))

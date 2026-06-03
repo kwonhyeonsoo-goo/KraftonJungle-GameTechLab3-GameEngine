@@ -1206,6 +1206,15 @@ namespace
             case ELuaBlueprintNodeType::SetAnimationPlaying:
                 EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Component}) then ({Component}):SetPlaying({Enabled}) end");
                 break;
+            case ELuaBlueprintNodeType::SetAnimGraphVariableFloat:
+                EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "({AnimInstance}):SetGraphVariableFloat({Variable}, {Value})", "__bp_is_valid_object({AnimInstance})");
+                break;
+            case ELuaBlueprintNodeType::SetAnimGraphVariableBool:
+                EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "({AnimInstance}):SetGraphVariableBool({Variable}, {Value})", "__bp_is_valid_object({AnimInstance})");
+                break;
+            case ELuaBlueprintNodeType::SetAnimGraphVariableInt:
+                EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "({AnimInstance}):SetGraphVariableInt({Variable}, {Value})", "__bp_is_valid_object({AnimInstance})");
+                break;
             case ELuaBlueprintNodeType::SetMaterial:
                 EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "__bp_lib_call(\"MaterialLibrary\", \"SetComponentMaterial\", {Component}, {ElementIndex}, {Material})", "__bp_is_valid_object({Component}) and __bp_is_valid_object({Material})");
                 break;
@@ -2649,11 +2658,38 @@ namespace
                 return FString("(") + GetInputExpression(Node, "Actor", "nil") + " and (" + GetInputExpression(Node, "Actor", "nil") + "):GetSkeletalMeshComponent() or nil)";
             case ELuaBlueprintNodeType::GetAnimInstance:
                 return FString("(") + GetInputExpression(Node, "Component", "nil") + " and (" + GetInputExpression(Node, "Component", "nil") + "):GetAnimInstance() or nil)";
+            case ELuaBlueprintNodeType::GetAnimGraphVariableFloat:
+            {
+                const FString Anim = GetInputExpression(Node, "AnimInstance", "nil");
+                const FString Var  = GetInputExpression(Node, "Variable", LuaQuoted(Node.NameValue.ToString()));
+                const FString PinName = OutputPin.DisplayName.ToString();
+                if (PinName == "Found") return FString("((") + Anim + ") and (" + Anim + "):HasGraphVariableFloat(" + Var + ") or false)";
+                return FString("((") + Anim + ") and (" + Anim + "):GetGraphVariableFloat(" + Var + ", 0.0) or 0.0)";
+            }
+            case ELuaBlueprintNodeType::GetAnimGraphVariableBool:
+            {
+                const FString Anim = GetInputExpression(Node, "AnimInstance", "nil");
+                const FString Var  = GetInputExpression(Node, "Variable", LuaQuoted(Node.NameValue.ToString()));
+                const FString PinName = OutputPin.DisplayName.ToString();
+                if (PinName == "Found") return FString("((") + Anim + ") and (" + Anim + "):HasGraphVariableBool(" + Var + ") or false)";
+                return FString("((") + Anim + ") and (" + Anim + "):GetGraphVariableBool(" + Var + ", false) or false)";
+            }
+            case ELuaBlueprintNodeType::GetAnimGraphVariableInt:
+            {
+                const FString Anim = GetInputExpression(Node, "AnimInstance", "nil");
+                const FString Var  = GetInputExpression(Node, "Variable", LuaQuoted(Node.NameValue.ToString()));
+                const FString PinName = OutputPin.DisplayName.ToString();
+                if (PinName == "Found") return FString("((") + Anim + ") and (" + Anim + "):HasGraphVariableInt(" + Var + ") or false)";
+                return FString("((") + Anim + ") and (" + Anim + "):GetGraphVariableInt(" + Var + ", 0) or 0)";
+            }
             case ELuaBlueprintNodeType::SetStaticMesh:
             case ELuaBlueprintNodeType::SetStaticMeshByPath:
             case ELuaBlueprintNodeType::SetSkeletalMeshByPath:
             case ELuaBlueprintNodeType::PlayAnimationByPath:
             case ELuaBlueprintNodeType::SetAnimationByPath:
+            case ELuaBlueprintNodeType::SetAnimGraphVariableFloat:
+            case ELuaBlueprintNodeType::SetAnimGraphVariableBool:
+            case ELuaBlueprintNodeType::SetAnimGraphVariableInt:
             case ELuaBlueprintNodeType::SetMaterial:
             case ELuaBlueprintNodeType::SetMaterialByPath:
             case ELuaBlueprintNodeType::SetMaterialScalarParameter:

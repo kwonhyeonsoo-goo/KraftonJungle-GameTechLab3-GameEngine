@@ -2,9 +2,11 @@
 
 #include "Animation/Graph/AnimGraphAsset.h"
 #include "Animation/Graph/AnimGraphTypes.h"
+#include "Animation/Graph/AnimGraphInstance.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/Nodes/AnimNode_Base.h"
 #include "Animation/Sequence/AnimSequence.h"
+#include "Animation/Sequence/AnimSequenceBase.h"
 #include "Animation/StateMachine/AnimState.h"
 #include "Animation/AnimationManager.h"
 #include "Animation/Nodes/AnimNode_BlendListByEnum.h"
@@ -74,6 +76,18 @@ namespace
 		{
 			if (!IsValid(AI) || VariableName == FName::None) return 0.0f;
 
+			// AnimGraph-owned variables take priority. This is the runtime side of the
+			// editor's My Blueprint > Variables panel. If the graph does not declare
+			// the variable, fall back to reflected UPROPERTY for custom AnimInstance classes.
+			if (UAnimGraphInstance* GraphAI = Cast<UAnimGraphInstance>(AI))
+			{
+				float RuntimeValue = 0.0f;
+				if (GraphAI->GetGraphVariableAsFloat(VariableName, RuntimeValue))
+				{
+					return RuntimeValue;
+				}
+			}
+
 			UClass* Cls = AI->GetClass();
 			if (!Cls) return 0.0f;
 
@@ -102,23 +116,90 @@ namespace
 		};
 	}
 
-	// Transition rule — 단일 비교식 (Var Op Threshold) 을 bool 람다로 빌드.
-	// F-3 단순화 — 미니 그래프 / 다중 조건 / && || 는 후속 단계.
-	TFunction<bool(UAnimInstance*)> MakeTransitionCondition(FName VarName, ETransitionOp Op, float Threshold)
+	bool CompareTransitionFloat(float V, ETransitionOp Op, float Threshold)
 	{
-		auto Reader = MakeFloatReader(VarName);
-		return [Reader, Op, Threshold](UAnimInstance* AI) -> bool
+		constexpr float Eps = 1e-4f;
+		switch (Op)
 		{
-			const float V = Reader(AI);
-			constexpr float Eps = 1e-4f;
-			switch (Op)
+			case ETransitionOp::Greater:      return V >  Threshold;
+			case ETransitionOp::GreaterEqual: return V >= Threshold;
+			case ETransitionOp::Less:         return V <  Threshold;
+			case ETransitionOp::LessEqual:    return V <= Threshold;
+			case ETransitionOp::Equal:        return std::fabs(V - Threshold) < Eps;
+			case ETransitionOp::NotEqual:     return std::fabs(V - Threshold) >= Eps;
+		}
+		return false;
+	}
+
+	float GetCurrentStateLengthSeconds(const FAnimNode_StateMachine* SM)
+	{
+		if (!SM) return 0.0f;
+		const UAnimState* State = SM->GetCurrentState();
+		if (!IsValid(State) || !IsValid(State->Sequence)) return 0.0f;
+		return std::max(0.0f, State->Sequence->GetPlayLength());
+	}
+
+	float GetCurrentStateElapsedSeconds(const FAnimNode_StateMachine* SM)
+	{
+		if (!SM) return 0.0f;
+		const UAnimState* State = SM->GetCurrentState();
+		return IsValid(State) ? std::max(0.0f, State->GetLocalTime()) : 0.0f;
+	}
+
+	float GetCurrentStateRemainingSeconds(const FAnimNode_StateMachine* SM)
+	{
+		const float Length = GetCurrentStateLengthSeconds(SM);
+		if (Length <= 0.0f) return 0.0f;
+		return std::max(0.0f, Length - GetCurrentStateElapsedSeconds(SM));
+	}
+
+	// Transition rule — UE 의 Transition Rule Graph 에서 가장 많이 쓰는 노드들을 데이터 기반으로 평가.
+	// 전체 Blueprint VM 은 아니지만, bool/float property access 와 current state time 함수류는 런타임 반영된다.
+	TFunction<bool(UAnimInstance*)> MakeTransitionCondition(const FAnimGraphTransition& T, const FAnimNode_StateMachine* SM)
+	{
+		auto Reader = MakeFloatReader(T.VariableName);
+		return [Reader, T, SM](UAnimInstance* AI) -> bool
+		{
+			switch (T.RuleKind)
 			{
-				case ETransitionOp::Greater:      return V >  Threshold;
-				case ETransitionOp::GreaterEqual: return V >= Threshold;
-				case ETransitionOp::Less:         return V <  Threshold;
-				case ETransitionOp::LessEqual:    return V <= Threshold;
-				case ETransitionOp::Equal:        return std::fabs(V - Threshold) < Eps;
-				case ETransitionOp::NotEqual:     return std::fabs(V - Threshold) >= Eps;
+				case ETransitionRuleKind::FloatCompare:
+					return T.VariableName != FName::None && CompareTransitionFloat(Reader(AI), T.Op, T.Threshold);
+
+				case ETransitionRuleKind::BoolProperty:
+				{
+					if (T.VariableName == FName::None) return false;
+					const bool bValue = Reader(AI) >= 0.5f;
+					const bool bExpected = T.Threshold >= 0.5f;
+					return bValue == bExpected;
+				}
+
+				case ETransitionRuleKind::TimeRemaining:
+					return GetCurrentStateLengthSeconds(SM) > 0.0f && GetCurrentStateRemainingSeconds(SM) <= std::max(0.0f, T.Threshold);
+
+				case ETransitionRuleKind::TimeRemainingRatio:
+				{
+					const float Length = GetCurrentStateLengthSeconds(SM);
+					if (Length <= 0.0f) return false;
+					const float Ratio = GetCurrentStateRemainingSeconds(SM) / Length;
+					return Ratio <= std::max(0.0f, T.Threshold);
+				}
+
+				case ETransitionRuleKind::TimeElapsed:
+					return GetCurrentStateElapsedSeconds(SM) >= std::max(0.0f, T.Threshold);
+
+				case ETransitionRuleKind::AutomaticSequenceEnd:
+				{
+					const UAnimState* State = SM ? SM->GetCurrentState() : nullptr;
+					if (!IsValid(State) || !IsValid(State->Sequence) || State->bLooping) return false;
+					const float Length = State->Sequence->GetPlayLength();
+					return Length > 0.0f && State->GetLocalTime() >= Length - 1e-4f;
+				}
+
+				case ETransitionRuleKind::AlwaysTrue:
+					return true;
+
+				case ETransitionRuleKind::AlwaysFalse:
+					return false;
 			}
 			return false;
 		};
@@ -348,7 +429,7 @@ namespace
 					Trans.From      = T.FromStateName;
 					Trans.To        = T.ToStateName;
 					Trans.BlendTime = T.BlendTime;
-					Trans.Condition = MakeTransitionCondition(T.VariableName, T.Op, T.Threshold);
+					Trans.Condition = MakeTransitionCondition(T, SM);
 					SM->RegisterTransition(Trans);
 				}
 

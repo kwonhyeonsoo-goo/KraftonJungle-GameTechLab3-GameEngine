@@ -308,6 +308,13 @@ enum class ELuaBlueprintNodeType : uint8
     EventPostBeginPlay,
     EventPostStartMatch,
     EventPlayerCameraReady,
+    // ── AnimGraph variable bridge (appended to preserve serialized enum compatibility) ──
+    SetAnimGraphVariableFloat,
+    SetAnimGraphVariableBool,
+    SetAnimGraphVariableInt,
+    GetAnimGraphVariableFloat,
+    GetAnimGraphVariableBool,
+    GetAnimGraphVariableInt,
     Count
 };
 
