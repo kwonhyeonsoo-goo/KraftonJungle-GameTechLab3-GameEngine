@@ -82,6 +82,7 @@ public:
 
 	// ── 컴포넌트 접근 ──
 	void SetOwningComponent(USkeletalMeshComponent* InComp) { OwningComponent = InComp; }
+	UFUNCTION(Pure, Category="Animation")
 	USkeletalMeshComponent* GetOwningComponent() const;
 	UFUNCTION(Pure, Category="Animation")
 	USkeletalMesh*          GetSkeletalMesh()    const;

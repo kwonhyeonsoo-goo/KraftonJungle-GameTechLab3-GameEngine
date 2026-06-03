@@ -25,12 +25,17 @@ public:
 	~APlayerCameraManager() override = default;
 
 	// ─── Camera 등록 / Active / Possess ────────────────────────────
+	UFUNCTION(Callable, Category="Camera")
 	void RegisterCamera(UCameraComponent* Camera);
+	UFUNCTION(Callable, Category="Camera")
 	void UnregisterCamera(UCameraComponent* Camera);
 
+	UFUNCTION(Callable, Category="Camera")
 	void AutoPossessDefaultCamera();
 	// BlendTime > 0 이면 새 ActiveCamera 로 부드럽게 보간 전환 (PossessedCamera 는 즉시 swap).
+	UFUNCTION(Callable, Category="Camera")
 	bool ToggleActiveCameraForActor(const FString& ActorName, float BlendTime = 0.0f);
+	UFUNCTION(Callable, Category="Camera")
 	bool ToggleActiveCameraForActor(const AActor* Actor, float BlendTime = 0.0f);
 
 	UFUNCTION(Pure, Category="Camera")

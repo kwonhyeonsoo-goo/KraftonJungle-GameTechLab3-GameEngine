@@ -43,7 +43,10 @@ public:
     {
         return BlueprintPath;
     }
+    UFUNCTION(Pure, Category="Lua Blueprint")
+    FString GetBlueprintPathValue() const { return BlueprintPath; }
 
+    UFUNCTION(Pure, Category="Lua Blueprint")
     ULuaBlueprintAsset* GetBlueprintAsset() const
     {
         return GetValidBlueprintAsset();

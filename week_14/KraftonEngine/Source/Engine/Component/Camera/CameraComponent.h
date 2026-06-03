@@ -63,6 +63,14 @@ public:
 	UFUNCTION(Callable, Exec, Category="Camera|Letterbox")
 	void SetLetterboxColor(FLinearColor Color) { Letterbox.Color = Color; }
 	const FCameraLetterboxState& GetLetterboxSettings() const { return Letterbox; }
+	UFUNCTION(Pure, Category="Camera|Letterbox")
+	bool IsLetterboxEnabled() const { return Letterbox.bEnabled; }
+	UFUNCTION(Pure, Category="Camera|Letterbox")
+	float GetLetterboxAmount() const { return Letterbox.Amount; }
+	UFUNCTION(Pure, Category="Camera|Letterbox")
+	float GetLetterboxThickness() const { return Letterbox.Thickness; }
+	UFUNCTION(Pure, Category="Camera|Letterbox")
+	FLinearColor GetLetterboxColor() const { return Letterbox.Color; }
 
 	UFUNCTION(Callable, Exec, Category="Camera")
 	void OnResize(int32 Width, int32 Height);

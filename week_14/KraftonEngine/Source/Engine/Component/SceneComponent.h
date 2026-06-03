@@ -38,7 +38,10 @@ public:
 	bool ContainsChild(const USceneComponent* Child) const;
     UFUNCTION(Pure, Category="Scene|Hierarchy")
     FName GetAttachSocketName() const { return AttachSocketName; }
+	UFUNCTION(Pure, Category="Scene|Hierarchy")
 	bool IsDescendantOf(const USceneComponent* MaybeAncestor) const;
+	UFUNCTION(Pure, Category="Scene|Hierarchy")
+	TArray<USceneComponent*> GetChildComponents() const { return ChildComponents; }
 	const TArray<USceneComponent*>& GetChildren() const { return ChildComponents; }
 
 	void PreGetEditableProperties() override;
@@ -49,8 +52,22 @@ public:
 	void OnPostLoad(FArchive& Ar) override;
 
 	virtual void UpdateWorldMatrix() const;
+	UFUNCTION(Pure, Category="Scene|Socket")
 	virtual bool HasSocket(const FName& SocketName) const;
+	UFUNCTION(Pure, Category="Scene|Socket")
 	virtual FTransform GetSocketTransform(const FName& SocketName) const;
+	UFUNCTION(Pure, Category="Scene|Socket")
+	FVector GetSocketWorldLocation(const FName& SocketName) const;
+	UFUNCTION(Pure, Category="Scene|Socket")
+	FRotator GetSocketWorldRotation(const FName& SocketName) const;
+	UFUNCTION(Pure, Category="Scene|Socket")
+	FVector GetSocketWorldScale(const FName& SocketName) const;
+	UFUNCTION(Pure, Category="Scene|Socket")
+	FVector GetSocketForwardVector(const FName& SocketName) const;
+	UFUNCTION(Pure, Category="Scene|Socket")
+	FVector GetSocketRightVector(const FName& SocketName) const;
+	UFUNCTION(Pure, Category="Scene|Socket")
+	FVector GetSocketUpVector(const FName& SocketName) const;
 	UFUNCTION(Callable, Category="Scene|Transform")
 	virtual void AddWorldOffset(const FVector& WorldDelta);
 	UFUNCTION(Callable, Category="Scene|Transform")
@@ -61,6 +78,7 @@ public:
 	void SetRelativeRotation(const FVector& EulerRotation);	// FVector 호환
 	UFUNCTION(Callable, Category="Scene|Transform")
 	virtual void SetRelativeScale(const FVector& NewScale);
+	UFUNCTION(Callable, Category="Scene|Transform")
 	void SetRelativeTransform(const FTransform& NewTransform);
 	UFUNCTION(Callable, Category="Scene|Transform")
 	void SetAbsoluteScale(bool bInAbsoluteScale) { bAbsoluteScale = bInAbsoluteScale; MarkTransformDirty(); }
@@ -80,6 +98,12 @@ public:
 	void SetRelativeRotationWithEulerHint(const FQuat& NewQuat, const FRotator& EulerHint);
 	const FMatrix& GetWorldMatrix() const;
 	const FMatrix& GetWorldInverseMatrix() const;
+	UFUNCTION(Pure, Category="Scene|Transform")
+	FMatrix GetWorldMatrixValue() const { return GetWorldMatrix(); }
+	UFUNCTION(Pure, Category="Scene|Transform")
+	FMatrix GetWorldInverseMatrixValue() const { return GetWorldInverseMatrix(); }
+	UFUNCTION(Pure, Category="Scene|Transform")
+	FTransform GetWorldTransform() const;
 	UFUNCTION(Callable, Category="Scene|Transform")
 	void SetWorldLocation(FVector NewWorldLocation);
 	UFUNCTION(Callable, Category="Scene|Transform")
@@ -91,7 +115,8 @@ public:
 	FRotator GetWorldRotation() const;
 	UFUNCTION(Pure, Category="Scene|Transform")
 	FVector GetWorldScale() const;
-	const FTransform& GetRelativeTransform() const { return RelativeTransform; }
+	UFUNCTION(Pure, Category="Scene|Transform")
+	FTransform GetRelativeTransform() const { return RelativeTransform; }
 	UFUNCTION(Pure, Category="Scene|Transform")
 	FVector GetRelativeLocation() const { return RelativeTransform.Location; }
 	UFUNCTION(Pure, Category="Scene|Transform")
@@ -106,6 +131,7 @@ public:
 	UFUNCTION(Pure, Category="Scene|Transform")
 	FVector GetRightVector() const;
 
+	UFUNCTION(Pure, Category="Scene|Transform")
 	FMatrix GetRelativeMatrix() const;
 
 	UFUNCTION(Callable, Category="Scene|Transform")

@@ -34,6 +34,7 @@ public:
 	bool HasValidUpdatedComponent() const { return GetUpdatedComponent() != nullptr; }
 	UFUNCTION(Pure, Category="Movement")
 	FString GetUpdatedComponentDisplayName() const;
+	UFUNCTION(Pure, Category="Movement")
 	TArray<USceneComponent*> GetOwnerSceneComponents() const;
 	UFUNCTION(Callable, Category="Movement")
 	bool ResolveUpdatedComponent();

@@ -48,42 +48,61 @@ public:
 	void PostDuplicate() override;
 
 	// --- Text ---
+	UFUNCTION(Callable, Category="Text")
 	void SetText(const FString& InText) { Text = InText; }
-	const FString& GetText() const { return Text; }
+	UFUNCTION(Pure, Category="Text")
+	FString GetText() const { return Text; }
 
 	// Owner의 UUID를 문자열로 반환
+	UFUNCTION(Pure, Category="Text|Owner")
 	FString GetOwnerUUIDToString() const;
 
 	// Owner의 FName을 문자열로 반환
+	UFUNCTION(Pure, Category="Text|Owner")
 	FString GetOwnerNameToString() const;
 
 	// --- Font ---
 	// FName 키로 ResourceManager에서 FFontResource*를 찾아 캐싱
+	UFUNCTION(Callable, Category="Text|Font")
 	void SetFont(const FName& InFontName);
 	const FFontResource* GetFont() const { return CachedFont; }
-	const FName& GetFontName() const { return FontName; }
+	UFUNCTION(Pure, Category="Text|Font")
+	FName GetFontName() const { return FontName; }
 
 	// --- Appearance ---
+	UFUNCTION(Callable, Category="Text|Appearance")
 	void SetColor(const FVector4& InColor) { Color = InColor; }
-	const FVector4& GetColor() const { return Color; }
+	UFUNCTION(Pure, Category="Text|Appearance")
+	FVector4 GetColor() const { return Color; }
 
+	UFUNCTION(Callable, Category="Text|Appearance")
 	void SetFontSize(float InSize) { FontSize = InSize; }
+	UFUNCTION(Pure, Category="Text|Appearance")
 	float GetFontSize() const { return FontSize; }
 
 	// --- Space ---
+	UFUNCTION(Callable, Category="Text|Space")
 	void SetRenderSpace(ETextRenderSpace InSpace) { RenderSpace = InSpace; }
+	UFUNCTION(Pure, Category="Text|Space")
 	ETextRenderSpace GetRenderSpace() const { return RenderSpace; }
 
 	// Screen 모드 전용: 스크린 좌표 (픽셀)
+	UFUNCTION(Callable, Category="Text|Space")
 	void SetScreenPosition(float X, float Y) { ScreenX = X; ScreenY = Y; }
+	UFUNCTION(Pure, Category="Text|Space")
 	float GetScreenX() const { return ScreenX; }
+	UFUNCTION(Pure, Category="Text|Space")
 	float GetScreenY() const { return ScreenY; }
 
 	// --- Alignment ---
+	UFUNCTION(Callable, Category="Text|Alignment")
 	void SetHorizontalAlignment(ETextHAlign InAlign) { HAlign = InAlign; }
+	UFUNCTION(Pure, Category="Text|Alignment")
 	ETextHAlign GetHorizontalAlignment() const { return HAlign; }
 
+	UFUNCTION(Callable, Category="Text|Alignment")
 	void SetVerticalAlignment(ETextVAlign InAlign) { VAlign = InAlign; }
+	UFUNCTION(Pure, Category="Text|Alignment")
 	ETextVAlign GetVerticalAlignment() const { return VAlign; }
 
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
@@ -96,7 +115,9 @@ public:
 	FMatrix CalculateOutlineMatrix(const FMatrix& BillboardWorldMatrix) const;
 	int32 GetUTF8Length(const FString& str) const;
 
+	UFUNCTION(Pure, Category="Text|Metrics")
 	float GetCharWidth()  const { return CharWidth; }
+	UFUNCTION(Pure, Category="Text|Metrics")
 	float GetCharHeight() const { return CharHeight; }
 
 private:

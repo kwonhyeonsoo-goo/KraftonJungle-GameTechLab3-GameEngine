@@ -19,6 +19,9 @@ public:
 
 	void InitDefaultComponents(const FString& UStaticMeshFileName = "Content/Data/BasicShape/Cylinder.obj");
 
+	UFUNCTION(Pure, Category="Actor|Components")
+	UStaticMeshComponent* GetStaticMeshComponent() const { return StaticMeshComponent; }
+
 private:
 	TWeakObjectPtr<UStaticMeshComponent> StaticMeshComponent = nullptr;
 	//TWeakObjectPtr<UTextRenderComponent> TextRenderComponent = nullptr;

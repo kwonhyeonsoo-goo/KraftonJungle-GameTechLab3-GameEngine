@@ -24,13 +24,19 @@ public:
 
 	bool LineTraceComponent(const FRay& Ray, FHitResult& OutHitResult) override;
 
+	UFUNCTION(Callable, Category="Billboard")
 	void SetBillboardEnabled(bool bEnable) { bIsBillboard = bEnable; }
+	UFUNCTION(Pure, Category="Billboard")
+	bool IsBillboardEnabled() const { return bIsBillboard; }
 
 	// --- Material ---
+	UFUNCTION(Callable, Category="Materials")
 	void SetMaterial(class UMaterial* InMaterial);
+	UFUNCTION(Pure, Category="Materials")
 	class UMaterial* GetMaterial() const { return Material; }
 
 	// 주어진 카메라 방향으로 빌보드 월드 행렬을 계산 (per-view 렌더링용)
+	UFUNCTION(Pure, Category="Billboard")
 	FMatrix ComputeBillboardMatrix(const FVector& CameraForward) const;
 
 	FMeshBuffer* GetMeshBuffer() const override { return &FMeshBufferManager::Get().GetMeshBuffer(EMeshShape::Quad); }

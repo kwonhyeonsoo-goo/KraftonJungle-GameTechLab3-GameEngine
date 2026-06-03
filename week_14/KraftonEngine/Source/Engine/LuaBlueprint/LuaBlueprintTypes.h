@@ -315,6 +315,16 @@ enum class ELuaBlueprintNodeType : uint8
     GetAnimGraphVariableFloat,
     GetAnimGraphVariableBool,
     GetAnimGraphVariableInt,
+    // ── Scene component socket nodes (appended to preserve serialized enum compatibility) ──
+    AttachToComponent,
+    GetAttachSocketName,
+    HasSocket,
+    GetSocketWorldLocation,
+    GetSocketWorldRotation,
+    GetSocketWorldScale,
+    GetSocketForwardVector,
+    GetSocketRightVector,
+    GetSocketUpVector,
     Count
 };
 

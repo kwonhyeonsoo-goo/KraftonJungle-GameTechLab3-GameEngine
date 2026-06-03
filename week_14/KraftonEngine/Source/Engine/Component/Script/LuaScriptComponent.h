@@ -31,7 +31,11 @@ public:
 
 
 	void PreGetEditableProperties() override;
+	UFUNCTION(Pure, Category="Script")
 	const FString& GetScriptFile() const { return ScriptFile; }
+	UFUNCTION(Pure, Category="Script")
+	FString GetScriptFileValue() const { return ScriptFile; }
+	UFUNCTION(Callable, Category="Script")
 	void SetScriptFile(const FString& InScriptFile) { ScriptFile = InScriptFile; }
 	void DispatchOverlap(class AActor* OtherActor);
 

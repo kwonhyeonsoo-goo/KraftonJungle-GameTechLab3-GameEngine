@@ -17,6 +17,9 @@ public:
 
 	void InitDefaultComponents(const FString& SkeletalMeshFileName = "Content/Data/Samba Dancing (10).fbx");
 
+	UFUNCTION(Pure, Category="Actor|Components")
+	USkeletalMeshComponent* GetSkeletalMeshComponent() const { return SkeletalMeshComponent; }
+
 private:
 	TWeakObjectPtr<USkeletalMeshComponent> SkeletalMeshComponent = nullptr;
 };

@@ -19,11 +19,13 @@ public:
 
 	void BeginPlay() override;
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
+	UFUNCTION(Callable, Category="Movement|FloatingPawn")
 	void SetMoveInput(float ForwardValue, float RightValue)
 	{
 		MoveInput = std::max<float>(-1.0f, std::min<float>(1.0f, ForwardValue));
 		RightMoveInput = std::max<float>(-1.0f, std::min<float>(1.0f, RightValue));
 	}
+	UFUNCTION(Callable, Category="Movement|FloatingPawn")
 	void SetLookInput(float DeltaX, float DeltaY)
 	{
 		LookInputX += DeltaX;

@@ -1281,6 +1281,9 @@ namespace
             case ELuaBlueprintNodeType::ClearLetterbox:
                 EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Camera}) then ({Camera}):SetLetterbox(false, 0, 0) end");
                 break;
+            case ELuaBlueprintNodeType::AttachToComponent:
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Child}) and __bp_is_valid_object({Parent}) then ({Child}):AttachToComponent({Parent}, {SocketName}) end");
+                break;
 
             case ELuaBlueprintNodeType::CallCustomEvent:
                 EmitCallCustomEvent(Out, Node, Indent, ExecStack);
@@ -2741,6 +2744,25 @@ namespace
                 return FString("(") + GetInputExpression(Node, "Actor", "nil") + " and (" + GetInputExpression(Node, "Actor", "nil") + "):GetCamera() or nil)";
             case ELuaBlueprintNodeType::GetActiveCamera:
                 return "__bp_camera_call(\"GetActiveCamera\")";
+
+
+            // ── Scene component sockets ──
+            case ELuaBlueprintNodeType::GetAttachSocketName:
+                return FString("(") + GetInputExpression(Node, "Component", "nil") + " and (" + GetInputExpression(Node, "Component", "nil") + "):GetAttachSocketName() or "")";
+            case ELuaBlueprintNodeType::HasSocket:
+                return FString("(") + GetInputExpression(Node, "Component", "nil") + " and (" + GetInputExpression(Node, "Component", "nil") + "):HasSocket(" + GetInputExpression(Node, "SocketName", LuaQuoted("")) + ") or false)";
+            case ELuaBlueprintNodeType::GetSocketWorldLocation:
+                return FString("(") + GetInputExpression(Node, "Component", "nil") + " and (" + GetInputExpression(Node, "Component", "nil") + "):GetSocketWorldLocation(" + GetInputExpression(Node, "SocketName", LuaQuoted("")) + ") or __bp_vec(0,0,0))";
+            case ELuaBlueprintNodeType::GetSocketWorldRotation:
+                return FString("(") + GetInputExpression(Node, "Component", "nil") + " and (" + GetInputExpression(Node, "Component", "nil") + "):GetSocketWorldRotation(" + GetInputExpression(Node, "SocketName", LuaQuoted("")) + ") or __bp_vec(0,0,0))";
+            case ELuaBlueprintNodeType::GetSocketWorldScale:
+                return FString("(") + GetInputExpression(Node, "Component", "nil") + " and (" + GetInputExpression(Node, "Component", "nil") + "):GetSocketWorldScale(" + GetInputExpression(Node, "SocketName", LuaQuoted("")) + ") or __bp_vec(1,1,1))";
+            case ELuaBlueprintNodeType::GetSocketForwardVector:
+                return FString("(") + GetInputExpression(Node, "Component", "nil") + " and (" + GetInputExpression(Node, "Component", "nil") + "):GetSocketForwardVector(" + GetInputExpression(Node, "SocketName", LuaQuoted("")) + ") or __bp_vec(1,0,0))";
+            case ELuaBlueprintNodeType::GetSocketRightVector:
+                return FString("(") + GetInputExpression(Node, "Component", "nil") + " and (" + GetInputExpression(Node, "Component", "nil") + "):GetSocketRightVector(" + GetInputExpression(Node, "SocketName", LuaQuoted("")) + ") or __bp_vec(0,1,0))";
+            case ELuaBlueprintNodeType::GetSocketUpVector:
+                return FString("(") + GetInputExpression(Node, "Component", "nil") + " and (" + GetInputExpression(Node, "Component", "nil") + "):GetSocketUpVector(" + GetInputExpression(Node, "SocketName", LuaQuoted("")) + ") or __bp_vec(0,0,1))";
 
             // ── Time ──
             case ELuaBlueprintNodeType::LoadAudio:

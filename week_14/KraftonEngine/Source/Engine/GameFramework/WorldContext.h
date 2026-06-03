@@ -1,9 +1,11 @@
 #pragma once
 #include "Core/Types/CoreTypes.h"
 #include "Object/FName.h"
+#include "Object/Reflection/ObjectMacros.h"
 
 class UWorld;
 
+UENUM()
 enum class EWorldType : uint32
 {
     Editor,			// Editor mode — no BeginPlay

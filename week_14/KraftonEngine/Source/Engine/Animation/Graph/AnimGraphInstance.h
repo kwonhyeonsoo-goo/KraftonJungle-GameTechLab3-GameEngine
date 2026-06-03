@@ -38,7 +38,9 @@ public:
 	void AddReferencedObjects(FReferenceCollector& Collector) override;
 	void BeginDestroy() override;
 
+	UFUNCTION(Pure, Category="Animation|AnimGraph")
 	UAnimGraphAsset* GetGraphAsset() const;
+	UFUNCTION(Callable, Category="Animation|AnimGraph")
 	void             SetGraphAsset(UAnimGraphAsset* InAsset);
 
 	// AnimGraph-owned Variables.
@@ -51,9 +53,13 @@ public:
 	bool SetGraphVariableBool(FName VariableName, bool bValue);
 	UFUNCTION(Callable, Exec, Category="Animation|AnimGraph|Variables")
 	bool SetGraphVariableInt(FName VariableName, int32 Value);
+	UFUNCTION(Pure, Category="Animation|AnimGraph|Variables")
 	bool GetGraphVariableFloat(FName VariableName, float& OutValue) const;
+	UFUNCTION(Pure, Category="Animation|AnimGraph|Variables")
 	bool GetGraphVariableBool(FName VariableName, bool& bOutValue) const;
+	UFUNCTION(Pure, Category="Animation|AnimGraph|Variables")
 	bool GetGraphVariableInt(FName VariableName, int32& OutValue) const;
+	UFUNCTION(Pure, Category="Animation|AnimGraph|Variables")
 	bool GetGraphVariableAsFloat(FName VariableName, float& OutValue) const;
 	const TArray<FAnimGraphRuntimeVariable>& GetRuntimeVariables() const { return RuntimeVariables; }
 

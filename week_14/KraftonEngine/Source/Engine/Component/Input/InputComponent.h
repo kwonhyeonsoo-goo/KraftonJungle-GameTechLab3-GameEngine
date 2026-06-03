@@ -6,12 +6,14 @@
 struct FInputSystemSnapshot;
 
 // UE 의 EInputEvent 의 minimal subset — Repeat/DoubleClick 등은 후속.
+UENUM()
 enum class EInputEvent : uint8
 {
 	Pressed,
 	Released,
 };
 
+UENUM()
 enum class EInputAxisSourceType : uint8
 {
 	Key,
@@ -41,9 +43,12 @@ public:
 
 	// 매핑 — 코드 또는 ProjectSettings(.ini) 가 호출. 같은 이름에 여러 source 가능.
 	void AddAxisMapping(const FString& Name, int VKey, float Scale = 1.0f);
+	UFUNCTION(Callable, Category="Input|Mapping")
 	void AddAxisMapping(const FString& Name, const FString& KeyName, float Scale = 1.0f);
+	UFUNCTION(Callable, Category="Input|Mapping")
 	void AddMouseAxisMapping(const FString& Name, EInputAxisSourceType Axis, float Scale = 1.0f);
 	void AddActionMapping(const FString& Name, int VKey);
+	UFUNCTION(Callable, Category="Input|Mapping")
 	void AddActionMapping(const FString& Name, const FString& KeyName);
 
 	// Runtime-owned mapping/binding. LuaBlueprintComponent 는 reload/endplay 시 자기 항목만 제거한다.
@@ -60,6 +65,7 @@ public:
 	void BindActionForOwner(const void* OwnerKey, const FString& Name, EInputEvent Event, TFunction<void()> Callback);
 
 	// 등록된 mapping/binding 전부 제거 — SetupInputComponent 재호출 전 호출.
+	UFUNCTION(Callable, Category="Input|Binding")
 	void ClearBindings();
 	void RemoveBindingsForOwner(const void* OwnerKey);
 
