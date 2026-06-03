@@ -5,6 +5,9 @@
 #include "Object/Reflection/UClass.h"
 #include "ImGui/imgui.h"
 
+#include <algorithm>
+#include <cmath>
+
 void EditorProjectSettingsWidget::Render()
 {
 	if (!bOpen) return;
@@ -94,10 +97,26 @@ void EditorProjectSettingsWidget::Render()
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("ON: 1-frame latency, full overlap with render.\nOFF: wait for physics before render.");
 
         float fixedHz = 1.0f / PS.Physics.FixedTimeStep;
-        if (ImGui::SliderFloat("Fixed Step Hz", &fixedHz, 15.0f, 240.0f, "%.0f"))
+        if (ImGui::SliderFloat("Fixed Step Hz", &fixedHz, 1.0f, 240.0f, "%.0f"))
+        {
             PS.Physics.FixedTimeStep = 1.0f / fixedHz;
+            PS.Physics.MaxSimulationSubstepDeltaTime = (std::min)(PS.Physics.MaxSimulationSubstepDeltaTime, PS.Physics.FixedTimeStep);
+        }
+
+        float simSubstepHz = 1.0f / PS.Physics.MaxSimulationSubstepDeltaTime;
+        const float minSimSubstepHz = fixedHz;
+        if (ImGui::SliderFloat("Max Simulation Substep Hz", &simSubstepHz, minSimSubstepHz, 240.0f, "%.0f"))
+        {
+            PS.Physics.MaxSimulationSubstepDeltaTime = 1.0f / simSubstepHz;
+            PS.Physics.MaxSimulationSubstepDeltaTime = (std::min)(PS.Physics.MaxSimulationSubstepDeltaTime, PS.Physics.FixedTimeStep);
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Caps actual PxScene::simulate(dt). Keep 60Hz or higher when Fixed Step Hz is low.");
 
         ImGui::SliderInt("Max Substeps", &PS.Physics.MaxSubsteps, 1, 32);
+        const int RequiredSubsteps = (PS.Physics.MaxSimulationSubstepDeltaTime > 0.0f)
+            ? static_cast<int>(std::ceil(PS.Physics.FixedTimeStep / PS.Physics.MaxSimulationSubstepDeltaTime - 1.e-6f))
+            : 1;
+        PS.Physics.MaxSubsteps = (std::max)(PS.Physics.MaxSubsteps, (std::max)(1, RequiredSubsteps));
         ImGui::SliderInt("Worker Threads", &PS.Physics.WorkerThreadCount, 0, 32);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("0 = auto (hardware_concurrency - 1)");
 

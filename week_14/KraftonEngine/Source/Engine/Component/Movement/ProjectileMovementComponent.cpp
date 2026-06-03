@@ -1,16 +1,87 @@
 #include "ProjectileMovementComponent.h"
 
 #include "Component/SceneComponent.h"
+#include "Component/PrimitiveComponent.h"
+#include "Component/Shape/BoxComponent.h"
+#include "Component/Shape/CapsuleComponent.h"
+#include "Component/Shape/SphereComponent.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/World.h"
 #include "Math/MathUtils.h"
 #include "Object/Reflection/ObjectFactory.h"
 #include "Render/Scene/FScene.h"
 #include "Serialization/Archive.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace
 {
+    bool BuildSweepShapeForProjectileComponent(USceneComponent* Component, FCollisionShape& OutShape)
+    {
+        if (!Component)
+        {
+            return false;
+        }
+
+        if (USphereComponent* Sphere = Cast<USphereComponent>(Component))
+        {
+            const float Radius = Sphere->GetScaledSphereRadius();
+            if (Radius > 0.0f)
+            {
+                OutShape = FCollisionShape::MakeSphere(Radius);
+                return true;
+            }
+            return false;
+        }
+
+        if (UCapsuleComponent* Capsule = Cast<UCapsuleComponent>(Component))
+        {
+            const float Radius     = Capsule->GetScaledCapsuleRadius();
+            const float HalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+            if (Radius > 0.0f && HalfHeight > 0.0f)
+            {
+                OutShape = FCollisionShape::MakeCapsule(Radius, HalfHeight);
+                return true;
+            }
+            return false;
+        }
+
+        if (UBoxComponent* Box = Cast<UBoxComponent>(Component))
+        {
+            const FVector Extent = Box->GetScaledBoxExtent();
+            if (Extent.X > 0.0f && Extent.Y > 0.0f && Extent.Z > 0.0f)
+            {
+                OutShape = FCollisionShape::MakeBox(Extent);
+                return true;
+            }
+            return false;
+        }
+
+        if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
+        {
+            const FBoundingBox Bounds = Primitive->GetWorldBoundingBox();
+            if (Bounds.IsValid())
+            {
+                const FVector Extent = Bounds.GetExtent();
+                if (Extent.X > 0.0f && Extent.Y > 0.0f && Extent.Z > 0.0f)
+                {
+                    // 정확한 convex/mesh sweep은 아직 없으므로 컴포넌트 origin 기준 bounding sphere로 보수적으로 감싼다.
+                    // AABB 중심이 origin과 달라도 false negative가 나지 않게 center offset까지 radius에 포함한다.
+                    const FVector CenterOffset = Bounds.GetCenter() - Component->GetWorldLocation();
+                    const float Radius = CenterOffset.Length() + Extent.Length();
+                    if (Radius > 0.0f)
+                    {
+                        OutShape = FCollisionShape::MakeSphere(Radius);
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
 	void AddProjectileVelocityArrow(FScene& Scene, const FVector& Start, const FVector& Velocity)
 	{
 		constexpr float ProjectileArrowScale = 0.25f;
@@ -71,7 +142,52 @@ void UProjectileMovementComponent::TickComponent(float DeltaTime, ELevelTick Tic
 		return;
 	}
 
-	UpdatedSceneComponent->SetWorldLocation(UpdatedSceneComponent->GetWorldLocation() + MoveDelta);
+    const FVector CurrentLocation = UpdatedSceneComponent->GetWorldLocation();
+    const FVector TargetLocation  = CurrentLocation + MoveDelta;
+
+    if (bSweepCollision)
+    {
+        FCollisionShape SweepShape;
+        if (BuildSweepShapeForProjectileComponent(UpdatedSceneComponent, SweepShape))
+        {
+            AActor* OwnerActor = GetOwner();
+            UWorld* World      = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+
+            if (World)
+            {
+                ECollisionChannel TraceChannel = ECollisionChannel::Projectile;
+                if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(UpdatedSceneComponent))
+                {
+                    TraceChannel = Primitive->GetCollisionObjectType();
+                }
+
+                FHitResult Hit;
+                const FQuat SweepRotation = UpdatedSceneComponent->GetWorldMatrix().ToQuat();
+                if (World->PhysicsSweep(CurrentLocation, TargetLocation, SweepRotation, SweepShape, Hit, TraceChannel, OwnerActor))
+                {
+                    const FVector MoveDir = MoveDelta.Normalized();
+                    const float SafeDistance = (std::max)(0.0f, Hit.Distance - SweepPullbackDistance);
+                    UpdatedSceneComponent->SetWorldLocation(CurrentLocation + MoveDir * SafeDistance);
+
+                    if (UPrimitiveComponent* MovingPrimitive = Cast<UPrimitiveComponent>(UpdatedSceneComponent))
+                    {
+                        MovingPrimitive->NotifyComponentHit(
+                            MovingPrimitive,
+                            Hit.HitActor,
+                            Hit.HitComponent,
+                            FVector::ZeroVector,
+                            Hit
+                        );
+                    }
+
+                    HandleBlockingHit(UpdatedSceneComponent, CurrentLocation, MoveDelta, Hit);
+                    return;
+                }
+            }
+        }
+    }
+
+	UpdatedSceneComponent->SetWorldLocation(TargetLocation);
 }
 
 void UProjectileMovementComponent::ContributeSelectedVisuals(FScene& Scene) const
@@ -140,9 +256,33 @@ FVector UProjectileMovementComponent::ComputeEffectiveVelocity() const
 
 bool UProjectileMovementComponent::HandleBlockingHit(USceneComponent* UpdatedSceneComponent, const FVector& CurrentLocation, const FVector& MoveDelta, const FHitResult& HitResult)
 {
-	(void)UpdatedSceneComponent;
-	(void)CurrentLocation;
-	(void)MoveDelta;
-	(void)HitResult;
-	return true;
+    (void)UpdatedSceneComponent;
+    (void)CurrentLocation;
+    (void)MoveDelta;
+
+    switch (GetHitBehavior())
+    {
+    case EProjectileHitBehavior::Destroy:
+        if (AActor* OwnerActor = GetOwner())
+        {
+            if (UWorld* World = OwnerActor->GetWorld())
+            {
+                World->DestroyActor(OwnerActor);
+            }
+        }
+        return true;
+
+    case EProjectileHitBehavior::Bounce:
+        if (!HitResult.ImpactNormal.IsNearlyZero())
+        {
+            const float VelocityIntoSurface = Velocity.Dot(HitResult.ImpactNormal);
+            Velocity = Velocity - HitResult.ImpactNormal * (2.0f * VelocityIntoSurface);
+        }
+        return true;
+
+    case EProjectileHitBehavior::Stop:
+    default:
+        StopSimulating();
+        return true;
+    }
 }

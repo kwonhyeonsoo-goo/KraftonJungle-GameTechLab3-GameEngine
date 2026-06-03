@@ -92,6 +92,7 @@ constexpr uint32 PhysicsFilter_QueryAndPhysics       = 1u << 10;
 constexpr uint32 PhysicsFilter_IsTrigger             = 1u << 11;
 constexpr uint32 PhysicsFilter_GenerateHitEvents     = 1u << 12;
 constexpr uint32 PhysicsFilter_GenerateOverlapEvents = 1u << 13;
+constexpr uint32 PhysicsFilter_EnableCCD             = 1u << 14;
 
 inline uint32 GetPhysicsFilterObjectType(uint32 PackedWord0)
 {
@@ -115,6 +116,7 @@ struct FPhysicsFilterData
     bool              bIsTrigger             = false;
     bool              bGenerateHitEvents     = false;
     bool              bGenerateOverlapEvents = false;
+    bool              bEnableCCD             = false;
 };
 
 struct FPhysicsShapeDesc

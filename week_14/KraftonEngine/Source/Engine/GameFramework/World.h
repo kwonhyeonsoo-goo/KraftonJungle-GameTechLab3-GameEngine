@@ -198,6 +198,16 @@ public:
 		uint32 ObjectTypeMask,
 		const AActor* IgnoreActor = nullptr) const;
 
+    // Physics shape sweep convenience — delegates to IPhysicsScene::Sweep.
+    bool PhysicsSweep(const FVector& Start, const FVector& End, const FQuat& Rotation, const FCollisionShape& Shape, FHitResult& OutHit,
+        ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
+        const AActor* IgnoreActor = nullptr) const;
+
+    // ObjectType 기반 sweep convenience — delegates to IPhysicsScene::SweepByObjectTypes.
+    bool PhysicsSweepByObjectTypes(const FVector& Start, const FVector& End, const FQuat& Rotation, const FCollisionShape& Shape, FHitResult& OutHit,
+        uint32 ObjectTypeMask,
+        const AActor* IgnoreActor = nullptr) const;
+
 	// --- Game flow ---
 	// BeginPlay 이전에 호출. WorldType이 Editor면 무시된다.
 	void SetGameModeClass(UClass* InClass) { GameModeClass = InClass; }

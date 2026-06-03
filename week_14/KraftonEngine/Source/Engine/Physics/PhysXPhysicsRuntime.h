@@ -206,6 +206,10 @@ private:
     void ApplyAddForceAtLocation_Internal(FPhysicsBodyHandle Body, const FVector& Force, const FVector& WorldLocation);
     void ApplyAddTorque_Internal(FPhysicsBodyHandle Body, const FVector& Torque);
     void ApplyAddImpulse_Internal(FPhysicsBodyHandle Body, const FVector& Impulse);
+    void QueueContinuousForceCommand(const FPhysicsCommand& Command, float DurationSeconds);
+    void ApplyContinuousForcesForSubstep(float SubstepDt);
+    void PurgeContinuousForcesForBody(FPhysicsBodyHandle Body);
+    void PurgeExpiredContinuousForces();
     void ApplySetBodyVelocity_Internal(FPhysicsBodyHandle Body, const FVector& LinearVelocity, const FVector& AngularVelocity);
     void ApplySetBodyTransform_Internal(FPhysicsBodyHandle Body, const FTransform& Transform, EPhysicsTeleportMode TeleportMode);
     void ApplySetMass_Internal(FPhysicsBodyHandle Body, float Mass);
@@ -215,7 +219,7 @@ private:
 
     // 적용한 command 수를 반환 (Stat 용).
     int32 ApplyPendingCommands();
-    int32 ApplyCommands(const TArray<FPhysicsCommand>& Commands);
+    int32 ApplyCommands(const TArray<FPhysicsCommand>& Commands, float ContinuousForceDurationSeconds = 0.0f);
     void  QueueCreationResult(const FPhysicsCreationResult& Result);
     void  UpdateStats();
 
@@ -254,6 +258,17 @@ private:
 
     FPhysicsCommandQueue CommandQueue;
 
+    struct FPendingContinuousForce
+    {
+        EPhysicsCommandType Type = EPhysicsCommandType::AddForce;
+        FPhysicsBodyHandle  Body;
+        FVector             VectorValue  = FVector::ZeroVector;
+        FVector             VectorValue2 = FVector::ZeroVector;
+        float               RemainingTimeSeconds = 0.0f;
+    };
+
+    TArray<FPendingContinuousForce> PendingContinuousForces;
+
     mutable std::mutex             CreationResultMutex;
     TArray<FPhysicsCreationResult> PendingCreationResults;
 
@@ -267,10 +282,11 @@ private:
 
     int32 FrameDeferredDestroys = 0;
 
-    float Accumulator = 0.0f;
-    float FixedDt     = 1.0f / 60.0f;
-    float MaxFrameDt  = 0.1f;
-    int32 MaxSubsteps = 4;
+    float Accumulator        = 0.0f;
+    float FixedDt            = 1.0f / 60.0f; // target publish/catch-up step
+    float SimulationSubstepDt = 1.0f / 60.0f; // actual PxScene::simulate dt cap
+    float MaxFrameDt         = 0.1f;
+    int32 MaxSubsteps        = 4;
 
     // 단조 증가 physics step 카운터 — body CreatedStep/DestroyedStep, snapshot StepIndex 용.
     uint64 StepIndex = 0;

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <fstream>
 #include <filesystem>
+#include <cmath>
 
 namespace PSKey
 {
@@ -17,6 +18,7 @@ namespace PSKey
 
 	constexpr const char* PhysicsSection             = "Physics";
     constexpr const char* FixedTimeStep              = "FixedTimeStep";
+    constexpr const char* MaxSimulationSubstepDeltaTime = "MaxSimulationSubstepDeltaTime";
     constexpr const char* MaxFrameDeltaTime          = "MaxFrameDeltaTime";
     constexpr const char* MaxSubsteps                = "MaxSubsteps";
     constexpr const char* WorkerThreadCount          = "WorkerThreadCount";
@@ -51,6 +53,7 @@ void FProjectSettings::SaveToFile(const FString& Path) const
 
 	JSON PhysObj                               = Object();
     PhysObj[PSKey::FixedTimeStep]              = Physics.FixedTimeStep;
+    PhysObj[PSKey::MaxSimulationSubstepDeltaTime] = Physics.MaxSimulationSubstepDeltaTime;
     PhysObj[PSKey::MaxFrameDeltaTime]          = Physics.MaxFrameDeltaTime;
     PhysObj[PSKey::MaxSubsteps]                = Physics.MaxSubsteps;
     PhysObj[PSKey::WorkerThreadCount]          = Physics.WorkerThreadCount;
@@ -99,6 +102,15 @@ void FProjectSettings::LoadFromFile(const FString& Path)
             float v               = static_cast<float>(P[PSKey::FixedTimeStep].ToFloat());
             Physics.FixedTimeStep = (std::max)(1.0f / 240.0f, (std::min)(v, 1.0f / 15.0f));
         }
+        if (P.hasKey(PSKey::MaxSimulationSubstepDeltaTime))
+        {
+            float v = static_cast<float>(P[PSKey::MaxSimulationSubstepDeltaTime].ToFloat());
+            Physics.MaxSimulationSubstepDeltaTime = (std::max)(1.0f / 240.0f, (std::min)(v, Physics.FixedTimeStep));
+        }
+        else
+        {
+            Physics.MaxSimulationSubstepDeltaTime = (std::min)(Physics.MaxSimulationSubstepDeltaTime, Physics.FixedTimeStep);
+        }
         if (P.hasKey(PSKey::MaxFrameDeltaTime))
         {
             float v                   = static_cast<float>(P[PSKey::MaxFrameDeltaTime].ToFloat());
@@ -122,6 +134,11 @@ void FProjectSettings::LoadFromFile(const FString& Path)
         if (P.hasKey(PSKey::bDispatchCollisionEvents)) Physics.bDispatchCollisionEvents = P[PSKey::bDispatchCollisionEvents].ToBool();
         if (P.hasKey(PSKey::bDispatchTriggerEvents)) Physics.bDispatchTriggerEvents = P[PSKey::bDispatchTriggerEvents].ToBool();
         if (P.hasKey(PSKey::bBuildDebugSnapshot)) Physics.bBuildDebugSnapshot = P[PSKey::bBuildDebugSnapshot].ToBool();
+
+        const int RequiredSubsteps = (Physics.MaxSimulationSubstepDeltaTime > 0.0f)
+            ? static_cast<int>(std::ceil(Physics.FixedTimeStep / Physics.MaxSimulationSubstepDeltaTime - 1.e-6f))
+            : 1;
+        Physics.MaxSubsteps = (std::max)(Physics.MaxSubsteps, (std::max)(1, RequiredSubsteps));
 	}
 
 	if (Root.hasKey(PSKey::GameSection))

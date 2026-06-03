@@ -316,7 +316,8 @@ namespace
     void FillFilterDataFromComponent_GameThread(
         FPhysicsFilterData&  Out,
         UPrimitiveComponent* Comp,
-        bool                 bIsTriggerShape
+        bool                 bIsTriggerShape,
+        bool                 bEnableCCD
     )
     {
         if (!Comp)
@@ -332,6 +333,7 @@ namespace
         Out.bIsTrigger             = bIsTriggerShape;
         Out.bGenerateHitEvents     = true;
         Out.bGenerateOverlapEvents = Comp->GetGenerateOverlapEvents();
+        Out.bEnableCCD             = bEnableCCD;
 
         for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
         {
@@ -345,6 +347,77 @@ namespace
             else if (R == ECollisionResponse::Overlap)
             {
                 Out.OverlapMask |= (1u << Ch);
+            }
+        }
+    }
+
+    bool BuildPxSweepGeometry(const FCollisionShape& Shape, PxGeometryHolder& OutGeometry, PxQuat& OutShapeAxisRotation)
+    {
+        OutShapeAxisRotation = PxQuat(PxIdentity);
+
+        if (Shape.ShapeType == ECollisionShape::Sphere)
+        {
+            const float Radius = Shape.GetSphereRadius();
+            if (Radius <= 0.0f)
+            {
+                return false;
+            }
+
+            OutGeometry = PxSphereGeometry(Radius);
+            return true;
+        }
+
+        if (Shape.ShapeType == ECollisionShape::Capsule)
+        {
+            const float Radius     = Shape.GetCapsuleRadius();
+            const float HalfHeight = Shape.GetCapsuleHalfHeight();
+            if (Radius <= 0.0f || HalfHeight <= 0.0f)
+            {
+                return false;
+            }
+
+            const float PhysXHalfHeight = (std::max)(0.0f, HalfHeight - Radius);
+            OutGeometry = PxCapsuleGeometry(Radius, PhysXHalfHeight);
+            // 엔진 capsule은 Z축 기준, PhysX capsule은 X축 기준이라 body 생성과 동일한 보정 회전을 쓴다.
+            OutShapeAxisRotation = PxQuat(-PxHalfPi, PxVec3(0.0f, 1.0f, 0.0f));
+            return true;
+        }
+
+        if (Shape.ShapeType == ECollisionShape::Box)
+        {
+            const FVector Extent = Shape.GetExtent();
+            if (Extent.X <= 0.0f || Extent.Y <= 0.0f || Extent.Z <= 0.0f)
+            {
+                return false;
+            }
+
+            OutGeometry = PxBoxGeometry(Extent.X, Extent.Y, Extent.Z);
+            return true;
+        }
+
+        return false;
+    }
+
+    bool IsContinuousForceCommand(EPhysicsCommandType Type)
+    {
+        return Type == EPhysicsCommandType::AddForce ||
+               Type == EPhysicsCommandType::AddForceAtLocation ||
+               Type == EPhysicsCommandType::AddTorque;
+    }
+
+    void StampContinuousForceCommandDurations(TArray<FPhysicsCommand>& Commands, float DeltaTime)
+    {
+        const float SafeDeltaTime = (std::max)(0.0f, DeltaTime);
+        if (SafeDeltaTime <= 0.0f)
+        {
+            return;
+        }
+
+        for (FPhysicsCommand& Command : Commands)
+        {
+            if (IsContinuousForceCommand(Command.Type) && Command.DurationSeconds <= 0.0f)
+            {
+                Command.DurationSeconds = SafeDeltaTime;
             }
         }
     }
@@ -909,6 +982,12 @@ namespace
         (HasPhysicsFilterFlag(A.word0, PhysicsFilter_GenerateOverlapEvents) ||
             HasPhysicsFilterFlag(B.word0, PhysicsFilter_GenerateOverlapEvents));
     }
+
+    bool WantsCCDContact(const PxFilterData& A, const PxFilterData& B)
+    {
+        return HasPhysicsFilterFlag(A.word0, PhysicsFilter_EnableCCD) ||
+                HasPhysicsFilterFlag(B.word0, PhysicsFilter_EnableCCD);
+    }
 }
 
 static PxFilterFlags KraftonFilterShader(
@@ -947,6 +1026,11 @@ static PxFilterFlags KraftonFilterShader(
         pairFlags = bBothCanPhysicallySolve
                 ? PxPairFlag::eCONTACT_DEFAULT
                 : PxPairFlag::eDETECT_DISCRETE_CONTACT;
+
+        if (bBothCanPhysicallySolve && WantsCCDContact(filterData0, filterData1))
+        {
+            pairFlags |= PxPairFlag::eDETECT_CCD_CONTACT;
+        }
 
         if (WantsHitNotify(filterData0, filterData1))
         {
@@ -1337,6 +1421,7 @@ FBodyCreationDesc FPhysXPhysicsScene::BuildBodyDescFromComponent_GameThread(UPri
 
     Desc.Mass                    = Comp->GetMass();
     Desc.CenterOfMassLocalOffset = Comp->GetCenterOfMass();
+    Desc.bEnableCCD              = Comp->GetEnableCCD();
     Desc.bGenerateHitEvents      = true;
     Desc.bGenerateOverlapEvents  = Comp->GetGenerateOverlapEvents();
 
@@ -1368,7 +1453,10 @@ FPhysicsShapeDesc FPhysXPhysicsScene::BuildShapeDescFromComponent_GameThread(
             RootComponent && (RootComponent->GetSimulatePhysics() || RootComponent->IsKinematic());
 
     Desc.bIsTrigger = ShouldBeTriggerShape_GameThread(Comp, bOwnerBodyIsDynamic);
-    FillFilterDataFromComponent_GameThread(Desc.FilterData, Comp, Desc.bIsTrigger);
+
+    const bool bEnableCCDForShape =
+            Comp->GetEnableCCD() || (RootComponent && RootComponent->GetEnableCCD());
+    FillFilterDataFromComponent_GameThread(Desc.FilterData, Comp, Desc.bIsTrigger, bEnableCCDForShape);
 
     if (auto* Box = Cast<UBoxComponent>(Comp))
     {
@@ -1513,6 +1601,7 @@ void FPhysXPhysicsScene::SubmitPhysicsFrame(uint64 FrameIndex, float DeltaTime)
 
     TArray<FPhysicsCommand> FrameCommands;
     Runtime.DrainPendingCommands_GameThread(FrameCommands);
+    StampContinuousForceCommandDurations(FrameCommands, DeltaTime);
 
     std::unique_lock<std::mutex> Lock(PhysicsThreadMutex);
     if (!bPhysicsThreadStarted)
@@ -1609,9 +1698,12 @@ void FPhysXPhysicsScene::PhysicsThreadMain()
             if (bPhysicsQueryPending)
             {
                 const bool              bObjectTypes       = bPendingQueryObjectTypes;
+                const bool              bSweepQuery        = bPendingQuerySweep;
                 const FVector           QueryStart         = PendingQueryStart;
                 const FVector           QueryDir           = PendingQueryDir;
                 const float             QueryMaxDist       = PendingQueryMaxDist;
+                const FQuat             QueryRotation      = PendingQueryRotation;
+                const FCollisionShape   QueryShape         = PendingQueryShape;
                 const ECollisionChannel QueryChannel       = PendingQueryTraceChannel;
                 const uint32            QueryObjectMask    = PendingQueryObjectTypeMask;
                 const uint32            QueryIgnoreActorId = PendingQueryIgnoreActorId;
@@ -1620,13 +1712,25 @@ void FPhysXPhysicsScene::PhysicsThreadMain()
                 bPhysicsQueryInProgress = true;
                 Lock.unlock();
 
-                FPhysicsRaycastResult QueryResult;
-                const bool            bHit = bObjectTypes
-                        ? ExecuteRaycastByObjectTypes_PhysicsThread(QueryStart, QueryDir, QueryMaxDist, QueryObjectMask, QueryIgnoreActorId, QueryResult)
-                        : ExecuteRaycast_PhysicsThread(QueryStart, QueryDir, QueryMaxDist, QueryChannel, QueryIgnoreActorId, QueryResult);
+                bool bHit = false;
+                FPhysicsRaycastResult RaycastResult;
+                FPhysicsSweepResult   SweepResult;
+                if (bSweepQuery)
+                {
+                    bHit = bObjectTypes
+                            ? ExecuteSweepByObjectTypes_PhysicsThread(QueryStart, QueryDir, QueryMaxDist, QueryRotation, QueryShape, QueryObjectMask, QueryIgnoreActorId, SweepResult)
+                            : ExecuteSweep_PhysicsThread(QueryStart, QueryDir, QueryMaxDist, QueryRotation, QueryShape, QueryChannel, QueryIgnoreActorId, SweepResult);
+                }
+                else
+                {
+                    bHit = bObjectTypes
+                            ? ExecuteRaycastByObjectTypes_PhysicsThread(QueryStart, QueryDir, QueryMaxDist, QueryObjectMask, QueryIgnoreActorId, RaycastResult)
+                            : ExecuteRaycast_PhysicsThread(QueryStart, QueryDir, QueryMaxDist, QueryChannel, QueryIgnoreActorId, RaycastResult);
+                }
 
                 Lock.lock();
-                PendingQueryResult      = QueryResult;
+                PendingQueryResult      = RaycastResult;
+                PendingSweepQueryResult = SweepResult;
                 bPendingQueryHit        = bHit;
                 bPhysicsQueryInProgress = false;
                 bPhysicsQueryCompleted  = true;
@@ -1662,6 +1766,7 @@ void FPhysXPhysicsScene::PhysicsThreadMain()
         bPhysicsQueryPending    = false;
         bPhysicsQueryInProgress = false;
         bPhysicsQueryCompleted  = true;
+        bPendingQuerySweep      = false;
     }
     PhysicsThreadDoneCv.notify_all();
 }
@@ -1680,6 +1785,7 @@ void FPhysXPhysicsScene::StartPhysicsThread()
     bPhysicsQueryPending        = false;
     bPhysicsQueryInProgress     = false;
     bPhysicsQueryCompleted      = false;
+    bPendingQuerySweep          = false;
     CompletedPhysicsFrameIndex  = 0;
     PendingPhysicsFrameIndex    = 0;
     PendingPhysicsDeltaTime     = 0.0f;
@@ -2050,12 +2156,16 @@ bool FPhysXPhysicsScene::SubmitRaycastQuery_GameThread(
     PendingQueryStart          = Start;
     PendingQueryDir            = RayDir;
     PendingQueryMaxDist        = MaxDist;
+    PendingQueryRotation       = FQuat::Identity;
+    PendingQueryShape          = FCollisionShape();
     PendingQueryTraceChannel   = TraceChannel;
     PendingQueryObjectTypeMask = ObjectTypeMask;
     PendingQueryIgnoreActorId  = IgnoreActorId;
     bPendingQueryObjectTypes   = bObjectTypes;
+    bPendingQuerySweep         = false;
     bPendingQueryHit           = false;
     PendingQueryResult         = FPhysicsRaycastResult();
+    PendingSweepQueryResult    = FPhysicsSweepResult();
     bPhysicsQueryCompleted     = false;
     bPhysicsQueryPending       = true;
     PhysicsThreadCv.notify_one();
@@ -2076,6 +2186,139 @@ bool FPhysXPhysicsScene::SubmitRaycastQuery_GameThread(
     }
 
     OutResult              = PendingQueryResult;
+    const bool bHit        = bPendingQueryHit;
+    bPhysicsQueryCompleted = false;
+    return bHit;
+}
+
+
+bool FPhysXPhysicsScene::ResolveSweepResult_GameThread(
+    const FPhysicsSweepResult& PhysicsResult,
+    FHitResult&                OutHit
+) const
+{
+    OutHit = FHitResult();
+    if (!PhysicsResult.bBlockingHit || PhysicsResult.HitComponentId == 0)
+    {
+        return false;
+    }
+
+    const FPhysicsComponentBinding* Binding = FindBinding_GameThread(PhysicsResult.HitComponentId);
+    if (!Binding || Binding->Generation != PhysicsResult.HitGeneration || Binding->bPendingDestroy)
+    {
+        return false;
+    }
+
+    UPrimitiveComponent* HitComp = Cast<UPrimitiveComponent>(
+        UObjectManager::Get().FindByUUID(PhysicsResult.HitComponentId)
+    );
+    if (!IsValid(HitComp))
+    {
+        return false;
+    }
+
+    OutHit.bHit              = true;
+    OutHit.bStartPenetrating = PhysicsResult.bStartPenetrating;
+    OutHit.Distance          = PhysicsResult.Distance;
+    OutHit.PenetrationDepth  = PhysicsResult.PenetrationDepth;
+    OutHit.WorldHitLocation  = PhysicsResult.Location;
+    OutHit.ImpactNormal      = PhysicsResult.ImpactNormal;
+    OutHit.WorldNormal       = PhysicsResult.Normal;
+    OutHit.HitComponent      = HitComp;
+    OutHit.HitActor          = HitComp->GetOwner();
+    return true;
+}
+
+bool FPhysXPhysicsScene::SubmitSweepQuery_GameThread(
+    bool                         bObjectTypes,
+    const FVector&               Start,
+    const FVector&               Dir,
+    float                        MaxDist,
+    const FQuat&                 Rotation,
+    const FCollisionShape&       Shape,
+    ECollisionChannel            TraceChannel,
+    uint32                       ObjectTypeMask,
+    uint32                       IgnoreActorId,
+    FPhysicsSweepResult&         OutResult
+)
+{
+    OutResult = FPhysicsSweepResult();
+    if (!Scene || MaxDist <= 0.0f)
+    {
+        return false;
+    }
+
+    FVector SweepDir = Dir;
+    if (SweepDir.IsNearlyZero())
+    {
+        return false;
+    }
+    SweepDir.Normalize();
+
+    PxGeometryHolder Geometry;
+    PxQuat ShapeAxisRotation(PxIdentity);
+    if (!BuildPxSweepGeometry(Shape, Geometry, ShapeAxisRotation))
+    {
+        return false;
+    }
+
+    Runtime.RecordRaycastQuery();
+
+    std::unique_lock<std::mutex> Lock(PhysicsThreadMutex);
+    PhysicsThreadDoneCv.wait(
+        Lock,
+        [this]()
+        {
+            return bPhysicsThreadStopRequested || (!bPhysicsQueryPending && !bPhysicsQueryInProgress);
+        }
+    );
+
+    if (bPhysicsThreadStopRequested)
+    {
+        return false;
+    }
+
+    if (!bPhysicsThreadStarted)
+    {
+        Lock.unlock();
+        return bObjectTypes
+                ? ExecuteSweepByObjectTypes_PhysicsThread(Start, SweepDir, MaxDist, Rotation, Shape, ObjectTypeMask, IgnoreActorId, OutResult)
+                : ExecuteSweep_PhysicsThread(Start, SweepDir, MaxDist, Rotation, Shape, TraceChannel, IgnoreActorId, OutResult);
+    }
+
+    PendingQueryStart          = Start;
+    PendingQueryDir            = SweepDir;
+    PendingQueryMaxDist        = MaxDist;
+    PendingQueryRotation       = Rotation;
+    PendingQueryShape          = Shape;
+    PendingQueryTraceChannel   = TraceChannel;
+    PendingQueryObjectTypeMask = ObjectTypeMask;
+    PendingQueryIgnoreActorId  = IgnoreActorId;
+    bPendingQueryObjectTypes   = bObjectTypes;
+    bPendingQuerySweep         = true;
+    bPendingQueryHit           = false;
+    PendingQueryResult         = FPhysicsRaycastResult();
+    PendingSweepQueryResult    = FPhysicsSweepResult();
+    bPhysicsQueryCompleted     = false;
+    bPhysicsQueryPending       = true;
+    PhysicsThreadCv.notify_one();
+
+    PhysicsThreadDoneCv.wait(
+        Lock,
+        [this]()
+        {
+            return bPhysicsQueryCompleted || bPhysicsThreadStopRequested;
+        }
+    );
+
+    if (bPhysicsThreadStopRequested && !bPhysicsQueryCompleted)
+    {
+        bPhysicsQueryPending   = false;
+        bPhysicsQueryCompleted = false;
+        return false;
+    }
+
+    OutResult              = PendingSweepQueryResult;
     const bool bHit        = bPendingQueryHit;
     bPhysicsQueryCompleted = false;
     return bHit;
@@ -2308,6 +2551,276 @@ bool FPhysXPhysicsScene::ExecuteRaycastByObjectTypes_PhysicsThread(
     return OutResult.bBlockingHit;
 }
 
+
+bool FPhysXPhysicsScene::ExecuteSweep_PhysicsThread(
+    const FVector&         Start,
+    const FVector&         Dir,
+    float                  MaxDist,
+    const FQuat&           Rotation,
+    const FCollisionShape& Shape,
+    ECollisionChannel      TraceChannel,
+    uint32                 IgnoreActorId,
+    FPhysicsSweepResult&   OutResult
+) const
+{
+    OutResult = FPhysicsSweepResult();
+    if (!Scene || MaxDist <= 0.0f)
+    {
+        return false;
+    }
+
+    FVector SweepDir = Dir;
+    if (SweepDir.IsNearlyZero())
+    {
+        return false;
+    }
+    SweepDir.Normalize();
+
+    PxGeometryHolder Geometry;
+    PxQuat ShapeAxisRotation(PxIdentity);
+    if (!BuildPxSweepGeometry(Shape, Geometry, ShapeAxisRotation))
+    {
+        return false;
+    }
+
+    struct FChannelSweepFilter : PxQueryFilterCallback
+    {
+        uint32 IgnoreActorId = 0;
+        PxU32  TraceBit      = 0;
+
+        FChannelSweepFilter(uint32 InIgnoreActorId, ECollisionChannel InChannel) : IgnoreActorId(InIgnoreActorId)
+                                                                                 , TraceBit(1u << static_cast<PxU32>(InChannel))
+        {
+        }
+
+        PxQueryHitType::Enum preFilter(
+            const PxFilterData&,
+            const PxShape* Shape,
+            const PxRigidActor* Actor,
+            PxHitFlags&
+        ) override
+        {
+            const uint32 ShapeActorId = GetActorIdFromShape(Shape);
+            const uint32 BodyActorId  = GetActorIdFromActor(Actor);
+            if (IgnoreActorId != 0 && (ShapeActorId == IgnoreActorId || BodyActorId == IgnoreActorId))
+            {
+                return PxQueryHitType::eNONE;
+            }
+
+            if (Shape)
+            {
+                if (Shape->getFlags().isSet(PxShapeFlag::eTRIGGER_SHAPE))
+                {
+                    return PxQueryHitType::eNONE;
+                }
+
+                const PxFilterData ShapeData = Shape->getQueryFilterData();
+                if ((ShapeData.word1 & TraceBit) == 0)
+                {
+                    return PxQueryHitType::eNONE;
+                }
+            }
+
+            return PxQueryHitType::eBLOCK;
+        }
+
+        PxQueryHitType::Enum postFilter(const PxFilterData&, const PxQueryHit&) override
+        {
+            return PxQueryHitType::eBLOCK;
+        }
+    };
+
+    FChannelSweepFilter FilterCallback(IgnoreActorId, TraceChannel);
+
+    PxSweepBuffer Hit;
+    PxQueryFilterData FilterData;
+    FilterData.flags = PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER;
+
+    const FQuat NormalizedRotation = Rotation.GetNormalized();
+    PxTransform StartPose(ToPxVec3(Start), ToPxQuat(NormalizedRotation) * ShapeAxisRotation);
+
+    PxSceneReadLock ReadLock(*Scene);
+    const bool bStatus = Scene->sweep(
+        Geometry.any(),
+        StartPose,
+        ToPxVec3(SweepDir),
+        MaxDist,
+        Hit,
+        PxHitFlag::eDEFAULT | PxHitFlag::eMTD,
+        FilterData,
+        &FilterCallback
+    );
+
+    if (!bStatus || !Hit.hasBlock)
+    {
+        return false;
+    }
+
+    const PxSweepHit& Block = Hit.block;
+    OutResult.bBlockingHit      = true;
+    OutResult.bStartPenetrating = Block.distance <= 0.0f;
+    OutResult.Distance          = (std::max)(0.0f, Block.distance);
+    OutResult.PenetrationDepth  = OutResult.bStartPenetrating ? (std::max)(0.0f, -Block.distance) : 0.0f;
+    OutResult.Location          = ToFVector(Block.position);
+    OutResult.ImpactPoint       = OutResult.Location;
+    OutResult.ImpactNormal      = ToFVector(Block.normal);
+    OutResult.Normal            = OutResult.ImpactNormal;
+
+    if (OutResult.Normal.IsNearlyZero())
+    {
+        OutResult.Normal       = SweepDir * -1.0f;
+        OutResult.ImpactNormal = OutResult.Normal;
+    }
+
+    if (Block.shape)
+    {
+        OutResult.HitComponentId = GetComponentIdFromShape(Block.shape);
+        OutResult.HitActorId     = GetActorIdFromShape(Block.shape);
+        OutResult.HitGeneration  = GetComponentGenerationFromShape(Block.shape);
+    }
+    if (OutResult.HitActorId == 0 && Block.actor)
+    {
+        OutResult.HitActorId = GetActorIdFromActor(Block.actor);
+    }
+
+    return OutResult.bBlockingHit;
+}
+
+bool FPhysXPhysicsScene::ExecuteSweepByObjectTypes_PhysicsThread(
+    const FVector&         Start,
+    const FVector&         Dir,
+    float                  MaxDist,
+    const FQuat&           Rotation,
+    const FCollisionShape& Shape,
+    uint32                 ObjectTypeMask,
+    uint32                 IgnoreActorId,
+    FPhysicsSweepResult&   OutResult
+) const
+{
+    OutResult = FPhysicsSweepResult();
+    if (!Scene || ObjectTypeMask == 0 || MaxDist <= 0.0f)
+    {
+        return false;
+    }
+
+    FVector SweepDir = Dir;
+    if (SweepDir.IsNearlyZero())
+    {
+        return false;
+    }
+    SweepDir.Normalize();
+
+    PxGeometryHolder Geometry;
+    PxQuat ShapeAxisRotation(PxIdentity);
+    if (!BuildPxSweepGeometry(Shape, Geometry, ShapeAxisRotation))
+    {
+        return false;
+    }
+
+    struct FObjectTypeSweepFilter : PxQueryFilterCallback
+    {
+        uint32 IgnoreActorId  = 0;
+        PxU32  ObjectTypeMask = 0;
+
+        FObjectTypeSweepFilter(uint32 InIgnoreActorId, PxU32 InMask) : IgnoreActorId(InIgnoreActorId)
+                                                                     , ObjectTypeMask(InMask)
+        {
+        }
+
+        PxQueryHitType::Enum preFilter(
+            const PxFilterData&,
+            const PxShape* Shape,
+            const PxRigidActor* Actor,
+            PxHitFlags&
+        ) override
+        {
+            const uint32 ShapeActorId = GetActorIdFromShape(Shape);
+            const uint32 BodyActorId  = GetActorIdFromActor(Actor);
+            if (IgnoreActorId != 0 && (ShapeActorId == IgnoreActorId || BodyActorId == IgnoreActorId))
+            {
+                return PxQueryHitType::eNONE;
+            }
+
+            if (Shape)
+            {
+                if (Shape->getFlags().isSet(PxShapeFlag::eTRIGGER_SHAPE))
+                {
+                    return PxQueryHitType::eNONE;
+                }
+
+                const PxFilterData ShapeData      = Shape->getQueryFilterData();
+                const PxU32        ShapeObjectBit = 1u << GetPhysicsFilterObjectType(ShapeData.word0);
+                if ((ShapeObjectBit & ObjectTypeMask) == 0)
+                {
+                    return PxQueryHitType::eNONE;
+                }
+            }
+
+            return PxQueryHitType::eBLOCK;
+        }
+
+        PxQueryHitType::Enum postFilter(const PxFilterData&, const PxQueryHit&) override
+        {
+            return PxQueryHitType::eBLOCK;
+        }
+    };
+
+    FObjectTypeSweepFilter FilterCallback(IgnoreActorId, ObjectTypeMask);
+
+    PxSweepBuffer Hit;
+    PxQueryFilterData FilterData;
+    FilterData.flags = PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER;
+
+    const FQuat NormalizedRotation = Rotation.GetNormalized();
+    PxTransform StartPose(ToPxVec3(Start), ToPxQuat(NormalizedRotation) * ShapeAxisRotation);
+
+    PxSceneReadLock ReadLock(*Scene);
+    const bool bStatus = Scene->sweep(
+        Geometry.any(),
+        StartPose,
+        ToPxVec3(SweepDir),
+        MaxDist,
+        Hit,
+        PxHitFlag::eDEFAULT | PxHitFlag::eMTD,
+        FilterData,
+        &FilterCallback
+    );
+
+    if (!bStatus || !Hit.hasBlock)
+    {
+        return false;
+    }
+
+    const PxSweepHit& Block = Hit.block;
+    OutResult.bBlockingHit      = true;
+    OutResult.bStartPenetrating = Block.distance <= 0.0f;
+    OutResult.Distance          = (std::max)(0.0f, Block.distance);
+    OutResult.PenetrationDepth  = OutResult.bStartPenetrating ? (std::max)(0.0f, -Block.distance) : 0.0f;
+    OutResult.Location          = ToFVector(Block.position);
+    OutResult.ImpactPoint       = OutResult.Location;
+    OutResult.ImpactNormal      = ToFVector(Block.normal);
+    OutResult.Normal            = OutResult.ImpactNormal;
+
+    if (OutResult.Normal.IsNearlyZero())
+    {
+        OutResult.Normal       = SweepDir * -1.0f;
+        OutResult.ImpactNormal = OutResult.Normal;
+    }
+
+    if (Block.shape)
+    {
+        OutResult.HitComponentId = GetComponentIdFromShape(Block.shape);
+        OutResult.HitActorId     = GetActorIdFromShape(Block.shape);
+        OutResult.HitGeneration  = GetComponentGenerationFromShape(Block.shape);
+    }
+    if (OutResult.HitActorId == 0 && Block.actor)
+    {
+        OutResult.HitActorId = GetActorIdFromActor(Block.actor);
+    }
+
+    return OutResult.bBlockingHit;
+}
+
 bool FPhysXPhysicsScene::Raycast(
     const FVector&    Start,
     const FVector&    Dir,
@@ -2348,4 +2861,66 @@ bool FPhysXPhysicsScene::RaycastByObjectTypes(
     }
 
     return ResolveRaycastResult_GameThread(PhysicsResult, OutHit);
+}
+
+bool FPhysXPhysicsScene::Sweep(
+    const FVector&         Start,
+    const FVector&         End,
+    const FQuat&           Rotation,
+    const FCollisionShape& Shape,
+    FHitResult&            OutHit,
+    ECollisionChannel      TraceChannel,
+    const AActor*          IgnoreActor
+)
+{
+    OutHit = FHitResult();
+
+    const FVector Delta   = End - Start;
+    const float   MaxDist = Delta.Length();
+    if (MaxDist <= 1.e-6f)
+    {
+        return false;
+    }
+
+    FVector SweepDir = Delta / MaxDist;
+    const uint32 IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
+
+    FPhysicsSweepResult PhysicsResult;
+    if (!SubmitSweepQuery_GameThread(false, Start, SweepDir, MaxDist, Rotation, Shape, TraceChannel, 0, IgnoreActorId, PhysicsResult))
+    {
+        return false;
+    }
+
+    return ResolveSweepResult_GameThread(PhysicsResult, OutHit);
+}
+
+bool FPhysXPhysicsScene::SweepByObjectTypes(
+    const FVector&         Start,
+    const FVector&         End,
+    const FQuat&           Rotation,
+    const FCollisionShape& Shape,
+    FHitResult&            OutHit,
+    uint32                 ObjectTypeMask,
+    const AActor*          IgnoreActor
+)
+{
+    OutHit = FHitResult();
+
+    const FVector Delta   = End - Start;
+    const float   MaxDist = Delta.Length();
+    if (MaxDist <= 1.e-6f || ObjectTypeMask == 0)
+    {
+        return false;
+    }
+
+    FVector SweepDir = Delta / MaxDist;
+    const uint32 IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
+
+    FPhysicsSweepResult PhysicsResult;
+    if (!SubmitSweepQuery_GameThread(true, Start, SweepDir, MaxDist, Rotation, Shape, ECollisionChannel::WorldStatic, ObjectTypeMask, IgnoreActorId, PhysicsResult))
+    {
+        return false;
+    }
+
+    return ResolveSweepResult_GameThread(PhysicsResult, OutHit);
 }

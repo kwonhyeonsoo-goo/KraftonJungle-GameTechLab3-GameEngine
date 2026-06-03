@@ -156,6 +156,7 @@ namespace
                 Options.bUseIndependentRagdollCollision,
                 Options.IndependentCollisionEnabled,
                 Options.bIndependentGenerateOverlapEvents);
+            ShapeDesc.FilterData.bEnableCCD = BodySetup.bEnableCCD;
             ShapeDesc.QueryIgnoreGroup = (OwnerComponent && OwnerComponent->GetOwner())
                 ? OwnerComponent->GetOwner()->GetUUID()
                 : 0;

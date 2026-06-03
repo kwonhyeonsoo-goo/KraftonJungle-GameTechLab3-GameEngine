@@ -278,6 +278,10 @@ void UPrimitiveComponent::PostEditProperty(const char* PropertyName)
 	{
 		SetCenterOfMass(CenterOfMassOffset);
 	}
+	else if (strcmp(PropertyName, "bEnableCCD") == 0 || strcmp(PropertyName, "Enable CCD") == 0)
+	{
+		NotifyPhysicsBodyDirty();
+	}
 }
 
 FBoundingBox UPrimitiveComponent::GetWorldBoundingBox() const
@@ -535,6 +539,17 @@ void UPrimitiveComponent::AddImpulse(const FVector& Impulse)
 		if (UWorld* W = Owner->GetWorld())
 			if (IPhysicsScene* PS = W->GetPhysicsScene())
 				PS->AddImpulse(this, Impulse);
+}
+
+void UPrimitiveComponent::SetEnableCCD(bool bInEnableCCD)
+{
+	if (bEnableCCD == bInEnableCCD)
+	{
+		return;
+	}
+
+	bEnableCCD = bInEnableCCD;
+	NotifyPhysicsBodyDirty();
 }
 
 FVector UPrimitiveComponent::GetLinearVelocity() const

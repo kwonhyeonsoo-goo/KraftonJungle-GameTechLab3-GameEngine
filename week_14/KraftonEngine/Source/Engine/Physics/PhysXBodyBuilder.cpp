@@ -38,6 +38,10 @@ namespace
         {
             PackedObjectAndFlags |= PhysicsFilter_GenerateOverlapEvents;
         }
+        if (In.bEnableCCD)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_EnableCCD;
+        }
 
         Out.word0 = PackedObjectAndFlags;
         Out.word1 = In.BlockMask;

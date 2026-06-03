@@ -472,6 +472,22 @@ bool UWorld::PhysicsRaycastByObjectTypes(const FVector& Start, const FVector& Di
 	return false;
 }
 
+bool UWorld::PhysicsSweep(const FVector& Start, const FVector& End, const FQuat& Rotation, const FCollisionShape& Shape, FHitResult& OutHit,
+    ECollisionChannel TraceChannel, const AActor* IgnoreActor) const
+{
+    if (PhysicsScene)
+        return PhysicsScene->Sweep(Start, End, Rotation, Shape, OutHit, TraceChannel, IgnoreActor);
+    return false;
+}
+
+bool UWorld::PhysicsSweepByObjectTypes(const FVector& Start, const FVector& End, const FQuat& Rotation, const FCollisionShape& Shape, FHitResult& OutHit,
+    uint32 ObjectTypeMask, const AActor* IgnoreActor) const
+{
+    if (PhysicsScene)
+        return PhysicsScene->SweepByObjectTypes(Start, End, Rotation, Shape, OutHit, ObjectTypeMask, IgnoreActor);
+    return false;
+}
+
 
 void UWorld::InsertActorToOctree(AActor* Actor)
 {
@@ -678,8 +694,20 @@ void UWorld::ApplyPhysicsSnapshot_GameThread()
 			continue;
 		}
 
-		Component->SetWorldLocation(Body.CurrentTransform.Location);
-		Component->SetWorldRotation(Body.CurrentTransform.Rotation);
+		const float Alpha = (std::max)(0.0f, (std::min)(Snapshot->InterpolationAlpha, 1.0f));
+		const FVector InterpolatedLocation = FVector::Lerp(
+			Body.PreviousTransform.Location,
+			Body.CurrentTransform.Location,
+			Alpha
+		);
+		const FQuat InterpolatedRotation = FQuat::Slerp(
+			Body.PreviousTransform.Rotation,
+			Body.CurrentTransform.Rotation,
+			Alpha
+		);
+
+		Component->SetWorldLocation(InterpolatedLocation);
+		Component->SetWorldRotation(InterpolatedRotation);
 	}
 
 	// Specialized snapshot domains are dispatched through registered receivers. UWorld applies
