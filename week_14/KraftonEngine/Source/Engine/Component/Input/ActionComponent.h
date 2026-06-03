@@ -19,17 +19,28 @@ public:
 	void EndPlay() override;
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
+	UFUNCTION(Callable, Category="Action")
 	void HitStop(float Duration, float TimeDilation);
+	UFUNCTION(Callable, Category="Action")
 	void LocalHitStop(float Duration);
+	UFUNCTION(Callable, Category="Action")
 	void HitSquash(const FVector& SquashedScale, float SquashInDuration, float RecoverDuration);
+	UFUNCTION(Callable, Category="Action")
 	void Knockback(const FVector& Direction, float Distance, float Duration);
+	UFUNCTION(Callable, Category="Action")
 	void Slomo(float Duration, float TimeDilation);
 
+	UFUNCTION(Callable, Category="Action")
 	void StopHitStop();
+	UFUNCTION(Callable, Category="Action")
 	void StopLocalHitStop();
+	UFUNCTION(Callable, Category="Action")
 	void StopHitSquash();
+	UFUNCTION(Callable, Category="Action")
 	void StopKnockback();
+	UFUNCTION(Callable, Category="Action")
 	void StopSlomo();
+	UFUNCTION(Callable, Category="Action")
 	void StopAllActions();
 
 private:

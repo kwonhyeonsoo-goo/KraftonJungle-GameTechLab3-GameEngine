@@ -16,6 +16,7 @@ public:
 	void InitDefaultComponents();
 	void PostDuplicate() override;
 
+	UFUNCTION(Pure, Category="Actor|Components")
 	UBoxComponent* GetBoxComponent() const { return BoxComponent; }
 
 private:

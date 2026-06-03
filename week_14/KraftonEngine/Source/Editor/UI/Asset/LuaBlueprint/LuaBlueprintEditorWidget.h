@@ -8,6 +8,8 @@
 namespace ax::NodeEditor { struct EditorContext; }
 
 class ULuaBlueprintAsset;
+class UClass;
+struct FFunction;
 struct FLuaBlueprintNode;
 struct FLuaBlueprintPin;
 struct FLuaBlueprintVariable;
@@ -61,6 +63,9 @@ private:
 	bool ApplyInlineAssetPickerSelection(ULuaBlueprintAsset* Blueprint, const FString& SelectedPath);
 
 	bool AddNodeMenuItem(ULuaBlueprintAsset* Blueprint, ELuaBlueprintNodeType Type);
+	FLuaBlueprintNode* SpawnReflectedFunctionNode(ULuaBlueprintAsset* Blueprint, const FFunction* Function, const ImVec2& Position, bool bSelectNode);
+	bool AddReflectedFunctionNodeMenuItem(ULuaBlueprintAsset* Blueprint, const UClass* Class, const FFunction* Function, const char* SearchQuery, const ImVec2& Position, bool bSelectNode);
+	void RenderReflectedFunctionNodeMenu(ULuaBlueprintAsset* Blueprint, const char* SearchQuery, const ImVec2& Position, bool bFlatList, bool bSelectNode);
 	bool AddVariableMenuItem(ULuaBlueprintAsset* Blueprint, ELuaBlueprintPinType Type, const char* Label);
 	void RenderAddNodeMenu(ULuaBlueprintAsset* Blueprint);
 	void RenderPinSpawnMenu(ULuaBlueprintAsset* Blueprint);

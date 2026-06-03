@@ -1,7 +1,5 @@
 #include "Profiling/Stats/ClothCollisionStats.h"
 
-#if STATS
-
 uint32 FClothCollisionStats::TickAttempts = 0;
 uint32 FClothCollisionStats::SkippedNoAsset = 0;
 uint32 FClothCollisionStats::SkippedNoClothPayload = 0;
@@ -264,4 +262,3 @@ void FClothCollisionStats::AddSectionResult(
     }
 }
 
-#endif

@@ -18,19 +18,29 @@ public:
 	UAnimSingleNodeInstance() = default;
 	~UAnimSingleNodeInstance() override = default;
 
+	UFUNCTION(Callable, Category="Animation|SingleNode")
 	void SetAnimationAsset(UAnimSequenceBase* InAsset);
+	UFUNCTION(Pure, Category="Animation|SingleNode")
 	UAnimSequenceBase* GetAnimationAsset() const;
 
+	UFUNCTION(Callable, Category="Animation|SingleNode")
 	void  SetPlayRate(float InRate) { PlayRate = InRate; }
+	UFUNCTION(Pure, Category="Animation|SingleNode")
 	float GetPlayRate() const       { return PlayRate; }
 
+	UFUNCTION(Callable, Category="Animation|SingleNode")
 	void  SetLooping(bool bInLoop) { bLooping = bInLoop; }
+	UFUNCTION(Pure, Category="Animation|SingleNode")
 	bool  IsLooping() const        { return bLooping; }
 
+	UFUNCTION(Callable, Category="Animation|SingleNode")
 	void  SetPlaying(bool bInPlay) { bPlaying = bInPlay; }
+	UFUNCTION(Pure, Category="Animation|SingleNode")
 	bool  IsPlaying() const        { return bPlaying; }
 
+	UFUNCTION(Pure, Category="Animation|SingleNode")
 	float GetCurrentTime() const   { return CurrentTime; }
+	UFUNCTION(Callable, Category="Animation|SingleNode")
 	void  SetCurrentTime(float T)  { CurrentTime = T; }
 
 	// UAnimInstance:

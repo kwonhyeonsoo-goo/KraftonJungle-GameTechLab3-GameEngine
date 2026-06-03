@@ -65,36 +65,71 @@ public:
 	const FString& GetSkeletalMeshPath() const { return SkeletalMeshPath.ToString(); }
 
 	// Bone edit 섹션: bone getter/setter는 edit pose를 만들고 CPU skinning/cache revision까지 갱신해야 한다.
+	UFUNCTION(Callable, Category="Mesh|Bone")
 	void EnsureBoneEditPose();
+	UFUNCTION(Callable, Category="Mesh|Bone")
 	void ResetBoneEditPose();
 
+	UFUNCTION(Pure, Category="Mesh|Bone")
 	FVector GetBoneLocationByIndex(int32 BoneIndex) const;
+	UFUNCTION(Pure, Category="Mesh|Bone")
 	FRotator GetBoneRotationByIndex(int32 BoneIndex) const;
 	FQuat GetBoneQuatByIndex(int32 BoneIndex) const;
+	UFUNCTION(Pure, Category="Mesh|Bone")
 	FVector GetBoneScaleByIndex(int32 BoneIndex) const;
+	UFUNCTION(Pure, Category="Mesh|Bone")
 	FTransform GetBoneLocalTransformByIndex(int32 BoneIndex) const;
+	UFUNCTION(Pure, Category="Mesh|Bone")
 	FTransform GetBoneEditBaseLocalTransformByIndex(int32 BoneIndex) const;
+	UFUNCTION(Pure, Category="Mesh|Bone")
 	int32 FindBoneIndex(const FName& BoneName) const;
+	UFUNCTION(Pure, Category="Mesh|Bone")
+	FVector GetBoneLocationByName(const FName& BoneName) const { return GetBoneLocationByIndex(FindBoneIndex(BoneName)); }
+	UFUNCTION(Pure, Category="Mesh|Bone")
+	FRotator GetBoneRotationByName(const FName& BoneName) const { return GetBoneRotationByIndex(FindBoneIndex(BoneName)); }
+	UFUNCTION(Pure, Category="Mesh|Bone")
+	FVector GetBoneScaleByName(const FName& BoneName) const { return GetBoneScaleByIndex(FindBoneIndex(BoneName)); }
+	UFUNCTION(Callable, Category="Mesh|Bone")
 	bool SetBoneWorldTransformByName(const FName& BoneName, const FTransform& WorldTransform);
 
+	UFUNCTION(Callable, Category="Mesh|Bone")
 	void SetBoneLocationByIndex(int32 BoneIndex, const FVector& NewLocation);
+	UFUNCTION(Callable, Category="Mesh|Bone")
+	void SetBoneLocationByName(const FName& BoneName, const FVector& NewLocation) { SetBoneLocationByIndex(FindBoneIndex(BoneName), NewLocation); }
+	UFUNCTION(Callable, Category="Mesh|Bone")
 	void SetBoneRotationByIndex(int32 BoneIndex, const FRotator& NewRotation);
+	UFUNCTION(Callable, Category="Mesh|Bone")
+	void SetBoneRotationByName(const FName& BoneName, const FRotator& NewRotation) { SetBoneRotationByIndex(FindBoneIndex(BoneName), NewRotation); }
 	void SetBoneRotationByIndex(int32 BoneIndex, const FQuat& NewQuat);
+	UFUNCTION(Callable, Category="Mesh|Bone")
 	void SetBoneScaleByIndex(int32 BoneIndex, const FVector& NewScale);
+	UFUNCTION(Callable, Category="Mesh|Bone")
+	void SetBoneScaleByName(const FName& BoneName, const FVector& NewScale) { SetBoneScaleByIndex(FindBoneIndex(BoneName), NewScale); }
+	UFUNCTION(Callable, Category="Mesh|Bone")
 	void SetBoneLocalTransformByIndex(int32 BoneIndex, const FTransform& NewLocalTransform);
+	UFUNCTION(Callable, Category="Mesh|Bone")
 	void SetBoneEditBaseLocalTransformByIndex(int32 BoneIndex, const FTransform& NewLocalTransform);
 
 	void SetBoneLocalTransforms(const TArray<FTransform>& LocalPose);
 	void SetAnimationPose(const TArray<FTransform>& LocalPose, const TArray<float>& InMorphTargetWeights);
+	UFUNCTION(Callable, Category="Mesh|Bone")
 	void ApplyBoneEditBasePose();
 
+	UFUNCTION(Pure, Category="Mesh|MorphTarget")
 	int32 FindMorphTargetIndex(const FString& TargetName) const;
+	UFUNCTION(Callable, Category="Mesh|MorphTarget")
 	void  SetMorphTargetWeight(const FString& TargetName, float Weight);
+	UFUNCTION(Callable, Category="Mesh|MorphTarget")
 	void  SetMorphTargetWeightByIndex(int32 TargetIndex, float Weight);
+	UFUNCTION(Callable, Category="Mesh|MorphTarget")
 	void  SetMorphTargetWeights(const TArray<float>& Weights);
+	UFUNCTION(Callable, Category="Mesh|MorphTarget")
 	void  ClearMorphTargetWeights();
+	UFUNCTION(Pure, Category="Mesh|MorphTarget")
 	float GetMorphTargetWeight(const FString& TargetName) const;
+	UFUNCTION(Pure, Category="Mesh|MorphTarget")
 	float GetMorphTargetWeightByIndex(int32 TargetIndex) const;
+	UFUNCTION(Pure, Category="Mesh|MorphTarget")
 	bool  HasActiveMorphTargets() const;
 
 	const TArray<float>& GetMorphTargetWeights() const

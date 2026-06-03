@@ -44,11 +44,13 @@ public:
 	// CMC 는 mode 를 모름 — "받으면 적용" 만. 어디서 가져올지는 AnimInstance::RootMotionMode 가 결정.
 	void AddRootMotionDelta(const FTransform& LocalDelta);
 	bool ConsumePendingRootMotion(FTransform& OutLocalDelta);
+	UFUNCTION(Pure, Category="CharacterMovement|RootMotion")
 	bool HasPendingRootMotion() const { return bHasPendingRootMotion; }
 
 	// 직전 TickComponent 에서 root motion 의 yaw 가 capsule rotation 에 실제로 적용됐는지.
 	// ACharacter::Tick 이 control yaw 를 capsule 에 덮어쓰기 전에 query 해서 충돌 회피
 	// (root motion 회전이 활성 중인 frame 은 control yaw 가 덮으면 회전이 토글되어 끊김).
+	UFUNCTION(Pure, Category="CharacterMovement|RootMotion")
 	bool HasYawDrivenByRootMotion() const { return bAppliedRootMotionYawThisFrame; }
 
 	const FVector& GetVelocity() const { return Velocity; }

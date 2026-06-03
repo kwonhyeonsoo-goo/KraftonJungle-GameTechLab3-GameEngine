@@ -525,6 +525,24 @@ namespace
             return "Get Anim Graph Bool";
         case ELuaBlueprintNodeType::GetAnimGraphVariableInt:
             return "Get Anim Graph Int";
+        case ELuaBlueprintNodeType::AttachToComponent:
+            return "Attach To Component";
+        case ELuaBlueprintNodeType::GetAttachSocketName:
+            return "Get Attach Socket Name";
+        case ELuaBlueprintNodeType::HasSocket:
+            return "Has Socket";
+        case ELuaBlueprintNodeType::GetSocketWorldLocation:
+            return "Get Socket World Location";
+        case ELuaBlueprintNodeType::GetSocketWorldRotation:
+            return "Get Socket World Rotation";
+        case ELuaBlueprintNodeType::GetSocketWorldScale:
+            return "Get Socket World Scale";
+        case ELuaBlueprintNodeType::GetSocketForwardVector:
+            return "Get Socket Forward Vector";
+        case ELuaBlueprintNodeType::GetSocketRightVector:
+            return "Get Socket Right Vector";
+        case ELuaBlueprintNodeType::GetSocketUpVector:
+            return "Get Socket Up Vector";
         case ELuaBlueprintNodeType::LoadMaterial:
             return "Load Material";
         case ELuaBlueprintNodeType::GetMaterial:
@@ -612,6 +630,93 @@ namespace
         }
     }
 
+    ELuaBlueprintPinType LuaBlueprintPinTypeFromObjectClass(UClass* Class)
+    {
+        if (!Class)
+        {
+            return ELuaBlueprintPinType::Object;
+        }
+
+        auto IsClassOrChildOf = [Class](const char* ClassName) -> bool
+        {
+            UClass* BaseClass = UClass::FindByName(ClassName);
+            return BaseClass && Class->IsA(BaseClass);
+        };
+
+        // Check more-derived classes before their bases so function return pins keep
+        // the most useful LuaBlueprint type instead of degrading to Object.
+        if (IsClassOrChildOf("UCineCameraComponent"))
+        {
+            return ELuaBlueprintPinType::CineCameraComponent;
+        }
+        if (IsClassOrChildOf("UCameraComponent"))
+        {
+            return ELuaBlueprintPinType::CameraComponent;
+        }
+        if (IsClassOrChildOf("USkeletalMeshComponent"))
+        {
+            return ELuaBlueprintPinType::SkeletalMeshComponent;
+        }
+        if (IsClassOrChildOf("USkinnedMeshComponent"))
+        {
+            return ELuaBlueprintPinType::SkinnedMeshComponent;
+        }
+        if (IsClassOrChildOf("UStaticMeshComponent"))
+        {
+            return ELuaBlueprintPinType::StaticMeshComponent;
+        }
+        if (IsClassOrChildOf("UPrimitiveComponent"))
+        {
+            return ELuaBlueprintPinType::PrimitiveComponent;
+        }
+        if (IsClassOrChildOf("USceneComponent"))
+        {
+            return ELuaBlueprintPinType::SceneComponent;
+        }
+        if (IsClassOrChildOf("ULuaBlueprintComponent"))
+        {
+            return ELuaBlueprintPinType::LuaBlueprintComponent;
+        }
+        if (IsClassOrChildOf("ULuaScriptComponent"))
+        {
+            return ELuaBlueprintPinType::LuaScriptComponent;
+        }
+        if (IsClassOrChildOf("UActorComponent"))
+        {
+            return ELuaBlueprintPinType::ActorComponent;
+        }
+        if (IsClassOrChildOf("APlayerController"))
+        {
+            return ELuaBlueprintPinType::PlayerController;
+        }
+        if (IsClassOrChildOf("APawn"))
+        {
+            return ELuaBlueprintPinType::Pawn;
+        }
+        if (IsClassOrChildOf("AActor"))
+        {
+            return ELuaBlueprintPinType::Actor;
+        }
+        if (IsClassOrChildOf("UAnimInstance"))
+        {
+            return ELuaBlueprintPinType::AnimInstance;
+        }
+        if (IsClassOrChildOf("UStaticMesh"))
+        {
+            return ELuaBlueprintPinType::StaticMesh;
+        }
+        if (IsClassOrChildOf("UMaterial"))
+        {
+            return ELuaBlueprintPinType::Material;
+        }
+        if (IsClassOrChildOf("UTexture2D"))
+        {
+            return ELuaBlueprintPinType::Texture;
+        }
+
+        return ELuaBlueprintPinType::Object;
+    }
+
     ELuaBlueprintPinType LuaBlueprintPinTypeFromProperty(const FProperty* Property)
     {
         if (!Property)
@@ -641,6 +746,10 @@ namespace
         case EPropertyType::Color4:
             return ELuaBlueprintPinType::LinearColor;
         case EPropertyType::ObjectRef:
+            if (const FObjectPropertyBase* ObjectProperty = Property->AsObjectPropertyBase())
+            {
+                return LuaBlueprintPinTypeFromObjectClass(ObjectProperty->GetAllowedClassType());
+            }
             return ELuaBlueprintPinType::Object;
         case EPropertyType::ClassRef:
             return ELuaBlueprintPinType::Class;
@@ -2096,6 +2205,33 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
         AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::CameraComponent, FName("Camera"));
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+
+    case ELuaBlueprintNodeType::AttachToComponent:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Exec, FName("In"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::SceneComponent, FName("Child"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::SceneComponent, FName("Parent"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Name, FName("SocketName"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::GetAttachSocketName:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::SceneComponent, FName("Component"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Name, FName("SocketName"));
+        break;
+    case ELuaBlueprintNodeType::HasSocket:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::SceneComponent, FName("Component"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Name, FName("SocketName"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Bool, FName("Result"));
+        break;
+    case ELuaBlueprintNodeType::GetSocketWorldLocation:
+    case ELuaBlueprintNodeType::GetSocketWorldRotation:
+    case ELuaBlueprintNodeType::GetSocketWorldScale:
+    case ELuaBlueprintNodeType::GetSocketForwardVector:
+    case ELuaBlueprintNodeType::GetSocketRightVector:
+    case ELuaBlueprintNodeType::GetSocketUpVector:
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::SceneComponent, FName("Component"));
+        AddPin(*N, ELuaBlueprintPinKind::Input, ELuaBlueprintPinType::Name, FName("SocketName"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Vector, FName("Value"));
         break;
 
     case ELuaBlueprintNodeType::ToBool:

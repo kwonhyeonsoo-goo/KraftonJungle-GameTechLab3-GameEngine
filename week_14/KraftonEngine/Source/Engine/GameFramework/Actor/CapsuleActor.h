@@ -16,6 +16,7 @@ public:
 	void InitDefaultComponents();
 	void PostDuplicate() override;
 
+	UFUNCTION(Pure, Category="Actor|Components")
 	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
 
 private:

@@ -418,6 +418,45 @@ FTransform USceneComponent::GetSocketTransform(const FName& /*SocketName*/) cons
 	return FTransform(GetWorldMatrix());
 }
 
+FVector USceneComponent::GetSocketWorldLocation(const FName& SocketName) const
+{
+	return GetSocketTransform(SocketName).Location;
+}
+
+FRotator USceneComponent::GetSocketWorldRotation(const FName& SocketName) const
+{
+	return GetSocketTransform(SocketName).GetRotator();
+}
+
+FVector USceneComponent::GetSocketWorldScale(const FName& SocketName) const
+{
+	return GetSocketTransform(SocketName).Scale;
+}
+
+FVector USceneComponent::GetSocketForwardVector(const FName& SocketName) const
+{
+	const FMatrix Matrix = GetSocketTransform(SocketName).ToMatrix();
+	FVector Forward(Matrix.M[0][0], Matrix.M[0][1], Matrix.M[0][2]);
+	Forward.Normalize();
+	return Forward;
+}
+
+FVector USceneComponent::GetSocketRightVector(const FName& SocketName) const
+{
+	const FMatrix Matrix = GetSocketTransform(SocketName).ToMatrix();
+	FVector Right(Matrix.M[1][0], Matrix.M[1][1], Matrix.M[1][2]);
+	Right.Normalize();
+	return Right;
+}
+
+FVector USceneComponent::GetSocketUpVector(const FName& SocketName) const
+{
+	const FMatrix Matrix = GetSocketTransform(SocketName).ToMatrix();
+	FVector Up(Matrix.M[2][0], Matrix.M[2][1], Matrix.M[2][2]);
+	Up.Normalize();
+	return Up;
+}
+
 void USceneComponent::AddWorldOffset(const FVector& WorldDelta)
 {
 	if (USceneComponent* Parent = ParentComponent.Get())
@@ -633,6 +672,11 @@ FVector USceneComponent::GetWorldScale() const
 	float ScaleZ = FVector(WorldMatrix.M[2][0], WorldMatrix.M[2][1], WorldMatrix.M[2][2]).Length();
 
 	return FVector(ScaleX, ScaleY, ScaleZ);
+}
+
+FTransform USceneComponent::GetWorldTransform() const
+{
+	return FTransform(GetWorldMatrix());
 }
 
 FVector USceneComponent::GetForwardVector() const

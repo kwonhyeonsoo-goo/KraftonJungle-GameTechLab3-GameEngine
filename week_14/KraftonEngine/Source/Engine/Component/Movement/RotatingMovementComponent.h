@@ -17,13 +17,19 @@ public:
 	~URotatingMovementComponent() override = default;
 
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
+	UFUNCTION(Callable, Category="Movement|Rotating")
 	void SetRotationRate(const FRotator& InRate) { RotationRate = InRate; }
+	UFUNCTION(Pure, Category="Movement|Rotating")
 	FRotator GetRotationRate() const { return RotationRate; }
 
+	UFUNCTION(Callable, Category="Movement|Rotating")
 	void SetRotationInLocalSpace(bool bInLocal) { bRotationInLocalSpace = bInLocal; }
+	UFUNCTION(Pure, Category="Movement|Rotating")
 	bool IsRotationInLocalSpace() const { return bRotationInLocalSpace; }
 
+	UFUNCTION(Callable, Category="Movement|Rotating")
 	void SetPivotTranslation(const FVector& InPivot) { PivotTranslation = InPivot; }
+	UFUNCTION(Pure, Category="Movement|Rotating")
 	FVector GetPivotTranslation() const { return PivotTranslation; }
 
 private:

@@ -25,12 +25,19 @@ public:
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 	void ContributeSelectedVisuals(FScene& Scene) const override;
 
+	UFUNCTION(Callable, Category="Movement|Projectile")
 	void SetVelocity(const FVector& InVelocity) { Velocity = InVelocity; }
-	const FVector& GetVelocity() const { return Velocity; }
+	UFUNCTION(Pure, Category="Movement|Projectile")
+	FVector GetVelocity() const { return Velocity; }
+	UFUNCTION(Callable, Category="Movement|Projectile")
 	void SetInitialSpeed(float InInitialSpeed) { InitialSpeed = InInitialSpeed; }
+	UFUNCTION(Pure, Category="Movement|Projectile")
 	float GetInitialSpeed() const { return InitialSpeed; }
+	UFUNCTION(Pure, Category="Movement|Projectile")
 	float GetMaxSpeed() const { return MaxSpeed; }
+	UFUNCTION(Pure, Category="Movement|Projectile")
 	FVector GetPreviewVelocity() const;
+	UFUNCTION(Callable, Category="Movement|Projectile")
 	void StopSimulating();
 
     UFUNCTION(Callable, Category="Movement|Collision")

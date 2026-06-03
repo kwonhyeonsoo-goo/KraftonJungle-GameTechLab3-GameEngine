@@ -53,6 +53,7 @@ enum class EPartialRagdollPreset : uint8
     HeadNeck,
 };
 
+UENUM()
 enum class EPartialRagdollPhase : uint8
 {
     None,
@@ -168,19 +169,33 @@ public:
     bool IsRagdollActive() const;
     UFUNCTION(Pure, Category="Physics")
     bool IsPartialRagdollActive() const;
+    UFUNCTION(Pure, Category="Physics")
     ERagdollMode GetRagdollMode() const { return ActiveRagdollMode; }
+    UFUNCTION(Pure, Category="Physics")
     EPartialRagdollPhase GetPartialRagdollPhase() const { return PartialRagdollPhase; }
+    UFUNCTION(Pure, Category="Physics")
     float GetPartialRagdollHoldRemaining() const { return PartialRagdollHoldRemaining; }
+    UFUNCTION(Pure, Category="Physics")
     bool IsPartialRagdollBlendOutPending() const { return bPendingPartialRagdollBlendOut; }
+    UFUNCTION(Pure, Category="Physics")
     FName GetActivePartialRagdollRootBoneName() const { return ActivePartialRagdollSelection.RootBoneName; }
+    UFUNCTION(Pure, Category="Physics")
     EPartialRagdollPreset GetLastPartialHitReactionPreset() const { return LastPartialHitReactionPreset; }
+    UFUNCTION(Pure, Category="Physics")
     FName GetLastPartialHitReactionHitBoneName() const { return LastPartialHitReactionHitBoneName; }
+    UFUNCTION(Pure, Category="Physics")
     FName GetLastPartialHitReactionRootBoneName() const { return LastPartialHitReactionRootBoneName; }
+    UFUNCTION(Pure, Category="Physics")
     FName GetLastPartialHitReactionTargetBoneName() const { return LastPartialHitReactionTargetBoneName; }
+    UFUNCTION(Pure, Category="Physics")
     float GetLastPartialHitReactionStrength() const { return LastPartialHitReactionStrength; }
+    UFUNCTION(Pure, Category="Physics")
     float GetLastPartialHitReactionHoldTime() const { return LastPartialHitReactionHoldTime; }
+    UFUNCTION(Pure, Category="Physics")
     float GetLastPartialHitReactionImpulseMagnitude() const { return LastPartialHitReactionImpulseMagnitude; }
-    const FVector& GetLastPartialHitReactionDirection() const { return LastPartialHitReactionDirection; }
+    UFUNCTION(Pure, Category="Physics")
+    FVector GetLastPartialHitReactionDirection() const { return LastPartialHitReactionDirection; }
+    UFUNCTION(Pure, Category="Physics")
     bool WasLastPartialHitReactionEscalationCandidate() const { return bLastPartialHitReactionEscalationCandidate; }
     UFUNCTION(Pure, Category="Physics")
     bool IsRecoveringFromRagdoll() const { return RecoveryPhase != ERagdollRecoveryPhase::None; }

@@ -136,14 +136,21 @@ public:
     UFUNCTION(Callable, Category="Vehicle|Wheel Setup")
     int32 RefreshWheelLocalPositionsFromBones();
 
+    UFUNCTION(Pure, Category="Vehicle")
     bool IsVehicleCreated() const { return VehicleHandle.IsValid(); }
     FVehicleHandle GetVehicleHandle() const { return VehicleHandle; }
 
+    UFUNCTION(Callable, Category="Vehicle|Debug")
     void SetDebugSelectedWheelIndex(int32 WheelIndex);
+    UFUNCTION(Pure, Category="Vehicle|Debug")
     int32 GetDebugSelectedWheelIndex() const { return DebugSelectedWheelIndex; }
+    UFUNCTION(Callable, Category="Vehicle|Debug")
     void SetDebugSelectedWheelEnabled(bool bEnabled) { bDebugDrawSelectedWheel = bEnabled; }
+    UFUNCTION(Pure, Category="Vehicle|Debug")
     bool IsDebugSelectedWheelEnabled() const { return bDebugDrawSelectedWheel; }
+    UFUNCTION(Callable, Category="Vehicle|Debug")
     void DrawSelectedWheelDebug() const;
+    UFUNCTION(Callable, Category="Vehicle|Debug")
     void DrawWheelDebug(int32 WheelIndex) const;
 
     const FVehicleSnapshot* GetLastVehicleSnapshot() const { return bHasLastSnapshot ? &LastSnapshot : nullptr; }

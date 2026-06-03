@@ -15,6 +15,7 @@ public:
 	AHeightFogActor();
 	void InitDefaultComponents();
 
+	UFUNCTION(Pure, Category="Actor|Components")
 	UHeightFogComponent* GetFogComponent() const { return FogComponent; }
 
 private:

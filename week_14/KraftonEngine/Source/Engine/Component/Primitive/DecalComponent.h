@@ -29,15 +29,19 @@ public:
 	void PostDuplicate() override;
 
 	// Color (with Color)
+	UFUNCTION(Callable, Category="Decal|Rendering")
 	void SetColor(FVector4 InColor)
 	{
 		Color = InColor;
 		MarkProxyDirty(EDirtyFlag::Material);
 	}
+	UFUNCTION(Pure, Category="Decal|Rendering")
 	FVector4 GetColor() const;
 
 	// --- Material ---
+	UFUNCTION(Callable, Category="Materials")
 	void SetMaterial(class UMaterial* InMaterial);
+	UFUNCTION(Pure, Category="Materials")
 	class UMaterial* GetMaterial() const { return Material; }
 	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
@@ -45,6 +49,7 @@ public:
 	void UpdateDecalVolumeFromTransform();
 	void OnTransformDirty() override;
 
+	UFUNCTION(Pure, Category="Decal")
 	TArray<UStaticMeshComponent*> GetReceivers() const;
 
 	class UBillboardComponent* EnsureEditorBillboard();

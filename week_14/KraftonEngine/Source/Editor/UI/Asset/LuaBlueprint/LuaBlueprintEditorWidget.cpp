@@ -859,6 +859,24 @@ namespace
             return "Get Anim Graph Bool";
         case ELuaBlueprintNodeType::GetAnimGraphVariableInt:
             return "Get Anim Graph Int";
+        case ELuaBlueprintNodeType::AttachToComponent:
+            return "Attach To Component";
+        case ELuaBlueprintNodeType::GetAttachSocketName:
+            return "Get Attach Socket Name";
+        case ELuaBlueprintNodeType::HasSocket:
+            return "Has Socket";
+        case ELuaBlueprintNodeType::GetSocketWorldLocation:
+            return "Get Socket World Location";
+        case ELuaBlueprintNodeType::GetSocketWorldRotation:
+            return "Get Socket World Rotation";
+        case ELuaBlueprintNodeType::GetSocketWorldScale:
+            return "Get Socket World Scale";
+        case ELuaBlueprintNodeType::GetSocketForwardVector:
+            return "Get Socket Forward Vector";
+        case ELuaBlueprintNodeType::GetSocketRightVector:
+            return "Get Socket Right Vector";
+        case ELuaBlueprintNodeType::GetSocketUpVector:
+            return "Get Socket Up Vector";
         case ELuaBlueprintNodeType::LoadMaterial:
             return "Load Material";
         case ELuaBlueprintNodeType::GetMaterial:
@@ -931,6 +949,20 @@ namespace
             if (Node.NameValue != FName::None)
             {
                 return FString("Set ") + Node.NameValue.ToString();
+            }
+            break;
+        case ELuaBlueprintNodeType::CallFunctionSignature:
+            if (Node.DisplayName != FName::None)
+            {
+                return Node.DisplayName.ToString();
+            }
+            if (Node.NameValue != FName::None)
+            {
+                return FString("Call ") + Node.NameValue.ToString();
+            }
+            if (!Node.StringValue.empty())
+            {
+                return FString("Call ") + Node.StringValue;
             }
             break;
         default:
@@ -1956,6 +1988,54 @@ namespace
             if (Node.Type == Type) return true;
         }
         return false;
+    }
+
+    bool IsLuaBlueprintCallableFunction(const FFunction* Function)
+    {
+        if (!Function)
+        {
+            return false;
+        }
+
+        // LuaBlueprint can execute reflected native functions through the Reflection bridge.
+        // Keep events/delegate override hooks out of the normal node palette: they are exposed
+        // through the dedicated Bind/Unbind/HasEvent nodes instead of direct Call nodes.
+        const uint32 Flags = Function->GetFlags();
+        if ((Flags & (FUNC_Callable | FUNC_Pure)) == 0)
+        {
+            return false;
+        }
+        if ((Flags & FUNC_Event) != 0)
+        {
+            return false;
+        }
+        return Function->Invoker != nullptr;
+    }
+
+    FString MakeReflectedFunctionSearchText(const UClass* Class, const FFunction* Function)
+    {
+        FString Text;
+        if (Class)
+        {
+            Text += Class->GetName();
+            Text += " ";
+        }
+        if (Function)
+        {
+            Text += Function->GetName();
+            Text += " ";
+            Text += Function->GetDisplayName();
+            Text += " ";
+            Text += Function->GetSignature();
+            Text += " ";
+            Text += Function->GetCategory();
+            if (Function->OwnerClassName)
+            {
+                Text += " ";
+                Text += Function->OwnerClassName;
+            }
+        }
+        return Text;
     }
 
     bool ContainsCaseInsensitive(const char* Haystack, const char* Needle)
@@ -3195,6 +3275,15 @@ void FLuaBlueprintEditorWidget::RenderPalettePanel(ULuaBlueprintAsset* Blueprint
         ImGui::PopID();
 
         ImGui::EndDisabled();
+    }
+
+    if (bSearching)
+    {
+        ImGui::Spacing();
+        ImGui::TextDisabled("Reflected Functions");
+        ImGui::Separator();
+        const ImVec2 Spawn(PendingNewNodePosition.x + 30.0f, PendingNewNodePosition.y + 30.0f);
+        RenderReflectedFunctionNodeMenu(Blueprint, PaletteSearchBuf, Spawn, true, true);
     }
 }
 
@@ -5624,6 +5713,229 @@ bool FLuaBlueprintEditorWidget::AddNodeMenuItem(ULuaBlueprintAsset* Blueprint, E
     return bClicked;
 }
 
+FLuaBlueprintNode* FLuaBlueprintEditorWidget::SpawnReflectedFunctionNode(
+    ULuaBlueprintAsset* Blueprint,
+    const FFunction*    Function,
+    const ImVec2&       Position,
+    bool                bSelectNode
+)
+{
+    if (!Blueprint || !IsLuaBlueprintCallableFunction(Function))
+    {
+        return nullptr;
+    }
+
+    const FString Signature = Function->GetSignature();
+    if (Signature.empty())
+    {
+        return nullptr;
+    }
+
+    FLuaBlueprintNode* NewNode = Blueprint->AddNodeOfType(
+        ELuaBlueprintNodeType::CallFunctionSignature,
+        Position.x,
+        Position.y
+    );
+    if (!NewNode)
+    {
+        return nullptr;
+    }
+
+    NewNode->NameValue   = FName(Function->GetName());
+    NewNode->StringValue = Signature;
+    NewNode->DisplayName = FName(Function->GetDisplayName());
+    NewNode->PosX        = Position.x;
+    NewNode->PosY        = Position.y;
+    Blueprint->RefreshNodePinTypes(*NewNode);
+
+    if (NodeEditorContext)
+    {
+        FScopedNodeEditorCurrent Scope(NodeEditorContext);
+        ed::SetNodePosition(ToNodeId(NewNode->NodeId), Position);
+    }
+
+    if (bSelectNode)
+    {
+        SelectOnlyNodes(TArray<uint32> { NewNode->NodeId });
+    }
+
+    CommitBlueprintEdit(Blueprint);
+    return NewNode;
+}
+
+bool FLuaBlueprintEditorWidget::AddReflectedFunctionNodeMenuItem(
+    ULuaBlueprintAsset* Blueprint,
+    const UClass*       Class,
+    const FFunction*    Function,
+    const char*         SearchQuery,
+    const ImVec2&       Position,
+    bool                bSelectNode
+)
+{
+    if (!Blueprint || !IsLuaBlueprintCallableFunction(Function))
+    {
+        return false;
+    }
+
+    const FString SearchText = MakeReflectedFunctionSearchText(Class, Function);
+    if (!ContainsCaseInsensitive(SearchText.c_str(), SearchQuery))
+    {
+        return false;
+    }
+
+    FString Label;
+    if (Class)
+    {
+        Label += Class->GetName();
+        Label += "::";
+    }
+    Label += Function->GetDisplayName();
+    const FString Signature = Function->GetSignature();
+    if (!Signature.empty())
+    {
+        Label += "  [";
+        Label += Signature;
+        Label += "]";
+    }
+
+    ImGui::PushID(Class ? Class->GetName() : "ReflectedFunction");
+    ImGui::PushID(Function->GetSignature());
+    ImGui::PushStyleColor(ImGuiCol_Text, NodeHeaderColor(ELuaBlueprintNodeType::CallFunctionSignature));
+    const bool bClicked = ImGui::MenuItem(Label.c_str());
+    ImGui::PopStyleColor();
+    ImGui::PopID();
+    ImGui::PopID();
+
+    if (!bClicked)
+    {
+        return false;
+    }
+
+    SpawnReflectedFunctionNode(Blueprint, Function, Position, bSelectNode);
+    return true;
+}
+
+void FLuaBlueprintEditorWidget::RenderReflectedFunctionNodeMenu(
+    ULuaBlueprintAsset* Blueprint,
+    const char*         SearchQuery,
+    const ImVec2&       Position,
+    bool                bFlatList,
+    bool                bSelectNode
+)
+{
+    if (!Blueprint)
+    {
+        return;
+    }
+
+    TArray<UClass*> Classes = UClass::GetAllClasses();
+    std::sort(
+        Classes.begin(),
+        Classes.end(),
+        [](const UClass* A, const UClass* B)
+        {
+            const char* AN = A ? A->GetName() : "";
+            const char* BN = B ? B->GetName() : "";
+            return std::strcmp(AN, BN) < 0;
+        }
+    );
+
+    int32 NumShown = 0;
+    for (UClass* Class : Classes)
+    {
+        if (!Class)
+        {
+            continue;
+        }
+
+        TArray<const FFunction*> Functions;
+        Class->GetFunctionRefs(Functions, false);
+        if (Functions.empty())
+        {
+            continue;
+        }
+
+        std::sort(
+            Functions.begin(),
+            Functions.end(),
+            [](const FFunction* A, const FFunction* B)
+            {
+                const char* AN = A ? A->GetDisplayName() : "";
+                const char* BN = B ? B->GetDisplayName() : "";
+                const int Cmp = std::strcmp(AN, BN);
+                if (Cmp != 0)
+                {
+                    return Cmp < 0;
+                }
+                const char* AS = A ? A->GetSignature() : "";
+                const char* BS = B ? B->GetSignature() : "";
+                return std::strcmp(AS, BS) < 0;
+            }
+        );
+
+        bool bClassHasVisibleFunction = false;
+        for (const FFunction* Function : Functions)
+        {
+            if (!IsLuaBlueprintCallableFunction(Function))
+            {
+                continue;
+            }
+            const FString SearchText = MakeReflectedFunctionSearchText(Class, Function);
+            if (!ContainsCaseInsensitive(SearchText.c_str(), SearchQuery))
+            {
+                continue;
+            }
+            bClassHasVisibleFunction = true;
+            break;
+        }
+        if (!bClassHasVisibleFunction)
+        {
+            continue;
+        }
+
+        if (bFlatList)
+        {
+            for (const FFunction* Function : Functions)
+            {
+                if (AddReflectedFunctionNodeMenuItem(Blueprint, Class, Function, SearchQuery, Position, bSelectNode))
+                {
+                    return;
+                }
+                const FString SearchText = MakeReflectedFunctionSearchText(Class, Function);
+                if (IsLuaBlueprintCallableFunction(Function) && ContainsCaseInsensitive(SearchText.c_str(), SearchQuery))
+                {
+                    ++NumShown;
+                }
+            }
+            continue;
+        }
+
+        if (!ImGui::BeginMenu(Class->GetName()))
+        {
+            continue;
+        }
+        for (const FFunction* Function : Functions)
+        {
+            if (AddReflectedFunctionNodeMenuItem(Blueprint, nullptr, Function, SearchQuery, Position, bSelectNode))
+            {
+                ImGui::EndMenu();
+                return;
+            }
+            const FString SearchText = MakeReflectedFunctionSearchText(Class, Function);
+            if (IsLuaBlueprintCallableFunction(Function) && ContainsCaseInsensitive(SearchText.c_str(), SearchQuery))
+            {
+                ++NumShown;
+            }
+        }
+        ImGui::EndMenu();
+    }
+
+    if (NumShown == 0)
+    {
+        ImGui::TextDisabled("No reflected functions found. If headers changed, regenerate reflection output first.");
+    }
+}
+
 bool FLuaBlueprintEditorWidget::AddVariableMenuItem(
     ULuaBlueprintAsset*  Blueprint,
     ELuaBlueprintPinType Type,
@@ -5656,11 +5968,12 @@ void FLuaBlueprintEditorWidget::RenderAddNodeMenu(ULuaBlueprintAsset* Blueprint)
     const bool bHasQuery = Query[0] != 0;
     if (bHasQuery)
     {
-        // 검색 모드: 카테고리 안 펼치고 한 줄로.
+        // 검색 모드: 고정 enum 노드와 reflection 기반 함수 노드를 함께 평평하게 보여준다.
         for (int32 i = 0; i < static_cast<int32>(ELuaBlueprintNodeType::Count); ++i)
         {
             AddItem(static_cast<ELuaBlueprintNodeType>(i));
         }
+        RenderReflectedFunctionNodeMenu(Blueprint, Query, PendingNewNodePosition, true, false);
     }
     else
     {
@@ -5780,6 +6093,16 @@ void FLuaBlueprintEditorWidget::RenderAddNodeMenu(ULuaBlueprintAsset* Blueprint)
             AddItem(ELuaBlueprintNodeType::GetPrimitiveComponent);
             AddItem(ELuaBlueprintNodeType::ActivateComponent);
             AddItem(ELuaBlueprintNodeType::DeactivateComponent);
+            ImGui::Separator();
+            AddItem(ELuaBlueprintNodeType::AttachToComponent);
+            AddItem(ELuaBlueprintNodeType::GetAttachSocketName);
+            AddItem(ELuaBlueprintNodeType::HasSocket);
+            AddItem(ELuaBlueprintNodeType::GetSocketWorldLocation);
+            AddItem(ELuaBlueprintNodeType::GetSocketWorldRotation);
+            AddItem(ELuaBlueprintNodeType::GetSocketWorldScale);
+            AddItem(ELuaBlueprintNodeType::GetSocketForwardVector);
+            AddItem(ELuaBlueprintNodeType::GetSocketRightVector);
+            AddItem(ELuaBlueprintNodeType::GetSocketUpVector);
             ImGui::Separator();
             AddItem(ELuaBlueprintNodeType::AddForce);
             AddItem(ELuaBlueprintNodeType::AddTorque);
@@ -5923,6 +6246,11 @@ void FLuaBlueprintEditorWidget::RenderAddNodeMenu(ULuaBlueprintAsset* Blueprint)
         {
             AddItem(ELuaBlueprintNodeType::CallFunction);
             AddItem(ELuaBlueprintNodeType::CallFunctionSignature);
+            if (ImGui::BeginMenu("Reflected Functions"))
+            {
+                RenderReflectedFunctionNodeMenu(Blueprint, Query, PendingNewNodePosition, false, false);
+                ImGui::EndMenu();
+            }
             AddItem(ELuaBlueprintNodeType::CustomEvent);
             AddItem(ELuaBlueprintNodeType::CallCustomEvent);
             AddItem(ELuaBlueprintNodeType::CustomLuaFunction);

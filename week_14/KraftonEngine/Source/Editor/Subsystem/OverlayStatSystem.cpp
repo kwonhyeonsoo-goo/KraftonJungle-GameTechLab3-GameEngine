@@ -611,6 +611,7 @@ void FOverlayStatSystem::BuildPhysicsLines(const UEditorEngine& Editor, TArray<F
 
 void FOverlayStatSystem::BuildClothCollisionLines(TArray<FString>& OutLines) const
 {
+#if STATS
 	char Buffer[256] = {};
 
 	snprintf(Buffer, sizeof(Buffer), "Cloth : Ticks %u   Components %u   Sections %u/%u eligible, %u gathered",
@@ -687,6 +688,9 @@ void FOverlayStatSystem::BuildClothCollisionLines(TArray<FString>& OutLines) con
 
 	AppendSelectedWorldCollisionLines(OutLines, "WorldStatic", FClothCollisionStats::RecentWorldStaticCandidates, 4);
 	AppendSelectedWorldCollisionLines(OutLines, "WorldDynamic", FClothCollisionStats::RecentWorldDynamicCandidates, 4);
+#else
+	OutLines.push_back(FString("Cloth collision stats unavailable (STATS=0)"));
+#endif
 }
 
 void FOverlayStatSystem::BuildLines(const UEditorEngine& Editor, TArray<FOverlayStatLine>& OutLines) const
