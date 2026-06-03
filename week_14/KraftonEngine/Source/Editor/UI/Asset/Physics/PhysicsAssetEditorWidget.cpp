@@ -4,6 +4,7 @@
 #include "Animation/Skeleton/Skeleton.h"
 #include "Component/Debug/PhysicsAssetPreviewComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Core/Types/RayTypes.h"
 #include "Debug/DrawDebugHelpers.h"
 #include "Editor/EditorEngine.h"
 #include "GameFramework/World.h"
@@ -17,6 +18,8 @@
 #include "Physics/PhysicsAssetInstance.h"
 #include "Physics/PhysicsAssetManager.h"
 #include "Physics/PhysicsAssetPreviewUtils.h"
+#include "Physics/PhysicsQueryTypes.h"
+#include "Physics/PhysicsRuntime.h"
 #include "Platform/Paths.h"
 #include "Render/Types/ViewTypes.h"
 
@@ -41,6 +44,10 @@ namespace
     constexpr int32 DebugHalfCircleSegments = 12;
     constexpr float PhysicsEditorTreeIndentSpacing = 10.0f;
 	constexpr float ShapeSizeDragSpeed = 0.001f;
+    constexpr float EditorRagdollGrabMaxDistance = 1000.0f;
+    constexpr float EditorRagdollGrabFollowSpeed = 28.0f;
+    constexpr float EditorRagdollGrabMaxLinearVelocity = 240.0f;
+    constexpr float EditorRagdollGrabAngularDamping = 0.85f;
 
     FTransform ComposePreviewDebugTransforms(const FTransform& ParentWorld, const FTransform& Local)
     {
@@ -3638,7 +3645,11 @@ void FPhysicsAssetEditorWidget::TickEditorSimulation(
     USkeletalMesh* PreviewMesh,
     UWorld* PreviewWorld,
     USkeletalMeshComponent* PreviewComponent,
-    float DeltaTime)
+    float DeltaTime,
+    const FRay* ViewportMouseRay,
+    bool bMouseLeftPressed,
+    bool bMouseLeftHeld,
+    bool bMouseLeftReleased)
 {
     PreviewSkeletalMesh = PreviewMesh;
     SetEditorPreviewContext(PreviewWorld, PreviewComponent);
@@ -3661,6 +3672,14 @@ void FPhysicsAssetEditorWidget::TickEditorSimulation(
         return;
     }
 
+    TickEditorRagdollGrab(
+        PreviewWorld,
+        PreviewComponent,
+        ViewportMouseRay,
+        bMouseLeftPressed,
+        bMouseLeftHeld,
+        bMouseLeftReleased);
+
     if (!bEditorSimulationPaused && DeltaTime > 0.0f)
     {
         if (IPhysicsScene* PhysicsScene = PreviewWorld->GetPhysicsScene())
@@ -3678,6 +3697,8 @@ void FPhysicsAssetEditorWidget::StopEditorSimulation(
     USkeletalMeshComponent* PreviewComponent,
     bool bResetPose)
 {
+    EndEditorRagdollGrab();
+
     USkeletalMeshComponent* Component = PreviewComponent ? PreviewComponent : PreviewSkeletalMeshComponent;
     if (Component)
     {
@@ -3745,6 +3766,154 @@ bool FPhysicsAssetEditorWidget::StartEditorSimulation(
     bEditorSimulationPaused = false;
     bEditorSimulationRestartRequested = false;
     return true;
+}
+
+bool FPhysicsAssetEditorWidget::BeginEditorRagdollGrab(
+    UPhysicsAsset* PhysicsAsset,
+    UWorld* PreviewWorld,
+    USkeletalMeshComponent* PreviewComponent,
+    const FRay& MouseRay)
+{
+    EndEditorRagdollGrab();
+
+    if (!bEditorSimulationActive || !PhysicsAsset || !PreviewWorld || !PreviewComponent)
+    {
+        return false;
+    }
+
+    IPhysicsScene* PhysicsScene = PreviewWorld->GetPhysicsScene();
+    FPhysicsAssetInstance* Instance = PreviewComponent->GetPhysicsAssetInstance();
+    if (!PhysicsScene || !Instance)
+    {
+        return false;
+    }
+
+    FPhysicsRaycastResult Hit;
+    const uint32 ObjectMask = ObjectTypeBit(PreviewComponent->GetCollisionObjectType());
+    if (!PhysicsScene->RaycastPhysicsByObjectTypes(
+            MouseRay.Origin,
+            MouseRay.Direction,
+            EditorRagdollGrabMaxDistance,
+            Hit,
+            ObjectMask,
+            nullptr))
+    {
+        return false;
+    }
+
+    if (!Hit.bBlockingHit ||
+        Hit.HitComponentId != PreviewComponent->GetUUID() ||
+        Hit.HitDomain != EPhysicsBodyDomain::Ragdoll ||
+        !Hit.HitBody.IsValid())
+    {
+        return false;
+    }
+
+    FName GrabBoneName = Hit.HitBoneName;
+    if (GrabBoneName == FName::None)
+    {
+        FVector BodyWorldLocation = FVector::ZeroVector;
+        if (!Instance->FindNearestBodyToWorldLocation(Hit.Location, GrabBoneName, BodyWorldLocation))
+        {
+            return false;
+        }
+    }
+
+    const FPhysicsBodyHandle GrabBody = Hit.HitBody.IsValid()
+        ? Hit.HitBody
+        : Instance->GetBodyHandleByBoneName(GrabBoneName);
+    IPhysicsRuntime* Runtime = PhysicsScene->GetRuntime();
+    if (!GrabBody.IsValid() || !Runtime)
+    {
+        return false;
+    }
+
+    const FTransform BodyWorld = Runtime->GetBodyTransform(GrabBody);
+    EditorRagdollGrabBody = GrabBody;
+    EditorRagdollGrabBoneName = GrabBoneName;
+    EditorRagdollGrabLocalOffset = BodyWorld.Rotation.Inverse().RotateVector(Hit.Location - BodyWorld.Location);
+    EditorRagdollGrabDistance = Hit.Distance > 0.0f
+        ? Hit.Distance
+        : (Hit.Location - MouseRay.Origin).Length();
+    if (EditorRagdollGrabDistance <= 0.0f)
+    {
+        EditorRagdollGrabDistance = (BodyWorld.Location - MouseRay.Origin).Length();
+    }
+
+    bEditorRagdollGrabActive = true;
+    return true;
+}
+
+void FPhysicsAssetEditorWidget::TickEditorRagdollGrab(
+    UWorld* PreviewWorld,
+    USkeletalMeshComponent* PreviewComponent,
+    const FRay* MouseRay,
+    bool bMouseLeftPressed,
+    bool bMouseLeftHeld,
+    bool bMouseLeftReleased)
+{
+    if (!bEditorSimulationActive || bEditorSimulationPaused || !PreviewWorld || !PreviewComponent)
+    {
+        EndEditorRagdollGrab();
+        return;
+    }
+
+    UPhysicsAsset* PhysicsAsset = GetEditedPhysicsAsset();
+    if (bMouseLeftPressed && MouseRay)
+    {
+        BeginEditorRagdollGrab(PhysicsAsset, PreviewWorld, PreviewComponent, *MouseRay);
+    }
+
+    if (bMouseLeftReleased || !bMouseLeftHeld || !MouseRay)
+    {
+        EndEditorRagdollGrab();
+        return;
+    }
+
+    if (!bEditorRagdollGrabActive || !EditorRagdollGrabBody.IsValid())
+    {
+        return;
+    }
+
+    IPhysicsScene* PhysicsScene = PreviewWorld->GetPhysicsScene();
+    IPhysicsRuntime* Runtime = PhysicsScene ? PhysicsScene->GetRuntime() : nullptr;
+    FPhysicsAssetInstance* Instance = PreviewComponent->GetPhysicsAssetInstance();
+    if (!Runtime || !Instance)
+    {
+        EndEditorRagdollGrab();
+        return;
+    }
+
+    const FPhysicsBodyHandle GrabBody = EditorRagdollGrabBody;
+    if (!GrabBody.IsValid())
+    {
+        EndEditorRagdollGrab();
+        return;
+    }
+
+    const FTransform BodyWorld = Runtime->GetBodyTransform(GrabBody);
+    const FVector CurrentGrabWorld = BodyWorld.Location + BodyWorld.Rotation.RotateVector(EditorRagdollGrabLocalOffset);
+    const FVector TargetGrabWorld = MouseRay->Origin + MouseRay->Direction * EditorRagdollGrabDistance;
+    const FVector Error = TargetGrabWorld - CurrentGrabWorld;
+
+    FVector DesiredLinearVelocity = Error * EditorRagdollGrabFollowSpeed;
+    const float DesiredSpeed = DesiredLinearVelocity.Length();
+    if (DesiredSpeed > EditorRagdollGrabMaxLinearVelocity && DesiredSpeed > 0.0001f)
+    {
+        DesiredLinearVelocity = DesiredLinearVelocity * (EditorRagdollGrabMaxLinearVelocity / DesiredSpeed);
+    }
+
+    FVector AngularVelocity = Runtime->GetBodyAngularVelocity(GrabBody) * EditorRagdollGrabAngularDamping;
+    Runtime->SetBodyVelocity(GrabBody, DesiredLinearVelocity, AngularVelocity);
+}
+
+void FPhysicsAssetEditorWidget::EndEditorRagdollGrab()
+{
+    bEditorRagdollGrabActive = false;
+    EditorRagdollGrabBody = FPhysicsBodyHandle{};
+    EditorRagdollGrabBoneName = FName::None;
+    EditorRagdollGrabLocalOffset = FVector::ZeroVector;
+    EditorRagdollGrabDistance = 0.0f;
 }
 
 void FPhysicsAssetEditorWidget::RequestEditorSimulationRestart()

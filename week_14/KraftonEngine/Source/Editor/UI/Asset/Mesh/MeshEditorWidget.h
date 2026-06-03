@@ -127,6 +127,8 @@ private:
 	void RefreshPhysicsAssetList();
 	void RenderMissingPhysicsAssetPanel(USkeletalMesh* SkeletalMesh);
 	bool IsCurrentPhysicsAssetDirty() const;
+	void UpdatePhysicsSimulationViewportState();
+	void RestorePhysicsSimulationShowFlags();
 
 private:
 	FMeshEditorViewportClient ViewportClient;
@@ -140,6 +142,9 @@ private:
 	int32 SelectedPhysicsAssetIndex = -1;
 	float PhysicsPanelWidth = 420.0f;
 	float PhysicsDetailsWidth = 360.0f;
+	bool bPhysicsSimulationShowFlagsSaved = false;
+	bool bLastPhysicsSimulationActive = false;
+	FShowFlags SavedPhysicsSimulationShowFlags;
 
 	// Skeleton tab state
 	int32 SelectedBoneIndex = -1;

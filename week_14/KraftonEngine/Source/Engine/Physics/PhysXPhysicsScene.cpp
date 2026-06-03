@@ -202,6 +202,32 @@ namespace
         return Body ? Body->OwnerActorId : 0;
     }
 
+    void FillRaycastPhysicsHit(const PxRaycastHit& Block, FPhysicsRaycastResult& OutResult)
+    {
+        if (Block.shape)
+        {
+            OutResult.HitComponentId = GetComponentIdFromShape(Block.shape);
+            OutResult.HitActorId     = GetActorIdFromShape(Block.shape);
+            OutResult.HitGeneration  = GetComponentGenerationFromShape(Block.shape);
+        }
+
+        FBodyInstance* Body = GetBodyInstance(Block.actor);
+        if (Body && Body->State == EPhysicsRuntimeObjectState::Alive)
+        {
+            OutResult.HitBody     = Body->Handle;
+            OutResult.HitBoneName = Body->BoneName;
+            OutResult.HitDomain   = Body->Domain;
+            if (OutResult.HitActorId == 0)
+            {
+                OutResult.HitActorId = Body->OwnerActorId;
+            }
+        }
+        else if (OutResult.HitActorId == 0 && Block.actor)
+        {
+            OutResult.HitActorId = GetActorIdFromActor(Block.actor);
+        }
+    }
+
     ECollisionResponse GetPackedMinResponse(const PxFilterData& A, const PxFilterData& B);
     EPhysicsCollisionRole GetPackedCollisionRole(const PxFilterData& Data);
     EPhysicsGameplayOverlapOwnership GetPackedGameplayOverlapOwnership(const PxFilterData& Data);
@@ -2617,16 +2643,7 @@ bool FPhysXPhysicsScene::ExecuteRaycast_PhysicsThread(
     OutResult.ImpactNormal    = ToFVector(Block.normal);
     OutResult.Normal          = OutResult.ImpactNormal;
 
-    if (Block.shape)
-    {
-        OutResult.HitComponentId = GetComponentIdFromShape(Block.shape);
-        OutResult.HitActorId     = GetActorIdFromShape(Block.shape);
-        OutResult.HitGeneration  = GetComponentGenerationFromShape(Block.shape);
-    }
-    if (OutResult.HitActorId == 0 && Block.actor)
-    {
-        OutResult.HitActorId = GetActorIdFromActor(Block.actor);
-    }
+    FillRaycastPhysicsHit(Block, OutResult);
 
     return OutResult.bBlockingHit;
 }
@@ -2731,16 +2748,7 @@ bool FPhysXPhysicsScene::ExecuteRaycastByObjectTypes_PhysicsThread(
     OutResult.ImpactNormal    = ToFVector(Block.normal);
     OutResult.Normal          = OutResult.ImpactNormal;
 
-    if (Block.shape)
-    {
-        OutResult.HitComponentId = GetComponentIdFromShape(Block.shape);
-        OutResult.HitActorId     = GetActorIdFromShape(Block.shape);
-        OutResult.HitGeneration  = GetComponentGenerationFromShape(Block.shape);
-    }
-    if (OutResult.HitActorId == 0 && Block.actor)
-    {
-        OutResult.HitActorId = GetActorIdFromActor(Block.actor);
-    }
+    FillRaycastPhysicsHit(Block, OutResult);
 
     return OutResult.bBlockingHit;
 }
@@ -3055,6 +3063,27 @@ bool FPhysXPhysicsScene::RaycastByObjectTypes(
     }
 
     return ResolveRaycastResult_GameThread(PhysicsResult, OutHit);
+}
+
+bool FPhysXPhysicsScene::RaycastPhysicsByObjectTypes(
+    const FVector&         Start,
+    const FVector&         Dir,
+    float                  MaxDist,
+    FPhysicsRaycastResult& OutResult,
+    uint32                 ObjectTypeMask,
+    const AActor*          IgnoreActor
+)
+{
+    const uint32 IgnoreActorId = IgnoreActor ? IgnoreActor->GetUUID() : 0;
+    return SubmitRaycastQuery_GameThread(
+        true,
+        Start,
+        Dir,
+        MaxDist,
+        ECollisionChannel::WorldStatic,
+        ObjectTypeMask,
+        IgnoreActorId,
+        OutResult);
 }
 
 bool FPhysXPhysicsScene::Sweep(

@@ -13,6 +13,7 @@ class AActor;
 class UPrimitiveComponent;
 class IPhysicsRuntime;
 struct FHitResult;
+struct FPhysicsRaycastResult;
 
 // ============================================================
 // IPhysicsScene — 물리 시스템 어댑터 인터페이스
@@ -91,6 +92,9 @@ public:
 	//   예: 바닥 detection 은 ObjectTypeBit(WorldStatic) 만 → 다이내믹/폰을 바닥으로 잘못 잡지 않음.
 	// Trigger flag shape는 physics query 단계에서 자동 제외된다.
 	virtual bool RaycastByObjectTypes(const FVector& Start, const FVector& Dir, float MaxDist, FHitResult& OutHit,
+		uint32 ObjectTypeMask, const AActor* IgnoreActor = nullptr) = 0;
+
+	virtual bool RaycastPhysicsByObjectTypes(const FVector& Start, const FVector& Dir, float MaxDist, FPhysicsRaycastResult& OutResult,
 		uint32 ObjectTypeMask, const AActor* IgnoreActor = nullptr) = 0;
 
     // Shape sweep — Start 위치의 Shape를 End까지 이동시키며 blocking hit을 찾는다.

@@ -79,6 +79,7 @@ public:
 	bool ConsumePhysicsAssetViewportPick(int32& OutBodyIndex, int32& OutShapeIndex, int32& OutConstraintIndex);
 	bool FocusSelectedPhysicsAssetElementImmediate();
 	void RefreshBoneDebug();
+	void SetPhysicsSimulationInteractionActive(bool bActive);
 
 	EBoneDebugDrawMode GetBoneDebugDrawMode() const;
 	void SetBoneDebugDrawMode(EBoneDebugDrawMode InDrawMode);
@@ -141,6 +142,7 @@ private:
 	int32 PendingPhysicsAssetPickBodyIndex = -1;
 	int32 PendingPhysicsAssetPickShapeIndex = -1;
 	int32 PendingPhysicsAssetPickConstraintIndex = -1;
+	bool bPhysicsSimulationInteractionActive = false;
 
 	bool bIsRenderable = false;
 

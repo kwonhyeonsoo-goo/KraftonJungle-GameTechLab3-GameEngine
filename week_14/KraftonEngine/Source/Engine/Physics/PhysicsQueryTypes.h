@@ -3,6 +3,9 @@
 #include "Core/Types/CoreTypes.h"
 #include "Core/Types/CollisionTypes.h"
 #include "Math/Vector.h"
+#include "Object/FName.h"
+#include "Physics/PhysicsBodyHandle.h"
+#include "Physics/PhysicsTypes.h"
 
 // Raycast 모드. 기본 gameplay 는 SnapshotImmediate(직전 publish 된 snapshot 기준, lock-free),
 // 정확히 live PhysX scene 을 query 해야 하면 PhysicsThreadExact(request + fence 대기).
@@ -39,6 +42,9 @@ struct FPhysicsRaycastResult
     uint32 HitActorId     = 0;
     uint32 HitComponentId = 0;
     uint32 HitGeneration  = 0;
+    FPhysicsBodyHandle HitBody;
+    FName HitBoneName = FName::None;
+    EPhysicsBodyDomain HitDomain = EPhysicsBodyDomain::ActorComponent;
 
     FVector Location     = FVector::ZeroVector;
     FVector ImpactPoint  = FVector::ZeroVector;

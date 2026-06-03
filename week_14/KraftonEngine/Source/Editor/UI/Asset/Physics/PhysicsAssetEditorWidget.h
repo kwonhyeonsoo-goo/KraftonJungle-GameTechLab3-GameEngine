@@ -2,7 +2,9 @@
 
 #include "Editor/UI/Asset/AssetEditorWidget.h"
 #include "Physics/PhysicsAssetValidation.h"
+#include "Physics/PhysicsBodyHandle.h"
 #include "Object/FName.h"
+#include "Math/Vector.h"
 #include "Gizmo/PhysicsAssetGizmoTarget.h"
 
 namespace ax { namespace NodeEditor { struct EditorContext; } }
@@ -19,6 +21,7 @@ struct FPhysicsAssetConstraintSetup;
 struct FPhysicsAssetPreviewPoseCache;
 struct FPhysicsAssetShapeSetup;
 struct FShowFlags;
+struct FRay;
 
 class FPhysicsAssetEditorWidget : public FAssetEditorWidget
 {
@@ -62,7 +65,11 @@ public:
         USkeletalMesh* PreviewMesh,
         UWorld* PreviewWorld,
         USkeletalMeshComponent* PreviewComponent,
-        float DeltaTime);
+        float DeltaTime,
+        const FRay* ViewportMouseRay = nullptr,
+        bool bMouseLeftPressed = false,
+        bool bMouseLeftHeld = false,
+        bool bMouseLeftReleased = false);
     void StopEditorSimulation(UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent, bool bResetPose);
     bool IsEditorSimulationActive() const { return bEditorSimulationActive; }
     bool SaveEditedPhysicsAsset();
@@ -156,6 +163,9 @@ private:
     void RunValidation(UPhysicsAsset* PhysicsAsset);
     void MarkPhysicsAssetDirty();
     bool StartEditorSimulation(UPhysicsAsset* PhysicsAsset, UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent);
+    bool BeginEditorRagdollGrab(UPhysicsAsset* PhysicsAsset, UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent, const FRay& MouseRay);
+    void TickEditorRagdollGrab(UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent, const FRay* MouseRay, bool bMouseLeftPressed, bool bMouseLeftHeld, bool bMouseLeftReleased);
+    void EndEditorRagdollGrab();
     void RequestEditorSimulationRestart();
     FName GetSelectedSimulationRootBoneName(UPhysicsAsset* PhysicsAsset) const;
     void InitializeConstraintGraphEditor();
@@ -189,6 +199,11 @@ private:
     bool bEditorSimulationNoGravity = false;
     bool bEditorSimulationSelectedOnly = false;
     bool bEditorSimulationRestartRequested = false;
+    bool bEditorRagdollGrabActive = false;
+    FPhysicsBodyHandle EditorRagdollGrabBody;
+    FName EditorRagdollGrabBoneName = FName::None;
+    FVector EditorRagdollGrabLocalOffset = FVector::ZeroVector;
+    float EditorRagdollGrabDistance = 0.0f;
     bool bRegenerateUsePCAAnalysis = true;
     bool bRegenerateUseBoneAxis = false;
     bool bRegenerateCreateConstraints = true;

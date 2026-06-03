@@ -1126,6 +1126,7 @@ void FPhysXPhysicsRuntime::ApplySetBodyVelocity_Internal(
 
     Dynamic->setLinearVelocity(ToPxVec3(LinearVelocity));
     Dynamic->setAngularVelocity(ToPxVec3(AngularVelocity));
+    Dynamic->wakeUp();
     Body->LinearVelocity  = LinearVelocity;
     Body->AngularVelocity = AngularVelocity;
 }

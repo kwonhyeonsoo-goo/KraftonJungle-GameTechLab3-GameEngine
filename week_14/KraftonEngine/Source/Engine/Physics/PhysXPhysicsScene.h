@@ -94,6 +94,15 @@ public:
         const AActor*  IgnoreActor = nullptr
     ) override;
 
+    bool RaycastPhysicsByObjectTypes(
+        const FVector&          Start,
+        const FVector&          Dir,
+        float                   MaxDist,
+        FPhysicsRaycastResult&  OutResult,
+        uint32                  ObjectTypeMask,
+        const AActor*           IgnoreActor = nullptr
+    ) override;
+
     bool Sweep(
         const FVector&         Start,
         const FVector&         End,

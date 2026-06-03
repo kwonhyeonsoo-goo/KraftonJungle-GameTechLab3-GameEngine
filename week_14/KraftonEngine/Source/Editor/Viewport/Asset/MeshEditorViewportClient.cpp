@@ -558,6 +558,28 @@ bool FMeshEditorViewportClient::FocusSelectedPhysicsAssetElementImmediate()
 	return true;
 }
 
+void FMeshEditorViewportClient::SetPhysicsSimulationInteractionActive(bool bActive)
+{
+	if (bPhysicsSimulationInteractionActive == bActive)
+	{
+		return;
+	}
+
+	bPhysicsSimulationInteractionActive = bActive;
+	if (bActive)
+	{
+		ClearPhysicsAssetGizmoTarget();
+		if (Gizmo)
+		{
+			Gizmo->SetPressedOnHandle(false);
+			if (Gizmo->IsHolding())
+			{
+				Gizmo->DragEnd();
+			}
+		}
+	}
+}
+
 void FMeshEditorViewportClient::TickInput(float DeltaTime)
 {
 	if (!FSlateApplication::Get().DoesClientOwnMouseInput(this)) return;
@@ -667,6 +689,11 @@ void FMeshEditorViewportClient::TickInteraction(float DeltaTime)
 		}
 	}
 
+
+	if (bPhysicsSimulationInteractionActive)
+	{
+		return;
+	}
 
 	ImVec2 MousePos = ImGui::GetIO().MousePos;
 	float LocalMouseX = MousePos.x - ViewportScreenRect.X;
@@ -786,6 +813,11 @@ void FMeshEditorViewportClient::ToggleCoordSystem()
 
 void FMeshEditorViewportClient::HandleDragStart(const FRay& Ray)
 {
+	if (bPhysicsSimulationInteractionActive)
+	{
+		return;
+	}
+
 	FHitResult Hit;
 	if (Gizmo && FRayUtils::RaycastComponent(Gizmo, Ray, Hit))
 	{
@@ -801,6 +833,11 @@ void FMeshEditorViewportClient::HandleDragStart(const FRay& Ray)
 
 bool FMeshEditorViewportClient::TryPickPhysicsAssetPreviewShape(const FRay& Ray)
 {
+	if (bPhysicsSimulationInteractionActive)
+	{
+		return false;
+	}
+
 	if (!PhysicsAssetPreviewComponent || !PhysicsAssetPreviewComponent->IsVisible())
 	{
 		return false;

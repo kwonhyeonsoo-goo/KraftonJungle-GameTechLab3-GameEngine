@@ -735,6 +735,8 @@ void FMeshEditorWidget::Open(UObject* Object)
 
 void FMeshEditorWidget::Close()
 {
+	RestorePhysicsSimulationShowFlags();
+	ViewportClient.SetPhysicsSimulationInteractionActive(false);
 	PhysicsAssetEditor.StopEditorSimulation(
 		ViewportClient.GetPreviewWorld(),
 		ViewportClient.GetPreviewMeshComponent(),
@@ -778,6 +780,7 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 			int32 PickedPhysicsShapeIndex = -1;
 			int32 PickedPhysicsConstraintIndex = -1;
 			if (ActiveTab == EMeshEditorTab::Physics &&
+				!PhysicsAssetEditor.IsEditorSimulationActive() &&
 				ViewportClient.ConsumePhysicsAssetViewportPick(PickedPhysicsBodyIndex, PickedPhysicsShapeIndex, PickedPhysicsConstraintIndex))
 			{
 				if (PickedPhysicsConstraintIndex >= 0)
@@ -796,6 +799,7 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 			}
 
 			if (ActiveTab == EMeshEditorTab::Physics &&
+				!PhysicsAssetEditor.IsEditorSimulationActive() &&
 				FSlateApplication::Get().DoesClientOwnKeyboardInput(&ViewportClient) &&
 				!ImGui::GetIO().WantTextInput &&
 				InputSystem::Get().GetKeyDown(VK_DELETE))
@@ -805,12 +809,33 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 
 		if (ActiveTab == EMeshEditorTab::Physics)
 		{
+			FRay PhysicsMouseRay;
+			const bool bCanUsePhysicsMouse =
+				PhysicsAssetEditor.IsEditorSimulationActive() &&
+				FSlateApplication::Get().DoesClientOwnMouseInput(&ViewportClient) &&
+				!ImGui::GetIO().WantTextInput &&
+				ViewportClient.GetMouseRay(PhysicsMouseRay);
+
+			InputSystem& Input = InputSystem::Get();
+			const bool bMouseLeftPressed = bCanUsePhysicsMouse && Input.GetKeyDown(VK_LBUTTON);
+			const bool bMouseLeftHeld = bCanUsePhysicsMouse && Input.GetKey(VK_LBUTTON);
+			const bool bMouseLeftReleased = Input.GetKeyUp(VK_LBUTTON) || Input.GetLeftDragEnd();
+
 			PhysicsAssetEditor.TickEditorSimulation(
 				GetCurrentPhysicsAsset(),
 				Cast<USkeletalMesh>(EditedObject),
 				ViewportClient.GetPreviewWorld(),
 				ViewportClient.GetPreviewMeshComponent(),
-				DeltaTime);
+				DeltaTime,
+				bCanUsePhysicsMouse ? &PhysicsMouseRay : nullptr,
+				bMouseLeftPressed,
+				bMouseLeftHeld,
+				bMouseLeftReleased);
+			UpdatePhysicsSimulationViewportState();
+		}
+		else
+		{
+			UpdatePhysicsSimulationViewportState();
 		}
 
 		if (ActiveTab == EMeshEditorTab::Mesh)
@@ -1707,6 +1732,54 @@ bool FMeshEditorWidget::IsCurrentPhysicsAssetDirty() const
 	return PhysicsAssetEditor.HasUnsavedChanges();
 }
 
+void FMeshEditorWidget::UpdatePhysicsSimulationViewportState()
+{
+	const bool bSimulationActive = ActiveTab == EMeshEditorTab::Physics && PhysicsAssetEditor.IsEditorSimulationActive();
+	FShowFlags& ShowFlags = ViewportClient.GetRenderOptions().ShowFlags;
+
+	if (bSimulationActive)
+	{
+		if (!bPhysicsSimulationShowFlagsSaved)
+		{
+			SavedPhysicsSimulationShowFlags = ShowFlags;
+			bPhysicsSimulationShowFlagsSaved = true;
+		}
+
+		ShowFlags.bPhysicsAssetShapes = false;
+		ShowFlags.bPhysicsAssetConstraints = false;
+		ShowFlags.bPhysicsAssetBodySkeleton = true;
+		ShowFlags.bGizmo = false;
+		ViewportClient.SetPhysicsSimulationInteractionActive(true);
+		ViewportClient.ClearPhysicsAssetGizmoTarget();
+	}
+	else
+	{
+		if (bLastPhysicsSimulationActive)
+		{
+			RestorePhysicsSimulationShowFlags();
+		}
+		ViewportClient.SetPhysicsSimulationInteractionActive(false);
+	}
+
+	bLastPhysicsSimulationActive = bSimulationActive;
+}
+
+void FMeshEditorWidget::RestorePhysicsSimulationShowFlags()
+{
+	if (!bPhysicsSimulationShowFlagsSaved)
+	{
+		return;
+	}
+
+	FShowFlags& ShowFlags = ViewportClient.GetRenderOptions().ShowFlags;
+	ShowFlags.bPhysicsAssetShapes = SavedPhysicsSimulationShowFlags.bPhysicsAssetShapes;
+	ShowFlags.bPhysicsAssetConstraints = SavedPhysicsSimulationShowFlags.bPhysicsAssetConstraints;
+	ShowFlags.bPhysicsAssetBodySkeleton = SavedPhysicsSimulationShowFlags.bPhysicsAssetBodySkeleton;
+	ShowFlags.bGizmo = SavedPhysicsSimulationShowFlags.bGizmo;
+	bPhysicsSimulationShowFlagsSaved = false;
+	bLastPhysicsSimulationActive = false;
+}
+
 void FMeshEditorWidget::RenderMissingPhysicsAssetPanel(USkeletalMesh* SkeletalMesh)
 {
 	ImGui::TextUnformatted("Physics Asset");
@@ -1879,12 +1952,17 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 
 	if (PhysicsAsset)
 	{
-		ViewportClient.SetSelectedPhysicsAssetElement(
-			PhysicsAsset,
-			PhysicsAssetEditor.GetSelectedBodyIndex(),
-			PhysicsAssetEditor.GetSelectedShapeIndex(),
-			PhysicsAssetEditor.GetSelectedConstraintIndex(),
-			PhysicsAssetEditor.GetSelectedConstraintGizmoFrame());
+		UpdatePhysicsSimulationViewportState();
+		if (!PhysicsAssetEditor.IsEditorSimulationActive())
+		{
+			ViewportClient.SetSelectedPhysicsAssetElement(
+				PhysicsAsset,
+				PhysicsAssetEditor.GetSelectedBodyIndex(),
+				PhysicsAssetEditor.GetSelectedShapeIndex(),
+				PhysicsAssetEditor.GetSelectedConstraintIndex(),
+				PhysicsAssetEditor.GetSelectedConstraintGizmoFrame());
+		}
+
 		if (PhysicsAssetEditor.ConsumeConstraintGraphViewportFocusRequest())
 		{
 			ViewportClient.FocusSelectedPhysicsAssetElementImmediate();
@@ -1892,6 +1970,7 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 	}
 	else
 	{
+		UpdatePhysicsSimulationViewportState();
 		ViewportClient.ClearPhysicsAssetGizmoTarget();
 	}
 }
