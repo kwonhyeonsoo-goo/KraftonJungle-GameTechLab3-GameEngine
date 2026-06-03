@@ -61,6 +61,8 @@ struct FRagdollReactionTuning
     float DefaultStrengthWhenUnspecified = 0.5f;
     float BaseImpulseMagnitude = 120.0f;
     float AdditionalImpulseMagnitude = 240.0f;
+    float OverdriveImpulseMagnitudeScale = 600.0f;
+    float FullBodyLaunchImpulseMagnitude = 900.0f;
     float HoldTimeBaseScale = 0.75f;
     float HoldTimeStrengthScale = 0.75f;
     float FullBodyThreshold = 0.85f;
@@ -160,6 +162,29 @@ inline float NormalizeRagdollReactionStrength(const FRagdollReactionRequest& Req
     return std::clamp(RawStrength, 0.0f, 1.0f);
 }
 
+inline float GetRagdollReactionRawStrength(const FRagdollReactionRequest& Request, const FRagdollReactionTuning& Tuning)
+{
+    return Request.Strength > 0.0f
+        ? Request.Strength
+        : Tuning.DefaultStrengthWhenUnspecified;
+}
+
+inline void ApplyFullBodyLaunchImpulseTuning(
+    FRagdollReactionDecision& Decision,
+    const FRagdollReactionTuning& Tuning)
+{
+    if (!Decision.bApplyImpulse)
+    {
+        return;
+    }
+
+    if (Decision.Type == ERagdollReactionType::FullBody ||
+        Decision.Type == ERagdollReactionType::EscalateToFull)
+    {
+        Decision.ImpulseMagnitude = (std::max)(Decision.ImpulseMagnitude, Tuning.FullBodyLaunchImpulseMagnitude);
+    }
+}
+
 inline FRagdollReactionDecision EvaluateRagdollReactionPolicy(
     const FRagdollReactionContext& Context,
     const FRagdollReactionRequest& Request,
@@ -176,6 +201,8 @@ inline FRagdollReactionDecision EvaluateRagdollReactionPolicy(
     };
 
     FRagdollReactionDecision Decision;
+    const float RawStrength = GetRagdollReactionRawStrength(Request, Tuning);
+    const float OverdriveStrength = (std::max)(0.0f, RawStrength - 1.0f);
     Decision.ResolvedPreset = Context.ResolvedPreset;
     Decision.ResolvedRootBoneName = Context.ResolvedRootBoneName;
     Decision.bIncludeDescendants = Context.bResolvedIncludeDescendants;
@@ -183,7 +210,10 @@ inline FRagdollReactionDecision EvaluateRagdollReactionPolicy(
     Decision.HoldTime = Request.HasHoldTimeOverride()
         ? Request.HoldTimeOverride
         : (Context.DefaultPartialHoldTime * (Tuning.HoldTimeBaseScale + Tuning.HoldTimeStrengthScale * Decision.NormalizedStrength));
-    Decision.ImpulseMagnitude = Tuning.BaseImpulseMagnitude + Tuning.AdditionalImpulseMagnitude * Decision.NormalizedStrength;
+    Decision.ImpulseMagnitude =
+        Tuning.BaseImpulseMagnitude +
+        Tuning.AdditionalImpulseMagnitude * Decision.NormalizedStrength +
+        Tuning.OverdriveImpulseMagnitudeScale * OverdriveStrength;
     Decision.ImpulseDirection = ResolveImpulseDirection(Request.HitWorldDirection);
     Decision.bApplyImpulse = Decision.ImpulseMagnitude > 1.0e-3f;
     Decision.bEscalationCandidate =
@@ -202,6 +232,7 @@ inline FRagdollReactionDecision EvaluateRagdollReactionPolicy(
         {
             Decision.Type = ERagdollReactionType::EscalateToFull;
             Decision.Reason = ERagdollReactionDecisionReason::RecoveryEscalatedToFull;
+            ApplyFullBodyLaunchImpulseTuning(Decision, Tuning);
             return Decision;
         }
 
@@ -226,6 +257,7 @@ inline FRagdollReactionDecision EvaluateRagdollReactionPolicy(
                     ? ERagdollReactionType::EscalateToFull
                     : ERagdollReactionType::FullBody;
             Decision.Reason = ERagdollReactionDecisionReason::ShockwaveFullBody;
+            ApplyFullBodyLaunchImpulseTuning(Decision, Tuning);
             return Decision;
         }
 
@@ -267,6 +299,7 @@ inline FRagdollReactionDecision EvaluateRagdollReactionPolicy(
         {
             Decision.Type = ERagdollReactionType::FullBody;
             Decision.Reason = ERagdollReactionDecisionReason::FullBodyThreshold;
+            ApplyFullBodyLaunchImpulseTuning(Decision, Tuning);
             return Decision;
         }
 
@@ -283,6 +316,7 @@ inline FRagdollReactionDecision EvaluateRagdollReactionPolicy(
             {
                 Decision.Type = ERagdollReactionType::EscalateToFull;
                 Decision.Reason = ERagdollReactionDecisionReason::ExistingPartialEscalated;
+                ApplyFullBodyLaunchImpulseTuning(Decision, Tuning);
                 return Decision;
             }
 
@@ -295,6 +329,7 @@ inline FRagdollReactionDecision EvaluateRagdollReactionPolicy(
         {
             Decision.Type = ERagdollReactionType::EscalateToFull;
             Decision.Reason = ERagdollReactionDecisionReason::ExistingPartialEscalated;
+            ApplyFullBodyLaunchImpulseTuning(Decision, Tuning);
             return Decision;
         }
 
@@ -307,6 +342,7 @@ inline FRagdollReactionDecision EvaluateRagdollReactionPolicy(
     {
         Decision.Type = ERagdollReactionType::FullBody;
         Decision.Reason = ERagdollReactionDecisionReason::FullBodyThreshold;
+        ApplyFullBodyLaunchImpulseTuning(Decision, Tuning);
         return Decision;
     }
 

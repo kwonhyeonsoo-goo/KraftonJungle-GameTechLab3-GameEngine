@@ -55,10 +55,10 @@ private:
         bool bSucceeded) const;
 
 private:
-    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Force", DisplayName="Default Impulse Strength", Min=0.0f, Max=1.0f, Speed=0.01f)
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Force", DisplayName="Default Impulse Strength", Min=0.0f, Max=3.0f, Speed=0.01f)
     float DefaultImpulseStrength = 0.5f;
 
-    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Force", DisplayName="Default Shockwave Strength", Min=0.0f, Max=1.0f, Speed=0.01f)
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Force", DisplayName="Default Shockwave Strength", Min=0.0f, Max=3.0f, Speed=0.01f)
     float DefaultShockwaveStrength = 1.0f;
 
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll Force", DisplayName="Default Shockwave Radius", Min=0.0f, Max=10000.0f, Speed=1.0f)
