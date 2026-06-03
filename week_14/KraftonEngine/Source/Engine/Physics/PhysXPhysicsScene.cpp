@@ -203,6 +203,36 @@ namespace
 
     ECollisionResponse GetPackedMinResponse(const PxFilterData& A, const PxFilterData& B);
 
+    bool IsSceneSocketAttachmentNameSet_GameThread(const FName& SocketName)
+    {
+        return SocketName.IsValid() && SocketName != FName::None;
+    }
+
+    FQuat GetSceneComponentWorldRotationNoScale_GameThread(const USceneComponent* Comp)
+    {
+        if (!Comp)
+        {
+            return FQuat::Identity;
+        }
+
+        const USceneComponent* Parent = Comp->GetParent();
+        const FName AttachSocketName = Comp->GetAttachSocketName();
+        if (Parent &&
+            IsSceneSocketAttachmentNameSet_GameThread(AttachSocketName) &&
+            Parent->HasSocket(AttachSocketName))
+        {
+            return Comp->GetWorldRotation().ToQuaternion().GetNormalized();
+        }
+
+        const FQuat ParentRotation = GetSceneComponentWorldRotationNoScale_GameThread(Parent);
+        return (ParentRotation * Comp->GetRelativeQuat()).GetNormalized();
+    }
+
+    FQuat GetComponentWorldRotationNoScale_GameThread(const UPrimitiveComponent* Comp)
+    {
+        return GetSceneComponentWorldRotationNoScale_GameThread(Comp);
+    }
+
     FTransform GetComponentWorldTransform_GameThread(UPrimitiveComponent* Comp)
     {
         FTransform Result;
@@ -212,7 +242,7 @@ namespace
         }
 
         Result.Location = Comp->GetWorldLocation();
-        Result.Rotation = Comp->GetWorldMatrix().ToQuat();
+        Result.Rotation = GetComponentWorldRotationNoScale_GameThread(Comp);
         Result.Scale    = FVector::OneVector;
         return Result;
     }
@@ -234,11 +264,11 @@ namespace
         }
 
         const FVector RootPos    = Root->GetWorldLocation();
-        const FQuat   RootRot    = Root->GetWorldMatrix().ToQuat();
+        const FQuat   RootRot    = GetComponentWorldRotationNoScale_GameThread(Root);
         const FQuat   InvRootRot = RootRot.Inverse();
 
         Result.Location = InvRootRot.RotateVector(ChildWorldLocation - RootPos);
-        Result.Rotation = InvRootRot * ChildWorldRotation;
+        Result.Rotation = (InvRootRot * ChildWorldRotation).GetNormalized();
         Result.Scale    = FVector::OneVector;
         return Result;
     }
@@ -252,7 +282,7 @@ namespace
 
         return MakeRelativeTransformFromWorld_GameThread(
             Comp->GetWorldLocation(),
-            Comp->GetWorldMatrix().ToQuat(),
+            GetComponentWorldRotationNoScale_GameThread(Comp),
             Root
         );
     }
@@ -1489,7 +1519,7 @@ FPhysicsShapeDesc FPhysXPhysicsScene::BuildShapeDescFromComponent_GameThread(
         Desc.BoxHalfExtent  = WorldExtent;
         Desc.LocalTransform = MakeRelativeTransformFromWorld_GameThread(
             WorldCenter,
-            Comp->GetWorldMatrix().ToQuat(),
+            GetComponentWorldRotationNoScale_GameThread(Comp),
             RootComponent
         );
     }
