@@ -7,6 +7,7 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Object/Object.h"
+#include "Engine/Platform/Paths.h"
 #include "Engine/Platform/WindowsWindow.h"
 
 #include "ImGui/imgui.h"
@@ -130,14 +131,14 @@ FString GetFileStemForDisplay(const FString& Path)
 		return FString();
 	}
 
-	std::filesystem::path FilePath(Path);
-	FString Stem = FilePath.stem().string();
+	std::filesystem::path FilePath(FPaths::ToWide(Path));
+	FString Stem = FPaths::ToUtf8(FilePath.stem().wstring());
 	if (!Stem.empty())
 	{
 		return Stem;
 	}
 
-	return FilePath.filename().string();
+	return FPaths::ToUtf8(FilePath.filename().wstring());
 }
 
 }
