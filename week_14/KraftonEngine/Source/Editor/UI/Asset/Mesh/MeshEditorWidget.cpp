@@ -1750,6 +1750,10 @@ void FMeshEditorWidget::RenderPhysicsLayout(float TotalHeight)
 			PhysicsAssetEditor.GetSelectedShapeIndex(),
 			PhysicsAssetEditor.GetSelectedConstraintIndex(),
 			PhysicsAssetEditor.GetSelectedConstraintGizmoFrame());
+		if (PhysicsAssetEditor.ConsumeConstraintGraphViewportFocusRequest())
+		{
+			ViewportClient.FocusSelectedPhysicsAssetElementImmediate();
+		}
 	}
 	else
 	{

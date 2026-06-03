@@ -468,6 +468,11 @@ void FMeshEditorViewportClient::TickShortcuts()
 
 	if (Input.GetKeyDown('F'))
 	{
+		if (FocusSelectedPhysicsAssetElementImmediate())
+		{
+			return;
+		}
+
 		FVector TargetLoc = FVector::ZeroVector;
 		bool bHasFocusTarget = false;
 
@@ -484,37 +489,73 @@ void FMeshEditorViewportClient::TickShortcuts()
 
 		if (bHasFocusTarget)
 		{
-			FVector OriginalLoc = ViewTransform.ViewLocation;
-			FRotator OriginalRot = ViewTransform.ViewRotation;
-
-			FBoundingBox Bounds = PreviewMeshComponent->GetWorldBoundingBox();
-			FVector Center = Bounds.GetCenter();
-			float Radius = Bounds.GetExtent().Length();
-
-			if (Radius < 0.1f)
-			{
-				Radius = 1.0f;
-			}
-
-			float FocusDistance = Radius;
-			FVector CameraForward = ViewTransform.ViewRotation.GetForwardVector();
-			FVector NewCameraLoc = TargetLoc - CameraForward * FocusDistance;
-
-			ViewTransform.ViewLocation = NewCameraLoc;
-			ViewTransform.LookAt(TargetLoc);
-			FRotator TargetRot = ViewTransform.ViewRotation;
-
-			ViewTransform.ViewLocation = OriginalLoc;
-			ViewTransform.ViewRotation = OriginalRot;
-
-			bIsFocusAnimating = true;
-			FocusAnimTimer = 0.0f;
-			FocusStartLoc = OriginalLoc;
-			FocusStartRot = OriginalRot;
-			FocusEndLoc = NewCameraLoc;
-			FocusEndRot = TargetRot;
+			FocusOnLocation(TargetLoc, true);
 		}
 	}
+}
+
+void FMeshEditorViewportClient::FocusOnLocation(const FVector& TargetLoc, bool bAnimate)
+{
+	if (!PreviewMeshComponent)
+	{
+		return;
+	}
+
+	const FVector OriginalLoc = ViewTransform.ViewLocation;
+	const FRotator OriginalRot = ViewTransform.ViewRotation;
+
+	FBoundingBox Bounds = PreviewMeshComponent->GetWorldBoundingBox();
+	float Radius = Bounds.GetExtent().Length();
+	if (Radius < 0.1f)
+	{
+		Radius = 1.0f;
+	}
+
+	const float FocusDistance = Radius;
+	const FVector CameraForward = ViewTransform.ViewRotation.GetForwardVector();
+	const FVector NewCameraLoc = TargetLoc - CameraForward * FocusDistance;
+
+	ViewTransform.ViewLocation = NewCameraLoc;
+	ViewTransform.LookAt(TargetLoc);
+	const FRotator TargetRot = ViewTransform.ViewRotation;
+
+	if (bAnimate)
+	{
+		ViewTransform.ViewLocation = OriginalLoc;
+		ViewTransform.ViewRotation = OriginalRot;
+
+		bIsFocusAnimating = true;
+		FocusAnimTimer = 0.0f;
+		FocusStartLoc = OriginalLoc;
+		FocusStartRot = OriginalRot;
+		FocusEndLoc = NewCameraLoc;
+		FocusEndRot = TargetRot;
+		return;
+	}
+
+	bIsFocusAnimating = false;
+	FocusAnimTimer = 0.0f;
+	TargetLocation = NewCameraLoc;
+	bTargetLocationInitialized = true;
+	LastAppliedCameraLocation = NewCameraLoc;
+	bLastAppliedCameraLocationInitialized = true;
+}
+
+bool FMeshEditorViewportClient::FocusSelectedPhysicsAssetElementImmediate()
+{
+	if (ActivePhysicsGizmoKind == EPhysicsGizmoSelectionKind::None || !Gizmo)
+	{
+		return false;
+	}
+
+	IGizmoTransformTarget* Target = Gizmo->GetTarget();
+	if (!Target || !Target->IsValid())
+	{
+		return false;
+	}
+
+	FocusOnLocation(Target->GetWorldLocation(), false);
+	return true;
 }
 
 void FMeshEditorViewportClient::TickInput(float DeltaTime)

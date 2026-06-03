@@ -73,6 +73,7 @@ public:
     EPhysicsAssetConstraintFrameTarget GetSelectedConstraintGizmoFrame() const { return SelectedConstraintGizmoFrame; }
     void SelectPhysicsShapeFromViewport(UPhysicsAsset* PhysicsAsset, int32 BodyIndex, int32 ShapeIndex);
     void SelectPhysicsConstraintFromViewport(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex);
+    bool ConsumeConstraintGraphViewportFocusRequest();
     void NotifyViewportGizmoModified();
 
     FString GetDocumentTitle() const override;
@@ -132,6 +133,10 @@ private:
     void SelectBoneInPhysicsTree(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton, int32 BoneIndex);
     void SelectBodySetup(UPhysicsAsset* PhysicsAsset, int32 BodyIndex, int32 TreeBoneIndex);
     void SelectConstraintSetup(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex, int32 TreeBoneIndex);
+    void SelectBodySetupFromConstraintGraph(UPhysicsAsset* PhysicsAsset, int32 BodyIndex);
+    void SelectConstraintSetupFromConstraintGraph(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex);
+    void SyncConstraintGraphSelectionFromNodeEditor(UPhysicsAsset* PhysicsAsset);
+    void SelectCurrentConstraintGraphNode(UPhysicsAsset* PhysicsAsset, bool bNavigateToSelection);
     int32 FindPreviewBoneIndexByName(const FName& BoneName) const;
 
     void AddDefaultBody(UPhysicsAsset* PhysicsAsset);
@@ -161,6 +166,8 @@ private:
     ax::NodeEditor::EditorContext* ConstraintGraphContext = nullptr;
     bool bPendingClose = false;
     bool bConstraintGraphLayoutDirty = true;
+    bool bPendingConstraintGraphNavigateToSelection = false;
+    bool bPendingConstraintGraphViewportFocusRequest = false;
     bool bPhysicsTreePanelShowsBodies = false;
     bool bShowPreviewBodies = true;
     bool bShowPreviewConstraints = true;

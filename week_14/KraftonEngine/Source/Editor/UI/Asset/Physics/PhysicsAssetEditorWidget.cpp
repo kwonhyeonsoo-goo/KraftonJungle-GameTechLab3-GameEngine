@@ -1133,6 +1133,7 @@ void FPhysicsAssetEditorWidget::SelectPhysicsShapeFromViewport(UPhysicsAsset* Ph
             : -1;
     SelectedConstraintIndex = -1;
     SelectedTreeBoneIndex = FindPreviewBoneIndexByName(Body.BoneName);
+    bPendingConstraintGraphNavigateToSelection = true;
     if (bEditorSimulationActive && bEditorSimulationSelectedOnly)
     {
         RequestEditorSimulationRestart();
@@ -1152,10 +1153,18 @@ void FPhysicsAssetEditorWidget::SelectPhysicsConstraintFromViewport(UPhysicsAsse
     }
 
     SelectConstraintSetup(PhysicsAsset, ConstraintIndex, -1);
+    bPendingConstraintGraphNavigateToSelection = true;
     if (bEditorSimulationActive && bEditorSimulationSelectedOnly)
     {
         RequestEditorSimulationRestart();
     }
+}
+
+bool FPhysicsAssetEditorWidget::ConsumeConstraintGraphViewportFocusRequest()
+{
+    const bool bWasRequested = bPendingConstraintGraphViewportFocusRequest;
+    bPendingConstraintGraphViewportFocusRequest = false;
+    return bWasRequested;
 }
 
 void FPhysicsAssetEditorWidget::RenderDocument(float DeltaTime)
@@ -2105,6 +2114,11 @@ void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* Physic
 
     ImGui::BeginChild("##PhysicsConstraintGraphHost", ImVec2(0.0f, 0.0f), false);
     ed::SetCurrentEditor(ConstraintGraphContext);
+    const bool bRequestViewportFocusFromGraph =
+        ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+        !ImGui::GetIO().WantTextInput &&
+        ImGui::IsKeyPressed(ImGuiKey_F, false);
+    ed::EnableShortcuts(!bRequestViewportFocusFromGraph);
     ed::Begin("PhysicsConstraintGraph");
 
     if (bConstraintGraphLayoutDirty)
@@ -2131,18 +2145,12 @@ void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* Physic
             "Body");
         if (ImGui::IsItemClicked())
         {
-            SelectedBodyIndex = BodyIndex;
-            SelectedShapeIndex = Body.Shapes.empty() ? -1 : 0;
-            SelectedConstraintIndex = -1;
-            SelectedTreeBoneIndex = -1;
+            SelectBodySetupFromConstraintGraph(PhysicsAsset, BodyIndex);
         }
         ImGui::TextUnformatted(BoneLabel.c_str());
         if (ImGui::IsItemClicked())
         {
-            SelectedBodyIndex = BodyIndex;
-            SelectedShapeIndex = Body.Shapes.empty() ? -1 : 0;
-            SelectedConstraintIndex = -1;
-            SelectedTreeBoneIndex = -1;
+            SelectBodySetupFromConstraintGraph(PhysicsAsset, BodyIndex);
         }
         ImGui::TextDisabled("%d %s", ShapeCount, ShapeCount == 1 ? "shape" : "shapes");
         ImGui::EndGroup();
@@ -2171,18 +2179,12 @@ void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* Physic
             "Constraint");
         if (ImGui::IsItemClicked())
         {
-            SelectedConstraintIndex = ConstraintIndex;
-            SelectedBodyIndex = -1;
-            SelectedShapeIndex = -1;
-            SelectedTreeBoneIndex = -1;
+            SelectConstraintSetupFromConstraintGraph(PhysicsAsset, ConstraintIndex);
         }
         ImGui::TextDisabled("%s -> %s", ParentLabel.c_str(), ChildLabel.c_str());
         if (ImGui::IsItemClicked())
         {
-            SelectedConstraintIndex = ConstraintIndex;
-            SelectedBodyIndex = -1;
-            SelectedShapeIndex = -1;
-            SelectedTreeBoneIndex = -1;
+            SelectConstraintSetupFromConstraintGraph(PhysicsAsset, ConstraintIndex);
         }
         ImGui::EndGroup();
         ImGui::SameLine();
@@ -2327,12 +2329,27 @@ void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* Physic
         bConstraintGraphLayoutDirty = true;
     }
 
+    if (bPendingConstraintGraphNavigateToSelection)
+    {
+        SelectCurrentConstraintGraphNode(PhysicsAsset, true);
+        bPendingConstraintGraphNavigateToSelection = false;
+    }
+    else
+    {
+        SyncConstraintGraphSelectionFromNodeEditor(PhysicsAsset);
+    }
+
     if (bRequestResetView || bRequestRearrange)
     {
         ed::NavigateToContent(0.25f);
     }
 
     ed::End();
+    ed::EnableShortcuts(true);
+    if (bRequestViewportFocusFromGraph)
+    {
+        bPendingConstraintGraphViewportFocusRequest = true;
+    }
     ImGui::EndChild();
 }
 
@@ -2725,6 +2742,81 @@ void FPhysicsAssetEditorWidget::SelectConstraintSetup(UPhysicsAsset* PhysicsAsse
     else
     {
         SelectedTreeBoneIndex = FindPreviewBoneIndexByName(PhysicsAsset->GetConstraintSetups()[ConstraintIndex].ChildBoneName);
+    }
+}
+
+void FPhysicsAssetEditorWidget::SelectBodySetupFromConstraintGraph(UPhysicsAsset* PhysicsAsset, int32 BodyIndex)
+{
+    SelectBodySetup(PhysicsAsset, BodyIndex, -1);
+    SelectCurrentConstraintGraphNode(PhysicsAsset, true);
+}
+
+void FPhysicsAssetEditorWidget::SelectConstraintSetupFromConstraintGraph(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex)
+{
+    SelectConstraintSetup(PhysicsAsset, ConstraintIndex, -1);
+    SelectCurrentConstraintGraphNode(PhysicsAsset, true);
+}
+
+void FPhysicsAssetEditorWidget::SyncConstraintGraphSelectionFromNodeEditor(UPhysicsAsset* PhysicsAsset)
+{
+    if (!PhysicsAsset || !ConstraintGraphContext || !ed::HasSelectionChanged())
+    {
+        return;
+    }
+
+    ed::NodeId SelectedNodes[1] = {};
+    if (ed::GetSelectedNodes(SelectedNodes, 1) <= 0)
+    {
+        return;
+    }
+
+    const uint32 SelectedNode = PhysicsNodeIdToU32(SelectedNodes[0]);
+    int32 BodyIndex = -1;
+    int32 ConstraintIndex = -1;
+    if (DecodeBodyNode(SelectedNode, BodyIndex) && IsValidBodyIndex(PhysicsAsset, BodyIndex))
+    {
+        if (SelectedBodyIndex != BodyIndex || SelectedConstraintIndex >= 0)
+        {
+            SelectBodySetup(PhysicsAsset, BodyIndex, -1);
+            SelectCurrentConstraintGraphNode(PhysicsAsset, true);
+        }
+    }
+    else if (DecodeConstraintNode(SelectedNode, ConstraintIndex) && IsValidConstraintIndex(PhysicsAsset, ConstraintIndex))
+    {
+        if (SelectedConstraintIndex != ConstraintIndex)
+        {
+            SelectConstraintSetup(PhysicsAsset, ConstraintIndex, -1);
+            SelectCurrentConstraintGraphNode(PhysicsAsset, true);
+        }
+    }
+}
+
+void FPhysicsAssetEditorWidget::SelectCurrentConstraintGraphNode(UPhysicsAsset* PhysicsAsset, bool bNavigateToSelection)
+{
+    if (!PhysicsAsset || !ConstraintGraphContext)
+    {
+        return;
+    }
+
+    ed::NodeId NodeId = 0;
+    if (SelectedConstraintIndex >= 0 && IsValidConstraintIndex(PhysicsAsset, SelectedConstraintIndex))
+    {
+        NodeId = ToPhysicsNodeId(MakeConstraintNodeId(SelectedConstraintIndex));
+    }
+    else if (SelectedBodyIndex >= 0 && IsValidBodyIndex(PhysicsAsset, SelectedBodyIndex))
+    {
+        NodeId = ToPhysicsNodeId(MakeBodyNodeId(SelectedBodyIndex));
+    }
+
+    if (!NodeId)
+    {
+        return;
+    }
+
+    ed::SelectNode(NodeId, false);
+    if (bNavigateToSelection)
+    {
+        ed::NavigateToSelection(false, 0.20f);
     }
 }
 
