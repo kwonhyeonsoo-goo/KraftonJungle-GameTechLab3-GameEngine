@@ -196,6 +196,7 @@ public:
     bool CreatePhysicsAssetInstanceBodies();
     UFUNCTION(Callable, Category="Physics")
     void DestroyPhysicsAssetInstanceBodies();
+    void BeginPhysicsAssetPosePreview(bool bFullBlend = true);
     UFUNCTION(Callable, Category="Physics")
     void SetUsePhysicsAssetPose(bool bEnable);
     UFUNCTION(Pure, Category="Physics")

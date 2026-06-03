@@ -1439,6 +1439,26 @@ void USkeletalMeshComponent::DestroyPhysicsAssetInstanceBodies()
     DisableRagdollPhysics();
 }
 
+void USkeletalMeshComponent::BeginPhysicsAssetPosePreview(bool bFullBlend)
+{
+    if (!PhysicsAssetInstance || !PhysicsAssetInstance->HasLivePhysicsObjects())
+    {
+        SetUsePhysicsAssetPose(false);
+        ResetPhysicsPoseBlendState();
+        return;
+    }
+
+    CaptureRagdollPoseBaseline();
+    ResetRagdollRecoveryState();
+    ClearPartialRagdollState();
+    ActiveRagdollMode = ERagdollMode::FullBody;
+    TargetPhysicsPoseBlendWeight = 1.0f;
+    PhysicsPoseBlendWeight = bFullBlend ? 1.0f : 0.0f;
+    bHasReceivedValidPhysicsPose = bFullBlend;
+    FirstValidPhysicsPoseBlendAlpha = bFullBlend ? 1.0f : 0.0f;
+    SetUsePhysicsAssetPose(true);
+}
+
 void USkeletalMeshComponent::SetUsePhysicsAssetPose(bool bEnable)
 {
     // Pose sync is only considered active when live runtime objects exist. This keeps

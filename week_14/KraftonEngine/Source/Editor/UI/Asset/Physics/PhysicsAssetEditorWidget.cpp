@@ -3733,7 +3733,7 @@ bool FPhysicsAssetEditorWidget::StartEditorSimulation(
         return false;
     }
 
-    PreviewComponent->SetUsePhysicsAssetPose(true);
+    PreviewComponent->BeginPhysicsAssetPosePreview(true);
     if (IPhysicsScene* PhysicsScene = PreviewWorld->GetPhysicsScene())
     {
         PhysicsScene->Tick(0.0f);

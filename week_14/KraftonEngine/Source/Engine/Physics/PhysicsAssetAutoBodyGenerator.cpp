@@ -589,7 +589,7 @@ namespace
         OutFit.BodyComponentTransform.Scale = FVector::OneVector;
         OutFit.BoxHalfExtent = FVector(RadiusX, RadiusY, HalfLength);
         OutFit.CapsuleRadius = Radius;
-        OutFit.CapsuleHalfHeight = (std::max)(HalfLength, Radius);
+        OutFit.CapsuleHalfHeight = (std::max)(HalfLength, Radius + AutoBodyMinExtent);
         return true;
     }
 
@@ -782,7 +782,7 @@ namespace
         OutFit.BodyComponentTransform.Scale = FVector::OneVector;
         OutFit.BoxHalfExtent = FVector(Radius, Radius, (std::max)(SegmentLength * 0.5f, AutoBodyMinExtent));
         OutFit.CapsuleRadius = Radius;
-        OutFit.CapsuleHalfHeight = (std::max)(SegmentLength * 0.5f, Radius);
+        OutFit.CapsuleHalfHeight = (std::max)(SegmentLength * 0.5f, Radius + AutoBodyMinExtent);
         return true;
     }
 
@@ -823,7 +823,7 @@ namespace
         const FVector BoxHalfExtent = ClampAutoBodyHalfExtent(Fit.BoxHalfExtent * FitPadding);
         const float SphereRadius = (std::max)(GetMaxComponent(BoxHalfExtent), AutoBodyMinExtent);
         const float CapsuleRadius = (std::max)(Fit.CapsuleRadius * FitPadding, AutoBodyMinExtent);
-        const float CapsuleHalfHeight = (std::max)(Fit.CapsuleHalfHeight * FitPadding, CapsuleRadius);
+        const float CapsuleHalfHeight = (std::max)(Fit.CapsuleHalfHeight * FitPadding, CapsuleRadius + AutoBodyMinExtent);
 
         FPhysicsAssetShapeSetup Shape;
         Shape.LocalTransform = FTransform();
