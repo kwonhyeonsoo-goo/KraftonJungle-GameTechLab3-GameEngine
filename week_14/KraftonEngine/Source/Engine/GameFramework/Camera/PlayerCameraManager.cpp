@@ -495,6 +495,30 @@ void APlayerCameraManager::ClearCameraVignette()
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Camera Depth of Field / Bokeh
+// ─────────────────────────────────────────────────────────────────
+void APlayerCameraManager::SetDepthOfField(float FocusDistance, float FocusRange, float MaxBlurRadius)
+{
+	bEnableDepthOfField = true;
+	DoFFocusDistance = std::max(0.0f, FocusDistance);
+	DoFFocusRange = std::max(0.0f, FocusRange);
+	DoFMaxBlurRadius = std::max(0.0f, MaxBlurRadius);
+}
+
+void APlayerCameraManager::SetBokeh(float RadiusThreshold, float LumaThreshold, float Intensity)
+{
+	bEnableDepthOfField = true;
+	DoFBokehRadiusThreshold = std::max(0.0f, RadiusThreshold);
+	DoFBokehLumaThreshold = std::max(0.0f, LumaThreshold);
+	DoFBokehIntensity = std::max(0.0f, Intensity);
+}
+
+void APlayerCameraManager::ClearDepthOfField()
+{
+	bEnableDepthOfField = false;
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Camera Blend — ViewTarget A → Pending B 로 전환 중일 때 매 호출 시 보간된
 // raw POV 를 산출. shake 는 미포함. UpdateCamera 가 이걸 호출해 base POV 로
 // 받은 뒤 shake 를 누적해 CameraCachePOV 에 commit 한다.

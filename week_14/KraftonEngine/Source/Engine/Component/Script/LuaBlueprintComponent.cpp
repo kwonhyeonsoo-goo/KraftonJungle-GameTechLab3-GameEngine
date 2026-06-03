@@ -14,7 +14,9 @@
 #include "LuaBlueprint/LuaBlueprintManager.h"
 #include "Input/InputKeyCodes.h"
 #include "Object/GarbageCollection.h"
+#include "Platform/Paths.h"
 
+#include <algorithm>
 #include <cstring>
 #include <cmath>
 
@@ -81,6 +83,294 @@ bool ULuaBlueprintComponent::CallFunction(const FString& FunctionName)
     return bOk;
 }
 
+
+
+
+sol::environment ULuaBlueprintComponent::CreateExternalLuaEnvironment(const FString& DebugName, uint32 Generation)
+{
+    sol::state& Lua = FLuaScriptManager::GetState();
+    sol::environment ExternalEnv(Lua, sol::create, Lua.globals());
+    sol::table ObjectVars = Lua.create_table();
+
+    ExternalEnv["obj"] = GetOwner();
+    ExternalEnv["this"] = this;
+    ExternalEnv["component"] = this;
+    ExternalEnv["__bp_external_object_vars"] = ObjectVars;
+
+    ExternalEnv.set_function(
+        "BP_InitVar",
+        [ObjectVars](const FString& Name, bool /*bStrong*/) mutable
+        {
+            if (!Name.empty())
+            {
+                sol::object Existing = ObjectVars[Name.c_str()];
+                if (!Existing.valid() || Existing.get_type() == sol::type::nil)
+                {
+                    ObjectVars[Name.c_str()] = sol::nil;
+                }
+            }
+        }
+    );
+    ExternalEnv.set_function(
+        "BP_SetVar",
+        [ObjectVars](const FString& Name, sol::object Value) mutable
+        {
+            if (!Name.empty())
+            {
+                ObjectVars[Name.c_str()] = Value;
+            }
+        }
+    );
+    ExternalEnv.set_function(
+        "BP_GetVar",
+        [ObjectVars](const FString& Name) mutable -> UObject*
+        {
+            if (Name.empty())
+            {
+                return nullptr;
+            }
+            sol::object Value = ObjectVars[Name.c_str()];
+            if (!Value.valid() || Value.get_type() == sol::type::nil || !Value.is<UObject*>())
+            {
+                return nullptr;
+            }
+            return Value.as<UObject*>();
+        }
+    );
+    ExternalEnv.set_function(
+        "BP_Delay",
+        [this, Generation](float Seconds, sol::protected_function Callback)
+        {
+            ScheduleLuaDelay(Seconds, Callback, Generation);
+        }
+    );
+    ExternalEnv.set_function(
+        "BP_ToStringValue",
+        [](sol::this_state State, sol::object Value) -> FString
+        {
+            return FLuaDebugManager::CoerceLuaValueToString(State, Value);
+        }
+    );
+    ExternalEnv.set_function(
+        "BP_ToDisplayValue",
+        [](sol::this_state State, sol::object Value) -> FString
+        {
+            return FLuaDebugManager::DescribeLuaValueForDisplay(State, Value);
+        }
+    );
+    ExternalEnv.set_function(
+        "BP_DebugNode",
+        [this, DebugName](sol::this_state State, uint32 NodeId, const FString& NodeName, const FString& SourceName, int32 Line, int32 Depth, sol::object VarsObject, sol::object NodeValuesObject) -> bool
+        {
+            lua_State* RawLuaState = State;
+            return FLuaDebugManager::OnLuaBlueprintNode(
+                RawLuaState,
+                this,
+                GetRuntimeName(),
+                DebugName.empty() ? GetDebugBlueprintPath() : DebugName,
+                NodeId,
+                NodeName,
+                SourceName,
+                Line,
+                Depth,
+                VarsObject,
+                NodeValuesObject
+            );
+        }
+    );
+
+    return ExternalEnv;
+}
+
+bool ULuaBlueprintComponent::LoadExternalLuaBlueprintRuntime(const FString& InBlueprintPath, sol::environment& OutEnv, FString& OutDebugName)
+{
+    const FString NormalizedPath = FPaths::MakeProjectRelative(InBlueprintPath);
+    if (NormalizedPath.empty() || NormalizedPath == "None")
+    {
+        return false;
+    }
+
+    const FString Key = FString("BP:") + NormalizedPath;
+    for (FLuaBlueprintExternalRuntime& Runtime : ExternalRuntimes)
+    {
+        if (Runtime.Key == Key && Runtime.Env.valid() && Runtime.BlueprintAsset && IsValid(Runtime.BlueprintAsset) &&
+            Runtime.LoadedRuntimeVersion == Runtime.BlueprintAsset->GetRuntimeVersion())
+        {
+            OutEnv = Runtime.Env;
+            OutDebugName = Runtime.DebugName;
+            return true;
+        }
+    }
+
+    ULuaBlueprintAsset* Asset = FLuaBlueprintManager::Get().Load(NormalizedPath);
+    if (!Asset || !Asset->HasRunnableLuaSource())
+    {
+        UE_LOG("LuaBlueprint external asset could not be loaded or has no runnable source: %s", NormalizedPath.c_str());
+        return false;
+    }
+
+    const FString& Source = Asset->GetRuntimeLuaSource();
+    if (Source.empty())
+    {
+        return false;
+    }
+
+    ExternalRuntimes.erase(
+        std::remove_if(ExternalRuntimes.begin(), ExternalRuntimes.end(), [&Key](const FLuaBlueprintExternalRuntime& Existing)
+        {
+            return Existing.Key == Key;
+        }),
+        ExternalRuntimes.end()
+    );
+
+    FLuaBlueprintExternalRuntime Runtime;
+    Runtime.Key = Key;
+    Runtime.DebugName = NormalizedPath;
+    Runtime.bBlueprint = true;
+    Runtime.BlueprintAsset = Asset;
+    Runtime.LoadedRuntimeVersion = Asset->GetRuntimeVersion();
+    Runtime.Env = CreateExternalLuaEnvironment(NormalizedPath, LuaRuntimeGeneration);
+
+    sol::state& Lua = FLuaScriptManager::GetState();
+    sol::protected_function_result Result = Lua.safe_script(Source, Runtime.Env, sol::script_pass_on_error, NormalizedPath);
+    if (!Result.valid())
+    {
+        sol::error Err = Result;
+        UE_LOG("Failed to load external LuaBlueprint %s: %s", NormalizedPath.c_str(), Err.what());
+        FLuaDebugManager::OnLuaError(NormalizedPath, Err.what(), true);
+        return false;
+    }
+
+    ExternalRuntimes.push_back(std::move(Runtime));
+    FLuaBlueprintExternalRuntime& Stored = ExternalRuntimes.back();
+    OutEnv = Stored.Env;
+    OutDebugName = Stored.DebugName;
+    return true;
+}
+
+bool ULuaBlueprintComponent::LoadExternalLuaScriptRuntime(const FString& InScriptFile, sol::environment& OutEnv, FString& OutDebugName)
+{
+    if (InScriptFile.empty() || InScriptFile == "None")
+    {
+        return false;
+    }
+
+    const FString ResolvedPath = FLuaScriptManager::ResolveScriptPath(InScriptFile);
+    const FString Key = FString("Lua:") + ResolvedPath;
+    for (FLuaBlueprintExternalRuntime& Runtime : ExternalRuntimes)
+    {
+        if (Runtime.Key == Key && Runtime.Env.valid())
+        {
+            OutEnv = Runtime.Env;
+            OutDebugName = Runtime.DebugName;
+            return true;
+        }
+    }
+
+    FString Content;
+    if (!FLuaScriptManager::ReadScriptFileContent(InScriptFile, Content))
+    {
+        UE_LOG("Failed to read external Lua script %s", ResolvedPath.c_str());
+        return false;
+    }
+
+    ExternalRuntimes.erase(
+        std::remove_if(ExternalRuntimes.begin(), ExternalRuntimes.end(), [&Key](const FLuaBlueprintExternalRuntime& Existing)
+        {
+            return Existing.Key == Key;
+        }),
+        ExternalRuntimes.end()
+    );
+
+    FLuaBlueprintExternalRuntime Runtime;
+    Runtime.Key = Key;
+    Runtime.DebugName = ResolvedPath;
+    Runtime.bBlueprint = false;
+    Runtime.Env = CreateExternalLuaEnvironment(ResolvedPath, LuaRuntimeGeneration);
+
+    sol::state& Lua = FLuaScriptManager::GetState();
+    sol::protected_function_result Result = Lua.safe_script(Content, Runtime.Env, sol::script_pass_on_error, ResolvedPath);
+    if (!Result.valid())
+    {
+        sol::error Err = Result;
+        UE_LOG("Failed to load external Lua script %s: %s", ResolvedPath.c_str(), Err.what());
+        FLuaDebugManager::OnLuaError(ResolvedPath, Err.what(), false);
+        return false;
+    }
+
+    ExternalRuntimes.push_back(std::move(Runtime));
+    FLuaBlueprintExternalRuntime& Stored = ExternalRuntimes.back();
+    OutEnv = Stored.Env;
+    OutDebugName = Stored.DebugName;
+    return true;
+}
+
+bool ULuaBlueprintComponent::CallLuaBlueprintFileFunction(const FString& InBlueprintPath, const FString& FunctionName)
+{
+    sol::environment TargetEnv;
+    FString DebugName;
+    if (!LoadExternalLuaBlueprintRuntime(InBlueprintPath, TargetEnv, DebugName))
+    {
+        return false;
+    }
+
+    sol::object Target = TargetEnv[FunctionName.c_str()];
+    if (!Target.valid() || Target.get_type() != sol::type::function)
+    {
+        return false;
+    }
+
+    sol::protected_function Fn = Target;
+    FLuaCallScope Scope(this);
+    sol::protected_function_result Result = Fn();
+    if (!Result.valid())
+    {
+        sol::error Err = Result;
+        UE_LOG("LuaBlueprint external call %s in %s failed: %s", FunctionName.c_str(), DebugName.c_str(), Err.what());
+        FLuaDebugManager::OnLuaError(DebugName, Err.what(), true);
+        return false;
+    }
+    return true;
+}
+
+bool ULuaBlueprintComponent::CallLuaScriptFileFunction(const FString& InScriptFile, const FString& FunctionName)
+{
+    sol::environment TargetEnv;
+    FString DebugName;
+    if (!LoadExternalLuaScriptRuntime(InScriptFile, TargetEnv, DebugName))
+    {
+        return false;
+    }
+
+    sol::object Target = TargetEnv[FunctionName.c_str()];
+    if (!Target.valid() || Target.get_type() != sol::type::function)
+    {
+        return false;
+    }
+
+    sol::protected_function Fn = Target;
+    FLuaCallScope Scope(this);
+    sol::protected_function_result Result = Fn();
+    if (!Result.valid())
+    {
+        sol::error Err = Result;
+        UE_LOG("Lua script external call %s in %s failed: %s", FunctionName.c_str(), DebugName.c_str(), Err.what());
+        FLuaDebugManager::OnLuaError(DebugName, Err.what(), false);
+        return false;
+    }
+    return true;
+}
+
+void ULuaBlueprintComponent::ClearExternalLuaRuntimes()
+{
+    for (FLuaBlueprintExternalRuntime& Runtime : ExternalRuntimes)
+    {
+        Runtime.Env = sol::environment();
+        Runtime.BlueprintAsset = nullptr;
+        Runtime.LoadedRuntimeVersion = 0;
+    }
+    ExternalRuntimes.clear();
+}
 
 bool ULuaBlueprintComponent::ResumeLuaDebugExecution()
 {
@@ -170,6 +460,13 @@ void ULuaBlueprintComponent::AddReferencedObjects(FReferenceCollector& Collector
 {
     UActorComponent::AddReferencedObjects(Collector);
     Collector.AddReferencedObject(BlueprintAsset, "ULuaBlueprintComponent::BlueprintAsset");
+    for (FLuaBlueprintExternalRuntime& Runtime : ExternalRuntimes)
+    {
+        if (Runtime.BlueprintAsset)
+        {
+            Collector.AddReferencedObject(Runtime.BlueprintAsset, "ULuaBlueprintComponent::ExternalBlueprintAsset");
+        }
+    }
     for (FLuaBlueprintRuntimeObjectVariable& Variable : RuntimeObjectVariables)
     {
         if (Variable.bStrong)
@@ -463,6 +760,7 @@ void ULuaBlueprintComponent::ClearLuaRuntime()
     LuaOnEndHit     = sol::nil;
     Env             = sol::environment();
     RuntimeObjectVariables.clear();
+    ClearExternalLuaRuntimes();
     bWantsBeginPlay      = false;
     bWantsTick           = false;
     bWantsEndPlay        = false;

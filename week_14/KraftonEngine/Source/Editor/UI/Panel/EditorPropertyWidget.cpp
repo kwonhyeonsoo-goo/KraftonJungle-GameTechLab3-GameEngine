@@ -1799,14 +1799,16 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 
 	if (AssetType == "Script")
 	{
-		char Buf[256];
-		strncpy_s(Buf, sizeof(Buf), CurrentPath.c_str(), _TRUNCATE);
-		if (ImGui::InputText("##Value", Buf, sizeof(Buf)))
+		FString SelectedPath;
+		float ButtonWidth = ImGui::CalcTextSize("Edit Script").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+		float Spacing = ImGui::GetStyle().ItemSpacing.x;
+		ImGui::SetNextItemWidth(-(ButtonWidth + Spacing));
+		if (TryRenderRegisteredAssetPicker("Script", CurrentPath, "##LuaScript", SelectedPath))
 		{
-			SetPath(Buf);
+			SetPath(SelectedPath);
 			bChanged = true;
 		}
-
+		ImGui::SameLine();
 		if (ImGui::Button("Edit Script"))
 		{
 			if (!FLuaScriptManager::OpenOrCreateScript(CurrentPath))

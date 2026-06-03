@@ -78,9 +78,12 @@
 #include "Input/InputSystem.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialManager.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Math/Rotator.h"
 #include "Math/Vector.h"
+#include "Mesh/MeshManager.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
+#include "Mesh/Static/StaticMesh.h"
 #include "Object/GarbageCollection.h"
 #include "Object/Object.h"
 #include "Object/Reflection/ObjectFactory.h"
@@ -2063,6 +2066,19 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         }
     );
     CameraManager.set_function(
+        "GetActiveCamera",
+        []() -> UCameraComponent*
+        {
+            if (!GEngine || !GEngine->GetWorld())
+            {
+                return nullptr;
+            }
+            APlayerController*    PC      = GEngine->GetWorld()->GetFirstPlayerController();
+            APlayerCameraManager* Manager = PC ? PC->GetPlayerCameraManager() : nullptr;
+            return Manager ? Manager->GetActiveCamera() : nullptr;
+        }
+    );
+    CameraManager.set_function(
         "GetPossessedCamera",
         []() -> UCameraComponent*
         {
@@ -2209,6 +2225,45 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
             if (Manager)
             {
                 Manager->StartCameraShakeAsset(AssetPath, Scale.value_or(1.0f));
+            }
+        }
+    );
+    CameraManager.set_function(
+        "SetDepthOfField",
+        [](float FocusDistance, float FocusRange, float MaxBlurRadius)
+        {
+            if (!GEngine || !GEngine->GetWorld()) return;
+            APlayerController*    PC      = GEngine->GetWorld()->GetFirstPlayerController();
+            APlayerCameraManager* Manager = PC ? PC->GetPlayerCameraManager() : nullptr;
+            if (Manager)
+            {
+                Manager->SetDepthOfField(FocusDistance, FocusRange, MaxBlurRadius);
+            }
+        }
+    );
+    CameraManager.set_function(
+        "SetBokeh",
+        [](float RadiusThreshold, float LumaThreshold, float Intensity)
+        {
+            if (!GEngine || !GEngine->GetWorld()) return;
+            APlayerController*    PC      = GEngine->GetWorld()->GetFirstPlayerController();
+            APlayerCameraManager* Manager = PC ? PC->GetPlayerCameraManager() : nullptr;
+            if (Manager)
+            {
+                Manager->SetBokeh(RadiusThreshold, LumaThreshold, Intensity);
+            }
+        }
+    );
+    CameraManager.set_function(
+        "ClearDepthOfField",
+        []()
+        {
+            if (!GEngine || !GEngine->GetWorld()) return;
+            APlayerController*    PC      = GEngine->GetWorld()->GetFirstPlayerController();
+            APlayerCameraManager* Manager = PC ? PC->GetPlayerCameraManager() : nullptr;
+            if (Manager)
+            {
+                Manager->ClearDepthOfField();
             }
         }
     );
@@ -2375,7 +2430,31 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         }
     );
 
+
+    sol::table Texture = Lua.create_named_table("Texture");
+    Texture.set_function(
+        "Load",
+        [](const FString& Path, sol::optional<bool> bSRGB) -> UTexture2D*
+        {
+            return UTexture2D::LoadFromCached(Path, bSRGB.value_or(true) ? ETextureColorSpace::SRGB : ETextureColorSpace::Linear);
+        }
+    );
+
+    sol::table StaticMeshLibrary = Lua.create_named_table("StaticMeshLibrary");
+    Lua["StaticMeshes"] = StaticMeshLibrary;
+    StaticMeshLibrary.set_function(
+        "Load",
+        [](const FString& Path) -> UStaticMesh*
+        {
+            if (!GEngine || Path.empty() || Path == "None") return nullptr;
+            ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
+            return FMeshManager::LoadStaticMesh(Path, Device);
+        }
+    );
+
     sol::table Material = Lua.create_named_table("Material");
+    Lua["MaterialLibrary"] = Material;
+    Lua["Materials"] = Material;
     Material.set_function(
         "Load",
         [](const FString& Path) -> UMaterial*
@@ -2405,6 +2484,93 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         }
     );
     Material.set_function(
+        "GetComponentMaterial",
+        [](UPrimitiveComponent* Component, int32 ElementIndex) -> UMaterial*
+        {
+            if (!IsValid(Component)) return nullptr;
+            if (UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component))
+            {
+                return StaticMeshComponent->GetMaterial(ElementIndex);
+            }
+            if (USkinnedMeshComponent* SkinnedMeshComponent = Cast<USkinnedMeshComponent>(Component))
+            {
+                return SkinnedMeshComponent->GetMaterial(ElementIndex);
+            }
+            return nullptr;
+        }
+    );
+    Material.set_function(
+        "SetComponentMaterial",
+        [](UPrimitiveComponent* Component, int32 ElementIndex, UMaterial* InMaterial) -> bool
+        {
+            if (!IsValid(Component) || !IsValid(InMaterial)) return false;
+            if (UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component))
+            {
+                StaticMeshComponent->SetMaterial(ElementIndex, InMaterial);
+                return true;
+            }
+            if (USkinnedMeshComponent* SkinnedMeshComponent = Cast<USkinnedMeshComponent>(Component))
+            {
+                SkinnedMeshComponent->SetMaterial(ElementIndex, InMaterial);
+                return true;
+            }
+            return false;
+        }
+    );
+    Material.set_function(
+        "SetComponentMaterialByPath",
+        [](UPrimitiveComponent* Component, int32 ElementIndex, const FString& MaterialPath) -> bool
+        {
+            if (!IsValid(Component)) return false;
+            if (UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component))
+            {
+                return StaticMeshComponent->SetMaterialByPath(ElementIndex, MaterialPath);
+            }
+            if (USkinnedMeshComponent* SkinnedMeshComponent = Cast<USkinnedMeshComponent>(Component))
+            {
+                return SkinnedMeshComponent->SetMaterialByPath(ElementIndex, MaterialPath);
+            }
+            return false;
+        }
+    );
+    Material.set_function(
+        "CreateDynamicInstance",
+        [](UMaterial* Parent, UObject* Owner, sol::optional<FString> DebugName) -> UMaterialInstanceDynamic*
+        {
+            return IsValid(Parent) ? UMaterialInstanceDynamic::Create(Parent, Owner, DebugName.value_or(FString())) : nullptr;
+        }
+    );
+    Material.set_function(
+        "CreateDynamicInstanceForComponent",
+        [](UPrimitiveComponent* Component, int32 ElementIndex, sol::optional<FString> DebugName) -> UMaterialInstanceDynamic*
+        {
+            if (!IsValid(Component)) return nullptr;
+
+            UMaterial* ParentMaterial = nullptr;
+            if (UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component))
+            {
+                ParentMaterial = StaticMeshComponent->GetMaterial(ElementIndex);
+                if (UMaterialInstanceDynamic* Instance = UMaterialInstanceDynamic::Create(ParentMaterial, Component, DebugName.value_or(FString())))
+                {
+                    StaticMeshComponent->SetMaterial(ElementIndex, Instance);
+                    return Instance;
+                }
+                return nullptr;
+            }
+            if (USkinnedMeshComponent* SkinnedMeshComponent = Cast<USkinnedMeshComponent>(Component))
+            {
+                ParentMaterial = SkinnedMeshComponent->GetMaterial(ElementIndex);
+                if (UMaterialInstanceDynamic* Instance = UMaterialInstanceDynamic::Create(ParentMaterial, Component, DebugName.value_or(FString())))
+                {
+                    SkinnedMeshComponent->SetMaterial(ElementIndex, Instance);
+                    return Instance;
+                }
+                return nullptr;
+            }
+            return nullptr;
+        }
+    );
+    Material.set_function(
         "Save",
         [](UMaterial* Mat, const FString& Path)
         {
@@ -2416,6 +2582,40 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
         [](UMaterial* Mat, const FString& ShaderPath)
         {
             return IsValid(Mat) && FMaterialManager::Get().SetMaterialShader(Mat, ShaderPath);
+        }
+    );
+    Material.set_function(
+        "SetScalarParameter",
+        [](UMaterial* Mat, const FString& ParamName, float Value) -> bool
+        {
+            return IsValid(Mat) && Mat->SetScalarParameter(ParamName, Value);
+        }
+    );
+    Material.set_function(
+        "SetVectorParameter",
+        [](UMaterial* Mat, const FString& ParamName, const sol::object& Value) -> bool
+        {
+            if (!IsValid(Mat)) return false;
+            FVector VectorValue;
+            if (!LuaObjectToVector(Value, VectorValue)) return false;
+            return Mat->SetVector3Parameter(ParamName, VectorValue);
+        }
+    );
+    Material.set_function(
+        "SetColorParameter",
+        [](UMaterial* Mat, const FString& ParamName, const sol::object& Value) -> bool
+        {
+            if (!IsValid(Mat)) return false;
+            FVector4 ColorValue;
+            if (!LuaObjectToVector4(Value, ColorValue)) return false;
+            return Mat->SetVector4Parameter(ParamName, ColorValue);
+        }
+    );
+    Material.set_function(
+        "SetTextureParameter",
+        [](UMaterial* Mat, const FString& ParamName, UTexture2D* Texture) -> bool
+        {
+            return IsValid(Mat) && IsValid(Texture) && Mat->SetTextureParameter(ParamName, Texture);
         }
     );
 
@@ -2848,6 +3048,39 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         &UActorComponent::Deactivate
     );
 
+
+    Lua.new_usertype<ULuaBlueprintComponent>(
+        "LuaBlueprintComponent",
+        sol::base_classes,
+        sol::bases<UActorComponent, UObject>(),
+        "ReloadBlueprint",
+        &ULuaBlueprintComponent::ReloadBlueprint,
+        "CallFunction",
+        &ULuaBlueprintComponent::CallFunction,
+        "CallLuaBlueprintFileFunction",
+        &ULuaBlueprintComponent::CallLuaBlueprintFileFunction,
+        "CallLuaScriptFileFunction",
+        &ULuaBlueprintComponent::CallLuaScriptFileFunction,
+        "GetBlueprintPath",
+        &ULuaBlueprintComponent::GetBlueprintPath,
+        "SetBlueprintPath",
+        &ULuaBlueprintComponent::SetBlueprintPath
+    );
+
+    Lua.new_usertype<ULuaScriptComponent>(
+        "LuaScriptComponent",
+        sol::base_classes,
+        sol::bases<UActorComponent, UObject>(),
+        "ReloadScript",
+        &ULuaScriptComponent::ReloadScript,
+        "CallFunction",
+        &ULuaScriptComponent::CallFunction,
+        "GetScriptFile",
+        &ULuaScriptComponent::GetScriptFile,
+        "SetScriptFile",
+        &ULuaScriptComponent::SetScriptFile
+    );
+
     sol::table Reflection = Lua.create_named_table("Reflection");
     Reflection.set_function(
         "Call",
@@ -3146,7 +3379,27 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         "GetVignetteRadius",
         &APlayerCameraManager::GetVignetteRadius,
         "GetVignetteSoftness",
-        &APlayerCameraManager::GetVignetteSoftness
+        &APlayerCameraManager::GetVignetteSoftness,
+        "SetDepthOfField",
+        &APlayerCameraManager::SetDepthOfField,
+        "SetBokeh",
+        &APlayerCameraManager::SetBokeh,
+        "ClearDepthOfField",
+        &APlayerCameraManager::ClearDepthOfField,
+        "IsDepthOfFieldEnabled",
+        &APlayerCameraManager::IsDepthOfFieldEnabled,
+        "GetDoFFocusDistance",
+        &APlayerCameraManager::GetDoFFocusDistance,
+        "GetDoFFocusRange",
+        &APlayerCameraManager::GetDoFFocusRange,
+        "GetDoFMaxBlurRadius",
+        &APlayerCameraManager::GetDoFMaxBlurRadius,
+        "GetDoFBokehRadiusThreshold",
+        &APlayerCameraManager::GetDoFBokehRadiusThreshold,
+        "GetDoFBokehLumaThreshold",
+        &APlayerCameraManager::GetDoFBokehLumaThreshold,
+        "GetDoFBokehIntensity",
+        &APlayerCameraManager::GetDoFBokehIntensity
     );
 
     // Broad engine/gameplay bindings. The generic Reflection/CallFunction path can call
@@ -3498,6 +3751,8 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &UMaterial::SetScalarParameter,
         "SetVector3Parameter",
         &UMaterial::SetVector3Parameter,
+        "SetVector4Parameter",
+        &UMaterial::SetVector4Parameter,
         "SetTextureParameter",
         &UMaterial::SetTextureParameter,
         "GetScalarParameterValue",
@@ -3518,6 +3773,54 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &UMaterial::GetAssetPathFileName,
         "SetAssetPathFileName",
         &UMaterial::SetAssetPathFileName
+    );
+
+    {
+        sol::object MaterialLibraryObject = Lua["MaterialLibrary"];
+        sol::object MaterialTypeObject = Lua["Material"];
+        if (MaterialLibraryObject.is<sol::table>() && MaterialTypeObject.is<sol::table>())
+        {
+            sol::table MaterialLibrary = MaterialLibraryObject.as<sol::table>();
+            sol::table MaterialType = MaterialTypeObject.as<sol::table>();
+            const char* LibraryFunctions[] = {
+                    "Load",
+                    "GetOrCreate",
+                    "Create",
+                    "CreateGraph",
+                    "GetComponentMaterial",
+                    "SetComponentMaterial",
+                    "SetComponentMaterialByPath",
+                    "CreateDynamicInstance",
+                    "CreateDynamicInstanceForComponent",
+                    "Save",
+                    "SetShader",
+                    "SetScalarParameter",
+                    "SetVectorParameter",
+                    "SetColorParameter",
+                    "SetTextureParameter"
+            };
+            for (const char* FunctionName : LibraryFunctions)
+            {
+                sol::object Function = MaterialLibrary[FunctionName];
+                MaterialType[FunctionName] = Function;
+            }
+        }
+    }
+
+    Lua.new_usertype<UMaterialInstanceDynamic>(
+        "MaterialInstanceDynamic",
+        sol::base_classes,
+        sol::bases<UMaterial, UObject>(),
+        "SetScalarParameterValue",
+        &UMaterialInstanceDynamic::SetScalarParameterValue,
+        "SetVector3ParameterValue",
+        &UMaterialInstanceDynamic::SetVector3ParameterValue,
+        "SetVectorParameterValue",
+        &UMaterialInstanceDynamic::SetVectorParameterValue,
+        "SetTextureParameterValue",
+        &UMaterialInstanceDynamic::SetTextureParameterValue,
+        "GetOwnerObject",
+        &UMaterialInstanceDynamic::GetOwnerObject
     );
 
     Lua.new_usertype<UAnimSequence>(
@@ -4215,6 +4518,24 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         }
     );
 
+    Lua.new_usertype<UStaticMesh>(
+        "StaticMesh",
+        sol::base_classes,
+        sol::bases<UObject>(),
+        "AssetPath",
+        sol::property(
+            [](UStaticMesh& Mesh)
+            {
+                return Mesh.GetAssetPathFileName();
+            }
+        ),
+        "GetAssetPath",
+        [](UStaticMesh& Mesh)
+        {
+            return Mesh.GetAssetPathFileName();
+        }
+    );
+
     // 메시 에셋 경로로 컴포넌트 식별 가능하게 노출. 자동 생성된 FName ("UStaticMeshComponent_41")
     // 은 월드 초기화 순서에 따라 카운터가 달라져 빌드별로 매칭이 깨질 수 있다. 메시 경로는
     // 씬 파일에 명시 저장되므로 deterministic.
@@ -4233,7 +4554,73 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         [](UStaticMeshComponent& C)
         {
             return C.GetStaticMeshPath();
-        }
+        },
+        "SetStaticMesh",
+        &UStaticMeshComponent::SetStaticMesh,
+        "SetStaticMeshByPath",
+        &UStaticMeshComponent::SetStaticMeshByPath,
+        "ClearStaticMesh",
+        &UStaticMeshComponent::ClearStaticMesh,
+        "GetStaticMesh",
+        &UStaticMeshComponent::GetStaticMesh,
+        "SetMaterialByPath",
+        &UStaticMeshComponent::SetMaterialByPath,
+        "SetMaterial",
+        &UStaticMeshComponent::SetMaterial,
+        "GetMaterial",
+        &UStaticMeshComponent::GetMaterial,
+        "GetMaterialPath",
+        &UStaticMeshComponent::GetMaterialPath,
+        "GetMaterialSlotCount",
+        &UStaticMeshComponent::GetMaterialSlotCount
+    );
+
+    Lua.new_usertype<USkinnedMeshComponent>(
+        "SkinnedMeshComponent",
+        sol::base_classes,
+        sol::bases<UPrimitiveComponent, USceneComponent, UActorComponent, UObject>(),
+        "SetSkeletalMeshByPath",
+        &USkinnedMeshComponent::SetSkeletalMeshByPath,
+        "ClearSkeletalMesh",
+        &USkinnedMeshComponent::ClearSkeletalMesh,
+        "GetSkeletalMesh",
+        &USkinnedMeshComponent::GetSkeletalMesh,
+        "GetSkeletalMeshPathValue",
+        &USkinnedMeshComponent::GetSkeletalMeshPathValue,
+        "SetMaterialByPath",
+        &USkinnedMeshComponent::SetMaterialByPath,
+        "SetMaterial",
+        &USkinnedMeshComponent::SetMaterial,
+        "GetMaterial",
+        &USkinnedMeshComponent::GetMaterial,
+        "GetMaterialPath",
+        &USkinnedMeshComponent::GetMaterialPath,
+        "GetMaterialSlotCount",
+        &USkinnedMeshComponent::GetMaterialSlotCount
+    );
+
+    Lua.new_usertype<USkeletalMeshComponent>(
+        "SkeletalMeshComponent",
+        sol::base_classes,
+        sol::bases<USkinnedMeshComponent, UPrimitiveComponent, USceneComponent, UActorComponent, UObject>(),
+        "PlayAnimationByPath",
+        &USkeletalMeshComponent::PlayAnimationByPath,
+        "StopAnimation",
+        &USkeletalMeshComponent::StopAnimation,
+        "SetAnimationByPath",
+        &USkeletalMeshComponent::SetAnimationByPath,
+        "SetPlayRate",
+        &USkeletalMeshComponent::SetPlayRate,
+        "SetLooping",
+        &USkeletalMeshComponent::SetLooping,
+        "SetPlaying",
+        &USkeletalMeshComponent::SetPlaying,
+        "GetAnimInstance",
+        &USkeletalMeshComponent::GetAnimInstance,
+        "GetAnimationMode",
+        &USkeletalMeshComponent::GetAnimationMode,
+        "GetAnimation",
+        &USkeletalMeshComponent::GetAnimation
     );
 
     Lua.new_usertype<FHitResult>(
@@ -4308,6 +4695,32 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         &UCameraComponent::SetOrthographic,
         "IsOrthographic",
         &UCameraComponent::IsOrthogonal,
+        "SetLetterbox",
+        [](UCameraComponent& Camera, bool bEnabled, sol::optional<float> Amount, sol::optional<float> Thickness, sol::optional<sol::object> Color)
+        {
+            if (UCineCameraComponent* CineCamera = Cast<UCineCameraComponent>(&Camera))
+            {
+                CineCamera->SetLetterboxEnabled(bEnabled);
+                if (Amount) CineCamera->SetLetterboxAmount(Amount.value());
+                if (Thickness) CineCamera->SetLetterboxThickness(Thickness.value());
+                if (Color)
+                {
+                    FVector4 ColorValue;
+                    if (LuaObjectToVector4(Color.value(), ColorValue))
+                    {
+                        CineCamera->SetLetterboxColor(FLinearColor(ColorValue.X, ColorValue.Y, ColorValue.Z, ColorValue.W));
+                    }
+                }
+            }
+        },
+        "ClearLetterbox",
+        [](UCameraComponent& Camera)
+        {
+            if (UCineCameraComponent* CineCamera = Cast<UCineCameraComponent>(&Camera))
+            {
+                CineCamera->SetLetterboxEnabled(false);
+            }
+        },
         "OnResize",
         &UCameraComponent::OnResize
     );
@@ -4452,10 +4865,40 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
             return nullptr;
         },
 
+        "GetStaticMeshComponent",
+        [](AActor& Actor)
+        {
+            return Actor.GetComponentByClass<UStaticMeshComponent>();
+        },
+
         "GetCamera",
         [](AActor& Actor)
         {
             return Actor.GetComponentByClass<UCameraComponent>();
+        },
+
+        "GetSkeletalMeshComponent",
+        [](AActor& Actor)
+        {
+            return Actor.GetComponentByClass<USkeletalMeshComponent>();
+        },
+
+        "GetSkinnedMeshComponent",
+        [](AActor& Actor)
+        {
+            return Actor.GetComponentByClass<USkinnedMeshComponent>();
+        },
+
+        "GetLuaBlueprintComponent",
+        [](AActor& Actor)
+        {
+            return Actor.GetComponentByClass<ULuaBlueprintComponent>();
+        },
+
+        "GetLuaScriptComponent",
+        [](AActor& Actor)
+        {
+            return Actor.GetComponentByClass<ULuaScriptComponent>();
         },
 
         "GetParticleSystemComponent",

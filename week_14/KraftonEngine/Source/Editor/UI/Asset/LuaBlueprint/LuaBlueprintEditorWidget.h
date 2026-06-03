@@ -46,11 +46,16 @@ private:
 	void RenderVariableEditor(ULuaBlueprintAsset* Blueprint, FLuaBlueprintVariable& Variable, int32 Index);
 	void RenderDiagnostics(ULuaBlueprintAsset* Blueprint);
 	void RenderGeneratedLua(ULuaBlueprintAsset* Blueprint);
+	void OpenCustomLuaFunctionEditor(ULuaBlueprintAsset* Blueprint, uint32 NodeId);
+	void RenderCustomLuaFunctionEditor(ULuaBlueprintAsset* Blueprint);
 	void SyncBreakpointsToDebugManager(ULuaBlueprintAsset* Blueprint);
 	void ProcessLuaDebugAutoFocus(ULuaBlueprintAsset* Blueprint);
 	void QueueNavigateToNode(uint32 NodeId);
 
 	bool RenderInlinePinLiteral(ULuaBlueprintAsset* Blueprint, FLuaBlueprintNode& Node, FLuaBlueprintPin& Pin);
+	void OpenInlineAssetPicker(const FLuaBlueprintNode& Node, const FLuaBlueprintPin& Pin, const char* AssetType);
+	void RenderDeferredInlineAssetPicker(ULuaBlueprintAsset* Blueprint);
+	bool ApplyInlineAssetPickerSelection(ULuaBlueprintAsset* Blueprint, const FString& SelectedPath);
 
 	bool AddNodeMenuItem(ULuaBlueprintAsset* Blueprint, ELuaBlueprintNodeType Type);
 	bool AddVariableMenuItem(ULuaBlueprintAsset* Blueprint, ELuaBlueprintPinType Type, const char* Label);
@@ -63,6 +68,7 @@ private:
 	// 변수 패널에서 캔버스 위로 drag → drop 시 Get/Set 팝업.
 	void HandleVariableDropOnCanvas();
 	void RenameVariableCascade(ULuaBlueprintAsset* Blueprint, const FName& OldName, const FName& NewName);
+	void RenameCustomLuaFunctionCascade(ULuaBlueprintAsset* Blueprint, const FName& OldName, const FName& NewName);
 	void SpawnVariableNode(ULuaBlueprintAsset* Blueprint, ELuaBlueprintNodeType Type, const FName& VariableName, const ImVec2& Position);
 
 	// 에디터 대형 기능: snapshot 기반 Undo/Redo 와 선택 노드 copy/paste.
@@ -126,6 +132,13 @@ private:
 	bool bQueuedDuplicateSelected = false;
 	bool bQueuedDeleteSelected = false;
 	bool bQueuedGroupSelected = false;
+
+	// ImGui popups stay open across frames, but ax::NodeEditor::Show*ContextMenu() only returns
+	// the target id on the frame the popup is opened. Persist the ids so right-click menu actions
+	// operate on the node/link/pin that opened the menu, not on a zeroed local id on later frames.
+	uint32 ContextMenuNodeId = 0;
+	uint32 ContextMenuPinId = 0;
+	uint32 ContextMenuLinkId = 0;
 	bool bPendingInitialContentFit = false;
 	bool bPendingNodeGeometryEdit = false;
 	bool bSuppressInitialGeometryDirty = false;
@@ -135,4 +148,26 @@ private:
 	uint32 PendingNavigateToNodeId = 0;
 	uint64 LastHandledLuaDebugFocusSerial = 0;
 	char DebugWatchExpressionBuf[256] = {};
+
+	// NodeEditor 캔버스 안에서 ImGui combo/popup/tooltip 을 직접 열면 좌표와 hit-test 가 섞일 수 있다.
+	// 노드 내부에서는 버튼 클릭/호버 상태와 screen-space anchor 만 캡쳐하고, 실제 asset picker 와 tooltip 은 ed::End() 이후 overlay layer 에서만 렌더링한다.
+	bool    bOpenInlineAssetPicker = false;
+	bool    bInlineAssetPickerVisible = false;
+	uint32  InlineAssetPickerNodeId = 0;
+	uint32  InlineAssetPickerPinId = 0;
+	FString InlineAssetPickerType;
+	FString InlineAssetPickerPreviewPath;
+	ImVec2  InlineAssetPickerAnchorPos = ImVec2(0, 0);
+	ImVec2  InlineAssetPickerFallbackPos = ImVec2(0, 0);
+	ImVec2  InlineAssetPickerOwnerMin = ImVec2(0, 0);
+	ImVec2  InlineAssetPickerOwnerMax = ImVec2(0, 0);
+	char    InlineAssetPickerSearchBuf[128] = {};
+	bool    bInlineAssetHoverTooltipVisible = false;
+	FString InlineAssetHoverTooltipPath;
+
+	bool   bCustomLuaFunctionEditorOpen = false;
+	bool   bCustomLuaFunctionEditorRequestFocus = false;
+	uint32 CustomLuaFunctionEditorNodeId = 0;
+	char   CustomLuaFunctionNameBuf[128] = {};
+	char   CustomLuaFunctionCodeBuf[32768] = {};
 };

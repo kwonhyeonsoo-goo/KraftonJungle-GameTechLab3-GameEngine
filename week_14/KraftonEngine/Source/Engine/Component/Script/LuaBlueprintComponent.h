@@ -27,6 +27,8 @@ public:
     UFUNCTION(Callable, Exec, Category="Lua Blueprint") bool ReloadBlueprint();
 
     UFUNCTION(Callable, Exec, Category="Lua Blueprint") bool CallFunction(const FString& FunctionName);
+    UFUNCTION(Callable, Exec, Category="Lua Blueprint") bool CallLuaBlueprintFileFunction(const FString& BlueprintPath, const FString& FunctionName);
+    UFUNCTION(Callable, Exec, Category="Lua Blueprint") bool CallLuaScriptFileFunction(const FString& ScriptFile, const FString& FunctionName);
 
     // LuaBlueprint 디버거가 중단점/스텝 정지 후 같은 coroutine 지점에서 재개할 때 호출한다.
     bool ResumeLuaDebugExecution();
@@ -68,6 +70,10 @@ private:
     void                ClearInvalidBlueprintAsset();
     bool                InitializeLua();
     void                ClearLuaRuntime();
+    void                ClearExternalLuaRuntimes();
+    sol::environment    CreateExternalLuaEnvironment(const FString& DebugName, uint32 Generation);
+    bool                LoadExternalLuaBlueprintRuntime(const FString& InBlueprintPath, sol::environment& OutEnv, FString& OutDebugName);
+    bool                LoadExternalLuaScriptRuntime(const FString& InScriptFile, sol::environment& OutEnv, FString& OutDebugName);
     void                BindOwnerCollisionEvents();
     void                ClearCollisionBindings();
     bool                BindInputEvents();
@@ -175,6 +181,18 @@ private:
     };
 
     TArray<FLuaBlueprintRuntimeObjectVariable> RuntimeObjectVariables;
+
+    struct FLuaBlueprintExternalRuntime
+    {
+        FString          Key;
+        FString          DebugName;
+        bool             bBlueprint = false;
+        ULuaBlueprintAsset* BlueprintAsset = nullptr;
+        uint32           LoadedRuntimeVersion = 0;
+        sol::environment Env;
+    };
+
+    TArray<FLuaBlueprintExternalRuntime> ExternalRuntimes;
 
     TArray<TWeakObjectPtr<UPrimitiveComponent>> BoundOverlapComponents;
     TWeakObjectPtr<UInputComponent>             BoundInputComponent;

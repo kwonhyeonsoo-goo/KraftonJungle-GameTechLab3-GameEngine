@@ -4,6 +4,7 @@
 #include "Lua/LuaDebugManager.h"
 #include "LuaBlueprint/LuaBlueprintAsset.h"
 #include "LuaBlueprint/LuaBlueprintManager.h"
+#include "Asset/AssetRegistry.h"
 #include "Object/Object.h"
 
 #include "imgui.h"
@@ -380,6 +381,70 @@ namespace
         }
         if (OutputType == InputType) return true;
         if (OutputType == ELuaBlueprintPinType::Any || InputType == ELuaBlueprintPinType::Any) return true;
+
+        auto IsObjectPinType = [](ELuaBlueprintPinType T)
+        {
+            switch (T)
+            {
+            case ELuaBlueprintPinType::Object:
+            case ELuaBlueprintPinType::Actor:
+            case ELuaBlueprintPinType::Pawn:
+            case ELuaBlueprintPinType::PlayerController:
+            case ELuaBlueprintPinType::ActorComponent:
+            case ELuaBlueprintPinType::SceneComponent:
+            case ELuaBlueprintPinType::PrimitiveComponent:
+            case ELuaBlueprintPinType::StaticMesh:
+            case ELuaBlueprintPinType::StaticMeshComponent:
+            case ELuaBlueprintPinType::SkinnedMeshComponent:
+            case ELuaBlueprintPinType::SkeletalMeshComponent:
+            case ELuaBlueprintPinType::CameraComponent:
+            case ELuaBlueprintPinType::CineCameraComponent:
+            case ELuaBlueprintPinType::Material:
+            case ELuaBlueprintPinType::Texture:
+            case ELuaBlueprintPinType::AnimInstance:
+            case ELuaBlueprintPinType::LuaBlueprintComponent:
+            case ELuaBlueprintPinType::LuaScriptComponent:
+                return true;
+            default:
+                return false;
+            }
+        };
+        auto IsDerivedObjectType = [](ELuaBlueprintPinType Derived, ELuaBlueprintPinType Base)
+        {
+            if (Derived == Base) return true;
+            if (Base == ELuaBlueprintPinType::Object) return true;
+            if (Base == ELuaBlueprintPinType::Actor && Derived == ELuaBlueprintPinType::Pawn) return true;
+            if (Base == ELuaBlueprintPinType::ActorComponent &&
+                (Derived == ELuaBlueprintPinType::SceneComponent ||
+                 Derived == ELuaBlueprintPinType::PrimitiveComponent ||
+                 Derived == ELuaBlueprintPinType::StaticMeshComponent ||
+                 Derived == ELuaBlueprintPinType::SkinnedMeshComponent ||
+                 Derived == ELuaBlueprintPinType::SkeletalMeshComponent ||
+                 Derived == ELuaBlueprintPinType::CameraComponent ||
+                 Derived == ELuaBlueprintPinType::CineCameraComponent ||
+                 Derived == ELuaBlueprintPinType::LuaBlueprintComponent ||
+                 Derived == ELuaBlueprintPinType::LuaScriptComponent)) return true;
+            if (Base == ELuaBlueprintPinType::SceneComponent &&
+                (Derived == ELuaBlueprintPinType::PrimitiveComponent ||
+                 Derived == ELuaBlueprintPinType::StaticMeshComponent ||
+                 Derived == ELuaBlueprintPinType::SkinnedMeshComponent ||
+                 Derived == ELuaBlueprintPinType::SkeletalMeshComponent ||
+                 Derived == ELuaBlueprintPinType::CameraComponent ||
+                 Derived == ELuaBlueprintPinType::CineCameraComponent)) return true;
+            if (Base == ELuaBlueprintPinType::PrimitiveComponent &&
+                (Derived == ELuaBlueprintPinType::StaticMeshComponent ||
+                 Derived == ELuaBlueprintPinType::SkinnedMeshComponent ||
+                 Derived == ELuaBlueprintPinType::SkeletalMeshComponent)) return true;
+            if (Base == ELuaBlueprintPinType::SkinnedMeshComponent &&
+                Derived == ELuaBlueprintPinType::SkeletalMeshComponent) return true;
+            if (Base == ELuaBlueprintPinType::CameraComponent &&
+                Derived == ELuaBlueprintPinType::CineCameraComponent) return true;
+            return false;
+        };
+        if (IsObjectPinType(OutputType) && IsObjectPinType(InputType))
+        {
+            return IsDerivedObjectType(OutputType, InputType);
+        }
         if ((OutputType == ELuaBlueprintPinType::Int && InputType == ELuaBlueprintPinType::Float) ||
             (OutputType == ELuaBlueprintPinType::Float && InputType == ELuaBlueprintPinType::Int))
         {
@@ -728,6 +793,108 @@ namespace
             return "Stop Audio Loop";
         case ELuaBlueprintNodeType::SetAudioMasterVolume:
             return "Set Audio Master Volume";
+        case ELuaBlueprintNodeType::LoadStaticMesh:
+            return "Load Static Mesh";
+        case ELuaBlueprintNodeType::GetStaticMeshComponent:
+            return "Get Static Mesh Component";
+        case ELuaBlueprintNodeType::GetStaticMesh:
+            return "Get Static Mesh";
+        case ELuaBlueprintNodeType::SetStaticMesh:
+            return "Set Static Mesh";
+        case ELuaBlueprintNodeType::SetStaticMeshByPath:
+            return "Set Static Mesh By Path";
+        case ELuaBlueprintNodeType::ClearStaticMesh:
+            return "Clear Static Mesh";
+        case ELuaBlueprintNodeType::GetLuaBlueprintComponent:
+            return "Get Lua Blueprint Component";
+        case ELuaBlueprintNodeType::GetLuaScriptComponent:
+            return "Get Lua Script Component";
+        case ELuaBlueprintNodeType::CallLuaBlueprintFunction:
+            return "Call Lua Blueprint Function";
+        case ELuaBlueprintNodeType::CallLuaScriptFunction:
+            return "Call Lua Script Function";
+        case ELuaBlueprintNodeType::CallLuaBlueprintFileFunction:
+            return "Call Lua Blueprint File Function";
+        case ELuaBlueprintNodeType::CallLuaScriptFileFunction:
+            return "Call Lua Script File Function";
+        case ELuaBlueprintNodeType::CustomLuaFunction:
+            return "Custom Lua Function";
+        case ELuaBlueprintNodeType::CallCustomLuaFunction:
+            return "Call Custom Lua Function";
+        case ELuaBlueprintNodeType::GetSkeletalMeshComponent:
+            return "Get Skeletal Mesh Component";
+        case ELuaBlueprintNodeType::SetSkeletalMeshByPath:
+            return "Set Skeletal Mesh By Path";
+        case ELuaBlueprintNodeType::ClearSkeletalMesh:
+            return "Clear Skeletal Mesh";
+        case ELuaBlueprintNodeType::PlayAnimationByPath:
+            return "Play Animation By Path";
+        case ELuaBlueprintNodeType::StopAnimation:
+            return "Stop Animation";
+        case ELuaBlueprintNodeType::SetAnimationByPath:
+            return "Set Animation By Path";
+        case ELuaBlueprintNodeType::SetAnimationPlayRate:
+            return "Set Animation Play Rate";
+        case ELuaBlueprintNodeType::SetAnimationLooping:
+            return "Set Animation Looping";
+        case ELuaBlueprintNodeType::SetAnimationPlaying:
+            return "Set Animation Playing";
+        case ELuaBlueprintNodeType::GetAnimInstance:
+            return "Get Anim Instance";
+        case ELuaBlueprintNodeType::LoadMaterial:
+            return "Load Material";
+        case ELuaBlueprintNodeType::GetMaterial:
+            return "Get Material";
+        case ELuaBlueprintNodeType::SetMaterial:
+            return "Set Material";
+        case ELuaBlueprintNodeType::SetMaterialByPath:
+            return "Set Material By Path";
+        case ELuaBlueprintNodeType::CreateDynamicMaterialInstance:
+            return "Create Dynamic Material Instance";
+        case ELuaBlueprintNodeType::SetMaterialScalarParameter:
+            return "Set Material Scalar Parameter";
+        case ELuaBlueprintNodeType::SetMaterialVectorParameter:
+            return "Set Material Vector Parameter";
+        case ELuaBlueprintNodeType::SetMaterialColorParameter:
+            return "Set Material Color Parameter";
+        case ELuaBlueprintNodeType::SetMaterialTextureParameter:
+            return "Set Material Texture Parameter";
+        case ELuaBlueprintNodeType::LoadTexture:
+            return "Load Texture";
+        case ELuaBlueprintNodeType::GetCameraComponent:
+            return "Get Camera Component";
+        case ELuaBlueprintNodeType::GetActiveCamera:
+            return "Get Active Camera";
+        case ELuaBlueprintNodeType::PossessCamera:
+            return "Possess Camera";
+        case ELuaBlueprintNodeType::SetActiveCameraWithBlend:
+            return "Set Active Camera With Blend";
+        case ELuaBlueprintNodeType::SetViewTargetWithBlend:
+            return "Set View Target With Blend";
+        case ELuaBlueprintNodeType::SetCameraFOV:
+            return "Set Camera FOV";
+        case ELuaBlueprintNodeType::CameraLookAt:
+            return "Camera Look At";
+        case ELuaBlueprintNodeType::FadeIn:
+            return "Fade In";
+        case ELuaBlueprintNodeType::FadeOut:
+            return "Fade Out";
+        case ELuaBlueprintNodeType::SetVignette:
+            return "Set Vignette";
+        case ELuaBlueprintNodeType::ClearVignette:
+            return "Clear Vignette";
+        case ELuaBlueprintNodeType::StartCameraShakeAsset:
+            return "Start Camera Shake Asset";
+        case ELuaBlueprintNodeType::SetDepthOfField:
+            return "Set Depth Of Field";
+        case ELuaBlueprintNodeType::SetBokeh:
+            return "Set Bokeh";
+        case ELuaBlueprintNodeType::ClearDepthOfField:
+            return "Clear Depth Of Field";
+        case ELuaBlueprintNodeType::SetLetterbox:
+            return "Set Letterbox";
+        case ELuaBlueprintNodeType::ClearLetterbox:
+            return "Clear Letterbox";
         }
         return "Node";
     }
@@ -996,6 +1163,10 @@ namespace
             return "Defines a custom exec entry that can be called or bound.";
         case ELuaBlueprintNodeType::CallCustomEvent:
             return "Calls a Custom Event by name.";
+        case ELuaBlueprintNodeType::CustomLuaFunction:
+            return "Defines a user-authored Lua function body stored inside this Blueprint. Double-click the node body or use Edit Code to open the editor.";
+        case ELuaBlueprintNodeType::CallCustomLuaFunction:
+            return "Calls a Custom Lua Function defined in this Blueprint and exposes Success and Return outputs.";
         case ELuaBlueprintNodeType::Delay:
             return "Waits for a duration before continuing exec flow.";
         case ELuaBlueprintNodeType::ToBool:
@@ -1048,6 +1219,104 @@ namespace
             return "Stops a named looping audio instance.";
         case ELuaBlueprintNodeType::SetAudioMasterVolume:
             return "Sets the audio master volume.";
+        case ELuaBlueprintNodeType::LoadStaticMesh:
+            return "Loads a static mesh asset by path.";
+        case ELuaBlueprintNodeType::GetStaticMeshComponent:
+            return "Returns the first static mesh component owned by the actor.";
+        case ELuaBlueprintNodeType::GetStaticMesh:
+            return "Returns the static mesh asset assigned to a static mesh component.";
+        case ELuaBlueprintNodeType::SetStaticMesh:
+            return "Assigns a loaded static mesh asset to a static mesh component.";
+        case ELuaBlueprintNodeType::SetStaticMeshByPath:
+            return "Loads and assigns a static mesh asset by path on a static mesh component.";
+        case ELuaBlueprintNodeType::ClearStaticMesh:
+            return "Clears the static mesh assigned to a static mesh component.";
+        case ELuaBlueprintNodeType::GetLuaBlueprintComponent:
+            return "Returns the first Lua Blueprint component owned by the actor.";
+        case ELuaBlueprintNodeType::GetLuaScriptComponent:
+            return "Returns the first Lua Script component owned by the actor.";
+        case ELuaBlueprintNodeType::CallLuaBlueprintFunction:
+            return "Calls a no-argument function on a Lua Blueprint component through its own runtime environment.";
+        case ELuaBlueprintNodeType::CallLuaScriptFunction:
+            return "Calls a no-argument function on a Lua Script component through its own runtime environment.";
+        case ELuaBlueprintNodeType::CallLuaBlueprintFileFunction:
+            return "Loads a Lua Blueprint asset from the asset picker and calls a no-argument function in its cached runtime environment.";
+        case ELuaBlueprintNodeType::CallLuaScriptFileFunction:
+            return "Loads a Lua script file from the script picker and calls a no-argument function in its cached runtime environment.";
+        case ELuaBlueprintNodeType::GetSkeletalMeshComponent:
+            return "Returns the first skeletal mesh component owned by the actor.";
+        case ELuaBlueprintNodeType::SetSkeletalMeshByPath:
+            return "Loads and assigns a skeletal mesh asset by path on a skeletal/skinned mesh component.";
+        case ELuaBlueprintNodeType::ClearSkeletalMesh:
+            return "Clears the skeletal mesh assigned to a skinned mesh component.";
+        case ELuaBlueprintNodeType::PlayAnimationByPath:
+            return "Loads and plays an animation asset on a skeletal mesh component.";
+        case ELuaBlueprintNodeType::StopAnimation:
+            return "Stops animation playback on a skeletal mesh component.";
+        case ELuaBlueprintNodeType::SetAnimationByPath:
+            return "Loads and assigns an animation asset without forcing playback.";
+        case ELuaBlueprintNodeType::SetAnimationPlayRate:
+            return "Sets skeletal animation playback rate.";
+        case ELuaBlueprintNodeType::SetAnimationLooping:
+            return "Enables or disables skeletal animation looping.";
+        case ELuaBlueprintNodeType::SetAnimationPlaying:
+            return "Starts or pauses skeletal animation playback.";
+        case ELuaBlueprintNodeType::GetAnimInstance:
+            return "Returns the animation instance from a skeletal mesh component.";
+        case ELuaBlueprintNodeType::LoadMaterial:
+            return "Loads a material asset by path.";
+        case ELuaBlueprintNodeType::GetMaterial:
+            return "Reads a material from a primitive component element slot.";
+        case ELuaBlueprintNodeType::SetMaterial:
+            return "Assigns a material object to a primitive component element slot.";
+        case ELuaBlueprintNodeType::SetMaterialByPath:
+            return "Loads and assigns a material asset by path to a primitive component element slot.";
+        case ELuaBlueprintNodeType::CreateDynamicMaterialInstance:
+            return "Creates a per-component dynamic material instance and assigns it back to the slot.";
+        case ELuaBlueprintNodeType::SetMaterialScalarParameter:
+            return "Sets a scalar parameter on a material or dynamic material instance.";
+        case ELuaBlueprintNodeType::SetMaterialVectorParameter:
+            return "Sets a Vector3 parameter on a material or dynamic material instance.";
+        case ELuaBlueprintNodeType::SetMaterialColorParameter:
+            return "Sets a Vector4/Color parameter on a material or dynamic material instance.";
+        case ELuaBlueprintNodeType::SetMaterialTextureParameter:
+            return "Sets a texture parameter on a material or dynamic material instance.";
+        case ELuaBlueprintNodeType::LoadTexture:
+            return "Loads a texture asset by path for texture material parameters.";
+        case ELuaBlueprintNodeType::GetCameraComponent:
+            return "Returns the first camera component owned by the actor.";
+        case ELuaBlueprintNodeType::GetActiveCamera:
+            return "Returns the active camera component from the camera manager.";
+        case ELuaBlueprintNodeType::PossessCamera:
+            return "Makes the player camera manager possess and drive the target camera.";
+        case ELuaBlueprintNodeType::SetActiveCameraWithBlend:
+            return "Blends the active camera manager view to a target camera component.";
+        case ELuaBlueprintNodeType::SetViewTargetWithBlend:
+            return "Blends the player view target to a target actor.";
+        case ELuaBlueprintNodeType::SetCameraFOV:
+            return "Sets camera field of view.";
+        case ELuaBlueprintNodeType::CameraLookAt:
+            return "Rotates a camera to look at a world-space target point.";
+        case ELuaBlueprintNodeType::FadeIn:
+            return "Runs camera fade-in through the camera manager.";
+        case ELuaBlueprintNodeType::FadeOut:
+            return "Runs camera fade-out through the camera manager.";
+        case ELuaBlueprintNodeType::SetVignette:
+            return "Enables and configures camera-manager vignette rendering.";
+        case ELuaBlueprintNodeType::ClearVignette:
+            return "Disables camera-manager vignette rendering.";
+        case ELuaBlueprintNodeType::StartCameraShakeAsset:
+            return "Starts a camera shake asset through the camera manager.";
+        case ELuaBlueprintNodeType::SetDepthOfField:
+            return "Overrides runtime depth of field focus distance, range and blur radius.";
+        case ELuaBlueprintNodeType::SetBokeh:
+            return "Overrides runtime bokeh radius, luma threshold and intensity.";
+        case ELuaBlueprintNodeType::ClearDepthOfField:
+            return "Clears runtime depth of field and bokeh overrides.";
+        case ELuaBlueprintNodeType::SetLetterbox:
+            return "Enables cine-camera letterbox with amount, thickness and color.";
+        case ELuaBlueprintNodeType::ClearLetterbox:
+            return "Disables cine-camera letterbox.";
         case ELuaBlueprintNodeType::EventInputAction:
             return "Executes when the owning possessed Pawn receives the configured action input.";
         case ELuaBlueprintNodeType::EventInputAxis:
@@ -1130,6 +1399,30 @@ namespace
             return "Enum";
         case ELuaBlueprintPinType::Name:
             return "Name";
+        case ELuaBlueprintPinType::StaticMesh:
+            return "StaticMesh";
+        case ELuaBlueprintPinType::StaticMeshComponent:
+            return "StaticMeshComponent";
+        case ELuaBlueprintPinType::SkinnedMeshComponent:
+            return "SkinnedMeshComponent";
+        case ELuaBlueprintPinType::SkeletalMeshComponent:
+            return "SkeletalMeshComponent";
+        case ELuaBlueprintPinType::CameraComponent:
+            return "CameraComponent";
+        case ELuaBlueprintPinType::CineCameraComponent:
+            return "CineCameraComponent";
+        case ELuaBlueprintPinType::Material:
+            return "Material";
+        case ELuaBlueprintPinType::Texture:
+            return "Texture";
+        case ELuaBlueprintPinType::AnimInstance:
+            return "AnimInstance";
+        case ELuaBlueprintPinType::LuaBlueprintComponent:
+            return "LuaBlueprintComponent";
+        case ELuaBlueprintPinType::LuaScriptComponent:
+            return "LuaScriptComponent";
+        case ELuaBlueprintPinType::LuaFunction:
+            return "LuaFunction";
         case ELuaBlueprintPinType::Any:
             return "Any";
         case ELuaBlueprintPinType::Array:
@@ -1182,6 +1475,8 @@ namespace
         case ELuaBlueprintNodeType::CallFunctionSignature:
         case ELuaBlueprintNodeType::CallCustomEvent:
         case ELuaBlueprintNodeType::CustomEvent:
+        case ELuaBlueprintNodeType::CustomLuaFunction:
+        case ELuaBlueprintNodeType::CallCustomLuaFunction:
             return ImVec4(0.45f, 0.70f, 1.00f, 1.0f);
         case ELuaBlueprintNodeType::BindEvent:
         case ELuaBlueprintNodeType::UnbindEvent:
@@ -1277,6 +1572,60 @@ namespace
         case ELuaBlueprintNodeType::GetMass:
         case ELuaBlueprintNodeType::SetSimulatePhysics:
             return ImVec4(0.45f, 0.85f, 0.65f, 1.0f);
+        case ELuaBlueprintNodeType::LoadStaticMesh:
+        case ELuaBlueprintNodeType::GetStaticMeshComponent:
+        case ELuaBlueprintNodeType::GetStaticMesh:
+        case ELuaBlueprintNodeType::SetStaticMesh:
+        case ELuaBlueprintNodeType::SetStaticMeshByPath:
+        case ELuaBlueprintNodeType::ClearStaticMesh:
+            return ImVec4(0.45f, 0.85f, 0.90f, 1.0f);
+        case ELuaBlueprintNodeType::GetLuaBlueprintComponent:
+        case ELuaBlueprintNodeType::GetLuaScriptComponent:
+        case ELuaBlueprintNodeType::CallLuaBlueprintFunction:
+        case ELuaBlueprintNodeType::CallLuaScriptFunction:
+        case ELuaBlueprintNodeType::CallLuaBlueprintFileFunction:
+        case ELuaBlueprintNodeType::CallLuaScriptFileFunction:
+            return ImVec4(0.55f, 0.90f, 0.75f, 1.0f);
+        case ELuaBlueprintNodeType::GetSkeletalMeshComponent:
+        case ELuaBlueprintNodeType::SetSkeletalMeshByPath:
+        case ELuaBlueprintNodeType::ClearSkeletalMesh:
+        case ELuaBlueprintNodeType::PlayAnimationByPath:
+        case ELuaBlueprintNodeType::StopAnimation:
+        case ELuaBlueprintNodeType::SetAnimationByPath:
+        case ELuaBlueprintNodeType::SetAnimationPlayRate:
+        case ELuaBlueprintNodeType::SetAnimationLooping:
+        case ELuaBlueprintNodeType::SetAnimationPlaying:
+        case ELuaBlueprintNodeType::GetAnimInstance:
+            return ImVec4(0.55f, 0.80f, 1.00f, 1.0f);
+        case ELuaBlueprintNodeType::LoadMaterial:
+        case ELuaBlueprintNodeType::GetMaterial:
+        case ELuaBlueprintNodeType::SetMaterial:
+        case ELuaBlueprintNodeType::SetMaterialByPath:
+        case ELuaBlueprintNodeType::CreateDynamicMaterialInstance:
+        case ELuaBlueprintNodeType::SetMaterialScalarParameter:
+        case ELuaBlueprintNodeType::SetMaterialVectorParameter:
+        case ELuaBlueprintNodeType::SetMaterialColorParameter:
+        case ELuaBlueprintNodeType::SetMaterialTextureParameter:
+        case ELuaBlueprintNodeType::LoadTexture:
+            return ImVec4(0.75f, 0.55f, 1.00f, 1.0f);
+        case ELuaBlueprintNodeType::GetCameraComponent:
+        case ELuaBlueprintNodeType::GetActiveCamera:
+        case ELuaBlueprintNodeType::PossessCamera:
+        case ELuaBlueprintNodeType::SetActiveCameraWithBlend:
+        case ELuaBlueprintNodeType::SetViewTargetWithBlend:
+        case ELuaBlueprintNodeType::SetCameraFOV:
+        case ELuaBlueprintNodeType::CameraLookAt:
+        case ELuaBlueprintNodeType::FadeIn:
+        case ELuaBlueprintNodeType::FadeOut:
+        case ELuaBlueprintNodeType::SetVignette:
+        case ELuaBlueprintNodeType::ClearVignette:
+        case ELuaBlueprintNodeType::StartCameraShakeAsset:
+        case ELuaBlueprintNodeType::SetDepthOfField:
+        case ELuaBlueprintNodeType::SetBokeh:
+        case ELuaBlueprintNodeType::ClearDepthOfField:
+        case ELuaBlueprintNodeType::SetLetterbox:
+        case ELuaBlueprintNodeType::ClearLetterbox:
+            return ImVec4(0.35f, 0.75f, 1.00f, 1.0f);
         case ELuaBlueprintNodeType::Lerp:
         case ELuaBlueprintNodeType::Clamp:
         case ELuaBlueprintNodeType::Min:
@@ -1352,7 +1701,25 @@ namespace
         case ELuaBlueprintPinType::ActorComponent:
         case ELuaBlueprintPinType::SceneComponent:
         case ELuaBlueprintPinType::PrimitiveComponent:
+        case ELuaBlueprintPinType::LuaBlueprintComponent:
+        case ELuaBlueprintPinType::LuaScriptComponent:
             return ImVec4(0.40f, 0.85f, 0.65f, 1.0f);
+        case ELuaBlueprintPinType::StaticMesh:
+            return ImVec4(0.70f, 0.85f, 0.95f, 1.0f);
+        case ELuaBlueprintPinType::StaticMeshComponent:
+        case ELuaBlueprintPinType::SkinnedMeshComponent:
+        case ELuaBlueprintPinType::SkeletalMeshComponent:
+            return ImVec4(0.45f, 0.85f, 0.90f, 1.0f);
+        case ELuaBlueprintPinType::CameraComponent:
+        case ELuaBlueprintPinType::CineCameraComponent:
+            return ImVec4(0.35f, 0.75f, 1.00f, 1.0f);
+        case ELuaBlueprintPinType::Material:
+        case ELuaBlueprintPinType::Texture:
+            return ImVec4(0.75f, 0.55f, 1.00f, 1.0f);
+        case ELuaBlueprintPinType::AnimInstance:
+            return ImVec4(0.55f, 0.80f, 1.00f, 1.0f);
+        case ELuaBlueprintPinType::LuaFunction:
+            return ImVec4(0.95f, 0.70f, 0.35f, 1.0f);
         case ELuaBlueprintPinType::Rotator:
             return ImVec4(0.95f, 0.75f, 0.30f, 1.0f);
         case ELuaBlueprintPinType::LinearColor:
@@ -1371,6 +1738,127 @@ namespace
             return ImVec4(0.55f, 0.60f, 1.00f, 1.0f);
         }
         return ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
+    }
+
+
+    bool LuaBlueprintPinNameMatches(const FString& PinName, const char* A, const char* B = nullptr, const char* C = nullptr)
+    {
+        return PinName == A || (B && PinName == B) || (C && PinName == C);
+    }
+
+    const char* LuaBlueprintAssetTypeForPin(const FLuaBlueprintNode& Node, const FLuaBlueprintPin& Pin)
+    {
+        if (Pin.Type != ELuaBlueprintPinType::String)
+        {
+            return nullptr;
+        }
+
+        const FString PinName = Pin.DisplayName.ToString();
+        switch (Node.Type)
+        {
+        case ELuaBlueprintNodeType::LoadStaticMesh:
+            return LuaBlueprintPinNameMatches(PinName, "Path", "MeshPath") ? "StaticMesh" : nullptr;
+        case ELuaBlueprintNodeType::SetStaticMeshByPath:
+            return LuaBlueprintPinNameMatches(PinName, "MeshPath", "Path") ? "StaticMesh" : nullptr;
+        case ELuaBlueprintNodeType::SetSkeletalMeshByPath:
+            return LuaBlueprintPinNameMatches(PinName, "MeshPath", "Path") ? "SkeletalMesh" : nullptr;
+        case ELuaBlueprintNodeType::PlayAnimationByPath:
+        case ELuaBlueprintNodeType::SetAnimationByPath:
+            return LuaBlueprintPinNameMatches(PinName, "AnimationPath", "Path") ? "UAnimSequence" : nullptr;
+        case ELuaBlueprintNodeType::LoadMaterial:
+            return LuaBlueprintPinNameMatches(PinName, "Path", "MaterialPath") ? "Material" : nullptr;
+        case ELuaBlueprintNodeType::SetMaterialByPath:
+            return LuaBlueprintPinNameMatches(PinName, "MaterialPath", "Path") ? "Material" : nullptr;
+        case ELuaBlueprintNodeType::LoadTexture:
+            return LuaBlueprintPinNameMatches(PinName, "Path", "TexturePath") ? "Texture" : nullptr;
+        case ELuaBlueprintNodeType::LoadAudio:
+            return LuaBlueprintPinNameMatches(PinName, "Path", "AudioPath") ? "Audio" : nullptr;
+        case ELuaBlueprintNodeType::ParticleSetTemplateByPath:
+            // Existing ParticleSetTemplateByPath nodes create the input as "Path", while an older picker
+            // mapping expected "TemplatePath". Accept both so saved graphs and new graphs get the asset picker.
+            return LuaBlueprintPinNameMatches(PinName, "Path", "TemplatePath", "ParticlePath") ? "UParticleSystem" : nullptr;
+        case ELuaBlueprintNodeType::CreateWidget:
+            return LuaBlueprintPinNameMatches(PinName, "DocumentPath", "Path") ? "RmlDocument" : nullptr;
+        case ELuaBlueprintNodeType::StartCameraShakeAsset:
+            return LuaBlueprintPinNameMatches(PinName, "AssetPath", "Path") ? "CameraShake" : nullptr;
+        case ELuaBlueprintNodeType::CallLuaBlueprintFileFunction:
+            return LuaBlueprintPinNameMatches(PinName, "BlueprintPath", "Path") ? "ULuaBlueprintAsset" : nullptr;
+        case ELuaBlueprintNodeType::CallLuaScriptFileFunction:
+            return LuaBlueprintPinNameMatches(PinName, "ScriptFile", "Path") ? "Script" : nullptr;
+        default:
+            break;
+        }
+        return nullptr;
+    }
+
+    FString LuaBlueprintAssetPreviewText(const FString& CurrentPath)
+    {
+        FString Preview = "None";
+        if (!CurrentPath.empty() && CurrentPath != "None")
+        {
+            size_t SlashPos = CurrentPath.find_last_of("/\\");
+            Preview = (SlashPos == FString::npos) ? CurrentPath : CurrentPath.substr(SlashPos + 1);
+            size_t DotPos = Preview.find_last_of('.');
+            if (DotPos != FString::npos)
+            {
+                Preview = Preview.substr(0, DotPos);
+            }
+        }
+        return Preview;
+    }
+
+    bool RenderLuaBlueprintAssetPicker(const char* AssetType, const FString& CurrentPath, const char* ComboId, FString& OutSelectedPath)
+    {
+        // Inspector / non-node-editor fallback. Inline node pins must not use this directly because
+        // ImGui combo popups opened inside ax::NodeEditor canvas are transformed/clipped by the canvas.
+        if (!AssetType || !AssetType[0])
+        {
+            return false;
+        }
+
+        const FString Preview = LuaBlueprintAssetPreviewText(CurrentPath);
+        bool bChanged = false;
+        if (ImGui::BeginCombo(ComboId, Preview.c_str()))
+        {
+            const TArray<FAssetListItem>& Items = FAssetRegistry::ListByTypeName(AssetType);
+
+            const bool bSelectedNone = CurrentPath.empty() || CurrentPath == "None";
+            if (ImGui::Selectable("None", bSelectedNone))
+            {
+                OutSelectedPath = "None";
+                bChanged = true;
+            }
+            if (bSelectedNone)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+
+            if (Items.empty())
+            {
+                ImGui::Separator();
+                ImGui::TextDisabled("No assets found");
+            }
+            for (const FAssetListItem& Item : Items)
+            {
+                const bool bSelected = Item.FullPath == CurrentPath;
+                const char* Label = Item.DisplayName.empty() ? Item.FullPath.c_str() : Item.DisplayName.c_str();
+                if (ImGui::Selectable(Label, bSelected))
+                {
+                    OutSelectedPath = Item.FullPath;
+                    bChanged = true;
+                }
+                if (ImGui::IsItemHovered() && !Item.FullPath.empty())
+                {
+                    ImGui::SetTooltip("%s", Item.FullPath.c_str());
+                }
+                if (bSelected)
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+        return bChanged;
     }
 
     bool IsEventNode(ELuaBlueprintNodeType Type)
@@ -1442,6 +1930,17 @@ namespace
         case ELuaBlueprintPinType::ActorComponent:
         case ELuaBlueprintPinType::SceneComponent:
         case ELuaBlueprintPinType::PrimitiveComponent:
+        case ELuaBlueprintPinType::StaticMesh:
+        case ELuaBlueprintPinType::StaticMeshComponent:
+        case ELuaBlueprintPinType::SkinnedMeshComponent:
+        case ELuaBlueprintPinType::SkeletalMeshComponent:
+        case ELuaBlueprintPinType::CameraComponent:
+        case ELuaBlueprintPinType::CineCameraComponent:
+        case ELuaBlueprintPinType::Material:
+        case ELuaBlueprintPinType::Texture:
+        case ELuaBlueprintPinType::AnimInstance:
+        case ELuaBlueprintPinType::LuaBlueprintComponent:
+        case ELuaBlueprintPinType::LuaScriptComponent:
         case ELuaBlueprintPinType::Rotator:
         case ELuaBlueprintPinType::LinearColor:
         case ELuaBlueprintPinType::Vector4:
@@ -1496,6 +1995,28 @@ namespace
             return 17;
         case ELuaBlueprintPinType::Name:
             return 18;
+        case ELuaBlueprintPinType::StaticMesh:
+            return 19;
+        case ELuaBlueprintPinType::StaticMeshComponent:
+            return 20;
+        case ELuaBlueprintPinType::SkinnedMeshComponent:
+            return 21;
+        case ELuaBlueprintPinType::SkeletalMeshComponent:
+            return 22;
+        case ELuaBlueprintPinType::CameraComponent:
+            return 23;
+        case ELuaBlueprintPinType::CineCameraComponent:
+            return 24;
+        case ELuaBlueprintPinType::Material:
+            return 25;
+        case ELuaBlueprintPinType::Texture:
+            return 26;
+        case ELuaBlueprintPinType::AnimInstance:
+            return 27;
+        case ELuaBlueprintPinType::LuaBlueprintComponent:
+            return 28;
+        case ELuaBlueprintPinType::LuaScriptComponent:
+            return 29;
         default:
             return 2;
         }
@@ -1543,6 +2064,28 @@ namespace
             return ELuaBlueprintPinType::Enum;
         case 18:
             return ELuaBlueprintPinType::Name;
+        case 19:
+            return ELuaBlueprintPinType::StaticMesh;
+        case 20:
+            return ELuaBlueprintPinType::StaticMeshComponent;
+        case 21:
+            return ELuaBlueprintPinType::SkinnedMeshComponent;
+        case 22:
+            return ELuaBlueprintPinType::SkeletalMeshComponent;
+        case 23:
+            return ELuaBlueprintPinType::CameraComponent;
+        case 24:
+            return ELuaBlueprintPinType::CineCameraComponent;
+        case 25:
+            return ELuaBlueprintPinType::Material;
+        case 26:
+            return ELuaBlueprintPinType::Texture;
+        case 27:
+            return ELuaBlueprintPinType::AnimInstance;
+        case 28:
+            return ELuaBlueprintPinType::LuaBlueprintComponent;
+        case 29:
+            return ELuaBlueprintPinType::LuaScriptComponent;
         default:
             return ELuaBlueprintPinType::Float;
         }
@@ -1757,6 +2300,94 @@ namespace
             return false;
         }
     }
+
+    const FLuaBlueprintNode* FindCustomLuaFunctionNodeById(const ULuaBlueprintAsset* Blueprint, uint32 NodeId)
+    {
+        if (!Blueprint || NodeId == 0) return nullptr;
+        const FLuaBlueprintNode* Node = Blueprint->FindNode(NodeId);
+        return Node && Node->Type == ELuaBlueprintNodeType::CustomLuaFunction ? Node : nullptr;
+    }
+
+    FLuaBlueprintNode* FindCustomLuaFunctionNodeById(ULuaBlueprintAsset* Blueprint, uint32 NodeId)
+    {
+        if (!Blueprint || NodeId == 0) return nullptr;
+        FLuaBlueprintNode* Node = Blueprint->FindNode(NodeId);
+        return Node && Node->Type == ELuaBlueprintNodeType::CustomLuaFunction ? Node : nullptr;
+    }
+
+    const FLuaBlueprintNode* FindCustomLuaFunctionNodeByName(const ULuaBlueprintAsset* Blueprint, const FName& FunctionName)
+    {
+        if (!Blueprint || FunctionName == FName::None) return nullptr;
+        for (const FLuaBlueprintNode& Node : Blueprint->GetNodes())
+        {
+            if (Node.Type == ELuaBlueprintNodeType::CustomLuaFunction && Node.NameValue == FunctionName)
+            {
+                return &Node;
+            }
+        }
+        return nullptr;
+    }
+
+    FLuaBlueprintNode* FindCustomLuaFunctionNodeByName(ULuaBlueprintAsset* Blueprint, const FName& FunctionName)
+    {
+        if (!Blueprint || FunctionName == FName::None) return nullptr;
+        for (FLuaBlueprintNode& Node : Blueprint->GetMutableNodes())
+        {
+            if (Node.Type == ELuaBlueprintNodeType::CustomLuaFunction && Node.NameValue == FunctionName)
+            {
+                return &Node;
+            }
+        }
+        return nullptr;
+    }
+
+    const FLuaBlueprintNode* ResolveCustomLuaFunctionCallTarget(const ULuaBlueprintAsset* Blueprint, const FLuaBlueprintNode& CallNode)
+    {
+        if (!Blueprint || CallNode.Type != ELuaBlueprintNodeType::CallCustomLuaFunction) return nullptr;
+
+        for (const FLuaBlueprintPin& Pin : CallNode.Pins)
+        {
+            if (Pin.Kind != ELuaBlueprintPinKind::Input || Pin.DisplayName.ToString() != "Function") continue;
+            if (const FLuaBlueprintLink* Link = Blueprint->FindLinkToInput(Pin.PinId))
+            {
+                if (const FLuaBlueprintPin* SourcePin = Blueprint->FindPin(Link->FromPinId))
+                {
+                    if (const FLuaBlueprintNode* SourceNode = FindCustomLuaFunctionNodeById(Blueprint, SourcePin->OwningNodeId))
+                    {
+                        return SourceNode;
+                    }
+                }
+            }
+            break;
+        }
+
+        if (const FLuaBlueprintNode* ById = FindCustomLuaFunctionNodeById(Blueprint, static_cast<uint32>(CallNode.IntValue)))
+        {
+            return ById;
+        }
+        return FindCustomLuaFunctionNodeByName(Blueprint, CallNode.NameValue);
+    }
+
+    void SyncCallCustomLuaFunctionNamePin(FLuaBlueprintNode& CallNode)
+    {
+        if (CallNode.Type != ELuaBlueprintNodeType::CallCustomLuaFunction) return;
+        for (FLuaBlueprintPin& Pin : CallNode.Pins)
+        {
+            if (Pin.Kind == ELuaBlueprintPinKind::Input && Pin.DisplayName.ToString() == "FunctionName")
+            {
+                Pin.DefaultString = CallNode.NameValue.ToString();
+                break;
+            }
+        }
+    }
+
+    void SetCallCustomLuaFunctionTarget(ULuaBlueprintAsset* Blueprint, FLuaBlueprintNode& CallNode, const FLuaBlueprintNode* FunctionNode)
+    {
+        if (!Blueprint || CallNode.Type != ELuaBlueprintNodeType::CallCustomLuaFunction || !FunctionNode || FunctionNode->Type != ELuaBlueprintNodeType::CustomLuaFunction) return;
+        CallNode.IntValue = static_cast<int32>(FunctionNode->NodeId);
+        CallNode.NameValue = FunctionNode->NameValue;
+        SyncCallCustomLuaFunctionNamePin(CallNode);
+    }
 }
 
 FLuaBlueprintEditorWidget::~FLuaBlueprintEditorWidget()
@@ -1923,6 +2554,8 @@ void FLuaBlueprintEditorWidget::Render(float /*DeltaTime*/)
         }
         ImGui::EndTabBar();
     }
+
+    RenderCustomLuaFunctionEditor(Blueprint);
 
     if (!bRenderingDocument)
     {
@@ -2270,6 +2903,15 @@ void FLuaBlueprintEditorWidget::RenderVariables(ULuaBlueprintAsset* Blueprint)
         AddVariableMenuItem(Blueprint, ELuaBlueprintPinType::ActorComponent, "ActorComponent");
         AddVariableMenuItem(Blueprint, ELuaBlueprintPinType::SceneComponent, "SceneComponent");
         AddVariableMenuItem(Blueprint, ELuaBlueprintPinType::PrimitiveComponent, "PrimitiveComponent");
+        AddVariableMenuItem(Blueprint, ELuaBlueprintPinType::StaticMesh, "StaticMesh");
+        AddVariableMenuItem(Blueprint, ELuaBlueprintPinType::StaticMeshComponent, "StaticMeshComponent");
+        AddVariableMenuItem(Blueprint, ELuaBlueprintPinType::SkinnedMeshComponent, "SkinnedMeshComponent");
+        AddVariableMenuItem(Blueprint, ELuaBlueprintPinType::SkeletalMeshComponent, "SkeletalMeshComponent");
+        AddVariableMenuItem(Blueprint, ELuaBlueprintPinType::CameraComponent, "CameraComponent");
+        AddVariableMenuItem(Blueprint, ELuaBlueprintPinType::CineCameraComponent, "CineCameraComponent");
+        AddVariableMenuItem(Blueprint, ELuaBlueprintPinType::Material, "Material");
+        AddVariableMenuItem(Blueprint, ELuaBlueprintPinType::Texture, "Texture");
+        AddVariableMenuItem(Blueprint, ELuaBlueprintPinType::AnimInstance, "AnimInstance");
         AddVariableMenuItem(Blueprint, ELuaBlueprintPinType::Rotator, "Rotator");
         AddVariableMenuItem(Blueprint, ELuaBlueprintPinType::LinearColor, "LinearColor");
         AddVariableMenuItem(Blueprint, ELuaBlueprintPinType::Vector4, "Vector4");
@@ -2384,6 +3026,8 @@ void FLuaBlueprintEditorWidget::RenderPalettePanel(ULuaBlueprintAsset* Blueprint
         { "Functions", ELuaBlueprintNodeType::CallFunction },
         { "Functions", ELuaBlueprintNodeType::CustomEvent },
         { "Functions", ELuaBlueprintNodeType::CallCustomEvent },
+        { "Functions", ELuaBlueprintNodeType::CustomLuaFunction },
+        { "Functions", ELuaBlueprintNodeType::CallCustomLuaFunction },
         { "Delegates", ELuaBlueprintNodeType::BindEvent },
         { "Delegates", ELuaBlueprintNodeType::UnbindEvent },
         { "Utility", ELuaBlueprintNodeType::Lerp },
@@ -2511,6 +3155,8 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
     const ImRect         TooltipOwnerRect(TooltipOwnerMin, TooltipOwnerMax);
     const ImGuiViewport* TooltipOwnerViewport   = ImGui::GetWindowViewport();
     const ImGuiID        TooltipOwnerViewportId = TooltipOwnerViewport ? TooltipOwnerViewport->ID : 0;
+    InlineAssetPickerOwnerMin = TooltipOwnerMin;
+    InlineAssetPickerOwnerMax = TooltipOwnerMax;
 
     ed::SetCurrentEditor(NodeEditorContext);
     ed::Begin("LuaBlueprintCanvas");
@@ -2539,6 +3185,8 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
     bool                  bHoveredNodeHelpIcon             = false;
     ELuaBlueprintNodeType HoveredNodeHelpType              = ELuaBlueprintNodeType::Comment;
     FDeferredTooltip      DeferredNodeTooltip;
+    bInlineAssetHoverTooltipVisible = false;
+    InlineAssetHoverTooltipPath.clear();
 
     for (FLuaBlueprintNode& Node : Blueprint->GetMutableNodes())
     {
@@ -2749,6 +3397,20 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
                     if (ed::AcceptNewItem())
                     {
                         Blueprint->AddLink(FromPinId, ToPinIdValue);
+                        if (const FLuaBlueprintPin* FromPin = Blueprint->FindPin(FromPinId))
+                        {
+                            if (FLuaBlueprintPin* ToPin = Blueprint->FindPin(ToPinIdValue))
+                            {
+                                FLuaBlueprintNode* FromNode = Blueprint->FindNode(FromPin->OwningNodeId);
+                                FLuaBlueprintNode* ToNode = Blueprint->FindNode(ToPin->OwningNodeId);
+                                if (FromNode && ToNode && FromNode->Type == ELuaBlueprintNodeType::CustomLuaFunction &&
+                                    ToNode->Type == ELuaBlueprintNodeType::CallCustomLuaFunction &&
+                                    ToPin->DisplayName.ToString() == "Function")
+                                {
+                                    SetCallCustomLuaFunctionTarget(Blueprint, *ToNode, FromNode);
+                                }
+                            }
+                        }
                         CommitBlueprintEdit(Blueprint);
                     }
                 }
@@ -2855,11 +3517,21 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
     ed::Suspend();
     if (ed::ShowNodeContextMenu(&ContextNodeId))
     {
+        ContextMenuNodeId = NodeIdToU32(ContextNodeId);
+        ContextMenuPinId  = 0;
+        ContextMenuLinkId = 0;
+        if (ContextMenuNodeId != 0)
+        {
+            SelectOnlyNodes(TArray<uint32> { ContextMenuNodeId });
+        }
         ImGui::OpenPopup("LuaBlueprintNodeMenu");
     }
     else if (ed::ShowPinContextMenu(&ContextPinId))
     {
-        PendingPinSpawnPinId   = PinIdToU32(ContextPinId);
+        ContextMenuNodeId = 0;
+        ContextMenuPinId  = PinIdToU32(ContextPinId);
+        ContextMenuLinkId = 0;
+        PendingPinSpawnPinId   = ContextMenuPinId;
         PendingPinSpawnPos     = ed::ScreenToCanvas(ImGui::GetMousePos());
         PendingNewNodePosition = PendingPinSpawnPos;
         PinSpawnSearchBuf[0]   = 0;
@@ -2867,10 +3539,16 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
     }
     else if (ed::ShowLinkContextMenu(&ContextLinkId))
     {
+        ContextMenuNodeId = 0;
+        ContextMenuPinId  = 0;
+        ContextMenuLinkId = LinkIdToU32(ContextLinkId);
         ImGui::OpenPopup("LuaBlueprintLinkMenu");
     }
     else if (ed::ShowBackgroundContextMenu())
     {
+        ContextMenuNodeId = 0;
+        ContextMenuPinId  = 0;
+        ContextMenuLinkId = 0;
         PendingNewNodePosition = ed::ScreenToCanvas(ImGui::GetMousePos());
         AddNodeSearchBuf[0]    = 0;
         ImGui::OpenPopup("LuaBlueprintBackgroundMenu");
@@ -2878,8 +3556,16 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
 
     if (ImGui::BeginPopup("LuaBlueprintNodeMenu"))
     {
-        if (FLuaBlueprintNode* ContextNode = Blueprint->FindNode(NodeIdToU32(ContextNodeId)))
+        if (FLuaBlueprintNode* ContextNode = Blueprint->FindNode(ContextMenuNodeId))
         {
+            if (ContextNode->Type == ELuaBlueprintNodeType::CustomLuaFunction)
+            {
+                if (ImGui::MenuItem("Edit Code"))
+                {
+                    OpenCustomLuaFunctionEditor(Blueprint, ContextNode->NodeId);
+                }
+                ImGui::Separator();
+            }
             if (IsLuaBlueprintExecutableDebugNode(*ContextNode))
             {
                 const char* BreakpointLabel = ContextNode->bBreakpointEnabled ? "Disable Breakpoint" : "Enable Breakpoint";
@@ -2911,8 +3597,9 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
         if (ImGui::MenuItem("Delete"))
         {
             TArray<uint32> RootNodeIds;
-            RootNodeIds.push_back(NodeIdToU32(ContextNodeId));
+            RootNodeIds.push_back(ContextMenuNodeId);
             if (DeleteNodesIncludingContainedGroups(Blueprint, RootNodeIds)) CommitBlueprintEdit(Blueprint);
+            ContextMenuNodeId = 0;
         }
         ImGui::EndPopup();
     }
@@ -2921,18 +3608,17 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
     {
         if (ImGui::MenuItem("Break Link"))
         {
-            if (Blueprint->RemoveLink(LinkIdToU32(ContextLinkId))) CommitBlueprintEdit(Blueprint);
+            if (ContextMenuLinkId != 0 && Blueprint->RemoveLink(ContextMenuLinkId)) CommitBlueprintEdit(Blueprint);
+            ContextMenuLinkId = 0;
         }
         ImGui::EndPopup();
     }
 
     if (ImGui::BeginPopup("LuaBlueprintPinMenu"))
     {
-        if (ContextPinId)
+        if (ContextMenuPinId != 0)
         {
-            PendingPinSpawnPinId   = PinIdToU32(ContextPinId);
-            PendingPinSpawnPos     = ed::ScreenToCanvas(ImGui::GetMousePos());
-            PendingNewNodePosition = PendingPinSpawnPos;
+            PendingPinSpawnPinId = ContextMenuPinId;
         }
         RenderPinSpawnMenu(Blueprint);
         ImGui::EndPopup();
@@ -2995,6 +3681,7 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
         }
         ImGui::EndPopup();
     }
+
     ed::Resume();
 
     {
@@ -3023,9 +3710,19 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
     ed::End();
     ed::SetCurrentEditor(nullptr);
 
+    // NodeEditor canvas transform/clipping is no longer active here.
+    // Render hover tooltips and the inline asset picker only from this stable layer.
+    RenderDeferredInlineAssetPicker(Blueprint);
+
     if (bHoveredNodeHelpIcon)
     {
         RenderNodeHelpTooltip(HoveredNodeHelpType, TooltipOwnerRect, TooltipOwnerViewportId);
+    }
+    else if (bInlineAssetHoverTooltipVisible)
+    {
+        FDeferredTooltip Tooltip;
+        SetDeferredTooltip(Tooltip, FString(), InlineAssetHoverTooltipPath);
+        RenderDeferredTooltip(Tooltip);
     }
     else
     {
@@ -3146,6 +3843,45 @@ void FLuaBlueprintEditorWidget::RenderNodeBody(ULuaBlueprintAsset* Blueprint, FL
             ImGui::TextDisabled("%s", Node.StringValue.c_str());
         }
         break;
+    case ELuaBlueprintNodeType::CustomLuaFunction:
+    {
+        ImGui::TextDisabled("%s", Node.NameValue == FName::None ? "(no function)" : Node.NameValue.ToString().c_str());
+        ImGui::TextWrapped("Double-click here or press Edit Code to write Lua.");
+        const bool bDoubleClickedBody = ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
+        if (ImGui::SmallButton("Edit Code"))
+        {
+            OpenCustomLuaFunctionEditor(Blueprint, Node.NodeId);
+        }
+        if (bDoubleClickedBody)
+        {
+            OpenCustomLuaFunctionEditor(Blueprint, Node.NodeId);
+        }
+        break;
+    }
+    case ELuaBlueprintNodeType::CallCustomLuaFunction:
+    {
+        const FLuaBlueprintNode* Target = ResolveCustomLuaFunctionCallTarget(Blueprint, Node);
+        const FString TargetLabel = Target ? Target->NameValue.ToString() : Node.NameValue.ToString();
+        ImGui::TextDisabled("%s", TargetLabel.empty() ? "(no function)" : TargetLabel.c_str());
+        if (Target && Node.IntValue == static_cast<int32>(Target->NodeId))
+        {
+            ImGui::TextDisabled("linked to node #%u", Target->NodeId);
+        }
+        else if (Target)
+        {
+            ImGui::TextDisabled("resolved by name");
+        }
+        else
+        {
+            ImGui::TextDisabled("unresolved");
+        }
+        const bool bOpenDefinition = ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
+        if (bOpenDefinition && Target)
+        {
+            OpenCustomLuaFunctionEditor(Blueprint, Target->NodeId);
+        }
+        break;
+    }
     case ELuaBlueprintNodeType::CustomEvent:
     case ELuaBlueprintNodeType::CallCustomEvent:
     case ELuaBlueprintNodeType::SetTimer:
@@ -3379,6 +4115,79 @@ void FLuaBlueprintEditorWidget::RenderNodeInspector(ULuaBlueprintAsset* Blueprin
             ImGui::EndCombo();
         }
         ImGui::TextDisabled("선택 시 reflection parameter 기준으로 입력/출력 핀이 자동 재구성됩니다.");
+        break;
+    }
+    case ELuaBlueprintNodeType::CustomLuaFunction:
+    {
+        char FunctionBuf[160];
+        CopyToBuffer(FunctionBuf, sizeof(FunctionBuf), Node.NameValue.ToString());
+        if (ImGui::InputText("Function Name", FunctionBuf, sizeof(FunctionBuf), ImGuiInputTextFlags_EnterReturnsTrue))
+        {
+            const FName OldName = Node.NameValue;
+            const FName NewName = FunctionBuf[0] ? FName(FunctionBuf) : FName::None;
+            Node.NameValue = NewName;
+            RenameCustomLuaFunctionCascade(Blueprint, OldName, NewName);
+            Blueprint->BumpVersion();
+            CommitBlueprintEdit(Blueprint);
+        }
+        if (ImGui::Button("Edit Code"))
+        {
+            OpenCustomLuaFunctionEditor(Blueprint, Node.NodeId);
+        }
+        ImGui::TextDisabled("Arguments: Arg0, Arg1, Arg2, Arg3. Use return <value> for the Return output.");
+        break;
+    }
+    case ELuaBlueprintNodeType::CallCustomLuaFunction:
+    {
+        const FLuaBlueprintNode* CurrentTarget = ResolveCustomLuaFunctionCallTarget(Blueprint, Node);
+        const FString CurrentName = CurrentTarget ? CurrentTarget->NameValue.ToString() : Node.NameValue.ToString();
+        const char* Preview = CurrentName.empty() ? "(none)" : CurrentName.c_str();
+        if (ImGui::BeginCombo("Custom Lua Function Node", Preview))
+        {
+            for (const FLuaBlueprintNode& Other : Blueprint->GetNodes())
+            {
+                if (Other.Type != ELuaBlueprintNodeType::CustomLuaFunction) continue;
+                const FString FunctionName = Other.NameValue.ToString();
+                const FString Label = FunctionName.empty()
+                    ? FString("<unnamed>  #") + std::to_string(Other.NodeId)
+                    : FunctionName + FString("  #") + std::to_string(Other.NodeId);
+                const bool bSelected = (Node.IntValue == static_cast<int32>(Other.NodeId));
+                if (ImGui::Selectable(Label.c_str(), bSelected))
+                {
+                    SetCallCustomLuaFunctionTarget(Blueprint, Node, &Other);
+                    Blueprint->BumpVersion();
+                    CommitBlueprintEdit(Blueprint);
+                }
+                if (bSelected) ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::TextDisabled("Node link is stored by stable NodeId. The name below remains the readable/fallback call target.");
+
+        char FunctionBuf[160];
+        CopyToBuffer(FunctionBuf, sizeof(FunctionBuf), Node.NameValue.ToString());
+        if (ImGui::InputText("Function Name Fallback", FunctionBuf, sizeof(FunctionBuf), ImGuiInputTextFlags_EnterReturnsTrue))
+        {
+            Node.NameValue = FunctionBuf[0] ? FName(FunctionBuf) : FName::None;
+            Node.IntValue = 0;
+            SyncCallCustomLuaFunctionNamePin(Node);
+            Blueprint->BumpVersion();
+            CommitBlueprintEdit(Blueprint);
+        }
+        if (ImGui::Button("Open Definition"))
+        {
+            if (const FLuaBlueprintNode* Target = ResolveCustomLuaFunctionCallTarget(Blueprint, Node))
+            {
+                OpenCustomLuaFunctionEditor(Blueprint, Target->NodeId);
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Clear Node Link"))
+        {
+            Node.IntValue = 0;
+            Blueprint->BumpVersion();
+            CommitBlueprintEdit(Blueprint);
+        }
         break;
     }
     case ELuaBlueprintNodeType::CustomEvent:
@@ -3755,7 +4564,7 @@ void FLuaBlueprintEditorWidget::RenderVariableEditor(
 
     Variable.Type            = NormalizeVariablePinTypeForEditor(Variable.Type);
     int         TypeIndex    = VariablePinTypeToComboIndex(Variable.Type);
-    const char* TypeLabels[] = { "Bool", "Int", "Float", "String", "Vector", "Object", "Array", "Actor", "Pawn", "PlayerController", "ActorComponent", "SceneComponent", "PrimitiveComponent", "Rotator", "LinearColor", "Vector4", "Class", "Enum", "Name" };
+    const char* TypeLabels[] = { "Bool", "Int", "Float", "String", "Vector", "Object", "Array", "Actor", "Pawn", "PlayerController", "ActorComponent", "SceneComponent", "PrimitiveComponent", "Rotator", "LinearColor", "Vector4", "Class", "Enum", "Name", "StaticMesh", "StaticMeshComponent", "SkinnedMeshComponent", "SkeletalMeshComponent", "CameraComponent", "CineCameraComponent", "Material", "Texture", "AnimInstance", "LuaBlueprintComponent", "LuaScriptComponent" };
     if (ImGui::Combo("Type", &TypeIndex, TypeLabels, IM_ARRAYSIZE(TypeLabels)))
     {
         Variable.Type = ComboIndexToVariablePinType(TypeIndex);
@@ -3989,9 +4798,379 @@ void FLuaBlueprintEditorWidget::RenderGeneratedLua(ULuaBlueprintAsset* Blueprint
     );
 }
 
+
+void FLuaBlueprintEditorWidget::OpenCustomLuaFunctionEditor(ULuaBlueprintAsset* Blueprint, uint32 NodeId)
+{
+    if (!Blueprint) return;
+    FLuaBlueprintNode* Node = Blueprint->FindNode(NodeId);
+    if (!Node || Node->Type != ELuaBlueprintNodeType::CustomLuaFunction) return;
+
+    CustomLuaFunctionEditorNodeId = NodeId;
+    CopyToBuffer(CustomLuaFunctionNameBuf, sizeof(CustomLuaFunctionNameBuf), Node->NameValue.ToString());
+    CopyToBuffer(CustomLuaFunctionCodeBuf, sizeof(CustomLuaFunctionCodeBuf), Node->StringValue);
+    bCustomLuaFunctionEditorOpen = true;
+    bCustomLuaFunctionEditorRequestFocus = true;
+    ImGui::OpenPopup("Custom Lua Function Editor");
+}
+
+void FLuaBlueprintEditorWidget::RenderCustomLuaFunctionEditor(ULuaBlueprintAsset* Blueprint)
+{
+    if (!bCustomLuaFunctionEditorOpen || !Blueprint)
+    {
+        return;
+    }
+
+    if (bCustomLuaFunctionEditorRequestFocus)
+    {
+        ImGui::OpenPopup("Custom Lua Function Editor");
+        ImGui::SetNextWindowSize(ImVec2(820.0f, 620.0f), ImGuiCond_Always);
+        bCustomLuaFunctionEditorRequestFocus = false;
+    }
+
+    bool bOpen = bCustomLuaFunctionEditorOpen;
+    if (ImGui::BeginPopupModal("Custom Lua Function Editor", &bOpen, ImGuiWindowFlags_NoSavedSettings))
+    {
+        FLuaBlueprintNode* Node = Blueprint->FindNode(CustomLuaFunctionEditorNodeId);
+        if (!Node || Node->Type != ELuaBlueprintNodeType::CustomLuaFunction)
+        {
+            ImGui::TextDisabled("The edited function node no longer exists.");
+            if (ImGui::Button("Close"))
+            {
+                bCustomLuaFunctionEditorOpen = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+            return;
+        }
+
+        ImGui::TextDisabled("Arguments available in the function body: Arg0, Arg1, Arg2, Arg3");
+        ImGui::TextDisabled("Use return <value> to feed the Return pin of Call Custom Lua Function.");
+        ImGui::Separator();
+
+        ImGui::SetNextItemWidth(-1.0f);
+        ImGui::InputText("Function Name", CustomLuaFunctionNameBuf, sizeof(CustomLuaFunctionNameBuf));
+
+        ImGui::TextUnformatted("Lua Body");
+        ImGui::SetNextItemWidth(-1.0f);
+        ImGui::InputTextMultiline(
+            "##CustomLuaFunctionBody",
+            CustomLuaFunctionCodeBuf,
+            sizeof(CustomLuaFunctionCodeBuf),
+            ImVec2(-1.0f, -88.0f),
+            ImGuiInputTextFlags_AllowTabInput
+        );
+
+        ImGui::Separator();
+        if (ImGui::Button("Apply"))
+        {
+            const FName OldName = Node->NameValue;
+            const FName NewName = CustomLuaFunctionNameBuf[0] ? FName(CustomLuaFunctionNameBuf) : FName::None;
+            Node->NameValue = NewName;
+            RenameCustomLuaFunctionCascade(Blueprint, OldName, NewName);
+            Node->StringValue = CustomLuaFunctionCodeBuf;
+            Blueprint->BumpVersion();
+            CommitBlueprintEdit(Blueprint);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Apply && Close"))
+        {
+            const FName OldName = Node->NameValue;
+            const FName NewName = CustomLuaFunctionNameBuf[0] ? FName(CustomLuaFunctionNameBuf) : FName::None;
+            Node->NameValue = NewName;
+            RenameCustomLuaFunctionCascade(Blueprint, OldName, NewName);
+            Node->StringValue = CustomLuaFunctionCodeBuf;
+            Blueprint->BumpVersion();
+            CommitBlueprintEdit(Blueprint);
+            bCustomLuaFunctionEditorOpen = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Compile"))
+        {
+            const FName OldName = Node->NameValue;
+            const FName NewName = CustomLuaFunctionNameBuf[0] ? FName(CustomLuaFunctionNameBuf) : FName::None;
+            Node->NameValue = NewName;
+            RenameCustomLuaFunctionCascade(Blueprint, OldName, NewName);
+            Node->StringValue = CustomLuaFunctionCodeBuf;
+            Blueprint->BumpVersion();
+            Blueprint->Compile();
+            CommitBlueprintEdit(Blueprint);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel"))
+        {
+            bCustomLuaFunctionEditorOpen = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        if (!bOpen)
+        {
+            bCustomLuaFunctionEditorOpen = false;
+        }
+        ImGui::EndPopup();
+    }
+    else if (!bOpen)
+    {
+        bCustomLuaFunctionEditorOpen = false;
+    }
+}
+
+void FLuaBlueprintEditorWidget::OpenInlineAssetPicker(
+    const FLuaBlueprintNode& Node,
+    const FLuaBlueprintPin&  Pin,
+    const char*              AssetType
+)
+{
+    if (!AssetType || !AssetType[0])
+    {
+        return;
+    }
+
+    InlineAssetPickerNodeId = Node.NodeId;
+    InlineAssetPickerPinId  = Pin.PinId;
+    InlineAssetPickerType   = AssetType;
+    InlineAssetPickerPreviewPath = Pin.DefaultString;
+
+    // NodeEditor 내부에서는 ImGui popup/combo 를 직접 열지 않는다.
+    // 클릭된 버튼의 실제 screen-space rect 를 캡쳐하고, ed::End() 이후의 안정적인
+    // overlay 레이어에서 이 rect 바로 아래에 asset picker window 를 띄운다.
+    const ImVec2 ItemMin = ImGui::GetItemRectMin();
+    const ImVec2 ItemMax = ImGui::GetItemRectMax();
+    InlineAssetPickerAnchorPos = ImVec2(ItemMin.x, ItemMax.y + 4.0f);
+
+    // 일부 NodeEditor zoom/transform 상태에서 item rect 가 비정상적으로 들어오는 경우를
+    // 대비해 mouse position fallback 도 같이 보관한다.
+    InlineAssetPickerFallbackPos = ImGui::GetMousePos();
+    InlineAssetPickerFallbackPos.x += 12.0f;
+    InlineAssetPickerFallbackPos.y += 12.0f;
+
+    InlineAssetPickerSearchBuf[0] = 0;
+    bOpenInlineAssetPicker = true;
+}
+
+bool FLuaBlueprintEditorWidget::ApplyInlineAssetPickerSelection(
+    ULuaBlueprintAsset* Blueprint,
+    const FString&      SelectedPath
+)
+{
+    if (!Blueprint || InlineAssetPickerNodeId == 0 || InlineAssetPickerPinId == 0)
+    {
+        return false;
+    }
+
+    FLuaBlueprintNode* Node = Blueprint->FindNode(InlineAssetPickerNodeId);
+    if (!Node)
+    {
+        return false;
+    }
+
+    FLuaBlueprintPin* Pin = nullptr;
+    for (FLuaBlueprintPin& Candidate : Node->Pins)
+    {
+        if (Candidate.PinId == InlineAssetPickerPinId)
+        {
+            Pin = &Candidate;
+            break;
+        }
+    }
+    if (!Pin || Pin->Kind != ELuaBlueprintPinKind::Input || Pin->Type != ELuaBlueprintPinType::String)
+    {
+        return false;
+    }
+
+    if (Pin->DefaultString == SelectedPath)
+    {
+        return false;
+    }
+
+    Pin->DefaultString = SelectedPath;
+    Blueprint->BumpVersion();
+    CommitBlueprintEdit(Blueprint);
+    return true;
+}
+
+void FLuaBlueprintEditorWidget::RenderDeferredInlineAssetPicker(ULuaBlueprintAsset* Blueprint)
+{
+    bool bJustOpenedThisFrame = false;
+    if (bOpenInlineAssetPicker)
+    {
+        bOpenInlineAssetPicker = false;
+        bInlineAssetPickerVisible = true;
+        bJustOpenedThisFrame = true;
+    }
+
+    if (!bInlineAssetPickerVisible)
+    {
+        return;
+    }
+
+    ImVec2 PickerPos = InlineAssetPickerAnchorPos;
+    const bool bAnchorLooksInvalid =
+        !std::isfinite(PickerPos.x) || !std::isfinite(PickerPos.y)
+        || (InlineAssetPickerOwnerMax.x > InlineAssetPickerOwnerMin.x
+            && (PickerPos.x < InlineAssetPickerOwnerMin.x - 256.0f || PickerPos.x > InlineAssetPickerOwnerMax.x + 256.0f))
+        || (InlineAssetPickerOwnerMax.y > InlineAssetPickerOwnerMin.y
+            && (PickerPos.y < InlineAssetPickerOwnerMin.y - 256.0f || PickerPos.y > InlineAssetPickerOwnerMax.y + 256.0f));
+    if (bAnchorLooksInvalid)
+    {
+        PickerPos = InlineAssetPickerFallbackPos;
+    }
+
+    const ImVec2 EstimatedSize(380.0f, 390.0f);
+    if (InlineAssetPickerOwnerMax.x > InlineAssetPickerOwnerMin.x && InlineAssetPickerOwnerMax.y > InlineAssetPickerOwnerMin.y)
+    {
+        const float MinX = InlineAssetPickerOwnerMin.x + 6.0f;
+        const float MinY = InlineAssetPickerOwnerMin.y + 6.0f;
+        const float MaxX = (std::max)(MinX, InlineAssetPickerOwnerMax.x - EstimatedSize.x - 6.0f);
+        const float MaxY = (std::max)(MinY, InlineAssetPickerOwnerMax.y - EstimatedSize.y - 6.0f);
+        PickerPos.x = (std::min)((std::max)(PickerPos.x, MinX), MaxX);
+        PickerPos.y = (std::min)((std::max)(PickerPos.y, MinY), MaxY);
+    }
+
+    // 위치는 새 open 요청이 들어온 프레임에만 강제로 지정한다.
+    // 그 이후에는 ImGui 가 보관한 위치를 사용해야 사용자가 창을 드래그해서 옮길 수 있다.
+    const ImGuiCond PickerPlacementCond = bJustOpenedThisFrame ? ImGuiCond_Always : ImGuiCond_Appearing;
+    ImGui::SetNextWindowPos(PickerPos, PickerPlacementCond);
+    ImGui::SetNextWindowSize(ImVec2(380.0f, 0.0f), PickerPlacementCond);
+    if (bJustOpenedThisFrame)
+    {
+        ImGui::SetNextWindowFocus();
+    }
+
+    bool bWindowOpen = true;
+    const ImGuiWindowFlags Flags = ImGuiWindowFlags_NoCollapse
+        | ImGuiWindowFlags_NoSavedSettings
+        | ImGuiWindowFlags_NoDocking
+        | ImGuiWindowFlags_AlwaysAutoResize;
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 8.0f));
+    if (!ImGui::Begin("Asset Picker##LuaBlueprintInlineAssetPicker", &bWindowOpen, Flags))
+    {
+        ImGui::End();
+        ImGui::PopStyleVar();
+        if (!bWindowOpen)
+        {
+            bInlineAssetPickerVisible = false;
+        }
+        return;
+    }
+
+    if (!Blueprint || InlineAssetPickerType.empty())
+    {
+        ImGui::TextDisabled("No asset type.");
+        ImGui::End();
+        ImGui::PopStyleVar();
+        return;
+    }
+
+    const FString CurrentPath = InlineAssetPickerPreviewPath;
+    ImGui::TextDisabled("%s", InlineAssetPickerType.c_str());
+    if (!CurrentPath.empty() && CurrentPath != "None")
+    {
+        ImGui::SameLine();
+        ImGui::TextDisabled("/ %s", LuaBlueprintAssetPreviewText(CurrentPath).c_str());
+    }
+    ImGui::Separator();
+
+    ImGui::SetNextItemWidth(350.0f);
+    if (bJustOpenedThisFrame)
+    {
+        ImGui::SetKeyboardFocusHere();
+    }
+    ImGui::InputTextWithHint("##AssetSearch", "search...", InlineAssetPickerSearchBuf, sizeof(InlineAssetPickerSearchBuf));
+
+    auto MatchesSearch = [&](const FAssetListItem& Item)
+    {
+        if (InlineAssetPickerSearchBuf[0] == 0)
+        {
+            return true;
+        }
+        return ContainsCaseInsensitive(Item.DisplayName.c_str(), InlineAssetPickerSearchBuf)
+            || ContainsCaseInsensitive(Item.FullPath.c_str(), InlineAssetPickerSearchBuf);
+    };
+
+    bool bClosePicker = false;
+
+    const bool bSelectedNone = CurrentPath.empty() || CurrentPath == "None";
+    if (ImGui::Selectable("None", bSelectedNone))
+    {
+        ApplyInlineAssetPickerSelection(Blueprint, "None");
+        bClosePicker = true;
+    }
+    if (bSelectedNone)
+    {
+        ImGui::SetItemDefaultFocus();
+    }
+
+    ImGui::Separator();
+    const TArray<FAssetListItem>& Items = FAssetRegistry::ListByTypeName(InlineAssetPickerType.c_str());
+    int32 VisibleCount = 0;
+    ImGui::BeginChild("##AssetList", ImVec2(360.0f, 280.0f), true);
+    for (const FAssetListItem& Item : Items)
+    {
+        if (!MatchesSearch(Item))
+        {
+            continue;
+        }
+        ++VisibleCount;
+        const bool bSelected = Item.FullPath == CurrentPath;
+        const char* Label = Item.DisplayName.empty() ? Item.FullPath.c_str() : Item.DisplayName.c_str();
+        ImGui::PushID(Item.FullPath.c_str());
+        if (ImGui::Selectable(Label, bSelected))
+        {
+            ApplyInlineAssetPickerSelection(Blueprint, Item.FullPath);
+            bClosePicker = true;
+        }
+        if (ImGui::IsItemHovered() && !Item.FullPath.empty())
+        {
+            ImGui::SetTooltip("%s", Item.FullPath.c_str());
+        }
+        if (bSelected)
+        {
+            ImGui::SetItemDefaultFocus();
+        }
+        ImGui::PopID();
+    }
+    if (VisibleCount == 0)
+    {
+        ImGui::TextDisabled(Items.empty() ? "No assets found." : "No matching assets.");
+    }
+    ImGui::EndChild();
+
+    // IsWindowHovered() 만으로 닫힘 판정을 하면 InputText/Child/드래그 상태에서
+    // hovered window 가 예상과 다르게 잡혀 창 내부 클릭도 외부 클릭처럼 처리될 수 있다.
+    // 따라서 현재 picker window 의 실제 screen rect 를 저장하고, 외부 클릭은 이 rect 기준으로 판정한다.
+    const ImVec2 PickerWindowMin = ImGui::GetWindowPos();
+    const ImVec2 PickerWindowMax(
+        PickerWindowMin.x + ImGui::GetWindowSize().x,
+        PickerWindowMin.y + ImGui::GetWindowSize().y
+    );
+    const ImVec2 MousePos = ImGui::GetMousePos();
+    const bool bMouseInsidePicker =
+        MousePos.x >= PickerWindowMin.x && MousePos.x <= PickerWindowMax.x
+        && MousePos.y >= PickerWindowMin.y && MousePos.y <= PickerWindowMax.y;
+
+    ImGui::End();
+    ImGui::PopStyleVar();
+
+    if (!bWindowOpen || bClosePicker || ImGui::IsKeyPressed(ImGuiKey_Escape))
+    {
+        bInlineAssetPickerVisible = false;
+        return;
+    }
+
+    // Popup API 대신 floating window 를 사용하므로 외부 클릭 닫기도 직접 처리한다.
+    // 창 내부 검색/선택/스크롤/드래그는 모두 유지하고, picker rect 밖에서 새 left-click 이 들어왔을 때만 닫는다.
+    if (!bJustOpenedThisFrame && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !bMouseInsidePicker)
+    {
+        bInlineAssetPickerVisible = false;
+    }
+}
+
+
 bool FLuaBlueprintEditorWidget::RenderInlinePinLiteral(
     ULuaBlueprintAsset* Blueprint,
-    FLuaBlueprintNode& /*Node*/,
+    FLuaBlueprintNode& Node,
     FLuaBlueprintPin& Pin
 )
 {
@@ -4020,6 +5199,34 @@ bool FLuaBlueprintEditorWidget::RenderInlinePinLiteral(
         if (ImGui::DragFloat("##def", &Pin.DefaultFloat, 0.01f, 0.0f, 0.0f, "%.3f")) bChanged = true;
         break;
     case ELuaBlueprintPinType::String:
+    {
+        if (const char* AssetType = LuaBlueprintAssetTypeForPin(Node, Pin))
+        {
+            const FString Preview = LuaBlueprintAssetPreviewText(Pin.DefaultString);
+            ImGui::SetNextItemWidth(190.0f);
+            if (ImGui::Button(Preview.c_str(), ImVec2(190.0f, 0.0f)))
+            {
+                OpenInlineAssetPicker(Node, Pin, AssetType);
+            }
+            if (ImGui::IsItemHovered() && !Pin.DefaultString.empty() && Pin.DefaultString != "None")
+            {
+                bInlineAssetHoverTooltipVisible = true;
+                InlineAssetHoverTooltipPath = Pin.DefaultString;
+            }
+        }
+        else
+        {
+            char Buf[256];
+            CopyToBuffer(Buf, sizeof(Buf), Pin.DefaultString);
+            ImGui::SetNextItemWidth(160.0f);
+            if (ImGui::InputText("##def", Buf, sizeof(Buf)))
+            {
+                Pin.DefaultString = Buf;
+                bChanged          = true;
+            }
+        }
+        break;
+    }
     case ELuaBlueprintPinType::Name:
     case ELuaBlueprintPinType::Class:
     case ELuaBlueprintPinType::Enum:
@@ -4258,6 +5465,81 @@ void FLuaBlueprintEditorWidget::RenderAddNodeMenu(ULuaBlueprintAsset* Blueprint)
             AddItem(ELuaBlueprintNodeType::SetSimulatePhysics);
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Lua / Blueprint Calls"))
+        {
+            AddItem(ELuaBlueprintNodeType::GetLuaBlueprintComponent);
+            AddItem(ELuaBlueprintNodeType::GetLuaScriptComponent);
+            ImGui::Separator();
+            AddItem(ELuaBlueprintNodeType::CallLuaBlueprintFunction);
+            AddItem(ELuaBlueprintNodeType::CallLuaScriptFunction);
+            ImGui::Separator();
+            AddItem(ELuaBlueprintNodeType::CallLuaBlueprintFileFunction);
+            AddItem(ELuaBlueprintNodeType::CallLuaScriptFileFunction);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Static Mesh"))
+        {
+            AddItem(ELuaBlueprintNodeType::LoadStaticMesh);
+            AddItem(ELuaBlueprintNodeType::GetStaticMeshComponent);
+            AddItem(ELuaBlueprintNodeType::GetStaticMesh);
+            AddItem(ELuaBlueprintNodeType::SetStaticMesh);
+            AddItem(ELuaBlueprintNodeType::SetStaticMeshByPath);
+            AddItem(ELuaBlueprintNodeType::ClearStaticMesh);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Skeletal Mesh / Animation"))
+        {
+            AddItem(ELuaBlueprintNodeType::GetSkeletalMeshComponent);
+            AddItem(ELuaBlueprintNodeType::SetSkeletalMeshByPath);
+            AddItem(ELuaBlueprintNodeType::ClearSkeletalMesh);
+            ImGui::Separator();
+            AddItem(ELuaBlueprintNodeType::PlayAnimationByPath);
+            AddItem(ELuaBlueprintNodeType::StopAnimation);
+            AddItem(ELuaBlueprintNodeType::SetAnimationByPath);
+            AddItem(ELuaBlueprintNodeType::SetAnimationPlayRate);
+            AddItem(ELuaBlueprintNodeType::SetAnimationLooping);
+            AddItem(ELuaBlueprintNodeType::SetAnimationPlaying);
+            AddItem(ELuaBlueprintNodeType::GetAnimInstance);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Material"))
+        {
+            AddItem(ELuaBlueprintNodeType::LoadMaterial);
+            AddItem(ELuaBlueprintNodeType::LoadTexture);
+            AddItem(ELuaBlueprintNodeType::GetMaterial);
+            AddItem(ELuaBlueprintNodeType::SetMaterial);
+            AddItem(ELuaBlueprintNodeType::SetMaterialByPath);
+            AddItem(ELuaBlueprintNodeType::CreateDynamicMaterialInstance);
+            ImGui::Separator();
+            AddItem(ELuaBlueprintNodeType::SetMaterialScalarParameter);
+            AddItem(ELuaBlueprintNodeType::SetMaterialVectorParameter);
+            AddItem(ELuaBlueprintNodeType::SetMaterialColorParameter);
+            AddItem(ELuaBlueprintNodeType::SetMaterialTextureParameter);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Camera / Cinematic"))
+        {
+            AddItem(ELuaBlueprintNodeType::GetCameraComponent);
+            AddItem(ELuaBlueprintNodeType::GetActiveCamera);
+            AddItem(ELuaBlueprintNodeType::PossessCamera);
+            AddItem(ELuaBlueprintNodeType::SetActiveCameraWithBlend);
+            AddItem(ELuaBlueprintNodeType::SetViewTargetWithBlend);
+            AddItem(ELuaBlueprintNodeType::SetCameraFOV);
+            AddItem(ELuaBlueprintNodeType::CameraLookAt);
+            ImGui::Separator();
+            AddItem(ELuaBlueprintNodeType::FadeIn);
+            AddItem(ELuaBlueprintNodeType::FadeOut);
+            AddItem(ELuaBlueprintNodeType::SetVignette);
+            AddItem(ELuaBlueprintNodeType::ClearVignette);
+            AddItem(ELuaBlueprintNodeType::StartCameraShakeAsset);
+            ImGui::Separator();
+            AddItem(ELuaBlueprintNodeType::SetDepthOfField);
+            AddItem(ELuaBlueprintNodeType::SetBokeh);
+            AddItem(ELuaBlueprintNodeType::ClearDepthOfField);
+            AddItem(ELuaBlueprintNodeType::SetLetterbox);
+            AddItem(ELuaBlueprintNodeType::ClearLetterbox);
+            ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu("UI"))
         {
             AddItem(ELuaBlueprintNodeType::CreateWidget);
@@ -4311,6 +5593,8 @@ void FLuaBlueprintEditorWidget::RenderAddNodeMenu(ULuaBlueprintAsset* Blueprint)
             AddItem(ELuaBlueprintNodeType::CallFunctionSignature);
             AddItem(ELuaBlueprintNodeType::CustomEvent);
             AddItem(ELuaBlueprintNodeType::CallCustomEvent);
+            AddItem(ELuaBlueprintNodeType::CustomLuaFunction);
+            AddItem(ELuaBlueprintNodeType::CallCustomLuaFunction);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Delegates"))
@@ -4593,6 +5877,45 @@ void FLuaBlueprintEditorWidget::RenameVariableCascade(
                     ;
         }
         if (Node.NameValue == OldName) Node.NameValue = NewName;
+    }
+}
+
+void FLuaBlueprintEditorWidget::RenameCustomLuaFunctionCascade(
+    ULuaBlueprintAsset* Blueprint,
+    const FName&        OldName,
+    const FName&        NewName
+)
+{
+    if (!Blueprint || OldName == NewName) return;
+    uint32 RenamedFunctionNodeId = 0;
+    for (const FLuaBlueprintNode& Node : Blueprint->GetNodes())
+    {
+        if (Node.Type == ELuaBlueprintNodeType::CustomLuaFunction && Node.NameValue == NewName)
+        {
+            RenamedFunctionNodeId = Node.NodeId;
+            break;
+        }
+    }
+
+    for (FLuaBlueprintNode& Node : Blueprint->GetMutableNodes())
+    {
+        if (Node.Type != ELuaBlueprintNodeType::CallCustomLuaFunction)
+        {
+            continue;
+        }
+
+        if (Node.IntValue != 0 && RenamedFunctionNodeId != 0 && Node.IntValue == static_cast<int32>(RenamedFunctionNodeId))
+        {
+            Node.NameValue = NewName;
+            SyncCallCustomLuaFunctionNamePin(Node);
+            continue;
+        }
+
+        if (Node.NameValue == OldName)
+        {
+            Node.NameValue = NewName;
+            SyncCallCustomLuaFunctionNamePin(Node);
+        }
     }
 }
 
