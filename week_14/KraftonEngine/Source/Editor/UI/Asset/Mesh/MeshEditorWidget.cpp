@@ -2083,6 +2083,9 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 			ImGui::TextUnformatted("Inertia");
 			bChanged |= ImGui::SliderFloat("Linear Inertia", &SelectedCloth->Config.InertiaLinearScale, 0.0f, 1.0f, "%.2f");
 			bChanged |= ImGui::SliderFloat("Angular Inertia", &SelectedCloth->Config.InertiaAngularScale, 0.0f, 1.0f, "%.2f");
+			ImGui::Separator();
+			ImGui::TextUnformatted("Physics Asset Collision");
+			bChanged |= ImGui::Checkbox("Enable Physics Asset Collision", &SelectedCloth->Config.bEnablePhysicsAssetCollision);
 		}
 	);
 

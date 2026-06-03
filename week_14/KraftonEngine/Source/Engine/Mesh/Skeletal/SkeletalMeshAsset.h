@@ -203,7 +203,22 @@ struct FSkeletalClothPaintData
 	}
 };
 
-inline constexpr uint32 SkeletalMeshClothPayloadCurrentVersion = 3;
+inline constexpr uint32 SkeletalMeshClothPayloadCurrentVersion = 4;
+
+struct FSkeletalClothPhysicsAssetCollisionFilterEntry
+{
+	FName BoneName = FName::None;
+	int32 BodyIndex = -1;
+	int32 ShapeIndex = -1;
+
+	friend FArchive& operator<<(FArchive& Ar, FSkeletalClothPhysicsAssetCollisionFilterEntry& Entry)
+	{
+		Ar << Entry.BoneName;
+		Ar << Entry.BodyIndex;
+		Ar << Entry.ShapeIndex;
+		return Ar;
+	}
+};
 
 struct FSkeletalClothConfig
 {
@@ -217,6 +232,8 @@ struct FSkeletalClothConfig
 	float FluidDensity = 1.0f;
 	float InertiaLinearScale = 1.0f;
 	float InertiaAngularScale = 1.0f;
+	bool bEnablePhysicsAssetCollision = false;
+	TArray<FSkeletalClothPhysicsAssetCollisionFilterEntry> PhysicsAssetCollisionFilter;
 
 	void Serialize(FArchive& Ar, uint32 PayloadVersion)
 	{
@@ -247,6 +264,16 @@ struct FSkeletalClothConfig
 		{
 			InertiaLinearScale = 1.0f;
 			InertiaAngularScale = 1.0f;
+		}
+		if (PayloadVersion >= 4)
+		{
+			Ar << bEnablePhysicsAssetCollision;
+			Ar << PhysicsAssetCollisionFilter;
+		}
+		else if (Ar.IsLoading())
+		{
+			bEnablePhysicsAssetCollision = false;
+			PhysicsAssetCollisionFilter.clear();
 		}
 	}
 

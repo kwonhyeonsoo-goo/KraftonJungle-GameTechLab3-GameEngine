@@ -503,6 +503,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClCompile Include="Source\Engine\Audio\AudioManager.cpp" />
     <ClCompile Include="Source\Engine\CameraShake\CameraShakeAsset.cpp" />
     <ClCompile Include="Source\Engine\CameraShake\CameraShakeManager.cpp" />
+    <ClCompile Include="Source\Engine\Cloth\ClothCollisionGatherer.cpp" />
     <ClCompile Include="Source\Engine\Cloth\NvClothBackend.cpp" />
     <ClCompile Include="Source\Engine\Cloth\SkeletalClothRuntime.cpp" />
     <ClCompile Include="Source\Engine\Collision\BVH\MeshTriangleBVH.cpp" />
@@ -947,6 +948,8 @@ xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\release\libfbxsdk.dll" "$(OutDir)"
     <ClInclude Include="Source\Engine\CameraShake\CameraShakeAsset.h" />
     <ClInclude Include="Source\Engine\CameraShake\CameraShakeManager.h" />
     <ClInclude Include="Source\Engine\Cloth\ClothBackend.h" />
+    <ClInclude Include="Source\Engine\Cloth\ClothCollisionGatherer.h" />
+    <ClInclude Include="Source\Engine\Cloth\ClothCollisionTypes.h" />
     <ClInclude Include="Source\Engine\Cloth\NvClothBackend.h" />
     <ClInclude Include="Source\Engine\Cloth\SkeletalClothRuntime.h" />
     <ClInclude Include="Source\Engine\Collision\BVH\MeshTriangleBVH.h" />

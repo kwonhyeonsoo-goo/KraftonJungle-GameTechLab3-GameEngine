@@ -1,5 +1,6 @@
 #include "Cloth/SkeletalClothRuntime.h"
 
+#include "Cloth/ClothCollisionTypes.h"
 #include "Cloth/NvClothBackend.h"
 #include "Core/Logging/Log.h"
 #include "Math/MathUtils.h"
@@ -136,6 +137,7 @@ struct FSkeletalClothRuntime::FImpl
         TArray<physx::PxVec3> CookedPositions;
         TArray<float> InvMasses;
         TArray<uint32_t> CookedIndices;
+        FClothCollisionDebugStats CollisionStats;
 
         void Destroy(nv::cloth::Solver* Solver)
         {
@@ -157,6 +159,7 @@ struct FSkeletalClothRuntime::FImpl
             CookedPositions.clear();
             InvMasses.clear();
             CookedIndices.clear();
+            CollisionStats.Reset();
         }
     };
 
@@ -304,6 +307,173 @@ struct FSkeletalClothRuntime::FImpl
                 Section.Cloth->setLiftCoefficient(0.0f);
             }
         }
+    }
+
+    void ClearCollision(FSectionRuntime& Section)
+    {
+        if (!Section.Cloth)
+        {
+            return;
+        }
+
+        const uint32_t ExistingConvexes = Section.Cloth->getNumConvexes();
+        if (ExistingConvexes > 0)
+        {
+            Section.Cloth->setConvexes(
+                nv::cloth::Range<const uint32_t>(),
+                0,
+                ExistingConvexes);
+        }
+
+        const uint32_t ExistingPlanes = Section.Cloth->getNumPlanes();
+        if (ExistingPlanes > 0)
+        {
+            Section.Cloth->setPlanes(
+                nv::cloth::Range<const physx::PxVec4>(),
+                0,
+                ExistingPlanes);
+        }
+
+        const uint32_t ExistingCapsules = Section.Cloth->getNumCapsules();
+        if (ExistingCapsules > 0)
+        {
+            Section.Cloth->setCapsules(
+                nv::cloth::Range<const uint32_t>(),
+                0,
+                ExistingCapsules);
+        }
+
+        const uint32_t ExistingSpheres = Section.Cloth->getNumSpheres();
+        if (ExistingSpheres > 0)
+        {
+            Section.Cloth->setSpheres(
+                nv::cloth::Range<const physx::PxVec4>(),
+                0,
+                ExistingSpheres);
+        }
+        Section.CollisionStats.Reset();
+    }
+
+    void UploadCollision(
+        FSectionRuntime& Section,
+        const FClothCollisionGatherResult* CollisionResult)
+    {
+        if (!Section.Cloth)
+        {
+            return;
+        }
+
+        if (!CollisionResult)
+        {
+            ClearCollision(Section);
+            return;
+        }
+
+        TArray<physx::PxVec4> Spheres;
+        TArray<uint32_t> CapsuleSphereIndices;
+        const FClothCollisionPrimitiveSet& Primitives = CollisionResult->SelectedPrimitives;
+        Spheres.reserve(Primitives.Spheres.size() + Primitives.Capsules.size() * 2);
+        CapsuleSphereIndices.reserve(Primitives.Capsules.size() * 2);
+
+        for (const FClothCollisionSphere& Sphere : Primitives.Spheres)
+        {
+            if (Sphere.Radius <= 0.0f || !IsFiniteVector(Sphere.LocalCenter))
+            {
+                continue;
+            }
+            Spheres.push_back(physx::PxVec4(
+                Sphere.LocalCenter.X,
+                Sphere.LocalCenter.Y,
+                Sphere.LocalCenter.Z,
+                Sphere.Radius));
+        }
+
+        for (const FClothCollisionCapsule& Capsule : Primitives.Capsules)
+        {
+            if (Capsule.Radius <= 0.0f ||
+                !IsFiniteVector(Capsule.LocalPoint0) ||
+                !IsFiniteVector(Capsule.LocalPoint1))
+            {
+                continue;
+            }
+
+            const uint32_t FirstSphereIndex = static_cast<uint32_t>(Spheres.size());
+            Spheres.push_back(physx::PxVec4(
+                Capsule.LocalPoint0.X,
+                Capsule.LocalPoint0.Y,
+                Capsule.LocalPoint0.Z,
+                Capsule.Radius));
+            Spheres.push_back(physx::PxVec4(
+                Capsule.LocalPoint1.X,
+                Capsule.LocalPoint1.Y,
+                Capsule.LocalPoint1.Z,
+                Capsule.Radius));
+            CapsuleSphereIndices.push_back(FirstSphereIndex);
+            CapsuleSphereIndices.push_back(FirstSphereIndex + 1);
+        }
+
+        if (CapsuleSphereIndices.empty())
+        {
+            const uint32_t ExistingCapsules = Section.Cloth->getNumCapsules();
+            if (ExistingCapsules > 0)
+            {
+                Section.Cloth->setCapsules(
+                    nv::cloth::Range<const uint32_t>(),
+                    0,
+                    ExistingCapsules);
+            }
+        }
+
+        if (!Spheres.empty())
+        {
+            Section.Cloth->setSpheres(
+                nv::cloth::Range<const physx::PxVec4>(Spheres.data(), Spheres.data() + Spheres.size()),
+                0,
+                Section.Cloth->getNumSpheres());
+        }
+        else
+        {
+            const uint32_t ExistingSpheres = Section.Cloth->getNumSpheres();
+            if (ExistingSpheres > 0)
+            {
+                Section.Cloth->setSpheres(
+                    nv::cloth::Range<const physx::PxVec4>(),
+                    0,
+                    ExistingSpheres);
+            }
+        }
+
+        if (!CapsuleSphereIndices.empty())
+        {
+            Section.Cloth->setCapsules(
+                nv::cloth::Range<const uint32_t>(CapsuleSphereIndices.data(), CapsuleSphereIndices.data() + CapsuleSphereIndices.size()),
+                0,
+                Section.Cloth->getNumCapsules());
+        }
+
+        Section.CollisionStats = CollisionResult->Stats;
+        Section.CollisionStats.UploadedSpheres = static_cast<uint32>(Spheres.size());
+        Section.CollisionStats.UploadedCapsules = static_cast<uint32>(CapsuleSphereIndices.size() / 2);
+    }
+
+    const FClothCollisionGatherResult* FindCollisionResultForSection(
+        const TArray<FClothCollisionSectionResult>* CollisionResults,
+        const FSectionRuntime& Section) const
+    {
+        if (!CollisionResults)
+        {
+            return nullptr;
+        }
+
+        for (const FClothCollisionSectionResult& SectionResult : *CollisionResults)
+        {
+            if (SectionResult.LODIndex == Section.LODIndex &&
+                SectionResult.SectionIndex == Section.SectionIndex)
+            {
+                return &SectionResult.GatherResult;
+            }
+        }
+        return nullptr;
     }
 
     bool HasEnabledCloth(const FSkeletalMesh& Asset) const
@@ -773,7 +943,8 @@ struct FSkeletalClothRuntime::FImpl
         float DeltaTime,
         TArray<FVertexPNCTT>& InOutSkinnedVertices,
         const FMatrix& ComponentWorldMatrix,
-        const FClothWorldForceContext& ForceContext)
+        const FClothWorldForceContext& ForceContext,
+        const TArray<FClothCollisionSectionResult>* CollisionResults)
     {
         if (!PrepareComponentTransformHistory(ComponentWorldMatrix))
         {
@@ -806,6 +977,7 @@ struct FSkeletalClothRuntime::FImpl
 
             ApplyComponentInertia(Section);
             UpdateAnimatedPinsAndConstraints(Section, InOutSkinnedVertices);
+            UploadCollision(Section, FindCollisionResultForSection(CollisionResults, Section));
             bHasSimulatedParticles = bHasSimulatedParticles || HasPositivePaintRadius(*Section.SourceData);
         }
 
@@ -865,9 +1037,10 @@ bool FSkeletalClothRuntime::Tick(
     float DeltaTime,
     TArray<FVertexPNCTT>& InOutSkinnedVertices,
     const FMatrix& ComponentWorldMatrix,
-    const FClothWorldForceContext& ForceContext)
+    const FClothWorldForceContext& ForceContext,
+    const TArray<FClothCollisionSectionResult>* CollisionResults)
 {
-    return Impl->Tick(Asset, DeltaTime, InOutSkinnedVertices, ComponentWorldMatrix, ForceContext);
+    return Impl->Tick(Asset, DeltaTime, InOutSkinnedVertices, ComponentWorldMatrix, ForceContext, CollisionResults);
 }
 
 bool FSkeletalClothRuntime::IsActive() const
