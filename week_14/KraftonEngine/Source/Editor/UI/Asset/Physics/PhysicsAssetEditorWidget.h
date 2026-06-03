@@ -66,6 +66,7 @@ public:
     void StopEditorSimulation(UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent, bool bResetPose);
     bool IsEditorSimulationActive() const { return bEditorSimulationActive; }
     bool SaveEditedPhysicsAsset();
+    bool ExportPhysicsAssetDebugJson(UPhysicsAsset* PhysicsAsset, FString* OutPath = nullptr);
     bool HasUnsavedChanges() const { return IsDirty(); }
     int32 GetSelectedBodyIndex() const { return SelectedBodyIndex; }
     int32 GetSelectedShapeIndex() const { return SelectedShapeIndex; }
@@ -203,6 +204,7 @@ private:
     float RegenerateMinWeldSize = 1.0e-4f;
     EPhysicsAssetConstraintFrameTarget SelectedConstraintGizmoFrame = EPhysicsAssetConstraintFrameTarget::Child;
     uint64 ConstraintGraphTopologyHash = 0;
+    FString LastDebugExportMessage;
 
     TArray<FPhysicsAssetValidationIssue> ValidationIssues;
     FString ValidationMeshPath;
