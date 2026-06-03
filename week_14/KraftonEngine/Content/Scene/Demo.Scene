@@ -38,6 +38,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -73,6 +74,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -108,6 +110,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -143,6 +146,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -178,6 +182,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -213,6 +218,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -248,6 +254,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -283,6 +290,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -318,6 +326,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -353,6 +362,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -388,6 +398,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -423,6 +434,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -458,6 +470,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -493,6 +506,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -528,6 +542,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -563,6 +578,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -598,6 +614,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -633,6 +650,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -668,6 +686,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -703,6 +722,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -738,6 +758,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -773,6 +794,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -808,6 +830,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -843,6 +866,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -878,6 +902,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -913,6 +938,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -948,6 +974,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -983,6 +1010,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -1018,6 +1046,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -1053,6 +1082,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -1088,6 +1118,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -1123,6 +1154,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -1158,6 +1190,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -1193,6 +1226,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -1228,6 +1262,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -1263,6 +1298,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -1298,6 +1334,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -1333,6 +1370,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -1368,6 +1406,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -1403,6 +1442,43 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : true,
+              "bEnableCCD" : false,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsBillboard" : true,
+              "bIsVisible" : true,
+              "bKinematic" : false,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "ObjectId" : 44,
+            "Properties" : {
+              "AttachSocketName" : "Name_None",
+              "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+              "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "Mass" : 1.000000,
+              "MaterialSlot" : "Content/Material/Editor/DirectionalLight.uasset",
+              "ObjectType" : 0,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "bAutoActivate" : true,
+              "bCastShadow" : true,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : true,
               "bIsActive" : true,
@@ -1441,7 +1517,7 @@
       "ClassName" : "ABoxActor",
       "Name" : "ABoxActor_1",
       "NonSceneComponents" : [],
-      "ObjectId" : 44,
+      "ObjectId" : 45,
       "Properties" : {
         "PendingActorLocation" : [0.000000, 0.000000, -1.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -1453,7 +1529,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UBoxComponent",
-        "ObjectId" : 45,
+        "ObjectId" : 46,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "BoxExtent" : [1.000000, 1.000000, 1.000000],
@@ -1477,6 +1553,7 @@
           "bCastShadowAsTwoSided" : false,
           "bDrawOnlyIfSelected" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -1491,7 +1568,7 @@
       "Name" : "ALuaCharacter_1",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 51,
+          "ObjectId" : 52,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -1500,6 +1577,7 @@
             "MaxAcceleration" : 20.000000,
             "MaxWalkSpeed" : 6.000000,
             "RotationYawRate" : 540.000000,
+            "SweepPullbackDistance" : 0.010000,
             "bAutoActivate" : true,
             "bAutoRegisterUpdatedComponent" : true,
             "bEditorOnly" : false,
@@ -1510,7 +1588,7 @@
           }
         }, {
           "ClassName" : "ULuaScriptComponent",
-          "ObjectId" : 52,
+          "ObjectId" : 53,
           "Properties" : {
             "ScriptFile" : "ULevel_10_ALuaCharacter_1.lua",
             "bAutoActivate" : true,
@@ -1521,7 +1599,7 @@
           }
         }, {
           "ClassName" : "UPhysicsAssetRagdollTestComponent",
-          "ObjectId" : 53,
+          "ObjectId" : 54,
           "Properties" : {
             "ActiveLogInterval" : 1.000000,
             "BeginRecoveryKey" : 126,
@@ -1541,7 +1619,7 @@
           }
         }, {
           "ClassName" : "URagdollForceEmitterComponent",
-          "ObjectId" : 54,
+          "ObjectId" : 55,
           "Properties" : {
             "DefaultImpulseStrength" : 1.000000,
             "DefaultPreferredPreset" : 0,
@@ -1558,7 +1636,7 @@
           }
         }, {
           "ClassName" : "URagdollForceHitscanComponent",
-          "ObjectId" : 55,
+          "ObjectId" : 56,
           "Properties" : {
             "AimOriginHeightOffset" : 60.000000,
             "AimPreviewDuration" : 0.000000,
@@ -1586,7 +1664,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 46,
+      "ObjectId" : 47,
       "Properties" : {
         "PendingActorLocation" : [0.000000, -1.588386, 4.061543],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -1603,7 +1681,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 48,
+            "ObjectId" : 49,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "ULuaAnimInstance",
@@ -1663,6 +1741,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : false,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : false,
               "bIsActive" : true,
@@ -1675,7 +1754,7 @@
             "Children" : [{
                 "Children" : [],
                 "ClassName" : "UCameraComponent",
-                "ObjectId" : 50,
+                "ObjectId" : 51,
                 "Properties" : {
                   "AttachSocketName" : "Name_None",
                   "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -1684,6 +1763,10 @@
                   "CameraState.NearZ" : 0.100000,
                   "CameraState.OrthoWidth" : 10.000000,
                   "CameraState.bIsOrthogonal" : false,
+                  "Letterbox.Amount" : 1.000000,
+                  "Letterbox.Color" : [0.000000, 0.000000, 0.000000, 1.000000],
+                  "Letterbox.Thickness" : 0.120000,
+                  "Letterbox.bEnabled" : false,
                   "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
                   "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
                   "bAutoActivate" : true,
@@ -1694,7 +1777,7 @@
                 }
               }],
             "ClassName" : "USpringArmComponent",
-            "ObjectId" : 49,
+            "ObjectId" : 50,
             "Properties" : {
               "AttachSocketName" : "Name_None",
               "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -1714,12 +1797,16 @@
               "bEnableCameraLag" : true,
               "bEnableCameraRotationLag" : true,
               "bHiddenInComponentTree" : false,
+              "bInheritPitch" : true,
+              "bInheritRoll" : false,
+              "bInheritYaw" : true,
               "bIsActive" : true,
-              "bTickEnable" : true
+              "bTickEnable" : true,
+              "bUsePawnControlRotation" : true
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 47,
+        "ObjectId" : 48,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -1744,6 +1831,7 @@
           "bCastShadowAsTwoSided" : false,
           "bDrawOnlyIfSelected" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : true,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -1757,7 +1845,7 @@
       "ClassName" : "ABoxActor",
       "Name" : "ABoxActor_7",
       "NonSceneComponents" : [],
-      "ObjectId" : 56,
+      "ObjectId" : 57,
       "Properties" : {
         "PendingActorLocation" : [14.156162, 0.000000, 3.999006],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -1770,7 +1858,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 58,
+            "ObjectId" : 59,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimSingleNodeInstance",
@@ -1829,6 +1917,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : false,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : false,
               "bIsActive" : true,
@@ -1839,7 +1928,7 @@
             }
           }],
         "ClassName" : "UBoxComponent",
-        "ObjectId" : 57,
+        "ObjectId" : 58,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "BoxExtent" : [3.000000, 3.000000, 3.000000],
@@ -1863,6 +1952,7 @@
           "bCastShadowAsTwoSided" : false,
           "bDrawOnlyIfSelected" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -1876,7 +1966,7 @@
       "ClassName" : "AStaticMeshActor",
       "Name" : "AStaticMeshActor_7",
       "NonSceneComponents" : [],
-      "ObjectId" : 59,
+      "ObjectId" : 60,
       "Properties" : {
         "PendingActorLocation" : [0.000000, 0.000000, -1.000000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -1888,7 +1978,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 60,
+        "ObjectId" : 61,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -1911,55 +2001,7 @@
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
           "bEditorOnly" : false,
-          "bGenerateOverlapEvents" : false,
-          "bHiddenInComponentTree" : false,
-          "bIsActive" : true,
-          "bIsVisible" : true,
-          "bKinematic" : false,
-          "bSimulatePhysics" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
-      "ClassName" : "ABoxActor",
-      "Name" : "ABoxActor_5_Copy",
-      "NonSceneComponents" : [],
-      "ObjectId" : 61,
-      "Properties" : {
-        "PendingActorLocation" : [0.100000, -34.361217, 6.100000],
-        "PendingActorRotation" : [-0.000000, 128.285675, 0.000000],
-        "PendingActorScale" : [1.000000, 35.000000, 6.000000],
-        "PendingActorVisible" : true,
-        "PendingTagsString" : "",
-        "bNeedsTick" : true
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "UBoxComponent",
-        "ObjectId" : 62,
-        "Properties" : {
-          "AttachSocketName" : "Name_None",
-          "BoxExtent" : [1.000000, 1.000000, 1.000000],
-          "CachedEditRotator" : [-0.000000, 128.285675, 0.000000],
-          "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-          "CollisionEnabled" : 3,
-          "Mass" : 1.000000,
-          "ObjectType" : 1,
-          "RelativeTransform.Location" : [0.100000, -34.361217, 6.100000],
-          "RelativeTransform.Scale" : [1.000000, 35.000000, 6.000000],
-          "ResponseContainer" : {
-            "Responses[0]" : 2,
-            "Responses[1]" : 2,
-            "Responses[2]" : 2,
-            "Responses[3]" : 2,
-            "Responses[4]" : 2
-          },
-          "ShapeColor" : [0.000000, 1.000000, 0.000000, 1.000000],
-          "bAutoActivate" : true,
-          "bCastShadow" : false,
-          "bCastShadowAsTwoSided" : false,
-          "bDrawOnlyIfSelected" : false,
-          "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -1973,7 +2015,7 @@
       "ClassName" : "ABoxActor",
       "Name" : "ABoxActor_5_Copy_Copy",
       "NonSceneComponents" : [],
-      "ObjectId" : 63,
+      "ObjectId" : 62,
       "Properties" : {
         "PendingActorLocation" : [-35.000000, 0.000000, 6.200000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -1986,7 +2028,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "UStaticMeshComponent",
-            "ObjectId" : 65,
+            "ObjectId" : 64,
             "Properties" : {
               "AttachSocketName" : "Name_None",
               "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -2009,6 +2051,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : false,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : false,
               "bIsActive" : true,
@@ -2019,7 +2062,7 @@
             }
           }],
         "ClassName" : "UBoxComponent",
-        "ObjectId" : 64,
+        "ObjectId" : 63,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "BoxExtent" : [1.000000, 1.000000, 1.000000],
@@ -2043,6 +2086,7 @@
           "bCastShadowAsTwoSided" : false,
           "bDrawOnlyIfSelected" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2056,7 +2100,7 @@
       "ClassName" : "ABoxActor",
       "Name" : "ABoxActor_5_Copy_Copy_Copy",
       "NonSceneComponents" : [],
-      "ObjectId" : 66,
+      "ObjectId" : 65,
       "Properties" : {
         "PendingActorLocation" : [35.000000, 0.300000, 6.300000],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -2069,7 +2113,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "UStaticMeshComponent",
-            "ObjectId" : 68,
+            "ObjectId" : 67,
             "Properties" : {
               "AttachSocketName" : "Name_None",
               "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -2092,6 +2136,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : false,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : false,
               "bIsActive" : true,
@@ -2102,7 +2147,7 @@
             }
           }],
         "ClassName" : "UBoxComponent",
-        "ObjectId" : 67,
+        "ObjectId" : 66,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "BoxExtent" : [1.000000, 1.000000, 1.000000],
@@ -2126,55 +2171,7 @@
           "bCastShadowAsTwoSided" : false,
           "bDrawOnlyIfSelected" : false,
           "bEditorOnly" : false,
-          "bGenerateOverlapEvents" : false,
-          "bHiddenInComponentTree" : false,
-          "bIsActive" : true,
-          "bIsVisible" : true,
-          "bKinematic" : false,
-          "bSimulatePhysics" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
-      "ClassName" : "ABoxActor",
-      "Name" : "ABoxActor_9",
-      "NonSceneComponents" : [],
-      "ObjectId" : 69,
-      "Properties" : {
-        "PendingActorLocation" : [-0.392988, 34.375401, 6.336240],
-        "PendingActorRotation" : [0.000000, -53.207767, 0.000000],
-        "PendingActorScale" : [1.000000, 35.000000, 6.000000],
-        "PendingActorVisible" : true,
-        "PendingTagsString" : "",
-        "bNeedsTick" : true
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "UBoxComponent",
-        "ObjectId" : 70,
-        "Properties" : {
-          "AttachSocketName" : "Name_None",
-          "BoxExtent" : [1.000000, 1.000000, 1.000000],
-          "CachedEditRotator" : [0.000000, -53.207767, 0.000000],
-          "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
-          "CollisionEnabled" : 3,
-          "Mass" : 1.000000,
-          "ObjectType" : 1,
-          "RelativeTransform.Location" : [-0.392988, 34.375401, 6.336240],
-          "RelativeTransform.Scale" : [1.000000, 35.000000, 6.000000],
-          "ResponseContainer" : {
-            "Responses[0]" : 2,
-            "Responses[1]" : 2,
-            "Responses[2]" : 2,
-            "Responses[3]" : 2,
-            "Responses[4]" : 2
-          },
-          "ShapeColor" : [0.000000, 1.000000, 0.000000, 1.000000],
-          "bAutoActivate" : true,
-          "bCastShadow" : false,
-          "bCastShadowAsTwoSided" : false,
-          "bDrawOnlyIfSelected" : false,
-          "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2188,7 +2185,7 @@
       "ClassName" : "AParticleSystemActor",
       "Name" : "AParticleSystemActor_5",
       "NonSceneComponents" : [],
-      "ObjectId" : 71,
+      "ObjectId" : 68,
       "Properties" : {
         "PendingActorLocation" : [-4.968734, -27.421314, 1.574116],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -2200,7 +2197,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UParticleSystemComponent",
-        "ObjectId" : 72,
+        "ObjectId" : 69,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -2224,6 +2221,7 @@
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2238,7 +2236,7 @@
       "ClassName" : "ATriggerVolumeParticle",
       "Name" : "ATriggerVolumeParticle_0",
       "NonSceneComponents" : [],
-      "ObjectId" : 73,
+      "ObjectId" : 70,
       "Properties" : {
         "ParticleTag" : "DemoParticle1",
         "PendingActorLocation" : [24.702715, -19.463406, 3.507058],
@@ -2254,7 +2252,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UBoxComponent",
-        "ObjectId" : 74,
+        "ObjectId" : 71,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "BoxExtent" : [3.000000, 3.000000, 3.000000],
@@ -2278,6 +2276,7 @@
           "bCastShadowAsTwoSided" : false,
           "bDrawOnlyIfSelected" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : true,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2291,7 +2290,7 @@
       "ClassName" : "ATriggerVolumeParticle",
       "Name" : "ATriggerVolumeParticle_0_Copy",
       "NonSceneComponents" : [],
-      "ObjectId" : 75,
+      "ObjectId" : 72,
       "Properties" : {
         "ParticleTag" : "DemoParticle2",
         "PendingActorLocation" : [11.910564, -19.363405, 3.607058],
@@ -2307,7 +2306,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UBoxComponent",
-        "ObjectId" : 76,
+        "ObjectId" : 73,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "BoxExtent" : [3.000000, 3.000000, 3.000000],
@@ -2331,6 +2330,7 @@
           "bCastShadowAsTwoSided" : false,
           "bDrawOnlyIfSelected" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : true,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2344,7 +2344,7 @@
       "ClassName" : "ATriggerVolumeParticle",
       "Name" : "ATriggerVolumeParticle_0_Copy_Copy",
       "NonSceneComponents" : [],
-      "ObjectId" : 77,
+      "ObjectId" : 74,
       "Properties" : {
         "ParticleTag" : "DemoParticle3",
         "PendingActorLocation" : [-4.992408, -19.263405, 3.707058],
@@ -2360,7 +2360,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UBoxComponent",
-        "ObjectId" : 78,
+        "ObjectId" : 75,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "BoxExtent" : [3.000000, 3.000000, 3.000000],
@@ -2384,6 +2384,7 @@
           "bCastShadowAsTwoSided" : false,
           "bDrawOnlyIfSelected" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : true,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2397,7 +2398,7 @@
       "ClassName" : "ATriggerVolumeParticle",
       "Name" : "ATriggerVolumeParticle_0_Copy_Copy_Copy",
       "NonSceneComponents" : [],
-      "ObjectId" : 79,
+      "ObjectId" : 76,
       "Properties" : {
         "ParticleTag" : "DemoParticle4",
         "PendingActorLocation" : [-21.420185, -19.163404, 3.807058],
@@ -2413,7 +2414,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UBoxComponent",
-        "ObjectId" : 80,
+        "ObjectId" : 77,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "BoxExtent" : [3.000000, 3.000000, 3.000000],
@@ -2437,6 +2438,7 @@
           "bCastShadowAsTwoSided" : false,
           "bDrawOnlyIfSelected" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : true,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2450,7 +2452,7 @@
       "ClassName" : "AParticleSystemActor",
       "Name" : "AParticleSystemActor_3",
       "NonSceneComponents" : [],
-      "ObjectId" : 81,
+      "ObjectId" : 78,
       "Properties" : {
         "PendingActorLocation" : [24.761738, -25.140430, 0.794391],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -2462,7 +2464,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UParticleSystemComponent",
-        "ObjectId" : 82,
+        "ObjectId" : 79,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -2486,6 +2488,7 @@
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2500,7 +2503,7 @@
       "ClassName" : "AParticleSystemActor",
       "Name" : "AParticleSystemActor_4",
       "NonSceneComponents" : [],
-      "ObjectId" : 83,
+      "ObjectId" : 80,
       "Properties" : {
         "PendingActorLocation" : [12.467142, -27.881325, 5.121586],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -2512,7 +2515,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UParticleSystemComponent",
-        "ObjectId" : 84,
+        "ObjectId" : 81,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -2536,6 +2539,7 @@
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2550,10 +2554,10 @@
       "ClassName" : "AStaticMeshActor",
       "Name" : "AStaticMeshActor_7",
       "NonSceneComponents" : [],
-      "ObjectId" : 85,
+      "ObjectId" : 82,
       "Properties" : {
         "PendingActorLocation" : [-21.442320, -19.524439, 0.295732],
-        "PendingActorRotation" : [-89.965729, -90.000000, 0.000000],
+        "PendingActorRotation" : [-89.972015, -90.000008, 0.000000],
         "PendingActorScale" : [0.010000, 0.030000, 0.030000],
         "PendingActorVisible" : true,
         "PendingTagsString" : "",
@@ -2562,10 +2566,10 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 86,
+        "ObjectId" : 83,
         "Properties" : {
           "AttachSocketName" : "Name_None",
-          "CachedEditRotator" : [-89.965729, -90.000000, 0.000000],
+          "CachedEditRotator" : [-89.972015, -90.000008, 0.000000],
           "CenterOfMassOffset" : [0.000000, 0.000000, 0.000000],
           "CollisionEnabled" : 0,
           "Mass" : 1.000000,
@@ -2585,6 +2589,7 @@
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2598,7 +2603,7 @@
       "ClassName" : "AStaticMeshActor",
       "Name" : "AStaticMeshActor_7_Copy_Copy",
       "NonSceneComponents" : [],
-      "ObjectId" : 87,
+      "ObjectId" : 84,
       "Properties" : {
         "PendingActorLocation" : [12.486946, -19.324438, 0.495732],
         "PendingActorRotation" : [-89.499535, -90.000000, 0.000000],
@@ -2610,7 +2615,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 88,
+        "ObjectId" : 85,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-89.499535, -90.000000, 0.000000],
@@ -2633,6 +2638,7 @@
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2646,7 +2652,7 @@
       "ClassName" : "AStaticMeshActor",
       "Name" : "AStaticMeshActor_7_Copy_Copy_Copy",
       "NonSceneComponents" : [],
-      "ObjectId" : 89,
+      "ObjectId" : 86,
       "Properties" : {
         "PendingActorLocation" : [24.890486, -19.224438, 0.595732],
         "PendingActorRotation" : [-89.499535, -90.000000, 0.000000],
@@ -2658,7 +2664,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 90,
+        "ObjectId" : 87,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-89.499535, -90.000000, 0.000000],
@@ -2681,6 +2687,7 @@
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2694,7 +2701,7 @@
       "ClassName" : "AStaticMeshActor",
       "Name" : "AStaticMeshActor_7_Copy_Copy_Copy_Copy",
       "NonSceneComponents" : [],
-      "ObjectId" : 91,
+      "ObjectId" : 88,
       "Properties" : {
         "PendingActorLocation" : [-4.773643, -19.124437, 0.695732],
         "PendingActorRotation" : [-89.499535, -90.000000, 0.000000],
@@ -2706,7 +2713,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
-        "ObjectId" : 92,
+        "ObjectId" : 89,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-89.499535, -90.000000, 0.000000],
@@ -2729,6 +2736,7 @@
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2742,7 +2750,7 @@
       "ClassName" : "AParticleSystemActor",
       "Name" : "AParticleSystemActor_13",
       "NonSceneComponents" : [],
-      "ObjectId" : 93,
+      "ObjectId" : 90,
       "Properties" : {
         "PendingActorLocation" : [1.788761, -3.137112, 9.061496],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -2754,7 +2762,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UParticleSystemComponent",
-        "ObjectId" : 94,
+        "ObjectId" : 91,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -2778,6 +2786,7 @@
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2792,7 +2801,7 @@
       "ClassName" : "AParticleSystemActor",
       "Name" : "AParticleSystemActor_89",
       "NonSceneComponents" : [],
-      "ObjectId" : 95,
+      "ObjectId" : 92,
       "Properties" : {
         "PendingActorLocation" : [-5.957800, -26.490440, 1.411701],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -2804,7 +2813,7 @@
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UParticleSystemComponent",
-        "ObjectId" : 96,
+        "ObjectId" : 93,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -2828,6 +2837,7 @@
           "bCastShadow" : true,
           "bCastShadowAsTwoSided" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2843,7 +2853,7 @@
       "Name" : "ALuaCharacter_1_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 100,
+          "ObjectId" : 97,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -2852,6 +2862,7 @@
             "MaxAcceleration" : 20.000000,
             "MaxWalkSpeed" : 6.000000,
             "RotationYawRate" : 540.000000,
+            "SweepPullbackDistance" : 0.010000,
             "bAutoActivate" : true,
             "bAutoRegisterUpdatedComponent" : true,
             "bEditorOnly" : false,
@@ -2862,7 +2873,7 @@
           }
         }, {
           "ClassName" : "UPhysicsAssetRagdollTestComponent",
-          "ObjectId" : 101,
+          "ObjectId" : 98,
           "Properties" : {
             "ActiveLogInterval" : 1.000000,
             "BeginRecoveryKey" : 126,
@@ -2881,7 +2892,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 97,
+      "ObjectId" : 94,
       "Properties" : {
         "PendingActorLocation" : [0.100000, 6.135014, 4.161543],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -2898,7 +2909,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 99,
+            "ObjectId" : 96,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimSingleNodeInstance",
@@ -2957,6 +2968,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : false,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : false,
               "bIsActive" : true,
@@ -2967,7 +2979,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 98,
+        "ObjectId" : 95,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -2992,6 +3004,7 @@
           "bCastShadowAsTwoSided" : false,
           "bDrawOnlyIfSelected" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : true,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -3006,7 +3019,7 @@
       "Name" : "ALuaCharacter_1_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 105,
+          "ObjectId" : 102,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -3015,6 +3028,7 @@
             "MaxAcceleration" : 20.000000,
             "MaxWalkSpeed" : 6.000000,
             "RotationYawRate" : 540.000000,
+            "SweepPullbackDistance" : 0.010000,
             "bAutoActivate" : true,
             "bAutoRegisterUpdatedComponent" : true,
             "bEditorOnly" : false,
@@ -3025,7 +3039,7 @@
           }
         }, {
           "ClassName" : "UPhysicsAssetRagdollTestComponent",
-          "ObjectId" : 106,
+          "ObjectId" : 103,
           "Properties" : {
             "ActiveLogInterval" : 1.000000,
             "BeginRecoveryKey" : 126,
@@ -3044,7 +3058,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 102,
+      "ObjectId" : 99,
       "Properties" : {
         "PendingActorLocation" : [0.200000, 10.590951, 4.261543],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -3061,7 +3075,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 104,
+            "ObjectId" : 101,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimSingleNodeInstance",
@@ -3120,6 +3134,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : false,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : false,
               "bIsActive" : true,
@@ -3130,7 +3145,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 103,
+        "ObjectId" : 100,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -3155,6 +3170,7 @@
           "bCastShadowAsTwoSided" : false,
           "bDrawOnlyIfSelected" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : true,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -3169,7 +3185,7 @@
       "Name" : "ALuaCharacter_1_Copy_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 110,
+          "ObjectId" : 107,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -3178,6 +3194,7 @@
             "MaxAcceleration" : 20.000000,
             "MaxWalkSpeed" : 6.000000,
             "RotationYawRate" : 540.000000,
+            "SweepPullbackDistance" : 0.010000,
             "bAutoActivate" : true,
             "bAutoRegisterUpdatedComponent" : true,
             "bEditorOnly" : false,
@@ -3188,7 +3205,7 @@
           }
         }, {
           "ClassName" : "UPhysicsAssetRagdollTestComponent",
-          "ObjectId" : 111,
+          "ObjectId" : 108,
           "Properties" : {
             "ActiveLogInterval" : 1.000000,
             "BeginRecoveryKey" : 126,
@@ -3207,7 +3224,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 107,
+      "ObjectId" : 104,
       "Properties" : {
         "PendingActorLocation" : [0.300000, 15.559901, 4.361543],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -3224,7 +3241,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 109,
+            "ObjectId" : 106,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimSingleNodeInstance",
@@ -3283,6 +3300,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : false,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : false,
               "bIsActive" : true,
@@ -3293,7 +3311,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 108,
+        "ObjectId" : 105,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -3318,6 +3336,7 @@
           "bCastShadowAsTwoSided" : false,
           "bDrawOnlyIfSelected" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : true,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -3332,7 +3351,7 @@
       "Name" : "ALuaCharacter_1_Copy_Copy_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 115,
+          "ObjectId" : 112,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -3341,6 +3360,7 @@
             "MaxAcceleration" : 20.000000,
             "MaxWalkSpeed" : 6.000000,
             "RotationYawRate" : 540.000000,
+            "SweepPullbackDistance" : 0.010000,
             "bAutoActivate" : true,
             "bAutoRegisterUpdatedComponent" : true,
             "bEditorOnly" : false,
@@ -3351,7 +3371,7 @@
           }
         }, {
           "ClassName" : "UPhysicsAssetRagdollTestComponent",
-          "ObjectId" : 116,
+          "ObjectId" : 113,
           "Properties" : {
             "ActiveLogInterval" : 1.000000,
             "BeginRecoveryKey" : 126,
@@ -3370,7 +3390,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 112,
+      "ObjectId" : 109,
       "Properties" : {
         "PendingActorLocation" : [0.400000, 21.983681, 4.461543],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -3387,7 +3407,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 114,
+            "ObjectId" : 111,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimSingleNodeInstance",
@@ -3446,6 +3466,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : false,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : false,
               "bIsActive" : true,
@@ -3456,7 +3477,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 113,
+        "ObjectId" : 110,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -3481,6 +3502,7 @@
           "bCastShadowAsTwoSided" : false,
           "bDrawOnlyIfSelected" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : true,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -3495,7 +3517,7 @@
       "Name" : "ALuaCharacter_1_Copy_Copy_Copy_Copy_Copy",
       "NonSceneComponents" : [{
           "ClassName" : "UCharacterMovementComponent",
-          "ObjectId" : 120,
+          "ObjectId" : 117,
           "Properties" : {
             "BrakingFriction" : 8.000000,
             "FloorProbeDistance" : 0.100000,
@@ -3504,6 +3526,7 @@
             "MaxAcceleration" : 20.000000,
             "MaxWalkSpeed" : 6.000000,
             "RotationYawRate" : 540.000000,
+            "SweepPullbackDistance" : 0.010000,
             "bAutoActivate" : true,
             "bAutoRegisterUpdatedComponent" : true,
             "bEditorOnly" : false,
@@ -3514,7 +3537,7 @@
           }
         }, {
           "ClassName" : "UPhysicsAssetRagdollTestComponent",
-          "ObjectId" : 121,
+          "ObjectId" : 118,
           "Properties" : {
             "ActiveLogInterval" : 1.000000,
             "BeginRecoveryKey" : 126,
@@ -3533,7 +3556,7 @@
             "bTickEnable" : true
           }
         }],
-      "ObjectId" : 117,
+      "ObjectId" : 114,
       "Properties" : {
         "PendingActorLocation" : [0.500000, 29.900740, 4.561543],
         "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
@@ -3550,7 +3573,7 @@
         "Children" : [{
             "Children" : [],
             "ClassName" : "USkeletalMeshComponent",
-            "ObjectId" : 119,
+            "ObjectId" : 116,
             "Properties" : {
               "AnimInstance" : {
                 "ClassName" : "UAnimSingleNodeInstance",
@@ -3609,6 +3632,7 @@
               "bCastShadow" : true,
               "bCastShadowAsTwoSided" : false,
               "bEditorOnly" : false,
+              "bEnableCCD" : false,
               "bGenerateOverlapEvents" : false,
               "bHiddenInComponentTree" : false,
               "bIsActive" : true,
@@ -3619,7 +3643,7 @@
             }
           }],
         "ClassName" : "UCapsuleComponent",
-        "ObjectId" : 118,
+        "ObjectId" : 115,
         "Properties" : {
           "AttachSocketName" : "Name_None",
           "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
@@ -3644,6 +3668,7 @@
           "bCastShadowAsTwoSided" : false,
           "bDrawOnlyIfSelected" : false,
           "bEditorOnly" : false,
+          "bEnableCCD" : false,
           "bGenerateOverlapEvents" : true,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -3662,9 +3687,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [12.978655, -5.287981, 11.562204],
+    "Location" : [2.731648, -7.742019, 23.167919],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 32.264950, 1216.861450]
+    "Rotation" : [0.000000, 36.314884, 1865.917114]
   },
   "Version" : 2,
   "WorldSettings" : {
