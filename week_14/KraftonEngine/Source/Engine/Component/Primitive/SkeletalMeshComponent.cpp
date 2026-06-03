@@ -1213,8 +1213,33 @@ bool USkeletalMeshComponent::ApplyImpulseForRagdollReaction(
     }
 
     const FVector Impulse = Decision.ImpulseDirection * Decision.ImpulseMagnitude;
-    const FName TargetBodyBoneName =
-        Instance->ResolveBestImpulseTargetBoneName(Request.HitBoneName, PartialRootBoneName);
+    FName TargetBodyBoneName = FName::None;
+
+    if (Decision.Type == ERagdollReactionType::FullBody ||
+        Decision.Type == ERagdollReactionType::EscalateToFull)
+    {
+        TargetBodyBoneName = Instance->GetPrimarySimulatedBodyBoneName();
+    }
+
+    if (TargetBodyBoneName == FName::None)
+    {
+        TargetBodyBoneName =
+            Instance->ResolveBestImpulseTargetBoneName(Request.HitBoneName, PartialRootBoneName);
+    }
+
+    if (TargetBodyBoneName == FName::None)
+    {
+        FName NearestBodyBoneName = FName::None;
+        FVector NearestBodyLocation = FVector::ZeroVector;
+        if (Instance->FindNearestBodyToWorldLocation(
+                Request.HitWorldLocation,
+                NearestBodyBoneName,
+                NearestBodyLocation))
+        {
+            TargetBodyBoneName = NearestBodyBoneName;
+        }
+    }
+
     if (TargetBodyBoneName == FName::None || !Instance->AddImpulseToBone(TargetBodyBoneName, Impulse))
     {
         return false;
@@ -1223,6 +1248,20 @@ bool USkeletalMeshComponent::ApplyImpulseForRagdollReaction(
     LastPartialHitReactionTargetBoneName = TargetBodyBoneName;
     LastPartialHitReactionDirection = Decision.ImpulseDirection;
     return true;
+}
+
+void USkeletalMeshComponent::RefreshRagdollReactionTuning()
+{
+    RagdollReactionTuning.BaseImpulseMagnitude = RagdollBaseImpulseMagnitude;
+    RagdollReactionTuning.AdditionalImpulseMagnitude = RagdollAdditionalImpulseMagnitude;
+    RagdollReactionTuning.OverdriveImpulseMagnitudeScale = RagdollOverdriveImpulseMagnitudeScale;
+    RagdollReactionTuning.FullBodyLaunchImpulseMagnitude = FullBodyLaunchImpulseMagnitude;
+    RagdollReactionTuning.FullBodyThreshold = DirectHitFullBodyThreshold;
+    RagdollReactionTuning.EscalationThreshold = PartialEscalationThreshold;
+    RagdollReactionTuning.ShockwaveFullThreshold = ShockwaveFullBodyThreshold;
+    RagdollReactionTuning.ShockwaveImpulseThreshold = ShockwaveImpulseThreshold;
+    RagdollReactionTuning.RecoveryEscalationThreshold = RecoveryFullBodyThreshold;
+    RagdollReactionTuning.RecoveryImpulseThreshold = RecoveryImpulseThreshold;
 }
 
 void USkeletalMeshComponent::UpdateLastRagdollReactionDiagnostics(
@@ -1319,6 +1358,7 @@ bool USkeletalMeshComponent::ExecuteRagdollReactionDecision(
 
 bool USkeletalMeshComponent::ApplyRagdollReaction(const FRagdollReactionRequest& Request)
 {
+    RefreshRagdollReactionTuning();
     const FRagdollReactionContext Context = BuildRagdollReactionContext(Request);
     const FRagdollReactionDecision Decision =
         EvaluateRagdollReactionPolicy(Context, Request, RagdollReactionTuning);

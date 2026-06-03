@@ -1,22 +1,24 @@
 #include "RagdollForceHitscanComponent.h"
 
-#include "Component/Camera/CameraComponent.h"
 #include "Component/Gameplay/RagdollForceEmitterComponent.h"
-#include "Component/PrimitiveComponent.h"
+#include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Core/Logging/Log.h"
+#include "Debug/DrawDebugHelpers.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/Pawn/Character.h"
 #include "GameFramework/GameMode/PlayerController.h"
-#include "GameFramework/Pawn/Pawn.h"
+#include "Input/InputSystem.h"
 #include "GameFramework/World.h"
 #include "Runtime/Engine.h"
 #include "Viewport/GameViewportClient.h"
 
+#include <cmath>
 #include <windows.h>
 
 namespace
 {
     constexpr int32 DefaultImpulseFireKey = VK_LBUTTON;
-    constexpr int32 DefaultShockwaveFireKey = VK_RBUTTON;
+    constexpr int32 DefaultOwnerShockwaveKey = 'Q';
 
     const char* GetNameSafe(const UObject* Object)
     {
@@ -27,14 +29,13 @@ namespace
 URagdollForceHitscanComponent::URagdollForceHitscanComponent()
 {
     ImpulseFireKey = DefaultImpulseFireKey;
-    ShockwaveFireKey = DefaultShockwaveFireKey;
+    OwnerShockwaveKey = DefaultOwnerShockwaveKey;
 }
 
 void URagdollForceHitscanComponent::BeginPlay()
 {
     UActorComponent::BeginPlay();
     CachedForceEmitter = ResolveForceEmitter();
-    CachedAimCamera = GetOwner() ? GetOwner()->GetComponentByClass<UCameraComponent>() : nullptr;
     SetComponentTickEnabled(bEnableInputFiring);
 }
 
@@ -49,6 +50,7 @@ void URagdollForceHitscanComponent::TickComponent(
     (void)ThisTickFunction;
 
     ProcessHitscanInput();
+    DrawAutoTargetPreview();
 }
 
 bool URagdollForceHitscanComponent::FireImpulseHitscan()
@@ -56,40 +58,28 @@ bool URagdollForceHitscanComponent::FireImpulseHitscan()
     URagdollForceEmitterComponent* ForceEmitter = ResolveForceEmitter();
     if (!ForceEmitter)
     {
-        LogHitscanResult("Impulse", nullptr, false);
+        LogHitscanResult("Impulse", nullptr, 0, false);
         return false;
     }
 
-    FHitResult Hit;
-    if (!ExecuteHitscan(Hit))
+    FVector TargetLocation = FVector::ZeroVector;
+    AActor* TargetActor = ResolveBestImpulseTargetActor(&TargetLocation);
+    FVector AimOrigin = FVector::ZeroVector;
+    FVector AimDirection = FVector::ZeroVector;
+    if (!TargetActor || !TryGetActionRay(AimOrigin, AimDirection))
     {
-        LogHitscanResult("Impulse", nullptr, false);
-        return false;
-    }
-
-    AActor* TargetActor = ResolveHitActor(Hit);
-    if (!TargetActor)
-    {
-        LogHitscanResult("Impulse", &Hit, false);
-        return false;
-    }
-
-    FVector AimOrigin;
-    FVector AimDirection;
-    if (!TryGetAimRay(AimOrigin, AimDirection))
-    {
-        LogHitscanResult("Impulse", &Hit, false);
+        LogHitscanResult("Impulse", nullptr, 0, false);
         return false;
     }
 
     const FVector ShotDirection =
-        (Hit.WorldHitLocation - AimOrigin).IsNearlyZero()
+        (TargetLocation - AimOrigin).IsNearlyZero()
             ? AimDirection
-            : (Hit.WorldHitLocation - AimOrigin).Normalized();
+            : (TargetLocation - AimOrigin).Normalized();
 
     FRagdollImpulseRequest Request;
     Request.HitBoneName = FName::None;
-    Request.WorldLocation = Hit.WorldHitLocation;
+    Request.WorldLocation = TargetLocation;
     Request.WorldDirection = ShotDirection;
     Request.Strength = ImpulseStrength;
     Request.HoldTimeOverride = -1.0f;
@@ -99,56 +89,43 @@ bool URagdollForceHitscanComponent::FireImpulseHitscan()
     Request.bAllowWhileMoving = bAllowWhileMoving;
 
     const bool bSucceeded = ForceEmitter->ApplyImpulseToActor(TargetActor, Request);
-    LogHitscanResult("Impulse", &Hit, bSucceeded);
+    LogHitscanResult("Impulse", &TargetLocation, bSucceeded ? 1 : 0, bSucceeded);
     return bSucceeded;
 }
 
-bool URagdollForceHitscanComponent::FireShockwaveHitscan()
+bool URagdollForceHitscanComponent::FireOwnerCenteredShockwave()
 {
-    URagdollForceEmitterComponent* ForceEmitter = ResolveForceEmitter();
-    if (!ForceEmitter)
+    FVector Origin = FVector::ZeroVector;
+    FVector Direction = FVector::ZeroVector;
+    if (!TryGetActionRay(Origin, Direction))
     {
-        LogHitscanResult("Shockwave", nullptr, false);
+        LogHitscanResult("OwnerShockwave", nullptr, 0, false);
         return false;
     }
 
-    FHitResult Hit;
-    if (!ExecuteHitscan(Hit))
-    {
-        LogHitscanResult("Shockwave", nullptr, false);
-        return false;
-    }
-
-    AActor* TargetActor = ResolveHitActor(Hit);
-    if (!TargetActor)
-    {
-        LogHitscanResult("Shockwave", &Hit, false);
-        return false;
-    }
-
-    FVector AimOrigin;
-    FVector AimDirection;
-    if (!TryGetAimRay(AimOrigin, AimDirection))
-    {
-        LogHitscanResult("Shockwave", &Hit, false);
-        return false;
-    }
-
-    const FVector ShockwaveOrigin = Hit.WorldHitLocation - AimDirection * ShockwaveOriginBackOffset;
-    FRagdollShockwaveRequest Request;
-    Request.Origin = ShockwaveOrigin;
-    Request.Radius = ShockwaveRadius;
-    Request.Strength = ShockwaveStrength;
-    Request.MinStrength = 0.0f;
-    Request.HoldTimeOverride = -1.0f;
-    Request.PreferredPreset = PreferredPreset;
-    Request.bUsePreferredPreset = true;
-    Request.bAllowEscalationToFullBody = bAllowEscalationToFullBody;
-    Request.bAllowWhileMoving = bAllowWhileMoving;
-
-    const bool bSucceeded = ForceEmitter->ApplyShockwaveToActor(TargetActor, Request);
-    LogHitscanResult("Shockwave", &Hit, bSucceeded);
+    const int32 AffectedCount = ApplyShockwaveBurstAtLocation(Origin, OwnerShockwaveStrength);
+    const bool bSucceeded = AffectedCount > 0;
+    LogHitscanResult("OwnerShockwave", &Origin, AffectedCount, bSucceeded);
     return bSucceeded;
+}
+
+bool URagdollForceHitscanComponent::WasActionPressed(const FInputSystemSnapshot& Snapshot, int32 KeyCode) const
+{
+    switch (KeyCode)
+    {
+    case VK_LBUTTON:
+        return Snapshot.bLeftMousePressed || Snapshot.WasPressed(VK_LBUTTON);
+    case VK_RBUTTON:
+        return Snapshot.bRightMousePressed || Snapshot.WasPressed(VK_RBUTTON);
+    case VK_MBUTTON:
+        return Snapshot.bMiddleMousePressed || Snapshot.WasPressed(VK_MBUTTON);
+    case VK_XBUTTON1:
+        return Snapshot.bXButton1Pressed || Snapshot.WasPressed(VK_XBUTTON1);
+    case VK_XBUTTON2:
+        return Snapshot.bXButton2Pressed || Snapshot.WasPressed(VK_XBUTTON2);
+    default:
+        return Snapshot.WasPressed(KeyCode);
+    }
 }
 
 URagdollForceEmitterComponent* URagdollForceHitscanComponent::ResolveForceEmitter() const
@@ -181,7 +158,7 @@ bool URagdollForceHitscanComponent::CanProcessHitscanInput() const
     return PossessedPawn && PossessedPawn == GetOwner();
 }
 
-bool URagdollForceHitscanComponent::TryGetAimRay(FVector& OutOrigin, FVector& OutDirection) const
+bool URagdollForceHitscanComponent::TryGetActionRay(FVector& OutOrigin, FVector& OutDirection) const
 {
     AActor* OwnerActor = GetOwner();
     if (!OwnerActor)
@@ -189,48 +166,221 @@ bool URagdollForceHitscanComponent::TryGetAimRay(FVector& OutOrigin, FVector& Ou
         return false;
     }
 
-    UCameraComponent* AimCamera = bUseCameraAim
-        ? (CachedAimCamera.Get() ? CachedAimCamera.Get() : OwnerActor->GetComponentByClass<UCameraComponent>())
-        : nullptr;
-
-    if (AimCamera)
-    {
-        OutOrigin = AimCamera->GetWorldLocation();
-        OutDirection = AimCamera->GetWorldRotation().GetForwardVector();
-        return true;
-    }
-
-    OutOrigin = OwnerActor->GetActorLocation();
+    OutOrigin = OwnerActor->GetActorLocation() + OwnerActor->GetActorUp() * AimOriginHeightOffset;
     OutDirection = OwnerActor->GetActorForward();
     return !OutDirection.IsNearlyZero();
 }
 
-bool URagdollForceHitscanComponent::ExecuteHitscan(FHitResult& OutHit) const
+USkeletalMeshComponent* URagdollForceHitscanComponent::ResolveTargetMesh(AActor* CandidateActor) const
 {
-    UWorld* World = GetWorld();
-    FVector Origin;
-    FVector Direction;
-    if (!World || !TryGetAimRay(Origin, Direction))
+    if (!CandidateActor)
+    {
+        return nullptr;
+    }
+
+    if (ACharacter* Character = Cast<ACharacter>(CandidateActor))
+    {
+        if (USkeletalMeshComponent* CharacterMesh = Character->GetMesh())
+        {
+            return CharacterMesh;
+        }
+    }
+
+    return CandidateActor->GetComponentByClass<USkeletalMeshComponent>();
+}
+
+FVector URagdollForceHitscanComponent::ResolveTargetLocation(AActor* CandidateActor) const
+{
+    USkeletalMeshComponent* TargetMesh = ResolveTargetMesh(CandidateActor);
+    if (!TargetMesh)
+    {
+        return CandidateActor ? CandidateActor->GetActorLocation() : FVector::ZeroVector;
+    }
+
+    if (FPhysicsAssetInstance* PhysicsAssetInstance = TargetMesh->GetPhysicsAssetInstance())
+    {
+        if (PhysicsAssetInstance->HasLivePhysicsObjects())
+        {
+            const FName PrimaryBodyBoneName = PhysicsAssetInstance->GetPrimarySimulatedBodyBoneName();
+            if (PrimaryBodyBoneName != FName::None && PhysicsAssetInstance->HasValidBodyForBone(PrimaryBodyBoneName))
+            {
+                return PhysicsAssetInstance->GetBodyWorldTransformByBoneName(PrimaryBodyBoneName).Location;
+            }
+
+            FName NearestBodyBoneName = FName::None;
+            FVector NearestBodyLocation = FVector::ZeroVector;
+            if (PhysicsAssetInstance->FindNearestBodyToWorldLocation(TargetMesh->GetWorldLocation(), NearestBodyBoneName, NearestBodyLocation))
+            {
+                return NearestBodyLocation;
+            }
+        }
+    }
+
+    return TargetMesh->GetWorldLocation();
+}
+
+bool URagdollForceHitscanComponent::HasValidRagdollTarget(AActor* CandidateActor) const
+{
+    if (!CandidateActor || CandidateActor == GetOwner())
     {
         return false;
     }
 
-    return World->PhysicsRaycast(Origin, Direction, TraceDistance, OutHit, TraceChannel, GetOwner());
+    USkeletalMeshComponent* TargetMesh = ResolveTargetMesh(CandidateActor);
+    return TargetMesh && TargetMesh->GetEffectivePhysicsAsset() != nullptr;
 }
 
-AActor* URagdollForceHitscanComponent::ResolveHitActor(const FHitResult& Hit) const
+AActor* URagdollForceHitscanComponent::ResolveBestImpulseTargetActor(FVector* OutTargetLocation) const
 {
-    if (Hit.HitActor)
+    UWorld* World = GetWorld();
+    FVector Origin;
+    FVector Forward;
+    if (!World || !TryGetActionRay(Origin, Forward))
     {
-        return Hit.HitActor;
+        return nullptr;
     }
 
-    if (Hit.HitComponent)
+    const float MaxAngleRadians = AutoTargetMaxAngleDegrees * (3.1415926535f / 180.0f);
+    const float ConeSlope = std::tan(MaxAngleRadians);
+    const float MinCaptureRadius = 120.0f;
+    float BestDistance = 0.0f;
+    float BestLateralDistance = 0.0f;
+    AActor* BestActor = nullptr;
+    FVector BestLocation = FVector::ZeroVector;
+
+    for (AActor* Actor : World->GetActors())
     {
-        return Hit.HitComponent->GetOwner();
+        if (!HasValidRagdollTarget(Actor))
+        {
+            continue;
+        }
+
+        const FVector CandidateLocation = ResolveTargetLocation(Actor);
+        const FVector ToCandidate = CandidateLocation - Origin;
+        const float DistanceSquared = ToCandidate.Dot(ToCandidate);
+        if (DistanceSquared <= 1.0e-6f)
+        {
+            continue;
+        }
+
+        const float Distance = std::sqrt(DistanceSquared);
+        if (Distance > AutoTargetRange)
+        {
+            continue;
+        }
+
+        const float ForwardDistance = Forward.Dot(ToCandidate);
+        if (ForwardDistance <= 0.0f)
+        {
+            continue;
+        }
+
+        const float LateralDistanceSquared =
+            DistanceSquared - (ForwardDistance * ForwardDistance);
+        const float LateralDistance = std::sqrt(LateralDistanceSquared > 0.0f ? LateralDistanceSquared : 0.0f);
+        const float AllowedLateralDistance =
+            (ForwardDistance * ConeSlope) + MinCaptureRadius;
+        if (LateralDistance > AllowedLateralDistance)
+        {
+            continue;
+        }
+
+        if (!BestActor ||
+            Distance < BestDistance ||
+            (std::abs(Distance - BestDistance) <= 1.0e-3f && LateralDistance < BestLateralDistance))
+        {
+            BestDistance = Distance;
+            BestLateralDistance = LateralDistance;
+            BestActor = Actor;
+            BestLocation = CandidateLocation;
+        }
     }
 
-    return nullptr;
+    if (OutTargetLocation)
+    {
+        *OutTargetLocation = BestLocation;
+    }
+
+    return BestActor;
+}
+
+int32 URagdollForceHitscanComponent::ApplyShockwaveBurstAtLocation(const FVector& Origin, float Strength) const
+{
+    UWorld* World = GetWorld();
+    URagdollForceEmitterComponent* ForceEmitter = ResolveForceEmitter();
+    if (!World || !ForceEmitter)
+    {
+        return 0;
+    }
+
+    int32 AffectedCount = 0;
+    for (AActor* Actor : World->GetActors())
+    {
+        if (!HasValidRagdollTarget(Actor))
+        {
+            continue;
+        }
+
+        const FVector CandidateLocation = ResolveTargetLocation(Actor);
+        const float Distance = FVector::Distance(Origin, CandidateLocation);
+        if (Distance > ShockwaveRadius)
+        {
+            continue;
+        }
+
+        FRagdollShockwaveRequest Request;
+        Request.Origin = Origin;
+        Request.Radius = ShockwaveRadius;
+        Request.Strength = Strength;
+        Request.HoldTimeOverride = -1.0f;
+        Request.PreferredPreset = PreferredPreset;
+        Request.bUsePreferredPreset = true;
+        Request.bAllowEscalationToFullBody = bAllowEscalationToFullBody;
+        Request.bAllowWhileMoving = bAllowWhileMoving;
+
+        if (ForceEmitter->ApplyShockwaveToActor(Actor, Request))
+        {
+            ++AffectedCount;
+        }
+    }
+
+    return AffectedCount;
+}
+
+void URagdollForceHitscanComponent::DrawAutoTargetPreview() const
+{
+    if (!bDrawAimPreview || !CanProcessHitscanInput())
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    FVector Start = FVector::ZeroVector;
+    FVector Direction = FVector::ZeroVector;
+    if (!TryGetActionRay(Start, Direction))
+    {
+        return;
+    }
+
+    FVector TargetLocation = FVector::ZeroVector;
+    AActor* TargetActor = ResolveBestImpulseTargetActor(&TargetLocation);
+    if (!TargetActor)
+    {
+        return;
+    }
+
+    const FVector End = TargetLocation;
+    const float Duration = AimPreviewDuration;
+    DrawDebugSphere(World, Start, AimPreviewSourceRadius, 10, FColor(0, 180, 255), Duration);
+    if (bDrawAutoTargetTargetMarker)
+    {
+        DrawDebugSphere(World, End, AimPreviewImpactRadius, 12, FColor::Green(), Duration);
+    }
 }
 
 void URagdollForceHitscanComponent::ProcessHitscanInput()
@@ -241,20 +391,21 @@ void URagdollForceHitscanComponent::ProcessHitscanInput()
     }
 
     const FInputSystemSnapshot& Snapshot = GEngine->GetGameViewportClient()->GetGameInputSnapshot();
-    if (Snapshot.WasPressed(ImpulseFireKey))
+    if (WasActionPressed(Snapshot, ImpulseFireKey))
     {
         FireImpulseHitscan();
     }
 
-    if (Snapshot.WasPressed(ShockwaveFireKey))
+    if (WasActionPressed(Snapshot, OwnerShockwaveKey))
     {
-        FireShockwaveHitscan();
+        FireOwnerCenteredShockwave();
     }
 }
 
 void URagdollForceHitscanComponent::LogHitscanResult(
     const char* RequestKind,
-    const FHitResult* Hit,
+    const FVector* Location,
+    int32 AffectedCount,
     bool bSucceeded) const
 {
     if (!bLogHitscan)
@@ -262,13 +413,14 @@ void URagdollForceHitscanComponent::LogHitscanResult(
         return;
     }
 
-    UE_LOG("Ragdoll hitscan %s. Component=%s Owner=%s HitActor=%s HitLocation=(%.2f,%.2f,%.2f) Success=%s",
+    UE_LOG("Ragdoll force %s. Component=%s Owner=%s TargetResolved=%s Location=(%.2f,%.2f,%.2f) Affected=%d Success=%s",
         RequestKind ? RequestKind : "Unknown",
         GetNameSafe(this),
         GetNameSafe(GetOwner()),
-        Hit ? GetNameSafe(Hit->HitActor) : "None",
-        Hit ? Hit->WorldHitLocation.X : 0.0f,
-        Hit ? Hit->WorldHitLocation.Y : 0.0f,
-        Hit ? Hit->WorldHitLocation.Z : 0.0f,
+        Location ? "true" : "false",
+        Location ? Location->X : 0.0f,
+        Location ? Location->Y : 0.0f,
+        Location ? Location->Z : 0.0f,
+        AffectedCount,
         bSucceeded ? "true" : "false");
 }

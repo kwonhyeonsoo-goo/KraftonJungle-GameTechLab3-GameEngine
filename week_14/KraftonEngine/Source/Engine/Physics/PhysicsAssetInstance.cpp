@@ -1001,6 +1001,28 @@ bool FPhysicsAssetInstance::HasValidBodyForBone(const FName& BoneName) const
     return GetBodyHandleByBoneName(BoneName).IsValid();
 }
 
+FName FPhysicsAssetInstance::GetPrimarySimulatedBodyBoneName() const
+{
+    UPhysicsAsset* Asset = GetAsset();
+    if (!Asset)
+    {
+        return FName::None;
+    }
+
+    const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
+    for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
+    {
+        if (BodyIndex >= static_cast<int32>(BodiesByBone.size()) || !BodiesByBone[BodyIndex].IsValid())
+        {
+            continue;
+        }
+
+        return BodySetups[BodyIndex].BoneName;
+    }
+
+    return FName::None;
+}
+
 FName FPhysicsAssetInstance::FindNearestSimulatedAncestorBodyBoneName(const FName& BoneName) const
 {
     USkeletalMeshComponent* Owner = GetOwnerComponent();

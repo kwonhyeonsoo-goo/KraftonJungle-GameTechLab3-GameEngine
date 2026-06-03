@@ -64,6 +64,7 @@ public:
     bool AddImpulseToBody(FPhysicsBodyHandle BodyHandle, const FVector& Impulse) const;
     bool AddImpulseToBone(const FName& BoneName, const FVector& Impulse) const;
     bool HasValidBodyForBone(const FName& BoneName) const;
+    FName GetPrimarySimulatedBodyBoneName() const;
     FName FindNearestSimulatedAncestorBodyBoneName(const FName& BoneName) const;
     FName ResolveBestImpulseTargetBoneName(const FName& HitBoneName, const FName& FallbackRootBoneName) const;
     int32 FindBodySetupIndexByBoneName(const FName& BoneName) const;

@@ -328,6 +328,7 @@ private:
         const FRagdollReactionRequest& Request,
         const FRagdollReactionDecision& Decision,
         const FName& PartialRootBoneName);
+    void RefreshRagdollReactionTuning();
     void UpdateLastRagdollReactionDiagnostics(
         const FRagdollReactionRequest& Request,
         const FRagdollReactionDecision& Decision);
@@ -388,6 +389,26 @@ protected:
     float PartialRagdollHoldTime = 0.18f;
     UPROPERTY(Edit, Save, Category="Physics|Partial Ragdoll", DisplayName="Partial First Valid Pose Blend In Time", Min=0.0f, Max=0.0f, Speed=0.01f)
     float PartialFirstValidPoseBlendInTime = 0.04f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Reaction", DisplayName="Direct Hit Full Body Threshold", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float DirectHitFullBodyThreshold = 0.85f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Reaction", DisplayName="Partial Escalation Threshold", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float PartialEscalationThreshold = 0.80f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Reaction", DisplayName="Shockwave Full Body Threshold", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float ShockwaveFullBodyThreshold = 0.90f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Reaction", DisplayName="Shockwave Impulse Threshold", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float ShockwaveImpulseThreshold = 0.45f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Reaction", DisplayName="Recovery Full Body Threshold", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float RecoveryFullBodyThreshold = 0.90f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Reaction", DisplayName="Recovery Impulse Threshold", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float RecoveryImpulseThreshold = 0.55f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Launch", DisplayName="Base Impulse Magnitude", Min=0.0f, Max=5000.0f, Speed=1.0f)
+    float RagdollBaseImpulseMagnitude = 120.0f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Launch", DisplayName="Additional Impulse Magnitude", Min=0.0f, Max=5000.0f, Speed=1.0f)
+    float RagdollAdditionalImpulseMagnitude = 240.0f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Launch", DisplayName="Overdrive Impulse Magnitude Scale", Min=0.0f, Max=10000.0f, Speed=1.0f)
+    float RagdollOverdriveImpulseMagnitudeScale = 600.0f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Launch", DisplayName="Full Body Launch Impulse Magnitude", Min=0.0f, Max=10000.0f, Speed=1.0f)
+    float FullBodyLaunchImpulseMagnitude = 900.0f;
     // FaceDown means prone/front get-up. FaceUp means supine/back get-up.
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Front Stand Up Animation", AssetType="UAnimSequence")
     FSoftObjectPtr FrontStandUpAnimationPath = "None";

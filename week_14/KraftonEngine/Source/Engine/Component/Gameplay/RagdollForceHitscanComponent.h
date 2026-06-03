@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "Component/ActorComponent.h"
-#include "Core/Types/CollisionTypes.h"
 #include "Math/Vector.h"
 #include "Object/Ptr/WeakObjectPtr.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
@@ -9,11 +8,8 @@
 #include "Source/Engine/Component/Gameplay/RagdollForceHitscanComponent.generated.h"
 
 class AActor;
-class APawn;
-class UCameraComponent;
 class URagdollForceEmitterComponent;
-class UWorld;
-struct FHitResult;
+struct FInputSystemSnapshot;
 enum class EPartialRagdollPreset : uint8;
 
 UCLASS()
@@ -31,16 +27,21 @@ protected:
 
 public:
     bool FireImpulseHitscan();
-    bool FireShockwaveHitscan();
+    bool FireOwnerCenteredShockwave();
 
 private:
+    bool WasActionPressed(const FInputSystemSnapshot& Snapshot, int32 KeyCode) const;
     URagdollForceEmitterComponent* ResolveForceEmitter() const;
     bool CanProcessHitscanInput() const;
-    bool TryGetAimRay(FVector& OutOrigin, FVector& OutDirection) const;
-    bool ExecuteHitscan(FHitResult& OutHit) const;
-    AActor* ResolveHitActor(const FHitResult& Hit) const;
+    bool TryGetActionRay(FVector& OutOrigin, FVector& OutDirection) const;
+    USkeletalMeshComponent* ResolveTargetMesh(AActor* CandidateActor) const;
+    FVector ResolveTargetLocation(AActor* CandidateActor) const;
+    bool HasValidRagdollTarget(AActor* CandidateActor) const;
+    AActor* ResolveBestImpulseTargetActor(FVector* OutTargetLocation = nullptr) const;
+    int32 ApplyShockwaveBurstAtLocation(const FVector& Origin, float Strength) const;
+    void DrawAutoTargetPreview() const;
     void ProcessHitscanInput();
-    void LogHitscanResult(const char* RequestKind, const FHitResult* Hit, bool bSucceeded) const;
+    void LogHitscanResult(const char* RequestKind, const FVector* Location, int32 AffectedCount, bool bSucceeded) const;
 
 private:
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Enable Input Firing")
@@ -49,23 +50,23 @@ private:
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Impulse Fire Key")
     int32 ImpulseFireKey = 0;
 
-    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Shockwave Fire Key")
-    int32 ShockwaveFireKey = 0;
-
-    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Trace Distance", Min=0.0f, Max=100000.0f, Speed=1.0f)
-    float TraceDistance = 2000.0f;
-
-    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Trace Channel", Enum=ECollisionChannel)
-    ECollisionChannel TraceChannel = ECollisionChannel::WorldDynamic;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Owner Shockwave Key")
+    int32 OwnerShockwaveKey = 0;
 
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Impulse Strength", Min=0.0f, Max=3.0f, Speed=0.01f)
     float ImpulseStrength = 1.0f;
 
-    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Shockwave Strength", Min=0.0f, Max=3.0f, Speed=0.01f)
-    float ShockwaveStrength = 1.0f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Owner Shockwave Strength", Min=0.0f, Max=3.0f, Speed=0.01f)
+    float OwnerShockwaveStrength = 1.0f;
 
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Shockwave Radius", Min=0.0f, Max=10000.0f, Speed=1.0f)
     float ShockwaveRadius = 300.0f;
+
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Auto Target Range", Min=0.0f, Max=100000.0f, Speed=1.0f)
+    float AutoTargetRange = 1800.0f;
+
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Auto Target Max Angle Degrees", Min=0.0f, Max=180.0f, Speed=1.0f)
+    float AutoTargetMaxAngleDegrees = 35.0f;
 
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Preferred Preset", Enum=EPartialRagdollPreset)
     EPartialRagdollPreset PreferredPreset = EPartialRagdollPreset::UpperBody;
@@ -76,15 +77,29 @@ private:
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Allow While Moving")
     bool bAllowWhileMoving = true;
 
-    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Shockwave Origin Back Offset", Min=0.0f, Max=1000.0f, Speed=1.0f)
-    float ShockwaveOriginBackOffset = 15.0f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Aim Origin Height Offset", Min=-500.0f, Max=500.0f, Speed=0.1f)
+    float AimOriginHeightOffset = 60.0f;
 
-    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Use Camera Aim")
-    bool bUseCameraAim = true;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Draw Auto Target Preview")
+    bool bDrawAimPreview = true;
+
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Draw Auto Target Target Marker")
+    bool bDrawAutoTargetTargetMarker = true;
+
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Preview Duration", Min=0.0f, Max=0.25f, Speed=0.01f)
+    float AimPreviewDuration = 0.0f;
+
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Target Preview Radius", Min=0.0f, Max=100.0f, Speed=0.1f)
+    float AimPreviewImpactRadius = 6.0f;
+
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Source Preview Radius", Min=0.0f, Max=100.0f, Speed=0.1f)
+    float AimPreviewSourceRadius = 4.0f;
+
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Shockwave Preview Duration", Min=0.0f, Max=5.0f, Speed=0.01f)
+    float ShockwavePreviewDuration = 0.4f;
 
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Log Hitscan")
     bool bLogHitscan = false;
 
     TWeakObjectPtr<URagdollForceEmitterComponent> CachedForceEmitter;
-    TWeakObjectPtr<UCameraComponent> CachedAimCamera;
 };
