@@ -27,6 +27,7 @@
 #include "Materials/MaterialManager.h"
 #include "Engine/Platform/Paths.h"
 #include "Lua/LuaScriptManager.h"
+#include "Lua/LuaDebugManager.h"
 #include "Object/GarbageCollection.h"
 #include "Audio/AudioManager.h"
 #include <filesystem>
@@ -431,6 +432,12 @@ void UEditorEngine::EndPlayMap()
 		return;
 	}
 
+	// PIE가 중단점/스텝에서 멈춘 상태로 끝나면 런타임 코루틴과 PIE 월드가 곧 파괴된다.
+	// 이 상태를 그대로 두면 LuaBlueprint 에디터가 계속 Paused 노드로 남고, 다음 PIE에서도
+	// 파괴된 컴포넌트를 재개하려 할 수 있으므로 세션 종료를 디버그 pause 취소로 처리한다.
+	FLuaDebugManager::AbortPauseForPlaySessionEnd();
+	FSlateApplication::Get().ClearInputOwner();
+
 	// 활성 월드를 PIE 시작 전 핸들로 복원.
 	const FName PrevHandle = PlayInEditorSessionInfo->PreviousActiveWorldHandle;
 	SetActiveWorld(PrevHandle);
@@ -512,6 +519,7 @@ void UEditorEngine::EndPlayMap()
 	PlayInEditorSessionInfo.reset();
 	PIEControlMode = EPIEControlMode::Possessed;
 	InputSystem::Get().ResetCaptureStateForPIEEnd();
+	FSlateApplication::Get().ClearInputOwner();
 }
 
 bool UEditorEngine::TogglePIEControlMode()
@@ -553,6 +561,7 @@ bool UEditorEngine::EnterPIEEjectedMode()
 	SyncGameViewportPIEControlState(false);
 	InputSystem::Get().SetUseRawMouse(false);
 	InputSystem::Get().ResetTransientState();
+	FSlateApplication::Get().ClearInputOwner();
 	return true;
 }
 

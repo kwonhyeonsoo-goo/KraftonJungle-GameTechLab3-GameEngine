@@ -81,32 +81,36 @@ void UCapsuleComponent::ContributeSelectedVisuals(FScene& Scene) const
 	constexpr int32 Segments = 24;
 
 	const FColor Color = GetShapeColor();
-	const FVector TopCenter = Center + FVector(0.0f, 0.0f, CylinderHalf);
-	const FVector BotCenter = Center - FVector(0.0f, 0.0f, CylinderHalf);
+	const FQuat WorldRot = GetWorldRotation().ToQuaternion().GetNormalized();
+	const FVector AxisX = WorldRot.RotateVector(FVector(1.0f, 0.0f, 0.0f));
+	const FVector AxisY = WorldRot.RotateVector(FVector(0.0f, 1.0f, 0.0f));
+	const FVector AxisZ = WorldRot.RotateVector(FVector(0.0f, 0.0f, 1.0f));
+	const FVector TopCenter = Center + AxisZ * CylinderHalf;
+	const FVector BotCenter = Center - AxisZ * CylinderHalf;
 
 	// Top and bottom horizontal circles (XY plane)
-	AddWireCircle(Scene, TopCenter, FVector(1.0f, 0.0f, 0.0f), FVector(0.0f, 1.0f, 0.0f), R, Segments, Color);
-	AddWireCircle(Scene, BotCenter, FVector(1.0f, 0.0f, 0.0f), FVector(0.0f, 1.0f, 0.0f), R, Segments, Color);
+	AddWireCircle(Scene, TopCenter, AxisX, AxisY, R, Segments, Color);
+	AddWireCircle(Scene, BotCenter, AxisX, AxisY, R, Segments, Color);
 
 	// 4 vertical lines connecting top and bottom circles
-	Scene.AddDebugLine(TopCenter + FVector(R, 0.0f, 0.0f), BotCenter + FVector(R, 0.0f, 0.0f), Color);
-	Scene.AddDebugLine(TopCenter - FVector(R, 0.0f, 0.0f), BotCenter - FVector(R, 0.0f, 0.0f), Color);
-	Scene.AddDebugLine(TopCenter + FVector(0.0f, R, 0.0f), BotCenter + FVector(0.0f, R, 0.0f), Color);
-	Scene.AddDebugLine(TopCenter - FVector(0.0f, R, 0.0f), BotCenter - FVector(0.0f, R, 0.0f), Color);
+	Scene.AddDebugLine(TopCenter + AxisX * R, BotCenter + AxisX * R, Color);
+	Scene.AddDebugLine(TopCenter - AxisX * R, BotCenter - AxisX * R, Color);
+	Scene.AddDebugLine(TopCenter + AxisY * R, BotCenter + AxisY * R, Color);
+	Scene.AddDebugLine(TopCenter - AxisY * R, BotCenter - AxisY * R, Color);
 
 	constexpr int32 HalfSegments = 12;
 
 	// Top half-circle caps (upper hemisphere)
 	// XZ plane — upward half-circle
-	AddWireHalfCircle(Scene, TopCenter, FVector(1.0f, 0.0f, 0.0f), FVector(0.0f, 0.0f, 1.0f), R, HalfSegments, 0.0f, Color);
+	AddWireHalfCircle(Scene, TopCenter, AxisX, AxisZ, R, HalfSegments, 0.0f, Color);
 	// YZ plane — upward half-circle
-	AddWireHalfCircle(Scene, TopCenter, FVector(0.0f, 1.0f, 0.0f), FVector(0.0f, 0.0f, 1.0f), R, HalfSegments, 0.0f, Color);
+	AddWireHalfCircle(Scene, TopCenter, AxisY, AxisZ, R, HalfSegments, 0.0f, Color);
 
 	// Bottom half-circle caps (lower hemisphere)
 	// XZ plane — downward half-circle
-	AddWireHalfCircle(Scene, BotCenter, FVector(1.0f, 0.0f, 0.0f), FVector(0.0f, 0.0f, 1.0f), R, HalfSegments, FMath::Pi, Color);
+	AddWireHalfCircle(Scene, BotCenter, AxisX, AxisZ, R, HalfSegments, FMath::Pi, Color);
 	// YZ plane — downward half-circle
-	AddWireHalfCircle(Scene, BotCenter, FVector(0.0f, 1.0f, 0.0f), FVector(0.0f, 0.0f, 1.0f), R, HalfSegments, FMath::Pi, Color);
+	AddWireHalfCircle(Scene, BotCenter, AxisY, AxisZ, R, HalfSegments, FMath::Pi, Color);
 }
 
 void UCapsuleComponent::UpdateWorldAABB() const
@@ -114,8 +118,15 @@ void UCapsuleComponent::UpdateWorldAABB() const
 	FVector Center = GetWorldLocation();
 	float R = GetScaledCapsuleRadius();
 	float HH = GetScaledCapsuleHalfHeight();
-	WorldAABBMinLocation = Center - FVector(R, R, HH);
-	WorldAABBMaxLocation = Center + FVector(R, R, HH);
+	const float CylinderHalf = (std::max)(0.0f, HH - R);
+	const FVector Axis = GetWorldRotation().ToQuaternion().GetNormalized().RotateVector(FVector(0.0f, 0.0f, 1.0f));
+	const FVector Extent(
+		R + std::abs(Axis.X) * CylinderHalf,
+		R + std::abs(Axis.Y) * CylinderHalf,
+		R + std::abs(Axis.Z) * CylinderHalf
+	);
+	WorldAABBMinLocation = Center - Extent;
+	WorldAABBMaxLocation = Center + Extent;
 	bWorldAABBDirty = false;
 	bHasValidWorldAABB = true;
 }

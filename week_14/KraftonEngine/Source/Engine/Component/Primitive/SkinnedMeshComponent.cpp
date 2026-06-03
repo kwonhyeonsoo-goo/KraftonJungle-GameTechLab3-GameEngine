@@ -247,6 +247,11 @@ USkeletalMesh* USkinnedMeshComponent::GetSkeletalMesh() const
 	return SkeletalMesh;
 }
 
+ESkinningMode USkinnedMeshComponent::GetEffectiveSkinningMode() const
+{
+	return SkinningModeRuntime::Get();
+}
+
 bool USkinnedMeshComponent::HasSocket(const FName& SocketName) const
 {
 	USkeleton* Skeleton = SkeletalMesh ? SkeletalMesh->GetSkeleton() : nullptr;
@@ -1247,7 +1252,7 @@ void USkinnedMeshComponent::UpdateCPUSkinning()
 		}
 		};
 
-	if (SkinningModeRuntime::Get() == ESkinningMode::CPU)
+	if (GetEffectiveSkinningMode() == ESkinningMode::CPU)
 	{
 		SCOPE_STAT_CAT("CPUSkinning_VertexSkin", "Skinning");
 		RunVertexSkinning();
@@ -1270,7 +1275,7 @@ void USkinnedMeshComponent::MarkSkinnedVerticesModifiedByCloth()
 
 void USkinnedMeshComponent::RefreshSkinningAfterPoseChanged()
 {
-	if (SkinningModeRuntime::Get() == ESkinningMode::CPU || HasActiveMorphTargets())
+	if (GetEffectiveSkinningMode() == ESkinningMode::CPU || HasActiveMorphTargets())
 	{
 		UpdateCPUSkinning();
 		MarkSocketAttachedChildrenDirty();
@@ -1546,7 +1551,7 @@ bool USkinnedMeshComponent::LineTraceComponent(const FRay& Ray, FHitResult& OutH
 void USkinnedMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
 	UMeshComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	if (SkinningModeRuntime::Get() == ESkinningMode::CPU || HasActiveMorphTargets())
+	if (GetEffectiveSkinningMode() == ESkinningMode::CPU || HasActiveMorphTargets())
 	{
 		UpdateCPUSkinning();
 	}

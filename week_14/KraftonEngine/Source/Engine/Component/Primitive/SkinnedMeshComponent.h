@@ -5,6 +5,7 @@
 #include "Math/Transform.h"
 #include "Object/Ptr/ObjectPtr.h"
 #include "Object/Ptr/SoftObjectPtr.h"
+#include "Render/Types/ViewTypes.h"
 
 #include "Source/Engine/Component/Primitive/SkinnedMeshComponent.generated.h"
 struct FSkeletalMesh;
@@ -104,6 +105,7 @@ public:
 	void GetCurrentBoneGlobalTransforms(TArray<FTransform>& OutGlobals) const;
 	void GetCurrentBoneGlobalMatrices(TArray<FMatrix>& OutGlobals) const;
 	void BuildSkinMatrices(TArray<FMatrix>& OutSkinMatrices) const;
+	virtual ESkinningMode GetEffectiveSkinningMode() const;
 	const TArray<FVertexPNCTT>& GetSkinnedVertices() const { return SkinnedVertices; }
 	uint64 GetSkinnedRevision() const { return SkinnedRevision; }
 	FMeshBuffer* GetMeshBuffer() const override;

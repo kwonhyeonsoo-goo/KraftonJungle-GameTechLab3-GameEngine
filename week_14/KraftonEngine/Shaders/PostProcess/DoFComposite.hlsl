@@ -29,7 +29,10 @@ float4 PS(PS_Input_UV input) : SV_TARGET
 
     float foregroundAlpha = saturate(max(foreground.a, foregroundAmount));
     color.rgb = lerp(color.rgb, foreground.rgb, foregroundAlpha);
-    color.rgb += DoFBokehTexture.SampleLevel(LinearClampSampler, uv, 0).rgb;
+
+    float4 bokeh = DoFBokehTexture.SampleLevel(LinearClampSampler, uv, 0);
+    float bokehAlpha = saturate(bokeh.a * BokehIntensity);
+    color.rgb = lerp(color.rgb, max(color.rgb, bokeh.rgb), bokehAlpha);
 
     color.a = sharp.a;
     return color;

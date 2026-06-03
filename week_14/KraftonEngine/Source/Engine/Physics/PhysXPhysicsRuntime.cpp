@@ -30,6 +30,64 @@ namespace
         Result.Rotation   = ParentWorld.Rotation * Local.Rotation;
         return Result;
     }
+
+    void ExpandBoxByOrientedBox(FBoundingBox& OutBounds, const FTransform& Transform, const FVector& HalfExtent)
+    {
+        const FVector Corners[8] =
+        {
+            FVector(-HalfExtent.X, -HalfExtent.Y, -HalfExtent.Z),
+            FVector(-HalfExtent.X, -HalfExtent.Y,  HalfExtent.Z),
+            FVector(-HalfExtent.X,  HalfExtent.Y, -HalfExtent.Z),
+            FVector(-HalfExtent.X,  HalfExtent.Y,  HalfExtent.Z),
+            FVector( HalfExtent.X, -HalfExtent.Y, -HalfExtent.Z),
+            FVector( HalfExtent.X, -HalfExtent.Y,  HalfExtent.Z),
+            FVector( HalfExtent.X,  HalfExtent.Y, -HalfExtent.Z),
+            FVector( HalfExtent.X,  HalfExtent.Y,  HalfExtent.Z)
+        };
+
+        for (const FVector& Corner : Corners)
+        {
+            OutBounds.Expand(Transform.Location + Transform.Rotation.RotateVector(Corner));
+        }
+    }
+
+    FBoundingBox BuildClothShapeWorldBounds(
+        EPhysicsShapeType Type,
+        const FTransform& WorldTransform,
+        const FVector& BoxHalfExtent,
+        float SphereRadius,
+        float CapsuleRadius,
+        float CapsuleHalfHeight)
+    {
+        FBoundingBox Bounds;
+        switch (Type)
+        {
+        case EPhysicsShapeType::Sphere:
+        {
+            const FVector Extent(SphereRadius, SphereRadius, SphereRadius);
+            Bounds.Expand(WorldTransform.Location - Extent);
+            Bounds.Expand(WorldTransform.Location + Extent);
+            break;
+        }
+        case EPhysicsShapeType::Capsule:
+        {
+            const FVector Axis = WorldTransform.Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f));
+            const float HalfSegment = (std::max)(0.0f, CapsuleHalfHeight - CapsuleRadius);
+            const FVector Extent(CapsuleRadius, CapsuleRadius, CapsuleRadius);
+            Bounds.Expand(WorldTransform.Location - Axis * HalfSegment - Extent);
+            Bounds.Expand(WorldTransform.Location - Axis * HalfSegment + Extent);
+            Bounds.Expand(WorldTransform.Location + Axis * HalfSegment - Extent);
+            Bounds.Expand(WorldTransform.Location + Axis * HalfSegment + Extent);
+            break;
+        }
+        case EPhysicsShapeType::Box:
+            ExpandBoxByOrientedBox(Bounds, WorldTransform, BoxHalfExtent);
+            break;
+        default:
+            break;
+        }
+        return Bounds;
+    }
 }
 
 
@@ -54,6 +112,7 @@ void FPhysXPhysicsRuntime::Initialize(
 
     const auto& PhysicsSettings = FProjectSettings::Get().Physics;
     FixedDt                     = (std::max)(1.0f / 240.0f, PhysicsSettings.FixedTimeStep);
+    SimulationSubstepDt         = (std::max)(1.0f / 240.0f, (std::min)(PhysicsSettings.MaxSimulationSubstepDeltaTime, FixedDt));
     MaxFrameDt                  = (std::max)(FixedDt, PhysicsSettings.MaxFrameDeltaTime);
     MaxSubsteps                 = (std::max)(1, PhysicsSettings.MaxSubsteps);
     bDebugSnapshotEnabled       = PhysicsSettings.bBuildDebugSnapshot;
@@ -118,6 +177,7 @@ void FPhysXPhysicsRuntime::Shutdown()
     ActorCompounds.clear();
     ComponentToBody.clear();
     ComponentToShape.clear();
+    PendingContinuousForces.clear();
 
     CommandQueue.Clear();
     Stats = FPhysicsStats();
@@ -166,7 +226,7 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime, const TArray<FPhysicsCommand>& 
         int32 AppliedCommands = 0;
         {
             PxSceneWriteLock WriteLock(*Scene);
-            AppliedCommands = ApplyCommands(FrameCommands);
+            AppliedCommands = ApplyCommands(FrameCommands, 0.0f);
             for (auto& BodyPtr : Bodies)
             {
                 if (!BodyPtr || !BodyPtr->Actor)
@@ -225,7 +285,7 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime, const TArray<FPhysicsCommand>& 
     {
         PxSceneWriteLock WriteLock(*Scene);
         PendingCommandsAtDrain += static_cast<int32>(FrameCommands.size());
-        AppliedCommands        += ApplyCommands(FrameCommands);
+        AppliedCommands        += ApplyCommands(FrameCommands, DeltaTime);
         PreApplyEnd            = FClock::now();
 
         for (auto& BodyPtr : Bodies)
@@ -248,58 +308,79 @@ void FPhysXPhysicsRuntime::Tick(float DeltaTime, const TArray<FPhysicsCommand>& 
     SyncEngineToPhysicsMs += DurationMs(PreApplyEnd, PreSyncEnd);
     PrePhysicsMs          += DurationMs(PreApplyStart, PreSyncEnd);
 
+    bool bDroppedAccumulatedTime = false;
     while (Accumulator >= FixedDt && StepCount < MaxSubsteps)
     {
-        const auto T1 = FClock::now();
-        auto       T2 = T1;
-        auto       T3 = T1;
-        auto       VehicleUpdateEnd = T1;
+        const int32 RequiredSubstepsForTargetStep = (SimulationSubstepDt > 0.0f)
+            ? static_cast<int32>(std::ceil(FixedDt / SimulationSubstepDt - 1.e-6f))
+            : 1;
+        if (StepCount + RequiredSubstepsForTargetStep > MaxSubsteps)
         {
-            PxSceneWriteLock WriteLock(*Scene);
-            if (VehicleRuntime)
-            {
-                VehicleRuntime->PreSimulate(FixedDt);
-                VehicleRaycastMs += VehicleRuntime->GetLastRaycastMs();
-            }
-            VehicleUpdateEnd = FClock::now();
-            Scene->simulate(FixedDt);
-            T2 = FClock::now();
-            Scene->fetchResults(true);
-            T3 = FClock::now();
+            bDroppedAccumulatedTime = true;
+            break;
         }
 
+        float RemainingStepTime = FixedDt;
+
+        while (RemainingStepTime > 1.e-6f)
         {
-            PxSceneReadLock ReadLock(*Scene);
-            for (auto& BodyPtr : Bodies)
+            const float SubstepDt = (std::min)(SimulationSubstepDt, RemainingStepTime);
+
+            const auto T1 = FClock::now();
+            auto       T2 = T1;
+            auto       T3 = T1;
+            auto       VehicleUpdateEnd = T1;
             {
-                if (!BodyPtr || !BodyPtr->Actor)
+                PxSceneWriteLock WriteLock(*Scene);
+                ApplyContinuousForcesForSubstep(SubstepDt);
+                if (VehicleRuntime)
                 {
-                    continue;
+                    VehicleRuntime->PreSimulate(SubstepDt);
+                    VehicleRaycastMs += VehicleRuntime->GetLastRaycastMs();
                 }
-
-                CachePhysicsResult(*BodyPtr);
+                VehicleUpdateEnd = FClock::now();
+                Scene->simulate(SubstepDt);
+                T2 = FClock::now();
+                Scene->fetchResults(true);
+                T3 = FClock::now();
             }
+
+            {
+                PxSceneReadLock ReadLock(*Scene);
+                for (auto& BodyPtr : Bodies)
+                {
+                    if (!BodyPtr || !BodyPtr->Actor)
+                    {
+                        continue;
+                    }
+
+                    CachePhysicsResult(*BodyPtr);
+                }
+            }
+
+            const auto T4 = FClock::now();
+
+            VehicleUpdateMs       += DurationMs(T1, VehicleUpdateEnd);
+            SimulateMs            += DurationMs(VehicleUpdateEnd, T2);
+            FetchResultsMs        += DurationMs(T2, T3);
+            SyncPhysicsToEngineMs += DurationMs(T3, T4);
+            PostPhysicsMs         += DurationMs(T3, T4);
+
+            RemainingStepTime -= SubstepDt;
+            ++StepCount;
+            ++StepIndex;
         }
-
-        const auto T4 = FClock::now();
-
-        VehicleUpdateMs       += DurationMs(T1, VehicleUpdateEnd);
-        SimulateMs            += DurationMs(VehicleUpdateEnd, T2);
-        FetchResultsMs        += DurationMs(T2, T3);
-        SyncPhysicsToEngineMs += DurationMs(T3, T4);
-        PostPhysicsMs         += DurationMs(T3, T4);
 
         Accumulator -= FixedDt;
-        ++StepCount;
-        ++StepIndex;
     }
 
     int32 DroppedSubsteps = 0;
-    if (StepCount == MaxSubsteps)
+    if (bDroppedAccumulatedTime || (StepCount == MaxSubsteps && Accumulator >= FixedDt))
     {
         // 남은 누적 시간을 버린다 (spiral-of-death 방지). 버린 step 수를 기록.
-        DroppedSubsteps = (FixedDt > 0.0f) ? static_cast<int32>(Accumulator / FixedDt) : 0;
+        DroppedSubsteps = (SimulationSubstepDt > 0.0f) ? static_cast<int32>(Accumulator / SimulationSubstepDt) : 0;
         Accumulator     = 0.0f;
+        PendingContinuousForces.clear();
     }
 
     Stats.NumSubsteps = StepCount;
@@ -654,6 +735,7 @@ void FPhysXPhysicsRuntime::DestroyRigidBody_Internal(FPhysicsBodyHandle BodyHand
 
     // 이 시점부터 어떤 콜백/쿼리도 이 body 를 살아있다고 보면 안 된다.
     Body->State = EPhysicsRuntimeObjectState::PendingDestroy;
+    PurgeContinuousForcesForBody(BodyHandle);
 
     TArray<FPhysicsConstraintHandle> ConstraintsToDestroy = Body->Constraints;
     for (FPhysicsConstraintHandle Constraint : ConstraintsToDestroy)
@@ -963,6 +1045,22 @@ std::shared_ptr<const FPhysicsWorldSnapshot> FPhysXPhysicsRuntime::AcquireLatest
     return PublishedWorldSnapshot;
 }
 
+void FPhysXPhysicsRuntime::QueryClothCollisionShapes(
+    const FBoundingBox& WorldBounds,
+    uint32 ObjectTypeMask,
+    TArray<FPhysicsClothCollisionShape>& OutShapes) const
+{
+    OutShapes.clear();
+    if (!WorldBounds.IsValid() || !Scene)
+    {
+        return;
+    }
+
+    std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
+    PxSceneReadLock ReadLock(*Scene);
+    QueryClothCollisionShapes_Internal(WorldBounds, ObjectTypeMask, OutShapes);
+}
+
 void FPhysXPhysicsRuntime::SetBodyTransform(
     FPhysicsBodyHandle   BodyHandle,
     const FTransform&    Transform,
@@ -1145,6 +1243,95 @@ void FPhysXPhysicsRuntime::ApplyAddTorque_Internal(FPhysicsBodyHandle BodyHandle
     }
 
     Dynamic->addTorque(ToPxVec3(Torque));
+}
+
+void FPhysXPhysicsRuntime::QueueContinuousForceCommand(const FPhysicsCommand& Command, float DurationSeconds)
+{
+    if (DurationSeconds <= 0.0f || !Command.Body.IsValid())
+    {
+        return;
+    }
+
+    FPendingContinuousForce Pending;
+    Pending.Type                 = Command.Type;
+    Pending.Body                 = Command.Body;
+    Pending.VectorValue          = Command.VectorValue;
+    Pending.VectorValue2         = Command.VectorValue2;
+    Pending.RemainingTimeSeconds = DurationSeconds;
+    PendingContinuousForces.push_back(Pending);
+}
+
+void FPhysXPhysicsRuntime::ApplyContinuousForcesForSubstep(float SubstepDt)
+{
+    if (SubstepDt <= 0.0f || PendingContinuousForces.empty())
+    {
+        return;
+    }
+
+    for (FPendingContinuousForce& Pending : PendingContinuousForces)
+    {
+        if (Pending.RemainingTimeSeconds <= 0.0f)
+        {
+            continue;
+        }
+
+        const float ConsumeTime = (std::min)(Pending.RemainingTimeSeconds, SubstepDt);
+        const float Scale       = ConsumeTime / SubstepDt;
+
+        switch (Pending.Type)
+        {
+        case EPhysicsCommandType::AddForce:
+            ApplyAddForce_Internal(Pending.Body, Pending.VectorValue * Scale);
+            break;
+        case EPhysicsCommandType::AddForceAtLocation:
+            ApplyAddForceAtLocation_Internal(Pending.Body, Pending.VectorValue * Scale, Pending.VectorValue2);
+            break;
+        case EPhysicsCommandType::AddTorque:
+            ApplyAddTorque_Internal(Pending.Body, Pending.VectorValue * Scale);
+            break;
+        default:
+            break;
+        }
+
+        Pending.RemainingTimeSeconds -= ConsumeTime;
+    }
+
+    PurgeExpiredContinuousForces();
+}
+
+void FPhysXPhysicsRuntime::PurgeContinuousForcesForBody(FPhysicsBodyHandle Body)
+{
+    if (!Body.IsValid() || PendingContinuousForces.empty())
+    {
+        return;
+    }
+
+    PendingContinuousForces.erase(
+        std::remove_if(
+            PendingContinuousForces.begin(),
+            PendingContinuousForces.end(),
+            [Body](const FPendingContinuousForce& Pending)
+            {
+                return Pending.Body == Body;
+            }
+        ),
+        PendingContinuousForces.end()
+    );
+}
+
+void FPhysXPhysicsRuntime::PurgeExpiredContinuousForces()
+{
+    PendingContinuousForces.erase(
+        std::remove_if(
+            PendingContinuousForces.begin(),
+            PendingContinuousForces.end(),
+            [](const FPendingContinuousForce& Pending)
+            {
+                return Pending.RemainingTimeSeconds <= 0.0f;
+            }
+        ),
+        PendingContinuousForces.end()
+    );
 }
 
 void FPhysXPhysicsRuntime::AddImpulse(FPhysicsBodyHandle BodyHandle, const FVector& Impulse)
@@ -1458,6 +1645,86 @@ void FPhysXPhysicsRuntime::BuildDebugConstraints_Internal(TArray<FPhysicsDebugCo
         Debug.Swing2LimitDegrees = Constraint.Limits.Swing2LimitDegrees;
 
         OutConstraints.push_back(Debug);
+    }
+}
+
+void FPhysXPhysicsRuntime::QueryClothCollisionShapes_Internal(
+    const FBoundingBox& WorldBounds,
+    uint32 ObjectTypeMask,
+    TArray<FPhysicsClothCollisionShape>& OutShapes) const
+{
+    OutShapes.clear();
+
+    for (const auto& BodyPtr : Bodies)
+    {
+        if (!BodyPtr || !BodyPtr->IsAlive() || !BodyPtr->Actor)
+        {
+            continue;
+        }
+
+        const FBodyInstance& Body = *BodyPtr;
+        for (FPhysicsShapeHandle ShapeHandle : Body.Shapes)
+        {
+            const FShapeInstance* ShapeInstance = ResolveShape(ShapeHandle);
+            if (!ShapeInstance || ShapeInstance->State != EPhysicsRuntimeObjectState::Alive)
+            {
+                continue;
+            }
+
+            const FPhysicsShapeDesc& Desc = ShapeInstance->Desc;
+            if (Desc.Type != EPhysicsShapeType::Sphere &&
+                Desc.Type != EPhysicsShapeType::Capsule &&
+                Desc.Type != EPhysicsShapeType::Box)
+            {
+                continue;
+            }
+
+            if (Desc.FilterData.CollisionEnabled == ECollisionEnabled::NoCollision ||
+                Desc.FilterData.bIsTrigger ||
+                Desc.bIsTrigger)
+            {
+                continue;
+            }
+
+            const uint32 ShapeObjectType = 1u << (Desc.FilterData.ObjectType & PhysicsFilter_ObjectTypeMask);
+            if ((ShapeObjectType & ObjectTypeMask) == 0)
+            {
+                continue;
+            }
+
+            const FTransform CurrentShapeWorld =
+                ComposePhysicsTransforms(Body.CurrentTransform, ShapeInstance->EngineLocalTransform);
+            const FBoundingBox ShapeWorldBounds = BuildClothShapeWorldBounds(
+                Desc.Type,
+                CurrentShapeWorld,
+                Desc.BoxHalfExtent,
+                Desc.SphereRadius,
+                Desc.CapsuleRadius,
+                Desc.CapsuleHalfHeight);
+            if (!ShapeWorldBounds.IsValid() || !ShapeWorldBounds.IsIntersected(WorldBounds))
+            {
+                continue;
+            }
+
+            FPhysicsClothCollisionShape ClothShape;
+            ClothShape.Type = Desc.Type;
+            ClothShape.OwnerActorId = ShapeInstance->SourceActorId;
+            ClothShape.OwnerComponentId = ShapeInstance->SourceComponentId;
+            ClothShape.OwnerComponentGeneration = ShapeInstance->SourceComponentGeneration;
+            ClothShape.Body = Body.Handle;
+            ClothShape.Shape = ShapeHandle;
+            ClothShape.BodyType = Body.BodyType;
+            ClothShape.FilterData = Desc.FilterData;
+            ClothShape.PreviousWorldTransform =
+                ComposePhysicsTransforms(Body.PreviousTransform, ShapeInstance->EngineLocalTransform);
+            ClothShape.CurrentWorldTransform = CurrentShapeWorld;
+            ClothShape.WorldBounds = ShapeWorldBounds;
+            ClothShape.BoxHalfExtent = Desc.BoxHalfExtent;
+            ClothShape.SphereRadius = Desc.SphereRadius;
+            ClothShape.CapsuleRadius = Desc.CapsuleRadius;
+            ClothShape.CapsuleHalfHeight = Desc.CapsuleHalfHeight;
+            OutShapes.push_back(ClothShape);
+        }
     }
 }
 
@@ -1864,7 +2131,19 @@ FPhysicsShapeHandle FPhysXPhysicsRuntime::AddShapeToBody(
         return {};
     }
 
-    PxShape* Shape = FPhysXBodyBuilder::CreateShape(Physics, DefaultMaterial, Desc);
+    FPhysicsShapeDesc ShapeDesc = Desc;
+    ShapeDesc.FilterData.bEnableCCD = ShapeDesc.FilterData.bEnableCCD || Body->Properties.bEnableCCD;
+
+    if (ShapeDesc.FilterData.bEnableCCD)
+    {
+        Body->Properties.bEnableCCD = true;
+        if (PxRigidDynamic* Dynamic = Body->Actor->is<PxRigidDynamic>())
+        {
+            Dynamic->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, true);
+        }
+    }
+
+    PxShape* Shape = FPhysXBodyBuilder::CreateShape(Physics, DefaultMaterial, ShapeDesc);
     if (!Shape)
     {
         return {};
@@ -1890,8 +2169,8 @@ FPhysicsShapeHandle FPhysXPhysicsRuntime::AddShapeToBody(
     ShapeInstance->SourceComponentId         = SourceComponentId;
     ShapeInstance->SourceActorId             = SourceActorId;
     ShapeInstance->SourceComponentGeneration = SourceGeneration;
-    ShapeInstance->Desc                      = Desc;
-    ShapeInstance->EngineLocalTransform      = Desc.LocalTransform;
+    ShapeInstance->Desc                      = ShapeDesc;
+    ShapeInstance->EngineLocalTransform      = ShapeDesc.LocalTransform;
     ShapeInstance->PhysXLocalTransform       = ToFTransform(Shape->getLocalPose());
     ShapeInstance->Shape                     = Shape;
     ShapeInstance->State                     = EPhysicsRuntimeObjectState::Alive;
@@ -1927,6 +2206,23 @@ void FPhysXPhysicsRuntime::DetachShape(FPhysicsShapeHandle ShapeHandle)
             std::remove(Body->Shapes.begin(), Body->Shapes.end(), ShapeHandle),
             Body->Shapes.end()
         );
+
+        bool bAnyRemainingShapeNeedsCCD = false;
+        for (FPhysicsShapeHandle RemainingShapeHandle : Body->Shapes)
+        {
+            const FShapeInstance* RemainingShape = ResolveShape(RemainingShapeHandle);
+            if (RemainingShape && RemainingShape->Desc.FilterData.bEnableCCD)
+            {
+                bAnyRemainingShapeNeedsCCD = true;
+                break;
+            }
+        }
+
+        Body->Properties.bEnableCCD = bAnyRemainingShapeNeedsCCD;
+        if (PxRigidDynamic* Dynamic = Body->Actor->is<PxRigidDynamic>())
+        {
+            Dynamic->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, bAnyRemainingShapeNeedsCCD);
+        }
     }
 
     if (ShapeInstance->SourceComponentId != 0)
@@ -2012,10 +2308,10 @@ int32 FPhysXPhysicsRuntime::ApplyPendingCommands()
 {
     TArray<FPhysicsCommand> Commands;
     CommandQueue.Drain(Commands);
-    return ApplyCommands(Commands);
+    return ApplyCommands(Commands, 0.0f);
 }
 
-int32 FPhysXPhysicsRuntime::ApplyCommands(const TArray<FPhysicsCommand>& Commands)
+int32 FPhysXPhysicsRuntime::ApplyCommands(const TArray<FPhysicsCommand>& Commands, float ContinuousForceDurationSeconds)
 {
     // Commands are sealed by the Game Thread at SubmitPhysicsFrame().
     // Do not touch CommandQueue here; otherwise async physics can consume commands for a later game frame.
@@ -2077,13 +2373,13 @@ int32 FPhysXPhysicsRuntime::ApplyCommands(const TArray<FPhysicsCommand>& Command
             ApplySetBodyTransform_Internal(Command.Body, Command.TransformValue, Command.TeleportMode);
             break;
         case EPhysicsCommandType::AddForce:
-            ApplyAddForce_Internal(Command.Body, Command.VectorValue);
+            QueueContinuousForceCommand(Command, Command.DurationSeconds > 0.0f ? Command.DurationSeconds : ContinuousForceDurationSeconds);
             break;
         case EPhysicsCommandType::AddForceAtLocation:
-            ApplyAddForceAtLocation_Internal(Command.Body, Command.VectorValue, Command.VectorValue2);
+            QueueContinuousForceCommand(Command, Command.DurationSeconds > 0.0f ? Command.DurationSeconds : ContinuousForceDurationSeconds);
             break;
         case EPhysicsCommandType::AddTorque:
-            ApplyAddTorque_Internal(Command.Body, Command.VectorValue);
+            QueueContinuousForceCommand(Command, Command.DurationSeconds > 0.0f ? Command.DurationSeconds : ContinuousForceDurationSeconds);
             break;
         case EPhysicsCommandType::AddImpulse:
             ApplyAddImpulse_Internal(Command.Body, Command.VectorValue);

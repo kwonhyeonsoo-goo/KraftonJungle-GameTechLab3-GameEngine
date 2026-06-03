@@ -20,13 +20,55 @@ namespace
     struct FAutoBodyFitResult
     {
         FTransform BodyComponentTransform;
+        FVector BoxHalfExtent = FVector(0.4f, 0.4f, 1.2f);
         float CapsuleRadius = 0.4f;
         float CapsuleHalfHeight = 1.2f;
+    };
+
+    struct FAutoBodyPointFit
+    {
+        bool bHasPoints = false;
+        FVector Min = FVector::ZeroVector;
+        FVector Max = FVector::ZeroVector;
+        TArray<FVector> Points;
+
+        void AddPoint(const FVector& Point)
+        {
+            Points.push_back(Point);
+            if (!bHasPoints)
+            {
+                Min = Point;
+                Max = Point;
+                bHasPoints = true;
+                return;
+            }
+
+            Min.X = (std::min)(Min.X, Point.X);
+            Min.Y = (std::min)(Min.Y, Point.Y);
+            Min.Z = (std::min)(Min.Z, Point.Z);
+            Max.X = (std::max)(Max.X, Point.X);
+            Max.Y = (std::max)(Max.Y, Point.Y);
+            Max.Z = (std::max)(Max.Z, Point.Z);
+        }
+
+        FVector GetExtent() const
+        {
+            return (Max - Min) * 0.5f;
+        }
+    };
+
+    struct FMergedAutoBodyData
+    {
+        TArray<FAutoBodyPointFit> ExtraFits;
+        TArray<float> MergedSizes;
+        TArray<bool> bMergedIntoParent;
+        int32 ForcedRootBoneIndex = -1;
     };
 
     constexpr float AutoBodyMinExtent = 0.05f;
     constexpr float AutoBodyRadiusPadding = 1.10f;
     constexpr float AutoBodyFallbackRadiusRatio = 0.18f;
+    constexpr float AutoBodyMinWeldSize = 1.0e-6f;
 
     bool HasBoneName(const FName& BoneName)
     {
@@ -129,6 +171,19 @@ namespace
         if (Index == 0) return Value.X;
         if (Index == 1) return Value.Y;
         return Value.Z;
+    }
+
+    float GetMaxComponent(const FVector& Value)
+    {
+        return (std::max)(Value.X, (std::max)(Value.Y, Value.Z));
+    }
+
+    FVector ClampAutoBodyHalfExtent(const FVector& HalfExtent)
+    {
+        return FVector(
+            (std::max)(HalfExtent.X, AutoBodyMinExtent),
+            (std::max)(HalfExtent.Y, AutoBodyMinExtent),
+            (std::max)(HalfExtent.Z, AutoBodyMinExtent));
     }
 
     void BuildBasisFromZAxis(const FVector& InAxisZ, FVector& OutAxisX, FVector& OutAxisY, FVector& OutAxisZ)
@@ -306,6 +361,195 @@ namespace
         }
     }
 
+
+    float GetPointFitSize(const FAutoBodyPointFit& Fit)
+    {
+        return Fit.bHasPoints ? Fit.GetExtent().Length() : 0.0f;
+    }
+
+    bool IsValidRefBoneIndex(const FReferenceSkeleton& RefSkeleton, int32 BoneIndex)
+    {
+        return BoneIndex >= 0 && BoneIndex < RefSkeleton.GetNumBones();
+    }
+
+    void AppendPointFit(FAutoBodyPointFit& TargetFit, const FAutoBodyPointFit& SourceFit)
+    {
+        if (!SourceFit.bHasPoints)
+        {
+            return;
+        }
+
+        for (const FVector& Point : SourceFit.Points)
+        {
+            TargetFit.AddPoint(Point);
+        }
+    }
+
+    FAutoBodyPointFit MakeCombinedPointFit(const FAutoBodyPointFit& OwnFit, const FAutoBodyPointFit& ExtraFit)
+    {
+        FAutoBodyPointFit CombinedFit;
+        AppendPointFit(CombinedFit, OwnFit);
+        AppendPointFit(CombinedFit, ExtraFit);
+        return CombinedFit;
+    }
+
+    TArray<FAutoBodyPointFit> BuildBonePointFits(
+        const FReferenceSkeleton& RefSkeleton,
+        const FSkeletalMesh* MeshAsset,
+        const TArray<FMatrix>* OverrideBoneGlobalMatrices,
+        const FPhysicsAssetAutoBodyGeneratorOptions& Options)
+    {
+        TArray<FAutoBodyPointFit> Fits;
+        Fits.resize(RefSkeleton.GetNumBones());
+        if (!MeshAsset)
+        {
+            return Fits;
+        }
+
+        for (int32 BoneIndex = 0; BoneIndex < RefSkeleton.GetNumBones(); ++BoneIndex)
+        {
+            const int32 MeshBoneIndex = FindMeshBoneIndexByName(MeshAsset, RefSkeleton.Bones[BoneIndex].Name);
+            if (MeshBoneIndex < 0 || MeshBoneIndex >= static_cast<int32>(MeshAsset->Bones.size()))
+            {
+                continue;
+            }
+
+            TArray<FVector> Points;
+            CollectInfluencedBoneVertices(MeshAsset, OverrideBoneGlobalMatrices, MeshBoneIndex, Options.MinInfluenceWeight, Points);
+            for (const FVector& Point : Points)
+            {
+                Fits[BoneIndex].AddPoint(Point);
+            }
+        }
+
+        return Fits;
+    }
+
+    FMergedAutoBodyData BuildMergedAutoBodyData(
+        const FReferenceSkeleton& RefSkeleton,
+        const TArray<FAutoBodyPointFit>& BoneFits,
+        const FPhysicsAssetAutoBodyGeneratorOptions& Options)
+    {
+        FMergedAutoBodyData Data;
+        const int32 BoneCount = RefSkeleton.GetNumBones();
+        Data.ExtraFits.resize(BoneCount);
+        Data.MergedSizes.resize(BoneCount, 0.0f);
+        Data.bMergedIntoParent.resize(BoneCount, false);
+
+        if (!Options.bMergeSmallBones)
+        {
+            return Data;
+        }
+
+        const float MinBoneSize = (std::max)(Options.MinBoneSize, 0.0f);
+        const float MinWeldSize = (std::max)(Options.MinWeldSize, AutoBodyMinWeldSize);
+
+        for (int32 BoneIndex = BoneCount - 1; BoneIndex >= 0; --BoneIndex)
+        {
+            if (!IsValidRefBoneIndex(RefSkeleton, BoneIndex))
+            {
+                continue;
+            }
+
+            const FReferenceBone& RefBone = RefSkeleton.Bones[BoneIndex];
+            const float MyMergedSize = Data.MergedSizes[BoneIndex] +
+                (BoneIndex < static_cast<int32>(BoneFits.size()) ? GetPointFitSize(BoneFits[BoneIndex]) : 0.0f);
+            Data.MergedSizes[BoneIndex] = MyMergedSize;
+
+            const bool bHelperBone = Options.bSkipHelperBones && IsLikelyHelperBoneName(RefBone.Name);
+            const bool bSmallEnoughToMerge = MyMergedSize < MinBoneSize && MyMergedSize >= MinWeldSize;
+            if (!bHelperBone && !bSmallEnoughToMerge)
+            {
+                continue;
+            }
+
+            const int32 ParentIndex = RefBone.ParentIndex;
+            if (!IsValidRefBoneIndex(RefSkeleton, ParentIndex))
+            {
+                continue;
+            }
+
+            Data.MergedSizes[ParentIndex] += MyMergedSize;
+            if (BoneIndex < static_cast<int32>(BoneFits.size()))
+            {
+                AppendPointFit(Data.ExtraFits[ParentIndex], BoneFits[BoneIndex]);
+            }
+            AppendPointFit(Data.ExtraFits[ParentIndex], Data.ExtraFits[BoneIndex]);
+            Data.bMergedIntoParent[BoneIndex] = true;
+        }
+
+        int32 FirstParentBoneIndex = -1;
+        for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
+        {
+            if (Data.MergedSizes[BoneIndex] <= MinBoneSize)
+            {
+                continue;
+            }
+
+            const int32 ParentBoneIndex = RefSkeleton.Bones[BoneIndex].ParentIndex;
+            if (ParentBoneIndex == -1)
+            {
+                break;
+            }
+
+            if (FirstParentBoneIndex == -1)
+            {
+                FirstParentBoneIndex = ParentBoneIndex;
+                continue;
+            }
+
+            if (ParentBoneIndex == FirstParentBoneIndex)
+            {
+                Data.ForcedRootBoneIndex = ParentBoneIndex;
+                break;
+            }
+        }
+
+        return Data;
+    }
+
+    bool ShouldGenerateBodyForBone(
+        const FReferenceSkeleton& RefSkeleton,
+        const FMergedAutoBodyData& MergedData,
+        const FPhysicsAssetAutoBodyGeneratorOptions& Options,
+        int32 BoneIndex)
+    {
+        if (!IsValidRefBoneIndex(RefSkeleton, BoneIndex))
+        {
+            return false;
+        }
+
+        if (Options.bSkipHelperBones &&
+            IsLikelyHelperBoneName(RefSkeleton.Bones[BoneIndex].Name) &&
+            BoneIndex != MergedData.ForcedRootBoneIndex)
+        {
+            return false;
+        }
+
+        if (!Options.bMergeSmallBones)
+        {
+            return true;
+        }
+
+        if (BoneIndex == MergedData.ForcedRootBoneIndex)
+        {
+            return true;
+        }
+
+        if (BoneIndex < static_cast<int32>(MergedData.bMergedIntoParent.size()) && MergedData.bMergedIntoParent[BoneIndex])
+        {
+            return false;
+        }
+
+        const float MinBoneSize = (std::max)(Options.MinBoneSize, 0.0f);
+        if (BoneIndex < static_cast<int32>(MergedData.MergedSizes.size()) && MergedData.MergedSizes[BoneIndex] < MinBoneSize)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     bool FitCapsuleToPointsOnBasis(
         const TArray<FVector>& Points,
         const FVector& Origin,
@@ -336,15 +580,16 @@ namespace
         const FVector CenterLocal((Min.X + Max.X) * 0.5f, (Min.Y + Max.Y) * 0.5f, (Min.Z + Max.Z) * 0.5f);
         const FVector Center = Origin + AxisX * CenterLocal.X + AxisY * CenterLocal.Y + AxisZ * CenterLocal.Z;
         const float HalfLength = (std::max)((Max.Z - Min.Z) * 0.5f, AutoBodyMinExtent);
-        const float RadiusX = (Max.X - Min.X) * 0.5f;
-        const float RadiusY = (Max.Y - Min.Y) * 0.5f;
+        const float RadiusX = (std::max)((Max.X - Min.X) * 0.5f, AutoBodyMinExtent);
+        const float RadiusY = (std::max)((Max.Y - Min.Y) * 0.5f, AutoBodyMinExtent);
         const float Radius = (std::max)((std::max)(RadiusX, RadiusY) * AutoBodyRadiusPadding, AutoBodyMinExtent);
 
         OutFit.BodyComponentTransform.Location = Center;
         OutFit.BodyComponentTransform.Rotation = MakeQuatFromLocalAxes(AxisX, AxisY, AxisZ);
         OutFit.BodyComponentTransform.Scale = FVector::OneVector;
+        OutFit.BoxHalfExtent = FVector(RadiusX, RadiusY, HalfLength);
         OutFit.CapsuleRadius = Radius;
-        OutFit.CapsuleHalfHeight = (std::max)(HalfLength, Radius);
+        OutFit.CapsuleHalfHeight = (std::max)(HalfLength, Radius + AutoBodyMinExtent);
         return true;
     }
 
@@ -535,8 +780,9 @@ namespace
         OutFit.BodyComponentTransform.Location = (SegmentStart + SegmentEnd) * 0.5f;
         OutFit.BodyComponentTransform.Rotation = MakeQuatFromLocalAxes(AxisX, AxisY, AxisZ);
         OutFit.BodyComponentTransform.Scale = FVector::OneVector;
+        OutFit.BoxHalfExtent = FVector(Radius, Radius, (std::max)(SegmentLength * 0.5f, AutoBodyMinExtent));
         OutFit.CapsuleRadius = Radius;
-        OutFit.CapsuleHalfHeight = (std::max)(SegmentLength * 0.5f, Radius);
+        OutFit.CapsuleHalfHeight = (std::max)(SegmentLength * 0.5f, Radius + AutoBodyMinExtent);
         return true;
     }
 
@@ -567,6 +813,43 @@ namespace
         }
 
         return BuildBoneAxisAutoBodyFit(MeshAsset, OverrideBoneGlobalMatrices, MeshBoneIndex, Points, OutFit);
+    }
+
+    FPhysicsAssetShapeSetup BuildShapeSetupFromFit(
+        const FAutoBodyFitResult& Fit,
+        const FPhysicsAssetAutoBodyGeneratorOptions& Options)
+    {
+        const float FitPadding = (std::max)(Options.FitPadding, 0.01f);
+        const FVector BoxHalfExtent = ClampAutoBodyHalfExtent(Fit.BoxHalfExtent * FitPadding);
+        const float SphereRadius = (std::max)(GetMaxComponent(BoxHalfExtent), AutoBodyMinExtent);
+        const float CapsuleRadius = (std::max)(Fit.CapsuleRadius * FitPadding, AutoBodyMinExtent);
+        const float CapsuleHalfHeight = (std::max)(Fit.CapsuleHalfHeight * FitPadding, CapsuleRadius + AutoBodyMinExtent);
+
+        FPhysicsAssetShapeSetup Shape;
+        Shape.LocalTransform = FTransform();
+        Shape.BoxHalfExtent = BoxHalfExtent;
+        Shape.SphereRadius = SphereRadius;
+        Shape.CapsuleRadius = CapsuleRadius;
+        Shape.CapsuleHalfHeight = CapsuleHalfHeight;
+
+        switch (Options.PrimitiveType)
+        {
+        case EPhysicsAssetAutoBodyPrimitiveType::Box:
+            Shape.Type = EPhysicsAssetShapeType::Box;
+            break;
+        case EPhysicsAssetAutoBodyPrimitiveType::Sphere:
+            Shape.Type = EPhysicsAssetShapeType::Sphere;
+            Shape.BoxHalfExtent = FVector(SphereRadius, SphereRadius, SphereRadius);
+            Shape.CapsuleRadius = SphereRadius;
+            Shape.CapsuleHalfHeight = SphereRadius;
+            break;
+        case EPhysicsAssetAutoBodyPrimitiveType::Capsule:
+        default:
+            Shape.Type = EPhysicsAssetShapeType::Capsule;
+            break;
+        }
+
+        return Shape;
     }
 
     bool ComputeBodyComponentTransformFromSetup(
@@ -636,6 +919,16 @@ bool FPhysicsAssetAutoBodyGenerator::Regenerate(
         Result.bAssetChanged = true;
     }
 
+    const TArray<FAutoBodyPointFit> BoneFits = BuildBonePointFits(
+        RefSkeleton,
+        MeshAsset,
+        OverrideBoneGlobalMatrices,
+        Options);
+    const FMergedAutoBodyData MergedData = BuildMergedAutoBodyData(
+        RefSkeleton,
+        BoneFits,
+        Options);
+
     for (int32 BoneIndex = 0; BoneIndex < RefSkeleton.GetNumBones(); ++BoneIndex)
     {
         const FReferenceBone& RefBone = RefSkeleton.Bones[BoneIndex];
@@ -645,7 +938,7 @@ bool FPhysicsAssetAutoBodyGenerator::Regenerate(
             continue;
         }
 
-        if (Options.bSkipHelperBones && IsLikelyHelperBoneName(RefBone.Name))
+        if (!ShouldGenerateBodyForBone(RefSkeleton, MergedData, Options, BoneIndex))
         {
             ++Result.SkippedBoneCount;
             continue;
@@ -658,8 +951,11 @@ bool FPhysicsAssetAutoBodyGenerator::Regenerate(
             continue;
         }
 
-        TArray<FVector> Points;
-        CollectInfluencedBoneVertices(MeshAsset, OverrideBoneGlobalMatrices, MeshBoneIndex, Options.MinInfluenceWeight, Points);
+        const FAutoBodyPointFit EmptyFit;
+        const FAutoBodyPointFit& OwnFit = BoneIndex < static_cast<int32>(BoneFits.size()) ? BoneFits[BoneIndex] : EmptyFit;
+        const FAutoBodyPointFit& ExtraFit = BoneIndex < static_cast<int32>(MergedData.ExtraFits.size()) ? MergedData.ExtraFits[BoneIndex] : EmptyFit;
+        const FAutoBodyPointFit CombinedFit = MakeCombinedPointFit(OwnFit, ExtraFit);
+        const TArray<FVector>& Points = CombinedFit.Points;
 
         const int32 MinWeightedVertices = (std::max)(Options.MinWeightedVertices, 1);
         if (static_cast<int32>(Points.size()) < MinWeightedVertices && !Options.bAllowBoneAxisFallback)
@@ -687,15 +983,7 @@ bool FPhysicsAssetAutoBodyGenerator::Regenerate(
         FPhysicsAssetBodySetup Body;
         Body.BoneName = BoneName;
         Body.BodyLocalFrame = MakeLocalTransformFromComponent(BoneComponentTransform, Fit.BodyComponentTransform);
-
-        FPhysicsAssetShapeSetup Shape;
-        Shape.Type = EPhysicsAssetShapeType::Capsule;
-        Shape.LocalTransform = FTransform();
-        Shape.CapsuleRadius = (std::max)(Fit.CapsuleRadius, AutoBodyMinExtent);
-        Shape.CapsuleHalfHeight = (std::max)(Fit.CapsuleHalfHeight, Shape.CapsuleRadius);
-        Shape.SphereRadius = Shape.CapsuleRadius;
-        Shape.BoxHalfExtent = FVector(Shape.CapsuleRadius, Shape.CapsuleRadius, Shape.CapsuleHalfHeight);
-        Body.Shapes.push_back(Shape);
+        Body.Shapes.push_back(BuildShapeSetupFromFit(Fit, Options));
 
         const int32 NewBodyIndex = PhysicsAsset->AddBodySetup(Body);
         if (NewBodyIndex >= 0)

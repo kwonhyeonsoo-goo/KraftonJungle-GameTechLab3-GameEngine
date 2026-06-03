@@ -29,9 +29,13 @@ class FProjectSettings : public TSingleton<FProjectSettings>
 	{
 
         // Fixed-step simulation. 렌더 FrameDt를 그대로 PhysX에 넣지 않고 이 값으로만 진행한다.
-        float FixedTimeStep     = 1.0f / 60.0f;
-        float MaxFrameDeltaTime = 0.1f;
-        int32 MaxSubsteps       = 4;
+        // FixedTimeStep is the target physics publish/catch-up step.
+        // MaxSimulationSubstepDeltaTime caps the actual PxScene::simulate(dt) slice used inside that step.
+        // Keep this at 1/60 or lower when the exposed physics Hz is reduced for stability.
+        float FixedTimeStep                 = 1.0f / 60.0f;
+        float MaxSimulationSubstepDeltaTime = 1.0f / 60.0f;
+        float MaxFrameDeltaTime             = 0.1f;
+        int32 MaxSubsteps                   = 4;
 
         // PhysX scene/worker 설정. 0 이하면 안전한 기본값을 고른다.
         int32 WorkerThreadCount          = 2;

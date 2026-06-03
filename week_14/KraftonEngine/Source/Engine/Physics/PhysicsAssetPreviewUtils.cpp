@@ -63,6 +63,112 @@ namespace
     }
 }
 
+
+
+bool FPhysicsAssetPreviewPoseCache::Initialize(
+    const USkeletalMeshComponent* InPreviewComponent,
+    const UPhysicsAsset* InPhysicsAsset)
+{
+    PreviewComponent = InPreviewComponent;
+    PhysicsAsset = InPhysicsAsset;
+    BoneComponentSpaceTransforms.clear();
+    BodyWorldTransforms.clear();
+    BodyWorldTransformValid.clear();
+
+    if (!PreviewComponent || !PhysicsAsset || !PreviewComponent->GetSkeletalMesh())
+    {
+        return false;
+    }
+
+    PreviewComponent->GetCurrentBoneGlobalTransforms(BoneComponentSpaceTransforms);
+    if (BoneComponentSpaceTransforms.empty())
+    {
+        return false;
+    }
+
+    const TArray<FPhysicsAssetBodySetup>& BodySetups = PhysicsAsset->GetBodySetups();
+    BodyWorldTransforms.resize(BodySetups.size());
+    BodyWorldTransformValid.resize(BodySetups.size(), 0);
+
+    const USkeletalMesh* SkeletalMesh = PreviewComponent->GetSkeletalMesh();
+    const FTransform ComponentWorldTransform = GetComponentWorldTransform(PreviewComponent);
+    for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
+    {
+        int32 BoneIndex = -1;
+        if (!FPhysicsAssetPreviewUtils::ResolveBodyBoneIndex(SkeletalMesh, BodySetups[BodyIndex], BoneIndex) ||
+            BoneIndex < 0 ||
+            BoneIndex >= static_cast<int32>(BoneComponentSpaceTransforms.size()))
+        {
+            continue;
+        }
+
+        const FTransform BoneWorldTransform =
+            ComposePreviewTransforms(ComponentWorldTransform, BoneComponentSpaceTransforms[BoneIndex]);
+        BodyWorldTransforms[BodyIndex] = ComposePreviewTransforms(BoneWorldTransform, BodySetups[BodyIndex].BodyLocalFrame);
+        BodyWorldTransformValid[BodyIndex] = 1;
+    }
+
+    return true;
+}
+
+bool FPhysicsAssetPreviewPoseCache::HasPose() const
+{
+    return PreviewComponent && PhysicsAsset && !BoneComponentSpaceTransforms.empty();
+}
+
+bool FPhysicsAssetPreviewPoseCache::ComputeBodyWorldTransform(
+    int32 BodyIndex,
+    FTransform& OutWorldTransform) const
+{
+    if (!HasPose() ||
+        BodyIndex < 0 ||
+        BodyIndex >= static_cast<int32>(BodyWorldTransforms.size()) ||
+        BodyIndex >= static_cast<int32>(BodyWorldTransformValid.size()) ||
+        !BodyWorldTransformValid[BodyIndex])
+    {
+        return false;
+    }
+
+    OutWorldTransform = BodyWorldTransforms[BodyIndex];
+    return true;
+}
+
+bool FPhysicsAssetPreviewPoseCache::ComputeBodyWorldTransformByBoneName(
+    const FName& BoneName,
+    FTransform& OutWorldTransform) const
+{
+    if (!PhysicsAsset)
+    {
+        return false;
+    }
+
+    return ComputeBodyWorldTransform(PhysicsAsset->FindBodySetupIndexByBoneName(BoneName), OutWorldTransform);
+}
+
+bool FPhysicsAssetPreviewPoseCache::ComputeConstraintWorldFrames(
+    int32 ConstraintIndex,
+    FTransform& OutParentFrameWorld,
+    FTransform& OutChildFrameWorld) const
+{
+    if (!HasPose() || !FPhysicsAssetPreviewUtils::IsConstraintSetupIndexValid(PhysicsAsset, ConstraintIndex))
+    {
+        return false;
+    }
+
+    const FPhysicsAssetConstraintSetup& ConstraintSetup = PhysicsAsset->GetConstraintSetups()[ConstraintIndex];
+    FTransform ParentBodyWorld;
+    FTransform ChildBodyWorld;
+    if (!ComputeBodyWorldTransformByBoneName(ConstraintSetup.ParentBoneName, ParentBodyWorld) ||
+        !ComputeBodyWorldTransformByBoneName(ConstraintSetup.ChildBoneName, ChildBodyWorld))
+    {
+        return false;
+    }
+
+    OutParentFrameWorld = ComposePreviewTransforms(ParentBodyWorld, ConstraintSetup.ParentLocalFrame);
+    OutChildFrameWorld = ComposePreviewTransforms(ChildBodyWorld, ConstraintSetup.ChildLocalFrame);
+    return true;
+}
+
 bool FPhysicsAssetPreviewUtils::HasPreviewPose(const USkeletalMeshComponent* PreviewComponent)
 {
     if (!PreviewComponent || !PreviewComponent->GetSkeletalMesh())
@@ -115,38 +221,11 @@ bool FPhysicsAssetPreviewUtils::ComputePreviewBodyWorldTransform(
     int32 BodyIndex,
     FTransform& OutWorldTransform)
 {
-    // Preview helpers fail fast on missing data so editor callers get deterministic
-    // "no transform available" behavior instead of partially computed gizmo state.
-    if (!PreviewComponent || !PhysicsAsset || !HasPreviewPose(PreviewComponent))
-    {
-        return false;
-    }
-
-    const TArray<FPhysicsAssetBodySetup>& BodySetups = PhysicsAsset->GetBodySetups();
-    if (!IsBodySetupIndexValid(PhysicsAsset, BodyIndex))
-    {
-        return false;
-    }
-
-    const USkeletalMesh* SkeletalMesh = PreviewComponent->GetSkeletalMesh();
-    int32 BoneIndex = -1;
-    if (!ResolveBodyBoneIndex(SkeletalMesh, BodySetups[BodyIndex], BoneIndex))
-    {
-        return false;
-    }
-
-    TArray<FTransform> BoneComponentSpaceTransforms;
-    PreviewComponent->GetCurrentBoneGlobalTransforms(BoneComponentSpaceTransforms);
-    if (BoneIndex < 0 || BoneIndex >= static_cast<int32>(BoneComponentSpaceTransforms.size()))
-    {
-        return false;
-    }
-
-    const FTransform ComponentWorldTransform = GetComponentWorldTransform(PreviewComponent);
-    const FTransform BoneWorldTransform =
-        ComposePreviewTransforms(ComponentWorldTransform, BoneComponentSpaceTransforms[BoneIndex]);
-    OutWorldTransform = ComposePreviewTransforms(BoneWorldTransform, BodySetups[BodyIndex].BodyLocalFrame);
-    return true;
+    // Single-shot callers keep the old API, but internally go through the same cache path
+    // used by the editor preview to avoid duplicated transform logic.
+    FPhysicsAssetPreviewPoseCache PoseCache;
+    return PoseCache.Initialize(PreviewComponent, PhysicsAsset) &&
+        PoseCache.ComputeBodyWorldTransform(BodyIndex, OutWorldTransform);
 }
 
 bool FPhysicsAssetPreviewUtils::ComputePreviewBodyWorldTransformByBoneName(
@@ -174,37 +253,7 @@ bool FPhysicsAssetPreviewUtils::ComputePreviewConstraintWorldFrames(
     FTransform& OutParentFrameWorld,
     FTransform& OutChildFrameWorld)
 {
-    if (!PreviewComponent || !PhysicsAsset || !HasPreviewPose(PreviewComponent))
-    {
-        return false;
-    }
-
-    const TArray<FPhysicsAssetConstraintSetup>& ConstraintSetups = PhysicsAsset->GetConstraintSetups();
-    if (!IsConstraintSetupIndexValid(PhysicsAsset, ConstraintIndex))
-    {
-        return false;
-    }
-
-    const FPhysicsAssetConstraintSetup& ConstraintSetup = ConstraintSetups[ConstraintIndex];
-    FTransform ParentBodyWorld;
-    FTransform ChildBodyWorld;
-    if (!ComputePreviewBodyWorldTransformByBoneName(
-            PreviewComponent,
-            PhysicsAsset,
-            ConstraintSetup.ParentBoneName,
-            ParentBodyWorld) ||
-        !ComputePreviewBodyWorldTransformByBoneName(
-            PreviewComponent,
-            PhysicsAsset,
-            ConstraintSetup.ChildBoneName,
-            ChildBodyWorld))
-    {
-        return false;
-    }
-
-    // Constraint preview frames are derived from preview body world transforms so editor
-    // gizmos match the same local-frame convention used by runtime constraint creation.
-    OutParentFrameWorld = ComposePreviewTransforms(ParentBodyWorld, ConstraintSetup.ParentLocalFrame);
-    OutChildFrameWorld = ComposePreviewTransforms(ChildBodyWorld, ConstraintSetup.ChildLocalFrame);
-    return true;
+    FPhysicsAssetPreviewPoseCache PoseCache;
+    return PoseCache.Initialize(PreviewComponent, PhysicsAsset) &&
+        PoseCache.ComputeConstraintWorldFrames(ConstraintIndex, OutParentFrameWorld, OutChildFrameWorld);
 }

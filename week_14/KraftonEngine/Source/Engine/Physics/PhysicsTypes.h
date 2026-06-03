@@ -2,6 +2,7 @@
 
 #include "Core/Types/CollisionTypes.h"
 #include "Core/Types/CoreTypes.h"
+#include "Core/Types/EngineTypes.h"
 #include "Math/Transform.h"
 #include "Math/Vector.h"
 #include "Object/FName.h"
@@ -113,15 +114,16 @@ constexpr uint32 PhysicsFilter_QueryAndPhysics       = 1u << 10;
 constexpr uint32 PhysicsFilter_IsTrigger             = 1u << 11;
 constexpr uint32 PhysicsFilter_GenerateHitEvents     = 1u << 12;
 constexpr uint32 PhysicsFilter_GenerateOverlapEvents = 1u << 13;
-constexpr uint32 PhysicsFilter_ComponentPrimitive    = 1u << 14;
-constexpr uint32 PhysicsFilter_SameActorSelfIgnore   = 1u << 15;
-constexpr uint32 PhysicsFilter_IndependentRagdoll    = 1u << 16;
-constexpr uint32 PhysicsFilter_PartialRagdoll        = 1u << 17;
-constexpr uint32 PhysicsFilter_SuppressSameActorPrimitivePairs = 1u << 18;
-constexpr uint32 PhysicsFilter_OverlapOwnerPrimary   = 1u << 19;
-constexpr uint32 PhysicsFilter_OverlapOwnerQueryProxy = 1u << 20;
-constexpr uint32 PhysicsFilter_OverlapNonOwningReaction = 1u << 21;
-constexpr uint32 PhysicsFilter_CollisionRoleShift    = 22u;
+constexpr uint32 PhysicsFilter_EnableCCD             = 1u << 14;
+constexpr uint32 PhysicsFilter_ComponentPrimitive    = 1u << 15;
+constexpr uint32 PhysicsFilter_SameActorSelfIgnore   = 1u << 16;
+constexpr uint32 PhysicsFilter_IndependentRagdoll    = 1u << 17;
+constexpr uint32 PhysicsFilter_PartialRagdoll        = 1u << 18;
+constexpr uint32 PhysicsFilter_SuppressSameActorPrimitivePairs = 1u << 19;
+constexpr uint32 PhysicsFilter_OverlapOwnerPrimary   = 1u << 20;
+constexpr uint32 PhysicsFilter_OverlapOwnerQueryProxy = 1u << 21;
+constexpr uint32 PhysicsFilter_OverlapNonOwningReaction = 1u << 22;
+constexpr uint32 PhysicsFilter_CollisionRoleShift    = 23u;
 constexpr uint32 PhysicsFilter_CollisionRoleMask     = 0xFu << PhysicsFilter_CollisionRoleShift;
 
 inline uint32 GetPhysicsFilterObjectType(uint32 PackedWord0)
@@ -179,6 +181,7 @@ struct FPhysicsFilterData
     bool              bIsTrigger             = false;
     bool              bGenerateHitEvents     = false;
     bool              bGenerateOverlapEvents = false;
+    bool              bEnableCCD             = false;
     bool              bIsComponentPrimitive  = false;
     bool              bIgnoreSameActor       = false;
     bool              bIsIndependentRagdoll  = false;
@@ -208,6 +211,31 @@ struct FPhysicsShapeDesc
     uint32 QueryIgnoreGroup = 0;
 
     bool bIsTrigger = false;
+};
+
+struct FPhysicsClothCollisionShape
+{
+    EPhysicsShapeType Type = EPhysicsShapeType::Box;
+
+    uint32 OwnerActorId = 0;
+    uint32 OwnerComponentId = 0;
+    uint32 OwnerComponentGeneration = 0;
+
+    FPhysicsBodyHandle Body;
+    FPhysicsShapeHandle Shape;
+
+    EPhysicsBodyType BodyType = EPhysicsBodyType::Static;
+    FPhysicsFilterData FilterData;
+
+    FTransform PreviousWorldTransform;
+    FTransform CurrentWorldTransform;
+
+    FBoundingBox WorldBounds;
+
+    FVector BoxHalfExtent = FVector::ZeroVector;
+    float SphereRadius = 0.0f;
+    float CapsuleRadius = 0.0f;
+    float CapsuleHalfHeight = 0.0f;
 };
 
 // Runtime 에서 보관하는 body 의 mutable 속성 묶음. SetMass/SetCOM/SetLock 등이 서로의 값을

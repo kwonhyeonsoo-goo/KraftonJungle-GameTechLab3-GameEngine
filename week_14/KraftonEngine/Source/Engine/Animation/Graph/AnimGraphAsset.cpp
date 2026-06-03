@@ -6,6 +6,10 @@
 #include "Serialization/Archive.h"
 
 #include <algorithm>
+#include <cstdio>
+#include <unordered_map>
+#include <unordered_set>
+#include <string>
 
 // ── AnimGraphTypes operator<< ──
 //
@@ -21,6 +25,28 @@
 
 FArchive& operator<<(FArchive& Ar, FAnimGraphPin&        Pin);
 FArchive& operator<<(FArchive& Ar, FAnimGraphTransition& T);
+FArchive& operator<<(FArchive& Ar, FAnimGraphVariable&   Var);
+
+namespace
+{
+	constexpr uint32 kAnimGraphAssetMagic   = 0x46475241u; // 'AGRF' - Anim Graph File
+	constexpr uint32 kAnimGraphAssetVersion = 3u;          // v3 adds AnimGraph-owned variables.
+	thread_local bool g_LoadLegacyTransitionFormat = false;
+
+	struct FLegacyTransitionFormatScope
+	{
+		explicit FLegacyTransitionFormatScope(bool bEnable)
+			: bPrevious(g_LoadLegacyTransitionFormat)
+		{
+			g_LoadLegacyTransitionFormat = bEnable;
+		}
+		~FLegacyTransitionFormatScope()
+		{
+			g_LoadLegacyTransitionFormat = bPrevious;
+		}
+		bool bPrevious = false;
+	};
+}
 
 inline FArchive& operator<<(FArchive& Ar, TArray<FAnimGraphPin>& Array)
 {
@@ -32,6 +58,15 @@ inline FArchive& operator<<(FArchive& Ar, TArray<FAnimGraphPin>& Array)
 }
 
 inline FArchive& operator<<(FArchive& Ar, TArray<FAnimGraphTransition>& Array)
+{
+	uint32 N = static_cast<uint32>(Array.size());
+	Ar << N;
+	if (Ar.IsLoading()) Array.resize(N);
+	for (auto& Item : Array) Ar << Item;
+	return Ar;
+}
+
+inline FArchive& operator<<(FArchive& Ar, TArray<FAnimGraphVariable>& Array)
 {
 	uint32 N = static_cast<uint32>(Array.size());
 	Ar << N;
@@ -58,6 +93,15 @@ FArchive& operator<<(FArchive& Ar, FAnimGraphLink& Link)
 	return Ar;
 }
 
+FArchive& operator<<(FArchive& Ar, FAnimGraphVariable& Var)
+{
+	Ar << Var.VariableName;
+	Ar << Var.Type;
+	Ar << Var.DefaultValue;
+	Ar << Var.Category;
+	return Ar;
+}
+
 FArchive& operator<<(FArchive& Ar, FAnimGraphState& State)
 {
 	Ar << State.StateName;
@@ -76,6 +120,15 @@ FArchive& operator<<(FArchive& Ar, FAnimGraphTransition& T)
 	Ar << T.Op;
 	Ar << T.Threshold;
 	Ar << T.BlendTime;
+	if (Ar.IsLoading() && g_LoadLegacyTransitionFormat)
+	{
+		// v1 assets stored only Variable/Op/Threshold/Blend. Preserve the old compare-based behavior.
+		T.RuleKind = ETransitionRuleKind::FloatCompare;
+	}
+	else
+	{
+		Ar << T.RuleKind;
+	}
 	return Ar;
 }
 
@@ -101,6 +154,90 @@ FArchive& operator<<(FArchive& Ar, FAnimGraphNode& Node)
 }
 
 // ── UAnimGraphAsset ──
+
+FAnimGraphVariable* UAnimGraphAsset::AddVariable(const FName& Name, EAnimGraphPinType Type)
+{
+	FName FinalName = Name == FName::None ? FName("NewVariable") : Name;
+	const FString Base = FinalName.ToString().empty() ? FString("NewVariable") : FinalName.ToString();
+	int32 Suffix = 1;
+	while (FindVariable(FinalName))
+	{
+		char Buf[128];
+		std::snprintf(Buf, sizeof(Buf), "%s_%d", Base.c_str(), Suffix++);
+		FinalName = FName(Buf);
+	}
+
+	FAnimGraphVariable Var;
+	Var.VariableName = FinalName;
+	Var.Type = Type;
+	Var.DefaultValue = (Type == EAnimGraphPinType::Bool) ? 0.0f : 0.0f;
+	Variables.push_back(std::move(Var));
+	BumpVersion();
+	return &Variables.back();
+}
+
+bool UAnimGraphAsset::RemoveVariable(const FName& Name)
+{
+	if (Name == FName::None) return false;
+	const size_t Before = Variables.size();
+	Variables.erase(std::remove_if(Variables.begin(), Variables.end(),
+		[&Name](const FAnimGraphVariable& V) { return V.VariableName == Name; }), Variables.end());
+	const bool bRemoved = Variables.size() != Before;
+	if (!bRemoved) return false;
+
+	// Delete cascade: nodes / transition rules bound to the removed variable become unbound.
+	for (FAnimGraphNode& Node : Nodes)
+	{
+		if (Node.VariableName == Name) Node.VariableName = FName::None;
+		for (FAnimGraphTransition& T : Node.Transitions)
+		{
+			if (T.VariableName == Name) T.VariableName = FName::None;
+		}
+	}
+	BumpVersion();
+	return true;
+}
+
+bool UAnimGraphAsset::RenameVariable(const FName& OldName, const FName& NewName)
+{
+	if (OldName == FName::None || NewName == FName::None || OldName == NewName) return false;
+	if (FindVariable(NewName)) return false;
+	FAnimGraphVariable* Var = FindVariable(OldName);
+	if (!Var) return false;
+	Var->VariableName = NewName;
+
+	// Rename cascade: 모든 Get 노드와 Transition Rule Property Access 를 새 이름으로 갱신.
+	for (FAnimGraphNode& Node : Nodes)
+	{
+		if (Node.VariableName == OldName) Node.VariableName = NewName;
+		for (FAnimGraphTransition& T : Node.Transitions)
+		{
+			if (T.VariableName == OldName) T.VariableName = NewName;
+		}
+	}
+	BumpVersion();
+	return true;
+}
+
+FAnimGraphVariable* UAnimGraphAsset::FindVariable(const FName& Name)
+{
+	if (Name == FName::None) return nullptr;
+	for (FAnimGraphVariable& Var : Variables)
+	{
+		if (Var.VariableName == Name) return &Var;
+	}
+	return nullptr;
+}
+
+const FAnimGraphVariable* UAnimGraphAsset::FindVariable(const FName& Name) const
+{
+	if (Name == FName::None) return nullptr;
+	for (const FAnimGraphVariable& Var : Variables)
+	{
+		if (Var.VariableName == Name) return &Var;
+	}
+	return nullptr;
+}
 
 FAnimGraphNode* UAnimGraphAsset::AddNode(EAnimGraphNodeType Type, const FName& DisplayName, float X, float Y)
 {
@@ -130,6 +267,15 @@ FAnimGraphPin* UAnimGraphAsset::AddPin(FAnimGraphNode& Node, EAnimGraphPinKind K
 
 FAnimGraphLink* UAnimGraphAsset::AddLink(uint32 FromPinId, uint32 ToPinId)
 {
+	// UE Blueprint/AnimGraph input pin semantics: one input pin owns at most one upstream link.
+	// Dragging a new source into an already-connected input replaces the previous connection
+	// instead of creating ambiguous fan-in. Output fan-out remains allowed.
+	Links.erase(std::remove_if(Links.begin(), Links.end(),
+		[ToPinId](const FAnimGraphLink& Existing)
+		{
+			return Existing.ToPinId == ToPinId;
+		}), Links.end());
+
 	FAnimGraphLink Link;
 	Link.LinkId    = AllocateId();
 	Link.FromPinId = FromPinId;
@@ -241,6 +387,20 @@ bool UAnimGraphAsset::RemoveNode(uint32 NodeId)
 	Nodes.erase(std::remove_if(Nodes.begin(), Nodes.end(),
 		[NodeId](const FAnimGraphNode& N) { return N.NodeId == NodeId; }), Nodes.end());
 
+	// State.SubGraphNodeId is an explicit node-id reference. Clear every state that pointed to
+	// the removed node so deleting a nested State Machine cannot leave a dangling runtime ref.
+	for (FAnimGraphNode& Node : Nodes)
+	{
+		if (Node.Type != EAnimGraphNodeType::StateMachine) continue;
+		for (FAnimGraphState& State : Node.States)
+		{
+			if (State.SubGraphNodeId == NodeId)
+			{
+				State.SubGraphNodeId = 0;
+			}
+		}
+	}
+
 	BumpVersion();
 	return true;
 }
@@ -277,7 +437,8 @@ bool UAnimGraphAsset::CanLinkPins(uint32 PinAId, uint32 PinBId, uint32* OutFromP
 	const FAnimGraphPin* From = (A->Kind == EAnimGraphPinKind::Output) ? A : B;
 	const FAnimGraphPin* To   = (From == A) ? B : A;
 
-	// 중복 링크 거부 — UE 도 동일 (1 input 에 1 output 의 multi-fanout 은 허용, 같은 from→to 중복은 금지).
+	// 중복 링크 거부. 다른 output 이 같은 input 에 연결된 경우는 AddLink 에서 기존 input 링크를
+	// 교체한다. 이것이 UE 그래프의 단일 input-pin 연결 규칙과 가장 가깝다.
 	for (const FAnimGraphLink& L : Links)
 	{
 		if (L.FromPinId == From->PinId && L.ToPinId == To->PinId) return false;
@@ -301,6 +462,7 @@ void UAnimGraphAsset::InitializeDefault()
 {
 	Nodes.clear();
 	Links.clear();
+	Variables.clear();
 	NextId = 1;
 
 	// ⚠ Nodes 가 std::vector — 후속 AddNode 호출이 reallocation 을 일으키면 이전에 받은
@@ -382,10 +544,121 @@ void UAnimGraphAsset::Serialize(FArchive& Ar)
 {
 	// UObject::Serialize 호출 안 함 — 다른 자산(UFloatCurveAsset 등)과 동일 패턴 (자산 패키지
 	// 컨텍스트에서 ObjectName 직렬화 불필요).
-	Ar << NextId;
+	if (Ar.IsSaving())
+	{
+		uint32 Magic = kAnimGraphAssetMagic;
+		uint32 Version = kAnimGraphAssetVersion;
+		Ar << Magic;
+		Ar << Version;
+		Ar << NextId;
+		Ar << Nodes;
+		Ar << Links;
+		Ar << OwnerClassName;
+		Ar << Variables;
+		return;
+	}
+
+	uint32 First = 0;
+	Ar << First;
+	uint32 Version = 1;
+	if (First == kAnimGraphAssetMagic)
+	{
+		Ar << Version;
+		Ar << NextId;
+	}
+	else
+	{
+		// Legacy v1 files started directly with NextId. Treat the first word as that field.
+		NextId = First;
+	}
+
+	const bool bLegacyTransitions = Version < 2;
+	FLegacyTransitionFormatScope LegacyTransitionScope(bLegacyTransitions);
 	Ar << Nodes;
 	Ar << Links;
 	Ar << OwnerClassName;
+	if (Version >= 3)
+	{
+		Ar << Variables;
+	}
+	else
+	{
+		Variables.clear();
+	}
+
+	// Loaded assets can come from older editor versions or hand-edited files. Normalize explicit
+	// id/name references here too, not only in the editor, so runtime compilation never starts
+	// from dangling pins, stale transitions, duplicate input fan-in, or invalid nested SM refs.
+	std::unordered_set<uint32> PinIds;
+	for (const FAnimGraphNode& Node : Nodes)
+	{
+		for (const FAnimGraphPin& Pin : Node.Pins) PinIds.insert(Pin.PinId);
+	}
+
+	std::unordered_map<uint32, uint32> LastLinkForInputPin;
+	Links.erase(std::remove_if(Links.begin(), Links.end(),
+		[&](const FAnimGraphLink& Link)
+		{
+			const FAnimGraphPin* From = FindPin(Link.FromPinId);
+			const FAnimGraphPin* To   = FindPin(Link.ToPinId);
+			if (!From || !To || !PinIds.count(Link.FromPinId) || !PinIds.count(Link.ToPinId)) return true;
+			if (From->Kind != EAnimGraphPinKind::Output || To->Kind != EAnimGraphPinKind::Input || From->Type != To->Type) return true;
+			auto It = LastLinkForInputPin.find(To->PinId);
+			if (It != LastLinkForInputPin.end()) return true;
+			LastLinkForInputPin[To->PinId] = Link.LinkId;
+			return false;
+		}), Links.end());
+
+	auto FindStateIndexLocal = [](const TArray<FAnimGraphState>& States, FName Name) -> int32
+	{
+		for (int32 i = 0; i < static_cast<int32>(States.size()); ++i)
+		{
+			if (States[i].StateName == Name) return i;
+		}
+		return -1;
+	};
+
+	auto IsValidStateMachineNodeId = [&](uint32 NodeId) -> bool
+	{
+		if (NodeId == 0) return false;
+		const FAnimGraphNode* Node = FindNode(NodeId);
+		return Node && Node->Type == EAnimGraphNodeType::StateMachine;
+	};
+
+	for (FAnimGraphNode& Node : Nodes)
+	{
+		if (Node.Type != EAnimGraphNodeType::StateMachine) continue;
+
+		if (!Node.States.empty() && FindStateIndexLocal(Node.States, Node.InitialStateName) < 0)
+		{
+			Node.InitialStateName = Node.States.front().StateName;
+		}
+		else if (Node.States.empty())
+		{
+			Node.InitialStateName = FName::None;
+		}
+
+		for (FAnimGraphState& State : Node.States)
+		{
+			if (State.SubGraphNodeId == Node.NodeId || (State.SubGraphNodeId != 0 && !IsValidStateMachineNodeId(State.SubGraphNodeId)))
+			{
+				State.SubGraphNodeId = 0;
+			}
+		}
+
+		std::unordered_set<std::string> SeenTransitions;
+		Node.Transitions.erase(std::remove_if(Node.Transitions.begin(), Node.Transitions.end(),
+			[&](const FAnimGraphTransition& T)
+			{
+				const bool bMissingTo = T.ToStateName == FName::None || FindStateIndexLocal(Node.States, T.ToStateName) < 0;
+				const bool bMissingFrom = T.FromStateName != FName::None && FindStateIndexLocal(Node.States, T.FromStateName) < 0;
+				if (bMissingTo || bMissingFrom) return true;
+				const FString Key = (T.FromStateName == FName::None ? FString("<Any>") : T.FromStateName.ToString()) + "->" + T.ToStateName.ToString();
+				if (SeenTransitions.count(Key)) return true;
+				SeenTransitions.insert(Key);
+				return false;
+			}), Node.Transitions.end());
+	}
 }
 
 

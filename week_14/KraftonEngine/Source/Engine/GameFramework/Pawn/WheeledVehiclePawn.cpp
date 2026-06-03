@@ -9,6 +9,64 @@
 #include "Mesh/MeshManager.h"
 #include "Runtime/Engine.h"
 
+#include <algorithm>
+#include <cmath>
+
+namespace
+{
+    float NormalizeVehicleCameraAngle(float Angle)
+    {
+        Angle = std::fmod(Angle, 360.0f);
+        if (Angle > 180.0f)
+        {
+            Angle -= 360.0f;
+        }
+        else if (Angle <= -180.0f)
+        {
+            Angle += 360.0f;
+        }
+        return Angle;
+    }
+
+    float ClampVehicleCameraPitch(float Value, float MinPitch, float MaxPitch)
+    {
+        if (MinPitch > MaxPitch)
+        {
+            std::swap(MinPitch, MaxPitch);
+        }
+        return std::clamp(Value, MinPitch, MaxPitch);
+    }
+
+    float ClampVehicleCameraYawOffset(float Value, float MaxAbsOffset)
+    {
+        const float ClampedMax = std::clamp(MaxAbsOffset, 0.0f, 180.0f);
+        return std::clamp(NormalizeVehicleCameraAngle(Value), -ClampedMax, ClampedMax);
+    }
+
+    float ExponentialInterpTo(float Current, float Target, float DeltaTime, float Speed)
+    {
+        if (DeltaTime <= 0.0f || Speed <= 0.0f)
+        {
+            return Current;
+        }
+
+        const float Alpha = 1.0f - std::exp(-Speed * DeltaTime);
+        return Current + (Target - Current) * Alpha;
+    }
+
+    float ExponentialAngleInterpTo(float Current, float Target, float DeltaTime, float Speed)
+    {
+        if (DeltaTime <= 0.0f || Speed <= 0.0f)
+        {
+            return Current;
+        }
+
+        const float Delta = NormalizeVehicleCameraAngle(Target - Current);
+        const float Alpha = 1.0f - std::exp(-Speed * DeltaTime);
+        return NormalizeVehicleCameraAngle(Current + Delta * Alpha);
+    }
+}
+
 void AWheeledVehiclePawn::InitDefaultComponents(const FString& SkeletalMeshFileName)
 {
     Mesh = AddComponent<USkeletalMeshComponent>();
@@ -39,6 +97,9 @@ void AWheeledVehiclePawn::InitDefaultComponents(const FString& SkeletalMeshFileN
     SpringArm->bInheritYaw = true;
     SpringArm->bInheritRoll = false;
 
+    VehicleCameraPitch = ClampVehicleCameraPitch(VehicleDefaultCameraPitch, VehicleMinCameraPitch, VehicleMaxCameraPitch);
+    UpdateVehicleCameraControlRotation();
+
     Camera = AddComponent<UCameraComponent>();
     Camera->AttachToComponent(SpringArm);
 }
@@ -65,7 +126,21 @@ void AWheeledVehiclePawn::RebindVehicleComponents()
 void AWheeledVehiclePawn::BeginPlay()
 {
     RebindVehicleComponents();
+    VehicleCameraPitch = ClampVehicleCameraPitch(VehicleDefaultCameraPitch, VehicleMinCameraPitch, VehicleMaxCameraPitch);
+    VehicleCameraYawOffset = 0.0f;
+    VehicleCameraTimeSinceLookInput = VehicleCameraReturnDelay;
+    bVehicleCameraLookInputThisFrame = false;
+    LastVehicleThrottleInput = 0.0f;
+    LastVehicleSteeringInput = 0.0f;
+    UpdateVehicleCameraControlRotation();
     Super::BeginPlay();
+}
+
+void AWheeledVehiclePawn::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+    UpdateVehicleCameraReturn(DeltaTime);
+    UpdateVehicleCameraControlRotation();
 }
 
 void AWheeledVehiclePawn::PostDuplicate()
@@ -80,53 +155,166 @@ void AWheeledVehiclePawn::OnPostLoad(FArchive& Ar)
     RebindVehicleComponents();
 }
 
-void AWheeledVehiclePawn::SetupInputComponent()
+float AWheeledVehiclePawn::GetVehicleCameraBaseYaw() const
 {
-    Super::SetupInputComponent();
+    if (Mesh)
+    {
+        return Mesh->GetWorldRotation().Yaw;
+    }
+    if (const USceneComponent* Root = GetRootComponent())
+    {
+        return Root->GetWorldRotation().Yaw;
+    }
+    return GetActorRotation().Yaw;
+}
 
-    if (!bAutoInputVehicle || !InputComponent || !VehicleMovement)
+void AWheeledVehiclePawn::UpdateVehicleCameraControlRotation()
+{
+    if (!bAutoInputVehicleCamera)
     {
         return;
     }
 
-    InputComponent->AddAxisMapping("VehicleThrottle", "W",  1.0f);
-    InputComponent->AddAxisMapping("VehicleThrottle", "S", -1.0f);
-    InputComponent->AddAxisMapping("VehicleSteering", "D",  1.0f);
-    InputComponent->AddAxisMapping("VehicleSteering", "A", -1.0f);
-    InputComponent->AddActionMapping("VehicleHandbrake", "Space");
+    VehicleCameraPitch = ClampVehicleCameraPitch(VehicleCameraPitch, VehicleMinCameraPitch, VehicleMaxCameraPitch);
+    VehicleCameraYawOffset = ClampVehicleCameraYawOffset(VehicleCameraYawOffset, VehicleMaxCameraYawOffset);
 
-    InputComponent->BindAxis("VehicleThrottle", [this](float Value)
+    const float BaseYaw = GetVehicleCameraBaseYaw();
+
+    FRotator CameraControl = GetControlRotation();
+    CameraControl.Pitch = VehicleCameraPitch;
+    CameraControl.Yaw = NormalizeVehicleCameraAngle(BaseYaw + VehicleCameraYawOffset);
+    CameraControl.Roll = 0.0f;
+    SetControlRotation(CameraControl);
+}
+
+void AWheeledVehiclePawn::UpdateVehicleCameraReturn(float DeltaTime)
+{
+    if (!bAutoInputVehicleCamera || !bAutoReturnVehicleCamera || DeltaTime <= 0.0f)
     {
-        if (!VehicleMovement)
-        {
-            return;
-        }
+        bVehicleCameraLookInputThisFrame = false;
+        return;
+    }
 
-        VehicleMovement->SetThrottleInput(Value);
-        VehicleMovement->SetBrakeInput(0.0f);
-    });
-
-    InputComponent->BindAxis("VehicleSteering", [this](float Value)
+    if (bVehicleCameraLookInputThisFrame)
     {
-        if (VehicleMovement)
-        {
-            VehicleMovement->SetSteeringInput(Value);
-        }
-    });
+        VehicleCameraTimeSinceLookInput = 0.0f;
+        bVehicleCameraLookInputThisFrame = false;
+        return;
+    }
 
-    InputComponent->BindAction("VehicleHandbrake", EInputEvent::Pressed, [this]()
-    {
-        if (VehicleMovement)
-        {
-            VehicleMovement->SetHandbrakeInput(1.0f);
-        }
-    });
+    VehicleCameraTimeSinceLookInput += DeltaTime;
 
-    InputComponent->BindAction("VehicleHandbrake", EInputEvent::Released, [this]()
+    const bool bVehicleInputActive =
+        std::abs(LastVehicleThrottleInput) > 0.01f ||
+        std::abs(LastVehicleSteeringInput) > 0.01f;
+    const bool bVehicleMoving =
+        VehicleMovement && std::abs(VehicleMovement->GetForwardSpeed()) > VehicleCameraMovingReturnSpeedThreshold;
+
+    const bool bReturnRequestedByVehicle = bVehicleInputActive || bVehicleMoving;
+    if (!bReturnRequestedByVehicle || VehicleCameraTimeSinceLookInput < VehicleCameraReturnDelay)
     {
-        if (VehicleMovement)
+        return;
+    }
+
+    const float SpeedScale = VehicleCameraMovingReturnMultiplier;
+    VehicleCameraYawOffset = ExponentialAngleInterpTo(VehicleCameraYawOffset, 0.0f, DeltaTime, VehicleCameraYawReturnSpeed * SpeedScale);
+    VehicleCameraPitch = ExponentialInterpTo(VehicleCameraPitch, VehicleDefaultCameraPitch, DeltaTime, VehicleCameraPitchReturnSpeed * SpeedScale);
+
+    if (std::abs(VehicleCameraYawOffset) < 0.01f)
+    {
+        VehicleCameraYawOffset = 0.0f;
+    }
+    if (std::abs(VehicleCameraPitch - VehicleDefaultCameraPitch) < 0.01f)
+    {
+        VehicleCameraPitch = VehicleDefaultCameraPitch;
+    }
+}
+
+void AWheeledVehiclePawn::SetupInputComponent()
+{
+    Super::SetupInputComponent();
+
+    if (!InputComponent)
+    {
+        return;
+    }
+
+    if (bAutoInputVehicle && VehicleMovement)
+    {
+        InputComponent->AddAxisMapping("VehicleThrottle", "W",  1.0f);
+        InputComponent->AddAxisMapping("VehicleThrottle", "S", -1.0f);
+        InputComponent->AddAxisMapping("VehicleSteering", "D",  1.0f);
+        InputComponent->AddAxisMapping("VehicleSteering", "A", -1.0f);
+        InputComponent->AddActionMapping("VehicleHandbrake", "Space");
+
+        InputComponent->BindAxis("VehicleThrottle", [this](float Value)
         {
-            VehicleMovement->SetHandbrakeInput(0.0f);
-        }
-    });
+            if (!VehicleMovement)
+            {
+                return;
+            }
+
+            LastVehicleThrottleInput = Value;
+            VehicleMovement->SetThrottleInput(Value);
+            VehicleMovement->SetBrakeInput(0.0f);
+        });
+
+        InputComponent->BindAxis("VehicleSteering", [this](float Value)
+        {
+            LastVehicleSteeringInput = Value;
+            if (VehicleMovement)
+            {
+                VehicleMovement->SetSteeringInput(Value);
+            }
+        });
+
+        InputComponent->BindAction("VehicleHandbrake", EInputEvent::Pressed, [this]()
+        {
+            if (VehicleMovement)
+            {
+                VehicleMovement->SetHandbrakeInput(1.0f);
+            }
+        });
+
+        InputComponent->BindAction("VehicleHandbrake", EInputEvent::Released, [this]()
+        {
+            if (VehicleMovement)
+            {
+                VehicleMovement->SetHandbrakeInput(0.0f);
+            }
+        });
+    }
+
+    if (bAutoInputVehicleCamera && bEnableVehicleMouseLook)
+    {
+        InputComponent->AddMouseAxisMapping("VehicleCameraTurn", EInputAxisSourceType::MouseX, VehicleMouseSensitivity);
+        InputComponent->AddMouseAxisMapping("VehicleCameraLookUp", EInputAxisSourceType::MouseY, VehicleMouseSensitivity);
+
+        InputComponent->BindAxis("VehicleCameraTurn", [this](float Value)
+        {
+            if (std::abs(Value) <= 0.0001f)
+            {
+                return;
+            }
+
+            VehicleCameraTimeSinceLookInput = 0.0f;
+            bVehicleCameraLookInputThisFrame = true;
+            VehicleCameraYawOffset = ClampVehicleCameraYawOffset(VehicleCameraYawOffset + Value, VehicleMaxCameraYawOffset);
+            UpdateVehicleCameraControlRotation();
+        });
+
+        InputComponent->BindAxis("VehicleCameraLookUp", [this](float Value)
+        {
+            if (std::abs(Value) <= 0.0001f)
+            {
+                return;
+            }
+
+            VehicleCameraTimeSinceLookInput = 0.0f;
+            bVehicleCameraLookInputThisFrame = true;
+            const float Direction = bInvertVehicleMouseY ? -1.0f : 1.0f;
+            VehicleCameraPitch = ClampVehicleCameraPitch(VehicleCameraPitch + Value * Direction, VehicleMinCameraPitch, VehicleMaxCameraPitch);
+            UpdateVehicleCameraControlRotation();
+        });
+    }
 }

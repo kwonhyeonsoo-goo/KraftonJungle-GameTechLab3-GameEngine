@@ -33,6 +33,11 @@ public:
 	FVector GetPreviewVelocity() const;
 	void StopSimulating();
 
+    UFUNCTION(Callable, Category="Movement|Collision")
+    void SetSweepCollisionEnabled(bool bInEnableSweep) { bSweepCollision = bInEnableSweep; }
+    UFUNCTION(Pure, Category="Movement|Collision")
+    bool IsSweepCollisionEnabled() const { return bSweepCollision; }
+
 protected:
 	FVector ComputeEffectiveVelocity() const;
 	virtual EProjectileHitBehavior GetHitBehavior() const;
@@ -44,4 +49,13 @@ protected:
 	float InitialSpeed = 10.0f;
 	UPROPERTY(Edit, Save, Category="Movement", DisplayName="Max Speed", Min=0.0f, Max=0.0f, Speed=10.0f)
 	float MaxSpeed = 100.0f;
+
+    // true면 UpdatedComponent의 shape를 Start→End로 sweep한 뒤 이동한다.
+    // CCD가 잡지 못하는 SetWorldLocation 기반 projectile 관통 방지용이다.
+    UPROPERTY(Edit, Save, Category="Movement|Collision", DisplayName="Sweep Collision")
+    bool bSweepCollision = true;
+
+    // hit 직전에서 살짝 당겨 배치해 다음 프레임 start penetration을 줄인다.
+    UPROPERTY(Edit, Save, Category="Movement|Collision", DisplayName="Sweep Pullback Distance", Min=0.0f, Max=10.0f, Speed=0.01f)
+    float SweepPullbackDistance = 0.01f;
 };

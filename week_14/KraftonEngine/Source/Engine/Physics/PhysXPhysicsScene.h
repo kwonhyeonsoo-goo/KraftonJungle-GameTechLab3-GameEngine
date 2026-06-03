@@ -94,6 +94,26 @@ public:
         const AActor*  IgnoreActor = nullptr
     ) override;
 
+    bool Sweep(
+        const FVector&         Start,
+        const FVector&         End,
+        const FQuat&           Rotation,
+        const FCollisionShape& Shape,
+        FHitResult&            OutHit,
+        ECollisionChannel      TraceChannel = ECollisionChannel::WorldStatic,
+        const AActor*          IgnoreActor  = nullptr
+    ) override;
+
+    bool SweepByObjectTypes(
+        const FVector&         Start,
+        const FVector&         End,
+        const FQuat&           Rotation,
+        const FCollisionShape& Shape,
+        FHitResult&            OutHit,
+        uint32                 ObjectTypeMask,
+        const AActor*          IgnoreActor = nullptr
+    ) override;
+
     IPhysicsRuntime* GetRuntime() override
     {
         return &Runtime;
@@ -121,9 +141,13 @@ private:
     FPhysicsShapeDesc         BuildShapeDescFromComponent_GameThread(UPrimitiveComponent* Comp, UPrimitiveComponent* RootComponent) const;
     void                      EnqueueEngineTransformSync_GameThread();
     bool                      ResolveRaycastResult_GameThread(const FPhysicsRaycastResult& PhysicsResult, FHitResult& OutHit) const;
+    bool                      ResolveSweepResult_GameThread(const FPhysicsSweepResult& PhysicsResult, FHitResult& OutHit) const;
     bool                      ExecuteRaycast_PhysicsThread(const FVector& Start, const FVector& Dir, float MaxDist, ECollisionChannel TraceChannel, uint32 IgnoreActorId, FPhysicsRaycastResult& OutResult) const;
     bool                      ExecuteRaycastByObjectTypes_PhysicsThread(const FVector& Start, const FVector& Dir, float MaxDist, uint32 ObjectTypeMask, uint32 IgnoreActorId, FPhysicsRaycastResult& OutResult) const;
+    bool                      ExecuteSweep_PhysicsThread(const FVector& Start, const FVector& Dir, float MaxDist, const FQuat& Rotation, const FCollisionShape& Shape, ECollisionChannel TraceChannel, uint32 IgnoreActorId, FPhysicsSweepResult& OutResult) const;
+    bool                      ExecuteSweepByObjectTypes_PhysicsThread(const FVector& Start, const FVector& Dir, float MaxDist, const FQuat& Rotation, const FCollisionShape& Shape, uint32 ObjectTypeMask, uint32 IgnoreActorId, FPhysicsSweepResult& OutResult) const;
     bool                      SubmitRaycastQuery_GameThread(bool bObjectTypes, const FVector& Start, const FVector& Dir, float MaxDist, ECollisionChannel TraceChannel, uint32 ObjectTypeMask, uint32 IgnoreActorId, FPhysicsRaycastResult& OutResult);
+    bool                      SubmitSweepQuery_GameThread(bool bObjectTypes, const FVector& Start, const FVector& Dir, float MaxDist, const FQuat& Rotation, const FCollisionShape& Shape, ECollisionChannel TraceChannel, uint32 ObjectTypeMask, uint32 IgnoreActorId, FPhysicsSweepResult& OutResult);
 
     void StartPhysicsThread();
     void StopPhysicsThreadAndJoin();
@@ -164,12 +188,16 @@ private:
     mutable bool                  bPhysicsQueryInProgress  = false;
     mutable bool                  bPhysicsQueryCompleted   = false;
     mutable bool                  bPendingQueryObjectTypes = false;
+    mutable bool                  bPendingQuerySweep       = false;
     mutable FVector               PendingQueryStart;
     mutable FVector               PendingQueryDir;
     mutable float                 PendingQueryMaxDist        = 0.0f;
+    mutable FQuat                 PendingQueryRotation       = FQuat::Identity;
+    mutable FCollisionShape       PendingQueryShape;
     mutable ECollisionChannel     PendingQueryTraceChannel   = ECollisionChannel::WorldStatic;
     mutable uint32                PendingQueryObjectTypeMask = 0;
     mutable uint32                PendingQueryIgnoreActorId  = 0;
     mutable bool                  bPendingQueryHit           = false;
     mutable FPhysicsRaycastResult PendingQueryResult;
+    mutable FPhysicsSweepResult   PendingSweepQueryResult;
 };

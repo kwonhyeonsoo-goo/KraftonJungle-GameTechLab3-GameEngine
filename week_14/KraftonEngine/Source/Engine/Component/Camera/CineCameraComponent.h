@@ -4,13 +4,6 @@
 #include "Core/Types/EngineTypes.h"
 
 #include "Source/Engine/Component/Camera/CineCameraComponent.generated.h"
-struct FCineLetterboxSettings
-{
-	bool bEnabled = false;
-	float Amount = 1.0f;
-	float Thickness = 0.12f;
-	FLinearColor Color = FLinearColor::Black();
-};
 
 UCLASS()
 class UCineCameraComponent : public UCameraComponent
@@ -20,20 +13,13 @@ public:
 	UCineCameraComponent() = default;
 
 	UFUNCTION(Callable, Exec, Category="Cinematic")
-	void SetLetterboxEnabled(bool bEnabled) { Letterbox.bEnabled = bEnabled; }
+	void SetLetterboxEnabled(bool bEnabled) { UCameraComponent::SetLetterboxEnabled(bEnabled); }
 	UFUNCTION(Callable, Exec, Category="Cinematic")
-	void SetLetterboxAmount(float Amount) { Letterbox.Amount = Amount; }
+	void SetLetterboxAmount(float Amount) { UCameraComponent::SetLetterboxAmount(Amount); }
 	UFUNCTION(Callable, Exec, Category="Cinematic")
-	void SetLetterboxThickness(float Thickness) { Letterbox.Thickness = Thickness; }
+	void SetLetterboxThickness(float Thickness) { UCameraComponent::SetLetterboxThickness(Thickness); }
 	UFUNCTION(Callable, Exec, Category="Cinematic")
-	void SetLetterboxColor(FLinearColor Color) { Letterbox.Color = Color; }
+	void SetLetterboxColor(FLinearColor Color) { UCameraComponent::SetLetterboxColor(Color); }
 
-	const FCineLetterboxSettings& GetLetterboxSettings() const { return Letterbox; }
-
-private:
-	UPROPERTY(Edit, Save, Category="Cinematic", DisplayName="Enable Letterbox", Member=Letterbox.bEnabled, Type=Bool);
-	UPROPERTY(Edit, Save, Category="Cinematic", DisplayName="Letterbox Amount", Member=Letterbox.Amount, Type=Float, Min=0.0f, Max=1.0f, Speed=0.01f);
-	UPROPERTY(Edit, Save, Category="Cinematic", DisplayName="Letterbox Thickness", Member=Letterbox.Thickness, Type=Float, Min=0.0f, Max=0.5f, Speed=0.01f);
-	UPROPERTY(Edit, Save, Category="Cinematic", DisplayName="Letterbox Color", Member=Letterbox.Color, Type=Color4);
-	FCineLetterboxSettings Letterbox;
+	const FCameraLetterboxState& GetLetterboxSettings() const { return UCameraComponent::GetLetterboxSettings(); }
 };

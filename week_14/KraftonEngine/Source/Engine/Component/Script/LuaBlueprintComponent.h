@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sol/sol.hpp>
+#include <utility>
 #include "Component/ActorComponent.h"
 #include "Core/Delegate.h"
 #include "Math/Vector.h"
@@ -11,7 +12,10 @@
 class ULuaBlueprintAsset;
 class UObject;
 class AActor;
+class APlayerController;
+class APlayerCameraManager;
 class UPrimitiveComponent;
+class UCameraComponent;
 class UInputComponent;
 struct FHitResult;
 
@@ -26,6 +30,11 @@ public:
     UFUNCTION(Callable, Exec, Category="Lua Blueprint") bool ReloadBlueprint();
 
     UFUNCTION(Callable, Exec, Category="Lua Blueprint") bool CallFunction(const FString& FunctionName);
+    UFUNCTION(Callable, Exec, Category="Lua Blueprint") bool CallLuaBlueprintFileFunction(const FString& BlueprintPath, const FString& FunctionName);
+    UFUNCTION(Callable, Exec, Category="Lua Blueprint") bool CallLuaScriptFileFunction(const FString& ScriptFile, const FString& FunctionName);
+
+    // LuaBlueprint 디버거가 중단점/스텝 정지 후 같은 coroutine 지점에서 재개할 때 호출한다.
+    bool ResumeLuaDebugExecution();
 
     UFUNCTION(Callable, Exec, Category="Lua Blueprint")
     void SetBlueprintPath(const FString& InPath);
@@ -40,11 +49,22 @@ public:
         return GetValidBlueprintAsset();
     }
 
+    TArray<std::pair<FString, UObject*>> GetRuntimeObjectVariableSnapshot() const;
+
     void BeginPlay() override;
     void EndPlay() override;
     void RouteComponentDestroyed() override;
     void BeginDestroy() override;
     void AddReferencedObjects(FReferenceCollector& Collector) override;
+
+    // Routed by UWorld after the global gameplay phase is actually ready.
+    void RoutePostBeginPlay();
+    void RoutePostStartMatch();
+    void RoutePlayerCameraReady(
+        APlayerController*    PlayerController,
+        APlayerCameraManager* CameraManager,
+        UCameraComponent*     ActiveCamera
+    );
 
     // FLuaScriptManager::Shutdown 이 lua_State 종료(Lua.reset()) 직전에 호출한다.
     // sol 핸들을 살아있는 lua_State 에서 미리 해제해, 이후 최종 GC sweep 의 ClearLuaRuntime 이
@@ -62,6 +82,10 @@ private:
     void                ClearInvalidBlueprintAsset();
     bool                InitializeLua();
     void                ClearLuaRuntime();
+    void                ClearExternalLuaRuntimes();
+    sol::environment    CreateExternalLuaEnvironment(const FString& DebugName, uint32 Generation);
+    bool                LoadExternalLuaBlueprintRuntime(const FString& InBlueprintPath, sol::environment& OutEnv, FString& OutDebugName);
+    bool                LoadExternalLuaScriptRuntime(const FString& InScriptFile, sol::environment& OutEnv, FString& OutDebugName);
     void                BindOwnerCollisionEvents();
     void                ClearCollisionBindings();
     bool                BindInputEvents();
@@ -73,13 +97,16 @@ private:
     }
 
     FString  GetRuntimeName() const;
+    FString  GetDebugBlueprintPath() const;
     void     InitializeRuntimeObjectVariables();
     void     InitRuntimeObjectVariable(const FString& Name, bool bStrong);
     void     SetRuntimeObjectVariable(const FString& Name, sol::object Value);
     UObject* GetRuntimeObjectVariable(const FString& Name) const;
     bool     ReadEventFlag(const char* EventName) const;
     void     ScheduleLuaDelay(float Seconds, sol::protected_function Callback, uint32 Generation);
+    void     TickLuaDelays(float DeltaTime);
     bool     IsLuaRuntimeGenerationValid(uint32 Generation) const;
+    bool     InvokeLuaNoArgEvent(const char* EventName, sol::protected_function& Function);
     void     InvokeLuaEndPlay();
     void     HandleDeferredLuaCleanup();
 
@@ -116,7 +143,10 @@ private:
 
     sol::environment        Env;
     sol::protected_function LuaBeginPlay;
+    sol::protected_function LuaPostBeginPlay;
     sol::protected_function LuaTick;
+    sol::protected_function LuaPostStartMatch;
+    sol::protected_function LuaOnPlayerCameraReady;
     sol::protected_function LuaEndPlay;
     sol::protected_function LuaOnOverlap;
     sol::protected_function LuaOnEndOverlap;
@@ -124,7 +154,10 @@ private:
     sol::protected_function LuaOnEndHit;
 
     bool   bWantsBeginPlay      = false;
+    bool   bWantsPostBeginPlay  = false;
     bool   bWantsTick           = false;
+    bool   bWantsPostStartMatch = false;
+    bool   bWantsPlayerCameraReady = false;
     bool   bWantsEndPlay        = false;
     bool   bWantsOverlap        = false;
     bool   bWantsEndOverlap     = false;
@@ -140,6 +173,15 @@ private:
     // 복귀 시 lua51 SIGSEGV. 재진입 중에는 정리를 미루고 outer 진입에서 처리한다.
     int32 LuaCallDepth       = 0;
     bool  bPendingLuaCleanup = false;
+
+    struct FLuaBlueprintDelayedCallback
+    {
+        float                   RemainingSeconds = 0.0f;
+        uint32                  Generation       = 0;
+        sol::protected_function Callback;
+    };
+
+    TArray<FLuaBlueprintDelayedCallback> PendingLuaDelays;
 
     struct FLuaCallScope
     {
@@ -168,6 +210,18 @@ private:
     };
 
     TArray<FLuaBlueprintRuntimeObjectVariable> RuntimeObjectVariables;
+
+    struct FLuaBlueprintExternalRuntime
+    {
+        FString          Key;
+        FString          DebugName;
+        bool             bBlueprint = false;
+        ULuaBlueprintAsset* BlueprintAsset = nullptr;
+        uint32           LoadedRuntimeVersion = 0;
+        sol::environment Env;
+    };
+
+    TArray<FLuaBlueprintExternalRuntime> ExternalRuntimes;
 
     TArray<TWeakObjectPtr<UPrimitiveComponent>> BoundOverlapComponents;
     TWeakObjectPtr<UInputComponent>             BoundInputComponent;

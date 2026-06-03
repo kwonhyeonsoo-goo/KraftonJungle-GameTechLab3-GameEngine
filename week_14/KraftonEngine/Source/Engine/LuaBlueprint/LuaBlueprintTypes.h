@@ -39,7 +39,19 @@ enum class ELuaBlueprintPinType : uint8
     Matrix,
     Class,
     Enum,
-    Name
+    Name,
+    StaticMeshComponent,
+    SkinnedMeshComponent,
+    SkeletalMeshComponent,
+    CameraComponent,
+    CineCameraComponent,
+    Material,
+    Texture,
+    AnimInstance,
+    StaticMesh,
+    LuaBlueprintComponent,
+    LuaScriptComponent,
+    LuaFunction
 };
 
 enum class ELuaBlueprintNodeType : uint8
@@ -229,12 +241,80 @@ enum class ELuaBlueprintNodeType : uint8
     BindWidgetClick,
     // ── Audio ──
     LoadAudio,
-    PlaySound,
+    AudioPlaySound,
     PlayBGM,
     StopBGM,
     PlayAudioLoop,
     StopAudioLoop,
     SetAudioMasterVolume,
+    // ── Skeletal mesh / animation ──
+    GetSkeletalMeshComponent,
+    SetSkeletalMeshByPath,
+    ClearSkeletalMesh,
+    PlayAnimationByPath,
+    StopAnimation,
+    SetAnimationByPath,
+    SetAnimationPlayRate,
+    SetAnimationLooping,
+    SetAnimationPlaying,
+    GetAnimInstance,
+    // ── Materials ──
+    LoadMaterial,
+    GetMaterial,
+    SetMaterial,
+    SetMaterialByPath,
+    CreateDynamicMaterialInstance,
+    SetMaterialScalarParameter,
+    SetMaterialVectorParameter,
+    SetMaterialColorParameter,
+    SetMaterialTextureParameter,
+    LoadTexture,
+    // ── Camera / cinematic ──
+    GetCameraComponent,
+    GetActiveCamera,
+    PossessCamera,
+    SetActiveCameraWithBlend,
+    SetViewTargetWithBlend,
+    SetCameraFOV,
+    CameraLookAt,
+    FadeIn,
+    FadeOut,
+    SetVignette,
+    ClearVignette,
+    StartCameraShakeAsset,
+    SetDepthOfField,
+    SetBokeh,
+    ClearDepthOfField,
+    SetLetterbox,
+    ClearLetterbox,
+    // ── Static mesh ──
+    LoadStaticMesh,
+    GetStaticMeshComponent,
+    GetStaticMesh,
+    SetStaticMesh,
+    SetStaticMeshByPath,
+    ClearStaticMesh,
+    // ── Script / Blueprint invocation ──
+    GetLuaBlueprintComponent,
+    GetLuaScriptComponent,
+    CallLuaBlueprintFunction,
+    CallLuaScriptFunction,
+    CallLuaBlueprintFileFunction,
+    CallLuaScriptFileFunction,
+    // ── User-authored Lua functions ──
+    CustomLuaFunction,
+    CallCustomLuaFunction,
+    // ── Late lifecycle events (appended to preserve serialized enum compatibility) ──
+    EventPostBeginPlay,
+    EventPostStartMatch,
+    EventPlayerCameraReady,
+    // ── AnimGraph variable bridge (appended to preserve serialized enum compatibility) ──
+    SetAnimGraphVariableFloat,
+    SetAnimGraphVariableBool,
+    SetAnimGraphVariableInt,
+    GetAnimGraphVariableFloat,
+    GetAnimGraphVariableBool,
+    GetAnimGraphVariableInt,
     Count
 };
 
@@ -304,6 +384,9 @@ struct FLuaBlueprintNode
     int32   IntValue   = 0;
     float   FloatValue = 0.0f;
     FVector VectorValue;
+
+    // Editor/runtime debugger state. Serialized separately by ULuaBlueprintAsset so old assets remain readable.
+    bool bBreakpointEnabled = false;
 
     friend FArchive& operator<<(FArchive& Ar, FLuaBlueprintNode& Node);
 };

@@ -11,8 +11,12 @@
 #include "Physics/PhysicsAssetManager.h"
 #include "Platform/Paths.h"
 #include "Core/Logging/Log.h"
+#include "Asset/AssetPackage.h"
+#include "Materials/MaterialManager.h"
 
+#include <algorithm>
 #include <cstring>
+#include <cwctype>
 #include <exception>
 #include <filesystem>
 
@@ -60,7 +64,9 @@ namespace FAssetRegistry
 			FAnimGraphManager::Get().RefreshAvailableGraphs();
 			return FAnimGraphManager::Get().GetAvailableGraphFiles();
 		}
-        if (std::strcmp(AssetTypeName, "UParticleSystem") == 0)
+        if (std::strcmp(AssetTypeName, "UParticleSystem") == 0
+            || std::strcmp(AssetTypeName, "ParticleSystem") == 0
+            || std::strcmp(AssetTypeName, "Particle") == 0)
         {
             FParticleSystemManager::Get().RefreshAvailableParticleSystems();
             return FParticleSystemManager::Get().GetAvailableParticleSystemFiles();
@@ -71,6 +77,147 @@ namespace FAssetRegistry
 		{
 			FLuaBlueprintManager::Get().RefreshAvailableBlueprints();
 			return FLuaBlueprintManager::Get().GetAvailableBlueprintFiles();
+		}
+		if (std::strcmp(AssetTypeName, "UMaterial") == 0 || std::strcmp(AssetTypeName, "Material") == 0)
+		{
+			static TArray<FAssetListItem> MaterialCache;
+			MaterialCache.clear();
+			FMaterialManager::Get().ScanMaterialAssets();
+			for (const FMaterialAssetListItem& MaterialItem : FMaterialManager::Get().GetAvailableMaterialFiles())
+			{
+				FAssetListItem Item;
+				Item.DisplayName = MaterialItem.DisplayName;
+				Item.FullPath = MaterialItem.FullPath;
+				MaterialCache.push_back(std::move(Item));
+			}
+			return MaterialCache;
+		}
+		if (std::strcmp(AssetTypeName, "UTexture") == 0 || std::strcmp(AssetTypeName, "Texture") == 0)
+		{
+			static TArray<FAssetListItem> TextureCache;
+			TextureCache.clear();
+			FMaterialManager::Get().ScanTexturePaths();
+			for (const FString& TexturePath : FMaterialManager::Get().GetAvailableTexturePaths())
+			{
+				std::filesystem::path Path(FPaths::ToWide(TexturePath));
+				FAssetListItem Item;
+				Item.DisplayName = FPaths::ToUtf8(Path.stem().wstring());
+				Item.FullPath = TexturePath;
+				TextureCache.push_back(std::move(Item));
+			}
+			return TextureCache;
+		}
+		if (std::strcmp(AssetTypeName, "Audio") == 0 || std::strcmp(AssetTypeName, "Sound") == 0)
+		{
+			static TArray<FAssetListItem> AudioCache;
+			AudioCache.clear();
+
+			namespace fs = std::filesystem;
+			const fs::path AudioRoot = fs::path(FPaths::AudioDir());
+			if (fs::exists(AudioRoot) && fs::is_directory(AudioRoot))
+			{
+				std::error_code IterError;
+				for (fs::recursive_directory_iterator It(AudioRoot, fs::directory_options::skip_permission_denied, IterError), End;
+				     !IterError && It != End; It.increment(IterError))
+				{
+					std::error_code EntryError;
+					if (!It->is_regular_file(EntryError) || EntryError) continue;
+					std::wstring Ext = It->path().extension().wstring();
+					std::transform(Ext.begin(), Ext.end(), Ext.begin(), ::towlower);
+					if (Ext != L".wav" && Ext != L".mp3" && Ext != L".ogg" && Ext != L".flac") continue;
+
+					FAssetListItem Item;
+					Item.DisplayName = FPaths::ToUtf8(It->path().stem().wstring());
+					Item.FullPath = FPaths::ToUtf8(It->path().lexically_relative(AudioRoot).generic_wstring());
+					AudioCache.push_back(std::move(Item));
+				}
+			}
+			return AudioCache;
+		}
+		if (std::strcmp(AssetTypeName, "Script") == 0 || std::strcmp(AssetTypeName, "LuaScript") == 0)
+		{
+			static TArray<FAssetListItem> ScriptCache;
+			ScriptCache.clear();
+
+			namespace fs = std::filesystem;
+			const fs::path ScriptRoot = fs::path(FPaths::ScriptDir());
+			if (fs::exists(ScriptRoot) && fs::is_directory(ScriptRoot))
+			{
+				std::error_code IterError;
+				for (fs::recursive_directory_iterator It(ScriptRoot, fs::directory_options::skip_permission_denied, IterError), End;
+				     !IterError && It != End; It.increment(IterError))
+				{
+					std::error_code EntryError;
+					if (!It->is_regular_file(EntryError) || EntryError) continue;
+					if (It->path().extension() != L".lua") continue;
+
+					FAssetListItem Item;
+					Item.DisplayName = FPaths::ToUtf8(It->path().stem().wstring());
+					Item.FullPath = FPaths::ToUtf8(It->path().lexically_relative(ScriptRoot).generic_wstring());
+					ScriptCache.push_back(std::move(Item));
+				}
+			}
+			return ScriptCache;
+		}
+		if (std::strcmp(AssetTypeName, "RmlDocument") == 0
+			|| std::strcmp(AssetTypeName, "UIDocument") == 0
+			|| std::strcmp(AssetTypeName, "UI") == 0)
+		{
+			static TArray<FAssetListItem> RmlDocumentCache;
+			RmlDocumentCache.clear();
+
+			namespace fs = std::filesystem;
+			const fs::path ContentRoot = fs::path(FPaths::RootDir()) / L"Content";
+			const fs::path ProjectRoot(FPaths::RootDir());
+			if (fs::exists(ContentRoot) && fs::is_directory(ContentRoot))
+			{
+				std::error_code IterError;
+				for (fs::recursive_directory_iterator It(ContentRoot, fs::directory_options::skip_permission_denied, IterError), End;
+				     !IterError && It != End; It.increment(IterError))
+				{
+					std::error_code EntryError;
+					if (!It->is_regular_file(EntryError) || EntryError) continue;
+
+					std::wstring Ext = It->path().extension().wstring();
+					std::transform(Ext.begin(), Ext.end(), Ext.begin(), ::towlower);
+					if (Ext != L".rml" && Ext != L".html" && Ext != L".htm") continue;
+
+					FAssetListItem Item;
+					Item.DisplayName = FPaths::ToUtf8(It->path().stem().wstring());
+					Item.FullPath = FPaths::ToUtf8(It->path().lexically_relative(ProjectRoot).generic_wstring());
+					RmlDocumentCache.push_back(std::move(Item));
+				}
+			}
+			return RmlDocumentCache;
+		}
+		if (std::strcmp(AssetTypeName, "UCameraShakeAsset") == 0 || std::strcmp(AssetTypeName, "CameraShake") == 0)
+		{
+			static TArray<FAssetListItem> CameraShakeCache;
+			CameraShakeCache.clear();
+
+			namespace fs = std::filesystem;
+			const fs::path ContentRoot = fs::path(FPaths::RootDir()) / L"Content";
+			const fs::path ProjectRoot(FPaths::RootDir());
+			if (fs::exists(ContentRoot) && fs::is_directory(ContentRoot))
+			{
+				std::error_code IterError;
+				for (fs::recursive_directory_iterator It(ContentRoot, fs::directory_options::skip_permission_denied, IterError), End;
+				     !IterError && It != End; It.increment(IterError))
+				{
+					std::error_code EntryError;
+					if (!It->is_regular_file(EntryError) || EntryError) continue;
+					if (It->path().extension() != L".uasset") continue;
+					const FString RelPath = FPaths::ToUtf8(It->path().lexically_relative(ProjectRoot).generic_wstring());
+					FAssetImportMetadata Metadata;
+					if (!FAssetPackage::ReadMetadata(RelPath, EAssetPackageType::CameraShake, Metadata)) continue;
+
+					FAssetListItem Item;
+					Item.DisplayName = FPaths::ToUtf8(It->path().stem().wstring());
+					Item.FullPath = RelPath;
+					CameraShakeCache.push_back(std::move(Item));
+				}
+			}
+			return CameraShakeCache;
 		}
 		if (std::strcmp(AssetTypeName, "UVectorFieldAsset") == 0)
 		{

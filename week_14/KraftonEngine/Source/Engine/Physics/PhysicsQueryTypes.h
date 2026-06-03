@@ -47,3 +47,25 @@ struct FPhysicsRaycastResult
 
     float Distance = 0.0f;
 };
+
+// Sweep 결과 — raycast와 동일하게 Game Thread에서 UObject로 resolve한다.
+// StartPenetrating은 sweep 시작 지점이 이미 blocking shape와 겹쳤을 때 true가 된다.
+struct FPhysicsSweepResult
+{
+    uint64 RequestId = 0;
+
+    bool bBlockingHit      = false;
+    bool bStartPenetrating = false;
+
+    uint32 HitActorId     = 0;
+    uint32 HitComponentId = 0;
+    uint32 HitGeneration  = 0;
+
+    FVector Location     = FVector::ZeroVector;
+    FVector ImpactPoint  = FVector::ZeroVector;
+    FVector Normal       = FVector::ZeroVector;
+    FVector ImpactNormal = FVector::ZeroVector;
+
+    float Distance         = 0.0f;
+    float PenetrationDepth = 0.0f;
+};

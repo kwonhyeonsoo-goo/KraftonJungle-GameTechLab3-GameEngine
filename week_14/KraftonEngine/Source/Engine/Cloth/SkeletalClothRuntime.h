@@ -8,6 +8,7 @@
 
 struct FSkeletalMesh;
 struct FVertexPNCTT;
+struct FClothCollisionSectionResult;
 
 struct FClothWorldForceContext
 {
@@ -38,7 +39,9 @@ public:
         float DeltaTime,
         TArray<FVertexPNCTT>& InOutSkinnedVertices,
         const FMatrix& ComponentWorldMatrix,
-        const FClothWorldForceContext& ForceContext);
+        const FClothWorldForceContext& ForceContext,
+        const TArray<FClothCollisionSectionResult>* CollisionResults = nullptr);
+    void CopyCollisionDebugStats(TArray<FClothCollisionSectionResult>& InOutCollisionResults) const;
     bool IsActive() const;
 
     static FClothDebugRuntimeConfig& GetMutableDebugRuntimeConfig();

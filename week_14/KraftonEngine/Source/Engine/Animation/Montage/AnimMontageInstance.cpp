@@ -244,22 +244,35 @@ void UAnimMontageInstance::Tick(float DeltaSeconds, UAnimInstance* Owner)
         return;
     }
 
-    while (CurLen > 0.0f && SectionTime >= CurLen && State != EState::Inactive && State != EState::BlendingOut)
+    int32 AdvanceGuard = 0;
+    while (State != EState::Inactive && State != EState::BlendingOut)
     {
+        if (++AdvanceGuard > 64)
+        {
+            UE_LOG("Montage Tick: excessive section advance in '%s' — possible zero-length loop.",
+                CurrentMontage ? CurrentMontage->GetName().c_str() : "None");
+            break;
+        }
+
+        const auto& LiveSections = CurrentMontage->GetSections();
+        if (CurrentSectionIndex < 0 || CurrentSectionIndex >= static_cast<int32>(LiveSections.size())) break;
+
+        const FCompositeSection& Active = LiveSections[CurrentSectionIndex];
+        const float ActiveLen = std::max(Active.LinkTime - Active.StartTime, 0.0f);
+        if (ActiveLen <= 0.0f || SectionTime < ActiveLen) break;
+
         // section 끝났음 → advance. 다음 section 으로 이동 OR BlendOut 진입.
         if (!AdvanceSection(Owner))
         {
             // BlendOut 시작됨 — section time 은 마지막 frame 유지.
-            SectionTime = CurLen;
+            SectionTime = ActiveLen;
             break;
         }
+
         // 새 section 으로 넘어왔으면 남은 시간만큼 다시 진행.
-        SectionTime = std::max(SectionTime - CurLen, 0.0f);
-        const FCompositeSection& NewCur = Sections[CurrentSectionIndex];
-        const float NewLen = std::max(NewCur.LinkTime - NewCur.StartTime, 0.0f);
-        if (NewLen <= 0.0f) break;
-        if (SectionTime < NewLen) break;
-        // 다음 iteration 에서 SectionTime >= NewLen 이면 또 advance.
+        // 기존 구현은 최초 CurLen 만 계속 사용해서 길이가 다른 section 을 건너뛰는 경우
+        // section time 이 틀어졌다. 매 iteration 마다 현재 section length 를 다시 읽는다.
+        SectionTime = std::max(SectionTime - ActiveLen, 0.0f);
     }
 }
 

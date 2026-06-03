@@ -184,6 +184,7 @@ namespace
                 Options.bPartialSimulation,
                 Options.bSuppressSameActorPrimitiveCollisionForPartial,
                 Options.bSuppressSameActorPrimitiveOverlapForPartial);
+            ShapeDesc.FilterData.bEnableCCD = BodySetup.bEnableCCD;
             ShapeDesc.QueryIgnoreGroup = (OwnerComponent && OwnerComponent->GetOwner())
                 ? OwnerComponent->GetOwner()->GetUUID()
                 : 0;

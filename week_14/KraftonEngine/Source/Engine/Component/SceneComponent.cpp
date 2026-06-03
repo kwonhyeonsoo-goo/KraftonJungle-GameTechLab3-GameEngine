@@ -56,6 +56,25 @@ static bool IsSocketAttachmentNameSet(const FName& SocketName)
 	return SocketName.IsValid() && SocketName != FName::None;
 }
 
+static FQuat GetWorldRotationNoScale(const USceneComponent* Component)
+{
+	if (!Component)
+	{
+		return FQuat::Identity;
+	}
+
+	const USceneComponent* Parent = Component->GetParent();
+	const FName AttachSocketName = Component->GetAttachSocketName();
+	if (Parent && IsSocketAttachmentNameSet(AttachSocketName) && Parent->HasSocket(AttachSocketName))
+	{
+		const FQuat SocketWorldQuat = GetRotationTranslationWithoutScale(Parent->GetSocketTransform(AttachSocketName).ToMatrix()).ToQuat().GetNormalized();
+		return (SocketWorldQuat * Component->GetRelativeQuat()).GetNormalized();
+	}
+
+	const FQuat ParentWorldQuat = GetWorldRotationNoScale(Parent);
+	return (ParentWorldQuat * Component->GetRelativeQuat()).GetNormalized();
+}
+
 static const char* GetObjectClassName(const UObject* Object)
 {
 	return Object && Object->GetClass() ? Object->GetClass()->GetName() : "None";
@@ -580,8 +599,12 @@ void USceneComponent::SetWorldRotation(const FQuat& NewWorldRotation)
 
 	if (USceneComponent* Parent = ParentComponent.Get())
 	{
-		const FQuat ParentWorldQuat = Parent->GetWorldMatrix().ToQuat().GetNormalized();
-		SetRelativeRotation((WorldQuat * ParentWorldQuat.Inverse()).GetNormalized());
+		FQuat ParentWorldQuat = GetWorldRotationNoScale(Parent);
+		if (IsSocketAttachmentNameSet(AttachSocketName) && Parent->HasSocket(AttachSocketName))
+		{
+			ParentWorldQuat = GetRotationTranslationWithoutScale(Parent->GetSocketTransform(AttachSocketName).ToMatrix()).ToQuat().GetNormalized();
+		}
+		SetRelativeRotation((ParentWorldQuat.Inverse() * WorldQuat).GetNormalized());
 	}
 	else
 	{
@@ -597,15 +620,7 @@ FVector USceneComponent::GetWorldLocation() const
 
 FRotator USceneComponent::GetWorldRotation() const
 {
-	FQuat WorldQuat = RelativeTransform.Rotation.GetNormalized();
-
-	const USceneComponent* CurrentParent = ParentComponent.Get();
-	while (CurrentParent)
-	{
-		WorldQuat = (WorldQuat * CurrentParent->RelativeTransform.Rotation).GetNormalized();
-		CurrentParent = CurrentParent->ParentComponent.Get();
-	}
-
+	const FQuat WorldQuat = GetWorldRotationNoScale(this);
 	return WorldQuat.ToRotator();
 }
 
