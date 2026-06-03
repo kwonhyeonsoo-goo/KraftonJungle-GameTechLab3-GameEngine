@@ -14,6 +14,7 @@ PS_Input_UV VS(uint vertexID : SV_VertexID)
 float3 AccumulateBokehSprite(float2 uv, float2 texel)
 {
     float3 bokeh = 0.0f;
+    float totalWeight = 0.0f;
     int searchRadius = min((int)ceil(max(MaxBlurRadius, 1.0f)), DoFMaxBokehSearchRadius);
     float feather = max(DoFBokehMinFeather, MaxBlurRadius * DoFBokehFeatherScale);
 
@@ -53,11 +54,12 @@ float3 AccumulateBokehSprite(float2 uv, float2 texel)
 
             float3 highlight = max(sourceColor - BokehLumaThreshold, 0.0f);
             float weight = coverage * candidate;
-            bokeh = max(bokeh, highlight * weight);
+            bokeh += highlight * weight;
+            totalWeight += weight;
         }
     }
 
-    return bokeh;
+    return totalWeight > DoFMinAccumulatedWeight ? bokeh / totalWeight : 0.0f;
 }
 
 float4 PS(PS_Input_UV input) : SV_TARGET

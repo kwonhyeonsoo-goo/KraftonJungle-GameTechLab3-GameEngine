@@ -145,6 +145,12 @@ struct FSkeletalClothRuntime::FImpl
         TArray<physx::PxVec3> CookedPositions;
         TArray<float> InvMasses;
         TArray<uint32_t> CookedIndices;
+        TArray<physx::PxVec4> CollisionSpheres;
+        TArray<uint32_t> CollisionCapsuleSphereIndices;
+        TArray<physx::PxVec4> CollisionPlanes;
+        TArray<uint32_t> CollisionConvexMasks;
+        TArray<FVector> NormalSums;
+        TArray<FVector> TangentSums;
         FClothCollisionDebugStats CollisionStats;
 
         void Destroy(nv::cloth::Solver* Solver)
@@ -167,6 +173,12 @@ struct FSkeletalClothRuntime::FImpl
             CookedPositions.clear();
             InvMasses.clear();
             CookedIndices.clear();
+            CollisionSpheres.clear();
+            CollisionCapsuleSphereIndices.clear();
+            CollisionPlanes.clear();
+            CollisionConvexMasks.clear();
+            NormalSums.clear();
+            TangentSums.clear();
             CollisionStats.Reset();
         }
     };
@@ -377,10 +389,14 @@ struct FSkeletalClothRuntime::FImpl
             return;
         }
 
-        TArray<physx::PxVec4> Spheres;
-        TArray<uint32_t> CapsuleSphereIndices;
-        TArray<physx::PxVec4> Planes;
-        TArray<uint32_t> ConvexMasks;
+        TArray<physx::PxVec4>& Spheres = Section.CollisionSpheres;
+        TArray<uint32_t>& CapsuleSphereIndices = Section.CollisionCapsuleSphereIndices;
+        TArray<physx::PxVec4>& Planes = Section.CollisionPlanes;
+        TArray<uint32_t>& ConvexMasks = Section.CollisionConvexMasks;
+        Spheres.clear();
+        CapsuleSphereIndices.clear();
+        Planes.clear();
+        ConvexMasks.clear();
         const FClothCollisionPrimitiveSet& Primitives = CollisionResult->SelectedPrimitives;
         Spheres.reserve(Primitives.Spheres.size() + Primitives.Capsules.size() * 2);
         CapsuleSphereIndices.reserve(Primitives.Capsules.size() * 2);
@@ -569,13 +585,38 @@ struct FSkeletalClothRuntime::FImpl
         return nullptr;
     }
 
-    bool HasEnabledCloth(const FSkeletalMesh& Asset) const
+    void CopyCollisionDebugStats(TArray<FClothCollisionSectionResult>& InOutCollisionResults) const
+    {
+        for (FClothCollisionSectionResult& SectionResult : InOutCollisionResults)
+        {
+            for (const FSectionRuntime& Section : Sections)
+            {
+                if (SectionResult.LODIndex == Section.LODIndex &&
+                    SectionResult.SectionIndex == Section.SectionIndex)
+                {
+                    SectionResult.GatherResult.Stats = Section.CollisionStats;
+                    break;
+                }
+            }
+        }
+    }
+
+    bool ShouldBuildRuntimeCloth(const FSkeletalClothData& ClothData) const
+    {
+        return ClothData.bEnabled &&
+            !ClothData.ParticleToRenderVertex.empty() &&
+            !ClothData.ClothLocalIndices.empty() &&
+            ClothData.ClothLocalIndices.size() % 3 == 0 &&
+            HasPositivePaintRadius(ClothData);
+    }
+
+    bool HasRuntimeClothCandidate(const FSkeletalMesh& Asset) const
     {
         for (const FSkeletalClothLODData& LODData : Asset.ClothPayload.LODs)
         {
             for (const FSkeletalClothData& ClothData : LODData.Cloths)
             {
-                if (ClothData.bEnabled)
+                if (ShouldBuildRuntimeCloth(ClothData))
                 {
                     return true;
                 }
@@ -596,7 +637,7 @@ struct FSkeletalClothRuntime::FImpl
         {
             for (const FSkeletalClothData& ClothData : LODData.Cloths)
             {
-                if (!ClothData.bEnabled)
+                if (!ShouldBuildRuntimeCloth(ClothData))
                 {
                     continue;
                 }
@@ -631,7 +672,7 @@ struct FSkeletalClothRuntime::FImpl
     {
         Reset();
 
-        if (!HasEnabledCloth(Asset))
+        if (!HasRuntimeClothCandidate(Asset))
         {
             BuiltAsset = &Asset;
             return true;
@@ -654,7 +695,7 @@ struct FSkeletalClothRuntime::FImpl
         {
             for (const FSkeletalClothData& ClothData : LODData.Cloths)
             {
-                if (!ClothData.bEnabled)
+                if (!ShouldBuildRuntimeCloth(ClothData))
                 {
                     continue;
                 }
@@ -665,18 +706,6 @@ struct FSkeletalClothRuntime::FImpl
                     UE_LOG("[NvCloth] Skipping invalid cloth '%s': %s",
                         ClothData.Name.c_str(),
                         Error.c_str());
-                    continue;
-                }
-
-                if (ClothData.ParticleToRenderVertex.empty() ||
-                    ClothData.ClothLocalIndices.empty() ||
-                    ClothData.ClothLocalIndices.size() % 3 != 0)
-                {
-                    continue;
-                }
-
-                if (!HasPositivePaintRadius(ClothData))
-                {
                     continue;
                 }
 
@@ -945,17 +974,18 @@ struct FSkeletalClothRuntime::FImpl
 
         if (bModified)
         {
-            RecomputeNormalsAndTangents(ClothData, InOutSkinnedVertices);
+            RecomputeNormalsAndTangents(Section, InOutSkinnedVertices);
         }
 
         return bModified;
     }
 
-    void RecomputeNormalsAndTangents(const FSkeletalClothData& ClothData, TArray<FVertexPNCTT>& InOutSkinnedVertices)
+    void RecomputeNormalsAndTangents(FSectionRuntime& Section, TArray<FVertexPNCTT>& InOutSkinnedVertices)
     {
+        const FSkeletalClothData& ClothData = *Section.SourceData;
         const uint32 ParticleCount = static_cast<uint32>(ClothData.ParticleToRenderVertex.size());
-        TArray<FVector> NormalSums(ParticleCount, FVector::ZeroVector);
-        TArray<FVector> TangentSums(ParticleCount, FVector::ZeroVector);
+        Section.NormalSums.assign(ParticleCount, FVector::ZeroVector);
+        Section.TangentSums.assign(ParticleCount, FVector::ZeroVector);
 
         for (uint32 Index = 0; Index + 2 < ClothData.ClothLocalIndices.size(); Index += 3)
         {
@@ -982,9 +1012,9 @@ struct FSkeletalClothRuntime::FImpl
             if (!FaceNormal.IsNearlyZero())
             {
                 FaceNormal.Normalize();
-                NormalSums[I0] += FaceNormal;
-                NormalSums[I1] += FaceNormal;
-                NormalSums[I2] += FaceNormal;
+                Section.NormalSums[I0] += FaceNormal;
+                Section.NormalSums[I1] += FaceNormal;
+                Section.NormalSums[I2] += FaceNormal;
             }
 
             const FVector2& UV0 = InOutSkinnedVertices[V0].UV;
@@ -1001,9 +1031,9 @@ struct FSkeletalClothRuntime::FImpl
                 if (!Tangent.IsNearlyZero())
                 {
                     Tangent.Normalize();
-                    TangentSums[I0] += Tangent;
-                    TangentSums[I1] += Tangent;
-                    TangentSums[I2] += Tangent;
+                    Section.TangentSums[I0] += Tangent;
+                    Section.TangentSums[I1] += Tangent;
+                    Section.TangentSums[I2] += Tangent;
                 }
             }
         }
@@ -1017,16 +1047,16 @@ struct FSkeletalClothRuntime::FImpl
             }
 
             FVertexPNCTT& Vertex = InOutSkinnedVertices[RenderVertexIndex];
-            if (!NormalSums[ParticleIndex].IsNearlyZero())
+            if (!Section.NormalSums[ParticleIndex].IsNearlyZero())
             {
-                NormalSums[ParticleIndex].Normalize();
-                Vertex.Normal = NormalSums[ParticleIndex];
+                Section.NormalSums[ParticleIndex].Normalize();
+                Vertex.Normal = Section.NormalSums[ParticleIndex];
             }
 
-            if (!TangentSums[ParticleIndex].IsNearlyZero())
+            if (!Section.TangentSums[ParticleIndex].IsNearlyZero())
             {
-                TangentSums[ParticleIndex].Normalize();
-                Vertex.Tangent = FVector4(TangentSums[ParticleIndex], Vertex.Tangent.W);
+                Section.TangentSums[ParticleIndex].Normalize();
+                Vertex.Tangent = FVector4(Section.TangentSums[ParticleIndex], Vertex.Tangent.W);
             }
         }
     }
@@ -1134,6 +1164,14 @@ bool FSkeletalClothRuntime::Tick(
     const TArray<FClothCollisionSectionResult>* CollisionResults)
 {
     return Impl->Tick(Asset, DeltaTime, InOutSkinnedVertices, ComponentWorldMatrix, ForceContext, CollisionResults);
+}
+
+void FSkeletalClothRuntime::CopyCollisionDebugStats(TArray<FClothCollisionSectionResult>& InOutCollisionResults) const
+{
+    if (Impl)
+    {
+        Impl->CopyCollisionDebugStats(InOutCollisionResults);
+    }
 }
 
 bool FSkeletalClothRuntime::IsActive() const

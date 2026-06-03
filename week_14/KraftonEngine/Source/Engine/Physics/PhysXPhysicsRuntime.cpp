@@ -30,6 +30,64 @@ namespace
         Result.Rotation   = ParentWorld.Rotation * Local.Rotation;
         return Result;
     }
+
+    void ExpandBoxByOrientedBox(FBoundingBox& OutBounds, const FTransform& Transform, const FVector& HalfExtent)
+    {
+        const FVector Corners[8] =
+        {
+            FVector(-HalfExtent.X, -HalfExtent.Y, -HalfExtent.Z),
+            FVector(-HalfExtent.X, -HalfExtent.Y,  HalfExtent.Z),
+            FVector(-HalfExtent.X,  HalfExtent.Y, -HalfExtent.Z),
+            FVector(-HalfExtent.X,  HalfExtent.Y,  HalfExtent.Z),
+            FVector( HalfExtent.X, -HalfExtent.Y, -HalfExtent.Z),
+            FVector( HalfExtent.X, -HalfExtent.Y,  HalfExtent.Z),
+            FVector( HalfExtent.X,  HalfExtent.Y, -HalfExtent.Z),
+            FVector( HalfExtent.X,  HalfExtent.Y,  HalfExtent.Z)
+        };
+
+        for (const FVector& Corner : Corners)
+        {
+            OutBounds.Expand(Transform.Location + Transform.Rotation.RotateVector(Corner));
+        }
+    }
+
+    FBoundingBox BuildClothShapeWorldBounds(
+        EPhysicsShapeType Type,
+        const FTransform& WorldTransform,
+        const FVector& BoxHalfExtent,
+        float SphereRadius,
+        float CapsuleRadius,
+        float CapsuleHalfHeight)
+    {
+        FBoundingBox Bounds;
+        switch (Type)
+        {
+        case EPhysicsShapeType::Sphere:
+        {
+            const FVector Extent(SphereRadius, SphereRadius, SphereRadius);
+            Bounds.Expand(WorldTransform.Location - Extent);
+            Bounds.Expand(WorldTransform.Location + Extent);
+            break;
+        }
+        case EPhysicsShapeType::Capsule:
+        {
+            const FVector Axis = WorldTransform.Rotation.RotateVector(FVector(0.0f, 0.0f, 1.0f));
+            const float HalfSegment = (std::max)(0.0f, CapsuleHalfHeight - CapsuleRadius);
+            const FVector Extent(CapsuleRadius, CapsuleRadius, CapsuleRadius);
+            Bounds.Expand(WorldTransform.Location - Axis * HalfSegment - Extent);
+            Bounds.Expand(WorldTransform.Location - Axis * HalfSegment + Extent);
+            Bounds.Expand(WorldTransform.Location + Axis * HalfSegment - Extent);
+            Bounds.Expand(WorldTransform.Location + Axis * HalfSegment + Extent);
+            break;
+        }
+        case EPhysicsShapeType::Box:
+            ExpandBoxByOrientedBox(Bounds, WorldTransform, BoxHalfExtent);
+            break;
+        default:
+            break;
+        }
+        return Bounds;
+    }
 }
 
 
@@ -987,6 +1045,22 @@ std::shared_ptr<const FPhysicsWorldSnapshot> FPhysXPhysicsRuntime::AcquireLatest
     return PublishedWorldSnapshot;
 }
 
+void FPhysXPhysicsRuntime::QueryClothCollisionShapes(
+    const FBoundingBox& WorldBounds,
+    uint32 ObjectTypeMask,
+    TArray<FPhysicsClothCollisionShape>& OutShapes) const
+{
+    OutShapes.clear();
+    if (!WorldBounds.IsValid() || !Scene)
+    {
+        return;
+    }
+
+    std::lock_guard<std::mutex> StateLock(RuntimeStateMutex);
+    PxSceneReadLock ReadLock(*Scene);
+    QueryClothCollisionShapes_Internal(WorldBounds, ObjectTypeMask, OutShapes);
+}
+
 void FPhysXPhysicsRuntime::SetBodyTransform(
     FPhysicsBodyHandle   BodyHandle,
     const FTransform&    Transform,
@@ -1571,6 +1645,86 @@ void FPhysXPhysicsRuntime::BuildDebugConstraints_Internal(TArray<FPhysicsDebugCo
         Debug.Swing2LimitDegrees = Constraint.Limits.Swing2LimitDegrees;
 
         OutConstraints.push_back(Debug);
+    }
+}
+
+void FPhysXPhysicsRuntime::QueryClothCollisionShapes_Internal(
+    const FBoundingBox& WorldBounds,
+    uint32 ObjectTypeMask,
+    TArray<FPhysicsClothCollisionShape>& OutShapes) const
+{
+    OutShapes.clear();
+
+    for (const auto& BodyPtr : Bodies)
+    {
+        if (!BodyPtr || !BodyPtr->IsAlive() || !BodyPtr->Actor)
+        {
+            continue;
+        }
+
+        const FBodyInstance& Body = *BodyPtr;
+        for (FPhysicsShapeHandle ShapeHandle : Body.Shapes)
+        {
+            const FShapeInstance* ShapeInstance = ResolveShape(ShapeHandle);
+            if (!ShapeInstance || ShapeInstance->State != EPhysicsRuntimeObjectState::Alive)
+            {
+                continue;
+            }
+
+            const FPhysicsShapeDesc& Desc = ShapeInstance->Desc;
+            if (Desc.Type != EPhysicsShapeType::Sphere &&
+                Desc.Type != EPhysicsShapeType::Capsule &&
+                Desc.Type != EPhysicsShapeType::Box)
+            {
+                continue;
+            }
+
+            if (Desc.FilterData.CollisionEnabled == ECollisionEnabled::NoCollision ||
+                Desc.FilterData.bIsTrigger ||
+                Desc.bIsTrigger)
+            {
+                continue;
+            }
+
+            const uint32 ShapeObjectType = 1u << (Desc.FilterData.ObjectType & PhysicsFilter_ObjectTypeMask);
+            if ((ShapeObjectType & ObjectTypeMask) == 0)
+            {
+                continue;
+            }
+
+            const FTransform CurrentShapeWorld =
+                ComposePhysicsTransforms(Body.CurrentTransform, ShapeInstance->EngineLocalTransform);
+            const FBoundingBox ShapeWorldBounds = BuildClothShapeWorldBounds(
+                Desc.Type,
+                CurrentShapeWorld,
+                Desc.BoxHalfExtent,
+                Desc.SphereRadius,
+                Desc.CapsuleRadius,
+                Desc.CapsuleHalfHeight);
+            if (!ShapeWorldBounds.IsValid() || !ShapeWorldBounds.IsIntersected(WorldBounds))
+            {
+                continue;
+            }
+
+            FPhysicsClothCollisionShape ClothShape;
+            ClothShape.Type = Desc.Type;
+            ClothShape.OwnerActorId = ShapeInstance->SourceActorId;
+            ClothShape.OwnerComponentId = ShapeInstance->SourceComponentId;
+            ClothShape.OwnerComponentGeneration = ShapeInstance->SourceComponentGeneration;
+            ClothShape.Body = Body.Handle;
+            ClothShape.Shape = ShapeHandle;
+            ClothShape.BodyType = Body.BodyType;
+            ClothShape.FilterData = Desc.FilterData;
+            ClothShape.PreviousWorldTransform =
+                ComposePhysicsTransforms(Body.PreviousTransform, ShapeInstance->EngineLocalTransform);
+            ClothShape.CurrentWorldTransform = CurrentShapeWorld;
+            ClothShape.WorldBounds = ShapeWorldBounds;
+            ClothShape.BoxHalfExtent = Desc.BoxHalfExtent;
+            ClothShape.SphereRadius = Desc.SphereRadius;
+            ClothShape.CapsuleRadius = Desc.CapsuleRadius;
+            ClothShape.CapsuleHalfHeight = Desc.CapsuleHalfHeight;
+            OutShapes.push_back(ClothShape);
+        }
     }
 }
 

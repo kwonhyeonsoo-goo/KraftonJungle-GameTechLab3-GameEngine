@@ -15,7 +15,7 @@
 // World 를 자동 상속하므로 별도 후크 없이 부드럽게 끌려오는 효과가 난다.
 //
 // 차량/플레이어 뒤를 따라오는 3인칭 카메라, 흔들림 있는 카메라 마운트 등에 사용.
-// 충돌 인지(raycast) 는 별도 PR 에서 추가 — 현재는 lag 만 처리.
+// lag, control rotation, sweep 기반 충돌 회피를 처리한다.
 // UE: USpringArmComponent (간소화)
 // ============================================================
 UCLASS()
@@ -53,24 +53,31 @@ public:
 	UPROPERTY(Edit, Save, Category="SpringArm", DisplayName="Camera Lag Max Distance", Min=0.0f, Max=100000.0f, Speed=1.0f)
 	float CameraLagMaxDistance = 0.0f;     // 0 = 무제한
 
-	// Collision 옵션 — 활성화 시 부착점 → ArmEnd 사이로 ray 를 쏴서 첫 충돌점까지만 arm
-	// 길이를 단축. 카메라가 벽/지형 너머로 빠지는 현상 방지. Owner Pawn 은 ignore.
-	// (본 엔진은 sphere sweep 미지원이라 단일 ray + ProbeSize 안전 거리로 근사한다.)
+	// Collision 옵션 — 활성화 시 부착점 → ArmEnd 사이로 sphere sweep 을 수행해
+	// 첫 blocking hit 지점까지만 arm 길이를 단축. 카메라가 벽/지형 너머로
+	// 빠지는 현상을 방지한다. Owner Pawn 은 ignore.
 	UPROPERTY(Edit, Save, Category="SpringArm", DisplayName="Do Collision Test")
 	bool bDoCollisionTest = false;
 	UPROPERTY(Edit, Save, Category="SpringArm", DisplayName="Probe Channel", Enum=ECollisionChannel)
 	ECollisionChannel ProbeChannel = ECollisionChannel::WorldStatic;
 	UPROPERTY(Edit, Save, Category="SpringArm", DisplayName="Probe Size", Min=0.0f, Max=100.0f, Speed=0.01f)
-	float ProbeSize = 0.12f;               // hit 지점에서 ProbeSize 만큼 안쪽에 정지
+	float ProbeSize = 0.12f;               // sweep 반경. 0이면 raycast fallback
 
 	// Control rotation 사용 옵션 (UE 패턴). true 면 부모 (capsule) 의 world rotation 대신
-	// owner APawn 의 ControlRotation 을 desired rotation 으로 사용 — mouse look 이 capsule
-	// 회전 안 건드리고 카메라만 움직이는 ThirdPerson 패턴.
+	// owner APawn 의 ControlRotation 을 desired rotation 으로 사용한다.
 	// bInheritPitch/Yaw/Roll 가 각 axis 별로 — false 면 그 axis 는 capsule rotation 사용.
+	UPROPERTY(Edit, Save, Category="SpringArm", DisplayName="Use Pawn Control Rotation")
 	bool bUsePawnControlRotation = true;
+	UPROPERTY(Edit, Save, Category="SpringArm", DisplayName="Inherit Pitch")
 	bool bInheritPitch           = true;
+	UPROPERTY(Edit, Save, Category="SpringArm", DisplayName="Inherit Yaw")
 	bool bInheritYaw             = true;
+	UPROPERTY(Edit, Save, Category="SpringArm", DisplayName="Inherit Roll")
 	bool bInheritRoll            = false;
+
+	// 텔레포트/리스폰/재부착처럼 이전 lag 상태를 이어가면 안 되는 시점에 호출한다.
+	UFUNCTION(Callable, Category="SpringArm")
+	void ResetLagState();
 
 private:
 	// 매 Tick 에 갱신되는 보간 상태 — 부착점 (parent + TargetOffset) 위치/회전.
