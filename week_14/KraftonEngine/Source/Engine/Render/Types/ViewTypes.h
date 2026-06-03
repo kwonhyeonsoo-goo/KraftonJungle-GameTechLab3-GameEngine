@@ -68,6 +68,7 @@ struct FShowFlags
 	bool bShowCollisionShape = false;	// PIE/Game에서 콘솔로 콜리전 shape 와이어프레임 강제 표시
 	bool bPhysicsAssetShapes = true;	// Physics Asset Editor shape/body preview
 	bool bPhysicsAssetConstraints = true;	// Physics Asset Editor constraint preview
+	bool bPhysicsAssetBodySkeleton = false;	// Physics Asset Editor body-to-body skeleton preview
 };
 
 // 뷰포트 카메라 프리셋 (Perspective / 6방향 Orthographic)

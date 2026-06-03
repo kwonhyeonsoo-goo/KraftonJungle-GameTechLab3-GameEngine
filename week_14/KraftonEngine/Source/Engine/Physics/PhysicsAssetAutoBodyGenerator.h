@@ -34,7 +34,7 @@ struct FPhysicsAssetAutoBodyGeneratorOptions
     bool bMergeSmallBones = true;
     float MinInfluenceWeight = 0.15f;
     int32 MinWeightedVertices = 16;
-    float MinBoneSize = 0.5f;
+    float MinBoneSize = 0.25f;
     float MinWeldSize = 1.0e-4f;
     float FitPadding = 1.0f;
 };

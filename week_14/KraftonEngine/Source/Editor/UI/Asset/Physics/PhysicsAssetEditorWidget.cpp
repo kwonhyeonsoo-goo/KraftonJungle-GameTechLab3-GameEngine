@@ -598,6 +598,54 @@ namespace
         return false;
     }
 
+    bool BoneSubtreeHasPhysicsBody(
+        UPhysicsAsset* PhysicsAsset,
+        const FReferenceSkeleton& RefSkeleton,
+        int32 BoneIndex)
+    {
+        if (!PhysicsAsset || BoneIndex < 0 || BoneIndex >= RefSkeleton.GetNumBones())
+        {
+            return false;
+        }
+
+        if (PhysicsAsset->HasBodySetupForBone(FName(RefSkeleton.Bones[BoneIndex].Name)))
+        {
+            return true;
+        }
+
+        for (int32 ChildIndex = BoneIndex + 1; ChildIndex < RefSkeleton.GetNumBones(); ++ChildIndex)
+        {
+            if (RefSkeleton.Bones[ChildIndex].ParentIndex == BoneIndex &&
+                BoneSubtreeHasPhysicsBody(PhysicsAsset, RefSkeleton, ChildIndex))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool HasVisiblePhysicsBoneChild(
+        UPhysicsAsset* PhysicsAsset,
+        const FReferenceSkeleton& RefSkeleton,
+        int32 BoneIndex,
+        bool bOnlyBonesWithBodies)
+    {
+        if (!bOnlyBonesWithBodies)
+        {
+            return HasChildBone(RefSkeleton, BoneIndex);
+        }
+
+        for (int32 ChildIndex = BoneIndex + 1; ChildIndex < RefSkeleton.GetNumBones(); ++ChildIndex)
+        {
+            if (RefSkeleton.Bones[ChildIndex].ParentIndex == BoneIndex &&
+                BoneSubtreeHasPhysicsBody(PhysicsAsset, RefSkeleton, ChildIndex))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     int32 FindNearestParentBodyBoneIndex(
         UPhysicsAsset* PhysicsAsset,
         const FReferenceSkeleton& RefSkeleton,
@@ -1154,6 +1202,8 @@ void FPhysicsAssetEditorWidget::SelectPhysicsShapeFromViewport(UPhysicsAsset* Ph
             : -1;
     SelectedConstraintIndex = -1;
     SelectedTreeBoneIndex = FindPreviewBoneIndexByName(Body.BoneName);
+    bPhysicsTreePanelShowsBodies = false;
+    bPendingScrollSelectedTreeBoneIntoView = SelectedTreeBoneIndex >= 0;
     bPendingConstraintGraphNavigateToSelection = true;
     if (bEditorSimulationActive && bEditorSimulationSelectedOnly)
     {
@@ -1628,6 +1678,12 @@ void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* Physics
 	ImGui::SetWindowFontScale(1.5f);
     ImGui::TextUnformatted("Skeleton Physics");
 	ImGui::SetWindowFontScale(1.0f);
+    ImGui::SameLine();
+    ImGui::Checkbox("Show Only Bones with Bodies", &bShowOnlyBonesWithBodies);
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Show only bones that have physics bodies, plus the parent chain needed to reach them.");
+    }
 
     const float ToggleButtonWidth = (std::max)(
         70.0f,
@@ -1722,7 +1778,16 @@ void FPhysicsAssetEditorWidget::RenderPhysicsBoneTree(
     const FName BoneName(Bone.Name);
     const int32 BodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(BoneName);
     const int32 ConstraintIndex = FindConstraintToNearestParentBodyIndex(PhysicsAsset, RefSkeleton, BoneIndex);
-    const bool bHasSkeletonChildren = HasChildBone(RefSkeleton, BoneIndex);
+    if (bShowOnlyBonesWithBodies && !BoneSubtreeHasPhysicsBody(PhysicsAsset, RefSkeleton, BoneIndex))
+    {
+        return;
+    }
+
+    const bool bHasSkeletonChildren = HasVisiblePhysicsBoneChild(
+        PhysicsAsset,
+        RefSkeleton,
+        BoneIndex,
+        bShowOnlyBonesWithBodies);
     const bool bHasBody = BodyIndex >= 0;
     const bool bSelected =
         SelectedTreeBoneIndex == BoneIndex ||
@@ -1764,6 +1829,12 @@ void FPhysicsAssetEditorWidget::RenderPhysicsBoneTree(
         }
     }
 
+    if (bSelected && bPendingScrollSelectedTreeBoneIntoView)
+    {
+        ImGui::SetScrollHereY(0.5f);
+        bPendingScrollSelectedTreeBoneIntoView = false;
+    }
+
     if (ImGui::IsItemClicked())
     {
         SelectBoneInPhysicsTree(PhysicsAsset, RefSkeleton, BoneIndex);
@@ -1781,7 +1852,8 @@ void FPhysicsAssetEditorWidget::RenderPhysicsBoneTree(
     {
         for (int32 ChildIndex = BoneIndex + 1; ChildIndex < RefSkeleton.GetNumBones(); ++ChildIndex)
         {
-            if (RefSkeleton.Bones[ChildIndex].ParentIndex == BoneIndex)
+            if (RefSkeleton.Bones[ChildIndex].ParentIndex == BoneIndex &&
+                (!bShowOnlyBonesWithBodies || BoneSubtreeHasPhysicsBody(PhysicsAsset, RefSkeleton, ChildIndex)))
             {
                 RenderPhysicsBoneTree(PhysicsAsset, RefSkeleton, ChildIndex);
             }
@@ -2519,7 +2591,18 @@ void FPhysicsAssetEditorWidget::RenderSelectedBoneDetails(UPhysicsAsset* Physics
 void FPhysicsAssetEditorWidget::RenderBodyDetails(UPhysicsAsset* PhysicsAsset, FPhysicsAssetBodySetup& Body)
 {
     bool bChanged = false;
+    const int32 BoundBoneIndex = FindPreviewBoneIndexByName(Body.BoneName);
     ImGui::Text("Bone Name: %s", Body.BoneName == FName::None ? "<None>" : Body.BoneName.ToString().c_str());
+    ImGui::TextDisabled("Bone Index: %d", BoundBoneIndex);
+    if (BoundBoneIndex >= 0)
+    {
+        if (ImGui::Button("Show Bound Bone in Tree", ImVec2(190.0f, 0.0f)))
+        {
+            SelectedTreeBoneIndex = BoundBoneIndex;
+            bPhysicsTreePanelShowsBodies = false;
+            bPendingScrollSelectedTreeBoneIntoView = true;
+        }
+    }
     //ImGui::TextDisabled("Bodies should be bound from the Skeleton Physics Tree, not typed manually.");
     //if (PreviewSkeletalMesh && PreviewSkeletalMesh->GetSkeleton() &&
     //    SelectedTreeBoneIndex >= 0 &&
@@ -3158,6 +3241,9 @@ void FPhysicsAssetEditorWidget::RenderPreviewDebug(
 
     const bool bShowBodies = bShowPreviewBodies && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetShapes);
     const bool bShowConstraints = bShowPreviewConstraints && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetConstraints);
+    const bool bShowBodySkeleton = PreviewShowFlags
+        ? PreviewShowFlags->bPhysicsAssetBodySkeleton
+        : bShowPreviewBodySkeleton;
 
     FPhysicsAssetPreviewPoseCache PoseCache;
     const bool bHasPoseCache = PoseCache.Initialize(PreviewComponent, PhysicsAsset);
@@ -3170,6 +3256,11 @@ void FPhysicsAssetEditorWidget::RenderPreviewDebug(
     if (bShowConstraints)
     {
         RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld, bHasPoseCache ? &PoseCache : nullptr);
+    }
+
+    if (bShowBodySkeleton)
+    {
+        RenderBodySkeletonDebug(PhysicsAsset, PreviewComponent, PreviewWorld, bHasPoseCache ? &PoseCache : nullptr);
     }
 }
 
@@ -3199,6 +3290,9 @@ void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
 
     const bool bShowBodies = bShowPreviewBodies && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetShapes);
     const bool bShowConstraints = bShowPreviewConstraints && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetConstraints);
+    const bool bShowBodySkeleton = PreviewShowFlags
+        ? PreviewShowFlags->bPhysicsAssetBodySkeleton
+        : bShowPreviewBodySkeleton;
 
     if (SolidPreviewComponent)
     {
@@ -3228,6 +3322,11 @@ void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
     {
         RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld, bHasPoseCache ? &PoseCache : nullptr);
     }
+
+    if (bShowBodySkeleton)
+    {
+        RenderBodySkeletonDebug(PhysicsAsset, PreviewComponent, PreviewWorld, bHasPoseCache ? &PoseCache : nullptr);
+    }
 }
 
 void FPhysicsAssetEditorWidget::RenderViewportDebugOptions(FShowFlags* PreviewShowFlags)
@@ -3237,9 +3336,11 @@ void FPhysicsAssetEditorWidget::RenderViewportDebugOptions(FShowFlags* PreviewSh
 
     bool* bShowBodies = PreviewShowFlags ? &PreviewShowFlags->bPhysicsAssetShapes : &bShowPreviewBodies;
     bool* bShowConstraints = PreviewShowFlags ? &PreviewShowFlags->bPhysicsAssetConstraints : &bShowPreviewConstraints;
+    bool* bShowBodySkeleton = PreviewShowFlags ? &PreviewShowFlags->bPhysicsAssetBodySkeleton : &bShowPreviewBodySkeleton;
 
     ImGui::Checkbox("Physics Asset Shapes", bShowBodies);
     ImGui::Checkbox("Physics Asset Constraints", bShowConstraints);
+    ImGui::Checkbox("Physics Asset Body Skeleton", bShowBodySkeleton);
     if (!*bShowConstraints) ImGui::BeginDisabled();
     ImGui::Checkbox("Constraint Limits", &bShowConstraintLimitAngles);
     if (!bShowConstraintLimitAngles) ImGui::BeginDisabled();
@@ -3389,6 +3490,85 @@ FName FPhysicsAssetEditorWidget::GetSelectedSimulationRootBoneName(UPhysicsAsset
 
     const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
     return Bodies[SelectedBodyIndex].BoneName;
+}
+
+void FPhysicsAssetEditorWidget::RenderBodySkeletonDebug(
+    UPhysicsAsset* PhysicsAsset,
+    USkeletalMeshComponent* PreviewComponent,
+    UWorld* PreviewWorld,
+    const FPhysicsAssetPreviewPoseCache* PoseCache)
+{
+    if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
+    {
+        return;
+    }
+
+    USkeletalMesh* SkeletalMesh = PreviewComponent->GetSkeletalMesh();
+    USkeleton* Skeleton = SkeletalMesh ? SkeletalMesh->GetSkeleton() : nullptr;
+    if (!Skeleton)
+    {
+        return;
+    }
+
+    const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+    const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
+    for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
+    {
+        const FPhysicsAssetBodySetup& Body = Bodies[BodyIndex];
+        const int32 BoneIndex = RefSkeleton.FindBoneIndex(Body.BoneName.ToString());
+        if (BoneIndex < 0)
+        {
+            continue;
+        }
+
+        const int32 ParentBodyBoneIndex = FindNearestParentBodyBoneIndex(PhysicsAsset, RefSkeleton, BoneIndex);
+        if (ParentBodyBoneIndex < 0)
+        {
+            continue;
+        }
+
+        const FName ParentBodyBoneName(RefSkeleton.Bones[ParentBodyBoneIndex].Name);
+        const int32 ParentBodyIndex = PhysicsAsset->FindBodySetupIndexByBoneName(ParentBodyBoneName);
+        if (!IsValidBodyIndex(PhysicsAsset, ParentBodyIndex))
+        {
+            continue;
+        }
+
+        FTransform ParentBodyWorld;
+        FTransform ChildBodyWorld;
+        const bool bHasParentBodyWorld = PoseCache
+            ? PoseCache->ComputeBodyWorldTransform(ParentBodyIndex, ParentBodyWorld)
+            : FPhysicsAssetPreviewUtils::ComputePreviewBodyWorldTransform(
+                PreviewComponent,
+                PhysicsAsset,
+                ParentBodyIndex,
+                ParentBodyWorld);
+        const bool bHasChildBodyWorld = PoseCache
+            ? PoseCache->ComputeBodyWorldTransform(BodyIndex, ChildBodyWorld)
+            : FPhysicsAssetPreviewUtils::ComputePreviewBodyWorldTransform(
+                PreviewComponent,
+                PhysicsAsset,
+                BodyIndex,
+                ChildBodyWorld);
+        if (!bHasParentBodyWorld || !bHasChildBodyWorld)
+        {
+            continue;
+        }
+
+        const bool bSelectedSegment =
+            SelectedBodyIndex == BodyIndex ||
+            SelectedBodyIndex == ParentBodyIndex ||
+            (SelectedConstraintIndex >= 0 &&
+                IsValidConstraintIndex(PhysicsAsset, SelectedConstraintIndex) &&
+                PhysicsAsset->GetConstraintSetups()[SelectedConstraintIndex].ChildBoneName == Body.BoneName);
+        const FColor Color = bSelectedSegment
+            ? FColor(255, 230, 90, 220)
+            : FColor(10, 10, 200, 135);
+
+        DrawDebugLine(PreviewWorld, ParentBodyWorld.Location, ChildBodyWorld.Location, Color, 0.0f);
+        DrawDebugPoint(PreviewWorld, ParentBodyWorld.Location, bSelectedSegment ? 0.10f : 0.055f, Color, 0.0f);
+        DrawDebugPoint(PreviewWorld, ChildBodyWorld.Location, bSelectedSegment ? 0.10f : 0.055f, Color, 0.0f);
+    }
 }
 
 void FPhysicsAssetEditorWidget::RenderBodyDebug(
