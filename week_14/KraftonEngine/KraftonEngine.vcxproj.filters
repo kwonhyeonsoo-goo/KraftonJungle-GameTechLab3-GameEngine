@@ -175,6 +175,9 @@
     <Filter Include="Source\Engine\Component\Debug">
       <UniqueIdentifier>{2872cca9-e20a-a7f4-7251-8819c7443392}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Component\Gameplay">
+      <UniqueIdentifier>{1e13e2f5-b035-4de0-8cdb-7aa0a6f4b202}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Component\Input">
       <UniqueIdentifier>{358e161e-2bd5-5db1-9e14-9bfb5d4671f1}</UniqueIdentifier>
     </Filter>
@@ -1141,6 +1144,9 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Debug\TemporaryBoneAnimatorComponent.cpp">
       <Filter>Source\Engine\Component\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Component\Gameplay\RagdollForceEmitterComponent.cpp">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Component\Input\ActionComponent.cpp">
       <Filter>Source\Engine\Component\Input</Filter>
@@ -2467,6 +2473,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Debug\TemporaryBoneAnimatorComponent.h">
       <Filter>Source\Engine\Component\Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Component\Gameplay\RagdollForceEmitterComponent.h">
+      <Filter>Source\Engine\Component\Gameplay</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Component\Input\ActionComponent.h">
       <Filter>Source\Engine\Component\Input</Filter>
