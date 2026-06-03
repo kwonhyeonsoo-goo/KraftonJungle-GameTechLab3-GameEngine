@@ -33,10 +33,9 @@ float4 AccumulateBackground(float2 uv, float2 offset, float currentDistance, flo
     float sampleDistance = ViewDistanceFromDepth(sampleUV, sampleDepth);
 
     float bgWeight = saturate(sampleCoC);
-    float4 sampleColor = SceneColorTexture.SampleLevel(LinearClampSampler, sampleUV, 0);
-    float bokehCandidate = DoFBokehCandidateMask(sampleCoC, sampleColor.rgb);
     float nearerReject = sampleDistance + DoFNearerSampleRejectBias < currentDistance ? DoFNearerSampleRejectWeight : 1.0f;
-    float weight = bgWeight * nearerReject * kernelWeight * (1.0f - bokehCandidate);
+    float weight = bgWeight * nearerReject * kernelWeight;
+    float4 sampleColor = SceneColorTexture.SampleLevel(LinearClampSampler, sampleUV, 0);
     totalWeight += weight;
     return sampleColor * weight;
 }
@@ -54,45 +53,17 @@ float4 PS(PS_Input_UV input) : SV_TARGET
     float centerDepth = SceneDepthTexture.SampleLevel(PointClampSampler, uv, 0);
     float centerDistance = ViewDistanceFromDepth(uv, centerDepth);
 
-    float centerBokehCandidate = DoFBokehCandidateMask(centerCoC, sharp.rgb);
-    float totalWeight = DoFBackgroundCenterWeight * centerBgCoC * (1.0f - centerBokehCandidate);
+    float totalWeight = DoFBackgroundCenterWeight * centerBgCoC;
     float4 blur = sharp * totalWeight;
+    float rotation = DoFStablePixelHash(uv) * 6.28318530718f;
 
     [unroll]
-    for (int i = 0; i < DoFRing0Count; ++i)
+    for (int i = 0; i < DoFBlurSampleCount; ++i)
     {
-        blur += AccumulateBackground(uv, texel * DoFRing0[i] * radius, centerDistance,
-            DoFRingSampleWeight(DoFRing0Radius), totalWeight);
-    }
-
-    if (radius > 2.0f)
-    {
-        [unroll]
-        for (int i = 0; i < DoFRing1Count; ++i)
-        {
-            blur += AccumulateBackground(uv, texel * DoFRing1[i] * radius, centerDistance,
-                DoFRingSampleWeight(DoFRing1Radius), totalWeight);
-        }
-    }
-
-    if (radius > 5.0f)
-    {
-        [unroll]
-        for (int i = 0; i < DoFRing2Count; ++i)
-        {
-            blur += AccumulateBackground(uv, texel * DoFRing2[i] * radius, centerDistance,
-                DoFRingSampleWeight(DoFRing2Radius), totalWeight);
-        }
-    }
-
-    if (radius > 8.0f)
-    {
-        [unroll]
-        for (int i = 0; i < DoFRing3Count; ++i)
-        {
-            blur += AccumulateBackground(uv, texel * DoFRing3[i] * radius, centerDistance,
-                DoFRingSampleWeight(DoFRing3Radius), totalWeight);
-        }
+        float2 diskOffset = DoFSpiralDiskOffset(i, DoFBlurSampleCount, rotation);
+        float diskRadius = length(diskOffset);
+        blur += AccumulateBackground(uv, texel * diskOffset * radius, centerDistance,
+            DoFDiskSampleWeight(diskRadius), totalWeight);
     }
 
     float safeWeight = max(totalWeight, DoFMinAccumulatedWeight);
@@ -101,6 +72,5 @@ float4 PS(PS_Input_UV input) : SV_TARGET
         return blur / safeWeight;
     }
 
-    sharp.rgb = DoFRemoveBokehEnergyForFallback(centerCoC, sharp.rgb);
     return sharp;
 }
