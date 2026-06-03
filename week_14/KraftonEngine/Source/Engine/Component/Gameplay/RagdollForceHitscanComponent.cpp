@@ -197,23 +197,10 @@ FVector URagdollForceHitscanComponent::ResolveTargetLocation(AActor* CandidateAc
         return CandidateActor ? CandidateActor->GetActorLocation() : FVector::ZeroVector;
     }
 
-    if (FPhysicsAssetInstance* PhysicsAssetInstance = TargetMesh->GetPhysicsAssetInstance())
+    FVector RepresentativeLocation = FVector::ZeroVector;
+    if (TargetMesh->TryGetRagdollRepresentativeLocation(RepresentativeLocation))
     {
-        if (PhysicsAssetInstance->HasLivePhysicsObjects())
-        {
-            const FName PrimaryBodyBoneName = PhysicsAssetInstance->GetPrimarySimulatedBodyBoneName();
-            if (PrimaryBodyBoneName != FName::None && PhysicsAssetInstance->HasValidBodyForBone(PrimaryBodyBoneName))
-            {
-                return PhysicsAssetInstance->GetBodyWorldTransformByBoneName(PrimaryBodyBoneName).Location;
-            }
-
-            FName NearestBodyBoneName = FName::None;
-            FVector NearestBodyLocation = FVector::ZeroVector;
-            if (PhysicsAssetInstance->FindNearestBodyToWorldLocation(TargetMesh->GetWorldLocation(), NearestBodyBoneName, NearestBodyLocation))
-            {
-                return NearestBodyLocation;
-            }
-        }
+        return RepresentativeLocation;
     }
 
     return TargetMesh->GetWorldLocation();
