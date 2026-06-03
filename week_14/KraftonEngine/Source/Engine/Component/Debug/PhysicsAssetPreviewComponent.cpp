@@ -1,4 +1,4 @@
-#include "PhysicsAssetPreviewComponent.h"
+﻿#include "PhysicsAssetPreviewComponent.h"
 
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Math/MathUtils.h"
@@ -99,7 +99,7 @@ namespace
 		float ComputeConstraintLimitSurfaceRadius(const FTransform& ParentFrameWorld, const FTransform& ChildFrameWorld)
 		{
 			const float FrameDistance = FVector::Distance(ParentFrameWorld.Location, ChildFrameWorld.Location);
-			return FMath::Clamp(FrameDistance * 0.45f + 0.25f, 0.25f, 2.5f);
+			return FMath::Clamp(FrameDistance * 0.25f + 0.15f, 0.15f, 1.2f);
 		}
 
 		float ComputeConstraintPickTolerance(float Radius)

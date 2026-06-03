@@ -970,6 +970,19 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 		}
 	}
 
+	// 컴포넌트 트리에서 선택한 컴포넌트는 Delete 키로 제거할 수 있다.
+	// 단, Actor 루트 컴포넌트는 삭제하지 않는다.
+	if (!ImGui::GetIO().WantTextInput
+		&& ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)
+		&& ImGui::IsKeyPressed(ImGuiKey_Delete, false))
+	{
+		if (RemoveSelectedComponent(PrimaryActor))
+		{
+			ImGui::End();
+			return;
+		}
+	}
+
 	// ========== 고정 영역: Actor Info (clickable) ==========
 	if (SelectionCount > 1)
 	{
@@ -1280,6 +1293,23 @@ void FEditorPropertyWidget::RenderComponentTree(AActor* Actor)
 		ImGui::OpenPopup("##AddComponentPopup");
 	}
 
+	ImGui::SameLine();
+	const bool bCanRemoveSelectedComponent = CanRemoveSelectedComponent(Actor);
+	if (!bCanRemoveSelectedComponent)
+	{
+		ImGui::BeginDisabled();
+	}
+
+	if (ImGui::Button("Remove"))
+	{
+		RemoveSelectedComponent(Actor);
+	}
+
+	if (!bCanRemoveSelectedComponent)
+	{
+		ImGui::EndDisabled();
+	}
+
 	if (ImGui::BeginPopup("##AddComponentPopup"))
 	{
 		auto AddComponentClassItem = [&](UClass* Cls)
@@ -1506,20 +1536,7 @@ void FEditorPropertyWidget::RenderSceneComponentNode(USceneComponent* Comp)
 
 void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArray<AActor*>& SelectedActors)
 {
-	if (SelectedComponent.Get() != Actor->GetRootComponent())
-	{
-		if (ImGui::Button("Remove"))
-		{
-			if (SelectedComponent.Get() != nullptr)
-			{
-				Actor->RemoveComponent(SelectedComponent);
-				SelectedComponent = nullptr;
-				PendingDetailsScrollY = -1.0f;
-				bRestoreDetailsScrollY = false;
-				return;
-			}
-		}
-	}
+	(void)Actor;
 
 	ImGui::Separator();
 
@@ -1686,6 +1703,37 @@ void FEditorPropertyWidget::PropagatePropertyChange(const FString& PropName, con
 			break; // 같은 타입의 첫 번째 컴포넌트에만 전파
 		}
 	}
+}
+
+bool FEditorPropertyWidget::CanRemoveSelectedComponent(AActor* Actor) const
+{
+	if (!Actor || bActorSelected)
+	{
+		return false;
+	}
+
+	UActorComponent* Component = SelectedComponent.Get();
+	if (!Component || Component->GetOwner() != Actor)
+	{
+		return false;
+	}
+
+	return Component != Actor->GetRootComponent();
+}
+
+bool FEditorPropertyWidget::RemoveSelectedComponent(AActor* Actor)
+{
+	if (!CanRemoveSelectedComponent(Actor))
+	{
+		return false;
+	}
+
+	UActorComponent* Component = SelectedComponent.Get();
+	Actor->RemoveComponent(Component);
+	SelectedComponent = nullptr;
+	PendingDetailsScrollY = -1.0f;
+	bRestoreDetailsScrollY = false;
+	return true;
 }
 
 void FEditorPropertyWidget::AddComponentToActor(AActor* Actor, UClass* ComponentClass)
