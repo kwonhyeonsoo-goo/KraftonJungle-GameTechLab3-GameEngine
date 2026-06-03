@@ -1,10 +1,42 @@
 #include "GameFramework/Actor/TriggerVolumeBase.h"
-#include "GameFramework/Pawn/Pawn.h"
-#include "GameFramework/GameMode/GameModeBase.h"
-#include "GameFramework/World.h"
+
+#include "Component/PrimitiveComponent.h"
 #include "Component/Shape/BoxComponent.h"
+#include "Core/Logging/Log.h"
 #include "Core/Types/CollisionTypes.h"
+#include "GameFramework/GameMode/GameModeBase.h"
+#include "GameFramework/Pawn/Pawn.h"
+#include "GameFramework/World.h"
 #include "Serialization/Archive.h"
+
+namespace
+{
+	const char* GetPawnNameSafe(APawn* Pawn)
+	{
+		return Pawn ? Pawn->GetName().c_str() : "None";
+	}
+
+	bool CanPrimitiveParticipateInTriggerOccupancy(const UPrimitiveComponent* Primitive, ECollisionChannel TriggerChannel)
+	{
+		if (!Primitive || !Primitive->IsCollisionEnabled())
+		{
+			return false;
+		}
+
+		const ECollisionEnabled CollisionEnabled = Primitive->GetCollisionEnabled();
+		if (CollisionEnabled == ECollisionEnabled::PhysicsOnly)
+		{
+			return false;
+		}
+
+		if (!Primitive->GetGenerateOverlapEvents())
+		{
+			return false;
+		}
+
+		return Primitive->GetCollisionResponseToChannel(TriggerChannel) != ECollisionResponse::Ignore;
+	}
+}
 
 void ATriggerVolumeBase::InitDefaultComponents(const FVector& Extent)
 {
@@ -12,7 +44,6 @@ void ATriggerVolumeBase::InitDefaultComponents(const FVector& Extent)
 	SetRootComponent(TriggerBox);
 
 	TriggerBox->SetBoxExtent(Extent);
-	// Overlap-only — 물리적으로 충돌하지 않고 진입만 감지.
 	TriggerBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	TriggerBox->SetCollisionObjectType(ECollisionChannel::Trigger);
 	TriggerBox->SetCollisionResponseToAllChannels(ECollisionResponse::Overlap);
@@ -27,10 +58,6 @@ void ATriggerVolumeBase::PostDuplicate()
 
 void ATriggerVolumeBase::BeginPlay()
 {
-	// 신규 spawn (World->SpawnActor<ATriggerVolumeBase>()) 경로 — 호출자가 컴포넌트를 채울
-	// 시점이 없어 RootComponent 가 비어있다. AMeteor / APoliceCar 와 동일 패턴으로 여기서
-	// 직접 default 셋업. 직렬화/Duplicate 경로에선 RootComponent 가 deserialize 돼 있어
-	// InitDefaultComponents 안 부르고 cast 만.
 	if (!GetRootComponent())
 	{
 		InitDefaultComponents();
@@ -41,10 +68,6 @@ void ATriggerVolumeBase::BeginPlay()
 		TriggerBox = Cast<UBoxComponent>(GetRootComponent());
 	}
 
-	// 씬에 잘못 직렬화된 값(GenerateOverlapEvents=false 등)이 있으면 PhysX가 trigger flag
-	// 대신 simulation shape로 등록 → Pawn과 일반 충돌 발생 → trigger 표면에서 튕김.
-	// Super::BeginPlay 전에 강제 보정해야 PrimitiveComponent::BeginPlay → PhysX
-	// RegisterComponent 시점에 trigger 셋업이 반영된다.
 	if (TriggerBox)
 	{
 		TriggerBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
@@ -63,17 +86,93 @@ void ATriggerVolumeBase::BeginPlay()
 	}
 }
 
+APawn* ATriggerVolumeBase::ResolvePossessedPawn(AActor* OtherActor) const
+{
+	APawn* Pawn = Cast<APawn>(OtherActor);
+	return (Pawn && Pawn->IsPossessed()) ? Pawn : nullptr;
+}
+
+bool ATriggerVolumeBase::AddOccupyingPawn(APawn* Pawn)
+{
+	if (!Pawn)
+	{
+		return false;
+	}
+
+	return OccupyingPawns.insert(TWeakObjectPtr<APawn>(Pawn)).second;
+}
+
+bool ATriggerVolumeBase::RemoveOccupyingPawn(APawn* Pawn)
+{
+	if (!Pawn)
+	{
+		return false;
+	}
+
+	return OccupyingPawns.erase(TWeakObjectPtr<APawn>(Pawn)) > 0;
+}
+
+bool ATriggerVolumeBase::IsPawnStillInsideTrigger(APawn* Pawn) const
+{
+	UBoxComponent* Box = TriggerBox.Get();
+	if (!Pawn || !Box || !Box->IsCollisionEnabled())
+	{
+		return false;
+	}
+
+	const FBoundingBox TriggerBounds = Box->GetWorldBoundingBox();
+	const ECollisionChannel TriggerChannel = Box->GetCollisionObjectType();
+
+	for (UPrimitiveComponent* Primitive : Pawn->GetPrimitiveComponents())
+	{
+		if (!Primitive || Primitive == Box)
+		{
+			continue;
+		}
+
+		if (!CanPrimitiveParticipateInTriggerOccupancy(Primitive, TriggerChannel))
+		{
+			continue;
+		}
+
+		if (TriggerBounds.IsIntersected(Primitive->GetWorldBoundingBox()))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void ATriggerVolumeBase::HandleBeginOverlap(
 	UPrimitiveComponent* /*OverlappedComponent*/,
 	AActor* OtherActor,
-	UPrimitiveComponent* /*OtherComp*/,
+	UPrimitiveComponent* OtherComp,
 	int32 /*OtherBodyIndex*/,
 	bool /*bFromSweep*/,
 	const FHitResult& /*SweepResult*/)
 {
-	// Possessed Pawn만 통과 — 자유 비행 중인 Pawn / 비-Pawn 액터는 무시
-	APawn* Pawn = Cast<APawn>(OtherActor);
-	if (!Pawn || !Pawn->IsPossessed()) return;
+	APawn* Pawn = ResolvePossessedPawn(OtherActor);
+	if (!Pawn)
+	{
+		return;
+	}
+
+	UE_LOG("[TriggerVolume] BeginOverlapReceived Trigger=%s Pawn=%s OtherComp=%s OccupantsBefore=%d",
+		GetName().c_str(),
+		GetPawnNameSafe(Pawn),
+		OtherComp ? OtherComp->GetName().c_str() : "None",
+		GetOccupyingPawnCount());
+
+	if (!AddOccupyingPawn(Pawn))
+	{
+		return;
+	}
+
+	UE_LOG("[TriggerVolume] OccupancyAdded Trigger=%s Pawn=%s Occupants=%d",
+		GetName().c_str(),
+		GetPawnNameSafe(Pawn),
+		GetOccupyingPawnCount());
 
 	OnPossessedPawnEntered(Pawn);
 
@@ -89,11 +188,44 @@ void ATriggerVolumeBase::HandleBeginOverlap(
 void ATriggerVolumeBase::HandleEndOverlap(
 	UPrimitiveComponent* /*OverlappedComponent*/,
 	AActor* OtherActor,
-	UPrimitiveComponent* /*OtherComp*/,
+	UPrimitiveComponent* OtherComp,
 	int32 /*OtherBodyIndex*/)
 {
-	APawn* Pawn = Cast<APawn>(OtherActor);
-	if (!Pawn || !Pawn->IsPossessed()) return;
+	APawn* Pawn = ResolvePossessedPawn(OtherActor);
+	if (!Pawn)
+	{
+		return;
+	}
+
+	UE_LOG("[TriggerVolume] EndOverlapReceived Trigger=%s Pawn=%s OtherComp=%s OccupantsBefore=%d",
+		GetName().c_str(),
+		GetPawnNameSafe(Pawn),
+		OtherComp ? OtherComp->GetName().c_str() : "None",
+		GetOccupyingPawnCount());
+
+	if (OccupyingPawns.find(TWeakObjectPtr<APawn>(Pawn)) == OccupyingPawns.end())
+	{
+		return;
+	}
+
+	if (IsPawnStillInsideTrigger(Pawn))
+	{
+		UE_LOG("[TriggerVolume] OccupancyRetainedAfterRecheck Trigger=%s Pawn=%s Occupants=%d",
+			GetName().c_str(),
+			GetPawnNameSafe(Pawn),
+			GetOccupyingPawnCount());
+		return;
+	}
+
+	if (!RemoveOccupyingPawn(Pawn))
+	{
+		return;
+	}
+
+	UE_LOG("[TriggerVolume] OccupancyRemoved Trigger=%s Pawn=%s Occupants=%d",
+		GetName().c_str(),
+		GetPawnNameSafe(Pawn),
+		GetOccupyingPawnCount());
 
 	OnPossessedPawnExited(Pawn);
 

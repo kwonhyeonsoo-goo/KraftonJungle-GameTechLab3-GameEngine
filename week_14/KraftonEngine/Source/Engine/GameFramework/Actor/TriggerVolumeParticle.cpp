@@ -1,56 +1,85 @@
 #include "GameFramework/Actor/TriggerVolumeParticle.h"
 
-#include "GameFramework/World.h"
+#include "Component/Particle/ParticleSystemComponent.h"
+#include "Core/Logging/Log.h"
 #include "GameFramework/Actor/ParticleSystemActor.h"
 #include "GameFramework/GameMode/GameplayStatics.h"
-#include "Component/Particle/ParticleSystemComponent.h"
+#include "GameFramework/Pawn/Pawn.h"
+#include "GameFramework/World.h"
 
 void ATriggerVolumeParticle::BeginPlay()
 {
-	Super::BeginPlay();  // 베이스의 콜리전 보정 + Begin/End Overlap 델리게이트 바인딩
+	Super::BeginPlay();
 
-	// ParticleTag 를 가진 파티클 액터들을 1회 lookup 해 PSC 캐싱. 선형 스캔이라
-	// 매 frame 호출은 피하고 여기서만 수행 (FGameplayStatics 주석 권장 패턴).
 	CachedComponents.clear();
 	for (AActor* Actor : FGameplayStatics::FindActorsByTag(GetWorld(), ParticleTag))
 	{
 		AParticleSystemActor* ParticleActor = Cast<AParticleSystemActor>(Actor);
-		if (!ParticleActor) continue;
+		if (!ParticleActor)
+		{
+			continue;
+		}
 
 		UParticleSystemComponent* PSC = ParticleActor->GetParticleSystemComponent();
-		if (!PSC) continue;
+		if (!PSC)
+		{
+			continue;
+		}
 
 		CachedComponents.push_back(PSC);
 		if (bActivateOnTriggerEnter)
 		{
-			PSC->Deactivate();  // 시작 시 꺼둠 — 트리거 진입 전까지 비활성
+			PSC->Deactivate();
 		}
 	}
 }
 
-void ATriggerVolumeParticle::OnPossessedPawnEntered(APawn* /*Pawn*/)
+void ATriggerVolumeParticle::OnPossessedPawnEntered(APawn* Pawn)
 {
-	// 첫 Pawn 진입에서만 켠다 (이미 켜진 상태에서 추가 진입은 무시).
-	if (OverlapCount++ != 0) return;
-	if (!bActivateOnTriggerEnter) return;
+	UE_LOG("[TriggerVolumeParticle] OccupantEntered Trigger=%s Pawn=%s Occupants=%d",
+		GetName().c_str(),
+		Pawn ? Pawn->GetName().c_str() : "None",
+		GetOccupyingPawnCount());
+
+	if (GetOccupyingPawnCount() != 1 || !bActivateOnTriggerEnter)
+	{
+		return;
+	}
+
+	UE_LOG("[TriggerVolumeParticle] FirstOccupantEntered Trigger=%s ParticleCount=%d",
+		GetName().c_str(),
+		static_cast<int32>(CachedComponents.size()));
 
 	for (const TWeakObjectPtr<UParticleSystemComponent>& WeakPSC : CachedComponents)
 	{
-		UParticleSystemComponent* PSC = WeakPSC.Get();
-		if (PSC) PSC->Activate();  // bReset=false — 기존 상태 유지하며 spawn 재개
+		if (UParticleSystemComponent* PSC = WeakPSC.Get())
+		{
+			PSC->Activate();
+		}
 	}
 }
 
-void ATriggerVolumeParticle::OnPossessedPawnExited(APawn* /*Pawn*/)
+void ATriggerVolumeParticle::OnPossessedPawnExited(APawn* Pawn)
 {
-	// 마지막 Pawn 이 빠져나갈 때만 끈다.
-	if (--OverlapCount > 0) return;
-	OverlapCount = 0;  // 음수 방어 (Enter/Exit 비대칭 시)
-	if (!bDeactivateOnTriggerExit) return;
+	UE_LOG("[TriggerVolumeParticle] OccupantExited Trigger=%s Pawn=%s Occupants=%d",
+		GetName().c_str(),
+		Pawn ? Pawn->GetName().c_str() : "None",
+		GetOccupyingPawnCount());
+
+	if (GetOccupyingPawnCount() != 0 || !bDeactivateOnTriggerExit)
+	{
+		return;
+	}
+
+	UE_LOG("[TriggerVolumeParticle] LastOccupantExited Trigger=%s ParticleCount=%d",
+		GetName().c_str(),
+		static_cast<int32>(CachedComponents.size()));
 
 	for (const TWeakObjectPtr<UParticleSystemComponent>& WeakPSC : CachedComponents)
 	{
-		UParticleSystemComponent* PSC = WeakPSC.Get();
-		if (PSC) PSC->Deactivate();  // graceful — 기존 입자는 수명대로 소멸
+		if (UParticleSystemComponent* PSC = WeakPSC.Get())
+		{
+			PSC->Deactivate();
+		}
 	}
 }
