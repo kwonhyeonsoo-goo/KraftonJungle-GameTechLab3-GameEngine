@@ -580,8 +580,8 @@ void USceneComponent::SetWorldRotation(const FQuat& NewWorldRotation)
 
 	if (USceneComponent* Parent = ParentComponent.Get())
 	{
-		const FQuat ParentWorldQuat = Parent->GetWorldMatrix().ToQuat().GetNormalized();
-		SetRelativeRotation((WorldQuat * ParentWorldQuat.Inverse()).GetNormalized());
+		const FQuat ParentWorldQuat = GetRotationTranslationWithoutScale(Parent->GetWorldMatrix()).ToQuat().GetNormalized();
+		SetRelativeRotation((ParentWorldQuat.Inverse() * WorldQuat).GetNormalized());
 	}
 	else
 	{
@@ -597,15 +597,7 @@ FVector USceneComponent::GetWorldLocation() const
 
 FRotator USceneComponent::GetWorldRotation() const
 {
-	FQuat WorldQuat = RelativeTransform.Rotation.GetNormalized();
-
-	const USceneComponent* CurrentParent = ParentComponent.Get();
-	while (CurrentParent)
-	{
-		WorldQuat = (WorldQuat * CurrentParent->RelativeTransform.Rotation).GetNormalized();
-		CurrentParent = CurrentParent->ParentComponent.Get();
-	}
-
+	const FQuat WorldQuat = GetRotationTranslationWithoutScale(GetWorldMatrix()).ToQuat().GetNormalized();
 	return WorldQuat.ToRotator();
 }
 
