@@ -1,11 +1,20 @@
 #pragma once
 
 #include "GameFramework/Pawn/Pawn.h"
+#include "Core/Types/CollisionTypes.h"
 #include "Object/Ptr/WeakObjectPtr.h"
 
 class UCapsuleComponent;
 class USkeletalMeshComponent;
 class UCharacterMovementComponent;
+
+enum class ECharacterPhysicsOwnershipMode : uint8
+{
+	CharacterDriven,
+	TransitionToRagdoll,
+	RagdollDriven,
+	TransitionFromRagdoll
+};
 
 // UE 의 ACharacter 패턴 — Capsule(Root) → SkeletalMesh + CharacterMovement 의 표준 구성.
 //
@@ -40,6 +49,15 @@ public:
 	UFUNCTION(Callable, Exec, Category="Character|Movement")
 	void Jump();
 
+	UFUNCTION(Callable, Category="Character|Physics")
+	bool EnterRagdoll();
+	UFUNCTION(Callable, Category="Character|Physics")
+	void ExitRagdoll();
+	UFUNCTION(Callable, Category="Character|Physics")
+	bool BeginRagdollRecovery();
+	UFUNCTION(Pure, Category="Character|Physics")
+	bool IsInRagdoll() const;
+
 	UFUNCTION(Pure, Category="Character|Components")
 	UCapsuleComponent* GetCapsuleComponent()  const { return CapsuleComponent; }
 	UFUNCTION(Pure, Category="Character|Components")
@@ -65,8 +83,27 @@ protected:
 
 	// ControlRotation → RootComponent 동기화 등 per-frame 처리.
 	void Tick(float DeltaTime) override;
+	void SavePreRagdollCharacterState();
+	void SetCharacterDrivenCollisionEnabled(bool bEnabled);
+	void SuspendCharacterForRagdoll();
+	void RestoreMovementAfterRagdoll();
+	void FinalizePendingRagdollEntry();
+	void CacheRagdollRestoreLocation();
+	void RestoreCharacterAfterRagdoll();
 
 	TWeakObjectPtr<UCapsuleComponent>           CapsuleComponent  = nullptr;
 	TWeakObjectPtr<USkeletalMeshComponent>      Mesh              = nullptr;
 	TWeakObjectPtr<UCharacterMovementComponent> CharacterMovement = nullptr;
+	ECharacterPhysicsOwnershipMode PhysicsOwnershipMode = ECharacterPhysicsOwnershipMode::CharacterDriven;
+	bool bPendingRagdollBodyEnable = false;
+	bool bAwaitingRagdollRecoveryRestore = false;
+	bool bSavedPreRagdollCharacterState = false;
+	ECollisionEnabled SavedCapsuleCollisionEnabled = ECollisionEnabled::NoCollision;
+	ECollisionEnabled SavedMeshCollisionEnabled = ECollisionEnabled::NoCollision;
+	bool bSavedMovementTickEnabled = true;
+	bool bSavedMovementActive = true;
+	bool bHasCachedRagdollRestoreLocation = false;
+	FVector CachedRagdollRestoreLocation = FVector::ZeroVector;
+	bool bHasCachedRagdollRestoreYaw = false;
+	float CachedRagdollRestoreYawDegrees = 0.0f;
 };

@@ -1,4 +1,4 @@
-#include "Physics/PhysicsAssetInstance.h"
+﻿#include "Physics/PhysicsAssetInstance.h"
 
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Core/Logging/Log.h"
@@ -20,6 +20,15 @@ namespace
         FTransform Result = Local;
         Result.Location = ParentWorld.Location + ParentWorld.Rotation.RotateVector(Local.Location);
         Result.Rotation = ParentWorld.Rotation * Local.Rotation;
+        Result.Scale = FVector::OneVector;
+        return Result;
+    }
+
+    FTransform ComputeParentWorldTransformFromChild(const FTransform& ChildWorld, const FTransform& ChildLocalToParent)
+    {
+        FTransform Result;
+        Result.Rotation = ChildWorld.Rotation * ChildLocalToParent.Rotation.Inverse();
+        Result.Location = ChildWorld.Location - Result.Rotation.RotateVector(ChildLocalToParent.Location);
         Result.Scale = FVector::OneVector;
         return Result;
     }
@@ -75,7 +84,10 @@ namespace
     void FillShapeFilterDataFromComponent(
         FPhysicsFilterData& OutFilterData,
         const USkeletalMeshComponent* Component,
-        bool bForceQueryAndPhysicsCollision)
+        bool bForceQueryAndPhysicsCollision,
+        bool bUseIndependentRagdollCollision,
+        ECollisionEnabled IndependentCollisionEnabled,
+        bool bIndependentGenerateOverlapEvents)
     {
         if (!Component)
         {
@@ -87,20 +99,25 @@ namespace
         OutFilterData.OverlapMask = 0;
         // Keep ragdoll self-collision decisions at the PhysicsAsset constraint layer.
         OutFilterData.IgnoreGroup = 0;
-        OutFilterData.CollisionEnabled = bForceQueryAndPhysicsCollision
-            ? ECollisionEnabled::QueryAndPhysics
-            : Component->GetCollisionEnabled();
+        OutFilterData.CollisionEnabled = bUseIndependentRagdollCollision
+            ? IndependentCollisionEnabled
+            : (bForceQueryAndPhysicsCollision
+                ? ECollisionEnabled::QueryAndPhysics
+                : Component->GetCollisionEnabled());
         OutFilterData.bIsTrigger = false;
         OutFilterData.bGenerateHitEvents = true;
-        OutFilterData.bGenerateOverlapEvents = bForceQueryAndPhysicsCollision
-            ? false
-            : Component->GetGenerateOverlapEvents();
+        OutFilterData.bGenerateOverlapEvents = bUseIndependentRagdollCollision
+            ? bIndependentGenerateOverlapEvents
+            : (bForceQueryAndPhysicsCollision
+                ? false
+                : Component->GetGenerateOverlapEvents());
 
         for (int32 ChannelIndex = 0; ChannelIndex < static_cast<int32>(ECollisionChannel::ActiveCount); ++ChannelIndex)
         {
-            const ECollisionResponse Response = bForceQueryAndPhysicsCollision
-                ? ECollisionResponse::Block
-                : Component->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(ChannelIndex));
+            const ECollisionResponse Response =
+                (bForceQueryAndPhysicsCollision && !bUseIndependentRagdollCollision)
+                    ? ECollisionResponse::Block
+                    : Component->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(ChannelIndex));
 
             if (Response == ECollisionResponse::Block)
             {
@@ -116,7 +133,7 @@ namespace
     void BuildShapeDescs(
         const FPhysicsAssetBodySetup& BodySetup,
         const USkeletalMeshComponent* OwnerComponent,
-        bool bForceQueryAndPhysicsCollision,
+        const FPhysicsAssetSimulationOptions& Options,
         TArray<FPhysicsShapeDesc>& OutShapes
     )
     {
@@ -126,14 +143,19 @@ namespace
         {
             FPhysicsShapeDesc ShapeDesc;
             ShapeDesc.LocalTransform = ShapeSetup.LocalTransform;
-            ShapeDesc.CollisionEnabled = bForceQueryAndPhysicsCollision
-                ? ECollisionEnabled::QueryAndPhysics
-                : (OwnerComponent ? OwnerComponent->GetCollisionEnabled() : ECollisionEnabled::QueryAndPhysics);
+            ShapeDesc.CollisionEnabled = Options.bUseIndependentRagdollCollision
+                ? Options.IndependentCollisionEnabled
+                : (Options.bForceQueryAndPhysicsCollision
+                    ? ECollisionEnabled::QueryAndPhysics
+                    : (OwnerComponent ? OwnerComponent->GetCollisionEnabled() : ECollisionEnabled::QueryAndPhysics));
             ShapeDesc.bIsTrigger = false;
             FillShapeFilterDataFromComponent(
                 ShapeDesc.FilterData,
                 OwnerComponent,
-                bForceQueryAndPhysicsCollision);
+                Options.bForceQueryAndPhysicsCollision,
+                Options.bUseIndependentRagdollCollision,
+                Options.IndependentCollisionEnabled,
+                Options.bIndependentGenerateOverlapEvents);
             ShapeDesc.QueryIgnoreGroup = (OwnerComponent && OwnerComponent->GetOwner())
                 ? OwnerComponent->GetOwner()->GetUUID()
                 : 0;
@@ -165,7 +187,7 @@ namespace
         USkeletalMeshComponent* OwnerComponent,
         const FPhysicsAssetBodySetup& BodySetup,
         const FTransform& BoneWorldTransform,
-        bool bForceQueryAndPhysicsCollision,
+        const FPhysicsAssetSimulationOptions& Options,
         FBodyCreationDesc& OutDesc
     )
     {
@@ -186,7 +208,7 @@ namespace
         OutDesc.SyncMode = EPhysicsSyncMode::Manual;
         OutDesc.WorldTransform = ComposePhysicsTransforms(BoneWorldTransform, BodySetup.BodyLocalFrame);
 
-        BuildShapeDescs(BodySetup, OwnerComponent, bForceQueryAndPhysicsCollision, OutDesc.Shapes);
+        BuildShapeDescs(BodySetup, OwnerComponent, Options, OutDesc.Shapes);
         if (OutDesc.Shapes.empty())
         {
             return false;
@@ -202,7 +224,9 @@ namespace
         OutDesc.bEnableGravity = BodySetup.bEnableGravity;
         OutDesc.bEnableCCD = BodySetup.bEnableCCD;
         OutDesc.bGenerateHitEvents = true;
-        OutDesc.bGenerateOverlapEvents = OwnerComponent->GetGenerateOverlapEvents();
+        OutDesc.bGenerateOverlapEvents = Options.bUseIndependentRagdollCollision
+            ? Options.bIndependentGenerateOverlapEvents
+            : OwnerComponent->GetGenerateOverlapEvents();
         OutDesc.bLockLinearX = BodySetup.bLockLinearX;
         OutDesc.bLockLinearY = BodySetup.bLockLinearY;
         OutDesc.bLockLinearZ = BodySetup.bLockLinearZ;
@@ -360,17 +384,28 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
     const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
     const TArray<FPhysicsAssetConstraintSetup>& ConstraintSetups = Asset->GetConstraintSetups();
 
+    const bool bStrictPartialSimulation = Options.bPartialSimulation;
+    const bool bRestrictSimulationScope = Options.bPartialSimulation || Options.bSelectedOnly;
+    const FName ScopeRootBoneName =
+        Options.bPartialSimulation
+            ? Options.PartialRootBoneName
+            : Options.SelectedBoneName;
+    const bool bIncludeScopeDescendants =
+        Options.bPartialSimulation
+            ? Options.bIncludePartialDescendants
+            : true;
+
     TArray<uint8> SimulatedBodyMask;
     SimulatedBodyMask.resize(BodySetups.size(), 1);
-    if (Options.bSelectedOnly)
+    if (bRestrictSimulationScope)
     {
         SimulatedBodyMask.assign(BodySetups.size(), 0);
-        const int32 SelectedBoneIndex = FindBoneIndexForBody(Options.SelectedBoneName);
+        const int32 SelectedBoneIndex = FindBoneIndexForBody(ScopeRootBoneName);
         if (SelectedBoneIndex < 0)
         {
-            UE_LOG("CreateBodiesAndConstraints failed: selected simulation has no valid selected body. Component=%s Bone=%s",
+            UE_LOG("CreateBodiesAndConstraints failed: partial/selected simulation has no valid root body. Component=%s Bone=%s",
                 Owner->GetName().c_str(),
-                Options.SelectedBoneName.ToString().c_str());
+                ScopeRootBoneName.ToString().c_str());
             return false;
         }
 
@@ -378,7 +413,10 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
         for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
         {
             const int32 BodyBoneIndex = FindBoneIndexForBody(BodySetups[BodyIndex].BoneName);
-            if (IsSameOrDescendantBone(MeshAsset, BodyBoneIndex, SelectedBoneIndex))
+            const bool bInScope = bIncludeScopeDescendants
+                ? IsSameOrDescendantBone(MeshAsset, BodyBoneIndex, SelectedBoneIndex)
+                : (BodyBoneIndex == SelectedBoneIndex);
+            if (bInScope)
             {
                 SimulatedBodyMask[BodyIndex] = 1;
                 ++SelectedDynamicBodyCount;
@@ -389,7 +427,7 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
         {
             UE_LOG("CreateBodiesAndConstraints failed: selected body chain is empty. Component=%s Bone=%s",
                 Owner->GetName().c_str(),
-                Options.SelectedBoneName.ToString().c_str());
+                ScopeRootBoneName.ToString().c_str());
             return false;
         }
     }
@@ -429,7 +467,7 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
                 Owner,
                 BodySetup,
                 BoneWorldTransform,
-                Options.bForceQueryAndPhysicsCollision,
+                Options,
                 BodyDesc))
         {
             UE_LOG("Skipped PhysicsAsset body: invalid body setup. Component=%s Bone=%s",
@@ -442,7 +480,12 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
             BodyIndex >= 0 && BodyIndex < static_cast<int32>(SimulatedBodyMask.size())
                 ? SimulatedBodyMask[BodyIndex] != 0
                 : true;
-        if (Options.bSelectedOnly && !bSimulateThisBody)
+        if (bStrictPartialSimulation && !bSimulateThisBody)
+        {
+            continue;
+        }
+
+        if (Options.bSelectedOnly && !Options.bPartialSimulation && !bSimulateThisBody)
         {
             BodyDesc.BodyType = EPhysicsBodyType::Kinematic;
             BodyDesc.bEnableGravity = false;
@@ -471,7 +514,22 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
         const FPhysicsBodyHandle ParentHandle = GetBodyHandleByBoneName(ConstraintSetup.ParentBoneName);
         const FPhysicsBodyHandle ChildHandle = GetBodyHandleByBoneName(ConstraintSetup.ChildBoneName);
 
-        if (Options.bSelectedOnly)
+        if (bStrictPartialSimulation)
+        {
+            const int32 ParentBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ParentBoneName);
+            const int32 ChildBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ChildBoneName);
+            const bool bParentSimulated =
+                ParentBodyIndex >= 0 && ParentBodyIndex < static_cast<int32>(SimulatedBodyMask.size()) &&
+                SimulatedBodyMask[ParentBodyIndex] != 0;
+            const bool bChildSimulated =
+                ChildBodyIndex >= 0 && ChildBodyIndex < static_cast<int32>(SimulatedBodyMask.size()) &&
+                SimulatedBodyMask[ChildBodyIndex] != 0;
+            if (!bParentSimulated || !bChildSimulated)
+            {
+                continue;
+            }
+        }
+        else if (Options.bSelectedOnly)
         {
             const int32 ParentBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ParentBoneName);
             const int32 ChildBodyIndex = Asset->FindBodySetupIndexByBoneName(ConstraintSetup.ChildBoneName);
@@ -521,10 +579,12 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
         ++CreatedConstraintCount;
     }
 
-    UE_LOG("Created PhysicsAsset runtime objects. Component=%s Bodies=%d Constraints=%d",
+    UE_LOG("Created PhysicsAsset runtime objects. Component=%s Bodies=%d Constraints=%d Partial=%s RootBone=%s",
         Owner->GetName().c_str(),
         CreatedBodyCount,
-        CreatedConstraintCount);
+        CreatedConstraintCount,
+        Options.bPartialSimulation ? "true" : "false",
+        ScopeRootBoneName.ToString().c_str());
 
     return CreatedBodyCount > 0;
 }
@@ -630,7 +690,10 @@ int32 FPhysicsAssetInstance::GetLiveConstraintCount() const
     return LiveConstraintCount;
 }
 
-bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTransforms) const
+bool FPhysicsAssetInstance::PullPhysicsPose(
+    TArray<FTransform>& OutBoneWorldTransforms,
+    const TArray<FTransform>* ReferenceBoneComponentSpaceTransforms,
+    const TArray<FTransform>* ReferenceBoneLocalTransforms) const
 {
     const USkeletalMeshComponent* Owner = GetOwnerComponent();
     const UPhysicsAsset* Asset = GetAsset();
@@ -655,17 +718,37 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
     }
 
     TArray<FTransform> CurrentBoneComponentSpaceTransforms;
-    Owner->GetCurrentBoneGlobalTransforms(CurrentBoneComponentSpaceTransforms);
+    const bool bUseReferenceComponentSpacePose =
+        ReferenceBoneComponentSpaceTransforms &&
+        ReferenceBoneComponentSpaceTransforms->size() >= MeshAsset->Bones.size();
+    if (bUseReferenceComponentSpacePose)
+    {
+        CurrentBoneComponentSpaceTransforms = *ReferenceBoneComponentSpaceTransforms;
+    }
+    else
+    {
+        Owner->GetCurrentBoneGlobalTransforms(CurrentBoneComponentSpaceTransforms);
+    }
     if (CurrentBoneComponentSpaceTransforms.size() < MeshAsset->Bones.size())
     {
         return false;
     }
 
     TArray<FTransform> CurrentBoneLocalTransforms;
-    CurrentBoneLocalTransforms.resize(MeshAsset->Bones.size());
-    for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+    const bool bUseReferenceLocalPose =
+        ReferenceBoneLocalTransforms &&
+        ReferenceBoneLocalTransforms->size() >= MeshAsset->Bones.size();
+    if (bUseReferenceLocalPose)
     {
-        CurrentBoneLocalTransforms[BoneIndex] = Owner->GetBoneLocalTransformByIndex(BoneIndex);
+        CurrentBoneLocalTransforms = *ReferenceBoneLocalTransforms;
+    }
+    else
+    {
+        CurrentBoneLocalTransforms.resize(MeshAsset->Bones.size());
+        for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++BoneIndex)
+        {
+            CurrentBoneLocalTransforms[BoneIndex] = Owner->GetBoneLocalTransformByIndex(BoneIndex);
+        }
     }
 
     const FTransform ComponentWorldTransform = GetComponentWorldTransform(Owner);
@@ -729,13 +812,28 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
         return false;
     }
 
-    FVector RootTranslationDelta = FVector::ZeroVector;
-    if (RagdollRootBoneIndex >= 0 && RagdollRootBoneIndex < static_cast<int32>(OutBoneWorldTransforms.size()))
+    if (RagdollRootBoneIndex >= 0 &&
+        RagdollRootBoneIndex < static_cast<int32>(OutBoneWorldTransforms.size()) &&
+        AppliedBodyBoneMask[RagdollRootBoneIndex] != 0)
     {
-        if (AppliedBodyBoneMask[RagdollRootBoneIndex] != 0)
+        int32 ChildBoneIndex = RagdollRootBoneIndex;
+        int32 ParentBoneIndex = MeshAsset->Bones[ChildBoneIndex].ParentIndex;
+        while (ParentBoneIndex >= 0 &&
+               ParentBoneIndex < static_cast<int32>(OutBoneWorldTransforms.size()) &&
+               AppliedBodyBoneMask[ParentBoneIndex] == 0)
         {
-            const FTransform CurrentAnimatedRootWorld = ComposePhysicsTransforms(ComponentWorldTransform, CurrentBoneComponentSpaceTransforms[RagdollRootBoneIndex]);
-            RootTranslationDelta = OutBoneWorldTransforms[RagdollRootBoneIndex].Location - CurrentAnimatedRootWorld.Location;
+            FTransform ParentWorld = ComputeParentWorldTransformFromChild(
+                OutBoneWorldTransforms[ChildBoneIndex],
+                CurrentBoneLocalTransforms[ChildBoneIndex]);
+
+            // Reconstruct uncovered ancestors from the simulated ragdoll-root body so the
+            // skeleton root follows ragdoll movement without applying a coarse world-space
+            // translation delta that can make the whole mesh float above the floor.
+            ParentWorld.Scale = OutBoneWorldTransforms[ParentBoneIndex].Scale;
+            OutBoneWorldTransforms[ParentBoneIndex] = ParentWorld;
+
+            ChildBoneIndex = ParentBoneIndex;
+            ParentBoneIndex = MeshAsset->Bones[ChildBoneIndex].ParentIndex;
         }
     }
 
@@ -753,7 +851,6 @@ bool FPhysicsAssetInstance::PullPhysicsPose(TArray<FTransform>& OutBoneWorldTran
         const int32 ParentIndex = MeshAsset->Bones[BoneIndex].ParentIndex;
         if (ParentIndex < 0 || ParentIndex >= static_cast<int32>(OutBoneWorldTransforms.size()))
         {
-            OutBoneWorldTransforms[BoneIndex].Location += RootTranslationDelta;
             continue;
         }
 
@@ -802,9 +899,87 @@ FTransform FPhysicsAssetInstance::GetBodyWorldTransformByBoneName(const FName& B
     return BodySnapshot ? BodySnapshot->CurrentTransform : FTransform();
 }
 
+bool FPhysicsAssetInstance::AddImpulseToBody(FPhysicsBodyHandle BodyHandle, const FVector& Impulse) const
+{
+    if (!BodyHandle.IsValid())
+    {
+        return false;
+    }
+
+    IPhysicsRuntime* Runtime = GetPhysicsRuntime(GetOwnerComponent());
+    if (!Runtime)
+    {
+        return false;
+    }
+
+    Runtime->AddImpulse(BodyHandle, Impulse);
+    return true;
+}
+
+bool FPhysicsAssetInstance::AddImpulseToBone(const FName& BoneName, const FVector& Impulse) const
+{
+    return AddImpulseToBody(GetBodyHandleByBoneName(BoneName), Impulse);
+}
+
 bool FPhysicsAssetInstance::HasValidBodyForBone(const FName& BoneName) const
 {
     return GetBodyHandleByBoneName(BoneName).IsValid();
+}
+
+FName FPhysicsAssetInstance::FindNearestSimulatedAncestorBodyBoneName(const FName& BoneName) const
+{
+    USkeletalMeshComponent* Owner = GetOwnerComponent();
+    USkeletalMesh* Mesh = Owner ? Owner->GetSkeletalMesh() : nullptr;
+    FSkeletalMesh* MeshAsset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+    if (!MeshAsset || BoneName == FName::None)
+    {
+        return FName::None;
+    }
+
+    int32 BoneIndex = -1;
+    const FString TargetBoneName = BoneName.ToString();
+    for (int32 MeshBoneIndex = 0; MeshBoneIndex < static_cast<int32>(MeshAsset->Bones.size()); ++MeshBoneIndex)
+    {
+        if (MeshAsset->Bones[MeshBoneIndex].Name == TargetBoneName)
+        {
+            BoneIndex = MeshBoneIndex;
+            break;
+        }
+    }
+
+    while (BoneIndex >= 0 && BoneIndex < static_cast<int32>(MeshAsset->Bones.size()))
+    {
+        const FName CandidateBoneName(MeshAsset->Bones[BoneIndex].Name);
+        if (HasValidBodyForBone(CandidateBoneName))
+        {
+            return CandidateBoneName;
+        }
+
+        BoneIndex = MeshAsset->Bones[BoneIndex].ParentIndex;
+    }
+
+    return FName::None;
+}
+
+FName FPhysicsAssetInstance::ResolveBestImpulseTargetBoneName(const FName& HitBoneName, const FName& FallbackRootBoneName) const
+{
+    if (HitBoneName != FName::None && HasValidBodyForBone(HitBoneName))
+    {
+        return HitBoneName;
+    }
+
+    const FName AncestorBoneName = FindNearestSimulatedAncestorBodyBoneName(HitBoneName);
+    if (AncestorBoneName != FName::None)
+    {
+        return AncestorBoneName;
+    }
+
+    if (FallbackRootBoneName != FName::None && HasValidBodyForBone(FallbackRootBoneName))
+    {
+        return FallbackRootBoneName;
+    }
+
+    return FName::None;
 }
 
 int32 FPhysicsAssetInstance::FindBodySetupIndexByBoneName(const FName& BoneName) const

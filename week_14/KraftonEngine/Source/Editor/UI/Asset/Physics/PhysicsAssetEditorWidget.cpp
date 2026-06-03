@@ -1375,7 +1375,7 @@ void FPhysicsAssetEditorWidget::RenderRegenerateBodiesControls(UPhysicsAsset* Ph
     }
     if (!bCanRegenerate) ImGui::EndDisabled();
 
-    ImGui::SetNextWindowSize(ImVec2(360.0f, 0.0f), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(420.0f, 0.0f), ImGuiCond_Appearing);
     if (ImGui::BeginPopupModal(RegenerateBodiesPopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
         ImGui::TextUnformatted("Regenerate physics bodies from the preview skeletal mesh.");
@@ -1409,6 +1409,43 @@ void FPhysicsAssetEditorWidget::RenderRegenerateBodiesControls(UPhysicsAsset* Ph
         {
             bRegenerateUseBoneAxis = true;
         }
+
+        const char* PrimitiveTypeItems[] = { "Capsule", "Box", "Sphere" };
+        RegeneratePrimitiveTypeIndex = (std::min)((std::max)(RegeneratePrimitiveTypeIndex, 0), 2);
+        ImGui::SetNextItemWidth(150.0f);
+        ImGui::Combo("Primitive", &RegeneratePrimitiveTypeIndex, PrimitiveTypeItems, IM_ARRAYSIZE(PrimitiveTypeItems));
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Select the primitive generated for each fitted body. Capsule keeps the old behavior; Box and Sphere use the same fitted bounds.");
+        }
+
+        ImGui::Checkbox("Merge Small Bones", &bRegenerateMergeSmallBones);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Small bones do not receive their own bodies; their weighted vertices are folded into the nearest parent body candidate.");
+        }
+
+        if (!bRegenerateMergeSmallBones) ImGui::BeginDisabled();
+        ImGui::SetNextItemWidth(120.0f);
+        if (ImGui::InputFloat("Min Bone Size", &RegenerateMinBoneSize, 0.0f, 0.0f, "%.2f"))
+        {
+            RegenerateMinBoneSize = (std::max)(RegenerateMinBoneSize, 0.0f);
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Bones with a merged bounds size below this value are skipped and merged into their parent. This is scale-dependent.");
+        }
+
+        ImGui::SetNextItemWidth(120.0f);
+        if (ImGui::InputFloat("Min Weld Size", &RegenerateMinWeldSize, 0.0f, 0.0f, "%.4f"))
+        {
+            RegenerateMinWeldSize = (std::max)(RegenerateMinWeldSize, 0.0f);
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Tiny or empty fits below this size are ignored instead of being propagated upward.");
+        }
+        if (!bRegenerateMergeSmallBones) ImGui::EndDisabled();
 
         ImGui::Checkbox("Constraints", &bRegenerateCreateConstraints);
         if (ImGui::IsItemHovered())
@@ -2720,13 +2757,29 @@ bool FPhysicsAssetEditorWidget::RegenerateBodies(UPhysicsAsset* PhysicsAsset, US
     Options.Method = (bRegenerateUsePCAAnalysis && !bRegenerateUseBoneAxis)
         ? EPhysicsAssetAutoBodyMethod::PCAAnalysis
         : EPhysicsAssetAutoBodyMethod::BoneAxis;
+    switch (RegeneratePrimitiveTypeIndex)
+    {
+    case 1:
+        Options.PrimitiveType = EPhysicsAssetAutoBodyPrimitiveType::Box;
+        break;
+    case 2:
+        Options.PrimitiveType = EPhysicsAssetAutoBodyPrimitiveType::Sphere;
+        break;
+    case 0:
+    default:
+        Options.PrimitiveType = EPhysicsAssetAutoBodyPrimitiveType::Capsule;
+        break;
+    }
     Options.bCreateConstraints = bRegenerateCreateConstraints;
     Options.bDisableCollisionBetweenConstrainedBodies = bRegenerateDisableConstrainedBodyCollision;
     Options.bReplaceExisting = bRegenerateReplaceExisting;
     Options.bSkipHelperBones = bRegenerateSkipHelperBones;
     Options.bAllowBoneAxisFallback = bRegenerateAllowBoneAxisFallback;
+    Options.bMergeSmallBones = bRegenerateMergeSmallBones;
     Options.MinInfluenceWeight = RegenerateMinInfluenceWeight;
     Options.MinWeightedVertices = (std::max)(RegenerateMinWeightedVertices, 1);
+    Options.MinBoneSize = (std::max)(RegenerateMinBoneSize, 0.0f);
+    Options.MinWeldSize = (std::max)(RegenerateMinWeldSize, 0.0f);
 
     TArray<FMatrix> CurrentBoneGlobalMatrices;
     const TArray<FMatrix>* OverrideBoneGlobalMatrices = nullptr;

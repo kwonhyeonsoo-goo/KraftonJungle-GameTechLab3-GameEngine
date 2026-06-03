@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Types/CoreTypes.h"
+#include "Core/Types/CollisionTypes.h"
 #include "Math/Transform.h"
 #include "Object/FName.h"
 #include "Object/Ptr/WeakObjectPtr.h"
@@ -13,8 +14,14 @@ struct FPhysicsAssetSimulationOptions
 {
     bool bNoGravity = false;
     bool bSelectedOnly = false;
+    bool bPartialSimulation = false;
+    bool bIncludePartialDescendants = true;
     bool bForceQueryAndPhysicsCollision = false;
+    bool bUseIndependentRagdollCollision = false;
+    ECollisionEnabled IndependentCollisionEnabled = ECollisionEnabled::QueryAndPhysics;
+    bool bIndependentGenerateOverlapEvents = false;
     FName SelectedBoneName = FName::None;
+    FName PartialRootBoneName = FName::None;
 };
 
 // Runtime state is separated from UPhysicsAsset so the asset stays editable/serializable data only.
@@ -36,7 +43,10 @@ public:
     int32 GetLiveConstraintCount() const;
     // Pulls simulated body state back into bone world transforms for pose sync. The
     // component consumes the result, but the instance remains the source of truth.
-    bool PullPhysicsPose(TArray<FTransform>& OutBoneWorldTransforms) const;
+    bool PullPhysicsPose(
+        TArray<FTransform>& OutBoneWorldTransforms,
+        const TArray<FTransform>* ReferenceBoneComponentSpaceTransforms = nullptr,
+        const TArray<FTransform>* ReferenceBoneLocalTransforms = nullptr) const;
 
     UPhysicsAsset* GetAsset() const;
     USkeletalMeshComponent* GetOwnerComponent() const;
@@ -45,7 +55,11 @@ public:
     const TArray<FPhysicsConstraintHandle>& GetConstraints() const { return Constraints; }
     FPhysicsBodyHandle GetBodyHandleByBoneName(const FName& BoneName) const;
     FTransform GetBodyWorldTransformByBoneName(const FName& BoneName) const;
+    bool AddImpulseToBody(FPhysicsBodyHandle BodyHandle, const FVector& Impulse) const;
+    bool AddImpulseToBone(const FName& BoneName, const FVector& Impulse) const;
     bool HasValidBodyForBone(const FName& BoneName) const;
+    FName FindNearestSimulatedAncestorBodyBoneName(const FName& BoneName) const;
+    FName ResolveBestImpulseTargetBoneName(const FName& HitBoneName, const FName& FallbackRootBoneName) const;
     int32 FindBodySetupIndexByBoneName(const FName& BoneName) const;
     int32 FindBoneIndexForBody(const FName& BoneName) const;
     bool IsInitialized() const { return bInitialized; }
