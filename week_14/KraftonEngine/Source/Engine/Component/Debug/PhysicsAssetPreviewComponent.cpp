@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <functional>
 
 namespace
 {
@@ -102,6 +103,111 @@ namespace
 		HalfExtent.Y = (std::max)(HalfExtent.Y, MinShapeSize);
 		HalfExtent.Z = (std::max)(HalfExtent.Z, MinShapeSize);
 		return HalfExtent;
+	}
+
+
+	uint64 HashCombinePreview(uint64 Seed, uint64 Value)
+	{
+		return Seed ^ (Value + 0x9e3779b97f4a7c15ull + (Seed << 6) + (Seed >> 2));
+	}
+
+	uint64 HashFloatPreview(float Value)
+	{
+		return static_cast<uint64>(std::hash<float>{}(Value));
+	}
+
+	uint64 HashNamePreview(const FName& Name)
+	{
+		return static_cast<uint64>(FName::Hash{}(Name));
+	}
+
+	uint64 HashVectorPreview(uint64 Seed, const FVector& Value)
+	{
+		Seed = HashCombinePreview(Seed, HashFloatPreview(Value.X));
+		Seed = HashCombinePreview(Seed, HashFloatPreview(Value.Y));
+		Seed = HashCombinePreview(Seed, HashFloatPreview(Value.Z));
+		return Seed;
+	}
+
+	uint64 HashQuatPreview(uint64 Seed, const FQuat& Value)
+	{
+		Seed = HashCombinePreview(Seed, HashFloatPreview(Value.X));
+		Seed = HashCombinePreview(Seed, HashFloatPreview(Value.Y));
+		Seed = HashCombinePreview(Seed, HashFloatPreview(Value.Z));
+		Seed = HashCombinePreview(Seed, HashFloatPreview(Value.W));
+		return Seed;
+	}
+
+	uint64 HashTransformPreview(uint64 Seed, const FTransform& Value)
+	{
+		Seed = HashVectorPreview(Seed, Value.Location);
+		Seed = HashQuatPreview(Seed, Value.Rotation);
+		Seed = HashVectorPreview(Seed, Value.Scale);
+		return Seed;
+	}
+
+	uint64 HashPreviewComponentWorld(const USkeletalMeshComponent* Component)
+	{
+		if (!Component)
+		{
+			return 0;
+		}
+
+		uint64 Hash = 7809847782465536322ull;
+		Hash = HashVectorPreview(Hash, Component->GetWorldLocation());
+		Hash = HashQuatPreview(Hash, Component->GetWorldMatrix().ToQuat().GetNormalized());
+		return Hash;
+	}
+
+	uint64 ComputePhysicsAssetPreviewHash(const UPhysicsAsset* Asset)
+	{
+		if (!Asset)
+		{
+			return 0;
+		}
+
+		uint64 Hash = 1469598103934665603ull;
+		const TArray<FPhysicsAssetBodySetup>& Bodies = Asset->GetBodySetups();
+		Hash = HashCombinePreview(Hash, static_cast<uint64>(Bodies.size()));
+		for (const FPhysicsAssetBodySetup& Body : Bodies)
+		{
+			Hash = HashCombinePreview(Hash, HashNamePreview(Body.BoneName));
+			Hash = HashTransformPreview(Hash, Body.BodyLocalFrame);
+			Hash = HashCombinePreview(Hash, static_cast<uint64>(Body.Shapes.size()));
+			for (const FPhysicsAssetShapeSetup& Shape : Body.Shapes)
+			{
+				Hash = HashCombinePreview(Hash, static_cast<uint64>(Shape.Type));
+				Hash = HashTransformPreview(Hash, Shape.LocalTransform);
+				Hash = HashVectorPreview(Hash, Shape.BoxHalfExtent);
+				Hash = HashCombinePreview(Hash, HashFloatPreview(Shape.SphereRadius));
+				Hash = HashCombinePreview(Hash, HashFloatPreview(Shape.CapsuleRadius));
+				Hash = HashCombinePreview(Hash, HashFloatPreview(Shape.CapsuleHalfHeight));
+			}
+		}
+
+		const TArray<FPhysicsAssetConstraintSetup>& Constraints = Asset->GetConstraintSetups();
+		Hash = HashCombinePreview(Hash, static_cast<uint64>(Constraints.size()));
+		for (const FPhysicsAssetConstraintSetup& Constraint : Constraints)
+		{
+			Hash = HashCombinePreview(Hash, HashNamePreview(Constraint.ParentBoneName));
+			Hash = HashCombinePreview(Hash, HashNamePreview(Constraint.ChildBoneName));
+			Hash = HashTransformPreview(Hash, Constraint.ParentLocalFrame);
+			Hash = HashTransformPreview(Hash, Constraint.ChildLocalFrame);
+			Hash = HashCombinePreview(Hash, static_cast<uint64>(Constraint.Limits.LinearX));
+			Hash = HashCombinePreview(Hash, static_cast<uint64>(Constraint.Limits.LinearY));
+			Hash = HashCombinePreview(Hash, static_cast<uint64>(Constraint.Limits.LinearZ));
+			Hash = HashCombinePreview(Hash, static_cast<uint64>(Constraint.Limits.Twist));
+			Hash = HashCombinePreview(Hash, static_cast<uint64>(Constraint.Limits.Swing1));
+			Hash = HashCombinePreview(Hash, static_cast<uint64>(Constraint.Limits.Swing2));
+			Hash = HashCombinePreview(Hash, HashFloatPreview(Constraint.Limits.TwistLimitMinDegrees));
+			Hash = HashCombinePreview(Hash, HashFloatPreview(Constraint.Limits.TwistLimitMaxDegrees));
+			Hash = HashCombinePreview(Hash, HashFloatPreview(Constraint.Limits.Swing1LimitDegrees));
+			Hash = HashCombinePreview(Hash, HashFloatPreview(Constraint.Limits.Swing2LimitDegrees));
+			Hash = HashCombinePreview(Hash, Constraint.Limits.bEnableProjection ? 1ull : 0ull);
+			Hash = HashCombinePreview(Hash, Constraint.bDisableCollisionBetweenBodies ? 1ull : 0ull);
+		}
+
+		return Hash;
 	}
 
 	bool IntersectRayLocalBox(const FRay& LocalRay, const FVector& HalfExtent, float& OutT)
@@ -323,6 +429,12 @@ bool UPhysicsAssetPreviewComponent::LineTraceComponent(const FRay& Ray, FHitResu
 		return false;
 	}
 
+	FPhysicsAssetPreviewPoseCache PoseCache;
+	if (!PoseCache.Initialize(MeshComponent, Asset))
+	{
+		return false;
+	}
+
 	bool bHit = false;
 	float ClosestT = FLT_MAX;
 	int32 HitBodyIndex = -1;
@@ -332,11 +444,7 @@ bool UPhysicsAssetPreviewComponent::LineTraceComponent(const FRay& Ray, FHitResu
 	for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
 	{
 		FTransform BodyWorld;
-		if (!FPhysicsAssetPreviewUtils::ComputePreviewBodyWorldTransform(
-				MeshComponent,
-				Asset,
-				BodyIndex,
-				BodyWorld))
+		if (!PoseCache.ComputeBodyWorldTransform(BodyIndex, BodyWorld))
 		{
 			continue;
 		}
@@ -429,11 +537,44 @@ void UPhysicsAssetPreviewComponent::UpdatePreview(
 	if ((!bShowBodies && !bShowConstraintLimitSurfaces) || !PhysicsAsset.Get() || !PreviewComponent.Get() || !Device)
 	{
 		ClearPreview(Device);
+		InvalidatePreviewBuildCache();
+		return;
+	}
+
+	const uint64 CurrentSkinnedRevision = PreviewComponent.Get()->GetSkinnedRevision();
+	const uint64 CurrentComponentWorldHash = HashPreviewComponentWorld(PreviewComponent.Get());
+	const uint64 CurrentAssetHash = ComputePhysicsAssetPreviewHash(PhysicsAsset.Get());
+	if (IsPreviewBuildCacheCurrent(
+			PhysicsAsset.Get(),
+			PreviewComponent.Get(),
+			SelectedBodyIndex,
+			SelectedShapeIndex,
+			SelectedConstraintIndex,
+			bShowBodies,
+			bShowConstraintLimitSurfaces,
+			bShowOnlySelectedConstraintLimitSurfaces,
+			CurrentSkinnedRevision,
+			CurrentComponentWorldHash,
+			CurrentAssetHash))
+	{
+		SetVisibility(!PreviewMeshData.Vertices.empty());
 		return;
 	}
 
 	RebuildPreviewMesh();
 	UploadPreviewMesh(Device);
+	StorePreviewBuildCache(
+		PhysicsAsset.Get(),
+		PreviewComponent.Get(),
+		SelectedBodyIndex,
+		SelectedShapeIndex,
+		SelectedConstraintIndex,
+		bShowBodies,
+		bShowConstraintLimitSurfaces,
+		bShowOnlySelectedConstraintLimitSurfaces,
+		CurrentSkinnedRevision,
+		CurrentComponentWorldHash,
+		CurrentAssetHash);
 	SetVisibility(!PreviewMeshData.Vertices.empty());
 }
 
@@ -445,10 +586,82 @@ void UPhysicsAssetPreviewComponent::ClearPreview(ID3D11Device* Device)
 	CachedWorldBounds = FBoundingBox();
 	bHasPreviewBounds = false;
 	PreviewMeshBuffer.Release();
+	InvalidatePreviewBuildCache();
 
 	SetVisibility(false);
 	MarkWorldBoundsDirty();
 	MarkProxyDirty(EDirtyFlag::Mesh);
+}
+
+
+bool UPhysicsAssetPreviewComponent::IsPreviewBuildCacheCurrent(
+	UPhysicsAsset* InPhysicsAsset,
+	USkeletalMeshComponent* InPreviewComponent,
+	int32 InSelectedBodyIndex,
+	int32 InSelectedShapeIndex,
+	int32 InSelectedConstraintIndex,
+	bool bInShowBodies,
+	bool bInShowConstraintLimitSurfaces,
+	bool bInShowOnlySelectedConstraintLimitSurfaces,
+	uint64 InSkinnedRevision,
+	uint64 InComponentWorldHash,
+	uint64 InAssetHash) const
+{
+	return bHasValidPreviewBuildCache &&
+		CachedBuildPhysicsAsset == InPhysicsAsset &&
+		CachedBuildPreviewComponent == InPreviewComponent &&
+		CachedBuildSelectedBodyIndex == InSelectedBodyIndex &&
+		CachedBuildSelectedShapeIndex == InSelectedShapeIndex &&
+		CachedBuildSelectedConstraintIndex == InSelectedConstraintIndex &&
+		bCachedBuildShowBodies == bInShowBodies &&
+		bCachedBuildShowConstraintLimitSurfaces == bInShowConstraintLimitSurfaces &&
+		bCachedBuildShowOnlySelectedConstraintLimitSurfaces == bInShowOnlySelectedConstraintLimitSurfaces &&
+		CachedBuildSkinnedRevision == InSkinnedRevision &&
+		CachedBuildComponentWorldHash == InComponentWorldHash &&
+		CachedBuildAssetHash == InAssetHash;
+}
+
+void UPhysicsAssetPreviewComponent::StorePreviewBuildCache(
+	UPhysicsAsset* InPhysicsAsset,
+	USkeletalMeshComponent* InPreviewComponent,
+	int32 InSelectedBodyIndex,
+	int32 InSelectedShapeIndex,
+	int32 InSelectedConstraintIndex,
+	bool bInShowBodies,
+	bool bInShowConstraintLimitSurfaces,
+	bool bInShowOnlySelectedConstraintLimitSurfaces,
+	uint64 InSkinnedRevision,
+	uint64 InComponentWorldHash,
+	uint64 InAssetHash)
+{
+	CachedBuildPhysicsAsset = InPhysicsAsset;
+	CachedBuildPreviewComponent = InPreviewComponent;
+	CachedBuildSelectedBodyIndex = InSelectedBodyIndex;
+	CachedBuildSelectedShapeIndex = InSelectedShapeIndex;
+	CachedBuildSelectedConstraintIndex = InSelectedConstraintIndex;
+	bCachedBuildShowBodies = bInShowBodies;
+	bCachedBuildShowConstraintLimitSurfaces = bInShowConstraintLimitSurfaces;
+	bCachedBuildShowOnlySelectedConstraintLimitSurfaces = bInShowOnlySelectedConstraintLimitSurfaces;
+	CachedBuildSkinnedRevision = InSkinnedRevision;
+	CachedBuildComponentWorldHash = InComponentWorldHash;
+	CachedBuildAssetHash = InAssetHash;
+	bHasValidPreviewBuildCache = true;
+}
+
+void UPhysicsAssetPreviewComponent::InvalidatePreviewBuildCache()
+{
+	CachedBuildPhysicsAsset = nullptr;
+	CachedBuildPreviewComponent = nullptr;
+	CachedBuildSelectedBodyIndex = -1;
+	CachedBuildSelectedShapeIndex = -1;
+	CachedBuildSelectedConstraintIndex = -1;
+	bCachedBuildShowBodies = false;
+	bCachedBuildShowConstraintLimitSurfaces = false;
+	bCachedBuildShowOnlySelectedConstraintLimitSurfaces = false;
+	CachedBuildSkinnedRevision = 0;
+	CachedBuildComponentWorldHash = 0;
+	CachedBuildAssetHash = 0;
+	bHasValidPreviewBuildCache = false;
 }
 
 void UPhysicsAssetPreviewComponent::RebuildPreviewMesh()
@@ -465,50 +678,52 @@ void UPhysicsAssetPreviewComponent::RebuildPreviewMesh()
 		return;
 	}
 
+	FPhysicsAssetPreviewPoseCache PoseCache;
+	if (!PoseCache.Initialize(MeshComponent, Asset))
+	{
+		return;
+	}
+
 	if (bShowBodies)
 	{
-	const TArray<FPhysicsAssetBodySetup>& Bodies = Asset->GetBodySetups();
-	for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
-	{
-		FTransform BodyWorld;
-		if (!FPhysicsAssetPreviewUtils::ComputePreviewBodyWorldTransform(
-			MeshComponent,
-			Asset,
-			BodyIndex,
-			BodyWorld))
+		const TArray<FPhysicsAssetBodySetup>& Bodies = Asset->GetBodySetups();
+		for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
 		{
-			continue;
-		}
-
-		const FPhysicsAssetBodySetup& Body = Bodies[BodyIndex];
-		const bool bSelectedBody = SelectedBodyIndex == BodyIndex && SelectedConstraintIndex < 0;
-		for (int32 ShapeIndex = 0; ShapeIndex < static_cast<int32>(Body.Shapes.size()); ++ShapeIndex)
-		{
-			const FPhysicsAssetShapeSetup& Shape = Body.Shapes[ShapeIndex];
-			const FTransform ShapeWorld = ComposePreviewDebugTransforms(BodyWorld, Shape.LocalTransform);
-			const bool bSelectedShape = bSelectedBody && SelectedShapeIndex == ShapeIndex;
-			const FVector4 Color = PhysicsPreviewShapeColor(bSelectedBody, bSelectedShape);
-
-			switch (Shape.Type)
+			FTransform BodyWorld;
+			if (!PoseCache.ComputeBodyWorldTransform(BodyIndex, BodyWorld))
 			{
-			case EPhysicsAssetShapeType::Box:
-				AppendBox(ShapeWorld, ClampHalfExtent(Shape.BoxHalfExtent), Color);
-				break;
-			case EPhysicsAssetShapeType::Sphere:
-				AppendSphere(ShapeWorld, (std::max)(Shape.SphereRadius, MinShapeSize), Color);
-				break;
-			case EPhysicsAssetShapeType::Capsule:
-			{
-				const float Radius = (std::max)(Shape.CapsuleRadius, MinShapeSize);
-				const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight, Radius);
-				AppendCapsuleZAxis(ShapeWorld, Radius, HalfHeight, Color);
-				break;
+				continue;
 			}
-			default:
-				break;
+
+			const FPhysicsAssetBodySetup& Body = Bodies[BodyIndex];
+			const bool bSelectedBody = SelectedBodyIndex == BodyIndex && SelectedConstraintIndex < 0;
+			for (int32 ShapeIndex = 0; ShapeIndex < static_cast<int32>(Body.Shapes.size()); ++ShapeIndex)
+			{
+				const FPhysicsAssetShapeSetup& Shape = Body.Shapes[ShapeIndex];
+				const FTransform ShapeWorld = ComposePreviewDebugTransforms(BodyWorld, Shape.LocalTransform);
+				const bool bSelectedShape = bSelectedBody && SelectedShapeIndex == ShapeIndex;
+				const FVector4 Color = PhysicsPreviewShapeColor(bSelectedBody, bSelectedShape);
+
+				switch (Shape.Type)
+				{
+				case EPhysicsAssetShapeType::Box:
+					AppendBox(ShapeWorld, ClampHalfExtent(Shape.BoxHalfExtent), Color);
+					break;
+				case EPhysicsAssetShapeType::Sphere:
+					AppendSphere(ShapeWorld, (std::max)(Shape.SphereRadius, MinShapeSize), Color);
+					break;
+				case EPhysicsAssetShapeType::Capsule:
+				{
+					const float Radius = (std::max)(Shape.CapsuleRadius, MinShapeSize);
+					const float HalfHeight = (std::max)(Shape.CapsuleHalfHeight, Radius);
+					AppendCapsuleZAxis(ShapeWorld, Radius, HalfHeight, Color);
+					break;
+				}
+				default:
+					break;
+				}
 			}
 		}
-	}
 	}
 
 	if (bShowConstraintLimitSurfaces)
@@ -520,9 +735,10 @@ void UPhysicsAssetPreviewComponent::RebuildPreviewMesh()
 			{
 				continue;
 			}
-			AppendConstraintLimitSurfaces(ConstraintIndex);
+			AppendConstraintLimitSurfaces(ConstraintIndex, PoseCache);
 		}
 	}
+
 }
 
 void UPhysicsAssetPreviewComponent::UploadPreviewMesh(ID3D11Device* Device)
@@ -545,11 +761,12 @@ uint32 UPhysicsAssetPreviewComponent::AddVertexWorld(const FVector& WorldPositio
 	return static_cast<uint32>(PreviewMeshData.Vertices.size() - 1);
 }
 
-void UPhysicsAssetPreviewComponent::AppendConstraintLimitSurfaces(int32 ConstraintIndex)
+void UPhysicsAssetPreviewComponent::AppendConstraintLimitSurfaces(
+	int32 ConstraintIndex,
+	const FPhysicsAssetPreviewPoseCache& PoseCache)
 {
 	UPhysicsAsset* Asset = PhysicsAsset.Get();
-	USkeletalMeshComponent* MeshComponent = PreviewComponent.Get();
-	if (!Asset || !MeshComponent)
+	if (!Asset)
 	{
 		return;
 	}
@@ -562,12 +779,7 @@ void UPhysicsAssetPreviewComponent::AppendConstraintLimitSurfaces(int32 Constrai
 
 	FTransform ParentFrameWorld;
 	FTransform ChildFrameWorld;
-	if (!FPhysicsAssetPreviewUtils::ComputePreviewConstraintWorldFrames(
-			MeshComponent,
-			Asset,
-			ConstraintIndex,
-			ParentFrameWorld,
-			ChildFrameWorld))
+	if (!PoseCache.ComputeConstraintWorldFrames(ConstraintIndex, ParentFrameWorld, ChildFrameWorld))
 	{
 		return;
 	}

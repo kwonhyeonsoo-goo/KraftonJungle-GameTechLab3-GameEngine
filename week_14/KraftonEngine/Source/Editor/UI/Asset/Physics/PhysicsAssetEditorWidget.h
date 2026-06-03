@@ -16,6 +16,7 @@ struct ID3D11Device;
 struct FReferenceSkeleton;
 struct FPhysicsAssetBodySetup;
 struct FPhysicsAssetConstraintSetup;
+struct FPhysicsAssetPreviewPoseCache;
 struct FPhysicsAssetShapeSetup;
 struct FShowFlags;
 
@@ -102,20 +103,30 @@ private:
     void RenderConstraintDetails(UPhysicsAsset* PhysicsAsset, FPhysicsAssetConstraintSetup& ConstraintSetup);
     void RenderValidationPanel();
     void RenderConstraintGraphPanel(UPhysicsAsset* PhysicsAsset);
-    void RenderBodyDebug(UPhysicsAsset* PhysicsAsset, USkeletalMeshComponent* PreviewComponent, UWorld* PreviewWorld);
-    void RenderConstraintDebug(UPhysicsAsset* PhysicsAsset, USkeletalMeshComponent* PreviewComponent, UWorld* PreviewWorld);
+    void RenderBodyDebug(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMeshComponent* PreviewComponent,
+        UWorld* PreviewWorld,
+        const FPhysicsAssetPreviewPoseCache* PoseCache = nullptr);
+    void RenderConstraintDebug(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMeshComponent* PreviewComponent,
+        UWorld* PreviewWorld,
+        const FPhysicsAssetPreviewPoseCache* PoseCache = nullptr);
     void DrawBodySetupDebug(
         UPhysicsAsset* PhysicsAsset,
         USkeletalMeshComponent* PreviewComponent,
         UWorld* PreviewWorld,
         int32 BodyIndex,
-        const FPhysicsAssetBodySetup& BodySetup);
+        const FPhysicsAssetBodySetup& BodySetup,
+        const FPhysicsAssetPreviewPoseCache* PoseCache = nullptr);
     void DrawConstraintSetupDebug(
         UPhysicsAsset* PhysicsAsset,
         USkeletalMeshComponent* PreviewComponent,
         UWorld* PreviewWorld,
         int32 ConstraintIndex,
-        const FPhysicsAssetConstraintSetup& ConstraintSetup);
+        const FPhysicsAssetConstraintSetup& ConstraintSetup,
+        const FPhysicsAssetPreviewPoseCache* PoseCache = nullptr);
 
     void SelectBoneInPhysicsTree(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton, int32 BoneIndex);
     void SelectBodySetup(UPhysicsAsset* PhysicsAsset, int32 BodyIndex, int32 TreeBoneIndex);

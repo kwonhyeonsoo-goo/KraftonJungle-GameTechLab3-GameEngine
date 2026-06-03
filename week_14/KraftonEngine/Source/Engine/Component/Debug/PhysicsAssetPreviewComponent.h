@@ -10,6 +10,7 @@
 
 class UPhysicsAsset;
 class USkeletalMeshComponent;
+struct FPhysicsAssetPreviewPoseCache;
 struct ID3D11Device;
 
 UCLASS()
@@ -47,11 +48,36 @@ public:
 private:
 	void RebuildPreviewMesh();
 	void UploadPreviewMesh(ID3D11Device* Device);
+	bool IsPreviewBuildCacheCurrent(
+		UPhysicsAsset* InPhysicsAsset,
+		USkeletalMeshComponent* InPreviewComponent,
+		int32 InSelectedBodyIndex,
+		int32 InSelectedShapeIndex,
+		int32 InSelectedConstraintIndex,
+		bool bInShowBodies,
+		bool bInShowConstraintLimitSurfaces,
+		bool bInShowOnlySelectedConstraintLimitSurfaces,
+		uint64 InSkinnedRevision,
+		uint64 InComponentWorldHash,
+		uint64 InAssetHash) const;
+	void StorePreviewBuildCache(
+		UPhysicsAsset* InPhysicsAsset,
+		USkeletalMeshComponent* InPreviewComponent,
+		int32 InSelectedBodyIndex,
+		int32 InSelectedShapeIndex,
+		int32 InSelectedConstraintIndex,
+		bool bInShowBodies,
+		bool bInShowConstraintLimitSurfaces,
+		bool bInShowOnlySelectedConstraintLimitSurfaces,
+		uint64 InSkinnedRevision,
+		uint64 InComponentWorldHash,
+		uint64 InAssetHash);
+	void InvalidatePreviewBuildCache();
 
 	void AppendBox(const FTransform& ShapeWorld, const FVector& HalfExtent, const FVector4& Color);
 	void AppendSphere(const FTransform& ShapeWorld, float Radius, const FVector4& Color);
 	void AppendCapsuleZAxis(const FTransform& ShapeWorld, float Radius, float HalfHeight, const FVector4& Color);
-	void AppendConstraintLimitSurfaces(int32 ConstraintIndex);
+	void AppendConstraintLimitSurfaces(int32 ConstraintIndex, const FPhysicsAssetPreviewPoseCache& PoseCache);
 	void AppendSwingLimitSurface(const FTransform& ParentFrameWorld, const struct FConstraintLimitDesc& Limits, float Radius, const FVector4& Color);
 	void AppendTwistLimitSurface(const FTransform& ParentFrameWorld, const struct FConstraintLimitDesc& Limits, float Radius, const FVector4& Color);
 
@@ -74,4 +100,17 @@ private:
 
 	FBoundingBox CachedWorldBounds;
 	bool bHasPreviewBounds = false;
+
+	UPhysicsAsset* CachedBuildPhysicsAsset = nullptr;
+	USkeletalMeshComponent* CachedBuildPreviewComponent = nullptr;
+	int32 CachedBuildSelectedBodyIndex = -1;
+	int32 CachedBuildSelectedShapeIndex = -1;
+	int32 CachedBuildSelectedConstraintIndex = -1;
+	bool bCachedBuildShowBodies = false;
+	bool bCachedBuildShowConstraintLimitSurfaces = false;
+	bool bCachedBuildShowOnlySelectedConstraintLimitSurfaces = false;
+	uint64 CachedBuildSkinnedRevision = 0;
+	uint64 CachedBuildComponentWorldHash = 0;
+	uint64 CachedBuildAssetHash = 0;
+	bool bHasValidPreviewBuildCache = false;
 };
