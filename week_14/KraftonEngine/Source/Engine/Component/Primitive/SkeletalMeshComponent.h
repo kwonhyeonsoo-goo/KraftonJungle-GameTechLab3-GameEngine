@@ -125,6 +125,24 @@ struct FRagdollImpulseRequest
     }
 };
 
+struct FRagdollShockwaveRequest
+{
+    FVector Origin = FVector::ZeroVector;
+    float Radius = 300.0f;
+    float Strength = 1.0f;
+    float MinStrength = 0.0f;
+    float HoldTimeOverride = -1.0f;
+    EPartialRagdollPreset PreferredPreset = EPartialRagdollPreset::UpperBody;
+    bool bUsePreferredPreset = false;
+    bool bAllowEscalationToFullBody = true;
+    bool bAllowWhileMoving = true;
+
+    bool HasHoldTimeOverride() const
+    {
+        return HoldTimeOverride >= 0.0f;
+    }
+};
+
 #define KRAFTON_SKELETAL_MESH_RAGDOLL_TYPES_DEFINED 1
 #include "Component/Primitive/RagdollReactionPolicy.h"
 #undef KRAFTON_SKELETAL_MESH_RAGDOLL_TYPES_DEFINED
@@ -178,6 +196,7 @@ public:
     bool EnablePartialRagdoll(const FName& RootBoneName);
     bool ApplyRagdollReaction(const FRagdollReactionRequest& Request);
     bool ApplyRagdollImpulse(const FRagdollImpulseRequest& Request);
+    bool ApplyRagdollShockwave(const FRagdollShockwaveRequest& Request);
     bool TriggerPartialRagdoll(const FPartialRagdollRequest& Request);
     bool TriggerPartialRagdollHitReaction(const FPartialRagdollHitReactionRequest& Request);
     UFUNCTION(Callable, Category="Physics")

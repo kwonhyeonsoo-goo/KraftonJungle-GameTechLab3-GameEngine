@@ -57,6 +57,10 @@ public:
     const TArray<FPhysicsConstraintHandle>& GetConstraints() const { return Constraints; }
     FPhysicsBodyHandle GetBodyHandleByBoneName(const FName& BoneName) const;
     FTransform GetBodyWorldTransformByBoneName(const FName& BoneName) const;
+    bool FindNearestBodyToWorldLocation(
+        const FVector& WorldLocation,
+        FName& OutBoneName,
+        FVector& OutBodyWorldLocation) const;
     bool AddImpulseToBody(FPhysicsBodyHandle BodyHandle, const FVector& Impulse) const;
     bool AddImpulseToBone(const FName& BoneName, const FVector& Impulse) const;
     bool HasValidBodyForBone(const FName& BoneName) const;

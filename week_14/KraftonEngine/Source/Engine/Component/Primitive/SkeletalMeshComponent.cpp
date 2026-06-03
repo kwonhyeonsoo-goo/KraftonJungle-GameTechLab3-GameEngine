@@ -320,6 +320,72 @@ namespace
         return ReactionRequest;
     }
 
+    bool MakeRagdollShockwaveReactionRequest(
+        const USkeletalMeshComponent* Component,
+        const FRagdollShockwaveRequest& ShockwaveRequest,
+        FRagdollReactionRequest& OutReactionRequest)
+    {
+        constexpr float MinRadius = 1.0e-3f;
+        constexpr float MinEffectiveStrength = 1.0e-3f;
+        if (!Component || ShockwaveRequest.Radius <= MinRadius)
+        {
+            return false;
+        }
+
+        FName TargetBoneName = FName::None;
+        FVector TargetLocation = Component->GetWorldLocation();
+        if (FPhysicsAssetInstance* Instance = Component->GetPhysicsAssetInstance())
+        {
+            FVector NearestBodyLocation = TargetLocation;
+            FName NearestBodyBoneName = FName::None;
+            if (Instance->HasLivePhysicsObjects() &&
+                Instance->FindNearestBodyToWorldLocation(
+                    ShockwaveRequest.Origin,
+                    NearestBodyBoneName,
+                    NearestBodyLocation))
+            {
+                TargetBoneName = NearestBodyBoneName;
+                TargetLocation = NearestBodyLocation;
+            }
+        }
+
+        const float Distance = FVector::Distance(ShockwaveRequest.Origin, TargetLocation);
+        if (Distance > ShockwaveRequest.Radius)
+        {
+            return false;
+        }
+
+        const float DistanceAlpha = Clamp01(Distance / ShockwaveRequest.Radius);
+        const float Falloff = 1.0f - DistanceAlpha;
+        const float EffectiveStrength = ShockwaveRequest.Strength * Falloff;
+        if (EffectiveStrength < ShockwaveRequest.MinStrength || EffectiveStrength <= MinEffectiveStrength)
+        {
+            return false;
+        }
+
+        FVector Direction = TargetLocation - ShockwaveRequest.Origin;
+        if (Direction.Dot(Direction) <= 1.0e-6f)
+        {
+            Direction = FVector::UpVector;
+        }
+        else
+        {
+            Direction = Direction.Normalized();
+        }
+
+        OutReactionRequest.EventKind = ERagdollReactionEventKind::RadialShockwave;
+        OutReactionRequest.HitBoneName = TargetBoneName;
+        OutReactionRequest.HitWorldLocation = TargetLocation;
+        OutReactionRequest.HitWorldDirection = Direction;
+        OutReactionRequest.Strength = EffectiveStrength;
+        OutReactionRequest.HoldTimeOverride = ShockwaveRequest.HoldTimeOverride;
+        OutReactionRequest.PreferredPreset = ShockwaveRequest.PreferredPreset;
+        OutReactionRequest.bUsePreferredPreset = ShockwaveRequest.bUsePreferredPreset;
+        OutReactionRequest.bAllowEscalationToFullBody = ShockwaveRequest.bAllowEscalationToFullBody;
+        OutReactionRequest.bAllowWhileMoving = ShockwaveRequest.bAllowWhileMoving;
+        return true;
+    }
+
     FTransform DecomposePoseMatrixPreservingScale(const FMatrix& Matrix, const FVector& PreservedScale)
     {
         FTransform Result;
@@ -1290,6 +1356,17 @@ bool USkeletalMeshComponent::ApplyRagdollReaction(const FRagdollReactionRequest&
 bool USkeletalMeshComponent::ApplyRagdollImpulse(const FRagdollImpulseRequest& Request)
 {
     const FRagdollReactionRequest ReactionRequest = MakeRagdollReactionRequest(Request);
+    return ApplyRagdollReaction(ReactionRequest);
+}
+
+bool USkeletalMeshComponent::ApplyRagdollShockwave(const FRagdollShockwaveRequest& Request)
+{
+    FRagdollReactionRequest ReactionRequest;
+    if (!MakeRagdollShockwaveReactionRequest(this, Request, ReactionRequest))
+    {
+        return false;
+    }
+
     return ApplyRagdollReaction(ReactionRequest);
 }
 

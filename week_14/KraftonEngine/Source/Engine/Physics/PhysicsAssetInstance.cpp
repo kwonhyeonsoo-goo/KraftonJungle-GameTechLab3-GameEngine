@@ -937,6 +937,43 @@ FTransform FPhysicsAssetInstance::GetBodyWorldTransformByBoneName(const FName& B
     return BodySnapshot ? BodySnapshot->CurrentTransform : FTransform();
 }
 
+bool FPhysicsAssetInstance::FindNearestBodyToWorldLocation(
+    const FVector& WorldLocation,
+    FName& OutBoneName,
+    FVector& OutBodyWorldLocation) const
+{
+    UPhysicsAsset* Asset = GetAsset();
+    if (!Asset)
+    {
+        return false;
+    }
+
+    const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
+    float BestDistanceSquared = 0.0f;
+    bool bFoundBody = false;
+
+    for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
+    {
+        if (BodyIndex >= static_cast<int32>(BodiesByBone.size()) || !BodiesByBone[BodyIndex].IsValid())
+        {
+            continue;
+        }
+
+        const FName& CandidateBoneName = BodySetups[BodyIndex].BoneName;
+        const FVector CandidateLocation = GetBodyWorldTransformByBoneName(CandidateBoneName).Location;
+        const float DistanceSquared = FVector::DistSquared(WorldLocation, CandidateLocation);
+        if (!bFoundBody || DistanceSquared < BestDistanceSquared)
+        {
+            BestDistanceSquared = DistanceSquared;
+            OutBoneName = CandidateBoneName;
+            OutBodyWorldLocation = CandidateLocation;
+            bFoundBody = true;
+        }
+    }
+
+    return bFoundBody;
+}
+
 bool FPhysicsAssetInstance::AddImpulseToBody(FPhysicsBodyHandle BodyHandle, const FVector& Impulse) const
 {
     if (!BodyHandle.IsValid())
