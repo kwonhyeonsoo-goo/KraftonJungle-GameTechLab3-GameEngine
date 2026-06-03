@@ -118,6 +118,32 @@ namespace
 			return "Unknown";
 		}
 	}
+
+	const char* LexToString(ECharacterPhysicsCollisionMode Mode)
+	{
+		switch (Mode)
+		{
+		case ECharacterPhysicsCollisionMode::FullRagdollOwned:
+			return "FullRagdollOwned";
+		case ECharacterPhysicsCollisionMode::PartialHybrid:
+			return "PartialHybrid";
+		default:
+			return "CharacterDriven";
+		}
+	}
+
+	const char* LexToString(ECharacterQueryCollisionMode Mode)
+	{
+		switch (Mode)
+		{
+		case ECharacterQueryCollisionMode::Disabled:
+			return "Disabled";
+		case ECharacterQueryCollisionMode::ReservedForFullRagdollProxy:
+			return "ReservedForFullRagdollProxy";
+		default:
+			return "CharacterDriven";
+		}
+	}
 }
 void ACharacter::InitDefaultComponents(const FString& SkeletalMeshFileName)
 {
@@ -287,12 +313,14 @@ void ACharacter::SavePreRagdollCharacterState()
 		return;
 	}
 
-	SavedCapsuleCollisionEnabled = CapsuleComponent
+	SavedPreRagdollCollisionOwnership.CapsuleCollisionEnabled = CapsuleComponent
 		? CapsuleComponent->GetCollisionEnabled()
 		: ECollisionEnabled::NoCollision;
-	SavedMeshCollisionEnabled = Mesh
+	SavedPreRagdollCollisionOwnership.MeshCollisionEnabled = Mesh
 		? Mesh->GetCollisionEnabled()
 		: ECollisionEnabled::NoCollision;
+	SavedPreRagdollCollisionOwnership.PhysicsCollisionMode = CharacterPhysicsCollisionMode;
+	SavedPreRagdollCollisionOwnership.QueryCollisionMode = CharacterQueryCollisionMode;
 	bSavedMovementTickEnabled = CharacterMovement
 		? CharacterMovement->PrimaryComponentTick.bTickEnabled
 		: true;
@@ -302,26 +330,158 @@ void ACharacter::SavePreRagdollCharacterState()
 	bSavedPreRagdollCharacterState = true;
 }
 
-void ACharacter::SetCharacterDrivenCollisionEnabled(bool bEnabled)
+ECollisionEnabled ACharacter::ResolveCharacterDrivenCapsuleCollisionEnabled() const
 {
-	// Character-driven collision is treated as a single ownership set. During ragdoll
-	// we disable the normal capsule/mesh primitive collision together so only the
-	// PhysicsAsset runtime bodies remain as physical blockers.
-	if (Mesh)
+	if (bSavedPreRagdollCharacterState)
 	{
-		Mesh->SetCollisionEnabled(bEnabled ? SavedMeshCollisionEnabled : ECollisionEnabled::NoCollision);
+		return SavedPreRagdollCollisionOwnership.CapsuleCollisionEnabled;
 	}
 
+	return CapsuleComponent
+		? CapsuleComponent->GetCollisionEnabled()
+		: ECollisionEnabled::NoCollision;
+}
+
+ECollisionEnabled ACharacter::ResolveCharacterDrivenMeshCollisionEnabled() const
+{
+	if (bSavedPreRagdollCharacterState)
+	{
+		return SavedPreRagdollCollisionOwnership.MeshCollisionEnabled;
+	}
+
+	return Mesh
+		? Mesh->GetCollisionEnabled()
+		: ECollisionEnabled::NoCollision;
+}
+
+ECollisionEnabled ACharacter::ResolveCapsuleCollisionEnabledForCurrentOwnership() const
+{
+	switch (CharacterPhysicsCollisionMode)
+	{
+	case ECharacterPhysicsCollisionMode::CharacterDriven:
+		return ResolveCharacterDrivenCapsuleCollisionEnabled();
+	case ECharacterPhysicsCollisionMode::PartialHybrid:
+		// Partial ragdoll keeps the normal capsule authority for now. Its dedicated
+		// self-interference policy is handled in a later pass.
+		return ResolveCharacterDrivenCapsuleCollisionEnabled();
+	case ECharacterPhysicsCollisionMode::FullRagdollOwned:
+	default:
+		// This foundation pass separates ownership roles first. The later runtime pass
+		// can promote ReservedForFullRagdollProxy to QueryOnly without reworking the API.
+		switch (CharacterQueryCollisionMode)
+		{
+		case ECharacterQueryCollisionMode::ReservedForFullRagdollProxy:
+			return ECollisionEnabled::NoCollision;
+		case ECharacterQueryCollisionMode::Disabled:
+			return ECollisionEnabled::NoCollision;
+		case ECharacterQueryCollisionMode::CharacterDriven:
+		default:
+			return ECollisionEnabled::NoCollision;
+		}
+	}
+}
+
+ECollisionEnabled ACharacter::ResolveMeshCollisionEnabledForCurrentOwnership() const
+{
+	switch (CharacterPhysicsCollisionMode)
+	{
+	case ECharacterPhysicsCollisionMode::CharacterDriven:
+		return ResolveCharacterDrivenMeshCollisionEnabled();
+	case ECharacterPhysicsCollisionMode::PartialHybrid:
+		return ResolveCharacterDrivenMeshCollisionEnabled();
+	case ECharacterPhysicsCollisionMode::FullRagdollOwned:
+	default:
+		switch (CharacterQueryCollisionMode)
+		{
+		case ECharacterQueryCollisionMode::ReservedForFullRagdollProxy:
+			return ECollisionEnabled::NoCollision;
+		case ECharacterQueryCollisionMode::Disabled:
+			return ECollisionEnabled::NoCollision;
+		case ECharacterQueryCollisionMode::CharacterDriven:
+		default:
+			return ECollisionEnabled::NoCollision;
+		}
+	}
+}
+
+void ACharacter::ReconcileCharacterCollisionOwnership()
+{
 	if (CapsuleComponent)
 	{
-		CapsuleComponent->SetCollisionEnabled(
-			bEnabled ? SavedCapsuleCollisionEnabled : ECollisionEnabled::NoCollision);
+		CapsuleComponent->SetCollisionEnabled(ResolveCapsuleCollisionEnabledForCurrentOwnership());
 	}
+
+	if (Mesh)
+	{
+		Mesh->SetCollisionEnabled(ResolveMeshCollisionEnabledForCurrentOwnership());
+	}
+}
+
+void ACharacter::ApplyCharacterCollisionOwnershipModes(
+	ECharacterPhysicsCollisionMode NewPhysicsMode,
+	ECharacterQueryCollisionMode NewQueryMode,
+	const char* Context)
+{
+	const bool bChanged =
+		CharacterPhysicsCollisionMode != NewPhysicsMode ||
+		CharacterQueryCollisionMode != NewQueryMode;
+	if (!bChanged)
+	{
+		return;
+	}
+
+	CharacterPhysicsCollisionMode = NewPhysicsMode;
+	CharacterQueryCollisionMode = NewQueryMode;
+	ReconcileCharacterCollisionOwnership();
+
+	UE_LOG("Character collision ownership updated. Actor=%s Context=%s Physics=%s Query=%s",
+		GetName().c_str(),
+		Context ? Context : "Unspecified",
+		LexToString(CharacterPhysicsCollisionMode),
+		LexToString(CharacterQueryCollisionMode));
+}
+
+void ACharacter::ApplyCharacterPhysicsCollisionMode(ECharacterPhysicsCollisionMode NewMode, const char* Context)
+{
+	ApplyCharacterCollisionOwnershipModes(NewMode, CharacterQueryCollisionMode, Context);
+}
+
+void ACharacter::ApplyCharacterQueryCollisionMode(ECharacterQueryCollisionMode NewMode, const char* Context)
+{
+	ApplyCharacterCollisionOwnershipModes(CharacterPhysicsCollisionMode, NewMode, Context);
+}
+
+void ACharacter::ApplyCharacterDrivenCollisionPolicy()
+{
+	ApplyCharacterCollisionOwnershipModes(
+		ECharacterPhysicsCollisionMode::CharacterDriven,
+		ECharacterQueryCollisionMode::CharacterDriven,
+		"CharacterDrivenPolicy");
+}
+
+void ACharacter::ApplyFullRagdollCollisionPolicy()
+{
+	// Full ragdoll hands physical blocking ownership to the ragdoll bodies. Query
+	// ownership stays explicitly modeled so a later pass can preserve a capsule proxy.
+	ApplyCharacterCollisionOwnershipModes(
+		ECharacterPhysicsCollisionMode::FullRagdollOwned,
+		ECharacterQueryCollisionMode::Disabled,
+		"FullRagdollPolicy");
+}
+
+void ACharacter::ApplyPartialRagdollCollisionPolicy()
+{
+	// Partial ragdoll remains hybrid for now: the character capsule still owns the main
+	// character collision responsibilities while local physics chains layer on top.
+	ApplyCharacterCollisionOwnershipModes(
+		ECharacterPhysicsCollisionMode::PartialHybrid,
+		ECharacterQueryCollisionMode::CharacterDriven,
+		"PartialRagdollPolicy");
 }
 
 void ACharacter::SuspendCharacterForRagdoll()
 {
-	SetCharacterDrivenCollisionEnabled(false);
+	ApplyFullRagdollCollisionPolicy();
 	if (CharacterMovement)
 	{
 		FVector DiscardedInput;
@@ -450,13 +610,25 @@ void ACharacter::RestoreCharacterAfterRagdoll()
 		SetControlRotation(Control);
 	}
 
-	SetCharacterDrivenCollisionEnabled(true);
+	const ECharacterPhysicsCollisionMode RestoredPhysicsCollisionMode =
+		bSavedPreRagdollCharacterState
+			? SavedPreRagdollCollisionOwnership.PhysicsCollisionMode
+			: ECharacterPhysicsCollisionMode::CharacterDriven;
+	const ECharacterQueryCollisionMode RestoredQueryCollisionMode =
+		bSavedPreRagdollCharacterState
+			? SavedPreRagdollCollisionOwnership.QueryCollisionMode
+			: ECharacterQueryCollisionMode::CharacterDriven;
+	ApplyCharacterCollisionOwnershipModes(
+		RestoredPhysicsCollisionMode,
+		RestoredQueryCollisionMode,
+		"RestoreCharacterAfterRagdoll");
 	RestoreMovementAfterRagdoll();
 
 	PhysicsOwnershipMode = ECharacterPhysicsOwnershipMode::CharacterDriven;
 	bPendingRagdollBodyEnable = false;
 	bAwaitingRagdollRecoveryRestore = false;
 	bSavedPreRagdollCharacterState = false;
+	SavedPreRagdollCollisionOwnership = FCharacterCollisionOwnershipSnapshot{};
 	bHasCachedRagdollRestoreLocation = false;
 	CachedRagdollRestoreLocation = FVector::ZeroVector;
 	bHasCachedRagdollRestoreYaw = false;

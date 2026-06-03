@@ -16,6 +16,28 @@ enum class ECharacterPhysicsOwnershipMode : uint8
 	TransitionFromRagdoll
 };
 
+enum class ECharacterPhysicsCollisionMode : uint8
+{
+	CharacterDriven,
+	FullRagdollOwned,
+	PartialHybrid
+};
+
+enum class ECharacterQueryCollisionMode : uint8
+{
+	CharacterDriven,
+	Disabled,
+	ReservedForFullRagdollProxy
+};
+
+struct FCharacterCollisionOwnershipSnapshot
+{
+	ECollisionEnabled CapsuleCollisionEnabled = ECollisionEnabled::NoCollision;
+	ECollisionEnabled MeshCollisionEnabled = ECollisionEnabled::NoCollision;
+	ECharacterPhysicsCollisionMode PhysicsCollisionMode = ECharacterPhysicsCollisionMode::CharacterDriven;
+	ECharacterQueryCollisionMode QueryCollisionMode = ECharacterQueryCollisionMode::CharacterDriven;
+};
+
 // UE 의 ACharacter 패턴 — Capsule(Root) → SkeletalMesh + CharacterMovement 의 표준 구성.
 //
 //   Root: UCapsuleComponent           (충돌/이동 본체. CharacterMovement 의 UpdatedComponent)
@@ -84,7 +106,20 @@ protected:
 	// ControlRotation → RootComponent 동기화 등 per-frame 처리.
 	void Tick(float DeltaTime) override;
 	void SavePreRagdollCharacterState();
-	void SetCharacterDrivenCollisionEnabled(bool bEnabled);
+	void ApplyCharacterPhysicsCollisionMode(ECharacterPhysicsCollisionMode NewMode, const char* Context = nullptr);
+	void ApplyCharacterQueryCollisionMode(ECharacterQueryCollisionMode NewMode, const char* Context = nullptr);
+	void ApplyCharacterCollisionOwnershipModes(
+		ECharacterPhysicsCollisionMode NewPhysicsMode,
+		ECharacterQueryCollisionMode NewQueryMode,
+		const char* Context);
+	void ApplyCharacterDrivenCollisionPolicy();
+	void ApplyFullRagdollCollisionPolicy();
+	void ApplyPartialRagdollCollisionPolicy();
+	void ReconcileCharacterCollisionOwnership();
+	ECollisionEnabled ResolveCharacterDrivenCapsuleCollisionEnabled() const;
+	ECollisionEnabled ResolveCharacterDrivenMeshCollisionEnabled() const;
+	ECollisionEnabled ResolveCapsuleCollisionEnabledForCurrentOwnership() const;
+	ECollisionEnabled ResolveMeshCollisionEnabledForCurrentOwnership() const;
 	void SuspendCharacterForRagdoll();
 	void RestoreMovementAfterRagdoll();
 	void FinalizePendingRagdollEntry();
@@ -95,11 +130,12 @@ protected:
 	TWeakObjectPtr<USkeletalMeshComponent>      Mesh              = nullptr;
 	TWeakObjectPtr<UCharacterMovementComponent> CharacterMovement = nullptr;
 	ECharacterPhysicsOwnershipMode PhysicsOwnershipMode = ECharacterPhysicsOwnershipMode::CharacterDriven;
+	ECharacterPhysicsCollisionMode CharacterPhysicsCollisionMode = ECharacterPhysicsCollisionMode::CharacterDriven;
+	ECharacterQueryCollisionMode CharacterQueryCollisionMode = ECharacterQueryCollisionMode::CharacterDriven;
 	bool bPendingRagdollBodyEnable = false;
 	bool bAwaitingRagdollRecoveryRestore = false;
 	bool bSavedPreRagdollCharacterState = false;
-	ECollisionEnabled SavedCapsuleCollisionEnabled = ECollisionEnabled::NoCollision;
-	ECollisionEnabled SavedMeshCollisionEnabled = ECollisionEnabled::NoCollision;
+	FCharacterCollisionOwnershipSnapshot SavedPreRagdollCollisionOwnership;
 	bool bSavedMovementTickEnabled = true;
 	bool bSavedMovementActive = true;
 	bool bHasCachedRagdollRestoreLocation = false;
