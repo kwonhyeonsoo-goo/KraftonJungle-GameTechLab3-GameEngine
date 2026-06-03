@@ -203,7 +203,7 @@ struct FSkeletalClothPaintData
 	}
 };
 
-inline constexpr uint32 SkeletalMeshClothPayloadCurrentVersion = 5;
+inline constexpr uint32 SkeletalMeshClothPayloadCurrentVersion = 6;
 
 struct FSkeletalClothPhysicsAssetCollisionFilterEntry
 {
@@ -234,6 +234,7 @@ struct FSkeletalClothConfig
 	float InertiaAngularScale = 1.0f;
 	bool bEnablePhysicsAssetCollision = false;
 	bool bEnableWorldStaticClothCollision = false;
+	bool bEnableWorldDynamicClothCollision = false;
 	TArray<FSkeletalClothPhysicsAssetCollisionFilterEntry> PhysicsAssetCollisionFilter;
 
 	void Serialize(FArchive& Ar, uint32 PayloadVersion)
@@ -283,6 +284,14 @@ struct FSkeletalClothConfig
 		else if (Ar.IsLoading())
 		{
 			bEnableWorldStaticClothCollision = false;
+		}
+		if (PayloadVersion >= 6)
+		{
+			Ar << bEnableWorldDynamicClothCollision;
+		}
+		else if (Ar.IsLoading())
+		{
+			bEnableWorldDynamicClothCollision = false;
 		}
 	}
 

@@ -2209,6 +2209,7 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 			ImGui::TextUnformatted("Physics Asset Collision");
 			bChanged |= ImGui::Checkbox("Enable Physics Asset Collision", &SelectedCloth->Config.bEnablePhysicsAssetCollision);
 			bChanged |= ImGui::Checkbox("Enable World Static Collision", &SelectedCloth->Config.bEnableWorldStaticClothCollision);
+			bChanged |= ImGui::Checkbox("Enable World Dynamic Collision", &SelectedCloth->Config.bEnableWorldDynamicClothCollision);
 		}
 	);
 
@@ -2220,7 +2221,8 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 		[&]()
 		{
 			if (!SelectedCloth->Config.bEnablePhysicsAssetCollision &&
-				!SelectedCloth->Config.bEnableWorldStaticClothCollision)
+				!SelectedCloth->Config.bEnableWorldStaticClothCollision &&
+				!SelectedCloth->Config.bEnableWorldDynamicClothCollision)
 			{
 				ImGui::TextDisabled("Cloth collision is disabled.");
 				return;
@@ -2276,6 +2278,12 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 				GatherResult.Stats.SelectedWorldStatic,
 				GatherResult.Stats.RejectedWorldStatic,
 				GatherResult.Stats.TruncatedWorldStatic);
+			ImGui::Text(
+				"WorldDynamic Gathered:%u Selected:%u Rejected:%u Truncated:%u",
+				GatherResult.Stats.GatheredWorldDynamic,
+				GatherResult.Stats.SelectedWorldDynamic,
+				GatherResult.Stats.RejectedWorldDynamic,
+				GatherResult.Stats.TruncatedWorldDynamic);
 
 			DrawClothCollisionCandidateList(
 				"Selected",

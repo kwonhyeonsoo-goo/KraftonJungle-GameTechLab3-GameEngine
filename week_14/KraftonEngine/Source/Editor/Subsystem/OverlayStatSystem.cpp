@@ -49,6 +49,55 @@ static const char* LexToString(EClothCollisionPrimitiveType Type)
 	return "Unknown";
 }
 
+static void AppendSelectedWorldCollisionLines(
+	TArray<FString>& OutLines,
+	const char* Label,
+	const TArray<FClothCollisionStatCandidate>& Candidates,
+	uint32 MaxDisplayed)
+{
+	char Buffer[256] = {};
+	uint32 DisplayedCandidates = 0;
+	for (const FClothCollisionStatCandidate& Candidate : Candidates)
+	{
+		if (Candidate.State != EClothCollisionSelectState::Selected)
+		{
+			continue;
+		}
+
+		if (DisplayedCandidates == 0)
+		{
+			snprintf(Buffer, sizeof(Buffer), "Selected %s:", Label);
+			OutLines.push_back(FString(Buffer));
+		}
+
+		snprintf(Buffer, sizeof(Buffer),
+			"  C%u B%d S%d  %s  Center(%.1f %.1f %.1f) Ext(%.1f %.1f %.1f)",
+			Candidate.OwnerComponentId,
+			Candidate.BodyIndex,
+			Candidate.ShapeIndex,
+			LexToString(Candidate.Type),
+			Candidate.BoundsCenter.X,
+			Candidate.BoundsCenter.Y,
+			Candidate.BoundsCenter.Z,
+			Candidate.BoundsExtent.X,
+			Candidate.BoundsExtent.Y,
+			Candidate.BoundsExtent.Z);
+		OutLines.push_back(FString(Buffer));
+
+		++DisplayedCandidates;
+		if (DisplayedCandidates >= MaxDisplayed)
+		{
+			break;
+		}
+	}
+
+	if (DisplayedCandidates == 0)
+	{
+		snprintf(Buffer, sizeof(Buffer), "Selected %s : none", Label);
+		OutLines.push_back(FString(Buffer));
+	}
+}
+
 void FOverlayStatSystem::AppendLine(TArray<FOverlayStatLine>& OutLines, float Y, const FString& Text) const
 {
 	FOverlayStatLine Line;
@@ -579,12 +628,27 @@ void FOverlayStatSystem::BuildClothCollisionLines(TArray<FString>& OutLines) con
 		FClothCollisionStats::WorldStaticCandidateCount);
 	OutLines.push_back(FString(Buffer));
 
+	snprintf(Buffer, sizeof(Buffer), "WorldDynamic : Sections %u configured, %u enabled   Candidates %u selected / %u total",
+		FClothCollisionStats::WorldDynamicConfiguredSections,
+		FClothCollisionStats::WorldDynamicEnabledSections,
+		FClothCollisionStats::DebugStats.SelectedWorldDynamic,
+		FClothCollisionStats::WorldDynamicCandidateCount);
+	OutLines.push_back(FString(Buffer));
+
 	snprintf(Buffer, sizeof(Buffer), "WorldStatic Types : Selected S%u C%u B%u   Rejected %u   Truncated %u",
 		FClothCollisionStats::WorldStaticSelectedSpheres,
 		FClothCollisionStats::WorldStaticSelectedCapsules,
 		FClothCollisionStats::WorldStaticSelectedBoxes,
 		FClothCollisionStats::DebugStats.RejectedWorldStatic,
 		FClothCollisionStats::DebugStats.TruncatedWorldStatic);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "WorldDynamic Types : Selected S%u C%u B%u   Rejected %u   Truncated %u",
+		FClothCollisionStats::WorldDynamicSelectedSpheres,
+		FClothCollisionStats::WorldDynamicSelectedCapsules,
+		FClothCollisionStats::WorldDynamicSelectedBoxes,
+		FClothCollisionStats::DebugStats.RejectedWorldDynamic,
+		FClothCollisionStats::DebugStats.TruncatedWorldDynamic);
 	OutLines.push_back(FString(Buffer));
 
 	snprintf(Buffer, sizeof(Buffer), "Uploaded : Spheres %u   Capsules %u   Planes %u   Convexes %u",
@@ -605,61 +669,24 @@ void FOverlayStatSystem::BuildClothCollisionLines(TArray<FString>& OutLines) con
 		FClothCollisionStats::InvalidSectionBounds +
 		FClothCollisionStats::WorldStaticRejectedBySectionBounds +
 		FClothCollisionStats::WorldStaticSkippedFilter +
+		FClothCollisionStats::WorldDynamicRejectedBySectionBounds +
+		FClothCollisionStats::WorldDynamicSkippedFilter +
 		FClothCollisionStats::DebugStats.SkippedNonUniformScale;
 	if (IssueCount > 0)
 	{
+		const uint32 FilteredCount =
+			FClothCollisionStats::WorldStaticSkippedFilter +
+			FClothCollisionStats::WorldDynamicSkippedFilter;
 		snprintf(Buffer, sizeof(Buffer), "Issues : EarlySkips %u   MissingRuntime %u   InvalidBounds %u   Filtered %u",
 			SkipCount,
 			FClothCollisionStats::MissingPhysicsRuntimeSections,
 			FClothCollisionStats::InvalidSectionBounds,
-			FClothCollisionStats::WorldStaticSkippedFilter);
+			FilteredCount);
 		OutLines.push_back(FString(Buffer));
 	}
 
-	if (FClothCollisionStats::RecentWorldStaticCandidates.empty())
-	{
-		OutLines.push_back(FString("Selected WorldStatic : none"));
-		return;
-	}
-
-	uint32 DisplayedSelectedCandidates = 0;
-	for (const FClothCollisionStatCandidate& Candidate : FClothCollisionStats::RecentWorldStaticCandidates)
-	{
-		if (Candidate.State != EClothCollisionSelectState::Selected)
-		{
-			continue;
-		}
-
-		if (DisplayedSelectedCandidates == 0)
-		{
-			OutLines.push_back(FString("Selected WorldStatic:"));
-		}
-
-		snprintf(Buffer, sizeof(Buffer),
-			"  C%u B%d S%d  %s  Center(%.1f %.1f %.1f) Ext(%.1f %.1f %.1f)",
-			Candidate.OwnerComponentId,
-			Candidate.BodyIndex,
-			Candidate.ShapeIndex,
-			LexToString(Candidate.Type),
-			Candidate.BoundsCenter.X,
-			Candidate.BoundsCenter.Y,
-			Candidate.BoundsCenter.Z,
-			Candidate.BoundsExtent.X,
-			Candidate.BoundsExtent.Y,
-			Candidate.BoundsExtent.Z);
-		OutLines.push_back(FString(Buffer));
-
-		++DisplayedSelectedCandidates;
-		if (DisplayedSelectedCandidates >= 4)
-		{
-			break;
-		}
-	}
-
-	if (DisplayedSelectedCandidates == 0)
-	{
-		OutLines.push_back(FString("Selected WorldStatic : none"));
-	}
+	AppendSelectedWorldCollisionLines(OutLines, "WorldStatic", FClothCollisionStats::RecentWorldStaticCandidates, 4);
+	AppendSelectedWorldCollisionLines(OutLines, "WorldDynamic", FClothCollisionStats::RecentWorldDynamicCandidates, 4);
 }
 
 void FOverlayStatSystem::BuildLines(const UEditorEngine& Editor, TArray<FOverlayStatLine>& OutLines) const
@@ -697,7 +724,7 @@ void FOverlayStatSystem::BuildLines(const UEditorEngine& Editor, TArray<FOverlay
 	}
 	if (bShowClothCollision)
 	{
-		EstimatedLineCount += 10;
+		EstimatedLineCount += 12;
 	}
 	OutLines.reserve(EstimatedLineCount);
 

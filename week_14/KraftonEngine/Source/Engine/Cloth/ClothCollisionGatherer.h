@@ -45,6 +45,23 @@ private:
         const FBoundingBox& ComponentWorldBounds,
         const FBoundingBox& SectionWorldBounds) const;
 
+    void GatherWorldDynamicCandidates(
+        FClothCollisionGatherResult& Result,
+        const IPhysicsRuntime& PhysicsRuntime,
+        const USkeletalMeshComponent& Component,
+        const FSkeletalClothConfig& ClothConfig,
+        const FBoundingBox& ComponentWorldBounds,
+        const FBoundingBox& SectionWorldBounds) const;
+
+    void GatherWorldCandidates(
+        FClothCollisionGatherResult& Result,
+        const IPhysicsRuntime& PhysicsRuntime,
+        const USkeletalMeshComponent& Component,
+        const FBoundingBox& ComponentWorldBounds,
+        const FBoundingBox& SectionWorldBounds,
+        EClothCollisionSource Source,
+        uint32 ObjectTypeMask) const;
+
     void SelectWithinBudget(
         FClothCollisionGatherResult& Result,
         const FClothCollisionBudget& Budget) const;

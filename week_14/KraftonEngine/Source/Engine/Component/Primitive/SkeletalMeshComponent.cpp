@@ -76,7 +76,8 @@ namespace
 
         for (const FClothCollisionCandidate& Candidate : GatherResult.Candidates)
         {
-            if (Candidate.SourceId.Source != EClothCollisionSource::WorldStatic ||
+            if ((Candidate.SourceId.Source != EClothCollisionSource::WorldStatic &&
+                Candidate.SourceId.Source != EClothCollisionSource::WorldDynamic) ||
                 !Candidate.WorldBounds.IsValid())
             {
                 continue;
@@ -85,7 +86,9 @@ namespace
             FColor Color = FColor::Gray();
             if (Candidate.State == EClothCollisionSelectState::Selected)
             {
-                Color = FColor::Green();
+                Color = Candidate.SourceId.Source == EClothCollisionSource::WorldDynamic
+                    ? FColor(0, 255, 255)
+                    : FColor::Green();
             }
             else if (Candidate.State == EClothCollisionSelectState::TruncatedByBudget)
             {
@@ -2506,7 +2509,8 @@ void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
             }
 
             if (!ClothData.Config.bEnablePhysicsAssetCollision &&
-                !ClothData.Config.bEnableWorldStaticClothCollision)
+                !ClothData.Config.bEnableWorldStaticClothCollision &&
+                !ClothData.Config.bEnableWorldDynamicClothCollision)
             {
                 continue;
             }
@@ -2517,6 +2521,7 @@ void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
             {
                 CLOTH_COLLISION_STATS_ADD_COLLISION_ELIGIBLE_SECTION(
                     ClothData.Config.bEnableWorldStaticClothCollision,
+                    ClothData.Config.bEnableWorldDynamicClothCollision,
                     Bounds.IsValid(),
                     PhysicsRuntime != nullptr);
             }
@@ -2541,6 +2546,7 @@ void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
             SectionResult.LODIndex = ClothData.Binding.LODIndex;
             SectionResult.SectionIndex = ClothData.Binding.SectionIndex;
             SectionResult.bWorldStaticCollisionEnabled = ClothData.Config.bEnableWorldStaticClothCollision;
+            SectionResult.bWorldDynamicCollisionEnabled = ClothData.Config.bEnableWorldDynamicClothCollision;
             SectionResult.GatherResult = CollisionGatherer.GatherForSection(
                 *this,
                 *Mesh,
@@ -2569,7 +2575,8 @@ void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
         {
             CLOTH_COLLISION_STATS_ADD_SECTION(
                 SectionResult.GatherResult,
-                SectionResult.bWorldStaticCollisionEnabled);
+                SectionResult.bWorldStaticCollisionEnabled,
+                SectionResult.bWorldDynamicCollisionEnabled);
         }
         CLOTH_COLLISION_STATS_ADD_COMPONENT();
     }

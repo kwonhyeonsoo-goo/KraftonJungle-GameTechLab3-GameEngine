@@ -216,6 +216,13 @@ FClothCollisionGatherResult FClothCollisionGatherer::GatherForSection(
             ClothConfig,
             ComponentWorldBounds,
             SectionWorldBounds);
+        GatherWorldDynamicCandidates(
+            Result,
+            *PhysicsRuntime,
+            Component,
+            ClothConfig,
+            ComponentWorldBounds,
+            SectionWorldBounds);
     }
     SelectWithinBudget(Result, Budget);
     return Result;
@@ -404,10 +411,54 @@ void FClothCollisionGatherer::GatherWorldStaticCandidates(
         return;
     }
 
+    GatherWorldCandidates(
+        Result,
+        PhysicsRuntime,
+        Component,
+        ComponentWorldBounds,
+        SectionWorldBounds,
+        EClothCollisionSource::WorldStatic,
+        ObjectTypeBit(ECollisionChannel::WorldStatic));
+}
+
+void FClothCollisionGatherer::GatherWorldDynamicCandidates(
+    FClothCollisionGatherResult& Result,
+    const IPhysicsRuntime& PhysicsRuntime,
+    const USkeletalMeshComponent& Component,
+    const FSkeletalClothConfig& ClothConfig,
+    const FBoundingBox& ComponentWorldBounds,
+    const FBoundingBox& SectionWorldBounds) const
+{
+    if (!ClothConfig.bEnableWorldDynamicClothCollision ||
+        !ComponentWorldBounds.IsValid() ||
+        !SectionWorldBounds.IsValid())
+    {
+        return;
+    }
+
+    GatherWorldCandidates(
+        Result,
+        PhysicsRuntime,
+        Component,
+        ComponentWorldBounds,
+        SectionWorldBounds,
+        EClothCollisionSource::WorldDynamic,
+        ObjectTypeBit(ECollisionChannel::WorldDynamic));
+}
+
+void FClothCollisionGatherer::GatherWorldCandidates(
+    FClothCollisionGatherResult& Result,
+    const IPhysicsRuntime& PhysicsRuntime,
+    const USkeletalMeshComponent& Component,
+    const FBoundingBox& ComponentWorldBounds,
+    const FBoundingBox& SectionWorldBounds,
+    EClothCollisionSource Source,
+    uint32 ObjectTypeMask) const
+{
     TArray<FPhysicsClothCollisionShape> Shapes;
     PhysicsRuntime.QueryClothCollisionShapes(
         ExpandBounds(ComponentWorldBounds, ClothWorldCollisionSectionExpansion),
-        ObjectTypeBit(ECollisionChannel::WorldStatic),
+        ObjectTypeMask,
         Shapes);
 
     const FBoundingBox ExpandedSectionWorldBounds =
@@ -423,8 +474,14 @@ void FClothCollisionGatherer::GatherWorldStaticCandidates(
             continue;
         }
 
+        if (Source == EClothCollisionSource::WorldStatic &&
+            Shape.BodyType != EPhysicsBodyType::Static)
+        {
+            continue;
+        }
+
         FClothCollisionCandidate Candidate;
-        Candidate.SourceId.Source = EClothCollisionSource::WorldStatic;
+        Candidate.SourceId.Source = Source;
         Candidate.SourceId.OwnerActorId = Shape.OwnerActorId;
         Candidate.SourceId.OwnerComponentId = Shape.OwnerComponentId;
         Candidate.SourceId.BodyIndex = static_cast<int32>(Shape.Body.Index);
@@ -432,7 +489,7 @@ void FClothCollisionGatherer::GatherWorldStaticCandidates(
         Candidate.SourceId.ObjectChannel = ToCollisionChannel(Shape.FilterData.ObjectType);
         Candidate.WorldBounds = Shape.WorldBounds;
         Candidate.StableTieBreaker =
-            (static_cast<uint64>(1u) << 60) ^
+            (static_cast<uint64>(Source == EClothCollisionSource::WorldDynamic ? 2u : 1u) << 60) ^
             (static_cast<uint64>(Shape.OwnerComponentId) << 32) ^
             (static_cast<uint64>(Shape.Body.Index) << 16) ^
             static_cast<uint64>(Shape.Shape.Index);
@@ -457,7 +514,14 @@ void FClothCollisionGatherer::GatherWorldStaticCandidates(
             break;
         default:
             Candidate.State = EClothCollisionSelectState::SkippedFilter;
-            ++Result.Stats.RejectedWorldStatic;
+            if (Source == EClothCollisionSource::WorldDynamic)
+            {
+                ++Result.Stats.RejectedWorldDynamic;
+            }
+            else
+            {
+                ++Result.Stats.RejectedWorldStatic;
+            }
             ++Result.Stats.Rejected;
             Result.Candidates.push_back(Candidate);
             continue;
@@ -470,7 +534,14 @@ void FClothCollisionGatherer::GatherWorldStaticCandidates(
         if (!IsWorldShapeBlocking(Shape))
         {
             Candidate.State = EClothCollisionSelectState::SkippedFilter;
-            ++Result.Stats.RejectedWorldStatic;
+            if (Source == EClothCollisionSource::WorldDynamic)
+            {
+                ++Result.Stats.RejectedWorldDynamic;
+            }
+            else
+            {
+                ++Result.Stats.RejectedWorldStatic;
+            }
             ++Result.Stats.Rejected;
             Result.Candidates.push_back(Candidate);
             continue;
@@ -479,7 +550,14 @@ void FClothCollisionGatherer::GatherWorldStaticCandidates(
         if (!Shape.WorldBounds.IsIntersected(ExpandedSectionWorldBounds))
         {
             Candidate.State = EClothCollisionSelectState::RejectedBySectionBounds;
-            ++Result.Stats.RejectedWorldStatic;
+            if (Source == EClothCollisionSource::WorldDynamic)
+            {
+                ++Result.Stats.RejectedWorldDynamic;
+            }
+            else
+            {
+                ++Result.Stats.RejectedWorldStatic;
+            }
             ++Result.Stats.Rejected;
             Result.Candidates.push_back(Candidate);
             continue;
@@ -494,7 +572,14 @@ void FClothCollisionGatherer::GatherWorldStaticCandidates(
         if (!IsValidTransformForCollision(Candidate.LocalTransform))
         {
             Candidate.State = EClothCollisionSelectState::SkippedInvalidTransform;
-            ++Result.Stats.RejectedWorldStatic;
+            if (Source == EClothCollisionSource::WorldDynamic)
+            {
+                ++Result.Stats.RejectedWorldDynamic;
+            }
+            else
+            {
+                ++Result.Stats.RejectedWorldStatic;
+            }
             ++Result.Stats.Rejected;
             Result.Candidates.push_back(Candidate);
             continue;
@@ -505,7 +590,14 @@ void FClothCollisionGatherer::GatherWorldStaticCandidates(
             Candidate.Radius <= 0.0f)
         {
             Candidate.State = EClothCollisionSelectState::SkippedInvalidTransform;
-            ++Result.Stats.RejectedWorldStatic;
+            if (Source == EClothCollisionSource::WorldDynamic)
+            {
+                ++Result.Stats.RejectedWorldDynamic;
+            }
+            else
+            {
+                ++Result.Stats.RejectedWorldStatic;
+            }
             ++Result.Stats.Rejected;
             Result.Candidates.push_back(Candidate);
             continue;
@@ -515,7 +607,14 @@ void FClothCollisionGatherer::GatherWorldStaticCandidates(
             Candidate.CapsuleHalfHeight <= 0.0f)
         {
             Candidate.State = EClothCollisionSelectState::SkippedInvalidTransform;
-            ++Result.Stats.RejectedWorldStatic;
+            if (Source == EClothCollisionSource::WorldDynamic)
+            {
+                ++Result.Stats.RejectedWorldDynamic;
+            }
+            else
+            {
+                ++Result.Stats.RejectedWorldStatic;
+            }
             ++Result.Stats.Rejected;
             Result.Candidates.push_back(Candidate);
             continue;
@@ -527,13 +626,27 @@ void FClothCollisionGatherer::GatherWorldStaticCandidates(
                 Candidate.HalfExtent.Z <= 0.0f))
         {
             Candidate.State = EClothCollisionSelectState::SkippedInvalidTransform;
-            ++Result.Stats.RejectedWorldStatic;
+            if (Source == EClothCollisionSource::WorldDynamic)
+            {
+                ++Result.Stats.RejectedWorldDynamic;
+            }
+            else
+            {
+                ++Result.Stats.RejectedWorldStatic;
+            }
             ++Result.Stats.Rejected;
             Result.Candidates.push_back(Candidate);
             continue;
         }
 
-        ++Result.Stats.GatheredWorldStatic;
+        if (Source == EClothCollisionSource::WorldDynamic)
+        {
+            ++Result.Stats.GatheredWorldDynamic;
+        }
+        else
+        {
+            ++Result.Stats.GatheredWorldStatic;
+        }
         AccumulateGatheredStat(Result.Stats, Candidate.Type);
         Result.Candidates.push_back(Candidate);
     }

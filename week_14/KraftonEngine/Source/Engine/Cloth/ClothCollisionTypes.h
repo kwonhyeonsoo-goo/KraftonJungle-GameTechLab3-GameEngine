@@ -135,6 +135,7 @@ struct FClothCollisionSectionResult
     uint32 LODIndex = 0;
     int32 SectionIndex = -1;
     bool bWorldStaticCollisionEnabled = false;
+    bool bWorldDynamicCollisionEnabled = false;
     FClothCollisionGatherResult GatherResult;
 };
 
