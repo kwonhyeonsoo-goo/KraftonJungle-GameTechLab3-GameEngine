@@ -68,6 +68,64 @@ namespace
             return "Unknown";
         }
     }
+
+    const char* LexToString(ECharacterPhysicsOwnershipMode Mode)
+    {
+        switch (Mode)
+        {
+        case ECharacterPhysicsOwnershipMode::TransitionToRagdoll:
+            return "TransitionToRagdoll";
+        case ECharacterPhysicsOwnershipMode::RagdollDriven:
+            return "RagdollDriven";
+        case ECharacterPhysicsOwnershipMode::TransitionFromRagdoll:
+            return "TransitionFromRagdoll";
+        default:
+            return "CharacterDriven";
+        }
+    }
+
+    const char* LexToString(ECharacterPhysicsCollisionMode Mode)
+    {
+        switch (Mode)
+        {
+        case ECharacterPhysicsCollisionMode::FullRagdollOwned:
+            return "FullRagdollOwned";
+        case ECharacterPhysicsCollisionMode::PartialHybrid:
+            return "PartialHybrid";
+        default:
+            return "CharacterDriven";
+        }
+    }
+
+    const char* LexToString(ECharacterQueryCollisionMode Mode)
+    {
+        switch (Mode)
+        {
+        case ECharacterQueryCollisionMode::Disabled:
+            return "Disabled";
+        case ECharacterQueryCollisionMode::ReservedForFullRagdollProxy:
+            return "ReservedForFullRagdollProxy";
+        default:
+            return "CharacterDriven";
+        }
+    }
+
+    const char* LexToString(ECollisionEnabled Mode)
+    {
+        switch (Mode)
+        {
+        case ECollisionEnabled::NoCollision:
+            return "NoCollision";
+        case ECollisionEnabled::QueryOnly:
+            return "QueryOnly";
+        case ECollisionEnabled::PhysicsOnly:
+            return "PhysicsOnly";
+        case ECollisionEnabled::QueryAndPhysics:
+            return "QueryAndPhysics";
+        default:
+            return "Unknown";
+        }
+    }
 }
 
 UPhysicsAssetRagdollTestComponent::UPhysicsAssetRagdollTestComponent()
@@ -364,12 +422,13 @@ void UPhysicsAssetRagdollTestComponent::LogResolvedTarget(bool bForceLogFailure)
 void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) const
 {
     USkeletalMeshComponent* MeshComponent = TargetMeshComponent.Get();
+    ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner());
     UPhysicsAsset* EffectivePhysicsAsset = MeshComponent ? MeshComponent->GetEffectivePhysicsAsset() : nullptr;
     UPhysicsAsset* ActivePhysicsAsset = MeshComponent ? MeshComponent->GetActivePhysicsAsset() : nullptr;
     const FVector LastHitDirection =
         MeshComponent ? MeshComponent->GetLastPartialHitReactionDirection() : FVector::ZeroVector;
 
-    UE_LOG("[RagdollTest] %s Actor=%s MeshComponent=%s EffectivePhysicsAsset=%s ActivePhysicsAsset=%s Mode=%s Active=%s PhysicsPose=%s Recovering=%s PartialRoot=%s PartialPhase=%s Hold=%.2f PendingBlendOut=%s LiveBodies=%d LiveConstraints=%d BlendWeight=%.2f LastPreset=%s LastHitBone=%s LastRoot=%s LastTarget=%s LastStrength=%.2f LastHold=%.2f LastImpulse=%.2f LastDirection=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
+    UE_LOG("[RagdollTest] %s Actor=%s MeshComponent=%s EffectivePhysicsAsset=%s ActivePhysicsAsset=%s Mode=%s Active=%s PhysicsPose=%s Recovering=%s CharacterOwnership=%s CharacterPhysicsCollision=%s CharacterQueryCollision=%s CapsuleCollision=%s MeshCollision=%s PartialRoot=%s PartialPhase=%s Hold=%.2f PendingBlendOut=%s LiveBodies=%d LiveConstraints=%d BlendWeight=%.2f LastPreset=%s LastHitBone=%s LastRoot=%s LastTarget=%s LastStrength=%.2f LastHold=%.2f LastImpulse=%.2f LastDirection=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
         EventLabel ? EventLabel : "State",
         GetOwnerNameSafe(),
         GetComponentNameSafe(),
@@ -379,6 +438,11 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
         (MeshComponent && MeshComponent->IsRagdollActive()) ? "true" : "false",
         (MeshComponent && MeshComponent->IsUsingPhysicsAssetPose()) ? "true" : "false",
         (MeshComponent && MeshComponent->IsRecoveringFromRagdoll()) ? "true" : "false",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetPhysicsOwnershipMode()) : "None",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetCharacterPhysicsCollisionMode()) : "None",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetCharacterQueryCollisionMode()) : "None",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetCurrentCapsuleCollisionEnabled()) : "None",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetCurrentMeshCollisionEnabled()) : "None",
         MeshComponent ? MeshComponent->GetActivePartialRagdollRootBoneName().ToString().c_str() : "None",
         MeshComponent ? LexToString(MeshComponent->GetPartialRagdollPhase()) : "None",
         MeshComponent ? MeshComponent->GetPartialRagdollHoldRemaining() : 0.0f,

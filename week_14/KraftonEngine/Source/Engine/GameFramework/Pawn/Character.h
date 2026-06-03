@@ -79,6 +79,22 @@ public:
 	bool BeginRagdollRecovery();
 	UFUNCTION(Pure, Category="Character|Physics")
 	bool IsInRagdoll() const;
+	UFUNCTION(Pure, Category="Character|Physics")
+	ECharacterPhysicsOwnershipMode GetPhysicsOwnershipMode() const { return PhysicsOwnershipMode; }
+	UFUNCTION(Pure, Category="Character|Physics")
+	ECharacterPhysicsCollisionMode GetCharacterPhysicsCollisionMode() const { return CharacterPhysicsCollisionMode; }
+	UFUNCTION(Pure, Category="Character|Physics")
+	ECharacterQueryCollisionMode GetCharacterQueryCollisionMode() const { return CharacterQueryCollisionMode; }
+	UFUNCTION(Pure, Category="Character|Physics")
+	ECollisionEnabled GetCurrentCapsuleCollisionEnabled() const
+	{
+		return CapsuleComponent ? CapsuleComponent->GetCollisionEnabled() : ECollisionEnabled::NoCollision;
+	}
+	UFUNCTION(Pure, Category="Character|Physics")
+	ECollisionEnabled GetCurrentMeshCollisionEnabled() const
+	{
+		return Mesh ? Mesh->GetCollisionEnabled() : ECollisionEnabled::NoCollision;
+	}
 
 	UFUNCTION(Pure, Category="Character|Components")
 	UCapsuleComponent* GetCapsuleComponent()  const { return CapsuleComponent; }
