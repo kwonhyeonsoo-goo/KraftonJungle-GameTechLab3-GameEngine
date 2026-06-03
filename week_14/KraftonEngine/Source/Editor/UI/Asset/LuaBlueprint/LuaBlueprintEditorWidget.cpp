@@ -471,6 +471,12 @@ namespace
             return "Event Hit";
         case ELuaBlueprintNodeType::EventEndHit:
             return "Event EndHit";
+        case ELuaBlueprintNodeType::EventPostBeginPlay:
+            return "Event PostBeginPlay";
+        case ELuaBlueprintNodeType::EventPostStartMatch:
+            return "Event PostStartMatch";
+        case ELuaBlueprintNodeType::EventPlayerCameraReady:
+            return "Event OnPlayerCameraReady";
         case ELuaBlueprintNodeType::EventInputAction:
             return "Event InputAction";
         case ELuaBlueprintNodeType::EventInputAxis:
@@ -917,6 +923,12 @@ namespace
             return "Exec entry fired when a blocking hit occurs.";
         case ELuaBlueprintNodeType::EventEndHit:
             return "Exec entry fired for the matching hit-end event if available.";
+        case ELuaBlueprintNodeType::EventPostBeginPlay:
+            return "Exec entry fired after all current world actors have completed BeginPlay.";
+        case ELuaBlueprintNodeType::EventPostStartMatch:
+            return "Exec entry fired after GameMode StartMatch has completed.";
+        case ELuaBlueprintNodeType::EventPlayerCameraReady:
+            return "Exec entry fired after the player camera manager has been created and camera registration is ready.";
         case ELuaBlueprintNodeType::Sequence:
             return "Runs multiple exec outputs in order.";
         case ELuaBlueprintNodeType::Branch:
@@ -1459,6 +1471,9 @@ namespace
         case ELuaBlueprintNodeType::EventEndOverlap:
         case ELuaBlueprintNodeType::EventHit:
         case ELuaBlueprintNodeType::EventEndHit:
+        case ELuaBlueprintNodeType::EventPostBeginPlay:
+        case ELuaBlueprintNodeType::EventPostStartMatch:
+        case ELuaBlueprintNodeType::EventPlayerCameraReady:
             return ImVec4(0.95f, 0.45f, 0.45f, 1.0f);
         case ELuaBlueprintNodeType::Branch:
         case ELuaBlueprintNodeType::Sequence:
@@ -1872,6 +1887,9 @@ namespace
         case ELuaBlueprintNodeType::EventEndOverlap:
         case ELuaBlueprintNodeType::EventHit:
         case ELuaBlueprintNodeType::EventEndHit:
+        case ELuaBlueprintNodeType::EventPostBeginPlay:
+        case ELuaBlueprintNodeType::EventPostStartMatch:
+        case ELuaBlueprintNodeType::EventPlayerCameraReady:
             return true;
         default:
             return false;
@@ -2984,6 +3002,10 @@ void FLuaBlueprintEditorWidget::RenderPalettePanel(ULuaBlueprintAsset* Blueprint
         { "Events", ELuaBlueprintNodeType::EventOverlap },
         { "Events", ELuaBlueprintNodeType::EventEndOverlap },
         { "Events", ELuaBlueprintNodeType::EventHit },
+        { "Events", ELuaBlueprintNodeType::EventEndHit },
+        { "Events", ELuaBlueprintNodeType::EventPostBeginPlay },
+        { "Events", ELuaBlueprintNodeType::EventPostStartMatch },
+        { "Events", ELuaBlueprintNodeType::EventPlayerCameraReady },
         { "Events", ELuaBlueprintNodeType::EventInputAction },
         { "Events", ELuaBlueprintNodeType::EventInputAxis },
         { "Flow", ELuaBlueprintNodeType::Sequence },
@@ -5351,6 +5373,9 @@ void FLuaBlueprintEditorWidget::RenderAddNodeMenu(ULuaBlueprintAsset* Blueprint)
             AddItem(ELuaBlueprintNodeType::EventEndOverlap);
             AddItem(ELuaBlueprintNodeType::EventHit);
             AddItem(ELuaBlueprintNodeType::EventEndHit);
+            AddItem(ELuaBlueprintNodeType::EventPostBeginPlay);
+            AddItem(ELuaBlueprintNodeType::EventPostStartMatch);
+            AddItem(ELuaBlueprintNodeType::EventPlayerCameraReady);
             AddItem(ELuaBlueprintNodeType::EventInputAction);
             AddItem(ELuaBlueprintNodeType::EventInputAxis);
             ImGui::EndMenu();

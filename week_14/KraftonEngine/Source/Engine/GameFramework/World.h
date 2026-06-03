@@ -78,12 +78,35 @@ public:
 	void EndPlay();        // Stop gameplay without owning memory lifetime.
 	void RouteWorldDestroyed();
 
+    // LuaBlueprint late lifecycle broadcasts. UWorld owns the phase ordering, so
+    // it also owns catch-up delivery for actors spawned after the phase has passed.
+    void BroadcastLuaBlueprintPostBeginPlay();
+    void BroadcastLuaBlueprintPostStartMatch();
+    void BroadcastLuaBlueprintPlayerCameraReady(
+        APlayerController*       PlayerController,
+        APlayerCameraManager*    CameraManager,
+        UCameraComponent*        ActiveCamera
+    );
+
 private:
 	// PlayerCameraManager 갱신 — Slomo / HitStop 등 TimeDilation 의 영향을 받지 않도록
 	// FTimer 의 raw delta 를 직접 사용한다. Tick 의 paused / 정상 흐름 양쪽에서 호출.
 	void TickPlayerCamera() const;
 	void ApplyPhysicsSnapshot_GameThread();
 	void ShutdownPhysicsScene();
+    void RouteLuaBlueprintPostBeginPlayForActor(AActor* Actor) const;
+    void RouteLuaBlueprintPostStartMatchForActor(AActor* Actor) const;
+    bool ResolveLuaBlueprintPlayerCameraReadyContext(
+        APlayerController*&       OutPlayerController,
+        APlayerCameraManager*&    OutCameraManager,
+        UCameraComponent*&        OutActiveCamera
+    ) const;
+    void RouteLuaBlueprintPlayerCameraReadyForActor(
+        AActor*                   Actor,
+        APlayerController*        PlayerController,
+        APlayerCameraManager*     CameraManager,
+        UCameraComponent*         ActiveCamera
+    ) const;
 
 public:
 
@@ -134,6 +157,9 @@ private:
     IPOVProvider*                     EditorPOVProvider   = nullptr;
     EWorldType                        WorldType           = EWorldType::Editor;
     bool                              bHasBegunPlay       = false;
+	    bool                              bHasRoutedPostBeginPlay = false;
+	    bool                              bHasRoutedPostStartMatch = false;
+	    bool                              bHasRoutedPlayerCameraReady = false;
     bool                              bPaused             = false;
     float                             GameTimeSeconds     = 0.0f;
     bool                              bWorldDestroyRouted = false;

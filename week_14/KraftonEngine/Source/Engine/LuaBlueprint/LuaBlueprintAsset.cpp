@@ -14,7 +14,7 @@ namespace
 {
     constexpr uint32 LuaBlueprintAssetMagic         = 0x4C425031; // LBP1
     constexpr uint32 LuaBlueprintAssetFormatVersion = 5;
-    constexpr uint32 LuaBlueprintCompilerVersion    = 19;
+    constexpr uint32 LuaBlueprintCompilerVersion    = 20;
 }
 
 FArchive& operator<<(FArchive& Ar, TArray<FLuaBlueprintPin>& Array);
@@ -149,6 +149,12 @@ namespace
             return "Event Hit";
         case ELuaBlueprintNodeType::EventEndHit:
             return "Event EndHit";
+        case ELuaBlueprintNodeType::EventPostBeginPlay:
+            return "Event PostBeginPlay";
+        case ELuaBlueprintNodeType::EventPostStartMatch:
+            return "Event PostStartMatch";
+        case ELuaBlueprintNodeType::EventPlayerCameraReady:
+            return "Event OnPlayerCameraReady";
         case ELuaBlueprintNodeType::EventInputAction:
             return "Event InputAction";
         case ELuaBlueprintNodeType::EventInputAxis:
@@ -988,7 +994,15 @@ FLuaBlueprintNode* ULuaBlueprintAsset::AddNodeOfType(ELuaBlueprintNodeType Type,
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Float, FName("DeltaTime"));
         break;
     case ELuaBlueprintNodeType::EventEndPlay:
+    case ELuaBlueprintNodeType::EventPostBeginPlay:
+    case ELuaBlueprintNodeType::EventPostStartMatch:
         AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        break;
+    case ELuaBlueprintNodeType::EventPlayerCameraReady:
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Exec, FName("Then"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::PlayerController, FName("PlayerController"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::Object, FName("CameraManager"));
+        AddPin(*N, ELuaBlueprintPinKind::Output, ELuaBlueprintPinType::CameraComponent, FName("ActiveCamera"));
         break;
     case ELuaBlueprintNodeType::EventOverlap:
     case ELuaBlueprintNodeType::EventEndOverlap:

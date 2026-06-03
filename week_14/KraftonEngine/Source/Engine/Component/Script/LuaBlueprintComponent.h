@@ -12,7 +12,10 @@
 class ULuaBlueprintAsset;
 class UObject;
 class AActor;
+class APlayerController;
+class APlayerCameraManager;
 class UPrimitiveComponent;
+class UCameraComponent;
 class UInputComponent;
 struct FHitResult;
 
@@ -54,6 +57,15 @@ public:
     void BeginDestroy() override;
     void AddReferencedObjects(FReferenceCollector& Collector) override;
 
+    // Routed by UWorld after the global gameplay phase is actually ready.
+    void RoutePostBeginPlay();
+    void RoutePostStartMatch();
+    void RoutePlayerCameraReady(
+        APlayerController*    PlayerController,
+        APlayerCameraManager* CameraManager,
+        UCameraComponent*     ActiveCamera
+    );
+
     // FLuaScriptManager::Shutdown 이 lua_State 종료(Lua.reset()) 직전에 호출한다.
     // sol 핸들을 살아있는 lua_State 에서 미리 해제해, 이후 최종 GC sweep 의 ClearLuaRuntime 이
     // 닫힌 lua_State 에 luaL_unref 를 호출하며 lua51.dll 내부에서 크래시나는 것을 막는다.
@@ -92,7 +104,9 @@ private:
     UObject* GetRuntimeObjectVariable(const FString& Name) const;
     bool     ReadEventFlag(const char* EventName) const;
     void     ScheduleLuaDelay(float Seconds, sol::protected_function Callback, uint32 Generation);
+    void     TickLuaDelays(float DeltaTime);
     bool     IsLuaRuntimeGenerationValid(uint32 Generation) const;
+    bool     InvokeLuaNoArgEvent(const char* EventName, sol::protected_function& Function);
     void     InvokeLuaEndPlay();
     void     HandleDeferredLuaCleanup();
 
@@ -129,7 +143,10 @@ private:
 
     sol::environment        Env;
     sol::protected_function LuaBeginPlay;
+    sol::protected_function LuaPostBeginPlay;
     sol::protected_function LuaTick;
+    sol::protected_function LuaPostStartMatch;
+    sol::protected_function LuaOnPlayerCameraReady;
     sol::protected_function LuaEndPlay;
     sol::protected_function LuaOnOverlap;
     sol::protected_function LuaOnEndOverlap;
@@ -137,7 +154,10 @@ private:
     sol::protected_function LuaOnEndHit;
 
     bool   bWantsBeginPlay      = false;
+    bool   bWantsPostBeginPlay  = false;
     bool   bWantsTick           = false;
+    bool   bWantsPostStartMatch = false;
+    bool   bWantsPlayerCameraReady = false;
     bool   bWantsEndPlay        = false;
     bool   bWantsOverlap        = false;
     bool   bWantsEndOverlap     = false;
@@ -153,6 +173,15 @@ private:
     // 복귀 시 lua51 SIGSEGV. 재진입 중에는 정리를 미루고 outer 진입에서 처리한다.
     int32 LuaCallDepth       = 0;
     bool  bPendingLuaCleanup = false;
+
+    struct FLuaBlueprintDelayedCallback
+    {
+        float                   RemainingSeconds = 0.0f;
+        uint32                  Generation       = 0;
+        sol::protected_function Callback;
+    };
+
+    TArray<FLuaBlueprintDelayedCallback> PendingLuaDelays;
 
     struct FLuaCallScope
     {

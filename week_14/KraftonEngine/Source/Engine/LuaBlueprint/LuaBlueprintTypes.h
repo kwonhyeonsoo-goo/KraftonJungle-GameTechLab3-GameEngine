@@ -304,6 +304,10 @@ enum class ELuaBlueprintNodeType : uint8
     // ── User-authored Lua functions ──
     CustomLuaFunction,
     CallCustomLuaFunction,
+    // ── Late lifecycle events (appended to preserve serialized enum compatibility) ──
+    EventPostBeginPlay,
+    EventPostStartMatch,
+    EventPlayerCameraReady,
     Count
 };
 

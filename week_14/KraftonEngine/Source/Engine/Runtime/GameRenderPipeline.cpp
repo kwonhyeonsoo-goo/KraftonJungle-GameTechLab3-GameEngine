@@ -134,9 +134,9 @@ void FGameRenderPipeline::BuildFrame(FViewport* VP, const FMinimalViewInfo& POV,
 	}
 
 	UCameraComponent* ActiveCamera = CamManager ? CamManager->GetActiveCamera() : nullptr;
-	if (UCineCameraComponent* CineCamera = Cast<UCineCameraComponent>(ActiveCamera))
+	if (ActiveCamera)
 	{
-		const FCineLetterboxSettings& LetterboxSettings = CineCamera->GetLetterboxSettings();
+		const FCameraLetterboxState& LetterboxSettings = ActiveCamera->GetLetterboxSettings();
 		Frame.CameraLetterbox.bEnabled = LetterboxSettings.bEnabled;
 		if (Frame.CameraLetterbox.bEnabled)
 		{

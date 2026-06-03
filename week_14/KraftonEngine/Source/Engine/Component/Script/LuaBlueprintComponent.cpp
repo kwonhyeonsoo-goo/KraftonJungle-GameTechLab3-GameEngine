@@ -2,10 +2,12 @@
 
 #include "Component/PrimitiveComponent.h"
 #include "Component/Input/InputComponent.h"
+#include "Component/Camera/CameraComponent.h"
 #include "Core/Logging/Log.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/Pawn/Pawn.h"
 #include "GameFramework/GameMode/PlayerController.h"
+#include "GameFramework/Camera/PlayerCameraManager.h"
 #include "GameFramework/World.h"
 #include "Runtime/Engine.h"
 #include "Lua/LuaScriptManager.h"
@@ -420,6 +422,49 @@ void ULuaBlueprintComponent::BeginPlay()
     }
 }
 
+void ULuaBlueprintComponent::RoutePostBeginPlay()
+{
+    if (!bWantsPostBeginPlay || !LuaPostBeginPlay)
+    {
+        return;
+    }
+    InvokeLuaNoArgEvent("PostBeginPlay", LuaPostBeginPlay);
+}
+
+void ULuaBlueprintComponent::RoutePostStartMatch()
+{
+    if (!bWantsPostStartMatch || !LuaPostStartMatch)
+    {
+        return;
+    }
+    InvokeLuaNoArgEvent("PostStartMatch", LuaPostStartMatch);
+}
+
+void ULuaBlueprintComponent::RoutePlayerCameraReady(
+    APlayerController*    PlayerController,
+    APlayerCameraManager* CameraManager,
+    UCameraComponent*     ActiveCamera
+    )
+{
+    if (!bWantsPlayerCameraReady || !LuaOnPlayerCameraReady || !Env.valid() || bPendingLuaCleanup)
+    {
+        return;
+    }
+
+    APlayerController* SafePlayerController = IsValid(PlayerController) ? PlayerController : nullptr;
+    APlayerCameraManager* SafeCameraManager = IsValid(CameraManager) ? CameraManager : nullptr;
+    UCameraComponent* SafeActiveCamera = IsValid(ActiveCamera) ? ActiveCamera : nullptr;
+
+    FLuaCallScope                  Scope(this);
+    sol::protected_function_result Result = LuaOnPlayerCameraReady(SafePlayerController, SafeCameraManager, SafeActiveCamera);
+    if (!Result.valid())
+    {
+        sol::error Err = Result;
+        UE_LOG("LuaBlueprint OnPlayerCameraReady error in %s: %s", GetRuntimeName().c_str(), Err.what());
+        FLuaDebugManager::OnLuaError(GetRuntimeName(), Err.what(), true);
+    }
+}
+
 void ULuaBlueprintComponent::EndPlay()
 {
     if (bEndPlayRouted)
@@ -514,6 +559,8 @@ void ULuaBlueprintComponent::TickComponent(
     {
         BindInputEvents();
     }
+
+    TickLuaDelays(DeltaTime);
 
     if (bWantsTick && LuaTick)
     {
@@ -710,25 +757,34 @@ bool ULuaBlueprintComponent::InitializeLua()
         return false;
     }
 
-    bWantsBeginPlay      = ReadEventFlag("BeginPlay");
-    bWantsTick           = ReadEventFlag("Tick");
-    bWantsEndPlay        = ReadEventFlag("EndPlay");
-    bWantsOverlap        = ReadEventFlag("OnOverlap");
-    bWantsEndOverlap     = ReadEventFlag("OnEndOverlap");
-    bWantsHit            = ReadEventFlag("OnHit");
-    bWantsEndHit         = ReadEventFlag("OnEndHit");
+    bWantsBeginPlay         = ReadEventFlag("BeginPlay");
+    bWantsPostBeginPlay     = ReadEventFlag("PostBeginPlay");
+    bWantsTick              = ReadEventFlag("Tick");
+    bWantsPostStartMatch    = ReadEventFlag("PostStartMatch");
+    bWantsPlayerCameraReady = ReadEventFlag("OnPlayerCameraReady");
+    bWantsEndPlay           = ReadEventFlag("EndPlay");
+    bWantsOverlap           = ReadEventFlag("OnOverlap");
+    bWantsEndOverlap        = ReadEventFlag("OnEndOverlap");
+    bWantsHit               = ReadEventFlag("OnHit");
+    bWantsEndHit            = ReadEventFlag("OnEndHit");
     bHasCalledLuaEndPlay = false;
     bPendingLuaEndPlay   = false;
 
-    LuaBeginPlay    = sol::nil;
-    LuaTick         = sol::nil;
-    LuaEndPlay      = sol::nil;
-    LuaOnOverlap    = sol::nil;
-    LuaOnEndOverlap = sol::nil;
-    LuaOnHit        = sol::nil;
-    LuaOnEndHit     = sol::nil;
+    LuaBeginPlay           = sol::nil;
+    LuaPostBeginPlay       = sol::nil;
+    LuaTick                = sol::nil;
+    LuaPostStartMatch      = sol::nil;
+    LuaOnPlayerCameraReady = sol::nil;
+    LuaEndPlay             = sol::nil;
+    LuaOnOverlap           = sol::nil;
+    LuaOnEndOverlap        = sol::nil;
+    LuaOnHit               = sol::nil;
+    LuaOnEndHit            = sol::nil;
     if (bWantsBeginPlay) LuaBeginPlay = Env["BeginPlay"];
+    if (bWantsPostBeginPlay) LuaPostBeginPlay = Env["PostBeginPlay"];
     if (bWantsTick) LuaTick = Env["Tick"];
+    if (bWantsPostStartMatch) LuaPostStartMatch = Env["PostStartMatch"];
+    if (bWantsPlayerCameraReady) LuaOnPlayerCameraReady = Env["OnPlayerCameraReady"];
     if (bWantsEndPlay) LuaEndPlay = Env["EndPlay"];
     if (bWantsOverlap) LuaOnOverlap = Env["OnOverlap"];
     if (bWantsEndOverlap) LuaOnEndOverlap = Env["OnEndOverlap"];
@@ -751,23 +807,30 @@ void ULuaBlueprintComponent::ClearLuaRuntime()
 {
     ClearInputBindings();
     ++LuaRuntimeGeneration;
-    LuaBeginPlay    = sol::nil;
-    LuaTick         = sol::nil;
-    LuaEndPlay      = sol::nil;
-    LuaOnOverlap    = sol::nil;
-    LuaOnEndOverlap = sol::nil;
-    LuaOnHit        = sol::nil;
-    LuaOnEndHit     = sol::nil;
+    LuaBeginPlay           = sol::nil;
+    LuaPostBeginPlay       = sol::nil;
+    LuaTick                = sol::nil;
+    LuaPostStartMatch      = sol::nil;
+    LuaOnPlayerCameraReady = sol::nil;
+    LuaEndPlay             = sol::nil;
+    LuaOnOverlap           = sol::nil;
+    LuaOnEndOverlap        = sol::nil;
+    LuaOnHit               = sol::nil;
+    LuaOnEndHit            = sol::nil;
     Env             = sol::environment();
     RuntimeObjectVariables.clear();
+    PendingLuaDelays.clear();
     ClearExternalLuaRuntimes();
-    bWantsBeginPlay      = false;
-    bWantsTick           = false;
-    bWantsEndPlay        = false;
-    bWantsOverlap        = false;
-    bWantsEndOverlap     = false;
-    bWantsHit            = false;
-    bWantsEndHit         = false;
+    bWantsBeginPlay         = false;
+    bWantsPostBeginPlay     = false;
+    bWantsTick              = false;
+    bWantsPostStartMatch    = false;
+    bWantsPlayerCameraReady = false;
+    bWantsEndPlay           = false;
+    bWantsOverlap           = false;
+    bWantsEndOverlap        = false;
+    bWantsHit               = false;
+    bWantsEndHit            = false;
     bHasCalledLuaEndPlay = false;
     bPendingLuaEndPlay   = false;
     bPendingLuaCleanup   = false;
@@ -1289,52 +1352,83 @@ void ULuaBlueprintComponent::ScheduleLuaDelay(float Seconds, sol::protected_func
         return;
     }
 
-    sol::state& Lua = FLuaScriptManager::GetState();
-    sol::object CoroutineObject = Lua["CoroutineManager"];
-    if (!CoroutineObject.valid() || CoroutineObject.get_type() != sol::type::table)
+    FLuaBlueprintDelayedCallback Entry;
+    Entry.RemainingSeconds = std::max(0.0f, Seconds);
+    Entry.Generation       = Generation;
+    Entry.Callback         = Callback;
+    PendingLuaDelays.push_back(std::move(Entry));
+}
+
+void ULuaBlueprintComponent::TickLuaDelays(float DeltaTime)
+{
+    if (PendingLuaDelays.empty())
     {
-        UE_LOG("LuaBlueprint Delay skipped in %s: CoroutineManager is not available", GetRuntimeName().c_str());
         return;
     }
 
-    sol::table CoroutineManager = CoroutineObject.as<sol::table>();
-    sol::object DelayObject = CoroutineManager["Delay"];
-    if (!DelayObject.valid() || DelayObject.get_type() != sol::type::function)
-    {
-        UE_LOG("LuaBlueprint Delay skipped in %s: CoroutineManager.Delay is not available", GetRuntimeName().c_str());
-        return;
-    }
+    const float SafeDeltaTime = std::max(0.0f, DeltaTime);
+    TArray<FLuaBlueprintDelayedCallback> ReadyCallbacks;
 
-    TWeakObjectPtr<ULuaBlueprintComponent> WeakThis(this);
-    sol::protected_function SafeCallback = Callback;
-    sol::protected_function DelayFunction = DelayObject;
-    sol::protected_function_result DelayResult = DelayFunction(
-        Seconds,
-        [WeakThis, Generation, SafeCallback]() mutable
+    for (int32 Index = 0; Index < static_cast<int32>(PendingLuaDelays.size());)
+    {
+        FLuaBlueprintDelayedCallback& Entry = PendingLuaDelays[Index];
+        if (!IsLuaRuntimeGenerationValid(Entry.Generation) || !Entry.Callback.valid())
         {
-            ULuaBlueprintComponent* Owner = WeakThis.Get();
-            if (!Owner || !Owner->IsLuaRuntimeGenerationValid(Generation))
-            {
-                return;
-            }
-
-            FLuaCallScope Scope(Owner);
-            sol::protected_function_result CallbackResult = SafeCallback();
-            if (!CallbackResult.valid())
-            {
-                sol::error Err = CallbackResult;
-                UE_LOG("LuaBlueprint Delay callback error in %s: %s", Owner->GetRuntimeName().c_str(), Err.what());
-            FLuaDebugManager::OnLuaError(Owner->GetRuntimeName(), Err.what(), true);
-            }
+            PendingLuaDelays.erase(PendingLuaDelays.begin() + Index);
+            continue;
         }
-    );
 
-    if (!DelayResult.valid())
-    {
-        sol::error Err = DelayResult;
-        UE_LOG("LuaBlueprint Delay scheduling error in %s: %s", GetRuntimeName().c_str(), Err.what());
-            FLuaDebugManager::OnLuaError(GetRuntimeName(), Err.what(), true);
+        Entry.RemainingSeconds -= SafeDeltaTime;
+        if (Entry.RemainingSeconds <= 0.0f)
+        {
+            ReadyCallbacks.push_back(std::move(Entry));
+            PendingLuaDelays.erase(PendingLuaDelays.begin() + Index);
+            continue;
+        }
+
+        ++Index;
     }
+
+    for (FLuaBlueprintDelayedCallback& Entry : ReadyCallbacks)
+    {
+        if (!IsLuaRuntimeGenerationValid(Entry.Generation) || !Entry.Callback.valid())
+        {
+            continue;
+        }
+
+        FLuaCallScope                  Scope(this);
+        sol::protected_function_result Result = Entry.Callback();
+        if (!Result.valid())
+        {
+            sol::error Err = Result;
+            UE_LOG("LuaBlueprint Delay callback error in %s: %s", GetRuntimeName().c_str(), Err.what());
+            FLuaDebugManager::OnLuaError(GetRuntimeName(), Err.what(), true);
+        }
+
+        if (!IsLuaRuntimeGenerationValid(Entry.Generation))
+        {
+            break;
+        }
+    }
+}
+
+bool ULuaBlueprintComponent::InvokeLuaNoArgEvent(const char* EventName, sol::protected_function& Function)
+{
+    if (!EventName || !Env.valid() || bPendingLuaCleanup || !Function)
+    {
+        return false;
+    }
+
+    FLuaCallScope                  Scope(this);
+    sol::protected_function_result Result = Function();
+    if (!Result.valid())
+    {
+        sol::error Err = Result;
+        UE_LOG("LuaBlueprint %s error in %s: %s", EventName, GetRuntimeName().c_str(), Err.what());
+        FLuaDebugManager::OnLuaError(GetRuntimeName(), Err.what(), true);
+        return false;
+    }
+    return true;
 }
 
 bool ULuaBlueprintComponent::ReadEventFlag(const char* EventName) const

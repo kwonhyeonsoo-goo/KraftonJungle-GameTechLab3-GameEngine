@@ -131,7 +131,10 @@ namespace
             EmitCustomLuaFunctionDefinitions(Out);
 
             EmitEventFunction(Out, ELuaBlueprintNodeType::EventBeginPlay, "BeginPlay", "");
+            EmitEventFunction(Out, ELuaBlueprintNodeType::EventPostBeginPlay, "PostBeginPlay", "");
             EmitEventFunction(Out, ELuaBlueprintNodeType::EventTick, "Tick", "DeltaTime");
+            EmitEventFunction(Out, ELuaBlueprintNodeType::EventPostStartMatch, "PostStartMatch", "");
+            EmitEventFunction(Out, ELuaBlueprintNodeType::EventPlayerCameraReady, "OnPlayerCameraReady", "PlayerController, PlayerCameraManager, ActiveCamera");
             EmitEventFunction(Out, ELuaBlueprintNodeType::EventEndPlay, "EndPlay", "");
             EmitEventFunction(
                 Out,
@@ -245,6 +248,7 @@ namespace
             bool bAnyOutput = false;
             if (Node.Type == ELuaBlueprintNodeType::EventTick ||
                 Node.Type == ELuaBlueprintNodeType::EventInputAxis ||
+                Node.Type == ELuaBlueprintNodeType::EventPlayerCameraReady ||
                 Node.Type == ELuaBlueprintNodeType::EventOverlap ||
                 Node.Type == ELuaBlueprintNodeType::EventEndOverlap ||
                 Node.Type == ELuaBlueprintNodeType::EventHit ||
@@ -530,8 +534,17 @@ namespace
             static const std::unordered_set<FString> Reserved = {
                 "and", "break", "do", "else", "elseif", "end", "false", "for", "function",
                 "goto", "if", "in", "local", "nil", "not", "or", "repeat", "return", "then",
-                "true", "until", "while", "BeginPlay", "Tick", "EndPlay", "OnOverlap",
-                "OnEndOverlap", "OnHit", "OnEndHit", "__vars", "__bp_custom_lua_functions"
+                "true", "until", "while", "BeginPlay", "PostBeginPlay", "Tick", "PostStartMatch",
+                "OnPlayerCameraReady", "EndPlay", "OnOverlap", "OnEndOverlap", "OnHit", "OnEndHit",
+                "__vars", "__bp_custom_lua_functions", "__bp_custom_lua_functions_by_id",
+                "__bp_global_table", "__bp_lib_call", "__bp_camera_call", "__bp_vec",
+                "_G", "_ENV", "obj", "this", "component", "print", "Vector", "Input", "Engine", "Key",
+                "CameraManager", "Audio", "AudioManager", "LoadAudio", "Time", "Texture",
+                "StaticMeshLibrary", "StaticMeshes", "Material", "MaterialLibrary", "Materials",
+                "CameraShake", "Math", "Vec3", "Class", "Reflection", "Particle", "World",
+                "UI", "LuaDebug", "CoroutineManager",
+                "BP_InitVar", "BP_SetVar", "BP_GetVar", "BP_Delay", "BP_ToStringValue",
+                "BP_ToDisplayValue", "BP_DebugNode"
             };
             if (Reserved.find(Name) != Reserved.end()) return false;
             for (char Ch : Name)
@@ -624,6 +637,9 @@ namespace
             case ELuaBlueprintNodeType::EventEndOverlap:
             case ELuaBlueprintNodeType::EventHit:
             case ELuaBlueprintNodeType::EventEndHit:
+            case ELuaBlueprintNodeType::EventPostBeginPlay:
+            case ELuaBlueprintNodeType::EventPostStartMatch:
+            case ELuaBlueprintNodeType::EventPlayerCameraReady:
                 return true;
             default:
                 return false;
@@ -648,6 +664,12 @@ namespace
                 return "OnHit";
             case ELuaBlueprintNodeType::EventEndHit:
                 return "OnEndHit";
+            case ELuaBlueprintNodeType::EventPostBeginPlay:
+                return "PostBeginPlay";
+            case ELuaBlueprintNodeType::EventPostStartMatch:
+                return "PostStartMatch";
+            case ELuaBlueprintNodeType::EventPlayerCameraReady:
+                return "OnPlayerCameraReady";
             default:
                 return "";
             }
@@ -746,7 +768,7 @@ namespace
                 }
                 if (!IsValidLuaIdentifierName(FunctionName))
                 {
-                    AddDiagnostic(Result, ELuaBlueprintDiagnosticSeverity::Warning, Node.NodeId, FString("Custom Lua function can be called by Call Custom Lua Function, but will not be exported as a direct Lua global because the name is not a safe Lua identifier: ") + FunctionName);
+                    AddDiagnostic(Result, ELuaBlueprintDiagnosticSeverity::Warning, Node.NodeId, FString("Custom Lua function can be called by Call Custom Lua Function, but will not be exported as a direct Lua global because the name is reserved or not a safe Lua identifier: ") + FunctionName);
                 }
             }
 
@@ -862,7 +884,9 @@ namespace
         void EmitRuntimeHelpers(std::ostringstream& Out)
         {
             Out << "local __bp_loop_limit = 100000\n";
-            Out << "local function __bp_vec(x,y,z) if type(Vector) ~= 'table' or type(Vector.new) ~= 'function' then error('LuaBlueprint Vector.new constructor is not registered') end return Vector.new(x or 0, y or 0, z or 0) end\n";
+            Out << "local function __bp_global_table(name) local g = (_G ~= nil) and rawget(_G, name) or nil; if type(g) == 'table' then return g end; local e = (_ENV ~= nil) and rawget(_ENV, name) or nil; if type(e) == 'table' then return e end; return nil end\n";
+            Out << "local function __bp_lib_call(lib_name, fn_name, ...) local lib = __bp_global_table(lib_name); if lib == nil then return nil end; local fn = lib[fn_name]; if type(fn) ~= 'function' then return nil end; return fn(...) end\n";
+            Out << "local function __bp_vec(x,y,z) local lib = __bp_global_table('Vector'); if lib == nil or type(lib.new) ~= 'function' then error('LuaBlueprint Vector.new constructor is not registered') end return lib.new(x or 0, y or 0, z or 0) end\n";
             Out <<
                     "local function __bp_safe_div(a,b) if b == nil or b == 0 then return 0 end return (a or 0) / b end\n";
             Out <<
@@ -888,6 +912,7 @@ namespace
             Out << "local function __bp_to_class(v) return __bp_to_string(v) end\n";
             Out << "local function __bp_to_enum(v) if type(v) == 'number' then return math.floor(v) end return __bp_to_string(v) end\n";
             Out << "local function __bp_color4(r,g,b,a) return { X = r or 0, Y = g or 0, Z = b or 0, W = a or 1, R = r or 0, G = g or 0, B = b or 0, A = a or 1 } end\n";
+            Out << "local function __bp_camera_call(name, ...) return __bp_lib_call('CameraManager', name, ...) end\n";
             Out << "__bp_debug_coroutines = __bp_debug_coroutines or {}\n";
             Out << "__bp_debug_active_depth = __bp_debug_active_depth or 0\n";
             Out << "__bp_custom_lua_functions = {}\n";
@@ -907,7 +932,8 @@ namespace
             Out << "local function __bp_cancel_timer(id) if id == nil then return end __bp_timers[tostring(id)] = nil end\n";
             Out << "local function __bp_is_timer_active(id) return id ~= nil and __bp_timers[tostring(id)] ~= nil end\n";
             Out << "local function __bp_set_timer(id, seconds, looping, fn) if id == nil or fn == nil then return end local key = tostring(id); local token = {}; __bp_timers[key] = token; local function step() if __bp_timers[key] ~= token then return end fn(); if looping and __bp_timers[key] == token then if BP_Delay then BP_Delay(seconds or 0, step) else __bp_timers[key] = nil end else __bp_timers[key] = nil end end; if BP_Delay then BP_Delay(seconds or 0, step) end end\n";
-            Out << "local function __bp_line_trace(start_pos, end_pos, ignore_actor) if World and World.LineTrace then return World.LineTrace(start_pos, end_pos, ignore_actor) end return { Hit = false, Actor = nil, Component = nil, Location = __bp_vec(0,0,0), Normal = __bp_vec(0,0,0), Distance = 0 } end\n";
+            Out << "local function __bp_empty_trace() return { Hit = false, Actor = nil, Component = nil, Location = __bp_vec(0,0,0), Normal = __bp_vec(0,0,0), Distance = 0 } end\n";
+            Out << "local function __bp_line_trace(start_pos, end_pos, ignore_actor) local r = __bp_lib_call('World', 'LineTrace', start_pos, end_pos, ignore_actor); if r ~= nil then return r end return __bp_empty_trace() end\n";
             Out <<
                     "local function __bp_get_var(name) if BP_GetVar then local v = BP_GetVar(name); if v ~= nil then return v end end return __vars[name] end\n";
             Out <<
@@ -918,7 +944,10 @@ namespace
         {
             Out << "__events = {";
             Out << " BeginPlay = " << (HasRunnableEvent(ELuaBlueprintNodeType::EventBeginPlay) ? "true" : "false") << ",";
+            Out << " PostBeginPlay = " << (HasRunnableEvent(ELuaBlueprintNodeType::EventPostBeginPlay) ? "true" : "false") << ",";
             Out << " Tick = " << (HasRunnableEvent(ELuaBlueprintNodeType::EventTick) ? "true" : "false") << ",";
+            Out << " PostStartMatch = " << (HasRunnableEvent(ELuaBlueprintNodeType::EventPostStartMatch) ? "true" : "false") << ",";
+            Out << " OnPlayerCameraReady = " << (HasRunnableEvent(ELuaBlueprintNodeType::EventPlayerCameraReady) ? "true" : "false") << ",";
             Out << " EndPlay = " << (HasRunnableEvent(ELuaBlueprintNodeType::EventEndPlay) ? "true" : "false") << ",";
             Out << " OnOverlap = " << (HasRunnableEvent(ELuaBlueprintNodeType::EventOverlap) ? "true" : "false") << ",";
             Out << " OnEndOverlap = " << (HasRunnableEvent(ELuaBlueprintNodeType::EventEndOverlap) ? "true" : "false") <<
@@ -1178,34 +1207,34 @@ namespace
                 EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Component}) then ({Component}):SetPlaying({Enabled}) end");
                 break;
             case ELuaBlueprintNodeType::SetMaterial:
-                EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "MaterialLibrary.SetComponentMaterial({Component}, {ElementIndex}, {Material})", "__bp_is_valid_object({Component}) and __bp_is_valid_object({Material})");
+                EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "__bp_lib_call(\"MaterialLibrary\", \"SetComponentMaterial\", {Component}, {ElementIndex}, {Material})", "__bp_is_valid_object({Component}) and __bp_is_valid_object({Material})");
                 break;
             case ELuaBlueprintNodeType::SetMaterialByPath:
-                EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "MaterialLibrary.SetComponentMaterialByPath({Component}, {ElementIndex}, {MaterialPath})", "__bp_is_valid_object({Component})");
+                EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "__bp_lib_call(\"MaterialLibrary\", \"SetComponentMaterialByPath\", {Component}, {ElementIndex}, {MaterialPath})", "__bp_is_valid_object({Component})");
                 break;
             case ELuaBlueprintNodeType::CreateDynamicMaterialInstance:
                 EmitCreateDynamicMaterialInstance(Out, Node, Indent, ExecStack);
                 break;
             case ELuaBlueprintNodeType::SetMaterialScalarParameter:
-                EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "MaterialLibrary.SetScalarParameter({Material}, {Parameter}, {Value})", "__bp_is_valid_object({Material})");
+                EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "__bp_lib_call(\"MaterialLibrary\", \"SetScalarParameter\", {Material}, {Parameter}, {Value})", "__bp_is_valid_object({Material})");
                 break;
             case ELuaBlueprintNodeType::SetMaterialVectorParameter:
-                EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "MaterialLibrary.SetVectorParameter({Material}, {Parameter}, {Value})", "__bp_is_valid_object({Material})");
+                EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "__bp_lib_call(\"MaterialLibrary\", \"SetVectorParameter\", {Material}, {Parameter}, {Value})", "__bp_is_valid_object({Material})");
                 break;
             case ELuaBlueprintNodeType::SetMaterialColorParameter:
-                EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "MaterialLibrary.SetColorParameter({Material}, {Parameter}, {Value})", "__bp_is_valid_object({Material})");
+                EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "__bp_lib_call(\"MaterialLibrary\", \"SetColorParameter\", {Material}, {Parameter}, {Value})", "__bp_is_valid_object({Material})");
                 break;
             case ELuaBlueprintNodeType::SetMaterialTextureParameter:
-                EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "MaterialLibrary.SetTextureParameter({Material}, {Parameter}, {Texture})", "__bp_is_valid_object({Material})");
+                EmitExecResultCall(Out, Node, Indent, ExecStack, "Success", "false", "__bp_lib_call(\"MaterialLibrary\", \"SetTextureParameter\", {Material}, {Parameter}, {Texture})", "__bp_is_valid_object({Material})");
                 break;
             case ELuaBlueprintNodeType::PossessCamera:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Camera}) then CameraManager.PossessCamera({Camera}) end");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Camera}) then __bp_camera_call(\"PossessCamera\", {Camera}) end");
                 break;
             case ELuaBlueprintNodeType::SetActiveCameraWithBlend:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Camera}) then CameraManager.SetActiveCameraWithBlend({Camera}, {BlendTime}) end");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Camera}) then __bp_camera_call(\"SetActiveCameraWithBlend\", {Camera}, {BlendTime}) end");
                 break;
             case ELuaBlueprintNodeType::SetViewTargetWithBlend:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Target}) then CameraManager.SetViewTargetWithBlend({Target}, {BlendTime}) end");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Target}) then __bp_camera_call(\"SetViewTargetWithBlend\", {Target}, {BlendTime}) end");
                 break;
             case ELuaBlueprintNodeType::SetCameraFOV:
                 EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Camera}) then ({Camera}):SetFOV({FOV}) end");
@@ -1214,28 +1243,28 @@ namespace
                 EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Camera}) then ({Camera}):LookAt({Target}) end");
                 break;
             case ELuaBlueprintNodeType::FadeIn:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "CameraManager.FadeIn({Duration})");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "__bp_camera_call(\"FadeIn\", {Duration})");
                 break;
             case ELuaBlueprintNodeType::FadeOut:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "CameraManager.FadeOut({Duration})");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "__bp_camera_call(\"FadeOut\", {Duration})");
                 break;
             case ELuaBlueprintNodeType::SetVignette:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "CameraManager.SetVignette({Intensity}, {Radius}, {Softness})");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "__bp_camera_call(\"SetVignette\", {Intensity}, {Radius}, {Softness})");
                 break;
             case ELuaBlueprintNodeType::ClearVignette:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "CameraManager.ClearVignette()");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "__bp_camera_call(\"ClearVignette\")");
                 break;
             case ELuaBlueprintNodeType::StartCameraShakeAsset:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "CameraManager.StartCameraShakeAsset({AssetPath}, {Scale})");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "__bp_camera_call(\"StartCameraShakeAsset\", {AssetPath}, {Scale})");
                 break;
             case ELuaBlueprintNodeType::SetDepthOfField:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "CameraManager.SetDepthOfField({FocusDistance}, {FocusRange}, {MaxBlurRadius})");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "__bp_camera_call(\"SetDepthOfField\", {FocusDistance}, {FocusRange}, {MaxBlurRadius})");
                 break;
             case ELuaBlueprintNodeType::SetBokeh:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "CameraManager.SetBokeh({RadiusThreshold}, {LumaThreshold}, {Intensity})");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "__bp_camera_call(\"SetBokeh\", {RadiusThreshold}, {LumaThreshold}, {Intensity})");
                 break;
             case ELuaBlueprintNodeType::ClearDepthOfField:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "CameraManager.ClearDepthOfField()");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "__bp_camera_call(\"ClearDepthOfField\")");
                 break;
             case ELuaBlueprintNodeType::SetLetterbox:
                 EmitSimpleCall(Out, Node, Indent, ExecStack, "if __bp_is_valid_object({Camera}) then ({Camera}):SetLetterbox(true, {Amount}, {Thickness}, {Color}) end");
@@ -1278,22 +1307,22 @@ namespace
                 EmitLoadAudio(Out, Node, Indent, ExecStack);
                 break;
             case ELuaBlueprintNodeType::AudioPlaySound:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "Audio.Play({Key}, {Volume})");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "__bp_lib_call(\"Audio\", \"Play\", {Key}, {Volume})");
                 break;
             case ELuaBlueprintNodeType::PlayBGM:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "Audio.PlayBGM({Key}, {Volume})");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "__bp_lib_call(\"Audio\", \"PlayBGM\", {Key}, {Volume})");
                 break;
             case ELuaBlueprintNodeType::StopBGM:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "Audio.StopBGM()");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "__bp_lib_call(\"Audio\", \"StopBGM\")");
                 break;
             case ELuaBlueprintNodeType::PlayAudioLoop:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "Audio.PlayLoop({Key}, {LoopName}, {Volume}, {Pitch})");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "__bp_lib_call(\"Audio\", \"PlayLoop\", {Key}, {LoopName}, {Volume}, {Pitch})");
                 break;
             case ELuaBlueprintNodeType::StopAudioLoop:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "Audio.StopLoop({LoopName})");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "__bp_lib_call(\"Audio\", \"StopLoop\", {LoopName})");
                 break;
             case ELuaBlueprintNodeType::SetAudioMasterVolume:
-                EmitSimpleCall(Out, Node, Indent, ExecStack, "Audio.SetMasterVolume({Volume})");
+                EmitSimpleCall(Out, Node, Indent, ExecStack, "__bp_lib_call(\"Audio\", \"SetMasterVolume\", {Volume})");
                 break;
             case ELuaBlueprintNodeType::Cast:
                 EmitCast(Out, Node, Indent, ExecStack);
@@ -1414,11 +1443,11 @@ namespace
             EmitIndent(Out, Indent);
             if (bPawn)
             {
-                Out << "local " << Local << " = World.SpawnPawn(" << LuaQuoted(ClassName) << ", " << Location << ", " << Rotation << ", " << Scale << ", " << (bPossess ? "true" : "false") << ")\n";
+                Out << "local " << Local << " = __bp_lib_call(\"World\", \"SpawnPawn\", " << LuaQuoted(ClassName) << ", " << Location << ", " << Rotation << ", " << Scale << ", " << (bPossess ? "true" : "false") << ")\n";
             }
             else
             {
-                Out << "local " << Local << " = World.SpawnActor(" << LuaQuoted(ClassName) << ", " << Location << ", " << Rotation << ", " << Scale << ")\n";
+                Out << "local " << Local << " = __bp_lib_call(\"World\", \"SpawnActor\", " << LuaQuoted(ClassName) << ", " << Location << ", " << Rotation << ", " << Scale << ")\n";
             }
             ExecLocals[Node.NodeId] = Local;
             EmitThen(Out, Node, Indent, ExecStack);
@@ -1516,7 +1545,7 @@ namespace
             EmitIndent(Out, Indent);
             Out << "if __bp_is_valid_object(" << GetInputExpression(Node, "Component", "nil") << ") then\n";
             EmitIndent(Out, Indent + 1);
-            Out << Local << ".Material = MaterialLibrary.CreateDynamicInstanceForComponent("
+            Out << Local << ".Material = __bp_lib_call(\"MaterialLibrary\", \"CreateDynamicInstanceForComponent\", "
                 << GetInputExpression(Node, "Component", "nil") << ", "
                 << GetInputExpression(Node, "ElementIndex", "0") << ", "
                 << GetInputExpression(Node, "DebugName", LuaQuoted("")) << ")\n";
@@ -1619,7 +1648,7 @@ namespace
             EmitIndent(Out, Indent);
             // 콜백이 정의되지 않은 경우(스크립트에서 해당 CustomEvent 가 없음) BindEvent 자체를 skip.
             const FString CallbackFn = CustomEventFunctionName(CallbackName);
-            Out << "local " << Local << " = (" << CallbackFn << " ~= nil) and Reflection.BindEvent("
+            Out << "local " << Local << " = (" << CallbackFn << " ~= nil) and __bp_lib_call(\"Reflection\", \"BindEvent\", "
                     << GetInputExpression(Node, "Target", "obj") << ", " << LuaQuoted(EventName)
                     << ", " << CallbackFn << ") or false\n";
             ExecLocals[Node.NodeId] = Local;
@@ -1641,7 +1670,7 @@ namespace
                 return;
             }
             EmitIndent(Out, Indent);
-            Out << "Reflection.UnbindEvent(" << GetInputExpression(Node, "Target", "obj") << ", "
+            Out << "__bp_lib_call(\"Reflection\", \"UnbindEvent\", " << GetInputExpression(Node, "Target", "obj") << ", "
                     << LuaQuoted(EventName) << ")\n";
             EmitThen(Out, Node, Indent, ExecStack);
         }
@@ -1756,7 +1785,7 @@ namespace
         {
             const FString Local = FString("__audio") + std::to_string(Node.NodeId);
             EmitIndent(Out, Indent);
-            Out << "local " << Local << " = Audio.Load(" << GetInputExpression(Node, "Key", LuaQuoted("")) << ", "
+            Out << "local " << Local << " = __bp_lib_call(\"Audio\", \"Load\", " << GetInputExpression(Node, "Key", LuaQuoted("")) << ", "
                     << GetInputExpression(Node, "Path", LuaQuoted("")) << ", " << GetInputExpression(Node, "Loop", "false") << ")\n";
             ExecLocals[Node.NodeId] = Local;
             EmitThen(Out, Node, Indent, ExecStack);
@@ -1779,7 +1808,7 @@ namespace
             }
             const FString Local = FString("__c") + std::to_string(Node.NodeId);
             EmitIndent(Out, Indent);
-            Out << "local " << Local << " = Reflection.Cast(" << GetInputExpression(Node, "Target", "nil") << ", " <<
+            Out << "local " << Local << " = __bp_lib_call(\"Reflection\", \"Cast\", " << GetInputExpression(Node, "Target", "nil") << ", " <<
                     LuaQuoted(ClassName) << ")\n";
 
             EmitIndent(Out, Indent);
@@ -1822,11 +1851,11 @@ namespace
             }
             const FString ActorLocal = FString("__a") + std::to_string(Node.NodeId);
             const FString IndexLocal = FString("__i") + std::to_string(Node.NodeId);
-            const char*   Source     = bByClass ? "World.FindActorsByClass" : "World.FindActorsByTag";
+            const char*   Source     = bByClass ? "__bp_lib_call(\"World\", \"FindActorsByClass\", " : "__bp_lib_call(\"World\", \"FindActorsByTag\", ";
 
             EmitIndent(Out, Indent);
-            Out << "for " << IndexLocal << ", " << ActorLocal << " in ipairs(" << Source << "(" << LuaQuoted(Key) <<
-                    ")) do\n";
+            Out << "for " << IndexLocal << ", " << ActorLocal << " in ipairs((" << Source << LuaQuoted(Key) <<
+                    ") or {})) do\n";
             ForEachActorNodeIds[Node.NodeId] = ActorLocal;
             LoopIndexNodeIds[Node.NodeId]    = IndexLocal;
             if (const FLuaBlueprintPin* Loop = FindPinByName(Node, "Loop", ELuaBlueprintPinKind::Output))
@@ -1975,7 +2004,7 @@ namespace
                 return;
             }
             EmitIndent(Out, Indent);
-            Out << "Reflection.SetProperty(" << GetInputExpression(Node, "Target", "obj") << ", " << LuaQuoted(
+            Out << "__bp_lib_call(\"Reflection\", \"SetProperty\", " << GetInputExpression(Node, "Target", "obj") << ", " << LuaQuoted(
                 PropertyName
             ) << ", " << GetInputExpression(Node, "Value", "nil") << ")\n";
             EmitThen(Out, Node, Indent, ExecStack);
@@ -2163,6 +2192,12 @@ namespace
             case ELuaBlueprintNodeType::EventHit:
             case ELuaBlueprintNodeType::EventEndHit:
                 return OutputPin.DisplayName.ToString();
+            case ELuaBlueprintNodeType::EventPlayerCameraReady:
+            {
+                const FString PinName = OutputPin.DisplayName.ToString();
+                if (PinName == "CameraManager") return "PlayerCameraManager";
+                return PinName;
+            }
             case ELuaBlueprintNodeType::LiteralBool:
                 return Node.BoolValue ? "true" : "false";
             case ELuaBlueprintNodeType::LiteralInt:
@@ -2206,7 +2241,7 @@ namespace
                     );
                     return "nil";
                 }
-                return FString("Reflection.GetProperty(") + GetInputExpression(Node, "Target", "obj") + ", " +
+                return FString("__bp_lib_call(\"Reflection\", \"GetProperty\", ") + GetInputExpression(Node, "Target", "obj") + ", " +
                         LuaQuoted(PropertyName) + ")";
             }
             case ELuaBlueprintNodeType::CallFunction:
@@ -2396,29 +2431,29 @@ namespace
                 return It != ExecLocals.end() ? It->second : FString("nil");
             }
             case ELuaBlueprintNodeType::HasEventBinding:
-                return FString("Reflection.HasEventBinding(") + GetInputExpression(Node, "Target", "obj") + ", " + LuaQuoted(LuaName(Node.NameValue)) + ")";
+                return FString("__bp_lib_call(\"Reflection\", \"HasEventBinding\", ") + GetInputExpression(Node, "Target", "obj") + ", " + LuaQuoted(LuaName(Node.NameValue)) + ")";
             case ELuaBlueprintNodeType::FindActorByName:
-                return FString("World.FindActorByName(") + GetInputExpression(
+                return FString("__bp_lib_call(\"World\", \"FindActorByName\", ") + GetInputExpression(
                     Node,
                     "Name",
                     LuaQuoted(Node.StringValue)
                 ) + ")";
             case ELuaBlueprintNodeType::FindActorByClass:
-                return FString("World.FindFirstActorByClass(") + LuaQuoted(LuaName(Node.NameValue)) + ")";
+                return FString("__bp_lib_call(\"World\", \"FindFirstActorByClass\", ") + LuaQuoted(LuaName(Node.NameValue)) + ")";
             case ELuaBlueprintNodeType::FindActorByTag:
-                return FString("World.FindFirstActorByTag(") + GetInputExpression(
+                return FString("__bp_lib_call(\"World\", \"FindFirstActorByTag\", ") + GetInputExpression(
                     Node,
                     "Tag",
                     LuaQuoted(Node.StringValue)
                 ) + ")";
             case ELuaBlueprintNodeType::FindActorsByTag:
-                return FString("World.FindActorsByTag(") + GetInputExpression(
+                return FString("__bp_lib_call(\"World\", \"FindActorsByTag\", ") + GetInputExpression(
                     Node,
                     "Tag",
                     LuaQuoted(Node.StringValue)
                 ) + ")";
             case ELuaBlueprintNodeType::FindActorsByClass:
-                return FString("World.FindActorsByClass(") + LuaQuoted(LuaName(Node.NameValue)) + ")";
+                return FString("__bp_lib_call(\"World\", \"FindActorsByClass\", ") + LuaQuoted(LuaName(Node.NameValue)) + ")";
             case ELuaBlueprintNodeType::GetActorLocation:
                 return FString("(") + GetInputExpression(Node, "Target", "obj") + " and (" + GetInputExpression(
                     Node,
@@ -2470,11 +2505,11 @@ namespace
 
             // ── Game framework ──
             case ELuaBlueprintNodeType::GetPlayerController:
-                return "World.GetFirstPlayerController()";
+                return "__bp_lib_call(\"World\", \"GetFirstPlayerController\")";
             case ELuaBlueprintNodeType::GetController:
                 return FString("(") + GetInputExpression(Node, "Pawn", "obj") + " and (" + GetInputExpression(Node, "Pawn", "obj") + "):GetController() or nil)";
             case ELuaBlueprintNodeType::GetControlledPawn:
-                return FString("(") + GetInputExpression(Node, "Controller", "World.GetFirstPlayerController()") + " and (" + GetInputExpression(Node, "Controller", "World.GetFirstPlayerController()") + "):GetPossessedPawn() or nil)";
+                return FString("(") + GetInputExpression(Node, "Controller", "__bp_lib_call(\"World\", \"GetFirstPlayerController\")") + " and (" + GetInputExpression(Node, "Controller", "__bp_lib_call(\"World\", \"GetFirstPlayerController\")") + "):GetPossessedPawn() or nil)";
             case ELuaBlueprintNodeType::IsPawnPossessed:
                 return FString("(") + GetInputExpression(Node, "Pawn", "obj") + " and (" + GetInputExpression(Node, "Pawn", "obj") + "):IsPossessed() or false)";
             case ELuaBlueprintNodeType::GetInputComponent:
@@ -2599,7 +2634,7 @@ namespace
 
             // ── Static mesh ──
             case ELuaBlueprintNodeType::LoadStaticMesh:
-                return FString("StaticMeshLibrary.Load(") + GetInputExpression(Node, "Path", LuaQuoted("")) + ")";
+                return FString("__bp_lib_call(\"StaticMeshLibrary\", \"Load\", ") + GetInputExpression(Node, "Path", LuaQuoted("")) + ")";
             case ELuaBlueprintNodeType::GetStaticMeshComponent:
                 return FString("(") + GetInputExpression(Node, "Actor", "nil") + " and (" + GetInputExpression(Node, "Actor", "nil") + "):GetStaticMeshComponent() or nil)";
             case ELuaBlueprintNodeType::GetStaticMesh:
@@ -2652,11 +2687,11 @@ namespace
                 return "nil";
             }
             case ELuaBlueprintNodeType::LoadMaterial:
-                return FString("MaterialLibrary.Load(") + GetInputExpression(Node, "Path", LuaQuoted("")) + ")";
+                return FString("__bp_lib_call(\"MaterialLibrary\", \"Load\", ") + GetInputExpression(Node, "Path", LuaQuoted("")) + ")";
             case ELuaBlueprintNodeType::LoadTexture:
-                return FString("Texture.Load(") + GetInputExpression(Node, "Path", LuaQuoted("")) + ", " + GetInputExpression(Node, "SRGB", "true") + ")";
+                return FString("__bp_lib_call(\"Texture\", \"Load\", ") + GetInputExpression(Node, "Path", LuaQuoted("")) + ", " + GetInputExpression(Node, "SRGB", "true") + ")";
             case ELuaBlueprintNodeType::GetMaterial:
-                return FString("MaterialLibrary.GetComponentMaterial(") + GetInputExpression(Node, "Component", "nil") + ", " + GetInputExpression(Node, "ElementIndex", "0") + ")";
+                return FString("__bp_lib_call(\"MaterialLibrary\", \"GetComponentMaterial\", ") + GetInputExpression(Node, "Component", "nil") + ", " + GetInputExpression(Node, "ElementIndex", "0") + ")";
             case ELuaBlueprintNodeType::CreateDynamicMaterialInstance:
             {
                 auto It = ExecLocals.find(Node.NodeId);
@@ -2669,21 +2704,21 @@ namespace
             case ELuaBlueprintNodeType::GetCameraComponent:
                 return FString("(") + GetInputExpression(Node, "Actor", "nil") + " and (" + GetInputExpression(Node, "Actor", "nil") + "):GetCamera() or nil)";
             case ELuaBlueprintNodeType::GetActiveCamera:
-                return "CameraManager.GetActiveCamera()";
+                return "__bp_camera_call(\"GetActiveCamera\")";
 
             // ── Time ──
             case ELuaBlueprintNodeType::LoadAudio:
             {
                 auto It = ExecLocals.find(Node.NodeId);
                 if (It != ExecLocals.end()) return It->second;
-                return FString("Audio.Load(") + GetInputExpression(Node, "Key", LuaQuoted("")) + ", " + GetInputExpression(Node, "Path", LuaQuoted("")) + ", " + GetInputExpression(Node, "Loop", "false") + ")";
+                return FString("__bp_lib_call(\"Audio\", \"Load\", ") + GetInputExpression(Node, "Key", LuaQuoted("")) + ", " + GetInputExpression(Node, "Path", LuaQuoted("")) + ", " + GetInputExpression(Node, "Loop", "false") + ")";
             }
             case ELuaBlueprintNodeType::GetGameTime:
-                return "World.GetGameTime()";
+                return "__bp_lib_call(\"World\", \"GetGameTime\") or 0";
             case ELuaBlueprintNodeType::IsTimerActive:
                 return FString("__bp_is_timer_active(") + GetInputExpression(Node, "TimerId", LuaQuoted("")) + ")";
             case ELuaBlueprintNodeType::CreateWidget:
-                return FString("UI.CreateWidget(") + GetInputExpression(Node, "DocumentPath", LuaQuoted("")) + ")";
+                return FString("__bp_lib_call(\"UI\", \"CreateWidget\", ") + GetInputExpression(Node, "DocumentPath", LuaQuoted("")) + ")";
             case ELuaBlueprintNodeType::LineTrace:
             {
                 auto          It    = ExecLocals.find(Node.NodeId);
@@ -2820,9 +2855,9 @@ namespace
 
             if (Node.Type == ELuaBlueprintNodeType::CallFunctionSignature)
             {
-                return FString("Reflection.CallSignature(") + Target + ", " + LuaQuoted(Name) + Suffix + ")";
+                return FString("__bp_lib_call(\"Reflection\", \"CallSignature\", ") + Target + ", " + LuaQuoted(Name) + Suffix + ")";
             }
-            return FString("Reflection.Call(") + Target + ", " + LuaQuoted(Name) + Suffix + ")";
+            return FString("__bp_lib_call(\"Reflection\", \"Call\", ") + Target + ", " + LuaQuoted(Name) + Suffix + ")";
         }
 
         void EmitIndent(std::ostringstream& Out, int Indent)

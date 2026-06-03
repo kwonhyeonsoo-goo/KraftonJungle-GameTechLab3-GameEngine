@@ -4698,28 +4698,22 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
         "SetLetterbox",
         [](UCameraComponent& Camera, bool bEnabled, sol::optional<float> Amount, sol::optional<float> Thickness, sol::optional<sol::object> Color)
         {
-            if (UCineCameraComponent* CineCamera = Cast<UCineCameraComponent>(&Camera))
+            Camera.SetLetterboxEnabled(bEnabled);
+            if (Amount) Camera.SetLetterboxAmount(Amount.value());
+            if (Thickness) Camera.SetLetterboxThickness(Thickness.value());
+            if (Color)
             {
-                CineCamera->SetLetterboxEnabled(bEnabled);
-                if (Amount) CineCamera->SetLetterboxAmount(Amount.value());
-                if (Thickness) CineCamera->SetLetterboxThickness(Thickness.value());
-                if (Color)
+                FVector4 ColorValue;
+                if (LuaObjectToVector4(Color.value(), ColorValue))
                 {
-                    FVector4 ColorValue;
-                    if (LuaObjectToVector4(Color.value(), ColorValue))
-                    {
-                        CineCamera->SetLetterboxColor(FLinearColor(ColorValue.X, ColorValue.Y, ColorValue.Z, ColorValue.W));
-                    }
+                    Camera.SetLetterboxColor(FLinearColor(ColorValue.X, ColorValue.Y, ColorValue.Z, ColorValue.W));
                 }
             }
         },
         "ClearLetterbox",
         [](UCameraComponent& Camera)
         {
-            if (UCineCameraComponent* CineCamera = Cast<UCineCameraComponent>(&Camera))
-            {
-                CineCamera->SetLetterboxEnabled(false);
-            }
+            Camera.SetLetterboxEnabled(false);
         },
         "OnResize",
         &UCameraComponent::OnResize
