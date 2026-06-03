@@ -58,12 +58,16 @@ namespace
 
 	FVector4 PhysicsPreviewSwingLimitColor(bool bSelectedConstraint)
 	{
-		return ConstraintLimitColorFromHex(0xc5, 0x00, 0x00, bSelectedConstraint ? 0.58f : 0.42f);
+		return bSelectedConstraint
+			? ConstraintLimitColorFromHex(0xff, 0xcd, 0x37, 0.66f)
+			: ConstraintLimitColorFromHex(0xc5, 0x00, 0x00, 0.42f);
 	}
 
 	FVector4 PhysicsPreviewTwistLimitColor(bool bSelectedConstraint)
 	{
-		return ConstraintLimitColorFromHex(0x00, 0x80, 0x20, bSelectedConstraint ? 0.58f : 0.42f);
+		return bSelectedConstraint
+			? ConstraintLimitColorFromHex(0x50, 0xdc, 0xff, 0.66f)
+			: ConstraintLimitColorFromHex(0x00, 0x80, 0x20, 0.42f);
 	}
 
 	float ClampLimitDegreesForPreview(float Degrees)

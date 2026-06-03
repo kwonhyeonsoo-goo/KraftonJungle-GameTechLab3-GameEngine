@@ -37,6 +37,7 @@
 #include "Physics/PhysicsAsset.h"
 #include "Physics/PhysicsAssetManager.h"
 #include "Physics/IPhysicsScene.h"
+#include "Input/InputSystem.h"
 #include "UI/Asset/Animation/AnimationTransportBar.h"
 #include "UI/Asset/Animation/AnimationTimelinePanel.h"
 #include "UI/Asset/Animation/AnimSequencePropertyPanel.h"
@@ -691,6 +692,14 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 						PickedPhysicsBodyIndex,
 						PickedPhysicsShapeIndex);
 				}
+			}
+
+			if (ActiveTab == EMeshEditorTab::Physics &&
+				FSlateApplication::Get().DoesClientOwnKeyboardInput(&ViewportClient) &&
+				!ImGui::GetIO().WantTextInput &&
+				InputSystem::Get().GetKeyDown(VK_DELETE))
+			{
+				PhysicsAssetEditor.DeleteSelectedPhysicsAssetElement(GetCurrentPhysicsAsset());
 			}
 
 		if (ActiveTab == EMeshEditorTab::Physics)

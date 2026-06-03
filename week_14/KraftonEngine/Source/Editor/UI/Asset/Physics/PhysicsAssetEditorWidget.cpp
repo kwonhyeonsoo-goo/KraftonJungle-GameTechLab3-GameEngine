@@ -58,6 +58,16 @@ namespace
         return FColor(0x00, 0x80, 0x20, Alpha);
     }
 
+    FColor SelectedConstraintSwingColor(uint32 Alpha)
+    {
+        return FColor(0xff, 0xcd, 0x37, Alpha);
+    }
+
+    FColor SelectedConstraintTwistColor(uint32 Alpha)
+    {
+        return FColor(0x50, 0xdc, 0xff, Alpha);
+    }
+
     void DrawDebugCircle(
         UWorld* World,
         const FVector& Center,
@@ -295,8 +305,19 @@ namespace
 	        const float Radius = ComputeConstraintLimitDrawRadius(ParentFrameWorld, ChildFrameWorld);
 	        DrawDebugFrameAxes(World, ParentFrameWorld, Radius * 0.32f, Alpha);
         DrawDebugFrameAxes(World, ChildFrameWorld, Radius * 0.22f, Alpha);
-        DrawConstraintSwingLimitDebug(World, ParentFrameWorld, Limits, Radius, ConstraintLimitSwingRed(Alpha));
-        DrawConstraintTwistLimitDebug(World, ParentFrameWorld, ChildFrameWorld, Limits, Radius, ConstraintLimitTwistGreen(Alpha));
+        DrawConstraintSwingLimitDebug(
+            World,
+            ParentFrameWorld,
+            Limits,
+            Radius,
+            bSelected ? SelectedConstraintSwingColor(Alpha) : ConstraintLimitSwingRed(Alpha));
+        DrawConstraintTwistLimitDebug(
+            World,
+            ParentFrameWorld,
+            ChildFrameWorld,
+            Limits,
+            Radius,
+            bSelected ? SelectedConstraintTwistColor(Alpha) : ConstraintLimitTwistGreen(Alpha));
     }
 
     void DrawDebugOrientedBox(
@@ -1165,6 +1186,44 @@ bool FPhysicsAssetEditorWidget::ConsumeConstraintGraphViewportFocusRequest()
     const bool bWasRequested = bPendingConstraintGraphViewportFocusRequest;
     bPendingConstraintGraphViewportFocusRequest = false;
     return bWasRequested;
+}
+
+bool FPhysicsAssetEditorWidget::DeleteSelectedPhysicsAssetElement(UPhysicsAsset* PhysicsAsset)
+{
+    if (!PhysicsAsset)
+    {
+        return false;
+    }
+
+    if (IsValidConstraintIndex(PhysicsAsset, SelectedConstraintIndex))
+    {
+        if (!PhysicsAsset->RemoveConstraintSetupByIndex(SelectedConstraintIndex))
+        {
+            return false;
+        }
+
+        SelectedConstraintIndex = -1;
+        SelectedBodyIndex = -1;
+        SelectedShapeIndex = -1;
+        MarkPhysicsAssetDirty();
+        return true;
+    }
+
+    if (IsValidBodyIndex(PhysicsAsset, SelectedBodyIndex))
+    {
+        if (!PhysicsAsset->RemoveBodySetupByIndex(SelectedBodyIndex))
+        {
+            return false;
+        }
+
+        SelectedBodyIndex = -1;
+        SelectedShapeIndex = -1;
+        SelectedConstraintIndex = -1;
+        MarkPhysicsAssetDirty();
+        return true;
+    }
+
+    return false;
 }
 
 void FPhysicsAssetEditorWidget::RenderDocument(float DeltaTime)
@@ -2748,13 +2807,13 @@ void FPhysicsAssetEditorWidget::SelectConstraintSetup(UPhysicsAsset* PhysicsAsse
 void FPhysicsAssetEditorWidget::SelectBodySetupFromConstraintGraph(UPhysicsAsset* PhysicsAsset, int32 BodyIndex)
 {
     SelectBodySetup(PhysicsAsset, BodyIndex, -1);
-    SelectCurrentConstraintGraphNode(PhysicsAsset, true);
+    SelectCurrentConstraintGraphNode(PhysicsAsset, false);
 }
 
 void FPhysicsAssetEditorWidget::SelectConstraintSetupFromConstraintGraph(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex)
 {
     SelectConstraintSetup(PhysicsAsset, ConstraintIndex, -1);
-    SelectCurrentConstraintGraphNode(PhysicsAsset, true);
+    SelectCurrentConstraintGraphNode(PhysicsAsset, false);
 }
 
 void FPhysicsAssetEditorWidget::SyncConstraintGraphSelectionFromNodeEditor(UPhysicsAsset* PhysicsAsset)
@@ -2778,7 +2837,7 @@ void FPhysicsAssetEditorWidget::SyncConstraintGraphSelectionFromNodeEditor(UPhys
         if (SelectedBodyIndex != BodyIndex || SelectedConstraintIndex >= 0)
         {
             SelectBodySetup(PhysicsAsset, BodyIndex, -1);
-            SelectCurrentConstraintGraphNode(PhysicsAsset, true);
+            SelectCurrentConstraintGraphNode(PhysicsAsset, false);
         }
     }
     else if (DecodeConstraintNode(SelectedNode, ConstraintIndex) && IsValidConstraintIndex(PhysicsAsset, ConstraintIndex))
@@ -2786,7 +2845,7 @@ void FPhysicsAssetEditorWidget::SyncConstraintGraphSelectionFromNodeEditor(UPhys
         if (SelectedConstraintIndex != ConstraintIndex)
         {
             SelectConstraintSetup(PhysicsAsset, ConstraintIndex, -1);
-            SelectCurrentConstraintGraphNode(PhysicsAsset, true);
+            SelectCurrentConstraintGraphNode(PhysicsAsset, false);
         }
     }
 }
@@ -3480,10 +3539,10 @@ void FPhysicsAssetEditorWidget::DrawConstraintSetupDebug(
     }
 
     const bool bSelected = SelectedConstraintIndex == ConstraintIndex;
-    const FColor Color = bSelected ? ConstraintLimitTwistGreen(220u) : ConstraintLimitSwingRed(145u);
+    const FColor Color = bSelected ? SelectedConstraintSwingColor(240u) : ConstraintLimitSwingRed(145u);
     DrawDebugLine(PreviewWorld, ParentFrameWorld.Location, ChildFrameWorld.Location, Color, 0.0f);
-    DrawDebugPoint(PreviewWorld, ParentFrameWorld.Location, bSelected ? 0.08f : 0.05f, Color, 0.0f);
-    DrawDebugPoint(PreviewWorld, ChildFrameWorld.Location, bSelected ? 0.08f : 0.05f, Color, 0.0f);
+    DrawDebugPoint(PreviewWorld, ParentFrameWorld.Location, bSelected ? 0.12f : 0.05f, Color, 0.0f);
+    DrawDebugPoint(PreviewWorld, ChildFrameWorld.Location, bSelected ? 0.12f : 0.05f, Color, 0.0f);
 
     if (bShowConstraintLimitAngles && (!bShowOnlySelectedConstraintLimitAngles || bSelected))
     {

@@ -74,6 +74,7 @@ public:
     void SelectPhysicsShapeFromViewport(UPhysicsAsset* PhysicsAsset, int32 BodyIndex, int32 ShapeIndex);
     void SelectPhysicsConstraintFromViewport(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex);
     bool ConsumeConstraintGraphViewportFocusRequest();
+    bool DeleteSelectedPhysicsAssetElement(UPhysicsAsset* PhysicsAsset);
     void NotifyViewportGizmoModified();
 
     FString GetDocumentTitle() const override;
