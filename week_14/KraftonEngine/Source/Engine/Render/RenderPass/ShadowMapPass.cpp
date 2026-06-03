@@ -710,7 +710,13 @@ void FShadowMapPass::DrawShadowCasters(ID3D11DeviceContext* DC, FScene& Scene, F
 		if (!Partition && !LightFrustum.IntersectAABB(Proxy->GetCachedBounds())) continue;
 
 		const bool bSkeletal = Proxy->HasProxyFlag(EPrimitiveProxyFlags::SkeletalMesh);
-		const bool bGpuSkinned = bSkeletal && bUseGpuSkinning;
+		FSkeletalMeshSceneProxy* SkeletalProxy = bSkeletal
+			? static_cast<FSkeletalMeshSceneProxy*>(Proxy)
+			: nullptr;
+		const bool bGpuSkinned =
+			SkeletalProxy &&
+			bUseGpuSkinning &&
+			SkeletalProxy->GetEffectiveSkinningMode() == ESkinningMode::GPU;
 
 		FDrawCommandBuffer ProxyBuffer;
 		ID3D11ShaderResourceView* SkinMatrixSRV = nullptr;
@@ -719,7 +725,6 @@ void FShadowMapPass::DrawShadowCasters(ID3D11DeviceContext* DC, FScene& Scene, F
 		{
 			if (!bCanDrawGpuSkinnedCasters) continue;
 
-			FSkeletalMeshSceneProxy* SkeletalProxy = static_cast<FSkeletalMeshSceneProxy*>(Proxy);
 			if (!SkeletalProxy->PrepareGpuSkinningDrawBuffer(Device, DC, ProxyBuffer)) continue;
 
 			SkinMatrixSRV = SkeletalProxy->GetSkinMatrixSRV(Device, DC);

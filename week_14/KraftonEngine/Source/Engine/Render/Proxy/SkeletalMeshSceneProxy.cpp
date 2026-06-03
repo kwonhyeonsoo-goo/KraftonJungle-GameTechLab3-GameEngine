@@ -243,6 +243,12 @@ ID3D11ShaderResourceView* FSkeletalMeshSceneProxy::GetSkinMatrixSRV(ID3D11Device
 	return SkinMatrixSRV;
 }
 
+ESkinningMode FSkeletalMeshSceneProxy::GetEffectiveSkinningMode() const
+{
+	USkeletalMeshComponent* SMC = GetSkeletalMeshComponent();
+	return SMC ? SMC->GetEffectiveSkinningMode() : SkinningModeRuntime::Get();
+}
+
 void FSkeletalMeshSceneProxy::ReleaseSkinMatrixBuffer() const
 {
 	if (SkinMatrixSRV)

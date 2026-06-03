@@ -365,9 +365,44 @@ FPrimitiveSceneProxy* USkeletalMeshComponent::CreateSceneProxy()
     return new FSkeletalMeshSceneProxy(this);
 }
 
+bool USkeletalMeshComponent::HasEnabledClothSections() const
+{
+    USkeletalMesh* Mesh = GetSkeletalMesh();
+    FSkeletalMesh* Asset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+    if (!Asset)
+    {
+        return false;
+    }
+
+    for (const FSkeletalClothLODData& LODData : Asset->ClothPayload.LODs)
+    {
+        for (const FSkeletalClothData& ClothData : LODData.Cloths)
+        {
+            if (ClothData.bEnabled &&
+                (!ClothData.ParticleToRenderVertex.empty() || !ClothData.RenderVertexIndices.empty()))
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+ESkinningMode USkeletalMeshComponent::GetEffectiveSkinningMode() const
+{
+    const ESkinningMode GlobalMode = Super::GetEffectiveSkinningMode();
+    if (GlobalMode == ESkinningMode::GPU && HasEnabledClothSections())
+    {
+        return ESkinningMode::CPU;
+    }
+
+    return GlobalMode;
+}
+
 void USkeletalMeshComponent::TickClothSimulationForEditorPreview(float DeltaTime)
 {
-    if (SkinningModeRuntime::Get() != ESkinningMode::CPU)
+    if (GetEffectiveSkinningMode() != ESkinningMode::CPU)
     {
         if (ClothRuntime)
         {
@@ -2310,7 +2345,7 @@ void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
         return;
     }
 
-    if (SkinningModeRuntime::Get() != ESkinningMode::CPU)
+    if (GetEffectiveSkinningMode() != ESkinningMode::CPU)
     {
         if (ClothRuntime)
         {

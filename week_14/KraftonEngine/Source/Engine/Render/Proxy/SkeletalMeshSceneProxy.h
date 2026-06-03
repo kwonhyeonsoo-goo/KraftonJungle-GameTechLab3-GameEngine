@@ -2,6 +2,7 @@
 
 #include "Render/Proxy/PrimitiveSceneProxy.h"
 #include "Render/Types/VertexTypes.h"
+#include "Render/Types/ViewTypes.h"
 
 class USkeletalMeshComponent;
 struct FDrawCommandBuffer;
@@ -27,6 +28,7 @@ public:
 		uint32& OutFirstIndex,
 		uint32& OutIndexCount) const;
 	ID3D11ShaderResourceView* GetSkinMatrixSRV(ID3D11Device* Device, ID3D11DeviceContext* Context) const;
+	ESkinningMode GetEffectiveSkinningMode() const;
 	
 private:
 	void RebuildSectionDraws();
