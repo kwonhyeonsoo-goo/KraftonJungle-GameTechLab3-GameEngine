@@ -161,6 +161,11 @@ namespace
 			return "Unknown";
 		}
 	}
+
+	const char* BoolToString(bool bValue)
+	{
+		return bValue ? "true" : "false";
+	}
 }
 void ACharacter::InitDefaultComponents(const FString& SkeletalMeshFileName)
 {
@@ -230,10 +235,16 @@ bool ACharacter::EnterRagdoll()
 	PhysicsOwnershipMode = ECharacterPhysicsOwnershipMode::TransitionToRagdoll;
 	bPendingRagdollBodyEnable = true;
 	bAwaitingRagdollRecoveryRestore = false;
-	UE_LOG("Character ragdoll transition queued. Actor=%s Mesh=%s Ownership=%s",
+	UE_LOG("Character ragdoll transition queued. Actor=%s Mesh=%s Ownership=%s PhysicsCollision=%s QueryCollision=%s Capsule=%s MeshCollision=%s AwaitingRestore=%s QueryProxyActive=%s",
 		GetName().c_str(),
 		Mesh->GetName().c_str(),
-		LexToString(PhysicsOwnershipMode));
+		LexToString(PhysicsOwnershipMode),
+		LexToString(CharacterPhysicsCollisionMode),
+		LexToString(CharacterQueryCollisionMode),
+		LexToString(CapsuleComponent ? CapsuleComponent->GetCollisionEnabled() : ECollisionEnabled::NoCollision),
+		LexToString(Mesh ? Mesh->GetCollisionEnabled() : ECollisionEnabled::NoCollision),
+		BoolToString(bAwaitingRagdollRecoveryRestore),
+		BoolToString(IsUsingFullRagdollQueryProxy()));
 	return true;
 }
 
@@ -262,9 +273,11 @@ void ACharacter::ExitRagdoll()
 
 	bAwaitingRagdollRecoveryRestore = false;
 	RestoreCharacterAfterRagdoll();
-	UE_LOG("Character ragdoll exited. Actor=%s Ownership=%s",
+	UE_LOG("Character ragdoll exited. Actor=%s Ownership=%s AwaitingRestore=%s QueryProxyActive=%s",
 		GetName().c_str(),
-		LexToString(PhysicsOwnershipMode));
+		LexToString(PhysicsOwnershipMode),
+		BoolToString(bAwaitingRagdollRecoveryRestore),
+		BoolToString(IsUsingFullRagdollQueryProxy()));
 }
 
 bool ACharacter::BeginRagdollRecovery()
@@ -280,13 +293,15 @@ bool ACharacter::BeginRagdollRecovery()
 	{
 		PhysicsOwnershipMode = ECharacterPhysicsOwnershipMode::TransitionFromRagdoll;
 		bAwaitingRagdollRecoveryRestore = true;
-		UE_LOG("Character ragdoll recovery started. Actor=%s Ownership=%s PhysicsCollision=%s QueryCollision=%s Capsule=%s Mesh=%s",
+		UE_LOG("Character ragdoll recovery started. Actor=%s Ownership=%s PhysicsCollision=%s QueryCollision=%s Capsule=%s Mesh=%s AwaitingRestore=%s QueryProxyActive=%s",
 			GetName().c_str(),
 			LexToString(PhysicsOwnershipMode),
 			LexToString(CharacterPhysicsCollisionMode),
 			LexToString(CharacterQueryCollisionMode),
 			LexToString(CapsuleComponent ? CapsuleComponent->GetCollisionEnabled() : ECollisionEnabled::NoCollision),
-			LexToString(Mesh ? Mesh->GetCollisionEnabled() : ECollisionEnabled::NoCollision));
+			LexToString(Mesh ? Mesh->GetCollisionEnabled() : ECollisionEnabled::NoCollision),
+			BoolToString(bAwaitingRagdollRecoveryRestore),
+			BoolToString(IsUsingFullRagdollQueryProxy()));
 	}
 	else
 	{
@@ -521,13 +536,15 @@ void ACharacter::SuspendCharacterForRagdoll()
 		CharacterMovement->Deactivate();
 	}
 
-	UE_LOG("Character collision and movement suspended for ragdoll. Actor=%s Ownership=%s PhysicsCollision=%s QueryCollision=%s Capsule=%s Mesh=%s",
+	UE_LOG("Character collision and movement suspended for ragdoll. Actor=%s Ownership=%s PhysicsCollision=%s QueryCollision=%s Capsule=%s Mesh=%s AwaitingRestore=%s QueryProxyActive=%s",
 		GetName().c_str(),
 		LexToString(PhysicsOwnershipMode),
 		LexToString(CharacterPhysicsCollisionMode),
 		LexToString(CharacterQueryCollisionMode),
 		LexToString(CapsuleComponent ? CapsuleComponent->GetCollisionEnabled() : ECollisionEnabled::NoCollision),
-		LexToString(Mesh ? Mesh->GetCollisionEnabled() : ECollisionEnabled::NoCollision));
+		LexToString(Mesh ? Mesh->GetCollisionEnabled() : ECollisionEnabled::NoCollision),
+		BoolToString(bAwaitingRagdollRecoveryRestore),
+		BoolToString(IsUsingFullRagdollQueryProxy()));
 }
 
 void ACharacter::RestoreMovementAfterRagdoll()
@@ -573,10 +590,17 @@ void ACharacter::FinalizePendingRagdollEntry()
 	}
 
 	PhysicsOwnershipMode = ECharacterPhysicsOwnershipMode::RagdollDriven;
-	UE_LOG("Character ragdoll entered. Actor=%s Mesh=%s Ownership=%s",
+	UE_LOG("Character ragdoll runtime active. Actor=%s Mesh=%s Ownership=%s PhysicsCollision=%s QueryCollision=%s Capsule=%s MeshCollision=%s MeshRagdollActive=%s MeshRecovering=%s QueryProxyActive=%s",
 		GetName().c_str(),
 		Mesh->GetName().c_str(),
-		LexToString(PhysicsOwnershipMode));
+		LexToString(PhysicsOwnershipMode),
+		LexToString(CharacterPhysicsCollisionMode),
+		LexToString(CharacterQueryCollisionMode),
+		LexToString(CapsuleComponent ? CapsuleComponent->GetCollisionEnabled() : ECollisionEnabled::NoCollision),
+		LexToString(Mesh ? Mesh->GetCollisionEnabled() : ECollisionEnabled::NoCollision),
+		BoolToString(Mesh->IsRagdollActive()),
+		BoolToString(Mesh->IsRecoveringFromRagdoll()),
+		BoolToString(IsUsingFullRagdollQueryProxy()));
 }
 
 void ACharacter::CacheRagdollRestoreLocation()
@@ -655,6 +679,15 @@ void ACharacter::RestoreCharacterAfterRagdoll()
 		bSavedPreRagdollCharacterState
 			? SavedPreRagdollCollisionOwnership.QueryCollisionMode
 			: ECharacterQueryCollisionMode::CharacterDriven;
+	UE_LOG("Character ragdoll restore ready. Actor=%s Ownership=%s RestoredPhysicsCollision=%s RestoredQueryCollision=%s Capsule=%s Mesh=%s AwaitingRestore=%s QueryProxyActive=%s",
+		GetName().c_str(),
+		LexToString(PhysicsOwnershipMode),
+		LexToString(RestoredPhysicsCollisionMode),
+		LexToString(RestoredQueryCollisionMode),
+		LexToString(CapsuleComponent ? CapsuleComponent->GetCollisionEnabled() : ECollisionEnabled::NoCollision),
+		LexToString(Mesh ? Mesh->GetCollisionEnabled() : ECollisionEnabled::NoCollision),
+		BoolToString(bAwaitingRagdollRecoveryRestore),
+		BoolToString(IsUsingFullRagdollQueryProxy()));
 	ApplyCharacterCollisionOwnershipModes(
 		RestoredPhysicsCollisionMode,
 		RestoredQueryCollisionMode,
@@ -670,13 +703,15 @@ void ACharacter::RestoreCharacterAfterRagdoll()
 	CachedRagdollRestoreLocation = FVector::ZeroVector;
 	bHasCachedRagdollRestoreYaw = false;
 	CachedRagdollRestoreYawDegrees = 0.0f;
-	UE_LOG("Character ragdoll ownership restored. Actor=%s Ownership=%s PhysicsCollision=%s QueryCollision=%s Capsule=%s Mesh=%s",
+	UE_LOG("Character ragdoll ownership restored. Actor=%s Ownership=%s PhysicsCollision=%s QueryCollision=%s Capsule=%s Mesh=%s AwaitingRestore=%s QueryProxyActive=%s",
 		GetName().c_str(),
 		LexToString(PhysicsOwnershipMode),
 		LexToString(CharacterPhysicsCollisionMode),
 		LexToString(CharacterQueryCollisionMode),
 		LexToString(CapsuleComponent ? CapsuleComponent->GetCollisionEnabled() : ECollisionEnabled::NoCollision),
-		LexToString(Mesh ? Mesh->GetCollisionEnabled() : ECollisionEnabled::NoCollision));
+		LexToString(Mesh ? Mesh->GetCollisionEnabled() : ECollisionEnabled::NoCollision),
+		BoolToString(bAwaitingRagdollRecoveryRestore),
+		BoolToString(IsUsingFullRagdollQueryProxy()));
 }
 
 void ACharacter::SetupInputComponent()

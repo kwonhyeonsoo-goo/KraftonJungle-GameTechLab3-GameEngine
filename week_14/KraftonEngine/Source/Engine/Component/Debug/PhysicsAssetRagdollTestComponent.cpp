@@ -428,7 +428,7 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
     const FVector LastHitDirection =
         MeshComponent ? MeshComponent->GetLastPartialHitReactionDirection() : FVector::ZeroVector;
 
-    UE_LOG("[RagdollTest] %s Actor=%s MeshComponent=%s EffectivePhysicsAsset=%s ActivePhysicsAsset=%s Mode=%s Active=%s PhysicsPose=%s Recovering=%s CharacterOwnership=%s CharacterPhysicsCollision=%s CharacterQueryCollision=%s CapsuleCollision=%s MeshCollision=%s PartialRoot=%s PartialPhase=%s Hold=%.2f PendingBlendOut=%s LiveBodies=%d LiveConstraints=%d BlendWeight=%.2f LastPreset=%s LastHitBone=%s LastRoot=%s LastTarget=%s LastStrength=%.2f LastHold=%.2f LastImpulse=%.2f LastDirection=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
+    UE_LOG("[RagdollTest] %s Actor=%s MeshComponent=%s EffectivePhysicsAsset=%s ActivePhysicsAsset=%s Mode=%s Active=%s PhysicsPose=%s Recovering=%s CharacterOwnership=%s CharacterPhysicsCollision=%s CharacterQueryCollision=%s CapsuleCollision=%s MeshCollision=%s AwaitingRestore=%s FullQueryProxyActive=%s PartialRoot=%s PartialPhase=%s Hold=%.2f PendingBlendOut=%s LiveBodies=%d LiveConstraints=%d BlendWeight=%.2f LastPreset=%s LastHitBone=%s LastRoot=%s LastTarget=%s LastStrength=%.2f LastHold=%.2f LastImpulse=%.2f LastDirection=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
         EventLabel ? EventLabel : "State",
         GetOwnerNameSafe(),
         GetComponentNameSafe(),
@@ -443,6 +443,8 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
         OwnerCharacter ? LexToString(OwnerCharacter->GetCharacterQueryCollisionMode()) : "None",
         OwnerCharacter ? LexToString(OwnerCharacter->GetCurrentCapsuleCollisionEnabled()) : "None",
         OwnerCharacter ? LexToString(OwnerCharacter->GetCurrentMeshCollisionEnabled()) : "None",
+        (OwnerCharacter && OwnerCharacter->IsAwaitingRagdollRecoveryRestore()) ? "true" : "false",
+        (OwnerCharacter && OwnerCharacter->IsUsingFullRagdollQueryProxy()) ? "true" : "false",
         MeshComponent ? MeshComponent->GetActivePartialRagdollRootBoneName().ToString().c_str() : "None",
         MeshComponent ? LexToString(MeshComponent->GetPartialRagdollPhase()) : "None",
         MeshComponent ? MeshComponent->GetPartialRagdollHoldRemaining() : 0.0f,
@@ -461,6 +463,30 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
         LastHitDirection.Y,
         LastHitDirection.Z,
         (MeshComponent && MeshComponent->WasLastPartialHitReactionEscalationCandidate()) ? "true" : "false");
+
+    if (OwnerCharacter && OwnerCharacter->IsUsingFullRagdollQueryProxy())
+    {
+        UE_LOG("[RagdollTest] FullRagdollQueryProxy Actor=%s Ownership=%s PhysicsCollision=%s QueryCollision=%s Capsule=%s Mesh=%s AwaitingRestore=%s",
+            GetOwnerNameSafe(),
+            LexToString(OwnerCharacter->GetPhysicsOwnershipMode()),
+            LexToString(OwnerCharacter->GetCharacterPhysicsCollisionMode()),
+            LexToString(OwnerCharacter->GetCharacterQueryCollisionMode()),
+            LexToString(OwnerCharacter->GetCurrentCapsuleCollisionEnabled()),
+            LexToString(OwnerCharacter->GetCurrentMeshCollisionEnabled()),
+            OwnerCharacter->IsAwaitingRagdollRecoveryRestore() ? "true" : "false");
+    }
+
+    if (OwnerCharacter &&
+        OwnerCharacter->GetCharacterPhysicsCollisionMode() == ECharacterPhysicsCollisionMode::PartialHybrid)
+    {
+        UE_LOG("[RagdollTest] PartialHybridCollisionPath Actor=%s CharacterOwnership=%s Capsule=%s Mesh=%s PartialMode=%s PartialPhase=%s",
+            GetOwnerNameSafe(),
+            LexToString(OwnerCharacter->GetPhysicsOwnershipMode()),
+            LexToString(OwnerCharacter->GetCurrentCapsuleCollisionEnabled()),
+            LexToString(OwnerCharacter->GetCurrentMeshCollisionEnabled()),
+            MeshComponent ? LexToString(MeshComponent->GetRagdollMode()) : "None",
+            MeshComponent ? LexToString(MeshComponent->GetPartialRagdollPhase()) : "None");
+    }
 }
 
 const char* UPhysicsAssetRagdollTestComponent::GetComponentNameSafe() const

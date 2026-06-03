@@ -86,6 +86,16 @@ public:
 	UFUNCTION(Pure, Category="Character|Physics")
 	ECharacterQueryCollisionMode GetCharacterQueryCollisionMode() const { return CharacterQueryCollisionMode; }
 	UFUNCTION(Pure, Category="Character|Physics")
+	bool IsAwaitingRagdollRecoveryRestore() const { return bAwaitingRagdollRecoveryRestore; }
+	UFUNCTION(Pure, Category="Character|Physics")
+	bool IsUsingFullRagdollQueryProxy() const
+	{
+		return
+			CharacterPhysicsCollisionMode == ECharacterPhysicsCollisionMode::FullRagdollOwned &&
+			CharacterQueryCollisionMode == ECharacterQueryCollisionMode::ReservedForFullRagdollProxy &&
+			GetCurrentCapsuleCollisionEnabled() == ECollisionEnabled::QueryOnly;
+	}
+	UFUNCTION(Pure, Category="Character|Physics")
 	ECollisionEnabled GetCurrentCapsuleCollisionEnabled() const
 	{
 		return CapsuleComponent ? CapsuleComponent->GetCollisionEnabled() : ECollisionEnabled::NoCollision;
