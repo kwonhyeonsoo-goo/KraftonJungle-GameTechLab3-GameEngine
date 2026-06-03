@@ -1942,7 +1942,7 @@ void FPhysicsAssetEditorWidget::RenderSkeletonPhysicsTree(UPhysicsAsset* Physics
 
     const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
 	ImGui::SetWindowFontScale(1.5f);
-    ImGui::TextUnformatted("Skeleton Physics");
+    ImGui::TextUnformatted("Skeleton Tree");
 	ImGui::SetWindowFontScale(1.0f);
     ImGui::SameLine();
     ImGui::Checkbox("Show Only Bones with Bodies", &bShowOnlyBonesWithBodies);
@@ -2448,7 +2448,7 @@ void FPhysicsAssetEditorWidget::DestroyConstraintGraphEditor()
 void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* PhysicsAsset)
 {
 	ImGui::SetWindowFontScale(1.5f);
-    ImGui::TextUnformatted("Constraint Graph");
+    ImGui::TextUnformatted("Body-Constraint Graph");
 	ImGui::SetWindowFontScale(1.0f);
 	ImGui::SameLine();
 
