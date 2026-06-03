@@ -8,7 +8,6 @@
 #include "Object/Ptr/SoftObjectPtr.h"
 #include "Object/Ptr/WeakObjectPtr.h"
 #include "Physics/PhysicsAssetInstance.h"
-#include "Component/Primitive/RagdollReactionPolicy.h"
 #include <memory>
 
 #include "Source/Engine/Component/Primitive/SkeletalMeshComponent.generated.h"
@@ -107,6 +106,10 @@ struct FPartialRagdollHitReactionRequest
         return HoldTimeOverride >= 0.0f;
     }
 };
+
+#define KRAFTON_SKELETAL_MESH_RAGDOLL_TYPES_DEFINED 1
+#include "Component/Primitive/RagdollReactionPolicy.h"
+#undef KRAFTON_SKELETAL_MESH_RAGDOLL_TYPES_DEFINED
 
 // SkeletalMesh 전용 render proxy만 제공하는 얇은 wrapper.
 // Skinning/bone/material/bounds 상태는 모두 USkinnedMeshComponent가 소유한다.

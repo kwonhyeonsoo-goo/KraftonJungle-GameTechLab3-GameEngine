@@ -745,10 +745,44 @@ bool USkeletalMeshComponent::BuildPartialRagdollSelectionFromPreset(EPartialRagd
         RootBoneIndex = FindBoneIndexByPriority(MeshAsset, { "spine_01", "spine1", "spine" });
         break;
     case EPartialRagdollPreset::LeftArm:
-        RootBoneIndex = FindBoneIndexByPriority(MeshAsset, { "clavicle_l", "upperarm_l", "shoulder_l", "arm_l" });
+        RootBoneIndex = FindBoneIndexByPriority(
+            MeshAsset,
+            {
+                "clavicle_l",
+                "upperarm_l",
+                "shoulder_l",
+                "arm_l",
+                "leftshoulder",
+                "leftarm",
+                "l_clavicle",
+                "l_upperarm",
+                "l_shoulder",
+                "armleft",
+                "bip001 l clavicle",
+                "bip001 l upperarm",
+                "l clavicle",
+                "l upperarm"
+            });
         break;
     case EPartialRagdollPreset::RightArm:
-        RootBoneIndex = FindBoneIndexByPriority(MeshAsset, { "clavicle_r", "upperarm_r", "shoulder_r", "arm_r" });
+        RootBoneIndex = FindBoneIndexByPriority(
+            MeshAsset,
+            {
+                "clavicle_r",
+                "upperarm_r",
+                "shoulder_r",
+                "arm_r",
+                "rightshoulder",
+                "rightarm",
+                "r_clavicle",
+                "r_upperarm",
+                "r_shoulder",
+                "armright",
+                "bip001 r clavicle",
+                "bip001 r upperarm",
+                "r clavicle",
+                "r upperarm"
+            });
         break;
     case EPartialRagdollPreset::HeadNeck:
         RootBoneIndex = FindBoneIndexByPriority(MeshAsset, { "neck_01", "neck1", "neck", "head" });
@@ -781,13 +815,39 @@ bool USkeletalMeshComponent::ResolvePartialRagdollPresetFromHitBone(const FName&
         return true;
     }
 
-    if (ContainsAnyToken(BoneName, { "clavicle_l", "upperarm_l", "lowerarm_l", "forearm_l", "hand_l", "_l", "left" }))
+    if (ContainsAnyToken(BoneName, {
+            "clavicle_l",
+            "upperarm_l",
+            "lowerarm_l",
+            "forearm_l",
+            "hand_l",
+            "_l",
+            "left",
+            " l clavicle",
+            " l upperarm",
+            " l forearm",
+            " l hand",
+            "bip001 l"
+        }))
     {
         OutPreset = EPartialRagdollPreset::LeftArm;
         return true;
     }
 
-    if (ContainsAnyToken(BoneName, { "clavicle_r", "upperarm_r", "lowerarm_r", "forearm_r", "hand_r", "_r", "right" }))
+    if (ContainsAnyToken(BoneName, {
+            "clavicle_r",
+            "upperarm_r",
+            "lowerarm_r",
+            "forearm_r",
+            "hand_r",
+            "_r",
+            "right",
+            " r clavicle",
+            " r upperarm",
+            " r forearm",
+            " r hand",
+            "bip001 r"
+        }))
     {
         OutPreset = EPartialRagdollPreset::RightArm;
         return true;
@@ -849,9 +909,17 @@ bool USkeletalMeshComponent::EnableRagdollPhysics()
 
     if (ActiveRagdollMode == ERagdollMode::Partial && PhysicsAssetInstance)
     {
-        PhysicsAssetInstance->DestroyBodiesAndConstraints();
+        PhysicsAssetInstance->ResetRuntimeState();
+        SetUsePhysicsAssetPose(false);
         ResetPhysicsPoseBlendState();
         ClearPartialRagdollState();
+        ResetBoneEditPose();
+        RefreshSkinningAfterPoseChanged();
+
+        // Re-sample the authored animation pose before promoting a localized reaction into
+        // a fresh full-body ragdoll, otherwise the new baseline can inherit the deformed
+        // partial-physics pose and spawn bodies in a state that explodes outward.
+        EvaluateAnimInstance(0.0f);
     }
 
     // The component stays responsible for high-level ragdoll policy while the instance
@@ -1875,7 +1943,8 @@ void USkeletalMeshComponent::UpdatePhysicsPoseBlend(float DeltaTime)
         {
             // Partial ragdoll should self-release after a short reaction window so gameplay
             // callers do not need to orchestrate a stand-up-style recovery every time.
-            PartialRagdollHoldRemaining = std::max(0.0f, PartialRagdollHoldRemaining - DeltaTime);
+            const float UpdatedHoldRemaining = PartialRagdollHoldRemaining - DeltaTime;
+            PartialRagdollHoldRemaining = UpdatedHoldRemaining > 0.0f ? UpdatedHoldRemaining : 0.0f;
             if (PartialRagdollHoldRemaining <= 1.0e-4f)
             {
                 UE_LOG("Partial ragdoll auto-release started. Component=%s RootBone=%s",

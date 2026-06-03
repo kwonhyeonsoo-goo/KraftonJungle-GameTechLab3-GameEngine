@@ -7,6 +7,7 @@
 #include "Source/Engine/Component/Debug/PhysicsAssetRagdollTestComponent.generated.h"
 
 class USkeletalMeshComponent;
+enum class EPartialRagdollPreset : uint8;
 
 // Temporary validation hook:
 // this component exists only to drive the already-authored PhysicsAsset ragdoll flow
@@ -32,7 +33,12 @@ private:
     void ProcessDebugInput();
     void ProcessPeriodicActiveLogging(float DeltaTime);
     void MonitorStateTransitions();
-    void TriggerFixedHitReaction(const char* EventLabel, const FName& HitBoneName, const FVector& HitDirection, float Strength);
+    void TriggerFixedHitReaction(
+        const char* EventLabel,
+        const FName& HitBoneName,
+        const FVector& HitDirection,
+        float Strength,
+        EPartialRagdollPreset PreferredPreset);
 
     void LogControls() const;
     void LogResolvedTarget(bool bForceLogFailure = false);
