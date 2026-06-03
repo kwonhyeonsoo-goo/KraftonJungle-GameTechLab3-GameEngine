@@ -681,10 +681,16 @@ void FEditorMainPanel::RenderShortcutOverlay()
 	ImGui::TextUnformatted("Editor");
 	ImGui::Separator();
 	ImGui::TextUnformatted("` : Focus console input / open console drawer");
+	ImGui::TextUnformatted("Crtl + Spacebar : open content bowser");
 	ImGui::TextUnformatted("F : Focus on selection");
 	ImGui::TextUnformatted("Ctrl + LMB : Multi Picking (Toggle)");
 	ImGui::TextUnformatted("Ctrl + Alt + LMB Drag : Area Selection");
 	ImGui::TextUnformatted("F2: Actor or Component Rename");
+	ImGui::Separator();
+	ImGui::TextUnformatted("Physics Editor");
+	ImGui::Separator();
+	ImGui::TextUnformatted("F : Focus viewport on selected body, shape, or constraint");
+	ImGui::TextUnformatted("Delete : Remove selected body or constraint");
 	ImGui::Separator();
 	ImGui::TextUnformatted("EsterEgg");
 	ImGui::Separator();
