@@ -66,6 +66,7 @@ public:
     void StopEditorSimulation(UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent, bool bResetPose);
     bool IsEditorSimulationActive() const { return bEditorSimulationActive; }
     bool SaveEditedPhysicsAsset();
+    bool ExportPhysicsAssetDebugJson(UPhysicsAsset* PhysicsAsset, FString* OutPath = nullptr);
     bool HasUnsavedChanges() const { return IsDirty(); }
     int32 GetSelectedBodyIndex() const { return SelectedBodyIndex; }
     int32 GetSelectedShapeIndex() const { return SelectedShapeIndex; }
@@ -93,6 +94,11 @@ private:
     void RenderAssetSummary(UPhysicsAsset* PhysicsAsset);
     void RenderSkeletonPhysicsTree(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh);
     void RenderPhysicsBoneTree(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton, int32 BoneIndex);
+    void RenderBodySkeletonDebug(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMeshComponent* PreviewComponent,
+        UWorld* PreviewWorld,
+        const FPhysicsAssetPreviewPoseCache* PoseCache = nullptr);
     void RenderPhysicsBoneContextMenu(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton, int32 BoneIndex);
     void RenderSelectedBoneActionPanel(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton);
     void RenderUnboundPhysicsSetups(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton);
@@ -170,8 +176,11 @@ private:
     bool bPendingConstraintGraphNavigateToSelection = false;
     bool bPendingConstraintGraphViewportFocusRequest = false;
     bool bPhysicsTreePanelShowsBodies = false;
+    bool bShowOnlyBonesWithBodies = false;
+    bool bPendingScrollSelectedTreeBoneIntoView = false;
     bool bShowPreviewBodies = true;
     bool bShowPreviewConstraints = true;
+    bool bShowPreviewBodySkeleton = false;
     bool bShowConstraintLimitAngles = true;
     bool bShowConstraintLimitSurfaces = true;
     bool bShowOnlySelectedConstraintLimitAngles = false;
@@ -191,10 +200,11 @@ private:
     int32 RegeneratePrimitiveTypeIndex = 0;
     float RegenerateMinInfluenceWeight = 0.15f;
     int32 RegenerateMinWeightedVertices = 64;
-    float RegenerateMinBoneSize = 20.0f;
+    float RegenerateMinBoneSize = 0.025;
     float RegenerateMinWeldSize = 1.0e-4f;
     EPhysicsAssetConstraintFrameTarget SelectedConstraintGizmoFrame = EPhysicsAssetConstraintFrameTarget::Child;
     uint64 ConstraintGraphTopologyHash = 0;
+    FString LastDebugExportMessage;
 
     TArray<FPhysicsAssetValidationIssue> ValidationIssues;
     FString ValidationMeshPath;
