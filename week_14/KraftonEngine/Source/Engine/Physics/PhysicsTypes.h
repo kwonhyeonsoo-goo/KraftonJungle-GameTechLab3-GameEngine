@@ -92,6 +92,11 @@ constexpr uint32 PhysicsFilter_QueryAndPhysics       = 1u << 10;
 constexpr uint32 PhysicsFilter_IsTrigger             = 1u << 11;
 constexpr uint32 PhysicsFilter_GenerateHitEvents     = 1u << 12;
 constexpr uint32 PhysicsFilter_GenerateOverlapEvents = 1u << 13;
+constexpr uint32 PhysicsFilter_ComponentPrimitive    = 1u << 14;
+constexpr uint32 PhysicsFilter_SameActorSelfIgnore   = 1u << 15;
+constexpr uint32 PhysicsFilter_IndependentRagdoll    = 1u << 16;
+constexpr uint32 PhysicsFilter_PartialRagdoll        = 1u << 17;
+constexpr uint32 PhysicsFilter_SuppressSameActorPrimitivePairs = 1u << 18;
 
 inline uint32 GetPhysicsFilterObjectType(uint32 PackedWord0)
 {
@@ -115,6 +120,11 @@ struct FPhysicsFilterData
     bool              bIsTrigger             = false;
     bool              bGenerateHitEvents     = false;
     bool              bGenerateOverlapEvents = false;
+    bool              bIsComponentPrimitive  = false;
+    bool              bIgnoreSameActor       = false;
+    bool              bIsIndependentRagdoll  = false;
+    bool              bIsPartialRagdoll      = false;
+    bool              bSuppressSameActorPrimitivePairs = false;
 };
 
 struct FPhysicsShapeDesc

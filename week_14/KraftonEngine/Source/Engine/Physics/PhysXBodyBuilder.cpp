@@ -38,6 +38,26 @@ namespace
         {
             PackedObjectAndFlags |= PhysicsFilter_GenerateOverlapEvents;
         }
+        if (In.bIsComponentPrimitive)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_ComponentPrimitive;
+        }
+        if (In.bIgnoreSameActor)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_SameActorSelfIgnore;
+        }
+        if (In.bIsIndependentRagdoll)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_IndependentRagdoll;
+        }
+        if (In.bIsPartialRagdoll)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_PartialRagdoll;
+        }
+        if (In.bSuppressSameActorPrimitivePairs)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_SuppressSameActorPrimitivePairs;
+        }
 
         Out.word0 = PackedObjectAndFlags;
         Out.word1 = In.BlockMask;

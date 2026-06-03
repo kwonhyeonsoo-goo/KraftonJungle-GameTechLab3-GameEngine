@@ -428,7 +428,7 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
     const FVector LastHitDirection =
         MeshComponent ? MeshComponent->GetLastPartialHitReactionDirection() : FVector::ZeroVector;
 
-    UE_LOG("[RagdollTest] %s Actor=%s MeshComponent=%s EffectivePhysicsAsset=%s ActivePhysicsAsset=%s Mode=%s Active=%s PhysicsPose=%s Recovering=%s CharacterOwnership=%s CharacterPhysicsCollision=%s CharacterQueryCollision=%s CapsuleCollision=%s MeshCollision=%s AwaitingRestore=%s FullQueryProxyActive=%s PartialRoot=%s PartialPhase=%s Hold=%.2f PendingBlendOut=%s LiveBodies=%d LiveConstraints=%d BlendWeight=%.2f LastPreset=%s LastHitBone=%s LastRoot=%s LastTarget=%s LastStrength=%.2f LastHold=%.2f LastImpulse=%.2f LastDirection=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
+    UE_LOG("[RagdollTest] %s Actor=%s MeshComponent=%s EffectivePhysicsAsset=%s ActivePhysicsAsset=%s Mode=%s Active=%s PhysicsPose=%s Recovering=%s CharacterOwnership=%s CharacterPhysicsCollision=%s CharacterQueryCollision=%s CapsuleCollision=%s MeshCollision=%s AwaitingRestore=%s FullQueryProxyActive=%s PartialRoot=%s PartialPhase=%s Hold=%.2f PendingBlendOut=%s PartialSelfSuppression=%s LiveBodies=%d LiveConstraints=%d BlendWeight=%.2f LastPreset=%s LastHitBone=%s LastRoot=%s LastTarget=%s LastStrength=%.2f LastHold=%.2f LastImpulse=%.2f LastDirection=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
         EventLabel ? EventLabel : "State",
         GetOwnerNameSafe(),
         GetComponentNameSafe(),
@@ -449,6 +449,7 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
         MeshComponent ? LexToString(MeshComponent->GetPartialRagdollPhase()) : "None",
         MeshComponent ? MeshComponent->GetPartialRagdollHoldRemaining() : 0.0f,
         (MeshComponent && MeshComponent->IsPartialRagdollBlendOutPending()) ? "true" : "false",
+        (MeshComponent && MeshComponent->IsPartialRagdollSelfSuppressionActive()) ? "true" : "false",
         MeshComponent ? MeshComponent->GetLiveRagdollBodyCount() : 0,
         MeshComponent ? MeshComponent->GetLiveRagdollConstraintCount() : 0,
         MeshComponent ? MeshComponent->GetPhysicsAssetBlendWeight() : 0.0f,
@@ -479,13 +480,14 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
     if (OwnerCharacter &&
         OwnerCharacter->GetCharacterPhysicsCollisionMode() == ECharacterPhysicsCollisionMode::PartialHybrid)
     {
-        UE_LOG("[RagdollTest] PartialHybridCollisionPath Actor=%s CharacterOwnership=%s Capsule=%s Mesh=%s PartialMode=%s PartialPhase=%s",
+        UE_LOG("[RagdollTest] PartialHybridCollisionPath Actor=%s CharacterOwnership=%s Capsule=%s Mesh=%s PartialMode=%s PartialPhase=%s PartialSelfSuppression=%s",
             GetOwnerNameSafe(),
             LexToString(OwnerCharacter->GetPhysicsOwnershipMode()),
             LexToString(OwnerCharacter->GetCurrentCapsuleCollisionEnabled()),
             LexToString(OwnerCharacter->GetCurrentMeshCollisionEnabled()),
             MeshComponent ? LexToString(MeshComponent->GetRagdollMode()) : "None",
-            MeshComponent ? LexToString(MeshComponent->GetPartialRagdollPhase()) : "None");
+            MeshComponent ? LexToString(MeshComponent->GetPartialRagdollPhase()) : "None",
+            (MeshComponent && MeshComponent->IsPartialRagdollSelfSuppressionActive()) ? "true" : "false");
     }
 }
 

@@ -87,7 +87,10 @@ namespace
         bool bForceQueryAndPhysicsCollision,
         bool bUseIndependentRagdollCollision,
         ECollisionEnabled IndependentCollisionEnabled,
-        bool bIndependentGenerateOverlapEvents)
+        bool bIndependentGenerateOverlapEvents,
+        bool bIsPartialRagdollBody,
+        bool bSuppressSameActorPrimitiveCollisionForPartial,
+        bool bSuppressSameActorPrimitiveOverlapForPartial)
     {
         if (!Component)
         {
@@ -98,7 +101,12 @@ namespace
         OutFilterData.BlockMask = 0;
         OutFilterData.OverlapMask = 0;
         // Keep ragdoll self-collision decisions at the PhysicsAsset constraint layer.
-        OutFilterData.IgnoreGroup = 0;
+        OutFilterData.IgnoreGroup =
+            (bIsPartialRagdollBody &&
+                (bSuppressSameActorPrimitiveCollisionForPartial || bSuppressSameActorPrimitiveOverlapForPartial) &&
+                Component->GetOwner())
+                ? Component->GetOwner()->GetUUID()
+                : 0;
         OutFilterData.CollisionEnabled = bUseIndependentRagdollCollision
             ? IndependentCollisionEnabled
             : (bForceQueryAndPhysicsCollision
@@ -111,6 +119,11 @@ namespace
             : (bForceQueryAndPhysicsCollision
                 ? false
                 : Component->GetGenerateOverlapEvents());
+        OutFilterData.bIsIndependentRagdoll = bUseIndependentRagdollCollision;
+        OutFilterData.bIsPartialRagdoll = bIsPartialRagdollBody;
+        OutFilterData.bSuppressSameActorPrimitivePairs =
+            bIsPartialRagdollBody &&
+            (bSuppressSameActorPrimitiveCollisionForPartial || bSuppressSameActorPrimitiveOverlapForPartial);
 
         for (int32 ChannelIndex = 0; ChannelIndex < static_cast<int32>(ECollisionChannel::ActiveCount); ++ChannelIndex)
         {
@@ -155,7 +168,10 @@ namespace
                 Options.bForceQueryAndPhysicsCollision,
                 Options.bUseIndependentRagdollCollision,
                 Options.IndependentCollisionEnabled,
-                Options.bIndependentGenerateOverlapEvents);
+                Options.bIndependentGenerateOverlapEvents,
+                Options.bPartialSimulation,
+                Options.bSuppressSameActorPrimitiveCollisionForPartial,
+                Options.bSuppressSameActorPrimitiveOverlapForPartial);
             ShapeDesc.QueryIgnoreGroup = (OwnerComponent && OwnerComponent->GetOwner())
                 ? OwnerComponent->GetOwner()->GetUUID()
                 : 0;
@@ -441,6 +457,10 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
         Constraints.resize(ConstraintSetups.size());
     }
     ResetRuntimeState();
+    const bool bRequestedPartialSameActorPrimitiveSuppression =
+        Options.bPartialSimulation &&
+        (Options.bSuppressSameActorPrimitiveCollisionForPartial ||
+            Options.bSuppressSameActorPrimitiveOverlapForPartial);
 
     int32 CreatedBodyCount = 0;
     int32 CreatedConstraintCount = 0;
@@ -579,12 +599,16 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
         ++CreatedConstraintCount;
     }
 
-    UE_LOG("Created PhysicsAsset runtime objects. Component=%s Bodies=%d Constraints=%d Partial=%s RootBone=%s",
+    bPartialSameActorPrimitiveSuppressionActive =
+        CreatedBodyCount > 0 && bRequestedPartialSameActorPrimitiveSuppression;
+
+    UE_LOG("Created PhysicsAsset runtime objects. Component=%s Bodies=%d Constraints=%d Partial=%s RootBone=%s PartialSelfSuppression=%s",
         Owner->GetName().c_str(),
         CreatedBodyCount,
         CreatedConstraintCount,
         Options.bPartialSimulation ? "true" : "false",
-        ScopeRootBoneName.ToString().c_str());
+        ScopeRootBoneName.ToString().c_str(),
+        bPartialSameActorPrimitiveSuppressionActive ? "true" : "false");
 
     return CreatedBodyCount > 0;
 }
@@ -647,6 +671,7 @@ void FPhysicsAssetInstance::Shutdown()
     SourceAsset.Reset();
     BoneNameToIndex.clear();
     RagdollRootBoneIndex = -1;
+    bPartialSameActorPrimitiveSuppressionActive = false;
     bInitialized = false;
 }
 
@@ -655,6 +680,7 @@ void FPhysicsAssetInstance::ResetRuntimeState()
     // Reset keeps the instance attached to the same asset/component pairing while
     // discarding live runtime objects that may no longer match the current state.
     DestroyBodiesAndConstraints();
+    bPartialSameActorPrimitiveSuppressionActive = false;
 }
 
 bool FPhysicsAssetInstance::HasLivePhysicsObjects() const

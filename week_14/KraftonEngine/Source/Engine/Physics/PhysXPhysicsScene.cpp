@@ -332,6 +332,8 @@ namespace
         Out.bIsTrigger             = bIsTriggerShape;
         Out.bGenerateHitEvents     = true;
         Out.bGenerateOverlapEvents = Comp->GetGenerateOverlapEvents();
+        Out.bIsComponentPrimitive  = true;
+        Out.bIgnoreSameActor       = true;
 
         for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
         {
@@ -909,6 +911,40 @@ namespace
         (HasPhysicsFilterFlag(A.word0, PhysicsFilter_GenerateOverlapEvents) ||
             HasPhysicsFilterFlag(B.word0, PhysicsFilter_GenerateOverlapEvents));
     }
+
+    bool HasPackedSameActorSelfIgnore(const PxFilterData& Data)
+    {
+        return HasPhysicsFilterFlag(Data.word0, PhysicsFilter_SameActorSelfIgnore);
+    }
+
+    bool IsPackedComponentPrimitive(const PxFilterData& Data)
+    {
+        return HasPhysicsFilterFlag(Data.word0, PhysicsFilter_ComponentPrimitive);
+    }
+
+    bool IsPackedPartialRagdollBody(const PxFilterData& Data)
+    {
+        return HasPhysicsFilterFlag(Data.word0, PhysicsFilter_PartialRagdoll);
+    }
+
+    bool SuppressesPackedSameActorPrimitivePairs(const PxFilterData& Data)
+    {
+        return HasPhysicsFilterFlag(Data.word0, PhysicsFilter_SuppressSameActorPrimitivePairs);
+    }
+
+    bool IsSameActorPrimitiveVsPartialSuppressedPair(const PxFilterData& A, const PxFilterData& B)
+    {
+        if (A.word3 == 0 || A.word3 != B.word3)
+        {
+            return false;
+        }
+
+        const bool bAPrimitive = IsPackedComponentPrimitive(A);
+        const bool bBPrimitive = IsPackedComponentPrimitive(B);
+        const bool bAPartial = IsPackedPartialRagdollBody(A) && SuppressesPackedSameActorPrimitivePairs(A);
+        const bool bBPartial = IsPackedPartialRagdollBody(B) && SuppressesPackedSameActorPrimitivePairs(B);
+        return (bAPrimitive && bBPartial) || (bBPrimitive && bAPartial);
+    }
 }
 
 static PxFilterFlags KraftonFilterShader(
@@ -916,7 +952,15 @@ static PxFilterFlags KraftonFilterShader(
     PxFilterObjectAttributes attributes1, PxFilterData filterData1,
     PxPairFlags& pairFlags, const void*, PxU32)
 {
-    if (filterData0.word3 != 0 && filterData0.word3 == filterData1.word3)
+    const bool bSameActor = filterData0.word3 != 0 && filterData0.word3 == filterData1.word3;
+    if (bSameActor &&
+        HasPackedSameActorSelfIgnore(filterData0) &&
+        HasPackedSameActorSelfIgnore(filterData1))
+    {
+        return PxFilterFlag::eKILL;
+    }
+
+    if (IsSameActorPrimitiveVsPartialSuppressedPair(filterData0, filterData1))
     {
         return PxFilterFlag::eKILL;
     }

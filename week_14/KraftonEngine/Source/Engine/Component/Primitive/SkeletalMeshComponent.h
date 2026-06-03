@@ -180,6 +180,7 @@ public:
     float GetLastPartialHitReactionImpulseMagnitude() const { return LastPartialHitReactionImpulseMagnitude; }
     const FVector& GetLastPartialHitReactionDirection() const { return LastPartialHitReactionDirection; }
     bool WasLastPartialHitReactionEscalationCandidate() const { return bLastPartialHitReactionEscalationCandidate; }
+    bool IsPartialRagdollSelfSuppressionActive() const;
     UFUNCTION(Pure, Category="Physics")
     bool IsRecoveringFromRagdoll() const { return RecoveryPhase != ERagdollRecoveryPhase::None; }
     UFUNCTION(Pure, Category="Physics")

@@ -594,6 +594,11 @@ FPhysicsAssetInstance* USkeletalMeshComponent::GetPhysicsAssetInstance() const
     return PhysicsAssetInstance.get();
 }
 
+bool USkeletalMeshComponent::IsPartialRagdollSelfSuppressionActive() const
+{
+    return PhysicsAssetInstance && PhysicsAssetInstance->IsPartialSameActorPrimitiveSuppressionActive();
+}
+
 FPhysicsAssetInstance* USkeletalMeshComponent::GetOrCreatePhysicsAssetInstance()
 {
     UPhysicsAsset* EffectivePhysicsAsset = GetEffectivePhysicsAsset();
@@ -947,6 +952,8 @@ bool USkeletalMeshComponent::EnablePartialRagdoll(const FPartialRagdollSelection
     SimulationOptions.bPartialSimulation = true;
     SimulationOptions.PartialRootBoneName = Selection.RootBoneName;
     SimulationOptions.bIncludePartialDescendants = Selection.bIncludeDescendants;
+    SimulationOptions.bSuppressSameActorPrimitiveCollisionForPartial = true;
+    SimulationOptions.bSuppressSameActorPrimitiveOverlapForPartial = true;
 
     if (!Instance->CreateBodiesAndConstraints(SimulationOptions))
     {
@@ -964,11 +971,12 @@ bool USkeletalMeshComponent::EnablePartialRagdoll(const FPartialRagdollSelection
     PartialRagdollHoldRemaining = RequestedHoldDuration;
     TargetPhysicsPoseBlendWeight = 1.0f;
     SetUsePhysicsAssetPose(true);
-    UE_LOG("Partial ragdoll started. Component=%s RootBone=%s Bodies=%d Constraints=%d",
+    UE_LOG("Partial ragdoll started. Component=%s RootBone=%s Bodies=%d Constraints=%d SelfSuppression=%s",
         GetName().c_str(),
         Selection.RootBoneName.ToString().c_str(),
         GetLiveRagdollBodyCount(),
-        GetLiveRagdollConstraintCount());
+        GetLiveRagdollConstraintCount(),
+        IsPartialRagdollSelfSuppressionActive() ? "true" : "false");
     return IsPartialRagdollActive();
 }
 
