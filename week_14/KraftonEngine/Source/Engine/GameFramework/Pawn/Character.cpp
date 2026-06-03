@@ -776,28 +776,53 @@ void ACharacter::CacheRagdollRestoreLocation()
 		return;
 	}
 
+	FVector RepresentativeLocation = FVector::ZeroVector;
+	const bool bHasRepresentativeLocation =
+		Mesh->TryGetRagdollRepresentativeLocation(RepresentativeLocation);
+
 	FPhysicsAssetInstance* Instance = Mesh->GetPhysicsAssetInstance();
 	USkeletalMesh* SkeletalMesh = Mesh->GetSkeletalMesh();
 	FSkeletalMesh* MeshAsset = SkeletalMesh ? SkeletalMesh->GetSkeletalMeshAsset() : nullptr;
 	if (!Instance || !MeshAsset)
 	{
+		if (bHasRepresentativeLocation)
+		{
+			CachedRagdollRestoreLocation = RepresentativeLocation;
+			bHasCachedRagdollRestoreLocation = true;
+		}
 		return;
 	}
 
 	TArray<FTransform> BoneWorldTransforms;
 	if (!Instance->PullPhysicsPose(BoneWorldTransforms) || BoneWorldTransforms.empty())
 	{
+		if (bHasRepresentativeLocation)
+		{
+			CachedRagdollRestoreLocation = RepresentativeLocation;
+			bHasCachedRagdollRestoreLocation = true;
+		}
 		return;
 	}
 
+	bool bUpdatedRestoreLocation = false;
 	const int32 AnchorBoneIndex = FindCharacterRagdollAnchorBoneIndex(MeshAsset);
-	if (AnchorBoneIndex < 0 || AnchorBoneIndex >= static_cast<int32>(BoneWorldTransforms.size()))
+	if (bHasRepresentativeLocation)
+	{
+		CachedRagdollRestoreLocation = RepresentativeLocation;
+		bHasCachedRagdollRestoreLocation = true;
+		bUpdatedRestoreLocation = true;
+	}
+	else if (AnchorBoneIndex >= 0 && AnchorBoneIndex < static_cast<int32>(BoneWorldTransforms.size()))
+	{
+		CachedRagdollRestoreLocation = BoneWorldTransforms[AnchorBoneIndex].Location;
+		bHasCachedRagdollRestoreLocation = true;
+		bUpdatedRestoreLocation = true;
+	}
+
+	if (!bUpdatedRestoreLocation)
 	{
 		return;
 	}
-
-	CachedRagdollRestoreLocation = BoneWorldTransforms[AnchorBoneIndex].Location;
-	bHasCachedRagdollRestoreLocation = true;
 
 	const int32 ChestBoneIndex = FindCharacterChestBoneIndex(MeshAsset);
 	if (ChestBoneIndex >= 0 && ChestBoneIndex < static_cast<int32>(BoneWorldTransforms.size()))
