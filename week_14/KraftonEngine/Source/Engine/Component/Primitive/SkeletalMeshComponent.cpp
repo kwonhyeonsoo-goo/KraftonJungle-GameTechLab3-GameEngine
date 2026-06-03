@@ -225,6 +225,61 @@ namespace
         return -1;
     }
 
+    FName ResolvePreferredRagdollRepresentativeBodyBoneName(const FPhysicsAssetInstance* Instance)
+    {
+        if (!Instance)
+        {
+            return FName::None;
+        }
+
+        UPhysicsAsset* Asset = Instance->GetAsset();
+        if (!Asset)
+        {
+            return FName::None;
+        }
+
+        const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
+        const char* PreferredTokens[] = { "pelvis", "hips", "hip", "root", "spine_01", "spine", "torso" };
+
+        for (const char* PreferredToken : PreferredTokens)
+        {
+            const FString Token = ToLowerCopy(PreferredToken ? FString(PreferredToken) : FString());
+            for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
+            {
+                const FName CandidateBoneName = BodySetups[BodyIndex].BoneName;
+                if (!Instance->HasValidBodyForBone(CandidateBoneName))
+                {
+                    continue;
+                }
+
+                if (ToLowerCopy(CandidateBoneName.ToString()) == Token)
+                {
+                    return CandidateBoneName;
+                }
+            }
+        }
+
+        for (const char* PreferredToken : PreferredTokens)
+        {
+            const FString Token = ToLowerCopy(PreferredToken ? FString(PreferredToken) : FString());
+            for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
+            {
+                const FName CandidateBoneName = BodySetups[BodyIndex].BoneName;
+                if (!Instance->HasValidBodyForBone(CandidateBoneName))
+                {
+                    continue;
+                }
+
+                if (ToLowerCopy(CandidateBoneName.ToString()).find(Token) != FString::npos)
+                {
+                    return CandidateBoneName;
+                }
+            }
+        }
+
+        return FName::None;
+    }
+
     bool IsSameOrDescendantBone(const FSkeletalMesh* MeshAsset, int32 BoneIndex, int32 PossibleAncestorIndex)
     {
         if (!MeshAsset || BoneIndex < 0 || PossibleAncestorIndex < 0)
@@ -1600,6 +1655,49 @@ bool USkeletalMeshComponent::IsPartialRagdollActive() const
            bUsePhysicsAssetPose &&
            PhysicsAssetInstance &&
            PhysicsAssetInstance->HasLivePhysicsObjects();
+}
+
+bool USkeletalMeshComponent::TryGetRagdollRepresentativeLocation(FVector& OutWorldLocation) const
+{
+    if (ActiveRagdollMode != ERagdollMode::FullBody ||
+        !PhysicsAssetInstance ||
+        !PhysicsAssetInstance->HasLivePhysicsObjects() ||
+        !bHasReceivedValidPhysicsPose)
+    {
+        return false;
+    }
+
+    const FName PreferredBodyBoneName =
+        ResolvePreferredRagdollRepresentativeBodyBoneName(PhysicsAssetInstance.get());
+    if (PreferredBodyBoneName != FName::None &&
+        PhysicsAssetInstance->HasValidBodyForBone(PreferredBodyBoneName))
+    {
+        OutWorldLocation =
+            PhysicsAssetInstance->GetBodyWorldTransformByBoneName(PreferredBodyBoneName).Location;
+        return true;
+    }
+
+    const FName PrimaryBodyBoneName = PhysicsAssetInstance->GetPrimarySimulatedBodyBoneName();
+    if (PrimaryBodyBoneName != FName::None &&
+        PhysicsAssetInstance->HasValidBodyForBone(PrimaryBodyBoneName))
+    {
+        OutWorldLocation =
+            PhysicsAssetInstance->GetBodyWorldTransformByBoneName(PrimaryBodyBoneName).Location;
+        return true;
+    }
+
+    FName NearestBodyBoneName = FName::None;
+    FVector NearestBodyLocation = FVector::ZeroVector;
+    if (PhysicsAssetInstance->FindNearestBodyToWorldLocation(
+            GetWorldLocation(),
+            NearestBodyBoneName,
+            NearestBodyLocation))
+    {
+        OutWorldLocation = NearestBodyLocation;
+        return true;
+    }
+
+    return false;
 }
 
 int32 USkeletalMeshComponent::GetLiveRagdollBodyCount() const

@@ -209,6 +209,7 @@ public:
     bool IsRagdollActive() const;
     UFUNCTION(Pure, Category="Physics")
     bool IsPartialRagdollActive() const;
+    bool TryGetRagdollRepresentativeLocation(FVector& OutWorldLocation) const;
     ERagdollMode GetRagdollMode() const { return ActiveRagdollMode; }
     EPartialRagdollPhase GetPartialRagdollPhase() const { return PartialRagdollPhase; }
     float GetPartialRagdollHoldRemaining() const { return PartialRagdollHoldRemaining; }
