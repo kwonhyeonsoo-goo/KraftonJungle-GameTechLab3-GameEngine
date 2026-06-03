@@ -1029,20 +1029,26 @@ namespace
         return HasPhysicsFilterFlag(Data.word0, PhysicsFilter_SuppressSameActorPrimitivePairs);
     }
 
+    bool IsCharacterPrimitiveRole(EPhysicsCollisionRole Role)
+    {
+        return
+            Role == EPhysicsCollisionRole::CharacterLocomotionProxy ||
+            Role == EPhysicsCollisionRole::CharacterMeshPrimitive ||
+            Role == EPhysicsCollisionRole::CharacterQueryProxy;
+    }
+
+    bool IsCharacterRagdollBodyRole(EPhysicsCollisionRole Role)
+    {
+        return
+            Role == EPhysicsCollisionRole::PartialReactionBody ||
+            Role == EPhysicsCollisionRole::FullRagdollBody;
+    }
+
     bool ShouldSuppressSameActorRolePair(EPhysicsCollisionRole RoleA, EPhysicsCollisionRole RoleB)
     {
-        const bool bARoleBlocksPartial =
-            RoleA == EPhysicsCollisionRole::CharacterLocomotionProxy ||
-            RoleA == EPhysicsCollisionRole::CharacterMeshPrimitive ||
-            RoleA == EPhysicsCollisionRole::CharacterQueryProxy;
-        const bool bBRoleBlocksPartial =
-            RoleB == EPhysicsCollisionRole::CharacterLocomotionProxy ||
-            RoleB == EPhysicsCollisionRole::CharacterMeshPrimitive ||
-            RoleB == EPhysicsCollisionRole::CharacterQueryProxy;
-
         return
-            (bARoleBlocksPartial && RoleB == EPhysicsCollisionRole::PartialReactionBody) ||
-            (bBRoleBlocksPartial && RoleA == EPhysicsCollisionRole::PartialReactionBody);
+            (IsCharacterPrimitiveRole(RoleA) && IsCharacterRagdollBodyRole(RoleB)) ||
+            (IsCharacterPrimitiveRole(RoleB) && IsCharacterRagdollBodyRole(RoleA));
     }
 
     bool IsSameActorSuppressedRolePair(const PxFilterData& A, const PxFilterData& B)

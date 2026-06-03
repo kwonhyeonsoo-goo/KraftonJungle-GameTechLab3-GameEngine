@@ -100,11 +100,11 @@ namespace
         OutFilterData.ObjectType = static_cast<uint32>(Component->GetCollisionObjectType());
         OutFilterData.BlockMask = 0;
         OutFilterData.OverlapMask = 0;
-        // Keep ragdoll self-collision decisions at the PhysicsAsset constraint layer.
+        // Keep ragdoll-vs-ragdoll self-collision decisions at the PhysicsAsset constraint
+        // layer, but still stamp the owning actor so filter policy can reject ragdoll
+        // body vs same-actor character primitive pairs.
         OutFilterData.IgnoreGroup =
-            (bIsPartialRagdollBody &&
-                (bSuppressSameActorPrimitiveCollisionForPartial || bSuppressSameActorPrimitiveOverlapForPartial) &&
-                Component->GetOwner())
+            (bUseIndependentRagdollCollision && Component->GetOwner())
                 ? Component->GetOwner()->GetUUID()
                 : 0;
         OutFilterData.CollisionEnabled = bUseIndependentRagdollCollision
@@ -126,9 +126,14 @@ namespace
             : (bUseIndependentRagdollCollision
                 ? EPhysicsCollisionRole::FullRagdollBody
                 : EPhysicsCollisionRole::None);
+        // Full ragdoll also must not fight the owning character primitive. The high-level
+        // policy turns capsule/mesh collision down, while this filter flag protects the
+        // frame where physics commands may still observe stale primitive shapes.
         OutFilterData.bSuppressSameActorPrimitivePairs =
-            bIsPartialRagdollBody &&
-            (bSuppressSameActorPrimitiveCollisionForPartial || bSuppressSameActorPrimitiveOverlapForPartial);
+            bUseIndependentRagdollCollision &&
+            (!bIsPartialRagdollBody ||
+                bSuppressSameActorPrimitiveCollisionForPartial ||
+                bSuppressSameActorPrimitiveOverlapForPartial);
         OutFilterData.GameplayOverlapOwnership =
             GetDefaultGameplayOverlapOwnershipForRole(OutFilterData.CollisionRole);
 

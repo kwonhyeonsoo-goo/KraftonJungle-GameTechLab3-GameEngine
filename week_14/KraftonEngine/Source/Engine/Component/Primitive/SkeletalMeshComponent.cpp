@@ -304,6 +304,22 @@ namespace
         }
     }
 
+    FRagdollReactionRequest MakeRagdollReactionRequest(const FRagdollImpulseRequest& Request)
+    {
+        FRagdollReactionRequest ReactionRequest;
+        ReactionRequest.EventKind = ERagdollReactionEventKind::DirectHit;
+        ReactionRequest.HitBoneName = Request.HitBoneName;
+        ReactionRequest.HitWorldLocation = Request.WorldLocation;
+        ReactionRequest.HitWorldDirection = Request.WorldDirection;
+        ReactionRequest.Strength = Request.Strength;
+        ReactionRequest.HoldTimeOverride = Request.HoldTimeOverride;
+        ReactionRequest.PreferredPreset = Request.PreferredPreset;
+        ReactionRequest.bUsePreferredPreset = Request.bUsePreferredPreset;
+        ReactionRequest.bAllowEscalationToFullBody = Request.bAllowEscalationToFullBody;
+        ReactionRequest.bAllowWhileMoving = Request.bAllowWhileMoving;
+        return ReactionRequest;
+    }
+
     FTransform DecomposePoseMatrixPreservingScale(const FMatrix& Matrix, const FVector& PreservedScale)
     {
         FTransform Result;
@@ -909,17 +925,10 @@ bool USkeletalMeshComponent::EnableRagdollPhysics()
 
     if (ActiveRagdollMode == ERagdollMode::Partial && PhysicsAssetInstance)
     {
-        PhysicsAssetInstance->ResetRuntimeState();
+        PhysicsAssetInstance->DestroyBodiesAndConstraints();
         SetUsePhysicsAssetPose(false);
         ResetPhysicsPoseBlendState();
         ClearPartialRagdollState();
-        ResetBoneEditPose();
-        RefreshSkinningAfterPoseChanged();
-
-        // Re-sample the authored animation pose before promoting a localized reaction into
-        // a fresh full-body ragdoll, otherwise the new baseline can inherit the deformed
-        // partial-physics pose and spawn bodies in a state that explodes outward.
-        EvaluateAnimInstance(0.0f);
     }
 
     // The component stays responsible for high-level ragdoll policy while the instance
@@ -1278,6 +1287,12 @@ bool USkeletalMeshComponent::ApplyRagdollReaction(const FRagdollReactionRequest&
     return bExecuted;
 }
 
+bool USkeletalMeshComponent::ApplyRagdollImpulse(const FRagdollImpulseRequest& Request)
+{
+    const FRagdollReactionRequest ReactionRequest = MakeRagdollReactionRequest(Request);
+    return ApplyRagdollReaction(ReactionRequest);
+}
+
 bool USkeletalMeshComponent::TriggerPartialRagdoll(const FPartialRagdollRequest& Request)
 {
     FPartialRagdollSelection Selection;
@@ -1385,18 +1400,17 @@ bool USkeletalMeshComponent::TriggerPartialRagdoll(const FPartialRagdollRequest&
 
 bool USkeletalMeshComponent::TriggerPartialRagdollHitReaction(const FPartialRagdollHitReactionRequest& Request)
 {
-    FRagdollReactionRequest ReactionRequest;
-    ReactionRequest.EventKind = ERagdollReactionEventKind::DirectHit;
-    ReactionRequest.PreferredPreset = Request.PreferredPreset;
-    ReactionRequest.HitBoneName = Request.HitBoneName;
-    ReactionRequest.HitWorldLocation = Request.HitWorldLocation;
-    ReactionRequest.HitWorldDirection = Request.HitWorldDirection;
-    ReactionRequest.Strength = Request.Strength;
-    ReactionRequest.HoldTimeOverride = Request.HoldTimeOverride;
-    ReactionRequest.bUsePreferredPreset = Request.bUsePreferredPreset;
-    ReactionRequest.bAllowEscalationToFullBody = Request.bAllowEscalationToFullBody;
-    ReactionRequest.bAllowWhileMoving = true;
-    return ApplyRagdollReaction(ReactionRequest);
+    FRagdollImpulseRequest ImpulseRequest;
+    ImpulseRequest.HitBoneName = Request.HitBoneName;
+    ImpulseRequest.WorldLocation = Request.HitWorldLocation;
+    ImpulseRequest.WorldDirection = Request.HitWorldDirection;
+    ImpulseRequest.Strength = Request.Strength;
+    ImpulseRequest.HoldTimeOverride = Request.HoldTimeOverride;
+    ImpulseRequest.PreferredPreset = Request.PreferredPreset;
+    ImpulseRequest.bUsePreferredPreset = Request.bUsePreferredPreset;
+    ImpulseRequest.bAllowEscalationToFullBody = Request.bAllowEscalationToFullBody;
+    ImpulseRequest.bAllowWhileMoving = true;
+    return ApplyRagdollImpulse(ImpulseRequest);
 }
 
 void USkeletalMeshComponent::DisableRagdollPhysics()
