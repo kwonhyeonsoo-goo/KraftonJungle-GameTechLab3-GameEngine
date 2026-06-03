@@ -294,7 +294,10 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 	ID3D11DeviceContext* Ctx = CachedContext;
 
 	const bool bSkeletal = Proxy.HasProxyFlag(EPrimitiveProxyFlags::SkeletalMesh);
-	const bool bGPUSkinning = bSkeletal && SkinningModeRuntime::Get() == ESkinningMode::GPU;
+	const FSkeletalMeshSceneProxy* SkeletalProxy = bSkeletal
+		? static_cast<const FSkeletalMeshSceneProxy*>(&Proxy)
+		: nullptr;
+	const bool bGPUSkinning = SkeletalProxy && SkeletalProxy->GetEffectiveSkinningMode() == ESkinningMode::GPU;
 	const bool bBoneHeatMapOverlay =
 		(Pass == ERenderPass::ViewModeMesh) &&
 		!ViewModeUtils::IsPureMeshDebugViewMode(CollectViewMode) &&
@@ -310,9 +313,6 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 		CollectClothOverlayLODIndex >= 0 &&
 		CollectClothOverlayIndex >= 0;
 	const bool bMeshScalarOverlay = bClothMaxDistanceOverlay || bBoneHeatMapOverlay;
-	const FSkeletalMeshSceneProxy* SkeletalProxy = bSkeletal
-		? static_cast<const FSkeletalMeshSceneProxy*>(&Proxy)
-		: nullptr;
 
 	FDrawCommandBuffer ProxyBuffer;
 	uint32 ClothOverlayFirstIndex = 0;
@@ -756,8 +756,8 @@ void FDrawCommandBuilder::BuildMeshCommands(FScene& Scene, const FPrimitiveScene
 		bCollectClothMaxDistanceOverlay &&
 		CollectClothOverlayLODIndex >= 0 &&
 		CollectClothOverlayIndex >= 0 &&
-		SkinningModeRuntime::Get() == ESkinningMode::CPU &&
-		Proxy->HasProxyFlag(EPrimitiveProxyFlags::SkeletalMesh);
+		Proxy->HasProxyFlag(EPrimitiveProxyFlags::SkeletalMesh) &&
+		static_cast<const FSkeletalMeshSceneProxy*>(Proxy)->GetEffectiveSkinningMode() == ESkinningMode::CPU;
 	const bool bNeedsBoneHeatMapOverlay =
 		bCollectWeightBoneHeatMap &&
 		CollectWeightBoneHeatMapBoneIndex >= 0 &&
