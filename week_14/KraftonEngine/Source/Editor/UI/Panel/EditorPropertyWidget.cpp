@@ -2,6 +2,7 @@
 #include "Editor/EditorEngine.h"
 
 #include "ImGui/imgui.h"
+#include "ImGui/imgui_internal.h"
 #include "Component/ActorComponent.h"
 #include "Component/Primitive/BillboardComponent.h"
 #include "Component/MeshComponent.h"
@@ -63,6 +64,14 @@
 
 namespace
 {
+	void CancelActiveDetailsEdit()
+	{
+		if (ImGui::GetActiveID() != 0)
+		{
+			ImGui::ClearActiveID();
+		}
+	}
+
 	bool IsFbxFilePath(const FString& Path)
 	{
 		std::filesystem::path FilePath(FPaths::ToWide(Path));
@@ -930,6 +939,10 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 	AActor* PrimaryActor = Selection.GetPrimarySelection();
 	if (!PrimaryActor)
 	{
+		if (LastSelectedActor || SelectedComponent)
+		{
+			CancelActiveDetailsEdit();
+		}
 		SelectedComponent = nullptr;
 		LastSelectedActor = nullptr;
 		bActorSelected = true;
@@ -943,6 +956,7 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 	// Actor 선택이 바뀌면 초기화
     if (LastSelectedActor.Get() != PrimaryActor)
 	{
+		CancelActiveDetailsEdit();
 		SelectedComponent = nullptr;
 		LastSelectedActor = PrimaryActor;
 		bActorSelected = true;
@@ -997,6 +1011,7 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 		if (bHighlight) ImGui::PopStyleColor();
 		if (ImGui::IsItemClicked())
 		{
+			CancelActiveDetailsEdit();
 			bActorSelected = true;
 			SelectedComponent = nullptr;
 			PendingDetailsScrollY = -1.0f;
@@ -1035,6 +1050,7 @@ void FEditorPropertyWidget::Render(float DeltaTime)
 
 		if (ImGui::IsItemClicked())
 		{
+			CancelActiveDetailsEdit();
 			bActorSelected = true;
 			SelectedComponent = nullptr;
 			PendingDetailsScrollY = -1.0f;
@@ -1182,6 +1198,7 @@ void FEditorPropertyWidget::RenderActorProperties(AActor* PrimaryActor, const TA
 {
 	if (PrimaryActor->GetRootComponent())
 	{
+		ImGui::PushID(PrimaryActor);
 		ImGui::Separator();
 		ImGui::Text("Transform");
 		ImGui::Spacing();
@@ -1222,6 +1239,7 @@ void FEditorPropertyWidget::RenderActorProperties(AActor* PrimaryActor, const TA
 			ImGui::EndTable();
 			ImGui::PopStyleColor(2);
 		}
+		ImGui::PopID();
 	}
 }
 
@@ -1360,6 +1378,28 @@ void FEditorPropertyWidget::RenderComponentTree(AActor* Actor)
 
 	ImGui::BeginChild("##ComponentTree", ImVec2(0, TreeHeight), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 	{
+		FString ActorName = Actor->GetFName().ToString();
+		if (ActorName.empty()) ActorName = Actor->GetClass()->GetName();
+
+		ImGuiTreeNodeFlags ActorFlags =
+			ImGuiTreeNodeFlags_Leaf |
+			ImGuiTreeNodeFlags_NoTreePushOnOpen |
+			ImGuiTreeNodeFlags_SpanAvailWidth;
+		if (bActorSelected)
+		{
+			ActorFlags |= ImGuiTreeNodeFlags_Selected;
+		}
+
+		ImGui::TreeNodeEx(Actor, ActorFlags, "[Actor] %s (%s)", ActorName.c_str(), Actor->GetClass()->GetName());
+		if (ImGui::IsItemClicked())
+		{
+			CancelActiveDetailsEdit();
+			bActorSelected = true;
+			SelectedComponent = nullptr;
+			PendingDetailsScrollY = -1.0f;
+			bRestoreDetailsScrollY = false;
+		}
+
 		if (Root)
 		{
 			RenderSceneComponentNode(Root);
@@ -1400,6 +1440,7 @@ void FEditorPropertyWidget::RenderComponentTree(AActor* Actor)
 		
 			if (ImGui::IsItemClicked())
 			{
+				CancelActiveDetailsEdit();
 				SelectedComponent = Comp;
 				bActorSelected = false;
 				PendingDetailsScrollY = -1.0f;
@@ -1476,6 +1517,7 @@ void FEditorPropertyWidget::RenderSceneComponentNode(USceneComponent* Comp)
 
 	if (ImGui::IsItemClicked())
 	{
+		CancelActiveDetailsEdit();
 		SelectedComponent = Comp;
 		bActorSelected = false;
 		PendingDetailsScrollY = -1.0f;
@@ -1543,6 +1585,7 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 	// reflected property 기반 자동 위젯 렌더링
 	TArray<FPropertyValue> Props;
 	SelectedComponent->GetEditableProperties(Props);
+	ImGui::PushID(SelectedComponent.Get());
 
 	bool bIsRoot = false;
 	if (SelectedComponent->IsA<USceneComponent>())
@@ -1657,6 +1700,8 @@ void FEditorPropertyWidget::RenderComponentProperties(AActor* Actor, const TArra
 	{
         static_cast<USceneComponent*>(SelectedComponent.Get())->MarkTransformDirty();
 	}
+
+	ImGui::PopID();
 }
 
 void FEditorPropertyWidget::PropagatePropertyChange(const FString& PropName, const TArray<AActor*>& SelectedActors)
@@ -1730,6 +1775,7 @@ bool FEditorPropertyWidget::RemoveSelectedComponent(AActor* Actor)
 
 	UActorComponent* Component = SelectedComponent.Get();
 	Actor->RemoveComponent(Component);
+	CancelActiveDetailsEdit();
 	SelectedComponent = nullptr;
 	PendingDetailsScrollY = -1.0f;
 	bRestoreDetailsScrollY = false;
@@ -1773,6 +1819,7 @@ void FEditorPropertyWidget::AddComponentToActor(AActor* Actor, UClass* Component
 
 	SelectedComponent = Comp;
 	bActorSelected = false;
+	CancelActiveDetailsEdit();
 	PendingDetailsScrollY = -1.0f;
 	bRestoreDetailsScrollY = false;
 }
