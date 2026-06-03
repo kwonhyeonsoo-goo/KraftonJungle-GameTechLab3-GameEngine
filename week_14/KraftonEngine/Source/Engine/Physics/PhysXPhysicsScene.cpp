@@ -1,6 +1,7 @@
 #include "Physics/PhysXPhysicsScene.h"
 
 #include "Component/PrimitiveComponent.h"
+#include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Component/Shape/BoxComponent.h"
 #include "Component/Shape/CapsuleComponent.h"
 #include "Component/Shape/SphereComponent.h"
@@ -202,6 +203,8 @@ namespace
     }
 
     ECollisionResponse GetPackedMinResponse(const PxFilterData& A, const PxFilterData& B);
+    EPhysicsCollisionRole GetPackedCollisionRole(const PxFilterData& Data);
+    EPhysicsGameplayOverlapOwnership GetPackedGameplayOverlapOwnership(const PxFilterData& Data);
 
     bool IsSceneSocketAttachmentNameSet_GameThread(const FName& SocketName)
     {
@@ -343,6 +346,43 @@ namespace
         return bShouldBeTrigger;
     }
 
+    EPhysicsCollisionRole ResolveComponentCollisionRole_GameThread(
+        UPrimitiveComponent* Comp,
+        bool bIsTriggerShape)
+    {
+        if (!Comp)
+        {
+            return EPhysicsCollisionRole::None;
+        }
+
+        if (bIsTriggerShape)
+        {
+            return EPhysicsCollisionRole::TriggerVolume;
+        }
+
+        if (Cast<UCapsuleComponent>(Comp))
+        {
+            return Comp->GetCollisionEnabled() == ECollisionEnabled::QueryOnly
+                ? EPhysicsCollisionRole::CharacterQueryProxy
+                : EPhysicsCollisionRole::CharacterLocomotionProxy;
+        }
+
+        if (Cast<USkeletalMeshComponent>(Comp))
+        {
+            return EPhysicsCollisionRole::CharacterMeshPrimitive;
+        }
+
+        switch (Comp->GetCollisionObjectType())
+        {
+        case ECollisionChannel::WorldStatic:
+            return EPhysicsCollisionRole::WorldStatic;
+        case ECollisionChannel::WorldDynamic:
+            return EPhysicsCollisionRole::WorldDynamic;
+        default:
+            return EPhysicsCollisionRole::CharacterMeshPrimitive;
+        }
+    }
+
     void FillFilterDataFromComponent_GameThread(
         FPhysicsFilterData&  Out,
         UPrimitiveComponent* Comp,
@@ -364,6 +404,10 @@ namespace
         Out.bGenerateHitEvents     = true;
         Out.bGenerateOverlapEvents = Comp->GetGenerateOverlapEvents();
         Out.bEnableCCD             = bEnableCCD;
+        Out.bIsComponentPrimitive  = true;
+        Out.bIgnoreSameActor       = true;
+        Out.CollisionRole          = ResolveComponentCollisionRole_GameThread(Comp, bIsTriggerShape);
+        Out.GameplayOverlapOwnership = GetDefaultGameplayOverlapOwnershipForRole(Out.CollisionRole);
 
         for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
         {
@@ -465,6 +509,8 @@ public:
         uint32 ActorId       = 0;
         uint32 Generation    = 0;
         bool   bWantsOverlap = false;
+        EPhysicsCollisionRole CollisionRole = EPhysicsCollisionRole::None;
+        EPhysicsGameplayOverlapOwnership GameplayOverlapOwnership = EPhysicsGameplayOverlapOwnership::None;
         bool   bValid        = false;
     };
 
@@ -554,6 +600,8 @@ public:
         {
             const PxFilterData FilterData = Shape->getSimulationFilterData();
             Info.bWantsOverlap            = HasPhysicsFilterFlag(FilterData.word0, PhysicsFilter_GenerateOverlapEvents);
+            Info.CollisionRole            = GetPackedCollisionRole(FilterData);
+            Info.GameplayOverlapOwnership = GetPackedGameplayOverlapOwnership(FilterData);
         }
         return Info;
     }
@@ -795,6 +843,10 @@ private:
             return;
         }
 
+        // Overlap-owner semantics are intentionally interpreted above the physics event queue.
+        // The queue preserves the raw component-level event, while gameplay systems such as
+        // trigger occupancy can now prefer components marked as overlap owners.
+
         std::lock_guard<std::mutex> Lock(EventMutex);
         FPairKey                    Key(A.ComponentId, B.ComponentId);
         if (!Key.IsValid())
@@ -1013,6 +1065,110 @@ namespace
             HasPhysicsFilterFlag(B.word0, PhysicsFilter_GenerateOverlapEvents));
     }
 
+    bool HasPackedSameActorSelfIgnore(const PxFilterData& Data)
+    {
+        return HasPhysicsFilterFlag(Data.word0, PhysicsFilter_SameActorSelfIgnore);
+    }
+
+    EPhysicsCollisionRole GetPackedCollisionRole(const PxFilterData& Data)
+    {
+        EPhysicsCollisionRole Role = GetPackedPhysicsCollisionRole(Data.word0);
+        if (Role != EPhysicsCollisionRole::None)
+        {
+            return Role;
+        }
+
+        if (HasPhysicsFilterFlag(Data.word0, PhysicsFilter_PartialRagdoll))
+        {
+            return EPhysicsCollisionRole::PartialReactionBody;
+        }
+
+        if (HasPhysicsFilterFlag(Data.word0, PhysicsFilter_IndependentRagdoll))
+        {
+            return EPhysicsCollisionRole::FullRagdollBody;
+        }
+
+        if (HasPhysicsFilterFlag(Data.word0, PhysicsFilter_IsTrigger))
+        {
+            return EPhysicsCollisionRole::TriggerVolume;
+        }
+
+        if (HasPhysicsFilterFlag(Data.word0, PhysicsFilter_ComponentPrimitive))
+        {
+            return EPhysicsCollisionRole::CharacterMeshPrimitive;
+        }
+
+        switch (static_cast<ECollisionChannel>(GetPhysicsFilterObjectType(Data.word0)))
+        {
+        case ECollisionChannel::WorldStatic:
+            return EPhysicsCollisionRole::WorldStatic;
+        case ECollisionChannel::WorldDynamic:
+            return EPhysicsCollisionRole::WorldDynamic;
+        default:
+            return EPhysicsCollisionRole::None;
+        }
+    }
+
+    EPhysicsGameplayOverlapOwnership GetPackedGameplayOverlapOwnership(const PxFilterData& Data)
+    {
+        if (HasPhysicsFilterFlag(Data.word0, PhysicsFilter_OverlapOwnerPrimary))
+        {
+            return EPhysicsGameplayOverlapOwnership::PrimaryOwner;
+        }
+        if (HasPhysicsFilterFlag(Data.word0, PhysicsFilter_OverlapOwnerQueryProxy))
+        {
+            return EPhysicsGameplayOverlapOwnership::QueryProxyOwner;
+        }
+        if (HasPhysicsFilterFlag(Data.word0, PhysicsFilter_OverlapNonOwningReaction))
+        {
+            return EPhysicsGameplayOverlapOwnership::NonOwningReactionBody;
+        }
+
+        return GetDefaultGameplayOverlapOwnershipForRole(GetPackedCollisionRole(Data));
+    }
+
+    bool SuppressesPackedSameActorPrimitivePairs(const PxFilterData& Data)
+    {
+        return HasPhysicsFilterFlag(Data.word0, PhysicsFilter_SuppressSameActorPrimitivePairs);
+    }
+
+    bool IsCharacterPrimitiveRole(EPhysicsCollisionRole Role)
+    {
+        return
+            Role == EPhysicsCollisionRole::CharacterLocomotionProxy ||
+            Role == EPhysicsCollisionRole::CharacterMeshPrimitive ||
+            Role == EPhysicsCollisionRole::CharacterQueryProxy;
+    }
+
+    bool IsCharacterRagdollBodyRole(EPhysicsCollisionRole Role)
+    {
+        return
+            Role == EPhysicsCollisionRole::PartialReactionBody ||
+            Role == EPhysicsCollisionRole::FullRagdollBody;
+    }
+
+    bool ShouldSuppressSameActorRolePair(EPhysicsCollisionRole RoleA, EPhysicsCollisionRole RoleB)
+    {
+        return
+            (IsCharacterPrimitiveRole(RoleA) && IsCharacterRagdollBodyRole(RoleB)) ||
+            (IsCharacterPrimitiveRole(RoleB) && IsCharacterRagdollBodyRole(RoleA));
+    }
+
+    bool IsSameActorSuppressedRolePair(const PxFilterData& A, const PxFilterData& B)
+    {
+        if (A.word3 == 0 || A.word3 != B.word3)
+        {
+            return false;
+        }
+
+        if (!SuppressesPackedSameActorPrimitivePairs(A) && !SuppressesPackedSameActorPrimitivePairs(B))
+        {
+            return false;
+        }
+
+        return ShouldSuppressSameActorRolePair(GetPackedCollisionRole(A), GetPackedCollisionRole(B));
+    }
+
     bool WantsCCDContact(const PxFilterData& A, const PxFilterData& B)
     {
         return HasPhysicsFilterFlag(A.word0, PhysicsFilter_EnableCCD) ||
@@ -1025,7 +1181,15 @@ static PxFilterFlags KraftonFilterShader(
     PxFilterObjectAttributes attributes1, PxFilterData filterData1,
     PxPairFlags& pairFlags, const void*, PxU32)
 {
-    if (filterData0.word3 != 0 && filterData0.word3 == filterData1.word3)
+    const bool bSameActor = filterData0.word3 != 0 && filterData0.word3 == filterData1.word3;
+    if (bSameActor &&
+        HasPackedSameActorSelfIgnore(filterData0) &&
+        HasPackedSameActorSelfIgnore(filterData1))
+    {
+        return PxFilterFlag::eKILL;
+    }
+
+    if (IsSameActorSuppressedRolePair(filterData0, filterData1))
     {
         return PxFilterFlag::eKILL;
     }

@@ -11,13 +11,13 @@
 
 namespace
 {
-    constexpr int32 DefaultEnableRagdollKey = VK_F6;
-    constexpr int32 DefaultDisableRagdollKey = VK_F7;
-    constexpr int32 DefaultRightArmHitReactionKey = VK_F8;
-    constexpr int32 DefaultRecoveryKey = VK_F9;
-    constexpr int32 DefaultDumpStateKey = VK_F10;
-    constexpr int32 DefaultUpperBodyHitReactionKey = VK_F11;
-    constexpr int32 DefaultLeftArmHitReactionKey = VK_F12;
+    constexpr int32 DefaultEnableRagdollKey = VK_F13;
+    constexpr int32 DefaultDisableRagdollKey = VK_F14;
+    constexpr int32 DefaultRightArmHitReactionKey = VK_F15;
+    constexpr int32 DefaultLeftArmHitReactionKey = VK_F16;
+    constexpr int32 DefaultUpperBodyHitReactionKey = VK_F17;
+    constexpr int32 DefaultRecoveryKey = VK_F18;
+    constexpr int32 DefaultDumpStateKey = VK_F19;
 
     const char* GetAssetNameSafe(UPhysicsAsset* PhysicsAsset)
     {
@@ -64,6 +64,104 @@ namespace
             return "RightArm";
         case EPartialRagdollPreset::HeadNeck:
             return "HeadNeck";
+        default:
+            return "Unknown";
+        }
+    }
+
+    const char* LexToString(ECharacterPhysicsOwnershipMode Mode)
+    {
+        switch (Mode)
+        {
+        case ECharacterPhysicsOwnershipMode::TransitionToRagdoll:
+            return "TransitionToRagdoll";
+        case ECharacterPhysicsOwnershipMode::RagdollDriven:
+            return "RagdollDriven";
+        case ECharacterPhysicsOwnershipMode::TransitionFromRagdoll:
+            return "TransitionFromRagdoll";
+        default:
+            return "CharacterDriven";
+        }
+    }
+
+    const char* LexToString(ECharacterPhysicsCollisionMode Mode)
+    {
+        switch (Mode)
+        {
+        case ECharacterPhysicsCollisionMode::FullRagdollOwned:
+            return "FullRagdollOwned";
+        case ECharacterPhysicsCollisionMode::PartialHybrid:
+            return "PartialHybrid";
+        default:
+            return "CharacterDriven";
+        }
+    }
+
+    const char* LexToString(ECharacterQueryCollisionMode Mode)
+    {
+        switch (Mode)
+        {
+        case ECharacterQueryCollisionMode::Disabled:
+            return "Disabled";
+        case ECharacterQueryCollisionMode::ReservedForFullRagdollProxy:
+            return "ReservedForFullRagdollProxy";
+        default:
+            return "CharacterDriven";
+        }
+    }
+
+    const char* LexToString(ECharacterGameplayOverlapOwnershipMode Mode)
+    {
+        switch (Mode)
+        {
+        case ECharacterGameplayOverlapOwnershipMode::None:
+            return "None";
+        case ECharacterGameplayOverlapOwnershipMode::FullRagdollQueryProxy:
+            return "FullRagdollQueryProxy";
+        case ECharacterGameplayOverlapOwnershipMode::PartialHybrid:
+            return "PartialHybrid";
+        default:
+            return "CharacterDriven";
+        }
+    }
+
+    const char* LexToString(EPhysicsCollisionRole Role)
+    {
+        switch (Role)
+        {
+        case EPhysicsCollisionRole::CharacterLocomotionProxy:
+            return "CharacterLocomotionProxy";
+        case EPhysicsCollisionRole::CharacterQueryProxy:
+            return "CharacterQueryProxy";
+        case EPhysicsCollisionRole::CharacterMeshPrimitive:
+            return "CharacterMeshPrimitive";
+        case EPhysicsCollisionRole::PartialReactionBody:
+            return "PartialReactionBody";
+        case EPhysicsCollisionRole::FullRagdollBody:
+            return "FullRagdollBody";
+        case EPhysicsCollisionRole::TriggerVolume:
+            return "TriggerVolume";
+        case EPhysicsCollisionRole::WorldStatic:
+            return "WorldStatic";
+        case EPhysicsCollisionRole::WorldDynamic:
+            return "WorldDynamic";
+        default:
+            return "None";
+        }
+    }
+
+    const char* LexToString(ECollisionEnabled Mode)
+    {
+        switch (Mode)
+        {
+        case ECollisionEnabled::NoCollision:
+            return "NoCollision";
+        case ECollisionEnabled::QueryOnly:
+            return "QueryOnly";
+        case ECollisionEnabled::PhysicsOnly:
+            return "PhysicsOnly";
+        case ECollisionEnabled::QueryAndPhysics:
+            return "QueryAndPhysics";
         default:
             return "Unknown";
         }
@@ -240,17 +338,32 @@ void UPhysicsAssetRagdollTestComponent::ProcessDebugInput()
 
     if (Input.GetKeyDown(UpperBodyHitReactionKey))
     {
-        TriggerFixedHitReaction("UpperBodyHitReaction", FName("spine_02"), FVector(-1.0f, 0.0f, 0.15f), 0.65f);
+        TriggerFixedHitReaction(
+            "UpperBodyHitReaction",
+            FName("spine_02"),
+            FVector(-1.0f, 0.0f, 0.15f),
+            0.65f,
+            EPartialRagdollPreset::UpperBody);
     }
 
     if (Input.GetKeyDown(LeftArmHitReactionKey))
     {
-        TriggerFixedHitReaction("LeftArmHitReaction", FName("upperarm_l"), FVector(-0.5f, 0.85f, 0.1f), 0.58f);
+        TriggerFixedHitReaction(
+            "LeftArmHitReaction",
+            FName("upperarm_l"),
+            FVector(-0.5f, 0.85f, 0.1f),
+            0.58f,
+            EPartialRagdollPreset::LeftArm);
     }
 
     if (Input.GetKeyDown(RightArmHitReactionKey))
     {
-        TriggerFixedHitReaction("RightArmHitReaction", FName("upperarm_r"), FVector(-0.5f, -0.85f, 0.1f), 0.58f);
+        TriggerFixedHitReaction(
+            "RightArmHitReaction",
+            FName("upperarm_r"),
+            FVector(-0.5f, -0.85f, 0.1f),
+            0.58f,
+            EPartialRagdollPreset::RightArm);
     }
 }
 
@@ -306,7 +419,8 @@ void UPhysicsAssetRagdollTestComponent::TriggerFixedHitReaction(
     const char* EventLabel,
     const FName& HitBoneName,
     const FVector& HitDirection,
-    float Strength)
+    float Strength,
+    EPartialRagdollPreset PreferredPreset)
 {
     USkeletalMeshComponent* MeshComponent = TargetMeshComponent.Get();
     if (!MeshComponent)
@@ -320,6 +434,8 @@ void UPhysicsAssetRagdollTestComponent::TriggerFixedHitReaction(
     Request.HitWorldLocation = MeshComponent->GetWorldLocation();
     Request.HitWorldDirection = HitDirection;
     Request.Strength = Strength;
+    Request.PreferredPreset = PreferredPreset;
+    Request.bUsePreferredPreset = true;
     Request.bAllowEscalationToFullBody = true;
 
     UE_LOG("[RagdollTest] HitReactionRequested Actor=%s MeshComponent=%s HitBone=%s Strength=%.2f Direction=(%.2f,%.2f,%.2f)",
@@ -338,7 +454,7 @@ void UPhysicsAssetRagdollTestComponent::TriggerFixedHitReaction(
 
 void UPhysicsAssetRagdollTestComponent::LogControls() const
 {
-    UE_LOG("[RagdollTest] Controls: F6=Enable Ragdoll, F7=Disable Ragdoll, F8=RightArm HitReaction, F9=Begin Recovery, F10=Dump State, F11=UpperBody HitReaction, F12=LeftArm HitReaction. Actor=%s RequestedMesh=%s",
+    UE_LOG("[RagdollTest] Controls: F13=Enable Ragdoll, F14=Disable Ragdoll, F15=RightArm HitReaction, F16=LeftArm HitReaction, F17=UpperBody HitReaction, F18=Begin Recovery, F19=Dump State. Actor=%s RequestedMesh=%s",
         GetOwnerNameSafe(),
         TargetMeshComponentName.empty() ? "<First SkeletalMeshComponent>" : TargetMeshComponentName.c_str());
 }
@@ -364,12 +480,13 @@ void UPhysicsAssetRagdollTestComponent::LogResolvedTarget(bool bForceLogFailure)
 void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) const
 {
     USkeletalMeshComponent* MeshComponent = TargetMeshComponent.Get();
+    ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner());
     UPhysicsAsset* EffectivePhysicsAsset = MeshComponent ? MeshComponent->GetEffectivePhysicsAsset() : nullptr;
     UPhysicsAsset* ActivePhysicsAsset = MeshComponent ? MeshComponent->GetActivePhysicsAsset() : nullptr;
     const FVector LastHitDirection =
         MeshComponent ? MeshComponent->GetLastPartialHitReactionDirection() : FVector::ZeroVector;
 
-    UE_LOG("[RagdollTest] %s Actor=%s MeshComponent=%s EffectivePhysicsAsset=%s ActivePhysicsAsset=%s Mode=%s Active=%s PhysicsPose=%s Recovering=%s PartialRoot=%s PartialPhase=%s Hold=%.2f PendingBlendOut=%s LiveBodies=%d LiveConstraints=%d BlendWeight=%.2f LastPreset=%s LastHitBone=%s LastRoot=%s LastTarget=%s LastStrength=%.2f LastHold=%.2f LastImpulse=%.2f LastDirection=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
+    UE_LOG("[RagdollTest] %s Actor=%s MeshComponent=%s EffectivePhysicsAsset=%s ActivePhysicsAsset=%s Mode=%s Active=%s PhysicsPose=%s Recovering=%s CharacterOwnership=%s CharacterPhysicsCollision=%s CharacterQueryCollision=%s OverlapOwnership=%s CapsuleCollision=%s MeshCollision=%s CapsuleRole=%s MeshRole=%s PartialBodyRole=%s CapsuleOverlapOwner=%s MeshOverlapOwner=%s PartialBodiesOverlapOwner=%s AwaitingRestore=%s FullQueryProxyActive=%s PartialRoot=%s PartialPhase=%s Hold=%.2f PendingBlendOut=%s PartialSelfSuppression=%s LiveBodies=%d LiveConstraints=%d BlendWeight=%.2f LastEvent=%s LastDecision=%s LastReason=%s LastPreset=%s LastHitBone=%s LastRoot=%s LastTarget=%s LastStrength=%.2f LastHold=%.2f LastImpulse=%.2f LastDirection=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
         EventLabel ? EventLabel : "State",
         GetOwnerNameSafe(),
         GetComponentNameSafe(),
@@ -379,13 +496,31 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
         (MeshComponent && MeshComponent->IsRagdollActive()) ? "true" : "false",
         (MeshComponent && MeshComponent->IsUsingPhysicsAssetPose()) ? "true" : "false",
         (MeshComponent && MeshComponent->IsRecoveringFromRagdoll()) ? "true" : "false",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetPhysicsOwnershipMode()) : "None",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetCharacterPhysicsCollisionMode()) : "None",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetCharacterQueryCollisionMode()) : "None",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetGameplayOverlapOwnershipMode()) : "None",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetCurrentCapsuleCollisionEnabled()) : "None",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetCurrentMeshCollisionEnabled()) : "None",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetCapsuleCollisionRole()) : "None",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetMeshCollisionRole()) : "None",
+        OwnerCharacter ? LexToString(OwnerCharacter->GetPartialReactionBodyCollisionRole()) : "None",
+        (OwnerCharacter && OwnerCharacter->IsCapsuleGameplayOverlapOwner()) ? "true" : "false",
+        (OwnerCharacter && OwnerCharacter->IsMeshGameplayOverlapOwner()) ? "true" : "false",
+        (OwnerCharacter && OwnerCharacter->ArePartialReactionBodiesGameplayOverlapOwners()) ? "true" : "false",
+        (OwnerCharacter && OwnerCharacter->IsAwaitingRagdollRecoveryRestore()) ? "true" : "false",
+        (OwnerCharacter && OwnerCharacter->IsUsingFullRagdollQueryProxy()) ? "true" : "false",
         MeshComponent ? MeshComponent->GetActivePartialRagdollRootBoneName().ToString().c_str() : "None",
         MeshComponent ? LexToString(MeshComponent->GetPartialRagdollPhase()) : "None",
         MeshComponent ? MeshComponent->GetPartialRagdollHoldRemaining() : 0.0f,
         (MeshComponent && MeshComponent->IsPartialRagdollBlendOutPending()) ? "true" : "false",
+        (MeshComponent && MeshComponent->IsPartialRagdollSelfSuppressionActive()) ? "true" : "false",
         MeshComponent ? MeshComponent->GetLiveRagdollBodyCount() : 0,
         MeshComponent ? MeshComponent->GetLiveRagdollConstraintCount() : 0,
         MeshComponent ? MeshComponent->GetPhysicsAssetBlendWeight() : 0.0f,
+        MeshComponent ? ::LexToString(MeshComponent->GetLastRagdollReactionEventKind()) : "DirectHit",
+        MeshComponent ? ::LexToString(MeshComponent->GetLastRagdollReactionType()) : "None",
+        MeshComponent ? ::LexToString(MeshComponent->GetLastRagdollReactionDecisionReason()) : "None",
         MeshComponent ? LexToString(MeshComponent->GetLastPartialHitReactionPreset()) : "Unknown",
         MeshComponent ? MeshComponent->GetLastPartialHitReactionHitBoneName().ToString().c_str() : "None",
         MeshComponent ? MeshComponent->GetLastPartialHitReactionRootBoneName().ToString().c_str() : "None",
@@ -397,6 +532,40 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
         LastHitDirection.Y,
         LastHitDirection.Z,
         (MeshComponent && MeshComponent->WasLastPartialHitReactionEscalationCandidate()) ? "true" : "false");
+
+    if (OwnerCharacter && OwnerCharacter->IsUsingFullRagdollQueryProxy())
+    {
+        UE_LOG("[RagdollTest] FullRagdollQueryProxy Actor=%s Ownership=%s PhysicsCollision=%s QueryCollision=%s OverlapOwnership=%s Capsule=%s Mesh=%s CapsuleRole=%s PartialBodyRole=%s CapsuleOverlapOwner=%s AwaitingRestore=%s",
+            GetOwnerNameSafe(),
+            LexToString(OwnerCharacter->GetPhysicsOwnershipMode()),
+            LexToString(OwnerCharacter->GetCharacterPhysicsCollisionMode()),
+            LexToString(OwnerCharacter->GetCharacterQueryCollisionMode()),
+            LexToString(OwnerCharacter->GetGameplayOverlapOwnershipMode()),
+            LexToString(OwnerCharacter->GetCurrentCapsuleCollisionEnabled()),
+            LexToString(OwnerCharacter->GetCurrentMeshCollisionEnabled()),
+            LexToString(OwnerCharacter->GetCapsuleCollisionRole()),
+            LexToString(OwnerCharacter->GetPartialReactionBodyCollisionRole()),
+            OwnerCharacter->IsCapsuleGameplayOverlapOwner() ? "true" : "false",
+            OwnerCharacter->IsAwaitingRagdollRecoveryRestore() ? "true" : "false");
+    }
+
+    if (OwnerCharacter &&
+        OwnerCharacter->GetCharacterPhysicsCollisionMode() == ECharacterPhysicsCollisionMode::PartialHybrid)
+    {
+        UE_LOG("[RagdollTest] PartialHybridCollisionPath Actor=%s CharacterOwnership=%s OverlapOwnership=%s Capsule=%s Mesh=%s CapsuleRole=%s PartialBodyRole=%s CapsuleOverlapOwner=%s PartialBodiesOverlapOwner=%s PartialMode=%s PartialPhase=%s PartialSelfSuppression=%s",
+            GetOwnerNameSafe(),
+            LexToString(OwnerCharacter->GetPhysicsOwnershipMode()),
+            LexToString(OwnerCharacter->GetGameplayOverlapOwnershipMode()),
+            LexToString(OwnerCharacter->GetCurrentCapsuleCollisionEnabled()),
+            LexToString(OwnerCharacter->GetCurrentMeshCollisionEnabled()),
+            LexToString(OwnerCharacter->GetCapsuleCollisionRole()),
+            LexToString(OwnerCharacter->GetPartialReactionBodyCollisionRole()),
+            OwnerCharacter->IsCapsuleGameplayOverlapOwner() ? "true" : "false",
+            OwnerCharacter->ArePartialReactionBodiesGameplayOverlapOwners() ? "true" : "false",
+            MeshComponent ? LexToString(MeshComponent->GetRagdollMode()) : "None",
+            MeshComponent ? LexToString(MeshComponent->GetPartialRagdollPhase()) : "None",
+            (MeshComponent && MeshComponent->IsPartialRagdollSelfSuppressionActive()) ? "true" : "false");
+    }
 }
 
 const char* UPhysicsAssetRagdollTestComponent::GetComponentNameSafe() const

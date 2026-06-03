@@ -108,6 +108,46 @@ struct FPartialRagdollHitReactionRequest
     }
 };
 
+struct FRagdollImpulseRequest
+{
+    FName HitBoneName = FName::None;
+    FVector WorldLocation = FVector::ZeroVector;
+    FVector WorldDirection = FVector::ZeroVector;
+    float Strength = 0.5f;
+    float HoldTimeOverride = -1.0f;
+    EPartialRagdollPreset PreferredPreset = EPartialRagdollPreset::UpperBody;
+    bool bUsePreferredPreset = false;
+    bool bAllowEscalationToFullBody = true;
+    bool bAllowWhileMoving = true;
+
+    bool HasHoldTimeOverride() const
+    {
+        return HoldTimeOverride >= 0.0f;
+    }
+};
+
+struct FRagdollShockwaveRequest
+{
+    FVector Origin = FVector::ZeroVector;
+    float Radius = 300.0f;
+    float Strength = 1.0f;
+    float MinStrength = 0.0f;
+    float HoldTimeOverride = -1.0f;
+    EPartialRagdollPreset PreferredPreset = EPartialRagdollPreset::UpperBody;
+    bool bUsePreferredPreset = false;
+    bool bAllowEscalationToFullBody = true;
+    bool bAllowWhileMoving = true;
+
+    bool HasHoldTimeOverride() const
+    {
+        return HoldTimeOverride >= 0.0f;
+    }
+};
+
+#define KRAFTON_SKELETAL_MESH_RAGDOLL_TYPES_DEFINED 1
+#include "Component/Primitive/RagdollReactionPolicy.h"
+#undef KRAFTON_SKELETAL_MESH_RAGDOLL_TYPES_DEFINED
+
 // SkeletalMesh 전용 render proxy만 제공하는 얇은 wrapper.
 // Skinning/bone/material/bounds 상태는 모두 USkinnedMeshComponent가 소유한다.
 UCLASS()
@@ -157,6 +197,9 @@ public:
     bool EnablePartialRagdoll(const FPartialRagdollSelection& Selection);
     UFUNCTION(Callable, Category="Physics")
     bool EnablePartialRagdoll(const FName& RootBoneName);
+    bool ApplyRagdollReaction(const FRagdollReactionRequest& Request);
+    bool ApplyRagdollImpulse(const FRagdollImpulseRequest& Request);
+    bool ApplyRagdollShockwave(const FRagdollShockwaveRequest& Request);
     bool TriggerPartialRagdoll(const FPartialRagdollRequest& Request);
     bool TriggerPartialRagdollHitReaction(const FPartialRagdollHitReactionRequest& Request);
     UFUNCTION(Callable, Category="Physics")
@@ -169,6 +212,7 @@ public:
     bool IsRagdollActive() const;
     UFUNCTION(Pure, Category="Physics")
     bool IsPartialRagdollActive() const;
+    bool TryGetRagdollRepresentativeLocation(FVector& OutWorldLocation) const;
     UFUNCTION(Pure, Category="Physics")
     ERagdollMode GetRagdollMode() const { return ActiveRagdollMode; }
     UFUNCTION(Pure, Category="Physics")
@@ -197,6 +241,10 @@ public:
     FVector GetLastPartialHitReactionDirection() const { return LastPartialHitReactionDirection; }
     UFUNCTION(Pure, Category="Physics")
     bool WasLastPartialHitReactionEscalationCandidate() const { return bLastPartialHitReactionEscalationCandidate; }
+    ERagdollReactionEventKind GetLastRagdollReactionEventKind() const { return LastRagdollReactionEventKind; }
+    ERagdollReactionType GetLastRagdollReactionType() const { return LastRagdollReactionType; }
+    ERagdollReactionDecisionReason GetLastRagdollReactionDecisionReason() const { return LastRagdollReactionDecisionReason; }
+    bool IsPartialRagdollSelfSuppressionActive() const;
     UFUNCTION(Pure, Category="Physics")
     bool IsRecoveringFromRagdoll() const { return RecoveryPhase != ERagdollRecoveryPhase::None; }
     UFUNCTION(Pure, Category="Physics")
@@ -290,6 +338,19 @@ protected:
     void TickClothSimulation(float DeltaTime);
 
 private:
+    FRagdollReactionContext BuildRagdollReactionContext(const FRagdollReactionRequest& Request) const;
+    bool ExecuteRagdollReactionDecision(
+        const FRagdollReactionRequest& Request,
+        const FRagdollReactionContext& Context,
+        const FRagdollReactionDecision& Decision);
+    bool ApplyImpulseForRagdollReaction(
+        const FRagdollReactionRequest& Request,
+        const FRagdollReactionDecision& Decision,
+        const FName& PartialRootBoneName);
+    void RefreshRagdollReactionTuning();
+    void UpdateLastRagdollReactionDiagnostics(
+        const FRagdollReactionRequest& Request,
+        const FRagdollReactionDecision& Decision);
     bool ShouldAdvanceAnimationDuringTick() const;
     bool ShouldBlockExternalAnimationControl() const;
     bool CaptureRagdollPoseBaseline();
@@ -347,6 +408,26 @@ protected:
     float PartialRagdollHoldTime = 0.18f;
     UPROPERTY(Edit, Save, Category="Physics|Partial Ragdoll", DisplayName="Partial First Valid Pose Blend In Time", Min=0.0f, Max=0.0f, Speed=0.01f)
     float PartialFirstValidPoseBlendInTime = 0.04f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Reaction", DisplayName="Direct Hit Full Body Threshold", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float DirectHitFullBodyThreshold = 0.85f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Reaction", DisplayName="Partial Escalation Threshold", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float PartialEscalationThreshold = 0.80f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Reaction", DisplayName="Shockwave Full Body Threshold", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float ShockwaveFullBodyThreshold = 0.90f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Reaction", DisplayName="Shockwave Impulse Threshold", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float ShockwaveImpulseThreshold = 0.45f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Reaction", DisplayName="Recovery Full Body Threshold", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float RecoveryFullBodyThreshold = 0.90f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Reaction", DisplayName="Recovery Impulse Threshold", Min=0.0f, Max=1.0f, Speed=0.01f)
+    float RecoveryImpulseThreshold = 0.55f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Launch", DisplayName="Base Impulse Magnitude", Min=0.0f, Max=5000.0f, Speed=1.0f)
+    float RagdollBaseImpulseMagnitude = 120.0f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Launch", DisplayName="Additional Impulse Magnitude", Min=0.0f, Max=5000.0f, Speed=1.0f)
+    float RagdollAdditionalImpulseMagnitude = 240.0f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Launch", DisplayName="Overdrive Impulse Magnitude Scale", Min=0.0f, Max=10000.0f, Speed=1.0f)
+    float RagdollOverdriveImpulseMagnitudeScale = 600.0f;
+    UPROPERTY(Edit, Save, Category="Physics|Ragdoll Launch", DisplayName="Full Body Launch Impulse Magnitude", Min=0.0f, Max=10000.0f, Speed=1.0f)
+    float FullBodyLaunchImpulseMagnitude = 900.0f;
     // FaceDown means prone/front get-up. FaceUp means supine/back get-up.
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll", DisplayName="Front Stand Up Animation", AssetType="UAnimSequence")
     FSoftObjectPtr FrontStandUpAnimationPath = "None";
@@ -369,6 +450,10 @@ protected:
     bool bPendingPartialRagdollBlendOut = false;
     float PendingPartialRagdollHoldTimeOverride = -1.0f;
     float PartialRagdollHoldRemaining = 0.0f;
+    FRagdollReactionTuning RagdollReactionTuning;
+    ERagdollReactionEventKind LastRagdollReactionEventKind = ERagdollReactionEventKind::DirectHit;
+    ERagdollReactionType LastRagdollReactionType = ERagdollReactionType::None;
+    ERagdollReactionDecisionReason LastRagdollReactionDecisionReason = ERagdollReactionDecisionReason::None;
     EPartialRagdollPreset LastPartialHitReactionPreset = EPartialRagdollPreset::UpperBody;
     FName LastPartialHitReactionHitBoneName = FName::None;
     FName LastPartialHitReactionRootBoneName = FName::None;

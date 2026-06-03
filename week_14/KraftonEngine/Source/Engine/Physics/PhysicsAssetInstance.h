@@ -20,6 +20,8 @@ struct FPhysicsAssetSimulationOptions
     bool bUseIndependentRagdollCollision = false;
     ECollisionEnabled IndependentCollisionEnabled = ECollisionEnabled::QueryAndPhysics;
     bool bIndependentGenerateOverlapEvents = false;
+    bool bSuppressSameActorPrimitiveCollisionForPartial = false;
+    bool bSuppressSameActorPrimitiveOverlapForPartial = false;
     FName SelectedBoneName = FName::None;
     FName PartialRootBoneName = FName::None;
 };
@@ -55,13 +57,19 @@ public:
     const TArray<FPhysicsConstraintHandle>& GetConstraints() const { return Constraints; }
     FPhysicsBodyHandle GetBodyHandleByBoneName(const FName& BoneName) const;
     FTransform GetBodyWorldTransformByBoneName(const FName& BoneName) const;
+    bool FindNearestBodyToWorldLocation(
+        const FVector& WorldLocation,
+        FName& OutBoneName,
+        FVector& OutBodyWorldLocation) const;
     bool AddImpulseToBody(FPhysicsBodyHandle BodyHandle, const FVector& Impulse) const;
     bool AddImpulseToBone(const FName& BoneName, const FVector& Impulse) const;
     bool HasValidBodyForBone(const FName& BoneName) const;
+    FName GetPrimarySimulatedBodyBoneName() const;
     FName FindNearestSimulatedAncestorBodyBoneName(const FName& BoneName) const;
     FName ResolveBestImpulseTargetBoneName(const FName& HitBoneName, const FName& FallbackRootBoneName) const;
     int32 FindBodySetupIndexByBoneName(const FName& BoneName) const;
     int32 FindBoneIndexForBody(const FName& BoneName) const;
+    bool IsPartialSameActorPrimitiveSuppressionActive() const { return bPartialSameActorPrimitiveSuppressionActive; }
     bool IsInitialized() const { return bInitialized; }
     int32 GetRagdollRootBoneIndex() const { return RagdollRootBoneIndex; }
 
@@ -74,5 +82,6 @@ private:
     TArray<FPhysicsConstraintHandle> Constraints;
     TMap<FString, int32> BoneNameToIndex;
     int32 RagdollRootBoneIndex = -1;
+    bool bPartialSameActorPrimitiveSuppressionActive = false;
     bool bInitialized = false;
 };

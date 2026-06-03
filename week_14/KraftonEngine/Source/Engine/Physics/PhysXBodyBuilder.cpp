@@ -25,6 +25,10 @@ namespace
     {
         PxFilterData Out;
         uint32       PackedObjectAndFlags = In.ObjectType & PhysicsFilter_ObjectTypeMask;
+        const EPhysicsGameplayOverlapOwnership EffectiveOverlapOwnership =
+            In.GameplayOverlapOwnership != EPhysicsGameplayOverlapOwnership::None
+                ? In.GameplayOverlapOwnership
+                : GetDefaultGameplayOverlapOwnershipForRole(In.CollisionRole);
 
         if (In.CollisionEnabled == ECollisionEnabled::QueryOnly)
         {
@@ -54,6 +58,39 @@ namespace
         if (In.bEnableCCD)
         {
             PackedObjectAndFlags |= PhysicsFilter_EnableCCD;
+        }
+        if (In.bIsComponentPrimitive)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_ComponentPrimitive;
+        }
+        if (In.bIgnoreSameActor)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_SameActorSelfIgnore;
+        }
+        if (In.bIsIndependentRagdoll)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_IndependentRagdoll;
+        }
+        if (In.bIsPartialRagdoll)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_PartialRagdoll;
+        }
+        if (In.bSuppressSameActorPrimitivePairs)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_SuppressSameActorPrimitivePairs;
+        }
+        PackedObjectAndFlags |= PackPhysicsCollisionRole(In.CollisionRole);
+        if (EffectiveOverlapOwnership == EPhysicsGameplayOverlapOwnership::PrimaryOwner)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_OverlapOwnerPrimary;
+        }
+        else if (EffectiveOverlapOwnership == EPhysicsGameplayOverlapOwnership::QueryProxyOwner)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_OverlapOwnerQueryProxy;
+        }
+        else if (EffectiveOverlapOwnership == EPhysicsGameplayOverlapOwnership::NonOwningReactionBody)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_OverlapNonOwningReaction;
         }
 
         Out.word0 = PackedObjectAndFlags;

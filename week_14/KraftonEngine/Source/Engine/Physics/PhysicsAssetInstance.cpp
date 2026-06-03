@@ -87,7 +87,10 @@ namespace
         bool bForceQueryAndPhysicsCollision,
         bool bUseIndependentRagdollCollision,
         ECollisionEnabled IndependentCollisionEnabled,
-        bool bIndependentGenerateOverlapEvents)
+        bool bIndependentGenerateOverlapEvents,
+        bool bIsPartialRagdollBody,
+        bool bSuppressSameActorPrimitiveCollisionForPartial,
+        bool bSuppressSameActorPrimitiveOverlapForPartial)
     {
         if (!Component)
         {
@@ -97,8 +100,13 @@ namespace
         OutFilterData.ObjectType = static_cast<uint32>(Component->GetCollisionObjectType());
         OutFilterData.BlockMask = 0;
         OutFilterData.OverlapMask = 0;
-        // Keep ragdoll self-collision decisions at the PhysicsAsset constraint layer.
-        OutFilterData.IgnoreGroup = 0;
+        // Keep ragdoll-vs-ragdoll self-collision decisions at the PhysicsAsset constraint
+        // layer, but still stamp the owning actor so filter policy can reject ragdoll
+        // body vs same-actor character primitive pairs.
+        OutFilterData.IgnoreGroup =
+            (bUseIndependentRagdollCollision && Component->GetOwner())
+                ? Component->GetOwner()->GetUUID()
+                : 0;
         OutFilterData.CollisionEnabled = bUseIndependentRagdollCollision
             ? IndependentCollisionEnabled
             : (bForceQueryAndPhysicsCollision
@@ -111,6 +119,23 @@ namespace
             : (bForceQueryAndPhysicsCollision
                 ? false
                 : Component->GetGenerateOverlapEvents());
+        OutFilterData.bIsIndependentRagdoll = bUseIndependentRagdollCollision;
+        OutFilterData.bIsPartialRagdoll = bIsPartialRagdollBody;
+        OutFilterData.CollisionRole = bIsPartialRagdollBody
+            ? EPhysicsCollisionRole::PartialReactionBody
+            : (bUseIndependentRagdollCollision
+                ? EPhysicsCollisionRole::FullRagdollBody
+                : EPhysicsCollisionRole::None);
+        // Full ragdoll also must not fight the owning character primitive. The high-level
+        // policy turns capsule/mesh collision down, while this filter flag protects the
+        // frame where physics commands may still observe stale primitive shapes.
+        OutFilterData.bSuppressSameActorPrimitivePairs =
+            bUseIndependentRagdollCollision &&
+            (!bIsPartialRagdollBody ||
+                bSuppressSameActorPrimitiveCollisionForPartial ||
+                bSuppressSameActorPrimitiveOverlapForPartial);
+        OutFilterData.GameplayOverlapOwnership =
+            GetDefaultGameplayOverlapOwnershipForRole(OutFilterData.CollisionRole);
 
         for (int32 ChannelIndex = 0; ChannelIndex < static_cast<int32>(ECollisionChannel::ActiveCount); ++ChannelIndex)
         {
@@ -155,7 +180,10 @@ namespace
                 Options.bForceQueryAndPhysicsCollision,
                 Options.bUseIndependentRagdollCollision,
                 Options.IndependentCollisionEnabled,
-                Options.bIndependentGenerateOverlapEvents);
+                Options.bIndependentGenerateOverlapEvents,
+                Options.bPartialSimulation,
+                Options.bSuppressSameActorPrimitiveCollisionForPartial,
+                Options.bSuppressSameActorPrimitiveOverlapForPartial);
             ShapeDesc.FilterData.bEnableCCD = BodySetup.bEnableCCD;
             ShapeDesc.QueryIgnoreGroup = (OwnerComponent && OwnerComponent->GetOwner())
                 ? OwnerComponent->GetOwner()->GetUUID()
@@ -442,6 +470,10 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
         Constraints.resize(ConstraintSetups.size());
     }
     ResetRuntimeState();
+    const bool bRequestedPartialSameActorPrimitiveSuppression =
+        Options.bPartialSimulation &&
+        (Options.bSuppressSameActorPrimitiveCollisionForPartial ||
+            Options.bSuppressSameActorPrimitiveOverlapForPartial);
 
     int32 CreatedBodyCount = 0;
     int32 CreatedConstraintCount = 0;
@@ -580,12 +612,16 @@ bool FPhysicsAssetInstance::CreateBodiesAndConstraints(const FPhysicsAssetSimula
         ++CreatedConstraintCount;
     }
 
-    UE_LOG("Created PhysicsAsset runtime objects. Component=%s Bodies=%d Constraints=%d Partial=%s RootBone=%s",
+    bPartialSameActorPrimitiveSuppressionActive =
+        CreatedBodyCount > 0 && bRequestedPartialSameActorPrimitiveSuppression;
+
+    UE_LOG("Created PhysicsAsset runtime objects. Component=%s Bodies=%d Constraints=%d Partial=%s RootBone=%s PartialSelfSuppression=%s",
         Owner->GetName().c_str(),
         CreatedBodyCount,
         CreatedConstraintCount,
         Options.bPartialSimulation ? "true" : "false",
-        ScopeRootBoneName.ToString().c_str());
+        ScopeRootBoneName.ToString().c_str(),
+        bPartialSameActorPrimitiveSuppressionActive ? "true" : "false");
 
     return CreatedBodyCount > 0;
 }
@@ -648,6 +684,7 @@ void FPhysicsAssetInstance::Shutdown()
     SourceAsset.Reset();
     BoneNameToIndex.clear();
     RagdollRootBoneIndex = -1;
+    bPartialSameActorPrimitiveSuppressionActive = false;
     bInitialized = false;
 }
 
@@ -656,6 +693,7 @@ void FPhysicsAssetInstance::ResetRuntimeState()
     // Reset keeps the instance attached to the same asset/component pairing while
     // discarding live runtime objects that may no longer match the current state.
     DestroyBodiesAndConstraints();
+    bPartialSameActorPrimitiveSuppressionActive = false;
 }
 
 bool FPhysicsAssetInstance::HasLivePhysicsObjects() const
@@ -900,6 +938,43 @@ FTransform FPhysicsAssetInstance::GetBodyWorldTransformByBoneName(const FName& B
     return BodySnapshot ? BodySnapshot->CurrentTransform : FTransform();
 }
 
+bool FPhysicsAssetInstance::FindNearestBodyToWorldLocation(
+    const FVector& WorldLocation,
+    FName& OutBoneName,
+    FVector& OutBodyWorldLocation) const
+{
+    UPhysicsAsset* Asset = GetAsset();
+    if (!Asset)
+    {
+        return false;
+    }
+
+    const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
+    float BestDistanceSquared = 0.0f;
+    bool bFoundBody = false;
+
+    for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
+    {
+        if (BodyIndex >= static_cast<int32>(BodiesByBone.size()) || !BodiesByBone[BodyIndex].IsValid())
+        {
+            continue;
+        }
+
+        const FName& CandidateBoneName = BodySetups[BodyIndex].BoneName;
+        const FVector CandidateLocation = GetBodyWorldTransformByBoneName(CandidateBoneName).Location;
+        const float DistanceSquared = FVector::DistSquared(WorldLocation, CandidateLocation);
+        if (!bFoundBody || DistanceSquared < BestDistanceSquared)
+        {
+            BestDistanceSquared = DistanceSquared;
+            OutBoneName = CandidateBoneName;
+            OutBodyWorldLocation = CandidateLocation;
+            bFoundBody = true;
+        }
+    }
+
+    return bFoundBody;
+}
+
 bool FPhysicsAssetInstance::AddImpulseToBody(FPhysicsBodyHandle BodyHandle, const FVector& Impulse) const
 {
     if (!BodyHandle.IsValid())
@@ -925,6 +1000,28 @@ bool FPhysicsAssetInstance::AddImpulseToBone(const FName& BoneName, const FVecto
 bool FPhysicsAssetInstance::HasValidBodyForBone(const FName& BoneName) const
 {
     return GetBodyHandleByBoneName(BoneName).IsValid();
+}
+
+FName FPhysicsAssetInstance::GetPrimarySimulatedBodyBoneName() const
+{
+    UPhysicsAsset* Asset = GetAsset();
+    if (!Asset)
+    {
+        return FName::None;
+    }
+
+    const TArray<FPhysicsAssetBodySetup>& BodySetups = Asset->GetBodySetups();
+    for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(BodySetups.size()); ++BodyIndex)
+    {
+        if (BodyIndex >= static_cast<int32>(BodiesByBone.size()) || !BodiesByBone[BodyIndex].IsValid())
+        {
+            continue;
+        }
+
+        return BodySetups[BodyIndex].BoneName;
+    }
+
+    return FName::None;
 }
 
 FName FPhysicsAssetInstance::FindNearestSimulatedAncestorBodyBoneName(const FName& BoneName) const

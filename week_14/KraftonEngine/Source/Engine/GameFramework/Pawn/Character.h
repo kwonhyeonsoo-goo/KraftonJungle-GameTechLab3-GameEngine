@@ -3,10 +3,12 @@
 #include "GameFramework/Pawn/Pawn.h"
 #include "Core/Types/CollisionTypes.h"
 #include "Object/Ptr/WeakObjectPtr.h"
+#include "Physics/PhysicsTypes.h"
 
 class UCapsuleComponent;
 class USkeletalMeshComponent;
 class UCharacterMovementComponent;
+class UPrimitiveComponent;
 
 enum class ECharacterPhysicsOwnershipMode : uint8
 {
@@ -28,6 +30,14 @@ enum class ECharacterQueryCollisionMode : uint8
 	CharacterDriven,
 	Disabled,
 	ReservedForFullRagdollProxy
+};
+
+enum class ECharacterGameplayOverlapOwnershipMode : uint8
+{
+	None,
+	CharacterDriven,
+	FullRagdollQueryProxy,
+	PartialHybrid
 };
 
 struct FCharacterCollisionOwnershipSnapshot
@@ -79,6 +89,26 @@ public:
 	bool BeginRagdollRecovery();
 	UFUNCTION(Pure, Category="Character|Physics")
 	bool IsInRagdoll() const;
+	ECharacterPhysicsOwnershipMode GetPhysicsOwnershipMode() const { return PhysicsOwnershipMode; }
+	ECharacterPhysicsCollisionMode GetCharacterPhysicsCollisionMode() const { return CharacterPhysicsCollisionMode; }
+	ECharacterQueryCollisionMode GetCharacterQueryCollisionMode() const { return CharacterQueryCollisionMode; }
+	ECharacterGameplayOverlapOwnershipMode GetGameplayOverlapOwnershipMode() const { return GameplayOverlapOwnershipMode; }
+	UFUNCTION(Pure, Category="Character|Physics")
+	bool IsAwaitingRagdollRecoveryRestore() const { return bAwaitingRagdollRecoveryRestore; }
+	UFUNCTION(Pure, Category="Character|Physics")
+	bool IsUsingFullRagdollQueryProxy() const;
+	EPhysicsCollisionRole GetCapsuleCollisionRole() const;
+	EPhysicsCollisionRole GetMeshCollisionRole() const;
+	EPhysicsCollisionRole GetPartialReactionBodyCollisionRole() const;
+	EPhysicsCollisionRole GetCollisionRoleForComponent(const UPrimitiveComponent* Component) const;
+	bool IsCapsuleGameplayOverlapOwner() const;
+	bool IsMeshGameplayOverlapOwner() const;
+	bool ArePartialReactionBodiesGameplayOverlapOwners() const;
+	bool IsGameplayOverlapOwnerComponent(const UPrimitiveComponent* Component) const;
+	UFUNCTION(Pure, Category="Character|Physics")
+	ECollisionEnabled GetCurrentCapsuleCollisionEnabled() const;
+	UFUNCTION(Pure, Category="Character|Physics")
+	ECollisionEnabled GetCurrentMeshCollisionEnabled() const;
 
 	UFUNCTION(Pure, Category="Character|Components")
 	UCapsuleComponent* GetCapsuleComponent()  const { return CapsuleComponent; }
@@ -132,6 +162,7 @@ protected:
 	ECharacterPhysicsOwnershipMode PhysicsOwnershipMode = ECharacterPhysicsOwnershipMode::CharacterDriven;
 	ECharacterPhysicsCollisionMode CharacterPhysicsCollisionMode = ECharacterPhysicsCollisionMode::CharacterDriven;
 	ECharacterQueryCollisionMode CharacterQueryCollisionMode = ECharacterQueryCollisionMode::CharacterDriven;
+	ECharacterGameplayOverlapOwnershipMode GameplayOverlapOwnershipMode = ECharacterGameplayOverlapOwnershipMode::CharacterDriven;
 	bool bPendingRagdollBodyEnable = false;
 	bool bAwaitingRagdollRecoveryRestore = false;
 	bool bSavedPreRagdollCharacterState = false;
