@@ -42,6 +42,7 @@ public:
 
 	void CaptureMouse(FViewportClient* Client);
 	void ReleaseMouse(FViewportClient* Client);
+	void ClearInputOwner();
 
 	bool IsViewportRegistered(FViewportClient* Client) const;
 

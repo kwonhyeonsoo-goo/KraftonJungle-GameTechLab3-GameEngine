@@ -32,6 +32,9 @@ static const float DoFNearerSampleRejectWeight = 0.15f;
 static const float DoFNearerSampleRejectBias = 1.0f;
 static const float DoFMinAccumulatedWeight = 1.0e-4f;
 static const float DoFForegroundGatherFeather = 1.0f;
+static const int DoFBlurSampleCount = 48;
+static const float DoFBokehRadiusFeather = 1.0f;
+static const float DoFBokehLumaFeather = 0.08f;
 
 static const int DoFMaxBokehSearchRadius = 64;
 static const float DoFBokehMinFeather = 1.0f;
@@ -79,18 +82,35 @@ float DoFRingSampleWeight(float ringRadius)
     return saturate(1.0f - ringRadius * ringRadius * 0.35f);
 }
 
+float DoFStablePixelHash(float2 uv)
+{
+    uint width, height;
+    SceneColorTexture.GetDimensions(width, height);
+    float2 pixel = floor(uv * max(float2(width, height), float2(1.0f, 1.0f)));
+    return frac(sin(dot(pixel, float2(127.1f, 311.7f))) * 43758.5453123f);
+}
+
+float2 DoFSpiralDiskOffset(int sampleIndex, int sampleCount, float rotation)
+{
+    const float GoldenAngle = 2.39996322973f;
+    float t = ((float)sampleIndex + 0.5f) / (float)sampleCount;
+    float angle = (float)sampleIndex * GoldenAngle + rotation;
+    float radius = sqrt(t);
+    return float2(cos(angle), sin(angle)) * radius;
+}
+
+float DoFDiskSampleWeight(float normalizedRadius)
+{
+    return saturate(1.0f - normalizedRadius * normalizedRadius * 0.20f);
+}
+
 float DoFBokehCandidateMask(float coc, float3 color)
 {
     float radius = abs(coc) * MaxBlurRadius;
     float luma = DoFHighlightLuma(color);
-    return (radius >= BokehRadiusThreshold && luma >= BokehLumaThreshold) ? 1.0f : 0.0f;
-}
-
-float3 DoFRemoveBokehEnergyForFallback(float coc, float3 color)
-{
-    float candidate = DoFBokehCandidateMask(coc, color);
-    float3 nonBokehColor = min(color, BokehLumaThreshold);
-    return lerp(color, nonBokehColor, candidate);
+    float radiusMask = smoothstep(BokehRadiusThreshold, BokehRadiusThreshold + DoFBokehRadiusFeather, radius);
+    float lumaMask = smoothstep(BokehLumaThreshold, BokehLumaThreshold + DoFBokehLumaFeather, luma);
+    return radiusMask * lumaMask;
 }
 
 float2 DoFGetSceneTexel()

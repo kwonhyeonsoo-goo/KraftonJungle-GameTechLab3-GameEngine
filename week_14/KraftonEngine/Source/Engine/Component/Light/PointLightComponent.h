@@ -15,7 +15,9 @@ public:
 	virtual void DestroyFromScene() override;
 	virtual bool GetLightViewProj(FLightViewProjResult& OutResult, const FMinimalViewInfo* POV, int32 FaceIndex) const override;
 
+	UFUNCTION(Pure, Category="Lighting")
 	float GetAttenuationRadius() const { return AttenuationRadius; }
+	UFUNCTION(Callable, Category="Lighting")
 	void  SetAttenuationRadius(float V) { AttenuationRadius = V; PushToScene(); }
 
 protected:

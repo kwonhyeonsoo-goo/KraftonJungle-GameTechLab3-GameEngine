@@ -2,6 +2,7 @@
 #include "Object/Reflection/ObjectFactory.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/Primitive/StaticMeshComponent.h"
+#include "Component/Script/LuaBlueprintComponent.h"
 #include "Engine/Component/Camera/CameraComponent.h"
 #include "Render/Types/LODContext.h"
 #include "Core/ProjectSettings.h"
@@ -72,6 +73,9 @@ void UWorld::RouteWorldDestroyed()
 	bWorldDestroyRouted = true;
 	EndPlay();
 	PhysicsSnapshotReceivers.clear();
+	bHasRoutedPostBeginPlay = false;
+	bHasRoutedPostStartMatch = false;
+	bHasRoutedPlayerCameraReady = false;
 	ShutdownPhysicsScene();
 	Partition.Reset(FBoundingBox());
 	MarkWorldPrimitivePickingBVHDirty();
@@ -217,6 +221,129 @@ bool UWorld::GetActivePOV(FMinimalViewInfo& OutPOV) const
 	return false;
 }
 
+void UWorld::RouteLuaBlueprintPostBeginPlayForActor(AActor* Actor) const
+{
+    if (!IsValid(Actor) || !Actor->HasActorBegunPlay())
+    {
+        return;
+    }
+
+    const TArray<UActorComponent*> Components = Actor->GetComponents();
+    for (UActorComponent* Component : Components)
+    {
+        if (!IsValid(Component))
+        {
+            continue;
+        }
+        if (ULuaBlueprintComponent* LuaBlueprint = Cast<ULuaBlueprintComponent>(Component))
+        {
+            LuaBlueprint->RoutePostBeginPlay();
+        }
+    }
+}
+
+void UWorld::RouteLuaBlueprintPostStartMatchForActor(AActor* Actor) const
+{
+    if (!IsValid(Actor) || !Actor->HasActorBegunPlay())
+    {
+        return;
+    }
+
+    const TArray<UActorComponent*> Components = Actor->GetComponents();
+    for (UActorComponent* Component : Components)
+    {
+        if (!IsValid(Component))
+        {
+            continue;
+        }
+        if (ULuaBlueprintComponent* LuaBlueprint = Cast<ULuaBlueprintComponent>(Component))
+        {
+            LuaBlueprint->RoutePostStartMatch();
+        }
+    }
+}
+
+bool UWorld::ResolveLuaBlueprintPlayerCameraReadyContext(
+    APlayerController*&    OutPlayerController,
+    APlayerCameraManager*& OutCameraManager,
+    UCameraComponent*&     OutActiveCamera
+    ) const
+{
+    OutPlayerController = GetFirstPlayerController();
+    OutCameraManager    = OutPlayerController ? OutPlayerController->GetPlayerCameraManager() : nullptr;
+    OutActiveCamera     = OutCameraManager ? OutCameraManager->GetActiveCamera() : nullptr;
+
+    return IsValid(OutPlayerController) && IsValid(OutCameraManager);
+}
+
+void UWorld::RouteLuaBlueprintPlayerCameraReadyForActor(
+    AActor*               Actor,
+    APlayerController*    PlayerController,
+    APlayerCameraManager* CameraManager,
+    UCameraComponent*     ActiveCamera
+    ) const
+{
+    if (!IsValid(Actor) || !Actor->HasActorBegunPlay() || !IsValid(PlayerController) || !IsValid(CameraManager))
+    {
+        return;
+    }
+
+    const TArray<UActorComponent*> Components = Actor->GetComponents();
+    for (UActorComponent* Component : Components)
+    {
+        if (!IsValid(Component))
+        {
+            continue;
+        }
+        if (ULuaBlueprintComponent* LuaBlueprint = Cast<ULuaBlueprintComponent>(Component))
+        {
+            LuaBlueprint->RoutePlayerCameraReady(PlayerController, CameraManager, ActiveCamera);
+        }
+    }
+}
+
+void UWorld::BroadcastLuaBlueprintPostBeginPlay()
+{
+    bHasRoutedPostBeginPlay = true;
+
+    const TArray<AActor*> ActorSnapshot = GetActors();
+    for (AActor* Actor : ActorSnapshot)
+    {
+        RouteLuaBlueprintPostBeginPlayForActor(Actor);
+    }
+}
+
+void UWorld::BroadcastLuaBlueprintPostStartMatch()
+{
+    bHasRoutedPostStartMatch = true;
+
+    const TArray<AActor*> ActorSnapshot = GetActors();
+    for (AActor* Actor : ActorSnapshot)
+    {
+        RouteLuaBlueprintPostStartMatchForActor(Actor);
+    }
+}
+
+void UWorld::BroadcastLuaBlueprintPlayerCameraReady(
+    APlayerController*    PlayerController,
+    APlayerCameraManager* CameraManager,
+    UCameraComponent*     ActiveCamera
+    )
+{
+    if (!IsValid(PlayerController) || !IsValid(CameraManager))
+    {
+        return;
+    }
+
+    bHasRoutedPlayerCameraReady = true;
+
+    const TArray<AActor*> ActorSnapshot = GetActors();
+    for (AActor* Actor : ActorSnapshot)
+    {
+        RouteLuaBlueprintPlayerCameraReadyForActor(Actor, PlayerController, CameraManager, ActiveCamera);
+    }
+}
+
 
 void UWorld::AddActor(AActor* Actor)
 {
@@ -235,6 +362,28 @@ void UWorld::AddActor(AActor* Actor)
 	{
 		Actor->BeginPlay();
 	}
+
+    if (Actor->HasActorBegunPlay())
+    {
+        if (bHasRoutedPostBeginPlay)
+        {
+            RouteLuaBlueprintPostBeginPlayForActor(Actor);
+        }
+        if (bHasRoutedPlayerCameraReady)
+        {
+            APlayerController* PlayerController = nullptr;
+            APlayerCameraManager* CameraManager = nullptr;
+            UCameraComponent* ActiveCamera = nullptr;
+            if (ResolveLuaBlueprintPlayerCameraReadyContext(PlayerController, CameraManager, ActiveCamera))
+            {
+                RouteLuaBlueprintPlayerCameraReadyForActor(Actor, PlayerController, CameraManager, ActiveCamera);
+            }
+        }
+        if (bHasRoutedPostStartMatch)
+        {
+            RouteLuaBlueprintPostStartMatchForActor(Actor);
+        }
+    }
 }
 
 void UWorld::MarkWorldPrimitivePickingBVHDirty()
@@ -323,6 +472,22 @@ bool UWorld::PhysicsRaycastByObjectTypes(const FVector& Start, const FVector& Di
 	return false;
 }
 
+bool UWorld::PhysicsSweep(const FVector& Start, const FVector& End, const FQuat& Rotation, const FCollisionShape& Shape, FHitResult& OutHit,
+    ECollisionChannel TraceChannel, const AActor* IgnoreActor) const
+{
+    if (PhysicsScene)
+        return PhysicsScene->Sweep(Start, End, Rotation, Shape, OutHit, TraceChannel, IgnoreActor);
+    return false;
+}
+
+bool UWorld::PhysicsSweepByObjectTypes(const FVector& Start, const FVector& End, const FQuat& Rotation, const FCollisionShape& Shape, FHitResult& OutHit,
+    uint32 ObjectTypeMask, const AActor* IgnoreActor) const
+{
+    if (PhysicsScene)
+        return PhysicsScene->SweepByObjectTypes(Start, End, Rotation, Shape, OutHit, ObjectTypeMask, IgnoreActor);
+    return false;
+}
+
 
 void UWorld::InsertActorToOctree(AActor* Actor)
 {
@@ -405,12 +570,24 @@ void UWorld::BeginPlay()
 		PersistentLevel->BeginPlay();
 	}
 
+    BroadcastLuaBlueprintPostBeginPlay();
+
 	// 모든 액터 BeginPlay 완료 후 매치 시작 — 페이즈 변경 브로드캐스트가
 	// 이때 모든 리스너에게 안전하게 도달한다.
 	if (AGameModeBase* GameModeActor = GetGameMode())
 	{
 		GameModeActor->StartMatch();
 	}
+
+    if (APlayerController* PlayerController = GetFirstPlayerController())
+    {
+        if (APlayerCameraManager* CameraManager = PlayerController->GetPlayerCameraManager())
+        {
+            BroadcastLuaBlueprintPlayerCameraReady(PlayerController, CameraManager, CameraManager->GetActiveCamera());
+        }
+    }
+
+    BroadcastLuaBlueprintPostStartMatch();
 
 	// E.2/3: AutoPossessDefaultCamera 는 PC 의 BeginPlay 가 처리.
 }
@@ -517,8 +694,20 @@ void UWorld::ApplyPhysicsSnapshot_GameThread()
 			continue;
 		}
 
-		Component->SetWorldLocation(Body.CurrentTransform.Location);
-		Component->SetWorldRotation(Body.CurrentTransform.Rotation);
+		const float Alpha = (std::max)(0.0f, (std::min)(Snapshot->InterpolationAlpha, 1.0f));
+		const FVector InterpolatedLocation = FVector::Lerp(
+			Body.PreviousTransform.Location,
+			Body.CurrentTransform.Location,
+			Alpha
+		);
+		const FQuat InterpolatedRotation = FQuat::Slerp(
+			Body.PreviousTransform.Rotation,
+			Body.CurrentTransform.Rotation,
+			Alpha
+		);
+
+		Component->SetWorldLocation(InterpolatedLocation);
+		Component->SetWorldRotation(InterpolatedRotation);
 	}
 
 	// Specialized snapshot domains are dispatched through registered receivers. UWorld applies
@@ -567,6 +756,9 @@ void UWorld::EndPlay()
 	}
 
 	bHasBegunPlay = false;
+	bHasRoutedPostBeginPlay = false;
+	bHasRoutedPostStartMatch = false;
+	bHasRoutedPlayerCameraReady = false;
 	TickManager.Reset();
 
 	if (PersistentLevel)

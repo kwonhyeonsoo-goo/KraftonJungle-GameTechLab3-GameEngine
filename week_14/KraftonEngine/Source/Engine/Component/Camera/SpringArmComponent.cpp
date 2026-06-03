@@ -5,13 +5,57 @@
 #include "GameFramework/Pawn/Pawn.h"
 #include "GameFramework/World.h"
 #include "Core/Types/CollisionTypes.h"
+#include "Math/Matrix.h"
 #include "Math/Rotator.h"
 #include <algorithm>
 #include <cmath>
 
+namespace
+{
+	FVector GetSafeNormalizedAxis(const FVector& Axis, const FVector& Fallback)
+	{
+		const float Length = Axis.Length();
+		if (Length <= 1.0e-6f)
+		{
+			return Fallback;
+		}
+
+		return Axis / Length;
+	}
+
+	FQuat ExtractRotationWithoutScale(const FMatrix& Matrix)
+	{
+		const FVector XAxis = GetSafeNormalizedAxis(FVector(Matrix.M[0][0], Matrix.M[0][1], Matrix.M[0][2]), FVector(1.0f, 0.0f, 0.0f));
+		const FVector YAxis = GetSafeNormalizedAxis(FVector(Matrix.M[1][0], Matrix.M[1][1], Matrix.M[1][2]), FVector(0.0f, 1.0f, 0.0f));
+		const FVector ZAxis = GetSafeNormalizedAxis(FVector(Matrix.M[2][0], Matrix.M[2][1], Matrix.M[2][2]), FVector(0.0f, 0.0f, 1.0f));
+
+		FMatrix RotationMatrix = FMatrix::Identity;
+		RotationMatrix.M[0][0] = XAxis.X; RotationMatrix.M[0][1] = XAxis.Y; RotationMatrix.M[0][2] = XAxis.Z;
+		RotationMatrix.M[1][0] = YAxis.X; RotationMatrix.M[1][1] = YAxis.Y; RotationMatrix.M[1][2] = YAxis.Z;
+		RotationMatrix.M[2][0] = ZAxis.X; RotationMatrix.M[2][1] = ZAxis.Y; RotationMatrix.M[2][2] = ZAxis.Z;
+		return RotationMatrix.ToQuat().GetNormalized();
+	}
+
+	float CalculateExponentialLagAlpha(float DeltaTime, float Speed)
+	{
+		if (DeltaTime <= 0.0f || Speed <= 0.0f)
+		{
+			return 0.0f;
+		}
+
+		const float Alpha = 1.0f - static_cast<float>(std::exp(-static_cast<double>(Speed * DeltaTime)));
+		return std::min(std::max(Alpha, 0.0f), 1.0f);
+	}
+}
+
 void USpringArmComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	ResetLagState();
+}
+
+void USpringArmComponent::ResetLagState()
+{
 	bHasPreviousState = false;
 }
 
@@ -30,8 +74,9 @@ void USpringArmComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	//   - ParentActualRot: capsule 의 실제 world rotation (RelativeRotation 환산용 — 불변).
 	//   - DesiredParentRot: SpringArm 이 사용할 desired rotation (control rotation 적용 후).
 	const FMatrix& ParentWorld = ParentComponent->GetWorldMatrix();
+	const FMatrix& ParentWorldInv = ParentComponent->GetWorldInverseMatrix();
 	const FVector ParentWorldLoc = ParentComponent->GetWorldLocation();
-	const FQuat   ParentActualRot  = ParentWorld.ToQuat().GetNormalized();
+	const FQuat   ParentActualRot  = ExtractRotationWithoutScale(ParentWorld);
 	FQuat         DesiredParentRot = ParentActualRot;
 
 	// bUsePawnControlRotation — capsule rotation 대신 owner APawn 의 ControlRotation 을
@@ -64,7 +109,7 @@ void USpringArmComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	{
 		if (bEnableCameraRotationLag && CameraRotationLagSpeed > 0.0f)
 		{
-			const float Alpha = std::min(DeltaTime * CameraRotationLagSpeed, 1.0f);
+			const float Alpha = CalculateExponentialLagAlpha(DeltaTime, CameraRotationLagSpeed);
 			LaggedAttachRot = FQuat::Slerp(LaggedAttachRot, DesiredAttachRot, Alpha).GetNormalized();
 		}
 		else
@@ -74,7 +119,7 @@ void USpringArmComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 
 		if (bEnableCameraLag && CameraLagSpeed > 0.0f)
 		{
-			const float Alpha = std::min(DeltaTime * CameraLagSpeed, 1.0f);
+			const float Alpha = CalculateExponentialLagAlpha(DeltaTime, CameraLagSpeed);
 			FVector NewLoc = LaggedAttachLoc + (DesiredAttachLoc - LaggedAttachLoc) * Alpha;
 
 			// 너무 멀어지면 클램프 — 빠른 텔레포트/리스폰 직후 카메라가 한참 뒤따라오는 현상 방지.
@@ -103,9 +148,9 @@ void USpringArmComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	FVector ArmEndWorld = LaggedAttachLoc + ArmDirWorld + SocketWorld;
 
 	// (4b) Collision test — bDoCollisionTest 가 켜져 있으면 LaggedAttach → ArmEnd 방향으로
-	//      raycast. Hit 이 있으면 해당 거리에서 ProbeSize 만큼 안쪽에서 정지해 카메라가
-	//      벽 너머로 빠지지 않게 한다. 자기 Owner 액터는 ignore. (UE 의 sphere sweep 은 본
-	//      엔진 미지원이라 단일 ray + ProbeSize 안전 거리로 근사.)
+	//      ProbeSize > 0 일 때는 sphere sweep 을 수행한다. 카메라 중심선만 검사하던
+	//      raycast 와 달리 ProbeSize 를 실제 sweep 반경으로 사용하므로 모서리/문틀/기둥
+	//      옆 클리핑에 더 안전하다. ProbeSize 가 0 이면 기존처럼 raycast 로 처리한다.
 	if (bDoCollisionTest)
 	{
 		AActor* Owner = GetOwner();
@@ -118,9 +163,20 @@ void USpringArmComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 			{
 				const FVector Dir = Diff / Distance;
 				FHitResult Hit;
-				if (World->PhysicsRaycast(LaggedAttachLoc, Dir, Distance, Hit, ProbeChannel, Owner))
+				bool bHit = false;
+				if (ProbeSize > 0.0f)
 				{
-					const float SafeDist = std::max(Hit.Distance - ProbeSize, 0.0f);
+					const FCollisionShape ProbeShape = FCollisionShape::MakeSphere(ProbeSize);
+					bHit = World->PhysicsSweep(LaggedAttachLoc, ArmEndWorld, FQuat::Identity, ProbeShape, Hit, ProbeChannel, Owner);
+				}
+				else
+				{
+					bHit = World->PhysicsRaycast(LaggedAttachLoc, Dir, Distance, Hit, ProbeChannel, Owner);
+				}
+
+				if (bHit)
+				{
+					const float SafeDist = std::max(Hit.Distance, 0.0f);
 					ArmEndWorld = LaggedAttachLoc + Dir * SafeDist;
 				}
 			}
@@ -133,7 +189,7 @@ void USpringArmComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	//       (Desired)^-1 × Lagged 가 Desired ≈ Lagged 일 때 identity 되어 카메라 가 capsule
 	//       회전만 따라감 — control rotation 이 무시되는 버그.
 	const FQuat ParentInvRot = ParentActualRot.Inverse();
-	const FVector RelLoc = ParentInvRot.RotateVector(ArmEndWorld - ParentWorldLoc);
+	const FVector RelLoc = ArmEndWorld * ParentWorldInv;
 	const FQuat RelRot = (ParentInvRot * LaggedAttachRot).GetNormalized();
 
 	SetRelativeLocation(RelLoc);

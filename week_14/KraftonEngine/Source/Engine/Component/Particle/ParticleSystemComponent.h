@@ -32,13 +32,19 @@ public:
 	~UParticleSystemComponent() override;
 
 	// --- 에셋 ---
+	UFUNCTION(Callable, Category="Particle")
 	void SetTemplate(UParticleSystem* InTemplate);
+	UFUNCTION(Pure, Category="Particle")
 	UParticleSystem* GetTemplate() const { return Template; }
 
 	// --- 재생 제어 ---
+	UFUNCTION(Callable, Category="Particle|Playback")
 	void Activate(bool bReset = false);
+	UFUNCTION(Callable, Category="Particle|Playback")
 	void Deactivate();
+	UFUNCTION(Callable, Category="Particle|Playback")
 	void ResetParticles();
+	UFUNCTION(Pure, Category="Particle|Playback")
 	bool IsActive() const { return bActive; }
 
 	// --- 컴포넌트 라이프사이클 ---
@@ -65,13 +71,19 @@ public:
 	AParticleEventManager* GetEventManager() const;
 
 	// --- Emitter Instance 접근 ---
+	UFUNCTION(Pure, Category="Particle|Emitter")
 	int32 GetEmitterInstanceCount() const { return static_cast<int32>(EmitterInstances.size()); }
 	FParticleEmitterInstance* GetEmitterInstance(int32 Index) const;
 
+	UFUNCTION(Pure, Category="Particle|LOD")
 	int32 GetCurrentLODIndex() const { return CurrentLODIndex; }
+	UFUNCTION(Callable, Category="Particle|LOD")
 	void  SetCurrentLODIndex(int32 InLODIndex);
 
+	UFUNCTION(Callable, Category="Particle")
 	void RebuildInstances(bool bReset = true);
+	UFUNCTION(Pure, Category="Particle")
+	FString GetTemplatePathValue() const { return TemplatePath.ToString(); }
 	const FString& GetTemplatePath() const { return TemplatePath.ToString(); }
 
 	// SceneProxy 가 매 프레임 쓸 dynamic data 묶음. PSC 가 소유, GetDynamicData() 가

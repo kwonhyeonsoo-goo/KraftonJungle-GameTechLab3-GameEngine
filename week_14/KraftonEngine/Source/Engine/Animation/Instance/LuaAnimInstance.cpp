@@ -18,6 +18,7 @@
 #include "GameFramework/AActor.h"
 #include "Input/InputSystem.h"
 #include "Lua/LuaScriptManager.h"
+#include "Lua/LuaDebugManager.h"
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
 #include "Object/Object.h"
@@ -74,6 +75,7 @@ void ULuaAnimInstance::NativeInitializeAnimation()
 	{
 		sol::error Err = Result;
 		UE_LOG("[LuaAnimInstance] Script load error %s: %s", ScriptFile.c_str(), Err.what());
+		FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 		ClearGraph();
 		return;
 	}
@@ -114,6 +116,7 @@ void ULuaAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		{
 			sol::error Err = R;
 			UE_LOG("[LuaAnimInstance] update() error: %s", Err.what());
+			FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 		}
 	}
 }
@@ -128,6 +131,7 @@ void ULuaAnimInstance::HandleAnimNotify(const FAnimNotifyEvent& Notify)
 	{
 		sol::error Err = R;
 		UE_LOG("[LuaAnimInstance] on_notify() error: %s", Err.what());
+		FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 	}
 }
 
@@ -216,6 +220,7 @@ void ULuaAnimInstance::DispatchLuaInit()
 	{
 		sol::error Err = R;
 		UE_LOG("[LuaAnimInstance] init() error: %s", Err.what());
+		FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 	}
 }
 
@@ -276,6 +281,7 @@ bool ULuaAnimInstance::EvaluateLuaTransitionCondition(int32 ConditionIndex, uint
 	{
 		sol::error Err = R;
 		UE_LOG("[LuaAnim] sm_add_transition condition error: %s", Err.what());
+		FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 		return false;
 	}
 	return R.get<bool>();

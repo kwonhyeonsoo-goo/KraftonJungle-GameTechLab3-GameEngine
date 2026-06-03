@@ -3,6 +3,7 @@
 #include "Animation/AnimInstance.h"
 #include "Component/Shape/CapsuleComponent.h"
 #include "Component/SceneComponent.h"
+#include "Component/PrimitiveComponent.h"
 #include "Component/Primitive/SkeletalMeshComponent.h"
 #include "Core/Types/PropertyTypes.h"
 #include "Core/TickFunction.h"
@@ -262,7 +263,7 @@ void UCharacterMovementComponent::TickWalking(float DeltaTime, const FVector& Ro
 		Velocity.X * DeltaTime + RootMotionWorldXY.X,
 		Velocity.Y * DeltaTime + RootMotionWorldXY.Y,
 		0.0f);
-	Updated->SetWorldLocation(Updated->GetWorldLocation() + XYOffset);
+	SafeMoveUpdatedComponent(XYOffset);
 
 	// Floor 잡혔는지 — 이동 직후 위치에서 다시 trace.
 	FHitResult Floor;
@@ -291,7 +292,7 @@ void UCharacterMovementComponent::TickFalling(float DeltaTime, const FVector& Ro
 		Velocity.X * DeltaTime + RootMotionWorldXY.X,
 		Velocity.Y * DeltaTime + RootMotionWorldXY.Y,
 		Velocity.Z * DeltaTime);
-	Updated->SetWorldLocation(Updated->GetWorldLocation() + Offset);
+	SafeMoveUpdatedComponent(Offset);
 
 	// 올라가는 중 (점프 arc 상승) 엔 floor 체크 skip — 안 그러면 점프 직후 1 frame 의
 	// 작은 상승 (≈ JumpZVelocity * dt) 이 raycast probe 거리 안에 있어 즉시 착지로 잡힘.
@@ -310,6 +311,105 @@ void UCharacterMovementComponent::TickFalling(float DeltaTime, const FVector& Ro
 	Updated->SetWorldLocation(LandLoc);
 	Velocity.Z = 0.0f;
 	SetMovementMode(EMovementMode::Walking);
+}
+
+bool UCharacterMovementComponent::SafeMoveUpdatedComponent(const FVector& Delta, FHitResult* OutHit)
+{
+    if (OutHit)
+    {
+        *OutHit = FHitResult();
+    }
+
+    if (Delta.Length() <= 1.e-6f)
+    {
+        return true;
+    }
+
+    USceneComponent* Updated = GetUpdatedComponent();
+    if (!Updated)
+    {
+        return false;
+    }
+
+    AActor* Owner = GetOwner();
+    if (!Owner)
+    {
+        Updated->SetWorldLocation(Updated->GetWorldLocation() + Delta);
+        return true;
+    }
+
+    UWorld* World = Owner->GetWorld();
+    if (!World)
+    {
+        Updated->SetWorldLocation(Updated->GetWorldLocation() + Delta);
+        return true;
+    }
+
+    UCapsuleComponent* Capsule = Cast<UCapsuleComponent>(Updated);
+    if (!Capsule)
+    {
+        Updated->SetWorldLocation(Updated->GetWorldLocation() + Delta);
+        return true;
+    }
+
+    const float Radius     = Capsule->GetScaledCapsuleRadius();
+    const float HalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+    if (Radius <= 0.0f || HalfHeight <= 0.0f)
+    {
+        Updated->SetWorldLocation(Updated->GetWorldLocation() + Delta);
+        return true;
+    }
+
+    ECollisionChannel TraceChannel = ECollisionChannel::Pawn;
+    if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Updated))
+    {
+        TraceChannel = Primitive->GetCollisionObjectType();
+    }
+
+    const FVector Start = Updated->GetWorldLocation();
+    const FVector End   = Start + Delta;
+    const FQuat   Rot   = Updated->GetWorldMatrix().ToQuat();
+    const FCollisionShape Shape = FCollisionShape::MakeCapsule(Radius, HalfHeight);
+
+    FHitResult Hit;
+    if (!World->PhysicsSweep(Start, End, Rot, Shape, Hit, TraceChannel, Owner))
+    {
+        Updated->SetWorldLocation(End);
+        return true;
+    }
+
+    if (OutHit)
+    {
+        *OutHit = Hit;
+    }
+
+    const FVector MoveDir = Delta.Normalized();
+    const float SafeDistance = (std::max)(0.0f, Hit.Distance - SweepPullbackDistance);
+    Updated->SetWorldLocation(Start + MoveDir * SafeDistance);
+
+    if (UPrimitiveComponent* MovingPrimitive = Cast<UPrimitiveComponent>(Updated))
+    {
+        MovingPrimitive->NotifyComponentHit(
+            MovingPrimitive,
+            Hit.HitActor,
+            Hit.HitComponent,
+            FVector::ZeroVector,
+            Hit
+        );
+    }
+
+    // 벽/천장/바닥으로 계속 밀어 넣는 속도 성분은 제거한다. 남은 접선 성분은 다음 tick에서 유지되어
+    // 최소한의 slide와 비슷하게 동작한다.
+    if (!Hit.ImpactNormal.IsNearlyZero())
+    {
+        const float VelocityIntoSurface = Velocity.Dot(Hit.ImpactNormal);
+        if (VelocityIntoSurface < 0.0f)
+        {
+            Velocity = Velocity - Hit.ImpactNormal * VelocityIntoSurface;
+        }
+    }
+
+    return false;
 }
 
 bool UCharacterMovementComponent::TraceFloor(FHitResult& OutHit) const
@@ -358,4 +458,5 @@ void UCharacterMovementComponent::Serialize(FArchive& Ar)
 	Ar << JumpZVelocity;
 	Ar << bOrientRotationToMovement;
 	Ar << RotationYawRate;
+	Ar << SweepPullbackDistance;
 }

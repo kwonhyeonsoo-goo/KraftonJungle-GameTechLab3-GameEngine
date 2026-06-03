@@ -14,6 +14,9 @@
 #include "Object/GarbageCollection.h"
 #include "Object/Object.h"
 
+#include <algorithm>
+#include <cmath>
+
 namespace
 {
 	UAnimSequenceBase* LoadByPath(const FString& Path)
@@ -77,6 +80,9 @@ void UAnimGraphInstance::NativeInitializeAnimation()
 		return;
 	}
 
+	// AnimGraph-owned 변수는 자산 기본값에서 per-instance runtime storage 로 초기화한다.
+	SyncRuntimeVariablesFromAsset(/*bResetExistingToDefaults*/true);
+
 	// Version 강제 mismatch 로 첫 컴파일 트리거. (자산이 fresh load 라면 Version 이 0 이지만,
 	// 다른 인스턴스가 이미 변경해 Version > 0 인 캐시 자산일 수도 있음 — 안전하게 강제.)
 	CompiledAssetVersion = GraphAsset->GetVersion() - 1;
@@ -103,6 +109,9 @@ void UAnimGraphInstance::RecompileTreeIfDirty()
 		return;
 	}
 	if (GraphAsset->GetVersion() == CompiledAssetVersion) return;
+
+	// Recompile 때 새로 추가된 변수는 기본값으로 채우고, 이미 게임 코드가 set 한 값은 유지한다.
+	SyncRuntimeVariablesFromAsset(/*bResetExistingToDefaults*/false);
 
 	// 노드별 SequenceRef 재해상 (per-node SequencePath > Instance.DefaultSequencePath > nullptr).
 	const FString DefaultPathStr = DefaultSequencePath.ToString();
@@ -159,6 +168,121 @@ void UAnimGraphInstance::SetGraphAsset(UAnimGraphAsset* InAsset)
 	CompiledAssetVersion = 0;
 	RootNode = nullptr;
 	OwnedNodes.clear();
+	SyncRuntimeVariablesFromAsset(/*bResetExistingToDefaults*/true);
+}
+
+FAnimGraphRuntimeVariable* UAnimGraphInstance::FindRuntimeVariable(FName VariableName)
+{
+	if (VariableName == FName::None) return nullptr;
+	for (FAnimGraphRuntimeVariable& V : RuntimeVariables)
+	{
+		if (V.VariableName == VariableName) return &V;
+	}
+	return nullptr;
+}
+
+const FAnimGraphRuntimeVariable* UAnimGraphInstance::FindRuntimeVariable(FName VariableName) const
+{
+	if (VariableName == FName::None) return nullptr;
+	for (const FAnimGraphRuntimeVariable& V : RuntimeVariables)
+	{
+		if (V.VariableName == VariableName) return &V;
+	}
+	return nullptr;
+}
+
+void UAnimGraphInstance::SyncRuntimeVariablesFromAsset(bool bResetExistingToDefaults)
+{
+	if (!IsValid(GraphAsset))
+	{
+		RuntimeVariables.clear();
+		return;
+	}
+
+	// Asset 에서 삭제된 변수는 runtime 에서도 제거.
+	RuntimeVariables.erase(std::remove_if(RuntimeVariables.begin(), RuntimeVariables.end(),
+		[this](const FAnimGraphRuntimeVariable& RuntimeVar)
+		{
+			return !GraphAsset || !GraphAsset->FindVariable(RuntimeVar.VariableName);
+		}), RuntimeVariables.end());
+
+	for (const FAnimGraphVariable& Decl : GraphAsset->GetVariables())
+	{
+		if (Decl.VariableName == FName::None) continue;
+		FAnimGraphRuntimeVariable* Existing = FindRuntimeVariable(Decl.VariableName);
+		if (!Existing)
+		{
+			FAnimGraphRuntimeVariable RuntimeVar;
+			RuntimeVar.VariableName = Decl.VariableName;
+			RuntimeVar.Type = Decl.Type;
+			RuntimeVar.Value = Decl.DefaultValue;
+			RuntimeVariables.push_back(RuntimeVar);
+		}
+		else
+		{
+			Existing->Type = Decl.Type;
+			if (bResetExistingToDefaults)
+			{
+				Existing->Value = Decl.DefaultValue;
+			}
+		}
+	}
+}
+
+bool UAnimGraphInstance::SetGraphVariableFloat(FName VariableName, float Value)
+{
+	SyncRuntimeVariablesFromAsset(/*bResetExistingToDefaults*/false);
+	FAnimGraphRuntimeVariable* V = FindRuntimeVariable(VariableName);
+	if (!V) return false;
+	V->Value = Value;
+	return true;
+}
+
+bool UAnimGraphInstance::SetGraphVariableBool(FName VariableName, bool bValue)
+{
+	SyncRuntimeVariablesFromAsset(/*bResetExistingToDefaults*/false);
+	FAnimGraphRuntimeVariable* V = FindRuntimeVariable(VariableName);
+	if (!V) return false;
+	V->Value = bValue ? 1.0f : 0.0f;
+	return true;
+}
+
+bool UAnimGraphInstance::SetGraphVariableInt(FName VariableName, int32 Value)
+{
+	SyncRuntimeVariablesFromAsset(/*bResetExistingToDefaults*/false);
+	FAnimGraphRuntimeVariable* V = FindRuntimeVariable(VariableName);
+	if (!V) return false;
+	V->Value = static_cast<float>(Value);
+	return true;
+}
+
+bool UAnimGraphInstance::GetGraphVariableAsFloat(FName VariableName, float& OutValue) const
+{
+	const FAnimGraphRuntimeVariable* V = FindRuntimeVariable(VariableName);
+	if (!V) return false;
+	OutValue = V->Value;
+	return true;
+}
+
+bool UAnimGraphInstance::GetGraphVariableFloat(FName VariableName, float& OutValue) const
+{
+	return GetGraphVariableAsFloat(VariableName, OutValue);
+}
+
+bool UAnimGraphInstance::GetGraphVariableBool(FName VariableName, bool& bOutValue) const
+{
+	float V = 0.0f;
+	if (!GetGraphVariableAsFloat(VariableName, V)) return false;
+	bOutValue = V >= 0.5f;
+	return true;
+}
+
+bool UAnimGraphInstance::GetGraphVariableInt(FName VariableName, int32& OutValue) const
+{
+	float V = 0.0f;
+	if (!GetGraphVariableAsFloat(VariableName, V)) return false;
+	OutValue = static_cast<int32>(std::floor(V + 0.5f));
+	return true;
 }
 
 void UAnimGraphInstance::AddReferencedObjects(FReferenceCollector& Collector)

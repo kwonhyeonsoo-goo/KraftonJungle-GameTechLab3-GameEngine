@@ -26,6 +26,7 @@ public:
 
     virtual void InitDefaultComponents(const FString& SkeletalMeshFileName);
     void BeginPlay() override;
+    void Tick(float DeltaTime) override;
     void PostDuplicate() override;
 
 protected:
@@ -47,6 +48,9 @@ public:
 protected:
     void SetupInputComponent() override;
     void RebindVehicleComponents();
+    void UpdateVehicleCameraControlRotation();
+    void UpdateVehicleCameraReturn(float DeltaTime);
+    float GetVehicleCameraBaseYaw() const;
 
 protected:
     TWeakObjectPtr<USkeletalMeshComponent> Mesh = nullptr;
@@ -57,4 +61,40 @@ protected:
 
     UPROPERTY(Edit, Save, Category="Vehicle|Input", DisplayName="Auto Vehicle Input")
     bool bAutoInputVehicle = true;
+
+    UPROPERTY(Edit, Save, Category="Vehicle|Camera", DisplayName="Auto Vehicle Camera Input")
+    bool bAutoInputVehicleCamera = true;
+    UPROPERTY(Edit, Save, Category="Vehicle|Camera", DisplayName="Enable Mouse Look")
+    bool bEnableVehicleMouseLook = true;
+    UPROPERTY(Edit, Save, Category="Vehicle|Camera", DisplayName="Mouse Sensitivity", Min=0.0f, Max=10.0f, Speed=0.01f)
+    float VehicleMouseSensitivity = 0.10f;
+    UPROPERTY(Edit, Save, Category="Vehicle|Camera", DisplayName="Default Camera Pitch", Min=-89.0f, Max=89.0f, Speed=0.1f)
+    float VehicleDefaultCameraPitch = 10.0f;
+    UPROPERTY(Edit, Save, Category="Vehicle|Camera", DisplayName="Min Camera Pitch", Min=-89.0f, Max=89.0f, Speed=0.1f)
+    float VehicleMinCameraPitch = -5.0f;
+    UPROPERTY(Edit, Save, Category="Vehicle|Camera", DisplayName="Max Camera Pitch", Min=-89.0f, Max=89.0f, Speed=0.1f)
+    float VehicleMaxCameraPitch = 25.0f;
+    UPROPERTY(Edit, Save, Category="Vehicle|Camera", DisplayName="Max Yaw Look Offset", Min=0.0f, Max=180.0f, Speed=1.0f)
+    float VehicleMaxCameraYawOffset = 135.0f;
+    UPROPERTY(Edit, Save, Category="Vehicle|Camera", DisplayName="Invert Mouse Y")
+    bool bInvertVehicleMouseY = false;
+    UPROPERTY(Edit, Save, Category="Vehicle|Camera", DisplayName="Auto Return Camera")
+    bool bAutoReturnVehicleCamera = true;
+    UPROPERTY(Edit, Save, Category="Vehicle|Camera", DisplayName="Camera Return Delay", Min=0.0f, Max=5.0f, Speed=0.01f)
+    float VehicleCameraReturnDelay = 1.5f;
+    UPROPERTY(Edit, Save, Category="Vehicle|Camera", DisplayName="Yaw Return Speed", Min=0.0f, Max=30.0f, Speed=0.1f)
+    float VehicleCameraYawReturnSpeed = 1.0f;
+    UPROPERTY(Edit, Save, Category="Vehicle|Camera", DisplayName="Pitch Return Speed", Min=0.0f, Max=30.0f, Speed=0.1f)
+    float VehicleCameraPitchReturnSpeed = 4.0f;
+    UPROPERTY(Edit, Save, Category="Vehicle|Camera", DisplayName="Moving Return Speed Multiplier", Min=1.0f, Max=10.0f, Speed=0.1f)
+    float VehicleCameraMovingReturnMultiplier = 1.75f;
+    UPROPERTY(Edit, Save, Category="Vehicle|Camera", DisplayName="Moving Return Speed Threshold", Min=0.0f, Max=100.0f, Speed=0.1f)
+    float VehicleCameraMovingReturnSpeedThreshold = 0.5f;
+
+    float VehicleCameraYawOffset = 0.0f;
+    float VehicleCameraPitch = 10.0f;
+    float VehicleCameraTimeSinceLookInput = 1000.0f;
+    bool bVehicleCameraLookInputThisFrame = false;
+    float LastVehicleThrottleInput = 0.0f;
+    float LastVehicleSteeringInput = 0.0f;
 };

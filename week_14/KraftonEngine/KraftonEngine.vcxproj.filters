@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Intermediate">
@@ -15,6 +15,18 @@
     </Filter>
     <Filter Include="Shaders\Editor">
       <UniqueIdentifier>{f3afd37d-e427-b6e6-d610-351b0cbf0f39}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\Generated">
+      <UniqueIdentifier>{89cde20b-0d22-3693-892a-01ff6973b7f3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\Generated\Materials">
+      <UniqueIdentifier>{3de592bd-0830-b23c-449c-06a97393139e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\Generated\Preview">
+      <UniqueIdentifier>{06e64ccf-c33d-546a-03f7-b51d5cb948fd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\Generated\Preview\Materials">
+      <UniqueIdentifier>{c3c91e2a-ea29-bc50-1a55-9eae5443bc0f}</UniqueIdentifier>
     </Filter>
     <Filter Include="Shaders\Geometry">
       <UniqueIdentifier>{a95f0cc6-e11f-2881-9524-de9a7fdc530e}</UniqueIdentifier>
@@ -681,6 +693,45 @@
     <FxCompile Include="Shaders\Editor\ViewModeMesh.hlsl">
       <Filter>Shaders\Editor</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Generated\Materials\AdditiveDecal_Decal.hlsl">
+      <Filter>Shaders\Generated\Materials</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generated\Materials\AdditiveDecal_Surface.hlsl">
+      <Filter>Shaders\Generated\Materials</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generated\Materials\AdditiveMat_Decal.hlsl">
+      <Filter>Shaders\Generated\Materials</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generated\Materials\AdditiveMat_Surface.hlsl">
+      <Filter>Shaders\Generated\Materials</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generated\Materials\DefaultDecal_Surface.hlsl">
+      <Filter>Shaders\Generated\Materials</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generated\Materials\NewMaterial_1_Decal.hlsl">
+      <Filter>Shaders\Generated\Materials</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generated\Materials\NewMaterial_Surface.hlsl">
+      <Filter>Shaders\Generated\Materials</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generated\Materials\acc.002_Surface.hlsl">
+      <Filter>Shaders\Generated\Materials</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generated\Materials\b0.002_Surface.hlsl">
+      <Filter>Shaders\Generated\Materials</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generated\Materials\e.002_Surface.hlsl">
+      <Filter>Shaders\Generated\Materials</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generated\Materials\m.002_Surface.hlsl">
+      <Filter>Shaders\Generated\Materials</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generated\Materials\water_Surface.hlsl">
+      <Filter>Shaders\Generated\Materials</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generated\Preview\Materials\acc.002_Surface.hlsl">
+      <Filter>Shaders\Generated\Preview\Materials</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\Geometry\Decal.hlsl">
       <Filter>Shaders\Geometry</Filter>
     </FxCompile>
@@ -738,6 +789,9 @@
     <FxCompile Include="Shaders\PostProcess\CameraVignette.hlsl">
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\PostProcess\DebugViewModeResolve.hlsl">
+      <Filter>Shaders\PostProcess</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\PostProcess\DoFBackgroundBlur.hlsl">
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
@@ -745,9 +799,6 @@
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\PostProcess\DoFCoCDebug.hlsl">
-      <Filter>Shaders\PostProcess</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\PostProcess\DebugViewModeResolve.hlsl">
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\PostProcess\DoFComposite.hlsl">
@@ -1072,6 +1123,9 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\CameraShake\CameraShakeManager.cpp">
       <Filter>Source\Engine\CameraShake</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Cloth\ClothCollisionGatherer.cpp">
+      <Filter>Source\Engine\Cloth</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Cloth\NvClothBackend.cpp">
       <Filter>Source\Engine\Cloth</Filter>
@@ -1411,6 +1465,9 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Input\InputSystem.cpp">
       <Filter>Source\Engine\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Lua\LuaDebugManager.cpp">
+      <Filter>Source\Engine\Lua</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Lua\LuaScriptManager.cpp">
       <Filter>Source\Engine\Lua</Filter>
@@ -1811,6 +1868,9 @@
     <ClCompile Include="Source\Engine\Render\RenderPass\AdditiveDecalPass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\RenderPass\DebugViewModeResolvePass.cpp">
+      <Filter>Source\Engine\Render\RenderPass</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\RenderPass\DecalPass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
@@ -1851,9 +1911,6 @@
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\RenderPass\LightCullingPass.cpp">
-      <Filter>Source\Engine\Render\RenderPass</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Render\RenderPass\DebugViewModeResolvePass.cpp">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\RenderPass\OpaquePass.cpp">
@@ -2396,6 +2453,12 @@
     <ClInclude Include="Source\Engine\Cloth\ClothBackend.h">
       <Filter>Source\Engine\Cloth</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Cloth\ClothCollisionGatherer.h">
+      <Filter>Source\Engine\Cloth</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Cloth\ClothCollisionTypes.h">
+      <Filter>Source\Engine\Cloth</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Cloth\NvClothBackend.h">
       <Filter>Source\Engine\Cloth</Filter>
     </ClInclude>
@@ -2773,6 +2836,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Input\InputSystem.h">
       <Filter>Source\Engine\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Lua\LuaDebugManager.h">
+      <Filter>Source\Engine\Lua</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Lua\LuaScriptManager.h">
       <Filter>Source\Engine\Lua</Filter>
@@ -3311,6 +3377,9 @@
     <ClInclude Include="Source\Engine\Render\RenderPass\AdditiveDecalPass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\RenderPass\DebugViewModeResolvePass.h">
+      <Filter>Source\Engine\Render\RenderPass</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\RenderPass\DecalPass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
@@ -3351,9 +3420,6 @@
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\RenderPass\LightCullingPass.h">
-      <Filter>Source\Engine\Render\RenderPass</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Render\RenderPass\DebugViewModeResolvePass.h">
       <Filter>Source\Engine\Render\RenderPass</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\RenderPass\OpaquePass.h">

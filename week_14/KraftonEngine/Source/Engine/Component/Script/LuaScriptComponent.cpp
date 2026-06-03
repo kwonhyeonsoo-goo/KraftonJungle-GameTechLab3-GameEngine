@@ -5,6 +5,7 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/Level.h"
 #include "Lua/LuaScriptManager.h"
+#include "Lua/LuaDebugManager.h"
 #include "Object/Reflection/ObjectFactory.h"
 #include "Object/GarbageCollection.h"
 #include "Serialization/Archive.h"
@@ -89,6 +90,7 @@ void ULuaScriptComponent::InitializeLua()
 	{
 		sol::error Err = Result;
 		UE_LOG("Failed to load Lua script %s: %s", ScriptFile.c_str(), Err.what());
+		FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 		ClearLuaRuntime();
 		return;
 	}
@@ -115,6 +117,7 @@ void ULuaScriptComponent::ReloadScript()
 		{
 			sol::error Err = Result;
 			UE_LOG("Lua BeginPlay error in %s: %s", ScriptFile.c_str(), Err.what());
+			FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 		}
 	}
 
@@ -137,6 +140,7 @@ void ULuaScriptComponent::BeginPlay()
 		{
 			sol::error Err = Result;
 			UE_LOG("Lua BeginPlay error in %s: %s", ScriptFile.c_str(), Err.what());
+			FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 		}
 	}
 
@@ -178,6 +182,7 @@ void ULuaScriptComponent::InvokeLuaEndPlay()
 	{
 		sol::error Err = Result;
 		UE_LOG("Lua EndPlay error in %s: %s", ScriptFile.c_str(), Err.what());
+		FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 	}
 }
 
@@ -312,6 +317,7 @@ void ULuaScriptComponent::HandleBeginOverlap(
 		{
 			sol::error Err = Result;
 			UE_LOG("Lua OnOverlap error in %s: %s", ScriptFile.c_str(), Err.what());
+			FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 		}
 	}
 }
@@ -337,6 +343,7 @@ void ULuaScriptComponent::HandleEndOverlap(
 		{
 			sol::error Err = Result;
 			UE_LOG("Lua OnEndOverlap error in %s: %s", ScriptFile.c_str(), Err.what());
+			FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 		}
 	}
 }
@@ -363,6 +370,7 @@ void ULuaScriptComponent::HandleHit(
 		{
 			sol::error Err = Result;
 			UE_LOG("Lua OnHit error in %s: %s", ScriptFile.c_str(), Err.what());
+			FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 		}
 	}
 }
@@ -387,6 +395,7 @@ void ULuaScriptComponent::HandleEndHit(
 		{
 			sol::error Err = Result;
 			UE_LOG("Lua OnEndHit error in %s: %s", ScriptFile.c_str(), Err.what());
+			FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 		}
 	}
 }
@@ -414,6 +423,7 @@ bool ULuaScriptComponent::CallFunction(const FString& FunctionName)
 		{
 			sol::error Err = Result;
 			UE_LOG("Lua %s error in %s: %s", FunctionName.c_str(), ScriptFile.c_str(), Err.what());
+			FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 		}
 	}
 	return bOk;
@@ -434,6 +444,7 @@ void ULuaScriptComponent::DispatchOverlap(AActor* OtherActor)
 		{
 			sol::error Err = Result;
 			UE_LOG("Lua OnOverlap error in %s: %s", ScriptFile.c_str(), Err.what());
+			FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 		}
 	}
 }
@@ -449,6 +460,7 @@ void ULuaScriptComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 		{
 			sol::error Err = Result;
 			UE_LOG("Lua Tick error in %s: %s", ScriptFile.c_str(), Err.what());
+			FLuaDebugManager::OnLuaError(ScriptFile, Err.what(), false);
 		}
 	}
 }

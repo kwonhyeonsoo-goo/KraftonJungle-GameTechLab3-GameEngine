@@ -17,6 +17,7 @@ public:
 
 	void InitDefaultComponents();
 
+	UFUNCTION(Pure, Category="Actor|Components")
 	UDecalComponent* GetDecalComponent() const { return DecalComponent; }
 
 private:

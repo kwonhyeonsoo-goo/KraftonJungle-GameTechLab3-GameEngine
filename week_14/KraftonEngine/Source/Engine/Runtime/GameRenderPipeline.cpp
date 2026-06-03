@@ -117,12 +117,26 @@ void FGameRenderPipeline::BuildFrame(FViewport* VP, const FMinimalViewInfo& POV,
 		Frame.CameraVignette.Intensity = CamManager->GetVignetteIntensity();
 		Frame.CameraVignette.Radius = CamManager->GetVignetteRadius();
 		Frame.CameraVignette.Softness = CamManager->GetVignetteSoftness();
+		Frame.CameraVignette.Color = CamManager->GetVignetteColor();
+	}
+
+	if (CamManager && CamManager->IsDepthOfFieldEnabled())
+	{
+		FViewportRenderOptions Opts = Frame.RenderOptions;
+		Opts.ShowFlags.bDoF = true;
+		Opts.DoFFocusDistance = CamManager->GetDoFFocusDistance();
+		Opts.DoFFocusRange = CamManager->GetDoFFocusRange();
+		Opts.DoFMaxBlurRadius = CamManager->GetDoFMaxBlurRadius();
+		Opts.DoFBokehRadiusThreshold = CamManager->GetDoFBokehRadiusThreshold();
+		Opts.DoFBokehLumaThreshold = CamManager->GetDoFBokehLumaThreshold();
+		Opts.DoFBokehIntensity = CamManager->GetDoFBokehIntensity();
+		Frame.SetRenderOptions(Opts);
 	}
 
 	UCameraComponent* ActiveCamera = CamManager ? CamManager->GetActiveCamera() : nullptr;
-	if (UCineCameraComponent* CineCamera = Cast<UCineCameraComponent>(ActiveCamera))
+	if (ActiveCamera)
 	{
-		const FCineLetterboxSettings& LetterboxSettings = CineCamera->GetLetterboxSettings();
+		const FCameraLetterboxState& LetterboxSettings = ActiveCamera->GetLetterboxSettings();
 		Frame.CameraLetterbox.bEnabled = LetterboxSettings.bEnabled;
 		if (Frame.CameraLetterbox.bEnabled)
 		{

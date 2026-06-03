@@ -38,6 +38,28 @@ enum class EAnimGraphNodeType : uint8
 	RefPose,              // FAnimNode_RefPose — mesh ref pose 출력. 보통 Slot/LayeredBlend 의 fallback 입력으로.
 };
 
+
+// AnimGraph-owned variable declaration. UE Anim Blueprint 의 "My Blueprint > Variables"에 해당한다.
+// VariableGet / Transition Rule Graph 는 먼저 이 선언을 찾고, 없으면 OwnerClass UPROPERTY 로 fallback 한다.
+struct FAnimGraphVariable
+{
+	FName             VariableName;
+	EAnimGraphPinType Type         = EAnimGraphPinType::Float; // Float / Bool / Int 지원.
+	float             DefaultValue = 0.0f;                     // Bool 은 0/1, Int 는 float 저장 후 int cast.
+	FString           Category;
+
+	friend FArchive& operator<<(FArchive& Ar, FAnimGraphVariable& Var);
+};
+
+// UAnimGraphInstance 의 per-instance runtime 변수 값. Asset DefaultValue 에서 초기화되고,
+// 게임 코드 / Lua / preview UI 가 SetGraphVariable* 로 매 frame 갱신한다.
+struct FAnimGraphRuntimeVariable
+{
+	FName             VariableName;
+	EAnimGraphPinType Type  = EAnimGraphPinType::Float;
+	float             Value = 0.0f;
+};
+
 struct FAnimGraphPin
 {
 	// 같은 자산 안에서 Node/Pin/Link 가 같은 id 공간을 공유 (imgui-node-editor 가
@@ -74,6 +96,21 @@ enum class ETransitionOp : uint8
 	NotEqual
 };
 
+// State Machine transition rule preset. UE 의 Transition Rule Graph 전체를 그대로 복제하기 전 단계로,
+// 실제 런타임 평가가 가능한 핵심 rule node 들을 데이터화한다.
+// FloatCompare 를 0 으로 유지해 기존 저장 데이터(VariableName/Op/Threshold 기반)와 호환.
+enum class ETransitionRuleKind : uint8
+{
+	FloatCompare,          // Property Access float/int/bool -> Var Op Threshold
+	BoolProperty,          // Property Access bool-like -> expected true/false (Threshold >= 0.5 == true)
+	TimeRemaining,         // Current state time remaining seconds <= Threshold
+	TimeRemainingRatio,    // Current state time remaining ratio <= Threshold
+	TimeElapsed,           // Current state elapsed seconds >= Threshold
+	AutomaticSequenceEnd,  // Non-looping sequence reached the end
+	AlwaysTrue,            // Explicit unconditional rule
+	AlwaysFalse            // Explicit disabled rule
+};
+
 struct FAnimGraphState
 {
 	FName    StateName;
@@ -92,12 +129,13 @@ struct FAnimGraphState
 
 struct FAnimGraphTransition
 {
-	FName         FromStateName; // FName::None == AnyState
-	FName         ToStateName;
-	FName         VariableName;  // OwnerClass 의 UPROPERTY 이름 (Float/Int/Bool 등)
-	ETransitionOp Op            = ETransitionOp::Greater;
-	float         Threshold     = 0.0f;
-	float         BlendTime     = 0.2f;
+	FName                 FromStateName; // FName::None == AnyState
+	FName                 ToStateName;
+	FName                 VariableName;  // OwnerClass 의 UPROPERTY 이름 (Float/Int/Bool 등)
+	ETransitionOp         Op            = ETransitionOp::Greater;
+	float                 Threshold     = 0.0f;
+	float                 BlendTime     = 0.2f;
+	ETransitionRuleKind   RuleKind      = ETransitionRuleKind::FloatCompare;
 
 	friend FArchive& operator<<(FArchive& Ar, FAnimGraphTransition& T);
 };

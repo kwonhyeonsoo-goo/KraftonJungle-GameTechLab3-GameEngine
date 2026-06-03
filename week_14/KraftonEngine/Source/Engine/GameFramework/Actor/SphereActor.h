@@ -17,6 +17,7 @@ public:
 	void PostDuplicate() override;
 	void BeginPlay() override;
 
+	UFUNCTION(Pure, Category="Actor|Components")
 	USphereComponent* GetSphereComponent() const { return SphereComponent; }
 
 private:

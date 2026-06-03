@@ -42,10 +42,13 @@ public:
 	virtual void OnPossessedPawnEntered(APawn* Pawn) {}
 	virtual void OnPossessedPawnExited(APawn* Pawn) {}
 
+	UFUNCTION(Pure, Category="Trigger")
 	UBoxComponent* GetTriggerBox() const { return TriggerBox; }
 
 	// 게임모드가 트리거 종류를 구분할 때 사용 (씬에 직렬화).
+	UFUNCTION(Pure, Category="Trigger")
 	FName GetTriggerTag() const { return TriggerTag; }
+	UFUNCTION(Callable, Category="Trigger")
 	void SetTriggerTag(const FName& InTag) { TriggerTag = InTag; }
 
 protected:

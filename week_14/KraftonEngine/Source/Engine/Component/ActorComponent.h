@@ -45,7 +45,9 @@ public:
 	bool IsEditorOnlyComponent() const { return IsEditorOnly(); }
 	void SetEditorOnlyComponent(bool bInEditorOnly) { SetEditorOnly(bInEditorOnly); }
 
+	UFUNCTION(Pure, Category="Component|Editor")
 	bool IsHiddenInComponentTree() const { return bHiddenInComponentTree; }
+	UFUNCTION(Callable, Category="Component|Editor")
 	void SetHiddenInComponentTree(bool bHidden) { bHiddenInComponentTree = bHidden; }
 
 	UFUNCTION(Callable, Exec, Category="Component|Activation")

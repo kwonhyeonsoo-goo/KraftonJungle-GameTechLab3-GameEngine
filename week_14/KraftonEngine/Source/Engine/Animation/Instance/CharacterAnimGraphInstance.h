@@ -29,16 +29,26 @@ public:
 	void NativeUpdateAnimation(float DeltaSeconds) override;
 	void Serialize(FArchive& Ar)                   override;
 
-	// 외부 push 변수 — 그래프의 VariableGet 노드가 reflection 으로 읽음.
-	// Owner UCharacterMovementComponent::GetSpeed (Velocity.Length()) — yui_character.lua 의
-	// self.Speed = Anim.get_owner_speed() 와 동등.
+	// CharacterMovement 에서 계산되는 자동 관측값.
+	// 중요: 이 값들은 reflected UPROPERTY fallback 용이다. 같은 이름의 AnimGraph 변수를
+	// My Blueprint - Variables 에 선언하면 그 변수는 Lua BP / 게임 코드가 수동 제어하고,
+	// 아래 reflected 값보다 우선된다. 즉 C++ 자동 갱신이 BP 입력을 덮어쓰지 않는다.
 	UPROPERTY(Edit, Category="Animation|Character", DisplayName="Speed", Min=0.0f, Max=100.0f, Speed=0.5f)
 	float Speed = 0.0f;
 
-	// Owner UCharacterMovementComponent::IsFalling — yui_character.lua 의
-	// Anim.is_owner_falling() 와 동등. Top-SM 의 Locomotion↔Jump 전이 condition 용.
-	// (V1 transition rule 은 float 비교만 지원 — bool 도 MakeFloatReader 가 0/1 cast 하므로
-	// "bIsFalling > 0.5" 또는 "bIsFalling == 1" 식으로 비교.)
+	UPROPERTY(Edit, Category="Animation|Character", DisplayName="Ground Speed", Min=0.0f, Max=100.0f, Speed=0.5f)
+	float GroundSpeed = 0.0f;
+
+	UPROPERTY(Edit, Category="Animation|Character", DisplayName="Direction", Min=-180.0f, Max=180.0f, Speed=1.0f)
+	float Direction = 0.0f;
+
+	UPROPERTY(Edit, Category="Animation|Character", DisplayName="Should Move")
+	bool ShouldMove = false;
+
 	UPROPERTY(Edit, Category="Animation|Character", DisplayName="Is Falling")
+	bool IsFalling = false;
+
+	// 기존 그래프 호환용 별칭. 기존 rule 이 bIsFalling 을 읽는 경우도 계속 동작한다.
+	UPROPERTY(Edit, Category="Animation|Character", DisplayName="bIsFalling")
 	bool bIsFalling = false;
 };

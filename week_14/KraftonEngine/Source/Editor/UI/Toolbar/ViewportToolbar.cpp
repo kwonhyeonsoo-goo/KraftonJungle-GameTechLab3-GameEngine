@@ -717,6 +717,7 @@ void FViewportToolbar::RenderShowFlags(const FToolbarRenderState& State)
 			ImGui::TextUnformatted("Physics Asset");
 			ImGui::Checkbox("Physics Asset Shapes", &RenderOptions.ShowFlags.bPhysicsAssetShapes);
 			ImGui::Checkbox("Physics Asset Constraints", &RenderOptions.ShowFlags.bPhysicsAssetConstraints);
+			ImGui::Checkbox("Physics Asset Body Skeleton", &RenderOptions.ShowFlags.bPhysicsAssetBodySkeleton);
 		}
 
 		ImGui::EndPopup();

@@ -25,6 +25,7 @@ public:
 	void InitDefaultComponents(const FString& StaticMeshFileName = "Content/Data/BasicShape/Cube.obj");
 	void PostDuplicate() override;
 
+	UFUNCTION(Pure, Category="Actor|Components")
 	UStaticMeshComponent* GetStaticMeshComponent() const { return StaticMeshComponent; }
 
 private:

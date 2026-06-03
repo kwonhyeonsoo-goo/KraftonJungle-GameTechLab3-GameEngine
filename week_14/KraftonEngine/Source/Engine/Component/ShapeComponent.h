@@ -18,8 +18,10 @@ public:
 	bool SupportsOutline() const override { return false; }
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
 
+	UFUNCTION(Pure, Category="Shape")
 	bool IsDrawOnlyIfSelected() const { return bDrawOnlyIfSelected; }
-	const FVector4& GetShapeColorVec4() const { return ShapeColor; }
+	UFUNCTION(Pure, Category="Shape")
+	FVector4 GetShapeColorVec4() const { return ShapeColor; }
 
 protected:
 	FColor GetShapeColor() const

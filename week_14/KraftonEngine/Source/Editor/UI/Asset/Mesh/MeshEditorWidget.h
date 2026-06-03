@@ -44,7 +44,7 @@ struct FAnimationTabState
 	TSet<UAnimMontage*>    DirtyMontages;
 
 	float         AnimListWidth                = 200.0f;
-	float         AnimDetailsWidth             = 280.0f;
+	float         AnimDetailsWidth             = 380.0f;
 
 	FFbxAnimationImportDialogState AnimationImportDialog;
 };

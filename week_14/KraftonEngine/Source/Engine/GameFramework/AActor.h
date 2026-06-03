@@ -32,6 +32,7 @@ public:
 	virtual void EndPlay();
 	virtual void RouteActorDestroyed();
 
+	UFUNCTION(Pure, Category="Actor|Lifecycle")
 	bool HasActorBegunPlay() const { return bActorHasBegunPlay; }
 
 	void OnPreSave(FArchive& Ar) override;
@@ -59,6 +60,7 @@ public:
 	void RemoveComponent(UActorComponent* Component);
 
 	// 외부에서 생성된 컴포넌트를 등록 (역직렬화 등)
+	UFUNCTION(Callable, Category="Actor|Components")
 	void RegisterComponent(UActorComponent* Comp);
 
 	UFUNCTION(Callable, Category="Actor|Components")
@@ -124,8 +126,10 @@ public:
 	UFUNCTION(Pure, Category="Actor|Gameplay")
 	FVector GetVelocity() const;
 
+	UFUNCTION(Pure, Category="Actor|World")
 	UWorld* GetWorld() const;
 	UWorld* GetWorldEvenIfPendingKill() const;
+	UFUNCTION(Pure, Category="Actor|World")
 	ULevel* GetLevel() const;
 
 	UFUNCTION(Pure, Category="Actor|Visibility")
@@ -152,6 +156,8 @@ public:
 	bool bNeedsTick = true;
 	bool bTickInEditor = false;
 
+	UFUNCTION(Pure, Category="Actor|Components")
+	TArray<UPrimitiveComponent*> GetPrimitiveComponentsValue() const { return GetPrimitiveComponents(); }
 	const TArray<UPrimitiveComponent*>& GetPrimitiveComponents() const;
 	bool IsQueuedForPartitionUpdate() const { return bQueuedForPartitionUpdate; }
 	void SetQueuedForPartitionUpdate(bool bQueued) { bQueuedForPartitionUpdate = bQueued; }

@@ -172,6 +172,18 @@ void FSlateApplication::ReleaseMouse(FViewportClient* Client)
 	}
 }
 
+
+void FSlateApplication::ClearInputOwner()
+{
+	HoveredClient = nullptr;
+	FocusedClient = nullptr;
+	CapturedClient = nullptr;
+	for (FViewportInfo& Info : RegisteredViewports)
+	{
+		Info.bImGuiHovered = false;
+	}
+}
+
 bool FSlateApplication::IsViewportRegistered(FViewportClient* Client) const
 {
 	for (const FViewportInfo& Info : RegisteredViewports)

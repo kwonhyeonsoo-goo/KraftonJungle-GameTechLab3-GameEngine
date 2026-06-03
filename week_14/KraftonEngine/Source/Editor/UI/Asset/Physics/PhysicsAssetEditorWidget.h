@@ -16,6 +16,7 @@ struct ID3D11Device;
 struct FReferenceSkeleton;
 struct FPhysicsAssetBodySetup;
 struct FPhysicsAssetConstraintSetup;
+struct FPhysicsAssetPreviewPoseCache;
 struct FPhysicsAssetShapeSetup;
 struct FShowFlags;
 
@@ -65,12 +66,16 @@ public:
     void StopEditorSimulation(UWorld* PreviewWorld, USkeletalMeshComponent* PreviewComponent, bool bResetPose);
     bool IsEditorSimulationActive() const { return bEditorSimulationActive; }
     bool SaveEditedPhysicsAsset();
+    bool ExportPhysicsAssetDebugJson(UPhysicsAsset* PhysicsAsset, FString* OutPath = nullptr);
     bool HasUnsavedChanges() const { return IsDirty(); }
     int32 GetSelectedBodyIndex() const { return SelectedBodyIndex; }
     int32 GetSelectedShapeIndex() const { return SelectedShapeIndex; }
     int32 GetSelectedConstraintIndex() const { return SelectedConstraintIndex; }
     EPhysicsAssetConstraintFrameTarget GetSelectedConstraintGizmoFrame() const { return SelectedConstraintGizmoFrame; }
     void SelectPhysicsShapeFromViewport(UPhysicsAsset* PhysicsAsset, int32 BodyIndex, int32 ShapeIndex);
+    void SelectPhysicsConstraintFromViewport(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex);
+    bool ConsumeConstraintGraphViewportFocusRequest();
+    bool DeleteSelectedPhysicsAssetElement(UPhysicsAsset* PhysicsAsset);
     void NotifyViewportGizmoModified();
 
     FString GetDocumentTitle() const override;
@@ -89,6 +94,11 @@ private:
     void RenderAssetSummary(UPhysicsAsset* PhysicsAsset);
     void RenderSkeletonPhysicsTree(UPhysicsAsset* PhysicsAsset, USkeletalMesh* PreviewMesh);
     void RenderPhysicsBoneTree(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton, int32 BoneIndex);
+    void RenderBodySkeletonDebug(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMeshComponent* PreviewComponent,
+        UWorld* PreviewWorld,
+        const FPhysicsAssetPreviewPoseCache* PoseCache = nullptr);
     void RenderPhysicsBoneContextMenu(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton, int32 BoneIndex);
     void RenderSelectedBoneActionPanel(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton);
     void RenderUnboundPhysicsSetups(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton);
@@ -102,24 +112,38 @@ private:
     void RenderConstraintDetails(UPhysicsAsset* PhysicsAsset, FPhysicsAssetConstraintSetup& ConstraintSetup);
     void RenderValidationPanel();
     void RenderConstraintGraphPanel(UPhysicsAsset* PhysicsAsset);
-    void RenderBodyDebug(UPhysicsAsset* PhysicsAsset, USkeletalMeshComponent* PreviewComponent, UWorld* PreviewWorld);
-    void RenderConstraintDebug(UPhysicsAsset* PhysicsAsset, USkeletalMeshComponent* PreviewComponent, UWorld* PreviewWorld);
+    void RenderBodyDebug(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMeshComponent* PreviewComponent,
+        UWorld* PreviewWorld,
+        const FPhysicsAssetPreviewPoseCache* PoseCache = nullptr);
+    void RenderConstraintDebug(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMeshComponent* PreviewComponent,
+        UWorld* PreviewWorld,
+        const FPhysicsAssetPreviewPoseCache* PoseCache = nullptr);
     void DrawBodySetupDebug(
         UPhysicsAsset* PhysicsAsset,
         USkeletalMeshComponent* PreviewComponent,
         UWorld* PreviewWorld,
         int32 BodyIndex,
-        const FPhysicsAssetBodySetup& BodySetup);
+        const FPhysicsAssetBodySetup& BodySetup,
+        const FPhysicsAssetPreviewPoseCache* PoseCache = nullptr);
     void DrawConstraintSetupDebug(
         UPhysicsAsset* PhysicsAsset,
         USkeletalMeshComponent* PreviewComponent,
         UWorld* PreviewWorld,
         int32 ConstraintIndex,
-        const FPhysicsAssetConstraintSetup& ConstraintSetup);
+        const FPhysicsAssetConstraintSetup& ConstraintSetup,
+        const FPhysicsAssetPreviewPoseCache* PoseCache = nullptr);
 
     void SelectBoneInPhysicsTree(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton, int32 BoneIndex);
     void SelectBodySetup(UPhysicsAsset* PhysicsAsset, int32 BodyIndex, int32 TreeBoneIndex);
     void SelectConstraintSetup(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex, int32 TreeBoneIndex);
+    void SelectBodySetupFromConstraintGraph(UPhysicsAsset* PhysicsAsset, int32 BodyIndex);
+    void SelectConstraintSetupFromConstraintGraph(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex);
+    void SyncConstraintGraphSelectionFromNodeEditor(UPhysicsAsset* PhysicsAsset);
+    void SelectCurrentConstraintGraphNode(UPhysicsAsset* PhysicsAsset, bool bNavigateToSelection);
     int32 FindPreviewBoneIndexByName(const FName& BoneName) const;
 
     void AddDefaultBody(UPhysicsAsset* PhysicsAsset);
@@ -149,9 +173,14 @@ private:
     ax::NodeEditor::EditorContext* ConstraintGraphContext = nullptr;
     bool bPendingClose = false;
     bool bConstraintGraphLayoutDirty = true;
+    bool bPendingConstraintGraphNavigateToSelection = false;
+    bool bPendingConstraintGraphViewportFocusRequest = false;
     bool bPhysicsTreePanelShowsBodies = false;
+    bool bShowOnlyBonesWithBodies = false;
+    bool bPendingScrollSelectedTreeBoneIntoView = false;
     bool bShowPreviewBodies = true;
     bool bShowPreviewConstraints = true;
+    bool bShowPreviewBodySkeleton = false;
     bool bShowConstraintLimitAngles = true;
     bool bShowConstraintLimitSurfaces = true;
     bool bShowOnlySelectedConstraintLimitAngles = false;
@@ -167,10 +196,15 @@ private:
     bool bRegenerateReplaceExisting = true;
     bool bRegenerateSkipHelperBones = true;
     bool bRegenerateAllowBoneAxisFallback = false;
+    bool bRegenerateMergeSmallBones = true;
+    int32 RegeneratePrimitiveTypeIndex = 0;
     float RegenerateMinInfluenceWeight = 0.15f;
     int32 RegenerateMinWeightedVertices = 64;
+    float RegenerateMinBoneSize = 0.025f;
+    float RegenerateMinWeldSize = 1.0e-4f;
     EPhysicsAssetConstraintFrameTarget SelectedConstraintGizmoFrame = EPhysicsAssetConstraintFrameTarget::Child;
     uint64 ConstraintGraphTopologyHash = 0;
+    FString LastDebugExportMessage;
 
     TArray<FPhysicsAssetValidationIssue> ValidationIssues;
     FString ValidationMeshPath;

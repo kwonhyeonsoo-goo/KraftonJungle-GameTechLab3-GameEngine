@@ -128,6 +128,10 @@ public:
 
     // Game Thread 는 이 스냅샷을 acquire 해서 Component/Ragdoll/Vehicle visual 을 적용한다.
     std::shared_ptr<const FPhysicsWorldSnapshot> AcquireLatestSnapshotRef() const override;
+    void QueryClothCollisionShapes(
+        const FBoundingBox& WorldBounds,
+        uint32 ObjectTypeMask,
+        TArray<FPhysicsClothCollisionShape>& OutShapes) const override;
 
     // 외부 소비자(C/D)는 이 세 함수로만 디버그 데이터를 얻는다 — 전부 step 직후 publish 된
     // 스냅샷의 복사본을 lock 아래에서 반환한다 (live PhysX 직접 접근 없음).
@@ -206,6 +210,10 @@ private:
     void ApplyAddForceAtLocation_Internal(FPhysicsBodyHandle Body, const FVector& Force, const FVector& WorldLocation);
     void ApplyAddTorque_Internal(FPhysicsBodyHandle Body, const FVector& Torque);
     void ApplyAddImpulse_Internal(FPhysicsBodyHandle Body, const FVector& Impulse);
+    void QueueContinuousForceCommand(const FPhysicsCommand& Command, float DurationSeconds);
+    void ApplyContinuousForcesForSubstep(float SubstepDt);
+    void PurgeContinuousForcesForBody(FPhysicsBodyHandle Body);
+    void PurgeExpiredContinuousForces();
     void ApplySetBodyVelocity_Internal(FPhysicsBodyHandle Body, const FVector& LinearVelocity, const FVector& AngularVelocity);
     void ApplySetBodyTransform_Internal(FPhysicsBodyHandle Body, const FTransform& Transform, EPhysicsTeleportMode TeleportMode);
     void ApplySetMass_Internal(FPhysicsBodyHandle Body, float Mass);
@@ -215,7 +223,7 @@ private:
 
     // 적용한 command 수를 반환 (Stat 용).
     int32 ApplyPendingCommands();
-    int32 ApplyCommands(const TArray<FPhysicsCommand>& Commands);
+    int32 ApplyCommands(const TArray<FPhysicsCommand>& Commands, float ContinuousForceDurationSeconds = 0.0f);
     void  QueueCreationResult(const FPhysicsCreationResult& Result);
     void  UpdateStats();
 
@@ -223,6 +231,10 @@ private:
     void BuildBodySnapshots_Internal(TArray<FPhysicsBodySnapshot>& OutBodies) const;
     void BuildDebugBodies_Internal(TArray<FPhysicsDebugBody>& OutBodies) const;
     void BuildDebugConstraints_Internal(TArray<FPhysicsDebugConstraint>& OutConstraints) const;
+    void QueryClothCollisionShapes_Internal(
+        const FBoundingBox& WorldBounds,
+        uint32 ObjectTypeMask,
+        TArray<FPhysicsClothCollisionShape>& OutShapes) const;
     void BuildWorldSnapshot_Internal();
     void BuildDebugSnapshot_Internal();
 
@@ -254,6 +266,17 @@ private:
 
     FPhysicsCommandQueue CommandQueue;
 
+    struct FPendingContinuousForce
+    {
+        EPhysicsCommandType Type = EPhysicsCommandType::AddForce;
+        FPhysicsBodyHandle  Body;
+        FVector             VectorValue  = FVector::ZeroVector;
+        FVector             VectorValue2 = FVector::ZeroVector;
+        float               RemainingTimeSeconds = 0.0f;
+    };
+
+    TArray<FPendingContinuousForce> PendingContinuousForces;
+
     mutable std::mutex             CreationResultMutex;
     TArray<FPhysicsCreationResult> PendingCreationResults;
 
@@ -267,10 +290,11 @@ private:
 
     int32 FrameDeferredDestroys = 0;
 
-    float Accumulator = 0.0f;
-    float FixedDt     = 1.0f / 60.0f;
-    float MaxFrameDt  = 0.1f;
-    int32 MaxSubsteps = 4;
+    float Accumulator        = 0.0f;
+    float FixedDt            = 1.0f / 60.0f; // target publish/catch-up step
+    float SimulationSubstepDt = 1.0f / 60.0f; // actual PxScene::simulate dt cap
+    float MaxFrameDt         = 0.1f;
+    int32 MaxSubsteps        = 4;
 
     // 단조 증가 physics step 카운터 — body CreatedStep/DestroyedStep, snapshot StepIndex 용.
     uint64 StepIndex = 0;

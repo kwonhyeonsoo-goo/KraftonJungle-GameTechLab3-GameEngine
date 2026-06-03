@@ -38,6 +38,7 @@ public:
 	void AddReferencedObjects(FReferenceCollector& Collector) override;
 
 	// --- 월드 타입 ---
+	UFUNCTION(Pure, Category="World")
 	EWorldType GetWorldType() const { return WorldType; }
 	void SetWorldType(EWorldType InType) { WorldType = InType; }
 
@@ -66,6 +67,8 @@ public:
 	void WarmupPickingData() const;
 	bool RaycastPrimitives(const FRay& Ray, FHitResult& OutHitResult, AActor*& OutActor) const;
 
+	UFUNCTION(Pure, Category="World|Actor")
+	TArray<AActor*> GetActorsValue() const { return PersistentLevel ? PersistentLevel->GetActors() : TArray<AActor*>(); }
 	const TArray<AActor*>& GetActors() const { static const TArray<AActor*> EmptyActors; return PersistentLevel ? PersistentLevel->GetActors() : EmptyActors; }
 
 	// LOD 컨텍스트를 FFrameContext에 전달 (Collect 단계에서 LOD 인라인 갱신용)
@@ -74,9 +77,20 @@ public:
 	void InitWorld();      // Set up the world before gameplay begins
 	void BeginPlay();      // Triggers BeginPlay on all actors
 	void Tick(float DeltaTime, ELevelTick TickType);  // Drives the game loop every frame
+	UFUNCTION(Pure, Category="World|Time")
 	float GetGameTimeSeconds() const { return GameTimeSeconds; }
 	void EndPlay();        // Stop gameplay without owning memory lifetime.
 	void RouteWorldDestroyed();
+
+    // LuaBlueprint late lifecycle broadcasts. UWorld owns the phase ordering, so
+    // it also owns catch-up delivery for actors spawned after the phase has passed.
+    void BroadcastLuaBlueprintPostBeginPlay();
+    void BroadcastLuaBlueprintPostStartMatch();
+    void BroadcastLuaBlueprintPlayerCameraReady(
+        APlayerController*       PlayerController,
+        APlayerCameraManager*    CameraManager,
+        UCameraComponent*        ActiveCamera
+    );
 
 private:
 	// PlayerCameraManager 갱신 — Slomo / HitStop 등 TimeDilation 의 영향을 받지 않도록
@@ -84,9 +98,23 @@ private:
 	void TickPlayerCamera() const;
 	void ApplyPhysicsSnapshot_GameThread();
 	void ShutdownPhysicsScene();
+    void RouteLuaBlueprintPostBeginPlayForActor(AActor* Actor) const;
+    void RouteLuaBlueprintPostStartMatchForActor(AActor* Actor) const;
+    bool ResolveLuaBlueprintPlayerCameraReadyContext(
+        APlayerController*&       OutPlayerController,
+        APlayerCameraManager*&    OutCameraManager,
+        UCameraComponent*&        OutActiveCamera
+    ) const;
+    void RouteLuaBlueprintPlayerCameraReadyForActor(
+        AActor*                   Actor,
+        APlayerController*        PlayerController,
+        APlayerCameraManager*     CameraManager,
+        UCameraComponent*         ActiveCamera
+    ) const;
 
 public:
 
+	UFUNCTION(Pure, Category="World|Lifecycle")
 	bool HasBegunPlay() const { return bHasBegunPlay; }
 
 	// 씬 단위 게임 설정 (GameMode 등). 에디터 UI 와 SceneSaveManager 가 사용.
@@ -95,14 +123,20 @@ public:
 
 	// Transient runtime hook for future global wind actors/fields. Scene save/load does
 	// not serialize this value; editor preview wind remains a component-level override.
+	UFUNCTION(Callable, Category="World|Cloth")
 	void SetClothWorldWindVelocity(const FVector& InWorldWindVelocity) { ClothWorldWindVelocity = InWorldWindVelocity; }
 	const FVector& GetClothWorldWindVelocity() const { return ClothWorldWindVelocity; }
+	UFUNCTION(Pure, Category="World|Cloth")
+	FVector GetClothWorldWindVelocityValue() const { return ClothWorldWindVelocity; }
+	UFUNCTION(Callable, Category="World|Cloth")
 	void ClearClothWorldWindVelocity() { ClothWorldWindVelocity = FVector::ZeroVector; }
 
 	// 일시정지 — true 동안 World::Tick 이 PhysicsScene 와 TickManager 호출을 skip 한다.
 	// Render / UI / Input poll 은 영향 받지 않으므로 인트로 / 메뉴 / 모달 띄운 상태에서
 	// 게임 시간만 멈추는 용도. 기본 false (게임 진행).
+	UFUNCTION(Callable, Category="World|Time")
 	void SetPaused(bool bInPaused) { bPaused = bInPaused; }
+	UFUNCTION(Pure, Category="World|Time")
 	bool IsPaused() const { return bPaused; }
 
 	// Active POV — Editor viewport / PIE-Game 의 PC->PlayerCameraManager 통합.
@@ -134,6 +168,9 @@ private:
     IPOVProvider*                     EditorPOVProvider   = nullptr;
     EWorldType                        WorldType           = EWorldType::Editor;
     bool                              bHasBegunPlay       = false;
+	    bool                              bHasRoutedPostBeginPlay = false;
+	    bool                              bHasRoutedPostStartMatch = false;
+	    bool                              bHasRoutedPlayerCameraReady = false;
     bool                              bPaused             = false;
     float                             GameTimeSeconds     = 0.0f;
     bool                              bWorldDestroyRouted = false;
@@ -171,6 +208,16 @@ public:
 	bool PhysicsRaycastByObjectTypes(const FVector& Start, const FVector& Dir, float MaxDist, FHitResult& OutHit,
 		uint32 ObjectTypeMask,
 		const AActor* IgnoreActor = nullptr) const;
+
+    // Physics shape sweep convenience — delegates to IPhysicsScene::Sweep.
+    bool PhysicsSweep(const FVector& Start, const FVector& End, const FQuat& Rotation, const FCollisionShape& Shape, FHitResult& OutHit,
+        ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
+        const AActor* IgnoreActor = nullptr) const;
+
+    // ObjectType 기반 sweep convenience — delegates to IPhysicsScene::SweepByObjectTypes.
+    bool PhysicsSweepByObjectTypes(const FVector& Start, const FVector& End, const FQuat& Rotation, const FCollisionShape& Shape, FHitResult& OutHit,
+        uint32 ObjectTypeMask,
+        const AActor* IgnoreActor = nullptr) const;
 
 	// --- Game flow ---
 	// BeginPlay 이전에 호출. WorldType이 Editor면 무시된다.

@@ -50,6 +50,8 @@ private:
 	void PropagatePropertyChange(const FString& PropName, const TArray<AActor*>& SelectedActors);
 
 	void AddComponentToActor(AActor* Actor, UClass* ComponentClass);
+	bool CanRemoveSelectedComponent(AActor* Actor) const;
+	bool RemoveSelectedComponent(AActor* Actor);
 
 	static FString OpenObjFileDialog();
 	static FString OpenStaticMeshFileDialog();

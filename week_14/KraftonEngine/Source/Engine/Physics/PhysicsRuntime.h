@@ -78,6 +78,11 @@ public:
 
     virtual std::shared_ptr<const FPhysicsWorldSnapshot> AcquireLatestSnapshotRef() const = 0;
 
+    virtual void QueryClothCollisionShapes(
+        const FBoundingBox& WorldBounds,
+        uint32 ObjectTypeMask,
+        TArray<FPhysicsClothCollisionShape>& OutShapes) const = 0;
+
     virtual void GatherDebugBodies(TArray<FPhysicsDebugBody>& OutBodies) const = 0;
     virtual void GatherDebugConstraints(TArray<FPhysicsDebugConstraint>& OutConstraints) const = 0;
 

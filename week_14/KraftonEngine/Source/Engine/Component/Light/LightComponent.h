@@ -9,15 +9,24 @@ class ULightComponent : public ULightComponentBase
 {
 public:
 	GENERATED_BODY()
+	UFUNCTION(Pure, Category="Light|Shadow")
 	float GetShadowResolutionScale() const { return ShadowResolutionScale; }
+	UFUNCTION(Pure, Category="Light|Shadow")
 	float GetShadowBias() const { return ShadowBias; }
+	UFUNCTION(Pure, Category="Light|Shadow")
 	float GetShadowSlopeBias() const { return ShadowSlopeBias; }
+	UFUNCTION(Pure, Category="Light|Shadow")
 	float GetShadowNormalBias() const { return ShadowNormalBias; } 
+	UFUNCTION(Pure, Category="Light|Shadow")
 	float GetShadowSharpen() const { return ShadowSharpen; }
 
+	UFUNCTION(Callable, Category="Light|Shadow")
 	void SetShadowBias(float V) { ShadowBias = V; }
+	UFUNCTION(Callable, Category="Light|Shadow")
 	void SetShadowSlopeBias(float V) { ShadowSlopeBias = V; }
+	UFUNCTION(Callable, Category="Light|Shadow")
 	void SetShadowNormalBias(float V) { ShadowNormalBias = V; }
+	UFUNCTION(Callable, Category="Light|Shadow")
 	void SetShadowSharpen(float V) { ShadowSharpen = V; }
 
 protected:

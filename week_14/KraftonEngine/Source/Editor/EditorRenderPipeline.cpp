@@ -243,9 +243,9 @@ void FEditorRenderPipeline::BuildFrame(FLevelEditorViewportClient* VC, const FMi
 	}
 
 	UCameraComponent* ActiveCamera = CamManager ? CamManager->GetActiveCamera() : nullptr;
-	if (UCineCameraComponent* CineCamera = Cast<UCineCameraComponent>(ActiveCamera))
+	if (ActiveCamera)
 	{
-		const FCineLetterboxSettings& LetterboxSettings = CineCamera->GetLetterboxSettings();
+		const FCameraLetterboxState& LetterboxSettings = ActiveCamera->GetLetterboxSettings();
 		Frame.CameraLetterbox.bEnabled = LetterboxSettings.bEnabled;
 		if (Frame.CameraLetterbox.bEnabled)
 		{
@@ -290,6 +290,18 @@ void FEditorRenderPipeline::BuildFrame(FLevelEditorViewportClient* VC, const FMi
 	Frame.bIsLightView = VC->IsViewingFromLight();
 	Frame.WorldType = World->GetWorldType();
 	Frame.SetRenderOptions(VC->GetRenderOptions());
+	if (CamManager && CamManager->IsDepthOfFieldEnabled())
+	{
+		FViewportRenderOptions Opts = Frame.RenderOptions;
+		Opts.ShowFlags.bDoF = true;
+		Opts.DoFFocusDistance = CamManager->GetDoFFocusDistance();
+		Opts.DoFFocusRange = CamManager->GetDoFFocusRange();
+		Opts.DoFMaxBlurRadius = CamManager->GetDoFMaxBlurRadius();
+		Opts.DoFBokehRadiusThreshold = CamManager->GetDoFBokehRadiusThreshold();
+		Opts.DoFBokehLumaThreshold = CamManager->GetDoFBokehLumaThreshold();
+		Opts.DoFBokehIntensity = CamManager->GetDoFBokehIntensity();
+		Frame.SetRenderOptions(Opts);
+	}
 	Frame.OcclusionCulling = &GetOcclusionForViewport(VC);
 	Frame.LODContext = World->PrepareLODContext();
 

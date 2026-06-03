@@ -15,6 +15,9 @@
 
 #include "Render/Pipeline/Renderer.h"
 #include "Engine/Input/InputSystem.h"
+#include "Lua/LuaDebugManager.h"
+#include "LuaBlueprint/LuaBlueprintAsset.h"
+#include "LuaBlueprint/LuaBlueprintManager.h"
 
 #include "Editor/Slate/SlateApplication.h"
 #include "Editor/UI/Util/ImGuiSetting.h"
@@ -678,10 +681,16 @@ void FEditorMainPanel::RenderShortcutOverlay()
 	ImGui::TextUnformatted("Editor");
 	ImGui::Separator();
 	ImGui::TextUnformatted("` : Focus console input / open console drawer");
+	ImGui::TextUnformatted("Crtl + Spacebar : open content bowser");
 	ImGui::TextUnformatted("F : Focus on selection");
 	ImGui::TextUnformatted("Ctrl + LMB : Multi Picking (Toggle)");
 	ImGui::TextUnformatted("Ctrl + Alt + LMB Drag : Area Selection");
 	ImGui::TextUnformatted("F2: Actor or Component Rename");
+	ImGui::Separator();
+	ImGui::TextUnformatted("Physics Editor");
+	ImGui::Separator();
+	ImGui::TextUnformatted("F : Focus viewport on selected body, shape, or constraint");
+	ImGui::TextUnformatted("Delete : Remove selected body or constraint");
 	ImGui::Separator();
 	ImGui::TextUnformatted("EsterEgg");
 	ImGui::Separator();
@@ -1196,7 +1205,31 @@ void FEditorMainPanel::ToggleConsoleDrawer(bool bFocusInput)
 
 void FEditorMainPanel::ProcessPendingDebugActions()
 {
-	if (!bPendingClearLastBatch || !EditorEngine)
+	if (!EditorEngine)
+	{
+		return;
+	}
+
+	FLuaDebugEditorFocusRequest LuaDebugFocus;
+	if (FLuaDebugManager::PeekEditorFocusRequest(LuaDebugFocus)
+		&& LuaDebugFocus.Serial != LastLuaDebugEditorFocusSerial
+		&& !LuaDebugFocus.Location.BlueprintPath.empty())
+	{
+		LastLuaDebugEditorFocusSerial = LuaDebugFocus.Serial;
+		if (EditorEngine && EditorEngine->IsPIEPossessedMode())
+		{
+			EditorEngine->TogglePIEControlMode();
+		}
+		FSlateApplication::Get().ClearInputOwner();
+		InputSystem::Get().ResetTransientState();
+		if (ULuaBlueprintAsset* Blueprint = FLuaBlueprintManager::Get().Load(LuaDebugFocus.Location.BlueprintPath))
+		{
+			ShowEditorWindows();
+			OpenAssetEditorForObject(Blueprint);
+		}
+	}
+
+	if (!bPendingClearLastBatch)
 	{
 		return;
 	}

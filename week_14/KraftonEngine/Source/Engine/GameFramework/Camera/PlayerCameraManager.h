@@ -25,12 +25,17 @@ public:
 	~APlayerCameraManager() override = default;
 
 	// ─── Camera 등록 / Active / Possess ────────────────────────────
+	UFUNCTION(Callable, Category="Camera")
 	void RegisterCamera(UCameraComponent* Camera);
+	UFUNCTION(Callable, Category="Camera")
 	void UnregisterCamera(UCameraComponent* Camera);
 
+	UFUNCTION(Callable, Category="Camera")
 	void AutoPossessDefaultCamera();
 	// BlendTime > 0 이면 새 ActiveCamera 로 부드럽게 보간 전환 (PossessedCamera 는 즉시 swap).
+	UFUNCTION(Callable, Category="Camera")
 	bool ToggleActiveCameraForActor(const FString& ActorName, float BlendTime = 0.0f);
+	UFUNCTION(Callable, Category="Camera")
 	bool ToggleActiveCameraForActor(const AActor* Actor, float BlendTime = 0.0f);
 
 	UFUNCTION(Pure, Category="Camera")
@@ -168,6 +173,29 @@ public:
 	UFUNCTION(Pure, Category="Camera|Vignette")
 	FLinearColor GetVignetteColor() const { return VignetteColor; }
 
+	// ─── Camera Depth of Field / Bokeh ──────────────────────────────
+	UFUNCTION(Callable, Category="Camera|PostProcess")
+	virtual void SetDepthOfField(float FocusDistance, float FocusRange, float MaxBlurRadius);
+	UFUNCTION(Callable, Category="Camera|PostProcess")
+	virtual void SetBokeh(float RadiusThreshold, float LumaThreshold, float Intensity);
+	UFUNCTION(Callable, Category="Camera|PostProcess")
+	virtual void ClearDepthOfField();
+
+	UFUNCTION(Pure, Category="Camera|PostProcess")
+	bool IsDepthOfFieldEnabled() const { return bEnableDepthOfField; }
+	UFUNCTION(Pure, Category="Camera|PostProcess")
+	float GetDoFFocusDistance() const { return DoFFocusDistance; }
+	UFUNCTION(Pure, Category="Camera|PostProcess")
+	float GetDoFFocusRange() const { return DoFFocusRange; }
+	UFUNCTION(Pure, Category="Camera|PostProcess")
+	float GetDoFMaxBlurRadius() const { return DoFMaxBlurRadius; }
+	UFUNCTION(Pure, Category="Camera|PostProcess")
+	float GetDoFBokehRadiusThreshold() const { return DoFBokehRadiusThreshold; }
+	UFUNCTION(Pure, Category="Camera|PostProcess")
+	float GetDoFBokehLumaThreshold() const { return DoFBokehLumaThreshold; }
+	UFUNCTION(Pure, Category="Camera|PostProcess")
+	float GetDoFBokehIntensity() const { return DoFBokehIntensity; }
+
 	// ─── Camera Blend ──────────────────────────────────────────────
 	bool GetCameraView(FMinimalViewInfo& OutPOV) const;
 
@@ -235,6 +263,15 @@ private:
 	float VignetteRadius = 0.75f;
 	float VignetteSoftness = 0.35f;
 	FLinearColor VignetteColor = FLinearColor::Black();
+
+	// Depth of Field / Bokeh state. Render pipelines copy this into FViewportRenderOptions.
+	bool bEnableDepthOfField = false;
+	float DoFFocusDistance = 500.0f;
+	float DoFFocusRange = 200.0f;
+	float DoFMaxBlurRadius = 4.0f;
+	float DoFBokehRadiusThreshold = 2.5f;
+	float DoFBokehLumaThreshold = 0.45f;
+	float DoFBokehIntensity = 0.65f;
 
 	// POV cache — UpdateCamera 가 채우고, 외부는 GetCameraCachePOV 로 read.
 	// ActiveCamera 가 한 번도 없었으면 bCameraCacheValid=false → caller 가 fallback 처리.

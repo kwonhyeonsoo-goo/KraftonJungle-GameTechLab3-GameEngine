@@ -55,9 +55,18 @@ public:
 	bool             CanLinkPins(uint32 PinAId, uint32 PinBId, uint32* OutFromPinId = nullptr, uint32* OutToPinId = nullptr) const;
 	bool             HasOutputPoseNode() const;
 
+	// ── Variables ──
+	FAnimGraphVariable* AddVariable(const FName& Name, EAnimGraphPinType Type = EAnimGraphPinType::Float);
+	bool                RemoveVariable(const FName& Name);
+	bool                RenameVariable(const FName& OldName, const FName& NewName);
+	FAnimGraphVariable*       FindVariable(const FName& Name);
+	const FAnimGraphVariable* FindVariable(const FName& Name) const;
+
 	// ── Inspection ──
-	const TArray<FAnimGraphNode>&  GetNodes() const { return Nodes; }
-	const TArray<FAnimGraphLink>&  GetLinks() const { return Links; }
+	const TArray<FAnimGraphNode>&      GetNodes() const { return Nodes; }
+	const TArray<FAnimGraphLink>&      GetLinks() const { return Links; }
+	const TArray<FAnimGraphVariable>&  GetVariables() const { return Variables; }
+	TArray<FAnimGraphVariable>&        EditVariables() { return Variables; }
 
 	FAnimGraphNode*       FindNode(uint32 NodeId);
 	const FAnimGraphNode* FindNode(uint32 NodeId) const;
@@ -83,6 +92,7 @@ private:
 
 	TArray<FAnimGraphNode> Nodes;
 	TArray<FAnimGraphLink> Links;
+	TArray<FAnimGraphVariable> Variables;
 	uint32                 NextId = 1; // 0 은 invalid sentinel
 	uint32                 Version = 0;
 	FString                SourcePath;

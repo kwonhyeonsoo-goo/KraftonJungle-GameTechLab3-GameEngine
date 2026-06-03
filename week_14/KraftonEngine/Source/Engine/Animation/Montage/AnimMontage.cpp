@@ -7,6 +7,9 @@
 #include "Object/GarbageCollection.h"
 #include "Object/Object.h"
 
+#include <algorithm>
+#include <cstdio>
+
 FArchive& operator<<(FArchive& Ar, FCompositeSection& S)
 {
     Ar << S.SectionName;
@@ -62,10 +65,13 @@ void UAnimMontage::SetSourceSequence(UAnimSequence* InSeq)
         FrameRate          = SourceSequence->GetFrameRate();
         SourceSequencePath = SourceSequence->GetAssetPathFileName();
         EnsureDefaultSection();
+        NormalizeSections();
     }
     else
     {
+        PlayLength = 0.0f;
         SourceSequencePath = "None";
+        NormalizeSections();
     }
 }
 
@@ -78,6 +84,55 @@ void UAnimMontage::EnsureDefaultSection()
     Default.LinkTime        = IsValid(SourceSequence) ? SourceSequence->GetPlayLength() : 0.0f;
     Default.NextSectionName = FName::None;
     Sections.push_back(Default);
+}
+
+void UAnimMontage::NormalizeSections()
+{
+    const float MaxTime = IsValid(SourceSequence) ? std::max(SourceSequence->GetPlayLength(), 0.0f) : 0.0f;
+
+    auto NameExistsBefore = [this](FName Name, int32 BeforeIndex) -> bool
+    {
+        if (Name == FName::None || Name.ToString().empty()) return false;
+        for (int32 i = 0; i < BeforeIndex && i < static_cast<int32>(Sections.size()); ++i)
+        {
+            if (Sections[i].SectionName == Name) return true;
+        }
+        return false;
+    };
+
+    auto MakeUniqueName = [this](const char* Prefix) -> FName
+    {
+        for (int32 Candidate = 1; Candidate < 10000; ++Candidate)
+        {
+            char Buf[64];
+            std::snprintf(Buf, sizeof(Buf), "%s%d", Prefix, Candidate);
+            if (!FindSection(FName(Buf))) return FName(Buf);
+        }
+        return FName("Section");
+    };
+
+    for (int32 Index = 0; Index < static_cast<int32>(Sections.size()); ++Index)
+    {
+        FCompositeSection& S = Sections[Index];
+        S.StartTime = std::clamp(S.StartTime, 0.0f, MaxTime);
+        S.LinkTime  = std::clamp(S.LinkTime,  S.StartTime, MaxTime);
+
+        // 이름이 비어 있거나 앞 section 과 중복되면 runtime lookup 이 모호해지므로 안전한 이름으로 복구.
+        if (S.SectionName == FName::None || S.SectionName.ToString().empty() || NameExistsBefore(S.SectionName, Index))
+        {
+            S.SectionName = MakeUniqueName("Section_");
+        }
+    }
+
+    // 깨진 NextSectionName 은 종료로 정규화. 자기 자신은 의도적인 loop 로 허용.
+    for (FCompositeSection& S : Sections)
+    {
+        if (S.NextSectionName == FName::None) continue;
+        if (!FindSection(S.NextSectionName))
+        {
+            S.NextSectionName = FName::None;
+        }
+    }
 }
 
 const FCompositeSection* UAnimMontage::FindSection(FName Name) const

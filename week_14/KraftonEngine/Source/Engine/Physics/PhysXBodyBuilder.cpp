@@ -2,12 +2,25 @@
 #include "Physics/PhysXConversion.h"
 
 #include <algorithm>
+#include <cmath>
 #include <PxPhysicsAPI.h>
 
 using namespace physx;
 
 namespace
 {
+    constexpr float MinPhysXGeometryExtent = 1.0e-4f;
+
+    bool IsFiniteGeometryValue(float Value)
+    {
+        return std::isfinite(Value);
+    }
+
+    float ClampPhysXGeometryExtent(float Value)
+    {
+        return (std::max)(Value, MinPhysXGeometryExtent);
+    }
+
     PxFilterData ToPxFilterData(const FPhysicsFilterData& In)
     {
         PxFilterData Out;
@@ -37,6 +50,10 @@ namespace
         if (In.bGenerateOverlapEvents)
         {
             PackedObjectAndFlags |= PhysicsFilter_GenerateOverlapEvents;
+        }
+        if (In.bEnableCCD)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_EnableCCD;
         }
 
         Out.word0 = PackedObjectAndFlags;
@@ -89,22 +106,41 @@ PxShape* FPhysXBodyBuilder::CreateShape(PxPhysics* Physics, PxMaterial* DefaultM
 
     if (Desc.Type == EPhysicsShapeType::Box)
     {
+        if (!IsFiniteGeometryValue(Desc.BoxHalfExtent.X) ||
+            !IsFiniteGeometryValue(Desc.BoxHalfExtent.Y) ||
+            !IsFiniteGeometryValue(Desc.BoxHalfExtent.Z))
+        {
+            return nullptr;
+        }
+
         Geometry = PxBoxGeometry(
-            Desc.BoxHalfExtent.X,
-            Desc.BoxHalfExtent.Y,
-            Desc.BoxHalfExtent.Z
+            ClampPhysXGeometryExtent(Desc.BoxHalfExtent.X),
+            ClampPhysXGeometryExtent(Desc.BoxHalfExtent.Y),
+            ClampPhysXGeometryExtent(Desc.BoxHalfExtent.Z)
         );
         bHasGeometry = true;
     }
     else if (Desc.Type == EPhysicsShapeType::Sphere)
     {
-        Geometry = PxSphereGeometry(Desc.SphereRadius);
+        if (!IsFiniteGeometryValue(Desc.SphereRadius))
+        {
+            return nullptr;
+        }
+
+        Geometry = PxSphereGeometry(ClampPhysXGeometryExtent(Desc.SphereRadius));
         bHasGeometry = true;
     }
     else if (Desc.Type == EPhysicsShapeType::Capsule)
     {
-        const float PhysXHalfHeight = std::max(0.0f, Desc.CapsuleHalfHeight - Desc.CapsuleRadius);
-        Geometry = PxCapsuleGeometry(Desc.CapsuleRadius, PhysXHalfHeight);
+        if (!IsFiniteGeometryValue(Desc.CapsuleRadius) ||
+            !IsFiniteGeometryValue(Desc.CapsuleHalfHeight))
+        {
+            return nullptr;
+        }
+
+        const float CapsuleRadius = ClampPhysXGeometryExtent(Desc.CapsuleRadius);
+        const float PhysXHalfHeight = ClampPhysXGeometryExtent(Desc.CapsuleHalfHeight - CapsuleRadius);
+        Geometry = PxCapsuleGeometry(CapsuleRadius, PhysXHalfHeight);
 
         ShapeAxisRotation = PxQuat(-PxHalfPi, PxVec3(0.0f, 1.0f, 0.0f));
         bHasGeometry = true;

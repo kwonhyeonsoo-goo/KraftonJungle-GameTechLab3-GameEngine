@@ -21,7 +21,7 @@ enum class EMovementMode : uint8
 //   - Jump: 후속 phase (F-5).
 //
 // Floor detection: IPhysicsScene::Raycast — capsule 중심에서 down 으로 (HalfHeight + Probe).
-// Owner 는 ignore 해서 자기 capsule 안 잡힘. Wall sweep 은 없으므로 벽 통과 가능 (minimal).
+// Owner 는 ignore 해서 자기 capsule 안 잡힘. XY/Z 이동은 capsule sweep으로 벽 관통을 막는다.
 
 #include "Source/Engine/Component/Movement/CharacterMovementComponent.generated.h"
 
@@ -44,11 +44,13 @@ public:
 	// CMC 는 mode 를 모름 — "받으면 적용" 만. 어디서 가져올지는 AnimInstance::RootMotionMode 가 결정.
 	void AddRootMotionDelta(const FTransform& LocalDelta);
 	bool ConsumePendingRootMotion(FTransform& OutLocalDelta);
+	UFUNCTION(Pure, Category="CharacterMovement|RootMotion")
 	bool HasPendingRootMotion() const { return bHasPendingRootMotion; }
 
 	// 직전 TickComponent 에서 root motion 의 yaw 가 capsule rotation 에 실제로 적용됐는지.
 	// ACharacter::Tick 이 control yaw 를 capsule 에 덮어쓰기 전에 query 해서 충돌 회피
 	// (root motion 회전이 활성 중인 frame 은 control yaw 가 덮으면 회전이 토글되어 끊김).
+	UFUNCTION(Pure, Category="CharacterMovement|RootMotion")
 	bool HasYawDrivenByRootMotion() const { return bAppliedRootMotionYawThisFrame; }
 
 	const FVector& GetVelocity() const { return Velocity; }
@@ -88,6 +90,8 @@ public:
 	float FloorProbeDistance = 0.1f;     // capsule HalfHeight 아래 추가 probe 거리
 	UPROPERTY(Edit, Save, Category="CharacterMovement", DisplayName="Jump Z Velocity", Min=0.0f, Max=50.0f, Speed=0.1f)
 	float JumpZVelocity      = 6.0f;     // m/s — Jump 시 Velocity.Z 에 박는 값
+	UPROPERTY(Edit, Save, Category="CharacterMovement|Collision", DisplayName="Sweep Pullback Distance", Min=0.0f, Max=10.0f, Speed=0.01f)
+	float SweepPullbackDistance = 0.01f;
 
 	// UE 패턴 — true 면 매 frame Updated 의 yaw 를 현재 Velocity.XY 방향으로 lerp 회전.
 	// 이동 중에만 회전 (정지 시 마지막 facing 유지). Pawn::bUseControllerRotationYaw 와 동시
@@ -109,6 +113,7 @@ protected:
 
 	// capsule 중심에서 down raycast — bHit + WorldHitLocation 사용.
 	bool  TraceFloor(FHitResult& OutHit) const;
+    bool  SafeMoveUpdatedComponent(const FVector& Delta, FHitResult* OutHit = nullptr);
 	float GetCapsuleHalfHeight() const;
 
 	FVector       AccumulatedInput = FVector(0.0f, 0.0f, 0.0f);

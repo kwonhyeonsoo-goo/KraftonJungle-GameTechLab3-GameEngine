@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Animation/AnimInstance.h"
+#include "Animation/Graph/AnimGraphTypes.h"
 #include "Object/Ptr/SoftObjectPtr.h"
 
 class UAnimGraphAsset;
@@ -37,8 +38,30 @@ public:
 	void AddReferencedObjects(FReferenceCollector& Collector) override;
 	void BeginDestroy() override;
 
+	UFUNCTION(Pure, Category="Animation|AnimGraph")
 	UAnimGraphAsset* GetGraphAsset() const;
+	UFUNCTION(Callable, Category="Animation|AnimGraph")
 	void             SetGraphAsset(UAnimGraphAsset* InAsset);
+
+	// AnimGraph-owned Variables.
+	// Asset 의 My Blueprint > Variables 기본값에서 초기화되고, 게임 코드 / Lua / preview UI 가
+	// 매 frame SetGraphVariable* 로 갱신한다. Transition Rule 과 VariableGet 은 이 값을 먼저 읽고,
+	// 없으면 기존 OwnerClass UPROPERTY 로 fallback 한다.
+	UFUNCTION(Callable, Exec, Category="Animation|AnimGraph|Variables")
+	bool SetGraphVariableFloat(FName VariableName, float Value);
+	UFUNCTION(Callable, Exec, Category="Animation|AnimGraph|Variables")
+	bool SetGraphVariableBool(FName VariableName, bool bValue);
+	UFUNCTION(Callable, Exec, Category="Animation|AnimGraph|Variables")
+	bool SetGraphVariableInt(FName VariableName, int32 Value);
+	UFUNCTION(Pure, Category="Animation|AnimGraph|Variables")
+	bool GetGraphVariableFloat(FName VariableName, float& OutValue) const;
+	UFUNCTION(Pure, Category="Animation|AnimGraph|Variables")
+	bool GetGraphVariableBool(FName VariableName, bool& bOutValue) const;
+	UFUNCTION(Pure, Category="Animation|AnimGraph|Variables")
+	bool GetGraphVariableInt(FName VariableName, int32& OutValue) const;
+	UFUNCTION(Pure, Category="Animation|AnimGraph|Variables")
+	bool GetGraphVariableAsFloat(FName VariableName, float& OutValue) const;
+	const TArray<FAnimGraphRuntimeVariable>& GetRuntimeVariables() const { return RuntimeVariables; }
 
 	// Editor PropertyWidget 의 자산 콤보로 노출 (AssetType meta). NativeInitialize 에서 LoadAnimation.
 	// "None" / empty / 로드 실패 시 SequenceRef=nullptr — SequencePlayer 가 ref pose 유지.
@@ -55,6 +78,9 @@ private:
 	// GraphAsset.Version != CompiledAssetVersion 이면 트리 폐기 + 재컴파일 + 버전 캡쳐.
 	// NativeInitialize / NativeUpdate 양쪽에서 호출 — 동일 코드 경로로 첫 컴파일 / live preview 처리.
 	void RecompileTreeIfDirty();
+	void SyncRuntimeVariablesFromAsset(bool bResetExistingToDefaults);
+	FAnimGraphRuntimeVariable*       FindRuntimeVariable(FName VariableName);
+	const FAnimGraphRuntimeVariable* FindRuntimeVariable(FName VariableName) const;
 
 	// 자산 슬롯. GraphAssetPath 로 로드된 디스크 자산 또는 자동 생성된 transient 자산.
 	UAnimGraphAsset* GraphAsset = nullptr;
@@ -62,4 +88,6 @@ private:
 	// 마지막으로 컴파일했을 때 캡쳐한 GraphAsset.Version. 매 NativeUpdate 시 현재 Version 과
 	// 비교 → 다르면 OwnedNodes clear + 재컴파일 + SetRootNode + 캡쳐 갱신. in-editor live preview.
 	uint32 CompiledAssetVersion = 0;
+
+	TArray<FAnimGraphRuntimeVariable> RuntimeVariables;
 };

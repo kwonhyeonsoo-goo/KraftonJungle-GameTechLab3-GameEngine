@@ -274,9 +274,32 @@ void UPrimitiveComponent::PostEditProperty(const char* PropertyName)
 		// 에디터 슬라이더로 값을 바꾼 경우 백엔드에 즉시 반영.
 		SetMass(Mass);
 	}
+	else if (strcmp(PropertyName, "ObjectType") == 0 || strcmp(PropertyName, "Object Type") == 0)
+	{
+		// 에디터 property panel 이 enum 값을 직접 바꾼 경우 setter 를 안 거치므로
+		// shape filter data / trigger role / compound shape 구성을 재생성한다.
+		NotifyPhysicsBodyDirty();
+	}
+	else if (strcmp(PropertyName, "bSimulatePhysics") == 0 || strcmp(PropertyName, "Simulate Physics") == 0)
+	{
+		// Details 패널은 bool 필드를 직접 수정하므로 SetSimulatePhysics()의 rebuild 경로를 복구한다.
+		NotifyPhysicsBodyDirty();
+	}
+	else if (strcmp(PropertyName, "bKinematic") == 0 || strcmp(PropertyName, "Kinematic") == 0)
+	{
+		NotifyPhysicsBodyDirty();
+	}
+	else if (strcmp(PropertyName, "bGenerateOverlapEvents") == 0 || strcmp(PropertyName, "Generate Overlap Events") == 0)
+	{
+		NotifyPhysicsBodyDirty();
+	}
 	else if (strcmp(PropertyName, "CenterOfMassOffset") == 0 || strcmp(PropertyName, "Center Of Mass Offset") == 0)
 	{
 		SetCenterOfMass(CenterOfMassOffset);
+	}
+	else if (strcmp(PropertyName, "bEnableCCD") == 0 || strcmp(PropertyName, "Enable CCD") == 0)
+	{
+		NotifyPhysicsBodyDirty();
 	}
 }
 
@@ -535,6 +558,17 @@ void UPrimitiveComponent::AddImpulse(const FVector& Impulse)
 		if (UWorld* W = Owner->GetWorld())
 			if (IPhysicsScene* PS = W->GetPhysicsScene())
 				PS->AddImpulse(this, Impulse);
+}
+
+void UPrimitiveComponent::SetEnableCCD(bool bInEnableCCD)
+{
+	if (bEnableCCD == bInEnableCCD)
+	{
+		return;
+	}
+
+	bEnableCCD = bInEnableCCD;
+	NotifyPhysicsBodyDirty();
 }
 
 FVector UPrimitiveComponent::GetLinearVelocity() const

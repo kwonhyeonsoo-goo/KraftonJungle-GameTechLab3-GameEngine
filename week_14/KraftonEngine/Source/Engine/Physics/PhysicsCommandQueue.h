@@ -79,6 +79,10 @@ struct FPhysicsCommand
 
     float FloatValue = 0.0f;
 
+    // Frame duration carried across async frame merging. Continuous forces/torques use this
+    // instead of a later aggregated DeltaTime, so AddForce remains frame-rate invariant.
+    float DurationSeconds = 0.0f;
+
     bool BoolX = false;
     bool BoolY = false;
     bool BoolZ = false;

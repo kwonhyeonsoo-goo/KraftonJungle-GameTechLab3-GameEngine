@@ -185,6 +185,10 @@ public:
 	void AddTorque(const FVector& Torque);
 	UFUNCTION(Callable, Category="Physics")
 	void AddImpulse(const FVector& Impulse);
+	UFUNCTION(Callable, Exec, Category="Physics")
+	void SetEnableCCD(bool bInEnableCCD);
+	UFUNCTION(Pure, Category="Physics")
+	bool GetEnableCCD() const { return bEnableCCD; }
 	UFUNCTION(Pure, Category="Physics")
 	FVector GetLinearVelocity() const;
 	UFUNCTION(Callable, Category="Physics")
@@ -306,6 +310,8 @@ protected:
 	float Mass = 1.0f;                          // kg
 	UPROPERTY(Edit, Save, Category="Physics", DisplayName="Center Of Mass Offset")
 	FVector CenterOfMassOffset = { 0, 0, 0 };   // RootComponent local 좌표계 offset
+	UPROPERTY(Edit, Save, Category="Physics", DisplayName="Enable CCD")
+	bool bEnableCCD = false;
 	UPROPERTY(Edit, Save, Category="Collision", DisplayName="Collision Enabled", Enum=ECollisionEnabled)
 	ECollisionEnabled CollisionEnabled = ECollisionEnabled::NoCollision;
 	UPROPERTY(Edit, Save, Category="Collision", DisplayName="Object Type", Enum=ECollisionChannel)
