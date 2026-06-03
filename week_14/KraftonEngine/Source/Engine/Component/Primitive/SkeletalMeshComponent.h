@@ -119,6 +119,8 @@ public:
 
     // Render access 섹션: SceneProxy
     FPrimitiveSceneProxy* CreateSceneProxy() override;
+    ESkinningMode GetEffectiveSkinningMode() const override;
+    bool HasEnabledClothSections() const;
     void TickClothSimulationForEditorPreview(float DeltaTime);
     void ResetClothSimulation();
     void SetClothPreviewWindOverride(bool bEnable, const FVector& WorldWindVelocity);

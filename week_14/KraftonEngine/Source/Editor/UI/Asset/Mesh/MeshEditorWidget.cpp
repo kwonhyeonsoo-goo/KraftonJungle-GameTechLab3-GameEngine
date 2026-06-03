@@ -2077,9 +2077,17 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 		MarkCurrentMeshDirty();
 	}
 
-	const bool bCpuSkinning = SkinningModeRuntime::Get() == ESkinningMode::CPU;
+	USkeletalMeshComponent* PreviewComp = ViewportClient.GetPreviewMeshComponent();
+	const bool bGlobalCpuSkinning = SkinningModeRuntime::Get() == ESkinningMode::CPU;
+	const bool bCpuSkinning = PreviewComp
+		? PreviewComp->GetEffectiveSkinningMode() == ESkinningMode::CPU
+		: bGlobalCpuSkinning;
 	ImGui::Text("Skinning: %s", bCpuSkinning ? "CPU" : "GPU");
-	if (!bCpuSkinning)
+	if (!bGlobalCpuSkinning && bCpuSkinning)
+	{
+		ImGui::TextDisabled("Global GPU skinning is active; this cloth mesh is forced to CPU skinning.");
+	}
+	else if (!bCpuSkinning)
 	{
 		ImGui::TextDisabled("Cloth preview runs in CPU skinning mode.");
 		if (ImGui::Button("Use CPU Skinning", ImVec2(-1.0f, 0.0f)))
