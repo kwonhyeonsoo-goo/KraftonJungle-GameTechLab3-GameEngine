@@ -179,11 +179,11 @@ namespace
         return (std::max)(4, static_cast<int32>(ceilf(32.0f * Normalized)));
     }
 
-    float ComputeConstraintLimitDrawRadius(const FTransform& ParentFrameWorld, const FTransform& ChildFrameWorld)
-    {
-        const float FrameDistance = FVector::Distance(ParentFrameWorld.Location, ChildFrameWorld.Location);
-        return FMath::Clamp(FrameDistance * 0.45f + 0.25f, 0.25f, 2.5f);
-    }
+	    float ComputeConstraintLimitDrawRadius(const FTransform& ParentFrameWorld, const FTransform& ChildFrameWorld)
+	    {
+	        const float FrameDistance = FVector::Distance(ParentFrameWorld.Location, ChildFrameWorld.Location);
+	        return FMath::Clamp(FrameDistance * 0.45f + 0.25f, 0.25f, 2.5f);
+	    }
 
     void DrawConstraintSwingLimitDebug(
         UWorld* World,
@@ -279,21 +279,21 @@ namespace
         DrawDebugLine(World, Center, Center + ChildY * RingRadius, ConstraintLimitSwingRed(Color.A), 0.0f);
     }
 
-    void DrawConstraintAngularLimitDebug(
-        UWorld* World,
-        const FTransform& ParentFrameWorld,
-        const FTransform& ChildFrameWorld,
-        const FConstraintLimitDesc& Limits,
-        bool bSelected)
-    {
-        if (!World)
-        {
-            return;
-        }
+	    void DrawConstraintAngularLimitDebug(
+	        UWorld* World,
+	        const FTransform& ParentFrameWorld,
+	        const FTransform& ChildFrameWorld,
+	        const FConstraintLimitDesc& Limits,
+	        bool bSelected)
+	    {
+	        if (!World)
+	        {
+	            return;
+	        }
 
-        const uint32 Alpha = bSelected ? 230u : 145u;
-        const float Radius = ComputeConstraintLimitDrawRadius(ParentFrameWorld, ChildFrameWorld);
-        DrawDebugFrameAxes(World, ParentFrameWorld, Radius * 0.32f, Alpha);
+	        const uint32 Alpha = bSelected ? 230u : 145u;
+	        const float Radius = ComputeConstraintLimitDrawRadius(ParentFrameWorld, ChildFrameWorld);
+	        DrawDebugFrameAxes(World, ParentFrameWorld, Radius * 0.32f, Alpha);
         DrawDebugFrameAxes(World, ChildFrameWorld, Radius * 0.22f, Alpha);
         DrawConstraintSwingLimitDebug(World, ParentFrameWorld, Limits, Radius, ConstraintLimitSwingRed(Alpha));
         DrawConstraintTwistLimitDebug(World, ParentFrameWorld, ChildFrameWorld, Limits, Radius, ConstraintLimitTwistGreen(Alpha));
@@ -1133,6 +1133,25 @@ void FPhysicsAssetEditorWidget::SelectPhysicsShapeFromViewport(UPhysicsAsset* Ph
             : -1;
     SelectedConstraintIndex = -1;
     SelectedTreeBoneIndex = FindPreviewBoneIndexByName(Body.BoneName);
+    if (bEditorSimulationActive && bEditorSimulationSelectedOnly)
+    {
+        RequestEditorSimulationRestart();
+    }
+}
+
+void FPhysicsAssetEditorWidget::SelectPhysicsConstraintFromViewport(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex)
+{
+    if (!PhysicsAsset || !IsValidConstraintIndex(PhysicsAsset, ConstraintIndex))
+    {
+        return;
+    }
+
+    if (!IsEditingObject(PhysicsAsset))
+    {
+        OpenEmbedded(PhysicsAsset);
+    }
+
+    SelectConstraintSetup(PhysicsAsset, ConstraintIndex, -1);
     if (bEditorSimulationActive && bEditorSimulationSelectedOnly)
     {
         RequestEditorSimulationRestart();
@@ -2989,14 +3008,17 @@ void FPhysicsAssetEditorWidget::RenderPreviewDebug(
     const bool bShowBodies = bShowPreviewBodies && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetShapes);
     const bool bShowConstraints = bShowPreviewConstraints && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetConstraints);
 
+    FPhysicsAssetPreviewPoseCache PoseCache;
+    const bool bHasPoseCache = PoseCache.Initialize(PreviewComponent, PhysicsAsset);
+
     if (bShowBodies)
     {
-        RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+        RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld, bHasPoseCache ? &PoseCache : nullptr);
     }
 
     if (bShowConstraints)
     {
-        RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+        RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld, bHasPoseCache ? &PoseCache : nullptr);
     }
 }
 
@@ -3036,19 +3058,24 @@ void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
             SelectedShapeIndex,
             SelectedConstraintIndex,
             bShowBodies,
+            bShowConstraints,
+            bShowConstraintLimitAngles,
             bShowConstraints && bShowConstraintLimitAngles && bShowConstraintLimitSurfaces,
             bShowOnlySelectedConstraintLimitAngles,
             Device);
     }
 
+    FPhysicsAssetPreviewPoseCache PoseCache;
+    const bool bHasPoseCache = PoseCache.Initialize(PreviewComponent, PhysicsAsset);
+
     if (bShowBodies)
     {
-        RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+        RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld, bHasPoseCache ? &PoseCache : nullptr);
     }
 
     if (bShowConstraints)
     {
-        RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+        RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld, bHasPoseCache ? &PoseCache : nullptr);
     }
 }
 
@@ -3216,7 +3243,8 @@ FName FPhysicsAssetEditorWidget::GetSelectedSimulationRootBoneName(UPhysicsAsset
 void FPhysicsAssetEditorWidget::RenderBodyDebug(
     UPhysicsAsset* PhysicsAsset,
     USkeletalMeshComponent* PreviewComponent,
-    UWorld* PreviewWorld)
+    UWorld* PreviewWorld,
+    const FPhysicsAssetPreviewPoseCache* PoseCache)
 {
     if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
     {
@@ -3226,14 +3254,15 @@ void FPhysicsAssetEditorWidget::RenderBodyDebug(
     const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
     for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
     {
-        DrawBodySetupDebug(PhysicsAsset, PreviewComponent, PreviewWorld, BodyIndex, Bodies[BodyIndex]);
+        DrawBodySetupDebug(PhysicsAsset, PreviewComponent, PreviewWorld, BodyIndex, Bodies[BodyIndex], PoseCache);
     }
 }
 
 void FPhysicsAssetEditorWidget::RenderConstraintDebug(
     UPhysicsAsset* PhysicsAsset,
     USkeletalMeshComponent* PreviewComponent,
-    UWorld* PreviewWorld)
+    UWorld* PreviewWorld,
+    const FPhysicsAssetPreviewPoseCache* PoseCache)
 {
     if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
     {
@@ -3248,7 +3277,8 @@ void FPhysicsAssetEditorWidget::RenderConstraintDebug(
             PreviewComponent,
             PreviewWorld,
             ConstraintIndex,
-            Constraints[ConstraintIndex]);
+            Constraints[ConstraintIndex],
+            PoseCache);
     }
 }
 
@@ -3257,7 +3287,8 @@ void FPhysicsAssetEditorWidget::DrawBodySetupDebug(
     USkeletalMeshComponent* PreviewComponent,
     UWorld* PreviewWorld,
     int32 BodyIndex,
-    const FPhysicsAssetBodySetup& BodySetup)
+    const FPhysicsAssetBodySetup& BodySetup,
+    const FPhysicsAssetPreviewPoseCache* PoseCache)
 {
     if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
     {
@@ -3265,11 +3296,14 @@ void FPhysicsAssetEditorWidget::DrawBodySetupDebug(
     }
 
     FTransform BodyWorld;
-    if (!FPhysicsAssetPreviewUtils::ComputePreviewBodyWorldTransform(
+    const bool bHasBodyWorld = PoseCache
+        ? PoseCache->ComputeBodyWorldTransform(BodyIndex, BodyWorld)
+        : FPhysicsAssetPreviewUtils::ComputePreviewBodyWorldTransform(
             PreviewComponent,
             PhysicsAsset,
             BodyIndex,
-            BodyWorld))
+            BodyWorld);
+    if (!bHasBodyWorld)
     {
         return;
     }
@@ -3330,7 +3364,8 @@ void FPhysicsAssetEditorWidget::DrawConstraintSetupDebug(
     USkeletalMeshComponent* PreviewComponent,
     UWorld* PreviewWorld,
     int32 ConstraintIndex,
-    const FPhysicsAssetConstraintSetup& ConstraintSetup)
+    const FPhysicsAssetConstraintSetup& ConstraintSetup,
+    const FPhysicsAssetPreviewPoseCache* PoseCache)
 {
     if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
     {
@@ -3339,12 +3374,15 @@ void FPhysicsAssetEditorWidget::DrawConstraintSetupDebug(
 
     FTransform ParentFrameWorld;
     FTransform ChildFrameWorld;
-    if (!FPhysicsAssetPreviewUtils::ComputePreviewConstraintWorldFrames(
+    const bool bHasConstraintFrames = PoseCache
+        ? PoseCache->ComputeConstraintWorldFrames(ConstraintIndex, ParentFrameWorld, ChildFrameWorld)
+        : FPhysicsAssetPreviewUtils::ComputePreviewConstraintWorldFrames(
             PreviewComponent,
             PhysicsAsset,
             ConstraintIndex,
             ParentFrameWorld,
-            ChildFrameWorld))
+            ChildFrameWorld);
+    if (!bHasConstraintFrames)
     {
         return;
     }

@@ -76,7 +76,7 @@ public:
 	const FBone* GetSelectedBone() const;
 	bool ConsumeSocketGizmoModified();
 	bool ConsumePhysicsAssetGizmoModified();
-	bool ConsumePhysicsAssetViewportPick(int32& OutBodyIndex, int32& OutShapeIndex);
+	bool ConsumePhysicsAssetViewportPick(int32& OutBodyIndex, int32& OutShapeIndex, int32& OutConstraintIndex);
 	void RefreshBoneDebug();
 
 	EBoneDebugDrawMode GetBoneDebugDrawMode() const;
@@ -138,6 +138,7 @@ private:
 	bool bHasPendingPhysicsAssetViewportPick = false;
 	int32 PendingPhysicsAssetPickBodyIndex = -1;
 	int32 PendingPhysicsAssetPickShapeIndex = -1;
+	int32 PendingPhysicsAssetPickConstraintIndex = -1;
 
 	bool bIsRenderable = false;
 

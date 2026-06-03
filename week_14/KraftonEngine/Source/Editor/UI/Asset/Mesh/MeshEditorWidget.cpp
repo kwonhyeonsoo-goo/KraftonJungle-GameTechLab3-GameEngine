@@ -672,16 +672,26 @@ void FMeshEditorWidget::Tick(float DeltaTime)
 			PhysicsAssetEditor.NotifyViewportGizmoModified();
 		}
 
-		int32 PickedPhysicsBodyIndex = -1;
-		int32 PickedPhysicsShapeIndex = -1;
-		if (ActiveTab == EMeshEditorTab::Physics &&
-			ViewportClient.ConsumePhysicsAssetViewportPick(PickedPhysicsBodyIndex, PickedPhysicsShapeIndex))
-		{
-			PhysicsAssetEditor.SelectPhysicsShapeFromViewport(
-				GetCurrentPhysicsAsset(),
-				PickedPhysicsBodyIndex,
-				PickedPhysicsShapeIndex);
-		}
+			int32 PickedPhysicsBodyIndex = -1;
+			int32 PickedPhysicsShapeIndex = -1;
+			int32 PickedPhysicsConstraintIndex = -1;
+			if (ActiveTab == EMeshEditorTab::Physics &&
+				ViewportClient.ConsumePhysicsAssetViewportPick(PickedPhysicsBodyIndex, PickedPhysicsShapeIndex, PickedPhysicsConstraintIndex))
+			{
+				if (PickedPhysicsConstraintIndex >= 0)
+				{
+					PhysicsAssetEditor.SelectPhysicsConstraintFromViewport(
+						GetCurrentPhysicsAsset(),
+						PickedPhysicsConstraintIndex);
+				}
+				else
+				{
+					PhysicsAssetEditor.SelectPhysicsShapeFromViewport(
+						GetCurrentPhysicsAsset(),
+						PickedPhysicsBodyIndex,
+						PickedPhysicsShapeIndex);
+				}
+			}
 
 		if (ActiveTab == EMeshEditorTab::Physics)
 		{
@@ -738,17 +748,17 @@ void FMeshEditorWidget::CollectPreviewViewports(TArray<IEditorPreviewViewportCli
 	{
 		if (ActiveTab == EMeshEditorTab::Physics)
 		{
-			FMeshEditorWidget* MutableThis = const_cast<FMeshEditorWidget*>(this);
-			UPhysicsAsset* PhysicsAsset = MutableThis->GetCurrentPhysicsAsset();
-			USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
-			MutableThis->PhysicsAssetEditor.RenderPhysicsPreview(
-				PhysicsAsset,
-				SkeletalMesh,
-				ViewportClient.GetPreviewWorld(),
-				ViewportClient.GetPreviewMeshComponent(),
-				ViewportClient.GetPhysicsAssetPreviewComponent(),
-				ViewportClient.GetRenderDevice(),
-				&ViewportClient.GetRenderOptions().ShowFlags);
+				FMeshEditorWidget* MutableThis = const_cast<FMeshEditorWidget*>(this);
+				UPhysicsAsset* PhysicsAsset = MutableThis->GetCurrentPhysicsAsset();
+				USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject);
+				MutableThis->PhysicsAssetEditor.RenderPhysicsPreview(
+					PhysicsAsset,
+					SkeletalMesh,
+					ViewportClient.GetPreviewWorld(),
+					ViewportClient.GetPreviewMeshComponent(),
+					ViewportClient.GetPhysicsAssetPreviewComponent(),
+					ViewportClient.GetRenderDevice(),
+					&ViewportClient.GetRenderOptions().ShowFlags);
 		}
 		else if (ViewportClient.GetPhysicsAssetPreviewComponent())
 		{

@@ -370,6 +370,7 @@ void FMeshEditorViewportClient::ClearPhysicsAssetGizmoTarget()
 	bHasPendingPhysicsAssetViewportPick = false;
 	PendingPhysicsAssetPickBodyIndex = -1;
 	PendingPhysicsAssetPickShapeIndex = -1;
+	PendingPhysicsAssetPickConstraintIndex = -1;
 	if (Gizmo)
 	{
 		Gizmo->Deactivate();
@@ -399,10 +400,11 @@ bool FMeshEditorViewportClient::ConsumePhysicsAssetGizmoModified()
 	return bModified;
 }
 
-bool FMeshEditorViewportClient::ConsumePhysicsAssetViewportPick(int32& OutBodyIndex, int32& OutShapeIndex)
+bool FMeshEditorViewportClient::ConsumePhysicsAssetViewportPick(int32& OutBodyIndex, int32& OutShapeIndex, int32& OutConstraintIndex)
 {
 	OutBodyIndex = -1;
 	OutShapeIndex = -1;
+	OutConstraintIndex = -1;
 	if (!bHasPendingPhysicsAssetViewportPick)
 	{
 		return false;
@@ -410,9 +412,11 @@ bool FMeshEditorViewportClient::ConsumePhysicsAssetViewportPick(int32& OutBodyIn
 
 	OutBodyIndex = PendingPhysicsAssetPickBodyIndex;
 	OutShapeIndex = PendingPhysicsAssetPickShapeIndex;
+	OutConstraintIndex = PendingPhysicsAssetPickConstraintIndex;
 	bHasPendingPhysicsAssetViewportPick = false;
 	PendingPhysicsAssetPickBodyIndex = -1;
 	PendingPhysicsAssetPickShapeIndex = -1;
+	PendingPhysicsAssetPickConstraintIndex = -1;
 	return true;
 }
 
@@ -769,6 +773,16 @@ bool FMeshEditorViewportClient::TryPickPhysicsAssetPreviewShape(const FRay& Ray)
 
 	int32 BodyIndex = -1;
 	int32 ShapeIndex = -1;
+	int32 ConstraintIndex = -1;
+	if (UPhysicsAssetPreviewComponent::DecodeConstraintFaceIndex(Hit.FaceIndex, ConstraintIndex))
+	{
+		bHasPendingPhysicsAssetViewportPick = true;
+		PendingPhysicsAssetPickBodyIndex = -1;
+		PendingPhysicsAssetPickShapeIndex = -1;
+		PendingPhysicsAssetPickConstraintIndex = ConstraintIndex;
+		return true;
+	}
+
 	if (!UPhysicsAssetPreviewComponent::DecodeSelectionFaceIndex(Hit.FaceIndex, BodyIndex, ShapeIndex))
 	{
 		return false;
@@ -777,5 +791,6 @@ bool FMeshEditorViewportClient::TryPickPhysicsAssetPreviewShape(const FRay& Ray)
 	bHasPendingPhysicsAssetViewportPick = true;
 	PendingPhysicsAssetPickBodyIndex = BodyIndex;
 	PendingPhysicsAssetPickShapeIndex = ShapeIndex;
+	PendingPhysicsAssetPickConstraintIndex = -1;
 	return true;
 }
