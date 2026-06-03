@@ -10,6 +10,7 @@
 #include "Animation/Skeleton/Skeleton.h"
 #include "Animation/Skeleton/SkeletonManager.h"
 #include "Asset/AssetRegistry.h"
+#include "Cloth/ClothCollisionGatherer.h"
 #include "Cloth/SkeletalClothRuntime.h"
 #include "Component/PrimitiveComponent.h"
 #include "Core/Logging/Log.h"
@@ -2346,7 +2347,37 @@ void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
         ForceContext.bHasWorldWindVelocity = !ClothPreviewWorldWindVelocity.IsNearlyZero();
     }
 
-    if (ClothRuntime->Tick(*Asset, DeltaTime, MutableSkinnedVertices, GetWorldMatrix(), ForceContext))
+    FClothCollisionGatherer CollisionGatherer;
+    TArray<FClothCollisionSectionResult> CollisionResults;
+    if (UPhysicsAsset* PhysicsAsset = GetEffectivePhysicsAsset())
+    {
+        for (const FSkeletalClothLODData& LODData : Asset->ClothPayload.LODs)
+        {
+            for (const FSkeletalClothData& ClothData : LODData.Cloths)
+            {
+                if (ClothData.bEnabled && ClothData.Config.bEnablePhysicsAssetCollision)
+                {
+                    FClothCollisionSectionResult SectionResult;
+                    SectionResult.LODIndex = ClothData.Binding.LODIndex;
+                    SectionResult.SectionIndex = ClothData.Binding.SectionIndex;
+                    SectionResult.GatherResult = CollisionGatherer.GatherPhysicsAsset(
+                        *this,
+                        *Mesh,
+                        PhysicsAsset,
+                        ClothData.Config);
+                    CollisionResults.push_back(std::move(SectionResult));
+                }
+            }
+        }
+    }
+
+    if (ClothRuntime->Tick(
+        *Asset,
+        DeltaTime,
+        MutableSkinnedVertices,
+        GetWorldMatrix(),
+        ForceContext,
+        CollisionResults.empty() ? nullptr : &CollisionResults))
     {
         MarkSkinnedVerticesModifiedByCloth();
     }
