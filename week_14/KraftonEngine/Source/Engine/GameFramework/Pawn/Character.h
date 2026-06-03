@@ -79,32 +79,17 @@ public:
 	bool BeginRagdollRecovery();
 	UFUNCTION(Pure, Category="Character|Physics")
 	bool IsInRagdoll() const;
-	UFUNCTION(Pure, Category="Character|Physics")
 	ECharacterPhysicsOwnershipMode GetPhysicsOwnershipMode() const { return PhysicsOwnershipMode; }
-	UFUNCTION(Pure, Category="Character|Physics")
 	ECharacterPhysicsCollisionMode GetCharacterPhysicsCollisionMode() const { return CharacterPhysicsCollisionMode; }
-	UFUNCTION(Pure, Category="Character|Physics")
 	ECharacterQueryCollisionMode GetCharacterQueryCollisionMode() const { return CharacterQueryCollisionMode; }
 	UFUNCTION(Pure, Category="Character|Physics")
 	bool IsAwaitingRagdollRecoveryRestore() const { return bAwaitingRagdollRecoveryRestore; }
 	UFUNCTION(Pure, Category="Character|Physics")
-	bool IsUsingFullRagdollQueryProxy() const
-	{
-		return
-			CharacterPhysicsCollisionMode == ECharacterPhysicsCollisionMode::FullRagdollOwned &&
-			CharacterQueryCollisionMode == ECharacterQueryCollisionMode::ReservedForFullRagdollProxy &&
-			GetCurrentCapsuleCollisionEnabled() == ECollisionEnabled::QueryOnly;
-	}
+	bool IsUsingFullRagdollQueryProxy() const;
 	UFUNCTION(Pure, Category="Character|Physics")
-	ECollisionEnabled GetCurrentCapsuleCollisionEnabled() const
-	{
-		return CapsuleComponent ? CapsuleComponent->GetCollisionEnabled() : ECollisionEnabled::NoCollision;
-	}
+	ECollisionEnabled GetCurrentCapsuleCollisionEnabled() const;
 	UFUNCTION(Pure, Category="Character|Physics")
-	ECollisionEnabled GetCurrentMeshCollisionEnabled() const
-	{
-		return Mesh ? Mesh->GetCollisionEnabled() : ECollisionEnabled::NoCollision;
-	}
+	ECollisionEnabled GetCurrentMeshCollisionEnabled() const;
 
 	UFUNCTION(Pure, Category="Character|Components")
 	UCapsuleComponent* GetCapsuleComponent()  const { return CapsuleComponent; }

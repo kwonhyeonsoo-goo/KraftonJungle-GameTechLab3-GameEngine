@@ -316,6 +316,24 @@ bool ACharacter::IsInRagdoll() const
 	return PhysicsOwnershipMode != ECharacterPhysicsOwnershipMode::CharacterDriven;
 }
 
+bool ACharacter::IsUsingFullRagdollQueryProxy() const
+{
+	return
+		CharacterPhysicsCollisionMode == ECharacterPhysicsCollisionMode::FullRagdollOwned &&
+		CharacterQueryCollisionMode == ECharacterQueryCollisionMode::ReservedForFullRagdollProxy &&
+		GetCurrentCapsuleCollisionEnabled() == ECollisionEnabled::QueryOnly;
+}
+
+ECollisionEnabled ACharacter::GetCurrentCapsuleCollisionEnabled() const
+{
+	return CapsuleComponent ? CapsuleComponent->GetCollisionEnabled() : ECollisionEnabled::NoCollision;
+}
+
+ECollisionEnabled ACharacter::GetCurrentMeshCollisionEnabled() const
+{
+	return Mesh ? Mesh->GetCollisionEnabled() : ECollisionEnabled::NoCollision;
+}
+
 void ACharacter::AddMovementInput(const FVector& WorldDirection, float ScaleValue)
 {
 	if (IsInRagdoll())
