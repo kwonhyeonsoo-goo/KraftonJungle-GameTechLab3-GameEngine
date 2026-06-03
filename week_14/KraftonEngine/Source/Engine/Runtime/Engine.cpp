@@ -6,6 +6,7 @@
 #include "Engine/Platform/DirectoryWatcher.h"
 #include "Profiling/Stats/Stats.h"
 #include "Profiling/Stats/ParticleStats.h"
+#include "Profiling/Stats/ClothCollisionStats.h"
 #include "Profiling/StartupProfiler.h"
 #include "Engine/Input/InputSystem.h"
 #include "Engine/Platform/WindowsWindow.h"
@@ -225,6 +226,7 @@ void UEngine::WorldTick(float DeltaTime)
 	// 파티클 stat은 GT tick 중(PSC TickComponent / emitter Spawn·Update) 누적되므로,
 	// 월드 tick 루프 진입 전 여기서 프레임 카운터를 리셋한다. (Peak은 유지)
 	PARTICLE_STATS_RESET();
+	CLOTH_COLLISION_STATS_RESET();
 
 	// PIE 활성 시 Editor 월드는 sleep (UE 동작과 동일).
 	// culling/octree/visibility 갱신을 건너뛰어 50k+ 환경에서 비용 2배를 방지.

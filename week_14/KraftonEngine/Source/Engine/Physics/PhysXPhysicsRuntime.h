@@ -128,6 +128,10 @@ public:
 
     // Game Thread 는 이 스냅샷을 acquire 해서 Component/Ragdoll/Vehicle visual 을 적용한다.
     std::shared_ptr<const FPhysicsWorldSnapshot> AcquireLatestSnapshotRef() const override;
+    void QueryClothCollisionShapes(
+        const FBoundingBox& WorldBounds,
+        uint32 ObjectTypeMask,
+        TArray<FPhysicsClothCollisionShape>& OutShapes) const override;
 
     // 외부 소비자(C/D)는 이 세 함수로만 디버그 데이터를 얻는다 — 전부 step 직후 publish 된
     // 스냅샷의 복사본을 lock 아래에서 반환한다 (live PhysX 직접 접근 없음).
@@ -227,6 +231,10 @@ private:
     void BuildBodySnapshots_Internal(TArray<FPhysicsBodySnapshot>& OutBodies) const;
     void BuildDebugBodies_Internal(TArray<FPhysicsDebugBody>& OutBodies) const;
     void BuildDebugConstraints_Internal(TArray<FPhysicsDebugConstraint>& OutConstraints) const;
+    void QueryClothCollisionShapes_Internal(
+        const FBoundingBox& WorldBounds,
+        uint32 ObjectTypeMask,
+        TArray<FPhysicsClothCollisionShape>& OutShapes) const;
     void BuildWorldSnapshot_Internal();
     void BuildDebugSnapshot_Internal();
 

@@ -569,6 +569,22 @@ struct FSkeletalClothRuntime::FImpl
         return nullptr;
     }
 
+    void CopyCollisionDebugStats(TArray<FClothCollisionSectionResult>& InOutCollisionResults) const
+    {
+        for (FClothCollisionSectionResult& SectionResult : InOutCollisionResults)
+        {
+            for (const FSectionRuntime& Section : Sections)
+            {
+                if (SectionResult.LODIndex == Section.LODIndex &&
+                    SectionResult.SectionIndex == Section.SectionIndex)
+                {
+                    SectionResult.GatherResult.Stats = Section.CollisionStats;
+                    break;
+                }
+            }
+        }
+    }
+
     bool HasEnabledCloth(const FSkeletalMesh& Asset) const
     {
         for (const FSkeletalClothLODData& LODData : Asset.ClothPayload.LODs)
@@ -1134,6 +1150,14 @@ bool FSkeletalClothRuntime::Tick(
     const TArray<FClothCollisionSectionResult>* CollisionResults)
 {
     return Impl->Tick(Asset, DeltaTime, InOutSkinnedVertices, ComponentWorldMatrix, ForceContext, CollisionResults);
+}
+
+void FSkeletalClothRuntime::CopyCollisionDebugStats(TArray<FClothCollisionSectionResult>& InOutCollisionResults) const
+{
+    if (Impl)
+    {
+        Impl->CopyCollisionDebugStats(InOutCollisionResults);
+    }
 }
 
 bool FSkeletalClothRuntime::IsActive() const
