@@ -11,7 +11,7 @@ PS_Input_UV VS(uint vertexID : SV_VertexID)
     return FullscreenTriangleVS(vertexID);
 }
 
-float3 AccumulateBokehSprite(float2 uv, float2 texel)
+float4 AccumulateBokehSprite(float2 uv, float2 texel)
 {
     float3 bokeh = 0.0f;
     float totalWeight = 0.0f;
@@ -52,17 +52,22 @@ float3 AccumulateBokehSprite(float2 uv, float2 texel)
                 continue;
             }
 
-            float3 highlight = max(sourceColor - BokehLumaThreshold, 0.0f);
+            float3 highlight = sourceColor;
             float weight = coverage * candidate;
             bokeh += highlight * weight;
             totalWeight += weight;
         }
     }
 
-    return totalWeight > DoFMinAccumulatedWeight ? bokeh / totalWeight : 0.0f;
+    if (totalWeight <= DoFMinAccumulatedWeight)
+    {
+        return 0.0f;
+    }
+
+    return float4(bokeh / totalWeight, saturate(totalWeight));
 }
 
 float4 PS(PS_Input_UV input) : SV_TARGET
 {
-    return float4(AccumulateBokehSprite(input.uv, DoFGetSceneTexel()) * BokehIntensity, 1.0f);
+    return AccumulateBokehSprite(input.uv, DoFGetSceneTexel());
 }
