@@ -42,6 +42,9 @@ private:
 	void SpawnPaletteNode(ULuaBlueprintAsset* Blueprint, ELuaBlueprintNodeType Type);
 	void RenderGraph(ULuaBlueprintAsset* Blueprint);
 	void RenderNodeBody(ULuaBlueprintAsset* Blueprint, FLuaBlueprintNode& Node);
+	void RenderNodePins(ULuaBlueprintAsset* Blueprint, FLuaBlueprintNode& Node);
+	void RenderNodeInputPin(ULuaBlueprintAsset* Blueprint, FLuaBlueprintNode& Node, FLuaBlueprintPin& Pin);
+	void RenderNodeOutputPin(ULuaBlueprintAsset* Blueprint, FLuaBlueprintPin& Pin);
 	void RenderNodeInspector(ULuaBlueprintAsset* Blueprint, FLuaBlueprintNode& Node);
 	void RenderVariableEditor(ULuaBlueprintAsset* Blueprint, FLuaBlueprintVariable& Variable, int32 Index);
 	void RenderDiagnostics(ULuaBlueprintAsset* Blueprint);

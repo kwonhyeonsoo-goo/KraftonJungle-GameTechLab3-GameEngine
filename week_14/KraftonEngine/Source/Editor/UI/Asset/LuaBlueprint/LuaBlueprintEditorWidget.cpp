@@ -905,6 +905,28 @@ namespace
         return "Node";
     }
 
+    FString NodeHeaderDisplayLabel(const FLuaBlueprintNode& Node)
+    {
+        switch (Node.Type)
+        {
+        case ELuaBlueprintNodeType::GetVariable:
+            if (Node.NameValue != FName::None)
+            {
+                return FString("Get ") + Node.NameValue.ToString();
+            }
+            break;
+        case ELuaBlueprintNodeType::SetVariable:
+            if (Node.NameValue != FName::None)
+            {
+                return FString("Set ") + Node.NameValue.ToString();
+            }
+            break;
+        default:
+            break;
+        }
+        return FString(NodeTypeLabel(Node.Type));
+    }
+
     const char* NodeTypeHelpText(ELuaBlueprintNodeType Type)
     {
         switch (Type)
@@ -3311,7 +3333,8 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
             ImGui::TextColored(ImVec4(0.35f, 0.70f, 1.0f, 1.0f), "•");
             ImGui::SameLine(0.0f, 6.0f);
         }
-        ImGui::TextColored(NodeHeaderColor(Node.Type), "%s", NodeTypeLabel(Node.Type));
+        const FString HeaderLabel = NodeHeaderDisplayLabel(Node);
+        ImGui::TextColored(NodeHeaderColor(Node.Type), "%s", HeaderLabel.c_str());
         if (RenderNodeHelpIcon(Node.Type, HoveredNodeHelpType))
         {
             bHoveredNodeHelpIcon = true;
@@ -3327,41 +3350,7 @@ void FLuaBlueprintEditorWidget::RenderGraph(ULuaBlueprintAsset* Blueprint)
             RenderLuaDebugInlineSnapshot(FLuaDebugManager::GetPausedSnapshot());
         }
 
-        for (FLuaBlueprintPin& Pin : Node.Pins)
-        {
-            const ImVec4 PinCol     = PinTypeColor(Pin.Type);
-            const bool   bExecPin   = Pin.Type == ELuaBlueprintPinType::Exec;
-            const bool   bConnected = IsPinConnected(Blueprint, Pin);
-
-            ed::BeginPin(
-                ToPinId(Pin.PinId),
-                Pin.Kind == ELuaBlueprintPinKind::Input ? ed::PinKind::Input : ed::PinKind::Output
-            );
-            if (Pin.Kind == ELuaBlueprintPinKind::Input)
-            {
-                // UE 스타일: 입력 핀은 [아이콘][라벨]
-                DrawPinIcon(bConnected, bExecPin, PinCol);
-                ImGui::SameLine(0.0f, 6.0f);
-                ImGui::TextColored(PinCol, "%s", Pin.DisplayName.ToString().c_str());
-            }
-            else
-            {
-                // 출력 핀은 [라벨][아이콘]
-                ImGui::TextColored(PinCol, "%s", Pin.DisplayName.ToString().c_str());
-                ImGui::SameLine(0.0f, 6.0f);
-                DrawPinIcon(bConnected, bExecPin, PinCol);
-            }
-            ed::EndPin();
-
-            // Input pin 옆에 연결 상태/자동 형변환 badge와 inline literal editor를 표시한다.
-            if (Pin.Kind == ELuaBlueprintPinKind::Input)
-            {
-                ImGui::SameLine();
-                RenderInputPinConnectionStatus(Blueprint, Pin);
-                ImGui::SameLine();
-                RenderInlinePinLiteral(Blueprint, Node, Pin);
-            }
-        }
+        RenderNodePins(Blueprint, Node);
         ImGui::Dummy(ImVec2(0.0f, 2.0f));
         ed::EndNode();
         if (DebugStylePushes > 0)
@@ -3846,10 +3835,8 @@ void FLuaBlueprintEditorWidget::RenderNodeBody(ULuaBlueprintAsset* Blueprint, FL
     }
     case ELuaBlueprintNodeType::GetVariable:
     case ELuaBlueprintNodeType::SetVariable:
-        if (Node.NameValue != FName::None)
-        {
-            ImGui::TextDisabled("[%s]", Node.NameValue.ToString().c_str());
-        }
+        // 변수명은 노드 제목("Get/Set <Name>")에 표시한다.
+        // 본문에 별도 [Name] 라벨을 두면 핀 행과 분리되어 떠 보인다.
         break;
     case ELuaBlueprintNodeType::GetProperty:
     case ELuaBlueprintNodeType::SetProperty:
@@ -3954,9 +3941,284 @@ void FLuaBlueprintEditorWidget::RenderNodeBody(ULuaBlueprintAsset* Blueprint, FL
     }
 }
 
+
+void FLuaBlueprintEditorWidget::RenderNodeInputPin(
+    ULuaBlueprintAsset* Blueprint,
+    FLuaBlueprintNode&  Node,
+    FLuaBlueprintPin&   Pin
+)
+{
+    const ImVec4 PinCol     = PinTypeColor(Pin.Type);
+    const bool   bExecPin   = Pin.Type == ELuaBlueprintPinType::Exec;
+    const bool   bConnected = IsPinConnected(Blueprint, Pin);
+
+    ed::BeginPin(ToPinId(Pin.PinId), ed::PinKind::Input);
+    DrawPinIcon(bConnected, bExecPin, PinCol);
+    ImGui::SameLine(0.0f, 6.0f);
+    ImGui::TextColored(PinCol, "%s", Pin.DisplayName.ToString().c_str());
+    ed::EndPin();
+
+    if (Pin.Kind == ELuaBlueprintPinKind::Input)
+    {
+        ImGui::SameLine(0.0f, 6.0f);
+        RenderInputPinConnectionStatus(Blueprint, Pin);
+        ImGui::SameLine(0.0f, 6.0f);
+        RenderInlinePinLiteral(Blueprint, Node, Pin);
+    }
+}
+
+void FLuaBlueprintEditorWidget::RenderNodeOutputPin(ULuaBlueprintAsset* Blueprint, FLuaBlueprintPin& Pin)
+{
+    const ImVec4 PinCol     = PinTypeColor(Pin.Type);
+    const bool   bExecPin   = Pin.Type == ELuaBlueprintPinType::Exec;
+    const bool   bConnected = IsPinConnected(Blueprint, Pin);
+
+    ed::BeginPin(ToPinId(Pin.PinId), ed::PinKind::Output);
+    ImGui::TextColored(PinCol, "%s", Pin.DisplayName.ToString().c_str());
+    ImGui::SameLine(0.0f, 6.0f);
+    DrawPinIcon(bConnected, bExecPin, PinCol);
+    ed::EndPin();
+}
+
+void FLuaBlueprintEditorWidget::RenderNodePins(ULuaBlueprintAsset* Blueprint, FLuaBlueprintNode& Node)
+{
+    TArray<FLuaBlueprintPin*> InputPins;
+    TArray<FLuaBlueprintPin*> OutputPins;
+    InputPins.reserve(Node.Pins.size());
+    OutputPins.reserve(Node.Pins.size());
+
+    for (FLuaBlueprintPin& Pin : Node.Pins)
+    {
+        if (Pin.Kind == ELuaBlueprintPinKind::Input)
+        {
+            InputPins.push_back(&Pin);
+        }
+        else
+        {
+            OutputPins.push_back(&Pin);
+        }
+    }
+
+    if (InputPins.empty() && OutputPins.empty())
+    {
+        return;
+    }
+
+    auto EstimateInlineLiteralWidth = [&](FLuaBlueprintPin& Pin) -> float
+    {
+        if (Pin.Kind != ELuaBlueprintPinKind::Input)
+        {
+            return 0.0f;
+        }
+        if (Blueprint->FindLinkToInput(Pin.PinId) != nullptr)
+        {
+            return 0.0f;
+        }
+        switch (Pin.Type)
+        {
+        case ELuaBlueprintPinType::Bool:
+            return 26.0f;
+        case ELuaBlueprintPinType::Int:
+        case ELuaBlueprintPinType::Float:
+            return 84.0f;
+        case ELuaBlueprintPinType::String:
+            return LuaBlueprintAssetTypeForPin(Node, Pin) ? 194.0f : 164.0f;
+        case ELuaBlueprintPinType::Name:
+        case ELuaBlueprintPinType::Class:
+        case ELuaBlueprintPinType::Enum:
+            return 164.0f;
+        case ELuaBlueprintPinType::Vector:
+        case ELuaBlueprintPinType::Rotator:
+            return 164.0f;
+        case ELuaBlueprintPinType::LinearColor:
+        case ELuaBlueprintPinType::Vector4:
+            return 194.0f;
+        default:
+            return 0.0f;
+        }
+    };
+
+    auto EstimateConnectionStatusWidth = [&](FLuaBlueprintPin& Pin) -> float
+    {
+        if (Pin.Kind != ELuaBlueprintPinKind::Input || Pin.Type == ELuaBlueprintPinType::Exec)
+        {
+            return 0.0f;
+        }
+
+        const FLuaBlueprintLink* Link = Blueprint ? Blueprint->FindLinkToInput(Pin.PinId) : nullptr;
+        if (!Link)
+        {
+            return 0.0f;
+        }
+
+        const FLuaBlueprintPin* SourcePin = Blueprint->FindPin(Link->FromPinId);
+        if (!SourcePin || SourcePin->Type == ELuaBlueprintPinType::Exec)
+        {
+            return 0.0f;
+        }
+
+        FString Label = "linked";
+        if (SourcePin->Type != Pin.Type && ULuaBlueprintAsset::ArePinTypesCompatibleForLink(SourcePin->Type, Pin.Type))
+        {
+            Label = FString("auto ") + PinTypeLabel(SourcePin->Type) + " -> " + PinTypeLabel(Pin.Type);
+        }
+        return ImGui::CalcTextSize(Label.c_str()).x;
+    };
+
+    auto EstimateInputPinWidth = [&](FLuaBlueprintPin& Pin) -> float
+    {
+        const FString Label = Pin.DisplayName.ToString();
+        float Width = ImGui::GetTextLineHeight();
+        Width += 6.0f + ImGui::CalcTextSize(Label.c_str()).x;
+
+        const float StatusWidth = EstimateConnectionStatusWidth(Pin);
+        if (StatusWidth > 0.0f)
+        {
+            Width += 6.0f + StatusWidth;
+        }
+
+        const float LiteralWidth = EstimateInlineLiteralWidth(Pin);
+        if (LiteralWidth > 0.0f)
+        {
+            Width += 6.0f + LiteralWidth;
+        }
+
+        return Width;
+    };
+
+    auto EstimateOutputPinWidth = [&](FLuaBlueprintPin& Pin) -> float
+    {
+        const FString Label = Pin.DisplayName.ToString();
+        return ImGui::CalcTextSize(Label.c_str()).x + 6.0f + ImGui::GetTextLineHeight();
+    };
+
+    float LeftColumnWidth  = 0.0f;
+    float RightColumnWidth = 0.0f;
+    for (FLuaBlueprintPin* Pin : InputPins)
+    {
+        LeftColumnWidth = (std::max)(LeftColumnWidth, EstimateInputPinWidth(*Pin));
+    }
+    for (FLuaBlueprintPin* Pin : OutputPins)
+    {
+        RightColumnWidth = (std::max)(RightColumnWidth, EstimateOutputPinWidth(*Pin));
+    }
+
+    if (!InputPins.empty()) LeftColumnWidth = (std::max)(LeftColumnWidth, 120.0f);
+    if (!OutputPins.empty()) RightColumnWidth = (std::max)(RightColumnWidth, 90.0f);
+
+    auto EstimateNodeBodyMinWidth = [&]() -> float
+    {
+        switch (Node.Type)
+        {
+        case ELuaBlueprintNodeType::LiteralString:
+            return 184.0f;
+        case ELuaBlueprintNodeType::LiteralVector:
+            return 184.0f;
+        case ELuaBlueprintNodeType::CustomLuaFunction:
+            return 220.0f;
+        case ELuaBlueprintNodeType::CallFunctionSignature:
+            return Node.StringValue.empty() ? 0.0f : ImGui::CalcTextSize(Node.StringValue.c_str()).x;
+        case ELuaBlueprintNodeType::EventInputAction:
+        case ELuaBlueprintNodeType::EventInputAxis:
+            return 180.0f;
+        default:
+            break;
+        }
+        return 0.0f;
+    };
+
+    const FString HeaderLabel = NodeHeaderDisplayLabel(Node);
+    const float HeaderMinWidth = ImGui::GetTextLineHeight() + 6.0f
+            + ImGui::CalcTextSize(HeaderLabel.c_str()).x
+            + 22.0f  // help icon + local spacing
+            + 32.0f; // node inner padding / style slack
+
+    const float BaseMiddleGap = (InputPins.empty() || OutputPins.empty()) ? 12.0f : 28.0f;
+    const float ContentMinWidth = (std::max)(
+        (std::max)(HeaderMinWidth, EstimateNodeBodyMinWidth()),
+        150.0f
+    );
+
+    float MiddleGap = BaseMiddleGap;
+    float DesiredTableWidth = LeftColumnWidth + MiddleGap + RightColumnWidth;
+    if (DesiredTableWidth < ContentMinWidth)
+    {
+        const float Extra = ContentMinWidth - DesiredTableWidth;
+        if (InputPins.empty() && !OutputPins.empty())
+        {
+            // 출력만 있는 pure/value 노드는 출력 핀이 노드 오른쪽 끝에 붙어야 한다.
+            LeftColumnWidth += Extra;
+        }
+        else if (!InputPins.empty() && OutputPins.empty())
+        {
+            // 입력만 있는 sink 노드는 입력 핀이 왼쪽 끝에 붙어야 한다.
+            RightColumnWidth += Extra;
+        }
+        else
+        {
+            // 양쪽 핀이 모두 있으면 가운데 여백을 늘려 좌/우 edge anchoring 을 유지한다.
+            MiddleGap += Extra;
+        }
+        DesiredTableWidth = LeftColumnWidth + MiddleGap + RightColumnWidth;
+    }
+
+    const int32 RowCount = (std::max)(static_cast<int32>(InputPins.size()), static_cast<int32>(OutputPins.size()));
+
+    ImGui::PushID(static_cast<int>(Node.NodeId));
+    if (ImGui::BeginTable(
+            "##NodePins",
+            3,
+            ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_NoPadOuterX,
+            ImVec2(DesiredTableWidth, 0.0f)))
+    {
+        ImGui::TableSetupColumn("Inputs", ImGuiTableColumnFlags_WidthFixed, LeftColumnWidth);
+        ImGui::TableSetupColumn("Gap", ImGuiTableColumnFlags_WidthFixed, MiddleGap);
+        ImGui::TableSetupColumn("Outputs", ImGuiTableColumnFlags_WidthFixed, RightColumnWidth);
+
+        for (int32 RowIndex = 0; RowIndex < RowCount; ++RowIndex)
+        {
+            ImGui::TableNextRow();
+
+            ImGui::TableSetColumnIndex(0);
+            if (RowIndex < static_cast<int32>(InputPins.size()))
+            {
+                RenderNodeInputPin(Blueprint, Node, *InputPins[RowIndex]);
+            }
+            else
+            {
+                ImGui::Dummy(ImVec2(LeftColumnWidth, 0.0f));
+            }
+
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Dummy(ImVec2(MiddleGap, 0.0f));
+
+            ImGui::TableSetColumnIndex(2);
+            if (RowIndex < static_cast<int32>(OutputPins.size()))
+            {
+                const float CellCursorX = ImGui::GetCursorPosX();
+                const float CellAvailX  = ImGui::GetContentRegionAvail().x;
+                const float ContentWidth = EstimateOutputPinWidth(*OutputPins[RowIndex]);
+                if (CellAvailX > ContentWidth)
+                {
+                    ImGui::SetCursorPosX(CellCursorX + (CellAvailX - ContentWidth));
+                }
+                RenderNodeOutputPin(Blueprint, *OutputPins[RowIndex]);
+            }
+            else
+            {
+                ImGui::Dummy(ImVec2(RightColumnWidth, 0.0f));
+            }
+        }
+
+        ImGui::EndTable();
+    }
+    ImGui::PopID();
+}
+
 void FLuaBlueprintEditorWidget::RenderNodeInspector(ULuaBlueprintAsset* Blueprint, FLuaBlueprintNode& Node)
 {
-    ImGui::TextColored(NodeHeaderColor(Node.Type), "%s", NodeTypeLabel(Node.Type));
+    const FString HeaderLabel = NodeHeaderDisplayLabel(Node);
+    ImGui::TextColored(NodeHeaderColor(Node.Type), "%s", HeaderLabel.c_str());
     ImGui::TextDisabled("Node #%u", Node.NodeId);
     ImGui::Separator();
 
