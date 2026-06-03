@@ -32,6 +32,7 @@
 #include "Animation/Skeleton/SkeletonManager.h"
 #include "Animation/AnimationManager.h"
 #include "Materials/MaterialManager.h"
+#include "Physics/PhysicsAssetManager.h"
 
 UEngine* GEngine = nullptr;
 
@@ -131,6 +132,11 @@ void UEngine::Shutdown()
 	UTexture2D::ReleaseAllGPU();
 	FMeshManager::ReleaseAllGPU();
 	FMaterialManager::Get().Release();
+
+	// PhysicsAssetManager is also an FGCObject root. If this cache is left alive until
+	// process teardown, loaded PhysicsAsset data stays referenced and CRT reports it
+	// as a leak, especially after opening/simulating in the Physics Asset editor.
+	FPhysicsAssetManager::Get().ClearCache();
 
 	FAnimationManager::Get().ClearCache();
 	FSkeletonManager::Get().ClearCache();
