@@ -41,7 +41,12 @@ private:
     int32 ApplyShockwaveBurstAtLocation(const FVector& Origin, float Strength) const;
     void DrawAutoTargetPreview() const;
     void ProcessHitscanInput();
-    void LogHitscanResult(const char* RequestKind, const FVector* Location, int32 AffectedCount, bool bSucceeded) const;
+    void LogHitscanResult(
+        const char* RequestKind,
+        const FVector* Location,
+        int32 AffectedCount,
+        bool bSucceeded,
+        const char* TargetSourceName = nullptr) const;
 
 private:
     UPROPERTY(Edit, Save, Category="Physics|Ragdoll Hitscan", DisplayName="Enable Input Firing")

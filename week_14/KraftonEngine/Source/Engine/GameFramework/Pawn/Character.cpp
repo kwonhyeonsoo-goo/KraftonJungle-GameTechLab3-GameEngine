@@ -870,7 +870,7 @@ void ACharacter::RestoreCharacterAfterRagdoll()
 		bSavedPreRagdollCharacterState
 			? SavedPreRagdollCollisionOwnership.QueryCollisionMode
 			: ECharacterQueryCollisionMode::CharacterDriven;
-	UE_LOG("Character ragdoll restore ready. Actor=%s Ownership=%s RestoredPhysicsCollision=%s RestoredQueryCollision=%s Capsule=%s Mesh=%s CapsuleRole=%s MeshRole=%s PartialBodyRole=%s AwaitingRestore=%s QueryProxyActive=%s",
+	UE_LOG("Character ragdoll restore ready. Actor=%s Ownership=%s RestoredPhysicsCollision=%s RestoredQueryCollision=%s Capsule=%s Mesh=%s CapsuleRole=%s MeshRole=%s PartialBodyRole=%s AwaitingRestore=%s QueryProxyActive=%s HasRestoreLocation=%s RestoreLocation=(%.2f,%.2f,%.2f)",
 		GetName().c_str(),
 		LexToString(PhysicsOwnershipMode),
 		LexToString(RestoredPhysicsCollisionMode),
@@ -881,7 +881,11 @@ void ACharacter::RestoreCharacterAfterRagdoll()
 		LexToString(GetMeshCollisionRole()),
 		LexToString(GetPartialReactionBodyCollisionRole()),
 		BoolToString(bAwaitingRagdollRecoveryRestore),
-		BoolToString(IsUsingFullRagdollQueryProxy()));
+		BoolToString(IsUsingFullRagdollQueryProxy()),
+		BoolToString(bHasCachedRagdollRestoreLocation),
+		CachedRagdollRestoreLocation.X,
+		CachedRagdollRestoreLocation.Y,
+		CachedRagdollRestoreLocation.Z);
 	ApplyCharacterCollisionOwnershipModes(
 		RestoredPhysicsCollisionMode,
 		RestoredQueryCollisionMode,

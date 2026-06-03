@@ -20,9 +20,73 @@ namespace
     constexpr int32 DefaultImpulseFireKey = VK_LBUTTON;
     constexpr int32 DefaultOwnerShockwaveKey = 'Q';
 
+    enum class ERagdollForceTargetLocationSource
+    {
+        None,
+        ActorFallback,
+        MeshFallback,
+        RagdollRepresentative
+    };
+
     const char* GetNameSafe(const UObject* Object)
     {
         return Object ? Object->GetName().c_str() : "None";
+    }
+
+    const char* LexToString(ERagdollForceTargetLocationSource Source)
+    {
+        switch (Source)
+        {
+        case ERagdollForceTargetLocationSource::ActorFallback:
+            return "ActorFallback";
+        case ERagdollForceTargetLocationSource::MeshFallback:
+            return "MeshFallback";
+        case ERagdollForceTargetLocationSource::RagdollRepresentative:
+            return "RagdollRepresentative";
+        default:
+            return "None";
+        }
+    }
+
+    FVector ResolveRagdollForceTargetLocation(
+        AActor* CandidateActor,
+        USkeletalMeshComponent* TargetMesh,
+        ERagdollForceTargetLocationSource* OutSource)
+    {
+        if (OutSource)
+        {
+            *OutSource = ERagdollForceTargetLocationSource::None;
+        }
+
+        if (!CandidateActor)
+        {
+            return FVector::ZeroVector;
+        }
+
+        if (!TargetMesh)
+        {
+            if (OutSource)
+            {
+                *OutSource = ERagdollForceTargetLocationSource::ActorFallback;
+            }
+            return CandidateActor->GetActorLocation();
+        }
+
+        FVector RepresentativeLocation = FVector::ZeroVector;
+        if (TargetMesh->TryGetRagdollRepresentativeLocation(RepresentativeLocation))
+        {
+            if (OutSource)
+            {
+                *OutSource = ERagdollForceTargetLocationSource::RagdollRepresentative;
+            }
+            return RepresentativeLocation;
+        }
+
+        if (OutSource)
+        {
+            *OutSource = ERagdollForceTargetLocationSource::MeshFallback;
+        }
+        return TargetMesh->GetWorldLocation();
     }
 }
 
@@ -64,6 +128,14 @@ bool URagdollForceHitscanComponent::FireImpulseHitscan()
 
     FVector TargetLocation = FVector::ZeroVector;
     AActor* TargetActor = ResolveBestImpulseTargetActor(&TargetLocation);
+    ERagdollForceTargetLocationSource TargetSource = ERagdollForceTargetLocationSource::None;
+    if (TargetActor)
+    {
+        TargetLocation = ResolveRagdollForceTargetLocation(
+            TargetActor,
+            ResolveTargetMesh(TargetActor),
+            &TargetSource);
+    }
     FVector AimOrigin = FVector::ZeroVector;
     FVector AimDirection = FVector::ZeroVector;
     if (!TargetActor || !TryGetActionRay(AimOrigin, AimDirection))
@@ -89,7 +161,7 @@ bool URagdollForceHitscanComponent::FireImpulseHitscan()
     Request.bAllowWhileMoving = bAllowWhileMoving;
 
     const bool bSucceeded = ForceEmitter->ApplyImpulseToActor(TargetActor, Request);
-    LogHitscanResult("Impulse", &TargetLocation, bSucceeded ? 1 : 0, bSucceeded);
+    LogHitscanResult("Impulse", &TargetLocation, bSucceeded ? 1 : 0, bSucceeded, LexToString(TargetSource));
     return bSucceeded;
 }
 
@@ -192,18 +264,7 @@ USkeletalMeshComponent* URagdollForceHitscanComponent::ResolveTargetMesh(AActor*
 FVector URagdollForceHitscanComponent::ResolveTargetLocation(AActor* CandidateActor) const
 {
     USkeletalMeshComponent* TargetMesh = ResolveTargetMesh(CandidateActor);
-    if (!TargetMesh)
-    {
-        return CandidateActor ? CandidateActor->GetActorLocation() : FVector::ZeroVector;
-    }
-
-    FVector RepresentativeLocation = FVector::ZeroVector;
-    if (TargetMesh->TryGetRagdollRepresentativeLocation(RepresentativeLocation))
-    {
-        return RepresentativeLocation;
-    }
-
-    return TargetMesh->GetWorldLocation();
+    return ResolveRagdollForceTargetLocation(CandidateActor, TargetMesh, nullptr);
 }
 
 bool URagdollForceHitscanComponent::HasValidRagdollTarget(AActor* CandidateActor) const
@@ -393,18 +454,20 @@ void URagdollForceHitscanComponent::LogHitscanResult(
     const char* RequestKind,
     const FVector* Location,
     int32 AffectedCount,
-    bool bSucceeded) const
+    bool bSucceeded,
+    const char* TargetSourceName) const
 {
     if (!bLogHitscan)
     {
         return;
     }
 
-    UE_LOG("Ragdoll force %s. Component=%s Owner=%s TargetResolved=%s Location=(%.2f,%.2f,%.2f) Affected=%d Success=%s",
+    UE_LOG("Ragdoll force %s. Component=%s Owner=%s TargetResolved=%s TargetSource=%s Location=(%.2f,%.2f,%.2f) Affected=%d Success=%s",
         RequestKind ? RequestKind : "Unknown",
         GetNameSafe(this),
         GetNameSafe(GetOwner()),
         Location ? "true" : "false",
+        TargetSourceName ? TargetSourceName : "None",
         Location ? Location->X : 0.0f,
         Location ? Location->Y : 0.0f,
         Location ? Location->Z : 0.0f,
