@@ -14,6 +14,7 @@
 #include "Cloth/SkeletalClothRuntime.h"
 #include "Component/PrimitiveComponent.h"
 #include "Core/Logging/Log.h"
+#include "Debug/DrawDebugHelpers.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "GameFramework/WorldSettings.h"
@@ -27,6 +28,9 @@
 #include "Physics/PhysicsAsset.h"
 #include "Physics/PhysicsAssetManager.h"
 #include "Physics/PhysicsAssetInstance.h"
+#include "Physics/IPhysicsScene.h"
+#include "Physics/PhysicsRuntime.h"
+#include "Profiling/Stats/ClothCollisionStats.h"
 #include "Render/Proxy/SkeletalMeshSceneProxy.h"
 #include "Render/Types/ViewTypes.h"
 #include "Serialization/Archive.h"
@@ -41,6 +45,65 @@ namespace
     float Clamp01(float Value)
     {
         return std::clamp(Value, 0.0f, 1.0f);
+    }
+
+    FBoundingBox BuildClothSectionWorldBounds(
+        const FSkeletalClothData& ClothData,
+        const TArray<FVertexPNCTT>& SkinnedVertices,
+        const FMatrix& ComponentToWorld)
+    {
+        FBoundingBox Bounds;
+        const TArray<uint32>& SourceIndices = !ClothData.ParticleToRenderVertex.empty()
+            ? ClothData.ParticleToRenderVertex
+            : ClothData.RenderVertexIndices;
+        for (uint32 VertexIndex : SourceIndices)
+        {
+            if (VertexIndex >= SkinnedVertices.size())
+            {
+                continue;
+            }
+            Bounds.Expand(ComponentToWorld.TransformPositionWithW(SkinnedVertices[VertexIndex].Position));
+        }
+        return Bounds;
+    }
+
+    void DrawClothWorldCollisionCandidates(UWorld* World, const FClothCollisionGatherResult& GatherResult)
+    {
+        if (!World)
+        {
+            return;
+        }
+
+        for (const FClothCollisionCandidate& Candidate : GatherResult.Candidates)
+        {
+            if (Candidate.SourceId.Source != EClothCollisionSource::WorldStatic ||
+                !Candidate.WorldBounds.IsValid())
+            {
+                continue;
+            }
+
+            FColor Color = FColor::Gray();
+            if (Candidate.State == EClothCollisionSelectState::Selected)
+            {
+                Color = FColor::Green();
+            }
+            else if (Candidate.State == EClothCollisionSelectState::TruncatedByBudget)
+            {
+                Color = FColor::Yellow();
+            }
+            else if (Candidate.State == EClothCollisionSelectState::RejectedBySectionBounds ||
+                Candidate.State == EClothCollisionSelectState::SkippedFilter)
+            {
+                Color = FColor::Red();
+            }
+
+            DrawDebugBox(
+                World,
+                Candidate.WorldBounds.GetCenter(),
+                Candidate.WorldBounds.GetExtent(),
+                Color,
+                0.0f);
+        }
     }
 
     float AdvanceTowardTarget(float CurrentValue, float TargetValue, float DeltaTime, float Duration)
@@ -2334,10 +2397,34 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
 {
+    UWorld* World = GetWorld();
+    const bool bRecordClothCollisionStats = World && World->GetWorldType() != EWorldType::EditorPreview;
+    if (bRecordClothCollisionStats)
+    {
+        CLOTH_COLLISION_STATS_ADD_TICK_ATTEMPT();
+    }
+
     USkeletalMesh* Mesh = GetSkeletalMesh();
     FSkeletalMesh* Asset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
-    if (!Asset || Asset->ClothPayload.LODs.empty())
+    if (!Asset)
     {
+        if (bRecordClothCollisionStats)
+        {
+            CLOTH_COLLISION_STATS_SKIP_NO_ASSET();
+        }
+        if (ClothRuntime)
+        {
+            ClothRuntime->Reset();
+        }
+        return;
+    }
+
+    if (Asset->ClothPayload.LODs.empty())
+    {
+        if (bRecordClothCollisionStats)
+        {
+            CLOTH_COLLISION_STATS_SKIP_NO_CLOTH_PAYLOAD();
+        }
         if (ClothRuntime)
         {
             ClothRuntime->Reset();
@@ -2347,6 +2434,10 @@ void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
 
     if (GetEffectiveSkinningMode() != ESkinningMode::CPU)
     {
+        if (bRecordClothCollisionStats)
+        {
+            CLOTH_COLLISION_STATS_SKIP_NON_CPU_SKINNING();
+        }
         if (ClothRuntime)
         {
             ClothRuntime->Reset();
@@ -2362,6 +2453,10 @@ void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
     TArray<FVertexPNCTT>& MutableSkinnedVertices = GetMutableSkinnedVerticesForCloth();
     if (MutableSkinnedVertices.empty())
     {
+        if (bRecordClothCollisionStats)
+        {
+            CLOTH_COLLISION_STATS_SKIP_NO_SKINNED_VERTICES();
+        }
         return;
     }
 
@@ -2384,35 +2479,102 @@ void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
 
     FClothCollisionGatherer CollisionGatherer;
     TArray<FClothCollisionSectionResult> CollisionResults;
-    if (UPhysicsAsset* PhysicsAsset = GetEffectivePhysicsAsset())
+    UPhysicsAsset* PhysicsAsset = GetEffectivePhysicsAsset();
+    IPhysicsRuntime* PhysicsRuntime = nullptr;
+    if (World)
     {
-        for (const FSkeletalClothLODData& LODData : Asset->ClothPayload.LODs)
+        IPhysicsScene* PhysicsScene = World->GetPhysicsScene();
+        PhysicsRuntime = PhysicsScene ? PhysicsScene->GetRuntime() : nullptr;
+    }
+
+    FBoundingBox ComponentClothWorldBounds;
+    TArray<FBoundingBox> SectionWorldBounds;
+    TArray<const FSkeletalClothData*> CollisionCloths;
+    const FMatrix& ComponentWorldMatrix = GetWorldMatrix();
+    for (const FSkeletalClothLODData& LODData : Asset->ClothPayload.LODs)
+    {
+        for (const FSkeletalClothData& ClothData : LODData.Cloths)
         {
-            for (const FSkeletalClothData& ClothData : LODData.Cloths)
+            if (!ClothData.bEnabled)
             {
-                if (ClothData.bEnabled && ClothData.Config.bEnablePhysicsAssetCollision)
-                {
-                    FClothCollisionSectionResult SectionResult;
-                    SectionResult.LODIndex = ClothData.Binding.LODIndex;
-                    SectionResult.SectionIndex = ClothData.Binding.SectionIndex;
-                    SectionResult.GatherResult = CollisionGatherer.GatherPhysicsAsset(
-                        *this,
-                        *Mesh,
-                        PhysicsAsset,
-                        ClothData.Config);
-                    CollisionResults.push_back(std::move(SectionResult));
-                }
+                continue;
             }
+
+            if (bRecordClothCollisionStats)
+            {
+                CLOTH_COLLISION_STATS_ADD_ENABLED_SECTION();
+            }
+
+            if (!ClothData.Config.bEnablePhysicsAssetCollision &&
+                !ClothData.Config.bEnableWorldStaticClothCollision)
+            {
+                continue;
+            }
+
+            const FBoundingBox Bounds =
+                BuildClothSectionWorldBounds(ClothData, MutableSkinnedVertices, ComponentWorldMatrix);
+            if (bRecordClothCollisionStats)
+            {
+                CLOTH_COLLISION_STATS_ADD_COLLISION_ELIGIBLE_SECTION(
+                    ClothData.Config.bEnableWorldStaticClothCollision,
+                    Bounds.IsValid(),
+                    PhysicsRuntime != nullptr);
+            }
+            if (!Bounds.IsValid())
+            {
+                continue;
+            }
+
+            ComponentClothWorldBounds.Expand(Bounds.Min);
+            ComponentClothWorldBounds.Expand(Bounds.Max);
+            SectionWorldBounds.push_back(Bounds);
+            CollisionCloths.push_back(&ClothData);
         }
     }
 
-    if (ClothRuntime->Tick(
+    if (ComponentClothWorldBounds.IsValid())
+    {
+        for (int32 Index = 0; Index < static_cast<int32>(CollisionCloths.size()); ++Index)
+        {
+            const FSkeletalClothData& ClothData = *CollisionCloths[Index];
+            FClothCollisionSectionResult SectionResult;
+            SectionResult.LODIndex = ClothData.Binding.LODIndex;
+            SectionResult.SectionIndex = ClothData.Binding.SectionIndex;
+            SectionResult.bWorldStaticCollisionEnabled = ClothData.Config.bEnableWorldStaticClothCollision;
+            SectionResult.GatherResult = CollisionGatherer.GatherForSection(
+                *this,
+                *Mesh,
+                PhysicsAsset,
+                PhysicsRuntime,
+                ClothData.Config,
+                ComponentClothWorldBounds,
+                SectionWorldBounds[Index]);
+            DrawClothWorldCollisionCandidates(GetWorld(), SectionResult.GatherResult);
+            CollisionResults.push_back(std::move(SectionResult));
+        }
+    }
+
+    const bool bClothModified = ClothRuntime->Tick(
         *Asset,
         DeltaTime,
         MutableSkinnedVertices,
         GetWorldMatrix(),
         ForceContext,
-        CollisionResults.empty() ? nullptr : &CollisionResults))
+        CollisionResults.empty() ? nullptr : &CollisionResults);
+
+    if (bRecordClothCollisionStats && !CollisionResults.empty())
+    {
+        ClothRuntime->CopyCollisionDebugStats(CollisionResults);
+        for (const FClothCollisionSectionResult& SectionResult : CollisionResults)
+        {
+            CLOTH_COLLISION_STATS_ADD_SECTION(
+                SectionResult.GatherResult,
+                SectionResult.bWorldStaticCollisionEnabled);
+        }
+        CLOTH_COLLISION_STATS_ADD_COMPONENT();
+    }
+
+    if (bClothModified)
     {
         MarkSkinnedVerticesModifiedByCloth();
     }

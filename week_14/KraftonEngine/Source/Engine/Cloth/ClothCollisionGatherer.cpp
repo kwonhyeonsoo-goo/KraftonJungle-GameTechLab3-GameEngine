@@ -6,6 +6,7 @@
 #include "Mesh/Skeletal/SkeletalMesh.h"
 #include "Mesh/Skeletal/SkeletalMeshAsset.h"
 #include "Physics/PhysicsAsset.h"
+#include "Physics/PhysicsRuntime.h"
 
 #include <algorithm>
 #include <cmath>
@@ -13,6 +14,7 @@
 namespace
 {
     constexpr float ClothCollisionScaleTolerance = 1.0e-4f;
+    constexpr float ClothWorldCollisionSectionExpansion = 50.0f;
 
     FTransform ComposeClothCollisionTransforms(const FTransform& Parent, const FTransform& Local)
     {
@@ -51,6 +53,91 @@ namespace
             IsFiniteFloat(Transform.Rotation.Y) &&
             IsFiniteFloat(Transform.Rotation.Z) &&
             IsFiniteFloat(Transform.Rotation.W);
+    }
+
+    FBoundingBox ExpandBounds(const FBoundingBox& Bounds, float Margin)
+    {
+        if (!Bounds.IsValid())
+        {
+            return Bounds;
+        }
+        const FVector Expansion(Margin, Margin, Margin);
+        return FBoundingBox(Bounds.Min - Expansion, Bounds.Max + Expansion);
+    }
+
+    float ComputeBoundsDistanceSquared(const FBoundingBox& A, const FBoundingBox& B)
+    {
+        const float DX = (A.Max.X < B.Min.X) ? (B.Min.X - A.Max.X) : ((B.Max.X < A.Min.X) ? (A.Min.X - B.Max.X) : 0.0f);
+        const float DY = (A.Max.Y < B.Min.Y) ? (B.Min.Y - A.Max.Y) : ((B.Max.Y < A.Min.Y) ? (A.Min.Y - B.Max.Y) : 0.0f);
+        const float DZ = (A.Max.Z < B.Min.Z) ? (B.Min.Z - A.Max.Z) : ((B.Max.Z < A.Min.Z) ? (A.Min.Z - B.Max.Z) : 0.0f);
+        return DX * DX + DY * DY + DZ * DZ;
+    }
+
+    int32 GetClothCollisionSourcePriority(EClothCollisionSource Source)
+    {
+        switch (Source)
+        {
+        case EClothCollisionSource::PhysicsAsset:
+            return 0;
+        case EClothCollisionSource::WorldStatic:
+            return 1;
+        case EClothCollisionSource::WorldDynamic:
+            return 2;
+        default:
+            return 3;
+        }
+    }
+
+    bool IsWorldShapeBlocking(const FPhysicsClothCollisionShape& Shape)
+    {
+        return Shape.FilterData.CollisionEnabled != ECollisionEnabled::NoCollision &&
+            !Shape.FilterData.bIsTrigger &&
+            Shape.FilterData.BlockMask != 0;
+    }
+
+    ECollisionChannel ToCollisionChannel(uint32 ObjectType)
+    {
+        const uint32 Clamped = (std::min)(ObjectType, static_cast<uint32>(ECollisionChannel::ActiveCount) - 1u);
+        return static_cast<ECollisionChannel>(Clamped);
+    }
+
+    FVector GetComponentCollisionScale(const USkeletalMeshComponent& Component)
+    {
+        const FVector Scale = Component.GetWorldMatrix().GetScale();
+        if (!IsFiniteVector(Scale) ||
+            Scale.X <= ClothCollisionScaleTolerance ||
+            Scale.Y <= ClothCollisionScaleTolerance ||
+            Scale.Z <= ClothCollisionScaleTolerance)
+        {
+            return FVector::OneVector;
+        }
+        return Scale;
+    }
+
+    float GetUniformCollisionScale(const FVector& Scale)
+    {
+        return IsUniformPositiveScale(Scale) ? Scale.X : 1.0f;
+    }
+
+    FVector DivideByComponentScale(const FVector& Value, const FVector& Scale)
+    {
+        return FVector(
+            Value.X / Scale.X,
+            Value.Y / Scale.Y,
+            Value.Z / Scale.Z);
+    }
+
+    FTransform MakeComponentLocalTransform(const USkeletalMeshComponent& Component, const FTransform& WorldTransform)
+    {
+        const FMatrix ComponentWorldMatrix = Component.GetWorldMatrix();
+        const FTransform ComponentWorld(ComponentWorldMatrix);
+        const FQuat InverseRotation = ComponentWorld.Rotation.Inverse();
+
+        FTransform Local;
+        Local.Location = ComponentWorldMatrix.GetInverse().TransformPositionWithW(WorldTransform.Location);
+        Local.Rotation = (InverseRotation * WorldTransform.Rotation).GetNormalized();
+        Local.Scale = FVector::OneVector;
+        return Local;
     }
 
     int32 FindBoneIndexInMesh(const FSkeletalMesh& MeshAsset, const FName& BoneName)
@@ -108,6 +195,32 @@ namespace
     }
 }
 
+FClothCollisionGatherResult FClothCollisionGatherer::GatherForSection(
+    const USkeletalMeshComponent& Component,
+    const USkeletalMesh& SkeletalMesh,
+    const UPhysicsAsset* PhysicsAsset,
+    const IPhysicsRuntime* PhysicsRuntime,
+    const FSkeletalClothConfig& ClothConfig,
+    const FBoundingBox& ComponentWorldBounds,
+    const FBoundingBox& SectionWorldBounds,
+    const FClothCollisionBudget& Budget) const
+{
+    FClothCollisionGatherResult Result;
+    GatherPhysicsAssetCandidates(Result, Component, SkeletalMesh, PhysicsAsset, ClothConfig);
+    if (PhysicsRuntime)
+    {
+        GatherWorldStaticCandidates(
+            Result,
+            *PhysicsRuntime,
+            Component,
+            ClothConfig,
+            ComponentWorldBounds,
+            SectionWorldBounds);
+    }
+    SelectWithinBudget(Result, Budget);
+    return Result;
+}
+
 FClothCollisionGatherResult FClothCollisionGatherer::GatherPhysicsAsset(
     const USkeletalMeshComponent& Component,
     const USkeletalMesh& SkeletalMesh,
@@ -116,22 +229,34 @@ FClothCollisionGatherResult FClothCollisionGatherer::GatherPhysicsAsset(
     const FClothCollisionBudget& Budget) const
 {
     FClothCollisionGatherResult Result;
+    GatherPhysicsAssetCandidates(Result, Component, SkeletalMesh, PhysicsAsset, ClothConfig);
+    SelectWithinBudget(Result, Budget);
+    return Result;
+}
+
+void FClothCollisionGatherer::GatherPhysicsAssetCandidates(
+    FClothCollisionGatherResult& Result,
+    const USkeletalMeshComponent& Component,
+    const USkeletalMesh& SkeletalMesh,
+    const UPhysicsAsset* PhysicsAsset,
+    const FSkeletalClothConfig& ClothConfig) const
+{
     if (!ClothConfig.bEnablePhysicsAssetCollision || !PhysicsAsset)
     {
-        return Result;
+        return;
     }
 
     FSkeletalMesh* MeshAsset = SkeletalMesh.GetSkeletalMeshAsset();
     if (!MeshAsset)
     {
-        return Result;
+        return;
     }
 
     TArray<FTransform> BoneComponentSpaceTransforms;
     Component.GetCurrentBoneGlobalTransforms(BoneComponentSpaceTransforms);
     if (BoneComponentSpaceTransforms.empty())
     {
-        return Result;
+        return;
     }
 
     const uint32 OwnerActorId = Component.GetOwner() ? Component.GetOwner()->GetUUID() : 0;
@@ -209,6 +334,8 @@ FClothCollisionGatherResult FClothCollisionGatherer::GatherPhysicsAsset(
 
             Candidate.LocalTransform =
                 ComposeClothCollisionTransforms(BodyComponentTransform, ShapeSetup.LocalTransform);
+            Candidate.PreviousLocalTransform = Candidate.LocalTransform;
+            Candidate.CurrentLocalTransform = Candidate.LocalTransform;
 
             if (!IsValidTransformForCollision(Candidate.LocalTransform))
             {
@@ -260,9 +387,156 @@ FClothCollisionGatherResult FClothCollisionGatherer::GatherPhysicsAsset(
             Result.Candidates.push_back(Candidate);
         }
     }
+}
 
-    SelectWithinBudget(Result, Budget);
-    return Result;
+void FClothCollisionGatherer::GatherWorldStaticCandidates(
+    FClothCollisionGatherResult& Result,
+    const IPhysicsRuntime& PhysicsRuntime,
+    const USkeletalMeshComponent& Component,
+    const FSkeletalClothConfig& ClothConfig,
+    const FBoundingBox& ComponentWorldBounds,
+    const FBoundingBox& SectionWorldBounds) const
+{
+    if (!ClothConfig.bEnableWorldStaticClothCollision ||
+        !ComponentWorldBounds.IsValid() ||
+        !SectionWorldBounds.IsValid())
+    {
+        return;
+    }
+
+    TArray<FPhysicsClothCollisionShape> Shapes;
+    PhysicsRuntime.QueryClothCollisionShapes(
+        ExpandBounds(ComponentWorldBounds, ClothWorldCollisionSectionExpansion),
+        ObjectTypeBit(ECollisionChannel::WorldStatic),
+        Shapes);
+
+    const FBoundingBox ExpandedSectionWorldBounds =
+        ExpandBounds(SectionWorldBounds, ClothWorldCollisionSectionExpansion);
+    const uint32 OwnerComponentId = Component.GetUUID();
+    const FVector ComponentCollisionScale = GetComponentCollisionScale(Component);
+    const float UniformCollisionScale = GetUniformCollisionScale(ComponentCollisionScale);
+
+    for (const FPhysicsClothCollisionShape& Shape : Shapes)
+    {
+        if (Shape.OwnerComponentId == OwnerComponentId)
+        {
+            continue;
+        }
+
+        FClothCollisionCandidate Candidate;
+        Candidate.SourceId.Source = EClothCollisionSource::WorldStatic;
+        Candidate.SourceId.OwnerActorId = Shape.OwnerActorId;
+        Candidate.SourceId.OwnerComponentId = Shape.OwnerComponentId;
+        Candidate.SourceId.BodyIndex = static_cast<int32>(Shape.Body.Index);
+        Candidate.SourceId.ShapeIndex = static_cast<int32>(Shape.Shape.Index);
+        Candidate.SourceId.ObjectChannel = ToCollisionChannel(Shape.FilterData.ObjectType);
+        Candidate.WorldBounds = Shape.WorldBounds;
+        Candidate.StableTieBreaker =
+            (static_cast<uint64>(1u) << 60) ^
+            (static_cast<uint64>(Shape.OwnerComponentId) << 32) ^
+            (static_cast<uint64>(Shape.Body.Index) << 16) ^
+            static_cast<uint64>(Shape.Shape.Index);
+
+        switch (Shape.Type)
+        {
+        case EPhysicsShapeType::Sphere:
+            Candidate.Type = EClothCollisionPrimitiveType::Sphere;
+            Candidate.Radius = Shape.SphereRadius / UniformCollisionScale;
+            Candidate.TypeCost = 1;
+            break;
+        case EPhysicsShapeType::Capsule:
+            Candidate.Type = EClothCollisionPrimitiveType::Capsule;
+            Candidate.Radius = Shape.CapsuleRadius / UniformCollisionScale;
+            Candidate.CapsuleHalfHeight = Shape.CapsuleHalfHeight / UniformCollisionScale;
+            Candidate.TypeCost = 1;
+            break;
+        case EPhysicsShapeType::Box:
+            Candidate.Type = EClothCollisionPrimitiveType::Box;
+            Candidate.HalfExtent = DivideByComponentScale(Shape.BoxHalfExtent, ComponentCollisionScale);
+            Candidate.TypeCost = 6;
+            break;
+        default:
+            Candidate.State = EClothCollisionSelectState::SkippedFilter;
+            ++Result.Stats.RejectedWorldStatic;
+            ++Result.Stats.Rejected;
+            Result.Candidates.push_back(Candidate);
+            continue;
+        }
+
+        Candidate.LocalTransform = MakeComponentLocalTransform(Component, Shape.CurrentWorldTransform);
+        Candidate.PreviousLocalTransform = MakeComponentLocalTransform(Component, Shape.PreviousWorldTransform);
+        Candidate.CurrentLocalTransform = Candidate.LocalTransform;
+
+        if (!IsWorldShapeBlocking(Shape))
+        {
+            Candidate.State = EClothCollisionSelectState::SkippedFilter;
+            ++Result.Stats.RejectedWorldStatic;
+            ++Result.Stats.Rejected;
+            Result.Candidates.push_back(Candidate);
+            continue;
+        }
+
+        if (!Shape.WorldBounds.IsIntersected(ExpandedSectionWorldBounds))
+        {
+            Candidate.State = EClothCollisionSelectState::RejectedBySectionBounds;
+            ++Result.Stats.RejectedWorldStatic;
+            ++Result.Stats.Rejected;
+            Result.Candidates.push_back(Candidate);
+            continue;
+        }
+
+        Candidate.OverlapRank = Shape.WorldBounds.IsIntersected(SectionWorldBounds) ? 0 : 1;
+        Candidate.DistanceScore = ComputeBoundsDistanceSquared(Shape.WorldBounds, SectionWorldBounds);
+        Candidate.CenterDistanceScore =
+            (Shape.WorldBounds.GetCenter() - SectionWorldBounds.GetCenter()).Dot(
+                Shape.WorldBounds.GetCenter() - SectionWorldBounds.GetCenter());
+
+        if (!IsValidTransformForCollision(Candidate.LocalTransform))
+        {
+            Candidate.State = EClothCollisionSelectState::SkippedInvalidTransform;
+            ++Result.Stats.RejectedWorldStatic;
+            ++Result.Stats.Rejected;
+            Result.Candidates.push_back(Candidate);
+            continue;
+        }
+
+        if ((Candidate.Type == EClothCollisionPrimitiveType::Sphere ||
+            Candidate.Type == EClothCollisionPrimitiveType::Capsule) &&
+            Candidate.Radius <= 0.0f)
+        {
+            Candidate.State = EClothCollisionSelectState::SkippedInvalidTransform;
+            ++Result.Stats.RejectedWorldStatic;
+            ++Result.Stats.Rejected;
+            Result.Candidates.push_back(Candidate);
+            continue;
+        }
+
+        if (Candidate.Type == EClothCollisionPrimitiveType::Capsule &&
+            Candidate.CapsuleHalfHeight <= 0.0f)
+        {
+            Candidate.State = EClothCollisionSelectState::SkippedInvalidTransform;
+            ++Result.Stats.RejectedWorldStatic;
+            ++Result.Stats.Rejected;
+            Result.Candidates.push_back(Candidate);
+            continue;
+        }
+
+        if (Candidate.Type == EClothCollisionPrimitiveType::Box &&
+            (Candidate.HalfExtent.X <= 0.0f ||
+                Candidate.HalfExtent.Y <= 0.0f ||
+                Candidate.HalfExtent.Z <= 0.0f))
+        {
+            Candidate.State = EClothCollisionSelectState::SkippedInvalidTransform;
+            ++Result.Stats.RejectedWorldStatic;
+            ++Result.Stats.Rejected;
+            Result.Candidates.push_back(Candidate);
+            continue;
+        }
+
+        ++Result.Stats.GatheredWorldStatic;
+        AccumulateGatheredStat(Result.Stats, Candidate.Type);
+        Result.Candidates.push_back(Candidate);
+    }
 }
 
 void FClothCollisionGatherer::SelectWithinBudget(
@@ -278,6 +552,28 @@ void FClothCollisionGatherer::SelectWithinBudget(
         Result.Candidates.end(),
         [](const FClothCollisionCandidate& A, const FClothCollisionCandidate& B)
         {
+            const int32 SourcePriorityA = GetClothCollisionSourcePriority(A.SourceId.Source);
+            const int32 SourcePriorityB = GetClothCollisionSourcePriority(B.SourceId.Source);
+            if (SourcePriorityA != SourcePriorityB)
+            {
+                return SourcePriorityA < SourcePriorityB;
+            }
+            if (A.OverlapRank != B.OverlapRank)
+            {
+                return A.OverlapRank < B.OverlapRank;
+            }
+            if (A.DistanceScore != B.DistanceScore)
+            {
+                return A.DistanceScore < B.DistanceScore;
+            }
+            if (A.CenterDistanceScore != B.CenterDistanceScore)
+            {
+                return A.CenterDistanceScore < B.CenterDistanceScore;
+            }
+            if (A.TypeCost != B.TypeCost)
+            {
+                return A.TypeCost < B.TypeCost;
+            }
             return A.StableTieBreaker < B.StableTieBreaker;
         });
 
@@ -337,11 +633,27 @@ void FClothCollisionGatherer::SelectWithinBudget(
         {
             Candidate.State = EClothCollisionSelectState::Selected;
             AccumulateSelectedStat(Result.Stats, Candidate.Type);
+            if (Candidate.SourceId.Source == EClothCollisionSource::WorldStatic)
+            {
+                ++Result.Stats.SelectedWorldStatic;
+            }
+            else if (Candidate.SourceId.Source == EClothCollisionSource::WorldDynamic)
+            {
+                ++Result.Stats.SelectedWorldDynamic;
+            }
         }
         else
         {
             Candidate.State = EClothCollisionSelectState::TruncatedByBudget;
             ++Result.Stats.Truncated;
+            if (Candidate.SourceId.Source == EClothCollisionSource::WorldStatic)
+            {
+                ++Result.Stats.TruncatedWorldStatic;
+            }
+            else if (Candidate.SourceId.Source == EClothCollisionSource::WorldDynamic)
+            {
+                ++Result.Stats.TruncatedWorldDynamic;
+            }
         }
     }
 }

@@ -41,6 +41,7 @@ public:
         const FMatrix& ComponentWorldMatrix,
         const FClothWorldForceContext& ForceContext,
         const TArray<FClothCollisionSectionResult>* CollisionResults = nullptr);
+    void CopyCollisionDebugStats(TArray<FClothCollisionSectionResult>& InOutCollisionResults) const;
     bool IsActive() const;
 
     static FClothDebugRuntimeConfig& GetMutableDebugRuntimeConfig();

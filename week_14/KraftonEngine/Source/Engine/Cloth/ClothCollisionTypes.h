@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Types/CollisionTypes.h"
 #include "Core/Types/CoreTypes.h"
 #include "Core/Types/EngineTypes.h"
 #include "Math/Transform.h"
@@ -28,7 +29,8 @@ enum class EClothCollisionSelectState : uint8
     TruncatedByBudget,
     SkippedInvalidTransform,
     SkippedNonUniformScale,
-    SkippedFilter
+    SkippedFilter,
+    RejectedBySectionBounds
 };
 
 struct FClothCollisionSourceId
@@ -39,6 +41,7 @@ struct FClothCollisionSourceId
     FName BoneName = FName::None;
     int32 BodyIndex = -1;
     int32 ShapeIndex = -1;
+    ECollisionChannel ObjectChannel = ECollisionChannel::WorldStatic;
 };
 
 struct FClothCollisionSphere
@@ -73,12 +76,17 @@ struct FClothCollisionCandidate
     FClothCollisionSourceId SourceId;
 
     FTransform LocalTransform;
+    FTransform PreviousLocalTransform;
+    FTransform CurrentLocalTransform;
     FVector HalfExtent = FVector::ZeroVector;
     float Radius = 0.0f;
     float CapsuleHalfHeight = 0.0f;
 
     FBoundingBox WorldBounds;
 
+    int32 OverlapRank = 1;
+    float DistanceScore = 0.0f;
+    float CenterDistanceScore = 0.0f;
     int32 TypeCost = 1;
     uint64 StableTieBreaker = 0;
 
@@ -100,6 +108,14 @@ struct FClothCollisionDebugStats
     uint32 SkippedNonUniformScale = 0;
     uint32 Rejected = 0;
     uint32 Truncated = 0;
+    uint32 GatheredWorldStatic = 0;
+    uint32 SelectedWorldStatic = 0;
+    uint32 RejectedWorldStatic = 0;
+    uint32 TruncatedWorldStatic = 0;
+    uint32 GatheredWorldDynamic = 0;
+    uint32 SelectedWorldDynamic = 0;
+    uint32 RejectedWorldDynamic = 0;
+    uint32 TruncatedWorldDynamic = 0;
 
     void Reset()
     {
@@ -118,6 +134,7 @@ struct FClothCollisionSectionResult
 {
     uint32 LODIndex = 0;
     int32 SectionIndex = -1;
+    bool bWorldStaticCollisionEnabled = false;
     FClothCollisionGatherResult GatherResult;
 };
 

@@ -19,6 +19,8 @@
 #include "Viewport/Viewport.h"
 #include "GameFramework/World.h"
 #include "GameFramework/WorldSettings.h"
+#include "Physics/IPhysicsScene.h"
+#include "Physics/PhysicsRuntime.h"
 #include "GameFramework/Light/DirectionalLightActor.h"
 #include "GameFramework/Actor/StaticMeshActor.h"
 #include "Settings/EditorSettings.h"
@@ -166,6 +168,41 @@ namespace
 		}
 	}
 
+	const char* GetClothCollisionSourceLabel(EClothCollisionSource Source)
+	{
+		switch (Source)
+		{
+		case EClothCollisionSource::PhysicsAsset:
+			return "PhysicsAsset";
+		case EClothCollisionSource::WorldStatic:
+			return "WorldStatic";
+		case EClothCollisionSource::WorldDynamic:
+			return "WorldDynamic";
+		default:
+			return "Unknown";
+		}
+	}
+
+	FBoundingBox BuildPreviewClothSectionWorldBounds(
+		const FSkeletalClothData& ClothData,
+		const TArray<FVertexPNCTT>& SkinnedVertices,
+		const FMatrix& ComponentToWorld)
+	{
+		FBoundingBox Bounds;
+		const TArray<uint32>& SourceIndices = !ClothData.ParticleToRenderVertex.empty()
+			? ClothData.ParticleToRenderVertex
+			: ClothData.RenderVertexIndices;
+		for (uint32 VertexIndex : SourceIndices)
+		{
+			if (VertexIndex >= SkinnedVertices.size())
+			{
+				continue;
+			}
+			Bounds.Expand(ComponentToWorld.TransformPositionWithW(SkinnedVertices[VertexIndex].Position));
+		}
+		return Bounds;
+	}
+
 	void DrawClothCollisionCandidateList(
 		const char* Label,
 		const TArray<FClothCollisionCandidate>& Candidates,
@@ -201,8 +238,10 @@ namespace
 			}
 
 			ImGui::BulletText(
-				"%s  Body %d  Shape %d  Bone %s",
+				"%s  %s  Comp %u  Body %d  Shape %d  Bone %s",
+				GetClothCollisionSourceLabel(Candidate.SourceId.Source),
 				GetClothCollisionPrimitiveTypeLabel(Candidate.Type),
+				Candidate.SourceId.OwnerComponentId,
 				Candidate.SourceId.BodyIndex,
 				Candidate.SourceId.ShapeIndex,
 				Candidate.SourceId.BoneName.ToString().c_str());
@@ -2169,36 +2208,58 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 			ImGui::Separator();
 			ImGui::TextUnformatted("Physics Asset Collision");
 			bChanged |= ImGui::Checkbox("Enable Physics Asset Collision", &SelectedCloth->Config.bEnablePhysicsAssetCollision);
+			bChanged |= ImGui::Checkbox("Enable World Static Collision", &SelectedCloth->Config.bEnableWorldStaticClothCollision);
 		}
 	);
 
 	DrawClothFoldoutBox(
 		"PhysicsAssetCollisionCandidates",
-		"Physics Asset Collision Candidates",
+		"Cloth Collision Candidates",
 		ImVec4(0.12f, 0.10f, 0.08f, 1.0f),
 		ImVec4(0.38f, 0.27f, 0.16f, 1.0f),
 		[&]()
 		{
-			if (!SelectedCloth->Config.bEnablePhysicsAssetCollision)
+			if (!SelectedCloth->Config.bEnablePhysicsAssetCollision &&
+				!SelectedCloth->Config.bEnableWorldStaticClothCollision)
 			{
-				ImGui::TextDisabled("Physics asset collision is disabled.");
+				ImGui::TextDisabled("Cloth collision is disabled.");
 				return;
 			}
 
 			USkeletalMeshComponent* PreviewMeshComponent = ViewportClient.GetPreviewMeshComponent();
 			UPhysicsAsset* PhysicsAsset = PreviewMeshComponent ? PreviewMeshComponent->GetEffectivePhysicsAsset() : nullptr;
-			if (!PreviewMeshComponent || !PhysicsAsset)
+			if (!PreviewMeshComponent)
 			{
-				ImGui::TextDisabled("No preview component or effective physics asset.");
+				ImGui::TextDisabled("No preview component.");
+				return;
+			}
+
+			IPhysicsRuntime* PhysicsRuntime = nullptr;
+			if (UWorld* PreviewWorld = PreviewMeshComponent->GetWorld())
+			{
+				IPhysicsScene* PhysicsScene = PreviewWorld->GetPhysicsScene();
+				PhysicsRuntime = PhysicsScene ? PhysicsScene->GetRuntime() : nullptr;
+			}
+
+			const FBoundingBox SectionBounds = BuildPreviewClothSectionWorldBounds(
+				*SelectedCloth,
+				PreviewMeshComponent->GetSkinnedVertices(),
+				PreviewMeshComponent->GetWorldMatrix());
+			if (!SectionBounds.IsValid())
+			{
+				ImGui::TextDisabled("No valid cloth section bounds.");
 				return;
 			}
 
 			FClothCollisionGatherer Gatherer;
-			const FClothCollisionGatherResult GatherResult = Gatherer.GatherPhysicsAsset(
+			const FClothCollisionGatherResult GatherResult = Gatherer.GatherForSection(
 				*PreviewMeshComponent,
 				*SkeletalMesh,
 				PhysicsAsset,
-				SelectedCloth->Config);
+				PhysicsRuntime,
+				SelectedCloth->Config,
+				SectionBounds,
+				SectionBounds);
 
 			ImGui::Text(
 				"Gathered S:%u C:%u B:%u  Selected S:%u C:%u B:%u  Truncated:%u",
@@ -2209,6 +2270,12 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 				GatherResult.Stats.SelectedCapsules,
 				GatherResult.Stats.SelectedBoxes,
 				GatherResult.Stats.Truncated);
+			ImGui::Text(
+				"WorldStatic Gathered:%u Selected:%u Rejected:%u Truncated:%u",
+				GatherResult.Stats.GatheredWorldStatic,
+				GatherResult.Stats.SelectedWorldStatic,
+				GatherResult.Stats.RejectedWorldStatic,
+				GatherResult.Stats.TruncatedWorldStatic);
 
 			DrawClothCollisionCandidateList(
 				"Selected",
@@ -2218,6 +2285,10 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 				"Truncated",
 				GatherResult.Candidates,
 				EClothCollisionSelectState::TruncatedByBudget);
+			DrawClothCollisionCandidateList(
+				"Rejected",
+				GatherResult.Candidates,
+				EClothCollisionSelectState::RejectedBySectionBounds);
 		}
 	);
 
@@ -2372,6 +2443,10 @@ void FMeshEditorWidget::RenderClothAuthoringPanel(USkeletalMesh* SkeletalMesh, F
 		SelectedCloth->Config.InertiaLinearScale = std::clamp(SelectedCloth->Config.InertiaLinearScale, 0.0f, 1.0f);
 		SelectedCloth->Config.InertiaAngularScale = std::clamp(SelectedCloth->Config.InertiaAngularScale, 0.0f, 1.0f);
 		MarkCurrentMeshDirty();
+		if (USkeletalMeshComponent* Comp = ViewportClient.GetPreviewMeshComponent())
+		{
+			Comp->ResetClothSimulation();
+		}
 	}
 }
 

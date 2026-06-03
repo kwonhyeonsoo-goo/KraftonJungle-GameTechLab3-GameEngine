@@ -2,6 +2,7 @@
 
 #include "Core/Types/CollisionTypes.h"
 #include "Core/Types/CoreTypes.h"
+#include "Core/Types/EngineTypes.h"
 #include "Math/Transform.h"
 #include "Math/Vector.h"
 #include "Object/FName.h"
@@ -137,6 +138,31 @@ struct FPhysicsShapeDesc
     uint32 QueryIgnoreGroup = 0;
 
     bool bIsTrigger = false;
+};
+
+struct FPhysicsClothCollisionShape
+{
+    EPhysicsShapeType Type = EPhysicsShapeType::Box;
+
+    uint32 OwnerActorId = 0;
+    uint32 OwnerComponentId = 0;
+    uint32 OwnerComponentGeneration = 0;
+
+    FPhysicsBodyHandle Body;
+    FPhysicsShapeHandle Shape;
+
+    EPhysicsBodyType BodyType = EPhysicsBodyType::Static;
+    FPhysicsFilterData FilterData;
+
+    FTransform PreviousWorldTransform;
+    FTransform CurrentWorldTransform;
+
+    FBoundingBox WorldBounds;
+
+    FVector BoxHalfExtent = FVector::ZeroVector;
+    float SphereRadius = 0.0f;
+    float CapsuleRadius = 0.0f;
+    float CapsuleHalfHeight = 0.0f;
 };
 
 // Runtime 에서 보관하는 body 의 mutable 속성 묶음. SetMass/SetCOM/SetLock 등이 서로의 값을
