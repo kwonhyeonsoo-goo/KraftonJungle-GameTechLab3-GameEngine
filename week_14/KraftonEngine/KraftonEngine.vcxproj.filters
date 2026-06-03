@@ -1124,6 +1124,9 @@
     <ClCompile Include="Source\Engine\CameraShake\CameraShakeManager.cpp">
       <Filter>Source\Engine\CameraShake</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Cloth\ClothCollisionGatherer.cpp">
+      <Filter>Source\Engine\Cloth</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Cloth\NvClothBackend.cpp">
       <Filter>Source\Engine\Cloth</Filter>
     </ClCompile>
@@ -2448,6 +2451,12 @@
       <Filter>Source\Engine\CameraShake</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Cloth\ClothBackend.h">
+      <Filter>Source\Engine\Cloth</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Cloth\ClothCollisionGatherer.h">
+      <Filter>Source\Engine\Cloth</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Cloth\ClothCollisionTypes.h">
       <Filter>Source\Engine\Cloth</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Cloth\NvClothBackend.h">

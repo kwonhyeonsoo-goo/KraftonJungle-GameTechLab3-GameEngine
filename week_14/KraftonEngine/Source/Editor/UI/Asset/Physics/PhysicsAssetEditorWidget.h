@@ -16,6 +16,7 @@ struct ID3D11Device;
 struct FReferenceSkeleton;
 struct FPhysicsAssetBodySetup;
 struct FPhysicsAssetConstraintSetup;
+struct FPhysicsAssetPreviewPoseCache;
 struct FPhysicsAssetShapeSetup;
 struct FShowFlags;
 
@@ -71,6 +72,9 @@ public:
     int32 GetSelectedConstraintIndex() const { return SelectedConstraintIndex; }
     EPhysicsAssetConstraintFrameTarget GetSelectedConstraintGizmoFrame() const { return SelectedConstraintGizmoFrame; }
     void SelectPhysicsShapeFromViewport(UPhysicsAsset* PhysicsAsset, int32 BodyIndex, int32 ShapeIndex);
+    void SelectPhysicsConstraintFromViewport(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex);
+    bool ConsumeConstraintGraphViewportFocusRequest();
+    bool DeleteSelectedPhysicsAssetElement(UPhysicsAsset* PhysicsAsset);
     void NotifyViewportGizmoModified();
 
     FString GetDocumentTitle() const override;
@@ -102,24 +106,38 @@ private:
     void RenderConstraintDetails(UPhysicsAsset* PhysicsAsset, FPhysicsAssetConstraintSetup& ConstraintSetup);
     void RenderValidationPanel();
     void RenderConstraintGraphPanel(UPhysicsAsset* PhysicsAsset);
-    void RenderBodyDebug(UPhysicsAsset* PhysicsAsset, USkeletalMeshComponent* PreviewComponent, UWorld* PreviewWorld);
-    void RenderConstraintDebug(UPhysicsAsset* PhysicsAsset, USkeletalMeshComponent* PreviewComponent, UWorld* PreviewWorld);
+    void RenderBodyDebug(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMeshComponent* PreviewComponent,
+        UWorld* PreviewWorld,
+        const FPhysicsAssetPreviewPoseCache* PoseCache = nullptr);
+    void RenderConstraintDebug(
+        UPhysicsAsset* PhysicsAsset,
+        USkeletalMeshComponent* PreviewComponent,
+        UWorld* PreviewWorld,
+        const FPhysicsAssetPreviewPoseCache* PoseCache = nullptr);
     void DrawBodySetupDebug(
         UPhysicsAsset* PhysicsAsset,
         USkeletalMeshComponent* PreviewComponent,
         UWorld* PreviewWorld,
         int32 BodyIndex,
-        const FPhysicsAssetBodySetup& BodySetup);
+        const FPhysicsAssetBodySetup& BodySetup,
+        const FPhysicsAssetPreviewPoseCache* PoseCache = nullptr);
     void DrawConstraintSetupDebug(
         UPhysicsAsset* PhysicsAsset,
         USkeletalMeshComponent* PreviewComponent,
         UWorld* PreviewWorld,
         int32 ConstraintIndex,
-        const FPhysicsAssetConstraintSetup& ConstraintSetup);
+        const FPhysicsAssetConstraintSetup& ConstraintSetup,
+        const FPhysicsAssetPreviewPoseCache* PoseCache = nullptr);
 
     void SelectBoneInPhysicsTree(UPhysicsAsset* PhysicsAsset, const FReferenceSkeleton& RefSkeleton, int32 BoneIndex);
     void SelectBodySetup(UPhysicsAsset* PhysicsAsset, int32 BodyIndex, int32 TreeBoneIndex);
     void SelectConstraintSetup(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex, int32 TreeBoneIndex);
+    void SelectBodySetupFromConstraintGraph(UPhysicsAsset* PhysicsAsset, int32 BodyIndex);
+    void SelectConstraintSetupFromConstraintGraph(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex);
+    void SyncConstraintGraphSelectionFromNodeEditor(UPhysicsAsset* PhysicsAsset);
+    void SelectCurrentConstraintGraphNode(UPhysicsAsset* PhysicsAsset, bool bNavigateToSelection);
     int32 FindPreviewBoneIndexByName(const FName& BoneName) const;
 
     void AddDefaultBody(UPhysicsAsset* PhysicsAsset);
@@ -149,6 +167,8 @@ private:
     ax::NodeEditor::EditorContext* ConstraintGraphContext = nullptr;
     bool bPendingClose = false;
     bool bConstraintGraphLayoutDirty = true;
+    bool bPendingConstraintGraphNavigateToSelection = false;
+    bool bPendingConstraintGraphViewportFocusRequest = false;
     bool bPhysicsTreePanelShowsBodies = false;
     bool bShowPreviewBodies = true;
     bool bShowPreviewConstraints = true;

@@ -7,6 +7,25 @@ class UPhysicsAsset;
 class USkeletalMesh;
 class USkeletalMeshComponent;
 
+struct FPhysicsAssetPreviewPoseCache
+{
+    const USkeletalMeshComponent* PreviewComponent = nullptr;
+    const UPhysicsAsset* PhysicsAsset = nullptr;
+
+    TArray<FTransform> BoneComponentSpaceTransforms;
+    TArray<FTransform> BodyWorldTransforms;
+    TArray<uint8> BodyWorldTransformValid;
+
+    bool Initialize(const USkeletalMeshComponent* InPreviewComponent, const UPhysicsAsset* InPhysicsAsset);
+    bool HasPose() const;
+    bool ComputeBodyWorldTransform(int32 BodyIndex, FTransform& OutWorldTransform) const;
+    bool ComputeBodyWorldTransformByBoneName(const FName& BoneName, FTransform& OutWorldTransform) const;
+    bool ComputeConstraintWorldFrames(
+        int32 ConstraintIndex,
+        FTransform& OutParentFrameWorld,
+        FTransform& OutChildFrameWorld) const;
+};
+
 // Editor preview math stays separate from runtime ragdoll execution so tools can
 // place gizmos without requiring live physics objects.
 class FPhysicsAssetPreviewUtils

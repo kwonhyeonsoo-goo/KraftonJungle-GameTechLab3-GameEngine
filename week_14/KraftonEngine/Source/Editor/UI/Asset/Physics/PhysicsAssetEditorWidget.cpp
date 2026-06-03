@@ -58,6 +58,16 @@ namespace
         return FColor(0x00, 0x80, 0x20, Alpha);
     }
 
+    FColor SelectedConstraintSwingColor(uint32 Alpha)
+    {
+        return FColor(0xff, 0xcd, 0x37, Alpha);
+    }
+
+    FColor SelectedConstraintTwistColor(uint32 Alpha)
+    {
+        return FColor(0x50, 0xdc, 0xff, Alpha);
+    }
+
     void DrawDebugCircle(
         UWorld* World,
         const FVector& Center,
@@ -179,11 +189,11 @@ namespace
         return (std::max)(4, static_cast<int32>(ceilf(32.0f * Normalized)));
     }
 
-    float ComputeConstraintLimitDrawRadius(const FTransform& ParentFrameWorld, const FTransform& ChildFrameWorld)
-    {
-        const float FrameDistance = FVector::Distance(ParentFrameWorld.Location, ChildFrameWorld.Location);
-        return FMath::Clamp(FrameDistance * 0.45f + 0.25f, 0.25f, 2.5f);
-    }
+	    float ComputeConstraintLimitDrawRadius(const FTransform& ParentFrameWorld, const FTransform& ChildFrameWorld)
+	    {
+	        const float FrameDistance = FVector::Distance(ParentFrameWorld.Location, ChildFrameWorld.Location);
+	        return FMath::Clamp(FrameDistance * 0.45f + 0.25f, 0.25f, 2.5f);
+	    }
 
     void DrawConstraintSwingLimitDebug(
         UWorld* World,
@@ -279,24 +289,35 @@ namespace
         DrawDebugLine(World, Center, Center + ChildY * RingRadius, ConstraintLimitSwingRed(Color.A), 0.0f);
     }
 
-    void DrawConstraintAngularLimitDebug(
-        UWorld* World,
-        const FTransform& ParentFrameWorld,
-        const FTransform& ChildFrameWorld,
-        const FConstraintLimitDesc& Limits,
-        bool bSelected)
-    {
-        if (!World)
-        {
-            return;
-        }
+	    void DrawConstraintAngularLimitDebug(
+	        UWorld* World,
+	        const FTransform& ParentFrameWorld,
+	        const FTransform& ChildFrameWorld,
+	        const FConstraintLimitDesc& Limits,
+	        bool bSelected)
+	    {
+	        if (!World)
+	        {
+	            return;
+	        }
 
-        const uint32 Alpha = bSelected ? 230u : 145u;
-        const float Radius = ComputeConstraintLimitDrawRadius(ParentFrameWorld, ChildFrameWorld);
-        DrawDebugFrameAxes(World, ParentFrameWorld, Radius * 0.32f, Alpha);
+	        const uint32 Alpha = bSelected ? 230u : 145u;
+	        const float Radius = ComputeConstraintLimitDrawRadius(ParentFrameWorld, ChildFrameWorld);
+	        DrawDebugFrameAxes(World, ParentFrameWorld, Radius * 0.32f, Alpha);
         DrawDebugFrameAxes(World, ChildFrameWorld, Radius * 0.22f, Alpha);
-        DrawConstraintSwingLimitDebug(World, ParentFrameWorld, Limits, Radius, ConstraintLimitSwingRed(Alpha));
-        DrawConstraintTwistLimitDebug(World, ParentFrameWorld, ChildFrameWorld, Limits, Radius, ConstraintLimitTwistGreen(Alpha));
+        DrawConstraintSwingLimitDebug(
+            World,
+            ParentFrameWorld,
+            Limits,
+            Radius,
+            bSelected ? SelectedConstraintSwingColor(Alpha) : ConstraintLimitSwingRed(Alpha));
+        DrawConstraintTwistLimitDebug(
+            World,
+            ParentFrameWorld,
+            ChildFrameWorld,
+            Limits,
+            Radius,
+            bSelected ? SelectedConstraintTwistColor(Alpha) : ConstraintLimitTwistGreen(Alpha));
     }
 
     void DrawDebugOrientedBox(
@@ -1133,10 +1154,76 @@ void FPhysicsAssetEditorWidget::SelectPhysicsShapeFromViewport(UPhysicsAsset* Ph
             : -1;
     SelectedConstraintIndex = -1;
     SelectedTreeBoneIndex = FindPreviewBoneIndexByName(Body.BoneName);
+    bPendingConstraintGraphNavigateToSelection = true;
     if (bEditorSimulationActive && bEditorSimulationSelectedOnly)
     {
         RequestEditorSimulationRestart();
     }
+}
+
+void FPhysicsAssetEditorWidget::SelectPhysicsConstraintFromViewport(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex)
+{
+    if (!PhysicsAsset || !IsValidConstraintIndex(PhysicsAsset, ConstraintIndex))
+    {
+        return;
+    }
+
+    if (!IsEditingObject(PhysicsAsset))
+    {
+        OpenEmbedded(PhysicsAsset);
+    }
+
+    SelectConstraintSetup(PhysicsAsset, ConstraintIndex, -1);
+    bPendingConstraintGraphNavigateToSelection = true;
+    if (bEditorSimulationActive && bEditorSimulationSelectedOnly)
+    {
+        RequestEditorSimulationRestart();
+    }
+}
+
+bool FPhysicsAssetEditorWidget::ConsumeConstraintGraphViewportFocusRequest()
+{
+    const bool bWasRequested = bPendingConstraintGraphViewportFocusRequest;
+    bPendingConstraintGraphViewportFocusRequest = false;
+    return bWasRequested;
+}
+
+bool FPhysicsAssetEditorWidget::DeleteSelectedPhysicsAssetElement(UPhysicsAsset* PhysicsAsset)
+{
+    if (!PhysicsAsset)
+    {
+        return false;
+    }
+
+    if (IsValidConstraintIndex(PhysicsAsset, SelectedConstraintIndex))
+    {
+        if (!PhysicsAsset->RemoveConstraintSetupByIndex(SelectedConstraintIndex))
+        {
+            return false;
+        }
+
+        SelectedConstraintIndex = -1;
+        SelectedBodyIndex = -1;
+        SelectedShapeIndex = -1;
+        MarkPhysicsAssetDirty();
+        return true;
+    }
+
+    if (IsValidBodyIndex(PhysicsAsset, SelectedBodyIndex))
+    {
+        if (!PhysicsAsset->RemoveBodySetupByIndex(SelectedBodyIndex))
+        {
+            return false;
+        }
+
+        SelectedBodyIndex = -1;
+        SelectedShapeIndex = -1;
+        SelectedConstraintIndex = -1;
+        MarkPhysicsAssetDirty();
+        return true;
+    }
+
+    return false;
 }
 
 void FPhysicsAssetEditorWidget::RenderDocument(float DeltaTime)
@@ -2086,6 +2173,11 @@ void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* Physic
 
     ImGui::BeginChild("##PhysicsConstraintGraphHost", ImVec2(0.0f, 0.0f), false);
     ed::SetCurrentEditor(ConstraintGraphContext);
+    const bool bRequestViewportFocusFromGraph =
+        ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+        !ImGui::GetIO().WantTextInput &&
+        ImGui::IsKeyPressed(ImGuiKey_F, false);
+    ed::EnableShortcuts(!bRequestViewportFocusFromGraph);
     ed::Begin("PhysicsConstraintGraph");
 
     if (bConstraintGraphLayoutDirty)
@@ -2112,18 +2204,12 @@ void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* Physic
             "Body");
         if (ImGui::IsItemClicked())
         {
-            SelectedBodyIndex = BodyIndex;
-            SelectedShapeIndex = Body.Shapes.empty() ? -1 : 0;
-            SelectedConstraintIndex = -1;
-            SelectedTreeBoneIndex = -1;
+            SelectBodySetupFromConstraintGraph(PhysicsAsset, BodyIndex);
         }
         ImGui::TextUnformatted(BoneLabel.c_str());
         if (ImGui::IsItemClicked())
         {
-            SelectedBodyIndex = BodyIndex;
-            SelectedShapeIndex = Body.Shapes.empty() ? -1 : 0;
-            SelectedConstraintIndex = -1;
-            SelectedTreeBoneIndex = -1;
+            SelectBodySetupFromConstraintGraph(PhysicsAsset, BodyIndex);
         }
         ImGui::TextDisabled("%d %s", ShapeCount, ShapeCount == 1 ? "shape" : "shapes");
         ImGui::EndGroup();
@@ -2152,18 +2238,12 @@ void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* Physic
             "Constraint");
         if (ImGui::IsItemClicked())
         {
-            SelectedConstraintIndex = ConstraintIndex;
-            SelectedBodyIndex = -1;
-            SelectedShapeIndex = -1;
-            SelectedTreeBoneIndex = -1;
+            SelectConstraintSetupFromConstraintGraph(PhysicsAsset, ConstraintIndex);
         }
         ImGui::TextDisabled("%s -> %s", ParentLabel.c_str(), ChildLabel.c_str());
         if (ImGui::IsItemClicked())
         {
-            SelectedConstraintIndex = ConstraintIndex;
-            SelectedBodyIndex = -1;
-            SelectedShapeIndex = -1;
-            SelectedTreeBoneIndex = -1;
+            SelectConstraintSetupFromConstraintGraph(PhysicsAsset, ConstraintIndex);
         }
         ImGui::EndGroup();
         ImGui::SameLine();
@@ -2308,12 +2388,27 @@ void FPhysicsAssetEditorWidget::RenderConstraintGraphPanel(UPhysicsAsset* Physic
         bConstraintGraphLayoutDirty = true;
     }
 
+    if (bPendingConstraintGraphNavigateToSelection)
+    {
+        SelectCurrentConstraintGraphNode(PhysicsAsset, true);
+        bPendingConstraintGraphNavigateToSelection = false;
+    }
+    else
+    {
+        SyncConstraintGraphSelectionFromNodeEditor(PhysicsAsset);
+    }
+
     if (bRequestResetView || bRequestRearrange)
     {
         ed::NavigateToContent(0.25f);
     }
 
     ed::End();
+    ed::EnableShortcuts(true);
+    if (bRequestViewportFocusFromGraph)
+    {
+        bPendingConstraintGraphViewportFocusRequest = true;
+    }
     ImGui::EndChild();
 }
 
@@ -2709,6 +2804,81 @@ void FPhysicsAssetEditorWidget::SelectConstraintSetup(UPhysicsAsset* PhysicsAsse
     }
 }
 
+void FPhysicsAssetEditorWidget::SelectBodySetupFromConstraintGraph(UPhysicsAsset* PhysicsAsset, int32 BodyIndex)
+{
+    SelectBodySetup(PhysicsAsset, BodyIndex, -1);
+    SelectCurrentConstraintGraphNode(PhysicsAsset, false);
+}
+
+void FPhysicsAssetEditorWidget::SelectConstraintSetupFromConstraintGraph(UPhysicsAsset* PhysicsAsset, int32 ConstraintIndex)
+{
+    SelectConstraintSetup(PhysicsAsset, ConstraintIndex, -1);
+    SelectCurrentConstraintGraphNode(PhysicsAsset, false);
+}
+
+void FPhysicsAssetEditorWidget::SyncConstraintGraphSelectionFromNodeEditor(UPhysicsAsset* PhysicsAsset)
+{
+    if (!PhysicsAsset || !ConstraintGraphContext || !ed::HasSelectionChanged())
+    {
+        return;
+    }
+
+    ed::NodeId SelectedNodes[1] = {};
+    if (ed::GetSelectedNodes(SelectedNodes, 1) <= 0)
+    {
+        return;
+    }
+
+    const uint32 SelectedNode = PhysicsNodeIdToU32(SelectedNodes[0]);
+    int32 BodyIndex = -1;
+    int32 ConstraintIndex = -1;
+    if (DecodeBodyNode(SelectedNode, BodyIndex) && IsValidBodyIndex(PhysicsAsset, BodyIndex))
+    {
+        if (SelectedBodyIndex != BodyIndex || SelectedConstraintIndex >= 0)
+        {
+            SelectBodySetup(PhysicsAsset, BodyIndex, -1);
+            SelectCurrentConstraintGraphNode(PhysicsAsset, false);
+        }
+    }
+    else if (DecodeConstraintNode(SelectedNode, ConstraintIndex) && IsValidConstraintIndex(PhysicsAsset, ConstraintIndex))
+    {
+        if (SelectedConstraintIndex != ConstraintIndex)
+        {
+            SelectConstraintSetup(PhysicsAsset, ConstraintIndex, -1);
+            SelectCurrentConstraintGraphNode(PhysicsAsset, false);
+        }
+    }
+}
+
+void FPhysicsAssetEditorWidget::SelectCurrentConstraintGraphNode(UPhysicsAsset* PhysicsAsset, bool bNavigateToSelection)
+{
+    if (!PhysicsAsset || !ConstraintGraphContext)
+    {
+        return;
+    }
+
+    ed::NodeId NodeId = 0;
+    if (SelectedConstraintIndex >= 0 && IsValidConstraintIndex(PhysicsAsset, SelectedConstraintIndex))
+    {
+        NodeId = ToPhysicsNodeId(MakeConstraintNodeId(SelectedConstraintIndex));
+    }
+    else if (SelectedBodyIndex >= 0 && IsValidBodyIndex(PhysicsAsset, SelectedBodyIndex))
+    {
+        NodeId = ToPhysicsNodeId(MakeBodyNodeId(SelectedBodyIndex));
+    }
+
+    if (!NodeId)
+    {
+        return;
+    }
+
+    ed::SelectNode(NodeId, false);
+    if (bNavigateToSelection)
+    {
+        ed::NavigateToSelection(false, 0.20f);
+    }
+}
+
 int32 FPhysicsAssetEditorWidget::FindPreviewBoneIndexByName(const FName& BoneName) const
 {
     if (!HasBoneName(BoneName) || !PreviewSkeletalMesh || !PreviewSkeletalMesh->GetSkeleton())
@@ -2989,14 +3159,17 @@ void FPhysicsAssetEditorWidget::RenderPreviewDebug(
     const bool bShowBodies = bShowPreviewBodies && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetShapes);
     const bool bShowConstraints = bShowPreviewConstraints && (!PreviewShowFlags || PreviewShowFlags->bPhysicsAssetConstraints);
 
+    FPhysicsAssetPreviewPoseCache PoseCache;
+    const bool bHasPoseCache = PoseCache.Initialize(PreviewComponent, PhysicsAsset);
+
     if (bShowBodies)
     {
-        RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+        RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld, bHasPoseCache ? &PoseCache : nullptr);
     }
 
     if (bShowConstraints)
     {
-        RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+        RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld, bHasPoseCache ? &PoseCache : nullptr);
     }
 }
 
@@ -3036,19 +3209,24 @@ void FPhysicsAssetEditorWidget::RenderPhysicsPreview(
             SelectedShapeIndex,
             SelectedConstraintIndex,
             bShowBodies,
+            bShowConstraints,
+            bShowConstraintLimitAngles,
             bShowConstraints && bShowConstraintLimitAngles && bShowConstraintLimitSurfaces,
             bShowOnlySelectedConstraintLimitAngles,
             Device);
     }
 
+    FPhysicsAssetPreviewPoseCache PoseCache;
+    const bool bHasPoseCache = PoseCache.Initialize(PreviewComponent, PhysicsAsset);
+
     if (bShowBodies)
     {
-        RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+        RenderBodyDebug(PhysicsAsset, PreviewComponent, PreviewWorld, bHasPoseCache ? &PoseCache : nullptr);
     }
 
     if (bShowConstraints)
     {
-        RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld);
+        RenderConstraintDebug(PhysicsAsset, PreviewComponent, PreviewWorld, bHasPoseCache ? &PoseCache : nullptr);
     }
 }
 
@@ -3216,7 +3394,8 @@ FName FPhysicsAssetEditorWidget::GetSelectedSimulationRootBoneName(UPhysicsAsset
 void FPhysicsAssetEditorWidget::RenderBodyDebug(
     UPhysicsAsset* PhysicsAsset,
     USkeletalMeshComponent* PreviewComponent,
-    UWorld* PreviewWorld)
+    UWorld* PreviewWorld,
+    const FPhysicsAssetPreviewPoseCache* PoseCache)
 {
     if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
     {
@@ -3226,14 +3405,15 @@ void FPhysicsAssetEditorWidget::RenderBodyDebug(
     const TArray<FPhysicsAssetBodySetup>& Bodies = PhysicsAsset->GetBodySetups();
     for (int32 BodyIndex = 0; BodyIndex < static_cast<int32>(Bodies.size()); ++BodyIndex)
     {
-        DrawBodySetupDebug(PhysicsAsset, PreviewComponent, PreviewWorld, BodyIndex, Bodies[BodyIndex]);
+        DrawBodySetupDebug(PhysicsAsset, PreviewComponent, PreviewWorld, BodyIndex, Bodies[BodyIndex], PoseCache);
     }
 }
 
 void FPhysicsAssetEditorWidget::RenderConstraintDebug(
     UPhysicsAsset* PhysicsAsset,
     USkeletalMeshComponent* PreviewComponent,
-    UWorld* PreviewWorld)
+    UWorld* PreviewWorld,
+    const FPhysicsAssetPreviewPoseCache* PoseCache)
 {
     if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
     {
@@ -3248,7 +3428,8 @@ void FPhysicsAssetEditorWidget::RenderConstraintDebug(
             PreviewComponent,
             PreviewWorld,
             ConstraintIndex,
-            Constraints[ConstraintIndex]);
+            Constraints[ConstraintIndex],
+            PoseCache);
     }
 }
 
@@ -3257,7 +3438,8 @@ void FPhysicsAssetEditorWidget::DrawBodySetupDebug(
     USkeletalMeshComponent* PreviewComponent,
     UWorld* PreviewWorld,
     int32 BodyIndex,
-    const FPhysicsAssetBodySetup& BodySetup)
+    const FPhysicsAssetBodySetup& BodySetup,
+    const FPhysicsAssetPreviewPoseCache* PoseCache)
 {
     if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
     {
@@ -3265,11 +3447,14 @@ void FPhysicsAssetEditorWidget::DrawBodySetupDebug(
     }
 
     FTransform BodyWorld;
-    if (!FPhysicsAssetPreviewUtils::ComputePreviewBodyWorldTransform(
+    const bool bHasBodyWorld = PoseCache
+        ? PoseCache->ComputeBodyWorldTransform(BodyIndex, BodyWorld)
+        : FPhysicsAssetPreviewUtils::ComputePreviewBodyWorldTransform(
             PreviewComponent,
             PhysicsAsset,
             BodyIndex,
-            BodyWorld))
+            BodyWorld);
+    if (!bHasBodyWorld)
     {
         return;
     }
@@ -3330,7 +3515,8 @@ void FPhysicsAssetEditorWidget::DrawConstraintSetupDebug(
     USkeletalMeshComponent* PreviewComponent,
     UWorld* PreviewWorld,
     int32 ConstraintIndex,
-    const FPhysicsAssetConstraintSetup& ConstraintSetup)
+    const FPhysicsAssetConstraintSetup& ConstraintSetup,
+    const FPhysicsAssetPreviewPoseCache* PoseCache)
 {
     if (!PhysicsAsset || !PreviewComponent || !PreviewWorld)
     {
@@ -3339,21 +3525,24 @@ void FPhysicsAssetEditorWidget::DrawConstraintSetupDebug(
 
     FTransform ParentFrameWorld;
     FTransform ChildFrameWorld;
-    if (!FPhysicsAssetPreviewUtils::ComputePreviewConstraintWorldFrames(
+    const bool bHasConstraintFrames = PoseCache
+        ? PoseCache->ComputeConstraintWorldFrames(ConstraintIndex, ParentFrameWorld, ChildFrameWorld)
+        : FPhysicsAssetPreviewUtils::ComputePreviewConstraintWorldFrames(
             PreviewComponent,
             PhysicsAsset,
             ConstraintIndex,
             ParentFrameWorld,
-            ChildFrameWorld))
+            ChildFrameWorld);
+    if (!bHasConstraintFrames)
     {
         return;
     }
 
     const bool bSelected = SelectedConstraintIndex == ConstraintIndex;
-    const FColor Color = bSelected ? ConstraintLimitTwistGreen(220u) : ConstraintLimitSwingRed(145u);
+    const FColor Color = bSelected ? SelectedConstraintSwingColor(240u) : ConstraintLimitSwingRed(145u);
     DrawDebugLine(PreviewWorld, ParentFrameWorld.Location, ChildFrameWorld.Location, Color, 0.0f);
-    DrawDebugPoint(PreviewWorld, ParentFrameWorld.Location, bSelected ? 0.08f : 0.05f, Color, 0.0f);
-    DrawDebugPoint(PreviewWorld, ChildFrameWorld.Location, bSelected ? 0.08f : 0.05f, Color, 0.0f);
+    DrawDebugPoint(PreviewWorld, ParentFrameWorld.Location, bSelected ? 0.12f : 0.05f, Color, 0.0f);
+    DrawDebugPoint(PreviewWorld, ChildFrameWorld.Location, bSelected ? 0.12f : 0.05f, Color, 0.0f);
 
     if (bShowConstraintLimitAngles && (!bShowOnlySelectedConstraintLimitAngles || bSelected))
     {

@@ -76,7 +76,8 @@ public:
 	const FBone* GetSelectedBone() const;
 	bool ConsumeSocketGizmoModified();
 	bool ConsumePhysicsAssetGizmoModified();
-	bool ConsumePhysicsAssetViewportPick(int32& OutBodyIndex, int32& OutShapeIndex);
+	bool ConsumePhysicsAssetViewportPick(int32& OutBodyIndex, int32& OutShapeIndex, int32& OutConstraintIndex);
+	bool FocusSelectedPhysicsAssetElementImmediate();
 	void RefreshBoneDebug();
 
 	EBoneDebugDrawMode GetBoneDebugDrawMode() const;
@@ -99,6 +100,7 @@ private:
 	void TickInteraction(float DeltaTime);
 	void SyncCameraSmoothingTarget();
 	void ApplySmoothedCameraLocation(float DeltaTime);
+	void FocusOnLocation(const FVector& TargetLoc, bool bAnimate);
 
 	void SyncGizmo();
 
@@ -138,6 +140,7 @@ private:
 	bool bHasPendingPhysicsAssetViewportPick = false;
 	int32 PendingPhysicsAssetPickBodyIndex = -1;
 	int32 PendingPhysicsAssetPickShapeIndex = -1;
+	int32 PendingPhysicsAssetPickConstraintIndex = -1;
 
 	bool bIsRenderable = false;
 
