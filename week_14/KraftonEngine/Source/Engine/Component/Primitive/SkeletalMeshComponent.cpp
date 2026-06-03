@@ -238,6 +238,18 @@ namespace
         return false;
     }
 
+    bool HasPositiveClothPaintRadius(const FSkeletalClothData& ClothData)
+    {
+        for (float MaxDistance : ClothData.Paint.MaxDistanceValues)
+        {
+            if (MaxDistance > 0.0f)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     int32 FindBoneIndexByPriority(const FSkeletalMesh* MeshAsset, std::initializer_list<const char*> CandidateTokens)
     {
         if (!MeshAsset)
@@ -2506,6 +2518,11 @@ void USkeletalMeshComponent::TickClothSimulation(float DeltaTime)
             if (bRecordClothCollisionStats)
             {
                 CLOTH_COLLISION_STATS_ADD_ENABLED_SECTION();
+            }
+
+            if (!HasPositiveClothPaintRadius(ClothData))
+            {
+                continue;
             }
 
             if (!ClothData.Config.bEnablePhysicsAssetCollision &&
