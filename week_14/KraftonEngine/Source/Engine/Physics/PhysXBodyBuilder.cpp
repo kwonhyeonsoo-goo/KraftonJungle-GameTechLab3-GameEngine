@@ -58,6 +58,18 @@ namespace
         {
             PackedObjectAndFlags |= PhysicsFilter_SuppressSameActorPrimitivePairs;
         }
+        if (In.GameplayOverlapOwnership == EPhysicsGameplayOverlapOwnership::PrimaryOwner)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_OverlapOwnerPrimary;
+        }
+        else if (In.GameplayOverlapOwnership == EPhysicsGameplayOverlapOwnership::QueryProxyOwner)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_OverlapOwnerQueryProxy;
+        }
+        else if (In.GameplayOverlapOwnership == EPhysicsGameplayOverlapOwnership::NonOwningReactionBody)
+        {
+            PackedObjectAndFlags |= PhysicsFilter_OverlapNonOwningReaction;
+        }
 
         Out.word0 = PackedObjectAndFlags;
         Out.word1 = In.BlockMask;

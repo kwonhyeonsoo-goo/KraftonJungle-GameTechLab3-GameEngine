@@ -5,6 +5,7 @@
 #include "Core/Logging/Log.h"
 #include "Core/Types/CollisionTypes.h"
 #include "GameFramework/GameMode/GameModeBase.h"
+#include "GameFramework/Pawn/Character.h"
 #include "GameFramework/Pawn/Pawn.h"
 #include "GameFramework/World.h"
 #include "Serialization/Archive.h"
@@ -35,6 +36,22 @@ namespace
 		}
 
 		return Primitive->GetCollisionResponseToChannel(TriggerChannel) != ECollisionResponse::Ignore;
+	}
+
+	bool CanPrimitiveOwnTriggerOccupancy(const APawn* Pawn, const UPrimitiveComponent* Primitive)
+	{
+		if (!Primitive)
+		{
+			return false;
+		}
+
+		const ACharacter* Character = Cast<ACharacter>(const_cast<APawn*>(Pawn));
+		if (!Character)
+		{
+			return true;
+		}
+
+		return Character->IsGameplayOverlapOwnerComponent(Primitive);
 	}
 }
 
@@ -135,6 +152,11 @@ bool ATriggerVolumeBase::IsPawnStillInsideTrigger(APawn* Pawn) const
 			continue;
 		}
 
+		if (!CanPrimitiveOwnTriggerOccupancy(Pawn, Primitive))
+		{
+			continue;
+		}
+
 		if (TriggerBounds.IsIntersected(Primitive->GetWorldBoundingBox()))
 		{
 			return true;
@@ -210,7 +232,7 @@ void ATriggerVolumeBase::HandleEndOverlap(
 
 	if (IsPawnStillInsideTrigger(Pawn))
 	{
-		UE_LOG("[TriggerVolume] OccupancyRetainedAfterRecheck Trigger=%s Pawn=%s Occupants=%d",
+		UE_LOG("[TriggerVolume] OccupancyRetainedAfterRecheck Trigger=%s Pawn=%s Occupants=%d OverlapOwnerRecheck=true",
 			GetName().c_str(),
 			GetPawnNameSafe(Pawn),
 			GetOccupyingPawnCount());

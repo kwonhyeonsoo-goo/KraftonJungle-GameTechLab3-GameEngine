@@ -65,6 +65,14 @@ enum class EConstraintMotion : uint8
     Locked
 };
 
+enum class EPhysicsGameplayOverlapOwnership : uint8
+{
+    None,
+    PrimaryOwner,
+    QueryProxyOwner,
+    NonOwningReactionBody
+};
+
 // Thread boundary 의 기본 식별 단위. UObject pointer 대신 모든 command/event/query 가 이 key 를
 // 사용한다. ComponentGeneration 은 destroy/recreate 후 도착한 stale command/event 를 폐기하는 데 쓴다.
 struct FPhysicsObjectKey
@@ -97,6 +105,9 @@ constexpr uint32 PhysicsFilter_SameActorSelfIgnore   = 1u << 15;
 constexpr uint32 PhysicsFilter_IndependentRagdoll    = 1u << 16;
 constexpr uint32 PhysicsFilter_PartialRagdoll        = 1u << 17;
 constexpr uint32 PhysicsFilter_SuppressSameActorPrimitivePairs = 1u << 18;
+constexpr uint32 PhysicsFilter_OverlapOwnerPrimary   = 1u << 19;
+constexpr uint32 PhysicsFilter_OverlapOwnerQueryProxy = 1u << 20;
+constexpr uint32 PhysicsFilter_OverlapNonOwningReaction = 1u << 21;
 
 inline uint32 GetPhysicsFilterObjectType(uint32 PackedWord0)
 {
@@ -125,6 +136,7 @@ struct FPhysicsFilterData
     bool              bIsIndependentRagdoll  = false;
     bool              bIsPartialRagdoll      = false;
     bool              bSuppressSameActorPrimitivePairs = false;
+    EPhysicsGameplayOverlapOwnership GameplayOverlapOwnership = EPhysicsGameplayOverlapOwnership::None;
 };
 
 struct FPhysicsShapeDesc

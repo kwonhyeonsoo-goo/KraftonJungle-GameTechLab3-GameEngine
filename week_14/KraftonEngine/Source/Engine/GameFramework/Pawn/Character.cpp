@@ -1,5 +1,6 @@
 ﻿#include "GameFramework/Pawn/Character.h"
 
+#include "Component/PrimitiveComponent.h"
 #include "Component/Shape/CapsuleComponent.h"
 #include "Component/Input/InputComponent.h"
 #include "Component/Movement/CharacterMovementComponent.h"
@@ -140,6 +141,21 @@ namespace
 			return "Disabled";
 		case ECharacterQueryCollisionMode::ReservedForFullRagdollProxy:
 			return "ReservedForFullRagdollProxy";
+		default:
+			return "CharacterDriven";
+		}
+	}
+
+	const char* LexToString(ECharacterGameplayOverlapOwnershipMode Mode)
+	{
+		switch (Mode)
+		{
+		case ECharacterGameplayOverlapOwnershipMode::None:
+			return "None";
+		case ECharacterGameplayOverlapOwnershipMode::FullRagdollQueryProxy:
+			return "FullRagdollQueryProxy";
+		case ECharacterGameplayOverlapOwnershipMode::PartialHybrid:
+			return "PartialHybrid";
 		default:
 			return "CharacterDriven";
 		}
@@ -324,6 +340,41 @@ bool ACharacter::IsUsingFullRagdollQueryProxy() const
 		GetCurrentCapsuleCollisionEnabled() == ECollisionEnabled::QueryOnly;
 }
 
+bool ACharacter::IsCapsuleGameplayOverlapOwner() const
+{
+	return CapsuleComponent && GameplayOverlapOwnershipMode != ECharacterGameplayOverlapOwnershipMode::None;
+}
+
+bool ACharacter::IsMeshGameplayOverlapOwner() const
+{
+	return false;
+}
+
+bool ACharacter::ArePartialReactionBodiesGameplayOverlapOwners() const
+{
+	return false;
+}
+
+bool ACharacter::IsGameplayOverlapOwnerComponent(const UPrimitiveComponent* Component) const
+{
+	if (!Component)
+	{
+		return false;
+	}
+
+	if (Component == CapsuleComponent.Get())
+	{
+		return IsCapsuleGameplayOverlapOwner();
+	}
+
+	if (Component == Mesh.Get())
+	{
+		return IsMeshGameplayOverlapOwner();
+	}
+
+	return false;
+}
+
 ECollisionEnabled ACharacter::GetCurrentCapsuleCollisionEnabled() const
 {
 	return CapsuleComponent ? CapsuleComponent->GetCollisionEnabled() : ECollisionEnabled::NoCollision;
@@ -487,6 +538,13 @@ void ACharacter::ApplyCharacterCollisionOwnershipModes(
 
 	CharacterPhysicsCollisionMode = NewPhysicsMode;
 	CharacterQueryCollisionMode = NewQueryMode;
+	GameplayOverlapOwnershipMode =
+		(NewPhysicsMode == ECharacterPhysicsCollisionMode::FullRagdollOwned &&
+			NewQueryMode == ECharacterQueryCollisionMode::ReservedForFullRagdollProxy)
+			? ECharacterGameplayOverlapOwnershipMode::FullRagdollQueryProxy
+			: (NewPhysicsMode == ECharacterPhysicsCollisionMode::PartialHybrid
+				? ECharacterGameplayOverlapOwnershipMode::PartialHybrid
+				: ECharacterGameplayOverlapOwnershipMode::CharacterDriven);
 	ReconcileCharacterCollisionOwnership();
 
 	const ECollisionEnabled CapsuleCollisionEnabled = CapsuleComponent
@@ -496,13 +554,17 @@ void ACharacter::ApplyCharacterCollisionOwnershipModes(
 		? Mesh->GetCollisionEnabled()
 		: ECollisionEnabled::NoCollision;
 
-	UE_LOG("Character collision ownership updated. Actor=%s Context=%s Physics=%s Query=%s Capsule=%s Mesh=%s",
+	UE_LOG("Character collision ownership updated. Actor=%s Context=%s Physics=%s Query=%s OverlapOwnership=%s Capsule=%s Mesh=%s CapsuleOverlapOwner=%s MeshOverlapOwner=%s PartialBodiesOverlapOwner=%s",
 		GetName().c_str(),
 		Context ? Context : "Unspecified",
 		LexToString(CharacterPhysicsCollisionMode),
 		LexToString(CharacterQueryCollisionMode),
+		LexToString(GameplayOverlapOwnershipMode),
 		LexToString(CapsuleCollisionEnabled),
-		LexToString(MeshCollisionEnabled));
+		LexToString(MeshCollisionEnabled),
+		BoolToString(IsCapsuleGameplayOverlapOwner()),
+		BoolToString(IsMeshGameplayOverlapOwner()),
+		BoolToString(ArePartialReactionBodiesGameplayOverlapOwners()));
 }
 
 void ACharacter::ApplyCharacterPhysicsCollisionMode(ECharacterPhysicsCollisionMode NewMode, const char* Context)

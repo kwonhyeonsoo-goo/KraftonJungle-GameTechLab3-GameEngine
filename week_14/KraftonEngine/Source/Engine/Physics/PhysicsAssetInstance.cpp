@@ -124,6 +124,9 @@ namespace
         OutFilterData.bSuppressSameActorPrimitivePairs =
             bIsPartialRagdollBody &&
             (bSuppressSameActorPrimitiveCollisionForPartial || bSuppressSameActorPrimitiveOverlapForPartial);
+        OutFilterData.GameplayOverlapOwnership = bIsPartialRagdollBody
+            ? EPhysicsGameplayOverlapOwnership::NonOwningReactionBody
+            : EPhysicsGameplayOverlapOwnership::None;
 
         for (int32 ChannelIndex = 0; ChannelIndex < static_cast<int32>(ECollisionChannel::ActiveCount); ++ChannelIndex)
         {

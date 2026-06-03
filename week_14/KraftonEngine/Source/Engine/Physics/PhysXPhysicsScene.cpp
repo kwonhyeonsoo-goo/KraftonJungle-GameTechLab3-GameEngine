@@ -334,6 +334,9 @@ namespace
         Out.bGenerateOverlapEvents = Comp->GetGenerateOverlapEvents();
         Out.bIsComponentPrimitive  = true;
         Out.bIgnoreSameActor       = true;
+        Out.GameplayOverlapOwnership = bIsTriggerShape
+            ? EPhysicsGameplayOverlapOwnership::None
+            : EPhysicsGameplayOverlapOwnership::PrimaryOwner;
 
         for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
         {
@@ -364,6 +367,7 @@ public:
         uint32 ActorId       = 0;
         uint32 Generation    = 0;
         bool   bWantsOverlap = false;
+        EPhysicsGameplayOverlapOwnership GameplayOverlapOwnership = EPhysicsGameplayOverlapOwnership::None;
         bool   bValid        = false;
     };
 
@@ -453,6 +457,14 @@ public:
         {
             const PxFilterData FilterData = Shape->getSimulationFilterData();
             Info.bWantsOverlap            = HasPhysicsFilterFlag(FilterData.word0, PhysicsFilter_GenerateOverlapEvents);
+            Info.GameplayOverlapOwnership =
+                HasPhysicsFilterFlag(FilterData.word0, PhysicsFilter_OverlapOwnerPrimary)
+                    ? EPhysicsGameplayOverlapOwnership::PrimaryOwner
+                    : (HasPhysicsFilterFlag(FilterData.word0, PhysicsFilter_OverlapOwnerQueryProxy)
+                        ? EPhysicsGameplayOverlapOwnership::QueryProxyOwner
+                        : (HasPhysicsFilterFlag(FilterData.word0, PhysicsFilter_OverlapNonOwningReaction)
+                            ? EPhysicsGameplayOverlapOwnership::NonOwningReactionBody
+                            : EPhysicsGameplayOverlapOwnership::None));
         }
         return Info;
     }
@@ -693,6 +705,10 @@ private:
         {
             return;
         }
+
+        // Overlap-owner semantics are intentionally interpreted above the physics event queue.
+        // The queue preserves the raw component-level event, while gameplay systems such as
+        // trigger occupancy can now prefer components marked as overlap owners.
 
         std::lock_guard<std::mutex> Lock(EventMutex);
         FPairKey                    Key(A.ComponentId, B.ComponentId);

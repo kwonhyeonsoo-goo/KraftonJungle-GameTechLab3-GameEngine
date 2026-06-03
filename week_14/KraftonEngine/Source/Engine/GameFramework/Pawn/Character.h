@@ -7,6 +7,7 @@
 class UCapsuleComponent;
 class USkeletalMeshComponent;
 class UCharacterMovementComponent;
+class UPrimitiveComponent;
 
 enum class ECharacterPhysicsOwnershipMode : uint8
 {
@@ -28,6 +29,14 @@ enum class ECharacterQueryCollisionMode : uint8
 	CharacterDriven,
 	Disabled,
 	ReservedForFullRagdollProxy
+};
+
+enum class ECharacterGameplayOverlapOwnershipMode : uint8
+{
+	None,
+	CharacterDriven,
+	FullRagdollQueryProxy,
+	PartialHybrid
 };
 
 struct FCharacterCollisionOwnershipSnapshot
@@ -82,10 +91,15 @@ public:
 	ECharacterPhysicsOwnershipMode GetPhysicsOwnershipMode() const { return PhysicsOwnershipMode; }
 	ECharacterPhysicsCollisionMode GetCharacterPhysicsCollisionMode() const { return CharacterPhysicsCollisionMode; }
 	ECharacterQueryCollisionMode GetCharacterQueryCollisionMode() const { return CharacterQueryCollisionMode; }
+	ECharacterGameplayOverlapOwnershipMode GetGameplayOverlapOwnershipMode() const { return GameplayOverlapOwnershipMode; }
 	UFUNCTION(Pure, Category="Character|Physics")
 	bool IsAwaitingRagdollRecoveryRestore() const { return bAwaitingRagdollRecoveryRestore; }
 	UFUNCTION(Pure, Category="Character|Physics")
 	bool IsUsingFullRagdollQueryProxy() const;
+	bool IsCapsuleGameplayOverlapOwner() const;
+	bool IsMeshGameplayOverlapOwner() const;
+	bool ArePartialReactionBodiesGameplayOverlapOwners() const;
+	bool IsGameplayOverlapOwnerComponent(const UPrimitiveComponent* Component) const;
 	UFUNCTION(Pure, Category="Character|Physics")
 	ECollisionEnabled GetCurrentCapsuleCollisionEnabled() const;
 	UFUNCTION(Pure, Category="Character|Physics")
@@ -143,6 +157,7 @@ protected:
 	ECharacterPhysicsOwnershipMode PhysicsOwnershipMode = ECharacterPhysicsOwnershipMode::CharacterDriven;
 	ECharacterPhysicsCollisionMode CharacterPhysicsCollisionMode = ECharacterPhysicsCollisionMode::CharacterDriven;
 	ECharacterQueryCollisionMode CharacterQueryCollisionMode = ECharacterQueryCollisionMode::CharacterDriven;
+	ECharacterGameplayOverlapOwnershipMode GameplayOverlapOwnershipMode = ECharacterGameplayOverlapOwnershipMode::CharacterDriven;
 	bool bPendingRagdollBodyEnable = false;
 	bool bAwaitingRagdollRecoveryRestore = false;
 	bool bSavedPreRagdollCharacterState = false;
