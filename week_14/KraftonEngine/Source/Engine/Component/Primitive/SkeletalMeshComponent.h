@@ -8,6 +8,7 @@
 #include "Object/Ptr/SoftObjectPtr.h"
 #include "Object/Ptr/WeakObjectPtr.h"
 #include "Physics/PhysicsAssetInstance.h"
+#include "Component/Primitive/RagdollReactionPolicy.h"
 #include <memory>
 
 #include "Source/Engine/Component/Primitive/SkeletalMeshComponent.generated.h"
@@ -154,6 +155,7 @@ public:
     bool EnablePartialRagdoll(const FPartialRagdollSelection& Selection);
     UFUNCTION(Callable, Category="Physics")
     bool EnablePartialRagdoll(const FName& RootBoneName);
+    bool ApplyRagdollReaction(const FRagdollReactionRequest& Request);
     bool TriggerPartialRagdoll(const FPartialRagdollRequest& Request);
     bool TriggerPartialRagdollHitReaction(const FPartialRagdollHitReactionRequest& Request);
     UFUNCTION(Callable, Category="Physics")
@@ -180,6 +182,9 @@ public:
     float GetLastPartialHitReactionImpulseMagnitude() const { return LastPartialHitReactionImpulseMagnitude; }
     const FVector& GetLastPartialHitReactionDirection() const { return LastPartialHitReactionDirection; }
     bool WasLastPartialHitReactionEscalationCandidate() const { return bLastPartialHitReactionEscalationCandidate; }
+    ERagdollReactionEventKind GetLastRagdollReactionEventKind() const { return LastRagdollReactionEventKind; }
+    ERagdollReactionType GetLastRagdollReactionType() const { return LastRagdollReactionType; }
+    ERagdollReactionDecisionReason GetLastRagdollReactionDecisionReason() const { return LastRagdollReactionDecisionReason; }
     bool IsPartialRagdollSelfSuppressionActive() const;
     UFUNCTION(Pure, Category="Physics")
     bool IsRecoveringFromRagdoll() const { return RecoveryPhase != ERagdollRecoveryPhase::None; }
@@ -273,6 +278,18 @@ protected:
     void TickClothSimulation(float DeltaTime);
 
 private:
+    FRagdollReactionContext BuildRagdollReactionContext(const FRagdollReactionRequest& Request) const;
+    bool ExecuteRagdollReactionDecision(
+        const FRagdollReactionRequest& Request,
+        const FRagdollReactionContext& Context,
+        const FRagdollReactionDecision& Decision);
+    bool ApplyImpulseForRagdollReaction(
+        const FRagdollReactionRequest& Request,
+        const FRagdollReactionDecision& Decision,
+        const FName& PartialRootBoneName);
+    void UpdateLastRagdollReactionDiagnostics(
+        const FRagdollReactionRequest& Request,
+        const FRagdollReactionDecision& Decision);
     bool ShouldAdvanceAnimationDuringTick() const;
     bool ShouldBlockExternalAnimationControl() const;
     bool CaptureRagdollPoseBaseline();
@@ -352,6 +369,10 @@ protected:
     bool bPendingPartialRagdollBlendOut = false;
     float PendingPartialRagdollHoldTimeOverride = -1.0f;
     float PartialRagdollHoldRemaining = 0.0f;
+    FRagdollReactionTuning RagdollReactionTuning;
+    ERagdollReactionEventKind LastRagdollReactionEventKind = ERagdollReactionEventKind::DirectHit;
+    ERagdollReactionType LastRagdollReactionType = ERagdollReactionType::None;
+    ERagdollReactionDecisionReason LastRagdollReactionDecisionReason = ERagdollReactionDecisionReason::None;
     EPartialRagdollPreset LastPartialHitReactionPreset = EPartialRagdollPreset::UpperBody;
     FName LastPartialHitReactionHitBoneName = FName::None;
     FName LastPartialHitReactionRootBoneName = FName::None;

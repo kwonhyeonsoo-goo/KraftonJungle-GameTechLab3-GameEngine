@@ -150,6 +150,21 @@ namespace
         }
     }
 
+    const char* LexToString(ERagdollReactionEventKind EventKind)
+    {
+        return ::LexToString(EventKind);
+    }
+
+    const char* LexToString(ERagdollReactionType ReactionType)
+    {
+        return ::LexToString(ReactionType);
+    }
+
+    const char* LexToString(ERagdollReactionDecisionReason Reason)
+    {
+        return ::LexToString(Reason);
+    }
+
     const char* LexToString(ECollisionEnabled Mode)
     {
         switch (Mode)
@@ -468,7 +483,7 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
     const FVector LastHitDirection =
         MeshComponent ? MeshComponent->GetLastPartialHitReactionDirection() : FVector::ZeroVector;
 
-    UE_LOG("[RagdollTest] %s Actor=%s MeshComponent=%s EffectivePhysicsAsset=%s ActivePhysicsAsset=%s Mode=%s Active=%s PhysicsPose=%s Recovering=%s CharacterOwnership=%s CharacterPhysicsCollision=%s CharacterQueryCollision=%s OverlapOwnership=%s CapsuleCollision=%s MeshCollision=%s CapsuleRole=%s MeshRole=%s PartialBodyRole=%s CapsuleOverlapOwner=%s MeshOverlapOwner=%s PartialBodiesOverlapOwner=%s AwaitingRestore=%s FullQueryProxyActive=%s PartialRoot=%s PartialPhase=%s Hold=%.2f PendingBlendOut=%s PartialSelfSuppression=%s LiveBodies=%d LiveConstraints=%d BlendWeight=%.2f LastPreset=%s LastHitBone=%s LastRoot=%s LastTarget=%s LastStrength=%.2f LastHold=%.2f LastImpulse=%.2f LastDirection=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
+    UE_LOG("[RagdollTest] %s Actor=%s MeshComponent=%s EffectivePhysicsAsset=%s ActivePhysicsAsset=%s Mode=%s Active=%s PhysicsPose=%s Recovering=%s CharacterOwnership=%s CharacterPhysicsCollision=%s CharacterQueryCollision=%s OverlapOwnership=%s CapsuleCollision=%s MeshCollision=%s CapsuleRole=%s MeshRole=%s PartialBodyRole=%s CapsuleOverlapOwner=%s MeshOverlapOwner=%s PartialBodiesOverlapOwner=%s AwaitingRestore=%s FullQueryProxyActive=%s PartialRoot=%s PartialPhase=%s Hold=%.2f PendingBlendOut=%s PartialSelfSuppression=%s LiveBodies=%d LiveConstraints=%d BlendWeight=%.2f LastEvent=%s LastDecision=%s LastReason=%s LastPreset=%s LastHitBone=%s LastRoot=%s LastTarget=%s LastStrength=%.2f LastHold=%.2f LastImpulse=%.2f LastDirection=(%.2f,%.2f,%.2f) EscalationCandidate=%s",
         EventLabel ? EventLabel : "State",
         GetOwnerNameSafe(),
         GetComponentNameSafe(),
@@ -500,6 +515,9 @@ void UPhysicsAssetRagdollTestComponent::LogCurrentState(const char* EventLabel) 
         MeshComponent ? MeshComponent->GetLiveRagdollBodyCount() : 0,
         MeshComponent ? MeshComponent->GetLiveRagdollConstraintCount() : 0,
         MeshComponent ? MeshComponent->GetPhysicsAssetBlendWeight() : 0.0f,
+        MeshComponent ? LexToString(MeshComponent->GetLastRagdollReactionEventKind()) : "DirectHit",
+        MeshComponent ? LexToString(MeshComponent->GetLastRagdollReactionType()) : "None",
+        MeshComponent ? LexToString(MeshComponent->GetLastRagdollReactionDecisionReason()) : "None",
         MeshComponent ? LexToString(MeshComponent->GetLastPartialHitReactionPreset()) : "Unknown",
         MeshComponent ? MeshComponent->GetLastPartialHitReactionHitBoneName().ToString().c_str() : "None",
         MeshComponent ? MeshComponent->GetLastPartialHitReactionRootBoneName().ToString().c_str() : "None",
