@@ -40,6 +40,7 @@ private:
     void RenderLinkPanel(UCombatCoverNodeComponent* Node);
     void RenderGraphEditor();
     void RenderAgentPanel();
+    void RenderRoleStatsPopup();
     void RenderAutoLinkPopup();
     void RenderValidationPopup();
     template<typename TComponent>
@@ -80,5 +81,6 @@ private:
 	bool bPendingGraphNavigateToContent = false;
     bool bPendingOpenAutoLinkPopup = false;
     bool bPendingOpenValidationPopup = false;
+    bool bPendingOpenRoleStatsPopup = false;
     float GraphSceneUnitsPerGraphUnit = 1.0f / 15.0f;
 };

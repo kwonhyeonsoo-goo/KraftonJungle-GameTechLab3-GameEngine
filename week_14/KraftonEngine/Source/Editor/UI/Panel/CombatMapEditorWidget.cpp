@@ -367,26 +367,26 @@ void FCombatMapEditorWidget::RenderToolbar()
     {
         bPendingOpenAutoLinkPopup = true;
     }
+    ImGui::SameLine();
+    if (ImGui::Button("Agent Type Stats"))
+    {
+        bPendingOpenRoleStatsPopup = true;
+    }
     if (UCombatFlowManagerComponent* Manager = FindOrUseManager())
     {
-        bool bEnableCombat = Manager->GetEnableCombatSimulation();
-        if (ImGui::Checkbox("Combat Sim", &bEnableCombat))
-        {
-            Manager->SetEnableCombatSimulation(bEnableCombat);
-        }
-        ImGui::SameLine();
-
-        bool bRequireMutualRange = Manager->GetRequireMutualFireRange();
-        if (ImGui::Checkbox("Mutual Range", &bRequireMutualRange))
-        {
-            Manager->SetRequireMutualFireRange(bRequireMutualRange);
-        }
         ImGui::SameLine();
 
         bool bRequireSlotTags = Manager->GetRequireSlotTagMatch();
         if (ImGui::Checkbox("Slot Tags", &bRequireSlotTags))
         {
             Manager->SetRequireSlotTagMatch(bRequireSlotTags);
+        }
+        ImGui::SameLine();
+
+        bool bEnableSuppression = Manager->GetEnableSuppression();
+        if (ImGui::Checkbox("Suppression", &bEnableSuppression))
+        {
+            Manager->SetEnableSuppression(bEnableSuppression);
         }
         ImGui::SameLine();
 
@@ -408,21 +408,16 @@ void FCombatMapEditorWidget::RenderToolbar()
     const FString SelectedActorName = ActorNameForUI(SelectedActor);
     ImGui::Text("Selected Actor: %s", SelectedActorName.c_str());
 
+    RenderRoleStatsPopup();
     RenderAutoLinkPopup();
     RenderValidationPopup();
 }
 
 void FCombatMapEditorWidget::RenderMainLayout()
 {
-    const float AvailableHeight = ImGui::GetContentRegionAvail().y;
-    const float MiddleHeight = (std::min)((std::max)(260.0f, AvailableHeight * 0.40f), 360.0f);
-
-    ImGui::BeginChild("CombatMapEditorMiddleRegion", ImVec2(0.0f, MiddleHeight), false);
+    ImGui::BeginChild("CombatMapEditorMainRegion", ImVec2(0.0f, 0.0f), false);
     RenderMiddleLayout();
     ImGui::EndChild();
-
-    ImGui::Separator();
-    RenderGraphEditor();
 
     if (!EditorEngine || !EditorEngine->IsPlayingInEditor())
     {
@@ -437,10 +432,11 @@ void FCombatMapEditorWidget::RenderMainLayout()
 void FCombatMapEditorWidget::RenderMiddleLayout()
 {
     const ImGuiTableFlags Flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchProp;
-    if (ImGui::BeginTable("CombatMapEditorMiddleLayout", 2, Flags))
+    if (ImGui::BeginTable("CombatMapEditorMiddleLayout", 3, Flags))
     {
-        ImGui::TableSetupColumn("NodesAndAgents", ImGuiTableColumnFlags_WidthFixed, 340.0f);
-        ImGui::TableSetupColumn("SelectedDetails", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("NodesAndAgents", ImGuiTableColumnFlags_WidthFixed, 300.0f);
+        ImGui::TableSetupColumn("SelectedDetails", ImGuiTableColumnFlags_WidthFixed, 420.0f);
+        ImGui::TableSetupColumn("NodeGraph", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableNextRow();
 
         ImGui::TableSetColumnIndex(0);
@@ -451,6 +447,11 @@ void FCombatMapEditorWidget::RenderMiddleLayout()
         ImGui::TableSetColumnIndex(1);
         ImGui::BeginChild("CombatMapEditorRightColumn", ImVec2(0.0f, 0.0f), false);
         RenderRightColumn();
+        ImGui::EndChild();
+
+        ImGui::TableSetColumnIndex(2);
+        ImGui::BeginChild("CombatMapEditorGraphColumn", ImVec2(0.0f, 0.0f), false);
+        RenderGraphEditor();
         ImGui::EndChild();
 
         ImGui::EndTable();
@@ -531,11 +532,6 @@ void FCombatMapEditorWidget::RenderSelectedNodePanel()
         Refresh();
     }
 
-    FString DisplayName = Node->GetDisplayName();
-    if (InputTextString("Display Name", DisplayName))
-    {
-        Node->SetDisplayName(DisplayName);
-    }
 
     ImGui::Text("Slots: %d  Links: %d  MaxOccupants: %d",
         Node->GetSlotCount(), Node->GetLinkCount(), Node->GetMaxOccupants());
@@ -971,33 +967,68 @@ void FCombatMapEditorWidget::RenderAgentPanel()
             continue;
         }
 
-        ImGui::TextWrapped("%s | Team %s | %s",
+        ImGui::TextWrapped("%s | %s | HP %.1f / %.1f | %s",
             ActorNameForUI(Agent->GetOwner()).c_str(),
-            Agent->GetTeamTag().c_str(),
-            Agent->GetStateName());
-        ImGui::TextDisabled("Current: %s:%d  MoveTarget: %s:%d",
-            Agent->GetCurrentNodeId().c_str(),
-            Agent->GetCurrentSlotId(),
-            Agent->GetTargetNodeId().c_str(),
-            Agent->GetTargetSlotId());
-
-        UCombatCoverAgentComponent* CombatTarget = Agent->GetCurrentTarget();
-        const FString TargetName = ActorNameForUI(CombatTarget ? CombatTarget->GetOwner() : nullptr);
-        ImGui::TextDisabled("HP: %.1f / %.1f  Range: %.0f  Damage: %.1f  Interval: %.1f-%.1fs",
+            Agent->GetResolvedCombatRoleName(),
             Agent->GetHealth(),
             Agent->GetMaxHealth(),
-            Agent->GetFireRange(),
-            Agent->GetAttackDamage(),
-            Agent->GetAttackIntervalMin(),
-            Agent->GetAttackIntervalMax());
-        ImGui::TextDisabled("CombatTarget: %s  Incoming: %d attacks / %.1f damage",
-            TargetName.c_str(),
-            Agent->GetIncomingFireCount(),
-            Agent->GetIncomingAttackDamage());
-        ImGui::TextDisabled("Advance: %s", Agent->GetAdvanceLinkModeName());
+            Agent->GetStateName());
         ImGui::Separator();
     }
     ImGui::EndChild();
+}
+
+void FCombatMapEditorWidget::RenderRoleStatsPopup()
+{
+    if (bPendingOpenRoleStatsPopup)
+    {
+        ImGui::OpenPopup("Agent Type Stats");
+        bPendingOpenRoleStatsPopup = false;
+    }
+
+    if (ImGui::BeginPopupModal("Agent Type Stats", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::TextDisabled("Role defaults override direct combat stat edits while Use Role Combat Defaults is on.");
+        ImGui::Spacing();
+
+        if (ImGui::BeginTable("##CombatAgentTypeStatsTable", 7,
+            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp))
+        {
+            ImGui::TableSetupColumn("Type");
+            ImGui::TableSetupColumn("Team");
+            ImGui::TableSetupColumn("Route");
+            ImGui::TableSetupColumn("Range");
+            ImGui::TableSetupColumn("Run Range");
+            ImGui::TableSetupColumn("Damage");
+            ImGui::TableSetupColumn("Interval");
+            ImGui::TableHeadersRow();
+
+            auto Row = [](const char* Type, const char* Team, const char* Route, const char* Range, const char* MovingRange, const char* Damage, const char* Interval)
+            {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0); ImGui::TextUnformatted(Type);
+                ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(Team);
+                ImGui::TableSetColumnIndex(2); ImGui::TextUnformatted(Route);
+                ImGui::TableSetColumnIndex(3); ImGui::TextUnformatted(Range);
+                ImGui::TableSetColumnIndex(4); ImGui::TextUnformatted(MovingRange);
+                ImGui::TableSetColumnIndex(5); ImGui::TextUnformatted(Damage);
+                ImGui::TableSetColumnIndex(6); ImGui::TextUnformatted(Interval);
+            };
+
+            Row("Ally", "Ally", "Outgoing", "50", "30", "5", "1.0-2.0s");
+            Row("EnemyShortRange", "Enemy", "Incoming", "35", "25", "5", "0.8-1.4s");
+            Row("EnemyLongRangeSlow", "Enemy", "Incoming", "80", "30", "7", "2.4-3.6s");
+
+            ImGui::EndTable();
+        }
+
+        ImGui::Spacing();
+        if (ImGui::Button("Close"))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
 }
 
 void FCombatMapEditorWidget::RenderAutoLinkPopup()
