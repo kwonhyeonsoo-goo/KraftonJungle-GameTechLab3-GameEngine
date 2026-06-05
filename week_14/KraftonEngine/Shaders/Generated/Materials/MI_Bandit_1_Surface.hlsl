@@ -64,14 +64,14 @@ float3 GetCommonMaterialEmissive()
 FMaterialResult EvaluateMaterial(FMaterialPixelInput Input)
 {
     float4 n_17 = Tex_Diffuse.Sample(LinearWrapSampler, Input.UV0);
-    float4 n_38 = Tex_Diffuse.Sample(LinearWrapSampler, Input.UV0);
-    float4 n_53 = Tex_Diffuse.Sample(LinearWrapSampler, Input.UV0);
+    float4 n_28 = Tex_Diffuse.Sample(LinearWrapSampler, Input.UV0);
+    float4 n_44 = Tex_Diffuse.Sample(LinearWrapSampler, Input.UV0);
     float n_3 = 1.000000f;
     FMaterialResult Result;
     Result.BaseColor = (n_17).rgb;
-    Result.Normal = (n_38).rgb;
-    Result.Roughness = (n_53).r;
-    Result.Metallic = (n_53).g;
+    Result.Normal = (n_28).rgb;
+    Result.Roughness = (n_44).r;
+    Result.Metallic = (n_44).g;
     Result.Emissive = float3(0, 0, 0);
     Result.Opacity = n_3;
     return Result;
