@@ -8,6 +8,8 @@
 #include "Editor/PIE/PIETypes.h"
 #include "Editor/Selection/SelectionManager.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/Actor/StaticMeshActor.h"
+#include "Component/Primitive/StaticMeshComponent.h"
 #include "Component/SceneComponent.h"
 #include "GameFramework/World.h"
 
@@ -186,7 +188,7 @@ void FCombatMapEditorWidget::Render(float /*DeltaTime*/)
 
     RenderToolbar();
     ImGui::Separator();
-    RenderTwoColumnLayout();
+    RenderMainLayout();
 
     ImGui::End();
 }
@@ -339,16 +341,31 @@ void FCombatMapEditorWidget::RenderToolbar()
     if (ImGui::Button("Refresh"))
     {
         Refresh();
+        ResetGraphLayoutFromScene();
     }
     ImGui::SameLine();
-    if (ImGui::Button("Validate Graph"))
+    if (ImGui::Button("Auto Generate Missing NodeIds"))
     {
+        GenerateNodeIdsAndRenameActors();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Validate Now"))
+    {
+        LastValidationMessages.clear();
         if (UCombatFlowManagerComponent* Manager = FindOrUseManager())
         {
             const FCombatCoverGraphValidationResult Result = Manager->ValidateGraph(true);
             LastValidationMessages = Result.Messages;
         }
-        Refresh();
+        if (!LastValidationMessages.empty())
+        {
+            bPendingOpenValidationPopup = true;
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Auto Link Nearby"))
+    {
+        bPendingOpenAutoLinkPopup = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Draw Debug Once"))
@@ -362,71 +379,31 @@ void FCombatMapEditorWidget::RenderToolbar()
     const FString SelectedActorName = ActorNameForUI(SelectedActor);
     ImGui::Text("Selected Actor: %s", SelectedActorName.c_str());
 
-    if (ImGui::Button("Add Cover Node Component"))
-    {
-        if (UCombatCoverNodeComponent* Node = AddComponentToSelectedActor<UCombatCoverNodeComponent>())
-        {
-            SelectNode(Node);
-        }
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Create Cover Node Actor"))
-    {
-        if (UCombatCoverNodeComponent* Node = CreateCoverNodeActorFromEditor())
-        {
-            SelectNode(Node);
-        }
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Duplicate Cover Node"))
-    {
-        if (UCombatCoverNodeComponent* Node = DuplicateSelectedCoverNodeActor())
-        {
-            SelectNode(Node);
-        }
-    }
-
-    if (ImGui::Button("Add Cover Agent"))
-    {
-        AddComponentToSelectedActor<UCombatCoverAgentComponent>();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Add Flow Manager"))
-    {
-        AddComponentToSelectedActor<UCombatFlowManagerComponent>();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Auto Generate Missing NodeIds"))
-    {
-        GenerateNodeIdsAndRenameActors();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Auto Link Nearby"))
-    {
-        if (UCombatFlowManagerComponent* Manager = FindOrUseManager())
-        {
-            const int32 Count = Manager->AutoLinkNearby(AutoLinkMaxDistance, AutoLinkMaxLinksPerNode, bAutoLinkDirectedByX);
-            UE_LOG("CombatMapEditor: auto linked %d edges", Count);
-        }
-        Refresh();
-    }
-
-    ImGui::SetNextItemWidth(180.0f);
-    ImGui::DragFloat("Auto Link Max Distance", &AutoLinkMaxDistance, 10.0f, 0.0f, 100000.0f);
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(120.0f);
-    ImGui::DragInt("Max Links", &AutoLinkMaxLinksPerNode, 1.0f, 1, 16);
-    ImGui::SameLine();
-    ImGui::Checkbox("Directed By +X", &bAutoLinkDirectedByX);
+    RenderAutoLinkPopup();
+    RenderValidationPopup();
 }
 
-void FCombatMapEditorWidget::RenderTwoColumnLayout()
+void FCombatMapEditorWidget::RenderMainLayout()
+{
+    const float AvailableHeight = ImGui::GetContentRegionAvail().y;
+    const float GraphHeight = (std::max)(260.0f, AvailableHeight * 0.48f);
+    const float MiddleHeight = (std::max)(220.0f, AvailableHeight - GraphHeight - ImGui::GetStyle().ItemSpacing.y);
+
+    ImGui::BeginChild("CombatMapEditorMiddleRegion", ImVec2(0.0f, MiddleHeight), false);
+    RenderMiddleLayout();
+    ImGui::EndChild();
+
+    ImGui::Separator();
+    RenderGraphEditor();
+}
+
+void FCombatMapEditorWidget::RenderMiddleLayout()
 {
     const ImGuiTableFlags Flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchProp;
-    if (ImGui::BeginTable("CombatMapEditorTwoColumnLayout", 2, Flags))
+    if (ImGui::BeginTable("CombatMapEditorMiddleLayout", 2, Flags))
     {
-        ImGui::TableSetupColumn("Left", ImGuiTableColumnFlags_WidthFixed, 340.0f);
-        ImGui::TableSetupColumn("Right", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("NodesAndAgents", ImGuiTableColumnFlags_WidthFixed, 340.0f);
+        ImGui::TableSetupColumn("SelectedDetails", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableNextRow();
 
         ImGui::TableSetColumnIndex(0);
@@ -448,8 +425,6 @@ void FCombatMapEditorWidget::RenderLeftColumn()
     RenderNodeList();
     ImGui::Separator();
     RenderAgentPanel();
-    ImGui::Separator();
-    RenderValidationPanel();
 }
 
 void FCombatMapEditorWidget::RenderRightColumn()
@@ -457,8 +432,6 @@ void FCombatMapEditorWidget::RenderRightColumn()
     RenderSelectedNodePanel();
     ImGui::Separator();
     RenderLinkPanel(SelectedNode);
-    ImGui::Separator();
-    RenderGraphEditor();
 }
 
 void FCombatMapEditorWidget::RenderNodeList()
@@ -696,27 +669,7 @@ void FCombatMapEditorWidget::RenderGraphEditor()
 	}
     ImGui::SameLine();
     ImGui::Checkbox("Apply Graph To Scene", &bGraphApplyToScene);
-    ImGui::SetNextItemWidth(180.0f);
-    if (ImGui::DragFloat("Scene Units / Graph Unit", &GraphSceneUnitsPerGraphUnit, 0.001f, 0.001f, 1000.0f, "%.4f"))
-    {
-        ResetGraphLayoutFromScene();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Use 1/15 Scale"))
-    {
-        GraphSceneUnitsPerGraphUnit = 1.0f / 15.0f;
-        ResetGraphLayoutFromScene();
-    }
-
-    bool bGraphAxisChanged = false;
-    bGraphAxisChanged |= ImGui::Checkbox("Mirror Graph X", &bGraphMirrorX);
-    ImGui::SameLine();
-    bGraphAxisChanged |= ImGui::Checkbox("Mirror Graph Y", &bGraphMirrorY);
-    if (bGraphAxisChanged)
-    {
-        ResetGraphLayoutFromScene();
-    }
-    ImGui::TextDisabled("Graph default is 1 graph unit = 0.0667 scene units. Mirror X/Y only changes the top-down graph view mapping. Scene Z is fixed to 0.");
+    ImGui::TextDisabled("Top-down graph uses fixed 1/15 scale and always flips scene X/Y for Z-up left-handed view. Scene Z is fixed to 0.");
 
     if (!GraphEditorContext)
     {
@@ -724,13 +677,14 @@ void FCombatMapEditorWidget::RenderGraphEditor()
         return;
     }
 
-    ImGui::BeginChild("CombatGraphEditorChild", ImVec2(0.0f, 360.0f), true);
+    ImGui::BeginChild("CombatGraphEditorChild", ImVec2(0.0f, 0.0f), true);
     ed::SetCurrentEditor(GraphEditorContext);
     ed::Begin("CombatCoverGraphCanvas");
 
     TMap<uint32, UCombatCoverNodeComponent*> InputPinToNode;
     TMap<uint32, UCombatCoverNodeComponent*> OutputPinToNode;
     TMap<uint32, std::pair<UCombatCoverNodeComponent*, FString>> LinkIdToEdge;
+    bool bSkipApplyGraphToScene = false;
 
     for (int32 NodeIndex = 0; NodeIndex < static_cast<int32>(CachedNodes.size()); ++NodeIndex)
     {
@@ -753,8 +707,8 @@ void FCombatMapEditorWidget::RenderGraphEditor()
         const FString NodeIdText = Node->GetNodeId().empty() ? FString("<empty NodeId>") : Node->GetNodeId();
 
         ed::BeginNode(ToGraphNodeId(NodeGraphId));
-        ed::BeginPin(ToGraphPinId(InputPinId), ed::PinKind::Input);
-        ImGui::TextColored(ImVec4(0.55f, 0.90f, 0.80f, 1.0f), "in");
+        ed::BeginPin(ToGraphPinId(OutputPinId), ed::PinKind::Output);
+        ImGui::TextColored(ImVec4(0.55f, 0.90f, 0.80f, 1.0f), "out");
         ed::EndPin();
         ImGui::SameLine();
         ImGui::BeginGroup();
@@ -774,8 +728,8 @@ void FCombatMapEditorWidget::RenderGraphEditor()
         ImGui::TextDisabled("S %d | L %d", Node->GetSlotCount(), Node->GetLinkCount());
         ImGui::EndGroup();
         ImGui::SameLine();
-        ed::BeginPin(ToGraphPinId(OutputPinId), ed::PinKind::Output);
-        ImGui::TextColored(ImVec4(0.55f, 0.90f, 0.80f, 1.0f), "out");
+        ed::BeginPin(ToGraphPinId(InputPinId), ed::PinKind::Input);
+        ImGui::TextColored(ImVec4(0.55f, 0.90f, 0.80f, 1.0f), "in");
         ed::EndPin();
         ed::EndNode();
 
@@ -892,9 +846,58 @@ void FCombatMapEditorWidget::RenderGraphEditor()
     }
     ed::EndDelete();
 
+    static ImVec2 ContextGraphPosition(0.0f, 0.0f);
+    static uint32 ContextGraphNodeId = 0;
+    ed::NodeId ContextNodeId = 0;
+    ed::Suspend();
+    if (ed::ShowNodeContextMenu(&ContextNodeId))
+    {
+        ContextGraphNodeId = static_cast<uint32>(ContextNodeId.Get());
+        ContextGraphPosition = ed::ScreenToCanvas(ImGui::GetMousePos());
+        ImGui::OpenPopup("CombatCoverGraphNodeMenu");
+    }
+    else if (ed::ShowBackgroundContextMenu())
+    {
+        ContextGraphNodeId = 0;
+        ContextGraphPosition = ed::ScreenToCanvas(ImGui::GetMousePos());
+        ImGui::OpenPopup("CombatCoverGraphBackgroundMenu");
+    }
+
+    if (ImGui::BeginPopup("CombatCoverGraphNodeMenu"))
+    {
+        UCombatCoverNodeComponent* ContextNode = FindNodeByGraphNodeId(ContextGraphNodeId);
+        const bool bCanDuplicate = IsValidCombatNode(ContextNode);
+        if (ImGui::MenuItem("Duplicate Cover Node", nullptr, false, bCanDuplicate))
+        {
+            if (UCombatCoverNodeComponent* NewNode = DuplicateCoverNodeActor(ContextNode, &ContextGraphPosition))
+            {
+                SelectNode(NewNode);
+                bSkipApplyGraphToScene = true;
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    if (ImGui::BeginPopup("CombatCoverGraphBackgroundMenu"))
+    {
+        if (ImGui::MenuItem("Create Cover Node Actor"))
+        {
+            if (UCombatCoverNodeComponent* NewNode = CreateCoverNodeActorFromEditor(&ContextGraphPosition))
+            {
+                SelectNode(NewNode);
+                bSkipApplyGraphToScene = true;
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+    ed::Resume();
+
+
     ed::End();
 
-    if (bGraphApplyToScene)
+    if (bGraphApplyToScene && !bSkipApplyGraphToScene)
     {
         for (int32 NodeIndex = 0; NodeIndex < static_cast<int32>(CachedNodes.size()); ++NodeIndex)
         {
@@ -918,25 +921,12 @@ void FCombatMapEditorWidget::RenderAgentPanel()
     RenderPIEControls();
 
     ImGui::Text("Agents: %d", static_cast<int32>(CachedAgents.size()));
-    if (UCombatFlowManagerComponent* Manager = FindOrUseManager())
-    {
-        if (ImGui::Button("Refresh Manager Registry"))
-        {
-            Manager->RefreshRegistry();
-            Refresh();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Reset Occupancy"))
-        {
-            Manager->ResetRuntimeState();
-        }
-    }
-    else
+    if (!FindOrUseManager())
     {
         ImGui::TextDisabled("No UCombatFlowManagerComponent in this world.");
     }
 
-    ImGui::BeginChild("CombatAgentList", ImVec2(0.0f, 190.0f), true);
+    ImGui::BeginChild("CombatAgentList", ImVec2(0.0f, 0.0f), true);
     if (CachedAgents.empty())
     {
         ImGui::TextDisabled("No combat agents.");
@@ -944,7 +934,7 @@ void FCombatMapEditorWidget::RenderAgentPanel()
 
     for (UCombatCoverAgentComponent* Agent : CachedAgents)
     {
-		if (!IsValidCombatAgent(Agent))
+        if (!IsValidCombatAgent(Agent))
         {
             continue;
         }
@@ -963,31 +953,65 @@ void FCombatMapEditorWidget::RenderAgentPanel()
     ImGui::EndChild();
 }
 
-void FCombatMapEditorWidget::RenderValidationPanel()
+void FCombatMapEditorWidget::RenderAutoLinkPopup()
 {
-    ImGui::SeparatorText("Validation");
-    if (ImGui::Button("Validate Now"))
+    if (bPendingOpenAutoLinkPopup)
     {
-        if (UCombatFlowManagerComponent* Manager = FindOrUseManager())
+        ImGui::OpenPopup("Auto Link Nearby Settings");
+        bPendingOpenAutoLinkPopup = false;
+    }
+
+    if (ImGui::BeginPopupModal("Auto Link Nearby Settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::SetNextItemWidth(180.0f);
+        ImGui::DragFloat("Max Distance", &AutoLinkMaxDistance, 10.0f, 0.0f, 100000.0f);
+        ImGui::SetNextItemWidth(180.0f);
+        ImGui::DragInt("Max Lines", &AutoLinkMaxLinksPerNode, 1.0f, 1, 16);
+        ImGui::Checkbox("Directed By +X", &bAutoLinkDirectedByX);
+
+        if (ImGui::Button("Run Auto Link"))
         {
-            const FCombatCoverGraphValidationResult Result = Manager->ValidateGraph(true);
-            LastValidationMessages = Result.Messages;
+            if (UCombatFlowManagerComponent* Manager = FindOrUseManager())
+            {
+                const int32 Count = Manager->AutoLinkNearby(AutoLinkMaxDistance, AutoLinkMaxLinksPerNode, bAutoLinkDirectedByX);
+                UE_LOG("CombatMapEditor: auto linked %d edges", Count);
+            }
+            Refresh();
+            ResetGraphLayoutFromScene();
+            ImGui::CloseCurrentPopup();
         }
+        ImGui::SameLine();
+        if (ImGui::Button("Close"))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+}
+
+void FCombatMapEditorWidget::RenderValidationPopup()
+{
+    if (bPendingOpenValidationPopup)
+    {
+        ImGui::OpenPopup("Combat Graph Validation");
+        bPendingOpenValidationPopup = false;
     }
 
-    ImGui::BeginChild("CombatValidationMessages", ImVec2(0.0f, 0.0f), true);
-    if (LastValidationMessages.empty())
+    if (ImGui::BeginPopupModal("Combat Graph Validation", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        ImGui::TextDisabled("No validation result yet.");
-        ImGui::EndChild();
-        return;
+        ImGui::Text("Validation issues: %d", static_cast<int32>(LastValidationMessages.size()));
+        ImGui::Separator();
+        for (const FString& Message : LastValidationMessages)
+        {
+            ImGui::TextWrapped("%s", Message.c_str());
+        }
+        ImGui::Separator();
+        if (ImGui::Button("Close"))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
     }
-
-    for (const FString& Message : LastValidationMessages)
-    {
-        ImGui::TextWrapped("%s", Message.c_str());
-    }
-    ImGui::EndChild();
 }
 
 void FCombatMapEditorWidget::RenderPIEControls()
@@ -1064,25 +1088,13 @@ void FCombatMapEditorWidget::ResetGraphLayoutFromScene()
 ImVec2 FCombatMapEditorWidget::WorldToGraph(const FVector& Position) const
 {
     const float SafeUnitsPerGraphUnit = (std::max)(0.001f, GraphSceneUnitsPerGraphUnit);
-    float GraphX = Position.X / SafeUnitsPerGraphUnit;
-    float GraphY = -Position.Y / SafeUnitsPerGraphUnit;
-    if (bGraphMirrorX)
-    {
-        GraphX = -GraphX;
-    }
-    if (bGraphMirrorY)
-    {
-        GraphY = -GraphY;
-    }
-    return ImVec2(GraphX, GraphY);
+    return ImVec2(-Position.X / SafeUnitsPerGraphUnit, -Position.Y / SafeUnitsPerGraphUnit);
 }
 
 FVector FCombatMapEditorWidget::GraphToWorld(const ImVec2& Position) const
 {
     const float SafeUnitsPerGraphUnit = (std::max)(0.001f, GraphSceneUnitsPerGraphUnit);
-    const float GraphX = bGraphMirrorX ? -Position.x : Position.x;
-    const float GraphY = bGraphMirrorY ? -Position.y : Position.y;
-    return FVector(GraphX * SafeUnitsPerGraphUnit, -GraphY * SafeUnitsPerGraphUnit, 0.0f);
+    return FVector(-Position.x * SafeUnitsPerGraphUnit, -Position.y * SafeUnitsPerGraphUnit, 0.0f);
 }
 
 void FCombatMapEditorWidget::EnsureGraphNodePositionFromScene(UCombatCoverNodeComponent* Node, int32 /*NodeIndex*/)
@@ -1115,7 +1127,7 @@ void FCombatMapEditorWidget::ApplyGraphPositionToScene(UCombatCoverNodeComponent
     Node->GetOwner()->SetActorLocation(GraphToWorld(GraphPosition));
 }
 
-UCombatCoverNodeComponent* FCombatMapEditorWidget::CreateCoverNodeActorFromEditor()
+UCombatCoverNodeComponent* FCombatMapEditorWidget::CreateCoverNodeActorFromEditor(const ImVec2* GraphPosition)
 {
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -1123,20 +1135,27 @@ UCombatCoverNodeComponent* FCombatMapEditorWidget::CreateCoverNodeActorFromEdito
         return nullptr;
     }
 
-    AActor* Actor = World->SpawnActor<AActor>();
+    AStaticMeshActor* Actor = World->SpawnActor<AStaticMeshActor>();
     if (!Actor)
     {
         return nullptr;
     }
 
-    USceneComponent* Root = Actor->AddComponent<USceneComponent>();
-    if (Root)
+    Actor->InitDefaultComponents("Content/Data/BasicShape/Cube.OBJ");
+    if (UStaticMeshComponent* StaticMeshComponent = Actor->GetStaticMeshComponent())
     {
-        Actor->SetRootComponent(Root);
+        if (!StaticMeshComponent->SetMaterialByPath(0, "Content/Material/Auto/BasicShapeMaterial.uasset"))
+        {
+            UE_LOG("CombatMapEditor: failed to assign BasicShapeMaterial to new cover node actor");
+        }
     }
 
     FVector SpawnLocation(static_cast<float>(CachedNodes.size()) * 500.0f, 0.0f, 0.0f);
-	if (IsValidCombatNode(SelectedNode))
+    if (GraphPosition)
+    {
+        SpawnLocation = GraphToWorld(*GraphPosition);
+    }
+    else if (IsValidCombatNode(SelectedNode))
     {
         SpawnLocation = SelectedNode->GetOwner()->GetActorLocation() + FVector(500.0f, 0.0f, 0.0f);
     }
@@ -1162,19 +1181,15 @@ UCombatCoverNodeComponent* FCombatMapEditorWidget::CreateCoverNodeActorFromEdito
     return Actor->GetComponentByClass<UCombatCoverNodeComponent>();
 }
 
-UCombatCoverNodeComponent* FCombatMapEditorWidget::DuplicateSelectedCoverNodeActor()
+UCombatCoverNodeComponent* FCombatMapEditorWidget::DuplicateCoverNodeActor(UCombatCoverNodeComponent* SourceNode, const ImVec2* GraphPosition)
 {
-	UCombatCoverNodeComponent* SourceNode = IsValidCombatNode(SelectedNode) ? SelectedNode : nullptr;
-	if (!SourceNode)
+    if (!IsValidCombatNode(SourceNode))
     {
-        if (AActor* SelectedActor = GetSelectedActor())
-        {
-			SourceNode = IsValid(SelectedActor) ? SelectedActor->GetComponentByClass<UCombatCoverNodeComponent>() : nullptr;
-        }
+        return nullptr;
     }
 
-	AActor* SourceActor = IsValidCombatNode(SourceNode) ? SourceNode->GetOwner() : nullptr;
-	if (!IsValid(SourceActor))
+    AActor* SourceActor = SourceNode->GetOwner();
+    if (!IsValid(SourceActor))
     {
         return nullptr;
     }
@@ -1186,6 +1201,10 @@ UCombatCoverNodeComponent* FCombatMapEditorWidget::DuplicateSelectedCoverNodeAct
     }
 
     FVector NewLocation = SourceActor->GetActorLocation() + FVector(500.0f, 0.0f, 0.0f);
+    if (GraphPosition)
+    {
+        NewLocation = GraphToWorld(*GraphPosition);
+    }
     NewLocation.Z = 0.0f;
     DuplicateActor->SetActorLocation(NewLocation);
 
@@ -1207,6 +1226,18 @@ UCombatCoverNodeComponent* FCombatMapEditorWidget::DuplicateSelectedCoverNodeAct
     }
     ResetGraphLayoutFromScene();
     return DuplicateActor->GetComponentByClass<UCombatCoverNodeComponent>();
+}
+
+UCombatCoverNodeComponent* FCombatMapEditorWidget::FindNodeByGraphNodeId(uint32 GraphNodeId) const
+{
+    for (UCombatCoverNodeComponent* Node : CachedNodes)
+    {
+        if (IsValidCombatNode(Node) && MakeCombatNodeGraphNodeId(Node) == GraphNodeId)
+        {
+            return Node;
+        }
+    }
+    return nullptr;
 }
 
 void FCombatMapEditorWidget::GenerateNodeIdsAndRenameActors()

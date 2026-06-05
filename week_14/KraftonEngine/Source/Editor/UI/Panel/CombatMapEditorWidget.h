@@ -30,7 +30,8 @@ private:
     AActor* GetSelectedActor() const;
     UCombatFlowManagerComponent* FindOrUseManager() const;
     void RenderToolbar();
-    void RenderTwoColumnLayout();
+    void RenderMainLayout();
+    void RenderMiddleLayout();
     void RenderLeftColumn();
     void RenderRightColumn();
     void RenderNodeList();
@@ -39,7 +40,8 @@ private:
     void RenderLinkPanel(UCombatCoverNodeComponent* Node);
     void RenderGraphEditor();
     void RenderAgentPanel();
-    void RenderValidationPanel();
+    void RenderAutoLinkPopup();
+    void RenderValidationPopup();
     void RenderPIEControls();
     template<typename TComponent>
     TComponent* AddComponentToSelectedActor();
@@ -54,8 +56,9 @@ private:
     FVector GraphToWorld(const ImVec2& Position) const;
     ImVec2 WorldToGraph(const FVector& Position) const;
 
-    UCombatCoverNodeComponent* CreateCoverNodeActorFromEditor();
-    UCombatCoverNodeComponent* DuplicateSelectedCoverNodeActor();
+    UCombatCoverNodeComponent* CreateCoverNodeActorFromEditor(const ImVec2* GraphPosition = nullptr);
+    UCombatCoverNodeComponent* DuplicateCoverNodeActor(UCombatCoverNodeComponent* SourceNode, const ImVec2* GraphPosition = nullptr);
+    UCombatCoverNodeComponent* FindNodeByGraphNodeId(uint32 GraphNodeId) const;
     void GenerateNodeIdsAndRenameActors();
     void RenameActorToNodeId(UCombatCoverNodeComponent* Node);
 
@@ -76,9 +79,9 @@ private:
     ax::NodeEditor::EditorContext* GraphEditorContext = nullptr;
     TSet<uint32> InitializedGraphItemIds;
     bool bGraphApplyToScene = true;
-    bool bGraphMirrorX = false;
-    bool bGraphMirrorY = false;
 	bool bWasPlayingInEditor = false;
 	bool bPendingGraphNavigateToContent = false;
+    bool bPendingOpenAutoLinkPopup = false;
+    bool bPendingOpenValidationPopup = false;
     float GraphSceneUnitsPerGraphUnit = 1.0f / 15.0f;
 };
