@@ -1942,6 +1942,9 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 	if (AssetType == "Material")
 	{
 		FString Preview = (CurrentPath.empty() || CurrentPath == "None") ? "None" : CurrentPath;
+		const float OpenButtonWidth = ImGui::CalcTextSize("Open").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+		const float Spacing = ImGui::GetStyle().ItemSpacing.x;
+		ImGui::SetNextItemWidth(-(OpenButtonWidth + Spacing));
 		if (ImGui::BeginCombo("##Material", Preview.c_str()))
 		{
 			bool bSelectedNone = (CurrentPath == "None" || CurrentPath.empty());
@@ -1977,6 +1980,30 @@ bool FEditorPropertyWidget::RenderSoftObjectPropertyWidget(FPropertyValue& Prop)
 				bChanged = true;
 			}
 			ImGui::EndDragDropTarget();
+		}
+
+		ImGui::SameLine();
+		const bool bCanOpenMaterial = EditorEngine
+			&& !CurrentPath.empty()
+			&& CurrentPath != "None";
+		if (!bCanOpenMaterial)
+		{
+			ImGui::BeginDisabled();
+		}
+		if (ImGui::Button("Open"))
+		{
+			if (UMaterial* Material = FMaterialManager::Get().GetOrCreateMaterial(CurrentPath))
+			{
+				EditorEngine->OpenAssetEditorForObject(Material);
+			}
+		}
+		if (!bCanOpenMaterial)
+		{
+			ImGui::EndDisabled();
+		}
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+		{
+			ImGui::SetTooltip(bCanOpenMaterial ? "Open in Material Editor" : "No material selected");
 		}
 		return bChanged;
 	}
