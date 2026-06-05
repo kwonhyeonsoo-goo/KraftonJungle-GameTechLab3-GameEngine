@@ -132,6 +132,18 @@ namespace
 
 namespace
 {
+	bool IsDirectObjectProperty(const FPropertyValue& Prop)
+	{
+		if (!Prop.Object || !Prop.Property || !Prop.Object->GetClass())
+		{
+			return false;
+		}
+
+		TArray<const FProperty*> Properties;
+		Prop.Object->GetClass()->GetPropertyRefs(Properties);
+		return std::find(Properties.begin(), Properties.end(), Prop.Property) != Properties.end();
+	}
+
 	void CancelActiveDetailsEdit()
 	{
 		if (ImGui::GetActiveID() != 0)
@@ -3710,6 +3722,13 @@ bool FEditorPropertyWidget::RenderStructPropertyWidget(FPropertyValue& Prop, boo
 	}
 
 	bool bChanged = false;
+	FEditorReflectedPropertyState UndoBeforeState;
+	const bool bCanRecordUndo = bDispatchChange && EditorEngine && IsDirectObjectProperty(Prop);
+	if (bCanRecordUndo)
+	{
+		UndoBeforeState = EditorEngine->GetUndoSystem().CaptureReflectedProperty(Prop.Object, *Prop.Property);
+	}
+
 	ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_DefaultOpen |
 		ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding;
 
@@ -3756,7 +3775,7 @@ bool FEditorPropertyWidget::RenderStructPropertyWidget(FPropertyValue& Prop, boo
 			{
 				ImGui::BeginDisabled();
 			}
-			if (RenderPropertyWidget(ChildProps, ChildIdx, bDispatchChange, ChildPath))
+			if (RenderPropertyWidget(ChildProps, ChildIdx, false, ChildPath))
 			{
 				bChanged = true;
 			}
@@ -3773,6 +3792,18 @@ bool FEditorPropertyWidget::RenderStructPropertyWidget(FPropertyValue& Prop, boo
 
 		ImGui::Unindent(8.0f);
 		ImGui::TreePop();
+	}
+
+	if (bDispatchChange && bChanged)
+	{
+		DispatchPostEditChange(Prop, EPropertyChangeType::ValueSet, -1, PropertyPath);
+		if (UndoBeforeState.IsValid() && EditorEngine)
+		{
+			EditorEngine->GetUndoSystem().RecordReflectedProperty(
+				UndoBeforeState,
+				EditorEngine->GetUndoSystem().CaptureReflectedProperty(Prop.Object, *Prop.Property),
+				"Edit Property");
+		}
 	}
 
 	return bChanged;
@@ -3875,6 +3906,13 @@ bool FEditorPropertyWidget::RenderArrayPropertyWidget(FPropertyValue& Prop, bool
 	}
 
 	bool bChanged = false;
+	FEditorReflectedPropertyState UndoBeforeState;
+	const bool bCanRecordUndo = bDispatchChange && EditorEngine && IsDirectObjectProperty(Prop);
+	if (bCanRecordUndo)
+	{
+		UndoBeforeState = EditorEngine->GetUndoSystem().CaptureReflectedProperty(Prop.Object, *Prop.Property);
+	}
+
 	size_t Num = Ops->GetNum(ArrayPtr);
 	const bool bEditFixedSize = HasTruthyPropertyMetadata(Prop, "editfixedsize") || HasTruthyPropertyMetadata(Prop, "fixedsize");
 	UWheeledVehicleMovementComponent* VehicleWheelSetupOwner = Cast<UWheeledVehicleMovementComponent>(Prop.Object);
@@ -3953,7 +3991,7 @@ bool FEditorPropertyWidget::RenderArrayPropertyWidget(FPropertyValue& Prop, bool
 		ElementProps.push_back(ElementValue);
 		int32 ElementPropIndex = 0;
 		const bool bElementIsStruct = InnerProperty->AsStructProperty() != nullptr;
-		if (RenderPropertyWidget(ElementProps, ElementPropIndex, bElementIsStruct ? bDispatchChange : false, ElementPath))
+		if (RenderPropertyWidget(ElementProps, ElementPropIndex, false, ElementPath))
 		{
 			bChanged = true;
 			if (bDispatchChange && !bElementIsStruct)
@@ -3963,6 +4001,14 @@ bool FEditorPropertyWidget::RenderArrayPropertyWidget(FPropertyValue& Prop, bool
 		}
 
 		ImGui::PopID();
+	}
+
+	if (bChanged && UndoBeforeState.IsValid() && EditorEngine)
+	{
+		EditorEngine->GetUndoSystem().RecordReflectedProperty(
+			UndoBeforeState,
+			EditorEngine->GetUndoSystem().CaptureReflectedProperty(Prop.Object, *Prop.Property),
+			"Edit Property");
 	}
 
 	return bChanged;
@@ -4350,7 +4396,16 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FPropertyValue>& Props, 
 	const FString EffectivePropertyPath = PropertyPath.empty() ? FString(Prop.GetName()) : PropertyPath;
 	const bool bReadOnly = Prop.Property && (Prop.Property->Flags & PF_ReadOnly) != 0;
 	FEditorReflectedPropertyState UndoBeforeState;
-	if (!bReadOnly && bDispatchChange && EditorEngine && Prop.Object && Prop.Property)
+	const bool bUseContainerLevelUndo =
+		Prop.GetType() == EPropertyType::Array ||
+		Prop.GetType() == EPropertyType::Struct;
+	const bool bCanRecordDirectUndo =
+		!bReadOnly &&
+		bDispatchChange &&
+		EditorEngine &&
+		IsDirectObjectProperty(Prop) &&
+		!bUseContainerLevelUndo;
+	if (bCanRecordDirectUndo)
 	{
 		UndoBeforeState = EditorEngine->GetUndoSystem().CaptureReflectedProperty(Prop.Object, *Prop.Property);
 	}
