@@ -4591,6 +4591,16 @@ void FLuaScriptManager::RegisterReflectionBindings(sol::state& Lua)
         sol::bases<UActorComponent, UObject>(),
         "GetAliveBulletCount",
         &UBallisticBulletManagerComponent::GetAliveBulletCount,
+        "IsWindEnabled",
+        &UBallisticBulletManagerComponent::IsWindEnabled,
+        "GetWindEnabled",
+        &UBallisticBulletManagerComponent::IsWindEnabled,
+        "SetWindEnabled",
+        &UBallisticBulletManagerComponent::SetWindEnabled,
+        "GetWindAcceleration",
+        &UBallisticBulletManagerComponent::GetWindAcceleration,
+        "SetWindAcceleration",
+        &UBallisticBulletManagerComponent::SetWindAcceleration,
         "GetWeaponComponent",
         &UBallisticBulletManagerComponent::GetWeaponComponent
     );
