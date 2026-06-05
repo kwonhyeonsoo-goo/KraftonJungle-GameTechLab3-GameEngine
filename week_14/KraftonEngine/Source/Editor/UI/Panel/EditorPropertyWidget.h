@@ -56,6 +56,8 @@ private:
 	static FString OpenObjFileDialog();
 	static FString OpenStaticMeshFileDialog();
 	static FString OpenFbxFileDialog();
+	static FString OpenPrefabSaveFileDialog(AActor* Actor);
+	void SaveActorAsPrefab(AActor* Actor);
 
 	TWeakObjectPtr<UActorComponent> SelectedComponent = nullptr;
 	TWeakObjectPtr<AActor> LastSelectedActor = nullptr;

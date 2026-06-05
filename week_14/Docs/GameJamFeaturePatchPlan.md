@@ -229,6 +229,141 @@ and text input, script-backed packaging UX, and Lua save/json/random/asset/scene
 helpers. Week14 is still behind Week12 in dependency-cooked packaging, audio
 routing policy, Actor Sequence tooling, and advanced IME polish.
 
+## Immediate Goal - Jam-Ready Engine Patch Roadmap
+
+이 목표는 "게임을 만들 수 있는 엔진" 상태까지 빠르게 끌어올리는 것을
+우선한다. Week12/Week13 기능을 참고하되, Week14의 현재 구조에 맞춰
+포팅한다. 특히 Actor Sequence는 런타임 코어만 있고 저작 UI가 없으므로
+현재 팀원 입장에서는 거의 사용할 수 없는 상태다.
+
+### P0 - 반드시 끝내야 게임 제작이 편해지는 항목
+
+- Undo System foundation: 현재 Week14는 Material/AnimGraph/LuaBlueprint 같은
+  일부 에셋 에디터에만 snapshot 기반 undo가 있고, 일반 Actor/Component
+  property edit와 Actor Sequence edit를 포괄하는 공통 transaction 흐름이
+  약하다. 최소한 selected actor/component serialization snapshot,
+  begin/commit/cancel edit gesture, Ctrl+Z/Ctrl+Y routing, dirty state, scene
+  reload safety가 필요하다.
+- Actor Sequence Editor UI: `UActorSequenceComponent` details entry point,
+  dedicated sequencer tab, edit model, timeline, track/property/key authoring,
+  preview playback/scrub, embedded curve editing, undo/redo, scene/prefab
+  persistence까지 완료해야 한다.
+- Camera editor visualization mesh: Week13의 `UCameraComponent` camera mesh
+  visualization을 Week14에 그대로 이식한다. 핵심은
+  `CreateRenderState()`, `PreGetEditableProperties()`,
+  `EnsureEditorVisualizationMesh()`, `GetEditorVisualizationMaterialPath()`,
+  editor-only `UStaticMeshComponent`, no-collision/no-shadow/hidden tree 처리,
+  `Content/Data/EditorCamera/CameraMesh.OBJ`, 가능하면
+  `CameraMesh_StaticMesh.uasset`, 그리고 `EditorCamera_Blue.mat` asset copy다.
+- Actor Sequence small fixes: `PlayRate`/`StartOffsetSeconds` metadata의
+  `Max=0.0f`를 수정하고, raw `SequenceDataJson`은 details에서 직접 편집하지
+  않게 숨기거나 read-only diagnostics로 제한한다.
+- Actor Sequence diagnostics: Lua self-test를 실제 editor/game session에서
+  실행하고, full scene save/load round-trip까지 확장한다.
+
+### P1 - UI 담당자 생산성을 크게 올리는 항목
+
+- Runtime UI Layout/Preview module: Week12의 Runtime UI viewer/editor는 단순
+  viewer가 아니라 `RuntimeUILayoutAsset` 데이터 모델, RML/RCSS export,
+  hierarchy/details, preview rendering, action event 확인까지 묶인 툴이다.
+  가능하면 통째 기능 포팅을 목표로 하되, Week14의 `UUIManager` 구조에 맞춰
+  preview document/widget bridge를 새로 맞춘다.
+- UI Animation parity: Week12에서 실제로 분리된 keyframe UI animation
+  시스템이 있는지 한 번 더 확인한다. 없다면 우선 RML/RCSS transition,
+  class/style toggling, transform/opacity/background/text color helpers,
+  hover/pressed/disabled state export를 Week12 수준으로 맞춘다.
+- UI Lua convenience wrappers: 현재 Week14는 lower-level `SetStyle`류가 꽤
+  있지만 Week12식 `SetImage`, `SetProgress`, `SetTint`,
+  `SetBackgroundColor`, `SetTextColor`, `SetAlpha`, `SetRounding`,
+  `SetFontScale`, `SetElementTransform`, `SetZOrder` 같은 편의 wrapper는
+  부족할 수 있다.
+- RmlUi per-event consume router: 현재는 widget capture/block plus focused
+  form control policy로 보통 메뉴는 되지만, 같은 프레임 UI click/key가
+  game input으로 새는 정교한 케이스를 막으려면 Week12식
+  `InputRouter`/`GameInputBridge` consume feedback을 포팅한다.
+
+### P2 - 시간 남으면 추가
+
+- Input mapping/rebind asset: 팀원이 키 설정 변경 UI를 만들 계획이면 필요.
+  코드/Lua binding만으로 충분하면 미룬다.
+- Lua API definitions/examples: Lua를 많이 쓸수록 자동완성/예제 가치가 크다.
+  최소한 이번에 새로 추가한 Scene/Input/UI/Audio/ActorSequence API 정의를
+  맞춘다.
+- Packaging cook/prune optimizer: 현재 full-copy package + manifest + smoke는
+  충분히 쓸 수 있다. 용량이 문제가 될 때만 dependency cook/prune로 간다.
+- Gamepad: 게임패드를 쓰지 않으면 이번 마감에서는 제외한다.
+- Advanced audio mixer/banks/ducking: 현재 handle/group/3D/policy면 jam에는
+  충분하다. 사운드 연출이 복잡해질 때만 추가한다.
+
+### Recommended Batch Order
+
+시간이 없으므로 작은 안정화와 큰 저작툴을 분리한다. 각 batch는 빌드 성공과
+짧은 smoke test를 통과한 뒤 다음 batch로 넘어간다.
+
+1. Batch 18 - Quick Editor Fixes And Camera Mesh
+   - Week13 camera visualization mesh를 Week14 `UCameraComponent`에 이식.
+   - `Content/Data/EditorCamera` asset과 editor camera material 복사.
+   - ActorSequence `PlayRate`/`StartOffsetSeconds` metadata 수정.
+   - `SequenceDataJson` raw editing 노출 정책 정리.
+   - Debug build 확인.
+
+2. Batch 19 - Undo System Foundation
+   - 공통 editor transaction/snapshot helper 설계.
+   - actor/component property edit, component add/remove/rename, transform edit,
+     ActorSequence edit가 같은 undo entry를 만들 수 있게 한다.
+   - Ctrl+Z/Ctrl+Y routing과 redo invalidation 추가.
+   - 기존 Material/AnimGraph/LuaBlueprint snapshot undo는 건드리지 말고,
+     공통 helper와 충돌하지 않게 둔다.
+
+3. Batch 20 - Actor Sequence Details And EditModel
+   - `FEditorActorSequenceEditModel` 포팅/적응.
+   - `FEditorActorSequenceDetails`를 Week14 property panel에 연결.
+   - Open Sequencer, preview play/pause/stop, current time/duration,
+     autoplay/loop/pause-at-end/play-rate/start-offset, clear/reset 제공.
+   - animatable property filtering과 owner/component persistent-guid binding
+     검증.
+
+4. Batch 21 - Actor Sequencer Timeline
+   - dedicated document/tab 추가.
+   - toolbar, scrubber, track list, add-track/add-property, add key from current
+     value, delete key/track, section/range/key drag, context menu, selection,
+     zoom/view range/scroll 구현.
+   - preview player만 사용하고 runtime player와 충돌하지 않게 한다.
+
+5. Batch 22 - Embedded Curve Editor And Actor Sequence QA
+   - Week14 `FFloatCurveEditorWidget`를 embedded actor-sequence curve mode로
+     확장하거나, 필요하면 Week12 `FEditorCurveEditorWidget` 역할을 포팅.
+   - key/tangent/interpolation edit, source-aware dirty/save callback,
+     reference preview, undo begin/commit/cancel 구현.
+   - actor JSON, prefab, full scene save/load round-trip과 duplicate/rename
+     hostile test 통과.
+
+6. Batch 23 - Runtime UI Layout/Preview Module
+   - `RuntimeUITypes`, `RuntimeUILayoutAsset`, RML/RCSS export 모델 포팅.
+   - Week14 `UUIManager`에 preview-only document/widget bridge 추가.
+   - Runtime UI preview/editor tab: open `.rml`, open layout `.uasset`, reload,
+     resolution/zoom, action event log, hierarchy/details, export 확인.
+
+7. Batch 24 - UI Animation And UI/Input Parity
+   - UI transform/opacity/color/style/class convenience API 보강.
+   - RML transition/class based animation 예제와 Lua wrapper 추가.
+   - 필요 시 RmlUi same-frame consume feedback 라우터 포팅.
+   - UI click/key가 game input으로 새지 않는지 PIE possessed/ejected에서
+     smoke test.
+
+8. Batch 25 - Lua Definitions, Examples, Final Polish
+   - 새 API 자동완성 정의와 짧은 Lua examples 추가.
+   - Actor Sequence/UI/Input/Camera smoke scene 또는 script 추가.
+   - Debug/Game build, package dry-run, optional launch smoke.
+
+### Fast-Cut If Time Runs Out
+
+마감이 정말 빡빡하면 Batch 18-22까지만 P0로 끝낸다. 그 상태면 카메라 배치,
+Actor Sequence authoring, undo/redo, prefab/scene persistence가 갖춰져서
+"게임 제작용 엔진"이라고 부를 수 있다. Runtime UI editor/animation parity는
+UI 담당 생산성에는 크지만, 게임 메뉴를 Lua/RML 수동 작성으로 버틸 수 있으면
+P1로 미룰 수 있다.
+
 ## Actor Sequence Next Batch Candidate
 
 Reference files inspected from `Week12_JSEngine`:

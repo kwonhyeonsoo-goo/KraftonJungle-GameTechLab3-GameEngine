@@ -48,6 +48,7 @@
 #include "Editor/UI/Asset/Mesh/MeshEditorWidget.h"
 #include "Editor/UI/ContentBrowser/ContentItem.h"
 #include "Platform/Paths.h"
+#include "Serialization/PrefabManager.h"
 #include "Serialization/MemoryArchive.h"
 
 #include <Windows.h>
@@ -1081,6 +1082,95 @@ static FString GetStemFromPath(const FString& Path)
 	return RemoveExtension(FileName);
 }
 
+static std::wstring MakeSafePrefabFileName(AActor* Actor)
+{
+	FString Name = Actor ? Actor->GetFName().ToString() : FString();
+	if (Name.empty() && Actor && Actor->GetClass())
+	{
+		Name = Actor->GetClass()->GetName();
+	}
+	if (Name.empty())
+	{
+		Name = "Prefab";
+	}
+
+	std::wstring FileName = FPaths::ToWide(Name);
+	for (wchar_t& Ch : FileName)
+	{
+		const bool bInvalid =
+			Ch < 32 ||
+			Ch == L'<' || Ch == L'>' || Ch == L':' || Ch == L'"' ||
+			Ch == L'/' || Ch == L'\\' || Ch == L'|' || Ch == L'?' || Ch == L'*';
+		if (bInvalid)
+		{
+			Ch = L'_';
+		}
+	}
+	return FileName + L".prefab";
+}
+
+static FString MakeProjectRelativePathOrAbsolute(const std::filesystem::path& Path)
+{
+	std::filesystem::path AbsPath = Path.lexically_normal();
+	std::filesystem::path RootPath = std::filesystem::path(FPaths::RootDir()).lexically_normal();
+	std::filesystem::path RelPath = AbsPath.lexically_relative(RootPath);
+
+	if (RelPath.empty() || RelPath.is_absolute())
+	{
+		return FPaths::ToUtf8(AbsPath.generic_wstring());
+	}
+
+	const std::wstring RelText = RelPath.wstring();
+	if (RelText.starts_with(L".."))
+	{
+		return FPaths::ToUtf8(AbsPath.generic_wstring());
+	}
+
+	return FPaths::ToUtf8(RelPath.generic_wstring());
+}
+
+FString FEditorPropertyWidget::OpenPrefabSaveFileDialog(AActor* Actor)
+{
+	if (!IsValid(Actor))
+	{
+		return FString();
+	}
+
+	std::filesystem::path InitialDir(FPrefabManager::GetPrefabDirectory());
+	std::error_code DirError;
+	std::filesystem::create_directories(InitialDir, DirError);
+
+	wchar_t FilePath[MAX_PATH] = {};
+	const std::wstring DefaultFileName = MakeSafePrefabFileName(Actor);
+	wcsncpy_s(FilePath, DefaultFileName.c_str(), _TRUNCATE);
+
+	const std::wstring InitialDirText = InitialDir.wstring();
+
+	OPENFILENAMEW Ofn = {};
+	Ofn.lStructSize = sizeof(Ofn);
+	Ofn.hwndOwner = nullptr;
+	Ofn.lpstrFilter = L"Prefab Files (*.prefab)\0*.prefab\0All Files (*.*)\0*.*\0";
+	Ofn.lpstrFile = FilePath;
+	Ofn.nMaxFile = MAX_PATH;
+	Ofn.lpstrInitialDir = InitialDirText.c_str();
+	Ofn.lpstrTitle = L"Save Actor Prefab";
+	Ofn.lpstrDefExt = L"prefab";
+	Ofn.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
+
+	if (!GetSaveFileNameW(&Ofn))
+	{
+		return FString();
+	}
+
+	std::filesystem::path SavePath = std::filesystem::path(FilePath).lexically_normal();
+	if (SavePath.extension().empty())
+	{
+		SavePath += FPrefabManager::PrefabExtension;
+	}
+
+	return MakeProjectRelativePathOrAbsolute(SavePath);
+}
+
 FString FEditorPropertyWidget::OpenObjFileDialog()
 {
 	wchar_t FilePath[MAX_PATH] = {};
@@ -1164,6 +1254,39 @@ FString FEditorPropertyWidget::OpenFbxFileDialog()
 		return FPaths::ToUtf8(RelPath.generic_wstring());
 	}
 	return FString();
+}
+
+void FEditorPropertyWidget::SaveActorAsPrefab(AActor* Actor)
+{
+	if (!IsValid(Actor))
+	{
+		return;
+	}
+
+	const FString PrefabPath = OpenPrefabSaveFileDialog(Actor);
+	if (PrefabPath.empty())
+	{
+		return;
+	}
+
+	if (FPrefabManager::SaveActorPrefab(Actor, PrefabPath))
+	{
+		UE_LOG("[Prefab] Saved actor '%s' to %s", Actor->GetFName().ToString().c_str(), PrefabPath.c_str());
+		if (EditorEngine)
+		{
+			EditorEngine->RefreshContentBrowser();
+		}
+
+		const FString Message = "Saved prefab:\n" + PrefabPath;
+		MessageBoxA(nullptr, Message.c_str(), "Save Prefab", MB_OK | MB_ICONINFORMATION);
+	}
+	else
+	{
+		const FString Message =
+			"Failed to save prefab:\n" + PrefabPath +
+			"\n\nThe path must be inside the project and the actor must be serializable.";
+		MessageBoxA(nullptr, Message.c_str(), "Save Prefab", MB_OK | MB_ICONERROR);
+	}
 }
 
 void FEditorPropertyWidget::Render(float DeltaTime)
@@ -1574,6 +1697,16 @@ void FEditorPropertyWidget::RenderComponentTree(AActor* Actor)
 	if (!bCanRemoveSelectedComponent)
 	{
 		ImGui::EndDisabled();
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button("Save Prefab"))
+	{
+		SaveActorAsPrefab(Actor);
+	}
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetTooltip("Save the selected actor and its components as a .prefab file.");
 	}
 
 	if (ImGui::BeginPopup("##AddComponentPopup"))
