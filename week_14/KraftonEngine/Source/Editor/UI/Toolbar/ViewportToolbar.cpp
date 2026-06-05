@@ -1,4 +1,4 @@
-#include "ViewportToolbar.h"
+﻿#include "ViewportToolbar.h"
 #include "Component/Debug/GizmoComponent.h"
 #include "Editor/UI/Util/EditorTextureManager.h"
 #include "Render/Pipeline/Renderer.h"
@@ -696,6 +696,7 @@ void FViewportToolbar::RenderShowFlags(const FToolbarRenderState& State)
 		ImGui::Checkbox("Debug Draw", &RenderOptions.ShowFlags.bDebugDraw);
 		ImGui::Checkbox("Octree", &RenderOptions.ShowFlags.bOctree);
 		ImGui::Checkbox("Fog", &RenderOptions.ShowFlags.bFog);
+		ImGui::Checkbox("Bloom", &RenderOptions.ShowFlags.bBloom);
 		ImGui::Checkbox("DoF", &RenderOptions.ShowFlags.bDoF);
 		ImGui::SliderFloat("DoF Focus", &RenderOptions.DoFFocusDistance, 1.0f, 5000.0f, "%.1f");
 		ImGui::SliderFloat("DoF Range", &RenderOptions.DoFFocusRange, 1.0f, 2000.0f, "%.1f");
