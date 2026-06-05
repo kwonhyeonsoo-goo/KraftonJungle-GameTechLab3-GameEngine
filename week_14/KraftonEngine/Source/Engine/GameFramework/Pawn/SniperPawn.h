@@ -39,12 +39,21 @@ private:
 	void CacheComponentReferences();
 	void SyncSniperRuntimeState();
 	void UpdateScopeState(float DeltaTime);
+	void UpdateHoldBreathState(float DeltaTime);
+	void UpdateAimSwayState(float DeltaTime);
+	void UpdateRecoilState(float DeltaTime);
 	void ApplySniperControlRotation();
+	FRotator BuildEffectiveAimRotation() const;
 	void HandleTurnInput(float Value);
 	void HandleLookUpInput(float Value);
 	void HandleFirePressed();
 	void HandleScopePressed();
 	void HandleScopeReleased();
+	void HandleHoldBreathPressed();
+	void HandleHoldBreathReleased();
+	void HandleSwitchAmmoNormalPressed();
+	void HandleSwitchAmmoAntiMaterialPressed();
+	void ApplyFireRecoil();
 	bool FireCurrentRound();
 
 	TWeakObjectPtr<USceneComponent> SniperRoot;
@@ -54,6 +63,8 @@ private:
 
 	FSniperInputState InputState;
 	FScopeState ScopeState;
+	FAimSwayState AimSwayState;
+	FRecoilState RecoilState;
 
 	float MouseSensitivity = 0.2f;
 	float MinCameraPitch = -80.0f;
